@@ -119,4 +119,4 @@ dotnet run --project tools/DataValidator -- data/    # esquemas de /data
 - `balance-check`: ejecutar el lote de `/Balance` y contrastar con los rangos de RT-056 y las métricas obligatorias.
 - `sim-debug`: reproducir un partido desde semilla, volcar la tabla de utilidad de un tick (RT-098), localizar una divergencia de determinismo.
 
-Plugins instalados a nivel de usuario: `csharp-lsp`, `commit-commands`, `claude-md-management`, `context7`, `skill-creator`.
+Plugins instalados a nivel de usuario: `csharp-lsp`, `commit-commands`, `claude-md-management`, `context7`, `skill-creator`, `dotnet-skills` (patrones C#/.NET, testing, rendimiento) y `godot-prompter` (55 skills de Godot 4 con ejemplos C#; se activa cuando exista `/Game`). Candidato para fase 4: plugin `godot` de Randroids-Dojo (exportación y CI de Godot, orientado a GDScript).

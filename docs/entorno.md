@@ -34,4 +34,4 @@ dotnet test Sim.Tests
 
 ## Claude Code
 
-Plugins instalados a nivel de usuario: `csharp-lsp`, `commit-commands`, `claude-md-management`, `context7`, `skill-creator`. Skills del proyecto en `.claude/skills/`. Permisos preaprobados para `dotnet build/test/run` en `.claude/settings.json`.
+Plugins instalados a nivel de usuario: `csharp-lsp`, `commit-commands`, `claude-md-management`, `context7`, `skill-creator` (marketplace oficial), `dotnet-skills` (marketplace `Aaronontheweb/dotnet-skills`) y `godot-prompter` (marketplace `jame581/skillsmith`). Marketplace `Randroids-Dojo/skills` añadido sin instalar nada (su plugin `godot` es candidato para la fase 4). Skills del proyecto en `.claude/skills/`; subagentes del proyecto en `.claude/agents/` (`deep-reasoner` opus, `fast-worker` sonnet). Permisos preaprobados para `dotnet build/test/run` en `.claude/settings.json`.
