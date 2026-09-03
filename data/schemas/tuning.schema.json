@@ -11,6 +11,7 @@
     "goldenGoalMaxTicks": { "type": "integer", "minimum": 0, "maximum": 1000000 },
     "decisionIntervalTicks": { "type": "integer", "minimum": 1, "maximum": 1000 },
     "transitionTicks": { "type": "integer", "minimum": 0, "maximum": 1000 },
+    "assistWindowTicks": { "type": "integer", "minimum": 0, "maximum": 10000 },
     "movement": { "$ref": "#/$defs/movement" },
     "ball": { "$ref": "#/$defs/ball" },
     "states": { "$ref": "#/$defs/states" },
@@ -28,6 +29,7 @@
   },
   "required": [
     "ticksPerSecond", "regulationTicks", "goldenGoalMaxTicks", "decisionIntervalTicks", "transitionTicks",
+    "assistWindowTicks",
     "movement", "ball", "states", "pass", "dribble", "shot", "save", "tackle", "injury", "referee",
     "restart", "pitch", "generation", "leash"
   ],
@@ -74,9 +76,10 @@
         "TacklingTicks": { "$ref": "#/$defs/ticks" },
         "KnockedDownTicks": { "$ref": "#/$defs/ticks" },
         "CelebratingTicks": { "$ref": "#/$defs/ticks" },
-        "DribbleDuelCooldownTicks": { "$ref": "#/$defs/ticks" }
+        "DribbleDuelCooldownTicks": { "$ref": "#/$defs/ticks" },
+        "TackleCooldownTicks": { "$ref": "#/$defs/ticks" }
       },
-      "required": ["PassingTicks", "ShootingTicks", "TacklingTicks", "KnockedDownTicks", "CelebratingTicks", "DribbleDuelCooldownTicks"],
+      "required": ["PassingTicks", "ShootingTicks", "TacklingTicks", "KnockedDownTicks", "CelebratingTicks", "DribbleDuelCooldownTicks", "TackleCooldownTicks"],
       "additionalProperties": false
     },
     "pass": {
@@ -101,9 +104,10 @@
         "baseWin": { "$ref": "#/$defs/probability" },
         "attackerTechniqueFactor": { "$ref": "#/$defs/factor" },
         "defenderSpeedFactor": { "$ref": "#/$defs/factor" },
-        "defenderStrengthFactor": { "$ref": "#/$defs/factor" }
+        "defenderStrengthFactor": { "$ref": "#/$defs/factor" },
+        "lostKnockdownTicks": { "$ref": "#/$defs/ticks" }
       },
-      "required": ["baseWin", "attackerTechniqueFactor", "defenderSpeedFactor", "defenderStrengthFactor"],
+      "required": ["baseWin", "attackerTechniqueFactor", "defenderSpeedFactor", "defenderStrengthFactor", "lostKnockdownTicks"],
       "additionalProperties": false
     },
     "shot": {
@@ -116,9 +120,10 @@
         "distancePenaltyPerCell": { "$ref": "#/$defs/penalty" },
         "pressurePenalty": { "$ref": "#/$defs/penalty" },
         "offTargetBase": { "$ref": "#/$defs/probability" },
-        "offTargetDistanceFactor": { "$ref": "#/$defs/factor" }
+        "offTargetDistanceFactor": { "$ref": "#/$defs/factor" },
+        "penaltyQualityBonus": { "type": "integer", "minimum": 0, "maximum": 100 }
       },
-      "required": ["baseQuality", "techniqueFactor", "strengthFactor", "distancePenaltyPerCell", "pressurePenalty", "offTargetBase", "offTargetDistanceFactor"],
+      "required": ["baseQuality", "techniqueFactor", "strengthFactor", "distancePenaltyPerCell", "pressurePenalty", "offTargetBase", "offTargetDistanceFactor", "penaltyQualityBonus"],
       "additionalProperties": false
     },
     "save": {
@@ -128,9 +133,10 @@
         "basePercent": { "$ref": "#/$defs/percent" },
         "closeRangeCells": { "type": "integer", "minimum": 0, "maximum": 20 },
         "attributeWeightPercent": { "$ref": "#/$defs/percent" },
-        "consecutiveShotDecayPercent": { "$ref": "#/$defs/percent" }
+        "consecutiveShotDecayPercent": { "$ref": "#/$defs/percent" },
+        "qualityWeight": { "$ref": "#/$defs/percent" }
       },
-      "required": ["basePercent", "closeRangeCells", "attributeWeightPercent", "consecutiveShotDecayPercent"],
+      "required": ["basePercent", "closeRangeCells", "attributeWeightPercent", "consecutiveShotDecayPercent", "qualityWeight"],
       "additionalProperties": false
     },
     "tackle": {
@@ -146,11 +152,14 @@
         "hardTackleThreshold": { "$ref": "#/$defs/probability" },
         "yellowCardBase": { "$ref": "#/$defs/probability" },
         "redCardBase": { "$ref": "#/$defs/probability" },
+        "hardTackleYellowBonus": { "$ref": "#/$defs/probability" },
+        "hardTackleRedBonus": { "$ref": "#/$defs/probability" },
         "secondYellowIsRed": { "type": "boolean" }
       },
       "required": [
         "baseWin", "strengthFactor", "speedFactor", "carrierTechniqueFactor", "foulBase",
-        "foulStrengthFactor", "hardTackleThreshold", "yellowCardBase", "redCardBase", "secondYellowIsRed"
+        "foulStrengthFactor", "hardTackleThreshold", "yellowCardBase", "redCardBase",
+        "hardTackleYellowBonus", "hardTackleRedBonus", "secondYellowIsRed"
       ],
       "additionalProperties": false
     },
@@ -209,6 +218,7 @@
       "properties": {
         "_doc": { "type": "string" },
         "positionBias": { "$ref": "#/$defs/positionBias" },
+        "leashBase": { "type": "integer", "minimum": 1, "maximum": 99 },
         "traitCountWeights": {
           "type": "array",
           "description": "Peso ponderado para elegir 1, 2 o 3 rasgos.",
@@ -218,7 +228,7 @@
         },
         "goalkeeperTraitChance": { "$ref": "#/$defs/probability" }
       },
-      "required": ["positionBias", "traitCountWeights", "goalkeeperTraitChance"],
+      "required": ["positionBias", "leashBase", "traitCountWeights", "goalkeeperTraitChance"],
       "additionalProperties": false
     },
     "positionBias": {

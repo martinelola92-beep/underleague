@@ -42,6 +42,17 @@ public static class Pitch
         return isOwnThird ? Zone.Own : Zone.Opposing;
     }
 
+    /// <summary>True si a y b son casillas distintas y contiguas (incluidas las diagonales).</summary>
+    public static bool AreAdjacent(Cell a, Cell b)
+    {
+        if (a == b)
+        {
+            return false;
+        }
+
+        return Math.Abs(a.Column - b.Column) <= 1 && Math.Abs(a.Row - b.Row) <= 1;
+    }
+
     /// <summary>Centro continuo de la casilla c.</summary>
     public static Vec2 CellCenter(Cell c) => new(c.Column + 0.5f, c.Row + 0.5f);
 

@@ -8,7 +8,8 @@ namespace Underleague.Sim.Generation;
 public static class PlayerGenerator
 {
     /// <summary>
-    /// Cada atributo = clamp(quality + raceBias + positionBias + Range(-dev, dev+1), 1, 99).
+    /// Cada atributo = clamp(quality + raceBias + positionBias + Range(-dev, dev+1), 1, 99). El atributo
+    /// leash es la excepción: clamp(generation.leashBase + raceBias + positionBias, 1, 99), sin quality ni dado.
     /// Rasgos: n = pick ponderado de tuning.generation.traitCountWeights (1..3), elegidos por peso de
     /// race.TraitWeights sin repetición. Portero: además, con probabilidad
     /// tuning.generation.goalkeeperTraitChance, un rasgo de portero (Cat/Wall/Rusher, uniforme).
@@ -24,7 +25,12 @@ public static class PlayerGenerator
             Math.Clamp(quality + race.AttributeBias.Speed + positionBias.Speed + rng.Range(-dev, dev + 1), 1, 99),
             Math.Clamp(quality + race.AttributeBias.Technique + positionBias.Technique + rng.Range(-dev, dev + 1), 1, 99),
             Math.Clamp(quality + race.AttributeBias.Stamina + positionBias.Stamina + rng.Range(-dev, dev + 1), 1, 99),
-            Math.Clamp(quality + race.AttributeBias.Leash + positionBias.Leash + rng.Range(-dev, dev + 1), 1, 99));
+            // La correa no sale de la calidad ni del dado: es disciplina posicional pura
+            // (generation.leashBase + sesgo de raza + sesgo de posición). Con quality y desviación dentro,
+            // la conversión entera a casillas (minCells + leash*cellsPer99/99) cruzaba escalones enteros
+            // entre calidades y entre jugadores del mismo equipo, y una casilla más de radio era el canal
+            // de ventaja más fuerte del motor: hacía inalcanzable el 65-80% de RT-056 (paquete E).
+            Math.Clamp(catalog.Tuning.Generation.LeashBase + race.AttributeBias.Leash + positionBias.Leash, 1, 99));
 
         var traits = PickTraits(ref rng, catalog, race, position);
 

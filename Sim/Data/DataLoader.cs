@@ -222,7 +222,7 @@ public static class DataLoader
 
     private static readonly string[] AiContextKnownKeys =
     {
-        "chaseBallDistancePenaltyPerCell", "chaseBallLooseBonus", "chaseBallNotNearestPenalty",
+        "chaseBallDistancePenaltyPerCell", "chaseBallLooseBonus", "chaseBallNotNearestPenalty", "chaseBallIncomingPassBonus",
         "markDistancePenaltyPerCell", "supportAheadBonus", "supportCrowdedPenalty",
         "coverBetweenBallAndGoalBonus", "passOpenReceiverBonus", "passUnderPressureBonus", "passNoReceiverPenalty",
         "dribbleOpenSpaceBonus", "dribbleOpponentAheadPenalty",
@@ -293,6 +293,7 @@ public static class DataLoader
             contextNode.Prop("chaseBallDistancePenaltyPerCell").AsInt(),
             contextNode.Prop("chaseBallLooseBonus").AsInt(),
             contextNode.Prop("chaseBallNotNearestPenalty").AsInt(),
+            contextNode.Prop("chaseBallIncomingPassBonus").AsInt(),
             contextNode.Prop("markDistancePenaltyPerCell").AsInt(),
             contextNode.Prop("supportAheadBonus").AsInt(),
             contextNode.Prop("supportCrowdedPenalty").AsInt(),
@@ -361,6 +362,7 @@ public static class DataLoader
         var root = new Json(doc.RootElement, file, "$");
         root.EnsureKnownKeys(
             "ticksPerSecond", "regulationTicks", "goldenGoalMaxTicks", "decisionIntervalTicks", "transitionTicks",
+            "assistWindowTicks",
             "movement", "ball", "states", "pass", "dribble", "shot", "save", "tackle", "injury", "referee",
             "restart", "pitch", "generation", "leash");
 
@@ -370,6 +372,7 @@ public static class DataLoader
             root.Prop("goldenGoalMaxTicks").AsInt(),
             root.Prop("decisionIntervalTicks").AsInt(),
             root.Prop("transitionTicks").AsInt(),
+            root.Prop("assistWindowTicks").AsInt(),
             ParseMovement(root.Prop("movement")),
             ParseBall(root.Prop("ball")),
             ParseStates(root.Prop("states")),
@@ -408,14 +411,15 @@ public static class DataLoader
 
     private static StatesTuning ParseStates(Json node)
     {
-        node.EnsureKnownKeys("PassingTicks", "ShootingTicks", "TacklingTicks", "KnockedDownTicks", "CelebratingTicks", "DribbleDuelCooldownTicks");
+        node.EnsureKnownKeys("PassingTicks", "ShootingTicks", "TacklingTicks", "KnockedDownTicks", "CelebratingTicks", "DribbleDuelCooldownTicks", "TackleCooldownTicks");
         return new StatesTuning(
             node.Prop("PassingTicks").AsInt(),
             node.Prop("ShootingTicks").AsInt(),
             node.Prop("TacklingTicks").AsInt(),
             node.Prop("KnockedDownTicks").AsInt(),
             node.Prop("CelebratingTicks").AsInt(),
-            node.Prop("DribbleDuelCooldownTicks").AsInt());
+            node.Prop("DribbleDuelCooldownTicks").AsInt(),
+            node.Prop("TackleCooldownTicks").AsInt());
     }
 
     private static PassTuning ParsePass(Json node)
@@ -433,17 +437,18 @@ public static class DataLoader
 
     private static DribbleTuning ParseDribble(Json node)
     {
-        node.EnsureKnownKeys("baseWin", "attackerTechniqueFactor", "defenderSpeedFactor", "defenderStrengthFactor");
+        node.EnsureKnownKeys("baseWin", "attackerTechniqueFactor", "defenderSpeedFactor", "defenderStrengthFactor", "lostKnockdownTicks");
         return new DribbleTuning(
             node.Prop("baseWin").AsInt(),
             node.Prop("attackerTechniqueFactor").AsInt(),
             node.Prop("defenderSpeedFactor").AsInt(),
-            node.Prop("defenderStrengthFactor").AsInt());
+            node.Prop("defenderStrengthFactor").AsInt(),
+            node.Prop("lostKnockdownTicks").AsInt());
     }
 
     private static ShotTuning ParseShot(Json node)
     {
-        node.EnsureKnownKeys("baseQuality", "techniqueFactor", "strengthFactor", "distancePenaltyPerCell", "pressurePenalty", "offTargetBase", "offTargetDistanceFactor");
+        node.EnsureKnownKeys("baseQuality", "techniqueFactor", "strengthFactor", "distancePenaltyPerCell", "pressurePenalty", "offTargetBase", "offTargetDistanceFactor", "penaltyQualityBonus");
         return new ShotTuning(
             node.Prop("baseQuality").AsInt(),
             node.Prop("techniqueFactor").AsInt(),
@@ -451,22 +456,24 @@ public static class DataLoader
             node.Prop("distancePenaltyPerCell").AsInt(),
             node.Prop("pressurePenalty").AsInt(),
             node.Prop("offTargetBase").AsInt(),
-            node.Prop("offTargetDistanceFactor").AsInt());
+            node.Prop("offTargetDistanceFactor").AsInt(),
+            node.Prop("penaltyQualityBonus").AsInt());
     }
 
     private static SaveTuning ParseSave(Json node)
     {
-        node.EnsureKnownKeys("basePercent", "closeRangeCells", "attributeWeightPercent", "consecutiveShotDecayPercent");
+        node.EnsureKnownKeys("basePercent", "closeRangeCells", "attributeWeightPercent", "consecutiveShotDecayPercent", "qualityWeight");
         return new SaveTuning(
             node.Prop("basePercent").AsInt(),
             node.Prop("closeRangeCells").AsInt(),
             node.Prop("attributeWeightPercent").AsInt(),
-            node.Prop("consecutiveShotDecayPercent").AsInt());
+            node.Prop("consecutiveShotDecayPercent").AsInt(),
+            node.Prop("qualityWeight").AsInt());
     }
 
     private static TackleTuning ParseTackle(Json node)
     {
-        node.EnsureKnownKeys("baseWin", "strengthFactor", "speedFactor", "carrierTechniqueFactor", "foulBase", "foulStrengthFactor", "hardTackleThreshold", "yellowCardBase", "redCardBase", "secondYellowIsRed");
+        node.EnsureKnownKeys("baseWin", "strengthFactor", "speedFactor", "carrierTechniqueFactor", "foulBase", "foulStrengthFactor", "hardTackleThreshold", "yellowCardBase", "redCardBase", "hardTackleYellowBonus", "hardTackleRedBonus", "secondYellowIsRed");
         return new TackleTuning(
             node.Prop("baseWin").AsInt(),
             node.Prop("strengthFactor").AsInt(),
@@ -477,6 +484,8 @@ public static class DataLoader
             node.Prop("hardTackleThreshold").AsInt(),
             node.Prop("yellowCardBase").AsInt(),
             node.Prop("redCardBase").AsInt(),
+            node.Prop("hardTackleYellowBonus").AsInt(),
+            node.Prop("hardTackleRedBonus").AsInt(),
             node.Prop("secondYellowIsRed").AsBool());
     }
 
@@ -523,7 +532,7 @@ public static class DataLoader
 
     private static GenerationTuning ParseGeneration(Json node)
     {
-        node.EnsureKnownKeys("positionBias", "traitCountWeights", "goalkeeperTraitChance");
+        node.EnsureKnownKeys("positionBias", "leashBase", "traitCountWeights", "goalkeeperTraitChance");
 
         var biasNode = node.Prop("positionBias");
         biasNode.EnsureKnownKeys("Goalkeeper", "Defender", "Midfielder", "Forward");
@@ -535,7 +544,7 @@ public static class DataLoader
 
         var traitCountWeights = node.Prop("traitCountWeights").EnumerateArray().Select(j => j.AsInt()).ToList();
 
-        return new GenerationTuning(positionBias, traitCountWeights, node.Prop("goalkeeperTraitChance").AsInt());
+        return new GenerationTuning(positionBias, node.Prop("leashBase").AsInt(), traitCountWeights, node.Prop("goalkeeperTraitChance").AsInt());
     }
 
     private static Attributes ParsePositionBiasEntry(Json node)

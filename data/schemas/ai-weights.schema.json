@@ -40,6 +40,7 @@
         "chaseBallDistancePenaltyPerCell": { "type": "integer", "minimum": 0, "maximum": 10000 },
         "chaseBallLooseBonus": { "type": "integer", "minimum": 0, "maximum": 10000 },
         "chaseBallNotNearestPenalty": { "type": "integer", "minimum": 0, "maximum": 10000 },
+        "chaseBallIncomingPassBonus": { "type": "integer", "minimum": 0, "maximum": 10000 },
         "markDistancePenaltyPerCell": { "type": "integer", "minimum": 0, "maximum": 10000 },
         "supportAheadBonus": { "type": "integer", "minimum": 0, "maximum": 10000 },
         "supportCrowdedPenalty": { "type": "integer", "minimum": 0, "maximum": 10000 },
@@ -62,7 +63,7 @@
       },
       "required": [
         "chaseBallDistancePenaltyPerCell", "chaseBallLooseBonus", "chaseBallNotNearestPenalty",
-        "markDistancePenaltyPerCell", "supportAheadBonus", "supportCrowdedPenalty",
+        "chaseBallIncomingPassBonus", "markDistancePenaltyPerCell", "supportAheadBonus", "supportCrowdedPenalty",
         "coverBetweenBallAndGoalBonus", "passOpenReceiverBonus", "passUnderPressureBonus",
         "passNoReceiverPenalty", "dribbleOpenSpaceBonus", "dribbleOpponentAheadPenalty",
         "shootBaseRangeCells", "shootInRangeBonus", "shootOutOfRangePenalty",

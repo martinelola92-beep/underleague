@@ -50,9 +50,10 @@ public class DataLoaderTests
 
         Assert.Equal(600, catalog.Ai.Base(Position.Goalkeeper, PlayerAction.Pass));
         Assert.Equal(100, catalog.Ai.Tactical(TacticalState.InPossession, PlayerAction.Pass));
-        Assert.Equal(2.0f, catalog.Ai.Shift(TacticalState.InPossession).Shift);
+        Assert.Equal(4.0f, catalog.Ai.Shift(TacticalState.InPossession).Shift);
         Assert.Equal(30, catalog.Ai.Shift(TacticalState.InPossession).SpeedTicks);
-        Assert.Equal(1.2f, catalog.Ai.Context.TackleDistanceMaxCells);
+        Assert.Equal(1.0f, catalog.Ai.Context.TackleDistanceMaxCells);
+        Assert.Equal(700, catalog.Ai.Context.ChaseBallIncomingPassBonus);
     }
 
     [Fact]
@@ -61,11 +62,27 @@ public class DataLoaderTests
         var catalog = TestData.LoadCatalog();
 
         Assert.Equal(1, catalog.Tuning.Leash.MinCells);
-        Assert.Equal(4, catalog.Tuning.Leash.CellsPer99);
+        Assert.Equal(8, catalog.Tuning.Leash.CellsPer99);
+        Assert.Equal(50, catalog.Tuning.Generation.LeashBase);
         Assert.Equal(new[] { 50, 35, 15 }, catalog.Tuning.Generation.TraitCountWeights);
         Assert.Equal(5000, catalog.Tuning.Generation.GoalkeeperTraitChance);
         Assert.Equal(-30, catalog.Tuning.Generation.PositionBias.Goalkeeper.Leash);
         Assert.Equal(8, catalog.Tuning.Generation.PositionBias.Midfielder.Leash);
+    }
+
+    /// <summary>Constantes que el motor tenía como private const y ahora salen de tuning.json (paquete E).</summary>
+    [Fact]
+    public void FromJson_ExposesResolutionConstantsThatWereLiterals()
+    {
+        var catalog = TestData.LoadCatalog();
+
+        Assert.Equal(60, catalog.Tuning.AssistWindowTicks);
+        Assert.Equal(6, catalog.Tuning.Dribble.LostKnockdownTicks);
+        Assert.Equal(15, catalog.Tuning.Shot.PenaltyQualityBonus);
+        Assert.Equal(60, catalog.Tuning.Save.QualityWeight);
+        Assert.Equal(1500, catalog.Tuning.Tackle.HardTackleYellowBonus);
+        Assert.Equal(200, catalog.Tuning.Tackle.HardTackleRedBonus);
+        Assert.Equal(100, catalog.Tuning.States.TackleCooldownTicks);
     }
 
     [Fact]

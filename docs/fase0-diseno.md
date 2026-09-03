@@ -28,6 +28,7 @@ Sim/
   Engine/Simulator.cs        public static class Simulator; sealed record SimConfig, MatchResult
   Data/Catalog.cs            sealed record Catalog, RaceDefinition, TraitDefinition, AiWeights, Tuning
   Data/DataLoader.cs         static class DataLoader (System.Text.Json, desde strings)
+  Analysis/MatchMetrics.cs   sealed record struct MatchSummary; static class MatchMetrics (métricas RT-056, sin E/S)
   Generation/NameGenerator.cs
   Generation/PlayerGenerator.cs
   Generation/TeamGenerator.cs
@@ -241,6 +242,12 @@ public sealed class DataException : Exception { public string File { get; } publ
 
 Las claves `_doc` de los JSON se ignoran. Claves desconocidas dentro de `context`, `tuning` o `traits` son error (así un typo no pasa en silencio, RT-032).
 
+Constantes de resolución que el motor tenía como `private const` y que desde el paquete E son datos de
+`tuning.json` (ningún número que el balance pueda querer mover vive en el código):
+`assistWindowTicks` (60), `dribble.lostKnockdownTicks` (6), `shot.penaltyQualityBonus` (15),
+`save.qualityWeight` (60), `tackle.hardTackleYellowBonus` (1500), `tackle.hardTackleRedBonus` (200).
+Se añaden además `states.TackleCooldownTicks` (§3.5) y `generation.leashBase` (§2.6).
+
 ### 2.6 Generation
 
 ```csharp
@@ -280,7 +287,15 @@ Añadir a `data/sim/tuning.json`:
 "leash": { "minCells": 1, "cellsPer99": 4 }
 ```
 
-Correa en casillas: `leashCells = minCells + leash * cellsPer99 / 99` (entero; leash 50 -> 3, 99 -> 5).
+Correa en casillas: `leashCells = minCells + leash * cellsPer99 / 99` (entero).
+
+El atributo `leash` es la **excepción** a la fórmula de arriba: `clamp(generation.leashBase + raceBias +
+positionBias, 1, 99)`, sin `quality` y sin dado. Es disciplina posicional, no nivel. Con `quality` dentro,
+la conversión entera a casillas cruzaba un escalón entre calidad 40 y 60 (4 casillas de radio frente a 5)
+y el radio de acción resultó ser el canal de ventaja más fuerte del motor: con él, `betterTeamWinRate`
+para una diferencia de calidad de 20 no bajaba de 85-90% por mucho que se aplanara el resto (paquete E).
+Con `leashBase` 50 y `cellsPer99` 8 la correa queda en 2 casillas (portero), 4 (defensa) y 5 (medio y
+delantero), igual para los dos equipos.
 
 ## 3. Motor: algoritmo
 
@@ -305,7 +320,15 @@ while phase != Finished:
   comprobar fin de reglamentario / gol de oro (3.9)
 ```
 
-Orden de resolución de eventos en el mismo tick: el orden del bucle. Nunca se reordena.
+El recorrido de jugadores va por **id ascendente en los ticks pares y por id descendente en los impares**
+(`MatchEngine.PlayerInTurnOrder`). Con un orden fijo, el equipo cuyos jugadores tienen los ids más bajos
+resolvía antes las entradas, los pases y los tiros del mismo tick y ganaba el 53,6% de los partidos espejo
+(medido en el paquete E con dos equipos de la misma calidad, 4.800 partidos); alternando, gana el 50,6%,
+que es ruido. La alternancia es igual de determinista y reproducible entre plataformas (RT-020, RT-024): no
+introduce ninguna fuente de aleatoriedad, solo depende del número de tick. La ventaja de local, cuando la
+haya, debe venir del criterio del árbitro (RF-060), no del orden de un array.
+
+Orden de resolución de eventos en el mismo tick: el orden del bucle de ese tick. Nunca se reordena por otro criterio.
 
 ### 3.3 Movimiento
 
@@ -325,23 +348,32 @@ Para cada acción legal del estado (`StateMachine.LegalActions`):
 
 ```
 score = Base(pos, a) * Tactical(state, a) / 100 * TraitMult(a) / 100 + Context(a)
-TraitMult(a) = producto de ActionMultipliers de los rasgos del jugador (porcentaje, 100 = neutro), evaluado en int como acumulación secuencial: m = m * x / 100
+TraitMult(a) = producto de ActionMultipliers de los rasgos del jugador (porcentaje, 100 = neutro), evaluado en int
+               como acumulación secuencial: m = m * x / 100; al final se multiplica por (100 + LeaderBonus) / 100
+LeaderBonus  = suma de adjacentTeammateBonusPercent de los compañeros con rasgo Leader cuya casilla-hogar es
+               contigua a la del jugador (incluidas las diagonales, Pitch.AreAdjacent). Las casillas-hogar no
+               cambian durante el partido: se resuelve una vez al construir el motor
 ```
 
-Se descarta (`LeashFiltered`) toda acción de movimiento cuyo punto objetivo, tras acotar a la correa, quede a menos de 0.25 casillas del jugador y a la vez el objetivo real esté fuera de la correa (es decir, la acción exigiría salir). `Shoot`, `Pass` y `Tackle` no se filtran por correa.
+Se descarta (`LeashFiltered`) toda acción de movimiento cuyo punto objetivo, tras acotar a la correa, quede a menos de 0.25 casillas del jugador y a la vez el objetivo real esté fuera de la correa (es decir, la acción exigiría salir). `Shoot`, `Pass` y `Tackle` no se filtran por correa. El campo `LeashFiltered` de `UtilityRow` marca **cualquier** descarte, no solo el de correa: en el volcado (RT-098) una acción descartada por falta de candidato o por enfriamiento aparece también con esa marca.
+
+Dos descartes no son de correa y sí de mecánica:
+
+- `Tackle` se descarta mientras `TackleCooldown > 0` (§3.6). Sin ese enfriamiento la utilidad elegía `Tackle` en casi cada decisión con un rival cerca y el motor resolvía unas 75 entradas por partido, cuatro veces el rango de RT-056; con él, el número de entradas lo gobierna el peso de la acción en `weights.json`, que es una palanca continua.
+- `ChaseBall` recibe `+chaseBallIncomingPassBonus` y queda exenta del filtro de correa cuando el jugador es el receptor previsto de un pase en vuelo. Sin ese término ganaba `OfferSupport` y el receptor se alejaba del punto de llegada mientras el pase viajaba: el balón caía suelto en el 42% de los pases y la posesión duraba tres segundos.
 
 Términos de contexto (claves de `weights.json`, todo en enteros; distancias en casillas convertidas con `(int)(d * 100)` cuando se multiplican):
 
 | Acción | Objetivo de movimiento | Contexto |
 |---|---|---|
-| ChaseBall | posición del balón (si vuela, su punto de llegada) | `+chaseBallLooseBonus` si suelto; `-chaseBallDistancePenaltyPerCell * d`; `-chaseBallNotNearestPenalty` si no es el compañero más cercano al balón (empate por id) |
+| ChaseBall | posición del balón (si vuela, su punto de llegada) | `+chaseBallLooseBonus` si suelto; `+chaseBallIncomingPassBonus` si es el receptor del pase en vuelo (y sin filtro de correa); `-chaseBallDistancePenaltyPerCell * d`; `-chaseBallNotNearestPenalty` si no es el compañero más cercano al balón (empate por id) |
 | MarkOpponent | rival de campo más cercano dentro de la correa | `-markDistancePenaltyPerCell * d`; sin candidato: descartada |
-| OfferSupport | `(carrierX + 2*dir, Y propia acercada 1 hacia 2.5)` | `+supportAheadBonus` si el jugador está por delante del balón en sentido de ataque; `-supportCrowdedPenalty` por compañero a < 1.5 del objetivo. Solo si su equipo posee el balón; si no, descartada |
+| OfferSupport | `(carrierX + 2*dir, fila de la **casilla-hogar** acercada 1 hacia 2.5)` | `+supportAheadBonus` si el jugador está por delante del balón en sentido de ataque; `-supportCrowdedPenalty` por compañero a < 1.5 del objetivo. Solo si su equipo posee el balón; si no, descartada |
 | CoverSpace | punto del segmento balón->propia portería a distancia `LeashCells` de la casilla-hogar efectiva (acotado) | `+coverBetweenBallAndGoalBonus` si ya está entre el balón y la portería (proyección sobre X) |
 | Pass | — | receptor: compañeros a <= 7 casillas, visibles (ningún rival a < 1.0 del receptor); se elige el de mayor `avance*100 - distancia*20`; `+passOpenReceiverBonus` si hay receptor; `+passUnderPressureBonus` si un rival está a < 1.0 del poseedor; `-passNoReceiverPenalty` si no hay receptor |
 | Dribble | 1 casilla hacia la portería rival, Y hacia 2.5 | `+dribbleOpenSpaceBonus` si ningún rival a < 2 casillas por delante; `-dribbleOpponentAheadPenalty` por cada rival a < 2 por delante |
 | Shoot | — | `range = shootBaseRangeCells + LongShot.shootRangeBonusCells`; `d` = distancia al centro de la portería; en rango: `+shootInRangeBonus - shootDistancePenaltyPerCell*d - shootAnglePenaltyPerRow*|Y-2.5|`; fuera: `-shootOutOfRangePenalty` |
-| Tackle | poseedor rival | poseedor a <= `tackleDistanceMaxCells`: `+tackleBallCarrierBonus`; si no: `-tackleOutOfReachPenalty` |
+| Tackle | poseedor rival | descartada si `TackleCooldown > 0`; poseedor a <= `tackleDistanceMaxCells`: `+tackleBallCarrierBonus`; si no: `-tackleOutOfReachPenalty` |
 | Retreat | casilla-hogar efectiva | `+retreatDistanceBonusPerCell * d`; `-retreatAtHomePenalty` si d < 0.5 |
 
 Gana la puntuación máxima; empate: la primera en el orden del enum. Puntuación mínima para actuar: no hay; siempre se elige una. El jugador seleccionado en `SimConfig.DumpUtility` guarda la tabla en el tick indicado.
@@ -354,7 +386,7 @@ Duraciones en `tuning.states`. Transiciones:
 
 - Decidir `Pass` -> `Passing` (PassingTicks); al expirar, lanza el pase (3.7) y pasa a `Positioning`.
 - Decidir `Shoot` -> `Shooting`; al expirar, lanza el tiro (3.7) y pasa a `Positioning`.
-- Decidir `Tackle` -> `Tackling`; al expirar, resuelve la entrada (3.7) y pasa a `Positioning` o `KnockedDown`.
+- Decidir `Tackle` -> `Tackling` (TacklingTicks) y `TackleCooldown = TackleCooldownTicks + TacklingTicks`; al expirar, resuelve la entrada (3.7) y pasa a `Positioning` o `KnockedDown`. El enfriamiento se decrementa un tick por tick y mientras dure la utilidad descarta `Tackle` (3.5): un jugador no se tira dos veces seguidas.
 - Decidir `Dribble` con balón -> `Dribbling` (se mueve cada tick). Sin balón, `ChaseBall`/`Mark`/`Support`/`Cover`/`Retreat` -> `Chasing` (ChaseBall) o `Positioning` (resto), con objetivo guardado.
 - Al perder el balón desde `Dribbling` -> `Positioning`.
 - `KnockedDown` -> `Positioning` al expirar. `Celebrating` -> `Positioning`. `Injured` y `SentOff` son terminales: el jugador sale del campo (posición `(-1,-1)`, no cuenta ni decide).
@@ -367,20 +399,20 @@ Duraciones en `tuning.states`. Transiciones:
 
 **Balón suelto**: `Position += Velocity; Velocity *= looseBallFrictionPercent/100`. Recogida: el jugador más cercano a < 0.5 casillas (empate por id) pasa a dueño; si es de otro equipo que el último toque -> `Recovery`.
 
-**Tiro**: `d` al centro de la portería, `pressure` = rivales a < 1.0. `quality = clamp((shot.baseQuality + shot.techniqueFactor*Technique + shot.strengthFactor*Strength + Scorer.shotQualityBonus*100 - shot.distancePenaltyPerCell*d - shot.pressurePenalty*pressure) / 100, 5, 95)` (0..100). `offTarget = rng.Chance(shot.offTargetBase + shot.offTargetDistanceFactor*d - quality*20)`. Evento `Shot` (Detail `"onTarget"`/`"offTarget"`). Vuelo hasta la línea de gol a `shotSpeed`. Si va a puerta, al llegar: `gkRel = d <= save.closeRangeCells ? Speed : Strength`, más `Cat.saveBonusClose` o `Wall.saveBonusFar`; `savePercent = save.basePercent + (gkRel - 50) * save.attributeWeightPercent / 50 - (quality - 50) * 60 / 100 - save.consecutiveShotDecayPercent * consecutivosSinPerder`, acotado 5..95, reducido por `Stamina` del portero: el decaimiento se multiplica por `(100 - Stamina) / 50` acotado [0.2, 2] en enteros (`* (100-Stamina) / 50`). `rng.Chance(savePercent*100)` -> `Save` (portero dueño) o `Goal`. Sin portero en campo: gol si va a puerta. Fuera: saque de puerta. Penalti: tiro desde `(goalX - 2*dir, 2.5)` con `pressure = 0` y `quality + 15`.
+**Tiro**: `d` al centro de la portería, `pressure` = rivales a < 1.0. `quality = clamp((shot.baseQuality + shot.techniqueFactor*Technique + shot.strengthFactor*Strength + Scorer.shotQualityBonus*100 - shot.distancePenaltyPerCell*d - shot.pressurePenalty*pressure) / 100, 5, 95)` (0..100). `offTarget = rng.Chance(shot.offTargetBase + shot.offTargetDistanceFactor*d - quality*20)`. Evento `Shot` (Detail `"onTarget"`/`"offTarget"`). Vuelo hasta la línea de gol a `shotSpeed`. Si va a puerta, al llegar: `gkRel = d <= save.closeRangeCells ? Speed : Strength`, más `Cat.saveBonusClose` o `Wall.saveBonusFar`; `savePercent = save.basePercent + (gkRel - 50) * save.attributeWeightPercent / 50 - (quality - 50) * save.qualityWeight / 100 - save.consecutiveShotDecayPercent * consecutivosSinPerder`, acotado 5..95, reducido por `Stamina` del portero: el decaimiento se multiplica por `(100 - Stamina) / 50` acotado [0.2, 2] en enteros (`* (100-Stamina) / 50`). `rng.Chance(savePercent*100)` -> `Save` (portero dueño) o `Goal`. Sin portero en campo: gol si va a puerta. Fuera: saque de puerta. Penalti: tiro desde `(goalX - 2*dir, 2.5)` con `pressure = 0` y `quality + shot.penaltyQualityBonus`.
 
-**Entrada**: al expirar `Tackling`, si el poseedor sigue a <= `tackleDistanceMaxCells + 0.3`: `win = tackle.baseWin + strengthFactor*(Str-50) + speedFactor*(Spd-50) - carrierTechniqueFactor*(carrierTech-50)`; `foul = tackle.foulBase + foulStrengthFactor*(Str-50) + Dirty.foulChanceBonus*100 + Aggressive.hardTackleBonus*100 + biasShift`, con `biasShift = -referee.biasFoulShiftPer10 * Bias / 10` si el que entra es del equipo 0 y `+` si es del 1 (Bias positivo favorece al local). Primero `isFoul = rng.Chance(foul)`, luego `isWin = rng.Chance(win)`; siempre se consumen los dos rolls. Evento `Tackle` (Detail `"won"`/`"missed"`/`"foul"`).
-- Falta: `Foul`; poseedor conserva el balón; el que entra `KnockedDown` (KnockedDownTicks); tarjeta: `rng.Chance(redCardBase + (hard ? 200 : 0))` -> roja; si no, `rng.Chance(yellowCardBase + (hard ? 1500 : 0))` -> amarilla (segunda amarilla = roja). `hard` = `Aggressive` o `Dirty` o `Str >= 70`. Roja: `SentOff`. Si la falta ocurre dentro del área del que entra: `rng.Chance(referee.penaltyOnFoulInArea)` -> fase `Penalty`.
+**Entrada**: al expirar `Tackling`, si el objetivo se fue de `tackleDistanceMaxCells + 0.3` (o ya no está en el campo) no hay contacto: el que entra vuelve a `Positioning` sin evento. Si sigue en alcance, la entrada se resuelve **tenga o no el balón**: cuando lo ha soltado dentro de los ticks de `Tackling` (un pase tarda `PassingTicks`) es una entrada a destiempo, que tira falta y lesión igual pero no puede robar un balón que ya no está (`isWin` se anula) ni cuenta como evento `Tackle`. Antes el motor volvía a `Positioning` en silencio también en ese caso, y el número de entradas por partido dependía de si `TacklingTicks` era mayor o menor que `PassingTicks` (2,3 entradas con 6/5; 30 con 4/6): una carrera de ticks, no una palanca. Resolución: `win = tackle.baseWin + strengthFactor*(Str-50) + speedFactor*(Spd-50) - carrierTechniqueFactor*(carrierTech-50)`; `foul = tackle.foulBase + foulStrengthFactor*(Str-50) + Dirty.foulChanceBonus*100 + Aggressive.hardTackleBonus*100 + biasShift`, con `biasShift = -referee.biasFoulShiftPer10 * Bias / 10` si el que entra es del equipo 0 y `+` si es del 1 (Bias positivo favorece al local). Primero `isFoul = rng.Chance(foul)`, luego `isWin = rng.Chance(win)`; siempre se consumen los dos rolls. Evento `Tackle` (Detail `"won"`/`"missed"`/`"foul"`).
+- Falta: `Foul`; poseedor conserva el balón; el que entra `KnockedDown` (KnockedDownTicks); tarjeta: `rng.Chance(redCardBase + (hard ? hardTackleRedBonus : 0))` -> roja; si no, `rng.Chance(yellowCardBase + (hard ? hardTackleYellowBonus : 0))` -> amarilla (segunda amarilla = roja). `hard` = `Aggressive` o `Dirty` o `Str * 100 >= tackle.hardTackleThreshold`; los sumandos de tarjeta dura son `tackle.hardTackleRedBonus` y `tackle.hardTackleYellowBonus`. Roja: `SentOff`. Si la falta ocurre dentro del área del que entra: `rng.Chance(referee.penaltyOnFoulInArea)` -> fase `Penalty`.
 - Sin falta y `isWin`: `Recovery` para el que entra, poseedor `KnockedDown`. Sin falta y no gana: el que entra `KnockedDown` durante `KnockedDownTicks / 2`.
-- Lesión (después de resolver): `inj = injury.onTackleBase + (isFoul ? injury.onFoulBase : 0) + attackerStrengthFactor*(Str-50) - victimStaminaResistFactor*(Sta-50) + Dirty.injuryChanceBonus*100 - Resilient.injuryResistanceBonus*100`; `rng.Chance(clamp(inj, 0, 5000))` -> `Injury` (Detail `"severe"` si `rng.Chance(injury.severeShare)`, si no `"minor"`); el lesionado pasa a `Injured` y sale del campo; si tenía el balón, queda suelto. Muerte: nunca en fase 0 (RF-093 requiere estado previo).
+- Lesión (después de resolver, y solo si hubo contacto: el poseedor tenía el balón o hubo falta): `inj = injury.onTackleBase + (isFoul ? injury.onFoulBase : 0) + attackerStrengthFactor*(Str-50) - victimStaminaResistFactor*(Sta-50) + Dirty.injuryChanceBonus*100 - Resilient.injuryResistanceBonus*100`; `rng.Chance(clamp(inj, 0, 5000))` -> `Injury` (Detail `"severe"` si `rng.Chance(injury.severeShare)`, si no `"minor"`); el lesionado pasa a `Injured` y sale del campo; si tenía el balón, queda suelto. Muerte: nunca en fase 0 (RF-093 requiere estado previo).
 
-**Regate**: en `Dribbling`, si un rival de campo está a < 0.8 y `DribbleDuelCooldown == 0`: `DribbleAttempted`; `win = dribble.baseWin + attackerTechniqueFactor*(Tech-50) - defenderSpeedFactor*(Spd-50) - defenderStrengthFactor*(Str-50)`; ganado: `DribbleWon`, rival `KnockedDown` 6 ticks; perdido: `DribbleLost`, rival dueño, `Recovery`. Cooldown `DribbleDuelCooldownTicks` para el atacante.
+**Regate**: en `Dribbling`, si un rival de campo está a < 0.8 y `DribbleDuelCooldown == 0`: `DribbleAttempted`; `win = dribble.baseWin + attackerTechniqueFactor*(Tech-50) - defenderSpeedFactor*(Spd-50) - defenderStrengthFactor*(Str-50)`; ganado: `DribbleWon`, rival `KnockedDown` `dribble.lostKnockdownTicks` ticks; perdido: `DribbleLost`, rival dueño, `Recovery`. `DribbleDuelCooldownTicks` para **los dos** duelistas: con el enfriamiento solo en el conductor, el defensor que ganaba el balón lo perdía al tick siguiente contra el mismo rival, que seguía a menos de 0.8 casillas, y el balón rebotaba entre los dos equipos.
 
 ### 3.8 Fuera, gol, reanudaciones, incomparecencia
 
 - `Y < 0` o `Y > 5`: saque de banda para el equipo contrario al último toque: fase `Restart` durante `throwInTicks`; el balón se coloca en el punto de salida acotado; al terminar, el jugador de ese equipo más cercano (empate id) se teletransporta al punto y es dueño. Evento `Recovery` con Detail `"throwIn"`.
 - `X < 0` o `X > 16` sin ser gol: último toque del atacante -> saque de puerta (portero dueño en su casilla, `goalKickTicks`, Detail `"goalKick"`); del defensor -> córner (atacante más cercano dueño en la esquina, `cornerTicks`, Detail `"corner"`).
-- Gol: `Goal` (Actor = tirador; Target = asistente si el último pase completado fue a < 60 ticks), goleador `Celebrating`, marcador, `Kickoff` para el equipo que encaja durante `kickoffTicks`: todos a su casilla-hogar (sin desplazamiento), centrocampista central (más cercano a (8,2.5)) del equipo que saca es dueño en el centro.
+- Gol: `Goal` (Actor = tirador; Target = asistente si el último pase completado fue a < `assistWindowTicks` ticks), goleador `Celebrating`, marcador, `Kickoff` para el equipo que encaja durante `kickoffTicks`: todos a su casilla-hogar (sin desplazamiento), centrocampista central (más cercano a (8,2.5)) del equipo que saca es dueño en el centro.
 - Penalti: fase `Penalty` durante `penaltyTicks`; el tirador es el jugador de campo con más `Technique` del equipo; los demás quedan quietos; al expirar se resuelve el tiro; después, saque de puerta o kickoff según resultado.
 - Incomparecencia: si un equipo tiene < 5 jugadores en campo (Injured/SentOff descontados) -> `MatchEnd` con Detail `"forfeit"`, gana el otro (RF-059). `Report.Forfeit = true`.
 
@@ -396,6 +428,34 @@ Al llegar `tick == regulationTicks`: si hay ganador, `MatchEnd`. Si empate: `Mob
 - Jugada: `PlayStart` al iniciar una posesión, `PlayEnd` (Detail `"shot"`/`"lost"`) al terminar. Cadena de pases: pases completados consecutivos dentro de la posesión; al terminar la posesión, si hubo >= 1 pase completado, `PassChains++` y `PassChainTotalLength += longitud`.
 - `BallTicksByThird`: cada tick, según X absoluta del balón. `PossessionTicks[team]`: ticks con dueño de ese equipo.
 - Log (RF-121): una línea por evento relevante: `"[t=0123] Grok tackles Aelar: foul (yellow)"`. Formato `[t=NNNN] {Actor} {verbo} {Target}: {Detail}`. Sin log si `CollectLog=false`.
+
+### 3.11 Decisiones de implementación
+
+Detalles que la especificación no cerraba y que el motor resolvió al implementarlo (paquete B) o al ajustar
+el balance (paquete E). Cada uno está también comentado en el punto del código donde se aplica.
+
+**Paquete B (motor).**
+
+1. **`OfferSupport` usa la fila de la casilla-hogar**, no la Y instantánea del jugador. Con la Y instantánea el punto de apoyo se recalcula en cada decisión, todo el bloque converge en pocos ticks a la fila 2.5, se solapa y el partido se bloquea.
+2. **`hard` en la tarjeta se decide con `tackle.hardTackleThreshold`** (`Str * 100 >= threshold`), no con un 70 escrito en el código.
+3. **Las constantes literales del motor son `private const` con documentación**, nunca números sueltos en medio de una fórmula. El paquete E subió a `tuning.json` las que el balance puede querer mover (§2.5); las que quedan son geométricas (radio de recogida 0.5, radio de presión 1.0, radio de duelo 0.8, margen de alcance de entrada 0.3, punto de penalti a 2 casillas, velocidad del balón suelto 0.1).
+4. **`CoverSpace` resuelve la intersección** del segmento balón->portería propia con la circunferencia de correa (ecuación de segundo grado, raíz más cercana al balón); si el segmento nunca alcanza esa distancia, se toma el punto del segmento más cercano a la casilla-hogar.
+5. **`LeashFiltered` marca cualquier descarte** de la fila del volcado de utilidad, no solo el de correa: una acción sin candidato (`MarkOpponent` sin rival, `OfferSupport` sin posesión) o descartada por enfriamiento aparece con la misma marca.
+6. **`DistanceToGoal` de `MatchEvent` va en centésimas de casilla** (entero), como el resto de distancias que entran en aritmética entera (RT-023).
+7. **El reloj no se detiene** en reanudaciones, penaltis ni celebraciones: los ticks de `Restart`, `Kickoff` y `Penalty` cuentan dentro de `regulationTicks`. No hay tiempo añadido en fase 0.
+8. **Solo se marca gol desde un `Shot`**: no hay gol por el balón cruzando la línea suelto ni en propia puerta. Un balón que sale por la línea de fondo es siempre saque de puerta o córner.
+9. **Ganar el balón fuerza `Dribbling`**: `SetOwner` mete al nuevo poseedor en `Dribbling` si venía de `Positioning`, `Chasing` o `Tackling`, y saca al anterior de `Dribbling`/`Passing`/`Shooting`. Así nadie conduce un balón que ya no tiene ni se queda parado con el balón hasta su siguiente decisión.
+10. **`Trait.Leader` quedó sin aplicar en el paquete B**; el paquete E lo implementa (§3.5).
+11. **Los tipos del motor son `internal`** (`MatchPlayer`, `Ball`, `Utility`, `MatchEngine`, `UtilityContext`): no forman parte de la superficie pública de §2.4. `Sim.csproj` declara `InternalsVisibleTo("Underleague.Sim.Tests")` para que los tests los ejerciten directamente.
+12. **El test de incomparecencia usa equipos escritos a mano** (cinco frágiles contra siete brutales) porque `TeamGenerator` no puede producir los extremos necesarios para provocar cinco bajas.
+
+**Paquete E (ajuste).**
+
+13. **El recorrido del bucle de tick alterna con la paridad del tick** (§3.2): quita la ventaja del equipo con ids más bajos.
+14. **El receptor previsto de un pase va a por el balón** (`chaseBallIncomingPassBonus`, §3.5).
+15. **El enfriamiento del duelo de regate se aplica a los dos duelistas** (§3.7).
+16. **La entrada a destiempo tiene consecuencias** —falta y lesión— **pero no cuenta como `Tackle` ni roba el balón** (§3.7), y **`Tackle` tiene enfriamiento propio** (§3.5, §3.6).
+17. **El atributo `leash` no depende de la calidad ni del dado** (§2.6).
 
 ## 4. `/Balance` (consola)
 
@@ -416,6 +476,10 @@ Sin paquetes externos. Parseo manual de argumentos.
 `summary.csv`: `metric,value,rangeMin,rangeMax,status` con `status` en `IN`/`OUT`/`INFO`.
 
 Métricas y rangos (de `balance.md`, RT-056): `possessionChanges` 12-25; `passChainAvgLength` 2-4; `shotsPerMatch` 8-16; `scorelineShare_1-0_to_3-2` >= 50 (INFO además de `share_over5goals` < 5, `drawShareAtRegulation` < 15); `ballThirdMaxShare` <= 50; `tacklesPerMatch` 6-14; `injuriesPerMatch` 0.3-0.8. Extra fase 0: `betterTeamWinRate` para cada emparejamiento cuyas calidades difieran (`human_60` vs `human_40`, `human_60` vs `human_50`), rango 65-80 para diferencia 20, INFO para diferencia 10. Todos los valores con dos decimales.
+
+El cálculo vive en `Sim/Analysis/MatchMetrics.cs` (público, sin E/S y sin aleatoriedad): `Balance/Metrics.cs`
+es solo el adaptador a las columnas de `summary.csv`, y la puerta estadística de `Sim.Tests` (§6) llama al
+mismo código. Una métrica no puede significar una cosa en el lote y otra en la puerta.
 
 Consola: tabla alineada, tiempo total y partidos/segundo. Código de salida 1 si alguna métrica `OUT` (para CI), 0 si no.
 
@@ -438,7 +502,7 @@ Esquemas a escribir: `races.schema.json`, `traits.schema.json`, `ai-weights.sche
 | `Engine/DeterminismTests.cs` | `SameSeedSameEvents` (comparación elemento a elemento de 20 semillas); `IndependentStreams`; `CrossPlatformFingerprint` escribe `fingerprint.txt` (hash FNV-1a de la secuencia de eventos de 100 semillas) en el directorio de salida de tests |
 | `Engine/ArchitectureTests.cs` | `Underleague.Sim` no referencia ensamblados cuyo nombre contenga `Godot`; y no contiene tipos que referencien `System.IO.File`, `System.Random`, `System.DateTime` (escaneo de metadatos con `System.Reflection.Metadata`) |
 | `Engine/MatchRulesTests.cs` | nunca empate; forfeit con < 5; el portero nunca sale del área (comprobación sobre todas las posiciones registradas en un partido con `DumpUtility`... o exponiendo `Report.Players` con `MaxDistanceFromArea` — añadir campo `GoalkeeperLeftArea: bool` a `MatchReport`) |
-| `Engine/StatisticalTests.cs` | 1.000 partidos del conjunto de referencia: métricas RT-056 en rango, `betterTeamWinRate` 65-80. **Es la puerta de salida de la fase 0**: se marca con `[Trait("Category","Gate")]` y hasta que el motor esté ajustado se ejecuta con `dotnet test --filter Category!=Gate` en el bucle de desarrollo, y con todo en CI |
+| `Engine/StatisticalTests.cs` | 1.000 partidos del conjunto de referencia con la misma generación de equipos y las mismas semillas que `Balance/BatchRunner` (`RngStreams.Generation(seed, índice)`, ids desde `1 + índice*100`, gemelo con índice `1000+i` para un equipo contra sí mismo, `RngStreams.MatchSeed(seed, i)`, árbitro neutro): métricas RT-056 en rango y `betterTeamWinRate` 65-80 para una diferencia de calidad de 20. Reutiliza `Sim.Analysis.MatchMetrics` y lee `data/balance/reference.json` de disco, para no duplicar ni el cálculo ni el conjunto. **Es la puerta de salida de la fase 0**: se marca con `[Trait("Category","Gate")]` y se puede excluir del bucle de desarrollo con `dotnet test --filter Category!=Gate`; en CI corre entera |
 
 ## 7. CI
 

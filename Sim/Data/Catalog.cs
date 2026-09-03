@@ -47,6 +47,7 @@ public sealed record AiContext(
     int ChaseBallDistancePenaltyPerCell,
     int ChaseBallLooseBonus,
     int ChaseBallNotNearestPenalty,
+    int ChaseBallIncomingPassBonus,
     int MarkDistancePenaltyPerCell,
     int SupportAheadBonus,
     int SupportCrowdedPenalty,
@@ -102,7 +103,7 @@ public sealed class AiWeights
 public sealed record PositionBiasTable(Attributes Goalkeeper, Attributes Defender, Attributes Midfielder, Attributes Forward);
 
 /// <summary>tuning.generation: parámetros de generación de jugadores (§2.6).</summary>
-public sealed record GenerationTuning(PositionBiasTable PositionBias, IReadOnlyList<int> TraitCountWeights, int GoalkeeperTraitChance);
+public sealed record GenerationTuning(PositionBiasTable PositionBias, int LeashBase, IReadOnlyList<int> TraitCountWeights, int GoalkeeperTraitChance);
 
 /// <summary>tuning.leash: conversión de atributo Leash a radio de correa en casillas (§2.6).</summary>
 public sealed record LeashTuning(int MinCells, int CellsPer99);
@@ -114,22 +115,22 @@ public sealed record MovementTuning(int BaseCellsPerTickMilli, int SpeedCellsPer
 public sealed record BallTuning(int PassSpeedCellsPerTickMilli, int ShotSpeedCellsPerTickMilli, int LooseBallFrictionPercent);
 
 /// <summary>tuning.states: duraciones de los estados de jugador, en ticks.</summary>
-public sealed record StatesTuning(int PassingTicks, int ShootingTicks, int TacklingTicks, int KnockedDownTicks, int CelebratingTicks, int DribbleDuelCooldownTicks);
+public sealed record StatesTuning(int PassingTicks, int ShootingTicks, int TacklingTicks, int KnockedDownTicks, int CelebratingTicks, int DribbleDuelCooldownTicks, int TackleCooldownTicks);
 
 /// <summary>tuning.pass.</summary>
 public sealed record PassTuning(int BaseSuccess, int TechniqueFactor, int DistancePenaltyPerCell, int PressurePenalty, float InterceptRadiusCells, int InterceptBaseChance, int InterceptTechniqueFactor);
 
 /// <summary>tuning.dribble.</summary>
-public sealed record DribbleTuning(int BaseWin, int AttackerTechniqueFactor, int DefenderSpeedFactor, int DefenderStrengthFactor);
+public sealed record DribbleTuning(int BaseWin, int AttackerTechniqueFactor, int DefenderSpeedFactor, int DefenderStrengthFactor, int LostKnockdownTicks);
 
 /// <summary>tuning.shot.</summary>
-public sealed record ShotTuning(int BaseQuality, int TechniqueFactor, int StrengthFactor, int DistancePenaltyPerCell, int PressurePenalty, int OffTargetBase, int OffTargetDistanceFactor);
+public sealed record ShotTuning(int BaseQuality, int TechniqueFactor, int StrengthFactor, int DistancePenaltyPerCell, int PressurePenalty, int OffTargetBase, int OffTargetDistanceFactor, int PenaltyQualityBonus);
 
 /// <summary>tuning.save.</summary>
-public sealed record SaveTuning(int BasePercent, int CloseRangeCells, int AttributeWeightPercent, int ConsecutiveShotDecayPercent);
+public sealed record SaveTuning(int BasePercent, int CloseRangeCells, int AttributeWeightPercent, int ConsecutiveShotDecayPercent, int QualityWeight);
 
 /// <summary>tuning.tackle.</summary>
-public sealed record TackleTuning(int BaseWin, int StrengthFactor, int SpeedFactor, int CarrierTechniqueFactor, int FoulBase, int FoulStrengthFactor, int HardTackleThreshold, int YellowCardBase, int RedCardBase, bool SecondYellowIsRed);
+public sealed record TackleTuning(int BaseWin, int StrengthFactor, int SpeedFactor, int CarrierTechniqueFactor, int FoulBase, int FoulStrengthFactor, int HardTackleThreshold, int YellowCardBase, int RedCardBase, int HardTackleYellowBonus, int HardTackleRedBonus, bool SecondYellowIsRed);
 
 /// <summary>tuning.injury.</summary>
 public sealed record InjuryTuning(int OnTackleBase, int OnFoulBase, int AttackerStrengthFactor, int VictimStaminaResistFactor, int SevereShare);
@@ -150,6 +151,7 @@ public sealed record Tuning(
     int GoldenGoalMaxTicks,
     int DecisionIntervalTicks,
     int TransitionTicks,
+    int AssistWindowTicks,
     MovementTuning Movement,
     BallTuning Ball,
     StatesTuning States,

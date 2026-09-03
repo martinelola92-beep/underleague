@@ -109,6 +109,62 @@ public sealed class UtilityTests
         Assert.Equal(600, row.Score);
     }
 
+    /// <summary>
+    /// Leader (RT-094): el bono del compañero con casilla-hogar contigua multiplica la puntuación base,
+    /// dentro del multiplicador de rasgos de la fórmula de §3.5.
+    /// </summary>
+    [Fact]
+    public void LeaderBonusMultipliesTheBaseScore()
+    {
+        var weights = Weights(builder => builder[(int)Position.Defender, (int)PlayerAction.Retreat] = 300);
+        var player = Player(0, Position.Defender, new Cell(2, 2), new Attributes(50, 50, 50, 50, 50));
+        player.LeaderBonusPercent = 8;
+        var context = Context(weights, player);
+
+        var rows = new List<UtilityRow>();
+        Utility.Choose(context, player, rows);
+
+        var row = Row(rows, PlayerAction.Retreat);
+        Assert.Equal(108, row.TraitMultiplier);
+        Assert.Equal(324, row.Base * row.TacticalMultiplier / 100 * row.TraitMultiplier / 100);
+    }
+
+    /// <summary>Casillas-hogar contiguas incluidas las diagonales; una casilla no es contigua a sí misma.</summary>
+    [Fact]
+    public void AdjacentHomeCellsIncludeDiagonalsButNotTheSameCell()
+    {
+        Assert.True(Pitch.AreAdjacent(new Cell(2, 2), new Cell(3, 3)));
+        Assert.True(Pitch.AreAdjacent(new Cell(2, 2), new Cell(2, 1)));
+        Assert.False(Pitch.AreAdjacent(new Cell(2, 2), new Cell(2, 2)));
+        Assert.False(Pitch.AreAdjacent(new Cell(2, 2), new Cell(4, 2)));
+    }
+
+    /// <summary>El enfriamiento de entrada descarta Tackle mientras dura (§3.5, paquete E).</summary>
+    [Fact]
+    public void TackleIsDiscardedWhileTheCooldownLasts()
+    {
+        var weights = Weights(builder =>
+        {
+            builder[(int)Position.Defender, (int)PlayerAction.Tackle] = 1000;
+            builder[(int)Position.Defender, (int)PlayerAction.Retreat] = 100;
+        });
+
+        var player = Player(0, Position.Defender, new Cell(2, 2), new Attributes(50, 50, 50, 50, 50));
+        var carrier = Player(100, Position.Forward, new Cell(13, 2), new Attributes(50, 50, 50, 50, 50), team: 1);
+        carrier.Position = player.Position;
+
+        var context = Context(weights, player, carrier);
+        context.Ball.Owner = carrier;
+
+        var rows = new List<UtilityRow>();
+        Assert.Equal(PlayerAction.Tackle, Utility.Choose(context, player, rows));
+
+        player.TackleCooldown = 1;
+        rows.Clear();
+        Assert.NotEqual(PlayerAction.Tackle, Utility.Choose(context, player, rows));
+        Assert.True(Row(rows, PlayerAction.Tackle).LeashFiltered);
+    }
+
     private static UtilityRow Row(List<UtilityRow> rows, PlayerAction action)
     {
         foreach (var row in rows)
@@ -172,7 +228,7 @@ public sealed class UtilityTests
 
         configure(baseTable);
 
-        var context = new AiContext(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1.2f, 0, 0, 0, 0);
+        var context = new AiContext(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1.2f, 0, 0, 0, 0);
         var shifts = new BlockShift[Enum.GetValues<TacticalState>().Length];
         return new AiWeights(baseTable, tacticalTable, context, shifts);
     }

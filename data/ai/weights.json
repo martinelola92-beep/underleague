@@ -2,9 +2,9 @@
   "_doc": "Pesos base de utilidad por posición (RT-093) y multiplicadores por estado táctico. Escala entera 0-1000. Los rasgos aplican sus multiplicadores desde data/traits/traits.json (RT-094).",
   "base": {
     "Goalkeeper":  { "ChaseBall": 300, "MarkOpponent": 0,   "OfferSupport": 0,   "CoverSpace": 500, "Pass": 600, "Dribble": 50,  "Shoot": 0,   "Tackle": 200, "Retreat": 400 },
-    "Defender":    { "ChaseBall": 380, "MarkOpponent": 320, "OfferSupport": 150, "CoverSpace": 420, "Pass": 420, "Dribble": 180, "Shoot": 120, "Tackle": 420, "Retreat": 320 },
-    "Midfielder":  { "ChaseBall": 420, "MarkOpponent": 240, "OfferSupport": 340, "CoverSpace": 260, "Pass": 460, "Dribble": 300, "Shoot": 260, "Tackle": 300, "Retreat": 220 },
-    "Forward":     { "ChaseBall": 400, "MarkOpponent": 120, "OfferSupport": 420, "CoverSpace": 120, "Pass": 340, "Dribble": 360, "Shoot": 520, "Tackle": 180, "Retreat": 140 }
+    "Defender":    { "ChaseBall": 380, "MarkOpponent": 320, "OfferSupport": 150, "CoverSpace": 420, "Pass": 420, "Dribble": 180, "Shoot": 120, "Tackle": 210, "Retreat": 320 },
+    "Midfielder":  { "ChaseBall": 420, "MarkOpponent": 240, "OfferSupport": 340, "CoverSpace": 260, "Pass": 460, "Dribble": 300, "Shoot": 260, "Tackle": 150, "Retreat": 220 },
+    "Forward":     { "ChaseBall": 400, "MarkOpponent": 120, "OfferSupport": 420, "CoverSpace": 120, "Pass": 340, "Dribble": 360, "Shoot": 520, "Tackle": 90,  "Retreat": 140 }
   },
   "tactical": {
     "InPossession":        { "ChaseBall": 60,  "MarkOpponent": 40,  "OfferSupport": 140, "CoverSpace": 80,  "Pass": 100, "Dribble": 100, "Shoot": 100, "Tackle": 30,  "Retreat": 70 },
@@ -17,6 +17,7 @@
     "chaseBallDistancePenaltyPerCell": 45,
     "chaseBallLooseBonus": 250,
     "chaseBallNotNearestPenalty": 300,
+    "chaseBallIncomingPassBonus": 700,
     "markDistancePenaltyPerCell": 30,
     "supportAheadBonus": 120,
     "supportCrowdedPenalty": 90,
@@ -26,12 +27,12 @@
     "passNoReceiverPenalty": 600,
     "dribbleOpenSpaceBonus": 160,
     "dribbleOpponentAheadPenalty": 140,
-    "shootBaseRangeCells": 5,
-    "shootInRangeBonus": 300,
+    "shootBaseRangeCells": 8,
+    "shootInRangeBonus": 500,
     "shootOutOfRangePenalty": 700,
-    "shootDistancePenaltyPerCell": 60,
+    "shootDistancePenaltyPerCell": 40,
     "shootAnglePenaltyPerRow": 50,
-    "tackleDistanceMaxCells": 1.2,
+    "tackleDistanceMaxCells": 1.0,
     "tackleOutOfReachPenalty": 900,
     "tackleBallCarrierBonus": 200,
     "retreatDistanceBonusPerCell": 40,
@@ -39,7 +40,7 @@
   },
   "blockShift": {
     "_doc": "Desplazamiento de casillas-hogar por estado táctico (capa 2). En casillas, positivo hacia la portería rival. speedTicks: ticks que tarda el bloque en completar el desplazamiento.",
-    "InPossession": { "shift": 2.0, "speedTicks": 30 },
+    "InPossession": { "shift": 4.0, "speedTicks": 30 },
     "OutOfPossession": { "shift": -1.0, "speedTicks": 20 },
     "OffensiveTransition": { "shift": 1.0, "speedTicks": 10 },
     "DefensiveTransition": { "shift": -0.5, "speedTicks": 8 }

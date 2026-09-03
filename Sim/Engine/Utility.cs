@@ -69,6 +69,7 @@ internal static class Utility
         public int Context;
         public bool Discarded;
         public bool LeashFiltered;
+        public bool IgnoreLeashFilter;
         public Vec2 Target;
         public MatchPlayer? Receiver;
         public MatchPlayer? TackleTarget;
@@ -95,7 +96,9 @@ internal static class Utility
             var eval = Evaluate(ctx, p, action);
             int baseWeight = ctx.Weights.Base(p.Role, action);
             int tactical = ctx.Weights.Tactical(ctx.TacticalStates[p.Team], action);
-            int traitMultiplier = p.ActionMultiplier(action);
+            // El bono de Leader de los compañeros con casilla-hogar contigua entra en el multiplicador de
+            // rasgos: la fórmula de §3.5 sigue siendo Base * Tactical / 100 * TraitMult / 100 + Context.
+            int traitMultiplier = p.ActionMultiplier(action) * (100 + p.LeaderBonusPercent) / 100;
             int score = (baseWeight * tactical / 100 * traitMultiplier / 100) + eval.Context;
 
             bool rejected = eval.Discarded || eval.LeashFiltered;
@@ -226,7 +229,7 @@ internal static class Utility
         }
 
         bool outsideLeash = Vec2.Distance(raw, p.EffectiveHome) > p.LeashCells;
-        if (outsideLeash && Vec2.Distance(clamped, p.Position) < LeashFilterMinAdvance)
+        if (!eval.IgnoreLeashFilter && outsideLeash && Vec2.Distance(clamped, p.Position) < LeashFilterMinAdvance)
         {
             eval.LeashFiltered = true;
         }
@@ -257,6 +260,15 @@ internal static class Utility
         if (loose)
         {
             score += context.ChaseBallLooseBonus;
+        }
+
+        // El receptor previsto de un pase en vuelo va a por el balón (§3.5). Sin este término gana
+        // OfferSupport y el receptor se aleja del punto de llegada mientras el pase viaja: el balón
+        // caía suelto en el 42% de los pases y la posesión duraba tres segundos (paquete E).
+        if (ball.InFlight && !ball.IsShot && ReferenceEquals(ball.PassReceiver, p))
+        {
+            score += context.ChaseBallIncomingPassBonus;
+            eval.IgnoreLeashFilter = true;
         }
 
         if (!ReferenceEquals(ctx.NearestToBall[p.Team], p))
@@ -531,6 +543,12 @@ internal static class Utility
 
     private static void EvaluateTackle(MatchPlayer p, Ball ball, AiContext context, ref Eval eval)
     {
+        if (p.TackleCooldown > 0)
+        {
+            eval.Discarded = true;
+            return;
+        }
+
         var carrier = ball.Owner;
         if (carrier is null || carrier.Team == p.Team)
         {

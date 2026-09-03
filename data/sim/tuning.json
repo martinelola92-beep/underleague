@@ -5,71 +5,78 @@
   "goldenGoalMaxTicks": 900,
   "decisionIntervalTicks": 2,
   "transitionTicks": 12,
+  "assistWindowTicks": 60,
   "movement": {
-    "baseCellsPerTickMilli": 90,
-    "speedCellsPerTickMilliPer99": 110,
+    "baseCellsPerTickMilli": 131,
+    "speedCellsPerTickMilliPer99": 28,
     "dribbleSpeedPercent": 80,
     "fatigueStartTick": 600,
     "fatigueMaxSlowPercent": 25
   },
   "ball": {
-    "passSpeedCellsPerTickMilli": 450,
+    "passSpeedCellsPerTickMilli": 250,
     "shotSpeedCellsPerTickMilli": 700,
     "looseBallFrictionPercent": 92
   },
   "states": {
-    "PassingTicks": 4,
+    "PassingTicks": 5,
     "ShootingTicks": 5,
-    "TacklingTicks": 6,
+    "TacklingTicks": 3,
     "KnockedDownTicks": 18,
     "CelebratingTicks": 30,
-    "DribbleDuelCooldownTicks": 10
+    "DribbleDuelCooldownTicks": 40,
+    "TackleCooldownTicks": 100
   },
   "pass": {
-    "baseSuccess": 7800,
-    "techniqueFactor": 22,
-    "distancePenaltyPerCell": 220,
-    "pressurePenalty": 900,
+    "baseSuccess": 9200,
+    "techniqueFactor": 6,
+    "distancePenaltyPerCell": 130,
+    "pressurePenalty": 600,
     "interceptRadiusCells": 0.9,
-    "interceptBaseChance": 3500,
-    "interceptTechniqueFactor": 25
+    "interceptBaseChance": 250,
+    "interceptTechniqueFactor": 6
   },
   "dribble": {
-    "baseWin": 5000,
-    "attackerTechniqueFactor": 40,
-    "defenderSpeedFactor": 20,
-    "defenderStrengthFactor": 20
+    "baseWin": 8400,
+    "attackerTechniqueFactor": 10,
+    "defenderSpeedFactor": 5,
+    "defenderStrengthFactor": 5,
+    "lostKnockdownTicks": 6
   },
   "shot": {
-    "baseQuality": 3000,
-    "techniqueFactor": 35,
-    "strengthFactor": 15,
+    "baseQuality": 4875,
+    "techniqueFactor": 9,
+    "strengthFactor": 4,
     "distancePenaltyPerCell": 500,
     "pressurePenalty": 800,
     "offTargetBase": 2500,
-    "offTargetDistanceFactor": 250
+    "offTargetDistanceFactor": 250,
+    "penaltyQualityBonus": 15
   },
   "save": {
     "basePercent": 50,
     "closeRangeCells": 3,
-    "attributeWeightPercent": 30,
-    "consecutiveShotDecayPercent": 6
+    "attributeWeightPercent": 8,
+    "consecutiveShotDecayPercent": 6,
+    "qualityWeight": 60
   },
   "tackle": {
-    "baseWin": 4500,
-    "strengthFactor": 25,
-    "speedFactor": 15,
-    "carrierTechniqueFactor": 30,
-    "foulBase": 2200,
+    "baseWin": 2800,
+    "strengthFactor": 6,
+    "speedFactor": 4,
+    "carrierTechniqueFactor": 8,
+    "foulBase": 1200,
     "foulStrengthFactor": 12,
     "hardTackleThreshold": 6500,
     "yellowCardBase": 2000,
     "redCardBase": 300,
+    "hardTackleYellowBonus": 1500,
+    "hardTackleRedBonus": 200,
     "secondYellowIsRed": true
   },
   "injury": {
-    "onTackleBase": 240,
-    "onFoulBase": 700,
+    "onTackleBase": 170,
+    "onFoulBase": 420,
     "attackerStrengthFactor": 5,
     "victimStaminaResistFactor": 5,
     "severeShare": 3000
@@ -99,8 +106,9 @@
       "Midfielder": { "strength": -2, "speed": 2, "technique": 4, "stamina": 6, "leash": 8 },
       "Forward":    { "strength": 0, "speed": 6, "technique": 4, "stamina": -4, "leash": 0 }
     },
+    "leashBase": 50,
     "traitCountWeights": [50, 35, 15],
     "goalkeeperTraitChance": 5000
   },
-  "leash": { "minCells": 1, "cellsPer99": 4 }
+  "leash": { "minCells": 1, "cellsPer99": 8 }
 }

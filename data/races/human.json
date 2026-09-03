@@ -5,7 +5,7 @@
   "launch": true,
   "cellsOccupied": 1,
   "attributeBias": { "strength": 0, "speed": 0, "technique": 0, "stamina": 0, "leash": 0 },
-  "individualDeviation": 12,
+  "individualDeviation": 8,
   "traitWeights": { "Aggressive": 10, "Fast": 10, "Scorer": 10, "LongShot": 10, "Cerebral": 12, "Dirty": 8, "Resilient": 10, "Coward": 8, "Leader": 12, "Lazy": 10 },
   "names": {
     "first": ["Aldo", "Bruno", "Ciro", "Dario", "Elio", "Fabio", "Gino", "Hugo", "Ivo", "Jano", "Lino", "Marco", "Nilo", "Otto", "Pino", "Remo", "Sandro", "Tino", "Ugo", "Vito", "Ada", "Bea", "Cloe", "Dora", "Elsa", "Fina", "Gala", "Ines", "Juno", "Lía", "Mara", "Nora", "Olga", "Pola", "Rita", "Sara", "Tea", "Uma", "Vera", "Zoe"],

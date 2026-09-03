@@ -28,7 +28,7 @@ Concreta RT-020 a RT-024, RT-041, RT-097. Requisito: **misma semilla + mismo bin
 
 - Perks simultáneos: rareza desc, id de jugador asc, id de perk asc (RT-041).
 - Empates de utilidad: id de jugador asc (RT-097). Nunca RNG para desempatar.
-- Iteración de jugadores en un tick: por id ascendente.
+- Iteración de jugadores en un tick: por id ascendente en ticks pares y descendente en impares (`fase0-diseno.md` §3.2). Es un orden fijo y reproducible; la alternancia evita que el equipo con ids más bajos resuelva siempre antes los contactos del mismo tick (medido: 53,6% de victorias en partidos espejo con orden fijo).
 - Cualquier colección que afecte al resultado se recorre en orden definido: `List` o `SortedDictionary`. `Dictionary` y `HashSet` solo para búsqueda, nunca para iterar.
 - Los ids de jugador son enteros asignados en orden de creación dentro de la run; los ids de perk son strings comparados con `StringComparer.Ordinal`.
 

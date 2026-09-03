@@ -18,7 +18,7 @@ Registro vivo. Cuando una decisión se toma, se mueve a un ADR en `decisiones/` 
 | D-10 | Distribución exacta de tipos de nodo dentro de cada acto | Fase 2 | Ver D-2 |
 | D-11 | Precio de lanzamiento y alcance de la demo | Fase 4 | — |
 
-## Decisiones añadidas durante la preparación del repositorio
+## Decisiones añadidas durante la preparación del repositorio y la fase 0
 
 | Id | Decisión | Bloquea | Lectura provisional |
 |---|---|---|---|
@@ -28,6 +28,9 @@ Registro vivo. Cuando una decisión se toma, se mueve a un ADR en `decisiones/` 
 | D-14 | Organización de `/data`: un fichero por entidad o uno por tipo | Fase 1 | Un fichero por entidad; facilita revisión y diffs |
 | D-15 | Cómo se resuelve el consumible manual sin romper la pureza de `Simulador.Ejecutar` | Fase 1 | Re-ejecución con activación en el estado (ver `arquitectura.md`) |
 | D-16 | Analizador para prohibir APIs no deterministas en `/Sim` | Fase 0 | `Microsoft.CodeAnalysis.BannedApiAnalyzers` + test de ensamblado |
+| D-18 | `Trait.Leader` está implementado (§3.5) pero **inerte con `Lineup.Default`**: las casillas-hogar por defecto (GK (0,2); DEF (2,1),(2,3); MID (4,0),(4,2),(4,4); FWD (6,2)) no son contiguas entre sí, así que ningún jugador tiene un Leader adyacente y el bono nunca se aplica en fase 0 | Fase 1 | Se deja implementado y probado con una alineación a mano (`UtilityTests.LeaderBonusMultipliesTheBaseScore`). Cuando la fase 1 permita colocar a los titulares, hay que volver a medir su efecto en `/Balance` antes de darlo por equilibrado; si entonces sigue sin usarse, se retira de `traits.json` y de `TraitDefinition` |
+| D-19 | `individualDeviation` de las razas bajado de 12/14 a 8/9 en el paquete E | Fase 1 | La dispersión anterior hacía que la plantilla concreta pesara más que la diferencia de calidad en `betterTeamWinRate` (desviación de 11 puntos entre semillas). Con 8/9 baja a ~6 puntos y el rango 65-80 es alcanzable de forma estable. Revisar cuando existan niveles y perks, que añaden su propia dispersión |
+| D-20 | `generation.positionBias.leash` sigue en `tuning.json` y sí se usa, pero el atributo `leash` ya no depende de `quality` ni del dado (§2.6) | Fase 1 | La correa es disciplina posicional. Si en fase 1 se quiere que un jugador mejor cubra más campo, hazlo con una palanca continua (por ejemplo, casillas en centésimas) y no con la conversión entera actual, que da saltos de una casilla completa |
 
 ## Inconsistencias detectadas en requisitos v0.9
 
@@ -45,3 +48,5 @@ Se aplica la lectura indicada hasta que el documento suba de versión.
 | I-8 | D-9 vs RF-001c | La decisión pendiente pregunta si existe la condición de derrota propia del jefe final; RF-001c ya la afirma | Existe; falta definirla |
 | I-9 | RF-066 vs RF-055b | El catálogo tiene `INICIO_TURBA` y `ARBITRO_SE_VA` como eventos distintos aunque ocurren a la vez | Se emiten ambos, en ese orden, en el mismo tick |
 | I-10 | Numeración | Secciones 3.6c antes de 3.6b, 3.12b/3.12c | Cosmético; se corrige al subir de versión |
+| I-11 | RT-056, fila de resultados | `< 15% de empates al final del reglamentario` es incompatible con `mayoría de resultados entre 1-0 y 3-2` y `< 5% con más de 5 goles`: con marcadores casi independientes, bajar del 15% de empates exige unos 8 goles por partido (`e^-2λ·I₀(2λ)`) | La métrica se emite como `INFO` y no bloquea la puerta; medida en 29-31% con 2,4 goles por partido. Resolver con un ADR: o se sube el rango a ~30%, o se introduce una mecánica que correlacione los marcadores (el equipo por detrás arriesga más) |
+| I-12 | `balance.md` vs `fase0-diseno.md` §4 | `balance.md` pedía "equipo +10 en todos los atributos gana 65-80%"; `fase0-diseno.md` §4 y `Balance/Metrics.cs` aplican ese rango a una diferencia de **20** y dejan la de 10 como `INFO` | Se aplica la lectura de §4 (diferencia 20 obligatoria, diferencia 10 informativa en 55-70%) y se corrige la tabla de `balance.md` en el mismo commit. Con los datos del paquete E, +20 gana 73,0% y +10 gana 65,8% en 2.000 partidos con semilla 1 |

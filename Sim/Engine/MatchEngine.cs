@@ -7,29 +7,12 @@ namespace Underleague.Sim.Engine;
 
 /// <summary>
 /// Motor de partido (docs/fase0-diseno.md §3). Bucle de ticks determinista: un único Pcg32 para todo
-/// el partido, iteración de jugadores por id ascendente y ninguna colección sin orden (RT-020..RT-024).
+/// el partido, recorrido de jugadores por id (ascendente en los ticks pares, descendente en los impares,
+/// ver <see cref="PlayerInTurnOrder"/>) y ninguna colección sin orden (RT-020..RT-024).
 /// Se construye una vez por partido y se ejecuta con <see cref="Run"/>.
 /// </summary>
 internal sealed class MatchEngine
 {
-    /// <summary>Ventana en ticks para atribuir asistencia al último pase completado (§3.8).</summary>
-    private const int AssistWindowTicks = 60;
-
-    /// <summary>Ticks que queda derribado el defensor que pierde un regate (§3.7).</summary>
-    private const int DribbleLostKnockdownTicks = 6;
-
-    /// <summary>Sumando a la probabilidad de roja cuando la entrada es dura (§3.7).</summary>
-    private const int HardTackleRedBonus = 200;
-
-    /// <summary>Sumando a la probabilidad de amarilla cuando la entrada es dura (§3.7).</summary>
-    private const int HardTackleYellowBonus = 1500;
-
-    /// <summary>Peso de la calidad del tiro en el porcentaje de parada (§3.7).</summary>
-    private const int SaveQualityWeight = 60;
-
-    /// <summary>Bono de calidad de un penalti (§3.8).</summary>
-    private const int PenaltyQualityBonus = 15;
-
     /// <summary>Distancia del punto de penalti a la línea de gol, en casillas (§3.8).</summary>
     private const float PenaltySpotCells = 2f;
 
@@ -111,6 +94,27 @@ internal sealed class MatchEngine
             }
         }
 
+        // Bono de Leader (§3.5): suma de los bonos de los compañeros con casilla-hogar contigua. Las
+        // casillas-hogar son fijas durante el partido, así que se resuelve una sola vez aquí.
+        for (int i = 0; i < _players.Length; i++)
+        {
+            int bonus = 0;
+            for (int j = 0; j < _players.Length; j++)
+            {
+                if (i == j || _players[j].Team != _players[i].Team || _players[j].AdjacentTeammateBonusPercent == 0)
+                {
+                    continue;
+                }
+
+                if (Pitch.AreAdjacent(_players[i].HomeCell, _players[j].HomeCell))
+                {
+                    bonus += _players[j].AdjacentTeammateBonusPercent;
+                }
+            }
+
+            _players[i].LeaderBonusPercent = bonus;
+        }
+
         _ball.InterceptAttempted = new bool[_players.Length];
         _context = new UtilityContext(_players, _ball, catalog.Ai);
         _context.TacticalStates[0] = TacticalState.OutOfPossession;
@@ -189,7 +193,7 @@ internal sealed class MatchEngine
         {
             for (int i = 0; i < _players.Length; i++)
             {
-                TickStateTimer(_players[i]);
+                TickStateTimer(PlayerInTurnOrder(i));
             }
 
             _restartTicksLeft--;
@@ -202,7 +206,7 @@ internal sealed class MatchEngine
         {
             for (int i = 0; i < _players.Length; i++)
             {
-                UpdatePlayer(_players[i]);
+                UpdatePlayer(PlayerInTurnOrder(i));
             }
 
             UpdateBall();
@@ -218,6 +222,17 @@ internal sealed class MatchEngine
         AccumulateMetrics();
         CheckEndConditions();
     }
+
+    /// <summary>
+    /// Jugador que ocupa la posición i del recorrido de este tick (§3.2). El array está ordenado por id
+    /// ascendente; el recorrido lo hace en ese orden en los ticks pares y en orden inverso en los impares.
+    /// Con el orden fijo, el equipo cuyos jugadores tienen los ids más bajos resuelve antes las entradas,
+    /// los pases y los tiros del mismo tick y ganaba el 53,6% de los partidos espejo (paquete E): la
+    /// ventaja no era del local sino del que iba primero en el bucle. Alternar por paridad de tick es
+    /// igual de determinista y reproducible, y reparte esa ventaja entre los dos equipos.
+    /// </summary>
+    private MatchPlayer PlayerInTurnOrder(int i) =>
+        (_tick & 1) == 0 ? _players[i] : _players[_players.Length - 1 - i];
 
     // ---------------------------------------------------------------- 3.4 estado táctico y bloque
 
@@ -345,6 +360,11 @@ internal sealed class MatchEngine
             player.DribbleDuelCooldown--;
         }
 
+        if (player.TackleCooldown > 0)
+        {
+            player.TackleCooldown--;
+        }
+
         if (StateMachine.IsDecisionState(player.State)
             && (_tick + player.Id) % _tuning.DecisionIntervalTicks == 0)
         {
@@ -419,7 +439,11 @@ internal sealed class MatchEngine
 
                 break;
             case PlayerAction.Tackle:
+                // Un jugador no se tira dos veces seguidas: el enfriamiento (§3.5) evita las 75 entradas
+                // por partido que salían cuando la utilidad elegía Tackle en cada decisión con el rival
+                // cerca, y deja el número de entradas gobernado por un valor de datos (paquete E).
                 player.EnterState(PlayerState.Tackling, _tuning.States.TacklingTicks);
+                player.TackleCooldown = _tuning.States.TackleCooldownTicks + _tuning.States.TacklingTicks;
                 break;
             case PlayerAction.Dribble:
                 if (ReferenceEquals(_ball.Owner, player))
@@ -903,7 +927,7 @@ internal sealed class MatchEngine
         int quality = Math.Clamp(raw / 100, 5, 95);
         if (isPenalty)
         {
-            quality = Math.Clamp(quality + PenaltyQualityBonus, 5, 95);
+            quality = Math.Clamp(quality + shot.PenaltyQualityBonus, 5, 95);
         }
 
         bool offTarget = _rng.Chance(shot.OffTargetBase
@@ -974,7 +998,7 @@ internal sealed class MatchEngine
             int savePercent = Math.Clamp(
                 save.BasePercent
                 + ((relevant - 50) * save.AttributeWeightPercent / 50)
-                - ((_ball.ShotQuality - 50) * SaveQualityWeight / 100)
+                - ((_ball.ShotQuality - 50) * save.QualityWeight / 100)
                 - decay,
                 5,
                 95);
@@ -1007,7 +1031,7 @@ internal sealed class MatchEngine
         if (_lastCompletedPasser is not null
             && _lastCompletedPasser.Team == team
             && !ReferenceEquals(_lastCompletedPasser, shooter)
-            && _tick - _lastCompletedPassTick < AssistWindowTicks)
+            && _tick - _lastCompletedPassTick < _tuning.AssistWindowTicks)
         {
             assistant = _lastCompletedPasser;
             assistant.Assists++;
@@ -1064,7 +1088,13 @@ internal sealed class MatchEngine
 
         var dribble = _tuning.Dribble;
         Emit(EventType.DribbleAttempted, "attempted", carrier, opponent: defender);
+
+        // El enfriamiento se aplica a los dos duelistas, no solo al conductor (§3.7). Con el enfriamiento
+        // solo en el conductor, el defensor que ganaba el balón lo perdía al tick siguiente contra el
+        // mismo rival, que seguía a menos de 0,8 casillas: el balón rebotaba entre los dos equipos y
+        // producía decenas de cambios de posesión por partido (paquete E).
         carrier.DribbleDuelCooldown = _tuning.States.DribbleDuelCooldownTicks;
+        defender.DribbleDuelCooldown = _tuning.States.DribbleDuelCooldownTicks;
 
         int win = dribble.BaseWin
             + (dribble.AttackerTechniqueFactor * (carrier.Technique - 50))
@@ -1074,7 +1104,7 @@ internal sealed class MatchEngine
         if (_rng.Chance(win))
         {
             Emit(EventType.DribbleWon, "won", carrier, opponent: defender);
-            defender.EnterState(PlayerState.KnockedDown, DribbleLostKnockdownTicks);
+            defender.EnterState(PlayerState.KnockedDown, _tuning.Dribble.LostKnockdownTicks);
             return;
         }
 
@@ -1087,12 +1117,19 @@ internal sealed class MatchEngine
     {
         var carrier = tackler.TackleTarget;
         float reach = _catalog.Ai.Context.TackleDistanceMaxCells + TackleReachMargin;
-        if (carrier is null || !ReferenceEquals(_ball.Owner, carrier)
-            || Vec2.Distance(tackler.Position, carrier.Position) > reach)
+        if (carrier is null || !carrier.OnPitch || Vec2.Distance(tackler.Position, carrier.Position) > reach)
         {
+            // El rival se fue de su alcance antes de que la entrada llegara: no hay contacto ni evento.
             tackler.EnterState(PlayerState.Positioning, 0);
             return;
         }
+
+        // Entrada a destiempo: el rival soltó el balón mientras duraba Tackling. Antes el motor volvía a
+        // Positioning en silencio y no pasaba nada; ahora la entrada llega igual y se tira la falta (y la
+        // lesión si la hay), pero no cuenta como TACKLE ni puede robar un balón que ya no está: el evento
+        // TACKLE sigue siendo una disputa del balón (§3.7, RT-056) y las faltas tardías dejan de ser
+        // gratis. Sin esto, un defensor podía tirarse una y otra vez sin coste (paquete E).
+        bool carrierHasBall = ReferenceEquals(_ball.Owner, carrier);
 
         var tackle = _tuning.Tackle;
         int win = tackle.BaseWin
@@ -1113,11 +1150,14 @@ internal sealed class MatchEngine
             + biasShift;
 
         bool isFoul = _rng.Chance(foulChance);
-        bool isWin = _rng.Chance(win);
+        bool isWin = _rng.Chance(win) && carrierHasBall;
 
-        _report.Tackles++;
-        tackler.Tackles++;
-        Emit(EventType.Tackle, isFoul ? "foul" : (isWin ? "won" : "missed"), tackler, opponent: carrier);
+        if (carrierHasBall)
+        {
+            _report.Tackles++;
+            tackler.Tackles++;
+            Emit(EventType.Tackle, isFoul ? "foul" : (isWin ? "won" : "missed"), tackler, opponent: carrier);
+        }
 
         if (isFoul)
         {
@@ -1135,7 +1175,11 @@ internal sealed class MatchEngine
             tackler.EnterState(PlayerState.KnockedDown, _tuning.States.KnockedDownTicks / 2);
         }
 
-        ResolveInjury(tackler, carrier, isFoul);
+        // Sin balón y sin falta el que entra se retiró a tiempo: no hay contacto y no se tira lesión.
+        if (carrierHasBall || isFoul)
+        {
+            ResolveInjury(tackler, carrier, isFoul);
+        }
     }
 
     private void ResolveFoul(MatchPlayer tackler, MatchPlayer carrier)
@@ -1151,11 +1195,11 @@ internal sealed class MatchEngine
             || tackler.HasTrait(Trait.Dirty)
             || tackler.Strength * 100 >= tackle.HardTackleThreshold;
 
-        if (_rng.Chance(tackle.RedCardBase + (hard ? HardTackleRedBonus : 0)))
+        if (_rng.Chance(tackle.RedCardBase + (hard ? tackle.HardTackleRedBonus : 0)))
         {
             SendOff(tackler);
         }
-        else if (_rng.Chance(tackle.YellowCardBase + (hard ? HardTackleYellowBonus : 0)))
+        else if (_rng.Chance(tackle.YellowCardBase + (hard ? tackle.HardTackleYellowBonus : 0)))
         {
             tackler.YellowCards++;
             tackler.Cards++;

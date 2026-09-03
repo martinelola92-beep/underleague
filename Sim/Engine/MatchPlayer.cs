@@ -57,6 +57,7 @@ internal sealed class MatchPlayer
             InjuryChanceBonus += trait.InjuryChanceBonus;
             FatigueResistancePercent += trait.FatigueResistancePercent;
             InjuryResistanceBonus += trait.InjuryResistanceBonus;
+            AdjacentTeammateBonusPercent += trait.AdjacentTeammateBonusPercent;
             SaveBonusClose += trait.SaveBonusClose;
             SaveBonusFar += trait.SaveBonusFar;
             LeashBonus += trait.LeashBonus;
@@ -125,6 +126,15 @@ internal sealed class MatchPlayer
 
     public int InjuryResistanceBonus { get; }
 
+    /// <summary>Bono porcentual que este jugador da a los compañeros con casilla-hogar contigua (Leader, RT-094).</summary>
+    public int AdjacentTeammateBonusPercent { get; }
+
+    /// <summary>
+    /// Suma de los bonos de los Leader del equipo con casilla-hogar contigua a la suya (§3.5). Se calcula
+    /// una vez al construir el motor: las casillas-hogar no cambian durante el partido.
+    /// </summary>
+    public int LeaderBonusPercent { get; set; }
+
     public int SaveBonusClose { get; }
 
     public int SaveBonusFar { get; }
@@ -157,6 +167,9 @@ internal sealed class MatchPlayer
 
     /// <summary>Ticks que faltan para poder volver a disputar un regate (§3.7).</summary>
     public int DribbleDuelCooldown { get; set; }
+
+    /// <summary>Ticks que faltan para poder volver a decidir una entrada (§3.5); mientras sea &gt; 0, Tackle se descarta.</summary>
+    public int TackleCooldown { get; set; }
 
     /// <summary>Tarjetas amarillas acumuladas (la segunda es roja si lo dice tuning).</summary>
     public int YellowCards { get; set; }

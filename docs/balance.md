@@ -41,6 +41,15 @@ Criterio de salida de la fase 0 e indicador permanente del equilibrio fútbol/ag
 
 Los rangos son puntos de partida. **Cambiar un rango es una decisión explícita** (RT-057): ADR en `decisiones/` con los datos que lo motivan y actualización de esta tabla en el mismo commit.
 
+### Cómo se leen estas métricas (medido en el paquete E)
+
+- **El cálculo es único**: `Sim/Analysis/MatchMetrics.cs`. Lo usan el lote de `/Balance` y la puerta estadística de `Sim.Tests`; no hay dos definiciones de la misma métrica.
+- **Alternancias de posesión y tiros están acopladas**: toda posesión que acaba en tiro acaba también en cambio de poseedor (parada, saque de puerta o saque de centro). Con 8-16 tiros, entre 8 y 16 de las 12-25 alternancias ya están gastadas; el resto del presupuesto es para intercepciones, entradas ganadas, regates perdidos, saques de banda y córneres. Subir los tiros sin bajar las pérdidas saca `possessionChanges` de rango.
+- **`ballThirdMaxShare` cuenta también el balón parado**: durante reanudaciones el reloj sigue y el balón está quieto en el punto del saque (§3.11), así que el tercio de los saques de puerta suma. Es intencionado: el tiempo muerto es parte del reparto.
+- **`drawShareAtRegulation` < 15% no es alcanzable junto con el resto de la fila de resultados.** Con dos marcadores aproximadamente independientes, la probabilidad de empate es `e^-2λ·I₀(2λ)`: 27% con 2,5 goles por partido, 23% con 3,2 y 14% solo a partir de 8 goles por partido, que rompería a la vez `< 5%` de partidos con más de cinco goles y la mayoría de resultados entre 1-0 y 3-2. La medición del paquete E se queda en 29-31% con 2,4 goles por partido. La métrica es `INFO` en `summary.csv` y **no bloquea** la puerta; queda anotada como inconsistencia I-11 en `pendientes.md`. El partido nunca termina en empate de todos modos (gol de oro, RF-055c): lo que mide en la práctica es la frecuencia de turba.
+- **`betterTeamWinRate` mide dos plantillas concretas, no dos calidades.** Cada equipo del conjunto de referencia se genera una sola vez por lote (`RngStreams.Generation(semilla, índice)`), así que los 333 partidos de un emparejamiento en un lote de 2.000 son la misma pareja de plantillas: el tamaño de muestra efectivo para esta métrica es el número de **semillas**, no el de partidos. Medida sobre diez semillas, la tasa para una diferencia de calidad de 20 tiene una desviación de unos 6 puntos alrededor de la media. Si el valor se mueve al cambiar `--runs` o `--seed`, no es ruido de partido: es otra plantilla.
+- **Local y visitante no cambian nada**: desde el paquete E, dos equipos de la misma calidad ganan 50,6%/49,4% (4.800 partidos espejo). Cualquier ventaja de local debe venir del criterio del árbitro (RF-060).
+
 ## Puertas de CI (RT-054, RT-055)
 
 En cada commit sobre `/Sim` o `/data`:
@@ -63,7 +72,7 @@ Se añaden a `summary.csv` cuando el sistema correspondiente existe:
 | Cada raza sostiene 3 builds viables distintas | RF-032 | Tres configuraciones con tasa 30-70% y perks mayoritariamente distintos | 2-3 |
 | Distribución del catálogo de perks | RF-069 | 60/30/10 ±5 puntos | 1+ |
 | Perks que acumulan entre partidos | RF-070 | >= 15 en el catálogo de lanzamiento | 2+ |
-| Mejores equipos ganan más con sorpresas creíbles | Fase 0 | Equipo +10 en todos los atributos gana 65-80% | 0 |
+| Mejores equipos ganan más con sorpresas creíbles | Fase 0 | Equipo **+20** en todos los atributos gana 65-80%; +10 es informativo y se vigila en 55-70% | 0 |
 
 ## Definición de "build" para `/Balance`
 
