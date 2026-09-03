@@ -23,6 +23,7 @@ export/
 
 # Salidas de /Balance
 Balance/out/
+out/
 *.csv
 !data/**/*.csv
 
