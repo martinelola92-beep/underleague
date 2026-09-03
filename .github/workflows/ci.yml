@@ -70,8 +70,9 @@ jobs:
         shell: bash
         run: |
           set -u
-          ubuntu_file=$(find fingerprints/ubuntu-latest -type f -name fingerprint.txt | head -n1)
-          windows_file=$(find fingerprints/windows-latest -type f -name fingerprint.txt | head -n1)
+          # bash corre con -e -o pipefail: find sobre un directorio inexistente rompería el paso.
+          ubuntu_file=$( [ -d fingerprints/ubuntu-latest ] && find fingerprints/ubuntu-latest -type f -name fingerprint.txt | head -n1 || true )
+          windows_file=$( [ -d fingerprints/windows-latest ] && find fingerprints/windows-latest -type f -name fingerprint.txt | head -n1 || true )
 
           if [ -z "$ubuntu_file" ] || [ -z "$windows_file" ]; then
             echo "No se encontró fingerprint.txt en uno de los dos sistemas operativos (aún no hay DeterminismTests.CrossPlatformFingerprint); nada que comparar todavía."
