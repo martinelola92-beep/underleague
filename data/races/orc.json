@@ -1,0 +1,14 @@
+{
+  "id": "Orc",
+  "name": { "es": "Orcos", "en": "Orcs" },
+  "tag": "Brute",
+  "launch": true,
+  "cellsOccupied": 1,
+  "attributeBias": { "strength": 14, "speed": -4, "technique": -10, "stamina": 6, "leash": -1 },
+  "individualDeviation": 14,
+  "traitWeights": { "Aggressive": 25, "Fast": 6, "Scorer": 8, "LongShot": 6, "Cerebral": 3, "Dirty": 18, "Resilient": 14, "Coward": 2, "Leader": 8, "Lazy": 10 },
+  "names": {
+    "first": ["Grok", "Urzag", "Morg", "Thrak", "Bolg", "Gashk", "Ruk", "Zog", "Drog", "Krum", "Snaga", "Urk", "Ghash", "Lurtz", "Muzgash", "Naz", "Ogrim", "Rukh", "Shagrat", "Yagul", "Brakka", "Gorza", "Mazka", "Ulga", "Zurka", "Hrakka", "Nargla", "Torka"],
+    "last": ["Rompehuesos", "Comecráneos", "Piedraroja", "Mascadientes", "Tragaclavos", "Matabueyes", "Partecuellos", "Muerdehierro", "Sangrefría", "Pisacráneos", "Quiebraespinas", "Zampalobos"]
+  }
+}

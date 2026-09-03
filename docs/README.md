@@ -12,6 +12,7 @@
 | [pendientes.md](pendientes.md) | Decisiones abiertas e inconsistencias del documento de requisitos |
 | [decisiones/](decisiones/README.md) | Registro de decisiones de arquitectura (ADR) |
 | [entorno.md](entorno.md) | Puesta a punto de la máquina (WSL + Windows) |
+| [fase0-diseno.md](fase0-diseno.md) | Especificación de implementación de la fase 0: tipos, firmas, fórmulas, paquetes de trabajo |
 | [glosario-identificadores.md](glosario-identificadores.md) | Correspondencia español -> identificador en código. Única fuente para nombrar conceptos |
 
 Convención de referencias: los identificadores `RF-xxx`, `RT-xxx`, `RA-xxx` y `UI-xxx` apuntan siempre a `requisitos.md`. Los documentos derivados **no repiten** los requisitos: los organizan, los concretan y registran lo que el documento original deja abierto.

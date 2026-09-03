@@ -29,28 +29,28 @@ Una sola entrada. Todo lo demás es `internal`.
 ```csharp
 namespace Underleague.Sim;
 
-public static class Simulador
+public static class Simulator
 {
-    /// Ejecuta un partido completo. Puro: mismo (estado, semilla, catalogo, config) => mismo resultado.
-    public static ResultadoPartido Ejecutar(
-        EstadoPartido inicial,
-        ulong semilla,
-        Catalogo catalogo,          // perks, objetos, consumibles, pesos de IA ya compilados
-        ConfiguracionSim config);   // ticks/s, profundidad máxima de recursión, etc.
+    /// Ejecuta un partido completo. Puro: mismo (estado, semilla, catálogo, config) => mismo resultado.
+    public static MatchResult Run(
+        MatchState initialState,
+        ulong seed,
+        Catalog catalog,            // perks, objetos, consumibles, pesos de IA ya compilados
+        SimConfig config);          // ticks/s, profundidad máxima de recursión, etc.
 }
 
-public sealed record ResultadoPartido(
-    IReadOnlyList<Evento> Eventos,          // ordenados por tick, luego por orden de resolución
-    EstadoPartido Final,
-    InformePartido Informe);                // activaciones de perks con contexto (RT-043), criterio del árbitro
+public sealed record MatchResult(
+    IReadOnlyList<Event> Events,            // ordenados por tick, luego por orden de resolución
+    MatchState FinalState,
+    MatchReport Report);                    // activaciones de perks con contexto (RT-043), criterio del árbitro
 ```
 
 Además, para no obligar al llamador a conocer el formato interno, `/Sim` expone parseo **desde string** (no desde fichero):
 
 ```csharp
-public static class CargaDatos
+public static class DataLoader
 {
-    public static Catalogo DesdeJson(IReadOnlyDictionary<string, string> ficherosPorRuta); // valida contra esquema, compila NCalc
+    public static Catalog FromJson(IReadOnlyDictionary<string, string> filesByPath); // valida contra esquema, compila NCalc
 }
 ```
 
@@ -58,21 +58,21 @@ Quién lee del disco es siempre el llamador (`/Game`, `/Balance`, `/tools`).
 
 ## Eventos (RT-040, RF-066, RF-067)
 
-- `Evento` es un registro inmutable: `Tipo` (enum con el catálogo de RF-066), `Tick`, y `Contexto` con ejecutor, receptor, rival implicado, casilla, zona del campo, estado del partido (reglamentario/turba), criterio del árbitro y distancia a portería.
+- El evento (`Event`) es un registro inmutable: `Type` (enum `EventType` con el catálogo de RF-066), `Tick`, y `Context` con ejecutor (`Actor`), receptor (`Target`), rival implicado (`Opponent`), casilla (`Cell`), zona del campo (`Zone`), estado del partido (`MatchPhase`, reglamentario/turba), criterio del árbitro (`Bias`) y distancia a portería (`DistanceToGoal`).
 - El bus es propio (~30 líneas): lista ordenada de suscriptores por tipo de evento. Los perks activos se suscriben al empezar el partido.
 - Orden de resolución de perks simultáneos (RT-041): rareza descendente, id de jugador ascendente, id de perk ascendente. Documentado aquí y comprobado por test.
-- Recursión (RT-042): un efecto que publica un evento incrementa una profundidad; al superar `config.ProfundidadMaxima` (por defecto 4) el evento se descarta y se registra `RECURSION_CORTADA` en el informe, nunca una excepción.
+- Recursión (RT-042): un efecto que publica un evento incrementa una profundidad; al superar `config.MaxDepth` (por defecto 4) el evento se descarta y se registra `RECURSION_CUT` en el informe, nunca una excepción.
 - Cada activación se registra con su contexto (RT-043) para alimentar el informe post-partido (RF-119).
 
 ## Render (RT-014, RT-020)
 
-`/Game` reproduce la lista de eventos: interpola posiciones entre ticks, dispara animaciones, highlights (RF-115/116), texto flotante (RF-118) y log (RF-121). No tiene acceso al estado interno del simulador y no puede alterar el resultado. La velocidad x1..x4 y "saltar al resultado" (RF-050) solo cambian el ritmo de consumo de la lista. La repetición (RF-120) es volver a ejecutar `Simulador.Ejecutar` con la misma semilla y reproducir el tramo.
+`/Game` reproduce la lista de eventos: interpola posiciones entre ticks, dispara animaciones, highlights (RF-115/116), texto flotante (RF-118) y log (RF-121). No tiene acceso al estado interno del simulador y no puede alterar el resultado. La velocidad x1..x4 y "saltar al resultado" (RF-050) solo cambian el ritmo de consumo de la lista. La repetición (RF-120) es volver a ejecutar `Simulator.Run` con la misma semilla y reproducir el tramo.
 
 ## Consumibles manuales durante el partido (RF-082)
 
-Un consumible manual es una entrada del usuario en mitad de un partido determinista. Se modela como parte del **estado inicial**: `Simulador.Ejecutar` se llama con la lista de consumibles ya equipados y sus disparadores; el slot manual se resuelve así:
+Un consumible manual es una entrada del usuario en mitad de un partido determinista. Se modela como parte del **estado inicial**: `Simulator.Run` se llama con la lista de consumibles ya equipados y sus disparadores; el slot manual se resuelve así:
 
-1. El render ejecuta el partido por tramos. Al pulsar el consumible en el tick T, `/Game` vuelve a llamar a `Ejecutar` con `inicial + activacionManual(idConsumible, tick T)` y descarta los eventos posteriores a T de la ejecución anterior.
+1. El render ejecuta el partido por tramos. Al pulsar el consumible en el tick T, `/Game` vuelve a llamar a `Run` con `initialState + manualActivation(consumableId, tick T)` y descarta los eventos posteriores a T de la ejecución anterior.
 2. La activación queda en el estado, por lo que la repetición y el guardado ironman (RT-061) reproducen exactamente lo mismo.
 
 Esta decisión mantiene RT-013 (una sola entrada pura) sin excepciones. Coste: recalcular desde el inicio, que con partidos de 60-90 s a 15 ticks/s es despreciable (RT-051).
@@ -84,8 +84,8 @@ Esta decisión mantiene RT-013 (una sola entrada pura) sin excepciones. Coste: r
 
 ## Persistencia (RT-060 a RT-063)
 
-- JSON local con `version_esquema`. Un slot por run (ironman): se guarda al completar cada nodo, se borra al cargar. Salir a mitad de partido reproduce el partido desde la semilla al volver.
-- Modo de depuración (RT-062): `/Game` y `/Balance` aceptan `--estado ruta.json` para cargar un estado predefinido.
+- JSON local con `schemaVersion`. Un slot por run (ironman): se guarda al completar cada nodo, se borra al cargar. Salir a mitad de partido reproduce el partido desde la semilla al volver.
+- Modo de depuración (RT-062): `/Game` y `/Balance` aceptan `--state path.json` para cargar un estado predefinido.
 - Steam Cloud sincroniza el directorio de guardado. Fase 4.
 - Telemetría (RT-065): el **formato del evento** se define en fase 1 en `modelo-datos.md`; el envío llega en fase 4 y está desactivado por defecto.
 

@@ -1,0 +1,95 @@
+{
+  "_doc": "Constantes de resolución del simulador. Probabilidades en base 10000 salvo que se indique. Enteras.",
+  "ticksPerSecond": 15,
+  "regulationTicks": 1200,
+  "goldenGoalMaxTicks": 900,
+  "decisionIntervalTicks": 2,
+  "transitionTicks": 12,
+  "movement": {
+    "baseCellsPerTickMilli": 90,
+    "speedCellsPerTickMilliPer99": 110,
+    "dribbleSpeedPercent": 80,
+    "fatigueStartTick": 600,
+    "fatigueMaxSlowPercent": 25
+  },
+  "ball": {
+    "passSpeedCellsPerTickMilli": 450,
+    "shotSpeedCellsPerTickMilli": 700,
+    "looseBallFrictionPercent": 92
+  },
+  "states": {
+    "PassingTicks": 4,
+    "ShootingTicks": 5,
+    "TacklingTicks": 6,
+    "KnockedDownTicks": 18,
+    "CelebratingTicks": 30,
+    "DribbleDuelCooldownTicks": 10
+  },
+  "pass": {
+    "baseSuccess": 7800,
+    "techniqueFactor": 22,
+    "distancePenaltyPerCell": 220,
+    "pressurePenalty": 900,
+    "interceptRadiusCells": 0.9,
+    "interceptBaseChance": 3500,
+    "interceptTechniqueFactor": 25
+  },
+  "dribble": {
+    "baseWin": 5000,
+    "attackerTechniqueFactor": 40,
+    "defenderSpeedFactor": 20,
+    "defenderStrengthFactor": 20
+  },
+  "shot": {
+    "baseQuality": 3000,
+    "techniqueFactor": 35,
+    "strengthFactor": 15,
+    "distancePenaltyPerCell": 500,
+    "pressurePenalty": 800,
+    "offTargetBase": 2500,
+    "offTargetDistanceFactor": 250
+  },
+  "save": {
+    "basePercent": 50,
+    "closeRangeCells": 3,
+    "attributeWeightPercent": 30,
+    "consecutiveShotDecayPercent": 6
+  },
+  "tackle": {
+    "baseWin": 4500,
+    "strengthFactor": 25,
+    "speedFactor": 15,
+    "carrierTechniqueFactor": 30,
+    "foulBase": 2200,
+    "foulStrengthFactor": 12,
+    "hardTackleThreshold": 6500,
+    "yellowCardBase": 2000,
+    "redCardBase": 300,
+    "secondYellowIsRed": true
+  },
+  "injury": {
+    "onTackleBase": 240,
+    "onFoulBase": 700,
+    "attackerStrengthFactor": 5,
+    "victimStaminaResistFactor": 5,
+    "severeShare": 3000
+  },
+  "referee": {
+    "biasFoulShiftPer10": 400,
+    "penaltyOnFoulInArea": 8000
+  },
+  "restart": {
+    "throwInTicks": 15,
+    "goalKickTicks": 15,
+    "cornerTicks": 15,
+    "kickoffTicks": 15,
+    "penaltyTicks": 45
+  },
+  "pitch": {
+    "columns": 16,
+    "rows": 5,
+    "areaColumns": 2,
+    "areaRows": 3,
+    "goalRows": 3
+  }
+}

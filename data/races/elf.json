@@ -1,0 +1,14 @@
+{
+  "id": "Elf",
+  "name": { "es": "Elfos", "en": "Elves" },
+  "tag": "Fine",
+  "launch": true,
+  "cellsOccupied": 1,
+  "attributeBias": { "strength": -12, "speed": 6, "technique": 14, "stamina": -6, "leash": 1 },
+  "individualDeviation": 12,
+  "traitWeights": { "Aggressive": 3, "Fast": 16, "Scorer": 12, "LongShot": 14, "Cerebral": 20, "Dirty": 4, "Resilient": 4, "Coward": 12, "Leader": 8, "Lazy": 7 },
+  "names": {
+    "first": ["Aelar", "Belanor", "Caelum", "Daeris", "Elandor", "Faelar", "Galion", "Haldir", "Ithil", "Laeron", "Maeron", "Naerys", "Orophin", "Rhovan", "Sindar", "Thalion", "Vaelis", "Ysolde", "Aerin", "Celebrin", "Elowen", "Faelwen", "Ilphra", "Lorien", "Miriel", "Nimue", "Saelis", "Tauriel", "Ylwen", "Zephyra"],
+    "last": ["Hojaplata", "Vientoclaro", "Lunargenta", "Ramaluz", "Sombraverde", "Cantoalba", "Espinafina", "Brisadorada", "Rocíogris", "Fuegoquieto"]
+  }
+}

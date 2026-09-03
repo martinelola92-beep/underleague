@@ -1,0 +1,8 @@
+<Solution>
+  <Folder Name="/tools/">
+    <Project Path="tools/DataValidator/DataValidator.csproj" />
+  </Folder>
+  <Project Path="Balance/Balance.csproj" />
+  <Project Path="Sim.Tests/Sim.Tests.csproj" />
+  <Project Path="Sim/Sim.csproj" />
+</Solution>

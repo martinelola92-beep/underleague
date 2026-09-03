@@ -11,13 +11,13 @@ Concreta RT-020 a RT-024, RT-041, RT-097. Requisito: **misma semilla + mismo bin
 ## Generador aleatorio
 
 - Propio, PCG32 (ver ADR 0004). Salida de 32 bits, estado de 64 bits, semilla `ulong`. `System.Random` queda prohibido: su secuencia no es estable entre versiones de .NET.
-- API mínima: `Siguiente()`, `Entre(int minInclusivo, int maxExclusivo)`, `Porcentaje(int probabilidad)` (devuelve `true` con `probabilidad` en 0-100), `Elegir<T>(IReadOnlyList<T>)`, `Barajar<T>(IList<T>)`. Todo entero.
-- **Flujos separados** (RT-022), derivados de la semilla de la run con un mezclador (splitmix64): `rngPartido(indiceNodo)`, `rngMapa(acto)`, `rngRecompensas(indiceNodo)`, `rngEventos(indiceNodo)`. Cambiar recompensas no altera el partido con la misma semilla.
+- API mínima: `Next()`, `Range(int minInclusive, int maxExclusive)`, `Chance(int probability)` (devuelve `true` con `probability` en 0-100), `Pick<T>(IReadOnlyList<T>)`, `Shuffle<T>(IList<T>)`. Todo entero.
+- **Flujos separados** (RT-022), derivados de la semilla de la run con un mezclador (splitmix64): `matchRng(nodeIndex)`, `mapRng(act)`, `rewardRng(nodeIndex)`, `eventRng(nodeIndex)`. Cambiar recompensas no altera el partido con la misma semilla.
 - El RNG del partido se pasa explícitamente a quien lo necesita; no hay instancia global ni estática (RT-021).
 
 ## Aritmética
 
-- Atributos (1-99), probabilidades (0-100 o 0-10000 según precisión), contadores, criterio del árbitro (-100..+100), oro y experiencia: **`int`** (RT-023). Los porcentajes se calculan como `valor * p / 100` con división entera, siempre en el mismo orden de operaciones.
+- Atributos (1-99), probabilidades (0-100 o 0-10000 según precisión), contadores, criterio del árbitro (-100..+100), oro y experiencia: **`int`** (RT-023). Los porcentajes se calculan como `value * p / 100` con división entera, siempre en el mismo orden de operaciones.
 - Posiciones y vectores de movimiento: `float` (RT-023). Se aceptan porque, con el mismo binario, la misma máquina y el mismo orden de operaciones, `float` es determinista. Reglas para que siga siéndolo:
   - No usar `Math.Sin/Cos/Pow/Exp` en `/Sim`. Solo suma, resta, multiplicación, división y `MathF.Sqrt` (IEEE exacta).
   - No convertir una comparación en probabilidad: la distancia se compara con umbrales, no se mezcla con el RNG.
@@ -40,10 +40,10 @@ Concreta RT-020 a RT-024, RT-041, RT-097. Requisito: **misma semilla + mismo bin
 
 | Test | Qué comprueba | Referencia |
 |---|---|---|
-| `DeterminismoTests.MismaSemillaMismosEventos` | Dos ejecuciones con misma semilla producen secuencias de eventos idénticas (comparación elemento a elemento, no solo hash) | RT-024, RT-082 |
-| `DeterminismoTests.HuellaMultiplataforma` | Escribe un hash de la secuencia para 100 semillas; la CI compara el artefacto de Windows con el de Linux | RT-024 |
-| `DeterminismoTests.FlujosIndependientes` | Cambiar la semilla de recompensas no altera los eventos del partido | RT-022 |
-| `ArquitecturaTests.SimNoReferenciaGodot` | El ensamblado `Underleague.Sim` no referencia `GodotSharp` ni `System.IO.File` | RT-011, RT-012 |
-| `OrdenTests.PerksSimultaneos` | Tres perks disparados en el mismo evento se resuelven en el orden de RT-041 | RT-041 |
+| `DeterminismTests.SameSeedSameEvents` | Dos ejecuciones con misma semilla producen secuencias de eventos idénticas (comparación elemento a elemento, no solo hash) | RT-024, RT-082 |
+| `DeterminismTests.CrossPlatformFingerprint` | Escribe un hash de la secuencia para 100 semillas; la CI compara el artefacto de Windows con el de Linux | RT-024 |
+| `DeterminismTests.IndependentStreams` | Cambiar la semilla de recompensas no altera los eventos del partido | RT-022 |
+| `ArchitectureTests.SimDoesNotReferenceGodot` | El ensamblado `Underleague.Sim` no referencia `GodotSharp` ni `System.IO.File` | RT-011, RT-012 |
+| `OrderingTests.SimultaneousPerks` | Tres perks disparados en el mismo evento se resuelven en el orden de RT-041 | RT-041 |
 
 La CI ejecuta `dotnet test` en `windows-latest` y `ubuntu-latest` en cada commit que toque `/Sim` o `/data` (RT-054). Una divergencia de huella entre ambos abre automáticamente la decisión RT-023b.

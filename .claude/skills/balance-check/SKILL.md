@@ -12,12 +12,12 @@ Fuente: `docs/balance.md`. Los rangos que hay allí son los vigentes; no uses ot
 1. Asegúrate de que compila y pasan los tests: `dotnet build Underleague.sln && dotnet test Sim.Tests`. Si el test estadístico de 1.000 partidos falla, ya tienes la respuesta; no sigas hasta entenderlo.
 2. Lanza el lote de referencia con la **misma semilla base** que la última medición registrada (búscala en el último commit que tocó `Balance/out/` o en `docs/balance.md`):
    ```bash
-   dotnet run --project Balance -c Release -- --runs 10000 --seed 1 --teams data/balance/referencia.json --out out/$(date +%F)/
+   dotnet run --project Balance -c Release -- --runs 10000 --seed 1 --teams data/balance/reference.json --out out/$(date +%F)/
    ```
-3. Lee `out/<fecha>/resumen.csv`. Presenta una tabla con: métrica, valor, rango, DENTRO/FUERA, y la diferencia respecto a la medición anterior si existe.
+3. Lee `out/<fecha>/summary.csv`. Presenta una tabla con: métrica, valor, rango, dentro/fuera (`IN`/`OUT`), y la diferencia respecto a la medición anterior si existe.
 4. Comprueba el tiempo total: si supera 60 s para 10.000 partidos, es un hallazgo (RT-051).
 5. Para cada build catalogada, tasa de victoria contra la referencia: cualquier valor > 70% o < 30% rompe RT-055 y bloquea el commit.
-6. Si se tocó el catálogo de perks, incluye la distribución relleno/condicional/rompe-reglas (RF-069) y el número de perks con `acumulaEntrePartidos` (RF-070, >= 15).
+6. Si se tocó el catálogo de perks, incluye la distribución relleno/condicional/rompe-reglas (`filler`/`conditional`/`ruleBreaker`, RF-069) y el número de perks con `accumulatesAcrossMatches` (RF-070, >= 15).
 
 ## Interpretación
 

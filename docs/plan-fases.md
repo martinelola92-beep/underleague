@@ -14,10 +14,10 @@ Entregables:
 
 1. Solución `Underleague.sln` con `/Sim`, `/Sim.Tests`, `/Balance`, `/tools/DataValidator`. CI en GitHub Actions con matriz Windows/Linux (RT-024, RT-054).
 2. RNG PCG32 + splitmix64 para derivar flujos (RT-021, RT-022). Tests.
-3. Esquema `Run` y `EstadoPartido` versión 1 en código y JSON Schema (RT-030). Solo los campos que la fase 0 usa; el resto se documenta en `modelo-datos.md`.
+3. Esquema `Run` y `MatchState` versión 1 en código y JSON Schema (RT-030). Solo los campos que la fase 0 usa; el resto se documenta en `modelo-datos.md`.
 4. Campo 16x5, casillas-hogar, correas, posiciones y restricciones de colocación (RF-040..045).
-5. Las tres máquinas de estado en código con `Puede(estado, accion)` (RT-089c).
-6. IA de utilidad con pesos en `data/ia/` por posición y rasgo (RT-090..097) y volcado de tabla por tick (RT-098).
+5. Las tres máquinas de estado en código con `CanPerform(state, action)` (RT-089c).
+6. IA de utilidad con pesos en `data/ai/` por posición y rasgo (RT-090..097) y volcado de tabla por tick (RT-098).
 7. Portero con fórmula de parada (RF-057c).
 8. Árbitro neutro con criterio fijo 0: faltas, tarjetas, penalti (para que la máquina de partido esté completa).
 9. Jugadas y fases de jugada (RF-051), saque, reanudaciones instantáneas (RF-052/053).

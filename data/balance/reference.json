@@ -1,0 +1,18 @@
+{
+  "_doc": "Conjunto de referencia para /Balance (RT-052). Cada equipo se genera desde raza y calidad media (nivel de atributos), con la semilla del lote. quality: media objetivo de atributos antes de sesgo racial.",
+  "teams": [
+    { "id": "human_50", "race": "Human", "quality": 50 },
+    { "id": "orc_50",   "race": "Orc",   "quality": 50 },
+    { "id": "elf_50",   "race": "Elf",   "quality": 50 },
+    { "id": "human_60", "race": "Human", "quality": 60 },
+    { "id": "human_40", "race": "Human", "quality": 40 }
+  ],
+  "pairings": [
+    ["human_50", "human_50"],
+    ["human_50", "orc_50"],
+    ["human_50", "elf_50"],
+    ["orc_50", "elf_50"],
+    ["human_60", "human_50"],
+    ["human_60", "human_40"]
+  ]
+}

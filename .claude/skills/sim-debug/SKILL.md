@@ -12,21 +12,21 @@ Fuentes: `docs/simulacion.md`, `docs/determinismo.md`, `docs/arquitectura.md`.
 Todo partido queda identificado por `(semilla, estado inicial, versión de /data)`. Con eso:
 
 ```bash
-dotnet run --project Balance -- --runs 1 --seed <semilla> --teams <config> --out out/debug/ --log
+dotnet run --project Balance -- --runs 1 --seed <seed> --teams <config> --out out/debug/ --log
 ```
 
-`--log` imprime el log de eventos (RF-121) tick a tick. Si el partido viene de una run guardada, usa `--estado <guardado.json>` (RT-062), que contiene el snapshot de `/data` (RT-061b).
+`--log` imprime el log de eventos (RF-121) tick a tick. Si el partido viene de una run guardada, usa `--state <saved.json>` (RT-062), que contiene el snapshot de `/data` (RT-061b).
 
 ## "¿Por qué hizo eso el jugador?"
 
 1. Localiza el tick en el log de eventos.
-2. Vuelca la tabla de utilidad: `--dump-utility <idJugador>:<tick>` (RT-098). Muestra cada acción legal en el estado del jugador con su puntuación y los términos que la componen (peso base por posición, modificadores de rasgo, estado táctico, contexto).
-3. Comprueba en orden: ¿estaba el jugador en un estado que permitía la acción esperada (`Puede(estado, accion)`)? ¿La correa la descartó antes de puntuar (RT-095)? ¿Qué término dominó?
-4. Si la decisión es correcta según los pesos pero mala para el juego, el arreglo es un dato en `data/ia/`, no un caso especial en código.
+2. Vuelca la tabla de utilidad: `--dump-utility <playerId>:<tick>` (RT-098). Muestra cada acción legal en el estado del jugador con su puntuación y los términos que la componen (peso base por posición, modificadores de rasgo, estado táctico, contexto).
+3. Comprueba en orden: ¿estaba el jugador en un estado que permitía la acción esperada (`CanPerform(state, action)`)? ¿La correa la descartó antes de puntuar (RT-095)? ¿Qué término dominó?
+4. Si la decisión es correcta según los pesos pero mala para el juego, el arreglo es un dato en `data/ai/`, no un caso especial en código.
 
 ## Divergencia de determinismo
 
-Síntoma: `DeterminismoTests` falla, o la huella de Windows y Linux difiere en CI.
+Síntoma: `DeterminismTests` falla, o la huella de Windows y Linux difiere en CI.
 
 1. Reproduce en local: ejecuta el mismo partido dos veces y compara las secuencias de eventos con `diff`. El **primer** evento distinto marca el tick sospechoso.
 2. En ese tick, busca en orden las causas habituales de `docs/determinismo.md`:

@@ -10,20 +10,20 @@ Consola .NET que ejecuta N partidos sin Godot y vuelca CSV.
 dotnet run --project Balance -- \
   --runs 10000 \
   --seed 1 \
-  --teams data/balance/referencia.json \      # parejas o pool de equipos
-  --perks sed_de_sangre,cara_de_inocente \    # filtro opcional
+  --teams data/balance/reference.json \       # parejas o pool de equipos
+  --perks bloodlust,innocent_face \           # filtro opcional
   --out out/2026-09-03/ \
-  [--estado ruta.json]                        # RT-062: estado predefinido
-  [--dump-utility idJugador:tick]             # RT-098
+  [--state path.json]                         # RT-062: estado predefinido
+  [--dump-utility playerId:tick]              # RT-098
 ```
 
 Rendimiento: 10.000 partidos en menos de 60 s en máquina de desarrollo (RT-051). Se mide en cada ejecución y se imprime al final.
 
-Salida (`resumen.csv` + `partidos.csv` + `perks.csv`):
+Salida (`summary.csv` + `matches.csv` + `perks.csv`):
 
-- `partidos.csv`: semilla, equipoA, equipoB, golesA, golesB, ganador, ticks, alternancias, cadenaMediaPases, tiros, entradas, faltas, tarjetas, lesiones, muertes, turba (bool), criterioFinal, tiempoBalonPorTercio.
-- `perks.csv`: idPerk, activaciones, partidosConActivacion, contribucion (goles, lesiones, recuperaciones).
-- `resumen.csv`: cada métrica de la tabla siguiente con valor, rango y `DENTRO|FUERA`.
+- `matches.csv`: `seed`, `teamA`, `teamB`, `goalsA`, `goalsB`, `winner`, `ticks`, `possessionChanges` (alternancias), `avgPassChain` (cadena media de pases), `shots`, `tackles`, `fouls`, `cards`, `injuries`, `deaths`, `mob` (bool, turba), `finalBias` (criterio final), `ballTimeByThird` (tiempo del balón por tercio).
+- `perks.csv`: `perkId`, `activations`, `matchesWithActivation`, `contribution` (goles, lesiones, recuperaciones).
+- `summary.csv`: cada métrica de la tabla siguiente con valor (`value`), rango (`range`) y `IN|OUT` (dentro/fuera de rango).
 
 ## Métricas de sensación de fútbol (RT-056)
 
@@ -33,11 +33,11 @@ Criterio de salida de la fase 0 e indicador permanente del equilibrio fútbol/ag
 |---|---|---|
 | Alternancias de posesión por partido | 12-25 | Cambios de equipo poseedor |
 | Longitud media de cadena de pases | 2-4 | Pases completados consecutivos por posesión |
-| Tiros por partido (ambos equipos) | 8-16 | Eventos `TIRO` |
+| Tiros por partido (ambos equipos) | 8-16 | Eventos `SHOT` |
 | Distribución de resultados | Mayoría entre 1-0 y 3-2; < 5% con más de 5 goles totales; < 15% de empates **al final del reglamentario** | Marcador antes de la turba |
 | Tiempo del balón por tercio | Ningún tercio > 50% | Ticks con el balón en cada tercio de columnas |
-| Entradas por partido | 6-14 | Eventos `ENTRADA` |
-| Lesiones por partido | 0,3-0,8 | Eventos `LESION` |
+| Entradas por partido | 6-14 | Eventos `TACKLE` |
+| Lesiones por partido | 0,3-0,8 | Eventos `INJURY` |
 
 Los rangos son puntos de partida. **Cambiar un rango es una decisión explícita** (RT-057): ADR en `decisiones/` con los datos que lo motivan y actualización de esta tabla en el mismo commit.
 
@@ -51,7 +51,7 @@ En cada commit sobre `/Sim` o `/data`:
 
 ## Métricas de diseño obligatorias
 
-Se añaden a `resumen.csv` cuando el sistema correspondiente existe:
+Se añaden a `summary.csv` cuando el sistema correspondiente existe:
 
 | Métrica | Requisito | Condición de aprobado | Fase |
 |---|---|---|---|
@@ -73,5 +73,5 @@ Un fichero en `data/balance/builds/<id>.json`: club, plantilla con niveles, perk
 
 1. Cambia el valor en `/data` (nunca en código si el valor debería ser dato).
 2. Ejecuta el lote de referencia con la misma semilla base que la última medición.
-3. Compara `resumen.csv` con el anterior. Anota en el commit qué métricas se movieron y por qué.
+3. Compara `summary.csv` con el anterior. Anota en el commit qué métricas se movieron y por qué.
 4. Si una métrica sale de rango y crees que el rango está mal, no toques el rango: abre un ADR.

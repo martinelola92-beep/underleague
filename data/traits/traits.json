@@ -1,0 +1,19 @@
+{
+  "traits": {
+    "Aggressive": { "name": { "es": "agresivo", "en": "aggressive" }, "actionMultipliers": { "Tackle": 160, "MarkOpponent": 120 }, "hardTackleBonus": 15 },
+    "Fast":       { "name": { "es": "rápido", "en": "fast" }, "actionMultipliers": { "ChaseBall": 130, "Dribble": 115 }, "speedBonusPercent": 8 },
+    "Scorer":     { "name": { "es": "goleador", "en": "scorer" }, "actionMultipliers": { "Shoot": 150, "OfferSupport": 115 }, "shotQualityBonus": 6 },
+    "LongShot":   { "name": { "es": "tiro lejano", "en": "long shot" }, "actionMultipliers": { "Shoot": 115 }, "shootRangeBonusCells": 2 },
+    "Cerebral":   { "name": { "es": "cerebral", "en": "cerebral" }, "actionMultipliers": { "Pass": 135, "CoverSpace": 115, "Dribble": 85 }, "passQualityBonus": 6 },
+    "Dirty":      { "name": { "es": "sucio", "en": "dirty" }, "actionMultipliers": { "Tackle": 125 }, "foulChanceBonus": 15, "injuryChanceBonus": 10 },
+    "Resilient":  { "name": { "es": "resistente", "en": "resilient" }, "actionMultipliers": {}, "fatigueResistancePercent": 40, "injuryResistanceBonus": 15 },
+    "Coward":     { "name": { "es": "cobarde", "en": "coward" }, "actionMultipliers": { "Tackle": 45, "Dribble": 70, "ChaseBall": 85 } },
+    "Leader":     { "name": { "es": "líder", "en": "leader" }, "actionMultipliers": {}, "adjacentTeammateBonusPercent": 8 },
+    "Lazy":       { "name": { "es": "vago", "en": "lazy" }, "actionMultipliers": { "Retreat": 50, "MarkOpponent": 70, "OfferSupport": 80 } }
+  },
+  "goalkeeperTraits": {
+    "Cat":    { "name": { "es": "Gato", "en": "Cat" }, "actionMultipliers": {}, "saveBonusClose": 8 },
+    "Wall":   { "name": { "es": "Muro", "en": "Wall" }, "actionMultipliers": {}, "saveBonusFar": 8 },
+    "Rusher": { "name": { "es": "Sale mucho", "en": "Rusher" }, "actionMultipliers": { "ChaseBall": 160 }, "leashBonus": 1 }
+  }
+}
