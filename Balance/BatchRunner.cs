@@ -67,15 +67,12 @@ public sealed record BatchResult(
     IReadOnlyList<MatchRow> Matches,
     IReadOnlyList<PlayerAggregate> Players,
     int TotalRequested,
-    int EnginePendingFailures,
     IReadOnlyList<string> FirstMatchLog,
     UtilityDump? FirstMatchUtilityDump,
     TimeSpan Elapsed);
 
 /// <summary>
 /// Genera los equipos del conjunto de referencia y ejecuta los partidos del lote (docs/fase0-diseno.md §4).
-/// Mientras Simulator.Run lance NotSupportedException("engine pending", paquete B pendiente), cada partido
-/// que falle por esa causa se cuenta aparte y no se añade a Matches; Program decide qué hacer con el conteo.
 /// </summary>
 public static class BatchRunner
 {
@@ -135,7 +132,6 @@ public static class BatchRunner
         var matches = new List<MatchRow>(options.Runs);
         string[] firstMatchLog = Array.Empty<string>();
         UtilityDump? firstMatchDump = null;
-        int enginePendingFailures = 0;
 
         var stopwatch = System.Diagnostics.Stopwatch.StartNew();
 
@@ -163,21 +159,12 @@ public static class BatchRunner
                     CollectLog: isFirst && options.Log,
                     DumpUtility: isFirst ? options.DumpUtility : null);
 
-                MatchResult result;
-                try
-                {
-                    result = Simulator.Run(setup, matchSeed, catalog, config);
-                }
-                catch (NotSupportedException)
-                {
-                    enginePendingFailures++;
-                    continue;
-                }
+                MatchResult result = Simulator.Run(setup, matchSeed, catalog, config);
 
                 var report = result.Report;
                 matches.Add(new MatchRow(
                     Index: i,
-                    Seed: (ulong)i,
+                    Seed: matchSeed,
                     HomeId: pairing.HomeId,
                     AwayId: pairing.AwayId,
                     HomeGoals: report.Goals[0],
@@ -217,7 +204,7 @@ public static class BatchRunner
             .OrderBy(p => p.PlayerId)
             .ToList();
 
-        return new BatchResult(matches, players, options.Runs, enginePendingFailures, firstMatchLog, firstMatchDump, stopwatch.Elapsed);
+        return new BatchResult(matches, players, options.Runs, firstMatchLog, firstMatchDump, stopwatch.Elapsed);
     }
 
     private static void RegisterPlayers(Dictionary<int, PlayerAggregate> lookup, IEnumerable<TeamSetup> teams)
@@ -263,5 +250,91 @@ public static class BatchRunner
             aggregate.Injuries += stat.Injured ? 1 : 0;
             aggregate.TicksOnPitch += stat.TicksOnPitch;
         }
+    }
+
+    /// <summary>
+    /// Ejecuta un único partido con la semilla de motor exacta <paramref name="matchSeed"/> (--match-seed,
+    /// docs/sim-debug, revisión independiente de fase 0): los equipos son los del primer emparejamiento de
+    /// reference.json, generados con la semilla base habitual de siempre
+    /// (RngStreams.Generation(options.Seed, índice), igual que <see cref="Run"/>), pero la semilla que
+    /// recibe Simulator.Run no se deriva con RngStreams.MatchSeed a partir de un índice de lote: es la que
+    /// pide la línea de comandos, para reproducir exactamente el partido que identificó esa semilla en un
+    /// log o en un matches.csv anterior.
+    /// </summary>
+    public static BatchResult RunSingle(Options options, Catalog catalog, ReferenceConfig reference, ulong matchSeed)
+    {
+        var teamIndex = new Dictionary<string, int>(StringComparer.Ordinal);
+        for (int i = 0; i < reference.Teams.Count; i++)
+        {
+            teamIndex[reference.Teams[i].Id] = i;
+        }
+
+        var pairing = reference.Pairings[0];
+        int homeIdx = teamIndex[pairing.HomeId];
+        int awayIdx = teamIndex[pairing.AwayId];
+
+        var homeTeamRef = reference.Teams[homeIdx];
+        var homeRng = RngStreams.Generation(options.Seed, homeIdx);
+        var homeTeam = TeamGenerator.Generate(ref homeRng, catalog, homeTeamRef.Id, homeTeamRef.Race, homeTeamRef.Quality, 1 + (homeIdx * 100));
+
+        var awayTeamRef = reference.Teams[awayIdx];
+        TeamSetup awayTeam;
+        if (pairing.HomeId == pairing.AwayId)
+        {
+            // Mismo esquema que Run() para un emparejamiento de un equipo consigo mismo: la segunda
+            // instancia usa el índice 1000+índice para no colisionar con la primera.
+            var twinRng = RngStreams.Generation(options.Seed, 1000 + awayIdx);
+            awayTeam = TeamGenerator.Generate(ref twinRng, catalog, awayTeamRef.Id, awayTeamRef.Race, awayTeamRef.Quality, 1 + ((1000 + awayIdx) * 100));
+        }
+        else
+        {
+            var awayRng = RngStreams.Generation(options.Seed, awayIdx);
+            awayTeam = TeamGenerator.Generate(ref awayRng, catalog, awayTeamRef.Id, awayTeamRef.Race, awayTeamRef.Quality, 1 + (awayIdx * 100));
+        }
+
+        var referee = new RefereeSetup("Referee", RefereeTrait.Neutral, 0);
+        var setup = new MatchSetup(homeTeam, awayTeam, referee);
+        var config = new SimConfig(CollectLog: options.Log, DumpUtility: options.DumpUtility);
+
+        var stopwatch = System.Diagnostics.Stopwatch.StartNew();
+        MatchResult result = Simulator.Run(setup, matchSeed, catalog, config);
+        stopwatch.Stop();
+
+        var report = result.Report;
+        var matches = new List<MatchRow>
+        {
+            new(
+                Index: 0,
+                Seed: matchSeed,
+                HomeId: pairing.HomeId,
+                AwayId: pairing.AwayId,
+                HomeGoals: report.Goals[0],
+                AwayGoals: report.Goals[1],
+                Winner: report.Winner,
+                Ticks: report.Ticks,
+                GoldenGoal: report.WentToGoldenGoal,
+                Forfeit: report.Forfeit,
+                PossessionChanges: report.PossessionChanges,
+                PassChains: report.PassChains,
+                PassChainTotalLength: report.PassChainTotalLength,
+                Shots: report.Shots[0] + report.Shots[1],
+                ShotsOnTarget: report.ShotsOnTarget[0] + report.ShotsOnTarget[1],
+                Tackles: report.Tackles,
+                Fouls: report.Fouls,
+                Yellow: report.YellowCards,
+                Red: report.RedCards,
+                Injuries: report.Injuries,
+                BallThird0: report.BallTicksByThird[0],
+                BallThird1: report.BallTicksByThird[1],
+                BallThird2: report.BallTicksByThird[2],
+                FinalBias: report.FinalBias),
+        };
+
+        var playerLookup = new Dictionary<int, PlayerAggregate>();
+        RegisterPlayers(playerLookup, new[] { homeTeam, awayTeam });
+        AccumulatePlayers(playerLookup, report.Players);
+        var players = playerLookup.Values.OrderBy(p => p.PlayerId).ToList();
+
+        return new BatchResult(matches, players, 1, report.Log.ToArray(), report.UtilityDump, stopwatch.Elapsed);
     }
 }

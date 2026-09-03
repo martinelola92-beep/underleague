@@ -82,7 +82,7 @@ public sealed class MatchReport
     /// <summary>Ticks de posesión por equipo, [2].</summary>
     public int[] PossessionTicks { get; }
 
-    /// <summary>Sesgo del árbitro al terminar el partido.</summary>
+    /// <summary>Sesgo del árbitro al terminar el partido; en fase 0 es fijo e igual a InitialBias (§3).</summary>
     public int FinalBias { get; }
 
     /// <summary>Estadísticas por jugador que participó en el partido.</summary>
@@ -185,7 +185,12 @@ internal sealed class MatchReportBuilder
     /// <summary>Ticks de posesión por equipo; se incrementa cada tick con dueño de ese equipo (3.10).</summary>
     public int[] PossessionTicks { get; } = new int[2];
 
-    /// <summary>Sesgo del árbitro; se actualiza cuando cambie y se lee al terminar el partido.</summary>
+    /// <summary>
+    /// Sesgo del árbitro al terminar el partido. En fase 0 es fijo e igual a InitialBias (§3, RF-060): el
+    /// motor no tiene ningún mecanismo que lo mueva durante el partido todavía, así que se lee una sola
+    /// vez al final en <see cref="MatchEngine.Run"/> (revisión independiente, fase 0: el comentario
+    /// anterior decía "se actualiza cuando cambie", que no describía código existente).
+    /// </summary>
     public int FinalBias { get; set; }
 
     /// <summary>Estadísticas por jugador; se acumulan durante el partido y se listan al terminar.</summary>

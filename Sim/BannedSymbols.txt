@@ -1,0 +1,14 @@
+; APIs prohibidas en /Sim (RT-012, RT-021, docs/determinismo.md). Formato: <DocID>;<mensaje>
+; T: tipo completo, P: propiedad, M: método. Reforzado además por
+; Sim.Tests/Engine/ArchitectureTests.cs, que escanea el ensamblado compilado.
+T:System.Random;RT-021: prohibido en /Sim, su secuencia no es estable entre versiones de .NET. Usa Underleague.Sim.Random.Pcg32 con una semilla explícita.
+T:System.DateTime;RT-012/RT-021: prohibido en /Sim, consulta el reloj del sistema.
+T:System.DateTimeOffset;RT-012/RT-021: prohibido en /Sim, consulta el reloj del sistema.
+T:System.Guid;RT-021: Guid.NewGuid() no es determinista entre ejecuciones. Deriva el identificador del estado, no de un Guid.
+T:System.Diagnostics.Stopwatch;RT-012/RT-021: prohibido en /Sim, mide tiempo real de reloj.
+P:System.Environment.TickCount;RT-012/RT-021: prohibido en /Sim, consulta el reloj del sistema.
+P:System.Environment.TickCount64;RT-012/RT-021: prohibido en /Sim, consulta el reloj del sistema.
+T:System.IO.File;RT-012: /Sim no hace E/S. Recibe los ficheros ya leídos (Sim.Data.DataLoader.FromJson).
+T:System.IO.Directory;RT-012: /Sim no hace E/S.
+T:System.Threading.Tasks.Parallel;RT-021: prohibido en /Sim, el orden de ejecución debe ser determinista y reproducible.
+T:System.HashCode;RT-021: HashCode.Combine usa una semilla aleatoria por proceso (no determinista entre ejecuciones), salvo que se inicialice explícitamente, lo que este proyecto no hace.

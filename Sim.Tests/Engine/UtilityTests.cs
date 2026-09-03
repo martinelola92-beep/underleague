@@ -188,16 +188,11 @@ public sealed class UtilityTests
         }
 
         var definition = new PlayerDefinition(id, "p" + id, Race.Human, position, Rarity.Common, 1, attributes, traits, tags, PhysicalState.Healthy);
-        return new MatchPlayer(definition, team, 0, home, Catalog);
+        return new MatchPlayer(definition, team, home, Catalog);
     }
 
     private static UtilityContext Context(AiWeights weights, params MatchPlayer[] players)
     {
-        for (int i = 0; i < players.Length; i++)
-        {
-            players[i].Index = i;
-        }
-
         var ball = new Ball
         {
             InterceptAttempted = new bool[players.Length],

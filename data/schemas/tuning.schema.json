@@ -2,11 +2,10 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://underleague.dev/schemas/tuning.schema.json",
   "title": "Underleague sim tuning",
-  "description": "data/sim/tuning.json: constantes de resolución del simulador (fase0-diseno.md 2.5, 2.6). Probabilidades en base 10000 salvo que se indique 'Percent'. Todo entero salvo posiciones.",
+  "description": "data/sim/tuning.json: constantes de resolución del simulador (fase0-diseno.md 2.5, 2.6). Probabilidades en base 10000 salvo que se indique 'Percent'. Todo entero salvo posiciones. Sin 'ticksPerSecond' ni 'pitch' (revisión independiente, fase 0): ninguno de los dos tenía consumidor en el motor -- la geometría del campo vive en Sim.Model.Pitch y el reloj lógico de 15/s es RT-020, no un dato de balance.",
   "type": "object",
   "properties": {
     "_doc": { "type": "string" },
-    "ticksPerSecond": { "type": "integer", "minimum": 1, "maximum": 240 },
     "regulationTicks": { "type": "integer", "minimum": 1, "maximum": 1000000 },
     "goldenGoalMaxTicks": { "type": "integer", "minimum": 0, "maximum": 1000000 },
     "decisionIntervalTicks": { "type": "integer", "minimum": 1, "maximum": 1000 },
@@ -23,15 +22,14 @@
     "injury": { "$ref": "#/$defs/injury" },
     "referee": { "$ref": "#/$defs/referee" },
     "restart": { "$ref": "#/$defs/restart" },
-    "pitch": { "$ref": "#/$defs/pitch" },
     "generation": { "$ref": "#/$defs/generation" },
     "leash": { "$ref": "#/$defs/leash" }
   },
   "required": [
-    "ticksPerSecond", "regulationTicks", "goldenGoalMaxTicks", "decisionIntervalTicks", "transitionTicks",
+    "regulationTicks", "goldenGoalMaxTicks", "decisionIntervalTicks", "transitionTicks",
     "assistWindowTicks",
     "movement", "ball", "states", "pass", "dribble", "shot", "save", "tackle", "injury", "referee",
-    "restart", "pitch", "generation", "leash"
+    "restart", "generation", "leash"
   ],
   "additionalProperties": false,
   "$defs": {
@@ -197,19 +195,6 @@
         "penaltyTicks": { "$ref": "#/$defs/ticks" }
       },
       "required": ["throwInTicks", "goalKickTicks", "cornerTicks", "kickoffTicks", "penaltyTicks"],
-      "additionalProperties": false
-    },
-    "pitch": {
-      "type": "object",
-      "properties": {
-        "_doc": { "type": "string" },
-        "columns": { "type": "integer", "minimum": 1, "maximum": 100 },
-        "rows": { "type": "integer", "minimum": 1, "maximum": 100 },
-        "areaColumns": { "type": "integer", "minimum": 0, "maximum": 100 },
-        "areaRows": { "type": "integer", "minimum": 0, "maximum": 100 },
-        "goalRows": { "type": "integer", "minimum": 0, "maximum": 100 }
-      },
-      "required": ["columns", "rows", "areaColumns", "areaRows", "goalRows"],
       "additionalProperties": false
     },
     "generation": {

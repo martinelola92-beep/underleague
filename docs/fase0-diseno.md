@@ -376,7 +376,7 @@ Términos de contexto (claves de `weights.json`, todo en enteros; distancias en 
 | Tackle | poseedor rival | descartada si `TackleCooldown > 0`; poseedor a <= `tackleDistanceMaxCells`: `+tackleBallCarrierBonus`; si no: `-tackleOutOfReachPenalty` |
 | Retreat | casilla-hogar efectiva | `+retreatDistanceBonusPerCell * d`; `-retreatAtHomePenalty` si d < 0.5 |
 
-Gana la puntuación máxima; empate: la primera en el orden del enum. Puntuación mínima para actuar: no hay; siempre se elige una. El jugador seleccionado en `SimConfig.DumpUtility` guarda la tabla en el tick indicado.
+Gana la puntuación máxima; empate: la primera en el orden del enum. Puntuación mínima para actuar: no hay; siempre se elige una. El jugador seleccionado en `SimConfig.DumpUtility` solo decide cada `decisionIntervalTicks` ticks (desplazado por su id); el volcado captura su **primera** decisión en un tick >= el indicado (una sola vez por partido), no necesariamente ese tick exacto (revisión independiente, fase 0).
 
 Portero: mismas reglas con estos ajustes: `ChaseBall` solo si el balón está suelto dentro de su área; `MarkOpponent` y `OfferSupport` descartadas; `CoverSpace` objetivo = punto a 0.7 casillas de la línea de gol sobre la recta portería->balón; `Pass` elige el compañero más adelantado visible sin límite de distancia.
 
@@ -395,7 +395,7 @@ Duraciones en `tuning.states`. Transiciones:
 
 `Ball`: `Position`, `Velocity`, `OwnerId` (-1 = suelto), `InFlight`, `FlightTarget` (Vec2), `FlightTicksLeft`, `PassReceiverId`, `PassSucceeds`, `LastTouchTeam`, `LastTouchPlayer`. Con dueño, el balón está en la posición del dueño.
 
-**Pase**: `dist` al receptor. `p = pass.baseSuccess + pass.techniqueFactor*(Technique-50) + Cerebral.passQualityBonus*100 - pass.distancePenaltyPerCell*dist - pass.pressurePenalty*(rival a <1.0 del pasador)`; `PassSucceeds = rng.Chance(clamp(p, 500, 9800))`. `FlightTicksLeft = max(1, ceil(dist / (ball.passSpeedCellsPerTickMilli/1000)))`. Objetivo: posición del receptor + su velocidad * ticks (anticipación), acotada al campo. Evento `PassAttempted`. Cada tick de vuelo, para cada rival por id que esté a < `interceptRadiusCells` del balón y no haya intentado aún en este pase: `rng.Chance(interceptBaseChance + interceptTechniqueFactor*(Technique-50))` -> intercepta: dueño, `PassFailed` (Detail `"intercepted"`), `Recovery`. Al llegar: si `PassSucceeds` y receptor a < 1.0 -> dueño, `PassCompleted`; si no, suelto con `Velocity` = dirección * 0.1, `PassFailed` (Detail `"loose"`).
+**Pase**: `dist` al receptor. `p = pass.baseSuccess + pass.techniqueFactor*(Technique-50) + Cerebral.passQualityBonus*100 - pass.distancePenaltyPerCell*dist - pass.pressurePenalty*(rival a <1.0 del pasador)`; `PassSucceeds = rng.Chance(clamp(p, 500, 9800))`, **siempre** se consume el roll aunque no haya receptor visible (§3.5 elige `Pass` sin candidato con `passNoReceiverPenalty`; `LaunchPass` vuelve a buscar uno con `MostAdvancedTeammate` y, si tampoco hay, lanza igual): sin receptor, el objetivo es 3 casillas hacia la portería rival desde la posición del pasador, acotado al campo (`PassSucceeds` nunca se usa en ese caso, porque `succeeds` exige receptor, pero el roll se consume igualmente para que el flujo de `_rng` no dependa de si había o no compañero visible). `FlightTicksLeft = max(1, ceil(dist / (ball.passSpeedCellsPerTickMilli/1000)))`. Con receptor, objetivo: su posición + su velocidad * ticks (anticipación), acotada al campo. Evento `PassAttempted`. Cada tick de vuelo, para cada rival por id que esté a < `interceptRadiusCells` del balón y no haya intentado aún en este pase: `rng.Chance(interceptBaseChance + interceptTechniqueFactor*(Technique-50))` -> intercepta: dueño, `PassFailed` (Detail `"intercepted"`), `Recovery`. Al llegar: si `PassSucceeds` y receptor a < 1.0 -> dueño, `PassCompleted`; si no, suelto con `Velocity` = dirección * 0.1, `PassFailed` (Detail `"loose"`). Si un pase en vuelo se interrumpe antes de llegar (el balón se aparca por un gol/tarjeta/lesión/reanudación, o el partido termina) se cierra con `PassFailed` (Detail `"cancelled"`), para que `PASS_ATTEMPTED = PASS_COMPLETED + PASS_FAILED` siempre cuadre (revisión independiente, fase 0).
 
 **Balón suelto**: `Position += Velocity; Velocity *= looseBallFrictionPercent/100`. Recogida: el jugador más cercano a < 0.5 casillas (empate por id) pasa a dueño; si es de otro equipo que el último toque -> `Recovery`.
 
@@ -412,9 +412,9 @@ Duraciones en `tuning.states`. Transiciones:
 
 - `Y < 0` o `Y > 5`: saque de banda para el equipo contrario al último toque: fase `Restart` durante `throwInTicks`; el balón se coloca en el punto de salida acotado; al terminar, el jugador de ese equipo más cercano (empate id) se teletransporta al punto y es dueño. Evento `Recovery` con Detail `"throwIn"`.
 - `X < 0` o `X > 16` sin ser gol: último toque del atacante -> saque de puerta (portero dueño en su casilla, `goalKickTicks`, Detail `"goalKick"`); del defensor -> córner (atacante más cercano dueño en la esquina, `cornerTicks`, Detail `"corner"`).
-- Gol: `Goal` (Actor = tirador; Target = asistente si el último pase completado fue a < `assistWindowTicks` ticks), goleador `Celebrating`, marcador, `Kickoff` para el equipo que encaja durante `kickoffTicks`: todos a su casilla-hogar (sin desplazamiento), centrocampista central (más cercano a (8,2.5)) del equipo que saca es dueño en el centro.
+- Gol: `Goal` (Actor = tirador; Target = asistente si el último pase completado fue a < `assistWindowTicks` ticks **y el equipo del pasador conservó el balón sin interrupción desde ese pase**: el "último pase completado" se olvida en cuanto el balón cambia de equipo poseedor por cualquier vía —robo, intercepción, duelo de regate perdido—, aunque el mismo equipo lo recupere después dentro de la ventana; revisión independiente, fase 0), goleador `Celebrating`, marcador, `Kickoff` para el equipo que encaja durante `kickoffTicks`: todos a su casilla-hogar (sin desplazamiento), centrocampista central (más cercano a (8,2.5)) del equipo que saca es dueño en el centro.
 - Penalti: fase `Penalty` durante `penaltyTicks`; el tirador es el jugador de campo con más `Technique` del equipo; los demás quedan quietos; al expirar se resuelve el tiro; después, saque de puerta o kickoff según resultado.
-- Incomparecencia: si un equipo tiene < 5 jugadores en campo (Injured/SentOff descontados) -> `MatchEnd` con Detail `"forfeit"`, gana el otro (RF-059). `Report.Forfeit = true`.
+- Incomparecencia: si un equipo tiene < 5 jugadores en campo (Injured/SentOff descontados) -> `MatchEnd` con Detail `"forfeit"`, gana el otro (RF-059). `Report.Forfeit = true`. Si los **dos** equipos bajan de 5 en el mismo tick (revisión independiente, fase 0): gana el que tenga más jugadores en campo; si empatan (incluido 0 a 0), se aplica la misma cadena de desempate que el gol de oro agotado (§3.9: más tiros a puerta, si no más ticks de posesión, si no el visitante). El Detail sigue siendo `"forfeit"`, no `"tiebreak"`.
 
 Durante `Restart`, `Kickoff` y `Penalty` los jugadores no deciden ni se mueven, salvo el teletransporte indicado.
 
@@ -469,6 +469,9 @@ Sin paquetes externos. Parseo manual de argumentos.
 --out dir           por defecto out/<seed>/; escribe summary.csv, matches.csv, players.csv
 --log               imprime el log del primer partido
 --dump-utility P:T  SimConfig.DumpUtility para el primer partido; imprime la tabla
+--match-seed S      un único partido con esta semilla de motor exacta (equipos del primer emparejamiento
+                     de --teams); ignora --runs, no escribe summary.csv (revisión independiente, fase 0:
+                     reproduce el partido de una fila de matches.csv, ver Balance/README.md)
 --quiet             sin resumen por consola
 ```
 

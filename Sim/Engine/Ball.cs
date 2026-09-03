@@ -16,9 +16,6 @@ internal sealed class Ball
     /// <summary>Poseedor actual; null si el balón está suelto o en vuelo.</summary>
     public MatchPlayer? Owner { get; set; }
 
-    /// <summary>Id del poseedor, -1 si el balón está suelto (§3.7).</summary>
-    public int OwnerId => Owner is null ? -1 : Owner.Id;
-
     /// <summary>True mientras el balón viaja (pase o tiro).</summary>
     public bool InFlight { get; set; }
 

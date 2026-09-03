@@ -26,20 +26,57 @@ try
     string referenceContent = File.ReadAllText(options.TeamsPath);
     ReferenceConfig reference = ReferenceConfig.Load(referenceContent);
 
+    if (options.MatchSeed is { } matchSeed)
+    {
+        // --match-seed: un único partido reproducido con esa semilla de motor exacta, sin métricas de
+        // lote (no tienen sentido sobre un solo partido) y sin el código de salida 1/OUT (docs/sim-debug,
+        // revisión independiente de fase 0).
+        BatchResult single = BatchRunner.RunSingle(options, catalog, reference, matchSeed);
+
+        WriteMatchesCsv(options.OutDir!, single.Matches);
+        WritePlayersCsv(options.OutDir!, single.Players);
+
+        if (options.Log)
+        {
+            Console.WriteLine();
+            Console.WriteLine("--- log del partido (Report.Log) ---");
+            if (single.FirstMatchLog.Count == 0)
+            {
+                Console.WriteLine("(sin líneas: --log no estaba activo)");
+            }
+            else
+            {
+                foreach (var line in single.FirstMatchLog)
+                {
+                    Console.WriteLine(line);
+                }
+            }
+        }
+
+        if (options.DumpUtility is not null)
+        {
+            Console.WriteLine();
+            Console.WriteLine("--- tabla de utilidad (--dump-utility) ---");
+            if (single.FirstMatchUtilityDump is null)
+            {
+                Console.WriteLine("(sin volcado: el jugador pedido no llegó a decidir en ningún tick >= el pedido)");
+            }
+            else
+            {
+                PrintUtilityDump(single.FirstMatchUtilityDump);
+            }
+        }
+
+        if (!options.Quiet)
+        {
+            Console.WriteLine();
+            Console.WriteLine($"partido con --match-seed {matchSeed} escrito en {options.OutDir}");
+        }
+
+        return 0;
+    }
+
     BatchResult batch = BatchRunner.Run(options, catalog, reference);
-
-    if (batch.EnginePendingFailures > 0 && batch.EnginePendingFailures < batch.TotalRequested)
-    {
-        Console.Error.WriteLine(
-            $"aviso: {batch.EnginePendingFailures} de {batch.TotalRequested} partidos fallaron con " +
-            "NotSupportedException (motor pendiente) mientras otros se ejecutaron; se continúa con los que sí corrieron.");
-    }
-
-    if (batch.EnginePendingFailures == batch.TotalRequested)
-    {
-        Console.WriteLine("engine pending");
-        return 2;
-    }
 
     var metrics = Metrics.Compute(batch.Matches, reference);
 
@@ -111,10 +148,12 @@ static void PrintUsage()
         uso: dotnet run --project Balance -- [opciones]
           --runs N            total de partidos (por defecto 1000)
           --seed S            semilla base, entero sin signo (por defecto 1)
+          --match-seed S      un único partido con esta semilla de motor exacta (primer emparejamiento de
+                               --teams); ignora --runs, no escribe summary.csv, código de salida siempre 0
           --teams path        por defecto data/balance/reference.json
           --data path         por defecto: subir directorios desde cwd hasta encontrar data/
           --out dir           por defecto out/<seed>/
-          --log               imprime el log del primer partido
+          --log               imprime el log del primer partido (o del partido de --match-seed)
           --dump-utility P:T  SimConfig.DumpUtility para el primer partido; imprime la tabla
           --quiet             sin resumen por consola
         """);

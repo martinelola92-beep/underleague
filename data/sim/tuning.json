@@ -1,6 +1,5 @@
 {
-  "_doc": "Constantes de resolución del simulador. Probabilidades en base 10000 salvo que se indique. Enteras.",
-  "ticksPerSecond": 15,
+  "_doc": "Constantes de resolución del simulador. Probabilidades en base 10000 salvo que se indique. Enteras. ticksPerSecond y pitch se retiraron aquí (revisión independiente, fase 0): la geometría del campo vive en Sim.Model.Pitch como constantes de compilación y el reloj lógico de 15/s es RT-020, no tenían consumidor en el motor.",
   "regulationTicks": 1200,
   "goldenGoalMaxTicks": 900,
   "decisionIntervalTicks": 2,
@@ -91,13 +90,6 @@
     "cornerTicks": 15,
     "kickoffTicks": 15,
     "penaltyTicks": 45
-  },
-  "pitch": {
-    "columns": 16,
-    "rows": 5,
-    "areaColumns": 2,
-    "areaRows": 3,
-    "goalRows": 3
   },
   "generation": {
     "positionBias": {

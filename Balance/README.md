@@ -25,11 +25,22 @@ Opciones (todas opcionales):
 | `--teams path` | `data/balance/reference.json` | Conjunto de referencia: equipos y emparejamientos |
 | `--data path` | subir directorios desde el directorio de trabajo hasta encontrar `data/` | Raíz de `/data` |
 | `--out dir` | `out/<seed>/` | Directorio de salida de los CSV |
-| `--log` | apagado | Imprime `Report.Log` del primer partido del lote |
-| `--dump-utility P:T` | ninguno | `SimConfig.DumpUtility = (P, T)` para el primer partido; imprime la tabla de utilidad si el tick coincide |
+| `--log` | apagado | Imprime `Report.Log` del primer partido del lote (o del partido de `--match-seed`) |
+| `--dump-utility P:T` | ninguno | `SimConfig.DumpUtility = (P, T)` para el primer partido; imprime la tabla de utilidad la primera vez que el jugador P decide en un tick >= T |
+| `--match-seed S` | ninguno | Ejecuta un único partido con esta semilla de motor exacta, con los equipos del primer emparejamiento de `--teams`; ignora `--runs`, no escribe `summary.csv`. Ver "Reproducir un partido concreto" abajo |
 | `--quiet` | apagado | No imprime el resumen por consola (los CSV se escriben igual) |
 
-Salida por consola (salvo `--quiet`): tabla de `summary.csv` alineada, tiempo total y partidos/segundo. Código de salida: `0` si todas las métricas están `IN`/`INFO`, `1` si alguna está `OUT`, `2` si el motor de partidos (`Simulator.Run`, paquete B) aún no está implementado (imprime `engine pending`).
+Salida por consola (salvo `--quiet`): tabla de `summary.csv` alineada, tiempo total y partidos/segundo. Código de salida: `0` si todas las métricas están `IN`/`INFO` (o si se usó `--match-seed`, que no tiene métricas), `1` si alguna está `OUT`.
+
+## Reproducir un partido concreto
+
+`matches.csv` guarda en su columna `seed` la semilla de motor exacta de cada partido (`RngStreams.MatchSeed(seedBase, índice)`, no el índice). Para reproducirlo bit a bit, incluido el log tick a tick:
+
+```bash
+dotnet run --project Balance -- --match-seed <seed de la fila> --teams <mismo --teams del lote> --seed <misma --seed del lote> --log
+```
+
+`--seed` sigue haciendo falta porque los equipos se generan con `RngStreams.Generation(seed, índice)`; solo la semilla del propio partido se fija con `--match-seed`. Ver también la skill `sim-debug`.
 
 ## Ficheros de salida
 
@@ -39,7 +50,7 @@ Una fila por partido simulado con éxito.
 
 `index,seed,homeId,awayId,homeGoals,awayGoals,winner,ticks,goldenGoal,forfeit,possessionChanges,passChains,passChainAvgLength,shots,shotsOnTarget,tackles,fouls,yellow,red,injuries,ballThird0,ballThird1,ballThird2,finalBias`
 
-- `index`/`seed`: el índice 0-based del partido en el lote completo (decisión fuera de la especificación: ambas columnas llevan el mismo valor `i`, tal como pide el encargo — "la semilla mostrada en matches.csv es i" — en vez de un `ulong` interno no reproducible a simple vista).
+- `index`: el índice 0-based del partido en el lote completo. `seed`: la semilla de motor real de ese partido, `RngStreams.MatchSeed(seedBase, índice)` (revisión independiente, fase 0: antes llevaba el mismo valor que `index`, que no era la semilla que recibió `Simulator.Run` y no servía para reproducir el partido con `--match-seed`).
 - `winner`: `0` = gana `homeId`, `1` = gana `awayId`.
 - `goldenGoal`/`forfeit`: `true`/`false`.
 - `shots`/`shotsOnTarget`: suma de ambos equipos.
@@ -71,7 +82,7 @@ Una fila por jugador generado que llegó a jugar al menos un partido, con sus es
 
 ## Decisiones fuera de la especificación
 
-- **Semilla del motor**: `Simulator.Run` espera un `ulong seed`; `RngStreams.Match(seed, i)` devuelve un `Pcg32`. Se usa `Pcg32.State` (propiedad pública, documentada "para tests") tras construirlo como puente determinista entre ambos: `Simulator.Run(setup, RngStreams.MatchSeed(seed, i), catalog, config)`.
+- **Semilla del motor**: `Simulator.Run` espera un `ulong seed`; `RngStreams.MatchSeed(seed, i)` deriva esa semilla escalar con la misma mezcla que `RngStreams.Match(seed, i)` (que en cambio devuelve un `Pcg32` ya construido), así que `Simulator.Run(setup, RngStreams.MatchSeed(seed, i), catalog, config)` usa el mismo flujo de partido que el resto de `/Sim` sin tener que exponer el estado interno de un `Pcg32`.
 - **Árbitro**: `docs/fase0-diseno.md` no define cómo generar el árbitro de los partidos de `/Balance`. Se usa un árbitro fijo neutro (`RefereeSetup("Referee", RefereeTrait.Neutral, InitialBias: 0)`) para todos los partidos del lote.
 - **`firstPlayerId` de la segunda instancia en autoenfrentamientos** (p. ej. `human_50` vs `human_50`): `1 + (1000 + índice) * 100`, siguiendo el mismo esquema que la instancia primaria (`1 + índice * 100`) para no colisionar con ninguna otra.
 - **Rendimiento**: `SimConfig.CollectLog` y `SimConfig.DumpUtility` solo se activan (si se pidieron por `--log`/`--dump-utility`) para el primer partido del lote (índice 0 global); el resto corre con `CollectLog = false` para no acumular el log de miles de partidos en memoria.

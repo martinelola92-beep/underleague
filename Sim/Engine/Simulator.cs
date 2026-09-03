@@ -4,7 +4,14 @@ using Underleague.Sim.Model;
 
 namespace Underleague.Sim.Engine;
 
-/// <summary>Configuración de una simulación de partido.</summary>
+/// <summary>
+/// Configuración de una simulación de partido.
+/// </summary>
+/// <param name="DumpUtility">
+/// Si no es null, vuelca la tabla de utilidad (RT-098) de PlayerId. El jugador solo decide cada
+/// tuning.decisionIntervalTicks ticks (desplazado por su id), así que el volcado no espera al tick exacto:
+/// captura la PRIMERA decisión de ese jugador en un tick >= Tick, una sola vez por partido.
+/// </param>
 public sealed record SimConfig(bool CollectLog = true, (int PlayerId, int Tick)? DumpUtility = null, int? RegulationTicksOverride = null)
 {
     /// <summary>Configuración por defecto: con log, sin volcado de utilidad, duración reglamentaria estándar.</summary>
@@ -140,6 +147,21 @@ public static class Simulator
                 throw new ArgumentException(
                     $"el equipo {side} ('{team.Id}') coloca al jugador {slot.PlayerId} en la casilla "
                         + $"({slot.HomeCell.Column},{slot.HomeCell.Row}); debe estar en 0..{MaxHomeColumn} x 0..{Pitch.Rows - 1}",
+                    nameof(team));
+            }
+
+            // El portero se refleja tal cual para el equipo 1 (MatchEngine.AddTeam solo invierte la
+            // columna), así que su casilla-hogar en coordenadas relativas debe caer ya dentro de su propia
+            // área: columna dentro de las AreaColumns desde su portería y fila en 1..AreaRows. Sin esta
+            // comprobación, un portero alineado fuera del área nunca dispara GoalkeeperLeftArea porque
+            // "salir" no tiene sentido si nunca estuvo dentro (revisión independiente, fase 0).
+            if (definition.Position == Position.Goalkeeper
+                && (slot.HomeCell.Column >= Pitch.AreaColumns || slot.HomeCell.Row < 1 || slot.HomeCell.Row > Pitch.AreaRows))
+            {
+                throw new ArgumentException(
+                    $"el equipo {side} ('{team.Id}') alinea al portero {slot.PlayerId} en la casilla "
+                        + $"({slot.HomeCell.Column},{slot.HomeCell.Row}); debe estar dentro de su área "
+                        + $"(columna < {Pitch.AreaColumns}, fila entre 1 y {Pitch.AreaRows})",
                     nameof(team));
             }
 

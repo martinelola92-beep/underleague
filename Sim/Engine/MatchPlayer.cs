@@ -15,11 +15,10 @@ internal sealed class MatchPlayer
     private readonly int[] _actionMultipliers = new int[ActionCount];
     private readonly int _traitMask;
 
-    public MatchPlayer(PlayerDefinition definition, int team, int index, Cell homeCell, Catalog catalog)
+    public MatchPlayer(PlayerDefinition definition, int team, Cell homeCell, Catalog catalog)
     {
         Definition = definition;
         Team = team;
-        Index = index;
         HomeCell = homeCell;
         HomeCenter = Pitch.CellCenter(homeCell);
         EffectiveHome = HomeCenter;
@@ -84,9 +83,6 @@ internal sealed class MatchPlayer
 
     /// <summary>Equipo: 0 local, 1 visitante.</summary>
     public int Team { get; }
-
-    /// <summary>Índice en el array de jugadores del motor (ordenado por id ascendente).</summary>
-    public int Index { get; set; }
 
     /// <summary>Casilla-hogar absoluta (ya reflejada para el equipo 1).</summary>
     public Cell HomeCell { get; }

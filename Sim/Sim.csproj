@@ -12,4 +12,11 @@
     <InternalsVisibleTo Include="Underleague.Sim.Tests" />
   </ItemGroup>
 
+  <!-- APIs prohibidas en /Sim (RT-012, RT-021, docs/determinismo.md), en tiempo de compilación: complementa
+       el escaneo en runtime de Sim.Tests/Engine/ArchitectureTests.cs sobre el ensamblado ya compilado. -->
+  <ItemGroup>
+    <PackageReference Include="Microsoft.CodeAnalysis.BannedApiAnalyzers" Version="5.6.0" PrivateAssets="all" />
+    <AdditionalFiles Include="BannedSymbols.txt" />
+  </ItemGroup>
+
 </Project>

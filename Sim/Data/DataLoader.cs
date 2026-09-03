@@ -360,14 +360,16 @@ public static class DataLoader
     {
         var doc = JsonDocument.Parse(content);
         var root = new Json(doc.RootElement, file, "$");
+        // "ticksPerSecond" y "pitch" se retiraron de aquí, del esquema y de Tuning (ver el comentario de
+        // Tuning en Catalog.cs): no tenían ningún consumidor y cablearlas habría sido más invasivo que el
+        // resto de este arreglo (revisión independiente, fase 0).
         root.EnsureKnownKeys(
-            "ticksPerSecond", "regulationTicks", "goldenGoalMaxTicks", "decisionIntervalTicks", "transitionTicks",
+            "regulationTicks", "goldenGoalMaxTicks", "decisionIntervalTicks", "transitionTicks",
             "assistWindowTicks",
             "movement", "ball", "states", "pass", "dribble", "shot", "save", "tackle", "injury", "referee",
-            "restart", "pitch", "generation", "leash");
+            "restart", "generation", "leash");
 
         return new Tuning(
-            root.Prop("ticksPerSecond").AsInt(),
             root.Prop("regulationTicks").AsInt(),
             root.Prop("goldenGoalMaxTicks").AsInt(),
             root.Prop("decisionIntervalTicks").AsInt(),
@@ -384,7 +386,6 @@ public static class DataLoader
             ParseInjury(root.Prop("injury")),
             ParseReferee(root.Prop("referee")),
             ParseRestart(root.Prop("restart")),
-            ParsePitch(root.Prop("pitch")),
             ParseGeneration(root.Prop("generation")),
             ParseLeash(root.Prop("leash")));
     }
@@ -517,17 +518,6 @@ public static class DataLoader
             node.Prop("cornerTicks").AsInt(),
             node.Prop("kickoffTicks").AsInt(),
             node.Prop("penaltyTicks").AsInt());
-    }
-
-    private static PitchTuning ParsePitch(Json node)
-    {
-        node.EnsureKnownKeys("columns", "rows", "areaColumns", "areaRows", "goalRows");
-        return new PitchTuning(
-            node.Prop("columns").AsInt(),
-            node.Prop("rows").AsInt(),
-            node.Prop("areaColumns").AsInt(),
-            node.Prop("areaRows").AsInt(),
-            node.Prop("goalRows").AsInt());
     }
 
     private static GenerationTuning ParseGeneration(Json node)

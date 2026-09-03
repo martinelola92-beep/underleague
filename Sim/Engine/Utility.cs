@@ -48,9 +48,6 @@ internal static class Utility
     /// <summary>Distancia mínima que debe recorrer una acción de movimiento para no ser filtrada (§3.5).</summary>
     private const float LeashFilterMinAdvance = 0.25f;
 
-    /// <summary>Radio en el que un rival presiona a un jugador (§3.5).</summary>
-    private const float PressureRadius = 1.0f;
-
     /// <summary>Distancia máxima de pase para un jugador de campo (§3.5).</summary>
     private const float PassMaxCells = 7.0f;
 
@@ -59,9 +56,6 @@ internal static class Utility
 
     /// <summary>Distancia por delante en la que un rival estorba al regate (§3.5).</summary>
     private const float DribbleAheadRadius = 2.0f;
-
-    /// <summary>Fila central del campo.</summary>
-    private const float CenterRow = Pitch.Rows / 2f;
 
     /// <summary>Resultado de evaluar una acción concreta; struct para no asignar por evaluación.</summary>
     private struct Eval
@@ -161,8 +155,15 @@ internal static class Utility
     public static Vec2 ClampToPitch(Vec2 point) =>
         new(Math.Clamp(point.X, 0f, Pitch.Columns), Math.Clamp(point.Y, 0f, Pitch.Rows));
 
-    /// <summary>Convierte una distancia en casillas al entero de centésimas usado en los términos (§3.5).</summary>
-    public static int Centi(float cells) => (int)(cells * 100f);
+    /// <summary>
+    /// Convierte una distancia en casillas al entero de centésimas usado en los términos (§3.5).
+    /// Floor explícito (revisión independiente, fase 0): el cast directo a int trunca hacia cero, así que
+    /// -0.5 casillas se convertía en 0 pero 0.5 se convertía en 50, un salto asimétrico justo alrededor de
+    /// cero. La mayoría de llamadas pasan una distancia no negativa (Vec2.Distance), pero
+    /// <c>EvaluatePass</c> también la usa sobre un "avance" con signo; con floor, los dos lados de cero se
+    /// tratan igual.
+    /// </summary>
+    public static int Centi(float cells) => (int)MathF.Floor(cells * 100f);
 
     /// <summary>Acerca value a target en un paso como máximo.</summary>
     private static float MoveToward(float value, float target, float step)
@@ -335,7 +336,7 @@ internal static class Utility
         // "Y propia acercada 1 hacia 2.5" (§3.5) se toma sobre la fila de la casilla-hogar, no sobre la Y
         // instantánea: con la Y instantánea el punto de apoyo se recalcula cada decisión y todo el bloque
         // converge en pocos ticks a la fila 2.5, se solapa y el partido se bloquea (ver informe del paquete B).
-        var target = ClampToPitch(new Vec2(carrierX + (2f * direction), MoveToward(p.EffectiveHome.Y, CenterRow, 1f)));
+        var target = ClampToPitch(new Vec2(carrierX + (2f * direction), MoveToward(p.EffectiveHome.Y, PitchConstants.CenterRow, 1f)));
         eval.Target = target;
 
         int score = 0;
@@ -445,7 +446,7 @@ internal static class Utility
                 continue;
             }
 
-            if (HasOpponentWithin(players, mate, PressureRadius))
+            if (HasOpponentWithin(players, mate, PitchConstants.PressureRadius))
             {
                 continue;
             }
@@ -469,7 +470,7 @@ internal static class Utility
             score = context.PassOpenReceiverBonus;
         }
 
-        if (HasOpponentWithin(players, p, PressureRadius))
+        if (HasOpponentWithin(players, p, PitchConstants.PressureRadius))
         {
             score += context.PassUnderPressureBonus;
         }
@@ -499,7 +500,7 @@ internal static class Utility
 
     private static void EvaluateDribble(UtilityContext ctx, MatchPlayer p, AiContext context, int direction, ref Eval eval)
     {
-        eval.Target = ClampToPitch(new Vec2(p.Position.X + direction, MoveToward(p.Position.Y, CenterRow, 1f)));
+        eval.Target = ClampToPitch(new Vec2(p.Position.X + direction, MoveToward(p.Position.Y, PitchConstants.CenterRow, 1f)));
 
         int ahead = 0;
         var players = ctx.Players;
@@ -535,7 +536,7 @@ internal static class Utility
             return;
         }
 
-        int angle = Centi(MathF.Abs(p.Position.Y - CenterRow));
+        int angle = Centi(MathF.Abs(p.Position.Y - PitchConstants.CenterRow));
         eval.Context = context.ShootInRangeBonus
             - (context.ShootDistancePenaltyPerCell * Centi(distance) / 100)
             - (context.ShootAnglePenaltyPerRow * angle / 100);

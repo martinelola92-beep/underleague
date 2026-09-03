@@ -22,9 +22,6 @@ internal sealed class MatchEngine
     /// <summary>Radio en el que el receptor recoge un pase que llega (§3.7).</summary>
     private const float PassArrivalRadius = 1.0f;
 
-    /// <summary>Radio de presión de un rival sobre el poseedor (§3.7).</summary>
-    private const float PressureRadius = 1.0f;
-
     /// <summary>Radio en el que se dispara un duelo de regate (§3.7).</summary>
     private const float DribbleDuelRadius = 0.8f;
 
@@ -33,9 +30,6 @@ internal sealed class MatchEngine
 
     /// <summary>Velocidad con la que queda un balón suelto tras un pase fallido (§3.7).</summary>
     private const float LooseBallSpeed = 0.1f;
-
-    /// <summary>Fila central del campo.</summary>
-    private const float CenterRow = Pitch.Rows / 2f;
 
     private readonly MatchSetup _setup;
     private readonly Catalog _catalog;
@@ -87,7 +81,6 @@ internal sealed class MatchEngine
         _players = players.ToArray();
         for (int i = 0; i < _players.Length; i++)
         {
-            _players[i].Index = i;
             if (!_players[i].IsOutfield)
             {
                 _goalkeepers[_players[i].Team] = _players[i];
@@ -138,7 +131,7 @@ internal sealed class MatchEngine
     public MatchResult Run()
     {
         ResetPositions();
-        _ball.Park(new Vec2(Pitch.Columns / 2f, CenterRow));
+        _ball.Park(new Vec2(Pitch.Columns / 2f, PitchConstants.CenterRow));
         Emit(EventType.MatchStart, "kickoff");
         ScheduleKickoff(0);
 
@@ -178,7 +171,7 @@ internal sealed class MatchEngine
             }
 
             int column = teamIndex == 0 ? slot.HomeCell.Column : Pitch.Columns - 1 - slot.HomeCell.Column;
-            players.Add(new MatchPlayer(definition, teamIndex, players.Count, new Cell(column, slot.HomeCell.Row), _catalog));
+            players.Add(new MatchPlayer(definition, teamIndex, new Cell(column, slot.HomeCell.Row), _catalog));
         }
     }
 
@@ -191,9 +184,23 @@ internal sealed class MatchEngine
 
         if (_restartTicksLeft > 0)
         {
+            // Con el balón muerto, el enfriamiento de entrada y de duelo de regate siguen bajando tick a
+            // tick igual que fuera de una reanudación (revisión independiente, fase 0): antes se congelaban
+            // durante Restart/Kickoff/Penalty porque solo se llamaba a TickStateTimer, y un jugador podía
+            // salir de la reanudación con un enfriamiento más largo del que tuning.json pedía.
             for (int i = 0; i < _players.Length; i++)
             {
-                TickStateTimer(PlayerInTurnOrder(i));
+                var player = PlayerInTurnOrder(i);
+                TickStateTimer(player);
+                if (player.DribbleDuelCooldown > 0)
+                {
+                    player.DribbleDuelCooldown--;
+                }
+
+                if (player.TackleCooldown > 0)
+                {
+                    player.TackleCooldown--;
+                }
             }
 
             _restartTicksLeft--;
@@ -209,8 +216,16 @@ internal sealed class MatchEngine
                 UpdatePlayer(PlayerInTurnOrder(i));
             }
 
-            UpdateBall();
-            CheckOutOfBounds();
+            // Una falta resuelta dentro de este bucle puede haber pedido un penalti (SchedulePenalty ->
+            // BeginRestart), que aparca el balón en el punto de penalti y deja _restartTicksLeft > 0 a
+            // mitad de este mismo Step. Si se llamara igualmente a UpdateBall/CheckOutOfBounds, el balón
+            // aparcado se trataría como suelto y el jugador más cercano lo recogería ese mismo tick, antes
+            // de que la reanudación llegue a resolverse (revisión independiente, fase 0).
+            if (_restartTicksLeft == 0)
+            {
+                UpdateBall();
+                CheckOutOfBounds();
+            }
         }
 
         CheckForfeit();
@@ -410,7 +425,13 @@ internal sealed class MatchEngine
     private void Decide(MatchPlayer player)
     {
         List<UtilityRow>? rows = null;
-        if (_config.DumpUtility is { } dump && dump.PlayerId == player.Id && dump.Tick == _tick && _report.UtilityDump is null)
+
+        // El jugador solo decide cada tuning.decisionIntervalTicks ticks, desplazado por su propio id
+        // ((tick + Id) % decisionIntervalTicks == 0): el tick exacto pedido en --dump-utility casi nunca
+        // coincide con uno de sus ticks de decisión. Se captura la PRIMERA decisión de ese jugador en un
+        // tick >= el pedido (revisión independiente, fase 0); "_report.UtilityDump is null" sigue
+        // garantizando que solo se captura una vez por partido.
+        if (_config.DumpUtility is { } dump && dump.PlayerId == player.Id && _tick >= dump.Tick && _report.UtilityDump is null)
         {
             rows = new List<UtilityRow>();
         }
@@ -700,8 +721,24 @@ internal sealed class MatchEngine
             or PlayerState.SentOff or PlayerState.Celebrating);
 
     /// <summary>
+    /// Si hay un pase en vuelo (no un tiro) pendiente de llegar, lo cierra con <c>PassFailed</c>
+    /// Detail "cancelled" antes de que otra cosa se lleve el balón por delante (§3.7): sin este cierre,
+    /// un pase que <see cref="ParkBall"/> o <see cref="EndMatch"/> interrumpían a mitad de vuelo se
+    /// quedaba sin resolver y el flujo de eventos dejaba de cuadrar
+    /// (PASS_ATTEMPTED != PASS_COMPLETED + PASS_FAILED), revisión independiente de fase 0.
+    /// </summary>
+    private void CancelInFlightPass()
+    {
+        if (_ball.InFlight && !_ball.IsShot && _ball.Passer is not null)
+        {
+            Emit(EventType.PassFailed, "cancelled", _ball.Passer);
+        }
+    }
+
+    /// <summary>
     /// Deja el balón parado en un punto sin dueño. Si había poseedor, sale de Dribbling/Passing/Shooting
-    /// para que no siga conduciendo un balón que ya no tiene (§3.6).
+    /// para que no siga conduciendo un balón que ya no tiene (§3.6). Si había un pase en vuelo, se cierra
+    /// primero con PassFailed "cancelled" (§3.7).
     /// </summary>
     private void ParkBall(Vec2 position)
     {
@@ -711,6 +748,7 @@ internal sealed class MatchEngine
             previous.EnterState(PlayerState.Positioning, 0);
         }
 
+        CancelInFlightPass();
         _ball.Park(position);
     }
 
@@ -742,6 +780,13 @@ internal sealed class MatchEngine
         if (_lastOwningTeam >= 0 && _lastOwningTeam != player.Team)
         {
             _report.PossessionChanges++;
+
+            // La asistencia (§3.8) exige que el equipo que remata haya conservado el balón desde el
+            // último pase completado: si el rival lo tocó entre medias (robo, intercepción, duelo de
+            // regate perdido) y el mismo equipo lo recupera después, el pasador anterior ya no cuenta
+            // como asistente aunque el gol llegue dentro de assistWindowTicks (revisión independiente,
+            // fase 0). Se limpia en cualquier cambio de equipo poseedor, no solo cuando el rival marca.
+            _lastCompletedPasser = null;
         }
 
         _lastOwningTeam = player.Team;
@@ -801,14 +846,20 @@ internal sealed class MatchEngine
             : Utility.ClampToPitch(new Vec2(passer.Position.X + (3f * direction), passer.Position.Y));
 
         float distance = Vec2.Distance(passer.Position, receiverPoint);
-        int pressure = HasOpponentWithin(passer, PressureRadius) ? 1 : 0;
+        int pressure = HasOpponentWithin(passer, PitchConstants.PressureRadius) ? 1 : 0;
         int probability = pass.BaseSuccess
             + (pass.TechniqueFactor * (passer.Technique - 50))
             + (passer.PassQualityBonus * 100)
             - (pass.DistancePenaltyPerCell * Utility.Centi(distance) / 100)
             - (pass.PressurePenalty * pressure);
 
-        bool succeeds = receiver is not null && _rng.Chance(Math.Clamp(probability, 500, 9800));
+        // El roll se consume siempre, haya o no receptor (revisión independiente, fase 0): con
+        // "receiver is not null && _rng.Chance(...)" el cortocircuito del && saltaba el Chance() entero
+        // cuando no había receptor, así que el número de números que _rng.Next() consume en un pase
+        // dependía de si había o no compañero visible. Con esto, el flujo de RNG solo depende de la
+        // secuencia de decisiones tomadas, nunca de sus resultados intermedios.
+        bool chanceRoll = _rng.Chance(Math.Clamp(probability, 500, 9800));
+        bool succeeds = receiver is not null && chanceRoll;
         int ticks = FlightTicks(distance, _tuning.Ball.PassSpeedCellsPerTickMilli);
         Vec2 target = receiver is not null
             ? Utility.ClampToPitch(receiver.Position + (receiver.Velocity * ticks))
@@ -916,7 +967,7 @@ internal sealed class MatchEngine
         var shot = _tuning.Shot;
         Vec2 goal = Pitch.GoalCenter(shooter.Team);
         float distance = Vec2.Distance(shooter.Position, goal);
-        int pressure = isPenalty ? 0 : CountOpponentsWithin(shooter, PressureRadius);
+        int pressure = isPenalty ? 0 : CountOpponentsWithin(shooter, PitchConstants.PressureRadius);
 
         int raw = shot.BaseQuality
             + (shot.TechniqueFactor * shooter.Technique)
@@ -945,7 +996,7 @@ internal sealed class MatchEngine
         EndPlay("shot");
 
         Vec2 target = offTarget
-            ? new Vec2(goal.X, shooter.Position.Y < CenterRow ? 0f : Pitch.Rows)
+            ? new Vec2(goal.X, shooter.Position.Y < PitchConstants.CenterRow ? 0f : Pitch.Rows)
             : goal;
 
         _ball.Owner = null;
@@ -1137,7 +1188,14 @@ internal sealed class MatchEngine
             + (tackle.SpeedFactor * (tackler.Speed - 50))
             - (tackle.CarrierTechniqueFactor * (carrier.Technique - 50));
 
-        int biasShift = -(_tuning.Referee.BiasFoulShiftPer10 * _bias / 10);
+        // División simétrica explícita (revisión independiente, fase 0): Math.DivRem trunca hacia cero,
+        // igual que el operador "/" desnudo que ya se usaba, así que el resultado no cambia. Se deja
+        // explícito porque es la propiedad que hace correcto invertir el signo para el equipo 1: con
+        // truncamiento hacia cero, -(a/b) == (-a)/b siempre (el descarte del resto es el mismo a un lado
+        // y otro de cero), así que la magnitud del desplazamiento de falta es idéntica para bias positivo
+        // y negativo y para los dos equipos. Con un floor "hacia -infinito" (round(-4.5)=-5 pero
+        // round(4.5)=4) esa igualdad se rompe y el sesgo dejaría de ser simétrico.
+        int biasShift = -Math.DivRem(_tuning.Referee.BiasFoulShiftPer10 * _bias, 10, out _);
         if (tackler.Team == 1)
         {
             biasShift = -biasShift;
@@ -1289,7 +1347,7 @@ internal sealed class MatchEngine
         else
         {
             float cornerX = defendingTeam == 0 ? 0f : Pitch.Columns;
-            float cornerY = position.Y < CenterRow ? 0f : Pitch.Rows;
+            float cornerY = position.Y < PitchConstants.CenterRow ? 0f : Pitch.Rows;
             ScheduleCorner(attackingTeam, new Vec2(cornerX, cornerY));
         }
     }
@@ -1315,14 +1373,14 @@ internal sealed class MatchEngine
 
     private void ScheduleKickoff(int team)
     {
-        BeginRestart(RestartKind.Kickoff, team, new Vec2(Pitch.Columns / 2f, CenterRow), _tuning.Restart.KickoffTicks, MatchPhase.Kickoff);
+        BeginRestart(RestartKind.Kickoff, team, new Vec2(Pitch.Columns / 2f, PitchConstants.CenterRow), _tuning.Restart.KickoffTicks, MatchPhase.Kickoff);
     }
 
     private void SchedulePenalty(int team)
     {
         int direction = Pitch.AttackDirection(team);
         Vec2 goal = Pitch.GoalCenter(team);
-        var point = new Vec2(goal.X - (PenaltySpotCells * direction), CenterRow);
+        var point = new Vec2(goal.X - (PenaltySpotCells * direction), PitchConstants.CenterRow);
 
         _penaltyTaker = BestPenaltyTaker(team);
         BeginRestart(RestartKind.Penalty, team, point, _tuning.Restart.PenaltyTicks, MatchPhase.Penalty);
@@ -1356,14 +1414,33 @@ internal sealed class MatchEngine
         _restartTicksLeft = ticks > 0 ? ticks : 1;
         _phase = phase;
         ParkBall(point);
+        CancelPendingTackles();
         EndPlay("lost");
+    }
+
+    /// <summary>
+    /// Cancela cualquier entrada en curso (Tackling) al empezar una reanudación (§3.6, §3.8), igual que
+    /// <see cref="ParkBall"/> ya sacaba al dueño de Dribbling/Passing/Shooting: con el balón muerto durante
+    /// Restart/Kickoff/Penalty no debe resolverse una entrada que estaba a mitad de TacklingTicks
+    /// (revisión independiente, fase 0). El que entraba vuelve a Positioning sin evento, igual que cuando
+    /// el objetivo se sale de alcance por su cuenta (ResolveTackle).
+    /// </summary>
+    private void CancelPendingTackles()
+    {
+        for (int i = 0; i < _players.Length; i++)
+        {
+            var player = _players[i];
+            if (player.State == PlayerState.Tackling)
+            {
+                player.EnterState(PlayerState.Positioning, 0);
+            }
+        }
     }
 
     private void ResolveRestart()
     {
         var kind = _pendingRestart;
         _pendingRestart = RestartKind.None;
-        _phase = _goldenGoal ? MatchPhase.MobGoldenGoal : MatchPhase.OpenPlay;
 
         switch (kind)
         {
@@ -1384,6 +1461,17 @@ internal sealed class MatchEngine
                 break;
             default:
                 break;
+        }
+
+        // La fase vuelve a OpenPlay/MobGoldenGoal DESPUÉS del switch (revisión independiente, fase 0):
+        // TakeRestart/TakeGoalKick/TakeKickoff emiten su Recovery mientras el saque se resuelve, y ese
+        // evento debe llevar Phase = Restart/Kickoff/Penalty, no la fase de juego abierto en la que el
+        // motor entra justo después. Si TakePenalty no encuentra tirador, llama a ScheduleGoalKick, que
+        // abre una reanudación nueva (BeginRestart dentro del propio switch) y dejará _restartTicksLeft
+        // > 0: en ese caso no se toca _phase aquí, porque BeginRestart ya la puso en Restart.
+        if (_restartTicksLeft == 0)
+        {
+            _phase = _goldenGoal ? MatchPhase.MobGoldenGoal : MatchPhase.OpenPlay;
         }
     }
 
@@ -1441,7 +1529,7 @@ internal sealed class MatchEngine
         _shift[1] = 0f;
         ResetPositions();
 
-        var center = new Vec2(Pitch.Columns / 2f, CenterRow);
+        var center = new Vec2(Pitch.Columns / 2f, PitchConstants.CenterRow);
         MatchPlayer? taker = null;
         float bestDistance = 0f;
         for (int i = 0; i < _players.Length; i++)
@@ -1515,6 +1603,14 @@ internal sealed class MatchEngine
 
     private void CheckForfeit()
     {
+        if (_phase == MatchPhase.Finished)
+        {
+            // El partido ya terminó en este mismo Step (por ejemplo, EndConditions o una incomparecencia
+            // resuelta antes en la cadena); comprobar de nuevo emitiría un segundo MATCH_END (revisión
+            // independiente, fase 0).
+            return;
+        }
+
         int home = CountOnPitch(0);
         int away = CountOnPitch(1);
         if (home >= 5 && away >= 5)
@@ -1523,7 +1619,23 @@ internal sealed class MatchEngine
         }
 
         _report.Forfeit = true;
-        EndMatch(home < 5 ? 1 : 0, "forfeit");
+
+        // Incomparecencia simultánea de los dos equipos en el mismo tick (§3.8, §3.9): gana el que tenga
+        // más jugadores en campo; si empatan (incluido 0 a 0, ambos equipos vaciados el mismo tick), se
+        // aplica la misma cadena de desempate que el gol de oro agotado (más tiros a puerta, más ticks de
+        // posesión, visitante). El Detail sigue siendo "forfeit": para el informe es una incomparecencia,
+        // no un desempate de partido completo.
+        int winner;
+        if (home < 5 && away < 5)
+        {
+            winner = home != away ? (home > away ? 0 : 1) : TiebreakWinner();
+        }
+        else
+        {
+            winner = home < 5 ? 1 : 0;
+        }
+
+        EndMatch(winner, "forfeit");
     }
 
     private int CountOnPitch(int team)
@@ -1600,25 +1712,40 @@ internal sealed class MatchEngine
             return;
         }
 
-        int winner;
+        EndMatch(TiebreakWinner(), "tiebreak");
+    }
+
+    /// <summary>
+    /// Cadena de desempate de §3.9: más tiros a puerta, si no más ticks de posesión, si no el visitante
+    /// (equipo 1). Se usa al agotar el gol de oro y, desde la revisión independiente de fase 0, también
+    /// en la incomparecencia simultánea de los dos equipos (§3.8), que necesita el mismo criterio.
+    /// </summary>
+    private int TiebreakWinner()
+    {
         if (_report.ShotsOnTarget[0] != _report.ShotsOnTarget[1])
         {
-            winner = _report.ShotsOnTarget[0] > _report.ShotsOnTarget[1] ? 0 : 1;
-        }
-        else if (_report.PossessionTicks[0] != _report.PossessionTicks[1])
-        {
-            winner = _report.PossessionTicks[0] > _report.PossessionTicks[1] ? 0 : 1;
-        }
-        else
-        {
-            winner = 1;
+            return _report.ShotsOnTarget[0] > _report.ShotsOnTarget[1] ? 0 : 1;
         }
 
-        EndMatch(winner, "tiebreak");
+        if (_report.PossessionTicks[0] != _report.PossessionTicks[1])
+        {
+            return _report.PossessionTicks[0] > _report.PossessionTicks[1] ? 0 : 1;
+        }
+
+        return 1;
     }
 
     private void EndMatch(int winner, string detail)
     {
+        if (_phase == MatchPhase.Finished)
+        {
+            // Ya se cerró el partido en este mismo Step (por ejemplo, CheckEndConditions seguido de
+            // CheckForfeit sobre el mismo tick): un segundo MATCH_END sería un evento fantasma
+            // (revisión independiente, fase 0).
+            return;
+        }
+
+        CancelInFlightPass();
         EndPlay("lost");
         _phase = MatchPhase.Finished;
         _report.Winner = winner;

@@ -111,7 +111,7 @@ public class DataLoaderTests
     public void FromJson_UnknownKeyAtTuningRoot_Throws()
     {
         var files = TestData.LoadAllFiles();
-        files["sim/tuning.json"] = InjectKey(files["sim/tuning.json"], "\"ticksPerSecond\": 15,", "\"bogusKey\": 1, \"ticksPerSecond\": 15,");
+        files["sim/tuning.json"] = InjectKey(files["sim/tuning.json"], "\"regulationTicks\": 1200,", "\"bogusKey\": 1, \"regulationTicks\": 1200,");
 
         var ex = Assert.Throws<DataException>(() => DataLoader.FromJson(files));
         Assert.Equal("sim/tuning.json", ex.File);

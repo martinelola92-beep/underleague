@@ -141,12 +141,17 @@ public sealed record RefereeTuning(int BiasFoulShiftPer10, int PenaltyOnFoulInAr
 /// <summary>tuning.restart.</summary>
 public sealed record RestartTuning(int ThrowInTicks, int GoalKickTicks, int CornerTicks, int KickoffTicks, int PenaltyTicks);
 
-/// <summary>tuning.pitch.</summary>
-public sealed record PitchTuning(int Columns, int Rows, int AreaColumns, int AreaRows, int GoalRows);
-
-/// <summary>Constantes de resolución del simulador (data/sim/tuning.json), un campo por clave, anidado por sección.</summary>
+/// <summary>
+/// Constantes de resolución del simulador (data/sim/tuning.json), un campo por clave, anidado por sección.
+/// Decisión fuera de la especificación (revisión independiente, fase 0): las claves "ticksPerSecond" y
+/// "pitch" de tuning.json no las leía nadie (la geometría del campo vive en Sim.Model.Pitch como
+/// constantes de compilación, no en datos, y el reloj lógico de 15/s es RT-020, no un ajuste de balance).
+/// Cablear Sim.Model.Pitch a estos datos habría tocado más de 20 sitios (const de compilación en
+/// MatchEngine/Utility que dependen de Pitch.Columns/Rows en tiempo de compilación, más el propio Utility
+/// como clase estática), muy por encima del umbral fijado para el arreglo; se retiran del esquema, del
+/// catálogo y del parser en vez de cablearlas en silencio. Ver el informe del hito para el detalle.
+/// </summary>
 public sealed record Tuning(
-    int TicksPerSecond,
     int RegulationTicks,
     int GoldenGoalMaxTicks,
     int DecisionIntervalTicks,
@@ -163,7 +168,6 @@ public sealed record Tuning(
     InjuryTuning Injury,
     RefereeTuning Referee,
     RestartTuning Restart,
-    PitchTuning Pitch,
     GenerationTuning Generation,
     LeashTuning Leash);
 

@@ -7,6 +7,12 @@ public sealed class Options
 
     public ulong Seed { get; private set; } = 1;
 
+    /// <summary>
+    /// Null salvo que se pase --match-seed: ejecuta un único partido con esta semilla exacta de motor en
+    /// vez del lote completo (docs/sim-debug), usando --teams y su primer emparejamiento.
+    /// </summary>
+    public ulong? MatchSeed { get; private set; }
+
     public string TeamsPath { get; private set; } = Path.Combine("data", "balance", "reference.json");
 
     /// <summary>Null hasta resolver: si no se pasa --data, se busca subiendo directorios desde cwd (Program.ResolveDataPath).</summary>
@@ -43,6 +49,10 @@ public sealed class Options
 
                 case "--seed":
                     options.Seed = ParseUlong(arg, NextValue(args, ref i, arg));
+                    break;
+
+                case "--match-seed":
+                    options.MatchSeed = ParseUlong(arg, NextValue(args, ref i, arg));
                     break;
 
                 case "--teams":
