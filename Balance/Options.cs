@@ -1,0 +1,122 @@
+namespace Underleague.Balance;
+
+/// <summary>Opciones de línea de comandos de /Balance (docs/fase0-diseno.md §4). Parseo manual, sin paquetes.</summary>
+public sealed class Options
+{
+    public int Runs { get; private set; } = 1000;
+
+    public ulong Seed { get; private set; } = 1;
+
+    public string TeamsPath { get; private set; } = Path.Combine("data", "balance", "reference.json");
+
+    /// <summary>Null hasta resolver: si no se pasa --data, se busca subiendo directorios desde cwd (Program.ResolveDataPath).</summary>
+    public string? DataPath { get; private set; }
+
+    /// <summary>Null hasta resolver: por defecto "out/&lt;seed&gt;/", calculado una vez se conoce Seed.</summary>
+    public string? OutDir { get; private set; }
+
+    public bool Log { get; private set; }
+
+    public (int PlayerId, int Tick)? DumpUtility { get; private set; }
+
+    public bool Quiet { get; private set; }
+
+    /// <summary>Parsea argv. Lanza ArgumentException con un mensaje claro ante cualquier opción mal formada o desconocida.</summary>
+    public static Options Parse(string[] args)
+    {
+        var options = new Options();
+        string? outDir = null;
+
+        for (int i = 0; i < args.Length; i++)
+        {
+            string arg = args[i];
+            switch (arg)
+            {
+                case "--runs":
+                    options.Runs = ParseInt(arg, NextValue(args, ref i, arg));
+                    if (options.Runs <= 0)
+                    {
+                        throw new ArgumentException("--runs debe ser mayor que cero");
+                    }
+
+                    break;
+
+                case "--seed":
+                    options.Seed = ParseUlong(arg, NextValue(args, ref i, arg));
+                    break;
+
+                case "--teams":
+                    options.TeamsPath = NextValue(args, ref i, arg);
+                    break;
+
+                case "--data":
+                    options.DataPath = NextValue(args, ref i, arg);
+                    break;
+
+                case "--out":
+                    outDir = NextValue(args, ref i, arg);
+                    break;
+
+                case "--log":
+                    options.Log = true;
+                    break;
+
+                case "--dump-utility":
+                    options.DumpUtility = ParseDumpUtility(NextValue(args, ref i, arg));
+                    break;
+
+                case "--quiet":
+                    options.Quiet = true;
+                    break;
+
+                default:
+                    throw new ArgumentException($"opción desconocida '{arg}'");
+            }
+        }
+
+        options.OutDir = outDir ?? Path.Combine("out", options.Seed.ToString());
+        return options;
+    }
+
+    private static string NextValue(string[] args, ref int i, string option)
+    {
+        if (i + 1 >= args.Length)
+        {
+            throw new ArgumentException($"{option} requiere un valor");
+        }
+
+        i++;
+        return args[i];
+    }
+
+    private static int ParseInt(string option, string value)
+    {
+        if (!int.TryParse(value, out int result))
+        {
+            throw new ArgumentException($"{option}: valor entero inválido '{value}'");
+        }
+
+        return result;
+    }
+
+    private static ulong ParseUlong(string option, string value)
+    {
+        if (!ulong.TryParse(value, out ulong result))
+        {
+            throw new ArgumentException($"{option}: valor entero sin signo inválido '{value}'");
+        }
+
+        return result;
+    }
+
+    private static (int PlayerId, int Tick) ParseDumpUtility(string value)
+    {
+        string[] parts = value.Split(':');
+        if (parts.Length != 2 || !int.TryParse(parts[0], out int playerId) || !int.TryParse(parts[1], out int tick))
+        {
+            throw new ArgumentException($"--dump-utility: formato inválido '{value}', se espera 'playerId:tick'");
+        }
+
+        return (playerId, tick);
+    }
+}

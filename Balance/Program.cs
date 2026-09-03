@@ -1,2 +1,334 @@
-﻿// See https://aka.ms/new-console-template for more information
-Console.WriteLine("Hello, World!");
+using Underleague.Balance;
+using Underleague.Sim.Data;
+using Underleague.Sim.Engine;
+
+// Punto de entrada de /Balance (docs/fase0-diseno.md §4, docs/balance.md). Sin paquetes NuGet, parseo
+// manual de argumentos (Options.cs).
+
+Options options;
+try
+{
+    options = Options.Parse(args);
+}
+catch (ArgumentException ex)
+{
+    Console.Error.WriteLine($"error de argumentos: {ex.Message}");
+    PrintUsage();
+    return 1;
+}
+
+try
+{
+    string dataPath = ResolveDataPath(options.DataPath);
+    var dataFiles = LoadDataFiles(dataPath);
+    Catalog catalog = DataLoader.FromJson(dataFiles);
+
+    string referenceContent = File.ReadAllText(options.TeamsPath);
+    ReferenceConfig reference = ReferenceConfig.Load(referenceContent);
+
+    BatchResult batch = BatchRunner.Run(options, catalog, reference);
+
+    if (batch.EnginePendingFailures > 0 && batch.EnginePendingFailures < batch.TotalRequested)
+    {
+        Console.Error.WriteLine(
+            $"aviso: {batch.EnginePendingFailures} de {batch.TotalRequested} partidos fallaron con " +
+            "NotSupportedException (motor pendiente) mientras otros se ejecutaron; se continúa con los que sí corrieron.");
+    }
+
+    if (batch.EnginePendingFailures == batch.TotalRequested)
+    {
+        Console.WriteLine("engine pending");
+        return 2;
+    }
+
+    var metrics = Metrics.Compute(batch.Matches, reference);
+
+    WriteMatchesCsv(options.OutDir!, batch.Matches);
+    WritePlayersCsv(options.OutDir!, batch.Players);
+    WriteSummaryCsv(options.OutDir!, metrics);
+
+    if (options.Log)
+    {
+        Console.WriteLine();
+        Console.WriteLine("--- log del primer partido (Report.Log) ---");
+        if (batch.FirstMatchLog.Count == 0)
+        {
+            Console.WriteLine("(sin líneas: --log no estaba activo en SimConfig del primer partido, o el partido no llegó a ejecutarse)");
+        }
+        else
+        {
+            foreach (var line in batch.FirstMatchLog)
+            {
+                Console.WriteLine(line);
+            }
+        }
+    }
+
+    if (options.DumpUtility is not null)
+    {
+        Console.WriteLine();
+        Console.WriteLine("--- tabla de utilidad del primer partido (--dump-utility) ---");
+        if (batch.FirstMatchUtilityDump is null)
+        {
+            Console.WriteLine("(sin volcado: el tick/jugador pedido no coincidió en el primer partido)");
+        }
+        else
+        {
+            PrintUtilityDump(batch.FirstMatchUtilityDump);
+        }
+    }
+
+    bool anyOut = metrics.Any(m => m.Status == "OUT");
+
+    if (!options.Quiet)
+    {
+        Console.WriteLine();
+        PrintSummaryTable(metrics);
+        Console.WriteLine();
+        double seconds = batch.Elapsed.TotalSeconds;
+        double matchesPerSecond = seconds > 0 ? batch.Matches.Count / seconds : 0;
+        Console.WriteLine($"{batch.Matches.Count} partidos en {seconds:F2} s ({matchesPerSecond:F1} partidos/s)");
+        Console.WriteLine($"CSV escritos en {options.OutDir}");
+    }
+
+    return anyOut ? 1 : 0;
+}
+catch (DataException ex)
+{
+    Console.Error.WriteLine($"error cargando /data: {ex.Message}");
+    return 1;
+}
+catch (Exception ex) when (ex is FormatException or IOException or DirectoryNotFoundException or FileNotFoundException)
+{
+    Console.Error.WriteLine($"error: {ex.Message}");
+    return 1;
+}
+
+static void PrintUsage()
+{
+    Console.Error.WriteLine(
+        """
+        uso: dotnet run --project Balance -- [opciones]
+          --runs N            total de partidos (por defecto 1000)
+          --seed S            semilla base, entero sin signo (por defecto 1)
+          --teams path        por defecto data/balance/reference.json
+          --data path         por defecto: subir directorios desde cwd hasta encontrar data/
+          --out dir           por defecto out/<seed>/
+          --log               imprime el log del primer partido
+          --dump-utility P:T  SimConfig.DumpUtility para el primer partido; imprime la tabla
+          --quiet             sin resumen por consola
+        """);
+}
+
+/// <summary>Sube directorios desde cwd hasta encontrar un directorio "data" (por defecto de --data).</summary>
+static string ResolveDataPath(string? given)
+{
+    if (given is not null)
+    {
+        return given;
+    }
+
+    DirectoryInfo? dir = new(Directory.GetCurrentDirectory());
+    while (dir is not null)
+    {
+        string candidate = Path.Combine(dir.FullName, "data");
+        if (Directory.Exists(candidate))
+        {
+            return candidate;
+        }
+
+        dir = dir.Parent;
+    }
+
+    throw new DirectoryNotFoundException(
+        $"no se encontró un directorio 'data' subiendo desde {Directory.GetCurrentDirectory()}; usa --data para indicarlo");
+}
+
+/// <summary>Lee todos los *.json bajo dataRoot excepto dataRoot/schemas/, en rutas relativas con barras.</summary>
+static Dictionary<string, string> LoadDataFiles(string dataRoot)
+{
+    string fullRoot = Path.GetFullPath(dataRoot);
+    string schemasDir = Path.GetFullPath(Path.Combine(fullRoot, "schemas")) + Path.DirectorySeparatorChar;
+
+    var files = new Dictionary<string, string>(StringComparer.Ordinal);
+    foreach (string file in Directory.EnumerateFiles(fullRoot, "*.json", SearchOption.AllDirectories))
+    {
+        string fullFile = Path.GetFullPath(file);
+        if (fullFile.StartsWith(schemasDir, StringComparison.Ordinal))
+        {
+            continue;
+        }
+
+        string relative = Path.GetRelativePath(fullRoot, fullFile).Replace(Path.DirectorySeparatorChar, '/');
+        files[relative] = File.ReadAllText(fullFile);
+    }
+
+    return files;
+}
+
+static void WriteMatchesCsv(string outDir, IReadOnlyList<MatchRow> matches)
+{
+    string[] header =
+    {
+        "index", "seed", "homeId", "awayId", "homeGoals", "awayGoals", "winner", "ticks", "goldenGoal",
+        "forfeit", "possessionChanges", "passChains", "passChainAvgLength", "shots", "shotsOnTarget",
+        "tackles", "fouls", "yellow", "red", "injuries", "ballThird0", "ballThird1", "ballThird2", "finalBias",
+    };
+
+    var rows = matches.Select(m =>
+    {
+        double avgLength = m.PassChains > 0 ? (double)m.PassChainTotalLength / m.PassChains : 0.0;
+        return (IReadOnlyList<string>)new[]
+        {
+            m.Index.ToString(),
+            m.Seed.ToString(),
+            m.HomeId,
+            m.AwayId,
+            m.HomeGoals.ToString(),
+            m.AwayGoals.ToString(),
+            m.Winner.ToString(),
+            m.Ticks.ToString(),
+            CsvWriter.Bool(m.GoldenGoal),
+            CsvWriter.Bool(m.Forfeit),
+            m.PossessionChanges.ToString(),
+            m.PassChains.ToString(),
+            CsvWriter.F2(avgLength),
+            m.Shots.ToString(),
+            m.ShotsOnTarget.ToString(),
+            m.Tackles.ToString(),
+            m.Fouls.ToString(),
+            m.Yellow.ToString(),
+            m.Red.ToString(),
+            m.Injuries.ToString(),
+            m.BallThird0.ToString(),
+            m.BallThird1.ToString(),
+            m.BallThird2.ToString(),
+            m.FinalBias.ToString(),
+        };
+    });
+
+    CsvWriter.Write(Path.Combine(outDir, "matches.csv"), header, rows);
+}
+
+static void WritePlayersCsv(string outDir, IReadOnlyList<PlayerAggregate> players)
+{
+    string[] header =
+    {
+        "playerId", "teamId", "name", "race", "position", "rarity", "matches", "goals", "assists",
+        "shots", "passesAttempted", "passesCompleted", "tackles", "tacklesWon", "fouls", "cards",
+        "injuries", "ticksOnPitch",
+    };
+
+    var rows = players.Select(p => (IReadOnlyList<string>)new[]
+    {
+        p.PlayerId.ToString(),
+        p.TeamId,
+        p.Name,
+        p.Race,
+        p.Position,
+        p.Rarity,
+        p.Matches.ToString(),
+        p.Goals.ToString(),
+        p.Assists.ToString(),
+        p.Shots.ToString(),
+        p.PassesAttempted.ToString(),
+        p.PassesCompleted.ToString(),
+        p.Tackles.ToString(),
+        p.TacklesWon.ToString(),
+        p.Fouls.ToString(),
+        p.Cards.ToString(),
+        p.Injuries.ToString(),
+        p.TicksOnPitch.ToString(),
+    });
+
+    CsvWriter.Write(Path.Combine(outDir, "players.csv"), header, rows);
+}
+
+static void WriteSummaryCsv(string outDir, IReadOnlyList<MetricRow> metrics)
+{
+    string[] header = { "metric", "value", "rangeMin", "rangeMax", "status" };
+
+    var rows = metrics.Select(m => (IReadOnlyList<string>)new[]
+    {
+        m.Name,
+        CsvWriter.F2(m.Value),
+        m.RangeMin is { } min ? CsvWriter.F2(min) : string.Empty,
+        m.RangeMax is { } max ? CsvWriter.F2(max) : string.Empty,
+        m.Status,
+    });
+
+    CsvWriter.Write(Path.Combine(outDir, "summary.csv"), header, rows);
+}
+
+static void PrintSummaryTable(IReadOnlyList<MetricRow> metrics)
+{
+    string[] headers = { "metric", "value", "rangeMin", "rangeMax", "status" };
+    var rows = metrics
+        .Select(m => new[]
+        {
+            m.Name,
+            CsvWriter.F2(m.Value),
+            m.RangeMin is { } min ? CsvWriter.F2(min) : "-",
+            m.RangeMax is { } max ? CsvWriter.F2(max) : "-",
+            m.Status,
+        })
+        .ToList();
+
+    PrintAlignedTable(headers, rows);
+}
+
+static void PrintUtilityDump(UtilityDump dump)
+{
+    Console.WriteLine($"jugador {dump.PlayerId}, tick {dump.Tick}, estado {dump.State}, elegida {dump.Chosen}");
+
+    string[] headers = { "accion", "score", "base", "tactical", "trait", "context", "filtered" };
+    var rows = dump.Rows
+        .Select(r => new[]
+        {
+            r.Action.ToString(),
+            r.Score.ToString(),
+            r.Base.ToString(),
+            r.TacticalMultiplier.ToString(),
+            r.TraitMultiplier.ToString(),
+            r.Context.ToString(),
+            r.LeashFiltered.ToString(),
+        })
+        .ToList();
+
+    PrintAlignedTable(headers, rows);
+}
+
+static void PrintAlignedTable(IReadOnlyList<string> headers, IReadOnlyList<string[]> rows)
+{
+    int columns = headers.Count;
+    var widths = new int[columns];
+    for (int c = 0; c < columns; c++)
+    {
+        widths[c] = headers[c].Length;
+    }
+
+    foreach (var row in rows)
+    {
+        for (int c = 0; c < columns; c++)
+        {
+            widths[c] = Math.Max(widths[c], row[c].Length);
+        }
+    }
+
+    Console.WriteLine(FormatRow(headers, widths));
+    foreach (var row in rows)
+    {
+        Console.WriteLine(FormatRow(row, widths));
+    }
+}
+
+static string FormatRow(IReadOnlyList<string> cells, IReadOnlyList<int> widths)
+{
+    var parts = new string[cells.Count];
+    for (int c = 0; c < cells.Count; c++)
+    {
+        parts[c] = cells[c].PadRight(widths[c]);
+    }
+
+    return string.Join("  ", parts);
+}
