@@ -91,5 +91,16 @@
     "areaColumns": 2,
     "areaRows": 3,
     "goalRows": 3
-  }
+  },
+  "generation": {
+    "positionBias": {
+      "Goalkeeper": { "strength": 4, "speed": 0, "technique": 2, "stamina": 4, "leash": -30 },
+      "Defender":   { "strength": 6, "speed": -2, "technique": -4, "stamina": 4, "leash": -5 },
+      "Midfielder": { "strength": -2, "speed": 2, "technique": 4, "stamina": 6, "leash": 8 },
+      "Forward":    { "strength": 0, "speed": 6, "technique": 4, "stamina": -4, "leash": 0 }
+    },
+    "traitCountWeights": [50, 35, 15],
+    "goalkeeperTraitChance": 5000
+  },
+  "leash": { "minCells": 1, "cellsPer99": 4 }
 }
