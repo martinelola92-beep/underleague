@@ -1,0 +1,45 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://underleague.dev/schemas/balance-reference.schema.json",
+  "title": "Underleague balance reference set",
+  "description": "data/balance/reference.json: equipos y emparejamientos de referencia para /Balance (RT-052).",
+  "type": "object",
+  "properties": {
+    "_doc": { "type": "string" },
+    "teams": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/team" },
+      "minItems": 1
+    },
+    "pairings": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/pairing" },
+      "minItems": 1
+    }
+  },
+  "required": ["teams", "pairings"],
+  "additionalProperties": false,
+  "$defs": {
+    "race": {
+      "type": "string",
+      "enum": ["Human", "Orc", "Elf", "Dwarf", "Undead", "DarkElf", "Demon", "Vampire", "Lizard"]
+    },
+    "team": {
+      "type": "object",
+      "properties": {
+        "_doc": { "type": "string" },
+        "id": { "type": "string", "minLength": 1 },
+        "race": { "$ref": "#/$defs/race" },
+        "quality": { "type": "integer", "minimum": 1, "maximum": 99 }
+      },
+      "required": ["id", "race", "quality"],
+      "additionalProperties": false
+    },
+    "pairing": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 },
+      "minItems": 2,
+      "maxItems": 2
+    }
+  }
+}

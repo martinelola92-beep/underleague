@@ -1,0 +1,97 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://underleague.dev/schemas/traits.schema.json",
+  "title": "Underleague trait catalog",
+  "description": "data/traits/traits.json: rasgos normales y exclusivos de portero (TraitDefinition, fase0-diseno.md 2.5).",
+  "type": "object",
+  "properties": {
+    "_doc": { "type": "string" },
+    "traits": {
+      "type": "object",
+      "properties": {
+        "_doc": { "type": "string" },
+        "Aggressive": { "$ref": "#/$defs/traitEntry" },
+        "Fast": { "$ref": "#/$defs/traitEntry" },
+        "Scorer": { "$ref": "#/$defs/traitEntry" },
+        "LongShot": { "$ref": "#/$defs/traitEntry" },
+        "Cerebral": { "$ref": "#/$defs/traitEntry" },
+        "Dirty": { "$ref": "#/$defs/traitEntry" },
+        "Resilient": { "$ref": "#/$defs/traitEntry" },
+        "Coward": { "$ref": "#/$defs/traitEntry" },
+        "Leader": { "$ref": "#/$defs/traitEntry" },
+        "Lazy": { "$ref": "#/$defs/traitEntry" }
+      },
+      "required": ["Aggressive", "Fast", "Scorer", "LongShot", "Cerebral", "Dirty", "Resilient", "Coward", "Leader", "Lazy"],
+      "additionalProperties": false
+    },
+    "goalkeeperTraits": {
+      "type": "object",
+      "properties": {
+        "_doc": { "type": "string" },
+        "Cat": { "$ref": "#/$defs/traitEntry" },
+        "Wall": { "$ref": "#/$defs/traitEntry" },
+        "Rusher": { "$ref": "#/$defs/traitEntry" }
+      },
+      "required": ["Cat", "Wall", "Rusher"],
+      "additionalProperties": false
+    }
+  },
+  "required": ["traits", "goalkeeperTraits"],
+  "additionalProperties": false,
+  "$defs": {
+    "playerAction": {
+      "type": "string",
+      "enum": ["ChaseBall", "MarkOpponent", "OfferSupport", "CoverSpace", "Pass", "Dribble", "Shoot", "Tackle", "Retreat"]
+    },
+    "localizedName": {
+      "type": "object",
+      "properties": {
+        "_doc": { "type": "string" },
+        "es": { "type": "string", "minLength": 1 },
+        "en": { "type": "string", "minLength": 1 }
+      },
+      "required": ["es", "en"],
+      "additionalProperties": false
+    },
+    "actionMultipliers": {
+      "type": "object",
+      "description": "Multiplicador porcentual por PlayerAction (100 = neutro). Solo se listan las acciones afectadas.",
+      "properties": {
+        "_doc": { "type": "string" },
+        "ChaseBall": { "type": "integer", "minimum": 0, "maximum": 1000 },
+        "MarkOpponent": { "type": "integer", "minimum": 0, "maximum": 1000 },
+        "OfferSupport": { "type": "integer", "minimum": 0, "maximum": 1000 },
+        "CoverSpace": { "type": "integer", "minimum": 0, "maximum": 1000 },
+        "Pass": { "type": "integer", "minimum": 0, "maximum": 1000 },
+        "Dribble": { "type": "integer", "minimum": 0, "maximum": 1000 },
+        "Shoot": { "type": "integer", "minimum": 0, "maximum": 1000 },
+        "Tackle": { "type": "integer", "minimum": 0, "maximum": 1000 },
+        "Retreat": { "type": "integer", "minimum": 0, "maximum": 1000 }
+      },
+      "additionalProperties": false
+    },
+    "traitEntry": {
+      "type": "object",
+      "properties": {
+        "_doc": { "type": "string" },
+        "name": { "$ref": "#/$defs/localizedName" },
+        "actionMultipliers": { "$ref": "#/$defs/actionMultipliers" },
+        "hardTackleBonus": { "type": "integer", "minimum": -1000, "maximum": 1000 },
+        "speedBonusPercent": { "type": "integer", "minimum": -1000, "maximum": 1000 },
+        "shotQualityBonus": { "type": "integer", "minimum": -10000, "maximum": 10000 },
+        "shootRangeBonusCells": { "type": "integer", "minimum": 0, "maximum": 20 },
+        "passQualityBonus": { "type": "integer", "minimum": -10000, "maximum": 10000 },
+        "foulChanceBonus": { "type": "integer", "minimum": -10000, "maximum": 10000 },
+        "injuryChanceBonus": { "type": "integer", "minimum": -10000, "maximum": 10000 },
+        "fatigueResistancePercent": { "type": "integer", "minimum": -1000, "maximum": 1000 },
+        "injuryResistanceBonus": { "type": "integer", "minimum": -10000, "maximum": 10000 },
+        "adjacentTeammateBonusPercent": { "type": "integer", "minimum": -1000, "maximum": 1000 },
+        "saveBonusClose": { "type": "integer", "minimum": -10000, "maximum": 10000 },
+        "saveBonusFar": { "type": "integer", "minimum": -10000, "maximum": 10000 },
+        "leashBonus": { "type": "integer", "minimum": -99, "maximum": 99 }
+      },
+      "required": ["name", "actionMultipliers"],
+      "additionalProperties": false
+    }
+  }
+}

@@ -1,0 +1,80 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://underleague.dev/schemas/races.schema.json",
+  "title": "Underleague race definition",
+  "description": "Un fichero por raza en data/races/*.json (RaceDefinition, fase0-diseno.md 2.5).",
+  "type": "object",
+  "properties": {
+    "_doc": { "type": "string" },
+    "id": { "$ref": "#/$defs/race" },
+    "name": { "$ref": "#/$defs/localizedName" },
+    "tag": { "type": "string", "minLength": 1, "maxLength": 32 },
+    "launch": { "type": "boolean" },
+    "cellsOccupied": { "type": "integer", "minimum": 1, "maximum": 3 },
+    "attributeBias": { "$ref": "#/$defs/attributeBias" },
+    "individualDeviation": { "type": "integer", "minimum": 0, "maximum": 40 },
+    "traitWeights": { "$ref": "#/$defs/traitWeights" },
+    "names": { "$ref": "#/$defs/names" }
+  },
+  "required": ["id", "name", "tag", "launch", "cellsOccupied", "attributeBias", "individualDeviation", "traitWeights", "names"],
+  "additionalProperties": false,
+  "$defs": {
+    "race": {
+      "type": "string",
+      "enum": ["Human", "Orc", "Elf", "Dwarf", "Undead", "DarkElf", "Demon", "Vampire", "Lizard"]
+    },
+    "localizedName": {
+      "type": "object",
+      "properties": {
+        "_doc": { "type": "string" },
+        "es": { "type": "string", "minLength": 1 },
+        "en": { "type": "string", "minLength": 1 }
+      },
+      "required": ["es", "en"],
+      "additionalProperties": false
+    },
+    "attributeBias": {
+      "type": "object",
+      "description": "Sesgo por atributo, rango razonable -40..40 (RT-023).",
+      "properties": {
+        "_doc": { "type": "string" },
+        "strength": { "type": "integer", "minimum": -40, "maximum": 40 },
+        "speed": { "type": "integer", "minimum": -40, "maximum": 40 },
+        "technique": { "type": "integer", "minimum": -40, "maximum": 40 },
+        "stamina": { "type": "integer", "minimum": -40, "maximum": 40 },
+        "leash": { "type": "integer", "minimum": -40, "maximum": 40 }
+      },
+      "required": ["strength", "speed", "technique", "stamina", "leash"],
+      "additionalProperties": false
+    },
+    "traitWeights": {
+      "type": "object",
+      "description": "Peso >= 0 por rasgo no exclusivo de portero (los rasgos de portero se sortean aparte, ver tuning.generation.goalkeeperTraitChance).",
+      "properties": {
+        "_doc": { "type": "string" },
+        "Aggressive": { "type": "integer", "minimum": 0 },
+        "Fast": { "type": "integer", "minimum": 0 },
+        "Scorer": { "type": "integer", "minimum": 0 },
+        "LongShot": { "type": "integer", "minimum": 0 },
+        "Cerebral": { "type": "integer", "minimum": 0 },
+        "Dirty": { "type": "integer", "minimum": 0 },
+        "Resilient": { "type": "integer", "minimum": 0 },
+        "Coward": { "type": "integer", "minimum": 0 },
+        "Leader": { "type": "integer", "minimum": 0 },
+        "Lazy": { "type": "integer", "minimum": 0 }
+      },
+      "required": ["Aggressive", "Fast", "Scorer", "LongShot", "Cerebral", "Dirty", "Resilient", "Coward", "Leader", "Lazy"],
+      "additionalProperties": false
+    },
+    "names": {
+      "type": "object",
+      "properties": {
+        "_doc": { "type": "string" },
+        "first": { "type": "array", "items": { "type": "string", "minLength": 1 }, "minItems": 1 },
+        "last": { "type": "array", "items": { "type": "string", "minLength": 1 }, "minItems": 1 }
+      },
+      "required": ["first", "last"],
+      "additionalProperties": false
+    }
+  }
+}

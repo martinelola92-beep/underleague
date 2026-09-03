@@ -1,0 +1,88 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build:
+    name: build (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configurar .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+
+      - name: Compilar (Release)
+        run: dotnet build -c Release
+
+      - name: Tests (RT-081, RT-024; sin la puerta de fase 0)
+        run: dotnet test -c Release --filter "Category!=Gate"
+
+      - name: Tests estadísticos de referencia (Category=Gate, puerta de salida de fase 0)
+        run: dotnet test -c Release --filter "Category=Gate"
+        continue-on-error: true
+
+      - name: Validar /data contra los esquemas (RT-032, RT-083)
+        run: dotnet run --project tools/DataValidator -c Release -- data/
+
+      - name: Lote de /Balance (2000 partidos, RT-056)
+        run: dotnet run --project Balance -c Release -- --runs 2000 --quiet
+        continue-on-error: true
+
+      - name: Subir fingerprint.txt (RT-024)
+        uses: actions/upload-artifact@v4
+        with:
+          name: fingerprint-${{ matrix.os }}
+          path: "**/fingerprint.txt"
+          if-no-files-found: warn
+
+  compare-fingerprints:
+    name: Comparar fingerprints multiplataforma (RT-023b)
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Descargar fingerprint de ubuntu-latest
+        uses: actions/download-artifact@v4
+        continue-on-error: true
+        with:
+          name: fingerprint-ubuntu-latest
+          path: fingerprints/ubuntu-latest
+
+      - name: Descargar fingerprint de windows-latest
+        uses: actions/download-artifact@v4
+        continue-on-error: true
+        with:
+          name: fingerprint-windows-latest
+          path: fingerprints/windows-latest
+
+      - name: Comparar fingerprints
+        shell: bash
+        run: |
+          set -u
+          ubuntu_file=$(find fingerprints/ubuntu-latest -type f -name fingerprint.txt | head -n1)
+          windows_file=$(find fingerprints/windows-latest -type f -name fingerprint.txt | head -n1)
+
+          if [ -z "$ubuntu_file" ] || [ -z "$windows_file" ]; then
+            echo "No se encontró fingerprint.txt en uno de los dos sistemas operativos (aún no hay DeterminismTests.CrossPlatformFingerprint); nada que comparar todavía."
+            exit 0
+          fi
+
+          if ! diff -q "$ubuntu_file" "$windows_file" > /dev/null; then
+            echo "::error::El fingerprint de eventos (hash FNV-1a de 100 semillas) difiere entre ubuntu-latest y windows-latest."
+            echo "Esto viola el determinismo multiplataforma exigido por RT-023b: misma semilla debe producir la misma secuencia de eventos en cualquier SO."
+            diff "$ubuntu_file" "$windows_file" || true
+            exit 1
+          fi
+
+          echo "Fingerprints idénticos entre ubuntu-latest y windows-latest (RT-023b cumplido)."
