@@ -155,11 +155,8 @@ public static class BatchRunner
                 int i = globalIndex;
                 globalIndex++;
 
-                // Semilla del partido i: RngStreams.Match(seed, i). Simulator.Run espera un ulong y
-                // RngStreams.Match devuelve un Pcg32; se usa Pcg32.State (público, documentado "para
-                // tests") como puente determinista entre ambos. Decisión fuera de la especificación.
-                var matchRng = RngStreams.Match(options.Seed, i);
-                ulong matchSeed = matchRng.State;
+                // Semilla del partido i, derivada del flujo de partido (RT-022).
+                ulong matchSeed = RngStreams.MatchSeed(options.Seed, i);
 
                 bool isFirst = i == 0;
                 var config = new SimConfig(

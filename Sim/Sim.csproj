@@ -1,9 +1,15 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
   </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Los tipos internos del motor (MatchPlayer, Ball, Utility, MatchEngine) no forman parte de la
+         superficie pública de §2.4, pero Sim.Tests los ejercita directamente (UtilityTests). -->
+    <InternalsVisibleTo Include="Underleague.Sim.Tests" />
+  </ItemGroup>
 
 </Project>

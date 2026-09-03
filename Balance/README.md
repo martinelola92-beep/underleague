@@ -71,7 +71,7 @@ Una fila por jugador generado que llegó a jugar al menos un partido, con sus es
 
 ## Decisiones fuera de la especificación
 
-- **Semilla del motor**: `Simulator.Run` espera un `ulong seed`; `RngStreams.Match(seed, i)` devuelve un `Pcg32`. Se usa `Pcg32.State` (propiedad pública, documentada "para tests") tras construirlo como puente determinista entre ambos: `Simulator.Run(setup, RngStreams.Match(seed, i).State, catalog, config)`.
+- **Semilla del motor**: `Simulator.Run` espera un `ulong seed`; `RngStreams.Match(seed, i)` devuelve un `Pcg32`. Se usa `Pcg32.State` (propiedad pública, documentada "para tests") tras construirlo como puente determinista entre ambos: `Simulator.Run(setup, RngStreams.MatchSeed(seed, i), catalog, config)`.
 - **Árbitro**: `docs/fase0-diseno.md` no define cómo generar el árbitro de los partidos de `/Balance`. Se usa un árbitro fijo neutro (`RefereeSetup("Referee", RefereeTrait.Neutral, InitialBias: 0)`) para todos los partidos del lote.
 - **`firstPlayerId` de la segunda instancia en autoenfrentamientos** (p. ej. `human_50` vs `human_50`): `1 + (1000 + índice) * 100`, siguiendo el mismo esquema que la instancia primaria (`1 + índice * 100`) para no colisionar con ninguna otra.
 - **Rendimiento**: `SimConfig.CollectLog` y `SimConfig.DumpUtility` solo se activan (si se pidieron por `--log`/`--dump-utility`) para el primer partido del lote (índice 0 global); el resto corre con `CollectLog = false` para no acumular el log de miles de partidos en memoria.

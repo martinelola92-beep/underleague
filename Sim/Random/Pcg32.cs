@@ -116,6 +116,13 @@ public static class RngStreams
     /// <summary>Flujo de RNG para el partido del nodo nodeIndex de la run.</summary>
     public static Pcg32 Match(ulong runSeed, int nodeIndex) => Create(runSeed, MatchKind, nodeIndex);
 
+    /// <summary>
+    /// Semilla escalar del partido del nodo nodeIndex, para pasar a Simulator.Run (que crea su propio Pcg32).
+    /// Es la misma derivación que Match(): cambiar recompensas o mapa no la altera (RT-022).
+    /// </summary>
+    public static ulong MatchSeed(ulong runSeed, int nodeIndex) =>
+        SplitMix64.Mix(SplitMix64.Mix(runSeed, MatchKind), unchecked((ulong)nodeIndex));
+
     /// <summary>Flujo de RNG para la generación del mapa del acto act.</summary>
     public static Pcg32 Map(ulong runSeed, int act) => Create(runSeed, MapKind, act);
 
