@@ -56,6 +56,16 @@ Proceden de los requisitos técnicos y no se negocian en un PR. Si parece necesa
 10. **No se produce arte hasta cerrar el diseño de la fase 2.** Solo placeholders; el arte previo se descarta (regla de fase, §7).
 11. Principio rector de diseño: **todo lo malo que pase en un partido debe haber sido previsible** con la información previa (RF-012d). Un jugador sano nunca muere (RF-093). Ningún sistema nuevo introduce daño no anunciado.
 
+## Modo de trabajo: desarrollo autónomo
+
+El usuario actúa **únicamente como revisor**. Claude planifica, implementa, prueba, documenta, commitea y hace push por su cuenta, y solo consulta cuando una decisión cambia una regla de juego de `docs/requisitos.md`, tiene coste económico, o es irreversible fuera del repositorio.
+
+- **Subagentes**: usa subagentes para trabajo paralelizable (generación de datos, tests, documentación, exploración) y siempre para una revisión de código independiente antes de cerrar un hito. Usa `fork` cuando el subagente necesite el contexto de la sesión; `general-purpose` o `Explore` cuando no. Da a cada uno un encargo cerrado, con los ficheros que puede tocar y el criterio de terminado, y pídele que no haga commit.
+- **Skills y plugins**: cuando un flujo se repita o requiera conocimiento específico, crea una skill en `.claude/skills/` (plugin `skill-creator`) o instala un plugin del marketplace, y regístralo en la sección de skills de este fichero. No pidas permiso para ello.
+- **Hitos**: cada entregable de `docs/plan-fases.md` termina con: build y tests en verde, lote de `/Balance` si toca `/Sim` o `/data`, revisión por subagente, commit con RF/RT, push, y actualización del estado en `plan-fases.md`.
+- **Informe al revisor**: al cerrar un hito, un resumen corto de qué se hizo, qué se midió, qué quedó fuera y qué decisiones se tomaron sin consultar (con enlace al ADR o a `pendientes.md`).
+- Si algo bloquea (herramienta que falta, credencial, decisión de diseño), se hace todo lo que no dependa de ello y se deja la pregunta al final del informe, no en medio del trabajo.
+
 ## Flujo de trabajo
 
 - Antes de implementar un sistema, lee su sección en `docs/requisitos.md` y el documento derivado de `docs/` (tabla abajo). Si un requisito es ambiguo o contradictorio, anótalo en `docs/pendientes.md` y aplica la lectura más conservadora; no inventes reglas de juego.
@@ -63,7 +73,7 @@ Proceden de los requisitos técnicos y no se negocian en un PR. Si parece necesa
 - Decisión de arquitectura o cambio de rango de balance -> ADR en `docs/decisiones/` (RT-057: nunca un ajuste silencioso).
 - Cada fase tiene criterio de salida objetivo (`docs/plan-fases.md`). No se empieza la siguiente sin cumplirlo con datos de `/Balance`.
 - Cambio en `/Sim` o `/data` -> tests + lote de balance antes de darlo por terminado (RT-054).
-- No hacer commit ni push sin que el usuario lo pida.
+- Commits pequeños y frecuentes; push a `main` tras cada hito con build y tests en verde.
 
 ## Comandos
 
@@ -80,8 +90,8 @@ dotnet run --project tools/DataValidator -- data/    # esquemas de /data
 
 ## Convenciones
 
-- **Idioma**: español en docs, comentarios, commits, claves JSON, nombres de eventos, etiquetas e identificadores de dominio en C# (`Jugador`, `Correa`, `EstadoFisico`, `Puede(estado, accion)`), como en el documento de requisitos. Inglés solo para lo que impone el framework. Pendiente de confirmar: `docs/pendientes.md` D-12.
-- Eventos del simulador en `MAYUSCULAS_CON_GUION_BAJO` según el catálogo de RF-066. Etiquetas en `PascalCase` (`Bruto`, `Chatarra`, `Autómata`). Ids de datos en `snake_case` (`sed_de_sangre`).
+- **Idioma** (ADR 0009): código C#, claves JSON, ids, eventos y etiquetas en **inglés**; documentación, comentarios de diseño y commits en **español**; texto visible por el jugador siempre localizado (es/en) desde `data/l10n/`. La correspondencia con los términos del documento de requisitos está en `docs/glosario-identificadores.md`: consúltala antes de nombrar un concepto nuevo y amplíala allí.
+- Eventos en `UPPER_SNAKE` en datos y logs (`MATCH_START`), `EventType.MatchStart` en C#. Etiquetas y rasgos en `PascalCase` (`Brute`, `Scrap`, `Aggressive`). Ids de datos en `snake_case` (`bloodlust`).
 - Commits: `tipo(ámbito): resumen — RF-xxx/RT-xxx`, con ámbito en `sim`, `data`, `balance`, `game`, `tools`, `docs`. Un commit no mezcla `/Sim` y `/Game`.
 - C#: `nullable enable`, `TreatWarningsAsErrors` en `/Sim`, sin `dynamic`, sin reflexión en tiempo de partido. Estilo en `.editorconfig`.
 - Tests estadísticos con semilla fija y rangos de RT-056; un test que falla "por mala suerte" es un test mal escrito.

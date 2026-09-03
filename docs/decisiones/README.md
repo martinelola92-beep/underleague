@@ -14,3 +14,4 @@ Cuándo escribir un ADR: cambio de librería o stack, frontera entre proyectos, 
 | [0006](0006-sin-ecs.md) | Sin ECS | Aceptada |
 | [0007](0007-punto-fijo-aplazado.md) | Aritmética entera + float en posiciones; punto fijo aplazado | Aceptada |
 | [0008](0008-net10-lts.md) | .NET 10 LTS como SDK y objetivo; `/Game` se confirma en fase 1 | Aceptada |
+| [0009](0009-identificadores-en-ingles.md) | Identificadores en inglés, documentación en español | Aceptada |

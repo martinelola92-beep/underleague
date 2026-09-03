@@ -10,7 +10,7 @@ Registro vivo. Cuando una decisión se toma, se mueve a un ADR en `decisiones/` 
 | D-2 | Número exacto de nodos por acto y distribución por tipo | Fase 2 | 10-12 nodos, <= 60% partidos (RF-003b), mercado cada 3-4 (RF-011b) |
 | D-3 | Modelo económico del salario de mercenarios frente al coste de tienda | Fase 2 | — |
 | D-4 | Si la turba introduce peligros de público como entidades o solo estrechamiento | Fase 3 | Solo estrechamiento + casillas invadidas fijas (RF-055b). Nota: el enunciado original habla de "fase 3 del partido", concepto eliminado por RF-055 |
-| D-5 | Qué 3 razas entran en el prototipo | **Fase 0** | Humanos, orcos, elfos (recomendación del documento) |
+| D-5 | Qué 3 razas entran en el prototipo | Fase 0 | **Resuelta 2026-09-03**: humanos, orcos, elfos |
 | D-6 | Si el jefe final admite reintento inmediato o exige nueva run | Fase 2 | Nueva run (coherente con ironman RT-061) |
 | D-7 | Detalle de la tienda de Rune Dice a replicar | Fase 2 | Solo la estructura por categorías |
 | D-8 | Qué logro desbloquea cada raza y en qué orden | Fase 4 | Ejemplos de RF-125 |
@@ -22,7 +22,7 @@ Registro vivo. Cuando una decisión se toma, se mueve a un ADR en `decisiones/` 
 
 | Id | Decisión | Bloquea | Lectura provisional |
 |---|---|---|---|
-| D-12 | Idioma de los identificadores de C# | Fase 0 | Español para dominio (`Jugador`, `Correa`, `Puede`), siguiendo el documento. Confirmar antes de escribir `/Sim` |
+| D-12 | Idioma de los identificadores de C# | Fase 0 | **Resuelta 2026-09-03**: inglés (ADR 0009, `glosario-identificadores.md`) |
 | D-17 | `/Game` con `net10.0` en Godot 4.6 (ADR 0008) | Fase 1 | Probar al crear `/Game`; si falla, bajar a `net8.0` |
 | D-13 | `/Run` como librería separada de `/Sim` o namespace dentro | Fase 2 | Namespace `Underleague.Sim.Run` hasta la fase 2 (ver `arquitectura.md`) |
 | D-14 | Organización de `/data`: un fichero por entidad o uno por tipo | Fase 1 | Un fichero por entidad; facilita revisión y diffs |
