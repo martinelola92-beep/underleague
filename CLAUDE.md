@@ -97,6 +97,7 @@ dotnet run --project tools/DataValidator -- data/    # esquemas de /data
 - Commits: `tipo(ámbito): resumen — RF-xxx/RT-xxx`, con ámbito en `sim`, `data`, `balance`, `game`, `tools`, `docs`. Un commit no mezcla `/Sim` y `/Game`.
 - C#: `nullable enable`, `TreatWarningsAsErrors` en `/Sim`, sin `dynamic`, sin reflexión en tiempo de partido. Estilo en `.editorconfig`.
 - Tests estadísticos con semilla fija y rangos de RT-056; un test que falla "por mala suerte" es un test mal escrito.
+- **Tests con criterio, no por reflejo**: ejecuta solo los tests que cubren lo que has tocado (`dotnet test --filter "FullyQualifiedName~X"`), con `-v q` y filtrando la salida a las líneas de resultado. La suite completa se lanza una vez antes del commit del hito, nunca tras cada edición. No repitas un build o test cuyo resultado ya conoces. Los subagentes siguen la misma regla.
 
 ## Mapa de documentación
 
