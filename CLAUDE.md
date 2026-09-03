@@ -84,7 +84,7 @@ Contrato objetivo; se actualizará cuando exista el código.
 ```bash
 dotnet build Underleague.sln                         # /Sim, /Sim.Tests, /Balance, /tools (sin /Game)
 dotnet test Sim.Tests                                # unitarias + estadísticas + determinismo
-dotnet run --project Balance -- --runs 10000 --seed 1 --teams data/balance/referencia.json --out out/
+dotnet run --project Balance -- --runs 10000 --seed 1 --teams data/balance/reference.json --out out/
 dotnet run --project tools/DataValidator -- data/    # esquemas de /data
 ```
 

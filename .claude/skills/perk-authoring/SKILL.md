@@ -29,7 +29,7 @@ Fuentes: `docs/modelo-datos.md` (formato, tipos de efecto, funciones NCalc), `do
 - Los perks que acumulan entre partidos (`accumulatesAcrossMatches: true`) usan `counter('name')` y `addCounter`; hacen falta al menos 15 en el catálogo (RF-070).
 - Objetos: exactamente un arquetipo (`cursed`, `fragile`, `restricted`) o ninguno; un jugador lleva un único objeto (RF-076).
 - Consumibles: familia (`family`) obligatoria; si `isBribe`, la `outcomeTable` suma 100 y la denuncia existe (RF-064b).
-- Escribe el efecto en español, con los valores en enteros. Sin decimales (RT-023).
+- Claves y valores del objeto `effect` en inglés según el glosario; los valores numéricos son enteros, sin decimales (RT-023). El texto que ve el jugador sale de las plantillas de `data/l10n/`, nunca del JSON del perk.
 
 ## Después de escribir
 
