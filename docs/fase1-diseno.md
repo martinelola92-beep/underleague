@@ -362,6 +362,6 @@ espera a que esas ADR estén implementadas.
 7. **`severeInjury` no tiene consecuencia en fase 1** (no hay muertes y "grave" solo cambia el `Detail`),
    así que `guardian_angel` es un perk que se activa y no hace nada. No se ha cambiado; anotado.
 8. **La puerta de fase 1 está escrita** (`Sim.Tests/Analysis/BuildGateTests.cs`, `Category=Gate`) y
-   **desactivada con `Skip`** hasta que las ADR 0020/0021 estén implementadas: sus umbrales dependen de la
+   **desactivada con `Skip`** hasta que las ADR 0020/0021/0022 estén implementadas: sus umbrales dependen de la
    mecánica que va a cambiar. Lee `data/balance/builds/` y `data/balance/groups.json` con su propio
    cargador mínimo, como la puerta de fase 0 con `reference.json`: `Sim.Tests` no referencia `/Balance`.

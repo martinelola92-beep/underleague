@@ -19,3 +19,4 @@ Cuándo escribir un ADR: cambio de librería o stack, frontera entre proyectos, 
 | [0012](0012-buildswindifferently-normalizada.md) | `buildsWinDifferently` normalizada contra la referencia de la raza | **Propuesta: decisión del revisor** |
 | [0020](0020-cuerpos-y-ocupacion.md) | Cuerpos con volumen, separación blanda y empuje | Aceptada |
 | [0021](0021-adyacencia-estatica-y-proximidad.md) | Adyacencia resuelta antes del partido; proximidad dinámica aparte | Aceptada |
+| [0022](0022-roles-y-ocupacion-de-espacio.md) | Comportamiento sin balón: contraste táctico y búsqueda de espacio | Aceptada |

@@ -8,7 +8,7 @@ Clasificación **ortogonal** a la de RF-069 (`filler` / `conditional` / `ruleBre
 
 | Eje | De qué depende | Qué decisión estimula | Mecanismo | Estado |
 |---|---|---|---|---|
-| **Identidad** | Raza, rasgo, posición del portador | A quién fichas y a quién le das el perk | `hasTag`, `position`, `tagsRequired` | Existe |
+| **Identidad individual** | Rasgo y posición del portador | A quién le das el perk: dentro de una misma raza, dos jugadores son distintos (RF-024b) | `hasTag` sobre rasgo, `position`, `tagsRequired` | Existe |
 | **Acumulación** | Acciones realizadas, dentro del partido y entre partidos | A quién inviertes y si lo proteges de la lesión | `counter`, `addCounter`, `accumulatesAcrossMatches`, `stat` | Existe (falta `stat`) |
 | **Alineación relacional** | Quién tiene al lado, delante o detrás en la cuadrícula | Cómo dibujas la formación | Vínculos direccionales (ADR 0021) | Falta |
 | **Zona de inicio** | En qué parte del campo empieza: línea (tercio) y banda (fila) | Dónde colocas a cada jugador | `startsIn`, `startsOn` | Falta |
@@ -23,14 +23,18 @@ Orientativa, sobre el catálogo de lanzamiento; se revisa con datos como los ran
 
 | Eje | Proporción |
 |---|---|
-| Identidad | 25% |
+| Identidad individual (rasgo, posición) | 15% |
 | Acumulación | 20% |
 | Alineación relacional | 15% |
 | Zona de inicio | 10% |
-| Geometría en juego | 10% |
+| Geometría en juego | 15% |
 | Estado del partido | 10% |
 | Composición de plantilla | 5% |
-| Proximidad dinámica | 5% |
+| Proximidad dinámica | 10% |
+
+Aparte de este reparto, un **10% del catálogo son perks exclusivos de raza** (ADR 0023), que no compiten por estas cuotas: no aparecen salvo que juegues esa raza. El otro 90% es universal.
+
+**La raza no se usa como condición en los perks universales.** Con clubes monoraza (RF-004), `hasTag(owner,'Brute')` en un equipo orco se cumple siempre y en cualquier otro no se cumple nunca: no es una decisión, es un adorno que además hace que un perk aparezca en runs donde no sirve. La identidad individual sí es una decisión, porque los rasgos varían entre jugadores de la misma raza (RF-024b).
 
 ## Regla de legibilidad
 
