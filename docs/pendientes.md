@@ -73,3 +73,10 @@ Todos los cambios R-1 a R-7 quedan **aplicados en `requisitos.md` v0.9.1** (2026
 | R-8 | RF-057 | Se permite el contacto con un rival sin balón siempre que esté dentro de la jugada activa (radio alrededor del balón o corredor hacia la portería atacada); sigue prohibida la pelea paralela | ADR 0030 |
 | R-7 | RF-045 | En la colocación se muestra la zona del jugador manipulado con sus dos capas, no todas las correas a la vez, que con zonas asimétricas serían ilegibles | ADR 0029 | Aplicado en v0.9.1 |
 | R-6 | RF-042, RT-095 | La correa deja de ser un radio circular duro: pasa a ser una zona con forma por posición, tamaño escalado por el atributo y salida penalizada en vez de prohibida | ADR 0028 | Aplicado en v0.9.1 |
+
+## Hallazgos de la revisión visual de la pantalla de Equipo (5 sep 2026)
+
+| Id | Qué | Dónde |
+|---|---|---|
+| V-1 | La descripción generada encadena tres segmentos con dos puntos: *"Sangre caliente: al empezar el partido: el portador: sus entradas dejan al rival derribado más tiempo"*. Incumple `estilo-descripciones.md` (una frase). Hay que revisar las plantillas de composición en `data/l10n/*/templates.json`: el disparador y el objetivo deberían integrarse en la frase, no anteponerse | `data/l10n`, `DescriptionGenerator` |
+| V-2 | La zona de acción de un centrocampista cubre casi media anchura del campo (columnas 0-10 desde la 5). Puede ser demasiado y explicar en parte por qué el marcaje y las entradas caen. Contrastar con `actionZone.shape` en el reajuste | `data/sim/tuning.json` |

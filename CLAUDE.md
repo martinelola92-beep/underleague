@@ -2,7 +2,7 @@
 
 Roguelite de gestión y autobatalla: el jugador dirige un equipo de fútbol 7 de criaturas fantásticas. Los partidos se resuelven solos en 60-90 s sobre una cuadrícula; todas las decisiones ocurren entre partidos. La identidad no es el fútbol, es la **carnicería administrada**: lesiones, muertes, prótesis y vínculos. El desgaste de la plantilla es el recurso central de la run.
 
-PC (Steam), premium, sin online. **Estado: preproducción, fase 0 no iniciada, sin código escrito.**
+PC (Steam), premium, sin online. **Estado (5 sep 2026): fase 0 cerrada, fase 1 en su tramo final (rediseño espacial implementado, reajuste de balance en curso), pantalla de Equipo funcionando en Godot. Fase 2 especificada en `docs/fase2-diseno.md`.**
 
 La fuente de verdad del diseño es `docs/requisitos.md` (v0.9.1). Cada requisito tiene identificador (`RF-xxx` funcional, `RT-xxx` técnico, `RA-xxx` arte, `UI-xxx` interfaz): cítalos en commits, ADRs, tests y comentarios cuando implementes o discutas uno.
 
@@ -10,8 +10,8 @@ La fuente de verdad del diseño es `docs/requisitos.md` (v0.9.1). Cada requisito
 
 | | |
 |---|---|
-| Motor | Godot 4.6+ rama .NET, **solo en `/Game`** |
-| Lenguaje | C# sobre .NET 10 (LTS). `net10.0` en todo; `/Game` se verifica con Godot 4.6 en fase 1 (ADR 0008) |
+| Motor | Godot 4.6.3 mono, **solo en `/Game`**; `net10.0` verificado (ADR 0008) |
+| Lenguaje | C# sobre .NET 10 (LTS), `net10.0` en todo |
 | Tests | xUnit, sin librerías fluidas |
 | Condiciones de perks | NCalc con funciones propias, compiladas al cargar |
 | Validación de `/data` | JsonSchema.Net |
@@ -22,11 +22,11 @@ Descartados con motivo registrado en `docs/decisiones/`: ECS, aprendizaje autom�
 
 ## Entorno de trabajo
 
-Claude Code corre en **WSL (Ubuntu 24.04)**; Godot corre en **Windows**. Detalle en `docs/entorno.md`.
+Claude Code y **Godot** corren en **WSL (Ubuntu 24.04)**. Detalle en `docs/entorno.md`.
 
 - `/Sim`, `/Sim.Tests`, `/Balance` y `/tools` son .NET puro: se compilan y prueban **en WSL** con `dotnet`. Ahí ocurre casi todo el trabajo de las fases 0-2.
-- `/Game` se abre con el editor de Godot en Windows. El repo vive en el sistema de ficheros de WSL; desde Windows se accede por `\\wsl$\Ubuntu\home\martinelola92\underleague`.
-- Instalado en WSL: .NET SDK 10.0.111 (y 8.0.130), `global.json` fija el 10; `csharp-ls` 0.27. Prerrequisitos **aún no instalados** en Windows (3 sep 2026): .NET SDK 10 (solo hay runtimes) y Godot 4.6 .NET.
+- `/Game` se compila y ejecuta con el Godot de Linux instalado en WSL (`~/.local/bin/godot`). **El editor de Windows no puede abrir el proyecto**: Godot no admite rutas UNC. No hay editor gráfico (WSLg deshabilitado en `.wslconfig`), así que las escenas se editan como texto y el resultado visual se verifica con capturas por Xvfb; la receta está en `docs/entorno.md`.
+- Instalado en WSL: .NET SDK 10.0.111 (y 8.0.130), `global.json` fija el 10; `csharp-ls` 0.27. En Windows (4 sep 2026): .NET SDK 10.0.400 y Godot 4.6.3 .NET, ambos vía winget.
 
 ## Estructura de la solución (RT-010)
 
@@ -89,7 +89,12 @@ dotnet run --project Balance -- --runs 10000 --seed 1 --teams data/balance/refer
 dotnet run --project tools/DataValidator -- data/    # esquemas de /data
 ```
 
-`/Game` se compila desde el editor de Godot en Windows.
+```bash
+godot --headless --path Game --import          # importar recursos
+godot --headless --path Game --quit-after 60   # ejecutar sin dibujar
+xvfb-run -a --server-args="-screen 0 1280x800x24" godot --path Game \
+  --rendering-driver opengl3 --audio-driver Dummy   # ejecutar y capturar
+```
 
 ## Convenciones
 
@@ -115,6 +120,8 @@ dotnet run --project tools/DataValidator -- data/    # esquemas de /data
 | `docs/pendientes.md` | Decisiones abiertas e inconsistencias detectadas en los requisitos | Cuando algo no cuadre |
 | `docs/decisiones/` | ADRs | Antes de cambiar una decisión tomada |
 | `docs/entorno.md` | WSL/Windows, instalación, cómo se compila cada parte | Al montar la máquina |
+| `docs/ui-equipo.md` | Decisiones de la pantalla de Equipo, de las que derivan las demás pantallas (UI-021) | Antes de tocar `/Game` |
+| `docs/fase2-diseno.md` | Bucle de run: mapa, economía, mercado, jefe, ironman | Fase 2 |
 
 ## Skills del proyecto (`.claude/skills/`)
 
