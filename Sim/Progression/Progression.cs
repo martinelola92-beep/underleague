@@ -1,6 +1,7 @@
 using Underleague.Sim.Data;
 using Underleague.Sim.Engine;
 using Underleague.Sim.Model;
+using Underleague.Sim.Perks;
 
 namespace Underleague.Sim.Progression;
 
@@ -70,6 +71,130 @@ public static class Progression
 
         awards.Sort(static (a, b) => a.PlayerId.CompareTo(b.PlayerId));
         return awards;
+    }
+
+    /// <summary>
+    /// Reparto de experiencia tras un partido (RF-025) teniendo en cuenta los perks que la modifican
+    /// **fuera** del partido (efecto <c>modifyExperience</c>): la habilidad racial Adaptables de los
+    /// humanos (RF-031b, ADR 0026) y cualquier perk u objeto futuro que use el mismo canal.
+    /// <para>
+    /// Es una sobrecarga y no un cambio de la existente porque el reparto base -quién cobra y cuánto- es
+    /// una regla del calendario y no del jugador: aquí solo se aplica, al final, el multiplicador de cada
+    /// uno. El resultado sigue ordenado por id ascendente y sigue siendo entero (RT-023).
+    /// </para>
+    /// </summary>
+    public static IReadOnlyList<ExperienceAward> AwardExperience(
+        IReadOnlyList<PlayerDefinition> played,
+        IReadOnlyList<PlayerDefinition> bench,
+        Catalog catalog,
+        ProgressionTuning tuning,
+        int? matchExperienceOverride = null)
+    {
+        ArgumentNullException.ThrowIfNull(played);
+        ArgumentNullException.ThrowIfNull(bench);
+        ArgumentNullException.ThrowIfNull(catalog);
+        ArgumentNullException.ThrowIfNull(tuning);
+
+        var flat = AwardExperience(
+            played.Select(p => p.Id).ToArray(),
+            bench.Select(p => p.Id).ToArray(),
+            tuning,
+            matchExperienceOverride);
+
+        var awards = new List<ExperienceAward>(flat.Count);
+        for (int i = 0; i < flat.Count; i++)
+        {
+            var award = flat[i];
+            var definition = Find(played, award.PlayerId) ?? Find(bench, award.PlayerId);
+            int percent = definition is null ? 100 : ExperiencePercent(definition, catalog);
+            awards.Add(award with { Experience = award.Experience * percent / 100 });
+        }
+
+        return awards;
+    }
+
+    /// <summary>
+    /// Porcentaje de experiencia del jugador: 100 más la suma de los <c>modifyExperience</c> de su
+    /// habilidad racial y de los perks que lleva. Nunca baja de 0.
+    /// </summary>
+    public static int ExperiencePercent(PlayerDefinition player, Catalog catalog)
+    {
+        int percent = 100;
+        foreach (var perk in ActivePerks(player, catalog))
+        {
+            for (int e = 0; e < perk.Effects.Count; e++)
+            {
+                if (perk.Effects[e].Type == EffectType.ModifyExperience)
+                {
+                    percent += perk.Effects[e].Value;
+                }
+            }
+        }
+
+        return percent < 0 ? 0 : percent;
+    }
+
+    /// <summary>
+    /// True si el jugador tiene esa inmunidad fuera del partido (efecto <c>immunity</c>, ADR 0026): la
+    /// habilidad No sienten nada de los no-muertos concede <see cref="ImmunityKind.Mourning"/> (RF-104) y
+    /// <see cref="ImmunityKind.MinorInjuryPenalty"/> (RF-035). Es el único sitio donde la capa de campaña
+    /// tiene que preguntar por ellas.
+    /// </summary>
+    public static bool HasImmunity(PlayerDefinition player, Catalog catalog, ImmunityKind kind)
+    {
+        foreach (var perk in ActivePerks(player, catalog))
+        {
+            for (int e = 0; e < perk.Effects.Count; e++)
+            {
+                if (perk.Effects[e].Type == EffectType.Immunity && perk.Effects[e].Immunity == kind)
+                {
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
+
+    /// <summary>
+    /// Perks que surten efecto sobre el jugador: su habilidad racial (asignada por raza, sin ocupar slot)
+    /// más los que lleva, descartando los exclusivos de otra raza (ADR 0023 §4). Orden determinista:
+    /// primero la habilidad, luego los perks en el orden en que están en el jugador.
+    /// </summary>
+    private static IEnumerable<PerkDefinition> ActivePerks(PlayerDefinition player, Catalog catalog)
+    {
+        ArgumentNullException.ThrowIfNull(player);
+        ArgumentNullException.ThrowIfNull(catalog);
+
+        string ability = catalog.Race(player.Race).Ability;
+        if (ability.Length > 0 && catalog.Perks.Find(ability) is { } racial)
+        {
+            yield return racial;
+        }
+
+        for (int i = 0; i < player.Perks.Count; i++)
+        {
+            var perk = catalog.Perks.Find(player.Perks[i]);
+            if (perk is null || (perk.Race is { } required && !player.HasTag(required.ToString())))
+            {
+                continue;
+            }
+
+            yield return perk;
+        }
+    }
+
+    private static PlayerDefinition? Find(IReadOnlyList<PlayerDefinition> players, int id)
+    {
+        for (int i = 0; i < players.Count; i++)
+        {
+            if (players[i].Id == id)
+            {
+                return players[i];
+            }
+        }
+
+        return null;
     }
 
     /// <summary>

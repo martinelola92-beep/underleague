@@ -50,6 +50,32 @@ internal interface IPerkWorld
 }
 
 /// <summary>
+/// Lo que las funciones de condición del rediseño espacial (fase1b-diseno.md §1.5) necesitan y
+/// <see cref="IPerkWorld"/> no puede dar: los vínculos direccionales resueltos al construir el partido
+/// (ADR 0021), la proximidad real en el momento del evento y las estadísticas que el motor ya lleva para
+/// el informe post-partido (RF-119).
+/// <para>
+/// La implementa <see cref="EffectEngine"/> y no <see cref="MatchEngine"/> a propósito: los vínculos, las
+/// estadísticas de perk y los modificadores por par son estado del motor de **perks**, y con 0 perks no
+/// existe ninguno de los tres (§3, coste cero).
+/// </para>
+/// </summary>
+internal interface IPerkLinks
+{
+    /// <summary>True si player tiene vinculado en esa relación (RF-044, ADR 0021).</summary>
+    bool HasLink(MatchPlayer player, LinkRelation relation);
+
+    /// <summary>True si hay un compañero con esa etiqueta a <paramref name="cells"/> casillas o menos, ahora.</summary>
+    bool NearAlly(MatchPlayer player, string tag, int cells);
+
+    /// <summary>True si hay un rival con esa etiqueta a <paramref name="cells"/> casillas o menos, ahora.</summary>
+    bool NearOpponent(MatchPlayer player, string tag, int cells);
+
+    /// <summary>Estadística del jugador en el partido en curso (RF-119).</summary>
+    int Stat(MatchPlayer player, MatchStat stat);
+}
+
+/// <summary>
 /// Contexto de una evaluación de condición (§2). Struct sin asignaciones: el motor lo compone en la pila
 /// y lo pasa por <c>in</c> a <see cref="CompiledCondition.Evaluate"/>.
 /// </summary>
@@ -57,6 +83,7 @@ internal readonly struct ConditionContext
 {
     public ConditionContext(
         IPerkWorld world,
+        IPerkLinks perks,
         MatchPlayer owner,
         MatchPlayer? actor,
         MatchPlayer? target,
@@ -64,6 +91,7 @@ internal readonly struct ConditionContext
         string detail)
     {
         World = world;
+        Perks = perks;
         Owner = owner;
         Actor = actor;
         Target = target;
@@ -72,6 +100,9 @@ internal readonly struct ConditionContext
     }
 
     public IPerkWorld World { get; }
+
+    /// <summary>Vínculos, proximidad y estadísticas del motor de perks (fase1b-diseno.md §1.5).</summary>
+    public IPerkLinks Perks { get; }
 
     /// <summary>Portador del perk que se está evaluando.</summary>
     public MatchPlayer Owner { get; }

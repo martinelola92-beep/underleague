@@ -1,3 +1,6 @@
+using Underleague.Sim.Data;
+using Underleague.Sim.Events;
+using Underleague.Sim.Model;
 using Underleague.Sim.Perks;
 
 namespace Underleague.Sim.Tests.Perks;
@@ -6,51 +9,26 @@ namespace Underleague.Sim.Tests.Perks;
 /// Descripciones generadas desde el efecto (RT-035). El texto exacto es parte del contrato: si alguien
 /// cambia un valor del perk o una plantilla, el test cae y la descripción no puede quedarse obsoleta,
 /// que es justo lo que RT-035 quiere hacer imposible.
+/// <para>
+/// Los perks de ejemplo se declaran aquí y no se leen de <c>data/perks/</c>: el catálogo de lanzamiento
+/// lo escribe el paquete T y estos tests comprueban el **generador**, no el catálogo.
+/// </para>
 /// </summary>
 public sealed class DescriptionTests
 {
-    private static readonly Underleague.Sim.Data.Catalog Catalog = TestData.LoadCatalog();
+    private static readonly Catalog Catalog = TestPerks.CatalogWith();
 
     [Fact]
-    public void BloodlustInSpanish() => Assert.Equal(
+    public void ConditionAndLimitInSpanish() => Assert.Equal(
         "al entrar, si el jugador es Bruto y si el criterio es menor que 0: "
             + "el jugador +3 de fuerza durante la jugada (máximo 2 por partido)",
-        DescriptionGenerator.Describe(Catalog.Perks.Get("bloodlust"), "es", Catalog));
+        Describe("es", Bloodlust()));
 
     [Fact]
-    public void BloodlustInEnglish() => Assert.Equal(
+    public void ConditionAndLimitInEnglish() => Assert.Equal(
         "on a tackle, if the player is Brute and if the referee bias is less than 0: "
             + "the player +3 strength for the play (max 2 per match)",
-        DescriptionGenerator.Describe(Catalog.Perks.Get("bloodlust"), "en", Catalog));
-
-    [Fact]
-    public void VeteranInSpanish() => Assert.Equal(
-        "al empezar el partido: el portador +1 de fuerza por cada partido (máximo 8) durante el partido, "
-            + "+1 al contador partido",
-        DescriptionGenerator.Describe(Catalog.Perks.Get("veteran"), "es", Catalog));
-
-    [Fact]
-    public void VeteranInEnglish() => Assert.Equal(
-        "when the match starts: the holder +1 strength per match (max 8) for the match, "
-            + "+1 to the match counter",
-        DescriptionGenerator.Describe(Catalog.Perks.Get("veteran"), "en", Catalog));
-
-    [Fact]
-    public void EveryCatalogPerkIsDescribableInEveryLanguage()
-    {
-        Assert.Contains("es", Catalog.Localization.Languages);
-        Assert.Contains("en", Catalog.Localization.Languages);
-
-        foreach (var perk in Catalog.Perks.All)
-        {
-            foreach (var language in Catalog.Localization.Languages)
-            {
-                string text = DescriptionGenerator.Describe(perk, language, Catalog);
-                Assert.False(string.IsNullOrWhiteSpace(text), $"{perk.Id} no tiene descripción en {language}");
-                Assert.DoesNotContain('{', text);
-            }
-        }
-    }
+        Describe("en", Bloodlust()));
 
     [Fact]
     public void ElseEffectsAndProbabilitiesAreDescribed()
@@ -58,15 +36,14 @@ public sealed class DescriptionTests
         var perk = TestPerks.Load("showboat", TestPerks.Json(
             "showboat",
             "DRIBBLE_ATTEMPTED",
-            """[{ "type": "modifyProbability", "target": "actor", "probability": "dribble", "value": 1500, "duration": "play" }]""",
+            """[{ "type": "modifyProbability", "target": "actor", "probability": "dribble", "value": 15, "duration": "play" }]""",
             condition: "hasTag(owner, 'Fine')",
-            elseEffects: """[{ "type": "modifyProbability", "target": "actor", "probability": "dribble", "value": -1500, "duration": "play" }]"""));
+            elseEffects: """[{ "type": "modifyProbability", "target": "actor", "probability": "dribble", "value": -15, "duration": "play" }]"""));
 
-        var templates = Catalog.Localization.Get("es");
         Assert.Equal(
             "al encarar, si el portador es Fino: el jugador: probabilidad de regate +15%; "
                 + "si no, el jugador: probabilidad de regate -15%",
-            DescriptionGenerator.Describe(perk, templates));
+            Describe("es", perk));
     }
 
     [Fact]
@@ -81,12 +58,8 @@ public sealed class DescriptionTests
             kind: "ruleBreaker",
             limit: """{ "per": "match", "times": 1 }"""));
 
-        Assert.Equal(
-            "en una lesión: anula la lesión (máximo 1 por partido)",
-            DescriptionGenerator.Describe(perk, Catalog.Localization.Get("es")));
-        Assert.Equal(
-            "on an injury: cancels the injury (max 1 per match)",
-            DescriptionGenerator.Describe(perk, Catalog.Localization.Get("en")));
+        Assert.Equal("en una lesión: anula la lesión (máximo 1 por partido)", Describe("es", perk));
+        Assert.Equal("on an injury: cancels the injury (max 1 per match)", Describe("en", perk));
     }
 
     [Fact]
@@ -102,6 +75,314 @@ public sealed class DescriptionTests
 
         Assert.Equal(
             "al empezar el partido: el portador +1 de técnica por cada 25 de pase (máximo 6) durante el partido",
-            DescriptionGenerator.Describe(perk, Catalog.Localization.Get("es")));
+            Describe("es", perk));
     }
+
+    /// <summary>
+    /// RT-035 sobre el modificador por par (ADR 0021): la descripción tiene que decir **hacia quién**
+    /// mejora el pase. "Mejora el pase" a secas sería una descripción que miente, porque el bono no vale
+    /// para los demás pases del portador.
+    /// </summary>
+    [Fact]
+    public void PairedProbabilityNamesTheLinkedPartner()
+    {
+        var perk = LinkedPasser();
+        Assert.Equal(
+            "al empezar el partido: probabilidad de pase +10% hacia el compañero de su columna",
+            Describe("es", perk));
+        Assert.Equal(
+            "when the match starts: pass chance +10% towards the partner in their column",
+            Describe("en", perk));
+    }
+
+    [Fact]
+    public void SeveralLinksAreJoined()
+    {
+        var perk = TestPerks.Load("hub", TestPerks.Json(
+            "hub",
+            "MATCH_START",
+            """[{ "type": "modifyProbability", "target": "linked", "probability": "pass", "value": 5, "duration": "match" }]""",
+            axis: "alignment",
+            links: """["ahead", "behind"]"""));
+
+        Assert.Equal(
+            "al empezar el partido: probabilidad de pase +5% hacia el compañero de delante y compañero de detrás",
+            Describe("es", perk));
+    }
+
+    /// <summary>
+    /// Las funciones nuevas (§1.5) son describibles, y las unidades internas no aparecen: los ticks del
+    /// derribo se dicen como "más tiempo" (docs/estilo-descripciones.md).
+    /// </summary>
+    [Theory]
+    [InlineData("startsIn(owner, 'AttackingThird')", "si el portador empieza en el tercio rival")]
+    [InlineData("startsOn(owner, 'LeftFlank')", "si el portador empieza en la banda izquierda")]
+    [InlineData("linked(owner, 'behind')", "si el portador tiene compañero de detrás")]
+    [InlineData("nearAlly(owner, 'Brute', 2)", "si el portador tiene cerca un Bruto a 2 casillas")]
+    [InlineData("nearOpponent(actor, 'Fine', 3)", "si el jugador tiene cerca un Fino rival a 3 casillas")]
+    [InlineData("stat(owner, 'goals') >= 2", "si el portador lleva al menos 2 goles")]
+    [InlineData("stat(actor, 'tacklesWon') < 1", "si el jugador lleva menos de 1 entradas ganadas")]
+    [InlineData("distanceToGoal(owner) < 3", "si el portador está a menos de 3 casillas de portería")]
+    public void NewConditionFunctionsAreDescribed(string condition, string expected)
+    {
+        var perk = TestPerks.Load("cond", TestPerks.Json(
+            "cond",
+            "MATCH_START",
+            """[{ "type": "modifyAttribute", "target": "owner", "attribute": "speed", "value": 1, "duration": "match" }]""",
+            axis: "proximity",
+            links: """["behind"]""",
+            condition: condition));
+
+        Assert.Equal($"al empezar el partido, {expected}: el portador +1 de velocidad durante el partido", Describe("es", perk));
+    }
+
+    [Fact]
+    public void CounterScaledProbabilityIsDescribedInPercentagePoints()
+    {
+        var perk = TestPerks.Load("grower", TestPerks.Json(
+            "grower",
+            "MATCH_START",
+            """
+            [{ "type": "modifyProbability", "target": "owner", "probability": "intercept",
+               "valuePerCounter": 5, "counter": "matches", "maxValue": 25, "duration": "match" }]
+            """,
+            axis: "accumulation",
+            accumulates: true));
+
+        Assert.Equal(
+            "al empezar el partido: el portador: probabilidad de interceptar +5% por cada partido (máximo 25%)",
+            Describe("es", perk));
+    }
+
+    [Fact]
+    public void RacialAbilitiesReadAsTheAdrDescribesThem()
+    {
+        Assert.Equal(
+            "al terminar el partido: el portador gana un 25% más de experiencia",
+            Describe("es", Catalog.Perks.Get("quick_learner")));
+        Assert.Equal(
+            "al empezar el partido: el portador: sus entradas dejan al rival derribado más tiempo",
+            Describe("es", Catalog.Perks.Get("hot_blooded")));
+        Assert.Equal(
+            "al empezar el partido: el portador: resistencia a las entradas +10%, "
+                + "el portador: resistencia a las intercepciones +10%",
+            Describe("es", Catalog.Perks.Get("elf_touch")));
+        Assert.Equal(
+            "al empezar el partido: el portador: no puede ser desplazado por empujones",
+            Describe("es", Catalog.Perks.Get("roots")));
+        Assert.Equal(
+            "when the match starts: the holder: cannot be shoved out of position",
+            Describe("en", Catalog.Perks.Get("roots")));
+        Assert.Equal(
+            "al empezar el partido: el portador: no entra en duelo cuando pierde a un vinculado, "
+                + "el portador: las lesiones leves no le penalizan",
+            Describe("es", Catalog.Perks.Get("numb")));
+    }
+
+    /// <summary>
+    /// RT-035: todo perk de <c>data/perks/</c> es describible en los dos idiomas. Se recorren los ficheros
+    /// uno a uno en vez de cargar el catálogo entero porque el paquete T está reescribiéndolo al formato
+    /// de §1.4; los que todavía no lo cumplen los rechaza el cargador y este test lo hace explícito en el
+    /// mensaje, en lugar de caer con un error de carga sin contexto.
+    /// </summary>
+    [Fact]
+    public void EveryPerkInDataIsDescribableInEveryLanguage()
+    {
+        var localization = Catalog.Localization;
+        Assert.Contains("es", localization.Languages);
+        Assert.Contains("en", localization.Languages);
+
+        var pending = new List<string>();
+        var described = new List<string>();
+        foreach (var path in Directory.EnumerateFiles(Path.Combine(TestData.DataDirectory, "perks"), "*.json")
+                     .OrderBy(p => p, StringComparer.Ordinal))
+        {
+            string name = "perks/" + Path.GetFileName(path);
+            PerkDefinition perk;
+            try
+            {
+                perk = PerkLoader.Parse(name, File.ReadAllText(path));
+            }
+            catch (DataException)
+            {
+                // Formato viejo: lo migra el paquete T. Cuando esa lista quede vacía, este catch sobra.
+                pending.Add(name);
+                continue;
+            }
+
+            foreach (var language in localization.Languages)
+            {
+                string text = DescriptionGenerator.Describe(perk, language, Catalog);
+                Assert.False(string.IsNullOrWhiteSpace(text), $"{perk.Id} no tiene descripción en {language}");
+                Assert.DoesNotContain('{', text);
+            }
+
+            described.Add(perk.Id);
+        }
+
+        foreach (var ability in new[] { "elf_touch", "hot_blooded", "numb", "quick_learner", "roots" })
+        {
+            Assert.Contains(ability, described);
+        }
+
+        Assert.DoesNotContain("perks/quick_learner.json", pending);
+    }
+
+    /// <summary>
+    /// La garantía fuerte de RT-035: **toda** clave que el generador puede llegar a pedir existe en los
+    /// dos idiomas. Un tipo de efecto, un objetivo, una probabilidad, una inmunidad, una relación de
+    /// vínculo o una función de condición nuevos sin plantilla caen aquí, aunque todavía no exista ningún
+    /// perk del catálogo que los use.
+    /// </summary>
+    [Fact]
+    public void EveryTemplateKeyTheGeneratorCanAskForExistsInEveryLanguage()
+    {
+        string[] comparisons = { "Lt", "Le", "Gt", "Ge", "Eq", "Ne" };
+        string[] boolFunctions = { "hasTag", "isMob", "adjacent", "startsIn", "startsOn", "linked", "nearAlly", "nearOpponent" };
+        string[] comparedFunctions =
+        {
+            "bias", "scoreDiff", "tick", "distanceToGoal", "level", "attr", "counter",
+            "adjacentCount", "teammatesWithTag", "position", "zone", "detail", "stat",
+        };
+
+        foreach (var language in Catalog.Localization.Languages)
+        {
+            var templates = Catalog.Localization.Get(language);
+
+            foreach (var trigger in Enum.GetValues<EventType>())
+            {
+                templates.Get("triggers", EventTypeNames.ToUpperSnake(trigger));
+                templates.Get("events", EventTypeNames.ToUpperSnake(trigger));
+            }
+
+            foreach (var key in new[]
+            {
+                "modifyAttribute", "modifyAttributePerCounter", "modifyAttributePerCounterDivided",
+                "modifyLeash", "modifyBias", "modifyProbability", "modifyProbabilityPaired", "cancelEvent",
+                "addCounter", "setState", "modifyKnockdownTicks", "modifyKnockdownTicksDown", "immunity",
+                "modifyExperience", "modifyExperienceDown",
+            })
+            {
+                templates.Get("effects", key);
+            }
+
+            foreach (var key in new[]
+            {
+                "actor", "target", "opponent", "owner", "adjacent", "team", "opposingTeam",
+                "withTag", "adjacentWithTag", "linked", "linkedWithTag",
+            })
+            {
+                templates.Get("targets", key);
+            }
+
+            foreach (var key in new[]
+            {
+                "foul", "card", "injury", "injure", "severeInjury", "pass", "intercept", "dribble",
+                "tackle", "shotOnTarget", "save", "tackleEvasion", "interceptEvasion",
+            })
+            {
+                templates.Get("probabilities", key);
+            }
+
+            foreach (var key in new[] { "push", "mourning", "minorInjuryPenalty" })
+            {
+                templates.Get("immunities", key);
+            }
+
+            foreach (var key in new[] { "beside", "ahead", "behind", "left", "right", "diagonalAhead", "diagonalBehind" })
+            {
+                templates.Get("links", key);
+            }
+
+            foreach (var key in new[] { "OwnThird", "Middle", "AttackingThird" })
+            {
+                templates.Get("startZones", key);
+            }
+
+            foreach (var key in new[] { "LeftFlank", "Center", "RightFlank" })
+            {
+                templates.Get("startFlanks", key);
+            }
+
+            foreach (var key in new[] { "goals", "passesCompleted", "tacklesWon", "shots", "saves" })
+            {
+                templates.Get("stats", key);
+            }
+
+            foreach (var name in boolFunctions)
+            {
+                templates.Get("conditions", name);
+            }
+
+            foreach (var name in comparedFunctions)
+            {
+                foreach (var comparison in comparisons)
+                {
+                    if (name is "position" or "zone" or "detail" && comparison is not ("Eq" or "Ne"))
+                    {
+                        continue;
+                    }
+
+                    templates.Get("conditions", name + comparison);
+                }
+            }
+
+            foreach (var key in new[] { "and", "or", "not" })
+            {
+                templates.Get("conditions", key);
+            }
+
+            foreach (var key in new[]
+            {
+                "plain", "withCondition", "withLimit", "withConditionAndLimit",
+                "effectSeparator", "elsePrefix", "linkSeparator",
+            })
+            {
+                templates.Get("layout", key);
+            }
+
+            foreach (var duration in new[] { "instant", "play", "match", "run" })
+            {
+                templates.Get("durations", duration);
+            }
+
+            foreach (var scope in new[] { "play", "match", "mob", "run" })
+            {
+                templates.Get("limits", scope);
+            }
+
+            foreach (var attribute in Enum.GetValues<AttributeKind>())
+            {
+                templates.Get("attributes", attribute.ToString().ToLowerInvariant());
+            }
+
+            foreach (var position in Enum.GetValues<Position>())
+            {
+                templates.Get("positions", position.ToString());
+            }
+
+            foreach (var zone in Enum.GetValues<Zone>())
+            {
+                templates.Get("zones", zone.ToString());
+            }
+        }
+    }
+
+    private static PerkDefinition Bloodlust() => TestPerks.Load("bloodlust", TestPerks.Json(
+        "bloodlust",
+        "TACKLE",
+        """[{ "type": "modifyAttribute", "target": "actor", "attribute": "strength", "value": 3, "duration": "play" }]""",
+        kind: "conditional",
+        condition: "hasTag(actor, 'Brute') && bias() < 0",
+        limit: """{ "per": "match", "times": 2 }"""));
+
+    private static PerkDefinition LinkedPasser() => TestPerks.Load("column_pass", TestPerks.Json(
+        "column_pass",
+        "MATCH_START",
+        """[{ "type": "modifyProbability", "target": "linked", "probability": "pass", "value": 10, "duration": "match" }]""",
+        axis: "alignment",
+        links: """["beside"]"""));
+
+    private static string Describe(string language, PerkDefinition perk) =>
+        DescriptionGenerator.Describe(perk, language, Catalog);
 }

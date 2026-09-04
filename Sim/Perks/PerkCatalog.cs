@@ -34,6 +34,41 @@ public sealed class PerkCatalog
     /// <summary>Busca un perk por id; null si no existe.</summary>
     public PerkDefinition? Find(string id) => _byId.GetValueOrDefault(id);
 
+    /// <summary>
+    /// Número de perks de cada eje de activación (docs/perks-ejes.md), indexado por
+    /// <see cref="PerkAxis"/>. La distribución objetivo del catálogo se vigila con esto: un catálogo con
+    /// la proporción 60/30/10 de RF-069 correcta puede seguir siendo aburrido si todos los perks se
+    /// activan por lo mismo.
+    /// </summary>
+    public int[] CountByAxis()
+    {
+        var counts = new int[Enum.GetValues<PerkAxis>().Length];
+        for (int i = 0; i < _perks.Length; i++)
+        {
+            counts[(int)_perks[i].Axis]++;
+        }
+
+        return counts;
+    }
+
+    /// <summary>
+    /// Perks que pueden aparecer en el pool de una run de esa raza (ADR 0023): los universales más los
+    /// exclusivos de esa raza. Orden de id ordinal ascendente, como <see cref="All"/>.
+    /// </summary>
+    public IReadOnlyList<PerkDefinition> AvailableTo(Model.Race race)
+    {
+        var available = new List<PerkDefinition>(_perks.Length);
+        for (int i = 0; i < _perks.Length; i++)
+        {
+            if (_perks[i].Race is null || _perks[i].Race == race)
+            {
+                available.Add(_perks[i]);
+            }
+        }
+
+        return available;
+    }
+
     /// <summary>Busca un perk por id; lanza si no existe.</summary>
     public PerkDefinition Get(string id) =>
         Find(id) ?? throw new InvalidOperationException($"perk no encontrado en el catálogo: {id}");

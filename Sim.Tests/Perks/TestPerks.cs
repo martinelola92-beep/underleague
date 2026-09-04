@@ -13,10 +13,28 @@ namespace Underleague.Sim.Tests.Perks;
 /// </summary>
 internal static class TestPerks
 {
-    /// <summary>Catálogo real de /data más los perks indicados, como (id, JSON).</summary>
+    /// <summary>
+    /// Ids de <c>data/perks/</c> que estos tests conservan del catálogo real: las cinco habilidades
+    /// raciales (RF-031b, ADR 0026), que el motor asigna solo por la raza del jugador y sin las que
+    /// ningún partido se puede construir. El resto del catálogo se descarta a propósito: lo está
+    /// reescribiendo el paquete T al formato de fase1b-diseno.md §1.4, y los tests de perks no deben
+    /// depender de en qué punto de esa reescritura esté. Todo lo que estos tests necesitan lo declaran
+    /// ellos mismos con <see cref="Json"/>.
+    /// </summary>
+    private static readonly string[] RacialAbilities =
+    {
+        "elf_touch", "hot_blooded", "numb", "quick_learner", "roots",
+    };
+
+    /// <summary>Catálogo real de /data (sin el catálogo de perks, ver arriba) más los perks indicados.</summary>
     public static Catalog CatalogWith(params (string Id, string Json)[] perks)
     {
         var files = TestData.LoadAllFiles();
+        foreach (var path in files.Keys.Where(IsDiscardedPerk).ToList())
+        {
+            files.Remove(path);
+        }
+
         foreach (var (id, json) in perks)
         {
             files["perks/" + id + ".json"] = json;
@@ -24,6 +42,10 @@ internal static class TestPerks
 
         return DataLoader.FromJson(files);
     }
+
+    private static bool IsDiscardedPerk(string path) =>
+        path.StartsWith("perks/", StringComparison.Ordinal)
+        && !RacialAbilities.Any(id => path == "perks/" + id + ".json");
 
     /// <summary>Carga un único perk sobre el catálogo real y lo devuelve ya compilado.</summary>
     public static Underleague.Sim.Perks.PerkDefinition Load(string id, string json) =>
@@ -39,6 +61,9 @@ internal static class TestPerks
         string effects,
         string rarity = "common",
         string kind = "filler",
+        string axis = "identity",
+        string? race = null,
+        string links = "[]",
         string scope = "actor",
         string condition = "",
         string? limit = null,
@@ -51,12 +76,16 @@ internal static class TestPerks
         string limitText = limit is null ? string.Empty : $"\"limit\": {limit},";
         string elseText = elseEffects is null ? string.Empty : $"\"elseEffects\": {elseEffects},";
         string positionText = positionOnly is null ? "null" : $"\"{positionOnly}\"";
+        string raceText = race is null ? "null" : $"\"{race}\"";
         return $$"""
         {
           "id": "{{id}}",
           "name": { "es": "{{id}}", "en": "{{id}}" },
           "rarity": "{{rarity}}",
           "kind": "{{kind}}",
+          "axis": "{{axis}}",
+          "race": {{raceText}},
+          "links": {{links}},
           "trigger": "{{trigger}}",
           "scope": "{{scope}}",
           "condition": "{{condition}}",

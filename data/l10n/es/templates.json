@@ -1,12 +1,13 @@
 {
-  "_doc": "Plantillas de descripción de perks, objetos y consumibles (RT-035). El texto de un efecto NO se escribe a mano: se compone desde el propio dato con estas plantillas, así que descripción y efecto no pueden divergir. Marcadores: {trigger} {condition} {effects} {limit} {target} {who} {tag} {attribute} {duration} {probability} {counter} {value:+} {value:+%} {valuePerCounter:+} {maxValue} {counterDivisor} {ticks} {event} {n} {position} {zone} {detail} {a} {b}. Las claves de 'conditions' son el nombre de la función y, para las funciones que devuelven un número o texto, el nombre más el sufijo de la comparación (Lt, Le, Gt, Ge, Eq, Ne).",
+  "_doc": "Plantillas de descripción de perks, objetos y consumibles (RT-035). El texto de un efecto NO se escribe a mano: se compone desde el propio dato con estas plantillas, así que descripción y efecto no pueden divergir. Marcadores: {trigger} {condition} {effects} {limit} {target} {who} {tag} {attribute} {duration} {probability} {counter} {value:+} {value:+%} {valuePerCounter:+} {maxValue} {counterDivisor} {ticks} {event} {n} {position} {zone} {detail} {a} {b}. Las claves de 'conditions' son el nombre de la función y, para las funciones que devuelven un número o texto, el nombre más el sufijo de la comparación (Lt, Le, Gt, Ge, Eq, Ne). Secciones del rediseño espacial (paquete S): 'links' nombra las relaciones direccionales de la ADR 0021 (marcador {link}), 'immunities' los efectos de tipo immunity, y 'startZones', 'startFlanks' y 'stats' los literales de las funciones startsIn, startsOn y stat (marcadores {startZone}, {startFlank}, {stat}, {cells}). Los valores porcentuales se escriben y se leen en puntos porcentuales enteros.",
   "layout": {
     "plain": "{trigger}: {effects}",
     "withCondition": "{trigger}, {condition}: {effects}",
     "withLimit": "{trigger}: {effects} ({limit})",
     "withConditionAndLimit": "{trigger}, {condition}: {effects} ({limit})",
     "effectSeparator": ", ",
-    "elsePrefix": "; si no, "
+    "elsePrefix": "; si no, ",
+    "linkSeparator": " y "
   },
   "effects": {
     "modifyAttribute": "{target} {value:+} de {attribute} durante {duration}",
@@ -17,7 +18,17 @@
     "modifyProbability": "{target}: {probability} {value:+%}",
     "cancelEvent": "anula {event}",
     "addCounter": "+{value} al contador {counter}",
-    "setState": "{target} derribado {ticks} ticks"
+    "setState": "{target} derribado {ticks} ticks",
+    "modifyProbabilityPaired": "{probability} {value:+%} hacia {target}",
+    "modifyKnockdownTicks": "{target}: sus entradas dejan al rival derribado más tiempo",
+    "modifyKnockdownTicksDown": "{target}: sus entradas dejan al rival derribado menos tiempo",
+    "immunity": "{target}: {immunity}",
+    "modifyExperience": "{target} gana un {value:abs}% más de experiencia",
+    "modifyExperienceDown": "{target} gana un {value:abs}% menos de experiencia",
+    "modifyProbabilityPerCounter": "{target}: {probability} {valuePerCounter:+%} por cada {counter} (máximo {maxValue:%})",
+    "modifyProbabilityPerCounterDivided": "{target}: {probability} {valuePerCounter:+%} por cada {counterDivisor} de {counter} (máximo {maxValue:%})",
+    "modifyLeashPerCounter": "{target} {valuePerCounter:+} de correa por cada {counter} (máximo {maxValue}) durante {duration}",
+    "modifyLeashPerCounterDivided": "{target} {valuePerCounter:+} de correa por cada {counterDivisor} de {counter} (máximo {maxValue}) durante {duration}"
   },
   "triggers": {
     "MATCH_START": "al empezar el partido",
@@ -93,12 +104,12 @@
     "tickGe": "si el tick es al menos {n}",
     "tickEq": "si el tick es {n}",
     "tickNe": "si el tick no es {n}",
-    "distanceToGoalLt": "si la distancia a portería es menor que {n}",
-    "distanceToGoalLe": "si la distancia a portería es como mucho {n}",
-    "distanceToGoalGt": "si la distancia a portería es mayor que {n}",
-    "distanceToGoalGe": "si la distancia a portería es al menos {n}",
-    "distanceToGoalEq": "si la distancia a portería es {n}",
-    "distanceToGoalNe": "si la distancia a portería no es {n}",
+    "distanceToGoalLt": "si {who} está a menos de {n} casillas de portería",
+    "distanceToGoalLe": "si {who} está a {n} casillas de portería o menos",
+    "distanceToGoalGt": "si {who} está a más de {n} casillas de portería",
+    "distanceToGoalGe": "si {who} está a {n} casillas de portería o más",
+    "distanceToGoalEq": "si {who} está a {n} casillas de portería",
+    "distanceToGoalNe": "si {who} no está a {n} casillas de portería",
     "levelLt": "si el nivel de {who} es menor que {n}",
     "levelLe": "si el nivel de {who} es como mucho {n}",
     "levelGt": "si el nivel de {who} es mayor que {n}",
@@ -137,7 +148,18 @@
     "detailNe": "si el evento no es {detail}",
     "and": "{a} y {b}",
     "or": "{a} o {b}",
-    "not": "no {a}"
+    "not": "no {a}",
+    "startsIn": "si {who} empieza en {startZone}",
+    "startsOn": "si {who} empieza en {startFlank}",
+    "linked": "si {who} tiene {link}",
+    "nearAlly": "si {who} tiene cerca un {tag} a {cells} casillas",
+    "nearOpponent": "si {who} tiene cerca un {tag} rival a {cells} casillas",
+    "statLt": "si {who} lleva menos de {n} {stat}",
+    "statLe": "si {who} lleva como mucho {n} {stat}",
+    "statGt": "si {who} lleva más de {n} {stat}",
+    "statGe": "si {who} lleva al menos {n} {stat}",
+    "statEq": "si {who} lleva {n} {stat}",
+    "statNe": "si {who} no lleva {n} {stat}"
   },
   "targets": {
     "actor": "el jugador",
@@ -148,7 +170,9 @@
     "team": "el equipo",
     "opposingTeam": "el equipo rival",
     "withTag": "los {tag} del equipo",
-    "adjacentWithTag": "los {tag} adyacentes"
+    "adjacentWithTag": "los {tag} adyacentes",
+    "linked": "el {link}",
+    "linkedWithTag": "el {link} si es {tag}"
   },
   "durations": {
     "instant": "",
@@ -180,20 +204,20 @@
     "dribble": "probabilidad de regate",
     "tackle": "probabilidad de robar",
     "shotOnTarget": "probabilidad de tiro a puerta",
-    "save": "probabilidad de parada"
-  },
-  "positions": {
-    "Goalkeeper": "portero",
-    "Defender": "defensa",
-    "Midfielder": "centrocampista",
-    "Forward": "delantero"
-  },
-  "zones": {
-    "Own": "propia",
-    "Middle": "media",
-    "Opposing": "rival"
+    "save": "probabilidad de parada",
+    "tackleEvasion": "resistencia a las entradas",
+    "interceptEvasion": "resistencia a las intercepciones"
   },
   "tags": {
+    "Human": "Humano",
+    "Orc": "Orco",
+    "Elf": "Elfo",
+    "Dwarf": "Enano",
+    "Undead": "No-muerto",
+    "DarkElf": "Elfo oscuro",
+    "Demon": "Demonio",
+    "Vampire": "Vampiro",
+    "Lizard": "Lagarto",
     "Neutral": "Neutral",
     "Brute": "Bruto",
     "Fine": "Fino",
@@ -225,6 +249,17 @@
     "Defender": "defensa",
     "Midfielder": "centrocampista",
     "Forward": "delantero"
+  },
+  "positions": {
+    "Goalkeeper": "portero",
+    "Defender": "defensa",
+    "Midfielder": "centrocampista",
+    "Forward": "delantero"
+  },
+  "zones": {
+    "Own": "propia",
+    "Middle": "media",
+    "Opposing": "rival"
   },
   "details": {
     "attempted": "un intento",
@@ -273,5 +308,36 @@
     "cards": "tarjeta",
     "fouls": "falta",
     "dribbles": "regate"
+  },
+  "links": {
+    "beside": "compañero de su columna",
+    "ahead": "compañero de delante",
+    "behind": "compañero de detrás",
+    "left": "compañero de su izquierda",
+    "right": "compañero de su derecha",
+    "diagonalAhead": "compañero en diagonal hacia delante",
+    "diagonalBehind": "compañero en diagonal hacia atrás"
+  },
+  "immunities": {
+    "push": "no puede ser desplazado por empujones",
+    "mourning": "no entra en duelo cuando pierde a un vinculado",
+    "minorInjuryPenalty": "las lesiones leves no le penalizan"
+  },
+  "startZones": {
+    "OwnThird": "su tercio",
+    "Middle": "el centro del campo",
+    "AttackingThird": "el tercio rival"
+  },
+  "startFlanks": {
+    "LeftFlank": "la banda izquierda",
+    "Center": "el carril central",
+    "RightFlank": "la banda derecha"
+  },
+  "stats": {
+    "goals": "goles",
+    "passesCompleted": "pases completados",
+    "tacklesWon": "entradas ganadas",
+    "shots": "tiros",
+    "saves": "paradas"
   }
 }

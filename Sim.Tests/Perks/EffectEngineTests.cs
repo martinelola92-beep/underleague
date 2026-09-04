@@ -130,22 +130,32 @@ public sealed class EffectEngineTests
     }
 
     [Fact]
-    public void CancelledCardLeavesTheEventInTheSequenceWithItsSuffix()
+    public void CancelledEventLeavesTheEventInTheSequenceWithItsSuffix()
     {
-        // El motor completo: el perk anula la roja, el jugador sigue en el campo y el evento CARD queda
-        // registrado con Detail "red:cancelled" (§2).
+        // El motor completo: el perk anula la falta y el evento FOUL queda igualmente registrado, con
+        // Detail "foul:cancelled" (§2). Se usa FOUL y no CARD porque la falta es el evento cancelable que
+        // el motor produce con regularidad; la cancelación de CARD la cubre el test unitario de arriba.
         const string Cancel = """[{ "type": "cancelEvent" }]""";
         var catalog = TestPerks.CatalogWith(
-            ("innocent_face", TestPerks.Json("innocent_face", "CARD", Cancel, scope: "any", rarity: "legendary", kind: "ruleBreaker")));
+            ("innocent_face", TestPerks.Json("innocent_face", "FOUL", Cancel, scope: "any", rarity: "legendary", kind: "ruleBreaker")));
 
-        var setup = TestPerks.Match(catalog, 4, (1, new[] { "innocent_face" }));
-        var result = Simulator.Run(setup, 4, catalog, new SimConfig(CollectLog: false));
+        // Se recorren varias semillas y no una fija: que un partido concreto tenga falta depende del
+        // ajuste del motor, y este test es sobre la anulación, no sobre la tasa de faltas (RT-056).
+        var fouls = new List<MatchEvent>();
+        for (ulong seed = 1; seed <= 20; seed++)
+        {
+            var setup = TestPerks.Match(catalog, seed, (1, new[] { "innocent_face" }));
+            var result = Simulator.Run(setup, seed, catalog, new SimConfig(CollectLog: false));
 
-        var cards = result.Events.Where(e => e.Type == EventType.Card).ToList();
-        Assert.NotEmpty(cards);
-        Assert.All(cards, c => Assert.EndsWith(":cancelled", c.Detail, StringComparison.Ordinal));
-        Assert.Equal(0, result.Report.YellowCards);
-        Assert.Equal(0, result.Report.RedCards);
+            // La falta sigue contando en el informe -ocurrió-, pero el árbitro no la castiga: no hay
+            // tarjeta ni derribo (comentario de ResolveFoul en MatchEngine).
+            fouls.AddRange(result.Events.Where(e => e.Type == EventType.Foul));
+            Assert.Equal(0, result.Report.YellowCards);
+            Assert.Equal(0, result.Report.RedCards);
+        }
+
+        Assert.NotEmpty(fouls);
+        Assert.All(fouls, c => Assert.EndsWith(":cancelled", c.Detail, StringComparison.Ordinal));
     }
 
     [Fact]
@@ -261,7 +271,7 @@ public sealed class EffectEngineTests
     [Fact]
     public void ZeroPerksMeansNoEffectEngineAtAll()
     {
-        var catalog = TestData.LoadCatalog();
+        var catalog = TestPerks.CatalogWith();
         var engine = TestPerks.Engine(catalog, TestMatches.Reference(catalog, 1));
         Assert.Null(engine.Effects);
     }
@@ -275,11 +285,13 @@ public sealed class EffectEngineTests
 
         var result = Simulator.Run(setup, 5, catalog, new SimConfig(CollectLog: false));
 
+        // Además del perk asignado, el informe trae las activaciones de la habilidad racial que el motor
+        // concede a toda la plantilla (RF-031b, ADR 0026): aquí se mira solo la del perk del test.
         Assert.Equal(0, result.Report.RecursionCuts);
-        var activation = Assert.Single(result.Report.PerkActivations);
+        var activation = Assert.Single(result.Report.PerkActivations, a => a.PerkId == "kickoff_bonus");
         Assert.Equal("kickoff_bonus", activation.PerkId);
         Assert.Equal(EventType.MatchStart, activation.EventType);
-        var summary = Assert.Single(result.Report.PerksSummary);
+        var summary = Assert.Single(result.Report.PerksSummary, p => p.PerkId == "kickoff_bonus");
         Assert.Equal(new PerkActivationSummary("kickoff_bonus", 1, 1), summary);
     }
 

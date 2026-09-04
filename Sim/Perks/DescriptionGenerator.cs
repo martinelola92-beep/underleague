@@ -35,6 +35,11 @@ public static class DescriptionGenerator
     private const string DetailsSection = "details";
     private const string EventsSection = "events";
     private const string CountersSection = "counters";
+    private const string LinksSection = "links";
+    private const string ImmunitiesSection = "immunities";
+    private const string StartZonesSection = "startZones";
+    private const string StartFlanksSection = "startFlanks";
+    private const string StatsSection = "stats";
 
     /// <summary>Descripción completa del perk en el idioma pedido (RT-035).</summary>
     public static string Describe(PerkDefinition perk, string language, Catalog catalog)
@@ -54,12 +59,13 @@ public static class DescriptionGenerator
         string separator = templates.Get(Layout, "effectSeparator");
 
         string triggerNoun = templates.Get(EventsSection, EventTypeNames.ToUpperSnake(perk.Trigger));
+        string links = DescribeLinks(perk.Links, templates);
         var effects = new StringBuilder();
-        AppendEffects(effects, perk.Effects, templates, separator, triggerNoun);
+        AppendEffects(effects, perk.Effects, templates, separator, triggerNoun, links);
         if (perk.ElseEffects.Count > 0)
         {
             effects.Append(templates.Get(Layout, "elsePrefix"));
-            AppendEffects(effects, perk.ElseEffects, templates, separator, triggerNoun);
+            AppendEffects(effects, perk.ElseEffects, templates, separator, triggerNoun, links);
         }
 
         string limit = perk.Limit is { } l
@@ -107,7 +113,8 @@ public static class DescriptionGenerator
         IReadOnlyList<EffectDefinition> effects,
         DescriptionTemplates templates,
         string separator,
-        string triggerNoun)
+        string triggerNoun,
+        string links)
     {
         for (int i = 0; i < effects.Count; i++)
         {
@@ -116,11 +123,38 @@ public static class DescriptionGenerator
                 builder.Append(separator);
             }
 
-            builder.Append(DescribeEffect(effects[i], templates, triggerNoun));
+            builder.Append(DescribeEffect(effects[i], templates, triggerNoun, links));
         }
     }
 
-    private static string DescribeEffect(EffectDefinition effect, DescriptionTemplates templates, string triggerNoun)
+    /// <summary>
+    /// Nombre de las relaciones que el perk declara (ADR 0021), unidas por la conjunción de la plantilla.
+    /// Es lo que convierte "el vinculado" en "el compañero de su columna" o "el de detrás".
+    /// </summary>
+    private static string DescribeLinks(IReadOnlyList<LinkRelation> links, DescriptionTemplates templates)
+    {
+        if (links.Count == 0)
+        {
+            return string.Empty;
+        }
+
+        var text = new StringBuilder();
+        string separator = templates.Get(Layout, "linkSeparator");
+        for (int i = 0; i < links.Count; i++)
+        {
+            if (i > 0)
+            {
+                text.Append(separator);
+            }
+
+            text.Append(templates.Get(LinksSection, ConditionCompiler.LinkNames[(int)links[i]]));
+        }
+
+        return text.ToString();
+    }
+
+    private static string DescribeEffect(
+        EffectDefinition effect, DescriptionTemplates templates, string triggerNoun, string links)
     {
         string key = effect.Type switch
         {
@@ -128,32 +162,52 @@ public static class DescriptionGenerator
             EffectType.ModifyAttribute => effect.CounterDivisor > 1
                 ? "modifyAttributePerCounterDivided"
                 : "modifyAttributePerCounter",
-            EffectType.ModifyLeash => "modifyLeash",
+            EffectType.ModifyLeash when !effect.UsesCounter => "modifyLeash",
+            EffectType.ModifyLeash => effect.CounterDivisor > 1
+                ? "modifyLeashPerCounterDivided"
+                : "modifyLeashPerCounter",
             EffectType.ModifyBias => "modifyBias",
+            // El objetivo vinculado hace que el modificador sea **por par** (ADR 0021), y la descripción
+            // tiene que decirlo: "hacia ese compañero", no "en general".
+            EffectType.ModifyProbability when effect.Target is EffectTarget.Linked or EffectTarget.LinkedWithTag
+                => "modifyProbabilityPaired",
+            EffectType.ModifyProbability when effect.UsesCounter => effect.CounterDivisor > 1
+                ? "modifyProbabilityPerCounterDivided"
+                : "modifyProbabilityPerCounter",
             EffectType.ModifyProbability => "modifyProbability",
             EffectType.CancelEvent => "cancelEvent",
             EffectType.AddCounter => "addCounter",
             EffectType.SetState => "setState",
+
+            // Los ticks son una unidad interna y no aparecen nunca en pantalla
+            // (docs/estilo-descripciones.md): la descripción dice "más tiempo", que es lo que se ve.
+            EffectType.ModifyKnockdownTicks => effect.Value >= 0 ? "modifyKnockdownTicks" : "modifyKnockdownTicksDown",
+            EffectType.Immunity => "immunity",
+            EffectType.ModifyExperience => effect.Value >= 0 ? "modifyExperience" : "modifyExperienceDown",
             _ => throw new InvalidOperationException($"tipo de efecto sin plantilla: {effect.Type}"),
         };
 
         string text = templates.Get(Effects, key);
-        text = Replace(text, "{target}", DescribeTarget(effect, templates));
+        text = Replace(text, "{target}", DescribeTarget(effect, templates, links));
+        text = Replace(text, "{immunity}", templates.Get(ImmunitiesSection, ImmunityKey(effect.Immunity)));
         text = Replace(text, "{attribute}", templates.Get(AttributesSection, ConditionCompiler.AttributeName(effect.Attribute)));
         text = Replace(text, "{duration}", templates.Get(Durations, DurationKey(effect.Duration)));
         text = Replace(text, "{probability}", templates.Get(Probabilities, ProbabilityKey(effect.Probability)));
         text = Replace(text, "{counter}", CounterName(effect.Counter, templates));
         text = Replace(text, "{value:+%}", Percent(effect.Value));
         text = Replace(text, "{value:+}", Signed(effect.Value));
+        text = Replace(text, "{value:abs}", Math.Abs(effect.Value).ToString(CultureInfo.InvariantCulture));
         text = Replace(text, "{value}", effect.Value.ToString(CultureInfo.InvariantCulture));
+        text = Replace(text, "{valuePerCounter:+%}", Percent(effect.ValuePerCounter));
         text = Replace(text, "{valuePerCounter:+}", Signed(effect.ValuePerCounter));
+        text = Replace(text, "{maxValue:%}", PlainPercent(effect.MaxValue));
         text = Replace(text, "{maxValue}", effect.MaxValue.ToString(CultureInfo.InvariantCulture));
         text = Replace(text, "{counterDivisor}", effect.CounterDivisor.ToString(CultureInfo.InvariantCulture));
         text = Replace(text, "{ticks}", effect.Ticks.ToString(CultureInfo.InvariantCulture));
         return Replace(text, "{event}", triggerNoun);
     }
 
-    private static string DescribeTarget(EffectDefinition effect, DescriptionTemplates templates)
+    private static string DescribeTarget(EffectDefinition effect, DescriptionTemplates templates, string links)
     {
         string key = effect.Target switch
         {
@@ -166,10 +220,13 @@ public static class DescriptionGenerator
             EffectTarget.OpposingTeam => "opposingTeam",
             EffectTarget.WithTag => "withTag",
             EffectTarget.AdjacentWithTag => "adjacentWithTag",
+            EffectTarget.Linked => "linked",
+            EffectTarget.LinkedWithTag => "linkedWithTag",
             _ => throw new InvalidOperationException($"objetivo sin plantilla: {effect.Target}"),
         };
 
-        return Replace(templates.Get(TargetsSection, key), "{tag}", Tag(effect.TargetTag, templates));
+        string text = Replace(templates.Get(TargetsSection, key), "{tag}", Tag(effect.TargetTag, templates));
+        return Replace(text, "{link}", links);
     }
 
     // ------------------------------------------------------------------ condiciones (pretty-printer)
@@ -222,6 +279,12 @@ public static class DescriptionGenerator
 
             if (arguments[i] is not ValueExpression { Value: string text })
             {
+                // Argumento entero literal: hoy solo el radio en casillas de nearAlly/nearOpponent.
+                if (ConditionCompiler.TryReadInt(arguments[i]) is { } cells)
+                {
+                    template = Replace(template, "{cells}", cells.ToString(CultureInfo.InvariantCulture));
+                }
+
                 continue;
             }
 
@@ -229,6 +292,10 @@ public static class DescriptionGenerator
             {
                 "attr" => Replace(template, "{attribute}", templates.Get(AttributesSection, text)),
                 "counter" => Replace(template, "{counter}", CounterName(text, templates)),
+                "startsIn" => Replace(template, "{startZone}", templates.Get(StartZonesSection, text)),
+                "startsOn" => Replace(template, "{startFlank}", templates.Get(StartFlanksSection, text)),
+                "linked" => Replace(template, "{link}", templates.Get(LinksSection, text)),
+                "stat" => Replace(template, "{stat}", templates.Get(StatsSection, text)),
                 _ => Replace(template, "{tag}", Tag(text, templates)),
             };
         }
@@ -274,6 +341,13 @@ public static class DescriptionGenerator
         _ => "run",
     };
 
+    private static string ImmunityKey(ImmunityKind kind) => kind switch
+    {
+        ImmunityKind.Push => "push",
+        ImmunityKind.Mourning => "mourning",
+        _ => "minorInjuryPenalty",
+    };
+
     private static string ProbabilityKey(ProbabilityKind kind) => kind switch
     {
         ProbabilityKind.Foul => "foul",
@@ -286,6 +360,8 @@ public static class DescriptionGenerator
         ProbabilityKind.Dribble => "dribble",
         ProbabilityKind.Tackle => "tackle",
         ProbabilityKind.ShotOnTarget => "shotOnTarget",
+        ProbabilityKind.TackleEvasion => "tackleEvasion",
+        ProbabilityKind.InterceptEvasion => "interceptEvasion",
         _ => "save",
     };
 
@@ -304,6 +380,10 @@ public static class DescriptionGenerator
     /// </summary>
     private static string Percent(int value) =>
         (value / 100m).ToString("+0.##;-0.##;0", CultureInfo.InvariantCulture) + "%";
+
+    /// <summary>Puntos base 10000 como porcentaje sin signo: un tope no es un incremento.</summary>
+    private static string PlainPercent(int value) =>
+        (Math.Abs(value) / 100m).ToString("0.##", CultureInfo.InvariantCulture) + "%";
 
     private static string Replace(string text, string token, string value) =>
         text.Contains(token, StringComparison.Ordinal) ? text.Replace(token, value, StringComparison.Ordinal) : text;

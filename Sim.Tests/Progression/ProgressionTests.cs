@@ -1,6 +1,8 @@
 using Underleague.Sim.Data;
 using Underleague.Sim.Engine;
 using Underleague.Sim.Model;
+using Underleague.Sim.Perks;
+using Underleague.Sim.Tests.Perks;
 using ProgressionRules = Underleague.Sim.Progression.Progression;
 
 namespace Underleague.Sim.Tests.Progression;
@@ -11,7 +13,12 @@ namespace Underleague.Sim.Tests.Progression;
 /// </summary>
 public sealed class ProgressionTests
 {
-    private static readonly ProgressionTuning Tuning = TestData.LoadCatalog().Progression;
+    // Catálogo real de /data salvo el catálogo de perks, que está reescribiendo el paquete T al formato
+    // de fase1b-diseno.md §1.4 (ver TestPerks.CatalogWith). Las cinco habilidades raciales sí entran,
+    // porque son las que la progresión consulta.
+    private static readonly Catalog Catalog = TestPerks.CatalogWith();
+
+    private static readonly ProgressionTuning Tuning = Catalog.Progression;
 
     [Fact]
     public void TuningComesFromData()

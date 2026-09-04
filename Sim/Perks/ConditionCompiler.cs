@@ -27,6 +27,21 @@ internal enum ConditionArgKind
 
     /// <summary>Literal de cadena con el nombre de un contador (RF-070).</summary>
     CounterName,
+
+    /// <summary>Literal entero (por ejemplo, el radio en casillas de nearAlly/nearOpponent).</summary>
+    Number,
+
+    /// <summary>Literal de cadena con un tercio de inicio: OwnThird, Middle, AttackingThird.</summary>
+    StartZone,
+
+    /// <summary>Literal de cadena con una banda de inicio: LeftFlank, Center, RightFlank.</summary>
+    StartFlank,
+
+    /// <summary>Literal de cadena con una relación de vínculo direccional (ADR 0021).</summary>
+    Link,
+
+    /// <summary>Literal de cadena con una estadística del partido en curso (RF-119).</summary>
+    Stat,
 }
 
 /// <summary>Firma de una función de condición: aridad, tipos de argumento y tipo de retorno (RT-034).</summary>
@@ -66,12 +81,41 @@ public static class ConditionCompiler
         new("adjacent", new[] { ConditionArgKind.Who, ConditionArgKind.Tag }, ConditionValueKind.Bool),
         new("adjacentCount", new[] { ConditionArgKind.Who, ConditionArgKind.Tag }, ConditionValueKind.Int),
         new("teammatesWithTag", new[] { ConditionArgKind.Who, ConditionArgKind.Tag }, ConditionValueKind.Int),
-        new("distanceToGoal", Array.Empty<ConditionArgKind>(), ConditionValueKind.Int),
+        new("distanceToGoal", new[] { ConditionArgKind.Who }, ConditionValueKind.Int),
         new("scoreDiff", Array.Empty<ConditionArgKind>(), ConditionValueKind.Int),
         new("tick", Array.Empty<ConditionArgKind>(), ConditionValueKind.Int),
         new("counter", new[] { ConditionArgKind.CounterName }, ConditionValueKind.Int),
         new("detail", Array.Empty<ConditionArgKind>(), ConditionValueKind.Str),
+
+        // Funciones nuevas del rediseño espacial (fase1b-diseno.md §1.5, docs/perks-ejes.md). Cierran los
+        // tres ejes que faltaban -alineación, zona de inicio y proximidad dinámica- y abaratan el eje de
+        // acumulación, que hasta ahora obligaba a declarar un contador propio para leer algo que el motor
+        // ya lleva para el informe post-partido (RF-119).
+        new("startsIn", new[] { ConditionArgKind.Who, ConditionArgKind.StartZone }, ConditionValueKind.Bool),
+        new("startsOn", new[] { ConditionArgKind.Who, ConditionArgKind.StartFlank }, ConditionValueKind.Bool),
+        new("linked", new[] { ConditionArgKind.Who, ConditionArgKind.Link }, ConditionValueKind.Bool),
+        new("nearAlly", new[] { ConditionArgKind.Who, ConditionArgKind.Tag, ConditionArgKind.Number }, ConditionValueKind.Bool),
+        new("nearOpponent", new[] { ConditionArgKind.Who, ConditionArgKind.Tag, ConditionArgKind.Number }, ConditionValueKind.Bool),
+        new("stat", new[] { ConditionArgKind.Who, ConditionArgKind.Stat }, ConditionValueKind.Int),
     };
+
+    /// <summary>Nombres de los tercios de inicio admitidos por <c>startsIn</c>, en orden de StartZone.</summary>
+    internal static readonly string[] StartZoneNames = { "OwnThird", "Middle", "AttackingThird" };
+
+    /// <summary>Nombres de las bandas de inicio admitidas por <c>startsOn</c>, en orden de StartFlank.</summary>
+    internal static readonly string[] StartFlankNames = { "LeftFlank", "Center", "RightFlank" };
+
+    /// <summary>Nombres de las relaciones de vínculo, en orden de <see cref="LinkRelation"/>.</summary>
+    internal static readonly string[] LinkNames =
+    {
+        "beside", "ahead", "behind", "left", "right", "diagonalAhead", "diagonalBehind",
+    };
+
+    /// <summary>Nombres de las estadísticas de <c>stat</c>, en orden de <see cref="MatchStat"/>.</summary>
+    internal static readonly string[] StatNames = { "goals", "passesCompleted", "tacklesWon", "shots", "saves" };
+
+    /// <summary>Radio máximo en casillas de nearAlly/nearOpponent: más allá cubre el campo entero.</summary>
+    internal const int MaxProximityCells = 8;
 
     private static readonly string[] WhoNames = { "actor", "target", "opponent", "owner" };
 
@@ -186,6 +230,76 @@ public static class ConditionCompiler
     /// <summary>Nombre en minúsculas del atributo, tal y como se escribe en /data.</summary>
     internal static string AttributeName(AttributeKind kind) => AttributeNames[(int)kind];
 
+    /// <summary>Índice de text en names con comparación ordinal; -1 si no está.</summary>
+    internal static int NameIndex(IReadOnlyList<string> names, string text)
+    {
+        for (int i = 0; i < names.Count; i++)
+        {
+            if (string.Equals(names[i], text, StringComparison.Ordinal))
+            {
+                return i;
+            }
+        }
+
+        return -1;
+    }
+
+    /// <summary>
+    /// Etiquetas (RF-068) que la condición nombra como literal. Lo usa <see cref="PerkLoader"/> para
+    /// rechazar que un perk universal consulte la etiqueta de especie (ADR 0023): la comprobación se hace
+    /// sobre el AST ya analizado, no sobre el texto, así que no se puede colar por espaciado ni comillas.
+    /// </summary>
+    internal static IReadOnlyList<string> TagLiterals(LogicalExpression? ast)
+    {
+        if (ast is null)
+        {
+            return Array.Empty<string>();
+        }
+
+        var tags = new List<string>();
+        Collect(ast, tags);
+        return tags;
+    }
+
+    private static void Collect(LogicalExpression node, List<string> tags)
+    {
+        switch (node)
+        {
+            case NCalc.Function function:
+            {
+                int index = FunctionIndex(function.Identifier.Name);
+                if (index < 0)
+                {
+                    return;
+                }
+
+                var signature = Signatures[index];
+                for (int i = 0; i < function.Parameters.Count && i < signature.Arguments.Count; i++)
+                {
+                    if (signature.Arguments[i] == ConditionArgKind.Tag
+                        && function.Parameters[i] is ValueExpression { Value: string text })
+                    {
+                        tags.Add(text);
+                    }
+                }
+
+                return;
+            }
+
+            case UnaryExpression unary:
+                Collect(unary.Expression, tags);
+                return;
+
+            case BinaryExpression binary:
+                Collect(binary.LeftExpression, tags);
+                Collect(binary.RightExpression, tags);
+                return;
+
+            default:
+                return;
+        }
+    }
+
     /// <summary>Comprueba el nodo y devuelve su tipo estático; lanza DataException si no es admisible.</summary>
     private static ConditionValueKind Validate(LogicalExpression node, string file, string path, string source)
     {
@@ -267,6 +381,23 @@ public static class ConditionCompiler
             return;
         }
 
+        if (kind == ConditionArgKind.Number)
+        {
+            int? cells = TryReadInt(argument);
+            if (cells is null)
+            {
+                throw new DataException(file, path, $"'{function}' espera un entero literal en '{source}'");
+            }
+
+            if (cells.Value < 1 || cells.Value > MaxProximityCells)
+            {
+                throw new DataException(
+                    file, path, $"'{function}' admite un radio de 1 a {MaxProximityCells} casillas en '{source}'");
+            }
+
+            return;
+        }
+
         if (argument is not ValueExpression value || value.Type != NCalc.ValueType.String || value.Value is not string text)
         {
             throw new DataException(file, path, $"'{function}' espera un literal de cadena en '{source}'");
@@ -280,6 +411,20 @@ public static class ConditionCompiler
         if (kind == ConditionArgKind.Attribute && Attribute(text) is null)
         {
             throw new DataException(file, path, $"atributo desconocido '{text}' en la condición '{source}'");
+        }
+
+        var (names, what) = kind switch
+        {
+            ConditionArgKind.StartZone => (StartZoneNames, "tercio de inicio"),
+            ConditionArgKind.StartFlank => (StartFlankNames, "banda de inicio"),
+            ConditionArgKind.Link => (LinkNames, "relación de vínculo"),
+            ConditionArgKind.Stat => (StatNames, "estadística"),
+            _ => (Array.Empty<string>(), string.Empty),
+        };
+
+        if (names.Length > 0 && NameIndex(names, text) < 0)
+        {
+            throw new DataException(file, path, $"{what} desconocida '{text}' en la condición '{source}'");
         }
     }
 
@@ -555,8 +700,13 @@ public sealed class CompiledCondition
             }
 
             case "distanceToGoal":
-                args.Result = _probe || _context.Actor is null ? 0 : _context.World.DistanceToGoalCells(_context.Actor);
+            {
+                // Toma un jugador explícito, como el resto de funciones que hablan de alguien: el implícito
+                // era siempre el actor y no dejaba preguntar por el portador ni por el rival (paquete S).
+                var who = Player(args, 0);
+                args.Result = who is null ? 0 : _context.World.DistanceToGoalCells(who);
                 break;
+            }
 
             case "scoreDiff":
                 args.Result = _probe ? 0 : _context.World.ScoreDiff(_context.Owner.Team);
@@ -573,6 +723,54 @@ public sealed class CompiledCondition
             case "detail":
                 args.Result = _probe ? string.Empty : _context.Detail;
                 break;
+
+            case "startsIn":
+            {
+                var who = Player(args, 0);
+                int index = ConditionCompiler.NameIndex(ConditionCompiler.StartZoneNames, Text(args, 1));
+                args.Result = who is not null
+                    && LinkGeometry.ZoneOfHome(who.HomeCell, who.Team) == (StartZone)index;
+                break;
+            }
+
+            case "startsOn":
+            {
+                var who = Player(args, 0);
+                int index = ConditionCompiler.NameIndex(ConditionCompiler.StartFlankNames, Text(args, 1));
+                args.Result = who is not null
+                    && LinkGeometry.FlankOfHome(who.HomeCell, who.Team) == (StartFlank)index;
+                break;
+            }
+
+            case "linked":
+            {
+                var who = Player(args, 0);
+                int index = ConditionCompiler.NameIndex(ConditionCompiler.LinkNames, Text(args, 1));
+                args.Result = who is not null && _context.Perks.HasLink(who, (LinkRelation)index);
+                break;
+            }
+
+            case "nearAlly":
+            {
+                var who = Player(args, 0);
+                args.Result = who is not null && _context.Perks.NearAlly(who, Text(args, 1), Number(args, 2));
+                break;
+            }
+
+            case "nearOpponent":
+            {
+                var who = Player(args, 0);
+                args.Result = who is not null && _context.Perks.NearOpponent(who, Text(args, 1), Number(args, 2));
+                break;
+            }
+
+            case "stat":
+            {
+                var who = Player(args, 0);
+                int index = ConditionCompiler.NameIndex(ConditionCompiler.StatNames, Text(args, 1));
+                args.Result = who is null ? 0 : _context.Perks.Stat(who, (MatchStat)index);
+                break;
+            }
 
             default:
                 throw new InvalidOperationException($"función desconocida '{name}' en la condición '{Source}'");
@@ -595,4 +793,8 @@ public sealed class CompiledCondition
 
     private static string Text(NCalc.Handlers.FunctionEventArgs args, int index) =>
         (string)args.Parameters.Evaluate(index)!;
+
+    /// <summary>Literal entero de un argumento (radio en casillas); la carga ya comprobó que lo es.</summary>
+    private static int Number(NCalc.Handlers.FunctionEventArgs args, int index) =>
+        Convert.ToInt32(args.Parameters.Evaluate(index)!, CultureInfo.InvariantCulture);
 }

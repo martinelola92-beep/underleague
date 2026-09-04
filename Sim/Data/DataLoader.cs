@@ -113,7 +113,7 @@ public static class DataLoader
         var seenIds = new HashSet<string>(StringComparer.Ordinal);
         foreach (var (path, content) in perkFiles)
         {
-            var perk = ParsePerk(path, content);
+            var perk = PerkLoader.Parse(path, content);
             if (!seenIds.Add(perk.Id))
             {
                 throw new DataException(path, "$.id", $"id de perk repetido en el catálogo: '{perk.Id}'");
@@ -128,272 +128,11 @@ public static class DataLoader
         return new Catalog(races, styles, traits, ai, tuning, new PerkCatalog(perks), localization);
     }
 
-    // ---- perks/*.json (RT-033, docs/fase1-diseno.md §2) ----
+    // ---- perks/*.json ----
 
-    private static readonly string[] PerkKnownKeys =
-    {
-        "id", "name", "rarity", "kind", "trigger", "scope", "condition", "effects", "elseEffects",
-        "limit", "accumulatesAcrossMatches", "lethal", "positionOnly", "tagsRequired", "tagsForbidden",
-    };
-
-    private static readonly string[] EffectKnownKeys =
-    {
-        "type", "target", "attribute", "value", "valuePerCounter", "counter", "maxValue",
-        "counterDivisor", "probability", "duration", "state", "ticks",
-    };
-
-    private static PerkDefinition ParsePerk(string file, string content)
-    {
-        JsonDocument doc;
-        try
-        {
-            doc = JsonDocument.Parse(content);
-        }
-        catch (JsonException ex)
-        {
-            throw new DataException(file, "$", $"JSON inválido: {ex.Message}");
-        }
-
-        var root = new Json(doc.RootElement, file, "$");
-        root.EnsureKnownKeys(PerkKnownKeys);
-
-        string id = root.Prop("id").AsString();
-        var name = ParseLocalizedName(root.Prop("name"));
-        var rarity = ParseEnum<Rarity>(root.Prop("rarity"), "rareza");
-        var kind = ParseEnum<PerkKind>(root.Prop("kind"), "tipo de perk");
-        var trigger = ParseTrigger(root.Prop("trigger"));
-        var scope = root.TryProp("scope") is { } scopeNode
-            ? ParseEnum<PerkScope>(scopeNode, "alcance")
-            : PerkScope.Actor;
-
-        string conditionSource = root.TryProp("condition") is { } conditionNode ? conditionNode.AsString() : string.Empty;
-        var condition = ConditionCompiler.Compile(conditionSource, file, "$.condition");
-
-        var effects = ParseEffects(root.Prop("effects"), file, trigger);
-        var elseEffects = root.TryProp("elseEffects") is { } elseNode
-            ? ParseEffects(elseNode, file, trigger)
-            : Array.Empty<EffectDefinition>();
-        if (effects.Count == 0 && elseEffects.Count == 0)
-        {
-            throw new DataException(file, "$.effects", "un perk debe tener al menos un efecto");
-        }
-
-        LimitDefinition? limit = null;
-        if (root.TryProp("limit") is { } limitNode)
-        {
-            limitNode.EnsureKnownKeys("per", "times");
-            int times = limitNode.Prop("times").AsInt();
-            if (times < 1)
-            {
-                throw new DataException(file, limitNode.Path + ".times", "el límite debe ser al menos 1");
-            }
-
-            limit = new LimitDefinition(ParseEnum<LimitScope>(limitNode.Prop("per"), "ámbito de límite"), times);
-        }
-
-        bool accumulates = root.TryProp("accumulatesAcrossMatches") is { } accNode && accNode.AsBool();
-        bool lethal = root.TryProp("lethal") is { } lethalNode && lethalNode.AsBool();
-        if (lethal)
-        {
-            // RF-093: en fase 1 no hay muertes, así que ningún efecto puede producir DEATH y un perk
-            // letal sería una promesa que el motor no cumple.
-            throw new DataException(file, "$.lethal", "en fase 1 no hay muertes: lethal debe ser false");
-        }
-
-        Position? positionOnly = null;
-        if (root.TryProp("positionOnly") is { } positionNode && !positionNode.IsNull)
-        {
-            positionOnly = ParseEnum<Position>(positionNode, "posición");
-        }
-
-        var tagsRequired = ParseTags(root.TryProp("tagsRequired"));
-        var tagsForbidden = ParseTags(root.TryProp("tagsForbidden"));
-
-        return new PerkDefinition(
-            id, name, rarity, kind, trigger, scope, conditionSource, condition,
-            effects, elseEffects, limit, accumulates, lethal, positionOnly, tagsRequired, tagsForbidden);
-    }
-
-    private static IReadOnlyList<string> ParseTags(Json? node) =>
-        node is { } tags ? tags.EnumerateArray().Select(j => j.AsString()).ToArray() : Array.Empty<string>();
-
-    private static EventType ParseTrigger(Json node)
-    {
-        string text = node.AsString();
-        foreach (var candidate in Enum.GetValues<EventType>())
-        {
-            if (string.Equals(EventTypeNames.ToUpperSnake(candidate), text, StringComparison.Ordinal))
-            {
-                return candidate;
-            }
-        }
-
-        throw new DataException(node.File, node.Path, $"disparador desconocido '{text}'");
-    }
-
-    private static T ParseEnum<T>(Json node, string what)
-        where T : struct, Enum
-    {
-        string text = node.AsString();
-        string pascal = text.Length == 0 ? text : char.ToUpperInvariant(text[0]) + text[1..];
-        if (Enum.TryParse<T>(pascal, out var value) && Enum.IsDefined(value))
-        {
-            return value;
-        }
-
-        throw new DataException(node.File, node.Path, $"{what} desconocido '{text}'");
-    }
-
-    private static IReadOnlyList<EffectDefinition> ParseEffects(Json node, string file, EventType trigger)
-    {
-        var effects = new List<EffectDefinition>();
-        foreach (var item in node.EnumerateArray())
-        {
-            effects.Add(ParseEffect(item, file, trigger));
-        }
-
-        return effects;
-    }
-
-    private static EffectDefinition ParseEffect(Json node, string file, EventType trigger)
-    {
-        node.EnsureKnownKeys(EffectKnownKeys);
-        var type = ParseEnum<EffectType>(node.Prop("type"), "tipo de efecto");
-
-        var (target, targetTag) = node.TryProp("target") is { } targetNode
-            ? ParseTarget(targetNode)
-            : (EffectTarget.Owner, string.Empty);
-
-        var duration = node.TryProp("duration") is { } durationNode
-            ? ParseEnum<EffectDuration>(durationNode, "duración")
-            : EffectDuration.Instant;
-
-        int value = node.TryProp("value") is { } valueNode ? valueNode.AsInt() : 0;
-        bool usesCounter = node.TryProp("valuePerCounter") is not null;
-        int valuePerCounter = usesCounter ? node.Prop("valuePerCounter").AsInt() : 0;
-        string counter = node.TryProp("counter") is { } counterNode ? counterNode.AsString() : string.Empty;
-        int maxValue = node.TryProp("maxValue") is { } maxNode ? maxNode.AsInt() : 0;
-        int counterDivisor = node.TryProp("counterDivisor") is { } divisorNode ? divisorNode.AsInt() : 1;
-        int ticks = node.TryProp("ticks") is { } ticksNode ? ticksNode.AsInt() : 0;
-
-        var attribute = AttributeKind.Strength;
-        if (node.TryProp("attribute") is { } attributeNode)
-        {
-            attribute = ConditionCompiler.Attribute(attributeNode.AsString())
-                ?? throw new DataException(file, attributeNode.Path, $"atributo desconocido '{attributeNode.AsString()}'");
-        }
-
-        var probability = ProbabilityKind.Foul;
-        if (node.TryProp("probability") is { } probabilityNode)
-        {
-            probability = ParseEnum<ProbabilityKind>(probabilityNode, "probabilidad");
-        }
-
-        var state = PlayerState.KnockedDown;
-        if (node.TryProp("state") is { } stateNode)
-        {
-            state = ParseEnum<PlayerState>(stateNode, "estado");
-        }
-
-        ValidateEffect(node, file, trigger, type, target, duration, usesCounter, counter, counterDivisor, state);
-
-        return new EffectDefinition(
-            type, target, targetTag, attribute, value, usesCounter, valuePerCounter, counter,
-            maxValue, counterDivisor, probability, duration, state, ticks);
-    }
-
-    private static void ValidateEffect(
-        Json node,
-        string file,
-        EventType trigger,
-        EffectType type,
-        EffectTarget target,
-        EffectDuration duration,
-        bool usesCounter,
-        string counter,
-        int counterDivisor,
-        PlayerState state)
-    {
-        bool instantOnly = type is EffectType.AddCounter or EffectType.ModifyBias or EffectType.SetState or EffectType.CancelEvent;
-        if (instantOnly && duration != EffectDuration.Instant)
-        {
-            throw new DataException(file, node.Path, $"'{type}' solo admite duration 'instant'");
-        }
-
-        if (!instantOnly && duration == EffectDuration.Instant)
-        {
-            throw new DataException(file, node.Path, $"'{type}' necesita una duración ('play', 'match' o 'run')");
-        }
-
-        if (type == EffectType.CancelEvent && trigger is not (EventType.Card or EventType.Injury or EventType.Foul))
-        {
-            throw new DataException(
-                file, node.Path, "cancelEvent solo es válido con trigger CARD, INJURY o FOUL");
-        }
-
-        if (type == EffectType.SetState)
-        {
-            if (state != PlayerState.KnockedDown)
-            {
-                throw new DataException(file, node.Path, "setState solo admite el estado 'KnockedDown'");
-            }
-
-            if (target is not (EffectTarget.Target or EffectTarget.Opponent or EffectTarget.OpposingTeam))
-            {
-                throw new DataException(
-                    file, node.Path, "setState solo puede derribar a objetivos rivales (target, opponent, opposingTeam)");
-            }
-        }
-
-        if (type == EffectType.AddCounter && counter.Length == 0)
-        {
-            throw new DataException(file, node.Path, "addCounter necesita el nombre del contador");
-        }
-
-        if (usesCounter)
-        {
-            if (type != EffectType.ModifyAttribute)
-            {
-                throw new DataException(file, node.Path, "valuePerCounter solo es válido en modifyAttribute");
-            }
-
-            if (counter.Length == 0)
-            {
-                throw new DataException(file, node.Path, "valuePerCounter necesita el contador de referencia");
-            }
-
-            if (counterDivisor < 1)
-            {
-                throw new DataException(file, node.Path, "counterDivisor debe ser al menos 1");
-            }
-        }
-    }
-
-    private static (EffectTarget Target, string Tag) ParseTarget(Json node)
-    {
-        string text = node.AsString();
-        int separator = text.IndexOf(':', StringComparison.Ordinal);
-        if (separator < 0)
-        {
-            return (ParseEnum<EffectTarget>(node, "objetivo"), string.Empty);
-        }
-
-        string prefix = text[..separator];
-        string tag = text[(separator + 1)..];
-        if (tag.Length == 0)
-        {
-            throw new DataException(node.File, node.Path, $"objetivo '{text}' sin etiqueta");
-        }
-
-        var target = prefix switch
-        {
-            "withTag" => EffectTarget.WithTag,
-            "adjacentWithTag" => EffectTarget.AdjacentWithTag,
-            _ => throw new DataException(node.File, node.Path, $"objetivo desconocido '{text}'"),
-        };
-
-        return (target, tag);
-    }
+    // El formato de perk (fase1b-diseno.md §1.4) y su validación viven en Sim.Perks.PerkLoader: es el
+    // mismo paquete que el motor de efectos, las condiciones y el generador de descripciones, así que un
+    // tipo de efecto, un objetivo o una función nuevos se añaden en un solo sitio (paquete S).
 
     // ---- l10n/<lang>/templates.json (RT-035, RT-073) ----
 
@@ -401,6 +140,10 @@ public static class DataLoader
     {
         "layout", "effects", "triggers", "events", "conditions", "targets", "durations", "limits",
         "attributes", "probabilities", "tags", "positions", "zones", "details", "counters",
+
+        // Secciones del rediseño espacial (paquete S): relaciones de vínculo (ADR 0021), inmunidades y
+        // estadísticas de las funciones de condición nuevas (fase1b-diseno.md §1.5).
+        "links", "immunities", "startZones", "startFlanks", "stats",
     };
 
     private static DescriptionTemplates ParseTemplates(string file, string content)

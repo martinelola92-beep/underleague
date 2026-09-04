@@ -2,25 +2,97 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://underleague.dev/schemas/perks.schema.json",
   "title": "Underleague perk",
-  "description": "data/perks/<id>.json: un perk por fichero (RT-033, docs/fase1-diseno.md §2). Un perk es un dato, no código: disparador, condición NCalc, efectos, alcance y límite. NO existe campo 'description': el texto se genera desde el efecto con las plantillas de data/l10n (RT-035), así que aquí se rechaza explícitamente.",
+  "description": "data/perks/<id>.json: un perk por fichero (RT-033, docs/fase1b-diseno.md §1.4). Un perk es un dato, no código: eje, disparador, condición NCalc, efectos, vínculos, alcance y límite. NO existe campo 'description': el texto se genera desde el efecto con las plantillas de data/l10n (RT-035), así que aquí se rechaza explícitamente. Los 'value' de modifyProbability se escriben en PUNTOS PORCENTUALES enteros de la escala 5/10/15/20/25/50 y el cargador los multiplica por 100 para la base interna de 10.000 (docs/estilo-descripciones.md); el resto de efectos conserva su propia unidad. Un perk universal (race: null) no puede consultar la etiqueta de especie (ADR 0023, RF-065b): eso lo comprueba el cargador, porque exige leer la condición.",
   "type": "object",
   "properties": {
-    "_doc": { "type": "string" },
+    "_doc": {
+      "type": "string"
+    },
     "id": {
       "type": "string",
       "description": "Identificador snake_case; debe coincidir con el nombre del fichero.",
       "pattern": "^[a-z][a-z0-9_]*$"
     },
-    "name": { "$ref": "#/$defs/localizedName" },
-    "rarity": { "enum": ["common", "rare", "legendary"] },
+    "name": {
+      "$ref": "#/$defs/localizedName"
+    },
+    "rarity": {
+      "enum": [
+        "common",
+        "rare",
+        "legendary"
+      ]
+    },
     "kind": {
       "description": "RF-069: distribución objetivo 60% filler, 30% conditional, 10% ruleBreaker.",
-      "enum": ["filler", "conditional", "ruleBreaker"]
+      "enum": [
+        "filler",
+        "conditional",
+        "ruleBreaker"
+      ]
     },
-    "trigger": { "$ref": "#/$defs/eventType" },
+    "axis": {
+      "description": "Eje de activación (docs/perks-ejes.md): de qué depende que el perk se active. Ortogonal a 'kind', que mide potencia.",
+      "enum": [
+        "identity",
+        "accumulation",
+        "alignment",
+        "startZone",
+        "geometry",
+        "matchState",
+        "composition",
+        "proximity"
+      ]
+    },
+    "race": {
+      "description": "null = perk universal; id de raza = perk exclusivo (ADR 0023). Es restricción de APARICIÓN en el pool de la run, no de asignación.",
+      "oneOf": [
+        {
+          "type": "null"
+        },
+        {
+          "enum": [
+            "Human",
+            "Orc",
+            "Elf",
+            "Dwarf",
+            "Undead",
+            "DarkElf",
+            "Demon",
+            "Vampire",
+            "Lizard"
+          ]
+        }
+      ]
+    },
+    "trigger": {
+      "$ref": "#/$defs/eventType"
+    },
     "scope": {
       "description": "A quién debe corresponder el evento para evaluar el perk del portador (RF-065).",
-      "enum": ["actor", "target", "team", "opposingTeam", "any"]
+      "enum": [
+        "actor",
+        "target",
+        "team",
+        "opposingTeam",
+        "any"
+      ]
+    },
+    "links": {
+      "description": "Relaciones direccionales entre casillas-hogar que el perk necesita (RF-044, ADR 0021). Se resuelven una sola vez al construir el partido y habilitan los objetivos 'linked' y 'linkedWithTag:<Tag>'.",
+      "type": "array",
+      "items": {
+        "enum": [
+          "beside",
+          "ahead",
+          "behind",
+          "left",
+          "right",
+          "diagonalAhead",
+          "diagonalBehind"
+        ]
+      },
+      "uniqueItems": true
     },
     "condition": {
       "type": "string",
@@ -28,22 +100,48 @@
     },
     "effects": {
       "type": "array",
-      "items": { "$ref": "#/$defs/effect" },
+      "items": {
+        "$ref": "#/$defs/effect"
+      },
       "minItems": 1
     },
     "elseEffects": {
       "type": "array",
       "description": "Efectos aplicados cuando la condición es falsa (antisinergias declaradas, §7).",
-      "items": { "$ref": "#/$defs/effect" }
+      "items": {
+        "$ref": "#/$defs/effect"
+      }
     },
     "limit": {
-      "type": "object",
-      "properties": {
-        "per": { "enum": ["play", "match", "mob", "run"] },
-        "times": { "type": "integer", "minimum": 1, "maximum": 100 }
-      },
-      "required": ["per", "times"],
-      "additionalProperties": false
+      "description": "null o el límite de activaciones: 'times' veces por 'per'. El formato de §1.4 escribe explícitamente 'limit': null cuando no hay.",
+      "oneOf": [
+        {
+          "type": "null"
+        },
+        {
+          "type": "object",
+          "properties": {
+            "per": {
+              "enum": [
+                "play",
+                "match",
+                "mob",
+                "run"
+              ]
+            },
+            "times": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100
+            }
+          },
+          "required": [
+            "per",
+            "times"
+          ],
+          "additionalProperties": false
+        }
+      ]
     },
     "accumulatesAcrossMatches": {
       "type": "boolean",
@@ -57,67 +155,266 @@
     "positionOnly": {
       "description": "null o la única posición que puede llevar el perk (validación de build, §5).",
       "oneOf": [
-        { "type": "null" },
-        { "enum": ["Goalkeeper", "Defender", "Midfielder", "Forward"] }
+        {
+          "type": "null"
+        },
+        {
+          "enum": [
+            "Goalkeeper",
+            "Defender",
+            "Midfielder",
+            "Forward"
+          ]
+        }
       ]
     },
-    "tagsRequired": { "$ref": "#/$defs/tagList" },
-    "tagsForbidden": { "$ref": "#/$defs/tagList" }
+    "tagsRequired": {
+      "$ref": "#/$defs/tagList"
+    },
+    "tagsForbidden": {
+      "$ref": "#/$defs/tagList"
+    }
   },
-  "required": ["id", "name", "rarity", "kind", "trigger", "effects"],
+  "required": [
+    "id",
+    "name",
+    "rarity",
+    "kind",
+    "axis",
+    "trigger",
+    "effects"
+  ],
   "additionalProperties": false,
   "$defs": {
     "localizedName": {
       "type": "object",
       "properties": {
-        "es": { "type": "string", "minLength": 1 },
-        "en": { "type": "string", "minLength": 1 }
+        "es": {
+          "type": "string",
+          "minLength": 1
+        },
+        "en": {
+          "type": "string",
+          "minLength": 1
+        }
       },
-      "required": ["es", "en"],
+      "required": [
+        "es",
+        "en"
+      ],
       "additionalProperties": false
     },
     "tagList": {
       "type": "array",
-      "items": { "type": "string", "pattern": "^[A-Z][A-Za-z]*$" },
+      "items": {
+        "type": "string",
+        "pattern": "^[A-Z][A-Za-z]*$"
+      },
       "uniqueItems": true
     },
     "eventType": {
       "description": "Nombre UPPER_SNAKE de un EventType (RF-066).",
       "enum": [
-        "MATCH_START", "MATCH_END", "MOB_START", "REFEREE_LEAVES", "PLAY_START", "PLAY_END",
-        "PASS_ATTEMPTED", "PASS_COMPLETED", "PASS_FAILED",
-        "DRIBBLE_ATTEMPTED", "DRIBBLE_WON", "DRIBBLE_LOST",
-        "AERIAL_DUEL", "TACKLE", "RECOVERY", "SHOT", "GOAL", "SAVE",
-        "FOUL", "CARD", "INJURY", "DEATH", "SUBSTITUTION", "CONSUMABLE_USED"
+        "MATCH_START",
+        "MATCH_END",
+        "MOB_START",
+        "REFEREE_LEAVES",
+        "PLAY_START",
+        "PLAY_END",
+        "PASS_ATTEMPTED",
+        "PASS_COMPLETED",
+        "PASS_FAILED",
+        "DRIBBLE_ATTEMPTED",
+        "DRIBBLE_WON",
+        "DRIBBLE_LOST",
+        "AERIAL_DUEL",
+        "TACKLE",
+        "RECOVERY",
+        "SHOT",
+        "GOAL",
+        "SAVE",
+        "FOUL",
+        "CARD",
+        "INJURY",
+        "DEATH",
+        "SUBSTITUTION",
+        "CONSUMABLE_USED"
       ]
     },
     "effect": {
       "type": "object",
-      "description": "Catálogo cerrado de efectos de fase 1 (§2). El cargador valida además qué campos exige cada tipo, qué duraciones admite y con qué disparadores es legal cancelEvent.",
+      "description": "Catálogo cerrado de efectos (§2, fase1b-diseno.md §1.4). El cargador valida además qué campos exige cada tipo, qué duraciones admite, con qué disparadores es legal cancelEvent y que un objetivo vinculado venga acompañado de 'links'.",
       "properties": {
         "type": {
-          "enum": ["modifyAttribute", "modifyLeash", "modifyBias", "modifyProbability", "cancelEvent", "addCounter", "setState"]
+          "enum": [
+            "modifyAttribute",
+            "modifyLeash",
+            "modifyBias",
+            "modifyProbability",
+            "cancelEvent",
+            "addCounter",
+            "setState",
+            "modifyKnockdownTicks",
+            "immunity",
+            "modifyExperience"
+          ]
         },
         "target": {
-          "description": "Objetivo del efecto; 'withTag:<Tag>' y 'adjacentWithTag:<Tag>' llevan etiqueta.",
+          "description": "Objetivo del efecto; 'withTag:<Tag>', 'adjacentWithTag:<Tag>' y 'linkedWithTag:<Tag>' llevan etiqueta. 'linked' y 'linkedWithTag' exigen declarar 'links' y, en modifyProbability, convierten el modificador en uno POR PAR (ADR 0021).",
           "type": "string",
-          "pattern": "^(actor|target|opponent|owner|adjacent|team|opposingTeam|(withTag|adjacentWithTag):[A-Z][A-Za-z]*)$"
+          "pattern": "^(actor|target|opponent|owner|adjacent|team|opposingTeam|linked|(withTag|adjacentWithTag|linkedWithTag):[A-Z][A-Za-z]*)$"
         },
-        "attribute": { "enum": ["strength", "speed", "technique", "stamina", "leash"] },
-        "value": { "type": "integer", "minimum": -100000, "maximum": 100000 },
-        "valuePerCounter": { "type": "integer", "minimum": -1000, "maximum": 1000 },
-        "counter": { "type": "string", "pattern": "^[a-z][a-zA-Z0-9]*$" },
-        "maxValue": { "type": "integer", "minimum": -100000, "maximum": 100000 },
-        "counterDivisor": { "type": "integer", "minimum": 1, "maximum": 1000 },
+        "attribute": {
+          "enum": [
+            "strength",
+            "speed",
+            "technique",
+            "stamina",
+            "leash"
+          ]
+        },
+        "value": {
+          "type": "integer",
+          "minimum": -100000,
+          "maximum": 100000,
+          "description": "Unidad propia de cada tipo de efecto: puntos de atributo, casillas de correa, ticks de derribo, puntos de criterio o, en modifyProbability y modifyExperience, PUNTOS PORCENTUALES enteros."
+        },
+        "valuePerCounter": {
+          "type": "integer",
+          "minimum": -1000,
+          "maximum": 1000,
+          "description": "Incremento por unidad de 'counter' (RF-070). Válido en modifyAttribute, modifyLeash y modifyProbability; en este último, en puntos porcentuales de la misma escala que 'value'."
+        },
+        "counter": {
+          "type": "string",
+          "pattern": "^[a-z][a-zA-Z0-9]*$"
+        },
+        "maxValue": {
+          "type": "integer",
+          "minimum": -100000,
+          "maximum": 100000
+        },
+        "counterDivisor": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 1000
+        },
         "probability": {
-          "enum": ["foul", "card", "injury", "injure", "severeInjury", "pass", "intercept", "dribble", "tackle", "shotOnTarget", "save"]
+          "enum": [
+            "foul",
+            "card",
+            "injury",
+            "injure",
+            "severeInjury",
+            "pass",
+            "intercept",
+            "dribble",
+            "tackle",
+            "shotOnTarget",
+            "save",
+            "tackleEvasion",
+            "interceptEvasion"
+          ]
         },
-        "duration": { "enum": ["instant", "play", "match", "run"] },
-        "state": { "enum": ["KnockedDown"] },
-        "ticks": { "type": "integer", "minimum": 0, "maximum": 1000 }
+        "duration": {
+          "enum": [
+            "instant",
+            "play",
+            "match",
+            "run"
+          ]
+        },
+        "state": {
+          "enum": [
+            "KnockedDown"
+          ]
+        },
+        "ticks": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1000
+        },
+        "immunity": {
+          "description": "Inmunidad concedida por un efecto 'immunity' (ADR 0026): empuje (motor de cuerpos), duelo por vinculado (RF-104) o penalización de lesión leve (RF-035).",
+          "enum": [
+            "push",
+            "mourning",
+            "minorInjuryPenalty"
+          ]
+        }
       },
-      "required": ["type"],
-      "additionalProperties": false
+      "required": [
+        "type"
+      ],
+      "additionalProperties": false,
+      "allOf": [
+        {
+          "_doc": "La escala corta de puntos porcentuales de docs/estilo-descripciones.md, para que cada perk tenga un tamaño reconocible. En modifyProbability se aplica al valor fijo, al incremento por contador y al tope; el cargador multiplica los tres por 100.",
+          "if": {
+            "properties": {
+              "type": {
+                "const": "modifyProbability"
+              }
+            },
+            "required": [
+              "type"
+            ]
+          },
+          "then": {
+            "properties": {
+              "value": {
+                "enum": [
+                  -50,
+                  -25,
+                  -20,
+                  -15,
+                  -10,
+                  -5,
+                  5,
+                  10,
+                  15,
+                  20,
+                  25,
+                  50
+                ]
+              },
+              "valuePerCounter": {
+                "enum": [
+                  -50,
+                  -25,
+                  -20,
+                  -15,
+                  -10,
+                  -5,
+                  5,
+                  10,
+                  15,
+                  20,
+                  25,
+                  50
+                ]
+              },
+              "maxValue": {
+                "enum": [
+                  -50,
+                  -25,
+                  -20,
+                  -15,
+                  -10,
+                  -5,
+                  5,
+                  10,
+                  15,
+                  20,
+                  25,
+                  50,
+                  0
+                ]
+              }
+            }
+          }
+        }
+      ]
     }
   }
 }
