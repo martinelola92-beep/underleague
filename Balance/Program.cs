@@ -1,8 +1,10 @@
+using System.Globalization;
 using Underleague.Balance;
 using Underleague.Sim.Analysis;
 using Underleague.Sim.Data;
 using Underleague.Sim.Engine;
 using Underleague.Sim.Perks;
+using Underleague.Sim.Run;
 using Underleague.Sim.Run.Bosses;
 using Underleague.Sim.Run.Systems.Items;
 
@@ -33,6 +35,34 @@ try
         // (docs/fase1-diseno.md §8). No toca reference.json ni simula ningún partido.
         RunDescribe(catalog, language);
         return 0;
+    }
+
+    if (options.FullRuns is { } fullRuns)
+    {
+        // --full-runs N: N runs completas con la política automática (fase2-diseno.md §10). Responde a
+        // la pregunta que la curva de puertas deja abierta: si la economía permite llegar a cada puerta
+        // con la build que esa puerta exige.
+        FullRunResult full = FullRunRunner.Run(catalog, dataFiles, options.Seed, fullRuns);
+
+        var fullSummary = full.Metrics
+            .Select(m => new MetricRow(m.Name, m.Value, m.RangeMin, m.RangeMax, m.Status))
+            .ToList();
+
+        WriteRunsCsv(options.OutDir!, full.Runs);
+        WriteSummaryCsv(options.OutDir!, fullSummary);
+
+        if (!options.Quiet)
+        {
+            Console.WriteLine();
+            PrintSummaryTable(fullSummary);
+            Console.WriteLine();
+            double fullSeconds = full.Elapsed.TotalSeconds;
+            Console.WriteLine(
+                $"{full.Runs.Count} runs ({full.TotalMatches} partidos, {FullRunRunner.Doctrines.Count} doctrinas) en {fullSeconds:F2} s");
+            Console.WriteLine($"CSV escritos en {options.OutDir}");
+        }
+
+        return full.Metrics.Any(m => m.Status == "OUT") ? 1 : 0;
     }
 
     if (options.BossGate)
@@ -271,6 +301,9 @@ static void PrintUsage()
           --boss-gate         curva de puertas de la ADR 0033: cada nivel de build (qualityLevels de
                                data/balance/groups.json) contra cada jefe de data/bosses/, con sus
                                modificadores; --runs = partidos por plantilla (8), --rosters = plantillas
+          --full-runs N       N runs completas por cada una de las tres doctrinas de compra de la ADR
+                               0037 (contextual, gastadora, ahorradora) sobre las mismas semillas;
+                               escribe runs.csv y summary.csv con las métricas de fase2-diseno.md §10
         """);
 }
 
@@ -397,6 +430,48 @@ static void WritePlayersCsv(string outDir, IReadOnlyList<PlayerAggregate> player
     });
 
     CsvWriter.Write(Path.Combine(outDir, "players.csv"), header, rows);
+}
+
+/// <summary>runs.csv del modo --full-runs (fase2-diseno.md §10): una fila por run jugada.</summary>
+static void WriteRunsCsv(string outDir, IReadOnlyList<RunPlayResult> runs)
+{
+    string[] header =
+    {
+        "seed", "doctrine", "race", "outcome", "cause", "actReached", "matches", "matchesWon", "bossesBeaten",
+        "matchesAct1", "matchesAct2", "matchesAct3",
+        "goldEarned", "goldEarnedAct1", "goldEarnedAct2", "goldEarnedAct3", "goldFromSales",
+        "goldMarket", "goldClinic", "goldReroll", "goldWages", "goldLeft",
+        "deaths", "ownInjuries", "severeInjuries", "rosterSize", "available", "averageLevel",
+        "perks", "starterPerks", "items", "counters",
+        "markets", "offersSeen", "offersAffordable", "goldAtMarkets", "brokeMarkets", "purchases", "perksBought",
+        "itemsBought", "playersSigned", "youths", "mercenaries", "playersSold", "treatments", "rerolls",
+    };
+
+    var rows = runs.Select(r => (IReadOnlyList<string>)new[]
+    {
+        r.Seed.ToString(CultureInfo.InvariantCulture),
+        r.Doctrine.ToString(),
+        r.ClubRace.ToString(),
+        r.Outcome.ToString(),
+        r.Cause.ToString(),
+        Int(r.ActReached), Int(r.Matches), Int(r.MatchesWon), Int(r.BossesBeaten),
+        Int(r.MatchesByAct[0]), Int(r.MatchesByAct[1]), Int(r.MatchesByAct[2]),
+        Int(r.GoldEarned), Int(r.GoldEarnedByAct[0]), Int(r.GoldEarnedByAct[1]), Int(r.GoldEarnedByAct[2]),
+        Int(r.GoldFromSales),
+        Int(r.GoldSpentMarket), Int(r.GoldSpentClinic), Int(r.GoldSpentReroll), Int(r.GoldSpentWages),
+        Int(r.GoldLeft),
+        Int(r.Deaths), Int(r.OwnInjuries), Int(r.SevereInjuriesSuffered), Int(r.FinalRosterSize),
+        Int(r.FinalAvailable), CsvWriter.F2(r.AverageLevelTimes100 / 100.0),
+        Int(r.PerksOnRoster), Int(r.PerksOnStarters), Int(r.ItemsOnRoster), Int(r.AccumulatedCounters),
+        Int(r.MarketsVisited), Int(r.OffersSeen), Int(r.OffersAffordable), Int(r.GoldAtMarketArrival), Int(r.BrokeMarketVisits),
+        Int(r.Purchases), Int(r.PerksBought),
+        Int(r.ItemsBought), Int(r.PlayersSigned), Int(r.YouthsSigned), Int(r.MercenariesHired),
+        Int(r.PlayersSold), Int(r.Treatments), Int(r.Rerolls),
+    });
+
+    CsvWriter.Write(Path.Combine(outDir, "runs.csv"), header, rows);
+
+    static string Int(int value) => value.ToString(CultureInfo.InvariantCulture);
 }
 
 static void WriteSummaryCsv(string outDir, IReadOnlyList<MetricRow> metrics)

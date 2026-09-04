@@ -1,4 +1,5 @@
 {
+  "_doc": "Build de pruebas del eje de acumulacion (docs/perks-ejes.md). No entra en ningun grupo de data/balance/groups.json: existe para que todo perk de acumulacion tenga un portador y EveryCatalogPerkIsAssignedInSomeBuild no falle. Los quince perks que acumulan entre partidos (RF-070) se reparten entre esta build y las *_excellent de la ADR 0033.",
   "id": "human_accum",
   "name": "Humanos: acumuladores",
   "race": "Human",
@@ -6,35 +7,35 @@
   "perks": [
     {
       "slot": 0,
-      "perk": "battle_reader"
+      "perk": "steady_hands"
     },
     {
       "slot": 0,
-      "perk": "silky_veteran"
+      "perk": "iron_lungs"
     },
     {
       "slot": 1,
-      "perk": "battle_reader"
+      "perk": "pit_veteran"
     },
     {
       "slot": 1,
-      "perk": "silky_veteran"
+      "perk": "sharpshooter_drill"
     },
     {
       "slot": 2,
-      "perk": "battle_reader"
+      "perk": "lane_reader"
     },
     {
       "slot": 2,
-      "perk": "silky_veteran"
+      "perk": "bruised_knuckles"
     },
     {
       "slot": 3,
-      "perk": "battle_reader"
+      "perk": "captains_voice"
     },
     {
       "slot": 3,
-      "perk": "silky_veteran"
+      "perk": "scar_veteran"
     },
     {
       "slot": 4,

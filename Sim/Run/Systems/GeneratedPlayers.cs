@@ -49,11 +49,16 @@ public static class GeneratedPlayers
     private static readonly RarityWeights MercenaryWeights = new(25, 55, 20);
     private static readonly RarityWeights RewardWeights = new(35, 50, 15);
 
-    /// <summary>Fichaje de pago (RF-114): raza del club, posición y rareza sorteadas.</summary>
-    public static RunPlayer Recruit(ref Pcg32 rng, Catalog catalog, Race race, int quality)
+    /// <summary>
+    /// Fichaje de pago (RF-114): raza del club, posición y rareza sorteadas, y el <b>nivel del acto</b>
+    /// (<c>economy.recruitLevelByAct</c>). Que un fichaje de pago entre en el nivel 1 en el acto 3 lo
+    /// convierte en oro tirado: la plantilla va por el 6 o el 7 y ningún criterio razonable lo alinea,
+    /// así que el mercado deja de ser un sumidero justo cuando más oro hay (medido en el paquete Z).
+    /// </summary>
+    public static RunPlayer Recruit(ref Pcg32 rng, Catalog catalog, Race race, int quality, int level = 1)
     {
         var rarity = RecruitWeights.Pick(ref rng);
-        return Generate(ref rng, catalog, race, rarity, quality, level: 1, youth: false, mercenary: false, wage: 0);
+        return Generate(ref rng, catalog, race, rarity, quality, level, youth: false, mercenary: false, wage: 0);
     }
 
     /// <summary>Canterano gratuito (RF-114b/c): común, de la raza del club, atributos bajos, +33% de experiencia.</summary>
@@ -65,19 +70,19 @@ public static class GeneratedPlayers
     /// media de su rareza (calidad más alta), salario por partido, y cuenta como <c>Stranger</c> para las
     /// sinergias de cohesión (RF-111).
     /// </summary>
-    public static RunPlayer Mercenary(ref Pcg32 rng, Catalog catalog, Race foreignRace, int quality, int wage)
+    public static RunPlayer Mercenary(ref Pcg32 rng, Catalog catalog, Race foreignRace, int quality, int wage, int level = 1)
     {
         var rarity = MercenaryWeights.Pick(ref rng);
-        var player = Generate(ref rng, catalog, foreignRace, rarity, quality, level: 1, youth: false, mercenary: true, wage: wage);
+        var player = Generate(ref rng, catalog, foreignRace, rarity, quality, level, youth: false, mercenary: true, wage: wage);
         var tags = new List<string>(player.Tags) { "Stranger" };
         return player with { Tags = tags };
     }
 
     /// <summary>Jugador de recompensa (RF-071): raza del club, rareza sesgada al alza.</summary>
-    public static RunPlayer Reward(ref Pcg32 rng, Catalog catalog, Race race, int quality)
+    public static RunPlayer Reward(ref Pcg32 rng, Catalog catalog, Race race, int quality, int level = 1)
     {
         var rarity = RewardWeights.Pick(ref rng);
-        return Generate(ref rng, catalog, race, rarity, quality, level: 1, youth: false, mercenary: false, wage: 0);
+        return Generate(ref rng, catalog, race, rarity, quality, level, youth: false, mercenary: false, wage: 0);
     }
 
     private static RunPlayer Generate(
@@ -96,6 +101,18 @@ public static class GeneratedPlayers
         string name = nameGenerator.Next(ref rng);
         var position = rng.Pick(AllPositions);
         var definition = PlayerGenerator.Generate(ref rng, catalog, raceDefinition, position, rarity, level, id: -1, name, quality);
-        return RunPlayer.From(definition) with { IsYouth = youth, IsMercenary = mercenary, Wage = wage };
+
+        // La experiencia tiene que corresponder al nivel con el que entra: si no, el primer partido lo
+        // recalcularía desde cero y el jugador se quedaría clavado en su nivel durante media run
+        // (Progression.LevelUp nunca baja, pero tampoco sube hasta cruzar el umbral).
+        var table = catalog.Progression.ExperiencePerLevel;
+        int experience = level >= 1 && level <= table.Count ? table[level - 1] : 0;
+        return RunPlayer.From(definition) with
+        {
+            Experience = experience,
+            IsYouth = youth,
+            IsMercenary = mercenary,
+            Wage = wage,
+        };
     }
 }

@@ -315,7 +315,15 @@
     "longLeashMatches": "match",
     "poacherInstinctGoals": "goal",
     "scarTissueInjuries": "injury",
-    "silkyVeteranDribbles": "dribble"
+    "silkyVeteranDribbles": "dribble",
+    "steadyHandsPasses": "pass",
+    "ironLungsMatches": "match",
+    "pitVeteranTackles": "tackle",
+    "sharpshooterShots": "shot",
+    "laneReaderRecoveries": "recovery",
+    "bruisedKnucklesFouls": "foul",
+    "captainsVoiceMatches": "match",
+    "scarVeteranMatches": "match"
   },
   "links": {
     "beside": "partner in their column",

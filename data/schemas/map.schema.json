@@ -1,0 +1,19 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://underleague.dev/schemas/map.schema.json",
+  "title": "Underleague map",
+  "description": "data/map/map.json: estructura del mapa de la run (RF-001, RF-003b, D-2, D-10), único fichero. Cargado por Sim.Run.Systems.Map.MapLoader, fuera del Catalog compartido.",
+  "type": "object",
+  "properties": {
+    "_doc": { "type": "string" },
+    "nodesPerAct": {
+      "description": "Nodos recorridos por acto (RF-001: 10-12). Tres entradas, una por acto.",
+      "type": "array",
+      "items": { "type": "integer", "minimum": 10, "maximum": 12 },
+      "minItems": 3,
+      "maxItems": 3
+    }
+  },
+  "required": ["nodesPerAct"],
+  "additionalProperties": false
+}

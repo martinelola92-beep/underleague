@@ -24,8 +24,14 @@ namespace Underleague.Sim.Tests.Perks;
 /// </summary>
 public sealed class EquipmentImpactTests
 {
-    /// <summary>Plantillas distintas sobre las que se promedia (equivalente a <c>--rosters</c>).</summary>
-    private const int Rosters = 8;
+    /// <summary>
+    /// Plantillas distintas sobre las que se promedia (equivalente a <c>--rosters</c>). Subido de 8 a 24
+    /// en el paquete Z: con 8 el brazo de cada arm eran 512 partidos, la diferencia entre arms tenía una
+    /// desviación de ~3 puntos y el umbral de 5 quedaba dentro del ruido —añadir ocho perks al catálogo
+    /// (RF-070) movió la medida de 5,4 a 4,7 sin tocar un solo objeto—. Con 24 la desviación baja a
+    /// ~1,8 y el test avisa de una regresión de verdad.
+    /// </summary>
+    private const int Rosters = 24;
 
     /// <summary>Partidos por plantilla y dirección; con ida y vuelta salen 2x (equivalente a <c>--home-away</c>).</summary>
     private const int MatchesPerRoster = 32;

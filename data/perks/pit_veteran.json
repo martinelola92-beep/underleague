@@ -1,0 +1,41 @@
+{
+  "id": "pit_veteran",
+  "name": {
+    "es": "Veterano del foso",
+    "en": "Pit Veteran"
+  },
+  "rarity": "common",
+  "kind": "conditional",
+  "axis": "accumulation",
+  "race": null,
+  "trigger": "TACKLE",
+  "scope": "actor",
+  "links": [],
+  "condition": "startsIn(owner,'OwnThird')",
+  "effects": [
+    {
+      "type": "modifyProbability",
+      "target": "actor",
+      "probability": "tackle",
+      "valuePerCounter": 3,
+      "counter": "pitVeteranTackles",
+      "maxValue": 15,
+      "duration": "match"
+    },
+    {
+      "type": "addCounter",
+      "counter": "pitVeteranTackles",
+      "value": 1
+    }
+  ],
+  "elseEffects": [],
+  "limit": {
+    "per": "match",
+    "times": 1
+  },
+  "accumulatesAcrossMatches": true,
+  "lethal": false,
+  "positionOnly": null,
+  "tagsRequired": [],
+  "tagsForbidden": []
+}

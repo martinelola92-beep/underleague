@@ -6,6 +6,7 @@
   "type": "object",
   "properties": {
     "_doc": { "type": "string" },
+    "startingGold": { "type": "integer", "minimum": 0 },
     "goldAct1": { "type": "integer", "minimum": 0 },
     "goldAct2": { "type": "integer", "minimum": 0 },
     "goldAct3": { "type": "integer", "minimum": 0 },
@@ -29,6 +30,13 @@
     "mercenaryWagePerRarityStep": { "type": "integer", "minimum": 0 },
     "mercenaryBenchAbandonMatches": { "type": "integer", "minimum": 1 },
     "mercenaryLossStreakAbandon": { "type": "integer", "minimum": 1 },
+    "recruitLevelByAct": {
+      "description": "Nivel con el que entran los fichajes de pago, los mercenarios y los jugadores de recompensa en cada acto (RF-114, RF-071). Los canteranos entran siempre en el nivel 1 (RF-114b/c).",
+      "type": "array",
+      "items": { "type": "integer", "minimum": 1, "maximum": 8 },
+      "minItems": 3,
+      "maxItems": 3
+    },
     "rewardPlayerQuality": { "type": "integer", "minimum": 1, "maximum": 99 },
     "rewardPerkWeight": { "type": "integer", "minimum": 0 },
     "rewardPlayerWeight": { "type": "integer", "minimum": 0 },
@@ -36,12 +44,12 @@
     "market": { "$ref": "#/$defs/market" }
   },
   "required": [
-    "goldAct1", "goldAct2", "goldAct3", "difficultyMultiplierPercent",
+    "startingGold", "goldAct1", "goldAct2", "goldAct3", "difficultyMultiplierPercent",
     "eliteBonusPercent", "bossBonusPercent", "excellentMatchBonusGold",
     "clinicCost", "rerollBaseCost", "rerollStepCost", "trainingExperience",
     "eventGoldMin", "eventGoldMax", "mercenaryBaseWage", "mercenaryWagePerRarityStep",
     "mercenaryBenchAbandonMatches", "mercenaryLossStreakAbandon",
-    "rewardPlayerQuality", "rewardPerkWeight", "rewardPlayerWeight", "rewardItemWeight",
+    "recruitLevelByAct", "rewardPlayerQuality", "rewardPerkWeight", "rewardPlayerWeight", "rewardItemWeight",
     "market"
   ],
   "additionalProperties": false,
@@ -66,6 +74,10 @@
         "playerPriceByRarity": { "$ref": "#/$defs/priceByRarity" },
         "perkPriceByRarity": { "$ref": "#/$defs/priceByRarity" },
         "itemPriceByRarity": { "$ref": "#/$defs/priceByRarity" },
+        "priceSpreadPercent": {
+          "description": "Dispersión del precio de cada artículo alrededor del de su rareza, en tanto por ciento (ADR 0037). Sin ella todos los artículos de una rareza cuestan lo mismo y la fracción del surtido asequible salta de 0 a 1 con el oro.",
+          "type": "integer", "minimum": 0, "maximum": 90
+        },
         "consumablePrice": { "type": "integer", "minimum": 0 },
         "itemSellFractionPercent": { "type": "integer", "minimum": 0, "maximum": 100 },
         "playerSaleBaseByRarity": { "$ref": "#/$defs/priceByRarity" },
@@ -79,7 +91,7 @@
       "required": [
         "playerOffers", "perkOffers", "itemOffers", "consumableOffers", "mercenaryOffers",
         "youthMin", "youthMax", "playerPriceByRarity", "perkPriceByRarity", "itemPriceByRarity",
-        "consumablePrice", "itemSellFractionPercent", "playerSaleBaseByRarity",
+        "priceSpreadPercent", "consumablePrice", "itemSellFractionPercent", "playerSaleBaseByRarity",
         "playerSalePerLevel", "playerSalePerPerk", "playerSalePerBond",
         "recruitQuality", "youthQuality", "mercenaryQuality"
       ],

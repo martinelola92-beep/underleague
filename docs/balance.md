@@ -17,6 +17,22 @@ dotnet run --project Balance -- \
   [--dump-utility playerId:tick]              # RT-098
 ```
 
+Modos añadidos después de la fase 0:
+
+```
+dotnet run --project Balance -- --builds all [--vs id] [--campaign N] [--home-away] [--rosters N]
+dotnet run --project Balance -- --boss-gate [--rosters 32] [--runs 4]     # curva de la ADR 0033
+dotnet run --project Balance -- --full-runs 500 [--seed 1]                # runs completas (fase 2)
+dotnet run --project Balance -- --describe [es|en]                        # catálogo de perks
+```
+
+`--full-runs N` juega N runs completas **con cada una de las tres doctrinas de compra de la ADR 0037**
+(contextual, gastadora, ahorradora) sobre las mismas semillas, y escribe `runs.csv` (una fila por run:
+acto alcanzado, causa de derrota, oro ganado y gastado por sumidero, muertes, lesiones, tamaño final de
+plantilla, nivel medio, mercados visitados y qué se compró) más `summary.csv` con las métricas de
+`fase2-diseno.md` §10 y de la ADR 0037. La política automática y sus reglas están en
+`Sim.Analysis.RunPolicy` y explicadas en `docs/balance/fase2-resultados.md` §1.
+
 Rendimiento: 10.000 partidos en menos de 60 s en máquina de desarrollo (RT-051). Se mide en cada ejecución y se imprime al final.
 
 Salida (`summary.csv` + `matches.csv` + `perks.csv`):
@@ -67,6 +83,9 @@ Las tres puertas automáticas viven en `Sim.Tests` con `Trait("Category", "Gate"
 | Sensación de fútbol | `Engine/StatisticalTests.cs` | 1.000 partidos, semilla 1 | RT-056 y `betterTeamWinRate` |
 | Criterio de salida de fase 1 | `Analysis/BuildGateTests.cs` | 40 plantillas × 12 partidos × 14 celdas = 6.720, semilla 1, ~30 s | Coherentes >= 58%, malas <= 45%, aleatoria 40-60%, `buildsWinDifferently`, `noDeadPerks`, RF-069 |
 | Rareza y jefe final | `Analysis/RarityAndBossTests.cs` | 24 plantillas × 20 partidos × 3 comparaciones, semilla 1 | RF-024 y la salvaguarda de la ADR 0027 |
+| Equilibrio entre razas | `Analysis/RaceBalanceTests.cs` | 250 plantillas × 4 partidos × 10 parejas, semilla 1 | D-29: ninguna raza fuera del 40-60% agrupado |
+| **Curva de puertas de la ADR 0033** | `Analysis/BossGateTests.cs` | 32 plantillas × 4 partidos × 4 niveles × 3 jefes × 5 razas = 7.680, semilla 1, ~35 s | **La** métrica de la fase 2: cada nivel de calidad de build contra cada jefe |
+| **Run completa** | `Analysis/FullRunGateTests.cs` | 60 runs × 3 doctrinas de compra, semilla 1, ~14 s | Duración de la run, causas de derrota, RF-114k, compras por mercado, determinismo del bucle |
 
 **RT-055 no está automatizada**: se mide a mano con `--builds all --vs human_none`. Al cierre del paquete U
 la incumplen las razas, no las builds (elfos 67,5%, orcos 23,5% contra `human_none` sin perks); anotado como
@@ -84,10 +103,13 @@ Se añaden a `summary.csv` cuando el sistema correspondiente existe:
 | Común superviviente competitivo ante jefe final | RF-023b | Tasa de victoria del equipo con comunes de nivel 8 dentro de 30-70% contra el jefe final. Medido 38,75% sin perks | 2 |
 | Build de violencia con sobornos vs sin sobornos | RF-064e | Viable (>=40%) con sobornos, inviable (<30%) sin ellos | 3 |
 | Build de violencia con sobornos + 2 mitigaciones | RF-064g | Alcanza la tasa de referencia sin depender de una sola mitigación (retirar cualquiera no la hunde por debajo del 30%) | 3 |
-| Oro medio por acto | RF-114k | Permite usar 2-3 sumideros, nunca todos | 2 |
+| Oro medio por acto | RF-114k | Permite usar 2-3 sumideros, nunca todos. **Implementada** en `FullRunMetrics.SinksAffordable`; medido 2,40 y nunca los cuatro | 2 |
+| Tasa de victoria de la run | `fase2-diseno.md` §10 | 25-40% con la política contextual. Medido **13,0%**; la banda no es compatible con la tabla de la ADR 0033 (Z-G en `pendientes.md`) | 2 |
+| Ventaja de la política contextual | ADR 0037 | >= 8 puntos sobre la gastadora y la ahorradora. Medido **+5,0** y **+0,8**; bloqueada por la ADR 0036 (Z-H) | 2 |
+| Escasez del mercado | ADR 0037 | 20-35% del surtido asequible al llegar, 1-2 compras por visita, < 15% de oro sobrante, 10-25% de runs sin poder comprar. Medido 40,5 · 1,43 · 23,2 · 49,2 (Z-K, Z-L) | 2 |
 | Cada raza sostiene 3 builds viables distintas | RF-032 | Tres configuraciones con tasa 30-70% y perks mayoritariamente distintos | 2-3 |
 | Distribución del catálogo de perks | RF-069 | 60/30/10 ±5 puntos | 1+ |
-| Perks que acumulan entre partidos | RF-070 | >= 15 en el catálogo de lanzamiento | 2+ |
+| Perks que acumulan entre partidos | RF-070 | >= 15 en el catálogo de lanzamiento. **Cumplido**: 15 desde el paquete Z | 2+ |
 | Mejores equipos ganan más con sorpresas creíbles | Fase 0 | Equipo **+20** en todos los atributos gana 65-80%; +10 es informativo y se vigila en 55-70% | 0 |
 
 ## Definición de "build" para `/Balance`

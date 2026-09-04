@@ -5,6 +5,7 @@ using Underleague.Sim.Run.Systems.Consumables;
 using Underleague.Sim.Run.Systems.Economy;
 using Underleague.Sim.Run.Systems.Equipment;
 using Underleague.Sim.Run.Systems.Items;
+using Underleague.Sim.Run.Systems.Map;
 using Underleague.Sim.Run.Systems.Market;
 using Underleague.Sim.Run.Systems.Medical;
 using Underleague.Sim.Run.Systems.Mercenaries;
@@ -31,13 +32,15 @@ public sealed class StandardRunSystems : IRunSystems
     private readonly ItemCatalog _items;
     private readonly ConsumableCatalog _consumables;
     private readonly RivalCatalog _rivals;
+    private readonly MapConfig _map;
 
-    public StandardRunSystems(EconomyConfig economy, ItemCatalog items, ConsumableCatalog consumables, RivalCatalog rivals)
+    public StandardRunSystems(EconomyConfig economy, ItemCatalog items, ConsumableCatalog consumables, RivalCatalog rivals, MapConfig map)
     {
         _economy = economy ?? throw new ArgumentNullException(nameof(economy));
         _items = items ?? throw new ArgumentNullException(nameof(items));
         _consumables = consumables ?? throw new ArgumentNullException(nameof(consumables));
         _rivals = rivals ?? throw new ArgumentNullException(nameof(rivals));
+        _map = map ?? throw new ArgumentNullException(nameof(map));
     }
 
     /// <summary>Configuración de economía de esta instancia (para tests y <c>/Balance</c>).</summary>
@@ -52,6 +55,9 @@ public sealed class StandardRunSystems : IRunSystems
     /// <summary>Catálogo de rivales de esta instancia.</summary>
     public RivalCatalog Rivals => _rivals;
 
+    /// <summary>Estructura del mapa de esta instancia (D-2/D-10, <c>data/map/map.json</c>).</summary>
+    public MapConfig Map => _map;
+
     /// <summary>
     /// Construye los cuatro catálogos del paquete X de una instantánea de <c>/data</c> (el mismo
     /// diccionario que consume <c>DataLoader.FromJson</c>). Ayudante de conveniencia para tests y
@@ -61,7 +67,8 @@ public sealed class StandardRunSystems : IRunSystems
         EconomyLoader.FromJson(files),
         ItemLoader.FromJson(files),
         ConsumableLoader.FromJson(files),
-        RivalLoader.FromJson(files));
+        RivalLoader.FromJson(files),
+        MapLoader.FromJson(files));
 
     /// <summary>Rivales estáticos de esta instancia, por acto (1..3), para <c>RunSetup.OpponentIdsByAct</c> (RF-015).</summary>
     public IReadOnlyList<IReadOnlyList<string>> OpponentIdsByAct() =>

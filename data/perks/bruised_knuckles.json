@@ -1,0 +1,41 @@
+{
+  "id": "bruised_knuckles",
+  "name": {
+    "es": "Nudillos marcados",
+    "en": "Bruised Knuckles"
+  },
+  "rarity": "rare",
+  "kind": "conditional",
+  "axis": "accumulation",
+  "race": null,
+  "trigger": "FOUL",
+  "scope": "actor",
+  "links": [],
+  "condition": "hasTag(owner,'Brute')",
+  "effects": [
+    {
+      "type": "modifyProbability",
+      "target": "actor",
+      "probability": "injure",
+      "valuePerCounter": 1,
+      "counter": "bruisedKnucklesFouls",
+      "maxValue": 3,
+      "duration": "match"
+    },
+    {
+      "type": "addCounter",
+      "counter": "bruisedKnucklesFouls",
+      "value": 1
+    }
+  ],
+  "elseEffects": [],
+  "limit": {
+    "per": "match",
+    "times": 1
+  },
+  "accumulatesAcrossMatches": true,
+  "lethal": false,
+  "positionOnly": null,
+  "tagsRequired": [],
+  "tagsForbidden": []
+}

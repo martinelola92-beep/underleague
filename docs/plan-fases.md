@@ -4,6 +4,36 @@ Del §7 de requisitos, con los entregables concretos y el estado. **Regla de fas
 
 ## Estado actual
 
+**Fase 2 implementada y medida** (5 de septiembre de 2026). El bucle de run se juega entero desde
+código, es reproducible y sus decisiones tienen consecuencias medibles: mapa por actos con mercado
+garantizado, economía, mercado con canteranos y mercenarios, clínica, equipamiento, recompensas con
+reroll, tres jefes con modificadores de regla, guardado ironman y `--full-runs` con tres políticas
+automáticas. Cinco puertas automáticas en verde (`Trait("Category","Gate")`), `DataValidator` sin
+errores y la suite completa en verde.
+
+**La métrica principal de la fase, la curva de puertas de la ADR 0033, se cumple en las doce celdas**
+(`docs/fase2-diseno.md` §16.6). Lo que **no** se cumple es la mitad de las métricas de apoyo de §10 y de
+la ADR 0037, con causa identificada y número en `docs/balance/fase2-resultados.md`:
+
+| Métrica | Rango | Medido |
+|---|---|---|
+| Curva de puertas (12 celdas, ADR 0033) | tabla de la ADR | **todas dentro** |
+| Duración de una run completa | 18-22 partidos | 20,0 |
+| Derrotas por bajar de 5 jugadores | < 35% | 0,0 |
+| Sumideros que paga el oro de un acto (RF-114k) | 2-3, nunca 4 | 2,40 |
+| Compras por visita al mercado (ADR 0037) | 1-2 | 1,43 |
+| Tasa de victoria de la run | 25-40% | **13,0** |
+| Muertes por run | 0,5-2 | **0,00** |
+| Ventaja de la política contextual (ADR 0037) | >= 8 puntos | **+5,0 / +0,8** |
+| Fracción asequible del surtido / oro sobrante / visitas en blanco | 20-35 / <15 / 10-25 | **40,5 / 23,2 / 49,2** |
+
+Las cuatro cosas que hay que decidir antes de cerrar la fase están en `pendientes.md` Z-F a Z-L: que el
+club inicial traiga una build (RF-023/RF-005, exige ADR), que la banda de tasa de victoria de §10 baje a
+20-30% para ser compatible con la ADR 0033, que se aplique la **ADR 0036** (el equipamiento no vale nada
+hoy y bloquea el criterio de la ADR 0037), y que la fórmula de lesión deje de medirse contra el nivel 1
+(hoy un equipo que sube de nivel es inmune a las lesiones, y con ellas se van la clínica, las muertes y
+el desgaste).
+
 **Fase 1 cerrada** (4 de septiembre de 2026) con el bloque de rediseño espacial (ADR 0020-0030) y su
 reajuste único (paquete U). El criterio de salida de la fase 1 —"dos builds distintas ganan de formas
 distintas y se nota"— **se cumple y está automatizado**: la puerta `Sim.Tests/Analysis/BuildGateTests.cs`
@@ -68,8 +98,9 @@ Criterio de salida: dos builds distintas ganan de formas distintas y se nota.
 Criterio de salida: el jugador dice "una run más" sin arte terminado.
 
 - Mapa por capas (RF-010..014), 8 partidos + 1 jefe, nodos de mercado (RF-114..114f) con canteranos (RF-114b..d), lesiones y clínica (RF-090..094), equipamiento (RF-075..078), mercenarios (RF-110..113), economía (RF-114g..k), reroll (RF-071b), guardado ironman (RT-061) con snapshot de `/data` (RT-061b), modo de depuración (RT-062).
-- Máximo 30 perks y 12 objetos.
-- Cierre del diseño: se resuelven las decisiones pendientes D-2, D-3, D-6, D-7, D-10. A partir de aquí se puede encargar arte.
+- Máximo 30 perks y 12 objetos. **Al cierre del paquete Z: 53 perks (15 acumulativos, RF-070) y 12 objetos.**
+- Cierre del diseño: se resuelven las decisiones pendientes D-2, D-3, D-6, D-7, D-10. **Las cinco están
+  cerradas** (paquete Z, `pendientes.md`), más D-9 (paquete Y). A partir de aquí se puede encargar arte.
 
 ## Fase 3: identidad
 

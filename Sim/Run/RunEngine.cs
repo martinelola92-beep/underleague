@@ -81,7 +81,7 @@ public static class RunEngine
         for (int act = 1; act <= RunRules.Acts; act++)
         {
             var opponents = OpponentIdsOf(setup, act);
-            maps.Add(MapGenerator.Generate(seed, act, new MapOptions(setup.NodesPerAct, opponents)));
+            maps.Add(MapGenerator.Generate(seed, act, new MapOptions(setup.NodesOfAct(act), opponents)));
         }
 
         var state = new RunState

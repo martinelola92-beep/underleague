@@ -86,6 +86,42 @@ public static class RunLineup
     }
 
     /// <summary>
+    /// Coloca en la cuadrícula un conjunto de titulares <b>ya elegido</b>, con las mismas casillas y el
+    /// mismo criterio que <see cref="Build"/>: portero en <see cref="GoalkeeperCell"/> y el resto por su
+    /// posición sobre el 2-3-1 por defecto. Es lo que necesita cualquier política automática que decida
+    /// <i>quién</i> juega —<c>/Balance --full-runs</c>, y mañana la pantalla de alineación— sin tener que
+    /// reimplementar la colocación: la decisión es el once, no las casillas.
+    /// </summary>
+    public static Lineup Compose(IReadOnlyList<RunPlayer> starters)
+    {
+        ArgumentNullException.ThrowIfNull(starters);
+        if (starters.Count is < RunRules.MinimumAvailablePlayers or > RunRules.MaxStarters)
+        {
+            throw new ArgumentException(
+                $"un once tiene entre {RunRules.MinimumAvailablePlayers} y {RunRules.MaxStarters} titulares "
+                    + $"y se han pasado {starters.Count} (RF-002d, RF-059)",
+                nameof(starters));
+        }
+
+        var goalkeeper = PickGoalkeeper(starters);
+        var slots = new List<LineupSlot>(starters.Count) { new(goalkeeper.Id, GoalkeeperCell) };
+        var taken = new List<Cell>(OutfieldCells.Length);
+        for (int i = 0; i < starters.Count; i++)
+        {
+            if (starters[i].Id == goalkeeper.Id)
+            {
+                continue;
+            }
+
+            var cell = CellFor(starters[i].Position, taken);
+            taken.Add(cell);
+            slots.Add(new LineupSlot(starters[i].Id, cell));
+        }
+
+        return new Lineup(slots);
+    }
+
+    /// <summary>
     /// Construye el equipo para un partido. Si <paramref name="catalog"/> es null no se convierte a
     /// <see cref="PlayerDefinition"/> (se usa solo para calcular la colocación).
     /// </summary>
@@ -223,7 +259,7 @@ public static class RunLineup
     }
 
     /// <summary>Portero titular: el de verdad si hay alguno entre los titulares, y si no, el de menor id.</summary>
-    private static RunPlayer PickGoalkeeper(List<RunPlayer> starters)
+    private static RunPlayer PickGoalkeeper(IReadOnlyList<RunPlayer> starters)
     {
         RunPlayer? goalkeeper = null;
         for (int i = 0; i < starters.Count; i++)

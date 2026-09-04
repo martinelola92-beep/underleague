@@ -31,6 +31,7 @@ public sealed record MarketConfig(
     PriceByRarity PlayerPrice,
     PriceByRarity PerkPrice,
     PriceByRarity ItemPrice,
+    int PriceSpreadPercent,
     int ConsumablePrice,
     int ItemSellFractionPercent,
     PriceByRarity PlayerSaleBase,
@@ -49,6 +50,7 @@ public sealed record MarketConfig(
 /// el contenido ya leído).
 /// </summary>
 public sealed record EconomyConfig(
+    int StartingGold,
     int GoldAct1,
     int GoldAct2,
     int GoldAct3,
@@ -66,6 +68,7 @@ public sealed record EconomyConfig(
     int MercenaryWagePerRarityStep,
     int MercenaryBenchAbandonMatches,
     int MercenaryLossStreakAbandon,
+    IReadOnlyList<int> RecruitLevelByAct,
     int RewardPlayerQuality,
     int RewardPerkWeight,
     int RewardPlayerWeight,
@@ -90,6 +93,13 @@ public sealed record EconomyConfig(
 
     /// <summary>Coste de un reroll de recompensa, creciente con el número de rerolls ya usados en la run (RF-071b).</summary>
     public int RerollCost(int rerollsUsedInRun) => RerollBaseCost + (RerollStepCost * rerollsUsedInRun);
+
+    /// <summary>
+    /// Nivel con el que entra un jugador comprado, fichado como mercenario o elegido como recompensa en
+    /// el acto indicado (1..3). El canterano no pasa por aquí: entra siempre en el nivel 1, que es lo que
+    /// RF-114b/c describe ("malo hoy, potencialmente el mejor del acto 3 si se ficha pronto").
+    /// </summary>
+    public int RecruitLevel(int act) => act >= 1 && act <= RecruitLevelByAct.Count ? RecruitLevelByAct[act - 1] : 1;
 
     /// <summary>Salario por partido de un mercenario de esa rareza (RF-111): base + escalón por rareza.</summary>
     public int MercenaryWage(Rarity rarity) => MercenaryBaseWage + (MercenaryWagePerRarityStep * (int)rarity);
@@ -123,9 +133,21 @@ public static class EconomyLoader
             throw new DataException(Path, "$.difficultyMultiplierPercent", "debe tener exactamente 5 valores (RF-012: 5 niveles de dificultad)");
         }
 
+        var recruitLevels = new List<int>();
+        foreach (var item in root.Prop("recruitLevelByAct").EnumerateArray())
+        {
+            recruitLevels.Add(item.AsInt());
+        }
+
+        if (recruitLevels.Count != 3)
+        {
+            throw new DataException(Path, "$.recruitLevelByAct", "debe tener exactamente 3 valores, uno por acto (RF-001)");
+        }
+
         var market = ReadMarket(root.Prop("market"));
 
         return new EconomyConfig(
+            root.Int("startingGold"),
             root.Int("goldAct1"),
             root.Int("goldAct2"),
             root.Int("goldAct3"),
@@ -143,6 +165,7 @@ public static class EconomyLoader
             root.Int("mercenaryWagePerRarityStep"),
             root.Int("mercenaryBenchAbandonMatches"),
             root.Int("mercenaryLossStreakAbandon"),
+            recruitLevels,
             root.Int("rewardPlayerQuality"),
             root.Int("rewardPerkWeight"),
             root.Int("rewardPlayerWeight"),
@@ -161,6 +184,7 @@ public static class EconomyLoader
         ReadPriceByRarity(node.Prop("playerPriceByRarity")),
         ReadPriceByRarity(node.Prop("perkPriceByRarity")),
         ReadPriceByRarity(node.Prop("itemPriceByRarity")),
+        node.Int("priceSpreadPercent"),
         node.Int("consumablePrice"),
         node.Int("itemSellFractionPercent"),
         ReadPriceByRarity(node.Prop("playerSaleBaseByRarity")),

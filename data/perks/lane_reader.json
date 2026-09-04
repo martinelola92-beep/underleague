@@ -1,0 +1,41 @@
+{
+  "id": "lane_reader",
+  "name": {
+    "es": "Lector de carriles",
+    "en": "Lane Reader"
+  },
+  "rarity": "rare",
+  "kind": "filler",
+  "axis": "accumulation",
+  "race": null,
+  "trigger": "RECOVERY",
+  "scope": "actor",
+  "links": [],
+  "condition": "",
+  "effects": [
+    {
+      "type": "modifyProbability",
+      "target": "actor",
+      "probability": "intercept",
+      "valuePerCounter": 1,
+      "counter": "laneReaderRecoveries",
+      "maxValue": 5,
+      "duration": "match"
+    },
+    {
+      "type": "addCounter",
+      "counter": "laneReaderRecoveries",
+      "value": 1
+    }
+  ],
+  "elseEffects": [],
+  "limit": {
+    "per": "match",
+    "times": 1
+  },
+  "accumulatesAcrossMatches": true,
+  "lethal": false,
+  "positionOnly": null,
+  "tagsRequired": [],
+  "tagsForbidden": []
+}

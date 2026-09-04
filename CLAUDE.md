@@ -2,7 +2,7 @@
 
 Roguelite de gestión y autobatalla: el jugador dirige un equipo de fútbol 7 de criaturas fantásticas. Los partidos se resuelven solos en 60-90 s sobre una cuadrícula; todas las decisiones ocurren entre partidos. La identidad no es el fútbol, es la **carnicería administrada**: lesiones, muertes, prótesis y vínculos. El desgaste de la plantilla es el recurso central de la run.
 
-PC (Steam), premium, sin online. **Estado (5 sep 2026): fase 0 cerrada, fase 1 en su tramo final (rediseño espacial implementado, reajuste de balance en curso), pantalla de Equipo funcionando en Godot. Fase 2 especificada en `docs/fase2-diseno.md`.**
+PC (Steam), premium, sin online. **Estado (5 sep 2026): fases 0 y 1 cerradas; fase 2 implementada y medida —bucle de run completo, tres jefes con modificadores, economía y `--full-runs` con tres políticas automáticas—, con la curva de puertas de la ADR 0033 en verde y cuatro decisiones abiertas antes de darla por cerrada (`docs/balance/fase2-resultados.md` §7). Pantalla de Equipo funcionando en Godot.**
 
 La fuente de verdad del diseño es `docs/requisitos.md` (v0.9.1). Cada requisito tiene identificador (`RF-xxx` funcional, `RT-xxx` técnico, `RA-xxx` arte, `UI-xxx` interfaz): cítalos en commits, ADRs, tests y comentarios cuando implementes o discutas uno.
 

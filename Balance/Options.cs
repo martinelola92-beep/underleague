@@ -57,6 +57,12 @@ public sealed class Options
     /// <summary>--boss-gate: mide la curva de puertas de la ADR 0033 (cada nivel de build contra cada jefe).</summary>
     public bool BossGate { get; private set; }
 
+    /// <summary>
+    /// Null salvo que se pase --full-runs N: juega N runs completas con la política automática de
+    /// <c>Sim.Analysis.RunPolicy</c> y vuelca runs.csv (fase2-diseno.md §10).
+    /// </summary>
+    public int? FullRuns { get; private set; }
+
     /// <summary>Null salvo que se pase --describe [es|en]: activa el modo catálogo, con el idioma pedido (por defecto "es").</summary>
     public string? Describe { get; private set; }
 
@@ -105,6 +111,15 @@ public sealed class Options
 
                 case "--boss-gate":
                     options.BossGate = true;
+                    break;
+
+                case "--full-runs":
+                    options.FullRuns = ParseInt(arg, NextValue(args, ref i, arg));
+                    if (options.FullRuns <= 0)
+                    {
+                        throw new ArgumentException("--full-runs debe ser mayor que cero");
+                    }
+
                     break;
 
                 case "--rosters":

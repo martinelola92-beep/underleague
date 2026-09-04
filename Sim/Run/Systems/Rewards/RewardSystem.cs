@@ -45,7 +45,7 @@ public static class RewardSystem
         var options = new List<RewardOption>(3);
         for (int i = 0; i < 3; i++)
         {
-            options.Add(PickOption(ref rng, perkPool, items, catalog, state, economy));
+            options.Add(PickOption(ref rng, perkPool, items, catalog, state, economy, node.Act));
         }
 
         return options;
@@ -138,7 +138,8 @@ public static class RewardSystem
         ItemCatalog items,
         Catalog catalog,
         RunState state,
-        EconomyConfig economy)
+        EconomyConfig economy,
+        int act)
     {
         int total = economy.RewardPerkWeight + economy.RewardPlayerWeight + economy.RewardItemWeight;
         int roll = rng.Range(0, total);
@@ -152,7 +153,7 @@ public static class RewardSystem
 
         if (wantsPlayer || wantsPerk)
         {
-            var player = GeneratedPlayers.Reward(ref rng, catalog, state.ClubRace, economy.RewardPlayerQuality);
+            var player = GeneratedPlayers.Reward(ref rng, catalog, state.ClubRace, economy.RewardPlayerQuality, economy.RecruitLevel(act));
             return new PlayerRewardOption(player);
         }
 

@@ -352,3 +352,122 @@ Las doce celdas caen dentro de su banda **sin** usar la tolerancia de la Y-9, y 
 - **Cuánto equipamiento tiene un jugador a cada puerta.** La fila "muy buena" asume siete titulares equipados y tres objetos raros. Si la economía no lo permite en el acto 3, la fila hay que rebajarla o el oro hay que subirlo.
 - **RF-070 pide al menos 15 perks que acumulen entre partidos y hay 6.** Ahora los seis acumulan de verdad, que era el problema urgente; el número sigue siendo el del catálogo de pruebas, no el de lanzamiento.
 - **El agujero de los consumibles equipados** que anotaron W y X sigue abierto en la parte de inventario (X-9): comprar y equipar tienen el mismo efecto porque el estado no lleva inventario de consumibles.
+
+## 17. Decisiones de implementación del paquete Z
+
+Lo que el paquete Z (`Sim/Analysis/{RunPolicy,FullRunMetrics,PerkPlacement}`, `Balance --full-runs`,
+`Sim.Tests/Analysis/FullRunGateTests`, `data/economy`, `data/map`, ocho perks de acumulación) resolvió
+y por qué. Las medidas y las conclusiones están en **`docs/balance/fase2-resultados.md`**; aquí van las
+decisiones.
+
+**Z-17. `--full-runs N` juega N runs con las *tres* doctrinas de compra, no con una política.** La ADR
+0037 llegó a mitad del encargo y cambia el criterio: la métrica no es cómo rinde una política, es cuál
+gana. `PurchaseDoctrine` (gastadora, ahorradora, contextual) es lo **único** que cambia entre las tres;
+nodo, alineación, clínica y elección de recompensa son idénticos, para que la diferencia de tasa de
+victoria sea atribuible a la decisión de comprar y a nada más. Las tres juegan las **mismas semillas**.
+
+**Z-18. La política vive en `/Sim`, no en `/Balance`.** Igual que `BossGateMetrics` (Y-14): jugar y
+medir son de `/Sim` —puro, sin E/S— y `/Balance` solo lee ficheros y cronometra, de modo que la puerta
+de `Sim.Tests` y el modo de `/Balance` sean literalmente el mismo código. Las siete reglas comunes están
+en el comentario de clase de `RunPolicy` y en `fase2-resultados.md` §1.
+
+**Z-19. `PerkPlacement`: la política *lee* el perk antes de dárselo a alguien.** Comprar un perk cuya
+condición de colocación no se cumple en su portador es construir el escalón "incoherente" de la ADR 0033
+a propósito: ocupa un slot y, si el perk castiga (`elseEffects`), resta. El motor compila y evalúa las
+condiciones con el contexto del evento, que no existe fuera del partido, así que `PerkPlacement`
+reconoce los cinco predicados sobre `owner` que dependen solo de plantilla y colocación —`hasTag`,
+`startsIn`, `startsOn`, `linked`, `teammatesWithTag`— y **da por bueno todo lo demás**: solo rechaza
+cuando está segura. Es una lectura, no una evaluación, y vive en `Sim/Analysis` por eso; cuando la
+pantalla de plantilla quiera dar el mismo aviso al jugador (RF-012d) lo correcto será un evaluador
+estático sobre el AST en `Sim/Perks`. Medido: con el filtro la contextual pasa del 4,2% al 10,0% de
+victorias de run, y la celda del jefe del acto 2 sube de 26 a 46.
+
+**Z-20. D-2 y D-10 cerradas: 11, 12 y 12 nodos recorridos**, en `data/map/map.json`. Son 35 nodos por
+run (RF-003b pide 30-36) y, con el reparto por construcción de `MapGenerator`, **20 partidos** en el
+peor camino: 6 en el acto 1 y 7 en los actos 2 y 3, incluido el jefe. El 57,1% de los nodos son de
+partido, por debajo del 60% de RF-003b, y los 20 partidos caen en el centro de la banda "18-22" de §10,
+que con los 11 nodos de partida quedaba justo en el borde. El acto crece con la run, que es lo que
+RF-001 permite y lo que hace que el acto 3 se sienta más largo. El fichero es nuevo porque los nodos por
+acto no son economía; `MapLoader` lo carga con el patrón de los demás cargadores del paquete X (X-1) y
+`StandardRunSystems.Map` lo expone.
+
+**Z-21. D-3 cerrada: el mercenario no cuesta fichaje, cuesta salario, y el salario compite con una
+compra.** `mercenaryBaseWage` 16 más 12 por escalón de rareza: un mercenario raro cuesta 28 por partido
+y 196 en un acto de siete, algo más que un objeto común (240 de base con dispersión) y bastante más que
+un tratamiento de clínica en proporción. Es la relación que RF-114k necesita para que los cuatro
+sumideros sean comparables: sin ella el salario era calderilla (10 por partido, 60 por acto) y "usar el
+sumidero de salarios" no significaba nada. **Consecuencia medida y anotada**: con trece jugadores en
+plantilla la política nunca ficha un mercenario, así que el sumidero está calibrado pero no se ejercita
+(`fase2-resultados.md` §5).
+
+**Z-22. D-6 cerrada: perder contra el jefe final exige una run nueva.** Es la lectura provisional que
+`pendientes.md` ya aplicaba y no había ninguna razón para cambiarla: el guardado ironman se borra al
+cargar (RT-061) y `RunEngine` graba el desenlace en el estado, así que un reintento exigiría conservar
+un estado que la propia regla de guardado destruye. No hay valor en datos que cerrar: la decisión es que
+**no existe** ninguna clave de reintento.
+
+**Z-23. D-7 cerrada: de la tienda de Rune Dice se replica la estructura por categorías y nada más.** El
+mercado ofrece las cuatro categorías de RF-114 simultáneamente (jugadores, perks, equipamiento,
+consumibles) con 3-4 artículos cada una, no se renueva, y el surtido se deriva de la semilla del nodo
+(W-12). Lo que **no** se replica: ni reroll del surtido (el reroll es de la recompensa, RF-071b), ni
+cupones, ni descuentos, ni artículos que modifican la tienda. El valor en datos es el bloque `market`
+de `data/economy/economy.json`, con `playerOffers` 3, `perkOffers` 4, `itemOffers` 4 y
+`consumableOffers` 3: quince o dieciséis artículos, que es el tamaño de surtido que la ADR 0037 fija.
+
+**Z-24. Los precios se dispersan dentro de la rareza (`market.priceSpreadPercent`).** Sin dispersión,
+los diez u once artículos comunes de un surtido cuestan exactamente lo mismo y "qué fracción del surtido
+puedo pagar" salta de 0 a 1 con el oro: la métrica de escasez de la ADR 0037 no tiene ningún valor
+intermedio y no se puede calibrar. Con un 70% de dispersión la fracción asequible baja del 82% al 40% y
+dentro de una misma rareza hay artículos que se pueden pagar y otros por los que hay que ahorrar, que es
+literalmente el dilema que la ADR describe.
+
+**Z-25. Los fichajes, los mercenarios y los jugadores de recompensa entran con el nivel del acto**
+(`economy.recruitLevelByAct = [1, 4, 6]`). Un fichaje de pago de nivel 1 en el acto 3 es oro tirado —la
+plantilla va por el nivel 7 y ningún criterio razonable lo alinea—, así que el mercado dejaba de ser un
+sumidero justo cuando más oro hay. El canterano **no** pasa por aquí: entra siempre en el nivel 1, que es
+lo que RF-114b/c describe. Y la experiencia se fija al umbral de su nivel: si no, el primer partido
+recalcularía el nivel desde cero y el fichaje se quedaría clavado media run.
+
+**Z-26. RF-070 cumplido: quince perks acumulan entre partidos.** Ocho nuevos —`steady_hands`,
+`iron_lungs`, `pit_veteran`, `sharpshooter_drill`, `lane_reader`, `bruised_knuckles`, `captains_voice` y
+`scar_veteran`— repartidos por canal (pase, resistencia, entrada, remate, intercepción, lesionar, entrada
+de equipo, fuerza), por rareza (3 comunes, 4 raros, 1 legendario) y por tipo de RF-069 (5 `filler`, 3
+`conditional`, que dejan la distribución en 64/32/4). Todos llevan `limit: {per: match, times: 1}`
+—salvo los de `MATCH_START`, que ya se disparan una vez— para que el contador crezca como mucho +1 por
+partido, que es la corrección de la costura 16.5. Los valores respetan la escala por canal de la ADR
+0035 y la de puntos de atributo. Viven en `data/balance/builds/human_accum.json`, que no entra en ningún
+grupo de `groups.json`, para que `EveryCatalogPerkIsAssignedInSomeBuild` los vea sin mover ninguna
+puerta de fase 1.
+
+**Z-27. Medido: cuántos partidos hacen falta para llegar al tope de un acumulador** (la primera pregunta
+que §16.7 dejaba). Los contadores acumulados en la plantilla al llegar a cada jefe son **3,3** (acto 1,
+tras 6 partidos), **12,1** (acto 2, tras 13) y **30,8** (acto final, tras 20). Con seis acumuladores
+repartidos por el once, 30,8 es un contador medio de ~5 por perk: **el tope de la fila "muy buena" se
+alcanza justo al final de la run**, que es exactamente lo que la ADR 0033 llama "escalado acumulado
+durante toda la run". Los de `MATCH_START` llegan al tope en 4-5 partidos; los que dependen de una
+jugada del portador (`clean_sheet_legacy`, `poacher_instinct`) tardan el doble o más.
+
+**Z-28. `EquipmentImpactTests` sube su muestra de 8 a 24 plantillas.** Añadir ocho perks al catálogo
+movió la medida de 5,4 a 4,7 puntos **sin tocar un solo objeto**: con 512 partidos por brazo la
+diferencia entre brazos tiene una desviación de ~3 puntos y el umbral de 5 estaba dentro del ruido. Con
+24 plantillas la desviación baja a ~1,8 y el test avisa de una regresión de verdad.
+
+### Lo que el paquete Z deja abierto
+
+Con número en `docs/balance/fase2-resultados.md` §4 y §7:
+
+- **La build llega tarde**: al jefe del acto 1 el once lleva 4,3 perks contra los 14 de `*_correct`, y
+  el hueco es aritmético (6 partidos, 3 mercados, plantilla inicial sin perks). La salida es que el club
+  inicial traiga una build, y toca RF-023/RF-005: **exige un ADR**.
+- **La banda de tasa de victoria de §10 (25-40%) no es compatible con la tabla de la ADR 0033**, cuyo
+  producto máximo es 29,5%. La banda coherente es 20-30%.
+- **El criterio de la ADR 0037 (la contextual por encima de las dos puras en 8 puntos) no es medible
+  hasta que se aplique la ADR 0036**: el equipamiento no vale hoy casi nada, y es el sumidero que la
+  propia ADR 0037 llama la palanca fina. Medido: contextual +5,0 sobre la gastadora, +0,8 sobre la
+  ahorradora.
+- **Las lesiones han desaparecido del bucle de run** (0,04 por partido, frente a 0,62 del lote de fase
+  1): la fórmula de `tuning.injury` se mide contra el nivel 1 y la progresión sube la resistencia. Sin
+  lesiones no hay muertes, no hay clínica y no hay desgaste. Es un defecto de fase 1 que solo se ve
+  jugando runs completas y **no se ha tocado** porque `tuning.json` es global.
+- **Dos de los cuatro sumideros son contenido muerto** (clínica y mercenarios), consecuencia del punto
+  anterior y del tamaño de plantilla.

@@ -1,0 +1,41 @@
+{
+  "id": "sharpshooter_drill",
+  "name": {
+    "es": "Ensayo de tirador",
+    "en": "Sharpshooter Drill"
+  },
+  "rarity": "rare",
+  "kind": "filler",
+  "axis": "accumulation",
+  "race": null,
+  "trigger": "SHOT",
+  "scope": "actor",
+  "links": [],
+  "condition": "",
+  "effects": [
+    {
+      "type": "modifyProbability",
+      "target": "actor",
+      "probability": "shotOnTarget",
+      "valuePerCounter": 5,
+      "counter": "sharpshooterShots",
+      "maxValue": 25,
+      "duration": "match"
+    },
+    {
+      "type": "addCounter",
+      "counter": "sharpshooterShots",
+      "value": 1
+    }
+  ],
+  "elseEffects": [],
+  "limit": {
+    "per": "match",
+    "times": 1
+  },
+  "accumulatesAcrossMatches": true,
+  "lethal": false,
+  "positionOnly": null,
+  "tagsRequired": [],
+  "tagsForbidden": []
+}

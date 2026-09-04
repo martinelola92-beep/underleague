@@ -1,0 +1,38 @@
+{
+  "id": "captains_voice",
+  "name": {
+    "es": "Voz de capitán",
+    "en": "Captain's Voice"
+  },
+  "rarity": "rare",
+  "kind": "conditional",
+  "axis": "accumulation",
+  "race": null,
+  "trigger": "MATCH_START",
+  "scope": "actor",
+  "links": [],
+  "condition": "startsIn(owner,'Middle')",
+  "effects": [
+    {
+      "type": "modifyProbability",
+      "target": "team",
+      "probability": "tackle",
+      "valuePerCounter": 3,
+      "counter": "captainsVoiceMatches",
+      "maxValue": 9,
+      "duration": "match"
+    },
+    {
+      "type": "addCounter",
+      "counter": "captainsVoiceMatches",
+      "value": 1
+    }
+  ],
+  "elseEffects": [],
+  "limit": null,
+  "accumulatesAcrossMatches": true,
+  "lethal": false,
+  "positionOnly": null,
+  "tagsRequired": [],
+  "tagsForbidden": []
+}

@@ -1,0 +1,38 @@
+{
+  "id": "scar_veteran",
+  "name": {
+    "es": "Veterano de cicatrices",
+    "en": "Scarred Veteran"
+  },
+  "rarity": "legendary",
+  "kind": "filler",
+  "axis": "accumulation",
+  "race": null,
+  "trigger": "MATCH_START",
+  "scope": "actor",
+  "links": [],
+  "condition": "",
+  "effects": [
+    {
+      "type": "modifyAttribute",
+      "target": "owner",
+      "attribute": "strength",
+      "valuePerCounter": 3,
+      "counter": "scarVeteranMatches",
+      "maxValue": 10,
+      "duration": "match"
+    },
+    {
+      "type": "addCounter",
+      "counter": "scarVeteranMatches",
+      "value": 1
+    }
+  ],
+  "elseEffects": [],
+  "limit": null,
+  "accumulatesAcrossMatches": true,
+  "lethal": false,
+  "positionOnly": null,
+  "tagsRequired": [],
+  "tagsForbidden": []
+}

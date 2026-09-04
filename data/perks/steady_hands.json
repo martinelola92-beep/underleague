@@ -1,0 +1,41 @@
+{
+  "id": "steady_hands",
+  "name": {
+    "es": "Manos firmes",
+    "en": "Steady Hands"
+  },
+  "rarity": "common",
+  "kind": "filler",
+  "axis": "accumulation",
+  "race": null,
+  "trigger": "PASS_COMPLETED",
+  "scope": "actor",
+  "links": [],
+  "condition": "",
+  "effects": [
+    {
+      "type": "modifyProbability",
+      "target": "actor",
+      "probability": "pass",
+      "valuePerCounter": 5,
+      "counter": "steadyHandsPasses",
+      "maxValue": 25,
+      "duration": "match"
+    },
+    {
+      "type": "addCounter",
+      "counter": "steadyHandsPasses",
+      "value": 1
+    }
+  ],
+  "elseEffects": [],
+  "limit": {
+    "per": "match",
+    "times": 1
+  },
+  "accumulatesAcrossMatches": true,
+  "lethal": false,
+  "positionOnly": null,
+  "tagsRequired": [],
+  "tagsForbidden": []
+}

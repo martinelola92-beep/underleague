@@ -1,4 +1,5 @@
 using Underleague.Sim.Data;
+using Underleague.Sim.Random;
 using Underleague.Sim.Run.Systems.Economy;
 using Underleague.Sim.Run.Systems.Items;
 
@@ -14,7 +15,7 @@ public sealed record MercenaryOffer(RunPlayer Player);
 public sealed record PerkOffer(string PerkId, int Price);
 
 /// <summary>Objeto de equipamiento ofrecido en el mercado (RF-078).</summary>
-public sealed record ItemOffer(string ItemId, int Price);
+public sealed record ItemOffer(string ItemId, int Price, Model.Rarity Rarity = Model.Rarity.Common);
 
 /// <summary>Consumible ofrecido en el mercado.</summary>
 public sealed record ConsumableOffer(string ConsumableId, int Price);
@@ -54,11 +55,29 @@ public static class MarketOfferGenerator
         var market = economy.Market;
         var rng = OfferStream.For(state.Seed, node.Id, rerollCount: 0);
 
+        // El precio de un artículo concreto se dispersa alrededor del de su rareza (ADR 0037,
+        // market.priceSpreadPercent). Sin dispersión, todos los comunes cuestan exactamente lo mismo y
+        // "cuánto del surtido puedo pagar" salta de 0 a 1 con el oro, que es justo lo contrario de la
+        // decisión que la ADR quiere: con dispersión hay artículos que se pueden pagar y otros por los
+        // que hay que ahorrar dentro de la misma rareza.
+        int Priced(ref Pcg32 stream, int basePrice)
+        {
+            int spread = market.PriceSpreadPercent;
+            if (spread <= 0 || basePrice <= 0)
+            {
+                return basePrice;
+            }
+
+            int percent = 100 - spread + stream.Range(0, (2 * spread) + 1);
+            int price = basePrice * percent / 100;
+            return price < 1 ? 1 : price;
+        }
+
         var recruits = new List<PlayerOffer>(market.PlayerOffers);
         for (int i = 0; i < market.PlayerOffers; i++)
         {
-            var player = GeneratedPlayers.Recruit(ref rng, catalog, state.ClubRace, market.RecruitQuality);
-            recruits.Add(new PlayerOffer(player, market.PlayerPrice.Of(player.Rarity)));
+            var player = GeneratedPlayers.Recruit(ref rng, catalog, state.ClubRace, market.RecruitQuality, economy.RecruitLevel(node.Act));
+            recruits.Add(new PlayerOffer(player, Priced(ref rng, market.PlayerPrice.Of(player.Rarity))));
         }
 
         int youthCount = market.YouthMin == market.YouthMax
@@ -76,7 +95,7 @@ public static class MarketOfferGenerator
         for (int i = 0; i < market.MercenaryOffers && foreignRaces.Count > 0; i++)
         {
             var race = foreignRaces[rng.Range(0, foreignRaces.Count)];
-            var mercenary = GeneratedPlayers.Mercenary(ref rng, catalog, race, market.MercenaryQuality, wage: 0);
+            var mercenary = GeneratedPlayers.Mercenary(ref rng, catalog, race, market.MercenaryQuality, wage: 0, economy.RecruitLevel(node.Act));
             // El salario depende de la rareza sorteada, así que se calcula después de generarla.
             mercenary = mercenary with { Wage = economy.MercenaryWage(mercenary.Rarity) };
             mercenaries.Add(new MercenaryOffer(mercenary));
@@ -87,21 +106,21 @@ public static class MarketOfferGenerator
         for (int i = 0; i < market.PerkOffers && perkPool.Count > 0; i++)
         {
             var perk = perkPool[rng.Range(0, perkPool.Count)];
-            perks.Add(new PerkOffer(perk.Id, market.PerkPrice.Of(perk.Rarity)));
+            perks.Add(new PerkOffer(perk.Id, Priced(ref rng, market.PerkPrice.Of(perk.Rarity))));
         }
 
         var itemOffers = new List<ItemOffer>(market.ItemOffers);
         for (int i = 0; i < market.ItemOffers && items.All.Count > 0; i++)
         {
             var item = items.All[rng.Range(0, items.All.Count)];
-            itemOffers.Add(new ItemOffer(item.Id, market.ItemPrice.Of(item.Rarity)));
+            itemOffers.Add(new ItemOffer(item.Id, Priced(ref rng, market.ItemPrice.Of(item.Rarity)), item.Rarity));
         }
 
         var consumableOffers = new List<ConsumableOffer>(market.ConsumableOffers);
         for (int i = 0; i < market.ConsumableOffers && consumables.All.Count > 0; i++)
         {
             var consumable = consumables.All[rng.Range(0, consumables.All.Count)];
-            consumableOffers.Add(new ConsumableOffer(consumable.Id, market.ConsumablePrice));
+            consumableOffers.Add(new ConsumableOffer(consumable.Id, Priced(ref rng, market.ConsumablePrice)));
         }
 
         return new MarketOffers(recruits, youths, mercenaries, perks, itemOffers, consumableOffers);

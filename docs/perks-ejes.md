@@ -9,7 +9,7 @@ Clasificación **ortogonal** a la de RF-069 (`filler` / `conditional` / `ruleBre
 | Eje | De qué depende | Qué decisión estimula | Mecanismo | Estado |
 |---|---|---|---|---|
 | **Identidad individual** | Etiqueta de estilo, rasgo y posición del portador | A quién le das el perk y a quién fichas: dentro de una misma raza, dos jugadores son distintos (RF-024b, ADR 0024) | `hasTag` sobre estilo o rasgo, `position`, `tagsRequired` | Existe (falta la variación de estilo) |
-| **Acumulación** | Acciones realizadas, dentro del partido y entre partidos | A quién inviertes y si lo proteges de la lesión | `counter`, `addCounter`, `accumulatesAcrossMatches`, `stat` | Existe (falta `stat`) |
+| **Acumulación** | Acciones realizadas, dentro del partido y entre partidos | A quién inviertes y si lo proteges de la lesión | `counter`, `addCounter`, `accumulatesAcrossMatches`, `stat` | Existe (falta `stat`). **15 perks acumulan entre partidos** desde el paquete Z, que es lo que RF-070 exige; todos con `limit` de una activación por partido, de modo que el contador sube como mucho +1 por partido |
 | **Alineación relacional** | Quién tiene al lado, delante o detrás en la cuadrícula | Cómo dibujas la formación | Vínculos direccionales (ADR 0021) | Falta |
 | **Zona de inicio** | En qué parte del campo empieza: línea (tercio) y banda (fila) | Dónde colocas a cada jugador | `startsIn`, `startsOn` | Falta |
 | **Geometría en juego** | Dónde está el jugador o el balón en ese momento | Nada directo: premia el estilo de juego que produce tu build | `distanceToGoal`, `zone` | Existe |

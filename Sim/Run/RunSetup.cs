@@ -41,6 +41,19 @@ public sealed record RunSetup(
     public int NodesPerAct { get; init; } = MapGenerator.DefaultPathLength;
 
     /// <summary>
+    /// Nodos recorridos <b>por acto</b> (índice 0 = acto 1), cuando el acto crece con la run. Es el valor
+    /// que cierra D-2/D-10 y vive en <c>data/map/map.json</c>. Null = los tres actos usan
+    /// <see cref="NodesPerAct"/>.
+    /// </summary>
+    public IReadOnlyList<int>? NodesPerActByAct { get; init; }
+
+    /// <summary>Nodos que el jugador recorre en el acto indicado (1..3).</summary>
+    public int NodesOfAct(int act) =>
+        NodesPerActByAct is { Count: > 0 } byAct && act >= 1 && act - 1 < byAct.Count
+            ? byAct[act - 1]
+            : NodesPerAct;
+
+    /// <summary>
     /// Rivales estáticos por acto (RF-015): índice 0 = acto 1. Cada lista se reparte entre los nodos de
     /// partido de su acto. Null mientras el paquete X no traiga <c>data/rivals/</c>.
     /// </summary>
