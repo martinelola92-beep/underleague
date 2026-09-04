@@ -89,8 +89,8 @@ public class DataLoaderTests
     {
         var catalog = TestData.LoadCatalog();
 
-        Assert.Equal(600, catalog.Ai.Base(Position.Goalkeeper, PlayerAction.Pass));
-        Assert.Equal(100, catalog.Ai.Tactical(TacticalState.InPossession, PlayerAction.Pass));
+        Assert.Equal(560, catalog.Ai.Base(Position.Goalkeeper, PlayerAction.ShortPass));
+        Assert.Equal(100, catalog.Ai.Tactical(TacticalState.InPossession, PlayerAction.ShortPass));
         Assert.Equal(4.0f, catalog.Ai.Shift(TacticalState.InPossession).Shift);
         Assert.Equal(30, catalog.Ai.Shift(TacticalState.InPossession).SpeedTicks);
         Assert.Equal(1.0f, catalog.Ai.Context.TackleDistanceMaxCells);

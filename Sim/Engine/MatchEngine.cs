@@ -124,12 +124,16 @@ internal sealed class MatchEngine : IPerkWorld
             _players[i].Index = i;
         }
 
-        // El motor de efectos solo existe si algún titular lleva perks: con 0 perks no hay suscripciones,
-        // no hay publicaciones y el coste añadido sobre la fase 0 es exactamente cero (§3).
+        // El motor de efectos solo existe si hay algo que ejecutar: con 0 perks y 0 habilidades no hay
+        // suscripciones, no hay publicaciones y el coste añadido sobre la fase 0 es exactamente cero (§3).
+        // La habilidad racial cuenta (ADR 0026, §5.10): no está en Definition.Perks porque no ocupa slot,
+        // así que mirando solo esa lista un equipo sin ningún perk asignado se quedaba sin su habilidad
+        // de partido. Es el hueco que el paquete S dejó anotado para este.
         bool anyPerks = false;
         for (int i = 0; i < _players.Length; i++)
         {
-            if (_players[i].Definition.Perks.Count > 0)
+            if (_players[i].Definition.Perks.Count > 0
+                || _catalog.Race(_players[i].Definition.Race).Ability.Length > 0)
             {
                 anyPerks = true;
                 break;
@@ -580,6 +584,9 @@ internal sealed class MatchEngine : IPerkWorld
             case PlayerState.Tackling:
                 ResolveTackle(player);
                 break;
+            case PlayerState.Blocking:
+                ResolveBlock(player);
+                break;
             case PlayerState.KnockedDown:
             case PlayerState.Celebrating:
                 player.EnterState(PlayerState.Positioning, 0);
@@ -612,7 +619,8 @@ internal sealed class MatchEngine : IPerkWorld
 
         switch (action)
         {
-            case PlayerAction.Pass:
+            case PlayerAction.ShortPass:
+            case PlayerAction.LongPass:
                 if (ReferenceEquals(_ball.Owner, player))
                 {
                     player.EnterState(PlayerState.Passing, _tuning.States.PassingTicks);
@@ -632,6 +640,13 @@ internal sealed class MatchEngine : IPerkWorld
                 // cerca, y deja el número de entradas gobernado por un valor de datos (paquete E).
                 player.EnterState(PlayerState.Tackling, _tuning.States.TacklingTicks);
                 player.TackleCooldown = _tuning.States.TackleCooldownTicks + _tuning.States.TacklingTicks;
+                break;
+            case PlayerAction.Block:
+                // El bloqueo comparte enfriamiento con la entrada (ADR 0030 §2): las dos son la misma
+                // carga con y sin balón, y sin un tope común un jugador podía alternarlas y estar
+                // repartiendo golpes cada dos ticks.
+                player.EnterState(PlayerState.Blocking, _tuning.Block.BlockingTicks);
+                player.TackleCooldown = _tuning.Block.CooldownTicks + _tuning.Block.BlockingTicks;
                 break;
             case PlayerAction.Dribble:
                 if (ReferenceEquals(_ball.Owner, player))
@@ -801,9 +816,7 @@ internal sealed class MatchEngine : IPerkWorld
             }
 
             _ball.InterceptAttempted[i] = true;
-            if (!_rng.Chance(pass.InterceptBaseChance
-                + (pass.InterceptTechniqueFactor * (player.Technique - 50))
-                + Probability(player, ProbabilityKind.Intercept)))
+            if (!_rng.Chance(InterceptChance(player, passer)))
             {
                 continue;
             }
@@ -815,6 +828,20 @@ internal sealed class MatchEngine : IPerkWorld
         }
 
         return false;
+    }
+
+    /// <summary>
+    /// Probabilidad de que <paramref name="player"/> intercepte el pase de <paramref name="passer"/>
+    /// (§3.7). El término de evasión es la mitad del canal Toque de los elfos (ADR 0026): la resistencia
+    /// del <b>pasador</b> a que le lean el pase, que resta a quien intenta interceptarlo.
+    /// </summary>
+    internal int InterceptChance(MatchPlayer player, MatchPlayer passer)
+    {
+        var pass = _tuning.Pass;
+        return pass.InterceptBaseChance
+            + (pass.InterceptTechniqueFactor * (player.Technique - 50))
+            + Probability(player, ProbabilityKind.Intercept)
+            - Probability(passer, ProbabilityKind.InterceptEvasion);
     }
 
     private void ResolvePassArrival()
@@ -1384,30 +1411,13 @@ internal sealed class MatchEngine : IPerkWorld
         PublishBeforeResolving(EventType.Tackle, "attempted", tackler, opponent: carrier);
 
         var tackle = _tuning.Tackle;
-        int win = tackle.BaseWin
-            + (tackle.StrengthFactor * (tackler.Strength - 50))
-            + (tackle.SpeedFactor * (tackler.Speed - 50))
-            - (tackle.CarrierTechniqueFactor * (carrier.Technique - 50))
-            + Probability(tackler, ProbabilityKind.Tackle);
-
-        // División simétrica explícita (revisión independiente, fase 0): Math.DivRem trunca hacia cero,
-        // igual que el operador "/" desnudo que ya se usaba, así que el resultado no cambia. Se deja
-        // explícito porque es la propiedad que hace correcto invertir el signo para el equipo 1: con
-        // truncamiento hacia cero, -(a/b) == (-a)/b siempre (el descarte del resto es el mismo a un lado
-        // y otro de cero), así que la magnitud del desplazamiento de falta es idéntica para bias positivo
-        // y negativo y para los dos equipos. Con un floor "hacia -infinito" (round(-4.5)=-5 pero
-        // round(4.5)=4) esa igualdad se rompe y el sesgo dejaría de ser simétrico.
-        int biasShift = -Math.DivRem(_tuning.Referee.BiasFoulShiftPer10 * _bias, 10, out _);
-        if (tackler.Team == 1)
-        {
-            biasShift = -biasShift;
-        }
+        int win = TackleWinChance(tackler, carrier);
 
         int foulChance = tackle.FoulBase
             + (tackle.FoulStrengthFactor * (tackler.Strength - 50))
             + (tackler.FoulChanceBonus * 100)
             + (tackler.HardTackleBonus * 100)
-            + biasShift
+            + BiasRollShift(_tuning.Referee.BiasFoulShiftPer10, tackler.Team)
             + Probability(tackler, ProbabilityKind.Foul);
 
         bool isFoul = _rng.Chance(foulChance);
@@ -1427,7 +1437,7 @@ internal sealed class MatchEngine : IPerkWorld
         else if (isWin)
         {
             tackler.TacklesWon++;
-            carrier.EnterState(PlayerState.KnockedDown, _tuning.States.KnockedDownTicks);
+            carrier.EnterState(PlayerState.KnockedDown, KnockdownTicksCausedBy(tackler, _tuning.States.KnockedDownTicks));
             SetOwner(tackler);
             Emit(EventType.Recovery, "tackle", tackler);
         }
@@ -1444,17 +1454,90 @@ internal sealed class MatchEngine : IPerkWorld
         }
     }
 
-    private void ResolveFoul(MatchPlayer tackler, MatchPlayer carrier)
+    /// <summary>
+    /// Probabilidad de que la entrada de <paramref name="tackler"/> le quite el balón a
+    /// <paramref name="carrier"/> (§3.7). El término de evasión es la otra mitad del canal Toque de los
+    /// elfos (ADR 0026): la resistencia del <b>conductor</b> a que le roben, que resta a quien entra.
+    /// </summary>
+    internal int TackleWinChance(MatchPlayer tackler, MatchPlayer carrier)
     {
         var tackle = _tuning.Tackle;
+        return tackle.BaseWin
+            + (tackle.StrengthFactor * (tackler.Strength - 50))
+            + (tackle.SpeedFactor * (tackler.Speed - 50))
+            - (tackle.CarrierTechniqueFactor * (carrier.Technique - 50))
+            + Probability(tackler, ProbabilityKind.Tackle)
+            - Probability(carrier, ProbabilityKind.TackleEvasion);
+    }
+
+    /// <summary>
+    /// Ticks que dura el derribo que <paramref name="causer"/> le provoca a un <b>rival</b>: la duración
+    /// base de la acción más el canal <c>modifyKnockdownTicks</c> (Sangre caliente de los orcos, ADR 0026).
+    /// Se aplica solo a los derribos que el jugador causa a otro —entrada ganada y bloqueo—, nunca a las
+    /// veces que se cae él mismo al fallar o al cometer falta: la habilidad se describe como "sus entradas
+    /// dejan al rival derribado más tiempo" (§5.14) y un jugador no puede llevarse un castigo que su
+    /// descripción no anuncia (RF-012d).
+    /// </summary>
+    internal int KnockdownTicksCausedBy(MatchPlayer causer, int baseTicks) =>
+        baseTicks + (_effects is null ? 0 : _effects.Modifiers.KnockdownTicks(causer));
+
+    /// <summary>
+    /// Efecto del criterio del árbitro sobre una tirada que juzga a <paramref name="team"/> (RF-064):
+    /// <paramref name="perTen"/> puntos base 10.000 por cada 10 puntos de criterio, a favor del equipo al
+    /// que el criterio favorece (positivo = local, RF-062).
+    ///
+    /// <para>División simétrica explícita (revisión independiente, fase 0): <c>Math.DivRem</c> trunca
+    /// hacia cero, igual que el operador "/" desnudo, así que el resultado no cambia. Se deja explícito
+    /// porque es la propiedad que hace correcto invertir el signo para el equipo 1: con truncamiento hacia
+    /// cero, <c>-(a/b) == (-a)/b</c> siempre, así que la magnitud es idéntica para criterio positivo y
+    /// negativo y para los dos equipos. Con un floor "hacia -infinito" esa igualdad se rompe y el sesgo
+    /// dejaría de ser simétrico.</para>
+    /// </summary>
+    private int BiasRollShift(int perTen, int team)
+    {
+        int shift = -Math.DivRem(perTen * _bias, 10, out _);
+        return team == 1 ? -shift : shift;
+    }
+
+    /// <summary>
+    /// Desplaza el criterio <b>en contra</b> del equipo que cometió la acción sucia (RF-063). Se llama
+    /// tanto si el árbitro señala como si no: "el árbitro toma nota aunque no pite". La magnitud la fija
+    /// la gravedad, sumando los <c>biasShift...</c> de <c>tuning.referee</c>.
+    /// </summary>
+    private void ShiftBiasAgainst(int team, int points)
+    {
+        if (points <= 0 || team < 0)
+        {
+            return;
+        }
+
+        _bias = Math.Clamp(_bias + (team == 0 ? -points : points), -100, 100);
+    }
+
+    /// <summary>
+    /// Falta señalada por el árbitro. <paramref name="offBall"/> distingue el bloqueo sin balón
+    /// (ADR 0030 §2), que es más grave a ojos del árbitro que una entrada al que lleva el balón.
+    ///
+    /// <para>Orden dentro de la falta: primero se mueve el criterio (RF-063) y después se tiran las
+    /// tarjetas (RF-064), no al revés. Es la cadena causal legible —el árbitro se enfada y por eso saca la
+    /// tarjeta— y hace que la falta que colma el vaso sea la que se castiga, no la siguiente.</para>
+    /// </summary>
+    private void ResolveFoul(MatchPlayer tackler, MatchPlayer carrier, bool offBall = false)
+    {
+        var tackle = _tuning.Tackle;
+        var referee = _tuning.Referee;
         _report.Fouls++;
         tackler.Fouls++;
 
+        int offBallExtra = offBall ? referee.BiasShiftBlockExtra : 0;
+
         // La falta se publica antes de su consecuencia (§3): un perk puede anularla (cancelEvent). La
         // falta sigue registrada en el informe y en la secuencia de eventos -ocurrió-, pero el árbitro no
-        // la castiga: ni derribo, ni tarjeta, ni penalti.
+        // la castiga: ni derribo, ni tarjeta, ni penalti. El criterio sí se mueve, con la magnitud de una
+        // acción sucia no señalada: el árbitro la vio ocurrir aunque no la castigue (RF-063).
         if (EmitCancellable(EventType.Foul, "foul", tackler, opponent: carrier))
         {
+            ShiftBiasAgainst(tackler.Team, referee.BiasShiftFoulUnseen + offBallExtra);
             return;
         }
 
@@ -1465,10 +1548,16 @@ internal sealed class MatchEngine : IPerkWorld
             || tackler.HasTrait(Trait.Dirty)
             || tackler.Strength * 100 >= tackle.HardTackleThreshold;
 
-        int cardShift = Probability(tackler, ProbabilityKind.Card);
+        ShiftBiasAgainst(
+            tackler.Team,
+            referee.BiasShiftFoulSeen + offBallExtra + (hard ? referee.BiasShiftHardExtra : 0));
+
+        int cardShift = Probability(tackler, ProbabilityKind.Card)
+            + BiasRollShift(referee.BiasCardShiftPer10, tackler.Team);
         if (_rng.Chance(tackle.RedCardBase + (hard ? tackle.HardTackleRedBonus : 0) + cardShift))
         {
             SendOff(tackler);
+            ShiftBiasAgainst(tackler.Team, referee.BiasShiftRedExtra);
         }
         else if (_rng.Chance(tackle.YellowCardBase + (hard ? tackle.HardTackleYellowBonus : 0) + cardShift))
         {
@@ -1477,16 +1566,98 @@ internal sealed class MatchEngine : IPerkWorld
                 tackler.YellowCards++;
                 tackler.Cards++;
                 _report.YellowCards++;
+                ShiftBiasAgainst(tackler.Team, referee.BiasShiftYellowExtra);
                 if (tackler.YellowCards >= 2 && tackle.SecondYellowIsRed)
                 {
                     SendOff(tackler);
+                    ShiftBiasAgainst(tackler.Team, referee.BiasShiftRedExtra);
                 }
             }
         }
 
-        if (inOwnArea && _rng.Chance(_tuning.Referee.PenaltyOnFoulInArea))
+        if (inOwnArea && _rng.Chance(
+            referee.PenaltyOnFoulInArea + BiasRollShift(referee.BiasPenaltyShiftPer10, tackler.Team)))
         {
             SchedulePenalty(carrier.Team);
+        }
+    }
+
+    /// <summary>
+    /// Bloqueo sin balón (ADR 0030 §2): la carga contra un rival que no lleva el balón, decidida por
+    /// <see cref="Utility"/> con el criterio de jugada activa de RF-057 ya aplicado. Es el gemelo sin
+    /// balón de <see cref="ResolveTackle"/> y sigue su mismo orden de resolución: comprobación de alcance,
+    /// publicación previa del evento, tirada de falta, tirada de derribo, empuje y lesión.
+    ///
+    /// <para>Reutiliza el tipo de evento <c>TACKLE</c> con Detail propio (<c>block</c>, <c>blockFoul</c>,
+    /// <c>blockMissed</c>) y los canales de probabilidad de la entrada: un bloqueo <b>es</b> una entrada
+    /// sin balón, y separar el tipo de evento habría dejado a todos los perks de contacto ciegos ante la
+    /// mitad de los golpes del partido. Lo que <b>no</b> hace es contar en <c>report.Tackles</c>: esa
+    /// métrica de RT-056 mide disputas del balón y un bloqueo no lo es. Los bloqueos se cuentan aparte, en
+    /// <c>report.Blocks</c>.</para>
+    /// </summary>
+    private void ResolveBlock(MatchPlayer blocker)
+    {
+        var target = blocker.BlockTarget;
+        blocker.BlockTarget = null;
+        var block = _tuning.Block;
+
+        if (target is null || !target.OnPitch || ReferenceEquals(_ball.Owner, target)
+            || Vec2.Distance(blocker.Position, target.Position) > _catalog.Ai.Context.BlockReachMaxCells + TackleReachMargin)
+        {
+            // El rival se fue, salió del campo o pasó a llevar el balón (y entonces esto sería una entrada,
+            // no un bloqueo): no hay contacto ni evento.
+            blocker.EnterState(PlayerState.Positioning, 0);
+            return;
+        }
+
+        PublishBeforeResolving(EventType.Tackle, "block", blocker, opponent: target);
+
+        int foulChance = block.FoulBase
+            + (blocker.FoulChanceBonus * 100)
+            + BiasRollShift(_tuning.Referee.BiasFoulShiftPer10, blocker.Team)
+            + Probability(blocker, ProbabilityKind.Foul);
+
+        int win = block.BaseWin
+            + (block.StrengthFactor * (blocker.Strength - target.Strength))
+            + (block.SpeedFactor * (blocker.Speed - target.Speed))
+            + Probability(blocker, ProbabilityKind.Tackle);
+
+        bool isFoul = _rng.Chance(foulChance);
+        bool isWin = _rng.Chance(win);
+
+        _report.Blocks++;
+        Emit(
+            EventType.Tackle,
+            isFoul ? "blockFoul" : (isWin ? "block" : "blockMissed"),
+            blocker,
+            opponent: target,
+            publish: false);
+
+        if (isWin)
+        {
+            target.EnterState(PlayerState.KnockedDown, KnockdownTicksCausedBy(blocker, block.KnockdownTicks));
+        }
+
+        if (isFoul)
+        {
+            ResolveFoul(blocker, target, offBall: true);
+        }
+        else
+        {
+            // Falta que el árbitro no ve, que es la razón de ser de RF-063: el criterio se mueve igual.
+            ShiftBiasAgainst(
+                blocker.Team,
+                _tuning.Referee.BiasShiftFoulUnseen + _tuning.Referee.BiasShiftBlockExtra);
+            blocker.EnterState(PlayerState.Positioning, 0);
+        }
+
+        // Mismo criterio que la entrada: sin derribo y sin falta el que carga se frenó a tiempo, no hubo
+        // contacto y no se tira lesión. Un bloqueo que no tumba a nadie y que el árbitro no ve es una
+        // carga que se quedó corta, no un golpe gratis.
+        if (isWin || isFoul)
+        {
+            _bodies.AddTacklePush(blocker, target);
+            ResolveInjury(blocker, target, isFoul);
         }
     }
 
@@ -1537,6 +1708,10 @@ internal sealed class MatchEngine : IPerkWorld
 
         _report.Injuries++;
         victim.Injured = true;
+
+        // Lesionar a un rival mueve el criterio en contra aunque no haya habido falta (RF-063): es la
+        // acción sucia más visible que existe y el árbitro toma nota igual.
+        ShiftBiasAgainst(tackler.Team, _tuning.Referee.BiasShiftInjuryExtra);
 
         if (ReferenceEquals(_ball.Owner, victim))
         {
@@ -1649,7 +1824,8 @@ internal sealed class MatchEngine : IPerkWorld
     }
 
     /// <summary>
-    /// Cancela cualquier entrada en curso (Tackling) al empezar una reanudación (§3.6, §3.8), igual que
+    /// Cancela cualquier entrada o bloqueo en curso (Tackling/Blocking) al empezar una reanudación
+    /// (§3.6, §3.8, ADR 0030 §2), igual que
     /// <see cref="ParkBall"/> ya sacaba al dueño de Dribbling/Passing/Shooting: con el balón muerto durante
     /// Restart/Kickoff/Penalty no debe resolverse una entrada que estaba a mitad de TacklingTicks
     /// (revisión independiente, fase 0). El que entraba vuelve a Positioning sin evento, igual que cuando
@@ -1660,7 +1836,7 @@ internal sealed class MatchEngine : IPerkWorld
         for (int i = 0; i < _players.Length; i++)
         {
             var player = _players[i];
-            if (player.State == PlayerState.Tackling)
+            if (player.State is PlayerState.Tackling or PlayerState.Blocking)
             {
                 player.EnterState(PlayerState.Positioning, 0);
             }

@@ -329,7 +329,17 @@ public sealed class OffBallTests
             baseTable[p, (int)action] = weight;
         }
 
-        var context = new AiContext(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1.2f, 0, 0, 0, 0);
+        // Contexto sintético: todo a cero salvo los términos de las dos acciones que este fichero prueba.
+        // Desde el paquete V viven en data/ai/weights.json (§4, decisión 20, saldada), así que el test los
+        // declara aquí con los mismos valores en vez de heredarlos de una constante de Utility.
+        var context = new AiContext(
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1.2f, 0, 0, 0, 0,
+            FindSpaceOpponentDistanceBonusPerCell: 70,
+            FindSpaceAdvanceBonusPerCell: 60,
+            FindSpaceOpenLaneBonus: 200,
+            PressCarrierBonus: 120,
+            PressDistancePenaltyPerCell: 60,
+            PressGoalkeeperExitBonus: 200);
         return new AiWeights(baseTable, tacticalTable, context, new BlockShift[Enum.GetValues<TacticalState>().Length]);
     }
 }

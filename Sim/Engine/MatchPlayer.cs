@@ -10,7 +10,7 @@ namespace Underleague.Sim.Engine;
 /// </summary>
 internal sealed class MatchPlayer
 {
-    private const int ActionCount = (int)PlayerAction.PressCarrier + 1;
+    private const int ActionCount = (int)PlayerAction.Block + 1;
 
     /// <summary>Número de atributos de <see cref="AttributeKind"/>.</summary>
     private const int AttributeCount = (int)AttributeKind.Leash + 1;
@@ -277,6 +277,14 @@ internal sealed class MatchPlayer
 
     /// <summary>Rival objetivo al decidir Tackle; se lee al expirar Tackling.</summary>
     public MatchPlayer? TackleTarget { get; set; }
+
+    /// <summary>
+    /// Rival objetivo al decidir Block (ADR 0030 §2); se lee al expirar Blocking. Va en una propiedad
+    /// propia y no en <see cref="TackleTarget"/> aunque las dos acciones nunca coincidan en el mismo
+    /// tick: el volcado de utilidad y la depuración necesitan poder distinguir a quién iba a entrar un
+    /// jugador de a quién iba a cargar.
+    /// </summary>
+    public MatchPlayer? BlockTarget { get; set; }
 
     /// <summary>Ticks que faltan para poder volver a disputar un regate (§3.7).</summary>
     public int DribbleDuelCooldown { get; set; }

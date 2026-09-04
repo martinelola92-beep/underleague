@@ -41,7 +41,7 @@
   "$defs": {
     "playerAction": {
       "type": "string",
-      "enum": ["ChaseBall", "MarkOpponent", "OfferSupport", "CoverSpace", "Pass", "Dribble", "Shoot", "Tackle", "Retreat"]
+      "enum": ["ChaseBall", "MarkOpponent", "OfferSupport", "CoverSpace", "Dribble", "Shoot", "Tackle", "Retreat", "FindSpace", "PressCarrier", "ShortPass", "LongPass", "Block"]
     },
     "localizedName": {
       "type": "object",
@@ -62,11 +62,15 @@
         "MarkOpponent": { "type": "integer", "minimum": 0, "maximum": 1000 },
         "OfferSupport": { "type": "integer", "minimum": 0, "maximum": 1000 },
         "CoverSpace": { "type": "integer", "minimum": 0, "maximum": 1000 },
-        "Pass": { "type": "integer", "minimum": 0, "maximum": 1000 },
         "Dribble": { "type": "integer", "minimum": 0, "maximum": 1000 },
         "Shoot": { "type": "integer", "minimum": 0, "maximum": 1000 },
         "Tackle": { "type": "integer", "minimum": 0, "maximum": 1000 },
-        "Retreat": { "type": "integer", "minimum": 0, "maximum": 1000 }
+        "Retreat": { "type": "integer", "minimum": 0, "maximum": 1000 },
+        "FindSpace": { "type": "integer", "minimum": 0, "maximum": 1000 },
+        "PressCarrier": { "type": "integer", "minimum": 0, "maximum": 1000 },
+        "ShortPass": { "type": "integer", "minimum": 0, "maximum": 1000 },
+        "LongPass": { "type": "integer", "minimum": 0, "maximum": 1000 },
+        "Block": { "type": "integer", "minimum": 0, "maximum": 1000 }
       },
       "additionalProperties": false
     },

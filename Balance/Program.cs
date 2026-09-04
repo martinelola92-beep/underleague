@@ -598,7 +598,7 @@ static void PrintUtilityDump(UtilityDump dump)
 {
     Console.WriteLine($"jugador {dump.PlayerId}, tick {dump.Tick}, estado {dump.State}, elegida {dump.Chosen}");
 
-    string[] headers = { "accion", "score", "base", "tactical", "trait", "context", "filtered" };
+    string[] headers = { "accion", "score", "base", "tactical", "trait", "context", "rejected", "fueraCenti" };
     var rows = dump.Rows
         .Select(r => new[]
         {
@@ -608,7 +608,8 @@ static void PrintUtilityDump(UtilityDump dump)
             r.TacticalMultiplier.ToString(),
             r.TraitMultiplier.ToString(),
             r.Context.ToString(),
-            r.LeashFiltered.ToString(),
+            r.Rejected.ToString(),
+            r.OutsideCentiCells.ToString(),
         })
         .ToList();
 

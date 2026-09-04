@@ -2,8 +2,9 @@ namespace Underleague.Sim.Engine;
 
 /// <summary>
 /// Tabla explícita de acciones legales por estado de jugador (RT-089c). Positioning y Chasing permiten
-/// las acciones sin balón —incluidas FindSpace y PressCarrier, ADR 0022—; Dribbling permite las acciones
-/// con balón; el resto de estados no permite ninguna.
+/// las acciones sin balón —incluidas FindSpace y PressCarrier (ADR 0022) y Block (ADR 0030 §2)—;
+/// Dribbling permite las acciones con balón, con el pase ya partido en corto y largo (ADR 0030 §1);
+/// el resto de estados no permite ninguna.
 /// </summary>
 public static class StateMachine
 {
@@ -17,13 +18,15 @@ public static class StateMachine
         PlayerAction.Retreat,
         PlayerAction.FindSpace,
         PlayerAction.PressCarrier,
+        PlayerAction.Block,
     };
 
     private static readonly PlayerAction[] WithBallActions =
     {
-        PlayerAction.Pass,
         PlayerAction.Dribble,
         PlayerAction.Shoot,
+        PlayerAction.ShortPass,
+        PlayerAction.LongPass,
     };
 
     private static readonly PlayerAction[] NoActions = Array.Empty<PlayerAction>();
@@ -52,6 +55,7 @@ public static class StateMachine
         PlayerState.Passing => NoActions,
         PlayerState.Shooting => NoActions,
         PlayerState.Tackling => NoActions,
+        PlayerState.Blocking => NoActions,
         PlayerState.KnockedDown => NoActions,
         PlayerState.Injured => NoActions,
         PlayerState.Celebrating => NoActions,

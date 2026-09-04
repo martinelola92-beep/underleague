@@ -73,8 +73,16 @@ public sealed class MatchRulesTests
             Assert.Equal("forfeit", end.Detail);
 
             int loser = 1 - result.Report.Winner;
-            Assert.True(OnPitch(setup, result, loser) < 5, $"semilla {seed}: el perdedor conserva 5 o más jugadores");
-            Assert.True(OnPitch(setup, result, result.Report.Winner) >= 5, $"semilla {seed}: el ganador también estaba por debajo de 5");
+            int loserOnPitch = OnPitch(setup, result, loser);
+            int winnerOnPitch = OnPitch(setup, result, result.Report.Winner);
+            Assert.True(loserOnPitch < 5, $"semilla {seed}: el perdedor conserva 5 o más jugadores");
+
+            // Los dos equipos pueden quedarse por debajo de cinco en el mismo tick (§3.8, §3.9): ahí gana
+            // el que conserve más jugadores y, si empatan, la cadena de desempate del gol de oro. Con el
+            // bloqueo sin balón (ADR 0030 §2) el caso simultáneo deja de ser una rareza teórica.
+            Assert.True(
+                winnerOnPitch >= 5 || winnerOnPitch >= loserOnPitch,
+                $"semilla {seed}: el ganador tenía menos jugadores en campo que el perdedor");
         }
 
         Assert.True(forfeits > 0, "el emparejamiento de prueba debe producir al menos una incomparecencia en 20 semillas");
@@ -135,6 +143,7 @@ public sealed class MatchRulesTests
             int goals = 0;
             int shots = 0;
             int tackles = 0;
+            int blocks = 0;
             int fouls = 0;
             int injuries = 0;
             int deaths = 0;
@@ -150,7 +159,17 @@ public sealed class MatchRulesTests
                         shots++;
                         break;
                     case EventType.Tackle:
-                        tackles++;
+                        // El bloqueo sin balón (ADR 0030 §2) reutiliza el tipo TACKLE con Detail propio y
+                        // se cuenta aparte: report.Tackles sigue siendo "disputas del balón" (RT-056).
+                        if (e.Detail.StartsWith("block", StringComparison.Ordinal))
+                        {
+                            blocks++;
+                        }
+                        else
+                        {
+                            tackles++;
+                        }
+
                         break;
                     case EventType.Foul:
                         fouls++;
@@ -169,6 +188,7 @@ public sealed class MatchRulesTests
             Assert.Equal(report.Goals[0] + report.Goals[1], goals);
             Assert.Equal(report.Shots[0] + report.Shots[1], shots);
             Assert.Equal(report.Tackles, tackles);
+            Assert.Equal(report.Blocks, blocks);
             Assert.Equal(report.Fouls, fouls);
             Assert.Equal(report.Injuries, injuries);
             Assert.Equal(0, deaths);

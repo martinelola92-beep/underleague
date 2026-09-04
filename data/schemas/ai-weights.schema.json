@@ -52,24 +52,51 @@
         "dribbleOpponentAheadPenalty": { "type": "integer", "minimum": 0, "maximum": 10000 },
         "shootBaseRangeCells": { "type": "integer", "minimum": 0, "maximum": 20 },
         "shootInRangeBonus": { "type": "integer", "minimum": 0, "maximum": 10000 },
-        "shootOutOfRangePenalty": { "type": "integer", "minimum": 0, "maximum": 10000 },
+        "shootBeyondRangePenaltyPerCell": { "type": "integer", "minimum": 0, "maximum": 10000 },
         "shootDistancePenaltyPerCell": { "type": "integer", "minimum": 0, "maximum": 10000 },
         "shootAnglePenaltyPerRow": { "type": "integer", "minimum": 0, "maximum": 10000 },
         "tackleDistanceMaxCells": { "type": "number", "minimum": 0, "maximum": 20 },
         "tackleOutOfReachPenalty": { "type": "integer", "minimum": 0, "maximum": 10000 },
         "tackleBallCarrierBonus": { "type": "integer", "minimum": 0, "maximum": 10000 },
         "retreatDistanceBonusPerCell": { "type": "integer", "minimum": 0, "maximum": 10000 },
-        "retreatAtHomePenalty": { "type": "integer", "minimum": 0, "maximum": 10000 }
+        "retreatAtHomePenalty": { "type": "integer", "minimum": 0, "maximum": 10000 },
+        "findSpaceOpponentDistanceBonusPerCell": { "type": "integer", "minimum": 0, "maximum": 10000 },
+        "findSpaceAdvanceBonusPerCell": { "type": "integer", "minimum": 0, "maximum": 10000 },
+        "findSpaceOpenLaneBonus": { "type": "integer", "minimum": 0, "maximum": 10000 },
+        "pressCarrierBonus": { "type": "integer", "minimum": 0, "maximum": 10000 },
+        "pressDistancePenaltyPerCell": { "type": "integer", "minimum": 0, "maximum": 10000 },
+        "pressGoalkeeperExitBonus": { "type": "integer", "minimum": 0, "maximum": 10000 },
+        "shortPassMaxCells": { "type": "number", "minimum": 0, "maximum": 20 },
+        "longPassMaxCells": { "type": "number", "minimum": 0, "maximum": 20 },
+        "shortPassTechniqueSlope": { "type": "integer", "minimum": 0, "maximum": 1000 },
+        "longPassTechniqueSlope": { "type": "integer", "minimum": 0, "maximum": 1000 },
+        "dribbleTechniqueSlope": { "type": "integer", "minimum": 0, "maximum": 1000 },
+        "dribbleSpeedSlope": { "type": "integer", "minimum": 0, "maximum": 1000 },
+        "shootTechniqueSlope": { "type": "integer", "minimum": 0, "maximum": 1000 },
+        "shootStrengthSlope": { "type": "integer", "minimum": 0, "maximum": 1000 },
+        "blockActiveRadiusCells": { "type": "number", "minimum": 0, "maximum": 20 },
+        "blockCorridorHalfWidthCells": { "type": "number", "minimum": 0, "maximum": 20 },
+        "blockReachMaxCells": { "type": "number", "minimum": 0, "maximum": 20 },
+        "blockTargetBonus": { "type": "integer", "minimum": 0, "maximum": 10000 },
+        "blockDistancePenaltyPerCell": { "type": "integer", "minimum": 0, "maximum": 10000 },
+        "blockAggressiveBonus": { "type": "integer", "minimum": 0, "maximum": 10000 },
+        "blockBruteTagBonus": { "type": "integer", "minimum": 0, "maximum": 10000 }
       },
       "required": [
         "chaseBallDistancePenaltyPerCell", "chaseBallLooseBonus", "chaseBallNotNearestPenalty",
         "chaseBallIncomingPassBonus", "markDistancePenaltyPerCell", "supportAheadBonus", "supportCrowdedPenalty",
         "coverBetweenBallAndGoalBonus", "passOpenReceiverBonus", "passUnderPressureBonus",
         "passNoReceiverPenalty", "dribbleOpenSpaceBonus", "dribbleOpponentAheadPenalty",
-        "shootBaseRangeCells", "shootInRangeBonus", "shootOutOfRangePenalty",
+        "shootBaseRangeCells", "shootInRangeBonus", "shootBeyondRangePenaltyPerCell",
         "shootDistancePenaltyPerCell", "shootAnglePenaltyPerRow", "tackleDistanceMaxCells",
         "tackleOutOfReachPenalty", "tackleBallCarrierBonus", "retreatDistanceBonusPerCell",
-        "retreatAtHomePenalty"
+        "retreatAtHomePenalty",
+        "findSpaceOpponentDistanceBonusPerCell", "findSpaceAdvanceBonusPerCell", "findSpaceOpenLaneBonus",
+        "pressCarrierBonus", "pressDistancePenaltyPerCell", "pressGoalkeeperExitBonus",
+        "shortPassMaxCells", "longPassMaxCells", "shortPassTechniqueSlope", "longPassTechniqueSlope",
+        "dribbleTechniqueSlope", "dribbleSpeedSlope", "shootTechniqueSlope", "shootStrengthSlope",
+        "blockActiveRadiusCells", "blockCorridorHalfWidthCells", "blockReachMaxCells",
+        "blockTargetBonus", "blockDistancePenaltyPerCell", "blockAggressiveBonus", "blockBruteTagBonus"
       ],
       "additionalProperties": false
     },
@@ -92,7 +119,7 @@
   "$defs": {
     "playerAction": {
       "type": "string",
-      "enum": ["ChaseBall", "MarkOpponent", "OfferSupport", "CoverSpace", "Pass", "Dribble", "Shoot", "Tackle", "Retreat", "FindSpace", "PressCarrier"]
+      "enum": ["ChaseBall", "MarkOpponent", "OfferSupport", "CoverSpace", "Dribble", "Shoot", "Tackle", "Retreat", "FindSpace", "PressCarrier", "ShortPass", "LongPass", "Block"]
     },
     "actionWeights": {
       "type": "object",
@@ -102,15 +129,17 @@
         "MarkOpponent": { "type": "integer", "minimum": 0, "maximum": 1000 },
         "OfferSupport": { "type": "integer", "minimum": 0, "maximum": 1000 },
         "CoverSpace": { "type": "integer", "minimum": 0, "maximum": 1000 },
-        "Pass": { "type": "integer", "minimum": 0, "maximum": 1000 },
         "Dribble": { "type": "integer", "minimum": 0, "maximum": 1000 },
         "Shoot": { "type": "integer", "minimum": 0, "maximum": 1000 },
         "Tackle": { "type": "integer", "minimum": 0, "maximum": 1000 },
         "Retreat": { "type": "integer", "minimum": 0, "maximum": 1000 },
         "FindSpace": { "type": "integer", "minimum": 0, "maximum": 1000 },
-        "PressCarrier": { "type": "integer", "minimum": 0, "maximum": 1000 }
+        "PressCarrier": { "type": "integer", "minimum": 0, "maximum": 1000 },
+        "ShortPass": { "type": "integer", "minimum": 0, "maximum": 1000 },
+        "LongPass": { "type": "integer", "minimum": 0, "maximum": 1000 },
+        "Block": { "type": "integer", "minimum": 0, "maximum": 1000 }
       },
-      "required": ["ChaseBall", "MarkOpponent", "OfferSupport", "CoverSpace", "Pass", "Dribble", "Shoot", "Tackle", "Retreat", "FindSpace", "PressCarrier"],
+      "required": ["ChaseBall", "MarkOpponent", "OfferSupport", "CoverSpace", "Dribble", "Shoot", "Tackle", "Retreat", "FindSpace", "PressCarrier", "ShortPass", "LongPass", "Block"],
       "additionalProperties": false
     },
     "actionPercent": {
@@ -121,15 +150,17 @@
         "MarkOpponent": { "type": "integer", "minimum": 0, "maximum": 1000 },
         "OfferSupport": { "type": "integer", "minimum": 0, "maximum": 1000 },
         "CoverSpace": { "type": "integer", "minimum": 0, "maximum": 1000 },
-        "Pass": { "type": "integer", "minimum": 0, "maximum": 1000 },
         "Dribble": { "type": "integer", "minimum": 0, "maximum": 1000 },
         "Shoot": { "type": "integer", "minimum": 0, "maximum": 1000 },
         "Tackle": { "type": "integer", "minimum": 0, "maximum": 1000 },
         "Retreat": { "type": "integer", "minimum": 0, "maximum": 1000 },
         "FindSpace": { "type": "integer", "minimum": 0, "maximum": 1000 },
-        "PressCarrier": { "type": "integer", "minimum": 0, "maximum": 1000 }
+        "PressCarrier": { "type": "integer", "minimum": 0, "maximum": 1000 },
+        "ShortPass": { "type": "integer", "minimum": 0, "maximum": 1000 },
+        "LongPass": { "type": "integer", "minimum": 0, "maximum": 1000 },
+        "Block": { "type": "integer", "minimum": 0, "maximum": 1000 }
       },
-      "required": ["ChaseBall", "MarkOpponent", "OfferSupport", "CoverSpace", "Pass", "Dribble", "Shoot", "Tackle", "Retreat", "FindSpace", "PressCarrier"],
+      "required": ["ChaseBall", "MarkOpponent", "OfferSupport", "CoverSpace", "Dribble", "Shoot", "Tackle", "Retreat", "FindSpace", "PressCarrier", "ShortPass", "LongPass", "Block"],
       "additionalProperties": false
     },
     "shiftEntry": {

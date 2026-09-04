@@ -434,9 +434,15 @@ public static class DataLoader
         "markDistancePenaltyPerCell", "supportAheadBonus", "supportCrowdedPenalty",
         "coverBetweenBallAndGoalBonus", "passOpenReceiverBonus", "passUnderPressureBonus", "passNoReceiverPenalty",
         "dribbleOpenSpaceBonus", "dribbleOpponentAheadPenalty",
-        "shootBaseRangeCells", "shootInRangeBonus", "shootOutOfRangePenalty", "shootDistancePenaltyPerCell", "shootAnglePenaltyPerRow",
+        "shootBaseRangeCells", "shootInRangeBonus", "shootBeyondRangePenaltyPerCell", "shootDistancePenaltyPerCell", "shootAnglePenaltyPerRow",
         "tackleDistanceMaxCells", "tackleOutOfReachPenalty", "tackleBallCarrierBonus",
         "retreatDistanceBonusPerCell", "retreatAtHomePenalty",
+        "findSpaceOpponentDistanceBonusPerCell", "findSpaceAdvanceBonusPerCell", "findSpaceOpenLaneBonus",
+        "pressCarrierBonus", "pressDistancePenaltyPerCell", "pressGoalkeeperExitBonus",
+        "shortPassMaxCells", "longPassMaxCells", "shortPassTechniqueSlope", "longPassTechniqueSlope",
+        "dribbleTechniqueSlope", "dribbleSpeedSlope", "shootTechniqueSlope", "shootStrengthSlope",
+        "blockActiveRadiusCells", "blockCorridorHalfWidthCells", "blockReachMaxCells",
+        "blockTargetBonus", "blockDistancePenaltyPerCell", "blockAggressiveBonus", "blockBruteTagBonus",
     };
 
     private static AiWeights ParseAiWeights(string file, string content)
@@ -513,14 +519,35 @@ public static class DataLoader
             contextNode.Prop("dribbleOpponentAheadPenalty").AsInt(),
             contextNode.Prop("shootBaseRangeCells").AsInt(),
             contextNode.Prop("shootInRangeBonus").AsInt(),
-            contextNode.Prop("shootOutOfRangePenalty").AsInt(),
+            contextNode.Prop("shootBeyondRangePenaltyPerCell").AsInt(),
             contextNode.Prop("shootDistancePenaltyPerCell").AsInt(),
             contextNode.Prop("shootAnglePenaltyPerRow").AsInt(),
             contextNode.Prop("tackleDistanceMaxCells").AsFloat(),
             contextNode.Prop("tackleOutOfReachPenalty").AsInt(),
             contextNode.Prop("tackleBallCarrierBonus").AsInt(),
             contextNode.Prop("retreatDistanceBonusPerCell").AsInt(),
-            contextNode.Prop("retreatAtHomePenalty").AsInt());
+            contextNode.Prop("retreatAtHomePenalty").AsInt(),
+            FindSpaceOpponentDistanceBonusPerCell: contextNode.Prop("findSpaceOpponentDistanceBonusPerCell").AsInt(),
+            FindSpaceAdvanceBonusPerCell: contextNode.Prop("findSpaceAdvanceBonusPerCell").AsInt(),
+            FindSpaceOpenLaneBonus: contextNode.Prop("findSpaceOpenLaneBonus").AsInt(),
+            PressCarrierBonus: contextNode.Prop("pressCarrierBonus").AsInt(),
+            PressDistancePenaltyPerCell: contextNode.Prop("pressDistancePenaltyPerCell").AsInt(),
+            PressGoalkeeperExitBonus: contextNode.Prop("pressGoalkeeperExitBonus").AsInt(),
+            ShortPassMaxCells: contextNode.Prop("shortPassMaxCells").AsFloat(),
+            LongPassMaxCells: contextNode.Prop("longPassMaxCells").AsFloat(),
+            ShortPassTechniqueSlope: contextNode.Prop("shortPassTechniqueSlope").AsInt(),
+            LongPassTechniqueSlope: contextNode.Prop("longPassTechniqueSlope").AsInt(),
+            DribbleTechniqueSlope: contextNode.Prop("dribbleTechniqueSlope").AsInt(),
+            DribbleSpeedSlope: contextNode.Prop("dribbleSpeedSlope").AsInt(),
+            ShootTechniqueSlope: contextNode.Prop("shootTechniqueSlope").AsInt(),
+            ShootStrengthSlope: contextNode.Prop("shootStrengthSlope").AsInt(),
+            BlockActiveRadiusCells: contextNode.Prop("blockActiveRadiusCells").AsFloat(),
+            BlockCorridorHalfWidthCells: contextNode.Prop("blockCorridorHalfWidthCells").AsFloat(),
+            BlockReachMaxCells: contextNode.Prop("blockReachMaxCells").AsFloat(),
+            BlockTargetBonus: contextNode.Prop("blockTargetBonus").AsInt(),
+            BlockDistancePenaltyPerCell: contextNode.Prop("blockDistancePenaltyPerCell").AsInt(),
+            BlockAggressiveBonus: contextNode.Prop("blockAggressiveBonus").AsInt(),
+            BlockBruteTagBonus: contextNode.Prop("blockBruteTagBonus").AsInt());
 
         var shiftArray = new BlockShift[tacticalCount];
         var shiftSet = new bool[tacticalCount];
@@ -575,7 +602,7 @@ public static class DataLoader
             "regulationTicks", "goldenGoalMaxTicks", "decisionIntervalTicks", "transitionTicks",
             "assistWindowTicks",
             "movement", "ball", "states", "pass", "dribble", "shot", "save", "tackle", "injury", "referee",
-            "restart", "generation", "bodies", "actionZone", "progression");
+            "block", "restart", "generation", "bodies", "actionZone", "progression");
 
         return new Tuning(
             root.Prop("regulationTicks").AsInt(),
@@ -593,6 +620,7 @@ public static class DataLoader
             ParseTackle(root.Prop("tackle")),
             ParseInjury(root.Prop("injury")),
             ParseReferee(root.Prop("referee")),
+            ParseBlock(root.Prop("block")),
             ParseRestart(root.Prop("restart")),
             ParseGeneration(root.Prop("generation")),
             ParseBodies(root.Prop("bodies")),
@@ -713,10 +741,38 @@ public static class DataLoader
 
     private static RefereeTuning ParseReferee(Json node)
     {
-        node.EnsureKnownKeys("biasFoulShiftPer10", "penaltyOnFoulInArea");
+        node.EnsureKnownKeys(
+            "biasFoulShiftPer10", "penaltyOnFoulInArea", "biasCardShiftPer10", "biasPenaltyShiftPer10",
+            "biasShiftFoulSeen", "biasShiftFoulUnseen", "biasShiftHardExtra", "biasShiftBlockExtra",
+            "biasShiftInjuryExtra", "biasShiftYellowExtra", "biasShiftRedExtra");
         return new RefereeTuning(
             node.Prop("biasFoulShiftPer10").AsInt(),
-            node.Prop("penaltyOnFoulInArea").AsInt());
+            node.Prop("penaltyOnFoulInArea").AsInt(),
+            node.Prop("biasCardShiftPer10").AsInt(),
+            node.Prop("biasPenaltyShiftPer10").AsInt(),
+            node.Prop("biasShiftFoulSeen").AsInt(),
+            node.Prop("biasShiftFoulUnseen").AsInt(),
+            node.Prop("biasShiftHardExtra").AsInt(),
+            node.Prop("biasShiftBlockExtra").AsInt(),
+            node.Prop("biasShiftInjuryExtra").AsInt(),
+            node.Prop("biasShiftYellowExtra").AsInt(),
+            node.Prop("biasShiftRedExtra").AsInt());
+    }
+
+    /// <summary>tuning.block: resolución del bloqueo sin balón (ADR 0030 §2).</summary>
+    private static BlockTuning ParseBlock(Json node)
+    {
+        node.EnsureKnownKeys(
+            "blockingTicks", "cooldownTicks", "baseWin", "strengthFactor", "speedFactor",
+            "knockdownTicks", "foulBase");
+        return new BlockTuning(
+            node.Prop("blockingTicks").AsInt(),
+            node.Prop("cooldownTicks").AsInt(),
+            node.Prop("baseWin").AsInt(),
+            node.Prop("strengthFactor").AsInt(),
+            node.Prop("speedFactor").AsInt(),
+            node.Prop("knockdownTicks").AsInt(),
+            node.Prop("foulBase").AsInt());
     }
 
     private static RestartTuning ParseRestart(Json node)

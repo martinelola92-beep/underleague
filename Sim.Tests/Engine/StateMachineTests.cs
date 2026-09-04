@@ -8,12 +8,12 @@ public class StateMachineTests
     {
         PlayerAction.ChaseBall, PlayerAction.MarkOpponent, PlayerAction.OfferSupport,
         PlayerAction.CoverSpace, PlayerAction.Tackle, PlayerAction.Retreat,
-        PlayerAction.FindSpace, PlayerAction.PressCarrier,
+        PlayerAction.FindSpace, PlayerAction.PressCarrier, PlayerAction.Block,
     };
 
     private static readonly PlayerAction[] WithBallActions =
     {
-        PlayerAction.Pass, PlayerAction.Dribble, PlayerAction.Shoot,
+        PlayerAction.Dribble, PlayerAction.Shoot, PlayerAction.ShortPass, PlayerAction.LongPass,
     };
 
     [Theory]
@@ -42,6 +42,7 @@ public class StateMachineTests
     [InlineData(PlayerState.Passing)]
     [InlineData(PlayerState.Shooting)]
     [InlineData(PlayerState.Tackling)]
+    [InlineData(PlayerState.Blocking)]
     [InlineData(PlayerState.KnockedDown)]
     [InlineData(PlayerState.Injured)]
     [InlineData(PlayerState.Celebrating)]
@@ -63,6 +64,7 @@ public class StateMachineTests
     [InlineData(PlayerState.Passing, false)]
     [InlineData(PlayerState.Shooting, false)]
     [InlineData(PlayerState.Tackling, false)]
+    [InlineData(PlayerState.Blocking, false)]
     [InlineData(PlayerState.KnockedDown, false)]
     [InlineData(PlayerState.Injured, false)]
     [InlineData(PlayerState.Celebrating, false)]

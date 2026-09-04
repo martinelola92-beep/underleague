@@ -81,8 +81,28 @@
     "severeShare": 3000
   },
   "referee": {
+    "_doc": "Criterio del árbitro (RF-062..RF-064, ADR 0030 §3). Los tres ...ShiftPer10 son EFECTOS del criterio sobre una tirada: puntos base 10.000 por cada 10 puntos de criterio, siempre a favor del equipo que el criterio favorece. Los biasShift... son DESPLAZAMIENTOS del propio criterio, en puntos de la escala -100..+100, y se acumulan por gravedad (RF-063): toda acción sucia mueve el criterio en contra del que la comete, se señale o no.",
     "biasFoulShiftPer10": 400,
-    "penaltyOnFoulInArea": 8000
+    "penaltyOnFoulInArea": 8000,
+    "biasCardShiftPer10": 300,
+    "biasPenaltyShiftPer10": 250,
+    "biasShiftFoulSeen": 3,
+    "biasShiftFoulUnseen": 2,
+    "biasShiftHardExtra": 3,
+    "biasShiftBlockExtra": 2,
+    "biasShiftInjuryExtra": 4,
+    "biasShiftYellowExtra": 2,
+    "biasShiftRedExtra": 5
+  },
+  "block": {
+    "_doc": "Bloqueo sin balón (ADR 0030 §2): cargar contra un rival que NO lleva el balón para abrirle hueco a un compañero. La DECISIÓN de bloquear (incluido el criterio de jugada activa de RF-057) vive en data/ai/weights.json; aquí está solo la resolución. Un bloqueo es SIEMPRE falta; foulBase es la probabilidad de que el árbitro la vea y la señale, y el criterio la modula igual que la de una entrada. Cuando no la ve, el criterio se desplaza igualmente (RF-063).",
+    "blockingTicks": 3,
+    "cooldownTicks": 150,
+    "baseWin": 6000,
+    "strengthFactor": 40,
+    "speedFactor": 20,
+    "knockdownTicks": 18,
+    "foulBase": 4500
   },
   "restart": {
     "throwInTicks": 15,

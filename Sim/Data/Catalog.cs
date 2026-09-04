@@ -82,14 +82,47 @@ public sealed record AiContext(
     int DribbleOpponentAheadPenalty,
     int ShootBaseRangeCells,
     int ShootInRangeBonus,
-    int ShootOutOfRangePenalty,
+    int ShootBeyondRangePenaltyPerCell,
     int ShootDistancePenaltyPerCell,
     int ShootAnglePenaltyPerRow,
     float TackleDistanceMaxCells,
     int TackleOutOfReachPenalty,
     int TackleBallCarrierBonus,
     int RetreatDistanceBonusPerCell,
-    int RetreatAtHomePenalty);
+    int RetreatAtHomePenalty,
+
+    // Términos de FindSpace y PressCarrier (ADR 0022, §2.3). El paquete R los dejó como constantes de
+    // Utility.cs porque añadir claves aquí exigía abrir Sim/Data, fuera de sus fronteras; era su única
+    // deuda declarada (§4, decisión 20) y aquí queda saldada, con el mismo nombre que ya tenían.
+    int FindSpaceOpponentDistanceBonusPerCell = 0,
+    int FindSpaceAdvanceBonusPerCell = 0,
+    int FindSpaceOpenLaneBonus = 0,
+    int PressCarrierBonus = 0,
+    int PressDistancePenaltyPerCell = 0,
+    int PressGoalkeeperExitBonus = 0,
+
+    // Acciones de ataque diferenciadas (ADR 0030 §1). Las dos bandas de pase son disjuntas y exhaustivas:
+    // corto es "distancia <= ShortPassMaxCells" y largo, "> ShortPassMaxCells y <= LongPassMaxCells".
+    // Las pendientes son puntos de utilidad por punto de atributo por encima de 50, con signo: el torpe
+    // paga lo mismo que cobra el brillante. La del pase corto es deliberadamente la más suave de todas.
+    float ShortPassMaxCells = 0f,
+    float LongPassMaxCells = 0f,
+    int ShortPassTechniqueSlope = 0,
+    int LongPassTechniqueSlope = 0,
+    int DribbleTechniqueSlope = 0,
+    int DribbleSpeedSlope = 0,
+    int ShootTechniqueSlope = 0,
+    int ShootStrengthSlope = 0,
+
+    // Bloqueo sin balón (ADR 0030 §2). La "jugada activa" de RF-057 son las dos primeras claves: un radio
+    // alrededor del balón o un corredor entre el balón y la portería que ataca quien lo tiene.
+    float BlockActiveRadiusCells = 0f,
+    float BlockCorridorHalfWidthCells = 0f,
+    float BlockReachMaxCells = 0f,
+    int BlockTargetBonus = 0,
+    int BlockDistancePenaltyPerCell = 0,
+    int BlockAggressiveBonus = 0,
+    int BlockBruteTagBonus = 0);
 
 /// <summary>
 /// Pesos de la IA de utilidad (RT-093..RT-098). Las tablas Base y Tactical se guardan como arrays
@@ -259,8 +292,38 @@ public sealed record TackleTuning(int BaseWin, int StrengthFactor, int SpeedFact
 /// <summary>tuning.injury.</summary>
 public sealed record InjuryTuning(int OnTackleBase, int OnFoulBase, int AttackerStrengthFactor, int VictimStaminaResistFactor, int SevereShare);
 
-/// <summary>tuning.referee.</summary>
-public sealed record RefereeTuning(int BiasFoulShiftPer10, int PenaltyOnFoulInArea);
+/// <summary>
+/// tuning.referee: el criterio del árbitro (RF-062..RF-064, ADR 0030 §3). Los tres campos
+/// <c>...ShiftPer10</c> son <b>efectos</b> del criterio sobre una tirada (puntos base 10.000 por cada 10
+/// puntos de criterio); los campos <c>BiasShift...</c> son <b>desplazamientos</b> del propio criterio, en
+/// puntos de la escala -100..+100, y son acumulativos por gravedad (RF-063).
+/// </summary>
+public sealed record RefereeTuning(
+    int BiasFoulShiftPer10,
+    int PenaltyOnFoulInArea,
+    int BiasCardShiftPer10,
+    int BiasPenaltyShiftPer10,
+    int BiasShiftFoulSeen,
+    int BiasShiftFoulUnseen,
+    int BiasShiftHardExtra,
+    int BiasShiftBlockExtra,
+    int BiasShiftInjuryExtra,
+    int BiasShiftYellowExtra,
+    int BiasShiftRedExtra);
+
+/// <summary>
+/// tuning.block: resolución del bloqueo sin balón (ADR 0030 §2). La <b>decisión</b> de bloquear vive en
+/// data/ai/weights.json como cualquier otra acción; aquí están las constantes de la <b>resolución</b>,
+/// junto a las de la entrada y el regate, que es donde el motor las busca.
+/// </summary>
+public sealed record BlockTuning(
+    int BlockingTicks,
+    int CooldownTicks,
+    int BaseWin,
+    int StrengthFactor,
+    int SpeedFactor,
+    int KnockdownTicks,
+    int FoulBase);
 
 /// <summary>tuning.progression: experiencia, niveles y atributos por nivel (§6, RF-025, RF-027).</summary>
 public sealed record ProgressionTuning(
@@ -298,6 +361,7 @@ public sealed record Tuning(
     TackleTuning Tackle,
     InjuryTuning Injury,
     RefereeTuning Referee,
+    BlockTuning Block,
     RestartTuning Restart,
     GenerationTuning Generation,
     BodiesTuning Bodies,

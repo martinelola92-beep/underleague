@@ -63,6 +63,9 @@
     "referee": {
       "$ref": "#/$defs/referee"
     },
+    "block": {
+      "$ref": "#/$defs/block"
+    },
     "restart": {
       "$ref": "#/$defs/restart"
     },
@@ -95,6 +98,7 @@
     "tackle",
     "injury",
     "referee",
+    "block",
     "restart",
     "generation",
     "bodies",
@@ -484,11 +488,62 @@
         },
         "penaltyOnFoulInArea": {
           "$ref": "#/$defs/probability"
-        }
+        },
+        "biasCardShiftPer10": {
+          "type": "integer",
+          "minimum": -10000,
+          "maximum": 10000
+        },
+        "biasPenaltyShiftPer10": {
+          "type": "integer",
+          "minimum": -10000,
+          "maximum": 10000
+        },
+        "biasShiftFoulSeen": { "$ref": "#/$defs/biasPoints" },
+        "biasShiftFoulUnseen": { "$ref": "#/$defs/biasPoints" },
+        "biasShiftHardExtra": { "$ref": "#/$defs/biasPoints" },
+        "biasShiftBlockExtra": { "$ref": "#/$defs/biasPoints" },
+        "biasShiftInjuryExtra": { "$ref": "#/$defs/biasPoints" },
+        "biasShiftYellowExtra": { "$ref": "#/$defs/biasPoints" },
+        "biasShiftRedExtra": { "$ref": "#/$defs/biasPoints" }
       },
       "required": [
         "biasFoulShiftPer10",
-        "penaltyOnFoulInArea"
+        "penaltyOnFoulInArea",
+        "biasCardShiftPer10",
+        "biasPenaltyShiftPer10",
+        "biasShiftFoulSeen",
+        "biasShiftFoulUnseen",
+        "biasShiftHardExtra",
+        "biasShiftBlockExtra",
+        "biasShiftInjuryExtra",
+        "biasShiftYellowExtra",
+        "biasShiftRedExtra"
+      ],
+      "additionalProperties": false
+    },
+    "biasPoints": {
+      "description": "Desplazamiento del criterio del árbitro, en puntos de la escala -100..+100 (RF-062, RF-063).",
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 100
+    },
+    "block": {
+      "description": "Resolución del bloqueo sin balón (ADR 0030 §2).",
+      "type": "object",
+      "properties": {
+        "_doc": { "type": "string" },
+        "blockingTicks": { "$ref": "#/$defs/ticks" },
+        "cooldownTicks": { "$ref": "#/$defs/ticks" },
+        "baseWin": { "$ref": "#/$defs/probability" },
+        "strengthFactor": { "type": "integer", "minimum": 0, "maximum": 1000 },
+        "speedFactor": { "type": "integer", "minimum": 0, "maximum": 1000 },
+        "knockdownTicks": { "$ref": "#/$defs/ticks" },
+        "foulBase": { "$ref": "#/$defs/probability" }
+      },
+      "required": [
+        "blockingTicks", "cooldownTicks", "baseWin", "strengthFactor", "speedFactor",
+        "knockdownTicks", "foulBase"
       ],
       "additionalProperties": false
     },

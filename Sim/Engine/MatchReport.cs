@@ -50,15 +50,7 @@ public sealed record UtilityRow(
     int Context,
     bool Rejected,
     bool OutsideZone,
-    int OutsideCentiCells)
-{
-    /// <summary>
-    /// Alias de <see cref="Rejected"/> conservado solo porque <c>Balance/Program.cs</c> imprime esta
-    /// columna y queda fuera de las fronteras del paquete R. El paquete U sustituye esa columna por
-    /// <see cref="Rejected"/> más <see cref="OutsideCentiCells"/> y esta propiedad desaparece.
-    /// </summary>
-    public bool LeashFiltered => Rejected;
-}
+    int OutsideCentiCells);
 
 /// <summary>Volcado de la tabla de utilidad de un jugador en un tick concreto (SimConfig.DumpUtility, RT-098).</summary>
 public sealed record UtilityDump(int PlayerId, int Tick, PlayerState State, IReadOnlyList<UtilityRow> Rows, PlayerAction Chosen);
@@ -108,6 +100,12 @@ public sealed class MatchReport
     /// <summary>Entradas totales.</summary>
     public int Tackles { get; }
 
+    /// <summary>
+    /// Bloqueos sin balón totales (ADR 0030 §2). Cuenta aparte de <see cref="Tackles"/> a propósito: la
+    /// métrica de entradas por partido de RT-056 mide disputas del balón y un bloqueo no lo es.
+    /// </summary>
+    public int Blocks { get; }
+
     /// <summary>Faltas totales.</summary>
     public int Fouls { get; }
 
@@ -129,7 +127,11 @@ public sealed class MatchReport
     /// <summary>Ticks de posesión por equipo, [2].</summary>
     public int[] PossessionTicks { get; }
 
-    /// <summary>Sesgo del árbitro al terminar el partido; en fase 0 es fijo e igual a InitialBias (§3).</summary>
+    /// <summary>
+    /// Criterio del árbitro al terminar el partido (RF-062). Ya no es fijo: desde la ADR 0030 §3 se
+    /// desplaza durante el partido con cada acción sucia, se señale o no (RF-063). El recorrido completo
+    /// se lee en el campo <c>Bias</c> de cada evento de la secuencia.
+    /// </summary>
     public int FinalBias { get; }
 
     /// <summary>Estadísticas por jugador que participó en el partido.</summary>
@@ -168,6 +170,7 @@ public sealed class MatchReport
         Shots = (int[])builder.Shots.Clone();
         ShotsOnTarget = (int[])builder.ShotsOnTarget.Clone();
         Tackles = builder.Tackles;
+        Blocks = builder.Blocks;
         Fouls = builder.Fouls;
         YellowCards = builder.YellowCards;
         RedCards = builder.RedCards;
@@ -231,6 +234,9 @@ internal sealed class MatchReportBuilder
     /// <summary>Entradas totales; se incrementa al resolver cada Tackle (3.7).</summary>
     public int Tackles { get; set; }
 
+    /// <summary>Bloqueos sin balón totales; se incrementa al resolver cada Block (ADR 0030 §2).</summary>
+    public int Blocks { get; set; }
+
     /// <summary>Faltas totales; se incrementa en cada Foul (3.7).</summary>
     public int Fouls { get; set; }
 
@@ -253,10 +259,10 @@ internal sealed class MatchReportBuilder
     public int[] PossessionTicks { get; } = new int[2];
 
     /// <summary>
-    /// Sesgo del árbitro al terminar el partido. En fase 0 es fijo e igual a InitialBias (§3, RF-060): el
-    /// motor no tiene ningún mecanismo que lo mueva durante el partido todavía, así que se lee una sola
-    /// vez al final en <see cref="MatchEngine.Run"/> (revisión independiente, fase 0: el comentario
-    /// anterior decía "se actualiza cuando cambie", que no describía código existente).
+    /// Criterio del árbitro al terminar el partido (RF-062). Parte de <c>RefereeSetup.InitialBias</c> y se
+    /// desplaza durante el partido con cada acción sucia, se señale o no (RF-063, ADR 0030 §3); el motor
+    /// lo vuelca aquí una sola vez al final, en <see cref="MatchEngine.Run"/>. El recorrido intermedio no
+    /// se pierde: cada evento de la secuencia lleva el criterio vigente en su tick.
     /// </summary>
     public int FinalBias { get; set; }
 

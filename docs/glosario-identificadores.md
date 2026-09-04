@@ -119,6 +119,9 @@ Raza, posición y rasgo comparten el sistema de etiquetas (RF-022d): el id del r
 | Vínculo de colocación | `Link` (`links`: `beside`, `ahead`, `behind`, `left`, `right`, `diagonalAhead`, `diagonalBehind`) |
 | Eje de activación | `Axis` (`axis`: `identity`, `accumulation`, `alignment`, `startZone`, `geometry`, `matchState`, `composition`, `proximity`) |
 | Buscar espacio / presionar | `FindSpace` / `PressCarrier` |
+| Pase corto / pase largo | `ShortPass` / `LongPass` (ADR 0030 §1) |
+| Bloqueo sin balón | `Block` (ADR 0030 §2) |
+| Jugada activa | `ActivePlay` (`blockActiveRadiusCells`, `blockCorridorHalfWidthCells`) |
 
 ## Simulación
 
@@ -129,8 +132,8 @@ Raza, posición y rasgo comparten el sistema de etiquetas (RF-022d): el id del r
 | Resultado | `MatchResult` (`Events`, `FinalState`, `Report`) |
 | Máquina de estados del partido | `MatchPhase`: `Kickoff`, `OpenPlay`, `Restart`, `Penalty`, `MobGoldenGoal`, `Finished` |
 | Estado táctico | `TacticalState`: `InPossession`, `OutOfPossession`, `OffensiveTransition`, `DefensiveTransition` |
-| Estado del jugador | `PlayerState`: `Positioning`, `Chasing`, `Dribbling`, `Passing`, `Shooting`, `Tackling`, `KnockedDown`, `Injured`, `Celebrating` |
-| Acciones | `PlayerAction`: `ChaseBall`, `MarkOpponent`, `OfferSupport`, `CoverSpace`, `Pass`, `Dribble`, `Shoot`, `Tackle`, `Retreat` |
+| Estado del jugador | `PlayerState`: `Positioning`, `Chasing`, `Dribbling`, `Passing`, `Shooting`, `Tackling`, `KnockedDown`, `Injured`, `Celebrating`, `SentOff`, `Blocking` |
+| Acciones | `PlayerAction`: `ChaseBall`, `MarkOpponent`, `OfferSupport`, `CoverSpace`, `Dribble`, `Shoot`, `Tackle`, `Retreat`, `FindSpace`, `PressCarrier`, `ShortPass`, `LongPass`, `Block`. `Pass` se retiró en la ADR 0030 §1: el pase son dos acciones que compiten, corta y larga |
 | `Puede(estado, accion)` | `CanPerform(state, action)` |
 | Utilidad | `Utility`, `UtilityTable` |
 | Árbitro | `Referee` |

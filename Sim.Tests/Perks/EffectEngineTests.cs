@@ -268,12 +268,26 @@ public sealed class EffectEngineTests
         Assert.Equal(-15, BiasAfter(catalog, 100));
     }
 
+    /// <summary>
+    /// El "coste cero con cero perks" de §3 se replantea con la ADR 0026: el motor de efectos existe si
+    /// hay perks asignados <b>o</b> habilidad racial, y las cinco razas de <c>data/races</c> declaran la
+    /// suya. Con cero perks asignados el motor se construye igual y lo único que lleva dentro son las
+    /// habilidades raciales de los catorce titulares, que es justo el hueco que el paquete S dejó anotado
+    /// (§5.10): mirando solo <c>Definition.Perks</c>, un equipo sin perks se quedaba sin la suya.
+    /// </summary>
     [Fact]
-    public void ZeroPerksMeansNoEffectEngineAtAll()
+    public void ZeroPerksStillCarriesTheRacialAbility()
     {
         var catalog = TestPerks.CatalogWith();
-        var engine = TestPerks.Engine(catalog, TestMatches.Reference(catalog, 1));
-        Assert.Null(engine.Effects);
+        var setup = TestMatches.Reference(catalog, 1);
+        Assert.All(setup.Home.Players, p => Assert.Empty(p.Perks));
+        Assert.All(setup.Away.Players, p => Assert.Empty(p.Perks));
+
+        var engine = TestPerks.Engine(catalog, setup);
+
+        Assert.NotNull(engine.Effects);
+        Assert.All(engine.Effects!.Subscriptions, sub => Assert.Equal("quick_learner", sub.Perk.Id));
+        Assert.Equal(14, engine.Effects.Subscriptions.Count);
     }
 
     [Fact]
