@@ -16,6 +16,15 @@ Cada una de las tres invalida el ajuste de las otras: los cuerpos cambian el con
 | 3 | Adyacencia resuelta al construir el partido en vínculos direccionales (`beside`, `ahead`, `behind`, `left`, `right`); efectos dirigidos a pares en el motor de efectos; condición de proximidad dinámica; revisión del catálogo de perks | Los perks de colocación se activan sin exigir formaciones absurdas; descripciones generadas correctas para ambas familias |
 | 4 | Reajuste único: RT-056 en rango y criterio de salida de fase 1 (coherentes ≥ 58%, malas ≤ 45%, progresión que premia) | Ambas puertas en verde y `docs/balance/fase1-perks.md` actualizado con el antes y el después |
 
+## Hallazgos de la línea base que condicionan el rediseño
+
+De `docs/balance/fase1-perks.md`, medido con plantillas emparejadas. Son restricciones de partida, no opiniones.
+
+1. **Los canales de probabilidad saturados no responden hacia arriba.** `pass +1500` puntos base repartido entre los siete titulares vale **+0,4 puntos** de tasa de victoria (el mismo valor en negativo, −2,0), porque `pass.baseSuccess` está en 9.200 sobre 10.000 y el techo absorbe la mejora. Canales con recorrido real: `intercept` (+24 con +1500, fuera de escala), `injure` (+9), correa ±1 casilla (±8), `save` ±800 (±6), `shotOnTarget` (+6), `dribble` (±7). **Consecuencia**: un perk que promete "mejor pase" es una mentira medible; o se baja `pass.baseSuccess` para dejar recorrido, o esa familia de perks actúa sobre `intercept` en vez de sobre `pass`.
+2. **Los perks de acumulación no producen progresión perceptible**: su efecto máximo vale 0,2-0,4 puntos porque acumulan sobre **atributos**, el canal más barato. Para que la progresión premie a quien construye bien (objetivo explícito de la fase 1), los perks de acumulación deben escalar sobre canales con recorrido, o desbloquear efectos estructurales al alcanzar umbrales, no sumar +1 de fuerza por partido.
+3. **La velocidad es un atributo casi muerto** (+0,3 en humanos, −1,2 en orcos). Es la métrica que debe moverse con los cuerpos y la búsqueda de espacio; si tras el rediseño sigue plana, el rediseño no ha funcionado.
+4. **La varianza de generación domina cualquier medición ingenua**: la misma build contra la misma referencia da entre 16,5% y 59,5% según qué plantilla salga (sd 14,9 puntos). Toda comparación de builds usa plantillas emparejadas y varias plantillas; ya está implementado en `/Balance --rosters`.
+
 ## Riesgos
 
 - **Determinismo en la separación**: aplicar los empujes sobre la marcha haría que el orden del bucle cambiara el resultado. Es el mismo error que produjo el sesgo por id en la fase 0. Se resuelve con el buffer de dos fases y se comprueba con la huella.

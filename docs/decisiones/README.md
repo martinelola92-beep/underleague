@@ -16,6 +16,13 @@ Cuándo escribir un ADR: cambio de librería o stack, frontera entre proyectos, 
 | [0008](0008-net10-lts.md) | .NET 10 LTS como SDK y objetivo; `/Game` se confirma en fase 1 | Aceptada |
 | [0009](0009-identificadores-en-ingles.md) | Identificadores en inglés, documentación en español | Aceptada |
 | [0010](0010-rango-empates-reglamentario.md) | Rango de empates al final del reglamentario en RT-056 | **Propuesta: decisión del revisor** |
+| [0012](0012-buildswindifferently-normalizada.md) | `buildsWinDifferently` normalizada contra la referencia de la raza | Propuesta |
+| [0020](0020-cuerpos-y-ocupacion.md) | Cuerpos con volumen, separación blanda y empuje | Aceptada, pendiente de implementar |
+| [0021](0021-adyacencia-estatica-y-proximidad.md) | Vínculos direccionales resueltos antes del partido y proximidad dinámica | Aceptada, pendiente de implementar |
+| [0022](0022-roles-y-ocupacion-de-espacio.md) | Comportamiento sin balón por estado táctico, `FindSpace` y `PressCarrier` | Aceptada, pendiente de implementar |
+| [0023](0023-perks-exclusivos-de-raza.md) | Perks universales por defecto y núcleo exclusivo por raza | Aceptada, pendiente de implementar |
+
+El hueco del 0011 corresponde a una decisión sobre el radio de adyacencia que quedó absorbida por la 0021 antes de aceptarse.
 | [0012](0012-buildswindifferently-normalizada.md) | `buildsWinDifferently` normalizada contra la referencia de la raza | **Propuesta: decisión del revisor** |
 | [0020](0020-cuerpos-y-ocupacion.md) | Cuerpos con volumen, separación blanda y empuje | Aceptada |
 | [0021](0021-adyacencia-estatica-y-proximidad.md) | Adyacencia resuelta antes del partido; proximidad dinámica aparte | Aceptada |

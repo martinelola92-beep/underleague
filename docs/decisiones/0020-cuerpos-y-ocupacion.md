@@ -8,9 +8,11 @@
 
 Hasta la fase 1 los jugadores son **puntos sin volumen**: catorce pueden ocupar la misma coordenada. Las únicas magnitudes espaciales son radios de interacción sueltos y descoordinados (recogida 0,5 · duelo de regate 0,8 · intercepción 0,9 · presión y entrada 1,0).
 
-Las mediciones de la fase 1 mostraron el coste de esa simplificación: el motor **solo modela la mitad mala de concentrarse**. Apiñar el equipo deja el campo descubierto (coste real y bien simulado) pero no produce nada de lo que la concentración da en un deporte de contacto: ni masa, ni bloqueo, ni estorbo, ni superioridad local. `elf_tiki_taka`, que apiña para conseguir adyacencias, gana el 12% de sus partidos contra elfos sin perks; `human_scattered`, diseñada como mala, tiene la formación más ancha y gana el 59%.
+Las mediciones de la fase 1 mostraron el coste de esa simplificación: el motor **solo modela la mitad mala de concentrarse**. Apiñar el equipo deja el campo descubierto (coste real y bien simulado) pero no produce nada de lo que la concentración da en un deporte de contacto: ni masa, ni bloqueo, ni estorbo, ni superioridad local.
 
-Consecuencias adicionales: las builds de bloque no pueden existir (su ventaja es física); **RF-033 queda vacío** (las razas grandes ocupan 2 casillas al colocar, o sea puro coste, sin presencia a cambio); y el eje fuerza/técnica se desequilibra porque la técnica actúa siempre y la fuerza solo cuando el contacto ocurre por casualidad geométrica.
+Cuantificado con plantillas emparejadas (`docs/balance/fase1-perks.md`), el coste de la formación es dominante y de un orden de magnitud superior al beneficio: la alineación apiñada de `elf_tiki_taka` cuesta **−23,8 puntos** de tasa de victoria y la de `orc_violence` **−16,1**, mientras que el mayor bono de adyacencia del catálogo vale **menos de 3**. El cambio mínimo que hace adyacentes a dos centrocampistas con radio 1 cuesta ya **16 puntos** por sí solo.
+
+Consecuencias adicionales: las builds de bloque no pueden existir (su ventaja es física); **RF-033 queda vacío** (las razas grandes ocupan 2 casillas al colocar, o sea puro coste, sin presencia a cambio); y la **velocidad es un atributo casi muerto** (+0,3 puntos por cada +10 en humanos, −1,2 en orcos, frente a +4,1 de la técnica), precisamente porque sin cuerpos no hay a quién ganar la posición ni espacio que ocupar antes que otro.
 
 ## Decisión
 
@@ -30,6 +32,6 @@ Modelo **B + C ligero**:
 ## Consecuencias
 
 - **Determinismo**: la separación se resuelve en dos fases (estilo Jacobi): se acumulan todos los desplazamientos en un buffer y se aplican al final del tick. Aplicarlos sobre la marcha haría que el orden del bucle cambiara el resultado, que es exactamente el sesgo por id que hubo que corregir en la fase 0.
-- **Balance**: más contacto significa más entradas, más lesiones y menos intercepciones limpias. Hay que revalidar RT-056 y rehacer el ajuste. Se agrupa con las decisiones 0021 y 0022 para reajustar una sola vez.
+- **Balance**: más contacto significa más entradas, más lesiones y menos intercepciones limpias. Hay que revalidar RT-056 y rehacer el ajuste. Se espera además que la velocidad recupere valor: es el atributo que más debería ganar con cuerpos y con la búsqueda de espacio de la ADR 0022, y su valor marginal es la métrica que lo comprobará. Se agrupa con las decisiones 0021 y 0022 para reajustar una sola vez.
 - **Rendimiento**: 91 pares por tick × ~1.350 ticks ≈ 123.000 comprobaciones por partido. Estimación previa a la medida: de ~520 a ~380 partidos/s, muy por encima de los 167 que exige RT-051. Se mide, no se supone.
 - Las razas grandes pasan a tener identidad mecánica: ocupan espacio de verdad.
