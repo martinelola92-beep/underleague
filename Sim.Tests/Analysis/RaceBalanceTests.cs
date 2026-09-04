@@ -16,42 +16,34 @@ namespace Underleague.Sim.Tests.Analysis;
 /// D-29, mide "raza contra humanos", no "raza contra el resto").
 ///
 /// <para>
-/// <b>Lo que resultó NO ser la causa</b> (corrige la hipótesis de D-29). Con el sesgo de atributos
-/// original de los elfos intacto, doblar <c>discipline</c> de 35 a 70 no movió la tasa de victoria ni una
-/// décima (61,23% en los dos casos, misma semilla y mismas plantillas). Igualando <c>attributeBias</c>,
-/// <c>bodyRadius</c> (30) y <c>discipline</c> (55) de los elfos exactamente a los de los humanos —perfil
-/// físico y de atributos idéntico— los elfos seguían ganando el 59,85% contra <c>human_none</c> en
-/// solitario. La causa dominante es <c>elf_touch</c> (ADR 0026, RF-031b): +10 pp de resistencia a las
-/// entradas y +10 pp de resistencia a las intercepciones para <b>toda</b> la plantilla, siempre activa
-/// (la concede la raza, no ocupa slot y no se puede quitar de una build "sin perks"). No es una palanca
-/// que este encargo pueda tocar (no está en la lista de campos autorizados de D-29: <c>attributeBias</c>,
-/// <c>bodyRadius</c>, <c>discipline</c>, <c>styleTagWeights</c>).
+/// <b>Lo que resultó NO ser la causa.</b> Ni <c>discipline</c> (doblarlo de 35 a 70 no movió la tasa ni
+/// una décima), ni <c>bodyRadius</c> (subirlo rompe
+/// <c>Sim.Tests.Engine.BodiesTests.TheLighterBodyTakesTheLargerShareOfThePush</c>, que fija al elfo como
+/// el cuerpo ligero del catálogo), ni el sesgo de atributos. Este último es la trampa que costó un
+/// intento entero: <c>attributeBias</c> se aplica <b>antes</b> de renormalizar al presupuesto de
+/// generación (<c>PlayerGenerator.GenerateAttributes</c>, pasos 3 a 5), así que no añade puntos, los
+/// <b>reparte</b>, y como palanca de balance casi no mueve nada. Medido: con las habilidades apagadas,
+/// las cinco razas caben en 3,5 puntos (enanos 49,5 · elfos 51,0 · humanos 49,3 · orcos 51,8 ·
+/// no-muertos 48,3). Los sesgos de <c>data/races/*.json</c> ya estaban bien; describen a la raza
+/// (RF-024b, tabla §3.4) y no se tocan para balancear.
 /// </para>
 ///
 /// <para>
-/// <b>Por qué la calibración final solo toca fuerza, y con un margen ajustado.</b> <c>bodyRadius</c>
-/// parecía la palanca más prometedora (subirlo diluye la ventaja de <c>elf_touch</c> sin tocarlo), pero
-/// <c>Sim.Tests.Engine.BodiesTests.TheLighterBodyTakesTheLargerShareOfThePush</c> fija que el elfo es el
-/// cuerpo <b>ligero</b> del catálogo frente al orco (§2.1.2: "el ligero se lleva la parte mayor del
-/// empuje"): con <c>bodyRadius</c> por encima de ~32 el solape con un orco a distancia de contacto supera
-/// el tope de empuje por tick de los dos cuerpos a la vez, la puerta de física se rompe (empuje 50/50 en
-/// vez de a favor del elfo) y, aunque numéricamente la tasa de victoria mejoraba con radios de hasta 60,
-/// era una mejora **de un modelo de físicas roto**, no del diseño. Se descarta por completo (queda en 30,
-/// el valor original) y la puerta de <c>BodiesTests</c> no se toca (regla del encargo: "si tu ajuste
-/// racial mueve alguna puerta, reajusta tu propio cambio, no la puerta"). Con <c>bodyRadius</c> fuera de
-/// juego, <c>discipline</c> demostrado inerte (arriba) y cualquier sesgo positivo de velocidad o técnica
-/// subiendo la tasa por encima del 60% por pequeño que fuera (el sesgo original ya lo hacía), el único
-/// margen que queda es <c>attributeBias.strength</c> en negativo. También tiene techo: los atributos se
-/// recortan a [1, 99] (RT-023), así que a partir de unos -35 casi toda la plantilla ya está en el suelo y
-/// bajar más (probado hasta -70) no cambia nada medible. El resultado no es un margen amplio: la tasa
-/// pooled de los elfos medida en el cierre está entre el 58,8% y el 60,3% según la muestra (D-29 en
-/// <c>docs/pendientes.md</c> documenta el rango completo), así que esta puerta usa <see cref="Rosters"/>
-/// alto para acercarse al valor poblacional. <c>styleTagWeights</c> no se toca: ningún perk de una build
-/// <c>*_none</c> consulta la etiqueta de estilo, así que no tiene ningún efecto mecánico que medir aquí.
+/// <b>La causa era el presupuesto de las habilidades raciales</b> (RF-031b, ADR 0026), que la ADR no
+/// había fijado: repartía un canal distinto a cada raza pero no cuánto podía valer. Apagando cada
+/// habilidad y volviendo a medir (1.000 plantillas por pareja, 40.000 partidos, semilla 1): Toque valía
+/// <b>+10,4</b> puntos y las otras cuatro entre 0 y +0,9. Y no era una cifra mal calibrada sino un canal
+/// ilegal: la mitad de <c>interceptEvasion</c> valía ella sola +6,6 porque <c>intercept</c> tiene base
+/// 250 y el escalón mínimo de la escala de puntos porcentuales son 500, así que el valor legal más
+/// pequeño que se puede escribir no es "esquivar mejor" sino "ser inmune" (D-30). La ADR 0026 recoge
+/// ahora el criterio de presupuesto (§"Presupuesto de impacto"): canal legal antes que valor, techo de un
+/// escalón de la escala (+2,5 puntos de tasa agrupada), y presupuesto aparte para las dos habilidades que
+/// actúan fuera del partido. Con Toque en <c>tackleEvasion</c> +5 y sin la mitad de intercepción, y
+/// Sangre caliente calibrada de 5 a 15 ticks para subir al mismo techo, las cinco quedan entre +0 y +1,7.
 /// </para>
 ///
 /// <para>
-/// <b>Metodología</b>: todas-contra-todos entre las cinco referencias de raza sin ningún perk
+/// <b>Metodología</b>: todas-contra-todas entre las cinco referencias de raza sin ningún perk
 /// (<c>data/balance/builds/*_none.json</c>: <see cref="Races"/>), plantillas independientes por raza
 /// (aquí no hay build gemela que comparar, a diferencia de <see cref="BuildGateTests"/>), local/visitante
 /// y reparto de ids alternados en las cuatro combinaciones (metodología del paquete I). Cada raza juega
@@ -67,16 +59,20 @@ namespace Underleague.Sim.Tests.Analysis;
 /// cref="MatchesPerRoster"/>×10 = 10.000 partidos, semilla <see cref="Seed"/>, unos 45 s. La varianza
 /// dominante en esta medida es de plantilla a plantilla, no de partido a partido dentro de la misma
 /// plantilla (a diferencia de <see cref="BuildGateTests"/>, aquí no hay una única plantilla emparejada por
-/// raza que promediar contra sí misma), así que <see cref="Rosters"/> se fija muy alto (250, frente a los
-/// 40 de <see cref="BuildGateTests"/>) y <see cref="MatchesPerRoster"/> al mínimo (4, un solo ciclo
-/// local/visitante × reparto de ids): más plantillas compran más estabilidad por segundo de puerta que más
-/// partidos por plantilla. Aun así, el margen de los elfos contra el techo del 60% es el más ajustado de
-/// todas las puertas de fase 1 (por debajo de 1 punto en la medición de cierre): es el límite real de lo
-/// que <c>attributeBias</c>/<c>bodyRadius</c>/<c>discipline</c> pueden corregir mientras <c>elf_touch</c>
-/// no se toque, y queda anotado como D-29 sin cerrar del todo en <c>docs/pendientes.md</c>: si un cambio
-/// futuro en <c>/Sim</c> o en <c>data/perks/elf_touch.json</c> desplaza esta tasa, esta puerta lo dirá, y
-/// puede que la solución completa exija por fin revisar <c>elf_touch</c>, fuera del alcance de este
-/// encargo. Categoría <c>Gate</c> como el resto de puertas de fase 1.
+/// raza que promediar contra sí misma): las cuatro repeticiones de una plantilla son casi la misma
+/// observación, así que la unidad efectiva es la plantilla y el error típico por raza ronda 1,6 puntos a
+/// 250 plantillas. Por eso <see cref="Rosters"/> se fija muy alto (250, frente a los 40 de
+/// <see cref="BuildGateTests"/>) y <see cref="MatchesPerRoster"/> al mínimo (4, un solo ciclo
+/// local/visitante × reparto de ids): más plantillas compran más estabilidad por segundo de puerta que
+/// más partidos por plantilla.
+/// </para>
+///
+/// <para>
+/// Medición de cierre del reequilibrio, con esta misma muestra y semilla: enanos 47,55 · elfos 54,12 ·
+/// humanos 48,95 · orcos 51,80 · no-muertos 47,58. El margen más ajustado es el de los elfos contra el
+/// techo, <b>5,9 puntos</b> (antes del reequilibrio estaba por debajo de 1). Con 1.000 plantillas, que es
+/// el valor poblacional, se aprietan más todavía: 49,07 · 52,89 · 48,23 · 52,48 · 47,34. Categoría
+/// <c>Gate</c> como el resto de puertas de fase 1.
 /// </para>
 /// </summary>
 [Trait("Category", "Gate")]

@@ -1,5 +1,5 @@
 {
-  "_doc": "Habilidad racial de los elfos (RF-031b, ADR 0026): Toque. Expresa la fragilidad élfica como evitar el contacto en vez de ganarlo, sobre los dos canales con recorrido medido (entrada e intercepción) y sin tocar el pase, que está saturado. Se asigna automáticamente a toda la plantilla élfica y no ocupa slot.",
+  "_doc": "Habilidad racial de los elfos (RF-031b, ADR 0026): Toque. Expresa la fragilidad élfica como evitar el contacto en vez de ganarlo. Un solo canal y en el escalón mínimo de la escala: es el presupuesto de una habilidad racial, que es gratis, irrenunciable y de plantilla entera (ADR 0026, Presupuesto de impacto; D-29). La mitad de intercepción se retiró en ese reequilibrio: sobre una base de 250 puntos, 5 pp no son esquivar mejor sino ser inmune, y valía sola +6,6 puntos de tasa agrupada (D-30). Vuelve cuando el canal intercept esté en escala. Se asigna automáticamente a toda la plantilla élfica y no ocupa slot.",
   "id": "elf_touch",
   "name": { "es": "Toque", "en": "Touch" },
   "rarity": "rare",
@@ -11,8 +11,7 @@
   "links": [],
   "condition": "",
   "effects": [
-    { "type": "modifyProbability", "target": "owner", "probability": "tackleEvasion", "value": 10, "duration": "match" },
-    { "type": "modifyProbability", "target": "owner", "probability": "interceptEvasion", "value": 10, "duration": "match" }
+    { "type": "modifyProbability", "target": "owner", "probability": "tackleEvasion", "value": 5, "duration": "match" }
   ],
   "elseEffects": [],
   "accumulatesAcrossMatches": false,

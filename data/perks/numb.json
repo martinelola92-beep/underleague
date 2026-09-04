@@ -1,5 +1,5 @@
 {
-  "_doc": "Habilidad racial de los no-muertos (RF-031b, ADR 0026): No sienten nada. Convierte el desgaste, que es el recurso central del juego, en su ventaja (RF-035, RF-104). Las dos inmunidades las consulta la capa de campaña con Sim.Progression.Progression.HasImmunity. Se asigna automáticamente a toda la plantilla no-muerta y no ocupa slot.",
+  "_doc": "Habilidad racial de los no-muertos (RF-031b, ADR 0026): No sienten nada. Convierte el desgaste, que es el recurso central del juego, en su ventaja (RF-035, RF-104). Las dos inmunidades las consulta la capa de campaña con Sim.Progression.Progression.HasImmunity. Actúa FUERA del partido: vale 0 puntos de tasa de victoria por construcción y su presupuesto es de campaña, no de partido (ADR 0026, Presupuesto de impacto; D-29). Se asigna automáticamente a toda la plantilla no-muerta y no ocupa slot.",
   "id": "numb",
   "name": { "es": "No sienten nada", "en": "Numb" },
   "rarity": "rare",

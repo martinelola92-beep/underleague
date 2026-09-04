@@ -193,8 +193,7 @@ public sealed class DescriptionTests
             "Al empezar el partido, el portador deja al rival derribado más tiempo con sus entradas.",
             Describe("es", Catalog.Perks.Get("hot_blooded")));
         Assert.Equal(
-            "Al empezar el partido, el portador suma +10% a su resistencia a las entradas "
-                + "y el portador suma +10% a su resistencia a las intercepciones.",
+            "Al empezar el partido, el portador suma +5% a su resistencia a las entradas.",
             Describe("es", Catalog.Perks.Get("elf_touch")));
         Assert.Equal(
             "Al empezar el partido, el portador no puede ser desplazado por empujones.",

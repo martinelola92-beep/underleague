@@ -40,28 +40,41 @@ public sealed class RacialAbilityTests
         }
     }
 
-    /// <summary>Orcos: Sangre caliente abre el canal de duración del derribo que el motor suma al rival.</summary>
+    /// <summary>
+    /// Orcos: Sangre caliente abre el canal de duración del derribo que el motor suma al rival. El valor
+    /// se lee del propio dato (ADR 0026, §"Presupuesto de impacto"): el test comprueba que el canal está
+    /// conectado, no cuánto vale, que es una cifra de balance y vive en <c>data/perks/</c>.
+    /// </summary>
     [Fact]
     public void HotBloodedLengthensTheKnockdownTheOwnerCauses()
     {
         var engine = Engine(Race.Orc);
         var orc = engine.PlayerById(1)!;
+        int ticks = Catalog.Perks.Get("hot_blooded").Effects[0].Value;
 
+        Assert.True(ticks > 0, "Sangre caliente tiene que alargar el derribo, no acortarlo");
         Assert.Equal(0, engine.Effects!.Modifiers.KnockdownTicks(orc));
         engine.Effects.Publish(MatchStart(engine));
-        Assert.Equal(5, engine.Effects.Modifiers.KnockdownTicks(orc));
+        Assert.Equal(ticks, engine.Effects.Modifiers.KnockdownTicks(orc));
     }
 
-    /// <summary>Elfos: Toque abre los dos canales de evasión, en puntos base sobre 10.000.</summary>
+    /// <summary>
+    /// Elfos: Toque abre el canal de evasión de entrada, en puntos base sobre 10.000, y <b>solo</b> ese.
+    /// La mitad de intercepción se retiró en el reequilibrio de habilidades raciales (ADR 0026,
+    /// §"Presupuesto de impacto", D-29): sobre una base de 250 puntos, el escalón mínimo legal de la
+    /// escala (5 pp = 500 puntos) no es "esquivar mejor" sino inmunidad, así que el canal
+    /// <c>interceptEvasion</c> queda sin usar en el catálogo hasta que D-30 lo ponga en escala.
+    /// </summary>
     [Fact]
-    public void ElfTouchOpensBothEvasionChannels()
+    public void ElfTouchOpensTheTackleEvasionChannelOnly()
     {
         var engine = Engine(Race.Elf);
         var elf = engine.PlayerById(1)!;
+        int points = Catalog.Perks.Get("elf_touch").Effects[0].Value;
 
         engine.Effects!.Publish(MatchStart(engine));
-        Assert.Equal(1000, engine.Effects.Modifiers.Probability(elf, ProbabilityKind.TackleEvasion));
-        Assert.Equal(1000, engine.Effects.Modifiers.Probability(elf, ProbabilityKind.InterceptEvasion));
+        Assert.Equal(points, engine.Effects.Modifiers.Probability(elf, ProbabilityKind.TackleEvasion));
+        Assert.Equal(0, engine.Effects.Modifiers.Probability(elf, ProbabilityKind.InterceptEvasion));
     }
 
     /// <summary>

@@ -93,6 +93,32 @@ juego sabe escribir. Tres reglas, en este orden:
   `{ strength −12, speed +6, technique +14, stamina −6, leash +1 }`, y `discipline` a 35, su valor de
   diseño (el comentario de `Utility.OutsidePenalty` lo cita explícitamente).
 
+### Efecto colateral: la puerta de builds se queda en rojo y no es culpa de este cambio
+
+Al retirar `interceptEvasion`, la celda `badBuildsLoseToNone_elf_out_of_zone` de
+`Sim.Tests/Analysis/BuildGateTests.cs` pasa de **42,08%** a **54,38%** (el criterio es ≤ 45%). Medido con
+la metodología exacta de esa puerta (40 plantillas × 12 partidos, plantillas emparejadas, semilla 1):
+
+| Configuración de Toque | `elf_out_of_zone` vs `elf_none` |
+|---|---|
+| `tackleEvasion` 10 + `interceptEvasion` 10 (como estaba) | 42,08% |
+| `tackleEvasion` 5 + `interceptEvasion` 10 | 42,50% |
+| solo `interceptEvasion` 10 | 41,46% |
+| solo `tackleEvasion` 5 (este cambio) | **54,38%** |
+| solo `tackleEvasion` 5, y quitando los tres `center_conductor` de la build | **38,12%** |
+
+La causa no es la habilidad élfica: es que `elf_out_of_zone` lleva **tres copias de `center_conductor`**
+(`intercept` +5 a todo el equipo) y ese canal tiene base 250, así que una sola copia lo triplica y las tres
+lo multiplican por siete. Esa build no era mala; era una build con un arma enorme que la inmunidad racial
+de su propio rival —también elfo— cancelaba. Con la inmunidad fuera, el arma se ve, y la build "mala" gana.
+Control: `orc_misplaced`, que también lleva tres `center_conductor` pero sobre slots donde la condición no
+se cumple, mide 32,50% y no se mueve.
+
+Es D-30 otra vez, y la solución está fuera de esta ADR: o `center_conductor` cambia de canal, o
+`elf_out_of_zone` deja de apoyarse en él (verificado: sin las tres copias, la celda cae a 38,12% y la
+puerta vuelve a verde), o la build sale del grupo `bad` en favor de `elf_incoherent`. Ninguno de esos tres
+ficheros está en el alcance de este trabajo. Queda anotado como **D-35** en `docs/pendientes.md`.
+
 ## Alternativas descartadas
 
 - **Habilidades como código especial por raza**: rompe el principio de que las reglas viven en datos (RT-031) y multiplica los casos especiales del simulador.

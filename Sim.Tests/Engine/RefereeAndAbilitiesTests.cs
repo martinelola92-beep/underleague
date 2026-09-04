@@ -20,7 +20,8 @@ public sealed class RefereeAndAbilitiesTests
     /// Sangre caliente (orcos, ADR 0026): el derribo que provoca un orco dura más. Se mide en el punto
     /// exacto en el que el motor lo usa —la duración del estado <c>KnockedDown</c> que aplica al rival—,
     /// antes y después de que la habilidad se active, para que lo único que cambie entre las dos lecturas
-    /// sea la habilidad.
+    /// sea la habilidad. Los ticks que suma se leen del dato: cuánto vale es una cifra de balance (ADR
+    /// 0026, §"Presupuesto de impacto") y vive en <c>data/perks/hot_blooded.json</c>, no aquí.
     /// </summary>
     [Fact]
     public void AnOrcLeavesTheRivalDownForLonger()
@@ -28,12 +29,13 @@ public sealed class RefereeAndAbilitiesTests
         var engine = Engine(Race.Orc);
         var orc = engine.PlayerById(1)!;
         int baseTicks = Catalog.Tuning.States.KnockedDownTicks;
+        int extraTicks = Catalog.Perks.Get("hot_blooded").Effects[0].Value;
 
         Assert.Equal(baseTicks, engine.KnockdownTicksCausedBy(orc, baseTicks));
 
         engine.Effects!.Publish(MatchStart(engine));
 
-        Assert.Equal(baseTicks + 5, engine.KnockdownTicksCausedBy(orc, baseTicks));
+        Assert.Equal(baseTicks + extraTicks, engine.KnockdownTicksCausedBy(orc, baseTicks));
     }
 
     /// <summary>
@@ -53,12 +55,15 @@ public sealed class RefereeAndAbilitiesTests
     }
 
     /// <summary>
-    /// Toque (elfos, ADR 0026): el elfo esquiva mejor en los dos canales que abrió el paquete S. Se mide
-    /// sobre las dos probabilidades reales del motor —la de que le roben el balón en una entrada y la de
-    /// que le corten el pase—, antes y después de activar la habilidad.
+    /// Toque (elfos, ADR 0026): el elfo esquiva mejor la entrada, y <b>solo</b> la entrada. Se mide sobre
+    /// las dos probabilidades reales del motor —la de que le roben el balón en una entrada y la de que le
+    /// corten el pase—, antes y después de activar la habilidad: la primera baja, la segunda no se mueve.
+    /// El reequilibrio de habilidades raciales (ADR 0026, §"Presupuesto de impacto", D-29) retiró la
+    /// mitad de intercepción porque sobre una base de 250 puntos el escalón mínimo de la escala (5 pp)
+    /// no es una evasión sino una inmunidad, y una habilidad gratis e irrenunciable no puede valer eso.
     /// </summary>
     [Fact]
-    public void AnElfEvadesTacklesAndInterceptionsBetter()
+    public void AnElfEvadesTacklesBetterAndInterceptionsTheSame()
     {
         var engine = Engine(Race.Elf);
         var elf = engine.PlayerById(1)!;
@@ -66,12 +71,13 @@ public sealed class RefereeAndAbilitiesTests
 
         int tackleBefore = engine.TackleWinChance(opponent, elf);
         int interceptBefore = engine.InterceptChance(opponent, elf);
+        int points = Catalog.Perks.Get("elf_touch").Effects[0].Value;
 
         engine.Effects!.Publish(MatchStart(engine));
 
-        // 10 puntos porcentuales del perk, en la base 10.000 del motor (§5.2).
-        Assert.Equal(tackleBefore - 1000, engine.TackleWinChance(opponent, elf));
-        Assert.Equal(interceptBefore - 1000, engine.InterceptChance(opponent, elf));
+        // Los puntos porcentuales del perk, ya en la base 10.000 del motor (§5.2).
+        Assert.Equal(tackleBefore - points, engine.TackleWinChance(opponent, elf));
+        Assert.Equal(interceptBefore, engine.InterceptChance(opponent, elf));
     }
 
     /// <summary>
