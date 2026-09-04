@@ -5,6 +5,14 @@
   "quality": 50,
   "perks": [
     {
+      "slot": 0,
+      "perk": "safety_net"
+    },
+    {
+      "slot": 0,
+      "perk": "sweeper_keeper"
+    },
+    {
       "slot": 1,
       "perk": "brute_boots"
     },
@@ -18,7 +26,23 @@
     },
     {
       "slot": 2,
-      "perk": "road_warrior"
+      "perk": "shadow_marker"
+    },
+    {
+      "slot": 3,
+      "perk": "shadow_marker"
+    },
+    {
+      "slot": 3,
+      "perk": "center_conductor"
+    },
+    {
+      "slot": 4,
+      "perk": "shadow_marker"
+    },
+    {
+      "slot": 5,
+      "perk": "shadow_marker"
     },
     {
       "slot": 6,
@@ -26,11 +50,19 @@
     },
     {
       "slot": 6,
-      "perk": "poacher_instinct"
+      "perk": "forward_line"
+    },
+    {
+      "slot": 4,
+      "perk": "brute_boots"
     },
     {
       "slot": 6,
-      "perk": "battle_reader"
+      "perk": "poacher_instinct"
+    },
+    {
+      "slot": 5,
+      "perk": "scar_tissue"
     }
   ],
   "rarities": {

@@ -16,7 +16,7 @@
     {
       "type": "modifyLeash",
       "target": "actor",
-      "value": 5,
+      "value": 2,
       "duration": "play"
     }
   ],

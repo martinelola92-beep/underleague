@@ -16,7 +16,22 @@ Cada una de las tres invalida el ajuste de las otras: los cuerpos cambian el con
 | 3b | Catálogo rehecho: 90% universal sin condiciones de raza y 10% exclusivos por raza (ADR 0023), con los ocho ejes de `perks-ejes.md` | Distribución por eje dentro de lo previsto; ninguna build de prueba depende de perks que el juego no ofrecería |
 | 3 | Adyacencia resuelta al construir el partido en vínculos direccionales (`beside`, `ahead`, `behind`, `left`, `right`); efectos dirigidos a pares en el motor de efectos; condición de proximidad dinámica; revisión del catálogo de perks | Los perks de colocación se activan sin exigir formaciones absurdas; descripciones generadas correctas para ambas familias |
 | 3c | Acciones de ataque diferenciadas (`ShortPass`, `LongPass`, escalado de regate y tiro), bloqueo sin balón dentro de la jugada activa y árbitro con criterio activo (ADR 0030) | Estilos de juego distinguibles en el log; la violencia es viable pero castigada por el árbitro |
-| 4 | Reajuste único: RT-056 en rango y criterio de salida de fase 1 (coherentes ≥ 58%, malas ≤ 45%, progresión que premia) | Ambas puertas en verde y `docs/balance/fase1-perks.md` actualizado con el antes y el después |
+| 4 | Reajuste único: RT-056 en rango y criterio de salida de fase 1 (coherentes ≥ 58%, malas ≤ 45%, progresión que premia) | **Hecho (paquete U, 4 sep 2026).** Las tres puertas en verde; antes y después en `docs/balance/fase1b-resultados.md`, que sustituye a `fase1-perks.md` como línea base |
+
+## Estado
+
+**Bloque cerrado el 4 de septiembre de 2026.** Los cuatro hallazgos de abajo eran restricciones de partida;
+qué ha pasado con cada uno está medido en `docs/balance/fase1b-resultados.md`:
+
+1. Canales saturados: **resuelto**. `pass.baseSuccess` 9.200 -> 7.700 y `dribble.baseWin` 8.400 -> 7.200, y
+   el catálogo elige el canal por su recorrido. Aparece el problema contrario (D-30): la escala única de
+   puntos porcentuales es demasiado gruesa para `intercept` y para `injure`.
+2. Perks de acumulación sin progresión perceptible: **resuelto** cambiándolos de canal. Una plantilla que
+   solo acumula pasa del 57% al 88% de tasa de victoria a lo largo de una campaña de ocho partidos.
+3. La velocidad muerta: **resuelto**. De +0,4 puntos por cada 10 a **+6,6 por cada 20**, sin tocar ninguna
+   fórmula: los cuerpos con volumen y `FindSpace` la resucitan.
+4. La varianza de generación domina: **sigue siendo cierta** y sigue exigiendo `--rosters` y plantillas
+   emparejadas en toda comparación de builds.
 
 ## Hallazgos de la línea base que condicionan el rediseño
 

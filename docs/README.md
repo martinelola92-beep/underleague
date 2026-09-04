@@ -17,6 +17,8 @@
 | [perks-ejes.md](perks-ejes.md) | Taxonomía de ejes de activación de los perks y distribución objetivo del catálogo |
 | [fase2-diseno.md](fase2-diseno.md) | Especificación de la fase 2: bucle de run completo sin gráficos |
 | [fase1b-diseno.md](fase1b-diseno.md) | Especificación de implementación del bloque de rediseño: contrato de datos, motor y paquetes |
+| [balance/fase1b-resultados.md](balance/fase1b-resultados.md) | Medición de cierre del bloque de rediseño espacial (paquete U): RT-056 antes y después, criterio de salida de fase 1, valor marginal por atributo, campaña, rareza y jefe final, y las conclusiones de diseño. **Línea base de balance vigente** |
+| [balance/fase1-perks.md](balance/fase1-perks.md) | Medición del motor anterior al rediseño. Superada; se conserva por sus hallazgos y por el apéndice §12 |
 | [rediseno-espacial.md](rediseno-espacial.md) | Plan del rediseño espacial: cuerpos con volumen, roles derivados de la colocación y adyacencia por pares (ADR 0020-0022) |
 | [fase1-diseno.md](fase1-diseno.md) | Especificación de la fase 1: motor de efectos, formato de perk, descripciones generadas, progresión, catálogo de prueba, builds y modos de simulación |
 | [glosario-identificadores.md](glosario-identificadores.md) | Correspondencia español -> identificador en código. Única fuente para nombrar conceptos |

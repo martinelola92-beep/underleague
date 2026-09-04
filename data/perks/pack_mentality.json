@@ -26,7 +26,7 @@
       "type": "modifyAttribute",
       "target": "owner",
       "attribute": "strength",
-      "value": -5,
+      "value": -10,
       "duration": "match"
     }
   ],

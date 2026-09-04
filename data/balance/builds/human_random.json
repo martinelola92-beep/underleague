@@ -1,20 +1,40 @@
 {
   "id": "human_random",
-  "name": "Humanos: al azar",
+  "name": "Humanos: perks al azar",
   "race": "Human",
   "quality": 50,
   "perks": [
+    {
+      "slot": 1,
+      "perk": "own_third_anchor"
+    },
     {
       "slot": 1,
       "perk": "back_to_back"
     },
     {
       "slot": 3,
+      "perk": "flank_specialist"
+    },
+    {
+      "slot": 3,
       "perk": "home_ref"
     },
     {
-      "slot": 6,
+      "slot": 5,
       "perk": "comeback_spirit"
+    },
+    {
+      "slot": 5,
+      "perk": "forward_line"
+    },
+    {
+      "slot": 6,
+      "perk": "own_third_anchor"
+    },
+    {
+      "slot": 6,
+      "perk": "box_predator"
     }
   ],
   "lineup": null

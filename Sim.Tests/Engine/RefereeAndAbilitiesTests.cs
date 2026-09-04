@@ -166,17 +166,39 @@ public sealed class RefereeAndAbilitiesTests
     [Fact]
     public void TheInitialCriterionChangesTheMatch()
     {
+        // Se mide sobre treinta semillas y no sobre una (paquete U): el criterio desplaza el umbral de
+        // las tiradas, así que en un partido concreto puede no llegar a voltear ninguna y las dos
+        // secuencias de eventos salir idénticas. Lo que RF-064 exige es el efecto, no que cada partido
+        // suelto cambie: con el árbitro a favor, el local comete MENOS faltas señaladas que con el
+        // árbitro en contra, y alguna de las treinta secuencias tiene que ser distinta.
+        const int Seeds = 30;
         var setup = TestMatches.Brutal(Catalog);
         var friendly = setup with { Referee = setup.Referee with { InitialBias = 80 } };
         var hostile = setup with { Referee = setup.Referee with { InitialBias = -80 } };
 
-        var withFriendly = Simulator.Run(friendly, 4, Catalog, new SimConfig(CollectLog: false));
-        var withHostile = Simulator.Run(hostile, 4, Catalog, new SimConfig(CollectLog: false));
+        int friendlyHomeFouls = 0;
+        int hostileHomeFouls = 0;
+        bool anySequenceDiffers = false;
 
-        Assert.NotEqual(withFriendly.Report.FinalBias, withHostile.Report.FinalBias);
-        Assert.NotEqual(
-            withFriendly.Events.Select(e => (e.Type, e.Tick, e.Detail)).ToList(),
-            withHostile.Events.Select(e => (e.Type, e.Tick, e.Detail)).ToList());
+        for (ulong seed = 1; seed <= Seeds; seed++)
+        {
+            var withFriendly = Simulator.Run(friendly, seed, Catalog, new SimConfig(CollectLog: false));
+            var withHostile = Simulator.Run(hostile, seed, Catalog, new SimConfig(CollectLog: false));
+
+            Assert.NotEqual(withFriendly.Report.FinalBias, withHostile.Report.FinalBias);
+
+            friendlyHomeFouls += withFriendly.Report.Players.Where(p => p.Team == 0).Sum(p => p.Fouls);
+            hostileHomeFouls += withHostile.Report.Players.Where(p => p.Team == 0).Sum(p => p.Fouls);
+
+            anySequenceDiffers = anySequenceDiffers
+                || !withFriendly.Events.Select(e => (e.Type, e.Tick, e.Detail))
+                    .SequenceEqual(withHostile.Events.Select(e => (e.Type, e.Tick, e.Detail)));
+        }
+
+        Assert.True(anySequenceDiffers, "el criterio inicial no cambió ningún partido de los treinta");
+        Assert.True(
+            friendlyHomeFouls < hostileHomeFouls,
+            $"faltas del local con árbitro a favor {friendlyHomeFouls} frente a en contra {hostileHomeFouls}");
     }
 
     // ------------------------------------------------------------------ ayudantes

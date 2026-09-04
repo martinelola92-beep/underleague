@@ -6,11 +6,11 @@
   "perks": [
     {
       "slot": 0,
-      "perk": "sweeper_keeper"
+      "perk": "safety_net"
     },
     {
       "slot": 0,
-      "perk": "safety_net"
+      "perk": "sweeper_keeper"
     },
     {
       "slot": 1,
@@ -27,7 +27,43 @@
     {
       "slot": 2,
       "perk": "own_third_anchor"
+    },
+    {
+      "slot": 3,
+      "perk": "center_conductor"
+    },
+    {
+      "slot": 3,
+      "perk": "last_ditch"
+    },
+    {
+      "slot": 4,
+      "perk": "last_ditch"
+    },
+    {
+      "slot": 4,
+      "perk": "covering_shadow"
+    },
+    {
+      "slot": 5,
+      "perk": "last_ditch"
+    },
+    {
+      "slot": 5,
+      "perk": "game_management"
+    },
+    {
+      "slot": 6,
+      "perk": "box_predator"
+    },
+    {
+      "slot": 6,
+      "perk": "forward_line"
     }
   ],
+  "styles": {
+    "1": "Bulwark",
+    "2": "Bulwark"
+  },
   "lineup": null
 }

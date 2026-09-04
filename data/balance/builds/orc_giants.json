@@ -1,20 +1,48 @@
 {
   "id": "orc_giants",
-  "name": "Orcos: gigantes gentiles",
+  "name": "Orcos: gigantes",
   "race": "Orc",
   "quality": 50,
   "perks": [
+    {
+      "slot": 0,
+      "perk": "safety_net"
+    },
+    {
+      "slot": 0,
+      "perk": "sweeper_keeper"
+    },
+    {
+      "slot": 1,
+      "perk": "own_third_anchor"
+    },
+    {
+      "slot": 1,
+      "perk": "diagonal_press"
+    },
+    {
+      "slot": 2,
+      "perk": "own_third_anchor"
+    },
     {
       "slot": 2,
       "perk": "brute_boots"
     },
     {
-      "slot": 2,
-      "perk": "road_warrior"
+      "slot": 3,
+      "perk": "gentle_giant"
     },
     {
-      "slot": 5,
-      "perk": "gentle_giant"
+      "slot": 3,
+      "perk": "center_conductor"
+    },
+    {
+      "slot": 4,
+      "perk": "pack_mentality"
+    },
+    {
+      "slot": 4,
+      "perk": "game_management"
     },
     {
       "slot": 5,
@@ -26,6 +54,10 @@
     },
     {
       "slot": 6,
+      "perk": "forward_line"
+    },
+    {
+      "slot": 5,
       "perk": "battle_reader"
     }
   ],

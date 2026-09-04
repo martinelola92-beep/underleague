@@ -292,6 +292,14 @@ internal sealed class MatchPlayer
     /// <summary>Ticks que faltan para poder volver a decidir una entrada (§3.5); mientras sea &gt; 0, Tackle se descarta.</summary>
     public int TackleCooldown { get; set; }
 
+    /// <summary>
+    /// Ticks que faltan para poder volver a decidir un bloqueo sin balón (ADR 0030 §2); mientras sea
+    /// &gt; 0, Block se descarta. Contador propio, separado del de la entrada (paquete U): compartirlos
+    /// (fase1b-diseno.md §6.8) hacía que cargar sin balón dejara al jugador sin poder disputar el balón
+    /// durante 150 ticks, y se llevaba por delante la mitad de las entradas por partido.
+    /// </summary>
+    public int BlockCooldown { get; set; }
+
     /// <summary>Tarjetas amarillas acumuladas (la segunda es roja si lo dice tuning).</summary>
     public int YellowCards { get; set; }
 

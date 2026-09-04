@@ -25,7 +25,12 @@ public sealed class MatchRulesTests
             var report = result.Report;
 
             Assert.True(report.Winner is 0 or 1, $"semilla {seed}: ganador {report.Winner}");
-            if (report.Goals[0] != report.Goals[1])
+
+            // La incomparecencia (RF-059) decide el partido por encima del marcador: un equipo que se
+            // queda con menos de cinco jugadores pierde aunque fuera ganando, así que ese caso no puede
+            // exigir que gane quien más goles tiene (paquete U: con la violencia calibrada las
+            // incomparecencias dejaron de ser anecdóticas y esta rama empezó a ejercitarse).
+            if (!report.Forfeit && report.Goals[0] != report.Goals[1])
             {
                 Assert.Equal(report.Goals[0] > report.Goals[1] ? 0 : 1, report.Winner);
             }

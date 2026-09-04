@@ -10,6 +10,15 @@ public static class Pitch
 {
     public const int Columns = 16;
     public const int Rows = 5;
+    /// <summary>
+    /// Columnas de colocación de una alineación, contadas desde la portería propia (RF-040..045): una
+    /// casilla-hogar vive en 0..7 y el motor refleja la columna para el equipo 1. Los tercios de inicio
+    /// (<c>startsIn</c>) se miden sobre este tramo, no sobre las 16 columnas del campo: con 16 el tercio
+    /// atacante caía en las columnas 11-15, donde ningún jugador puede colocarse, y todo perk que lo
+    /// exigiera era letra muerta (corregido en el paquete U).
+    /// </summary>
+    public const int PlacementColumns = 8;
+
     public const int AreaColumns = 2;
     public const int AreaRows = 3;
 

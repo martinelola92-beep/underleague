@@ -31,19 +31,23 @@ namespace Underleague.Sim.Tests.Analysis;
 /// 52,2% Orc, 52,0% Elf; alternando, 50,7% / 50,5% / 49,9%).
 /// </para>
 /// <para>
-/// Tamaño de muestra: <see cref="Rosters"/> × <see cref="MatchesPerRoster"/> = 1.600 partidos por celda,
-/// semilla <see cref="Seed"/>. Con ese tamaño el error típico de una tasa de victoria es de 1,25 puntos y
-/// la puerta tarda unos 35 s. Los márgenes reales medidos están en docs/balance/fase1-perks.md.
+/// Tamaño de muestra: <see cref="Rosters"/> × <see cref="MatchesPerRoster"/> = <b>480 partidos por
+/// celda</b>, catorce celdas, <b>semilla <see cref="Seed"/></b>; 6.720 partidos en total y unos
+/// <b>30 s</b> de ejecución (paquete U; antes eran 80 × 20 = 1.600 por celda y ~85 s, por encima del
+/// minuto que se le pide a una puerta). Con 480 partidos y plantillas emparejadas el error típico de una
+/// tasa de victoria es de 2,3 puntos, y el margen más ajustado de la medición de cierre es de 6,6 puntos
+/// (<c>elf_bulwark</c> 64,6% contra el umbral de 58%), así que la puerta es estable. Los valores medidos
+/// están en docs/balance/fase1b-resultados.md.
 /// </para>
 /// </summary>
 [Trait("Category", "Gate")]
 public sealed class BuildGateTests
 {
     /// <summary>Plantillas distintas sobre las que se promedia cada celda.</summary>
-    private const int Rosters = 80;
+    private const int Rosters = 40;
 
     /// <summary>Partidos por plantilla (múltiplo de 4: local/visitante × reparto de ids).</summary>
-    private const int MatchesPerRoster = 20;
+    private const int MatchesPerRoster = 12;
 
     /// <summary>Semilla base del lote de la puerta.</summary>
     private const ulong Seed = 1;
@@ -60,36 +64,25 @@ public sealed class BuildGateTests
     /// <summary>Build "gana por técnica" de <c>buildsWinDifferently</c> (§8).</summary>
     private const string TechnicalBuild = "elf_tiki_taka";
 
-    /// <summary>
-    /// La puerta está escrita y funciona, pero desactivada: sus umbrales dependen de la mecánica espacial
-    /// que las ADR 0020 (cuerpos con volumen), 0021 (adyacencia estática y proximidad dinámica) y 0022
-    /// (comportamiento sin balón) van a cambiar, y el catálogo de perks y las builds se ajustarán después
-    /// de ese cambio. Se reactiva quitando este Skip cuando las tres estén implementadas y `data/perks` y
-    /// `data/balance/builds` estén rediseñados sobre la mecánica nueva. Los valores medidos con el motor actual están en
-    /// `docs/balance/fase1-perks.md`.
-    /// </summary>
-    private const string SkipReason =
-        "pendiente del rediseño de adyacencia y cuerpos (ADR 0020/0021/0022): los umbrales de §8 dependen de esa mecánica";
-
     private static readonly Lazy<IReadOnlyList<MetricResult>> Results = new(Compute);
 
     /// <summary>§8: cada build coherente gana ≥ 58% a la referencia sin perks de su raza.</summary>
-    [Fact(Skip = SkipReason)]
+    [Fact]
     public void CoherentBuildsBeatTheirBaseline() =>
         AssertAllIn(BuildMetrics.CoherentBuildsBeatNonePrefix);
 
     /// <summary>§8: cada build mal construida a propósito gana ≤ 45% a su referencia.</summary>
-    [Fact(Skip = SkipReason)]
+    [Fact]
     public void BadBuildsLoseToTheirBaseline() =>
         AssertAllIn(BuildMetrics.BadBuildsLoseToNonePrefix);
 
     /// <summary>§8: la build sin criterio se queda entre el 40% y el 60%.</summary>
-    [Fact(Skip = SkipReason)]
+    [Fact]
     public void RandomBuildStaysNearItsBaseline() =>
         AssertAllIn(BuildMetrics.RandomBuildNearNonePrefix);
 
     /// <summary>§8: la build de contacto lesiona mucho más y la técnica encadena muchos más pases.</summary>
-    [Fact(Skip = SkipReason)]
+    [Fact]
     public void BuildsWinDifferently()
     {
         AssertIn(BuildMetrics.BuildsWinDifferentlyInjuries);
@@ -97,17 +90,27 @@ public sealed class BuildGateTests
     }
 
     /// <summary>§8/RF-070: ningún perk asignado se queda por debajo del 1% de partidos con activación.</summary>
-    [Fact(Skip = SkipReason)]
+    [Fact]
     public void NoPerkIsDead() => AssertIn(BuildMetrics.NoDeadPerks);
 
     /// <summary>Todo perk del catálogo tiene que estar asignado en alguna build, o noDeadPerks no lo ve.</summary>
-    [Fact(Skip = SkipReason)]
+    [Fact]
     public void EveryCatalogPerkIsAssignedInSomeBuild()
     {
         var catalog = TestData.LoadCatalog();
         var builds = BuildFile.LoadAll(TestData.DataDirectory);
         var assigned = builds.Values.SelectMany(b => b.Perks.Select(p => p.Perk)).ToHashSet(StringComparer.Ordinal);
-        var missing = catalog.Perks.All.Select(p => p.Id).Where(id => !assigned.Contains(id)).ToList();
+
+        // Las habilidades raciales (ADR 0026) no se asignan: las concede la raza y no ocupan slot
+        // (fase1b-diseno.md §5.10), así que ninguna build puede listarlas y noDeadPerks no las mide.
+        var racialAbilities = catalog.Races
+            .Select(r => r.Ability)
+            .Where(a => !string.IsNullOrEmpty(a))
+            .ToHashSet(StringComparer.Ordinal);
+
+        var missing = catalog.Perks.All.Select(p => p.Id)
+            .Where(id => !assigned.Contains(id) && !racialAbilities.Contains(id))
+            .ToList();
 
         Assert.True(
             missing.Count == 0,
@@ -115,7 +118,7 @@ public sealed class BuildGateTests
     }
 
     /// <summary>RF-069: 60/30/10 ± 8 puntos.</summary>
-    [Fact(Skip = SkipReason)]
+    [Fact]
     public void CatalogDistributionFollowsRf069()
     {
         AssertIn(BuildMetrics.Rf069Filler);
@@ -124,7 +127,7 @@ public sealed class BuildGateTests
     }
 
     /// <summary>Ninguna métrica de la puerta puede quedar OUT: es el criterio de salida completo.</summary>
-    [Fact(Skip = SkipReason)]
+    [Fact]
     public void NoGateMetricIsOutOfRange()
     {
         var offenders = Results.Value.Where(r => r.Status == "OUT").ToList();
@@ -311,149 +314,4 @@ public sealed class BuildGateTests
     }
 
     private static readonly RefereeSetup Referee = new("Referee", RefereeTrait.Neutral, 0);
-
-    /// <summary>
-    /// Lectura mínima de <c>data/balance/builds/*.json</c>. /Balance tiene la suya (BuildConfig); aquí no
-    /// se comparte proyecto, igual que con reference.json en la puerta de fase 0.
-    /// </summary>
-    private sealed record BuildFile(
-        string Id,
-        Race Race,
-        int Quality,
-        IReadOnlyList<(int Slot, string Perk)> Perks,
-        IReadOnlyDictionary<int, Rarity> Rarities,
-        IReadOnlyList<Cell>? Lineup)
-    {
-        private const int StarterCount = 7;
-
-        public static IReadOnlyDictionary<string, BuildFile> LoadAll(string dataDirectory)
-        {
-            var result = new Dictionary<string, BuildFile>(StringComparer.Ordinal);
-            string dir = Path.Combine(dataDirectory, "balance", "builds");
-            foreach (var path in Directory.EnumerateFiles(dir, "*.json").OrderBy(p => p, StringComparer.Ordinal))
-            {
-                var build = Parse(File.ReadAllText(path));
-                result[build.Id] = build;
-            }
-
-            return result;
-        }
-
-        private static BuildFile Parse(string content)
-        {
-            using var document = JsonDocument.Parse(content);
-            var root = document.RootElement;
-
-            var perks = new List<(int, string)>();
-            if (root.TryGetProperty("perks", out var perksElement) && perksElement.ValueKind == JsonValueKind.Array)
-            {
-                foreach (var entry in perksElement.EnumerateArray())
-                {
-                    perks.Add((entry.GetProperty("slot").GetInt32(), entry.GetProperty("perk").GetString()!));
-                }
-            }
-
-            var rarities = new Dictionary<int, Rarity>();
-            if (root.TryGetProperty("rarities", out var raritiesElement) && raritiesElement.ValueKind == JsonValueKind.Object)
-            {
-                foreach (var property in raritiesElement.EnumerateObject())
-                {
-                    rarities[int.Parse(property.Name)] = Enum.Parse<Rarity>(property.Value.GetString()!, ignoreCase: true);
-                }
-            }
-
-            List<Cell>? lineup = null;
-            if (root.TryGetProperty("lineup", out var lineupElement) && lineupElement.ValueKind == JsonValueKind.Array)
-            {
-                lineup = new List<Cell>();
-                foreach (var cell in lineupElement.EnumerateArray())
-                {
-                    lineup.Add(new Cell(cell[0].GetInt32(), cell[1].GetInt32()));
-                }
-            }
-
-            return new BuildFile(
-                root.GetProperty("id").GetString()!,
-                Enum.Parse<Race>(root.GetProperty("race").GetString()!),
-                root.GetProperty("quality").GetInt32(),
-                perks,
-                rarities,
-                lineup);
-        }
-
-        /// <summary>Mismo esquema de generación que /Balance: RngStreams.Generation(semilla, índice).</summary>
-        public TeamSetup ToTeamSetup(Catalog catalog, ulong seed, int generationIndex, int firstPlayerId)
-        {
-            var rng = RngStreams.Generation(seed, generationIndex);
-            var generated = TeamGenerator.Generate(ref rng, catalog, Id, Race, Quality, firstPlayerId);
-            var players = generated.Players.ToList();
-
-            foreach (var (slot, rarity) in Rarities.OrderBy(r => r.Key))
-            {
-                players[slot] = players[slot] with { Rarity = rarity };
-            }
-
-            var bySlot = new Dictionary<int, List<string>>();
-            foreach (var (slot, perk) in Perks)
-            {
-                if (!bySlot.TryGetValue(slot, out var list))
-                {
-                    list = new List<string>();
-                    bySlot[slot] = list;
-                }
-
-                list.Add(perk);
-            }
-
-            foreach (var (slot, list) in bySlot.OrderBy(e => e.Key))
-            {
-                players[slot] = players[slot] with { Perks = list };
-            }
-
-            Lineup lineup;
-            if (Lineup is { } cells)
-            {
-                var slots = new List<LineupSlot>(StarterCount);
-                for (int i = 0; i < StarterCount; i++)
-                {
-                    slots.Add(new LineupSlot(players[i].Id, cells[i]));
-                }
-
-                lineup = new Lineup(slots);
-            }
-            else
-            {
-                lineup = Model.Lineup.Default(players.Take(StarterCount).ToList());
-            }
-
-            return new TeamSetup(Id, Id, Race, players, lineup);
-        }
-    }
-
-    /// <summary>Lectura mínima de <c>data/balance/groups.json</c> (§8, paquete H).</summary>
-    private sealed record BuildGroupsFile(
-        IReadOnlyList<string> Coherent,
-        IReadOnlyList<string> Bad,
-        IReadOnlyList<string> Random,
-        IReadOnlyDictionary<string, string> BaselineByRace)
-    {
-        public static BuildGroupsFile Load(string dataDirectory)
-        {
-            using var document = JsonDocument.Parse(
-                File.ReadAllText(Path.Combine(dataDirectory, "balance", "groups.json")));
-            var root = document.RootElement;
-
-            static List<string> Array(JsonElement root, string name) =>
-                root.GetProperty(name).EnumerateArray().Select(e => e.GetString()!).ToList();
-
-            var baselines = new Dictionary<string, string>(StringComparer.Ordinal);
-            foreach (var property in root.GetProperty("baselineByRace").EnumerateObject())
-            {
-                baselines[property.Name] = property.Value.GetString()!;
-            }
-
-            return new BuildGroupsFile(
-                Array(root, "coherent"), Array(root, "bad"), Array(root, "random"), baselines);
-        }
-    }
 }

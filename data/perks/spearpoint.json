@@ -13,22 +13,22 @@
   "links": [
     "ahead"
   ],
-  "condition": "",
+  "condition": "linked(owner,'ahead')",
   "effects": [
     {
       "type": "modifyProbability",
-      "target": "linkedWithTag:Forward",
+      "target": "linked",
       "probability": "shotOnTarget",
-      "value": 20,
+      "value": 25,
       "duration": "match"
     }
   ],
   "elseEffects": [
     {
-      "type": "modifyAttribute",
-      "target": "owner",
-      "attribute": "technique",
-      "value": -10,
+      "type": "modifyProbability",
+      "target": "team",
+      "probability": "shotOnTarget",
+      "value": -25,
       "duration": "match"
     }
   ],

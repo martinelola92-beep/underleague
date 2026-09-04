@@ -5,11 +5,51 @@
   "quality": 50,
   "perks": [
     {
-      "slot": 1,
-      "perk": "comeback_spirit"
+      "slot": 0,
+      "perk": "safety_net"
+    },
+    {
+      "slot": 0,
+      "perk": "sweeper_keeper"
     },
     {
       "slot": 1,
+      "perk": "own_third_anchor"
+    },
+    {
+      "slot": 1,
+      "perk": "game_management"
+    },
+    {
+      "slot": 2,
+      "perk": "own_third_anchor"
+    },
+    {
+      "slot": 2,
+      "perk": "back_to_back"
+    },
+    {
+      "slot": 3,
+      "perk": "center_conductor"
+    },
+    {
+      "slot": 3,
+      "perk": "high_press_trigger"
+    },
+    {
+      "slot": 4,
+      "perk": "covering_shadow"
+    },
+    {
+      "slot": 4,
+      "perk": "comeback_spirit"
+    },
+    {
+      "slot": 5,
+      "perk": "natural_leader"
+    },
+    {
+      "slot": 5,
       "perk": "game_management"
     },
     {
@@ -22,11 +62,16 @@
     },
     {
       "slot": 6,
-      "perk": "battle_reader"
+      "perk": "forward_line"
     }
   ],
   "rarities": {
     "6": "rare"
+  },
+  "traits": {
+    "5": [
+      "Leader"
+    ]
   },
   "lineup": null
 }

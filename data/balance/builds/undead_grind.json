@@ -5,20 +5,52 @@
   "quality": 50,
   "perks": [
     {
+      "slot": 0,
+      "perk": "safety_net"
+    },
+    {
+      "slot": 0,
+      "perk": "sweeper_keeper"
+    },
+    {
+      "slot": 1,
+      "perk": "own_third_anchor"
+    },
+    {
+      "slot": 1,
+      "perk": "last_ditch"
+    },
+    {
       "slot": 2,
-      "perk": "battle_reader"
+      "perk": "own_third_anchor"
     },
     {
       "slot": 2,
       "perk": "last_ditch"
     },
     {
-      "slot": 4,
+      "slot": 3,
+      "perk": "center_conductor"
+    },
+    {
+      "slot": 3,
       "perk": "deathless_march"
     },
     {
       "slot": 4,
       "perk": "cold_focus"
+    },
+    {
+      "slot": 4,
+      "perk": "covering_shadow"
+    },
+    {
+      "slot": 5,
+      "perk": "high_press_trigger"
+    },
+    {
+      "slot": 5,
+      "perk": "game_management"
     },
     {
       "slot": 6,

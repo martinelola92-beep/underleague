@@ -1,64 +1,64 @@
 {
-  "id": "human_wall",
-  "name": "Humanos: el muro",
+  "id": "human_accum",
+  "name": "Humanos: acumuladores",
   "race": "Human",
   "quality": 50,
   "perks": [
     {
       "slot": 0,
-      "perk": "safety_net"
+      "perk": "battle_reader"
     },
     {
       "slot": 0,
-      "perk": "sweeper_keeper"
+      "perk": "silky_veteran"
     },
     {
       "slot": 1,
-      "perk": "own_third_anchor"
+      "perk": "battle_reader"
     },
     {
       "slot": 1,
-      "perk": "pivot_duo"
+      "perk": "silky_veteran"
     },
     {
       "slot": 2,
-      "perk": "own_third_anchor"
+      "perk": "battle_reader"
     },
     {
       "slot": 2,
-      "perk": "pivot_duo"
+      "perk": "silky_veteran"
     },
     {
       "slot": 3,
-      "perk": "center_conductor"
+      "perk": "battle_reader"
     },
     {
       "slot": 3,
-      "perk": "covering_shadow"
+      "perk": "silky_veteran"
     },
     {
       "slot": 4,
-      "perk": "last_ditch"
+      "perk": "battle_reader"
     },
     {
       "slot": 4,
-      "perk": "covering_shadow"
+      "perk": "silky_veteran"
     },
     {
       "slot": 5,
-      "perk": "last_ditch"
+      "perk": "battle_reader"
     },
     {
       "slot": 5,
-      "perk": "covering_shadow"
+      "perk": "silky_veteran"
     },
     {
       "slot": 6,
-      "perk": "box_predator"
+      "perk": "battle_reader"
     },
     {
       "slot": 6,
-      "perk": "forward_line"
+      "perk": "silky_veteran"
     }
   ],
   "lineup": null

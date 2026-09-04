@@ -3,8 +3,13 @@ using Underleague.Sim.Model;
 
 namespace Underleague.Balance;
 
-/// <summary>Un equipo del conjunto de referencia: id, raza y calidad media de atributos.</summary>
-public sealed record ReferenceTeam(string Id, Race Race, int Quality);
+/// <summary>
+/// Un equipo del conjunto de referencia: id, raza, calidad media de atributos, nivel de la plantilla y
+/// rareza uniforme opcional. <c>Quality</c> y <c>Level</c> son diales independientes (paquete U):
+/// la calidad desplaza los atributos punto por punto y el nivel es la progresión dentro de la run.
+/// <c>UniformRarity</c> null deja la composición por defecto de RF-005 (un raro entre diez).
+/// </summary>
+public sealed record ReferenceTeam(string Id, Race Race, int Quality, int Level = 1, Rarity? UniformRarity = null, Attributes? AttributeBonus = null);
 
 /// <summary>Un emparejamiento local-visitante del conjunto de referencia.</summary>
 public sealed record ReferencePairing(string HomeId, string AwayId);
@@ -34,7 +39,35 @@ public sealed record ReferenceConfig(IReadOnlyList<ReferenceTeam> Teams, IReadOn
             }
 
             int quality = RequireInt(teamElement, "quality");
-            teams.Add(new ReferenceTeam(id, race, quality));
+            int level = OptionalInt(teamElement, "level", 1);
+            if (level is < 1 or > 8)
+            {
+                throw new FormatException($"reference.json: 'level' fuera de 1..8 en equipo '{id}'");
+            }
+
+            Rarity? uniformRarity = null;
+            if (teamElement.TryGetProperty("rarity", out var rarityElement) && rarityElement.ValueKind == JsonValueKind.String)
+            {
+                if (!Enum.TryParse<Rarity>(rarityElement.GetString(), ignoreCase: true, out var parsed))
+                {
+                    throw new FormatException($"reference.json: rareza desconocida '{rarityElement.GetString()}' en equipo '{id}'");
+                }
+
+                uniformRarity = parsed;
+            }
+
+            Attributes? attributeBonus = null;
+            if (teamElement.TryGetProperty("attributeBonus", out var bonusElement) && bonusElement.ValueKind == JsonValueKind.Object)
+            {
+                attributeBonus = new Attributes(
+                    OptionalIntIn(bonusElement, "strength"),
+                    OptionalIntIn(bonusElement, "speed"),
+                    OptionalIntIn(bonusElement, "technique"),
+                    OptionalIntIn(bonusElement, "stamina"),
+                    OptionalIntIn(bonusElement, "leash"));
+            }
+
+            teams.Add(new ReferenceTeam(id, race, quality, level, uniformRarity, attributeBonus));
         }
 
         if (!root.TryGetProperty("pairings", out var pairingsElement) || pairingsElement.ValueKind != JsonValueKind.Array)
@@ -85,6 +118,24 @@ public sealed record ReferenceConfig(IReadOnlyList<ReferenceTeam> Teams, IReadOn
         }
 
         return value.GetString()!;
+    }
+
+    private static int OptionalIntIn(JsonElement element, string property) =>
+        element.TryGetProperty(property, out var value) && value.TryGetInt32(out int result) ? result : 0;
+
+    private static int OptionalInt(JsonElement element, string property, int fallback)
+    {
+        if (!element.TryGetProperty(property, out var value))
+        {
+            return fallback;
+        }
+
+        if (!value.TryGetInt32(out int result))
+        {
+            throw new FormatException($"reference.json: la propiedad '{property}' debe ser entera");
+        }
+
+        return result;
     }
 
     private static int RequireInt(JsonElement element, string property)

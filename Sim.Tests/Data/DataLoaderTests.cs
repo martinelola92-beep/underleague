@@ -89,7 +89,7 @@ public class DataLoaderTests
     {
         var catalog = TestData.LoadCatalog();
 
-        Assert.Equal(560, catalog.Ai.Base(Position.Goalkeeper, PlayerAction.ShortPass));
+        Assert.Equal(600, catalog.Ai.Base(Position.Goalkeeper, PlayerAction.ShortPass));
         Assert.Equal(100, catalog.Ai.Tactical(TacticalState.InPossession, PlayerAction.ShortPass));
         Assert.Equal(4.0f, catalog.Ai.Shift(TacticalState.InPossession).Shift);
         Assert.Equal(30, catalog.Ai.Shift(TacticalState.InPossession).SpeedTicks);
@@ -131,8 +131,8 @@ public class DataLoaderTests
 
         Assert.Equal(1, catalog.Tuning.ActionZone.Shape.Goalkeeper.Forward);
         Assert.Equal(-1, catalog.Tuning.ActionZone.Shape.Defender.Back);
-        Assert.Equal(60, catalog.Tuning.ActionZone.ScaleFromLeashPercent.At1);
-        Assert.Equal(150, catalog.Tuning.ActionZone.ScaleFromLeashPercent.At99);
+        Assert.Equal(85, catalog.Tuning.ActionZone.ScaleFromLeashPercent.At1);
+        Assert.Equal(115, catalog.Tuning.ActionZone.ScaleFromLeashPercent.At99);
         Assert.Equal(200, catalog.Tuning.ActionZone.OuterLimitMultiplier);
     }
 
@@ -159,9 +159,9 @@ public class DataLoaderTests
         Assert.Equal(6, catalog.Tuning.Dribble.LostKnockdownTicks);
         Assert.Equal(15, catalog.Tuning.Shot.PenaltyQualityBonus);
         Assert.Equal(60, catalog.Tuning.Save.QualityWeight);
-        Assert.Equal(1500, catalog.Tuning.Tackle.HardTackleYellowBonus);
-        Assert.Equal(200, catalog.Tuning.Tackle.HardTackleRedBonus);
-        Assert.Equal(100, catalog.Tuning.States.TackleCooldownTicks);
+        Assert.Equal(300, catalog.Tuning.Tackle.HardTackleYellowBonus);
+        Assert.Equal(20, catalog.Tuning.Tackle.HardTackleRedBonus);
+        Assert.Equal(60, catalog.Tuning.States.TackleCooldownTicks);
     }
 
     [Fact]

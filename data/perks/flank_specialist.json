@@ -17,16 +17,16 @@
       "type": "modifyProbability",
       "target": "owner",
       "probability": "dribble",
-      "value": 15,
+      "value": 20,
       "duration": "match"
     }
   ],
   "elseEffects": [
     {
-      "type": "modifyAttribute",
+      "type": "modifyProbability",
       "target": "owner",
-      "attribute": "speed",
-      "value": -10,
+      "probability": "dribble",
+      "value": -25,
       "duration": "match"
     }
   ],

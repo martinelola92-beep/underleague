@@ -11,7 +11,7 @@
   "trigger": "TACKLE",
   "scope": "actor",
   "links": [],
-  "condition": "nearOpponent(actor,'Fine',2)",
+  "condition": "nearAlly(actor,'Brute',2)",
   "effects": [
     {
       "type": "modifyProbability",

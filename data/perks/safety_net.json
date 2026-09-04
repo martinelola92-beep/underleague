@@ -11,13 +11,13 @@
   "trigger": "SAVE",
   "scope": "actor",
   "links": [],
-  "condition": "nearAlly(actor,'Cold',2)",
+  "condition": "nearAlly(actor,'Defender',3)",
   "effects": [
     {
       "type": "modifyProbability",
       "target": "actor",
       "probability": "save",
-      "value": 15,
+      "value": 20,
       "duration": "play"
     }
   ],
@@ -26,7 +26,7 @@
       "type": "modifyProbability",
       "target": "actor",
       "probability": "save",
-      "value": -10,
+      "value": -25,
       "duration": "play"
     }
   ],

@@ -27,4 +27,14 @@ public readonly record struct Vec2(float X, float Y)
 
     /// <summary>Interpolación lineal entre a y b, t en [0,1].</summary>
     public static Vec2 Lerp(Vec2 a, Vec2 b, float t) => a + ((b - a) * t);
+
+    /// <summary>
+    /// Texto del vector, en cultura invariante. <b>Tiene que estar escrito a mano</b>: el
+    /// <c>PrintMembers</c> que genera el compilador para un <c>record struct</c> recorre todas las
+    /// propiedades públicas, incluida <see cref="Normalized"/>, que es otro <see cref="Vec2"/> —así que
+    /// el <c>ToString()</c> por defecto se llamaba a sí mismo hasta desbordar la pila. No era un
+    /// problema teórico: cualquier aserción fallida de xUnit que formateara un Vec2 tumbaba el proceso
+    /// entero y abortaba la ejecución de los tests (encontrado en el paquete U).
+    /// </summary>
+    public override string ToString() => FormattableString.Invariant($"Vec2 {{ X = {X}, Y = {Y} }}");
 }

@@ -11,15 +11,16 @@
   "trigger": "MATCH_START",
   "scope": "actor",
   "links": [
-    "beside"
+    "left",
+    "right"
   ],
-  "condition": "",
+  "condition": "linked(owner,'left') || linked(owner,'right')",
   "effects": [
     {
       "type": "modifyProbability",
       "target": "linked",
       "probability": "tackle",
-      "value": 15,
+      "value": 20,
       "duration": "match"
     }
   ],
@@ -28,7 +29,7 @@
       "type": "modifyProbability",
       "target": "owner",
       "probability": "tackle",
-      "value": -10,
+      "value": -25,
       "duration": "match"
     }
   ],

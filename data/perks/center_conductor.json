@@ -17,16 +17,16 @@
       "type": "modifyProbability",
       "target": "team",
       "probability": "intercept",
-      "value": 10,
+      "value": 5,
       "duration": "match"
     }
   ],
   "elseEffects": [
     {
-      "type": "modifyAttribute",
+      "type": "modifyProbability",
       "target": "owner",
-      "attribute": "technique",
-      "value": -10,
+      "probability": "pass",
+      "value": -20,
       "duration": "match"
     }
   ],

@@ -16,9 +16,9 @@
     {
       "type": "modifyLeash",
       "target": "owner",
-      "valuePerCounter": 5,
+      "valuePerCounter": 1,
       "counter": "longLeashMatches",
-      "maxValue": 10,
+      "maxValue": 2,
       "duration": "match",
       "counterDivisor": 4
     },

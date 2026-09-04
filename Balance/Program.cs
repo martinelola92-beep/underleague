@@ -291,7 +291,7 @@ static void WriteMatchesCsv(string outDir, IReadOnlyList<MatchRow> matches)
     {
         "index", "seed", "homeId", "awayId", "homeGoals", "awayGoals", "winner", "ticks", "goldenGoal",
         "forfeit", "possessionChanges", "passChains", "passChainAvgLength", "shots", "shotsOnTarget",
-        "tackles", "fouls", "yellow", "red", "injuries", "ballThird0", "ballThird1", "ballThird2", "finalBias",
+        "tackles", "blocks", "fouls", "yellow", "red", "injuries", "ballThird0", "ballThird1", "ballThird2", "finalBias",
     };
 
     var rows = matches.Select(m =>
@@ -315,6 +315,7 @@ static void WriteMatchesCsv(string outDir, IReadOnlyList<MatchRow> matches)
             m.Shots.ToString(),
             m.ShotsOnTarget.ToString(),
             m.Tackles.ToString(),
+            m.Blocks.ToString(),
             m.Fouls.ToString(),
             m.Yellow.ToString(),
             m.Red.ToString(),

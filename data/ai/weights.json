@@ -1,10 +1,10 @@
 {
   "_doc": "Pesos base de utilidad por posición (RT-093) y multiplicadores por estado táctico. Escala entera 0-1000. Los rasgos aplican sus multiplicadores desde data/traits/traits.json (RT-094). FindSpace y PressCarrier son las acciones sin balón de la ADR 0022; ShortPass, LongPass y Block son las tres de la ADR 0030 (el pase partido en dos bandas y el bloqueo sin balón). El pase largo lleva peso base bajo a propósito: lo levanta la pendiente por técnica de context.longPassTechniqueSlope y el rasgo Cerebral, no la tabla. Valores de partida a calibrar en el reajuste.",
   "base": {
-    "Goalkeeper":  { "ChaseBall": 300, "MarkOpponent": 0,   "OfferSupport": 0,   "CoverSpace": 500, "Dribble": 50,  "Shoot": 0,   "Tackle": 200, "Retreat": 400, "FindSpace": 0,   "PressCarrier": 0,   "ShortPass": 560, "LongPass": 320, "Block": 0 },
-    "Defender":    { "ChaseBall": 380, "MarkOpponent": 320, "OfferSupport": 80,  "CoverSpace": 420, "Dribble": 180, "Shoot": 120, "Tackle": 210, "Retreat": 320, "FindSpace": 200, "PressCarrier": 150, "ShortPass": 420, "LongPass": 170, "Block": 55 },
-    "Midfielder":  { "ChaseBall": 420, "MarkOpponent": 240, "OfferSupport": 140, "CoverSpace": 260, "Dribble": 300, "Shoot": 260, "Tackle": 150, "Retreat": 220, "FindSpace": 380, "PressCarrier": 180, "ShortPass": 460, "LongPass": 250, "Block": 60 },
-    "Forward":     { "ChaseBall": 400, "MarkOpponent": 120, "OfferSupport": 160, "CoverSpace": 120, "Dribble": 360, "Shoot": 520, "Tackle": 90,  "Retreat": 140, "FindSpace": 460, "PressCarrier": 140, "ShortPass": 340, "LongPass": 135, "Block": 80 }
+    "Goalkeeper":  { "ChaseBall": 300, "MarkOpponent": 0,   "OfferSupport": 0,   "CoverSpace": 500, "Dribble": 50,  "Shoot": 0,   "Tackle": 165, "Retreat": 400, "FindSpace": 0,   "PressCarrier": 0,   "ShortPass": 600, "LongPass": 320, "Block": 0 },
+    "Defender":    { "ChaseBall": 380, "MarkOpponent": 320, "OfferSupport": 80,  "CoverSpace": 420, "Dribble": 140, "Shoot": 77,  "Tackle": 255, "Retreat": 320, "FindSpace": 200, "PressCarrier": 150, "ShortPass": 500, "LongPass": 170, "Block": 35 },
+    "Midfielder":  { "ChaseBall": 420, "MarkOpponent": 240, "OfferSupport": 140, "CoverSpace": 260, "Dribble": 240, "Shoot": 188, "Tackle": 210, "Retreat": 220, "FindSpace": 380, "PressCarrier": 180, "ShortPass": 560, "LongPass": 250, "Block": 40 },
+    "Forward":     { "ChaseBall": 400, "MarkOpponent": 120, "OfferSupport": 160, "CoverSpace": 120, "Dribble": 300, "Shoot": 385, "Tackle": 128, "Retreat": 140, "FindSpace": 460, "PressCarrier": 140, "ShortPass": 420, "LongPass": 135, "Block": 55 }
   },
   "tactical": {
     "_doc": "Contraste ampliado (ADR 0022): con balón manda buscar espacio, sin balón mandan marcar, presionar y cubrir. Los estados de transición amortiguan el salto para que el bloque no se mueva de golpe. Block es una herramienta de ataque (ADR 0030 §2): abre hueco para el compañero que lleva el balón, así que pesa más en posesión que fuera de ella.",
@@ -29,27 +29,27 @@
     "dribbleOpenSpaceBonus": 160,
     "dribbleOpponentAheadPenalty": 140,
     "shootBaseRangeCells": 8,
-    "shootInRangeBonus": 500,
+    "shootInRangeBonus": 388,
     "shootBeyondRangePenaltyPerCell": 300,
-    "shootDistancePenaltyPerCell": 40,
+    "shootDistancePenaltyPerCell": 50,
     "shootAnglePenaltyPerRow": 50,
     "tackleDistanceMaxCells": 1.0,
     "tackleOutOfReachPenalty": 900,
-    "tackleBallCarrierBonus": 200,
+    "tackleBallCarrierBonus": 195,
     "retreatDistanceBonusPerCell": 40,
     "retreatAtHomePenalty": 400,
 
     "findSpaceOpponentDistanceBonusPerCell": 70,
     "findSpaceAdvanceBonusPerCell": 60,
     "findSpaceOpenLaneBonus": 200,
-    "pressCarrierBonus": 120,
+    "pressCarrierBonus": 60,
     "pressDistancePenaltyPerCell": 60,
     "pressGoalkeeperExitBonus": 200,
 
     "shortPassMaxCells": 3.0,
     "longPassMaxCells": 8.0,
     "shortPassTechniqueSlope": 2,
-    "longPassTechniqueSlope": 12,
+    "longPassTechniqueSlope": 10,
     "dribbleTechniqueSlope": 7,
     "dribbleSpeedSlope": 4,
     "shootTechniqueSlope": 6,
@@ -58,7 +58,7 @@
     "blockActiveRadiusCells": 5.0,
     "blockCorridorHalfWidthCells": 2.0,
     "blockReachMaxCells": 1.2,
-    "blockTargetBonus": 200,
+    "blockTargetBonus": 160,
     "blockDistancePenaltyPerCell": 300,
     "blockAggressiveBonus": 260,
     "blockBruteTagBonus": 200

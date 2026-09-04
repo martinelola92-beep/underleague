@@ -1,5 +1,5 @@
 {
-  "_doc": "Conjunto de referencia para /Balance (RT-052). Cada equipo se genera desde raza y calidad media (nivel de atributos), con la semilla del lote. quality: media objetivo de atributos antes de sesgo racial.",
+  "_doc": "Conjunto de referencia para /Balance (RT-052). Cada equipo se genera desde raza, calidad y nivel con la semilla del lote. quality: media objetivo de atributos del equipo; desde el paquete U el dial desplaza presupuesto y banda punto por punto (calidad 60 = veinte puntos por atributo más que calidad 40), que es lo que mide betterTeamWinRate. level (opcional, 1 por defecto) es la progresion dentro de la run y rarity (opcional) fija una rareza uniforme para toda la plantilla.",
   "teams": [
     { "id": "human_50", "race": "Human", "quality": 50 },
     { "id": "orc_50",   "race": "Orc",   "quality": 50 },

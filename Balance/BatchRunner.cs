@@ -24,6 +24,7 @@ public sealed record MatchRow(
     int Shots,
     int ShotsOnTarget,
     int Tackles,
+    int Blocks,
     int Fouls,
     int Yellow,
     int Red,
@@ -91,7 +92,7 @@ public static class BatchRunner
         {
             var team = reference.Teams[i];
             var rng = RngStreams.Generation(options.Seed, i);
-            instances[i] = TeamGenerator.Generate(ref rng, catalog, team.Id, team.Race, team.Quality, 1 + (i * 100));
+            instances[i] = WithAttributeBonus(TeamGenerator.Generate(ref rng, catalog, team.Id, team.Race, team.Quality, 1 + (i * 100), team.Level, team.UniformRarity), team.AttributeBonus);
         }
 
         // Decisión fuera de la especificación: cuando un emparejamiento enfrenta a un equipo consigo mismo,
@@ -113,7 +114,7 @@ public static class BatchRunner
 
             var team = reference.Teams[idx];
             var rng = RngStreams.Generation(options.Seed, 1000 + idx);
-            twins[idx] = TeamGenerator.Generate(ref rng, catalog, team.Id, team.Race, team.Quality, 1 + ((1000 + idx) * 100));
+            twins[idx] = WithAttributeBonus(TeamGenerator.Generate(ref rng, catalog, team.Id, team.Race, team.Quality, 1 + ((1000 + idx) * 100), team.Level, team.UniformRarity), team.AttributeBonus);
         }
 
         var playerLookup = new Dictionary<int, PlayerAggregate>();
@@ -179,6 +180,7 @@ public static class BatchRunner
                     Shots: report.Shots[0] + report.Shots[1],
                     ShotsOnTarget: report.ShotsOnTarget[0] + report.ShotsOnTarget[1],
                     Tackles: report.Tackles,
+                    Blocks: report.Blocks,
                     Fouls: report.Fouls,
                     Yellow: report.YellowCards,
                     Red: report.RedCards,
@@ -205,6 +207,35 @@ public static class BatchRunner
             .ToList();
 
         return new BatchResult(matches, players, options.Runs, firstMatchLog, firstMatchDump, stopwatch.Elapsed);
+    }
+
+    /// <summary>
+    /// Instrumento de medida del <b>valor marginal por atributo</b> (paquete U, hallazgos 2 y 3 de
+    /// docs/rediseno-espacial.md): suma un bono fijo a un atributo de todos los jugadores del equipo,
+    /// después de generar la plantilla. Sirve para enfrentar dos equipos idénticos salvo por N puntos de
+    /// un solo atributo y leer cuánto vale ese atributo en puntos de tasa de victoria. Es una opción de
+    /// <c>reference.json</c> (<c>attributeBonus</c>), no una mecánica del juego: /Sim no la conoce.
+    /// </summary>
+    private static TeamSetup WithAttributeBonus(TeamSetup team, Attributes? bonus)
+    {
+        if (bonus is not { } delta)
+        {
+            return team;
+        }
+
+        var players = team.Players
+            .Select(p => p with
+            {
+                Attributes = Attributes.Clamp(new Attributes(
+                    p.Attributes.Strength + delta.Strength,
+                    p.Attributes.Speed + delta.Speed,
+                    p.Attributes.Technique + delta.Technique,
+                    p.Attributes.Stamina + delta.Stamina,
+                    p.Attributes.Leash + delta.Leash)),
+            })
+            .ToList();
+
+        return team with { Players = players };
     }
 
     private static void RegisterPlayers(Dictionary<int, PlayerAggregate> lookup, IEnumerable<TeamSetup> teams)
@@ -275,7 +306,7 @@ public static class BatchRunner
 
         var homeTeamRef = reference.Teams[homeIdx];
         var homeRng = RngStreams.Generation(options.Seed, homeIdx);
-        var homeTeam = TeamGenerator.Generate(ref homeRng, catalog, homeTeamRef.Id, homeTeamRef.Race, homeTeamRef.Quality, 1 + (homeIdx * 100));
+        var homeTeam = WithAttributeBonus(TeamGenerator.Generate(ref homeRng, catalog, homeTeamRef.Id, homeTeamRef.Race, homeTeamRef.Quality, 1 + (homeIdx * 100), homeTeamRef.Level, homeTeamRef.UniformRarity), homeTeamRef.AttributeBonus);
 
         var awayTeamRef = reference.Teams[awayIdx];
         TeamSetup awayTeam;
@@ -284,12 +315,12 @@ public static class BatchRunner
             // Mismo esquema que Run() para un emparejamiento de un equipo consigo mismo: la segunda
             // instancia usa el índice 1000+índice para no colisionar con la primera.
             var twinRng = RngStreams.Generation(options.Seed, 1000 + awayIdx);
-            awayTeam = TeamGenerator.Generate(ref twinRng, catalog, awayTeamRef.Id, awayTeamRef.Race, awayTeamRef.Quality, 1 + ((1000 + awayIdx) * 100));
+            awayTeam = WithAttributeBonus(TeamGenerator.Generate(ref twinRng, catalog, awayTeamRef.Id, awayTeamRef.Race, awayTeamRef.Quality, 1 + ((1000 + awayIdx) * 100), awayTeamRef.Level, awayTeamRef.UniformRarity), awayTeamRef.AttributeBonus);
         }
         else
         {
             var awayRng = RngStreams.Generation(options.Seed, awayIdx);
-            awayTeam = TeamGenerator.Generate(ref awayRng, catalog, awayTeamRef.Id, awayTeamRef.Race, awayTeamRef.Quality, 1 + (awayIdx * 100));
+            awayTeam = WithAttributeBonus(TeamGenerator.Generate(ref awayRng, catalog, awayTeamRef.Id, awayTeamRef.Race, awayTeamRef.Quality, 1 + (awayIdx * 100), awayTeamRef.Level, awayTeamRef.UniformRarity), awayTeamRef.AttributeBonus);
         }
 
         var referee = new RefereeSetup("Referee", RefereeTrait.Neutral, 0);
@@ -320,6 +351,7 @@ public static class BatchRunner
                 Shots: report.Shots[0] + report.Shots[1],
                 ShotsOnTarget: report.ShotsOnTarget[0] + report.ShotsOnTarget[1],
                 Tackles: report.Tackles,
+                Blocks: report.Blocks,
                 Fouls: report.Fouls,
                 Yellow: report.YellowCards,
                 Red: report.RedCards,

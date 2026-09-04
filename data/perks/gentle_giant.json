@@ -13,13 +13,13 @@
   "links": [
     "ahead"
   ],
-  "condition": "",
+  "condition": "linked(owner,'ahead')",
   "effects": [
     {
       "type": "modifyProbability",
       "target": "linked",
       "probability": "intercept",
-      "value": 20,
+      "value": 10,
       "duration": "match"
     }
   ],

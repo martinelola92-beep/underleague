@@ -5,12 +5,44 @@
   "quality": 50,
   "perks": [
     {
+      "slot": 0,
+      "perk": "safety_net"
+    },
+    {
+      "slot": 0,
+      "perk": "sweeper_keeper"
+    },
+    {
+      "slot": 1,
+      "perk": "own_third_anchor"
+    },
+    {
+      "slot": 1,
+      "perk": "pack_mentality"
+    },
+    {
+      "slot": 2,
+      "perk": "own_third_anchor"
+    },
+    {
       "slot": 2,
       "perk": "brute_boots"
     },
     {
-      "slot": 2,
-      "perk": "pack_mentality"
+      "slot": 3,
+      "perk": "center_conductor"
+    },
+    {
+      "slot": 3,
+      "perk": "high_press_trigger"
+    },
+    {
+      "slot": 4,
+      "perk": "road_warrior"
+    },
+    {
+      "slot": 4,
+      "perk": "game_management"
     },
     {
       "slot": 5,
@@ -23,6 +55,14 @@
     {
       "slot": 5,
       "perk": "road_warrior"
+    },
+    {
+      "slot": 6,
+      "perk": "box_predator"
+    },
+    {
+      "slot": 6,
+      "perk": "forward_line"
     }
   ],
   "rarities": {

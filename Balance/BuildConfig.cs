@@ -24,7 +24,11 @@ public sealed record BuildConfig(
     int Quality,
     IReadOnlyList<BuildPerkAssignment> Perks,
     IReadOnlyDictionary<int, Rarity> Rarities,
-    IReadOnlyList<Cell>? Lineup)
+    IReadOnlyList<Cell>? Lineup,
+    int Level = 1,
+    Rarity? UniformRarity = null,
+    IReadOnlyDictionary<int, StyleTag>? Styles = null,
+    IReadOnlyDictionary<int, IReadOnlyList<Trait>>? Traits = null)
 {
     /// <summary>Número de titulares de un equipo (GK, DEF, DEF, MID, MID, MID, FWD).</summary>
     public const int StarterCount = 7;
@@ -45,6 +49,27 @@ public sealed record BuildConfig(
         }
 
         int quality = RequireInt(root, path, "quality");
+
+        int level = 1;
+        if (root.TryGetProperty("level", out var levelElement) && levelElement.ValueKind == JsonValueKind.Number)
+        {
+            level = levelElement.GetInt32();
+            if (level is < 1 or > 8)
+            {
+                throw new FormatException($"{path}: 'level' fuera de 1..8");
+            }
+        }
+
+        Rarity? uniformRarity = null;
+        if (root.TryGetProperty("rarity", out var uniformElement) && uniformElement.ValueKind == JsonValueKind.String)
+        {
+            if (!Enum.TryParse<Rarity>(uniformElement.GetString(), ignoreCase: true, out var parsedUniform))
+            {
+                throw new FormatException($"{path}: rareza desconocida '{uniformElement.GetString()}' en 'rarity'");
+            }
+
+            uniformRarity = parsedUniform;
+        }
 
         var perks = new List<BuildPerkAssignment>();
         if (root.TryGetProperty("perks", out var perksElement) && perksElement.ValueKind != JsonValueKind.Null)
@@ -110,7 +135,51 @@ public sealed record BuildConfig(
             lineup = cells;
         }
 
-        return new BuildConfig(id, name, race, quality, perks, rarities, lineup);
+        var styles = new Dictionary<int, StyleTag>();
+        if (root.TryGetProperty("styles", out var stylesElement) && stylesElement.ValueKind == JsonValueKind.Object)
+        {
+            foreach (var property in stylesElement.EnumerateObject())
+            {
+                if (!int.TryParse(property.Name, out int slot) || slot < 0 || slot >= StarterCount)
+                {
+                    throw new FormatException($"{path}: clave de 'styles' inválida '{property.Name}'");
+                }
+
+                if (!Enum.TryParse<StyleTag>(property.Value.GetString(), ignoreCase: false, out var style))
+                {
+                    throw new FormatException($"{path}: etiqueta de estilo desconocida '{property.Value.GetString()}'");
+                }
+
+                styles[slot] = style;
+            }
+        }
+
+        var traits = new Dictionary<int, IReadOnlyList<Trait>>();
+        if (root.TryGetProperty("traits", out var traitsElement) && traitsElement.ValueKind == JsonValueKind.Object)
+        {
+            foreach (var property in traitsElement.EnumerateObject())
+            {
+                if (!int.TryParse(property.Name, out int slot) || slot < 0 || slot >= StarterCount)
+                {
+                    throw new FormatException($"{path}: clave de 'traits' inválida '{property.Name}'");
+                }
+
+                var list = new List<Trait>();
+                foreach (var item in property.Value.EnumerateArray())
+                {
+                    if (!Enum.TryParse<Trait>(item.GetString(), ignoreCase: false, out var trait))
+                    {
+                        throw new FormatException($"{path}: rasgo desconocido '{item.GetString()}'");
+                    }
+
+                    list.Add(trait);
+                }
+
+                traits[slot] = list;
+            }
+        }
+
+        return new BuildConfig(id, name, race, quality, perks, rarities, lineup, level, uniformRarity, styles, traits);
     }
 
     /// <summary>Carga todas las builds de un directorio: todo *.json (los grupos viven fuera, en data/balance/groups.json).</summary>
@@ -147,7 +216,7 @@ public sealed record BuildConfig(
     /// </summary>
     public TeamSetup ToTeamSetup(ref Pcg32 rng, Catalog catalog, int firstPlayerId, int? qualityOverride = null)
     {
-        var generated = TeamGenerator.Generate(ref rng, catalog, Id, Race, qualityOverride ?? Quality, firstPlayerId);
+        var generated = TeamGenerator.Generate(ref rng, catalog, Id, Race, qualityOverride ?? Quality, firstPlayerId, Level, UniformRarity, Styles, Traits);
         var players = generated.Players.ToList();
 
         foreach (var (slot, rarity) in Rarities)

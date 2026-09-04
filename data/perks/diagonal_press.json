@@ -14,22 +14,22 @@
     "diagonalAhead",
     "diagonalBehind"
   ],
-  "condition": "",
+  "condition": "linked(owner,'diagonalAhead') || linked(owner,'diagonalBehind')",
   "effects": [
     {
       "type": "modifyProbability",
       "target": "linked",
       "probability": "tackle",
-      "value": 10,
+      "value": 15,
       "duration": "play"
     }
   ],
   "elseEffects": [
     {
-      "type": "modifyAttribute",
+      "type": "modifyProbability",
       "target": "owner",
-      "attribute": "strength",
-      "value": -5,
+      "probability": "tackle",
+      "value": -25,
       "duration": "play"
     }
   ],

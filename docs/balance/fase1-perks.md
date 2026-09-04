@@ -1,5 +1,10 @@
 # Fase 1: medidas de perks, builds y atributos (paquete I)
 
+> **Superado.** Este documento es la medición del **motor anterior** al bloque de rediseño espacial
+> (ADR 0020-0030). La línea base vigente es `docs/balance/fase1b-resultados.md`. Se conserva porque sus
+> hallazgos son los que condicionaron el rediseño y porque el apéndice §12 documenta qué hacía falta para
+> cumplir los umbrales de §8, que es la receta que el paquete U acabó siguiendo.
+
 > **Estos números corresponden al motor anterior a las ADR 0020 (cuerpos con volumen, separación blanda y
 > empuje), 0021 (adyacencia resuelta antes del partido y proximidad dinámica) y 0022 (comportamiento sin
 > balón: contraste táctico y búsqueda de espacio).** Se publican como **línea base**: cuando esas tres

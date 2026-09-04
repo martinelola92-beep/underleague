@@ -17,7 +17,14 @@
       "type": "modifyAttribute",
       "target": "owner",
       "attribute": "strength",
-      "value": 15,
+      "value": 10,
+      "duration": "match"
+    },
+    {
+      "type": "modifyProbability",
+      "target": "owner",
+      "probability": "pass",
+      "value": -10,
       "duration": "match"
     }
   ],
@@ -26,6 +33,13 @@
       "type": "modifyAttribute",
       "target": "owner",
       "attribute": "strength",
+      "value": -10,
+      "duration": "match"
+    },
+    {
+      "type": "modifyProbability",
+      "target": "owner",
+      "probability": "pass",
       "value": -10,
       "duration": "match"
     }

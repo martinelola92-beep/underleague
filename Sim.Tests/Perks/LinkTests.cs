@@ -97,7 +97,9 @@ public sealed class LinkTests
         Assert.Equal(StartZone.OwnThird, LinkGeometry.ZoneOfHome(new Cell(0, 2), 0));
         Assert.Equal(StartZone.OwnThird, LinkGeometry.ZoneOfHome(new Cell(15, 2), 1));
         Assert.Equal(StartZone.AttackingThird, LinkGeometry.ZoneOfHome(new Cell(15, 2), 0));
-        Assert.Equal(StartZone.Middle, LinkGeometry.ZoneOfHome(new Cell(8, 2), 0));
+        Assert.Equal(StartZone.Middle, LinkGeometry.ZoneOfHome(new Cell(4, 2), 0));
+        Assert.Equal(StartZone.AttackingThird, LinkGeometry.ZoneOfHome(new Cell(6, 2), 0));
+        Assert.Equal(StartZone.Middle, LinkGeometry.ZoneOfHome(new Cell(11, 2), 1));
 
         Assert.Equal(StartFlank.LeftFlank, LinkGeometry.FlankOfHome(new Cell(4, 0), 0));
         Assert.Equal(StartFlank.RightFlank, LinkGeometry.FlankOfHome(new Cell(4, 0), 1));

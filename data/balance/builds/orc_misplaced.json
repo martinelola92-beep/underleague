@@ -1,16 +1,64 @@
 {
   "id": "orc_misplaced",
-  "name": "Orcos: desubicados",
+  "name": "Orcos: perks equivocados",
   "race": "Orc",
   "quality": 50,
   "perks": [
     {
+      "slot": 0,
+      "perk": "forward_line"
+    },
+    {
+      "slot": 0,
+      "perk": "flank_specialist"
+    },
+    {
       "slot": 1,
-      "perk": "poacher_instinct"
+      "perk": "fine_touch"
+    },
+    {
+      "slot": 1,
+      "perk": "center_conductor"
     },
     {
       "slot": 2,
-      "perk": "silky_veteran"
+      "perk": "fine_touch"
+    },
+    {
+      "slot": 2,
+      "perk": "center_conductor"
+    },
+    {
+      "slot": 3,
+      "perk": "own_third_anchor"
+    },
+    {
+      "slot": 3,
+      "perk": "flank_specialist"
+    },
+    {
+      "slot": 4,
+      "perk": "fine_touch"
+    },
+    {
+      "slot": 4,
+      "perk": "forward_line"
+    },
+    {
+      "slot": 5,
+      "perk": "fine_touch"
+    },
+    {
+      "slot": 5,
+      "perk": "center_conductor"
+    },
+    {
+      "slot": 6,
+      "perk": "own_third_anchor"
+    },
+    {
+      "slot": 6,
+      "perk": "fine_touch"
     }
   ],
   "lineup": null

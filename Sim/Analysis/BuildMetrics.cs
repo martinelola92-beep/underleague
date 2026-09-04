@@ -288,19 +288,32 @@ public static class BuildMetrics
         double minActivationRatePercent = DeadPerkThresholdPercent)
     {
         var rows = new List<MetricResult>();
-        int dead = 0;
+
+        // Una fila informativa por (perk, build): sirve para ver dónde se activa cada perk, pero NO
+        // bloquea. El umbral de §8 es "cada perk se activa en >= 1% de los partidos de ALGUNA build que
+        // lo lleve": una build mal construida a propósito (orc_misplaced pone perks técnicos en orcos)
+        // existe justamente para que sus perks NO se disparen, y exigirle activación convertía el
+        // criterio de salida en su contrario (corregido en el paquete U).
         foreach (var activation in perkActivations.OrderBy(a => a.PerkId, StringComparer.Ordinal).ThenBy(a => a.Build, StringComparer.Ordinal))
         {
-            double rate = activation.ActivationRate;
-            bool ok = rate >= minActivationRatePercent;
+            rows.Add(new MetricResult(
+                ActivationRatePrefix + activation.PerkId + "_" + activation.Build,
+                activation.ActivationRate, minActivationRatePercent, null, "INFO"));
+        }
+
+        // Fila con estado por perk: la mejor de sus builds.
+        int dead = 0;
+        foreach (var group in perkActivations.GroupBy(a => a.PerkId, StringComparer.Ordinal).OrderBy(g => g.Key, StringComparer.Ordinal))
+        {
+            double best = group.Max(a => a.ActivationRate);
+            bool ok = best >= minActivationRatePercent;
             if (!ok)
             {
                 dead++;
             }
 
             rows.Add(new MetricResult(
-                ActivationRatePrefix + activation.PerkId + "_" + activation.Build,
-                rate, minActivationRatePercent, null, ok ? "IN" : "OUT"));
+                ActivationRatePrefix + group.Key, best, minActivationRatePercent, null, ok ? "IN" : "OUT"));
         }
 
         rows.Add(new MetricResult(NoDeadPerks, dead, null, 0, dead == 0 ? "IN" : "OUT"));

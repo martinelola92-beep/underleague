@@ -14,19 +14,19 @@
   "condition": "hasTag(owner,'Fine')",
   "effects": [
     {
-      "type": "modifyAttribute",
+      "type": "modifyProbability",
       "target": "owner",
-      "attribute": "technique",
-      "value": 15,
+      "probability": "pass",
+      "value": 25,
       "duration": "match"
     }
   ],
   "elseEffects": [
     {
-      "type": "modifyAttribute",
+      "type": "modifyProbability",
       "target": "owner",
-      "attribute": "technique",
-      "value": -10,
+      "probability": "pass",
+      "value": -25,
       "duration": "match"
     }
   ],

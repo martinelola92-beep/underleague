@@ -51,15 +51,20 @@ internal static class LinkGeometry
     /// <summary>Tercio de inicio de la casilla-hogar, relativo al sentido de ataque del equipo.</summary>
     public static StartZone ZoneOfHome(Cell home, int team)
     {
-        // Tercio absoluto por división entera: columnas 0-5, 6-10 y 11-15 en un campo de 16 (RT-023).
-        int third = home.Column * 3 / Pitch.Columns;
-        if (third == 1)
+        // El tercio se mide sobre las columnas de COLOCACIÓN (0..7 desde la portería propia), no sobre
+        // las 16 del campo (corregido en el paquete U): con 16, el tercio atacante eran las columnas
+        // 11-15, donde ninguna alineación puede poner a nadie, y 'startsIn(owner,''AttackingThird'')' era
+        // una condición imposible. Con 8 columnas los tres tercios son 0-2, 3-5 y 6-7, y la alineación
+        // por defecto reparte portero y defensas en el propio, centrocampistas en el medio y el delantero
+        // en el atacante. División entera (RT-023).
+        int relative = team == 0 ? home.Column : Pitch.Columns - 1 - home.Column;
+        int third = Math.Clamp(relative, 0, Pitch.PlacementColumns - 1) * 3 / Pitch.PlacementColumns;
+        return third switch
         {
-            return StartZone.Middle;
-        }
-
-        bool own = team == 0 ? third == 0 : third == 2;
-        return own ? StartZone.OwnThird : StartZone.AttackingThird;
+            0 => StartZone.OwnThird,
+            1 => StartZone.Middle,
+            _ => StartZone.AttackingThird,
+        };
     }
 
     /// <summary>Banda de inicio de la casilla-hogar, vista desde el jugador mirando a la portería rival.</summary>

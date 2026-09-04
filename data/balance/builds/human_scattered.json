@@ -5,12 +5,60 @@
   "quality": 50,
   "perks": [
     {
+      "slot": 0,
+      "perk": "covering_shadow"
+    },
+    {
+      "slot": 0,
+      "perk": "pivot_duo"
+    },
+    {
       "slot": 1,
       "perk": "pivot_duo"
     },
     {
+      "slot": 1,
+      "perk": "covering_shadow"
+    },
+    {
       "slot": 2,
       "perk": "pivot_duo"
+    },
+    {
+      "slot": 2,
+      "perk": "covering_shadow"
+    },
+    {
+      "slot": 3,
+      "perk": "wing_overlap"
+    },
+    {
+      "slot": 3,
+      "perk": "spearpoint"
+    },
+    {
+      "slot": 4,
+      "perk": "pivot_duo"
+    },
+    {
+      "slot": 4,
+      "perk": "diagonal_press"
+    },
+    {
+      "slot": 5,
+      "perk": "wing_overlap"
+    },
+    {
+      "slot": 5,
+      "perk": "spearpoint"
+    },
+    {
+      "slot": 6,
+      "perk": "pivot_duo"
+    },
+    {
+      "slot": 6,
+      "perk": "covering_shadow"
     }
   ],
   "lineup": [
@@ -27,19 +75,19 @@
       4
     ],
     [
-      4,
-      0
+      3,
+      2
     ],
     [
       4,
-      2
+      0
     ],
     [
       4,
       4
     ],
     [
-      7,
+      6,
       2
     ]
   ]

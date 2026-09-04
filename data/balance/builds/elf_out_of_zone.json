@@ -1,6 +1,6 @@
 {
   "id": "elf_out_of_zone",
-  "name": "Elfos: zona equivocada",
+  "name": "Elfos: fuera de su zona",
   "race": "Elf",
   "quality": 50,
   "perks": [
@@ -9,9 +9,68 @@
       "perk": "forward_line"
     },
     {
+      "slot": 0,
+      "perk": "flank_specialist"
+    },
+    {
+      "slot": 1,
+      "perk": "forward_line"
+    },
+    {
+      "slot": 1,
+      "perk": "center_conductor"
+    },
+    {
+      "slot": 2,
+      "perk": "forward_line"
+    },
+    {
+      "slot": 2,
+      "perk": "center_conductor"
+    },
+    {
+      "slot": 3,
+      "perk": "forward_line"
+    },
+    {
+      "slot": 3,
+      "perk": "own_third_anchor"
+    },
+    {
+      "slot": 3,
+      "perk": "long_leash_legacy"
+    },
+    {
+      "slot": 3,
+      "perk": "center_conductor"
+    },
+    {
+      "slot": 4,
+      "perk": "forward_line"
+    },
+    {
+      "slot": 4,
+      "perk": "own_third_anchor"
+    },
+    {
+      "slot": 5,
+      "perk": "forward_line"
+    },
+    {
+      "slot": 5,
+      "perk": "own_third_anchor"
+    },
+    {
       "slot": 6,
       "perk": "own_third_anchor"
+    },
+    {
+      "slot": 6,
+      "perk": "flank_specialist"
     }
   ],
+  "rarities": {
+    "3": "legendary"
+  },
   "lineup": null
 }

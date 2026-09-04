@@ -50,14 +50,25 @@ public sealed class AttackActionsTests
         Utility.Choose(context, carrier, rows);
         Assert.Same(far, carrier.PassReceiver);
 
-        // Con el pase largo apagado en la tabla (y con él las otras dos acciones con balón, para que la
-        // elección sea entre las dos bandas de pase y nada más), el mismo escenario elige al cercano.
-        var shortOnly = WeightsWithout(PlayerAction.LongPass, PlayerAction.Dribble, PlayerAction.Shoot);
-        var shortContext = Context(shortOnly, new[] { carrier, near, far, context.Players[3] });
-        shortContext.Ball.Owner = carrier;
+        // El mismo escenario con un pasador torpe: las dos bandas siguen compitiendo (el pase largo NO se
+        // apaga en la tabla, que es lo que hace la prueba honesta) y las demás acciones con balón y las
+        // dos sin balón que compiten en posesión sí, para que la elección sea entre banda corta y banda
+        // larga y nada más. El torpe elige la corta, y la corta elige al cercano: ningún receptor puntúa
+        // en las dos bandas.
+        //
+        // Apagar el peso base del pase largo no basta desde el paquete U: el término de contexto no se
+        // multiplica por el peso base, y con la pendiente por técnica de la ADR 0030 el contexto solo ya
+        // ganaba la fila.
+        var (clumsy, clumsyNear, clumsyFar, clumsyContext) = PassPlayers(technique: 10);
+        var twoBands = WeightsWithout(
+            PlayerAction.Dribble, PlayerAction.Shoot, PlayerAction.FindSpace, PlayerAction.OfferSupport);
+        var shortContext = Context(twoBands, new[] { clumsy, clumsyNear, clumsyFar, clumsyContext.Players[3] });
+        shortContext.Ball.Owner = clumsy;
+        shortContext.Ball.Position = clumsy.Position;
         shortContext.HoldingTeam = 0;
-        Utility.Choose(shortContext, carrier, null);
-        Assert.Same(near, carrier.PassReceiver);
+
+        Assert.Equal(PlayerAction.ShortPass, Utility.Choose(shortContext, clumsy, null));
+        Assert.Same(clumsyNear, clumsy.PassReceiver);
     }
 
     /// <summary>

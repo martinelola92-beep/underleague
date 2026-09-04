@@ -5,12 +5,48 @@
   "quality": 50,
   "perks": [
     {
+      "slot": 0,
+      "perk": "safety_net"
+    },
+    {
+      "slot": 0,
+      "perk": "sweeper_keeper"
+    },
+    {
+      "slot": 1,
+      "perk": "own_third_anchor"
+    },
+    {
+      "slot": 1,
+      "perk": "pivot_duo"
+    },
+    {
+      "slot": 2,
+      "perk": "fine_touch"
+    },
+    {
+      "slot": 2,
+      "perk": "pivot_duo"
+    },
+    {
+      "slot": 3,
+      "perk": "center_conductor"
+    },
+    {
       "slot": 4,
       "perk": "fine_touch"
     },
     {
       "slot": 4,
       "perk": "crowd_control"
+    },
+    {
+      "slot": 5,
+      "perk": "fine_touch"
+    },
+    {
+      "slot": 5,
+      "perk": "wing_overlap"
     },
     {
       "slot": 6,
@@ -22,11 +58,21 @@
     },
     {
       "slot": 6,
-      "perk": "battle_reader"
+      "perk": "crowd_control"
+    },
+    {
+      "slot": 3,
+      "perk": "spearpoint"
     }
   ],
   "rarities": {
     "6": "rare"
+  },
+  "styles": {
+    "2": "Fine",
+    "3": "Fine",
+    "4": "Fine",
+    "5": "Fine"
   },
   "lineup": null
 }

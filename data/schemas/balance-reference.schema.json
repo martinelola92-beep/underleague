@@ -5,39 +5,123 @@
   "description": "data/balance/reference.json: equipos y emparejamientos de referencia para /Balance (RT-052).",
   "type": "object",
   "properties": {
-    "_doc": { "type": "string" },
+    "_doc": {
+      "type": "string"
+    },
     "teams": {
       "type": "array",
-      "items": { "$ref": "#/$defs/team" },
+      "items": {
+        "$ref": "#/$defs/team"
+      },
       "minItems": 1
     },
     "pairings": {
       "type": "array",
-      "items": { "$ref": "#/$defs/pairing" },
+      "items": {
+        "$ref": "#/$defs/pairing"
+      },
       "minItems": 1
     }
   },
-  "required": ["teams", "pairings"],
+  "required": [
+    "teams",
+    "pairings"
+  ],
   "additionalProperties": false,
   "$defs": {
     "race": {
       "type": "string",
-      "enum": ["Human", "Orc", "Elf", "Dwarf", "Undead", "DarkElf", "Demon", "Vampire", "Lizard"]
+      "enum": [
+        "Human",
+        "Orc",
+        "Elf",
+        "Dwarf",
+        "Undead",
+        "DarkElf",
+        "Demon",
+        "Vampire",
+        "Lizard"
+      ]
     },
     "team": {
       "type": "object",
       "properties": {
-        "_doc": { "type": "string" },
-        "id": { "type": "string", "minLength": 1 },
-        "race": { "$ref": "#/$defs/race" },
-        "quality": { "type": "integer", "minimum": 1, "maximum": 99 }
+        "_doc": {
+          "type": "string"
+        },
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "race": {
+          "$ref": "#/$defs/race"
+        },
+        "quality": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 99,
+          "description": "Media objetivo de atributos del equipo (dial de fuerza, paquete U): desplaza presupuesto y banda punto por punto respecto de 50."
+        },
+        "level": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 8,
+          "description": "Nivel de todos los jugadores de la plantilla (RF-023). Por defecto 1. Dial independiente de 'quality'."
+        },
+        "rarity": {
+          "enum": [
+            "common",
+            "rare",
+            "legendary"
+          ],
+          "description": "Rareza uniforme de los diez jugadores. Ausente = composición por defecto de RF-005 (un raro entre diez)."
+        },
+        "attributeBonus": {
+          "type": "object",
+          "description": "Instrumento de medida (paquete U): puntos que se suman a cada atributo de todos los jugadores después de generar la plantilla, para medir el valor marginal de un atributo. No es una mecánica del juego.",
+          "properties": {
+            "strength": {
+              "type": "integer",
+              "minimum": -99,
+              "maximum": 99
+            },
+            "speed": {
+              "type": "integer",
+              "minimum": -99,
+              "maximum": 99
+            },
+            "technique": {
+              "type": "integer",
+              "minimum": -99,
+              "maximum": 99
+            },
+            "stamina": {
+              "type": "integer",
+              "minimum": -99,
+              "maximum": 99
+            },
+            "leash": {
+              "type": "integer",
+              "minimum": -99,
+              "maximum": 99
+            }
+          },
+          "additionalProperties": false
+        }
       },
-      "required": ["id", "race", "quality"],
+      "required": [
+        "id",
+        "race",
+        "quality"
+      ],
       "additionalProperties": false
     },
     "pairing": {
       "type": "array",
-      "items": { "type": "string", "minLength": 1 },
+      "items": {
+        "type": "string",
+        "minLength": 1
+      },
       "minItems": 2,
       "maxItems": 2
     }

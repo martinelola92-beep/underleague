@@ -17,7 +17,7 @@
       "type": "modifyProbability",
       "target": "team",
       "probability": "tackle",
-      "value": 10,
+      "value": 15,
       "duration": "match"
     }
   ],

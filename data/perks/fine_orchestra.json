@@ -15,18 +15,25 @@
   "effects": [
     {
       "type": "modifyProbability",
-      "target": "withTag:Fine",
-      "probability": "dribble",
-      "value": 15,
+      "target": "opposingTeam",
+      "probability": "intercept",
+      "value": -5,
+      "duration": "match"
+    },
+    {
+      "type": "modifyProbability",
+      "target": "team",
+      "probability": "tackleEvasion",
+      "value": 25,
       "duration": "match"
     }
   ],
   "elseEffects": [
     {
-      "type": "modifyAttribute",
+      "type": "modifyProbability",
       "target": "owner",
-      "attribute": "technique",
-      "value": -10,
+      "probability": "pass",
+      "value": -15,
       "duration": "match"
     }
   ],

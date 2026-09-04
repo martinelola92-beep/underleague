@@ -1,20 +1,64 @@
 {
   "id": "elf_brawler",
-  "name": "Elfos: camorristas",
+  "name": "Elfos: peleones",
   "race": "Elf",
   "quality": 50,
   "perks": [
+    {
+      "slot": 0,
+      "perk": "bulwark_stance"
+    },
+    {
+      "slot": 0,
+      "perk": "brute_boots"
+    },
+    {
+      "slot": 1,
+      "perk": "brute_boots"
+    },
+    {
+      "slot": 1,
+      "perk": "bulwark_stance"
+    },
+    {
+      "slot": 2,
+      "perk": "brute_boots"
+    },
+    {
+      "slot": 2,
+      "perk": "pack_mentality"
+    },
     {
       "slot": 3,
       "perk": "brute_boots"
     },
     {
+      "slot": 3,
+      "perk": "bulwark_stance"
+    },
+    {
       "slot": 4,
+      "perk": "pack_mentality"
+    },
+    {
+      "slot": 4,
+      "perk": "brute_boots"
+    },
+    {
+      "slot": 5,
       "perk": "bulwark_stance"
     },
     {
       "slot": 5,
-      "perk": "pack_mentality"
+      "perk": "brute_boots"
+    },
+    {
+      "slot": 6,
+      "perk": "brute_boots"
+    },
+    {
+      "slot": 6,
+      "perk": "bulwark_stance"
     }
   ],
   "lineup": null

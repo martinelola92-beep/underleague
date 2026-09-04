@@ -824,7 +824,7 @@ internal static class Utility
     /// </summary>
     private static void EvaluateBlock(UtilityContext ctx, MatchPlayer p, AiContext context, ref Eval eval)
     {
-        if (!p.IsOutfield || p.TackleCooldown > 0)
+        if (!p.IsOutfield || p.BlockCooldown > 0)
         {
             eval.Discarded = true;
             return;

@@ -297,4 +297,71 @@ public class GeneratorTests
             Assert.True(value >= floor && value <= cap, $"{race.Id} {position} {rarity} {kind}={value} fuera de [{floor},{cap}]");
         }
     }
+
+    /// <summary>
+    /// Paquete U: el dial de calidad desplaza los atributos punto por punto. Un equipo de calidad 60
+    /// tiene veinte puntos más por atributo que uno de calidad 40, que es literalmente lo que dice medir
+    /// <c>betterTeamWinRate_60_vs_40</c> (docs/balance.md). Hasta el paquete Q la calidad se traducía a
+    /// <c>nivel = quality/10</c> y la diferencia real era de 3,2 puntos por atributo.
+    /// </summary>
+    [Fact]
+    public void TeamGenerator_QualityShiftsEveryAttributePointByPoint()
+    {
+        var catalog = TestData.LoadCatalog();
+
+        static double MeanAttribute(Catalog catalog, int quality)
+        {
+            double total = 0;
+            int players = 0;
+            for (int i = 0; i < 40; i++)
+            {
+                var rng = RngStreams.Generation(11, i);
+                var team = TeamGenerator.Generate(ref rng, catalog, "t", Race.Human, quality, 1);
+                foreach (var player in team.Players)
+                {
+                    var a = player.Attributes;
+                    total += a.Strength + a.Speed + a.Technique + a.Stamina + a.Leash;
+                    players++;
+                }
+            }
+
+            return total / (players * 5);
+        }
+
+        double low = MeanAttribute(catalog, 40);
+        double high = MeanAttribute(catalog, 60);
+
+        Assert.InRange(high - low, 19.0, 21.0);
+    }
+
+    /// <summary>Calidad y nivel son diales independientes: el nivel suma budgetPerLevel por nivel, no calidad.</summary>
+    [Fact]
+    public void TeamGenerator_LevelIsIndependentOfQuality()
+    {
+        var catalog = TestData.LoadCatalog();
+
+        var rngLow = RngStreams.Generation(12, 0);
+        var levelOne = TeamGenerator.Generate(ref rngLow, catalog, "t", Race.Human, 50, 1, level: 1);
+        var rngHigh = RngStreams.Generation(12, 0);
+        var levelEight = TeamGenerator.Generate(ref rngHigh, catalog, "t", Race.Human, 50, 1, level: 8);
+
+        static int Sum(Model.PlayerDefinition p) =>
+            p.Attributes.Strength + p.Attributes.Speed + p.Attributes.Technique + p.Attributes.Stamina + p.Attributes.Leash;
+
+        // budgetPerLevel = 8 por nivel: siete niveles de diferencia son 56 puntos de presupuesto.
+        Assert.Equal(56, Sum(levelEight.Players[0]) - Sum(levelOne.Players[0]));
+        Assert.All(levelEight.Players, p => Assert.Equal(8, p.Level));
+    }
+
+    /// <summary>La rareza uniforme sustituye al sorteo de RF-005: los diez jugadores comparten rareza.</summary>
+    [Fact]
+    public void TeamGenerator_UniformRarityAppliesToEveryPlayer()
+    {
+        var catalog = TestData.LoadCatalog();
+        var rng = RngStreams.Generation(13, 0);
+
+        var team = TeamGenerator.Generate(ref rng, catalog, "t", Race.Human, 50, 1, level: 2, uniformRarity: Rarity.Legendary);
+
+        Assert.All(team.Players, p => Assert.Equal(Rarity.Legendary, p.Rarity));
+    }
 }

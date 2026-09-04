@@ -551,6 +551,11 @@ internal sealed class MatchEngine : IPerkWorld
             player.TackleCooldown--;
         }
 
+        if (player.BlockCooldown > 0)
+        {
+            player.BlockCooldown--;
+        }
+
         if (StateMachine.IsDecisionState(player.State)
             && (_tick + player.Id) % _tuning.DecisionIntervalTicks == 0)
         {
@@ -642,11 +647,15 @@ internal sealed class MatchEngine : IPerkWorld
                 player.TackleCooldown = _tuning.States.TackleCooldownTicks + _tuning.States.TacklingTicks;
                 break;
             case PlayerAction.Block:
-                // El bloqueo comparte enfriamiento con la entrada (ADR 0030 §2): las dos son la misma
-                // carga con y sin balón, y sin un tope común un jugador podía alternarlas y estar
-                // repartiendo golpes cada dos ticks.
+                // El bloqueo lleva su PROPIO enfriamiento (paquete U). El paquete V lo compartía con el
+                // de la entrada para que un jugador no alternara las dos y repartiera golpes cada dos
+                // ticks (fase1b-diseno.md §6.8); el precio medido era la mitad de las entradas por
+                // partido (4,37 -> 2,31), que es la métrica de RT-056 que estaba más lejos de su rango.
+                // Con contadores separados el tope por acción sigue existiendo —cargar dos veces
+                // seguidas sigue costando block.cooldownTicks— y disputar el balón deja de pagar por
+                // haber cargado.
                 player.EnterState(PlayerState.Blocking, _tuning.Block.BlockingTicks);
-                player.TackleCooldown = _tuning.Block.CooldownTicks + _tuning.Block.BlockingTicks;
+                player.BlockCooldown = _tuning.Block.CooldownTicks + _tuning.Block.BlockingTicks;
                 break;
             case PlayerAction.Dribble:
                 if (ReferenceEquals(_ball.Owner, player))

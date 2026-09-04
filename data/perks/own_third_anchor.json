@@ -17,16 +17,16 @@
       "type": "modifyProbability",
       "target": "owner",
       "probability": "tackle",
-      "value": 15,
+      "value": 20,
       "duration": "match"
     }
   ],
   "elseEffects": [
     {
       "type": "modifyProbability",
-      "target": "owner",
+      "target": "team",
       "probability": "tackle",
-      "value": -10,
+      "value": -15,
       "duration": "match"
     }
   ],

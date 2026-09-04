@@ -14,22 +14,22 @@
     "left",
     "right"
   ],
-  "condition": "",
+  "condition": "linked(owner,'left') || linked(owner,'right')",
   "effects": [
     {
       "type": "modifyProbability",
       "target": "linked",
       "probability": "dribble",
-      "value": 15,
+      "value": 20,
       "duration": "play"
     }
   ],
   "elseEffects": [
     {
-      "type": "modifyAttribute",
+      "type": "modifyProbability",
       "target": "owner",
-      "attribute": "speed",
-      "value": -10,
+      "probability": "dribble",
+      "value": -25,
       "duration": "play"
     }
   ],

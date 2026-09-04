@@ -11,13 +11,13 @@
   "trigger": "RECOVERY",
   "scope": "actor",
   "links": [],
-  "condition": "stat(actor,'tacklesWon') >= 5",
+  "condition": "stat(actor,'tacklesWon') >= 2",
   "effects": [
     {
       "type": "modifyProbability",
       "target": "team",
       "probability": "tackle",
-      "value": 10,
+      "value": 15,
       "duration": "match"
     }
   ],

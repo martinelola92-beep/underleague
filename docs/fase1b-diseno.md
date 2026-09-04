@@ -339,3 +339,91 @@ Acciones de ataque diferenciadas, bloqueo sin balón, criterio del árbitro y la
 20. **El peso base del pase largo es el mando de los tiros por partido.** Con el pase largo demasiado barato para el jugador medio (base 120 en el centro del campo, pivote de pendiente en 50), la mitad de la plantilla se queda sin pase de media distancia y conduce o remata en su lugar: `shotsPerMatch` se iba a 16,3, fuera de rango, y era la única métrica que este paquete rompía. La curva medida en el lote corto de 60 partidos, moviendo la base (portero/defensa/centro/delantero): 260/90/120/70 → 17,87 tiros; 300/140/200/110 → 17,27; 340/190/280/150 → 16,78. Se cierra en 320/170/250/135, que devuelve `shotsPerMatch` al rango y sube la cadena de pases, sin que el pase largo deje de valer la mitad que el corto en la tabla.
 
 21. **Estado de las métricas al cerrar** (puerta de 1.000 partidos, semilla 1; entre paréntesis el valor en `63e0fe3`): `passChainAvgLength` 1,56 (1,56), `tacklesPerMatch` 2,31 (4,37), `betterTeamWinRate_60_vs_40` 47,59 (47,59), `shotsPerMatch` y el resto en rango. En el lote de `/Balance` de 600 partidos con los mismos valores: `shotsPerMatch` 15,46 IN, `ballThirdMaxShare` 36,53 IN, `injuriesPerMatch` 0,53 IN, `possessionChanges` 23,27 IN, `passChainAvgLength` 1,54 OUT, `tacklesPerMatch` 2,33 OUT, `betterTeamWinRate_60_vs_40` 61,00 OUT. Siguen rojas exactamente las mismas cuatro pruebas que ya lo estaban y ninguna nueva. La cadena de pases y el reparto por tercios (`ballThirdMaxShare` 36,96) confirman que el pase largo **no** convirtió el partido en balonazos, que era el riesgo declarado de la ADR 0030; las entradas por partido, ya bajas, bajan más por la decisión 8 y son el primer trabajo del reajuste.
+
+## 7. Decisiones de implementación del paquete U
+
+Reajuste único, puertas y cierre. Frontera: `data/**`, `Sim/{Analysis,Engine,Generation,Model,Perks}`,
+`Balance/*`, `Sim.Tests/*`, `docs/*`. La medición completa está en **`docs/balance/fase1b-resultados.md`**;
+aquí quedan solo las decisiones que este documento no fijaba.
+
+1. **`quality` vuelve a significar lo que decía `reference.json`: la media objetivo de atributos.** El
+   modelo de presupuesto de §1.3 no tenía dial de calidad y el paquete Q lo tradujo a `nivel = quality/10`.
+   Con eso, calidad 60 contra calidad 40 eran dos niveles —16 puntos de presupuesto sobre 290— y
+   `betterTeamWinRate` medía la varianza de la plantilla: el equipo "mejor" de calidad 60 ganaba el 40,8%
+   contra uno de calidad 50. El dial pasa a desplazar a la vez el **presupuesto**
+   (`+ q × AttributeCount`, cinco puntos por punto de calidad) y la **banda** de suelo y techo (`+ q` en los
+   dos), de modo que un equipo de calidad 60 es exactamente uno de calidad 40 con veinte puntos más en cada
+   atributo. `PlayerGenerator.QualityPivot = 50` vive en código, como el pivote 50 de las pendientes (§6.3):
+   es la definición de jugador medio, no un valor de balance. `attributeFloor` y `attributeCap` son cotas
+   absolutas de cordura y **no** se desplazan.
+
+2. **Nivel y rareza son diales propios de los datos de `/Balance`.** `reference.json.teams[]` y las builds
+   admiten `level` (1-8, por defecto **1**) y `rarity` (rareza uniforme para los diez jugadores; ausente
+   deja la composición de RF-005, un raro entre diez). Sin ellos no se pueden expresar las métricas de la
+   ADR 0027, que son comparaciones de rareza y nivel a calidad constante. El defecto de `level` pasa de 5
+   (lo que daba `quality/10`) a 1: una campaña empieza en el nivel 1.
+
+3. **Tres instrumentos de medida más en los datos, que no son mecánica de juego.** `styles` y `traits` por
+   slot en una build imponen la etiqueta de estilo y añaden rasgos: sin ellos, una build que prueba
+   `unlikely_bulwark` (exige `Elf` + `Bulwark`) solo es válida el 12% de las veces y el lote se cae al
+   validar. `attributeBonus` en un equipo de `reference.json` suma puntos a un atributo **después** de
+   generar la plantilla, que es como se mide el valor marginal de cada atributo. El dado de estilo se tira
+   igual cuando la etiqueta se impone: el flujo de RNG no puede depender de si hay imposición (RT-021).
+
+4. **Los tercios de `startsIn()` se miden sobre las columnas de colocación, no sobre el campo.** Una
+   casilla-hogar vive en las columnas 0-7 relativas a la portería propia, pero `ZoneOfHome` dividía las 16
+   del campo: el tercio atacante caían en las columnas 11-15, donde nadie puede colocarse, y
+   `startsIn(owner,'AttackingThird')` era una condición imposible. Con `Pitch.PlacementColumns` = 8 los tres
+   tercios son 0-2, 3-5 y 6-7.
+
+5. **La alineación por defecto pasa a un 2-3-1 con columnas contiguas**: GK (0,2); DEF (2,1),(2,3); MID
+   (3,2),(4,1),(4,3); FWD (6,2). La anterior dejaba a todo el mundo en columnas pares y a los compañeros de
+   línea a dos filas, así que **ninguna** de las siete relaciones direccionales de la ADR 0021 encontraba
+   candidato nunca: los seis perks del eje de colocación eran maluses puros. Con esta forma se resuelven
+   `ahead`, `behind`, `left`, `right` y las dos diagonales, y los tres tercios de inicio quedan ocupados.
+   `beside` (misma columna, filas contiguas) sigue sin resolverse con ninguna forma razonable de 7 jugadores
+   en 5 filas: `pivot_duo` pasa a declarar `left`/`right`, que es lo que "el compañero de al lado" quiere
+   decir, y ningún perk del catálogo usa ya `beside`.
+
+6. **Un perk de vínculo necesita `condition: linked(owner, '<relación>')` para poder castigar.** Los seis
+   llevaban condición vacía —siempre cierta—, así que sus `elseEffects` no se aplicaban jamás y una mala
+   colocación salía gratis. Es una propiedad del formato que conviene tener presente al escribir perks
+   nuevos: `elseEffects` responde a la **condición**, no a que el objetivo del efecto exista.
+
+7. **El criterio del árbitro tenía un bucle de realimentación.** `biasFoulShiftPer10` valía 400 sobre un
+   `foulBase` de 1.200: con el criterio medio en 35,7 puntos y el 10% de los partidos saturando en 100, una
+   falta movía el criterio, el criterio disparaba la siguiente falta y el partido terminaba con 1,04 rojas
+   y una incomparecencia cada cuatro partidos. Los tres `...ShiftPer10` bajan a 120/100/100 y los siete
+   `biasShift...` a la mitad. El criterio sigue teniendo efecto medible (RF-064) y el test que lo defiende
+   se reescribe para medirlo sobre treinta semillas: con umbrales pequeños, un partido suelto puede no
+   voltear ninguna tirada y salir idéntico.
+
+8. **`noDeadPerks` se mide por perk, no por pareja (perk, build).** El criterio de `fase1-diseno.md` §8 es
+   "se activa en >= 1% de los partidos de **alguna** build que lo lleve"; la implementación lo exigía en
+   todas, incluidas las builds mal construidas a propósito, cuyo sentido es justamente que sus perks no se
+   disparen. Las filas por pareja se conservan como `INFO`.
+
+9. **La escala de `modifyAttribute`, `modifyLeash`, `modifyBias` y `addCounter` se comprueba en el
+   esquema.** §1.4 decía que el validador rechazaba los valores fuera de escala, pero solo estaba escrito el
+   `if/then` de `modifyProbability`: había perks con 15 puntos de atributo y con 5 y 10 **casillas** de
+   correa en un campo de cinco filas. No se lleva al cargador a propósito: decenas de tests construyen perks
+   sintéticos con valores arbitrarios y lo que hay que garantizar es el contenido de `/data`.
+
+10. **`Vec2.ToString()` se escribe a mano.** El `PrintMembers` generado para un `record struct` recorre las
+    propiedades públicas, incluida `Normalized`, que devuelve otro `Vec2`: el `ToString()` por defecto se
+    llamaba a sí mismo hasta desbordar la pila. No era teórico —cualquier aserción fallida de xUnit que
+    formateara un vector abortaba la ejecución de los tests a mitad, y durante meses la suite completa nunca
+    llegó a terminar cuando algo fallaba—. Vale para cualquier `record` con una propiedad calculada de su
+    propio tipo.
+
+11. **Muestra de la puerta de fase 1: 40 plantillas × 12 partidos = 480 por celda, 30 s.** Antes eran
+    80 × 20 = 1.600 por celda y 85 s, por encima del minuto que se le pide a una puerta. Con 480 partidos el
+    error típico de una tasa de victoria es de 2,3 puntos y el margen más ajustado de la medición de cierre
+    es de 9,7 puntos, así que la puerta es estable. Semilla 1 en las tres puertas.
+
+12. **El jefe final se monta como rival de plantilla íntegramente legendaria y nivel máximo, sin perks.** No
+    existe todavía como sistema de campaña; es la lectura literal de RF-001c y lo único que cambia respecto
+    de un rival normal es el presupuesto que da la rareza (300 frente a 250) y el nivel. El umbral operativo
+    de "tasa razonable" de la ADR 0027 se fija en **25%**. Medido: 57,9% con una build coherente de comunes
+    de nivel máximo y 38,8% con comunes sin perks, así que la ADR 0027 no hay que revisarla — con el aviso
+    de que la holgura la ponen **los perks**, no el nivel.

@@ -4,11 +4,31 @@ Del §7 de requisitos, con los entregables concretos y el estado. **Regla de fas
 
 ## Estado actual
 
-**Fase 1 en curso** (4 de septiembre de 2026): motor de efectos, catálogo de prueba de 26-30 perks con sinergias y antisinergias, progresión y simulaciones de builds según `fase1-diseno.md`. Fase 0 cerrada salvo la decisión del ADR 0010.
+**Fase 1 cerrada** (4 de septiembre de 2026) con el bloque de rediseño espacial (ADR 0020-0030) y su
+reajuste único (paquete U). El criterio de salida de la fase 1 —"dos builds distintas ganan de formas
+distintas y se nota"— **se cumple y está automatizado**: la puerta `Sim.Tests/Analysis/BuildGateTests.cs`
+está activa y en verde, junto con la de fase 0 y la nueva de rareza y jefe final.
 
-**Fase 0 implementada** el 3 de septiembre de 2026. Existen `/Sim` (motor completo sin perks), `/Sim.Tests` (90 tests, incluida la puerta estadística de 1.000 partidos), `/Balance` y `/tools/DataValidator`, con CI en Windows y Linux. Rendimiento: ~520 partidos/s en Release (10.000 en ~20 s, RT-051 cumplido).
+Criterio de salida de fase 0, remedido (RT-056, 2.000 partidos, semilla 1): alternancias 23,6 · cadena
+media de pases 2,32 · tiros 11,8 · resultados 1-0..3-2 79% · tercio máximo 40,0% · entradas 9,96 · lesiones
+0,62 · mejor equipo (Δ20) 69,4%. **Todo dentro de rango** salvo los empates al final del reglamentario
+(27,8%, inconsistencia I-11, `INFO`) y los partidos de más de cinco goles (10,9%, `INFO`).
 
-Criterio de salida (RT-056, 2.000 partidos, semilla 1): cambios de posesión 22,5 · cadena media de pases 3,56 · tiros 10,7 · resultados 1-0..3-2 84% · >5 goles 2,6% · tercio máximo 39% · entradas 11,8 · lesiones 0,63 · mejor equipo (Δ20) gana 73%. **Todo dentro de rango salvo los empates al final del reglamentario: 29% frente al <15% del documento**, que es matemáticamente incompatible con el resto de la fila de resultados (ver ADR 0010, propuesta pendiente del revisor). Detalle de palancas y cambios de motor en `fase0-diseno.md` §3.11 y `pendientes.md` D-18..D-20, I-11, I-12.
+Criterio de salida de fase 1 (6.720 partidos, semilla 1): las nueve builds coherentes ganan entre el 67,7%
+y el 83,1% a la referencia de su raza (umbral 58%), las cuatro malas se quedan entre el 9,2% y el 42,1%
+(umbral 45%), la aleatoria en 55,6%, `buildsWinDifferently` 3,05× en lesiones y 1,39× en cadena de pases,
+ningún perk muerto y RF-069 en 64/31/4.
+
+Métricas de rareza (ADR 0027): común de nivel 8 contra legendario de nivel 2, 49,8%; contra legendario de
+nivel 8, 38,8%; equipo sin ningún legendario contra el jefe final, 57,9%.
+
+Detalle completo, palancas movidas y conclusiones de diseño en **`docs/balance/fase1b-resultados.md`**;
+deuda abierta en `pendientes.md` D-28 a D-33, con el equilibrio entre razas (D-29) como primer trabajo de
+balance de la fase 2.
+
+**Fase 0 implementada** el 3 de septiembre de 2026. Existen `/Sim` (motor completo sin perks),
+`/Sim.Tests`, `/Balance` y `/tools/DataValidator`, con CI en Windows y Linux. Rendimiento tras el rediseño:
+231 partidos/s en Release, por encima de los 167 que exige RT-051.
 
 ## Fase 0: simulador sin gráficos
 

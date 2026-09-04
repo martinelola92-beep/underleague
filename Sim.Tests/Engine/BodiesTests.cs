@@ -208,4 +208,16 @@ public sealed class BodiesTests
             PhysicalState.Healthy);
         return new MatchPlayer(definition, team, home, Catalog);
     }
+
+    /// <summary>
+    /// El <c>ToString</c> de <see cref="Vec2"/> no se llama a sí mismo (paquete U): el
+    /// <c>PrintMembers</c> que genera el compilador para un <c>record struct</c> incluiría la propiedad
+    /// <c>Normalized</c>, que es otro <c>Vec2</c>, y desbordaba la pila. Cualquier aserción fallida que
+    /// formateara un vector tumbaba el proceso de pruebas entero.
+    /// </summary>
+    [Fact]
+    public void Vec2ToStringDoesNotRecurse()
+    {
+        Assert.Equal("Vec2 { X = 1.5, Y = -2 }", new Vec2(1.5f, -2f).ToString());
+    }
 }

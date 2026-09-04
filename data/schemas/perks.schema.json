@@ -413,6 +413,152 @@
               }
             }
           }
+        },
+        {
+          "_doc": "Escala de puntos de atributo de fase1b-diseno.md §1.4 (3/5/8/10 y sus negativos). No se multiplica por nada: es la unidad del atributo (1-99), y un +20 sobre un presupuesto de ~290 puntos seria enorme.",
+          "if": {
+            "properties": {
+              "type": {
+                "const": "modifyAttribute"
+              }
+            },
+            "required": [
+              "type"
+            ]
+          },
+          "then": {
+            "properties": {
+              "value": {
+                "enum": [
+                  -10,
+                  -8,
+                  -5,
+                  -3,
+                  3,
+                  5,
+                  8,
+                  10
+                ]
+              },
+              "valuePerCounter": {
+                "enum": [
+                  -10,
+                  -8,
+                  -5,
+                  -3,
+                  3,
+                  5,
+                  8,
+                  10
+                ]
+              },
+              "maxValue": {
+                "enum": [
+                  -10,
+                  -8,
+                  -5,
+                  -3,
+                  3,
+                  5,
+                  8,
+                  10,
+                  0
+                ]
+              }
+            }
+          }
+        },
+        {
+          "_doc": "Escala de casillas de correa de fase1b-diseno.md §1.4 (1/2 y sus negativos). La correa es la extension lateral de la zona de accion (ADR 0028) y el campo tiene cinco filas: una casilla ya es mucho.",
+          "if": {
+            "properties": {
+              "type": {
+                "const": "modifyLeash"
+              }
+            },
+            "required": [
+              "type"
+            ]
+          },
+          "then": {
+            "properties": {
+              "value": {
+                "enum": [
+                  -2,
+                  -1,
+                  1,
+                  2
+                ]
+              },
+              "valuePerCounter": {
+                "enum": [
+                  -2,
+                  -1,
+                  1,
+                  2
+                ]
+              },
+              "maxValue": {
+                "enum": [
+                  -2,
+                  -1,
+                  1,
+                  2,
+                  0
+                ]
+              }
+            }
+          }
+        },
+        {
+          "_doc": "Escala de puntos de criterio del arbitro de fase1b-diseno.md §1.4 (10/15/20 y sus negativos).",
+          "if": {
+            "properties": {
+              "type": {
+                "const": "modifyBias"
+              }
+            },
+            "required": [
+              "type"
+            ]
+          },
+          "then": {
+            "properties": {
+              "value": {
+                "enum": [
+                  -20,
+                  -15,
+                  -10,
+                  10,
+                  15,
+                  20
+                ]
+              }
+            }
+          }
+        },
+        {
+          "_doc": "Escala de unidades de contador de fase1b-diseno.md §1.4 (1/2).",
+          "if": {
+            "properties": {
+              "type": {
+                "const": "addCounter"
+              }
+            },
+            "required": [
+              "type"
+            ]
+          },
+          "then": {
+            "properties": {
+              "value": {
+                "enum": [
+                  1,
+                  2
+                ]
+              }
+            }
+          }
         }
       ]
     }

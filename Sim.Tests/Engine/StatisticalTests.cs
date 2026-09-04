@@ -105,7 +105,7 @@ public sealed class StatisticalTests
         {
             var team = reference.Teams[i];
             var rng = RngStreams.Generation(Seed, i);
-            instances[i] = TeamGenerator.Generate(ref rng, catalog, team.Id, team.Race, team.Quality, 1 + (i * PlayerIdStride));
+            instances[i] = TeamGenerator.Generate(ref rng, catalog, team.Id, team.Race, team.Quality, 1 + (i * PlayerIdStride), team.Level, team.Rarity);
         }
 
         var twins = new Dictionary<int, TeamSetup>();
@@ -125,7 +125,7 @@ public sealed class StatisticalTests
             var team = reference.Teams[index];
             var rng = RngStreams.Generation(Seed, TwinIndexOffset + index);
             twins[index] = TeamGenerator.Generate(
-                ref rng, catalog, team.Id, team.Race, team.Quality, 1 + ((TwinIndexOffset + index) * PlayerIdStride));
+                ref rng, catalog, team.Id, team.Race, team.Quality, 1 + ((TwinIndexOffset + index) * PlayerIdStride), team.Level, team.Rarity);
         }
 
         var referee = new RefereeSetup("Referee", RefereeTrait.Neutral, 0);
@@ -164,7 +164,7 @@ public sealed class StatisticalTests
 
     /// <summary>Lectura mínima de data/balance/reference.json; /Balance tiene la suya, aquí no se comparte proyecto.</summary>
     private sealed record ReferenceSet(
-        IReadOnlyList<(string Id, Race Race, int Quality)> Teams,
+        IReadOnlyList<(string Id, Race Race, int Quality, int Level, Rarity? Rarity)> Teams,
         IReadOnlyList<(string HomeId, string AwayId)> Pairings)
     {
         public static ReferenceSet Load(string dataDirectory)
@@ -172,13 +172,15 @@ public sealed class StatisticalTests
             using var document = JsonDocument.Parse(File.ReadAllText(Path.Combine(dataDirectory, "balance", "reference.json")));
             var root = document.RootElement;
 
-            var teams = new List<(string, Race, int)>();
+            var teams = new List<(string, Race, int, int, Rarity?)>();
             foreach (var team in root.GetProperty("teams").EnumerateArray())
             {
                 teams.Add((
                     team.GetProperty("id").GetString()!,
                     Enum.Parse<Race>(team.GetProperty("race").GetString()!),
-                    team.GetProperty("quality").GetInt32()));
+                    team.GetProperty("quality").GetInt32(),
+                    team.TryGetProperty("level", out var level) ? level.GetInt32() : 1,
+                    team.TryGetProperty("rarity", out var rarity) ? Enum.Parse<Rarity>(rarity.GetString()!, ignoreCase: true) : null));
             }
 
             var pairings = new List<(string, string)>();

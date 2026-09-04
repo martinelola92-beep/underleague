@@ -20,15 +20,36 @@ public static class PlayerGenerator
     };
 
     /// <summary>
+    /// Calidad de referencia del dial de <c>/Balance</c>: un jugador de calidad 50 es exactamente el
+    /// jugador que describe el modelo de presupuesto de <c>tuning.generation</c> sin desplazar (ADR 0025).
+    /// Es la misma definición de "jugador medio" que usan las fórmulas de <c>tuning.json</c>, que restan
+    /// 50 en todas partes, así que vive en código y no en datos: no es un valor de balance.
+    /// </summary>
+    public const int QualityPivot = 50;
+
+    /// <summary>Número de atributos que reparten el presupuesto (fuerza, velocidad, técnica, resistencia, correa).</summary>
+    public const int AttributeCount = 5;
+
+    /// <summary>
     /// Genera un jugador de nivel <paramref name="level"/> (1..8, RF-023/Progression.MaxLevel) para la
     /// rareza y posición dadas. Tags = [SpeciesTag, StyleTag, Position, ...Traits] (ADR 0024).
+    /// <paramref name="quality"/> es el dial de fuerza de <c>/Balance</c> (RT-052): desplaza el
+    /// presupuesto y la banda de atributos punto por punto respecto de <see cref="QualityPivot"/>.
     /// </summary>
-    public static PlayerDefinition Generate(ref Pcg32 rng, Catalog catalog, RaceDefinition race, Position position, Rarity rarity, int level, int id, string name)
+    public static PlayerDefinition Generate(ref Pcg32 rng, Catalog catalog, RaceDefinition race, Position position, Rarity rarity, int level, int id, string name, int quality = QualityPivot, StyleTag? forcedStyle = null)
     {
+        // El dado de estilo se tira SIEMPRE, aunque el llamador imponga la etiqueta: el flujo de RNG no
+        // puede depender de si hay imposición o no (RT-021). forcedStyle es un instrumento de /Balance
+        // (builds que necesitan una etiqueta concreta para probar un perk que la exige), no una mecánica.
         var styleTag = PickStyleTag(ref rng, race.StyleTagWeights);
+        if (forcedStyle is { } imposed)
+        {
+            styleTag = imposed;
+        }
+
         var style = catalog.Style(styleTag);
 
-        var attributes = GenerateAttributes(ref rng, catalog.Tuning.Generation, race, style, position, rarity, level);
+        var attributes = GenerateAttributes(ref rng, catalog.Tuning.Generation, race, style, position, rarity, level, quality);
         var traits = PickTraits(ref rng, catalog, race, position);
 
         var tags = new List<string> { race.SpeciesTag, styleTag.ToString(), position.ToString() };
@@ -69,7 +90,18 @@ public static class PlayerGenerator
     /// <summary>
     /// Modelo de presupuesto (fase1b-diseno.md §1.3, ADR 0025, ADR 0027).
     ///
-    /// 1. <c>budget = budgetByRarity[rarity] + budgetPerLevel * (level - 1)</c>.
+    /// 0. <b>Dial de calidad</b> (paquete U). <c>quality</c> es el dial de fuerza de <c>/Balance</c>
+    ///    (equipos de referencia, builds, campañas y tests estadísticos) y significa lo que siempre dijo
+    ///    <c>data/balance/reference.json</c>: la media objetivo de atributos del equipo. Se aplica como un
+    ///    desplazamiento <c>q = quality - <see cref="QualityPivot"/></c> que mueve a la vez el presupuesto
+    ///    (<c>+ q * <see cref="AttributeCount"/></c>) y la banda de suelo y techo (<c>+ q</c> en los dos),
+    ///    de modo que un equipo de calidad 60 es un equipo de calidad 40 con veinte puntos más en cada
+    ///    atributo, que es literalmente lo que mide <c>betterTeamWinRate</c> (docs/balance.md, fase 0 §4).
+    ///    Hasta el paquete Q el dial se traducía a <c>nivel = quality/10</c>, y entonces 60 contra 40 eran
+    ///    dos niveles —16 puntos de presupuesto sobre ~290— y la métrica no medía lo que decía medir.
+    ///    Nivel y calidad son ahora diales independientes: el nivel es progresión dentro de la run
+    ///    (8 puntos de presupuesto por nivel), la calidad es de qué liga sale el equipo.
+    /// 1. <c>budget = budgetByRarity[rarity] + budgetPerLevel * (level - 1) + q * AttributeCount</c>.
     /// 2. Reparto inicial por <c>positionShare</c> (porcentajes 0..100 que suman 100) con el método del
     ///    resto mayor (largest remainder): se asigna primero <c>budget * share / 100</c> (división
     ///    entera) a cada atributo y el resto sin repartir se entrega, de uno en uno, a los atributos con
@@ -78,9 +110,10 @@ public static class PlayerGenerator
     /// 3. A cada atributo se le suma <c>race.AttributeBias</c> + <c>style.AttributeBias</c> + una
     ///    desviación individual entera en [-dev, dev] (<c>race.IndividualDeviation</c>), un dado por
     ///    atributo en el orden fijo de arriba.
-    /// 4. Se calculan suelo y techo por atributo: <c>floor = max(attributeFloor, rangeByRarity[rarity].min,
-    ///    positionFloors[position][attr] si existe)</c>, <c>cap = min(attributeCap, rangeByRarity[rarity].max)</c>.
-    ///    Cada atributo se acota a [floor, cap].
+    /// 4. Se calculan suelo y techo por atributo: <c>floor = max(attributeFloor, rangeByRarity[rarity].min + q,
+    ///    positionFloors[position][attr] + q si existe)</c>, <c>cap = min(attributeCap, rangeByRarity[rarity].max + q)</c>.
+    ///    Cada atributo se acota a [floor, cap]. <c>attributeFloor</c> y <c>attributeCap</c> son cotas
+    ///    absolutas de cordura y no se desplazan con la calidad.
     /// 5. Acotar mueve la suma lejos de <c>budget</c> (los sesgos empujan algunos atributos contra su
     ///    tope). Se renormaliza con un reparto iterativo de 1 en 1: mientras la suma sea menor que
     ///    <c>budget</c>, se suma 1 a cada atributo que aún tenga hueco bajo su techo, en el orden fijo,
@@ -92,9 +125,10 @@ public static class PlayerGenerator
     ///    viola floor/cap por construcción, y la suma final iguala al presupuesto salvo en ese caso límite
     ///    (documentado también en fase1b-diseno.md §1.3).
     /// </summary>
-    private static Attributes GenerateAttributes(ref Pcg32 rng, GenerationTuning tuning, RaceDefinition race, StyleDefinition style, Position position, Rarity rarity, int level)
+    private static Attributes GenerateAttributes(ref Pcg32 rng, GenerationTuning tuning, RaceDefinition race, StyleDefinition style, Position position, Rarity rarity, int level, int quality)
     {
-        int budget = tuning.BudgetByRarity.Of(rarity) + tuning.BudgetPerLevel * (level - 1);
+        int qualityShift = quality - QualityPivot;
+        int budget = tuning.BudgetByRarity.Of(rarity) + tuning.BudgetPerLevel * (level - 1) + (qualityShift * AttributeCount);
         var share = PositionShareOf(tuning.PositionShare, position);
         var range = RangeOf(tuning.RangeByRarity, rarity);
         var positionFloor = tuning.PositionFloors.Of(position);
@@ -135,9 +169,9 @@ public static class PlayerGenerator
         for (int i = 0; i < AttributeOrder.Length; i++)
         {
             var attribute = AttributeOrder[i];
-            int extraFloor = positionFloor.TryGetValue(attribute, out int f) ? f : tuning.AttributeFloor;
-            floors[i] = Math.Max(tuning.AttributeFloor, Math.Max(range.Min, extraFloor));
-            caps[i] = Math.Min(tuning.AttributeCap, range.Max);
+            int extraFloor = positionFloor.TryGetValue(attribute, out int f) ? f + qualityShift : tuning.AttributeFloor;
+            floors[i] = Math.Max(tuning.AttributeFloor, Math.Max(range.Min + qualityShift, extraFloor));
+            caps[i] = Math.Min(tuning.AttributeCap, range.Max + qualityShift);
             if (floors[i] > caps[i])
             {
                 floors[i] = caps[i];
