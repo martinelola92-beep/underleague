@@ -4,7 +4,7 @@ Roguelite de gestión y autobatalla: el jugador dirige un equipo de fútbol 7 de
 
 PC (Steam), premium, sin online. **Estado: preproducción, fase 0 no iniciada, sin código escrito.**
 
-La fuente de verdad del diseño es `docs/requisitos.md` (v0.9). Cada requisito tiene identificador (`RF-xxx` funcional, `RT-xxx` técnico, `RA-xxx` arte, `UI-xxx` interfaz): cítalos en commits, ADRs, tests y comentarios cuando implementes o discutas uno.
+La fuente de verdad del diseño es `docs/requisitos.md` (v0.9.1). Cada requisito tiene identificador (`RF-xxx` funcional, `RT-xxx` técnico, `RA-xxx` arte, `UI-xxx` interfaz): cítalos en commits, ADRs, tests y comentarios cuando implementes o discutas uno.
 
 ## Stack
 
@@ -104,7 +104,7 @@ dotnet run --project tools/DataValidator -- data/    # esquemas de /data
 
 | Documento | Contenido | Cuándo leerlo |
 |---|---|---|
-| `docs/requisitos.md` | Requisitos completos v0.9, fuente de verdad | Siempre que implementes algo |
+| `docs/requisitos.md` | Requisitos completos v0.9.1, fuente de verdad | Siempre que implementes algo |
 | `docs/arquitectura.md` | Proyectos, dependencias, superficie pública de `/Sim`, bus de eventos, carga de datos, persistencia | Antes de crear proyectos o tocar fronteras |
 | `docs/determinismo.md` | RNG, ticks, aritmética, orden, APIs prohibidas, test RT-024 | Antes de escribir cualquier cosa en `/Sim` |
 | `docs/modelo-datos.md` | Esquema de Run, formato de perk/objeto/consumible, funciones NCalc, plantillas de descripción | Antes de tocar `/data` o el estado |

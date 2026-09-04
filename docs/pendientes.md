@@ -42,31 +42,33 @@ Registro vivo. Cuando una decisión se toma, se mueve a un ADR en `decisiones/` 
 
 ## Inconsistencias detectadas en requisitos v0.9
 
-Se aplica la lectura indicada hasta que el documento suba de versión.
+Se aplica la lectura indicada hasta que el documento suba de versión. **I-1 a I-5 e I-9 quedan incorporadas al texto de `requisitos.md` en v0.9.1**; para el resto sigue aplicándose la lectura de esta tabla.
 
-| Id | Dónde | Conflicto | Lectura aplicada |
-|---|---|---|---|
-| I-1 | RT-030 vs RF-022 | El esquema lista `precision` y `agresividad` como atributos; RF-022 integra precisión en técnica y expresa agresividad como rasgo | Cinco atributos: fuerza, velocidad, técnica, resistencia, correa |
-| I-2 | RT-030 vs RF-076 | `equipamiento[] (ids, por slot)` frente a "un único objeto equipado" | Un campo `equipo` con un id o null |
-| I-3 | RT-030 vs RF-103 | `vinculos[] (…, signo)` frente a "no existen vínculos negativos en el lanzamiento" | Sin campo `signo`; se añade si entran rivalidades |
-| I-4 | Glosario vs RF-055 | Glosario: "Fase: uno de los tres tramos en que se divide un partido"; RF-055: el reglamentario es una sola fase | El partido tiene reglamentario + turba opcional. "Fase" se reserva para los tramos de una **jugada** (RF-051) y para el plan de desarrollo |
-| I-5 | RT-033 vs RF-055 | Ejemplo de perk con `limite.por = "parte"`; no existen partes | Ámbitos válidos: `jugada`, `partido`, `turba`, `run` |
-| I-6 | RF-128 | "Una run recorre los tres actos de una división (C, B, A)" frente a la tabla con cinco divisiones Tercera..Mundial | Cinco divisiones con los nombres de la tabla |
-| I-7 | RT-056 vs RF-055c | "Menos del 15% de empates" frente a "los empates no existen como resultado final" | La métrica mide empates **al final del reglamentario**, es decir, frecuencia de turba |
-| I-8 | D-9 vs RF-001c | La decisión pendiente pregunta si existe la condición de derrota propia del jefe final; RF-001c ya la afirma | Existe; falta definirla |
-| I-9 | RF-066 vs RF-055b | El catálogo tiene `INICIO_TURBA` y `ARBITRO_SE_VA` como eventos distintos aunque ocurren a la vez | Se emiten ambos, en ese orden, en el mismo tick |
-| I-10 | Numeración | Secciones 3.6c antes de 3.6b, 3.12b/3.12c | Cosmético; se corrige al subir de versión |
-| I-11 | RT-056, fila de resultados | `< 15% de empates al final del reglamentario` es incompatible con `mayoría de resultados entre 1-0 y 3-2` y `< 5% con más de 5 goles`: con marcadores casi independientes, bajar del 15% de empates exige unos 8 goles por partido (`e^-2λ·I₀(2λ)`) | La métrica se emite como `INFO` y no bloquea la puerta; medida en 29-31% con 2,4 goles por partido. Resolver con un ADR: o se sube el rango a ~30%, o se introduce una mecánica que correlacione los marcadores (el equipo por detrás arriesga más) |
-| I-12 | `balance.md` vs `fase0-diseno.md` §4 | `balance.md` pedía "equipo +10 en todos los atributos gana 65-80%"; `fase0-diseno.md` §4 y `Balance/Metrics.cs` aplican ese rango a una diferencia de **20** y dejan la de 10 como `INFO` | Se aplica la lectura de §4 (diferencia 20 obligatoria, diferencia 10 informativa en 55-70%) y se corrige la tabla de `balance.md` en el mismo commit. Con los datos del paquete E, +20 gana 73,0% y +10 gana 65,8% en 2.000 partidos con semilla 1 |
+| Id | Dónde | Conflicto | Lectura aplicada | Estado |
+|---|---|---|---|---|
+| I-1 | RT-030 vs RF-022 | El esquema lista `precision` y `agresividad` como atributos; RF-022 integra precisión en técnica y expresa agresividad como rasgo | Cinco atributos: fuerza, velocidad, técnica, resistencia, correa | Corregida en v0.9.1 |
+| I-2 | RT-030 vs RF-076 | `equipamiento[] (ids, por slot)` frente a "un único objeto equipado" | Un campo `equipo` con un id o null | Corregida en v0.9.1 |
+| I-3 | RT-030 vs RF-103 | `vinculos[] (…, signo)` frente a "no existen vínculos negativos en el lanzamiento" | Sin campo `signo`; se añade si entran rivalidades | Corregida en v0.9.1 |
+| I-4 | Glosario vs RF-055 | Glosario: "Fase: uno de los tres tramos en que se divide un partido"; RF-055: el reglamentario es una sola fase | El partido tiene reglamentario + turba opcional. "Fase" se reserva para los tramos de una **jugada** (RF-051) y para el plan de desarrollo | Corregida en v0.9.1 |
+| I-5 | RT-033 vs RF-055 | Ejemplo de perk con `limite.por = "parte"`; no existen partes | Ámbitos válidos: `jugada`, `partido`, `turba`, `run` | Corregida en v0.9.1 |
+| I-6 | RF-128 | "Una run recorre los tres actos de una división (C, B, A)" frente a la tabla con cinco divisiones Tercera..Mundial | Cinco divisiones con los nombres de la tabla | Abierta |
+| I-7 | RT-056 vs RF-055c | "Menos del 15% de empates" frente a "los empates no existen como resultado final" | La métrica mide empates **al final del reglamentario**, es decir, frecuencia de turba | Abierta |
+| I-8 | D-9 vs RF-001c | La decisión pendiente pregunta si existe la condición de derrota propia del jefe final; RF-001c ya la afirma | Existe; falta definirla | Abierta |
+| I-9 | RF-066 vs RF-055b | El catálogo tiene `INICIO_TURBA` y `ARBITRO_SE_VA` como eventos distintos aunque ocurren a la vez | Se emiten ambos, en ese orden, en el mismo tick | Corregida en v0.9.1 |
+| I-10 | Numeración | Secciones 3.6c antes de 3.6b, 3.12b/3.12c | Cosmético; se corrige al subir de versión | Abierta |
+| I-11 | RT-056, fila de resultados | `< 15% de empates al final del reglamentario` es incompatible con `mayoría de resultados entre 1-0 y 3-2` y `< 5% con más de 5 goles`: con marcadores casi independientes, bajar del 15% de empates exige unos 8 goles por partido (`e^-2λ·I₀(2λ)`) | La métrica se emite como `INFO` y no bloquea la puerta; medida en 29-31% con 2,4 goles por partido. Resolver con un ADR: o se sube el rango a ~30%, o se introduce una mecánica que correlacione los marcadores (el equipo por detrás arriesga más) | — (no forma parte del paquete P) |
+| I-12 | `balance.md` vs `fase0-diseno.md` §4 | `balance.md` pedía "equipo +10 en todos los atributos gana 65-80%"; `fase0-diseno.md` §4 y `Balance/Metrics.cs` aplican ese rango a una diferencia de **20** y dejan la de 10 como `INFO` | Se aplica la lectura de §4 (diferencia 20 obligatoria, diferencia 10 informativa en 55-70%) y se corrige la tabla de `balance.md` en el mismo commit. Con los datos del paquete E, +20 gana 73,0% y +10 gana 65,8% en 2.000 partidos con semilla 1 | — (no forma parte del paquete P) |
 
 ## Cambios de requisito pendientes de subir `requisitos.md` de versión
 
-| Id | Requisito | Cambio | Origen |
-|---|---|---|---|
-| R-1 | RF-024 | Se invierte: el legendario es netamente superior y un común de nivel máximo equivale a un legendario de nivel 2, en vez de superarlo | ADR 0027 |
-| R-2 | RF-023b | Se matiza: el común sigue siendo competitivo **si el jugador lo cuida** (nivel, perks acumulativos, vínculos), no por defecto | ADR 0027 |
-| R-3 | RF-022d | La etiqueta deja de ser única por raza: se separa en etiqueta de especie (fija) y etiqueta de estilo (individual, con sesgo racial) | ADR 0024 |
-| R-4 | RF-044 | La adyacencia se resuelve antes del partido en vínculos direccionales acotados, no como condición evaluada en cada evento | ADR 0021 |
-| R-5 | RF-031 | Cada raza tiene una habilidad concreta, implementada como perk de equipo | ADR 0026 |
-| R-7 | RF-045 | En la colocación se muestra la zona del jugador manipulado con sus dos capas, no todas las correas a la vez, que con zonas asimétricas serían ilegibles | ADR 0029 |
-| R-6 | RF-042, RT-095 | La correa deja de ser un radio circular duro: pasa a ser una zona con forma por posición, tamaño escalado por el atributo y salida penalizada en vez de prohibida | ADR 0028 |
+Todos los cambios R-1 a R-7 quedan **aplicados en `requisitos.md` v0.9.1** (2026-09-04, paquete P). La tabla se conserva como registro histórico.
+
+| Id | Requisito | Cambio | Origen | Estado |
+|---|---|---|---|---|
+| R-1 | RF-024 | Se invierte: el legendario es netamente superior y un común de nivel máximo equivale a un legendario de nivel 2, en vez de superarlo | ADR 0027 | Aplicado en v0.9.1 |
+| R-2 | RF-023b | Se matiza: el común sigue siendo competitivo **si el jugador lo cuida** (nivel, perks acumulativos, vínculos), no por defecto | ADR 0027 | Aplicado en v0.9.1 |
+| R-3 | RF-022d | La etiqueta deja de ser única por raza: se separa en etiqueta de especie (fija) y etiqueta de estilo (individual, con sesgo racial) | ADR 0024 | Aplicado en v0.9.1 |
+| R-4 | RF-044 | La adyacencia se resuelve antes del partido en vínculos direccionales acotados, no como condición evaluada en cada evento | ADR 0021 | Aplicado en v0.9.1 |
+| R-5 | RF-031 | Cada raza tiene una habilidad concreta, implementada como perk de equipo | ADR 0026 | Aplicado en v0.9.1 (nuevo RF-031b, y columna de habilidad en la tabla de razas de §3.4) |
+| R-7 | RF-045 | En la colocación se muestra la zona del jugador manipulado con sus dos capas, no todas las correas a la vez, que con zonas asimétricas serían ilegibles | ADR 0029 | Aplicado en v0.9.1 |
+| R-6 | RF-042, RT-095 | La correa deja de ser un radio circular duro: pasa a ser una zona con forma por posición, tamaño escalado por el atributo y salida penalizada en vez de prohibida | ADR 0028 | Aplicado en v0.9.1 |

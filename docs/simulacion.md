@@ -5,7 +5,7 @@ Concreta RF-040..060, RF-057b..e, RF-061..064, RT-089..098. Es el contenido de l
 ## Campo y colocación
 
 - Cuadrícula 16 columnas x 5 filas (RF-040). Cada equipo coloca en su mitad (columnas 0-7 / 8-15); portero en casilla fija (RF-041). Posición restringe filas y columnas permitidas (RF-022b). Razas grandes ocupan 2 casillas contiguas (RF-033).
-- **Correa** (`Leash`): radio en casillas desde la casilla-hogar (`HomeCell`) (RF-042). Fuera del radio el jugador no persigue el balón; actúa como filtro previo de la utilidad (RT-095). El portero tiene su correa contenida en el área (RF-057b).
+- **Correa** (`Leash`): desde v0.9.1 (ADR 0028) no es un radio circular sino el tamaño de una **zona de acción con forma asimétrica dada por la posición** (RF-042): un delantero avanza sin límite y retrocede una columna; un defensa avanza tres. Salir de la zona no está prohibido, está **penalizado** de forma creciente (RT-095), con un límite duro exterior; cuánto tira de vuelta lo da la disciplina de la raza y los rasgos. El portero tiene su zona contenida en el área (RF-057b). Detalle de implementación en `fase1b-diseno.md` §2.2.
 - Estado táctico desplaza las casillas-hogar de todo el bloque (RT-089 capa 2). La correa se evalúa respecto a la casilla-hogar **desplazada**.
 
 ## Las tres capas (RT-089)
@@ -37,7 +37,7 @@ En cada tick en que su estado lo permite, el jugador puntúa las acciones legale
 - Acciones mínimas (`PlayerAction`, RT-092): perseguir balón (`ChaseBall`), marcar rival (`MarkOpponent`), ofrecer apoyo (`OfferSupport`), cubrir espacio (`CoverSpace`), pasar (`Pass`), conducir (`Dribble`), tirar (`Shoot`), entrar (`Tackle`), replegar a casilla-hogar (`Retreat`).
 - Puntuación = suma de términos enteros: `baseWeight[position][action]` (RT-093) x `traitModifier` (RT-094) x `tacticalStateModifier`, más términos de contexto (distancia al balón, a portería, rivales cerca, correa restante). Todo en `data/ai/weights.json` (RT-096).
 - Rasgos (RT-094): agresivo (`Aggressive`) sube entrar; goleador (`Scorer`) sube tirar; tiro lejano (`LongShot`) amplía la distancia útil de tiro; cobarde (`Coward`) baja duelos; vago (`Lazy`) baja replegar; cerebral (`Cerebral`) sube pasar; rápido (`Fast`) sube perseguir; sucio (`Dirty`) sube entrar dura y baja el coste percibido de falta; líder (`Leader`) sube pesos de compañeros adyacentes; resistente (`Resilient`) reduce el decaimiento por fatiga.
-- Correa como filtro previo (RT-095). Empates por id ascendente (RT-097).
+- Zona de acción como penalización creciente, no como filtro (RT-095, ADR 0028). Empates por id ascendente (RT-097).
 - **Volcado de tabla** (RT-098): `Simulator.Run` con `config.DumpUtility = (playerId, tick)` añade al informe la tabla `action -> score, términos`. Es la herramienta principal de depuración; `/Balance --dump-utility` la expone.
 
 ## Jugada (RF-051)

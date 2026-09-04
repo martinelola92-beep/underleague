@@ -1,9 +1,20 @@
 # Documento de requisitos funcionales y técnicos
 
 **Proyecto:** roguelite de fútbol autojugado con mecánicas de deporte brutal
-**Versión:** 0.9 (borrador de trabajo)
+**Versión:** 0.9.1 (borrador de trabajo)
 **Plataforma objetivo:** PC (Steam), premium
 **Estado:** preproducción, sin código escrito
+
+### Cambios respecto a 0.9
+
+- **RF-024**: se invierte. El legendario es netamente superior; un común de nivel máximo equivale aproximadamente a un legendario de nivel 2, con métrica de verificación y salvaguarda del jefe final (ADR 0027).
+- **RF-023b**: se matiza. El común solo es competitivo si el jugador lo cuida, no por defecto (ADR 0027).
+- **RF-022d, RF-031, RF-031b y tabla de razas (§3.4)**: la etiqueta se desdobla en etiqueta de especie (fija) y etiqueta de estilo (individual, sesgada por raza); se añade la habilidad racial de cada raza (ADR 0024, ADR 0026).
+- **RF-044**: la adyacencia se resuelve una sola vez antes del partido y produce vínculos direccionales, en vez de evaluarse por evento (ADR 0021).
+- **RF-042 y RT-095**: la correa deja de ser un radio duro y pasa a ser una zona de acción con forma por posición, escalada por el atributo, con salida penalizada y límite duro exterior (ADR 0028).
+- **RF-045**: en la colocación se muestra solo la zona del jugador manipulado, con sus dos capas, el modo de cobertura de equipo y los vínculos al mover (ADR 0029).
+- Se añaden **RF-065b** (perks universales por defecto, con un núcleo exclusivo por raza, ADR 0023) y **RT-016** (cuerpos con volumen, separación blanda y empuje repartido, ADR 0020).
+- Se corrigen las inconsistencias I-1 a I-5 y I-9 de `docs/pendientes.md` (atributos, equipamiento, vínculos, glosario de "fase", ámbitos de límite de perk y orden de eventos de la turba).
 
 ---
 
@@ -43,7 +54,7 @@ La identidad del juego no es el fútbol, es la **carnicería administrada**: los
 | **Casilla** | Unidad de la cuadrícula de colocación |
 | **Correa** | Radio máximo de desplazamiento de un jugador respecto a su casilla-hogar |
 | **Jugada** | Secuencia continua de juego desde una recuperación hasta un tiro o pérdida |
-| **Fase** | Uno de los tres tramos en que se divide un partido |
+| **Fase** | Uno de los tramos en que se divide una **jugada** (recuperación, progresión, último tercio, definición; RF-051). No se aplica al partido, que en tiempo reglamentario es un único tramo (RF-055) |
 | **Perk** | Efecto permanente ligado a un jugador |
 | **Etiqueta (tag)** | Descriptor de un jugador que los perks consultan |
 | **Vínculo** | Relación positiva o negativa entre dos jugadores de la plantilla |
@@ -94,7 +105,7 @@ La identidad del juego no es el fútbol, es la **carnicería administrada**: los
 - **RF-022** Atributos numéricos, en rango 1-99: **fuerza, velocidad, técnica, resistencia y correa**. La precisión se integra en técnica; la agresividad se expresa mediante rasgos, no como cifra.
 - **RF-022b** **Posición**: portero, defensa, centrocampista o delantero. Determina el comportamiento del jugador en la simulación (RT-090) y restringe las filas y columnas de la cuadrícula donde puede colocarse.
 - **RF-022c** **Rasgos**: descriptores cualitativos que alteran el comportamiento, no solo las cifras. Conjunto inicial: agresivo, rápido, goleador, tiro lejano, cerebral, sucio, resistente, cobarde, líder y vago. Cada jugador porta entre 1 y 3.
-- **RF-022d** Los rasgos son funcionalmente etiquetas consultables. Raza, posición y rasgo comparten el mismo sistema de etiquetado, de modo que un solo mecanismo alimenta todas las sinergias.
+- **RF-022d** Los rasgos son funcionalmente etiquetas consultables, igual que la posición. La etiqueta racial se desdobla en dos: **etiqueta de especie** (fija, la porta todo jugador de esa raza) y **etiqueta de estilo** (individual, sorteada al generar al jugador con una distribución sesgada por raza: ~70% la etiqueta dominante de su raza, el resto repartido entre alternativas que incluyen siempre una opuesta a su identidad racial). La etiqueta de estilo desplaza los atributos del individuo hacia ese estilo. Especie, estilo, posición y rasgo comparten el mismo sistema de etiquetado, de modo que un solo mecanismo alimenta todas las sinergias, pero los perks universales solo consultan estilo, posición y rasgo: nunca especie (RF-065b).
 - **RF-023** Rareza determina el **punto de partida y el techo de perks**, nunca el techo de nivel. Todos los jugadores pueden alcanzar el nivel 8.
 
 | Rareza | Perks iniciales | Slots de perk | Nivel máximo | Slots de equipo |
@@ -103,9 +114,9 @@ La identidad del juego no es el fútbol, es la **carnicería administrada**: los
 | Raro | 1 | 3 | 8 | 1 |
 | Legendario | 2 | 4 | 8 | 1 |
 
-- **RF-023b** Un jugador común que sobrevive toda la run debe seguir siendo competitivo ante el jefe final. Las decisiones tempranas no caducan por diseño.
+- **RF-023b** Un jugador común que sobrevive toda la run puede seguir siendo competitivo ante el jefe final **si el jugador lo cuida**: lo sube de nivel, le asigna perks acumulativos y le forma vínculos. No lo es por defecto. La ventaja del legendario es de fábrica (RF-024); la del común es de mérito. Las decisiones tempranas no caducan por diseño, pero tampoco se sostienen solas.
 
-- **RF-024** Un jugador común de nivel máximo con buenos perks debe poder superar en rendimiento a un legendario de nivel bajo. El balanceo debe verificarlo (ver RT-062).
+- **RF-024** El legendario es netamente superior en rendimiento: un jugador común de nivel máximo equivale aproximadamente a un legendario de nivel 2, sin llegar a superarlo. Métrica de verificación en `/Balance`: un común de nivel 8 debe quedar entre el 45% y el 55% de tasa de victoria frente a un legendario de nivel 2 en igualdad de perks, y perder con claridad contra uno de nivel alto (ver RT-062). Salvaguarda obligatoria: un equipo sin ningún legendario debe poder ganar al jefe final con una tasa razonable.
 - **RF-024b** La raza fija un **sesgo poblacional** que desplaza la media de sus atributos, pero cada jugador generado recibe además un **sesgo individual** que puede contradecirlo. Debe ser posible un orco técnico y lento, o un elfo agresivo y torpe. La raza describe a la población, nunca al individuo.
 - **RF-024c** La generación de jugadores combina: media de raza, desviación individual, posición y de 1 a 3 rasgos. Dos jugadores de la misma raza y posición no deben sentirse intercambiables.
 - **RF-025** La experiencia se reparte tras cada partido: 100% a los que jugaron, 45% a los suplentes.
@@ -115,32 +126,44 @@ La identidad del juego no es el fútbol, es la **carnicería administrada**: los
 ### 3.4 Razas
 
 - **RF-030** El juego contempla 9 razas jugables: 5 en el lanzamiento y 4 reservadas para expansión o DLC.
-- **RF-031** Cada raza aporta un sesgo poblacional de atributos, un conjunto de etiquetas propias y una regla o afinidad exclusiva.
+- **RF-031** Cada raza aporta un sesgo poblacional de atributos, una etiqueta de especie fija, una distribución de etiquetas de estilo sesgada hacia una dominante (RF-022d) y una habilidad racial exclusiva (RF-031b).
+- **RF-031b** Cada raza tiene una **habilidad racial**, implementada como un perk de equipo asignado automáticamente a toda la plantilla sin ocupar slot de perk: Humanos ganan experiencia más deprisa; Orcos, sus entradas dejan al rival derribado más tiempo; Elfos esquivan mejor las entradas y las intercepciones; Enanos no pueden ser desplazados por empujones; No-muertos son inmunes al duelo y las lesiones leves no les penalizan. Es visible en la pantalla de selección de club y en el informe de ojeo del rival (RF-012b).
 - **RF-032** Como cada raza equivale a un **club inicial completo** (RF-004), debe sostener por sí sola al menos tres builds viables y distintas. Este requisito encarece cada raza de forma sustancial frente a un diseño de plantilla mixta.
 - **RF-033** Las razas de tamaño grande ocupan **2 casillas contiguas** en la cuadrícula de colocación.
 - **RF-034** Las razas distintas a la inicial se desbloquean **al completar logros concretos**, nunca por acumulación de partidas jugadas.
 - **RF-035** No-muertos y vampiros disponen de mecánicas de retorno o drenaje (RF-096).
 
-| Raza | Lanzamiento | Sesgo poblacional | Etiqueta | Nota de diseño |
-|---|---|---|---|---|
-| Humanos | Sí | Equilibrado | `Neutral` | Club de referencia y tutorial implícito |
-| Orcos | Sí | Fuerza, agresividad | `Bruto` | Núcleo de las builds de violencia |
-| Elfos | Sí | Técnica, precisión | `Fino` | Muy vulnerables a agresividad |
-| Enanos | Sí | Resistencia, defensa | `Muro` | Correa corta, tamaño reducido |
-| No-muertos | Sí | Recuperación | `Frío` | Resurrección, inmunes a moral y duelo |
-| Elfos oscuros | DLC | Velocidad, juego sucio | `Ponzoña` | Faltas que no se señalan |
-| Demonios | DLC | Fuerza extrema | `Enorme` | Tamaño grande, ocupan 2 casillas |
-| Vampiros | DLC | Drenaje | `Sanguijuela` | Se curan con las lesiones que provocan |
-| Lagartos | DLC | Regeneración | `Escamas` | Convierten lesiones graves en leves |
+Las etiquetas se citan aquí en español; su identificador en código está en `docs/glosario-identificadores.md`.
+
+| Raza | Lanzamiento | Sesgo poblacional | Etiqueta de especie | Etiqueta de estilo dominante | Habilidad racial | Nota de diseño |
+|---|---|---|---|---|---|---|
+| Humanos | Sí | Equilibrado | `Humano` | `Neutral` | Adaptables: ganan experiencia más deprisa | Club de referencia y tutorial implícito |
+| Orcos | Sí | Fuerza, agresividad | `Orco` | `Bruto` | Sangre caliente: sus entradas dejan al rival derribado más tiempo | Núcleo de las builds de violencia |
+| Elfos | Sí | Técnica, precisión | `Elfo` | `Fino` | Toque: esquivan mejor las entradas y las intercepciones | Muy vulnerables a agresividad |
+| Enanos | Sí | Resistencia, defensa | `Enano` | `Muro` | Raíces: no pueden ser desplazados por empujones | Correa corta, tamaño reducido |
+| No-muertos | Sí | Recuperación | `No-muerto` | `Frío` | No sienten nada: inmunes al duelo y las lesiones leves no les penalizan | Resurrección, inmunes a moral y duelo |
+| Elfos oscuros | DLC | Velocidad, juego sucio | `Elfo oscuro` | `Ponzoña` | — (por definir en DLC) | Faltas que no se señalan |
+| Demonios | DLC | Fuerza extrema | `Demonio` | `Enorme` | — (por definir en DLC) | Tamaño grande, ocupan 2 casillas |
+| Vampiros | DLC | Drenaje | `Vampiro` | `Sanguijuela` | — (por definir en DLC) | Se curan con las lesiones que provocan |
+| Lagartos | DLC | Regeneración | `Lagarto` | `Escamas` | — (por definir en DLC) | Convierten lesiones graves en leves |
 
 ### 3.5 Cuadrícula y colocación
 
 - **RF-040** El campo se divide en una cuadrícula de 16 columnas por 5 filas.
 - **RF-041** Cada jugador se asigna a una casilla-hogar antes del partido. La colocación es libre dentro de la mitad propia, salvo el portero, que ocupa una casilla fija.
-- **RF-042** Cada jugador tiene una **correa**: un radio en casillas dentro del cual puede desplazarse durante el partido. Fuera de ese radio no persigue el balón.
+- **RF-042** Cada jugador tiene una **correa**: no es un radio circular, sino una **zona de acción con forma**, asimétrica y relativa a su casilla-hogar (adelante, atrás, lados), definida por su posición. El atributo `correa` escala el tamaño de esa zona, sin cambiar su forma ni convertir a un jugador en otra posición.
+
+| Posición | Adelante | Atrás | Lados |
+|---|---|---|---|
+| Portero | 1 | 0 | ±1 (siempre dentro del área, RF-057b) |
+| Defensa | 3 | hasta su portería | ±2 |
+| Centrocampista | 5 | 4 | ±3 |
+| Delantero | hasta la portería rival | 1 | ±2 |
+
+Salir de la zona no está prohibido: penaliza de forma creciente con la distancia y la acción de replegarse gana peso, en función de la **disciplina** del jugador, derivada de su raza y sus rasgos (los enanos no se desmadran, los elfos se mueven con mucha más libertad, el rasgo `vago` no vuelve, el rasgo `líder` mantiene la posición). Existe un **límite duro exterior**, generoso (del orden del doble de la zona), que impide que un caso raro deje a un jugador instalado permanentemente lejos de ella.
 - **RF-043** La correa es un atributo modificable por perks, equipamiento y consumibles.
-- **RF-044** La adyacencia entre casillas-hogar es la base de los perks de sinergia posicional.
-- **RF-045** En la pantalla de colocación se muestran todas las correas simultáneamente. Durante el partido solo se muestra la del jugador seleccionado o señalado.
+- **RF-044** La adyacencia entre casillas-hogar se resuelve **una sola vez, antes del partido**, a partir de la alineación, y produce **vínculos direccionales** entre pares de jugadores (`beside`, `ahead`, `behind`, `left`, `right` y sus diagonales) que se mantienen durante todo el partido, en lugar de evaluarse como condición en cada evento. Cada perk de sinergia posicional declara qué relación necesita; si no hay candidato para esa relación, el perk no aplica. Convención de orientación: "adelante" es siempre hacia la portería rival, e "izquierda" y "derecha" se toman desde el punto de vista de un jugador que mira hacia esa portería; el equipo visitante refleja columnas y bandas para que un mismo perk describa la misma estructura en ambos equipos.
+- **RF-045** En la pantalla de colocación se muestra la **zona de acción del jugador manipulado** (al arrastrarlo o seleccionarlo), con sus dos capas: la **zona** propia en un tono sólido y el **margen exterior** hasta el límite duro en un tono más claro, distinguibles también por **forma** de borde y no solo por color (UI-002). No se muestran todas las zonas a la vez: con formas asimétricas, siete superpuestas son ilegibles. La pantalla ofrece además un **modo de cobertura de equipo**, con un mapa de calor de cuántos jugadores cubren cada casilla y los huecos destacados, y dibuja los **vínculos direccionales** (RF-044) que se crean o rompen al mover a un jugador. Durante el partido solo se muestra la zona del jugador seleccionado o señalado.
 
 ### 3.6 Simulación del partido
 
@@ -185,6 +208,7 @@ La identidad del juego no es el fútbol, es la **carnicería administrada**: los
 ### 3.7 Sistema de perks
 
 - **RF-065** Un perk es un dato, no código. Su estructura es: `disparador`, `condición`, `efecto`, `alcance`, `límite`.
+- **RF-065b** El 90% del catálogo es **universal**: sin condición de etiqueta de especie (RF-022d). El 10% restante son perks **exclusivos de raza**, de rareza rara o legendaria, que solo aparecen en las recompensas, el mercado y los desbloqueos de una run cuyo club sea de esa raza.
 - **RF-066** Los perks se suscriben a eventos emitidos por el simulador. Catálogo mínimo de eventos:
 
 ```
@@ -197,6 +221,8 @@ TIRO                GOL               PARADA
 FALTA               TARJETA           LESION      MUERTE
 SUSTITUCION         CONSUMIBLE_USADO
 ```
+
+  `INICIO_TURBA` y `ARBITRO_SE_VA` son eventos distintos, aunque ocurren a la vez (RF-055b): se emiten ambos, en ese orden, dentro del mismo tick.
 
 - **RF-067** Cada evento transporta contexto: ejecutor, receptor, rival implicado, casilla, zona del campo, estado del partido (reglamentario o turba), criterio del árbitro y distancia a portería.
 - **RF-068** Los perks consultan **etiquetas**, nunca jugadores concretos. Esto permite escalar el catálogo sin casos especiales.
@@ -354,6 +380,7 @@ SUSTITUCION         CONSUMIBLE_USADO
 - **RT-013** El simulador expone una única superficie pública: recibe un estado inicial y una semilla, y devuelve una secuencia ordenada de eventos más el estado final.
 - **RT-014** La capa de render consume la secuencia de eventos. No calcula ni decide nada del partido.
 - **RT-015** No se usa el motor de físicas de Godot para el partido. El movimiento se implementa en `/Sim` con vectores propios.
+- **RT-016** Los jugadores tienen **volumen** (`bodyRadius` por raza) y se separan mediante **empuje blando**: dos cuerpos que se solapan se empujan, sin exclusión dura de casilla ni pathfinding. El desplazamiento del empuje se reparte según fuerza y tamaño, no al 50%. El balón **no tiene colisión**: sigue siendo un punto, interceptable por radio.
 
 ### 4.3 Determinismo
 
@@ -374,14 +401,14 @@ Run
   Plantilla
     Jugador
       id, nombre, raza, rareza, nivel, experiencia
-      atributos { fuerza, velocidad, tecnica, precision, agresividad, resistencia, correa }
+      atributos { fuerza, velocidad, tecnica, resistencia, correa }
       etiquetas[]
       perks[]            (ids)
-      equipamiento[]     (ids, por slot)
+      equipo             (id o null)
       estadoFisico       (sano | leve | grave | muerto)
       protesis[]
       salario
-      vinculos[]         (idOtroJugador, tipo, signo)
+      vinculos[]         (idOtroJugador, tipo)
       contadores{}       (acumuladores de perks entre partidos)
   Alineacion
     asignaciones[]       (idJugador, casilla)
@@ -402,12 +429,12 @@ Run
   "disparador": "ENTRADA",
   "condicion": "ejecutor.tiene('Bruto') && criterio < 0",
   "efecto": { "tipo": "modificar_atributo", "objetivo": "ejecutor", "atributo": "fuerza", "valor": 3, "duracion": "jugada" },
-  "limite": { "por": "parte", "veces": 2 },
+  "limite": { "por": "partido", "veces": 2 },
   "acumulaEntrePartidos": false
 }
 ```
 
-- **RT-034** Las condiciones se evalúan con **NCalc**, ampliado con funciones propias (`tiene`, `turba`, `criterio`, `zona`, `adyacente`). No se ejecuta código arbitrario ni se usa reflexión en tiempo de partido. Las expresiones se compilan una vez al cargar `/data`, no en cada evaluación.
+- **RT-034** Las condiciones se evalúan con **NCalc**, ampliado con funciones propias (`tiene`, `turba`, `criterio`, `zona`, `vinculado`). `vinculado` consulta los vínculos direccionales resueltos antes del partido (RF-044), no una adyacencia en tiempo real. No se ejecuta código arbitrario ni se usa reflexión en tiempo de partido. Las expresiones se compilan una vez al cargar `/data`, no en cada evaluación.
 
 - **RT-035** Las **descripciones de perks, objetos y consumibles se generan desde el efecto**, mediante plantillas por tipo de efecto. No existe texto descriptivo escrito a mano para efectos; se localizan las plantillas, nunca el texto final. Es imposible por construcción que la descripción y el efecto diverjan.
 
@@ -431,7 +458,7 @@ Run
 - **RT-092** Acciones evaluables mínimas: perseguir el balón, marcar a un rival, ofrecer apoyo, cubrir espacio, pasar, conducir, tirar, entrar, replegar a la casilla-hogar.
 - **RT-093** La **posición** define los pesos base de la función de utilidad. Un defensa puntúa alto cubrir espacio y entrar; un delantero, tirar y ofrecer apoyo en el último tercio.
 - **RT-094** Los **rasgos** modifican esos pesos. `agresivo` sube el peso de entrar, `goleador` el de tirar, `tiro lejano` amplía la distancia a la que tirar sigue siendo rentable, `cobarde` reduce el peso de disputar duelos, `vago` reduce el de replegar.
-- **RT-095** La **correa** actúa como filtro previo: las acciones que exigirían salir del radio se descartan antes de puntuar.
+- **RT-095** La **correa** actúa como **penalización creciente**: las acciones que exigirían salir de la zona de acción (RF-042) no se descartan, pero su puntuación de utilidad decae cuanto más lejos de la zona se ejecutarían, y la acción de replegarse a la casilla-hogar gana peso conforme el jugador se aleja. Solo el límite duro exterior descarta una acción por completo.
 - **RT-096** Todos los pesos por posición y por rasgo residen en `/data`, no en código, y son ajustables sin recompilar.
 - **RT-097** Los empates de puntuación se resuelven de forma determinista por identificador de jugador ascendente. Nunca al azar.
 - **RT-098** El sistema debe permitir volcar, para un tick concreto, la tabla de puntuaciones de un jugador. Es la herramienta principal de depuración de comportamiento.

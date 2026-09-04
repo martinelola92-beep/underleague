@@ -18,6 +18,22 @@ public sealed record PlayerDefinition(
         new SortedDictionary<string, int>(StringComparer.Ordinal);
 
     /// <summary>
+    /// Etiqueta de especie (ADR 0024): fija, la misma para todo jugador de <see cref="Race"/>
+    /// (<c>RaceDefinition.SpeciesTag</c>). Se declara como propiedad <c>init</c>, no posicional, por la
+    /// misma razón que <see cref="Perks"/>: las construcciones existentes (tests, equipos a mano) siguen
+    /// valiendo sin tocarlas. Vacía si el llamador no la ha rellenado.
+    /// </summary>
+    public string SpeciesTag { get; init; } = string.Empty;
+
+    /// <summary>
+    /// Etiqueta de estilo (ADR 0024): una por jugador, sorteada al generarlo (Sim.Generation.PlayerGenerator)
+    /// con la distribución de <c>race.StyleTagWeights</c>. Desplaza los atributos del individuo hacia su
+    /// estilo (su <c>attributeBias</c> ya está incorporado en <see cref="Attributes"/> al generarse).
+    /// Por defecto <see cref="StyleTag.Neutral"/> para las construcciones que no la especifican.
+    /// </summary>
+    public StyleTag StyleTag { get; init; } = StyleTag.Neutral;
+
+    /// <summary>
     /// Perks asignados al jugador (RF-071), por id de <c>data/perks/</c>. Se declara como propiedad
     /// <c>init</c> y no como parámetro posicional para que las construcciones existentes sigan valiendo
     /// y para poder escribir <c>definition with { Perks = ["bloodlust"] }</c>.
@@ -31,7 +47,10 @@ public sealed record PlayerDefinition(
     /// </summary>
     public IReadOnlyDictionary<string, int> Counters { get; init; } = NoCounters;
 
-    /// <summary>True si tag está en Tags (raza, posición y rasgos, como strings; RF-022d).</summary>
+    /// <summary>
+    /// True si tag está en Tags (especie, estilo, posición y rasgos, como strings; RF-022d, ADR 0024).
+    /// Sim.Generation.PlayerGenerator compone Tags con [SpeciesTag, StyleTag, Position, ...Traits].
+    /// </summary>
     public bool HasTag(string tag) => Tags.Contains(tag);
 
     /// <summary>Copia del jugador con los contadores indicados, ordenados por clave ordinal.</summary>

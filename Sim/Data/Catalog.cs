@@ -7,18 +7,40 @@ namespace Underleague.Sim.Data;
 /// <summary>Nombre localizado es/en. El texto visible por el jugador siempre sale de aquí o de data/l10n.</summary>
 public sealed record LocalizedName(string Es, string En);
 
-/// <summary>Definición de una raza jugable (data/races/*.json).</summary>
+/// <summary>
+/// Definición de una raza jugable (data/races/*.json, fase1b-diseno.md §1.1). <c>SpeciesTag</c> es la
+/// etiqueta fija de especie (ADR 0024); <c>StyleTagWeights</c> es la distribución de estilo individual
+/// que Sim.Generation.PlayerGenerator sortea por jugador. <c>BodyRadius</c> en centésimas de casilla
+/// (ADR 0020); <c>Discipline</c> 0-100, cuánto tira de vuelta a la zona (ADR 0028); <c>Ability</c> es el
+/// id del perk de habilidad racial (ADR 0026, en data/perks/, no validado aquí: lo carga otro paquete).
+/// </summary>
 public sealed record RaceDefinition(
     Race Id,
     LocalizedName Name,
-    string Tag,
+    string SpeciesTag,
+    IReadOnlyList<(StyleTag Style, int Weight)> StyleTagWeights,
     bool Launch,
     int CellsOccupied,
+    int BodyRadius,
+    int Discipline,
     Attributes AttributeBias,
+    string Ability,
+    LocalizedName Description,
     int IndividualDeviation,
     IReadOnlyList<(Trait Trait, int Weight)> TraitWeights,
     IReadOnlyList<string> FirstNames,
     IReadOnlyList<string> LastNames);
+
+/// <summary>
+/// Definición de una etiqueta de estilo (data/tags/styles.json, fase1b-diseno.md §1.2, ADR 0024).
+/// <c>AttributeBias</c> es lo que hace que, por ejemplo, un elfo Brute sea de verdad más fuerte que un
+/// elfo medio: Sim.Generation.PlayerGenerator lo suma al sesgo de raza al repartir el presupuesto.
+/// </summary>
+public sealed record StyleDefinition(
+    StyleTag Id,
+    LocalizedName Name,
+    LocalizedName Description,
+    Attributes AttributeBias);
 
 /// <summary>Definición de un rasgo de jugador (data/traits/traits.json).</summary>
 public sealed record TraitDefinition(
@@ -100,14 +122,115 @@ public sealed class AiWeights
     public BlockShift Shift(TacticalState s) => _shift[(int)s];
 }
 
-/// <summary>Sesgo de atributos por posición usado en la generación de jugadores (tuning.generation.positionBias).</summary>
-public sealed record PositionBiasTable(Attributes Goalkeeper, Attributes Defender, Attributes Midfielder, Attributes Forward);
+/// <summary>
+/// Porcentaje del presupuesto de generación (fase1b-diseno.md §1.3) asignado a cada atributo; misma
+/// forma que <see cref="Attributes"/> (cinco campos con nombre) pero sin su semántica de rango 1..99:
+/// aquí cada campo es un entero 0..100 y los cinco de una posición suman 100 (DataLoader lo valida).
+/// </summary>
+public readonly record struct AttributeShare(int Strength, int Speed, int Technique, int Stamina, int Leash)
+{
+    /// <summary>Lee el porcentaje del atributo indicado por kind.</summary>
+    public int Get(AttributeKind kind) => kind switch
+    {
+        AttributeKind.Strength => Strength,
+        AttributeKind.Speed => Speed,
+        AttributeKind.Technique => Technique,
+        AttributeKind.Stamina => Stamina,
+        AttributeKind.Leash => Leash,
+        _ => throw new ArgumentOutOfRangeException(nameof(kind)),
+    };
+}
 
-/// <summary>tuning.generation: parámetros de generación de jugadores (§2.6).</summary>
-public sealed record GenerationTuning(PositionBiasTable PositionBias, int LeashBase, IReadOnlyList<int> TraitCountWeights, int GoalkeeperTraitChance);
+/// <summary>tuning.generation.positionShare: reparto porcentual del presupuesto por posición (§1.3).</summary>
+public sealed record PositionShareTable(AttributeShare Goalkeeper, AttributeShare Defender, AttributeShare Midfielder, AttributeShare Forward);
 
-/// <summary>tuning.leash: conversión de atributo Leash a radio de correa en casillas (§2.6).</summary>
-public sealed record LeashTuning(int MinCells, int CellsPer99);
+/// <summary>Mínimo y máximo de un atributo para una rareza (tuning.generation.rangeByRarity).</summary>
+public sealed record AttributeRange(int Min, int Max);
+
+/// <summary>tuning.generation.rangeByRarity: baremo por rareza, igual para los cinco atributos (§1.3).</summary>
+public sealed record RarityRangeTable(AttributeRange Common, AttributeRange Rare, AttributeRange Legendary);
+
+/// <summary>tuning.generation.budgetByRarity: presupuesto de atributos en nivel 1, por rareza (§1.3, ADR 0027).</summary>
+public sealed record RarityBudgetTable(int Common, int Rare, int Legendary)
+{
+    /// <summary>Presupuesto de la rareza indicada.</summary>
+    public int Of(Rarity rarity) => rarity switch
+    {
+        Rarity.Common => Common,
+        Rarity.Rare => Rare,
+        Rarity.Legendary => Legendary,
+        _ => throw new ArgumentOutOfRangeException(nameof(rarity)),
+    };
+}
+
+/// <summary>
+/// Suelo por atributo, adicional al de <c>rangeByRarity</c>, solo para los atributos que una posición
+/// necesita garantizados (tuning.generation.positionFloors, §1.3): ausente = sin suelo adicional.
+/// </summary>
+public sealed record PositionFloorTable(
+    IReadOnlyDictionary<AttributeKind, int> Goalkeeper,
+    IReadOnlyDictionary<AttributeKind, int> Defender,
+    IReadOnlyDictionary<AttributeKind, int> Midfielder,
+    IReadOnlyDictionary<AttributeKind, int> Forward)
+{
+    /// <summary>Tabla de suelos de la posición indicada.</summary>
+    public IReadOnlyDictionary<AttributeKind, int> Of(Position position) => position switch
+    {
+        Position.Goalkeeper => Goalkeeper,
+        Position.Defender => Defender,
+        Position.Midfielder => Midfielder,
+        Position.Forward => Forward,
+        _ => throw new ArgumentOutOfRangeException(nameof(position)),
+    };
+}
+
+/// <summary>
+/// tuning.generation: modelo de presupuesto de la generación de jugadores (fase1b-diseno.md §1.3,
+/// ADR 0025, ADR 0027). Ver Sim.Generation.PlayerGenerator para el algoritmo de reparto y renormalización.
+/// </summary>
+public sealed record GenerationTuning(
+    RarityBudgetTable BudgetByRarity,
+    int BudgetPerLevel,
+    int AttributeFloor,
+    int AttributeCap,
+    RarityRangeTable RangeByRarity,
+    PositionShareTable PositionShare,
+    PositionFloorTable PositionFloors,
+    IReadOnlyList<int> TraitCountWeights,
+    int GoalkeeperTraitChance);
+
+/// <summary>Forma de la zona de acción de una posición, en casillas relativas a la casilla-hogar efectiva; -1 = sin límite (ADR 0028).</summary>
+public sealed record ZoneShape(int Forward, int Back, int Sides);
+
+/// <summary>tuning.actionZone.shape: forma de la zona por posición (§1.3, ADR 0028).</summary>
+public sealed record ActionZoneShapeTable(ZoneShape Goalkeeper, ZoneShape Defender, ZoneShape Midfielder, ZoneShape Forward);
+
+/// <summary>tuning.actionZone.scaleFromLeashPercent: escala de la zona interpolada según el atributo Leash 1..99.</summary>
+public sealed record LeashScalePercent(int At1, int At99);
+
+/// <summary>
+/// tuning.actionZone: zona de acción con forma que sustituye al radio de correa duro (ADR 0028,
+/// fase1b-diseno.md §1.3, §2.2). No tiene todavía consumidor en /Sim (lo añade el paquete R); se carga
+/// aquí para que exista, se valide y esté disponible.
+/// </summary>
+public sealed record ActionZoneTuning(
+    ActionZoneShapeTable Shape,
+    LeashScalePercent ScaleFromLeashPercent,
+    int OuterLimitMultiplier,
+    int OutsidePenaltyPerCell,
+    int DisciplineWeightPercent,
+    int RetreatBonusOutsidePerCell);
+
+/// <summary>
+/// tuning.bodies: colisión y empuje entre cuerpos (ADR 0020, fase1b-diseno.md §1.3, §2.1). Sin
+/// consumidor todavía en /Sim (lo añade el paquete R); se carga aquí para que exista y se valide.
+/// </summary>
+public sealed record BodiesTuning(
+    bool SeparationEnabled,
+    int MaxPushPerTickMilli,
+    int MassStrengthWeight,
+    int MassRadiusWeight,
+    int TacklePushMultiplier);
 
 /// <summary>tuning.movement.</summary>
 public sealed record MovementTuning(int BaseCellsPerTickMilli, int SpeedCellsPerTickMilliPer99, int DribbleSpeedPercent, int FatigueStartTick, int FatigueMaxSlowPercent);

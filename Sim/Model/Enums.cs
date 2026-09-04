@@ -31,6 +31,21 @@ public enum Rarity
     Legendary,
 }
 
+/// <summary>
+/// Etiqueta de estilo individual (ADR 0024): una por jugador, sorteada con la distribución de la raza
+/// (<c>data/races/*.json</c>, <c>styleTagWeights</c>) e independiente de la etiqueta de especie fija.
+/// Consultada por las sinergias de los perks universales; su sesgo de atributos vive en
+/// <c>data/tags/styles.json</c> (Sim.Data.StyleDefinition).
+/// </summary>
+public enum StyleTag
+{
+    Brute,
+    Fine,
+    Bulwark,
+    Cold,
+    Neutral,
+}
+
 /// <summary>Estado físico de un jugador entre partidos (RF-093).</summary>
 public enum PhysicalState
 {

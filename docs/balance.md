@@ -64,7 +64,8 @@ Se añaden a `summary.csv` cuando el sistema correspondiente existe:
 
 | Métrica | Requisito | Condición de aprobado | Fase |
 |---|---|---|---|
-| Común nivel 8 con buenos perks vs legendario nivel bajo | RF-024 | El común gana más del 50% | 1 |
+| Común nivel 8 vs legendario nivel 2, en igualdad de perks | RF-024 (v0.9.1, ADR 0027) | El común queda entre el 45% y el 55% | 1 |
+| Equipo sin ningún legendario contra el jefe final | RF-024 (v0.9.1, ADR 0027) | Puede ganar con una tasa razonable si el jugador ha jugado bien; si no, la decisión de la ADR 0027 hay que revisarla | 2 |
 | Común superviviente competitivo ante jefe final | RF-023b | Tasa de victoria del equipo con comunes de nivel 8 dentro de 30-70% contra el jefe final | 2 |
 | Build de violencia con sobornos vs sin sobornos | RF-064e | Viable (>=40%) con sobornos, inviable (<30%) sin ellos | 3 |
 | Build de violencia con sobornos + 2 mitigaciones | RF-064g | Alcanza la tasa de referencia sin depender de una sola mitigación (retirar cualquiera no la hunde por debajo del 30%) | 3 |

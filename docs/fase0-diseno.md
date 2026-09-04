@@ -1,5 +1,7 @@
 # Fase 0: diseño de implementación
 
+> **Documento histórico.** Describe el motor tal como se construyó en la fase 0. Las partes espaciales (correa como radio duro, ausencia de cuerpos, comportamiento sin balón) quedaron sustituidas por `fase1b-diseno.md` y las ADR 0020-0029. Se conserva porque documenta decisiones y fórmulas que siguen vigentes.
+
 Especificación cerrada para implementar el simulador sin gráficos. Concreta `simulacion.md`, `determinismo.md`, `arquitectura.md` y `balance.md` al nivel de tipos, firmas y fórmulas. Los subagentes implementan **contra este documento**; si algo no está aquí, se pregunta al orquestador, no se improvisa.
 
 Convenciones: identificadores en inglés (`glosario-identificadores.md`). Todos los enteros son `int` salvo semillas (`ulong`). Probabilidades en base 10000 salvo que se diga "porcentaje". Posiciones en `float`. Ninguna colección sin orden se itera. Ningún `System.Random`, `DateTime`, `Guid`, `Parallel`, `File`.
