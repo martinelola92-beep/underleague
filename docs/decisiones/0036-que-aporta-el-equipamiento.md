@@ -37,7 +37,7 @@ Los **tres arquetipos obligatorios de RF-077 se expresan igual de bien** con atr
 
 - **Maldito**: sube el doble y baja el doble en otro atributo. *"Mucha fuerza. Le cuesta correr."*
 - **Frágil**: sube lo mismo que un objeto normal de su rareza, pero cada partido puede romperse y perderse.
-- **Restringido**: sube un atributo solo si el portador lleva una etiqueta concreta; sin ella, no aporta nada.
+- **Restringido**: exclusivo de una raza, sin rareza, valores fijos y buenos; en un jugador de otra raza no aporta nada.
 
 **Sin excepciones.** Ningún objeto, tampoco el legendario, lleva efectos de regla: eso es lo que hace un perk. Una excepción "solo para legendarios" reintroduciría exactamente la complejidad que esta decisión elimina, y con ella la imposibilidad de calcular lo que vale un objeto antes de medirlo.
 
@@ -48,11 +48,17 @@ Los **tres arquetipos obligatorios de RF-077 se expresan igual de bien** con atr
 | **Normal** | la de su rareza | ninguna |
 | **Maldito** | **el doble**, en lo que sube y en lo que baja | baja un atributo, siempre |
 | **Frágil** | la de su rareza | **probabilidad de romperse** al terminar cada partido; si se rompe, se pierde |
-| **Restringido** | la de su rareza | solo aporta si el portador lleva su etiqueta |
+| **Restringido (racial)** | fija, sin rareza | solo aparece jugando esa raza, y solo funciona sobre ella |
 
 **El maldito lo decide el diseñador, no el jugador.** Sube y baja el doble, y **qué** baja viene con el objeto. Eso es lo que lo convierte en una decisión de colocación en vez de en un bono: *"+20 de fuerza, −20 de técnica"* es excelente en un defensa bruto y ruinoso en un centrocampista. Un maldito cuyo castigo caiga siempre en un atributo barato sería un bonus disfrazado, así que cada uno debe bajar algo que **importe a su portador natural**.
 
 **El frágil necesita una compensación, o es estrictamente peor.** Con la misma magnitud que un objeto normal de su rareza y encima riesgo de perderse, nadie lo elegiría teniendo la alternativa. Su ventaja va en el **precio**: cuesta bastante menos en el mercado y aparece con más frecuencia en las recompensas. Así la decisión es real —*"llevo el bueno o dos frágiles por el mismo oro"*— en vez de una trampa.
+
+**El restringido es un premio, no una limitación.** Es el equivalente en objetos de los perks exclusivos de raza (ADR 0023): **no tiene rareza**, sus valores son fijos y buenos, y **solo entra en el pool de una run cuya raza sea la suya**. Tres o cuatro por raza sobre un catálogo de más de cincuenta universales, así que verlo caer es un acontecimiento y no un trámite. Que además exija la etiqueta de especie para funcionar cumple la letra de RF-077 y, de paso, hace que no sirva de nada en un mercenario de otra raza, igual que sus perks (RF-111).
+
+Suben **tres atributos** con la magnitud normal: se sienten legendarios sin ocupar esa rareza, y su valor queda entre el raro y el legendario porque no llevan la magnitud doble del maldito ni el descuento del frágil.
+
+**Complementarios, pero no todos hacia el mismo sitio.** Encajan con la naturaleza de su raza, sí, pero si los tres o cuatro empujan hacia la misma build se convierten en un "gana más" y se incumple RF-032, que exige tres builds viables por raza. Al menos uno de cada raza debe **abrir** una build que esa raza normalmente no puede permitirse, en vez de reforzar la que ya le sale sola: unas botas enanas que amplíen la zona de acción son más interesantes que un yunque enano que suba todavía más la resistencia.
 
 **La rotura es probabilística y previsible.** El porcentaje se muestra antes de equipar y en la ficha, como el taller de implantes muestra sus cifras (RF-095), y la tirada se resuelve **al terminar el partido**, nunca durante: así no altera en secreto un partido en curso y el informe post-partido puede anunciarlo. Con la probabilidad a la vista se cumple RF-012d; sin ella sería exactamente el "azar post-acción negativo" que el §8 del documento identifica como riesgo alto.
 
