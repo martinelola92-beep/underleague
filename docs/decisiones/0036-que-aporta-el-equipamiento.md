@@ -21,7 +21,17 @@ Tres capas con tres funciones, tres cadencias y tres decisiones distintas:
 | **Objeto** | Una **estadística**: cuánto vale el jugador | Antes de cada partido, transferible (RF-075) | Sí |
 | **Consumible** | Un **efecto puntual** de un partido | Al preparar el partido (RF-080) | Se gasta (RF-085) |
 
-**Un objeto modifica uno o dos atributos, y nada más.** Sin disparador, sin condición, sin canal de probabilidad. Su efecto está activo mientras esté equipado.
+**Un objeto sube atributos y nada más.** Sin disparador, sin condición, sin canal de probabilidad, **sin excepciones por rareza**. Su efecto está activo mientras esté equipado.
+
+**La rareza determina cuántos atributos sube:**
+
+| Rareza | Atributos que sube |
+|---|---|
+| Común | 1 |
+| Raro | 2 |
+| Legendario | 3 |
+
+Es una regla que el jugador entiende sin que nadie se la explique —un legendario mejora tres cosas— y que el validador comprueba de un vistazo. La magnitud por atributo es la misma en las tres rarezas: lo que escala con la rareza es **cuántos** atributos toca, no cuánto sube cada uno.
 
 Los **tres arquetipos obligatorios de RF-077 se expresan igual de bien** con atributos, que es lo que hace viable la decisión:
 
@@ -29,7 +39,9 @@ Los **tres arquetipos obligatorios de RF-077 se expresan igual de bien** con atr
 - **Frágil**: sube un atributo y se rompe tras N partidos o cuando su portador se lesiona.
 - **Restringido**: sube un atributo solo si el portador lleva una etiqueta concreta; sin ella, no aporta nada.
 
-**Excepción acotada**: los objetos **legendarios** pueden llevar un efecto de regla, y son los únicos. Deben ser pocos y memorables. Si esa excepción empieza a crecer, se cierra: la claridad de la capa vale más que un objeto ingenioso.
+**Sin excepciones.** Ningún objeto, tampoco el legendario, lleva efectos de regla: eso es lo que hace un perk. Una excepción "solo para legendarios" reintroduciría exactamente la complejidad que esta decisión elimina, y con ella la imposibilidad de calcular lo que vale un objeto antes de medirlo.
+
+**Los arquetipos de RF-077 se apilan sobre esa regla**, sin alterar el recuento: el número de atributos que un objeto **sube** lo fija su rareza; lo que el arquetipo añade es su contrapartida. Un maldito común sube uno y baja otro; un maldito legendario sube tres y baja uno. El frágil y el restringido no cambian el recuento, cambian cuándo aporta.
 
 ## Por qué, además de por claridad
 
@@ -45,8 +57,9 @@ Los objetos rompe-reglas (anular una tarjeta, repetir un evento) dejan de existi
 
 ## Consecuencias
 
-- `data/items/*.json` cambia de forma: `attributeBonus` en vez de `effects`, más el arquetipo. Los 12 objetos actuales se reescriben.
-- El validador rechaza efectos con disparador o condición en un objeto no legendario.
+- `data/items/*.json` cambia de forma: `attributeBonus` con **tantas entradas como exige la rareza** en vez de `effects`, más el arquetipo y su contrapartida. Los 12 objetos actuales se reescriben.
+- El validador rechaza cualquier `effects` en un objeto y comprueba que el número de atributos coincide con la rareza. Es una validación trivial, que es justo la ventaja.
 - Las descripciones generadas se simplifican mucho: una plantilla por arquetipo.
-- Hay que recalibrar la magnitud: siete titulares equipados suben bastante a un equipo, así que los valores serán pequeños (del orden de +5 a +10 en uno o dos atributos), y el efecto conjunto se mide contra la curva de puertas de la ADR 0033.
+- **Magnitud de partida, calculada con la tabla de valor marginal**: esa tabla mide puntos de tasa de victoria por cada +20 repartidos entre los **diez** jugadores, así que +20 a **un** jugador vale en torno a 1,1 puntos con el atributo más valioso. Con eso, un valor del orden de **+10 por atributo** deja un común en ~0,55 puntos, un raro en ~1,1 y un legendario en ~1,65; siete titulares equipados con comunes suman unos 4 puntos y con legendarios unos 11. Es un escalonado razonable y del mismo orden que el +8,2 que se midió con los objetos antiguos. Se confirma midiendo contra la curva de puertas de la ADR 0033.
+- **La rareza del objeto se vuelve comparable a la del jugador**: ambas escalan lo mismo (un legendario toca tres atributos, igual que un jugador legendario tiene más presupuesto), lo que permite razonar sobre el precio de mercado de los dos con la misma vara.
 - El presupuesto de la ADR 0025 acota lo que un jugador **nace** valiendo; el equipamiento es la vía legítima de superar ese techo, y por eso su magnitud es la palanca que decide cuánto pesa el equipamiento frente a la generación.
