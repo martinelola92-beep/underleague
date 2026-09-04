@@ -1,0 +1,43 @@
+{
+  "id": "gentle_giant",
+  "name": {
+    "es": "Gigante amable",
+    "en": "Gentle Giant"
+  },
+  "rarity": "legendary",
+  "kind": "conditional",
+  "axis": "alignment",
+  "race": "Orc",
+  "trigger": "MATCH_START",
+  "scope": "actor",
+  "links": [
+    "ahead"
+  ],
+  "condition": "",
+  "effects": [
+    {
+      "type": "modifyProbability",
+      "target": "linked",
+      "probability": "intercept",
+      "value": 20,
+      "duration": "match"
+    }
+  ],
+  "elseEffects": [
+    {
+      "type": "modifyAttribute",
+      "target": "owner",
+      "attribute": "strength",
+      "value": -10,
+      "duration": "match"
+    }
+  ],
+  "limit": null,
+  "accumulatesAcrossMatches": false,
+  "lethal": false,
+  "positionOnly": null,
+  "tagsRequired": [
+    "Orc"
+  ],
+  "tagsForbidden": []
+}

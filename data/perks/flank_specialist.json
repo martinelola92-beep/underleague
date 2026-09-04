@@ -1,0 +1,39 @@
+{
+  "id": "flank_specialist",
+  "name": {
+    "es": "Especialista de banda",
+    "en": "Flank Specialist"
+  },
+  "rarity": "common",
+  "kind": "filler",
+  "axis": "startZone",
+  "race": null,
+  "trigger": "MATCH_START",
+  "scope": "actor",
+  "links": [],
+  "condition": "startsOn(owner,'LeftFlank') || startsOn(owner,'RightFlank')",
+  "effects": [
+    {
+      "type": "modifyProbability",
+      "target": "owner",
+      "probability": "dribble",
+      "value": 15,
+      "duration": "match"
+    }
+  ],
+  "elseEffects": [
+    {
+      "type": "modifyAttribute",
+      "target": "owner",
+      "attribute": "speed",
+      "value": -10,
+      "duration": "match"
+    }
+  ],
+  "limit": null,
+  "accumulatesAcrossMatches": false,
+  "lethal": false,
+  "positionOnly": null,
+  "tagsRequired": [],
+  "tagsForbidden": []
+}

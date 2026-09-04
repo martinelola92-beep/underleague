@@ -6,23 +6,23 @@
   "perks": [
     {
       "slot": 1,
-      "perk": "sweeper"
+      "perk": "comeback_spirit"
     },
     {
       "slot": 1,
-      "perk": "counter_punch"
+      "perk": "game_management"
     },
     {
       "slot": 6,
-      "perk": "sprinter"
+      "perk": "long_range_menace"
     },
     {
       "slot": 6,
-      "perk": "iron_lungs_plus"
+      "perk": "box_predator"
     },
     {
       "slot": 6,
-      "perk": "poacher"
+      "perk": "battle_reader"
     }
   ],
   "rarities": {

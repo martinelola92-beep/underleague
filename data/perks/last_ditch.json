@@ -1,0 +1,39 @@
+{
+  "id": "last_ditch",
+  "name": {
+    "es": "Último recurso",
+    "en": "Last Ditch"
+  },
+  "rarity": "rare",
+  "kind": "conditional",
+  "axis": "geometry",
+  "race": null,
+  "trigger": "TACKLE",
+  "scope": "actor",
+  "links": [],
+  "condition": "zone(actor) == 'Own'",
+  "effects": [
+    {
+      "type": "modifyProbability",
+      "target": "actor",
+      "probability": "tackle",
+      "value": 15,
+      "duration": "play"
+    }
+  ],
+  "elseEffects": [
+    {
+      "type": "modifyProbability",
+      "target": "actor",
+      "probability": "tackle",
+      "value": -10,
+      "duration": "play"
+    }
+  ],
+  "limit": null,
+  "accumulatesAcrossMatches": false,
+  "lethal": false,
+  "positionOnly": null,
+  "tagsRequired": [],
+  "tagsForbidden": []
+}

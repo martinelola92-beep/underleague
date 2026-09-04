@@ -1,0 +1,31 @@
+{
+  "id": "high_press_trigger",
+  "name": {
+    "es": "Disparador de presión alta",
+    "en": "High Press Trigger"
+  },
+  "rarity": "rare",
+  "kind": "conditional",
+  "axis": "geometry",
+  "race": null,
+  "trigger": "RECOVERY",
+  "scope": "team",
+  "links": [],
+  "condition": "zone(actor) == 'Opposing'",
+  "effects": [
+    {
+      "type": "modifyProbability",
+      "target": "team",
+      "probability": "intercept",
+      "value": 15,
+      "duration": "play"
+    }
+  ],
+  "elseEffects": [],
+  "limit": null,
+  "accumulatesAcrossMatches": false,
+  "lethal": false,
+  "positionOnly": null,
+  "tagsRequired": [],
+  "tagsForbidden": []
+}

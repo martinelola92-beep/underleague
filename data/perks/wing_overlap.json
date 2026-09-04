@@ -1,0 +1,42 @@
+{
+  "id": "wing_overlap",
+  "name": {
+    "es": "Solapamiento de banda",
+    "en": "Wing Overlap"
+  },
+  "rarity": "common",
+  "kind": "filler",
+  "axis": "alignment",
+  "race": null,
+  "trigger": "DRIBBLE_ATTEMPTED",
+  "scope": "actor",
+  "links": [
+    "left",
+    "right"
+  ],
+  "condition": "",
+  "effects": [
+    {
+      "type": "modifyProbability",
+      "target": "linked",
+      "probability": "dribble",
+      "value": 15,
+      "duration": "play"
+    }
+  ],
+  "elseEffects": [
+    {
+      "type": "modifyAttribute",
+      "target": "owner",
+      "attribute": "speed",
+      "value": -10,
+      "duration": "play"
+    }
+  ],
+  "limit": null,
+  "accumulatesAcrossMatches": false,
+  "lethal": false,
+  "positionOnly": null,
+  "tagsRequired": [],
+  "tagsForbidden": []
+}

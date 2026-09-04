@@ -1,0 +1,40 @@
+{
+  "id": "unlikely_bulwark",
+  "name": {
+    "es": "Muro improbable",
+    "en": "Unlikely Bulwark"
+  },
+  "rarity": "rare",
+  "kind": "conditional",
+  "axis": "identity",
+  "race": "Elf",
+  "trigger": "MATCH_START",
+  "scope": "actor",
+  "links": [],
+  "condition": "",
+  "effects": [
+    {
+      "type": "modifyProbability",
+      "target": "owner",
+      "probability": "tackle",
+      "value": 20,
+      "duration": "match"
+    },
+    {
+      "type": "modifyLeash",
+      "target": "owner",
+      "value": 5,
+      "duration": "match"
+    }
+  ],
+  "elseEffects": [],
+  "limit": null,
+  "accumulatesAcrossMatches": false,
+  "lethal": false,
+  "positionOnly": null,
+  "tagsRequired": [
+    "Elf",
+    "Bulwark"
+  ],
+  "tagsForbidden": []
+}

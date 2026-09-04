@@ -1,0 +1,30 @@
+{
+  "id": "sweeper_keeper",
+  "name": {
+    "es": "Portero líbero",
+    "en": "Sweeper Keeper"
+  },
+  "rarity": "common",
+  "kind": "filler",
+  "axis": "geometry",
+  "race": null,
+  "trigger": "RECOVERY",
+  "scope": "actor",
+  "links": [],
+  "condition": "zone(actor) == 'Own'",
+  "effects": [
+    {
+      "type": "modifyLeash",
+      "target": "actor",
+      "value": 5,
+      "duration": "play"
+    }
+  ],
+  "elseEffects": [],
+  "limit": null,
+  "accumulatesAcrossMatches": false,
+  "lethal": false,
+  "positionOnly": "Goalkeeper",
+  "tagsRequired": [],
+  "tagsForbidden": []
+}

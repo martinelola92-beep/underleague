@@ -1,0 +1,39 @@
+{
+  "id": "brute_boots",
+  "name": {
+    "es": "Botas de bruto",
+    "en": "Brute Boots"
+  },
+  "rarity": "common",
+  "kind": "filler",
+  "axis": "identity",
+  "race": null,
+  "trigger": "MATCH_START",
+  "scope": "actor",
+  "links": [],
+  "condition": "hasTag(owner,'Brute')",
+  "effects": [
+    {
+      "type": "modifyAttribute",
+      "target": "owner",
+      "attribute": "strength",
+      "value": 15,
+      "duration": "match"
+    }
+  ],
+  "elseEffects": [
+    {
+      "type": "modifyAttribute",
+      "target": "owner",
+      "attribute": "strength",
+      "value": -10,
+      "duration": "match"
+    }
+  ],
+  "limit": null,
+  "accumulatesAcrossMatches": false,
+  "lethal": false,
+  "positionOnly": null,
+  "tagsRequired": [],
+  "tagsForbidden": []
+}

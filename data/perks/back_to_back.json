@@ -1,0 +1,31 @@
+{
+  "id": "back_to_back",
+  "name": {
+    "es": "Espalda con espalda",
+    "en": "Back to Back"
+  },
+  "rarity": "common",
+  "kind": "filler",
+  "axis": "proximity",
+  "race": null,
+  "trigger": "TACKLE",
+  "scope": "actor",
+  "links": [],
+  "condition": "nearAlly(actor,'Bulwark',2)",
+  "effects": [
+    {
+      "type": "modifyProbability",
+      "target": "actor",
+      "probability": "tackle",
+      "value": 15,
+      "duration": "play"
+    }
+  ],
+  "elseEffects": [],
+  "limit": null,
+  "accumulatesAcrossMatches": false,
+  "lethal": false,
+  "positionOnly": null,
+  "tagsRequired": [],
+  "tagsForbidden": []
+}

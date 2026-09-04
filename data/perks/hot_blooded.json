@@ -1,0 +1,22 @@
+{
+  "_doc": "Habilidad racial de los orcos (RF-031b, ADR 0026): Sangre caliente. Convierte la violencia en ventaja posicional en vez de en lesiones: el rival tarda más en levantarse. Se asigna automáticamente a toda la plantilla orca y no ocupa slot.",
+  "id": "hot_blooded",
+  "name": { "es": "Sangre caliente", "en": "Hot blooded" },
+  "rarity": "rare",
+  "kind": "filler",
+  "axis": "identity",
+  "race": "Orc",
+  "trigger": "MATCH_START",
+  "scope": "any",
+  "links": [],
+  "condition": "",
+  "effects": [
+    { "type": "modifyKnockdownTicks", "target": "owner", "value": 5, "duration": "match" }
+  ],
+  "elseEffects": [],
+  "accumulatesAcrossMatches": false,
+  "lethal": false,
+  "positionOnly": null,
+  "tagsRequired": [],
+  "tagsForbidden": []
+}

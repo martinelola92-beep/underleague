@@ -5,28 +5,16 @@
   "quality": 50,
   "perks": [
     {
-      "slot": 0,
-      "perk": "mob_lawyer"
-    },
-    {
-      "slot": 0,
-      "perk": "lone_wolf"
+      "slot": 1,
+      "perk": "back_to_back"
     },
     {
       "slot": 3,
-      "perk": "bookworm"
-    },
-    {
-      "slot": 3,
-      "perk": "silk_touch"
+      "perk": "home_ref"
     },
     {
       "slot": 6,
-      "perk": "target_man"
-    },
-    {
-      "slot": 6,
-      "perk": "sweeper"
+      "perk": "comeback_spirit"
     }
   ],
   "lineup": null

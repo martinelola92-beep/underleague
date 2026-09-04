@@ -1,0 +1,31 @@
+{
+  "id": "cold_focus",
+  "name": {
+    "es": "Sangre fría",
+    "en": "Cold Focus"
+  },
+  "rarity": "common",
+  "kind": "filler",
+  "axis": "identity",
+  "race": null,
+  "trigger": "SHOT",
+  "scope": "actor",
+  "links": [],
+  "condition": "hasTag(actor,'Cold')",
+  "effects": [
+    {
+      "type": "modifyProbability",
+      "target": "actor",
+      "probability": "shotOnTarget",
+      "value": 15,
+      "duration": "play"
+    }
+  ],
+  "elseEffects": [],
+  "limit": null,
+  "accumulatesAcrossMatches": false,
+  "lethal": false,
+  "positionOnly": null,
+  "tagsRequired": [],
+  "tagsForbidden": []
+}

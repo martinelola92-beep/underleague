@@ -1,0 +1,42 @@
+{
+  "id": "diagonal_press",
+  "name": {
+    "es": "Presión diagonal",
+    "en": "Diagonal Press"
+  },
+  "rarity": "common",
+  "kind": "filler",
+  "axis": "alignment",
+  "race": null,
+  "trigger": "TACKLE",
+  "scope": "actor",
+  "links": [
+    "diagonalAhead",
+    "diagonalBehind"
+  ],
+  "condition": "",
+  "effects": [
+    {
+      "type": "modifyProbability",
+      "target": "linked",
+      "probability": "tackle",
+      "value": 10,
+      "duration": "play"
+    }
+  ],
+  "elseEffects": [
+    {
+      "type": "modifyAttribute",
+      "target": "owner",
+      "attribute": "strength",
+      "value": -5,
+      "duration": "play"
+    }
+  ],
+  "limit": null,
+  "accumulatesAcrossMatches": false,
+  "lethal": false,
+  "positionOnly": null,
+  "tagsRequired": [],
+  "tagsForbidden": []
+}

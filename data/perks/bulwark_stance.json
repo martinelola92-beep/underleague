@@ -1,0 +1,39 @@
+{
+  "id": "bulwark_stance",
+  "name": {
+    "es": "Postura de muro",
+    "en": "Bulwark Stance"
+  },
+  "rarity": "common",
+  "kind": "filler",
+  "axis": "identity",
+  "race": null,
+  "trigger": "MATCH_START",
+  "scope": "actor",
+  "links": [],
+  "condition": "hasTag(owner,'Bulwark')",
+  "effects": [
+    {
+      "type": "modifyProbability",
+      "target": "owner",
+      "probability": "tackle",
+      "value": 15,
+      "duration": "match"
+    }
+  ],
+  "elseEffects": [
+    {
+      "type": "modifyProbability",
+      "target": "owner",
+      "probability": "tackle",
+      "value": -10,
+      "duration": "match"
+    }
+  ],
+  "limit": null,
+  "accumulatesAcrossMatches": false,
+  "lethal": false,
+  "positionOnly": null,
+  "tagsRequired": [],
+  "tagsForbidden": []
+}

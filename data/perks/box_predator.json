@@ -1,0 +1,31 @@
+{
+  "id": "box_predator",
+  "name": {
+    "es": "Depredador de área",
+    "en": "Box Predator"
+  },
+  "rarity": "common",
+  "kind": "filler",
+  "axis": "geometry",
+  "race": null,
+  "trigger": "SHOT",
+  "scope": "actor",
+  "links": [],
+  "condition": "distanceToGoal(actor) < 3",
+  "effects": [
+    {
+      "type": "modifyProbability",
+      "target": "actor",
+      "probability": "shotOnTarget",
+      "value": 20,
+      "duration": "play"
+    }
+  ],
+  "elseEffects": [],
+  "limit": null,
+  "accumulatesAcrossMatches": false,
+  "lethal": false,
+  "positionOnly": null,
+  "tagsRequired": [],
+  "tagsForbidden": []
+}

@@ -1,0 +1,33 @@
+{
+  "id": "natural_leader",
+  "name": {
+    "es": "Líder nato",
+    "en": "Natural Leader"
+  },
+  "rarity": "rare",
+  "kind": "conditional",
+  "axis": "identity",
+  "race": null,
+  "trigger": "MATCH_START",
+  "scope": "actor",
+  "links": [],
+  "condition": "",
+  "effects": [
+    {
+      "type": "modifyProbability",
+      "target": "team",
+      "probability": "tackle",
+      "value": 10,
+      "duration": "match"
+    }
+  ],
+  "elseEffects": [],
+  "limit": null,
+  "accumulatesAcrossMatches": false,
+  "lethal": false,
+  "positionOnly": null,
+  "tagsRequired": [
+    "Leader"
+  ],
+  "tagsForbidden": []
+}

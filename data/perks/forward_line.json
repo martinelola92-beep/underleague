@@ -1,0 +1,39 @@
+{
+  "id": "forward_line",
+  "name": {
+    "es": "Línea de ataque",
+    "en": "Forward Line"
+  },
+  "rarity": "rare",
+  "kind": "filler",
+  "axis": "startZone",
+  "race": null,
+  "trigger": "MATCH_START",
+  "scope": "actor",
+  "links": [],
+  "condition": "startsIn(owner,'AttackingThird')",
+  "effects": [
+    {
+      "type": "modifyProbability",
+      "target": "owner",
+      "probability": "shotOnTarget",
+      "value": 20,
+      "duration": "match"
+    }
+  ],
+  "elseEffects": [
+    {
+      "type": "modifyProbability",
+      "target": "owner",
+      "probability": "shotOnTarget",
+      "value": -15,
+      "duration": "match"
+    }
+  ],
+  "limit": null,
+  "accumulatesAcrossMatches": false,
+  "lethal": false,
+  "positionOnly": null,
+  "tagsRequired": [],
+  "tagsForbidden": []
+}

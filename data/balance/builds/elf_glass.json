@@ -5,32 +5,28 @@
   "quality": 50,
   "perks": [
     {
-      "slot": 3,
-      "perk": "sweeper"
-    },
-    {
-      "slot": 3,
-      "perk": "innocent_face"
+      "slot": 4,
+      "perk": "fine_touch"
     },
     {
       "slot": 4,
-      "perk": "glass_cannon"
+      "perk": "crowd_control"
     },
     {
-      "slot": 4,
-      "perk": "guardian_angel"
+      "slot": 6,
+      "perk": "forward_line"
     },
     {
-      "slot": 4,
-      "perk": "matador"
+      "slot": 6,
+      "perk": "silky_veteran"
     },
     {
-      "slot": 4,
-      "perk": "playmaker"
+      "slot": 6,
+      "perk": "battle_reader"
     }
   ],
   "rarities": {
-    "4": "legendary"
+    "6": "rare"
   },
   "lineup": null
 }

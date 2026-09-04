@@ -6,19 +6,15 @@
   "perks": [
     {
       "slot": 3,
-      "perk": "glass_cannon"
+      "perk": "brute_boots"
     },
     {
-      "slot": 3,
-      "perk": "berserker"
+      "slot": 4,
+      "perk": "bulwark_stance"
     },
     {
-      "slot": 6,
-      "perk": "target_man"
-    },
-    {
-      "slot": 6,
-      "perk": "berserker"
+      "slot": 5,
+      "perk": "pack_mentality"
     }
   ],
   "lineup": null

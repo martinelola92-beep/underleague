@@ -1,0 +1,40 @@
+{
+  "id": "dwarf_fortress",
+  "name": "Enanos: fortaleza",
+  "race": "Dwarf",
+  "quality": 50,
+  "perks": [
+    {
+      "slot": 0,
+      "perk": "sweeper_keeper"
+    },
+    {
+      "slot": 0,
+      "perk": "safety_net"
+    },
+    {
+      "slot": 0,
+      "perk": "iron_gate"
+    },
+    {
+      "slot": 1,
+      "perk": "bulwark_stance"
+    },
+    {
+      "slot": 1,
+      "perk": "own_third_anchor"
+    },
+    {
+      "slot": 2,
+      "perk": "bulwark_stance"
+    },
+    {
+      "slot": 2,
+      "perk": "own_third_anchor"
+    }
+  ],
+  "rarities": {
+    "0": "legendary"
+  },
+  "lineup": null
+}

@@ -1,0 +1,32 @@
+{
+  "id": "iron_gate",
+  "name": {
+    "es": "Puerta de hierro",
+    "en": "Iron Gate"
+  },
+  "rarity": "legendary",
+  "kind": "ruleBreaker",
+  "axis": "identity",
+  "race": "Dwarf",
+  "trigger": "GOAL",
+  "scope": "opposingTeam",
+  "links": [],
+  "condition": "",
+  "effects": [
+    {
+      "type": "cancelEvent"
+    }
+  ],
+  "elseEffects": [],
+  "limit": {
+    "per": "match",
+    "times": 1
+  },
+  "accumulatesAcrossMatches": false,
+  "lethal": false,
+  "positionOnly": "Goalkeeper",
+  "tagsRequired": [
+    "Dwarf"
+  ],
+  "tagsForbidden": []
+}

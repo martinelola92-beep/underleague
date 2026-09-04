@@ -1,0 +1,17 @@
+{
+  "id": "elf_out_of_zone",
+  "name": "Elfos: zona equivocada",
+  "race": "Elf",
+  "quality": 50,
+  "perks": [
+    {
+      "slot": 0,
+      "perk": "forward_line"
+    },
+    {
+      "slot": 6,
+      "perk": "own_third_anchor"
+    }
+  ],
+  "lineup": null
+}

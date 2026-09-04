@@ -1,0 +1,38 @@
+{
+  "id": "poacher_instinct",
+  "name": {
+    "es": "Instinto cazagoles",
+    "en": "Poacher Instinct"
+  },
+  "rarity": "rare",
+  "kind": "filler",
+  "axis": "accumulation",
+  "race": null,
+  "trigger": "GOAL",
+  "scope": "actor",
+  "links": [],
+  "condition": "",
+  "effects": [
+    {
+      "type": "modifyProbability",
+      "target": "actor",
+      "probability": "shotOnTarget",
+      "valuePerCounter": 5,
+      "counter": "poacherInstinctGoals",
+      "maxValue": 25,
+      "duration": "match"
+    },
+    {
+      "type": "addCounter",
+      "counter": "poacherInstinctGoals",
+      "value": 1
+    }
+  ],
+  "elseEffects": [],
+  "limit": null,
+  "accumulatesAcrossMatches": true,
+  "lethal": false,
+  "positionOnly": null,
+  "tagsRequired": [],
+  "tagsForbidden": []
+}

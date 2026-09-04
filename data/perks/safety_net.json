@@ -1,0 +1,39 @@
+{
+  "id": "safety_net",
+  "name": {
+    "es": "Red de seguridad",
+    "en": "Safety Net"
+  },
+  "rarity": "common",
+  "kind": "filler",
+  "axis": "proximity",
+  "race": null,
+  "trigger": "SAVE",
+  "scope": "actor",
+  "links": [],
+  "condition": "nearAlly(actor,'Cold',2)",
+  "effects": [
+    {
+      "type": "modifyProbability",
+      "target": "actor",
+      "probability": "save",
+      "value": 15,
+      "duration": "play"
+    }
+  ],
+  "elseEffects": [
+    {
+      "type": "modifyProbability",
+      "target": "actor",
+      "probability": "save",
+      "value": -10,
+      "duration": "play"
+    }
+  ],
+  "limit": null,
+  "accumulatesAcrossMatches": false,
+  "lethal": false,
+  "positionOnly": "Goalkeeper",
+  "tagsRequired": [],
+  "tagsForbidden": []
+}

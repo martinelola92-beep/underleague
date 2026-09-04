@@ -1,0 +1,31 @@
+{
+  "id": "crowd_control",
+  "name": {
+    "es": "Control de multitud",
+    "en": "Crowd Control"
+  },
+  "rarity": "rare",
+  "kind": "conditional",
+  "axis": "proximity",
+  "race": null,
+  "trigger": "DRIBBLE_ATTEMPTED",
+  "scope": "actor",
+  "links": [],
+  "condition": "nearOpponent(actor,'Brute',1)",
+  "effects": [
+    {
+      "type": "modifyProbability",
+      "target": "actor",
+      "probability": "dribble",
+      "value": 20,
+      "duration": "play"
+    }
+  ],
+  "elseEffects": [],
+  "limit": null,
+  "accumulatesAcrossMatches": false,
+  "lethal": false,
+  "positionOnly": null,
+  "tagsRequired": [],
+  "tagsForbidden": []
+}

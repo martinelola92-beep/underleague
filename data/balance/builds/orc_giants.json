@@ -1,17 +1,9 @@
 {
-  "id": "orc_violence",
-  "name": "Orcos: carnicería",
+  "id": "orc_giants",
+  "name": "Orcos: gigantes gentiles",
   "race": "Orc",
   "quality": 50,
   "perks": [
-    {
-      "slot": 1,
-      "perk": "brute_boots"
-    },
-    {
-      "slot": 1,
-      "perk": "shadow_marker"
-    },
     {
       "slot": 2,
       "perk": "brute_boots"
@@ -21,20 +13,21 @@
       "perk": "road_warrior"
     },
     {
-      "slot": 6,
-      "perk": "box_predator"
+      "slot": 5,
+      "perk": "gentle_giant"
+    },
+    {
+      "slot": 5,
+      "perk": "brute_boots"
     },
     {
       "slot": 6,
-      "perk": "poacher_instinct"
+      "perk": "box_predator"
     },
     {
       "slot": 6,
       "perk": "battle_reader"
     }
   ],
-  "rarities": {
-    "6": "rare"
-  },
   "lineup": null
 }

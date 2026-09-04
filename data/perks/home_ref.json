@@ -1,0 +1,29 @@
+{
+  "id": "home_ref",
+  "name": {
+    "es": "Árbitro casero",
+    "en": "Home Ref"
+  },
+  "rarity": "rare",
+  "kind": "conditional",
+  "axis": "matchState",
+  "race": null,
+  "trigger": "FOUL",
+  "scope": "actor",
+  "links": [],
+  "condition": "scoreDiff() < 0",
+  "effects": [
+    {
+      "type": "modifyBias",
+      "value": 10,
+      "duration": "match"
+    }
+  ],
+  "elseEffects": [],
+  "limit": null,
+  "accumulatesAcrossMatches": false,
+  "lethal": false,
+  "positionOnly": null,
+  "tagsRequired": [],
+  "tagsForbidden": []
+}

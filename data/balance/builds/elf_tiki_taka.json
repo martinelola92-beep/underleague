@@ -6,73 +6,43 @@
   "perks": [
     {
       "slot": 3,
-      "perk": "silk_touch"
+      "perk": "fine_touch"
     },
     {
       "slot": 3,
-      "perk": "one_touch"
+      "perk": "wing_overlap"
     },
     {
       "slot": 4,
-      "perk": "matador"
+      "perk": "fine_touch"
     },
     {
       "slot": 4,
-      "perk": "sweeper"
+      "perk": "fine_orchestra"
     },
     {
-      "slot": 4,
-      "perk": "showboat"
+      "slot": 5,
+      "perk": "wing_overlap"
     },
     {
-      "slot": 6,
-      "perk": "playmaker"
-    },
-    {
-      "slot": 6,
-      "perk": "poacher"
+      "slot": 5,
+      "perk": "spearpoint"
     },
     {
       "slot": 6,
-      "perk": "one_touch"
+      "perk": "crowd_control"
     },
     {
       "slot": 6,
-      "perk": "matador"
+      "perk": "silky_veteran"
+    },
+    {
+      "slot": 6,
+      "perk": "battle_reader"
     }
   ],
   "rarities": {
-    "4": "rare",
-    "6": "legendary"
+    "6": "rare"
   },
-  "lineup": [
-    [
-      0,
-      2
-    ],
-    [
-      2,
-      2
-    ],
-    [
-      2,
-      3
-    ],
-    [
-      3,
-      2
-    ],
-    [
-      4,
-      2
-    ],
-    [
-      4,
-      3
-    ],
-    [
-      5,
-      2
-    ]
-  ]
+  "lineup": null
 }

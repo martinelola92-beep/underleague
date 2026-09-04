@@ -1,0 +1,31 @@
+{
+  "id": "game_management",
+  "name": {
+    "es": "Gestión del partido",
+    "en": "Game Management"
+  },
+  "rarity": "common",
+  "kind": "filler",
+  "axis": "matchState",
+  "race": null,
+  "trigger": "TACKLE",
+  "scope": "actor",
+  "links": [],
+  "condition": "scoreDiff() > 0",
+  "effects": [
+    {
+      "type": "modifyProbability",
+      "target": "actor",
+      "probability": "tackle",
+      "value": 15,
+      "duration": "play"
+    }
+  ],
+  "elseEffects": [],
+  "limit": null,
+  "accumulatesAcrossMatches": false,
+  "lethal": false,
+  "positionOnly": null,
+  "tagsRequired": [],
+  "tagsForbidden": []
+}

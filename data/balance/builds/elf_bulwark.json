@@ -1,7 +1,7 @@
 {
-  "id": "human_wall",
-  "name": "Humanos: muro",
-  "race": "Human",
+  "id": "elf_bulwark",
+  "name": "Elfos: muro improbable",
+  "race": "Elf",
   "quality": 50,
   "perks": [
     {
@@ -14,19 +14,19 @@
     },
     {
       "slot": 1,
-      "perk": "own_third_anchor"
+      "perk": "unlikely_bulwark"
     },
     {
       "slot": 1,
-      "perk": "pivot_duo"
-    },
-    {
-      "slot": 2,
       "perk": "own_third_anchor"
     },
     {
       "slot": 2,
-      "perk": "pivot_duo"
+      "perk": "bulwark_stance"
+    },
+    {
+      "slot": 2,
+      "perk": "own_third_anchor"
     }
   ],
   "lineup": null

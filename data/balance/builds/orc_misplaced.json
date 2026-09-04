@@ -5,20 +5,12 @@
   "quality": 50,
   "perks": [
     {
-      "slot": 4,
-      "perk": "silk_touch"
+      "slot": 1,
+      "perk": "poacher_instinct"
     },
     {
-      "slot": 4,
-      "perk": "showboat"
-    },
-    {
-      "slot": 6,
-      "perk": "one_touch"
-    },
-    {
-      "slot": 6,
-      "perk": "silk_touch"
+      "slot": 2,
+      "perk": "silky_veteran"
     }
   ],
   "lineup": null

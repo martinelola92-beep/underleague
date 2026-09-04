@@ -1,0 +1,31 @@
+{
+  "id": "long_range_menace",
+  "name": {
+    "es": "Amenaza de larga distancia",
+    "en": "Long-Range Menace"
+  },
+  "rarity": "common",
+  "kind": "filler",
+  "axis": "geometry",
+  "race": null,
+  "trigger": "SHOT",
+  "scope": "actor",
+  "links": [],
+  "condition": "distanceToGoal(actor) >= 6",
+  "effects": [
+    {
+      "type": "modifyProbability",
+      "target": "actor",
+      "probability": "shotOnTarget",
+      "value": 15,
+      "duration": "play"
+    }
+  ],
+  "elseEffects": [],
+  "limit": null,
+  "accumulatesAcrossMatches": false,
+  "lethal": false,
+  "positionOnly": null,
+  "tagsRequired": [],
+  "tagsForbidden": []
+}

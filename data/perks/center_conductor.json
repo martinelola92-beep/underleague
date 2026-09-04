@@ -1,0 +1,39 @@
+{
+  "id": "center_conductor",
+  "name": {
+    "es": "Conductor del centro",
+    "en": "Center Conductor"
+  },
+  "rarity": "rare",
+  "kind": "conditional",
+  "axis": "startZone",
+  "race": null,
+  "trigger": "MATCH_START",
+  "scope": "actor",
+  "links": [],
+  "condition": "startsOn(owner,'Center')",
+  "effects": [
+    {
+      "type": "modifyProbability",
+      "target": "team",
+      "probability": "intercept",
+      "value": 10,
+      "duration": "match"
+    }
+  ],
+  "elseEffects": [
+    {
+      "type": "modifyAttribute",
+      "target": "owner",
+      "attribute": "technique",
+      "value": -10,
+      "duration": "match"
+    }
+  ],
+  "limit": null,
+  "accumulatesAcrossMatches": false,
+  "lethal": false,
+  "positionOnly": null,
+  "tagsRequired": [],
+  "tagsForbidden": []
+}

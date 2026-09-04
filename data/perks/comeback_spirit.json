@@ -1,0 +1,31 @@
+{
+  "id": "comeback_spirit",
+  "name": {
+    "es": "Espíritu de remontada",
+    "en": "Comeback Spirit"
+  },
+  "rarity": "rare",
+  "kind": "conditional",
+  "axis": "matchState",
+  "race": null,
+  "trigger": "PLAY_START",
+  "scope": "actor",
+  "links": [],
+  "condition": "scoreDiff() < 0",
+  "effects": [
+    {
+      "type": "modifyAttribute",
+      "target": "actor",
+      "attribute": "strength",
+      "value": 10,
+      "duration": "play"
+    }
+  ],
+  "elseEffects": [],
+  "limit": null,
+  "accumulatesAcrossMatches": false,
+  "lethal": false,
+  "positionOnly": null,
+  "tagsRequired": [],
+  "tagsForbidden": []
+}

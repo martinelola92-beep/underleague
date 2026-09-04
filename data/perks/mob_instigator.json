@@ -1,0 +1,30 @@
+{
+  "id": "mob_instigator",
+  "name": {
+    "es": "Instigador de la turba",
+    "en": "Mob Instigator"
+  },
+  "rarity": "legendary",
+  "kind": "ruleBreaker",
+  "axis": "matchState",
+  "race": null,
+  "trigger": "FOUL",
+  "scope": "team",
+  "links": [],
+  "condition": "isMob()",
+  "effects": [
+    {
+      "type": "cancelEvent"
+    }
+  ],
+  "elseEffects": [],
+  "limit": {
+    "per": "match",
+    "times": 2
+  },
+  "accumulatesAcrossMatches": false,
+  "lethal": false,
+  "positionOnly": null,
+  "tagsRequired": [],
+  "tagsForbidden": []
+}

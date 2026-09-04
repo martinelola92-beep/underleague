@@ -1,0 +1,39 @@
+{
+  "id": "pack_mentality",
+  "name": {
+    "es": "Mentalidad de manada",
+    "en": "Pack Mentality"
+  },
+  "rarity": "rare",
+  "kind": "conditional",
+  "axis": "composition",
+  "race": null,
+  "trigger": "MATCH_START",
+  "scope": "actor",
+  "links": [],
+  "condition": "teammatesWithTag(owner,'Brute') > 2",
+  "effects": [
+    {
+      "type": "modifyAttribute",
+      "target": "withTag:Brute",
+      "attribute": "strength",
+      "value": 10,
+      "duration": "match"
+    }
+  ],
+  "elseEffects": [
+    {
+      "type": "modifyAttribute",
+      "target": "owner",
+      "attribute": "strength",
+      "value": -5,
+      "duration": "match"
+    }
+  ],
+  "limit": null,
+  "accumulatesAcrossMatches": false,
+  "lethal": false,
+  "positionOnly": null,
+  "tagsRequired": [],
+  "tagsForbidden": []
+}

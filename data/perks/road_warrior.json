@@ -1,0 +1,31 @@
+{
+  "id": "road_warrior",
+  "name": {
+    "es": "Curtido en mil batallas",
+    "en": "Road Warrior"
+  },
+  "rarity": "rare",
+  "kind": "conditional",
+  "axis": "accumulation",
+  "race": null,
+  "trigger": "RECOVERY",
+  "scope": "actor",
+  "links": [],
+  "condition": "stat(actor,'tacklesWon') >= 5",
+  "effects": [
+    {
+      "type": "modifyProbability",
+      "target": "team",
+      "probability": "tackle",
+      "value": 10,
+      "duration": "match"
+    }
+  ],
+  "elseEffects": [],
+  "limit": null,
+  "accumulatesAcrossMatches": false,
+  "lethal": false,
+  "positionOnly": null,
+  "tagsRequired": [],
+  "tagsForbidden": []
+}

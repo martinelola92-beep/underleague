@@ -1,0 +1,38 @@
+{
+  "id": "long_leash_legacy",
+  "name": {
+    "es": "Correa curtida",
+    "en": "Worn-in Leash"
+  },
+  "rarity": "legendary",
+  "kind": "filler",
+  "axis": "accumulation",
+  "race": null,
+  "trigger": "MATCH_START",
+  "scope": "actor",
+  "links": [],
+  "condition": "",
+  "effects": [
+    {
+      "type": "modifyLeash",
+      "target": "owner",
+      "valuePerCounter": 5,
+      "counter": "longLeashMatches",
+      "maxValue": 10,
+      "duration": "match",
+      "counterDivisor": 4
+    },
+    {
+      "type": "addCounter",
+      "counter": "longLeashMatches",
+      "value": 1
+    }
+  ],
+  "elseEffects": [],
+  "limit": null,
+  "accumulatesAcrossMatches": true,
+  "lethal": false,
+  "positionOnly": null,
+  "tagsRequired": [],
+  "tagsForbidden": []
+}

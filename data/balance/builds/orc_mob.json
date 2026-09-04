@@ -6,23 +6,23 @@
   "perks": [
     {
       "slot": 2,
-      "perk": "heavy_boots"
+      "perk": "brute_boots"
     },
     {
       "slot": 2,
-      "perk": "street_fighter"
+      "perk": "pack_mentality"
     },
     {
       "slot": 5,
-      "perk": "mob_lawyer"
+      "perk": "mob_instigator"
     },
     {
       "slot": 5,
-      "perk": "enforcer"
+      "perk": "home_ref"
     },
     {
       "slot": 5,
-      "perk": "bloodline"
+      "perk": "road_warrior"
     }
   ],
   "rarities": {

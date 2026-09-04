@@ -1,0 +1,38 @@
+{
+  "id": "scar_tissue",
+  "name": {
+    "es": "Tejido cicatricial",
+    "en": "Scar Tissue"
+  },
+  "rarity": "rare",
+  "kind": "filler",
+  "axis": "accumulation",
+  "race": null,
+  "trigger": "INJURY",
+  "scope": "actor",
+  "links": [],
+  "condition": "",
+  "effects": [
+    {
+      "type": "modifyProbability",
+      "target": "actor",
+      "probability": "injure",
+      "valuePerCounter": 5,
+      "counter": "scarTissueInjuries",
+      "maxValue": 25,
+      "duration": "match"
+    },
+    {
+      "type": "addCounter",
+      "counter": "scarTissueInjuries",
+      "value": 1
+    }
+  ],
+  "elseEffects": [],
+  "limit": null,
+  "accumulatesAcrossMatches": true,
+  "lethal": false,
+  "positionOnly": null,
+  "tagsRequired": [],
+  "tagsForbidden": []
+}

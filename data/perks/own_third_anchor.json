@@ -1,0 +1,39 @@
+{
+  "id": "own_third_anchor",
+  "name": {
+    "es": "Ancla del tercio propio",
+    "en": "Own-Third Anchor"
+  },
+  "rarity": "common",
+  "kind": "filler",
+  "axis": "startZone",
+  "race": null,
+  "trigger": "MATCH_START",
+  "scope": "actor",
+  "links": [],
+  "condition": "startsIn(owner,'OwnThird')",
+  "effects": [
+    {
+      "type": "modifyProbability",
+      "target": "owner",
+      "probability": "tackle",
+      "value": 15,
+      "duration": "match"
+    }
+  ],
+  "elseEffects": [
+    {
+      "type": "modifyProbability",
+      "target": "owner",
+      "probability": "tackle",
+      "value": -10,
+      "duration": "match"
+    }
+  ],
+  "limit": null,
+  "accumulatesAcrossMatches": false,
+  "lethal": false,
+  "positionOnly": null,
+  "tagsRequired": [],
+  "tagsForbidden": []
+}

@@ -1,0 +1,40 @@
+{
+  "id": "deathless_march",
+  "name": {
+    "es": "Marcha sin fin",
+    "en": "Deathless March"
+  },
+  "rarity": "legendary",
+  "kind": "filler",
+  "axis": "accumulation",
+  "race": "Undead",
+  "trigger": "MATCH_START",
+  "scope": "actor",
+  "links": [],
+  "condition": "",
+  "effects": [
+    {
+      "type": "modifyProbability",
+      "target": "team",
+      "probability": "tackle",
+      "valuePerCounter": 5,
+      "counter": "deathlessMarchMatches",
+      "maxValue": 25,
+      "duration": "match"
+    },
+    {
+      "type": "addCounter",
+      "counter": "deathlessMarchMatches",
+      "value": 1
+    }
+  ],
+  "elseEffects": [],
+  "limit": null,
+  "accumulatesAcrossMatches": true,
+  "lethal": false,
+  "positionOnly": null,
+  "tagsRequired": [
+    "Undead"
+  ],
+  "tagsForbidden": []
+}

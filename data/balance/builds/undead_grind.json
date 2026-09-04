@@ -1,0 +1,33 @@
+{
+  "id": "undead_grind",
+  "name": "No-muertos: desgaste",
+  "race": "Undead",
+  "quality": 50,
+  "perks": [
+    {
+      "slot": 2,
+      "perk": "battle_reader"
+    },
+    {
+      "slot": 2,
+      "perk": "last_ditch"
+    },
+    {
+      "slot": 4,
+      "perk": "deathless_march"
+    },
+    {
+      "slot": 4,
+      "perk": "cold_focus"
+    },
+    {
+      "slot": 6,
+      "perk": "cold_focus"
+    },
+    {
+      "slot": 6,
+      "perk": "box_predator"
+    }
+  ],
+  "lineup": null
+}

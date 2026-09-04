@@ -1,0 +1,41 @@
+{
+  "id": "pivot_duo",
+  "name": {
+    "es": "Doble pivote",
+    "en": "Double Pivot"
+  },
+  "rarity": "common",
+  "kind": "filler",
+  "axis": "alignment",
+  "race": null,
+  "trigger": "MATCH_START",
+  "scope": "actor",
+  "links": [
+    "beside"
+  ],
+  "condition": "",
+  "effects": [
+    {
+      "type": "modifyProbability",
+      "target": "linked",
+      "probability": "tackle",
+      "value": 15,
+      "duration": "match"
+    }
+  ],
+  "elseEffects": [
+    {
+      "type": "modifyProbability",
+      "target": "owner",
+      "probability": "tackle",
+      "value": -10,
+      "duration": "match"
+    }
+  ],
+  "limit": null,
+  "accumulatesAcrossMatches": false,
+  "lethal": false,
+  "positionOnly": null,
+  "tagsRequired": [],
+  "tagsForbidden": []
+}

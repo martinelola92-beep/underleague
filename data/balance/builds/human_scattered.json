@@ -6,19 +6,11 @@
   "perks": [
     {
       "slot": 1,
-      "perk": "shield_wall"
-    },
-    {
-      "slot": 1,
-      "perk": "anchor"
+      "perk": "pivot_duo"
     },
     {
       "slot": 2,
-      "perk": "shield_wall"
-    },
-    {
-      "slot": 2,
-      "perk": "anchor"
+      "perk": "pivot_duo"
     }
   ],
   "lineup": [

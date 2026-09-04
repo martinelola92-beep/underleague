@@ -1,85 +1,114 @@
-# Catálogo de perks (Paquete G, fase 1)
+# Catálogo de perks (Paquete T, bloque de rediseño espacial)
 
-30 perks: `bloodlust` y `veteran` son los dos ejemplos del paquete F (motor de efectos); el resto (28) se
-diseñó aquí según `docs/fase1-diseno.md` §7. Formato y campos en §2; catálogo de builds en §8.
+40 perks en el formato de `docs/fase1b-diseno.md` §1.4: `value` en puntos porcentuales enteros de la escala 5/10/15/20/25/50, campo `axis` (uno de los ocho ejes de `docs/perks-ejes.md`), campo `race` (`null` = universal) y `links` para los perks de alineación. No incluye las 5 habilidades raciales (`quick_learner`, `hot_blooded`, `elf_touch`, `roots`, `numb`), que hace el paquete S en paralelo. Ningún perk universal condiciona por etiqueta de especie (ADR 0023); la variación individual dentro de una raza se expresa por etiqueta de estilo (`Brute`, `Fine`, `Bulwark`, `Cold`, `Neutral`, ADR 0024). Ningún perk mejora el pase directamente (canal saturado, `docs/balance/fase1-perks.md`): la circulación se expresa a través de `intercept`.
 
-Distribución RF-069 (28 perks propios): 16 `filler` (57%), 9 `conditional` (32%), 3 `ruleBreaker` (11%).
-Con los dos de ejemplo (`veteran` filler, `bloodlust` conditional): 18/9/3 sobre 30 → 60% / 30% / 10%.
+Distribución RF-069 (60/30/10 ± 8): **24 filler (60%), 14 conditional (35%), 2 ruleBreaker (5%)**, sobre 40.
 
-Rareza: 14 `common`, 10 `rare`, 4 `legendary` (propios); con los dos de ejemplo, 15/11/4 sobre 30.
+Distribución por eje (`docs/perks-ejes.md`, sobre los 36 perks universales; el 10% exclusivo de raza no compite por la cuota):
+
+| eje | perks | % | objetivo |
+|---|---|---|---|
+| identidad (`identity`) | 5 | 13.9% | 15% |
+| acumulación (`accumulation`) | 7 | 19.4% | 20% |
+| alineación (`alignment`) | 5 | 13.9% | 15% |
+| zona de inicio (`startZone`) | 4 | 11.1% | 10% |
+| geometría (`geometry`) | 5 | 13.9% | 15% |
+| estado del partido (`matchState`) | 4 | 11.1% | 10% |
+| composición (`composition`) | 2 | 5.6% | 5% |
+| proximidad (`proximity`) | 4 | 11.1% | 10% |
+
+Rareza: 16 `common`, 19 `rare`, 5 `legendary` (sobre 40).
+
+`accumulatesAcrossMatches: true`: 7 perks (mínimo exigido: 7). Todos escalan sobre un canal con recorrido (`intercept`, `injure`, `save`, `shotOnTarget`, `dribble`, `leash`) o, en el caso de `road_warrior`, cruzan un umbral intramatch con `stat()` sin declarar contador propio.
+
+`elseEffects` con castigo real (no un `-3` simbólico, un `-5`/`-10`/`-15` en la misma escala que el efecto): 17 perks.
 
 ## Perks
 
-| id | familia | rareza | tipo | trigger | resumen | builds |
-|---|---|---|---|---|---|---|
-| `heavy_boots` | Violencia | common | filler | MATCH_START | +6 fuerza si es Bruto, si no −3 (slot desperdiciado) | orc_violence, orc_mob |
-| `bone_breaker` | Violencia | rare | filler | TACKLE | +6% de lesionar al rival si es Fino; prohibido para Finos | orc_violence |
-| `enforcer` | Violencia | rare | filler | INJURY (equipo) | cada lesión de un compañero da +1 fuerza (máx. 6) a los Brutos esa jugada | orc_violence, orc_mob |
-| `berserker` | Violencia | common | filler | TACKLE | +6 fuerza y +15% de falta en cada entrada, sin condición | orc_violence, elf_brawler |
-| `warpath` | Violencia | legendary | filler | MATCH_START | +1 fuerza por partido jugado (máx. 8, acumula entre partidos); solo Brutos | orc_violence |
-| `silk_touch` | Técnica | common | filler | MATCH_START | +6 técnica si es Fino, si no −3 | elf_tiki_taka, orc_misplaced, human_random |
-| `one_touch` | Técnica | common | conditional | PASS_ATTEMPTED | +8% de acierto de pase si hay un Fino adyacente | elf_tiki_taka, orc_misplaced |
-| `matador` | Técnica | common | filler | DRIBBLE_ATTEMPTED | +12% de regate si el rival es Bruto; solo Finos | elf_tiki_taka, elf_glass |
-| `showboat` | Técnica | common | filler | DRIBBLE_ATTEMPTED | +15% de regate si es Fino, si no −15% (antisinergia declarada) | elf_tiki_taka, orc_misplaced |
-| `playmaker` | Técnica | legendary | conditional | MATCH_START | +8 técnica a todos los Finos del equipo si hay ≥3 Finos compañeros; si no, −3 al portador; solo Finos | elf_tiki_taka, elf_glass |
-| `shield_wall` | Bloque/muro | rare | conditional | MATCH_START | +5 fuerza y +5% de robo a los Defensas adyacentes si hay algún Defensa adyacente; si no, −3 | human_wall, human_scattered, orc_violence |
-| `anchor` | Bloque/muro | common | filler | MATCH_START | +1 de correa; solo Defensas | human_wall, human_scattered |
-| `sweeper` | Bloque/muro | common | conditional | RECOVERY | +1 de correa esa jugada si recupera en zona propia | human_wall, human_counter, elf_tiki_taka, elf_glass, human_random |
-| `goalkeeper_wall` | Bloque/muro | common | filler | MATCH_START | +8% de parada; solo porteros | human_wall |
-| `counter_punch` | Contragolpe | common | conditional | RECOVERY (equipo) | +8 velocidad a los Delanteros esa jugada si un compañero recupera en zona propia | human_counter |
-| `sprinter` | Contragolpe | common | filler | PLAY_START | +6 velocidad esa jugada si es Rápido, si no −3 | human_counter |
-| `mob_lawyer` | Turba | legendary | ruleBreaker | FOUL | anula la falta propia en la turba (máx. 2/partido) | orc_mob, human_random |
-| `street_fighter` | Turba | rare | conditional | TACKLE | +8 fuerza y −4 técnica esa jugada en la turba | orc_mob |
-| `innocent_face` | Rompe-reglas | rare | ruleBreaker | CARD | anula la propia tarjeta (1/partido) | elf_glass, human_wall |
-| `lucky_charm` | Rompe-reglas | rare | ruleBreaker | INJURY | anula la propia lesión (1/partido) si hay algún Defensa en el equipo | human_wall |
-| `guardian_angel` | Rompe-reglas | legendary | conditional | MATCH_START | −12% de lesión grave si hay ≥2 Finos compañeros | elf_glass |
-| `target_man` | Posición | rare | conditional | SHOT | +4 fuerza al tirar si es Bruto y tiene un centrocampista adyacente, si no −3; solo Delanteros | orc_violence, elf_brawler, human_random |
-| `glass_cannon` | Fragilidad | common | filler | MATCH_START | +10 técnica y −10 resistencia, sin condición | elf_glass, elf_brawler |
-| `lone_wolf` | Fragilidad | rare | conditional | MATCH_START | +8 fuerza si no tiene ningún centrocampista adyacente, si no −6 | human_random |
-| `bloodline` | Escalado | rare | filler | INJURY | +1 fuerza por lesión sufrida en la carrera (máx. 10, acumula) | orc_violence, orc_mob |
-| `poacher` | Escalado | rare | filler | GOAL | +2 técnica por gol marcado en la carrera (máx. 12, acumula) | elf_tiki_taka, human_counter, orc_violence |
-| `bookworm` | Escalado | common | filler | PASS_COMPLETED | +1 técnica cada 25 pases completados en la carrera (máx. 6, acumula); solo centrocampistas con ≥2 compañeros centrocampistas | human_random |
-| `iron_lungs_plus` | Escalado | common | filler | MATCH_START | +1 resistencia por partido jugado (máx. 8, acumula) | human_counter |
+| id | eje | raza | rareza | tipo | trigger | resumen | builds |
+|---|---|---|---|---|---|---|---|
+| `back_to_back` | proximidad | — | common | filler | TACKLE | +15% de robo al entrar si tiene cerca un Muro propio | `human_random` |
+| `battle_reader` | acumulación | — | rare | filler | MATCH_START | +5% de interceptar por cada partido jugado en la run (máx. 25%, acumula) | `elf_glass`, `elf_tiki_taka`, `human_counter`, `orc_giants`, `orc_violence`, `undead_grind` |
+| `box_predator` | geometría | — | common | filler | SHOT | +20% de tiro a puerta al tirar cerca de portería | `human_counter`, `orc_giants`, `orc_violence`, `undead_grind` |
+| `brute_boots` | identidad | — | common | filler | MATCH_START | +15 de fuerza si es Bruto; si no, -10 (adorno para quien no encaje) | `elf_brawler`, `orc_giants`, `orc_mob`, `orc_violence` |
+| `bulwark_stance` | identidad | — | common | filler | MATCH_START | +15% de robo si es Muro; si no, -10% | `dwarf_fortress`, `elf_brawler`, `elf_bulwark` |
+| `center_conductor` | zona de inicio | — | rare | conditional | MATCH_START | +10% de interceptar a todo el equipo si empieza en el carril central; si no, -10 de técnica | — |
+| `clean_sheet_legacy` | acumulación | — | rare | filler | SAVE | +5% de parada por cada parada en la run (máx. 25%, acumula); solo porteros | — |
+| `cold_focus` | identidad | — | common | filler | SHOT | +15% de tiro a puerta si es Frío | `undead_grind` |
+| `comeback_spirit` | estado del partido | — | rare | conditional | PLAY_START | +10 de fuerza mientras el equipo va perdiendo | `human_counter`, `human_random` |
+| `covering_shadow` | alineación | — | rare | conditional | MATCH_START | +20% de interceptar al compañero de detrás; sin él, -15% para el portador | — |
+| `crowd_control` | proximidad | — | rare | conditional | DRIBBLE_ATTEMPTED | +20% de regate al encarar si tiene cerca a un rival Bruto | `elf_glass`, `elf_tiki_taka` |
+| `deathless_march` | acumulación | Undead | legendary | filler | MATCH_START | exclusivo no-muerto: +5% de robo a todo el equipo por cada partido jugado en la run (máx. 25%, acumula) | `undead_grind` |
+| `diagonal_press` | alineación | — | common | filler | TACKLE | +10% de robo al compañero en diagonal al entrar; sin él, -5 de fuerza | — |
+| `fine_orchestra` | composición | — | rare | conditional | MATCH_START | +15% de regate a los Finos si hay más de dos en el equipo; si no, -10 de técnica; solo Finos | `elf_tiki_taka` |
+| `fine_touch` | identidad | — | common | filler | MATCH_START | +15 de técnica si es Fino; si no, -10 | `elf_glass`, `elf_tiki_taka` |
+| `flank_specialist` | zona de inicio | — | common | filler | MATCH_START | +15% de regate si empieza en una banda; si no, -10 de velocidad | — |
+| `forward_line` | zona de inicio | — | rare | filler | MATCH_START | +20% de tiro a puerta si empieza en el tercio rival; si no, -15% | `elf_glass`, `elf_out_of_zone` |
+| `game_management` | estado del partido | — | common | filler | TACKLE | +15% de robo al entrar mientras el equipo va ganando | `human_counter` |
+| `gentle_giant` | alineación | Orc | legendary | conditional | MATCH_START | exclusivo orco: +20% de interceptar al compañero de delante; sin él, -10 de fuerza | `orc_giants` |
+| `high_press_trigger` | geometría | — | rare | conditional | RECOVERY | +15% de interceptar a todo el equipo si un compañero recupera en el tercio rival | — |
+| `home_ref` | estado del partido | — | rare | conditional | FOUL | mejora el criterio del árbitro mientras el equipo va perdiendo | `human_random`, `orc_mob` |
+| `iron_gate` | identidad | Dwarf | legendary | ruleBreaker | GOAL | exclusivo enano: anula el primer gol que le marcan (1 por partido); solo porteros | `dwarf_fortress` |
+| `last_ditch` | geometría | — | rare | conditional | TACKLE | +15% de robo al entrar en su propio tercio; si no, -10% | `undead_grind` |
+| `long_leash_legacy` | acumulación | — | legendary | filler | MATCH_START | +5 de correa cada 4 partidos jugados en la run (máx. 10, acumula) | — |
+| `long_range_menace` | geometría | — | common | filler | SHOT | +15% de tiro a puerta al tirar de lejos | `human_counter` |
+| `mob_instigator` | estado del partido | — | legendary | ruleBreaker | FOUL | anula la falta de un compañero en la turba (máx. 2 por partido) | `orc_mob` |
+| `natural_leader` | identidad | — | rare | conditional | MATCH_START | +10% de robo a todo el equipo; solo Líderes | — |
+| `own_third_anchor` | zona de inicio | — | common | filler | MATCH_START | +15% de robo si empieza en su propio tercio; si no, -10% | `dwarf_fortress`, `elf_bulwark`, `elf_out_of_zone`, `human_wall` |
+| `pack_mentality` | composición | — | rare | conditional | MATCH_START | +10 de fuerza a los Brutos si hay más de dos en el equipo; si no, -5 para el portador | `elf_brawler`, `orc_mob` |
+| `pivot_duo` | alineación | — | common | filler | MATCH_START | +15% de robo al compañero de su columna; sin él, -10% para el portador | `human_scattered`, `human_wall` |
+| `poacher_instinct` | acumulación | — | rare | filler | GOAL | +5% de tiro a puerta por cada gol marcado en la run (máx. 25%, acumula) | `orc_misplaced`, `orc_violence` |
+| `road_warrior` | acumulación | — | rare | conditional | RECOVERY | tras 5 entradas ganadas en el partido, +10% de robo a todo el equipo | `orc_giants`, `orc_mob`, `orc_violence` |
+| `safety_net` | proximidad | — | common | filler | SAVE | +15% de parada si tiene cerca a un compañero Frío; si no, -10%; solo porteros | `dwarf_fortress`, `elf_bulwark`, `human_wall` |
+| `scar_tissue` | acumulación | — | rare | filler | INJURY | +5% de lesionar por cada lesión sufrida en la run (máx. 25%, acumula) | — |
+| `shadow_marker` | proximidad | — | common | filler | TACKLE | +10% de lesionar al entrar si tiene cerca a un rival Fino | `orc_violence` |
+| `silky_veteran` | acumulación | — | rare | filler | DRIBBLE_WON | +5% de regate por cada regate ganado en la run (máx. 25%, acumula) | `elf_glass`, `elf_tiki_taka`, `orc_misplaced` |
+| `spearpoint` | alineación | — | rare | conditional | MATCH_START | +20% de tiro a puerta al compañero de delante si es Delantero; si no, -10 de técnica | `elf_tiki_taka` |
+| `sweeper_keeper` | geometría | — | common | filler | RECOVERY | +5 de correa al recuperar en su propio tercio; solo porteros | `dwarf_fortress`, `elf_bulwark`, `human_wall` |
+| `unlikely_bulwark` | identidad | Elf | rare | conditional | MATCH_START | exclusivo elfo: +20% de robo y +5 de correa; solo elfos con etiqueta Muro | `elf_bulwark` |
+| `wing_overlap` | alineación | — | common | filler | DRIBBLE_ATTEMPTED | +15% de regate al compañero de su banda; sin él, -10 de velocidad | `elf_tiki_taka` |
 
-Ejemplos del paquete F (no tocados aquí): `bloodlust` (rare, conditional, TACKLE) y `veteran` (common,
-filler, MATCH_START, acumula) — no se usan en ninguna build propia de este paquete, quedan disponibles
-para builds futuras.
+### Los 4 exclusivos de raza
 
-### Cobertura de requisitos del encargo
+Cada exclusivo apunta a una build de su raza **distinta** de las demás builds coherentes de esa raza, para no colapsar RF-032 (tres builds viables por raza):
 
-- Distribución: 60/30/10 (ver arriba).
-- `accumulatesAcrossMatches: true`: `warpath`, `bloodline`, `poacher`, `bookworm`, `iron_lungs_plus` (5,
-  + `veteran` = 6).
-- `tagsRequired`/`tagsForbidden`: `enforcer`, `warpath` (Bruto), `playmaker`, `matador` (Fino),
-  `bone_breaker` (prohibido Fino), `target_man` (Delantero) — 6.
-- `elseEffects`: `heavy_boots`, `silk_touch`, `showboat`, `shield_wall`, `playmaker`, `sprinter`,
-  `target_man`, `lone_wolf` — 8.
-- `positionOnly`: `anchor` (Defensa), `goalkeeper_wall` (Portero), `target_man` (Delantero), `bookworm`
-  (Centrocampista) — 4.
-- `adjacent`/`adjacentCount`/`adjacentWithTag`: `one_touch`, `shield_wall`, `lone_wolf`, `target_man` — 4.
-- `teammatesWithTag`: `playmaker`, `guardian_angel`, `bookworm` — 3.
-- `cancelEvent` (CARD/INJURY/FOUL): `mob_lawyer`, `innocent_face`, `lucky_charm` — 3.
+| perk | raza | build a la que apunta | qué la distingue de las otras builds de su raza |
+|---|---|---|---|
+| `gentle_giant` | Orc | `orc_giants` | juego de apoyo por alineación (protege al delantero), distinto de la violencia de `orc_violence` (`injure`) y la turba de `orc_mob` |
+| `unlikely_bulwark` | Elf | `elf_bulwark` | defensa Muro con la minoría de estilo opuesta a la élfica, distinto de la técnica de `elf_tiki_taka` y la fragilidad protegida de `elf_glass` |
+| `iron_gate` | Dwarf | `dwarf_fortress` | anula el primer gol encajado; ancla la única build enana del catálogo de prueba |
+| `deathless_march` | Undead | `undead_grind` | escalado de equipo entre partidos; ancla la única build no-muerta del catálogo de prueba |
 
 ## Builds (`data/balance/builds/`)
 
 | id | raza | idea | resultado esperado |
 |---|---|---|---|
-| `human_none` | Human | referencia sin perks | — (línea base) |
-| `orc_none` | Orc | referencia sin perks | — (línea base) |
-| `elf_none` | Elf | referencia sin perks | — (línea base) |
-| `orc_violence` | Orc | contacto físico: entradas duras, lesionar Finos, escalado de fuerza (`warpath`, `bloodline`), delantero Bruto apoyado por un centrocampista adyacente | gana a `orc_none` (≥58%) |
-| `elf_tiki_taka` | Elf | pases y regates entre Finos, cadena de adyacencias (`one_touch`), `playmaker` legendario que sube la técnica de todo el bloque Fino | gana a `elf_none` (≥58%); cadena de pases claramente mayor que `orc_violence` |
-| `human_wall` | Human | bloque defensivo: dos Defensas adyacentes con `shield_wall`, portero reforzado, `lucky_charm`/`innocent_face` para no perder efectivos | gana a `human_none` (≥58%) |
-| `human_counter` | Human | velocidad y transición: recuperar en zona propia y lanzar a los Delanteros, delantero rápido que escala resistencia y goles | gana a `human_none` (≥58%) |
-| `orc_mob` | Orc | apuesta por el gol de oro de la turba: `mob_lawyer` anula faltas propias, `street_fighter` y `enforcer` premian el caos | gana a `orc_none` (≥58%) |
-| `elf_glass` | Elf | coherente pero frágil: `glass_cannon` sube técnica y baja resistencia, `guardian_angel` y `playmaker` la protegen solo si el equipo es mayoritariamente Fino | gana a `elf_none`, pero con más riesgo (más lesiones/menos margen) que las demás coherentes |
-| `orc_misplaced` | Orc | perks técnicos (`silk_touch`, `showboat`, `one_touch`) puestos en un equipo Bruto: condición `hasTag(owner,'Fine')`/`adjacent(...,'Fine')` siempre falsa, sin bonus y con castigo real de `showboat`/`silk_touch` | pierde contra `orc_none` (≤45%) |
-| `elf_brawler` | Elf | perks de violencia (`glass_cannon` + `berserker`, `target_man`) en un equipo Fino: mucha falta y poca fuerza real, `target_man` castiga por no ser Bruto | pierde contra `elf_none` (≤45%) |
-| `human_random` | Human | mezcla arbitraria y fija de familias sin criterio (turba, escalado, posición, fragilidad) en un equipo Neutral que no cumple casi ninguna condición de raza | entre 40% y 60% contra `human_none` |
-| `human_scattered` | Human | dos `shield_wall` + `anchor` en los Defensas, pero el `lineup` los separa a distancia no adyacente a propósito, así que `shield_wall` cae siempre en su `elseEffects` (−3 fuerza) en vez de activarse | pierde contra `human_none` (≤45%) |
+| `dwarf_fortress` | Dwarf | fortaleza enana: portero con `iron_gate` (anula el primer gol) más `sweeper_keeper`/`safety_net`, central defensivo Muro que ancla su tercio | gana a `dwarf_none`; primera build enana del catálogo |
+| `dwarf_none` | Dwarf | referencia sin perks | línea base |
+| `elf_brawler` | Elf | perks que premian la etiqueta de estilo Bruta/Muro (`brute_boots`, `bulwark_stance`, `pack_mentality`) en un equipo élfico donde esa etiqueta es minoritaria (~10-12% por jugador, `styleTagWeights` de `data/races/elf.json`): casi siempre cae el `elseEffects`, y `pack_mentality` casi nunca ve tres Brutos | pierde contra `elf_none` |
+| `elf_bulwark` | Elf | tercera identidad élfica: el exclusivo `unlikely_bulwark` (solo elfos con etiqueta Muro) ancla una defensa físicamente sólida, contraria a la imagen frágil-técnica de `elf_tiki_taka`/`elf_glass` | gana a `elf_none`; build de nicho, depende de que la tirada de estilo cabe |
+| `elf_glass` | Elf | coherente pero frágil: técnica pura sin protección, delantero que solo rinde si empieza en el tercio rival (`forward_line`) y regatea rodeado de Brutos rivales (`crowd_control`) | gana a `elf_none`, pero con más riesgo/varianza que las builds anteriores |
+| `elf_none` | Elf | referencia sin perks | línea base |
+| `elf_out_of_zone` | Elf | `forward_line` (exige empezar en el tercio rival) en el portero y `own_third_anchor` (exige empezar en el tercio propio) en el delantero: la zona de inicio de cada uno es la contraria a la que pide su perk, `elseEffects` se dispara siempre, de forma determinista | pierde contra `elf_none` |
+| `elf_tiki_taka` | Elf | técnica y alineación: Finos que se dan solapes de banda (`wing_overlap`) y un mediocentro que sirve al delantero (`spearpoint`, vínculo `ahead`), orquesta de mayoría Fina (`fine_orchestra`) | gana a `elf_none`; cadena de posesión mayor que `orc_violence` |
+| `human_counter` | Human | transición: fuerza cuando va perdiendo (`comeback_spirit`), entradas más seguras cuando va ganando (`game_management`), delantero que dispara bien de lejos y de cerca | gana a `human_none` |
+| `human_none` | Human | referencia sin perks | línea base |
+| `human_random` | Human | mezcla arbitraria sin plan: un perk de proximidad, uno de estado del partido y uno de remontada repartidos sin criterio en un equipo Neutral que no cumple casi ninguna condición de raza | entre 40% y 60% contra `human_none` |
+| `human_scattered` | Human | dos `pivot_duo` en los centrales, pero el `lineup` los separa a las filas 0 y 4 de la misma columna (distancia 4, fuera del radio 2 de la ADR 0021): el vínculo `beside` no existe nunca y el perk cae siempre en su `elseEffects` | pierde contra `human_none` |
+| `human_wall` | Human | muro defensivo: portero cubierto (`sweeper_keeper`+`safety_net`), pareja de centrales vinculada `beside` (`pivot_duo`) que además anclan su tercio (`own_third_anchor`) | gana a `human_none` |
+| `orc_giants` | Orc | tercera identidad orca (ADR 0023, punto 5): el exclusivo `gentle_giant` protege por alineación al delantero en vez de buscar el contacto directo; distinta de `orc_violence` y `orc_mob` | gana a `orc_none`; demuestra que el exclusivo abre una build nueva, no repite las universales |
+| `orc_misplaced` | Orc | perks de acumulación (`poacher_instinct`, career de goles; `silky_veteran`, career de regates) puestos en los dos centrales de un equipo de contacto que casi nunca disparan ni regatean: contadores que no suben, slot muerto | pierde o iguala contra `orc_none` |
+| `orc_mob` | Orc | apuesta por la turba: anula faltas propias del equipo en la turba (`mob_instigator`), árbitro más favorable cuando va perdiendo (`home_ref`), mayoría Bruta que se refuerza entre sí (`pack_mentality`) | gana a `orc_none`, pero diluido (la turba no siempre llega) |
+| `orc_none` | Orc | referencia sin perks | línea base |
+| `orc_violence` | Orc | contacto físico: fuerza bruta en defensa, lesiona a los Finos que tiene cerca (`shadow_marker`), delantero que escala tiro a puerta con los goles de la run (`poacher_instinct`) | gana a `orc_none` |
+| `undead_grind` | Undead | primera build no-muerta: el exclusivo `deathless_march` escala el robo de todo el equipo partido a partido de la run, apoyado por `battle_reader` y un delantero frío que tira bien de lejos y de cerca | gana a `undead_none`, y la ventaja debería crecer con la run |
+| `undead_none` | Undead | referencia sin perks | línea base |
 
-Notas de asignación: todas las combinaciones de `positionOnly`/`tagsRequired`/`tagsForbidden` se
-comprobaron a mano contra `data/schemas/perks.schema.json` y `Sim/Perks/*` — ninguna build (ni las malas)
-tiene una asignación inválida; la incoherencia de `orc_misplaced`, `elf_brawler` y `human_random` viene de
-condiciones que se evalúan a falso (o a su `elseEffects`), y la de `human_scattered` viene del `lineup`
-rompiendo la adyacencia que `shield_wall` necesita, no de un perk mal asignado.
+`data/balance/groups.json`: `coherent` son las 9 builds que deben ganar a la referencia de su raza (incluye las tres nuevas de exclusivo — `orc_giants`, `elf_bulwark`, `undead_grind` — y `dwarf_fortress`); `bad` son las cuatro que deben perder; `random` es `human_random` (control, no debe ganar ni perder claramente); `baselineByRace` añade `Dwarf` y `Undead` a las tres razas de fase 1. `elf_glass` (frágil) queda fuera de `groups.json` a propósito, igual que en el catálogo de fase 1: se mide y se lee a mano, no entra en las puertas automáticas de `coherentBuildsBeatNone`/`badBuildsLoseToNone`.
+
+## Notas de asignación
+
+- Ninguna build (ni las malas) asigna un perk fuera de su `positionOnly` (`sweeper_keeper`, `safety_net`, `clean_sheet_legacy`, `iron_gate` solo en el slot 0, portero) ni fuera de la raza de su `race` (los exclusivos solo aparecen en builds de su propia raza).
+- La incoherencia de las builds malas **no** viene de perks de otra raza (ADR 0023: el juego no los ofrecería), sino de tres mecanismos distintos: colocación que rompe el vínculo que el perk necesita (`human_scattered`), perks de acumulación en un rol que no realiza esa acción (`orc_misplaced`), y zona de inicio contraria a la que pide el perk, con `elseEffects` disparándose siempre de forma determinista (`elf_out_of_zone`). `elf_brawler` añade un cuarto mecanismo: apostar por una etiqueta de estilo minoritaria en la raza.
+- `data/balance/reference.json` no se ha tocado: no referencia perks ni builds, solo raza y calidad media.
+

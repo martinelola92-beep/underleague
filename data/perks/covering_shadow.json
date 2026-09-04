@@ -1,0 +1,41 @@
+{
+  "id": "covering_shadow",
+  "name": {
+    "es": "Sombra de cobertura",
+    "en": "Covering Shadow"
+  },
+  "rarity": "rare",
+  "kind": "conditional",
+  "axis": "alignment",
+  "race": null,
+  "trigger": "MATCH_START",
+  "scope": "actor",
+  "links": [
+    "behind"
+  ],
+  "condition": "",
+  "effects": [
+    {
+      "type": "modifyProbability",
+      "target": "linked",
+      "probability": "intercept",
+      "value": 20,
+      "duration": "match"
+    }
+  ],
+  "elseEffects": [
+    {
+      "type": "modifyProbability",
+      "target": "owner",
+      "probability": "intercept",
+      "value": -15,
+      "duration": "match"
+    }
+  ],
+  "limit": null,
+  "accumulatesAcrossMatches": false,
+  "lethal": false,
+  "positionOnly": null,
+  "tagsRequired": [],
+  "tagsForbidden": []
+}

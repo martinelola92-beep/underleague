@@ -1,0 +1,31 @@
+{
+  "id": "shadow_marker",
+  "name": {
+    "es": "Marcador de sombra",
+    "en": "Shadow Marker"
+  },
+  "rarity": "common",
+  "kind": "filler",
+  "axis": "proximity",
+  "race": null,
+  "trigger": "TACKLE",
+  "scope": "actor",
+  "links": [],
+  "condition": "nearOpponent(actor,'Fine',2)",
+  "effects": [
+    {
+      "type": "modifyProbability",
+      "target": "actor",
+      "probability": "injure",
+      "value": 10,
+      "duration": "play"
+    }
+  ],
+  "elseEffects": [],
+  "limit": null,
+  "accumulatesAcrossMatches": false,
+  "lethal": false,
+  "positionOnly": null,
+  "tagsRequired": [],
+  "tagsForbidden": []
+}

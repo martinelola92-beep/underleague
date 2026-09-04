@@ -1,0 +1,38 @@
+{
+  "id": "battle_reader",
+  "name": {
+    "es": "Lector de la batalla",
+    "en": "Battle Reader"
+  },
+  "rarity": "rare",
+  "kind": "filler",
+  "axis": "accumulation",
+  "race": null,
+  "trigger": "MATCH_START",
+  "scope": "actor",
+  "links": [],
+  "condition": "",
+  "effects": [
+    {
+      "type": "modifyProbability",
+      "target": "owner",
+      "probability": "intercept",
+      "valuePerCounter": 5,
+      "counter": "battleReaderMatches",
+      "maxValue": 25,
+      "duration": "match"
+    },
+    {
+      "type": "addCounter",
+      "counter": "battleReaderMatches",
+      "value": 1
+    }
+  ],
+  "elseEffects": [],
+  "limit": null,
+  "accumulatesAcrossMatches": true,
+  "lethal": false,
+  "positionOnly": null,
+  "tagsRequired": [],
+  "tagsForbidden": []
+}
