@@ -36,6 +36,7 @@ Cuándo escribir un ADR: cambio de librería o stack, frontera entre proyectos, 
 | [0036](0036-que-aporta-el-equipamiento.md) | El objeto sube atributos según su rareza; el perk cambia reglas; el consumible es puntual | Aceptada |
 | [0037](0037-la-economia-como-dificultad.md) | La escasez de oro es la palanca de dificultad; se mide enfrentando tres políticas de compra | Aceptada |
 | [0038](0038-el-precio-como-palanca-de-balance.md) | Lo bueno se encarece en vez de debilitarse; y donde no hay precio, se hace menos frecuente | Aceptada |
+| [0039](0039-legendarios-como-personajes.md) | Tres rarezas generables; los legendarios son personajes únicos que se desbloquean ganando divisiones | Aceptada. **Modifica RF-023 y RF-127** |
 
 El hueco del 0011 corresponde a una decisión sobre el radio de adyacencia que quedó absorbida por la 0021 antes de aceptarse.
 | [0012](0012-buildswindifferently-normalizada.md) | `buildsWinDifferently` normalizada contra la referencia de la raza | **Propuesta: decisión del revisor** |
