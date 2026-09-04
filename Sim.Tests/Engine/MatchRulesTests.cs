@@ -205,9 +205,15 @@ public sealed class MatchRulesTests
         var dump = result.Report.UtilityDump;
         Assert.NotNull(dump);
         Assert.Equal(4, dump!.PlayerId);
-        Assert.Equal(100, dump.Tick);
+
+        // El jugador solo decide cada tuning.decisionIntervalTicks ticks, desplazado por su id, y solo si
+        // su estado lo permite: lo que el motor garantiza (y lo que documenta MatchEngine.Decide) es la
+        // PRIMERA decisión de ese jugador en un tick >= el pedido, no exactamente ese tick. Exigir la
+        // igualdad convertía este test en un test del reparto de estados de una semilla concreta.
+        Assert.True(dump.Tick >= 100, $"el volcado debía capturarse en un tick >= 100, fue {dump.Tick}");
+        Assert.True(StateMachine.IsDecisionState(dump.State));
         Assert.NotEmpty(dump.Rows);
-        Assert.Contains(dump.Rows, row => row.Action == dump.Chosen && !row.LeashFiltered);
+        Assert.Contains(dump.Rows, row => row.Action == dump.Chosen && !row.Rejected);
     }
 
     [Fact]

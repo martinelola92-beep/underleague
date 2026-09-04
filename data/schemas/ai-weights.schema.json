@@ -92,7 +92,7 @@
   "$defs": {
     "playerAction": {
       "type": "string",
-      "enum": ["ChaseBall", "MarkOpponent", "OfferSupport", "CoverSpace", "Pass", "Dribble", "Shoot", "Tackle", "Retreat"]
+      "enum": ["ChaseBall", "MarkOpponent", "OfferSupport", "CoverSpace", "Pass", "Dribble", "Shoot", "Tackle", "Retreat", "FindSpace", "PressCarrier"]
     },
     "actionWeights": {
       "type": "object",
@@ -106,9 +106,11 @@
         "Dribble": { "type": "integer", "minimum": 0, "maximum": 1000 },
         "Shoot": { "type": "integer", "minimum": 0, "maximum": 1000 },
         "Tackle": { "type": "integer", "minimum": 0, "maximum": 1000 },
-        "Retreat": { "type": "integer", "minimum": 0, "maximum": 1000 }
+        "Retreat": { "type": "integer", "minimum": 0, "maximum": 1000 },
+        "FindSpace": { "type": "integer", "minimum": 0, "maximum": 1000 },
+        "PressCarrier": { "type": "integer", "minimum": 0, "maximum": 1000 }
       },
-      "required": ["ChaseBall", "MarkOpponent", "OfferSupport", "CoverSpace", "Pass", "Dribble", "Shoot", "Tackle", "Retreat"],
+      "required": ["ChaseBall", "MarkOpponent", "OfferSupport", "CoverSpace", "Pass", "Dribble", "Shoot", "Tackle", "Retreat", "FindSpace", "PressCarrier"],
       "additionalProperties": false
     },
     "actionPercent": {
@@ -123,9 +125,11 @@
         "Dribble": { "type": "integer", "minimum": 0, "maximum": 1000 },
         "Shoot": { "type": "integer", "minimum": 0, "maximum": 1000 },
         "Tackle": { "type": "integer", "minimum": 0, "maximum": 1000 },
-        "Retreat": { "type": "integer", "minimum": 0, "maximum": 1000 }
+        "Retreat": { "type": "integer", "minimum": 0, "maximum": 1000 },
+        "FindSpace": { "type": "integer", "minimum": 0, "maximum": 1000 },
+        "PressCarrier": { "type": "integer", "minimum": 0, "maximum": 1000 }
       },
-      "required": ["ChaseBall", "MarkOpponent", "OfferSupport", "CoverSpace", "Pass", "Dribble", "Shoot", "Tackle", "Retreat"],
+      "required": ["ChaseBall", "MarkOpponent", "OfferSupport", "CoverSpace", "Pass", "Dribble", "Shoot", "Tackle", "Retreat", "FindSpace", "PressCarrier"],
       "additionalProperties": false
     },
     "shiftEntry": {

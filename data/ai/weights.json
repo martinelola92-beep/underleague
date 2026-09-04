@@ -1,16 +1,17 @@
 {
-  "_doc": "Pesos base de utilidad por posición (RT-093) y multiplicadores por estado táctico. Escala entera 0-1000. Los rasgos aplican sus multiplicadores desde data/traits/traits.json (RT-094).",
+  "_doc": "Pesos base de utilidad por posición (RT-093) y multiplicadores por estado táctico. Escala entera 0-1000. Los rasgos aplican sus multiplicadores desde data/traits/traits.json (RT-094). FindSpace y PressCarrier son las acciones sin balón de la ADR 0022; el contraste de la tabla tactical se amplía (ADR 0022, decisión 1) para que un mismo jugador se comporte de forma visiblemente distinta atacando y defendiendo. Valores de partida a calibrar en el reajuste.",
   "base": {
-    "Goalkeeper":  { "ChaseBall": 300, "MarkOpponent": 0,   "OfferSupport": 0,   "CoverSpace": 500, "Pass": 600, "Dribble": 50,  "Shoot": 0,   "Tackle": 200, "Retreat": 400 },
-    "Defender":    { "ChaseBall": 380, "MarkOpponent": 320, "OfferSupport": 150, "CoverSpace": 420, "Pass": 420, "Dribble": 180, "Shoot": 120, "Tackle": 210, "Retreat": 320 },
-    "Midfielder":  { "ChaseBall": 420, "MarkOpponent": 240, "OfferSupport": 340, "CoverSpace": 260, "Pass": 460, "Dribble": 300, "Shoot": 260, "Tackle": 150, "Retreat": 220 },
-    "Forward":     { "ChaseBall": 400, "MarkOpponent": 120, "OfferSupport": 420, "CoverSpace": 120, "Pass": 340, "Dribble": 360, "Shoot": 520, "Tackle": 90,  "Retreat": 140 }
+    "Goalkeeper":  { "ChaseBall": 300, "MarkOpponent": 0,   "OfferSupport": 0,   "CoverSpace": 500, "Pass": 600, "Dribble": 50,  "Shoot": 0,   "Tackle": 200, "Retreat": 400, "FindSpace": 0,   "PressCarrier": 0 },
+    "Defender":    { "ChaseBall": 380, "MarkOpponent": 320, "OfferSupport": 80,  "CoverSpace": 420, "Pass": 420, "Dribble": 180, "Shoot": 120, "Tackle": 210, "Retreat": 320, "FindSpace": 200, "PressCarrier": 150 },
+    "Midfielder":  { "ChaseBall": 420, "MarkOpponent": 240, "OfferSupport": 140, "CoverSpace": 260, "Pass": 460, "Dribble": 300, "Shoot": 260, "Tackle": 150, "Retreat": 220, "FindSpace": 380, "PressCarrier": 180 },
+    "Forward":     { "ChaseBall": 400, "MarkOpponent": 120, "OfferSupport": 160, "CoverSpace": 120, "Pass": 340, "Dribble": 360, "Shoot": 520, "Tackle": 90,  "Retreat": 140, "FindSpace": 460, "PressCarrier": 140 }
   },
   "tactical": {
-    "InPossession":        { "ChaseBall": 60,  "MarkOpponent": 40,  "OfferSupport": 140, "CoverSpace": 80,  "Pass": 100, "Dribble": 100, "Shoot": 100, "Tackle": 30,  "Retreat": 70 },
-    "OutOfPossession":     { "ChaseBall": 120, "MarkOpponent": 130, "OfferSupport": 40,  "CoverSpace": 130, "Pass": 100, "Dribble": 100, "Shoot": 100, "Tackle": 130, "Retreat": 110 },
-    "OffensiveTransition": { "ChaseBall": 100, "MarkOpponent": 50,  "OfferSupport": 150, "CoverSpace": 70,  "Pass": 110, "Dribble": 120, "Shoot": 110, "Tackle": 40,  "Retreat": 50 },
-    "DefensiveTransition": { "ChaseBall": 130, "MarkOpponent": 110, "OfferSupport": 40,  "CoverSpace": 110, "Pass": 100, "Dribble": 100, "Shoot": 100, "Tackle": 120, "Retreat": 140 }
+    "_doc": "Contraste ampliado (ADR 0022): con balón manda buscar espacio, sin balón mandan marcar, presionar y cubrir. Los estados de transición amortiguan el salto para que el bloque no se mueva de golpe.",
+    "InPossession":        { "ChaseBall": 60,  "MarkOpponent": 30,  "OfferSupport": 150, "CoverSpace": 60,  "Pass": 100, "Dribble": 100, "Shoot": 100, "Tackle": 25,  "Retreat": 60,  "FindSpace": 210, "PressCarrier": 15 },
+    "OutOfPossession":     { "ChaseBall": 125, "MarkOpponent": 150, "OfferSupport": 25,  "CoverSpace": 140, "Pass": 100, "Dribble": 100, "Shoot": 100, "Tackle": 165, "Retreat": 115, "FindSpace": 15,  "PressCarrier": 165 },
+    "OffensiveTransition": { "ChaseBall": 105, "MarkOpponent": 35,  "OfferSupport": 150, "CoverSpace": 60,  "Pass": 110, "Dribble": 120, "Shoot": 110, "Tackle": 30,  "Retreat": 50,  "FindSpace": 190, "PressCarrier": 25 },
+    "DefensiveTransition": { "ChaseBall": 135, "MarkOpponent": 130, "OfferSupport": 25,  "CoverSpace": 125, "Pass": 100, "Dribble": 100, "Shoot": 100, "Tackle": 150, "Retreat": 140, "FindSpace": 20,  "PressCarrier": 145 }
   },
   "context": {
     "_doc": "Términos de contexto enteros. Distancias en casillas.",

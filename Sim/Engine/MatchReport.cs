@@ -34,8 +34,31 @@ public sealed record PlayerMatchStats(
     bool Injured,
     int TicksOnPitch);
 
-/// <summary>Una fila de la tabla de utilidad de una acción evaluada (RT-098).</summary>
-public sealed record UtilityRow(PlayerAction Action, int Score, int Base, int TacticalMultiplier, int TraitMultiplier, int Context, bool LeashFiltered);
+/// <summary>
+/// Una fila de la tabla de utilidad de una acción evaluada (RT-098). <c>Rejected</c> indica que la acción
+/// quedó fuera de la elección (descartada por su propio criterio o por el límite duro exterior);
+/// <c>OutsideZone</c> y <c>OutsideCentiCells</c> son la sustitución de la antigua bandera
+/// <c>LeashFiltered</c> (ADR 0028, §2.2): con la correa blanda, salir de la zona ya no descarta, así que
+/// lo que hay que poder leer en el volcado es <b>cuánto</b> se sale la acción, en centésimas de casilla.
+/// </summary>
+public sealed record UtilityRow(
+    PlayerAction Action,
+    int Score,
+    int Base,
+    int TacticalMultiplier,
+    int TraitMultiplier,
+    int Context,
+    bool Rejected,
+    bool OutsideZone,
+    int OutsideCentiCells)
+{
+    /// <summary>
+    /// Alias de <see cref="Rejected"/> conservado solo porque <c>Balance/Program.cs</c> imprime esta
+    /// columna y queda fuera de las fronteras del paquete R. El paquete U sustituye esa columna por
+    /// <see cref="Rejected"/> más <see cref="OutsideCentiCells"/> y esta propiedad desaparece.
+    /// </summary>
+    public bool LeashFiltered => Rejected;
+}
 
 /// <summary>Volcado de la tabla de utilidad de un jugador en un tick concreto (SimConfig.DumpUtility, RT-098).</summary>
 public sealed record UtilityDump(int PlayerId, int Tick, PlayerState State, IReadOnlyList<UtilityRow> Rows, PlayerAction Chosen);

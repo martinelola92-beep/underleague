@@ -36,7 +36,12 @@ public enum PlayerState
     SentOff,
 }
 
-/// <summary>Acción que un jugador puede decidir ejecutar.</summary>
+/// <summary>
+/// Acción que un jugador puede decidir ejecutar. <see cref="FindSpace"/> y <see cref="PressCarrier"/>
+/// son las dos acciones sin balón de la ADR 0022; se añaden <b>al final</b> del enum a propósito: el
+/// desempate de utilidad es por orden de declaración (RT-097), así que colocarlas al final deja intactas
+/// las prioridades relativas de las siete acciones anteriores.
+/// </summary>
 public enum PlayerAction
 {
     ChaseBall,
@@ -48,4 +53,10 @@ public enum PlayerAction
     Shoot,
     Tackle,
     Retreat,
+
+    /// <summary>Buscar el mejor hueco para recibir (ADR 0022, §2.3): sustituye al punto fijo de OfferSupport.</summary>
+    FindSpace,
+
+    /// <summary>Presionar al poseedor rival, o al portero rival en su salida (ADR 0022, §2.3).</summary>
+    PressCarrier,
 }

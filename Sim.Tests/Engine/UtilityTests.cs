@@ -5,8 +5,9 @@ using Underleague.Sim.Model;
 namespace Underleague.Sim.Tests.Engine;
 
 /// <summary>
-/// IA de utilidad (§3.5, RT-095, RT-097): desempate por el orden del enum, filtro de correa y
-/// acumulación de multiplicadores de rasgo (RT-094).
+/// IA de utilidad (§3.5, RT-095, RT-097): desempate por el orden del enum, límite duro exterior de la
+/// zona de acción y acumulación de multiplicadores de rasgo (RT-094). La zona blanda tiene sus propios
+/// tests en <see cref="ActionZoneTests"/>.
 /// </summary>
 public sealed class UtilityTests
 {
@@ -35,8 +36,12 @@ public sealed class UtilityTests
         Assert.Equal(100, Row(rows, PlayerAction.CoverSpace).Score);
     }
 
+    /// <summary>
+    /// El límite duro exterior (§2.2) es la única forma de descarte espacial que queda: un jugador ya
+    /// pegado a él, con el objetivo todavía más lejos, no gana nada yendo y la acción se descarta.
+    /// </summary>
     [Fact]
-    public void LeashFiltersAnActionThatWouldRequireLeavingTheRadius()
+    public void TheOuterLimitDiscardsAnActionThatCannotAdvanceAnyFurther()
     {
         var weights = Weights(builder =>
         {
@@ -44,23 +49,23 @@ public sealed class UtilityTests
             builder[(int)Position.Defender, (int)PlayerAction.Retreat] = 100;
         });
 
-        // Correa de 1 casilla y jugador ya en el borde de la correa, en la dirección del balón.
-        var player = Player(0, Position.Defender, new Cell(2, 2), new Attributes(50, 50, 50, 1, 1));
-        Assert.Equal(1f, player.LeashCells);
-        player.Position = new Vec2(player.HomeCenter.X + 1f, player.HomeCenter.Y);
+        var player = Player(0, Position.Defender, new Cell(2, 2), new Attributes(50, 50, 50, 50, 1));
+        float limit = ActionZone.Cells(player.OuterZone.ForwardMilli);
+        player.Position = new Vec2(player.HomeCenter.X + limit, player.HomeCenter.Y);
 
         var context = Context(weights, player);
-        context.Ball.Position = new Vec2(player.HomeCenter.X + 9f, player.HomeCenter.Y);
+        context.Ball.Position = new Vec2(player.HomeCenter.X + limit + 4f, player.HomeCenter.Y);
 
         var rows = new List<UtilityRow>();
         var chosen = Utility.Choose(context, player, rows);
 
-        Assert.True(Row(rows, PlayerAction.ChaseBall).LeashFiltered);
+        Assert.True(Row(rows, PlayerAction.ChaseBall).Rejected);
         Assert.NotEqual(PlayerAction.ChaseBall, chosen);
     }
 
+    /// <summary>Dentro del límite duro la acción no se descarta aunque salga de la zona blanda.</summary>
     [Fact]
-    public void LeashDoesNotFilterAnActionThatStillAdvances()
+    public void AnActionThatStillAdvancesIsNotDiscarded()
     {
         var weights = Weights(builder =>
         {
@@ -68,14 +73,14 @@ public sealed class UtilityTests
             builder[(int)Position.Defender, (int)PlayerAction.Retreat] = 100;
         });
 
-        var player = Player(0, Position.Defender, new Cell(2, 2), new Attributes(50, 50, 50, 1, 1));
+        var player = Player(0, Position.Defender, new Cell(2, 2), new Attributes(50, 50, 50, 50, 1));
         var context = Context(weights, player);
         context.Ball.Position = new Vec2(player.HomeCenter.X + 9f, player.HomeCenter.Y);
 
         var rows = new List<UtilityRow>();
         var chosen = Utility.Choose(context, player, rows);
 
-        Assert.False(Row(rows, PlayerAction.ChaseBall).LeashFiltered);
+        Assert.False(Row(rows, PlayerAction.ChaseBall).Rejected);
         Assert.Equal(PlayerAction.ChaseBall, chosen);
     }
 
@@ -162,7 +167,7 @@ public sealed class UtilityTests
         player.TackleCooldown = 1;
         rows.Clear();
         Assert.NotEqual(PlayerAction.Tackle, Utility.Choose(context, player, rows));
-        Assert.True(Row(rows, PlayerAction.Tackle).LeashFiltered);
+        Assert.True(Row(rows, PlayerAction.Tackle).Rejected);
     }
 
     private static UtilityRow Row(List<UtilityRow> rows, PlayerAction action)
@@ -199,7 +204,12 @@ public sealed class UtilityTests
             Position = players[0].Position,
         };
 
-        var context = new UtilityContext(players, ball, weights);
+        for (int i = 0; i < players.Length; i++)
+        {
+            players[i].Index = i;
+        }
+
+        var context = new UtilityContext(players, ball, weights, Catalog.Tuning.ActionZone);
         context.TacticalStates[0] = TacticalState.InPossession;
         context.TacticalStates[1] = TacticalState.InPossession;
         context.NearestToBall[0] = players[0];

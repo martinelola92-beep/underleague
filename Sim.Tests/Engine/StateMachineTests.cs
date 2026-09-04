@@ -8,6 +8,7 @@ public class StateMachineTests
     {
         PlayerAction.ChaseBall, PlayerAction.MarkOpponent, PlayerAction.OfferSupport,
         PlayerAction.CoverSpace, PlayerAction.Tackle, PlayerAction.Retreat,
+        PlayerAction.FindSpace, PlayerAction.PressCarrier,
     };
 
     private static readonly PlayerAction[] WithBallActions =

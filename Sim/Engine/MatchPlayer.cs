@@ -10,20 +10,36 @@ namespace Underleague.Sim.Engine;
 /// </summary>
 internal sealed class MatchPlayer
 {
-    private const int ActionCount = (int)PlayerAction.Retreat + 1;
+    private const int ActionCount = (int)PlayerAction.PressCarrier + 1;
 
     /// <summary>Número de atributos de <see cref="AttributeKind"/>.</summary>
     private const int AttributeCount = (int)AttributeKind.Leash + 1;
+
+    /// <summary>
+    /// Id del perk de habilidad racial que concede inmunidad al empuje (Raíces, enanos; ADR 0020 §2.1.5).
+    /// El motor no pregunta por la raza: pregunta por la habilidad, que es un dato de
+    /// <c>data/races/*.json</c>. Lo único que hace con ella es sembrar <see cref="Immovable"/>, que a
+    /// partir de ahí es una propiedad del jugador que cualquier efecto de perk puede encender o apagar.
+    /// </summary>
+    private const string ImmovableAbility = "roots";
 
     private readonly int[] _actionMultipliers = new int[ActionCount];
     private readonly int[] _baseAttributes = new int[AttributeCount];
     private readonly int[] _attributeDeltas = new int[AttributeCount];
     private readonly int[] _effectiveAttributes = new int[AttributeCount];
     private readonly int _traitMask;
-    private readonly int _leashMinCells;
-    private readonly int _leashCellsPer99;
+    private readonly int _shapeForward;
+    private readonly int _shapeBack;
+    private readonly int _shapeSides;
+    private readonly int _leashScaleAt1;
+    private readonly int _leashScaleAt99;
+    private readonly int _outerLimitMultiplier;
+    private readonly int _massStrengthWeight;
+    private readonly int _massRadiusWeight;
     private int _leashCellDelta;
-    private float _leashCells;
+    private ActionZone _zone;
+    private ActionZone _outerZone;
+    private int _mass;
 
     public MatchPlayer(PlayerDefinition definition, int team, Cell homeCell, Catalog catalog)
     {
@@ -33,6 +49,35 @@ internal sealed class MatchPlayer
         HomeCenter = Pitch.CellCenter(homeCell);
         EffectiveHome = HomeCenter;
         Position = HomeCenter;
+
+        // Cuerpo y disciplina salen de la raza (ADR 0020, ADR 0028). bodyRadius viene en centésimas de
+        // casilla; se guarda en casillas porque solo se usa en geometría, junto a las posiciones.
+        var race = catalog.Race(definition.Race);
+        BodyRadiusCentiCells = race.BodyRadius;
+        BodyRadius = race.BodyRadius / 100f;
+        Discipline = race.Discipline;
+        Immovable = string.Equals(race.Ability, ImmovableAbility, StringComparison.Ordinal);
+
+        var zone = catalog.Tuning.ActionZone;
+        var shape = definition.Position switch
+        {
+            Model.Position.Goalkeeper => zone.Shape.Goalkeeper,
+            Model.Position.Defender => zone.Shape.Defender,
+            Model.Position.Midfielder => zone.Shape.Midfielder,
+            Model.Position.Forward => zone.Shape.Forward,
+            _ => throw new ArgumentOutOfRangeException(nameof(definition)),
+        };
+
+        _shapeForward = shape.Forward;
+        _shapeBack = shape.Back;
+        _shapeSides = shape.Sides;
+        _leashScaleAt1 = zone.ScaleFromLeashPercent.At1;
+        _leashScaleAt99 = zone.ScaleFromLeashPercent.At99;
+        _outerLimitMultiplier = zone.OuterLimitMultiplier;
+
+        var bodies = catalog.Tuning.Bodies;
+        _massStrengthWeight = bodies.MassStrengthWeight;
+        _massRadiusWeight = bodies.MassRadiusWeight;
 
         var attributes = definition.Attributes;
         for (int i = 0; i < AttributeCount; i++)
@@ -72,12 +117,6 @@ internal sealed class MatchPlayer
             LeashBonus += trait.LeashBonus;
         }
 
-        // tuning.leash desapareció como sección propia (fase1b-diseno.md §1.3, ADR 0028: la zona de
-        // acción la sustituye); el paquete R consumirá tuning.actionZone en su lugar. Ajuste mínimo del
-        // paquete Q para mantener la compilación sin cambiar comportamiento mientras tanto: mismos
-        // valores que tenía data/sim/tuning.json.leash (minCells 1, cellsPer99 8).
-        _leashMinCells = 1;
-        _leashCellsPer99 = 8;
         Recalculate();
     }
 
@@ -115,11 +154,60 @@ internal sealed class MatchPlayer
     public Vec2 EffectiveHome { get; set; }
 
     /// <summary>
-    /// Radio de correa en casillas (§2.6), incluido el bono de rasgo, el atributo efectivo de correa y
-    /// los modificadores de <c>modifyLeash</c> (fase 1, §2). Mínimo 1 casilla. Cacheado: solo se
-    /// recalcula cuando un modificador entra o expira.
+    /// Zona de acción con forma del jugador (ADR 0028, §2.2): la región <b>blanda</b>, la que penaliza
+    /// salir. Cacheada: solo se recalcula cuando cambia el atributo de correa o entra o expira un
+    /// modificador (la casilla-hogar efectiva se pasa aparte, porque cambia cada tick con el bloque).
     /// </summary>
-    public float LeashCells => _leashCells;
+    public ActionZone Zone => _zone;
+
+    /// <summary>
+    /// Límite duro exterior (§2.2): la misma zona multiplicada por <c>outerLimitMultiplier</c>. Fuera de
+    /// aquí la acción se descarta y el movimiento se acota; es la red de seguridad que impide que un
+    /// defensa se instale en el área rival el resto del partido.
+    /// </summary>
+    public ActionZone OuterZone => _outerZone;
+
+    /// <summary>
+    /// Extensión lateral de la zona en casillas. Es la única dirección finita en las cuatro posiciones
+    /// de la tabla de formas, así que sirve de escalar representativo de "cuánta correa tiene este
+    /// jugador" para el efecto <c>modifyLeash</c> y para los tests que lo comprueban. Conserva el nombre
+    /// que tenía el radio circular de la fase 0 porque es la magnitud que ese efecto sigue moviendo.
+    /// </summary>
+    public float LeashCells => ActionZone.Cells(_zone.SidesMilli);
+
+    /// <summary>Radio del cuerpo en casillas (ADR 0020, RT-016); dato de raza, constante durante el partido.</summary>
+    public float BodyRadius { get; }
+
+    /// <summary>El mismo radio en centésimas de casilla, tal cual viene del dato, para la masa entera.</summary>
+    public int BodyRadiusCentiCells { get; }
+
+    /// <summary>
+    /// Masa entera del jugador (§2.1.2): <c>fuerza × massStrengthWeight/100 + bodyRadius ×
+    /// massRadiusWeight/100</c>. El reparto del empuje es inverso a la masa, así que un orco abre hueco y
+    /// un elfo sale despedido. Se recalcula con la fuerza efectiva, no con la base: un perk de fuerza
+    /// también hace al jugador más difícil de mover.
+    /// </summary>
+    public int Mass => _mass;
+
+    /// <summary>
+    /// Disciplina 0-100 (ADR 0028): cuánto le penaliza la utilidad salirse de su zona. Sale de la raza,
+    /// pero es una propiedad del jugador, no una consulta a la raza: los rasgos y los perks la moverán.
+    /// </summary>
+    public int Discipline { get; set; }
+
+    /// <summary>
+    /// Inmunidad al empuje (§2.1.5): el jugador recibe desplazamiento 0 en la separación de cuerpos y en
+    /// el empuje de una entrada. Se siembra desde la habilidad racial <c>roots</c> (Raíces, enanos), pero
+    /// el motor solo lee esta propiedad: un efecto de perk puede encenderla o apagarla sin que haya un
+    /// <c>if</c> por raza en medio de la separación.
+    /// </summary>
+    public bool Immovable { get; set; }
+
+    /// <summary>
+    /// Rival asignado por el marcaje estable (ADR 0022, §2.3). Lo fija <see cref="Marking"/> una vez por
+    /// posesión y se mantiene mientras siga siendo válido; null si todavía no hay asignación.
+    /// </summary>
+    public MatchPlayer? MarkTarget { get; set; }
 
     /// <summary>Fuerza efectiva: base de nivel más modificadores activos, acotada a 1..99 (§3).</summary>
     public int Strength => _effectiveAttributes[(int)AttributeKind.Strength];
@@ -264,7 +352,15 @@ internal sealed class MatchPlayer
         Recalculate();
     }
 
-    /// <summary>Recalcula los cinco atributos efectivos y el radio de correa a partir de base + deltas.</summary>
+    /// <summary>
+    /// Recalcula los cinco atributos efectivos, la masa y la zona de acción a partir de base + deltas.
+    ///
+    /// <para>Zona (§2.2): la <b>forma</b> la da la posición (<c>tuning.actionZone.shape</c>) y el
+    /// <b>tamaño</b> lo escala el atributo de correa, con el porcentaje interpolado linealmente entre
+    /// <c>at1</c> y <c>at99</c>. El bono de rasgo y los modificadores <c>modifyLeash</c> se suman después,
+    /// en casillas enteras, a cada dirección finita: son "más correa", no "otra forma". Una dirección sin
+    /// límite (-1) lo sigue siendo pase lo que pase.</para>
+    /// </summary>
     private void Recalculate()
     {
         for (int i = 0; i < AttributeCount; i++)
@@ -272,11 +368,34 @@ internal sealed class MatchPlayer
             _effectiveAttributes[i] = Math.Clamp(_baseAttributes[i] + _attributeDeltas[i], 1, 99);
         }
 
-        int cells = _leashMinCells
-            + (_effectiveAttributes[(int)AttributeKind.Leash] * _leashCellsPer99 / 99)
-            + LeashBonus
-            + _leashCellDelta;
-        _leashCells = cells < 1 ? 1 : cells;
+        _mass = ((_effectiveAttributes[(int)AttributeKind.Strength] * _massStrengthWeight / 100)
+            + (BodyRadiusCentiCells * _massRadiusWeight / 100));
+        if (_mass < 1)
+        {
+            _mass = 1;
+        }
+
+        int leash = _effectiveAttributes[(int)AttributeKind.Leash];
+        int percent = _leashScaleAt1 + ((_leashScaleAt99 - _leashScaleAt1) * (leash - 1) / 98);
+        int extraMilli = (LeashBonus + _leashCellDelta) * 1000;
+
+        _zone = new ActionZone(
+            ExtentMilli(_shapeForward, percent, extraMilli),
+            ExtentMilli(_shapeBack, percent, extraMilli),
+            ExtentMilli(_shapeSides, percent, extraMilli));
+        _outerZone = _zone.Scaled(_outerLimitMultiplier);
+    }
+
+    /// <summary>Extensión en milicasillas de una dirección de la forma; -1 (sin límite) se propaga tal cual.</summary>
+    private static int ExtentMilli(int shapeCells, int percent, int extraMilli)
+    {
+        if (shapeCells == ActionZone.Unlimited)
+        {
+            return ActionZone.Unlimited;
+        }
+
+        int milli = (shapeCells * 1000 * percent / 100) + extraMilli;
+        return milli < 0 ? 0 : milli;
     }
 
     /// <summary>True si el jugador tiene el rasgo indicado (consulta sin asignar, RT-051).</summary>

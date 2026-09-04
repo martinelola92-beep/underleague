@@ -46,6 +46,12 @@ internal sealed class MatchEngine : IPerkWorld
     private readonly int _regulationTicks;
     private readonly EffectEngine? _effects;
 
+    /// <summary>Separación blanda entre cuerpos del tick (ADR 0020); guarda su propio buffer de empuje.</summary>
+    private readonly BodySeparation _bodies;
+
+    /// <summary>Buffer de trabajo del marcaje estable; se reutiliza para no asignar por tick (RT-051).</summary>
+    private readonly bool[] _markScratch;
+
     private Pcg32 _rng;
     private int _bias;
     private MatchPhase _phase = MatchPhase.Kickoff;
@@ -65,6 +71,9 @@ internal sealed class MatchEngine : IPerkWorld
     private int _restartTicksLeft;
     private Vec2 _restartPoint;
     private MatchPlayer? _penaltyTaker;
+
+    /// <summary>True cuando hay que rehacer el emparejamiento de marcaje (cambio de posesión, §2.3).</summary>
+    private bool _markingDirty = true;
 
     public MatchEngine(MatchSetup setup, ulong seed, Catalog catalog, SimConfig config)
     {
@@ -130,7 +139,9 @@ internal sealed class MatchEngine : IPerkWorld
         _effects = anyPerks ? new EffectEngine(this, _players, _report, config.MaxDepth) : null;
 
         _ball.InterceptAttempted = new bool[_players.Length];
-        _context = new UtilityContext(_players, _ball, catalog.Ai);
+        _bodies = new BodySeparation(_tuning.Bodies, _players.Length);
+        _markScratch = new bool[_players.Length];
+        _context = new UtilityContext(_players, _ball, catalog.Ai, _tuning.ActionZone);
         _context.TacticalStates[0] = TacticalState.OutOfPossession;
         _context.TacticalStates[1] = TacticalState.OutOfPossession;
     }
@@ -167,6 +178,7 @@ internal sealed class MatchEngine : IPerkWorld
     public MatchResult Run()
     {
         ResetPositions();
+        Marking.Assign(_players, _markScratch, force: true);
         _ball.Park(new Vec2(Pitch.Columns / 2f, PitchConstants.CenterRow));
         Emit(EventType.MatchStart, "kickoff");
         ScheduleKickoff(0);
@@ -324,6 +336,13 @@ internal sealed class MatchEngine : IPerkWorld
         UpdateBlockShift();
         UpdateContextCaches();
 
+        // El emparejamiento de marcaje se rehace solo al cambiar la posesión (§2.3); el resto de ticks
+        // esta llamada únicamente rellena los huecos que deje un jugador que ha salido del campo.
+        Marking.Assign(_players, _markScratch, _markingDirty);
+        _markingDirty = false;
+
+        _bodies.BeginTick();
+
         if (_restartTicksLeft > 0)
         {
             // Con el balón muerto, el enfriamiento de entrada y de duelo de regate siguen bajando tick a
@@ -345,6 +364,7 @@ internal sealed class MatchEngine : IPerkWorld
                 }
             }
 
+            _bodies.Resolve(_players);
             _restartTicksLeft--;
             if (_restartTicksLeft == 0)
             {
@@ -357,6 +377,10 @@ internal sealed class MatchEngine : IPerkWorld
             {
                 UpdatePlayer(PlayerInTurnOrder(i));
             }
+
+            // Separación de cuerpos al final del movimiento y antes de tocar el balón (§2.1): así el
+            // balón, que sigue al poseedor, ve ya las posiciones definitivas del tick.
+            _bodies.Resolve(_players);
 
             // Una falta resuelta dentro de este bucle puede haber pedido un penalti (SchedulePenalty ->
             // BeginRestart), que aparca el balón en el punto de penalti y deja _restartTicksLeft > 0 a
@@ -407,6 +431,7 @@ internal sealed class MatchEngine : IPerkWorld
 
         if (holding >= 0 && holding != _possessingTeam)
         {
+            _markingDirty = true;
             if (_possessingTeam >= 0)
             {
                 _transitionTicksLeft = _tuning.TransitionTicks;
@@ -648,7 +673,7 @@ internal sealed class MatchEngine : IPerkWorld
 
     private void Move(MatchPlayer player, bool dribbling)
     {
-        Vec2 target = Utility.ClampToLeash(player, player.TargetPoint);
+        Vec2 target = Utility.ClampToZone(player, player.TargetPoint);
         if (!player.IsOutfield)
         {
             target = Utility.ClampToArea(target, player.Team);
@@ -1414,6 +1439,7 @@ internal sealed class MatchEngine : IPerkWorld
         // Sin balón y sin falta el que entra se retiró a tiempo: no hay contacto y no se tira lesión.
         if (carrierHasBall || isFoul)
         {
+            _bodies.AddTacklePush(tackler, carrier);
             ResolveInjury(tackler, carrier, isFoul);
         }
     }

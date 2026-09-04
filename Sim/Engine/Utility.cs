@@ -9,11 +9,12 @@ namespace Underleague.Sim.Engine;
 /// </summary>
 internal sealed class UtilityContext
 {
-    public UtilityContext(MatchPlayer[] players, Ball ball, AiWeights weights)
+    public UtilityContext(MatchPlayer[] players, Ball ball, AiWeights weights, ActionZoneTuning zone)
     {
         Players = players;
         Ball = ball;
         Weights = weights;
+        Zone = zone;
     }
 
     /// <summary>Todos los jugadores del partido, ordenados por id ascendente (RT-041, RT-097).</summary>
@@ -24,6 +25,9 @@ internal sealed class UtilityContext
 
     /// <summary>Pesos de IA cargados de data/ai/weights.json (RT-096).</summary>
     public AiWeights Weights { get; }
+
+    /// <summary>Ajustes de la zona de acción, de data/sim/tuning.json (ADR 0028, §2.2).</summary>
+    public ActionZoneTuning Zone { get; }
 
     /// <summary>Estado táctico por equipo (§3.4).</summary>
     public TacticalState[] TacticalStates { get; } = new TacticalState[2];
@@ -45,8 +49,12 @@ internal static class Utility
     /// <summary>Margen para que un punto acotado al área quede estrictamente dentro de ella.</summary>
     private const float AreaMargin = 0.05f;
 
-    /// <summary>Distancia mínima que debe recorrer una acción de movimiento para no ser filtrada (§3.5).</summary>
-    private const float LeashFilterMinAdvance = 0.25f;
+    /// <summary>
+    /// Distancia mínima que debe recorrer una acción de movimiento acotada al límite duro exterior para
+    /// no ser descartada (§2.2). Es la única forma de descarte que deja la zona de acción: la zona
+    /// blanda penaliza, el límite duro descarta.
+    /// </summary>
+    private const float OuterLimitMinAdvance = 0.25f;
 
     /// <summary>Distancia máxima de pase para un jugador de campo (§3.5).</summary>
     private const float PassMaxCells = 7.0f;
@@ -57,13 +65,74 @@ internal static class Utility
     /// <summary>Distancia por delante en la que un rival estorba al regate (§3.5).</summary>
     private const float DribbleAheadRadius = 2.0f;
 
+    /// <summary>Radio en el que un rival tapa la línea de pase entre el poseedor y un hueco (§2.3).</summary>
+    private const float PassLaneRadius = 0.6f;
+
+    /// <summary>
+    /// Coeficientes de los términos de contexto de <c>FindSpace</c> y <c>PressCarrier</c> (§2.3).
+    ///
+    /// <para>Deberían vivir en <c>data/ai/weights.json.context</c> como el resto de términos, pero añadir
+    /// claves ahí exige tocar <c>AiContext</c> y <c>DataLoader</c> (<c>Sim/Data</c>), fuera de las
+    /// fronteras del paquete R. Se dejan aquí como valores de partida, con el nombre exacto que tendrán
+    /// como clave, para que el paquete que abra <c>Sim/Data</c> los mueva de un tirón y el reajuste
+    /// (paquete U) los calibre desde datos.</para>
+    /// </summary>
+    private const int FindSpaceOpponentDistanceBonusPerCell = 70;
+
+    /// <inheritdoc cref="FindSpaceOpponentDistanceBonusPerCell"/>
+    private const int FindSpaceAdvanceBonusPerCell = 60;
+
+    /// <inheritdoc cref="FindSpaceOpponentDistanceBonusPerCell"/>
+    private const int FindSpaceOpenLaneBonus = 200;
+
+    /// <summary>
+    /// <inheritdoc cref="FindSpaceOpponentDistanceBonusPerCell" path="/summary/node()"/>
+    ///
+    /// <para>La escala de los tres términos de presión está fijada por una restricción concreta y medida:
+    /// dentro del alcance de una entrada, <c>PressCarrier</c> tiene que valer <b>menos</b> que
+    /// <c>Tackle</c>. Con los valores iniciales (bono 260) presionar ganaba siempre y las entradas por
+    /// partido se hundían de 13 a 1, con ellas las lesiones y la mitad del contacto del juego. Presionar
+    /// es acercarse al que lleva el balón; quitárselo sigue siendo entrar.</para>
+    /// </summary>
+    private const int PressCarrierBonus = 120;
+
+    /// <inheritdoc cref="PressCarrierBonus"/>
+    private const int PressDistancePenaltyPerCell = 60;
+
+    /// <inheritdoc cref="PressCarrierBonus"/>
+    private const int PressGoalkeeperExitBonus = 200;
+
+    /// <summary>Tope de "espacio" que puntúa un candidato de FindSpace: más allá de 4 casillas da igual.</summary>
+    private const int FindSpaceMaxSpaceCenti = 400;
+
+    /// <summary>
+    /// Las ocho direcciones de <c>FindSpace</c> (§2.3), de módulo 1. Las diagonales llevan el factor
+    /// 0,70711 para que "a una casilla" signifique una casilla de distancia real en las ocho, y no 1,41
+    /// en las diagonales. Orden fijo: el desempate entre candidatos es por índice ascendente.
+    /// </summary>
+    private static readonly Vec2[] SpaceDirections =
+    {
+        new(1f, 0f),
+        new(0.70711f, 0.70711f),
+        new(0f, 1f),
+        new(-0.70711f, 0.70711f),
+        new(-1f, 0f),
+        new(-0.70711f, -0.70711f),
+        new(0f, -1f),
+        new(0.70711f, -0.70711f),
+    };
+
+    /// <summary>Las dos distancias a las que se prueba cada dirección de <c>FindSpace</c> (§2.3).</summary>
+    private static readonly float[] SpaceDistances = { 1f, 2f };
+
     /// <summary>Resultado de evaluar una acción concreta; struct para no asignar por evaluación.</summary>
     private struct Eval
     {
         public int Context;
         public bool Discarded;
-        public bool LeashFiltered;
-        public bool IgnoreLeashFilter;
+        public bool OutsideOuterLimit;
+        public bool IgnoreOuterLimit;
+        public int OutsideCentiCells;
         public Vec2 Target;
         public MatchPlayer? Receiver;
         public MatchPlayer? TackleTarget;
@@ -71,8 +140,8 @@ internal static class Utility
 
     /// <summary>
     /// Elige la acción de mayor utilidad para p y deja en el jugador el objetivo de movimiento ya
-    /// acotado a la correa (y al área si es portero), el receptor de pase y el objetivo de entrada.
-    /// Si rows no es null, añade una fila por acción evaluada (volcado RT-098).
+    /// acotado al límite duro exterior (y al área si es portero), el receptor de pase y el objetivo de
+    /// entrada. Si rows no es null, añade una fila por acción evaluada (volcado RT-098).
     /// </summary>
     public static PlayerAction Choose(UtilityContext ctx, MatchPlayer p, List<UtilityRow>? rows)
     {
@@ -95,8 +164,10 @@ internal static class Utility
             int traitMultiplier = p.ActionMultiplier(action) * (100 + p.LeaderBonusPercent) / 100;
             int score = (baseWeight * tactical / 100 * traitMultiplier / 100) + eval.Context;
 
-            bool rejected = eval.Discarded || eval.LeashFiltered;
-            rows?.Add(new UtilityRow(action, score, baseWeight, tactical, traitMultiplier, eval.Context, rejected));
+            bool rejected = eval.Discarded || eval.OutsideOuterLimit;
+            rows?.Add(new UtilityRow(
+                action, score, baseWeight, tactical, traitMultiplier, eval.Context,
+                rejected, eval.OutsideCentiCells > 0, eval.OutsideCentiCells));
 
             if (rejected)
             {
@@ -128,18 +199,16 @@ internal static class Utility
         return best;
     }
 
-    /// <summary>Acota target al radio de correa alrededor de la casilla-hogar efectiva de p (§3.3).</summary>
-    public static Vec2 ClampToLeash(MatchPlayer p, Vec2 target)
-    {
-        Vec2 offset = target - p.EffectiveHome;
-        float length = offset.Length;
-        if (length <= p.LeashCells || length <= 0f)
-        {
-            return target;
-        }
+    /// <summary>
+    /// Acota target al <b>límite duro exterior</b> de la zona de acción de p (§2.2). Es el único tope
+    /// espacial que sigue siendo un muro: dentro de él la zona blanda solo penaliza.
+    /// </summary>
+    public static Vec2 ClampToZone(MatchPlayer p, Vec2 target) =>
+        p.OuterZone.Clamp(target, p.EffectiveHome, Pitch.AttackDirection(p.Team));
 
-        return p.EffectiveHome + (offset * (p.LeashCells / length));
-    }
+    /// <summary>Distancia en casillas a la que un punto queda fuera de la zona blanda de p (0 si dentro).</summary>
+    public static float DistanceOutsideZone(MatchPlayer p, Vec2 point) =>
+        p.Zone.DistanceOutside(point, p.EffectiveHome, Pitch.AttackDirection(p.Team));
 
     /// <summary>Acota un punto al rectángulo del área que defiende team, con margen (RF-057b).</summary>
     public static Vec2 ClampToArea(Vec2 point, int team)
@@ -176,6 +245,17 @@ internal static class Utility
         return value - step < target ? target : value - step;
     }
 
+    /// <summary>
+    /// Evalúa una acción. Orden de resolución fijo para las acciones de movimiento (§2.2), documentado
+    /// porque de él dependen tanto el resultado como el volcado de utilidad:
+    /// <list type="number">
+    /// <item>la acción produce un punto objetivo bruto y su término de contexto propio;</item>
+    /// <item>el punto se acota al límite duro exterior (y al área, si es portero);</item>
+    /// <item>se mide a qué distancia queda el punto <b>ya acotado</b> fuera de la zona blanda;</item>
+    /// <item>esa distancia descuenta del contexto, ponderada por la disciplina del jugador;</item>
+    /// <item>si la acción exigía salir del límite duro y, acotada, ya no avanza nada, se descarta.</item>
+    /// </list>
+    /// </summary>
     private static Eval Evaluate(UtilityContext ctx, MatchPlayer p, PlayerAction action)
     {
         var eval = default(Eval);
@@ -196,7 +276,7 @@ internal static class Utility
                 EvaluateSupport(ctx, p, context, direction, ref eval);
                 break;
             case PlayerAction.CoverSpace:
-                EvaluateCover(ctx, p, context, ref eval);
+                EvaluateCover(ctx, p, context, direction, ref eval);
                 break;
             case PlayerAction.Pass:
                 EvaluatePass(ctx, p, context, direction, ref eval);
@@ -211,7 +291,13 @@ internal static class Utility
                 EvaluateTackle(p, ball, context, ref eval);
                 break;
             case PlayerAction.Retreat:
-                EvaluateRetreat(p, context, ref eval);
+                EvaluateRetreat(ctx, p, context, ref eval);
+                break;
+            case PlayerAction.FindSpace:
+                EvaluateFindSpace(ctx, p, direction, ref eval);
+                break;
+            case PlayerAction.PressCarrier:
+                EvaluatePress(ctx, p, ref eval);
                 break;
             default:
                 throw new ArgumentOutOfRangeException(nameof(action));
@@ -223,25 +309,47 @@ internal static class Utility
         }
 
         Vec2 raw = eval.Target;
-        Vec2 clamped = ClampToLeash(p, raw);
+        Vec2 clamped = ClampToZone(p, raw);
         if (!p.IsOutfield)
         {
             clamped = ClampToArea(clamped, p.Team);
         }
 
-        bool outsideLeash = Vec2.Distance(raw, p.EffectiveHome) > p.LeashCells;
-        if (!eval.IgnoreLeashFilter && outsideLeash && Vec2.Distance(clamped, p.Position) < LeashFilterMinAdvance)
+        float outside = DistanceOutsideZone(p, clamped);
+        if (outside > 0f)
         {
-            eval.LeashFiltered = true;
+            eval.OutsideCentiCells = Centi(outside);
+            eval.Context -= OutsidePenalty(ctx, p, eval.OutsideCentiCells);
+        }
+
+        bool beyondOuterLimit = p.OuterZone.DistanceOutside(raw, p.EffectiveHome, direction) > 0f;
+        if (!eval.IgnoreOuterLimit && beyondOuterLimit
+            && Vec2.Distance(clamped, p.Position) < OuterLimitMinAdvance)
+        {
+            eval.OutsideOuterLimit = true;
         }
 
         eval.Target = clamped;
         return eval;
     }
 
+    /// <summary>
+    /// Penalización de salida de zona (§2.2): <c>outsidePenaltyPerCell × distanciaFuera × disciplina</c>,
+    /// con la disciplina leída como porcentaje 0-100 (un enano de 80 paga 0,8 veces la tarifa completa y
+    /// un elfo de 35 paga 0,35) y modulada por <c>disciplineWeightPercent</c>. Todo entero (RT-023).
+    /// </summary>
+    private static int OutsidePenalty(UtilityContext ctx, MatchPlayer p, int outsideCentiCells)
+    {
+        var zone = ctx.Zone;
+        return zone.OutsidePenaltyPerCell * outsideCentiCells / 100
+            * p.Discipline / 100
+            * zone.DisciplineWeightPercent / 100;
+    }
+
     private static bool IsMovementAction(PlayerAction action) =>
         action is PlayerAction.ChaseBall or PlayerAction.MarkOpponent or PlayerAction.OfferSupport
-            or PlayerAction.CoverSpace or PlayerAction.Dribble or PlayerAction.Retreat;
+            or PlayerAction.CoverSpace or PlayerAction.Dribble or PlayerAction.Retreat
+            or PlayerAction.FindSpace or PlayerAction.PressCarrier;
 
     private static void EvaluateChaseBall(UtilityContext ctx, MatchPlayer p, AiContext context, ref Eval eval)
     {
@@ -269,7 +377,7 @@ internal static class Utility
         if (ball.InFlight && !ball.IsShot && ReferenceEquals(ball.PassReceiver, p))
         {
             score += context.ChaseBallIncomingPassBonus;
-            eval.IgnoreLeashFilter = true;
+            eval.IgnoreOuterLimit = true;
         }
 
         if (!ReferenceEquals(ctx.NearestToBall[p.Team], p))
@@ -280,6 +388,11 @@ internal static class Utility
         eval.Context = score;
     }
 
+    /// <summary>
+    /// Marcaje con objetivo estable (§2.3): el rival lo fija <see cref="Marking"/> una vez por posesión.
+    /// Si todavía no hay asignación (arranque del partido antes de la primera posesión, o un contexto de
+    /// prueba construido a mano) se usa el rival más cercano, que es el comportamiento de la fase 0.
+    /// </summary>
     private static void EvaluateMark(UtilityContext ctx, MatchPlayer p, AiContext context, ref Eval eval)
     {
         if (!p.IsOutfield)
@@ -288,7 +401,20 @@ internal static class Utility
             return;
         }
 
-        MatchPlayer? target = null;
+        var target = Marking.IsValidTarget(p.MarkTarget, p.Team) ? p.MarkTarget : NearestOpponent(ctx, p);
+        if (target is null)
+        {
+            eval.Discarded = true;
+            return;
+        }
+
+        eval.Target = target.Position;
+        eval.Context = -(context.MarkDistancePenaltyPerCell * Centi(Vec2.Distance(p.Position, target.Position)) / 100);
+    }
+
+    private static MatchPlayer? NearestOpponent(UtilityContext ctx, MatchPlayer p)
+    {
+        MatchPlayer? nearest = null;
         float bestDistance = 0f;
         var players = ctx.Players;
         for (int i = 0; i < players.Length; i++)
@@ -299,27 +425,15 @@ internal static class Utility
                 continue;
             }
 
-            if (Vec2.Distance(other.Position, p.EffectiveHome) > p.LeashCells)
-            {
-                continue;
-            }
-
             float distance = Vec2.Distance(p.Position, other.Position);
-            if (target is null || distance < bestDistance)
+            if (nearest is null || distance < bestDistance)
             {
-                target = other;
+                nearest = other;
                 bestDistance = distance;
             }
         }
 
-        if (target is null)
-        {
-            eval.Discarded = true;
-            return;
-        }
-
-        eval.Target = target.Position;
-        eval.Context = -(context.MarkDistancePenaltyPerCell * Centi(bestDistance) / 100);
+        return nearest;
     }
 
     private static void EvaluateSupport(UtilityContext ctx, MatchPlayer p, AiContext context, int direction, ref Eval eval)
@@ -363,7 +477,89 @@ internal static class Utility
         eval.Context = score;
     }
 
-    private static void EvaluateCover(UtilityContext ctx, MatchPlayer p, AiContext context, ref Eval eval)
+    /// <summary>
+    /// Búsqueda de espacio (ADR 0022, §2.3). Puntúa las ocho direcciones a una y a dos casillas —dieciséis
+    /// puntos: el "8 candidatos" de §2.3 son las ocho direcciones— con tres términos enteros: distancia al
+    /// rival más cercano (con tope), avance hacia la portería rival y línea de pase abierta con el
+    /// poseedor. Los candidatos se acotan a la zona blanda y al campo, así que buscar hueco nunca es la
+    /// acción que saca a un jugador de su zona. Empate por índice de candidato ascendente.
+    /// </summary>
+    private static void EvaluateFindSpace(UtilityContext ctx, MatchPlayer p, int direction, ref Eval eval)
+    {
+        var ball = ctx.Ball;
+        if (!p.IsOutfield || ctx.HoldingTeam != p.Team || ReferenceEquals(ball.Owner, p))
+        {
+            eval.Discarded = true;
+            return;
+        }
+
+        var carrier = ball.Owner is not null && ball.Owner.Team == p.Team ? ball.Owner : null;
+        var players = ctx.Players;
+        bool found = false;
+        int bestScore = 0;
+        Vec2 bestPoint = p.Position;
+
+        for (int d = 0; d < SpaceDirections.Length; d++)
+        {
+            for (int s = 0; s < SpaceDistances.Length; s++)
+            {
+                Vec2 candidate = ClampToPitch(p.Position + (SpaceDirections[d] * SpaceDistances[s]));
+                candidate = p.Zone.Clamp(candidate, p.EffectiveHome, direction);
+
+                int space = Centi(NearestOpponentDistance(players, p.Team, candidate));
+                if (space > FindSpaceMaxSpaceCenti)
+                {
+                    space = FindSpaceMaxSpaceCenti;
+                }
+
+                int advance = Centi((candidate.X - p.Position.X) * direction);
+                int score = (FindSpaceOpponentDistanceBonusPerCell * space / 100)
+                    + (FindSpaceAdvanceBonusPerCell * advance / 100);
+
+                if (carrier is not null && !SegmentBlocked(players, p.Team, carrier.Position, candidate))
+                {
+                    score += FindSpaceOpenLaneBonus;
+                }
+
+                if (!found || score > bestScore)
+                {
+                    found = true;
+                    bestScore = score;
+                    bestPoint = candidate;
+                }
+            }
+        }
+
+        eval.Target = bestPoint;
+        eval.Context = bestScore;
+    }
+
+    /// <summary>
+    /// Presión al poseedor (ADR 0022, §2.3): objetivo el rival que lleva el balón, sea jugador de campo o
+    /// el portero en su salida, con un extra si es el portero dentro de su área —el momento en que la
+    /// presión gana el balón en zona de gol—.
+    /// </summary>
+    private static void EvaluatePress(UtilityContext ctx, MatchPlayer p, ref Eval eval)
+    {
+        var carrier = ctx.Ball.Owner;
+        if (!p.IsOutfield || carrier is null || carrier.Team == p.Team)
+        {
+            eval.Discarded = true;
+            return;
+        }
+
+        eval.Target = carrier.Position;
+        int distance = Centi(Vec2.Distance(p.Position, carrier.Position));
+        int score = PressCarrierBonus - (PressDistancePenaltyPerCell * distance / 100);
+        if (!carrier.IsOutfield && Pitch.IsInArea(carrier.Position, carrier.Team))
+        {
+            score += PressGoalkeeperExitBonus;
+        }
+
+        eval.Context = score;
+    }
+
+    private static void EvaluateCover(UtilityContext ctx, MatchPlayer p, AiContext context, int direction, ref Eval eval)
     {
         var ball = ctx.Ball;
         Vec2 from = ball.Position;
@@ -379,7 +575,12 @@ internal static class Utility
         }
         else
         {
-            target = SegmentPointAtLeash(from, ownGoal, p.EffectiveHome, p.LeashCells);
+            // El punto por el que la recta balón->portería propia entra en la zona, es decir, el punto
+            // más adelantado de esa recta que el jugador puede cubrir sin salirse (§2.2). Sustituye al
+            // corte contra el círculo de correa de la fase 0. Si la recta no cruza la zona, se cubre el
+            // punto más cercano al balón que la zona permite.
+            target = p.Zone.SegmentEntry(from, ownGoal, p.EffectiveHome, direction)
+                ?? p.Zone.Clamp(from, p.EffectiveHome, direction);
         }
 
         eval.Target = target;
@@ -392,38 +593,6 @@ internal static class Utility
         {
             eval.Context = context.CoverBetweenBallAndGoalBonus;
         }
-    }
-
-    /// <summary>
-    /// Punto del segmento a->b a distancia radius del centro home, el más cercano a a. Si el segmento
-    /// nunca alcanza esa distancia, el punto del segmento más cercano a home ("acotado", §3.5).
-    /// </summary>
-    private static Vec2 SegmentPointAtLeash(Vec2 a, Vec2 b, Vec2 home, float radius)
-    {
-        Vec2 direction = b - a;
-        Vec2 offset = a - home;
-        float qa = (direction.X * direction.X) + (direction.Y * direction.Y);
-        if (qa <= 0f)
-        {
-            return a;
-        }
-
-        float qb = 2f * ((offset.X * direction.X) + (offset.Y * direction.Y));
-        float qc = (offset.X * offset.X) + (offset.Y * offset.Y) - (radius * radius);
-        float discriminant = (qb * qb) - (4f * qa * qc);
-
-        float t;
-        if (discriminant < 0f)
-        {
-            t = -((offset.X * direction.X) + (offset.Y * direction.Y)) / qa;
-        }
-        else
-        {
-            t = (-qb - MathF.Sqrt(discriminant)) / (2f * qa);
-        }
-
-        t = Math.Clamp(t, 0f, 1f);
-        return a + (direction * t);
     }
 
     private static void EvaluatePass(UtilityContext ctx, MatchPlayer p, AiContext context, int direction, ref Eval eval)
@@ -490,6 +659,55 @@ internal static class Utility
             }
 
             if (Vec2.Distance(other.Position, target.Position) < radius)
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /// <summary>Distancia al rival más cercano a un punto; el ancho del campo si no queda ninguno.</summary>
+    private static float NearestOpponentDistance(MatchPlayer[] players, int team, Vec2 point)
+    {
+        float best = Pitch.Columns;
+        for (int i = 0; i < players.Length; i++)
+        {
+            var other = players[i];
+            if (other.Team == team || !other.OnPitch)
+            {
+                continue;
+            }
+
+            float distance = Vec2.Distance(other.Position, point);
+            if (distance < best)
+            {
+                best = distance;
+            }
+        }
+
+        return best;
+    }
+
+    /// <summary>True si algún rival está a menos de <see cref="PassLaneRadius"/> del segmento from-&gt;to.</summary>
+    private static bool SegmentBlocked(MatchPlayer[] players, int team, Vec2 from, Vec2 to)
+    {
+        Vec2 segment = to - from;
+        float lengthSquared = (segment.X * segment.X) + (segment.Y * segment.Y);
+
+        for (int i = 0; i < players.Length; i++)
+        {
+            var other = players[i];
+            if (other.Team == team || !other.OnPitch)
+            {
+                continue;
+            }
+
+            Vec2 offset = other.Position - from;
+            float t = lengthSquared <= 0f
+                ? 0f
+                : Math.Clamp(((offset.X * segment.X) + (offset.Y * segment.Y)) / lengthSquared, 0f, 1f);
+            if (Vec2.Distance(other.Position, from + (segment * t)) < PassLaneRadius)
             {
                 return true;
             }
@@ -565,7 +783,13 @@ internal static class Utility
             : -context.TackleOutOfReachPenalty;
     }
 
-    private static void EvaluateRetreat(MatchPlayer p, AiContext context, ref Eval eval)
+    /// <summary>
+    /// Replegar (§2.2): además del bono por distancia a la casilla-hogar, gana peso cuanto más fuera de
+    /// su zona está el jugador <b>ahora mismo</b>. Es la otra mitad de la correa blanda: salir cuesta, y
+    /// volver paga. La distancia se mide sobre la posición actual, no sobre el objetivo, porque el
+    /// objetivo de replegar es siempre la casilla-hogar y por definición está dentro de la zona.
+    /// </summary>
+    private static void EvaluateRetreat(UtilityContext ctx, MatchPlayer p, AiContext context, ref Eval eval)
     {
         eval.Target = p.EffectiveHome;
         float distance = Vec2.Distance(p.Position, p.EffectiveHome);
@@ -573,6 +797,12 @@ internal static class Utility
         if (distance < 0.5f)
         {
             eval.Context -= context.RetreatAtHomePenalty;
+        }
+
+        float outsideNow = DistanceOutsideZone(p, p.Position);
+        if (outsideNow > 0f)
+        {
+            eval.Context += ctx.Zone.RetreatBonusOutsidePerCell * Centi(outsideNow) / 100;
         }
     }
 }

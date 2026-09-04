@@ -188,3 +188,53 @@ Fronteras de ficheros **exclusivas**: ningún paquete toca los ficheros de otro.
 | **U. Reajuste y puertas** | deep-reasoner | R, S, T | `data/**` (valores), `Sim/Analysis/*`, `Balance/*`, `Sim.Tests/Analysis/*`, `docs/balance/*` |
 
 Criterio de terminado de todo el bloque: RT-056 en rango, criterio de salida de fase 1 (`fase1-diseno.md` §8), métrica de RF-024 según ADR 0027, y un equipo sin legendarios capaz de ganar al jefe final.
+
+## 4. Decisiones de implementación del paquete R
+
+Lo que el paquete R (cuerpos, zona de acción y comportamiento sin balón) decidió por su cuenta porque §2 no lo fijaba. Ficheros: `Sim/Engine/{ActionZone,BodySeparation,Marking}.cs` (nuevos), `Sim/Engine/{MatchPlayer,Utility,MatchEngine,MatchReport,MatchPhase,StateMachine}.cs`, `data/ai/weights.json`, `data/schemas/ai-weights.schema.json`, `Sim.Tests/Engine/*`.
+
+1. **Orden de resolución del tick.** `estado táctico → bloque → cachés → marcaje → vaciado del buffer de empuje → decisiones y movimiento de los jugadores → separación de cuerpos → balón → fuera de banda`. La separación va **antes** de `UpdateBall` para que el balón, que sigue al poseedor, vea las posiciones definitivas del tick. El buffer se vacía **al principio**, no dentro de la separación, porque el empuje de una entrada se acumula durante el bucle de jugadores y tiene que caer en el mismo buffer.
+
+2. **La separación no usa el recorrido alterno por paridad de tick.** Los pares se recorren siempre `(i, j)` con `i < j` por índice ascendente (= id ascendente). Con acumulación en buffer la suma de un tick es conmutativa, así que el orden no puede influir; usar el recorrido alterno solo habría añadido ruido. Hay un test que comprueba que el desplazamiento de cada jugador es exactamente la suma de sus contactos por pares.
+
+3. **Dos cuerpos exactamente en el mismo punto** no tienen dirección de separación: se separan a lo largo del eje X, el de menor índice hacia las columnas bajas. Es arbitrario, pero depende solo del orden de los índices.
+
+4. **Un cuerpo inamovible se lleva la parte del otro.** Si uno de los dos tiene `Immovable`, el otro absorbe el solape **entero**, no solo su parte por masa: contra un cuerpo con Raíces se rebota, no se atraviesa. Si los dos lo son, no se mueve ninguno.
+
+5. **`MatchPlayer.Immovable` se siembra desde la habilidad racial, no desde la raza.** El motor compara `race.ability` con la constante `"roots"` una sola vez, al construir el jugador, y a partir de ahí solo lee la propiedad. El paquete de perks puede encenderla o apagarla por efecto sin que aparezca un `if` por raza en medio de la separación. Hay un test que la apaga en un enano y comprueba que pasa a ser empujable.
+
+6. **El empuje de una entrada usa el contacto pleno**, la suma de los dos radios, no el solape real: una entrada llega desde más lejos de lo que se solapan dos cuerpos, así que con el solape real el empuje habría sido casi siempre cero. Y **el tope del receptor sube en el mismo `tacklePushMultiplier`**: con el tope normal (60 milicasillas) el multiplicador no se notaría, porque el empuje de una entrada lo supera con creces.
+
+7. **El empuje no toca `Velocity` ni se acota a la zona.** `Velocity` es el desplazamiento propio del jugador y la lee la anticipación del pase; que a uno lo empujen no significa que vaya hacia allí. Y que un empujón te saque de tu zona es justo lo que tiene que poder pasar: la utilidad ya paga por volver.
+
+8. **La zona vive en un marco local** `u = (X − hogar.X) × direcciónDeAtaque`, `v = Y − hogar.Y`. El mismo dato de forma describe la misma geometría para los dos equipos y el visitante refleja columnas sin datos propios. Las extensiones se guardan en **milicasillas enteras** y `-1` (sin límite) se propaga por el escalado.
+
+9. **La distancia fuera de la zona es la distancia al rectángulo** (longitud del vector de exceso), la generalización natural del radio que había antes. Se mide sobre el punto **ya acotado** al límite duro, que es adonde el jugador iría de verdad.
+
+10. **La penalización lee la disciplina como porcentaje**: `outsidePenaltyPerCell × distanciaFuera × disciplina/100 × disciplineWeightPercent/100`. Multiplicar por la disciplina cruda (0-100) habría dado penalizaciones de miles de puntos contra pesos base de centenares. Todo entero.
+
+11. **El límite duro descarta con el mismo criterio que la correa de la fase 0**: la acción se descarta solo si, acotada al límite exterior, ya no avanza al menos 0,25 casillas. Descartar por el mero hecho de apuntar fuera dejaba sin acciones a un jugador arrinconado.
+
+12. **`Retreat` mide su bono sobre la posición actual, no sobre el objetivo.** El objetivo de replegar es la casilla-hogar y por definición está dentro de la zona; el bono tiene que crecer con lo lejos que está el **jugador**.
+
+13. **`CoverSpace` recorta el segmento contra la zona.** El corte circular contra el radio de correa se sustituye por un recorte por franjas (slabs) que devuelve el punto por el que la recta balón→portería propia **entra** en la zona, es decir, el punto más adelantado que ese jugador puede cubrir. Si la recta no cruza la zona, se cubre el punto de la recta acotado a la zona.
+
+14. **`LeashCells` sobrevive como la extensión lateral de la zona.** Es la única dirección finita en las cuatro posiciones de la tabla de formas, así que sirve de escalar representativo de "cuánta correa tiene" y hace que el efecto `modifyLeash` siga sumando exactamente lo que dice. Las constantes puente `minCells = 1` y `cellsPer99 = 8` que dejó el paquete Q se retiran.
+
+15. **`FindSpace` puntúa dieciséis puntos**: las ocho direcciones a una y a dos casillas. El "8 candidatos" de §2.3 son las ocho direcciones. Las diagonales llevan el factor 0,70711 para que "a una casilla" signifique una casilla de distancia real en las ocho. Los candidatos se acotan a la zona **blanda**, así que buscar hueco nunca es la acción que saca a un jugador de su zona. Empate por índice de candidato ascendente.
+
+16. **`OfferSupport` no se retira.** RT-092 la exige como acción evaluable mínima y los rasgos la modulan desde `data/traits/traits.json`. `FindSpace` la sustituye **de hecho**, con pesos base mucho mayores; `OfferSupport` queda como el apoyo geométrico barato. Retirarla habría obligado a tocar `data/traits` y `Sim/Data`, fuera de las fronteras del paquete.
+
+17. **Las dos acciones nuevas van al final del enum `PlayerAction`.** El desempate de utilidad es por orden de declaración (RT-097): ponerlas al final deja intactas las prioridades relativas de las nueve anteriores.
+
+18. **El marcaje se asigna por avaricia con preferencia por rol.** Defensores por id ascendente; cada uno se queda con el rival libre de menor coste, siendo el coste la distancia menos 2 casillas si el rol es el preferente (defensa↔delantero, centrocampista↔centrocampista); empate por id de rival ascendente. Si no quedan rivales libres se permite doblar el marcaje. Se rehace entero al cambiar la posesión y, el resto de ticks, solo se rellenan los huecos que deja un jugador que sale del campo. Si todavía no hay asignación, `MarkOpponent` cae al rival más cercano, que es el comportamiento de la fase 0.
+
+19. **`UtilityRow.LeashFiltered` pasa a `Rejected` + `OutsideZone` + `OutsideCentiCells`.** `Rejected` es "quedó fuera de la elección" (por su propio criterio o por el límite duro) y las otras dos son cuánto se sale la acción, en centésimas de casilla. Se conserva una propiedad `LeashFiltered => Rejected` **solo** porque `Balance/Program.cs` imprime esa columna y queda fuera de las fronteras del paquete R; el paquete U sustituye la columna y la propiedad desaparece.
+
+20. **Los coeficientes de contexto de `FindSpace` y `PressCarrier` están en código, no en datos.** Añadir claves a `data/ai/weights.json.context` exige tocar `AiContext` y `DataLoader` (`Sim/Data`), fuera de las fronteras del paquete. Están agrupados en `Utility.cs` con el nombre exacto que tendrán como clave, para que el paquete que abra `Sim/Data` los mueva de un tirón. **Es la única deuda deliberada que deja el paquete R.**
+
+21. **Presionar vale menos que entrar dentro del alcance de una entrada.** Con los valores iniciales (`PressCarrierBonus` 260) presionar ganaba siempre y las entradas por partido se hundían de 13,0 a 1,0, y con ellas las lesiones (0,82 → 0,05) y la mitad del contacto del juego. Presionar es acercarse al que lleva el balón; quitárselo sigue siendo entrar. Los valores de partida quedan en 120 / 60 por casilla / 200 de bono contra el portero en su salida, y los pesos base de `PressCarrier` por debajo de los de `Tackle`.
+
+22. **El contraste táctico se amplía sobre todo en el par nuevo.** `FindSpace` va de 210 (con balón) a 15 (sin balón) y `PressCarrier` de 15 a 165: catorce y once veces. Las acciones que ya existían se mueven menos (`MarkOpponent` 30↔150, `CoverSpace` 60↔140) porque ampliarlas al mismo nivel canibalizaba `Tackle`. La diferencia entre atacar y defender se lee en el volcado de utilidad y hay un test que la exige mayor que un factor 2.
+
+23. **Rendimiento** (600 partidos, semilla 1, `data/balance/reference.json`, misma máquina): **435,1 → 227,7 partidos/s**. La estimación de la ADR 0020 era 520 → 380 solo por los cuerpos; el resto lo pone la evaluación de los dieciséis candidatos de `FindSpace`. Sigue muy por encima de los 167 partidos/s que exige RT-051 (10.000 partidos en 60 s).
