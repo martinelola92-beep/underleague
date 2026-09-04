@@ -1,0 +1,55 @@
+# Ejes de activación de los perks
+
+Clasificación **ortogonal** a la de RF-069 (`filler` / `conditional` / `ruleBreaker`, que mide potencia). Esta mide **de qué depende** que un perk se active. Ambas se cumplen a la vez: un catálogo puede tener la distribución 60/30/10 correcta y aun así ser aburrido si todos los perks dependen de lo mismo.
+
+## Principio
+
+**Cada eje corresponde a una decisión distinta del jugador.** Si todos los perks se activan por raza, la única decisión es a quién fichas; si todos por adyacencia, la única decisión es cómo colocas. La variedad de ejes es lo que convierte una build en varias decisiones encadenadas en lugar de una repetida.
+
+| Eje | De qué depende | Qué decisión estimula | Mecanismo | Estado |
+|---|---|---|---|---|
+| **Identidad** | Raza, rasgo, posición del portador | A quién fichas y a quién le das el perk | `hasTag`, `position`, `tagsRequired` | Existe |
+| **Acumulación** | Acciones realizadas, dentro del partido y entre partidos | A quién inviertes y si lo proteges de la lesión | `counter`, `addCounter`, `accumulatesAcrossMatches`, `stat` | Existe (falta `stat`) |
+| **Alineación relacional** | Quién tiene al lado, delante o detrás en la cuadrícula | Cómo dibujas la formación | Vínculos direccionales (ADR 0021) | Falta |
+| **Zona de inicio** | En qué parte del campo empieza: línea (tercio) y banda (fila) | Dónde colocas a cada jugador | `startsIn`, `startsOn` | Falta |
+| **Geometría en juego** | Dónde está el jugador o el balón en ese momento | Nada directo: premia el estilo de juego que produce tu build | `distanceToGoal`, `zone` | Existe |
+| **Estado del partido** | Marcador, minuto, turba, criterio del árbitro | Cómo preparas el partido y qué consumibles llevas | `scoreDiff`, `tick`, `isMob`, `bias` | Existe |
+| **Composición de plantilla** | Cuántos compañeros de una etiqueta hay | Qué mayoría racial o de rasgo construyes | `teammatesWithTag` | Existe |
+| **Proximidad dinámica** | Quién está cerca **ahora** | Nada en el menú: se gana jugando | `nearAlly`, `nearOpponent` | Falta (ADR 0021) |
+
+## Distribución objetivo del catálogo
+
+Orientativa, sobre el catálogo de lanzamiento; se revisa con datos como los rangos de RT-056.
+
+| Eje | Proporción |
+|---|---|
+| Identidad | 25% |
+| Acumulación | 20% |
+| Alineación relacional | 15% |
+| Zona de inicio | 10% |
+| Geometría en juego | 10% |
+| Estado del partido | 10% |
+| Composición de plantilla | 5% |
+| Proximidad dinámica | 5% |
+
+## Regla de legibilidad
+
+**Un perk combina como máximo dos ejes.** Tres condiciones encadenadas producen un perk que nadie puede aprender, que la descripción generada (RT-035) convierte en una frase ilegible y que hace imposible atribuir una derrota a una causa (riesgo "el jugador no sabe por qué perdió"). Si un efecto necesita tres condiciones para estar equilibrado, el problema es el efecto, no la condición.
+
+## Funciones nuevas que exige esta taxonomía
+
+Se añaden al conjunto de RT-034 y a `fase1-diseno.md` §2 cuando se implementen:
+
+| Función | Devuelve |
+|---|---|
+| `startsIn(who, 'OwnThird' \| 'Middle' \| 'AttackingThird')` | bool, según la columna de la casilla-hogar |
+| `startsOn(who, 'LeftFlank' \| 'Center' \| 'RightFlank')` | bool, según la fila de la casilla-hogar |
+| `linked(who, 'beside' \| 'ahead' \| 'behind' \| 'left' \| 'right' \| ...)` | bool, existe vínculo en esa relación (ADR 0021) |
+| `nearAlly(who, 'Tag', cells)` / `nearOpponent(who, 'Tag', cells)` | bool, proximidad real en el momento del evento |
+| `stat(who, 'goals' \| 'passesCompleted' \| 'tacklesWon' \| 'shots' \| ...)` | int, estadística del partido en curso, sin declarar contadores propios |
+
+`stat` merece justificación: hoy un perk de acumulación necesita declarar su propio `addCounter` sobre un disparador y leerlo después, lo que gasta dos efectos y obliga a que el contador exista antes de poder usarlo. Exponer las estadísticas que el motor ya lleva para el informe post-partido (RF-119) abarata mucho toda la familia de acumulación y elimina una fuente de errores.
+
+## Objetivo `linked`
+
+Los efectos de la familia de alineación actúan **sobre el vínculo**, no sobre el portador: `target: "linked"` (todos los vinculados) o `target: "linkedWithTag:<Tag>"`. Es el tipo de modificador por par que la ADR 0021 exige añadir al motor de efectos.
