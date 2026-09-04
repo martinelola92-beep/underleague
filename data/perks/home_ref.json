@@ -15,8 +15,7 @@
   "effects": [
     {
       "type": "modifyBias",
-      "value": 10,
-      "duration": "match"
+      "value": 10
     }
   ],
   "elseEffects": [],

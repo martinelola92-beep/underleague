@@ -8,8 +8,8 @@
   "kind": "ruleBreaker",
   "axis": "identity",
   "race": "Dwarf",
-  "trigger": "GOAL",
-  "scope": "opposingTeam",
+  "trigger": "INJURY",
+  "scope": "team",
   "links": [],
   "condition": "",
   "effects": [
@@ -24,7 +24,7 @@
   },
   "accumulatesAcrossMatches": false,
   "lethal": false,
-  "positionOnly": "Goalkeeper",
+  "positionOnly": null,
   "tagsRequired": [
     "Dwarf"
   ],
