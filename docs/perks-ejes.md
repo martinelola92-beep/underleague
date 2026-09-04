@@ -8,7 +8,7 @@ Clasificación **ortogonal** a la de RF-069 (`filler` / `conditional` / `ruleBre
 
 | Eje | De qué depende | Qué decisión estimula | Mecanismo | Estado |
 |---|---|---|---|---|
-| **Identidad individual** | Rasgo y posición del portador | A quién le das el perk: dentro de una misma raza, dos jugadores son distintos (RF-024b) | `hasTag` sobre rasgo, `position`, `tagsRequired` | Existe |
+| **Identidad individual** | Etiqueta de estilo, rasgo y posición del portador | A quién le das el perk y a quién fichas: dentro de una misma raza, dos jugadores son distintos (RF-024b, ADR 0024) | `hasTag` sobre estilo o rasgo, `position`, `tagsRequired` | Existe (falta la variación de estilo) |
 | **Acumulación** | Acciones realizadas, dentro del partido y entre partidos | A quién inviertes y si lo proteges de la lesión | `counter`, `addCounter`, `accumulatesAcrossMatches`, `stat` | Existe (falta `stat`) |
 | **Alineación relacional** | Quién tiene al lado, delante o detrás en la cuadrícula | Cómo dibujas la formación | Vínculos direccionales (ADR 0021) | Falta |
 | **Zona de inicio** | En qué parte del campo empieza: línea (tercio) y banda (fila) | Dónde colocas a cada jugador | `startsIn`, `startsOn` | Falta |
@@ -34,7 +34,7 @@ Orientativa, sobre el catálogo de lanzamiento; se revisa con datos como los ran
 
 Aparte de este reparto, un **10% del catálogo son perks exclusivos de raza** (ADR 0023), que no compiten por estas cuotas: no aparecen salvo que juegues esa raza. El otro 90% es universal.
 
-**La raza no se usa como condición en los perks universales.** Con clubes monoraza (RF-004), `hasTag(owner,'Brute')` en un equipo orco se cumple siempre y en cualquier otro no se cumple nunca: no es una decisión, es un adorno que además hace que un perk aparezca en runs donde no sirve. La identidad individual sí es una decisión, porque los rasgos varían entre jugadores de la misma raza (RF-024b).
+**La especie no se usa como condición en los perks universales.** Con clubes monoraza (RF-004), condicionar por la etiqueta de especie se cumple siempre o nunca según el club: no es una decisión, es un adorno que además hace aparecer perks en runs donde no sirven. La identidad **individual** sí es una decisión, porque tanto los rasgos como la **etiqueta de estilo** varían entre jugadores de la misma raza (RF-024b, ADR 0024): en un club élfico la mayoría son `Fine`, pero el `Brute` que te salga cambia a quién le das cada perk.
 
 ## Regla de legibilidad
 

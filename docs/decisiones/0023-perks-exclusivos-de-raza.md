@@ -12,7 +12,7 @@ La sinergia real, según RF-004b, no viene de la raza sino de las **etiquetas qu
 
 ## Decisión
 
-1. **El 90% del catálogo es universal**: sin condiciones de raza. Sus condiciones usan los demás ejes (`docs/perks-ejes.md`): rasgo, posición, alineación, zona de inicio, acumulación, estado del partido, proximidad.
+1. **El 90% del catálogo es universal**: sin condiciones de **especie**. Sus condiciones usan los demás ejes (`docs/perks-ejes.md`): etiqueta de estilo, rasgo, posición, alineación, zona de inicio, acumulación, estado del partido, proximidad. La ADR 0024 hace que la **etiqueta de estilo** varíe entre jugadores de la misma raza, así que condicionar por ella sí es una decisión; lo que queda prohibido es condicionar por la etiqueta de especie, que en un club monoraza se cumple siempre o nunca.
 2. **El 10% son perks exclusivos de raza**, con un campo nuevo `race` que es una **restricción de aparición**, no de asignación: un perk con `race: "Orc"` solo entra en el pool de recompensas, mercado y desbloqueos de una run cuyo club sea orco. Es distinto de `tagsRequired`, que restringe a qué jugador puede asignarse.
 3. **Rareza alta**: los exclusivos son `rare` o `legendary`. Se encuentran poco y, cuando salen, definen la partida.
 4. **Aplicación**: además, exigen la etiqueta racial para surtir efecto, de modo que asignárselos a un **mercenario** de otra raza no funciona. Refuerza RF-111 (el mercenario rompe las sinergias raciales) sin mecánica adicional.
