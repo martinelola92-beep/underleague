@@ -17,16 +17,8 @@
       "perk": "forward_line"
     },
     {
-      "slot": 1,
-      "perk": "center_conductor"
-    },
-    {
       "slot": 2,
       "perk": "forward_line"
-    },
-    {
-      "slot": 2,
-      "perk": "center_conductor"
     },
     {
       "slot": 3,
@@ -39,10 +31,6 @@
     {
       "slot": 3,
       "perk": "long_leash_legacy"
-    },
-    {
-      "slot": 3,
-      "perk": "center_conductor"
     },
     {
       "slot": 4,
