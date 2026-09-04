@@ -30,6 +30,7 @@ Cuándo escribir un ADR: cambio de librería o stack, frontera entre proyectos, 
 | [0030](0030-acciones-de-ataque-y-bloqueo.md) | Pase corto y largo como decisiones distintas, regate y tiro según el jugador, bloqueo sin balón y árbitro adelantado | Aceptada. **Matiza RF-057** |
 | [0031](0031-correa-fuera-del-presupuesto.md) | La correa sale del presupuesto: su valor marginal medido es negativo | Aceptada. **Modifica ADR 0025 y 0028** |
 | [0032](0032-metricas-de-comparacion-de-builds.md) | RT-055 y la progresión se miden contra una referencia equipada, no contra una plantilla desnuda | **Propuesta: decisión del revisor** |
+| [0033](0033-los-jefes-como-puertas-de-build.md) | Los jefes son puertas de calidad de build y definen la curva de exigencia de la run | Aceptada. **Sustituye la 2.ª mitad de `scalingRewardsGoodBuilds`** |
 
 El hueco del 0011 corresponde a una decisión sobre el radio de adyacencia que quedó absorbida por la 0021 antes de aceptarse.
 | [0012](0012-buildswindifferently-normalizada.md) | `buildsWinDifferently` normalizada contra la referencia de la raza | **Propuesta: decisión del revisor** |
