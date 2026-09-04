@@ -1,6 +1,7 @@
 using System.Text.Json;
 using Underleague.Sim.Analysis;
 using Underleague.Sim.Data;
+using Underleague.Sim.Engine;
 using Underleague.Sim.Model;
 using Underleague.Sim.Run;
 using Underleague.Sim.Run.Bosses;
@@ -174,13 +175,25 @@ public sealed class BossGateTests
         Assert.All(scouted.Away.Players, p => Assert.Equal(boss.Template.Level, p.Level));
         Assert.Contains(scouted.Away.Players, p => p.Perks.Count > 0);
 
-        // El modificador se nota en el informe: el once del jugador que se va a alinear no es el mismo
-        // que sin la regla. Es lo que hace la derrota anticipable (RF-012d).
-        var raw = RunEngine.BuildMatch(state, bossNode.Id, catalog, systems);
-        Assert.Equal(raw.Seed, seed);
+        // §16: el partido que el bucle de run JUEGA es el mismo que el informe de ojeo enseña, porque
+        // RunEngine.BuildMatch pasa por IRunSystems.TransformMatch. Antes había dos partidos distintos
+        // (Y-8) y el jefe del bucle iba sin su modificador.
+        var played = RunEngine.BuildMatch(state, bossNode.Id, catalog, systems);
+        Assert.Equal(played.Seed, seed);
+        Assert.Equal(
+            played.Setup.Home.Players.Select(p => string.Join('+', p.Perks)),
+            scouted.Home.Players.Select(p => string.Join('+', p.Perks)));
+        Assert.Equal(
+            played.Setup.Home.Lineup.Slots.Select(s => (s.PlayerId, s.HomeCell)),
+            scouted.Home.Lineup.Slots.Select(s => (s.PlayerId, s.HomeCell)));
+
+        // Y lo que se juega es el partido con la regla aplicada, no el de antes de la regla: el once del
+        // jugador es exactamente BossRules.Apply del once sin modificar. Antes esta comprobación era una
+        // tautología (BuildMatch no transformaba nada); ahora contrasta dos partidos distintos.
         var modifiers = bosses.Modifiers(systems.BossRuleModifiers(state, bossNode, catalog));
         Assert.NotEmpty(modifiers);
-        var expected = BossRules.Apply(raw.Setup, 0, modifiers, catalog);
+        var unmodified = RunEngine.BuildMatch(state, bossNode.Id, catalog, new BossOpponentOnly(systems));
+        var expected = BossRules.Apply(unmodified.Setup, 0, modifiers, catalog);
         Assert.Equal(
             expected.Home.Players.Select(p => string.Join('+', p.Perks)),
             scouted.Home.Players.Select(p => string.Join('+', p.Perks)));
@@ -189,15 +202,12 @@ public sealed class BossGateTests
             scouted.Home.Lineup.Slots.Select(s => (s.PlayerId, s.HomeCell)));
 
         // RF-014b: una vez jugado el nodo, el modificador queda descubierto y el compendio puede
-        // registrarlo por su id. Ojo: RunEngine solo marca el descubrimiento cuando el partido NO termina
-        // la run, así que perder contra el jefe deja el modificador sin registrar — justo el caso en el
-        // que el jugador ha pagado la sorpresa. Es un hueco del paquete W, anotado como Y-8 en
-        // docs/fase2-diseno.md; aquí se comprueba lo que hoy está garantizado.
+        // registrarlo por su id — se gane o se pierda. Perder contra el jefe es justo el caso en el que
+        // el jugador ya ha pagado la sorpresa (§16, costura 1).
         var after = RunEngine.Enter(state, bossNode.Id, catalog, systems);
-        var outcome = RunEngine.Outcome(after);
         Assert.True(
-            after.MapOf(bossNode.Act).BossModifierRevealed || outcome.Cause == DefeatCause.BossMatchLost,
-            "el modificador del jefe no quedó descubierto y el partido tampoco terminó la run (RF-014b)");
+            after.MapOf(bossNode.Act).BossModifierRevealed,
+            "el modificador del jefe no quedó descubierto tras jugar el nodo (RF-014b)");
         Assert.All(boss.ModifierIds, id => Assert.NotNull(bosses.FindModifier(id)));
     }
 
@@ -245,6 +255,7 @@ public sealed class BossGateTests
         var catalog = DataLoader.FromJson(files);
         var bosses = BossCatalog.FromJson(files);
         var builds = BuildFile.LoadAll(TestData.DataDirectory);
+        var items = Underleague.Sim.Run.Systems.Items.ItemLoader.FromJson(files);
         var counters = LoadCounters(TestData.DataDirectory);
         var levels = LoadQualityLevels(TestData.DataDirectory);
 
@@ -262,7 +273,8 @@ public sealed class BossGateTests
                     var cell = BossGateMetrics.PlayCell(
                         catalog, boss, level, buildId,
                         (roster, idBase) => WithCounters(
-                            build.ToTeamSetup(catalog, Seed, roster, idBase, boss.GatePlayerLevel), slotCounters),
+                            build.ToTeamSetup(catalog, Seed, roster, idBase, boss.GatePlayerLevel, itemCatalog: items),
+                            slotCounters),
                         Seed, Rosters, MatchesPerRoster, matchIndex, (int)build.Race);
 
                     matchIndex += cell.Matches;
@@ -325,6 +337,39 @@ public sealed class BossGateTests
         }
 
         return result;
+    }
+
+    /// <summary>
+    /// El mismo sistema de jefes pero <b>sin</b> transformar el partido: sirve para comprobar que el
+    /// modificador cambia el once de verdad, comparando el partido con regla contra el partido sin ella.
+    /// </summary>
+    private sealed class BossOpponentOnly(IRunSystems inner) : IRunSystems
+    {
+        public IReadOnlyList<RunReferee> CreateReferees(ulong seed, int count, Catalog catalog) =>
+            inner.CreateReferees(seed, count, catalog);
+
+        public TeamSetup OpponentFor(RunState state, MapNode node, Catalog catalog) =>
+            inner.OpponentFor(state, node, catalog);
+
+        public RefereeSetup RefereeFor(RunState state, MapNode node, Catalog catalog) =>
+            inner.RefereeFor(state, node, catalog);
+
+        public SimConfig MatchConfig(RunState state, MapNode node) => inner.MatchConfig(state, node);
+
+        public RunState OpenNode(RunState state, MapNode node, Catalog catalog) =>
+            inner.OpenNode(state, node, catalog);
+
+        public RunState AfterMatch(RunState state, MapNode node, RunMatchSummary summary, Catalog catalog) =>
+            inner.AfterMatch(state, node, summary, catalog);
+
+        public RunState ApplyDecision(RunState state, RunDecision decision, Catalog catalog) =>
+            inner.ApplyDecision(state, decision, catalog);
+
+        public IReadOnlyList<string> BossRuleModifiers(RunState state, MapNode node, Catalog catalog) =>
+            inner.BossRuleModifiers(state, node, catalog);
+
+        public MatchSetup TransformMatch(
+            RunState state, MapNode node, MatchSetup setup, int playerTeamIndex, Catalog catalog) => setup;
     }
 
     private static Dictionary<string, IReadOnlyList<string>> LoadQualityLevels(string dataDirectory)

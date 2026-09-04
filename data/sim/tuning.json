@@ -80,6 +80,22 @@
     "victimStaminaResistFactor": 5,
     "severeShare": 3000
   },
+  "probabilityChannels": {
+    "_doc": "ADR 0035: escalon de cada canal de probabilidad, en PUNTOS PORCENTUALES. Un valor de modifyProbability es el escalon de su canal multiplicado por 1, 2, 3, 5 o 10 pasos, y el cargador de perks (Sim.Perks.PerkLoader) rechaza cualquier otro. El escalon se fija para que un paso valga aproximadamente lo mismo en todos los canales en impacto RELATIVO sobre su base, hasta donde el punto porcentual entero lo permite: intercept (base 250), injury/injure (40), foul (320) y card (250) tienen bases diminutas y su paso minimo posible es 1; tackle (2800) y las dos evasiones que lo contrarrestan van a 3; pass (7700), dribble (7200), save (5000) y shotOnTarget (4625) a 5. La descripcion que ve el jugador sigue diciendo el valor absoluto (docs/estilo-descripciones.md); lo que cambia es lo que el DISENADOR puede escribir.",
+    "foul":             { "step": 1 },
+    "card":             { "step": 1 },
+    "injury":           { "step": 1 },
+    "injure":           { "step": 1 },
+    "severeInjury":     { "step": 3 },
+    "pass":             { "step": 5 },
+    "intercept":        { "step": 1 },
+    "dribble":          { "step": 5 },
+    "tackle":           { "step": 3 },
+    "shotOnTarget":     { "step": 5 },
+    "save":             { "step": 5 },
+    "tackleEvasion":    { "step": 3 },
+    "interceptEvasion": { "step": 1 }
+  },
   "referee": {
     "_doc": "Criterio del árbitro (RF-062..RF-064, ADR 0030 §3). Los tres ...ShiftPer10 son EFECTOS del criterio sobre una tirada: puntos base 10.000 por cada 10 puntos de criterio, siempre a favor del equipo que el criterio favorece. Los biasShift... son DESPLAZAMIENTOS del propio criterio, en puntos de la escala -100..+100, y se acumulan por gravedad (RF-063): toda acción sucia mueve el criterio en contra del que la comete, se señale o no.",
     "biasFoulShiftPer10": 120,

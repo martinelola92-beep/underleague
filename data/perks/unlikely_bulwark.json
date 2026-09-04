@@ -17,7 +17,7 @@
       "type": "modifyProbability",
       "target": "owner",
       "probability": "tackle",
-      "value": 25,
+      "value": 15,
       "duration": "match"
     },
     {

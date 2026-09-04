@@ -163,6 +163,17 @@
           "minimum": 0
         }
       }
+    },
+    "items": {
+      "type": "object",
+      "description": "Objeto de equipamiento de un titular (RF-075..078): clave = índice de slot como texto, valor = id de data/items/. Es la otra mitad de \"muy buena\" en la ADR 0033 (\"buena, ADEMÁS equipada\"): sin este campo la fila superior de la curva se medía sin equipamiento. Un jugador lleva un objeto como máximo (RF-076).",
+      "propertyNames": {
+        "pattern": "^[0-6]$"
+      },
+      "additionalProperties": {
+        "type": "string",
+        "pattern": "^[a-z][a-z0-9_]*$"
+      }
     }
   },
   "required": [

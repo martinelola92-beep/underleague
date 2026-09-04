@@ -4,6 +4,7 @@ using Underleague.Sim.Data;
 using Underleague.Sim.Engine;
 using Underleague.Sim.Perks;
 using Underleague.Sim.Run.Bosses;
+using Underleague.Sim.Run.Systems.Items;
 
 // Punto de entrada de /Balance (docs/fase0-diseno.md §4, docs/balance.md). Sin paquetes NuGet, parseo
 // manual de argumentos (Options.cs).
@@ -44,8 +45,11 @@ try
         var bossGroups = BuildGroups.Load(Path.Combine(dataPath, "balance", "groups.json"));
         int matchesPerRoster = options.RunsExplicit ? options.Runs : 8;
 
+        var itemCatalog = ItemLoader.FromJson(dataFiles);
+
         BossGateResult gate = BossGateRunner.Run(
-            catalog, bossCatalog, bossBuilds, bossGroups.QualityLevels, options.Seed, options.Rosters, matchesPerRoster);
+            catalog, bossCatalog, bossBuilds, bossGroups.QualityLevels, itemCatalog,
+            options.Seed, options.Rosters, matchesPerRoster);
 
         WriteBossGateCsv(options.OutDir!, gate.Cells);
 

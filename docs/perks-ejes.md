@@ -54,6 +54,14 @@ Se añaden al conjunto de RT-034 y a `fase1-diseno.md` §2 cuando se implementen
 
 `stat` merece justificación: hoy un perk de acumulación necesita declarar su propio `addCounter` sobre un disparador y leerlo después, lo que gasta dos efectos y obliga a que el contador exista antes de poder usarlo. Exponer las estadísticas que el motor ya lleva para el informe post-partido (RF-119) abarata mucho toda la familia de acumulación y elimina una fuente de errores.
 
+## Escala de valores por canal (ADR 0035)
+
+Un punto porcentual no vale lo mismo en todos los canales: las bases van de 40 (`injure`) a 7.700 (`pass`), así que la misma cifra escrita en dos perks produce efectos que se diferencian en dos órdenes de magnitud. Cada canal declara su **escalón** en `data/sim/tuning.json` → `probabilityChannels.<canal>.step`, en puntos porcentuales, y un valor legal de `modifyProbability` es ese escalón por **1, 2, 3, 5 o 10 pasos**. La tabla completa está en `fase1b-diseno.md` §1.4; en corto: `intercept`, `injure`, `injury`, `foul`, `card` e `interceptEvasion` valen 1; `tackle`, `tackleEvasion` y `severeInjury` valen 3; `pass`, `dribble`, `save` y `shotOnTarget` valen 5. La comprobación la hace `Sim.Perks.PerkLoader` al cargar.
+
+Consecuencia práctica al escribir un perk: en los canales de base diminuta se escribe **1, 2 o 3**, nunca 10, salvo que se quiera de verdad un interruptor; en los de base grande, 5 a 25 es el rango normal y 50 es el techo.
+
 ## Objetivo `linked`
 
 Los efectos de la familia de alineación actúan **sobre el vínculo**, no sobre el portador: `target: "linked"` (todos los vinculados) o `target: "linkedWithTag:<Tag>"`. Es el tipo de modificador por par que la ADR 0021 exige añadir al motor de efectos.
+
+**El modificador por par solo existe en el canal `pass`.** Un vínculo une a dos **compañeros**, y la única resolución del motor que enfrenta a dos compañeros es el pase de uno al otro: en `intercept`, `tackle`, `dribble`, `shotOnTarget` o `save` la contraparte de la tirada es siempre un rival, así que un bono "del par" nunca se aplicaba y el perk era letra muerta (medido: quitar `covering_shadow` o `pivot_duo` de una build no cambiaba ni un partido de 4.800). Fuera del pase, `target: "linked"` se lee como lo que dice —**el bono es del compañero vinculado**, un modificador normal sobre él— y el vínculo sigue siendo la condición que lo hace existir. Detalle en `fase2-diseno.md` §16, costura 4.

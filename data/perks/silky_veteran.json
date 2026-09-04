@@ -29,7 +29,10 @@
     }
   ],
   "elseEffects": [],
-  "limit": null,
+  "limit": {
+    "per": "match",
+    "times": 1
+  },
   "accumulatesAcrossMatches": true,
   "lethal": false,
   "positionOnly": null,

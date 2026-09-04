@@ -21,7 +21,7 @@ Ticks, puntos base, nombres de canales o de campos JSON, identificadores, fórmu
 
 ## Convención de porcentajes
 
-**Los perks se escriben en puntos porcentuales enteros y redondos.** El JSON declara `"value": 20`, no `"value": 2000`; el cargador convierte a la base interna de 10.000 con la que el motor resuelve. El diseñador escribe y lee la misma cifra que ve el jugador, y los valores del catálogo se limitan a la escala **5, 10, 15, 20, 25, 50**: una escala corta obliga a que cada perk tenga un tamaño reconocible y hace el balanceo comprensible.
+**Los perks se escriben en puntos porcentuales enteros y redondos.** El JSON declara `"value": 20`, no `"value": 2000`; el cargador convierte a la base interna de 10.000 con la que el motor resuelve. El diseñador escribe y lee la misma cifra que ve el jugador. Los valores del catálogo se limitan a una escala corta —para que cada perk tenga un tamaño reconocible y el balanceo sea comprensible— pero esa escala **es propia de cada canal** (ADR 0035): el escalón de cada canal está en `data/sim/tuning.json` → `probabilityChannels.<canal>.step` y un valor legal es ese escalón por 1, 2, 3, 5 o 10. La razón es que un punto porcentual no vale lo mismo en todos los canales: sobre `intercept` (base 250) un `+5` triplica la probabilidad y sobre `pass` (base 7.700) la sube un 6,5%. **Lo que el jugador lee no cambia**: se le sigue diciendo el valor absoluto ("+3% de probabilidad de interceptar"), que es verdad y es verificable; lo que cambia es lo que el diseñador puede escribir.
 
 La base 10.000 se mantiene **solo** dentro del motor, donde hace falta precisión para probabilidades pequeñas (una lesión del 2,4% no se puede expresar en enteros sobre 100).
 

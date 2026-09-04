@@ -18,14 +18,11 @@ namespace Underleague.Sim.Run.Bosses;
 /// <item><see cref="AfterMatch"/>: aplica la condición de derrota propia del jefe final (RF-001c, D-9).
 /// Se resuelve aquí porque el motor no la conoce: un partido ganado en el gol de oro sigue siendo un
 /// partido ganado para <c>Simulator.Run</c>, y es la regla del jefe la que lo convierte en derrota.</item>
+/// <item><see cref="TransformMatch"/>: aplica <see cref="BossRules.Apply"/> al once del jugador. Lo llama
+/// <c>RunEngine.BuildMatch</c>, así que el partido que el bucle de run <b>juega</b> y el que el informe de
+/// ojeo <b>enseña</b> (RF-012b, RF-012d) son literalmente el mismo objeto, construido por la misma
+/// llamada. Es la costura que el paquete Y dejó anotada como Y-8.</item>
 /// </list>
-///
-/// <para><b>Hueco que queda</b>: <c>RunEngine.BuildMatch</c> (paquete W) construye el
-/// <see cref="MatchSetup"/> sin pasar por <see cref="IRunSystems"/>, así que no hay dónde enganchar la
-/// transformación de <see cref="BossRules.Apply"/>. Mientras no se añada esa línea a
-/// <c>RunEngine.EnterMatch</c>, quien quiera el partido del jefe <b>con</b> sus modificadores aplicados
-/// tiene que construirlo con <see cref="BuildBossMatch"/>, que es también lo que necesita el informe de
-/// ojeo (RF-012b) para enseñar el once con el que se va a jugar de verdad.</para>
 /// </summary>
 public sealed class BossRunSystems : IRunSystems
 {
@@ -60,26 +57,31 @@ public sealed class BossRunSystems : IRunSystems
     }
 
     /// <summary>
-    /// Partido de un nodo de jefe con los modificadores ya aplicados al equipo del jugador. Es lo que
-    /// <c>RunEngine.EnterMatch</c> tendría que simular y lo que el informe de ojeo tiene que enseñar
-    /// (RF-012b, RF-012d: nada de lo que pase en el partido puede no estar anunciado).
+    /// Partido de un nodo de jefe con los modificadores ya aplicados al equipo del jugador: el informe de
+    /// ojeo (RF-012b, RF-012d: nada de lo que pase en el partido puede no estar anunciado).
+    ///
+    /// <para>Desde que <c>RunEngine.BuildMatch</c> llama a <see cref="TransformMatch"/> esto es
+    /// literalmente <c>RunEngine.BuildMatch(state, nodeId, catalog, this)</c>; se conserva como nombre
+    /// del informe de ojeo, y porque que ojeo y partido sean la <b>misma llamada</b> es exactamente lo
+    /// que RF-012d pide.</para>
     /// </summary>
     public (MatchSetup Setup, ulong Seed, MatchLineup Lineup) BuildBossMatch(
-        RunState state, int nodeId, Catalog catalog)
-    {
-        ArgumentNullException.ThrowIfNull(state);
-        ArgumentNullException.ThrowIfNull(catalog);
+        RunState state, int nodeId, Catalog catalog) =>
+        RunEngine.BuildMatch(state, nodeId, catalog, this);
 
-        var node = state.GetNode(nodeId);
-        var (setup, seed, lineup) = RunEngine.BuildMatch(state, nodeId, catalog, this);
+    /// <inheritdoc />
+    public MatchSetup TransformMatch(
+        RunState state, MapNode node, MatchSetup setup, int playerTeamIndex, Catalog catalog)
+    {
+        ArgumentNullException.ThrowIfNull(node);
+        var transformed = _inner.TransformMatch(state, node, setup, playerTeamIndex, catalog);
         if (node.Kind != NodeKind.Boss)
         {
-            return (setup, seed, lineup);
+            return transformed;
         }
 
-        // W-15: el equipo del jugador siempre es local.
         var modifiers = Bosses.Modifiers(BossRuleModifiers(state, node, catalog));
-        return (BossRules.Apply(setup, 0, modifiers, catalog), seed, lineup);
+        return BossRules.Apply(transformed, playerTeamIndex, modifiers, catalog);
     }
 
     /// <inheritdoc />

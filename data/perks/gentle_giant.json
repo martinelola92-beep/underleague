@@ -19,7 +19,7 @@
       "type": "modifyProbability",
       "target": "linked",
       "probability": "intercept",
-      "value": 10,
+      "value": 3,
       "duration": "match"
     }
   ],

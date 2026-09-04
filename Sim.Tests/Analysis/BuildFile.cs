@@ -3,6 +3,7 @@ using Underleague.Sim.Data;
 using Underleague.Sim.Generation;
 using Underleague.Sim.Model;
 using Underleague.Sim.Random;
+using Underleague.Sim.Run.Systems.Items;
 
 namespace Underleague.Sim.Tests.Analysis;
 
@@ -20,7 +21,8 @@ internal sealed record BuildFile(
     int Level,
     Rarity? UniformRarity,
     IReadOnlyDictionary<int, StyleTag> Styles,
-    IReadOnlyDictionary<int, IReadOnlyList<Trait>> Traits)
+    IReadOnlyDictionary<int, IReadOnlyList<Trait>> Traits,
+    IReadOnlyDictionary<int, string> Items)
 {
     private const int StarterCount = 7;
 
@@ -94,6 +96,16 @@ internal sealed record BuildFile(
             }
         }
 
+        // Equipamiento por slot (RF-075..078): la otra mitad de "muy buena" en la ADR 0033.
+        var items = new SortedDictionary<int, string>();
+        if (root.TryGetProperty("items", out var itemsElement) && itemsElement.ValueKind == JsonValueKind.Object)
+        {
+            foreach (var property in itemsElement.EnumerateObject())
+            {
+                items[int.Parse(property.Name)] = property.Value.GetString()!;
+            }
+        }
+
         return new BuildFile(
             root.GetProperty("id").GetString()!,
             Enum.Parse<Race>(root.GetProperty("race").GetString()!),
@@ -104,7 +116,8 @@ internal sealed record BuildFile(
             level,
             uniformRarity,
             styles,
-            extraTraits);
+            extraTraits,
+            items);
     }
 
     /// <summary>
@@ -113,7 +126,7 @@ internal sealed record BuildFile(
     /// rareza y de jefe final (ADR 0027): la misma build jugada con una plantilla de otro nivel o de otra
     /// rareza, sin duplicar el fichero de build.
     /// </summary>
-    public TeamSetup ToTeamSetup(Catalog catalog, ulong seed, int generationIndex, int firstPlayerId, int? levelOverride = null, Rarity? rarityOverride = null)
+    public TeamSetup ToTeamSetup(Catalog catalog, ulong seed, int generationIndex, int firstPlayerId, int? levelOverride = null, Rarity? rarityOverride = null, ItemCatalog? itemCatalog = null)
     {
         var rng = RngStreams.Generation(seed, generationIndex);
         var generated = TeamGenerator.Generate(
@@ -144,6 +157,16 @@ internal sealed record BuildFile(
         foreach (var (slot, list) in bySlot.OrderBy(e => e.Key))
         {
             players[slot] = players[slot] with { Perks = list };
+        }
+
+        // Equipamiento: el objeto viaja dentro del PlayerDefinition, igual que en el bucle de run
+        // (RunEquipment.ToMatchItem es la misma conversión), así que la puerta mide lo que se equipa.
+        foreach (var (slot, itemId) in Items)
+        {
+            var definition = (itemCatalog ?? throw new InvalidOperationException(
+                    $"la build '{Id}' equipa objetos pero no se ha pasado el catálogo de data/items/")).Find(itemId)
+                ?? throw new InvalidOperationException($"la build '{Id}' equipa el objeto '{itemId}', que no está en data/items/");
+            players[slot] = players[slot] with { Item = RunEquipment.ToMatchItem(definition) };
         }
 
         Lineup lineup;

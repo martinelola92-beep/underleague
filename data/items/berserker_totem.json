@@ -7,6 +7,6 @@
     { "type": "modifyAttribute", "attribute": "strength", "value": 18 }
   ],
   "drawbackEffects": [
-    { "type": "modifyProbability", "probability": "injure", "value": 1000 }
+    { "type": "modifyProbability", "probability": "injury", "value": 300 }
   ]
 }

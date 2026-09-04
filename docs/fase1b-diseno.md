@@ -128,18 +128,35 @@ Comprobación obligatoria (ADR 0027): común de nivel 8 (presupuesto 306) ≈ le
 
 Cambios respecto a la fase 1:
 
-- **`value` en unidades enteras redondas, con escala propia por tipo de efecto.** La escala `5, 10, 15, 20, 25, 50` es de **puntos porcentuales** y aplica **solo a `modifyProbability`** (el cargador multiplica por 100 para la base interna de 10.000). Los demás efectos no son porcentajes y tienen su propia escala, porque un `+20` de fuerza sobre un presupuesto total de ~290 puntos sería enorme y un `+5` de correa es, según `docs/balance/fase1-perks.md`, el efecto más potente del juego:
+- **`value` en unidades enteras redondas, con escala propia por tipo de efecto.** `modifyProbability` va en **puntos porcentuales** (el cargador multiplica por 100 para la base interna de 10.000) y, desde la **ADR 0035**, su escala **no es única: depende del canal**. Cada canal declara su escalón en `data/sim/tuning.json` → `probabilityChannels.<canal>.step`, y un valor legal es ese escalón por **1, 2, 3, 5 o 10 pasos**. Los demás efectos no son porcentajes y tienen su propia escala, porque un `+20` de fuerza sobre un presupuesto total de ~290 puntos sería enorme y un `+5` de correa es, según `docs/balance/fase1-perks.md`, el efecto más potente del juego:
 
 | Tipo de efecto | Unidad | Escala permitida |
 |---|---|---|
-| `modifyProbability` | puntos porcentuales | 5, 10, 15, 20, 25, 50 |
+| `modifyProbability` | puntos porcentuales | escalón del canal × 1, 2, 3, 5, 10 (tabla abajo) |
 | `modifyAttribute` | puntos de atributo (1-99) | 3, 5, 8, 10 (y sus negativos) |
 | `modifyLeash` | casillas de extensión de zona | 1, 2 |
 | `modifyBias` | puntos de criterio (−100..100) | 10, 15, 20 |
 | `setState` | ticks | 5, 10, 15 |
 | `addCounter` | unidades de contador | 1, 2 |
 
-El validador rechaza valores fuera de la escala de su tipo.
+Escalones por canal (ADR 0035; el escalón se fija para que un paso valga aproximadamente lo mismo en impacto **relativo** sobre la base del canal, hasta donde el punto porcentual entero lo permite):
+
+| Canal | Base (10.000) | `step` | Valores legales |
+|---|---|---|---|
+| `intercept` | 250 | 1 | 1, 2, 3, 5, 10 |
+| `injure` / `injury` | 40 / 40 | 1 | 1, 2, 3, 5, 10 |
+| `foul` | 320 | 1 | 1, 2, 3, 5, 10 |
+| `card` | 250 | 1 | 1, 2, 3, 5, 10 |
+| `interceptEvasion` | contra 250 | 1 | 1, 2, 3, 5, 10 |
+| `tackle` | 2.800 | 3 | 3, 6, 9, 15, 30 |
+| `tackleEvasion` | contra 2.800 | 3 | 3, 6, 9, 15, 30 |
+| `severeInjury` | 3.000 | 3 | 3, 6, 9, 15, 30 |
+| `shotOnTarget` | 4.625 | 5 | 5, 10, 15, 25, 50 |
+| `save` | 5.000 | 5 | 5, 10, 15, 25, 50 |
+| `dribble` | 7.200 | 5 | 5, 10, 15, 25, 50 |
+| `pass` | 7.700 | 5 | 5, 10, 15, 25, 50 |
+
+El validador rechaza valores fuera de la escala de su tipo. La comprobación por canal la hace el **cargador** (`Sim.Perks.PerkLoader`, con la escala que trae `tuning.probabilityChannels`), no el esquema JSON: un esquema no puede expresar "múltiplo del escalón declarado en otro fichero".
 - **`race`**: `null` (universal) o id de raza (exclusivo, ADR 0023). Restricción de **aparición**, no de asignación.
 - **`axis`**: uno de `identity`, `accumulation`, `alignment`, `startZone`, `geometry`, `matchState`, `composition`, `proximity` (`docs/perks-ejes.md`). El validador comprueba la distribución del catálogo.
 - **`links`**: relaciones direccionales que el perk necesita (ADR 0021), de `beside`, `ahead`, `behind`, `left`, `right`, `diagonalAhead`, `diagonalBehind`. Resueltas **una vez** al construir el partido. Habilita `target: "linked"` y `target: "linkedWithTag:<Tag>"`.
@@ -256,7 +273,7 @@ Vínculos direccionales, efectos por par, funciones de condición nuevas y habil
 
 1. **El formato de perk se muda de `Sim/Data/DataLoader.cs` a `Sim/Perks/PerkLoader.cs`.** Es la única excepción de frontera del paquete, y es un traslado, no una reescritura: en `DataLoader` queda una línea (`PerkLoader.Parse(path, content)`) donde había doscientas. El motivo es que el formato del perk es el contrato del **motor de perks**: quien añade un tipo de efecto, un objetivo o una función de condición tocaba antes dos paquetes y ahora toca uno. `PerkLoader` lleva su propio lector de JSON con ruta porque el de `DataLoader` es un `private struct` de esa clase; duplicar cien líneas de lector es el precio de que el formato viva junto al motor que lo ejecuta. La otra excepción, de una línea, es la lista `TemplateSections` de `DataLoader`, que enumera las secciones legales de `data/l10n`: hay cinco nuevas.
 
-2. **La conversión ×100 y la escala 5/10/15/20/25/50 se aplican solo a `modifyProbability`.** Es el único canal que vive en base 10.000. Los puntos de atributo, las casillas de correa, los puntos de criterio del árbitro, los ticks de derribo y el porcentaje de experiencia son unidades propias y el cargador no las toca. La escala se comprueba también en el esquema, con un `if/then` sobre el tipo de efecto, para que un dato malo caiga en el validador antes que en el cargador.
+2. **La conversión ×100 y la escala de puntos porcentuales se aplican solo a `modifyProbability`.** *(la escala única de este punto la sustituye la escala por canal de la ADR 0035; ver la tabla de §1.4)* Es el único canal que vive en base 10.000. Los puntos de atributo, las casillas de correa, los puntos de criterio del árbitro, los ticks de derribo y el porcentaje de experiencia son unidades propias y el cargador no las toca. La escala se comprueba también en el esquema, con un `if/then` sobre el tipo de efecto, para que un dato malo caiga en el validador antes que en el cargador.
 
 3. **La etiqueta de especie se rechaza sobre el AST, no sobre el texto.** `ConditionCompiler.TagLiterals` recorre la condición ya analizada y devuelve los literales que ocupan una posición de etiqueta en la firma de la función, así que no se puede colar por espaciado, comillas ni por una función nueva que reciba etiquetas. Se comprueba también en `tagsRequired`, `tagsForbidden` y el objetivo de cada efecto. El conjunto de etiquetas de especie son los nombres de `Model.Race`, que es exactamente lo que `data/races/*.json` pone en `speciesTag`.
 

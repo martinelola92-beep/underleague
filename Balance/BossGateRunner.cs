@@ -3,6 +3,7 @@ using Underleague.Sim.Data;
 using Underleague.Sim.Model;
 using Underleague.Sim.Random;
 using Underleague.Sim.Run.Bosses;
+using Underleague.Sim.Run.Systems.Items;
 
 namespace Underleague.Balance;
 
@@ -32,6 +33,7 @@ public static class BossGateRunner
         BossCatalog bosses,
         IReadOnlyDictionary<string, BuildConfig> builds,
         IReadOnlyDictionary<string, IReadOnlyList<string>> qualityLevels,
+        ItemCatalog items,
         ulong seed,
         int rosters,
         int matchesPerRoster)
@@ -40,6 +42,7 @@ public static class BossGateRunner
         ArgumentNullException.ThrowIfNull(bosses);
         ArgumentNullException.ThrowIfNull(builds);
         ArgumentNullException.ThrowIfNull(qualityLevels);
+        ArgumentNullException.ThrowIfNull(items);
 
         var stopwatch = System.Diagnostics.Stopwatch.StartNew();
         var cells = new List<BossGateCell>();
@@ -70,7 +73,7 @@ public static class BossGateRunner
                         (roster, idBase) =>
                         {
                             var rng = RngStreams.Generation(seed, roster);
-                            return atGate.ToTeamSetup(ref rng, catalog, idBase);
+                            return atGate.ToTeamSetup(ref rng, catalog, idBase, qualityOverride: null, items);
                         },
                         seed, rosters, matchesPerRoster, matchIndex, (int)build.Race);
 

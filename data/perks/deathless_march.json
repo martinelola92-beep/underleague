@@ -17,9 +17,9 @@
       "type": "modifyProbability",
       "target": "team",
       "probability": "tackle",
-      "valuePerCounter": 5,
+      "valuePerCounter": 3,
       "counter": "deathlessMarchMatches",
-      "maxValue": 25,
+      "maxValue": 15,
       "duration": "match"
     },
     {

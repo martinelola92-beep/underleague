@@ -161,4 +161,7 @@ internal sealed class TestRunSystems : IRunSystems
 
     public IReadOnlyList<string> BossRuleModifiers(RunState state, MapNode node, Catalog catalog) =>
         _inner.BossRuleModifiers(state, node, catalog);
+
+    public MatchSetup TransformMatch(RunState state, MapNode node, MatchSetup setup, int playerTeamIndex, Catalog catalog) =>
+        _inner.TransformMatch(state, node, setup, playerTeamIndex, catalog);
 }

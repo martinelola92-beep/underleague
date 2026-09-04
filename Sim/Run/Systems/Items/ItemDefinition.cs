@@ -30,12 +30,13 @@ public enum ItemArchetype
 /// disparador, sin condición NCalc, sin alcance. La descripción no es un campo del dato: se genera desde
 /// el efecto (RT-035, <see cref="ItemDescriptions"/>).
 ///
-/// <para><b>Alcance de esta fase</b>: el equipamiento es economía y plantilla puras (comprar, transferir,
-/// vender, romperse) igual que los consumibles que dejó pendientes el paquete W
-/// (<c>fase2-diseno.md</c> §13, "Lo que el paquete W deja pendiente"): <c>PlayerDefinition</c> no tiene
-/// campo <c>Item</c> y <c>Simulator.Run</c> no lo consume, así que sus efectos no alteran el partido
-/// todavía. Wire-arlo exige tocar <c>Sim/Engine</c> y <c>Sim/Model.PlayerDefinition</c>, fuera de las
-/// fronteras del paquete X (ver "Decisiones de implementación del paquete X" en <c>fase2-diseno.md</c>).</para>
+/// <para>El objeto llega al partido dentro del <c>PlayerDefinition</c> de su portador, ya convertido a
+/// <see cref="MatchItem"/> por <see cref="RunEquipment.ToMatchItem"/>, y sus efectos los aplica el mismo
+/// motor de efectos que los de un perk (<c>EffectEngine.ApplyEquippedItems</c>). El camino es el mismo
+/// desde el bucle de run y desde <c>/Balance</c>: una build de <c>data/balance/builds/</c> declara su
+/// equipamiento en el campo <c>items</c> y lo resuelve con esta misma conversión, de modo que la curva de
+/// puertas de la ADR 0033 mide el objeto que el jugador equipa y no una copia paralela
+/// (<c>fase2-diseno.md</c> §16).</para>
 /// </summary>
 public sealed record ItemDefinition(
     string Id,

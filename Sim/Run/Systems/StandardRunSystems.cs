@@ -166,4 +166,13 @@ public sealed class StandardRunSystems : IRunSystems
     /// <inheritdoc />
     public IReadOnlyList<string> BossRuleModifiers(RunState state, MapNode node, Catalog catalog) =>
         Array.Empty<string>();
+
+    /// <inheritdoc />
+    /// <remarks>
+    /// El paquete X no transforma el partido: los objetos equipados ya viajan dentro del
+    /// <c>PlayerDefinition</c> que arma <c>RunLineup</c>, y los modificadores de regla son del jefe
+    /// (paquete Y), que envuelve a esta clase con <c>BossRunSystems</c>.
+    /// </remarks>
+    public MatchSetup TransformMatch(RunState state, MapNode node, MatchSetup setup, int playerTeamIndex, Catalog catalog) =>
+        setup;
 }

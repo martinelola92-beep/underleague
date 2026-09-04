@@ -717,7 +717,16 @@ internal sealed class EffectEngine : IPerkLinks
 
             int value = EffectValue(subscription, effect);
             bool expiresAtPlayEnd = effect.Duration == EffectDuration.Play;
-            bool pairwise = effect.Target is EffectTarget.Linked or EffectTarget.LinkedWithTag;
+
+            // Un modificador **por par** (ADR 0021) solo existe si hay una resolución que enfrente al
+            // portador con su vinculado, y el vinculado es siempre un COMPAÑERO: la única resolución que
+            // enfrenta a dos compañeros es el pase de uno al otro. En los demás canales -intercept,
+            // tackle, dribble, remate, parada- la contraparte de la tirada es un rival, así que el par
+            // (portador, compañero) no se forma nunca y el bono no se aplicaba jamás: medido, quitar
+            // covering_shadow o pivot_duo de una build no cambiaba ni un partido (§16, costura 4).
+            // Fuera del pase, "al vinculado" se lee como lo que dice: el bono es del compañero vinculado.
+            bool pairwise = effect.Target is EffectTarget.Linked or EffectTarget.LinkedWithTag
+                && effect.Probability == ProbabilityKind.Pass;
             ResolveTargets(subscription, effect, context);
             for (int t = 0; t < _targets.Count; t++)
             {

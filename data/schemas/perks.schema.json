@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://underleague.dev/schemas/perks.schema.json",
   "title": "Underleague perk",
-  "description": "data/perks/<id>.json: un perk por fichero (RT-033, docs/fase1b-diseno.md §1.4). Un perk es un dato, no código: eje, disparador, condición NCalc, efectos, vínculos, alcance y límite. NO existe campo 'description': el texto se genera desde el efecto con las plantillas de data/l10n (RT-035), así que aquí se rechaza explícitamente. Los 'value' de modifyProbability se escriben en PUNTOS PORCENTUALES enteros de la escala 5/10/15/20/25/50 y el cargador los multiplica por 100 para la base interna de 10.000 (docs/estilo-descripciones.md); el resto de efectos conserva su propia unidad. Un perk universal (race: null) no puede consultar la etiqueta de especie (ADR 0023, RF-065b): eso lo comprueba el cargador, porque exige leer la condición.",
+  "description": "data/perks/<id>.json: un perk por fichero (RT-033, docs/fase1b-diseno.md §1.4). Un perk es un dato, no código: eje, disparador, condición NCalc, efectos, vínculos, alcance y límite. NO existe campo 'description': el texto se genera desde el efecto con las plantillas de data/l10n (RT-035), así que aquí se rechaza explícitamente. Los 'value' de modifyProbability se escriben en PUNTOS PORCENTUALES enteros, multiplos del escalon de SU CANAL (ADR 0035, data/sim/tuning.json -> probabilityChannels) por 1, 2, 3, 5 o 10 pasos; eso lo comprueba el cargador, no este esquema, y multiplica por 100 para la base interna de 10.000 (docs/estilo-descripciones.md); el resto de efectos conserva su propia unidad. Un perk universal (race: null) no puede consultar la etiqueta de especie (ADR 0023, RF-065b): eso lo comprueba el cargador, porque exige leer la condición.",
   "type": "object",
   "properties": {
     "_doc": {
@@ -348,7 +348,7 @@
       "additionalProperties": false,
       "allOf": [
         {
-          "_doc": "La escala corta de puntos porcentuales de docs/estilo-descripciones.md, para que cada perk tenga un tamaño reconocible. En modifyProbability se aplica al valor fijo, al incremento por contador y al tope; el cargador multiplica los tres por 100.",
+          "_doc": "ADR 0035: la escala de modifyProbability ya NO es unica, depende del canal (tuning.probabilityChannels.<canal>.step, y el valor es ese escalon por 1, 2, 3, 5 o 10). Un esquema JSON no puede expresar 'multiplo del escalon declarado en otro fichero', asi que aqui solo queda la cota de cordura y la comprobacion real la hace Sim.Perks.PerkLoader al cargar, que es donde la ADR la pone. El cargador multiplica valor, incremento por contador y tope por 100 para la base interna de 10.000.",
           "if": {
             "properties": {
               "type": {
@@ -362,53 +362,19 @@
           "then": {
             "properties": {
               "value": {
-                "enum": [
-                  -50,
-                  -25,
-                  -20,
-                  -15,
-                  -10,
-                  -5,
-                  5,
-                  10,
-                  15,
-                  20,
-                  25,
-                  50
-                ]
+                "type": "integer",
+                "minimum": -100,
+                "maximum": 100
               },
               "valuePerCounter": {
-                "enum": [
-                  -50,
-                  -25,
-                  -20,
-                  -15,
-                  -10,
-                  -5,
-                  5,
-                  10,
-                  15,
-                  20,
-                  25,
-                  50
-                ]
+                "type": "integer",
+                "minimum": -100,
+                "maximum": 100
               },
               "maxValue": {
-                "enum": [
-                  -50,
-                  -25,
-                  -20,
-                  -15,
-                  -10,
-                  -5,
-                  5,
-                  10,
-                  15,
-                  20,
-                  25,
-                  50,
-                  0
-                ]
+                "type": "integer",
+                "minimum": -100,
+                "maximum": 100
               }
             }
           }

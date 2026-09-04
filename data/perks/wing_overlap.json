@@ -20,7 +20,7 @@
       "type": "modifyProbability",
       "target": "linked",
       "probability": "dribble",
-      "value": 20,
+      "value": 15,
       "duration": "play"
     }
   ],

@@ -489,7 +489,7 @@ public sealed class PerkLoaderTests
             """
             [
               { "type": "modifyProbability", "target": "owner", "probability": "intercept",
-                "valuePerCounter": 5, "counter": "matches", "maxValue": 25, "duration": "match" },
+                "valuePerCounter": 2, "counter": "matches", "maxValue": 10, "duration": "match" },
               { "type": "modifyLeash", "target": "owner",
                 "valuePerCounter": 5, "counter": "matches", "maxValue": 10, "counterDivisor": 4, "duration": "match" }
             ]
@@ -498,8 +498,8 @@ public sealed class PerkLoaderTests
             accumulates: true));
 
         Assert.True(perk.Effects[0].UsesCounter);
-        Assert.Equal(500, perk.Effects[0].ValuePerCounter);
-        Assert.Equal(2500, perk.Effects[0].MaxValue);
+        Assert.Equal(200, perk.Effects[0].ValuePerCounter);
+        Assert.Equal(1000, perk.Effects[0].MaxValue);
 
         // La correa son casillas: ni el incremento ni el tope se convierten.
         Assert.Equal(5, perk.Effects[1].ValuePerCounter);

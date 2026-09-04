@@ -16,9 +16,10 @@ namespace Underleague.Sim.Perks;
 /// </para>
 /// <para>Reglas del formato revisado que este cargador impone:</para>
 /// <list type="bullet">
-/// <item><c>value</c> de <c>modifyProbability</c> en **puntos porcentuales enteros** de la escala
-/// 5/10/15/20/25/50; se multiplica por 100 para la base interna de 10.000 (estilo-descripciones.md).
-/// El resto de efectos conserva su propia unidad (puntos de atributo, casillas, ticks).</item>
+/// <item><c>value</c> de <c>modifyProbability</c> en **puntos porcentuales enteros**, múltiplo del
+/// <b>escalón de su canal</b> (ADR 0035, <c>tuning.probabilityChannels</c>) por 1, 2, 3, 5 o 10; se
+/// multiplica por 100 para la base interna de 10.000 (estilo-descripciones.md). El resto de efectos
+/// conserva su propia unidad (puntos de atributo, casillas, ticks).</item>
 /// <item><c>axis</c> obligatorio, uno de los ocho ejes de <c>docs/perks-ejes.md</c>.</item>
 /// <item><c>race</c> null (universal) o id de raza (exclusivo, ADR 0023).</item>
 /// <item>Un perk universal **no puede consultar la etiqueta de especie** (ADR 0023, RF-065b): en un club
@@ -29,9 +30,6 @@ namespace Underleague.Sim.Perks;
 /// </summary>
 public static class PerkLoader
 {
-    /// <summary>Escala cerrada de puntos porcentuales admitida en <c>modifyProbability</c> (§1.4).</summary>
-    public static readonly int[] PercentScale = { 5, 10, 15, 20, 25, 50 };
-
     private static readonly string[] KnownKeys =
     {
         "id", "name", "rarity", "kind", "axis", "race", "trigger", "scope", "links", "condition",
@@ -63,9 +61,15 @@ public static class PerkLoader
     /// </summary>
     public static bool IsSpeciesTag(string tag) => Enum.TryParse<Race>(tag, out var race) && Enum.IsDefined(race);
 
-    /// <summary>Analiza el contenido de un fichero de perk. Lanza <see cref="DataException"/> si no cumple §1.4.</summary>
-    public static PerkDefinition Parse(string file, string content)
+    /// <summary>
+    /// Analiza el contenido de un fichero de perk. Lanza <see cref="DataException"/> si no cumple §1.4.
+    /// <paramref name="scale"/> es la escala de valores por canal de la ADR 0035
+    /// (<c>tuning.probabilityChannels</c>): sin ella no se puede decir si un <c>value</c> de
+    /// <c>modifyProbability</c> es legal, porque el escalón depende del canal.
+    /// </summary>
+    public static PerkDefinition Parse(string file, string content, ProbabilityScale scale)
     {
+        ArgumentNullException.ThrowIfNull(scale);
         JsonDocument doc;
         try
         {
@@ -101,9 +105,9 @@ public static class PerkLoader
         string conditionSource = root.TryProp("condition") is { } conditionNode ? conditionNode.AsString() : string.Empty;
         var condition = ConditionCompiler.Compile(conditionSource, file, "$.condition");
 
-        var effects = ParseEffects(root.Prop("effects"), file, trigger, links);
+        var effects = ParseEffects(root.Prop("effects"), file, trigger, links, scale);
         var elseEffects = root.TryProp("elseEffects") is { } elseNode
-            ? ParseEffects(elseNode, file, trigger, links)
+            ? ParseEffects(elseNode, file, trigger, links, scale)
             : Array.Empty<EffectDefinition>();
         if (effects.Count == 0 && elseEffects.Count == 0)
         {
@@ -263,19 +267,19 @@ public static class PerkLoader
     // ---------------------------------------------------------------- efectos
 
     private static IReadOnlyList<EffectDefinition> ParseEffects(
-        Node node, string file, EventType trigger, IReadOnlyList<LinkRelation> links)
+        Node node, string file, EventType trigger, IReadOnlyList<LinkRelation> links, ProbabilityScale scale)
     {
         var effects = new List<EffectDefinition>();
         foreach (var item in node.EnumerateArray())
         {
-            effects.Add(ParseEffect(item, file, trigger, links));
+            effects.Add(ParseEffect(item, file, trigger, links, scale));
         }
 
         return effects;
     }
 
     private static EffectDefinition ParseEffect(
-        Node node, string file, EventType trigger, IReadOnlyList<LinkRelation> links)
+        Node node, string file, EventType trigger, IReadOnlyList<LinkRelation> links, ProbabilityScale scale)
     {
         node.EnsureKnownKeys(EffectKnownKeys);
         var type = ParseEnum<EffectType>(node.Prop("type"), "tipo de efecto");
@@ -329,16 +333,16 @@ public static class PerkLoader
         {
             if (usesCounter)
             {
-                valuePerCounter = ToBasePoints(node, valuePerCounter, "valuePerCounter");
+                valuePerCounter = ToBasePoints(node, valuePerCounter, "valuePerCounter", probability, scale);
             }
             else
             {
-                value = ToBasePoints(node, value, "value");
+                value = ToBasePoints(node, value, "value", probability, scale);
             }
 
             if (maxValue != 0)
             {
-                maxValue = ToBasePoints(node, maxValue, "maxValue");
+                maxValue = ToBasePoints(node, maxValue, "maxValue", probability, scale);
             }
         }
 
@@ -349,22 +353,21 @@ public static class PerkLoader
             maxValue, counterDivisor, probability, duration, state, ticks, immunity);
     }
 
-    private static int ToBasePoints(Node node, int points, string field)
+    private static int ToBasePoints(Node node, int points, string field, ProbabilityKind probability, ProbabilityScale scale)
     {
-        int magnitude = Math.Abs(points);
-        for (int i = 0; i < PercentScale.Length; i++)
+        if (scale.IsLegal(probability, points))
         {
-            if (PercentScale[i] == magnitude)
-            {
-                return points * 100;
-            }
+            return points * 100;
         }
 
+        string channel = ProbabilityScale.Name(probability);
         throw new DataException(
             node.File,
             node.Path + "." + field,
-            $"'{points}' no está en la escala de puntos porcentuales 5/10/15/20/25/50 "
-                + "(estilo-descripciones.md); el cargador la multiplica por 100 para la base interna");
+            $"'{points}' no es un valor legal del canal '{channel}': su escalón es "
+                + $"{scale.Step(probability)} punto(s) porcentual(es) y la escala son 1, 2, 3, 5 o 10 pasos, "
+                + $"es decir {scale.Allowed(probability)} (ADR 0035, tuning.probabilityChannels.{channel}.step). "
+                + "El cargador multiplica el valor por 100 para la base interna de 10.000");
     }
 
     private static void ValidateEffect(

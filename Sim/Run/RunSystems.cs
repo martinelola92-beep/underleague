@@ -99,6 +99,20 @@ public interface IRunSystems
     /// Devuelve ids de <c>data/bosses/</c>; lista vacía si no hay ninguno todavía. Paquete Y.
     /// </summary>
     IReadOnlyList<string> BossRuleModifiers(RunState state, MapNode node, Catalog catalog);
+
+    /// <summary>
+    /// Última oportunidad de transformar el partido antes de simularlo. Es el gancho por el que entran
+    /// los modificadores de regla del jefe (RF-001b/c): un modificador es, por construcción, una
+    /// transformación del <see cref="MatchSetup"/> —quita perks, mueve casillas-hogar— y el motor no
+    /// puede saber que existe un jefe (RT-011).
+    ///
+    /// <para>Lo llama <see cref="RunEngine.BuildMatch"/>, así que <b>lo que se juega es exactamente lo
+    /// que el informe de ojeo enseña</b> (RF-012b, RF-012d): las dos cosas salen de la misma llamada.
+    /// Debe ser pura, determinista e <b>idempotente en la práctica</b> no hace falta: solo se aplica una
+    /// vez por partido, en <c>BuildMatch</c>.</para>
+    /// </summary>
+    /// <param name="playerTeamIndex">Equipo del jugador en el <see cref="MatchSetup"/>: 0 local, 1 visitante (W-15: siempre 0 hoy).</param>
+    MatchSetup TransformMatch(RunState state, MapNode node, MatchSetup setup, int playerTeamIndex, Catalog catalog);
 }
 
 /// <summary>
@@ -258,4 +272,8 @@ public sealed class DefaultRunSystems : IRunSystems
     /// <inheritdoc />
     public IReadOnlyList<string> BossRuleModifiers(RunState state, MapNode node, Catalog catalog) =>
         Array.Empty<string>();
+
+    /// <inheritdoc />
+    public MatchSetup TransformMatch(RunState state, MapNode node, MatchSetup setup, int playerTeamIndex, Catalog catalog) =>
+        setup;
 }

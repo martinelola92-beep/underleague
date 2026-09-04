@@ -1,5 +1,5 @@
 {
-  "_doc": "Escalón \"muy buena\" de la escala de calidad de build de la ADR 0033, medido por la puerta de jefes (Sim.Tests/Analysis/BossGateTests.cs). Los cuatro escalones de una raza comparten calidad 50, rareza común y etiqueta de estilo impuesta: lo único que cambia entre ellos es la construcción -qué perks, dónde colocados, con qué escalado acumulado-, nunca la plantilla. Buena, con la plantilla cuidada (dos titulares raros, NINGUN legendario: la salvaguarda de la ADR 0027 se mide sobre esta build), una segunda linea de sinergia (lider natural, +15 de entrada al equipo), la colocacion ajustada para que la punta de lanza alimente al delantero y el escalado acumulado de toda la run (contadores al tope). Le falta el equipamiento (RF-076), que es del paquete X.",
+  "_doc": "Escalón \"muy buena\" de la escala de calidad de build de la ADR 0033, medido por la puerta de jefes (Sim.Tests/Analysis/BossGateTests.cs). Los cuatro escalones de una raza comparten calidad 50, rareza común y etiqueta de estilo impuesta: lo único que cambia entre ellos es la construcción -qué perks, dónde colocados, con qué escalado acumulado-, nunca la plantilla. Buena, con la plantilla cuidada (dos titulares raros, NINGUN legendario: la salvaguarda de la ADR 0027 se mide sobre esta build), una segunda linea de sinergia (lider natural, +15 de entrada al equipo), la colocacion ajustada para que la punta de lanza alimente al delantero y el escalado acumulado de toda la run repartido en CUATRO acumuladores distintos con el contador al tope (parada, intercepcion, regate y remate), no cuatro copias del mismo: es lo que la costura 5 hace posible. Equipada (RF-076): los siete titulares llevan objeto, que es la otra mitad de \"ademas equipada\" de la ADR 0033. Sin legendarios ni frágiles ni restringidos: un objeto legendario romperia la salvaguarda de la ADR 0027 y uno frágil seria gratis en un partido suelto.",
   "id": "undead_excellent",
   "name": "No-muertos: muy buena",
   "race": "Undead",
@@ -52,11 +52,11 @@
     },
     {
       "slot": 4,
-      "perk": "battle_reader"
+      "perk": "silky_veteran"
     },
     {
       "slot": 5,
-      "perk": "battle_reader"
+      "perk": "silky_veteran"
     },
     {
       "slot": 5,
@@ -135,13 +135,22 @@
       "battleReaderMatches": 5
     },
     "4": {
-      "battleReaderMatches": 5
+      "silkyVeteranDribbles": 5
     },
     "5": {
-      "battleReaderMatches": 5
+      "silkyVeteranDribbles": 5
     },
     "6": {
       "poacherInstinctGoals": 5
     }
+  },
+  "items": {
+    "0": "focus_lens",
+    "1": "berserker_totem",
+    "2": "berserker_totem",
+    "3": "focus_lens",
+    "4": "endurance_belt",
+    "5": "berserker_totem",
+    "6": "worn_boots"
   }
 }

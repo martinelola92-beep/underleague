@@ -8,7 +8,7 @@
   },
   "template": {
     "race": "Undead",
-    "quality": 40,
+    "quality": 24,
     "level": 8,
     "rarity": "legendary",
     "perks": [

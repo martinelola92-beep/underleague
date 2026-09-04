@@ -3,6 +3,7 @@ using Underleague.Sim.Data;
 using Underleague.Sim.Generation;
 using Underleague.Sim.Model;
 using Underleague.Sim.Random;
+using Underleague.Sim.Run.Systems.Items;
 using SimLineup = Underleague.Sim.Model.Lineup;
 
 namespace Underleague.Balance;
@@ -29,7 +30,8 @@ public sealed record BuildConfig(
     Rarity? UniformRarity = null,
     IReadOnlyDictionary<int, StyleTag>? Styles = null,
     IReadOnlyDictionary<int, IReadOnlyList<Trait>>? Traits = null,
-    IReadOnlyDictionary<int, IReadOnlyDictionary<string, int>>? Counters = null)
+    IReadOnlyDictionary<int, IReadOnlyDictionary<string, int>>? Counters = null,
+    IReadOnlyDictionary<int, string>? Items = null)
 {
     /// <summary>Número de titulares de un equipo (GK, DEF, DEF, MID, MID, MID, FWD).</summary>
     public const int StarterCount = 7;
@@ -200,7 +202,24 @@ public sealed record BuildConfig(
             }
         }
 
-        return new BuildConfig(id, name, race, quality, perks, rarities, lineup, level, uniformRarity, styles, traits, counters);
+        // Equipamiento por slot (RF-075..078). Es la otra mitad de "muy buena" en la ADR 0033: sin esto
+        // el escalón superior se medía sin equipar, que es la mitad de su definición.
+        var items = new Dictionary<int, string>();
+        if (root.TryGetProperty("items", out var itemsElement) && itemsElement.ValueKind == JsonValueKind.Object)
+        {
+            foreach (var property in itemsElement.EnumerateObject())
+            {
+                if (!int.TryParse(property.Name, out int slot) || slot < 0 || slot >= StarterCount)
+                {
+                    throw new FormatException($"{path}: clave de 'items' inválida '{property.Name}'");
+                }
+
+                items[slot] = property.Value.GetString()
+                    ?? throw new FormatException($"{path}: 'items.{property.Name}' debe ser una cadena");
+            }
+        }
+
+        return new BuildConfig(id, name, race, quality, perks, rarities, lineup, level, uniformRarity, styles, traits, counters, items);
     }
 
     /// <summary>Carga todas las builds de un directorio: todo *.json (los grupos viven fuera, en data/balance/groups.json).</summary>
@@ -235,7 +254,8 @@ public sealed record BuildConfig(
     /// <c>Simulator.Run</c> al recibir el <see cref="TeamSetup"/>; un <c>ArgumentException</c> desde ahí ya
     /// nombra el equipo (Id de la build), el jugador y el perk (Sim/Engine/Simulator.cs, ValidatePerks).
     /// </summary>
-    public TeamSetup ToTeamSetup(ref Pcg32 rng, Catalog catalog, int firstPlayerId, int? qualityOverride = null)
+    public TeamSetup ToTeamSetup(
+        ref Pcg32 rng, Catalog catalog, int firstPlayerId, int? qualityOverride = null, ItemCatalog? items = null)
     {
         var generated = TeamGenerator.Generate(ref rng, catalog, Id, Race, qualityOverride ?? Quality, firstPlayerId, Level, UniformRarity, Styles, Traits);
         var players = generated.Players.ToList();
@@ -273,6 +293,27 @@ public sealed record BuildConfig(
             {
                 int index = IndexOfSlot(players, firstPlayerId, slot);
                 players[index] = players[index].WithCounters(values);
+            }
+        }
+
+        // Equipamiento (RF-075..078). El objeto llega al partido dentro del PlayerDefinition, igual que en
+        // la run: RunEquipment.ToMatchItem es la misma conversión que usa el bucle, así que /Balance mide
+        // el objeto que el jugador equipa y no una copia paralela.
+        if (Items is { Count: > 0 })
+        {
+            if (items is null)
+            {
+                throw new InvalidOperationException(
+                    $"la build '{Id}' equipa objetos pero no se ha pasado el catálogo de data/items/");
+            }
+
+            foreach (var (slot, itemId) in Items.OrderBy(i => i.Key))
+            {
+                var definition = items.Find(itemId)
+                    ?? throw new InvalidOperationException(
+                        $"la build '{Id}' equipa el objeto '{itemId}', que no está en data/items/");
+                int index = IndexOfSlot(players, firstPlayerId, slot);
+                players[index] = players[index] with { Item = RunEquipment.ToMatchItem(definition) };
             }
         }
 

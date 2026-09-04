@@ -29,7 +29,7 @@
       "type": "modifyProbability",
       "target": "owner",
       "probability": "tackle",
-      "value": -25,
+      "value": -30,
       "duration": "play"
     }
   ],

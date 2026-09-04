@@ -17,7 +17,7 @@
       "type": "modifyProbability",
       "target": "owner",
       "probability": "dribble",
-      "value": 20,
+      "value": 15,
       "duration": "match"
     }
   ],

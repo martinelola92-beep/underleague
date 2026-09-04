@@ -17,9 +17,9 @@
       "type": "modifyProbability",
       "target": "owner",
       "probability": "intercept",
-      "valuePerCounter": 5,
+      "valuePerCounter": 2,
       "counter": "battleReaderMatches",
-      "maxValue": 25,
+      "maxValue": 10,
       "duration": "match"
     },
     {

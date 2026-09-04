@@ -8,7 +8,7 @@
   "kind": "conditional",
   "axis": "geometry",
   "race": null,
-  "trigger": "RECOVERY",
+  "trigger": "PASS_FAILED",
   "scope": "team",
   "links": [],
   "condition": "zone(actor) == 'Opposing'",
@@ -17,7 +17,7 @@
       "type": "modifyProbability",
       "target": "team",
       "probability": "intercept",
-      "value": 5,
+      "value": 3,
       "duration": "play"
     }
   ],

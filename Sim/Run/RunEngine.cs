@@ -295,7 +295,12 @@ public static class RunEngine
         };
         var away = systems.OpponentFor(state, node, catalog);
         var referee = systems.RefereeFor(state, node, catalog);
-        return (new MatchSetup(home, away, referee), RngStreams.MatchSeed(state.Seed, node.Id), lineup);
+
+        // El último paso es el gancho de los sistemas (RF-001b/c): un modificador de regla de jefe es una
+        // transformación del MatchSetup, y tiene que pasar por aquí para que el partido que se juega y el
+        // que enseña el informe de ojeo sean el mismo (RF-012b, RF-012d). W-15: el jugador es local.
+        var setup = systems.TransformMatch(state, node, new MatchSetup(home, away, referee), 0, catalog);
+        return (setup, RngStreams.MatchSeed(state.Seed, node.Id), lineup);
     }
 
     // ------------------------------------------------------------------ interno
@@ -307,15 +312,18 @@ public static class RunEngine
         var applied = MatchResolution.Apply(state, node, lineup, result, catalog);
 
         var next = applied.State.WithCurrentNode(node.Id);
-        if (applied.Outcome.IsOver)
-        {
-            return next.WithOutcome(applied.Outcome);
-        }
 
-        // El nodo de jefe revela su modificador al llegar (RF-014b) y, si se gana, abre el acto siguiente.
+        // El modificador se revela por haber **jugado** el nodo de jefe, antes de mirar el desenlace
+        // (RF-014b): perder contra el jefe es precisamente el caso en el que el jugador ya ha pagado la
+        // sorpresa, y dejarlo sin registrar en el compendio sería cobrarla dos veces.
         if (node.Kind == NodeKind.Boss)
         {
             next = next.WithMap(next.MapOf(node.Act).WithBossModifierRevealed(true));
+        }
+
+        if (applied.Outcome.IsOver)
+        {
+            return next.WithOutcome(applied.Outcome);
         }
 
         next = systems.AfterMatch(next, node, applied.Summary, catalog);

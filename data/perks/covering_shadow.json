@@ -19,7 +19,7 @@
       "type": "modifyProbability",
       "target": "linked",
       "probability": "intercept",
-      "value": 10,
+      "value": 5,
       "duration": "match"
     }
   ],
@@ -28,7 +28,7 @@
       "type": "modifyProbability",
       "target": "owner",
       "probability": "intercept",
-      "value": -5,
+      "value": -1,
       "duration": "match"
     }
   ],

@@ -144,13 +144,13 @@ public sealed class DescriptionTests
             "MATCH_START",
             """
             [{ "type": "modifyProbability", "target": "owner", "probability": "intercept",
-               "valuePerCounter": 5, "counter": "matches", "maxValue": 25, "duration": "match" }]
+               "valuePerCounter": 2, "counter": "matches", "maxValue": 10, "duration": "match" }]
             """,
             axis: "accumulation",
             accumulates: true));
 
         Assert.Equal(
-            "Al empezar el partido, el portador suma +5% a su probabilidad de interceptar por cada partido (máximo 25%).",
+            "Al empezar el partido, el portador suma +2% a su probabilidad de interceptar por cada partido (máximo 10%).",
             Describe("es", perk));
     }
 
@@ -167,14 +167,14 @@ public sealed class DescriptionTests
             "MATCH_START",
             """
             [{ "type": "modifyProbability", "target": "owner", "probability": "intercept",
-               "valuePerCounter": 5, "counter": "matches", "maxValue": 25, "duration": "match" },
+               "valuePerCounter": 2, "counter": "matches", "maxValue": 10, "duration": "match" },
              { "type": "addCounter", "counter": "matches", "value": 1 }]
             """,
             axis: "accumulation",
             accumulates: true));
 
         Assert.Equal(
-            "Al empezar el partido, el portador suma +5% a su probabilidad de interceptar por cada partido (máximo 25%).",
+            "Al empezar el partido, el portador suma +2% a su probabilidad de interceptar por cada partido (máximo 10%).",
             Describe("es", perk));
     }
 
@@ -193,7 +193,7 @@ public sealed class DescriptionTests
             "Al empezar el partido, el portador deja al rival derribado más tiempo con sus entradas.",
             Describe("es", Catalog.Perks.Get("hot_blooded")));
         Assert.Equal(
-            "Al empezar el partido, el portador suma +5% a su resistencia a las entradas.",
+            "Al empezar el partido, el portador suma +3% a su resistencia a las entradas.",
             Describe("es", Catalog.Perks.Get("elf_touch")));
         Assert.Equal(
             "Al empezar el partido, el portador no puede ser desplazado por empujones.",
@@ -229,7 +229,7 @@ public sealed class DescriptionTests
             PerkDefinition perk;
             try
             {
-                perk = PerkLoader.Parse(name, File.ReadAllText(path));
+                perk = PerkLoader.Parse(name, File.ReadAllText(path), TestData.LoadCatalog().Tuning.Probability);
             }
             catch (DataException)
             {

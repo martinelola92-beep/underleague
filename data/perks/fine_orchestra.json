@@ -17,14 +17,14 @@
       "type": "modifyProbability",
       "target": "opposingTeam",
       "probability": "intercept",
-      "value": -5,
+      "value": -2,
       "duration": "match"
     },
     {
       "type": "modifyProbability",
       "target": "team",
       "probability": "tackleEvasion",
-      "value": 25,
+      "value": 15,
       "duration": "match"
     }
   ],

@@ -17,7 +17,7 @@
       "type": "modifyProbability",
       "target": "actor",
       "probability": "tackle",
-      "value": 20,
+      "value": 15,
       "duration": "play"
     }
   ],
@@ -26,7 +26,7 @@
       "type": "modifyProbability",
       "target": "actor",
       "probability": "tackle",
-      "value": -25,
+      "value": -30,
       "duration": "play"
     }
   ],
