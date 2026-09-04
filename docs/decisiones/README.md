@@ -37,6 +37,8 @@ Cuándo escribir un ADR: cambio de librería o stack, frontera entre proyectos, 
 | [0037](0037-la-economia-como-dificultad.md) | La escasez de oro es la palanca de dificultad; se mide enfrentando tres políticas de compra | Aceptada |
 | [0038](0038-el-precio-como-palanca-de-balance.md) | Lo bueno se encarece en vez de debilitarse; y donde no hay precio, se hace menos frecuente | Aceptada |
 | [0039](0039-legendarios-como-personajes.md) | Tres rarezas generables; los legendarios son personajes únicos que se desbloquean ganando divisiones | Aceptada. **Modifica RF-023 y RF-127** |
+| [0040](0040-densidad-de-build-por-acto.md) | La curva de puertas se mide con la build que cabe en ese acto, no con la plantilla terminada | Aceptada. **Corrige la medición de la ADR 0033** |
+| [0041](0041-lesiones-relativas-al-nivel.md) | La lesión se mide contra el rival: con niveles altos el sistema de desgaste se apagaba solo | Aceptada |
 
 El hueco del 0011 corresponde a una decisión sobre el radio de adyacencia que quedó absorbida por la 0021 antes de aceptarse.
 | [0012](0012-buildswindifferently-normalizada.md) | `buildsWinDifferently` normalizada contra la referencia de la raza | **Propuesta: decisión del revisor** |
