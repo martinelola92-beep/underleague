@@ -12,15 +12,15 @@ Máquina: Windows con WSL2 (Ubuntu 24.04). Claude Code corre en WSL. Godot corre
 
 Godot en Windows abre el proyecto desde `\\wsl$\Ubuntu\home\martinelola92\underleague\Game`. Si el rendimiento de E/S por `\\wsl$` resulta molesto, la alternativa es clonar el repo también en Windows y trabajar `/Game` allí, sincronizando por git; se decide cuando exista `/Game` (fase 1).
 
-## Estado el 3 de septiembre de 2026
+## Estado el 4 de septiembre de 2026
 
 | Prerrequisito | Estado | Instalación |
 |---|---|---|
 | Git en WSL | 2.43 | — |
 | .NET SDK 10 en WSL | 10.0.111 (también 8.0.130) | `sudo apt install -y dotnet-sdk-10.0` |
 | `csharp-ls` (plugin `csharp-lsp` de Claude Code) | 0.27.0 | `dotnet tool install --global csharp-ls`. Requiere SDK 10: con solo el SDK 8 falla con "DotnetToolSettings.xml was not found" (la última para .NET 8 es la 0.16.0). `~/.dotnet/tools` está en el `PATH` vía `.bashrc` |
-| .NET SDK 10 en Windows | **Falta** (solo hay runtimes 8/9/10) | `winget install Microsoft.DotNet.SDK.10` o instalador de dotnet.microsoft.com |
-| Godot 4.6 .NET en Windows | **Falta** | Descarga "Godot Engine - .NET" 4.6 desde godotengine.org (no la versión estándar) |
+| .NET SDK 10 en Windows | 10.0.400 en `C:\Program Files\dotnet` (instalado 4 sep 2026) | `winget install Microsoft.DotNet.SDK.10` (pide UAC) |
+| Godot 4.6 .NET en Windows | 4.6.3 en `%LOCALAPPDATA%\Microsoft\WinGet\Packages\GodotEngine.GodotEngine.Mono_Microsoft.Winget.Source_8wekyb3d8bbwe\Godot_v4.6.3-stable_mono_win64\` (instalado 4 sep 2026; sin alias `godot` por no ser admin) | `winget install GodotEngine.GodotEngine.Mono -v 4.6.3` (no la versión estándar) |
 | Git LFS | Falta, no necesario hasta fase 3 | `sudo apt install git-lfs` |
 | Identidad de git | **Sin configurar** | `git config --global user.name "…"` y `user.email "…"` |
 

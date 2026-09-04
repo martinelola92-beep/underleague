@@ -23,7 +23,7 @@ Registro vivo. Cuando una decisión se toma, se mueve a un ADR en `decisiones/` 
 | Id | Decisión | Bloquea | Lectura provisional |
 |---|---|---|---|
 | D-12 | Idioma de los identificadores de C# | Fase 0 | **Resuelta 2026-09-03**: inglés (ADR 0009, `glosario-identificadores.md`) |
-| D-17 | `/Game` con `net10.0` en Godot 4.6 (ADR 0008) | Fase 1 | Probar al crear `/Game`; si falla, bajar a `net8.0` |
+| D-17 | `/Game` con `net10.0` en Godot 4.6 (ADR 0008) | Fase 1 | **Resuelta 2026-09-05**: verificado con Godot 4.6.3 mono, compila y ejecuta; no hace falta bajar a `net8.0` |
 | D-13 | `/Run` como librería separada de `/Sim` o namespace dentro | Fase 2 | Namespace `Underleague.Sim.Run` hasta la fase 2 (ver `arquitectura.md`) |
 | D-14 | Organización de `/data`: un fichero por entidad o uno por tipo | Fase 1 | Un fichero por entidad; facilita revisión y diffs |
 | D-15 | Cómo se resuelve el consumible manual sin romper la pureza de `Simulador.Ejecutar` | Fase 1 | Re-ejecución con activación en el estado (ver `arquitectura.md`) |
