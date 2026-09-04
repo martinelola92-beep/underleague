@@ -1,13 +1,18 @@
 config_version=5
 
 [application]
+
 config/name="Underleague"
-run/main_scene="res://Main.tscn"
+run/main_scene="res://Scenes/Equipo.tscn"
 config/features=PackedStringArray("4.6", "C#", "Forward Plus")
 
 [display]
+
 window/size/viewport_width=1280
 window/size/viewport_height=800
+window/stretch/mode="canvas_items"
+window/stretch/aspect="keep"
 
 [dotnet]
+
 project/assembly_name="Underleague.Game"

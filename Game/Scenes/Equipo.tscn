@@ -1,0 +1,149 @@
+[gd_scene load_steps=4 format=3]
+
+[ext_resource type="Script" path="res://Screens/TeamScreen.cs" id="1"]
+[ext_resource type="Script" path="res://Ui/PitchView.cs" id="2"]
+[ext_resource type="Script" path="res://Ui/LegendView.cs" id="3"]
+
+[node name="Equipo" type="Control"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+mouse_filter = 2
+script = ExtResource("1")
+
+[node name="Fondo" type="ColorRect" parent="."]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+mouse_filter = 2
+color = Color(0.078, 0.09, 0.11, 1)
+
+[node name="Titulo" type="Label" parent="."]
+offset_left = 16.0
+offset_top = 8.0
+offset_right = 130.0
+offset_bottom = 34.0
+theme_override_font_sizes/font_size = 17
+theme_override_colors/font_color = Color(0.941, 0.706, 0.161, 1)
+
+[node name="Subtitulo" type="Label" parent="."]
+offset_left = 106.0
+offset_top = 14.0
+offset_right = 900.0
+offset_bottom = 32.0
+theme_override_font_sizes/font_size = 12
+theme_override_colors/font_color = Color(0.592, 0.627, 0.682, 1)
+
+[node name="PanelPlantilla" type="ColorRect" parent="."]
+offset_left = 12.0
+offset_top = 52.0
+offset_right = 388.0
+offset_bottom = 788.0
+mouse_filter = 2
+color = Color(0.11, 0.125, 0.153, 1)
+
+[node name="TituloPlantilla" type="Label" parent="."]
+offset_left = 24.0
+offset_top = 58.0
+offset_right = 300.0
+offset_bottom = 76.0
+theme_override_font_sizes/font_size = 12
+theme_override_colors/font_color = Color(0.941, 0.706, 0.161, 1)
+
+[node name="Roster" type="VBoxContainer" parent="."]
+offset_left = 22.0
+offset_top = 80.0
+offset_right = 378.0
+offset_bottom = 782.0
+theme_override_constants/separation = 3
+
+[node name="PanelCampo" type="ColorRect" parent="."]
+offset_left = 396.0
+offset_top = 52.0
+offset_right = 1268.0
+offset_bottom = 788.0
+mouse_filter = 2
+color = Color(0.11, 0.125, 0.153, 1)
+
+[node name="TituloCampo" type="Label" parent="."]
+offset_left = 410.0
+offset_top = 58.0
+offset_right = 900.0
+offset_bottom = 80.0
+theme_override_font_sizes/font_size = 17
+theme_override_colors/font_color = Color(0.941, 0.706, 0.161, 1)
+
+[node name="SubtituloCampo" type="Label" parent="."]
+offset_left = 410.0
+offset_top = 82.0
+offset_right = 1256.0
+offset_bottom = 100.0
+theme_override_font_sizes/font_size = 12
+theme_override_colors/font_color = Color(0.592, 0.627, 0.682, 1)
+
+[node name="BotonCobertura" type="Button" parent="."]
+offset_left = 1076.0
+offset_top = 56.0
+offset_right = 1256.0
+offset_bottom = 82.0
+focus_mode = 0
+theme_override_font_sizes/font_size = 12
+
+[node name="Campo" type="Control" parent="."]
+offset_left = 410.0
+offset_top = 104.0
+offset_right = 1242.0
+offset_bottom = 364.0
+script = ExtResource("2")
+
+[node name="Leyenda" type="Control" parent="."]
+offset_left = 410.0
+offset_top = 376.0
+offset_right = 1242.0
+offset_bottom = 402.0
+mouse_filter = 2
+script = ExtResource("3")
+
+[node name="Info" type="Label" parent="."]
+offset_left = 410.0
+offset_top = 412.0
+offset_right = 828.0
+offset_bottom = 720.0
+theme_override_font_sizes/font_size = 12
+theme_override_colors/font_color = Color(0.902, 0.914, 0.933, 1)
+autowrap_mode = 3
+vertical_alignment = 0
+
+[node name="TituloVinculos" type="Label" parent="."]
+offset_left = 846.0
+offset_top = 412.0
+offset_right = 1256.0
+offset_bottom = 430.0
+theme_override_font_sizes/font_size = 12
+theme_override_colors/font_color = Color(0.941, 0.706, 0.161, 1)
+
+[node name="Vinculos" type="Label" parent="."]
+offset_left = 846.0
+offset_top = 432.0
+offset_right = 1256.0
+offset_bottom = 720.0
+theme_override_font_sizes/font_size = 12
+theme_override_colors/font_color = Color(0.902, 0.914, 0.933, 1)
+autowrap_mode = 3
+vertical_alignment = 0
+
+[node name="AyudaRaton" type="Label" parent="."]
+offset_left = 410.0
+offset_top = 734.0
+offset_right = 1256.0
+offset_bottom = 752.0
+theme_override_font_sizes/font_size = 12
+theme_override_colors/font_color = Color(0.592, 0.627, 0.682, 1)
+
+[node name="AyudaMando" type="Label" parent="."]
+offset_left = 410.0
+offset_top = 756.0
+offset_right = 1256.0
+offset_bottom = 774.0
+theme_override_font_sizes/font_size = 12
+theme_override_colors/font_color = Color(0.592, 0.627, 0.682, 1)
