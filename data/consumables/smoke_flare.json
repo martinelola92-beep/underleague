@@ -1,0 +1,9 @@
+{
+  "id": "smoke_flare",
+  "name": { "es": "Bengala de humo", "en": "Smoke Flare" },
+  "rarity": "common",
+  "family": "tactical",
+  "effects": [
+    { "type": "modifyProbability", "probability": "tackleEvasion", "value": 1000 }
+  ]
+}

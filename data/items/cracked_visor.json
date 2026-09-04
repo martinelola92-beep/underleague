@@ -1,0 +1,10 @@
+{
+  "id": "cracked_visor",
+  "name": { "es": "Visera agrietada", "en": "Cracked Visor" },
+  "rarity": "common",
+  "archetype": "fragile",
+  "usesLimit": 3,
+  "effects": [
+    { "type": "modifyAttribute", "attribute": "technique", "value": 10 }
+  ]
+}

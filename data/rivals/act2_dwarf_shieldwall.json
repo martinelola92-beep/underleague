@@ -1,0 +1,157 @@
+{
+  "id": "act2_dwarf_shieldwall",
+  "name": {
+    "es": "Muralla de Escudos",
+    "en": "Shieldwall"
+  },
+  "race": "Dwarf",
+  "act": 2,
+  "difficulty": 4,
+  "players": [
+    {
+      "name": "Eldrin Golpefrío",
+      "position": "Goalkeeper",
+      "rarity": "common",
+      "level": 3,
+      "attributes": {
+        "strength": 69,
+        "speed": 44,
+        "technique": 39,
+        "stamina": 75,
+        "leash": 59
+      },
+      "traits": [
+        "Wall"
+      ],
+      "perks": [
+        "iron_gate"
+      ]
+    },
+    {
+      "name": "Fendrel Barbahierro",
+      "position": "Defender",
+      "rarity": "rare",
+      "level": 3,
+      "attributes": {
+        "strength": 74,
+        "speed": 46,
+        "technique": 39,
+        "stamina": 78,
+        "leash": 59
+      },
+      "traits": [
+        "Resilient"
+      ],
+      "perks": [
+        "own_third_anchor"
+      ]
+    },
+    {
+      "name": "Grimnir Cavaprofundo",
+      "position": "Defender",
+      "rarity": "rare",
+      "level": 3,
+      "attributes": {
+        "strength": 74,
+        "speed": 46,
+        "technique": 39,
+        "stamina": 78,
+        "leash": 59
+      },
+      "traits": [
+        "Resilient"
+      ]
+    },
+    {
+      "name": "Hjalmar Vetaoro",
+      "position": "Midfielder",
+      "rarity": "common",
+      "level": 3,
+      "attributes": {
+        "strength": 64,
+        "speed": 49,
+        "technique": 52,
+        "stamina": 80,
+        "leash": 59
+      }
+    },
+    {
+      "name": "Ivarr Forjagrís",
+      "position": "Midfielder",
+      "rarity": "common",
+      "level": 3,
+      "attributes": {
+        "strength": 64,
+        "speed": 49,
+        "technique": 52,
+        "stamina": 80,
+        "leash": 59
+      }
+    },
+    {
+      "name": "Joric Puñoroca",
+      "position": "Midfielder",
+      "rarity": "common",
+      "level": 3,
+      "attributes": {
+        "strength": 64,
+        "speed": 49,
+        "technique": 52,
+        "stamina": 80,
+        "leash": 59
+      }
+    },
+    {
+      "name": "Kordan Martillonegro",
+      "position": "Forward",
+      "rarity": "common",
+      "level": 3,
+      "attributes": {
+        "strength": 66,
+        "speed": 54,
+        "technique": 49,
+        "stamina": 72,
+        "leash": 59
+      }
+    },
+    {
+      "name": "Loric Tallapiedra",
+      "position": "Defender",
+      "rarity": "common",
+      "level": 3,
+      "attributes": {
+        "strength": 74,
+        "speed": 46,
+        "technique": 39,
+        "stamina": 78,
+        "leash": 59
+      }
+    },
+    {
+      "name": "Magnus Yunquefirme",
+      "position": "Midfielder",
+      "rarity": "common",
+      "level": 3,
+      "attributes": {
+        "strength": 64,
+        "speed": 49,
+        "technique": 52,
+        "stamina": 80,
+        "leash": 59
+      }
+    },
+    {
+      "name": "Norin Escudopétreo",
+      "position": "Forward",
+      "rarity": "common",
+      "level": 3,
+      "attributes": {
+        "strength": 66,
+        "speed": 54,
+        "technique": 49,
+        "stamina": 72,
+        "leash": 59
+      }
+    }
+  ]
+}

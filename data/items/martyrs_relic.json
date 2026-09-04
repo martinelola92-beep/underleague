@@ -1,0 +1,14 @@
+{
+  "id": "martyrs_relic",
+  "name": { "es": "Reliquia del mártir", "en": "Martyr's Relic" },
+  "rarity": "legendary",
+  "archetype": "cursed",
+  "effects": [
+    { "type": "modifyAttribute", "attribute": "strength", "value": 22 },
+    { "type": "modifyAttribute", "attribute": "technique", "value": 22 }
+  ],
+  "drawbackEffects": [
+    { "type": "modifyAttribute", "attribute": "speed", "value": -10 },
+    { "type": "modifyProbability", "probability": "severeInjury", "value": 600 }
+  ]
+}

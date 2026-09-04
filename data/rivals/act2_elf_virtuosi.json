@@ -1,0 +1,154 @@
+{
+  "id": "act2_elf_virtuosi",
+  "name": {
+    "es": "Virtuosos del Bosque",
+    "en": "Forest Virtuosi"
+  },
+  "race": "Elf",
+  "act": 2,
+  "difficulty": 4,
+  "players": [
+    {
+      "name": "Faelar Espinafina",
+      "position": "Goalkeeper",
+      "rarity": "common",
+      "level": 3,
+      "attributes": {
+        "strength": 50,
+        "speed": 63,
+        "technique": 64,
+        "stamina": 60,
+        "leash": 60
+      }
+    },
+    {
+      "name": "Galion Fuegoquieto",
+      "position": "Defender",
+      "rarity": "common",
+      "level": 3,
+      "attributes": {
+        "strength": 55,
+        "speed": 65,
+        "technique": 64,
+        "stamina": 63,
+        "leash": 60
+      }
+    },
+    {
+      "name": "Haldir Lunargenta",
+      "position": "Defender",
+      "rarity": "common",
+      "level": 3,
+      "attributes": {
+        "strength": 55,
+        "speed": 65,
+        "technique": 64,
+        "stamina": 63,
+        "leash": 60
+      }
+    },
+    {
+      "name": "Ithil Cantoalba",
+      "position": "Midfielder",
+      "rarity": "common",
+      "level": 3,
+      "attributes": {
+        "strength": 45,
+        "speed": 68,
+        "technique": 77,
+        "stamina": 65,
+        "leash": 60
+      }
+    },
+    {
+      "name": "Laeron Rocíogris",
+      "position": "Midfielder",
+      "rarity": "rare",
+      "level": 3,
+      "attributes": {
+        "strength": 45,
+        "speed": 68,
+        "technique": 77,
+        "stamina": 65,
+        "leash": 60
+      },
+      "traits": [
+        "Cerebral"
+      ],
+      "perks": [
+        "silky_veteran"
+      ]
+    },
+    {
+      "name": "Maeron Vientoclaro",
+      "position": "Midfielder",
+      "rarity": "rare",
+      "level": 3,
+      "attributes": {
+        "strength": 45,
+        "speed": 68,
+        "technique": 77,
+        "stamina": 65,
+        "leash": 60
+      },
+      "traits": [
+        "Fast"
+      ],
+      "perks": [
+        "pivot_duo"
+      ]
+    },
+    {
+      "name": "Naerys Sombraverde",
+      "position": "Forward",
+      "rarity": "common",
+      "level": 3,
+      "attributes": {
+        "strength": 47,
+        "speed": 73,
+        "technique": 74,
+        "stamina": 57,
+        "leash": 60
+      }
+    },
+    {
+      "name": "Orophin Brisadorada",
+      "position": "Defender",
+      "rarity": "common",
+      "level": 3,
+      "attributes": {
+        "strength": 55,
+        "speed": 65,
+        "technique": 64,
+        "stamina": 63,
+        "leash": 60
+      }
+    },
+    {
+      "name": "Rhovan Hojaplata",
+      "position": "Midfielder",
+      "rarity": "common",
+      "level": 3,
+      "attributes": {
+        "strength": 45,
+        "speed": 68,
+        "technique": 77,
+        "stamina": 65,
+        "leash": 60
+      }
+    },
+    {
+      "name": "Sindar Ramaluz",
+      "position": "Forward",
+      "rarity": "common",
+      "level": 3,
+      "attributes": {
+        "strength": 47,
+        "speed": 73,
+        "technique": 74,
+        "stamina": 57,
+        "leash": 60
+      }
+    }
+  ]
+}

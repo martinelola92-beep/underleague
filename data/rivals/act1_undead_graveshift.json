@@ -1,0 +1,151 @@
+{
+  "id": "act1_undead_graveshift",
+  "name": {
+    "es": "Turno de Ultratumba",
+    "en": "Graveshift"
+  },
+  "race": "Undead",
+  "act": 1,
+  "difficulty": 3,
+  "players": [
+    {
+      "name": "Vex Vozmuerta",
+      "position": "Goalkeeper",
+      "rarity": "common",
+      "level": 2,
+      "attributes": {
+        "strength": 47,
+        "speed": 36,
+        "technique": 37,
+        "stamina": 57,
+        "leash": 47
+      }
+    },
+    {
+      "name": "Orin Polvorento",
+      "position": "Defender",
+      "rarity": "common",
+      "level": 2,
+      "attributes": {
+        "strength": 52,
+        "speed": 38,
+        "technique": 37,
+        "stamina": 60,
+        "leash": 47
+      }
+    },
+    {
+      "name": "Cael Huesoseco",
+      "position": "Defender",
+      "rarity": "common",
+      "level": 2,
+      "attributes": {
+        "strength": 52,
+        "speed": 38,
+        "technique": 37,
+        "stamina": 60,
+        "leash": 47
+      }
+    },
+    {
+      "name": "Draven Tumbafría",
+      "position": "Midfielder",
+      "rarity": "common",
+      "level": 2,
+      "attributes": {
+        "strength": 42,
+        "speed": 41,
+        "technique": 50,
+        "stamina": 62,
+        "leash": 47
+      }
+    },
+    {
+      "name": "Malric Nochehueca",
+      "position": "Midfielder",
+      "rarity": "common",
+      "level": 2,
+      "attributes": {
+        "strength": 42,
+        "speed": 41,
+        "technique": 50,
+        "stamina": 62,
+        "leash": 47
+      },
+      "traits": [
+        "Resilient"
+      ]
+    },
+    {
+      "name": "Sever Cripta",
+      "position": "Midfielder",
+      "rarity": "common",
+      "level": 2,
+      "attributes": {
+        "strength": 42,
+        "speed": 41,
+        "technique": 50,
+        "stamina": 62,
+        "leash": 47
+      }
+    },
+    {
+      "name": "Thane Cenizagrís",
+      "position": "Forward",
+      "rarity": "common",
+      "level": 2,
+      "attributes": {
+        "strength": 44,
+        "speed": 46,
+        "technique": 47,
+        "stamina": 54,
+        "leash": 47
+      }
+    },
+    {
+      "name": "Cyrus Osamenta",
+      "position": "Defender",
+      "rarity": "common",
+      "level": 2,
+      "attributes": {
+        "strength": 52,
+        "speed": 38,
+        "technique": 37,
+        "stamina": 60,
+        "leash": 47
+      }
+    },
+    {
+      "name": "Doran Sudariofrío",
+      "position": "Midfielder",
+      "rarity": "common",
+      "level": 2,
+      "attributes": {
+        "strength": 42,
+        "speed": 41,
+        "technique": 50,
+        "stamina": 62,
+        "leash": 47
+      }
+    },
+    {
+      "name": "Ezren Sinaliento",
+      "position": "Forward",
+      "rarity": "rare",
+      "level": 2,
+      "attributes": {
+        "strength": 44,
+        "speed": 46,
+        "technique": 47,
+        "stamina": 54,
+        "leash": 47
+      },
+      "traits": [
+        "Scorer"
+      ],
+      "perks": [
+        "road_warrior"
+      ]
+    }
+  ]
+}

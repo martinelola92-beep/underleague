@@ -1,0 +1,154 @@
+{
+  "id": "act3_human_allstars",
+  "name": {
+    "es": "Selección de Puerto Claro",
+    "en": "Clearport All-Stars"
+  },
+  "race": "Human",
+  "act": 3,
+  "difficulty": 5,
+  "players": [
+    {
+      "name": "Fabio Rubio",
+      "position": "Goalkeeper",
+      "rarity": "common",
+      "level": 5,
+      "attributes": {
+        "strength": 72,
+        "speed": 67,
+        "technique": 62,
+        "stamina": 72,
+        "leash": 72
+      }
+    },
+    {
+      "name": "Gino Ureña",
+      "position": "Defender",
+      "rarity": "common",
+      "level": 5,
+      "attributes": {
+        "strength": 77,
+        "speed": 69,
+        "technique": 62,
+        "stamina": 75,
+        "leash": 72
+      }
+    },
+    {
+      "name": "Hugo Zamora",
+      "position": "Defender",
+      "rarity": "common",
+      "level": 5,
+      "attributes": {
+        "strength": 77,
+        "speed": 69,
+        "technique": 62,
+        "stamina": 75,
+        "leash": 72
+      }
+    },
+    {
+      "name": "Ivo Cano",
+      "position": "Midfielder",
+      "rarity": "legendary",
+      "level": 5,
+      "attributes": {
+        "strength": 67,
+        "speed": 72,
+        "technique": 75,
+        "stamina": 77,
+        "leash": 72
+      },
+      "traits": [
+        "Leader"
+      ],
+      "perks": [
+        "battle_reader"
+      ]
+    },
+    {
+      "name": "Jano Ferrer",
+      "position": "Midfielder",
+      "rarity": "common",
+      "level": 5,
+      "attributes": {
+        "strength": 67,
+        "speed": 72,
+        "technique": 75,
+        "stamina": 77,
+        "leash": 72
+      }
+    },
+    {
+      "name": "Lino Ibarra",
+      "position": "Midfielder",
+      "rarity": "common",
+      "level": 5,
+      "attributes": {
+        "strength": 67,
+        "speed": 72,
+        "technique": 75,
+        "stamina": 77,
+        "leash": 72
+      }
+    },
+    {
+      "name": "Marco Mora",
+      "position": "Forward",
+      "rarity": "rare",
+      "level": 5,
+      "attributes": {
+        "strength": 69,
+        "speed": 77,
+        "technique": 72,
+        "stamina": 69,
+        "leash": 72
+      },
+      "traits": [
+        "Scorer"
+      ],
+      "perks": [
+        "forward_line"
+      ]
+    },
+    {
+      "name": "Nilo Prieto",
+      "position": "Defender",
+      "rarity": "common",
+      "level": 5,
+      "attributes": {
+        "strength": 77,
+        "speed": 69,
+        "technique": 62,
+        "stamina": 75,
+        "leash": 72
+      }
+    },
+    {
+      "name": "Otto Soler",
+      "position": "Midfielder",
+      "rarity": "common",
+      "level": 5,
+      "attributes": {
+        "strength": 67,
+        "speed": 72,
+        "technique": 75,
+        "stamina": 77,
+        "leash": 72
+      }
+    },
+    {
+      "name": "Pino Vidal",
+      "position": "Forward",
+      "rarity": "common",
+      "level": 5,
+      "attributes": {
+        "strength": 69,
+        "speed": 77,
+        "technique": 72,
+        "stamina": 69,
+        "leash": 72
+      }
+    }
+  ]
+}

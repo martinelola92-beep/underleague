@@ -1,0 +1,9 @@
+{
+  "id": "worn_boots",
+  "name": { "es": "Botas gastadas", "en": "Worn Boots" },
+  "rarity": "common",
+  "archetype": "normal",
+  "effects": [
+    { "type": "modifyAttribute", "attribute": "speed", "value": 8 }
+  ]
+}

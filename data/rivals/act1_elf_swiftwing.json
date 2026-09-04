@@ -1,0 +1,154 @@
+{
+  "id": "act1_elf_swiftwing",
+  "name": {
+    "es": "Ala Veloz",
+    "en": "Swiftwing"
+  },
+  "race": "Elf",
+  "act": 1,
+  "difficulty": 2,
+  "players": [
+    {
+      "name": "Caelum Brisadorada",
+      "position": "Goalkeeper",
+      "rarity": "common",
+      "level": 1,
+      "attributes": {
+        "strength": 35,
+        "speed": 52,
+        "technique": 43,
+        "stamina": 41,
+        "leash": 45
+      }
+    },
+    {
+      "name": "Daeris Hojaplata",
+      "position": "Defender",
+      "rarity": "common",
+      "level": 1,
+      "attributes": {
+        "strength": 40,
+        "speed": 54,
+        "technique": 43,
+        "stamina": 44,
+        "leash": 45
+      }
+    },
+    {
+      "name": "Elandor Ramaluz",
+      "position": "Defender",
+      "rarity": "common",
+      "level": 1,
+      "attributes": {
+        "strength": 40,
+        "speed": 54,
+        "technique": 43,
+        "stamina": 44,
+        "leash": 45
+      }
+    },
+    {
+      "name": "Faelar Espinafina",
+      "position": "Midfielder",
+      "rarity": "common",
+      "level": 1,
+      "attributes": {
+        "strength": 30,
+        "speed": 57,
+        "technique": 56,
+        "stamina": 46,
+        "leash": 45
+      },
+      "perks": [
+        "wing_overlap"
+      ]
+    },
+    {
+      "name": "Galion Fuegoquieto",
+      "position": "Midfielder",
+      "rarity": "common",
+      "level": 1,
+      "attributes": {
+        "strength": 30,
+        "speed": 57,
+        "technique": 56,
+        "stamina": 46,
+        "leash": 45
+      }
+    },
+    {
+      "name": "Haldir Lunargenta",
+      "position": "Midfielder",
+      "rarity": "common",
+      "level": 1,
+      "attributes": {
+        "strength": 30,
+        "speed": 57,
+        "technique": 56,
+        "stamina": 46,
+        "leash": 45
+      }
+    },
+    {
+      "name": "Ithil Cantoalba",
+      "position": "Forward",
+      "rarity": "rare",
+      "level": 1,
+      "attributes": {
+        "strength": 32,
+        "speed": 62,
+        "technique": 53,
+        "stamina": 38,
+        "leash": 45
+      },
+      "traits": [
+        "Fast"
+      ],
+      "perks": [
+        "poacher_instinct"
+      ]
+    },
+    {
+      "name": "Laeron Rocíogris",
+      "position": "Defender",
+      "rarity": "common",
+      "level": 1,
+      "attributes": {
+        "strength": 40,
+        "speed": 54,
+        "technique": 43,
+        "stamina": 44,
+        "leash": 45
+      }
+    },
+    {
+      "name": "Maeron Vientoclaro",
+      "position": "Midfielder",
+      "rarity": "common",
+      "level": 1,
+      "attributes": {
+        "strength": 30,
+        "speed": 57,
+        "technique": 56,
+        "stamina": 46,
+        "leash": 45
+      },
+      "traits": [
+        "Fast"
+      ]
+    },
+    {
+      "name": "Naerys Sombraverde",
+      "position": "Forward",
+      "rarity": "common",
+      "level": 1,
+      "attributes": {
+        "strength": 32,
+        "speed": 62,
+        "technique": 53,
+        "stamina": 38,
+        "leash": 45
+      }
+    }
+  ]
+}

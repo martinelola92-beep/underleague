@@ -1,0 +1,154 @@
+{
+  "id": "act3_undead_legion",
+  "name": {
+    "es": "Legión Eterna",
+    "en": "Eternal Legion"
+  },
+  "race": "Undead",
+  "act": 3,
+  "difficulty": 5,
+  "players": [
+    {
+      "name": "Malric Nochehueca",
+      "position": "Goalkeeper",
+      "rarity": "rare",
+      "level": 5,
+      "attributes": {
+        "strength": 80,
+        "speed": 57,
+        "technique": 62,
+        "stamina": 90,
+        "leash": 72
+      },
+      "traits": [
+        "Resilient"
+      ],
+      "perks": [
+        "deathless_march"
+      ]
+    },
+    {
+      "name": "Sever Cripta",
+      "position": "Defender",
+      "rarity": "common",
+      "level": 5,
+      "attributes": {
+        "strength": 85,
+        "speed": 59,
+        "technique": 62,
+        "stamina": 93,
+        "leash": 72
+      }
+    },
+    {
+      "name": "Thane Cenizagrís",
+      "position": "Defender",
+      "rarity": "common",
+      "level": 5,
+      "attributes": {
+        "strength": 85,
+        "speed": 59,
+        "technique": 62,
+        "stamina": 93,
+        "leash": 72
+      }
+    },
+    {
+      "name": "Cyrus Osamenta",
+      "position": "Midfielder",
+      "rarity": "common",
+      "level": 5,
+      "attributes": {
+        "strength": 75,
+        "speed": 62,
+        "technique": 75,
+        "stamina": 95,
+        "leash": 72
+      }
+    },
+    {
+      "name": "Doran Sudariofrío",
+      "position": "Midfielder",
+      "rarity": "common",
+      "level": 5,
+      "attributes": {
+        "strength": 75,
+        "speed": 62,
+        "technique": 75,
+        "stamina": 95,
+        "leash": 72
+      }
+    },
+    {
+      "name": "Ezren Sinaliento",
+      "position": "Midfielder",
+      "rarity": "common",
+      "level": 5,
+      "attributes": {
+        "strength": 75,
+        "speed": 62,
+        "technique": 75,
+        "stamina": 95,
+        "leash": 72
+      }
+    },
+    {
+      "name": "Grimm Vozmuerta",
+      "position": "Forward",
+      "rarity": "common",
+      "level": 5,
+      "attributes": {
+        "strength": 77,
+        "speed": 67,
+        "technique": 72,
+        "stamina": 87,
+        "leash": 72
+      }
+    },
+    {
+      "name": "Ilan Polvorento",
+      "position": "Defender",
+      "rarity": "common",
+      "level": 5,
+      "attributes": {
+        "strength": 85,
+        "speed": 59,
+        "technique": 62,
+        "stamina": 93,
+        "leash": 72
+      }
+    },
+    {
+      "name": "Kessel Huesoseco",
+      "position": "Midfielder",
+      "rarity": "common",
+      "level": 5,
+      "attributes": {
+        "strength": 75,
+        "speed": 62,
+        "technique": 75,
+        "stamina": 95,
+        "leash": 72
+      }
+    },
+    {
+      "name": "Loth Tumbafría",
+      "position": "Forward",
+      "rarity": "legendary",
+      "level": 5,
+      "attributes": {
+        "strength": 77,
+        "speed": 67,
+        "technique": 72,
+        "stamina": 87,
+        "leash": 72
+      },
+      "traits": [
+        "Scorer"
+      ],
+      "perks": [
+        "mob_instigator"
+      ]
+    }
+  ]
+}

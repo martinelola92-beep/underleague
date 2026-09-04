@@ -1,0 +1,154 @@
+{
+  "id": "act3_dwarf_ironkings",
+  "name": {
+    "es": "Reyes de Hierro",
+    "en": "Iron Kings"
+  },
+  "race": "Dwarf",
+  "act": 3,
+  "difficulty": 5,
+  "players": [
+    {
+      "name": "Grimnir Cavaprofundo",
+      "position": "Goalkeeper",
+      "rarity": "legendary",
+      "level": 5,
+      "attributes": {
+        "strength": 87,
+        "speed": 54,
+        "technique": 49,
+        "stamina": 91,
+        "leash": 71
+      },
+      "traits": [
+        "Wall"
+      ],
+      "perks": [
+        "iron_gate"
+      ]
+    },
+    {
+      "name": "Hjalmar Vetaoro",
+      "position": "Defender",
+      "rarity": "rare",
+      "level": 5,
+      "attributes": {
+        "strength": 92,
+        "speed": 56,
+        "technique": 49,
+        "stamina": 94,
+        "leash": 71
+      },
+      "traits": [
+        "Resilient"
+      ],
+      "perks": [
+        "long_leash_legacy"
+      ]
+    },
+    {
+      "name": "Ivarr Forjagrís",
+      "position": "Defender",
+      "rarity": "common",
+      "level": 5,
+      "attributes": {
+        "strength": 92,
+        "speed": 56,
+        "technique": 49,
+        "stamina": 94,
+        "leash": 71
+      }
+    },
+    {
+      "name": "Joric Puñoroca",
+      "position": "Midfielder",
+      "rarity": "common",
+      "level": 5,
+      "attributes": {
+        "strength": 82,
+        "speed": 59,
+        "technique": 62,
+        "stamina": 96,
+        "leash": 71
+      }
+    },
+    {
+      "name": "Kordan Martillonegro",
+      "position": "Midfielder",
+      "rarity": "common",
+      "level": 5,
+      "attributes": {
+        "strength": 82,
+        "speed": 59,
+        "technique": 62,
+        "stamina": 96,
+        "leash": 71
+      }
+    },
+    {
+      "name": "Loric Tallapiedra",
+      "position": "Midfielder",
+      "rarity": "common",
+      "level": 5,
+      "attributes": {
+        "strength": 82,
+        "speed": 59,
+        "technique": 62,
+        "stamina": 96,
+        "leash": 71
+      }
+    },
+    {
+      "name": "Magnus Yunquefirme",
+      "position": "Forward",
+      "rarity": "common",
+      "level": 5,
+      "attributes": {
+        "strength": 84,
+        "speed": 64,
+        "technique": 59,
+        "stamina": 88,
+        "leash": 71
+      }
+    },
+    {
+      "name": "Norin Escudopétreo",
+      "position": "Defender",
+      "rarity": "common",
+      "level": 5,
+      "attributes": {
+        "strength": 92,
+        "speed": 56,
+        "technique": 49,
+        "stamina": 94,
+        "leash": 71
+      }
+    },
+    {
+      "name": "Oskar Golpefrío",
+      "position": "Midfielder",
+      "rarity": "common",
+      "level": 5,
+      "attributes": {
+        "strength": 82,
+        "speed": 59,
+        "technique": 62,
+        "stamina": 96,
+        "leash": 71
+      }
+    },
+    {
+      "name": "Ragnar Barbahierro",
+      "position": "Forward",
+      "rarity": "common",
+      "level": 5,
+      "attributes": {
+        "strength": 84,
+        "speed": 64,
+        "technique": 59,
+        "stamina": 88,
+        "leash": 71
+      }
+    }
+  ]
+}

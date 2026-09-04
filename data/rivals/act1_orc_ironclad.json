@@ -1,0 +1,157 @@
+{
+  "id": "act1_orc_ironclad",
+  "name": {
+    "es": "Yunque Verde",
+    "en": "Green Anvil"
+  },
+  "race": "Orc",
+  "act": 1,
+  "difficulty": 1,
+  "players": [
+    {
+      "name": "Grok Comecráneos",
+      "position": "Goalkeeper",
+      "rarity": "common",
+      "level": 1,
+      "attributes": {
+        "strength": 55,
+        "speed": 36,
+        "technique": 25,
+        "stamina": 53,
+        "leash": 45
+      },
+      "traits": [
+        "Wall"
+      ],
+      "perks": [
+        "bulwark_stance"
+      ]
+    },
+    {
+      "name": "Urzag Tragaclavos",
+      "position": "Defender",
+      "rarity": "rare",
+      "level": 1,
+      "attributes": {
+        "strength": 60,
+        "speed": 38,
+        "technique": 25,
+        "stamina": 56,
+        "leash": 45
+      },
+      "traits": [
+        "Aggressive"
+      ],
+      "perks": [
+        "scar_tissue"
+      ]
+    },
+    {
+      "name": "Morg Muerdehierro",
+      "position": "Defender",
+      "rarity": "common",
+      "level": 1,
+      "attributes": {
+        "strength": 60,
+        "speed": 38,
+        "technique": 25,
+        "stamina": 56,
+        "leash": 45
+      }
+    },
+    {
+      "name": "Thrak Quiebraespinas",
+      "position": "Midfielder",
+      "rarity": "common",
+      "level": 1,
+      "attributes": {
+        "strength": 50,
+        "speed": 41,
+        "technique": 38,
+        "stamina": 58,
+        "leash": 45
+      }
+    },
+    {
+      "name": "Bolg Comecráneos",
+      "position": "Midfielder",
+      "rarity": "common",
+      "level": 1,
+      "attributes": {
+        "strength": 50,
+        "speed": 41,
+        "technique": 38,
+        "stamina": 58,
+        "leash": 45
+      }
+    },
+    {
+      "name": "Gashk Tragaclavos",
+      "position": "Midfielder",
+      "rarity": "common",
+      "level": 1,
+      "attributes": {
+        "strength": 50,
+        "speed": 41,
+        "technique": 38,
+        "stamina": 58,
+        "leash": 45
+      }
+    },
+    {
+      "name": "Ruk Muerdehierro",
+      "position": "Forward",
+      "rarity": "common",
+      "level": 1,
+      "attributes": {
+        "strength": 52,
+        "speed": 46,
+        "technique": 35,
+        "stamina": 50,
+        "leash": 45
+      }
+    },
+    {
+      "name": "Zog Quiebraespinas",
+      "position": "Defender",
+      "rarity": "common",
+      "level": 1,
+      "attributes": {
+        "strength": 60,
+        "speed": 38,
+        "technique": 25,
+        "stamina": 56,
+        "leash": 45
+      },
+      "traits": [
+        "Aggressive"
+      ]
+    },
+    {
+      "name": "Drog Comecráneos",
+      "position": "Midfielder",
+      "rarity": "common",
+      "level": 1,
+      "attributes": {
+        "strength": 50,
+        "speed": 41,
+        "technique": 38,
+        "stamina": 58,
+        "leash": 45
+      }
+    },
+    {
+      "name": "Krum Tragaclavos",
+      "position": "Forward",
+      "rarity": "common",
+      "level": 1,
+      "attributes": {
+        "strength": 52,
+        "speed": 46,
+        "technique": 35,
+        "stamina": 50,
+        "leash": 45
+      }
+    }
+  ]
+}

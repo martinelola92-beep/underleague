@@ -1,0 +1,12 @@
+{
+  "id": "berserker_totem",
+  "name": { "es": "Tótem del berserker", "en": "Berserker Totem" },
+  "rarity": "rare",
+  "archetype": "cursed",
+  "effects": [
+    { "type": "modifyAttribute", "attribute": "strength", "value": 18 }
+  ],
+  "drawbackEffects": [
+    { "type": "modifyProbability", "probability": "injure", "value": 1000 }
+  ]
+}

@@ -1,0 +1,154 @@
+{
+  "id": "act3_orc_warlords",
+  "name": {
+    "es": "Señores de la Guerra Carmesí",
+    "en": "Crimson Warlords"
+  },
+  "race": "Orc",
+  "act": 3,
+  "difficulty": 5,
+  "players": [
+    {
+      "name": "Ruk Muerdehierro",
+      "position": "Goalkeeper",
+      "rarity": "common",
+      "level": 5,
+      "attributes": {
+        "strength": 93,
+        "speed": 68,
+        "technique": 51,
+        "stamina": 83,
+        "leash": 73
+      }
+    },
+    {
+      "name": "Zog Quiebraespinas",
+      "position": "Defender",
+      "rarity": "rare",
+      "level": 5,
+      "attributes": {
+        "strength": 98,
+        "speed": 70,
+        "technique": 51,
+        "stamina": 86,
+        "leash": 73
+      },
+      "traits": [
+        "Aggressive"
+      ],
+      "perks": [
+        "last_ditch"
+      ]
+    },
+    {
+      "name": "Drog Comecráneos",
+      "position": "Defender",
+      "rarity": "common",
+      "level": 5,
+      "attributes": {
+        "strength": 98,
+        "speed": 70,
+        "technique": 51,
+        "stamina": 86,
+        "leash": 73
+      }
+    },
+    {
+      "name": "Krum Tragaclavos",
+      "position": "Midfielder",
+      "rarity": "common",
+      "level": 5,
+      "attributes": {
+        "strength": 88,
+        "speed": 73,
+        "technique": 64,
+        "stamina": 88,
+        "leash": 73
+      }
+    },
+    {
+      "name": "Snaga Muerdehierro",
+      "position": "Midfielder",
+      "rarity": "common",
+      "level": 5,
+      "attributes": {
+        "strength": 88,
+        "speed": 73,
+        "technique": 64,
+        "stamina": 88,
+        "leash": 73
+      }
+    },
+    {
+      "name": "Urk Quiebraespinas",
+      "position": "Midfielder",
+      "rarity": "common",
+      "level": 5,
+      "attributes": {
+        "strength": 88,
+        "speed": 73,
+        "technique": 64,
+        "stamina": 88,
+        "leash": 73
+      }
+    },
+    {
+      "name": "Ghash Comecráneos",
+      "position": "Forward",
+      "rarity": "legendary",
+      "level": 5,
+      "attributes": {
+        "strength": 90,
+        "speed": 78,
+        "technique": 61,
+        "stamina": 80,
+        "leash": 73
+      },
+      "traits": [
+        "Aggressive"
+      ],
+      "perks": [
+        "gentle_giant"
+      ]
+    },
+    {
+      "name": "Lurtz Tragaclavos",
+      "position": "Defender",
+      "rarity": "common",
+      "level": 5,
+      "attributes": {
+        "strength": 98,
+        "speed": 70,
+        "technique": 51,
+        "stamina": 86,
+        "leash": 73
+      }
+    },
+    {
+      "name": "Muzgash Muerdehierro",
+      "position": "Midfielder",
+      "rarity": "common",
+      "level": 5,
+      "attributes": {
+        "strength": 88,
+        "speed": 73,
+        "technique": 64,
+        "stamina": 88,
+        "leash": 73
+      }
+    },
+    {
+      "name": "Naz Quiebraespinas",
+      "position": "Forward",
+      "rarity": "common",
+      "level": 5,
+      "attributes": {
+        "strength": 90,
+        "speed": 78,
+        "technique": 61,
+        "stamina": 80,
+        "leash": 73
+      }
+    }
+  ]
+}

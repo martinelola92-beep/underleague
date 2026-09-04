@@ -179,6 +179,30 @@ static string? MapSchemaFile(string relativePath)
         return "balance-builds.schema.json";
     }
 
+    if (relativePath.StartsWith("bosses/", StringComparison.Ordinal) && relativePath.EndsWith(".json", StringComparison.Ordinal)
+        && !relativePath[7..].Contains('/'))
+    {
+        return "bosses.schema.json";
+    }
+
+    if (relativePath.StartsWith("items/", StringComparison.Ordinal) && relativePath.EndsWith(".json", StringComparison.Ordinal)
+        && !relativePath[6..].Contains('/'))
+    {
+        return "items.schema.json";
+    }
+
+    if (relativePath.StartsWith("rivals/", StringComparison.Ordinal) && relativePath.EndsWith(".json", StringComparison.Ordinal)
+        && !relativePath[7..].Contains('/'))
+    {
+        return "rivals.schema.json";
+    }
+
+    if (relativePath.StartsWith("consumables/", StringComparison.Ordinal) && relativePath.EndsWith(".json", StringComparison.Ordinal)
+        && !relativePath[12..].Contains('/'))
+    {
+        return "consumables.schema.json";
+    }
+
     return relativePath switch
     {
         "balance/groups.json" => "balance-groups.schema.json",
@@ -187,6 +211,7 @@ static string? MapSchemaFile(string relativePath)
         "sim/tuning.json" => "tuning.schema.json",
         "balance/reference.json" => "balance-reference.schema.json",
         "tags/styles.json" => "styles.schema.json",
+        "economy/economy.json" => "economy.schema.json",
         _ => null,
     };
 }

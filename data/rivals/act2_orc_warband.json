@@ -1,0 +1,154 @@
+{
+  "id": "act2_orc_warband",
+  "name": {
+    "es": "Horda de Colmillo Rojo",
+    "en": "Red Fang Horde"
+  },
+  "race": "Orc",
+  "act": 2,
+  "difficulty": 3,
+  "players": [
+    {
+      "name": "Bolg Comecráneos",
+      "position": "Goalkeeper",
+      "rarity": "common",
+      "level": 3,
+      "attributes": {
+        "strength": 74,
+        "speed": 55,
+        "technique": 40,
+        "stamina": 66,
+        "leash": 60
+      }
+    },
+    {
+      "name": "Gashk Tragaclavos",
+      "position": "Defender",
+      "rarity": "rare",
+      "level": 3,
+      "attributes": {
+        "strength": 79,
+        "speed": 57,
+        "technique": 40,
+        "stamina": 69,
+        "leash": 60
+      },
+      "traits": [
+        "Dirty"
+      ],
+      "perks": [
+        "crowd_control"
+      ]
+    },
+    {
+      "name": "Ruk Muerdehierro",
+      "position": "Defender",
+      "rarity": "common",
+      "level": 3,
+      "attributes": {
+        "strength": 79,
+        "speed": 57,
+        "technique": 40,
+        "stamina": 69,
+        "leash": 60
+      }
+    },
+    {
+      "name": "Zog Quiebraespinas",
+      "position": "Midfielder",
+      "rarity": "common",
+      "level": 3,
+      "attributes": {
+        "strength": 69,
+        "speed": 60,
+        "technique": 53,
+        "stamina": 71,
+        "leash": 60
+      }
+    },
+    {
+      "name": "Drog Comecráneos",
+      "position": "Midfielder",
+      "rarity": "common",
+      "level": 3,
+      "attributes": {
+        "strength": 69,
+        "speed": 60,
+        "technique": 53,
+        "stamina": 71,
+        "leash": 60
+      }
+    },
+    {
+      "name": "Krum Tragaclavos",
+      "position": "Midfielder",
+      "rarity": "common",
+      "level": 3,
+      "attributes": {
+        "strength": 69,
+        "speed": 60,
+        "technique": 53,
+        "stamina": 71,
+        "leash": 60
+      }
+    },
+    {
+      "name": "Snaga Muerdehierro",
+      "position": "Forward",
+      "rarity": "rare",
+      "level": 3,
+      "attributes": {
+        "strength": 71,
+        "speed": 65,
+        "technique": 50,
+        "stamina": 63,
+        "leash": 60
+      },
+      "traits": [
+        "Aggressive"
+      ],
+      "perks": [
+        "hot_blooded"
+      ]
+    },
+    {
+      "name": "Urk Quiebraespinas",
+      "position": "Defender",
+      "rarity": "common",
+      "level": 3,
+      "attributes": {
+        "strength": 79,
+        "speed": 57,
+        "technique": 40,
+        "stamina": 69,
+        "leash": 60
+      }
+    },
+    {
+      "name": "Ghash Comecráneos",
+      "position": "Midfielder",
+      "rarity": "common",
+      "level": 3,
+      "attributes": {
+        "strength": 69,
+        "speed": 60,
+        "technique": 53,
+        "stamina": 71,
+        "leash": 60
+      }
+    },
+    {
+      "name": "Lurtz Tragaclavos",
+      "position": "Forward",
+      "rarity": "common",
+      "level": 3,
+      "attributes": {
+        "strength": 71,
+        "speed": 65,
+        "technique": 50,
+        "stamina": 63,
+        "leash": 60
+      }
+    }
+  ]
+}

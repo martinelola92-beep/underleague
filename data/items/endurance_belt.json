@@ -1,0 +1,9 @@
+{
+  "id": "endurance_belt",
+  "name": { "es": "Cinturón de resistencia", "en": "Endurance Belt" },
+  "rarity": "common",
+  "archetype": "normal",
+  "effects": [
+    { "type": "modifyAttribute", "attribute": "stamina", "value": 8 }
+  ]
+}

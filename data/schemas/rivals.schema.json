@@ -1,0 +1,79 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://underleague.dev/schemas/rivals.schema.json",
+  "title": "Underleague rival team",
+  "description": "data/rivals/<id>.json: un rival estático por fichero (RF-015), diseñado a mano. Exactamente 10 jugadores en el mismo orden que Sim.Generation.TeamGenerator: 7 titulares (GK, DEF, DEF, MID, MID, MID, FWD) y 3 suplentes (DEF, MID, FWD).",
+  "type": "object",
+  "properties": {
+    "_doc": { "type": "string" },
+    "id": { "type": "string", "pattern": "^[a-z][a-z0-9_]*$" },
+    "name": { "$ref": "#/$defs/localizedName" },
+    "race": {
+      "enum": ["Human", "Orc", "Elf", "Dwarf", "Undead", "DarkElf", "Demon", "Vampire", "Lizard"]
+    },
+    "act": { "type": "integer", "minimum": 1, "maximum": 3 },
+    "difficulty": {
+      "description": "Distintivo de dificultad de 5 niveles (RF-012), informativo: la dificultad real del nodo la fija MapGenerator.",
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 5
+    },
+    "players": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/player" },
+      "minItems": 10,
+      "maxItems": 10
+    }
+  },
+  "required": ["id", "name", "race", "act", "difficulty", "players"],
+  "additionalProperties": false,
+  "$defs": {
+    "localizedName": {
+      "type": "object",
+      "properties": {
+        "es": { "type": "string", "minLength": 1 },
+        "en": { "type": "string", "minLength": 1 }
+      },
+      "required": ["es", "en"],
+      "additionalProperties": false
+    },
+    "player": {
+      "type": "object",
+      "properties": {
+        "name": { "type": "string", "minLength": 1 },
+        "position": { "enum": ["Goalkeeper", "Defender", "Midfielder", "Forward"] },
+        "rarity": { "enum": ["common", "rare", "legendary"] },
+        "level": { "type": "integer", "minimum": 1, "maximum": 8 },
+        "attributes": {
+          "type": "object",
+          "properties": {
+            "strength": { "type": "integer", "minimum": 1, "maximum": 99 },
+            "speed": { "type": "integer", "minimum": 1, "maximum": 99 },
+            "technique": { "type": "integer", "minimum": 1, "maximum": 99 },
+            "stamina": { "type": "integer", "minimum": 1, "maximum": 99 },
+            "leash": { "type": "integer", "minimum": 1, "maximum": 99 }
+          },
+          "required": ["strength", "speed", "technique", "stamina", "leash"],
+          "additionalProperties": false
+        },
+        "traits": {
+          "type": "array",
+          "items": {
+            "enum": [
+              "Aggressive", "Fast", "Scorer", "LongShot", "Cerebral", "Dirty",
+              "Resilient", "Coward", "Leader", "Lazy", "Cat", "Wall", "Rusher"
+            ]
+          },
+          "uniqueItems": true
+        },
+        "perks": {
+          "type": "array",
+          "items": { "type": "string", "pattern": "^[a-z][a-z0-9_]*$" },
+          "uniqueItems": true
+        }
+      },
+      "required": ["name", "position", "rarity", "level", "attributes"],
+      "additionalProperties": false
+    }
+  }
+}

@@ -1,0 +1,10 @@
+{
+  "id": "brutes_pauldron",
+  "name": { "es": "Hombrera del bruto", "en": "Brute's Pauldron" },
+  "rarity": "common",
+  "archetype": "restricted",
+  "requiredTag": "Brute",
+  "effects": [
+    { "type": "modifyAttribute", "attribute": "strength", "value": 14 }
+  ]
+}

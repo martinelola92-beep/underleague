@@ -1,0 +1,154 @@
+{
+  "id": "act2_undead_deadwalkers",
+  "name": {
+    "es": "Caminantes Silenciosos",
+    "en": "Deadwalkers"
+  },
+  "race": "Undead",
+  "act": 2,
+  "difficulty": 4,
+  "players": [
+    {
+      "name": "Cael Huesoseco",
+      "position": "Goalkeeper",
+      "rarity": "rare",
+      "level": 4,
+      "attributes": {
+        "strength": 67,
+        "speed": 48,
+        "technique": 51,
+        "stamina": 73,
+        "leash": 61
+      },
+      "traits": [
+        "Resilient"
+      ],
+      "perks": [
+        "deathless_march"
+      ]
+    },
+    {
+      "name": "Draven Tumbafría",
+      "position": "Defender",
+      "rarity": "common",
+      "level": 4,
+      "attributes": {
+        "strength": 72,
+        "speed": 50,
+        "technique": 51,
+        "stamina": 76,
+        "leash": 61
+      }
+    },
+    {
+      "name": "Malric Nochehueca",
+      "position": "Defender",
+      "rarity": "common",
+      "level": 4,
+      "attributes": {
+        "strength": 72,
+        "speed": 50,
+        "technique": 51,
+        "stamina": 76,
+        "leash": 61
+      }
+    },
+    {
+      "name": "Sever Cripta",
+      "position": "Midfielder",
+      "rarity": "common",
+      "level": 4,
+      "attributes": {
+        "strength": 62,
+        "speed": 53,
+        "technique": 64,
+        "stamina": 78,
+        "leash": 61
+      }
+    },
+    {
+      "name": "Thane Cenizagrís",
+      "position": "Midfielder",
+      "rarity": "common",
+      "level": 4,
+      "attributes": {
+        "strength": 62,
+        "speed": 53,
+        "technique": 64,
+        "stamina": 78,
+        "leash": 61
+      }
+    },
+    {
+      "name": "Cyrus Osamenta",
+      "position": "Midfielder",
+      "rarity": "common",
+      "level": 4,
+      "attributes": {
+        "strength": 62,
+        "speed": 53,
+        "technique": 64,
+        "stamina": 78,
+        "leash": 61
+      }
+    },
+    {
+      "name": "Doran Sudariofrío",
+      "position": "Forward",
+      "rarity": "rare",
+      "level": 4,
+      "attributes": {
+        "strength": 64,
+        "speed": 58,
+        "technique": 61,
+        "stamina": 70,
+        "leash": 61
+      },
+      "traits": [
+        "Scorer"
+      ],
+      "perks": [
+        "long_range_menace"
+      ]
+    },
+    {
+      "name": "Ezren Sinaliento",
+      "position": "Defender",
+      "rarity": "common",
+      "level": 4,
+      "attributes": {
+        "strength": 72,
+        "speed": 50,
+        "technique": 51,
+        "stamina": 76,
+        "leash": 61
+      }
+    },
+    {
+      "name": "Grimm Vozmuerta",
+      "position": "Midfielder",
+      "rarity": "common",
+      "level": 4,
+      "attributes": {
+        "strength": 62,
+        "speed": 53,
+        "technique": 64,
+        "stamina": 78,
+        "leash": 61
+      }
+    },
+    {
+      "name": "Ilan Polvorento",
+      "position": "Forward",
+      "rarity": "common",
+      "level": 4,
+      "attributes": {
+        "strength": 64,
+        "speed": 58,
+        "technique": 61,
+        "stamina": 70,
+        "leash": 61
+      }
+    }
+  ]
+}

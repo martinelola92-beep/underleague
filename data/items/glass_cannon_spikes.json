@@ -1,0 +1,11 @@
+{
+  "id": "glass_cannon_spikes",
+  "name": { "es": "Púas de cañón de cristal", "en": "Glass Cannon Spikes" },
+  "rarity": "rare",
+  "archetype": "fragile",
+  "usesLimit": 2,
+  "effects": [
+    { "type": "modifyAttribute", "attribute": "strength", "value": 20 },
+    { "type": "modifyAttribute", "attribute": "stamina", "value": -6 }
+  ]
+}

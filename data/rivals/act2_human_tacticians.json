@@ -1,0 +1,154 @@
+{
+  "id": "act2_human_tacticians",
+  "name": {
+    "es": "Tácticos de Puerto Claro",
+    "en": "Clearport Tacticians"
+  },
+  "race": "Human",
+  "act": 2,
+  "difficulty": 3,
+  "players": [
+    {
+      "name": "Dario Lara",
+      "position": "Goalkeeper",
+      "rarity": "common",
+      "level": 3,
+      "attributes": {
+        "strength": 61,
+        "speed": 56,
+        "technique": 51,
+        "stamina": 61,
+        "leash": 61
+      }
+    },
+    {
+      "name": "Elio Ortiz",
+      "position": "Defender",
+      "rarity": "common",
+      "level": 3,
+      "attributes": {
+        "strength": 66,
+        "speed": 58,
+        "technique": 51,
+        "stamina": 64,
+        "leash": 61
+      }
+    },
+    {
+      "name": "Fabio Rubio",
+      "position": "Defender",
+      "rarity": "common",
+      "level": 3,
+      "attributes": {
+        "strength": 66,
+        "speed": 58,
+        "technique": 51,
+        "stamina": 64,
+        "leash": 61
+      }
+    },
+    {
+      "name": "Gino Ureña",
+      "position": "Midfielder",
+      "rarity": "rare",
+      "level": 3,
+      "attributes": {
+        "strength": 56,
+        "speed": 61,
+        "technique": 64,
+        "stamina": 66,
+        "leash": 61
+      },
+      "traits": [
+        "Leader"
+      ],
+      "perks": [
+        "diagonal_press"
+      ]
+    },
+    {
+      "name": "Hugo Zamora",
+      "position": "Midfielder",
+      "rarity": "common",
+      "level": 3,
+      "attributes": {
+        "strength": 56,
+        "speed": 61,
+        "technique": 64,
+        "stamina": 66,
+        "leash": 61
+      }
+    },
+    {
+      "name": "Ivo Cano",
+      "position": "Midfielder",
+      "rarity": "common",
+      "level": 3,
+      "attributes": {
+        "strength": 56,
+        "speed": 61,
+        "technique": 64,
+        "stamina": 66,
+        "leash": 61
+      }
+    },
+    {
+      "name": "Jano Ferrer",
+      "position": "Forward",
+      "rarity": "common",
+      "level": 3,
+      "attributes": {
+        "strength": 58,
+        "speed": 66,
+        "technique": 61,
+        "stamina": 58,
+        "leash": 61
+      }
+    },
+    {
+      "name": "Lino Ibarra",
+      "position": "Defender",
+      "rarity": "rare",
+      "level": 3,
+      "attributes": {
+        "strength": 66,
+        "speed": 58,
+        "technique": 51,
+        "stamina": 64,
+        "leash": 61
+      },
+      "traits": [
+        "Cerebral"
+      ],
+      "perks": [
+        "shadow_marker"
+      ]
+    },
+    {
+      "name": "Marco Mora",
+      "position": "Midfielder",
+      "rarity": "common",
+      "level": 3,
+      "attributes": {
+        "strength": 56,
+        "speed": 61,
+        "technique": 64,
+        "stamina": 66,
+        "leash": 61
+      }
+    },
+    {
+      "name": "Nilo Prieto",
+      "position": "Forward",
+      "rarity": "common",
+      "level": 3,
+      "attributes": {
+        "strength": 58,
+        "speed": 66,
+        "technique": 61,
+        "stamina": 58,
+        "leash": 61
+      }
+    }
+  ]
+}

@@ -1,0 +1,9 @@
+{
+  "id": "focus_lens",
+  "name": { "es": "Lente de enfoque", "en": "Focus Lens" },
+  "rarity": "common",
+  "archetype": "normal",
+  "effects": [
+    { "type": "modifyAttribute", "attribute": "technique", "value": 8 }
+  ]
+}

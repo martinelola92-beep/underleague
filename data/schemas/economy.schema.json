@@ -1,0 +1,89 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://underleague.dev/schemas/economy.schema.json",
+  "title": "Underleague economy",
+  "description": "data/economy/economy.json: economía de la run (RF-114g..k), único fichero. Enteros, valores en datos (RT-057). Cargado por Sim.Run.Systems.Economy.EconomyLoader, fuera del Catalog compartido.",
+  "type": "object",
+  "properties": {
+    "_doc": { "type": "string" },
+    "goldAct1": { "type": "integer", "minimum": 0 },
+    "goldAct2": { "type": "integer", "minimum": 0 },
+    "goldAct3": { "type": "integer", "minimum": 0 },
+    "difficultyMultiplierPercent": {
+      "description": "RF-012: 5 niveles de dificultad, en tanto por ciento.",
+      "type": "array",
+      "items": { "type": "integer", "minimum": 0, "maximum": 500 },
+      "minItems": 5,
+      "maxItems": 5
+    },
+    "eliteBonusPercent": { "type": "integer", "minimum": 0, "maximum": 500 },
+    "bossBonusPercent": { "type": "integer", "minimum": 0, "maximum": 500 },
+    "excellentMatchBonusGold": { "type": "integer", "minimum": 0 },
+    "clinicCost": { "type": "integer", "minimum": 0 },
+    "rerollBaseCost": { "type": "integer", "minimum": 0 },
+    "rerollStepCost": { "type": "integer", "minimum": 0 },
+    "trainingExperience": { "type": "integer", "minimum": 0 },
+    "eventGoldMin": { "type": "integer", "minimum": 0 },
+    "eventGoldMax": { "type": "integer", "minimum": 0 },
+    "mercenaryBaseWage": { "type": "integer", "minimum": 0 },
+    "mercenaryWagePerRarityStep": { "type": "integer", "minimum": 0 },
+    "mercenaryBenchAbandonMatches": { "type": "integer", "minimum": 1 },
+    "mercenaryLossStreakAbandon": { "type": "integer", "minimum": 1 },
+    "rewardPlayerQuality": { "type": "integer", "minimum": 1, "maximum": 99 },
+    "rewardPerkWeight": { "type": "integer", "minimum": 0 },
+    "rewardPlayerWeight": { "type": "integer", "minimum": 0 },
+    "rewardItemWeight": { "type": "integer", "minimum": 0 },
+    "market": { "$ref": "#/$defs/market" }
+  },
+  "required": [
+    "goldAct1", "goldAct2", "goldAct3", "difficultyMultiplierPercent",
+    "eliteBonusPercent", "bossBonusPercent", "excellentMatchBonusGold",
+    "clinicCost", "rerollBaseCost", "rerollStepCost", "trainingExperience",
+    "eventGoldMin", "eventGoldMax", "mercenaryBaseWage", "mercenaryWagePerRarityStep",
+    "mercenaryBenchAbandonMatches", "mercenaryLossStreakAbandon",
+    "rewardPlayerQuality", "rewardPerkWeight", "rewardPlayerWeight", "rewardItemWeight",
+    "market"
+  ],
+  "additionalProperties": false,
+  "$defs": {
+    "priceByRarity": {
+      "description": "[common, rare, legendary]",
+      "type": "array",
+      "items": { "type": "integer", "minimum": 0 },
+      "minItems": 3,
+      "maxItems": 3
+    },
+    "market": {
+      "type": "object",
+      "properties": {
+        "playerOffers": { "type": "integer", "minimum": 0, "maximum": 4 },
+        "perkOffers": { "type": "integer", "minimum": 0, "maximum": 4 },
+        "itemOffers": { "type": "integer", "minimum": 0, "maximum": 4 },
+        "consumableOffers": { "type": "integer", "minimum": 0, "maximum": 4 },
+        "mercenaryOffers": { "type": "integer", "minimum": 0, "maximum": 4 },
+        "youthMin": { "type": "integer", "minimum": 0, "maximum": 2 },
+        "youthMax": { "type": "integer", "minimum": 0, "maximum": 2 },
+        "playerPriceByRarity": { "$ref": "#/$defs/priceByRarity" },
+        "perkPriceByRarity": { "$ref": "#/$defs/priceByRarity" },
+        "itemPriceByRarity": { "$ref": "#/$defs/priceByRarity" },
+        "consumablePrice": { "type": "integer", "minimum": 0 },
+        "itemSellFractionPercent": { "type": "integer", "minimum": 0, "maximum": 100 },
+        "playerSaleBaseByRarity": { "$ref": "#/$defs/priceByRarity" },
+        "playerSalePerLevel": { "type": "integer", "minimum": 0 },
+        "playerSalePerPerk": { "type": "integer", "minimum": 0 },
+        "playerSalePerBond": { "type": "integer", "minimum": 0 },
+        "recruitQuality": { "type": "integer", "minimum": 1, "maximum": 99 },
+        "youthQuality": { "type": "integer", "minimum": 1, "maximum": 99 },
+        "mercenaryQuality": { "type": "integer", "minimum": 1, "maximum": 99 }
+      },
+      "required": [
+        "playerOffers", "perkOffers", "itemOffers", "consumableOffers", "mercenaryOffers",
+        "youthMin", "youthMax", "playerPriceByRarity", "perkPriceByRarity", "itemPriceByRarity",
+        "consumablePrice", "itemSellFractionPercent", "playerSaleBaseByRarity",
+        "playerSalePerLevel", "playerSalePerPerk", "playerSalePerBond",
+        "recruitQuality", "youthQuality", "mercenaryQuality"
+      ],
+      "additionalProperties": false
+    }
+  }
+}

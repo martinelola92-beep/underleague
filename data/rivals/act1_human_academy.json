@@ -1,0 +1,151 @@
+{
+  "id": "act1_human_academy",
+  "name": {
+    "es": "Academia Meridiana",
+    "en": "Meridian Academy"
+  },
+  "race": "Human",
+  "act": 1,
+  "difficulty": 1,
+  "players": [
+    {
+      "name": "Bruno Esteve",
+      "position": "Goalkeeper",
+      "rarity": "common",
+      "level": 1,
+      "attributes": {
+        "strength": 47,
+        "speed": 42,
+        "technique": 37,
+        "stamina": 47,
+        "leash": 47
+      }
+    },
+    {
+      "name": "Ciro Haro",
+      "position": "Defender",
+      "rarity": "common",
+      "level": 1,
+      "attributes": {
+        "strength": 52,
+        "speed": 44,
+        "technique": 37,
+        "stamina": 50,
+        "leash": 47
+      }
+    },
+    {
+      "name": "Dario Lara",
+      "position": "Defender",
+      "rarity": "common",
+      "level": 1,
+      "attributes": {
+        "strength": 52,
+        "speed": 44,
+        "technique": 37,
+        "stamina": 50,
+        "leash": 47
+      }
+    },
+    {
+      "name": "Elio Ortiz",
+      "position": "Midfielder",
+      "rarity": "rare",
+      "level": 1,
+      "attributes": {
+        "strength": 42,
+        "speed": 47,
+        "technique": 50,
+        "stamina": 52,
+        "leash": 47
+      },
+      "traits": [
+        "Leader"
+      ],
+      "perks": [
+        "game_management"
+      ]
+    },
+    {
+      "name": "Fabio Rubio",
+      "position": "Midfielder",
+      "rarity": "common",
+      "level": 1,
+      "attributes": {
+        "strength": 42,
+        "speed": 47,
+        "technique": 50,
+        "stamina": 52,
+        "leash": 47
+      }
+    },
+    {
+      "name": "Gino Ureña",
+      "position": "Midfielder",
+      "rarity": "common",
+      "level": 1,
+      "attributes": {
+        "strength": 42,
+        "speed": 47,
+        "technique": 50,
+        "stamina": 52,
+        "leash": 47
+      }
+    },
+    {
+      "name": "Hugo Zamora",
+      "position": "Forward",
+      "rarity": "common",
+      "level": 1,
+      "attributes": {
+        "strength": 44,
+        "speed": 52,
+        "technique": 47,
+        "stamina": 44,
+        "leash": 47
+      },
+      "traits": [
+        "Cerebral"
+      ]
+    },
+    {
+      "name": "Ivo Cano",
+      "position": "Defender",
+      "rarity": "common",
+      "level": 1,
+      "attributes": {
+        "strength": 52,
+        "speed": 44,
+        "technique": 37,
+        "stamina": 50,
+        "leash": 47
+      }
+    },
+    {
+      "name": "Jano Ferrer",
+      "position": "Midfielder",
+      "rarity": "common",
+      "level": 1,
+      "attributes": {
+        "strength": 42,
+        "speed": 47,
+        "technique": 50,
+        "stamina": 52,
+        "leash": 47
+      }
+    },
+    {
+      "name": "Lino Ibarra",
+      "position": "Forward",
+      "rarity": "common",
+      "level": 1,
+      "attributes": {
+        "strength": 44,
+        "speed": 52,
+        "technique": 47,
+        "stamina": 44,
+        "leash": 47
+      }
+    }
+  ]
+}
