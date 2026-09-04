@@ -1,0 +1,26 @@
+{
+  "id": "guardian_angel",
+  "name": {
+    "es": "Ángel guardián",
+    "en": "Guardian Angel"
+  },
+  "rarity": "legendary",
+  "kind": "conditional",
+  "trigger": "MATCH_START",
+  "scope": "actor",
+  "condition": "teammatesWithTag(owner,'Fine') > 1",
+  "effects": [
+    {
+      "type": "modifyProbability",
+      "target": "owner",
+      "probability": "severeInjury",
+      "value": -1200,
+      "duration": "match"
+    }
+  ],
+  "accumulatesAcrossMatches": false,
+  "lethal": false,
+  "positionOnly": null,
+  "tagsRequired": [],
+  "tagsForbidden": []
+}

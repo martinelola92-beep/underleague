@@ -1,0 +1,33 @@
+{
+  "id": "iron_lungs_plus",
+  "name": {
+    "es": "Pulmones de hierro",
+    "en": "Iron Lungs Plus"
+  },
+  "rarity": "common",
+  "kind": "filler",
+  "trigger": "MATCH_START",
+  "scope": "actor",
+  "condition": "",
+  "effects": [
+    {
+      "type": "modifyAttribute",
+      "target": "owner",
+      "attribute": "stamina",
+      "valuePerCounter": 1,
+      "counter": "ironLungsMatches",
+      "maxValue": 8,
+      "duration": "match"
+    },
+    {
+      "type": "addCounter",
+      "counter": "ironLungsMatches",
+      "value": 1
+    }
+  ],
+  "accumulatesAcrossMatches": true,
+  "lethal": false,
+  "positionOnly": null,
+  "tagsRequired": [],
+  "tagsForbidden": []
+}

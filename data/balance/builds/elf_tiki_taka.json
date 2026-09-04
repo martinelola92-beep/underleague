@@ -1,0 +1,78 @@
+{
+  "id": "elf_tiki_taka",
+  "name": "Elfos: tiki-taka",
+  "race": "Elf",
+  "quality": 50,
+  "perks": [
+    {
+      "slot": 3,
+      "perk": "silk_touch"
+    },
+    {
+      "slot": 3,
+      "perk": "one_touch"
+    },
+    {
+      "slot": 4,
+      "perk": "matador"
+    },
+    {
+      "slot": 4,
+      "perk": "sweeper"
+    },
+    {
+      "slot": 4,
+      "perk": "showboat"
+    },
+    {
+      "slot": 6,
+      "perk": "playmaker"
+    },
+    {
+      "slot": 6,
+      "perk": "poacher"
+    },
+    {
+      "slot": 6,
+      "perk": "one_touch"
+    },
+    {
+      "slot": 6,
+      "perk": "matador"
+    }
+  ],
+  "rarities": {
+    "4": "rare",
+    "6": "legendary"
+  },
+  "lineup": [
+    [
+      0,
+      2
+    ],
+    [
+      2,
+      2
+    ],
+    [
+      2,
+      3
+    ],
+    [
+      3,
+      2
+    ],
+    [
+      4,
+      2
+    ],
+    [
+      4,
+      3
+    ],
+    [
+      5,
+      2
+    ]
+  ]
+}

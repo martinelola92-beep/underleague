@@ -1,0 +1,33 @@
+{
+  "id": "human_random",
+  "name": "Humanos: al azar",
+  "race": "Human",
+  "quality": 50,
+  "perks": [
+    {
+      "slot": 0,
+      "perk": "mob_lawyer"
+    },
+    {
+      "slot": 0,
+      "perk": "lone_wolf"
+    },
+    {
+      "slot": 3,
+      "perk": "bookworm"
+    },
+    {
+      "slot": 3,
+      "perk": "silk_touch"
+    },
+    {
+      "slot": 6,
+      "perk": "target_man"
+    },
+    {
+      "slot": 6,
+      "perk": "sweeper"
+    }
+  ],
+  "lineup": null
+}

@@ -1,4 +1,22 @@
+using Underleague.Sim.Events;
+
 namespace Underleague.Sim.Engine;
+
+/// <summary>
+/// Una activación de perk con su contexto (RT-043), para el informe post-partido (RF-119).
+/// <c>Detail</c> es el del evento disparador, con sufijo <c>":else"</c> si lo que se aplicó fueron los
+/// <c>elseEffects</c> del perk (§7).
+/// </summary>
+public sealed record PerkActivation(string PerkId, int OwnerId, int Tick, EventType EventType, string Detail);
+
+/// <summary>Activaciones agregadas de un perk de un jugador en el partido (RT-043).</summary>
+public sealed record PerkActivationSummary(string PerkId, int OwnerId, int Activations);
+
+/// <summary>
+/// Lo que un contador de un jugador ha sumado en el partido a través de perks con
+/// <c>accumulatesAcrossMatches: true</c> (RF-070, §6). La campaña lo suma al PlayerDefinition siguiente.
+/// </summary>
+public sealed record PlayerCounterDelta(int PlayerId, string Counter, int Delta);
 
 /// <summary>Estadísticas de un jugador en un partido concreto.</summary>
 public sealed record PlayerMatchStats(
@@ -97,6 +115,15 @@ public sealed class MatchReport
     /// <summary>True si el portero de algún equipo salió de su área en algún tick del partido (RF-057b).</summary>
     public bool GoalkeeperLeftArea { get; }
 
+    /// <summary>Activaciones de perk en orden cronológico y, dentro de un evento, en el orden de RT-041.</summary>
+    public IReadOnlyList<PerkActivation> PerkActivations { get; }
+
+    /// <summary>Activaciones agregadas por (perk, jugador), ordenadas por id de perk y de jugador.</summary>
+    public IReadOnlyList<PerkActivationSummary> PerksSummary { get; }
+
+    /// <summary>Publicaciones descartadas por superar SimConfig.MaxDepth (RT-042).</summary>
+    public int RecursionCuts { get; }
+
     internal MatchReport(MatchReportBuilder builder)
     {
         Goals = (int[])builder.Goals.Clone();
@@ -122,6 +149,9 @@ public sealed class MatchReport
         Log = builder.Log.ToArray();
         UtilityDump = builder.UtilityDump;
         GoalkeeperLeftArea = builder.GoalkeeperLeftArea;
+        PerkActivations = builder.PerkActivations.ToArray();
+        PerksSummary = builder.PerksSummary.ToArray();
+        RecursionCuts = builder.RecursionCuts;
     }
 }
 
@@ -204,6 +234,15 @@ internal sealed class MatchReportBuilder
 
     /// <summary>Se pone a true la primera vez que un portero sale de su área (RF-057b, MatchRulesTests).</summary>
     public bool GoalkeeperLeftArea { get; set; }
+
+    /// <summary>Activaciones de perk registradas por el motor de efectos (RT-043).</summary>
+    public List<PerkActivation> PerkActivations { get; } = new();
+
+    /// <summary>Resumen por (perk, jugador); lo rellena el motor de efectos al terminar el partido.</summary>
+    public List<PerkActivationSummary> PerksSummary { get; } = new();
+
+    /// <summary>Publicaciones cortadas por profundidad de recursión (RT-042).</summary>
+    public int RecursionCuts { get; set; }
 
     /// <summary>Construye el MatchReport inmutable final a partir del estado acumulado.</summary>
     public MatchReport Build() => new(this);

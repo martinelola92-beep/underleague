@@ -7,9 +7,16 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <!-- Los tipos internos del motor (MatchPlayer, Ball, Utility, MatchEngine) no forman parte de la
-         superficie pública de §2.4, pero Sim.Tests los ejercita directamente (UtilityTests). -->
+    <!-- Los tipos internos del motor (MatchPlayer, Ball, Utility, MatchEngine, EffectEngine) no forman
+         parte de la superficie pública de §2.4, pero Sim.Tests los ejercita directamente. -->
     <InternalsVisibleTo Include="Underleague.Sim.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Condiciones de perk (RT-034, ADR 0003): NCalc solo se usa para PARSEAR y EVALUAR expresiones ya
+         compiladas al cargar /data. No hay reflexión ni compilación en tiempo de partido. NCalcSync es la
+         variante sin API asíncrona: /Sim es estrictamente síncrono y determinista. -->
+    <PackageReference Include="NCalcSync" Version="7.1.0" />
   </ItemGroup>
 
   <!-- APIs prohibidas en /Sim (RT-012, RT-021, docs/determinismo.md), en tiempo de compilación: complementa

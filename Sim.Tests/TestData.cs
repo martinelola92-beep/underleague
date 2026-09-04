@@ -10,19 +10,29 @@ internal static class TestData
 {
     public static string DataDirectory { get; } = FindDataDirectory();
 
+    /// <summary>
+    /// Todos los JSON de /data salvo los esquemas, con la ruta relativa que espera DataLoader.FromJson.
+    /// Se enumera el directorio en vez de listar los ficheros a mano (como hacía la fase 0) para que el
+    /// catálogo de perks y las plantillas de l10n que escriba cualquier paquete entren en los tests sin
+    /// tocar este ayudante.
+    /// </summary>
     public static Dictionary<string, string> LoadAllFiles()
     {
         var files = new Dictionary<string, string>();
+        string schemas = Path.Combine(DataDirectory, "schemas") + Path.DirectorySeparatorChar;
 
-        string racesDir = Path.Combine(DataDirectory, "races");
-        foreach (var racePath in Directory.GetFiles(racesDir, "*.json").OrderBy(p => p, StringComparer.Ordinal))
+        foreach (var path in Directory.EnumerateFiles(DataDirectory, "*.json", SearchOption.AllDirectories)
+                     .OrderBy(p => p, StringComparer.Ordinal))
         {
-            files["races/" + Path.GetFileName(racePath)] = File.ReadAllText(racePath);
+            if (path.StartsWith(schemas, StringComparison.Ordinal))
+            {
+                continue;
+            }
+
+            string relative = Path.GetRelativePath(DataDirectory, path).Replace(Path.DirectorySeparatorChar, '/');
+            files[relative] = File.ReadAllText(path);
         }
 
-        files["traits/traits.json"] = File.ReadAllText(Path.Combine(DataDirectory, "traits", "traits.json"));
-        files["ai/weights.json"] = File.ReadAllText(Path.Combine(DataDirectory, "ai", "weights.json"));
-        files["sim/tuning.json"] = File.ReadAllText(Path.Combine(DataDirectory, "sim", "tuning.json"));
         return files;
     }
 

@@ -1,6 +1,7 @@
 using Underleague.Sim.Data;
 using Underleague.Sim.Events;
 using Underleague.Sim.Model;
+using Underleague.Sim.Perks;
 using Underleague.Sim.Random;
 
 namespace Underleague.Sim.Engine;
@@ -11,7 +12,7 @@ namespace Underleague.Sim.Engine;
 /// ver <see cref="PlayerInTurnOrder"/>) y ninguna colección sin orden (RT-020..RT-024).
 /// Se construye una vez por partido y se ejecuta con <see cref="Run"/>.
 /// </summary>
-internal sealed class MatchEngine
+internal sealed class MatchEngine : IPerkWorld
 {
     /// <summary>Distancia del punto de penalti a la línea de gol, en casillas (§3.8).</summary>
     private const float PenaltySpotCells = 2f;
@@ -43,9 +44,10 @@ internal sealed class MatchEngine
     private readonly MatchReportBuilder _report = new();
     private readonly float[] _shift = new float[2];
     private readonly int _regulationTicks;
-    private readonly int _bias;
+    private readonly EffectEngine? _effects;
 
     private Pcg32 _rng;
+    private int _bias;
     private MatchPhase _phase = MatchPhase.Kickoff;
     private int _tick;
     private bool _goldenGoal;
@@ -108,6 +110,25 @@ internal sealed class MatchEngine
             _players[i].LeaderBonusPercent = bonus;
         }
 
+        for (int i = 0; i < _players.Length; i++)
+        {
+            _players[i].Index = i;
+        }
+
+        // El motor de efectos solo existe si algún titular lleva perks: con 0 perks no hay suscripciones,
+        // no hay publicaciones y el coste añadido sobre la fase 0 es exactamente cero (§3).
+        bool anyPerks = false;
+        for (int i = 0; i < _players.Length; i++)
+        {
+            if (_players[i].Definition.Perks.Count > 0)
+            {
+                anyPerks = true;
+                break;
+            }
+        }
+
+        _effects = anyPerks ? new EffectEngine(this, _players, _report, config.MaxDepth) : null;
+
         _ball.InterceptAttempted = new bool[_players.Length];
         _context = new UtilityContext(_players, _ball, catalog.Ai);
         _context.TacticalStates[0] = TacticalState.OutOfPossession;
@@ -124,6 +145,21 @@ internal sealed class MatchEngine
         Kickoff,
         Penalty,
     }
+
+    /// <summary>Catálogo del partido; el motor de efectos lo necesita para resolver los ids de perk.</summary>
+    public Catalog Catalog => _catalog;
+
+    /// <summary>Motor de efectos del partido, o null si ningún jugador en campo lleva perks.</summary>
+    public EffectEngine? Effects => _effects;
+
+    /// <summary>Informe en construcción; el motor de efectos registra ahí sus activaciones (RT-043).</summary>
+    public MatchReportBuilder Report => _report;
+
+    /// <inheritdoc/>
+    public int Tick => _tick;
+
+    /// <inheritdoc/>
+    public bool IsMob => _goldenGoal;
 
     private int RegulationTicks => _regulationTicks;
 
@@ -146,8 +182,114 @@ internal sealed class MatchEngine
         }
 
         _report.FinalBias = _bias;
-        return new MatchResult(_events, _report.Build());
+        if (_effects is not null)
+        {
+            _report.PerksSummary.AddRange(_effects.Summary());
+        }
+
+        var counterDeltas = _effects is not null
+            ? _effects.CounterDeltas()
+            : (IReadOnlyList<PlayerCounterDelta>)Array.Empty<PlayerCounterDelta>();
+
+        return new MatchResult(_events, _report.Build(), counterDeltas);
     }
+
+    // ---------------------------------------------------------------- IPerkWorld (§2, funciones NCalc)
+
+    /// <inheritdoc/>
+    public int BiasFor(int team) => team == 0 ? _bias : -_bias;
+
+    /// <inheritdoc/>
+    public int ScoreDiff(int team) => _report.Goals[team] - _report.Goals[1 - team];
+
+    /// <inheritdoc/>
+    public Zone ZoneOf(MatchPlayer player) => Pitch.ZoneOf(player.Position, player.Team);
+
+    /// <inheritdoc/>
+    public int DistanceToGoalCells(MatchPlayer player) =>
+        (int)MathF.Floor(Vec2.Distance(player.Position, Pitch.GoalCenter(player.Team)));
+
+    /// <inheritdoc/>
+    public int AdjacentCount(MatchPlayer player, string tag)
+    {
+        int count = 0;
+        for (int i = 0; i < _players.Length; i++)
+        {
+            var other = _players[i];
+            if (other.Team != player.Team || other.Id == player.Id || !other.OnPitch)
+            {
+                continue;
+            }
+
+            if (Pitch.AreAdjacent(player.HomeCell, other.HomeCell) && other.Definition.HasTag(tag))
+            {
+                count++;
+            }
+        }
+
+        return count;
+    }
+
+    /// <inheritdoc/>
+    public int TeammatesWithTag(MatchPlayer player, string tag)
+    {
+        int count = 0;
+        for (int i = 0; i < _players.Length; i++)
+        {
+            var other = _players[i];
+            if (other.Team == player.Team && other.Id != player.Id && other.OnPitch && other.Definition.HasTag(tag))
+            {
+                count++;
+            }
+        }
+
+        return count;
+    }
+
+    /// <inheritdoc/>
+    public int Counter(MatchPlayer player, string name) => _effects?.Counter(player, name) ?? 0;
+
+    /// <summary>Jugador con ese id, o null (incluido el -1 de "no aplica"). Lo usa el motor de efectos.</summary>
+    public MatchPlayer? PlayerById(int id)
+    {
+        if (id < 0)
+        {
+            return null;
+        }
+
+        for (int i = 0; i < _players.Length; i++)
+        {
+            if (_players[i].Id == id)
+            {
+                return _players[i];
+            }
+        }
+
+        return null;
+    }
+
+    /// <summary>Desplaza el criterio del árbitro (efecto modifyBias, §2); positivo favorece al local.</summary>
+    public void ApplyBiasDelta(int delta) => _bias = Math.Clamp(_bias + delta, -100, 100);
+
+    /// <summary>Derriba a un jugador (efecto setState, §2). Si llevaba el balón, queda suelto.</summary>
+    public void KnockDown(MatchPlayer player, int ticks)
+    {
+        if (!player.OnPitch || ticks <= 0)
+        {
+            return;
+        }
+
+        if (ReferenceEquals(_ball.Owner, player))
+        {
+            ParkBall(player.Position);
+        }
+
+        player.EnterState(PlayerState.KnockedDown, ticks);
+    }
+
+    /// <summary>Modificador de una probabilidad para el jugador; 0 si no hay perks (§2).</summary>
+    private int Probability(MatchPlayer player, ProbabilityKind kind) =>
+        _effects is null ? 0 : _effects.Modifiers.Probability(player, kind);
 
     private void AddTeam(List<MatchPlayer> players, TeamSetup team, int teamIndex)
     {
@@ -634,7 +776,9 @@ internal sealed class MatchEngine
             }
 
             _ball.InterceptAttempted[i] = true;
-            if (!_rng.Chance(pass.InterceptBaseChance + (pass.InterceptTechniqueFactor * (player.Technique - 50))))
+            if (!_rng.Chance(pass.InterceptBaseChance
+                + (pass.InterceptTechniqueFactor * (player.Technique - 50))
+                + Probability(player, ProbabilityKind.Intercept)))
             {
                 continue;
             }
@@ -814,6 +958,11 @@ internal sealed class MatchEngine
         }
 
         Emit(EventType.PlayEnd, detail, team: _playTeam);
+
+        // Los modificadores de duración "play" caducan DESPUÉS de publicar PLAY_END (§2): un perk
+        // disparado por el fin de jugada aplica sobre la siguiente, no sobre la que acaba de cerrarse.
+        _effects?.EndPlay();
+
         if (_playPasses >= 1)
         {
             _report.PassChains++;
@@ -846,12 +995,20 @@ internal sealed class MatchEngine
             : Utility.ClampToPitch(new Vec2(passer.Position.X + (3f * direction), passer.Position.Y));
 
         float distance = Vec2.Distance(passer.Position, receiverPoint);
+
+        // PASS_ATTEMPTED se emite y publica ANTES del roll de éxito (§3): así un perk de pase (+pass, o
+        // +técnica con duración "play") entra en esta misma resolución. Sin perks, el evento sigue
+        // ocupando exactamente el mismo lugar en la secuencia y el flujo de _rng no cambia.
+        Emit(EventType.PassAttempted, "attempted", passer, receiver);
+        passer.PassesAttempted++;
+
         int pressure = HasOpponentWithin(passer, PitchConstants.PressureRadius) ? 1 : 0;
         int probability = pass.BaseSuccess
             + (pass.TechniqueFactor * (passer.Technique - 50))
             + (passer.PassQualityBonus * 100)
             - (pass.DistancePenaltyPerCell * Utility.Centi(distance) / 100)
-            - (pass.PressurePenalty * pressure);
+            - (pass.PressurePenalty * pressure)
+            + Probability(passer, ProbabilityKind.Pass);
 
         // El roll se consume siempre, haya o no receptor (revisión independiente, fase 0): con
         // "receiver is not null && _rng.Chance(...)" el cortocircuito del && saltaba el Chance() entero
@@ -864,9 +1021,6 @@ internal sealed class MatchEngine
         Vec2 target = receiver is not null
             ? Utility.ClampToPitch(receiver.Position + (receiver.Velocity * ticks))
             : receiverPoint;
-
-        Emit(EventType.PassAttempted, "attempted", passer, receiver);
-        passer.PassesAttempted++;
 
         _ball.Owner = null;
         _ball.InFlight = true;
@@ -964,6 +1118,10 @@ internal sealed class MatchEngine
             return;
         }
 
+        // SHOT se publica antes de calcular calidad, desvío y parada (§3): el evento definitivo, con su
+        // Detail real ("onTarget"/"offTarget"), se emite más abajo con publish: false.
+        PublishBeforeResolving(EventType.Shot, "attempted", shooter);
+
         var shot = _tuning.Shot;
         Vec2 goal = Pitch.GoalCenter(shooter.Team);
         float distance = Vec2.Distance(shooter.Position, goal);
@@ -983,7 +1141,8 @@ internal sealed class MatchEngine
 
         bool offTarget = _rng.Chance(shot.OffTargetBase
             + (shot.OffTargetDistanceFactor * Utility.Centi(distance) / 100)
-            - (quality * 20));
+            - (quality * 20)
+            - Probability(shooter, ProbabilityKind.ShotOnTarget));
 
         _report.Shots[shooter.Team]++;
         shooter.Shots++;
@@ -992,7 +1151,7 @@ internal sealed class MatchEngine
             _report.ShotsOnTarget[shooter.Team]++;
         }
 
-        Emit(EventType.Shot, offTarget ? "offTarget" : "onTarget", shooter);
+        Emit(EventType.Shot, offTarget ? "offTarget" : "onTarget", shooter, publish: false);
         EndPlay("shot");
 
         Vec2 target = offTarget
@@ -1054,7 +1213,8 @@ internal sealed class MatchEngine
                 5,
                 95);
 
-            if (_rng.Chance(savePercent * 100))
+            if (_rng.Chance(Math.Clamp(
+                (savePercent * 100) + Probability(goalkeeper, ProbabilityKind.Save), 0, 10000)))
             {
                 goalkeeper.ConsecutiveSaves++;
                 SetOwner(goalkeeper);
@@ -1150,7 +1310,8 @@ internal sealed class MatchEngine
         int win = dribble.BaseWin
             + (dribble.AttackerTechniqueFactor * (carrier.Technique - 50))
             - (dribble.DefenderSpeedFactor * (defender.Speed - 50))
-            - (dribble.DefenderStrengthFactor * (defender.Strength - 50));
+            - (dribble.DefenderStrengthFactor * (defender.Strength - 50))
+            + Probability(carrier, ProbabilityKind.Dribble);
 
         if (_rng.Chance(win))
         {
@@ -1182,11 +1343,16 @@ internal sealed class MatchEngine
         // gratis. Sin esto, un defensor podía tirarse una y otra vez sin coste (paquete E).
         bool carrierHasBall = ReferenceEquals(_ball.Owner, carrier);
 
+        // TACKLE se publica antes de los rolls de falta, victoria y lesión (§3). El evento definitivo,
+        // con su Detail real, se emite más abajo (y solo si hubo disputa del balón) con publish: false.
+        PublishBeforeResolving(EventType.Tackle, "attempted", tackler, opponent: carrier);
+
         var tackle = _tuning.Tackle;
         int win = tackle.BaseWin
             + (tackle.StrengthFactor * (tackler.Strength - 50))
             + (tackle.SpeedFactor * (tackler.Speed - 50))
-            - (tackle.CarrierTechniqueFactor * (carrier.Technique - 50));
+            - (tackle.CarrierTechniqueFactor * (carrier.Technique - 50))
+            + Probability(tackler, ProbabilityKind.Tackle);
 
         // División simétrica explícita (revisión independiente, fase 0): Math.DivRem trunca hacia cero,
         // igual que el operador "/" desnudo que ya se usaba, así que el resultado no cambia. Se deja
@@ -1205,7 +1371,8 @@ internal sealed class MatchEngine
             + (tackle.FoulStrengthFactor * (tackler.Strength - 50))
             + (tackler.FoulChanceBonus * 100)
             + (tackler.HardTackleBonus * 100)
-            + biasShift;
+            + biasShift
+            + Probability(tackler, ProbabilityKind.Foul);
 
         bool isFoul = _rng.Chance(foulChance);
         bool isWin = _rng.Chance(win) && carrierHasBall;
@@ -1214,7 +1381,7 @@ internal sealed class MatchEngine
         {
             _report.Tackles++;
             tackler.Tackles++;
-            Emit(EventType.Tackle, isFoul ? "foul" : (isWin ? "won" : "missed"), tackler, opponent: carrier);
+            Emit(EventType.Tackle, isFoul ? "foul" : (isWin ? "won" : "missed"), tackler, opponent: carrier, publish: false);
         }
 
         if (isFoul)
@@ -1245,7 +1412,15 @@ internal sealed class MatchEngine
         var tackle = _tuning.Tackle;
         _report.Fouls++;
         tackler.Fouls++;
-        Emit(EventType.Foul, "foul", tackler, opponent: carrier);
+
+        // La falta se publica antes de su consecuencia (§3): un perk puede anularla (cancelEvent). La
+        // falta sigue registrada en el informe y en la secuencia de eventos -ocurrió-, pero el árbitro no
+        // la castiga: ni derribo, ni tarjeta, ni penalti.
+        if (EmitCancellable(EventType.Foul, "foul", tackler, opponent: carrier))
+        {
+            return;
+        }
+
         bool inOwnArea = Pitch.IsInArea(tackler.Position, tackler.Team);
         tackler.EnterState(PlayerState.KnockedDown, _tuning.States.KnockedDownTicks);
 
@@ -1253,19 +1428,22 @@ internal sealed class MatchEngine
             || tackler.HasTrait(Trait.Dirty)
             || tackler.Strength * 100 >= tackle.HardTackleThreshold;
 
-        if (_rng.Chance(tackle.RedCardBase + (hard ? tackle.HardTackleRedBonus : 0)))
+        int cardShift = Probability(tackler, ProbabilityKind.Card);
+        if (_rng.Chance(tackle.RedCardBase + (hard ? tackle.HardTackleRedBonus : 0) + cardShift))
         {
             SendOff(tackler);
         }
-        else if (_rng.Chance(tackle.YellowCardBase + (hard ? tackle.HardTackleYellowBonus : 0)))
+        else if (_rng.Chance(tackle.YellowCardBase + (hard ? tackle.HardTackleYellowBonus : 0) + cardShift))
         {
-            tackler.YellowCards++;
-            tackler.Cards++;
-            _report.YellowCards++;
-            Emit(EventType.Card, "yellow", tackler);
-            if (tackler.YellowCards >= 2 && tackle.SecondYellowIsRed)
+            if (!EmitCancellable(EventType.Card, "yellow", tackler))
             {
-                SendOff(tackler);
+                tackler.YellowCards++;
+                tackler.Cards++;
+                _report.YellowCards++;
+                if (tackler.YellowCards >= 2 && tackle.SecondYellowIsRed)
+                {
+                    SendOff(tackler);
+                }
             }
         }
 
@@ -1277,9 +1455,15 @@ internal sealed class MatchEngine
 
     private void SendOff(MatchPlayer player)
     {
+        // La roja se publica antes de expulsar (§3): un perk rompe-reglas puede anularla y el jugador se
+        // queda en el campo, con el evento CARD registrado igual y Detail "red:cancelled".
+        if (EmitCancellable(EventType.Card, "red", player))
+        {
+            return;
+        }
+
         player.Cards++;
         _report.RedCards++;
-        Emit(EventType.Card, "red", player);
         if (ReferenceEquals(_ball.Owner, player))
         {
             ParkBall(player.Position);
@@ -1296,17 +1480,26 @@ internal sealed class MatchEngine
             + (injury.AttackerStrengthFactor * (tackler.Strength - 50))
             - (injury.VictimStaminaResistFactor * (victim.Stamina - 50))
             + (tackler.InjuryChanceBonus * 100)
-            - (victim.InjuryResistanceBonus * 100);
+            - (victim.InjuryResistanceBonus * 100)
+            + Probability(tackler, ProbabilityKind.Injure)
+            + Probability(victim, ProbabilityKind.Injury);
 
         if (!_rng.Chance(Math.Clamp(chance, 0, 5000)))
         {
             return;
         }
 
-        bool severe = _rng.Chance(injury.SevereShare);
+        bool severe = _rng.Chance(injury.SevereShare + Probability(victim, ProbabilityKind.SevereInjury));
+
+        // La lesión se publica antes de aplicarla (§3): un perk puede anularla y el jugador sigue en el
+        // campo, con el evento INJURY registrado y Detail sufijado ":cancelled".
+        if (EmitCancellable(EventType.Injury, severe ? "severe" : "minor", victim, opponent: tackler))
+        {
+            return;
+        }
+
         _report.Injuries++;
         victim.Injured = true;
-        Emit(EventType.Injury, severe ? "severe" : "minor", victim, opponent: tackler);
 
         if (ReferenceEquals(_ball.Owner, victim))
         {
@@ -1700,6 +1893,7 @@ internal sealed class MatchEngine
 
             _phase = MatchPhase.RegulationEnd;
             Emit(EventType.MobStart, "mob");
+            _effects?.StartMob();
             Emit(EventType.RefereeLeaves, "refereeLeaves");
             _goldenGoal = true;
             _report.WentToGoldenGoal = true;
@@ -1755,19 +1949,19 @@ internal sealed class MatchEngine
 
     // ---------------------------------------------------------------- eventos y log
 
-    private void Emit(
+    private MatchEvent BuildEvent(
         EventType type,
         string detail,
-        MatchPlayer? actor = null,
-        MatchPlayer? target = null,
-        MatchPlayer? opponent = null,
-        int team = -1)
+        MatchPlayer? actor,
+        MatchPlayer? target,
+        MatchPlayer? opponent,
+        int team)
     {
         int eventTeam = actor is not null ? actor.Team : team;
         Vec2 position = actor is not null && actor.OnPitch ? actor.Position : _ball.Position;
         int reference = eventTeam >= 0 ? eventTeam : 0;
 
-        var matchEvent = new MatchEvent(
+        return new MatchEvent(
             type,
             _tick,
             eventTeam,
@@ -1780,13 +1974,70 @@ internal sealed class MatchEngine
             _bias,
             Utility.Centi(Vec2.Distance(position, Pitch.GoalCenter(reference))),
             detail);
+    }
 
+    /// <summary>
+    /// Registra un evento en la secuencia y, salvo que se indique lo contrario, lo publica al motor de
+    /// efectos (RT-040). <paramref name="publish"/> es false en los eventos cuya publicación ya se hizo
+    /// antes de resolverlos (SHOT, TACKLE) o que se publican con la variante cancelable.
+    /// </summary>
+    private void Emit(
+        EventType type,
+        string detail,
+        MatchPlayer? actor = null,
+        MatchPlayer? target = null,
+        MatchPlayer? opponent = null,
+        int team = -1,
+        bool publish = true)
+    {
+        var matchEvent = BuildEvent(type, detail, actor, target, opponent, team);
         _events.Add(matchEvent);
 
         if (_config.CollectLog)
         {
             _report.Log.Add(FormatLog(matchEvent, actor, target, opponent));
         }
+
+        if (publish)
+        {
+            _effects?.Publish(matchEvent);
+        }
+    }
+
+    /// <summary>
+    /// Publica un evento **antes** de resolverlo, sin registrarlo todavía (§3, semántica pre-resolución):
+    /// así un perk disparado por SHOT o TACKLE puede modificar atributos y probabilidades de la propia
+    /// resolución que ese evento gobierna. El evento definitivo se emite después con su Detail real y con
+    /// <c>publish: false</c>, para que la secuencia de eventos siga teniendo exactamente una entrada.
+    /// </summary>
+    private void PublishBeforeResolving(
+        EventType type, string detail, MatchPlayer? actor, MatchPlayer? target = null, MatchPlayer? opponent = null)
+    {
+        if (_effects is null)
+        {
+            return;
+        }
+
+        _effects.Publish(BuildEvent(type, detail, actor, target, opponent, -1));
+    }
+
+    /// <summary>
+    /// Emite un evento cuya consecuencia un perk puede anular (§2, cancelEvent; solo FOUL, CARD e
+    /// INJURY). Publica primero, registra después: el evento queda siempre en la secuencia, con el Detail
+    /// sufijado ":cancelled" si algún perk lo anuló. Devuelve true si se anuló.
+    /// </summary>
+    private bool EmitCancellable(
+        EventType type, string detail, MatchPlayer? actor = null, MatchPlayer? target = null, MatchPlayer? opponent = null)
+    {
+        if (_effects is null)
+        {
+            Emit(type, detail, actor, target, opponent, publish: false);
+            return false;
+        }
+
+        bool cancelled = !_effects.Publish(BuildEvent(type, detail, actor, target, opponent, -1));
+        Emit(type, cancelled ? detail + ":cancelled" : detail, actor, target, opponent, publish: false);
+        return cancelled;
     }
 
     private string FormatLog(MatchEvent matchEvent, MatchPlayer? actor, MatchPlayer? target, MatchPlayer? opponent)

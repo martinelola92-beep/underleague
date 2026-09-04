@@ -1,5 +1,6 @@
 using Underleague.Sim.Engine;
 using Underleague.Sim.Model;
+using Underleague.Sim.Perks;
 
 namespace Underleague.Sim.Data;
 
@@ -138,6 +139,13 @@ public sealed record InjuryTuning(int OnTackleBase, int OnFoulBase, int Attacker
 /// <summary>tuning.referee.</summary>
 public sealed record RefereeTuning(int BiasFoulShiftPer10, int PenaltyOnFoulInArea);
 
+/// <summary>tuning.progression: experiencia, niveles y atributos por nivel (§6, RF-025, RF-027).</summary>
+public sealed record ProgressionTuning(
+    int MatchExperience,
+    int BenchSharePercent,
+    IReadOnlyList<int> ExperiencePerLevel,
+    int AttributesPerLevel);
+
 /// <summary>tuning.restart.</summary>
 public sealed record RestartTuning(int ThrowInTicks, int GoalKickTicks, int CornerTicks, int KickoffTicks, int PenaltyTicks);
 
@@ -169,10 +177,84 @@ public sealed record Tuning(
     RefereeTuning Referee,
     RestartTuning Restart,
     GenerationTuning Generation,
-    LeashTuning Leash);
+    LeashTuning Leash,
+    ProgressionTuning Progression);
+
+/// <summary>
+/// Plantillas de descripción de un idioma (data/l10n/&lt;lang&gt;/templates.json, RT-035). Se guardan
+/// aplanadas como "sección.clave" para que la búsqueda sea un único acceso y para poder comprobar de una
+/// pasada que el catálogo entero es describible al cargar.
+/// </summary>
+public sealed class DescriptionTemplates
+{
+    private readonly Dictionary<string, string> _entries;
+
+    internal DescriptionTemplates(string language, Dictionary<string, string> entries)
+    {
+        Language = language;
+        _entries = entries;
+    }
+
+    /// <summary>Código de idioma ("es", "en").</summary>
+    public string Language { get; }
+
+    /// <summary>Texto de la clave, o null si la plantilla no la define.</summary>
+    public string? Find(string section, string key) =>
+        _entries.GetValueOrDefault(section + "." + key);
+
+    /// <summary>Texto de la clave; lanza si falta (una descripción incompleta es un fallo de datos).</summary>
+    public string Get(string section, string key) =>
+        Find(section, key)
+        ?? throw new InvalidOperationException(
+            $"data/l10n/{Language}/templates.json no define '{section}.{key}'");
+}
+
+/// <summary>Plantillas de descripción por idioma, ordenadas por código de idioma ordinal (RT-073).</summary>
+public sealed class Localization
+{
+    private readonly DescriptionTemplates[] _languages;
+
+    internal Localization(IEnumerable<DescriptionTemplates> languages)
+    {
+        _languages = languages.OrderBy(l => l.Language, StringComparer.Ordinal).ToArray();
+    }
+
+    /// <summary>Localización vacía: /Sim funciona sin plantillas mientras nadie pida una descripción.</summary>
+    public static Localization Empty { get; } = new(Array.Empty<DescriptionTemplates>());
+
+    /// <summary>Idiomas cargados, en orden ordinal.</summary>
+    public IReadOnlyList<string> Languages => _languages.Select(l => l.Language).ToArray();
+
+    /// <summary>Plantillas del idioma, o null si no está cargado.</summary>
+    public DescriptionTemplates? Find(string language)
+    {
+        for (int i = 0; i < _languages.Length; i++)
+        {
+            if (string.Equals(_languages[i].Language, language, StringComparison.Ordinal))
+            {
+                return _languages[i];
+            }
+        }
+
+        return null;
+    }
+
+    /// <summary>Plantillas del idioma; lanza si no está cargado.</summary>
+    public DescriptionTemplates Get(string language) =>
+        Find(language) ?? throw new InvalidOperationException($"idioma no cargado en data/l10n: {language}");
+
+    /// <summary>Todas las plantillas cargadas, en orden ordinal de idioma.</summary>
+    internal IReadOnlyList<DescriptionTemplates> All => _languages;
+}
 
 /// <summary>Conjunto de datos cargado de /data, listo para pasar a Simulator.Run.</summary>
-public sealed record Catalog(IReadOnlyList<RaceDefinition> Races, IReadOnlyList<TraitDefinition> Traits, AiWeights Ai, Tuning Tuning)
+public sealed record Catalog(
+    IReadOnlyList<RaceDefinition> Races,
+    IReadOnlyList<TraitDefinition> Traits,
+    AiWeights Ai,
+    Tuning Tuning,
+    PerkCatalog Perks,
+    Localization Localization)
 {
     /// <summary>Busca la definición de la raza id; lanza si no está en el catálogo.</summary>
     public RaceDefinition Race(Race id) =>
@@ -181,4 +263,7 @@ public sealed record Catalog(IReadOnlyList<RaceDefinition> Races, IReadOnlyList<
     /// <summary>Busca la definición del rasgo id; lanza si no está en el catálogo.</summary>
     public TraitDefinition Trait(Trait id) =>
         Traits.FirstOrDefault(t => t.Id == id) ?? throw new InvalidOperationException($"rasgo no encontrado en el catálogo: {id}");
+
+    /// <summary>Tabla de progresión (§6); atajo a <c>Tuning.Progression</c>.</summary>
+    public ProgressionTuning Progression => Tuning.Progression;
 }

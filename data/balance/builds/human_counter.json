@@ -1,0 +1,32 @@
+{
+  "id": "human_counter",
+  "name": "Humanos: contragolpe",
+  "race": "Human",
+  "quality": 50,
+  "perks": [
+    {
+      "slot": 1,
+      "perk": "sweeper"
+    },
+    {
+      "slot": 1,
+      "perk": "counter_punch"
+    },
+    {
+      "slot": 6,
+      "perk": "sprinter"
+    },
+    {
+      "slot": 6,
+      "perk": "iron_lungs_plus"
+    },
+    {
+      "slot": 6,
+      "perk": "poacher"
+    }
+  ],
+  "rarities": {
+    "6": "rare"
+  },
+  "lineup": null
+}

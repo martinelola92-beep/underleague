@@ -1,0 +1,26 @@
+{
+  "id": "innocent_face",
+  "name": {
+    "es": "Cara de inocente",
+    "en": "Innocent Face"
+  },
+  "rarity": "rare",
+  "kind": "ruleBreaker",
+  "trigger": "CARD",
+  "scope": "actor",
+  "condition": "",
+  "effects": [
+    {
+      "type": "cancelEvent"
+    }
+  ],
+  "limit": {
+    "per": "match",
+    "times": 1
+  },
+  "accumulatesAcrossMatches": false,
+  "lethal": false,
+  "positionOnly": null,
+  "tagsRequired": [],
+  "tagsForbidden": []
+}

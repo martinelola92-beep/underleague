@@ -1,0 +1,78 @@
+{
+  "id": "orc_violence",
+  "name": "Orcos: carniceria",
+  "race": "Orc",
+  "quality": 50,
+  "perks": [
+    {
+      "slot": 1,
+      "perk": "heavy_boots"
+    },
+    {
+      "slot": 1,
+      "perk": "bone_breaker"
+    },
+    {
+      "slot": 2,
+      "perk": "berserker"
+    },
+    {
+      "slot": 2,
+      "perk": "shield_wall"
+    },
+    {
+      "slot": 2,
+      "perk": "enforcer"
+    },
+    {
+      "slot": 6,
+      "perk": "target_man"
+    },
+    {
+      "slot": 6,
+      "perk": "warpath"
+    },
+    {
+      "slot": 6,
+      "perk": "bloodline"
+    },
+    {
+      "slot": 6,
+      "perk": "poacher"
+    }
+  ],
+  "rarities": {
+    "2": "rare",
+    "6": "legendary"
+  },
+  "lineup": [
+    [
+      0,
+      2
+    ],
+    [
+      2,
+      1
+    ],
+    [
+      2,
+      2
+    ],
+    [
+      4,
+      1
+    ],
+    [
+      4,
+      2
+    ],
+    [
+      5,
+      2
+    ],
+    [
+      6,
+      2
+    ]
+  ]
+}

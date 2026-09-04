@@ -1,0 +1,54 @@
+{
+  "id": "human_scattered",
+  "name": "Humanos: dispersos",
+  "race": "Human",
+  "quality": 50,
+  "perks": [
+    {
+      "slot": 1,
+      "perk": "shield_wall"
+    },
+    {
+      "slot": 1,
+      "perk": "anchor"
+    },
+    {
+      "slot": 2,
+      "perk": "shield_wall"
+    },
+    {
+      "slot": 2,
+      "perk": "anchor"
+    }
+  ],
+  "lineup": [
+    [
+      0,
+      2
+    ],
+    [
+      2,
+      0
+    ],
+    [
+      2,
+      4
+    ],
+    [
+      4,
+      0
+    ],
+    [
+      4,
+      2
+    ],
+    [
+      4,
+      4
+    ],
+    [
+      7,
+      2
+    ]
+  ]
+}

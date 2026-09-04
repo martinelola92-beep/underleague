@@ -160,6 +160,25 @@ static string? MapSchemaFile(string relativePath)
         return "races.schema.json";
     }
 
+    if (relativePath.StartsWith("perks/", StringComparison.Ordinal) && relativePath.EndsWith(".json", StringComparison.Ordinal)
+        && !relativePath[6..].Contains('/'))
+    {
+        return "perks.schema.json";
+    }
+
+    // l10n/<lang>/templates.json
+    if (relativePath.StartsWith("l10n/", StringComparison.Ordinal) && relativePath.EndsWith("/templates.json", StringComparison.Ordinal)
+        && relativePath.Count(c => c == '/') == 2)
+    {
+        return "l10n-templates.schema.json";
+    }
+
+    if (relativePath.StartsWith("balance/builds/", StringComparison.Ordinal) && relativePath.EndsWith(".json", StringComparison.Ordinal)
+        && !relativePath[15..].Contains('/'))
+    {
+        return "balance-builds.schema.json";
+    }
+
     return relativePath switch
     {
         "traits/traits.json" => "traits.schema.json",

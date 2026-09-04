@@ -1,0 +1,35 @@
+{
+  "id": "warpath",
+  "name": {
+    "es": "Senda de guerra",
+    "en": "Warpath"
+  },
+  "rarity": "legendary",
+  "kind": "filler",
+  "trigger": "MATCH_START",
+  "scope": "actor",
+  "condition": "",
+  "effects": [
+    {
+      "type": "modifyAttribute",
+      "target": "owner",
+      "attribute": "strength",
+      "valuePerCounter": 1,
+      "counter": "warpathMatches",
+      "maxValue": 8,
+      "duration": "match"
+    },
+    {
+      "type": "addCounter",
+      "counter": "warpathMatches",
+      "value": 1
+    }
+  ],
+  "accumulatesAcrossMatches": true,
+  "lethal": false,
+  "positionOnly": null,
+  "tagsRequired": [
+    "Brute"
+  ],
+  "tagsForbidden": []
+}

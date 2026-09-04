@@ -1,0 +1,35 @@
+{
+  "id": "sprinter",
+  "name": {
+    "es": "Velocista",
+    "en": "Sprinter"
+  },
+  "rarity": "common",
+  "kind": "filler",
+  "trigger": "PLAY_START",
+  "scope": "actor",
+  "condition": "hasTag(owner,'Fast')",
+  "effects": [
+    {
+      "type": "modifyAttribute",
+      "target": "owner",
+      "attribute": "speed",
+      "value": 6,
+      "duration": "play"
+    }
+  ],
+  "elseEffects": [
+    {
+      "type": "modifyAttribute",
+      "target": "owner",
+      "attribute": "speed",
+      "value": -3,
+      "duration": "play"
+    }
+  ],
+  "accumulatesAcrossMatches": false,
+  "lethal": false,
+  "positionOnly": null,
+  "tagsRequired": [],
+  "tagsForbidden": []
+}

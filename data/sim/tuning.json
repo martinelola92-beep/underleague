@@ -102,5 +102,12 @@
     "traitCountWeights": [50, 35, 15],
     "goalkeeperTraitChance": 5000
   },
-  "leash": { "minCells": 1, "cellsPer99": 8 }
+  "leash": { "minCells": 1, "cellsPer99": 8 },
+  "progression": {
+    "_doc": "Progresión entre partidos (fase 1 §6, RF-025/RF-027). experiencePerLevel es acumulada: la entrada i es la experiencia mínima del nivel i+1; ocho entradas, nivel máximo 8 (RF-023). attributesPerLevel se suma a cada atributo salvo la correa.",
+    "matchExperience": 100,
+    "benchSharePercent": 45,
+    "experiencePerLevel": [0, 100, 250, 450, 700, 1000, 1400, 1900],
+    "attributesPerLevel": 2
+  }
 }

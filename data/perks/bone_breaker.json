@@ -1,0 +1,28 @@
+{
+  "id": "bone_breaker",
+  "name": {
+    "es": "Rompehuesos",
+    "en": "Bone Breaker"
+  },
+  "rarity": "rare",
+  "kind": "filler",
+  "trigger": "TACKLE",
+  "scope": "actor",
+  "condition": "hasTag(opponent,'Fine')",
+  "effects": [
+    {
+      "type": "modifyProbability",
+      "target": "opponent",
+      "probability": "injure",
+      "value": 600,
+      "duration": "play"
+    }
+  ],
+  "accumulatesAcrossMatches": false,
+  "lethal": false,
+  "positionOnly": null,
+  "tagsRequired": [],
+  "tagsForbidden": [
+    "Fine"
+  ]
+}

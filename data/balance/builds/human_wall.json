@@ -1,0 +1,69 @@
+{
+  "id": "human_wall",
+  "name": "Humanos: muro",
+  "race": "Human",
+  "quality": 50,
+  "perks": [
+    {
+      "slot": 0,
+      "perk": "goalkeeper_wall"
+    },
+    {
+      "slot": 0,
+      "perk": "lucky_charm"
+    },
+    {
+      "slot": 1,
+      "perk": "anchor"
+    },
+    {
+      "slot": 1,
+      "perk": "shield_wall"
+    },
+    {
+      "slot": 1,
+      "perk": "innocent_face"
+    },
+    {
+      "slot": 2,
+      "perk": "anchor"
+    },
+    {
+      "slot": 2,
+      "perk": "sweeper"
+    }
+  ],
+  "rarities": {
+    "1": "rare"
+  },
+  "lineup": [
+    [
+      0,
+      2
+    ],
+    [
+      2,
+      2
+    ],
+    [
+      2,
+      3
+    ],
+    [
+      4,
+      0
+    ],
+    [
+      4,
+      2
+    ],
+    [
+      4,
+      4
+    ],
+    [
+      6,
+      2
+    ]
+  ]
+}

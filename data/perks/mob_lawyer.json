@@ -1,0 +1,26 @@
+{
+  "id": "mob_lawyer",
+  "name": {
+    "es": "Abogado de la turba",
+    "en": "Mob Lawyer"
+  },
+  "rarity": "legendary",
+  "kind": "ruleBreaker",
+  "trigger": "FOUL",
+  "scope": "actor",
+  "condition": "isMob()",
+  "effects": [
+    {
+      "type": "cancelEvent"
+    }
+  ],
+  "limit": {
+    "per": "match",
+    "times": 2
+  },
+  "accumulatesAcrossMatches": false,
+  "lethal": false,
+  "positionOnly": null,
+  "tagsRequired": [],
+  "tagsForbidden": []
+}

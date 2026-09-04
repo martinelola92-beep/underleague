@@ -1,0 +1,123 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://underleague.dev/schemas/perks.schema.json",
+  "title": "Underleague perk",
+  "description": "data/perks/<id>.json: un perk por fichero (RT-033, docs/fase1-diseno.md §2). Un perk es un dato, no código: disparador, condición NCalc, efectos, alcance y límite. NO existe campo 'description': el texto se genera desde el efecto con las plantillas de data/l10n (RT-035), así que aquí se rechaza explícitamente.",
+  "type": "object",
+  "properties": {
+    "_doc": { "type": "string" },
+    "id": {
+      "type": "string",
+      "description": "Identificador snake_case; debe coincidir con el nombre del fichero.",
+      "pattern": "^[a-z][a-z0-9_]*$"
+    },
+    "name": { "$ref": "#/$defs/localizedName" },
+    "rarity": { "enum": ["common", "rare", "legendary"] },
+    "kind": {
+      "description": "RF-069: distribución objetivo 60% filler, 30% conditional, 10% ruleBreaker.",
+      "enum": ["filler", "conditional", "ruleBreaker"]
+    },
+    "trigger": { "$ref": "#/$defs/eventType" },
+    "scope": {
+      "description": "A quién debe corresponder el evento para evaluar el perk del portador (RF-065).",
+      "enum": ["actor", "target", "team", "opposingTeam", "any"]
+    },
+    "condition": {
+      "type": "string",
+      "description": "Expresión NCalc con las funciones de RT-034, compilada al cargar. Vacía = siempre."
+    },
+    "effects": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/effect" },
+      "minItems": 1
+    },
+    "elseEffects": {
+      "type": "array",
+      "description": "Efectos aplicados cuando la condición es falsa (antisinergias declaradas, §7).",
+      "items": { "$ref": "#/$defs/effect" }
+    },
+    "limit": {
+      "type": "object",
+      "properties": {
+        "per": { "enum": ["play", "match", "mob", "run"] },
+        "times": { "type": "integer", "minimum": 1, "maximum": 100 }
+      },
+      "required": ["per", "times"],
+      "additionalProperties": false
+    },
+    "accumulatesAcrossMatches": {
+      "type": "boolean",
+      "description": "RF-070: sus contadores persisten entre partidos de la misma run."
+    },
+    "lethal": {
+      "type": "boolean",
+      "description": "RF-093. En fase 1 no hay muertes: el cargador exige false.",
+      "const": false
+    },
+    "positionOnly": {
+      "description": "null o la única posición que puede llevar el perk (validación de build, §5).",
+      "oneOf": [
+        { "type": "null" },
+        { "enum": ["Goalkeeper", "Defender", "Midfielder", "Forward"] }
+      ]
+    },
+    "tagsRequired": { "$ref": "#/$defs/tagList" },
+    "tagsForbidden": { "$ref": "#/$defs/tagList" }
+  },
+  "required": ["id", "name", "rarity", "kind", "trigger", "effects"],
+  "additionalProperties": false,
+  "$defs": {
+    "localizedName": {
+      "type": "object",
+      "properties": {
+        "es": { "type": "string", "minLength": 1 },
+        "en": { "type": "string", "minLength": 1 }
+      },
+      "required": ["es", "en"],
+      "additionalProperties": false
+    },
+    "tagList": {
+      "type": "array",
+      "items": { "type": "string", "pattern": "^[A-Z][A-Za-z]*$" },
+      "uniqueItems": true
+    },
+    "eventType": {
+      "description": "Nombre UPPER_SNAKE de un EventType (RF-066).",
+      "enum": [
+        "MATCH_START", "MATCH_END", "MOB_START", "REFEREE_LEAVES", "PLAY_START", "PLAY_END",
+        "PASS_ATTEMPTED", "PASS_COMPLETED", "PASS_FAILED",
+        "DRIBBLE_ATTEMPTED", "DRIBBLE_WON", "DRIBBLE_LOST",
+        "AERIAL_DUEL", "TACKLE", "RECOVERY", "SHOT", "GOAL", "SAVE",
+        "FOUL", "CARD", "INJURY", "DEATH", "SUBSTITUTION", "CONSUMABLE_USED"
+      ]
+    },
+    "effect": {
+      "type": "object",
+      "description": "Catálogo cerrado de efectos de fase 1 (§2). El cargador valida además qué campos exige cada tipo, qué duraciones admite y con qué disparadores es legal cancelEvent.",
+      "properties": {
+        "type": {
+          "enum": ["modifyAttribute", "modifyLeash", "modifyBias", "modifyProbability", "cancelEvent", "addCounter", "setState"]
+        },
+        "target": {
+          "description": "Objetivo del efecto; 'withTag:<Tag>' y 'adjacentWithTag:<Tag>' llevan etiqueta.",
+          "type": "string",
+          "pattern": "^(actor|target|opponent|owner|adjacent|team|opposingTeam|(withTag|adjacentWithTag):[A-Z][A-Za-z]*)$"
+        },
+        "attribute": { "enum": ["strength", "speed", "technique", "stamina", "leash"] },
+        "value": { "type": "integer", "minimum": -100000, "maximum": 100000 },
+        "valuePerCounter": { "type": "integer", "minimum": -1000, "maximum": 1000 },
+        "counter": { "type": "string", "pattern": "^[a-z][a-zA-Z0-9]*$" },
+        "maxValue": { "type": "integer", "minimum": -100000, "maximum": 100000 },
+        "counterDivisor": { "type": "integer", "minimum": 1, "maximum": 1000 },
+        "probability": {
+          "enum": ["foul", "card", "injury", "injure", "severeInjury", "pass", "intercept", "dribble", "tackle", "shotOnTarget", "save"]
+        },
+        "duration": { "enum": ["instant", "play", "match", "run"] },
+        "state": { "enum": ["KnockedDown"] },
+        "ticks": { "type": "integer", "minimum": 0, "maximum": 1000 }
+      },
+      "required": ["type"],
+      "additionalProperties": false
+    }
+  }
+}

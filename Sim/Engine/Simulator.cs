@@ -1,6 +1,8 @@
 using Underleague.Sim.Data;
 using Underleague.Sim.Events;
 using Underleague.Sim.Model;
+using Underleague.Sim.Perks;
+using ProgressionRules = Underleague.Sim.Progression.Progression;
 
 namespace Underleague.Sim.Engine;
 
@@ -12,14 +14,29 @@ namespace Underleague.Sim.Engine;
 /// tuning.decisionIntervalTicks ticks (desplazado por su id), así que el volcado no espera al tick exacto:
 /// captura la PRIMERA decisión de ese jugador en un tick >= Tick, una sola vez por partido.
 /// </param>
-public sealed record SimConfig(bool CollectLog = true, (int PlayerId, int Tick)? DumpUtility = null, int? RegulationTicksOverride = null)
+/// <param name="MaxDepth">
+/// Profundidad máxima de publicación de eventos en cascada dentro del motor de efectos (RT-042). Un
+/// evento emitido mientras se aplican efectos entra un nivel más abajo; al superar este límite la
+/// publicación se descarta y se cuenta en MatchReport.RecursionCuts.
+/// </param>
+public sealed record SimConfig(
+    bool CollectLog = true,
+    (int PlayerId, int Tick)? DumpUtility = null,
+    int? RegulationTicksOverride = null,
+    int MaxDepth = 4)
 {
     /// <summary>Configuración por defecto: con log, sin volcado de utilidad, duración reglamentaria estándar.</summary>
     public static SimConfig Default { get; } = new();
 }
 
-/// <summary>Resultado de simular un partido completo: secuencia ordenada de eventos e informe final.</summary>
-public sealed record MatchResult(IReadOnlyList<MatchEvent> Events, MatchReport Report);
+/// <summary>
+/// Resultado de simular un partido completo: secuencia ordenada de eventos, informe final y lo que los
+/// perks que acumulan entre partidos han sumado a los contadores de cada jugador (§6, RF-070).
+/// </summary>
+public sealed record MatchResult(
+    IReadOnlyList<MatchEvent> Events,
+    MatchReport Report,
+    IReadOnlyList<PlayerCounterDelta> CounterDeltas);
 
 /// <summary>Punto de entrada público del simulador de partidos (RT-013).</summary>
 public static class Simulator
@@ -76,6 +93,79 @@ public static class Simulator
         }
     }
 
+    /// <summary>
+    /// Validación de build (§5, RF-023, RF-071..072): los perks existen en el catálogo, no se repiten en
+    /// un jugador, caben en los slots de su rareza y respetan positionOnly/tagsRequired/tagsForbidden.
+    /// Una build inválida no se simula: es un error de programación o de datos, no un resultado.
+    /// </summary>
+    private static void ValidatePerks(TeamSetup team, string side, PlayerDefinition player, Catalog catalog)
+    {
+        var perks = player.Perks;
+        if (perks.Count == 0)
+        {
+            return;
+        }
+
+        int slots = ProgressionRules.PerkSlots(player.Rarity);
+        if (perks.Count > slots)
+        {
+            throw new ArgumentException(
+                $"el equipo {side} ('{team.Id}') asigna {perks.Count} perks al jugador {player.Id}, "
+                    + $"que siendo {player.Rarity} solo tiene {slots} slots",
+                nameof(team));
+        }
+
+        for (int i = 0; i < perks.Count; i++)
+        {
+            string id = perks[i];
+            for (int j = i + 1; j < perks.Count; j++)
+            {
+                if (string.Equals(perks[j], id, StringComparison.Ordinal))
+                {
+                    throw new ArgumentException(
+                        $"el equipo {side} ('{team.Id}') repite el perk '{id}' en el jugador {player.Id}",
+                        nameof(team));
+                }
+            }
+
+            var perk = catalog.Perks.Find(id)
+                ?? throw new ArgumentException(
+                    $"el equipo {side} ('{team.Id}') asigna al jugador {player.Id} el perk '{id}', "
+                        + "que no está en el catálogo",
+                    nameof(team));
+
+            if (perk.PositionOnly is { } required && player.Position != required)
+            {
+                throw new ArgumentException(
+                    $"el equipo {side} ('{team.Id}') asigna al jugador {player.Id} ({player.Position}) el perk "
+                        + $"'{id}', que solo admite {required}",
+                    nameof(team));
+            }
+
+            for (int t = 0; t < perk.TagsRequired.Count; t++)
+            {
+                if (!player.HasTag(perk.TagsRequired[t]))
+                {
+                    throw new ArgumentException(
+                        $"el equipo {side} ('{team.Id}') asigna al jugador {player.Id} el perk '{id}', "
+                            + $"que exige la etiqueta '{perk.TagsRequired[t]}'",
+                        nameof(team));
+                }
+            }
+
+            for (int t = 0; t < perk.TagsForbidden.Count; t++)
+            {
+                if (player.HasTag(perk.TagsForbidden[t]))
+                {
+                    throw new ArgumentException(
+                        $"el equipo {side} ('{team.Id}') asigna al jugador {player.Id} el perk '{id}', "
+                            + $"que prohíbe la etiqueta '{perk.TagsForbidden[t]}'",
+                        nameof(team));
+                }
+            }
+        }
+    }
+
     private static void ValidateTeam(TeamSetup team, string side, Catalog catalog)
     {
         if (team.Players is null || team.Players.Count == 0)
@@ -100,6 +190,8 @@ public static class Simulator
             {
                 _ = catalog.Trait(traits[t]);
             }
+
+            ValidatePerks(team, side, team.Players[i], catalog);
         }
 
         if (team.Lineup is null || team.Lineup.Slots is null)

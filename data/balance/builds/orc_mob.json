@@ -1,0 +1,32 @@
+{
+  "id": "orc_mob",
+  "name": "Orcos: turba",
+  "race": "Orc",
+  "quality": 50,
+  "perks": [
+    {
+      "slot": 2,
+      "perk": "heavy_boots"
+    },
+    {
+      "slot": 2,
+      "perk": "street_fighter"
+    },
+    {
+      "slot": 5,
+      "perk": "mob_lawyer"
+    },
+    {
+      "slot": 5,
+      "perk": "enforcer"
+    },
+    {
+      "slot": 5,
+      "perk": "bloodline"
+    }
+  ],
+  "rarities": {
+    "5": "rare"
+  },
+  "lineup": null
+}

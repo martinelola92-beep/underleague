@@ -1,0 +1,18 @@
+{
+  "id": "bloodlust",
+  "name": { "es": "Sed de sangre", "en": "Bloodlust" },
+  "rarity": "rare",
+  "kind": "conditional",
+  "trigger": "TACKLE",
+  "scope": "actor",
+  "condition": "hasTag(actor, 'Brute') && bias() < 0",
+  "effects": [
+    { "type": "modifyAttribute", "target": "actor", "attribute": "strength", "value": 3, "duration": "play" }
+  ],
+  "limit": { "per": "match", "times": 2 },
+  "accumulatesAcrossMatches": false,
+  "lethal": false,
+  "positionOnly": null,
+  "tagsRequired": [],
+  "tagsForbidden": []
+}

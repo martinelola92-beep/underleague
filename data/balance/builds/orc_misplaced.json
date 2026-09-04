@@ -1,0 +1,25 @@
+{
+  "id": "orc_misplaced",
+  "name": "Orcos: desubicados",
+  "race": "Orc",
+  "quality": 50,
+  "perks": [
+    {
+      "slot": 4,
+      "perk": "silk_touch"
+    },
+    {
+      "slot": 4,
+      "perk": "showboat"
+    },
+    {
+      "slot": 6,
+      "perk": "one_touch"
+    },
+    {
+      "slot": 6,
+      "perk": "silk_touch"
+    }
+  ],
+  "lineup": null
+}

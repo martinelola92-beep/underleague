@@ -1,0 +1,37 @@
+{
+  "id": "playmaker",
+  "name": {
+    "es": "Organizador",
+    "en": "Playmaker"
+  },
+  "rarity": "legendary",
+  "kind": "conditional",
+  "trigger": "MATCH_START",
+  "scope": "actor",
+  "condition": "teammatesWithTag(owner,'Fine') > 2",
+  "effects": [
+    {
+      "type": "modifyAttribute",
+      "target": "withTag:Fine",
+      "attribute": "technique",
+      "value": 8,
+      "duration": "match"
+    }
+  ],
+  "elseEffects": [
+    {
+      "type": "modifyAttribute",
+      "target": "owner",
+      "attribute": "technique",
+      "value": -3,
+      "duration": "match"
+    }
+  ],
+  "accumulatesAcrossMatches": false,
+  "lethal": false,
+  "positionOnly": null,
+  "tagsRequired": [
+    "Fine"
+  ],
+  "tagsForbidden": []
+}

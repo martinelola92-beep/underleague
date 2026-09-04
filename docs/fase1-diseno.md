@@ -205,3 +205,108 @@ Métricas de fase 1 en `Sim/Analysis` y en la puerta estadística (`StatisticalT
 | I. Puerta y análisis | deep-reasoner (opus) | G, H | `StatisticalTests` fase 1, ajuste de valores de perks en `data/perks/` (no de reglas), informe `docs/balance/fase1-perks.md` con tablas de matriz y campaña, conclusiones sobre sinergias y antisinergias, perks muertos, y propuestas |
 
 Revisión del orquestador tras F y tras I.
+
+### 9.1 Decisiones de implementación
+
+Detalles que esta especificación no cerraba y que se resolvieron al implementar. Cada uno está también
+comentado en el punto del código donde se aplica.
+
+**Paquete F (motor de efectos y progresión).**
+
+1. **La gramática de condiciones es cerrada, no "NCalc entero"** (`ConditionCompiler`). Se admite
+   `Cond := Cond ('&&'|'||') Cond | '!' Cond | BoolFn | IntFn Cmp IntLit | StrFn ('=='|'!=') StrLit`,
+   con `Cmp ∈ {<, <=, >, >=, ==, !=}` y la función siempre a la izquierda de la comparación. Esto da tres
+   propiedades a la vez: el tipo de cada nodo se conoce **estáticamente** (ninguna condición puede
+   devolver algo que no sea booleano en partido), toda la aritmética es entera porque no hay literales
+   flotantes ni división real (RT-023), y **toda condición es describible por construcción** (§4), porque
+   cada forma sintáctica admitida tiene su clave de plantilla. Aritmética suelta (`bias() + 1 > 0`),
+   comparación entre dos funciones, literal a la izquierda, función o identificador desconocidos y tipos
+   incorrectos son `DataException` al cargar.
+2. **Validación estática del AST + evaluación de prueba.** La validación de tipos recorre el AST completo;
+   además se evalúa la condición una vez al cargar con un contexto neutro para ejercitar el cableado real
+   de NCalc. Las dos hacen falta: el `&&` de NCalc cortocircuita, así que la evaluación sola no visitaría
+   todo el árbol, y la validación sola no detectaría un desajuste entre la tabla de firmas y los
+   manejadores.
+3. **El contexto de evaluación vive en la instancia de `CompiledCondition`.** Los manejadores de NCalc
+   reciben solo `(nombre, argumentos)`, así que la condición guarda el `ConditionContext` en curso en un
+   campo propio. Es seguro porque `/Sim` es estrictamente síncrono y de un solo hilo (RT-021 prohíbe
+   `Parallel`); si alguna vez se paraleliza el lote, hay que clonar la expresión por partido.
+4. **Semántica pre-resolución sin duplicar eventos.** `SHOT` y `TACKLE` se **publican** antes de resolver
+   con un evento provisional (`Detail = "attempted"`) que no entra en la secuencia; el evento definitivo,
+   con su `Detail` real, se emite después con `publish: false`. `PASS_ATTEMPTED` sí se mueve: su `Emit`
+   pasa a estar antes del roll de éxito, en el mismo lugar relativo de la secuencia.
+   `DRIBBLE_ATTEMPTED` ya se emitía antes de su duelo. Así la secuencia de eventos tiene exactamente una
+   entrada por evento y el orden de consumo del RNG no cambia cuando no hay perks.
+5. **Un evento cancelado se registra igual.** `FOUL`, `CARD` e `INJURY` se publican antes de aplicar su
+   consecuencia; si un perk los anula, el evento entra en la secuencia con `Detail` sufijado
+   `":cancelled"` y se saltan **las consecuencias**, no la contabilidad: una falta anulada sigue contando
+   como falta en el informe (ocurrió), pero no hay derribo, ni tarjeta, ni penalti. Una tarjeta anulada no
+   incrementa tarjetas ni expulsa; una lesión anulada no saca al jugador del campo.
+6. **Un perk fuera del campo sigue evaluándose.** Los perks se evalúan mientras dura el partido con
+   independencia de si su portador sigue en el campo, y los modificadores de duración `match` no se
+   retiran al lesionarse o ser expulsado. La alternativa (apagarlos al salir) silenciaría los perks de
+   contador disparados por `MATCH_END` justo en los jugadores que peor lo han pasado, que es el caso que
+   el diseño quiere premiar. En fase 1 no hay cambios, así que no hay ningún caso en que un perk "entre"
+   a mitad de partido.
+7. **`veteran` en un solo disparador.** Un perk tiene un `trigger`, no varios; §7 describe `veteran` con
+   dos. Se expresa con la lista **ordenada** de efectos sobre `MATCH_START`: primero el
+   `modifyAttribute` por contador (que lee el contador **antes** de incrementarlo, así que el primer
+   partido da +0) y después el `addCounter`. Cualquier perk de escalado del catálogo se escribe igual.
+8. **Los eventos sin actor se identifican por tipo, no por "¿trae Actor?"**: `MATCH_START`, `MATCH_END`,
+   `MOB_START`, `REFEREE_LEAVES`, `PLAY_START` y `PLAY_END`, tal y como los lista §2. `PLAY_START` sí
+   lleva actor en el motor, pero como disparador es un evento de partido y no de jugador, así que se
+   evalúa una vez por perk con `actor = owner` y sin comprobar el alcance.
+9. **Los modificadores de jugada caducan después de publicar `PLAY_END`**, no antes: un perk disparado por
+   el fin de jugada aplica sobre la siguiente. Los límites `per: play` se reinician en el mismo punto y
+   los `per: mob` al publicar `MOB_START`. `per: run` se comporta como `per: match` dentro del partido.
+10. **`elseEffects` cuenta como activación**, con la activación registrada con `Detail` sufijado
+    `":else"` (RT-043). Un perk cuya condición es falsa y que no tiene `elseEffects` no se activa y no
+    consume límite.
+11. **Solo se recalcula el atributo efectivo al cambiar.** `MatchPlayer` guarda base, deltas y efectivos
+    en tres arrays y recalcula los cinco atributos y el radio de correa cuando entra o expira un
+    modificador. Las propiedades `Strength`/`Speed`/`Technique`/`Stamina` pasan a devolver el efectivo, con
+    lo que **todo** el motor lee ya el valor con modificadores sin tocar ni una fórmula.
+12. **Con 0 perks no existe el motor de efectos.** `MatchEngine` construye `EffectEngine` solo si algún
+    titular lleva perks; si no, `_effects` es `null` y cada publicación, cada consulta de modificador de
+    probabilidad y cada caducidad son una comprobación de nulo. Medido: 2.000 partidos del conjunto de
+    referencia byte a byte idénticos a la salida de fase 0, y 400 → 422-448 partidos/s (ruido de medida).
+    Con 30 perks entre los dos equipos, sobre disparadores de alta frecuencia y condiciones de dos
+    funciones, el sobrecoste es del **16,5%** (< 20%, §3).
+13. **`modifyProbability` se suma dentro de los límites que ya tenía cada resolución**: el `clamp` de
+    pase (500..9800) y el de lesión (0..5000) siguen acotando el resultado, y la parada se acota a
+    0..10000 puntos base tras convertir el porcentaje. Un perk no puede sacar una probabilidad de su rango
+    de diseño.
+14. **`setState` suelta el balón.** Si el objetivo derribado lo llevaba, el balón queda muerto en su
+    posición y vuelve a estar disponible, en vez de quedarse asignado a un jugador que no puede tocarlo.
+15. **`PlayerDefinition.Perks` y `Counters` son propiedades `init`, no parámetros posicionales.** Así las
+    construcciones existentes del generador y de los tests siguen valiendo sin tocarlas y se puede
+    escribir `definition with { Perks = ["bloodlust"] }`. `Counters` se construye ordenado por clave
+    ordinal con `WithCounters`.
+16. **`Progression` es una clase estática pura sobre datos sueltos** (ids, enteros, `Attributes`), no
+    sobre el estado de la run, que todavía no existe. Expone `PerkSlots`, `InitialPerks`,
+    `AwardExperience`, `LevelFor`, `AttributesAtLevel`, `LevelUp` y `ApplyCounterDeltas`. Como
+    `PlayerDefinition` no tiene campo de experiencia (§2.2 de fase 0), la experiencia acumulada la lleva
+    quien llama (la campaña de `/Balance`).
+17. **Claves de condición en las plantillas: `<función><Sufijo>`** con sufijo `Lt/Le/Gt/Ge/Eq/Ne`, más las
+    funciones booleanas por su nombre y `and`/`or`/`not`. Son 66 claves por idioma y el conjunto es
+    cerrado, así que "condición describible" es comprobable: el cargador genera la descripción de cada
+    perk en **todos** los idiomas cargados y una clave que falta es error de carga.
+    `scoreDiffLt`/`scoreDiffGt` usan la forma genérica con `{n}` en vez de los "si va perdiendo"/"si va
+    ganando" del ejemplo de §4: esos textos solo son correctos para `n = 0` y una plantilla no puede
+    inspeccionar su argumento.
+18. **Secciones de plantilla añadidas a las de §4**: `layout` (cómo se compone `[disparador]
+    [condición]: [efectos] ([límite])`, localizable), `events` (sintagma nominal de cada evento, para
+    `anula {event}`), `positions`, `zones`, `details` (para `position()`, `zone()` y `detail()`) y
+    `counters` (nombre legible **en singular** de cada contador; si falta, se usa el id tal cual).
+    `effects` gana `modifyAttributePerCounterDivided` para el caso `counterDivisor > 1`.
+19. **`{value:+%}` convierte puntos base a porcentaje** con punto decimal invariante: 300 → `+3%`,
+    1500 → `+15%`, 350 → `+3.5%`. `{value:+}` fuerza el signo.
+20. **El validador de datos y los tests enumeran `/data` entero.** `Sim.Tests/TestData.LoadAllFiles`
+    pasa de una lista escrita a mano a enumerar el directorio (salvo `schemas/`), como ya hacía
+    `/Balance`: el catálogo de perks y las plantillas de otro paquete entran en los tests sin tocar el
+    ayudante, y `DataLoaderTests` valida de paso todo lo que escriba el paquete G.
+21. **`fingerprint.txt` se escribe en el directorio de salida de la configuración que corre.** Al medir
+    la huella antes y después de un cambio hay que comparar la **misma** configuración (`bin/Debug` con
+    `bin/Debug`): un `fingerprint.txt` de otra configuración puede ser de una revisión anterior del
+    código. La equivalencia con 0 perks se verificó, además de con la huella, con las tres salidas CSV de
+    un lote de 2.000 partidos idénticas byte a byte a las de fase 0.

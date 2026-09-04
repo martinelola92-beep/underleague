@@ -1,0 +1,55 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://underleague.dev/schemas/balance-builds.schema.json",
+  "title": "Underleague balance build",
+  "description": "data/balance/builds/<id>.json: una build de prueba para /Balance (docs/fase1-diseno.md §8). 'slot' es el índice de titular que produce TeamGenerator: 0 portero, 1-2 defensas, 3-5 centrocampistas, 6 delantero. La validación de build (§5) la hace Simulator.Run al construir el partido, no este esquema.",
+  "type": "object",
+  "properties": {
+    "_doc": { "type": "string" },
+    "id": { "type": "string", "pattern": "^[a-z][a-z0-9_]*$" },
+    "name": { "type": "string", "minLength": 1 },
+    "race": { "enum": ["Human", "Orc", "Elf", "Dwarf", "Undead", "DarkElf", "Demon", "Vampire", "Lizard"] },
+    "quality": { "type": "integer", "minimum": 1, "maximum": 99 },
+    "perks": {
+      "type": "array",
+      "description": "Asignaciones de perk a titular. Un mismo slot puede aparecer varias veces (varios perks).",
+      "items": {
+        "type": "object",
+        "properties": {
+          "slot": { "type": "integer", "minimum": 0, "maximum": 6 },
+          "perk": { "type": "string", "pattern": "^[a-z][a-z0-9_]*$" }
+        },
+        "required": ["slot", "perk"],
+        "additionalProperties": false
+      }
+    },
+    "rarities": {
+      "type": "object",
+      "description": "Sube la rareza de un titular (y con ella sus slots de perk, RF-023). Clave: índice de slot como texto.",
+      "propertyNames": { "pattern": "^[0-6]$" },
+      "additionalProperties": { "enum": ["common", "rare", "legendary"] }
+    },
+    "lineup": {
+      "description": "Casillas-hogar relativas por slot ([columna, fila]); null usa Lineup.Default.",
+      "oneOf": [
+        { "type": "null" },
+        {
+          "type": "array",
+          "items": {
+            "type": "array",
+            "prefixItems": [
+              { "type": "integer", "minimum": 0, "maximum": 7 },
+              { "type": "integer", "minimum": 0, "maximum": 4 }
+            ],
+            "items": false,
+            "minItems": 2
+          },
+          "minItems": 5,
+          "maxItems": 7
+        }
+      ]
+    }
+  },
+  "required": ["id", "name", "race", "quality", "perks"],
+  "additionalProperties": false
+}

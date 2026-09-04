@@ -1,0 +1,25 @@
+{
+  "id": "elf_brawler",
+  "name": "Elfos: camorristas",
+  "race": "Elf",
+  "quality": 50,
+  "perks": [
+    {
+      "slot": 3,
+      "perk": "glass_cannon"
+    },
+    {
+      "slot": 3,
+      "perk": "berserker"
+    },
+    {
+      "slot": 6,
+      "perk": "target_man"
+    },
+    {
+      "slot": 6,
+      "perk": "berserker"
+    }
+  ],
+  "lineup": null
+}

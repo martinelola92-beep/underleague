@@ -1,0 +1,42 @@
+{
+  "id": "shield_wall",
+  "name": {
+    "es": "Muro de escudos",
+    "en": "Shield Wall"
+  },
+  "rarity": "rare",
+  "kind": "conditional",
+  "trigger": "MATCH_START",
+  "scope": "actor",
+  "condition": "adjacentCount(owner,'Defender') > 0",
+  "effects": [
+    {
+      "type": "modifyAttribute",
+      "target": "owner",
+      "attribute": "strength",
+      "value": 5,
+      "duration": "match"
+    },
+    {
+      "type": "modifyProbability",
+      "target": "adjacentWithTag:Defender",
+      "probability": "tackle",
+      "value": 500,
+      "duration": "match"
+    }
+  ],
+  "elseEffects": [
+    {
+      "type": "modifyAttribute",
+      "target": "owner",
+      "attribute": "strength",
+      "value": -3,
+      "duration": "match"
+    }
+  ],
+  "accumulatesAcrossMatches": false,
+  "lethal": false,
+  "positionOnly": null,
+  "tagsRequired": [],
+  "tagsForbidden": []
+}

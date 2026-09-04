@@ -1,0 +1,26 @@
+{
+  "id": "goalkeeper_wall",
+  "name": {
+    "es": "Portero muro",
+    "en": "Goalkeeper Wall"
+  },
+  "rarity": "common",
+  "kind": "filler",
+  "trigger": "MATCH_START",
+  "scope": "actor",
+  "condition": "",
+  "effects": [
+    {
+      "type": "modifyProbability",
+      "target": "owner",
+      "probability": "save",
+      "value": 800,
+      "duration": "match"
+    }
+  ],
+  "accumulatesAcrossMatches": false,
+  "lethal": false,
+  "positionOnly": "Goalkeeper",
+  "tagsRequired": [],
+  "tagsForbidden": []
+}

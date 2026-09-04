@@ -5,251 +5,678 @@
   "description": "data/sim/tuning.json: constantes de resolución del simulador (fase0-diseno.md 2.5, 2.6). Probabilidades en base 10000 salvo que se indique 'Percent'. Todo entero salvo posiciones. Sin 'ticksPerSecond' ni 'pitch' (revisión independiente, fase 0): ninguno de los dos tenía consumidor en el motor -- la geometría del campo vive en Sim.Model.Pitch y el reloj lógico de 15/s es RT-020, no un dato de balance.",
   "type": "object",
   "properties": {
-    "_doc": { "type": "string" },
-    "regulationTicks": { "type": "integer", "minimum": 1, "maximum": 1000000 },
-    "goldenGoalMaxTicks": { "type": "integer", "minimum": 0, "maximum": 1000000 },
-    "decisionIntervalTicks": { "type": "integer", "minimum": 1, "maximum": 1000 },
-    "transitionTicks": { "type": "integer", "minimum": 0, "maximum": 1000 },
-    "assistWindowTicks": { "type": "integer", "minimum": 0, "maximum": 10000 },
-    "movement": { "$ref": "#/$defs/movement" },
-    "ball": { "$ref": "#/$defs/ball" },
-    "states": { "$ref": "#/$defs/states" },
-    "pass": { "$ref": "#/$defs/pass" },
-    "dribble": { "$ref": "#/$defs/dribble" },
-    "shot": { "$ref": "#/$defs/shot" },
-    "save": { "$ref": "#/$defs/save" },
-    "tackle": { "$ref": "#/$defs/tackle" },
-    "injury": { "$ref": "#/$defs/injury" },
-    "referee": { "$ref": "#/$defs/referee" },
-    "restart": { "$ref": "#/$defs/restart" },
-    "generation": { "$ref": "#/$defs/generation" },
-    "leash": { "$ref": "#/$defs/leash" }
+    "_doc": {
+      "type": "string"
+    },
+    "regulationTicks": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 1000000
+    },
+    "goldenGoalMaxTicks": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 1000000
+    },
+    "decisionIntervalTicks": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 1000
+    },
+    "transitionTicks": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 1000
+    },
+    "assistWindowTicks": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 10000
+    },
+    "movement": {
+      "$ref": "#/$defs/movement"
+    },
+    "ball": {
+      "$ref": "#/$defs/ball"
+    },
+    "states": {
+      "$ref": "#/$defs/states"
+    },
+    "pass": {
+      "$ref": "#/$defs/pass"
+    },
+    "dribble": {
+      "$ref": "#/$defs/dribble"
+    },
+    "shot": {
+      "$ref": "#/$defs/shot"
+    },
+    "save": {
+      "$ref": "#/$defs/save"
+    },
+    "tackle": {
+      "$ref": "#/$defs/tackle"
+    },
+    "injury": {
+      "$ref": "#/$defs/injury"
+    },
+    "referee": {
+      "$ref": "#/$defs/referee"
+    },
+    "restart": {
+      "$ref": "#/$defs/restart"
+    },
+    "generation": {
+      "$ref": "#/$defs/generation"
+    },
+    "leash": {
+      "$ref": "#/$defs/leash"
+    },
+    "progression": {
+      "$ref": "#/$defs/progression"
+    }
   },
   "required": [
-    "regulationTicks", "goldenGoalMaxTicks", "decisionIntervalTicks", "transitionTicks",
+    "regulationTicks",
+    "goldenGoalMaxTicks",
+    "decisionIntervalTicks",
+    "transitionTicks",
     "assistWindowTicks",
-    "movement", "ball", "states", "pass", "dribble", "shot", "save", "tackle", "injury", "referee",
-    "restart", "generation", "leash"
+    "movement",
+    "ball",
+    "states",
+    "pass",
+    "dribble",
+    "shot",
+    "save",
+    "tackle",
+    "injury",
+    "referee",
+    "restart",
+    "generation",
+    "leash",
+    "progression"
   ],
   "additionalProperties": false,
   "$defs": {
-    "probability": { "type": "integer", "minimum": 0, "maximum": 10000 },
-    "percent": { "type": "integer", "minimum": 0, "maximum": 1000 },
-    "factor": { "type": "integer", "minimum": -1000, "maximum": 1000 },
-    "penalty": { "type": "integer", "minimum": 0, "maximum": 10000 },
-    "ticks": { "type": "integer", "minimum": 0, "maximum": 1000000 },
-    "milli": { "type": "integer", "minimum": 0, "maximum": 1000000 },
-    "attributeBiasValue": { "type": "integer", "minimum": -40, "maximum": 40 },
-
+    "probability": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 10000
+    },
+    "percent": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 1000
+    },
+    "factor": {
+      "type": "integer",
+      "minimum": -1000,
+      "maximum": 1000
+    },
+    "penalty": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 10000
+    },
+    "ticks": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 1000000
+    },
+    "milli": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 1000000
+    },
+    "attributeBiasValue": {
+      "type": "integer",
+      "minimum": -40,
+      "maximum": 40
+    },
     "movement": {
       "type": "object",
       "properties": {
-        "_doc": { "type": "string" },
-        "baseCellsPerTickMilli": { "$ref": "#/$defs/milli" },
-        "speedCellsPerTickMilliPer99": { "$ref": "#/$defs/milli" },
-        "dribbleSpeedPercent": { "$ref": "#/$defs/percent" },
-        "fatigueStartTick": { "$ref": "#/$defs/ticks" },
-        "fatigueMaxSlowPercent": { "$ref": "#/$defs/percent" }
+        "_doc": {
+          "type": "string"
+        },
+        "baseCellsPerTickMilli": {
+          "$ref": "#/$defs/milli"
+        },
+        "speedCellsPerTickMilliPer99": {
+          "$ref": "#/$defs/milli"
+        },
+        "dribbleSpeedPercent": {
+          "$ref": "#/$defs/percent"
+        },
+        "fatigueStartTick": {
+          "$ref": "#/$defs/ticks"
+        },
+        "fatigueMaxSlowPercent": {
+          "$ref": "#/$defs/percent"
+        }
       },
-      "required": ["baseCellsPerTickMilli", "speedCellsPerTickMilliPer99", "dribbleSpeedPercent", "fatigueStartTick", "fatigueMaxSlowPercent"],
+      "required": [
+        "baseCellsPerTickMilli",
+        "speedCellsPerTickMilliPer99",
+        "dribbleSpeedPercent",
+        "fatigueStartTick",
+        "fatigueMaxSlowPercent"
+      ],
       "additionalProperties": false
     },
     "ball": {
       "type": "object",
       "properties": {
-        "_doc": { "type": "string" },
-        "passSpeedCellsPerTickMilli": { "$ref": "#/$defs/milli" },
-        "shotSpeedCellsPerTickMilli": { "$ref": "#/$defs/milli" },
-        "looseBallFrictionPercent": { "$ref": "#/$defs/percent" }
+        "_doc": {
+          "type": "string"
+        },
+        "passSpeedCellsPerTickMilli": {
+          "$ref": "#/$defs/milli"
+        },
+        "shotSpeedCellsPerTickMilli": {
+          "$ref": "#/$defs/milli"
+        },
+        "looseBallFrictionPercent": {
+          "$ref": "#/$defs/percent"
+        }
       },
-      "required": ["passSpeedCellsPerTickMilli", "shotSpeedCellsPerTickMilli", "looseBallFrictionPercent"],
+      "required": [
+        "passSpeedCellsPerTickMilli",
+        "shotSpeedCellsPerTickMilli",
+        "looseBallFrictionPercent"
+      ],
       "additionalProperties": false
     },
     "states": {
       "type": "object",
       "properties": {
-        "_doc": { "type": "string" },
-        "PassingTicks": { "$ref": "#/$defs/ticks" },
-        "ShootingTicks": { "$ref": "#/$defs/ticks" },
-        "TacklingTicks": { "$ref": "#/$defs/ticks" },
-        "KnockedDownTicks": { "$ref": "#/$defs/ticks" },
-        "CelebratingTicks": { "$ref": "#/$defs/ticks" },
-        "DribbleDuelCooldownTicks": { "$ref": "#/$defs/ticks" },
-        "TackleCooldownTicks": { "$ref": "#/$defs/ticks" }
+        "_doc": {
+          "type": "string"
+        },
+        "PassingTicks": {
+          "$ref": "#/$defs/ticks"
+        },
+        "ShootingTicks": {
+          "$ref": "#/$defs/ticks"
+        },
+        "TacklingTicks": {
+          "$ref": "#/$defs/ticks"
+        },
+        "KnockedDownTicks": {
+          "$ref": "#/$defs/ticks"
+        },
+        "CelebratingTicks": {
+          "$ref": "#/$defs/ticks"
+        },
+        "DribbleDuelCooldownTicks": {
+          "$ref": "#/$defs/ticks"
+        },
+        "TackleCooldownTicks": {
+          "$ref": "#/$defs/ticks"
+        }
       },
-      "required": ["PassingTicks", "ShootingTicks", "TacklingTicks", "KnockedDownTicks", "CelebratingTicks", "DribbleDuelCooldownTicks", "TackleCooldownTicks"],
+      "required": [
+        "PassingTicks",
+        "ShootingTicks",
+        "TacklingTicks",
+        "KnockedDownTicks",
+        "CelebratingTicks",
+        "DribbleDuelCooldownTicks",
+        "TackleCooldownTicks"
+      ],
       "additionalProperties": false
     },
     "pass": {
       "type": "object",
       "properties": {
-        "_doc": { "type": "string" },
-        "baseSuccess": { "$ref": "#/$defs/probability" },
-        "techniqueFactor": { "$ref": "#/$defs/factor" },
-        "distancePenaltyPerCell": { "$ref": "#/$defs/penalty" },
-        "pressurePenalty": { "$ref": "#/$defs/penalty" },
-        "interceptRadiusCells": { "type": "number", "minimum": 0, "maximum": 20 },
-        "interceptBaseChance": { "$ref": "#/$defs/probability" },
-        "interceptTechniqueFactor": { "$ref": "#/$defs/factor" }
+        "_doc": {
+          "type": "string"
+        },
+        "baseSuccess": {
+          "$ref": "#/$defs/probability"
+        },
+        "techniqueFactor": {
+          "$ref": "#/$defs/factor"
+        },
+        "distancePenaltyPerCell": {
+          "$ref": "#/$defs/penalty"
+        },
+        "pressurePenalty": {
+          "$ref": "#/$defs/penalty"
+        },
+        "interceptRadiusCells": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 20
+        },
+        "interceptBaseChance": {
+          "$ref": "#/$defs/probability"
+        },
+        "interceptTechniqueFactor": {
+          "$ref": "#/$defs/factor"
+        }
       },
-      "required": ["baseSuccess", "techniqueFactor", "distancePenaltyPerCell", "pressurePenalty", "interceptRadiusCells", "interceptBaseChance", "interceptTechniqueFactor"],
+      "required": [
+        "baseSuccess",
+        "techniqueFactor",
+        "distancePenaltyPerCell",
+        "pressurePenalty",
+        "interceptRadiusCells",
+        "interceptBaseChance",
+        "interceptTechniqueFactor"
+      ],
       "additionalProperties": false
     },
     "dribble": {
       "type": "object",
       "properties": {
-        "_doc": { "type": "string" },
-        "baseWin": { "$ref": "#/$defs/probability" },
-        "attackerTechniqueFactor": { "$ref": "#/$defs/factor" },
-        "defenderSpeedFactor": { "$ref": "#/$defs/factor" },
-        "defenderStrengthFactor": { "$ref": "#/$defs/factor" },
-        "lostKnockdownTicks": { "$ref": "#/$defs/ticks" }
+        "_doc": {
+          "type": "string"
+        },
+        "baseWin": {
+          "$ref": "#/$defs/probability"
+        },
+        "attackerTechniqueFactor": {
+          "$ref": "#/$defs/factor"
+        },
+        "defenderSpeedFactor": {
+          "$ref": "#/$defs/factor"
+        },
+        "defenderStrengthFactor": {
+          "$ref": "#/$defs/factor"
+        },
+        "lostKnockdownTicks": {
+          "$ref": "#/$defs/ticks"
+        }
       },
-      "required": ["baseWin", "attackerTechniqueFactor", "defenderSpeedFactor", "defenderStrengthFactor", "lostKnockdownTicks"],
+      "required": [
+        "baseWin",
+        "attackerTechniqueFactor",
+        "defenderSpeedFactor",
+        "defenderStrengthFactor",
+        "lostKnockdownTicks"
+      ],
       "additionalProperties": false
     },
     "shot": {
       "type": "object",
       "properties": {
-        "_doc": { "type": "string" },
-        "baseQuality": { "$ref": "#/$defs/probability" },
-        "techniqueFactor": { "$ref": "#/$defs/factor" },
-        "strengthFactor": { "$ref": "#/$defs/factor" },
-        "distancePenaltyPerCell": { "$ref": "#/$defs/penalty" },
-        "pressurePenalty": { "$ref": "#/$defs/penalty" },
-        "offTargetBase": { "$ref": "#/$defs/probability" },
-        "offTargetDistanceFactor": { "$ref": "#/$defs/factor" },
-        "penaltyQualityBonus": { "type": "integer", "minimum": 0, "maximum": 100 }
+        "_doc": {
+          "type": "string"
+        },
+        "baseQuality": {
+          "$ref": "#/$defs/probability"
+        },
+        "techniqueFactor": {
+          "$ref": "#/$defs/factor"
+        },
+        "strengthFactor": {
+          "$ref": "#/$defs/factor"
+        },
+        "distancePenaltyPerCell": {
+          "$ref": "#/$defs/penalty"
+        },
+        "pressurePenalty": {
+          "$ref": "#/$defs/penalty"
+        },
+        "offTargetBase": {
+          "$ref": "#/$defs/probability"
+        },
+        "offTargetDistanceFactor": {
+          "$ref": "#/$defs/factor"
+        },
+        "penaltyQualityBonus": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 100
+        }
       },
-      "required": ["baseQuality", "techniqueFactor", "strengthFactor", "distancePenaltyPerCell", "pressurePenalty", "offTargetBase", "offTargetDistanceFactor", "penaltyQualityBonus"],
+      "required": [
+        "baseQuality",
+        "techniqueFactor",
+        "strengthFactor",
+        "distancePenaltyPerCell",
+        "pressurePenalty",
+        "offTargetBase",
+        "offTargetDistanceFactor",
+        "penaltyQualityBonus"
+      ],
       "additionalProperties": false
     },
     "save": {
       "type": "object",
       "properties": {
-        "_doc": { "type": "string" },
-        "basePercent": { "$ref": "#/$defs/percent" },
-        "closeRangeCells": { "type": "integer", "minimum": 0, "maximum": 20 },
-        "attributeWeightPercent": { "$ref": "#/$defs/percent" },
-        "consecutiveShotDecayPercent": { "$ref": "#/$defs/percent" },
-        "qualityWeight": { "$ref": "#/$defs/percent" }
+        "_doc": {
+          "type": "string"
+        },
+        "basePercent": {
+          "$ref": "#/$defs/percent"
+        },
+        "closeRangeCells": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 20
+        },
+        "attributeWeightPercent": {
+          "$ref": "#/$defs/percent"
+        },
+        "consecutiveShotDecayPercent": {
+          "$ref": "#/$defs/percent"
+        },
+        "qualityWeight": {
+          "$ref": "#/$defs/percent"
+        }
       },
-      "required": ["basePercent", "closeRangeCells", "attributeWeightPercent", "consecutiveShotDecayPercent", "qualityWeight"],
+      "required": [
+        "basePercent",
+        "closeRangeCells",
+        "attributeWeightPercent",
+        "consecutiveShotDecayPercent",
+        "qualityWeight"
+      ],
       "additionalProperties": false
     },
     "tackle": {
       "type": "object",
       "properties": {
-        "_doc": { "type": "string" },
-        "baseWin": { "$ref": "#/$defs/probability" },
-        "strengthFactor": { "$ref": "#/$defs/factor" },
-        "speedFactor": { "$ref": "#/$defs/factor" },
-        "carrierTechniqueFactor": { "$ref": "#/$defs/factor" },
-        "foulBase": { "$ref": "#/$defs/probability" },
-        "foulStrengthFactor": { "$ref": "#/$defs/factor" },
-        "hardTackleThreshold": { "$ref": "#/$defs/probability" },
-        "yellowCardBase": { "$ref": "#/$defs/probability" },
-        "redCardBase": { "$ref": "#/$defs/probability" },
-        "hardTackleYellowBonus": { "$ref": "#/$defs/probability" },
-        "hardTackleRedBonus": { "$ref": "#/$defs/probability" },
-        "secondYellowIsRed": { "type": "boolean" }
+        "_doc": {
+          "type": "string"
+        },
+        "baseWin": {
+          "$ref": "#/$defs/probability"
+        },
+        "strengthFactor": {
+          "$ref": "#/$defs/factor"
+        },
+        "speedFactor": {
+          "$ref": "#/$defs/factor"
+        },
+        "carrierTechniqueFactor": {
+          "$ref": "#/$defs/factor"
+        },
+        "foulBase": {
+          "$ref": "#/$defs/probability"
+        },
+        "foulStrengthFactor": {
+          "$ref": "#/$defs/factor"
+        },
+        "hardTackleThreshold": {
+          "$ref": "#/$defs/probability"
+        },
+        "yellowCardBase": {
+          "$ref": "#/$defs/probability"
+        },
+        "redCardBase": {
+          "$ref": "#/$defs/probability"
+        },
+        "hardTackleYellowBonus": {
+          "$ref": "#/$defs/probability"
+        },
+        "hardTackleRedBonus": {
+          "$ref": "#/$defs/probability"
+        },
+        "secondYellowIsRed": {
+          "type": "boolean"
+        }
       },
       "required": [
-        "baseWin", "strengthFactor", "speedFactor", "carrierTechniqueFactor", "foulBase",
-        "foulStrengthFactor", "hardTackleThreshold", "yellowCardBase", "redCardBase",
-        "hardTackleYellowBonus", "hardTackleRedBonus", "secondYellowIsRed"
+        "baseWin",
+        "strengthFactor",
+        "speedFactor",
+        "carrierTechniqueFactor",
+        "foulBase",
+        "foulStrengthFactor",
+        "hardTackleThreshold",
+        "yellowCardBase",
+        "redCardBase",
+        "hardTackleYellowBonus",
+        "hardTackleRedBonus",
+        "secondYellowIsRed"
       ],
       "additionalProperties": false
     },
     "injury": {
       "type": "object",
       "properties": {
-        "_doc": { "type": "string" },
-        "onTackleBase": { "$ref": "#/$defs/probability" },
-        "onFoulBase": { "$ref": "#/$defs/probability" },
-        "attackerStrengthFactor": { "$ref": "#/$defs/factor" },
-        "victimStaminaResistFactor": { "$ref": "#/$defs/factor" },
-        "severeShare": { "$ref": "#/$defs/probability" }
+        "_doc": {
+          "type": "string"
+        },
+        "onTackleBase": {
+          "$ref": "#/$defs/probability"
+        },
+        "onFoulBase": {
+          "$ref": "#/$defs/probability"
+        },
+        "attackerStrengthFactor": {
+          "$ref": "#/$defs/factor"
+        },
+        "victimStaminaResistFactor": {
+          "$ref": "#/$defs/factor"
+        },
+        "severeShare": {
+          "$ref": "#/$defs/probability"
+        }
       },
-      "required": ["onTackleBase", "onFoulBase", "attackerStrengthFactor", "victimStaminaResistFactor", "severeShare"],
+      "required": [
+        "onTackleBase",
+        "onFoulBase",
+        "attackerStrengthFactor",
+        "victimStaminaResistFactor",
+        "severeShare"
+      ],
       "additionalProperties": false
     },
     "referee": {
       "type": "object",
       "properties": {
-        "_doc": { "type": "string" },
-        "biasFoulShiftPer10": { "type": "integer", "minimum": -10000, "maximum": 10000 },
-        "penaltyOnFoulInArea": { "$ref": "#/$defs/probability" }
+        "_doc": {
+          "type": "string"
+        },
+        "biasFoulShiftPer10": {
+          "type": "integer",
+          "minimum": -10000,
+          "maximum": 10000
+        },
+        "penaltyOnFoulInArea": {
+          "$ref": "#/$defs/probability"
+        }
       },
-      "required": ["biasFoulShiftPer10", "penaltyOnFoulInArea"],
+      "required": [
+        "biasFoulShiftPer10",
+        "penaltyOnFoulInArea"
+      ],
       "additionalProperties": false
     },
     "restart": {
       "type": "object",
       "properties": {
-        "_doc": { "type": "string" },
-        "throwInTicks": { "$ref": "#/$defs/ticks" },
-        "goalKickTicks": { "$ref": "#/$defs/ticks" },
-        "cornerTicks": { "$ref": "#/$defs/ticks" },
-        "kickoffTicks": { "$ref": "#/$defs/ticks" },
-        "penaltyTicks": { "$ref": "#/$defs/ticks" }
+        "_doc": {
+          "type": "string"
+        },
+        "throwInTicks": {
+          "$ref": "#/$defs/ticks"
+        },
+        "goalKickTicks": {
+          "$ref": "#/$defs/ticks"
+        },
+        "cornerTicks": {
+          "$ref": "#/$defs/ticks"
+        },
+        "kickoffTicks": {
+          "$ref": "#/$defs/ticks"
+        },
+        "penaltyTicks": {
+          "$ref": "#/$defs/ticks"
+        }
       },
-      "required": ["throwInTicks", "goalKickTicks", "cornerTicks", "kickoffTicks", "penaltyTicks"],
+      "required": [
+        "throwInTicks",
+        "goalKickTicks",
+        "cornerTicks",
+        "kickoffTicks",
+        "penaltyTicks"
+      ],
       "additionalProperties": false
     },
     "generation": {
       "type": "object",
       "description": "Sesgo de generación de jugadores por posición y reparto de rasgos (Sim.Generation.PlayerGenerator).",
       "properties": {
-        "_doc": { "type": "string" },
-        "positionBias": { "$ref": "#/$defs/positionBias" },
-        "leashBase": { "type": "integer", "minimum": 1, "maximum": 99 },
+        "_doc": {
+          "type": "string"
+        },
+        "positionBias": {
+          "$ref": "#/$defs/positionBias"
+        },
+        "leashBase": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 99
+        },
         "traitCountWeights": {
           "type": "array",
           "description": "Peso ponderado para elegir 1, 2 o 3 rasgos.",
-          "items": { "type": "integer", "minimum": 0 },
+          "items": {
+            "type": "integer",
+            "minimum": 0
+          },
           "minItems": 3,
           "maxItems": 3
         },
-        "goalkeeperTraitChance": { "$ref": "#/$defs/probability" }
+        "goalkeeperTraitChance": {
+          "$ref": "#/$defs/probability"
+        }
       },
-      "required": ["positionBias", "leashBase", "traitCountWeights", "goalkeeperTraitChance"],
+      "required": [
+        "positionBias",
+        "leashBase",
+        "traitCountWeights",
+        "goalkeeperTraitChance"
+      ],
       "additionalProperties": false
     },
     "positionBias": {
       "type": "object",
       "properties": {
-        "_doc": { "type": "string" },
-        "Goalkeeper": { "$ref": "#/$defs/positionBiasEntry" },
-        "Defender": { "$ref": "#/$defs/positionBiasEntry" },
-        "Midfielder": { "$ref": "#/$defs/positionBiasEntry" },
-        "Forward": { "$ref": "#/$defs/positionBiasEntry" }
+        "_doc": {
+          "type": "string"
+        },
+        "Goalkeeper": {
+          "$ref": "#/$defs/positionBiasEntry"
+        },
+        "Defender": {
+          "$ref": "#/$defs/positionBiasEntry"
+        },
+        "Midfielder": {
+          "$ref": "#/$defs/positionBiasEntry"
+        },
+        "Forward": {
+          "$ref": "#/$defs/positionBiasEntry"
+        }
       },
-      "required": ["Goalkeeper", "Defender", "Midfielder", "Forward"],
+      "required": [
+        "Goalkeeper",
+        "Defender",
+        "Midfielder",
+        "Forward"
+      ],
       "additionalProperties": false
     },
     "positionBiasEntry": {
       "type": "object",
       "properties": {
-        "_doc": { "type": "string" },
-        "strength": { "$ref": "#/$defs/attributeBiasValue" },
-        "speed": { "$ref": "#/$defs/attributeBiasValue" },
-        "technique": { "$ref": "#/$defs/attributeBiasValue" },
-        "stamina": { "$ref": "#/$defs/attributeBiasValue" },
-        "leash": { "$ref": "#/$defs/attributeBiasValue" }
+        "_doc": {
+          "type": "string"
+        },
+        "strength": {
+          "$ref": "#/$defs/attributeBiasValue"
+        },
+        "speed": {
+          "$ref": "#/$defs/attributeBiasValue"
+        },
+        "technique": {
+          "$ref": "#/$defs/attributeBiasValue"
+        },
+        "stamina": {
+          "$ref": "#/$defs/attributeBiasValue"
+        },
+        "leash": {
+          "$ref": "#/$defs/attributeBiasValue"
+        }
       },
-      "required": ["strength", "speed", "technique", "stamina", "leash"],
+      "required": [
+        "strength",
+        "speed",
+        "technique",
+        "stamina",
+        "leash"
+      ],
       "additionalProperties": false
     },
     "leash": {
       "type": "object",
       "description": "leashCells = minCells + leash * cellsPer99 / 99 (entero).",
       "properties": {
-        "_doc": { "type": "string" },
-        "minCells": { "type": "integer", "minimum": 0, "maximum": 20 },
-        "cellsPer99": { "type": "integer", "minimum": 0, "maximum": 100 }
+        "_doc": {
+          "type": "string"
+        },
+        "minCells": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 20
+        },
+        "cellsPer99": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 100
+        }
       },
-      "required": ["minCells", "cellsPer99"],
+      "required": [
+        "minCells",
+        "cellsPer99"
+      ],
+      "additionalProperties": false
+    },
+    "progression": {
+      "type": "object",
+      "description": "Progresión entre partidos (fase1-diseno.md §6, RF-025, RF-027).",
+      "properties": {
+        "_doc": {
+          "type": "string"
+        },
+        "matchExperience": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 100000
+        },
+        "benchSharePercent": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 100
+        },
+        "experiencePerLevel": {
+          "type": "array",
+          "description": "Experiencia acumulada mínima de cada nivel; ocho entradas, no decreciente.",
+          "items": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "minItems": 8,
+          "maxItems": 8
+        },
+        "attributesPerLevel": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 20
+        }
+      },
+      "required": [
+        "matchExperience",
+        "benchSharePercent",
+        "experiencePerLevel",
+        "attributesPerLevel"
+      ],
       "additionalProperties": false
     }
   }

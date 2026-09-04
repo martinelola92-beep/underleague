@@ -1,0 +1,35 @@
+{
+  "id": "heavy_boots",
+  "name": {
+    "es": "Botas pesadas",
+    "en": "Heavy Boots"
+  },
+  "rarity": "common",
+  "kind": "filler",
+  "trigger": "MATCH_START",
+  "scope": "actor",
+  "condition": "hasTag(owner,'Brute')",
+  "effects": [
+    {
+      "type": "modifyAttribute",
+      "target": "owner",
+      "attribute": "strength",
+      "value": 6,
+      "duration": "match"
+    }
+  ],
+  "elseEffects": [
+    {
+      "type": "modifyAttribute",
+      "target": "owner",
+      "attribute": "strength",
+      "value": -3,
+      "duration": "match"
+    }
+  ],
+  "accumulatesAcrossMatches": false,
+  "lethal": false,
+  "positionOnly": null,
+  "tagsRequired": [],
+  "tagsForbidden": []
+}

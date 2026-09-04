@@ -1,0 +1,25 @@
+{
+  "id": "anchor",
+  "name": {
+    "es": "Ancla",
+    "en": "Anchor"
+  },
+  "rarity": "common",
+  "kind": "filler",
+  "trigger": "MATCH_START",
+  "scope": "actor",
+  "condition": "",
+  "effects": [
+    {
+      "type": "modifyLeash",
+      "target": "owner",
+      "value": 1,
+      "duration": "match"
+    }
+  ],
+  "accumulatesAcrossMatches": false,
+  "lethal": false,
+  "positionOnly": "Defender",
+  "tagsRequired": [],
+  "tagsForbidden": []
+}

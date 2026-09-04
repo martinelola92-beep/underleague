@@ -1,0 +1,26 @@
+{
+  "id": "one_touch",
+  "name": {
+    "es": "Un toque",
+    "en": "One Touch"
+  },
+  "rarity": "common",
+  "kind": "conditional",
+  "trigger": "PASS_ATTEMPTED",
+  "scope": "actor",
+  "condition": "adjacent(actor,'Fine')",
+  "effects": [
+    {
+      "type": "modifyProbability",
+      "target": "actor",
+      "probability": "pass",
+      "value": 800,
+      "duration": "play"
+    }
+  ],
+  "accumulatesAcrossMatches": false,
+  "lethal": false,
+  "positionOnly": null,
+  "tagsRequired": [],
+  "tagsForbidden": []
+}

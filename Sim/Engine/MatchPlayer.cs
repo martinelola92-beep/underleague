@@ -12,8 +12,18 @@ internal sealed class MatchPlayer
 {
     private const int ActionCount = (int)PlayerAction.Retreat + 1;
 
+    /// <summary>Número de atributos de <see cref="AttributeKind"/>.</summary>
+    private const int AttributeCount = (int)AttributeKind.Leash + 1;
+
     private readonly int[] _actionMultipliers = new int[ActionCount];
+    private readonly int[] _baseAttributes = new int[AttributeCount];
+    private readonly int[] _attributeDeltas = new int[AttributeCount];
+    private readonly int[] _effectiveAttributes = new int[AttributeCount];
     private readonly int _traitMask;
+    private readonly int _leashMinCells;
+    private readonly int _leashCellsPer99;
+    private int _leashCellDelta;
+    private float _leashCells;
 
     public MatchPlayer(PlayerDefinition definition, int team, Cell homeCell, Catalog catalog)
     {
@@ -25,10 +35,10 @@ internal sealed class MatchPlayer
         Position = HomeCenter;
 
         var attributes = definition.Attributes;
-        Strength = attributes.Strength;
-        Speed = attributes.Speed;
-        Technique = attributes.Technique;
-        Stamina = attributes.Stamina;
+        for (int i = 0; i < AttributeCount; i++)
+        {
+            _baseAttributes[i] = attributes.Get((AttributeKind)i);
+        }
 
         for (int i = 0; i < ActionCount; i++)
         {
@@ -63,7 +73,9 @@ internal sealed class MatchPlayer
         }
 
         var leash = catalog.Tuning.Leash;
-        LeashCells = leash.MinCells + (attributes.Leash * leash.CellsPer99 / 99) + LeashBonus;
+        _leashMinCells = leash.MinCells;
+        _leashCellsPer99 = leash.CellsPer99;
+        Recalculate();
     }
 
     /// <summary>Definición estática de origen (atributos, rasgos, nombre).</summary>
@@ -71,6 +83,12 @@ internal sealed class MatchPlayer
 
     /// <summary>Identificador global del jugador; el motor itera siempre por id ascendente (RT-041).</summary>
     public int Id => Definition.Id;
+
+    /// <summary>
+    /// Índice del jugador en el array del motor (ordenado por id ascendente). Lo fija MatchEngine al
+    /// construirse; es la clave de las tablas planas de modificadores y contadores del motor de efectos.
+    /// </summary>
+    public int Index { get; set; }
 
     /// <summary>Nombre visible, usado solo en el log (RF-121).</summary>
     public string Name => Definition.Name;
@@ -93,16 +111,24 @@ internal sealed class MatchPlayer
     /// <summary>Casilla-hogar desplazada por el bloque táctico (§3.4); se recalcula cada tick.</summary>
     public Vec2 EffectiveHome { get; set; }
 
-    /// <summary>Radio de correa en casillas (§2.6), incluido el bono de rasgo.</summary>
-    public float LeashCells { get; }
+    /// <summary>
+    /// Radio de correa en casillas (§2.6), incluido el bono de rasgo, el atributo efectivo de correa y
+    /// los modificadores de <c>modifyLeash</c> (fase 1, §2). Mínimo 1 casilla. Cacheado: solo se
+    /// recalcula cuando un modificador entra o expira.
+    /// </summary>
+    public float LeashCells => _leashCells;
 
-    public int Strength { get; }
+    /// <summary>Fuerza efectiva: base de nivel más modificadores activos, acotada a 1..99 (§3).</summary>
+    public int Strength => _effectiveAttributes[(int)AttributeKind.Strength];
 
-    public int Speed { get; }
+    /// <summary>Velocidad efectiva (§3).</summary>
+    public int Speed => _effectiveAttributes[(int)AttributeKind.Speed];
 
-    public int Technique { get; }
+    /// <summary>Técnica efectiva (§3).</summary>
+    public int Technique => _effectiveAttributes[(int)AttributeKind.Technique];
 
-    public int Stamina { get; }
+    /// <summary>Resistencia efectiva (§3).</summary>
+    public int Stamina => _effectiveAttributes[(int)AttributeKind.Stamina];
 
     public int HardTackleBonus { get; }
 
@@ -197,6 +223,58 @@ internal sealed class MatchPlayer
     public bool Injured { get; set; }
 
     public int TicksOnPitch { get; set; }
+
+    /// <summary>
+    /// Atributo efectivo (§3, RF-065): base del jugador más la suma de los modificadores de perk activos,
+    /// acotado a 1..99. Es el valor que lee todo el motor; nadie consulta ya el atributo base.
+    /// </summary>
+    public int Effective(AttributeKind kind) => _effectiveAttributes[(int)kind];
+
+    /// <summary>Atributo base (sin modificadores), tal cual viene de <see cref="Definition"/>.</summary>
+    public int BaseAttribute(AttributeKind kind) => _baseAttributes[(int)kind];
+
+    /// <summary>
+    /// Suma delta al modificador acumulado del atributo y recalcula el efectivo. Recalcular al cambiar
+    /// (y no en cada lectura) es lo que mantiene el coste de los atributos efectivos en cero cuando no
+    /// hay perks (§3).
+    /// </summary>
+    internal void AddAttributeDelta(AttributeKind kind, int delta)
+    {
+        if (delta == 0)
+        {
+            return;
+        }
+
+        _attributeDeltas[(int)kind] += delta;
+        Recalculate();
+    }
+
+    /// <summary>Suma delta al radio de correa en casillas (efecto modifyLeash, §2) y recalcula.</summary>
+    internal void AddLeashCellDelta(int delta)
+    {
+        if (delta == 0)
+        {
+            return;
+        }
+
+        _leashCellDelta += delta;
+        Recalculate();
+    }
+
+    /// <summary>Recalcula los cinco atributos efectivos y el radio de correa a partir de base + deltas.</summary>
+    private void Recalculate()
+    {
+        for (int i = 0; i < AttributeCount; i++)
+        {
+            _effectiveAttributes[i] = Math.Clamp(_baseAttributes[i] + _attributeDeltas[i], 1, 99);
+        }
+
+        int cells = _leashMinCells
+            + (_effectiveAttributes[(int)AttributeKind.Leash] * _leashCellsPer99 / 99)
+            + LeashBonus
+            + _leashCellDelta;
+        _leashCells = cells < 1 ? 1 : cells;
+    }
 
     /// <summary>True si el jugador tiene el rasgo indicado (consulta sin asignar, RT-051).</summary>
     public bool HasTrait(Trait trait) => (_traitMask & (1 << (int)trait)) != 0;

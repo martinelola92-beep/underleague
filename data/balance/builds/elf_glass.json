@@ -1,0 +1,36 @@
+{
+  "id": "elf_glass",
+  "name": "Elfos: cristal",
+  "race": "Elf",
+  "quality": 50,
+  "perks": [
+    {
+      "slot": 3,
+      "perk": "sweeper"
+    },
+    {
+      "slot": 3,
+      "perk": "innocent_face"
+    },
+    {
+      "slot": 4,
+      "perk": "glass_cannon"
+    },
+    {
+      "slot": 4,
+      "perk": "guardian_angel"
+    },
+    {
+      "slot": 4,
+      "perk": "matador"
+    },
+    {
+      "slot": 4,
+      "perk": "playmaker"
+    }
+  ],
+  "rarities": {
+    "4": "legendary"
+  },
+  "lineup": null
+}
