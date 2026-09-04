@@ -1,10 +1,15 @@
 {
   "id": "Orc",
   "name": { "es": "Orcos", "en": "Orcs" },
-  "tag": "Brute",
+  "speciesTag": "Orc",
+  "styleTagWeights": { "Brute": 75, "Fine": 10, "Bulwark": 8, "Cold": 4, "Neutral": 3 },
   "launch": true,
   "cellsOccupied": 1,
+  "bodyRadius": 38,
+  "discipline": 45,
   "attributeBias": { "strength": 14, "speed": -4, "technique": -10, "stamina": 6, "leash": -1 },
+  "ability": "hot_blooded",
+  "description": { "es": "Fuerza bruta por delante de la técnica. Ganan el partido a base de contacto.", "en": "Brute strength over technique. They win matches through contact." },
   "individualDeviation": 9,
   "traitWeights": { "Aggressive": 25, "Fast": 6, "Scorer": 8, "LongShot": 6, "Cerebral": 3, "Dirty": 18, "Resilient": 14, "Coward": 2, "Leader": 8, "Lazy": 10 },
   "names": {

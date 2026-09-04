@@ -23,12 +23,22 @@ public static class TeamGenerator
     /// DEF, MID, FWD (firstId+7..firstId+9). Uno de los 10 es Rare (RF-005), elegido con rng.
     /// Decisión fuera de la especificación: Name del equipo se fija igual a teamId (Generate no recibe
     /// un nombre de equipo separado).
+    ///
+    /// <paramref name="quality"/> es el parámetro histórico de <c>/Balance</c> (equipos de referencia,
+    /// builds, tests estadísticos) para variar la fuerza de un equipo sin rediseñar esos consumidores.
+    /// El modelo de presupuesto de fase1b-diseno.md §1.3 (ADR 0025, ADR 0027) ya no tiene un dial de
+    /// "calidad": el presupuesto de atributos depende de rareza y nivel. Aquí se traduce quality a nivel
+    /// con <c>Clamp(quality / 10, 1, 8)</c> (nivel 1..8, RF-023/Progression.MaxLevel) y ese nivel es el
+    /// de todos los jugadores generados: decisión fuera de la especificación, tomada para no tocar
+    /// Balance/*.cs ni data/balance/*.json (fuera del ámbito de este paquete); el paquete de reajuste
+    /// debería sustituirla por un dial explícito de nivel en Balance en vez de reciclar "quality".
     /// </summary>
     public static TeamSetup Generate(ref Pcg32 rng, Catalog catalog, string teamId, Race race, int quality, int firstPlayerId)
     {
         var raceDefinition = catalog.Race(race);
         var nameGenerator = new NameGenerator(raceDefinition);
         var usedNames = new HashSet<string>(StringComparer.Ordinal);
+        int level = Math.Clamp(quality / 10, 1, 8);
 
         int totalPlayers = StarterPositions.Length + SubstitutePositions.Length;
         int rareIndex = rng.Range(0, totalPlayers);
@@ -37,13 +47,13 @@ public static class TeamGenerator
         int index = 0;
         foreach (var position in StarterPositions)
         {
-            players.Add(GeneratePlayer(ref rng, catalog, raceDefinition, nameGenerator, usedNames, position, index == rareIndex ? Rarity.Rare : Rarity.Common, quality, firstPlayerId + index));
+            players.Add(GeneratePlayer(ref rng, catalog, raceDefinition, nameGenerator, usedNames, position, index == rareIndex ? Rarity.Rare : Rarity.Common, level, firstPlayerId + index));
             index++;
         }
 
         foreach (var position in SubstitutePositions)
         {
-            players.Add(GeneratePlayer(ref rng, catalog, raceDefinition, nameGenerator, usedNames, position, index == rareIndex ? Rarity.Rare : Rarity.Common, quality, firstPlayerId + index));
+            players.Add(GeneratePlayer(ref rng, catalog, raceDefinition, nameGenerator, usedNames, position, index == rareIndex ? Rarity.Rare : Rarity.Common, level, firstPlayerId + index));
             index++;
         }
 
@@ -53,7 +63,7 @@ public static class TeamGenerator
         return new TeamSetup(teamId, teamId, race, players, lineup);
     }
 
-    private static PlayerDefinition GeneratePlayer(ref Pcg32 rng, Catalog catalog, RaceDefinition race, NameGenerator nameGenerator, HashSet<string> usedNames, Position position, Rarity rarity, int quality, int id)
+    private static PlayerDefinition GeneratePlayer(ref Pcg32 rng, Catalog catalog, RaceDefinition race, NameGenerator nameGenerator, HashSet<string> usedNames, Position position, Rarity rarity, int level, int id)
     {
         string name;
         do
@@ -62,6 +72,6 @@ public static class TeamGenerator
         }
         while (!usedNames.Add(name));
 
-        return PlayerGenerator.Generate(ref rng, catalog, race, position, rarity, quality, id, name);
+        return PlayerGenerator.Generate(ref rng, catalog, race, position, rarity, level, id, name);
     }
 }

@@ -69,8 +69,11 @@
     "generation": {
       "$ref": "#/$defs/generation"
     },
-    "leash": {
-      "$ref": "#/$defs/leash"
+    "bodies": {
+      "$ref": "#/$defs/bodies"
+    },
+    "actionZone": {
+      "$ref": "#/$defs/actionZone"
     },
     "progression": {
       "$ref": "#/$defs/progression"
@@ -94,7 +97,8 @@
     "referee",
     "restart",
     "generation",
-    "leash",
+    "bodies",
+    "actionZone",
     "progression"
   ],
   "additionalProperties": false,
@@ -521,18 +525,37 @@
     },
     "generation": {
       "type": "object",
-      "description": "Sesgo de generación de jugadores por posición y reparto de rasgos (Sim.Generation.PlayerGenerator).",
+      "description": "Modelo de presupuesto de la generación de jugadores (fase1b-diseno.md §1.3, ADR 0025, ADR 0027; Sim.Generation.PlayerGenerator).",
       "properties": {
         "_doc": {
           "type": "string"
         },
-        "positionBias": {
-          "$ref": "#/$defs/positionBias"
+        "budgetByRarity": {
+          "$ref": "#/$defs/rarityBudget"
         },
-        "leashBase": {
+        "budgetPerLevel": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 100
+        },
+        "attributeFloor": {
           "type": "integer",
           "minimum": 1,
           "maximum": 99
+        },
+        "attributeCap": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 99
+        },
+        "rangeByRarity": {
+          "$ref": "#/$defs/rarityRange"
+        },
+        "positionShare": {
+          "$ref": "#/$defs/positionShare"
+        },
+        "positionFloors": {
+          "$ref": "#/$defs/positionFloors"
         },
         "traitCountWeights": {
           "type": "array",
@@ -549,61 +572,60 @@
         }
       },
       "required": [
-        "positionBias",
-        "leashBase",
+        "budgetByRarity",
+        "budgetPerLevel",
+        "attributeFloor",
+        "attributeCap",
+        "rangeByRarity",
+        "positionShare",
+        "positionFloors",
         "traitCountWeights",
         "goalkeeperTraitChance"
       ],
       "additionalProperties": false
     },
-    "positionBias": {
+    "rarityBudget": {
       "type": "object",
       "properties": {
-        "_doc": {
-          "type": "string"
-        },
-        "Goalkeeper": {
-          "$ref": "#/$defs/positionBiasEntry"
-        },
-        "Defender": {
-          "$ref": "#/$defs/positionBiasEntry"
-        },
-        "Midfielder": {
-          "$ref": "#/$defs/positionBiasEntry"
-        },
-        "Forward": {
-          "$ref": "#/$defs/positionBiasEntry"
-        }
+        "_doc": { "type": "string" },
+        "common": { "type": "integer", "minimum": 0, "maximum": 500 },
+        "rare": { "type": "integer", "minimum": 0, "maximum": 500 },
+        "legendary": { "type": "integer", "minimum": 0, "maximum": 500 }
       },
-      "required": [
-        "Goalkeeper",
-        "Defender",
-        "Midfielder",
-        "Forward"
-      ],
+      "required": ["common", "rare", "legendary"],
       "additionalProperties": false
     },
-    "positionBiasEntry": {
+    "attributeRange": {
       "type": "object",
       "properties": {
-        "_doc": {
-          "type": "string"
-        },
-        "strength": {
-          "$ref": "#/$defs/attributeBiasValue"
-        },
-        "speed": {
-          "$ref": "#/$defs/attributeBiasValue"
-        },
-        "technique": {
-          "$ref": "#/$defs/attributeBiasValue"
-        },
-        "stamina": {
-          "$ref": "#/$defs/attributeBiasValue"
-        },
-        "leash": {
-          "$ref": "#/$defs/attributeBiasValue"
-        }
+        "_doc": { "type": "string" },
+        "min": { "type": "integer", "minimum": 1, "maximum": 99 },
+        "max": { "type": "integer", "minimum": 1, "maximum": 99 }
+      },
+      "required": ["min", "max"],
+      "additionalProperties": false
+    },
+    "rarityRange": {
+      "type": "object",
+      "properties": {
+        "_doc": { "type": "string" },
+        "common": { "$ref": "#/$defs/attributeRange" },
+        "rare": { "$ref": "#/$defs/attributeRange" },
+        "legendary": { "$ref": "#/$defs/attributeRange" }
+      },
+      "required": ["common", "rare", "legendary"],
+      "additionalProperties": false
+    },
+    "attributeShare": {
+      "type": "object",
+      "description": "Porcentajes 0..100 que deben sumar 100 (DataLoader lo comprueba).",
+      "properties": {
+        "_doc": { "type": "string" },
+        "strength": { "type": "integer", "minimum": 0, "maximum": 100 },
+        "speed": { "type": "integer", "minimum": 0, "maximum": 100 },
+        "technique": { "type": "integer", "minimum": 0, "maximum": 100 },
+        "stamina": { "type": "integer", "minimum": 0, "maximum": 100 },
+        "leash": { "type": "integer", "minimum": 0, "maximum": 100 }
       },
       "required": [
         "strength",
@@ -614,27 +636,116 @@
       ],
       "additionalProperties": false
     },
-    "leash": {
+    "positionShare": {
       "type": "object",
-      "description": "leashCells = minCells + leash * cellsPer99 / 99 (entero).",
       "properties": {
-        "_doc": {
-          "type": "string"
-        },
-        "minCells": {
-          "type": "integer",
-          "minimum": 0,
-          "maximum": 20
-        },
-        "cellsPer99": {
-          "type": "integer",
-          "minimum": 0,
-          "maximum": 100
-        }
+        "_doc": { "type": "string" },
+        "Goalkeeper": { "$ref": "#/$defs/attributeShare" },
+        "Defender": { "$ref": "#/$defs/attributeShare" },
+        "Midfielder": { "$ref": "#/$defs/attributeShare" },
+        "Forward": { "$ref": "#/$defs/attributeShare" }
+      },
+      "required": ["Goalkeeper", "Defender", "Midfielder", "Forward"],
+      "additionalProperties": false
+    },
+    "positionFloorEntry": {
+      "type": "object",
+      "description": "Suelo adicional por atributo, solo para los atributos que la posición necesita garantizados; ninguna clave es obligatoria.",
+      "properties": {
+        "_doc": { "type": "string" },
+        "strength": { "type": "integer", "minimum": 1, "maximum": 99 },
+        "speed": { "type": "integer", "minimum": 1, "maximum": 99 },
+        "technique": { "type": "integer", "minimum": 1, "maximum": 99 },
+        "stamina": { "type": "integer", "minimum": 1, "maximum": 99 },
+        "leash": { "type": "integer", "minimum": 1, "maximum": 99 }
+      },
+      "additionalProperties": false
+    },
+    "positionFloors": {
+      "type": "object",
+      "properties": {
+        "_doc": { "type": "string" },
+        "Goalkeeper": { "$ref": "#/$defs/positionFloorEntry" },
+        "Defender": { "$ref": "#/$defs/positionFloorEntry" },
+        "Midfielder": { "$ref": "#/$defs/positionFloorEntry" },
+        "Forward": { "$ref": "#/$defs/positionFloorEntry" }
+      },
+      "required": ["Goalkeeper", "Defender", "Midfielder", "Forward"],
+      "additionalProperties": false
+    },
+    "bodies": {
+      "type": "object",
+      "description": "Colisión y empuje entre cuerpos (ADR 0020, fase1b-diseno.md §2.1). Sin consumidor todavía en /Sim (paquete R).",
+      "properties": {
+        "_doc": { "type": "string" },
+        "separationEnabled": { "type": "boolean" },
+        "maxPushPerTickMilli": { "$ref": "#/$defs/milli" },
+        "massStrengthWeight": { "type": "integer", "minimum": 0, "maximum": 100 },
+        "massRadiusWeight": { "type": "integer", "minimum": 0, "maximum": 100 },
+        "tacklePushMultiplier": { "type": "integer", "minimum": 0, "maximum": 2000 }
       },
       "required": [
-        "minCells",
-        "cellsPer99"
+        "separationEnabled",
+        "maxPushPerTickMilli",
+        "massStrengthWeight",
+        "massRadiusWeight",
+        "tacklePushMultiplier"
+      ],
+      "additionalProperties": false
+    },
+    "zoneShape": {
+      "type": "object",
+      "description": "Casillas relativas a la casilla-hogar efectiva; -1 = sin límite en esa dirección (ADR 0028).",
+      "properties": {
+        "_doc": { "type": "string" },
+        "forward": { "type": "integer", "minimum": -1, "maximum": 20 },
+        "back": { "type": "integer", "minimum": -1, "maximum": 20 },
+        "sides": { "type": "integer", "minimum": -1, "maximum": 20 }
+      },
+      "required": ["forward", "back", "sides"],
+      "additionalProperties": false
+    },
+    "actionZoneShape": {
+      "type": "object",
+      "properties": {
+        "_doc": { "type": "string" },
+        "Goalkeeper": { "$ref": "#/$defs/zoneShape" },
+        "Defender": { "$ref": "#/$defs/zoneShape" },
+        "Midfielder": { "$ref": "#/$defs/zoneShape" },
+        "Forward": { "$ref": "#/$defs/zoneShape" }
+      },
+      "required": ["Goalkeeper", "Defender", "Midfielder", "Forward"],
+      "additionalProperties": false
+    },
+    "leashScalePercent": {
+      "type": "object",
+      "properties": {
+        "_doc": { "type": "string" },
+        "at1": { "type": "integer", "minimum": 0, "maximum": 1000 },
+        "at99": { "type": "integer", "minimum": 0, "maximum": 1000 }
+      },
+      "required": ["at1", "at99"],
+      "additionalProperties": false
+    },
+    "actionZone": {
+      "type": "object",
+      "description": "Zona de acción con forma que sustituye al radio de correa duro (ADR 0028, fase1b-diseno.md §1.3, §2.2). Sin consumidor todavía en /Sim (paquete R).",
+      "properties": {
+        "_doc": { "type": "string" },
+        "shape": { "$ref": "#/$defs/actionZoneShape" },
+        "scaleFromLeashPercent": { "$ref": "#/$defs/leashScalePercent" },
+        "outerLimitMultiplier": { "type": "integer", "minimum": 0, "maximum": 2000 },
+        "outsidePenaltyPerCell": { "$ref": "#/$defs/penalty" },
+        "disciplineWeightPercent": { "type": "integer", "minimum": 0, "maximum": 1000 },
+        "retreatBonusOutsidePerCell": { "$ref": "#/$defs/penalty" }
+      },
+      "required": [
+        "shape",
+        "scaleFromLeashPercent",
+        "outerLimitMultiplier",
+        "outsidePenaltyPerCell",
+        "disciplineWeightPercent",
+        "retreatBonusOutsidePerCell"
       ],
       "additionalProperties": false
     },

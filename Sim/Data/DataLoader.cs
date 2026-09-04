@@ -42,6 +42,8 @@ public static class DataLoader
         string? weightsContent = null;
         string? tuningPath = null;
         string? tuningContent = null;
+        string? stylesPath = null;
+        string? stylesContent = null;
 
         foreach (var path in files.Keys.OrderBy(p => p, StringComparer.Ordinal))
         {
@@ -49,6 +51,11 @@ public static class DataLoader
             if (path.StartsWith("races/", StringComparison.Ordinal))
             {
                 races.Add(ParseRace(path, content));
+            }
+            else if (path == "tags/styles.json")
+            {
+                stylesPath = path;
+                stylesContent = content;
             }
             else if (path == "traits/traits.json")
             {
@@ -91,9 +98,15 @@ public static class DataLoader
             throw new DataException("sim/tuning.json", "$", "fichero requerido ausente");
         }
 
+        if (stylesContent is null)
+        {
+            throw new DataException("tags/styles.json", "$", "fichero requerido ausente");
+        }
+
         var traits = ParseTraits(traitsPath!, traitsContent);
         var ai = ParseAiWeights(weightsPath!, weightsContent);
         var tuning = ParseTuning(tuningPath!, tuningContent);
+        var styles = ParseStyles(stylesPath!, stylesContent);
 
         var localization = new Localization(localizationFiles.Select(f => ParseTemplates(f.Path, f.Content)));
         var perks = new List<PerkDefinition>();
@@ -112,7 +125,7 @@ public static class DataLoader
             perks.Add(perk);
         }
 
-        return new Catalog(races, traits, ai, tuning, new PerkCatalog(perks), localization);
+        return new Catalog(races, styles, traits, ai, tuning, new PerkCatalog(perks), localization);
     }
 
     // ---- perks/*.json (RT-033, docs/fase1-diseno.md §2) ----
@@ -427,11 +440,17 @@ public static class DataLoader
 
     // ---- races/*.json ----
 
+    private static readonly string[] RaceKnownKeys =
+    {
+        "id", "name", "speciesTag", "styleTagWeights", "launch", "cellsOccupied", "bodyRadius", "discipline",
+        "attributeBias", "ability", "description", "individualDeviation", "traitWeights", "names",
+    };
+
     private static RaceDefinition ParseRace(string file, string content)
     {
         var doc = JsonDocument.Parse(content);
         var root = new Json(doc.RootElement, file, "$");
-        root.EnsureKnownKeys("id", "name", "tag", "launch", "cellsOccupied", "attributeBias", "individualDeviation", "traitWeights", "names");
+        root.EnsureKnownKeys(RaceKnownKeys);
 
         var idNode = root.Prop("id");
         string idText = idNode.AsString();
@@ -441,9 +460,27 @@ public static class DataLoader
         }
 
         var name = ParseLocalizedName(root.Prop("name"));
-        string tag = root.Prop("tag").AsString();
+
+        var speciesTagNode = root.Prop("speciesTag");
+        string speciesTag = speciesTagNode.AsString();
+        if (!Enum.TryParse<Race>(speciesTag, out _))
+        {
+            throw new DataException(file, speciesTagNode.Path, $"especie desconocida '{speciesTag}'");
+        }
+
+        if (!string.Equals(speciesTag, idText, StringComparison.Ordinal))
+        {
+            // ADR 0024: speciesTag es la etiqueta fija de especie, la misma raza que "id". Un desajuste
+            // solo puede ser un error de copia/pega en el dato (RT-032: error explícito, nunca silencioso).
+            throw new DataException(file, speciesTagNode.Path, $"speciesTag '{speciesTag}' no coincide con id '{idText}'");
+        }
+
+        var styleTagWeights = ParseStyleTagWeights(file, root.Prop("styleTagWeights"));
+
         bool launch = root.Prop("launch").AsBool();
         int cellsOccupied = root.Prop("cellsOccupied").AsInt();
+        int bodyRadius = root.Prop("bodyRadius").AsInt();
+        int discipline = root.Prop("discipline").AsInt();
 
         var biasNode = root.Prop("attributeBias");
         biasNode.EnsureKnownKeys("strength", "speed", "technique", "stamina", "leash");
@@ -453,6 +490,9 @@ public static class DataLoader
             biasNode.Prop("technique").AsInt(),
             biasNode.Prop("stamina").AsInt(),
             biasNode.Prop("leash").AsInt());
+
+        string ability = root.Prop("ability").AsString();
+        var description = ParseLocalizedName(root.Prop("description"));
 
         int individualDeviation = root.Prop("individualDeviation").AsInt();
 
@@ -472,13 +512,97 @@ public static class DataLoader
         var firstNames = namesNode.Prop("first").EnumerateArray().Select(j => j.AsString()).ToList();
         var lastNames = namesNode.Prop("last").EnumerateArray().Select(j => j.AsString()).ToList();
 
-        return new RaceDefinition(raceId, name, tag, launch, cellsOccupied, attributeBias, individualDeviation, traitWeights, firstNames, lastNames);
+        return new RaceDefinition(
+            raceId, name, speciesTag, styleTagWeights, launch, cellsOccupied, bodyRadius, discipline,
+            attributeBias, ability, description, individualDeviation, traitWeights, firstNames, lastNames);
+    }
+
+    /// <summary>
+    /// data/races/&lt;id&gt;.json.styleTagWeights (fase1b-diseno.md §1.1, ADR 0024): pesos enteros que
+    /// deben sumar 100. La suma se comprueba aquí (dato inválido = error explícito, RT-032); la regla de
+    /// diseño de que la dominante esté entre 60 y 85 y de que haya al menos una etiqueta opuesta a la
+    /// identidad de la raza no es mecánicamente verificable y queda en manos de quien autora el dato.
+    /// </summary>
+    private static IReadOnlyList<(StyleTag Style, int Weight)> ParseStyleTagWeights(string file, Json node)
+    {
+        var weights = new List<(StyleTag Style, int Weight)>();
+        int total = 0;
+        foreach (var (key, value) in node.EnumerateObjectEntries())
+        {
+            if (!Enum.TryParse<StyleTag>(key, out var style))
+            {
+                throw new DataException(file, value.Path, $"etiqueta de estilo desconocida '{key}'");
+            }
+
+            int weight = value.AsInt();
+            weights.Add((style, weight));
+            total += weight;
+        }
+
+        if (weights.Count == 0)
+        {
+            throw new DataException(file, node.Path, "styleTagWeights no puede estar vacío");
+        }
+
+        if (total != 100)
+        {
+            throw new DataException(file, node.Path, $"styleTagWeights debe sumar 100 y suma {total}");
+        }
+
+        return weights;
     }
 
     private static LocalizedName ParseLocalizedName(Json node)
     {
         node.EnsureKnownKeys("es", "en");
         return new LocalizedName(node.Prop("es").AsString(), node.Prop("en").AsString());
+    }
+
+    // ---- tags/styles.json ----
+
+    private static readonly string[] StyleTagNames = Enum.GetNames<StyleTag>();
+
+    private static List<StyleDefinition> ParseStyles(string file, string content)
+    {
+        var doc = JsonDocument.Parse(content);
+        var root = new Json(doc.RootElement, file, "$");
+        root.EnsureKnownKeys(StyleTagNames);
+
+        var result = new List<StyleDefinition>();
+        var seen = new HashSet<StyleTag>();
+        foreach (var (key, node) in root.EnumerateObjectEntries())
+        {
+            if (!Enum.TryParse<StyleTag>(key, out var style))
+            {
+                throw new DataException(file, node.Path, $"etiqueta de estilo desconocida '{key}'");
+            }
+
+            node.EnsureKnownKeys("name", "description", "attributeBias");
+            var name = ParseLocalizedName(node.Prop("name"));
+            var description = ParseLocalizedName(node.Prop("description"));
+
+            var biasNode = node.Prop("attributeBias");
+            biasNode.EnsureKnownKeys("strength", "speed", "technique", "stamina", "leash");
+            var attributeBias = new Attributes(
+                biasNode.Prop("strength").AsInt(),
+                biasNode.Prop("speed").AsInt(),
+                biasNode.Prop("technique").AsInt(),
+                biasNode.Prop("stamina").AsInt(),
+                biasNode.Prop("leash").AsInt());
+
+            seen.Add(style);
+            result.Add(new StyleDefinition(style, name, description, attributeBias));
+        }
+
+        foreach (var styleName in StyleTagNames)
+        {
+            if (!seen.Contains(Enum.Parse<StyleTag>(styleName)))
+            {
+                throw new DataException(file, root.Path, $"falta la etiqueta de estilo '{styleName}'");
+            }
+        }
+
+        return result;
     }
 
     // ---- traits/traits.json ----
@@ -708,7 +832,7 @@ public static class DataLoader
             "regulationTicks", "goldenGoalMaxTicks", "decisionIntervalTicks", "transitionTicks",
             "assistWindowTicks",
             "movement", "ball", "states", "pass", "dribble", "shot", "save", "tackle", "injury", "referee",
-            "restart", "generation", "leash", "progression");
+            "restart", "generation", "bodies", "actionZone", "progression");
 
         return new Tuning(
             root.Prop("regulationTicks").AsInt(),
@@ -728,7 +852,8 @@ public static class DataLoader
             ParseReferee(root.Prop("referee")),
             ParseRestart(root.Prop("restart")),
             ParseGeneration(root.Prop("generation")),
-            ParseLeash(root.Prop("leash")),
+            ParseBodies(root.Prop("bodies")),
+            ParseActionZone(root.Prop("actionZone")),
             ParseProgression(root.Prop("progression")));
     }
 
@@ -862,32 +987,147 @@ public static class DataLoader
             node.Prop("penaltyTicks").AsInt());
     }
 
+    /// <summary>tuning.generation (fase1b-diseno.md §1.3, ADR 0025, ADR 0027): modelo de presupuesto de atributos.</summary>
     private static GenerationTuning ParseGeneration(Json node)
     {
-        node.EnsureKnownKeys("positionBias", "leashBase", "traitCountWeights", "goalkeeperTraitChance");
+        node.EnsureKnownKeys(
+            "budgetByRarity", "budgetPerLevel", "attributeFloor", "attributeCap", "rangeByRarity",
+            "positionShare", "positionFloors", "traitCountWeights", "goalkeeperTraitChance");
 
-        var biasNode = node.Prop("positionBias");
-        biasNode.EnsureKnownKeys("Goalkeeper", "Defender", "Midfielder", "Forward");
-        var positionBias = new PositionBiasTable(
-            ParsePositionBiasEntry(biasNode.Prop("Goalkeeper")),
-            ParsePositionBiasEntry(biasNode.Prop("Defender")),
-            ParsePositionBiasEntry(biasNode.Prop("Midfielder")),
-            ParsePositionBiasEntry(biasNode.Prop("Forward")));
+        var budgetNode = node.Prop("budgetByRarity");
+        budgetNode.EnsureKnownKeys("common", "rare", "legendary");
+        var budgetByRarity = new RarityBudgetTable(
+            budgetNode.Prop("common").AsInt(),
+            budgetNode.Prop("rare").AsInt(),
+            budgetNode.Prop("legendary").AsInt());
+
+        int budgetPerLevel = node.Prop("budgetPerLevel").AsInt();
+        int attributeFloor = node.Prop("attributeFloor").AsInt();
+        int attributeCap = node.Prop("attributeCap").AsInt();
+
+        var rangeNode = node.Prop("rangeByRarity");
+        rangeNode.EnsureKnownKeys("common", "rare", "legendary");
+        var rangeByRarity = new RarityRangeTable(
+            ParseAttributeRange(rangeNode.Prop("common")),
+            ParseAttributeRange(rangeNode.Prop("rare")),
+            ParseAttributeRange(rangeNode.Prop("legendary")));
+
+        var shareNode = node.Prop("positionShare");
+        shareNode.EnsureKnownKeys("Goalkeeper", "Defender", "Midfielder", "Forward");
+        var positionShare = new PositionShareTable(
+            ParseAttributeShareSummingTo100(shareNode.Prop("Goalkeeper")),
+            ParseAttributeShareSummingTo100(shareNode.Prop("Defender")),
+            ParseAttributeShareSummingTo100(shareNode.Prop("Midfielder")),
+            ParseAttributeShareSummingTo100(shareNode.Prop("Forward")));
+
+        var floorsNode = node.Prop("positionFloors");
+        floorsNode.EnsureKnownKeys("Goalkeeper", "Defender", "Midfielder", "Forward");
+        var positionFloors = new PositionFloorTable(
+            ParsePositionFloorEntry(floorsNode.Prop("Goalkeeper")),
+            ParsePositionFloorEntry(floorsNode.Prop("Defender")),
+            ParsePositionFloorEntry(floorsNode.Prop("Midfielder")),
+            ParsePositionFloorEntry(floorsNode.Prop("Forward")));
 
         var traitCountWeights = node.Prop("traitCountWeights").EnumerateArray().Select(j => j.AsInt()).ToList();
 
-        return new GenerationTuning(positionBias, node.Prop("leashBase").AsInt(), traitCountWeights, node.Prop("goalkeeperTraitChance").AsInt());
+        return new GenerationTuning(
+            budgetByRarity, budgetPerLevel, attributeFloor, attributeCap, rangeByRarity, positionShare,
+            positionFloors, traitCountWeights, node.Prop("goalkeeperTraitChance").AsInt());
     }
 
-    private static Attributes ParsePositionBiasEntry(Json node)
+    private static AttributeRange ParseAttributeRange(Json node)
+    {
+        node.EnsureKnownKeys("min", "max");
+        return new AttributeRange(node.Prop("min").AsInt(), node.Prop("max").AsInt());
+    }
+
+    /// <summary>tuning.generation.positionShare.&lt;position&gt;: los cinco porcentajes deben sumar 100 (RT-032).</summary>
+    private static AttributeShare ParseAttributeShareSummingTo100(Json node)
     {
         node.EnsureKnownKeys("strength", "speed", "technique", "stamina", "leash");
-        return new Attributes(
+        var share = new AttributeShare(
             node.Prop("strength").AsInt(),
             node.Prop("speed").AsInt(),
             node.Prop("technique").AsInt(),
             node.Prop("stamina").AsInt(),
             node.Prop("leash").AsInt());
+
+        int total = share.Strength + share.Speed + share.Technique + share.Stamina + share.Leash;
+        if (total != 100)
+        {
+            throw new DataException(node.File, node.Path, $"positionShare debe sumar 100 y suma {total}");
+        }
+
+        return share;
+    }
+
+    private static readonly string[] AttributeFloorKeys = { "strength", "speed", "technique", "stamina", "leash" };
+
+    private static IReadOnlyDictionary<AttributeKind, int> ParsePositionFloorEntry(Json node)
+    {
+        node.EnsureKnownKeys(AttributeFloorKeys);
+        var floors = new Dictionary<AttributeKind, int>();
+        foreach (var (key, value) in node.EnumerateObjectEntries())
+        {
+            var attribute = key switch
+            {
+                "strength" => AttributeKind.Strength,
+                "speed" => AttributeKind.Speed,
+                "technique" => AttributeKind.Technique,
+                "stamina" => AttributeKind.Stamina,
+                "leash" => AttributeKind.Leash,
+                _ => throw new DataException(value.File, value.Path, $"atributo desconocido '{key}'"),
+            };
+            floors[attribute] = value.AsInt();
+        }
+
+        return floors;
+    }
+
+    /// <summary>tuning.bodies (fase1b-diseno.md §1.3, ADR 0020). Sin consumidor todavía en /Sim (paquete R).</summary>
+    private static BodiesTuning ParseBodies(Json node)
+    {
+        node.EnsureKnownKeys("separationEnabled", "maxPushPerTickMilli", "massStrengthWeight", "massRadiusWeight", "tacklePushMultiplier");
+        return new BodiesTuning(
+            node.Prop("separationEnabled").AsBool(),
+            node.Prop("maxPushPerTickMilli").AsInt(),
+            node.Prop("massStrengthWeight").AsInt(),
+            node.Prop("massRadiusWeight").AsInt(),
+            node.Prop("tacklePushMultiplier").AsInt());
+    }
+
+    /// <summary>tuning.actionZone (fase1b-diseno.md §1.3, ADR 0028). Sin consumidor todavía en /Sim (paquete R).</summary>
+    private static ActionZoneTuning ParseActionZone(Json node)
+    {
+        node.EnsureKnownKeys(
+            "shape", "scaleFromLeashPercent", "outerLimitMultiplier", "outsidePenaltyPerCell",
+            "disciplineWeightPercent", "retreatBonusOutsidePerCell");
+
+        var shapeNode = node.Prop("shape");
+        shapeNode.EnsureKnownKeys("Goalkeeper", "Defender", "Midfielder", "Forward");
+        var shape = new ActionZoneShapeTable(
+            ParseZoneShape(shapeNode.Prop("Goalkeeper")),
+            ParseZoneShape(shapeNode.Prop("Defender")),
+            ParseZoneShape(shapeNode.Prop("Midfielder")),
+            ParseZoneShape(shapeNode.Prop("Forward")));
+
+        var scaleNode = node.Prop("scaleFromLeashPercent");
+        scaleNode.EnsureKnownKeys("at1", "at99");
+        var scale = new LeashScalePercent(scaleNode.Prop("at1").AsInt(), scaleNode.Prop("at99").AsInt());
+
+        return new ActionZoneTuning(
+            shape,
+            scale,
+            node.Prop("outerLimitMultiplier").AsInt(),
+            node.Prop("outsidePenaltyPerCell").AsInt(),
+            node.Prop("disciplineWeightPercent").AsInt(),
+            node.Prop("retreatBonusOutsidePerCell").AsInt());
+    }
+
+    private static ZoneShape ParseZoneShape(Json node)
+    {
+        node.EnsureKnownKeys("forward", "back", "sides");
+        return new ZoneShape(node.Prop("forward").AsInt(), node.Prop("back").AsInt(), node.Prop("sides").AsInt());
     }
 
     private static ProgressionTuning ParseProgression(Json node)
@@ -909,11 +1149,6 @@ public static class DataLoader
             node.Prop("attributesPerLevel").AsInt());
     }
 
-    private static LeashTuning ParseLeash(Json node)
-    {
-        node.EnsureKnownKeys("minCells", "cellsPer99");
-        return new LeashTuning(node.Prop("minCells").AsInt(), node.Prop("cellsPer99").AsInt());
-    }
 
     /// <summary>
     /// Cursor de lectura sobre un JsonElement que arrastra el fichero y la ruta JSON recorrida, para

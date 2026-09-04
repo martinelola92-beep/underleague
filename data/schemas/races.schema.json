@@ -2,26 +2,52 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://underleague.dev/schemas/races.schema.json",
   "title": "Underleague race definition",
-  "description": "Un fichero por raza en data/races/*.json (RaceDefinition, fase0-diseno.md 2.5).",
+  "description": "Un fichero por raza en data/races/*.json (RaceDefinition, fase1b-diseno.md §1.1).",
   "type": "object",
   "properties": {
     "_doc": { "type": "string" },
     "id": { "$ref": "#/$defs/race" },
     "name": { "$ref": "#/$defs/localizedName" },
-    "tag": { "type": "string", "minLength": 1, "maxLength": 32 },
+    "speciesTag": { "$ref": "#/$defs/race" },
+    "styleTagWeights": { "$ref": "#/$defs/styleTagWeights" },
     "launch": { "type": "boolean" },
     "cellsOccupied": { "type": "integer", "minimum": 1, "maximum": 3 },
+    "bodyRadius": { "type": "integer", "minimum": 1, "maximum": 200 },
+    "discipline": { "type": "integer", "minimum": 0, "maximum": 100 },
     "attributeBias": { "$ref": "#/$defs/attributeBias" },
+    "ability": { "type": "string", "minLength": 1, "maxLength": 64 },
+    "description": { "$ref": "#/$defs/localizedName" },
     "individualDeviation": { "type": "integer", "minimum": 0, "maximum": 40 },
     "traitWeights": { "$ref": "#/$defs/traitWeights" },
     "names": { "$ref": "#/$defs/names" }
   },
-  "required": ["id", "name", "tag", "launch", "cellsOccupied", "attributeBias", "individualDeviation", "traitWeights", "names"],
+  "required": [
+    "id", "name", "speciesTag", "styleTagWeights", "launch", "cellsOccupied", "bodyRadius", "discipline",
+    "attributeBias", "ability", "description", "individualDeviation", "traitWeights", "names"
+  ],
   "additionalProperties": false,
   "$defs": {
     "race": {
       "type": "string",
       "enum": ["Human", "Orc", "Elf", "Dwarf", "Undead", "DarkElf", "Demon", "Vampire", "Lizard"]
+    },
+    "styleTag": {
+      "type": "string",
+      "enum": ["Brute", "Fine", "Bulwark", "Cold", "Neutral"]
+    },
+    "styleTagWeights": {
+      "type": "object",
+      "description": "Pesos enteros no negativos, deben sumar 100 (DataLoader lo comprueba). Dominante 60-85 y al menos una etiqueta opuesta a la identidad de la raza (ADR 0024, no verificable mecánicamente).",
+      "properties": {
+        "_doc": { "type": "string" },
+        "Brute": { "type": "integer", "minimum": 0, "maximum": 100 },
+        "Fine": { "type": "integer", "minimum": 0, "maximum": 100 },
+        "Bulwark": { "type": "integer", "minimum": 0, "maximum": 100 },
+        "Cold": { "type": "integer", "minimum": 0, "maximum": 100 },
+        "Neutral": { "type": "integer", "minimum": 0, "maximum": 100 }
+      },
+      "additionalProperties": false,
+      "minProperties": 1
     },
     "localizedName": {
       "type": "object",

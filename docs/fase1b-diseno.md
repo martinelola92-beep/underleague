@@ -99,6 +99,8 @@ El `attributeBias` del estilo es lo que hace que un elfo `Brute` sea de verdad m
 
 Comprobación obligatoria (ADR 0027): común de nivel 8 (presupuesto 306) ≈ legendario de nivel 2 (308).
 
+**Algoritmo de renormalización implementado** (`Sim.Generation.PlayerGenerator.GenerateAttributes`, paquete Q): el reparto inicial por `positionShare` usa el método del resto mayor (*largest remainder*) para que la suma antes de aplicar sesgos sea exactamente el presupuesto: se asigna `budget × share / 100` (división entera) a cada atributo y el resto sin repartir se entrega, de uno en uno, a los atributos con mayor resto, con empate resuelto por el orden fijo `Strength, Speed, Technique, Stamina, Leash`. Sobre ese reparto se suman `attributeBias` de raza y de estilo y la desviación individual (un dado `[-dev, dev]` por atributo, mismo orden fijo), y cada atributo se acota a `[floor, cap]` con `floor = max(attributeFloor, rangeByRarity[rareza].min, positionFloors[posición][atributo] si existe)` y `cap = min(attributeCap, rangeByRarity[rareza].max)`. Acotar aleja la suma del presupuesto cuando los sesgos empujan un atributo contra su tope; la renormalización final reparte esa diferencia de 1 en 1 en el mismo orden fijo, sumando a los atributos con hueco bajo su techo (si la suma quedó corta) o restando a los que tienen hueco sobre su suelo (si quedó larga), pasada tras pasada, hasta agotar la diferencia o comprobar que una pasada completa no mueve nada (salvaguarda de terminación para baremos mal configurados que no darían margen suficiente). Con los valores de partida de esta sección la suma final iguala siempre el presupuesto exacto, muy por debajo de la tolerancia de ±2 puntos.
+
 ### 1.4 `data/perks/<id>.json` — formato revisado
 
 ```json

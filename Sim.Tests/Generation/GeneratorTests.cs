@@ -1,3 +1,4 @@
+using Underleague.Sim.Data;
 using Underleague.Sim.Generation;
 using Underleague.Sim.Model;
 using Underleague.Sim.Random;
@@ -15,7 +16,7 @@ public class GeneratorTests
 
         for (int i = 0; i < 200; i++)
         {
-            var player = PlayerGenerator.Generate(ref rng, catalog, race, Position.Midfielder, Rarity.Common, 50, i, "Test Player");
+            var player = PlayerGenerator.Generate(ref rng, catalog, race, Position.Midfielder, Rarity.Common, 4, i, "Test Player");
             Assert.InRange(player.Attributes.Strength, 1, 99);
             Assert.InRange(player.Attributes.Speed, 1, 99);
             Assert.InRange(player.Attributes.Technique, 1, 99);
@@ -25,7 +26,7 @@ public class GeneratorTests
     }
 
     [Fact]
-    public void Generate_ExtremeQuality_StillClampsToRange()
+    public void Generate_ExtremeLevel_StillRespectsFloorAndCap()
     {
         var catalog = TestData.LoadCatalog();
         var race = catalog.Race(Race.Orc);
@@ -34,10 +35,12 @@ public class GeneratorTests
 
         for (int i = 0; i < 50; i++)
         {
-            var lowPlayer = PlayerGenerator.Generate(ref rngLow, catalog, race, Position.Defender, Rarity.Common, -100, i, "Low");
-            var highPlayer = PlayerGenerator.Generate(ref rngHigh, catalog, race, Position.Defender, Rarity.Common, 300, i, "High");
-            Assert.InRange(lowPlayer.Attributes.Strength, 1, 99);
-            Assert.InRange(highPlayer.Attributes.Strength, 1, 99);
+            // Nivel 1 (mínimo real) y un nivel muy por encima del máximo de juego (RF-023): la robustez
+            // del acotado a floor/cap no debe depender de que el llamador respete 1..8.
+            var lowPlayer = PlayerGenerator.Generate(ref rngLow, catalog, race, Position.Defender, Rarity.Common, 1, i, "Low");
+            var highPlayer = PlayerGenerator.Generate(ref rngHigh, catalog, race, Position.Defender, Rarity.Legendary, 50, i, "High");
+            AssertWithinFloorAndCap(catalog, race, Position.Defender, Rarity.Common, lowPlayer.Attributes);
+            AssertWithinFloorAndCap(catalog, race, Position.Defender, Rarity.Legendary, highPlayer.Attributes);
         }
     }
 
@@ -50,7 +53,7 @@ public class GeneratorTests
 
         for (int i = 0; i < 200; i++)
         {
-            var player = PlayerGenerator.Generate(ref rng, catalog, race, Position.Forward, Rarity.Common, 50, i, "Test Player");
+            var player = PlayerGenerator.Generate(ref rng, catalog, race, Position.Forward, Rarity.Common, 3, i, "Test Player");
             Assert.InRange(player.Traits.Count, 1, 3);
             Assert.Equal(player.Traits.Count, player.Traits.Distinct().Count());
         }
@@ -65,25 +68,126 @@ public class GeneratorTests
 
         for (int i = 0; i < 200; i++)
         {
-            var player = PlayerGenerator.Generate(ref rng, catalog, race, Position.Goalkeeper, Rarity.Common, 50, i, "Test GK");
+            var player = PlayerGenerator.Generate(ref rng, catalog, race, Position.Goalkeeper, Rarity.Common, 3, i, "Test GK");
             Assert.InRange(player.Traits.Count, 1, 4);
             Assert.Equal(player.Traits.Count, player.Traits.Distinct().Count());
         }
     }
 
     [Fact]
-    public void Generate_TagsIncludeRacePositionAndTraits()
+    public void Generate_TagsIncludeSpeciesStylePositionAndTraits()
     {
         var catalog = TestData.LoadCatalog();
         var race = catalog.Race(Race.Human);
         var rng = RngStreams.Generation(5, 0);
 
-        var player = PlayerGenerator.Generate(ref rng, catalog, race, Position.Forward, Rarity.Common, 50, 1, "Test Player");
-        Assert.Contains(race.Tag, player.Tags);
+        var player = PlayerGenerator.Generate(ref rng, catalog, race, Position.Forward, Rarity.Common, 3, 1, "Test Player");
+        Assert.Contains(race.SpeciesTag, player.Tags);
+        Assert.Contains(player.StyleTag.ToString(), player.Tags);
         Assert.Contains(Position.Forward.ToString(), player.Tags);
         foreach (var trait in player.Traits)
         {
             Assert.Contains(trait.ToString(), player.Tags);
+        }
+
+        Assert.Equal(race.SpeciesTag, player.SpeciesTag);
+        Assert.Equal("Human", player.SpeciesTag);
+    }
+
+    [Fact]
+    public void Generate_IsDeterministic_ForSameSeed()
+    {
+        var catalog = TestData.LoadCatalog();
+        var race = catalog.Race(Race.Orc);
+        var rngA = RngStreams.Generation(11, 0);
+        var rngB = RngStreams.Generation(11, 0);
+
+        var playerA = PlayerGenerator.Generate(ref rngA, catalog, race, Position.Midfielder, Rarity.Rare, 5, 1, "Same");
+        var playerB = PlayerGenerator.Generate(ref rngB, catalog, race, Position.Midfielder, Rarity.Rare, 5, 1, "Same");
+
+        Assert.Equal(playerA.Attributes, playerB.Attributes);
+        Assert.Equal(playerA.StyleTag, playerB.StyleTag);
+        Assert.Equal(playerA.Traits, playerB.Traits);
+    }
+
+    [Theory]
+    [InlineData(Rarity.Common, 1)]
+    [InlineData(Rarity.Common, 8)]
+    [InlineData(Rarity.Rare, 1)]
+    [InlineData(Rarity.Legendary, 2)]
+    [InlineData(Rarity.Legendary, 8)]
+    public void Generate_AttributeSumMatchesBudgetWithinTwoPoints(Rarity rarity, int level)
+    {
+        var catalog = TestData.LoadCatalog();
+        var race = catalog.Race(Race.Human);
+        var generation = catalog.Tuning.Generation;
+        int budget = generation.BudgetByRarity.Of(rarity) + generation.BudgetPerLevel * (level - 1);
+        var rng = RngStreams.Generation(21, (int)rarity * 100 + level);
+
+        foreach (var position in new[] { Position.Goalkeeper, Position.Defender, Position.Midfielder, Position.Forward })
+        {
+            for (int i = 0; i < 30; i++)
+            {
+                var player = PlayerGenerator.Generate(ref rng, catalog, race, position, rarity, level, i, "Budget");
+                var a = player.Attributes;
+                int sum = a.Strength + a.Speed + a.Technique + a.Stamina + a.Leash;
+                Assert.True(Math.Abs(sum - budget) <= 2, $"{position} {rarity} L{level}: sum={sum} budget={budget}");
+            }
+        }
+    }
+
+    [Fact]
+    public void Generate_RangeAndPositionFloorsAreRespected()
+    {
+        var catalog = TestData.LoadCatalog();
+        var generation = catalog.Tuning.Generation;
+        var rng = RngStreams.Generation(22, 0);
+
+        foreach (var race in catalog.Races)
+        {
+            foreach (var position in new[] { Position.Goalkeeper, Position.Defender, Position.Midfielder, Position.Forward })
+            {
+                foreach (var rarity in new[] { Rarity.Common, Rarity.Rare, Rarity.Legendary })
+                {
+                    for (int i = 0; i < 20; i++)
+                    {
+                        var player = PlayerGenerator.Generate(ref rng, catalog, race, position, rarity, 1, i, "Range");
+                        AssertWithinFloorAndCap(catalog, race, position, rarity, player.Attributes);
+                    }
+                }
+            }
+        }
+    }
+
+    [Fact]
+    public void Generate_StyleTagDistribution_ApproximatesRaceWeights_WithLargeSample()
+    {
+        var catalog = TestData.LoadCatalog();
+        var race = catalog.Race(Race.Orc); // Brute 75, Fine 10, Bulwark 8, Cold 4, Neutral 3
+        var rng = RngStreams.Generation(31, 0);
+
+        const int sampleSize = 20000;
+        var counts = new Dictionary<StyleTag, int>();
+        foreach (var (style, _) in race.StyleTagWeights)
+        {
+            counts[style] = 0;
+        }
+
+        for (int i = 0; i < sampleSize; i++)
+        {
+            var player = PlayerGenerator.Generate(ref rng, catalog, race, Position.Midfielder, Rarity.Common, 1, i, "Sample");
+            counts[player.StyleTag]++;
+        }
+
+        foreach (var (style, weight) in race.StyleTagWeights)
+        {
+            double expected = sampleSize * weight / 100.0;
+            // Margen generoso (semilla fija, RT-056): a 20000 muestras la desviación típica de la etiqueta
+            // dominante (p=0.75) es de unos 65 jugadores; se tolera un 4% absoluto (800) para no depender
+            // de la implementación exacta del sorteo, solo de que siga la distribución declarada.
+            double tolerance = sampleSize * 0.04;
+            Assert.True(Math.Abs(counts[style] - expected) <= tolerance,
+                $"{style}: esperado {expected}, obtenido {counts[style]}");
         }
     }
 
@@ -156,6 +260,7 @@ public class GeneratorTests
         Assert.Equal(teamA.Players.Select(p => p.Name), teamB.Players.Select(p => p.Name));
         Assert.Equal(teamA.Players.Select(p => p.Attributes), teamB.Players.Select(p => p.Attributes));
         Assert.Equal(teamA.Players.Select(p => p.Rarity), teamB.Players.Select(p => p.Rarity));
+        Assert.Equal(teamA.Players.Select(p => p.StyleTag), teamB.Players.Select(p => p.StyleTag));
         Assert.Equal(teamA.Players.SelectMany(p => p.Traits), teamB.Players.SelectMany(p => p.Traits));
     }
 
@@ -170,5 +275,26 @@ public class GeneratorTests
         var teamB = TeamGenerator.Generate(ref rngB, catalog, "human_50", Race.Human, 50, 1);
 
         Assert.NotEqual(teamA.Players.Select(p => p.Name).ToList(), teamB.Players.Select(p => p.Name).ToList());
+    }
+
+    private static void AssertWithinFloorAndCap(Catalog catalog, RaceDefinition race, Position position, Rarity rarity, Attributes attributes)
+    {
+        var generation = catalog.Tuning.Generation;
+        var range = rarity switch
+        {
+            Rarity.Common => generation.RangeByRarity.Common,
+            Rarity.Rare => generation.RangeByRarity.Rare,
+            Rarity.Legendary => generation.RangeByRarity.Legendary,
+            _ => throw new ArgumentOutOfRangeException(nameof(rarity)),
+        };
+        var positionFloors = generation.PositionFloors.Of(position);
+
+        foreach (var kind in new[] { AttributeKind.Strength, AttributeKind.Speed, AttributeKind.Technique, AttributeKind.Stamina, AttributeKind.Leash })
+        {
+            int floor = Math.Max(generation.AttributeFloor, Math.Max(range.Min, positionFloors.TryGetValue(kind, out int f) ? f : generation.AttributeFloor));
+            int cap = Math.Min(generation.AttributeCap, range.Max);
+            int value = attributes.Get(kind);
+            Assert.True(value >= floor && value <= cap, $"{race.Id} {position} {rarity} {kind}={value} fuera de [{floor},{cap}]");
+        }
     }
 }

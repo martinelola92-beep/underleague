@@ -91,18 +91,50 @@
     "kickoffTicks": 15,
     "penaltyTicks": 45
   },
-  "generation": {
-    "positionBias": {
-      "Goalkeeper": { "strength": 4, "speed": 0, "technique": 2, "stamina": 4, "leash": -30 },
-      "Defender":   { "strength": 6, "speed": -2, "technique": -4, "stamina": 4, "leash": -5 },
-      "Midfielder": { "strength": -2, "speed": 2, "technique": 4, "stamina": 6, "leash": 8 },
-      "Forward":    { "strength": 0, "speed": 6, "technique": 4, "stamina": -4, "leash": 0 }
+  "bodies": {
+    "_doc": "Colisión y empuje entre cuerpos (ADR 0020, fase1b-diseno.md §2.1). Sin consumidor todavía en /Sim: lo añade el paquete R (Cuerpos, zona y comportamiento); se carga aquí para que exista y se valide.",
+    "separationEnabled": true,
+    "maxPushPerTickMilli": 60,
+    "massStrengthWeight": 60,
+    "massRadiusWeight": 40,
+    "tacklePushMultiplier": 250
+  },
+  "actionZone": {
+    "_doc": "Forma de la zona por posición, en casillas relativas a la casilla-hogar efectiva (ADR 0028). -1 = sin límite en esa dirección. Sin consumidor todavía en /Sim: lo añade el paquete R; se carga aquí para que exista y se valide.",
+    "shape": {
+      "Goalkeeper":  { "forward": 1, "back": 0, "sides": 1 },
+      "Defender":    { "forward": 3, "back": -1, "sides": 2 },
+      "Midfielder":  { "forward": 5, "back": 4, "sides": 3 },
+      "Forward":     { "forward": -1, "back": 1, "sides": 2 }
     },
-    "leashBase": 50,
+    "scaleFromLeashPercent": { "at1": 60, "at99": 150 },
+    "outerLimitMultiplier": 200,
+    "outsidePenaltyPerCell": 120,
+    "disciplineWeightPercent": 100,
+    "retreatBonusOutsidePerCell": 90
+  },
+  "generation": {
+    "_doc": "Modelo de presupuesto de la generación de jugadores (ADR 0025, ADR 0027, fase1b-diseno.md §1.3). budget = budgetByRarity[rarity] + budgetPerLevel*(level-1); se reparte por positionShare (porcentajes que suman 100), se suman los sesgos de raza y estilo y la desviación individual, y el resultado se renormaliza al presupuesto y se acota a rangeByRarity y a positionFloors. Ver Sim.Generation.PlayerGenerator para el algoritmo exacto.",
+    "budgetByRarity": { "common": 250, "rare": 275, "legendary": 300 },
+    "budgetPerLevel": 8,
+    "attributeFloor": 25,
+    "attributeCap": 92,
+    "rangeByRarity": { "common": { "min": 40, "max": 70 }, "rare": { "min": 45, "max": 78 }, "legendary": { "min": 50, "max": 86 } },
+    "positionShare": {
+      "Goalkeeper": { "strength": 22, "speed": 24, "technique": 22, "stamina": 22, "leash": 10 },
+      "Defender":   { "strength": 26, "speed": 18, "technique": 16, "stamina": 22, "leash": 18 },
+      "Midfielder": { "strength": 16, "speed": 20, "technique": 24, "stamina": 22, "leash": 18 },
+      "Forward":    { "strength": 20, "speed": 24, "technique": 24, "stamina": 16, "leash": 16 }
+    },
+    "positionFloors": {
+      "Goalkeeper": { "strength": 40, "speed": 40, "technique": 40, "stamina": 40 },
+      "Defender":   { "strength": 40 },
+      "Midfielder": { "technique": 38 },
+      "Forward":    { "speed": 38 }
+    },
     "traitCountWeights": [50, 35, 15],
     "goalkeeperTraitChance": 5000
   },
-  "leash": { "minCells": 1, "cellsPer99": 8 },
   "progression": {
     "_doc": "Progresión entre partidos (fase 1 §6, RF-025/RF-027). experiencePerLevel es acumulada: la entrada i es la experiencia mínima del nivel i+1; ocho entradas, nivel máximo 8 (RF-023). attributesPerLevel se suma a cada atributo salvo la correa.",
     "matchExperience": 100,

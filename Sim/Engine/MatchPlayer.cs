@@ -72,9 +72,12 @@ internal sealed class MatchPlayer
             LeashBonus += trait.LeashBonus;
         }
 
-        var leash = catalog.Tuning.Leash;
-        _leashMinCells = leash.MinCells;
-        _leashCellsPer99 = leash.CellsPer99;
+        // tuning.leash desapareció como sección propia (fase1b-diseno.md §1.3, ADR 0028: la zona de
+        // acción la sustituye); el paquete R consumirá tuning.actionZone en su lugar. Ajuste mínimo del
+        // paquete Q para mantener la compilación sin cambiar comportamiento mientras tanto: mismos
+        // valores que tenía data/sim/tuning.json.leash (minCells 1, cellsPer99 8).
+        _leashMinCells = 1;
+        _leashCellsPer99 = 8;
         Recalculate();
     }
 

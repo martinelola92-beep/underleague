@@ -1,10 +1,15 @@
 {
   "id": "Human",
   "name": { "es": "Humanos", "en": "Humans" },
-  "tag": "Neutral",
+  "speciesTag": "Human",
+  "styleTagWeights": { "Neutral": 70, "Brute": 10, "Fine": 10, "Bulwark": 6, "Cold": 4 },
   "launch": true,
   "cellsOccupied": 1,
+  "bodyRadius": 32,
+  "discipline": 55,
   "attributeBias": { "strength": 0, "speed": 0, "technique": 0, "stamina": 0, "leash": 0 },
+  "ability": "quick_learner",
+  "description": { "es": "Sin ventajas ni desventajas marcadas. El club de referencia para aprender las reglas.", "en": "No marked strengths or weaknesses. The reference club for learning the ropes." },
   "individualDeviation": 8,
   "traitWeights": { "Aggressive": 10, "Fast": 10, "Scorer": 10, "LongShot": 10, "Cerebral": 12, "Dirty": 8, "Resilient": 10, "Coward": 8, "Leader": 12, "Lazy": 10 },
   "names": {

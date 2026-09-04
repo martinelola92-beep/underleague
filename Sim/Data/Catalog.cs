@@ -300,7 +300,8 @@ public sealed record Tuning(
     RefereeTuning Referee,
     RestartTuning Restart,
     GenerationTuning Generation,
-    LeashTuning Leash,
+    BodiesTuning Bodies,
+    ActionZoneTuning ActionZone,
     ProgressionTuning Progression);
 
 /// <summary>
@@ -373,6 +374,7 @@ public sealed class Localization
 /// <summary>Conjunto de datos cargado de /data, listo para pasar a Simulator.Run.</summary>
 public sealed record Catalog(
     IReadOnlyList<RaceDefinition> Races,
+    IReadOnlyList<StyleDefinition> Styles,
     IReadOnlyList<TraitDefinition> Traits,
     AiWeights Ai,
     Tuning Tuning,
@@ -382,6 +384,10 @@ public sealed record Catalog(
     /// <summary>Busca la definición de la raza id; lanza si no está en el catálogo.</summary>
     public RaceDefinition Race(Race id) =>
         Races.FirstOrDefault(r => r.Id == id) ?? throw new InvalidOperationException($"raza no encontrada en el catálogo: {id}");
+
+    /// <summary>Busca la definición de la etiqueta de estilo id; lanza si no está en el catálogo.</summary>
+    public StyleDefinition Style(StyleTag id) =>
+        Styles.FirstOrDefault(s => s.Id == id) ?? throw new InvalidOperationException($"etiqueta de estilo no encontrada en el catálogo: {id}");
 
     /// <summary>Busca la definición del rasgo id; lanza si no está en el catálogo.</summary>
     public TraitDefinition Trait(Trait id) =>

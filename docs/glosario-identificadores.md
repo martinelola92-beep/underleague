@@ -103,6 +103,23 @@ Raza, posición y rasgo comparten el sistema de etiquetas (RF-022d): el id del r
 
 `Human`, `Orc`, `Elf`, `Dwarf`, `Undead`, `DarkElf`, `Demon`, `Vampire`, `Lizard`. Prototipo (D-5): `Human`, `Orc`, `Elf`.
 
+## Rediseño espacial (v0.9.1, ADR 0020-0029)
+
+| Español | Identificador |
+|---|---|
+| Etiqueta de especie | `SpeciesTag` (`speciesTag` en JSON) |
+| Etiqueta de estilo | `StyleTag` (`styleTag`, `styleTagWeights`) |
+| Radio de cuerpo | `BodyRadius` (`bodyRadius`) |
+| Disciplina | `Discipline` (`discipline`) |
+| Zona de acción | `ActionZone` (`actionZone`, con `forward`, `back`, `sides`) |
+| Margen exterior | `OuterLimit` (`outerLimitMultiplier`) |
+| Separación / empuje | `Separation` / `Push` (`bodies`) |
+| Presupuesto de atributos | `Budget` (`budgetByRarity`, `budgetPerLevel`, `positionShare`, `positionFloors`) |
+| Habilidad racial | `RaceAbility` (`ability`) |
+| Vínculo de colocación | `Link` (`links`: `beside`, `ahead`, `behind`, `left`, `right`, `diagonalAhead`, `diagonalBehind`) |
+| Eje de activación | `Axis` (`axis`: `identity`, `accumulation`, `alignment`, `startZone`, `geometry`, `matchState`, `composition`, `proximity`) |
+| Buscar espacio / presionar | `FindSpace` / `PressCarrier` |
+
 ## Simulación
 
 | Español | Identificador |

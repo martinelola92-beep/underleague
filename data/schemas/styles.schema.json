@@ -1,0 +1,54 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://underleague.dev/schemas/styles.schema.json",
+  "title": "Underleague style tag definitions",
+  "description": "data/tags/styles.json: las cinco etiquetas de estilo individual (StyleDefinition, ADR 0024, fase1b-diseno.md §1.2). name y description son texto a mano (docs/estilo-descripciones.md); attributeBias se suma al de la raza en Sim.Generation.PlayerGenerator.",
+  "type": "object",
+  "properties": {
+    "_doc": { "type": "string" },
+    "Brute": { "$ref": "#/$defs/style" },
+    "Fine": { "$ref": "#/$defs/style" },
+    "Bulwark": { "$ref": "#/$defs/style" },
+    "Cold": { "$ref": "#/$defs/style" },
+    "Neutral": { "$ref": "#/$defs/style" }
+  },
+  "required": ["Brute", "Fine", "Bulwark", "Cold", "Neutral"],
+  "additionalProperties": false,
+  "$defs": {
+    "style": {
+      "type": "object",
+      "properties": {
+        "_doc": { "type": "string" },
+        "name": { "$ref": "#/$defs/localizedName" },
+        "description": { "$ref": "#/$defs/localizedName" },
+        "attributeBias": { "$ref": "#/$defs/attributeBias" }
+      },
+      "required": ["name", "description", "attributeBias"],
+      "additionalProperties": false
+    },
+    "localizedName": {
+      "type": "object",
+      "properties": {
+        "_doc": { "type": "string" },
+        "es": { "type": "string", "minLength": 1 },
+        "en": { "type": "string", "minLength": 1 }
+      },
+      "required": ["es", "en"],
+      "additionalProperties": false
+    },
+    "attributeBias": {
+      "type": "object",
+      "description": "Sesgo por atributo, rango razonable -40..40 (RT-023).",
+      "properties": {
+        "_doc": { "type": "string" },
+        "strength": { "type": "integer", "minimum": -40, "maximum": 40 },
+        "speed": { "type": "integer", "minimum": -40, "maximum": 40 },
+        "technique": { "type": "integer", "minimum": -40, "maximum": 40 },
+        "stamina": { "type": "integer", "minimum": -40, "maximum": 40 },
+        "leash": { "type": "integer", "minimum": -40, "maximum": 40 }
+      },
+      "required": ["strength", "speed", "technique", "stamina", "leash"],
+      "additionalProperties": false
+    }
+  }
+}

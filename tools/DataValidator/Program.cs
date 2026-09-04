@@ -186,6 +186,7 @@ static string? MapSchemaFile(string relativePath)
         "ai/weights.json" => "ai-weights.schema.json",
         "sim/tuning.json" => "tuning.schema.json",
         "balance/reference.json" => "balance-reference.schema.json",
+        "tags/styles.json" => "styles.schema.json",
         _ => null,
     };
 }

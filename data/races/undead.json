@@ -1,0 +1,19 @@
+{
+  "id": "Undead",
+  "name": { "es": "No-muertos", "en": "Undead" },
+  "speciesTag": "Undead",
+  "styleTagWeights": { "Cold": 72, "Brute": 12, "Fine": 8, "Bulwark": 8 },
+  "launch": true,
+  "cellsOccupied": 1,
+  "bodyRadius": 28,
+  "discipline": 65,
+  "attributeBias": { "strength": 2, "speed": -10, "technique": 4, "stamina": 14, "leash": -2 },
+  "ability": "numb",
+  "description": { "es": "No sienten dolor ni miedo. Lentos pero implacables, cuesta pararlos del todo.", "en": "They feel neither pain nor fear. Slow but relentless, hard to stop for good." },
+  "individualDeviation": 8,
+  "traitWeights": { "Aggressive": 6, "Fast": 4, "Scorer": 6, "LongShot": 8, "Cerebral": 14, "Dirty": 8, "Resilient": 24, "Coward": 2, "Leader": 10, "Lazy": 18 },
+  "names": {
+    "first": ["Malachar", "Vex", "Orin", "Cael", "Draven", "Malric", "Sever", "Thane", "Cyrus", "Doran", "Ezren", "Grimm", "Ilan", "Kessel", "Loth", "Mordan", "Nex", "Osric", "Ravik", "Zael", "Ashka", "Corvina", "Elowyn", "Isolde", "Lyra", "Morwen", "Neris", "Ravena", "Selis", "Vesper"],
+    "last": ["Huesoseco", "Sinaliento", "Cenizagrís", "Tumbafría", "Vozmuerta", "Osamenta", "Nochehueca", "Polvorento", "Sudariofrío", "Cripta"]
+  }
+}

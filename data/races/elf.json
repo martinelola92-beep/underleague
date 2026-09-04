@@ -1,10 +1,15 @@
 {
   "id": "Elf",
   "name": { "es": "Elfos", "en": "Elves" },
-  "tag": "Fine",
+  "speciesTag": "Elf",
+  "styleTagWeights": { "Fine": 70, "Bulwark": 12, "Brute": 10, "Cold": 8 },
   "launch": true,
   "cellsOccupied": 1,
+  "bodyRadius": 30,
+  "discipline": 35,
   "attributeBias": { "strength": -12, "speed": 6, "technique": 14, "stamina": -6, "leash": 1 },
+  "ability": "elf_touch",
+  "description": { "es": "Técnicos y frágiles. Ganan por velocidad y precisión, pierden si les tocan.", "en": "Technical and fragile. They win on speed and precision, and break if you touch them." },
   "individualDeviation": 8,
   "traitWeights": { "Aggressive": 3, "Fast": 16, "Scorer": 12, "LongShot": 14, "Cerebral": 20, "Dirty": 4, "Resilient": 4, "Coward": 12, "Leader": 8, "Lazy": 7 },
   "names": {

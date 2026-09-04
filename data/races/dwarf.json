@@ -1,0 +1,19 @@
+{
+  "id": "Dwarf",
+  "name": { "es": "Enanos", "en": "Dwarves" },
+  "speciesTag": "Dwarf",
+  "styleTagWeights": { "Bulwark": 75, "Fine": 12, "Brute": 8, "Cold": 5 },
+  "launch": true,
+  "cellsOccupied": 1,
+  "bodyRadius": 30,
+  "discipline": 80,
+  "attributeBias": { "strength": 10, "speed": -14, "technique": -6, "stamina": 18, "leash": -18 },
+  "ability": "roots",
+  "description": { "es": "Bajos, tercos y difíciles de mover. No llegan lejos, pero donde plantan el pie se quedan.", "en": "Short, stubborn and hard to move. They don't cover much ground, but where they plant their feet, they stay." },
+  "individualDeviation": 8,
+  "traitWeights": { "Aggressive": 8, "Fast": 4, "Scorer": 8, "LongShot": 10, "Cerebral": 10, "Dirty": 12, "Resilient": 28, "Coward": 2, "Leader": 14, "Lazy": 4 },
+  "names": {
+    "first": ["Borin", "Dagnar", "Eldrin", "Fendrel", "Grimnir", "Hjalmar", "Ivarr", "Joric", "Kordan", "Loric", "Magnus", "Norin", "Oskar", "Ragnar", "Skorri", "Thrainn", "Ulfgar", "Varin", "Yorik", "Balder", "Astrid", "Brynja", "Dagny", "Freya", "Gerda", "Helka", "Ingrid", "Jorunn", "Runa", "Sigrun"],
+    "last": ["Barbahierro", "Yunquefirme", "Puñoroca", "Cavaprofundo", "Escudopétreo", "Martillonegro", "Vetaoro", "Golpefrío", "Tallapiedra", "Forjagrís"]
+  }
+}
