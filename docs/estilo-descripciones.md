@@ -21,9 +21,11 @@ Ticks, puntos base, nombres de canales o de campos JSON, identificadores, fórmu
 
 ## Convención de porcentajes
 
-Internamente las probabilidades son enteros en base 10.000 y los efectos **suman**, no multiplican. Un `+1500` sobre una base de 2.200 lleva la probabilidad del 22% al 37%: son **quince puntos porcentuales más**, no "un 20% más".
+**Los perks se escriben en puntos porcentuales enteros y redondos.** El JSON declara `"value": 20`, no `"value": 2000`; el cargador convierte a la base interna de 10.000 con la que el motor resuelve. El diseñador escribe y lee la misma cifra que ve el jugador, y los valores del catálogo se limitan a la escala **5, 10, 15, 20, 25, 50**: una escala corta obliga a que cada perk tenga un tamaño reconocible y hace el balanceo comprensible.
 
-Regla: las descripciones expresan estos cambios como **puntos de probabilidad**, redondeados a enteros, con la fórmula "más probabilidad de X" y no "un N% más de X". Si un efecto sí es multiplicativo, se dice "el doble" o "la mitad", nunca un porcentaje. Confundir ambas cosas es la vía más rápida a una descripción que miente, y una descripción que miente incumple RF-012d tanto como una muerte no telegrafiada.
+La base 10.000 se mantiene **solo** dentro del motor, donde hace falta precisión para probabilidades pequeñas (una lesión del 2,4% no se puede expresar en enteros sobre 100).
+
+**Puntos, no proporciones.** Los efectos **suman**: un `+20` sobre una base del 22% la deja en el 42%, que son **veinte puntos porcentuales más**, no "un 20% más" (eso sería 26,4%). Las descripciones dicen "20% más de probabilidad de X" entendido como puntos, que es como lo lee cualquier jugador de un juego de este género, y nunca describen un aumento relativo como si fuera absoluto. Si algún efecto llega a ser realmente multiplicativo, se describe como "el doble" o "la mitad", nunca con un porcentaje. Confundir ambas cosas es la vía más rápida a una descripción que miente, y una descripción que miente incumple RF-012d tanto como una muerte no telegrafiada.
 
 ## Qué se genera y qué se escribe
 
