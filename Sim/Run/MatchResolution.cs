@@ -27,6 +27,9 @@ internal static class MatchResolution
     /// <summary>Detalle de una lesión grave en el evento INJURY.</summary>
     private const string SevereDetail = "severe";
 
+    /// <summary>Prefijo del contador de inventario de consumibles (paquete X, X-9).</summary>
+    private const string ConsumableOwnedCounter = "consumable_owned:";
+
     /// <summary>Resultado de aplicar un partido al estado de la run.</summary>
     internal sealed record Applied(RunState State, RunMatchSummary Summary, RunOutcome Outcome);
 
@@ -154,6 +157,11 @@ internal static class MatchResolution
             .WithRoster(players)
             .WithNodeCompleted(node.Id, node.Kind, won ? NodeResult.Won : NodeResult.Lost);
 
+        // 5. Consumibles gastados y alineación depurada. Los dos son consecuencia directa del partido y
+        //    los dos tienen que ocurrir aquí, antes de que el jugador vuelva al mapa.
+        next = ConsumeConsumables(next, result.Report);
+        next = PruneLineup(ClearSevereInjuryRisks(next));
+
         var outcome = Decide(node, won, defeatTick, result.Report.Ticks);
         return new Applied(next, summary, outcome);
     }
@@ -241,6 +249,76 @@ internal static class MatchResolution
                 Counters = definition.Counters,
             };
         }
+    }
+
+    /// <summary>
+    /// Gasta los consumibles del partido (RF-085). Los usados descuentan su unidad del inventario
+    /// (<c>consumable_owned:&lt;id&gt;</c>, el contador que rellena el mercado del paquete X, X-9) y la
+    /// lista de equipados se vacía entera: "no persisten entre partidos" es literal, y RF-080 dice que se
+    /// equipan <b>antes de cada partido</b>. Lo que no se usó sigue en el inventario y se puede volver a
+    /// equipar.
+    /// </summary>
+    private static RunState ConsumeConsumables(RunState state, MatchReport report)
+    {
+        if (state.Consumables.Count == 0)
+        {
+            return state;
+        }
+
+        var next = state;
+        var used = report.ConsumableActivations;
+        for (int i = 0; i < used.Count; i++)
+        {
+            if (used[i].Team != 0)
+            {
+                continue;
+            }
+
+            string counter = ConsumableOwnedCounter + used[i].ConsumableId;
+            next = next.WithCounter(counter, Math.Max(0, next.Counter(counter) - 1));
+        }
+
+        return next.WithConsumables(Array.Empty<EquippedConsumable>());
+    }
+
+    /// <summary>
+    /// Borra las marcas de "alineado a sabiendas con lesión grave" (RF-093 vía 1). El riesgo se asume
+    /// para un partido concreto; el siguiente exige volver a tomarlo.
+    /// </summary>
+    private static RunState ClearSevereInjuryRisks(RunState state)
+    {
+        var next = state;
+        foreach (var (name, value) in state.Counters)
+        {
+            if (value != 0 && name.StartsWith(RunLineup.RiskCounterPrefix, StringComparison.Ordinal))
+            {
+                next = next.WithCounter(name, 0);
+            }
+        }
+
+        return next;
+    }
+
+    /// <summary>
+    /// Quita de la alineación guardada a quien ya no puede jugar (RF-092, RF-093). Sin esto, un titular
+    /// que sale del partido con lesión grave seguiría en la alineación y volvería a saltar al campo en el
+    /// partido siguiente <b>sin que nadie lo decidiera</b>, que es exactamente lo que RF-093 no puede
+    /// permitir: alinear a un lesionado grave es una decisión explícita, y hay que volver a tomarla.
+    /// </summary>
+    private static RunState PruneLineup(RunState state)
+    {
+        var slots = state.Lineup.Slots;
+        var kept = new List<LineupSlot>(slots.Count);
+        for (int i = 0; i < slots.Count; i++)
+        {
+            var player = state.FindPlayer(slots[i].PlayerId);
+            if (player is not null && player.IsAvailable)
+            {
+                kept.Add(slots[i]);
+            }
+        }
+
+        return kept.Count == slots.Count ? state : state.WithLineup(new Lineup(kept));
     }
 
     private static int AvailableCount(IReadOnlyList<RunPlayer> players)

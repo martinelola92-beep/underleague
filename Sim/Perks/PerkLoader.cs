@@ -127,9 +127,20 @@ public static class PerkLoader
         bool lethal = root.TryProp("lethal") is { } lethalNode && lethalNode.AsBool();
         if (lethal)
         {
-            // RF-093: en fase 1 no hay muertes, así que ningún efecto puede producir DEATH y un perk
-            // letal sería una promesa que el motor no cumple.
-            throw new DataException(file, "$.lethal", "en fase 1 no hay muertes: lethal debe ser false");
+            // RF-093 vía 2. Ya no se rechaza: en fase 1 no había muertes y un perk letal era una promesa
+            // que el motor no cumplía; desde la fase 2 el motor la cumple (EffectEngine mata a los
+            // rivales alcanzados por un perk letal que ya no estén sanos, y solo a ellos). Lo que sí se
+            // exige es que el perk pueda alcanzar a un rival: un perk letal que solo se aplica a sí mismo
+            // o a su equipo sería una etiqueta de peligro sin peligro, y RF-013 obliga a destacarlo en el
+            // informe de ojeo, así que tiene que significar algo.
+            if (!ReachesAnOpponent(effects) && !ReachesAnOpponent(elseEffects))
+            {
+                throw new DataException(
+                    file,
+                    "$.lethal",
+                    "un perk letal debe tener algún efecto sobre el rival (target actor, target, opponent u "
+                        + "opposingTeam): matar solo puede alcanzar a un rival (RF-093)");
+            }
         }
 
         Position? positionOnly = null;
@@ -149,6 +160,28 @@ public static class PerkLoader
         return new PerkDefinition(
             id, name, rarity, kind, axis, race, links, trigger, scope, conditionSource, condition,
             effects, elseEffects, limit, accumulates, lethal, positionOnly, tagsRequired, tagsForbidden);
+    }
+
+    /// <summary>
+    /// True si alguno de los efectos puede recaer sobre un jugador del equipo contrario. Es la condición
+    /// que debe cumplir un perk marcado como letal (RF-093, RF-013): los objetivos colectivos propios
+    /// (<c>team</c>, <c>adjacent</c>, <c>withTag</c>, <c>linked</c>) nunca alcanzan a un rival, y
+    /// <c>owner</c> tampoco.
+    /// </summary>
+    private static bool ReachesAnOpponent(IReadOnlyList<EffectDefinition> effects)
+    {
+        for (int i = 0; i < effects.Count; i++)
+        {
+            if (effects[i].Target is EffectTarget.Actor
+                or EffectTarget.Target
+                or EffectTarget.Opponent
+                or EffectTarget.OpposingTeam)
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     // ---------------------------------------------------------------- campos nuevos de §1.4

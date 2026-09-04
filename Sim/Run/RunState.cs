@@ -1,5 +1,6 @@
 using Underleague.Sim.Data;
 using Underleague.Sim.Model;
+using Underleague.Sim.Run.Systems.Items;
 using ProgressionRules = Underleague.Sim.Progression.Progression;
 
 namespace Underleague.Sim.Run;
@@ -415,6 +416,16 @@ public sealed record RunState
     public IReadOnlyDictionary<string, string> DataSnapshot { get; init; } =
         new SortedDictionary<string, string>(StringComparer.Ordinal);
 
+    /// <summary>
+    /// Catálogos de objetos y consumibles de <b>esta</b> run, derivados de <see cref="DataSnapshot"/> por
+    /// <see cref="WithDataSnapshot"/> (RT-061b). No se serializa: es dato derivado, siempre coherente con
+    /// la instantánea, y se reconstruye solo al cargar. Es lo que permite que el equipamiento llegue al
+    /// partido sin que <c>Catalog</c> gane un campo ni <c>IRunSystems</c> un método
+    /// (<c>Sim.Run.Systems.Items.RunEquipment</c> explica por qué). Un estado sin instantánea —el modo de
+    /// depuración de RT-062— juega sin equipamiento.
+    /// </summary>
+    public RunEquipment Equipment { get; init; } = RunEquipment.None;
+
     /// <summary>Mapa del acto actual.</summary>
     public ActMap CurrentMap => MapOf(Act);
 
@@ -728,6 +739,6 @@ public sealed record RunState
             sorted[path] = content;
         }
 
-        return this with { DataSnapshot = sorted };
+        return this with { DataSnapshot = sorted, Equipment = RunEquipment.FromSnapshot(sorted) };
     }
 }

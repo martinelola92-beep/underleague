@@ -55,4 +55,15 @@ public sealed record Lineup(IReadOnlyList<LineupSlot> Slots)
 /// Validación esperada del motor (paquete B): 5..7 titulares, exactamente 1 portero alineado, casillas
 /// en 0..7 x 0..4 sin repetir.
 /// </summary>
-public sealed record TeamSetup(string Id, string Name, Race Race, IReadOnlyList<PlayerDefinition> Players, Lineup Lineup);
+public sealed record TeamSetup(string Id, string Name, Race Race, IReadOnlyList<PlayerDefinition> Players, Lineup Lineup)
+{
+    /// <summary>
+    /// Consumibles equipados por este equipo para este partido (RF-080..085): hasta 3, con al menos uno
+    /// manual y hasta dos condicionales (lo valida <c>RunEngine.Apply(SetConsumables)</c>, RF-080..082).
+    /// Se declara como propiedad <c>init</c> y no como parámetro posicional por la misma razón que
+    /// <c>PlayerDefinition.Perks</c>: las construcciones existentes siguen valiendo sin tocarlas.
+    /// Un equipo rival no lleva ninguno.
+    /// </summary>
+    public IReadOnlyList<Underleague.Sim.Perks.MatchConsumable> Consumables { get; init; } =
+        Array.Empty<Underleague.Sim.Perks.MatchConsumable>();
+}

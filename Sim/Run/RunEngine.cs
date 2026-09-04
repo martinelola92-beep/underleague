@@ -3,8 +3,33 @@ using Underleague.Sim.Engine;
 using Underleague.Sim.Generation;
 using Underleague.Sim.Model;
 using Underleague.Sim.Random;
+using Underleague.Sim.Run.Systems.Consumables;
 
 namespace Underleague.Sim.Run;
+
+/// <summary>Motivo por el que una alineación merece una advertencia antes de confirmarla (RF-012d).</summary>
+public enum LineupWarningKind
+{
+    /// <summary>
+    /// Un titular sale al campo con una lesión grave sin tratar: si vuelve a lesionarse, <b>muere</b>
+    /// (RF-093 vía 1). Es una decisión legítima del jugador —el precedente es RF-002d— pero la interfaz
+    /// tiene que decirlo de forma explícita antes de confirmar.
+    /// </summary>
+    SevereInjuryDeathRisk,
+
+    /// <summary>
+    /// Se juega en inferioridad numérica, con 5 o 6 (RF-002d): con 5 en campo, una sola baja termina la
+    /// run (RF-002b).
+    /// </summary>
+    Shorthanded,
+}
+
+/// <summary>
+/// Advertencia sobre una alineación (RF-012d, RF-002d, RF-093). Es dato estructurado, no texto: el texto
+/// visible lo compone la interfaz desde <c>data/l10n</c>. <c>PlayerId</c> es -1 cuando la advertencia es
+/// del equipo entero y no de un jugador concreto.
+/// </summary>
+public sealed record LineupWarning(LineupWarningKind Kind, int PlayerId);
 
 /// <summary>
 /// Superficie pública del bucle de run (<c>fase2-diseno.md</c> §3). Pura y determinista, igual que
@@ -180,6 +205,44 @@ public static class RunEngine
     }
 
     /// <summary>
+    /// Lo que la interfaz debe advertir <b>antes</b> de confirmar una alineación (RF-012d): que se juega
+    /// en inferioridad (RF-002d) y qué titulares arrastran una lesión grave sin tratar y por tanto pueden
+    /// morir (RF-093 vía 1). Devuelve dato estructurado, no texto: el texto visible lo compone la
+    /// interfaz desde <c>data/l10n</c>.
+    ///
+    /// <para>Ordenado: primero la advertencia de equipo, si la hay, y luego las de jugador por id
+    /// ascendente. Con <paramref name="lineup"/> a null se examina la alineación guardada.</para>
+    /// </summary>
+    public static IReadOnlyList<LineupWarning> LineupWarnings(RunState state, Lineup? lineup = null)
+    {
+        ArgumentNullException.ThrowIfNull(state);
+        var slots = (lineup ?? state.Lineup).Slots;
+        var warnings = new List<LineupWarning>();
+        if (slots.Count < RunRules.MaxStarters)
+        {
+            warnings.Add(new LineupWarning(LineupWarningKind.Shorthanded, -1));
+        }
+
+        var ids = new List<int>(slots.Count);
+        for (int i = 0; i < slots.Count; i++)
+        {
+            var player = state.FindPlayer(slots[i].PlayerId);
+            if (player is { PhysicalState: PhysicalState.SevereInjury })
+            {
+                ids.Add(player.Id);
+            }
+        }
+
+        ids.Sort();
+        for (int i = 0; i < ids.Count; i++)
+        {
+            warnings.Add(new LineupWarning(LineupWarningKind.SevereInjuryDeathRisk, ids[i]));
+        }
+
+        return warnings;
+    }
+
+    /// <summary>
     /// Desenlace de la run (RF-002, RF-002b). Además del desenlace ya registrado en el estado,
     /// comprueba el contador de disponibles frente al mínimo (RF-002e), de modo que cualquier cambio de
     /// plantilla hecho por otro paquete -una venta, un mercenario que se marcha- termine la run igual
@@ -204,7 +267,11 @@ public static class RunEngine
     /// reproducción de un partido desde la semilla (RF-120, RT-061).
     /// </summary>
     public static (MatchSetup Setup, ulong Seed, MatchLineup Lineup) BuildMatch(
-        RunState state, int nodeId, Catalog catalog, IRunSystems? systems = null)
+        RunState state,
+        int nodeId,
+        Catalog catalog,
+        IRunSystems? systems = null,
+        IReadOnlyList<ManualActivation>? manualActivations = null)
     {
         ArgumentNullException.ThrowIfNull(state);
         ArgumentNullException.ThrowIfNull(catalog);
@@ -217,7 +284,15 @@ public static class RunEngine
         }
 
         var lineup = RunLineup.Build(state, catalog);
-        var home = new TeamSetup(state.ClubId, state.ClubId, state.ClubRace, lineup.Starters, lineup.Lineup);
+
+        // Los consumibles equipados entran con el equipo (RF-080..085). Los condicionales se resuelven
+        // solos dentro del partido; el manual (RF-082) solo si el jugador lo pulsó, y eso llega como
+        // parte del estado inicial en manualActivations (docs/arquitectura.md): volver a ejecutar el
+        // partido con la misma lista reproduce exactamente lo mismo (RT-013, RT-061).
+        var home = new TeamSetup(state.ClubId, state.ClubId, state.ClubRace, lineup.Starters, lineup.Lineup)
+        {
+            Consumables = state.Equipment.ForMatch(state.Consumables, manualActivations),
+        };
         var away = systems.OpponentFor(state, node, catalog);
         var referee = systems.RefereeFor(state, node, catalog);
         return (new MatchSetup(home, away, referee), RngStreams.MatchSeed(state.Seed, node.Id), lineup);
@@ -324,15 +399,49 @@ public static class RunEngine
         {
             var player = state.FindPlayer(slots[i].PlayerId)
                 ?? throw new ArgumentException($"la alineación incluye al jugador {slots[i].PlayerId}, que no está en la plantilla", nameof(decision));
-            if (!player.IsAvailable)
+            // RF-092 deja de ser un bloqueo duro y pasa a ser una advertencia (RF-093 vía 1): alinear a
+            // alguien con una lesión grave sin tratar es una decisión legítima del jugador —el precedente
+            // es la inferioridad numérica de RF-002d— con una consecuencia anunciada, que si vuelve a
+            // lesionarse muere. Quien no puede volver al campo de ninguna manera es el muerto.
+            // Las advertencias que la interfaz debe enseñar antes de confirmar las da LineupWarnings.
+            if (player.PhysicalState == PhysicalState.Dead)
             {
                 throw new ArgumentException(
-                    $"la alineación incluye al jugador {player.Id}, que está {player.PhysicalState} y no puede jugar (RF-092, RF-093)",
+                    $"la alineación incluye al jugador {player.Id}, que está muerto (RF-093)",
                     nameof(decision));
             }
         }
 
-        return state.WithLineup(decision.Lineup);
+        return MarkSevereInjuryRisks(state, slots).WithLineup(decision.Lineup);
+    }
+
+    /// <summary>
+    /// Deja anotado en el estado quién sale al campo con una lesión grave sin tratar, y borra la marca de
+    /// quien ya no lo hace (RF-093 vía 1). La marca vale para <b>este</b> partido: sin ella,
+    /// <c>RunLineup</c> no alinea a un lesionado grave ni aunque su nombre siga en la alineación
+    /// guardada, de modo que arriesgarse es siempre una decisión tomada, nunca una herencia.
+    /// </summary>
+    private static RunState MarkSevereInjuryRisks(RunState state, IReadOnlyList<LineupSlot> slots)
+    {
+        var next = state;
+        foreach (var (name, value) in state.Counters)
+        {
+            if (value != 0 && name.StartsWith(RunLineup.RiskCounterPrefix, StringComparison.Ordinal))
+            {
+                next = next.WithCounter(name, 0);
+            }
+        }
+
+        for (int i = 0; i < slots.Count; i++)
+        {
+            var player = state.FindPlayer(slots[i].PlayerId);
+            if (player is { PhysicalState: PhysicalState.SevereInjury })
+            {
+                next = next.WithCounter(RunLineup.RiskCounterPrefix + player.Id.ToString(System.Globalization.CultureInfo.InvariantCulture), 1);
+            }
+        }
+
+        return next;
     }
 
     private static RunState ApplyConsumables(RunState state, SetConsumables decision)
@@ -346,14 +455,33 @@ public static class RunEngine
         if (decision.Consumables.Count > 0)
         {
             bool manual = false;
+            int conditional = 0;
             for (int i = 0; i < decision.Consumables.Count; i++)
             {
-                manual |= decision.Consumables[i].Mode == ConsumableMode.Manual;
+                var consumable = decision.Consumables[i];
+                if (consumable.Mode == ConsumableMode.Manual)
+                {
+                    manual = true;
+                    continue;
+                }
+
+                conditional++;
+
+                // El disparador se valida al equipar, no al empezar el partido: un disparador mal escrito
+                // tiene que doler aquí y no convertirse en un consumible que nunca se dispara (RF-083).
+                _ = ConsumableTriggers.Parse(consumable.Trigger);
             }
 
             if (!manual)
             {
                 throw new ArgumentException("al menos uno de los consumibles equipados debe ser manual (RF-082)", nameof(decision));
+            }
+
+            if (conditional > 2)
+            {
+                throw new ArgumentException(
+                    $"se pueden configurar 2 consumibles condicionales como máximo y se han pedido {conditional} (RF-081)",
+                    nameof(decision));
             }
         }
 

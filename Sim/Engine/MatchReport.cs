@@ -13,6 +13,23 @@ public sealed record PerkActivation(string PerkId, int OwnerId, int Tick, EventT
 public sealed record PerkActivationSummary(string PerkId, int OwnerId, int Activations);
 
 /// <summary>
+/// Un objeto equipado que entró en el partido (RT-043 extendido al equipamiento, RF-075..078). Va en una
+/// lista **separada** de <see cref="PerkActivation"/> a propósito: es lo que permite a <c>/Balance</c>
+/// medir por separado qué aporta un perk y qué un objeto.
+/// <para><c>Effects</c> es el número de efectos aplicados de verdad (contrapartida del maldito incluida);
+/// vale 0 si el objeto es restringido y el portador no lleva su etiqueta, y en ese caso
+/// <c>Detail</c> es <c>"restricted:&lt;Tag&gt;"</c> en vez de <c>"equipped"</c>.</para>
+/// </summary>
+public sealed record ItemActivation(string ItemId, int OwnerId, int Team, int Effects, string Detail);
+
+/// <summary>
+/// Un consumible usado durante el partido (RF-080..085, RT-043). <c>Trigger</c> es el nombre del
+/// disparador que lo resolvió (<c>manual</c> para el slot manual, RF-082) y <c>Tick</c>, el tick exacto:
+/// con eso, volver a ejecutar el partido reproduce la misma activación.
+/// </summary>
+public sealed record ConsumableActivation(string ConsumableId, int Team, int Tick, string Trigger);
+
+/// <summary>
 /// Lo que un contador de un jugador ha sumado en el partido a través de perks con
 /// <c>accumulatesAcrossMatches: true</c> (RF-070, §6). La campaña lo suma al PlayerDefinition siguiente.
 /// </summary>
@@ -118,7 +135,11 @@ public sealed class MatchReport
     /// <summary>Lesiones totales.</summary>
     public int Injuries { get; }
 
-    /// <summary>Muertes totales (siempre 0 en fase 0, RF-093 requiere estado previo).</summary>
+    /// <summary>
+    /// Muertes totales (RF-093). Solo puede subir por las dos vías del requisito: un titular que se
+    /// alineó con lesión grave sin tratar y vuelve a lesionarse, o un perk rival marcado como letal
+    /// sobre un jugador que ya no estaba sano. Un jugador sano nunca muere.
+    /// </summary>
     public int Deaths { get; }
 
     /// <summary>Ticks que el balón pasó en cada tercio absoluto del campo, [3].</summary>
@@ -151,6 +172,12 @@ public sealed class MatchReport
 
     /// <summary>Activaciones agregadas por (perk, jugador), ordenadas por id de perk y de jugador.</summary>
     public IReadOnlyList<PerkActivationSummary> PerksSummary { get; }
+
+    /// <summary>Objetos equipados que entraron en el partido, por id de jugador ascendente (RT-043, RF-075..078).</summary>
+    public IReadOnlyList<ItemActivation> ItemActivations { get; }
+
+    /// <summary>Consumibles usados, en orden cronológico (RT-043, RF-080..085).</summary>
+    public IReadOnlyList<ConsumableActivation> ConsumableActivations { get; }
 
     /// <summary>Publicaciones descartadas por superar SimConfig.MaxDepth (RT-042).</summary>
     public int RecursionCuts { get; }
@@ -185,6 +212,8 @@ public sealed class MatchReport
         GoalkeeperLeftArea = builder.GoalkeeperLeftArea;
         PerkActivations = builder.PerkActivations.ToArray();
         PerksSummary = builder.PerksSummary.ToArray();
+        ItemActivations = builder.ItemActivations.ToArray();
+        ConsumableActivations = builder.ConsumableActivations.ToArray();
         RecursionCuts = builder.RecursionCuts;
     }
 }
@@ -283,6 +312,12 @@ internal sealed class MatchReportBuilder
 
     /// <summary>Resumen por (perk, jugador); lo rellena el motor de efectos al terminar el partido.</summary>
     public List<PerkActivationSummary> PerksSummary { get; } = new();
+
+    /// <summary>Objetos equipados registrados por el motor de efectos al construirse (RT-043).</summary>
+    public List<ItemActivation> ItemActivations { get; } = new();
+
+    /// <summary>Consumibles usados, registrados por el motor de efectos al resolverse (RT-043).</summary>
+    public List<ConsumableActivation> ConsumableActivations { get; } = new();
 
     /// <summary>Publicaciones cortadas por profundidad de recursión (RT-042).</summary>
     public int RecursionCuts { get; set; }

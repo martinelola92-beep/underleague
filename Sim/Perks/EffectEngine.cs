@@ -33,9 +33,33 @@ internal sealed class PerkSubscription
 /// orden determinista de RT-041 (rareza descendente, id de jugador ascendente, id de perk ascendente),
 /// aplica sus efectos y registra la activación.
 /// <para>
-/// El motor solo se construye si algún jugador en campo lleva perks: con 0 perks
-/// <see cref="MatchEngine"/> no tiene <c>EffectEngine</c> y no paga absolutamente nada (§3).
+/// El motor solo se construye si algún jugador en campo lleva perks, un objeto equipado (RF-075..078) o
+/// su equipo lleva consumibles (RF-080..085): sin nada de eso <see cref="MatchEngine"/> no tiene
+/// <c>EffectEngine</c> y no paga absolutamente nada (§3). Con 0 objetos y 0 consumibles la secuencia de
+/// eventos es exactamente la de antes de que existieran (comprobado con la huella de DeterminismTests).
 /// </para>
+///
+/// <para><b>Orden de resolución con equipamiento (extensión de RT-041).</b> RT-041 fija el orden entre
+/// perks simultáneos; con objetos y consumibles en el partido hacen falta dos reglas más, y las tres
+/// juntas son:
+/// <list type="number">
+/// <item><b>Objetos equipados, antes que cualquier perk.</b> Se aplican al construir el motor, es decir
+/// antes de publicar <c>MATCH_START</c>, recorriendo a los jugadores por <b>id ascendente</b> y, dentro de
+/// cada objeto, primero sus <c>effects</c> y después sus <c>drawbackEffects</c>, en el orden del dato. Un
+/// objeto es equipo que el jugador ya lleva puesto cuando el árbitro pita: la condición de un perk que
+/// mire un atributo tiene que ver al portador <b>ya equipado</b>, no a medio vestir. Como cada jugador
+/// lleva un único objeto (RF-076), el id de jugador basta para ordenar y no hace falta un tercer
+/// criterio.</item>
+/// <item><b>Perks</b>, con el criterio de RT-041 intacto: rareza descendente, id de jugador ascendente,
+/// id de perk ordinal ascendente.</item>
+/// <item><b>Consumibles, después de todo lo demás.</b> Se resuelven al principio del tick, antes de que
+/// nadie decida nada, en el orden en que están equipados (equipo local antes que visitante). Llegan
+/// siempre "más tarde" que los objetos, que están puestos desde el tick 0; el único empate posible es un
+/// consumible manual pulsado en el tick 0, y ahí también va después.</item>
+/// </list>
+/// El orden importa poco numéricamente —los modificadores de atributo y de probabilidad son sumas
+/// enteras y conmutativas— pero tiene que estar fijado igualmente: las condiciones NCalc de los perks
+/// <b>leen</b> atributos y probabilidades, así que quién aplica antes cambia lo que el siguiente ve.</para>
 /// </summary>
 internal sealed class EffectEngine : IPerkLinks
 {
@@ -52,6 +76,7 @@ internal sealed class EffectEngine : IPerkLinks
     private readonly int[] _saves;
     private readonly LinkTable? _links;
     private readonly List<MatchPlayer> _targets = new();
+    private readonly ConsumableSlot[] _consumables;
     private readonly int _maxDepth;
 
     private int _depth;
@@ -143,6 +168,11 @@ internal sealed class EffectEngine : IPerkLinks
         {
             _byTrigger[type] = _all.Where(s => (int)s.Perk.Trigger == type).ToArray();
         }
+
+        // El equipamiento se pone ANTES de que empiece el partido: cuando MATCH_START se publica, los
+        // objetos ya están aplicados (ver el orden de resolución en la documentación de la clase).
+        ApplyEquippedItems();
+        _consumables = BuildConsumables(engine.Setup);
     }
 
     /// <summary>Modificadores activos; el motor los consulta en cada resolución probabilística (§2).</summary>
@@ -288,6 +318,243 @@ internal sealed class EffectEngine : IPerkLinks
     /// <summary>Reinicia los límites <c>per: mob</c> al empezar el gol de oro de la turba (§2).</summary>
     public void StartMob() => ResetLimits(LimitScope.Mob);
 
+    // ---------------------------------------------------------------- equipamiento (RF-075..085)
+
+    /// <summary>Ticks lógicos por segundo (RT-020). Lo necesita el disparador "últimos N segundos" (RF-083).</summary>
+    private const int TicksPerSecond = 15;
+
+    /// <summary>
+    /// Consumible equipado por un equipo, con la marca de gastado. Un consumible se resuelve <b>una sola
+    /// vez</b> por partido (RF-085, "se consumen al usarse").
+    /// </summary>
+    private sealed class ConsumableSlot
+    {
+        public ConsumableSlot(MatchConsumable consumable, int team)
+        {
+            Consumable = consumable;
+            Team = team;
+        }
+
+        public MatchConsumable Consumable { get; }
+
+        public int Team { get; }
+
+        public bool Used { get; set; }
+    }
+
+    /// <summary>Objetos equipados registrados en el informe, en el orden en que se aplicaron (RT-043).</summary>
+    public IReadOnlyList<ItemActivation> ItemActivations => _report.ItemActivations;
+
+    /// <summary>
+    /// Aplica el objeto de cada jugador (RF-075..078), por id ascendente y antes de que empiece el
+    /// partido. No ocupa slot de perk (RF-076): no se suscribe a ningún disparador, no tiene condición y
+    /// no aparece en <see cref="Subscriptions"/>; es un pasivo que dura todo el partido.
+    ///
+    /// <para>Un objeto <b>restringido</b> cuyo portador no lleva la etiqueta no aporta nada —tampoco su
+    /// contrapartida— y así queda anotado en el informe, que es lo que permite distinguir "no funcionó"
+    /// de "no lo llevaba".</para>
+    /// </summary>
+    private void ApplyEquippedItems()
+    {
+        for (int i = 0; i < _players.Length; i++)
+        {
+            var owner = _players[i];
+            if (owner.Definition.Item is not { } item)
+            {
+                continue;
+            }
+
+            if (!item.AppliesTo(owner.Definition))
+            {
+                _report.ItemActivations.Add(
+                    new ItemActivation(item.Id, owner.Id, owner.Team, 0, "restricted:" + item.RequiredTag));
+                continue;
+            }
+
+            int applied = ApplyPassiveEffects(owner, item.Effects);
+            applied += ApplyPassiveEffects(owner, item.DrawbackEffects);
+            _report.ItemActivations.Add(new ItemActivation(
+                item.Id,
+                owner.Id,
+                owner.Team,
+                applied,
+                item.DrawbackEffects.Count > 0 ? "cursed" : "equipped"));
+        }
+    }
+
+    /// <summary>Aplica una lista de efectos pasivos al portador y devuelve cuántos surtieron efecto.</summary>
+    private int ApplyPassiveEffects(MatchPlayer owner, IReadOnlyList<EffectDefinition> effects)
+    {
+        int applied = 0;
+        for (int i = 0; i < effects.Count; i++)
+        {
+            if (ApplyPassiveEffect(owner, effects[i]))
+            {
+                applied++;
+            }
+        }
+
+        return applied;
+    }
+
+    /// <summary>
+    /// Un efecto pasivo: sin disparador, sin condición, sin contador y con duración de partido. Es el
+    /// subconjunto que un objeto o un consumible pueden declarar (el cargador de <c>data/items</c> y
+    /// <c>data/consumables</c> ya recorta a <c>modifyAttribute</c> y <c>modifyProbability</c>; los otros
+    /// tres se admiten aquí porque son igual de pasivos y no cuesta nada). Los que necesitan contexto de
+    /// evento —cancelar, contar, derribar, mover el criterio— se ignoran a propósito: un objeto no
+    /// reacciona a nada.
+    /// </summary>
+    private bool ApplyPassiveEffect(MatchPlayer player, EffectDefinition effect)
+    {
+        switch (effect.Type)
+        {
+            case EffectType.ModifyAttribute:
+                _modifiers.AddAttribute(player.Index, effect.Attribute, effect.Value, expiresAtPlayEnd: false);
+                return true;
+            case EffectType.ModifyProbability:
+                _modifiers.AddProbability(player.Index, effect.Probability, effect.Value, expiresAtPlayEnd: false);
+                return true;
+            case EffectType.ModifyLeash:
+                _modifiers.AddLeash(player.Index, effect.Value, expiresAtPlayEnd: false);
+                return true;
+            case EffectType.ModifyKnockdownTicks:
+                _modifiers.AddKnockdownTicks(player.Index, effect.Value);
+                return true;
+            case EffectType.Immunity:
+                _modifiers.AddImmunity(player.Index, effect.Immunity);
+                return true;
+            default:
+                return false;
+        }
+    }
+
+    /// <summary>Consumibles equipados de los dos equipos, local primero (RF-080..083).</summary>
+    private static ConsumableSlot[] BuildConsumables(MatchSetup setup)
+    {
+        var home = setup.Home.Consumables;
+        var away = setup.Away.Consumables;
+        if (home.Count == 0 && away.Count == 0)
+        {
+            return Array.Empty<ConsumableSlot>();
+        }
+
+        var slots = new List<ConsumableSlot>(home.Count + away.Count);
+        for (int i = 0; i < home.Count; i++)
+        {
+            slots.Add(new ConsumableSlot(home[i], 0));
+        }
+
+        for (int i = 0; i < away.Count; i++)
+        {
+            slots.Add(new ConsumableSlot(away[i], 1));
+        }
+
+        return slots.ToArray();
+    }
+
+    /// <summary>
+    /// Resuelve los consumibles cuyo disparador se cumple (RF-081..083). Lo llama el motor al principio
+    /// de cada tick, antes de que nadie decida nada, así que el disparador ve el estado consolidado del
+    /// tick anterior y el efecto vale ya para este tick.
+    ///
+    /// <para>El efecto de un consumible <b>no tiene portador</b>: lo usa el entrenador y alcanza a todos
+    /// los jugadores de su equipo que estén en el campo en ese instante, hasta el final del partido. El
+    /// campo <c>target</c> del efecto se ignora por eso.</para>
+    /// </summary>
+    public void ResolveConsumables()
+    {
+        for (int i = 0; i < _consumables.Length; i++)
+        {
+            var slot = _consumables[i];
+            if (slot.Used || !TriggerHolds(slot))
+            {
+                continue;
+            }
+
+            slot.Used = true;
+            for (int p = 0; p < _players.Length; p++)
+            {
+                if (_players[p].Team == slot.Team && _players[p].OnPitch)
+                {
+                    ApplyPassiveEffects(_players[p], slot.Consumable.Effects);
+                }
+            }
+
+            _report.ConsumableActivations.Add(new ConsumableActivation(
+                slot.Consumable.Id, slot.Team, _engine.Tick, TriggerName(slot.Consumable.Trigger)));
+            _engine.EmitConsumableUsed(slot.Consumable, slot.Team);
+        }
+    }
+
+    /// <summary>
+    /// ¿Se cumple el disparador (RF-083)? Todo entero y sin azar: el mismo estado da siempre la misma
+    /// respuesta.
+    /// </summary>
+    private bool TriggerHolds(ConsumableSlot slot)
+    {
+        var consumable = slot.Consumable;
+        int team = slot.Team;
+        return consumable.Trigger switch
+        {
+            // El manual es una entrada del jugador guardada en el estado inicial (docs/arquitectura.md):
+            // -1 significa "no lo pulsó", y en /Balance no hay quien lo pulse.
+            ConsumableTrigger.Manual => consumable.ManualTick >= 0 && _engine.Tick >= consumable.ManualTick,
+            ConsumableTrigger.ScoreBehind => _engine.ScoreDiff(team) < 0,
+
+            // "Marcador empatado" es un disparador, no un estado inicial: un 0-0 recién sacado del centro
+            // no es que el marcador se haya igualado, así que hace falta al menos un gol en el partido.
+            ConsumableTrigger.ScoreTied => _engine.ScoreDiff(team) == 0 && _engine.GoalsOf(team) > 0,
+            ConsumableTrigger.LastSeconds => _engine.TicksLeftInRegulation
+                <= (consumable.Threshold > 0 ? consumable.Threshold : 20) * TicksPerSecond,
+            ConsumableTrigger.MobStart => _engine.IsMob,
+            ConsumableTrigger.OwnInjury => TeamHasInjured(team),
+            ConsumableTrigger.OwnRedCard => TeamHasSentOff(team),
+            ConsumableTrigger.GoalsConceded => _engine.GoalsOf(1 - team) >= Math.Max(1, consumable.Threshold),
+            _ => _engine.BiasFor(team) < consumable.Threshold,
+        };
+    }
+
+    /// <summary>Nombre estable del disparador para el informe y el log (RF-119, RT-043).</summary>
+    private static string TriggerName(ConsumableTrigger trigger) => trigger switch
+    {
+        ConsumableTrigger.Manual => "manual",
+        ConsumableTrigger.ScoreBehind => "scoreBehind",
+        ConsumableTrigger.ScoreTied => "scoreTied",
+        ConsumableTrigger.LastSeconds => "lastSeconds",
+        ConsumableTrigger.MobStart => "mobStart",
+        ConsumableTrigger.OwnInjury => "ownInjury",
+        ConsumableTrigger.OwnRedCard => "ownRedCard",
+        ConsumableTrigger.GoalsConceded => "goalsConceded",
+        _ => "refereeBiasBelow",
+    };
+
+    private bool TeamHasInjured(int team)
+    {
+        for (int i = 0; i < _players.Length; i++)
+        {
+            if (_players[i].Team == team && _players[i].Injured)
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private bool TeamHasSentOff(int team)
+    {
+        for (int i = 0; i < _players.Length; i++)
+        {
+            if (_players[i].Team == team && _players[i].State == PlayerState.SentOff)
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     /// <summary>Contador del jugador (RF-070); 0 si nunca se ha escrito.</summary>
     public int Counter(MatchPlayer player, string name) =>
         _counters[player.Index].TryGetValue(name, out int value) ? value : 0;
@@ -412,6 +679,12 @@ internal sealed class EffectEngine : IPerkLinks
     private bool ApplyEffects(PerkSubscription subscription, IReadOnlyList<EffectDefinition> effects, in ConditionContext context)
     {
         bool cancelled = false;
+
+        // RF-093 vía 2: un perk marcado como letal mata a los rivales sobre los que aplica sus efectos,
+        // y solo a ellos. La lista se aloja únicamente si el perk es letal (ninguno del catálogo lo es
+        // todavía) y es local, no un buffer compartido, porque matar publica DEATH y eso puede reentrar
+        // aquí con otro perk.
+        List<MatchPlayer>? victims = subscription.Perk.Lethal ? new List<MatchPlayer>() : null;
         for (int i = 0; i < effects.Count; i++)
         {
             var effect = effects[i];
@@ -449,6 +722,11 @@ internal sealed class EffectEngine : IPerkLinks
             for (int t = 0; t < _targets.Count; t++)
             {
                 var player = _targets[t];
+                if (victims is not null && IsLethalVictim(subscription.Owner, player) && !victims.Contains(player))
+                {
+                    victims.Add(player);
+                }
+
                 switch (effect.Type)
                 {
                     case EffectType.ModifyAttribute:
@@ -482,8 +760,30 @@ internal sealed class EffectEngine : IPerkLinks
             }
         }
 
+        if (victims is not null)
+        {
+            // Orden fijo: id de jugador ascendente, igual que el resto del motor (RT-041).
+            victims.Sort(static (a, b) => a.Id.CompareTo(b.Id));
+            for (int v = 0; v < victims.Count; v++)
+            {
+                _engine.Kill(victims[v], "perk:" + subscription.Perk.Id);
+            }
+        }
+
         return cancelled;
     }
+
+    /// <summary>
+    /// Quién puede morir por un perk letal (RF-093). Tres condiciones, y las tres son necesarias: es
+    /// <b>rival</b> del portador del perk (de ahí "perk rival letal"), está <b>en el campo</b>, y
+    /// <b>no está sano</b> —o llegó al partido arrastrando una lesión (RF-090) o ya se ha lesionado en
+    /// este—. La tercera es la que hace que "un jugador sano nunca muere" sea una garantía del sistema y
+    /// no una casualidad: sin ella, un perk letal mataría al primero al que alcanzara.
+    /// </summary>
+    private static bool IsLethalVictim(MatchPlayer owner, MatchPlayer candidate) =>
+        candidate.Team != owner.Team
+        && candidate.OnPitch
+        && (candidate.Injured || candidate.Definition.PhysicalState != PhysicalState.Healthy);
 
     private int EffectValue(PerkSubscription subscription, EffectDefinition effect)
     {

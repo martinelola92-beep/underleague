@@ -41,8 +41,31 @@ public sealed record MatchLineup(
 /// </summary>
 public static class RunLineup
 {
+    /// <summary>
+    /// Prefijo del contador de run que marca a los jugadores que el jugador ha decidido alinear
+    /// <b>a sabiendas</b> de que arrastran una lesión grave sin tratar (RF-092, RF-093 vía 1). Lo pone
+    /// <c>RunEngine.Apply(SetLineup)</c> —la única puerta por la que pasa una decisión del jugador— y lo
+    /// borra <c>MatchResolution</c> al terminar el partido: el riesgo se asume partido a partido, nunca
+    /// se hereda. Es el mecanismo genérico de contadores del paquete W (W-11), así que no sube la versión
+    /// del esquema del guardado.
+    /// </summary>
+    public const string RiskCounterPrefix = "fieldSevereInjured:";
+
     /// <summary>Casilla del portero (RF-041: casilla fija dentro del área).</summary>
     public static Cell GoalkeeperCell { get; } = new(0, 2);
+
+    /// <summary>
+    /// True si este jugador puede salir al campo: disponible (sano o con lesión leve, RF-090/091) o bien
+    /// con lesión grave y marcado explícitamente para arriesgarse (RF-093). El muerto, nunca.
+    /// </summary>
+    public static bool CanStart(RunState state, RunPlayer player)
+    {
+        ArgumentNullException.ThrowIfNull(state);
+        ArgumentNullException.ThrowIfNull(player);
+        return player.IsAvailable
+            || (player.PhysicalState == PhysicalState.SevereInjury
+                && state.Counter(RiskCounterPrefix + player.Id.ToString(System.Globalization.CultureInfo.InvariantCulture)) > 0);
+    }
 
     private static readonly Cell[] DefenderCells = { new(2, 1), new(2, 3) };
     private static readonly Cell[] MidfielderCells = { new(3, 2), new(4, 1), new(4, 3) };
@@ -93,7 +116,7 @@ public static class RunLineup
 
         if (catalog is not null)
         {
-            definitions.Add(Repositioned(goalkeeper.ToDefinition(catalog), Position.Goalkeeper, goalkeeper.Position));
+            definitions.Add(Equipped(state, goalkeeper, Repositioned(goalkeeper.ToDefinition(catalog), Position.Goalkeeper, goalkeeper.Position)));
         }
 
         var taken = new List<Cell>(OutfieldCells.Length);
@@ -118,7 +141,7 @@ public static class RunLineup
 
             // El portero sobrante juega de defensa: el simulador solo admite un portero alineado.
             var position = player.Position == Position.Goalkeeper ? Position.Defender : player.Position;
-            definitions.Add(Repositioned(player.ToDefinition(catalog), position, player.Position));
+            definitions.Add(Equipped(state, player, Repositioned(player.ToDefinition(catalog), position, player.Position)));
         }
 
         var bench = new List<PlayerDefinition>();
@@ -137,8 +160,15 @@ public static class RunLineup
     }
 
     /// <summary>
-    /// Titulares: primero los de la alineación guardada que siguen disponibles, en su orden, y luego se
+    /// Titulares: primero los de la alineación guardada que siguen en pie, en su orden, y luego se
     /// completa con los disponibles de menor id hasta 7 (o hasta agotarlos, RF-002d).
+    ///
+    /// <para><b>Lesión grave (RF-092, RF-093).</b> Un jugador con lesión grave sin tratar sale al campo
+    /// <b>solo si el jugador lo ha decidido para este partido</b>: está en la alineación guardada y lleva
+    /// la marca de <see cref="RiskCounterPrefix"/>. Nunca entra por el relleno automático, que sigue
+    /// mirando únicamente a los disponibles, ni por una alineación vieja que se quedó con su nombre
+    /// dentro, así que la decisión de arriesgarse a la muerte es siempre explícita y nunca se toma sola.
+    /// Al muerto no se le alinea jamás.</para>
     /// </summary>
     private static List<RunPlayer> SelectStarters(RunState state, IReadOnlyList<RunPlayer> available)
     {
@@ -147,7 +177,7 @@ public static class RunLineup
         for (int i = 0; i < slots.Count && starters.Count < RunRules.MaxStarters; i++)
         {
             var player = state.FindPlayer(slots[i].PlayerId);
-            if (player is not null && player.IsAvailable && !Contains(starters, player.Id))
+            if (player is not null && CanStart(state, player) && !Contains(starters, player.Id))
             {
                 starters.Add(player);
             }
@@ -254,6 +284,14 @@ public static class RunLineup
 
         throw new InvalidOperationException("no quedan casillas libres para colocar a un titular");
     }
+
+    /// <summary>
+    /// Pone el objeto equipado del jugador en la definición que recibe el simulador (RF-075..078). No
+    /// ocupa slot de perk (RF-076) y se resuelve con el catálogo de la instantánea de la run
+    /// (<c>RunState.Equipment</c>): sin instantánea, sin objeto.
+    /// </summary>
+    private static PlayerDefinition Equipped(RunState state, RunPlayer player, PlayerDefinition definition) =>
+        state.Equipment.MatchItemOf(player.Item) is { } item ? definition with { Item = item } : definition;
 
     /// <summary>
     /// Cambia la posición de una definición solo para este partido, manteniendo <c>Tags</c> coherente

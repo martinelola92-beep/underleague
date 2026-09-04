@@ -149,8 +149,7 @@
     },
     "lethal": {
       "type": "boolean",
-      "description": "RF-093. En fase 1 no hay muertes: el cargador exige false.",
-      "const": false
+      "description": "RF-093 vía 2: el perk puede matar. Solo mata a un rival que ya no esté sano, y obliga a destacarlo en el informe de ojeo (RF-013). En fase 1 se exigía false porque el motor no cumplía la promesa; desde la fase 2 sí (Sim.Perks.EffectEngine), y el cargador exige a cambio que el perk tenga algún efecto sobre el rival."
     },
     "positionOnly": {
       "description": "null o la única posición que puede llevar el perk (validación de build, §5).",

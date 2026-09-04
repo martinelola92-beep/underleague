@@ -129,18 +129,22 @@ internal sealed class MatchEngine : IPerkWorld
         // La habilidad racial cuenta (ADR 0026, §5.10): no está en Definition.Perks porque no ocupa slot,
         // así que mirando solo esa lista un equipo sin ningún perk asignado se quedaba sin su habilidad
         // de partido. Es el hueco que el paquete S dejó anotado para este.
-        bool anyPerks = false;
-        for (int i = 0; i < _players.Length; i++)
+        // El equipamiento entra por la misma puerta (RF-075..085): un objeto equipado o un consumible
+        // también necesitan el motor de efectos, porque sus efectos son los mismos EffectDefinition y los
+        // aplican los mismos Modifiers. Con 0 perks, 0 objetos y 0 consumibles no hay motor y no cambia
+        // ni un evento respecto a la fase 1 (huella de DeterminismTests).
+        bool anyEffects = setup.Home.Consumables.Count > 0 || setup.Away.Consumables.Count > 0;
+        for (int i = 0; i < _players.Length && !anyEffects; i++)
         {
             if (_players[i].Definition.Perks.Count > 0
+                || _players[i].Definition.Item is not null
                 || _catalog.Race(_players[i].Definition.Race).Ability.Length > 0)
             {
-                anyPerks = true;
-                break;
+                anyEffects = true;
             }
         }
 
-        _effects = anyPerks ? new EffectEngine(this, _players, _report, config.MaxDepth) : null;
+        _effects = anyEffects ? new EffectEngine(this, _players, _report, config.MaxDepth) : null;
 
         _ball.InterceptAttempted = new bool[_players.Length];
         _bodies = new BodySeparation(_tuning.Bodies, _players.Length);
@@ -163,6 +167,15 @@ internal sealed class MatchEngine : IPerkWorld
 
     /// <summary>Catálogo del partido; el motor de efectos lo necesita para resolver los ids de perk.</summary>
     public Catalog Catalog => _catalog;
+
+    /// <summary>Entrada del partido; el motor de efectos lee de ahí los consumibles equipados (RF-080).</summary>
+    public MatchSetup Setup => _setup;
+
+    /// <summary>Goles de un equipo ahora mismo; lo consultan los disparadores de consumible (RF-083).</summary>
+    public int GoalsOf(int team) => _report.Goals[team];
+
+    /// <summary>Ticks que quedan de tiempo reglamentario; 0 en la prórroga de turba (RF-083, "últimos 20 segundos").</summary>
+    public int TicksLeftInRegulation => Math.Max(0, _regulationTicks - _tick);
 
     /// <summary>Motor de efectos del partido, o null si ningún jugador en campo lleva perks.</summary>
     public EffectEngine? Effects => _effects;
@@ -336,6 +349,12 @@ internal sealed class MatchEngine : IPerkWorld
     private void Step()
     {
         _tick++;
+
+        // Consumibles condicionales (RF-081..083): se comprueban antes que nada, así que el disparador ve
+        // el estado consolidado del tick anterior y lo que conceden vale ya para este tick. Sin
+        // consumibles equipados el bucle recorre un array vacío y no toca el orden de nada.
+        _effects?.ResolveConsumables();
+
         UpdateTacticalState();
         UpdateBlockShift();
         UpdateContextCaches();
@@ -1728,6 +1747,14 @@ internal sealed class MatchEngine : IPerkWorld
         }
 
         victim.LeavePitch(PlayerState.Injured);
+
+        // RF-093 vía 1: quien salió al campo arrastrando una lesión grave sin tratar y vuelve a
+        // lesionarse, muere. Es la única consecuencia de alinearlo, y estaba anunciada antes de
+        // confirmar la alineación (RunEngine.LineupWarnings, RF-012d).
+        if (victim.Definition.PhysicalState == PhysicalState.SevereInjury)
+        {
+            Kill(victim, "severeInjury");
+        }
     }
 
     // ---------------------------------------------------------------- 3.8 fuera, reanudaciones
@@ -2197,6 +2224,43 @@ internal sealed class MatchEngine : IPerkWorld
             Utility.Centi(Vec2.Distance(position, Pitch.GoalCenter(reference))),
             detail);
     }
+
+    /// <summary>
+    /// Muerte de un jugador (RF-093). <b>Solo</b> se llama desde las dos vías del requisito: un titular
+    /// que se alineó con lesión grave sin tratar y vuelve a lesionarse (<see cref="ResolveInjury"/>), y
+    /// un perk rival marcado como letal sobre alguien que ya no estaba sano (<c>EffectEngine</c>). No hay
+    /// una tercera, y por eso "un jugador sano nunca muere" es una propiedad del sistema.
+    /// <para>El jugador sale del campo con <c>PlayerState.Injured</c>: el motor no necesita un estado
+    /// propio para el muerto —lo que importa es que ya no juega— y el evento DEATH es lo que
+    /// <c>Sim.Run.MatchResolution</c> lee para pasarlo a <c>PhysicalState.Dead</c> en la plantilla.</para>
+    /// </summary>
+    internal void Kill(MatchPlayer victim, string detail)
+    {
+        if (victim.Dead)
+        {
+            return;
+        }
+
+        victim.Dead = true;
+        victim.Injured = true;
+        _report.Deaths++;
+
+        if (ReferenceEquals(_ball.Owner, victim))
+        {
+            ParkBall(victim.Position);
+        }
+
+        if (victim.OnPitch)
+        {
+            victim.LeavePitch(PlayerState.Injured);
+        }
+
+        Emit(EventType.Death, detail, victim);
+    }
+
+    /// <summary>Registra el uso de un consumible en la secuencia de eventos (RF-080..085, RF-066).</summary>
+    internal void EmitConsumableUsed(MatchConsumable consumable, int team) =>
+        Emit(EventType.ConsumableUsed, consumable.Id, actor: null, team: team);
 
     /// <summary>
     /// Registra un evento en la secuencia y, salvo que se indique lo contrario, lo publica al motor de

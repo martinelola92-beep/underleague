@@ -105,7 +105,10 @@ public static class RunSave
             DataSnapshot = ReadStrings(root, "dataSnapshot", "$"),
         };
 
-        state = state.WithRoster(ReadRoster(root));
+        // Los catálogos de objetos y consumibles de la run son dato derivado de la instantánea y no se
+        // guardan; se reconstruyen aquí, que es lo que hace que una run cargada siga jugando con el
+        // equipamiento con el que empezó (RT-061b, RunEquipment).
+        state = state.WithDataSnapshot(state.DataSnapshot).WithRoster(ReadRoster(root));
 
         // nextPlayerId manda sobre el que deduce WithRoster: una run que ha vendido a su último fichaje
         // no puede reutilizar su id (determinismo.md, "Orden").

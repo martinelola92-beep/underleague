@@ -329,6 +329,12 @@ internal sealed class MatchPlayer
 
     public bool Injured { get; set; }
 
+    /// <summary>
+    /// True si el jugador ha muerto en este partido (RF-093). Evita que dos vías —una segunda lesión y un
+    /// perk letal en el mismo tick— cuenten dos muertes del mismo jugador.
+    /// </summary>
+    public bool Dead { get; set; }
+
     public int TicksOnPitch { get; set; }
 
     /// <summary>

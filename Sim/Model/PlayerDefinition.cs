@@ -1,3 +1,5 @@
+using Underleague.Sim.Perks;
+
 namespace Underleague.Sim.Model;
 
 /// <summary>Definición estática de un jugador (atributos, rasgos, etiquetas) usada como entrada del simulador.</summary>
@@ -40,6 +42,16 @@ public sealed record PlayerDefinition(
     /// El número máximo depende de la rareza (RF-023, Progression.PerkSlots); lo valida Simulator.Run.
     /// </summary>
     public IReadOnlyList<string> Perks { get; init; } = Array.Empty<string>();
+
+    /// <summary>
+    /// Objeto equipado, o null (RF-076: uno como máximo). <b>No ocupa slot de perk</b>: no está en
+    /// <see cref="Perks"/> y no cuenta para <c>Progression.PerkSlots</c>, exactamente igual que la
+    /// habilidad racial (ADR 0026). Llega ya resuelto a <see cref="MatchItem"/> —no como id— porque
+    /// <c>Simulator.Run</c> no lee <c>/data</c> (RT-012) y el catálogo de objetos no vive en
+    /// <c>Catalog</c>; quien lo resuelve es <c>Sim.Run.Systems.Items.RunEquipment</c> desde la
+    /// instantánea de la run (RT-061b).
+    /// </summary>
+    public MatchItem? Item { get; init; }
 
     /// <summary>
     /// Contadores acumulados entre partidos de la misma run (RF-070, §6). Inmutable y ordenado por clave
