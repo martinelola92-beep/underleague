@@ -70,6 +70,12 @@ public sealed class MatchReport
     /// <summary>Suma de longitudes de todas las cadenas de pases.</summary>
     public int PassChainTotalLength { get; }
 
+    /// <summary>Cadenas de pases de cada equipo (índice = equipo). Suma = <see cref="PassChains"/>.</summary>
+    public int[] PassChainsByTeam { get; }
+
+    /// <summary>Pases encadenados acumulados de cada equipo. Suma = <see cref="PassChainTotalLength"/>.</summary>
+    public int[] PassChainTotalLengthByTeam { get; }
+
     /// <summary>Tiros por equipo, [2].</summary>
     public int[] Shots { get; }
 
@@ -134,6 +140,8 @@ public sealed class MatchReport
         PossessionChanges = builder.PossessionChanges;
         PassChains = builder.PassChains;
         PassChainTotalLength = builder.PassChainTotalLength;
+        PassChainsByTeam = (int[])builder.PassChainsByTeam.Clone();
+        PassChainTotalLengthByTeam = (int[])builder.PassChainTotalLengthByTeam.Clone();
         Shots = (int[])builder.Shots.Clone();
         ShotsOnTarget = (int[])builder.ShotsOnTarget.Clone();
         Tackles = builder.Tackles;
@@ -184,6 +192,12 @@ internal sealed class MatchReportBuilder
 
     /// <summary>Se incrementa con la longitud de cada cadena de pases al terminar la posesión (3.10).</summary>
     public int PassChainTotalLength { get; set; }
+
+    /// <summary>Cadenas de pases por equipo (§8, buildsWinDifferently).</summary>
+    public int[] PassChainsByTeam { get; } = new int[2];
+
+    /// <summary>Pases encadenados por equipo (§8, buildsWinDifferently).</summary>
+    public int[] PassChainTotalLengthByTeam { get; } = new int[2];
 
     /// <summary>Tiros por equipo; se incrementa al resolver cada Shot (3.7).</summary>
     public int[] Shots { get; } = new int[2];

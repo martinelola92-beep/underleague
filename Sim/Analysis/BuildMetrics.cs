@@ -25,6 +25,9 @@ public readonly record struct BuildCellResult(
 
     public double InjuriesPerMatch => Matches > 0 ? (double)InjuriesFor / Matches : 0.0;
 
+    /// <summary>Lesiones que esta build le ha causado al rival por partido (las que "produce", §8).</summary>
+    public double InjuriesCausedPerMatch => Matches > 0 ? (double)InjuriesAgainst / Matches : 0.0;
+
     public double TacklesPerMatch => Matches > 0 ? (double)Tackles / Matches : 0.0;
 
     public double PassChainAvgLength => PassChains > 0 ? (double)PassChainTotalLength / PassChains : 0.0;
@@ -140,7 +143,7 @@ public static class BuildMetrics
         rows.AddRange(CoherentBuildsBeatNone(cells, coherentBuilds, baselineOpponentByBuild));
         rows.AddRange(BadBuildsLoseToNone(cells, badBuilds, baselineOpponentByBuild));
         rows.AddRange(RandomBuildsNearNone(cells, randomBuilds, baselineOpponentByBuild));
-        rows.AddRange(BuildsWinDifferently(cells, physicalBuild, technicalBuild));
+        rows.AddRange(BuildsWinDifferently(cells, physicalBuild, technicalBuild, baselineOpponentByBuild));
         rows.AddRange(NoDeadPerksRows(perkActivations));
         rows.AddRange(Rf069Distribution(catalogPerkKinds));
         return rows;
@@ -188,45 +191,91 @@ public static class BuildMetrics
     }
 
     /// <summary>
-    /// buildsWinDifferently (§8): la build "de contacto" produce ≥ 1,5× las lesiones propias por partido
-    /// que la build "técnica" (agregadas contra cualquier rival), y la técnica produce ≥ 1,3× la cadena
-    /// media de pases de la de contacto. Vacío si falta alguna de las dos builds o no jugó ningún partido.
+    /// buildsWinDifferently (§8): la build "de contacto" produce ≥ 1,5× las lesiones que la build
+    /// "técnica", y la técnica encadena ≥ 1,3× los pases de la de contacto. Las dos magnitudes se miden
+    /// <b>normalizadas contra la referencia sin perks de la propia raza</b> (paquete I, ADR 0012): lo que
+    /// se compara es "cuánto multiplica esta build lo que ya hacía su raza", no el valor absoluto.
+    ///
+    /// Sin normalizar, la métrica medía la raza y no la build: <c>orc_none</c> ya causa 3,9 veces las
+    /// lesiones de <c>elf_none</c> sin un solo perk, así que la mitad de lesiones aprobaba con el catálogo
+    /// vacío; y la cadena de pases de un equipo de orcos (lentos, correa corta, bloque junto) es más larga
+    /// que la de uno de elfos (rápidos, correa larga, que regatean) pase lo que pase con los perks, así que
+    /// la mitad de cadena no podía aprobar nunca. Con la normalización las dos miden el efecto de los
+    /// perks, que es lo que §8 quiere decir con "ganan de formas distintas".
+    ///
+    /// El denominador de cada build es su propia referencia <b>en los mismos partidos</b>: la celda
+    /// (referencia, build) de la matriz, que es la otra cara de la celda (build, referencia).
     /// </summary>
+    /// <param name="baselineOpponentByBuild">Referencia sin perks de cada build (misma raza), ya resuelta.</param>
     public static List<MetricResult> BuildsWinDifferently(
         IReadOnlyList<BuildCellResult> cells,
         string? physicalBuild,
         string? technicalBuild,
+        IReadOnlyDictionary<string, string> baselineOpponentByBuild,
         double minInjuryRatio = 1.5,
         double minPassChainRatio = 1.3)
     {
+        ArgumentNullException.ThrowIfNull(baselineOpponentByBuild);
+
         var rows = new List<MetricResult>();
         if (physicalBuild is null || technicalBuild is null)
         {
             return rows;
         }
 
-        var physical = AggregateByBuild(cells, physicalBuild);
-        var technical = AggregateByBuild(cells, technicalBuild);
-        if (physical.Matches == 0 || technical.Matches == 0)
+        if (!TryFindPair(cells, physicalBuild, baselineOpponentByBuild, out var physical, out var physicalBase)
+            || !TryFindPair(cells, technicalBuild, baselineOpponentByBuild, out var technical, out var technicalBase))
         {
             return rows;
         }
 
-        double injuryRatio = technical.InjuriesPerMatch > 0
-            ? physical.InjuriesPerMatch / technical.InjuriesPerMatch
-            : (physical.InjuriesPerMatch > 0 ? double.PositiveInfinity : 0.0);
+        double physicalInjuries = Relative(physical.InjuriesCausedPerMatch, physicalBase.InjuriesCausedPerMatch);
+        double technicalInjuries = Relative(technical.InjuriesCausedPerMatch, technicalBase.InjuriesCausedPerMatch);
+        double injuryRatio = Relative(physicalInjuries, technicalInjuries);
         rows.Add(new MetricResult(
             BuildsWinDifferentlyInjuries, injuryRatio, minInjuryRatio, null,
             injuryRatio >= minInjuryRatio ? "IN" : "OUT"));
 
-        double passChainRatio = physical.PassChainAvgLength > 0
-            ? technical.PassChainAvgLength / physical.PassChainAvgLength
-            : (technical.PassChainAvgLength > 0 ? double.PositiveInfinity : 0.0);
+        double technicalChain = Relative(technical.PassChainAvgLength, technicalBase.PassChainAvgLength);
+        double physicalChain = Relative(physical.PassChainAvgLength, physicalBase.PassChainAvgLength);
+        double passChainRatio = Relative(technicalChain, physicalChain);
         rows.Add(new MetricResult(
             BuildsWinDifferentlyPassChain, passChainRatio, minPassChainRatio, null,
             passChainRatio >= minPassChainRatio ? "IN" : "OUT"));
 
         return rows;
+    }
+
+    /// <summary>Cociente con el caso degenerado explícito: 0/0 = 0, x/0 = +infinito.</summary>
+    private static double Relative(double value, double reference) =>
+        reference > 0 ? value / reference : (value > 0 ? double.PositiveInfinity : 0.0);
+
+    /// <summary>Celdas (build, referencia) y (referencia, build): las dos caras de los mismos partidos.</summary>
+    private static bool TryFindPair(
+        IReadOnlyList<BuildCellResult> cells,
+        string build,
+        IReadOnlyDictionary<string, string> baselineOpponentByBuild,
+        out BuildCellResult cell,
+        out BuildCellResult baselineCell)
+    {
+        baselineCell = default;
+        if (!TryFindCell(cells, build, baselineOpponentByBuild, out cell))
+        {
+            return false;
+        }
+
+        string baseline = baselineOpponentByBuild[build];
+        for (int i = 0; i < cells.Count; i++)
+        {
+            if (string.Equals(cells[i].Build, baseline, StringComparison.Ordinal)
+                && string.Equals(cells[i].Opponent, build, StringComparison.Ordinal))
+            {
+                baselineCell = cells[i];
+                return baselineCell.Matches > 0;
+            }
+        }
+
+        return false;
     }
 
     /// <summary>
@@ -353,35 +402,5 @@ public static class BuildMetrics
         }
 
         return false;
-    }
-
-    /// <summary>Suma todas las celdas de <paramref name="build"/> contra cualquier rival del lote.</summary>
-    private static BuildCellResult AggregateByBuild(IReadOnlyList<BuildCellResult> cells, string build)
-    {
-        int matches = 0, wins = 0, goalsFor = 0, goalsAgainst = 0, injuriesFor = 0, injuriesAgainst = 0;
-        int tackles = 0, passChains = 0, passChainTotalLength = 0, activations = 0;
-        for (int i = 0; i < cells.Count; i++)
-        {
-            var cell = cells[i];
-            if (!string.Equals(cell.Build, build, StringComparison.Ordinal))
-            {
-                continue;
-            }
-
-            matches += cell.Matches;
-            wins += cell.Wins;
-            goalsFor += cell.GoalsFor;
-            goalsAgainst += cell.GoalsAgainst;
-            injuriesFor += cell.InjuriesFor;
-            injuriesAgainst += cell.InjuriesAgainst;
-            tackles += cell.Tackles;
-            passChains += cell.PassChains;
-            passChainTotalLength += cell.PassChainTotalLength;
-            activations += cell.Activations;
-        }
-
-        return new BuildCellResult(
-            build, string.Empty, matches, wins, goalsFor, goalsAgainst, injuriesFor, injuriesAgainst,
-            tackles, passChains, passChainTotalLength, activations);
     }
 }

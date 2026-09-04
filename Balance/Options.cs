@@ -47,6 +47,13 @@ public sealed class Options
     /// <summary>Null salvo que se pase --campaign N: activa el modo campaña con N partidos consecutivos por build (§8).</summary>
     public int? Campaign { get; private set; }
 
+    /// <summary>
+    /// --rosters N: plantillas distintas generadas por build sobre las que se promedia cada celda de la
+    /// matriz de builds (paquete I). Con una sola plantilla la tasa de victoria de una build depende más
+    /// del dado del generador (sd de 15 puntos) que de sus perks.
+    /// </summary>
+    public int Rosters { get; private set; } = BuildBatchRunner.DefaultRosters;
+
     /// <summary>Null salvo que se pase --describe [es|en]: activa el modo catálogo, con el idioma pedido (por defecto "es").</summary>
     public string? Describe { get; private set; }
 
@@ -91,6 +98,15 @@ public sealed class Options
 
                 case "--home-away":
                     options.HomeAway = true;
+                    break;
+
+                case "--rosters":
+                    options.Rosters = ParseInt(arg, NextValue(args, ref i, arg));
+                    if (options.Rosters <= 0)
+                    {
+                        throw new ArgumentException("--rosters debe ser mayor que cero");
+                    }
+
                     break;
 
                 case "--campaign":

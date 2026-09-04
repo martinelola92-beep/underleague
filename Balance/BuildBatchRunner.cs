@@ -41,6 +41,18 @@ public static class BuildBatchRunner
 {
     private static readonly RefereeSetup Referee = new("Referee", RefereeTrait.Neutral, 0);
 
+    /// <summary>Plantillas distintas por build sobre las que se promedia cada celda de la matriz (--rosters).</summary>
+    public const int DefaultRosters = 25;
+
+    /// <summary>Primer id de jugador del equipo que lleva los ids bajos en un partido de la matriz.</summary>
+    private const int PrimaryIdBase = 1;
+
+    /// <summary>Primer id de jugador del equipo que lleva los ids altos en un partido de la matriz.</summary>
+    private const int SecondaryIdBase = 100001;
+
+    /// <summary>Desplazamiento del índice de generación de la segunda build cuando no es comparable con la primera.</summary>
+    private const int RosterOffset = 500;
+
     /// <summary>Un emparejamiento local-visitante entre dos builds (Home siempre el "sujeto" cuando no hay --home-away).</summary>
     private readonly record struct BuildPairing(string Home, string Away);
 
@@ -91,11 +103,13 @@ public static class BuildBatchRunner
         string? vsId,
         bool homeAway,
         int totalRuns,
-        ulong seed)
+        ulong seed,
+        int rosters = DefaultRosters)
     {
         ArgumentNullException.ThrowIfNull(catalog);
         ArgumentNullException.ThrowIfNull(allBuilds);
         ArgumentNullException.ThrowIfNull(buildIds);
+        ArgumentOutOfRangeException.ThrowIfLessThan(rosters, 1);
 
         var pairings = MatrixPairings(buildIds, vsId);
         if (pairings.Count == 0)
@@ -125,32 +139,41 @@ public static class BuildBatchRunner
             indexByBuild[id] = i;
         }
 
-        var primary = new Dictionary<string, TeamSetup>(StringComparer.Ordinal);
-        var twin = new Dictionary<string, TeamSetup>(StringComparer.Ordinal);
+        // Paquete I: una sola plantilla por build hacía la medida inservible. Con una plantilla generada
+        // por build, la tasa de victoria de la MISMA build contra su referencia iba del 16% al 60% según
+        // qué jugadores le hubiera tocado sacar al generador (sd de 15 puntos entre plantillas, medido con
+        // 20 plantillas x 200 partidos): lo que medía builds.csv era el dado de la generación, no los
+        // perks. Ahora cada celda se promedia sobre `rosters` plantillas distintas y, cuando las dos
+        // builds del emparejamiento comparten raza y calidad, las dos usan el MISMO índice de generación:
+        // los dos equipos son los mismos jugadores y la única diferencia son los perks y la alineación,
+        // que es exactamente lo que §8 quiere medir.
+        var instances = new Dictionary<(string Id, int GenIndex, int IdBase), TeamSetup>();
 
-        TeamSetup GetInstance(string id, bool useTwin)
+        TeamSetup GetInstance(string id, int genIndex, int idBase)
         {
-            var cache = useTwin ? twin : primary;
-            if (cache.TryGetValue(id, out var cached))
+            var key = (id, genIndex, idBase);
+            if (instances.TryGetValue(key, out var cached))
             {
                 return cached;
             }
 
-            int index = (useTwin ? 1000 : 0) + indexByBuild[id];
-            var rng = RngStreams.Generation(seed, index);
+            var rng = RngStreams.Generation(seed, genIndex);
             TeamSetup team;
             try
             {
-                team = allBuilds[id].ToTeamSetup(ref rng, catalog, 1 + (index * 100));
+                team = allBuilds[id].ToTeamSetup(ref rng, catalog, idBase);
             }
             catch (ArgumentException ex)
             {
                 throw new ArgumentException($"build '{id}': {ex.Message}", ex);
             }
 
-            cache[id] = team;
+            instances[key] = team;
             return team;
         }
+
+        bool SameRosterBase(string a, string b) =>
+            allBuilds[a].Race == allBuilds[b].Race && allBuilds[a].Quality == allBuilds[b].Quality;
 
         int pairingCount = pairings.Count;
         int baseCount = totalRuns / pairingCount;
@@ -164,6 +187,13 @@ public static class BuildBatchRunner
         int globalMatchIndex = 0;
         int totalSimulated = 0;
 
+        // Variantes de un emparejamiento: orientación (quién es local) x reparto de ids de jugador. El
+        // reparto de ids importa porque los desempates del motor (jugador más cercano al balón, empate de
+        // utilidad) van por id ascendente: con ids fijos el equipo de ids bajos gana entre 2 y 3 puntos de
+        // más (medido: 53,1% / 52,2% / 52,0% por raza con plantillas idénticas; intercambiando los ids,
+        // 50,7% / 50,5% / 49,9%). Se alternan siempre, haya o no --home-away.
+        int variants = homeAway ? 4 : 2;
+
         for (int p = 0; p < pairingCount; p++)
         {
             var pairing = pairings[p];
@@ -173,50 +203,61 @@ public static class BuildBatchRunner
                 continue;
             }
 
-            int orientations = homeAway ? 2 : 1;
-            int firstOrientationRuns = homeAway ? (runsForPairing + 1) / 2 : runsForPairing;
+            bool selfPairing = string.Equals(pairing.Home, pairing.Away, StringComparison.Ordinal);
+            bool paired = !selfPairing && SameRosterBase(pairing.Home, pairing.Away);
 
-            for (int orientation = 0; orientation < orientations; orientation++)
+            for (int k = 0; k < runsForPairing; k++)
             {
-                int count = orientation == 0 ? firstOrientationRuns : runsForPairing - firstOrientationRuns;
-                if (count == 0)
-                {
-                    continue;
-                }
+                int variant = k % variants;
+                int rosterIndex = (k / variants) % rosters;
+                bool swapOrientation = homeAway && (variant % 2) == 1;
+                bool swapIds = (variant / (homeAway ? 2 : 1)) % 2 == 1;
 
-                string homeId = orientation == 0 ? pairing.Home : pairing.Away;
-                string awayId = orientation == 0 ? pairing.Away : pairing.Home;
-                bool selfPairing = string.Equals(homeId, awayId, StringComparison.Ordinal);
+                // Índice de generación: la build "A" del emparejamiento usa rosterIndex; la "B" usa el
+                // mismo si son comparables (misma raza y calidad) y uno desplazado si no.
+                int genA = rosterIndex;
+                int genB = paired ? rosterIndex : RosterOffset + rosterIndex;
+                int idBaseA = swapIds ? SecondaryIdBase : PrimaryIdBase;
+                int idBaseB = swapIds ? PrimaryIdBase : SecondaryIdBase;
 
-                TeamSetup homeTeam = GetInstance(homeId, useTwin: false);
-                TeamSetup awayTeam = GetInstance(awayId, useTwin: selfPairing);
+                var teamA = GetInstance(pairing.Home, genA, idBaseA);
+                var teamB = GetInstance(pairing.Away, genB, idBaseB);
+
+                string homeId = swapOrientation ? pairing.Away : pairing.Home;
+                string awayId = swapOrientation ? pairing.Home : pairing.Away;
+                TeamSetup homeTeam = swapOrientation ? teamB : teamA;
+                TeamSetup awayTeam = swapOrientation ? teamA : teamB;
+
                 var setup = new MatchSetup(homeTeam, awayTeam, Referee);
                 var homeTeamPlayerIds = new HashSet<int>(homeTeam.Players.Select(pl => pl.Id));
 
-                for (int k = 0; k < count; k++)
+                ulong matchSeed = RngStreams.MatchSeed(seed, globalMatchIndex);
+                globalMatchIndex++;
+                totalSimulated++;
+
+                MatchResult result;
+                try
                 {
-                    ulong matchSeed = RngStreams.MatchSeed(seed, globalMatchIndex);
-                    globalMatchIndex++;
-                    totalSimulated++;
-
-                    MatchResult result;
-                    try
-                    {
-                        result = Simulator.Run(setup, matchSeed, catalog, new SimConfig(CollectLog: false));
-                    }
-                    catch (ArgumentException ex)
-                    {
-                        throw new ArgumentException($"build '{homeId}' vs '{awayId}': {ex.Message}", ex);
-                    }
-
-                    AccumulateMatch(cellAcc, perkAcc, matchesByBuild, result.Report, homeId, awayId, homeTeamPlayerIds);
+                    result = Simulator.Run(setup, matchSeed, catalog, new SimConfig(CollectLog: false));
                 }
+                catch (ArgumentException ex)
+                {
+                    throw new ArgumentException($"build '{homeId}' vs '{awayId}': {ex.Message}", ex);
+                }
+
+                AccumulateMatch(cellAcc, perkAcc, matchesByBuild, result.Report, homeId, awayId, homeTeamPlayerIds);
             }
         }
 
         stopwatch.Stop();
 
+        // La build de --vs también entra en builds.csv: es la referencia contra la que se normalizan las
+        // métricas de §8 (ADR 0012) y sin su fila no se puede calcular el cociente.
         var requested = new HashSet<string>(buildIds, StringComparer.Ordinal);
+        if (vsId is not null)
+        {
+            requested.Add(vsId);
+        }
         var cells = cellAcc
             .Where(kv => requested.Contains(kv.Key.Build))
             .Select(kv => new BuildCellResult(
@@ -505,10 +546,12 @@ public static class BuildBatchRunner
             }
         }
 
+        // Las cadenas de pases van por equipo (paquete I): la fila de cada build recibe las suyas, no las
+        // del partido entero, que es lo que buildsWinDifferently necesita comparar.
         AddCell(cellAcc, homeBuild, awayBuild, homeWon, homeGoals, awayGoals, injuriesHome, injuriesAway,
-            tacklesHome, report.PassChains, report.PassChainTotalLength, activationsHome);
+            tacklesHome, report.PassChainsByTeam[0], report.PassChainTotalLengthByTeam[0], activationsHome);
         AddCell(cellAcc, awayBuild, homeBuild, !homeWon, awayGoals, homeGoals, injuriesAway, injuriesHome,
-            tacklesAway, report.PassChains, report.PassChainTotalLength, activationsAway);
+            tacklesAway, report.PassChainsByTeam[1], report.PassChainTotalLengthByTeam[1], activationsAway);
 
         matchesByBuild[homeBuild] = matchesByBuild.GetValueOrDefault(homeBuild) + 1;
         matchesByBuild[awayBuild] = matchesByBuild.GetValueOrDefault(awayBuild) + 1;

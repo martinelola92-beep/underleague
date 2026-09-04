@@ -12,7 +12,7 @@
   "effects": [
     {
       "type": "modifyProbability",
-      "target": "opponent",
+      "target": "actor",
       "probability": "injure",
       "value": 600,
       "duration": "play"

@@ -967,6 +967,17 @@ internal sealed class MatchEngine : IPerkWorld
         {
             _report.PassChains++;
             _report.PassChainTotalLength += _playPasses;
+
+            // Reparto por equipo (paquete I): la métrica buildsWinDifferently de §8 compara la cadena de
+            // pases de una build contra la de otra, y una estadística de todo el partido no puede
+            // distinguirlas — con ella la cadena de un lote de orcos salía mayor que la de un lote de
+            // elfos porque la mide el partido entero, no el equipo. La jugada pertenece al equipo que
+            // tenía la posesión (_playTeam), que es exactamente quien encadenó los pases.
+            if (_playTeam >= 0)
+            {
+                _report.PassChainsByTeam[_playTeam]++;
+                _report.PassChainTotalLengthByTeam[_playTeam] += _playPasses;
+            }
         }
 
         _playOpen = false;

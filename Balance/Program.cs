@@ -64,7 +64,7 @@ try
         }
 
         BuildsMatrixResult matrix = BuildBatchRunner.RunMatrix(
-            catalog, allBuilds, buildIds, options.Vs, options.HomeAway, options.Runs, options.Seed);
+            catalog, allBuilds, buildIds, options.Vs, options.HomeAway, options.Runs, options.Seed, options.Rosters);
 
         WriteBuildsCsv(options.OutDir!, matrix.Cells);
         WritePerksCsv(options.OutDir!, matrix.PerkActivations);
@@ -235,6 +235,7 @@ static void PrintUsage()
           --campaign N        modo campaña: N partidos consecutivos por build contra human_none de calidad
                                creciente; requiere --builds; --runs = campañas por build (por defecto 60)
           --home-away         cada emparejamiento (matriz o campaña) también con los equipos invertidos
+          --rosters N         plantillas distintas por build sobre las que promediar cada celda (25)
         """);
 }
 

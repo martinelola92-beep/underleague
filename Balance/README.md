@@ -34,6 +34,7 @@ Opciones (todas opcionales):
 | `--vs id` | ninguno (sin ella: todos-contra-todos) | Ídem. Requiere `--builds` |
 | `--campaign N` | ninguno; activa el modo campaña | Ídem. Requiere `--builds` |
 | `--home-away` | apagado | Ídem. Aplica al modo matriz y al modo campaña |
+| `--rosters N` | 25 | Plantillas distintas generadas por build sobre las que se promedia cada celda de la matriz (paquete I). Solo aplica al modo matriz |
 
 Salida por consola (salvo `--quiet`): tabla de `summary.csv` alineada, tiempo total y partidos/segundo. Código de salida: `0` si todas las métricas están `IN`/`INFO` (o si se usó `--match-seed`/`--describe`, que no tienen métricas), `1` si alguna está `OUT` o si una build es inválida o desconocida (`error de build: ...`).
 
@@ -56,9 +57,19 @@ dotnet run --project Balance -- --describe es
 
 ### `--builds a,b,c` [`--vs id`] [`--home-away`]: matriz build × rival
 
+**Metodología (paquete I).** Cada celda se promedia sobre `--rosters` plantillas distintas por build y,
+cuando las dos builds del emparejamiento comparten **raza y calidad**, las dos plantillas de un partido se
+generan con el **mismo índice de generación**: los dos equipos son los mismos diez jugadores y lo único que
+cambia son los perks, las rarezas y la alineación, que es lo que §8 quiere medir. Con una sola plantilla
+por build (paquete H) la tasa de victoria de la misma build contra su referencia iba del 16,5% al 59,5%
+según el dado del generador (sd de 14,9 puntos entre plantillas). Además, cada emparejamiento se juega en
+las cuatro combinaciones de (local, visitante) × (ids de jugador bajos, ids altos): los desempates del
+motor van por id ascendente y con el reparto fijo el equipo de ids bajos gana 2-3 puntos de más.
+
 Sin `--vs`: todos-contra-todos entre las builds listadas. Con `--vs id`: cada build de `--builds` contra
 esa única build rival (el caso de uso de la puerta RT-055/§8: comparar cada build contra la referencia sin
-perks de su propia raza). `--runs` se reparte por igual entre los emparejamientos (resto a los primeros).
+perks de su propia raza). La build de `--vs` también aparece en `builds.csv` con su propia fila: es el
+denominador de las métricas normalizadas de §8 (ADR 0012). `--runs` se reparte por igual entre los emparejamientos (resto a los primeros).
 Con `--home-away`, cada emparejamiento se juega también con los equipos invertidos y las estadísticas se
 acumulan sobre el total (elimina cualquier sesgo local/visitante); sin ella, siempre se simula con la misma
 orientación física. Un partido entre dos builds distintas alimenta a la vez las dos celdas de la matriz
@@ -77,8 +88,10 @@ que la build asigna estáticamente a algún titular aunque nunca llegue a activa
 - `injuriesFor`/`injuriesAgainst`, `tacklesPerMatch`: se reparten por equipo con `PlayerMatchStats.Team`
   (`injuriesFor` = lesiones sufridas por los propios jugadores de `build`; `injuriesAgainst` = lesiones que
   `build` le ha causado al rival).
-- `passChainAvgLength`: estadística de todo el partido (`MatchReport.PassChains`/`PassChainTotalLength` no
-  se reparten por equipo en el motor), así que el mismo valor alimenta las dos filas de un partido.
+- `passChainAvgLength`: se reparte por equipo con `MatchReport.PassChainsByTeam` /
+  `PassChainTotalLengthByTeam` (paquete I): cada fila lleva las cadenas de su propia build. Antes era una
+  estadística de partido completo y no podía distinguir a las dos builds, que es justo lo que compara
+  `buildsWinDifferently`.
 - `activationsPerMatch`: activaciones de perk (`MatchReport.PerkActivations`) cuyo `OwnerId` pertenece a
   los jugadores de esa build en ese partido.
 
@@ -178,5 +191,10 @@ Una fila por jugador generado que llegó a jugar al menos un partido, con sus es
 - **Rival de campaña fijo a `human_none`**: §8 dice literalmente "N partidos consecutivos contra `human_none`", no contra la referencia de la propia raza; se ha implementado así aunque sea distinto del rival de la matriz por defecto (`--vs human_none` también, mismo id, pero por coincidencia con la baseline de Human, no por raza).
 - **`avgLevel`/`avgStrength`/`avgTechnique` de `campaign.csv`**: promedian los 10 jugadores de la plantilla generada (titulares + suplentes), no solo los 7 titulares, porque los suplentes también progresan (45% de experiencia) y el objetivo de la columna es "cómo de fuerte está la plantilla completa en ese punto de la campaña".
 - **`passChainAvgLength` de `builds.csv`**: es una estadística de todo el partido, no de un equipo (`MatchReport.PassChains`/`PassChainTotalLength` no distinguen equipo en el motor, y no se ha tocado `Sim/Engine` para partirla); el mismo valor alimenta la fila de las dos builds de cada partido. Es una medida más débil que si estuviera partida por equipo, pero es la que puede darse sin tocar el motor, y sigue sirviendo para `buildsWinDifferently` (compara el promedio de una build sobre todos sus partidos, no una resolución por bando).
+- **`--rosters` por defecto 25**: es el valor mínimo con el que la tasa de victoria de una celda deja de
+  depender de qué plantilla salió; la puerta de fase 1 (`Sim.Tests/Analysis/BuildGateTests.cs`) usa 80.
+- **Los ids altos son `100001..`**, misma paridad que los bajos (`1..`): la paridad importa porque un
+  jugador decide cuando `(tick + id) % decisionIntervalTicks == 0`, y con paridades distintas los dos
+  equipos decidirían en ticks distintos.
 - **`data/balance/groups.json`**: los grupos de builds para las métricas de fase 1 (`coherent`/`bad`/`random`/`baselineByRace`) viven fuera de `balance/builds/` porque no son una build; tienen esquema propio (`data/schemas/balance-groups.schema.json`) y el validador los reconoce.
 - **`--describe` sin argumento**: por defecto imprime en español (`es`); solo consume el siguiente token de la línea de comandos si es exactamente `es` o `en`, para no confundirlo con la siguiente opción si `--describe` es el último flag antes de otra cosa.

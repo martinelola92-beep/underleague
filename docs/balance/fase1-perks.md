@@ -442,7 +442,38 @@ La fase 1 **no cumple su criterio de salida**, y la causa está identificada y n
 mecánica espacial (ADR 0020, 0021 y el rediseño de la IA sin balón). El ajuste de valores del catálogo y de
 las builds se hace **después** de esos cambios, con esta medición como línea base.
 
-La puerta `Sim.Tests/Analysis/BuildGateTests.cs` está escrita y probada (con un catálogo ajustado a mano
-cumplía las nueve métricas), pero queda **desactivada con `Skip`** hasta que las ADR 0020, 0021 y 0022 estén
-implementadas: sus umbrales dependen de la mecánica que va a cambiar. Muestra de la puerta: 80 plantillas ×
-20 partidos = **1.600 partidos por build**, semilla 1, nueve builds; unos 28 s.
+La puerta `Sim.Tests/Analysis/BuildGateTests.cs` está escrita y probada, pero queda **desactivada con
+`Skip`** hasta que las ADR 0020, 0021 y 0022 estén implementadas: sus umbrales dependen de la mecánica que
+va a cambiar. Muestra de la puerta: 80 plantillas × 20 partidos = **1.600 partidos por build**, semilla 1,
+nueve builds; unos 28 s de ejecución.
+
+## 12. Apéndice: los umbrales de §8 sí son alcanzables (experimento revertido)
+
+Antes de acotar el encargo se llegó a construir un catálogo y unas builds ajustados sobre este mismo motor
+que cumplían **las nueve métricas de §8 a la vez**. Ese trabajo se ha revertido —el ajuste fino se hará
+sobre la mecánica nueva— pero los números merecen quedar registrados, porque dicen **qué hace falta** para
+llegar:
+
+| métrica | valor alcanzado | umbral |
+|---|---|---|
+| `coherentBuildsBeatNone` | 63,3 - 65,8 (las cinco) | ≥ 58 |
+| `badBuildsLoseToNone` | 40,3 / 41,1 / 41,3 | ≤ 45 |
+| `randomBuildNearNone` | 49,3 | 40-60 |
+| `buildsWinDifferently` lesiones (normalizado) | 3,81 | ≥ 1,5 |
+| `buildsWinDifferently` cadena (normalizado) | 1,53 | ≥ 1,3 |
+| `noDeadPerks` | 0 perks muertos (mínimo 3,9%) | 0 |
+| RT-055 contra `human_none` | máximo 68,2%, mínimo 43,6% | 30-70 |
+
+Lo que hizo falta, y que el rediseño debería conservar:
+
+1. **Cambiar el canal de cada familia** por uno con recorrido (§6): la violencia sobre `injure` en vez de
+   sobre fuerza, el muro sobre `save` y `leash`, el contragolpe sobre `intercept` y `shotOnTarget`, el
+   tiki-taka sobre el `intercept` del rival. Ningún valor salió de los márgenes de §7.
+2. **Quitar los `lineup` apiñados** y ampliar el radio de adyacencia, para que la sinergia posicional deje
+   de costar más de lo que da. Es lo que resuelven las ADR 0020 y 0021 por la vía buena.
+3. **Castigos de verdad en los `elseEffects`**: un `−1` de correa o un `−1500` de pase, no un `−3` de
+   atributo (que vale 0,2 puntos). Es la única forma de que una build incoherente pierda de verdad.
+4. **`scope: team` en los rompe-reglas** para que se activen por encima del 1% de los partidos.
+
+Y lo que **no** se consiguió ni con ese catálogo: la segunda mitad de `scalingRewardsGoodBuilds` (§8) y la
+mitad de cadena de pases **sin** normalizar (§10.2-10.3).
