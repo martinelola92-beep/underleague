@@ -33,7 +33,8 @@ Cuándo escribir un ADR: cambio de librería o stack, frontera entre proyectos, 
 | [0033](0033-los-jefes-como-puertas-de-build.md) | Los jefes son puertas de calidad de build y definen la curva de exigencia de la run | Aceptada. **Sustituye la 2.ª mitad de `scalingRewardsGoodBuilds`** |
 | [0034](0034-alinear-con-lesion-grave.md) | Alinear a un lesionado grave es posible y su precio es el riesgo de muerte; falta decidir el coste inmediato | **Propuesta: decisión del revisor** |
 | [0035](0035-escala-de-valores-por-canal.md) | Cada canal de probabilidad declara su propio escalón: un `+5` vale 13x en un canal y 1,06x en otro | Aceptada. **Resuelve D-30** |
-| [0036](0036-que-aporta-el-equipamiento.md) | El objeto sube uno o dos atributos; el perk cambia reglas; el consumible es puntual | Aceptada |
+| [0036](0036-que-aporta-el-equipamiento.md) | El objeto sube atributos según su rareza; el perk cambia reglas; el consumible es puntual | Aceptada |
+| [0037](0037-la-economia-como-dificultad.md) | La escasez de oro es la palanca de dificultad; se mide enfrentando tres políticas de compra | Aceptada |
 
 El hueco del 0011 corresponde a una decisión sobre el radio de adyacencia que quedó absorbida por la 0021 antes de aceptarse.
 | [0012](0012-buildswindifferently-normalizada.md) | `buildsWinDifferently` normalizada contra la referencia de la raza | **Propuesta: decisión del revisor** |
