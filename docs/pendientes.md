@@ -68,3 +68,4 @@ Se aplica la lectura indicada hasta que el documento suba de versión.
 | R-3 | RF-022d | La etiqueta deja de ser única por raza: se separa en etiqueta de especie (fija) y etiqueta de estilo (individual, con sesgo racial) | ADR 0024 |
 | R-4 | RF-044 | La adyacencia se resuelve antes del partido en vínculos direccionales acotados, no como condición evaluada en cada evento | ADR 0021 |
 | R-5 | RF-031 | Cada raza tiene una habilidad concreta, implementada como perk de equipo | ADR 0026 |
+| R-6 | RF-042, RT-095 | La correa deja de ser un radio circular duro: pasa a ser una zona con forma por posición, tamaño escalado por el atributo y salida penalizada en vez de prohibida | ADR 0028 |
