@@ -1,0 +1,84 @@
+{
+  "_doc": "Escalón \"buena\" de la escala de calidad de build de la ADR 0033, medido por la puerta de jefes (Sim.Tests/Analysis/BossGateTests.cs). Los cuatro escalones de una raza comparten calidad 50, rareza común y etiqueta de estilo impuesta: lo único que cambia entre ellos es la construcción -qué perks, dónde colocados, con qué escalado acumulado-, nunca la plantilla. Correcta y ademas con una linea de sinergia clara -la interceptacion: conductor del centro y presion alta suman al EQUIPO, la sombra de cobertura alimenta al conductor y el lector de la batalla escala- y con los dos perks de acumulacion alimentados (dos partidos de contador). Catorce perks distintos: ninguno se pierde por la clausula de exclusividad del jefe del acto 1.",
+  "id": "elf_good",
+  "name": "Elfos: buena",
+  "race": "Elf",
+  "quality": 50,
+  "rarity": "common",
+  "perks": [
+    {
+      "slot": 0,
+      "perk": "safety_net"
+    },
+    {
+      "slot": 0,
+      "perk": "clean_sheet_legacy"
+    },
+    {
+      "slot": 1,
+      "perk": "own_third_anchor"
+    },
+    {
+      "slot": 1,
+      "perk": "diagonal_press"
+    },
+    {
+      "slot": 2,
+      "perk": "last_ditch"
+    },
+    {
+      "slot": 2,
+      "perk": "pivot_duo"
+    },
+    {
+      "slot": 3,
+      "perk": "center_conductor"
+    },
+    {
+      "slot": 3,
+      "perk": "covering_shadow"
+    },
+    {
+      "slot": 4,
+      "perk": "high_press_trigger"
+    },
+    {
+      "slot": 4,
+      "perk": "battle_reader"
+    },
+    {
+      "slot": 5,
+      "perk": "wing_overlap"
+    },
+    {
+      "slot": 5,
+      "perk": "fine_orchestra"
+    },
+    {
+      "slot": 6,
+      "perk": "box_predator"
+    },
+    {
+      "slot": 6,
+      "perk": "forward_line"
+    }
+  ],
+  "lineup": null,
+  "styles": {
+    "0": "Fine",
+    "1": "Fine",
+    "2": "Fine",
+    "3": "Fine",
+    "4": "Fine",
+    "5": "Fine",
+    "6": "Fine"
+  },
+  "counters": {
+    "0": {
+      "cleanSheetSaves": 2
+    },
+    "4": {
+      "battleReaderMatches": 2
+    }
+  }
+}

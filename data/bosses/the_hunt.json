@@ -1,0 +1,108 @@
+{
+  "_doc": "Jefe del acto 2 (RF-001b). Un modificador de regla: «Marca de muerte» deja sin perks al titular DE CAMPO en el que la build concentra los suyos (el portero queda fuera: no se marca al hombre a un portero). Castiga la build que lo canaliza todo por un jugador. Plantilla orca de violencia. Calibrado contra la fila del acto 2 de la ADR 0033.",
+  "id": "the_hunt",
+  "act": 2,
+  "name": {
+    "es": "La Cacería",
+    "en": "The Hunt"
+  },
+  "template": {
+    "race": "Orc",
+    "quality": 59,
+    "level": 6,
+    "perks": [
+      {
+        "slot": 0,
+        "perk": "safety_net"
+      },
+      {
+        "slot": 0,
+        "perk": "sweeper_keeper"
+      },
+      {
+        "slot": 1,
+        "perk": "own_third_anchor"
+      },
+      {
+        "slot": 1,
+        "perk": "shadow_marker"
+      },
+      {
+        "slot": 2,
+        "perk": "own_third_anchor"
+      },
+      {
+        "slot": 2,
+        "perk": "last_ditch"
+      },
+      {
+        "slot": 3,
+        "perk": "center_conductor"
+      },
+      {
+        "slot": 3,
+        "perk": "pack_mentality"
+      },
+      {
+        "slot": 4,
+        "perk": "brute_boots"
+      },
+      {
+        "slot": 4,
+        "perk": "shadow_marker"
+      },
+      {
+        "slot": 5,
+        "perk": "pivot_duo"
+      },
+      {
+        "slot": 5,
+        "perk": "diagonal_press"
+      },
+      {
+        "slot": 6,
+        "perk": "box_predator"
+      },
+      {
+        "slot": 6,
+        "perk": "forward_line"
+      }
+    ],
+    "styles": {
+      "1": "Brute",
+      "2": "Brute",
+      "4": "Brute",
+      "6": "Brute"
+    }
+  },
+  "modifiers": [
+    {
+      "id": "death_mark",
+      "name": {
+        "es": "Marca de muerte",
+        "en": "Death Mark"
+      },
+      "kind": "markStar"
+    }
+  ],
+  "gate": {
+    "playerLevel": 6,
+    "targets": {
+      "incoherent": {
+        "max": 15
+      },
+      "correct": {
+        "min": 30,
+        "max": 45
+      },
+      "good": {
+        "min": 55,
+        "max": 70
+      },
+      "excellent": {
+        "min": 65,
+        "max": 80
+      }
+    }
+  }
+}

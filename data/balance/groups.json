@@ -1,12 +1,60 @@
 {
-  "coherent": ["orc_violence", "elf_tiki_taka", "human_wall", "human_counter", "orc_mob", "dwarf_fortress", "orc_giants", "elf_bulwark", "undead_grind"],
-  "bad": ["orc_misplaced", "elf_brawler", "human_scattered", "elf_out_of_zone"],
-  "random": ["human_random"],
+  "_doc": "Grupos de builds de /Balance. 'coherent'/'bad'/'random'/'baselineByRace' son los de la puerta de fase 1 (docs/fase1-diseno.md 8). 'qualityLevels' es la escala de calidad de build de la ADR 0033, que mide la puerta de jefes (Sim.Tests/Analysis/BossGateTests.cs): cuatro escalones por raza, con la misma plantilla y distinta construccion.",
+  "coherent": [
+    "orc_violence",
+    "elf_tiki_taka",
+    "human_wall",
+    "human_counter",
+    "orc_mob",
+    "dwarf_fortress",
+    "orc_giants",
+    "elf_bulwark",
+    "undead_grind"
+  ],
+  "bad": [
+    "orc_misplaced",
+    "elf_brawler",
+    "human_scattered",
+    "elf_out_of_zone"
+  ],
+  "random": [
+    "human_random"
+  ],
   "baselineByRace": {
     "Human": "human_none",
     "Orc": "orc_none",
     "Elf": "elf_none",
     "Dwarf": "dwarf_none",
     "Undead": "undead_none"
+  },
+  "qualityLevels": {
+    "incoherent": [
+      "human_incoherent",
+      "orc_incoherent",
+      "elf_incoherent",
+      "dwarf_incoherent",
+      "undead_incoherent"
+    ],
+    "correct": [
+      "human_correct",
+      "orc_correct",
+      "elf_correct",
+      "dwarf_correct",
+      "undead_correct"
+    ],
+    "good": [
+      "human_good",
+      "orc_good",
+      "elf_good",
+      "dwarf_good",
+      "undead_good"
+    ],
+    "excellent": [
+      "human_excellent",
+      "orc_excellent",
+      "elf_excellent",
+      "dwarf_excellent",
+      "undead_excellent"
+    ]
   }
 }

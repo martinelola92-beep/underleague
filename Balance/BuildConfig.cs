@@ -28,7 +28,8 @@ public sealed record BuildConfig(
     int Level = 1,
     Rarity? UniformRarity = null,
     IReadOnlyDictionary<int, StyleTag>? Styles = null,
-    IReadOnlyDictionary<int, IReadOnlyList<Trait>>? Traits = null)
+    IReadOnlyDictionary<int, IReadOnlyList<Trait>>? Traits = null,
+    IReadOnlyDictionary<int, IReadOnlyDictionary<string, int>>? Counters = null)
 {
     /// <summary>Número de titulares de un equipo (GK, DEF, DEF, MID, MID, MID, FWD).</summary>
     public const int StarterCount = 7;
@@ -179,7 +180,27 @@ public sealed record BuildConfig(
             }
         }
 
-        return new BuildConfig(id, name, race, quality, perks, rarities, lineup, level, uniformRarity, styles, traits);
+        var counters = new Dictionary<int, IReadOnlyDictionary<string, int>>();
+        if (root.TryGetProperty("counters", out var countersElement) && countersElement.ValueKind == JsonValueKind.Object)
+        {
+            foreach (var property in countersElement.EnumerateObject())
+            {
+                if (!int.TryParse(property.Name, out int slot) || slot < 0 || slot >= StarterCount)
+                {
+                    throw new FormatException($"{path}: clave de 'counters' inválida '{property.Name}'");
+                }
+
+                var values = new SortedDictionary<string, int>(StringComparer.Ordinal);
+                foreach (var counter in property.Value.EnumerateObject())
+                {
+                    values[counter.Name] = counter.Value.GetInt32();
+                }
+
+                counters[slot] = values;
+            }
+        }
+
+        return new BuildConfig(id, name, race, quality, perks, rarities, lineup, level, uniformRarity, styles, traits, counters);
     }
 
     /// <summary>Carga todas las builds de un directorio: todo *.json (los grupos viven fuera, en data/balance/groups.json).</summary>
@@ -241,6 +262,18 @@ public sealed record BuildConfig(
         {
             int index = IndexOfSlot(players, firstPlayerId, slot);
             players[index] = players[index] with { Perks = perkIds };
+        }
+
+        // Contadores de carrera con los que entra el titular (RF-070): es lo que separa "buena" de "muy
+        // buena" en la escala de la ADR 0033, porque los perks de acumulación valen 0 con el contador a
+        // cero. EffectEngine los siembra desde PlayerDefinition.Counters.
+        if (Counters is not null)
+        {
+            foreach (var (slot, values) in Counters.OrderBy(c => c.Key))
+            {
+                int index = IndexOfSlot(players, firstPlayerId, slot);
+                players[index] = players[index].WithCounters(values);
+            }
         }
 
         SimLineup lineup;
@@ -308,7 +341,8 @@ public sealed record BuildGroups(
     IReadOnlyList<string> Coherent,
     IReadOnlyList<string> Bad,
     IReadOnlyList<string> Random,
-    IReadOnlyDictionary<string, string> BaselineByRace)
+    IReadOnlyDictionary<string, string> BaselineByRace,
+    IReadOnlyDictionary<string, IReadOnlyList<string>> QualityLevels)
 {
     public static BuildGroups Load(string path) => Parse(path, File.ReadAllText(path));
 
@@ -331,7 +365,23 @@ public sealed record BuildGroups(
             }
         }
 
-        return new BuildGroups(coherent, bad, random, baselineByRace);
+        // Escala de calidad de build de la ADR 0033 (paquete Y): los cuatro escalones por raza.
+        var qualityLevels = new Dictionary<string, IReadOnlyList<string>>(StringComparer.Ordinal);
+        if (root.TryGetProperty("qualityLevels", out var levelsElement) && levelsElement.ValueKind == JsonValueKind.Object)
+        {
+            foreach (var property in levelsElement.EnumerateObject())
+            {
+                var ids = new List<string>();
+                foreach (var item in property.Value.EnumerateArray())
+                {
+                    ids.Add(item.GetString() ?? throw new FormatException($"{path}: entrada nula en 'qualityLevels.{property.Name}'"));
+                }
+
+                qualityLevels[property.Name] = ids;
+            }
+        }
+
+        return new BuildGroups(coherent, bad, random, baselineByRace, qualityLevels);
     }
 
     /// <summary>

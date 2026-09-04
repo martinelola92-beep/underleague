@@ -1,0 +1,76 @@
+{
+  "_doc": "Escalón \"correcta\" de la escala de calidad de build de la ADR 0033, medido por la puerta de jefes (Sim.Tests/Analysis/BossGateTests.cs). Los cuatro escalones de una raza comparten calidad 50, rareza común y etiqueta de estilo impuesta: lo único que cambia entre ellos es la construcción -qué perks, dónde colocados, con qué escalado acumulado-, nunca la plantilla. Todos los perks se activan, ninguno castiga y la colocacion respeta lo que exigen, pero no hay ninguna linea de sinergia: ningun perk de alcance de EQUIPO, ningun perk de acumulacion y tres repetidos (ancla, pivote y ultimo recurso), que son los que pierde con la clausula de exclusividad del jefe del acto 1.",
+  "id": "human_correct",
+  "name": "Humanos: correcta",
+  "race": "Human",
+  "quality": 50,
+  "rarity": "common",
+  "perks": [
+    {
+      "slot": 0,
+      "perk": "safety_net"
+    },
+    {
+      "slot": 0,
+      "perk": "clean_sheet_legacy"
+    },
+    {
+      "slot": 1,
+      "perk": "own_third_anchor"
+    },
+    {
+      "slot": 1,
+      "perk": "diagonal_press"
+    },
+    {
+      "slot": 2,
+      "perk": "own_third_anchor"
+    },
+    {
+      "slot": 2,
+      "perk": "pivot_duo"
+    },
+    {
+      "slot": 3,
+      "perk": "last_ditch"
+    },
+    {
+      "slot": 3,
+      "perk": "pivot_duo"
+    },
+    {
+      "slot": 4,
+      "perk": "last_ditch"
+    },
+    {
+      "slot": 4,
+      "perk": "wing_overlap"
+    },
+    {
+      "slot": 5,
+      "perk": "game_management"
+    },
+    {
+      "slot": 5,
+      "perk": "flank_specialist"
+    },
+    {
+      "slot": 6,
+      "perk": "box_predator"
+    },
+    {
+      "slot": 6,
+      "perk": "forward_line"
+    }
+  ],
+  "lineup": null,
+  "styles": {
+    "0": "Neutral",
+    "1": "Neutral",
+    "2": "Neutral",
+    "3": "Neutral",
+    "4": "Neutral",
+    "5": "Neutral",
+    "6": "Neutral"
+  }
+}

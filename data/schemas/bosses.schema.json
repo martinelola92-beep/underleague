@@ -1,0 +1,146 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://underleague.dev/schemas/bosses.schema.json",
+  "title": "Underleague boss",
+  "description": "data/bosses/<id>.json: un jefe de acto (RF-001b, RF-001c). Contiene la plantilla (misma forma que una build de /Balance: 'slot' es el índice de titular que produce TeamGenerator, 0 portero, 1-2 defensas, 3-5 centrocampistas, 6 delantero), los modificadores de regla —uno en los actos 1 y 2, dos en el acto 3—, la condición de derrota propia del jefe final (D-9) y la fila de la tabla de la ADR 0033 que la puerta de /Balance tiene que verificar. La comprobación de 'un modificador en los actos 1 y 2, dos en el 3' la hace el cargador (Sim.Run.Bosses.BossCatalog), no este esquema.",
+  "type": "object",
+  "required": ["id", "act", "name", "template", "modifiers", "gate"],
+  "additionalProperties": false,
+  "properties": {
+    "_doc": { "type": "string" },
+    "id": { "type": "string", "pattern": "^[a-z][a-z0-9_]*$" },
+    "act": { "type": "integer", "minimum": 1, "maximum": 3 },
+    "name": { "$ref": "#/$defs/localizedName" },
+    "template": {
+      "type": "object",
+      "description": "Plantilla del jefe (RF-015: rival estático diseñado a mano). El jefe final la lleva íntegramente legendaria (RF-001c).",
+      "required": ["race", "quality"],
+      "additionalProperties": false,
+      "properties": {
+        "_doc": { "type": "string" },
+        "race": { "$ref": "#/$defs/race" },
+        "quality": { "type": "integer", "minimum": 1, "maximum": 99 },
+        "level": { "type": "integer", "minimum": 1, "maximum": 8 },
+        "rarity": { "$ref": "#/$defs/rarity" },
+        "perks": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["slot", "perk"],
+            "additionalProperties": false,
+            "properties": {
+              "slot": { "type": "integer", "minimum": 0, "maximum": 6 },
+              "perk": { "type": "string", "pattern": "^[a-z][a-z0-9_]*$" }
+            }
+          }
+        },
+        "rarities": {
+          "type": "object",
+          "propertyNames": { "pattern": "^[0-6]$" },
+          "additionalProperties": { "$ref": "#/$defs/rarity" }
+        },
+        "lineup": {
+          "type": "array",
+          "minItems": 7,
+          "maxItems": 7,
+          "items": {
+            "type": "array",
+            "prefixItems": [
+              { "type": "integer", "minimum": 0, "maximum": 7 },
+              { "type": "integer", "minimum": 0, "maximum": 4 }
+            ],
+            "items": false,
+            "minItems": 2
+          }
+        },
+        "styles": {
+          "type": "object",
+          "propertyNames": { "pattern": "^[0-6]$" },
+          "additionalProperties": { "enum": ["Brute", "Fine", "Bulwark", "Cold", "Neutral"] }
+        },
+        "traits": {
+          "type": "object",
+          "propertyNames": { "pattern": "^[0-6]$" },
+          "additionalProperties": {
+            "type": "array",
+            "items": { "type": "string", "pattern": "^[A-Z][A-Za-z]*$" },
+            "uniqueItems": true
+          }
+        }
+      }
+    },
+    "modifiers": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 2,
+      "description": "Modificadores de regla (RF-001b, RF-001c). Reglas que cambian el partido, no bonos de atributos: cada uno invalida un eje de construcción de build.",
+      "items": {
+        "type": "object",
+        "required": ["id", "name", "kind"],
+        "additionalProperties": false,
+        "properties": {
+          "id": { "type": "string", "pattern": "^[a-z][a-z0-9_]*$" },
+          "name": { "$ref": "#/$defs/localizedName" },
+          "kind": {
+            "enum": ["singleCopy", "markStar", "banChannel", "pushBack"],
+            "description": "singleCopy: un perk repetido solo cuenta en su primer portador. markStar: el titular con más perks pierde los suyos. banChannel: los perks que tocan 'probability' no se aplican. pushBack: ningún titular empieza por delante de 'column'."
+          },
+          "probability": {
+            "enum": ["Foul", "Card", "Injury", "Injure", "SevereInjury", "Pass", "Intercept", "Dribble", "Tackle", "ShotOnTarget", "Save", "TackleEvasion", "InterceptEvasion"],
+            "description": "Obligatorio con kind=banChannel."
+          },
+          "column": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 7,
+            "description": "Obligatorio con kind=pushBack: columna de colocación máxima, contada desde la portería propia."
+          }
+        }
+      }
+    },
+    "defeatCondition": {
+      "type": "object",
+      "description": "Condición de derrota adicional del jefe (RF-001c). Solo la tiene el jefe final.",
+      "required": ["id", "name", "kind"],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "type": "string", "pattern": "^[a-z][a-z0-9_]*$" },
+        "name": { "$ref": "#/$defs/localizedName" },
+        "kind": {
+          "enum": ["none", "drawIsDefeat"],
+          "description": "drawIsDefeat: llegar empatado al final del tiempo reglamentario es derrota (D-9)."
+        }
+      }
+    },
+    "gate": {
+      "type": "object",
+      "description": "Fila de la tabla de la ADR 0033 que este jefe tiene que cumplir, y nivel al que llega la plantilla del jugador a esta puerta.",
+      "required": ["playerLevel", "targets"],
+      "additionalProperties": false,
+      "properties": {
+        "playerLevel": { "type": "integer", "minimum": 1, "maximum": 8 },
+        "targets": {
+          "type": "object",
+          "propertyNames": { "enum": ["incoherent", "correct", "good", "excellent"] },
+          "additionalProperties": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "min": { "type": "number", "minimum": 0, "maximum": 100 },
+              "max": { "type": "number", "minimum": 0, "maximum": 100 }
+            }
+          }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "localizedName": {
+      "type": "object",
+      "required": ["es", "en"],
+      "additionalProperties": { "type": "string", "minLength": 1 }
+    },
+    "race": { "enum": ["Human", "Orc", "Elf", "Dwarf", "Undead", "DarkElf", "Demon", "Vampire", "Lizard"] },
+    "rarity": { "enum": ["common", "rare", "legendary"] }
+  }
+}

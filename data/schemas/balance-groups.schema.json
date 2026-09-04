@@ -4,21 +4,112 @@
   "title": "Grupos de builds para las métricas de fase 1",
   "type": "object",
   "additionalProperties": false,
-  "required": ["coherent", "bad", "random", "baselineByRace"],
+  "required": [
+    "coherent",
+    "bad",
+    "random",
+    "baselineByRace"
+  ],
   "properties": {
-    "_doc": { "type": "string" },
-    "coherent": { "type": "array", "items": { "type": "string" }, "minItems": 1 },
-    "bad": { "type": "array", "items": { "type": "string" }, "minItems": 1 },
-    "random": { "type": "array", "items": { "type": "string" } },
+    "_doc": {
+      "type": "string"
+    },
+    "coherent": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "minItems": 1
+    },
+    "bad": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "minItems": 1
+    },
+    "random": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
     "baselineByRace": {
       "type": "object",
       "additionalProperties": false,
       "properties": {
-        "_doc": { "type": "string" },
-        "Human": { "type": "string" }, "Orc": { "type": "string" }, "Elf": { "type": "string" },
-        "Dwarf": { "type": "string" }, "Undead": { "type": "string" }, "DarkElf": { "type": "string" },
-        "Demon": { "type": "string" }, "Vampire": { "type": "string" }, "Lizard": { "type": "string" }
+        "_doc": {
+          "type": "string"
+        },
+        "Human": {
+          "type": "string"
+        },
+        "Orc": {
+          "type": "string"
+        },
+        "Elf": {
+          "type": "string"
+        },
+        "Dwarf": {
+          "type": "string"
+        },
+        "Undead": {
+          "type": "string"
+        },
+        "DarkElf": {
+          "type": "string"
+        },
+        "Demon": {
+          "type": "string"
+        },
+        "Vampire": {
+          "type": "string"
+        },
+        "Lizard": {
+          "type": "string"
+        }
       }
+    },
+    "qualityLevels": {
+      "type": "object",
+      "description": "Escala de calidad de build de la ADR 0033: los cuatro escalones (incoherente, correcta, buena, muy buena) con los ids de build de cada raza. Es el eje de la puerta de jefes.",
+      "additionalProperties": false,
+      "properties": {
+        "incoherent": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1
+        },
+        "correct": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1
+        },
+        "good": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1
+        },
+        "excellent": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1
+        }
+      },
+      "required": [
+        "incoherent",
+        "correct",
+        "good",
+        "excellent"
+      ]
     }
   }
 }

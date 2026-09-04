@@ -1,0 +1,184 @@
+{
+  "_doc": "Jefe final (RF-001c): plantilla íntegramente legendaria, DOS modificadores de regla y una condición de derrota propia (D-9). «Portería sellada» apaga los perks que suben el remate a puerta y «Cerrojo» vacía el tercio atacante: hay que saber marcar sin ninguna de las dos cosas. «El campeón conserva el título» convierte el empate al final del tiempo reglamentario en derrota, así que no basta con no perder. Calibrado contra la fila del acto 3 de la ADR 0033.",
+  "id": "eternal_crown",
+  "act": 3,
+  "name": {
+    "es": "La Corona Eterna",
+    "en": "The Eternal Crown"
+  },
+  "template": {
+    "race": "Undead",
+    "quality": 40,
+    "level": 8,
+    "rarity": "legendary",
+    "perks": [
+      {
+        "slot": 0,
+        "perk": "safety_net"
+      },
+      {
+        "slot": 0,
+        "perk": "sweeper_keeper"
+      },
+      {
+        "slot": 0,
+        "perk": "clean_sheet_legacy"
+      },
+      {
+        "slot": 1,
+        "perk": "own_third_anchor"
+      },
+      {
+        "slot": 1,
+        "perk": "last_ditch"
+      },
+      {
+        "slot": 1,
+        "perk": "bulwark_stance"
+      },
+      {
+        "slot": 1,
+        "perk": "pivot_duo"
+      },
+      {
+        "slot": 2,
+        "perk": "own_third_anchor"
+      },
+      {
+        "slot": 2,
+        "perk": "last_ditch"
+      },
+      {
+        "slot": 2,
+        "perk": "pivot_duo"
+      },
+      {
+        "slot": 2,
+        "perk": "shadow_marker"
+      },
+      {
+        "slot": 3,
+        "perk": "center_conductor"
+      },
+      {
+        "slot": 3,
+        "perk": "high_press_trigger"
+      },
+      {
+        "slot": 3,
+        "perk": "natural_leader"
+      },
+      {
+        "slot": 3,
+        "perk": "covering_shadow"
+      },
+      {
+        "slot": 4,
+        "perk": "pivot_duo"
+      },
+      {
+        "slot": 4,
+        "perk": "diagonal_press"
+      },
+      {
+        "slot": 4,
+        "perk": "cold_focus"
+      },
+      {
+        "slot": 4,
+        "perk": "road_warrior"
+      },
+      {
+        "slot": 5,
+        "perk": "pivot_duo"
+      },
+      {
+        "slot": 5,
+        "perk": "diagonal_press"
+      },
+      {
+        "slot": 5,
+        "perk": "wing_overlap"
+      },
+      {
+        "slot": 5,
+        "perk": "cold_focus"
+      },
+      {
+        "slot": 6,
+        "perk": "box_predator"
+      },
+      {
+        "slot": 6,
+        "perk": "forward_line"
+      },
+      {
+        "slot": 6,
+        "perk": "long_range_menace"
+      },
+      {
+        "slot": 6,
+        "perk": "cold_focus"
+      }
+    ],
+    "styles": {
+      "1": "Bulwark",
+      "4": "Cold",
+      "5": "Cold",
+      "6": "Cold"
+    },
+    "traits": {
+      "3": [
+        "Leader"
+      ]
+    }
+  },
+  "modifiers": [
+    {
+      "id": "sealed_goal",
+      "name": {
+        "es": "Portería sellada",
+        "en": "Sealed Goal"
+      },
+      "kind": "banChannel",
+      "probability": "ShotOnTarget"
+    },
+    {
+      "id": "iron_curtain",
+      "name": {
+        "es": "Cerrojo",
+        "en": "Iron Curtain"
+      },
+      "kind": "pushBack",
+      "column": 5
+    }
+  ],
+  "defeatCondition": {
+    "id": "titleholder",
+    "name": {
+      "es": "El campeón conserva el título",
+      "en": "The Champion Retains"
+    },
+    "kind": "drawIsDefeat"
+  },
+  "gate": {
+    "playerLevel": 7,
+    "targets": {
+      "incoherent": {
+        "max": 10
+      },
+      "correct": {
+        "min": 15,
+        "max": 30
+      },
+      "good": {
+        "min": 35,
+        "max": 50
+      },
+      "excellent": {
+        "min": 55,
+        "max": 70
+      }
+    }
+  }
+}

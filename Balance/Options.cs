@@ -54,6 +54,9 @@ public sealed class Options
     /// </summary>
     public int Rosters { get; private set; } = BuildBatchRunner.DefaultRosters;
 
+    /// <summary>--boss-gate: mide la curva de puertas de la ADR 0033 (cada nivel de build contra cada jefe).</summary>
+    public bool BossGate { get; private set; }
+
     /// <summary>Null salvo que se pase --describe [es|en]: activa el modo catálogo, con el idioma pedido (por defecto "es").</summary>
     public string? Describe { get; private set; }
 
@@ -98,6 +101,10 @@ public sealed class Options
 
                 case "--home-away":
                     options.HomeAway = true;
+                    break;
+
+                case "--boss-gate":
+                    options.BossGate = true;
                     break;
 
                 case "--rosters":

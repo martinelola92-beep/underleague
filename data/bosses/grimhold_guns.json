@@ -1,0 +1,108 @@
+{
+  "_doc": "Jefe del acto 1 (RF-001b). Un modificador de regla: «Manos de mantequilla» apaga los perks que suben la parada, así que la build que descansa en el portero —la primera que se le ocurre a cualquiera, porque la parada es de los canales más rentables del catálogo— se queda sin plan y hay que ganar el partido por otro sitio. Plantilla enana de bloque bajo. Calibrado contra la fila del acto 1 de la ADR 0033.",
+  "id": "grimhold_guns",
+  "act": 1,
+  "name": {
+    "es": "Los Cañones de Grimhold",
+    "en": "The Grimhold Guns"
+  },
+  "template": {
+    "race": "Dwarf",
+    "quality": 43,
+    "level": 5,
+    "perks": [
+      {
+        "slot": 0,
+        "perk": "safety_net"
+      },
+      {
+        "slot": 0,
+        "perk": "sweeper_keeper"
+      },
+      {
+        "slot": 1,
+        "perk": "own_third_anchor"
+      },
+      {
+        "slot": 1,
+        "perk": "bulwark_stance"
+      },
+      {
+        "slot": 2,
+        "perk": "own_third_anchor"
+      },
+      {
+        "slot": 2,
+        "perk": "last_ditch"
+      },
+      {
+        "slot": 3,
+        "perk": "center_conductor"
+      },
+      {
+        "slot": 3,
+        "perk": "high_press_trigger"
+      },
+      {
+        "slot": 4,
+        "perk": "pivot_duo"
+      },
+      {
+        "slot": 4,
+        "perk": "diagonal_press"
+      },
+      {
+        "slot": 5,
+        "perk": "pivot_duo"
+      },
+      {
+        "slot": 5,
+        "perk": "back_to_back"
+      },
+      {
+        "slot": 6,
+        "perk": "box_predator"
+      },
+      {
+        "slot": 6,
+        "perk": "forward_line"
+      }
+    ],
+    "styles": {
+      "1": "Bulwark",
+      "2": "Bulwark",
+      "5": "Bulwark"
+    }
+  },
+  "modifiers": [
+    {
+      "id": "butterfingers",
+      "name": {
+        "es": "Manos de mantequilla",
+        "en": "Butterfingers"
+      },
+      "kind": "banChannel",
+      "probability": "Save"
+    }
+  ],
+  "gate": {
+    "playerLevel": 5,
+    "targets": {
+      "incoherent": {
+        "max": 25
+      },
+      "correct": {
+        "min": 45,
+        "max": 60
+      },
+      "good": {
+        "min": 60,
+        "max": 75
+      },
+      "excellent": {
+        "min": 70,
+        "max": 85
+      }
+    }
+  }
+}

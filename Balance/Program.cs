@@ -3,6 +3,7 @@ using Underleague.Sim.Analysis;
 using Underleague.Sim.Data;
 using Underleague.Sim.Engine;
 using Underleague.Sim.Perks;
+using Underleague.Sim.Run.Bosses;
 
 // Punto de entrada de /Balance (docs/fase0-diseno.md §4, docs/balance.md). Sin paquetes NuGet, parseo
 // manual de argumentos (Options.cs).
@@ -31,6 +32,33 @@ try
         // (docs/fase1-diseno.md §8). No toca reference.json ni simula ningún partido.
         RunDescribe(catalog, language);
         return 0;
+    }
+
+    if (options.BossGate)
+    {
+        // --boss-gate: la curva de puertas de la ADR 0033 con partidos directos build-contra-jefe
+        // (docs/fase2-diseno.md, paquete Y). --rosters = plantillas por celda; --runs = partidos por
+        // plantilla (múltiplo de 4: local/visitante x reparto de ids).
+        var bossCatalog = BossCatalog.FromJson(dataFiles);
+        var bossBuilds = BuildConfig.LoadAll(Path.Combine(dataPath, "balance", "builds"));
+        var bossGroups = BuildGroups.Load(Path.Combine(dataPath, "balance", "groups.json"));
+        int matchesPerRoster = options.RunsExplicit ? options.Runs : 8;
+
+        BossGateResult gate = BossGateRunner.Run(
+            catalog, bossCatalog, bossBuilds, bossGroups.QualityLevels, options.Seed, options.Rosters, matchesPerRoster);
+
+        WriteBossGateCsv(options.OutDir!, gate.Cells);
+
+        if (!options.Quiet)
+        {
+            Console.WriteLine();
+            BossGateRunner.PrintTable(gate.Metrics, bossCatalog);
+            Console.WriteLine();
+            Console.WriteLine($"{gate.TotalMatches} partidos en {gate.Elapsed.TotalSeconds:F2} s");
+            Console.WriteLine($"CSV escritos en {options.OutDir}");
+        }
+
+        return gate.Metrics.Any(m => m.Status == "OUT") ? 1 : 0;
     }
 
     if (options.Builds is { } requestedBuildIds)
@@ -236,6 +264,9 @@ static void PrintUsage()
                                creciente; requiere --builds; --runs = campañas por build (por defecto 60)
           --home-away         cada emparejamiento (matriz o campaña) también con los equipos invertidos
           --rosters N         plantillas distintas por build sobre las que promediar cada celda (25)
+          --boss-gate         curva de puertas de la ADR 0033: cada nivel de build (qualityLevels de
+                               data/balance/groups.json) contra cada jefe de data/bosses/, con sus
+                               modificadores; --runs = partidos por plantilla (8), --rosters = plantillas
         """);
 }
 
@@ -650,4 +681,24 @@ static string FormatRow(IReadOnlyList<string> cells, IReadOnlyList<int> widths)
     }
 
     return string.Join("  ", parts);
+}
+
+/// <summary>bossgate.csv: una fila por celda (jefe, nivel de build, build) de la curva de la ADR 0033.</summary>
+static void WriteBossGateCsv(string outDir, IReadOnlyList<BossGateCell> cells)
+{
+    string[] header = { "boss", "act", "level", "build", "matches", "wins", "winRate", "pitchWinRate" };
+
+    var rows = cells.Select(c => (IReadOnlyList<string>)new[]
+    {
+        c.BossId,
+        c.Act.ToString(),
+        c.Level,
+        c.BuildId,
+        c.Matches.ToString(),
+        c.Wins.ToString(),
+        CsvWriter.F2(c.WinRate),
+        CsvWriter.F2(c.PitchWinRate),
+    });
+
+    CsvWriter.Write(Path.Combine(outDir, "bossgate.csv"), header, rows);
 }

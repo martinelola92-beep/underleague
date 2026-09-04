@@ -1,0 +1,105 @@
+{
+  "_doc": "Escalón \"incoherente\" de la escala de calidad de build de la ADR 0033, medido por la puerta de jefes (Sim.Tests/Analysis/BossGateTests.cs). Los cuatro escalones de una raza comparten calidad 50, rareza común y etiqueta de estilo impuesta: lo único que cambia entre ellos es la construcción -qué perks, dónde colocados, con qué escalado acumulado-, nunca la plantilla. Catorce perks distintos con la condicion falsa y una alineacion que rompe los siete vinculos: el ancla del propio tercio en la columna 7 y la punta de lanza sin nadie delante aplican sus elseEffects sobre TODO el equipo (-15 de entrada, -25 de remate).",
+  "id": "elf_incoherent",
+  "name": "Elfos: incoherente",
+  "race": "Elf",
+  "quality": 50,
+  "rarity": "common",
+  "perks": [
+    {
+      "slot": 0,
+      "perk": "sweeper_keeper"
+    },
+    {
+      "slot": 0,
+      "perk": "covering_shadow"
+    },
+    {
+      "slot": 1,
+      "perk": "forward_line"
+    },
+    {
+      "slot": 1,
+      "perk": "brute_boots"
+    },
+    {
+      "slot": 2,
+      "perk": "own_third_anchor"
+    },
+    {
+      "slot": 2,
+      "perk": "bulwark_stance"
+    },
+    {
+      "slot": 3,
+      "perk": "center_conductor"
+    },
+    {
+      "slot": 3,
+      "perk": "spearpoint"
+    },
+    {
+      "slot": 4,
+      "perk": "cold_focus"
+    },
+    {
+      "slot": 4,
+      "perk": "pivot_duo"
+    },
+    {
+      "slot": 5,
+      "perk": "last_ditch"
+    },
+    {
+      "slot": 5,
+      "perk": "wing_overlap"
+    },
+    {
+      "slot": 6,
+      "perk": "pack_mentality"
+    },
+    {
+      "slot": 6,
+      "perk": "back_to_back"
+    }
+  ],
+  "lineup": [
+    [
+      1,
+      1
+    ],
+    [
+      0,
+      4
+    ],
+    [
+      7,
+      0
+    ],
+    [
+      4,
+      4
+    ],
+    [
+      2,
+      4
+    ],
+    [
+      6,
+      2
+    ],
+    [
+      3,
+      2
+    ]
+  ],
+  "styles": {
+    "0": "Fine",
+    "1": "Fine",
+    "2": "Fine",
+    "3": "Fine",
+    "4": "Fine",
+    "5": "Fine",
+    "6": "Fine"
+  }
+}

@@ -146,6 +146,23 @@
         },
         "uniqueItems": true
       }
+    },
+    "counters": {
+      "type": "object",
+      "description": "Instrumento de medida (paquete Y): contadores de carrera con los que entra un titular, para los perks accumulatesAcrossMatches (RF-070). Es lo que separa 'buena' de 'muy buena' en la escala de la ADR 0033: la misma build con su escalado alimentado o con el escalado acumulado durante toda la run. Clave: índice de slot como texto.",
+      "propertyNames": {
+        "pattern": "^[0-6]$"
+      },
+      "additionalProperties": {
+        "type": "object",
+        "propertyNames": {
+          "pattern": "^[a-zA-Z][a-zA-Z0-9]*$"
+        },
+        "additionalProperties": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
     }
   },
   "required": [
