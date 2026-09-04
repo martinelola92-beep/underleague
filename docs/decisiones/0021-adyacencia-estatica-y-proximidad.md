@@ -21,7 +21,20 @@ Dos familias distintas y explícitas:
 
 Ambas conviven: hay perks de casilla inicial y perks de proximidad, y el catálogo debe dejar claro cuál es cuál en su descripción generada.
 
-**Número de vínculos acotado por el perk.** Con radio Chebyshev ≤ 2 sobre un campo de 5 filas, casi cualquier formación razonable produce vínculos: la alineación por defecto ya tiene seis pares adyacentes. Si el perk vinculase a *todos* los que cumplen el radio, el bonus sería gratis y la colocación dejaría de ser una decisión. Por eso cada perk declara **a cuántos vincula** (`links: 2` por defecto) y se queda con los K más cercanos, con desempate determinista por distancia y luego por id ascendente. Así la pregunta que se le hace al jugador no es "¿tengo a alguien al lado?" (siempre sí) sino "¿a quién quiero tener al lado?", que es una decisión real y además es exactamente la forma del ejemplo que motivó esta decisión: *mejora el pase hacia esos dos jugadores concretos*.
+**Los vínculos son direccionales, no "los más cercanos".** Con radio Chebyshev ≤ 2 sobre un campo de 5 filas casi cualquier formación produce vínculos —la alineación por defecto ya tiene seis pares adyacentes—, así que vincular a todo el que cumpla el radio haría el bonus gratuito y la colocación dejaría de ser una decisión. En su lugar, **cada perk declara la relación geométrica que necesita**, en coordenadas relativas al sentido de ataque del equipo:
+
+| `link` | Significado | Lectura futbolística |
+|---|---|---|
+| `beside` | misma columna, fila contigua | pareja de centrales, doble pivote |
+| `ahead` / `behind` | columna contigua en sentido de ataque / en sentido contrario, fila igual o contigua | lateral y extremo, pivote y mediapunta |
+| `left` / `right` | fila contigua hacia una banda concreta | el compañero de tu banda |
+| `diagonalAhead` / `diagonalBehind` | columna y fila contiguas | apoyos en diagonal |
+
+Un perk puede declarar una o varias (`links: ["beside"]`, `links: ["ahead", "behind"]`). Si hay más de un candidato para la misma relación, se toma el más cercano y se desempata por id ascendente. **Si no hay candidato, no hay vínculo**: el perk no aplica (o aplica sus `elseEffects`), que es lo que convierte la formación en una decisión con coste.
+
+Convención de orientación, fijada aquí para evitar errores sutiles: "adelante" es siempre hacia la portería rival, e "izquierda" y "derecha" se toman desde el punto de vista de un jugador que mira hacia esa portería. El equipo visitante refleja columnas y bandas, de modo que un mismo perk describe la misma estructura para ambos equipos.
+
+Efecto de diseño buscado: los perks dejan de hablar de proximidad genérica y pasan a describir **estructuras de equipo** —una pareja de centrales, un carril de banda, un eje—, que es el vocabulario del deporte que el juego parodia (RA-025) y encaja con las líneas y el bloque de la capa táctica (RT-089).
 
 El radio de la relación estática es el de la ADR 0011 (Chebyshev ≤ 2 entre casillas-hogar): esa decisión sigue vigente y define **qué pares se vinculan**; lo que esta ADR cambia es **cuándo se evalúa** (una vez, al construir el partido) y **sobre qué actúa** (el par, no el portador aislado).
 

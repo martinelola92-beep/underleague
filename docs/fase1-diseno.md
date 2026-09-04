@@ -60,7 +60,7 @@ Sim.csproj: PackageReference NCalcSync 7.1.0
 | `isMob()` | bool |
 | `bias()` | int, desde el punto de vista del equipo de owner (positivo = favorable) |
 | `zone(who)` | `'Own'`, `'Middle'`, `'Opposing'` respecto al equipo de `who` |
-| `adjacent(who, 'Tag')` | bool: algún compañero con esa etiqueta cuya casilla-hogar es adyacente (8 vecinos, RF-044) |
+| `adjacent(who, 'Tag')` | bool: algún compañero con esa etiqueta cuya casilla-hogar es adyacente (8 vecinos, RF-044). **Con radio 1 la alineación por defecto no tiene ni una sola pareja adyacente** y apiñar el bloque para conseguirla cuesta 16 puntos de tasa de victoria (medido, paquete I); lo sustituye la sinergia estática de la ADR 0021 |
 | `adjacentCount(who, 'Tag')` | int |
 | `teammatesWithTag(who, 'Tag')` | int, compañeros en campo con esa etiqueta (excluye a `who`) |
 | `distanceToGoal()` | int, casillas (redondeo hacia abajo) del actor a la portería rival |
@@ -177,7 +177,7 @@ Conjunto inicial (`data/balance/builds/`): `human_none` (sin perks, referencia),
 
 Modos nuevos de `/Balance` (además de los actuales):
 
-- `--builds a,b,c` con `--vs <buildId>` (por defecto `human_none`): matriz build × rival, `--runs` partidos por celda repartidos, salida `builds.csv` (`build, opponent, matches, winRate, goalsFor, goalsAgainst, injuriesFor, injuriesAgainst, activationsPerMatch`) y `perks.csv` (`perkId, build, activations, matchesWithActivation, activationRate`). Sin `--vs`, todos contra todos.
+- `--builds a,b,c` con `--vs <buildId>` (por defecto `human_none`) y `--rosters N`: matriz build × rival, `--runs` partidos por celda repartidos, salida `builds.csv` (`build, opponent, matches, winRate, goalsFor, goalsAgainst, injuriesFor, injuriesAgainst, activationsPerMatch`) y `perks.csv` (`perkId, build, activations, matchesWithActivation, activationRate`). Sin `--vs`, todos contra todos.
 - `--campaign N` (por defecto 8): cada build juega N partidos seguidos contra rivales `human_none` de calidad creciente (`quality = 46, 48, …` hasta `46 + 2(N−1)`; con N=8, 46..60), arrastrando experiencia, niveles y contadores `run` (§6); rivales sin progresión. Salida `campaign.csv` (`build, matchIndex, opponentQuality, winRate, avgLevel, avgStrength…`) y una tabla por consola: tasa de victoria en partidos 1-4 vs 5-8 por build.
 - `--describe [es|en]`: catálogo con descripciones y distribución RF-069.
 - `--home-away`: cada emparejamiento se juega también invertido (elimina cualquier sesgo local/visitante en la comparación).
@@ -189,11 +189,29 @@ Métricas de fase 1 en `Sim/Analysis` y en la puerta estadística (`StatisticalT
 | `coherentBuildsBeatNone` | cada build coherente (`orc_violence`, `elf_tiki_taka`, `human_wall`, `human_counter`, `orc_mob`) gana ≥ 58% contra su `*_none` de la misma raza y calidad (RF-024/fase 1) |
 | `badBuildsLoseToNone` | cada build mala (`orc_misplaced`, `elf_brawler`, `human_scattered`) gana ≤ 45% contra su `*_none` |
 | `randomBuildNearNone` | `human_random` entre 40% y 60% |
-| `buildsWinDifferently` | `orc_violence` produce ≥ 1,5× lesiones que `elf_tiki_taka`; `elf_tiki_taka` ≥ 1,3× cadena media de pases que `orc_violence` |
-| `scalingRewardsGoodBuilds` | en campaña, la tasa de victoria de las builds coherentes en partidos 5-8 ≥ la de 1-4 − 10 puntos aunque los rivales suban de calidad; las builds malas caen ≥ 15 puntos |
+| `buildsWinDifferently` | `orc_violence` produce ≥ 1,5× lesiones que `elf_tiki_taka`; `elf_tiki_taka` ≥ 1,3× cadena media de pases que `orc_violence`. Las dos magnitudes **normalizadas contra la referencia sin perks de la propia raza** y medidas en los mismos partidos (ADR 0012): sin normalizar la métrica mide la raza y no la build — `orc_none` ya causa 3,9× las lesiones de `elf_none` sin un solo perk, y la cadena de pases de un bloque orco es estructuralmente más larga que la de uno élfico. "Lesiones que produce" son las **causadas al rival**, no las sufridas |
+| `scalingRewardsGoodBuilds` | en campaña, la tasa de victoria de las builds coherentes en partidos 5-8 ≥ la de 1-4 − 10 puntos aunque los rivales suban de calidad. La segunda mitad ("las builds malas caen ≥ 15 puntos") **no es alcanzable con la progresión de §6**: el rival sube 14 puntos de calidad en 8 partidos y la plantilla propia sube 8, así que hasta un equipo sin perks pierde solo 6,6 puntos entre las dos mitades, y ninguna mecánica hace decaer a una build mala más rápido que a la referencia. Ver `docs/balance/fase1-perks.md` |
 | `noDeadPerks` | cada perk del catálogo se activa en ≥ 1% de los partidos en los que está asignado en alguna build (perk muerto = fallo de diseño) |
 | RT-055 | ninguna build catalogada > 70% ni < 30% contra `human_none` de calidad 50 (las malas pueden bajar del 30%: se excluyen de RT-055 y se documenta, porque son casos de prueba, no builds del juego) |
 | Distribución RF-069 | 60/30/10 ± 8 puntos |
+
+**Metodología de medida (paquete I).** Una celda de la matriz solo dice algo del diseño de la build si el
+único cambio entre los dos equipos son los perks:
+
+1. **Plantillas emparejadas.** Cuando las dos builds de un emparejamiento comparten raza y calidad, las dos
+   se generan con el **mismo índice de generación**: son los mismos diez jugadores, con los mismos
+   atributos y rasgos, y solo cambian perks, rarezas y alineación. Con plantillas independientes (lo que
+   hacía el paquete H) la tasa de victoria de una misma build contra su referencia iba del 16,5% al 59,5%
+   según el dado del generador — desviación típica de 14,9 puntos entre plantillas, con 20 plantillas ×
+   200 partidos.
+2. **Varias plantillas por celda** (`--rosters`, 25 por defecto): incluso emparejada, una sola plantilla no
+   representa a la build.
+3. **Reparto de ids alternado.** Los desempates del motor van por id de jugador ascendente; con el reparto
+   fijo, el equipo de ids bajos gana entre 2 y 3 puntos de más con plantillas idénticas (53,1% Human,
+   52,2% Orc, 52,0% Elf; alternando, 50,7% / 50,5% / 49,9%). La matriz juega cada emparejamiento en las
+   cuatro combinaciones de (local, visitante) × (ids bajos, ids altos).
+4. **Cadenas de pases por equipo.** `MatchReport.PassChainsByTeam` / `PassChainTotalLengthByTeam`: la
+   estadística de partido completo del paquete H no podía distinguir a las dos builds.
 
 ## 9. Paquetes de trabajo
 
@@ -310,3 +328,40 @@ comentado en el punto del código donde se aplica.
     `bin/Debug`): un `fingerprint.txt` de otra configuración puede ser de una revisión anterior del
     código. La equivalencia con 0 perks se verificó, además de con la huella, con las tres salidas CSV de
     un lote de 2.000 partidos idénticas byte a byte a las de fase 0.
+
+### 9.2 Diagnóstico y correcciones del paquete I (cierre de la fase 1)
+
+El paquete H dejó la fase 1 con las builds coherentes perdiendo y las malas ganando. El diagnóstico
+completo, con números, está en `docs/balance/fase1-perks.md`. El paquete I se limitó a **diagnosticar y
+corregir defectos**: el rediseño de mecánica que el diagnóstico motiva está en las ADR 0020 (cuerpos con
+volumen) y 0021 (adyacencia estática y proximidad dinámica), y el ajuste de valores de perks y builds
+espera a que esas ADR estén implementadas.
+
+1. **La medida estaba rota antes que el diseño.** `/Balance --builds` generaba **una** plantilla por build:
+   la misma build contra su referencia daba entre el 16,5% y el 59,5% según el dado del generador (sd de
+   14,9 puntos, 20 plantillas × 200 partidos). Además el equipo de ids bajos —casi siempre la referencia,
+   por orden alfabético— ganaba 2-3 puntos de más por los desempates del motor. Corregido con plantillas
+   emparejadas, `--rosters` y reparto de ids alternado (§8, "Metodología de medida"). **Todos los números
+   de fase 1 anteriores a esta corrección son ruido de generación, no balance.**
+2. **`berserker` con 0 activaciones en 197 partidos no era un defecto del motor.** El perk se publica y se
+   evalúa correctamente: con la medida corregida se activa en el 92-98% de los partidos de las builds que
+   lo llevan. El 0 venía de que las 197 partidas usaban **una sola plantilla** en la que el portador del
+   perk no elegía nunca `Tackle`.
+3. **`bloodlust` sí es un perk muerto por construcción**, y sigue estándolo: su condición `bias() < 0` no
+   puede ser cierta en fase 1 —el árbitro es fijo y neutro y ningún perk del catálogo usa `modifyBias`—.
+   No se ha tocado (es una condición falsa, no un fallo del motor): queda anotado en `pendientes.md`.
+4. **`bone_breaker` aplicaba su efecto al jugador equivocado** (corregido). Ponía `injure` —la probabilidad
+   de *lesionar*, cuyo sujeto es quien entra— sobre `opponent`, es decir, hacía más peligroso al rival al
+   que quería romper. El efecto pasa a `actor`.
+5. **`buildsWinDifferently` se propone normalizada** contra la referencia de la propia raza (ADR 0012), y
+   "lesiones que produce" son las causadas al rival. Sin normalizar la métrica mide la raza: `orc_none` ya
+   causa 3,9× las lesiones de `elf_none` sin un solo perk.
+6. **Las cadenas de pases se reparten por equipo** en `MatchReport` (`PassChainsByTeam`,
+   `PassChainTotalLengthByTeam`), porque la métrica compara dos builds y la estadística de partido completo
+   no las distingue.
+7. **`severeInjury` no tiene consecuencia en fase 1** (no hay muertes y "grave" solo cambia el `Detail`),
+   así que `guardian_angel` es un perk que se activa y no hace nada. No se ha cambiado; anotado.
+8. **La puerta de fase 1 está escrita** (`Sim.Tests/Analysis/BuildGateTests.cs`, `Category=Gate`) y
+   **desactivada con `Skip`** hasta que las ADR 0020/0021 estén implementadas: sus umbrales dependen de la
+   mecánica que va a cambiar. Lee `data/balance/builds/` y `data/balance/groups.json` con su propio
+   cargador mínimo, como la puerta de fase 0 con `reference.json`: `Sim.Tests` no referencia `/Balance`.

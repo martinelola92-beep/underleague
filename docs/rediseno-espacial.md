@@ -11,8 +11,8 @@ Cada una de las tres invalida el ajuste de las otras: los cuerpos cambian el con
 | Paso | Contenido | Criterio de terminado |
 |---|---|---|
 | 1 | `bodyRadius` por raza; separación blanda en dos fases (buffer de desplazamientos aplicado al final del tick); empuje repartido por fuerza y tamaño; empuje también al resolver `TACKLE`; radios de interacción escalados por el radio de cuerpo | Determinismo intacto (huella idéntica en dos ejecuciones y entre SO); rendimiento medido y por encima de 167 partidos/s |
-| 2 | Roles derivados (columna de la casilla-hogar), pesos por rol, acciones `FindSpace` y `PressCarrier`, marcaje con asignación estable | El volcado de utilidad explica las decisiones; los jugadores se reparten de forma reconocible en el log de posiciones |
-| 3 | Adyacencia resuelta al construir el partido en relaciones por pares; efectos dirigidos a pares en el motor de efectos; condición de proximidad dinámica; revisión del catálogo de perks | Los perks de colocación se activan sin exigir formaciones absurdas; descripciones generadas correctas para ambas familias |
+| 2 | Contraste fuerte de pesos por estado táctico, acciones `FindSpace` y `PressCarrier`, marcaje con asignación estable | El volcado de utilidad explica las decisiones; los jugadores se reparten de forma reconocible en el log de posiciones |
+| 3 | Adyacencia resuelta al construir el partido en vínculos direccionales (`beside`, `ahead`, `behind`, `left`, `right`); efectos dirigidos a pares en el motor de efectos; condición de proximidad dinámica; revisión del catálogo de perks | Los perks de colocación se activan sin exigir formaciones absurdas; descripciones generadas correctas para ambas familias |
 | 4 | Reajuste único: RT-056 en rango y criterio de salida de fase 1 (coherentes ≥ 58%, malas ≤ 45%, progresión que premia) | Ambas puertas en verde y `docs/balance/fase1-perks.md` actualizado con el antes y el después |
 
 ## Riesgos
