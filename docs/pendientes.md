@@ -70,5 +70,6 @@ Todos los cambios R-1 a R-7 quedan **aplicados en `requisitos.md` v0.9.1** (2026
 | R-3 | RF-022d | La etiqueta deja de ser única por raza: se separa en etiqueta de especie (fija) y etiqueta de estilo (individual, con sesgo racial) | ADR 0024 | Aplicado en v0.9.1 |
 | R-4 | RF-044 | La adyacencia se resuelve antes del partido en vínculos direccionales acotados, no como condición evaluada en cada evento | ADR 0021 | Aplicado en v0.9.1 |
 | R-5 | RF-031 | Cada raza tiene una habilidad concreta, implementada como perk de equipo | ADR 0026 | Aplicado en v0.9.1 (nuevo RF-031b, y columna de habilidad en la tabla de razas de §3.4) |
+| R-8 | RF-057 | Se permite el contacto con un rival sin balón siempre que esté dentro de la jugada activa (radio alrededor del balón o corredor hacia la portería atacada); sigue prohibida la pelea paralela | ADR 0030 |
 | R-7 | RF-045 | En la colocación se muestra la zona del jugador manipulado con sus dos capas, no todas las correas a la vez, que con zonas asimétricas serían ilegibles | ADR 0029 | Aplicado en v0.9.1 |
 | R-6 | RF-042, RT-095 | La correa deja de ser un radio circular duro: pasa a ser una zona con forma por posición, tamaño escalado por el atributo y salida penalizada en vez de prohibida | ADR 0028 | Aplicado en v0.9.1 |
