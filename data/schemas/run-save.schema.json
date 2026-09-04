@@ -1,0 +1,301 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://underleague.dev/schemas/run-save.schema.json",
+  "title": "Underleague run save",
+  "description": "Guardado de una run (RT-030, RT-060, RT-061, RT-061b). Lo escribe y lo lee Sim.Run.Save.RunSave; el fichero no vive en /data, pero su esquema sí, para que el formato esté versionado y sea comprobable como cualquier otro dato. Los valores de enum van en camelCase, igual que en modelo-datos.md. La semilla va como cadena de dígitos porque es un entero de 64 bits sin signo y no cabe en un número JSON leído como double.",
+  "type": "object",
+  "properties": {
+    "schemaVersion": {
+      "description": "Versión del esquema del estado de la run. Cambiarla obliga a una migración explícita: nunca se migra en silencio.",
+      "type": "integer",
+      "minimum": 1
+    },
+    "seed": {
+      "description": "Semilla de la run (RT-022). De ella salen los flujos de mapa, partido, recompensas y generación.",
+      "type": "string",
+      "pattern": "^[0-9]{1,20}$"
+    },
+    "division": { "enum": ["third", "second", "first", "continental", "world"] },
+    "club": { "type": "string" },
+    "clubRace": { "$ref": "#/$defs/race" },
+    "act": { "type": "integer", "minimum": 1, "maximum": 3 },
+    "currentNode": {
+      "description": "Nodo en el que está el jugador; -1 mientras no ha entrado en ninguno del acto.",
+      "type": "integer",
+      "minimum": -1
+    },
+    "pendingNode": {
+      "description": "Nodo interactivo abierto; -1 si no hay ninguno. El contenido del nodo no se guarda: se deriva de la semilla y de nodeRerolls.",
+      "type": "integer",
+      "minimum": -1
+    },
+    "phase": { "enum": ["onMap", "nodeOpen", "finished"] },
+    "gold": { "type": "integer", "minimum": 0 },
+    "rerollsUsed": { "type": "integer", "minimum": 0 },
+    "nodeRerolls": { "type": "integer", "minimum": 0 },
+    "nextPlayerId": {
+      "description": "Siguiente id libre de jugador. Los ids se asignan en orden de creación y no se reutilizan.",
+      "type": "integer",
+      "minimum": 0
+    },
+    "result": {
+      "description": "Desenlace de la run (RF-002, RF-002b). Solo hay dos causas de derrota.",
+      "type": "object",
+      "properties": {
+        "kind": { "enum": ["inProgress", "victory", "defeat"] },
+        "cause": { "enum": ["none", "bossMatchLost", "notEnoughPlayers"] },
+        "nodeId": { "type": "integer" },
+        "tick": {
+          "description": "Tick del partido en el que se decidió, o -1 fuera de un partido (RF-002b: la baja termina la run al instante).",
+          "type": "integer"
+        }
+      },
+      "required": ["kind", "cause", "nodeId", "tick"],
+      "additionalProperties": false
+    },
+    "nodeHistory": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "nodeId": { "type": "integer" },
+          "kind": { "$ref": "#/$defs/nodeKind" },
+          "result": { "enum": ["completed", "won", "lost"] }
+        },
+        "required": ["nodeId", "kind", "result"],
+        "additionalProperties": false
+      }
+    },
+    "maps": {
+      "description": "Un mapa por acto (RF-010). Se guardan enteros aunque sean derivables de la semilla: así el guardado es autocontenido y auditable.",
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 3,
+      "items": { "$ref": "#/$defs/actMap" }
+    },
+    "referees": {
+      "description": "Árbitros de la run, 6-8 (RF-061b, RF-064c).",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "integer", "minimum": 0 },
+          "name": { "type": "string" },
+          "trait": { "enum": ["neutral", "strict", "lenient", "homer", "oneEyed", "cowardly", "corrupt", "incorruptible"] },
+          "bribesReceived": { "type": "integer", "minimum": 0 }
+        },
+        "required": ["id", "name", "trait", "bribesReceived"],
+        "additionalProperties": false
+      }
+    },
+    "roster": {
+      "description": "Plantilla completa, ordenada por id ascendente. Incluye lesionados graves y muertos.",
+      "type": "array",
+      "items": { "$ref": "#/$defs/player" }
+    },
+    "lineup": {
+      "description": "Alineación titular (RF-041): 5 a 7 casillas-hogar, columna relativa 0..7 desde la portería propia.",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "playerId": { "type": "integer", "minimum": 0 },
+          "column": { "type": "integer", "minimum": 0, "maximum": 7 },
+          "row": { "type": "integer", "minimum": 0, "maximum": 4 }
+        },
+        "required": ["playerId", "column", "row"],
+        "additionalProperties": false
+      }
+    },
+    "consumables": {
+      "description": "Consumibles equipados, máximo 3, mínimo 1 manual (RF-080..082).",
+      "type": "array",
+      "maxItems": 3,
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" },
+          "mode": { "enum": ["manual", "conditional"] },
+          "trigger": { "type": "string" }
+        },
+        "required": ["id", "mode", "trigger"],
+        "additionalProperties": false
+      }
+    },
+    "counters": {
+      "description": "Contadores enteros de los sistemas de run (coste de reroll, oro por sumidero...). Clave libre para no subir de versión cada vez que entra un sistema.",
+      "$ref": "#/$defs/intMap"
+    },
+    "achievements": {
+      "description": "Progreso de logros de desbloqueo (RF-125b).",
+      "$ref": "#/$defs/intMap"
+    },
+    "dataSnapshot": {
+      "description": "Instantánea de /data congelada al empezar la run (RT-061b): ruta relativa -> contenido del fichero. Opcional para los estados de depuración escritos a mano (RT-062); obligatoria en un guardado real.",
+      "type": "object",
+      "additionalProperties": { "type": "string" }
+    }
+  },
+  "required": [
+    "schemaVersion", "seed", "division", "club", "clubRace", "act", "currentNode", "pendingNode",
+    "phase", "gold", "rerollsUsed", "nodeRerolls", "nextPlayerId", "result", "nodeHistory", "maps",
+    "referees", "roster", "lineup", "consumables"
+  ],
+  "additionalProperties": false,
+  "$defs": {
+    "race": { "enum": ["human", "orc", "elf", "dwarf", "undead", "darkElf", "demon", "vampire", "lizard"] },
+    "nodeKind": {
+      "description": "Tipos de nodo de RF-011. 'workshop' está en el enum desde la versión 1 pero es de fase 3: el generador de la fase 2 no lo produce.",
+      "enum": ["leagueMatch", "eliteMatch", "market", "clinic", "workshop", "training", "event", "boss"]
+    },
+    "intMap": {
+      "type": "object",
+      "additionalProperties": { "type": "integer" }
+    },
+    "actMap": {
+      "type": "object",
+      "properties": {
+        "act": { "type": "integer", "minimum": 1, "maximum": 3 },
+        "bossNodeId": { "type": "integer" },
+        "bossModifierId": {
+          "description": "Id de data/bosses/ (RF-001b). Cadena vacía mientras no esté asignado.",
+          "type": "string"
+        },
+        "bossModifierRevealed": {
+          "description": "RF-014: el modificador permanece oculto hasta llegar al nodo de jefe.",
+          "type": "boolean"
+        },
+        "entryNodeIds": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "type": "integer" }
+        },
+        "nodes": {
+          "description": "Nodos dibujados del acto. Son más que los 10-12 de RF-001, que cuentan los nodos RECORRIDOS, es decir, las capas del grafo (ver Sim/Run/Map/MapGenerator.cs).",
+          "type": "array",
+          "minItems": 10,
+          "maxItems": 48,
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": { "type": "integer" },
+              "layer": { "type": "integer", "minimum": 0 },
+              "indexInLayer": { "type": "integer", "minimum": 0 },
+              "kind": { "$ref": "#/$defs/nodeKind" },
+              "next": {
+                "description": "Ids de la capa siguiente, ascendentes. Vacío solo en el nodo de jefe (RF-010: sin retroceso).",
+                "type": "array",
+                "items": { "type": "integer" }
+              },
+              "opponentId": { "type": "string" },
+              "difficulty": {
+                "description": "Distintivo de dificultad de 5 niveles (RF-012); 0 si el nodo no es de partido.",
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 5
+              }
+            },
+            "required": ["id", "layer", "indexInLayer", "kind", "next", "opponentId", "difficulty"],
+            "additionalProperties": false
+          }
+        }
+      },
+      "required": ["act", "bossNodeId", "bossModifierId", "bossModifierRevealed", "entryNodeIds", "nodes"],
+      "additionalProperties": false
+    },
+    "player": {
+      "description": "Un jugador de la plantilla (RT-030 con las correcciones I-1 a I-3: cinco atributos, un objeto, vínculos sin signo).",
+      "type": "object",
+      "properties": {
+        "id": { "type": "integer", "minimum": 0 },
+        "name": { "type": "string", "minLength": 1 },
+        "race": { "$ref": "#/$defs/race" },
+        "position": { "enum": ["goalkeeper", "defender", "midfielder", "forward"] },
+        "rarity": { "enum": ["common", "rare", "legendary"] },
+        "level": { "type": "integer", "minimum": 1, "maximum": 8 },
+        "experience": { "type": "integer", "minimum": 0 },
+        "attributes": {
+          "type": "object",
+          "properties": {
+            "strength": { "$ref": "#/$defs/attribute" },
+            "speed": { "$ref": "#/$defs/attribute" },
+            "technique": { "$ref": "#/$defs/attribute" },
+            "stamina": { "$ref": "#/$defs/attribute" },
+            "leash": { "$ref": "#/$defs/attribute" }
+          },
+          "required": ["strength", "speed", "technique", "stamina", "leash"],
+          "additionalProperties": false
+        },
+        "traits": {
+          "type": "array",
+          "maxItems": 3,
+          "items": {
+            "enum": ["aggressive", "fast", "scorer", "longShot", "cerebral", "dirty", "resilient", "coward", "leader", "lazy", "cat", "wall", "rusher"]
+          }
+        },
+        "tags": {
+          "description": "Etiquetas del jugador en PascalCase (RF-022d, ADR 0024): especie, estilo, posición, rasgos y adquiridas.",
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "speciesTag": { "type": "string" },
+        "styleTag": { "enum": ["brute", "fine", "bulwark", "cold", "neutral"] },
+        "perks": {
+          "type": "array",
+          "items": { "type": "string", "pattern": "^[a-z][a-z0-9_]*$" }
+        },
+        "item": {
+          "description": "Un único objeto equipado (RF-076, I-2), o null.",
+          "type": ["string", "null"]
+        },
+        "physicalState": { "enum": ["healthy", "minorInjury", "severeInjury", "dead"] },
+        "minorInjuries": {
+          "description": "Lesiones leves acumuladas (RF-091). Cada una resta un 15% a los atributos del siguiente partido.",
+          "type": "integer",
+          "minimum": 0
+        },
+        "prostheses": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "slot": { "type": "string" },
+              "effect": { "type": "string" }
+            },
+            "required": ["slot", "effect"],
+            "additionalProperties": false
+          }
+        },
+        "wage": { "type": "integer", "minimum": 0 },
+        "isMercenary": { "type": "boolean" },
+        "isYouth": { "type": "boolean" },
+        "matchesBenched": { "type": "integer", "minimum": 0 },
+        "bonds": {
+          "description": "Vínculos, máximo 2 y sin signo (RF-101, RF-102, I-3).",
+          "type": "array",
+          "maxItems": 2,
+          "items": {
+            "type": "object",
+            "properties": {
+              "otherPlayerId": { "type": "integer", "minimum": 0 },
+              "kind": { "enum": ["partnership", "bloodDebt", "stonewall"] }
+            },
+            "required": ["otherPlayerId", "kind"],
+            "additionalProperties": false
+          }
+        },
+        "mourning": { "type": "integer", "minimum": 0 },
+        "counters": { "$ref": "#/$defs/intMap" },
+        "bondProgress": { "$ref": "#/$defs/intMap" }
+      },
+      "required": [
+        "id", "name", "race", "position", "rarity", "level", "experience", "attributes", "traits",
+        "tags", "speciesTag", "styleTag", "perks", "item", "physicalState", "minorInjuries",
+        "prostheses", "wage", "isMercenary", "isYouth", "matchesBenched", "bonds", "mourning",
+        "counters", "bondProgress"
+      ],
+      "additionalProperties": false
+    },
+    "attribute": { "type": "integer", "minimum": 1, "maximum": 99 }
+  }
+}
