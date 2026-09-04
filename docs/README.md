@@ -15,6 +15,7 @@
 | [fase0-diseno.md](fase0-diseno.md) | Especificación de implementación de la fase 0: tipos, firmas, fórmulas, paquetes de trabajo |
 | [estilo-descripciones.md](estilo-descripciones.md) | Cómo se redacta lo que el jugador lee: una frase, efecto observable, sin implementación; convención de porcentajes |
 | [perks-ejes.md](perks-ejes.md) | Taxonomía de ejes de activación de los perks y distribución objetivo del catálogo |
+| [fase2-diseno.md](fase2-diseno.md) | Especificación de la fase 2: bucle de run completo sin gráficos |
 | [fase1b-diseno.md](fase1b-diseno.md) | Especificación de implementación del bloque de rediseño: contrato de datos, motor y paquetes |
 | [rediseno-espacial.md](rediseno-espacial.md) | Plan del rediseño espacial: cuerpos con volumen, roles derivados de la colocación y adyacencia por pares (ADR 0020-0022) |
 | [fase1-diseno.md](fase1-diseno.md) | Especificación de la fase 1: motor de efectos, formato de perk, descripciones generadas, progresión, catálogo de prueba, builds y modos de simulación |
