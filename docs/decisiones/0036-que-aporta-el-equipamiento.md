@@ -35,13 +35,26 @@ Es una regla que el jugador entiende sin que nadie se la explique —un legendar
 
 Los **tres arquetipos obligatorios de RF-077 se expresan igual de bien** con atributos, que es lo que hace viable la decisión:
 
-- **Maldito**: sube mucho un atributo y baja otro de forma permanente. *"Mucha fuerza. Le cuesta correr."*
-- **Frágil**: sube un atributo y se rompe tras N partidos o cuando su portador se lesiona.
+- **Maldito**: sube el doble y baja el doble en otro atributo. *"Mucha fuerza. Le cuesta correr."*
+- **Frágil**: sube lo mismo que un objeto normal de su rareza, pero cada partido puede romperse y perderse.
 - **Restringido**: sube un atributo solo si el portador lleva una etiqueta concreta; sin ella, no aporta nada.
 
 **Sin excepciones.** Ningún objeto, tampoco el legendario, lleva efectos de regla: eso es lo que hace un perk. Una excepción "solo para legendarios" reintroduciría exactamente la complejidad que esta decisión elimina, y con ella la imposibilidad de calcular lo que vale un objeto antes de medirlo.
 
-**Los arquetipos de RF-077 se apilan sobre esa regla**, sin alterar el recuento: el número de atributos que un objeto **sube** lo fija su rareza; lo que el arquetipo añade es su contrapartida. Un maldito común sube uno y baja otro; un maldito legendario sube tres y baja uno. El frágil y el restringido no cambian el recuento, cambian cuándo aporta.
+**Los arquetipos de RF-077 se apilan sobre esa regla**, sin alterar el recuento: el número de atributos que un objeto **sube** lo fija su rareza; lo que el arquetipo cambia es la magnitud o el riesgo.
+
+| Arquetipo | Magnitud | Contrapartida |
+|---|---|---|
+| **Normal** | la de su rareza | ninguna |
+| **Maldito** | **el doble**, en lo que sube y en lo que baja | baja un atributo, siempre |
+| **Frágil** | la de su rareza | **probabilidad de romperse** al terminar cada partido; si se rompe, se pierde |
+| **Restringido** | la de su rareza | solo aporta si el portador lleva su etiqueta |
+
+**El maldito lo decide el diseñador, no el jugador.** Sube y baja el doble, y **qué** baja viene con el objeto. Eso es lo que lo convierte en una decisión de colocación en vez de en un bono: *"+20 de fuerza, −20 de técnica"* es excelente en un defensa bruto y ruinoso en un centrocampista. Un maldito cuyo castigo caiga siempre en un atributo barato sería un bonus disfrazado, así que cada uno debe bajar algo que **importe a su portador natural**.
+
+**El frágil necesita una compensación, o es estrictamente peor.** Con la misma magnitud que un objeto normal de su rareza y encima riesgo de perderse, nadie lo elegiría teniendo la alternativa. Su ventaja va en el **precio**: cuesta bastante menos en el mercado y aparece con más frecuencia en las recompensas. Así la decisión es real —*"llevo el bueno o dos frágiles por el mismo oro"*— en vez de una trampa.
+
+**La rotura es probabilística y previsible.** El porcentaje se muestra antes de equipar y en la ficha, como el taller de implantes muestra sus cifras (RF-095), y la tirada se resuelve **al terminar el partido**, nunca durante: así no altera en secreto un partido en curso y el informe post-partido puede anunciarlo. Con la probabilidad a la vista se cumple RF-012d; sin ella sería exactamente el "azar post-acción negativo" que el §8 del documento identifica como riesgo alto.
 
 ## Por qué, además de por claridad
 
