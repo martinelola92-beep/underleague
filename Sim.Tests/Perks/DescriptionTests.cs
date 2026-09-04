@@ -20,14 +20,14 @@ public sealed class DescriptionTests
 
     [Fact]
     public void ConditionAndLimitInSpanish() => Assert.Equal(
-        "al entrar, si el jugador es Bruto y si el criterio es menor que 0: "
-            + "el jugador +3 de fuerza durante la jugada (máximo 2 por partido)",
+        "Al entrar, si el jugador es Bruto y si el criterio es menor que 0, "
+            + "el jugador +3 de fuerza durante la jugada (máximo 2 por partido).",
         Describe("es", Bloodlust()));
 
     [Fact]
     public void ConditionAndLimitInEnglish() => Assert.Equal(
-        "on a tackle, if the player is Brute and if the referee bias is less than 0: "
-            + "the player +3 strength for the play (max 2 per match)",
+        "On a tackle, if the player is Brute and if the referee bias is less than 0, "
+            + "the player +3 strength for the play (max 2 per match).",
         Describe("en", Bloodlust()));
 
     [Fact]
@@ -41,8 +41,8 @@ public sealed class DescriptionTests
             elseEffects: """[{ "type": "modifyProbability", "target": "actor", "probability": "dribble", "value": -15, "duration": "play" }]"""));
 
         Assert.Equal(
-            "al encarar, si el portador es Fino: el jugador: probabilidad de regate +15%; "
-                + "si no, el jugador: probabilidad de regate -15%",
+            "Al encarar, si el portador es Fino, el jugador suma +15% a su probabilidad de regate; "
+                + "si no, el jugador suma -15% a su probabilidad de regate.",
             Describe("es", perk));
     }
 
@@ -58,8 +58,8 @@ public sealed class DescriptionTests
             kind: "ruleBreaker",
             limit: """{ "per": "match", "times": 1 }"""));
 
-        Assert.Equal("en una lesión: anula la lesión (máximo 1 por partido)", Describe("es", perk));
-        Assert.Equal("on an injury: cancels the injury (max 1 per match)", Describe("en", perk));
+        Assert.Equal("En una lesión, anula la lesión (máximo 1 por partido).", Describe("es", perk));
+        Assert.Equal("On an injury, cancels the injury (max 1 per match).", Describe("en", perk));
     }
 
     [Fact]
@@ -74,7 +74,7 @@ public sealed class DescriptionTests
             """));
 
         Assert.Equal(
-            "al empezar el partido: el portador +1 de técnica por cada 25 de pase (máximo 6) durante el partido",
+            "Al empezar el partido, el portador +1 de técnica por cada 25 de pase (máximo 6) durante el partido.",
             Describe("es", perk));
     }
 
@@ -88,10 +88,10 @@ public sealed class DescriptionTests
     {
         var perk = LinkedPasser();
         Assert.Equal(
-            "al empezar el partido: probabilidad de pase +10% hacia el compañero de su columna",
+            "Al empezar el partido, probabilidad de pase +10% hacia el compañero de su columna.",
             Describe("es", perk));
         Assert.Equal(
-            "when the match starts: pass chance +10% towards the partner in their column",
+            "When the match starts, pass chance +10% towards the partner in their column.",
             Describe("en", perk));
     }
 
@@ -106,7 +106,7 @@ public sealed class DescriptionTests
             links: """["ahead", "behind"]"""));
 
         Assert.Equal(
-            "al empezar el partido: probabilidad de pase +5% hacia el compañero de delante y compañero de detrás",
+            "Al empezar el partido, probabilidad de pase +5% hacia el compañero de delante y compañero de detrás.",
             Describe("es", perk));
     }
 
@@ -133,7 +133,7 @@ public sealed class DescriptionTests
             links: """["behind"]""",
             condition: condition));
 
-        Assert.Equal($"al empezar el partido, {expected}: el portador +1 de velocidad durante el partido", Describe("es", perk));
+        Assert.Equal($"Al empezar el partido, {expected}, el portador +1 de velocidad durante el partido.", Describe("es", perk));
     }
 
     [Fact]
@@ -150,32 +150,61 @@ public sealed class DescriptionTests
             accumulates: true));
 
         Assert.Equal(
-            "al empezar el partido: el portador: probabilidad de interceptar +5% por cada partido (máximo 25%)",
+            "Al empezar el partido, el portador suma +5% a su probabilidad de interceptar por cada partido (máximo 25%).",
             Describe("es", perk));
     }
 
+    /// <summary>
+    /// <c>addCounter</c> es contabilidad interna pura (V-1, `docs/pendientes.md`): el contador que
+    /// incrementa ya lo narra el efecto emparejado con "por cada partido", así que el generador no lo
+    /// describe como una frase aparte y no debe aparecer en el texto final.
+    /// </summary>
+    [Fact]
+    public void AddCounterEffectsAreNotDescribed()
+    {
+        var perk = TestPerks.Load("grinder", TestPerks.Json(
+            "grinder",
+            "MATCH_START",
+            """
+            [{ "type": "modifyProbability", "target": "owner", "probability": "intercept",
+               "valuePerCounter": 5, "counter": "matches", "maxValue": 25, "duration": "match" },
+             { "type": "addCounter", "counter": "matches", "value": 1 }]
+            """,
+            axis: "accumulation",
+            accumulates: true));
+
+        Assert.Equal(
+            "Al empezar el partido, el portador suma +5% a su probabilidad de interceptar por cada partido (máximo 25%).",
+            Describe("es", perk));
+    }
+
+    /// <summary>
+    /// RT-035: la descripción es una sola frase (`docs/estilo-descripciones.md`, V-1). Ni el disparador ni
+    /// el objetivo se anteponen con dos puntos: se integran en la frase con comas, y el resultado empieza
+    /// en mayúscula y termina en punto.
+    /// </summary>
     [Fact]
     public void RacialAbilitiesReadAsTheAdrDescribesThem()
     {
         Assert.Equal(
-            "al terminar el partido: el portador gana un 25% más de experiencia",
+            "Al terminar el partido, el portador gana un 25% más de experiencia.",
             Describe("es", Catalog.Perks.Get("quick_learner")));
         Assert.Equal(
-            "al empezar el partido: el portador: sus entradas dejan al rival derribado más tiempo",
+            "Al empezar el partido, el portador deja al rival derribado más tiempo con sus entradas.",
             Describe("es", Catalog.Perks.Get("hot_blooded")));
         Assert.Equal(
-            "al empezar el partido: el portador: resistencia a las entradas +10%, "
-                + "el portador: resistencia a las intercepciones +10%",
+            "Al empezar el partido, el portador suma +10% a su resistencia a las entradas "
+                + "y el portador suma +10% a su resistencia a las intercepciones.",
             Describe("es", Catalog.Perks.Get("elf_touch")));
         Assert.Equal(
-            "al empezar el partido: el portador: no puede ser desplazado por empujones",
+            "Al empezar el partido, el portador no puede ser desplazado por empujones.",
             Describe("es", Catalog.Perks.Get("roots")));
         Assert.Equal(
-            "when the match starts: the holder: cannot be shoved out of position",
+            "When the match starts, the holder cannot be shoved out of position.",
             Describe("en", Catalog.Perks.Get("roots")));
         Assert.Equal(
-            "al empezar el partido: el portador: no entra en duelo cuando pierde a un vinculado, "
-                + "el portador: las lesiones leves no le penalizan",
+            "Al empezar el partido, el portador no entra en duelo cuando pierde a un vinculado "
+                + "y el portador no sufre penalización por lesiones leves.",
             Describe("es", Catalog.Perks.Get("numb")));
     }
 
@@ -335,7 +364,7 @@ public sealed class DescriptionTests
             foreach (var key in new[]
             {
                 "plain", "withCondition", "withLimit", "withConditionAndLimit",
-                "effectSeparator", "elsePrefix", "linkSeparator",
+                "effectSeparator", "effectFinalSeparator", "elsePrefix", "linkSeparator",
             })
             {
                 templates.Get("layout", key);

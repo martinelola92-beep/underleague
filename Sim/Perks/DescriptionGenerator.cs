@@ -57,15 +57,16 @@ public static class DescriptionGenerator
         string trigger = templates.Get(Triggers, EventTypeNames.ToUpperSnake(perk.Trigger));
         string condition = perk.CompiledCondition.Ast is { } ast ? DescribeCondition(ast, templates) : string.Empty;
         string separator = templates.Get(Layout, "effectSeparator");
+        string finalSeparator = templates.Get(Layout, "effectFinalSeparator");
 
         string triggerNoun = templates.Get(EventsSection, EventTypeNames.ToUpperSnake(perk.Trigger));
         string links = DescribeLinks(perk.Links, templates);
         var effects = new StringBuilder();
-        AppendEffects(effects, perk.Effects, templates, separator, triggerNoun, links);
+        AppendEffects(effects, perk.Effects, templates, separator, finalSeparator, triggerNoun, links);
         if (perk.ElseEffects.Count > 0)
         {
             effects.Append(templates.Get(Layout, "elsePrefix"));
-            AppendEffects(effects, perk.ElseEffects, templates, separator, triggerNoun, links);
+            AppendEffects(effects, perk.ElseEffects, templates, separator, finalSeparator, triggerNoun, links);
         }
 
         string limit = perk.Limit is { } l
@@ -84,8 +85,17 @@ public static class DescriptionGenerator
         text = Replace(text, "{trigger}", trigger);
         text = Replace(text, "{condition}", condition);
         text = Replace(text, "{effects}", effects.ToString());
-        return Replace(text, "{limit}", limit);
+        text = Replace(text, "{limit}", limit);
+        return CapitalizeFirst(text);
     }
+
+    /// <summary>
+    /// Una sola frase con mayúscula inicial (`docs/estilo-descripciones.md`): las plantillas se escriben en
+    /// minúscula porque el disparador puede aparecer en mitad de una frase (por ejemplo tras "; si no, "),
+    /// así que la mayúscula la pone el generador sobre el resultado ya compuesto, una vez.
+    /// </summary>
+    private static string CapitalizeFirst(string text) =>
+        text.Length == 0 ? text : char.ToUpperInvariant(text[0]) + text[1..];
 
     /// <summary>
     /// Comprueba que el perk es describible en todos los idiomas cargados. Lo llama el cargador de /data
@@ -108,22 +118,43 @@ public static class DescriptionGenerator
         }
     }
 
+    /// <summary>
+    /// Compone los efectos visibles de la lista en la frase. <see cref="EffectType.AddCounter"/> se omite
+    /// cuando acompaña a otro efecto: es contabilidad interna pura (incrementa el contador que ya narra el
+    /// efecto emparejado con "por cada ..."), y decirlo aparte ("+1 al contador X") es exponer una variable
+    /// interna (`docs/estilo-descripciones.md`, "nada de implementación"). Si un perk no tiene ningún otro
+    /// efecto (un contador aislado, sin escalar nada visible; no ocurre en el catálogo de lanzamiento pero
+    /// el motor lo admite), se describe él mismo en vez de dejar la frase vacía. El último efecto visible
+    /// se une con <paramref name="finalSeparator"/> ("y"/"and") en vez de con la coma, para que la lista se
+    /// lea como una frase y no como un volcado de datos.
+    /// </summary>
     private static void AppendEffects(
         StringBuilder builder,
         IReadOnlyList<EffectDefinition> effects,
         DescriptionTemplates templates,
         string separator,
+        string finalSeparator,
         string triggerNoun,
         string links)
     {
+        var visible = new List<EffectDefinition>(effects.Count);
         for (int i = 0; i < effects.Count; i++)
+        {
+            if (effects[i].Type != EffectType.AddCounter)
+            {
+                visible.Add(effects[i]);
+            }
+        }
+
+        IReadOnlyList<EffectDefinition> toRender = visible.Count > 0 ? visible : effects;
+        for (int i = 0; i < toRender.Count; i++)
         {
             if (i > 0)
             {
-                builder.Append(separator);
+                builder.Append(i == toRender.Count - 1 ? finalSeparator : separator);
             }
 
-            builder.Append(DescribeEffect(effects[i], templates, triggerNoun, links));
+            builder.Append(DescribeEffect(toRender[i], templates, triggerNoun, links));
         }
     }
 

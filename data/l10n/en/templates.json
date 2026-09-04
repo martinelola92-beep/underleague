@@ -1,11 +1,12 @@
 {
   "_doc": "Plantillas de descripción de perks, objetos y consumibles (RT-035). El texto de un efecto NO se escribe a mano: se compone desde el propio dato con estas plantillas, así que descripción y efecto no pueden divergir. Marcadores: {trigger} {condition} {effects} {limit} {target} {who} {tag} {attribute} {duration} {probability} {counter} {value:+} {value:+%} {valuePerCounter:+} {maxValue} {counterDivisor} {ticks} {event} {n} {position} {zone} {detail} {a} {b}. Las claves de 'conditions' son el nombre de la función y, para las funciones que devuelven un número o texto, el nombre más el sufijo de la comparación (Lt, Le, Gt, Ge, Eq, Ne). Secciones del rediseño espacial (paquete S): 'links' nombra las relaciones direccionales de la ADR 0021 (marcador {link}), 'immunities' los efectos de tipo immunity, y 'startZones', 'startFlanks' y 'stats' los literales de las funciones startsIn, startsOn y stat (marcadores {startZone}, {startFlank}, {stat}, {cells}). Los valores porcentuales se escriben y se leen en puntos porcentuales enteros.",
   "layout": {
-    "plain": "{trigger}: {effects}",
-    "withCondition": "{trigger}, {condition}: {effects}",
-    "withLimit": "{trigger}: {effects} ({limit})",
-    "withConditionAndLimit": "{trigger}, {condition}: {effects} ({limit})",
+    "plain": "{trigger}, {effects}.",
+    "withCondition": "{trigger}, {condition}, {effects}.",
+    "withLimit": "{trigger}, {effects} ({limit}).",
+    "withConditionAndLimit": "{trigger}, {condition}, {effects} ({limit}).",
     "effectSeparator": ", ",
+    "effectFinalSeparator": " and ",
     "elsePrefix": "; otherwise, ",
     "linkSeparator": " and "
   },
@@ -15,18 +16,18 @@
     "modifyAttributePerCounterDivided": "{target} {valuePerCounter:+} {attribute} per {counterDivisor} {counter} (max {maxValue}) for {duration}",
     "modifyLeash": "{target} {value:+} leash for {duration}",
     "modifyBias": "referee bias {value:+}",
-    "modifyProbability": "{target}: {probability} {value:+%}",
+    "modifyProbability": "{target} adds {value:+%} to their {probability}",
     "cancelEvent": "cancels {event}",
     "addCounter": "+{value} to the {counter} counter",
-    "setState": "{target} knocked down for {ticks} ticks",
+    "setState": "{target} stays knocked down for longer",
     "modifyProbabilityPaired": "{probability} {value:+%} towards {target}",
-    "modifyKnockdownTicks": "{target}: their tackles leave the opponent down for longer",
-    "modifyKnockdownTicksDown": "{target}: their tackles leave the opponent down for less time",
-    "immunity": "{target}: {immunity}",
+    "modifyKnockdownTicks": "{target} leaves the opponent knocked down for longer with their tackles",
+    "modifyKnockdownTicksDown": "{target} leaves the opponent knocked down for less time with their tackles",
+    "immunity": "{target} {immunity}",
     "modifyExperience": "{target} gains {value:abs}% more experience",
     "modifyExperienceDown": "{target} gains {value:abs}% less experience",
-    "modifyProbabilityPerCounter": "{target}: {probability} {valuePerCounter:+%} per {counter} (max {maxValue:%})",
-    "modifyProbabilityPerCounterDivided": "{target}: {probability} {valuePerCounter:+%} per {counterDivisor} {counter} (max {maxValue:%})",
+    "modifyProbabilityPerCounter": "{target} adds {valuePerCounter:+%} to their {probability} per {counter} (max {maxValue:%})",
+    "modifyProbabilityPerCounterDivided": "{target} adds {valuePerCounter:+%} to their {probability} per {counterDivisor} {counter} (max {maxValue:%})",
     "modifyLeashPerCounter": "{target} {valuePerCounter:+} leash per {counter} (max {maxValue}) for {duration}",
     "modifyLeashPerCounterDivided": "{target} {valuePerCounter:+} leash per {counterDivisor} {counter} (max {maxValue}) for {duration}"
   },
@@ -307,7 +308,14 @@
     "assists": "assist",
     "cards": "card",
     "fouls": "foul",
-    "dribbles": "dribble"
+    "dribbles": "dribble",
+    "battleReaderMatches": "match",
+    "cleanSheetSaves": "save",
+    "deathlessMarchMatches": "match",
+    "longLeashMatches": "match",
+    "poacherInstinctGoals": "goal",
+    "scarTissueInjuries": "injury",
+    "silkyVeteranDribbles": "dribble"
   },
   "links": {
     "beside": "partner in their column",
@@ -321,7 +329,7 @@
   "immunities": {
     "push": "cannot be shoved out of position",
     "mourning": "does not mourn a lost link",
-    "minorInjuryPenalty": "minor injuries do not hamper them"
+    "minorInjuryPenalty": "is not hampered by minor injuries"
   },
   "startZones": {
     "OwnThird": "their own third",
