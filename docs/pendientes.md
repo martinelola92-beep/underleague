@@ -58,3 +58,13 @@ Se aplica la lectura indicada hasta que el documento suba de versión.
 | I-10 | Numeración | Secciones 3.6c antes de 3.6b, 3.12b/3.12c | Cosmético; se corrige al subir de versión |
 | I-11 | RT-056, fila de resultados | `< 15% de empates al final del reglamentario` es incompatible con `mayoría de resultados entre 1-0 y 3-2` y `< 5% con más de 5 goles`: con marcadores casi independientes, bajar del 15% de empates exige unos 8 goles por partido (`e^-2λ·I₀(2λ)`) | La métrica se emite como `INFO` y no bloquea la puerta; medida en 29-31% con 2,4 goles por partido. Resolver con un ADR: o se sube el rango a ~30%, o se introduce una mecánica que correlacione los marcadores (el equipo por detrás arriesga más) |
 | I-12 | `balance.md` vs `fase0-diseno.md` §4 | `balance.md` pedía "equipo +10 en todos los atributos gana 65-80%"; `fase0-diseno.md` §4 y `Balance/Metrics.cs` aplican ese rango a una diferencia de **20** y dejan la de 10 como `INFO` | Se aplica la lectura de §4 (diferencia 20 obligatoria, diferencia 10 informativa en 55-70%) y se corrige la tabla de `balance.md` en el mismo commit. Con los datos del paquete E, +20 gana 73,0% y +10 gana 65,8% en 2.000 partidos con semilla 1 |
+
+## Cambios de requisito pendientes de subir `requisitos.md` de versión
+
+| Id | Requisito | Cambio | Origen |
+|---|---|---|---|
+| R-1 | RF-024 | Se invierte: el legendario es netamente superior y un común de nivel máximo equivale a un legendario de nivel 2, en vez de superarlo | ADR 0027 |
+| R-2 | RF-023b | Se matiza: el común sigue siendo competitivo **si el jugador lo cuida** (nivel, perks acumulativos, vínculos), no por defecto | ADR 0027 |
+| R-3 | RF-022d | La etiqueta deja de ser única por raza: se separa en etiqueta de especie (fija) y etiqueta de estilo (individual, con sesgo racial) | ADR 0024 |
+| R-4 | RF-044 | La adyacencia se resuelve antes del partido en vínculos direccionales acotados, no como condición evaluada en cada evento | ADR 0021 |
+| R-5 | RF-031 | Cada raza tiene una habilidad concreta, implementada como perk de equipo | ADR 0026 |

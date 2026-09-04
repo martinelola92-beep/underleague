@@ -24,6 +24,7 @@ Cuándo escribir un ADR: cambio de librería o stack, frontera entre proyectos, 
 | [0024](0024-etiquetas-de-estilo-individuales.md) | Etiqueta de estilo individual con sesgo racial (elfos mayormente `Fine`, pero existe el elfo `Brute`) | Aceptada, pendiente de implementar |
 | [0025](0025-generacion-de-atributos.md) | Generación de atributos por raza, posición, rareza y estilo, con baremos por posición | Aceptada, con tensión abierta en el eje de rareza |
 | [0026](0026-habilidades-raciales.md) | Habilidades raciales como perks de equipo | Aceptada, diseño pendiente del visto bueno del revisor |
+| [0027](0027-rareza-frente-a-nivel.md) | Los legendarios son netamente superiores; común de nivel 8 ≈ legendario de nivel 2 | Aceptada. **Modifica RF-024** |
 
 El hueco del 0011 corresponde a una decisión sobre el radio de adyacencia que quedó absorbida por la 0021 antes de aceptarse.
 | [0012](0012-buildswindifferently-normalizada.md) | `buildsWinDifferently` normalizada contra la referencia de la raza | **Propuesta: decisión del revisor** |

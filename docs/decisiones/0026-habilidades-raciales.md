@@ -18,7 +18,7 @@ Criterio de diseño: cada habilidad usa un **canal distinto** y ninguna es "más
 |---|---|---|---|
 | **Humanos** | Adaptables | Ganan experiencia más deprisa | Club de referencia y tutorial implícito: no distorsiona el partido, premia la continuidad y hace legible la progresión desde la primera run |
 | **Orcos** | Sangre caliente | Sus entradas dejan al rival derribado más tiempo | Convierte la violencia en ventaja **posicional**, no solo en lesiones; se nota en el campo sin depender del árbitro |
-| **Elfos** | Toque | El primer pase de cada jugada no puede interceptarse | Usa el canal de intercepción, el de mayor recorrido medido, y expresa el tiki-taka sin tocar el canal de pase, que está saturado |
+| **Elfos** | Toque | Esquivan mejor las entradas y las intercepciones | Cubre los dos canales de mayor recorrido medido (intercepción y regate) sin tocar el de pase, que está saturado; y expresa la fragilidad élfica como *evitar* el contacto en vez de ganarlo |
 | **Enanos** | Raíces | No pueden ser desplazados por empujes | Da identidad mecánica a los cuerpos de la ADR 0020 y hace del bloque enano una fantasía real, compensando su correa corta |
 | **No-muertos** | No sienten nada | Inmunes al duelo y las lesiones leves no les penalizan | Ya insinuado en RF-035 y RF-104; convierte el desgaste, que es el recurso central del juego, en su ventaja |
 
