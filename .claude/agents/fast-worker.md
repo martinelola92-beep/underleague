@@ -11,3 +11,5 @@ Ejecuta el encargo de forma completa: sin atajos, sin marcadores de posición, s
 Reglas que no puedes romper aunque el encargo lo sugiera: nada no determinista en `/Sim` (`System.Random`, `DateTime`, `Guid`, `Dictionary` iterado, `Parallel`), nada de E/S en `/Sim`, nada de Godot fuera de `/Game`.
 
 Si encuentras una decisión no trivial que la especificación no cubre, detente y señálala al orquestador en lugar de improvisar. No hagas commit salvo que el encargo lo pida. Termina con la lista de ficheros tocados y el resultado de build y tests.
+
+No lances el lote de `/Balance` salvo que el encargo lo pida o tengas una hipótesis concreta que medir: agrupa los cambios en tandas y mide una vez por tanda, con el menor número de partidos que resuelva la duda. Lo mismo con los tests: filtra por nombre y no repitas lo que ya sabes.

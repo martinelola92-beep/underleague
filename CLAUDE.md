@@ -98,6 +98,7 @@ dotnet run --project tools/DataValidator -- data/    # esquemas de /data
 - C#: `nullable enable`, `TreatWarningsAsErrors` en `/Sim`, sin `dynamic`, sin reflexión en tiempo de partido. Estilo en `.editorconfig`.
 - Tests estadísticos con semilla fija y rangos de RT-056; un test que falla "por mala suerte" es un test mal escrito.
 - **Tests con criterio, no por reflejo**: ejecuta solo los tests que cubren lo que has tocado (`dotnet test --filter "FullyQualifiedName~X"`), con `-v q` y filtrando la salida a las líneas de resultado. La suite completa se lanza una vez antes del commit del hito, nunca tras cada edición. No repitas un build o test cuyo resultado ya conoces. Los subagentes siguen la misma regla.
+- **El lote de `/Balance` no es un test de humo**: cuesta tiempo y tokens y su salida es larga. Se lanza cuando hay una **hipótesis concreta que medir**, no después de cada cambio. Agrupa las modificaciones en tandas y mide una vez por tanda, con el número de partidos más pequeño que resuelva la duda. La medición de referencia completa se hace una sola vez, al cerrar el trabajo. Nunca se lanza "para ver si sigue bien" algo que no se ha tocado.
 
 ## Mapa de documentación
 
