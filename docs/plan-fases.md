@@ -4,7 +4,9 @@ Del §7 de requisitos, con los entregables concretos y el estado. **Regla de fas
 
 ## Estado actual
 
-**Fase 0 implementada, pendiente de cierre formal.** 3 de septiembre de 2026. Existen `/Sim` (motor completo sin perks), `/Sim.Tests` (90 tests, incluida la puerta estadística de 1.000 partidos), `/Balance` y `/tools/DataValidator`, con CI en Windows y Linux. Rendimiento: ~520 partidos/s en Release (10.000 en ~20 s, RT-051 cumplido).
+**Fase 1 en curso** (4 de septiembre de 2026): motor de efectos, catálogo de prueba de 26-30 perks con sinergias y antisinergias, progresión y simulaciones de builds según `fase1-diseno.md`. Fase 0 cerrada salvo la decisión del ADR 0010.
+
+**Fase 0 implementada** el 3 de septiembre de 2026. Existen `/Sim` (motor completo sin perks), `/Sim.Tests` (90 tests, incluida la puerta estadística de 1.000 partidos), `/Balance` y `/tools/DataValidator`, con CI en Windows y Linux. Rendimiento: ~520 partidos/s en Release (10.000 en ~20 s, RT-051 cumplido).
 
 Criterio de salida (RT-056, 2.000 partidos, semilla 1): cambios de posesión 22,5 · cadena media de pases 3,56 · tiros 10,7 · resultados 1-0..3-2 84% · >5 goles 2,6% · tercio máximo 39% · entradas 11,8 · lesiones 0,63 · mejor equipo (Δ20) gana 73%. **Todo dentro de rango salvo los empates al final del reglamentario: 29% frente al <15% del documento**, que es matemáticamente incompatible con el resto de la fila de resultados (ver ADR 0010, propuesta pendiente del revisor). Detalle de palancas y cambios de motor en `fase0-diseno.md` §3.11 y `pendientes.md` D-18..D-20, I-11, I-12.
 
