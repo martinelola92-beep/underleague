@@ -66,6 +66,7 @@ El usuario actúa **únicamente como revisor**. Claude planifica, implementa, pr
 - **Skills y plugins**: cuando un flujo se repita o requiera conocimiento específico, crea una skill en `.claude/skills/` (plugin `skill-creator`) o instala un plugin del marketplace, y regístralo en la sección de skills de este fichero. No pidas permiso para ello.
 - **Hitos**: cada entregable de `docs/plan-fases.md` termina con: build y tests en verde, lote de `/Balance` si toca `/Sim` o `/data`, revisión por subagente, commit con RF/RT, push, y actualización del estado en `plan-fases.md`.
 - **Informe al revisor**: al cerrar un hito, un resumen corto de qué se hizo, qué se midió, qué quedó fuera y qué decisiones se tomaron sin consultar (con enlace al ADR o a `pendientes.md`).
+- **No pares al cerrar un hito**: encadena con el siguiente sin esperar aprobación. Al terminar un paquete, commitea, informa en una línea y arranca el siguiente del plan. Solo se detiene el desarrollo si falta una herramienta que el revisor deba instalar, si hay que tomar una decisión de diseño que cambie una regla del juego, o si algo tiene coste económico o es irreversible fuera del repositorio.
 - Si algo bloquea (herramienta que falta, credencial, decisión de diseño), se hace todo lo que no dependa de ello y se deja la pregunta al final del informe, no en medio del trabajo.
 
 ## Flujo de trabajo
