@@ -212,6 +212,8 @@ static string? MapSchemaFile(string relativePath)
         "balance/reference.json" => "balance-reference.schema.json",
         "tags/styles.json" => "styles.schema.json",
         "economy/economy.json" => "economy.schema.json",
+        "economy/perk-values.json" => "perk-values.schema.json",
+        "equipment/equipment.json" => "equipment.schema.json",
         "map/map.json" => "map.schema.json",
         _ => null,
     };

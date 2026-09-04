@@ -4,7 +4,7 @@
     "es": "Árbitro casero",
     "en": "Home Ref"
   },
-  "rarity": "rare",
+  "rarity": "uncommon",
   "kind": "conditional",
   "axis": "matchState",
   "race": null,

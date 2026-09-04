@@ -11,7 +11,7 @@
     {
       "name": "Cael Huesoseco",
       "position": "Goalkeeper",
-      "rarity": "rare",
+      "rarity": "uncommon",
       "level": 4,
       "attributes": {
         "strength": 67,
@@ -95,7 +95,7 @@
     {
       "name": "Doran Sudariofrío",
       "position": "Forward",
-      "rarity": "rare",
+      "rarity": "uncommon",
       "level": 4,
       "attributes": {
         "strength": 64,

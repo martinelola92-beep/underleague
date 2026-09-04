@@ -24,7 +24,7 @@
     {
       "name": "Zog Quiebraespinas",
       "position": "Defender",
-      "rarity": "rare",
+      "rarity": "uncommon",
       "level": 5,
       "attributes": {
         "strength": 98,
@@ -95,7 +95,7 @@
     {
       "name": "Ghash Comecráneos",
       "position": "Forward",
-      "rarity": "legendary",
+      "rarity": "rare",
       "level": 5,
       "attributes": {
         "strength": 90,

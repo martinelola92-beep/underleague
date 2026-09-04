@@ -1,0 +1,13 @@
+{
+  "id": "sprinters_greaves",
+  "name": {
+    "es": "Grebas del velocista",
+    "en": "Sprinter's Greaves"
+  },
+  "rarity": "uncommon",
+  "archetype": "normal",
+  "attributeBonus": {
+    "speed": 10,
+    "stamina": 10
+  }
+}

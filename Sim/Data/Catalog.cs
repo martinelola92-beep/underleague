@@ -175,21 +175,33 @@ public readonly record struct AttributeShare(int Strength, int Speed, int Techni
 }
 
 /// <summary>tuning.generation.positionShare: reparto porcentual del presupuesto por posición (§1.3).</summary>
-public sealed record PositionShareTable(AttributeShare Goalkeeper, AttributeShare Defender, AttributeShare Midfielder, AttributeShare Forward);
+public sealed record PositionShareTable(AttributeShare Goalkeeper, AttributeShare Defender, AttributeShare Midfielder, AttributeShare Forward)
+{
+    /// <summary>Reparto de presupuesto de esa posición: qué atributos le importan y cuánto.</summary>
+    public AttributeShare Of(Position position) => position switch
+    {
+        Position.Goalkeeper => Goalkeeper,
+        Position.Defender => Defender,
+        Position.Midfielder => Midfielder,
+        Position.Forward => Forward,
+        _ => throw new ArgumentOutOfRangeException(nameof(position)),
+    };
+}
 
 /// <summary>Mínimo y máximo de un atributo para una rareza (tuning.generation.rangeByRarity).</summary>
 public sealed record AttributeRange(int Min, int Max);
 
 /// <summary>tuning.generation.rangeByRarity: baremo por rareza, igual para los cinco atributos (§1.3).</summary>
-public sealed record RarityRangeTable(AttributeRange Common, AttributeRange Rare, AttributeRange Legendary);
+public sealed record RarityRangeTable(AttributeRange Common, AttributeRange Uncommon, AttributeRange Rare, AttributeRange Legendary);
 
 /// <summary>tuning.generation.budgetByRarity: presupuesto de atributos en nivel 1, por rareza (§1.3, ADR 0027).</summary>
-public sealed record RarityBudgetTable(int Common, int Rare, int Legendary)
+public sealed record RarityBudgetTable(int Common, int Uncommon, int Rare, int Legendary)
 {
     /// <summary>Presupuesto de la rareza indicada.</summary>
     public int Of(Rarity rarity) => rarity switch
     {
         Rarity.Common => Common,
+        Rarity.Uncommon => Uncommon,
         Rarity.Rare => Rare,
         Rarity.Legendary => Legendary,
         _ => throw new ArgumentOutOfRangeException(nameof(rarity)),
@@ -278,19 +290,19 @@ public sealed record StatesTuning(int PassingTicks, int ShootingTicks, int Tackl
 public sealed record PassTuning(int BaseSuccess, int TechniqueFactor, int DistancePenaltyPerCell, int PressurePenalty, float InterceptRadiusCells, int InterceptBaseChance, int InterceptTechniqueFactor);
 
 /// <summary>tuning.dribble.</summary>
-public sealed record DribbleTuning(int BaseWin, int AttackerTechniqueFactor, int DefenderSpeedFactor, int DefenderStrengthFactor, int LostKnockdownTicks);
+public sealed record DribbleTuning(int BaseWin, int AttackerTechniqueFactor, int DefenderSpeedSharePercent, int LostKnockdownTicks);
 
 /// <summary>tuning.shot.</summary>
 public sealed record ShotTuning(int BaseQuality, int TechniqueFactor, int StrengthFactor, int DistancePenaltyPerCell, int PressurePenalty, int OffTargetBase, int OffTargetDistanceFactor, int PenaltyQualityBonus);
 
 /// <summary>tuning.save.</summary>
-public sealed record SaveTuning(int BasePercent, int CloseRangeCells, int AttributeWeightPercent, int ConsecutiveShotDecayPercent, int QualityWeight);
+public sealed record SaveTuning(int BasePercent, int CloseRangeCells, int AttributeWeightPercent, int ConsecutiveShotDecayPercent, int QualityWeight, int QualityPivot);
 
 /// <summary>tuning.tackle.</summary>
-public sealed record TackleTuning(int BaseWin, int StrengthFactor, int SpeedFactor, int CarrierTechniqueFactor, int FoulBase, int FoulStrengthFactor, int HardTackleThreshold, int YellowCardBase, int RedCardBase, int HardTackleYellowBonus, int HardTackleRedBonus, bool SecondYellowIsRed);
+public sealed record TackleTuning(int BaseWin, int PressureFactor, int StrengthSharePercent, int FoulBase, int FoulStrengthFactor, int HardTackleThreshold, int YellowCardBase, int RedCardBase, int HardTackleYellowBonus, int HardTackleRedBonus, bool SecondYellowIsRed);
 
 /// <summary>tuning.injury.</summary>
-public sealed record InjuryTuning(int OnTackleBase, int OnFoulBase, int AttackerStrengthFactor, int VictimStaminaResistFactor, int SevereShare);
+public sealed record InjuryTuning(int OnTackleBase, int OnFoulBase, int RelativeFactor, int SevereShare);
 
 /// <summary>
 /// tuning.referee: el criterio del árbitro (RF-062..RF-064, ADR 0030 §3). Los tres campos

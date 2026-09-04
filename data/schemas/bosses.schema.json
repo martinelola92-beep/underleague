@@ -141,6 +141,6 @@
       "additionalProperties": { "type": "string", "minLength": 1 }
     },
     "race": { "enum": ["Human", "Orc", "Elf", "Dwarf", "Undead", "DarkElf", "Demon", "Vampire", "Lizard"] },
-    "rarity": { "enum": ["common", "rare", "legendary"] }
+    "rarity": { "enum": ["common", "uncommon", "rare", "legendary"] }
   }
 }

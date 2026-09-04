@@ -55,11 +55,11 @@
   "additionalProperties": false,
   "$defs": {
     "priceByRarity": {
-      "description": "[common, rare, legendary]",
+      "description": "[common, uncommon, rare, legendary] (ADR 0039). La entrada de legendario existe por completitud del enum: nada legendario se genera ni se pone a la venta.",
       "type": "array",
       "items": { "type": "integer", "minimum": 0 },
-      "minItems": 3,
-      "maxItems": 3
+      "minItems": 4,
+      "maxItems": 4
     },
     "market": {
       "type": "object",

@@ -23,10 +23,21 @@ public enum Position
     Forward,
 }
 
-/// <summary>Rareza de un jugador (RF-005).</summary>
+/// <summary>
+/// Rareza de un jugador, perk, objeto o consumible (RF-005, RF-023, ADR 0039).
+///
+/// <para><b>Tres rarezas generables</b> —<see cref="Common"/>, <see cref="Uncommon"/> y
+/// <see cref="Rare"/>, con 2, 3 y 4 slots de perk (<c>Progression.PerkSlots</c>)— y una cuarta,
+/// <see cref="Legendary"/>, que <b>la generación nunca produce</b>: los legendarios son personajes
+/// únicos escritos a mano que se desbloquean ganando divisiones (ADR 0039, fase 4). Ni el generador de
+/// equipos, ni el mercado, ni las recompensas, ni el pool de objetos la sortean jamás; existe en el
+/// enum para que el escalón esté reservado y para que precios, presupuestos y slots ya tengan su
+/// entrada cuando la fase 4 escriba los personajes.</para>
+/// </summary>
 public enum Rarity
 {
     Common,
+    Uncommon,
     Rare,
     Legendary,
 }

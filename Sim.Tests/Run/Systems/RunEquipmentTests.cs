@@ -56,11 +56,17 @@ public sealed class RunEquipmentTests
         report.Goals[0] = 1;
         var summary = new RunMatchSummary(
             node.Id, node.Kind, true, 1, 0, 500, false, new[] { owner.Id }, Array.Empty<int>(), 0, 0, report.Build());
-        for (int use = 0; use < fragile.UsesLimit; use++)
+        // ADR 0036: la rotura es una tirada por partido, no un contador de usos. Con una probabilidad
+        // positiva, repetir el post-partido acaba rompiéndolo; lo que el test afirma es el ciclo, no el
+        // número exacto de partidos.
+        var broken = state;
+        for (int match = 0; match < 200 && broken.GetPlayer(owner.Id).Item is not null; match++)
         {
-            state = Underleague.Sim.Run.Systems.Equipment.EquipmentSystem.ProcessFragileItems(state, summary, items);
+            var forMatch = summary with { NodeId = node.Id + match };
+            broken = Underleague.Sim.Run.Systems.Equipment.EquipmentSystem.ProcessFragileItems(broken, forMatch, items);
         }
 
+        state = broken;
         Assert.Null(state.GetPlayer(owner.Id).Item);
         var (after, _, _) = RunEngine.BuildMatch(state, node.Id, Catalog, SystemsTestSupport.Systems);
         Assert.Null(after.Home.Players.Single(p => p.Id == owner.Id).Item);

@@ -1,17 +1,17 @@
 using System.Globalization;
 using System.Text;
 using Underleague.Sim.Model;
-using Underleague.Sim.Perks;
 
 namespace Underleague.Sim.Run.Systems.Items;
 
 /// <summary>
-/// Genera la descripción de un objeto de equipamiento desde su efecto (RT-035): el dato no lleva ningún
-/// campo <c>description</c>. <c>Sim.Perks.DescriptionGenerator</c> hace exactamente esto para los perks,
-/// pero lee las plantillas de <c>data/l10n/&lt;lang&gt;/templates.json</c>, que es territorio de otro
-/// agente en paralelo (fase2-diseno.md, encargo del paquete X: "no toques ... data/l10n"). Por eso este
-/// generador usa sus propias plantillas, en código, con la misma idea: el texto sale del mismo dato que
-/// describe, nunca al revés.
+/// Genera la descripción de un objeto de equipamiento desde su dato (RT-035): el fichero no lleva ningún
+/// campo <c>description</c>.
+///
+/// <para>Con la ADR 0036 esto es casi trivial —"una plantilla por arquetipo"—, que era justamente uno de
+/// los argumentos de la decisión: un objeto es una lista de atributos, así que su texto es la lista y su
+/// contrapartida. La probabilidad de rotura del frágil <b>siempre</b> aparece, porque RF-012d exige que
+/// nada de lo que pase estuviera sin anunciar.</para>
 /// </summary>
 public static class ItemDescriptions
 {
@@ -22,45 +22,43 @@ public static class ItemDescriptions
         bool es = string.Equals(language, "es", StringComparison.Ordinal);
 
         var parts = new List<string>();
-        foreach (var effect in item.Effects)
+        foreach (var kind in item.Raised)
         {
-            parts.Add(DescribeEffect(effect, es, positive: true));
+            parts.Add(Modifier(item.Modifier.Get(kind), kind, es));
         }
 
         var builder = new StringBuilder();
         builder.Append(Join(parts, es));
 
-        if (item.Archetype == ItemArchetype.Cursed)
+        var lowered = item.Lowered;
+        if (lowered.Count > 0)
         {
-            var drawbacks = new List<string>();
-            foreach (var effect in item.DrawbackEffects)
+            var drawbacks = new List<string>(lowered.Count);
+            foreach (var kind in lowered)
             {
-                drawbacks.Add(DescribeEffect(effect, es, positive: false));
+                drawbacks.Add(Modifier(item.Modifier.Get(kind), kind, es));
             }
 
             builder.Append(es ? "; a cambio, " : "; in exchange, ");
             builder.Append(Join(drawbacks, es));
-            builder.Append('.');
         }
-        else
-        {
-            builder.Append('.');
-        }
+
+        builder.Append('.');
 
         if (item.Archetype == ItemArchetype.Fragile)
         {
-            builder.Append(' ');
+            string chance = item.BreakChancePercent.ToString(CultureInfo.InvariantCulture);
             builder.Append(es
-                ? $"Frágil: se rompe tras {item.UsesLimit.ToString(CultureInfo.InvariantCulture)} partidos jugados con él, o si el portador se lesiona."
-                : $"Fragile: breaks after {item.UsesLimit.ToString(CultureInfo.InvariantCulture)} matches played with it, or if the wearer is injured.");
+                ? $" Frágil: {chance}% de romperse al terminar cada partido."
+                : $" Fragile: {chance}% chance of breaking at the end of each match.");
         }
 
         if (item.Archetype == ItemArchetype.Restricted)
         {
-            builder.Append(' ');
+            string race = item.RequiredTag;
             builder.Append(es
-                ? $"Restringido: solo tiene efecto en portadores con la etiqueta {item.RequiredTag}."
-                : $"Restricted: only works on wearers with the {item.RequiredTag} tag.");
+                ? $" Exclusivo de {race}: no aporta nada a un portador de otra raza."
+                : $" {race} only: it does nothing on a wearer of another race.");
         }
 
         return CapitalizeFirst(builder.ToString());
@@ -92,25 +90,12 @@ public static class ItemDescriptions
         return builder.ToString();
     }
 
-    private static string DescribeEffect(EffectDefinition effect, bool es, bool positive)
+    private static string Modifier(int value, AttributeKind kind, bool es)
     {
-        string sign = effect.Value >= 0 ? "+" : string.Empty;
-        int abs = effect.Value;
-
-        if (effect.Type == EffectType.ModifyAttribute)
-        {
-            string attribute = AttributeName(effect.Attribute, es);
-            return es
-                ? $"{sign}{abs} de {attribute}"
-                : $"{sign}{abs} {attribute}";
-        }
-
-        // modifyProbability: valor en base 10.000 (RT-023), se muestra como puntos porcentuales.
-        int percent = abs / 100;
-        string probability = ProbabilityName(effect.Probability, es);
-        return es
-            ? $"{sign}{percent}% de probabilidad de {probability}"
-            : $"{sign}{percent}% {probability} probability";
+        string sign = value >= 0 ? "+" : string.Empty;
+        string attribute = AttributeName(kind, es);
+        string text = value.ToString(CultureInfo.InvariantCulture);
+        return es ? $"{sign}{text} de {attribute}" : $"{sign}{text} {attribute}";
     }
 
     private static string AttributeName(AttributeKind kind, bool es) => (kind, es) switch
@@ -125,21 +110,6 @@ public static class ItemDescriptions
         (AttributeKind.Stamina, false) => "stamina",
         (AttributeKind.Leash, true) => "correa",
         (AttributeKind.Leash, false) => "leash",
-        _ => kind.ToString(),
-    };
-
-    private static string ProbabilityName(ProbabilityKind kind, bool es) => (kind, es) switch
-    {
-        (ProbabilityKind.Injure, true) => "lesión",
-        (ProbabilityKind.Injure, false) => "injury",
-        (ProbabilityKind.SevereInjury, true) => "lesión grave",
-        (ProbabilityKind.SevereInjury, false) => "severe injury",
-        (ProbabilityKind.Injury, true) => "lesión",
-        (ProbabilityKind.Injury, false) => "injury",
-        (ProbabilityKind.Foul, true) => "falta",
-        (ProbabilityKind.Foul, false) => "foul",
-        (ProbabilityKind.Card, true) => "tarjeta",
-        (ProbabilityKind.Card, false) => "card",
         _ => kind.ToString(),
     };
 

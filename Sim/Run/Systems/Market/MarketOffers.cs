@@ -101,19 +101,39 @@ public static class MarketOfferGenerator
             mercenaries.Add(new MercenaryOffer(mercenary));
         }
 
+        // El peso de un perk en el pool es inversamente proporcional a su valor medido (ADR 0038): la
+        // palanca donde el precio ya interviene es doble, pero el pool tiene que ofrecer lo caro menos.
         var perkPool = PerkPool.Offerable(state, catalog);
+        var perkWeights = new List<int>(perkPool.Count);
+        for (int i = 0; i < perkPool.Count; i++)
+        {
+            perkWeights.Add(economy.PerkValues.WeightOf(perkPool[i].Id));
+        }
+
         var perks = new List<PerkOffer>(market.PerkOffers);
         for (int i = 0; i < market.PerkOffers && perkPool.Count > 0; i++)
         {
-            var perk = perkPool[rng.Range(0, perkPool.Count)];
+            var perk = perkPool[WeightedPick.Index(ref rng, perkWeights)];
             perks.Add(new PerkOffer(perk.Id, Priced(ref rng, market.PerkPrice.Of(perk.Rarity))));
         }
 
-        var itemOffers = new List<ItemOffer>(market.ItemOffers);
-        for (int i = 0; i < market.ItemOffers && items.All.Count > 0; i++)
+        // Solo los universales y los restringidos de la raza del club (ADR 0036); el precio sale del
+        // valor del objeto, no de su rareza (ADR 0038).
+        var itemPool = items.OfferableTo(state.ClubRace);
+        var itemWeights = new List<int>(itemPool.Count);
+        for (int i = 0; i < itemPool.Count; i++)
         {
-            var item = items.All[rng.Range(0, items.All.Count)];
-            itemOffers.Add(new ItemOffer(item.Id, Priced(ref rng, market.ItemPrice.Of(item.Rarity)), item.Rarity));
+            itemWeights.Add(ItemPricing.OfferWeight(itemPool[i], items.Scale));
+        }
+
+        var itemOffers = new List<ItemOffer>(market.ItemOffers);
+        for (int i = 0; i < market.ItemOffers && itemPool.Count > 0; i++)
+        {
+            var item = itemPool[WeightedPick.Index(ref rng, itemWeights)];
+            itemOffers.Add(new ItemOffer(
+                item.Id,
+                Priced(ref rng, ItemPricing.Price(item, items.Scale, market)),
+                item.Rarity));
         }
 
         var consumableOffers = new List<ConsumableOffer>(market.ConsumableOffers);

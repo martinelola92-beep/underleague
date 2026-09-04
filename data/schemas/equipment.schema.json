@@ -1,0 +1,44 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://underleague.dev/schemas/equipment.schema.json",
+  "title": "Underleague equipment scale",
+  "description": "data/equipment/equipment.json: escala del equipamiento (ADR 0036) y tabla de valor marginal por atributo (ADR 0038). La comprobación de que cada objeto respeta esta escala la hace el cargador (Sim.Run.Systems.Items.ItemLoader), no el esquema: 'cuántos atributos sube según su rareza' no se puede expresar en JSON Schema.",
+  "type": "object",
+  "properties": {
+    "_doc": { "type": "string" },
+    "attributeBonus": { "type": "integer", "minimum": 1, "maximum": 50 },
+    "cursedMultiplier": { "type": "integer", "minimum": 2, "maximum": 4 },
+    "attributesByRarity": {
+      "type": "object",
+      "properties": {
+        "common": { "type": "integer", "minimum": 1, "maximum": 5 },
+        "uncommon": { "type": "integer", "minimum": 1, "maximum": 5 },
+        "rare": { "type": "integer", "minimum": 1, "maximum": 5 },
+        "legendary": { "type": "integer", "minimum": 1, "maximum": 5 }
+      },
+      "required": ["common", "uncommon", "rare", "legendary"],
+      "additionalProperties": false
+    },
+    "restrictedAttributes": { "type": "integer", "minimum": 1, "maximum": 5 },
+    "marginalValuePerAttribute": {
+      "description": "Milésimas de punto de tasa de victoria por cada +20 repartidos entre los diez jugadores.",
+      "type": "object",
+      "properties": {
+        "strength": { "type": "integer", "minimum": 1 },
+        "speed": { "type": "integer", "minimum": 1 },
+        "technique": { "type": "integer", "minimum": 1 },
+        "stamina": { "type": "integer", "minimum": 1 },
+        "leash": { "type": "integer", "minimum": 1 }
+      },
+      "required": ["strength", "speed", "technique", "stamina", "leash"],
+      "additionalProperties": false
+    },
+    "fragilePricePercent": { "type": "integer", "minimum": 1, "maximum": 100 },
+    "fragileOfferWeightPercent": { "type": "integer", "minimum": 1, "maximum": 500 }
+  },
+  "required": [
+    "attributeBonus", "cursedMultiplier", "attributesByRarity", "restrictedAttributes",
+    "marginalValuePerAttribute", "fragilePricePercent", "fragileOfferWeightPercent"
+  ],
+  "additionalProperties": false
+}

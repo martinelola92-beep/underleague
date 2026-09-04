@@ -57,6 +57,9 @@ public sealed class Options
     /// <summary>--boss-gate: mide la curva de puertas de la ADR 0033 (cada nivel de build contra cada jefe).</summary>
     public bool BossGate { get; private set; }
 
+    /// <summary>--perk-values: mide el valor de cada perk contra su espejo sin él (ADR 0038).</summary>
+    public bool PerkValues { get; private set; }
+
     /// <summary>
     /// Null salvo que se pase --full-runs N: juega N runs completas con la política automática de
     /// <c>Sim.Analysis.RunPolicy</c> y vuelca runs.csv (fase2-diseno.md §10).
@@ -111,6 +114,10 @@ public sealed class Options
 
                 case "--boss-gate":
                     options.BossGate = true;
+                    break;
+
+                case "--perk-values":
+                    options.PerkValues = true;
                     break;
 
                 case "--full-runs":

@@ -1,0 +1,14 @@
+{
+  "id": "iron_league_medal",
+  "name": {
+    "es": "Medalla de la liga de hierro",
+    "en": "Iron League Medal"
+  },
+  "archetype": "restricted",
+  "race": "Human",
+  "attributeBonus": {
+    "strength": 10,
+    "technique": 10,
+    "stamina": 10
+  }
+}

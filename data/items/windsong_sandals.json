@@ -1,0 +1,14 @@
+{
+  "id": "windsong_sandals",
+  "name": {
+    "es": "Sandalias del canto del viento",
+    "en": "Windsong Sandals"
+  },
+  "archetype": "restricted",
+  "race": "Elf",
+  "attributeBonus": {
+    "speed": 10,
+    "technique": 10,
+    "leash": 10
+  }
+}

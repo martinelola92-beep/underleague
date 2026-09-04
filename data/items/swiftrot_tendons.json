@@ -1,0 +1,15 @@
+{
+  "_doc": "ABRE una build que los no-muertos no pueden permitirse: con velocidad -10 el contraataque les esta vedado y solo saben ganar por desgaste. Con los tendones pueden correr, que es la build contraria a la que su sesgo empuja.",
+  "id": "swiftrot_tendons",
+  "name": {
+    "es": "Tendones de podredumbre rápida",
+    "en": "Swiftrot Tendons"
+  },
+  "archetype": "restricted",
+  "race": "Undead",
+  "attributeBonus": {
+    "speed": 10,
+    "technique": 10,
+    "leash": 10
+  }
+}

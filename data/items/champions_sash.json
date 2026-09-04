@@ -1,0 +1,14 @@
+{
+  "id": "champions_sash",
+  "name": {
+    "es": "Faja de campeón",
+    "en": "Champion's Sash"
+  },
+  "rarity": "rare",
+  "archetype": "normal",
+  "attributeBonus": {
+    "strength": 10,
+    "technique": 10,
+    "stamina": 10
+  }
+}

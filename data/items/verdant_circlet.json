@@ -1,0 +1,14 @@
+{
+  "id": "verdant_circlet",
+  "name": {
+    "es": "Diadema verdeante",
+    "en": "Verdant Circlet"
+  },
+  "archetype": "restricted",
+  "race": "Elf",
+  "attributeBonus": {
+    "technique": 10,
+    "stamina": 10,
+    "speed": 10
+  }
+}

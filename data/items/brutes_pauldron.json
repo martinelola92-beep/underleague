@@ -1,10 +1,14 @@
 {
+  "_doc": "Maldito comun: sube un atributo (lo que su rareza permite) el doble, y baja el doble en velocidad. Excelente en un central de bloque bajo, ruinoso en cualquiera que tenga que cubrir campo.",
   "id": "brutes_pauldron",
-  "name": { "es": "Hombrera del bruto", "en": "Brute's Pauldron" },
+  "name": {
+    "es": "Hombrera del bruto",
+    "en": "Brute's Pauldron"
+  },
   "rarity": "common",
-  "archetype": "restricted",
-  "requiredTag": "Brute",
-  "effects": [
-    { "type": "modifyAttribute", "attribute": "strength", "value": 14 }
-  ]
+  "archetype": "cursed",
+  "attributeBonus": {
+    "strength": 20,
+    "speed": -20
+  }
 }

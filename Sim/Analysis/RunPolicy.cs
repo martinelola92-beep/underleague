@@ -4,6 +4,7 @@ using Underleague.Sim.Run;
 using Underleague.Sim.Run.Bosses;
 using Underleague.Sim.Run.Systems;
 using Underleague.Sim.Run.Systems.Economy;
+using Underleague.Sim.Run.Systems.Items;
 using Underleague.Sim.Run.Systems.Market;
 using Underleague.Sim.Run.Systems.Rewards;
 
@@ -41,6 +42,13 @@ public sealed record RunPolicyOptions
 
     /// <summary>Trata en la clínica mientras los disponibles estén por debajo de este número.</summary>
     public int TreatWhileAvailableBelow { get; init; } = 8;
+
+    /// <summary>
+    /// Valor mínimo de un lesionado grave para que compense tratarlo aunque sobren cuerpos (ADR 0041).
+    /// El valor de un jugador es la suma de sus cinco atributos más lo que aportan perks y objeto, así
+    /// que 250 es un titular corriente de nivel 1 y cualquier titular de la mitad de la run lo supera.
+    /// </summary>
+    public int TreatFromValue { get; init; } = 250;
 
     /// <summary>Acepta un partido de élite solo con al menos estos disponibles.</summary>
     public int EliteFromAvailable { get; init; } = 8;
@@ -111,6 +119,7 @@ public sealed record RunPlayResult(
     int Deaths,
     int Injuries,
     int OwnInjuries,
+    int MatchInjuries,
     int SevereInjuriesSuffered,
     int FinalRosterSize,
     int FinalAvailable,
@@ -513,13 +522,25 @@ public static class RunPolicy
     {
         for (int i = 0; i < RunRules.MaxStarters; i++)
         {
-            if (state.AvailablePlayerCount >= options.TreatWhileAvailableBelow || state.Gold < economy.ClinicCost)
+            if (state.Gold < economy.ClinicCost)
             {
                 break;
             }
 
             var patient = BestSevereInjured(state, options);
             if (patient is null)
+            {
+                break;
+            }
+
+            // Dos razones para pagar la clínica, y la primera es la que la mantiene viva (ADR 0041): que
+            // el lesionado sea una PIEZA, no que falten cuerpos. Con trece jugadores en plantilla los
+            // disponibles nunca bajan de ocho, así que la regla de "solo si falta gente" convertía la
+            // clínica en contenido muerto por mucho que hubiese lesiones. Un grave sin tratar es un
+            // titular menos y, si se le alinea igualmente, un candidato a morir (RF-093 vía 1).
+            bool worthTreating = state.AvailablePlayerCount < options.TreatWhileAvailableBelow
+                || Value(patient, options) >= options.TreatFromValue;
+            if (!worthTreating)
             {
                 break;
             }
@@ -568,7 +589,7 @@ public static class RunPolicy
             var current = action == 0
                 ? arrival
                 : MarketOfferGenerator.Generate(state, node, catalog, standard.Economy, standard.Items, standard.Consumables);
-            var decision = NextMarketAction(state, node, current, catalog, standard.Economy, options, used, spentHere);
+            var decision = NextMarketAction(state, node, current, catalog, standard.Economy, standard.Items, options, used, spentHere);
             if (decision is null)
             {
                 break;
@@ -704,6 +725,7 @@ public static class RunPolicy
         MarketOffers offers,
         Catalog catalog,
         EconomyConfig economy,
+        ItemCatalog? items,
         RunPolicyOptions options,
         HashSet<(string Category, int Index)> used,
         int alreadySpentHere)
@@ -762,11 +784,14 @@ public static class RunPolicy
             return new BuyOffer(MarketCategories.Perk, bestPerk, bestPerkCarrier);
         }
 
-        // (c) Un objeto para un titular sin objeto (RF-076), con el mismo criterio.
+        // (c) Un objeto para un titular sin objeto (RF-076). Aquí es donde las tres doctrinas dejan de
+        // parecerse: con la ADR 0036 un objeto es un paquete de atributos, así que la contextual compra
+        // **el par (objeto, portador) que mejor encaja** y las dos puras siguen comprando por rareza y
+        // precio y se lo dan a quien toque.
         int naked = BestStarterWithoutItem(state, lineup, options);
         if (naked >= 0)
         {
-            int bestItem = -1, bestItemRank = int.MinValue;
+            int bestItem = -1, bestItemRank = int.MinValue, bestItemCarrier = naked;
             for (int i = 0; i < offers.Items.Count; i++)
             {
                 if (used.Contains((MarketCategories.Item, i)) || offers.Items[i].Price > budget)
@@ -780,17 +805,39 @@ public static class RunPolicy
                     continue;
                 }
 
-                int rank = Rank(rarity, offers.Items[i].Price, options, safe: true);
+                int rank;
+                int carrier = naked;
+                if (options.Doctrine == PurchaseDoctrine.Contextual && items is not null)
+                {
+                    var definition = items.Find(offers.Items[i].ItemId);
+                    if (definition is null)
+                    {
+                        continue;
+                    }
+
+                    (carrier, rank) = BestFitFor(definition, lineup, catalog);
+                    if (carrier < 0 || rank <= 0)
+                    {
+                        // Un objeto que no le sirve a nadie del once no es una compra: es tirar oro.
+                        continue;
+                    }
+                }
+                else
+                {
+                    rank = Rank(rarity, offers.Items[i].Price, options, safe: true);
+                }
+
                 if (rank > bestItemRank)
                 {
                     bestItem = i;
                     bestItemRank = rank;
+                    bestItemCarrier = carrier;
                 }
             }
 
             if (bestItem >= 0)
             {
-                return new BuyOffer(MarketCategories.Item, bestItem, naked);
+                return new BuyOffer(MarketCategories.Item, bestItem, bestItemCarrier);
             }
         }
 
@@ -880,7 +927,7 @@ public static class RunPolicy
         Ledger ledger)
     {
         var rewards = RewardSystem.Options(state, node, catalog, standard.Economy, standard.Items);
-        var choice = PickReward(state, rewards, catalog, options);
+        var choice = PickReward(state, rewards, catalog, standard.Items, options);
 
         if (choice.Score < BestRewardScore && state.NodeRerolls == 0 && options.RerollGoldFactor != int.MaxValue)
         {
@@ -891,7 +938,7 @@ public static class RunPolicy
                 ledger.GoldSpentReroll += cost;
                 ledger.Rerolls++;
                 var rerolled = RewardSystem.Options(state, node, catalog, standard.Economy, standard.Items);
-                choice = PickReward(state, rerolled, catalog, options);
+                choice = PickReward(state, rerolled, catalog, standard.Items, options);
             }
         }
 
@@ -909,6 +956,7 @@ public static class RunPolicy
         RunState state,
         IReadOnlyList<RewardOption> rewards,
         Catalog catalog,
+        ItemCatalog? items,
         RunPolicyOptions options)
     {
         var lineup = ChooseStarters(state, options);
@@ -937,9 +985,20 @@ public static class RunPolicy
 
                     break;
 
-                case ItemRewardOption:
+                case ItemRewardOption item:
+                    // La contextual elige portador por encaje (ADR 0036); las puras, el titular sin
+                    // objeto de más valor.
                     carrier = naked;
-                    score = naked >= 0 ? 3 : 1;
+                    if (options.Doctrine == PurchaseDoctrine.Contextual && items?.Find(item.ItemId) is { } itemDefinition)
+                    {
+                        int fitted = BestFitFor(itemDefinition, lineup, catalog).Carrier;
+                        if (fitted >= 0)
+                        {
+                            carrier = fitted;
+                        }
+                    }
+
+                    score = carrier >= 0 ? 3 : 1;
                     if (score == 1 && lineup.Count > 0)
                     {
                         carrier = lineup[0].Id;
@@ -1134,6 +1193,53 @@ public static class RunPolicy
         return best;
     }
 
+    /// <summary>
+    /// <b>Cuánto le sirve ESE objeto a ESE jugador</b> (ADR 0036). Con el equipamiento convertido en
+    /// atributos, "¿a quién le doy las botas?" se responde mirando la plantilla, y esa es la decisión que
+    /// separa a la doctrina contextual de las dos puras: la gastadora y la ahorradora equipan a quien
+    /// toque, la contextual mira el puesto.
+    ///
+    /// <para>El peso de cada atributo por posición no se inventa: es <c>tuning.generation.positionShare</c>,
+    /// el mismo reparto con el que el generador decide en qué gasta su presupuesto un portero o un
+    /// delantero. Así el maldito cae donde su contrapartida no duele —<c>berserker_totem</c> baja técnica
+    /// y vale mucho en un central y muy poco en el organizador— sin una sola regla escrita a mano.</para>
+    /// </summary>
+    private static int ItemFit(ItemDefinition item, RunPlayer player, Catalog catalog)
+    {
+        var share = catalog.Tuning.Generation.PositionShare.Of(player.Position);
+        int score = 0;
+        foreach (var kind in ItemScale.AttributeOrder)
+        {
+            score += item.Modifier.Get(kind) * share.Get(kind);
+        }
+
+        return score;
+    }
+
+    /// <summary>Titular sin objeto al que mejor le viene ese objeto, con su ajuste; (-1, 0) si a ninguno.</summary>
+    private static (int Carrier, int Fit) BestFitFor(
+        ItemDefinition item, IReadOnlyList<RunPlayer> lineup, Catalog catalog)
+    {
+        int carrier = -1, best = int.MinValue;
+        for (int i = 0; i < lineup.Count; i++)
+        {
+            var player = lineup[i];
+            if (player.Item is not null || player.PhysicalState == PhysicalState.Dead)
+            {
+                continue;
+            }
+
+            int fit = ItemFit(item, player, catalog);
+            if (fit > best)
+            {
+                best = fit;
+                carrier = player.Id;
+            }
+        }
+
+        return carrier < 0 ? (-1, 0) : (carrier, best);
+    }
+
     private static void TakeBest(
         List<RunPlayer> starters,
         IReadOnlyList<RunPlayer> pool,
@@ -1279,6 +1385,7 @@ public static class RunPolicy
             ledger.Deaths,
             injuries,
             ledger.OwnInjuries,
+            ledger.MatchInjuries,
             ledger.SevereInjuries,
             state.Roster.Count,
             state.AvailablePlayerCount,
@@ -1328,6 +1435,7 @@ public static class RunPolicy
         public RunState AfterMatch(RunState state, MapNode node, RunMatchSummary summary, Catalog catalog)
         {
             _ledger.OwnInjuries += summary.OwnInjuries;
+            _ledger.MatchInjuries += summary.Report.Injuries;
             return _inner.AfterMatch(state, node, summary, catalog);
         }
 
@@ -1361,6 +1469,9 @@ public static class RunPolicy
     private sealed class Ledger
     {
         public int OwnInjuries;
+
+        /// <summary>Lesiones de los DOS equipos en los partidos de la run: la misma cifra que mide RT-056.</summary>
+        public int MatchInjuries;
 
         public int Matches;
         public int MatchesWon;

@@ -26,6 +26,19 @@ internal sealed record BuildFile(
 {
     private const int StarterCount = 7;
 
+    /// <summary>La misma build con las piezas que caben en ese punto de la run (ADR 0040).</summary>
+    public BuildFile At(Underleague.Sim.Analysis.BuildDensity density)
+    {
+        ArgumentNullException.ThrowIfNull(density);
+        return density.IsFull
+            ? this
+            : this with
+            {
+                Perks = density.TrimPerks(Perks, p => p.Slot),
+                Items = density.TrimItems(Items),
+            };
+    }
+
     public static IReadOnlyDictionary<string, BuildFile> LoadAll(string dataDirectory)
     {
         var result = new Dictionary<string, BuildFile>(StringComparer.Ordinal);

@@ -1,0 +1,14 @@
+{
+  "id": "grave_lantern",
+  "name": {
+    "es": "Farol de tumba",
+    "en": "Grave Lantern"
+  },
+  "archetype": "restricted",
+  "race": "Undead",
+  "attributeBonus": {
+    "strength": 10,
+    "technique": 10,
+    "stamina": 10
+  }
+}

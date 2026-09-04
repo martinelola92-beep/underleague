@@ -11,7 +11,7 @@
     {
       "name": "Malric Nochehueca",
       "position": "Goalkeeper",
-      "rarity": "rare",
+      "rarity": "uncommon",
       "level": 5,
       "attributes": {
         "strength": 80,
@@ -134,7 +134,7 @@
     {
       "name": "Loth Tumbafría",
       "position": "Forward",
-      "rarity": "legendary",
+      "rarity": "rare",
       "level": 5,
       "attributes": {
         "strength": 77,

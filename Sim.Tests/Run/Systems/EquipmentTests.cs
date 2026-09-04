@@ -37,7 +37,7 @@ public sealed class EquipmentTests
 
         Assert.Equal("worn_boots", next.GetPlayer(to.Id).Item);
         var displaced = items.Get("iron_gauntlets");
-        int expectedPrice = economy.Market.ItemPrice.Of(displaced.Rarity) * economy.Market.ItemSellFractionPercent / 100;
+        int expectedPrice = ItemPricing.SalePrice(displaced, items.Scale, economy.Market);
         Assert.Equal(expectedPrice, next.Gold);
     }
 
@@ -58,45 +58,60 @@ public sealed class EquipmentTests
 
         Assert.Null(sold.GetPlayer(owner.Id).Item);
         var item = items.Get("veteran_armband");
-        int expectedPrice = economy.Market.ItemPrice.Of(item.Rarity) * economy.Market.ItemSellFractionPercent / 100;
+        int expectedPrice = ItemPricing.SalePrice(item, items.Scale, economy.Market);
         Assert.Equal(expectedPrice, sold.Gold);
-        Assert.True(expectedPrice < economy.Market.ItemPrice.Of(item.Rarity), "vender debe pagar solo una fracción del valor del objeto (RF-076b)");
+        Assert.True(
+            expectedPrice < ItemPricing.Price(item, items.Scale, economy.Market),
+            "vender debe pagar solo una fracción del valor del objeto (RF-076b)");
     }
 
     [Fact]
-    public void FragileItemBreaksAfterItsUsesLimit()
+    public void FragileItemBreaksWithItsAnnouncedChanceAtTheEndOfTheMatch()
     {
+        // ADR 0036: la tirada se resuelve AL TERMINAR el partido, con la probabilidad que el objeto
+        // anuncia. Se comprueba sobre muchos post-partidos, no sobre uno: lo que define al frágil es la
+        // frecuencia, y esa frecuencia es la que se muestra antes de equiparlo (RF-012d).
         var items = SystemsTestSupport.Systems.Items;
         var fragile = items.All.First(i => i.Archetype == ItemArchetype.Fragile);
-        var state = RunEngine.Start(SystemsTestSupport.Setup(), 8004UL, SystemsTestSupport.Catalog, SystemsTestSupport.Systems);
-        var owner = state.Roster[0] with { Item = fragile.Id, PhysicalState = PhysicalState.Healthy };
-        state = state.WithPlayer(owner);
-        var playedIds = new List<int> { owner.Id };
+        var start = RunEngine.Start(SystemsTestSupport.Setup(), 8004UL, SystemsTestSupport.Catalog, SystemsTestSupport.Systems);
+        var owner = start.Roster[0];
 
-        for (int use = 1; use < fragile.UsesLimit; use++)
+        int broken = 0;
+        const int Trials = 400;
+        for (int trial = 0; trial < Trials; trial++)
         {
-            var summary = HealthySummary(playedIds);
+            var state = start.WithPlayer(owner with { Item = fragile.Id, PhysicalState = PhysicalState.Healthy });
+            var summary = HealthySummary(new List<int> { owner.Id }) with { NodeId = 200 + trial };
             state = EquipmentSystem.ProcessFragileItems(state, summary, items);
-            Assert.Equal(fragile.Id, state.GetPlayer(owner.Id).Item);
+            if (state.GetPlayer(owner.Id).Item is null)
+            {
+                broken++;
+                Assert.Equal(1, state.Counter(EquipmentSystem.ItemsBrokenCounter));
+            }
         }
 
-        state = EquipmentSystem.ProcessFragileItems(state, HealthySummary(playedIds), items);
-        Assert.Null(state.GetPlayer(owner.Id).Item);
+        double rate = 100.0 * broken / Trials;
+        Assert.InRange(rate, fragile.BreakChancePercent - 8, fragile.BreakChancePercent + 8);
     }
 
     [Fact]
-    public void FragileItemBreaksImmediatelyIfTheWearerIsInjured()
+    public void OnlyFragileItemsEverBreak()
     {
+        // Un objeto que no es frágil no se rompe nunca, pase lo que pase en el partido: la rotura es lo
+        // único que distingue al arquetipo (ADR 0036), y su portador puede acabar lesionado sin perderlo.
         var items = SystemsTestSupport.Systems.Items;
-        var fragile = items.All.First(i => i.Archetype == ItemArchetype.Fragile);
         var state = RunEngine.Start(SystemsTestSupport.Setup(), 8005UL, SystemsTestSupport.Catalog, SystemsTestSupport.Systems);
-        var owner = state.Roster[0] with { Item = fragile.Id, PhysicalState = PhysicalState.MinorInjury, MinorInjuries = 1 };
+        var owner = state.Roster[0] with { Item = "worn_boots", PhysicalState = PhysicalState.MinorInjury, MinorInjuries = 1 };
         state = state.WithPlayer(owner);
 
-        var summary = HealthySummary(new List<int> { owner.Id });
-        var next = EquipmentSystem.ProcessFragileItems(state, summary, items);
+        for (int match = 0; match < 50; match++)
+        {
+            var summary = HealthySummary(new List<int> { owner.Id }) with { NodeId = 300 + match };
+            state = EquipmentSystem.ProcessFragileItems(state, summary, items);
+        }
 
-        Assert.Null(next.GetPlayer(owner.Id).Item);
+        Assert.Equal("worn_boots", state.GetPlayer(owner.Id).Item);
+        Assert.Equal(0, state.Counter(EquipmentSystem.ItemsBrokenCounter));
     }
 
     private static RunMatchSummary HealthySummary(IReadOnlyList<int> playedIds)

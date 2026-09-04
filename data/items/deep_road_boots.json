@@ -1,0 +1,15 @@
+{
+  "_doc": "ABRE una build que los enanos no pueden permitirse: velocidad -14 y correa -18 de sesgo racial les prohiben presionar arriba y cubrir campo. Con estas botas el enano puede jugar adelantado, que es justo lo contrario de lo que le sale solo (ADR 0036: al menos uno por raza tiene que abrir, no reforzar).",
+  "id": "deep_road_boots",
+  "name": {
+    "es": "Botas del camino profundo",
+    "en": "Deep Road Boots"
+  },
+  "archetype": "restricted",
+  "race": "Dwarf",
+  "attributeBonus": {
+    "speed": 10,
+    "leash": 10,
+    "technique": 10
+  }
+}

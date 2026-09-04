@@ -2,7 +2,7 @@
   "_doc": "Habilidad racial de los enanos (RF-031b, ADR 0026): Raíces. Da identidad mecánica a los cuerpos de la ADR 0020 y compensa la correa corta enana. El motor siembra MatchPlayer.Immovable desde race.ability; este efecto es el que permite que cualquier otro perk, objeto o consumible conceda lo mismo. Su presupuesto se mide, como el de las otras cuatro (ADR 0026, Presupuesto de impacto; D-29): vale +0,6 puntos de tasa agrupada, dentro del techo y en el extremo bajo. Es una inmunidad, no tiene escala, así que no se puede subir sin inventarle un canal nuevo. Se asigna automáticamente a toda la plantilla enana y no ocupa slot.",
   "id": "roots",
   "name": { "es": "Raíces", "en": "Roots" },
-  "rarity": "rare",
+  "rarity": "uncommon",
   "kind": "filler",
   "axis": "identity",
   "race": "Dwarf",

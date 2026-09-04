@@ -1,0 +1,14 @@
+{
+  "id": "ossuary_charm",
+  "name": {
+    "es": "Amuleto del osario",
+    "en": "Ossuary Charm"
+  },
+  "archetype": "restricted",
+  "race": "Undead",
+  "attributeBonus": {
+    "strength": 10,
+    "stamina": 10,
+    "leash": 10
+  }
+}

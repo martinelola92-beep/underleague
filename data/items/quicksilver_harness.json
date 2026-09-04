@@ -1,0 +1,14 @@
+{
+  "id": "quicksilver_harness",
+  "name": {
+    "es": "Arnés de azogue",
+    "en": "Quicksilver Harness"
+  },
+  "rarity": "rare",
+  "archetype": "normal",
+  "attributeBonus": {
+    "speed": 10,
+    "technique": 10,
+    "leash": 10
+  }
+}

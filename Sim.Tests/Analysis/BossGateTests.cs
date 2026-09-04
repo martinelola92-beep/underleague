@@ -117,8 +117,8 @@ public sealed class BossGateTests
         foreach (var cell in Result.Value.Cells.Where(c => c.BossId == finalBoss.Id && c.Level == "excellent"))
         {
             var build = BuildFile.LoadAll(TestData.DataDirectory)[cell.BuildId];
-            Assert.NotEqual(Rarity.Legendary, build.UniformRarity);
-            Assert.DoesNotContain(build.Rarities, r => r.Value == Rarity.Legendary);
+            Assert.NotEqual(Rarity.Rare, build.UniformRarity);
+            Assert.DoesNotContain(build.Rarities, r => r.Value == Rarity.Rare);
         }
     }
 
@@ -223,7 +223,7 @@ public sealed class BossGateTests
             if (act == RunRules.Acts)
             {
                 Assert.NotNull(boss.DefeatCondition);
-                Assert.Equal(Rarity.Legendary, boss.Template.UniformRarity);   // RF-001c
+                Assert.Equal(Rarity.Rare, boss.Template.UniformRarity);   // RF-001c
             }
             else
             {
@@ -258,6 +258,7 @@ public sealed class BossGateTests
         var items = Underleague.Sim.Run.Systems.Items.ItemLoader.FromJson(files);
         var counters = LoadCounters(TestData.DataDirectory);
         var levels = LoadQualityLevels(TestData.DataDirectory);
+        var densities = LoadActDensity(TestData.DataDirectory);
 
         var cells = new List<BossGateCell>();
         int matchIndex = 0;
@@ -268,8 +269,11 @@ public sealed class BossGateTests
             {
                 foreach (var buildId in levels[level].OrderBy(id => id, StringComparer.Ordinal))
                 {
-                    var build = builds[buildId];
-                    var slotCounters = counters.GetValueOrDefault(buildId);
+                    // ADR 0040: cada puerta se mide con las piezas que caben en su acto, derivadas de la
+                    // build completa quitando perks, objetos y contador acumulado.
+                    var density = densities.GetValueOrDefault((boss.Act, level)) ?? BuildDensity.Full;
+                    var build = builds[buildId].At(density);
+                    var slotCounters = density.CapCounters(counters.GetValueOrDefault(buildId));
                     var cell = BossGateMetrics.PlayCell(
                         catalog, boss, level, buildId,
                         (roster, idBase) => WithCounters(
@@ -370,6 +374,36 @@ public sealed class BossGateTests
 
         public MatchSetup TransformMatch(
             RunState state, MapNode node, MatchSetup setup, int playerTeamIndex, Catalog catalog) => setup;
+    }
+
+    /// <summary>Densidad de build por acto (ADR 0040), de <c>data/balance/groups.json</c>.</summary>
+    private static Dictionary<(int Act, string Level), BuildDensity> LoadActDensity(string dataDirectory)
+    {
+        using var document = JsonDocument.Parse(
+            File.ReadAllText(Path.Combine(dataDirectory, "balance", "groups.json")));
+        var result = new Dictionary<(int, string), BuildDensity>();
+        if (!document.RootElement.TryGetProperty("actDensity", out var element))
+        {
+            return result;
+        }
+
+        foreach (var actProperty in element.EnumerateObject())
+        {
+            if (!int.TryParse(actProperty.Name, out int act))
+            {
+                continue;
+            }
+
+            foreach (var levelProperty in actProperty.Value.EnumerateObject())
+            {
+                result[(act, levelProperty.Name)] = new BuildDensity(
+                    levelProperty.Value.GetProperty("perks").GetInt32(),
+                    levelProperty.Value.GetProperty("items").GetInt32(),
+                    levelProperty.Value.GetProperty("counterCap").GetInt32());
+            }
+        }
+
+        return result;
     }
 
     private static Dictionary<string, IReadOnlyList<string>> LoadQualityLevels(string dataDirectory)

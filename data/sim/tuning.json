@@ -33,13 +33,13 @@
     "pressurePenalty": 480,
     "interceptRadiusCells": 0.9,
     "interceptBaseChance": 250,
-    "interceptTechniqueFactor": 14
+    "interceptTechniqueFactor": 10
   },
   "dribble": {
+    "_doc": "ADR 0041: la tecnica del conductor contra la COBERTURA del defensor, no las tres cifras contra el 50 fijo. cobertura = (defenderSpeedSharePercent*velocidad + resto*fuerza)/100. Subir de nivel a los dos no mueve el duelo.",
     "baseWin": 7200,
     "attackerTechniqueFactor": 18,
-    "defenderSpeedFactor": 9,
-    "defenderStrengthFactor": 9,
+    "defenderSpeedSharePercent": 50,
     "lostKnockdownTicks": 6
   },
   "shot": {
@@ -53,20 +53,22 @@
     "penaltyQualityBonus": 15
   },
   "save": {
-    "basePercent": 50,
+    "_doc": "ADR 0041: el atributo relevante del portero se mide contra la TECNICA DEL REMATADOR, no contra el 50 fijo; el segundo termino es lo que este remate concreto tuvo de bueno o de malo respecto de qualityPivot (distancia, presion, penalti). basePercent sube de 50 a 54 para compensar el cambio de referencia del primer termino.",
+    "basePercent": 53,
     "closeRangeCells": 3,
-    "attributeWeightPercent": 20,
+    "attributeWeightPercent": 8,
     "consecutiveShotDecayPercent": 6,
-    "qualityWeight": 60
+    "qualityWeight": 60,
+    "qualityPivot": 50
   },
   "tackle": {
+    "_doc": "ADR 0041: la PRESION del que entra -fuerza y velocidad repartidas por strengthSharePercent- contra la tecnica del conductor. foulStrengthFactor y hardTackleThreshold pasan a medirse contra la fuerza del conductor: una entrada es sucia cuando el que entra es mucho mas grande que el que la recibe, no cuando es grande en abstracto. hardTackleThreshold esta en centesimas de punto de DIFERENCIA de fuerza.",
     "baseWin": 2800,
-    "strengthFactor": 12,
-    "speedFactor": 8,
-    "carrierTechniqueFactor": 14,
+    "pressureFactor": 20,
+    "strengthSharePercent": 60,
     "foulBase": 320,
     "foulStrengthFactor": 5,
-    "hardTackleThreshold": 6500,
+    "hardTackleThreshold": 1500,
     "yellowCardBase": 250,
     "redCardBase": 10,
     "hardTackleYellowBonus": 300,
@@ -74,11 +76,11 @@
     "secondYellowIsRed": true
   },
   "injury": {
-    "onTackleBase": 40,
-    "onFoulBase": 110,
-    "attackerStrengthFactor": 5,
-    "victimStaminaResistFactor": 5,
-    "severeShare": 3000
+    "_doc": "ADR 0041: probabilidad = onTackleBase (+onFoulBase si hubo falta) + relativeFactor*(fuerza del que entra - resistencia de la victima). Sin ninguna constante de por medio: un nivel 8 que entra a otro nivel 8 lesiona aproximadamente lo mismo que un nivel 1 contra otro nivel 1.",
+    "onTackleBase": 175,
+    "onFoulBase": 60,
+    "relativeFactor": 2,
+    "severeShare": 4000
   },
   "probabilityChannels": {
     "_doc": "ADR 0035: escalon de cada canal de probabilidad, en PUNTOS PORCENTUALES. Un valor de modifyProbability es el escalon de su canal multiplicado por 1, 2, 3, 5 o 10 pasos, y el cargador de perks (Sim.Perks.PerkLoader) rechaza cualquier otro. El escalon se fija para que un paso valga aproximadamente lo mismo en todos los canales en impacto RELATIVO sobre su base, hasta donde el punto porcentual entero lo permite: intercept (base 250), injury/injure (40), foul (320) y card (250) tienen bases diminutas y su paso minimo posible es 1; tackle (2800) y las dos evasiones que lo contrarrestan van a 3; pass (7700), dribble (7200), save (5000) y shotOnTarget (4625) a 5. La descripcion que ve el jugador sigue diciendo el valor absoluto (docs/estilo-descripciones.md); lo que cambia es lo que el DISENADOR puede escribir.",
@@ -150,12 +152,12 @@
     "retreatBonusOutsidePerCell": 90
   },
   "generation": {
-    "_doc": "Modelo de presupuesto de la generación de jugadores (ADR 0025, ADR 0027, fase1b-diseno.md §1.3). budget = budgetByRarity[rarity] + budgetPerLevel*(level-1); se reparte por positionShare (porcentajes que suman 100), se suman los sesgos de raza y estilo y la desviación individual, y el resultado se renormaliza al presupuesto y se acota a rangeByRarity y a positionFloors. Ver Sim.Generation.PlayerGenerator para el algoritmo exacto.",
-    "budgetByRarity": { "common": 250, "rare": 275, "legendary": 300 },
+    "_doc": "Modelo de presupuesto de la generación de jugadores (ADR 0025, ADR 0027, ADR 0039, fase1b-diseno.md §1.3). Cuatro rarezas: comun, poco comun y raro son las generables; la entrada de legendario existe por completitud (ADR 0039: los legendarios son personajes unicos de fase 4 y la generacion no los produce nunca). budget = budgetByRarity[rarity] + budgetPerLevel*(level-1); se reparte por positionShare (porcentajes que suman 100), se suman los sesgos de raza y estilo y la desviación individual, y el resultado se renormaliza al presupuesto y se acota a rangeByRarity y a positionFloors. Ver Sim.Generation.PlayerGenerator para el algoritmo exacto.",
+    "budgetByRarity": { "common": 250, "uncommon": 275, "rare": 300, "legendary": 325 },
     "budgetPerLevel": 8,
     "attributeFloor": 25,
     "attributeCap": 92,
-    "rangeByRarity": { "common": { "min": 40, "max": 70 }, "rare": { "min": 45, "max": 78 }, "legendary": { "min": 50, "max": 86 } },
+    "rangeByRarity": { "common": { "min": 40, "max": 70 }, "uncommon": { "min": 45, "max": 78 }, "rare": { "min": 50, "max": 86 }, "legendary": { "min": 55, "max": 92 } },
     "positionShare": {
       "Goalkeeper": { "strength": 22, "speed": 24, "technique": 22, "stamina": 22, "leash": 10 },
       "Defender":   { "strength": 26, "speed": 18, "technique": 16, "stamina": 22, "leash": 18 },

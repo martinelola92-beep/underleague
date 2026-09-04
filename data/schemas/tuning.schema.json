@@ -330,11 +330,8 @@
         "attackerTechniqueFactor": {
           "$ref": "#/$defs/factor"
         },
-        "defenderSpeedFactor": {
-          "$ref": "#/$defs/factor"
-        },
-        "defenderStrengthFactor": {
-          "$ref": "#/$defs/factor"
+        "defenderSpeedSharePercent": {
+          "$ref": "#/$defs/percent"
         },
         "lostKnockdownTicks": {
           "$ref": "#/$defs/ticks"
@@ -343,8 +340,7 @@
       "required": [
         "baseWin",
         "attackerTechniqueFactor",
-        "defenderSpeedFactor",
-        "defenderStrengthFactor",
+        "defenderSpeedSharePercent",
         "lostKnockdownTicks"
       ],
       "additionalProperties": false
@@ -416,6 +412,9 @@
         },
         "qualityWeight": {
           "$ref": "#/$defs/percent"
+        },
+        "qualityPivot": {
+          "$ref": "#/$defs/percent"
         }
       },
       "required": [
@@ -423,7 +422,8 @@
         "closeRangeCells",
         "attributeWeightPercent",
         "consecutiveShotDecayPercent",
-        "qualityWeight"
+        "qualityWeight",
+        "qualityPivot"
       ],
       "additionalProperties": false
     },
@@ -436,14 +436,11 @@
         "baseWin": {
           "$ref": "#/$defs/probability"
         },
-        "strengthFactor": {
+        "pressureFactor": {
           "$ref": "#/$defs/factor"
         },
-        "speedFactor": {
-          "$ref": "#/$defs/factor"
-        },
-        "carrierTechniqueFactor": {
-          "$ref": "#/$defs/factor"
+        "strengthSharePercent": {
+          "$ref": "#/$defs/percent"
         },
         "foulBase": {
           "$ref": "#/$defs/probability"
@@ -472,9 +469,8 @@
       },
       "required": [
         "baseWin",
-        "strengthFactor",
-        "speedFactor",
-        "carrierTechniqueFactor",
+        "pressureFactor",
+        "strengthSharePercent",
         "foulBase",
         "foulStrengthFactor",
         "hardTackleThreshold",
@@ -498,10 +494,7 @@
         "onFoulBase": {
           "$ref": "#/$defs/probability"
         },
-        "attackerStrengthFactor": {
-          "$ref": "#/$defs/factor"
-        },
-        "victimStaminaResistFactor": {
+        "relativeFactor": {
           "$ref": "#/$defs/factor"
         },
         "severeShare": {
@@ -511,8 +504,7 @@
       "required": [
         "onTackleBase",
         "onFoulBase",
-        "attackerStrengthFactor",
-        "victimStaminaResistFactor",
+        "relativeFactor",
         "severeShare"
       ],
       "additionalProperties": false
@@ -686,10 +678,11 @@
       "properties": {
         "_doc": { "type": "string" },
         "common": { "type": "integer", "minimum": 0, "maximum": 500 },
+        "uncommon": { "type": "integer", "minimum": 0, "maximum": 500 },
         "rare": { "type": "integer", "minimum": 0, "maximum": 500 },
         "legendary": { "type": "integer", "minimum": 0, "maximum": 500 }
       },
-      "required": ["common", "rare", "legendary"],
+      "required": ["common", "uncommon", "rare", "legendary"],
       "additionalProperties": false
     },
     "attributeRange": {
@@ -707,10 +700,11 @@
       "properties": {
         "_doc": { "type": "string" },
         "common": { "$ref": "#/$defs/attributeRange" },
+        "uncommon": { "$ref": "#/$defs/attributeRange" },
         "rare": { "$ref": "#/$defs/attributeRange" },
         "legendary": { "$ref": "#/$defs/attributeRange" }
       },
-      "required": ["common", "rare", "legendary"],
+      "required": ["common", "uncommon", "rare", "legendary"],
       "additionalProperties": false
     },
     "attributeShare": {

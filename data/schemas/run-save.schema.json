@@ -211,7 +211,7 @@
         "name": { "type": "string", "minLength": 1 },
         "race": { "$ref": "#/$defs/race" },
         "position": { "enum": ["goalkeeper", "defender", "midfielder", "forward"] },
-        "rarity": { "enum": ["common", "rare", "legendary"] },
+        "rarity": { "enum": ["common", "uncommon", "rare", "legendary"] },
         "level": { "type": "integer", "minimum": 1, "maximum": 8 },
         "experience": { "type": "integer", "minimum": 0 },
         "attributes": {

@@ -1,5 +1,11 @@
 # Fase 2: resultados de balance (paquete Z)
 
+> **Superado en parte por el paquete AA** (`docs/fase2-diseno.md` §18), que aplica las ADR 0036, 0038,
+> 0039 (escala), 0040 y 0041 y vuelve a medirlo todo. Lo que sigue es el estado **antes** de esas cinco
+> ADR y se conserva como registro de la medición que las motivó: las cifras de curva de puertas,
+> economía, lesiones y doctrinas de este documento **ya no son las vigentes**. Las vigentes están en
+> §18.5 (curva), §18.4 (lesiones y `tuning.json`) y §18.6 (doctrinas y métricas de escasez).
+
 Cierre del bucle de run. Qué se midió, con qué política, qué cumple su rango y qué no —y por qué, con
 números—. La medida de referencia es **500 runs por doctrina, semilla 1**, cinco razas de lanzamiento
 repartidas por igual: 1.500 runs y 15.853 partidos en 89 s. Reproducible con:

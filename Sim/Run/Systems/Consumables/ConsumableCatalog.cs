@@ -97,6 +97,7 @@ public static class ConsumableLoader
         var rarity = root.Str("rarity") switch
         {
             "common" => Rarity.Common,
+            "uncommon" => Rarity.Uncommon,
             "rare" => Rarity.Rare,
             "legendary" => Rarity.Legendary,
             var other => throw new DataException(path, "$.rarity", $"rareza desconocida: '{other}'"),

@@ -1,0 +1,16 @@
+{
+  "_doc": "Escala del equipamiento (ADR 0036) y tabla de valor marginal por atributo (ADR 0038). Un objeto sube atributos y nada mas: la rareza fija CUANTOS (attributesByRarity), la magnitud es la misma en las tres (attributeBonus) y el arquetipo cambia la magnitud (maldito: cursedMultiplier, en lo que sube y en lo que baja) o el riesgo (fragil: breakChancePercent en cada objeto). El restringido no tiene rareza y sube restrictedAttributes con magnitud normal. marginalValuePerAttribute es la medida de fase1b (docs/balance/fase1b-resultados.md) en MILESIMAS de punto de tasa de victoria por cada +20 repartidos entre los diez jugadores: es la tabla con la que el precio de un objeto se calcula en vez de medirse, y hay que remedirla cuando cambie el motor. leash no estaba en la medida original y su valor es provisional, entre resistencia y velocidad.",
+  "attributeBonus": 10,
+  "cursedMultiplier": 2,
+  "attributesByRarity": { "common": 1, "uncommon": 2, "rare": 3, "legendary": 4 },
+  "restrictedAttributes": 3,
+  "marginalValuePerAttribute": {
+    "strength": 111,
+    "speed": 66,
+    "technique": 75,
+    "stamina": 30,
+    "leash": 40
+  },
+  "fragilePricePercent": 55,
+  "fragileOfferWeightPercent": 200
+}

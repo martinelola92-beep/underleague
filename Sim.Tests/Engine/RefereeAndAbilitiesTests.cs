@@ -118,8 +118,7 @@ public sealed class RefereeAndAbilitiesTests
             ("sim/tuning.json", $"\"foulStrengthFactor\": {tuning.Tackle.FoulStrengthFactor}", "\"foulStrengthFactor\": 0"),
             ("sim/tuning.json", $"\"onTackleBase\": {tuning.Injury.OnTackleBase}", "\"onTackleBase\": 0"),
             ("sim/tuning.json", $"\"onFoulBase\": {tuning.Injury.OnFoulBase}", "\"onFoulBase\": 0"),
-            ("sim/tuning.json", $"\"attackerStrengthFactor\": {tuning.Injury.AttackerStrengthFactor}", "\"attackerStrengthFactor\": 0"),
-            ("sim/tuning.json", $"\"victimStaminaResistFactor\": {tuning.Injury.VictimStaminaResistFactor}", "\"victimStaminaResistFactor\": 0"),
+            ("sim/tuning.json", $"\"relativeFactor\": {tuning.Injury.RelativeFactor}", "\"relativeFactor\": 0"),
             ("traits/traits.json", "\"hardTackleBonus\": 15", "\"hardTackleBonus\": 0"),
             ("traits/traits.json", "\"foulChanceBonus\": 15", "\"foulChanceBonus\": 0"),
             ("traits/traits.json", "\"injuryChanceBonus\": 10", "\"injuryChanceBonus\": 0"));

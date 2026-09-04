@@ -50,7 +50,7 @@
     {
       "name": "Gino Ureña",
       "position": "Midfielder",
-      "rarity": "rare",
+      "rarity": "uncommon",
       "level": 3,
       "attributes": {
         "strength": 56,
@@ -108,7 +108,7 @@
     {
       "name": "Lino Ibarra",
       "position": "Defender",
-      "rarity": "rare",
+      "rarity": "uncommon",
       "level": 3,
       "attributes": {
         "strength": 66,

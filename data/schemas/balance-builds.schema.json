@@ -67,6 +67,7 @@
       "additionalProperties": {
         "enum": [
           "common",
+          "uncommon",
           "rare",
           "legendary"
         ]
@@ -111,6 +112,7 @@
     "rarity": {
       "enum": [
         "common",
+        "uncommon",
         "rare",
         "legendary"
       ],

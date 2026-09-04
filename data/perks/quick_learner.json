@@ -2,7 +2,7 @@
   "_doc": "Habilidad racial de los humanos (RF-031b, ADR 0026): Adaptables. Actúa FUERA del partido, sobre el reparto de experiencia de Sim.Progression.Progression; dentro del partido no toca nada. Vale 0 puntos de tasa de victoria por construcción y su presupuesto es de campaña, no de partido (ADR 0026, Presupuesto de impacto; D-29). Se asigna automáticamente a toda la plantilla humana y no ocupa slot.",
   "id": "quick_learner",
   "name": { "es": "Adaptables", "en": "Adaptable" },
-  "rarity": "rare",
+  "rarity": "uncommon",
   "kind": "filler",
   "axis": "identity",
   "race": "Human",

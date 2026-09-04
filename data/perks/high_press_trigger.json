@@ -4,7 +4,7 @@
     "es": "Disparador de presión alta",
     "en": "High Press Trigger"
   },
-  "rarity": "rare",
+  "rarity": "uncommon",
   "kind": "conditional",
   "axis": "geometry",
   "race": null,

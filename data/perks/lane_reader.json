@@ -4,7 +4,7 @@
     "es": "Lector de carriles",
     "en": "Lane Reader"
   },
-  "rarity": "rare",
+  "rarity": "uncommon",
   "kind": "filler",
   "axis": "accumulation",
   "race": null,

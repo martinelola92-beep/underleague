@@ -77,15 +77,43 @@ public sealed class RunEquipment
         return ToMatchItem(item);
     }
 
-    /// <summary>Convierte un objeto del catálogo en su forma de partido (RF-077, arquetipos incluidos).</summary>
+    /// <summary>
+    /// Convierte un objeto del catálogo en su forma de partido (RF-077, arquetipos incluidos).
+    ///
+    /// <para>Con la ADR 0036 un objeto es un paquete de atributos, así que la conversión es mecánica: un
+    /// <c>modifyAttribute</c> por cada entrada no nula de <see cref="ItemDefinition.Modifier"/>, en el
+    /// orden fijo de <see cref="ItemScale.AttributeOrder"/>. Los bonos van en <see cref="MatchItem.Effects"/>
+    /// y la única entrada negativa —la contrapartida del maldito— en
+    /// <see cref="MatchItem.DrawbackEffects"/>, que es lo que el informe post-partido y <c>/Balance</c>
+    /// necesitan para medirlas por separado.</para>
+    /// </summary>
     public static MatchItem ToMatchItem(ItemDefinition item)
     {
         ArgumentNullException.ThrowIfNull(item);
-        return new MatchItem(item.Id, item.Rarity, item.Effects)
+
+        var effects = new List<EffectDefinition>(4);
+        var drawbacks = new List<EffectDefinition>(1);
+        foreach (var kind in ItemScale.AttributeOrder)
         {
-            // El maldito lleva su contrapartida puesta siempre; el frágil y el restringido no tienen
-            // ninguna (lo valida ItemLoader), así que esta lista está vacía en todos los demás.
-            DrawbackEffects = item.DrawbackEffects,
+            int value = item.Modifier.Get(kind);
+            if (value == 0)
+            {
+                continue;
+            }
+
+            var effect = new EffectDefinition(
+                EffectType.ModifyAttribute,
+                EffectTarget.Owner,
+                Attribute: kind,
+                Value: value,
+                Duration: EffectDuration.Match);
+
+            (value > 0 ? effects : drawbacks).Add(effect);
+        }
+
+        return new MatchItem(item.Id, item.Rarity, effects)
+        {
+            DrawbackEffects = drawbacks,
             RequiredTag = item.RequiredTag,
         };
     }

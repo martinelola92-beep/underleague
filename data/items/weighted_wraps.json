@@ -1,0 +1,13 @@
+{
+  "id": "weighted_wraps",
+  "name": {
+    "es": "Vendas lastradas",
+    "en": "Weighted Wraps"
+  },
+  "rarity": "uncommon",
+  "archetype": "normal",
+  "attributeBonus": {
+    "strength": 10,
+    "stamina": 10
+  }
+}

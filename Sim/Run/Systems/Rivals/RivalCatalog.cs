@@ -127,6 +127,7 @@ public static class RivalLoader
         var rarity = node.Str("rarity") switch
         {
             "common" => Rarity.Common,
+            "uncommon" => Rarity.Uncommon,
             "rare" => Rarity.Rare,
             "legendary" => Rarity.Legendary,
             var other => throw new DataException(node.File, node.Path + ".rarity", $"rareza desconocida: '{other}'"),

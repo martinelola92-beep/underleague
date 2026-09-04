@@ -1,0 +1,15 @@
+{
+  "id": "gilded_charm",
+  "name": {
+    "es": "Talismán dorado",
+    "en": "Gilded Charm"
+  },
+  "rarity": "rare",
+  "archetype": "fragile",
+  "attributeBonus": {
+    "strength": 10,
+    "speed": 10,
+    "technique": 10
+  },
+  "breakChancePercent": 20
+}

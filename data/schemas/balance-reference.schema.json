@@ -71,6 +71,7 @@
         "rarity": {
           "enum": [
             "common",
+            "uncommon",
             "rare",
             "legendary"
           ],

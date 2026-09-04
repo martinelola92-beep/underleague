@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://underleague.dev/schemas/items.schema.json",
   "title": "Underleague item",
-  "description": "data/items/<id>.json: un objeto de equipamiento por fichero (RF-075..078). NO existe campo 'description': se genera desde el efecto (RT-035, Sim.Run.Systems.Items.ItemDescriptions). Los efectos reutilizan el formato de los perks (Sim.Perks.EffectDefinition) recortado a modifyAttribute y modifyProbability, sin disparador ni condición: un objeto está siempre activo mientras esté equipado.",
+  "description": "data/items/<id>.json: un objeto de equipamiento por fichero (RF-075..078, ADR 0036). UN OBJETO SUBE ATRIBUTOS Y NADA MAS: no existe 'effects' (eso es lo que hace un perk) y no existe 'description' (se genera desde el dato, RT-035, Sim.Run.Systems.Items.ItemDescriptions). La rareza fija cuantos atributos sube y el arquetipo la magnitud o el riesgo; el numero exacto de atributos y su magnitud los comprueba el cargador contra data/equipment/equipment.json, porque JSON Schema no puede expresar 'tantas entradas como diga otro fichero'.",
   "type": "object",
   "properties": {
     "_doc": { "type": "string" },
@@ -12,50 +12,50 @@
       "description": "Debe coincidir con el nombre del fichero."
     },
     "name": { "$ref": "#/$defs/localizedName" },
-    "rarity": { "enum": ["common", "rare", "legendary"] },
+    "rarity": {
+      "description": "Cuantos atributos sube (ADR 0036: comun 1, poco comun 2, raro 3). Ausente solo en archetype=restricted, que no tiene rareza.",
+      "enum": ["common", "uncommon", "rare"]
+    },
     "archetype": {
-      "description": "RF-077: tres arquetipos obligatorios en el catálogo (cursed, fragile, restricted), además de normal.",
+      "description": "RF-077: tres arquetipos obligatorios en el catalogo (cursed, fragile, restricted), ademas de normal.",
       "enum": ["normal", "cursed", "fragile", "restricted"]
     },
-    "effects": {
-      "type": "array",
-      "items": { "$ref": "#/$defs/effect" },
-      "minItems": 1
+    "attributeBonus": {
+      "description": "Modificadores de atributo del objeto. Las entradas positivas son lo que sube (tantas como su rareza permita); la unica entrada negativa, si la hay, es la contrapartida del maldito.",
+      "type": "object",
+      "properties": {
+        "strength": { "$ref": "#/$defs/modifier" },
+        "speed": { "$ref": "#/$defs/modifier" },
+        "technique": { "$ref": "#/$defs/modifier" },
+        "stamina": { "$ref": "#/$defs/modifier" },
+        "leash": { "$ref": "#/$defs/modifier" }
+      },
+      "minProperties": 1,
+      "additionalProperties": false
     },
-    "drawbackEffects": {
-      "description": "Solo en archetype=cursed: la contrapartida permanente (RF-077).",
-      "type": "array",
-      "items": { "$ref": "#/$defs/effect" }
-    },
-    "usesLimit": {
-      "description": "Solo en archetype=fragile: partidos jugados con el objeto antes de romperse (RF-077).",
+    "breakChancePercent": {
+      "description": "Solo en archetype=fragile: probabilidad de romperse AL TERMINAR el partido (RF-077, ADR 0036). Se muestra antes de equipar (RF-012d).",
       "type": "integer",
       "minimum": 1,
-      "maximum": 20
+      "maximum": 99
     },
-    "requiredTag": {
-      "description": "Solo en archetype=restricted: etiqueta que debe llevar el portador (RF-077).",
-      "type": "string",
-      "pattern": "^[A-Z][A-Za-z]*$"
+    "race": {
+      "description": "Solo en archetype=restricted: raza de la que el objeto es exclusivo (ADR 0036). Solo aparece en runs de esa raza y solo funciona sobre un portador de esa raza.",
+      "enum": ["Human", "Orc", "Elf", "Dwarf", "Undead", "DarkElf", "Demon", "Vampire", "Lizard"]
     }
   },
-  "required": ["id", "name", "rarity", "archetype", "effects"],
+  "required": ["id", "name", "archetype", "attributeBonus"],
   "additionalProperties": false,
   "allOf": [
     {
-      "if": { "properties": { "archetype": { "const": "cursed" } }, "required": ["archetype"] },
-      "then": { "required": ["drawbackEffects"], "properties": { "drawbackEffects": { "minItems": 1 } } },
-      "else": { "not": { "required": ["drawbackEffects"] } }
-    },
-    {
       "if": { "properties": { "archetype": { "const": "fragile" } }, "required": ["archetype"] },
-      "then": { "required": ["usesLimit"] },
-      "else": { "not": { "required": ["usesLimit"] } }
+      "then": { "required": ["breakChancePercent"] },
+      "else": { "not": { "required": ["breakChancePercent"] } }
     },
     {
       "if": { "properties": { "archetype": { "const": "restricted" } }, "required": ["archetype"] },
-      "then": { "required": ["requiredTag"] },
-      "else": { "not": { "required": ["requiredTag"] } }
+      "then": { "required": ["race"], "not": { "required": ["rarity"] } },
+      "else": { "required": ["rarity"], "not": { "required": ["race"] } }
     }
   ],
   "$defs": {
@@ -68,31 +68,6 @@
       "required": ["es", "en"],
       "additionalProperties": false
     },
-    "effect": {
-      "type": "object",
-      "properties": {
-        "type": { "enum": ["modifyAttribute", "modifyProbability"] },
-        "attribute": { "enum": ["strength", "speed", "technique", "stamina", "leash"] },
-        "probability": {
-          "enum": [
-            "foul", "card", "injury", "injure", "severeInjury", "pass", "intercept",
-            "dribble", "tackle", "shotOnTarget", "save", "tackleEvasion", "interceptEvasion"
-          ]
-        },
-        "value": { "type": "integer", "minimum": -5000, "maximum": 5000 }
-      },
-      "required": ["type", "value"],
-      "additionalProperties": false,
-      "allOf": [
-        {
-          "if": { "properties": { "type": { "const": "modifyAttribute" } }, "required": ["type"] },
-          "then": { "required": ["attribute"] }
-        },
-        {
-          "if": { "properties": { "type": { "const": "modifyProbability" } }, "required": ["type"] },
-          "then": { "required": ["probability"] }
-        }
-      ]
-    }
+    "modifier": { "type": "integer", "minimum": -60, "maximum": 60 }
   }
 }

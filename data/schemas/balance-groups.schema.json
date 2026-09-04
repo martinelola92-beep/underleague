@@ -70,6 +70,30 @@
         }
       }
     },
+    "actDensity": {
+      "type": "object",
+      "description": "ADR 0040: densidad de build con la que se mide cada celda (acto -> escalón de calidad). Ver el _doc del propio fichero.",
+      "additionalProperties": false,
+      "properties": {
+        "_doc": {
+          "type": "string"
+        },
+        "1": {
+          "$ref": "#/$defs/actLevels"
+        },
+        "2": {
+          "$ref": "#/$defs/actLevels"
+        },
+        "3": {
+          "$ref": "#/$defs/actLevels"
+        }
+      },
+      "required": [
+        "1",
+        "2",
+        "3"
+      ]
+    },
     "qualityLevels": {
       "type": "object",
       "description": "Escala de calidad de build de la ADR 0033: los cuatro escalones (incoherente, correcta, buena, muy buena) con los ids de build de cada raza. Es el eje de la puerta de jefes.",
@@ -102,6 +126,58 @@
             "type": "string"
           },
           "minItems": 1
+        }
+      },
+      "required": [
+        "incoherent",
+        "correct",
+        "good",
+        "excellent"
+      ]
+    }
+  },
+  "$defs": {
+    "density": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "perks": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 30
+        },
+        "items": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 7
+        },
+        "counterCap": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 20
+        }
+      },
+      "required": [
+        "perks",
+        "items",
+        "counterCap"
+      ]
+    },
+    "actLevels": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "incoherent": {
+          "$ref": "#/$defs/density"
+        },
+        "correct": {
+          "$ref": "#/$defs/density"
+        },
+        "good": {
+          "$ref": "#/$defs/density"
+        },
+        "excellent": {
+          "$ref": "#/$defs/density"
         }
       },
       "required": [

@@ -248,6 +248,7 @@ public static class PlayerGenerator
     private static AttributeRange RangeOf(RarityRangeTable table, Rarity rarity) => rarity switch
     {
         Rarity.Common => table.Common,
+        Rarity.Uncommon => table.Uncommon,
         Rarity.Rare => table.Rare,
         Rarity.Legendary => table.Legendary,
         _ => throw new ArgumentOutOfRangeException(nameof(rarity)),

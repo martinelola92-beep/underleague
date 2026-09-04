@@ -4,7 +4,7 @@
     "es": "Voz de capitán",
     "en": "Captain's Voice"
   },
-  "rarity": "rare",
+  "rarity": "uncommon",
   "kind": "conditional",
   "axis": "accumulation",
   "race": null,

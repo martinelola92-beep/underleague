@@ -1,9 +1,12 @@
 {
   "id": "loose_leash_charm",
-  "name": { "es": "Amuleto de correa larga", "en": "Loose Leash Charm" },
+  "name": {
+    "es": "Amuleto de correa larga",
+    "en": "Loose Leash Charm"
+  },
   "rarity": "common",
   "archetype": "normal",
-  "effects": [
-    { "type": "modifyAttribute", "attribute": "leash", "value": 2 }
-  ]
+  "attributeBonus": {
+    "leash": 10
+  }
 }

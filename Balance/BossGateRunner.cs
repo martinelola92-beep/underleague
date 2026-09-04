@@ -33,6 +33,7 @@ public static class BossGateRunner
         BossCatalog bosses,
         IReadOnlyDictionary<string, BuildConfig> builds,
         IReadOnlyDictionary<string, IReadOnlyList<string>> qualityLevels,
+        IReadOnlyDictionary<(int Act, string Level), Underleague.Sim.Analysis.BuildDensity> actDensity,
         ItemCatalog items,
         ulong seed,
         int rosters,
@@ -66,8 +67,13 @@ public static class BossGateRunner
                     }
 
                     // La plantilla del jugador llega a la puerta con el nivel que le da la progresión de
-                    // la run (gate.playerLevel); la construcción es lo único que cambia entre escalones.
-                    var atGate = build with { Level = boss.GatePlayerLevel };
+                    // la run (gate.playerLevel) y con las PIEZAS que caben en ese punto de la run
+                    // (ADR 0040): la construcción es lo único que cambia entre escalones, y la densidad
+                    // lo único que cambia entre actos.
+                    var density = actDensity.TryGetValue((boss.Act, level), out var d)
+                        ? d
+                        : Underleague.Sim.Analysis.BuildDensity.Full;
+                    var atGate = (build with { Level = boss.GatePlayerLevel }).At(density);
                     var cell = BossGateMetrics.PlayCell(
                         catalog, boss, level, buildId,
                         (roster, idBase) =>

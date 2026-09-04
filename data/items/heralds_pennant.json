@@ -1,0 +1,15 @@
+{
+  "_doc": "ABRE una build que los humanos no pueden permitirse: sin sesgo racial, el humano nunca tiene correa ni velocidad de sobra para el futbol total de zonas amplias. Con el banderin puede jugar a moverse todo el rato en vez de a mantener la forma.",
+  "id": "heralds_pennant",
+  "name": {
+    "es": "Banderin del heraldo",
+    "en": "Herald's Pennant"
+  },
+  "archetype": "restricted",
+  "race": "Human",
+  "attributeBonus": {
+    "leash": 10,
+    "speed": 10,
+    "stamina": 10
+  }
+}

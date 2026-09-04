@@ -38,9 +38,9 @@ public class GeneratorTests
             // Nivel 1 (mínimo real) y un nivel muy por encima del máximo de juego (RF-023): la robustez
             // del acotado a floor/cap no debe depender de que el llamador respete 1..8.
             var lowPlayer = PlayerGenerator.Generate(ref rngLow, catalog, race, Position.Defender, Rarity.Common, 1, i, "Low");
-            var highPlayer = PlayerGenerator.Generate(ref rngHigh, catalog, race, Position.Defender, Rarity.Legendary, 50, i, "High");
+            var highPlayer = PlayerGenerator.Generate(ref rngHigh, catalog, race, Position.Defender, Rarity.Rare, 50, i, "High");
             AssertWithinFloorAndCap(catalog, race, Position.Defender, Rarity.Common, lowPlayer.Attributes);
-            AssertWithinFloorAndCap(catalog, race, Position.Defender, Rarity.Legendary, highPlayer.Attributes);
+            AssertWithinFloorAndCap(catalog, race, Position.Defender, Rarity.Rare, highPlayer.Attributes);
         }
     }
 
@@ -102,8 +102,8 @@ public class GeneratorTests
         var rngA = RngStreams.Generation(11, 0);
         var rngB = RngStreams.Generation(11, 0);
 
-        var playerA = PlayerGenerator.Generate(ref rngA, catalog, race, Position.Midfielder, Rarity.Rare, 5, 1, "Same");
-        var playerB = PlayerGenerator.Generate(ref rngB, catalog, race, Position.Midfielder, Rarity.Rare, 5, 1, "Same");
+        var playerA = PlayerGenerator.Generate(ref rngA, catalog, race, Position.Midfielder, Rarity.Uncommon, 5, 1, "Same");
+        var playerB = PlayerGenerator.Generate(ref rngB, catalog, race, Position.Midfielder, Rarity.Uncommon, 5, 1, "Same");
 
         Assert.Equal(playerA.Attributes, playerB.Attributes);
         Assert.Equal(playerA.StyleTag, playerB.StyleTag);
@@ -113,9 +113,9 @@ public class GeneratorTests
     [Theory]
     [InlineData(Rarity.Common, 1)]
     [InlineData(Rarity.Common, 8)]
-    [InlineData(Rarity.Rare, 1)]
-    [InlineData(Rarity.Legendary, 2)]
-    [InlineData(Rarity.Legendary, 8)]
+    [InlineData(Rarity.Uncommon, 1)]
+    [InlineData(Rarity.Rare, 2)]
+    [InlineData(Rarity.Rare, 8)]
     public void Generate_AttributeSumMatchesBudgetWithinTwoPoints(Rarity rarity, int level)
     {
         var catalog = TestData.LoadCatalog();
@@ -147,7 +147,7 @@ public class GeneratorTests
         {
             foreach (var position in new[] { Position.Goalkeeper, Position.Defender, Position.Midfielder, Position.Forward })
             {
-                foreach (var rarity in new[] { Rarity.Common, Rarity.Rare, Rarity.Legendary })
+                foreach (var rarity in new[] { Rarity.Common, Rarity.Uncommon, Rarity.Rare })
                 {
                     for (int i = 0; i < 20; i++)
                     {
@@ -226,7 +226,7 @@ public class GeneratorTests
 
         var team = TeamGenerator.Generate(ref rng, catalog, "orc_50", Race.Orc, 50, 1);
 
-        Assert.Equal(1, team.Players.Count(p => p.Rarity == Rarity.Rare));
+        Assert.Equal(1, team.Players.Count(p => p.Rarity == Rarity.Uncommon));
         Assert.Equal(9, team.Players.Count(p => p.Rarity == Rarity.Common));
     }
 
@@ -283,8 +283,8 @@ public class GeneratorTests
         var range = rarity switch
         {
             Rarity.Common => generation.RangeByRarity.Common,
+            Rarity.Uncommon => generation.RangeByRarity.Uncommon,
             Rarity.Rare => generation.RangeByRarity.Rare,
-            Rarity.Legendary => generation.RangeByRarity.Legendary,
             _ => throw new ArgumentOutOfRangeException(nameof(rarity)),
         };
         var positionFloors = generation.PositionFloors.Of(position);
@@ -360,8 +360,8 @@ public class GeneratorTests
         var catalog = TestData.LoadCatalog();
         var rng = RngStreams.Generation(13, 0);
 
-        var team = TeamGenerator.Generate(ref rng, catalog, "t", Race.Human, 50, 1, level: 2, uniformRarity: Rarity.Legendary);
+        var team = TeamGenerator.Generate(ref rng, catalog, "t", Race.Human, 50, 1, level: 2, uniformRarity: Rarity.Rare);
 
-        Assert.All(team.Players, p => Assert.Equal(Rarity.Legendary, p.Rarity));
+        Assert.All(team.Players, p => Assert.Equal(Rarity.Rare, p.Rarity));
     }
 }

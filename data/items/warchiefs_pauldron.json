@@ -1,0 +1,14 @@
+{
+  "id": "warchiefs_pauldron",
+  "name": {
+    "es": "Hombrera del jefe de guerra",
+    "en": "Warchief's Pauldron"
+  },
+  "archetype": "restricted",
+  "race": "Orc",
+  "attributeBonus": {
+    "strength": 10,
+    "stamina": 10,
+    "speed": 10
+  }
+}

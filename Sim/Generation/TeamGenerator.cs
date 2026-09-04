@@ -91,7 +91,7 @@ public static class TeamGenerator
 
     /// <summary>Rareza del jugador <paramref name="index"/>: la uniforme si se pide, o Rare solo para el elegido por el dado (RF-005).</summary>
     private static Rarity RarityOf(Rarity? uniformRarity, int index, int rareIndex) =>
-        uniformRarity ?? (index == rareIndex ? Rarity.Rare : Rarity.Common);
+        uniformRarity ?? (index == rareIndex ? Rarity.Uncommon : Rarity.Common);
 
     private static StyleTag? StyleOf(IReadOnlyDictionary<int, StyleTag>? styleBySlot, int index) =>
         styleBySlot is not null && styleBySlot.TryGetValue(index, out var style) ? style : null;

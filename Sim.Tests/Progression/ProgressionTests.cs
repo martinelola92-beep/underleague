@@ -31,8 +31,8 @@ public sealed class ProgressionTests
 
     [Theory]
     [InlineData(Rarity.Common, 2, 0)]
-    [InlineData(Rarity.Rare, 3, 1)]
-    [InlineData(Rarity.Legendary, 4, 2)]
+    [InlineData(Rarity.Uncommon, 3, 1)]
+    [InlineData(Rarity.Rare, 4, 2)]
     public void RarityDecidesSlotsAndInitialPerks(Rarity rarity, int slots, int initial)
     {
         // RF-023: la rareza es techo de perks, nunca techo de nivel.

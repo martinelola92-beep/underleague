@@ -4,7 +4,7 @@
     "es": "Control de multitud",
     "en": "Crowd Control"
   },
-  "rarity": "rare",
+  "rarity": "uncommon",
   "kind": "conditional",
   "axis": "proximity",
   "race": null,

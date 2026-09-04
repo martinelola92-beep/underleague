@@ -2,7 +2,7 @@
   "_doc": "Habilidad racial de los orcos (RF-031b, ADR 0026): Sangre caliente. Convierte la violencia en ventaja posicional en vez de en lesiones: el rival tarda más en levantarse. Los ticks no son la escala de puntos porcentuales, son unidad propia, así que el valor se calibra midiendo: con 5 valía +0,9 puntos de tasa agrupada y con 15 vale +1,4, dentro del presupuesto de una habilidad racial (ADR 0026, Presupuesto de impacto; D-29). El canal satura pronto: triplicar los ticks solo compra medio punto. Se asigna automáticamente a toda la plantilla orca y no ocupa slot.",
   "id": "hot_blooded",
   "name": { "es": "Sangre caliente", "en": "Hot blooded" },
-  "rarity": "rare",
+  "rarity": "uncommon",
   "kind": "filler",
   "axis": "identity",
   "race": "Orc",

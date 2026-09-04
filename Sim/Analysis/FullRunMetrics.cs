@@ -46,11 +46,17 @@ public static class FullRunMetrics
     /// <summary>Ventaja de la política contextual sobre la mejor de las dos puras, en puntos (&gt;= 8, ADR 0037).</summary>
     public const string ContextualAdvantage = "contextualAdvantage";
 
-    /// <summary>Tasa de victoria mínima de la run (fase2-diseno.md §10).</summary>
-    public const double RunWinRateMin = 25.0;
+    /// <summary>
+    /// Tasa de victoria mínima de la run (fase2-diseno.md §10, corregida por la ADR 0040). La banda es
+    /// <b>20-30%</b> y no la 25-40% de partida: el producto de las tres celdas "muy buena" de la tabla de
+    /// la ADR 0033 da 29,5%, así que el techo antiguo estaba por encima de lo que la propia curva permite
+    /// aunque se juegue perfecto, y la trayectoria que la ADR describe —buena antes del primer jefe, muy
+    /// buena al final— da entre 21,8% y 28,2%.
+    /// </summary>
+    public const double RunWinRateMin = 20.0;
 
-    /// <summary>Tasa de victoria máxima de la run.</summary>
-    public const double RunWinRateMax = 40.0;
+    /// <summary>Tasa de victoria máxima de la run (ADR 0040).</summary>
+    public const double RunWinRateMax = 30.0;
 
     /// <summary>Techo del porcentaje de derrotas por quedarse sin plantilla.</summary>
     public const double RosterDefeatShareMax = 35.0;
@@ -176,7 +182,7 @@ public static class FullRunMetrics
         int victories = 0, defeats = 0, rosterDefeats = 0, bossDefeats = 0;
         int deaths = 0, fullRuns = 0, fullRunMatches = 0, matches = 0, marketRuns = 0, brokeRuns = 0;
         long goldEarned = 0, market = 0, clinic = 0, reroll = 0, wages = 0, left = 0;
-        long roster = 0, level = 0, perks = 0, starterPerks = 0, items = 0, injuries = 0, severe = 0, counters = 0, ownInjuries = 0;
+        long roster = 0, level = 0, perks = 0, starterPerks = 0, items = 0, injuries = 0, severe = 0, counters = 0, ownInjuries = 0, matchInjuries = 0;
         long offers = 0, affordable = 0, purchases = 0, marketVisits = 0, goldAtMarket = 0;
         var actReached = new int[RunRules.Acts + 1];
         var goldByAct = new long[RunRules.Acts];
@@ -220,6 +226,7 @@ public static class FullRunMetrics
             injuries += run.Injuries;
             severe += run.SevereInjuriesSuffered;
             ownInjuries += run.OwnInjuries;
+            matchInjuries += run.MatchInjuries;
             counters += run.AccumulatedCounters;
             offers += run.OffersSeen;
             affordable += run.OffersAffordable;
@@ -330,6 +337,7 @@ public static class FullRunMetrics
         rows.Add(Info("severeInjuriesPerRun", (double)severe / runs.Count));
         rows.Add(Info("ownInjuriesPerRun", (double)ownInjuries / runs.Count));
         rows.Add(Info("ownInjuriesPerMatch", matches > 0 ? (double)ownInjuries / matches : 0.0));
+        rows.Add(Info("injuriesPerMatchBothTeams", matches > 0 ? (double)matchInjuries / matches : 0.0));
 
         for (int act = 0; act < RunRules.Acts; act++)
         {
@@ -370,7 +378,7 @@ public static class FullRunMetrics
             marketsInAct * (economy.Market.PerkPrice.Common + economy.Market.ItemPrice.Common),
             economy.ClinicCost,
             rerolls,
-            economy.MercenaryWage(Model.Rarity.Rare) * matchesInAct,
+            economy.MercenaryWage(Model.Rarity.Uncommon) * matchesInAct,
         };
 
         costs.Sort();

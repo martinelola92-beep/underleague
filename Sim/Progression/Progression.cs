@@ -22,8 +22,9 @@ public static class Progression
     public static int PerkSlots(Rarity rarity) => rarity switch
     {
         Rarity.Common => 2,
-        Rarity.Rare => 3,
-        Rarity.Legendary => 4,
+        Rarity.Uncommon => 3,
+        Rarity.Rare => 4,
+        Rarity.Legendary => 5,
         _ => throw new ArgumentOutOfRangeException(nameof(rarity)),
     };
 
@@ -31,8 +32,9 @@ public static class Progression
     public static int InitialPerks(Rarity rarity) => rarity switch
     {
         Rarity.Common => 0,
-        Rarity.Rare => 1,
-        Rarity.Legendary => 2,
+        Rarity.Uncommon => 1,
+        Rarity.Rare => 2,
+        Rarity.Legendary => 3,
         _ => throw new ArgumentOutOfRangeException(nameof(rarity)),
     };
 

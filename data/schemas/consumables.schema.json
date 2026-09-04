@@ -8,7 +8,7 @@
     "_doc": { "type": "string" },
     "id": { "type": "string", "pattern": "^[a-z][a-z0-9_]*$" },
     "name": { "$ref": "#/$defs/localizedName" },
-    "rarity": { "enum": ["common", "rare", "legendary"] },
+    "rarity": { "enum": ["common", "uncommon", "rare", "legendary"] },
     "family": {
       "description": "RF-084: médicos, tácticos, sucios y sobrenaturales.",
       "enum": ["medical", "tactical", "dirty", "supernatural"]

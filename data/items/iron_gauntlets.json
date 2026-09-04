@@ -1,9 +1,12 @@
 {
   "id": "iron_gauntlets",
-  "name": { "es": "Guanteletes de hierro", "en": "Iron Gauntlets" },
+  "name": {
+    "es": "Guanteletes de hierro",
+    "en": "Iron Gauntlets"
+  },
   "rarity": "common",
   "archetype": "normal",
-  "effects": [
-    { "type": "modifyAttribute", "attribute": "strength", "value": 8 }
-  ]
+  "attributeBonus": {
+    "strength": 10
+  }
 }

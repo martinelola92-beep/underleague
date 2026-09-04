@@ -11,7 +11,7 @@
     {
       "name": "Grimnir Cavaprofundo",
       "position": "Goalkeeper",
-      "rarity": "legendary",
+      "rarity": "rare",
       "level": 5,
       "attributes": {
         "strength": 87,
@@ -30,7 +30,7 @@
     {
       "name": "Hjalmar Vetaoro",
       "position": "Defender",
-      "rarity": "rare",
+      "rarity": "uncommon",
       "level": 5,
       "attributes": {
         "strength": 92,

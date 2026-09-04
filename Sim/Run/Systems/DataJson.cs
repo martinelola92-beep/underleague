@@ -101,6 +101,19 @@ internal readonly struct Json
         }
     }
 
+    public IEnumerable<(string Name, Json Value)> EnumerateObject()
+    {
+        if (_element.ValueKind != JsonValueKind.Object)
+        {
+            throw new DataException(File, Path, "se esperaba un objeto");
+        }
+
+        foreach (var property in _element.EnumerateObject())
+        {
+            yield return (property.Name, new Json(property.Value, File, Path + "." + property.Name));
+        }
+    }
+
     public int Int(string property) => Prop(property).AsInt();
 
     public int OptionalInt(string property, int fallback) =>

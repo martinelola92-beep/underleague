@@ -1,0 +1,55 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://underleague.dev/schemas/perk-values.schema.json",
+  "title": "Underleague perk value table",
+  "description": "data/economy/perk-values.json: valor medido de cada perk, en milésimas de punto de tasa de victoria, y los parámetros con los que ese valor se convierte en peso de pool (ADR 0038). Se produce con /Balance --perk-values.",
+  "type": "object",
+  "properties": {
+    "_doc": {
+      "type": "string"
+    },
+    "baseWeight": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "referenceValue": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "valueFloor": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "minWeight": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "maxWeight": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "values": {
+      "type": "object",
+      "propertyNames": {
+        "pattern": "^[a-z][a-z0-9_]*$"
+      },
+      "additionalProperties": {
+        "type": "integer"
+      }
+    },
+    "valueShift": {
+      "type": "integer",
+      "minimum": 0
+    }
+  },
+  "required": [
+    "baseWeight",
+    "referenceValue",
+    "valueShift",
+    "valueFloor",
+    "minWeight",
+    "maxWeight",
+    "values"
+  ],
+  "additionalProperties": false
+}

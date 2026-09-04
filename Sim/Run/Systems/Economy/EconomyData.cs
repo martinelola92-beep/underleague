@@ -5,14 +5,16 @@ using Underleague.Sim.Model;
 namespace Underleague.Sim.Run.Systems.Economy;
 
 /// <summary>
-/// Bandas de precio por rareza. Índice = <see cref="Rarity"/> (Common, Rare, Legendary), como en
-/// <c>tuning.generation.budgetByRarity</c>.
+/// Bandas de precio por rareza. Índice = <see cref="Rarity"/> (Common, Uncommon, Rare, Legendary), como
+/// en <c>tuning.generation.budgetByRarity</c>. La entrada de legendario existe por completitud del enum
+/// (ADR 0039): nada lo genera ni lo pone a la venta.
 /// </summary>
-public sealed record PriceByRarity(int Common, int Rare, int Legendary)
+public sealed record PriceByRarity(int Common, int Uncommon, int Rare, int Legendary)
 {
     public int Of(Rarity rarity) => rarity switch
     {
         Rarity.Common => Common,
+        Rarity.Uncommon => Uncommon,
         Rarity.Rare => Rare,
         Rarity.Legendary => Legendary,
         _ => throw new ArgumentOutOfRangeException(nameof(rarity)),
@@ -75,6 +77,13 @@ public sealed record EconomyConfig(
     int RewardItemWeight,
     MarketConfig Market)
 {
+    /// <summary>
+    /// Valor medido de cada perk y peso que ese valor le da en el pool (ADR 0038,
+    /// <c>data/economy/perk-values.json</c>). Vive aquí porque es la palanca gemela del precio: donde no
+    /// hay precio, la frecuencia. Una instantánea sin el fichero reparte pesos uniformes.
+    /// </summary>
+    public PerkValueTable PerkValues { get; init; } = PerkValueTable.Uniform;
+
     /// <summary>Oro fijo por victoria de ese acto, antes de multiplicadores (RF-114g).</summary>
     public int GoldForAct(int act) => act switch
     {
@@ -170,7 +179,10 @@ public static class EconomyLoader
             root.Int("rewardPerkWeight"),
             root.Int("rewardPlayerWeight"),
             root.Int("rewardItemWeight"),
-            market);
+            market)
+        {
+            PerkValues = PerkValueTable.FromJson(files),
+        };
     }
 
     private static MarketConfig ReadMarket(Json node) => new(
@@ -197,18 +209,18 @@ public static class EconomyLoader
 
     private static PriceByRarity ReadPriceByRarity(Json node)
     {
-        var values = new List<int>(3);
+        var values = new List<int>(4);
         foreach (var item in node.EnumerateArray())
         {
             values.Add(item.AsInt());
         }
 
-        if (values.Count != 3)
+        if (values.Count != 4)
         {
-            throw new DataException(node.File, node.Path, "debe tener exactamente 3 valores: [common, rare, legendary]");
+            throw new DataException(node.File, node.Path, "debe tener exactamente 4 valores: [common, uncommon, rare, legendary]");
         }
 
-        return new PriceByRarity(values[0], values[1], values[2]);
+        return new PriceByRarity(values[0], values[1], values[2], values[3]);
     }
 
     private static JsonDocument Parse(string content)

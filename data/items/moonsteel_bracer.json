@@ -1,0 +1,15 @@
+{
+  "_doc": "ABRE una build que los elfos no pueden permitirse: con fuerza -12 y resistencia -6 un elfo no sostiene un bloque bajo ni gana una entrada. Con el brazal si, y deja de tener que ganar todos los partidos con el balon.",
+  "id": "moonsteel_bracer",
+  "name": {
+    "es": "Brazal de acero lunar",
+    "en": "Moonsteel Bracer"
+  },
+  "archetype": "restricted",
+  "race": "Elf",
+  "attributeBonus": {
+    "strength": 10,
+    "stamina": 10,
+    "leash": 10
+  }
+}

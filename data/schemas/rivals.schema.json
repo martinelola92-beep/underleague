@@ -42,7 +42,7 @@
       "properties": {
         "name": { "type": "string", "minLength": 1 },
         "position": { "enum": ["Goalkeeper", "Defender", "Midfielder", "Forward"] },
-        "rarity": { "enum": ["common", "rare", "legendary"] },
+        "rarity": { "enum": ["common", "uncommon", "rare", "legendary"] },
         "level": { "type": "integer", "minimum": 1, "maximum": 8 },
         "attributes": {
           "type": "object",

@@ -50,7 +50,7 @@ public sealed class MatchEquipmentTests
         // RF-077, maldito: efecto potente y contrapartida permanente, las dos a la vez y sin condición.
         var item = new MatchItem(
             "test_cursed",
-            Rarity.Rare,
+            Rarity.Uncommon,
             new[] { new EffectDefinition(EffectType.ModifyAttribute, Attribute: AttributeKind.Strength, Value: 18, Duration: EffectDuration.Run) })
         {
             DrawbackEffects = new[]

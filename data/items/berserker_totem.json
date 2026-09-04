@@ -1,12 +1,16 @@
 {
+  "_doc": "Maldito raro: una bestia fisica que no sabe jugar. En un central o un pivote destructor es una ganga; en el organizador del equipo tira la build a la basura.",
   "id": "berserker_totem",
-  "name": { "es": "Tótem del berserker", "en": "Berserker Totem" },
+  "name": {
+    "es": "Tótem del berserker",
+    "en": "Berserker Totem"
+  },
   "rarity": "rare",
   "archetype": "cursed",
-  "effects": [
-    { "type": "modifyAttribute", "attribute": "strength", "value": 18 }
-  ],
-  "drawbackEffects": [
-    { "type": "modifyProbability", "probability": "injury", "value": 300 }
-  ]
+  "attributeBonus": {
+    "strength": 20,
+    "speed": 20,
+    "stamina": 20,
+    "technique": -20
+  }
 }

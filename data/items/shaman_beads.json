@@ -1,0 +1,15 @@
+{
+  "_doc": "ABRE una build que los orcos no pueden permitirse: con tecnica -10 un orco no juega al pase ni mantiene la posicion. Con los abalorios puede ganar sin pegar, que es la build que su sesgo racial le niega.",
+  "id": "shaman_beads",
+  "name": {
+    "es": "Abalorios del chamán",
+    "en": "Shaman's Beads"
+  },
+  "archetype": "restricted",
+  "race": "Orc",
+  "attributeBonus": {
+    "technique": 10,
+    "leash": 10,
+    "speed": 10
+  }
+}

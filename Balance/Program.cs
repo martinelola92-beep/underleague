@@ -65,6 +65,28 @@ try
         return full.Metrics.Any(m => m.Status == "OUT") ? 1 : 0;
     }
 
+    if (options.PerkValues)
+    {
+        // --perk-values: cuánto vale cada perk (ADR 0038). Alimenta data/economy/perk-values.json, de
+        // donde sale el peso de cada perk en el pool de recompensas y en el surtido del mercado.
+        var perkRows = PerkValueRunner.Run(
+            catalog, options.Seed, options.Rosters, options.RunsExplicit ? options.Runs : 16);
+
+        WritePerkValuesCsv(options.OutDir!, perkRows);
+
+        if (!options.Quiet)
+        {
+            Console.WriteLine();
+            PerkValueRunner.PrintTable(perkRows);
+            Console.WriteLine();
+            Console.WriteLine("bloque 'values' para data/economy/perk-values.json:");
+            Console.WriteLine(PerkValueRunner.ToJsonValues(perkRows));
+            Console.WriteLine($"CSV escritos en {options.OutDir}");
+        }
+
+        return 0;
+    }
+
     if (options.BossGate)
     {
         // --boss-gate: la curva de puertas de la ADR 0033 con partidos directos build-contra-jefe
@@ -78,7 +100,7 @@ try
         var itemCatalog = ItemLoader.FromJson(dataFiles);
 
         BossGateResult gate = BossGateRunner.Run(
-            catalog, bossCatalog, bossBuilds, bossGroups.QualityLevels, itemCatalog,
+            catalog, bossCatalog, bossBuilds, bossGroups.QualityLevels, bossGroups.ActDensity, itemCatalog,
             options.Seed, options.Rosters, matchesPerRoster);
 
         WriteBossGateCsv(options.OutDir!, gate.Cells);
@@ -432,6 +454,23 @@ static void WritePlayersCsv(string outDir, IReadOnlyList<PlayerAggregate> player
     CsvWriter.Write(Path.Combine(outDir, "players.csv"), header, rows);
 }
 
+/// <summary>perk-values.csv del modo --perk-values (ADR 0038): una fila por perk medido.</summary>
+static void WritePerkValuesCsv(string outDir, IReadOnlyList<PerkValueRow> rows)
+{
+    string[] header = { "perk", "slot", "matches", "wins", "winRate", "valueMilli" };
+    var data = rows.Select(r => (IReadOnlyList<string>)new[]
+    {
+        r.PerkId,
+        r.Slot.ToString(CultureInfo.InvariantCulture),
+        r.Matches.ToString(CultureInfo.InvariantCulture),
+        r.Wins.ToString(CultureInfo.InvariantCulture),
+        CsvWriter.F2(r.WinRate),
+        r.ValueMilli.ToString(CultureInfo.InvariantCulture),
+    });
+
+    CsvWriter.Write(Path.Combine(outDir, "perk-values.csv"), header, data);
+}
+
 /// <summary>runs.csv del modo --full-runs (fase2-diseno.md §10): una fila por run jugada.</summary>
 static void WriteRunsCsv(string outDir, IReadOnlyList<RunPlayResult> runs)
 {
@@ -441,7 +480,7 @@ static void WriteRunsCsv(string outDir, IReadOnlyList<RunPlayResult> runs)
         "matchesAct1", "matchesAct2", "matchesAct3",
         "goldEarned", "goldEarnedAct1", "goldEarnedAct2", "goldEarnedAct3", "goldFromSales",
         "goldMarket", "goldClinic", "goldReroll", "goldWages", "goldLeft",
-        "deaths", "ownInjuries", "severeInjuries", "rosterSize", "available", "averageLevel",
+        "deaths", "ownInjuries", "matchInjuries", "severeInjuries", "rosterSize", "available", "averageLevel",
         "perks", "starterPerks", "items", "counters",
         "markets", "offersSeen", "offersAffordable", "goldAtMarkets", "brokeMarkets", "purchases", "perksBought",
         "itemsBought", "playersSigned", "youths", "mercenaries", "playersSold", "treatments", "rerolls",
@@ -460,7 +499,7 @@ static void WriteRunsCsv(string outDir, IReadOnlyList<RunPlayResult> runs)
         Int(r.GoldFromSales),
         Int(r.GoldSpentMarket), Int(r.GoldSpentClinic), Int(r.GoldSpentReroll), Int(r.GoldSpentWages),
         Int(r.GoldLeft),
-        Int(r.Deaths), Int(r.OwnInjuries), Int(r.SevereInjuriesSuffered), Int(r.FinalRosterSize),
+        Int(r.Deaths), Int(r.OwnInjuries), Int(r.MatchInjuries), Int(r.SevereInjuriesSuffered), Int(r.FinalRosterSize),
         Int(r.FinalAvailable), CsvWriter.F2(r.AverageLevelTimes100 / 100.0),
         Int(r.PerksOnRoster), Int(r.PerksOnStarters), Int(r.ItemsOnRoster), Int(r.AccumulatedCounters),
         Int(r.MarketsVisited), Int(r.OffersSeen), Int(r.OffersAffordable), Int(r.GoldAtMarketArrival), Int(r.BrokeMarketVisits),

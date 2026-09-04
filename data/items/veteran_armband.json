@@ -1,10 +1,13 @@
 {
   "id": "veteran_armband",
-  "name": { "es": "Brazalete veterano", "en": "Veteran Armband" },
-  "rarity": "rare",
+  "name": {
+    "es": "Brazalete de veterano",
+    "en": "Veteran's Armband"
+  },
+  "rarity": "uncommon",
   "archetype": "normal",
-  "effects": [
-    { "type": "modifyAttribute", "attribute": "strength", "value": 6 },
-    { "type": "modifyAttribute", "attribute": "stamina", "value": 6 }
-  ]
+  "attributeBonus": {
+    "technique": 10,
+    "stamina": 10
+  }
 }

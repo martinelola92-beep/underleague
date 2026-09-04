@@ -17,19 +17,23 @@ public static class OfferStream
         RngStreams.Rewards(seed, checked((nodeId * 10_000) + rerollCount));
 }
 
-/// <summary>Reparto por rareza para sortear la rareza de un jugador generado en el mercado o en una recompensa.</summary>
-public sealed record RarityWeights(int Common, int Rare, int Legendary)
+/// <summary>
+/// Reparto por rareza para sortear la rareza de un jugador generado en el mercado o en una recompensa.
+/// Solo las <b>tres rarezas generables</b> (ADR 0039): el legendario no se sortea nunca, es un personaje
+/// único que se desbloquea ganando divisiones (fase 4).
+/// </summary>
+public sealed record RarityWeights(int Common, int Uncommon, int Rare)
 {
     public Rarity Pick(ref Pcg32 rng)
     {
-        int total = Common + Rare + Legendary;
+        int total = Common + Uncommon + Rare;
         int roll = rng.Range(0, total);
         if (roll < Common)
         {
             return Rarity.Common;
         }
 
-        return roll < Common + Rare ? Rarity.Rare : Rarity.Legendary;
+        return roll < Common + Uncommon ? Rarity.Uncommon : Rarity.Rare;
     }
 }
 

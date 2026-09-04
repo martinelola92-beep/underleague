@@ -90,7 +90,7 @@ Modo nuevo `--full-runs N`: juega runs completas con una **política automática
 
 | Métrica | Rango objetivo de partida |
 |---|---|
-| Tasa de victoria de la run con política razonable | 25-40% |
+| Tasa de victoria de la run con política razonable | **20-30%** (corregido por la ADR 0040; era 25-40) |
 | Runs perdidas por bajar de 5 jugadores | < 35% de las derrotas |
 | Oro medio por acto frente al coste de los sumideros | permite 2-3, nunca todos (RF-114k) |
 | Duración de la run en partidos | 18-22 |
@@ -471,3 +471,322 @@ Con número en `docs/balance/fase2-resultados.md` §4 y §7:
   jugando runs completas y **no se ha tocado** porque `tuning.json` es global.
 - **Dos de los cuatro sumideros son contenido muerto** (clínica y mercenarios), consecuencia del punto
   anterior y del tamaño de plantilla.
+
+## 18. Decisiones de implementación del paquete AA: las cinco ADR de cierre
+
+Este paquete aplica las ADR **0036** (el objeto sube atributos), **0038** (el precio y la frecuencia como
+palancas), **0041** (las fórmulas se miden contra el rival), **0040** (la curva se mide con la build que
+cabe en cada acto) y la parte de escala de la **0039** (tres rarezas generables, sin legendarios), y
+vuelve a medir el criterio de la **0037**. Las mediciones están abajo, con su lote y su semilla.
+
+### 18.1. La escala de rarezas (ADR 0039, solo el cambio de escala)
+
+**AA-1. `Rarity` pasa a tener cuatro entradas y la generación solo produce tres.** `Common`, `Uncommon`,
+`Rare` (2, 3 y 4 slots de perk) y `Legendary`, que **nada genera**: ni `TeamGenerator`, ni
+`GeneratedPlayers` (fichajes, canteranos, mercenarios y recompensas), ni el pool de objetos. Existe en el
+enum para que el escalón esté reservado y para que precios, presupuestos y slots ya tengan su entrada
+cuando la fase 4 escriba los personajes. `RarityWeights` pierde su tercer campo y pasa a repartir entre
+las tres generables con **los mismos pesos** que tenía.
+
+**AA-2. La migración es un renombrado, no un reajuste.** Lo que antes se llamaba `rare` pasa a llamarse
+`uncommon` y lo que se llamaba `legendary` pasa a llamarse `rare`, en el enum y en los 57 ficheros de
+`/data` que declaran rareza. Los números no se mueven: `budgetByRarity` sigue siendo 250 / 275 / 300 para
+las tres generables (con 325 reservado para el legendario), los slots siguen siendo 2 / 3 / 4, y los
+precios y los pesos de sorteo son los mismos. **Por eso el cambio de escala no necesita remedición**: el
+juego que se mide después es el mismo juego con otros nombres, más un escalón vacío arriba. La
+salvaguarda de la ADR 0027 —"un equipo sin legendarios tiene que poder ganar al jefe final"— deja de ser
+una tensión: ahora **ningún** equipo tiene legendarios.
+
+### 18.2. El objeto es un paquete de atributos (ADR 0036)
+
+**AA-3. `data/items/*.json` cambia de forma y el validador rechaza `effects`.** Un objeto declara
+`attributeBonus` y nada más: las entradas positivas son lo que sube, la única negativa es la
+contrapartida del maldito. `ItemLoader` rechaza explícitamente cualquier `effects` o `drawbackEffects`
+—el formato anterior, que permitía a un objeto hacer exactamente lo mismo que un perk— y comprueba, de un
+vistazo, que el número de atributos coincide con el que la rareza permite y que la magnitud es la de la
+escala. `MatchItem` sigue recibiendo `EffectDefinition`s, pero ya no salen del dato: los construye
+`RunEquipment.ToMatchItem` a partir de los bonos, uno por atributo no nulo, y manda los negativos a
+`DrawbackEffects` para que el informe pueda medirlos por separado.
+
+**AA-4. La escala vive en `data/equipment/equipment.json`, no en código.** Magnitud (+10 por atributo),
+multiplicador del maldito (×2), cuántos atributos toca cada rareza (1 / 2 / 3 / 4) y cuántos el
+restringido (3). En el mismo fichero va la **tabla de valor marginal por atributo** que la ADR 0038
+necesita, en milésimas de punto de tasa de victoria por cada +20 repartidos entre los diez jugadores:
+fuerza 111, técnica 75, velocidad 66, resistencia 30 y **correa 40**, que no estaba en la medida de
+fase 1b y entra como valor provisional entre la resistencia y la velocidad. Hay que remedir la tabla
+cuando cambie el motor, y este paquete lo ha cambiado: queda anotado.
+
+**AA-5. El frágil se rompe por probabilidad y al terminar el partido.** `usesLimit` desaparece;
+`breakChancePercent` (20-30% en el catálogo) se resuelve en `EquipmentSystem.ProcessFragileItems`, que
+se llama desde `AfterMatch`, con el flujo de recompensas del nodo (RT-022) y **tirando el dado siempre**,
+se rompa o no, para que el flujo de RNG no dependa del resultado. La rotura se anuncia dos veces: la
+probabilidad está en la descripción generada desde antes de equiparlo (RT-035, RF-012d) y la rotura
+queda en el contador de run `itemsBroken`, que es lo que el informe post-partido leerá cuando exista
+interfaz.
+
+**AA-6. El restringido es exclusivo de raza, no de etiqueta.** Declara `race` y no declara rareza; el
+cargador le asigna la banda de raro —tres atributos con magnitud normal es exactamente lo que vale— y le
+pone como `requiredTag` la etiqueta de especie. `ItemCatalog.OfferableTo(raza)` es lo que hace que **solo
+aparezca en runs de esa raza**, y `MatchItem.AppliesTo` lo que hace que **solo funcione sobre ella**.
+
+**AA-7. Catálogo: 19 universales y 3 por raza de lanzamiento.** Los universales cubren las tres rarezas y
+los tres arquetipos obligatorios: cinco comunes normales (uno por atributo), dos comunes frágiles, cuatro
+poco comunes normales, un poco común frágil, dos raros normales, un raro frágil y cuatro malditos
+(`brutes_pauldron` +20 fuerza / −20 velocidad, `glass_cannon_spikes` +20 velocidad y técnica / −20
+resistencia, `berserker_totem` +20 fuerza, velocidad y resistencia / −20 técnica, `martyrs_relic` +20
+técnica, resistencia y correa / −20 fuerza). Cada maldito baja algo que **le importa a su portador
+natural**, que es lo que lo convierte en una decisión de colocación: el tótem es una ganga en un central
+y tira la build a la basura en el organizador.
+
+De los tres restringidos de cada raza, **uno abre una build que esa raza no puede permitirse**, y está
+dicho en el `_doc` del propio fichero: `deep_road_boots` (velocidad, correa y técnica) le da al enano el
+bloque adelantado que sus sesgos −14 y −18 le prohíben; `moonsteel_bracer` (fuerza, resistencia y correa)
+le da al elfo el bloque bajo que su −12 de fuerza le niega; `shaman_beads` (técnica, correa y velocidad)
+le da al orco la build de pase que su −10 de técnica le niega; `swiftrot_tendons` (velocidad, técnica y
+correa) le da al no-muerto el contraataque que su −10 de velocidad le niega; y `heralds_pennant` (correa,
+velocidad y resistencia) le da al humano —que no tiene sesgo y por eso no puede especializarse— el fútbol
+de zonas amplias.
+
+**AA-8. Lo que vale equipar, medido.** Siete titulares con un juego realista de acto 3 (dos raros, tres
+poco comunes y dos comunes, el maldito en un central) valen **+3,3 puntos** de tasa de victoria sobre un
+espejo sin equipar (`EquipmentImpactTests`, 24 plantillas × 64 partidos por brazo). La aritmética de la
+ADR 0036 predecía 5,8: **la tabla de valor marginal sobrestima por un factor de ~1,6 cuando el bono va
+entero a un jugador** en vez de repartido entre los diez, y conviene decirlo porque el precio de los
+objetos se calcula con ella. Lo que confirma la magnitud de partida (+10) no es ese número sino la curva
+de puertas: con ella, la fila "muy buena" cae dentro de su banda en los tres jefes (§18.5). Se probó
+subirla a +14 y **empeora**: el precio se deriva del valor, así que los objetos buenos se salen del
+presupuesto y la doctrina que ahorra gana a la que compra (medido: contextual 15,5 contra ahorradora
+21,0). Se deja en 10.
+
+### 18.3. El precio se calcula y la frecuencia se mide (ADR 0038)
+
+**AA-9. `ItemPricing`: precio = precioBase(rareza) × valor / valorMedio(rareza).** El valor sale de la
+tabla marginal, así que un común de +10 de fuerza cuesta 3,7 veces lo que un común de +10 de resistencia,
+y el precio de venta (RF-076b) sale de la misma cuenta. La contrapartida del maldito entra con signo
+negativo y por eso un maldito que baja algo caro **cuesta menos**: es la misma aritmética, sin regla
+aparte. El frágil paga `fragilePricePercent` (55%) y pesa el doble en los sorteos
+(`fragileOfferWeightPercent` 200), que es la compensación que la ADR 0036 exige para que no sea
+estrictamente peor.
+
+**AA-10. Los perks se miden, y la medición es un modo de `/Balance`.** `--perk-values` enfrenta, perk a
+perk, una plantilla que lo lleva contra su espejo que no lo lleva —misma raza, calidad 50, nivel 4, ida y
+vuelta— y devuelve lo que sube sobre el 50%. El portador **rota** entre los titulares que pueden llevarlo
+(mismo filtro de `PerkAssignment.Eligible` que usa el juego): medir siempre sobre el primero elegible
+ponía los 53 perks en el portero, que es exactamente donde ninguno significa nada. La tabla resultante
+—45 perks medidos con 384 partidos cada uno, semilla 5— vive en `data/economy/perk-values.json`, **en
+datos y no en código**, y de ella sale el peso de cada perk en el pool de recompensas (RF-071) y en el
+surtido del mercado:
+
+```
+peso(perk) = clamp(pesoBase × valorReferencia / max(valor + desplazamiento, suelo), 25, 250)
+```
+
+El desplazamiento existe porque el valor medido es una diferencia sobre un espejo y **sale negativo en
+media tabla**; sin él, "inversamente proporcional" no está definido. Con los valores medidos
+(−125 a +198 milésimas) los pesos van de **71** (`steady_hands`, el más caro) a **133**
+(`spearpoint` y `bulwark_stance`, los que menos aportan): una relación de 1,9 entre el perk que menos
+sale y el que más. La desviación por fila es de unos 2,5 puntos, así que **la tabla ordena, no
+dictamina**, y por eso el peso está acotado por los dos lados.
+
+### 18.4. Las fórmulas se miden contra el rival (ADR 0041)
+
+**AA-11. Cinco fórmulas dejan de comparar contra el 50.** No solo la de lesión: la ADR pedía revisarlas
+todas y eran cinco.
+
+| Fórmula | Antes | Ahora |
+|---|---|---|
+| **Lesión** | `40 + falta + 5·(fuerza−50) − 5·(resistencia−50)` | `onTackleBase + falta + relativeFactor·(fuerza del que entra − resistencia de la víctima)` |
+| **Entrada** | `2800 + 12·(fuerza−50) + 8·(velocidad−50) − 14·(técnica−50)` | `2800 + pressureFactor·(presión del que entra − técnica del conductor)`, con `presión = (60·fuerza + 40·velocidad)/100` |
+| **Falta** | `320 + 5·(fuerza del que entra − 50)` | `320 + 5·(fuerza del que entra − fuerza del conductor)` |
+| **Entrada dura** | `fuerza ≥ 65` | `fuerza − fuerza del conductor ≥ 15` |
+| **Regate** | `7200 + 18·(técnica−50) − 9·(velocidad−50) − 9·(fuerza−50)` | `7200 + 18·(técnica del conductor − cobertura del defensor)`, con `cobertura = (50·velocidad + 50·fuerza)/100` |
+| **Parada** | `50 + (relevante−50)·20/50 − (calidad−50)·60/100` | `54 + (relevante − técnica del rematador)·8/50 − (calidad − qualityPivot)·60/100` |
+| **Intercepción** | `250 + 14·(técnica−50)` | `250 + 10·(técnica del que intercepta − técnica del pasador)` |
+
+Las tres primeras y la última son **exactamente invariantes** al nivel: subir a los dos equipos por igual
+no mueve la probabilidad. La parada deja un resto —la calidad del disparo sigue subiendo con los
+atributos del rematador— de algo más de un punto a nivel 8, contra los cuatro que tenía la fórmula
+absoluta y en el sentido contrario. El **pase** se deja como estaba y hay que decir por qué: no es un
+duelo (la mitad defensiva del pase es la intercepción, que sí se ha hecho relativa), así que no entra en
+lo que la ADR pide.
+
+**AA-12. La invariancia, medida.** Ocho plantillas por nivel contra su espejo, 400 partidos por nivel
+(semilla 11):
+
+| Nivel | Antes: lesiones/partido | Ahora | Entradas | Faltas | Goles |
+|---|---|---|---|---|---|
+| 1 | 0,61 | **0,31** | 12,2 | 3,1 | 1,47 / 1,38 |
+| 4 | — | **0,30** | 9,8 | 2,2 | 1,70 / 1,64 |
+| 6 | **0,05** | **0,19** | 9,3 | 2,0 | 1,75 / 1,74 |
+| 8 | — | **0,35** | 9,1 | 2,3 | 1,89 / 2,00 |
+
+Antes, dos equipos de nivel 6 producían **once veces menos lesiones** que dos de nivel 1 (0,05 contra
+0,61). Ahora la cifra es plana. Es el defecto que la ADR 0041 describe, y lo que lo causaba no era solo
+la constante: la banda de atributos por rareza (40-70) comprime las diferencias según sube el
+presupuesto, así que la resta *fuerza − resistencia* se estrecha sola. Con la fórmula relativa eso deja
+de importar.
+
+**AA-13. Recalibración de `tuning.json`, con RT-056 revalidado.** El lote de referencia
+(`--runs 2000 --seed 1`) sigue con **las once métricas en su rango o marcadas INFO**:
+`injuriesPerMatch` **0,63** (banda 0,30-0,80), `tacklesPerMatch` 9,5, `shotsPerMatch` 12,0,
+`possessionChanges` 23,7, `betterTeamWinRate_60_vs_40` **75,7** (banda 65-80). Ese último es el que más
+se movió y explica dos de los ajustes: al volverse relativas, las fórmulas amplifican la diferencia de
+calidad, y la métrica saltó de 69,4 a 85,3 con los valores de partida. Se corrigió bajando el peso del
+portero (`save.attributeWeightPercent` 20 → 8, con `basePercent` 50 → 54 para compensar el cambio de
+referencia) y el de la intercepción (`interceptTechniqueFactor` 14 → 10), que son las dos fórmulas cuyo
+significado cambió más.
+
+De la lesión se movieron dos claves: `onTackleBase` 40 → **175** y el factor relativo 5 → **2**, más
+`severeShare` 3000 → **4000**. La razón es el clamp: los centrocampistas rivales, que son la mitad de los
+que entran, tienen menos fuerza que resistencia tiene la víctima, así que la probabilidad se acotaba a
+cero y **una entrada limpia de un centrocampista no podía lesionar a nadie**. Con la base alta y el
+factor bajo, la diferencia sigue contando —un desnivel de 40 puntos multiplica el riesgo por 2,7— pero ya
+no lo apaga.
+
+**AA-14. La clínica no estaba muerta por falta de lesiones: lo estaba por la política.** La regla 4 de
+`RunPolicy` trataba a un lesionado grave *solo si los disponibles bajaban de ocho*, y con trece jugadores
+en plantilla eso no pasa nunca. Se le añade la razón que la mantiene viva: **tratar cuando el lesionado
+es una pieza** (`TreatFromValue`, 250 puntos de valor, que cualquier titular de mitad de run supera).
+Medido: la clínica pasa de **0 a 60 de oro por run** y de 0 a 0,3 tratamientos.
+
+**AA-15. Lo que la ADR 0041 esperaba y no ha llegado.** Las lesiones propias del bucle de run suben de
+**0,04 a 0,10 por partido** —2,5 veces— y las graves de 0,20 a **0,62 por run**, pero siguen por debajo
+de las 0,31 por equipo y partido del lote de referencia. La causa está identificada y es de **datos, no
+de fórmula**: los rivales de `data/rivals/` son plantillas escritas a mano cuyos centrocampistas tienen
+mucha menos fuerza que los generados, y los partidos de run producen **0,33 lesiones por partido entre
+los dos equipos** contra 0,63 del lote de referencia. Subir más la base choca con el techo de RT-056
+(0,80), así que el resto del camino pasa por los rivales, no por `tuning.json`. Y **las muertes siguen
+fuera de banda** (0,02 por run contra 0,5-2): con la vía 1 de RF-093 —alinear a un grave sin tratar y que
+vuelva a lesionarse— la aritmética no da, y la banda de §10 pide un orden de magnitud que esa vía sola no
+puede producir. Es una decisión de diseño pendiente, no un ajuste.
+
+### 18.5. La curva se mide con la build que cabe en cada acto (ADR 0040)
+
+**AA-16. `Sim.Analysis.BuildDensity` deriva las variantes por acto quitando piezas.** Los perks se
+recortan **en rondas por titular** —uno de cada slot, luego otro—, que es como los reparte una run, y
+dentro de cada titular se conserva **el último** de la lista: los cuatro escalones escriben primero el
+perk de base y después el que define ese escalón, así que quitar por delante deja la build de cinco perks
+*bien elegidos* que la ADR describe en vez de cinco perks que los cuatro escalones comparten. Los objetos
+se quedan en los slots más bajos (el orden en el que la política equipa) y los contadores se acotan a lo
+que cabe en los partidos jugados hasta esa puerta. Lo aplican los dos lectores de builds, el de
+`/Balance` y el de `Sim.Tests`.
+
+**AA-17. La densidad es por acto **y por escalón**, y hay que decir por qué se separa de la letra de la
+ADR.** La ADR 0040 propone una densidad por acto, la misma para los cuatro escalones. Medido así, en el
+acto 1 **"buena" y "muy buena" empatan** (51,2 contra 48,1): con cinco perks las dos builds conservan
+exactamente los mismos cinco, y lo único que las separa son dos objetos, que valen medio punto. El
+escalón superior deja de existir y la escalera de la ADR 0033 se rompe. La corrección es que la densidad
+medida (4,3 perks al primer jefe) es la media de **todas** las runs, buenas y malas: una build mejor gana
+más partidos de liga, cobra más recompensas y llega a la misma puerta con más piezas. Así que cada
+escalón se instancia con su propia densidad **alrededor de esa media**, declarada en
+`data/balance/groups.json`:
+
+| Puerta | Incoherente | Correcta | Buena | Muy buena | Medido en runs |
+|---|---|---|---|---|---|
+| **Acto 1** | 4 perks · 0 obj | 5 · 1 | 6 · 2 | 8 · 3 | 4,3 · 1,8 |
+| **Acto 2** | 5 · 1 | 6 · 2 | 11 · 4 | 13 · 5 | 9,7 · 3,6 |
+| **Acto final** | 8 · 1 | 8 · 3 | 14 · 6 | 17 · 7 | 13,9 · 6,1 |
+
+**AA-18. Los jefes, recalibrados contra ese material.** `template.quality`: `grimhold_guns` 39 → **31**,
+`the_hunt` 45 → **46**, `eternal_crown` 24 → **19**. El del acto 1 baja ocho puntos, que es exactamente
+lo que la ADR 0040 anticipaba: estaba ajustado contra una build de catorce perks que en su acto no
+existe. Curva remedida con la muestra de la puerta (semilla 1, 32 plantillas × 4 partidos por celda y
+raza, 640 partidos por celda, 7.680 en total, 35 s):
+
+| Puerta | Incoherente | Correcta | Buena | Muy buena |
+|---|---|---|---|---|
+| **Acto 1** `grimhold_guns` | **19,5** (< 25) | **55,3** (45-60) | **62,5** (60-75) | **71,7** (70-85) |
+| **Acto 2** `the_hunt` | **7,5** (< 15) | **34,4** (30-45) | **60,5** (55-70) | **66,7** (65-80) |
+| **Acto final** `eternal_crown` | **11,9** (< 10) | **32,3** (15-30) | **43,9** (35-50) | **54,7** (55-70) |
+
+Las doce celdas pasan y la escalera es monótona en los tres jefes, pero **tres celdas del jefe final
+pasan por la tolerancia declarada de ±2,5 y no por margen** (incoherente 11,9 sobre un techo de 10,
+correcta 32,3 sobre 30 y muy buena 54,7 bajo un suelo de 55). La fila del acto final es la más estrecha y
+la razón es estructural: la tabla pide 25 puntos de escalón entre "correcta" y "buena" y 20 entre "buena"
+y "muy buena", y el catálogo produce 12 y 11. Bajar la calidad del jefe sube las cuatro celdas a la vez,
+así que no se puede arreglar con el dial. Queda documentado en vez de forzado.
+
+**AA-19. La banda de victoria de la run pasa a 20-30%**, en §10 y en `FullRunMetrics.RunWinRateMin/Max`,
+con el argumento de la ADR 0040: el producto de las tres celdas "muy buena" da 29,5%, así que el techo
+antiguo estaba por encima de lo que la propia curva permite aunque se juegue perfecto.
+
+### 18.6. Las tres doctrinas, remedidas (ADR 0037)
+
+**AA-20. La contextual coloca; las puras, no.** Con el equipamiento convertido en atributos, *"¿a quién
+le doy las botas?"* se responde mirando la plantilla, y ahí es donde las tres doctrinas dejan de
+parecerse. La contextual compra el **par (objeto, portador)** que mejor encaja y las dos puras siguen
+comprando por rareza y precio y se lo dan al titular de más valor que no lleve nada. El encaje no se
+escribe a mano: es `tuning.generation.positionShare`, el mismo reparto con el que el generador decide en
+qué gasta su presupuesto un portero o un delantero, así que el maldito cae solo donde su contrapartida no
+duele.
+
+**AA-21. Y aun así el criterio de la ADR 0037 no se cumple.** Lote de referencia: **500 runs por
+doctrina, semilla 1**, cinco razas repartidas por igual (1.500 runs, 17.967 partidos, 99 s):
+
+| Doctrina | Run | Compras/mercado | Oro sobrante |
+|---|---|---|---|
+| **Contextual** | **17,8** | 1,66 | 18,8% |
+| **Gastadora** | **12,2** | 1,83 | 17,0% |
+| **Ahorradora** | **17,8** | 1,26 | 25,8% |
+
+La contextual gana a la gastadora por **+5,6 puntos** y **empata exactamente con la ahorradora**. Contra
+el diagnóstico del paquete Z —"la causa es que el equipamiento no vale nada"— aplicar la ADR 0036 y la
+0038 **no ha bastado**, y la razón es la que el propio experimento de AA-8 destapó: **el precio se deriva
+del valor, así que cuanto más vale un objeto más cuesta, y la ventaja de saber colocarlo se la come el
+precio de comprarlo**. Con los precios de objeto a la mitad (120/260/520 en vez de 240/510/1020) la
+contextual llega a +5,0 sobre la mejor de las puras y la tasa de victoria de la run sube a 21,0; con los
+precios altos, la ahorradora vuelve a empatar. Y la medida tiene ruido de seed: con la misma
+configuración, la ventaja va de **+5,0 (semilla 1)** a **−3,0 (semilla 7)** en lotes de 200 runs.
+
+**El diagnóstico, para la próxima decisión**: la palanca que separa a la contextual no es el
+equipamiento, es la **colocación**, y la colocación solo paga si se puede comprar. Mientras el objeto
+cueste una fracción grande del oro de un mercado, la ahorradora —que compra la mitad de veces pero
+siempre algo caro— rinde lo mismo. Las dos salidas que no rompen nada más son bajar el precio del
+equipamiento hasta que el once se pueda equipar entero antes del acto 3 (y aceptar que la fracción
+asequible del surtido suba por encima de 35%, que ya está fuera), o darle a la contextual la
+**transferencia** de objetos entre jugadores, que hoy no usa: es la decisión que la ADR 0036 declara
+como la razón de ser del formato y la política ni la considera.
+
+**AA-22. Las métricas de la run y de escasez, con todo aplicado** (500 runs por doctrina, semilla 1):
+
+| Métrica | Rango | Antes (paquete Z) | Ahora | Estado |
+|---|---|---|---|---|
+| Tasa de victoria de la run (contextual) | 20-30% | 13,0 | **17,8** | OUT |
+| Derrotas por bajar de 5 jugadores | < 35% | 0,0 | **0,0** | IN |
+| Duración de una run completa | 18-22 | 20,0 | **20,0** | IN |
+| Muertes por run | 0,5-2 | 0,00 | **0,02** | OUT |
+| Sumideros que paga el oro de un acto | 2-3, nunca 4 | 2,40 | **2,48** (los cuatro: 0%) | IN |
+| Fracción del surtido asequible | 20-35% | 40,5 | **44,1** | OUT |
+| Compras por visita al mercado | 1-2 | 1,43 | **1,66** | IN |
+| Oro sobrante al terminar la run | < 15% | 23,2 | **18,8** | OUT |
+| Runs que llegan a un mercado sin poder comprar | 10-25% | 49,2 | **45,0** | OUT |
+| Ventaja de la contextual sobre las dos puras | ≥ 8 puntos | 0,8 | **0,0** | OUT |
+| *Lesiones propias por partido* | *—* | *0,04* | ***0,10*** | *INFO* |
+| *Lesiones graves por run* | *—* | *0,20* | ***0,62*** | *INFO* |
+| *Oro gastado en clínica por run* | *—* | *0* | ***60*** | *INFO* |
+| *Objetos en la plantilla al terminar* | *—* | *3,55* | ***4,08*** | *INFO* |
+
+Cinco de las diez siguen fuera. Mejoran la tasa de victoria (+4,8), el oro sobrante (−4,4) y las visitas
+en blanco (−4,2); empeoran la fracción asequible (+3,6, por el abaratamiento del equipamiento que la
+ventaja de la contextual exigía) y la ventaja de la contextual (−0,8, dentro del ruido). Las dos que la
+ADR 0041 prometía —clínica y mercenarios como sumideros— se cumplen **a medias**: la clínica está viva
+(60 de oro por run, 0,3 tratamientos), los mercenarios siguen sin usarse porque con trece jugadores nunca
+faltan cuerpos, que es un límite de la política y no de la economía.
+
+### Lo que este paquete deja abierto
+
+- **La ventaja de 8 puntos de la ADR 0037 sigue sin conseguirse**, y ya no se puede achacar al
+  equipamiento. Diagnóstico y dos salidas en AA-21.
+- **Las muertes por run** (0,02 contra 0,5-2). La vía 1 de RF-093 no puede producir ese orden de
+  magnitud; hace falta una decisión de diseño, no un ajuste.
+- **Los rivales escritos a mano tacklean poco y flojo** (AA-15): es lo que separa las lesiones del bucle
+  de run de las del lote de referencia, y se arregla en `data/rivals/`, no en `tuning.json`.
+- **La tabla de valor marginal por atributo hay que remedirla**: el motor ha cambiado, y ya se sabe que
+  sobrestima por ~1,6 cuando el bono va a un solo jugador (AA-8). De ella salen todos los precios de
+  objeto.
+- **Tres celdas del jefe final pasan por tolerancia** (AA-18): el catálogo no tiene con qué separar los
+  escalones superiores tanto como la ADR 0033 pide.
+- **La fracción asequible del surtido y las visitas en blanco siguen oponiéndose** (ya anotado en el
+  paquete Z) y ahora además compiten con la ventaja de la contextual, que pide equipamiento barato.
+- **Los legendarios de la ADR 0039** (personajes, desbloqueo por división, métrica de dificultad neta)
+  son fase 4 y necesitan arte: aquí solo se ha hecho el cambio de escala.

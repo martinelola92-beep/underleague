@@ -63,7 +63,7 @@ public sealed class RarityAndBossTests
     [Fact]
     public void CommonAtMaxLevelMatchesALegendaryAtLevelTwo()
     {
-        double rate = WinRate(NeutralBuild, MaxLevel, Rarity.Common, NeutralBuild, 2, Rarity.Legendary);
+        double rate = WinRate(NeutralBuild, MaxLevel, Rarity.Common, NeutralBuild, 2, Rarity.Rare);
         Assert.InRange(rate, 45.0, 55.0);
     }
 
@@ -75,7 +75,7 @@ public sealed class RarityAndBossTests
     [Fact]
     public void CommonAtMaxLevelLosesClearlyToALegendaryAtMaxLevel()
     {
-        double rate = WinRate(NeutralBuild, MaxLevel, Rarity.Common, NeutralBuild, MaxLevel, Rarity.Legendary);
+        double rate = WinRate(NeutralBuild, MaxLevel, Rarity.Common, NeutralBuild, MaxLevel, Rarity.Rare);
         Assert.InRange(rate, 0.0, 40.0);
     }
 
@@ -86,7 +86,7 @@ public sealed class RarityAndBossTests
     [Fact]
     public void ATeamWithoutLegendariesCanBeatTheFinalBoss()
     {
-        double rate = WinRate(PlayerBuild, MaxLevel, Rarity.Common, NeutralBuild, BossLevel, Rarity.Legendary);
+        double rate = WinRate(PlayerBuild, MaxLevel, Rarity.Common, NeutralBuild, BossLevel, Rarity.Rare);
         Assert.True(
             rate >= MinBossWinRate,
             $"un equipo sin legendarios gana al jefe final el {rate:F2}% de las veces, por debajo del {MinBossWinRate}% "

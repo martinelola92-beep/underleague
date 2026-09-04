@@ -1,0 +1,14 @@
+{
+  "id": "bloodbanner",
+  "name": {
+    "es": "Estandarte de sangre",
+    "en": "Bloodbanner"
+  },
+  "archetype": "restricted",
+  "race": "Orc",
+  "attributeBonus": {
+    "strength": 10,
+    "stamina": 10,
+    "technique": 10
+  }
+}

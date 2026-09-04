@@ -1,0 +1,13 @@
+{
+  "id": "duelists_gloves",
+  "name": {
+    "es": "Guantes del duelista",
+    "en": "Duelist's Gloves"
+  },
+  "rarity": "uncommon",
+  "archetype": "normal",
+  "attributeBonus": {
+    "speed": 10,
+    "technique": 10
+  }
+}

@@ -50,7 +50,7 @@
     {
       "name": "Ivo Cano",
       "position": "Midfielder",
-      "rarity": "legendary",
+      "rarity": "rare",
       "level": 5,
       "attributes": {
         "strength": 67,
@@ -95,7 +95,7 @@
     {
       "name": "Marco Mora",
       "position": "Forward",
-      "rarity": "rare",
+      "rarity": "uncommon",
       "level": 5,
       "attributes": {
         "strength": 69,

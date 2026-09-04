@@ -1,0 +1,14 @@
+{
+  "id": "forgefire_ring",
+  "name": {
+    "es": "Anillo de fuego de forja",
+    "en": "Forgefire Ring"
+  },
+  "archetype": "restricted",
+  "race": "Dwarf",
+  "attributeBonus": {
+    "strength": 10,
+    "stamina": 10,
+    "leash": 10
+  }
+}

@@ -36,6 +36,24 @@ public sealed record BuildConfig(
     /// <summary>Número de titulares de un equipo (GK, DEF, DEF, MID, MID, MID, FWD).</summary>
     public const int StarterCount = 7;
 
+    /// <summary>
+    /// La misma build con las piezas que caben en ese punto de la run (ADR 0040): se derivan de la
+    /// completa quitando perks por rondas, objetos por slot y acotando los contadores, nunca
+    /// escribiéndolas a mano.
+    /// </summary>
+    public BuildConfig At(Underleague.Sim.Analysis.BuildDensity density)
+    {
+        ArgumentNullException.ThrowIfNull(density);
+        return density.IsFull
+            ? this
+            : this with
+            {
+                Perks = density.TrimPerks(Perks, p => p.Slot),
+                Items = density.TrimItems(Items),
+                Counters = density.CapCounters(Counters),
+            };
+    }
+
     public static BuildConfig Load(string path) => Parse(path, File.ReadAllText(path));
 
     public static BuildConfig Parse(string path, string content)
@@ -383,8 +401,13 @@ public sealed record BuildGroups(
     IReadOnlyList<string> Bad,
     IReadOnlyList<string> Random,
     IReadOnlyDictionary<string, string> BaselineByRace,
-    IReadOnlyDictionary<string, IReadOnlyList<string>> QualityLevels)
+    IReadOnlyDictionary<string, IReadOnlyList<string>> QualityLevels,
+    IReadOnlyDictionary<(int Act, string Level), Underleague.Sim.Analysis.BuildDensity> ActDensity)
 {
+    /// <summary>Densidad con la que se mide esa celda (ADR 0040); la completa si el fichero no la declara.</summary>
+    public Underleague.Sim.Analysis.BuildDensity DensityFor(int act, string level) =>
+        ActDensity.TryGetValue((act, level), out var density) ? density : Underleague.Sim.Analysis.BuildDensity.Full;
+
     public static BuildGroups Load(string path) => Parse(path, File.ReadAllText(path));
 
     public static BuildGroups Parse(string path, string content)
@@ -422,7 +445,28 @@ public sealed record BuildGroups(
             }
         }
 
-        return new BuildGroups(coherent, bad, random, baselineByRace, qualityLevels);
+        // ADR 0040: cada puerta se mide con la densidad de build que se alcanza en su acto.
+        var actDensity = new Dictionary<(int, string), Underleague.Sim.Analysis.BuildDensity>();
+        if (root.TryGetProperty("actDensity", out var densityElement) && densityElement.ValueKind == JsonValueKind.Object)
+        {
+            foreach (var actProperty in densityElement.EnumerateObject())
+            {
+                if (!int.TryParse(actProperty.Name, out int act))
+                {
+                    continue;
+                }
+
+                foreach (var levelProperty in actProperty.Value.EnumerateObject())
+                {
+                    actDensity[(act, levelProperty.Name)] = new Underleague.Sim.Analysis.BuildDensity(
+                        levelProperty.Value.GetProperty("perks").GetInt32(),
+                        levelProperty.Value.GetProperty("items").GetInt32(),
+                        levelProperty.Value.GetProperty("counterCap").GetInt32());
+                }
+            }
+        }
+
+        return new BuildGroups(coherent, bad, random, baselineByRace, qualityLevels, actDensity);
     }
 
     /// <summary>

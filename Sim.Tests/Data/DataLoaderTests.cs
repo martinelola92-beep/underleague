@@ -104,14 +104,14 @@ public class DataLoaderTests
         var generation = catalog.Tuning.Generation;
 
         Assert.Equal(250, generation.BudgetByRarity.Common);
-        Assert.Equal(275, generation.BudgetByRarity.Rare);
-        Assert.Equal(300, generation.BudgetByRarity.Legendary);
+        Assert.Equal(275, generation.BudgetByRarity.Uncommon);
+        Assert.Equal(300, generation.BudgetByRarity.Rare);
         Assert.Equal(8, generation.BudgetPerLevel);
         Assert.Equal(25, generation.AttributeFloor);
         Assert.Equal(92, generation.AttributeCap);
         Assert.Equal(40, generation.RangeByRarity.Common.Min);
         Assert.Equal(70, generation.RangeByRarity.Common.Max);
-        Assert.Equal(86, generation.RangeByRarity.Legendary.Max);
+        Assert.Equal(86, generation.RangeByRarity.Rare.Max);
         Assert.Equal(100, generation.PositionShare.Goalkeeper.Strength + generation.PositionShare.Goalkeeper.Speed
             + generation.PositionShare.Goalkeeper.Technique + generation.PositionShare.Goalkeeper.Stamina + generation.PositionShare.Goalkeeper.Leash);
         Assert.Equal(40, generation.PositionFloors.Defender[AttributeKind.Strength]);
@@ -144,7 +144,7 @@ public class DataLoaderTests
         var generation = catalog.Tuning.Generation;
 
         int commonLevel8 = generation.BudgetByRarity.Of(Rarity.Common) + generation.BudgetPerLevel * (8 - 1);
-        int legendaryLevel2 = generation.BudgetByRarity.Of(Rarity.Legendary) + generation.BudgetPerLevel * (2 - 1);
+        int legendaryLevel2 = generation.BudgetByRarity.Of(Rarity.Rare) + generation.BudgetPerLevel * (2 - 1);
 
         Assert.True(Math.Abs(commonLevel8 - legendaryLevel2) < 5, $"{commonLevel8} vs {legendaryLevel2}");
     }

@@ -1,0 +1,13 @@
+{
+  "id": "chipped_blade",
+  "name": {
+    "es": "Hoja mellada",
+    "en": "Chipped Blade"
+  },
+  "rarity": "common",
+  "archetype": "fragile",
+  "attributeBonus": {
+    "strength": 10
+  },
+  "breakChancePercent": 30
+}

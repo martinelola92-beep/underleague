@@ -148,7 +148,15 @@ public static class RewardSystem
 
         if (wantsPerk && perkPool.Count > 0)
         {
-            return new PerkRewardOption(perkPool[rng.Range(0, perkPool.Count)].Id);
+            // ADR 0038: el peso del perk en el pool baja con su valor medido. Es la palanca de la vía
+            // gratuita, la que el precio no puede tocar (RF-071).
+            var weights = new List<int>(perkPool.Count);
+            for (int i = 0; i < perkPool.Count; i++)
+            {
+                weights.Add(economy.PerkValues.WeightOf(perkPool[i].Id));
+            }
+
+            return new PerkRewardOption(perkPool[WeightedPick.Index(ref rng, weights)].Id);
         }
 
         if (wantsPlayer || wantsPerk)
@@ -157,7 +165,16 @@ public static class RewardSystem
             return new PlayerRewardOption(player);
         }
 
-        var item = items.All[rng.Range(0, items.All.Count)];
+        // Solo los universales y los restringidos de la raza del club (ADR 0036); el frágil sale más a
+        // menudo, que es la otra mitad de su compensación.
+        var itemPool = items.OfferableTo(state.ClubRace);
+        var itemWeights = new List<int>(itemPool.Count);
+        for (int i = 0; i < itemPool.Count; i++)
+        {
+            itemWeights.Add(ItemPricing.OfferWeight(itemPool[i], items.Scale));
+        }
+
+        var item = itemPool[WeightedPick.Index(ref rng, itemWeights)];
         return new ItemRewardOption(item.Id);
     }
 }

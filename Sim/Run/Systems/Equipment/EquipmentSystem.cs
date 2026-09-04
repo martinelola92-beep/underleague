@@ -1,4 +1,5 @@
 using Underleague.Sim.Model;
+using Underleague.Sim.Random;
 using Underleague.Sim.Run.Systems.Economy;
 using Underleague.Sim.Run.Systems.Items;
 
@@ -21,8 +22,8 @@ namespace Underleague.Sim.Run.Systems.Equipment;
 /// </summary>
 public static class EquipmentSystem
 {
-    /// <summary>Contador del jugador: partidos jugados con el objeto frágil actual equipado (RF-077).</summary>
-    public const string FragileUsesCounter = "item_uses";
+    /// <summary>Contador de run: objetos frágiles rotos, para el informe post-partido y para /Balance (RF-077).</summary>
+    public const string ItemsBrokenCounter = "itemsBroken";
 
     public static RunState Apply(RunState state, TransferItem decision, EconomyConfig economy, ItemCatalog items)
     {
@@ -66,15 +67,26 @@ public static class EquipmentSystem
     }
 
     /// <summary>
-    /// Objeto frágil que se rompe tras N partidos jugados o si el portador se lesiona (RF-077). Se llama
-    /// desde <see cref="StandardRunSystems.AfterMatch"/> para cada partido resuelto, ganado o perdido:
-    /// solo mira a los titulares (<c>summary.PlayedPlayerIds</c>), porque un suplente no ha "usado" nada.
+    /// Rotura de los objetos frágiles (RF-077, ADR 0036). Se llama desde
+    /// <see cref="StandardRunSystems.AfterMatch"/> para cada partido resuelto, ganado o perdido, y solo
+    /// mira a los titulares (<c>summary.PlayedPlayerIds</c>): un suplente no ha usado nada.
+    ///
+    /// <para><b>La tirada se resuelve al TERMINAR el partido, nunca durante</b> (ADR 0036): así no altera
+    /// en secreto un partido en curso y el informe post-partido puede anunciarla. La probabilidad está a
+    /// la vista en la ficha del objeto desde antes de equiparlo (<see cref="ItemDescriptions"/>), que es
+    /// lo que RF-012d exige y lo que separa esto del "azar post-acción negativo" del §8.</para>
+    ///
+    /// <para>El dado sale del flujo de recompensas del nodo (RT-022): cambiar una rotura no puede alterar
+    /// un partido con la misma semilla.</para>
     /// </summary>
     public static RunState ProcessFragileItems(RunState state, RunMatchSummary summary, ItemCatalog items)
     {
         ArgumentNullException.ThrowIfNull(state);
         ArgumentNullException.ThrowIfNull(summary);
         ArgumentNullException.ThrowIfNull(items);
+
+        var rng = OfferStream.For(state.Seed, summary.NodeId, rerollCount: FragileRollStream);
+        int broken = 0;
 
         for (int i = 0; i < summary.PlayedPlayerIds.Count; i++)
         {
@@ -90,19 +102,23 @@ public static class EquipmentSystem
                 continue;
             }
 
-            // W-10: un titular que termina el partido con un estado físico distinto de sano ha sido
-            // lesionado en ESTE partido (las leves que ya arrastraba se resetean a sano antes de aplicar
-            // las lesiones nuevas). Es la señal que RF-077 pide: "si el portador se lesiona".
-            bool injuredThisMatch = player.PhysicalState != PhysicalState.Healthy;
-            int uses = player.Counter(FragileUsesCounter) + 1;
-
-            state = state.WithPlayer(injuredThisMatch || uses >= item.UsesLimit
-                ? ClearItem(player)
-                : player.WithCounter(FragileUsesCounter, uses));
+            // El dado se tira SIEMPRE por cada frágil alineado, se rompa o no: si solo se tirara cuando
+            // se rompe, el flujo de RNG dependería del resultado y dejaría de ser reproducible.
+            if (rng.Range(0, 100) < item.BreakChancePercent)
+            {
+                state = state.WithPlayer(ClearItem(player));
+                broken++;
+            }
         }
 
-        return state;
+        return broken == 0 ? state : state.WithCounter(ItemsBrokenCounter, state.Counter(ItemsBrokenCounter) + broken);
     }
+
+    /// <summary>
+    /// Desplazamiento del flujo de recompensas del nodo con el que se tiran las roturas. Está por encima
+    /// de cualquier número de rerolls posible (RF-071b: uno por nodo) para no colisionar con el surtido.
+    /// </summary>
+    private const int FragileRollStream = 5000;
 
     /// <summary>
     /// Asigna un objeto recién adquirido (comprado en el mercado o elegido como recompensa) a un
@@ -126,34 +142,15 @@ public static class EquipmentSystem
         return displaced is null ? state : SellItemGold(state, displaced, economy, items);
     }
 
-    private static RunPlayer ClearItem(RunPlayer player) => player with
-    {
-        Item = null,
-        Counters = WithoutFragileCounter(player.Counters),
-    };
+    private static RunPlayer ClearItem(RunPlayer player) => player with { Item = null };
 
-    private static RunPlayer AssignItem(RunPlayer player, string itemId) => player with
-    {
-        Item = itemId,
-        Counters = WithoutFragileCounter(player.Counters),
-    };
-
-    private static IReadOnlyDictionary<string, int> WithoutFragileCounter(IReadOnlyDictionary<string, int> counters)
-    {
-        if (!counters.ContainsKey(FragileUsesCounter))
-        {
-            return counters;
-        }
-
-        var copy = new Dictionary<string, int>(counters, StringComparer.Ordinal);
-        copy.Remove(FragileUsesCounter);
-        return new SortedDictionary<string, int>(copy, StringComparer.Ordinal);
-    }
+    private static RunPlayer AssignItem(RunPlayer player, string itemId) => player with { Item = itemId };
 
     private static RunState SellItemGold(RunState state, string itemId, EconomyConfig economy, ItemCatalog items)
     {
+        // El precio de venta sale del VALOR del objeto (ADR 0038), no de su rareza: vender un +10 de
+        // fuerza tiene que devolver más que vender un +10 de resistencia, igual que comprarlo cuesta más.
         var item = items.Get(itemId);
-        int price = economy.Market.ItemPrice.Of(item.Rarity) * economy.Market.ItemSellFractionPercent / 100;
-        return state.AddGold(price);
+        return state.AddGold(ItemPricing.SalePrice(item, items.Scale, economy.Market));
     }
 }

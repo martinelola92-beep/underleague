@@ -1,0 +1,14 @@
+{
+  "id": "frayed_banner",
+  "name": {
+    "es": "Estandarte deshilachado",
+    "en": "Frayed Banner"
+  },
+  "rarity": "uncommon",
+  "archetype": "fragile",
+  "attributeBonus": {
+    "stamina": 10,
+    "leash": 10
+  },
+  "breakChancePercent": 25
+}

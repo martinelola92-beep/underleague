@@ -1,0 +1,14 @@
+{
+  "id": "grimhold_anvil",
+  "name": {
+    "es": "Yunque de Grimhold",
+    "en": "Grimhold Anvil"
+  },
+  "archetype": "restricted",
+  "race": "Dwarf",
+  "attributeBonus": {
+    "strength": 10,
+    "stamina": 10,
+    "technique": 10
+  }
+}

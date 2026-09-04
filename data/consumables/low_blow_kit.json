@@ -1,7 +1,7 @@
 {
   "id": "low_blow_kit",
   "name": { "es": "Kit de golpe bajo", "en": "Low Blow Kit" },
-  "rarity": "rare",
+  "rarity": "uncommon",
   "family": "dirty",
   "effects": [
     { "type": "modifyAttribute", "attribute": "strength", "value": 12 },

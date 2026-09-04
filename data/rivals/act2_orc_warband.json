@@ -24,7 +24,7 @@
     {
       "name": "Gashk Tragaclavos",
       "position": "Defender",
-      "rarity": "rare",
+      "rarity": "uncommon",
       "level": 3,
       "attributes": {
         "strength": 79,
@@ -95,7 +95,7 @@
     {
       "name": "Snaga Muerdehierro",
       "position": "Forward",
-      "rarity": "rare",
+      "rarity": "uncommon",
       "level": 3,
       "attributes": {
         "strength": 71,

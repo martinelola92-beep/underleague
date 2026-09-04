@@ -865,9 +865,11 @@ internal sealed class MatchEngine : IPerkWorld
     /// </summary>
     internal int InterceptChance(MatchPlayer player, MatchPlayer passer)
     {
+        // ADR 0041: la técnica del que intercepta se mide contra la del que pasa, no contra el 50 del
+        // nivel 1. Lo que decide una intercepción es quién lee mejor a quién, no cuánto han subido los dos.
         var pass = _tuning.Pass;
         return pass.InterceptBaseChance
-            + (pass.InterceptTechniqueFactor * (player.Technique - 50))
+            + (pass.InterceptTechniqueFactor * (player.Technique - passer.Technique))
             + Probability(player, ProbabilityKind.Intercept)
             - Probability(passer, ProbabilityKind.InterceptEvasion);
     }
@@ -1296,10 +1298,16 @@ internal sealed class MatchEngine : IPerkWorld
 
             int decayFactor = Math.Clamp((100 - goalkeeper.Stamina) * 100 / 50, 20, 200);
             int decay = save.ConsecutiveShotDecayPercent * goalkeeper.ConsecutiveSaves * decayFactor / 100;
+            // ADR 0041: el portero se mide contra el rematador, no contra el 50. El primer término es el
+            // duelo (su atributo relevante frente a la técnica del que remata) y el segundo lo que este
+            // remate concreto tuvo de bueno o de malo respecto del disparo medio (qualityPivot):
+            // distancia, presión y penalti. Queda un resto de deriva por nivel —la calidad del disparo
+            // sigue subiendo con los atributos del rematador—, pero es de un punto y pico a nivel 8
+            // frente a los cuatro que tenía la fórmula absoluta, y en el sentido contrario.
             int savePercent = Math.Clamp(
                 save.BasePercent
-                + ((relevant - 50) * save.AttributeWeightPercent / 50)
-                - ((_ball.ShotQuality - 50) * save.QualityWeight / 100)
+                + ((relevant - shooter.Technique) * save.AttributeWeightPercent / 50)
+                - ((_ball.ShotQuality - save.QualityPivot) * save.QualityWeight / 100)
                 - decay,
                 5,
                 95);
@@ -1398,10 +1406,12 @@ internal sealed class MatchEngine : IPerkWorld
         carrier.DribbleDuelCooldown = _tuning.States.DribbleDuelCooldownTicks;
         defender.DribbleDuelCooldown = _tuning.States.DribbleDuelCooldownTicks;
 
+        // ADR 0041: la técnica del conductor contra la cobertura del defensor —velocidad y fuerza, con el
+        // reparto de defenderSpeedSharePercent—, no las tres contra el 50.
+        int guard = ((dribble.DefenderSpeedSharePercent * defender.Speed)
+            + ((100 - dribble.DefenderSpeedSharePercent) * defender.Strength)) / 100;
         int win = dribble.BaseWin
-            + (dribble.AttackerTechniqueFactor * (carrier.Technique - 50))
-            - (dribble.DefenderSpeedFactor * (defender.Speed - 50))
-            - (dribble.DefenderStrengthFactor * (defender.Strength - 50))
+            + (dribble.AttackerTechniqueFactor * (carrier.Technique - guard))
             + Probability(carrier, ProbabilityKind.Dribble);
 
         if (_rng.Chance(win))
@@ -1441,8 +1451,11 @@ internal sealed class MatchEngine : IPerkWorld
         var tackle = _tuning.Tackle;
         int win = TackleWinChance(tackler, carrier);
 
+        // ADR 0041: la falta también es relativa. Una entrada es sucia cuando el que entra es mucho más
+        // fuerte que el que la recibe, no cuando es fuerte en abstracto: contra el 50 fijo, un equipo de
+        // nivel 8 cometía faltas todo el rato aunque su rival fuese igual de grande.
         int foulChance = tackle.FoulBase
-            + (tackle.FoulStrengthFactor * (tackler.Strength - 50))
+            + (tackle.FoulStrengthFactor * (tackler.Strength - carrier.Strength))
             + (tackler.FoulChanceBonus * 100)
             + (tackler.HardTackleBonus * 100)
             + BiasRollShift(_tuning.Referee.BiasFoulShiftPer10, tackler.Team)
@@ -1489,11 +1502,14 @@ internal sealed class MatchEngine : IPerkWorld
     /// </summary>
     internal int TackleWinChance(MatchPlayer tackler, MatchPlayer carrier)
     {
+        // ADR 0041: la presión del que entra —fuerza y velocidad, con el reparto que fija
+        // strengthSharePercent— se mide contra la técnica del conductor, no los tres contra el 50.
+        // Subir de nivel a los dos no cambia nada; lo que cambia el duelo es la diferencia.
         var tackle = _tuning.Tackle;
+        int pressure = ((tackle.StrengthSharePercent * tackler.Strength)
+            + ((100 - tackle.StrengthSharePercent) * tackler.Speed)) / 100;
         return tackle.BaseWin
-            + (tackle.StrengthFactor * (tackler.Strength - 50))
-            + (tackle.SpeedFactor * (tackler.Speed - 50))
-            - (tackle.CarrierTechniqueFactor * (carrier.Technique - 50))
+            + (tackle.PressureFactor * (pressure - carrier.Technique))
             + Probability(tackler, ProbabilityKind.Tackle)
             - Probability(carrier, ProbabilityKind.TackleEvasion);
     }
@@ -1574,7 +1590,7 @@ internal sealed class MatchEngine : IPerkWorld
 
         bool hard = tackler.HasTrait(Trait.Aggressive)
             || tackler.HasTrait(Trait.Dirty)
-            || tackler.Strength * 100 >= tackle.HardTackleThreshold;
+            || (tackler.Strength - carrier.Strength) * 100 >= tackle.HardTackleThreshold;
 
         ShiftBiasAgainst(
             tackler.Team,
@@ -1710,11 +1726,13 @@ internal sealed class MatchEngine : IPerkWorld
 
     private void ResolveInjury(MatchPlayer tackler, MatchPlayer victim, bool isFoul)
     {
+        // ADR 0041: la fuerza del que entra contra la resistencia del que la recibe, sin ninguna
+        // constante de por medio. Un nivel 8 que entra a otro nivel 8 lesiona aproximadamente lo mismo
+        // que un nivel 1 contra otro nivel 1; lo que mueve el riesgo es la diferencia entre los dos.
         var injury = _tuning.Injury;
         int chance = injury.OnTackleBase
             + (isFoul ? injury.OnFoulBase : 0)
-            + (injury.AttackerStrengthFactor * (tackler.Strength - 50))
-            - (injury.VictimStaminaResistFactor * (victim.Stamina - 50))
+            + (injury.RelativeFactor * (tackler.Strength - victim.Stamina))
             + (tackler.InjuryChanceBonus * 100)
             - (victim.InjuryResistanceBonus * 100)
             + Probability(tackler, ProbabilityKind.Injure)

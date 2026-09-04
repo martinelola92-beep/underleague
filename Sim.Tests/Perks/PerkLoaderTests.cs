@@ -50,12 +50,12 @@ public sealed class PerkLoaderTests
             "bloodlust",
             "TACKLE",
             """[{ "type": "modifyAttribute", "target": "actor", "attribute": "strength", "value": 3, "duration": "play" }]""",
-            rarity: "rare",
+            rarity: "uncommon",
             kind: "conditional",
             condition: "hasTag(actor, 'Brute') && bias() < 0",
             limit: """{ "per": "match", "times": 2 }"""));
 
-        Assert.Equal(Rarity.Rare, perk.Rarity);
+        Assert.Equal(Rarity.Uncommon, perk.Rarity);
         Assert.Equal(PerkKind.Conditional, perk.Kind);
         Assert.Equal(EventType.Tackle, perk.Trigger);
         Assert.Equal(PerkScope.Actor, perk.Scope);

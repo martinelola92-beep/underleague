@@ -1,0 +1,14 @@
+{
+  "id": "academy_whistle",
+  "name": {
+    "es": "Silbato de la academia",
+    "en": "Academy Whistle"
+  },
+  "archetype": "restricted",
+  "race": "Human",
+  "attributeBonus": {
+    "technique": 10,
+    "stamina": 10,
+    "leash": 10
+  }
+}

@@ -704,12 +704,11 @@ public static class DataLoader
 
     private static DribbleTuning ParseDribble(Json node)
     {
-        node.EnsureKnownKeys("baseWin", "attackerTechniqueFactor", "defenderSpeedFactor", "defenderStrengthFactor", "lostKnockdownTicks");
+        node.EnsureKnownKeys("baseWin", "attackerTechniqueFactor", "defenderSpeedSharePercent", "lostKnockdownTicks");
         return new DribbleTuning(
             node.Prop("baseWin").AsInt(),
             node.Prop("attackerTechniqueFactor").AsInt(),
-            node.Prop("defenderSpeedFactor").AsInt(),
-            node.Prop("defenderStrengthFactor").AsInt(),
+            node.Prop("defenderSpeedSharePercent").AsInt(),
             node.Prop("lostKnockdownTicks").AsInt());
     }
 
@@ -729,23 +728,23 @@ public static class DataLoader
 
     private static SaveTuning ParseSave(Json node)
     {
-        node.EnsureKnownKeys("basePercent", "closeRangeCells", "attributeWeightPercent", "consecutiveShotDecayPercent", "qualityWeight");
+        node.EnsureKnownKeys("basePercent", "closeRangeCells", "attributeWeightPercent", "consecutiveShotDecayPercent", "qualityWeight", "qualityPivot");
         return new SaveTuning(
             node.Prop("basePercent").AsInt(),
             node.Prop("closeRangeCells").AsInt(),
             node.Prop("attributeWeightPercent").AsInt(),
             node.Prop("consecutiveShotDecayPercent").AsInt(),
-            node.Prop("qualityWeight").AsInt());
+            node.Prop("qualityWeight").AsInt(),
+            node.Prop("qualityPivot").AsInt());
     }
 
     private static TackleTuning ParseTackle(Json node)
     {
-        node.EnsureKnownKeys("baseWin", "strengthFactor", "speedFactor", "carrierTechniqueFactor", "foulBase", "foulStrengthFactor", "hardTackleThreshold", "yellowCardBase", "redCardBase", "hardTackleYellowBonus", "hardTackleRedBonus", "secondYellowIsRed");
+        node.EnsureKnownKeys("baseWin", "pressureFactor", "strengthSharePercent", "foulBase", "foulStrengthFactor", "hardTackleThreshold", "yellowCardBase", "redCardBase", "hardTackleYellowBonus", "hardTackleRedBonus", "secondYellowIsRed");
         return new TackleTuning(
             node.Prop("baseWin").AsInt(),
-            node.Prop("strengthFactor").AsInt(),
-            node.Prop("speedFactor").AsInt(),
-            node.Prop("carrierTechniqueFactor").AsInt(),
+            node.Prop("pressureFactor").AsInt(),
+            node.Prop("strengthSharePercent").AsInt(),
             node.Prop("foulBase").AsInt(),
             node.Prop("foulStrengthFactor").AsInt(),
             node.Prop("hardTackleThreshold").AsInt(),
@@ -758,12 +757,11 @@ public static class DataLoader
 
     private static InjuryTuning ParseInjury(Json node)
     {
-        node.EnsureKnownKeys("onTackleBase", "onFoulBase", "attackerStrengthFactor", "victimStaminaResistFactor", "severeShare");
+        node.EnsureKnownKeys("onTackleBase", "onFoulBase", "relativeFactor", "severeShare");
         return new InjuryTuning(
             node.Prop("onTackleBase").AsInt(),
             node.Prop("onFoulBase").AsInt(),
-            node.Prop("attackerStrengthFactor").AsInt(),
-            node.Prop("victimStaminaResistFactor").AsInt(),
+            node.Prop("relativeFactor").AsInt(),
             node.Prop("severeShare").AsInt());
     }
 
@@ -822,9 +820,10 @@ public static class DataLoader
             "positionShare", "positionFloors", "traitCountWeights", "goalkeeperTraitChance");
 
         var budgetNode = node.Prop("budgetByRarity");
-        budgetNode.EnsureKnownKeys("common", "rare", "legendary");
+        budgetNode.EnsureKnownKeys("common", "uncommon", "rare", "legendary");
         var budgetByRarity = new RarityBudgetTable(
             budgetNode.Prop("common").AsInt(),
+            budgetNode.Prop("uncommon").AsInt(),
             budgetNode.Prop("rare").AsInt(),
             budgetNode.Prop("legendary").AsInt());
 
@@ -833,9 +832,10 @@ public static class DataLoader
         int attributeCap = node.Prop("attributeCap").AsInt();
 
         var rangeNode = node.Prop("rangeByRarity");
-        rangeNode.EnsureKnownKeys("common", "rare", "legendary");
+        rangeNode.EnsureKnownKeys("common", "uncommon", "rare", "legendary");
         var rangeByRarity = new RarityRangeTable(
             ParseAttributeRange(rangeNode.Prop("common")),
+            ParseAttributeRange(rangeNode.Prop("uncommon")),
             ParseAttributeRange(rangeNode.Prop("rare")),
             ParseAttributeRange(rangeNode.Prop("legendary")));
 
