@@ -21,6 +21,8 @@ Dos familias distintas y explícitas:
 
 Ambas conviven: hay perks de casilla inicial y perks de proximidad, y el catálogo debe dejar claro cuál es cuál en su descripción generada.
 
+**Número de vínculos acotado por el perk.** Con radio Chebyshev ≤ 2 sobre un campo de 5 filas, casi cualquier formación razonable produce vínculos: la alineación por defecto ya tiene seis pares adyacentes. Si el perk vinculase a *todos* los que cumplen el radio, el bonus sería gratis y la colocación dejaría de ser una decisión. Por eso cada perk declara **a cuántos vincula** (`links: 2` por defecto) y se queda con los K más cercanos, con desempate determinista por distancia y luego por id ascendente. Así la pregunta que se le hace al jugador no es "¿tengo a alguien al lado?" (siempre sí) sino "¿a quién quiero tener al lado?", que es una decisión real y además es exactamente la forma del ejemplo que motivó esta decisión: *mejora el pase hacia esos dos jugadores concretos*.
+
 El radio de la relación estática es el de la ADR 0011 (Chebyshev ≤ 2 entre casillas-hogar): esa decisión sigue vigente y define **qué pares se vinculan**; lo que esta ADR cambia es **cuándo se evalúa** (una vez, al construir el partido) y **sobre qué actúa** (el par, no el portador aislado).
 
 ## Alternativas descartadas
