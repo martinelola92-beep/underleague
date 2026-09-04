@@ -27,6 +27,32 @@ public sealed class Options
 
     public bool Quiet { get; private set; }
 
+    /// <summary>
+    /// Null salvo que se pase --builds: lista de ids de build (docs/fase1-diseno.md §8) para los modos
+    /// matriz (--vs) y campaña (--campaign). "all" en la línea de comandos se expande a todas las builds
+    /// de data/balance/builds/ (Program.cs), así que aquí nunca vale ["all"] literalmente salvo que el
+    /// usuario tenga una build llamada exactamente así.
+    /// </summary>
+    public IReadOnlyList<string>? Builds { get; private set; }
+
+    /// <summary>
+    /// Null salvo que se pase --vs: id de la build rival única del modo matriz. Sin --vs (null) con
+    /// --builds dado, el modo matriz es todos-contra-todos entre las builds listadas (§8).
+    /// </summary>
+    public string? Vs { get; private set; }
+
+    /// <summary>--home-away: cada emparejamiento (matriz o campaña) se juega también con los equipos invertidos (§8).</summary>
+    public bool HomeAway { get; private set; }
+
+    /// <summary>Null salvo que se pase --campaign N: activa el modo campaña con N partidos consecutivos por build (§8).</summary>
+    public int? Campaign { get; private set; }
+
+    /// <summary>Null salvo que se pase --describe [es|en]: activa el modo catálogo, con el idioma pedido (por defecto "es").</summary>
+    public string? Describe { get; private set; }
+
+    /// <summary>True si --runs se pasó explícitamente en la línea de comandos (el modo campaña usa un valor por defecto distinto, 60, cuando no se pasó).</summary>
+    public bool RunsExplicit { get; private set; }
+
     /// <summary>Parsea argv. Lanza ArgumentException con un mensaje claro ante cualquier opción mal formada o desconocida.</summary>
     public static Options Parse(string[] args)
     {
@@ -45,6 +71,46 @@ public sealed class Options
                         throw new ArgumentException("--runs debe ser mayor que cero");
                     }
 
+                    options.RunsExplicit = true;
+                    break;
+
+                case "--builds":
+                    string buildsValue = NextValue(args, ref i, arg);
+                    options.Builds = buildsValue
+                        .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+                    if (options.Builds.Count == 0)
+                    {
+                        throw new ArgumentException("--builds requiere al menos un id de build");
+                    }
+
+                    break;
+
+                case "--vs":
+                    options.Vs = NextValue(args, ref i, arg);
+                    break;
+
+                case "--home-away":
+                    options.HomeAway = true;
+                    break;
+
+                case "--campaign":
+                    options.Campaign = ParseInt(arg, NextValue(args, ref i, arg));
+                    if (options.Campaign <= 0)
+                    {
+                        throw new ArgumentException("--campaign debe ser mayor que cero");
+                    }
+
+                    break;
+
+                case "--describe":
+                    string language = "es";
+                    if (i + 1 < args.Length && (args[i + 1] == "es" || args[i + 1] == "en"))
+                    {
+                        i++;
+                        language = args[i];
+                    }
+
+                    options.Describe = language;
                     break;
 
                 case "--seed":

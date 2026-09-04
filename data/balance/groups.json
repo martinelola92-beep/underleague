@@ -1,0 +1,10 @@
+{
+  "coherent": ["orc_violence", "elf_tiki_taka", "human_wall", "human_counter", "orc_mob"],
+  "bad": ["orc_misplaced", "elf_brawler", "human_scattered"],
+  "random": ["human_random"],
+  "baselineByRace": {
+    "Human": "human_none",
+    "Orc": "orc_none",
+    "Elf": "elf_none"
+  }
+}

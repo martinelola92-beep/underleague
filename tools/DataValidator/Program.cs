@@ -181,6 +181,7 @@ static string? MapSchemaFile(string relativePath)
 
     return relativePath switch
     {
+        "balance/groups.json" => "balance-groups.schema.json",
         "traits/traits.json" => "traits.schema.json",
         "ai/weights.json" => "ai-weights.schema.json",
         "sim/tuning.json" => "tuning.schema.json",

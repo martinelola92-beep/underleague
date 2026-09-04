@@ -1,0 +1,387 @@
+using Underleague.Sim.Perks;
+
+namespace Underleague.Sim.Analysis;
+
+/// <summary>
+/// Resultado agregado de una celda de la matriz build × rival (docs/fase1-diseno.md §8): todas las
+/// estadísticas relevantes de <paramref name="Build"/> a través de todos los partidos que jugó contra
+/// <paramref name="Opponent"/> en un lote de <c>/Balance --builds</c> (cualquier local/visitante).
+/// </summary>
+public readonly record struct BuildCellResult(
+    string Build,
+    string Opponent,
+    int Matches,
+    int Wins,
+    int GoalsFor,
+    int GoalsAgainst,
+    int InjuriesFor,
+    int InjuriesAgainst,
+    int Tackles,
+    int PassChains,
+    int PassChainTotalLength,
+    int Activations)
+{
+    public double WinRate => Matches > 0 ? 100.0 * Wins / Matches : 0.0;
+
+    public double InjuriesPerMatch => Matches > 0 ? (double)InjuriesFor / Matches : 0.0;
+
+    public double TacklesPerMatch => Matches > 0 ? (double)Tackles / Matches : 0.0;
+
+    public double PassChainAvgLength => PassChains > 0 ? (double)PassChainTotalLength / PassChains : 0.0;
+
+    public double ActivationsPerMatch => Matches > 0 ? (double)Activations / Matches : 0.0;
+}
+
+/// <summary>
+/// Activaciones de un perk agregadas sobre todos los partidos de un lote en los que estaba asignado a
+/// algún titular de <paramref name="Build"/>, sea cual sea el rival (RF-070, noDeadPerks de §8).
+/// </summary>
+public readonly record struct PerkActivationResult(
+    string PerkId,
+    string Build,
+    int MatchesAssigned,
+    int MatchesWithActivation)
+{
+    public double ActivationRate => MatchesAssigned > 0 ? 100.0 * MatchesWithActivation / MatchesAssigned : 0.0;
+}
+
+/// <summary>
+/// Métricas de fase 1 sobre builds y perks (docs/fase1-diseno.md §8): coherencia (las builds coherentes
+/// ganan a su referencia, las malas pierden, la aleatoria queda cerca de 50%), diferenciación de estilo de
+/// juego, cobertura de activación del catálogo y distribución RF-069. Pura, sin E/S: recibe los resultados
+/// ya agregados de un lote (<see cref="BuildCellResult"/>, <see cref="PerkActivationResult"/>) y las listas
+/// de builds coherentes/malas/aleatoria como parámetro — nunca las codifica dentro, porque las usa también
+/// la puerta estadística de <c>Sim.Tests</c> (paquete I) además de <c>/Balance</c>. Sigue el mismo formato
+/// de salida que <see cref="MatchMetrics"/>: una lista de <see cref="MetricResult"/> (nombre, valor, rango,
+/// estado IN/OUT/INFO).
+/// </summary>
+public static class BuildMetrics
+{
+    /// <summary>Prefijo de la métrica por build de <c>coherentBuildsBeatNone</c> (§8: cada coherente gana ≥ 58% a su referencia).</summary>
+    public const string CoherentBuildsBeatNonePrefix = "coherentBuildsBeatNone_";
+
+    /// <summary>Prefijo de la métrica por build de <c>badBuildsLoseToNone</c> (§8: cada mala gana ≤ 45% a su referencia).</summary>
+    public const string BadBuildsLoseToNonePrefix = "badBuildsLoseToNone_";
+
+    /// <summary>Prefijo de la métrica por build de <c>randomBuildNearNone</c> (§8: la build aleatoria entre 40% y 60%).</summary>
+    public const string RandomBuildNearNonePrefix = "randomBuildNearNone_";
+
+    /// <summary>Nombre de la métrica de más lesiones producidas por la build de contacto que por la técnica (§8).</summary>
+    public const string BuildsWinDifferentlyInjuries = "buildsWinDifferently_injuries";
+
+    /// <summary>Nombre de la métrica de mayor cadena media de pases de la build técnica que de la de contacto (§8).</summary>
+    public const string BuildsWinDifferentlyPassChain = "buildsWinDifferently_passChain";
+
+    /// <summary>Prefijo de la métrica por perk de tasa de activación (§8: noDeadPerks, ≥ 1% de los partidos en los que está asignado).</summary>
+    public const string ActivationRatePrefix = "activationRate_";
+
+    /// <summary>Nombre del resumen agregado: cuántos perks del catálogo no llegan al 1% de activación (0 esperado).</summary>
+    public const string NoDeadPerks = "noDeadPerks";
+
+    /// <summary>Umbral mínimo de activación de un perk para no considerarlo muerto (RF-070, §8).</summary>
+    public const double DeadPerkThresholdPercent = 1.0;
+
+    /// <summary>Nombre de la métrica de porcentaje de perks <c>filler</c> del catálogo (RF-069).</summary>
+    public const string Rf069Filler = "rf069_filler";
+
+    /// <summary>Nombre de la métrica de porcentaje de perks <c>conditional</c> del catálogo (RF-069).</summary>
+    public const string Rf069Conditional = "rf069_conditional";
+
+    /// <summary>Nombre de la métrica de porcentaje de perks <c>ruleBreaker</c> del catálogo (RF-069).</summary>
+    public const string Rf069RuleBreaker = "rf069_ruleBreaker";
+
+    /// <summary>Distribución objetivo RF-069: 60% filler, 30% conditional, 10% ruleBreaker, tolerancia ± 8 puntos.</summary>
+    public const int Rf069Tolerance = 8;
+
+    /// <summary>
+    /// Calcula todas las métricas de fase 1 en el orden: coherentBuildsBeatNone (una fila por build de
+    /// <paramref name="coherentBuilds"/>), badBuildsLoseToNone, randomBuildNearNone, buildsWinDifferently
+    /// (si se dan <paramref name="physicalBuild"/>/<paramref name="technicalBuild"/>), noDeadPerks (una
+    /// fila por perk más el resumen) y la distribución RF-069.
+    /// </summary>
+    /// <param name="cells">Resultados agregados de la matriz build × rival de un lote.</param>
+    /// <param name="coherentBuilds">Ids de las builds que el diseño espera coherentes (§7/§8).</param>
+    /// <param name="badBuilds">Ids de las builds mal construidas a propósito.</param>
+    /// <param name="randomBuilds">Ids de las builds sin criterio (deben quedar cerca del 50%).</param>
+    /// <param name="baselineOpponentByBuild">
+    /// Para cada build de <paramref name="coherentBuilds"/>/<paramref name="badBuilds"/>/<paramref name="randomBuilds"/>,
+    /// el id de su build de referencia sin perks (misma raza). Resuelto por el llamador a partir de
+    /// <c>data/balance/builds/_groups.json</c> (<c>baselineByRace</c>) y la raza de cada build: este código
+    /// no conoce razas ni ficheros, solo el mapeo ya resuelto.
+    /// </param>
+    /// <param name="physicalBuild">
+    /// Build de referencia "gana por contacto" para <c>buildsWinDifferently</c> (p. ej. <c>orc_violence</c>);
+    /// null omite esa métrica. No se codifica dentro a propósito: qué dos builds representan los dos estilos
+    /// a comparar es una decisión de diseño de <c>data/balance/builds/</c>, no de este cálculo.
+    /// </param>
+    /// <param name="technicalBuild">Build de referencia "gana por técnica" para <c>buildsWinDifferently</c> (p. ej. <c>elf_tiki_taka</c>).</param>
+    /// <param name="perkActivations">Activación agregada de cada (perk, build) que lo tiene asignado, para <c>noDeadPerks</c>.</param>
+    /// <param name="catalogPerkKinds"><see cref="PerkKind"/> de cada perk del catálogo cargado, para la distribución RF-069.</param>
+    public static List<MetricResult> Compute(
+        IReadOnlyList<BuildCellResult> cells,
+        IReadOnlyList<string> coherentBuilds,
+        IReadOnlyList<string> badBuilds,
+        IReadOnlyList<string> randomBuilds,
+        IReadOnlyDictionary<string, string> baselineOpponentByBuild,
+        string? physicalBuild,
+        string? technicalBuild,
+        IReadOnlyList<PerkActivationResult> perkActivations,
+        IReadOnlyList<PerkKind> catalogPerkKinds)
+    {
+        ArgumentNullException.ThrowIfNull(cells);
+        ArgumentNullException.ThrowIfNull(coherentBuilds);
+        ArgumentNullException.ThrowIfNull(badBuilds);
+        ArgumentNullException.ThrowIfNull(randomBuilds);
+        ArgumentNullException.ThrowIfNull(baselineOpponentByBuild);
+        ArgumentNullException.ThrowIfNull(perkActivations);
+        ArgumentNullException.ThrowIfNull(catalogPerkKinds);
+
+        var rows = new List<MetricResult>();
+        rows.AddRange(CoherentBuildsBeatNone(cells, coherentBuilds, baselineOpponentByBuild));
+        rows.AddRange(BadBuildsLoseToNone(cells, badBuilds, baselineOpponentByBuild));
+        rows.AddRange(RandomBuildsNearNone(cells, randomBuilds, baselineOpponentByBuild));
+        rows.AddRange(BuildsWinDifferently(cells, physicalBuild, technicalBuild));
+        rows.AddRange(NoDeadPerksRows(perkActivations));
+        rows.AddRange(Rf069Distribution(catalogPerkKinds));
+        return rows;
+    }
+
+    /// <summary>coherentBuildsBeatNone (§8): cada build coherente gana ≥ 58% contra su referencia de la misma raza.</summary>
+    public static List<MetricResult> CoherentBuildsBeatNone(
+        IReadOnlyList<BuildCellResult> cells,
+        IReadOnlyList<string> coherentBuilds,
+        IReadOnlyDictionary<string, string> baselineOpponentByBuild,
+        double minWinRate = 58.0) =>
+        AtLeast(cells, coherentBuilds, baselineOpponentByBuild, CoherentBuildsBeatNonePrefix, minWinRate);
+
+    /// <summary>badBuildsLoseToNone (§8): cada build mala gana ≤ 45% contra su referencia de la misma raza.</summary>
+    public static List<MetricResult> BadBuildsLoseToNone(
+        IReadOnlyList<BuildCellResult> cells,
+        IReadOnlyList<string> badBuilds,
+        IReadOnlyDictionary<string, string> baselineOpponentByBuild,
+        double maxWinRate = 45.0) =>
+        AtMost(cells, badBuilds, baselineOpponentByBuild, BadBuildsLoseToNonePrefix, maxWinRate);
+
+    /// <summary>randomBuildNearNone (§8): la build sin criterio queda entre 40% y 60% contra su referencia.</summary>
+    public static List<MetricResult> RandomBuildsNearNone(
+        IReadOnlyList<BuildCellResult> cells,
+        IReadOnlyList<string> randomBuilds,
+        IReadOnlyDictionary<string, string> baselineOpponentByBuild,
+        double minWinRate = 40.0,
+        double maxWinRate = 60.0)
+    {
+        var rows = new List<MetricResult>();
+        foreach (var build in randomBuilds)
+        {
+            if (!TryFindCell(cells, build, baselineOpponentByBuild, out var cell))
+            {
+                continue;
+            }
+
+            double rate = cell.WinRate;
+            rows.Add(new MetricResult(
+                RandomBuildNearNonePrefix + build, rate, minWinRate, maxWinRate,
+                rate >= minWinRate && rate <= maxWinRate ? "IN" : "OUT"));
+        }
+
+        return rows;
+    }
+
+    /// <summary>
+    /// buildsWinDifferently (§8): la build "de contacto" produce ≥ 1,5× las lesiones propias por partido
+    /// que la build "técnica" (agregadas contra cualquier rival), y la técnica produce ≥ 1,3× la cadena
+    /// media de pases de la de contacto. Vacío si falta alguna de las dos builds o no jugó ningún partido.
+    /// </summary>
+    public static List<MetricResult> BuildsWinDifferently(
+        IReadOnlyList<BuildCellResult> cells,
+        string? physicalBuild,
+        string? technicalBuild,
+        double minInjuryRatio = 1.5,
+        double minPassChainRatio = 1.3)
+    {
+        var rows = new List<MetricResult>();
+        if (physicalBuild is null || technicalBuild is null)
+        {
+            return rows;
+        }
+
+        var physical = AggregateByBuild(cells, physicalBuild);
+        var technical = AggregateByBuild(cells, technicalBuild);
+        if (physical.Matches == 0 || technical.Matches == 0)
+        {
+            return rows;
+        }
+
+        double injuryRatio = technical.InjuriesPerMatch > 0
+            ? physical.InjuriesPerMatch / technical.InjuriesPerMatch
+            : (physical.InjuriesPerMatch > 0 ? double.PositiveInfinity : 0.0);
+        rows.Add(new MetricResult(
+            BuildsWinDifferentlyInjuries, injuryRatio, minInjuryRatio, null,
+            injuryRatio >= minInjuryRatio ? "IN" : "OUT"));
+
+        double passChainRatio = physical.PassChainAvgLength > 0
+            ? technical.PassChainAvgLength / physical.PassChainAvgLength
+            : (technical.PassChainAvgLength > 0 ? double.PositiveInfinity : 0.0);
+        rows.Add(new MetricResult(
+            BuildsWinDifferentlyPassChain, passChainRatio, minPassChainRatio, null,
+            passChainRatio >= minPassChainRatio ? "IN" : "OUT"));
+
+        return rows;
+    }
+
+    /// <summary>
+    /// noDeadPerks (§8, RF-070): una fila por (perk, build) con su tasa de activación (≥ 1% de los
+    /// partidos en los que estaba asignado) más un resumen agregado que cuenta cuántas de esas filas
+    /// están OUT (0 esperado: ningún perk muerto en ninguna build que lo use).
+    /// </summary>
+    public static List<MetricResult> NoDeadPerksRows(
+        IReadOnlyList<PerkActivationResult> perkActivations,
+        double minActivationRatePercent = DeadPerkThresholdPercent)
+    {
+        var rows = new List<MetricResult>();
+        int dead = 0;
+        foreach (var activation in perkActivations.OrderBy(a => a.PerkId, StringComparer.Ordinal).ThenBy(a => a.Build, StringComparer.Ordinal))
+        {
+            double rate = activation.ActivationRate;
+            bool ok = rate >= minActivationRatePercent;
+            if (!ok)
+            {
+                dead++;
+            }
+
+            rows.Add(new MetricResult(
+                ActivationRatePrefix + activation.PerkId + "_" + activation.Build,
+                rate, minActivationRatePercent, null, ok ? "IN" : "OUT"));
+        }
+
+        rows.Add(new MetricResult(NoDeadPerks, dead, null, 0, dead == 0 ? "IN" : "OUT"));
+        return rows;
+    }
+
+    /// <summary>Distribución RF-069 (60/30/10 ± 8 puntos) sobre el catálogo de perks cargado.</summary>
+    public static List<MetricResult> Rf069Distribution(IReadOnlyList<PerkKind> catalogPerkKinds)
+    {
+        var rows = new List<MetricResult>();
+        int total = catalogPerkKinds.Count;
+        if (total == 0)
+        {
+            return rows;
+        }
+
+        int filler = catalogPerkKinds.Count(k => k == PerkKind.Filler);
+        int conditional = catalogPerkKinds.Count(k => k == PerkKind.Conditional);
+        int ruleBreaker = catalogPerkKinds.Count(k => k == PerkKind.RuleBreaker);
+
+        rows.Add(DistributionRow(Rf069Filler, filler, total, 60));
+        rows.Add(DistributionRow(Rf069Conditional, conditional, total, 30));
+        rows.Add(DistributionRow(Rf069RuleBreaker, ruleBreaker, total, 10));
+        return rows;
+    }
+
+    private static MetricResult DistributionRow(string name, int count, int total, int target)
+    {
+        double pct = 100.0 * count / total;
+        double min = target - Rf069Tolerance;
+        double max = target + Rf069Tolerance;
+        return new MetricResult(name, pct, min, max, pct >= min && pct <= max ? "IN" : "OUT");
+    }
+
+    private static List<MetricResult> AtLeast(
+        IReadOnlyList<BuildCellResult> cells,
+        IReadOnlyList<string> builds,
+        IReadOnlyDictionary<string, string> baselineOpponentByBuild,
+        string prefix,
+        double minWinRate)
+    {
+        var rows = new List<MetricResult>();
+        foreach (var build in builds)
+        {
+            if (!TryFindCell(cells, build, baselineOpponentByBuild, out var cell))
+            {
+                continue;
+            }
+
+            double rate = cell.WinRate;
+            rows.Add(new MetricResult(prefix + build, rate, minWinRate, null, rate >= minWinRate ? "IN" : "OUT"));
+        }
+
+        return rows;
+    }
+
+    private static List<MetricResult> AtMost(
+        IReadOnlyList<BuildCellResult> cells,
+        IReadOnlyList<string> builds,
+        IReadOnlyDictionary<string, string> baselineOpponentByBuild,
+        string prefix,
+        double maxWinRate)
+    {
+        var rows = new List<MetricResult>();
+        foreach (var build in builds)
+        {
+            if (!TryFindCell(cells, build, baselineOpponentByBuild, out var cell))
+            {
+                continue;
+            }
+
+            double rate = cell.WinRate;
+            rows.Add(new MetricResult(prefix + build, rate, null, maxWinRate, rate <= maxWinRate ? "IN" : "OUT"));
+        }
+
+        return rows;
+    }
+
+    private static bool TryFindCell(
+        IReadOnlyList<BuildCellResult> cells,
+        string build,
+        IReadOnlyDictionary<string, string> baselineOpponentByBuild,
+        out BuildCellResult cell)
+    {
+        cell = default;
+        if (!baselineOpponentByBuild.TryGetValue(build, out var baseline))
+        {
+            return false;
+        }
+
+        for (int i = 0; i < cells.Count; i++)
+        {
+            if (string.Equals(cells[i].Build, build, StringComparison.Ordinal)
+                && string.Equals(cells[i].Opponent, baseline, StringComparison.Ordinal))
+            {
+                cell = cells[i];
+                return cell.Matches > 0;
+            }
+        }
+
+        return false;
+    }
+
+    /// <summary>Suma todas las celdas de <paramref name="build"/> contra cualquier rival del lote.</summary>
+    private static BuildCellResult AggregateByBuild(IReadOnlyList<BuildCellResult> cells, string build)
+    {
+        int matches = 0, wins = 0, goalsFor = 0, goalsAgainst = 0, injuriesFor = 0, injuriesAgainst = 0;
+        int tackles = 0, passChains = 0, passChainTotalLength = 0, activations = 0;
+        for (int i = 0; i < cells.Count; i++)
+        {
+            var cell = cells[i];
+            if (!string.Equals(cell.Build, build, StringComparison.Ordinal))
+            {
+                continue;
+            }
+
+            matches += cell.Matches;
+            wins += cell.Wins;
+            goalsFor += cell.GoalsFor;
+            goalsAgainst += cell.GoalsAgainst;
+            injuriesFor += cell.InjuriesFor;
+            injuriesAgainst += cell.InjuriesAgainst;
+            tackles += cell.Tackles;
+            passChains += cell.PassChains;
+            passChainTotalLength += cell.PassChainTotalLength;
+            activations += cell.Activations;
+        }
+
+        return new BuildCellResult(
+            build, string.Empty, matches, wins, goalsFor, goalsAgainst, injuriesFor, injuriesAgainst,
+            tackles, passChains, passChainTotalLength, activations);
+    }
+}

@@ -20,17 +20,100 @@ Opciones (todas opcionales):
 
 | Opción | Por defecto | Descripción |
 |---|---|---|
-| `--runs N` | 1000 | Total de partidos, repartidos por igual entre los emparejamientos de `--teams` (en orden, el resto de la división a los primeros) |
+| `--runs N` | 1000 (60 en modo campaña si no se pasa) | Total de partidos, repartidos por igual entre los emparejamientos de `--teams` (o entre las celdas de la matriz de `--builds`); en modo campaña, número de campañas por build |
 | `--seed S` | 1 | Semilla base (entero sin signo). Equipos: `RngStreams.Generation(seed, índice)`. Partido *i* (0-based sobre el total del lote): `RngStreams.Match(seed, i)` |
-| `--teams path` | `data/balance/reference.json` | Conjunto de referencia: equipos y emparejamientos |
+| `--teams path` | `data/balance/reference.json` | Conjunto de referencia: equipos y emparejamientos (modo por defecto, sin `--builds`/`--describe`) |
 | `--data path` | subir directorios desde el directorio de trabajo hasta encontrar `data/` | Raíz de `/data` |
 | `--out dir` | `out/<seed>/` | Directorio de salida de los CSV |
 | `--log` | apagado | Imprime `Report.Log` del primer partido del lote (o del partido de `--match-seed`) |
 | `--dump-utility P:T` | ninguno | `SimConfig.DumpUtility = (P, T)` para el primer partido; imprime la tabla de utilidad la primera vez que el jugador P decide en un tick >= T |
 | `--match-seed S` | ninguno | Ejecuta un único partido con esta semilla de motor exacta, con los equipos del primer emparejamiento de `--teams`; ignora `--runs`, no escribe `summary.csv`. Ver "Reproducir un partido concreto" abajo |
 | `--quiet` | apagado | No imprime el resumen por consola (los CSV se escriben igual) |
+| `--describe [es\|en]` | ninguno; activa el modo catálogo | Ver "Modos de fase 1" abajo |
+| `--builds a,b,c` | ninguno; activa el modo matriz o campaña | Ídem. `all` = todas las builds de `data/balance/builds/` |
+| `--vs id` | ninguno (sin ella: todos-contra-todos) | Ídem. Requiere `--builds` |
+| `--campaign N` | ninguno; activa el modo campaña | Ídem. Requiere `--builds` |
+| `--home-away` | apagado | Ídem. Aplica al modo matriz y al modo campaña |
 
-Salida por consola (salvo `--quiet`): tabla de `summary.csv` alineada, tiempo total y partidos/segundo. Código de salida: `0` si todas las métricas están `IN`/`INFO` (o si se usó `--match-seed`, que no tiene métricas), `1` si alguna está `OUT`.
+Salida por consola (salvo `--quiet`): tabla de `summary.csv` alineada, tiempo total y partidos/segundo. Código de salida: `0` si todas las métricas están `IN`/`INFO` (o si se usó `--match-seed`/`--describe`, que no tienen métricas), `1` si alguna está `OUT` o si una build es inválida o desconocida (`error de build: ...`).
+
+## Modos de fase 1: builds y catálogo (docs/fase1-diseno.md §8)
+
+Tres modos nuevos, todos independientes de `--teams`/`reference.json`: cargan las builds de
+`data/balance/builds/*.json` (formato en `data/perks/README.md` §8 y `Balance/BuildConfig.cs`) y, para el
+catálogo, los perks de `data/perks/*.json`.
+
+### `--describe [es|en]`
+
+Imprime, para cada perk del catálogo (ordenado por id), su rareza, tipo (`Filler`/`Conditional`/
+`RuleBreaker`), disparador y la descripción generada por `DescriptionGenerator.Describe` (RT-035: nunca
+texto escrito a mano); después, la distribución RF-069 (filler/conditional/ruleBreaker, con su porcentaje y
+si cae dentro de 60/30/10 ± 8 puntos). Por defecto en español (`es`); `en` para inglés.
+
+```bash
+dotnet run --project Balance -- --describe es
+```
+
+### `--builds a,b,c` [`--vs id`] [`--home-away`]: matriz build × rival
+
+Sin `--vs`: todos-contra-todos entre las builds listadas. Con `--vs id`: cada build de `--builds` contra
+esa única build rival (el caso de uso de la puerta RT-055/§8: comparar cada build contra la referencia sin
+perks de su propia raza). `--runs` se reparte por igual entre los emparejamientos (resto a los primeros).
+Con `--home-away`, cada emparejamiento se juega también con los equipos invertidos y las estadísticas se
+acumulan sobre el total (elimina cualquier sesgo local/visitante); sin ella, siempre se simula con la misma
+orientación física. Un partido entre dos builds distintas alimenta a la vez las dos celdas de la matriz
+(la perspectiva de cada una), así que no hace falta duplicar partidos para tener las dos filas.
+
+```bash
+dotnet run --project Balance -- --builds orc_violence,elf_tiki_taka,orc_misplaced --vs human_none --runs 3000 --home-away --out out/f1
+dotnet run --project Balance -- --builds all --runs 1300 --home-away --out out/f1
+```
+
+Escribe `builds.csv` (`build,opponent,matches,winRate,goalsFor,goalsAgainst,injuriesFor,injuriesAgainst,tacklesPerMatch,passChainAvgLength,activationsPerMatch`)
+y `perks.csv` (`perkId,build,activations,matchesWithActivation,activationRate`), con una fila por cada perk
+que la build asigna estáticamente a algún titular aunque nunca llegue a activarse (0% es justo lo que
+`noDeadPerks` de `Sim/Analysis/BuildMetrics.cs` necesita poder detectar).
+
+- `injuriesFor`/`injuriesAgainst`, `tacklesPerMatch`: se reparten por equipo con `PlayerMatchStats.Team`
+  (`injuriesFor` = lesiones sufridas por los propios jugadores de `build`; `injuriesAgainst` = lesiones que
+  `build` le ha causado al rival).
+- `passChainAvgLength`: estadística de todo el partido (`MatchReport.PassChains`/`PassChainTotalLength` no
+  se reparten por equipo en el motor), así que el mismo valor alimenta las dos filas de un partido.
+- `activationsPerMatch`: activaciones de perk (`MatchReport.PerkActivations`) cuyo `OwnerId` pertenece a
+  los jugadores de esa build en ese partido.
+
+### `--builds a,b,c --campaign N` [`--home-away`]: campaña con progresión
+
+Para cada build de `--builds`, `--runs` campañas independientes (por defecto 60, semillas distintas) de `N`
+partidos consecutivos (por defecto 8) contra la build `human_none` de calidad creciente (46, 48, ...,
+46+2(N-1)); el rival se regenera cada partido con la calidad que toque, sin historial. Dentro de cada
+campaña se arrastra progresión (docs/fase1-diseno.md §6): tras cada partido, `Progression.AwardExperience`
+reparte experiencia (100% a los 7 titulares que jugaron, 45% a los suplentes), `Progression.LevelFor` +
+`Progression.LevelUp` suben de nivel subiendo `attributesPerLevel` a todos los atributos salvo correa, y
+`MatchResult.CounterDeltas` se aplican a los `Counters` de cada jugador (`Progression.ApplyCounterDeltas`).
+Con `--home-away`, la build alterna de local a visitante partido a partido dentro de la misma campaña.
+
+```bash
+dotnet run --project Balance -- --builds orc_violence,elf_tiki_taka,orc_misplaced --campaign 8 --runs 40 --out out/f1c
+```
+
+Escribe `campaign.csv` (`build,matchIndex,opponentQuality,campaigns,winRate,avgLevel,avgStrength,avgTechnique,activationsPerMatch`,
+una fila por `(build, matchIndex)` agregada sobre las `campaigns` repeticiones; `avgLevel`/`avgStrength`/
+`avgTechnique` promedian los 10 jugadores de la plantilla, no solo los 7 titulares, después del partido de
+ese `matchIndex`). Por consola, una tabla por build con la tasa de victoria en los partidos `1..N/2` frente
+a `N/2+1..N`, calculada sobre victorias/partidos totales de las `campaigns` repeticiones (no como media de
+porcentajes).
+
+### `Sim/Analysis/BuildMetrics.cs`
+
+Cálculo puro y reutilizable (sin E/S) de las métricas de §8 —`coherentBuildsBeatNone`,
+`badBuildsLoseToNone`, `randomBuildNearNone`, `buildsWinDifferently`, `noDeadPerks` y la distribución
+RF-069— a partir de los datos ya agregados de un lote (`BuildCellResult`, `PerkActivationResult`). Las
+listas de builds coherentes/malas/aleatoria y el mapeo raza → build de referencia son parámetros, no están
+codificados dentro: `/Balance` (paquete H) no las usa desde la línea de comandos; las carga y resuelve
+`data/balance/groups.json` (`BuildConfig.BuildGroups` en `Balance/BuildConfig.cs`) la puerta
+estadística de `Sim.Tests` (paquete I), que es quien decide los umbrales finales y las builds concretas a
+comparar en `buildsWinDifferently`.
 
 ## Reproducir un partido concreto
 
@@ -87,3 +170,13 @@ Una fila por jugador generado que llegó a jugar al menos un partido, con sus es
 - **`firstPlayerId` de la segunda instancia en autoenfrentamientos** (p. ej. `human_50` vs `human_50`): `1 + (1000 + índice) * 100`, siguiendo el mismo esquema que la instancia primaria (`1 + índice * 100`) para no colisionar con ninguna otra.
 - **Rendimiento**: `SimConfig.CollectLog` y `SimConfig.DumpUtility` solo se activan (si se pidieron por `--log`/`--dump-utility`) para el primer partido del lote (índice 0 global); el resto corre con `CollectLog = false` para no acumular el log de miles de partidos en memoria.
 - **players.csv**: formato no especificado en `docs/fase0-diseno.md` §4 (solo se menciona su existencia); columnas elegidas arriba.
+
+### Paquete H (modos de fase 1 sobre builds)
+
+- **Semántica de `--vs`**: docs/fase1-diseno.md §8 dice a la vez "`--vs <buildId>` (por defecto `human_none`)" y "sin `--vs`, todos contra todos". Se ha resuelto literalmente por la segunda frase: `--vs` es `null` si no se pasa el flag (modo todos-contra-todos) y exige un valor explícito cuando se pasa (como el resto de opciones de `Options.cs`); "por defecto `human_none`" se lee como el valor típico que se espera que el usuario escriba (`--vs human_none`), no como un valor implícito al omitir el flag. Es la lectura que hace que el comando de verificación del encargo (`--builds all --home-away`, sin `--vs`) tenga sentido como el modo todos-contra-todos que describe la puerta RT-055/§8.
+- **`--campaign` siempre necesita un valor**: igual que `--runs`, no hay forma de escribir `--campaign` "a secas"; el "por defecto 8" de §8 se aplica solo cuando el flag no se pasa en absoluto (modo campaña desactivado), no como valor implícito del flag sin argumento.
+- **Rival de campaña fijo a `human_none`**: §8 dice literalmente "N partidos consecutivos contra `human_none`", no contra la referencia de la propia raza; se ha implementado así aunque sea distinto del rival de la matriz por defecto (`--vs human_none` también, mismo id, pero por coincidencia con la baseline de Human, no por raza).
+- **`avgLevel`/`avgStrength`/`avgTechnique` de `campaign.csv`**: promedian los 10 jugadores de la plantilla generada (titulares + suplentes), no solo los 7 titulares, porque los suplentes también progresan (45% de experiencia) y el objetivo de la columna es "cómo de fuerte está la plantilla completa en ese punto de la campaña".
+- **`passChainAvgLength` de `builds.csv`**: es una estadística de todo el partido, no de un equipo (`MatchReport.PassChains`/`PassChainTotalLength` no distinguen equipo en el motor, y no se ha tocado `Sim/Engine` para partirla); el mismo valor alimenta la fila de las dos builds de cada partido. Es una medida más débil que si estuviera partida por equipo, pero es la que puede darse sin tocar el motor, y sigue sirviendo para `buildsWinDifferently` (compara el promedio de una build sobre todos sus partidos, no una resolución por bando).
+- **`data/balance/groups.json`**: los grupos de builds para las métricas de fase 1 (`coherent`/`bad`/`random`/`baselineByRace`) viven fuera de `balance/builds/` porque no son una build; tienen esquema propio (`data/schemas/balance-groups.schema.json`) y el validador los reconoce.
+- **`--describe` sin argumento**: por defecto imprime en español (`es`); solo consume el siguiente token de la línea de comandos si es exactamente `es` o `en`, para no confundirlo con la siguiente opción si `--describe` es el último flag antes de otra cosa.
