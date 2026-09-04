@@ -18,7 +18,18 @@ godot --headless --path Game --quit-after 30   # ejecutar sin ventana
 godot --path Game                              # editor gráfico, vía WSLg
 ```
 
-El editor gráfico funciona porque WSLg está disponible (`/mnt/wslg`). La instalación de Windows se conserva por si hace falta exportar, pero no se usa para desarrollar.
+**No hay editor gráfico**: WSLg está instalado (1.0.71) pero deshabilitado en `C:\Users\urban\.wslconfig` con `guiApplications=false`, decisión del revisor para ahorrar VRAM. Las escenas (`.tscn`) son ficheros de texto y se editan sin editor.
+
+**Capturas de pantalla sin GUI**, para verificar el resultado visual (Xvfb instalado):
+
+```bash
+xvfb-run -a --server-args="-screen 0 1280x800x24" ~/.local/bin/godot --path Game \
+  --rendering-driver opengl3 --audio-driver Dummy --quit-after 120
+```
+
+`--headless` **no** sirve para capturar: usa el renderizador nulo, ejecuta pero no dibuja. Con Xvfb, Godot renderiza por software (Mesa/llvmpipe) contra un framebuffer virtual y el script puede guardar el viewport con `SavePng` tras esperar a `RenderingServer.FramePostDraw`. `opengl3` es obligatorio: falta el ICD de Vulkan para D3D12 (`dzn`), así que Vulkan no arranca en este WSL. **Sirve para juzgar composición, color y legibilidad; no fps ni fluidez.**
+
+Cuando haga falta evaluar cómo se *siente* el juego, la opción es mover el repositorio a Windows (`C:\dev\underleague`) y trabajar desde WSL por `/mnt/c`. Coste medido de ese peaje: build de la solución 2,6 s en WSL nativo frente a 9,9 s en `/mnt/c`. La instalación de Windows se conserva por si hace falta exportar, pero no se usa para desarrollar.
 
 ## Estado el 4 de septiembre de 2026
 
