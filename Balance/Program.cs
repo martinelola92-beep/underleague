@@ -478,6 +478,7 @@ static void WriteRunsCsv(string outDir, IReadOnlyList<RunPlayResult> runs)
     {
         "seed", "doctrine", "race", "outcome", "cause", "actReached", "matches", "matchesWon", "bossesBeaten",
         "matchesAct1", "matchesAct2", "matchesAct3",
+        "winsAct1", "winsAct2", "winsAct3",
         "goldEarned", "goldEarnedAct1", "goldEarnedAct2", "goldEarnedAct3", "goldFromSales",
         "goldMarket", "goldClinic", "goldEnrollment", "goldReroll", "goldWages", "goldLeft",
         "deaths", "ownInjuries", "matchInjuries", "severeInjuries", "rosterSize", "available", "averageLevel",
@@ -485,6 +486,10 @@ static void WriteRunsCsv(string outDir, IReadOnlyList<RunPlayResult> runs)
         "markets", "offersSeen", "offersAffordable", "goldAtMarkets", "brokeMarkets", "purchases", "perksBought",
         "itemsBought", "playersSigned", "youths", "mercenaries", "playersSold", "treatments", "slotsBought", "rerolls",
         "rewardsTaken", "rewardsDeclined", "nodes",
+
+        // ADR 0051: qué arco cerró la run y con qué build terminó. Sin las dos columnas no se puede
+        // reconstruir a mano ni "¿los arcos existen?" ni "¿hay compromiso?".
+        "masters", "finalPerks",
     };
 
     var rows = runs.Select(r => (IReadOnlyList<string>)new[]
@@ -496,6 +501,7 @@ static void WriteRunsCsv(string outDir, IReadOnlyList<RunPlayResult> runs)
         r.Cause.ToString(),
         Int(r.ActReached), Int(r.Matches), Int(r.MatchesWon), Int(r.BossesBeaten),
         Int(r.MatchesByAct[0]), Int(r.MatchesByAct[1]), Int(r.MatchesByAct[2]),
+        Int(r.WinsByAct[0]), Int(r.WinsByAct[1]), Int(r.WinsByAct[2]),
         Int(r.GoldEarned), Int(r.GoldEarnedByAct[0]), Int(r.GoldEarnedByAct[1]), Int(r.GoldEarnedByAct[2]),
         Int(r.GoldFromSales),
         Int(r.GoldSpentMarket), Int(r.GoldSpentClinic), Int(r.GoldSpentEnrollment), Int(r.GoldSpentReroll), Int(r.GoldSpentWages),
@@ -508,6 +514,7 @@ static void WriteRunsCsv(string outDir, IReadOnlyList<RunPlayResult> runs)
         Int(r.ItemsBought), Int(r.PlayersSigned), Int(r.YouthsSigned), Int(r.MercenariesHired),
         Int(r.PlayersSold), Int(r.Treatments), Int(r.SlotsBought), Int(r.Rerolls),
         Int(r.RewardsTaken), Int(r.RewardsDeclined), Int(r.NodesVisited),
+        string.Join(" ", r.Masters), string.Join(" ", r.FinalPerks),
     });
 
     CsvWriter.Write(Path.Combine(outDir, "runs.csv"), header, rows);

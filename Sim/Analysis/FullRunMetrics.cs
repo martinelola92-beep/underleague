@@ -65,6 +65,69 @@ public static class FullRunMetrics
     public const string NodesPerLostRun = "nodesPerLostRun";
 
     /// <summary>
+    /// Runs que terminan con al menos un perk <b>maestro</b> (ADR 0051), en porcentaje. Es la medición de
+    /// "¿los arcos existen?": una política que persigue un maestro tiene que llegar a él en una fracción
+    /// razonable de las runs. Si nunca se cierran, están mal calibrados o piden demasiado; si se cierran
+    /// siempre, el arco no es una decisión, es un trámite.
+    /// </summary>
+    public const string MastersReached = "mastersReached";
+
+    /// <summary>Maestros por run, contando las que no cierran ninguno (INFO).</summary>
+    public const string MastersPerRun = "mastersPerRun";
+
+    /// <summary>Tasa de victoria de las runs que cerraron un arco (INFO; vigila que los maestros no dominen).</summary>
+    public const string MasterRunWinRate = "runWinRate_withMaster";
+
+    /// <summary>Tasa de victoria de las runs que no cerraron ninguno (INFO).</summary>
+    public const string NoMasterRunWinRate = "runWinRate_withoutMaster";
+
+    /// <summary>Coincidencia media entre los perks de dos runs de la misma raza con el <b>mismo</b> maestro (INFO).</summary>
+    public const string OverlapSameMaster = "buildOverlap_sameMaster";
+
+    /// <summary>Coincidencia media entre los perks de dos runs de la misma raza con maestros <b>distintos</b> (INFO).</summary>
+    public const string OverlapDifferentMaster = "buildOverlap_differentMaster";
+
+    /// <summary>
+    /// Divergencia: cuántos puntos de coincidencia se pierden al tomar maestros distintos en vez del
+    /// mismo (ADR 0051, RF-032). Es la medición de "¿hay compromiso?": dos builds de la misma raza que
+    /// toman maestros distintos tienen que diferenciarse por lo que <b>decidieron</b>, no por lo que les
+    /// tocó. Cero significa que el maestro no cambia nada de lo que se construye después.
+    /// </summary>
+    public const string MasterDivergence = "masterDivergence";
+
+    /// <summary>
+    /// Suelo de <see cref="MastersReached"/>: por debajo, el arco no se cierra nunca. Es una fracción y no
+    /// una mayoría a propósito: solo el 84% de las runs llega al acto 2, que es donde un maestro empieza a
+    /// aparecer, y la mitad de esas se quedan ahí. Medido en 30,5% (200 runs, semilla 1).
+    /// </summary>
+    public const double MastersReachedMin = 20.0;
+
+    /// <summary>Techo de <see cref="MastersReached"/>: por encima, el arco no es una decisión.</summary>
+    public const double MastersReachedMax = 90.0;
+
+    /// <summary>
+    /// Suelo de <see cref="MasterDivergence"/>, en puntos de coincidencia. La prueba dura del compromiso
+    /// es estructural —dos maestros opuestos no pueden compartir un solo perk de las líneas que cierran, y
+    /// eso lo comprueba <c>PerkArcTests</c>—; esta cifra mide lo que de verdad ocurre en una run entera,
+    /// donde la mitad del catálogo son perks sueltos que las dos builds pueden compartir.
+    /// </summary>
+    public const double MasterDivergenceMin = 5.0;
+
+    /// <summary>
+    /// Tasa de victoria de la política que <b>esquiva los mercados</b> (ADR 0055): tiene que quedar por
+    /// debajo del 5%. Es la métrica que dice si el mercado es parte del núcleo de la build o solo un
+    /// añadido de calidad; con los perks maestros a la venta y <b>solo</b> a la venta (ADR 0051, ADR
+    /// 0055), una build sin mercado se queda sin el objetivo de su línea por definición.
+    /// </summary>
+    public const string MarketlessWinRate = "runWinRate_noMarket";
+
+    /// <summary>Mercados que pisa la política que los esquiva, por run: dice si la medida mide lo que dice (INFO).</summary>
+    public const string MarketlessVisits = "marketsVisited_noMarket";
+
+    /// <summary>Techo de <see cref="MarketlessWinRate"/> (ADR 0055).</summary>
+    public const double MarketlessWinRateMax = 5.0;
+
+    /// <summary>
     /// Tasa de victoria mínima de la run (fase2-diseno.md §10, corregida por la ADR 0040). La banda es
     /// <b>20-30%</b> y no la 25-40% de partida: el producto de las tres celdas "muy buena" de la tabla de
     /// la ADR 0033 da 29,5%, así que el techo antiguo estaba por encima de lo que la propia curva permite
@@ -172,6 +235,31 @@ public static class FullRunMetrics
         return rows;
     }
 
+    /// <summary>
+    /// La métrica de la ADR 0055 sobre un conjunto de runs jugadas por la política que esquiva los
+    /// mercados: cuánto gana sin comprar nada (banda: menos del 5%) y cuántos mercados no ha podido
+    /// esquivar, que es lo que dice si la medida está midiendo lo que dice.
+    /// </summary>
+    public static List<MetricResult> Marketless(IReadOnlyList<RunPlayResult> runs)
+    {
+        ArgumentNullException.ThrowIfNull(runs);
+        var rows = new List<MetricResult>();
+        if (runs.Count == 0)
+        {
+            return rows;
+        }
+
+        double visits = 0;
+        for (int i = 0; i < runs.Count; i++)
+        {
+            visits += runs[i].MarketsVisited;
+        }
+
+        rows.Add(Banded(MarketlessWinRate, WinRate(runs), null, MarketlessWinRateMax));
+        rows.Add(Info(MarketlessVisits, visits / runs.Count));
+        return rows;
+    }
+
     /// <summary>Tasa de victoria de un conjunto de runs, en porcentaje.</summary>
     public static double WinRate(IReadOnlyList<RunPlayResult> runs)
     {
@@ -221,6 +309,7 @@ public static class FullRunMetrics
         var bossSamples = new long[RunRules.Acts];
         long itemsRecovered = 0;
         var matchesByAct = new long[RunRules.Acts];
+        var winsByAct = new long[RunRules.Acts];
         var actSamples = new int[RunRules.Acts];
         int sinkSamples = 0, allFourAffordable = 0;
         long sinkTotal = 0;
@@ -322,6 +411,7 @@ public static class FullRunMetrics
                 actSamples[act]++;
                 goldByAct[act] += run.GoldEarnedByAct[act];
                 matchesByAct[act] += run.MatchesByAct[act];
+                winsByAct[act] += run.WinsByAct[act];
 
                 int sinks = SinksAffordable(
                     run.GoldEarnedByAct[act], run.MatchesByAct[act], run.WinsByAct[act], run.MarketsByAct[act], economy);
@@ -426,6 +516,11 @@ public static class FullRunMetrics
             rows.Add(Info($"goldEarnedAct{act + 1}", actSamples[act] > 0 ? (double)goldByAct[act] / actSamples[act] : 0.0));
             rows.Add(Info($"matchesAct{act + 1}", actSamples[act] > 0 ? (double)matchesByAct[act] / actSamples[act] : 0.0));
 
+            // Partidos ordinarios perdidos por acto: perder uno no termina la run (RF-002c), pero
+            // cuesta el oro y la recompensa, así que es la medida de cuánta presión pone cada acto.
+            rows.Add(Info($"matchesLostAct{act + 1}", actSamples[act] > 0 ? (double)(matchesByAct[act] - winsByAct[act]) / actSamples[act] : 0.0));
+            rows.Add(Info($"winRateAct{act + 1}", matchesByAct[act] > 0 ? 100.0 * winsByAct[act] / matchesByAct[act] : 0.0));
+
             // ADR 0048: la banda de muertes no dice nada sin saber dónde caen. Por run empezada, no por
             // run que llega al acto: es la cifra que se suma a deathsPerRun.
             rows.Add(Info($"{DeathsByActPrefix}{act + 1}", (double)deathsByAct[act] / runs.Count));
@@ -433,7 +528,133 @@ public static class FullRunMetrics
             rows.Add(Info($"itemsAtBossAct{act + 1}", bossSamples[act] > 0 ? (double)itemsAtBoss[act] / bossSamples[act] : 0.0));
         }
 
+        rows.AddRange(Arcs(runs));
         return rows;
+    }
+
+    /// <summary>
+    /// Las tres mediciones de la ADR 0051 sobre un conjunto de runs: si los arcos <b>existen</b> (cuántas
+    /// runs cierran un maestro), si hay <b>compromiso</b> (cuánto divergen dos builds de la misma raza que
+    /// tomaron maestros distintos) y si <b>no dominan</b> (la tasa de victoria con y sin maestro, que es
+    /// el aviso temprano del techo de RT-055).
+    /// </summary>
+    public static List<MetricResult> Arcs(IReadOnlyList<RunPlayResult> runs)
+    {
+        ArgumentNullException.ThrowIfNull(runs);
+        var rows = new List<MetricResult>();
+        if (runs.Count == 0)
+        {
+            return rows;
+        }
+
+        int withMaster = 0, masters = 0, wonWith = 0, wonWithout = 0;
+        for (int i = 0; i < runs.Count; i++)
+        {
+            masters += runs[i].Masters.Count;
+            if (runs[i].Masters.Count > 0)
+            {
+                withMaster++;
+                if (runs[i].Won)
+                {
+                    wonWith++;
+                }
+            }
+            else if (runs[i].Won)
+            {
+                wonWithout++;
+            }
+        }
+
+        rows.Add(Banded(MastersReached, 100.0 * withMaster / runs.Count, MastersReachedMin, MastersReachedMax));
+        rows.Add(Info(MastersPerRun, (double)masters / runs.Count));
+        rows.Add(Info(MasterRunWinRate, withMaster > 0 ? 100.0 * wonWith / withMaster : 0.0));
+        rows.Add(Info(
+            NoMasterRunWinRate,
+            runs.Count - withMaster > 0 ? 100.0 * wonWithout / (runs.Count - withMaster) : 0.0));
+
+        // Compromiso: la coincidencia media entre los perks finales de dos runs de la MISMA raza, según
+        // hayan tomado el mismo maestro o maestros distintos. Solo entran las runs que cerraron un arco:
+        // comparar contra una run sin maestro mediría otra cosa.
+        double sameTotal = 0.0, differentTotal = 0.0;
+        int samePairs = 0, differentPairs = 0;
+        for (int i = 0; i < runs.Count; i++)
+        {
+            if (runs[i].Masters.Count == 0)
+            {
+                continue;
+            }
+
+            for (int j = i + 1; j < runs.Count; j++)
+            {
+                if (runs[j].Masters.Count == 0 || runs[i].ClubRace != runs[j].ClubRace)
+                {
+                    continue;
+                }
+
+                double overlap = Overlap(runs[i].FinalPerks, runs[j].FinalPerks);
+                if (SameMasters(runs[i].Masters, runs[j].Masters))
+                {
+                    sameTotal += overlap;
+                    samePairs++;
+                }
+                else
+                {
+                    differentTotal += overlap;
+                    differentPairs++;
+                }
+            }
+        }
+
+        double same = samePairs > 0 ? sameTotal / samePairs : 0.0;
+        double different = differentPairs > 0 ? differentTotal / differentPairs : 0.0;
+        rows.Add(Info(OverlapSameMaster, same));
+        rows.Add(Info(OverlapDifferentMaster, different));
+        rows.Add(samePairs > 0 && differentPairs > 0
+            ? Banded(MasterDivergence, same - different, MasterDivergenceMin, null)
+            : Info(MasterDivergence, 0.0));
+        return rows;
+    }
+
+    /// <summary>Coincidencia de Jaccard entre dos conjuntos de ids, en porcentaje.</summary>
+    private static double Overlap(IReadOnlyList<string> a, IReadOnlyList<string> b)
+    {
+        if (a.Count == 0 && b.Count == 0)
+        {
+            return 100.0;
+        }
+
+        int shared = 0;
+        for (int i = 0; i < a.Count; i++)
+        {
+            for (int j = 0; j < b.Count; j++)
+            {
+                if (string.Equals(a[i], b[j], StringComparison.Ordinal))
+                {
+                    shared++;
+                    break;
+                }
+            }
+        }
+
+        return 100.0 * shared / (a.Count + b.Count - shared);
+    }
+
+    private static bool SameMasters(IReadOnlyList<string> a, IReadOnlyList<string> b)
+    {
+        if (a.Count != b.Count)
+        {
+            return false;
+        }
+
+        for (int i = 0; i < a.Count; i++)
+        {
+            if (!string.Equals(a[i], b[i], StringComparison.Ordinal))
+            {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     /// <summary>
