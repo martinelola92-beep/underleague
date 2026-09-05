@@ -1975,10 +1975,10 @@ eso construir bien consistía sobre todo en **rechazar**. Este paquete añade lo
 haya algo *hacia lo que* construir: **cuatro perks maestros** que exigen media línea y cierran otra para
 siempre, y una **profundidad nativa** por acto que hace que el surtido mejore con la run.
 
-**Resultado de una línea**: el 27% de las runs cierra un arco (y el 51% de las que llegan al acto 3); dos
-builds de la misma raza con maestros opuestos **no comparten un solo perk** y ganan de formas distintas
-—una concede un 23% menos de goles, la otra lesiona 2,3 veces más—; y ninguna de las dos pasa del 70% de
-RT-055 (65,8% y 67,8%), por debajo de las builds coherentes que ya había (78-85%).
+**Resultado de una línea**: el 24,5% de las runs cierra un arco (y el 45% de las que llegan al acto 3);
+dos builds de la misma raza con maestros opuestos **no comparten un solo perk** y ganan de formas
+distintas —una concede un 25% menos de goles, la otra lesiona 2,1 veces más—; y ninguna de las dos pasa
+del 70% de RT-055 (67,7% y 66,7%), por debajo de las dos coherentes más fuertes que ya había.
 
 ### 23.1. Cuatro maestros, cuatro líneas, dos parejas excluyentes
 
@@ -2106,10 +2106,10 @@ dice explícitamente que no sale ahí.
 **AF-12. Y hace falta una `frequency`, porque el acto solo no bastaba.** Medido: con la profundidad puesta
 pero sin frecuencia propia, los arcos se cerraban en el **10%** de las runs, y la causa no era el requisito
 —entre 55 y 86 de 200 runs lo cumplían— sino que el maestro **no aparecía**: es un perk entre cuarenta y
-pico de un pool en el que un slot de recompensa cae cada dos o tres nodos. `frequency` es el *commonness*
+pico de un pool del que salen tres opciones por victoria. `frequency` es el *commonness*
 de Angband (100 = lo normal) y multiplica al peso por valor de la ADR 0038 y a la curva de profundidad, sin
-sustituir a ninguno de los dos. Los cuatro maestros la declaran a **300**, y con eso los arcos se cierran
-en el 27%.
+sustituir a ninguno de los dos. Los cuatro maestros la declaran a **300**, y con eso los arcos pasan a
+cerrarse en una de cada cuatro runs (§23.4).
 
 **AF-12b. Un maestro ofrecido y no cumplido gasta la opción, y eso es deliberado.** Un maestro al que le
 falta una pieza aparece en la recompensa **bloqueado**, con el motivo y el recuento a la vista, y no se
@@ -2135,32 +2135,39 @@ de la misma puntuación, así que no le hace tomar perks que no colocaría.
 
 ### 23.4. Las tres mediciones
 
-Lote: `--full-runs 200 --seed 1` (200 runs por doctrina, cinco razas repartidas, unas 1.900 runs de
-partido); y `--builds human_granite,human_bloodrange --vs human_none --home-away --rosters 60` (720
-partidos por celda, plantillas emparejadas).
+Lote: `--full-runs 200 --seed 1` (200 runs por doctrina, cinco razas repartidas); y
+`--builds human_granite,human_bloodrange,human_wall,orc_violence,elf_tiki_taka --vs human_none --home-away
+--rosters 60` (288 partidos por celda, plantillas emparejadas). Las dos **remedidas sobre el motor de la
+ADR 0050 P2** (dos tiradas promediadas) y con las **tres opciones de recompensa** de la ADR 0052, que es
+el árbol en el que este paquete queda.
 
 #### 1. Los arcos existen
 
 | | valor |
 |---|---|
-| Runs que cierran al menos un arco (`mastersReached`) | **27,0%** (banda 20-90) |
-| Runs que **llegan al acto 3** y cierran un arco | **51,4%** (36 de 70) |
-| Maestros por run (`mastersPerRun`) | 0,28 |
-| Runs que cierran **dos** arcos | 2 de 200 |
+| Runs que cierran al menos un arco (`mastersReached`) | **24,5%** (banda 20-90) |
+| Runs que **llegan al acto 3** y cierran un arco | **44,6%** (37 de 83) |
+| Maestros por run (`mastersPerRun`) | 0,27 |
+| Runs que cierran **dos** arcos | 4 de 200 |
 
-Por maestro, sobre 200 runs: `granite_line` 23, `killing_range` 17, `first_touch_school` 12, `blood_tithe`
-4. **Los cuatro se alcanzan**, que era la condición mínima para que ninguno sea contenido muerto.
+Por maestro, sobre 200 runs: `killing_range` 23, `granite_line` 19, `first_touch_school` 9, `blood_tithe`
+2. **Los cuatro se alcanzan**, que era la condición mínima para que ninguno sea contenido muerto.
 
-El 27% no es una cifra baja disfrazada: solo el **84%** de las runs llega al acto 2, que es donde un
-maestro empieza a existir, y el 49% se queda ahí. Entre las que llegan al final, cerrar un arco es lo
-normal (51%). Por eso el suelo de la métrica es 20 y no una mayoría.
+El 24,5% no es una cifra baja disfrazada: 40 de las 200 runs se quedan en el acto 1, donde un maestro **no
+existe** todavía, y otras 77 no pasan del 2. Entre las que llegan al final, cerrar un arco es casi la
+mitad de las veces. Por eso el suelo de la métrica es 20 y no una mayoría.
 
-**`blood_tithe` bajó de exigir tres piezas a exigir dos**, y el motivo está medido: con tres, solo 3 de 200
+**Qué hizo falta para llegar ahí, medido.** Con la profundidad puesta pero sin frecuencia propia para el
+maestro, los arcos se cerraban en el **10%** de las runs; subiendo `frequency` a 300, en el **25%** (misma
+semilla, mismo lote de 200). La causa del 10% no era el requisito —entre 55 y 86 de 200 runs lo cumplían—
+sino que el maestro **no aparecía**.
+
+**Y `blood_tithe` bajó de exigir tres piezas a exigir dos**, con el motivo medido: con tres, solo 3 de 200
 runs cumplían el requisito y **ninguna** conseguía el perk. La causa es la tabla de valor de la ADR 0038 —
 las piezas de La Carnicería tienen valor medido negativo (`pack_mentality` -73, `bruised_knuckles` -16,
 `shadow_marker` -10) y la doctrina contextual no gasta un slot irreversible en ellas—, así que la línea no
-se podía juntar entera mirando el valor pieza a pieza. El número sigue siendo un dial en datos: cuando la
-carnicería tenga piezas que valgan la pena, vuelve a tres.
+se podía juntar entera mirando el valor pieza a pieza. Sigue siendo el arco más difícil (2 de 200) y el
+número es un dial en datos: cuando La Carnicería tenga piezas que valgan la pena, vuelve a tres.
 
 #### 2. Hay compromiso
 
@@ -2168,9 +2175,9 @@ carnicería tenga piezas que valgan la pena, vuelve a tres.
 
 | | valor |
 |---|---|
-| Coincidencia con el **mismo** maestro | 26,7% |
-| Coincidencia con maestros **distintos** | 15,4% |
-| Divergencia (`masterDivergence`) | **11,4 puntos** (suelo 5) |
+| Coincidencia con el **mismo** maestro | 29,4% |
+| Coincidencia con maestros **distintos** | 14,8% |
+| Divergencia (`masterDivergence`) | **14,6 puntos** (suelo 5) |
 
 **En la build**, que es la prueba dura. `human_granite` (La Muralla + El Toque) y `human_bloodrange` (La
 Puntería + La Carnicería) son la misma raza, la misma plantilla y las dos combinaciones de maestros
@@ -2179,11 +2186,11 @@ sola pieza de la otra— y ganan de formas distintas:
 
 | build | tasa | goles a favor | goles en contra | lesiones que inflige | cadena de pases |
 |---|---|---|---|---|---|
-| `human_granite` | 65,8% | 1.230 | **867** | 129 | **2,74** |
-| `human_bloodrange` | 67,8% | **1.572** | 1.131 | **294** | 2,30 |
+| `human_granite` | 67,7% | 484 | **326** | 59 | **2,72** |
+| `human_bloodrange` | 66,7% | **602** | 433 | **122** | 2,35 |
 
-La de granito concede un **23% menos de goles** y encadena un **19% más de pases**; la de sangre marca un
-28% más y lesiona **2,3 veces más**. Es exactamente la forma de la métrica `buildsWinDifferently` de la
+La de granito concede un **25% menos de goles** y encadena un **16% más de pases**; la de sangre marca un
+24% más y lesiona **2,1 veces más**. Es exactamente la forma de la métrica `buildsWinDifferently` de la
 fase 1, pero entre dos builds de la **misma raza**, que es lo que RF-032 exige y hasta ahora solo se
 cumplía por qué perks te tocaban.
 
@@ -2191,29 +2198,34 @@ cumplía por qué perks te tocaban.
 
 | build | tasa contra `human_none` | |
 |---|---|---|
-| `human_granite` | **65,8%** | por debajo del 70% de RT-055 |
-| `human_bloodrange` | **67,8%** | por debajo del 70% de RT-055 |
-| `human_wall` (coherente, sin maestro) | 78,1% | referencia |
-| `orc_violence` (coherente, sin maestro) | 78,1% | referencia |
-| `elf_tiki_taka` (coherente, sin maestro) | 85,4% | referencia |
+| `human_granite` | **67,7%** | por debajo del 70% de RT-055 |
+| `human_bloodrange` | **66,7%** | por debajo del 70% de RT-055 |
+| `human_wall` (coherente, sin maestro) | 78,5% | referencia |
+| `elf_tiki_taka` (coherente, sin maestro) | 77,4% | referencia |
+| `orc_violence` (coherente, sin maestro) | 65,6% | referencia |
 
-Las dos builds con maestro quedan **por debajo** de las coherentes que ya había: un arco cerrado no es un
-atajo a una build mejor que las que el catálogo permitía, es **otra** build. (El que las coherentes de
-fase 1 estén en 78-85% contra la referencia sin perks es un problema anterior a este paquete y está fuera
-de su alcance.)
+Las dos builds con maestro quedan **por debajo** de las dos coherentes más fuertes que ya había y a la par
+de la tercera: un arco cerrado no es un atajo a una build mejor que las que el catálogo ya permitía, es
+**otra** build. (Que las coherentes de fase 1 estén en 77-78% contra la referencia sin perks es un
+problema anterior a este paquete y fuera de su alcance.)
 
-En runs completas, las que cierran un arco ganan el 35,2% y las que no, el 17,1%. La diferencia **no es el
+En runs completas, las que cierran un arco ganan el 38,8% y las que no, el 15,9%. La diferencia **no es el
 efecto del maestro**: cerrar un arco exige llegar al acto 3, y una run que llega al acto 3 ya iba bien. Es
 correlación, y la cifra queda como INFO precisamente para no confundirla con una medida de potencia; la
 medida de potencia es la tabla de arriba, con plantillas emparejadas.
 
 #### Lo que no se ha movido
 
-- **Curva de puertas de la ADR 0033**: las doce celdas siguen en banda. Las builds de la puerta no llevan
-  maestros —y ahora hay un test que exige que ninguna build catalogada mezcle un maestro con la línea que
-  cierra, `CataloguedBuildArcTests`—, así que la escala de calidad mide lo mismo que medía.
-- **Distribución RF-069**: 55,7 / 32,8 / 11,5 contra 60/30/10 ±8.
-- **Tasa de victoria de la run**: 22,0% (banda 20-30). **Muertes por run**: 1,61 (banda 1,5-3).
+- **Curva de puertas de la ADR 0033**: `BossGateTests` en verde, las doce celdas en banda. Las builds de la
+  puerta no llevan maestros —y ahora hay un test que exige que ninguna build catalogada mezcle un maestro
+  con la línea que cierra, `CataloguedBuildArcTests`—, así que la escala de calidad mide lo mismo que
+  medía.
+- **Distribución RF-069**: 55,7 / 32,8 / 11,5 contra 60/30/10 ±8, con `BuildGateTests` en verde (y con él,
+  que ningún perk del catálogo está muerto y que todos están asignados en alguna build).
+- **Tasa de victoria de la run**: 21,5% (banda 20-30). **Muertes por run**: 1,62 (banda 1,5-3).
+- Las métricas de escasez que salen fuera de banda en el mismo lote (`contextualAdvantage`,
+  `affordableShareAtMarket`, `purchasesPerMarket`, `leftoverGoldShare`, `brokeMarketRunShare`) son de
+  economía y no las toca este paquete; están donde las dejó el trabajo de las ADR 0052 y 0054.
 
 ### 23.5. Qué se retiró o rediseñó del catálogo existente
 
