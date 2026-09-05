@@ -97,6 +97,42 @@ public sealed class FullRunGateTests
     }
 
     /// <summary>
+    /// ADR 0051: <b>los arcos existen</b>. Una política que persigue un maestro llega a cerrar uno en una
+    /// fracción razonable de las runs; si nunca se cerrara, los maestros estarían mal calibrados o
+    /// pedirían demasiado, y si se cerrara siempre, el arco no sería una decisión.
+    ///
+    /// <para>Se mide sobre las <b>tres doctrinas juntas</b> a propósito: con 60 runs por doctrina la
+    /// cifra tiene una desviación de casi 6 puntos y el suelo estaría a menos de dos de ellas, que es un
+    /// test que falla por mala suerte. Con las 180, la desviación baja a 3,4 y el suelo queda a tres.</para>
+    /// </summary>
+    [Fact]
+    public void TheRunReachesAMasterOftenEnough()
+    {
+        var all = Result.Value.ByDoctrine.OrderBy(e => e.Key).SelectMany(e => e.Value).ToList();
+        var row = FullRunMetrics.Arcs(all).Single(m => m.Name == FullRunMetrics.MastersReached);
+        Assert.True(
+            row.Status == "IN",
+            $"{row.Name} = {row.Value:F2}, fuera de {row.RangeMin:F2}..{row.RangeMax:F2} (ADR 0051)");
+    }
+
+    /// <summary>
+    /// ADR 0051 y RF-032: <b>hay compromiso</b>. Dos runs de la misma raza que tomaron maestros distintos
+    /// construyen builds que se parecen menos que dos que tomaron el mismo. La prueba dura del compromiso
+    /// es estructural (<c>PerkArcTests</c>: dos maestros opuestos no comparten un solo perk de las líneas
+    /// que cierran); esta mide lo que ocurre en una run entera, donde media docena de perks sueltos son
+    /// comunes a las dos.
+    /// </summary>
+    [Fact]
+    public void TwoDifferentMastersProduceDifferentBuilds()
+    {
+        var all = Result.Value.ByDoctrine.OrderBy(e => e.Key).SelectMany(e => e.Value).ToList();
+        var row = FullRunMetrics.Arcs(all).Single(m => m.Name == FullRunMetrics.MasterDivergence);
+        Assert.True(
+            row.Status is "IN" or "INFO",
+            $"{row.Name} = {row.Value:F2}, por debajo de {row.RangeMin:F2} (ADR 0051)");
+    }
+
+    /// <summary>
     /// RF-020 y ADR 0046: la plantilla base es de diez, el techo doce, y una run no termina con más.
     /// Es la afirmación central del cambio: si esto se rompe, el desgaste vuelve a no morder (ADR 0045).
     /// </summary>

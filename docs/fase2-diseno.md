@@ -1622,3 +1622,618 @@ la build, pero **no** consigue que comprar con criterio sea distinto de ahorrar.
 cambio de este paquete puede alcanzarlos, pero había que comprobarlo: 1.000 partidos, semilla 1 —cambios
 de posesión 23,76; cadena de pase 2,27; tiros 11,83; entradas 9,78; **lesiones por partido 0,73** (banda
 0,30-0,80); reparto de resultados 76,4%; tercio máximo 41,4%— cifra por cifra las de siempre.
+
+## 22. Decisiones de implementación del paquete AE: dos tiradas, un solo suelo y la tercera opción (ADR 0050 P2 y P4, ADR 0052 §2)
+
+Tres cambios que se implementan juntos porque los tres son baratos y ninguno cambia el diseño: las cuatro
+resoluciones decisivas pasan a tirarse contra el **promedio de dos** (ADR 0050 P2), toda probabilidad de
+resolución del balón se acota a **2%-98%** (ADR 0050 P4), y el partido de liga recupera la **tercera
+opción** de recompensa (ADR 0052 §2). **P1 (cuotas multiplicativas) y P3 (curva de nivel) no se tocan**:
+la propia ADR 0050 prohíbe juntarlas con esto.
+
+**Resultado de una línea**: la tirada pierde el **29,3%** de su desviación y la ventaja del equipo mejor
+crece un **31%**, así que el mismo efecto se mide con el **59% de los partidos**; la curva de la ADR 0033
+sube entera y, recalibrando dos jefes, pasa por primera vez a **doce celdas de doce en banda sin margen de
+medida**; la tercera opción de liga devuelve **un tercio** de la ventaja de la doctrina contextual (+0,2 →
++2,0, no los +5,6 pedidos) y **degradar la rareza más allá del 30% se la vuelve a llevar**; y la agencia
+frente al riesgo, con el ruido quitado, **no se separa: se separa exactamente cero**, que falsa la
+hipótesis del ruido y confirma la ADR 0052 §1.
+
+**Cómo se ha medido, y por qué importa decirlo.** Mientras se hacía este paquete había otro agente
+trabajando en `data/perks`, `data/items` y `Sim/Perks` (perks maestros y profundidad nativa, ADR 0051).
+Medir en el árbol de trabajo habría mezclado los dos efectos, que es exactamente el error que la ADR 0050
+prohíbe. Todas las cifras de esta sección salen de **dos copias aisladas del repositorio** —una en el
+commit de partida y otra con este paquete aplicado encima— construidas y medidas por separado con la misma
+semilla. Lo que se compara es este paquete contra su propio antes, sin nada más de por medio.
+
+### 22.1. El promedio de dos tiradas conserva la media y dobla la pendiente (ADR 0050 P2)
+
+**AE-1. Qué es exactamente el cambio.** `Pcg32.ChanceAveraged(p)` compara `p` contra
+`(Range(0,10000) + Range(0,10000)) / 2` en vez de contra una sola uniforme. La tirada conserva la media
+—4.999,5 sobre 10.000— y su desviación típica baja de **2.887 a 2.041**, un **29,3%**, que es el «en torno
+a un 30%» de la ADR. Está comprobado en `Sim.Tests/Random/Pcg32Tests.cs` sobre 200.000 tiradas, no solo en
+`/Balance`: es la propiedad de la que cuelga todo lo demás.
+
+**AE-2. La consecuencia no es menos ruido por resolución: es más señal.** La probabilidad efectiva deja de
+ser `p` y pasa a ser la **acumulada triangular** `F(p) = 2p²` por debajo del centro y `1 − 2(1−p)²` por
+encima. Dos cosas se siguen de ahí, y conviene no confundirlas:
+
+- La **pendiente** en el punto de trabajo pasa de 1 a **1,5**: la misma diferencia de atributos mueve el
+  duelo vez y media más. Esa es la mejora.
+- La **varianza por tirada** de un suceso de probabilidad `q` sigue siendo `q(1−q)` y no la toca nadie: una
+  Bernoulli es una Bernoulli. Lo que baja no es el ruido absoluto, es el ruido **medido en unidades de la
+  ventaja que se persigue**.
+
+**AE-3. Por eso hay que reexpresar cuatro bases, y no es un cambio de balance.** Con la tirada nueva, una
+base de 2.800 ya no produce un 28% sino un 15,7%. Para que el punto de trabajo no se mueva —la ADR pide
+explícitamente no tocar ninguna media ni cambiar el ritmo del partido— cada base se **reescribe en la
+escala nueva** resolviendo `F(p) = p_antigua`. Es un cambio de coordenadas, no de equilibrio:
+
+| Canal | Base antes | Base ahora | Probabilidad efectiva | Pendiente |
+|---|---|---|---|---|
+| `dribble.baseWin` | 7200 | **6260** | 72% → 72% | 1 → **1,5** |
+| `tackle.baseWin` | 2800 | **3740** | 28% → 28% | 1 → **1,5** |
+| `shot.offTargetBase` | 2500 | **3280** | 70,5% de tiros a puerta → 70,4% | 1 → **~1,5** |
+| `save.basePercent` | 53 | **51** | 56,2% de paradas → 56,3% | 1 → **~1,9** |
+
+`shot.baseQuality` y los demás términos del remate **no** se tocan: son calidad del disparo en 0-100, no
+una probabilidad.
+
+**AE-4. Las cuatro y solo las cuatro.** Tiro a puerta, parada, entrada (la disputa del balón, **no** la
+falta) y regate. Pase e intercepción se quedan con una uniforme, que es lo que la ADR pide para no cambiar
+el ritmo: son las resoluciones de alta frecuencia y ahí una ese de pendiente 1,5 se compone decenas de
+veces por posesión.
+
+### 22.2. Un solo suelo y un solo techo, y dónde no llega (ADR 0050 P4)
+
+**AE-5. 2%-98% en un único sitio.** `tuning.resolution.probabilityFloor/Ceiling` (200 y 9800 en base
+10.000) y `MatchEngine.Bounded()`. Sustituye a los límites ad hoc por canal: el 500-9800 del pase, el
+0-10.000 de la parada, y la **ausencia** de límite en regate, entrada, intercepción, bloqueo y tiro a
+puerta. El comportamiento cerca de los extremos deja de depender del canal, que es lo que la ADR pide.
+
+**AE-6. No se aplica a los sucesos raros, y está medido por qué.** Falta, tarjeta, penalti, lesión y
+muerte se quedan con sus propias cotas. La ADR dice «toda probabilidad», pero ahí el suelo del 2% **no
+sería una barandilla sino una mejora**, y en un caso rompería una decisión ya tomada:
+
+- `injury.onTackleBase` vale **140** (1,4%). Un suelo del 2% lo subiría un 43% y sacaría
+  `injuriesPerMatch` de la banda 0,30-0,80 de RT-056, que ya está pegada al techo.
+- La tirada letal de la ADR 0048 **necesita poder llegar a cero por distancia**
+  (`proximityMinPercent: 0`). Con un suelo del 2%, colocar al marcado lejos del portador dejaría de servir
+  de nada, y esa es la única de las cinco condiciones de la ADR 0048 que hubo que construir entera.
+
+Queda anotado como desviación explícita de la ADR 0050 P4, con su motivo medido, en el `_doc` del dato.
+
+### 22.3. Varianza y error de medición, antes y después: el entregable principal
+
+Lote de referencia idéntico en las dos copias: **2.000 partidos, semilla 1**, seis emparejamientos del
+conjunto de `data/balance/reference.json`.
+
+**AE-7. La desviación del resultado no baja; lo que sube es la señal.** Por emparejamiento, media y
+desviación típica de la diferencia de goles:
+
+| Emparejamiento | Antes (media / sd) | Ahora (media / sd) | señal ×|
+|---|---|---|---|
+| `human_50` vs `human_50` | +0,419 / 1,506 | **+0,689 / 1,538** | 1,64 |
+| `human_50` vs `elf_50` | +0,441 / 1,567 | **+0,498 / 1,498** | 1,13 |
+| `human_50` vs `orc_50` | −0,129 / 1,656 | **−0,096 / 1,700** | 0,74 |
+| `orc_50` vs `elf_50` | +0,562 / 1,460 | **+0,751 / 1,479** | 1,34 |
+| `human_60` vs `human_40` | +0,871 / 1,420 | **+1,180 / 1,538** | 1,36 |
+| `human_60` vs `human_50` | +0,096 / 1,663 | **+0,093 / 1,628** | 0,97 |
+| **Media** | **0,420 / 1,545** | **0,551 / 1,563** | **1,31** |
+
+- **Señal ×1,31**: la ventaja que un equipo mejor le saca a otro crece un 31%.
+- **Ruido ×1,01**: la desviación no se mueve. Era previsible y conviene decirlo: la varianza de una
+  Bernoulli la fija su probabilidad, y las probabilidades efectivas se han conservado a propósito (AE-3).
+- **Señal/ruido ×1,30.** Para detectar el mismo efecto con la misma certeza hacen falta **el 59% de los
+  partidos**: un lote de 640 rinde ahora como uno de 1.080 antes.
+
+Es el 30% que la ADR persigue, pero **no está donde la ADR lo colocaba**. La ADR 0050 dice «baja la
+desviación típica en torno a un 30%» y espera que el error por celda pase de ±4 a ±2,8 puntos. Lo que baja
+un 30% es la **desviación de la tirada**, y de ahí no se sigue que baje el error de una medición: se sigue
+que el efecto que se mide es un 30% mayor. La conclusión práctica de la ADR —«la diferencia entre construir
+bien y mal se ve con lotes más pequeños»— **se cumple**; su mecanismo, no.
+
+**AE-8. El error de una celda de la curva no baja: sube, y es la lectura correcta.** Misma muestra que la
+ADR 0033 (32 plantillas × 4 partidos × 5 razas = **640 partidos por celda**), repetida con las semillas 1,
+2, 3 y 4; el error de una celda es la desviación típica de sus cuatro medidas:
+
+| | Antes | Ahora |
+|---|---|---|
+| Error medio de celda (12 celdas, 4 semillas) | **1,11 puntos** | **1,42 puntos** |
+| Celda más ruidosa | `the_hunt` incoherente, 1,86 | `eternal_crown` correcta, 3,01 |
+| Celda menos ruidosa | `eternal_crown` incoherente, 0,32 | `grimhold_guns` buena, 0,46 |
+
+Y no es una regresión: **cambiar de semilla cambia las plantillas generadas**, así que esa desviación no
+mide ruido de partido sino **diferencias reales entre plantillas**, que es justo lo que P2 hace más
+visibles. El error de muestreo puro con 640 partidos —el que sí es ruido— es `√(p(1−p)/640)`, entre 1,8 y
+2,0 puntos, y no lo mueve nada de esto. Las celdas que más se ensanchan son las que están **cerca del
+50%**, donde la ese es más pronunciada (`eternal_crown` correcta 1,41 → 3,01; `the_hunt` correcta 0,83 →
+2,62), y las que están en los extremos se estrechan (`grimhold_guns` correcta 1,50 → 0,61).
+
+La consecuencia operativa es la contraria de la que la ADR anticipaba y hay que anotarla: el margen de
+medida de `BossGateTests` (±2,5) **no puede reducirse**; si acaso, la celda *correcta* del jefe final ya lo
+roza. Queda abierto como **AE-A**.
+
+**AE-9. Y el mejor equipo gana más, que era el otro objetivo.** `betterTeamWinRate` con +20 puntos en todos
+los atributos pasa de **72,97% a 77,48%** (banda 65-80 de la fase 0: sigue dentro, ahora en su mitad alta).
+Con +10 puntos sigue midiendo 49,9% y no dice nada, por la razón que `balance.md` ya documenta: son **dos
+plantillas concretas**, no dos calidades, y en esa pareja la de calidad 60 salió peor que la de 50. P2 no
+arregla eso; lo que hace es amplificarlo, y en el espejo se ve bien —dos plantillas de la misma calidad
+nominal que ganaban 58%/42% ahora ganan **69,5%/30,5%**—.
+
+### 22.4. La tercera opción de liga vuelve, y la rareza se degrada poco (ADR 0052 §2)
+
+**AE-10. Es un número en datos y una tirada con tres tramos.** `economy.nodeRewards.league.options` vuelve
+de 2 a **3** —que es lo que RF-071 dice desde siempre— y aparece `commonCeilingPercent`, la probabilidad de
+que una opción se sortee **solo entre las comunes**. Se sortea con la **misma** tirada que
+`rarityFloorPercent`, desde el otro extremo: `rare = r < floor`, `común = r >= 100 − ceiling`. Una sola
+tirada y no dos, para que añadir techo a la liga no desplace el flujo de RNG del élite ni del jefe, que no
+cambian.
+
+| Nodo | Opciones | Rareza |
+|---|---|---|
+| Partido de liga | **3** | `commonCeilingPercent` **30**: tres de cada diez opciones salen forzadas a común |
+| Partido de élite | 3 | `rarityFloorPercent` 65 (sin cambios) |
+| Jefe de acto | 3 × 2 elecciones | `rarityFloorPercent` 35 (sin cambios) |
+
+**AE-11. El barrido, que es lo que fija el 30.** Cuatro configuraciones, **500 runs por doctrina y semilla
+1**, todas con P2 y P4 puestos para que la única variable sea la recompensa:
+
+| Configuración | Contextual | Ahorradora | Gastadora | **Ventaja contextual** |
+|---|---|---|---|---|
+| *Referencia sin P2 ni P4* (2 opciones) | 21,0 | 20,8 | 14,8 | **+0,2** |
+| 2 opciones (control: solo P2 y P4) | 25,4 | 25,6 | 22,6 | **−0,2** |
+| 3 opciones · techo común **60** | 25,6 | 26,6 | 18,4 | **−1,0** |
+| 3 opciones · techo común **30** | **28,0** | 25,2 | 19,6 | **+2,8** |
+| 3 opciones · sin techo (0) | 27,0 | 24,4 | 22,0 | **+2,6** |
+
+Tres lecturas, y las tres importan:
+
+1. **P2 por sí solo no separa las doctrinas.** El control con dos opciones se queda en −0,2, igual que la
+   referencia. Menos ruido no crea una decisión que no existe: solo mide mejor la que hay.
+2. **La tercera opción sí paga, y es la mitad de la ADR 0052 que se cumple.** De −0,2 a +2,6/+2,8. El
+   diagnóstico de la ADR era correcto: **la ventaja está en tener con qué elegir**.
+3. **Degradar la rareza al 60% se lleva por delante lo que la tercera opción acaba de dar** (−1,0). Y tiene
+   sentido con el mismo diagnóstico: si las tres opciones son comunes, volver a tener tres no devuelve
+   ninguna decisión. Por eso el techo se queda en **30** y no en 60: es la degradación más alta que todavía
+   deja la ventaja en pie, y sigue siendo una degradación real —la liga es el único nodo que la tiene—.
+
+**AE-12. Lo que NO se cumple, y hay que decirlo claro.** El encargo pedía recuperar **al menos los +5,6** y
+acercarse a los 8 de la ADR 0037. Medido: **+2,8**. Se recupera la mitad. Con 500 runs por doctrina el
+error típico de una tasa ronda los 2 puntos, así que +2,8 y +2,6 son la misma cifra y −1,0 sí es distinta,
+pero ninguna llega a +5,6. Las dos explicaciones compatibles con los datos:
+
+- El +5,6 de §20 se midió **antes** de la ADR 0048 (0,64 muertes por run frente a 1,77). La carnicería se
+  lleva jugadores con sus perks puestos, y eso castiga por igual a quien elige bien y a quien no.
+- La regla que distingue a la contextual —repartir el oro entre los mercados que quedan y, dentro del
+  presupuesto, preferir lo raro— sigue chocando con que **lo raro casi nunca está dentro del presupuesto**:
+  `affordableShareAtMarket` sigue en 57 con banda 20-35. Mientras el mercado no separe precios, la
+  contextual seguirá degenerando en la ahorradora en la mitad de las visitas.
+
+Queda abierto como **AE-B**: el número de opciones estaba diagnosticado bien y ya está corregido; lo que
+queda de los +5,6 depende del **precio**, no de la recompensa, y choca con `brokeMarketRunShare` (Z-K,
+AB-F, AD-18), que sigue sin tener configuración que cumpla las dos.
+
+### 22.5. La curva de la ADR 0033, recalibrada: doce de doce
+
+Con la escalera más pronunciada, la curva entera sube y dos celdas se salen por arriba. Muestra idéntica a
+la de §21.4: semilla 1, 32 plantillas × 4 partidos por celda y raza, **640 partidos por celda**, 7.680 en
+total.
+
+| Puerta | Incoherente | Correcta | Buena | Muy buena |
+|---|---|---|---|---|
+| **Acto 1** `grimhold_guns` (calidad 17, **sin tocar**) | **25,0** (20-35) | **77,8** (65-80) | **87,2** (75-88) | **95,0** (85-95) |
+| **Acto 2** `the_hunt` (calidad 40 → **44**) | **8,0** (< 15) | **39,4** (35-50) | **67,3** (60-72) | **80,3** (72-85) |
+| **Acto final** `eternal_crown` (calidad 24 → **29**) | **6,1** (< 10) | **26,3** (15-28) | **43,6** (40-55) | **60,3** (55-70) |
+
+**Doce celdas de doce en banda, y por primera vez sin necesitar el margen de medida.** La escalera sigue
+siendo monótona en los tres jefes y **la celda que arrastraba el aviso desde el paquete AB —*correcta*
+contra el jefe final— entra por fin sola**: era 30,3 con 2,3 puntos de exceso, y ahora es 26,3 con 1,7 de
+margen.
+
+**AE-13. Qué se movió y qué no.**
+
+- **`data/balance/groups.json` no se toca.** La tercera opción de liga vuelve, pero **la densidad de la
+  build no cambia**: al jefe del acto 1 se llega con 3,29 perks (antes 3,18), al del 2 con 6,46 (6,28) y al
+  final con 8,57 (8,39). Lo que la tercera opción devuelve es la **decisión**, no la cantidad —quien no
+  rechaza nada se llevaba una recompensa por nodo con dos opciones y se lleva una con tres—, que es la
+  misma asimetría que AD-15 documentó al revés.
+- **`grimhold_guns` no se toca.** Sus cuatro celdas siguen en banda y una build correcta pasa el 77,8%: el
+  acto 1 sigue siendo el taller (ADR 0043), que es la condición que la ADR 0043 pone por encima de todo.
+- **`the_hunt` de 40 a 44 y `eternal_crown` de 24 a 29**, que es lo único que hacía falta. Sin tocarlos,
+  *buena* contra el acto 2 medía 76,1 (pide ≤72) y *correcta* contra el final medía 36,9 (pide ≤28).
+- **La ventana de `eternal_crown` es estrecha y conviene saberlo**: con 28 se sale *correcta* por arriba y
+  con 30 se sale *buena* por abajo (38,3 frente al 40 que pide). La banda de la ADR 0033 pide 12 puntos
+  entre esas dos celdas y la escalera medida da 13. Anotado como **AE-C**.
+
+### 22.6. RT-056 y las métricas de §10, antes y después
+
+**AE-14. RT-056 se conserva, y esa era la condición.** Misma muestra que la puerta estadística: **1.000
+partidos, semilla 1**, equipos de referencia sin perks.
+
+| Métrica | Banda | Antes | **Ahora** |
+|---|---|---|---|
+| Alternancias de posesión | 12-25 | 23,76 | **24,15** |
+| Cadena media de pases | 2-4 | 2,27 | **2,26** |
+| Tiros por partido | 8-16 | 11,83 | **11,98** |
+| Entradas por partido | 6-14 | 9,78 | **9,77** |
+| Lesiones por partido | 0,30-0,80 | 0,73 | **0,75** |
+| Reparto de resultados 1-0..3-2 | mayoría | 76,4% | **75,6%** |
+| Tercio máximo del balón | < 50% | 41,4% | **41,8%** |
+| Equipo **+20** en todos los atributos | 65-80% | 72,97 | **79,52** |
+
+Las siete primeras filas son las de siempre, que es exactamente lo que la reexpresión de bases (AE-3)
+perseguía: el ritmo del partido no se ha movido.
+
+**AE-15. La octava fila sí se ha movido y es el aviso más importante de este paquete.** `betterTeamWinRate`
+con +20 puntos pasa de 72,97 a **79,52**, dentro de su banda 65-80 pero **a medio punto del techo**. No es
+un efecto secundario: es literalmente lo que P2 hace —que el mejor equipo gane más a menudo—, y la banda
+65-80 se fijó en la fase 0 para un sistema **lineal**. Consecuencia práctica: **el siguiente cambio que
+suba el peso de la habilidad rompe esta puerta**, y P1 (cuotas multiplicativas) y P3 (curva de nivel) son
+exactamente eso. La banda hay que revisarla —con su ADR, RT-057— **antes** de aplicar P1, no después de que
+la puerta se ponga roja. Anotado como **AE-D**.
+
+**AE-16. Las métricas de §10.** Lote de referencia: **500 runs por doctrina, semilla 1** (1.500 runs),
+con las tres opciones, el techo de rareza en 30 y los dos jefes recalibrados.
+
+| Métrica | Rango | Antes (AD) | **Ahora** | Estado |
+|---|---|---|---|---|
+| **Ventaja de la contextual sobre las dos puras** | ≥ 8 puntos | +0,2 | **+2,0** | **OUT, pero recupera un tercio** |
+| Tasa de victoria de la run (contextual) | 20-30% | 21,0 | **21,6** | IN |
+| Muertes por run | 1,5-3 | 1,51 | **1,62** | IN |
+| Duración de una run completa | 18-22 | 20,00 | **20,00** | IN |
+| Derrotas por bajar de 5 jugadores | < 35% | 0,51% | **0,26%** | IN |
+| Sumideros que paga el oro de un acto | 2-3, nunca todos | 2,12 | **2,17** | IN |
+| Compras por visita al mercado | 0,5-2 (cota) | 0,88 | **0,94** | cota IN |
+| Fracción del surtido asequible | 20-35% | 56,7 | **57,4** | OUT (igual que antes) |
+| Oro sobrante al terminar la run | < 15% | 21,0 | **19,8** | OUT (mejora 1,2) |
+| Runs que llegan a un mercado sin poder comprar | 10-25% | 62,8 | **65,4** | OUT (igual que antes) |
+| *Recompensas cobradas / rechazadas por run* | *—* | *9,06 / 0,41* | ***9,92 / 0,22*** | *INFO* |
+| *Perks en el once al terminar* | *—* | *6,64* | ***7,05*** | *INFO* |
+| *Muertes por acto* | *—* | *0,00 / 0,86 / 0,65* | ***0,01 / 0,91 / 0,71*** | *INFO* |
+| *Lesiones graves por run* | *—* | *1,85* | ***1,71*** | *INFO* |
+| *Lesiones propias por partido* | *—* | *0,29* | ***0,25*** | *INFO* |
+| *Objetos recuperados de un muerto por run* | *—* | *0,91* | ***1,04*** | *INFO* |
+| *Reparto de derrotas por acto* | *—* | *31,7 / 51,9 / 16,5* | ***26,0 / 53,8 / 20,2*** | *INFO* |
+
+**Ninguna métrica que estuviera dentro se ha salido, y ninguna nueva se ha roto.** Las cuatro que siguen
+OUT son las cuatro de la escasez del mercado, que llevan fuera desde el paquete Z y no dependen de nada de
+esto (Z-K, AB-F, AD-18): siguen esperando a que se toquen precios, y siguen chocando entre sí.
+
+Lo que sí se mueve, y encaja: **el rechazo de recompensas se hunde** (0,41 → 0,22 por run) porque con tres
+opciones es mucho más raro que ninguna encaje —era el efecto secundario que la ADR 0049 buscaba al revés—,
+y las **derrotas se desplazan hacia el final** (el acto 1 pasa de 31,7% a 26,0% de las derrotas y el acto 3
+de 16,5% a 20,2%): con la escalera más pronunciada, quien construye bien pasa la primera puerta más a
+menudo y quien no, sigue sin pasarla.
+
+### 22.7. La agencia frente al riesgo: con menos ruido, la ADR 0048 se separa menos, no más
+
+**AE-17. El resultado, y es concluyente en la dirección incómoda.** Dos políticas idénticas salvo que una
+lee el informe de ojeo y el indicador de riesgo, 500 runs cada una, semilla 1:
+
+| | Antes (AD) | **Ahora** |
+|---|---|---|
+| Muertes por run **leyendo** el indicador | 1,51 | **1,62** |
+| Muertes por run **sin leer nada** (`--ignore-scouting`) | 1,57 | **1,62** |
+| Diferencia | 3,8% | **0,0%** |
+| Tasa de victoria leyendo / sin leer | 21,0 / 17,6 | **21,6 / 20,2** |
+
+La ADR 0048 declara esta métrica decisiva y dice que, si no se separa, *«el azar no tiene agencia y la
+decisión hay que revisarla»*. Con el ruido de antes se podía sostener que el 3,8% era una separación
+pequeña escondida bajo el error de medida. Con este paquete, **la separación es exactamente cero**, medida
+sobre 1.000 runs. La hipótesis de que el ruido tapaba la señal queda **falsada**: lo que había era señal
+cero.
+
+Y esa es la utilidad real de P2 en este caso concreto: no ha hecho visible una agencia que estaba tapada;
+ha permitido **descartar** que estuviera tapada. Es la conclusión que la **ADR 0052 §1** ya proponía por
+otro camino —con una formación de 2-3-1 fija y siete casillas obligatorias no hay forma de sacar del campo
+al frágil, así que no queda nada que decidir— y esta medición la confirma. **La palanca que falta es la
+formación (RF-002d), no menos ruido.** Se refuerza **AD-A** y se cierra el turno de la hipótesis del ruido.
+
+**AE-18. El barrido de `--risk-aversion` dice lo mismo que antes, y con la misma asimetría.** 300 runs
+por punto, semilla 1 (la fila por defecto es la de 500 del lote de referencia):
+
+| `--risk-aversion` | Qué hace la política | Muertes/run | Antes (AD) |
+|---|---|---|---|
+| **−1000** | busca el riesgo: pone al frágil donde muerde | **1,90** | 1,90 |
+| **0** | ignora el número y alinea por valor deportivo | **1,67** | 1,58 |
+| +150 (por defecto) | lo obedece | **1,62** | 1,51 |
+| **+1000** | lo obedece por encima de todo | **1,70** | 1,54 |
+
+El rango sigue siendo **del 17% entre el mejor y el peor uso del mismo indicador**, y sigue repartido
+igual: exponer al eslabón débil cuesta **+17%** y protegerlo ahorra **−3%**, dentro del error. Que
+obedecerlo *por encima de todo* (+1000) salga peor que obedecerlo con medida (+150) es la misma
+observación de AD-8 desde otro ángulo: pasado cierto punto, proteger al frágil cuesta partidos y los
+partidos perdidos también matan.
+
+Lo que sí paga es leer el informe: **+1,4 puntos de tasa de victoria**. La contrajugada sigue pagando en
+partidos ganados y no en cuerpos, igual que en AD-8. Y la doctrina contextual **necesita** el informe: su
+ventaja pasa de **+2,0 a −3,2** cuando se le apaga (`--ignore-scouting`), que es la mejor prueba de que la
+decisión de compra sí depende del contexto aunque su margen sea pequeño.
+
+### 22.8. Lo que queda abierto
+
+| Id | Qué | Dónde |
+|---|---|---|
+| **AE-A** | El margen de medida de `BossGateTests` (±2,5) **no se puede reducir**: el error por celda sube de 1,11 a 1,42 puntos porque lo que mide es diferencia entre plantillas, y P2 la hace más visible | AE-8 |
+| **AE-B** | La ventaja de la doctrina contextual recupera un tercio (+0,2 → +2,0) y no los +5,6 pedidos. Lo que queda depende del **precio**, no del número de opciones, y choca con `brokeMarketRunShare` | AE-12 |
+| **AE-C** | La ventana de calidad de `eternal_crown` es de un punto: con 28 se sale *correcta* y con 30 se sale *buena*. La banda de la ADR 0033 pide 12 puntos entre esas dos celdas y la escalera medida da 13 | AE-13 |
+| **AE-D** | `betterTeamWinRate` con +20 queda a medio punto del techo de su banda 65-80. **La banda hay que revisarla por ADR antes de aplicar P1**, que sube el peso de la habilidad otra vez | AE-15 |
+
+Y dos cosas que este paquete **cierra**:
+
+- La hipótesis de que el ruido tapaba la agencia frente al riesgo (**AD-A**) queda falsada: con el ruido
+  quitado la separación es exactamente cero. Lo que falta es la formación (ADR 0052 §1), no la medida.
+- El aviso **AB-D** —la celda *correcta* contra el jefe final necesitando el margen de medida desde el
+  paquete AB— desaparece: con `eternal_crown` en 29 esa celda entra sola.
+
+## 23. Decisiones de implementación del paquete AF: arcos de build y profundidad nativa (ADR 0051)
+
+Los 45 perks del catálogo eran independientes entre sí: ninguno exigía nada, ninguno cerraba nada, y por
+eso construir bien consistía sobre todo en **rechazar**. Este paquete añade lo único que faltaba para que
+haya algo *hacia lo que* construir: **cuatro perks maestros** que exigen media línea y cierran otra para
+siempre, y una **profundidad nativa** por acto que hace que el surtido mejore con la run.
+
+**Resultado de una línea**: el 27% de las runs cierra un arco (y el 51% de las que llegan al acto 3); dos
+builds de la misma raza con maestros opuestos **no comparten un solo perk** y ganan de formas distintas
+—una concede un 23% menos de goles, la otra lesiona 2,3 veces más—; y ninguna de las dos pasa del 70% de
+RT-055 (65,8% y 67,8%), por debajo de las builds coherentes que ya había (78-85%).
+
+### 23.1. Cuatro maestros, cuatro líneas, dos parejas excluyentes
+
+**AF-1. Las líneas son un dato, y son pocas.** `data/build/arcs.json` declara las cuatro líneas del
+catálogo; cada perk dice a cuál pertenece con `family` (o a ninguna, que es lo normal). Las cuatro tienen
+**siete piezas** cada una y cubren 28 de los 61 perks: menos de la mitad del catálogo, para que el resto
+siga siendo el roguelite de piezas sueltas que la ADR quiere preservar. El nombre visible de cada línea
+vive en `data/l10n/<idioma>/templates.json` (sección `families`), no en el fichero de datos: es texto que
+lee el jugador (RT-073).
+
+| línea | qué hace | maestro | exige | cierra |
+|---|---|---|---|---|
+| La Muralla (`wall`) | entrada y cobertura desde el propio tercio | `granite_line` | 2 de La Muralla | **La Puntería** |
+| El Toque (`craft`) | pase, regate y evasión | `first_touch_school` | 2 de El Toque | **La Carnicería** |
+| La Puntería (`aim`) | el remate | `killing_range` | 2 de La Puntería | **La Muralla** |
+| La Carnicería (`butchery`) | lesionar | `blood_tithe` | 2 de La Carnicería | **El Toque** |
+
+Los cuatro maestros escritos, con su efecto y su descripción **generada** (RT-035, sin una frase a mano):
+
+- **`granite_line` · Línea de granito** (raro, condicional, acto nativo 2). *"Al empezar el partido, si el
+  portador empieza en su tercio, el equipo suma +15% a su probabilidad de robar y el equipo rival suma -5%
+  a su probabilidad de tiro a puerta. Exige llevar ya 2 perks de La Muralla. Cierra La Puntería para el
+  resto de la run."* Es el único perk del catálogo que mueve a los dos equipos a la vez desde el saque
+  inicial, y por eso pide una línea construida detrás.
+- **`killing_range` · Distancia de tiro** (raro, condicional, acto 2). *"Al tirar, si el jugador está a
+  menos de 6 casillas de portería, el jugador suma +15% a su probabilidad de tiro a puerta. Exige llevar ya
+  2 perks de La Puntería. Cierra La Muralla para el resto de la run."* Con `scope: team` mejora el remate
+  de **todo el equipo**, no el del portador, que es lo que ningún perk suelto hace.
+- **`first_touch_school` · Escuela del primer toque** (raro, condicional, acto 2). *"Al empezar el partido,
+  si el portador tiene más de 1 Fino en su equipo, el equipo suma +10% a su probabilidad de pase y el
+  equipo suma +5% a su resistencia a las intercepciones. Exige llevar ya 2 perks de El Toque. Cierra La
+  Carnicería para el resto de la run."*
+- **`blood_tithe` · Diezmo de sangre** (raro, **rompe-reglas**, acto 2). *"Al empezar el partido, si el
+  portador tiene más de 1 Bruto en su equipo, el equipo suma +2% a su probabilidad de lesionar y el equipo
+  rival suma +3% a su probabilidad de lesión grave. Exige llevar ya 2 perks de La Carnicería. Cierra El
+  Toque para el resto de la run."* **No es letal**: no marca a nadie ni mata por sí mismo (ADR 0048); lo
+  que hace es que las entradas de todo el equipo lesionen más y que la lesión del rival sea peor.
+
+**AF-2. Las líneas se cierran por parejas, y eso acota la explosión.** La Muralla contra La Puntería y El
+Toque contra La Carnicería. Consecuencias que valen más que cualquier regla adicional: una run puede
+cerrar **como mucho dos** arcos (uno de cada pareja); los dos maestros de una pareja **no pueden
+coexistir** —el que cierra la línea del otro cierra también su maestro, que es miembro de ella—; y las dos
+combinaciones posibles son exactamente dos builds que no comparten nada. Nada de esto está escrito en el
+código: sale de los datos.
+
+**AF-3. Los maestros son el 6,6% del catálogo (4 de 61).** La ADR los acota al 5-10% y hay un test que lo
+vigila (`BuildArcTests.MastersAreASmallShareOfTheCatalog`): si crecen más, el catálogo se vuelve un árbol
+de talentos. Como son `conditional` los tres primeros y `ruleBreaker` el cuarto, la distribución RF-069
+queda en **55,7 / 32,8 / 11,5** contra el objetivo 60/30/10 (tolerancia ±8): los tres dentro.
+
+### 23.2. El bloqueo mira hacia adelante, y se anuncia antes
+
+**AF-4. Lo que ya se lleva sigue funcionando.** Un maestro cierra una línea **para lo que queda de run**:
+esos perks desaparecen del pool de recompensas y del mercado, y `PerkPool.Require` rechaza cobrarlos por
+cualquiera de las dos vías. Lo que **no** hace es apagar los que ya estaban puestos. La razón es RF-072: un
+perk no se puede retirar, así que un bloqueo retroactivo borraría algo que el jugador ya pagó con un slot
+irreversible. Un bloqueo hacia adelante sigue teniendo precio —el resto de la run se construye en una sola
+dirección— y no tiene ninguna trampa.
+
+**AF-4b. Un maestro es el único perk al que se le permiten tres frases.** `docs/estilo-descripciones.md`
+pide una frase de línea y media, y la razón es buena: un efecto que necesita dos frases combina demasiados
+ejes. Aquí la segunda y la tercera **no describen el efecto**, describen la regla de adquisición —qué
+exige y qué cierra—, que es exactamente la excepción que ya existía para la letalidad (`lethalSuffix`) y
+por el mismo motivo: es lo peor que puede pasar y hay que leerlo en la ficha, no en un tutorial. Las dos
+frases se escriben lo más cortas que se puede ("Exige llevar ya 2 perks de La Muralla. Cierra La Puntería
+para el resto de la run.") y solo las llevan cuatro perks de sesenta y uno.
+
+**AF-5. Se anuncia antes de aceptar, en los dos sitios donde se puede aceptar.** La descripción
+**generada** del maestro (RT-035) dice qué exige y qué cierra, con el mismo mecanismo con el que un perk
+letal añade su aviso: dos sufijos de plantilla (`requiresSuffix`, `blocksSuffix`) y los nombres
+localizados de las líneas. Eso cubre el mercado, la ficha del jugador y el informe de ojeo sin tocar
+ninguno. Y la **pantalla de recompensa** añade lo que un maestro necesita y una descripción no puede dar,
+porque depende del estado de la run:
+
+- *"MAESTRO · exige 2 perks de La Muralla y llevas 3: lo cumples"* (o *"...llevas 1: te falta 1"*),
+- *"SI LO ACEPTAS CIERRAS La Puntería para el resto de la run: 8 perks que ya no podrás conseguir, y no se
+  puede deshacer (RF-072)"*,
+
+las dos **por delante** de cualquier otro aviso de la ficha y aparezcan o no bloqueadas las opciones. Si la
+opción no se puede cobrar, la lista de portadores no se pinta: el motivo ya está arriba, y pintarla
+invitaría a un clic que `/Sim` va a rechazar (RF-012d: nada de lo que pase estaba sin anunciar).
+
+**AF-6. La regla vive en `/Sim`, no en la pantalla.** `PerkPool.Availability` devuelve por qué un perk no
+se puede cobrar (`Unmet`, `Closed`, `NoCarrier`) y `PerkPool.Require` lanza con el motivo. Lo llaman
+`RewardSystem.ApplyPerk` y `MarketSystem.BuyPerk`, así que no hay forma de conseguir un maestro por una vía
+y no por la otra, y la pantalla puede equivocarse sin que el estado de la run se corrompa.
+
+**AF-7. El validador comprueba las dependencias, los ciclos y los inalcanzables.** `PerkLoader.ValidateArcs`
+corre con el catálogo entero delante (por eso `DataLoader` construye el `PerkCatalog` **antes** de
+comprobar que todo es describible) y rechaza: una línea que no existe, un perk bloqueado que no existe, un
+maestro que exige la línea que él mismo cierra, un maestro con acto nativo 1, un perk que cierra algo sin
+ser maestro, un maestro que no cierra nada, y —la comprobación que cubre a la vez el **inalcanzable** y el
+**ciclo**— un maestro cuya línea no tiene suficientes miembros **que no sean maestros**. Contando solo
+piezas normales, un maestro no puede ser nunca el escalón de otro, así que un ciclo es imposible por
+construcción en vez de por una búsqueda en grafo.
+
+**AF-8. Un maestro no se regala al empezar.** `PerkAssignment.AssignInitial` los excluye del sorteo de
+perks iniciales de la plantilla: entrar con uno puesto sería saltarse el arco entero antes del primer
+partido.
+
+### 23.3. Profundidad nativa: el surtido mejora con la run
+
+**AF-9. Cada perk y cada objeto declaran su acto.** `minAct` (1-3) es el acto en el que empiezan a
+aparecer. El reparto no es mecánico por rareza, es por función:
+
+| acto nativo | perks | objetos | criterio |
+|---|---|---|---|
+| 1 | 47 | 14 | el relleno y la base de cada línea: el acto 1 es el taller (ADR 0043) |
+| 2 | 10 | 20 | los `rare`, los cuatro maestros y el equipo restringido de raza |
+| 3 | 4 | 0 | los cuatro letales (`iron_studs`, `marrow_thirst`, `second_wound`, `skullsplitter`) |
+
+**AF-10. La curva es de datos y aplana, no empina.** `data/build/arcs.json` → `depth`:
+
+- por **encima** del acto nativo, el peso decae despacio: **100 / 60 / 40**. El relleno del acto 1 sigue
+  saliendo en el 3, solo que menos; eso es lo que deja sitio a lo hondo sin vaciar el surtido, y es la
+  lección del rebalanceo de Angband 3.5 —que lo bueno aparezca antes de lo que la intuición pide, porque la
+  escasez tardía se administra sola cuando los slots se llenan—;
+- por **debajo**, queda un peso pequeño: **12 / 3**. Es la aparición *fuera de profundidad*: encontrar algo
+  del acto 3 en el 1 es raro y memorable, no imposible.
+
+**AF-11. Un maestro no tiene fuera de profundidad.** Es la única excepción de la curva, y está en el
+código con su motivo: un maestro en el acto 1 sería un objetivo que nadie puede cumplir todavía, y la ADR
+dice explícitamente que no sale ahí.
+
+**AF-12. Y hace falta una `frequency`, porque el acto solo no bastaba.** Medido: con la profundidad puesta
+pero sin frecuencia propia, los arcos se cerraban en el **10%** de las runs, y la causa no era el requisito
+—entre 55 y 86 de 200 runs lo cumplían— sino que el maestro **no aparecía**: es un perk entre cuarenta y
+pico de un pool en el que un slot de recompensa cae cada dos o tres nodos. `frequency` es el *commonness*
+de Angband (100 = lo normal) y multiplica al peso por valor de la ADR 0038 y a la curva de profundidad, sin
+sustituir a ninguno de los dos. Los cuatro maestros la declaran a **300**, y con eso los arcos se cierran
+en el 27%.
+
+**AF-12b. Un maestro ofrecido y no cumplido gasta la opción, y eso es deliberado.** Un maestro al que le
+falta una pieza aparece en la recompensa **bloqueado**, con el motivo y el recuento a la vista, y no se
+puede cobrar. Es el mismo comportamiento que ya tenía una opción sin portador posible o un jugador con la
+plantilla llena: se puede rechazar (ADR 0043) o repetir la tirada (RF-071b). Lo que **no** puede hacer
+nadie es cobrarla sin darse cuenta: `PerkPool.Require` lanza. Consecuencia práctica en los tests: la
+política ciega de `FullRunTests` —que coge la primera opción cobrable— tuvo que aprender a saltarse las
+opciones fuera de alcance, igual que ya se saltaba las que nadie puede llevar.
+
+**AF-13. Un maestro entra en el pool cuando le falta como mucho una pieza.** Con el requisito ya cumplido
+sería invisible hasta que sobra, y el jugador nunca aprendería que existe; ofreciéndolo siempre, el surtido
+se llenaría de opciones imposibles. A una pieza de distancia es el punto en el que el objetivo se ve venir
+y **el mercado recupera el papel** que el trampolín de la ADR 0043 le había quitado: si te falta la tercera
+pieza de tu línea, la buscas y la pagas. La política automática lo hace: `ArcMarketWeight` pone al maestro
+y a las piezas de la línea perseguida por encima de cualquier otra compra.
+
+**AF-14. La política automática persigue un maestro.** `RunPolicyOptions.PursuesMasters` (activo por
+defecto) elige la línea de la que la run lleva más piezas y, **a igualdad de todo lo demás**, prefiere sus
+perks y el maestro que la corona. No es un atajo para que la medición salga: sin él, la política automática
+es exactamente el jugador que la ADR describe como el problema —el que acumula piezas sueltas— y la
+pregunta "¿los arcos existen?" no tendría a quién preguntársela. La preferencia es un **desempate** dentro
+de la misma puntuación, así que no le hace tomar perks que no colocaría.
+
+### 23.4. Las tres mediciones
+
+Lote: `--full-runs 200 --seed 1` (200 runs por doctrina, cinco razas repartidas, unas 1.900 runs de
+partido); y `--builds human_granite,human_bloodrange --vs human_none --home-away --rosters 60` (720
+partidos por celda, plantillas emparejadas).
+
+#### 1. Los arcos existen
+
+| | valor |
+|---|---|
+| Runs que cierran al menos un arco (`mastersReached`) | **27,0%** (banda 20-90) |
+| Runs que **llegan al acto 3** y cierran un arco | **51,4%** (36 de 70) |
+| Maestros por run (`mastersPerRun`) | 0,28 |
+| Runs que cierran **dos** arcos | 2 de 200 |
+
+Por maestro, sobre 200 runs: `granite_line` 23, `killing_range` 17, `first_touch_school` 12, `blood_tithe`
+4. **Los cuatro se alcanzan**, que era la condición mínima para que ninguno sea contenido muerto.
+
+El 27% no es una cifra baja disfrazada: solo el **84%** de las runs llega al acto 2, que es donde un
+maestro empieza a existir, y el 49% se queda ahí. Entre las que llegan al final, cerrar un arco es lo
+normal (51%). Por eso el suelo de la métrica es 20 y no una mayoría.
+
+**`blood_tithe` bajó de exigir tres piezas a exigir dos**, y el motivo está medido: con tres, solo 3 de 200
+runs cumplían el requisito y **ninguna** conseguía el perk. La causa es la tabla de valor de la ADR 0038 —
+las piezas de La Carnicería tienen valor medido negativo (`pack_mentality` -73, `bruised_knuckles` -16,
+`shadow_marker` -10) y la doctrina contextual no gasta un slot irreversible en ellas—, así que la línea no
+se podía juntar entera mirando el valor pieza a pieza. El número sigue siendo un dial en datos: cuando la
+carnicería tenga piezas que valgan la pena, vuelve a tres.
+
+#### 2. Hay compromiso
+
+**En la run** (200 runs, coincidencia de Jaccard entre los perks finales de dos runs de la misma raza):
+
+| | valor |
+|---|---|
+| Coincidencia con el **mismo** maestro | 26,7% |
+| Coincidencia con maestros **distintos** | 15,4% |
+| Divergencia (`masterDivergence`) | **11,4 puntos** (suelo 5) |
+
+**En la build**, que es la prueba dura. `human_granite` (La Muralla + El Toque) y `human_bloodrange` (La
+Puntería + La Carnicería) son la misma raza, la misma plantilla y las dos combinaciones de maestros
+posibles. **No comparten un solo perk** —no es que se parezcan poco: es que ninguna podría contener una
+sola pieza de la otra— y ganan de formas distintas:
+
+| build | tasa | goles a favor | goles en contra | lesiones que inflige | cadena de pases |
+|---|---|---|---|---|---|
+| `human_granite` | 65,8% | 1.230 | **867** | 129 | **2,74** |
+| `human_bloodrange` | 67,8% | **1.572** | 1.131 | **294** | 2,30 |
+
+La de granito concede un **23% menos de goles** y encadena un **19% más de pases**; la de sangre marca un
+28% más y lesiona **2,3 veces más**. Es exactamente la forma de la métrica `buildsWinDifferently` de la
+fase 1, pero entre dos builds de la **misma raza**, que es lo que RF-032 exige y hasta ahora solo se
+cumplía por qué perks te tocaban.
+
+#### 3. No dominan
+
+| build | tasa contra `human_none` | |
+|---|---|---|
+| `human_granite` | **65,8%** | por debajo del 70% de RT-055 |
+| `human_bloodrange` | **67,8%** | por debajo del 70% de RT-055 |
+| `human_wall` (coherente, sin maestro) | 78,1% | referencia |
+| `orc_violence` (coherente, sin maestro) | 78,1% | referencia |
+| `elf_tiki_taka` (coherente, sin maestro) | 85,4% | referencia |
+
+Las dos builds con maestro quedan **por debajo** de las coherentes que ya había: un arco cerrado no es un
+atajo a una build mejor que las que el catálogo permitía, es **otra** build. (El que las coherentes de
+fase 1 estén en 78-85% contra la referencia sin perks es un problema anterior a este paquete y está fuera
+de su alcance.)
+
+En runs completas, las que cierran un arco ganan el 35,2% y las que no, el 17,1%. La diferencia **no es el
+efecto del maestro**: cerrar un arco exige llegar al acto 3, y una run que llega al acto 3 ya iba bien. Es
+correlación, y la cifra queda como INFO precisamente para no confundirla con una medida de potencia; la
+medida de potencia es la tabla de arriba, con plantillas emparejadas.
+
+#### Lo que no se ha movido
+
+- **Curva de puertas de la ADR 0033**: las doce celdas siguen en banda. Las builds de la puerta no llevan
+  maestros —y ahora hay un test que exige que ninguna build catalogada mezcle un maestro con la línea que
+  cierra, `CataloguedBuildArcTests`—, así que la escala de calidad mide lo mismo que medía.
+- **Distribución RF-069**: 55,7 / 32,8 / 11,5 contra 60/30/10 ±8.
+- **Tasa de victoria de la run**: 22,0% (banda 20-30). **Muertes por run**: 1,61 (banda 1,5-3).
+
+### 23.5. Qué se retiró o rediseñó del catálogo existente
+
+**Nada se retiró.** Los 57 perks anteriores siguen en el catálogo con el mismo efecto; lo que cambia en
+ellos es de **aparición**, no de comportamiento: 28 declaran ahora la línea a la que pertenecen, todos
+declaran su acto nativo, y los cuatro letales pasan a ser del acto 3.
+
+Un solo perk cambió de intención sin cambiar de números: **`blood_tithe` nació pidiendo tres piezas y pide
+dos** (medido arriba). Y dos decisiones de reparto que conviene dejar escritas porque no son obvias:
+
+- **`skullsplitter` y `second_wound` se quedan fuera de La Carnicería** aunque temáticamente encajarían.
+  Las cuatro líneas tienen siete piezas exactas para que "llevar media línea" signifique lo mismo en las
+  cuatro; y dejar los dos rompe-reglas fuera evita que cerrar la línea de la carnicería arrastre además a
+  los dos perks más fuertes del catálogo.
+- **Las cinco habilidades raciales no tienen línea.** No ocupan slot, no entran en el pool y la raza las
+  concede de oficio (ADR 0026): contarlas como pieza de una línea regalaría medio arco por nacer.
+
+### 23.6. Lo que este paquete no toca
+
+`data/economy/**` y `data/sim/tuning.json` no se han modificado, ni el número ni la rareza de las opciones
+de recompensa: lo que este paquete cambia es **qué entra en el pool**, no cuántas opciones se ofrecen. La
+tabla de valor por perk de la ADR 0038 (`data/economy/perk-values.json`) tampoco: los cuatro maestros no
+tienen valor medido y el pool les da el peso base, que es lo que esa tabla hace con cualquier perk que
+todavía no se ha medido. Cuando se midan, su peso bajará solo, como el de todos los demás.

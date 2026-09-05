@@ -60,6 +60,22 @@ public struct Pcg32
     /// <summary>Probabilidad en base 10000 (RT-023): true con probabilidad probabilityBase10000 / 10000.</summary>
     public bool Chance(int probabilityBase10000) => Range(0, 10000) < probabilityBase10000;
 
+    /// <summary>
+    /// Igual que <see cref="Chance"/> pero contra el <b>promedio de dos tiradas</b> (ADR 0050 P2, DCSS
+    /// <c>random2avg</c>; el <c>1d10+habilidad</c> contra <c>1d10+dificultad</c> de Sil-Q produce la misma
+    /// distribución). La tirada conserva la media —4.999,5 sobre 10.000— y baja su desviación típica de
+    /// 2.887 a 2.041, un <b>29,3% menos</b>: la distribución deja de ser uniforme y pasa a ser triangular,
+    /// así que los extremos se vuelven raros y el resultado se acerca a lo esperado.
+    /// <para>
+    /// Consecuencia buscada: la probabilidad efectiva deja de ser lineal en la diferencia de atributos y
+    /// pasa a ser una ese con pendiente <b>doble</b> en el centro, de modo que la misma ventaja de
+    /// habilidad pesa más y el ruido por resolución pesa menos. Se usa solo en las cuatro resoluciones
+    /// decisivas (tiro, parada, entrada y regate), nunca en las de alta frecuencia.
+    /// </para>
+    /// </summary>
+    public bool ChanceAveraged(int probabilityBase10000) =>
+        (Range(0, 10000) + Range(0, 10000)) / 2 < probabilityBase10000;
+
     /// <summary>Ayudante equivalente a Chance pero en base 100, devuelto como 0/1 entero.</summary>
     public int Percent(int probabilityPercent) => Range(0, 100) < probabilityPercent ? 1 : 0;
 

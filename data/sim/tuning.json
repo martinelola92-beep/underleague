@@ -5,6 +5,11 @@
   "decisionIntervalTicks": 2,
   "transitionTicks": 12,
   "assistWindowTicks": 60,
+  "resolution": {
+    "_doc": "ADR 0050 P4: un solo suelo y un solo techo para las probabilidades de RESOLUCION DEL BALON -pase, intercepcion, regate, entrada, bloqueo, tiro a puerta y parada-, en lugar de los limites ad hoc por canal de antes (500-9800 en pase, 5-95 por ciento en parada, ninguno en regate, entrada, intercepcion ni tiro). Base 10.000, es decir 2 por ciento y 98 por ciento, el equivalente al 2,5 por ciento automatico de DCSS. NO se aplica a los sucesos raros -falta, tarjeta, penalti, lesion y muerte- y esta medido por que: su base ya esta por debajo del suelo (la lesion en entrada vale 175, un 1,75 por ciento), asi que ahi un suelo del 2 por ciento no seria una barandilla sino una mejora, y en la tirada letal borraria la palanca de colocacion de la ADR 0048, que necesita poder llegar a cero por distancia (proximityMinPercent 0). Ver docs/fase2-diseno.md 22.",
+    "probabilityFloor": 200,
+    "probabilityCeiling": 9800
+  },
   "movement": {
     "baseCellsPerTickMilli": 131,
     "speedCellsPerTickMilliPer99": 28,
@@ -36,25 +41,26 @@
     "interceptTechniqueFactor": 10
   },
   "dribble": {
-    "_doc": "ADR 0041: la tecnica del conductor contra la COBERTURA del defensor, no las tres cifras contra el 50 fijo. cobertura = (defenderSpeedSharePercent*velocidad + resto*fuerza)/100. Subir de nivel a los dos no mueve el duelo.",
-    "baseWin": 7200,
+    "_doc": "ADR 0041: la tecnica del conductor contra la COBERTURA del defensor, no las tres cifras contra el 50 fijo. cobertura = (defenderSpeedSharePercent*velocidad + resto*fuerza)/100. Subir de nivel a los dos no mueve el duelo. ADR 0050 P2: la tirada de este canal ya no es una uniforme sino el PROMEDIO DE DOS, asi que la base se reexpresa en la escala nueva para no mover el punto de trabajo: la probabilidad efectiva es la acumulada triangular, F(p)=2p2 por debajo del centro y 1-2(1-p)2 por encima. baseWin pasa de 7200 a 6260 porque F(0,626)=0,72: el mismo 72 por ciento de antes, escrito en la escala nueva. Lo que cambia no es el punto de trabajo sino la PENDIENTE, que pasa de 1 a 1,5: la misma diferencia de tecnica mueve el duelo vez y media mas. Medido en docs/fase2-diseno.md 22.",
+    "baseWin": 6260,
     "attackerTechniqueFactor": 18,
     "defenderSpeedSharePercent": 50,
     "lostKnockdownTicks": 6
   },
   "shot": {
+    "_doc": "ADR 0050 P2: el tiro a puerta se tira contra el PROMEDIO DE DOS, asi que offTargetBase se reexpresa en la escala triangular -F(p)=2p2 por debajo del centro- y pasa de 2500 a 3280 para conservar el mismo 70,5 por ciento de tiros a puerta que antes; lo que cambia es la pendiente, no la media. baseQuality y los demas terminos son calidad del remate (0-100), no una probabilidad, y no los toca ni P2 ni el suelo y techo de P4. Medido en docs/fase2-diseno.md 22.",
     "baseQuality": 4625,
     "techniqueFactor": 14,
     "strengthFactor": 4,
     "distancePenaltyPerCell": 500,
     "pressurePenalty": 800,
-    "offTargetBase": 2500,
+    "offTargetBase": 3280,
     "offTargetDistanceFactor": 250,
     "penaltyQualityBonus": 15
   },
   "save": {
-    "_doc": "ADR 0041: el atributo relevante del portero se mide contra la TECNICA DEL REMATADOR, no contra el 50 fijo; el segundo termino es lo que este remate concreto tuvo de bueno o de malo respecto de qualityPivot (distancia, presion, penalti). basePercent sube de 50 a 54 para compensar el cambio de referencia del primer termino.",
-    "basePercent": 53,
+    "_doc": "ADR 0041: el atributo relevante del portero se mide contra la TECNICA DEL REMATADOR, no contra el 50 fijo; el segundo termino es lo que este remate concreto tuvo de bueno o de malo respecto de qualityPivot (distancia, presion, penalti). basePercent sube de 50 a 54 para compensar el cambio de referencia del primer termino. ADR 0050 P2: la tirada de este canal ya no es una uniforme sino el PROMEDIO DE DOS, asi que la base se reexpresa en la escala nueva para no mover el punto de trabajo: la probabilidad efectiva es la acumulada triangular, F(p)=2p2 por debajo del centro y 1-2(1-p)2 por encima. basePercent baja de 53 a 51 para conservar la misma tasa de paradas; el 5-95 interno se queda porque acota el PORCENTAJE antes de sumarle el canal de perk, y sobre el resultado manda ya el suelo y techo unicos de P4. Medido en docs/fase2-diseno.md 22.",
+    "basePercent": 51,
     "closeRangeCells": 3,
     "attributeWeightPercent": 8,
     "consecutiveShotDecayPercent": 6,
@@ -62,8 +68,8 @@
     "qualityPivot": 50
   },
   "tackle": {
-    "_doc": "ADR 0041: la PRESION del que entra -fuerza y velocidad repartidas por strengthSharePercent- contra la tecnica del conductor. foulStrengthFactor y hardTackleThreshold pasan a medirse contra la fuerza del conductor: una entrada es sucia cuando el que entra es mucho mas grande que el que la recibe, no cuando es grande en abstracto. hardTackleThreshold esta en centesimas de punto de DIFERENCIA de fuerza.",
-    "baseWin": 2800,
+    "_doc": "ADR 0041: la PRESION del que entra -fuerza y velocidad repartidas por strengthSharePercent- contra la tecnica del conductor. foulStrengthFactor y hardTackleThreshold pasan a medirse contra la fuerza del conductor: una entrada es sucia cuando el que entra es mucho mas grande que el que la recibe, no cuando es grande en abstracto. hardTackleThreshold esta en centesimas de punto de DIFERENCIA de fuerza. ADR 0050 P2: la tirada de este canal ya no es una uniforme sino el PROMEDIO DE DOS, asi que la base se reexpresa en la escala nueva para no mover el punto de trabajo: la probabilidad efectiva es la acumulada triangular, F(p)=2p2 por debajo del centro y 1-2(1-p)2 por encima. Solo la disputa del balon (baseWin), NO la falta ni las tarjetas: baseWin pasa de 2800 a 3740 porque F(0,374)=0,28, el mismo 28 por ciento de antes con pendiente 1,5. Medido en docs/fase2-diseno.md 22.",
+    "baseWin": 3740,
     "pressureFactor": 20,
     "strengthSharePercent": 60,
     "foulBase": 320,
@@ -76,8 +82,8 @@
     "secondYellowIsRed": true
   },
   "injury": {
-    "_doc": "ADR 0041: probabilidad = onTackleBase (+onFoulBase si hubo falta) + relativeFactor*(fuerza del que entra - resistencia de la victima). Sin ninguna constante de por medio: un nivel 8 que entra a otro nivel 8 lesiona aproximadamente lo mismo que un nivel 1 contra otro nivel 1. ADR 0043: el desgaste crece por acto (actScalePercent, un multiplicador en tanto por ciento sobre esa probabilidad, sin tocar la formula) y el partido de elite anade su propio recargo (eliteScalePercent). Solo los aplica el bucle de run, que es quien sabe en que acto y en que nodo esta; un partido suelto usa SimConfig.Default y por tanto el 100%.",
-    "onTackleBase": 175,
+    "_doc": "ADR 0041: probabilidad = onTackleBase (+onFoulBase si hubo falta) + relativeFactor*(fuerza del que entra - resistencia de la victima). Sin ninguna constante de por medio: un nivel 8 que entra a otro nivel 8 lesiona aproximadamente lo mismo que un nivel 1 contra otro nivel 1. ADR 0043: el desgaste crece por acto (actScalePercent, un multiplicador en tanto por ciento sobre esa probabilidad, sin tocar la formula) y el partido de elite anade su propio recargo (eliteScalePercent). Solo los aplica el bucle de run, que es quien sabe en que acto y en que nodo esta; un partido suelto usa SimConfig.Default y por tanto el 100%. ADR 0050 P2: la lesion NO es una de las cuatro resoluciones decisivas y su tirada sigue siendo uniforme, pero onTackleBase baja de 175 a 140 porque el promedio de dos sube la actividad del partido un 3 por ciento (mas entradas, mas bloqueos, mas faltas) y con 175 injuriesPerMatch se iba a 0,80-0,81, justo en el techo de RT-056. Con 140 vuelve a 0,75-0,76, el valor de siempre. La correccion parece grande para un desvio del 7 por ciento porque onTackleBase solo aporta un tercio de la probabilidad: el resto sale del termino relativo y de onFoulBase. Medido en docs/fase2-diseno.md 22.",
+    "onTackleBase": 140,
     "onFoulBase": 60,
     "relativeFactor": 2,
     "severeShare": 4000,

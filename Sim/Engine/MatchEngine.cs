@@ -844,7 +844,7 @@ internal sealed class MatchEngine : IPerkWorld
             }
 
             _ball.InterceptAttempted[i] = true;
-            if (!_rng.Chance(InterceptChance(player, passer)))
+            if (!_rng.Chance(Bounded(InterceptChance(player, passer))))
             {
                 continue;
             }
@@ -857,6 +857,20 @@ internal sealed class MatchEngine : IPerkWorld
 
         return false;
     }
+
+    /// <summary>
+    /// Acota una probabilidad de <b>resolución del balón</b> al suelo y al techo únicos de la ADR 0050 P4
+    /// (<c>tuning.resolution</c>, 2%-98%). Sustituye a los límites ad hoc por canal —500-9800 en el pase,
+    /// 5-95% en la parada, ninguno en regate, entrada, intercepción, bloqueo y tiro— y por eso está en un
+    /// único sitio: el comportamiento cerca de los extremos deja de depender del canal.
+    /// <para>
+    /// <b>No</b> la usan los sucesos raros (falta, tarjeta, penalti, lesión y muerte). Ahí el 2% no sería
+    /// una barandilla sino una mejora —la lesión en entrada vale 175, un 1,75%— y en la tirada letal
+    /// borraría la palanca de colocación de la ADR 0048, que necesita poder llegar a cero por distancia.
+    /// </para>
+    /// </summary>
+    internal int Bounded(int probability) => Math.Clamp(
+        probability, _tuning.Resolution.ProbabilityFloor, _tuning.Resolution.ProbabilityCeiling);
 
     /// <summary>
     /// Probabilidad de que <paramref name="player"/> intercepte el pase de <paramref name="passer"/>
@@ -1108,7 +1122,7 @@ internal sealed class MatchEngine : IPerkWorld
         // cuando no había receptor, así que el número de números que _rng.Next() consume en un pase
         // dependía de si había o no compañero visible. Con esto, el flujo de RNG solo depende de la
         // secuencia de decisiones tomadas, nunca de sus resultados intermedios.
-        bool chanceRoll = _rng.Chance(Math.Clamp(probability, 500, 9800));
+        bool chanceRoll = _rng.Chance(Bounded(probability));
         bool succeeds = receiver is not null && chanceRoll;
         int ticks = FlightTicks(distance, _tuning.Ball.PassSpeedCellsPerTickMilli);
         Vec2 target = receiver is not null
@@ -1232,10 +1246,12 @@ internal sealed class MatchEngine : IPerkWorld
             quality = Math.Clamp(quality + shot.PenaltyQualityBonus, 5, 95);
         }
 
-        bool offTarget = _rng.Chance(shot.OffTargetBase
+        // ADR 0050 P2: el tiro es una de las cuatro resoluciones decisivas y se tira contra el promedio
+        // de dos, no contra una uniforme. P4: el mismo suelo y el mismo techo que las demás.
+        bool offTarget = _rng.ChanceAveraged(Bounded(shot.OffTargetBase
             + (shot.OffTargetDistanceFactor * Utility.Centi(distance) / 100)
             - (quality * 20)
-            - Probability(shooter, ProbabilityKind.ShotOnTarget));
+            - Probability(shooter, ProbabilityKind.ShotOnTarget)));
 
         _report.Shots[shooter.Team]++;
         shooter.Shots++;
@@ -1312,8 +1328,10 @@ internal sealed class MatchEngine : IPerkWorld
                 5,
                 95);
 
-            if (_rng.Chance(Math.Clamp(
-                (savePercent * 100) + Probability(goalkeeper, ProbabilityKind.Save), 0, 10000)))
+            // ADR 0050 P2 y P4: promedio de dos tiradas y el suelo y techo únicos, que sustituyen al
+            // 0-10.000 de aquí; el 5-95 de savePercent lo hereda esta misma cota.
+            if (_rng.ChanceAveraged(Bounded(
+                (savePercent * 100) + Probability(goalkeeper, ProbabilityKind.Save))))
             {
                 goalkeeper.ConsecutiveSaves++;
                 SetOwner(goalkeeper);
@@ -1414,7 +1432,8 @@ internal sealed class MatchEngine : IPerkWorld
             + (dribble.AttackerTechniqueFactor * (carrier.Technique - guard))
             + Probability(carrier, ProbabilityKind.Dribble);
 
-        if (_rng.Chance(win))
+        // ADR 0050 P2 y P4: el regate es una de las cuatro resoluciones decisivas.
+        if (_rng.ChanceAveraged(Bounded(win)))
         {
             Emit(EventType.DribbleWon, "won", carrier, opponent: defender);
             defender.EnterState(PlayerState.KnockedDown, _tuning.Dribble.LostKnockdownTicks);
@@ -1461,8 +1480,10 @@ internal sealed class MatchEngine : IPerkWorld
             + BiasRollShift(_tuning.Referee.BiasFoulShiftPer10, tackler.Team)
             + Probability(tackler, ProbabilityKind.Foul);
 
+        // La falta no es una de las cuatro resoluciones decisivas de la ADR 0050 P2 (ni la acota P4: su
+        // base está por debajo del suelo); la disputa del balón sí es las dos cosas.
         bool isFoul = _rng.Chance(foulChance);
-        bool isWin = _rng.Chance(win) && carrierHasBall;
+        bool isWin = _rng.ChanceAveraged(Bounded(win)) && carrierHasBall;
 
         if (carrierHasBall)
         {
@@ -1667,7 +1688,7 @@ internal sealed class MatchEngine : IPerkWorld
             + Probability(blocker, ProbabilityKind.Tackle);
 
         bool isFoul = _rng.Chance(foulChance);
-        bool isWin = _rng.Chance(win);
+        bool isWin = _rng.Chance(Bounded(win));
 
         _report.Blocks++;
         Emit(

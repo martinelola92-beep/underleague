@@ -1,5 +1,5 @@
 {
-  "_doc": "Jefe del acto 2 (RF-001b), donde empieza la GESTION (ADR 0043). Un modificador: «Marca de muerte» (markStar) deja sin perks al titular DE CAMPO en el que la build concentra los suyos; castiga la build que lo canaliza todo por un jugador. Plantilla orca de violencia, quality 46->40 al recalibrar contra la tabla revisada de la ADR 0033 (la fila del acto 2 se mueve poco: 35-50% para una build correcta). Medido: 10,3 / 41,7 / 66,6 / 76,7. Es la puerta que separa a las doctrinas de compra: la contextual la pasa el 49,6% de las veces y la gastadora el 35,2% (docs/fase2-diseno.md 19).",
+  "_doc": "Jefe del acto 2 (RF-001b), donde empieza la GESTION (ADR 0043). Un modificador: «Marca de muerte» (markStar) deja sin perks al titular DE CAMPO en el que la build concentra los suyos; castiga la build que lo canaliza todo por un jugador. Plantilla orca de violencia, quality 46->40 al recalibrar contra la tabla revisada de la ADR 0033 (la fila del acto 2 se mueve poco: 35-50% para una build correcta). Medido: 10,3 / 41,7 / 66,6 / 76,7. Es la puerta que separa a las doctrinas de compra: la contextual la pasa el 49,6% de las veces y la gastadora el 35,2% (docs/fase2-diseno.md 19). RECALIBRADO POR LA ADR 0050 P2 (quality 40 -> 44): el promedio de dos tiradas hace que la diferencia de construccion pese vez y media mas, asi que la escalera entera sube y la celda BUENA se iba a 76,1 frente al 72 que pide su banda. Con 44 mide 8,0 / 39,4 / 67,3 / 80,3, las cuatro dentro de banda y sin necesitar el margen de medida. Ver docs/fase2-diseno.md 22.",
   "id": "the_hunt",
   "act": 2,
   "name": {
@@ -8,7 +8,7 @@
   },
   "template": {
     "race": "Orc",
-    "quality": 40,
+    "quality": 44,
     "level": 6,
     "perks": [
       {
