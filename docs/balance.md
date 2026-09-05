@@ -23,6 +23,8 @@ Modos añadidos después de la fase 0:
 dotnet run --project Balance -- --builds all [--vs id] [--campaign N] [--home-away] [--rosters N]
 dotnet run --project Balance -- --boss-gate [--rosters 32] [--runs 4]     # curva de la ADR 0033
 dotnet run --project Balance -- --full-runs 500 [--seed 1]                # runs completas (fase 2)
+dotnet run --project Balance -- --full-runs 500 --ignore-scouting         # la misma run sin leer el ojeo
+dotnet run --project Balance -- --full-runs 300 --risk-aversion N         # cuánto pesa el indicador de riesgo
 dotnet run --project Balance -- --describe [es|en]                        # catálogo de perks
 ```
 
@@ -32,6 +34,13 @@ acto alcanzado, causa de derrota, oro ganado y gastado por sumidero, muertes, le
 plantilla, nivel medio, mercados visitados y qué se compró) más `summary.csv` con las métricas de
 `fase2-diseno.md` §10 y de la ADR 0037. La política automática y sus reglas están en
 `Sim.Analysis.RunPolicy` y explicadas en `docs/balance/fase2-resultados.md` §1.
+
+`--ignore-scouting` apaga la lectura del informe de ojeo y del indicador de riesgo al alinear
+(`RunPolicyOptions.HeedsLethalScouting`), y `--risk-aversion N` fija cuánto descuenta la política el valor
+de un titular por su exposición a un perk letal (`DeathCostPercent`): 0 ignora el número, un valor alto lo
+obedece y un valor **negativo** hace lo contrario a propósito. Las dos existen para medir la **agencia**
+que la ADR 0048 declara obligatoria —si atender al indicador no cambia las muertes, el azar no tiene
+agencia— y su lectura está en `fase2-diseno.md` §21.2.
 
 Rendimiento: 10.000 partidos en menos de 60 s en máquina de desarrollo (RT-051). Se mide en cada ejecución y se imprime al final.
 

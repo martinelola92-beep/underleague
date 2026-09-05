@@ -1313,3 +1313,293 @@ siguen fuera de banda, con las mismas causas de §19 (Z-K: `affordableShare` y `
 oponen entre sí, y la aritmética entera de la escala de oro). La novedad de este paquete es que las tres
 se mueven **en la dirección correcta** por primera vez, sin tocar un solo precio: acortar la plantilla ha
 hecho más por la escasez que la escala de oro entera.
+
+## 21. Decisiones de implementación del paquete AD: morir estando sano y 1 de 2 (ADR 0048 y 0049)
+
+Dos cambios que tocan el mismo equilibrio y por eso se implementan juntos y se miden una sola vez: **un
+jugador sano puede morir** (ADR 0048, que sustituye a la ADR 0047) y **el partido de liga ofrece dos
+opciones de recompensa en vez de tres** (ADR 0049).
+
+**Resultado de una línea**: las muertes por run pasan de **0,64 a 1,53** y entran en la banda nueva
+(1,5-3); la curva de la ADR 0033 se recalibra y vuelve a dejar **once celdas de doce** en banda; el acto 1
+sigue siendo el taller; y las dos apuestas que las ADR hacían **no se cumplen y están medidas**: la
+ventaja de la doctrina contextual cae de +5,6 a **−0,2** en vez de subir, y la escasez **no se corrige
+sola** (58,1 → 56,6 con objetivo 20-35).
+
+### 21.1. La tirada de muerte: alcanzar deja de ser matar
+
+**AD-1. Retirar la condición no bastaba: la habría convertido en una siega.** `IsLethalVictim` exigía tres
+cosas —ser rival, estar en el campo y **no estar sano**—. Quitar la tercera a secas convierte
+`skullsplitter` en un exterminio: su efecto va sobre `opposingTeam`, así que en el saque inicial habría
+matado a **los siete** titulares a la vez. La ADR 0048 pide que la muerte sea *rara y memorable*, no que
+el partido empiece con un entierro colectivo, así que alcanzar deja de ser matar y pasa a ser **tirar**:
+
+- Cada perk letal declara su probabilidad base en el dato (`lethalChance`, base 10.000). Es la palanca con
+  la que se sube y se baja la letalidad al medir, y el cargador la exige a todo perk con `lethal: true`
+  (y la prohíbe al resto): un perk que se anuncia como letal en el ojeo y no puede matar sería el peligro
+  inexistente que RF-012d prohíbe tanto como el peligro callado.
+- La tirada la resuelve `Sim.Perks.Lethality`, **puro y entero**, y la usan el motor
+  (`MatchEngine.LethalChanceAgainst`) y el indicador de riesgo (`RunEngine.LethalRisks`). Que sea el mismo
+  código no es comodidad: es lo que impide que el número prometido y el dado real se separen.
+- Los tres factores de `tuning.injury.lethality` son, a propósito, **las tres cosas que el jugador decide
+  antes de confirmar la alineación** (RF-012c): en qué estado alinea, a quién alinea y dónde lo coloca.
+
+| Factor | Cómo entra | Valor |
+|---|---|---|
+| Estado de la víctima | multiplicador | sano **100**, lesión leve **800**, lesión grave **2500** |
+| Resistencia | multiplicador `100 + 6·(fuerza del portador − aguante de la víctima)`, acotado | **20-500** |
+| Cercanía | `100 − 25` por casilla de emparejamiento, con suelo | **100 → 0** a partir de 4 |
+| Techo | acotado al final | `maxChance` **8000** |
+
+**AD-2. La resistencia es un multiplicador y no un sumando, y está medido por qué.** Con la fórmula
+relativa de la ADR 0041 escrita como suma —`base + 2·(fuerza − aguante)`— sobre una base de miles de
+puntos, cuarenta puntos de aguante movían la tirada un 1,6%: **elegir a quién alinear no cambiaba el
+número**. Medido así: 1,62 muertes leyendo el indicador y 1,82 sin leerlo, indistinguible. Multiplicando,
+un aguante de 75 recibe la mitad que uno de 35.
+
+**AD-3. La distancia de emparejamiento, no la del saque inicial.** `Lethality.Matchup` no mide dónde están
+los dos al empezar —ahí cada equipo está en su mitad y todo el mundo está lejos de todo el mundo— sino
+**quién se va a encontrar con quién**: refleja al portador sobre el eje de colocación, de modo que la
+distancia en columnas es `|columna de la víctima + columna del portador − 7|` sobre las columnas locales
+0..7 de RF-040..045. Un delantero rival amenaza a mi portero y a mis centrales; mi delantero amenaza a los
+suyos. Las filas no se reflejan: la banda derecha del campo es la misma para los dos equipos. Y depende
+**solo de las casillas-hogar**, nunca de dónde estén cuando el perk se dispara, que es lo que hace que el
+indicador previo sea exacto y no una estimación.
+
+**AD-4. Un perk letal MARCA a un rival por activación, no siega el equipo.**
+`tuning.injury.lethality.victimsPerActivation` vale **1**, y el marcado es el que **peor lo tiene** (mayor
+probabilidad de morir; a igualdad, menor id, RT-041). Concentrar el peligro en el eslabón más débil es lo
+único que permite que la alineación lo **reduzca** —quitar ese eslabón baja el número— en vez de repartir
+un impuesto que nadie puede esquivar. También es lo que hace legible el indicador: en la pantalla de
+alineación hay **un** nombre señalado, no siete barras.
+
+**AD-5. La tirada usa los atributos BASE, no los efectivos.** El indicador tiene que poder calcular el
+mismo número antes del partido, cuando no se ha aplicado ningún modificador de perk. Si la letalidad
+dependiera de lo que pase a mitad de partido, el número prometido y el dado real se separarían sin que
+nada se pusiera rojo.
+
+**AD-6. Los perks letales, con su probabilidad y su reparto.** El reparto baja de **cuatro portadores por
+acto a tres** por la condición 2 (AD-9).
+
+| id | `lethalChance` | trigger | dónde |
+|---|---|---|---|
+| `skullsplitter` | **5000** | MATCH_START | acto 3 (orcos) |
+| `marrow_thirst` | **3900** | MATCH_START | actos 2 (orcos, no-muertos) y 3 (enanos) |
+| `second_wound` | **9000** | INJURY | actos 2 (humanos) y 3 (no-muertos) |
+| `iron_studs` | **760** | TACKLE | acto 3 (enanos) |
+
+`iron_studs` es un orden de magnitud más barato porque se dispara en **cada entrada** en el tercio rival,
+no una vez por partido: su número no es comparable con los otros tres.
+
+### 21.2. Las cinco condiciones de la ADR 0048, una a una y con su medida
+
+**AD-7. Anticipación (condición 1): se cumplía y se cumple.** `Scouting.LethalPerks` destaca la amenaza en
+el ojeo con nombre de portador (RF-013) y `DescriptionGenerator` cuelga el sufijo letal de la descripción
+generada (RT-035). El texto **cambia** porque lo que hace el perk ha cambiado: donde decía *«Si alcanza a
+un rival que ya no está sano, lo mata»* ahora dice *«Marca a un rival por activación, el que peor lo
+tiene, y puede matarlo aunque esté sano»*.
+
+**AD-8. Reducción (condición 3): existe, es numérica, y es la mitad de lo que la ADR necesita.** Es la
+condición que la ADR declara más importante y la única que había que construir entera.
+
+- `RunEngine.LethalRisks(estado, nodo, catálogo, sistemas, alineación)` devuelve la probabilidad de morir
+  **de cada titular**, en base 10.000, contra el rival concreto de ese nodo y con la colocación concreta
+  que se le pase. `RunEngine.LineupWarnings` la incorpora como `LineupWarningKind.LethalOpponentRisk` con
+  su `Risk`, que es lo que la pantalla de alineación tiene que pintar.
+- **Cambiar la alineación cambia el número**, y se comprueba en las tres palancas por separado
+  (`LethalRiskTests`): mover al marcado lejos del portador le baja el riesgo, cambiar quién juega cambia
+  el total, y estar tocado multiplica el número del mismo jugador en la misma casilla.
+- **Y aquí está el hallazgo incómodo.** La métrica que la propia ADR declara decisiva —dos políticas
+  idénticas salvo que una atiende al indicador— **no se separa claramente**. Con el lote de referencia
+  (500 runs por doctrina, semilla 1): leyendo el informe y el número, **1,53** muertes por run; sin leer
+  nada (`--ignore-scouting`), **1,62**. Son **5,6 puntos porcentuales de mejora**, dentro de dos
+  desviaciones típicas de la muestra.
+
+  El barrido de `--risk-aversion` (300 runs, semilla 1, todo lo demás idéntico; el dial es
+  `RunPolicyOptions.DeathCostPercent`, cuánto descuenta la política el valor de un titular por su
+  exposición) dice **por qué**, y es más informativo que la métrica sola:
+
+  | `--risk-aversion` | qué hace la política | Muertes/run |
+  |---|---|---|
+  | **−1000** | busca el riesgo: pone al frágil donde muerde | **1,98** |
+  | −400 | lo busca a medias | 1,75 |
+  | **0** | ignora el número (alinea por valor deportivo) | **1,64** |
+  | +150 (por defecto) | lo obedece | 1,58 |
+  | +400 | lo obedece más | 1,61 |
+  | **+1000** | lo obedece por encima de todo | **1,56** |
+
+  **El número tiene rango —un 27% entre el mejor y el peor uso del mismo indicador— pero está repartido
+  de forma asimétrica: exponer al eslabón débil cuesta +21%, y protegerlo solo ahorra −5%.** La causa está
+  medida y es que **una alineación elegida por valor deportivo ya está cerca de la más segura**: el valor
+  de un jugador incluye su aguante, así que la política que solo quiere ganar partidos ya deja fuera a los
+  frágiles sin proponérselo. La agencia existe en la dirección «puedes estropearlo» y está casi saturada
+  en la dirección «puedes protegerte».
+
+  Es, literalmente, el caso que la ADR 0048 anticipa: *«si no se separan, el azar no tiene agencia y la
+  decisión hay que revisarla»*. La lectura honesta no es que no haya agencia —hay un 27% de rango— sino
+  que **la mitad útil de esa agencia es pequeña y el jugador la obtiene gratis**, que es la misma
+  advertencia que AC-15 hizo con la contrajugada de la ADR 0046. Queda abierto como **AD-A**.
+
+**AD-9. Evitación (condición 2): se cumplía a medias y ha habido que pagar por ella.** El mapa es
+ramificado, pero eso no basta: si **todos** los rivales de una capa matan, no hay ruta que esquivar. Con
+el reparto de la ADR 0046 —cuatro rivales letales de cinco por acto— solo el **30%** de los nodos letales
+tenía al lado una alternativa que no mata. El reparto baja a **tres de cinco** y sube al **50%**; con dos
+de cinco sube al **77%**, pero entonces las muertes se quedan en **0,82 por run** y no llegan a la banda.
+
+El 100% **no es alcanzable** ni con el mejor reparto: `MapGenerator` asigna rivales con un cursor
+consecutivo sobre la baraja barajada del acto, y tres marcados en un ciclo de cinco tienen por fuerza dos
+adyacentes. Cerrarlo del todo exige bajar a dos letales por acto **y** añadir al generador la restricción
+"dos letales nunca en la misma capa", y cuesta la banda de muertes. Se elige el 50% con la banda dentro y
+queda anotado como **AD-B**.
+
+**AD-10. Recuperación (condición 4): el objeto del muerto vuelve al inventario.** `RunState` gana un
+**almacén** (`itemStock:<id>` en `Counters`, por la misma razón que los huecos de inscripción: añadir un
+sistema sin subir la versión del esquema, RT-030) y `MatchResolution` mete ahí el equipamiento del caído
+antes de marcarlo muerto. La decisión `EquipStoredItem` lo saca y se lo pone a un vivo **sin pagar nada**
+—ya estaba pagado— y en cualquier nodo, porque rehacer una build no puede depender de estar en un mercado.
+Medido: **0,89 objetos recuperados por run**, es decir que la recuperación se ejercita en casi todas las
+runs y no es una regla de papel.
+
+**AD-11. Rareza (condición 5): la ADR se contradice consigo misma, y hay que decirlo.** La misma ADR pide
+dos cosas incompatibles: que las muertes por run estén en **1,5-3** y que haya *«una muerte por perk letal
+cada dos o tres runs»*, que son **0,3-0,5 por run**. Un factor de cinco. Y no hay margen para acomodar las
+dos, porque la vía 1 de RF-093 (alinear a un lesionado grave) aporta **cero**: `deathsAct1` mide **0,00** y
+en el acto 1 no hay ningún rival letal, así que **las 1,53 muertes son todas de perk letal**. Se aplica la
+banda —es la que la ADR fija explícitamente y la que mide la puerta— y se anota la contradicción como
+**AD-C**: si lo que el revisor quiere es la frase, la banda tiene que bajar a 0,3-0,5 y `lethalChance` con
+ella.
+
+### 21.3. La recompensa de liga baja a 1 de 2 (ADR 0049)
+
+**AD-12. Es un número en datos.** `economy.nodeRewards.league.options` pasa de 3 a **2**; élite y jefe
+mantienen sus tres opciones, la rareza mejorada y las dos elecciones del jefe. El escalonado de la ADR
+0043 deja de ser solo de oro y pasa a ser **de calidad de decisión**, que es lo que la ADR 0049 pide.
+
+**AD-13. Lo que la run trae ahora a cada puerta.** Medido con el lote de referencia:
+
+| | Al jefe del acto 1 | Al del acto 2 | Al final |
+|---|---|---|---|
+| Antes (§20) | 3,8 perks · 2,2 objetos | 8,2 · 4,7 | 13,0 · 6,7 |
+| **Ahora** | **3,2 · 1,8** | **6,2 · 3,7** | **8,5 · 4,8** |
+
+La caída del acto 3 (−34% en perks) es **doble**: menos elecciones gratis y la carnicería de la ADR 0048,
+que se lleva jugadores **con sus perks puestos**. Las elecciones cobradas por run bajan de 9,8 a **9,0**
+—el número de nodos no cambia, solo la calidad de cada elección— y los rechazos suben de 0,43 a **0,42**
+por run (4,4% de las elecciones): con dos opciones falla más a menudo que ninguna encaje, pero también se
+llega con menos build montada y por tanto con más slots libres, y las dos cosas se compensan.
+
+**AD-14. La compensación ha ido por el mercado, como la ADR manda, y no por devolver la tercera opción.**
+`market.perkOffers` y `market.itemOffers` pasan de 4 a **5**: más surtido, ni mejor rareza ni precios más
+bajos, que son las otras dos palancas que la ADR autoriza. Efecto medido (300 runs): `purchasesPerMarket`
+0,83 → **0,88**, `sinksAffordablePerAct` 1,99 → **2,00** (vuelve a su banda) y `affordableShareAtMarket`
+58,1 → **56,4**. Es una compensación pequeña a propósito: el objetivo de la ADR 0049 es **mover peso de lo
+gratis a lo comprado**, no reponer el total.
+
+### 21.4. La curva de la ADR 0033, recalibrada
+
+Bajar la calidad de las recompensas baja la build final, así que la curva había que rehacerla entera.
+Muestra idéntica a la de §19.1: semilla 1, 32 plantillas × 4 partidos por celda y raza, **640 partidos por
+celda**, 7.680 en total, 34 s, `dotnet run --project Balance -c Release -- --boss-gate --rosters 32 --runs 4 --seed 1`.
+
+| Puerta | Incoherente | Correcta | Buena | Muy buena |
+|---|---|---|---|---|
+| **Acto 1** `grimhold_guns` | **26,7** (20-35) | **71,6** (65-80) | **82,3** (75-88) | **89,4** (85-95) |
+| **Acto 2** `the_hunt` | **10,3** (< 15) | **41,7** (35-50) | **67,3** (60-72) | **72,8** (72-85) |
+| **Acto final** `eternal_crown` | **8,9** (< 10) | **30,3** (15-28) ⚠ | **43,4** (40-55) | **57,8** (55-70) |
+
+**Once celdas de doce siguen en banda sin tolerancia**, la escalera sigue siendo monótona en los tres
+jefes, y la celda que pasa por el margen de medida (±2,5) es **la misma de siempre**: *correcta* contra el
+jefe final, ahora 2,3 puntos por encima de su techo en vez de 0,8 (AB-D).
+
+**AD-15. Qué se movió y por qué solo se movió eso.**
+
+- **`data/balance/groups.json`**: las densidades de los escalones *correcta*, *buena* y *muy buena* bajan
+  con la build real (AD-13). El escalón **incoherente se queda como estaba** (6 / 8 / 10 perks), y no es
+  un descuido: quien no rechaza nada coge **una** recompensa por nodo tanto si le ofrecen dos como si le
+  ofrecen tres, así que la ADR 0049 le baja la **calidad** de lo que coge pero no la **cantidad**. Es la
+  misma asimetría que AB-3 documentó al revés.
+- **`eternal_crown` de calidad 28 a 24**, el único jefe que ha habido que tocar. Con 28 y la build nueva,
+  *muy buena* se quedaba en **49,1** frente al 55 que pide su banda. Ablandarlo sube también la fila
+  *correcta*, y no hay forma de evitarlo: está medido que esa celda **no depende de cuántas piezas lleve
+  la build** (§19.1) y que subir la densidad de *muy buena* de 11 a 14 perks no la mueve (48,4 contra
+  49,1: el escalón superior está **saturado** contra ese jefe). Las dos configuraciones y su coste:
+
+  | `eternal_crown` | Incoherente | Correcta | Buena | Muy buena |
+  |---|---|---|---|---|
+  | calidad 28 | 7,5 | 28,6 ✓ | 40,8 | **49,1 ✗** (pide ≥55) |
+  | **calidad 24** (elegida) | 8,9 | **30,3 ⚠** | 43,4 | **57,8 ✓** |
+
+  Se elige la segunda: que el techo de la escalera sea alcanzable importa más que dos puntos de la fila
+  *correcta*, porque es lo que hace que construir muy bien sirva de algo.
+- **Los otros dos jefes no se tocan.** El del acto 1 mide 71,6 para una build correcta, exactamente la
+  misma cifra de §19.1: **el acto 1 sigue siendo el taller** (ADR 0043) y el jugador sigue llegando con
+  build a la primera puerta. Era la condición que la ADR 0049 pone por encima de todo lo demás.
+
+### 21.5. Las métricas de §10, antes y después
+
+Lote de referencia: **500 runs por doctrina, semilla 1**, cinco razas repartidas por igual (1.500 runs,
+~19.900 partidos, 100 s), `dotnet run --project Balance -c Release -- --full-runs 500 --seed 1`.
+
+| Métrica | Rango | Antes (AC) | **Ahora** | Estado |
+|---|---|---|---|---|
+| **Muertes por run** | **1,5-3** (antes 0,5-2) | 0,64 | **1,53** | **IN** con la banda nueva |
+| Tasa de victoria de la run (contextual) | 20-30% | 22,6 | **20,2** | IN |
+| Derrotas por bajar de 5 jugadores | < 35% | 2,07% | **0,50%** | IN |
+| Duración de una run completa | 18-22 | 19,97 | **20,00** | IN |
+| Sumideros que paga el oro de un acto | 2-3, nunca todos | 2,08 | **2,00** | IN, en el filo |
+| **Ventaja de la contextual sobre las dos puras** | ≥ 8 puntos | +5,6 | **−0,2** | **OUT y peor** |
+| Compras por visita al mercado | 0,5-2 (cota) | 0,76 | **0,87** | cota IN |
+| Fracción del surtido asequible | 20-35% | 59,3 | **56,6** | OUT |
+| Oro sobrante al terminar la run | < 15% | 20,9 | **21,9** | OUT |
+| Runs que llegan a un mercado sin poder comprar | 10-25% | 61,2 | **63,4** | OUT |
+| *Muertes por acto* | *—* | *—* | ***0,00 / 0,87 / 0,66*** | *INFO* |
+| *Objetos recuperados de un muerto por run* | *—* | *—* | ***0,89*** | *INFO* |
+| *Plantilla al terminar* | *—* | *10,5* | ***10,4*** | *INFO* |
+| *Lesiones graves por run* | *—* | *2,08* | ***1,83*** | *INFO* |
+| *Lesiones propias por partido* | *—* | *0,31* | ***0,28*** | *INFO* |
+| *Perks en el once al terminar* | *—* | *—* | ***6,5*** | *INFO* |
+| *Recompensas cobradas / rechazadas por run* | *—* | *—* | ***9,02 / 0,42*** | *INFO* |
+
+**AD-16. Dónde caen las muertes, y por qué el acto 1 está a cero.** El reparto por acto es **0,00 / 0,87 /
+0,66**, y el cero del acto 1 es una propiedad del catálogo, no del azar: la ADR 0046 dejó el acto 1 sin
+ningún rival letal porque es el taller. Que sea **exactamente** cero dice además algo que no se sabía: la
+**vía 1 de RF-093** —alinear a un lesionado grave sin tratar y volver a lesionarlo— no produce ni una
+muerte en 500 runs, porque una política razonable trata o sienta antes de llegar ahí. Las 1,53 muertes son
+todas de perk letal.
+
+**AD-17. Las derrotas siguen cayendo donde la ADR 0043 quiere.** 30,8% en el acto 1, **52,4% en el acto
+2** y 16,8% en el 3. El 99,75% son contra un jefe; quedarse sin plantilla es el 0,25%, menos que antes
+(2,07%) porque el almacén de objetos y el reparto letal más corto compensan la subida de muertes. Una run
+perdida cuesta el **60,9%** de una ganada (12,0 partidos frente a 20), igual que antes (AB-C).
+
+**AD-18. La escasez NO se corrige sola, y era la pregunta explícita.** La hipótesis era que con más
+muertes y menos recompensas gratis, fichar y curar subirían de valor y `affordableShareAtMarket` bajaría
+hacia su banda 20-35. Medido: **59,3 → 56,6**, dos puntos y medio, y el surtido ampliado de AD-14 es
+responsable de la mayor parte. El oro por run baja de 56,2 a **52,4** y el gasto en mercado de 37,6 a
+**34,0**, así que el jugador compra un poco menos de un surtido un poco mayor: la fracción asequible se
+mueve, pero no cambia de orden de magnitud. **Tocar precios sigue pendiente y sigue chocando con
+`brokeMarketRunShare`** (Z-K, AB-F): las dos se oponen y ninguna configuración cumple las dos.
+
+**AD-19. La apuesta de la ADR 0049 sobre las doctrinas no se ha cumplido: ha ido al revés.** La ADR
+razonaba que, si la run repartía menos elecciones gratis, el mercado decidiría más build y la doctrina que
+compra con criterio se separaría de las dos puras. Medido:
+
+| Doctrina | Antes (AC) | **Ahora** | Compras por mercado |
+|---|---|---|---|
+| **Contextual** | 22,6 | **20,2** | 0,87 |
+| Ahorradora | 17,0 | **20,4** | 0,67 |
+| Gastadora | 13,2 | **14,8** | 1,17 |
+
+`contextualAdvantage` cae de **+5,6 a −0,2**: la contextual ya no le saca nada a la ahorradora. La causa
+que los datos sugieren es que **la ventaja de la contextual no estaba en comprar, estaba en tener con qué
+elegir**: su regla distintiva es repartir el oro entre los mercados que le quedan antes del jefe y, dentro
+del presupuesto, preferir el raro; con la build más pobre y el surtido igual de caro, el presupuesto casi
+nunca alcanza al raro y su regla degenera en la de la ahorradora. La gastadora **sí** se separa de las
+otras dos (−5,4 puntos), que es la mitad del criterio de la ADR 0037 que sigue vivo. Queda abierto como
+**AD-D**, y es el hallazgo que más pesa en contra de la ADR 0049: la decisión sube el peso del mercado en
+la build, pero **no** consigue que comprar con criterio sea distinto de ahorrar.
+
+**AD-20. RT-056 no se mueve, como debía.** Los equipos de referencia no llevan perks, así que ningún
+cambio de este paquete puede alcanzarlos, pero había que comprobarlo: 1.000 partidos, semilla 1 —cambios
+de posesión 23,76; cadena de pase 2,27; tiros 11,83; entradas 9,78; **lesiones por partido 0,73** (banda
+0,30-0,80); reparto de resultados 76,4%; tercio máximo 41,4%— cifra por cifra las de siempre.
