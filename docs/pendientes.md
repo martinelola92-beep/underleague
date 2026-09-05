@@ -139,3 +139,5 @@ Medidas y desglose en `docs/fase2-diseno.md` §19.
 | R-14 | RF-020, RF-011 | La plantilla pasa de "mínimo 7, máximo 12" a **base 10 ampliable a 12** mediante un **nodo de inscripción** de coste creciente, que es una decisión de ruta. Se añade ese tipo de nodo a RF-011 | ADR 0046 |
 
 | R-15 | RF-128 | Las divisiones añaden como palanca el **oro inicial decreciente** (10 · 8 · 5 · 2) junto al encarecimiento del mercado, además de las reglas que ya listaba la tabla | ADR 0044 |
+
+| R-16 | RF-093, §8 | **Un jugador sano puede morir**: se retira la regla "un jugador en estado sano nunca puede morir" y con ella la mitigación del riesgo "muerte percibida como injusta". La sustituyen las cinco condiciones de la ADR 0048 (anticipación, evitación, reducción del riesgo, recuperación y rareza) | ADR 0048 |
