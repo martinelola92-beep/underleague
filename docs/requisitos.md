@@ -344,8 +344,7 @@ SUSTITUCION         CONSUMIBLE_USADO
 | Tercera | Run base |
 | Segunda | Los rivales traen consumibles y sobornan |
 | Primera | No hay canteranos gratuitos; el mercado los vende |
-| Continental | Cada jefe lleva dos modificadores; el final, tres |
-| Mundial | Ningún árbitro es neutro: todos corruptos o incorruptibles |
+| Mundial | Cada jefe lleva dos modificadores; el final, tres. Ningún árbitro es neutro: todos corruptos o incorruptibles |
 
 - **RF-128b** Cada división se desbloquea ganando la anterior **con esa raza**. La rejilla razas por divisiones es el mapa de objetivos a largo plazo.
 - **RF-128c** **Copa**: semilla diaria compartida con tabla de clasificación en Steam. Requiere determinismo entre plataformas (RT-023b), por lo que es contenido posterior al lanzamiento.

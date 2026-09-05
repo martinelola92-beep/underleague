@@ -27,7 +27,7 @@ Esta tabla es la referencia única. Si un término no está aquí, se añade aqu
 | Oro | `Gold` | |
 | Jefe | `Boss` | |
 | Modificador de regla | `RuleModifier` | |
-| División | `Division` | `Third`, `Second`, `First`, `Continental`, `World` |
+| División | `Division` | `Third`, `Second`, `First`, `World` |
 | Club | `Club` | |
 | Mercado | `Market` | |
 | Canterano | `YouthPlayer` | |

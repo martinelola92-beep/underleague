@@ -36,15 +36,9 @@ Eso tiene tres consecuencias que ordenan el resto del diseño:
 2. **Las muertes dejan de tener coste meta.** Perder a un jugador —incluido un legendario— condena como mucho la run en curso; en la siguiente vuelve. Eso permite que el desgaste sea tan duro como el juego necesita sin que arrastre castigo entre partidas, y confirma la dirección de la ADR 0034.
 3. **La única progresión permanente, además de los legendarios, es el conocimiento del jugador.** Por eso el compendio de modificadores de jefe (RF-014b), los rivales estáticos que se aprenden (RF-015) y las descripciones que no mienten (RT-035) dejan de ser comodidades y pasan a ser el sistema de progresión real.
 
-## Un desajuste que hay que resolver: cinco divisiones, tres legendarios
+## Cuatro divisiones, tres legendarios
 
-RF-128 define **cinco** divisiones (Tercera, Segunda, Primera, Continental, Mundial) y esta ADR fija **tres** legendarios por raza. La secuencia natural —empiezas sin ninguno y ganas uno por división superada— cubre cuatro escalones, no cinco. Tres salidas:
-
-- **Cuatro divisiones** en vez de cinco, y la tabla de RF-128 se reagrupa.
-- **Cinco divisiones y la última no da legendario**, sino otro premio (un desbloqueo, un cromo, el reconocimiento).
-- **Cuatro legendarios por raza**, con el coste de arte y escritura que eso multiplica por nueve razas.
-
-Queda para el revisor. Mientras no se decida, se asume la segunda, que no cambia ningún número.
+RF-128 definía cinco divisiones y esta ADR fija tres legendarios por raza, lo que dejaba un escalón sin premio. **Resuelto retirando la división Continental** (decisión del revisor): quedan **Tercera, Segunda, Primera y Mundial**, y sus reglas se reagrupan —los dos modificadores por jefe que llevaba Continental pasan a Mundial—. La secuencia encaja: empiezas sin ninguno en Tercera y ganas uno por división superada, de modo que llegas a Mundial con los tres.
 
 ## Los legendarios mueren
 
