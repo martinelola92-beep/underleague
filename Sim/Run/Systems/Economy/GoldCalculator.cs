@@ -88,24 +88,75 @@ public static class ExcellentMatchObjectives
 /// </summary>
 public static class GoldCalculator
 {
-    public static int GoldForWin(RunState state, MapNode node, RunMatchSummary summary, EconomyConfig economy)
+    public static int GoldForWin(RunState state, MapNode node, RunMatchSummary summary, EconomyConfig economy) =>
+        Breakdown(state, node, summary, economy).Total;
+
+    /// <summary>
+    /// El mismo cálculo, sumando aparte (RF-119). El informe post-partido tiene que poder decir
+    /// <b>por qué</b> se ha cobrado esa cantidad, y la única forma de que el desglose no mienta es que sea
+    /// el propio cálculo: <see cref="GoldForWin"/> es su total, no una fórmula paralela.
+    /// </summary>
+    public static GoldForWinBreakdown Breakdown(RunState state, MapNode node, RunMatchSummary summary, EconomyConfig economy)
     {
+        ArgumentNullException.ThrowIfNull(state);
         ArgumentNullException.ThrowIfNull(node);
         ArgumentNullException.ThrowIfNull(summary);
         ArgumentNullException.ThrowIfNull(economy);
 
-        int gold = economy.GoldForAct(node.Act) * economy.MultiplierForDifficulty(node.Difficulty) / 100;
+        int actBase = economy.GoldForAct(node.Act);
+        int difficultyPercent = economy.MultiplierForDifficulty(node.Difficulty);
+        int afterDifficulty = actBase * difficultyPercent / 100;
 
         // ADR 0043: el escalón por tipo de nodo. La liga paga la base, el élite paga más y el jefe mucho
         // más: sin ese salto, superar un acto no cambia la trayectoria de la run.
-        gold += gold * economy.RewardFor(node.Kind).GoldBonusPercent / 100;
+        int nodeBonusPercent = economy.RewardFor(node.Kind).GoldBonusPercent;
+        int nodeBonus = afterDifficulty * nodeBonusPercent / 100;
 
         var objective = ExcellentMatchObjectives.For(state.Seed, node);
-        if (ExcellentMatchObjectives.Satisfied(objective, state, summary))
-        {
-            gold += economy.ExcellentMatchBonusGold;
-        }
+        bool objectiveMet = ExcellentMatchObjectives.Satisfied(objective, state, summary);
+        int objectiveBonus = objectiveMet ? economy.ExcellentMatchBonusGold : 0;
 
-        return gold;
+        return new GoldForWinBreakdown(
+            node.Act,
+            actBase,
+            node.Difficulty,
+            difficultyPercent,
+            afterDifficulty,
+            node.Kind,
+            nodeBonusPercent,
+            nodeBonus,
+            objective,
+            objectiveMet,
+            objectiveBonus,
+            afterDifficulty + nodeBonus + objectiveBonus);
     }
 }
+
+/// <summary>
+/// Desglose del oro de una victoria (RF-114g..i, RF-119): de dónde sale cada moneda. Todo son datos
+/// conocidos antes de jugar salvo si se cumplió el objetivo anunciado, que es lo único que el partido
+/// decide (RF-114i: el oro nunca escala con el rendimiento).
+/// </summary>
+/// <param name="ActBase">Oro fijo por victoria del acto (RF-114g).</param>
+/// <param name="Difficulty">Distintivo de dificultad del nodo, 1..5 (RF-012).</param>
+/// <param name="DifficultyPercent">Multiplicador de esa dificultad, en tanto por ciento.</param>
+/// <param name="AfterDifficulty">Oro tras aplicar la dificultad.</param>
+/// <param name="NodeBonusPercent">Escalón por tipo de nodo, en tanto por ciento (ADR 0043).</param>
+/// <param name="NodeBonus">Oro que suma ese escalón.</param>
+/// <param name="Objective">Objetivo de partido excelente anunciado en el nodo (RF-114h).</param>
+/// <param name="ObjectiveMet">True si se cumplió.</param>
+/// <param name="ObjectiveBonus">Oro que suma el objetivo cumplido; 0 si no se cumplió.</param>
+/// <param name="Total">Oro cobrado, idéntico al de <see cref="GoldCalculator.GoldForWin"/>.</param>
+public sealed record GoldForWinBreakdown(
+    int Act,
+    int ActBase,
+    int Difficulty,
+    int DifficultyPercent,
+    int AfterDifficulty,
+    NodeKind NodeKind,
+    int NodeBonusPercent,
+    int NodeBonus,
+    ExcellentMatchObjective Objective,
+    bool ObjectiveMet,
+    int ObjectiveBonus,
+    int Total);

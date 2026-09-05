@@ -145,7 +145,7 @@ public static class MarketView
         {
             var offer = offers.Perks[i];
             var perk = catalog.Perks.Get(offer.PerkId);
-            var carriers = CarriersOf(state, PerkPool.EligibleCarriers(state, perk, catalog));
+            var carriers = RewardView.Carriers(state, items, PerkPool.EligibleCarriers(state, perk, catalog));
             perkRows.Add(new MarketRow(
                 MarketCategories.Perk,
                 i,
@@ -173,7 +173,7 @@ public static class MarketView
         {
             var offer = offers.Items[i];
             var item = items.Get(offer.ItemId);
-            var carriers = CarriersOf(state, LivingIds(state));
+            var carriers = RewardView.Carriers(state, items, LivingIds(state));
             itemRows.Add(new MarketRow(
                 MarketCategories.Item,
                 i,
@@ -298,31 +298,6 @@ public static class MarketView
         }
 
         return rows;
-    }
-
-    private static IReadOnlyList<RewardCarrier> CarriersOf(RunState state, IReadOnlyList<int> ids)
-    {
-        var carriers = new List<RewardCarrier>(ids.Count);
-        for (int i = 0; i < ids.Count; i++)
-        {
-            var player = state.FindPlayer(ids[i]);
-            if (player is null)
-            {
-                continue;
-            }
-
-            carriers.Add(new RewardCarrier(
-                player.Id,
-                player.Name,
-                player.Position,
-                player.Rarity,
-                player.Level,
-                player.PhysicalState,
-                Progression.Progression.PerkSlots(player.Rarity) - player.Perks.Count,
-                player.Item));
-        }
-
-        return carriers;
     }
 
     private static IReadOnlyList<int> LivingIds(RunState state)

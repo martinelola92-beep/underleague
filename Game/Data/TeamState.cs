@@ -1,35 +1,42 @@
 using System;
 using System.Collections.Generic;
-using System.IO;
-using Godot;
+using Underleague.Game.Autoload;
 using Underleague.Sim.Data;
 using Underleague.Sim.Generation;
 using Underleague.Sim.Model;
 using Underleague.Sim.Placement;
 using Underleague.Sim.Random;
+using Underleague.Sim.Run;
 
 namespace Underleague.Game.Data;
 
 /// <summary>
-/// Estado de la pantalla de Equipo: el catálogo real de <c>/data</c> y una plantilla generada con
-/// <c>Sim.Generation.TeamGenerator</c>. No hay datos falsos incrustados en ninguna parte de la pantalla.
+/// Lo que la pantalla de Equipo necesita saber de un equipo: el catálogo con el que se lee y la plantilla
+/// con su alineación. No hay datos falsos incrustados en ninguna parte de la pantalla.
 /// <para>
-/// La E/S vive aquí, en <c>/Game</c>, que es donde puede vivir: <c>/Sim</c> no lee ficheros (RT-012) y
-/// recibe el contenido ya leído. Y ninguna regla de juego vive aquí (RT-014): mover a un jugador lo
-/// resuelve <see cref="PlacementView.WithPlayerAt"/>.
+/// Tiene tres orígenes y ninguno de ellos es la escena: la <b>run en curso</b>
+/// (<see cref="FromRun"/>), un equipo ya construido como el rival del ojeo (<see cref="Of"/>) y la
+/// plantilla de pruebas con la que la pantalla se diseñó (<see cref="Load"/>).
+/// </para>
+/// <para>
+/// Ninguna regla de juego vive aquí (RT-014): mover a un jugador lo resuelve
+/// <see cref="PlacementView.WithPlayerAt"/> y guardarlo, <c>RunEngine.Apply(SetLineup)</c>.
 /// </para>
 /// </summary>
 public sealed class TeamState
 {
     /// <summary>Idioma de la interfaz. En fase 4 lo elige el jugador (RT-073); hasta entonces, español.</summary>
-    public const string Language = "es";
+    public const string Language = GameData.Language;
 
-    private TeamState(Catalog catalog, TeamSetup team)
+    private TeamState(Catalog catalog, TeamSetup team, RunController? run = null)
     {
         Catalog = catalog;
         Team = team;
         Templates = catalog.Localization.Get(Language);
+        _run = run;
     }
+
+    private readonly RunController? _run;
 
     public Catalog Catalog { get; }
 
@@ -42,12 +49,44 @@ public sealed class TeamState
     public Lineup Lineup => Team.Lineup;
 
     /// <summary>
-    /// Carga <c>/data</c> y genera la plantilla con la semilla dada. Flujos de RNG separados (RT-022):
-    /// uno para generar el equipo y otro para los perks iniciales, que son recompensa.
+    /// La plantilla de la <b>run en curso</b> (RT-030): la que se alinea de verdad. Los jugadores se
+    /// convierten con <c>RunPlayer.ToDefinition</c>, que es la misma conversión con la que el motor los
+    /// manda al campo —penalización de lesión leve incluida (RF-091)—, de modo que lo que la ficha
+    /// enseña es lo que va a jugar.
+    /// </summary>
+    public static TeamState FromRun(RunController run)
+    {
+        ArgumentNullException.ThrowIfNull(run);
+        var catalog = run.Catalog ?? throw new InvalidOperationException("la run no tiene catálogo cargado");
+        return new TeamState(catalog, TeamOf(run.State!, catalog), run);
+    }
+
+    /// <summary>
+    /// Un equipo cualquiera ya construido: lo que necesita el informe de ojeo para enseñar la plantilla
+    /// rival con las mismas fichas que la propia (UI-010). No hay run detrás, así que no se puede mover a
+    /// nadie.
+    /// </summary>
+    public static TeamState Of(Catalog catalog, TeamSetup team) => new(catalog, team);
+
+    private static TeamSetup TeamOf(RunState state, Catalog catalog)
+    {
+        var players = new List<PlayerDefinition>(state.Roster.Count);
+        for (int i = 0; i < state.Roster.Count; i++)
+        {
+            players.Add(state.Roster[i].ToDefinition(catalog));
+        }
+
+        return new TeamSetup(state.ClubId, state.ClubId, state.ClubRace, players, state.Lineup);
+    }
+
+    /// <summary>
+    /// Carga <c>/data</c> y genera la plantilla con la semilla dada. Es el equipo de pruebas con el que
+    /// la pantalla de Equipo se diseñó y con el que se regeneran sus capturas; una run de verdad entra
+    /// por <see cref="FromRun"/>.
     /// </summary>
     public static TeamState Load(ulong seed)
     {
-        var catalog = DataLoader.FromJson(ReadDataFiles(FindDataDirectory()));
+        var catalog = DataLoader.FromJson(GameData.Snapshot);
 
         var generation = RngStreams.Generation(seed, 0);
         var team = TeamGenerator.Generate(ref generation, catalog, "underleague_fc", Race.Orc, quality: 55, firstPlayerId: 1, level: 3);
@@ -105,7 +144,15 @@ public sealed class TeamState
     /// <summary>Alineación resultante de dejar al jugador en esa casilla, <b>sin</b> aplicarla (RF-045: previsualización).</summary>
     public Lineup Preview(int playerId, Cell target) => PlacementView.WithPlayerAt(Lineup, Players, playerId, target);
 
-    /// <summary>Aplica el movimiento. La regla es de <c>/Sim</c>; aquí solo se guarda el resultado.</summary>
+    /// <summary>
+    /// Aplica el movimiento. La regla es de <c>/Sim</c>; aquí solo se pide y se guarda el resultado.
+    /// <para>
+    /// Con una run detrás, la alineación no se guarda en esta clase: se le manda al motor como
+    /// <c>SetLineup</c>, que es la única puerta por la que una decisión del jugador entra en el estado
+    /// —y la que deja anotado quién sale al campo arrastrando una lesión grave (RF-093 vía 1)—. La
+    /// pantalla no guarda una copia paralela de nada.
+    /// </para>
+    /// </summary>
     public bool Move(int playerId, Cell target)
     {
         var next = Preview(playerId, target);
@@ -114,55 +161,14 @@ public sealed class TeamState
             return false;
         }
 
+        if (_run is { HasRun: true })
+        {
+            _run.Apply(new SetLineup(next));
+            Team = TeamOf(_run.State!, Catalog);
+            return true;
+        }
+
         Team = Team with { Lineup = next };
         return true;
-    }
-
-    /// <summary>Todos los JSON de <c>/data</c> salvo los esquemas, con la ruta relativa que espera el cargador.</summary>
-    private static Dictionary<string, string> ReadDataFiles(string dataDirectory)
-    {
-        var files = new Dictionary<string, string>();
-        string schemas = Path.Combine(dataDirectory, "schemas") + Path.DirectorySeparatorChar;
-        var paths = new List<string>(Directory.EnumerateFiles(dataDirectory, "*.json", SearchOption.AllDirectories));
-        paths.Sort(StringComparer.Ordinal);
-
-        foreach (string path in paths)
-        {
-            if (path.StartsWith(schemas, StringComparison.Ordinal))
-            {
-                continue;
-            }
-
-            files[Path.GetRelativePath(dataDirectory, path).Replace(Path.DirectorySeparatorChar, '/')] = File.ReadAllText(path);
-        }
-
-        return files;
-    }
-
-    /// <summary>Sube directorios desde el proyecto de Godot hasta encontrar <c>data/sim/tuning.json</c>.</summary>
-    private static string FindDataDirectory()
-    {
-        var candidates = new List<string>
-        {
-            ProjectSettings.GlobalizePath("res://"),
-            AppContext.BaseDirectory,
-        };
-
-        foreach (string start in candidates)
-        {
-            var dir = new DirectoryInfo(start);
-            while (dir is not null)
-            {
-                string data = Path.Combine(dir.FullName, "data");
-                if (File.Exists(Path.Combine(data, "sim", "tuning.json")))
-                {
-                    return data;
-                }
-
-                dir = dir.Parent;
-            }
-        }
-
-        throw new DirectoryNotFoundException("no se encontró data/sim/tuning.json subiendo desde res:// ni desde el ensamblado");
     }
 }

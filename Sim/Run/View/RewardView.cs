@@ -46,7 +46,8 @@ public sealed record RewardCarrier(
     int Level,
     PhysicalState PhysicalState,
     int FreeSlots,
-    string? CurrentItemId);
+    string? CurrentItemId,
+    string CurrentItemName);
 
 /// <summary>
 /// Una de las opciones de la elección (RF-071, ADR 0049: dos en liga, tres en élite y en jefe).
@@ -147,7 +148,7 @@ public static class RewardView
             case PerkRewardOption perkOption:
             {
                 var perk = catalog.Perks.Get(perkOption.PerkId);
-                var carriers = Carriers(state, catalog, PerkPool.EligibleCarriers(state, perk, catalog));
+                var carriers = Carriers(state, items, PerkPool.EligibleCarriers(state, perk, catalog));
                 return new RewardOptionView(
                     index,
                     RewardKind.Perk,
@@ -164,7 +165,7 @@ public static class RewardView
             case ItemRewardOption itemOption:
             {
                 var item = items.Get(itemOption.ItemId);
-                var carriers = Carriers(state, catalog, AllLivingIds(state));
+                var carriers = Carriers(state, items, AllLivingIds(state));
                 return new RewardOptionView(
                     index,
                     RewardKind.Item,
@@ -200,7 +201,7 @@ public static class RewardView
     }
 
     /// <summary>Fichas mínimas de los portadores posibles, por id ascendente (RT-041).</summary>
-    private static IReadOnlyList<RewardCarrier> Carriers(RunState state, Catalog catalog, IReadOnlyList<int> ids)
+    internal static IReadOnlyList<RewardCarrier> Carriers(RunState state, ItemCatalog items, IReadOnlyList<int> ids)
     {
         var carriers = new List<RewardCarrier>(ids.Count);
         for (int i = 0; i < ids.Count; i++)
@@ -219,7 +220,10 @@ public static class RewardView
                 player.Level,
                 player.PhysicalState,
                 Progression.Progression.PerkSlots(player.Rarity) - player.Perks.Count,
-                player.Item));
+                player.Item,
+
+                // El nombre del objeto, no su id: el jugador no lee identificadores (RT-073).
+                player.Item is null ? string.Empty : items.Find(player.Item)?.Name.Es ?? player.Item));
         }
 
         return carriers;

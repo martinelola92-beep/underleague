@@ -73,12 +73,23 @@ public static class MarketSystem
 
         NodeGuards.RequireOpen(state, NodeKind.Market, "vender un jugador");
         var player = state.GetPlayer(decision.PlayerId);
-        int price = economy.Market.PlayerSaleBase.Of(player.Rarity)
+        return state.WithoutPlayer(player.Id).AddGold(SalePrice(player, economy));
+    }
+
+    /// <summary>
+    /// Lo que pagan por ese jugador (RF-114f): base por rareza, más nivel, más cada perk asignado y cada
+    /// vínculo activo. Público porque la pantalla de mercado tiene que enseñar el precio <b>antes</b> de
+    /// vender, y el precio que enseña tiene que ser el que se cobra: es esta misma función, no una copia
+    /// (RT-014).
+    /// </summary>
+    public static int SalePrice(RunPlayer player, EconomyConfig economy)
+    {
+        ArgumentNullException.ThrowIfNull(player);
+        ArgumentNullException.ThrowIfNull(economy);
+        return economy.Market.PlayerSaleBase.Of(player.Rarity)
             + (economy.Market.PlayerSalePerLevel * (player.Level - 1))
             + (economy.Market.PlayerSalePerPerk * player.Perks.Count)
             + (economy.Market.PlayerSalePerBond * player.Bonds.Count);
-
-        return state.WithoutPlayer(player.Id).AddGold(price);
     }
 
     private static RunState BuyPlayer(RunState state, IReadOnlyList<PlayerOffer> offers, BuyOffer decision, bool requirePayment)

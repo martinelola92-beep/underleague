@@ -201,8 +201,10 @@ Se enseñan como huecos, no se rellenan con mentiras:
   "sin objeto (equipamiento: fase 2)".
 - **Salario**: la economía (RF-114g..k) y los mercenarios (RF-110..113) son de fase 2, y `PlayerDefinition`
   no tiene salario. La ficha reserva la fila y lo dice.
-- **Club**: los clubes son datos de fase 2; el subtítulo pone "club de pruebas" y la plantilla se genera
-  con la raza orca.
+- **Club**: los clubes son datos de fase 2. **Con una run en curso** (`RunController`, `ui-run-minima.md`)
+  la pantalla enseña la plantilla de la run y su club, y cada movimiento entra en el estado como
+  `SetLineup`; sin run —al regenerar estas capturas, o al abrir la escena suelta— sigue valiendo la
+  plantilla de pruebas de raza orca con semilla fija, y el subtítulo pone "club de pruebas".
 - **Perks iniciales**: ver §9.
 - **RF-022b** dice que la posición "restringe las filas y columnas donde puede colocarse". La única
   restricción que el diseño concreta hoy es la del portero (RF-041), así que es la única que se aplica:

@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using Godot;
 using Underleague.Sim.Model;
+using Underleague.Sim.Run;
 
 namespace Underleague.Game.Ui;
 
@@ -216,6 +217,87 @@ public static class Style
             default:
                 target.DrawLine(center - new Vector2(radius, radius), center + new Vector2(radius, radius), color, 2f);
                 target.DrawLine(center + new Vector2(-radius, radius), center + new Vector2(radius, -radius), color, 2f);
+                break;
+        }
+    }
+
+    /// <summary>
+    /// Colores del <b>distintivo de dificultad</b> de un nodo de partido (RF-012): cinco niveles, de
+    /// verde a rojo. El color nunca va solo: <see cref="DrawDifficultyIcon"/> le da además una silueta
+    /// propia a cada nivel (UI-002).
+    /// </summary>
+    private static readonly Color[] DifficultyColors =
+    {
+        new("5fad56"), // 1
+        new("9dc44d"), // 2
+        new("e8c547"), // 3
+        new("e08b3c"), // 4
+        new("d9544d"), // 5
+    };
+
+    private static readonly Color[] NodeColors =
+    {
+        new("8fa4c0"), // partido de liga
+        new("c58fd0"), // partido de élite
+        new("57c2b5"), // mercado
+        new("6fb3e0"), // clínica
+        new("9aa0aa"), // taller (fase 3)
+        new("b0c96a"), // entrenamiento
+        new("d8b25e"), // evento
+        new("d9544d"), // jefe
+        new("d2a0c8"), // inscripción
+    };
+
+    /// <summary>Color del nivel de dificultad, 1..5 (RF-012).</summary>
+    public static Color DifficultyColor(int level) =>
+        DifficultyColors[Mathf.Clamp(level - 1, 0, DifficultyColors.Length - 1)];
+
+    /// <summary>Color del tipo de nodo (RF-011). El mercado se destaca aparte, en el mapa (RF-011b).</summary>
+    public static Color Of(NodeKind kind) => NodeColors[Mathf.Clamp((int)kind, 0, NodeColors.Length - 1)];
+
+    /// <summary>
+    /// Silueta del nivel de dificultad (RF-012, UI-002: color <b>e</b> icono). Cinco formas distintas,
+    /// crecientes en número de puntas: círculo, triángulo, rombo, cuadrado y estrella de cuatro puntas.
+    /// </summary>
+    public static void DrawDifficultyIcon(CanvasItem target, Vector2 center, float radius, int level, Color color)
+    {
+        switch (Mathf.Clamp(level, 1, 5))
+        {
+            case 1:
+                target.DrawCircle(center, radius, color);
+                break;
+            case 2:
+                target.DrawColoredPolygon(new[]
+                {
+                    center + new Vector2(0f, -radius),
+                    center + new Vector2(radius, radius * 0.8f),
+                    center + new Vector2(-radius, radius * 0.8f),
+                }, color);
+                break;
+            case 3:
+                target.DrawColoredPolygon(new[]
+                {
+                    center + new Vector2(0f, -radius),
+                    center + new Vector2(radius, 0f),
+                    center + new Vector2(0f, radius),
+                    center + new Vector2(-radius, 0f),
+                }, color);
+                break;
+            case 4:
+                target.DrawRect(new Rect2(center - new Vector2(radius, radius), new Vector2(radius * 2f, radius * 2f)), color);
+                break;
+            default:
+                target.DrawColoredPolygon(new[]
+                {
+                    center + new Vector2(0f, -radius),
+                    center + new Vector2(radius * 0.34f, -radius * 0.34f),
+                    center + new Vector2(radius, 0f),
+                    center + new Vector2(radius * 0.34f, radius * 0.34f),
+                    center + new Vector2(0f, radius),
+                    center + new Vector2(-radius * 0.34f, radius * 0.34f),
+                    center + new Vector2(-radius, 0f),
+                    center + new Vector2(-radius * 0.34f, -radius * 0.34f),
+                }, color);
                 break;
         }
     }

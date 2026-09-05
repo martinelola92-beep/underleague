@@ -170,10 +170,13 @@ public static class PostMatchView
             MatchLogView.Minute(report.Ticks, regulationTicks),
             PerkRows(report, events, catalog, templates, names, own, playback.Setup),
             ItemRows(report, items, templates, names, own),
-            Casualties(events, names, playback.Setup, own, regulationTicks),
+            Casualties(events, names, playback.Setup, own, regulationTicks, catalog),
             Cards(events, names, own, regulationTicks),
             Referee(playback, report, events, own),
-            economy is null || report.Winner != own
+            // El oro solo se cobra si se ganó **y** la run sigue en pie: una baja que baja del mínimo
+            // (RF-002b) termina la run antes de que <c>AfterMatch</c> llegue a pagar, y un informe que
+            // enseñara ese oro estaría mintiendo sobre un cobro que no ocurrió.
+            economy is null || report.Winner != own || stateAfterMatch.Result.IsOver
                 ? null
                 : GoldCalculator.Breakdown(stateAfterMatch, playback.Node, summary, economy));
     }
@@ -280,7 +283,8 @@ public static class PostMatchView
         IReadOnlyDictionary<int, string> names,
         MatchSetup setup,
         int ownTeam,
-        int regulationTicks)
+        int regulationTicks,
+        Catalog catalog)
     {
         var positions = Positions(setup);
         var rows = new List<CasualtyRow>();
@@ -306,10 +310,29 @@ public static class PostMatchView
                 positions.GetValueOrDefault(matchEvent.Actor, Position.Midfielder),
                 kind,
                 MatchLogView.Minute(matchEvent.Tick, regulationTicks),
-                names.GetValueOrDefault(matchEvent.Opponent) ?? names.GetValueOrDefault(matchEvent.Target) ?? string.Empty));
+                Cause(matchEvent, names, catalog)));
         }
 
         return rows;
+    }
+
+    /// <summary>
+    /// Quién causó la baja. En una lesión es el rival que entró; en una muerte, el <b>perk letal</b> que
+    /// la provocó, que el motor deja en el detalle del evento como <c>perk:&lt;id&gt;</c>. RF-013 exige
+    /// que ninguna muerte quede sin explicar, y el informe es donde se explica.
+    /// </summary>
+    private static string Cause(MatchEvent matchEvent, IReadOnlyDictionary<int, string> names, Catalog catalog)
+    {
+        const string PerkPrefix = "perk:";
+        if (matchEvent.Detail.StartsWith(PerkPrefix, StringComparison.Ordinal))
+        {
+            string id = matchEvent.Detail[PerkPrefix.Length..];
+            return catalog.Perks.Find(id)?.Name.Es ?? id;
+        }
+
+        return names.GetValueOrDefault(matchEvent.Opponent)
+            ?? names.GetValueOrDefault(matchEvent.Target)
+            ?? string.Empty;
     }
 
     private static IReadOnlyList<CardRow> Cards(

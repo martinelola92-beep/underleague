@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using Godot;
+using Underleague.Game.Autoload;
 using Underleague.Game.Data;
 using Underleague.Game.Ui;
 using Underleague.Sim.Model;
@@ -68,14 +69,23 @@ public partial class TeamScreen : Control
         GetNode<Label>("AyudaRaton").Text = UiText.Get("ui.input.mouse");
         GetNode<Label>("AyudaMando").Text = UiText.Get("ui.input.pad");
 
-        // Semilla fija: la pantalla debe enseñar siempre la misma plantilla mientras se diseña. En fase 2
-        // la semilla es la de la run (RT-021: nunca un generador estático ni el reloj).
-        _state = TeamState.Load(20260904UL);
+        // Con una run en curso, la plantilla es la suya: esta pantalla es donde se toman todas las
+        // decisiones de plantilla (UI-020) y las decisiones son sobre los jugadores de verdad. Sin run
+        // —al regenerar las capturas, o al abrir la escena suelta— sigue valiendo la plantilla de pruebas
+        // con la que se diseñó, con semilla fija para que enseñe siempre lo mismo.
+        var run = RunController.Instance;
+        bool inRun = run is { HasRun: true };
+        _state = inRun ? TeamState.FromRun(run!) : TeamState.Load(20260904UL);
         _subtitle.Text = UiText.Get(
             "ui.team.subtitle",
             _state.Catalog.Race(_state.Team.Race).Name.Es,
-            UiText.Get("ui.team.placeholderClub"),
+            inRun ? run!.State!.ClubId : UiText.Get("ui.team.placeholderClub"),
             _state.Players.Count);
+
+        if (inRun)
+        {
+            AddBackButton();
+        }
 
         _pitch.State = _state;
         _pitch.CellPressed += OnCellPressed;
@@ -90,6 +100,35 @@ public partial class TeamScreen : Control
         {
             CaptureSequence();
         }
+        else if (Tour.Active && inRun)
+        {
+            // El recorrido pasa por aquí para comprobar lo que más se puede romper al enchufar la run:
+            // que esta pantalla, escrita antes que el bucle, enseña la plantilla de la run de verdad.
+            Tour.Step(this, "equipo-run", () => Nav.Go(this, Nav.Scout));
+        }
+    }
+
+    /// <summary>
+    /// Vuelve a donde se estaba: al ojeo si se vino a repasar la alineación antes de un partido, y al
+    /// mapa si no. La pantalla de Equipo no sabe navegar por su cuenta —no es suya esa decisión—: mira
+    /// si hay un nodo elegido, que es el dato que lo dice.
+    /// </summary>
+    private void AddBackButton()
+    {
+        var button = new Button
+        {
+            Text = UiText.Get("ui.nav.back"),
+            Position = new Vector2(940f, 56f),
+            Size = new Vector2(120f, 26f),
+            FocusMode = FocusModeEnum.None,
+        };
+        button.AddThemeFontSizeOverride("font_size", Style.TextSmall);
+        button.Pressed += () =>
+        {
+            var run = RunController.Instance;
+            Nav.Go(this, run is { SelectedNodeId: >= 0 } ? Nav.Scout : Nav.Map);
+        };
+        AddChild(button);
     }
 
     /// <summary>

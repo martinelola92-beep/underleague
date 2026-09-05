@@ -138,6 +138,29 @@ public static class DescriptionGenerator
     /// se une con <paramref name="finalSeparator"/> ("y"/"and") en vez de con la coma, para que la lista se
     /// lea como una frase y no como un volcado de datos.
     /// </summary>
+    /// <summary>
+    /// Descripción de una lista de efectos suelta, sin disparador ni condición (RT-035). La usan los
+    /// <b>consumibles</b>, que son efectos sin perk que los envuelva: sin esto, el mercado tendría que
+    /// escribir su texto a mano, que es justo lo que RT-035 prohíbe.
+    /// </summary>
+    public static string DescribeEffects(IReadOnlyList<EffectDefinition> effects, DescriptionTemplates templates)
+    {
+        ArgumentNullException.ThrowIfNull(effects);
+        ArgumentNullException.ThrowIfNull(templates);
+
+        var builder = new StringBuilder();
+        AppendEffects(
+            builder,
+            effects,
+            templates,
+            templates.Get(Layout, "effectSeparator"),
+            templates.Get(Layout, "effectFinalSeparator"),
+            templates.Get(EventsSection, EventTypeNames.ToUpperSnake(EventType.MatchStart)),
+            string.Empty);
+
+        return CapitalizeFirst(builder.ToString());
+    }
+
     private static void AppendEffects(
         StringBuilder builder,
         IReadOnlyList<EffectDefinition> effects,
