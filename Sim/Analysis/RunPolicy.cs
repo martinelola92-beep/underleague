@@ -246,6 +246,9 @@ public sealed record RunPlayResult(
     /// <summary>Veces que un maestro estuvo en el mostrador de un mercado de esta run (ADR 0055).</summary>
     int MastersOffered,
 
+    /// <summary>De esas, cuántas tenían la línea ya construida y el arco abierto, se pudiera pagar o no (§25).</summary>
+    int MastersUnlocked,
+
     /// <summary>De esas, cuántas se podían cobrar y pagar (ADR 0055).</summary>
     int MastersAffordable)
 {
@@ -996,8 +999,15 @@ public static class RunPolicy
             }
 
             ledger.MastersOffered++;
-            if (PerkPool.Availability(state, master, catalog, PerkSource.Market) == PerkAvailability.Available
-                && arrival.Perks[i].Price <= state.Gold)
+            if (PerkPool.Availability(state, master, catalog, PerkSource.Market) != PerkAvailability.Available)
+            {
+                continue;
+            }
+
+            // §25: separar "la línea no está construida" de "no llega el oro" es lo que dice cuál de las
+            // dos palancas hay que mover. Sin las dos cifras, 0,18 de 2,73 no distingue una causa de otra.
+            ledger.MastersUnlocked++;
+            if (arrival.Perks[i].Price <= state.Gold)
             {
                 ledger.MastersAffordable++;
             }
@@ -2087,6 +2097,7 @@ public static class RunPolicy
             masters,
             held,
             ledger.MastersOffered,
+            ledger.MastersUnlocked,
             ledger.MastersAffordable);
     }
 
@@ -2189,6 +2200,8 @@ public static class RunPolicy
 
         /// <summary>Veces que un maestro estuvo en el mostrador de un mercado (ADR 0055).</summary>
         public int MastersOffered;
+
+        public int MastersUnlocked;
 
         /// <summary>De esas, cuántas se podían cobrar y pagar de verdad (ADR 0055).</summary>
         public int MastersAffordable;

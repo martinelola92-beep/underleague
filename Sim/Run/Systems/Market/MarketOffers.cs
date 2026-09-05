@@ -109,17 +109,20 @@ public static class MarketOfferGenerator
             mercenaries.Add(new MercenaryOffer(mercenary));
         }
 
-        // El peso de un perk en el pool es inversamente proporcional a su valor medido (ADR 0038): la
-        // palanca donde el precio ya interviene es doble, pero el pool tiene que ofrecer lo caro menos.
-        // ADR 0051: y el acto decide qué entra. En el acto 1 el surtido es de relleno; en el 2 y el 3
-        // aparecen las piezas hondas y, si a la run le falta una sola pieza de una línea, su maestro:
-        // "me falta la tercera de la línea, la busco y la pago" es el papel que el mercado recupera.
+        // ADR 0038, tabla de palancas: en el **mercado** la palanca es el PRECIO y en la recompensa es la
+        // FRECUENCIA. Aquí se aplicaban las dos —el peso inversamente proporcional al valor medido— y el
+        // resultado era un mostrador lleno de los perks que nadie quiere: 20 de los 45 perks medidos
+        // valen negativo, el peso inverso los ofrece hasta cuatro veces más, y encima hay que pagarlos.
+        // El surtido usa por eso el peso BASE de la tabla: el acto y la frecuencia propia del perk siguen
+        // mandando (ADR 0051), el valor medido no. Es lo que devuelve al mercado el papel que la ADR 0055
+        // le pide —el sitio donde está lo bueno y donde hay que pagarlo— sin tocar un solo número de
+        // potencia.
         var perkPool = PerkPool.Offerable(state, catalog, node.Act, PerkSource.Market);
         var perkWeights = new List<int>(perkPool.Count);
         for (int i = 0; i < perkPool.Count; i++)
         {
             perkWeights.Add(PerkPool.OfferWeight(
-                state, perkPool[i], catalog, economy.PerkValues.WeightOf(perkPool[i].Id), node.Act));
+                state, perkPool[i], catalog, economy.PerkValues.BaseWeight, node.Act));
         }
 
         var perks = new List<PerkOffer>(market.PerkOffers);

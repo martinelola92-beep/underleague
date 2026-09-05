@@ -113,7 +113,7 @@ public static class FullRunRunner
             byDoctrine[PurchaseDoctrine.Spender],
             byDoctrine[PurchaseDoctrine.Saver],
             standard.Economy);
-        metrics.AddRange(FullRunMetrics.Marketless(marketless));
+        metrics.AddRange(FullRunMetrics.Marketless(marketless, byDoctrine[PurchaseDoctrine.Contextual]));
 
         return new FullRunResult(all, metrics, matches, stopwatch.Elapsed);
     }

@@ -246,7 +246,9 @@ public static class FullRunMetrics
     /// mercados: cuánto gana sin comprar nada (banda: menos del 5%) y cuántos mercados no ha podido
     /// esquivar, que es lo que dice si la medida está midiendo lo que dice.
     /// </summary>
-    public static List<MetricResult> Marketless(IReadOnlyList<RunPlayResult> runs)
+    public static List<MetricResult> Marketless(
+        IReadOnlyList<RunPlayResult> runs,
+        IReadOnlyList<RunPlayResult>? baseline = null)
     {
         ArgumentNullException.ThrowIfNull(runs);
         var rows = new List<MetricResult>();
@@ -263,7 +265,49 @@ public static class FullRunMetrics
 
         rows.Add(Banded(MarketlessWinRate, WinRate(runs), null, MarketlessWinRateMax));
         rows.Add(Info(MarketlessVisits, visits / runs.Count));
+
+        // Diagnóstico de la ADR 0055 (§25): la tasa sola dice QUE esquivar compensa, no POR QUÉ. Las tres
+        // causas candidatas —el coste de ruta, lo que se compra y el precio frente al oro— se separan
+        // comparando la misma política contra sí misma sobre las mismas semillas. Todo INFO: describe,
+        // no puntúa.
+        if (baseline is { Count: > 0 })
+        {
+            foreach (var (name, of) in DiagnosisFields)
+            {
+                rows.Add(Info(name + "_noMarket", Mean(runs, of)));
+                rows.Add(Info(name + "_market", Mean(baseline, of)));
+            }
+        }
+
         return rows;
+    }
+
+    /// <summary>Lo que se compara entre la política que esquiva los mercados y la que los usa (§25).</summary>
+    private static readonly (string Name, Func<RunPlayResult, double> Of)[] DiagnosisFields =
+    {
+        ("matchesPerRun", r => r.Matches),
+        ("nodesPerRun", r => r.NodesVisited),
+        ("rewardsTaken", r => r.RewardsTaken),
+        ("perksOnStarters", r => r.PerksOnStarters),
+        ("itemsOnRoster", r => r.ItemsOnRoster),
+        ("avgLevel", r => r.AverageLevelTimes100 / 100.0),
+        ("goldEarned", r => r.GoldEarned),
+        ("goldLeft", r => r.GoldLeft),
+        ("treatments", r => r.Treatments),
+        ("slotsBought", r => r.SlotsBought),
+        ("deaths", r => r.Deaths),
+        ("actReached", r => r.ActReached),
+    };
+
+    private static double Mean(IReadOnlyList<RunPlayResult> runs, Func<RunPlayResult, double> of)
+    {
+        double total = 0;
+        for (int i = 0; i < runs.Count; i++)
+        {
+            total += of(runs[i]);
+        }
+
+        return total / runs.Count;
     }
 
     /// <summary>Tasa de victoria de un conjunto de runs, en porcentaje.</summary>
@@ -576,14 +620,16 @@ public static class FullRunMetrics
 
         // ADR 0055: dónde se corta el arco. "Ofrecido" es cuántas veces el maestro llegó al mostrador;
         // "comprable", cuántas de esas la run cumplía su línea y podía pagarlo.
-        double offered = 0, affordable = 0;
+        double offered = 0, unlocked = 0, affordable = 0;
         for (int i = 0; i < runs.Count; i++)
         {
             offered += runs[i].MastersOffered;
+            unlocked += runs[i].MastersUnlocked;
             affordable += runs[i].MastersAffordable;
         }
 
         rows.Add(Info("mastersOfferedPerRun", offered / runs.Count));
+        rows.Add(Info("mastersUnlockedPerRun", unlocked / runs.Count));
         rows.Add(Info("mastersAffordablePerRun", affordable / runs.Count));
         rows.Add(Info(MasterRunWinRate, withMaster > 0 ? 100.0 * wonWith / withMaster : 0.0));
         rows.Add(Info(

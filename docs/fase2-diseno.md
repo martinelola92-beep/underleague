@@ -2432,3 +2432,227 @@ recorrido largo no se toca: sigue capturando `mapa.png` en el acto 1.
   sin implementarse.
 - El nodo de inscripción ya no compite solo con otro servicio, sino también con un partido o con el
   mercado: el test de la ADR 0046 pasa a comprobar que **compite con algo**, no con qué.
+
+## 25. Decisiones de implementación del paquete AI: el oro, los arcos y el precio de saltarse el mercado (ADR 0055)
+
+El paquete AF dejó dos cifras medidas y contradictorias: **ganar sin pisar un mercado salía a cuenta** y
+**el arco de build casi nunca se cerraba**. Este paquete diagnostica las dos, mueve el oro y los precios, y
+**falsifica la premisa de la ADR 0055**: el 5% que esa ADR pide no depende de la economía.
+
+**Resultado de una línea**: los arcos pasan del **2,9%** al **25,3%** de las runs —dentro de la banda
+20-30 que el encargo pedía— porque la causa estaba localizada al perk: el maestro llegaba al mostrador con
+la línea **ya construida** 2,01 veces por run y solo 0,15 se podían pagar. Ganar sin mercado baja del
+**20,0% al 17,8%**, muy lejos del 5%, y **está medido por qué no puede bajar más**: con las recompensas
+sin dar un solo perk, una run que termina con **1,58 perks en el once y 0,16 objetos —sin build ninguna—
+sigue ganando el 14,5%**. El suelo no es económico, es de curva de dificultad.
+
+**Muestra**: salvo donde se diga otra cosa, todas las cifras son de `--full-runs 400` sobre **dos
+semillas** (1 y 1001), 800 runs por doctrina, contra las 200 de una sola semilla de §23; varias métricas de
+§23 se mueven un par de puntos solo por eso (la tasa de victoria de la run era 20,0 con 200 runs y es
+**19,5** con 800, y los arcos eran 5,5% y son **2,9%**). Las cifras de referencia de este documento son las
+de 800.
+
+### 25.1. El diagnóstico: por qué desviarse no compensaba, en tres causas separadas
+
+La ADR 0055 nombra tres candidatas —coste de ruta, valor de lo que hay en el mostrador, precio frente al
+oro del acto— y había que medirlas por separado antes de tocar nada. El instrumento es la **misma política
+contextual sobre las mismas semillas**, con y sin `AvoidsMarkets`, y doce filas INFO emparejadas nuevas en
+`FullRunMetrics.Marketless` (§25.4).
+
+**AI-A. El coste de ruta es CERO, y con signo cambiado.** Con el mapa de cuatro carriles se esperaba que
+desviarse al mercado costara posición. No cuesta nada:
+
+| | usa mercados | los esquiva |
+|---|---|---|
+| Partidos por run | 13,88 | **13,64** |
+| Nodos por run | 25,30 | 24,77 |
+| Recompensas cobradas | 9,56 | 9,46 |
+
+La política que esquiva los mercados juega **menos** partidos, no más. La razón está escrita en el paquete
+anterior: **AH-8b** dejó que ninguna capa lleve partido y mercado a la vez, así que el desvío nunca es
+"mercado o partido", es siempre "mercado u otro servicio". Y ahí el mercado **pierde**: quien lo esquiva se
+va al entrenamiento y termina la run **0,56 niveles por encima** (5,79 contra 5,23), y con el oro que no
+gasta compra el doble de huecos de plantilla (**1,00 contra 0,54**). El coste de desviarse no es espacial:
+es el **coste de oportunidad del servicio al que renuncias**, y ese servicio pagaba más que la compra.
+
+**AI-B. Lo que se compraba valía menos que nada.** 37,6 de oro por run, repartidos en 9,6 mercados,
+compraban 1,9 perks y 2,2 objetos, que sobrevivían como **+1,18 perks en el once y +0,95 objetos**. El
+balance de la operación completa era **negativo**: 19,50% de victoria usando los mercados contra **20,00%
+esquivándolos**. Y la lectura de la ADR 0037 lo confirmaba desde el otro lado: la doctrina **ahorradora**,
+que apenas compra, ganaba 17,9% y la **gastadora** 10,5% — cuanto más se compraba, peor se terminaba.
+
+**AI-C. El precio no era el problema en la mitad barata del mostrador y era TODO el problema en la cara.**
+Con 14,2 de oro al llegar a un mercado, el 59,3% del surtido se podía pagar: los comunes (objeto 8, perk
+10) estaban siempre al alcance. La parte cara, no — y ahí es donde vive el objetivo de la build:
+
+| Maestro (ADR 0051), por run | antes |
+|---|---|
+| Veces que llega al mostrador | 2,65 |
+| De esas, con la **línea ya construida** (`mastersUnlockedPerRun`, nueva) | **2,01** |
+| De esas, **pagables** | **0,15** |
+
+**El arco no se cortaba por la línea: se cortaba por el precio.** El 76% de las apariciones tenían el arco
+abierto y solo el 7% de esas llegaban al oro. Un perk raro costaba 24-40 (base 32 ± banda) contra 14 de
+oro en el mostrador. Sin la cifra de en medio —`mastersUnlockedPerRun`, que este paquete añade— el 0,15 de
+2,65 no distinguía "no aparece", "no tengo la línea" y "no me llega".
+
+### 25.2. Las palancas que se han movido
+
+**AI-1. El equipamiento solo se consigue en el mercado** (palanca 2 de la ADR 0055).
+`economy.rewardItemWeight` pasa de 25 a **0**: la recompensa tras un partido ganado ya solo ofrece perks y
+jugadores. Un objeto es una compra, no un trofeo. Medido: los objetos de quien esquiva los mercados caen de
+**3,18 a 0,54** por run, y los de quien los usa de 4,13 a 2,12 — el margen de equipar (+8,2 puntos, ADR
+0055) deja de estar en las dos columnas y pasa a estar solo en una.
+
+**AI-2. El oro por acto sube de 5/6/7 a 9/11/13.** Una run completa pasa a ganar **del orden de 100**, que
+es exactamente lo que la tabla de valores de partida de la ADR 0044 fijaba y que **nunca se había
+alcanzado**: con 5/6/7 una run entera ganaba 72. No es inflación, es corregir una desviación: la ADR 0044
+calibró esa cifra cuando el mercado era un extra de calidad; con la ADR 0055 el mercado pasa a construir
+media build y el presupuesto tiene que dar para ella.
+
+**AI-3. La escalera de precios de los perks se acorta a 4,2:1**, de `10-18-32-64` a **`10-15-24-42`**. La
+propia ADR 0044 pedía acotar el rango **dentro de una misma categoría** "a algo del orden de 4:1" y eso
+nunca se aplicó: los perks estaban en 6,4:1 y los objetos en 6,5:1. Se ha bajado el **techo**, no subido el
+suelo — el común sigue en 10, donde la ADR lo puso—, porque el techo es donde vive el maestro. Los
+fichajes bajan igual, de `16-26-40-80` a `18-27-38-64`.
+
+**AI-4. Los objetos NO se abaratan, y la razón está medida.** El primer intento acortó también su escalera
+(`8-13-22-38`) y puso **roja** la puerta `TheThreeDoctrinesBuyDifferently`: con la parte alta barata, la
+doctrina **ahorradora** se queda sin nada por lo que ahorrar y termina la run con **menos** oro sin gastar
+que la contextual, que es justo lo que esa puerta prohíbe. Se quedan en `8-14-28-52`. El descuento de la
+parte alta se concentra donde está el objetivo de la build.
+
+**AI-5. El surtido del mercado deja de aplicar la palanca de la frecuencia** (`Sim/Run/Systems/Market/MarketOffers.cs`).
+La tabla de la ADR 0038 asigna al **mercado la palanca del precio** y a la **recompensa la de la
+frecuencia**; el código aplicaba **las dos** en el mercado, ponderando el surtido inversamente al valor
+medido del perk. Con 20 de los 45 perks medidos en negativo y un peso inverso que los ofrece hasta cuatro
+veces más, el mostrador se llenaba de lo que ninguna doctrina compra —y encima había que pagarlo—. Ahora
+el surtido usa el **peso base** de la tabla: el acto y la `frequency` del perk siguen mandando (ADR 0051),
+el valor medido no. Es la corrección de una inconsistencia documentada, no un cambio de diseño.
+
+**AI-6. Los sumideros que NO son el mercado suben con el oro.** `clinicCost` 8 → **10** (vuelve al valor de
+la ADR 0044; la ADR 0048 lo había bajado precisamente para `sinksAffordablePerAct`, y ahora el ajuste va en
+el mismo sentido), `enrollmentCosts` 12/25 → **14/28**, `rerollStepCost` 1 → **2** y el salario del
+mercenario 1+1 → **2+2**. Sin ellos, el oro más alto empuja `sinksAffordablePerAct` contra el techo de la banda 2-3 de RF-114k y por
+encima (medido durante la calibración: **3,03** con 10/12/14 y **3,75** con 12/15/18); con ellos vuelve a
+**2,51**. Se probó también subir clínica e inscripción
+mucho más (13 y 22/44) y **sale mal**: la política contextual **reserva** esos dos costes antes de comprar
+(`SpendableAtMarket`), así que encarecerlos sube el oro que llega intacto al mostrador y disparó
+`affordableShareAtMarket` a **76,1**, por encima de su cota de no regresión. Por eso el ajuste se apoya en
+los sumideros que la política **no** reserva.
+
+**AI-7. `consumablePrice` 8 → 20.** El consumible es de un solo uso y **nadie lo compra** —el estado no
+lleva inventario de consumibles (X-9)—, así que su precio solo mueve la mitad aspiracional del mostrador.
+A 8 eran 3 de los ~18 artículos siempre pagables e inflaban `affordableShareAtMarket` sin significar nada.
+
+**AI-8. Instrumento nuevo, y hace falta.** `mastersUnlockedPerRun` separa "no tengo la línea" de "no me
+llega el oro" (§25.1), y `FullRunMetrics.Marketless` recibe ahora la línea base contextual y emite **doce
+filas INFO emparejadas** —partidos, nodos, recompensas, perks en el once, objetos, nivel, oro ganado, oro
+sobrante, tratamientos, huecos, muertes y acto alcanzado, con y sin mercado—. Sin ellas, `runWinRate_noMarket`
+dice **que** esquivar compensa y no dice **por qué**, que es exactamente donde se atascó §23.
+
+### 25.3. Las cuatro medidas del encargo
+
+`--full-runs 400`, semillas 1 y 1001 (800 runs por doctrina), contra el mismo lote sobre `d216e1a`.
+
+| | antes | después | objetivo |
+|---|---|---|---|
+| **Ganar sin pisar mercado** (`runWinRate_noMarket`) | 20,00% | **17,75%** | < 5% — **no alcanzado** |
+| **Arcos cerrados** (`mastersReached`) | 2,88% | **25,25%** | 20-30% — **cumplido** |
+| **Tasa de victoria de la run** | 19,50% | **19,12%** | 20-30% — **al borde, como antes** |
+| **Las seis puertas** | verde | **verde** (526 tests, 41 de puerta) | verde — **cumplido** |
+
+Y lo que se mueve alrededor:
+
+| | antes | después | banda |
+|---|---|---|---|
+| Maestro en el mostrador, por run | 2,65 | 3,91 | INFO |
+| … con la línea construida | 2,01 | 3,35 | INFO |
+| … **pagable** | **0,15** | **1,29** | INFO |
+| Tasa de victoria **con** arco cerrado | 47,2% | 32,7% | INFO |
+| Tasa de victoria **sin** arco cerrado | 18,7% | 14,5% | INFO |
+| Perks en el once (usando mercados) | 6,74 | **10,39** | INFO |
+| Perks en el once (esquivándolos) | 5,56 | 8,89 | INFO |
+| Objetos en plantilla (usando / esquivando) | 4,13 / 3,18 | **2,12 / 0,54** | INFO |
+| `purchasesPerMarket` | 0,66 | **0,94** | 1-2 |
+| `leftoverGoldShare` | 18,05 (OUT) | **10,88 (IN)** | < 15 |
+| `sinksAffordablePerAct` | 2,06 | 2,51 | 2-3 |
+| `affordableShareAtMarket` | 59,32 | 62,77 | 20-35 (cota 25-70) |
+| `deathsPerRun` | 1,57 | 1,54 | 1,5-3 |
+| `matchesPerFullRun` | 19,39 | 19,48 | 18-22 |
+| `masterDivergence` | 11,70 | 9,31 | ≥ 5 |
+| `contextualAdvantage` | +1,62 | **−2,12** | ≥ 8 |
+
+**La curva de puertas de la ADR 0033 no se ha tocado y sigue verde**: este paquete no cambia ningún número
+de potencia, solo precios, oro y de dónde sale cada cosa.
+
+### 25.4. La falsificación: el 5% de la ADR 0055 no es un problema de economía
+
+Es lo más importante que deja este paquete y hay que decirlo con números, porque contradice la propia ADR.
+
+**Medición 1 — el techo del mercado.** Con **500 de oro inicial** (bolsa efectivamente ilimitada, 200 runs)
+la política contextual llega a **15,94 perks en el once y 7,50 objetos** y gana el **30,0%**: exactamente el
+techo de su banda. La misma política esquivando los mercados, con el mismo oro, gana el **20,5%**. Es decir:
+**el valor máximo que el mercado puede llegar a tener es de unos 10 puntos**, y la ADR 0055 necesita 15-25.
+
+**Medición 2 — el suelo sin build.** Con `rewardPerkWeight = 0` —las recompensas dejan de dar perks del
+todo, la palanca 3 de la ADR 0055 llevada al extremo— la política que esquiva los mercados termina la run
+con **1,58 perks en el once y 0,16 objetos**, es decir **sin build ninguna**, y **gana el 14,5% de las
+runs**. La que sí compra gana el 12,5%.
+
+Las dos mediciones juntas dicen lo mismo: **la tasa de victoria de una run no la decide la build.** Entre
+"sin build" (1,6 perks) y "build completa y equipada" (15,9 perks y 7,5 objetos) hay 14,5% → 30,0%, unos
+**1,1 puntos de tasa de victoria por perk del once**, y el suelo de esa recta está en **14-15%**, no en
+cero. El resto lo ponen el **nivel y los atributos**, que suben con los partidos y con el entrenamiento
+pase lo que pase.
+
+Y eso choca de frente con la tabla de la propia **ADR 0033**, que dice que una build **incoherente**
+completa la run el **~0,1%** de las veces y una **correcta** el **~6%**. El bucle de run entrega **14,5%
+sin build**. Las dos cifras no pueden ser las dos ciertas: o la curva de jefes está medida sobre un
+instrumento que no representa lo que llega al jefe en una run real (plantillas fabricadas contra plantillas
+que han subido cinco niveles), o la banda 20-30 de la tasa de victoria de la run es incompatible con "sin
+build no se gana".
+
+**Conclusión operativa: mientras ese suelo esté en el 14%, ninguna cantidad de oro, ningún precio y
+ninguna palanca de la ADR 0055 pueden poner `runWinRate_noMarket` por debajo del 5%.** Las palancas 1 y 2
+están aplicadas y valen lo que valen: el mercado ha pasado de restar 0,5 puntos a sumar 1,4. La decisión
+que queda es de **curva de dificultad**, no de economía, y es del revisor.
+
+Se comprobó además que el oro no es la palanca de esa métrica, midiendo tres niveles con el resto igual:
+
+| oro por acto | tasa de victoria | arcos | ganar sin mercado |
+|---|---|---|---|
+| 9/11/13 | 19,12% | 25,25% | 17,75% |
+| 10/12/14 | 19,25% | 29,25% | 18,12% |
+| 11/13/15 | 17,00% | 31,75% | 19,12% |
+
+**Más oro sube los arcos y no baja la métrica de la ADR 0055**; por encima de 10/12/14 empieza incluso a
+bajar la tasa de victoria, porque la doctrina contextual gasta el oro de más en artículos marginales que
+ocupan slots irreversibles (RF-072). De ahí el 9/11/13 elegido: es el punto donde los arcos están en banda
+con margen y el resto de métricas no empeora.
+
+### 25.5. Lo que queda abierto
+
+- **El 5% de la ADR 0055 necesita una decisión de curva, no de economía** (§25.4). Las opciones que la
+  medición deja sobre la mesa son endurecer los jefes contra plantillas de nivel alto y build pobre
+  (ADR 0033), o aceptar que la métrica correcta no es "ganar sin mercado" sino "cuánto peor se juega sin
+  él", que hoy son 1,4 puntos y con bolsa ilimitada 9,5.
+- **`contextualAdvantage` cambia de signo** (+1,62 → −2,12): la doctrina **ahorradora** (21,25%) supera
+  ahora a la **contextual** (19,12%). La causa está localizada y **es del instrumento, no de la economía**:
+  con la parte alta del mostrador más barata, "solo compro raros" pasa a ser una estrategia buena, mientras
+  que la contextual gasta en perks de valor medido apenas positivo (`MinPerkValue = 0`) que llenan slots
+  irreversibles. Es el mismo aviso de **AH-12/AH-C**: revisar los pesos y umbrales de `RunPolicy` es un
+  paquete propio, y cambiar el instrumento obliga a volver a medir la economía entera. No se ha tocado aquí
+  a propósito.
+- **`affordableShareAtMarket` (62,8) y `purchasesPerMarket` (0,94) siguen siendo incompatibles entre sí**
+  (Z-K): con 9,6 mercados por run, comprar 1-2 artículos en cada uno cuesta más oro del que una run gana, y
+  mientras el oro que llega al mostrador supere el precio de un común, más de la mitad del surtido será
+  pagable. La primera empeora 3 puntos y la segunda mejora 0,28 con este paquete; las dos siguen fuera de
+  su banda de diseño y dentro de su cota de no regresión.
+- **La tasa de victoria de la run (19,1%) sigue al borde de su banda**, como lo estaba antes del paquete
+  (19,5%). La cifra de 20,0% de §23 era de 200 runs y una sola semilla; con 800 la banda 20-30 no se
+  cumplía ya.
+- **El entrenamiento es el rival real del mercado** (AI-A) y su valor está en datos
+  (`economy.trainingExperience = 40`, para toda la plantilla disponible). No se ha tocado porque bajarlo
+  castiga por igual a quien va al mercado y a quien no, pero es la palanca que haría que desviarse cueste
+  algo de verdad si alguna vez se quiere que cueste.
