@@ -32,6 +32,21 @@ La base 10.000 se mantiene **solo** dentro del motor, donde hace falta precisió
 - **Perks, objetos, consumibles y habilidades raciales**: descripción **generada** desde el efecto (RT-035), con las plantillas de `data/l10n/<idioma>/templates.json`. No existe campo `description` y el validador lo rechaza. Es la única forma de garantizar que el texto y el efecto no divergen nunca.
 - **Razas, clubes y etiquetas de estilo**: no son efectos, son conceptos, así que su descripción se **escribe a mano** en `data/l10n/`, una frase, con las mismas reglas de estilo. Su habilidad asociada, en cambio, sí se genera, porque es un perk.
 
+## Nombres propios: el chiste se localiza, no se traduce
+
+Todo nombre que ve el jugador —clubes, rivales, jugadores generados, legendarios— existe en **español e inglés**. Y la regla no es traducir: es **encontrar el equivalente en la cultura futbolística de ese idioma**.
+
+`Fénix Concursal` / `Newco Athletic` es el estándar: *newco* es el término inglés real para la sociedad que sucede a un club en concurso de acreedores. No es una traducción de "concursal", es el mismo chiste contado a otro público. Traducirlo literalmente no habría significado nada.
+
+| Tipo de nombre | Qué se hace |
+|---|---|
+| **Nombre de pila de fantasía** (`Grok`, `Aelar`, `Borin`) | No cambia. No significa nada en ningún idioma, y ahí está la gracia |
+| **Apellido parlante** (`Rompehuesos`, `Hojaplata`) | Se busca el equivalente con el mismo registro: `Bonebreaker`, `Silverleaf`. No una traducción literal que suene a manual |
+| **Nombre de club y de rival** | El chiste equivalente, no la traducción. Puede alejarse del original todo lo que haga falta |
+| **Legendario** (parodia de futbolista) | El guiño tiene que funcionar en los dos idiomas, y no siempre es el mismo. Si un nombre solo funciona en uno, se cambia por otro futbolista que funcione en ambos |
+
+La prueba: **un jugador inglés no debe poder notar cuál era el idioma original**. Si el nombre en inglés suena a traducción, está mal.
+
 ## Longitud
 
 Una frase de línea y media como máximo a 1280x800 (RT-070) en el tamaño de texto pequeño (UI-004). Si no cabe, el problema es el efecto: un efecto que necesita dos frases para explicarse combina demasiados ejes (`perks-ejes.md`, regla de legibilidad) y hay que partirlo o simplificarlo.
