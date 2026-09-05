@@ -96,14 +96,9 @@ public static class GoldCalculator
 
         int gold = economy.GoldForAct(node.Act) * economy.MultiplierForDifficulty(node.Difficulty) / 100;
 
-        if (node.Kind == NodeKind.EliteMatch)
-        {
-            gold += gold * economy.EliteBonusPercent / 100;
-        }
-        else if (node.Kind == NodeKind.Boss)
-        {
-            gold += gold * economy.BossBonusPercent / 100;
-        }
+        // ADR 0043: el escalón por tipo de nodo. La liga paga la base, el élite paga más y el jefe mucho
+        // más: sin ese salto, superar un acto no cambia la trayectoria de la run.
+        gold += gold * economy.RewardFor(node.Kind).GoldBonusPercent / 100;
 
         var objective = ExcellentMatchObjectives.For(state.Seed, node);
         if (ExcellentMatchObjectives.Satisfied(objective, state, summary))

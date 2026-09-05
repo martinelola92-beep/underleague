@@ -70,6 +70,27 @@ public sealed class StandardRunSystems : IRunSystems
         RivalLoader.FromJson(files),
         MapLoader.FromJson(files));
 
+    /// <summary>
+    /// <see cref="RunSetup"/> completo para empezar una run con <b>estos</b> datos: oro de partida
+    /// (<c>economy.startingGold</c>), nodos por acto (<c>map.nodesPerAct</c>) y rivales estáticos por acto
+    /// (<c>data/rivals/</c>).
+    ///
+    /// <para>Existe porque <c>RunSetup.StartingGold</c> es un <c>init</c> que vale <b>0</b> si nadie lo
+    /// rellena, y <c>data/clubs/</c> todavía no existe: quien empezaba una run sin acordarse llegaba al
+    /// primer mercado sin un solo oro y no podía comprar nada. El valor está en datos y aquí solo se
+    /// enchufa, para que ningún llamador tenga que saberlo.</para>
+    /// </summary>
+    /// <param name="clubId">Id del club (RF-004).</param>
+    /// <param name="race">Raza del club (RF-004).</param>
+    /// <param name="files">Instantánea de <c>/data</c> con la que se juega la run (RT-061b).</param>
+    public RunSetup NewRunSetup(string clubId, Model.Race race, IReadOnlyDictionary<string, string> files) =>
+        new(clubId, race, files)
+        {
+            StartingGold = _economy.StartingGold,
+            NodesPerActByAct = _map.NodesPerAct,
+            OpponentIdsByAct = OpponentIdsByAct(),
+        };
+
     /// <summary>Rivales estáticos de esta instancia, por acto (1..3), para <c>RunSetup.OpponentIdsByAct</c> (RF-015).</summary>
     public IReadOnlyList<IReadOnlyList<string>> OpponentIdsByAct() =>
         new[] { _rivals.OfAct(1), _rivals.OfAct(2), _rivals.OfAct(3) };
@@ -91,7 +112,10 @@ public sealed class StandardRunSystems : IRunSystems
             var team = _rivals.Find(node.OpponentId);
             if (team is not null)
             {
-                return RivalTeamBuilder.Build(team, catalog);
+                var built = RivalTeamBuilder.Build(team, catalog);
+                return node.Kind == NodeKind.EliteMatch
+                    ? LevelUp(built, _map.EliteRivalLevelBonus, catalog)
+                    : built;
             }
         }
 
@@ -103,7 +127,26 @@ public sealed class StandardRunSystems : IRunSystems
         DefaultRunSystems.Instance.RefereeFor(state, node, catalog);
 
     /// <inheritdoc />
-    public SimConfig MatchConfig(RunState state, MapNode node) => DefaultRunSystems.Instance.MatchConfig(state, node);
+    /// <remarks>
+    /// Aquí entra el <b>desgaste creciente por acto</b> de la ADR 0043: la probabilidad de lesión se
+    /// multiplica por <c>tuning.injury.actScalePercent</c> del acto y, en un nodo de élite, además por
+    /// <c>eliteScalePercent</c> (más riesgo, que es la mitad de lo que le da su función al nodo). Es un
+    /// dato, no una fórmula: el motor recibe el multiplicador ya calculado y su fórmula no cambia.
+    /// </remarks>
+    public SimConfig MatchConfig(RunState state, MapNode node, Catalog catalog)
+    {
+        ArgumentNullException.ThrowIfNull(node);
+        ArgumentNullException.ThrowIfNull(catalog);
+
+        var injury = catalog.Tuning.Injury;
+        int scale = injury.ScaleForAct(node.Act);
+        if (node.Kind == NodeKind.EliteMatch)
+        {
+            scale = scale * injury.EliteScalePercent / 100;
+        }
+
+        return DefaultRunSystems.Instance.MatchConfig(state, node, catalog) with { InjuryScalePercent = scale };
+    }
 
     /// <inheritdoc />
     public RunState OpenNode(RunState state, MapNode node, Catalog catalog)
@@ -143,6 +186,16 @@ public sealed class StandardRunSystems : IRunSystems
         int gold = GoldCalculator.GoldForWin(state, node, summary, _economy);
         state = state.AddGold(gold);
 
+        // ADR 0043: superar el jefe cura la plantilla. Es lo que cierra el ciclo de desgaste del acto —se
+        // puede exprimir la plantilla sabiendo que habrá alivio, en vez de administrar una ruina uniforme
+        // durante toda la run— y la otra mitad del trampolín, junto a los dos perks. El muerto no vuelve
+        // (RF-093).
+        var reward = _economy.RewardFor(node.Kind);
+        if (reward.HealsRoster)
+        {
+            state = HealRoster(state);
+        }
+
         // Deja el nodo abierto para RF-071: el jugador elige recompensa (y puede repetir tirada una vez,
         // RF-071b) antes de volver al mapa con LeaveNode.
         return state.WithPendingNode(node.Id);
@@ -162,12 +215,61 @@ public sealed class StandardRunSystems : IRunSystems
             HireMercenary hire => MarketSystem.Hire(state, hire, catalog, _economy, _items, _consumables),
             TreatPlayer treat => MedicalSystem.Treat(state, treat, _economy),
             ChooseReward choose => RewardSystem.Choose(state, choose, catalog, _economy, _items),
+            DeclineReward => RewardSystem.Decline(state, _economy),
             RerollRewards => RewardSystem.Reroll(state, _economy),
             TransferItem transfer => EquipmentSystem.Apply(state, transfer, _economy, _items),
             _ => throw new NotSupportedException(
                 $"la decisión {decision.GetType().Name} no la resuelve el paquete X: la resuelve el paquete Y (jefe) "
                     + "sustituyendo StandardRunSystems por su propia implementación de IRunSystems, o componiendo las dos."),
         };
+    }
+
+    /// <summary>
+    /// El rival de un nodo de élite es el del acto <b>subido de nivel</b> (ADR 0043): más riesgo, que es
+    /// la mitad de lo que le da su función al nodo. Se sube con <c>Progression.LevelUp</c>, la misma
+    /// escalera de RF-027 por la que sube la plantilla del jugador, en vez de inventar una dificultad
+    /// aparte.
+    /// </summary>
+    private static TeamSetup LevelUp(TeamSetup team, int levels, Catalog catalog)
+    {
+        if (levels <= 0)
+        {
+            return team;
+        }
+
+        var players = new List<PlayerDefinition>(team.Players.Count);
+        for (int i = 0; i < team.Players.Count; i++)
+        {
+            players.Add(Progression.Progression.LevelUp(
+                team.Players[i], team.Players[i].Level + levels, catalog.Tuning.Progression));
+        }
+
+        return team with { Players = players };
+    }
+
+    /// <summary>
+    /// Cura la plantilla entera (ADR 0043): la lesión grave y las leves acumuladas desaparecen, el muerto
+    /// no vuelve (RF-093). Recorre el roster por id ascendente, que es como <c>RunState.WithPlayer</c> lo
+    /// mantiene ordenado (RT-041).
+    /// </summary>
+    private static RunState HealRoster(RunState state)
+    {
+        var next = state;
+        for (int i = 0; i < state.Roster.Count; i++)
+        {
+            var player = state.Roster[i];
+            if (player.PhysicalState == PhysicalState.Dead)
+            {
+                continue;
+            }
+
+            if (player.PhysicalState != PhysicalState.Healthy || player.MinorInjuries > 0)
+            {
+                next = next.WithPlayer(player with { PhysicalState = PhysicalState.Healthy, MinorInjuries = 0 });
+            }
+        }
+
+        return next;
     }
 
     /// <inheritdoc />

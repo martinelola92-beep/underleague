@@ -21,6 +21,25 @@ public sealed record PriceByRarity(int Common, int Uncommon, int Rare, int Legen
     };
 }
 
+/// <summary>
+/// Recompensa de un tipo de nodo de partido (ADR 0043). Es lo que convierte al jefe en <b>trampolín</b> y
+/// no solo en barrera: superar un acto cambia la trayectoria de la run.
+/// </summary>
+/// <param name="GoldBonusPercent">Recargo sobre el oro del acto ya multiplicado por la dificultad (RF-114g).</param>
+/// <param name="Options">Opciones que se ofrecen en cada elección (RF-071: tres).</param>
+/// <param name="Picks">Elecciones seguidas que da el nodo; el jefe da dos perks en vez de uno.</param>
+/// <param name="RarityFloorPercent">
+/// Probabilidad, en tanto por ciento, de que una opción se sortee <b>solo</b> entre las de rareza
+/// superior a común: es la "rareza mejorada" que la ADR 0043 le da al nodo de élite.
+/// </param>
+/// <param name="HealsRoster">Cura la plantilla entera al superarlo (RF-091, RF-092): cierra el ciclo de desgaste del acto.</param>
+public sealed record NodeRewardConfig(
+    int GoldBonusPercent,
+    int Options,
+    int Picks,
+    int RarityFloorPercent,
+    bool HealsRoster);
+
 /// <summary>Configuración del surtido del mercado (RF-114..114f).</summary>
 public sealed record MarketConfig(
     int PlayerOffers,
@@ -34,6 +53,7 @@ public sealed record MarketConfig(
     PriceByRarity PerkPrice,
     PriceByRarity ItemPrice,
     int PriceSpreadPercent,
+    int PriceBandPercent,
     int ConsumablePrice,
     int ItemSellFractionPercent,
     PriceByRarity PlayerSaleBase,
@@ -42,7 +62,28 @@ public sealed record MarketConfig(
     int PlayerSalePerBond,
     int RecruitQuality,
     int YouthQuality,
-    int MercenaryQuality);
+    int MercenaryQuality)
+{
+    /// <summary>
+    /// Acota el precio de un artículo a la banda de su rareza (ADR 0044). El precio nace del valor del
+    /// artículo (ADR 0038) y se dispersa dentro de su rareza (ADR 0037); las dos cosas juntas producían
+    /// rangos de <b>18 a 1</b> dentro de una misma categoría, con media tienda inalcanzable siempre y la
+    /// otra media trivial. La banda deja el rango dentro de una rareza en 2:1 y la diferencia grande donde
+    /// tiene sentido: entre rarezas y entre categorías. Mínimo 1: nada es gratis por redondeo.
+    /// </summary>
+    public int ClampToBand(int price, int rarityBasePrice)
+    {
+        if (PriceBandPercent <= 0 || rarityBasePrice <= 0)
+        {
+            return price < 1 ? 1 : price;
+        }
+
+        int min = rarityBasePrice * (100 - PriceBandPercent) / 100;
+        int max = rarityBasePrice * (100 + PriceBandPercent) / 100;
+        int clamped = Math.Clamp(price, min < 1 ? 1 : min, max < 1 ? 1 : max);
+        return clamped < 1 ? 1 : clamped;
+    }
+}
 
 /// <summary>
 /// Configuración íntegra de la economía de la run (RF-114g..k), cargada de <c>data/economy/economy.json</c>.
@@ -57,8 +98,9 @@ public sealed record EconomyConfig(
     int GoldAct2,
     int GoldAct3,
     IReadOnlyList<int> DifficultyMultiplierPercent,
-    int EliteBonusPercent,
-    int BossBonusPercent,
+    NodeRewardConfig LeagueReward,
+    NodeRewardConfig EliteReward,
+    NodeRewardConfig BossReward,
     int ExcellentMatchBonusGold,
     int ClinicCost,
     int RerollBaseCost,
@@ -91,6 +133,14 @@ public sealed record EconomyConfig(
         2 => GoldAct2,
         3 => GoldAct3,
         _ => throw new ArgumentOutOfRangeException(nameof(act), act, "el acto debe estar entre 1 y 3"),
+    };
+
+    /// <summary>Recompensa del tipo de nodo indicado (ADR 0043). Un nodo que no es de partido no tiene.</summary>
+    public NodeRewardConfig RewardFor(NodeKind kind) => kind switch
+    {
+        NodeKind.EliteMatch => EliteReward,
+        NodeKind.Boss => BossReward,
+        _ => LeagueReward,
     };
 
     /// <summary>Multiplicador de dificultad (1..5, RF-012) en tanto por ciento.</summary>
@@ -161,8 +211,9 @@ public static class EconomyLoader
             root.Int("goldAct2"),
             root.Int("goldAct3"),
             difficulty,
-            root.Int("eliteBonusPercent"),
-            root.Int("bossBonusPercent"),
+            ReadNodeReward(root.Prop("nodeRewards").Prop("league")),
+            ReadNodeReward(root.Prop("nodeRewards").Prop("elite")),
+            ReadNodeReward(root.Prop("nodeRewards").Prop("boss")),
             root.Int("excellentMatchBonusGold"),
             root.Int("clinicCost"),
             root.Int("rerollBaseCost"),
@@ -185,6 +236,13 @@ public static class EconomyLoader
         };
     }
 
+    private static NodeRewardConfig ReadNodeReward(Json node) => new(
+        node.Int("goldBonusPercent"),
+        node.Int("options"),
+        node.Int("picks"),
+        node.Int("rarityFloorPercent"),
+        node.Prop("healsRoster").AsBool());
+
     private static MarketConfig ReadMarket(Json node) => new(
         node.Int("playerOffers"),
         node.Int("perkOffers"),
@@ -197,6 +255,7 @@ public static class EconomyLoader
         ReadPriceByRarity(node.Prop("perkPriceByRarity")),
         ReadPriceByRarity(node.Prop("itemPriceByRarity")),
         node.Int("priceSpreadPercent"),
+        node.Int("priceBandPercent"),
         node.Int("consumablePrice"),
         node.Int("itemSellFractionPercent"),
         ReadPriceByRarity(node.Prop("playerSaleBaseByRarity")),

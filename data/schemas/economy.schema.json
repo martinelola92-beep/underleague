@@ -17,8 +17,7 @@
       "minItems": 5,
       "maxItems": 5
     },
-    "eliteBonusPercent": { "type": "integer", "minimum": 0, "maximum": 500 },
-    "bossBonusPercent": { "type": "integer", "minimum": 0, "maximum": 500 },
+    "nodeRewards": { "$ref": "#/$defs/nodeRewards" },
     "excellentMatchBonusGold": { "type": "integer", "minimum": 0 },
     "clinicCost": { "type": "integer", "minimum": 0 },
     "rerollBaseCost": { "type": "integer", "minimum": 0 },
@@ -45,7 +44,7 @@
   },
   "required": [
     "startingGold", "goldAct1", "goldAct2", "goldAct3", "difficultyMultiplierPercent",
-    "eliteBonusPercent", "bossBonusPercent", "excellentMatchBonusGold",
+    "nodeRewards", "excellentMatchBonusGold",
     "clinicCost", "rerollBaseCost", "rerollStepCost", "trainingExperience",
     "eventGoldMin", "eventGoldMax", "mercenaryBaseWage", "mercenaryWagePerRarityStep",
     "mercenaryBenchAbandonMatches", "mercenaryLossStreakAbandon",
@@ -54,6 +53,31 @@
   ],
   "additionalProperties": false,
   "$defs": {
+    "nodeReward": {
+      "description": "ADR 0043: recompensa de un tipo de nodo de partido.",
+      "type": "object",
+      "properties": {
+        "goldBonusPercent": { "type": "integer", "minimum": 0, "maximum": 1000 },
+        "options": { "type": "integer", "minimum": 1, "maximum": 6 },
+        "picks": { "type": "integer", "minimum": 0, "maximum": 4 },
+        "rarityFloorPercent": { "type": "integer", "minimum": 0, "maximum": 100 },
+        "healsRoster": { "type": "boolean" }
+      },
+      "required": ["goldBonusPercent", "options", "picks", "rarityFloorPercent", "healsRoster"],
+      "additionalProperties": false
+    },
+    "nodeRewards": {
+      "description": "ADR 0043: recompensas escalonadas por tipo de nodo (liga, elite, jefe).",
+      "type": "object",
+      "properties": {
+        "_doc": { "type": "string" },
+        "league": { "$ref": "#/$defs/nodeReward" },
+        "elite": { "$ref": "#/$defs/nodeReward" },
+        "boss": { "$ref": "#/$defs/nodeReward" }
+      },
+      "required": ["league", "elite", "boss"],
+      "additionalProperties": false
+    },
     "priceByRarity": {
       "description": "[common, uncommon, rare, legendary] (ADR 0039). La entrada de legendario existe por completitud del enum: nada legendario se genera ni se pone a la venta.",
       "type": "array",
@@ -78,6 +102,10 @@
           "description": "Dispersión del precio de cada artículo alrededor del de su rareza, en tanto por ciento (ADR 0037). Sin ella todos los artículos de una rareza cuestan lo mismo y la fracción del surtido asequible salta de 0 a 1 con el oro.",
           "type": "integer", "minimum": 0, "maximum": 90
         },
+        "priceBandPercent": {
+          "description": "ADR 0044: banda alrededor del precio base de la rareza a la que se acota el precio final de un artículo, en tanto por ciento. Con 35, un artículo cuesta entre el 65% y el 135% del precio de su rareza: el rango dentro de una rareza queda en 2:1 y dentro de una categoría en unas 4:1, y la diferencia grande se queda entre rarezas y entre categorías.",
+          "type": "integer", "minimum": 0, "maximum": 100
+        },
         "consumablePrice": { "type": "integer", "minimum": 0 },
         "itemSellFractionPercent": { "type": "integer", "minimum": 0, "maximum": 100 },
         "playerSaleBaseByRarity": { "$ref": "#/$defs/priceByRarity" },
@@ -91,7 +119,7 @@
       "required": [
         "playerOffers", "perkOffers", "itemOffers", "consumableOffers", "mercenaryOffers",
         "youthMin", "youthMax", "playerPriceByRarity", "perkPriceByRarity", "itemPriceByRarity",
-        "priceSpreadPercent", "consumablePrice", "itemSellFractionPercent", "playerSaleBaseByRarity",
+        "priceSpreadPercent", "priceBandPercent", "consumablePrice", "itemSellFractionPercent", "playerSaleBaseByRarity",
         "playerSalePerLevel", "playerSalePerPerk", "playerSalePerBond",
         "recruitQuality", "youthQuality", "mercenaryQuality"
       ],

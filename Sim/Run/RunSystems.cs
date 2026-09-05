@@ -64,8 +64,12 @@ public interface IRunSystems
     /// <summary>Árbitro que dirige el partido de ese nodo (RF-061).</summary>
     RefereeSetup RefereeFor(RunState state, MapNode node, Catalog catalog);
 
-    /// <summary>Configuración del simulador para ese partido (log, profundidad de recursión).</summary>
-    SimConfig MatchConfig(RunState state, MapNode node);
+    /// <summary>
+    /// Configuración del simulador para ese partido (log, profundidad de recursión y el desgaste del
+    /// nodo, ADR 0043). Recibe el catálogo porque el desgaste por acto es un dato de
+    /// <c>tuning.injury</c> y el motor no puede saber en qué acto se juega.
+    /// </summary>
+    SimConfig MatchConfig(RunState state, MapNode node, Catalog catalog);
 
     /// <summary>
     /// Abre un nodo no de partido (mercado, clínica, entrenamiento, evento) y devuelve el estado
@@ -238,7 +242,7 @@ public sealed class DefaultRunSystems : IRunSystems
     }
 
     /// <inheritdoc />
-    public SimConfig MatchConfig(RunState state, MapNode node) => SimConfig.Default;
+    public SimConfig MatchConfig(RunState state, MapNode node, Catalog catalog) => SimConfig.Default;
 
     /// <inheritdoc />
     public RunState OpenNode(RunState state, MapNode node, Catalog catalog)

@@ -10,7 +10,13 @@ namespace Underleague.Sim.Run.Systems.Map;
 /// construcción en <see cref="MapGenerator"/>, y moverlo exigiría un ADR (RT-057).
 /// </summary>
 /// <param name="NodesPerAct">Nodos recorridos en cada acto (índice 0 = acto 1), 10..12 (RF-001, lectura W-1).</param>
-public sealed record MapConfig(IReadOnlyList<int> NodesPerAct)
+/// <param name="EliteRivalLevelBonus">
+/// ADR 0043: niveles que el rival de un nodo de élite juega por encima del de liga del mismo acto. Es el
+/// <b>más riesgo</b> del élite —su más premio está en <c>economy.nodeRewards</c>—, y no inventa una
+/// dificultad nueva: sube al rival del acto con la progresión de RF-027, que es la misma escalera por la
+/// que sube el jugador.
+/// </param>
+public sealed record MapConfig(IReadOnlyList<int> NodesPerAct, int EliteRivalLevelBonus = 0)
 {
     /// <summary>Nodos recorridos en el acto indicado, 1..3.</summary>
     public int Of(int act) => act >= 1 && act <= NodesPerAct.Count
@@ -82,7 +88,7 @@ public static class MapLoader
                 }
             }
 
-            return new MapConfig(nodes);
+            return new MapConfig(nodes, root.Prop("eliteRivalLevelBonus").AsInt());
         }
     }
 }

@@ -95,13 +95,11 @@ public static class FullRunRunner
         IReadOnlyDictionary<string, string> dataFiles)
     {
         ArgumentNullException.ThrowIfNull(standard);
-        return new RunSetup(ClubId, race, dataFiles)
-        {
-            StartingGold = standard.Economy.StartingGold,
-            GeneratedQuality = StartingQuality,
-            NodesPerActByAct = standard.Map.NodesPerAct,
-            OpponentIdsByAct = standard.OpponentIdsByAct(),
-        };
+
+        // El oro de partida, los nodos por acto y los rivales salen de /data a través de los sistemas
+        // (StandardRunSystems.NewRunSetup): un RunSetup montado a mano se queda con 0 de oro y llega al
+        // primer mercado sin poder comprar nada.
+        return standard.NewRunSetup(ClubId, race, dataFiles) with { GeneratedQuality = StartingQuality };
     }
 
     /// <summary>Razas jugables al lanzamiento, en orden estable.</summary>

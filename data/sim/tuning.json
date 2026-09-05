@@ -76,11 +76,13 @@
     "secondYellowIsRed": true
   },
   "injury": {
-    "_doc": "ADR 0041: probabilidad = onTackleBase (+onFoulBase si hubo falta) + relativeFactor*(fuerza del que entra - resistencia de la victima). Sin ninguna constante de por medio: un nivel 8 que entra a otro nivel 8 lesiona aproximadamente lo mismo que un nivel 1 contra otro nivel 1.",
+    "_doc": "ADR 0041: probabilidad = onTackleBase (+onFoulBase si hubo falta) + relativeFactor*(fuerza del que entra - resistencia de la victima). Sin ninguna constante de por medio: un nivel 8 que entra a otro nivel 8 lesiona aproximadamente lo mismo que un nivel 1 contra otro nivel 1. ADR 0043: el desgaste crece por acto (actScalePercent, un multiplicador en tanto por ciento sobre esa probabilidad, sin tocar la formula) y el partido de elite anade su propio recargo (eliteScalePercent). Solo los aplica el bucle de run, que es quien sabe en que acto y en que nodo esta; un partido suelto usa SimConfig.Default y por tanto el 100%.",
     "onTackleBase": 175,
     "onFoulBase": 60,
     "relativeFactor": 2,
-    "severeShare": 4000
+    "severeShare": 4000,
+    "actScalePercent": [120, 260, 420],
+    "eliteScalePercent": 150
   },
   "probabilityChannels": {
     "_doc": "ADR 0035: escalon de cada canal de probabilidad, en PUNTOS PORCENTUALES. Un valor de modifyProbability es el escalon de su canal multiplicado por 1, 2, 3, 5 o 10 pasos, y el cargador de perks (Sim.Perks.PerkLoader) rechaza cualquier otro. El escalon se fija para que un paso valga aproximadamente lo mismo en todos los canales en impacto RELATIVO sobre su base, hasta donde el punto porcentual entero lo permite: intercept (base 250), injury/injure (40), foul (320) y card (250) tienen bases diminutas y su paso minimo posible es 1; tackle (2800) y las dos evasiones que lo contrarrestan van a 3; pass (7700), dribble (7200), save (5000) y shotOnTarget (4625) a 5. La descripcion que ve el jugador sigue diciendo el valor absoluto (docs/estilo-descripciones.md); lo que cambia es lo que el DISENADOR puede escribir.",

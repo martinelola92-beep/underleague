@@ -790,3 +790,264 @@ faltan cuerpos, que es un límite de la política y no de la economía.
   paquete Z) y ahora además compiten con la ventaja de la contextual, que pide equipamiento barato.
 - **Los legendarios de la ADR 0039** (personajes, desbloqueo por división, métrica de dificultad neta)
   son fase 4 y necesitan arte: aquí solo se ha hecho el cambio de escala.
+
+## 19. Decisiones de implementación del paquete AB: la curva por actos (ADR 0043 y 0044)
+
+Los tres actos dejan de ser el mismo juego con números más altos: **taller, gestión y examen**. Entra el
+trampolín del jefe (recompensas escalonadas por tipo de nodo), el desgaste creciente por acto, la
+posibilidad de **rechazar** la recompensa, el nodo de élite diferenciado en riesgo y premio, y la escala
+de oro de 1 a 100 de la ADR 0044.
+
+### 19.1. Los tres jefes, recalibrados contra la curva revisada (ADR 0033)
+
+La fila del acto 1 cambió de examen a taller (65-80% para una build correcta, antes 45-60), así que su
+jefe se recalibró entero, y con él las otras dos filas. Muestra: la de la puerta —semilla 1, 32
+plantillas × 4 partidos por celda y raza, **640 partidos por celda**, 7.680 en total, 35 s—, reproducible
+con `dotnet run --project Balance -c Release -- --boss-gate --rosters 32 --runs 4 --seed 1`.
+
+| Puerta | Incoherente | Correcta | Buena | Muy buena |
+|---|---|---|---|---|
+| **Acto 1** `grimhold_guns` | **26,7** (20-35) | **71,6** (65-80) | **84,8** (75-88) | **92,2** (85-95) |
+| **Acto 2** `the_hunt` | **10,3** (< 15) | **41,7** (35-50) | **66,6** (60-72) | **76,7** (72-85) |
+| **Acto final** `eternal_crown` | **6,1** (< 10) | **28,8** (15-28) | **46,2** (40-55) | **57,7** (55-70) |
+
+**Once celdas de doce caen dentro de la banda de la ADR sin usar la tolerancia**, y la escalera es
+monótona en los tres jefes. La única que pasa por el margen de medida (±2,5) es *correcta* contra el jefe
+final, 0,8 puntos por encima de su techo. Es mejor que el estado anterior (tres celdas por tolerancia,
+AA-18) y la causa está medida: **el resultado de una build correcta contra el jefe final no depende de
+cuántas piezas lleve**. Medido: con 5 perks y sin contadores pasa el 29,2% y con 7 perks y contadores el
+29,1%. Lo que mueve esa celda es el jefe, y bajarlo hunde a la vez *buena* y *muy buena*, que están en el
+suelo de su banda.
+
+**AB-1. Qué se movió en cada jefe.**
+
+| Jefe | Antes | Ahora | Por qué |
+|---|---|---|---|
+| `grimhold_guns` | calidad 31, nivel 5, `butterfingers` (banChannel `save`) | calidad **17**, nivel **4**, **`one_gun_per_port`** (singleCopy) | El acto 1 es el taller: su jefe es el más flojo de los tres y su modificador el más suave |
+| `the_hunt` | calidad 46 | calidad **40** | La fila del acto 2 se mueve poco; seis puntos de calidad bastan |
+| `eternal_crown` | calidad 24, `iron_curtain` en columna 5 | calidad **28**, `iron_curtain` en columna **6** | El cerrojo vacía el tercio atacante, no medio campo: ensancha la escalera y deja subir la calidad |
+
+**AB-2. El modificador del acto 1 cambia de tipo, y por qué era necesario.** `butterfingers` apagaba el
+canal de parada, y los cuatro escalones llevan sus dos perks de portero en el mismo sitio: apagaba el
+diferenciador del escalón superior en las cuatro filas a la vez y aplanaba la escalera (es Z-D en
+`pendientes.md`; medido aquí: con `butterfingers` y la densidad nueva, *buena* 89,2 y *muy buena* 89,1,
+que además rompe la monotonía). `one_gun_per_port` (**«Un cañón por tronera»**, `singleCopy`: una copia
+repetida de un perk solo surte efecto en su primer portador) no le cuesta nada a una build repartida y le
+cuesta media build a la que copia y pega, que es exactamente lo que un jefe-taller debe castigar. De paso
+los **cuatro tipos de modificador quedan repartidos sin repetirse**: `singleCopy` en el acto 1, `markStar`
+en el 2, `banChannel` y `pushBack` en el final.
+
+**AB-3. La densidad por acto, remedida y con un hallazgo.** `data/balance/groups.json` se actualiza con lo
+que la run produce ahora (500 runs, contextual): **3,8 perks y 2,2 objetos** al jefe del acto 1, **8,2 y
+4,7** al del 2, **13,0 y 6,7** al final. Y aparece algo que la ADR 0040 no preveía: **el escalón
+incoherente llega con MÁS piezas que el correcto**, no con menos. Es consecuencia directa de poder
+rechazar: quien construye bien deja pasar el perk que no encaja y llega con menos y mejores. Medido en las
+dos direcciones —en runs completas la doctrina contextual termina con 8,9 perks en el once y la gastadora
+con 10,3, y gana 7 puntos más de runs; en la puerta, un once incoherente de 10 perks pasa el jefe final el
+9,8% y uno de 5 perks el 12,0%—, así que la densidad del escalón incoherente se sube a propósito.
+
+### 19.2. El trampolín: recompensas escalonadas por tipo de nodo
+
+`data/economy/economy.json` gana `nodeRewards`, con una entrada por tipo de nodo de partido:
+
+| Nodo | Oro | Elecciones | Rareza mejorada | Cura |
+|---|---|---|---|---|
+| Liga | base del acto | 1 de 3 | — | no |
+| **Élite** | **+50%** | 1 de 3 | **65%** de las opciones por encima de común | no |
+| **Jefe** | **+100%** | **2** de 3 | 35% | **plantilla entera** |
+
+**AB-4. Dos elecciones en el jefe, no una doble.** Cada elección se resuelve por separado y con surtido
+propio: el flujo del nodo se desplaza `100` por elección cobrada (`RewardSystem.PickStreamStep`), así que
+la segunda no es la primera repetida. El reroll sigue siendo **uno por nodo** (RF-071b), no uno por
+elección. Cobrar dos veces sigue siendo determinista por (semilla, nodo, elección, rerolls) y no hay nada
+nuevo que guardar en el estado: basta un contador de elecciones cobradas.
+
+**AB-5. La rareza mejorada se sortea opción a opción y antes de elegir el tipo**, de modo que un nodo de
+liga tira exactamente el mismo número que uno de élite y siempre le sale «no»: cambiar el escalón de un
+nodo no desplaza el dado de los demás.
+
+**AB-6. La cura del jefe cierra el ciclo del acto.** Al superar un jefe, toda la plantilla vuelve a sano y
+las lesiones leves acumuladas se borran; **el muerto no vuelve** (RF-093). Es lo que permite exprimir la
+plantilla durante un acto en vez de administrar una ruina uniforme, y es la otra mitad del trampolín.
+
+### 19.3. Rechazar la recompensa (RF-071 cambia)
+
+RF-071 obliga hoy a elegir una de las tres. Con perks irreversibles (RF-072) y slots limitados (RF-023),
+quedarse con la menos mala **empeora** la build: ocupa el slot que necesitará el perk que llegue después.
+Entra la decisión `DeclineReward`, que consume la elección y no se lleva nada. **El cambio de requisito
+queda anotado en `pendientes.md`** (R-13).
+
+**AB-7. Cuándo la usa la política automática.** Cuando ninguna de las tres opciones encaja: ningún perk
+que el filtro `PerkPlacement` acepte en un titular, ningún objeto para un titular sin objeto, ningún
+cuerpo que haga falta. La doctrina **contextual** añade un segundo listón, y es el que más pesa: un perk
+solo merece un slot si su **valor medido** (ADR 0038) no es negativo. La mitad del catálogo mide por
+debajo de cero —resta tasa de victoria a quien lo lleva— y el pool los ofrece *más* a menudo, porque su
+peso es inversamente proporcional al valor. Las dos doctrinas puras no aplican ese listón: la gastadora
+coge lo primero que puede colocar (y **no rechaza nunca**, 0,00 rechazos por run) y la ahorradora mira la
+rareza, que no es lo mismo que el valor.
+
+Medido: **0,43 rechazos por run**, el **4,2%** de las elecciones. Es una válvula, no un cambio de ritmo:
+que las tres opciones fallen a la vez es raro por construcción.
+
+### 19.4. Desgaste creciente por acto y el nodo de élite
+
+**AB-8. El desgaste es un multiplicador en datos, no una fórmula nueva.** `tuning.injury` gana
+`actScalePercent` (**120 / 260 / 420**) y `eliteScalePercent` (**150**), y el bucle de run los pasa al
+motor en `SimConfig.InjuryScalePercent`; el motor multiplica la probabilidad **ya calculada** por él. Un
+partido suelto usa `SimConfig.Default` (100%) y por tanto RT-056 y las puertas de fase 1 no se mueven. El
+motor no puede saber en qué acto está, así que `IRunSystems.MatchConfig` recibe ahora el catálogo.
+
+Medido (500 runs, contextual): **0,21 lesiones propias por partido** (antes 0,10), **1,36 lesiones graves
+por run** (antes 0,62) y la clínica pasa de contenido testimonial a sumidero con uso real.
+
+**AB-9. El élite adquiere su función**: más premio (arriba) y **más riesgo**, en dos sitios. Su rival es
+el **mismo rival estático del acto subido `map.eliteRivalLevelBonus` = 2 niveles** con la progresión de
+RF-027 —no una tabla de dificultad aparte—, y su desgaste va multiplicado por `eliteScalePercent`. Elegir
+ruta pasa a ser una decisión: se paga con cuerpos y se cobra en rareza y oro.
+
+### 19.5. La escala de oro (ADR 0044)
+
+Toda la economía se reescribe en decenas. Un volcado real del mercado (semilla 20260906, club orco, primer
+nodo de mercado de cada acto) con la escala nueva:
+
+```
+oro inicial: 10
+jugador Rare 47 · jugador Common 18 · jugador Uncommon 23
+perk Uncommon 22 · perk Common 12 · perk Uncommon 21 · perk Rare 31
+objeto Uncommon 10 · objeto Uncommon 10 · objeto Rare 32 · objeto Common 6
+consumible 9 · 7 · 8
+```
+
+**AB-10. El rango se acota dentro de la rareza, no solo se escala.** El precio de un objeto nace de su
+valor medido (ADR 0038) y se dispersa dentro de su rareza (ADR 0037): las dos cosas juntas daban **18:1**
+dentro de una misma categoría. Se añade `market.priceBandPercent` (**25**), que acota el precio final al
+±25% del precio base de su rareza. Resultado: **1,7:1 dentro de una rareza** y unas 5:1 dentro de una
+categoría, con la diferencia grande entre rarezas y entre categorías, que es lo que la ADR 0044 pide.
+
+**AB-11. La relación perk/objeto se corrige.** Antes un perk poco común costaba 460 y un objeto de dos
+atributos 104: cuatro veces más caro el perk, así que comprar perks no compensaba nunca. Ahora, a igual
+rareza, un perk cuesta **1,25 veces** lo que un objeto (base 10/18/32 frente a 8/14/26).
+
+**AB-12. El club ya no empieza con 0 de oro.** `RunSetup.StartingGold` es un `init` que valía 0 si nadie
+lo rellenaba y `data/clubs/` no existe, así que quien montaba un `RunSetup` a mano llegaba al primer
+mercado sin poder comprar nada. Se cierra con `StandardRunSystems.NewRunSetup`, que arma el `RunSetup` con
+lo que dicen los datos —oro de partida, nodos por acto y rivales— y es lo que usan `/Balance` y la puerta.
+**El oro de partida es 10**: da para un objeto común o un perk común, no para los dos.
+
+**AB-13. Lo que la escala obligó a mover, con su medida.** La tabla de la ADR 0044 es de *valores de
+partida* y dos de sus filas no sobrevivieron a la medición:
+
+- `goldAct` es **5/6/7**, no 3/5/7, porque el multiplicador de dificultad de RF-012 se aplica encima: con
+  base 5 y el 70% del acto 1, una victoria de liga paga exactamente los **3** de la tabla. Lo que la ADR
+  fija es lo que el jugador cobra, no la base.
+- `rerollBaseCost` es **1**, no 2. Con 2, el sumidero de rerolls de un acto costaba más que una clínica y
+  `sinksAffordablePerAct` (RF-114k) caía a **1,81**, fuera de su banda 2-3.
+
+Con eso, el oro ganado por acto es **23 / 35 / 47** y una run completa gana del orden de **100**, que es
+lo que la ADR pide.
+
+### 19.6. Un defecto de bucle que la carnicería destapó
+
+**AB-14. Un portero suplente que juega de defensa se llevaba sus perks de portero al campo.** `RunLineup`
+recoloca al portero sobrante como defensa (el simulador solo admite un portero alineado) y al jugador de
+campo que hace de portero de emergencia, pero les dejaba los perks con `positionOnly` de la posición que
+acababan de perder. `Simulator.Run` rechaza el equipo entero —*«asigna al jugador 12 (Defender) el perk
+'clean_sheet_legacy', que solo admite Goalkeeper»*— y la run se cae. Estaba latente y salió en cuanto el
+trampolín repartió más perks: ahora `Repositioned` quita los perks que la posición nueva no admite. **No
+se pierden**: siguen en el estado y vuelven en cuanto el jugador juegue en su sitio.
+
+**AB-15. `spearpoint` describía mal lo que hace.** Generaba *«probabilidad de tiro a puerta +25% hacia el
+compañero de delante»*, que no significa nada: el tratamiento **por par** solo existe en el pase (§16.4), y
+en cualquier otro canal `target: linked` es un bono normal sobre el compañero vinculado. La descripción se
+había quedado en la lectura vieja. Ahora `DescriptionGenerator` aplica **la misma condición que el motor**
+(par solo si el canal es `pass`) y sale *«el compañero de delante suma +25% a su probabilidad de tiro a
+puerta»*. Revisado el catálogo entero: hay **seis** perks con efecto sobre el vinculado —`covering_shadow`,
+`diagonal_press`, `gentle_giant`, `pivot_duo`, `spearpoint`, `wing_overlap`— y **ninguno** usa el canal
+`pass`, así que hoy los seis son bonos sobre el compañero y ninguno es un par; la plantilla del par se
+conserva porque la mecánica existe (ADR 0021).
+
+### 19.7. Las tres cosas que había que comprobar
+
+Lote de referencia: **500 runs por doctrina, semilla 1**, cinco razas repartidas por igual (1.500 runs,
+20.620 partidos, 109 s), `dotnet run --project Balance -c Release -- --full-runs 500 --seed 1`.
+
+**1. Dónde se pierde.** Las derrotas se concentran en el **acto 2**, que es lo que la ADR 0043 pide:
+
+| Doctrina | Derrotas en el acto 1 | **en el acto 2** | en el acto 3 |
+|---|---|---|---|
+| Contextual | 30,9% | **52,1%** | 17,0% |
+| Ahorradora | 33,2% | **45,6%** | 21,1% |
+| Gastadora | 30,2% | **54,7%** | 15,1% |
+
+El 100% de las derrotas siguen siendo contra un jefe (RF-002b vía 1); la vía de quedarse sin plantilla no
+se ejercita ni con el desgaste nuevo.
+
+**2. La separación entre doctrinas: no se ha abierto, y la causa está medida.**
+
+| Doctrina | Puerta 1 | Puerta 2 | Puerta 3 | **Run** | Compras/mercado | Perks en el once |
+|---|---|---|---|---|---|---|
+| **Contextual** | 76,4 | 47,9 | 64,5 | **23,6** | 1,35 | 8,9 |
+| **Ahorradora** | 74,8 | 53,7 | 60,2 | **24,2** | 1,05 | 9,7 |
+| **Gastadora** | 74,8 | 39,0 | 56,8 | **16,6** | 1,53 | 10,3 |
+
+La contextual gana a la gastadora por **+7,0 puntos** (antes +5,6) y **sigue empatada con la ahorradora**
+(−0,6, dentro del ruido de ±2 puntos con 500 runs). Tres cosas que la medición sí dice:
+
+- **La puerta que separa es la del acto 2**, exactamente el acto que la ADR 0043 llama «gestión»: 47,9%
+  frente a 39,0%. En la primera puerta las tres doctrinas están dentro de dos puntos, y en la tercera lo
+  que se ve es supervivencia (solo llegan las runs que construyeron bien).
+- **El trampolín diluye la doctrina de compra.** Con las recompensas escalonadas, la run cobra **9,8
+  elecciones gratuitas** y compra unas 6 piezas en el mercado: lo único en lo que las tres doctrinas se
+  diferencian pasa a ser el 40% de la build, y la mitad de eso son objetos. La ventaja de 8 puntos de la
+  ADR 0037 es ahora **estructuralmente más difícil**, no menos.
+- **Lo que separa no es cuánto compras, es dónde lo pones.** La gastadora compra *más* (1,53 por mercado)
+  y termina con *más* perks en el once (10,3 frente a 8,9) y gana 7 puntos menos. La ahorradora compra la
+  mitad y rinde igual que la contextual. La conclusión que la aritmética de la ADR 0033 respalda: la run
+  la decide la **calidad** de la build, y la política automática que sabe colocar ya está cerca del
+  escalón «buena» (producto de la curva: 26,1%) mientras que la que no sabe se queda entre «correcta»
+  (8,8%) y «buena».
+
+**3. Cuánto cuesta perder.** Una run ganada dura **35 nodos y 20 partidos**; una perdida, **21,3 nodos y
+12,0 partidos**: el **61%**. La referencia del género es un tercio (23 minutos frente a 64). **No se llega
+a un tercio, y no se puede llegar sin contradecir la directriz**: si la mayoría de las derrotas tienen que
+caer en el acto 2 —a dos tercios del recorrido— una run perdida cuesta por fuerza ~60% de una ganada. Las
+dos exigencias (`curva-de-dificultad.md` §2.2 y la ADR 0043) son incompatibles y gana la ADR, que es
+posterior y es directriz del revisor. En minutos, con los 60-90 s por partido de RF-003, una run perdida
+son unos **25-30 minutos** frente a los 45-55 de una ganada: el número absoluto sí está en el punto dulce
+del género aunque la proporción no lo esté.
+
+### 19.8. Las métricas de §10 y de escasez, con todo aplicado
+
+| Métrica | Rango | Antes (AA) | **Ahora** | Estado |
+|---|---|---|---|---|
+| Tasa de victoria de la run (contextual) | 20-30% | 17,8 | **23,6** | **IN** |
+| Derrotas por bajar de 5 jugadores | < 35% | 0,0 | **0,0** | IN |
+| Duración de una run completa | 18-22 | 20,0 | **20,0** | IN |
+| Muertes por run | 0,5-2 | 0,02 | **0,06** | OUT |
+| Sumideros que paga el oro de un acto | 2-3, nunca 4 | 2,48 | **2,09** | IN |
+| Fracción del surtido asequible | 20-35% | 44,1 | **53,8** | OUT |
+| Compras por visita al mercado | 1-2 | 1,66 | **1,35** | IN |
+| Oro sobrante al terminar la run | < 15% | 18,8 | **17,7** | OUT |
+| Runs que llegan a un mercado sin poder comprar | 10-25% | 45,0 | **78,2** | OUT |
+| Ventaja de la contextual sobre las dos puras | ≥ 8 puntos | 0,0 | **−0,6** | OUT |
+| *Lesiones propias por partido* | *—* | *0,10* | ***0,21*** | *INFO* |
+| *Lesiones graves por run* | *—* | *0,62* | ***1,36*** | *INFO* |
+| *Oro gastado en clínica por run* | *—* | *60 (de 1.390)* | ***3,5 (de 64)*** | *INFO* |
+| *Recompensas rechazadas por run* | *—* | *—* | ***0,43*** | *INFO* |
+
+**AB-16. Las muertes siguen fuera de banda, y ahora se sabe por qué no basta el desgaste.** Con el
+desgaste al 420% en el acto 3 las lesiones se han doblado, pero las muertes van de 0,02 a **0,06**. La
+sensibilidad está medida: **duplicar el desgaste no mueve las muertes** (con 200/400/620 salen 0,11 y con
+300/650/950 salen 0,30, con 1,29 lesiones por partido entre los dos equipos, el doble de lo que RT-056
+admite en un partido suelto). La razón es que la única vía viva de RF-093 —alinear a un grave sin tratar—
+es una **decisión** que una política razonable no toma: con trece jugadores nunca faltan siete sanos, y
+cuando falta uno el oro cubre la clínica. Se confirma además al revés: la doctrina **gastadora**, que gasta
+el oro y no puede pagar tratamientos, tiene **el triple de muertes** (0,19 frente a 0,06). La banda 0,5-2
+necesita la segunda vía de RF-093 (perks rivales letales, hoy inexistentes en `/data`) o una plantilla más
+corta; no es un ajuste de datos.
+
+**AB-17. La escasez empeora por aritmética entera.** «Llegar a un mercado sin poder comprar nada» sube del
+45% al 78% de las runs: con precios de 6 a 47 y un acto que gana 23, quedarse con 4 de oro y no llegar al
+objeto común más barato es habitual. **Por visita** sigue siendo el 15%, que es la cifra razonable; la
+métrica está contada por run y una run visita 9 mercados (ya anotado como Z-K). Las cotas de no regresión
+de la puerta se ensanchan a 88% y 62% con este motivo escrito.

@@ -103,6 +103,13 @@ public sealed record TreatPlayer(int PlayerId) : RunDecision;
 /// <param name="CarrierPlayerId">Si la recompensa es un perk, jugador que lo porta; -1 si no aplica.</param>
 public sealed record ChooseReward(int OptionIndex, int CarrierPlayerId = -1) : RunDecision;
 
+/// <summary>
+/// <b>Rechaza</b> la recompensa ofrecida y se va con las manos vacías (ADR 0043). RF-071 obligaba a
+/// elegir una de las tres; con perks irreversibles (RF-072) y slots limitados, quedarse con la menos mala
+/// puede ser peor que no quedarse con nada. Consume la elección, no la aplaza.
+/// </summary>
+public sealed record DeclineReward : RunDecision;
+
 /// <summary>Vuelve a tirar las recompensas del nodo. Uno por nodo, coste creciente (RF-071b). Paquete X.</summary>
 public sealed record RerollRewards : RunDecision;
 

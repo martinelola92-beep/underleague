@@ -1738,6 +1738,11 @@ internal sealed class MatchEngine : IPerkWorld
             + Probability(tackler, ProbabilityKind.Injure)
             + Probability(victim, ProbabilityKind.Injury);
 
+        // ADR 0043: el desgaste crece por acto y en el nodo de élite. Es un multiplicador sobre la
+        // probabilidad ya calculada, no un término de la fórmula: en un partido suelto vale 100 y no
+        // cambia nada (SimConfig.InjuryScalePercent).
+        chance = Math.Clamp(chance, 0, 5000) * _config.InjuryScalePercent / 100;
+
         if (!_rng.Chance(Math.Clamp(chance, 0, 5000)))
         {
             return;

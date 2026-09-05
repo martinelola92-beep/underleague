@@ -302,7 +302,24 @@ public sealed record SaveTuning(int BasePercent, int CloseRangeCells, int Attrib
 public sealed record TackleTuning(int BaseWin, int PressureFactor, int StrengthSharePercent, int FoulBase, int FoulStrengthFactor, int HardTackleThreshold, int YellowCardBase, int RedCardBase, int HardTackleYellowBonus, int HardTackleRedBonus, bool SecondYellowIsRed);
 
 /// <summary>tuning.injury.</summary>
-public sealed record InjuryTuning(int OnTackleBase, int OnFoulBase, int RelativeFactor, int SevereShare);
+/// <summary>
+/// tuning.injury. <c>ActScalePercent</c> y <c>EliteScalePercent</c> son el desgaste creciente por acto de
+/// la ADR 0043: multiplicadores en tanto por ciento sobre la probabilidad ya calculada, <b>sin tocar la
+/// fórmula</b>. El motor no sabe en qué acto está, así que los aplica el bucle de run pasándolos en
+/// <c>SimConfig.InjuryScalePercent</c> (<c>IRunSystems.MatchConfig</c>); un partido suelto usa el 100%.
+/// </summary>
+public sealed record InjuryTuning(
+    int OnTackleBase,
+    int OnFoulBase,
+    int RelativeFactor,
+    int SevereShare,
+    IReadOnlyList<int> ActScalePercent,
+    int EliteScalePercent)
+{
+    /// <summary>Multiplicador de desgaste del acto indicado (1..3), en tanto por ciento.</summary>
+    public int ScaleForAct(int act) =>
+        act >= 1 && act <= ActScalePercent.Count ? ActScalePercent[act - 1] : 100;
+}
 
 /// <summary>
 /// tuning.referee: el criterio del árbitro (RF-062..RF-064, ADR 0030 §3). Los tres campos

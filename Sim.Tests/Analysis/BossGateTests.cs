@@ -358,7 +358,7 @@ public sealed class BossGateTests
         public RefereeSetup RefereeFor(RunState state, MapNode node, Catalog catalog) =>
             inner.RefereeFor(state, node, catalog);
 
-        public SimConfig MatchConfig(RunState state, MapNode node) => inner.MatchConfig(state, node);
+        public SimConfig MatchConfig(RunState state, MapNode node, Catalog catalog) => inner.MatchConfig(state, node, catalog);
 
         public RunState OpenNode(RunState state, MapNode node, Catalog catalog) =>
             inner.OpenNode(state, node, catalog);

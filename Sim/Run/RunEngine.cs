@@ -308,7 +308,7 @@ public static class RunEngine
     private static RunState EnterMatch(RunState state, MapNode node, Catalog catalog, IRunSystems systems)
     {
         var (setup, seed, lineup) = BuildMatch(state, node.Id, catalog, systems);
-        var result = Simulator.Run(setup, seed, catalog, systems.MatchConfig(state, node));
+        var result = Simulator.Run(setup, seed, catalog, systems.MatchConfig(state, node, catalog));
         var applied = MatchResolution.Apply(state, node, lineup, result, catalog);
 
         var next = applied.State.WithCurrentNode(node.Id);

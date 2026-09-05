@@ -140,8 +140,8 @@ public class RunSaveTests
         var (setupB, seedB, _) = RunEngine.BuildMatch(RunSave.Load(save), node.Id, Catalog, systems);
         Assert.Equal(seedA, seedB);
 
-        var a = Underleague.Sim.Engine.Simulator.Run(setupA, seedA, Catalog, systems.MatchConfig(state, node));
-        var b = Underleague.Sim.Engine.Simulator.Run(setupB, seedB, Catalog, systems.MatchConfig(state, node));
+        var a = Underleague.Sim.Engine.Simulator.Run(setupA, seedA, Catalog, systems.MatchConfig(state, node, Catalog));
+        var b = Underleague.Sim.Engine.Simulator.Run(setupB, seedB, Catalog, systems.MatchConfig(state, node, Catalog));
         Assert.Equal(a.Events.Count, b.Events.Count);
         for (int i = 0; i < a.Events.Count; i++)
         {

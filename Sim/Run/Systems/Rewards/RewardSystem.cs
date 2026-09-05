@@ -1,4 +1,5 @@
 using Underleague.Sim.Data;
+using Underleague.Sim.Model;
 using Underleague.Sim.Random;
 using Underleague.Sim.Run.Systems.Economy;
 using Underleague.Sim.Run.Systems.Equipment;
@@ -30,7 +31,18 @@ public static class RewardSystem
 {
     private const string ClaimedCounterPrefix = "rewardClaimed:";
 
-    /// <summary>Las 3 opciones del nodo de recompensa abierto, deterministas por (semilla, nodo, rerolls).</summary>
+    /// <summary>
+    /// Separación entre los flujos de dos elecciones del mismo nodo (ADR 0043: el jefe da dos). Está por
+    /// encima de cualquier número de rerolls (RF-071b: uno por nodo) y por debajo del desplazamiento con
+    /// el que <c>EquipmentSystem</c> tira las roturas, así que ningún surtido comparte dado con otro.
+    /// </summary>
+    private const int PickStreamStep = 100;
+
+    /// <summary>
+    /// Las opciones de la elección abierta de ese nodo, deterministas por (semilla, nodo, elección,
+    /// rerolls). Cuántas son y con qué rareza sale cada una lo dice el tipo de nodo
+    /// (<c>economy.nodeRewards</c>, ADR 0043): el partido de élite las sortea con rareza mejorada.
+    /// </summary>
     public static IReadOnlyList<RewardOption> Options(RunState state, MapNode node, Catalog catalog, EconomyConfig economy, ItemCatalog items)
     {
         ArgumentNullException.ThrowIfNull(state);
@@ -39,20 +51,47 @@ public static class RewardSystem
         ArgumentNullException.ThrowIfNull(economy);
         ArgumentNullException.ThrowIfNull(items);
 
-        var rng = OfferStream.For(state.Seed, node.Id, state.NodeRerolls);
+        var config = economy.RewardFor(node.Kind);
+        int taken = PicksTaken(state, node.Id);
+        var rng = OfferStream.For(state.Seed, node.Id, state.NodeRerolls + (taken * PickStreamStep));
         var perkPool = PerkPool.Offerable(state, catalog);
 
-        var options = new List<RewardOption>(3);
-        for (int i = 0; i < 3; i++)
+        var options = new List<RewardOption>(config.Options);
+        for (int i = 0; i < config.Options; i++)
         {
-            options.Add(PickOption(ref rng, perkPool, items, catalog, state, economy, node.Act));
+            // La rareza mejorada se sortea opción a opción y ANTES de elegir el tipo, para que el dado sea
+            // el mismo en todos los nodos: un nodo de liga tira el mismo número y siempre sale "no".
+            bool rare = rng.Range(0, 100) < config.RarityFloorPercent;
+            options.Add(PickOption(ref rng, perkPool, items, catalog, state, economy, node.Act, rare));
         }
 
         return options;
     }
 
-    /// <summary>Ha llegado a un nodo de recompensa que ya se cerró: no se puede volver a elegir ni repetir tirada.</summary>
-    public static bool AlreadyClaimed(RunState state, int nodeId) => state.Counter(ClaimedCounterPrefix + nodeId) != 0;
+    /// <summary>Elecciones ya cobradas (o rechazadas) en ese nodo (ADR 0043: el jefe da dos).</summary>
+    public static int PicksTaken(RunState state, int nodeId)
+    {
+        ArgumentNullException.ThrowIfNull(state);
+        return state.Counter(ClaimedCounterPrefix + nodeId);
+    }
+
+    /// <summary>Elecciones que da ese nodo de partido (<c>economy.nodeRewards</c>).</summary>
+    public static int PicksFor(MapNode node, EconomyConfig economy)
+    {
+        ArgumentNullException.ThrowIfNull(node);
+        ArgumentNullException.ThrowIfNull(economy);
+        return economy.RewardFor(node.Kind).Picks;
+    }
+
+    /// <summary>
+    /// No queda ninguna elección pendiente en ese nodo: ya se han cobrado (o rechazado) todas. Hace falta
+    /// el catálogo de economía porque el número de elecciones depende del tipo de nodo (ADR 0043).
+    /// </summary>
+    public static bool AlreadyClaimed(RunState state, MapNode node, EconomyConfig economy)
+    {
+        ArgumentNullException.ThrowIfNull(state);
+        return PicksTaken(state, node.Id) >= PicksFor(node, economy);
+    }
 
     public static RunState Choose(RunState state, ChooseReward decision, Catalog catalog, EconomyConfig economy, ItemCatalog items)
     {
@@ -60,9 +99,10 @@ public static class RewardSystem
         ArgumentNullException.ThrowIfNull(decision);
 
         var node = NodeGuards.RequireOpenMatch(state, "elegir una recompensa");
-        if (AlreadyClaimed(state, node.Id))
+        if (AlreadyClaimed(state, node, economy))
         {
-            throw new InvalidOperationException("la recompensa de este nodo ya se ha elegido (RF-071: una por partido ganado)");
+            throw new InvalidOperationException(
+                $"las {PicksFor(node, economy)} recompensas de este nodo ya se han resuelto (RF-071, ADR 0043)");
         }
 
         var options = Options(state, node, catalog, economy, items);
@@ -79,8 +119,35 @@ public static class RewardSystem
             var other => throw new InvalidOperationException($"tipo de recompensa no reconocido: {other.GetType().Name}"),
         };
 
-        return next.WithCounter(ClaimedCounterPrefix + node.Id, 1);
+        return Advance(next, node);
     }
+
+    /// <summary>
+    /// <b>Rechazar</b> la recompensa (ADR 0043): con perks irreversibles (RF-072) y slots limitados,
+    /// quedarse con la menos mala puede ser peor que no quedarse con nada. Consume la elección —no la
+    /// guarda para después— y deja las demás del nodo intactas.
+    /// </summary>
+    public static RunState Decline(RunState state, EconomyConfig economy)
+    {
+        ArgumentNullException.ThrowIfNull(state);
+        ArgumentNullException.ThrowIfNull(economy);
+
+        var node = NodeGuards.RequireOpenMatch(state, "rechazar una recompensa");
+        if (AlreadyClaimed(state, node, economy))
+        {
+            throw new InvalidOperationException(
+                $"las {PicksFor(node, economy)} recompensas de este nodo ya se han resuelto (RF-071, ADR 0043)");
+        }
+
+        return Advance(state, node);
+    }
+
+    /// <summary>
+    /// Cierra una elección del nodo: la anota. El reroll <b>no</b> se reinicia entre las dos elecciones
+    /// del jefe: RF-071b dice uno por nodo y sigue siendo uno por nodo.
+    /// </summary>
+    private static RunState Advance(RunState state, MapNode node) =>
+        state.WithCounter(ClaimedCounterPrefix + node.Id, PicksTaken(state, node.Id) + 1);
 
     public static RunState Reroll(RunState state, EconomyConfig economy)
     {
@@ -88,9 +155,9 @@ public static class RewardSystem
         ArgumentNullException.ThrowIfNull(economy);
 
         var node = NodeGuards.RequireOpenMatch(state, "repetir la tirada de recompensa");
-        if (AlreadyClaimed(state, node.Id))
+        if (AlreadyClaimed(state, node, economy))
         {
-            throw new InvalidOperationException("no se puede repetir la tirada: la recompensa ya se ha elegido");
+            throw new InvalidOperationException("no se puede repetir la tirada: las recompensas de este nodo ya se han resuelto");
         }
 
         if (state.NodeRerolls > 0)
@@ -139,12 +206,32 @@ public static class RewardSystem
         Catalog catalog,
         RunState state,
         EconomyConfig economy,
-        int act)
+        int act,
+        bool rarityFloor)
     {
         int total = economy.RewardPerkWeight + economy.RewardPlayerWeight + economy.RewardItemWeight;
         int roll = rng.Range(0, total);
         bool wantsPerk = roll < economy.RewardPerkWeight;
         bool wantsPlayer = !wantsPerk && roll < economy.RewardPerkWeight + economy.RewardPlayerWeight;
+
+        if (rarityFloor)
+        {
+            // Rareza mejorada (ADR 0043): la opción se sortea solo entre las que superan el común. Si el
+            // pool no tiene ninguna, se cae al pool entero en vez de dejar la opción vacía.
+            var better = new List<Perks.PerkDefinition>(perkPool.Count);
+            for (int i = 0; i < perkPool.Count; i++)
+            {
+                if (perkPool[i].Rarity != Rarity.Common)
+                {
+                    better.Add(perkPool[i]);
+                }
+            }
+
+            if (better.Count > 0)
+            {
+                perkPool = better;
+            }
+        }
 
         if (wantsPerk && perkPool.Count > 0)
         {
@@ -168,6 +255,23 @@ public static class RewardSystem
         // Solo los universales y los restringidos de la raza del club (ADR 0036); el frágil sale más a
         // menudo, que es la otra mitad de su compensación.
         var itemPool = items.OfferableTo(state.ClubRace);
+        if (rarityFloor)
+        {
+            var better = new List<ItemDefinition>(itemPool.Count);
+            for (int i = 0; i < itemPool.Count; i++)
+            {
+                if (itemPool[i].Rarity != Rarity.Common)
+                {
+                    better.Add(itemPool[i]);
+                }
+            }
+
+            if (better.Count > 0)
+            {
+                itemPool = better;
+            }
+        }
+
         var itemWeights = new List<int>(itemPool.Count);
         for (int i = 0; i < itemPool.Count; i++)
         {

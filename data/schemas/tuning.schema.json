@@ -499,13 +499,28 @@
         },
         "severeShare": {
           "$ref": "#/$defs/probability"
+        },
+        "actScalePercent": {
+          "description": "ADR 0043: desgaste creciente por acto. Multiplicador en tanto por ciento sobre la probabilidad de lesion, uno por acto. Solo lo aplica el bucle de run (IRunSystems.MatchConfig); un partido suelto vale 100.",
+          "type": "array",
+          "items": { "type": "integer", "minimum": 0, "maximum": 1000 },
+          "minItems": 3,
+          "maxItems": 3
+        },
+        "eliteScalePercent": {
+          "description": "ADR 0043: recargo de desgaste del nodo de elite, en tanto por ciento, multiplicado sobre el del acto.",
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1000
         }
       },
       "required": [
         "onTackleBase",
         "onFoulBase",
         "relativeFactor",
-        "severeShare"
+        "severeShare",
+        "actScalePercent",
+        "eliteScalePercent"
       ],
       "additionalProperties": false
     },

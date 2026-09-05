@@ -113,17 +113,23 @@ public sealed class FullRunGateTests
     }
 
     /// <summary>
-    /// Cotas de <b>no regresión</b> de las bandas de diseño que hoy no se cumplen (fase2-resultados.md
-    /// §4): son deliberadamente anchas alrededor de lo medido, para que un cambio de economía o de
-    /// catálogo las mueva y se vea, sin afirmar que el diseño está donde debe.
+    /// Cotas de <b>no regresión</b> de las bandas de diseño que hoy no se cumplen (fase2-diseno.md §19):
+    /// son deliberadamente anchas alrededor de lo medido, para que un cambio de economía o de catálogo
+    /// las mueva y se vea, sin afirmar que el diseño está donde debe.
+    ///
+    /// <para>Las cotas de <c>affordableShareAtMarket</c> y <c>brokeMarketRunShare</c> se ensancharon con
+    /// la escala de oro de la ADR 0044: con precios entre 4 y 47 y un acto que gana 23, "llegar a un
+    /// mercado sin poder pagar nada" pasa del 47% al 78% de las runs <b>por aritmética entera</b> —por
+    /// visita sigue siendo el 15%— y las dos métricas siguen oponiéndose entre sí (Z-K). Medido y
+    /// explicado en §19; la cota solo sirve para que no se mueva sin querer.</para>
     /// </summary>
     [Fact]
     public void TheMetricsThatDoNotMeetTheirDesignBandStayWhereTheyWereMeasured()
     {
         AssertBetween(FullRunMetrics.RunWinRate, 5.0, 40.0);
-        AssertBetween(FullRunMetrics.AffordableShare, 25.0, 55.0);
+        AssertBetween(FullRunMetrics.AffordableShare, 25.0, 62.0);
         AssertBetween(FullRunMetrics.LeftoverGoldShare, 5.0, 32.0);
-        AssertBetween(FullRunMetrics.BrokeMarketRunShare, 20.0, 70.0);
+        AssertBetween(FullRunMetrics.BrokeMarketRunShare, 20.0, 88.0);
         AssertBetween(FullRunMetrics.DeathsPerRun, 0.0, 0.5);
     }
 
@@ -210,13 +216,7 @@ public sealed class FullRunGateTests
     }
 
     private static RunSetup SetupFor(Race race, StandardRunSystems standard, IReadOnlyDictionary<string, string> files) =>
-        new("gate_club", race, files)
-        {
-            StartingGold = standard.Economy.StartingGold,
-            GeneratedQuality = 50,
-            NodesPerActByAct = standard.Map.NodesPerAct,
-            OpponentIdsByAct = standard.OpponentIdsByAct(),
-        };
+        standard.NewRunSetup("gate_club", race, files) with { GeneratedQuality = 50 };
 
     private static Measured Play()
     {

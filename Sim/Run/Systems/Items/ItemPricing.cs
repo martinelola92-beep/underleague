@@ -38,13 +38,17 @@ public static class ItemPricing
             return market.ItemPrice.Of(item.Rarity);
         }
 
-        long price = (long)market.ItemPrice.Of(item.Rarity) * scale.ValueOf(item) / reference;
+        int rarityBase = market.ItemPrice.Of(item.Rarity);
+        long price = (long)rarityBase * scale.ValueOf(item) / reference;
         if (item.Archetype == ItemArchetype.Fragile)
         {
             price = price * scale.FragilePricePercent / 100;
         }
 
-        return price < 1 ? 1 : (int)price;
+        // ADR 0044: el valor modula el precio dentro de la banda de su rareza, no fuera de ella. Sin la
+        // banda, un objeto común de fuerza costaba casi el cuádruple que otro común de resistencia y el
+        // rango dentro de una categoría llegaba a 18:1.
+        return market.ClampToBand(price > int.MaxValue ? int.MaxValue : (int)price, rarityBase);
     }
 
     /// <summary>Oro que devuelve vender un objeto (RF-076b): la fracción de mercado de su precio calculado.</summary>

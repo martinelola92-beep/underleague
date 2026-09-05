@@ -140,7 +140,7 @@ public sealed class BossRunSystems : IRunSystems
         _inner.RefereeFor(state, node, catalog);
 
     /// <inheritdoc />
-    public SimConfig MatchConfig(RunState state, MapNode node) => _inner.MatchConfig(state, node);
+    public SimConfig MatchConfig(RunState state, MapNode node, Catalog catalog) => _inner.MatchConfig(state, node, catalog);
 
     /// <inheritdoc />
     public RunState OpenNode(RunState state, MapNode node, Catalog catalog) =>

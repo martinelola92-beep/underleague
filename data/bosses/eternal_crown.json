@@ -1,5 +1,5 @@
 {
-  "_doc": "Jefe final (RF-001c): plantilla íntegramente legendaria, DOS modificadores de regla y una condición de derrota propia (D-9). «Portería sellada» apaga los perks que suben el remate a puerta y «Cerrojo» vacía el tercio atacante: hay que saber marcar sin ninguna de las dos cosas. «El campeón conserva el título» convierte el empate al final del tiempo reglamentario en derrota, así que no basta con no perder. Calibrado contra la fila del acto 3 de la ADR 0033.",
+  "_doc": "Jefe final (RF-001c): plantilla integramente legendaria, DOS modificadores de regla y una condicion de derrota propia (D-9). «Porteria sellada» apaga los perks que suben el remate a puerta y «Cerrojo» (pushBack) vacia el tercio atacante; «El campeon conserva el titulo» convierte el empate al final del tiempo reglamentario en derrota, y anula entre el 13% y el 20% de las victorias en el campo. Recalibrado contra la tabla revisada de la ADR 0033: la columna del acto 3 es la mas estrecha (pide <10% para una build incoherente y >=55% para una muy buena, 45 puntos de escalera) y con «Cerrojo» en la columna 5 el catalogo solo daba 41. Subir la columna a 6 —el cerrojo vacia el tercio atacante, no medio campo— ensancha la escalera a 47 puntos y permite subir la calidad del jefe de 20 a 28 sin aplastar el escalon superior. Medido: 6,1 / 28,8 / 46,2 / 57,7.",
   "id": "eternal_crown",
   "act": 3,
   "name": {
@@ -8,7 +8,7 @@
   },
   "template": {
     "race": "Undead",
-    "quality": 19,
+    "quality": 28,
     "level": 8,
     "rarity": "rare",
     "perks": [
@@ -150,7 +150,7 @@
         "en": "Iron Curtain"
       },
       "kind": "pushBack",
-      "column": 5
+      "column": 6
     }
   ],
   "defeatCondition": {
@@ -169,11 +169,11 @@
       },
       "correct": {
         "min": 15,
-        "max": 30
+        "max": 28
       },
       "good": {
-        "min": 35,
-        "max": 50
+        "min": 40,
+        "max": 55
       },
       "excellent": {
         "min": 55,

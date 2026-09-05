@@ -60,24 +60,32 @@ public static class MarketOfferGenerator
         // "cuánto del surtido puedo pagar" salta de 0 a 1 con el oro, que es justo lo contrario de la
         // decisión que la ADR quiere: con dispersión hay artículos que se pueden pagar y otros por los
         // que hay que ahorrar dentro de la misma rareza.
-        int Priced(ref Pcg32 stream, int basePrice)
+        // ADR 0044: y se acota a la banda de su rareza, porque dispersión y valor juntos daban rangos de
+        // 18 a 1 dentro de la misma categoría. rarityBase es el precio de referencia de la rareza; para un
+        // objeto, price ya viene modulado por su valor medido (ADR 0038) y rarityBase no.
+        int Priced(ref Pcg32 stream, int price, int rarityBase)
         {
             int spread = market.PriceSpreadPercent;
-            if (spread <= 0 || basePrice <= 0)
+            if (price <= 0)
             {
-                return basePrice;
+                return 0;
             }
 
-            int percent = 100 - spread + stream.Range(0, (2 * spread) + 1);
-            int price = basePrice * percent / 100;
-            return price < 1 ? 1 : price;
+            if (spread > 0)
+            {
+                int percent = 100 - spread + stream.Range(0, (2 * spread) + 1);
+                price = price * percent / 100;
+            }
+
+            return market.ClampToBand(price, rarityBase);
         }
 
         var recruits = new List<PlayerOffer>(market.PlayerOffers);
         for (int i = 0; i < market.PlayerOffers; i++)
         {
             var player = GeneratedPlayers.Recruit(ref rng, catalog, state.ClubRace, market.RecruitQuality, economy.RecruitLevel(node.Act));
-            recruits.Add(new PlayerOffer(player, Priced(ref rng, market.PlayerPrice.Of(player.Rarity))));
+            int recruitBase = market.PlayerPrice.Of(player.Rarity);
+            recruits.Add(new PlayerOffer(player, Priced(ref rng, recruitBase, recruitBase)));
         }
 
         int youthCount = market.YouthMin == market.YouthMax
@@ -114,7 +122,8 @@ public static class MarketOfferGenerator
         for (int i = 0; i < market.PerkOffers && perkPool.Count > 0; i++)
         {
             var perk = perkPool[WeightedPick.Index(ref rng, perkWeights)];
-            perks.Add(new PerkOffer(perk.Id, Priced(ref rng, market.PerkPrice.Of(perk.Rarity))));
+            int perkBase = market.PerkPrice.Of(perk.Rarity);
+            perks.Add(new PerkOffer(perk.Id, Priced(ref rng, perkBase, perkBase)));
         }
 
         // Solo los universales y los restringidos de la raza del club (ADR 0036); el precio sale del
@@ -132,7 +141,7 @@ public static class MarketOfferGenerator
             var item = itemPool[WeightedPick.Index(ref rng, itemWeights)];
             itemOffers.Add(new ItemOffer(
                 item.Id,
-                Priced(ref rng, ItemPricing.Price(item, items.Scale, market)),
+                Priced(ref rng, ItemPricing.Price(item, items.Scale, market), market.ItemPrice.Of(item.Rarity)),
                 item.Rarity));
         }
 
@@ -140,7 +149,7 @@ public static class MarketOfferGenerator
         for (int i = 0; i < market.ConsumableOffers && consumables.All.Count > 0; i++)
         {
             var consumable = consumables.All[rng.Range(0, consumables.All.Count)];
-            consumableOffers.Add(new ConsumableOffer(consumable.Id, Priced(ref rng, market.ConsumablePrice)));
+            consumableOffers.Add(new ConsumableOffer(consumable.Id, Priced(ref rng, market.ConsumablePrice, market.ConsumablePrice)));
         }
 
         return new MarketOffers(recruits, youths, mercenaries, perks, itemOffers, consumableOffers);

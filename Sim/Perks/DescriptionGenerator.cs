@@ -198,9 +198,16 @@ public static class DescriptionGenerator
                 ? "modifyLeashPerCounterDivided"
                 : "modifyLeashPerCounter",
             EffectType.ModifyBias => "modifyBias",
-            // El objetivo vinculado hace que el modificador sea **por par** (ADR 0021), y la descripción
-            // tiene que decirlo: "hacia ese compañero", no "en general".
-            EffectType.ModifyProbability when effect.Target is EffectTarget.Linked or EffectTarget.LinkedWithTag
+            // El objetivo vinculado hace que el modificador sea **por par** (ADR 0021) SOLO en el pase, que
+            // es la única resolución que enfrenta a dos compañeros; la misma condición que aplica
+            // EffectEngine (§16, costura 4). Ahí la descripción tiene que decirlo —"hacia ese
+            // compañero"— y en cualquier otro canal el bono es del compañero vinculado y se describe como
+            // lo que es: "el compañero de delante suma +25% a su remate". Antes se describían todos como
+            // pase y salía la frase sin sentido "probabilidad de tiro a puerta +25% hacia el compañero de
+            // delante" (RT-035: la descripción sale del efecto, así que tiene que salir del efecto REAL).
+            EffectType.ModifyProbability
+                when effect.Target is EffectTarget.Linked or EffectTarget.LinkedWithTag
+                    && effect.Probability == ProbabilityKind.Pass
                 => "modifyProbabilityPaired",
             EffectType.ModifyProbability when effect.UsesCounter => effect.CounterDivisor > 1
                 ? "modifyProbabilityPerCounterDivided"

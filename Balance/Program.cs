@@ -484,6 +484,7 @@ static void WriteRunsCsv(string outDir, IReadOnlyList<RunPlayResult> runs)
         "perks", "starterPerks", "items", "counters",
         "markets", "offersSeen", "offersAffordable", "goldAtMarkets", "brokeMarkets", "purchases", "perksBought",
         "itemsBought", "playersSigned", "youths", "mercenaries", "playersSold", "treatments", "rerolls",
+        "rewardsTaken", "rewardsDeclined", "nodes",
     };
 
     var rows = runs.Select(r => (IReadOnlyList<string>)new[]
@@ -506,6 +507,7 @@ static void WriteRunsCsv(string outDir, IReadOnlyList<RunPlayResult> runs)
         Int(r.Purchases), Int(r.PerksBought),
         Int(r.ItemsBought), Int(r.PlayersSigned), Int(r.YouthsSigned), Int(r.MercenariesHired),
         Int(r.PlayersSold), Int(r.Treatments), Int(r.Rerolls),
+        Int(r.RewardsTaken), Int(r.RewardsDeclined), Int(r.NodesVisited),
     });
 
     CsvWriter.Write(Path.Combine(outDir, "runs.csv"), header, rows);

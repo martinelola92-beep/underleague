@@ -71,6 +71,16 @@ public sealed record RunPolicyOptions
     /// <summary>Cuánto vale un objeto equipado en puntos de atributo al valorar a un jugador.</summary>
     public int ItemWorthInAttributePoints { get; init; } = 8;
 
+    /// <summary>
+    /// Valor medido mínimo (ADR 0038, <c>data/economy/perk-values.json</c>, en milésimas de punto de tasa
+    /// de victoria) que la doctrina <b>contextual</b> le exige a un perk para gastarse un slot en él, sea
+    /// comprándolo o cogiéndolo de recompensa. Cero: un perk cuyo valor medido es negativo empeora al
+    /// equipo que lo lleva, y el slot es irreversible (RF-072, RF-023). Es la diferencia entre "comprar lo
+    /// que me falta" y "comprar lo que hay", y no la aplican las dos doctrinas puras: la gastadora coge lo
+    /// primero que puede pagar y la ahorradora mira la rareza, que no es lo mismo que el valor.
+    /// </summary>
+    public int MinPerkValue { get; init; }
+
     /// <summary>Compras máximas en un mismo nodo de mercado; corta el bucle, no la política.</summary>
     public int MaxMarketActions { get; init; } = 16;
 
@@ -142,6 +152,9 @@ public sealed record RunPlayResult(
     int PlayersSold,
     int Treatments,
     int Rerolls,
+    int RewardsTaken,
+    int RewardsDeclined,
+    int NodesVisited,
     IReadOnlyList<int> MatchesByAct,
     IReadOnlyList<int> WinsByAct,
     IReadOnlyList<int> MarketsByAct,
@@ -438,6 +451,7 @@ public static class RunPolicy
         int wagesPaid = ranAfterMatch ? Math.Min(wagesDue, goldBefore) : 0;
         int earned = (state.Gold - goldBefore) + wagesPaid;
 
+        ledger.Nodes++;
         ledger.Matches++;
         ledger.MatchesByAct[node.Act - 1]++;
         if (won)
@@ -478,6 +492,7 @@ public static class RunPolicy
             ledger.GoldEarnedByAct[node.Act - 1] += delta;
         }
 
+        ledger.Nodes++;
         if (node.Kind == NodeKind.Market)
         {
             ledger.MarketsVisited++;
@@ -500,8 +515,8 @@ public static class RunPolicy
         {
             NodeKind.Market => VisitMarket(state, node, catalog, standard, systems, options, ledger),
             NodeKind.Clinic => VisitClinic(state, catalog, standard.Economy, systems, options, ledger),
-            _ => node.IsMatch && !RewardSystem.AlreadyClaimed(state, node.Id)
-                ? TakeReward(state, node, catalog, standard, systems, options, ledger)
+            _ => node.IsMatch
+                ? TakeRewards(state, node, catalog, standard, systems, options, ledger)
                 : state,
         };
 
@@ -719,6 +734,17 @@ public static class RunPolicy
     private static bool ClearsTheBar(Rarity rarity, RunPolicyOptions options) =>
         options.Doctrine != PurchaseDoctrine.Saver || rarity != Rarity.Common;
 
+    /// <summary>
+    /// ¿Merece ese perk uno de los pocos slots del once? Solo la doctrina contextual lo pregunta, y lo
+    /// pregunta al <b>valor medido</b> de la ADR 0038, no a la rareza: la mitad del catálogo mide negativo
+    /// —resta tasa de victoria a quien lo lleva— y el pool los ofrece <i>más</i> a menudo, porque su peso
+    /// es inversamente proporcional al valor. Coger el menos malo llena un slot irreversible (RF-072) y
+    /// deja fuera al perk que llegue después.
+    /// </summary>
+    private static bool WorthASlot(string perkId, EconomyConfig economy, RunPolicyOptions options) =>
+        options.Doctrine != PurchaseDoctrine.Contextual
+        || (economy.PerkValues.ValueOf(perkId) ?? 0) >= options.MinPerkValue;
+
     private static RunDecision? NextMarketAction(
         RunState state,
         MapNode node,
@@ -759,7 +785,7 @@ public static class RunPolicy
             }
 
             var perk = catalog.Perks.Find(offers.Perks[i].PerkId);
-            if (perk is null || !ClearsTheBar(perk.Rarity, options))
+            if (perk is null || !ClearsTheBar(perk.Rarity, options) || !WorthASlot(perk.Id, economy, options))
             {
                 continue;
             }
@@ -770,7 +796,15 @@ public static class RunPolicy
                 continue;
             }
 
-            int rank = Rank(perk.Rarity, offers.Perks[i].Price, options, perk.ElseEffects.Count == 0);
+            // La contextual ordena por VALOR MEDIDO (ADR 0038) y no por rareza: es la doctrina que sabe
+            // qué le falta al once, y lo que le falta se mide en tasa de victoria, no en color del marco.
+            // Las dos puras siguen con su criterio (la gastadora, lo más barato; la ahorradora, lo más
+            // raro), que es justamente lo que las hace comparables.
+            int rank = options.Doctrine == PurchaseDoctrine.Contextual
+                ? (economy.PerkValues.ValueOf(perk.Id) ?? 0) * 10
+                    + (perk.ElseEffects.Count == 0 ? 1_000_000 : 0)
+                    - offers.Perks[i].Price
+                : Rank(perk.Rarity, offers.Perks[i].Price, options, perk.ElseEffects.Count == 0);
             if (rank > bestPerkRank)
             {
                 bestPerk = i;
@@ -917,6 +951,34 @@ public static class RunPolicy
 
     // ------------------------------------------------------------------ 6 y 7. recompensa y reroll
 
+    /// <summary>
+    /// Cobra <b>todas</b> las elecciones que da el nodo: una tras un partido de liga o de élite, dos tras
+    /// un jefe (ADR 0043). Cada elección se resuelve por separado —surtido nuevo y decisión nueva—, que es
+    /// lo que hace del jefe un trampolín y no una recompensa doble del mismo dado.
+    /// </summary>
+    private static RunState TakeRewards(
+        RunState state,
+        MapNode node,
+        Catalog catalog,
+        StandardRunSystems standard,
+        IRunSystems systems,
+        RunPolicyOptions options,
+        Ledger ledger)
+    {
+        int picks = RewardSystem.PicksFor(node, standard.Economy);
+        for (int pick = 0; pick < picks; pick++)
+        {
+            if (RewardSystem.AlreadyClaimed(state, node, standard.Economy) || RunEngine.Outcome(state).IsOver)
+            {
+                break;
+            }
+
+            state = TakeReward(state, node, catalog, standard, systems, options, ledger);
+        }
+
+        return state;
+    }
+
     private static RunState TakeReward(
         RunState state,
         MapNode node,
@@ -927,7 +989,7 @@ public static class RunPolicy
         Ledger ledger)
     {
         var rewards = RewardSystem.Options(state, node, catalog, standard.Economy, standard.Items);
-        var choice = PickReward(state, rewards, catalog, standard.Items, options);
+        var choice = PickReward(state, rewards, catalog, standard.Economy, standard.Items, options);
 
         if (choice.Score < BestRewardScore && state.NodeRerolls == 0 && options.RerollGoldFactor != int.MaxValue)
         {
@@ -938,13 +1000,24 @@ public static class RunPolicy
                 ledger.GoldSpentReroll += cost;
                 ledger.Rerolls++;
                 var rerolled = RewardSystem.Options(state, node, catalog, standard.Economy, standard.Items);
-                choice = PickReward(state, rerolled, catalog, standard.Items, options);
+                choice = PickReward(state, rerolled, catalog, standard.Economy, standard.Items, options);
             }
         }
 
-        return choice.Index < 0
-            ? state
-            : RunEngine.Apply(state, new ChooseReward(choice.Index, choice.Carrier), catalog, systems);
+        // ADR 0043: rechazar. Un perk es irreversible (RF-072) y ocupa uno de los pocos slots que el once
+        // tiene (RF-023), así que quedarse con el menos malo empeora la build: si ninguna opción encaja
+        // -ningún perk que el filtro PerkPlacement acepte en un titular, ningún objeto para un titular sin
+        // objeto, ningún cuerpo que haga falta-, se va con las manos vacías. La doctrina gastadora lo hace
+        // mucho menos, y no por una regla aparte: no filtra por colocación, así que casi cualquier perk le
+        // "encaja".
+        if (choice.Index < 0 || choice.Score < BestRewardScore)
+        {
+            ledger.RewardsDeclined++;
+            return RunEngine.Apply(state, new DeclineReward(), catalog, systems);
+        }
+
+        ledger.RewardsTaken++;
+        return RunEngine.Apply(state, new ChooseReward(choice.Index, choice.Carrier), catalog, systems);
     }
 
     /// <summary>Puntuación de la mejor recompensa posible: un perk o un objeto para un titular.</summary>
@@ -956,6 +1029,7 @@ public static class RunPolicy
         RunState state,
         IReadOnlyList<RewardOption> rewards,
         Catalog catalog,
+        EconomyConfig economy,
         ItemCatalog? items,
         RunPolicyOptions options)
     {
@@ -971,10 +1045,10 @@ public static class RunPolicy
             {
                 case PerkRewardOption perk:
                     var definition = catalog.Perks.Find(perk.PerkId);
-                    var carriers = definition is null
+                    var carriers = definition is null || !WorthASlot(perk.PerkId, economy, options)
                         ? Array.Empty<int>()
                         : PerkPool.EligibleCarriers(state, definition, catalog);
-                    carrier = definition is null
+                    carrier = definition is null || carriers.Count == 0
                         ? -1
                         : BestCarrier(state, definition, carriers, lineup, placement, options);
                     score = carrier >= 0 ? 3 : (carriers.Count > 0 ? 2 : 0);
@@ -1007,7 +1081,12 @@ public static class RunPolicy
                     break;
 
                 case PlayerRewardOption:
-                    score = state.Roster.Count < options.RosterCap ? 2 : 1;
+                    // Un jugador de recompensa vale como el mejor perk solo cuando faltan cuerpos: si no,
+                    // es una boca más en una plantilla que ya llega a trece con canteranos gratis, y
+                    // rechazarlo (ADR 0043) deja el nodo sin ocupar nada irreversible.
+                    score = state.Roster.Count >= options.RosterCap
+                        ? 1
+                        : (state.AvailablePlayerCount < options.SignWhileAvailableBelow ? 3 : 2);
                     break;
 
                 default:
@@ -1408,6 +1487,9 @@ public static class RunPolicy
             ledger.PlayersSold,
             ledger.Treatments,
             ledger.Rerolls,
+            ledger.RewardsTaken,
+            ledger.RewardsDeclined,
+            ledger.Nodes,
             ledger.MatchesByAct,
             ledger.WinsByAct,
             ledger.MarketsByAct,
@@ -1448,8 +1530,8 @@ public static class RunPolicy
         public RefereeSetup RefereeFor(RunState state, MapNode node, Catalog catalog) =>
             _inner.RefereeFor(state, node, catalog);
 
-        public Underleague.Sim.Engine.SimConfig MatchConfig(RunState state, MapNode node) =>
-            _inner.MatchConfig(state, node);
+        public Underleague.Sim.Engine.SimConfig MatchConfig(RunState state, MapNode node, Catalog catalog) =>
+            _inner.MatchConfig(state, node, catalog);
 
         public RunState OpenNode(RunState state, MapNode node, Catalog catalog) =>
             _inner.OpenNode(state, node, catalog);
@@ -1498,6 +1580,15 @@ public static class RunPolicy
         public int PlayersSold;
         public int Treatments;
         public int Rerolls;
+
+        /// <summary>Elecciones de recompensa cobradas (ADR 0043: el jefe da dos).</summary>
+        public int RewardsTaken;
+
+        /// <summary>Elecciones rechazadas porque ninguna opción encajaba (ADR 0043).</summary>
+        public int RewardsDeclined;
+
+        /// <summary>Nodos recorridos, de partido y de servicio: la duración de la run en nodos (RF-003b).</summary>
+        public int Nodes;
 
         public int[] MatchesByAct { get; } = new int[RunRules.Acts];
 

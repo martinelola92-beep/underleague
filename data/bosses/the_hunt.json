@@ -1,5 +1,5 @@
 {
-  "_doc": "Jefe del acto 2 (RF-001b). Un modificador de regla: «Marca de muerte» deja sin perks al titular DE CAMPO en el que la build concentra los suyos (el portero queda fuera: no se marca al hombre a un portero). Castiga la build que lo canaliza todo por un jugador. Plantilla orca de violencia. Calibrado contra la fila del acto 2 de la ADR 0033.",
+  "_doc": "Jefe del acto 2 (RF-001b), donde empieza la GESTION (ADR 0043). Un modificador: «Marca de muerte» (markStar) deja sin perks al titular DE CAMPO en el que la build concentra los suyos; castiga la build que lo canaliza todo por un jugador. Plantilla orca de violencia, quality 46->40 al recalibrar contra la tabla revisada de la ADR 0033 (la fila del acto 2 se mueve poco: 35-50% para una build correcta). Medido: 10,3 / 41,7 / 66,6 / 76,7. Es la puerta que separa a las doctrinas de compra: la contextual la pasa el 49,6% de las veces y la gastadora el 35,2% (docs/fase2-diseno.md 19).",
   "id": "the_hunt",
   "act": 2,
   "name": {
@@ -8,7 +8,7 @@
   },
   "template": {
     "race": "Orc",
-    "quality": 46,
+    "quality": 40,
     "level": 6,
     "perks": [
       {
@@ -92,16 +92,16 @@
         "max": 15
       },
       "correct": {
-        "min": 30,
-        "max": 45
+        "min": 35,
+        "max": 50
       },
       "good": {
-        "min": 55,
-        "max": 70
+        "min": 60,
+        "max": 72
       },
       "excellent": {
-        "min": 65,
-        "max": 80
+        "min": 72,
+        "max": 85
       }
     }
   }

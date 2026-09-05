@@ -1,5 +1,5 @@
 {
-  "_doc": "Jefe del acto 1 (RF-001b). Un modificador de regla: «Manos de mantequilla» apaga los perks que suben la parada, así que la build que descansa en el portero —la primera que se le ocurre a cualquiera, porque la parada es de los canales más rentables del catálogo— se queda sin plan y hay que ganar el partido por otro sitio. Plantilla enana de bloque bajo. Calibrado contra la fila del acto 1 de la ADR 0033.",
+  "_doc": "Jefe del acto 1 (RF-001b). El acto 1 es el TALLER (ADR 0043): su jefe solo castiga a quien lo ha hecho MUY mal, asi que es el mas flojo de los tres (quality 31->17, level 5->4) y su modificador el mas suave. «Un canon por tronera» (singleCopy) deja sin efecto las copias de un mismo perk salvo en su primer portador: a una build repartida no le cuesta nada y a la que copia y pega el mismo perk en medio once le cuesta media build. Sustituye a «Manos de mantequilla» (banChannel sobre la parada), que apagaba los dos perks de portero en los CUATRO escalones y aplanaba la escalera del acto 1 (Z-D en pendientes.md; medido: 'buena' y 'muy buena' se cruzaban). Con el cambio los cuatro kinds de modificador quedan repartidos sin repetir: singleCopy aqui, markStar en el acto 2, banChannel y pushBack en el final. Plantilla enana de bloque bajo. Calibrado contra la fila REVISADA del acto 1 de la ADR 0033 (65-80% para una build correcta): medido 26,7 / 71,6 / 84,8 / 92,2.",
   "id": "grimhold_guns",
   "act": 1,
   "name": {
@@ -8,8 +8,8 @@
   },
   "template": {
     "race": "Dwarf",
-    "quality": 31,
-    "level": 5,
+    "quality": 17,
+    "level": 4,
     "perks": [
       {
         "slot": 0,
@@ -76,32 +76,32 @@
   },
   "modifiers": [
     {
-      "id": "butterfingers",
+      "id": "one_gun_per_port",
       "name": {
-        "es": "Manos de mantequilla",
-        "en": "Butterfingers"
+        "es": "Un cañón por tronera",
+        "en": "One Gun per Port"
       },
-      "kind": "banChannel",
-      "probability": "Save"
+      "kind": "singleCopy"
     }
   ],
   "gate": {
     "playerLevel": 5,
     "targets": {
       "incoherent": {
-        "max": 25
+        "min": 20,
+        "max": 35
       },
       "correct": {
-        "min": 45,
-        "max": 60
+        "min": 65,
+        "max": 80
       },
       "good": {
-        "min": 60,
-        "max": 75
+        "min": 75,
+        "max": 88
       },
       "excellent": {
-        "min": 70,
-        "max": 85
+        "min": 85,
+        "max": 95
       }
     }
   }

@@ -757,12 +757,28 @@ public static class DataLoader
 
     private static InjuryTuning ParseInjury(Json node)
     {
-        node.EnsureKnownKeys("onTackleBase", "onFoulBase", "relativeFactor", "severeShare");
+        node.EnsureKnownKeys(
+            "onTackleBase", "onFoulBase", "relativeFactor", "severeShare", "actScalePercent", "eliteScalePercent");
+
+        // ADR 0043: un multiplicador por acto, en datos, sobre la probabilidad ya calculada.
+        var actScale = new List<int>(3);
+        foreach (var item in node.Prop("actScalePercent").EnumerateArray())
+        {
+            actScale.Add(item.AsInt());
+        }
+
+        if (actScale.Count != 3)
+        {
+            throw new DataException(node.File, node.Path + ".actScalePercent", "debe tener exactamente 3 valores, uno por acto (RF-001)");
+        }
+
         return new InjuryTuning(
             node.Prop("onTackleBase").AsInt(),
             node.Prop("onFoulBase").AsInt(),
             node.Prop("relativeFactor").AsInt(),
-            node.Prop("severeShare").AsInt());
+            node.Prop("severeShare").AsInt(),
+            actScale,
+            node.Prop("eliteScalePercent").AsInt());
     }
 
     private static RefereeTuning ParseReferee(Json node)

@@ -71,9 +71,18 @@ public sealed class FullRunTests
                 state = RunEngine.Apply(state, new TreatPlayer(injured.Id), catalog, systems);
             }
         }
-        else if (node.IsMatch && !RewardSystem.AlreadyClaimed(state, node.Id))
+        else if (node.IsMatch)
         {
-            state = TryClaimReward(state, node);
+            // ADR 0043: un nodo puede dar más de una elección (el jefe da dos).
+            while (!RewardSystem.AlreadyClaimed(state, node, systems.Economy))
+            {
+                var before = state;
+                state = TryClaimReward(state, node);
+                if (ReferenceEquals(before, state))
+                {
+                    state = RunEngine.Apply(state, new DeclineReward(), catalog, systems);
+                }
+            }
         }
 
         return RunEngine.Apply(state, new LeaveNode(), catalog, systems);

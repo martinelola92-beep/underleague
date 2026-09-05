@@ -28,64 +28,64 @@
     "Undead": "undead_none"
   },
   "actDensity": {
-    "_doc": "ADR 0040: densidad de build con la que se mide cada celda de la tabla de la ADR 0033. La media medida en runs completas (4,3 perks y 1,8 objetos al jefe del acto 1; 9,7 y 3,6 al del acto 2; 13,9 y 6,1 al final, docs/balance/fase2-resultados.md 2) es la de TODAS las runs, buenas y malas. Una build mejor gana mas partidos de liga, cobra mas recompensas y llega a la misma puerta con MAS piezas, asi que cada escalon se instancia con su propia densidad alrededor de esa media: si los cuatro compartieran una sola, 'buena' y 'muy buena' serian la misma build mas dos objetos y el escalon superior dejaria de existir (medido: empate a 50 en el acto 1). Las variantes se derivan de la build completa quitando piezas (Sim.Analysis.BuildDensity), nunca se escriben a mano. counterCap es hasta donde ha podido crecer un contador de acumulacion con los partidos jugados hasta esa puerta (RF-070).",
+    "_doc": "ADR 0040 y ADR 0043: densidad de build con la que se mide cada celda de la tabla de la ADR 0033. Remedida tras el trampolin de la ADR 0043 y la escala de oro de la ADR 0044 (500 runs, politica contextual, semilla 1): el once llega al jefe del acto 1 con 3,8 perks y 2,2 objetos, al del acto 2 con 8,2 y 4,7, y al final con 13,0 y 6,7. Cada escalon se instancia con su propia densidad alrededor de esa media, por la razon de AA-17: con una sola densidad por acto, 'buena' y 'muy buena' empatan en el acto 1. El escalon INCOHERENTE llega con MAS piezas que el correcto, y no es un error: es lo que la ADR 0043 anade al modelo. Quien construye bien RECHAZA la recompensa que no encaja (RF-071 revisado), asi que la build incoherente es la que llena todos los slots con lo que le vaya saliendo; medido en runs completas, la doctrina contextual termina con 8,9 perks en el once y la gastadora con 10,3, y gana 7 puntos mas de runs. Y medido en la puerta: al jefe final, un once incoherente de 10 perks pasa el 9,8% y uno de 5 perks el 12,0%. Las variantes se derivan de la build completa quitando piezas (Sim.Analysis.BuildDensity), nunca se escriben a mano; 'items' solo muerde en el escalon 'muy buena', que es el unico que declara equipamiento en data/balance/builds/. counterCap es hasta donde ha podido crecer un contador de acumulacion con los partidos jugados hasta esa puerta (RF-070).",
     "1": {
       "incoherent": {
-        "perks": 4,
-        "items": 0,
+        "perks": 6,
+        "items": 2,
         "counterCap": 1
       },
       "correct": {
-        "perks": 5,
+        "perks": 4,
         "items": 1,
         "counterCap": 2
       },
       "good": {
         "perks": 6,
-        "items": 2,
+        "items": 3,
         "counterCap": 3
       },
       "excellent": {
-        "perks": 8,
-        "items": 3,
+        "perks": 9,
+        "items": 4,
         "counterCap": 4
       }
     },
     "2": {
       "incoherent": {
-        "perks": 5,
-        "items": 1,
+        "perks": 8,
+        "items": 3,
         "counterCap": 2
       },
       "correct": {
         "perks": 6,
-        "items": 2,
+        "items": 3,
         "counterCap": 2
       },
       "good": {
-        "perks": 11,
-        "items": 4,
+        "perks": 10,
+        "items": 5,
         "counterCap": 4
       },
       "excellent": {
-        "perks": 13,
-        "items": 5,
+        "perks": 12,
+        "items": 6,
         "counterCap": 5
       }
     },
     "3": {
       "incoherent": {
-        "perks": 8,
-        "items": 1,
+        "perks": 10,
+        "items": 2,
         "counterCap": 1
       },
       "correct": {
-        "perks": 8,
-        "items": 3,
+        "perks": 7,
+        "items": 2,
         "counterCap": 2
       },
       "good": {
-        "perks": 14,
+        "perks": 13,
         "items": 6,
         "counterCap": 5
       },

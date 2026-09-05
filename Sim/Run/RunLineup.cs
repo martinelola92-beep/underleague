@@ -152,7 +152,7 @@ public static class RunLineup
 
         if (catalog is not null)
         {
-            definitions.Add(Equipped(state, goalkeeper, Repositioned(goalkeeper.ToDefinition(catalog), Position.Goalkeeper, goalkeeper.Position)));
+            definitions.Add(Equipped(state, goalkeeper, Repositioned(goalkeeper.ToDefinition(catalog), Position.Goalkeeper, goalkeeper.Position, catalog)));
         }
 
         var taken = new List<Cell>(OutfieldCells.Length);
@@ -177,7 +177,7 @@ public static class RunLineup
 
             // El portero sobrante juega de defensa: el simulador solo admite un portero alineado.
             var position = player.Position == Position.Goalkeeper ? Position.Defender : player.Position;
-            definitions.Add(Equipped(state, player, Repositioned(player.ToDefinition(catalog), position, player.Position)));
+            definitions.Add(Equipped(state, player, Repositioned(player.ToDefinition(catalog), position, player.Position, catalog)));
         }
 
         var bench = new List<PlayerDefinition>();
@@ -331,9 +331,20 @@ public static class RunLineup
 
     /// <summary>
     /// Cambia la posición de una definición solo para este partido, manteniendo <c>Tags</c> coherente
-    /// (la etiqueta de posición forma parte de las etiquetas del jugador, ADR 0024).
+    /// (la etiqueta de posición forma parte de las etiquetas del jugador, ADR 0024) y <b>quitando los
+    /// perks que su posición nueva no admite</b>.
+    ///
+    /// <para>Lo segundo no es una regla nueva, es la consecuencia de la primera: un portero de más juega
+    /// de defensa (el simulador solo admite un portero alineado) y un jugador de campo puede acabar
+    /// de portero de emergencia, y un perk con <c>positionOnly</c> en la posición que deja de tener no
+    /// puede activarse de ninguna manera. Sin quitarlo, <c>Simulator.Run</c> rechaza el equipo entero y
+    /// la run se cae con "asigna al jugador N (Defender) el perk 'clean_sheet_legacy', que solo admite
+    /// Goalkeeper" — medido en el bucle de run en cuanto un portero suplente cobra un perk de portero.
+    /// El perk <b>no</b> se pierde: sigue en el estado y vuelve en cuanto el jugador juegue en su
+    /// posición.</para>
     /// </summary>
-    private static PlayerDefinition Repositioned(PlayerDefinition definition, Position position, Position original)
+    private static PlayerDefinition Repositioned(
+        PlayerDefinition definition, Position position, Position original, Catalog catalog)
     {
         if (position == original)
         {
@@ -348,7 +359,28 @@ public static class RunLineup
                 : definition.Tags[i]);
         }
 
-        return definition with { Position = position, Tags = tags };
+        var perks = definition.Perks;
+        for (int i = 0; i < definition.Perks.Count; i++)
+        {
+            var perk = catalog.Perks.Find(definition.Perks[i]);
+            if (perk?.PositionOnly is { } required && required != position)
+            {
+                var kept = new List<string>(definition.Perks.Count - 1);
+                for (int k = 0; k < definition.Perks.Count; k++)
+                {
+                    var candidate = catalog.Perks.Find(definition.Perks[k]);
+                    if (candidate?.PositionOnly is not { } only || only == position)
+                    {
+                        kept.Add(definition.Perks[k]);
+                    }
+                }
+
+                perks = kept;
+                break;
+            }
+        }
+
+        return definition with { Position = position, Tags = tags, Perks = perks };
     }
 
     private static bool Contains(IReadOnlyList<RunPlayer> players, int id)

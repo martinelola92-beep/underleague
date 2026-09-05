@@ -12,8 +12,14 @@
       "items": { "type": "integer", "minimum": 10, "maximum": 12 },
       "minItems": 3,
       "maxItems": 3
+    },
+    "eliteRivalLevelBonus": {
+      "description": "ADR 0043: niveles que el rival de un nodo de elite juega por encima del rival de liga del mismo acto (RF-011, RF-027).",
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 4
     }
   },
-  "required": ["nodesPerAct"],
+  "required": ["nodesPerAct", "eliteRivalLevelBonus"],
   "additionalProperties": false
 }

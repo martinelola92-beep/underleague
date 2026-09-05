@@ -19,11 +19,19 @@ namespace Underleague.Sim.Engine;
 /// evento emitido mientras se aplican efectos entra un nivel más abajo; al superar este límite la
 /// publicación se descarta y se cuenta en MatchReport.RecursionCuts.
 /// </param>
+/// <param name="InjuryScalePercent">
+/// Desgaste del partido, en tanto por ciento sobre la probabilidad de lesión ya calculada (ADR 0043).
+/// 100 = la probabilidad de <c>tuning.injury</c> tal cual, que es lo que usa un partido suelto. El bucle
+/// de run lo sube por acto y por tipo de nodo (<c>tuning.injury.actScalePercent</c> y
+/// <c>eliteScalePercent</c>): el motor no puede saber en qué acto está, así que lo recibe hecho. No toca
+/// la fórmula: la escala se aplica a su resultado, en aritmética entera (RT-023).
+/// </param>
 public sealed record SimConfig(
     bool CollectLog = true,
     (int PlayerId, int Tick)? DumpUtility = null,
     int? RegulationTicksOverride = null,
-    int MaxDepth = 4)
+    int MaxDepth = 4,
+    int InjuryScalePercent = 100)
 {
     /// <summary>Configuración por defecto: con log, sin volcado de utilidad, duración reglamentaria estándar.</summary>
     public static SimConfig Default { get; } = new();

@@ -46,6 +46,21 @@ public static class FullRunMetrics
     /// <summary>Ventaja de la política contextual sobre la mejor de las dos puras, en puntos (&gt;= 8, ADR 0037).</summary>
     public const string ContextualAdvantage = "contextualAdvantage";
 
+    /// <summary>Prefijo del reparto de las derrotas por acto (ADR 0043: la mayoría deben caer en el acto 2).</summary>
+    public const string DefeatShareByActPrefix = "defeatShareAct";
+
+    /// <summary>Partidos que juega una run ganada.</summary>
+    public const string MatchesPerWonRun = "matchesPerWonRun";
+
+    /// <summary>Partidos que juega una run perdida (curva-de-dificultad.md §2.2: perder tiene que ser barato).</summary>
+    public const string MatchesPerLostRun = "matchesPerLostRun";
+
+    /// <summary>Nodos que recorre una run ganada.</summary>
+    public const string NodesPerWonRun = "nodesPerWonRun";
+
+    /// <summary>Nodos que recorre una run perdida.</summary>
+    public const string NodesPerLostRun = "nodesPerLostRun";
+
     /// <summary>
     /// Tasa de victoria mínima de la run (fase2-diseno.md §10, corregida por la ADR 0040). La banda es
     /// <b>20-30%</b> y no la 25-40% de partida: el producto de las tres celdas "muy buena" de la tabla de
@@ -181,6 +196,8 @@ public static class FullRunMetrics
 
         int victories = 0, defeats = 0, rosterDefeats = 0, bossDefeats = 0;
         int deaths = 0, fullRuns = 0, fullRunMatches = 0, matches = 0, marketRuns = 0, brokeRuns = 0;
+        int wonMatches = 0, wonNodes = 0, lostMatches = 0, lostNodes = 0, rewardsTaken = 0, rewardsDeclined = 0;
+        var defeatsByAct = new int[RunRules.Acts];
         long goldEarned = 0, market = 0, clinic = 0, reroll = 0, wages = 0, left = 0;
         long roster = 0, level = 0, perks = 0, starterPerks = 0, items = 0, injuries = 0, severe = 0, counters = 0, ownInjuries = 0, matchInjuries = 0;
         long offers = 0, affordable = 0, purchases = 0, marketVisits = 0, goldAtMarket = 0;
@@ -210,6 +227,23 @@ public static class FullRunMetrics
                 }
             }
 
+            // ADR 0043 / curva-de-dificultad.md §2.2: dónde se pierde y cuánto cuesta perder. En el
+            // género una run perdida cuesta un tercio de una ganada (23 min contra 64), y aquí se mide en
+            // nodos y partidos, que es la unidad que el bucle produce.
+            if (run.Won)
+            {
+                wonMatches += run.Matches;
+                wonNodes += run.NodesVisited;
+            }
+            else if (run.Outcome == RunOutcomeKind.Defeat)
+            {
+                lostMatches += run.Matches;
+                lostNodes += run.NodesVisited;
+                defeatsByAct[Math.Clamp(run.ActReached, 1, RunRules.Acts) - 1]++;
+            }
+
+            rewardsTaken += run.RewardsTaken;
+            rewardsDeclined += run.RewardsDeclined;
             deaths += run.Deaths;
             matches += run.Matches;
             goldEarned += run.GoldEarned;
@@ -317,6 +351,26 @@ public static class FullRunMetrics
         rows.Add(Info("runs", runs.Count));
         rows.Add(Info("defeats", defeats));
         rows.Add(Info("defeatShare_bossMatchLost", defeats > 0 ? 100.0 * bossDefeats / defeats : 0.0));
+
+        // Dónde se pierde (ADR 0043: la mayoría de las derrotas debe caer en el acto 2) y qué cuesta
+        // perder frente a ganar.
+        for (int act = 0; act < RunRules.Acts; act++)
+        {
+            rows.Add(Info($"{DefeatShareByActPrefix}{act + 1}", defeats > 0 ? 100.0 * defeatsByAct[act] / defeats : 0.0));
+        }
+
+        rows.Add(Info(MatchesPerWonRun, victories > 0 ? (double)wonMatches / victories : 0.0));
+        rows.Add(Info(MatchesPerLostRun, defeats > 0 ? (double)lostMatches / defeats : 0.0));
+        rows.Add(Info(NodesPerWonRun, victories > 0 ? (double)wonNodes / victories : 0.0));
+        rows.Add(Info(NodesPerLostRun, defeats > 0 ? (double)lostNodes / defeats : 0.0));
+        rows.Add(Info("lostRunCostShare", wonNodes > 0 && victories > 0 && defeats > 0
+            ? 100.0 * ((double)lostNodes / defeats) / ((double)wonNodes / victories)
+            : 0.0));
+        rows.Add(Info("rewardsTakenPerRun", (double)rewardsTaken / runs.Count));
+        rows.Add(Info("rewardsDeclinedPerRun", (double)rewardsDeclined / runs.Count));
+        rows.Add(Info("rewardsDeclinedShare", rewardsTaken + rewardsDeclined > 0
+            ? 100.0 * rewardsDeclined / (rewardsTaken + rewardsDeclined)
+            : 0.0));
         rows.Add(Info("matchesPerRun", (double)matches / runs.Count));
         rows.Add(Info("actsWithAllFourSinksAffordable", sinkSamples > 0 ? 100.0 * allFourAffordable / sinkSamples : 0.0));
         rows.Add(Info("goldEarnedPerRun", (double)goldEarned / runs.Count));
