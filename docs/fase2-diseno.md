@@ -1320,11 +1320,11 @@ Dos cambios que tocan el mismo equilibrio y por eso se implementan juntos y se m
 jugador sano puede morir** (ADR 0048, que sustituye a la ADR 0047) y **el partido de liga ofrece dos
 opciones de recompensa en vez de tres** (ADR 0049).
 
-**Resultado de una línea**: las muertes por run pasan de **0,64 a 1,53** y entran en la banda nueva
+**Resultado de una línea**: las muertes por run pasan de **0,64 a 1,51** y entran en la banda nueva
 (1,5-3); la curva de la ADR 0033 se recalibra y vuelve a dejar **once celdas de doce** en banda; el acto 1
 sigue siendo el taller; y las dos apuestas que las ADR hacían **no se cumplen y están medidas**: la
-ventaja de la doctrina contextual cae de +5,6 a **−0,2** en vez de subir, y la escasez **no se corrige
-sola** (58,1 → 56,6 con objetivo 20-35).
+ventaja de la doctrina contextual se queda en **+0,2** en vez de subir de +5,6 a 8, y la escasez **no se
+corrige sola** (59,3 → 56,7 con objetivo 20-35).
 
 ### 21.1. La tirada de muerte: alcanzar deja de ser matar
 
@@ -1411,25 +1411,25 @@ condición que la ADR declara más importante y la única que había que constru
   el total, y estar tocado multiplica el número del mismo jugador en la misma casilla.
 - **Y aquí está el hallazgo incómodo.** La métrica que la propia ADR declara decisiva —dos políticas
   idénticas salvo que una atiende al indicador— **no se separa claramente**. Con el lote de referencia
-  (500 runs por doctrina, semilla 1): leyendo el informe y el número, **1,53** muertes por run; sin leer
-  nada (`--ignore-scouting`), **1,62**. Son **5,6 puntos porcentuales de mejora**, dentro de dos
-  desviaciones típicas de la muestra.
+  (500 runs por doctrina, semilla 1): leyendo el informe y el número, **1,51** muertes por run; sin leer
+  nada (`--ignore-scouting`), **1,57**. Son **3,8 puntos porcentuales de mejora**, dentro del ruido de la
+  muestra. Lo que sí se separa con claridad es la **tasa de victoria**: 21,0% leyendo contra 17,6% sin
+  leer, tres puntos y medio. La contrajugada paga, pero paga en partidos ganados y no en cuerpos, que es
+  justo lo contrario de lo que la ADR 0048 necesita para sostenerse.
 
   El barrido de `--risk-aversion` (300 runs, semilla 1, todo lo demás idéntico; el dial es
   `RunPolicyOptions.DeathCostPercent`, cuánto descuenta la política el valor de un titular por su
   exposición) dice **por qué**, y es más informativo que la métrica sola:
 
-  | `--risk-aversion` | qué hace la política | Muertes/run |
-  |---|---|---|
-  | **−1000** | busca el riesgo: pone al frágil donde muerde | **1,98** |
-  | −400 | lo busca a medias | 1,75 |
-  | **0** | ignora el número (alinea por valor deportivo) | **1,64** |
-  | +150 (por defecto) | lo obedece | 1,58 |
-  | +400 | lo obedece más | 1,61 |
-  | **+1000** | lo obedece por encima de todo | **1,56** |
+  | `--risk-aversion` | qué hace la política | Muertes/run | Tasa de victoria |
+  |---|---|---|---|
+  | **−1000** | busca el riesgo: pone al frágil donde muerde | **1,90** | 19,7 |
+  | **0** | ignora el número (alinea por valor deportivo) | **1,58** | 17,7 |
+  | +150 (por defecto) | lo obedece | 1,51 (500 runs) | 21,0 |
+  | **+1000** | lo obedece por encima de todo | **1,54** | 20,7 |
 
-  **El número tiene rango —un 27% entre el mejor y el peor uso del mismo indicador— pero está repartido
-  de forma asimétrica: exponer al eslabón débil cuesta +21%, y protegerlo solo ahorra −5%.** La causa está
+  **El número tiene rango —un 23% entre el mejor y el peor uso del mismo indicador— pero está repartido
+  de forma asimétrica: exponer al eslabón débil cuesta +20%, y protegerlo solo ahorra −3%.** La causa está
   medida y es que **una alineación elegida por valor deportivo ya está cerca de la más segura**: el valor
   de un jugador incluye su aguante, así que la política que solo quiere ganar partidos ya deja fuera a los
   frágiles sin proponérselo. La agencia existe en la dirección «puedes estropearlo» y está casi saturada
@@ -1457,14 +1457,14 @@ queda anotado como **AD-B**.
 sistema sin subir la versión del esquema, RT-030) y `MatchResolution` mete ahí el equipamiento del caído
 antes de marcarlo muerto. La decisión `EquipStoredItem` lo saca y se lo pone a un vivo **sin pagar nada**
 —ya estaba pagado— y en cualquier nodo, porque rehacer una build no puede depender de estar en un mercado.
-Medido: **0,89 objetos recuperados por run**, es decir que la recuperación se ejercita en casi todas las
+Medido: **0,91 objetos recuperados por run**, es decir que la recuperación se ejercita en casi todas las
 runs y no es una regla de papel.
 
 **AD-11. Rareza (condición 5): la ADR se contradice consigo misma, y hay que decirlo.** La misma ADR pide
 dos cosas incompatibles: que las muertes por run estén en **1,5-3** y que haya *«una muerte por perk letal
 cada dos o tres runs»*, que son **0,3-0,5 por run**. Un factor de cinco. Y no hay margen para acomodar las
 dos, porque la vía 1 de RF-093 (alinear a un lesionado grave) aporta **cero**: `deathsAct1` mide **0,00** y
-en el acto 1 no hay ningún rival letal, así que **las 1,53 muertes son todas de perk letal**. Se aplica la
+en el acto 1 no hay ningún rival letal, así que **las 1,51 muertes son todas de perk letal**. Se aplica la
 banda —es la que la ADR fija explícitamente y la que mide la puerta— y se anota la contradicción como
 **AD-C**: si lo que el revisor quiere es la frase, la banda tiene que bajar a 0,3-0,5 y `lethalChance` con
 ella.
@@ -1480,20 +1480,30 @@ mantienen sus tres opciones, la rareza mejorada y las dos elecciones del jefe. E
 | | Al jefe del acto 1 | Al del acto 2 | Al final |
 |---|---|---|---|
 | Antes (§20) | 3,8 perks · 2,2 objetos | 8,2 · 4,7 | 13,0 · 6,7 |
-| **Ahora** | **3,2 · 1,8** | **6,2 · 3,7** | **8,5 · 4,8** |
+| **Ahora** | **3,2 · 1,8** | **6,3 · 3,7** | **8,4 · 4,8** |
 
 La caída del acto 3 (−34% en perks) es **doble**: menos elecciones gratis y la carnicería de la ADR 0048,
 que se lleva jugadores **con sus perks puestos**. Las elecciones cobradas por run bajan de 9,8 a **9,0**
-—el número de nodos no cambia, solo la calidad de cada elección— y los rechazos suben de 0,43 a **0,42**
-por run (4,4% de las elecciones): con dos opciones falla más a menudo que ninguna encaje, pero también se
+—el número de nodos no cambia, solo la calidad de cada elección— y los rechazos se quedan en **0,41**
+por run (4,4% de las elecciones), contra 0,43 antes: con dos opciones falla más a menudo que ninguna encaje, pero también se
 llega con menos build montada y por tanto con más slots libres, y las dos cosas se compensan.
 
 **AD-14. La compensación ha ido por el mercado, como la ADR manda, y no por devolver la tercera opción.**
-`market.perkOffers` y `market.itemOffers` pasan de 4 a **5**: más surtido, ni mejor rareza ni precios más
-bajos, que son las otras dos palancas que la ADR autoriza. Efecto medido (300 runs): `purchasesPerMarket`
-0,83 → **0,88**, `sinksAffordablePerAct` 1,99 → **2,00** (vuelve a su banda) y `affordableShareAtMarket`
-58,1 → **56,4**. Es una compensación pequeña a propósito: el objetivo de la ADR 0049 es **mover peso de lo
-gratis a lo comprado**, no reponer el total.
+`market.perkOffers` y `market.itemOffers` pasan de 4 a **5** —más surtido— y `clinicCost` baja de 10 a
+**8** —precios más bajos—, que son dos de las tres palancas que la ADR autoriza; la tercera, mejor rareza,
+no se toca. Efecto medido: `purchasesPerMarket` 0,83 → **0,88** y `affordableShareAtMarket` 58,1 →
+**56,7**.
+
+La bajada de la clínica no es cosmética y tiene dos razones, una de diseño y otra de puerta. La de diseño:
+con las muertes en 1,5 por run, **curar tiene que estar más al alcance** —es la contrajugada del desgaste
+y el sumidero que la ADR 0046 predijo que subiría—. La de puerta: `sinksAffordablePerAct` había caído a
+**1,96** con la muestra de 60 runs, fuera de la banda 2-3 de RF-114k, porque la run gana menos oro por
+acto; con la clínica en 8 vuelve a **2,12**. Ninguna otra palanca lo arreglaba: el sumidero de mercado
+cuesta ~36 de oro contra los 22-29 que gana un acto, así que abaratar los comunes lo suficiente para que
+entrara habría disparado `affordableShareAtMarket`, que ya está muy por encima de su banda.
+
+Es una compensación pequeña a propósito: el objetivo de la ADR 0049 es **mover peso de lo gratis a lo
+comprado**, no reponer el total.
 
 ### 21.4. La curva de la ADR 0033, recalibrada
 
@@ -1538,47 +1548,56 @@ jefe final, ahora 2,3 puntos por encima de su techo en vez de 0,8 (AB-D).
 ### 21.5. Las métricas de §10, antes y después
 
 Lote de referencia: **500 runs por doctrina, semilla 1**, cinco razas repartidas por igual (1.500 runs,
-~19.900 partidos, 100 s), `dotnet run --project Balance -c Release -- --full-runs 500 --seed 1`.
+20.044 partidos, 101 s), `dotnet run --project Balance -c Release -- --full-runs 500 --seed 1`.
 
 | Métrica | Rango | Antes (AC) | **Ahora** | Estado |
 |---|---|---|---|---|
-| **Muertes por run** | **1,5-3** (antes 0,5-2) | 0,64 | **1,53** | **IN** con la banda nueva |
-| Tasa de victoria de la run (contextual) | 20-30% | 22,6 | **20,2** | IN |
-| Derrotas por bajar de 5 jugadores | < 35% | 2,07% | **0,50%** | IN |
+| **Muertes por run** | **1,5-3** (antes 0,5-2) | 0,64 | **1,51** | **IN** con la banda nueva |
+| Tasa de victoria de la run (contextual) | 20-30% | 22,6 | **21,0** | IN |
+| Derrotas por bajar de 5 jugadores | < 35% | 2,07% | **0,51%** | IN |
 | Duración de una run completa | 18-22 | 19,97 | **20,00** | IN |
-| Sumideros que paga el oro de un acto | 2-3, nunca todos | 2,08 | **2,00** | IN, en el filo |
-| **Ventaja de la contextual sobre las dos puras** | ≥ 8 puntos | +5,6 | **−0,2** | **OUT y peor** |
-| Compras por visita al mercado | 0,5-2 (cota) | 0,76 | **0,87** | cota IN |
-| Fracción del surtido asequible | 20-35% | 59,3 | **56,6** | OUT |
-| Oro sobrante al terminar la run | < 15% | 20,9 | **21,9** | OUT |
-| Runs que llegan a un mercado sin poder comprar | 10-25% | 61,2 | **63,4** | OUT |
-| *Muertes por acto* | *—* | *—* | ***0,00 / 0,87 / 0,66*** | *INFO* |
-| *Objetos recuperados de un muerto por run* | *—* | *—* | ***0,89*** | *INFO* |
-| *Plantilla al terminar* | *—* | *10,5* | ***10,4*** | *INFO* |
-| *Lesiones graves por run* | *—* | *2,08* | ***1,83*** | *INFO* |
-| *Lesiones propias por partido* | *—* | *0,31* | ***0,28*** | *INFO* |
-| *Perks en el once al terminar* | *—* | *—* | ***6,5*** | *INFO* |
-| *Recompensas cobradas / rechazadas por run* | *—* | *—* | ***9,02 / 0,42*** | *INFO* |
+| Sumideros que paga el oro de un acto | 2-3, nunca todos | 2,08 | **2,12** | IN |
+| **Ventaja de la contextual sobre las dos puras** | ≥ 8 puntos | +5,6 | **+0,2** | **OUT y peor** |
+| Compras por visita al mercado | 0,5-2 (cota) | 0,76 | **0,88** | cota IN |
+| Fracción del surtido asequible | 20-35% | 59,3 | **56,7** | OUT |
+| Oro sobrante al terminar la run | < 15% | 20,9 | **21,0** | OUT |
+| Runs que llegan a un mercado sin poder comprar | 10-25% | 61,2 | **62,8** | OUT |
+| *Muertes por acto* | *—* | *—* | ***0,00 / 0,86 / 0,65*** | *INFO* |
+| *Objetos recuperados de un muerto por run* | *—* | *—* | ***0,91*** | *INFO* |
+| *Plantilla al terminar* | *—* | *10,5* | ***10,5*** | *INFO* |
+| *Lesiones graves por run* | *—* | *2,08* | ***1,85*** | *INFO* |
+| *Lesiones propias por partido* | *—* | *0,31* | ***0,29*** | *INFO* |
+| *Perks en el once al terminar* | *—* | *—* | ***6,6*** | *INFO* |
+| *Recompensas cobradas / rechazadas por run* | *—* | *—* | ***9,06 / 0,41*** | *INFO* |
+| *Oro por run: ganado · mercado · clínica · inscripción · rerolls · sobrante* | *—* | *—* | ***52,5 · 35,2 · 3,7 · 10,5 · 2,2 · 11,0*** | *INFO* |
 
-**AD-16. Dónde caen las muertes, y por qué el acto 1 está a cero.** El reparto por acto es **0,00 / 0,87 /
-0,66**, y el cero del acto 1 es una propiedad del catálogo, no del azar: la ADR 0046 dejó el acto 1 sin
+**AD-16. Dónde caen las muertes, y por qué el acto 1 está a cero.** El reparto por acto es **0,00 / 0,86 /
+0,65**, y el cero del acto 1 es una propiedad del catálogo, no del azar: la ADR 0046 dejó el acto 1 sin
 ningún rival letal porque es el taller. Que sea **exactamente** cero dice además algo que no se sabía: la
 **vía 1 de RF-093** —alinear a un lesionado grave sin tratar y volver a lesionarlo— no produce ni una
-muerte en 500 runs, porque una política razonable trata o sienta antes de llegar ahí. Las 1,53 muertes son
+muerte en 500 runs, porque una política razonable trata o sienta antes de llegar ahí. Las 1,51 muertes son
 todas de perk letal.
 
-**AD-17. Las derrotas siguen cayendo donde la ADR 0043 quiere.** 30,8% en el acto 1, **52,4% en el acto
-2** y 16,8% en el 3. El 99,75% son contra un jefe; quedarse sin plantilla es el 0,25%, menos que antes
-(2,07%) porque el almacén de objetos y el reparto letal más corto compensan la subida de muertes. Una run
-perdida cuesta el **60,9%** de una ganada (12,0 partidos frente a 20), igual que antes (AB-C).
+Y el reparto por acto no es plano: **el acto 2 mata más que el 3** (0,86 contra 0,65) pese a tener el
+mismo número de rivales letales, porque solo el 34% de las runs llega al acto 3 y las que llegan lo hacen
+con plantilla tratada. Encaja con la ADR 0043: el acto 2 es el de gestión y es donde el desgaste muerde.
+
+**AD-17. Las derrotas siguen cayendo donde la ADR 0043 quiere.** 31,7% en el acto 1, **51,9% en el acto
+2** y 16,5% en el 3. El 99,49% son contra un jefe; quedarse sin plantilla es el 0,51%, **menos** que antes
+(2,07%) aunque haya más muertes, y la causa es el reparto letal más corto (tres rivales por acto en vez de
+cuatro): se muere más veces pero repartido entre más partidos, y ninguna run se queda sin once. Una run
+perdida cuesta el **60,5%** de una ganada (11,9 partidos frente a 20), igual que antes (AB-C).
 
 **AD-18. La escasez NO se corrige sola, y era la pregunta explícita.** La hipótesis era que con más
 muertes y menos recompensas gratis, fichar y curar subirían de valor y `affordableShareAtMarket` bajaría
-hacia su banda 20-35. Medido: **59,3 → 56,6**, dos puntos y medio, y el surtido ampliado de AD-14 es
-responsable de la mayor parte. El oro por run baja de 56,2 a **52,4** y el gasto en mercado de 37,6 a
-**34,0**, así que el jugador compra un poco menos de un surtido un poco mayor: la fracción asequible se
-mueve, pero no cambia de orden de magnitud. **Tocar precios sigue pendiente y sigue chocando con
-`brokeMarketRunShare`** (Z-K, AB-F): las dos se oponen y ninguna configuración cumple las dos.
+hacia su banda 20-35. Medido: **59,3 → 56,7**, dos puntos y medio, y el surtido ampliado de AD-14 es
+responsable de la mayor parte. El oro por run baja de 56,2 a **52,5** y el gasto en mercado de 37,6 a
+**35,2**, así que el jugador compra un poco menos de un surtido un poco mayor: la fracción asequible se
+mueve, pero no cambia de orden de magnitud. Y la clínica, que la ADR 0046 predijo que subiría de valor,
+**baja de uso**: 4,7 → 3,7 de oro por run pese a costar menos, porque lo que mata ahora no es la lesión
+sin tratar sino el perk rival, y contra eso la clínica no cura. **Tocar precios sigue pendiente y sigue
+chocando con `brokeMarketRunShare`** (Z-K, AB-F): las dos se oponen y ninguna configuración cumple las
+dos.
 
 **AD-19. La apuesta de la ADR 0049 sobre las doctrinas no se ha cumplido: ha ido al revés.** La ADR
 razonaba que, si la run repartía menos elecciones gratis, el mercado decidiría más build y la doctrina que
@@ -1586,11 +1605,11 @@ compra con criterio se separaría de las dos puras. Medido:
 
 | Doctrina | Antes (AC) | **Ahora** | Compras por mercado |
 |---|---|---|---|
-| **Contextual** | 22,6 | **20,2** | 0,87 |
-| Ahorradora | 17,0 | **20,4** | 0,67 |
-| Gastadora | 13,2 | **14,8** | 1,17 |
+| **Contextual** | 22,6 | **21,0** | 0,88 |
+| Ahorradora | 17,0 | **20,8** | 0,68 |
+| Gastadora | 13,2 | **14,8** | 1,18 |
 
-`contextualAdvantage` cae de **+5,6 a −0,2**: la contextual ya no le saca nada a la ahorradora. La causa
+`contextualAdvantage` cae de **+5,6 a +0,2**: la contextual ya no le saca nada a la ahorradora. La causa
 que los datos sugieren es que **la ventaja de la contextual no estaba en comprar, estaba en tener con qué
 elegir**: su regla distintiva es repartir el oro entre los mercados que le quedan antes del jefe y, dentro
 del presupuesto, preferir el raro; con la build más pobre y el surtido igual de caro, el presupuesto casi

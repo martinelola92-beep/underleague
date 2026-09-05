@@ -221,10 +221,12 @@ public sealed class MatchEquipmentTests
     }
 
     [Fact]
-    public void ALethalPerk_KillsOnlyAnOpponentWhoWasAlreadyHurt()
+    public void ALethalPerk_MarksOneOpponentPerActivationAndHurtingHimMultipliesTheRoll()
     {
-        // RF-093 vía 2. El mismo perk letal, dos víctimas: una que llegó con una lesión leve arrastrada y
-        // otra sana. Solo muere la primera; la sana sale ilesa de la misma jugada.
+        // RF-093 vía 2 y ADR 0048. El perk letal ya puede matar a un sano, así que lo que se afirma aquí
+        // es lo que sustituye a la garantía vieja: MARCA a uno por activación y marca al que peor lo
+        // tiene. Con un lesionado leve en el campo, el marcado es él —su estado multiplica la tirada por
+        // ocho— y muere uno solo, no el equipo entero.
         const string Lethal = """
         {
           "id": "test_lethal",
@@ -241,6 +243,7 @@ public sealed class MatchEquipmentTests
           "elseEffects": [],
           "accumulatesAcrossMatches": false,
           "lethal": true,
+          "lethalChance": 10000,
           "positionOnly": null,
           "tagsRequired": [],
           "tagsForbidden": []
@@ -263,11 +266,20 @@ public sealed class MatchEquipmentTests
             Away = setup.Away with { Players = away },
         };
 
+        // Con la tirada al máximo (lethalChance 10.000) muere EXACTAMENTE uno, no los siete del campo:
+        // el perk marca a victimsPerActivation rivales por activación, y son las tres palancas del
+        // jugador —estado, aguante y casilla— las que deciden a quién.
         var result = Underleague.Sim.Engine.Simulator.Run(setup, 21, catalog, new SimConfig(CollectLog: false));
-        var death = Assert.Single(result.Events, e => e.Type == EventType.Death);
-        Assert.Equal(1, death.Actor);
-        Assert.Equal("perk:test_lethal", death.Detail);
+        var death = Assert.Single(result.Events, e => e.Type == EventType.Death && e.Detail == "perk:test_lethal");
+        Assert.Equal(0, death.Team);
         Assert.Equal(1, result.Report.Deaths);
+
+        // Y el estado sigue pesando, aunque ya no sea una puerta: el mismo jugador, en la misma casilla y
+        // contra el mismo portador, muere mucho más fácil tocado que sano (ADR 0048).
+        var lethality = catalog.Tuning.Injury.Lethality;
+        int healthy = Lethality.Chance(lethality, 100, 60, 50, Lethality.StatePercent(lethality, PhysicalState.Healthy, false), 1);
+        int hurt = Lethality.Chance(lethality, 100, 60, 50, Lethality.StatePercent(lethality, PhysicalState.MinorInjury, false), 1);
+        Assert.True(hurt > healthy, $"un tocado ({hurt}) tiene que morir más fácil que un sano ({healthy})");
 
         // Y el informe de ojeo lo destaca antes de jugar (RF-013).
         var threats = Scouting.LethalPerks(setup.Away, catalog);

@@ -3,11 +3,15 @@ using Underleague.Sim.Run.Systems.Rewards;
 
 namespace Underleague.Sim.Tests.Run.Systems;
 
-/// <summary>RF-071, RF-071b: tres opciones de recompensa y reroll de coste creciente.</summary>
+/// <summary>
+/// RF-071, RF-071b, ADR 0049: <b>dos</b> opciones en un partido de liga y tres en élite y jefe, con
+/// reroll de coste creciente. El escalonado de la recompensa deja de ser solo de oro y pasa a ser de
+/// calidad de decisión, que es lo que devuelve peso al mercado.
+/// </summary>
 public sealed class RewardTests
 {
     [Fact]
-    public void OptionsAreThreeAndReproducibleForTheSameRerollCount()
+    public void OptionsAreTwoInALeagueMatchAndReproducibleForTheSameRerollCount()
     {
         var state = FreshPendingReward(11111UL);
         var node = state.GetNode(state.PendingNodeId);
@@ -15,8 +19,28 @@ public sealed class RewardTests
         var first = RewardSystem.Options(state, node, SystemsTestSupport.Catalog, SystemsTestSupport.Systems.Economy, SystemsTestSupport.Systems.Items);
         var second = RewardSystem.Options(state, node, SystemsTestSupport.Catalog, SystemsTestSupport.Systems.Economy, SystemsTestSupport.Systems.Items);
 
-        Assert.Equal(3, first.Count);
+        Assert.Equal(2, first.Count);
         Assert.Equal(first.Select(Describe), second.Select(Describe));
+    }
+
+    /// <summary>
+    /// ADR 0049: el escalonado por tipo de nodo es de <b>calidad de decisión</b>, no solo de oro. El
+    /// partido de liga ofrece dos opciones; el élite y el jefe, tres, y el jefe además dos elecciones.
+    /// Si esto se aplana, el mercado vuelve a ser prescindible, que es el problema que la ADR arregla.
+    /// </summary>
+    [Fact]
+    public void TheEliteAndTheBossOfferMoreOptionsThanALeagueMatch()
+    {
+        var economy = SystemsTestSupport.Systems.Economy;
+        int league = economy.RewardFor(NodeKind.LeagueMatch).Options;
+        int elite = economy.RewardFor(NodeKind.EliteMatch).Options;
+        int boss = economy.RewardFor(NodeKind.Boss).Options;
+
+        Assert.Equal(2, league);
+        Assert.True(elite > league, $"el élite ofrece {elite} opciones y la liga {league}");
+        Assert.True(boss > league, $"el jefe ofrece {boss} opciones y la liga {league}");
+        Assert.Equal(1, economy.RewardFor(NodeKind.LeagueMatch).Picks);
+        Assert.Equal(2, economy.RewardFor(NodeKind.Boss).Picks);
     }
 
     [Fact]

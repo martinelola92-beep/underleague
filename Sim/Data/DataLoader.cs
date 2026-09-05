@@ -758,7 +758,8 @@ public static class DataLoader
     private static InjuryTuning ParseInjury(Json node)
     {
         node.EnsureKnownKeys(
-            "onTackleBase", "onFoulBase", "relativeFactor", "severeShare", "actScalePercent", "eliteScalePercent");
+            "onTackleBase", "onFoulBase", "relativeFactor", "severeShare", "actScalePercent",
+            "eliteScalePercent", "lethality");
 
         // ADR 0043: un multiplicador por acto, en datos, sobre la probabilidad ya calculada.
         var actScale = new List<int>(3);
@@ -778,7 +779,41 @@ public static class DataLoader
             node.Prop("relativeFactor").AsInt(),
             node.Prop("severeShare").AsInt(),
             actScale,
-            node.Prop("eliteScalePercent").AsInt());
+            node.Prop("eliteScalePercent").AsInt(),
+            ParseLethality(node.Prop("lethality")));
+    }
+
+    /// <summary>
+    /// tuning.injury.lethality (ADR 0048): la tirada de muerte de un perk letal. Los tres factores son
+    /// las tres palancas del jugador —a quién alinea, en qué estado y dónde lo coloca— y viven en datos
+    /// porque la letalidad es exactamente lo que hay que poder subir y bajar al medir.
+    /// </summary>
+    private static Underleague.Sim.Perks.LethalityTuning ParseLethality(Json node)
+    {
+        node.EnsureKnownKeys(
+            "relativeFactor", "proximityBasePercent", "proximityStepPercent", "proximityMinPercent",
+            "minorInjuryPercent", "severeInjuryPercent", "resistanceMinPercent", "resistanceMaxPercent",
+            "maxChance", "victimsPerActivation");
+
+        int min = node.Prop("proximityMinPercent").AsInt();
+        int lowerBound = node.Prop("proximityBasePercent").AsInt();
+        if (min > lowerBound)
+        {
+            throw new DataException(
+                node.File, node.Path + ".proximityMinPercent", "el suelo de cercanía no puede superar a proximityBasePercent");
+        }
+
+        return new Underleague.Sim.Perks.LethalityTuning(
+            node.Prop("relativeFactor").AsInt(),
+            lowerBound,
+            node.Prop("proximityStepPercent").AsInt(),
+            min,
+            node.Prop("minorInjuryPercent").AsInt(),
+            node.Prop("severeInjuryPercent").AsInt(),
+            node.Prop("resistanceMinPercent").AsInt(),
+            node.Prop("resistanceMaxPercent").AsInt(),
+            node.Prop("maxChance").AsInt(),
+            node.Prop("victimsPerActivation").AsInt());
     }
 
     private static RefereeTuning ParseReferee(Json node)

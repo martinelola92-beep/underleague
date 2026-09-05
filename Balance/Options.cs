@@ -73,6 +73,15 @@ public sealed class Options
     /// </summary>
     public bool IgnoreScouting { get; private set; }
 
+    /// <summary>
+    /// <c>--risk-aversion N</c>: cuánto pesa el indicador de riesgo de muerte al alinear
+    /// (<c>RunPolicyOptions.DeathCostPercent</c>), sin dejar de leer el informe de ojeo. Es la palanca
+    /// con la que se mide el <b>rango</b> de la agencia de la ADR 0048: 0 la ignora, un valor alto la
+    /// obedece y un valor <b>negativo</b> hace lo contrario a propósito (el techo de muertes), que es lo
+    /// que dice cuánto había en juego. null = el valor por defecto de la política.
+    /// </summary>
+    public int? RiskAversion { get; private set; }
+
     /// <summary>Null salvo que se pase --describe [es|en]: activa el modo catálogo, con el idioma pedido (por defecto "es").</summary>
     public string? Describe { get; private set; }
 
@@ -129,6 +138,10 @@ public sealed class Options
 
                 case "--ignore-scouting":
                     options.IgnoreScouting = true;
+                    break;
+
+                case "--risk-aversion":
+                    options.RiskAversion = ParseInt(arg, NextValue(args, ref i, arg));
                     break;
 
                 case "--full-runs":

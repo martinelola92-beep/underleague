@@ -99,6 +99,20 @@ public sealed record RunPolicyOptions
     /// </summary>
     public bool HeedsLethalScouting { get; init; } = true;
 
+    /// <summary>
+    /// Cuánto vale un jugador muerto, en porcentaje de su valor de partido (ADR 0048). Es lo que
+    /// convierte el indicador de riesgo (RF-012c) en una decisión de alineación: la política puntúa cada
+    /// candidato en cada casilla con <c>valor × (1 − coste × riesgo)</c>, así que un titular mejor pero
+    /// más expuesto puede perder el sitio frente a uno peor y más duro. 400 = perderlo cuesta cuatro
+    /// partidos suyos, que es el orden de magnitud de una baja definitiva a mitad de run.
+    ///
+    /// <para>Es un dial de la <b>política</b>, no del juego: no vive en <c>/data</c> porque no describe
+    /// ninguna regla, describe cómo de prudente es el jugador simulado. Vale 0 cuando
+    /// <see cref="HeedsLethalScouting"/> es false, que es la política de control con la que se mide si
+    /// atender al indicador sirve de algo.</para>
+    /// </summary>
+    public int DeathCostPercent { get; init; } = 150;
+
     /// <summary>Compras máximas en un mismo nodo de mercado; corta el bucle, no la política.</summary>
     public int MaxMarketActions { get; init; } = 16;
 
@@ -180,7 +194,22 @@ public sealed record RunPlayResult(
     IReadOnlyList<int> MatchesByAct,
     IReadOnlyList<int> WinsByAct,
     IReadOnlyList<int> MarketsByAct,
-    IReadOnlyList<int> GoldEarnedByAct)
+    IReadOnlyList<int> GoldEarnedByAct,
+
+    /// <summary>Muertes por acto (ADR 0048).</summary>
+    IReadOnlyList<int> DeathsByAct,
+
+    /// <summary>Perks del once al entrar en el jefe de cada acto (ADR 0049).</summary>
+    IReadOnlyList<int> PerksAtBossByAct,
+
+    /// <summary>Objetos del once al entrar en el jefe de cada acto (ADR 0049).</summary>
+    IReadOnlyList<int> ItemsAtBossByAct,
+
+    /// <summary>Jefes jugados por acto, denominador de los dos de arriba.</summary>
+    IReadOnlyList<int> BossSamplesByAct,
+
+    /// <summary>Objetos recuperados del inventario tras una muerte (ADR 0048, condición 4).</summary>
+    int ItemsRecovered)
 {
     /// <summary>True si la run terminó ganando al jefe final (RF-002).</summary>
     public bool Won => Outcome == RunOutcomeKind.Victory;
@@ -361,14 +390,173 @@ public static class RunPolicy
         ChooseStarters(state, options, clinicCost, lethalOpponent: false);
 
     /// <summary>
-    /// Reglas 2 y 3 <b>leyendo el informe de ojeo</b> (RF-013). Con <paramref name="lethalOpponent"/> a
-    /// true —el rival lleva algún perk letal, que es lo que devuelve
-    /// <c>Sim.Perks.Scouting.LethalPerks</c>— la política <b>saca del once a los tocados</b> mientras le
-    /// queden siete sanos: contra un equipo que remata heridos, alinear a un herido es la única forma de
-    /// perderlo para siempre (RF-093 vía 2), y está anunciada antes de confirmar la alineación (RF-012d).
+    /// Reglas 2 y 3 <b>con el indicador de riesgo delante</b> (RF-012c, ADR 0048 condición 3). Es la
+    /// versión que sabe que un jugador sano también puede morir: además de dejar fuera a los tocados,
+    /// puntúa a cada candidato <b>en cada casilla</b> con <c>valor × (1 − coste × riesgo)</c> y coloca en
+    /// consecuencia. El once que devuelve viene <b>en orden de colocación</b>, no por id, porque desde
+    /// esta ADR la casilla es parte de la decisión: <c>RunLineup.Compose</c> reparte las casillas en el
+    /// orden de la lista.
     ///
-    /// <para>Es la contrajugada de la letalidad, y está en la política a propósito: sin ella la medición
-    /// de muertes sería la de un jugador que no lee el informe, es decir, un techo y no un número.</para>
+    /// <para>Con <paramref name="carriers"/> vacío se comporta exactamente como la versión sin riesgo:
+    /// no hay a quién temer y colocar deja de importar.</para>
+    /// </summary>
+    public static IReadOnlyList<RunPlayer> ChooseStarters(
+        RunState state,
+        RunPolicyOptions options,
+        int clinicCost,
+        Catalog catalog,
+        IReadOnlyList<Underleague.Sim.Perks.Lethality.LethalCarrier> carriers)
+    {
+        ArgumentNullException.ThrowIfNull(state);
+        ArgumentNullException.ThrowIfNull(options);
+        ArgumentNullException.ThrowIfNull(catalog);
+        ArgumentNullException.ThrowIfNull(carriers);
+
+        var pool = LineupPool(state, options, clinicCost, carriers.Count > 0);
+        // Con coste 0 no hay nada que descontar; con coste NEGATIVO el descuento se invierte y la
+        // política busca el riesgo a propósito, que es como se mide el techo de la agencia (ADR 0048).
+        if (carriers.Count == 0 || options.DeathCostPercent == 0)
+        {
+            return ByValue(pool, options);
+        }
+
+        var lethality = catalog.Tuning.Injury.Lethality;
+        var starters = new List<RunPlayer>(RunRules.MaxStarters);
+        var taken = new List<Cell>(RunRules.MaxStarters);
+
+        // Mismo reparto de casillas que RunLineup.Compose, en el mismo orden, y en cada una el candidato
+        // con mejor valor descontado por su riesgo EN ESA CASILLA. Aquí es donde "alejar a tu mejor
+        // jugador de la banda peligrosa" deja de ser una frase y se convierte en una decisión.
+        TakeSafest(starters, taken, pool, Position.Goalkeeper, 1, options, catalog, lethality, carriers);
+        TakeSafest(starters, taken, pool, Position.Defender, 2, options, catalog, lethality, carriers);
+        TakeSafest(starters, taken, pool, Position.Midfielder, 3, options, catalog, lethality, carriers);
+        TakeSafest(starters, taken, pool, Position.Forward, 1, options, catalog, lethality, carriers);
+
+        while (starters.Count < RunRules.MaxStarters && taken.Count < RunRules.MaxStarters)
+        {
+            // Sin portero de verdad en la plantilla, Compose recoloca al de menor id en la portería y las
+            // casillas se corren: puede no quedar ninguna libre con el once aún incompleto. Se corta y se
+            // deja el resto a Compose, que es quien manda sobre la colocación final.
+            if (!RunLineup.TryCellFor(Position.Midfielder, taken, out var cell))
+            {
+                break;
+            }
+
+            var best = Best(pool, starters, position: null, cell, options, catalog, lethality, carriers);
+            if (best is null)
+            {
+                break;
+            }
+
+            starters.Add(best);
+            taken.Add(cell);
+        }
+
+        return starters;
+    }
+
+    /// <summary>Mejor candidato para esa casilla, o null si no queda ninguno elegible.</summary>
+    private static RunPlayer? Best(
+        IReadOnlyList<RunPlayer> pool,
+        List<RunPlayer> starters,
+        Position? position,
+        Cell cell,
+        RunPolicyOptions options,
+        Catalog catalog,
+        Underleague.Sim.Perks.LethalityTuning lethality,
+        IReadOnlyList<Underleague.Sim.Perks.Lethality.LethalCarrier> carriers)
+    {
+        RunPlayer? best = null;
+        int bestScore = int.MinValue;
+        for (int i = 0; i < pool.Count; i++)
+        {
+            var candidate = pool[i];
+            if ((position is { } required && candidate.Position != required) || Contains(starters, candidate.Id))
+            {
+                continue;
+            }
+
+            int score = RiskAdjustedValue(candidate, cell, options, catalog, lethality, carriers);
+
+            // Empates por id ascendente (RT-041): nunca al azar.
+            if (best is null || score > bestScore || (score == bestScore && candidate.Id < best.Id))
+            {
+                best = candidate;
+                bestScore = score;
+            }
+        }
+
+        return best;
+    }
+
+    private static void TakeSafest(
+        List<RunPlayer> starters,
+        List<Cell> taken,
+        IReadOnlyList<RunPlayer> pool,
+        Position position,
+        int count,
+        RunPolicyOptions options,
+        Catalog catalog,
+        Underleague.Sim.Perks.LethalityTuning lethality,
+        IReadOnlyList<Underleague.Sim.Perks.Lethality.LethalCarrier> carriers)
+    {
+        for (int c = 0; c < count && starters.Count < RunRules.MaxStarters; c++)
+        {
+            Cell cell;
+            if (position == Position.Goalkeeper)
+            {
+                cell = RunLineup.GoalkeeperCell;
+            }
+            else if (!RunLineup.TryCellFor(position, taken, out cell))
+            {
+                return;
+            }
+
+            var best = Best(pool, starters, position, cell, options, catalog, lethality, carriers);
+            if (best is null)
+            {
+                return;
+            }
+
+            starters.Add(best);
+            taken.Add(cell);
+        }
+    }
+
+    /// <summary>
+    /// Valor del jugador descontado por la probabilidad de perderlo en esa casilla (ADR 0048): el
+    /// indicador de RF-012c convertido en un número con el que se puede comparar a dos candidatos.
+    /// </summary>
+    public static int RiskAdjustedValue(
+        RunPlayer player,
+        Cell cell,
+        RunPolicyOptions options,
+        Catalog catalog,
+        Underleague.Sim.Perks.LethalityTuning lethality,
+        IReadOnlyList<Underleague.Sim.Perks.Lethality.LethalCarrier> carriers)
+    {
+        ArgumentNullException.ThrowIfNull(player);
+        ArgumentNullException.ThrowIfNull(options);
+        ArgumentNullException.ThrowIfNull(catalog);
+
+        int value = Value(player, options);
+
+        // Exposición, no probabilidad de morir: solo muere el marcado, pero comparar candidatos para una
+        // casilla es comparar lo apetecibles que son como víctima. Bajar la exposición del once entero es
+        // bajar la del que acabe marcado, que es el número que cuenta (ADR 0048).
+        int risk = Underleague.Sim.Perks.Lethality.Exposure(
+            lethality, carriers, player.PhysicalState, player.ToDefinition(catalog).Attributes.Stamina, cell);
+        int penalty = Math.Min(10000, options.DeathCostPercent * risk / 100);
+        return value * (10000 - penalty) / 10000;
+    }
+
+    /// <summary>
+    /// Reglas 2 y 3 <b>leyendo el informe de ojeo</b> (RF-013), pero sin el indicador numérico. Con
+    /// <paramref name="lethalOpponent"/> a true la política <b>saca del once a los tocados</b> mientras
+    /// le queden siete sanos: contra un equipo que remata heridos, alinear a un herido multiplica por
+    /// varias veces su probabilidad de morir (RF-093 vía 2), y está anunciado antes de confirmar la
+    /// alineación (RF-012d). Es la versión de la ADR 0046; la que además <b>coloca</b> con criterio es la
+    /// sobrecarga con <c>carriers</c> (ADR 0048).
     /// </summary>
     public static IReadOnlyList<RunPlayer> ChooseStarters(
         RunState state,
@@ -378,7 +566,18 @@ public static class RunPolicy
     {
         ArgumentNullException.ThrowIfNull(state);
         ArgumentNullException.ThrowIfNull(options);
+        return ByValue(LineupPool(state, options, clinicCost, lethalOpponent), options);
+    }
 
+    /// <summary>
+    /// Los candidatos a titular: los disponibles, sin los tocados si el rival mata y quedan siete sanos,
+    /// más los lesionados graves que la política decide arriesgar (regla 3). Es la parte de la decisión
+    /// que <b>no</b> depende de la colocación, y por eso la comparten las dos versiones de
+    /// <c>ChooseStarters</c>.
+    /// </summary>
+    private static List<RunPlayer> LineupPool(
+        RunState state, RunPolicyOptions options, int clinicCost, bool lethalOpponent)
+    {
         var pool = new List<RunPlayer>(state.AvailablePlayers);
         if (lethalOpponent)
         {
@@ -429,6 +628,12 @@ public static class RunPolicy
             }
         }
 
+        return pool;
+    }
+
+    /// <summary>El once por valor y por rol, sin mirar el riesgo: el criterio de siempre (regla 2).</summary>
+    private static IReadOnlyList<RunPlayer> ByValue(List<RunPlayer> pool, RunPolicyOptions options)
+    {
         var starters = new List<RunPlayer>(RunRules.MaxStarters);
         TakeBest(starters, pool, Position.Goalkeeper, 1, options);
         TakeBest(starters, pool, Position.Defender, 2, options);
@@ -498,11 +703,14 @@ public static class RunPolicy
         int clinicCost,
         Ledger ledger)
     {
-        // RF-013: el informe de ojeo se lee ANTES de alinear. Si el rival lleva un perk letal, los tocados
-        // se quedan en el banquillo mientras haya siete sanos (ADR 0046).
-        bool lethalOpponent = options.HeedsLethalScouting
-            && Underleague.Sim.Perks.Scouting.LethalPerks(systems.OpponentFor(state, node, catalog), catalog).Count > 0;
-        var starters = ChooseStarters(state, options, clinicCost, lethalOpponent);
+        // RF-013 y RF-012c: el informe de ojeo y el indicador de riesgo se leen ANTES de alinear. Si el
+        // rival lleva un perk letal, los tocados se quedan en el banquillo mientras haya siete sanos (ADR
+        // 0046) y, desde la ADR 0048 —en la que un sano también muere—, el once y la colocación se
+        // deciden con el número de riesgo de cada casilla delante.
+        var carriers = options.HeedsLethalScouting
+            ? Underleague.Sim.Perks.Lethality.CarriersOf(systems.OpponentFor(state, node, catalog), catalog)
+            : Array.Empty<Underleague.Sim.Perks.Lethality.LethalCarrier>();
+        var starters = ChooseStarters(state, options, clinicCost, catalog, carriers);
         if (starters.Count >= RunRules.MinimumAvailablePlayers)
         {
             state = RunEngine.Apply(state, new SetLineup(RunLineup.Compose(starters)), catalog, systems);
@@ -511,6 +719,7 @@ public static class RunPolicy
         int wagesDue = WagesDue(state);
         int goldBefore = state.Gold;
         int deadBefore = CountState(state, PhysicalState.Dead);
+        int stockBefore = state.Counter(RunState.ItemsRecoveredCounter);
         int severeBefore = CountState(state, PhysicalState.SevereInjury);
 
         state = RunEngine.Enter(state, node.Id, catalog, systems);
@@ -526,6 +735,21 @@ public static class RunPolicy
         ledger.Nodes++;
         ledger.Matches++;
         ledger.MatchesByAct[node.Act - 1]++;
+
+        // ADR 0049: con qué build se llega a cada jefe. Es el dato con el que se calibra la densidad de
+        // data/balance/groups.json, y bajar las opciones de recompensa lo mueve por definición.
+        if (node.Kind == NodeKind.Boss)
+        {
+            ledger.BossSamplesByAct[node.Act - 1]++;
+            for (int i = 0; i < starters.Count; i++)
+            {
+                ledger.PerksAtBossByAct[node.Act - 1] += starters[i].Perks.Count;
+                if (starters[i].Item is not null)
+                {
+                    ledger.ItemsAtBossByAct[node.Act - 1]++;
+                }
+            }
+        }
         if (won)
         {
             ledger.MatchesWon++;
@@ -543,7 +767,10 @@ public static class RunPolicy
             ledger.GoldEarnedByAct[node.Act - 1] += earned;
         }
 
-        ledger.Deaths += CountState(state, PhysicalState.Dead) - deadBefore;
+        int deaths = CountState(state, PhysicalState.Dead) - deadBefore;
+        ledger.Deaths += deaths;
+        ledger.DeathsByAct[node.Act - 1] += deaths;
+        ledger.ItemsRecovered += state.Counter(RunState.ItemsRecoveredCounter) - stockBefore;
         int severeNow = CountState(state, PhysicalState.SevereInjury);
         if (severeNow > severeBefore)
         {
@@ -1108,6 +1335,39 @@ public static class RunPolicy
             state = TakeReward(state, node, catalog, standard, systems, options, ledger);
         }
 
+        return ClaimStoredItems(state, catalog, systems);
+    }
+
+    /// <summary>
+    /// Reparte el equipamiento heredado de los muertos (ADR 0048, condición 4). El objeto del caído está
+    /// en el almacén y no cuesta oro: dárselo a un titular sin objeto es la parte de "se puede rehacer"
+    /// que el jugador no tiene por qué pagar dos veces. Se hace después de cobrar la recompensa para que
+    /// el objeto recién elegido cuente y no se duplique el hueco.
+    /// </summary>
+    private static RunState ClaimStoredItems(RunState state, Catalog catalog, IRunSystems systems)
+    {
+        var stored = state.StoredItems;
+        for (int i = 0; i < stored.Count; i++)
+        {
+            int carrier = -1;
+            var roster = state.Roster;
+            for (int p = 0; p < roster.Count; p++)
+            {
+                if (roster[p].PhysicalState != PhysicalState.Dead && roster[p].Item is null)
+                {
+                    carrier = roster[p].Id;
+                    break;
+                }
+            }
+
+            if (carrier < 0)
+            {
+                break;
+            }
+
+            state = RunEngine.Apply(state, new EquipStoredItem(carrier, stored[i]), catalog, systems);
+        }
+
         return state;
     }
 
@@ -1651,7 +1911,12 @@ public static class RunPolicy
             ledger.MatchesByAct,
             ledger.WinsByAct,
             ledger.MarketsByAct,
-            ledger.GoldEarnedByAct);
+            ledger.GoldEarnedByAct,
+            ledger.DeathsByAct,
+            ledger.PerksAtBossByAct,
+            ledger.ItemsAtBossByAct,
+            ledger.BossSamplesByAct,
+            ledger.ItemsRecovered);
     }
 
     /// <summary>
@@ -1761,5 +2026,23 @@ public static class RunPolicy
         public int[] MarketsByAct { get; } = new int[RunRules.Acts];
 
         public int[] GoldEarnedByAct { get; } = new int[RunRules.Acts];
+
+        /// <summary>Muertes por acto (ADR 0048): la banda 1,5-3 no dice nada sin saber dónde caen.</summary>
+        public int[] DeathsByAct { get; } = new int[RunRules.Acts];
+
+        /// <summary>Perks del once al entrar en el jefe de cada acto (ADR 0049: calibra groups.json).</summary>
+        public int[] PerksAtBossByAct { get; } = new int[RunRules.Acts];
+
+        /// <summary>Objetos del once al entrar en el jefe de cada acto.</summary>
+        public int[] ItemsAtBossByAct { get; } = new int[RunRules.Acts];
+
+        /// <summary>Jefes jugados por acto, para promediar los dos de arriba.</summary>
+        public int[] BossSamplesByAct { get; } = new int[RunRules.Acts];
+
+        /// <summary>
+        /// Objetos que el inventario ha recuperado de un muerto (ADR 0048, condición 4): la
+        /// "recuperación" que sostiene que la muerte sea rehacible y no solo una pérdida.
+        /// </summary>
+        public int ItemsRecovered;
     }
 }

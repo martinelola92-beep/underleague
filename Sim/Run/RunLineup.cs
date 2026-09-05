@@ -292,7 +292,43 @@ public static class RunLineup
         return emergency;
     }
 
-    private static Cell CellFor(Position position, List<Cell> taken)
+    /// <summary>
+    /// Casilla que le toca a esa posición dadas las ya ocupadas, con el mismo criterio que
+    /// <see cref="Compose"/>: primero las preferidas de su posición en orden y, si no queda ninguna, la
+    /// primera libre del 2-3-1. Es público porque una política que quiera <b>colocar</b> con criterio
+    /// —y desde la ADR 0048 el riesgo de muerte depende de la casilla— necesita saber dónde va a caer
+    /// cada jugador antes de decidir el once, y reimplementarlo sería garantizar que los dos se separen.
+    /// </summary>
+    public static Cell CellFor(Position position, IReadOnlyList<Cell> taken)
+    {
+        ArgumentNullException.ThrowIfNull(taken);
+        return NextCell(position, taken);
+    }
+
+    /// <summary>
+    /// La misma casilla, sin excepción cuando ya no queda ninguna libre. Pasa de verdad: sin portero en
+    /// la plantilla, <see cref="Compose"/> recoloca al titular de menor id en la portería y las seis
+    /// casillas de campo pueden agotarse con el once todavía incompleto.
+    /// </summary>
+    public static bool TryCellFor(Position position, IReadOnlyList<Cell> taken, out Cell cell)
+    {
+        ArgumentNullException.ThrowIfNull(taken);
+        for (int i = 0; i < OutfieldCells.Length; i++)
+        {
+            if (!Taken(taken, OutfieldCells[i]))
+            {
+                cell = NextCell(position, taken);
+                return true;
+            }
+        }
+
+        cell = default;
+        return false;
+    }
+
+    private static Cell CellFor(Position position, List<Cell> taken) => NextCell(position, taken);
+
+    private static Cell NextCell(Position position, IReadOnlyList<Cell> taken)
     {
         var preferred = position switch
         {
@@ -304,7 +340,7 @@ public static class RunLineup
 
         for (int i = 0; i < preferred.Length; i++)
         {
-            if (!taken.Contains(preferred[i]))
+            if (!Taken(taken, preferred[i]))
             {
                 return preferred[i];
             }
@@ -312,13 +348,26 @@ public static class RunLineup
 
         for (int i = 0; i < OutfieldCells.Length; i++)
         {
-            if (!taken.Contains(OutfieldCells[i]))
+            if (!Taken(taken, OutfieldCells[i]))
             {
                 return OutfieldCells[i];
             }
         }
 
         throw new InvalidOperationException("no quedan casillas libres para colocar a un titular");
+    }
+
+    private static bool Taken(IReadOnlyList<Cell> cells, Cell cell)
+    {
+        for (int i = 0; i < cells.Count; i++)
+        {
+            if (cells[i] == cell)
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /// <summary>

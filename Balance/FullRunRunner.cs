@@ -48,7 +48,8 @@ public static class FullRunRunner
         IReadOnlyDictionary<string, string> dataFiles,
         ulong seed,
         int runs,
-        bool ignoreScouting = false)
+        bool ignoreScouting = false,
+        int? riskAversion = null)
     {
         ArgumentNullException.ThrowIfNull(catalog);
         ArgumentNullException.ThrowIfNull(dataFiles);
@@ -66,6 +67,10 @@ public static class FullRunRunner
         foreach (var doctrine in Doctrines)
         {
             var options = RunPolicyOptions.For(doctrine) with { HeedsLethalScouting = !ignoreScouting };
+            if (riskAversion is { } aversion)
+            {
+                options = options with { DeathCostPercent = aversion };
+            }
             var rows = new List<RunPlayResult>(runs);
             for (int i = 0; i < runs; i++)
             {

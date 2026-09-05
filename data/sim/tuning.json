@@ -82,7 +82,20 @@
     "relativeFactor": 2,
     "severeShare": 4000,
     "actScalePercent": [120, 260, 420],
-    "eliteScalePercent": 150
+    "eliteScalePercent": 150,
+    "lethality": {
+      "_doc": "ADR 0048: un jugador sano PUEDE morir, asi que alcanzar a una victima ya no la mata: la tira. victimsPerActivation es a cuantos rivales MARCA cada activacion, y marca al que peor lo tiene (mayor probabilidad de morir); concentrar el peligro en el eslabon mas debil es lo que permite que la alineacion lo reduzca -quitar ese eslabon baja el numero- en vez de repartir un impuesto que nadie puede esquivar. Los tres factores de la tirada son las tres cosas que el jugador decide antes de confirmar (RF-012c): en que estado alinea (minorInjuryPercent, severeInjuryPercent, lo que queda de la regla vieja de RF-093 convertida de puerta en multiplicador), a quien alinea (relativeFactor sobre fuerza del portador menos aguante de la victima, multiplicativo: sumando no cambiaba nada, medido) y donde lo coloca (proximity*, sobre la distancia de emparejamiento de Sim.Perks.Lethality). maxChance acota la tirada: al tope, un tocado marcado no vuelve.",
+      "relativeFactor": 6,
+      "proximityBasePercent": 100,
+      "proximityStepPercent": 25,
+      "proximityMinPercent": 0,
+      "minorInjuryPercent": 800,
+      "severeInjuryPercent": 2500,
+      "resistanceMinPercent": 20,
+      "resistanceMaxPercent": 500,
+      "maxChance": 8000,
+      "victimsPerActivation": 1
+    }
   },
   "probabilityChannels": {
     "_doc": "ADR 0035: escalon de cada canal de probabilidad, en PUNTOS PORCENTUALES. Un valor de modifyProbability es el escalon de su canal multiplicado por 1, 2, 3, 5 o 10 pasos, y el cargador de perks (Sim.Perks.PerkLoader) rechaza cualquier otro. El escalon se fija para que un paso valga aproximadamente lo mismo en todos los canales en impacto RELATIVO sobre su base, hasta donde el punto porcentual entero lo permite: intercept (base 250), injury/injure (40), foul (320) y card (250) tienen bases diminutas y su paso minimo posible es 1; tackle (2800) y las dos evasiones que lo contrarrestan van a 3; pass (7700), dribble (7200), save (5000) y shotOnTarget (4625) a 5. La descripcion que ve el jugador sigue diciendo el valor absoluto (docs/estilo-descripciones.md); lo que cambia es lo que el DISENADOR puede escribir.",

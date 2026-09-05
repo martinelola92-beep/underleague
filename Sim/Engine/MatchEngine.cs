@@ -2257,6 +2257,42 @@ internal sealed class MatchEngine : IPerkWorld
     /// propio para el muerto —lo que importa es que ya no juega— y el evento DEATH es lo que
     /// <c>Sim.Run.MatchResolution</c> lee para pasarlo a <c>PhysicalState.Dead</c> en la plantilla.</para>
     /// </summary>
+    /// <summary>
+    /// Probabilidad de que un perk letal mate a ese rival alcanzado (RF-093 vía 2, ADR 0048). Desde que
+    /// un jugador sano puede morir, alcanzar ya no es matar: se tira, y solo por los <b>marcados</b>, con
+    /// <see cref="Underleague.Sim.Perks.Lethality.Chance"/>, que es <b>exactamente la misma función</b>
+    /// que el indicador de riesgo por jugador enseña antes de confirmar la alineación (RF-012c,
+    /// <c>RunEngine.LineupWarnings</c>). Que el motor y el indicador compartan código no es una
+    /// comodidad: es lo que impide que el número prometido y el dado real se separen (RF-012d).
+    /// </summary>
+    internal int LethalChanceAgainst(
+        Underleague.Sim.Perks.PerkDefinition perk, MatchPlayer owner, MatchPlayer victim)
+    {
+        var lethality = _tuning.Injury.Lethality;
+        int statePercent = Underleague.Sim.Perks.Lethality.StatePercent(
+            lethality, victim.Definition.PhysicalState, victim.Injured);
+        int distance = Underleague.Sim.Perks.Lethality.MatchupAbsolute(
+            victim.HomeCell, victim.Team, owner.HomeCell, owner.Team);
+
+        // Atributos BASE, no efectivos, y a propósito: el indicador de riesgo (RF-012c) tiene que poder
+        // calcular este mismo número antes del partido, cuando todavía no se ha aplicado ningún
+        // modificador de perk. Si la letalidad dependiera de lo que pase a mitad de partido, el número
+        // prometido y el dado real se separarían y RF-012d se rompería en silencio.
+        return Underleague.Sim.Perks.Lethality.Chance(
+            lethality,
+            perk.LethalChance,
+            owner.BaseAttribute(AttributeKind.Strength),
+            victim.BaseAttribute(AttributeKind.Stamina),
+            statePercent,
+            distance);
+    }
+
+    /// <summary>A cuántos rivales marca cada activación de un perk letal (<c>tuning.injury.lethality</c>).</summary>
+    internal int LethalVictimsPerActivation => _tuning.Injury.Lethality.VictimsPerActivation;
+
+    /// <summary>La tirada en sí, con el flujo de dados del partido (RT-021, RT-022).</summary>
+    internal bool LethalRoll(int chance) => _rng.Chance(chance);
+
     internal void Kill(MatchPlayer victim, string detail)
     {
         if (victim.Dead)

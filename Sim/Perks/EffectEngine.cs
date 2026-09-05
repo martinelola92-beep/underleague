@@ -680,10 +680,10 @@ internal sealed class EffectEngine : IPerkLinks
     {
         bool cancelled = false;
 
-        // RF-093 vía 2: un perk marcado como letal mata a los rivales sobre los que aplica sus efectos,
-        // y solo a ellos. La lista se aloja únicamente si el perk es letal (ninguno del catálogo lo es
-        // todavía) y es local, no un buffer compartido, porque matar publica DEATH y eso puede reentrar
-        // aquí con otro perk.
+        // RF-093 vía 2: un perk marcado como letal puede matar a los rivales sobre los que aplica sus
+        // efectos, y solo a ellos. Desde la ADR 0048 alcanzar ya no es matar: cada alcanzado se juega una
+        // tirada (MatchEngine.LethalHits). La lista se aloja únicamente si el perk es letal y es local,
+        // no un buffer compartido, porque matar publica DEATH y eso puede reentrar aquí con otro perk.
         List<MatchPlayer>? victims = subscription.Perk.Lethal ? new List<MatchPlayer>() : null;
         for (int i = 0; i < effects.Count; i++)
         {
@@ -772,10 +772,45 @@ internal sealed class EffectEngine : IPerkLinks
         if (victims is not null)
         {
             // Orden fijo: id de jugador ascendente, igual que el resto del motor (RT-041).
+            // ADR 0048: alcanzar no es matar y matar no es segar el equipo. El perk MARCA a un número
+            // fijo de rivales por activación (tuning.injury.lethality.victimsPerActivation) y marca al
+            // que peor lo tiene: mayor probabilidad de morir y, a igualdad, menor id (RT-041). Concentrar
+            // el peligro en el eslabón más débil es lo que hace que la alineación pueda reducirlo —quitar
+            // ese eslabón baja el número— en vez de repartir un impuesto que nadie puede esquivar.
             victims.Sort(static (a, b) => a.Id.CompareTo(b.Id));
-            for (int v = 0; v < victims.Count; v++)
+            int marks = Math.Min(_engine.LethalVictimsPerActivation, victims.Count);
+            for (int m = 0; m < marks; m++)
             {
-                _engine.Kill(victims[v], "perk:" + subscription.Perk.Id);
+                int pick = -1;
+                int best = -1;
+                for (int v = 0; v < victims.Count; v++)
+                {
+                    if (victims[v].Dead || !victims[v].OnPitch)
+                    {
+                        continue;
+                    }
+
+                    int chance = _engine.LethalChanceAgainst(subscription.Perk, subscription.Owner, victims[v]);
+                    if (pick < 0 || chance > best)
+                    {
+                        pick = v;
+                        best = chance;
+                    }
+                }
+
+                if (pick < 0)
+                {
+                    break;
+                }
+
+                // Se tira siempre, incluso con probabilidad 0: el flujo de dados depende de cuántos
+                // marca el perk y no de cuánto valga la tirada de cada uno (RT-021).
+                var marked = victims[pick];
+                victims.RemoveAt(pick);
+                if (_engine.LethalRoll(best))
+                {
+                    _engine.Kill(marked, "perk:" + subscription.Perk.Id);
+                }
             }
         }
 
@@ -783,16 +818,19 @@ internal sealed class EffectEngine : IPerkLinks
     }
 
     /// <summary>
-    /// Quién puede morir por un perk letal (RF-093). Tres condiciones, y las tres son necesarias: es
-    /// <b>rival</b> del portador del perk (de ahí "perk rival letal"), está <b>en el campo</b>, y
-    /// <b>no está sano</b> —o llegó al partido arrastrando una lesión (RF-090) o ya se ha lesionado en
-    /// este—. La tercera es la que hace que "un jugador sano nunca muere" sea una garantía del sistema y
-    /// no una casualidad: sin ella, un perk letal mataría al primero al que alcanzara.
+    /// Quién puede morir por un perk letal (RF-093, ADR 0048). Dos condiciones: es <b>rival</b> del
+    /// portador del perk (de ahí "perk rival letal") y está <b>en el campo</b>.
+    ///
+    /// <para>La tercera —<i>no estar sano</i>— <b>se ha retirado</b>. Era la que garantizaba que un
+    /// jugador sano nunca muere y la que dejaba un solo hueco alcanzable (el que salta al campo herido),
+    /// con dos consecuencias que la ADR 0048 corrige: el desgaste no era un riesgo permanente sino el
+    /// castigo de una decisión, y un perk letal <b>propio</b> no podía matar a nadie porque los rivales
+    /// se generan siempre sanos (era la asimetría de la ADR 0047, que esta sustituye). Lo que queda de
+    /// ella es un multiplicador: estar tocado sigue multiplicando la probabilidad de morir
+    /// (<c>tuning.injury.lethality</c>), pero ya no es la puerta.</para>
     /// </summary>
     private static bool IsLethalVictim(MatchPlayer owner, MatchPlayer candidate) =>
-        candidate.Team != owner.Team
-        && candidate.OnPitch
-        && (candidate.Injured || candidate.Definition.PhysicalState != PhysicalState.Healthy);
+        candidate.Team != owner.Team && candidate.OnPitch && !candidate.Dead;
 
     private int EffectValue(PerkSubscription subscription, EffectDefinition effect)
     {

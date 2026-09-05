@@ -54,7 +54,7 @@ Proceden de los requisitos técnicos y no se negocian en un PR. Si parece necesa
 8. Sin ML en la IA (RT-091): utilidad ponderada con pesos por posición y rasgo en `/data` (RT-096), tabla de puntuaciones volcable por tick (RT-098).
 9. Las pruebas estadísticas de 1.000 partidos (RT-081) valen más que las unitarias. No se escriben tests de interfaz (RT-084). El test de determinismo (RT-024) es obligatorio y corre en CI en Windows y Linux.
 10. **No se produce arte hasta cerrar el diseño de la fase 2.** Solo placeholders; el arte previo se descarta (regla de fase, §7).
-11. Principio rector de diseño: **todo lo malo que pase en un partido debe haber sido previsible** con la información previa (RF-012d). Un jugador sano nunca muere (RF-093). Ningún sistema nuevo introduce daño no anunciado.
+11. Principio rector de diseño: **todo lo malo que pase en un partido debe haber sido previsible** con la información previa (RF-012d). Ningún sistema nuevo introduce daño no anunciado. Desde la **ADR 0048** un jugador **sano también puede morir**, así que la previsibilidad ya no se apoya en una garantía sino en las **cinco condiciones** de esa ADR —se sabe antes, se puede evitar el partido, se puede **reducir el riesgo con la alineación**, el equipo del muerto vuelve al inventario, y la muerte es rara—: son requisito, no aspiración, y cualquier cambio que las debilite hay que medirlo.
 
 ## Modo de trabajo: desarrollo autónomo
 

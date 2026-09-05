@@ -244,6 +244,7 @@ public sealed record PerkDefinition(
     LimitDefinition? Limit,
     bool AccumulatesAcrossMatches,
     bool Lethal,
+    int LethalChance,
     Position? PositionOnly,
     IReadOnlyList<string> TagsRequired,
     IReadOnlyList<string> TagsForbidden);

@@ -78,6 +78,7 @@ internal static class MatchResolution
         int defeatTick = -1;
         int injuries = 0;
         int deaths = 0;
+        var recovered = new List<string>();
         var events = result.Events;
         for (int i = 0; i < events.Count && defeatTick < 0; i++)
         {
@@ -108,6 +109,17 @@ internal static class MatchResolution
 
                 case EventType.Death:
                     deaths++;
+
+                    // ADR 0048, condición 4 ("se puede rehacer"): el objeto del muerto VUELVE AL
+                    // INVENTARIO, no se entierra con él. Es la mitad recuperable de una muerte y la que
+                    // permite que morir sea caro sin ser irreparable; sin ella, retirar la garantía de
+                    // RF-093 dejaría al jugador con una pérdida doble y sin salida (RF-075..078).
+                    if (players[index].Item is { } inherited)
+                    {
+                        recovered.Add(inherited);
+                        players[index] = players[index] with { Item = null };
+                    }
+
                     players[index] = players[index] with { PhysicalState = PhysicalState.Dead };
                     break;
 
@@ -156,6 +168,19 @@ internal static class MatchResolution
         var next = state
             .WithRoster(players)
             .WithNodeCompleted(node.Id, node.Kind, won ? NodeResult.Won : NodeResult.Lost);
+
+        // El almacén se rellena en orden de id de objeto (RT-041), no en orden de muerte.
+        recovered.Sort(StringComparer.Ordinal);
+        for (int i = 0; i < recovered.Count; i++)
+        {
+            next = next.WithStockedItem(recovered[i], 1);
+        }
+
+        if (recovered.Count > 0)
+        {
+            next = next.WithCounter(
+                RunState.ItemsRecoveredCounter, next.Counter(RunState.ItemsRecoveredCounter) + recovered.Count);
+        }
 
         // 5. Consumibles gastados y alineación depurada. Los dos son consecuencia directa del partido y
         //    los dos tienen que ocurrir aquí, antes de que el jugador vuelva al mapa.

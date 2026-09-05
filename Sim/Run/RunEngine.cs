@@ -22,6 +22,16 @@ public enum LineupWarningKind
     /// run (RF-002b).
     /// </summary>
     Shorthanded,
+
+    /// <summary>
+    /// Este titular puede morir en este partido concreto por un perk letal del rival (RF-093 vía 2, ADR
+    /// 0048). Desde que un jugador sano puede morir, esta advertencia <b>no</b> pregunta por su estado:
+    /// pregunta por él contra <b>ese</b> rival y en <b>esa</b> casilla. Lleva número
+    /// (<see cref="LineupWarning.Risk"/>) porque la condición 3 de la ADR 0048 —"se puede reducir el
+    /// riesgo"— es lo único que separa el azar duro del injusto, y una advertencia sin número no se
+    /// puede reducir.
+    /// </summary>
+    LethalOpponentRisk,
 }
 
 /// <summary>
@@ -29,7 +39,23 @@ public enum LineupWarningKind
 /// visible lo compone la interfaz desde <c>data/l10n</c>. <c>PlayerId</c> es -1 cuando la advertencia es
 /// del equipo entero y no de un jugador concreto.
 /// </summary>
-public sealed record LineupWarning(LineupWarningKind Kind, int PlayerId);
+/// <param name="Risk">
+/// Probabilidad de que esa advertencia se cumpla, en base 10.000, o 0 si la advertencia no es de riesgo
+/// cuantificado. Para <see cref="LineupWarningKind.LethalOpponentRisk"/> es la probabilidad de que ese
+/// titular <b>muera en este partido</b>, sumada sobre todos los perks letales del rival y calculada con
+/// la misma función que el motor usa para matar (<c>Sim.Perks.Lethality</c>): el número que se enseña y
+/// el dado que se tira son el mismo (RF-012c, RF-012d).
+/// </param>
+public sealed record LineupWarning(LineupWarningKind Kind, int PlayerId, int Risk = 0);
+
+/// <summary>
+/// Lo que deja un nodo de partido resuelto (<see cref="RunEngine.EnterMatch"/>): el estado ya avanzado,
+/// el resumen del partido y el desenlace de la run después de jugarlo.
+/// </summary>
+/// <param name="State">Estado tras el partido, sus consecuencias y <see cref="IRunSystems.AfterMatch"/>.</param>
+/// <param name="Summary">Resumen del partido, con su <see cref="MatchReport"/> completo (RF-119).</param>
+/// <param name="Outcome">Desenlace de la run tras el partido: en curso, victoria o derrota con su causa.</param>
+public sealed record MatchEntry(RunState State, RunMatchSummary Summary, RunOutcome Outcome);
 
 /// <summary>
 /// Superficie pública del bucle de run (<c>fase2-diseno.md</c> §3). Pura y determinista, igual que
@@ -152,27 +178,50 @@ public static class RunEngine
                 $"hay un nodo abierto ({state.PendingNodeId}): resuélvelo con Apply antes de entrar en otro");
         }
 
-        var available = AvailableNodes(state);
-        MapNode? node = null;
-        for (int i = 0; i < available.Count; i++)
-        {
-            if (available[i].Id == nodeId)
-            {
-                node = available[i];
-                break;
-            }
-        }
-
-        if (node is null)
-        {
-            throw new ArgumentException(
-                $"el nodo {nodeId} no es accesible desde la posición actual (nodo {state.CurrentNodeId}, acto {state.Act})",
-                nameof(nodeId));
-        }
-
+        var node = Accessible(state, nodeId);
         return node.IsMatch
-            ? EnterMatch(state, node, catalog, systems)
+            ? ResolveMatch(state, node, catalog, systems).State
             : EnterInteractive(state, node, catalog, systems);
+    }
+
+    /// <summary>
+    /// Entra en un nodo de <b>partido</b> y devuelve, además del estado, el <b>resumen del partido</b>
+    /// que se acaba de jugar (RF-119). Es exactamente lo que hace
+    /// <see cref="Enter"/> —mismo estado resultante, mismo orden de llamadas, mismas semillas—, pero sin
+    /// tirar el resumen por el camino.
+    ///
+    /// <para>Existe porque la firma de <see cref="Enter"/> es <c>(estado) =&gt; estado</c> y el resumen
+    /// no cabe en ella. La pantalla de partido y la del informe post-partido necesitan el
+    /// <see cref="MatchReport"/> con sus eventos y sus activaciones de perk, y RT-014 les prohíbe
+    /// volver a simular nada para conseguirlo: o se lo da el motor, o se lo inventan. Es también el
+    /// único camino por el que el resumen llega cuando el partido <b>termina la run</b> (RF-002b), que
+    /// es justo cuando <see cref="IRunSystems.AfterMatch"/> no se llega a llamar y no hay otro sitio
+    /// del que sacarlo.</para>
+    /// </summary>
+    public static MatchEntry EnterMatch(RunState state, int nodeId, Catalog catalog, IRunSystems? systems = null)
+    {
+        ArgumentNullException.ThrowIfNull(state);
+        ArgumentNullException.ThrowIfNull(catalog);
+        systems ??= DefaultRunSystems.Instance;
+
+        if (Outcome(state).IsOver)
+        {
+            throw new InvalidOperationException("la run ha terminado: no se puede entrar en más nodos");
+        }
+
+        if (state.Phase != RunPhase.OnMap)
+        {
+            throw new InvalidOperationException(
+                $"hay un nodo abierto ({state.PendingNodeId}): resuélvelo con Apply antes de entrar en otro");
+        }
+
+        var node = Accessible(state, nodeId);
+        if (!node.IsMatch)
+        {
+            throw new ArgumentException($"el nodo {nodeId} es de tipo {node.Kind} y no se juega", nameof(nodeId));
+        }
+
+        return ResolveMatch(state, node, catalog, systems);
     }
 
     /// <summary>
@@ -243,6 +292,106 @@ public static class RunEngine
     }
 
     /// <summary>
+    /// Las mismas advertencias <b>contra el rival concreto de ese nodo</b> (RF-012c, ADR 0048): a las de
+    /// la alineación se le suma una por titular al que un perk letal del rival puede matar, <b>con su
+    /// probabilidad</b> (<see cref="LineupWarning.Risk"/>, base 10.000).
+    ///
+    /// <para>Es la condición 3 de la ADR 0048, la que sostiene todo lo demás: desde que un jugador sano
+    /// puede morir, "se sabía antes" no basta, hay que <b>poder hacer algo</b>. Y el número se mueve con
+    /// las tres cosas que el jugador decide —a quién alinea, en qué estado y en qué casilla— porque
+    /// <see cref="Underleague.Sim.Perks.Lethality.Chance"/> depende de las tres. Pasar un
+    /// <paramref name="lineup"/> distinto devuelve números distintos: eso es lo que convierte el azar en
+    /// decisión.</para>
+    ///
+    /// <para>Ordenado como el resto: primero la advertencia de equipo, luego las de jugador por id
+    /// ascendente, y dentro de un jugador la de lesión grave antes que la de perk letal.</para>
+    /// </summary>
+    public static IReadOnlyList<LineupWarning> LineupWarnings(
+        RunState state, int nodeId, Catalog catalog, IRunSystems? systems = null, Lineup? lineup = null)
+    {
+        ArgumentNullException.ThrowIfNull(state);
+        ArgumentNullException.ThrowIfNull(catalog);
+
+        var warnings = new List<LineupWarning>(LineupWarnings(state, lineup));
+        var risks = LethalRisks(state, nodeId, catalog, systems, lineup);
+        for (int i = 0; i < risks.Count; i++)
+        {
+            if (risks[i].Risk > 0)
+            {
+                warnings.Add(risks[i]);
+            }
+        }
+
+        warnings.Sort(static (a, b) =>
+        {
+            int byPlayer = a.PlayerId.CompareTo(b.PlayerId);
+            return byPlayer != 0 ? byPlayer : ((int)a.Kind).CompareTo((int)b.Kind);
+        });
+
+        return warnings;
+    }
+
+    /// <summary>
+    /// Riesgo de muerte por perk letal rival de <b>cada titular</b> de esa alineación en ese nodo, en
+    /// base 10.000, por id de jugador ascendente y sin filtrar los ceros (RF-012c). Es el dato con el que
+    /// la pantalla de alineación pinta el indicador y con el que una política automática decide.
+    ///
+    /// <para>Se compone perk a perk como probabilidad de que <b>al menos uno</b> acierte, con la misma
+    /// función que el motor usa para matar y sobre los mismos atributos base, así que no es una
+    /// estimación: es el número. Un portador que no está en el once rival no cuenta —no va a saltar al
+    /// campo— y un nodo que no es de partido no tiene riesgo.</para>
+    /// </summary>
+    public static IReadOnlyList<LineupWarning> LethalRisks(
+        RunState state, int nodeId, Catalog catalog, IRunSystems? systems = null, Lineup? lineup = null)
+    {
+        ArgumentNullException.ThrowIfNull(state);
+        ArgumentNullException.ThrowIfNull(catalog);
+        systems ??= DefaultRunSystems.Instance;
+
+        var slots = (lineup ?? state.Lineup).Slots;
+        var risks = new List<LineupWarning>(slots.Count);
+
+        var node = state.GetNode(nodeId);
+        if (!node.IsMatch)
+        {
+            return risks;
+        }
+
+        var carriers = Underleague.Sim.Perks.Lethality.CarriersOf(
+            systems.OpponentFor(state, node, catalog), catalog);
+        if (carriers.Count == 0)
+        {
+            return risks;
+        }
+
+        var lethality = catalog.Tuning.Injury.Lethality;
+        var ordered = new List<LineupSlot>(slots);
+        ordered.Sort(static (a, b) => a.PlayerId.CompareTo(b.PlayerId));
+
+        var exposed = new List<Underleague.Sim.Perks.Lethality.Exposed>(ordered.Count);
+        for (int i = 0; i < ordered.Count; i++)
+        {
+            var player = state.FindPlayer(ordered[i].PlayerId);
+            if (player is null || player.PhysicalState == PhysicalState.Dead)
+            {
+                continue;
+            }
+
+            var definition = player.ToDefinition(catalog);
+            exposed.Add(new Underleague.Sim.Perks.Lethality.Exposed(
+                ordered[i].PlayerId, definition.PhysicalState, definition.Attributes.Stamina, ordered[i].HomeCell));
+        }
+
+        var marked = Underleague.Sim.Perks.Lethality.MarkedRisks(lethality, carriers, exposed);
+        for (int i = 0; i < exposed.Count; i++)
+        {
+            risks.Add(new LineupWarning(LineupWarningKind.LethalOpponentRisk, exposed[i].PlayerId, marked[i]));
+        }
+
+        return risks;
+    }
+
+    /// <summary>
     /// Desenlace de la run (RF-002, RF-002b). Además del desenlace ya registrado en el estado,
     /// comprueba el contador de disponibles frente al mínimo (RF-002e), de modo que cualquier cambio de
     /// plantilla hecho por otro paquete -una venta, un mercenario que se marcha- termine la run igual
@@ -305,7 +454,26 @@ public static class RunEngine
 
     // ------------------------------------------------------------------ interno
 
-    private static RunState EnterMatch(RunState state, MapNode node, Catalog catalog, IRunSystems systems)
+    /// <summary>
+    /// Nodo accesible con ese id desde la posición actual (RF-010: sin retroceso); lanza si no lo es.
+    /// </summary>
+    private static MapNode Accessible(RunState state, int nodeId)
+    {
+        var available = AvailableNodes(state);
+        for (int i = 0; i < available.Count; i++)
+        {
+            if (available[i].Id == nodeId)
+            {
+                return available[i];
+            }
+        }
+
+        throw new ArgumentException(
+            $"el nodo {nodeId} no es accesible desde la posición actual (nodo {state.CurrentNodeId}, acto {state.Act})",
+            nameof(nodeId));
+    }
+
+    private static MatchEntry ResolveMatch(RunState state, MapNode node, Catalog catalog, IRunSystems systems)
     {
         var (setup, seed, lineup) = BuildMatch(state, node.Id, catalog, systems);
         var result = Simulator.Run(setup, seed, catalog, systems.MatchConfig(state, node, catalog));
@@ -323,7 +491,8 @@ public static class RunEngine
 
         if (applied.Outcome.IsOver)
         {
-            return next.WithOutcome(applied.Outcome);
+            next = next.WithOutcome(applied.Outcome);
+            return new MatchEntry(next, applied.Summary, applied.Outcome);
         }
 
         next = systems.AfterMatch(next, node, applied.Summary, catalog);
@@ -334,7 +503,8 @@ public static class RunEngine
             next = next.WithAct(node.Act + 1);
         }
 
-        return Stamp(next);
+        next = Stamp(next);
+        return new MatchEntry(next, applied.Summary, Outcome(next));
     }
 
     private static RunState EnterInteractive(RunState state, MapNode node, Catalog catalog, IRunSystems systems)

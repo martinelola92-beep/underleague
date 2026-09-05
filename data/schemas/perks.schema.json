@@ -150,7 +150,13 @@
     },
     "lethal": {
       "type": "boolean",
-      "description": "RF-093 vía 2: el perk puede matar. Solo mata a un rival que ya no esté sano, y obliga a destacarlo en el informe de ojeo (RF-013). En fase 1 se exigía false porque el motor no cumplía la promesa; desde la fase 2 sí (Sim.Perks.EffectEngine), y el cargador exige a cambio que el perk tenga algún efecto sobre el rival."
+      "description": "RF-093 vía 2: el perk puede matar, y desde la ADR 0048 también a un rival sano. Obliga a destacarlo en el informe de ojeo (RF-013). El cargador exige que el perk tenga algún efecto sobre el rival y que declare lethalChance."
+    },
+    "lethalChance": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 10000,
+      "description": "ADR 0048: probabilidad base de muerte, en base 10.000, del rival MARCADO por cada activación. Obligatoria si lethal es true y prohibida si no. La tirada final la modulan tuning.injury.lethality (estado de la víctima, resistencia y distancia de emparejamiento). Es la palanca con la que se sube y se baja la letalidad al medir."
     },
     "positionOnly": {
       "description": "null o la única posición que puede llevar el perk (validación de build, §5).",

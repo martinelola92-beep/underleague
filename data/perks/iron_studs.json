@@ -26,6 +26,7 @@
   "limit": null,
   "accumulatesAcrossMatches": false,
   "lethal": true,
+  "lethalChance": 760,
   "positionOnly": null,
   "tagsRequired": [],
   "tagsForbidden": []

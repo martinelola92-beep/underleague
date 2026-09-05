@@ -9,7 +9,7 @@
     "effectFinalSeparator": " and ",
     "elsePrefix": "; otherwise, ",
     "linkSeparator": " and ",
-    "lethalSuffix": " If it reaches an opponent who is no longer healthy, it kills them."
+    "lethalSuffix": " It marks one opponent per activation, whoever is worst off, and may kill them even if healthy."
   },
   "effects": {
     "modifyAttribute": "{target} {value:+} {attribute} for {duration}",

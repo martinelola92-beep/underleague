@@ -102,8 +102,8 @@
       "type": "object",
       "properties": {
         "playerOffers": { "type": "integer", "minimum": 0, "maximum": 4 },
-        "perkOffers": { "type": "integer", "minimum": 0, "maximum": 4 },
-        "itemOffers": { "type": "integer", "minimum": 0, "maximum": 4 },
+        "perkOffers": { "type": "integer", "minimum": 0, "maximum": 6 },
+        "itemOffers": { "type": "integer", "minimum": 0, "maximum": 6 },
         "consumableOffers": { "type": "integer", "minimum": 0, "maximum": 4 },
         "mercenaryOffers": { "type": "integer", "minimum": 0, "maximum": 4 },
         "youthMin": { "type": "integer", "minimum": 0, "maximum": 2 },

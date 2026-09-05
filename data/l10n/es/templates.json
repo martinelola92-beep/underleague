@@ -9,7 +9,7 @@
     "effectFinalSeparator": " y ",
     "elsePrefix": "; si no, ",
     "linkSeparator": " y ",
-    "lethalSuffix": " Si alcanza a un rival que ya no está sano, lo mata."
+    "lethalSuffix": " Marca a un rival por activación, el que peor lo tiene, y puede matarlo aunque esté sano."
   },
   "effects": {
     "modifyAttribute": "{target} {value:+} de {attribute} durante {duration}",

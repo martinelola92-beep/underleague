@@ -142,6 +142,31 @@ public static class EquipmentSystem
         return displaced is null ? state : SellItemGold(state, displaced, economy, items);
     }
 
+    /// <summary>
+    /// Saca del almacén el objeto heredado de un muerto y se lo pone a un jugador vivo (ADR 0048,
+    /// condición 4). No cuesta oro —ya estaba pagado— y sigue las mismas reglas que cualquier otra
+    /// asignación: un objeto por jugador (RF-076), y el desplazado se vende como en
+    /// <see cref="AssignPurchasedItem"/>. Se puede hacer en cualquier nodo, igual que transferir: hacer
+    /// sitio o rehacer una build no puede depender de estar en un mercado.
+    /// </summary>
+    public static RunState Apply(RunState state, EquipStoredItem decision, EconomyConfig economy, ItemCatalog items)
+    {
+        ArgumentNullException.ThrowIfNull(state);
+        ArgumentNullException.ThrowIfNull(decision);
+        ArgumentNullException.ThrowIfNull(economy);
+        ArgumentNullException.ThrowIfNull(items);
+
+        if (state.StockOf(decision.ItemId) <= 0)
+        {
+            throw new ArgumentException(
+                $"el almacén no tiene ninguna copia de '{decision.ItemId}' (ADR 0048: solo entra el equipo de un muerto)",
+                nameof(decision));
+        }
+
+        state = state.WithStockedItem(decision.ItemId, -1);
+        return AssignPurchasedItem(state, decision.PlayerId, decision.ItemId, economy, items);
+    }
+
     private static RunPlayer ClearItem(RunPlayer player) => player with { Item = null };
 
     private static RunPlayer AssignItem(RunPlayer player, string itemId) => player with { Item = itemId };

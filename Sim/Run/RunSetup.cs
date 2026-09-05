@@ -117,6 +117,14 @@ public sealed record RerollRewards : RunDecision;
 public sealed record TransferItem(int FromPlayerId, int ToPlayerId) : RunDecision;
 
 /// <summary>
+/// Equipa a un jugador un objeto que está en el <b>almacén</b> del club (ADR 0048, condición 4). Al
+/// almacén solo se llega de una forma: heredando el equipamiento de un jugador muerto. Es "se puede
+/// rehacer" escrito como decisión —la muerte cuesta el jugador, no el jugador y su equipo— y no cuesta
+/// oro, porque el objeto ya estaba pagado.
+/// </summary>
+public sealed record EquipStoredItem(int PlayerId, string ItemId) : RunDecision;
+
+/// <summary>
 /// Compra un hueco de plantilla en un nodo de inscripción (ADR 0046, amplía RF-011). Paga el coste
 /// creciente de <c>economy.enrollmentCosts</c> y sube el techo de plantilla en uno, hasta el máximo de
 /// <see cref="RunRules.MaxRosterSize"/>. Paquete X.

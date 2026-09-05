@@ -469,6 +469,66 @@ public sealed record RunState
     public const string EnrollmentSlotsCounter = "enrollmentSlots";
 
     /// <summary>
+    /// Prefijo del <b>almacén de objetos</b> (ADR 0048, condición 4): <c>itemStock:&lt;idObjeto&gt;</c> con
+    /// cuántas copias sueltas tiene el club. Existe por una única razón: <b>el objeto del jugador muerto
+    /// vuelve al inventario</b> en vez de perderse con él, que es la mitad "se puede rehacer" de lo que
+    /// sostiene que un sano pueda morir. Vive en <see cref="Counters"/> como los huecos de inscripción
+    /// —mismo motivo: añadir un sistema sin subir la versión del esquema (RT-030)— y una run guardada
+    /// antes de esto se carga con el almacén vacío, que es la lectura correcta.
+    /// </summary>
+    public const string ItemStockPrefix = "itemStock:";
+
+    /// <summary>Objetos recuperados de un muerto en toda la run, para el informe y para /Balance.</summary>
+    public const string ItemsRecoveredCounter = "itemsRecovered";
+
+    /// <summary>Copias sueltas de ese objeto en el almacén.</summary>
+    public int StockOf(string itemId)
+    {
+        ArgumentException.ThrowIfNullOrEmpty(itemId);
+        return Counter(ItemStockPrefix + itemId);
+    }
+
+    /// <summary>
+    /// Objetos del almacén, por id ascendente y una entrada por copia (RT-041): es lo que la pantalla de
+    /// equipo enseña y lo que una política automática recorre.
+    /// </summary>
+    public IReadOnlyList<string> StoredItems
+    {
+        get
+        {
+            var ids = new List<string>();
+            foreach (var (key, count) in Counters)
+            {
+                if (count <= 0 || !key.StartsWith(ItemStockPrefix, StringComparison.Ordinal))
+                {
+                    continue;
+                }
+
+                for (int i = 0; i < count; i++)
+                {
+                    ids.Add(key[ItemStockPrefix.Length..]);
+                }
+            }
+
+            ids.Sort(StringComparer.Ordinal);
+            return ids;
+        }
+    }
+
+    /// <summary>Copia con una copia más (o menos) de ese objeto en el almacén.</summary>
+    public RunState WithStockedItem(string itemId, int delta)
+    {
+        ArgumentException.ThrowIfNullOrEmpty(itemId);
+        int next = StockOf(itemId) + delta;
+        if (next < 0)
+        {
+            throw new InvalidOperationException($"el almacén no tiene ninguna copia de '{itemId}' que sacar");
+        }
+
+        return WithCounter(ItemStockPrefix + itemId, next);
+    }
+
+    /// <summary>
     /// Jugadores que <b>ocupan plantilla</b> (RF-020): todos menos los muertos. El muerto se queda en
     /// <see cref="Roster"/> para el memorial (RF-122) pero deja su sitio libre: morir cuesta un jugador,
     /// no un jugador y su hueco.

@@ -38,6 +38,12 @@ public sealed class FullRunGateTests
 
     private static readonly Lazy<Measured> Result = new(Play);
 
+    /// <summary>
+    /// La misma política contextual sobre las mismas semillas pero <b>sin leer el indicador de riesgo</b>
+    /// (<c>HeedsLethalScouting</c> a false): la mitad de control de la métrica de agencia de la ADR 0048.
+    /// </summary>
+    private static readonly Lazy<IReadOnlyList<RunPlayResult>> Blind = new(PlayBlind);
+
     private sealed record Measured(
         IReadOnlyDictionary<PurchaseDoctrine, IReadOnlyList<RunPlayResult>> ByDoctrine,
         IReadOnlyList<MetricResult> Metrics);
@@ -122,15 +128,47 @@ public sealed class FullRunGateTests
     }
 
     /// <summary>
-    /// ADR 0046 y RF-093: las muertes tienen que existir y venir de las dos vías, no de una sola. La
-    /// banda de diseño (0,5-2) la comprueba <see cref="TheMetricsThatDoNotMeetTheirDesignBandStayWhereTheyWereMeasured"/>
-    /// como cota; aquí se afirma lo estructural: con perks letales en el catálogo, alguna run muere.
+    /// ADR 0046, ADR 0048 y RF-093: las muertes tienen que existir, y desde que un jugador sano puede
+    /// morir tienen que ser el riesgo permanente que la ADR 0048 describe, no una anécdota. La banda de
+    /// diseño (1,5-3) es ahora dura y la comprueba
+    /// <see cref="TheMetricsThatDoNotMeetTheirDesignBandStayWhereTheyWereMeasured"/> como cota ancha con
+    /// esta muestra de 60 runs; aquí se afirma lo estructural.
     /// </summary>
     [Fact]
     public void DeathsHappenAndTheyAreNotAllFromTheSameSource()
     {
         double deaths = Result.Value.ByDoctrine[PurchaseDoctrine.Contextual].Average(r => (double)r.Deaths);
-        Assert.True(deaths > 0.2, $"muertes por run = {deaths:F2}: con perks letales en el catálogo deberían ser más");
+        Assert.True(deaths > 0.8, $"muertes por run = {deaths:F2}: con la ADR 0048 deberían ser muchas más");
+
+        // ADR 0048, condición 4: el equipamiento del muerto vuelve al inventario en vez de enterrarse
+        // con él. Si dejara de volver, morir costaría el doble y la condición "se puede rehacer" —la que
+        // sostiene que un sano pueda morir— dejaría de cumplirse sin que nada se pusiera rojo.
+        double recovered = Result.Value.ByDoctrine[PurchaseDoctrine.Contextual].Average(r => (double)r.ItemsRecovered);
+        Assert.True(recovered > 0.0, "ningún objeto ha vuelto al inventario tras una muerte (ADR 0048)");
+    }
+
+    /// <summary>
+    /// ADR 0048, condición 3: la política que <b>no</b> lee el informe de ojeo tiene que alinear distinto
+    /// de la que sí lo lee. Es lo estructural, y es lo único que esta muestra puede afirmar.
+    ///
+    /// <para><b>Lo que esta puerta NO afirma, y por qué.</b> La métrica que la ADR declara decisiva —que
+    /// atender al indicador se note en las <b>muertes</b>— mide 1,53 contra 1,62 por run con 500 runs por
+    /// doctrina, un 5,6%. Con las 60 runs de esta puerta el ruido de <c>deathsPerRun</c> es de ±0,3, es
+    /// decir tres veces el efecto, así que afirmarlo aquí sería un test que falla por mala suerte, que es
+    /// exactamente lo que las convenciones del proyecto prohíben. La medición vive en fase2-diseno.md
+    /// §21.2 con su barrido de <c>--risk-aversion</c>, y la conclusión —que el indicador tiene un 27% de
+    /// rango pero solo un 5% de él es aprovechable— está abierta como AD-A en pendientes.md.</para>
+    /// </summary>
+    [Fact]
+    public void NotReadingTheScoutingReportChangesHowThePolicyLinesUp()
+    {
+        var heeding = Result.Value.ByDoctrine[PurchaseDoctrine.Contextual];
+        var blind = Blind.Value;
+
+        Assert.Equal(heeding.Count, blind.Count);
+        Assert.True(
+            heeding.Where((run, i) => run.Deaths != blind[i].Deaths || run.Matches != blind[i].Matches).Any(),
+            "leer o no leer el informe de ojeo produce runs idénticas: la contrajugada no está conectada (ADR 0048)");
     }
 
     /// <summary>
@@ -176,7 +214,7 @@ public sealed class FullRunGateTests
         AssertBetween(FullRunMetrics.AffordableShare, 25.0, 70.0);
         AssertBetween(FullRunMetrics.LeftoverGoldShare, 5.0, 32.0);
         AssertBetween(FullRunMetrics.BrokeMarketRunShare, 20.0, 88.0);
-        AssertBetween(FullRunMetrics.DeathsPerRun, 0.3, 2.0);
+        AssertBetween(FullRunMetrics.DeathsPerRun, 1.0, 3.0);
         AssertBetween(FullRunMetrics.PurchasesPerMarket, 0.5, 2.0);
     }
 
@@ -264,6 +302,25 @@ public sealed class FullRunGateTests
 
     private static RunSetup SetupFor(Race race, StandardRunSystems standard, IReadOnlyDictionary<string, string> files) =>
         standard.NewRunSetup("gate_club", race, files) with { GeneratedQuality = 50 };
+
+    private static IReadOnlyList<RunPlayResult> PlayBlind()
+    {
+        var catalog = TestData.LoadCatalog();
+        var files = TestData.LoadAllFiles();
+        var standard = StandardRunSystems.FromJson(files);
+        var bosses = BossCatalog.FromJson(files);
+        var races = catalog.Races.Where(r => r.Launch).Select(r => r.Id).OrderBy(r => r).ToList();
+        var options = RunPolicyOptions.For(PurchaseDoctrine.Contextual) with { HeedsLethalScouting = false };
+
+        var rows = new List<RunPlayResult>(Runs);
+        for (int i = 0; i < Runs; i++)
+        {
+            var setup = SetupFor(races[i % races.Count], standard, files);
+            rows.Add(RunPolicy.Play(setup, Seed + (ulong)i, catalog, standard, bosses, options));
+        }
+
+        return rows;
+    }
 
     private static Measured Play()
     {

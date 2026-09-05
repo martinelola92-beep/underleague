@@ -314,7 +314,8 @@ public sealed record InjuryTuning(
     int RelativeFactor,
     int SevereShare,
     IReadOnlyList<int> ActScalePercent,
-    int EliteScalePercent)
+    int EliteScalePercent,
+    Underleague.Sim.Perks.LethalityTuning Lethality)
 {
     /// <summary>Multiplicador de desgaste del acto indicado (1..3), en tanto por ciento.</summary>
     public int ScaleForAct(int act) =>

@@ -227,6 +227,7 @@ public sealed class StandardRunSystems : IRunSystems
             DeclineReward => RewardSystem.Decline(state, _economy),
             RerollRewards => RewardSystem.Reroll(state, _economy),
             TransferItem transfer => EquipmentSystem.Apply(state, transfer, _economy, _items),
+            EquipStoredItem stored => EquipmentSystem.Apply(state, stored, _economy, _items),
             _ => throw new NotSupportedException(
                 $"la decisión {decision.GetType().Name} no la resuelve el paquete X: la resuelve el paquete Y (jefe) "
                     + "sustituyendo StandardRunSystems por su propia implementación de IRunSystems, o componiendo las dos."),

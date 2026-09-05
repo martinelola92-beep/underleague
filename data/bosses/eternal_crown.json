@@ -1,5 +1,5 @@
 {
-  "_doc": "Jefe final (RF-001c): plantilla integramente legendaria, DOS modificadores de regla y una condicion de derrota propia (D-9). «Porteria sellada» apaga los perks que suben el remate a puerta y «Cerrojo» (pushBack) vacia el tercio atacante; «El campeon conserva el titulo» convierte el empate al final del tiempo reglamentario en derrota, y anula entre el 13% y el 20% de las victorias en el campo. Recalibrado contra la tabla revisada de la ADR 0033: la columna del acto 3 es la mas estrecha (pide <10% para una build incoherente y >=55% para una muy buena, 45 puntos de escalera) y con «Cerrojo» en la columna 5 el catalogo solo daba 41. Subir la columna a 6 —el cerrojo vacia el tercio atacante, no medio campo— ensancha la escalera a 47 puntos y permite subir la calidad del jefe de 20 a 28 sin aplastar el escalon superior. Medido: 6,1 / 28,8 / 46,2 / 57,7.",
+  "_doc": "Jefe final (RF-001c): plantilla integramente legendaria, DOS modificadores de regla y una condicion de derrota propia (D-9). «Porteria sellada» apaga los perks que suben el remate a puerta y «Cerrojo» (pushBack) vacia el tercio atacante; «El campeon conserva el titulo» convierte el empate al final del tiempo reglamentario en derrota, y anula entre el 13% y el 20% de las victorias en el campo. RECALIBRADO POR LA ADR 0049 (quality 28 -> 24): bajar la recompensa de liga a 1-de-2 baja la build con la que se llega al acto 3 (13,0 perks -> 8,6) y con quality 28 el escalon MUY BUENA se quedaba en 49,1 frente al 55 que pide su banda; ablandarlo sube tambien la fila CORRECTA, que pasa a ser la unica celda de las doce que necesita el margen de medida. Calibrado antes contra la tabla revisada de la ADR 0033: la columna del acto 3 es la mas estrecha (pide <10% para una build incoherente y >=55% para una muy buena, 45 puntos de escalera) y con «Cerrojo» en la columna 5 el catalogo solo daba 41. Subir la columna a 6 —el cerrojo vacia el tercio atacante, no medio campo— ensancha la escalera a 47 puntos y permite subir la calidad del jefe de 20 a 28 sin aplastar el escalon superior. Medido: 6,1 / 28,8 / 46,2 / 57,7.",
   "id": "eternal_crown",
   "act": 3,
   "name": {
@@ -8,7 +8,7 @@
   },
   "template": {
     "race": "Undead",
-    "quality": 28,
+    "quality": 24,
     "level": 8,
     "rarity": "rare",
     "perks": [

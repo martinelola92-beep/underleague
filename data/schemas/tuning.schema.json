@@ -512,6 +512,74 @@
           "type": "integer",
           "minimum": 0,
           "maximum": 1000
+        },
+        "lethality": {
+          "description": "ADR 0048: la tirada de muerte de un perk letal (Sim.Perks.Lethality). Un jugador sano puede morir, asi que alcanzar ya no es matar: se marca a victimsPerActivation rivales por activacion -el que peor lo tiene- y se tira por ellos.",
+          "type": "object",
+          "properties": {
+            "_doc": {
+              "type": "string"
+            },
+            "relativeFactor": {
+              "$ref": "#/$defs/factor"
+            },
+            "proximityBasePercent": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 1000
+            },
+            "proximityStepPercent": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 1000
+            },
+            "proximityMinPercent": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 1000
+            },
+            "minorInjuryPercent": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 10000
+            },
+            "severeInjuryPercent": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 10000
+            },
+            "resistanceMinPercent": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 10000
+            },
+            "resistanceMaxPercent": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 10000
+            },
+            "maxChance": {
+              "$ref": "#/$defs/probability"
+            },
+            "victimsPerActivation": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 7
+            }
+          },
+          "required": [
+            "relativeFactor",
+            "proximityBasePercent",
+            "proximityStepPercent",
+            "proximityMinPercent",
+            "minorInjuryPercent",
+            "severeInjuryPercent",
+            "resistanceMinPercent",
+            "resistanceMaxPercent",
+            "maxChance",
+            "victimsPerActivation"
+          ],
+          "additionalProperties": false
         }
       },
       "required": [
@@ -520,7 +588,8 @@
         "relativeFactor",
         "severeShare",
         "actScalePercent",
-        "eliteScalePercent"
+        "eliteScalePercent",
+        "lethality"
       ],
       "additionalProperties": false
     },

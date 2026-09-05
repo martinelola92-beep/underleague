@@ -25,7 +25,7 @@ public static class FullRunMetrics
     /// <summary>Partidos que juega una run que llega hasta el jefe final (18-22).</summary>
     public const string MatchesPerFullRun = "matchesPerFullRun";
 
-    /// <summary>Muertes por run (0,5-2).</summary>
+    /// <summary>Muertes por run (1,5-3 desde la ADR 0048; antes 0,5-2).</summary>
     public const string DeathsPerRun = "deathsPerRun";
 
     /// <summary>Sumideros que el oro de un acto permite pagar; 2-3 y nunca todos (RF-114k).</summary>
@@ -45,6 +45,9 @@ public static class FullRunMetrics
 
     /// <summary>Ventaja de la política contextual sobre la mejor de las dos puras, en puntos (&gt;= 8, ADR 0037).</summary>
     public const string ContextualAdvantage = "contextualAdvantage";
+
+    /// <summary>Prefijo de las muertes por acto (ADR 0048): la banda 1,5-3 no dice dónde caen.</summary>
+    public const string DeathsByActPrefix = "deathsAct";
 
     /// <summary>Prefijo del reparto de las derrotas por acto (ADR 0043: la mayoría deben caer en el acto 2).</summary>
     public const string DefeatShareByActPrefix = "defeatShareAct";
@@ -82,11 +85,14 @@ public static class FullRunMetrics
     /// <summary>Partidos máximos de una run completa.</summary>
     public const double MatchesPerFullRunMax = 22.0;
 
-    /// <summary>Muertes por run mínimas.</summary>
-    public const double DeathsPerRunMin = 0.5;
+    /// <summary>
+    /// Muertes por run mínimas. Sube de 0,5 a <b>1,5</b> con la ADR 0048: desde que un jugador sano puede
+    /// morir, el desgaste es un riesgo permanente y no el castigo de una mala decisión puntual.
+    /// </summary>
+    public const double DeathsPerRunMin = 1.5;
 
-    /// <summary>Muertes por run máximas.</summary>
-    public const double DeathsPerRunMax = 2.0;
+    /// <summary>Muertes por run máximas (ADR 0048: de 2 a 3).</summary>
+    public const double DeathsPerRunMax = 3.0;
 
     /// <summary>Sumideros pagables por acto: mínimo.</summary>
     public const double SinksMin = 2.0;
@@ -209,6 +215,11 @@ public static class FullRunMetrics
         long offers = 0, affordable = 0, purchases = 0, marketVisits = 0, goldAtMarket = 0;
         var actReached = new int[RunRules.Acts + 1];
         var goldByAct = new long[RunRules.Acts];
+        var deathsByAct = new long[RunRules.Acts];
+        var perksAtBoss = new long[RunRules.Acts];
+        var itemsAtBoss = new long[RunRules.Acts];
+        var bossSamples = new long[RunRules.Acts];
+        long itemsRecovered = 0;
         var matchesByAct = new long[RunRules.Acts];
         var actSamples = new int[RunRules.Acts];
         int sinkSamples = 0, allFourAffordable = 0;
@@ -296,8 +307,13 @@ public static class FullRunMetrics
                 fullRunMatches += run.Matches;
             }
 
+            itemsRecovered += run.ItemsRecovered;
             for (int act = 0; act < RunRules.Acts; act++)
             {
+                deathsByAct[act] += run.DeathsByAct[act];
+                perksAtBoss[act] += run.PerksAtBossByAct[act];
+                itemsAtBoss[act] += run.ItemsAtBossByAct[act];
+                bossSamples[act] += run.BossSamplesByAct[act];
                 if (run.MatchesByAct[act] == 0)
                 {
                     continue;
@@ -397,6 +413,7 @@ public static class FullRunMetrics
         rows.Add(Info("perksOnStarters", (double)starterPerks / runs.Count));
         rows.Add(Info("itemsOnRoster", (double)items / runs.Count));
         rows.Add(Info("accumulatedCountersPerRun", (double)counters / runs.Count));
+        rows.Add(Info("itemsRecoveredPerRun", (double)itemsRecovered / runs.Count));
         rows.Add(Info("injuredAtEnd", (double)injuries / runs.Count));
         rows.Add(Info("severeInjuriesPerRun", (double)severe / runs.Count));
         rows.Add(Info("ownInjuriesPerRun", (double)ownInjuries / runs.Count));
@@ -408,6 +425,12 @@ public static class FullRunMetrics
             rows.Add(Info($"reachedAct{act + 1}", 100.0 * ReachedAct(actReached, act + 1) / runs.Count));
             rows.Add(Info($"goldEarnedAct{act + 1}", actSamples[act] > 0 ? (double)goldByAct[act] / actSamples[act] : 0.0));
             rows.Add(Info($"matchesAct{act + 1}", actSamples[act] > 0 ? (double)matchesByAct[act] / actSamples[act] : 0.0));
+
+            // ADR 0048: la banda de muertes no dice nada sin saber dónde caen. Por run empezada, no por
+            // run que llega al acto: es la cifra que se suma a deathsPerRun.
+            rows.Add(Info($"{DeathsByActPrefix}{act + 1}", (double)deathsByAct[act] / runs.Count));
+            rows.Add(Info($"perksAtBossAct{act + 1}", bossSamples[act] > 0 ? (double)perksAtBoss[act] / bossSamples[act] : 0.0));
+            rows.Add(Info($"itemsAtBossAct{act + 1}", bossSamples[act] > 0 ? (double)itemsAtBoss[act] / bossSamples[act] : 0.0));
         }
 
         return rows;

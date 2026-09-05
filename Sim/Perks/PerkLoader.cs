@@ -33,7 +33,7 @@ public static class PerkLoader
     private static readonly string[] KnownKeys =
     {
         "id", "name", "rarity", "kind", "axis", "race", "trigger", "scope", "links", "condition",
-        "effects", "elseEffects", "limit", "accumulatesAcrossMatches", "lethal", "positionOnly",
+        "effects", "elseEffects", "limit", "accumulatesAcrossMatches", "lethal", "lethalChance", "positionOnly",
         "tagsRequired", "tagsForbidden",
     };
 
@@ -129,8 +129,21 @@ public static class PerkLoader
 
         bool accumulates = root.TryProp("accumulatesAcrossMatches") is { } accNode && accNode.AsBool();
         bool lethal = root.TryProp("lethal") is { } lethalNode && lethalNode.AsBool();
+        int lethalChance = root.TryProp("lethalChance") is { } chanceNode ? chanceNode.AsInt() : 0;
         if (lethal)
         {
+            // ADR 0048: un jugador sano puede morir, así que alcanzar a una víctima ya no la mata: tira
+            // por ella. La probabilidad base es del perk —es la palanca con la que se sube y se baja la
+            // letalidad al medir— y sin ella el perk sería letal en el ojeo y inofensivo en el campo.
+            if (lethalChance <= 0)
+            {
+                throw new DataException(
+                    file,
+                    "$.lethalChance",
+                    "un perk letal necesita una probabilidad base de muerte mayor que cero (ADR 0048): "
+                        + "sin ella se anuncia como letal en el informe de ojeo y no mata nunca (RF-012d)");
+            }
+
             // RF-093 vía 2. Ya no se rechaza: en fase 1 no había muertes y un perk letal era una promesa
             // que el motor no cumplía; desde la fase 2 el motor la cumple (EffectEngine mata a los
             // rivales alcanzados por un perk letal que ya no estén sanos, y solo a ellos). Lo que sí se
@@ -145,6 +158,12 @@ public static class PerkLoader
                     "un perk letal debe tener algún efecto sobre el rival (target actor, target, opponent u "
                         + "opposingTeam): matar solo puede alcanzar a un rival (RF-093)");
             }
+        }
+
+        else if (lethalChance != 0)
+        {
+            throw new DataException(
+                file, "$.lethalChance", "solo un perk con lethal:true puede declarar lethalChance (ADR 0048)");
         }
 
         Position? positionOnly = null;
@@ -163,7 +182,8 @@ public static class PerkLoader
 
         return new PerkDefinition(
             id, name, rarity, kind, axis, race, links, trigger, scope, conditionSource, condition,
-            effects, elseEffects, limit, accumulates, lethal, positionOnly, tagsRequired, tagsForbidden);
+            effects, elseEffects, limit, accumulates, lethal, lethalChance, positionOnly, tagsRequired,
+            tagsForbidden);
     }
 
     /// <summary>
