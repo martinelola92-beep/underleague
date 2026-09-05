@@ -121,9 +121,22 @@ public sealed class FullRunTests
         return state;
     }
 
+    /// <summary>
+    /// Primer portador posible, o -1 si la opción no se puede cobrar. Además de no tener portador, un
+    /// perk puede estar fuera de alcance por su arco (ADR 0051): un maestro cuya línea todavía no está
+    /// construida, o una línea que otro maestro cerró. La pantalla los enseña con su motivo y el botón
+    /// apagado; aquí, que es una política ciega que coge la primera opción cobrable, se saltan igual que
+    /// se salta un perk que nadie puede llevar.
+    /// </summary>
     private static int FirstEligibleCarrier(RunState state, string perkId, Catalog catalog)
     {
         var perk = catalog.Perks.Get(perkId);
+        if (Underleague.Sim.Run.Systems.PerkPool.Availability(state, perk, catalog)
+            != Underleague.Sim.Run.Systems.PerkAvailability.Available)
+        {
+            return -1;
+        }
+
         var carriers = Underleague.Sim.Run.Systems.PerkPool.EligibleCarriers(state, perk, catalog);
         return carriers.Count > 0 ? carriers[0] : -1;
     }

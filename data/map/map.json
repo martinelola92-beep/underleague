@@ -1,5 +1,5 @@
 {
-  "_doc": "Estructura del mapa de la run (RF-001, RF-003b, RF-010..015). Cierra D-2 y D-10: nodosPorActo es el número de nodos que el jugador RECORRE en cada acto (lectura W-1 de RF-001), no los dibujados. De él se derivan por construcción los mercados (capas 2, 5 y 8), el jefe (última capa) y el reparto entre capas de partido y de servicio (MapGenerator).",
+  "_doc": "Estructura del mapa de la run (RF-001, RF-003b, RF-010..015). Cierra D-2 y D-10: nodosPorActo es el número de nodos que el jugador RECORRE en cada acto (lectura W-1 de RF-001), no los dibujados. De él se derivan por construcción las capas de mercado (las pares, de la 2 a la penúltima; ADR 0053), el jefe (última capa) y el reparto entre capas con partido y sin partido (MapGenerator).",
   "nodesPerAct": [11, 12, 12],
   "eliteRivalLevelBonus": 2
 }

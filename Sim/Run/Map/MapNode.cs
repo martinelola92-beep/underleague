@@ -12,7 +12,12 @@ namespace Underleague.Sim.Run;
 /// </param>
 /// <param name="Act">Acto al que pertenece, 1..3.</param>
 /// <param name="Layer">Capa del grafo, 0 = entrada del acto. Las aristas siempre van de <c>Layer</c> a <c>Layer + 1</c> (RF-010: sin retroceso).</param>
-/// <param name="IndexInLayer">Posición dentro de la capa, 0 arriba. Determina el orden de dibujo y el criterio de no cruce de aristas.</param>
+/// <param name="IndexInLayer">
+/// <b>Carril</b> del nodo, 0 arriba y <c>MapGenerator.Lanes - 1</c> abajo (ADR 0053). No es un índice
+/// correlativo dentro de la capa: es una posición fija en el mapa, la misma en todas las capas, y por eso
+/// vale a la vez para dibujar (la altura del nodo) y para la regla de movimiento (solo se va a un carril
+/// contiguo). Una capa ocupa siempre un intervalo contiguo de carriles.
+/// </param>
 /// <param name="Kind">Tipo de nodo (RF-011).</param>
 /// <param name="Next">Ids de los nodos alcanzables en un salto, en orden ascendente. Vacío solo en el nodo de jefe.</param>
 /// <param name="OpponentId">
@@ -41,7 +46,7 @@ public sealed record MapNode(
 /// </summary>
 /// <param name="Act">Acto, 1..3.</param>
 /// <param name="Nodes">Nodos ordenados por <see cref="MapNode.Id"/> ascendente (= capa, luego índice en capa).</param>
-/// <param name="EntryNodeIds">Nodos de la capa 0: por los que se puede empezar el acto.</param>
+/// <param name="EntryNodeIds">Nodos de la capa 0. Desde la ADR 0053 es <b>uno solo</b>: el acto empieza siempre en el mismo nodo y bifurca a partir de ahí (1 -> 2 -> 4).</param>
 /// <param name="BossNodeId">Nodo de jefe. Visible desde el principio del acto (RF-014).</param>
 /// <param name="BossModifierId">
 /// Modificador de regla del jefe (RF-001b, <c>data/bosses/</c>). Cadena vacía mientras el paquete Y no lo

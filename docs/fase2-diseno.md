@@ -46,8 +46,9 @@ Puro y determinista, igual que `Simulator.Run`. Los partidos se resuelven llaman
 ## 4. Mapa (RF-010..015)
 
 - Grafo por capas dirigido, sin retroceso, 10-12 nodos por acto y 3 actos (D-2/D-10, valores de partida: 11 nodos, de los cuales **6 partidos como máximo**, RF-003b).
+- **Cuatro carriles** (ADR 0053, §24): entrada única y apertura 1 → 2 → 4, movimiento solo a carriles contiguos —que es lo que le da memoria a la ruta— y jefe de ancho 1. El acto dibuja ~36 nodos y el jugador recorre 11.
 - Tipos: `LeagueMatch`, `EliteMatch`, `Market`, `Clinic`, `Training`, `Event`, `Boss`. (`Workshop` en fase 3.)
-- **Un mercado cada 3-4 nodos y alcanzable en dos saltos desde cualquier punto** (RF-011b): el generador lo garantiza por construcción y hay un test que lo comprueba sobre 1.000 mapas.
+- **Un mercado alcanzable en dos saltos desde cualquier punto** (RF-011b): el generador lo garantiza por construcción —capas de mercado cada 2, con sus carriles dominando los de la capa anterior (§24)— y hay un test que lo comprueba sobre 1.000 mapas. Desde la ADR 0053 el mercado **no ocupa la capa entera**: se puede esquivar, y eso es lo que devuelve la decisión de RF-002d.
 - Rivales **estáticos por acto**, diseñados a mano en `data/rivals/` (RF-015); lo aleatorio es el mapa y qué rival cae en qué nodo.
 - Distintivo de dificultad de 5 niveles (RF-012) e informe de ojeo completo y gratuito (RF-012b), que es un dato derivado del `TeamSetup` del rival, no un texto.
 - El nodo de jefe es visible desde el principio; su modificador permanece oculto hasta llegar (RF-014) y queda registrado en el compendio del perfil una vez descubierto (RF-014b).
@@ -2000,8 +2001,8 @@ Los cuatro maestros escritos, con su efecto y su descripción **generada** (RT-0
 - **`granite_line` · Línea de granito** (raro, condicional, acto nativo 2). *"Al empezar el partido, si el
   portador empieza en su tercio, el equipo suma +15% a su probabilidad de robar y el equipo rival suma -5%
   a su probabilidad de tiro a puerta. Exige llevar ya 2 perks de La Muralla. Cierra La Puntería para el
-  resto de la run."* Es el único perk del catálogo que mueve a los dos equipos a la vez desde el saque
-  inicial, y por eso pide una línea construida detrás.
+  resto de la run."* Empuja a los dos equipos a la vez desde el saque inicial y sobre los dos canales que
+  deciden un 0-0 —el robo propio y el remate rival—, y por eso pide una línea construida detrás.
 - **`killing_range` · Distancia de tiro** (raro, condicional, acto 2). *"Al tirar, si el jugador está a
   menos de 6 casillas de portería, el jugador suma +15% a su probabilidad de tiro a puerta. Exige llevar ya
   2 perks de La Puntería. Cierra La Muralla para el resto de la run."* Con `scope: team` mejora el remate
@@ -2121,8 +2122,8 @@ opciones fuera de alcance, igual que ya se saltaba las que nadie puede llevar.
 **AF-13. Un maestro entra en el pool cuando le falta como mucho una pieza.** Con el requisito ya cumplido
 sería invisible hasta que sobra, y el jugador nunca aprendería que existe; ofreciéndolo siempre, el surtido
 se llenaría de opciones imposibles. A una pieza de distancia es el punto en el que el objetivo se ve venir
-y **el mercado recupera el papel** que el trampolín de la ADR 0043 le había quitado: si te falta la tercera
-pieza de tu línea, la buscas y la pagas. La política automática lo hace: `ArcMarketWeight` pone al maestro
+y **el mercado recupera el papel** que el trampolín de la ADR 0043 le había quitado: si te falta una pieza
+de tu línea, la buscas y la pagas. La política automática lo hace: `ArcMarketWeight` pone al maestro
 y a las piezas de la línea perseguida por encima de cualquier otra compra.
 
 **AF-14. La política automática persigue un maestro.** `RunPolicyOptions.PursuesMasters` (activo por
@@ -2237,3 +2238,164 @@ de recompensa: lo que este paquete cambia es **qué entra en el pool**, no cuán
 tabla de valor por perk de la ADR 0038 (`data/economy/perk-values.json`) tampoco: los cuatro maestros no
 tienen valor medido y el pool les da el peso base, que es lo que esa tabla hace con cualquier perk que
 todavía no se ha medido. Cuando se midan, su peso bajará solo, como el de todos los demás.
+
+## 24. Decisiones de implementación de la ADR 0053: el mapa de cuatro carriles
+
+Lo que la ADR 0053 (`Sim/Run/Map/**`, `Sim.Tests/Run/MapTests.cs`, `Game/Ui/MapView.cs`,
+`Game/Screens/MapScreen.cs`) resolvió y por qué. Revisa las decisiones **W-2** (mercados en cuello de
+botella), **W-3** (una capa libre es entera de partidos o entera de servicios) y **W-4** (aristas sin
+cruces) del paquete base. Los nodos que el jugador **recorre** no cambian: 11/12/12 (W-1).
+
+**AH-1. El esqueleto: 1 → 2 → 4 → … → 1.** El acto tiene `PathLength` capas y cuatro **carriles**
+(`MapGenerator.Lanes`). La capa 0 tiene un nodo, la 1 dos, y de la 2 en adelante las capas ocupan un
+intervalo contiguo de 3 o 4 carriles; la última es el jefe, de nuevo un nodo. El acto queda **cerrado por
+los dos extremos y abierto en medio**, que es donde deben estar las decisiones. Todo el sorteo —anchos,
+carriles de mercado, tipos y aristas— sale en orden fijo del flujo `RngStreams.Map(runSeed, act)` (RT-022):
+el mapa sigue siendo reproducible con la misma semilla y sigue sin depender de los flujos de partido y de
+recompensas, y los tests `SameSeed_SameMap` y `RewardsStream_DoesNotChangeTheMap` no han cambiado.
+
+```
+  capa:    0    1    2      3    4      5    6      7    8      9    10
+  ancho:   1    2    4      3-4  4      3-4  4      3-4  4      3-4   1
+                    MERC.       MERC.       MERC.       MERC.       JEFE
+```
+
+**AH-2. La capa 0 es siempre un partido de liga.** *(decisión de diseño, RF-123)* Todo el mundo juega el
+mismo primer nodo del acto: arranque comparable entre runs, oro antes del primer mercado y el sitio
+natural del mapa fijo de la primera run guiada. Es además lo que sube el suelo de partidos de AH-8.
+
+**AH-3. Movimiento solo a carriles contiguos, con dos excepciones.** Desde el carril `i` se va a `i-1`,
+`i` o `i+1`. Es lo que le da **memoria** a la ruta: subir de carril cierra la parte baja del acto y volver
+cuesta varias capas, así que la decisión deja de ser local. Las excepciones son las dos de la ADR: la
+**apertura** (capas 0 y 1, donde 1 → 2 y 2 → 4 son completas) y el **jefe**, en el que convergen todos los
+caminos. `MapInvariants.CheckLaneContiguity` lo comprueba y hay un test que lo verifica sin pasar por el
+comprobador.
+
+**AH-4. W-4 queda revisada: las aristas se cruzan, y eso ya no es un defecto.** Con carriles contiguos dos
+aristas vecinas pueden cruzarse (`i → i+1` y `i+1 → i`), y ese cruce *es* la reconvergencia que pide la
+ADR. El invariante de no cruce se sustituye por el de contigüidad de carril; el dibujo se hace cargo
+(AH-10).
+
+**AH-5. RF-011b: con capas de mercado mixtas, los mercados van cada 2 capas, no cada 3.** Es la parte
+difícil de la ADR y sale de una cuenta, no de un ajuste. En un grafo por capas, lo alcanzable en dos saltos
+desde la capa `i` son `i+1` e `i+2`. Si la capa de mercado **mezcla** mercado con otros nodos —que es justo
+lo que la ADR pide para que desviarse cueste posición—, el nodo que no es mercado necesita otro mercado en
+`i+1` o `i+2`; con la separación de 3 de W-2 el siguiente está en `i+3` y ese nodo se queda a tres saltos.
+Luego **la separación tiene que ser 2**: las capas de mercado son las **pares, de la 2 a la `PathLength-2`**.
+La garantía se cierra en tres pasos, todos por construcción:
+
+1. **Dominación.** Los mercados de la capa `m` cubren todos los carriles de la capa `m-1`: para cada carril
+   `x` hay un mercado en `[x-1, x+1]`. Se consigue eligiendo los carriles de mercado **en función del ancho
+   de la capa anterior**: si mide 3 carriles basta con **uno** (el central los cubre los tres); si mide los
+   4, hacen falta **dos**, uno en `{0,1}` y otro en `{2,3}`. De ahí sale, literalmente, el "uno o dos
+   carriles" de la ADR. La capa 2 es la excepción: la apertura 2 → 4 es completa y cualquier carril vale.
+2. **Arista forzada.** Todo nodo de una capa `m-1` recibe explícitamente la arista al mercado que lo
+   domina: tiene un mercado **a un salto**.
+3. **Dos saltos para el resto.** Cualquier otro nodo tiene sus sucesores en una capa `m-1` —porque las
+   capas de mercado van cada 2— y por el paso anterior ese sucesor tiene mercado a un salto: dos en total.
+   Las últimas capas no necesitan mercado porque tienen el **jefe** a uno o dos saltos, que es la excepción
+   que RF-011b ya admitía.
+
+Nunca hay que regenerar un mapa. **Medido: 0 violaciones en 3.000 mapas** (1.000 del test obligatorio, más
+1.000 semillas × 3 actos de la medición de AH-9), comprobando la garantía nodo a nodo con BFS y no solo la
+forma. El precio son **4-5 capas de mercado por acto** y 5,84 nodos de mercado dibujados, contra las 3
+capas-cuello de botella de antes.
+
+**AH-6. La densidad "un mercado cada 3-4 nodos" de RF-011b cambia de sitio.** *(lectura aplicada, RF-011b)*
+De las dos mitades del requisito, la que manda es la garantía de los dos saltos; la densidad era el
+mecanismo con el que W-2 la cumplía. Ahora se cumple **por exceso en lo que se ofrece** (una capa de
+mercado cada 2) y **deja de cumplirse en lo que se recorre**: un camino puede no pisar ningún mercado
+—medido: el 98,9% de los actos admiten un camino con cero mercados— y otro puede pisar 4 o 5. Eso no es un
+efecto colateral: es exactamente el desvío que RF-002d describe ("una decisión legítima frente a
+**desviarse** hacia un mercado") y que el mapa de cuellos de botella no tenía. Queda anotado como lectura
+aplicada, igual que W-1.
+
+**AH-7. RF-003b con capas mixtas: "una capa lleva partidos o no lleva ninguno".** W-3 ("entera de partidos
+o entera de servicios") ya no vale, porque con cuatro carriles interesa mezclar. La regla nueva es más
+débil y basta: como un camino visita **una capa de cada índice**, el número de partidos de cualquier camino
+está acotado por el **número de capas con algún partido**, y ese número es el presupuesto de RF-003b
+(`PathLength * 60 / 100`, jefe incluido). Dentro de una capa con partidos cabe además un servicio, que es
+lo que convierte la elección en "juego o me curo" sin tocar el tope.
+`MapInvariants.WorstCaseMatches` sigue siendo la cifra que se compara y ahora es una **cota conservadora**;
+el extremo exacto lo da `MapInvariants.PathMatches`, y **medido, los dos coinciden**: el peor camino juega
+6/7/7 = **20 partidos por run**, exactamente como antes.
+
+**AH-8. El suelo de partidos es nuevo, y hay un mando para él.** Si el mercado se puede esquivar, el
+partido también: un camino que se desvíe siempre juega menos. `MapGenerator.PorousMatchLayers` fija cuántas
+capas de partido por acto ofrecen alternativa en la misma capa —un carril de servicio entre los partidos—;
+las demás son de partido en **todos** sus carriles y ningún camino las esquiva. Con el valor 1: el peor
+camino juega 20 partidos por run y **el más evasivo, 17**, contra los 18-22 de §10. Cada capa porosa de más
+quita un partido por acto y tres por run: con 2 el suelo bajaría a 14.
+
+**AH-8b. Ninguna capa con partido lleva mercado, y la razón no es de diseño: es el instrumento de medida.**
+Es lo único de la ADR 0053 que este trabajo **no** entrega. La ADR pedía que la elección pasara a ser
+"partido, mercado o clínica" en la misma capa; se implementó así, se midió, y la puerta `matchesPerFullRun`
+(18-22) se puso **roja en 17,0**. La cadena es corta y no tiene truco:
+
+1. `RunPolicy.ChooseNode`, la política automática con la que `/Balance` mide, puntúa el **mercado con 90**
+   y un partido de liga con **50 menos la dificultad**. Son pesos calibrados cuando el mercado era un
+   cuello de botella y por tanto **nunca competía con nada**: no había elección que hacer.
+2. La construcción garantiza una arista al mercado desde todo nodo de la capa previa (paso 2 de AH-5), así
+   que si esa capa lleva partidos, la política ve siempre el mercado entre sus opciones y **siempre** lo
+   coge.
+3. El presupuesto de RF-003b deja las capas con partido justo en el tope (6 de 11). Un desvío que se toma
+   siempre es un partido menos por acto, tres por run: de 20 a 17.
+
+Con el servicio en vez del mercado la política solo se desvía cuando de verdad quiere lo que hay —clínica
+con alguien lesionado (100) o inscripción con hueco que comprar (80) valen más que un partido; entrenamiento
+(30) y evento (25), menos—, que es justo cuando el desvío debe tomarse. **Medido con el mapa nuevo: las 14
+pruebas de `FullRunGateTests` en verde**, `matchesPerFullRun` dentro de banda y las métricas ancladas sin
+moverse. **Revisar los pesos de `ChooseNode` es lo que desbloquea la capa con partido y mercado a la vez**,
+y no se ha tocado aquí porque otros dos paquetes estaban midiendo con ese mismo instrumento.
+
+**AH-9. Lo que ha cambiado, en números.** 1.000 semillas × 3 actos, con los 11/12/12 nodos de
+`data/map/map.json`:
+
+| | Antes (W-2) | Ahora (ADR 0053) |
+|---|---|---|
+| Nodos dibujados por acto | 20,3 | 35,8 |
+| Aristas por acto | 26,9 | 66,0 |
+| Nodos de mercado dibujados por acto | 3,00 | 5,84 |
+| **Nodos elegibles por paso (media)** | **1,39** | **1,90** |
+| Pasos con una sola opción | 64,6% | 37,2% |
+| Pasos con 2 opciones | 31,7% | 41,4% |
+| Pasos con 3 o 4 opciones | 3,7% | 21,4% |
+| **Pasos con 2+ tipos de nodo distintos entre las opciones** | **17,9%** | **47,0%** |
+| Partidos del peor camino (run) | 20 | 20 |
+| Partidos del mejor camino (run) | 20 | 17 |
+| Mercados en el camino, por acto (mín-máx) | 3-3 | 0-4,67 |
+
+Dicho en una línea: **dos de cada tres pasos no eran una decisión, y ahora lo son casi dos de cada tres**;
+y cuando lo eran, casi siempre se elegía entre dos nodos del mismo tipo (17,9% de variedad), mientras que
+ahora casi la mitad de las decisiones son entre tipos distintos. El tope de RF-003b no se mueve.
+
+**AH-10. La pantalla: el carril es una altura fija.** `MapView` dibuja `IndexInLayer` siempre a la misma
+`y`, en todas las capas, y centra las capas de un solo nodo (entrada y jefe). Eso es lo que hace visible la
+regla de movimiento: una arista sube, baja o sigue recta, nunca salta dos filas. Con ~36 nodos por acto
+hicieron falta dos cosas más: las aristas **arrancan y terminan en el borde** del glifo (los cruces entre
+carriles vecinos se leen como cruces y no como manchas) y lo que **ya no se puede alcanzar** desde donde
+está el jugador se apaga del todo y pierde etiqueta y distintivo de dificultad. Esa última es la
+información nueva del mapa de cuatro carriles —subir de carril cierra la parte baja del acto, y eso hay que
+verlo antes de elegir, no después— y es una cuenta de dibujo, no de reglas: un BFS hacia delante desde el
+nodo actual.
+
+**AH-11. Un recorrido de capturas propio para el mapa.** `--map-tour` (junto a `--tour`, en `Game/Ui/Tour.cs`)
+recorre el mapa de los **tres actos** y termina a media travesía, saltando de acto con
+`RunStateBuilder` a través de `RunController.JumpToAct`/`JumpToNode` (RT-062). Deja
+`mapa-acto1.png`, `mapa-acto2.png`, `mapa-acto3.png` y `mapa-mitad.png` en `Game/screenshots/`. El
+recorrido largo no se toca: sigue capturando `mapa.png` en el acto 1.
+
+**AH-12. Lo que este trabajo deja pendiente, y es material.**
+
+- **Los pesos de `RunPolicy.ChooseNode` (AH-8b).** Mientras el mercado valga 90 pase lo que pase, no puede
+  compartir capa con un partido sin romper la puerta de los 18-22 partidos, y la imagen que la ADR pedía
+  —"partido, mercado o clínica"— se queda a medias: hoy es "partido o clínica" en una capa por acto, y
+  "mercado o clínica" en las de mercado. Es un paquete propio: cambiar el instrumento de medida obliga a
+  volver a medir la economía entera.
+- **Más mercados ofrecidos, menos mercados visitados.** El surtido sale de `RngStreams.Rewards(seed,
+  nodeId)`, así que más nodos de mercado son más surtidos distintos, no más oro. El efecto neto sobre la
+  economía depende de la política de compra y hay que medirlo cuando el punto anterior esté resuelto.
+- **RF-123 (primera run guiada, mapa fijo)** encaja mejor que antes —la capa 0 es un nodo común— pero sigue
+  sin implementarse.
+- El nodo de inscripción ya no compite solo con otro servicio, sino también con un partido o con el
+  mercado: el test de la ADR 0046 pasa a comprobar que **compite con algo**, no con qué.

@@ -54,6 +54,25 @@ public partial class MapScreen : Control
 
         Refresh();
 
+        if (Tour.Maps)
+        {
+            // Recorrido corto: el mapa de los tres actos y fuera. Con cuatro carriles (ADR 0053) el
+            // dibujo cambia bastante de un acto a otro -11 capas en el primero y 12 en los otros dos-,
+            // así que juzgar la legibilidad con uno solo no vale.
+            var state = _run.State!;
+            if (state.CurrentNodeId >= 0)
+            {
+                // Cuarta captura: a media travesía, que es donde se ve lo que el mapa de cuatro carriles
+                // añade -lo que ya no se puede alcanzar desde el carril en el que estás se apaga-.
+                Tour.Step(this, "mapa-mitad", null);
+                return;
+            }
+
+            int act = state.Act;
+            Tour.Step(this, "mapa-acto" + act, act < RunRules.Acts ? () => NextAct(act + 1) : MidAct);
+            return;
+        }
+
         if (Tour.Active)
         {
             Tour.Step(this, "mapa", TourPickMatch);
@@ -310,6 +329,40 @@ public partial class MapScreen : Control
 
         _run.Enter(nodeId);
         Nav.Route(this);
+    }
+
+    /// <summary>Paso del recorrido corto: saltar a la entrada del acto siguiente y volver al mapa.</summary>
+    private void NextAct(int act)
+    {
+        _run.JumpToAct(act);
+        Nav.Go(this, Nav.Map);
+    }
+
+    /// <summary>
+    /// Último paso del recorrido corto: plantarse a media travesía, en el carril de abajo de una capa
+    /// central, que es la situación que enseña la regla de carriles contiguos —desde ahí la parte alta
+    /// del acto ya no se alcanza—.
+    /// </summary>
+    private void MidAct()
+    {
+        var map = _run.State!.CurrentMap;
+        int target = MapInvariants.PathLength(map) / 2;
+        MapNode? pick = null;
+        foreach (var node in map.Nodes)
+        {
+            if (node.Layer == target && (pick is null || node.IndexInLayer > pick.IndexInLayer))
+            {
+                pick = node;
+            }
+        }
+
+        if (pick is null)
+        {
+            return;
+        }
+
+        _run.JumpToNode(pick.Id);
+        Nav.Go(this, Nav.Map);
     }
 
     /// <summary>Paso del recorrido de capturas: el primer nodo de partido accesible, que es lo que un jugador miraría.</summary>

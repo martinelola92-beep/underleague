@@ -21,7 +21,7 @@ public static class MapInvariants
         CheckEdges(map, problems);
         CheckReachability(map, problems);
         CheckMarketGuarantee(map, problems);
-        CheckMarketSpacing(map, problems);
+        CheckMarketLayout(map, problems);
 
         return problems;
     }
@@ -51,9 +51,15 @@ public static class MapInvariants
     }
 
     /// <summary>
-    /// Partidos que jugaría el <b>peor camino</b>: capas que contienen algún nodo de partido. Es la
-    /// cifra que limita RF-003b, y se calcula por capas y no por nodos porque el jugador solo recorre
-    /// una capa cada vez.
+    /// Cota superior de los partidos que jugaría el <b>peor camino</b>: número de capas que contienen
+    /// algún nodo de partido. Es la cifra que limita RF-003b, y se calcula por capas y no por nodos
+    /// porque el jugador solo recorre una capa cada vez: ningún camino puede jugar más partidos que
+    /// capas con partido haya, se elija lo que se elija.
+    ///
+    /// <para>Con cuatro carriles (ADR 0053) una capa mezcla tipos, así que la cota puede quedar por
+    /// encima del peor camino real —una capa con un solo partido en el carril 0 no se la come quien
+    /// venga por el carril 3—. Se deja así a propósito: es conservadora, y es la que compara
+    /// <see cref="CheckMatchShare"/>. El extremo exacto lo da <see cref="PathMatches"/>.</para>
     /// </summary>
     public static int WorstCaseMatches(ActMap map)
     {
@@ -68,6 +74,43 @@ public static class MapInvariants
         }
 
         return matchLayers.Count;
+    }
+
+    /// <summary>
+    /// Partidos del camino que más (<paramref name="worst"/> = true) o que menos juega, exacto: recorre
+    /// el grafo hacia atrás quedándose con el extremo. El mínimo es el que dice cuánto se puede
+    /// <b>esquivar</b> el juego desviándose a mercados y servicios (RF-002d), y el máximo es el peor
+    /// camino de verdad, que nunca supera la cota de <see cref="WorstCaseMatches"/>.
+    /// </summary>
+    public static int PathMatches(ActMap map, bool worst)
+    {
+        ArgumentNullException.ThrowIfNull(map);
+        var best = new Dictionary<int, int>(map.Nodes.Count);
+        for (int i = map.Nodes.Count - 1; i >= 0; i--)
+        {
+            var node = map.Nodes[i];
+            int tail = 0;
+            if (node.Next.Count > 0)
+            {
+                tail = worst ? int.MinValue : int.MaxValue;
+                for (int e = 0; e < node.Next.Count; e++)
+                {
+                    int value = best[node.Next[e]];
+                    tail = worst ? Math.Max(tail, value) : Math.Min(tail, value);
+                }
+            }
+
+            best[node.Id] = (node.IsMatch ? 1 : 0) + tail;
+        }
+
+        int result = worst ? int.MinValue : int.MaxValue;
+        for (int i = 0; i < map.EntryNodeIds.Count; i++)
+        {
+            int value = best[map.EntryNodeIds[i]];
+            result = worst ? Math.Max(result, value) : Math.Min(result, value);
+        }
+
+        return result;
     }
 
     /// <summary>
@@ -190,9 +233,65 @@ public static class MapInvariants
             problems.Add($"{bosses} nodos de jefe; debe haber exactamente 1 (RF-001)");
         }
 
-        if (map.EntryNodeIds.Count == 0)
+        if (map.EntryNodeIds.Count != 1)
         {
-            problems.Add("el mapa no tiene nodos de entrada");
+            problems.Add(
+                $"el mapa tiene {map.EntryNodeIds.Count} nodos de entrada; el acto empieza en uno solo (ADR 0053)");
+        }
+
+        CheckLanes(map, problems);
+    }
+
+    /// <summary>
+    /// Carriles (ADR 0053): cuatro, numerados de arriba abajo. Una capa ocupa un <b>intervalo contiguo</b>
+    /// de carriles —con huecos interiores, un carril podría quedarse sin vecino a distancia 1 y el grafo
+    /// se partiría— y la apertura del acto es 1 → 2 → 4.
+    /// </summary>
+    private static void CheckLanes(ActMap map, List<string> problems)
+    {
+        var lanesByLayer = new Dictionary<int, List<int>>();
+        for (int i = 0; i < map.Nodes.Count; i++)
+        {
+            var node = map.Nodes[i];
+            if (node.IndexInLayer < 0 || node.IndexInLayer >= MapGenerator.Lanes)
+            {
+                problems.Add($"el nodo {node.Id} está en el carril {node.IndexInLayer}, fuera de 0..{MapGenerator.Lanes - 1}");
+            }
+
+            if (!lanesByLayer.TryGetValue(node.Layer, out var lanes))
+            {
+                lanes = new List<int>();
+                lanesByLayer[node.Layer] = lanes;
+            }
+
+            lanes.Add(node.IndexInLayer);
+        }
+
+        var layers = new List<int>(lanesByLayer.Keys);
+        layers.Sort();
+        for (int l = 0; l < layers.Count; l++)
+        {
+            var lanes = lanesByLayer[layers[l]];
+            lanes.Sort();
+            for (int i = 1; i < lanes.Count; i++)
+            {
+                if (lanes[i] != lanes[i - 1] + 1)
+                {
+                    problems.Add(
+                        $"la capa {layers[l]} ocupa los carriles [{string.Join(",", lanes)}]: tienen que ser contiguos");
+                    break;
+                }
+            }
+        }
+
+        if (lanesByLayer.TryGetValue(0, out var first) && first.Count != 1)
+        {
+            problems.Add($"la capa 0 tiene {first.Count} nodos; el acto empieza en uno solo (ADR 0053)");
+        }
+
+        if (lanesByLayer.TryGetValue(1, out var second) && second.Count != 2)
+        {
+            problems.Add($"la capa 1 tiene {second.Count} nodos; la apertura del acto es 1 -> 2 -> 4 (ADR 0053)");
         }
     }
 
@@ -242,44 +341,42 @@ public static class MapInvariants
             }
         }
 
-        CheckNoCrossings(map, problems);
+        CheckLaneContiguity(map, problems);
     }
 
     /// <summary>
-    /// Dos aristas se cruzan cuando la fuente de arriba llega más abajo que la fuente de abajo. Con
-    /// intervalos ordenados basta comprobar, capa a capa, que el destino máximo de un nodo no supera al
-    /// destino mínimo del siguiente nodo de su capa.
+    /// Movimiento solo a carriles contiguos (ADR 0053): desde el carril <c>i</c> se va a <c>i-1</c>,
+    /// <c>i</c> o <c>i+1</c>. Es lo que le da memoria a la elección de ruta. Dos excepciones, las dos de
+    /// la propia ADR: la <b>apertura</b> del acto (capas 0 y 1, donde 1 → 2 → 4 es total) y el
+    /// <b>jefe</b>, en el que convergen todos los caminos.
+    ///
+    /// <para>Las aristas <b>sí pueden cruzarse</b> entre carriles vecinos, y eso ya no es un defecto:
+    /// es lo que permite reconverger. La decisión W-4 (sin cruces) queda revisada por la ADR 0053.</para>
     /// </summary>
-    private static void CheckNoCrossings(ActMap map, List<string> problems)
+    private static void CheckLaneContiguity(ActMap map, List<string> problems)
     {
         for (int i = 0; i < map.Nodes.Count; i++)
         {
             var node = map.Nodes[i];
-            if (node.Next.Count == 0)
+            if (node.Layer < MapGenerator.OpeningLayers)
             {
                 continue;
             }
 
-            MapNode? below = null;
-            for (int j = 0; j < map.Nodes.Count; j++)
+            for (int e = 0; e < node.Next.Count; e++)
             {
-                if (map.Nodes[j].Layer == node.Layer && map.Nodes[j].IndexInLayer == node.IndexInLayer + 1)
+                var target = map.Find(node.Next[e]);
+                if (target is null || target.Kind == NodeKind.Boss)
                 {
-                    below = map.Nodes[j];
-                    break;
+                    continue;
                 }
-            }
 
-            if (below is null || below.Next.Count == 0)
-            {
-                continue;
-            }
-
-            int maxIndex = map.Get(node.Next[^1]).IndexInLayer;
-            int minIndexBelow = map.Get(below.Next[0]).IndexInLayer;
-            if (maxIndex > minIndexBelow)
-            {
-                problems.Add($"las aristas de los nodos {node.Id} y {below.Id} se cruzan");
+                if (Math.Abs(target.IndexInLayer - node.IndexInLayer) > 1)
+                {
+                    problems.Add(
+                        $"la arista {node.Id} -> {target.Id} salta del carril {node.IndexInLayer} al "
+                            + $"{target.IndexInLayer}; solo se admiten carriles contiguos (ADR 0053)");
+                }
             }
         }
     }
@@ -357,10 +454,18 @@ public static class MapInvariants
     }
 
     /// <summary>
-    /// RF-011b, densidad: un mercado cada 3-4 nodos a lo largo de cualquier camino. Como todos los
-    /// caminos visitan exactamente una capa de cada índice, basta mirar las capas de mercado.
+    /// RF-011b, esqueleto: el reparto de capas de mercado que hace cierta la garantía de los dos saltos
+    /// (ADR 0053). Con capas de mercado <b>mezcladas</b> —mercado y partido en la misma capa— la
+    /// condición es que toda capa sea previa a una capa de mercado, o que lo sea su sucesora, o que
+    /// tenga el jefe a dos saltos o menos. De ahí salen las capas pares 2, 4, 6, 8 (…): un mercado cada
+    /// 2 capas, no cada 3.
+    ///
+    /// <para>La densidad "un mercado cada 3-4 nodos" de RF-011b se cumple ahora por exceso en lo que se
+    /// <b>ofrece</b> (uno cada 2 capas) y deja de cumplirse en lo que se <b>recorre</b>: un camino puede
+    /// no pisar ninguno. Es el desvío que pedía RF-002d y que el mapa de cuellos de botella no tenía;
+    /// queda anotado en <c>fase2-diseno.md</c> §24.</para>
     /// </summary>
-    private static void CheckMarketSpacing(ActMap map, List<string> problems)
+    private static void CheckMarketLayout(ActMap map, List<string> problems)
     {
         int pathLength = PathLength(map);
         var marketLayers = new List<int>();
@@ -379,37 +484,18 @@ public static class MapInvariants
             return;
         }
 
-        // Una capa con mercado tiene que ser íntegramente de mercado: si no, el nodo que no lo es se
-        // queda a tres saltos del siguiente mercado (ver la demostración en MapGenerator).
-        for (int i = 0; i < map.Nodes.Count; i++)
+        int bossLayer = pathLength - 1;
+        for (int layer = 0; layer < bossLayer; layer++)
         {
-            if (map.Nodes[i].Kind != NodeKind.Market && marketLayers.Contains(map.Nodes[i].Layer))
+            bool covered = marketLayers.Contains(layer + 1)
+                || marketLayers.Contains(layer + 2)
+                || layer + MapGenerator.MaxHopsToMarket >= bossLayer;
+            if (!covered)
             {
-                problems.Add($"la capa {map.Nodes[i].Layer} mezcla mercado con el nodo {map.Nodes[i].Id} ({map.Nodes[i].Kind})");
+                problems.Add(
+                    $"la capa {layer} no tiene capa de mercado en {layer + 1} ni en {layer + 2}, y el jefe "
+                        + $"está a más de {MapGenerator.MaxHopsToMarket} saltos (RF-011b)");
             }
-        }
-
-        if (marketLayers[0] > MapGenerator.MarketLayerSpacing)
-        {
-            problems.Add($"el primer mercado está en la capa {marketLayers[0]}: demasiado tarde (RF-011b)");
-        }
-
-        for (int i = 1; i < marketLayers.Count; i++)
-        {
-            int gap = marketLayers[i] - marketLayers[i - 1];
-            if (gap is < 3 or > 4)
-            {
-                problems.Add($"entre los mercados de las capas {marketLayers[i - 1]} y {marketLayers[i]} hay {gap} nodos; deben ser 3 o 4 (RF-011b)");
-            }
-        }
-
-        // Desde la capa siguiente al último mercado hay que llegar al jefe en dos saltos: si el jefe
-        // queda a más de 3 capas del último mercado, ese nodo se queda sin mercado y sin jefe cerca.
-        int gapToBoss = (pathLength - 1) - marketLayers[^1];
-        if (gapToBoss > MapGenerator.MarketLayerSpacing)
-        {
-            problems.Add(
-                $"desde el último mercado (capa {marketLayers[^1]}) hasta el jefe (capa {pathLength - 1}) hay {gapToBoss} nodos (RF-011b)");
         }
     }
 

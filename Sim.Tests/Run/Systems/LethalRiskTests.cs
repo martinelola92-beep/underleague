@@ -248,10 +248,36 @@ public sealed class LethalRiskTests
             SystemsTestSupport.Systems.OpponentFor(state, node, SystemsTestSupport.Catalog),
             SystemsTestSupport.Catalog).Count > 0;
 
+    /// <summary>
+    /// Semillas con las que se busca una run que llegue a un partido de rival letal. Los rivales letales
+    /// viven en los actos 2 y 3 (<c>data/rivals/</c>), así que llegar a uno exige <b>ganar</b> el camino
+    /// hasta allí: con una sola semilla, cualquier cambio de catálogo o de resolución que mueva un
+    /// resultado deja el test sin caso y lo hace fallar por algo que no está probando. Se prueban varias
+    /// y se usa la primera que sirve, que es determinista igual.
+    /// </summary>
+    private static readonly ulong[] LethalSearchSeeds =
+        { 3, 4, 5, 7, 9, 10, 11, 13, 17, 21, 24, 25, 27, 28, 30, 33, 35, 36, 39, 41, 45, 46, 48, 50,
+          31337, 4242, 90210, 1234, 777, 20250905, 5150, 8675309, 112358, 606, 2718281, 31415, 99991,
+          424242, 13, 271828, 55555, 1618033, 101, 202, 303, 404, 505, 606060, 7007, 80808, 909090 };
+
     /// <summary>Una run parada delante de un partido cuyo rival lleva algún perk letal.</summary>
     private static (RunState State, MapNode Node) StateAtLethalMatch()
     {
-        var state = RunEngine.Start(SystemsTestSupport.Setup(Race.Orc), 31337, SystemsTestSupport.Catalog, SystemsTestSupport.Systems);
+        foreach (ulong seed in LethalSearchSeeds)
+        {
+            if (SearchLethalMatch(seed) is { } found)
+            {
+                return found;
+            }
+        }
+
+        throw new InvalidOperationException(
+            "no se ha encontrado ningún partido con rival letal en ninguna de las semillas de búsqueda");
+    }
+
+    private static (RunState State, MapNode Node)? SearchLethalMatch(ulong seed)
+    {
+        var state = RunEngine.Start(SystemsTestSupport.Setup(Race.Orc), seed, SystemsTestSupport.Catalog, SystemsTestSupport.Systems);
         for (int i = 0; i < 60 && !RunEngine.Outcome(state).IsOver; i++)
         {
             if (state.Phase == RunPhase.NodeOpen)
@@ -275,6 +301,6 @@ public sealed class LethalRiskTests
             state = RunEngine.Enter(state, available[0].Id, SystemsTestSupport.Catalog, SystemsTestSupport.Systems);
         }
 
-        throw new InvalidOperationException("no se ha encontrado ningún partido con rival letal en esta run");
+        return null;
     }
 }

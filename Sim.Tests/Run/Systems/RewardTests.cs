@@ -4,14 +4,15 @@ using Underleague.Sim.Run.Systems.Rewards;
 namespace Underleague.Sim.Tests.Run.Systems;
 
 /// <summary>
-/// RF-071, RF-071b, ADR 0049: <b>dos</b> opciones en un partido de liga y tres en élite y jefe, con
-/// reroll de coste creciente. El escalonado de la recompensa deja de ser solo de oro y pasa a ser de
-/// calidad de decisión, que es lo que devuelve peso al mercado.
+/// RF-071, RF-071b, ADR 0052 §2: <b>tres</b> opciones en los tres tipos de nodo, con reroll de coste
+/// creciente, y el escalonado de la recompensa por <b>rareza</b> —la liga degradada a común, el élite y
+/// el jefe con la rareza alta— en vez de por número de opciones, que es como lo había hecho la ADR 0049
+/// y salió al revés de lo buscado.
 /// </summary>
 public sealed class RewardTests
 {
     [Fact]
-    public void OptionsAreTwoInALeagueMatchAndReproducibleForTheSameRerollCount()
+    public void OptionsAreThreeInALeagueMatchAndReproducibleForTheSameRerollCount()
     {
         var state = FreshPendingReward(11111UL);
         var node = state.GetNode(state.PendingNodeId);
@@ -19,28 +20,45 @@ public sealed class RewardTests
         var first = RewardSystem.Options(state, node, SystemsTestSupport.Catalog, SystemsTestSupport.Systems.Economy, SystemsTestSupport.Systems.Items);
         var second = RewardSystem.Options(state, node, SystemsTestSupport.Catalog, SystemsTestSupport.Systems.Economy, SystemsTestSupport.Systems.Items);
 
-        Assert.Equal(2, first.Count);
+        Assert.Equal(3, first.Count);
         Assert.Equal(first.Select(Describe), second.Select(Describe));
     }
 
     /// <summary>
-    /// ADR 0049: el escalonado por tipo de nodo es de <b>calidad de decisión</b>, no solo de oro. El
-    /// partido de liga ofrece dos opciones; el élite y el jefe, tres, y el jefe además dos elecciones.
-    /// Si esto se aplana, el mercado vuelve a ser prescindible, que es el problema que la ADR arregla.
+    /// El escalonado por tipo de nodo sigue siendo de <b>calidad de decisión</b> y no solo de oro (ADR
+    /// 0043), pero desde la ADR 0052 §2 lo es por <b>rareza</b> y no por número de opciones: los tres
+    /// tipos de nodo ofrecen las <b>tres</b> opciones de RF-071, la liga las degrada a común y el élite y
+    /// el jefe conservan la rareza alta, que es lo que los hace deseables. La ADR 0049 lo había hecho al
+    /// revés —dos opciones en liga— y salió al contrario de lo buscado: la ventaja de la doctrina con
+    /// criterio cayó de +5,6 a +0,2 puntos porque la ventaja no estaba en comprar sino en tener con qué
+    /// elegir. Si esto se aplana, el mercado vuelve a ser prescindible.
     /// </summary>
     [Fact]
-    public void TheEliteAndTheBossOfferMoreOptionsThanALeagueMatch()
+    public void TheEliteAndTheBossOfferBetterRarityThanALeagueMatch()
     {
         var economy = SystemsTestSupport.Systems.Economy;
-        int league = economy.RewardFor(NodeKind.LeagueMatch).Options;
-        int elite = economy.RewardFor(NodeKind.EliteMatch).Options;
-        int boss = economy.RewardFor(NodeKind.Boss).Options;
+        var league = economy.RewardFor(NodeKind.LeagueMatch);
+        var elite = economy.RewardFor(NodeKind.EliteMatch);
+        var boss = economy.RewardFor(NodeKind.Boss);
 
-        Assert.Equal(2, league);
-        Assert.True(elite > league, $"el élite ofrece {elite} opciones y la liga {league}");
-        Assert.True(boss > league, $"el jefe ofrece {boss} opciones y la liga {league}");
-        Assert.Equal(1, economy.RewardFor(NodeKind.LeagueMatch).Picks);
-        Assert.Equal(2, economy.RewardFor(NodeKind.Boss).Picks);
+        Assert.Equal(3, league.Options);
+        Assert.Equal(3, elite.Options);
+        Assert.Equal(3, boss.Options);
+
+        Assert.Equal(0, league.RarityFloorPercent);
+        Assert.True(league.CommonCeilingPercent > 0, "la liga degrada la rareza de sus opciones (ADR 0052)");
+        Assert.Equal(0, elite.CommonCeilingPercent);
+        Assert.Equal(0, boss.CommonCeilingPercent);
+        Assert.True(elite.RarityFloorPercent > boss.RarityFloorPercent);
+
+        // Suelo y techo salen de la MISMA tirada, desde extremos opuestos: si se solapasen, un mismo
+        // número caería en los dos tramos y el que gana dejaría de ser evidente.
+        Assert.True(league.RarityFloorPercent + league.CommonCeilingPercent <= 100);
+        Assert.True(elite.RarityFloorPercent + elite.CommonCeilingPercent <= 100);
+        Assert.True(boss.RarityFloorPercent + boss.CommonCeilingPercent <= 100);
+
+        Assert.Equal(1, league.Picks);
+        Assert.Equal(2, boss.Picks);
     }
 
     [Fact]
@@ -86,6 +104,16 @@ public sealed class RewardTests
     public void ChoosingAPlayerOptionAddsItToTheRosterAndClosingAdvancesTheHistory()
     {
         var state = FreshPendingReward(44444UL);
+
+        // La plantilla de una run recién empezada está llena (10 de 10, RF-020) y una recompensa de
+        // jugador necesita hueco, así que se aparta al último para poder probar la rama. Hasta la ADR
+        // 0053 esta semilla no ofrecía opción de jugador -el id del nodo, del que sale el flujo de
+        // recompensas, se movió con el mapa- y la rama no llegaba a probarse nunca.
+        if (state.Roster.Count >= state.RosterCapacity)
+        {
+            state = RunStateBuilder.From(state).WithRoster(state.Roster.Take(state.Roster.Count - 1)).Build();
+        }
+
         var node = state.GetNode(state.PendingNodeId);
         var options = RewardSystem.Options(state, node, SystemsTestSupport.Catalog, SystemsTestSupport.Systems.Economy, SystemsTestSupport.Systems.Items);
 

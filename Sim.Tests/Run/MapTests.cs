@@ -5,8 +5,8 @@ using Underleague.Sim.Run;
 namespace Underleague.Sim.Tests.Run;
 
 /// <summary>
-/// Mapa por actos (RF-003b, RF-010, RF-011, RF-011b). El test que manda es
-/// <see cref="MarketGuarantee_HoldsOnAThousandMaps"/>: la garantía de RF-011b es dura y por
+/// Mapa por actos de cuatro carriles (RF-003b, RF-010, RF-011, RF-011b, ADR 0053). El test que manda
+/// sigue siendo <see cref="MarketGuarantee_HoldsOnAThousandMaps"/>: la garantía de RF-011b es dura y por
 /// construcción, así que si algún día se rompe, se rompe siempre y en el primer mapa.
 /// </summary>
 public class MapTests
@@ -129,20 +129,29 @@ public class MapTests
             Assert.Contains(map.Nodes, n => n.Kind == NodeKind.Enrollment);
             Assert.DoesNotContain(map.Nodes, n => n.Kind == NodeKind.Workshop);
 
-            // Y tres mercados por acto: un mercado cada 3 nodos recorridos (RF-011b).
-            var marketLayers = map.Nodes.Where(n => n.Kind == NodeKind.Market).Select(n => n.Layer).Distinct().ToList();
-            Assert.Equal(3, marketLayers.Count);
+            // Capas de mercado cada 2 (ADR 0053): son las que hacen cierta la garantía de RF-011b
+            // cuando el mercado comparte capa con otros nodos. Todas tienen mercado, y ninguna es solo
+            // mercado: siempre hay algo más en la capa, que es lo que convierte ir a la tienda en un
+            // desvío con coste (RF-002d).
+            var marketLayers = map.Nodes.Where(n => n.Kind == NodeKind.Market).Select(n => n.Layer).Distinct().OrderBy(l => l).ToList();
+            Assert.Equal(MapGenerator.MarketLayers(pathLength), marketLayers);
+            foreach (int layer in marketLayers)
+            {
+                var inLayer = map.Nodes.Where(n => n.Layer == layer).ToList();
+                Assert.Contains(inLayer, n => n.Kind != NodeKind.Market);
+                Assert.InRange(inLayer.Count(n => n.Kind == NodeKind.Market), 1, 2);
+            }
         }
     }
 
     /// <summary>
-    /// ADR 0046: el nodo de inscripción es una decisión de <b>ruta</b>. Aparece en una capa de servicios,
-    /// así que ir a por un hueco significa no ir al otro servicio de esa capa —la clínica, el
-    /// entrenamiento o el evento—, y nunca ocupa una capa entera: el mercado sigue siendo el cuello de
-    /// botella que RF-011b garantiza.
+    /// ADR 0046: el nodo de inscripción es una decisión de <b>ruta</b>. Aparece en una capa que tiene
+    /// más cosas, así que ir a por un hueco de plantilla significa no ir a lo otro de esa capa, y con
+    /// cuatro carriles además cuesta carril. Lo que la ADR 0053 cambia es con qué compite: ya no solo
+    /// con otro servicio, también con un partido o con el mercado.
     /// </summary>
     [Fact]
-    public void TheEnrollmentNodeIsAlwaysAChoiceAgainstAnotherService()
+    public void TheEnrollmentNodeIsAlwaysAChoiceAgainstSomethingElse()
     {
         for (ulong seed = 1; seed <= 200; seed++)
         {
@@ -159,9 +168,122 @@ public class MapTests
                         layer.Count > 1,
                         $"semilla {seed}, acto {act}: el nodo de inscripción {node.Id} ocupa una capa entera y no es una elección");
                     Assert.Contains(layer, n => n.Kind != NodeKind.Enrollment);
-                    Assert.DoesNotContain(layer, n => n.IsMatch || n.Kind == NodeKind.Market);
                 }
             }
+        }
+    }
+
+    /// <summary>
+    /// ADR 0053, apertura: el acto empieza en <b>un solo nodo</b> —el mismo partido de liga para todo el
+    /// mundo, que es el arranque comparable entre runs y el sitio de la primera run guiada (RF-123)— y
+    /// bifurca 1 → 2 → 4. Los cuatro carriles aparecen en la tercera capa y no antes.
+    /// </summary>
+    [Fact]
+    public void TheActOpensOneTwoFour()
+    {
+        for (ulong seed = 1; seed <= 200; seed++)
+        {
+            for (int act = 1; act <= 3; act++)
+            {
+                var map = MapGenerator.Generate(seed, act, MapOptions.Default);
+                Assert.Single(map.EntryNodeIds);
+                Assert.Equal(1, map.Nodes.Count(n => n.Layer == 0));
+                Assert.Equal(2, map.Nodes.Count(n => n.Layer == 1));
+                Assert.Equal(MapGenerator.Lanes, map.Nodes.Count(n => n.Layer == 2));
+                Assert.Equal(NodeKind.LeagueMatch, map.Get(map.EntryNodeIds[0]).Kind);
+                Assert.All(map.Nodes, n => Assert.InRange(n.IndexInLayer, 0, MapGenerator.Lanes - 1));
+            }
+        }
+    }
+
+    /// <summary>
+    /// ADR 0053, lo que le da memoria a la ruta: desde el carril <c>i</c> solo se va a <c>i-1</c>,
+    /// <c>i</c> o <c>i+1</c>, salvo en la apertura del acto y en el jefe, donde todo converge. Escrito
+    /// sin pasar por <see cref="MapInvariants"/>, como el de la garantía de mercado.
+    /// </summary>
+    [Fact]
+    public void MovementIsLaneAdjacent()
+    {
+        for (ulong seed = 1; seed <= 200; seed++)
+        {
+            var map = MapGenerator.Generate(seed, (int)(seed % 3) + 1, MapOptions.Default);
+            foreach (var node in map.Nodes.Where(n => n.Layer >= MapGenerator.OpeningLayers))
+            {
+                foreach (int targetId in node.Next)
+                {
+                    var target = map.Get(targetId);
+                    if (target.Kind == NodeKind.Boss)
+                    {
+                        continue;
+                    }
+
+                    Assert.True(
+                        Math.Abs(target.IndexInLayer - node.IndexInLayer) <= 1,
+                        $"semilla {seed}: {node.Id} (carril {node.IndexInLayer}) -> {target.Id} (carril {target.IndexInLayer})");
+                }
+            }
+        }
+    }
+
+    /// <summary>
+    /// RF-002d: desviarse al mercado tiene que ser una <b>decisión</b>, no un peaje. Se comprueba por los
+    /// dos extremos: existe un camino que no pisa ningún mercado, y existe uno que los pisa casi todos.
+    /// Con el mapa de cuellos de botella los dos números eran el mismo y la decisión no existía.
+    /// </summary>
+    [Fact]
+    public void TheMarketIsADetour_NotAToll()
+    {
+        int skipped = 0;
+        for (ulong seed = 1; seed <= 200; seed++)
+        {
+            for (int act = 1; act <= 3; act++)
+            {
+                var map = MapGenerator.Generate(seed, act, MapOptions.Default);
+                int min = PathCount(map, n => n.Kind == NodeKind.Market, worst: false);
+                int max = PathCount(map, n => n.Kind == NodeKind.Market, worst: true);
+                Assert.True(max >= 3, $"semilla {seed}, acto {act}: el camino más comprador solo pasa por {max} mercados");
+                Assert.True(min < max, $"semilla {seed}, acto {act}: todos los caminos pasan por {min} mercados");
+                if (min == 0)
+                {
+                    skipped++;
+                }
+            }
+        }
+
+        Assert.True(skipped > 500, $"solo {skipped} de 600 actos admiten un camino sin mercados");
+    }
+
+    /// <summary>
+    /// RF-003b por arriba y <c>fase2-diseno.md</c> §10 por abajo. El tope del 60% se mide sobre el peor
+    /// camino y lo garantiza el reparto por capas; el <b>suelo</b> es nuevo: con capas mixtas un camino
+    /// puede esquivar partidos, y lo que impide que esquive el acto entero es que solo una capa de
+    /// partido por acto es porosa (<see cref="MapGenerator.PorousMatchLayers"/>).
+    /// </summary>
+    [Fact]
+    public void EveryPath_PlaysBetweenTheFloorAndTheCap()
+    {
+        // Los nodos por acto de data/map/map.json: 11, 12 y 12.
+        int[] perAct = [11, 12, 12];
+        for (ulong seed = 1; seed <= 200; seed++)
+        {
+            int worst = 0;
+            int best = 0;
+            for (int act = 1; act <= 3; act++)
+            {
+                int pathLength = perAct[act - 1];
+                var map = MapGenerator.Generate(seed, act, new MapOptions(pathLength));
+                int cap = pathLength * MapGenerator.MaxMatchPercent / 100;
+                int actWorst = MapInvariants.PathMatches(map, worst: true);
+                int actBest = MapInvariants.PathMatches(map, worst: false);
+                Assert.True(actWorst <= cap, $"semilla {seed}, acto {act}: el peor camino juega {actWorst} partidos de {pathLength}");
+                Assert.Equal(actWorst, MapInvariants.WorstCaseMatches(map));
+                Assert.Equal(cap - 1, actBest);
+                worst += actWorst;
+                best += actBest;
+            }
+
+            Assert.Equal(20, worst);
+            Assert.Equal(17, best);
         }
     }
 
@@ -180,6 +302,29 @@ public class MapTests
 
             Assert.InRange(matches, 18, 22);
         }
+    }
+
+    /// <summary>Extremo de partidos (o de lo que cuente <paramref name="score"/>) sobre todos los caminos del acto.</summary>
+    private static int PathCount(ActMap map, Func<MapNode, bool> score, bool worst)
+    {
+        var best = new Dictionary<int, int>();
+        for (int i = map.Nodes.Count - 1; i >= 0; i--)
+        {
+            var node = map.Nodes[i];
+            int tail = 0;
+            if (node.Next.Count > 0)
+            {
+                tail = worst ? int.MinValue : int.MaxValue;
+                foreach (int target in node.Next)
+                {
+                    tail = worst ? Math.Max(tail, best[target]) : Math.Min(tail, best[target]);
+                }
+            }
+
+            best[node.Id] = (score(node) ? 1 : 0) + tail;
+        }
+
+        return best[map.EntryNodeIds[0]];
     }
 
     [Fact]

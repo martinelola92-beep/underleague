@@ -65,7 +65,7 @@ public sealed class MarketTests
         }
 
         // El pool completo (no solo lo que salió sorteado esta vez) tampoco debe contener exclusivos de otra raza.
-        var pool = Underleague.Sim.Run.Systems.PerkPool.Offerable(state, SystemsTestSupport.Catalog);
+        var pool = Underleague.Sim.Run.Systems.PerkPool.Offerable(state, SystemsTestSupport.Catalog, node.Act);
         Assert.All(pool, perk => Assert.True(perk.Race is null || perk.Race == Race.Dwarf));
         Assert.Contains(pool, perk => perk.Race == Race.Dwarf);
     }
