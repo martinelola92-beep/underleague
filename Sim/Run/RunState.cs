@@ -296,6 +296,23 @@ public static class RunRules
     /// <summary>Jugadores disponibles por debajo de los cuales la run termina en derrota (RF-002b).</summary>
     public const int MinimumAvailablePlayers = 5;
 
+    /// <summary>
+    /// Plantilla base (RF-020, ADR 0046): exactamente los 10 con los que empieza el club (RF-005). No es
+    /// un mínimo ni un objetivo: es el <b>techo de partida</b>. Crecer por encima exige un hueco, y el
+    /// único que los vende es el nodo de inscripción.
+    /// </summary>
+    public const int BaseRosterSize = 10;
+
+    /// <summary>
+    /// Plantilla máxima (RF-020, ADR 0046): 12. Con el mínimo de 5 de RF-002b, el margen de una run
+    /// entera son cinco bajas —siete si se compran los dos huecos—, que es lo que hace del desgaste un
+    /// recurso y no un contador que nunca llega a cero (ADR 0045).
+    /// </summary>
+    public const int MaxRosterSize = 12;
+
+    /// <summary>Huecos de inscripción comprables en una run: los que van de la plantilla base al techo.</summary>
+    public const int MaxEnrollmentSlots = MaxRosterSize - BaseRosterSize;
+
     /// <summary>Titulares máximos de un equipo (RF-059; el simulador exige entre 5 y 7).</summary>
     public const int MaxStarters = 7;
 
@@ -442,6 +459,49 @@ public sealed record RunState
 
         throw new ArgumentOutOfRangeException(nameof(act), act, "la run no tiene mapa para ese acto");
     }
+
+    /// <summary>
+    /// Contador de run con los huecos de inscripción ya comprados (ADR 0046). Vive en
+    /// <see cref="Counters"/> a propósito: es exactamente el caso para el que ese diccionario existe
+    /// —añadir un sistema sin subir la versión del esquema— y así una run guardada antes del nodo de
+    /// inscripción se carga con cero huecos, que es la lectura correcta.
+    /// </summary>
+    public const string EnrollmentSlotsCounter = "enrollmentSlots";
+
+    /// <summary>
+    /// Jugadores que <b>ocupan plantilla</b> (RF-020): todos menos los muertos. El muerto se queda en
+    /// <see cref="Roster"/> para el memorial (RF-122) pero deja su sitio libre: morir cuesta un jugador,
+    /// no un jugador y su hueco.
+    /// </summary>
+    public int RosterSize
+    {
+        get
+        {
+            int count = 0;
+            for (int i = 0; i < Roster.Count; i++)
+            {
+                if (Roster[i].PhysicalState != PhysicalState.Dead)
+                {
+                    count++;
+                }
+            }
+
+            return count;
+        }
+    }
+
+    /// <summary>
+    /// Tamaño máximo de plantilla ahora mismo (RF-020, ADR 0046): la base de 10 más los huecos de
+    /// inscripción comprados, con el techo duro de 12.
+    /// </summary>
+    public int RosterCapacity =>
+        Math.Min(RunRules.BaseRosterSize + Counter(EnrollmentSlotsCounter), RunRules.MaxRosterSize);
+
+    /// <summary>Huecos de inscripción que todavía se pueden comprar (0, 1 o 2).</summary>
+    public int EnrollmentSlotsLeft => RunRules.MaxEnrollmentSlots - Counter(EnrollmentSlotsCounter);
+
+    /// <summary>True si cabe un jugador más sin vender ni descartar a nadie (RF-020).</summary>
+    public bool HasRosterSpace => RosterSize < RosterCapacity;
 
     /// <summary>
     /// Jugadores que pueden alinearse ahora mismo (RF-002e). Es consultable en todo momento y es la
@@ -608,10 +668,25 @@ public sealed record RunState
         return this with { Roster = players };
     }
 
-    /// <summary>Copia con un jugador más. Le asigna <see cref="NextPlayerId"/> si su id es negativo.</summary>
+    /// <summary>
+    /// Copia con un jugador más. Le asigna <see cref="NextPlayerId"/> si su id es negativo.
+    ///
+    /// <para><b>Respeta el tamaño de plantilla</b> (RF-020, ADR 0046): con la plantilla llena lanza
+    /// <see cref="InvalidOperationException"/>. La comprobación está aquí, en el único embudo por el que
+    /// entra un jugador nuevo, y no repartida por los sistemas: así ningún camino —mercado, canterano,
+    /// mercenario, recompensa, o el que se añada mañana— puede ampliar la plantilla en silencio, que es
+    /// exactamente lo que hacía que el desgaste no mordiera (ADR 0045).</para>
+    /// </summary>
     public RunState WithNewPlayer(RunPlayer player)
     {
         ArgumentNullException.ThrowIfNull(player);
+        if (!HasRosterSpace)
+        {
+            throw new InvalidOperationException(
+                $"la plantilla está llena: {RosterSize} de {RosterCapacity} (RF-020). Hay que vender o "
+                    + "descartar a alguien, o comprar un hueco en un nodo de inscripción (ADR 0046)");
+        }
+
         var added = player.Id < 0 ? player with { Id = NextPlayerId } : player;
         if (FindPlayer(added.Id) is not null)
         {

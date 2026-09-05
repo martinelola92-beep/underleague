@@ -1,0 +1,32 @@
+{
+  "_doc": "ADR 0046, RF-093 vía 2. Perk LETAL que es la vía 1 de RF-093 escrita como perk: se dispara CUANDO UN RIVAL SE LESIONA y remata al que ya saltó al campo herido, en el instante anterior a que la lesión lo saque del campo. Es el letal de menor conversión de los cuatro —hace falta una segunda lesión sobre el mismo jugador— y por eso es el que se reparte en más equipos. La condición de marcador lo apaga mientras van ganando: el equipo herido es el que muerde.",
+  "id": "second_wound",
+  "name": {
+    "es": "La segunda herida",
+    "en": "Second Wound"
+  },
+  "rarity": "rare",
+  "kind": "ruleBreaker",
+  "axis": "matchState",
+  "race": null,
+  "trigger": "INJURY",
+  "scope": "opposingTeam",
+  "links": [],
+  "condition": "scoreDiff() <= 0",
+  "effects": [
+    {
+      "type": "modifyProbability",
+      "target": "actor",
+      "probability": "severeInjury",
+      "value": 3,
+      "duration": "match"
+    }
+  ],
+  "elseEffects": [],
+  "limit": null,
+  "accumulatesAcrossMatches": false,
+  "lethal": true,
+  "positionOnly": null,
+  "tagsRequired": [],
+  "tagsForbidden": []
+}

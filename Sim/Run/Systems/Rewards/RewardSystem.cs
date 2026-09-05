@@ -114,7 +114,7 @@ public static class RewardSystem
         var next = options[decision.OptionIndex] switch
         {
             PerkRewardOption perk => ApplyPerk(state, perk, decision, catalog),
-            PlayerRewardOption player => state.WithNewPlayer(player.Player),
+            PlayerRewardOption player => TakePlayer(state, player),
             ItemRewardOption item => ApplyItem(state, item, decision, economy, items),
             var other => throw new InvalidOperationException($"tipo de recompensa no reconocido: {other.GetType().Name}"),
         };
@@ -172,6 +172,23 @@ public static class RewardSystem
         }
 
         return state.AddGold(-cost).WithRerolls(state.RerollsUsed + 1, state.NodeRerolls + 1);
+    }
+
+    /// <summary>
+    /// Cobrar un jugador de recompensa (RF-071) también respeta el tamaño de plantilla (RF-020, ADR
+    /// 0046). Con la plantilla llena la opción no se puede cobrar y la salida es <see cref="Decline"/>:
+    /// aquí no hay mercado en el que vender, así que un cuerpo de más no entra por la puerta de atrás.
+    /// </summary>
+    private static RunState TakePlayer(RunState state, PlayerRewardOption option)
+    {
+        if (!state.HasRosterSpace)
+        {
+            throw new InvalidOperationException(
+                $"la plantilla está llena ({state.RosterSize} de {state.RosterCapacity}, RF-020): "
+                    + "hay que rechazar la recompensa o hacer sitio antes");
+        }
+
+        return state.WithNewPlayer(option.Player);
     }
 
     private static RunState ApplyPerk(RunState state, PerkRewardOption option, ChooseReward decision, Catalog catalog)

@@ -105,10 +105,12 @@
         "leash": 61
       },
       "traits": [
-        "Scorer"
+        "Scorer",
+        "Aggressive"
       ],
       "perks": [
-        "long_range_menace"
+        "long_range_menace",
+        "marrow_thirst"
       ]
     },
     {

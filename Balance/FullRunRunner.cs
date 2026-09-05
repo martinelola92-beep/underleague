@@ -47,7 +47,8 @@ public static class FullRunRunner
         Catalog catalog,
         IReadOnlyDictionary<string, string> dataFiles,
         ulong seed,
-        int runs)
+        int runs,
+        bool ignoreScouting = false)
     {
         ArgumentNullException.ThrowIfNull(catalog);
         ArgumentNullException.ThrowIfNull(dataFiles);
@@ -64,7 +65,7 @@ public static class FullRunRunner
 
         foreach (var doctrine in Doctrines)
         {
-            var options = RunPolicyOptions.For(doctrine);
+            var options = RunPolicyOptions.For(doctrine) with { HeedsLethalScouting = !ignoreScouting };
             var rows = new List<RunPlayResult>(runs);
             for (int i = 0; i < runs; i++)
             {

@@ -33,6 +33,13 @@ public enum NodeKind
 
     /// <summary>Jefe del acto (RF-001). Perderlo termina la run (RF-002b).</summary>
     Boss,
+
+    /// <summary>
+    /// Nodo de inscripción (ADR 0046, amplía RF-011): el despacho del presidente. Paga oro y amplía la
+    /// plantilla en un hueco, hasta el techo de <see cref="RunRules.MaxRosterSize"/>. Va al final del
+    /// enum a propósito: se serializa por nombre, pero el orden de los que ya existían no se mueve.
+    /// </summary>
+    Enrollment,
 }
 
 /// <summary>Utilidades sobre <see cref="NodeKind"/> compartidas por el generador, el motor y el guardado.</summary>

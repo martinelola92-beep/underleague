@@ -103,7 +103,14 @@
         "technique": 72,
         "stamina": 87,
         "leash": 72
-      }
+      },
+      "perks": [
+        "second_wound",
+        "marrow_thirst"
+      ],
+      "traits": [
+        "Aggressive"
+      ]
     },
     {
       "name": "Ilan Polvorento",

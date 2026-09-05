@@ -83,10 +83,16 @@ public sealed class StandardRunSystems : IRunSystems
     /// <param name="clubId">Id del club (RF-004).</param>
     /// <param name="race">Raza del club (RF-004).</param>
     /// <param name="files">Instantánea de <c>/data</c> con la que se juega la run (RT-061b).</param>
-    public RunSetup NewRunSetup(string clubId, Model.Race race, IReadOnlyDictionary<string, string> files) =>
+    /// <param name="division">División en la que se juega (RF-128): de ella sale el oro de partida (ADR 0044).</param>
+    public RunSetup NewRunSetup(
+        string clubId,
+        Model.Race race,
+        IReadOnlyDictionary<string, string> files,
+        Division division = Division.Third) =>
         new(clubId, race, files)
         {
-            StartingGold = _economy.StartingGold,
+            Division = division,
+            StartingGold = _economy.StartingGoldFor(division),
             NodesPerActByAct = _map.NodesPerAct,
             OpponentIdsByAct = OpponentIdsByAct(),
         };
@@ -159,6 +165,7 @@ public sealed class StandardRunSystems : IRunSystems
         {
             NodeKind.Market => state.WithPendingNode(node.Id),
             NodeKind.Clinic => state.WithPendingNode(node.Id),
+            NodeKind.Enrollment => state.WithPendingNode(node.Id),
             NodeKind.Training => ServiceNodeSystem.Training(state, _economy, catalog),
             NodeKind.Event => ServiceNodeSystem.Event(state, node, _economy),
             _ => state,
@@ -214,6 +221,8 @@ public sealed class StandardRunSystems : IRunSystems
             SellPlayer sell => MarketSystem.Sell(state, sell, _economy),
             HireMercenary hire => MarketSystem.Hire(state, hire, catalog, _economy, _items, _consumables),
             TreatPlayer treat => MedicalSystem.Treat(state, treat, _economy),
+            ExpandRoster => EnrollmentSystem.Expand(state, _economy),
+            ReleasePlayer release => EnrollmentSystem.Release(state, release),
             ChooseReward choose => RewardSystem.Choose(state, choose, catalog, _economy, _items),
             DeclineReward => RewardSystem.Decline(state, _economy),
             RerollRewards => RewardSystem.Reroll(state, _economy),

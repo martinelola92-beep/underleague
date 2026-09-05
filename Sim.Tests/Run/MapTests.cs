@@ -123,11 +123,45 @@ public class MapTests
                 $"el peor camino juega {matches} partidos de {pathLength} nodos, por encima del {MapGenerator.MaxMatchPercent}% de RF-003b");
             Assert.Equal(1, map.Nodes.Count(n => n.Kind == NodeKind.Boss));
             Assert.Contains(map.Nodes, n => n.Kind == NodeKind.Clinic);
+
+            // ADR 0046: y un nodo de inscripción por acto, por construcción y no por sorteo. Sin él,
+            // comprar un hueco de plantilla dependería de que el dado lo ofreciera.
+            Assert.Contains(map.Nodes, n => n.Kind == NodeKind.Enrollment);
             Assert.DoesNotContain(map.Nodes, n => n.Kind == NodeKind.Workshop);
 
             // Y tres mercados por acto: un mercado cada 3 nodos recorridos (RF-011b).
             var marketLayers = map.Nodes.Where(n => n.Kind == NodeKind.Market).Select(n => n.Layer).Distinct().ToList();
             Assert.Equal(3, marketLayers.Count);
+        }
+    }
+
+    /// <summary>
+    /// ADR 0046: el nodo de inscripción es una decisión de <b>ruta</b>. Aparece en una capa de servicios,
+    /// así que ir a por un hueco significa no ir al otro servicio de esa capa —la clínica, el
+    /// entrenamiento o el evento—, y nunca ocupa una capa entera: el mercado sigue siendo el cuello de
+    /// botella que RF-011b garantiza.
+    /// </summary>
+    [Fact]
+    public void TheEnrollmentNodeIsAlwaysAChoiceAgainstAnotherService()
+    {
+        for (ulong seed = 1; seed <= 200; seed++)
+        {
+            for (int act = 1; act <= 3; act++)
+            {
+                var map = MapGenerator.Generate(seed, act, MapOptions.Default);
+                var enrollment = map.Nodes.Where(n => n.Kind == NodeKind.Enrollment).ToList();
+                Assert.NotEmpty(enrollment);
+
+                foreach (var node in enrollment)
+                {
+                    var layer = map.Nodes.Where(n => n.Layer == node.Layer).ToList();
+                    Assert.True(
+                        layer.Count > 1,
+                        $"semilla {seed}, acto {act}: el nodo de inscripción {node.Id} ocupa una capa entera y no es una elección");
+                    Assert.Contains(layer, n => n.Kind != NodeKind.Enrollment);
+                    Assert.DoesNotContain(layer, n => n.IsMatch || n.Kind == NodeKind.Market);
+                }
+            }
         }
     }
 

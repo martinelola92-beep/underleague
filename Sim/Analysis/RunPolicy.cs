@@ -53,8 +53,13 @@ public sealed record RunPolicyOptions
     /// <summary>Acepta un partido de élite solo con al menos estos disponibles.</summary>
     public int EliteFromAvailable { get; init; } = 8;
 
-    /// <summary>Tope de plantilla: por encima no se fichan canteranos ni se aceptan jugadores de recompensa.</summary>
-    public int RosterCap { get; init; } = 13;
+    /// <summary>
+    /// El tope de plantilla ya no es un umbral de la política: lo fija el estado (RF-020, ADR 0046),
+    /// <c>RunState.RosterCapacity</c>, base 10 y hasta 12 con huecos de inscripción comprados. La opción
+    /// desapareció a propósito: cuando el tope era de la política, subirlo era gratis y el desgaste no
+    /// mordía (ADR 0045).
+    /// </summary>
+    public int EnrollFromAct { get; init; } = 1;
 
     /// <summary>Ficha de pago aunque no mejore al once si los disponibles bajan de este número.</summary>
     public int SignWhileAvailableBelow { get; init; } = 8;
@@ -62,8 +67,13 @@ public sealed record RunPolicyOptions
     /// <summary>Ficha un mercenario solo si los disponibles están por debajo de este número (D-3).</summary>
     public int HireMercenaryWhileAvailableBelow { get; init; } = 6;
 
-    /// <summary>Nunca vende si con ello los disponibles bajan de este número.</summary>
-    public int SellKeepingAvailable { get; init; } = 8;
+    /// <summary>
+    /// Nunca vende si con ello los disponibles bajan de este número. Baja de 8 a 7 con la plantilla
+    /// corta (RF-020, ADR 0046): con una base de diez, exigir nueve disponibles para vender dejaba a la
+    /// política sin poder hacer sitio nunca, y "vender o descartar para fichar" es justo la decisión que
+    /// la plantilla corta pone sobre la mesa.
+    /// </summary>
+    public int SellKeepingAvailable { get; init; } = 7;
 
     /// <summary>Cuánto vale un perk en puntos de atributo al valorar a un jugador.</summary>
     public int PerkWorthInAttributePoints { get; init; } = 10;
@@ -80,6 +90,14 @@ public sealed record RunPolicyOptions
     /// primero que puede pagar y la ahorradora mira la rareza, que no es lo mismo que el valor.
     /// </summary>
     public int MinPerkValue { get; init; }
+
+    /// <summary>
+    /// Si la política <b>lee el informe de ojeo</b> (RF-013) antes de alinear: con un rival que lleva
+    /// perks letales, deja en el banquillo a los tocados mientras le queden siete sanos (ADR 0046).
+    /// Existe como interruptor para poder medir <b>las dos</b> cifras —lo que muere quien lee el informe
+    /// y lo que muere quien no— porque es la diferencia entre una muerte injusta y una decisión.
+    /// </summary>
+    public bool HeedsLethalScouting { get; init; } = true;
 
     /// <summary>Compras máximas en un mismo nodo de mercado; corta el bucle, no la política.</summary>
     public int MaxMarketActions { get; init; } = 16;
@@ -123,6 +141,7 @@ public sealed record RunPlayResult(
     int GoldFromSales,
     int GoldSpentMarket,
     int GoldSpentClinic,
+    int GoldSpentEnrollment,
     int GoldSpentReroll,
     int GoldSpentWages,
     int GoldLeft,
@@ -131,6 +150,8 @@ public sealed record RunPlayResult(
     int OwnInjuries,
     int MatchInjuries,
     int SevereInjuriesSuffered,
+
+    /// <summary>Jugadores que ocupan plantilla al terminar (RF-020): los muertos ya no cuentan (ADR 0046).</summary>
     int FinalRosterSize,
     int FinalAvailable,
     int AverageLevelTimes100,
@@ -151,6 +172,7 @@ public sealed record RunPlayResult(
     int MercenariesHired,
     int PlayersSold,
     int Treatments,
+    int SlotsBought,
     int Rerolls,
     int RewardsTaken,
     int RewardsDeclined,
@@ -163,8 +185,9 @@ public sealed record RunPlayResult(
     /// <summary>True si la run terminó ganando al jefe final (RF-002).</summary>
     public bool Won => Outcome == RunOutcomeKind.Victory;
 
-    /// <summary>Oro gastado en los cuatro sumideros vivos en fase 2 (RF-114k).</summary>
-    public int GoldSpent => GoldSpentMarket + GoldSpentClinic + GoldSpentReroll + GoldSpentWages;
+    /// <summary>Oro gastado en los cinco sumideros vivos en fase 2 (RF-114k, ADR 0046).</summary>
+    public int GoldSpent =>
+        GoldSpentMarket + GoldSpentClinic + GoldSpentEnrollment + GoldSpentReroll + GoldSpentWages;
 
     /// <summary>True si la run llegó a pasar por al menos un nodo de mercado (RF-114b: quien no pasa, no se lleva nada).</summary>
     public bool VisitedMarket => MarketsVisited > 0;
@@ -190,7 +213,9 @@ public sealed record RunPlayResult(
 /// disponibles o más, y si no, el de menor dificultad. Entre servicios: el evento si el oro no llega a
 /// pagar una clínica, y si no, el entrenamiento. A igualdad, el id más bajo (RT-041).</item>
 /// <item><b>Quién juega.</b> Los siete de más <i>valor</i> por rol (1 portero, 2 defensas, 3
-/// centrocampistas, 1 delantero, y el resto por valor). Valor = suma de los cinco atributos +
+/// centrocampistas, 1 delantero, y el resto por valor), <b>leyendo antes el informe de ojeo</b>
+/// (RF-013): si el rival lleva perks letales, los tocados se quedan fuera mientras queden siete sanos
+/// (<see cref="RunPolicyOptions.HeedsLethalScouting"/>). Valor = suma de los cinco atributos +
 /// <see cref="RunPolicyOptions.PerkWorthInAttributePoints"/> por perk +
 /// <see cref="RunPolicyOptions.ItemWorthInAttributePoints"/> si lleva objeto.</item>
 /// <item><b>Cuándo se arriesga a un lesionado grave</b> (RF-093 vía 1). Cuando no hay siete
@@ -199,6 +224,11 @@ public sealed record RunPlayResult(
 /// alinearlo no acerca la derrota por plantilla: lo que arriesga es perderlo para siempre.</item>
 /// <item><b>Clínica.</b> Trata al lesionado grave de más valor mientras los disponibles estén por
 /// debajo de <see cref="RunPolicyOptions.TreatWhileAvailableBelow"/> y el oro alcance.</item>
+/// <item><b>Inscripción</b> (ADR 0046). Compra un hueco de plantilla mientras la plantilla esté llena
+/// (RF-020) y queden huecos que vender, y <b>reserva el precio del primero</b> en el mercado igual que
+/// reserva la clínica; para el segundo no ahorra. Sin la reserva el nodo es decorado —el mercado va antes
+/// en el acto y se lleva el oro— y reservando para los dos la plantilla vuelve a ser ancha y el desgaste
+/// deja de morder (medido en fase2-diseno.md §20.2).</item>
 /// <item><b>Mercado</b>, regenerando el surtido tras cada compra (el surtido depende de la plantilla):
 /// canteranos gratis mientras la plantilla no llegue al tope; luego un perk para un titular, luego un
 /// objeto para un titular sin objeto, luego un fichaje que mejore al titular más flojo, y un mercenario
@@ -286,6 +316,7 @@ public static class RunPolicy
         bool needsClinic = HasUntreatedSevereInjury(state) && state.Gold >= economy.ClinicCost;
         bool poor = state.Gold < economy.ClinicCost;
         bool strong = state.AvailablePlayerCount >= options.EliteFromAvailable;
+        bool wantsSlot = WantsRosterSlot(state, economy, options);
 
         MapNode? best = null;
         int bestScore = int.MinValue;
@@ -301,6 +332,7 @@ public static class RunPolicy
                 NodeKind.EliteMatch => strong ? 60 : 40 - node.Difficulty,
                 NodeKind.LeagueMatch => 50 - node.Difficulty,
                 NodeKind.Boss => 10,
+                NodeKind.Enrollment => wantsSlot ? 80 : 15,
                 _ => 0,
             };
 
@@ -325,12 +357,48 @@ public static class RunPolicy
     /// siete disponibles, o cuando el oro <b>no</b> cubre su tratamiento y aun así es mejor que el
     /// suplente al que sustituiría. Con la clínica pagada al alcance, la política no arriesga a nadie.
     /// </summary>
-    public static IReadOnlyList<RunPlayer> ChooseStarters(RunState state, RunPolicyOptions options, int clinicCost)
+    public static IReadOnlyList<RunPlayer> ChooseStarters(RunState state, RunPolicyOptions options, int clinicCost) =>
+        ChooseStarters(state, options, clinicCost, lethalOpponent: false);
+
+    /// <summary>
+    /// Reglas 2 y 3 <b>leyendo el informe de ojeo</b> (RF-013). Con <paramref name="lethalOpponent"/> a
+    /// true —el rival lleva algún perk letal, que es lo que devuelve
+    /// <c>Sim.Perks.Scouting.LethalPerks</c>— la política <b>saca del once a los tocados</b> mientras le
+    /// queden siete sanos: contra un equipo que remata heridos, alinear a un herido es la única forma de
+    /// perderlo para siempre (RF-093 vía 2), y está anunciada antes de confirmar la alineación (RF-012d).
+    ///
+    /// <para>Es la contrajugada de la letalidad, y está en la política a propósito: sin ella la medición
+    /// de muertes sería la de un jugador que no lee el informe, es decir, un techo y no un número.</para>
+    /// </summary>
+    public static IReadOnlyList<RunPlayer> ChooseStarters(
+        RunState state,
+        RunPolicyOptions options,
+        int clinicCost,
+        bool lethalOpponent)
     {
         ArgumentNullException.ThrowIfNull(state);
         ArgumentNullException.ThrowIfNull(options);
 
         var pool = new List<RunPlayer>(state.AvailablePlayers);
+        if (lethalOpponent)
+        {
+            var healthyOnly = new List<RunPlayer>(pool.Count);
+            for (int i = 0; i < pool.Count; i++)
+            {
+                if (pool[i].PhysicalState == PhysicalState.Healthy)
+                {
+                    healthyOnly.Add(pool[i]);
+                }
+            }
+
+            // Solo si sale un once entero de sanos: quedarse en inferioridad para no arriesgar a un
+            // tocado sería cambiar una muerte posible por una derrota segura (RF-002d).
+            if (healthyOnly.Count >= RunRules.MaxStarters)
+            {
+                pool = healthyOnly;
+            }
+        }
+
         var risky = new List<RunPlayer>();
         for (int i = 0; i < state.Roster.Count; i++)
         {
@@ -430,7 +498,11 @@ public static class RunPolicy
         int clinicCost,
         Ledger ledger)
     {
-        var starters = ChooseStarters(state, options, clinicCost);
+        // RF-013: el informe de ojeo se lee ANTES de alinear. Si el rival lleva un perk letal, los tocados
+        // se quedan en el banquillo mientras haya siete sanos (ADR 0046).
+        bool lethalOpponent = options.HeedsLethalScouting
+            && Underleague.Sim.Perks.Scouting.LethalPerks(systems.OpponentFor(state, node, catalog), catalog).Count > 0;
+        var starters = ChooseStarters(state, options, clinicCost, lethalOpponent);
         if (starters.Count >= RunRules.MinimumAvailablePlayers)
         {
             state = RunEngine.Apply(state, new SetLineup(RunLineup.Compose(starters)), catalog, systems);
@@ -515,6 +587,7 @@ public static class RunPolicy
         {
             NodeKind.Market => VisitMarket(state, node, catalog, standard, systems, options, ledger),
             NodeKind.Clinic => VisitClinic(state, catalog, standard.Economy, systems, options, ledger),
+            NodeKind.Enrollment => VisitEnrollment(state, catalog, standard.Economy, systems, options, ledger),
             _ => node.IsMatch
                 ? TakeRewards(state, node, catalog, standard, systems, options, ledger)
                 : state,
@@ -565,6 +638,59 @@ public static class RunPolicy
             ledger.Treatments++;
         }
 
+        return state;
+    }
+
+    // ------------------------------------------------------------------ 4b. inscripción
+
+    /// <summary>
+    /// ¿Merece la pena comprar un hueco de plantilla (ADR 0046)? Solo cuando la plantilla está
+    /// <b>llena</b> —si sobra sitio, el hueco no compra nada—, quedan huecos que vender, y el oro llega
+    /// sin comerse el tratamiento pendiente. Es la misma forma que la regla de la clínica: una condición
+    /// de necesidad y una de bolsillo, iguales en las tres doctrinas, para que la diferencia entre ellas
+    /// siga siendo solo la de comprar (ADR 0037).
+    /// </summary>
+    private static bool WantsRosterSlot(RunState state, EconomyConfig economy, RunPolicyOptions options)
+    {
+        int cost = NeededEnrollmentCost(state, economy, options);
+        return cost >= 0 && Spendable(state, economy) >= cost;
+    }
+
+    /// <summary>
+    /// Coste del hueco que la política <b>necesita</b>, o -1 si no necesita ninguno. Necesita uno mientras
+    /// la plantilla esté llena (RF-020) y queden huecos que vender: con sitio de sobra el hueco no compra
+    /// nada. Es el gemelo de la reserva de la clínica —la política aparta su precio del presupuesto del
+    /// mercado mientras lo necesita—, y hace falta porque el mercado va antes en el acto y si no se
+    /// reserva llega al nodo de inscripción con el oro ya gastado: medido, sin reserva la política compra
+    /// 0,26 huecos por run y el nodo es decorado.
+    /// </summary>
+    private static int NeededEnrollmentCost(RunState state, EconomyConfig economy, RunPolicyOptions options)
+    {
+        if (state.HasRosterSpace || state.EnrollmentSlotsLeft <= 0 || state.Act < options.EnrollFromAct)
+        {
+            return -1;
+        }
+
+        return economy.EnrollmentCost(state.Counter(RunState.EnrollmentSlotsCounter));
+    }
+
+    private static RunState VisitEnrollment(
+        RunState state,
+        Catalog catalog,
+        EconomyConfig economy,
+        IRunSystems systems,
+        RunPolicyOptions options,
+        Ledger ledger)
+    {
+        if (!WantsRosterSlot(state, economy, options))
+        {
+            return state;
+        }
+
+        int cost = economy.EnrollmentCost(state.Counter(RunState.EnrollmentSlotsCounter));
+        state = RunEngine.Apply(state, new ExpandRoster(), catalog, systems);
+        ledger.GoldSpentEnrollment += cost;
+        ledger.SlotsBought++;
         return state;
     }
 
@@ -706,7 +832,9 @@ public static class RunPolicy
         RunPolicyOptions options,
         int alreadySpentHere)
     {
-        int reserved = Spendable(state, economy);
+        // ADR 0046: además de la clínica, la reserva del hueco de plantilla. La gastadora no reserva nada
+        // —ni clínica ni hueco—, que es lo que la define y lo que hace que se quede sin recambios.
+        int reserved = SpendableAtMarket(state, economy, options);
         switch (options.Doctrine)
         {
             case PurchaseDoctrine.Spender:
@@ -758,7 +886,8 @@ public static class RunPolicy
     {
         // (a) Canteranos: gratis, así que primero y sin mirar el oro. Son además una de las tres vías de
         // recuperación que la ADR 0037 declara obligatorias para que arruinarse no sea irreversible.
-        if (state.Roster.Count < options.RosterCap)
+        // Gratis en oro, no en plantilla: con la plantilla llena hay que hacer sitio antes (RF-020).
+        if (state.HasRosterSpace)
         {
             for (int i = 0; i < offers.Youths.Count; i++)
             {
@@ -910,7 +1039,7 @@ public static class RunPolicy
             // (e) Venta para hacer sitio (RF-114f): solo cuando hay a quién fichar y la plantilla está
             // llena, y nunca un canterano —es la inversión de RF-114c, no mercancía—, ni un titular, ni
             // un mercenario, que se marcha solo (RF-111).
-            if (state.Roster.Count >= options.RosterCap)
+            if (!state.HasRosterSpace)
             {
                 var surplus = WorstSellable(state, lineup, options);
                 return surplus is null || state.AvailablePlayerCount <= options.SellKeepingAvailable
@@ -921,8 +1050,11 @@ public static class RunPolicy
             return new BuyOffer(MarketCategories.Player, bestRecruit);
         }
 
-        // (f) Mercenario solo si faltan cuerpos: no cuesta fichaje, cuesta salario (RF-110..113, D-3).
-        if (state.AvailablePlayerCount < options.HireMercenaryWhileAvailableBelow)
+        // (f) Mercenario solo si faltan cuerpos Y cabe: no cuesta fichaje ni hueco de mercado, pero sí
+        // ocupa plantilla (RF-020, ADR 0046). Con la plantilla llena y cuerpos faltando, la salida no es
+        // el mercado: es el nodo de inscripción, y por eso la política lo prioriza justo en ese caso
+        // (WantsRosterSlot). Ese es el bucle que la plantilla corta pone en marcha.
+        if (state.HasRosterSpace && state.AvailablePlayerCount < options.HireMercenaryWhileAvailableBelow)
         {
             for (int i = 0; i < offers.Mercenaries.Count; i++)
             {
@@ -1081,11 +1213,12 @@ public static class RunPolicy
                     break;
 
                 case PlayerRewardOption:
-                    // Un jugador de recompensa vale como el mejor perk solo cuando faltan cuerpos: si no,
-                    // es una boca más en una plantilla que ya llega a trece con canteranos gratis, y
-                    // rechazarlo (ADR 0043) deja el nodo sin ocupar nada irreversible.
-                    score = state.Roster.Count >= options.RosterCap
-                        ? 1
+                    // Un jugador de recompensa vale como el mejor perk solo cuando faltan cuerpos. Con la
+                    // plantilla llena (RF-020) la opción ni siquiera se puede cobrar —en un nodo de
+                    // recompensa no hay mercado en el que vender—, así que vale 0 y el nodo se rechaza
+                    // (ADR 0043) sin ocupar nada irreversible.
+                    score = !state.HasRosterSpace
+                        ? 0
                         : (state.AvailablePlayerCount < options.SignWhileAvailableBelow ? 3 : 2);
                     break;
 
@@ -1108,6 +1241,29 @@ public static class RunPolicy
     /// <summary>Oro que la política se permite gastar: reserva la clínica mientras haya un lesionado grave.</summary>
     private static int Spendable(RunState state, EconomyConfig economy) =>
         HasUntreatedSevereInjury(state) ? Math.Max(0, state.Gold - economy.ClinicCost) : state.Gold;
+
+    /// <summary>
+    /// Oro que la política se permite gastar <b>en el mercado</b>: además de la clínica, aparta el precio
+    /// del hueco de plantilla cuando lo necesita (ADR 0046). Sin esta reserva el nodo de inscripción es
+    /// decorado: el mercado va antes en el acto y se lleva el oro.
+    /// </summary>
+    private static int SpendableAtMarket(RunState state, EconomyConfig economy, RunPolicyOptions options)
+    {
+        int gold = Spendable(state, economy);
+
+        // Solo se ahorra para el PRIMER hueco. El segundo cuesta "bastante más" (ADR 0046) y la política
+        // lo compra únicamente si le sobra el oro al llegar al nodo: ahorrar para él significaría no
+        // comprar nada en el mercado durante medio acto, y a esas alturas un perk raro vale más que el
+        // duodécimo cuerpo. Medido: reservando para los dos, la plantilla vuelve a 11,2, las muertes caen
+        // a 0,22 y el gasto de mercado se hunde de 53 a 24 de oro por run.
+        if (state.Counter(RunState.EnrollmentSlotsCounter) > 0)
+        {
+            return gold;
+        }
+
+        int slot = NeededEnrollmentCost(state, economy, options);
+        return slot > 0 ? Math.Max(0, gold - slot) : gold;
+    }
 
     private static bool HasUntreatedSevereInjury(RunState state)
     {
@@ -1458,6 +1614,7 @@ public static class RunPolicy
             ledger.GoldFromSales,
             ledger.GoldSpentMarket,
             ledger.GoldSpentClinic,
+            ledger.GoldSpentEnrollment,
             ledger.GoldSpentReroll,
             ledger.GoldSpentWages,
             state.Gold,
@@ -1466,7 +1623,7 @@ public static class RunPolicy
             ledger.OwnInjuries,
             ledger.MatchInjuries,
             ledger.SevereInjuries,
-            state.Roster.Count,
+            state.RosterSize,
             state.AvailablePlayerCount,
             state.Roster.Count > 0 ? levels * 100 / state.Roster.Count : 0,
             perks,
@@ -1486,6 +1643,7 @@ public static class RunPolicy
             ledger.MercenariesHired,
             ledger.PlayersSold,
             ledger.Treatments,
+            ledger.SlotsBought,
             ledger.Rerolls,
             ledger.RewardsTaken,
             ledger.RewardsDeclined,
@@ -1562,6 +1720,12 @@ public static class RunPolicy
         public int GoldFromSales;
         public int GoldSpentMarket;
         public int GoldSpentClinic;
+
+        /// <summary>Oro gastado en huecos de plantilla (ADR 0046): el sumidero nuevo.</summary>
+        public int GoldSpentEnrollment;
+
+        /// <summary>Huecos de plantilla comprados en la run (0, 1 o 2).</summary>
+        public int SlotsBought;
         public int GoldSpentReroll;
         public int GoldSpentWages;
         public int Deaths;

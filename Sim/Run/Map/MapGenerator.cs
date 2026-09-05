@@ -46,6 +46,11 @@ public sealed record MapOptions(int PathLength = MapGenerator.DefaultPathLength,
 ///          libre libre MERCADO libre libre MERCADO libre libre MERCADO libre JEFE
 /// </code>
 ///
+/// <para><b>Las capas de servicio reparten cuatro tipos</b> (clínica, entrenamiento, evento e
+/// inscripción, ADR 0046) con dos garantías por acto: una clínica en la primera capa de servicios y un
+/// nodo de inscripción en la última. El nodo de inscripción entra quitándole sitio a los otros tres
+/// servicios, no al mercado: la garantía de RF-011b sale de las capas de mercado y no la toca nadie.</para>
+///
 /// <para><b>La garantía de RF-011b sale por construcción, no por reintentos.</b> Demostración corta:
 /// en un grafo por capas con aristas <c>i -> i+1</c>, lo alcanzable en dos saltos desde la capa
 /// <c>i</c> son las capas <c>i+1</c> e <c>i+2</c>. Si una capa contuviera un mercado <i>y</i> un nodo
@@ -354,23 +359,51 @@ public static class MapGenerator
             }
         }
 
-        // Servicios. La primera capa de servicios lleva siempre una clínica.
+        // Servicios. Dos garantías por acto, y las dos son de diseño, no de sorteo: la PRIMERA capa de
+        // servicios lleva siempre una clínica (RF-094: es lo que hace tratable una lesión grave) y la
+        // ÚLTIMA lleva siempre un nodo de inscripción (ADR 0046: comprar un hueco tiene que ser una
+        // opción real en cada acto, no una que el dado puede no ofrecer nunca). El resto de la capa sale
+        // del sorteo, así que ir a por el hueco significa no ir al otro servicio de esa capa —y cuando
+        // solo hay una capa de servicios en todo el acto, la elección es literalmente «curo al que tengo
+        // o me traigo a otro»—.
         bool clinicPlaced = false;
+        bool enrollmentPlaced = false;
         for (int i = 0; i < serviceLayers.Count; i++)
         {
             int layer = serviceLayers[i];
-            var pool = new List<NodeKind> { NodeKind.Clinic, NodeKind.Training, NodeKind.Event };
+            var pool = new List<NodeKind> { NodeKind.Clinic, NodeKind.Training, NodeKind.Event, NodeKind.Enrollment };
             rng.Shuffle(pool);
+
+            var forced = new List<NodeKind>(2);
             if (!clinicPlaced)
             {
-                pool.Remove(NodeKind.Clinic);
-                pool.Insert(0, NodeKind.Clinic);
+                forced.Add(NodeKind.Clinic);
                 clinicPlaced = true;
+            }
+
+            if (!enrollmentPlaced && i == serviceLayers.Count - 1)
+            {
+                forced.Add(NodeKind.Enrollment);
+                enrollmentPlaced = true;
+            }
+
+            var ordered = new List<NodeKind>(pool.Count);
+            ordered.AddRange(forced);
+            for (int p = 0; p < pool.Count; p++)
+            {
+                if (!forced.Contains(pool[p]))
+                {
+                    ordered.Add(pool[p]);
+                }
             }
 
             for (int index = 0; index < widths[layer]; index++)
             {
-                kinds[layer][index] = pool[index % pool.Count];
+                kinds[layer][index] = ordered[index % ordered.Count];
+                if (kinds[layer][index] == NodeKind.Enrollment)
+                {
+                    enrollmentPlaced = true;
+                }
             }
         }
 

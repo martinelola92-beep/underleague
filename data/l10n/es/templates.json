@@ -8,7 +8,8 @@
     "effectSeparator": ", ",
     "effectFinalSeparator": " y ",
     "elsePrefix": "; si no, ",
-    "linkSeparator": " y "
+    "linkSeparator": " y ",
+    "lethalSuffix": " Si alcanza a un rival que ya no está sano, lo mata."
   },
   "effects": {
     "modifyAttribute": "{target} {value:+} de {attribute} durante {duration}",

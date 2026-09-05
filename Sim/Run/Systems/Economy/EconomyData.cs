@@ -93,7 +93,7 @@ public sealed record MarketConfig(
 /// el contenido ya leído).
 /// </summary>
 public sealed record EconomyConfig(
-    int StartingGold,
+    IReadOnlyList<int> StartingGoldByDivision,
     int GoldAct1,
     int GoldAct2,
     int GoldAct3,
@@ -103,6 +103,7 @@ public sealed record EconomyConfig(
     NodeRewardConfig BossReward,
     int ExcellentMatchBonusGold,
     int ClinicCost,
+    IReadOnlyList<int> EnrollmentCosts,
     int RerollBaseCost,
     int RerollStepCost,
     int TrainingExperience,
@@ -125,6 +126,24 @@ public sealed record EconomyConfig(
     /// hay precio, la frecuencia. Una instantánea sin el fichero reparte pesos uniformes.
     /// </summary>
     public PerkValueTable PerkValues { get; init; } = PerkValueTable.Uniform;
+
+    /// <summary>
+    /// Oro de partida de la división indicada (RF-128, ADR 0044 §"el oro inicial es la primera palanca de
+    /// dificultad por división"). El criterio es que el club empiece con <b>lo justo para un artículo
+    /// común</b> en la primera tienda, y que en Mundial esa primera tienda sea solo un escaparate. Es una
+    /// palanca de <b>ritmo</b>: 10 de oro sobre los ~100 de una run es el 10% del total y no mueve la
+    /// tasa de victoria por sí sola; lo que decide es el tono del arranque.
+    /// </summary>
+    public int StartingGoldFor(Division division)
+    {
+        int index = (int)division;
+        return index >= 0 && index < StartingGoldByDivision.Count
+            ? StartingGoldByDivision[index]
+            : StartingGoldByDivision[^1];
+    }
+
+    /// <summary>Oro de partida en tercera (RF-128), que es la única división que juega la fase 2.</summary>
+    public int StartingGold => StartingGoldFor(Division.Third);
 
     /// <summary>Oro fijo por victoria de ese acto, antes de multiplicadores (RF-114g).</summary>
     public int GoldForAct(int act) => act switch
@@ -149,6 +168,15 @@ public sealed record EconomyConfig(
         int index = Math.Clamp(difficulty, 1, DifficultyMultiplierPercent.Count) - 1;
         return DifficultyMultiplierPercent[index];
     }
+
+    /// <summary>
+    /// Coste del siguiente hueco de plantilla (ADR 0046): <b>creciente</b>, uno por entrada de
+    /// <c>enrollmentCosts</c>. Devuelve -1 cuando ya no quedan huecos que vender, que es lo que hace del
+    /// techo de 12 un techo y no un peaje infinito.
+    /// </summary>
+    /// <param name="slotsBought">Huecos ya comprados en la run (<c>RunState.EnrollmentSlotsCounter</c>).</param>
+    public int EnrollmentCost(int slotsBought) =>
+        slotsBought >= 0 && slotsBought < EnrollmentCosts.Count ? EnrollmentCosts[slotsBought] : -1;
 
     /// <summary>Coste de un reroll de recompensa, creciente con el número de rerolls ya usados en la run (RF-071b).</summary>
     public int RerollCost(int rerollsUsedInRun) => RerollBaseCost + (RerollStepCost * rerollsUsedInRun);
@@ -181,6 +209,33 @@ public static class EconomyLoader
         using var document = Parse(content);
         var root = Json.Root(Path, document);
 
+        var startingGold = new List<int>();
+        foreach (var item in root.Prop("startingGoldByDivision").EnumerateArray())
+        {
+            startingGold.Add(item.AsInt());
+        }
+
+        int divisions = Enum.GetValues<Division>().Length;
+        if (startingGold.Count != divisions)
+        {
+            throw new DataException(
+                Path,
+                "$.startingGoldByDivision",
+                $"debe tener exactamente {divisions} valores, uno por división de RF-128 en el orden del enum "
+                    + "(tercera, segunda, primera, continental, mundial)");
+        }
+
+        for (int i = 1; i < startingGold.Count; i++)
+        {
+            if (startingGold[i] > startingGold[i - 1])
+            {
+                throw new DataException(
+                    Path,
+                    "$.startingGoldByDivision",
+                    "el oro de partida NO CRECE con la división (ADR 0044): subir de división es empezar con menos");
+            }
+        }
+
         var difficulty = new List<int>();
         foreach (var item in root.Prop("difficultyMultiplierPercent").EnumerateArray())
         {
@@ -203,10 +258,36 @@ public static class EconomyLoader
             throw new DataException(Path, "$.recruitLevelByAct", "debe tener exactamente 3 valores, uno por acto (RF-001)");
         }
 
+        var enrollment = new List<int>();
+        foreach (var item in root.Prop("enrollmentCosts").EnumerateArray())
+        {
+            enrollment.Add(item.AsInt());
+        }
+
+        if (enrollment.Count != RunRules.MaxEnrollmentSlots)
+        {
+            throw new DataException(
+                Path,
+                "$.enrollmentCosts",
+                $"debe tener exactamente {RunRules.MaxEnrollmentSlots} valores, uno por hueco de plantilla "
+                    + $"entre la base de {RunRules.BaseRosterSize} y el techo de {RunRules.MaxRosterSize} (RF-020, ADR 0046)");
+        }
+
+        for (int i = 1; i < enrollment.Count; i++)
+        {
+            if (enrollment[i] <= enrollment[i - 1])
+            {
+                throw new DataException(
+                    Path,
+                    "$.enrollmentCosts",
+                    "el coste del hueco de plantilla es CRECIENTE (ADR 0046): cada entrada debe superar a la anterior");
+            }
+        }
+
         var market = ReadMarket(root.Prop("market"));
 
         return new EconomyConfig(
-            root.Int("startingGold"),
+            startingGold,
             root.Int("goldAct1"),
             root.Int("goldAct2"),
             root.Int("goldAct3"),
@@ -216,6 +297,7 @@ public static class EconomyLoader
             ReadNodeReward(root.Prop("nodeRewards").Prop("boss")),
             root.Int("excellentMatchBonusGold"),
             root.Int("clinicCost"),
+            enrollment,
             root.Int("rerollBaseCost"),
             root.Int("rerollStepCost"),
             root.Int("trainingExperience"),

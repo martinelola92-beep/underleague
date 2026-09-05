@@ -66,6 +66,13 @@ public sealed class Options
     /// </summary>
     public int? FullRuns { get; private set; }
 
+    /// <summary>
+    /// --ignore-scouting: en --full-runs, la política automática <b>no lee</b> el informe de ojeo
+    /// (RF-013) y alinea a los tocados aunque el rival lleve perks letales (ADR 0046). Es la medida de
+    /// control: la diferencia entre las dos cifras de muertes es lo que vale leer el informe.
+    /// </summary>
+    public bool IgnoreScouting { get; private set; }
+
     /// <summary>Null salvo que se pase --describe [es|en]: activa el modo catálogo, con el idioma pedido (por defecto "es").</summary>
     public string? Describe { get; private set; }
 
@@ -118,6 +125,10 @@ public sealed class Options
 
                 case "--perk-values":
                     options.PerkValues = true;
+                    break;
+
+                case "--ignore-scouting":
+                    options.IgnoreScouting = true;
                     break;
 
                 case "--full-runs":

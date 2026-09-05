@@ -1,0 +1,32 @@
+{
+  "_doc": "ADR 0046, RF-093 vía 2. Perk LETAL. Mata solo a quien ya no está sano (EffectEngine.IsLethalVictim), y en este motor eso son exactamente los que SALTAN AL CAMPO heridos: una lesión sufrida en el partido saca al jugador del campo (MatchEngine.ResolveInjury -> LeavePitch), así que el único momento en que un herido está alcanzable es el saque inicial. De ahí el disparador MATCH_START: no es un adorno, es dónde el mecanismo existe. Regla que el jugador puede leer entera antes de entrar: contra este equipo, quien sale herido no vuelve. tagsRequired 'Dirty' lo hace escaso y el rasgo se ve en el ojeo (RF-013).",
+  "id": "skullsplitter",
+  "name": {
+    "es": "Partecráneos",
+    "en": "Skullsplitter"
+  },
+  "rarity": "legendary",
+  "kind": "ruleBreaker",
+  "axis": "identity",
+  "race": null,
+  "trigger": "MATCH_START",
+  "scope": "any",
+  "links": [],
+  "condition": "",
+  "effects": [
+    {
+      "type": "modifyProbability",
+      "target": "opposingTeam",
+      "probability": "injury",
+      "value": 3,
+      "duration": "match"
+    }
+  ],
+  "elseEffects": [],
+  "limit": null,
+  "accumulatesAcrossMatches": false,
+  "lethal": true,
+  "positionOnly": null,
+  "tagsRequired": ["Dirty"],
+  "tagsForbidden": []
+}

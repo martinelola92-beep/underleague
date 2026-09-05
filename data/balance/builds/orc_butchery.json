@@ -1,0 +1,40 @@
+{
+  "_doc": "ADR 0046: la build de violencia llevada a su culminación, con los CUATRO perks letales del catálogo (RF-093 vía 2). Existe para medir la aniquilación —si matar rivales fuera la vía eficiente de ganar, sería esta build la que lo demostrase— y para que ningún perk letal quede sin asignar en /data. Fuera de groups.json a propósito, como elf_glass: se mide a mano con '--builds orc_butchery,orc_none --vs orc_none', no entra en las puertas automáticas. Los 'traits' y las 'rarities' son instrumento de medida: los letales exigen Dirty o Aggressive (tagsRequired) y hacen falta slots para llevarlos.",
+  "id": "orc_butchery",
+  "name": "Orcos: carnicería letal",
+  "race": "Orc",
+  "quality": 50,
+  "perks": [
+    { "slot": 0, "perk": "safety_net" },
+    { "slot": 0, "perk": "sweeper_keeper" },
+    { "slot": 1, "perk": "brute_boots" },
+    { "slot": 1, "perk": "shadow_marker" },
+    { "slot": 1, "perk": "skullsplitter" },
+    { "slot": 1, "perk": "iron_studs" },
+    { "slot": 2, "perk": "brute_boots" },
+    { "slot": 2, "perk": "shadow_marker" },
+    { "slot": 2, "perk": "skullsplitter" },
+    { "slot": 3, "perk": "shadow_marker" },
+    { "slot": 3, "perk": "second_wound" },
+    { "slot": 4, "perk": "shadow_marker" },
+    { "slot": 4, "perk": "brute_boots" },
+    { "slot": 5, "perk": "shadow_marker" },
+    { "slot": 5, "perk": "scar_tissue" },
+    { "slot": 6, "perk": "box_predator" },
+    { "slot": 6, "perk": "forward_line" },
+    { "slot": 6, "perk": "marrow_thirst" },
+    { "slot": 6, "perk": "iron_studs" }
+  ],
+  "rarities": {
+    "1": "rare",
+    "2": "rare",
+    "3": "uncommon",
+    "6": "rare"
+  },
+  "traits": {
+    "1": ["Dirty", "Aggressive"],
+    "2": ["Dirty"],
+    "6": ["Aggressive"]
+  },
+  "lineup": null
+}

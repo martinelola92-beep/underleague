@@ -61,6 +61,7 @@ public static class MarketSystem
         var node = NodeGuards.RequireOpen(state, NodeKind.Market, "fichar a un mercenario");
         var offers = MarketOfferGenerator.Generate(state, node, catalog, economy, items, consumables);
         var offer = AtIndex(offers.Mercenaries, decision.OfferIndex, "mercenario");
+        RequireRosterSpace(state, "fichar a un mercenario");
         return state.WithNewPlayer(offer.Player);
     }
 
@@ -83,6 +84,10 @@ public static class MarketSystem
     private static RunState BuyPlayer(RunState state, IReadOnlyList<PlayerOffer> offers, BuyOffer decision, bool requirePayment)
     {
         var offer = AtIndex(offers, decision.OfferIndex, "jugador");
+
+        // RF-020 (ADR 0046): el canterano gratuito tampoco crece la plantilla por la cara. Que no cueste
+        // oro no quiere decir que no cueste un hueco, y el hueco es el recurso escaso.
+        RequireRosterSpace(state, "fichar");
         if (requirePayment)
         {
             RequireGold(state, offer.Price);
@@ -144,6 +149,20 @@ public static class MarketSystem
         }
 
         return offers[index];
+    }
+
+    /// <summary>
+    /// RF-020 (ADR 0046): con la plantilla llena hay que <b>vender</b> (RF-114f) o descartar antes de
+    /// fichar. El mensaje dice las dos salidas porque las dos existen aquí mismo, en el mercado.
+    /// </summary>
+    private static void RequireRosterSpace(RunState state, string action)
+    {
+        if (!state.HasRosterSpace)
+        {
+            throw new ArgumentException(
+                $"no se puede {action}: la plantilla está llena ({state.RosterSize} de {state.RosterCapacity}, RF-020). "
+                    + "Hay que vender o descartar a alguien primero, o comprar un hueco en un nodo de inscripción");
+        }
     }
 
     private static void RequireGold(RunState state, int price)

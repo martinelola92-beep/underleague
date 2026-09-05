@@ -108,6 +108,13 @@ public sealed class FullRunTests
                 continue;
             }
 
+            // RF-020 (ADR 0046): un jugador de recompensa solo se puede cobrar si cabe en la plantilla.
+            // Con la plantilla llena, la salida es rechazar (ADR 0043).
+            if (options[i] is PlayerRewardOption && !state.HasRosterSpace)
+            {
+                continue;
+            }
+
             return RunEngine.Apply(state, new ChooseReward(i, carrier), catalog, systems);
         }
 

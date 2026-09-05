@@ -1051,3 +1051,265 @@ corta; no es un ajuste de datos.
 objeto común más barato es habitual. **Por visita** sigue siendo el 15%, que es la cifra razonable; la
 métrica está contada por run y una run visita 9 mercados (ya anotado como Z-K). Las cotas de no regresión
 de la puerta se ensanchan a 88% y 62% con este motivo escrito.
+
+## 20. Decisiones de implementación del paquete AC: la plantilla corta (ADR 0046)
+
+El desgaste pasa a ser el recurso central que el documento dice que es. Tres cambios de la ADR 0046
+—plantilla base de diez con techo de doce, nodo de inscripción, y los primeros perks letales del
+catálogo— y una palanca añadida por el revisor: el oro inicial baja al subir de división (ADR 0044).
+
+**Resultado de una línea**: las muertes por run pasan de **0,06 a 0,64** (banda 0,5-2, **dentro**), la
+segunda vía de derrota de RF-002b deja de ser teórica (**2,07%** de las derrotas), la tasa de victoria
+sigue en banda (**22,6%**) y la curva de puertas de la ADR 0033 **no se mueve ni un decimal**.
+
+### 20.1. La plantilla base es de diez (RF-020)
+
+**AC-1. El límite se comprueba en un único embudo.** `RunState.WithNewPlayer` es por donde entra todo
+jugador nuevo —mercado, canterano, mercenario, recompensa— y ahí es donde lanza si la plantilla está
+llena. La comprobación no está repartida por los sistemas a propósito: el fallo que la ADR 0045
+diagnosticó era precisamente que *alguien* ampliaba la plantilla en silencio, y con el embudo cerrado
+ningún camino nuevo puede volver a hacerlo sin darse cuenta. Encima de él, cada sistema añade su mensaje
+("hay que vender o descartar a alguien primero"), que es lo que la interfaz necesita enseñar.
+
+**AC-2. El techo vive en un contador, no en el esquema.** `RosterCapacity = 10 + Counter("enrollmentSlots")`,
+acotado a 12. Va en `RunState.Counters` porque es exactamente para lo que ese diccionario existe (añadir
+un sistema sin subir la versión de esquema, RT-030), y porque así una run guardada antes de este paquete
+se carga con cero huecos, que es la lectura correcta.
+
+**AC-3. El muerto no ocupa plantilla.** `RosterSize` cuenta los vivos; el caído sigue en `Roster` para el
+memorial (RF-122) pero deja su sitio libre. Morir cuesta un jugador, no un jugador **y** su hueco.
+
+**AC-4. Descartar (`ReleasePlayer`) existe porque vender no basta.** Vender solo se puede en el mercado
+(RF-114f) y hacer sitio no puede depender de estar en uno. El descarte no cobra nada y nunca puede dejar
+los disponibles por debajo del mínimo de RF-002b: perder la run desde un menú no es una decisión, es un
+error de diseño.
+
+**AC-5. Lo que se llevó por delante: el canterano.** Con diez, el canterano gratuito compite por un hueco
+y lo pierde a menudo: solo entra cuando la plantilla tiene sitio, es decir, tras una baja o tras comprar
+un hueco. Medido: la política ficha **3,31 canteranos por run antes y 1,23 después**. Es la consecuencia
+más visible del cambio y vuelve en el apartado de economía (AC-18). Gratis en oro nunca quiso decir
+gratis en plantilla; ahora se nota.
+
+### 20.2. El nodo de inscripción (amplía RF-011)
+
+**AC-6. Entra quitándole sitio a los servicios, no al mercado.** Las capas de mercado son cuellos de
+botella de un nodo y de ellas sale la garantía de RF-011b por construcción (§4), así que tocarlas habría
+puesto en riesgo lo único que el mapa garantiza de verdad. El nodo de inscripción entra en el sorteo de
+las **capas de servicio**, junto a clínica, entrenamiento y evento: el reparto pasa de tres tipos a
+cuatro. La garantía de mercado sigue saliendo por construcción y el test de los 1.000 mapas
+(`MapTests.MarketGuarantee_HoldsOnAThousandMaps`) sigue en verde sin tocarlo.
+
+**AC-7. Uno por acto, garantizado, como la clínica.** La primera capa de servicios lleva siempre una
+clínica y la última lleva siempre un nodo de inscripción. Si dependiera del sorteo, comprar un hueco
+sería una opción que el dado puede no ofrecer nunca, y una decisión que a veces no existe no es una
+decisión. Un test nuevo lo comprueba sobre 600 mapas y además que el nodo **nunca ocupa una capa entera**:
+siempre hay otro servicio al lado, así que ir a por el hueco es no ir a lo otro.
+
+**AC-8. Coste creciente en datos**: `economy.enrollmentCosts = [12, 25]`, los valores de partida de la
+ADR 0046. Sobre los ~105 de oro de una run completa (§19.5) los dos huecos son el **35%**, que es la
+"casi la mitad" que la ADR pide. El cargador exige que sean exactamente dos y que el segundo supere al
+primero: el coste creciente es una regla, no una costumbre.
+
+**AC-9. Cuántas veces lo usa una política razonable: 0,88 huecos por run** (10,77 de oro), y el reparto
+importa más que la media. La política reserva el precio del **primer** hueco igual que reserva la clínica
+—si no, llega al nodo con el oro ya gastado en el mercado, que va antes en el acto— y **no reserva para el
+segundo**. Las tres variantes que llevaron a esa regla, medidas sobre **la misma exposición letal** (300 runs por doctrina, semilla 1, cinco
+rivales con letal de alta conversión) para que lo único que cambie sea la regla de ahorro:
+
+| Política ante el nodo | Huecos/run | Plantilla final | Muertes/run | Tasa de victoria | Oro al mercado |
+|---|---|---|---|---|---|
+| Sin reservar (compra si le sobra) | 0,25 | 10,6 | **0,59** | 17,7% | 47,7 |
+| **Reserva el primero** (elegida) | **0,89** | **11,0** | **0,38** | **25,0%** | **39,9** |
+| Reserva los dos | 1,21 | 11,2 | 0,22 | 23,0% | 23,8 |
+
+La fila de abajo es el aviso: **con los dos huecos comprados, la plantilla vuelve a ser ancha y el
+desgaste deja de morder** —0,22 muertes, otra vez el mundo de la ADR 0045— y el mercado se hunde de 48 a
+24 de oro por run, la mitad. La de arriba es el contrario: sin reserva el nodo es decorado (0,25 huecos) y
+la run se hace un 7% más difícil sin que el jugador tenga una salida. El nodo de inscripción es, por
+construcción, **el contrapeso de la plantilla corta**; que sea una decisión y no un trámite depende de que
+ahorrar para el segundo hueco cueste medio acto sin comprar nada, y a esas alturas un perk raro vale más
+que el duodécimo cuerpo. La exposición letal final (siete portadores, AC-13) se calibró **después** de
+fijar esta regla, no al revés.
+
+### 20.3. Los cuatro perks letales (RF-093 vía 2)
+
+**AC-10. El hallazgo que decidió su forma: el motor solo deja una ventana.** `EffectEngine.IsLethalVictim`
+exige que la víctima esté **en el campo** y **no esté sana**. Pero una lesión sufrida en el partido saca
+al jugador del campo en el acto (`MatchEngine.ResolveInjury` → `LeavePitch`), así que el único herido
+alcanzable es **el que salta al campo herido**. De ahí que los dos letales de mayor conversión disparen en
+`MATCH_START`: no es un adorno temático, es dónde el mecanismo existe. Y de ahí también que sean
+perfectamente telegrafiables: la regla que el jugador tiene que leer es *"contra este equipo, quien salga
+tocado no vuelve"*.
+
+| id | rareza | trigger | canal (escalón ADR 0035) | escasez | conversión |
+|---|---|---|---|---|---|
+| `skullsplitter` | legendary | MATCH_START | `injury` +3 (paso 1 ×3) | `tagsRequired: Dirty` | alta |
+| `marrow_thirst` | rare | MATCH_START | `injure` +3 y `severeInjury` +9 (pasos 1 y 3) | `Aggressive` + empezar en el tercio rival | alta |
+| `second_wound` | rare | INJURY | `severeInjury` +3 | solo mientras no van ganando | baja |
+| `iron_studs` | rare | TACKLE | `tackleEvasion` −9 (paso 3 ×3) | solo presionando en el tercio rival | baja |
+
+**AC-11. La escasez se escribe con `tagsRequired`, no con `condition`.** Un rival construido a mano
+siempre lleva `StyleTag.Neutral` (`RivalTeamBuilder`), así que condicionar por etiqueta de estilo habría
+hecho que el perk no se disparara nunca en un rival mientras el ojeo lo anunciaba: un peligro anunciado
+que no existe, que RF-012d prohíbe tanto como el contrario. Los rasgos (`Dirty`, `Aggressive`) sí viajan
+al partido, se ven en el informe y además restringen quién puede llevarlo en la plantilla del jugador
+(`PerkPool.EligibleCarriers`).
+
+**AC-12. La descripción lo dice, no solo el ojeo.** `Scouting.LethalPerks` ya destacaba la amenaza
+(RF-013), pero la ficha del perk no decía lo peor que puede pasar. Se añade `layout.lethalSuffix` a
+`data/l10n/*/templates.json` y `DescriptionGenerator` lo cuelga cuando el perk es letal: sigue siendo
+texto **generado desde el dato** (RT-035), no escrito a mano. Sale, por ejemplo: *«Al empezar el partido,
+el equipo rival suma +3% a su probabilidad de lesionarse. Si alcanza a un rival que ya no está sano, lo
+mata.»*
+
+**AC-13. El reparto en rivales, y por qué siete.** Acto 1: **ninguno** (es el taller, ADR 0043). Acto 2:
+tres equipos con un letal de alta conversión y uno con `second_wound`. Acto 3: cuatro con alta conversión
+y los dos de baja donde ya estaban. Los elfos quedan limpios en los dos actos, que es una declaración de
+identidad y no un hueco.
+
+**La exposición es la palanca**, y está medida punto a punto (300 runs por doctrina cada uno). Los dos
+primeros escalones se midieron antes de fijar la reserva del hueco (AC-9) y los dos últimos después, así
+que la escalera hay que leerla por tramos y no como una recta:
+
+| Portadores de alta conversión (de 10 rivales) | Muertes/run | Derrotas por plantilla | Tasa de victoria |
+|---|---|---|---|
+| 4, sin reserva de hueco | 0,42 | 0,0% | 19,0% |
+| 5, sin reserva de hueco | 0,59 | 2,0% | 17,7% |
+| 6, con reserva del primero | 0,46 | 1,8% | 24,3% |
+| **7, con reserva del primero** (elegido) | **0,77** | **3,5%** | **22,7%** |
+| 10, sin reserva de hueco | **2,87** | **17,1%** | **12,3%** |
+
+La fila de diez es el techo y el aviso a la vez: con todos los rivales de los actos 2 y 3 matando, las
+muertes se disparan a 2,87 —fuera de banda por arriba— y la run se vuelve injugable. Siete es el punto en
+el que la banda 0,5-2 se cumple sin que el resto de la curva se caiga. Con la muestra grande de cierre
+(500 runs) ese punto mide **0,64**; el 0,77 de la tabla es la misma configuración con 300 runs, y la
+diferencia es muestreo (la desviación típica de la cifra es de ±0,04 con 500 runs).
+
+### 20.4. Aniquilación: por qué hoy no es una vía, medido
+
+El riesgo que la ADR 0046 manda vigilar —que una build de violencia gane por incomparecencia (RF-002b)—
+**no existe hoy, y la causa es estructural, no de balance**:
+
+1. `RivalTeamBuilder` construye a los diez rivales **siempre sanos**.
+2. Una lesión en el partido saca al lesionado del campo, y `IsLethalVictim` exige estar en el campo.
+
+Luego un perk letal del jugador no encuentra víctima nunca. Medido y no supuesto: la build
+`orc_butchery` —los cuatro letales repartidos entre cuatro titulares con los rasgos y las rarezas que
+hacen falta— dispara los cuatro perks (`skullsplitter` y `marrow_thirst` en el **100%** de los partidos,
+`iron_studs` y `second_wound` en el **71%**) y produce **0 muertes rivales en 60 partidos**.
+`LethalPerkTests.APlayerViolenceBuildCannotKillAnOpponent` lo deja como guardia de regresión: si algún día
+cambia una de las dos condiciones, el test se pone rojo y hay que remedir la aniquilación **antes** de
+seguir, que es justo lo que la ADR pide.
+
+Consecuencia para el jugador: los letales le sirven hoy como lo que sus efectos dicen —más lesiones y más
+lesiones graves en el rival— y como espejo de la amenaza, no como vía de victoria. Encarecer la letalidad
+no hace falta porque no hay nada que encarecer.
+
+### 20.5. La contrajugada, y lo que vale leer el informe
+
+La política automática **lee el informe de ojeo** antes de alinear (RF-013): si el rival lleva algún perk
+letal, deja en el banquillo a los tocados mientras le queden siete sanos. Sin esa regla, la medición de
+muertes sería la de un jugador que no lee el informe, es decir un techo y no un número. Las dos cifras,
+con el lote de referencia completo (500 runs por doctrina):
+
+| | Muertes/run | Derrotas por plantilla | Tasa de victoria |
+|---|---|---|---|
+| **Lee el ojeo** (política por defecto) | **0,64** | **2,07%** | **22,6%** |
+| No lo lee (`--ignore-scouting`) | 1,28 | 0,75% | 20,4% |
+
+**AC-15. Apartar al tocado sale gratis, y eso es un aviso de diseño.** Las dos filas están a dos puntos de
+tasa de victoria: la contrajugada no cuesta partidos, porque un jugador con lesión leve ya juega al −15%
+(RF-091) y sentarlo casi no penaliza. El letal, por tanto, **no crea un dilema en el momento de alinear**:
+lo que castiga es llegar a ese partido sin siete sanos, es decir, la administración de todo el acto
+anterior. Es un buen sitio para que castigue —es exactamente el recurso que el juego dice tener— pero
+conviene saber que la decisión no está en la alineación, está antes.
+
+### 20.6. Economía remedida (RF-114k) y el oro por división
+
+**AC-16. Cinco sumideros, no cuatro.** El hueco de plantilla es oro que sale de la run y compite con los
+demás, así que entra en `FullRunMetrics.SinksAffordable` (se cuenta el **primer** hueco: la métrica
+pregunta qué cabe en *un* acto). `sinksAffordablePerAct` queda en **2,08** (banda 2-3) y ningún acto paga
+los cinco. RF-114k se sigue cumpliendo con un sumidero más.
+
+**AC-17. Dónde va el oro ahora**, por run (contextual, 500 runs; entre paréntesis, antes del paquete):
+
+| | Ganado | Mercado | Clínica | **Inscripción** | Rerolls | Sobrante |
+|---|---|---|---|---|---|---|
+| Antes | 66,3 | 58,7 | 3,8 | — | 2,4 | 11,4 |
+| **Ahora** | **56,2** | **37,6** | **4,7** | **10,8** | **1,4** | **11,8** |
+
+El mercado cede 21 de oro por run: 11 al sumidero nuevo y el resto a que se gana menos (se llega menos
+lejos). La clínica **sube** un 24%, que es la mitad de lo que la ADR 0046 predecía ("fichar y tratar suben
+de valor"); la otra mitad, fichar, no sube en volumen sino en precio de oportunidad, porque ahora un
+fichaje cuesta además un hueco.
+
+**AC-18. `purchasesPerMarket` baja de 1,39 a 0,76, y la mitad de la caída es el canterano.** Las compras
+por run pasan de 8,88 a 4,88 sobre el mismo número de mercados (6,4), y se reparten así:
+
+| | Canteranos | Perks | Objetos | Fichajes | **De pago por mercado** |
+|---|---|---|---|---|---|
+| Antes | 3,31 | 2,57 | 2,85 | 0,15 | **0,87** |
+| **Ahora** | **1,23** | **1,66** | **1,95** | **0,03** | **0,57** |
+
+Dos causas, las dos medidas. La primera es el hueco: los 2,1 canteranos que se pierden no se dejan de
+fichar por falta de oro, sino de sitio (AC-5), y la métrica los contaba como compras aunque fueran
+gratis. La segunda es aritmética de caja: la run gana 10 de oro menos (se llega menos lejos) y desvía
+10,8 al sumidero nuevo, de modo que al mercado le llegan 21 de oro menos y compra 1,8 artículos menos.
+Conviene señalar que **la banda 1-2 de la ADR 0037 ya se cumplía gracias a lo gratuito**: contando solo
+las compras de pago, el valor de antes era 0,87, también por debajo de 1. La métrica **deja de ser puerta
+dura** y pasa al grupo de cotas de no regresión (0,5-2,0) con esta causa escrita, como se hizo con
+`affordableShare` en §19; lo que la banda pide —que comprar sea una decisión y no un trámite— lo dice
+mejor hoy `contextualAdvantage` (AC-19), que ha mejorado seis puntos.
+
+**AC-19. La separación entre doctrinas mejora sola, y mucho.** `contextualAdvantage` pasa de **−0,6** (§19)
+a **+5,6** puntos: la contextual gana el 22,6% de sus runs, la ahorradora el 17,0% y la gastadora el
+13,2%. Sigue por debajo de los 8 puntos que pide la ADR 0037, pero es el mejor valor medido de la fase y
+la razón es la que la ADR 0037 describía: con la plantilla corta **el oro vuelve a ser escaso de verdad**
+y elegir en qué gastarlo separa a quien sabe de quien no. La gastadora, que no reserva ni para la clínica
+ni para el hueco, es la que más se hunde.
+
+**AC-20. El oro inicial por división (ADR 0044).** `economy.startingGold` pasa a ser
+`startingGoldByDivision`, en el orden del enum `Division`: **10 / 8 / 5 / 3 / 2** (tercera, segunda,
+primera, continental, mundial). El criterio es que el club empiece con lo justo para **un artículo común**
+de la primera tienda y que en Mundial esa tienda sea solo un escaparate. La ADR no lista Continental, que
+va interpolado entre Primera (5) y Mundial (2). El cargador exige que la serie **no crezca**: subir de
+división es empezar con menos. La fase 2 juega siempre en tercera, así que el único valor medido es el 10
+y todas las cifras de este apartado son a ese valor; el resto se valida cuando existan las divisiones
+(fase 4). Es una palanca de **ritmo**: 10 de oro sobre los ~105 de una run completa es el 10% del total y
+no mueve la tasa de victoria por sí sola.
+
+### 20.7. Las métricas de §10, antes y después
+
+Lote de referencia: **500 runs por doctrina, semilla 1**, cinco razas repartidas por igual (1.500 runs,
+20.202 partidos, 103 s), `dotnet run --project Balance -c Release -- --full-runs 500 --seed 1`.
+
+| Métrica | Rango | Antes (AB) | **Ahora** | Estado |
+|---|---|---|---|---|
+| **Muertes por run** | **0,5-2** | **0,06** | **0,64** | **IN** (era OUT) |
+| **Derrotas por bajar de 5 jugadores** | < 35% | 0,0% de las derrotas | **2,07%** | **IN y ya no es cero** |
+| Tasa de victoria de la run (contextual) | 20-30% | 23,6 | **22,6** | IN |
+| Duración de una run completa | 18-22 | 20,0 | **19,97** | IN |
+| Sumideros que paga el oro de un acto | 2-3, nunca todos | 2,09 | **2,08** | IN |
+| Ventaja de la contextual sobre las dos puras | ≥ 8 puntos | −0,6 | **+5,6** | OUT, pero el mejor valor de la fase |
+| Compras por visita al mercado | 1-2 | 1,35 | **0,76** | OUT — causa medida en AC-18 |
+| Fracción del surtido asequible | 20-35% | 53,8 | **59,3** | OUT |
+| Oro sobrante al terminar la run | < 15% | 17,7 | **20,9** | OUT |
+| Runs que llegan a un mercado sin poder comprar | 10-25% | 78,2 | **61,2** | OUT, pero mejora 17 puntos |
+| *Plantilla al terminar* | *—* | *13,0* | ***10,5*** | *INFO* |
+| *Huecos de plantilla comprados por run* | *—* | *—* | ***0,88*** | *INFO* |
+| *Lesiones graves por run* | *—* | *1,42* | ***2,08*** | *INFO* |
+| *Lesiones propias por partido* | *—* | *0,22* | ***0,31*** | *INFO* |
+| *Canteranos fichados por run* | *—* | *3,31* | ***1,23*** | *INFO* |
+| *Perks y objetos comprados por run* | *—* | *2,57 y 2,85* | ***1,66 y 1,95*** | *INFO* |
+
+**AC-21. La curva de la ADR 0033 no se ha movido.** Remedida con el mismo lote de la puerta (semilla 1,
+32 plantillas × 4 partidos, 7.680 partidos): **26,7 / 71,6 / 84,8 / 92,2**, **10,3 / 41,7 / 66,6 / 76,7**
+y **6,1 / 28,8 / 46,2 / 57,7**, cifra por cifra las mismas de §19.1, con las mismas once celdas de doce en
+banda sin tolerancia. Era lo esperado —la puerta se mide con partidos directos build-contra-jefe y ni las
+builds ni los jefes se han tocado— pero había que comprobarlo antes de dar el paquete por bueno.
+
+**AC-22. Lo que sigue abierto.** La ventaja de la contextual (5,6 de 8) y las tres métricas de escasez
+siguen fuera de banda, con las mismas causas de §19 (Z-K: `affordableShare` y `brokeMarketRunShare` se
+oponen entre sí, y la aritmética entera de la escala de oro). La novedad de este paquete es que las tres
+se mueven **en la dirección correcta** por primera vez, sin tocar un solo precio: acortar la plantilla ha
+hecho más por la escasez que la escala de oro entera.

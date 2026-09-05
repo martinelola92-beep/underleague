@@ -10,7 +10,7 @@ Esta tabla es la referencia única. Si un término no está aquí, se añade aqu
 |---|---|---|
 | Run | `Run` | |
 | Acto | `Act` | |
-| Nodo | `Node` | tipos: `LeagueMatch`, `EliteMatch`, `Market`, `Clinic`, `Workshop`, `Training`, `Event`, `Boss` |
+| Nodo | `Node` | tipos: `LeagueMatch`, `EliteMatch`, `Market`, `Clinic`, `Workshop`, `Training`, `Event`, `Boss`, `Enrollment` |
 | Casilla | `Cell` | `Column`, `Row` |
 | Casilla-hogar | `HomeCell` | |
 | Correa | `Leash` | atributo y radio |
@@ -33,6 +33,11 @@ Esta tabla es la referencia única. Si un término no está aquí, se añade aqu
 | Canterano | `YouthPlayer` | |
 | Mercenario | `Mercenary` | |
 | Clínica | `Clinic` | |
+| Nodo de inscripción | `Enrollment` | ADR 0046; el despacho del presidente: paga oro y amplía la plantilla en un hueco |
+| Hueco de plantilla | `RosterSlot` | decisión `ExpandRoster`, dato `economy.enrollmentCosts`, contador `enrollmentSlots` |
+| Descartar (a un jugador) | `ReleasePlayer` | sale de la plantilla sin cobrar nada; vender (`SellPlayer`) solo se puede en el mercado (RF-114f) |
+| Tamaño de plantilla | `RosterCapacity` | base `RunRules.BaseRosterSize` (10), techo `RunRules.MaxRosterSize` (12), RF-020 |
+| Perk letal | `LethalPerk` | `PerkDefinition.Lethal`; el ojeo los destaca con `Scouting.LethalPerks` (RF-013, RF-093) |
 | Taller de implantes | `Workshop` | |
 | Prótesis | `Prosthesis` | |
 | Informe de ojeo | `ScoutingReport` | |

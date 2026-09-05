@@ -34,10 +34,12 @@
         "leash": 73
       },
       "traits": [
-        "Aggressive"
+        "Aggressive",
+        "Dirty"
       ],
       "perks": [
-        "last_ditch"
+        "last_ditch",
+        "skullsplitter"
       ]
     },
     {

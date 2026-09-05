@@ -28,7 +28,7 @@ public static class FullRunMetrics
     /// <summary>Muertes por run (0,5-2).</summary>
     public const string DeathsPerRun = "deathsPerRun";
 
-    /// <summary>Sumideros que el oro de un acto permite pagar; 2-3 y nunca los cuatro (RF-114k).</summary>
+    /// <summary>Sumideros que el oro de un acto permite pagar; 2-3 y nunca todos (RF-114k).</summary>
     public const string SinksAffordablePerAct = "sinksAffordablePerAct";
 
     /// <summary>Fracción del surtido que el jugador puede pagar al llegar a un mercado (20-35%, ADR 0037).</summary>
@@ -91,7 +91,7 @@ public static class FullRunMetrics
     /// <summary>Sumideros pagables por acto: mínimo.</summary>
     public const double SinksMin = 2.0;
 
-    /// <summary>Sumideros pagables por acto: máximo. Los cuatro a la vez serían RF-114k incumplido.</summary>
+    /// <summary>Sumideros pagables por acto: máximo. Todos a la vez sería RF-114k incumplido.</summary>
     public const double SinksMax = 3.0;
 
     /// <summary>Fracción mínima del surtido asequible (ADR 0037): por debajo, la tienda es decorado.</summary>
@@ -118,8 +118,13 @@ public static class FullRunMetrics
     /// <summary>Ventaja mínima de la contextual sobre las dos puras, en puntos de tasa de victoria.</summary>
     public const double ContextualAdvantageMin = 8.0;
 
-    /// <summary>Sumideros vivos en fase 2 (RF-114k): mercado, clínica, rerolls y salarios.</summary>
-    public const int SinkCount = 4;
+    /// <summary>
+    /// Sumideros vivos en fase 2 (RF-114k): mercado, clínica, <b>huecos de plantilla</b> (ADR 0046),
+    /// rerolls y salarios. El nodo de inscripción es el quinto y entró con la plantilla corta: no estaba
+    /// en la lista de RF-114k porque no existía, pero es oro que sale de la run y compite con los demás,
+    /// que es lo único que la métrica pregunta.
+    /// </summary>
+    public const int SinkCount = 5;
 
     /// <summary>
     /// Contrasta las runs de la política <b>contextual</b> con los rangos de fase2-diseno.md §10 y de la
@@ -198,7 +203,8 @@ public static class FullRunMetrics
         int deaths = 0, fullRuns = 0, fullRunMatches = 0, matches = 0, marketRuns = 0, brokeRuns = 0;
         int wonMatches = 0, wonNodes = 0, lostMatches = 0, lostNodes = 0, rewardsTaken = 0, rewardsDeclined = 0;
         var defeatsByAct = new int[RunRules.Acts];
-        long goldEarned = 0, market = 0, clinic = 0, reroll = 0, wages = 0, left = 0;
+        long goldEarned = 0, market = 0, clinic = 0, enrollment = 0, reroll = 0, wages = 0, left = 0;
+        long slots = 0;
         long roster = 0, level = 0, perks = 0, starterPerks = 0, items = 0, injuries = 0, severe = 0, counters = 0, ownInjuries = 0, matchInjuries = 0;
         long offers = 0, affordable = 0, purchases = 0, marketVisits = 0, goldAtMarket = 0;
         var actReached = new int[RunRules.Acts + 1];
@@ -249,6 +255,8 @@ public static class FullRunMetrics
             goldEarned += run.GoldEarned;
             market += run.GoldSpentMarket;
             clinic += run.GoldSpentClinic;
+            enrollment += run.GoldSpentEnrollment;
+            slots += run.SlotsBought;
             reroll += run.GoldSpentReroll;
             wages += run.GoldSpentWages;
             left += run.GoldLeft;
@@ -372,10 +380,12 @@ public static class FullRunMetrics
             ? 100.0 * rewardsDeclined / (rewardsTaken + rewardsDeclined)
             : 0.0));
         rows.Add(Info("matchesPerRun", (double)matches / runs.Count));
-        rows.Add(Info("actsWithAllFourSinksAffordable", sinkSamples > 0 ? 100.0 * allFourAffordable / sinkSamples : 0.0));
+        rows.Add(Info("actsWithAllSinksAffordable", sinkSamples > 0 ? 100.0 * allFourAffordable / sinkSamples : 0.0));
         rows.Add(Info("goldEarnedPerRun", (double)goldEarned / runs.Count));
         rows.Add(Info("goldSpentMarketPerRun", (double)market / runs.Count));
         rows.Add(Info("goldSpentClinicPerRun", (double)clinic / runs.Count));
+        rows.Add(Info("goldSpentEnrollmentPerRun", (double)enrollment / runs.Count));
+        rows.Add(Info("rosterSlotsBoughtPerRun", (double)slots / runs.Count));
         rows.Add(Info("goldSpentRerollPerRun", (double)reroll / runs.Count));
         rows.Add(Info("goldSpentWagesPerRun", (double)wages / runs.Count));
         rows.Add(Info("goldLeftPerRun", (double)left / runs.Count));
@@ -410,6 +420,9 @@ public static class FullRunMetrics
     /// <list type="bullet">
     /// <item><b>Mercado</b>: un perk y un objeto comunes en cada uno de los mercados del acto.</item>
     /// <item><b>Clínica</b>: un tratamiento (RF-094: coste alto, resultado garantizado).</item>
+    /// <item><b>Inscripción</b>: el primer hueco de plantilla del acto (ADR 0046). Se cuenta el primero y
+    /// no el segundo porque la métrica pregunta qué cabe en <b>un</b> acto, y los dos huecos de una run no
+    /// caben en el mismo.</item>
     /// <item><b>Rerolls</b>: repetir la tirada en cada partido ganado del acto, con el coste creciente de
     /// RF-071b contado desde cero dentro del acto.</item>
     /// <item><b>Salarios</b>: un mercenario raro durante todos los partidos del acto (RF-111).</item>
@@ -431,6 +444,7 @@ public static class FullRunMetrics
         {
             marketsInAct * (economy.Market.PerkPrice.Common + economy.Market.ItemPrice.Common),
             economy.ClinicCost,
+            economy.EnrollmentCost(0),
             rerolls,
             economy.MercenaryWage(Model.Rarity.Uncommon) * matchesInAct,
         };

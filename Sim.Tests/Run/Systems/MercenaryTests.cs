@@ -13,6 +13,7 @@ public sealed class MercenaryTests
     {
         var economy = SystemsTestSupport.Systems.Economy;
         var state = RunEngine.Start(SystemsTestSupport.Setup(), 7001UL, SystemsTestSupport.Catalog, SystemsTestSupport.Systems);
+        state = WithRoomForOneMore(state);
         var mercenary = MakeMercenary(state, matchesBenched: economy.MercenaryBenchAbandonMatches);
         state = state.WithNewPlayer(mercenary);
         int mercenaryId = state.Roster.Last().Id;
@@ -28,6 +29,7 @@ public sealed class MercenaryTests
     {
         var economy = SystemsTestSupport.Systems.Economy;
         var state = RunEngine.Start(SystemsTestSupport.Setup(), 7002UL, SystemsTestSupport.Catalog, SystemsTestSupport.Systems);
+        state = WithRoomForOneMore(state);
         var mercenary = MakeMercenary(state, matchesBenched: economy.MercenaryBenchAbandonMatches - 1);
         state = state.WithNewPlayer(mercenary);
         int mercenaryId = state.Roster.Last().Id;
@@ -43,7 +45,7 @@ public sealed class MercenaryTests
     {
         var economy = SystemsTestSupport.Systems.Economy;
         var state = RunEngine.Start(SystemsTestSupport.Setup(), 7003UL, SystemsTestSupport.Catalog, SystemsTestSupport.Systems);
-        state = state.WithNewPlayer(MakeMercenary(state, matchesBenched: 0));
+        state = WithRoomForOneMore(state).WithNewPlayer(MakeMercenary(state, matchesBenched: 0));
         int mercenaryId = state.Roster.Last().Id;
 
         var loss = Loss(new List<int> { state.Roster[0].Id });
@@ -78,7 +80,7 @@ public sealed class MercenaryTests
         var economy = SystemsTestSupport.Systems.Economy;
         var state = RunEngine.Start(SystemsTestSupport.Setup(), 7005UL, SystemsTestSupport.Catalog, SystemsTestSupport.Systems)
             .WithGold(1000);
-        state = state.WithNewPlayer(MakeMercenary(state, matchesBenched: 0));
+        state = WithRoomForOneMore(state).WithNewPlayer(MakeMercenary(state, matchesBenched: 0));
         var mercenary = state.Roster.Last();
 
         var loss = Loss(new List<int> { state.Roster[0].Id });
@@ -86,6 +88,14 @@ public sealed class MercenaryTests
 
         Assert.Equal(state.Gold - mercenary.Wage, next.Gold);
     }
+
+    /// <summary>
+    /// Un hueco de plantilla comprado (ADR 0046). La plantilla base son 10 y el club arranca con 10
+    /// (RF-005, RF-020), así que fichar a un mercenario de prueba exige el hueco: es exactamente lo que
+    /// pasa en la run.
+    /// </summary>
+    private static RunState WithRoomForOneMore(RunState state) =>
+        state.WithCounter(RunState.EnrollmentSlotsCounter, 1);
 
     private static RunPlayer MakeMercenary(RunState state, int matchesBenched)
     {

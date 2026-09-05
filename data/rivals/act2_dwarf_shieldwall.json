@@ -112,7 +112,13 @@
         "technique": 49,
         "stamina": 72,
         "leash": 59
-      }
+      },
+      "traits": [
+        "Aggressive"
+      ],
+      "perks": [
+        "marrow_thirst"
+      ]
     },
     {
       "name": "Loric Tallapiedra",

@@ -63,7 +63,8 @@
         "Leader"
       ],
       "perks": [
-        "diagonal_press"
+        "diagonal_press",
+        "second_wound"
       ]
     },
     {

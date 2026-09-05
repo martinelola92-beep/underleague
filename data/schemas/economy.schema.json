@@ -6,7 +6,13 @@
   "type": "object",
   "properties": {
     "_doc": { "type": "string" },
-    "startingGold": { "type": "integer", "minimum": 0 },
+    "startingGoldByDivision": {
+      "description": "ADR 0044: oro de partida por division de RF-128, en el orden del enum Division (tercera, segunda, primera, continental, mundial). No crece con la division: subir de division es empezar con menos.",
+      "type": "array",
+      "items": { "type": "integer", "minimum": 0 },
+      "minItems": 5,
+      "maxItems": 5
+    },
     "goldAct1": { "type": "integer", "minimum": 0 },
     "goldAct2": { "type": "integer", "minimum": 0 },
     "goldAct3": { "type": "integer", "minimum": 0 },
@@ -20,6 +26,13 @@
     "nodeRewards": { "$ref": "#/$defs/nodeRewards" },
     "excellentMatchBonusGold": { "type": "integer", "minimum": 0 },
     "clinicCost": { "type": "integer", "minimum": 0 },
+    "enrollmentCosts": {
+      "description": "ADR 0046: coste creciente de cada hueco de plantilla que vende el nodo de inscripcion. Dos entradas, una por hueco entre la base de 10 y el techo de 12 de RF-020.",
+      "type": "array",
+      "items": { "type": "integer", "minimum": 1 },
+      "minItems": 2,
+      "maxItems": 2
+    },
     "rerollBaseCost": { "type": "integer", "minimum": 0 },
     "rerollStepCost": { "type": "integer", "minimum": 0 },
     "trainingExperience": { "type": "integer", "minimum": 0 },
@@ -43,9 +56,9 @@
     "market": { "$ref": "#/$defs/market" }
   },
   "required": [
-    "startingGold", "goldAct1", "goldAct2", "goldAct3", "difficultyMultiplierPercent",
+    "startingGoldByDivision", "goldAct1", "goldAct2", "goldAct3", "difficultyMultiplierPercent",
     "nodeRewards", "excellentMatchBonusGold",
-    "clinicCost", "rerollBaseCost", "rerollStepCost", "trainingExperience",
+    "clinicCost", "enrollmentCosts", "rerollBaseCost", "rerollStepCost", "trainingExperience",
     "eventGoldMin", "eventGoldMax", "mercenaryBaseWage", "mercenaryWagePerRarityStep",
     "mercenaryBenchAbandonMatches", "mercenaryLossStreakAbandon",
     "recruitLevelByAct", "rewardPlayerQuality", "rewardPerkWeight", "rewardPlayerWeight", "rewardItemWeight",

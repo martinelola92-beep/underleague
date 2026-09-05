@@ -8,7 +8,8 @@
     "effectSeparator": ", ",
     "effectFinalSeparator": " and ",
     "elsePrefix": "; otherwise, ",
-    "linkSeparator": " and "
+    "linkSeparator": " and ",
+    "lethalSuffix": " If it reaches an opponent who is no longer healthy, it kills them."
   },
   "effects": {
     "modifyAttribute": "{target} {value:+} {attribute} for {duration}",

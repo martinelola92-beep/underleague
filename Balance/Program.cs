@@ -42,7 +42,7 @@ try
         // --full-runs N: N runs completas con la política automática (fase2-diseno.md §10). Responde a
         // la pregunta que la curva de puertas deja abierta: si la economía permite llegar a cada puerta
         // con la build que esa puerta exige.
-        FullRunResult full = FullRunRunner.Run(catalog, dataFiles, options.Seed, fullRuns);
+        FullRunResult full = FullRunRunner.Run(catalog, dataFiles, options.Seed, fullRuns, options.IgnoreScouting);
 
         var fullSummary = full.Metrics
             .Select(m => new MetricRow(m.Name, m.Value, m.RangeMin, m.RangeMax, m.Status))
@@ -479,11 +479,11 @@ static void WriteRunsCsv(string outDir, IReadOnlyList<RunPlayResult> runs)
         "seed", "doctrine", "race", "outcome", "cause", "actReached", "matches", "matchesWon", "bossesBeaten",
         "matchesAct1", "matchesAct2", "matchesAct3",
         "goldEarned", "goldEarnedAct1", "goldEarnedAct2", "goldEarnedAct3", "goldFromSales",
-        "goldMarket", "goldClinic", "goldReroll", "goldWages", "goldLeft",
+        "goldMarket", "goldClinic", "goldEnrollment", "goldReroll", "goldWages", "goldLeft",
         "deaths", "ownInjuries", "matchInjuries", "severeInjuries", "rosterSize", "available", "averageLevel",
         "perks", "starterPerks", "items", "counters",
         "markets", "offersSeen", "offersAffordable", "goldAtMarkets", "brokeMarkets", "purchases", "perksBought",
-        "itemsBought", "playersSigned", "youths", "mercenaries", "playersSold", "treatments", "rerolls",
+        "itemsBought", "playersSigned", "youths", "mercenaries", "playersSold", "treatments", "slotsBought", "rerolls",
         "rewardsTaken", "rewardsDeclined", "nodes",
     };
 
@@ -498,7 +498,7 @@ static void WriteRunsCsv(string outDir, IReadOnlyList<RunPlayResult> runs)
         Int(r.MatchesByAct[0]), Int(r.MatchesByAct[1]), Int(r.MatchesByAct[2]),
         Int(r.GoldEarned), Int(r.GoldEarnedByAct[0]), Int(r.GoldEarnedByAct[1]), Int(r.GoldEarnedByAct[2]),
         Int(r.GoldFromSales),
-        Int(r.GoldSpentMarket), Int(r.GoldSpentClinic), Int(r.GoldSpentReroll), Int(r.GoldSpentWages),
+        Int(r.GoldSpentMarket), Int(r.GoldSpentClinic), Int(r.GoldSpentEnrollment), Int(r.GoldSpentReroll), Int(r.GoldSpentWages),
         Int(r.GoldLeft),
         Int(r.Deaths), Int(r.OwnInjuries), Int(r.MatchInjuries), Int(r.SevereInjuriesSuffered), Int(r.FinalRosterSize),
         Int(r.FinalAvailable), CsvWriter.F2(r.AverageLevelTimes100 / 100.0),
@@ -506,7 +506,7 @@ static void WriteRunsCsv(string outDir, IReadOnlyList<RunPlayResult> runs)
         Int(r.MarketsVisited), Int(r.OffersSeen), Int(r.OffersAffordable), Int(r.GoldAtMarketArrival), Int(r.BrokeMarketVisits),
         Int(r.Purchases), Int(r.PerksBought),
         Int(r.ItemsBought), Int(r.PlayersSigned), Int(r.YouthsSigned), Int(r.MercenariesHired),
-        Int(r.PlayersSold), Int(r.Treatments), Int(r.Rerolls),
+        Int(r.PlayersSold), Int(r.Treatments), Int(r.SlotsBought), Int(r.Rerolls),
         Int(r.RewardsTaken), Int(r.RewardsDeclined), Int(r.NodesVisited),
     });
 

@@ -86,6 +86,16 @@ public static class DescriptionGenerator
         text = Replace(text, "{condition}", condition);
         text = Replace(text, "{effects}", effects.ToString());
         text = Replace(text, "{limit}", limit);
+
+        // RF-093 vía 2 y RF-012d: la letalidad es parte del dato del perk, así que va en la descripción
+        // generada como todo lo demás (RT-035: no hay texto de efecto escrito a mano). El informe de ojeo
+        // la destaca aparte (RF-013, Scouting.LethalPerks), pero quien lea la ficha del perk tiene que ver
+        // lo peor que puede pasar sin salir de ella.
+        if (perk.Lethal)
+        {
+            text += templates.Get(Layout, "lethalSuffix");
+        }
+
         return CapitalizeFirst(text);
     }
 

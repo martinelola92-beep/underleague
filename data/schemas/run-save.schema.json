@@ -145,8 +145,8 @@
   "$defs": {
     "race": { "enum": ["human", "orc", "elf", "dwarf", "undead", "darkElf", "demon", "vampire", "lizard"] },
     "nodeKind": {
-      "description": "Tipos de nodo de RF-011. 'workshop' está en el enum desde la versión 1 pero es de fase 3: el generador de la fase 2 no lo produce.",
-      "enum": ["leagueMatch", "eliteMatch", "market", "clinic", "workshop", "training", "event", "boss"]
+      "description": "Tipos de nodo de RF-011. 'workshop' está en el enum desde la versión 1 pero es de fase 3: el generador de la fase 2 no lo produce. 'enrollment' lo añade la ADR 0046 (nodo de inscripción: paga oro y amplía la plantilla en un hueco).",
+      "enum": ["leagueMatch", "eliteMatch", "market", "clinic", "workshop", "training", "event", "boss", "enrollment"]
     },
     "intMap": {
       "type": "object",

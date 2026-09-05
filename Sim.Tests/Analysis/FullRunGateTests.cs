@@ -84,15 +84,54 @@ public sealed class FullRunGateTests
     /// cada uno durante un acto lo define <see cref="FullRunMetrics.SinksAffordable"/>.
     /// </summary>
     [Fact]
-    public void TheGoldOfAnActPaysTwoOrThreeSinksAndNeverFour()
+    public void TheGoldOfAnActPaysTwoOrThreeSinksAndNeverAllOfThem()
     {
         AssertIn(FullRunMetrics.SinksAffordablePerAct);
-        Assert.Equal(0.0, Value("actsWithAllFourSinksAffordable"));
+        Assert.Equal(0.0, Value("actsWithAllSinksAffordable"));
     }
 
-    /// <summary>ADR 0037: se compra poco y se piensa — una o dos compras por visita al mercado.</summary>
+    /// <summary>
+    /// RF-020 y ADR 0046: la plantilla base es de diez, el techo doce, y una run no termina con más.
+    /// Es la afirmación central del cambio: si esto se rompe, el desgaste vuelve a no morder (ADR 0045).
+    /// </summary>
     [Fact]
-    public void TheMarketIsVisitedForOneOrTwoPurchases() => AssertIn(FullRunMetrics.PurchasesPerMarket);
+    public void NoRunEverExceedsTheRosterCap()
+    {
+        foreach (var (doctrine, runs) in Result.Value.ByDoctrine)
+        {
+            foreach (var run in runs)
+            {
+                Assert.True(
+                    run.FinalRosterSize <= RunRules.MaxRosterSize,
+                    $"{doctrine}, semilla {run.Seed}: la run termina con {run.FinalRosterSize} jugadores y el techo es {RunRules.MaxRosterSize} (RF-020)");
+                Assert.InRange(run.SlotsBought, 0, RunRules.MaxEnrollmentSlots);
+            }
+        }
+    }
+
+    /// <summary>
+    /// ADR 0046: el nodo de inscripción tiene que ser una decisión que se toma de verdad. Si una política
+    /// razonable no comprara nunca un hueco, el nodo sería decorado; si comprara siempre los dos, la
+    /// plantilla corta no existiría.
+    /// </summary>
+    [Fact]
+    public void TheEnrollmentNodeIsUsedButNotAlways()
+    {
+        double slots = Result.Value.ByDoctrine[PurchaseDoctrine.Contextual].Average(r => (double)r.SlotsBought);
+        Assert.InRange(slots, 0.2, 1.6);
+    }
+
+    /// <summary>
+    /// ADR 0046 y RF-093: las muertes tienen que existir y venir de las dos vías, no de una sola. La
+    /// banda de diseño (0,5-2) la comprueba <see cref="TheMetricsThatDoNotMeetTheirDesignBandStayWhereTheyWereMeasured"/>
+    /// como cota; aquí se afirma lo estructural: con perks letales en el catálogo, alguna run muere.
+    /// </summary>
+    [Fact]
+    public void DeathsHappenAndTheyAreNotAllFromTheSameSource()
+    {
+        double deaths = Result.Value.ByDoctrine[PurchaseDoctrine.Contextual].Average(r => (double)r.Deaths);
+        Assert.True(deaths > 0.2, $"muertes por run = {deaths:F2}: con perks letales en el catálogo deberían ser más");
+    }
 
     /// <summary>
     /// ADR 0037: las tres doctrinas tienen que ser tres. Si compraran lo mismo, la comparación entre
@@ -117,6 +156,13 @@ public sealed class FullRunGateTests
     /// son deliberadamente anchas alrededor de lo medido, para que un cambio de economía o de catálogo
     /// las mueva y se vea, sin afirmar que el diseño está donde debe.
     ///
+    /// <para><c>purchasesPerMarket</c> baja aquí desde la banda dura (ADR 0046, §20): con la plantilla de
+    /// diez, el canterano gratuito ya no cabe y la política deja de ficharlo, y eran <b>3,3 de las 8,9
+    /// compras por run</b>. Las compras <i>de pago</i> no se han movido (perks 2,57 -&gt; 2,53, objetos
+    /// 2,85 -&gt; 2,58): lo que cambia es la composición, no el hábito, y la métrica contaba lo gratuito.
+    /// <c>deathsPerRun</c> deja de ser una cota "por debajo de 0,5" y pasa a ser la banda de diseño:
+    /// desde la ADR 0046 sí se cumple.</para>
+    ///
     /// <para>Las cotas de <c>affordableShareAtMarket</c> y <c>brokeMarketRunShare</c> se ensancharon con
     /// la escala de oro de la ADR 0044: con precios entre 4 y 47 y un acto que gana 23, "llegar a un
     /// mercado sin poder pagar nada" pasa del 47% al 78% de las runs <b>por aritmética entera</b> —por
@@ -127,10 +173,11 @@ public sealed class FullRunGateTests
     public void TheMetricsThatDoNotMeetTheirDesignBandStayWhereTheyWereMeasured()
     {
         AssertBetween(FullRunMetrics.RunWinRate, 5.0, 40.0);
-        AssertBetween(FullRunMetrics.AffordableShare, 25.0, 62.0);
+        AssertBetween(FullRunMetrics.AffordableShare, 25.0, 70.0);
         AssertBetween(FullRunMetrics.LeftoverGoldShare, 5.0, 32.0);
         AssertBetween(FullRunMetrics.BrokeMarketRunShare, 20.0, 88.0);
-        AssertBetween(FullRunMetrics.DeathsPerRun, 0.0, 0.5);
+        AssertBetween(FullRunMetrics.DeathsPerRun, 0.3, 2.0);
+        AssertBetween(FullRunMetrics.PurchasesPerMarket, 0.5, 2.0);
     }
 
     /// <summary>

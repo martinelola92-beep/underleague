@@ -2,7 +2,7 @@
 
 40 perks en el formato de `docs/fase1b-diseno.md` §1.4: `value` en puntos porcentuales enteros de la escala 5/10/15/20/25/50, campo `axis` (uno de los ocho ejes de `docs/perks-ejes.md`), campo `race` (`null` = universal) y `links` para los perks de alineación. No incluye las 5 habilidades raciales (`quick_learner`, `hot_blooded`, `elf_touch`, `roots`, `numb`), que hace el paquete S en paralelo. Ningún perk universal condiciona por etiqueta de especie (ADR 0023); la variación individual dentro de una raza se expresa por etiqueta de estilo (`Brute`, `Fine`, `Bulwark`, `Cold`, `Neutral`, ADR 0024). Ningún perk mejora el pase directamente (canal saturado, `docs/balance/fase1-perks.md`): la circulación se expresa a través de `intercept`.
 
-Distribución RF-069 (60/30/10 ± 8): **24 filler (60%), 14 conditional (35%), 2 ruleBreaker (5%)**, sobre 40.
+Distribución RF-069 (60/30/10 ± 8): con los cuatro letales de la ADR 0046 el catálogo pasa a **44 perks**: 24 filler (54,5%), 14 conditional (31,8%) y 6 ruleBreaker (13,6%), los tres dentro de la tolerancia de ±8.
 
 Distribución por eje (`docs/perks-ejes.md`, sobre los 36 perks universales; el 10% exclusivo de raza no compite por la cuota):
 
@@ -67,6 +67,35 @@ Rareza: 16 `common`, 19 `rare`, 5 `legendary` (sobre 40).
 | `sweeper_keeper` | geometría | — | common | filler | RECOVERY | +5 de correa al recuperar en su propio tercio; solo porteros | `dwarf_fortress`, `elf_bulwark`, `human_wall` |
 | `unlikely_bulwark` | identidad | Elf | rare | conditional | MATCH_START | exclusivo elfo: +20% de robo y +5 de correa; solo elfos con etiqueta Muro | `elf_bulwark` |
 | `wing_overlap` | alineación | — | common | filler | DRIBBLE_ATTEMPTED | +15% de regate al compañero de su banda; sin él, -10 de velocidad | `elf_tiki_taka` |
+
+## Los 4 letales (ADR 0046)
+
+`lethal: true` (RF-093 vía 2). **Solo matan a quien ya no está sano**, y el motor deja una sola ventana
+para eso: una lesión sufrida en el partido saca al jugador del campo, así que el único herido alcanzable
+es el que **salta al campo herido**. Por eso los dos de mayor conversión disparan en `MATCH_START`: no es
+un adorno, es dónde el mecanismo existe. El informe de ojeo los destaca antes de jugar (RF-013,
+`Scouting.LethalPerks`) y la descripción generada lo dice también (`layout.lethalSuffix`, RT-035).
+Ninguno aparece en rivales del acto 1 (el acto 1 es el taller, ADR 0043).
+
+| id | eje | rareza | trigger | canal | escasez | resumen |
+|---|---|---|---|---|---|---|
+| `skullsplitter` | identidad | legendary | MATCH_START | `injury` (+3) | `tagsRequired: Dirty` | el equipo rival suma +3% de lesionarse; quien saltó al campo herido, muere |
+| `marrow_thirst` | zona de inicio | rare | MATCH_START | `injure` (+3) y `severeInjury` (+9) | `tagsRequired: Aggressive` y empezar en el tercio rival | el portador lesiona más y las lesiones del rival tienden a graves |
+| `second_wound` | estado del partido | rare | INJURY | `severeInjury` (+3) | solo mientras no van ganando | al lesionarse un rival, sus lesiones tienden a graves; remata al que ya estaba tocado |
+| `iron_studs` | geometría | rare | TACKLE | `tackleEvasion` (−9) | solo presionando en el tercio rival | el rival al que entra resiste 9 puntos peor la entrada |
+
+Los valores respetan el escalón de su canal (ADR 0035): `injury`/`injure` escalón 1, `severeInjury` y
+`tackleEvasion` escalón 3.
+
+**Reparto en rivales** (ADR 0046: escasos y tardíos). Acto 1: ninguno. Acto 2: `act2_orc_warband`,
+`act2_undead_deadwalkers` y `act2_dwarf_shieldwall` con `marrow_thirst`, `act2_human_tacticians` con
+`second_wound`; los elfos quedan limpios. Acto 3: `act3_orc_warlords` con `skullsplitter`,
+`act3_human_allstars`, `act3_undead_legion` y `act3_dwarf_ironkings` con `marrow_thirst` (más
+`second_wound` e `iron_studs` donde ya estaban); los elfos, otra vez limpios. Los jefes no llevan
+ninguno: su rival es procedural y no asigna perks.
+
+**Build de medida**: `data/balance/builds/orc_butchery.json` lleva los cuatro. Está fuera de
+`groups.json` a propósito (como `elf_glass`): mide la aniquilación a mano, no entra en las puertas.
 
 ### Los 4 exclusivos de raza
 

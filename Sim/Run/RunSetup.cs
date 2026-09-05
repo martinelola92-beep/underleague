@@ -115,3 +115,18 @@ public sealed record RerollRewards : RunDecision;
 
 /// <summary>Mueve el objeto equipado de un jugador a otro fuera de partido (RF-076b). Paquete X.</summary>
 public sealed record TransferItem(int FromPlayerId, int ToPlayerId) : RunDecision;
+
+/// <summary>
+/// Compra un hueco de plantilla en un nodo de inscripción (ADR 0046, amplía RF-011). Paga el coste
+/// creciente de <c>economy.enrollmentCosts</c> y sube el techo de plantilla en uno, hasta el máximo de
+/// <see cref="RunRules.MaxRosterSize"/>. Paquete X.
+/// </summary>
+public sealed record ExpandRoster : RunDecision;
+
+/// <summary>
+/// <b>Descarta</b> a un jugador de la plantilla sin cobrar nada por él (RF-020, ADR 0046). Es la otra
+/// mitad de "con la plantilla llena, fichar exige vender o descartar": vender solo se puede en el
+/// mercado (RF-114f), y hacer sitio no puede depender de estar en un mercado. Nunca puede dejar los
+/// disponibles por debajo del mínimo de RF-002b.
+/// </summary>
+public sealed record ReleasePlayer(int PlayerId) : RunDecision;

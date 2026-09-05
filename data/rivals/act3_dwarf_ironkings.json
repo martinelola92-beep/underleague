@@ -109,7 +109,14 @@
         "technique": 59,
         "stamina": 88,
         "leash": 71
-      }
+      },
+      "perks": [
+        "iron_studs",
+        "marrow_thirst"
+      ],
+      "traits": [
+        "Aggressive"
+      ]
     },
     {
       "name": "Norin Escudopétreo",

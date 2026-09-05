@@ -105,10 +105,12 @@
         "leash": 72
       },
       "traits": [
-        "Scorer"
+        "Scorer",
+        "Aggressive"
       ],
       "perks": [
-        "forward_line"
+        "forward_line",
+        "marrow_thirst"
       ]
     },
     {
