@@ -49,6 +49,7 @@ Cuándo escribir un ADR: cambio de librería o stack, frontera entre proyectos, 
 | [0049](0049-dos-opciones-de-recompensa.md) | La liga ofrece 1 de 2; élite 1 de 3 y jefe 2 de 3. Devuelve peso al mercado | Aceptada. **Modifica RF-071** |
 | [0050](0050-fundamentos-matematicos.md) | Perks multiplicativos sobre cuotas, dos tiradas promediadas, curva de nivel más agresiva y límites únicos | Aceptada. **Retira la ADR 0035** |
 | [0051](0051-arcos-de-build-y-profundidad.md) | Perks maestros que exigen y excluyen, y profundidad nativa por acto | Aceptada |
+| [0052](0052-la-agencia-esta-en-la-formacion.md) | El indicador de riesgo no reduce muertes con formación fija; y recortar opciones eliminó la decisión en vez de moverla | **Propuesta: decisión del revisor** |
 
 El hueco del 0011 corresponde a una decisión sobre el radio de adyacencia que quedó absorbida por la 0021 antes de aceptarse.
 | [0012](0012-buildswindifferently-normalizada.md) | `buildsWinDifferently` normalizada contra la referencia de la raza | **Propuesta: decisión del revisor** |

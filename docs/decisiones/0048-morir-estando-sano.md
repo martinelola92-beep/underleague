@@ -26,7 +26,7 @@ Ninguna es nueva: todas existen ya en el diseño, y a partir de ahora son obliga
 2. **Se puede evitar el partido.** El mapa es ramificado: ese rival concreto está en un nodo concreto y hay otra ruta.
 3. **Se puede reducir el riesgo.** El indicador de riesgo por jugador (RF-012c) se recalcula al mover la alineación: no alinear a tu mejor jugador contra ese rival, o alejarlo de la banda peligrosa, tiene que **notarse en el número**. Esto es lo que convierte el azar en decisión, y es la condición más importante de las cinco.
 4. **Se puede rehacer.** Es el argumento del revisor: comprar en el mercado, heredar el equipamiento del muerto, ascender a un canterano. **El objeto del jugador muerto vuelve al inventario**, no se pierde con él.
-5. **La muerte es rara y memorable, no ruido.** Una muerte por perk letal cada dos o tres runs es una historia; tres por run es una tirada de dados con nombres. El objetivo es que el desgaste duela, no que la plantilla sea desechable.
+5. **La muerte pesa, pero no es ruido.** Corrección del 5 de septiembre: la redacción original de esta condición pedía *"una muerte cada dos o tres runs"* (0,3-0,5) y a la vez la sección de consecuencias fijaba una banda de **1,5-3 por run**. Son cifras que se diferencian en un factor de cinco y no pueden cumplirse a la vez; **vale la banda**, que es la que mide la puerta. Con una plantilla de diez y una run de veinte partidos, 1,5 muertes significan perder a uno o dos jugadores por partida: se nota en cada alineación sin que la plantilla sea desechable.
 
 ## Consecuencias
 
@@ -34,4 +34,8 @@ Ninguna es nueva: todas existen ya en el diseño, y a partir de ahora son obliga
 - El §8 del documento pierde su mitigación para el riesgo de muerte injusta y hay que **sustituirla por las cinco condiciones de arriba**, que pasan de deseables a requisito.
 - Las bandas de `fase2-diseno.md` §10 suben: muertes por run de 0,5-2 a **1,5-3**, a confirmar midiendo.
 - **La ceremonia de muerte y el memorial (RF-122) dejan de ser adorno**: si va a morir gente sana, el juego tiene que darle peso a cada una. Un obituario con las estadísticas de ese jugador es lo que convierte una tirada en una historia.
-- Hay que medir que **reducir el riesgo funciona**: dos políticas idénticas salvo que una atiende al indicador de riesgo y la otra no deben separarse claramente en muertes. Si no se separan, el azar no tiene agencia y la decisión hay que revisarla.
+- Hay que medir que **reducir el riesgo funciona**: dos políticas idénticas salvo que una atiende al indicador de riesgo y la otra no deben separarse claramente en muertes.
+
+  **Medido, y no se separan**: 1,51 muertes leyendo el ojeo y el indicador frente a 1,57 ignorándolos, un −3,8% dentro del ruido. El rango completo del indicador sí existe pero es **asimétrico**: buscar el peligro a propósito cuesta 1,90 y obedecer el indicador a rajatabla solo baja a 1,54. La causa medida es que **una alineación elegida por valor deportivo ya está cerca de la más segura**, porque el valor de un jugador incluye su aguante.
+
+  Lo que sí se separa es la **tasa de victoria** (21,0 frente a 17,6): atender al riesgo paga en partidos ganados, no en cuerpos salvados. Es una agencia real, pero **no la que esta ADR necesitaba**. Ver ADR 0052.
