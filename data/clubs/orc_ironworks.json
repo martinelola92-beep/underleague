@@ -1,0 +1,24 @@
+{
+  "_doc": "Club de lanzamiento (RF-004): orcos, núcleo de las builds de violencia. specialRule apunta a la habilidad racial 'hot_blooded' (ADR 0026), no a una mecánica nueva del club. startingGold es informativo (ver data/schemas/clubs.schema.json): coincide con startingGoldByDivision[0] de data/economy/economy.json.",
+  "id": "orc_ironworks",
+  "race": "Orc",
+  "name": { "es": "Altos Hornos FC", "en": "Ironworks FC" },
+  "description": {
+    "es": "Orcos. Poco oro, mucho acero: entran fuerte y cobran turno en la enfermería.",
+    "en": "Orcs. Short on gold, heavy on steel: they go in hard and queue for the infirmary."
+  },
+  "startingGold": 10,
+  "specialRule": "hot_blooded",
+  "roster": [
+    { "name": "Urk Piedraroja", "position": "Goalkeeper", "rarity": "common" },
+    { "name": "Grok Mascadientes", "position": "Defender", "rarity": "common" },
+    { "name": "Thrak Tragaclavos", "position": "Defender", "rarity": "common" },
+    { "name": "Bolg Matabueyes", "position": "Midfielder", "rarity": "common" },
+    { "name": "Gashk Partecuellos", "position": "Midfielder", "rarity": "common" },
+    { "name": "Zog Muerdehierro", "position": "Midfielder", "rarity": "common" },
+    { "name": "Krum Rompehuesos", "position": "Forward", "rarity": "rare" },
+    { "name": "Snaga Sangrefría", "position": "Defender", "rarity": "common" },
+    { "name": "Ghash Pisacráneos", "position": "Midfielder", "rarity": "common" },
+    { "name": "Lurtz Quiebraespinas", "position": "Forward", "rarity": "common" }
+  ]
+}

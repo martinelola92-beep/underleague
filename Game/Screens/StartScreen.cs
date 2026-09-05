@@ -1,23 +1,25 @@
 using System.Collections.Generic;
 using System.Globalization;
+using System.Linq;
 using Godot;
 using Underleague.Game.Autoload;
 using Underleague.Game.Data;
 using Underleague.Game.Ui;
 using Underleague.Sim.Data;
-using Underleague.Sim.Model;
 using Underleague.Sim.Perks;
 using Underleague.Sim.Run;
+using Underleague.Sim.Run.Systems.Clubs;
 
 namespace Underleague.Game.Screens;
 
 /// <summary>
 /// Pantalla de <b>inicio</b>: elegir club y semilla, empezar, o continuar la run guardada (RT-061).
 /// <para>
-/// El club es hoy una raza (RF-004: todos los jugadores del club inicial son de una única raza) porque
-/// <c>data/clubs/</c> no existe todavía; el hueco se enseña como hueco. Cada raza se elige leyendo lo que
-/// la hace distinta —su descripción y su <b>habilidad racial</b>, que RF-031b pide que sea visible aquí—
-/// generada desde el efecto del perk, nunca escrita a mano (RT-035).
+/// El club (RF-004, <c>data/clubs/</c>) es la unidad de elección, no la raza suelta: todos los jugadores
+/// del club inicial pertenecen a una única raza, pero lo que el jugador elige tiene nombre propio. La
+/// "regla especial" de RF-004 (<c>ClubDefinition.SpecialRule</c>) apunta hoy a la habilidad racial de esa
+/// raza (ADR 0026) —no se ha inventado una mecánica de club nueva—, y se enseña igual que antes: generada
+/// desde el efecto del perk, nunca escrita a mano (RT-035).
 /// </para>
 /// <para>
 /// La <b>semilla</b> se escribe o se sortea. Sortearla es lo único aleatorio de todo el juego que no sale
@@ -27,10 +29,11 @@ namespace Underleague.Game.Screens;
 /// </summary>
 public partial class StartScreen : Control
 {
-    private readonly List<(Race Race, Button Button)> _raceButtons = new();
+    private readonly List<(ClubDefinition Club, Button Button)> _clubButtons = new();
 
     private Catalog _catalog = null!;
-    private Race _race;
+    private ClubCatalog _clubs = null!;
+    private ClubDefinition? _club;
     private LineEdit _seed = null!;
     private Label _chosen = null!;
     private Label _description = null!;
@@ -46,6 +49,7 @@ public partial class StartScreen : Control
         }
 
         _catalog = DataLoader.FromJson(GameData.Snapshot);
+        _clubs = ClubLoader.FromJson(GameData.Snapshot);
 
         Widgets.Background(this);
         Widgets.Header(this, UiText.Get("ui.start.title"), UiText.Get("ui.start.subtitle"));
@@ -56,8 +60,11 @@ public partial class StartScreen : Control
 
         Widgets.InputHelp(this, UiText.Get("ui.input.mouseOnly"), UiText.Get("ui.input.padPending"));
 
-        var races = LaunchRaces();
-        Choose(races.Count > 0 ? races[0] : Race.Human);
+        var clubs = LaunchClubs();
+        if (clubs.Count > 0)
+        {
+            Choose(clubs[0]);
+        }
 
         if (Tour.Active)
         {
@@ -72,13 +79,12 @@ public partial class StartScreen : Control
         Widgets.Body(this, UiText.Get("ui.start.clubHint"), new Vector2(24f, 78f), 340f, Style.TextDim);
 
         float y = 112f;
-        foreach (var race in LaunchRaces())
+        foreach (var club in LaunchClubs())
         {
-            var definition = _catalog.Race(race);
-            var button = Widgets.Button(this, definition.Name.Es, new Rect2(24f, y, 340f, 26f));
-            var chosen = race;
+            var button = Widgets.Button(this, club.Name.Es, new Rect2(24f, y, 340f, 26f));
+            var chosen = club;
             button.Pressed += () => Choose(chosen);
-            _raceButtons.Add((race, button));
+            _clubButtons.Add((club, button));
             y += 32f;
         }
 
@@ -128,40 +134,27 @@ public partial class StartScreen : Control
         button.Pressed += ContinueRun;
     }
 
-    /// <summary>Razas jugables al lanzamiento, en orden estable (el mismo criterio que <c>/Balance</c>).</summary>
-    private List<Race> LaunchRaces()
-    {
-        var races = new List<Race>();
-        for (int i = 0; i < _catalog.Races.Count; i++)
-        {
-            if (_catalog.Races[i].Launch)
-            {
-                races.Add(_catalog.Races[i].Id);
-            }
-        }
+    /// <summary>Clubes jugables al lanzamiento (uno por raza con <c>launch: true</c>), en orden estable de id.</summary>
+    private List<ClubDefinition> LaunchClubs() =>
+        _clubs.All.Where(c => _catalog.Race(c.Race).Launch).ToList();
 
-        races.Sort();
-        return races;
-    }
-
-    private void Choose(Race race)
+    private void Choose(ClubDefinition club)
     {
-        _race = race;
-        var definition = _catalog.Race(race);
-        _chosen.Text = UiText.Get("ui.start.chosen", definition.Name.Es);
+        _club = club;
+        _chosen.Text = UiText.Get("ui.start.chosen", club.Name.Es);
 
         var templates = _catalog.Localization.Get(GameData.Language);
-        var ability = _catalog.Perks.Find(definition.Ability);
+        var ability = string.IsNullOrEmpty(club.SpecialRule) ? null : _catalog.Perks.Find(club.SpecialRule);
         string abilityLine = ability is null
             ? string.Empty
             : "\n\n" + UiText.Get("ui.start.ability").ToUpperInvariant() + "\n"
                 + ability.Name.Es + ": " + DescriptionGenerator.Describe(ability, templates);
 
-        _description.Text = definition.Description.Es + abilityLine;
+        _description.Text = club.Description.Es + abilityLine;
 
-        foreach (var (candidate, button) in _raceButtons)
+        foreach (var (candidate, button) in _clubButtons)
         {
-            button.AddThemeColorOverride("font_color", candidate == race ? Style.Accent : Style.Text);
+            button.AddThemeColorOverride("font_color", candidate.Id == club.Id ? Style.Accent : Style.Text);
         }
     }
 
@@ -180,7 +173,7 @@ public partial class StartScreen : Control
     private void Begin()
     {
         var run = RunController.Instance;
-        if (run is null)
+        if (run is null || _club is null)
         {
             return;
         }
@@ -191,7 +184,7 @@ public partial class StartScreen : Control
             _seed.Text = UiText.Get("ui.start.badSeed", seed);
         }
 
-        run.NewRun(_race, seed);
+        run.NewRun(_club.Id, _club.Race, seed);
         Nav.Go(this, Nav.Map);
     }
 

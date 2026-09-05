@@ -1,0 +1,24 @@
+{
+  "_doc": "Club de lanzamiento (RF-004): no-muertos, inmunes al duelo y a la lesión leve. specialRule apunta a la habilidad racial 'numb' (ADR 0026), no a una mecánica nueva del club. startingGold es informativo (ver data/schemas/clubs.schema.json): coincide con startingGoldByDivision[0] de data/economy/economy.json.",
+  "id": "undead_phoenix",
+  "race": "Undead",
+  "name": { "es": "Fénix Concursal", "en": "Newco Athletic" },
+  "description": {
+    "es": "No-muertos. Llevan tres descensos y cuatro concursos de acreedores, y siguen en pie.",
+    "en": "Undead. Three relegations and four bankruptcies in, and they're still standing."
+  },
+  "startingGold": 10,
+  "specialRule": "numb",
+  "roster": [
+    { "name": "Vex Osamenta", "position": "Goalkeeper", "rarity": "common" },
+    { "name": "Malric Huesoseco", "position": "Defender", "rarity": "common" },
+    { "name": "Corvina Cenizagrís", "position": "Defender", "rarity": "common" },
+    { "name": "Thane Vozmuerta", "position": "Midfielder", "rarity": "common" },
+    { "name": "Isolde Nochehueca", "position": "Midfielder", "rarity": "common" },
+    { "name": "Ravik Polvorento", "position": "Midfielder", "rarity": "common" },
+    { "name": "Malachar Sudariofrío", "position": "Forward", "rarity": "legendary" },
+    { "name": "Ezren Tumbafría", "position": "Defender", "rarity": "common" },
+    { "name": "Lyra Sinaliento", "position": "Midfielder", "rarity": "common" },
+    { "name": "Doran Cripta", "position": "Forward", "rarity": "common" }
+  ]
+}

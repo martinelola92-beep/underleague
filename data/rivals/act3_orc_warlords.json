@@ -4,6 +4,10 @@
     "es": "Señores de la Guerra Carmesí",
     "en": "Crimson Warlords"
   },
+  "description": {
+    "es": "El partido más violento del acto: entran a matar hasta en el descuento del descuento.",
+    "en": "The most violent fixture of the act: they go in to kill even in added time of added time."
+  },
   "race": "Orc",
   "act": 3,
   "difficulty": 5,

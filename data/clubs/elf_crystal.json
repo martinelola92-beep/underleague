@@ -1,0 +1,24 @@
+{
+  "_doc": "Club de lanzamiento (RF-004): elfos, técnicos y frágiles. specialRule apunta a la habilidad racial 'elf_touch' (ADR 0026), no a una mecánica nueva del club. startingGold es informativo (ver data/schemas/clubs.schema.json): coincide con startingGoldByDivision[0] de data/economy/economy.json.",
+  "id": "elf_crystal",
+  "race": "Elf",
+  "name": { "es": "Real Cristal", "en": "Crystal Rovers" },
+  "description": {
+    "es": "Elfos. Juegan precioso hasta el primer choque; después juegan menos.",
+    "en": "Elves. They play beautifully until the first collision; after that, less so."
+  },
+  "startingGold": 10,
+  "specialRule": "elf_touch",
+  "roster": [
+    { "name": "Sindar Hojaplata", "position": "Goalkeeper", "rarity": "common" },
+    { "name": "Belanor Ramaluz", "position": "Defender", "rarity": "common" },
+    { "name": "Rhovan Espinafina", "position": "Defender", "rarity": "common" },
+    { "name": "Aerin Lunargenta", "position": "Midfielder", "rarity": "common" },
+    { "name": "Faelwen Cantoalba", "position": "Midfielder", "rarity": "common" },
+    { "name": "Ilphra Vientoclaro", "position": "Midfielder", "rarity": "common" },
+    { "name": "Tauriel Brisadorada", "position": "Forward", "rarity": "rare" },
+    { "name": "Orophin Rocíogris", "position": "Defender", "rarity": "common" },
+    { "name": "Lorien Fuegoquieto", "position": "Midfielder", "rarity": "common" },
+    { "name": "Ylwen Sombraverde", "position": "Forward", "rarity": "common" }
+  ]
+}

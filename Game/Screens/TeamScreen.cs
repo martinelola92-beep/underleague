@@ -79,7 +79,7 @@ public partial class TeamScreen : Control
         _subtitle.Text = UiText.Get(
             "ui.team.subtitle",
             _state.Catalog.Race(_state.Team.Race).Name.Es,
-            inRun ? run!.State!.ClubId : UiText.Get("ui.team.placeholderClub"),
+            inRun ? _state.Team.Name : UiText.Get("ui.team.placeholderClub"),
             _state.Players.Count);
 
         if (inRun)

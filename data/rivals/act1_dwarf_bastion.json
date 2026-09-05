@@ -4,6 +4,10 @@
     "es": "Bastión de Granito",
     "en": "Granite Bastion"
   },
+  "description": {
+    "es": "Un muro de enanos que no se mueve ni con el gol en contra: si se decide algo, se decide en un córner.",
+    "en": "A wall of dwarves that won't budge even a goal down: if this match is decided at all, it's on a corner."
+  },
   "race": "Dwarf",
   "act": 1,
   "difficulty": 2,

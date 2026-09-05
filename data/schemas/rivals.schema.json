@@ -8,6 +8,10 @@
     "_doc": { "type": "string" },
     "id": { "type": "string", "pattern": "^[a-z][a-z0-9_]*$" },
     "name": { "$ref": "#/$defs/localizedName" },
+    "description": {
+      "description": "Una frase para el informe de ojeo (RF-012b, RF-015): la build real del rival, escrita a mano (docs/estilo-descripciones.md). No es un efecto: RT-035 no aplica.",
+      "$ref": "#/$defs/localizedName"
+    },
     "race": {
       "enum": ["Human", "Orc", "Elf", "Dwarf", "Undead", "DarkElf", "Demon", "Vampire", "Lizard"]
     },
@@ -25,7 +29,7 @@
       "maxItems": 10
     }
   },
-  "required": ["id", "name", "race", "act", "difficulty", "players"],
+  "required": ["id", "name", "description", "race", "act", "difficulty", "players"],
   "additionalProperties": false,
   "$defs": {
     "localizedName": {

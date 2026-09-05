@@ -4,6 +4,10 @@
     "es": "Virtuosos del Bosque",
     "en": "Forest Virtuosi"
   },
+  "description": {
+    "es": "Tocan el balón como si les debiera dinero: precioso de ver, letal si les dejas dos toques.",
+    "en": "They pass the ball like it owes them money: gorgeous to watch, lethal if you give them two touches."
+  },
   "race": "Elf",
   "act": 2,
   "difficulty": 4,

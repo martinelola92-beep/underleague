@@ -4,6 +4,10 @@
     "es": "Reyes de Hierro",
     "en": "Iron Kings"
   },
+  "description": {
+    "es": "La muralla definitiva: generaciones sin encajar un gol fácil ni retirar una entrada a tiempo.",
+    "en": "The ultimate wall: generations without conceding an easy goal or pulling out of a tackle."
+  },
   "race": "Dwarf",
   "act": 3,
   "difficulty": 5,

@@ -20,9 +20,15 @@ public sealed record RivalPlayer(
 /// <c>TeamSetup</c>. La build "reconocible" de RF-015 es la combinación de raza, sesgo de atributos y
 /// perks: no hay un campo de etiqueta de build separado, el propio roster la cuenta.
 /// </summary>
+/// <param name="Description">
+/// Línea de una frase para el informe de ojeo (RF-012b, RF-015): "un rival real, no un bloque de
+/// estadísticas". Se escribe a mano, con las mismas reglas que la descripción de una raza o un club
+/// (<c>docs/estilo-descripciones.md</c>): no es un efecto, así que RT-035 no aplica.
+/// </param>
 public sealed record RivalTeam(
     string Id,
     LocalizedName Name,
+    LocalizedName Description,
     Race Race,
     int Act,
     int Difficulty,

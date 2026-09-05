@@ -52,6 +52,12 @@ public static class RivalTeamBuilder
 
         var starters = players.Take(7).ToList();
         var lineup = Lineup.Default(starters);
-        return new TeamSetup(team.Id, team.Id, team.Race, players, lineup);
+
+        // El nombre visible del equipo, no su id de datos (RF-015): antes de este arreglo, el log de
+        // eventos (RF-121), el informe post-partido (RF-119) y el marcador del partido mostraban
+        // literalmente "act1_elf_swiftwing" en vez de "Ala Veloz", porque TeamSetup.Name se rellenaba con
+        // team.Id. El idioma es fijo a "es" (como el resto de textos generados fuera del catálogo de
+        // localización) mientras la fase 4 no elija idioma en tiempo de ejecución (RT-073).
+        return new TeamSetup(team.Id, team.Name.Es, team.Race, players, lineup);
     }
 }

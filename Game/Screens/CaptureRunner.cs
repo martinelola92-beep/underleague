@@ -47,7 +47,7 @@ public partial class CaptureRunner : Control
             return;
         }
 
-        run.NewRun(Race.Orc, Seed);
+        run.NewRun("orc_ironworks", Race.Orc, Seed);
 
         int matchNode = FirstOfKind(run, node => node.IsMatch);
         if (matchNode < 0)

@@ -197,6 +197,12 @@ static string? MapSchemaFile(string relativePath)
         return "rivals.schema.json";
     }
 
+    if (relativePath.StartsWith("clubs/", StringComparison.Ordinal) && relativePath.EndsWith(".json", StringComparison.Ordinal)
+        && !relativePath[6..].Contains('/'))
+    {
+        return "clubs.schema.json";
+    }
+
     if (relativePath.StartsWith("consumables/", StringComparison.Ordinal) && relativePath.EndsWith(".json", StringComparison.Ordinal)
         && !relativePath[12..].Contains('/'))
     {

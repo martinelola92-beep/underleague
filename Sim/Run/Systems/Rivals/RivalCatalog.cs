@@ -85,6 +85,7 @@ public static class RivalLoader
 
         string id = root.Str("id");
         var name = LocalizedNameJson.Read(root.Prop("name"));
+        var description = LocalizedNameJson.Read(root.Prop("description"));
         var race = ParseRace(root, root.Str("race"));
         int act = root.Int("act");
         if (act < 1 || act > 3)
@@ -111,7 +112,7 @@ public static class RivalLoader
             throw new DataException(path, "$.players", $"un rival necesita exactamente {SlotPositions.Length} jugadores (7 titulares y 3 suplentes)");
         }
 
-        return new RivalTeam(id, name, race, act, difficulty, players);
+        return new RivalTeam(id, name, description, race, act, difficulty, players);
     }
 
     private static RivalPlayer ParsePlayer(Json node, int index)

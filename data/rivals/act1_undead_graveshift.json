@@ -4,6 +4,10 @@
     "es": "Turno de Ultratumba",
     "en": "Graveshift"
   },
+  "description": {
+    "es": "Nunca fallan un partido fuera de casa ni una ocasión clara: el cansancio es cosa de los vivos.",
+    "en": "They never miss an away fixture or a clear chance: fatigue is a problem for the living."
+  },
   "race": "Undead",
   "act": 1,
   "difficulty": 3,

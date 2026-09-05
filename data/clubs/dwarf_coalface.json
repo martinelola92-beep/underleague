@@ -1,0 +1,24 @@
+{
+  "_doc": "Club de lanzamiento (RF-004): enanos, correa corta y difíciles de mover. specialRule apunta a la habilidad racial 'roots' (ADR 0026), no a una mecánica nueva del club. startingGold es informativo (ver data/schemas/clubs.schema.json): coincide con startingGoldByDivision[0] de data/economy/economy.json.",
+  "id": "dwarf_coalface",
+  "race": "Dwarf",
+  "name": { "es": "CD Socavón", "en": "Coalface United" },
+  "description": {
+    "es": "Enanos. No corren, no ceden y no los mueve nadie, ni siquiera el rival.",
+    "en": "Dwarves. They don't run, they don't yield, and nothing moves them — least of all the opposition."
+  },
+  "startingGold": 10,
+  "specialRule": "roots",
+  "roster": [
+    { "name": "Borin Escudopétreo", "position": "Goalkeeper", "rarity": "common" },
+    { "name": "Dagnar Barbahierro", "position": "Defender", "rarity": "common" },
+    { "name": "Grimnir Yunquefirme", "position": "Defender", "rarity": "common" },
+    { "name": "Astrid Puñoroca", "position": "Midfielder", "rarity": "common" },
+    { "name": "Freya Martillonegro", "position": "Midfielder", "rarity": "common" },
+    { "name": "Ragnar Cavaprofundo", "position": "Midfielder", "rarity": "common" },
+    { "name": "Thrainn Vetaoro", "position": "Forward", "rarity": "uncommon" },
+    { "name": "Ivarr Golpefrío", "position": "Defender", "rarity": "common" },
+    { "name": "Brynja Tallapiedra", "position": "Midfielder", "rarity": "common" },
+    { "name": "Skorri Forjagrís", "position": "Forward", "rarity": "common" }
+  ]
+}

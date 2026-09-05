@@ -4,6 +4,10 @@
     "es": "Horda de Colmillo Rojo",
     "en": "Red Fang Horde"
   },
+  "description": {
+    "es": "Una horda que juega mejor cuantos menos árbitros quedan ya en el campo.",
+    "en": "A horde that plays better the fewer referees are still on the pitch."
+  },
   "race": "Orc",
   "act": 2,
   "difficulty": 3,

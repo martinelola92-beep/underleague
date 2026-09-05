@@ -58,7 +58,7 @@ public sealed class TeamState
     {
         ArgumentNullException.ThrowIfNull(run);
         var catalog = run.Catalog ?? throw new InvalidOperationException("la run no tiene catálogo cargado");
-        return new TeamState(catalog, TeamOf(run.State!, catalog), run);
+        return new TeamState(catalog, TeamOf(run.State!, catalog, run.Systems), run);
     }
 
     /// <summary>
@@ -68,7 +68,14 @@ public sealed class TeamState
     /// </summary>
     public static TeamState Of(Catalog catalog, TeamSetup team) => new(catalog, team);
 
-    private static TeamSetup TeamOf(RunState state, Catalog catalog)
+    /// <summary>
+    /// El nombre visible del club, no su id de datos (RF-004): antes de este arreglo, la pantalla de
+    /// Equipo mostraba literalmente <c>state.ClubId</c> ("underleague_fc") en el subtítulo. Si el
+    /// catálogo de clubes de la run conoce el id, se usa su nombre; si no (equipo de pruebas cargado sin
+    /// run, <see cref="Load"/>), se deja el id, que ese caso ya sustituye por el texto de marcador de
+    /// posición antes de mostrarlo (<c>ui.team.placeholderClub</c>).
+    /// </summary>
+    private static TeamSetup TeamOf(RunState state, Catalog catalog, Sim.Run.Systems.StandardRunSystems? systems)
     {
         var players = new List<PlayerDefinition>(state.Roster.Count);
         for (int i = 0; i < state.Roster.Count; i++)
@@ -76,7 +83,8 @@ public sealed class TeamState
             players.Add(state.Roster[i].ToDefinition(catalog));
         }
 
-        return new TeamSetup(state.ClubId, state.ClubId, state.ClubRace, players, state.Lineup);
+        string clubName = systems?.Clubs.Find(state.ClubId)?.Name.Es ?? state.ClubId;
+        return new TeamSetup(state.ClubId, clubName, state.ClubRace, players, state.Lineup);
     }
 
     /// <summary>
@@ -164,7 +172,7 @@ public sealed class TeamState
         if (_run is { HasRun: true })
         {
             _run.Apply(new SetLineup(next));
-            Team = TeamOf(_run.State!, Catalog);
+            Team = TeamOf(_run.State!, Catalog, _run.Systems);
             return true;
         }
 

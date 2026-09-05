@@ -4,6 +4,10 @@
     "es": "Legión Eterna",
     "en": "Eternal Legion"
   },
+  "description": {
+    "es": "Cuantos más caen, más siguen viniendo: este partido no se gana, se sobrevive.",
+    "en": "However many fall, more keep coming: this match isn't won, it's survived."
+  },
   "race": "Undead",
   "act": 3,
   "difficulty": 5,

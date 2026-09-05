@@ -4,6 +4,10 @@
     "es": "Academia Meridiana",
     "en": "Meridian Academy"
   },
+  "description": {
+    "es": "Un equipo de manual: sin estrellas, pero cada uno sabe exactamente dónde tiene que estar.",
+    "en": "A textbook side: no stars, but everyone knows exactly where they're supposed to be."
+  },
   "race": "Human",
   "act": 1,
   "difficulty": 1,

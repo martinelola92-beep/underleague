@@ -4,6 +4,10 @@
     "es": "Tácticos de Puerto Claro",
     "en": "Clearport Tacticians"
   },
+  "description": {
+    "es": "Un plan distinto para cada rival y un hombre pegado a tu mejor jugador desde el pitido inicial.",
+    "en": "A different plan for every opponent, and a man glued to your best player from the first whistle."
+  },
   "race": "Human",
   "act": 2,
   "difficulty": 3,

@@ -4,6 +4,10 @@
     "es": "Caminantes Silenciosos",
     "en": "Deadwalkers"
   },
+  "description": {
+    "es": "Avanzan despacio y sin quejarse, y en cuanto pisan el área, disparan desde donde sea.",
+    "en": "They march forward slowly without complaint, and once inside the box, they shoot from anywhere."
+  },
   "race": "Undead",
   "act": 2,
   "difficulty": 4,

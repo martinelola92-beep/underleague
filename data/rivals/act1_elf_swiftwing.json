@@ -4,6 +4,10 @@
     "es": "Ala Veloz",
     "en": "Swiftwing"
   },
+  "description": {
+    "es": "Bandas rápidas y un cazagoles con hambre: si te ganan la espalda una vez, ya no llegas.",
+    "en": "Quick wingers and a hungry poacher up front: get caught square once and you won't catch up."
+  },
   "race": "Elf",
   "act": 1,
   "difficulty": 2,

@@ -7,6 +7,7 @@ using Underleague.Sim.Engine;
 using Underleague.Sim.Model;
 using Underleague.Sim.Perks;
 using Underleague.Sim.Run;
+using Underleague.Sim.Run.Systems.Rivals;
 
 namespace Underleague.Game.Screens;
 
@@ -62,7 +63,8 @@ public partial class ScoutScreen : Control
             node.Difficulty,
             UiText.Get("ui.difficulty." + (node.Difficulty <= 0 ? 5 : node.Difficulty))));
 
-        BuildRivalList(catalog, setup.Away);
+        var rivalTeam = _run.Systems?.Rivals.Find(node.OpponentId);
+        BuildRivalList(catalog, setup.Away, rivalTeam);
         BuildReport(state, catalog, node, setup);
         BuildButtons();
 
@@ -74,17 +76,30 @@ public partial class ScoutScreen : Control
         }
     }
 
-    /// <summary>La plantilla rival, con la misma ficha que la propia y el mismo patrón de inspección (UI-001, UI-010).</summary>
-    private void BuildRivalList(Sim.Data.Catalog catalog, TeamSetup away)
+    /// <summary>
+    /// La plantilla rival, con la misma ficha que la propia y el mismo patrón de inspección (UI-001,
+    /// UI-010). Encabezada por su <b>nombre</b> y su línea de ojeo (RF-015): antes de esto, la sección se
+    /// llamaba genéricamente "plantilla rival" y no había ni rastro del nombre del equipo, ni siquiera el
+    /// id de datos ("act1_elf_swiftwing") que sí se ve en el marcador del partido.
+    /// </summary>
+    private void BuildRivalList(Sim.Data.Catalog catalog, TeamSetup away, RivalTeam? rivalTeam)
     {
         Widgets.Panel(this, new Rect2(12f, 52f, Widgets.CardColumnWidth, 690f));
         Widgets.Section(this, UiText.Get("ui.scout.rival"), new Vector2(24f, 60f), 340f);
 
+        float listTop = 82f;
+        if (rivalTeam is not null)
+        {
+            Widgets.Body(this, rivalTeam.Name.Es, new Vector2(24f, 80f), 340f, Style.Accent);
+            var descriptionLabel = Widgets.Body(this, rivalTeam.Description.Es, new Vector2(24f, 98f), 340f, Style.TextDim);
+            listTop = 98f + descriptionLabel.Size.Y + 10f;
+        }
+
         _rival = TeamState.Of(catalog, away);
         _list = new VBoxContainer
         {
-            Position = new Vector2(22f, 82f),
-            Size = new Vector2(356f, 650f),
+            Position = new Vector2(22f, listTop),
+            Size = new Vector2(356f, 742f - listTop),
         };
         _list.AddThemeConstantOverride("separation", 3);
         AddChild(_list);

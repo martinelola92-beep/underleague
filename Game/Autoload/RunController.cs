@@ -32,9 +32,6 @@ public partial class RunController : Node
     /// <summary>Guardado ironman: un único slot por run (RT-061).</summary>
     public const string SavePath = "user://run.json";
 
-    /// <summary>Id del club mientras <c>data/clubs/</c> no exista (RF-004; mismo que usa <c>/Balance</c>).</summary>
-    public const string ClubId = "underleague_fc";
-
     private IRunSystems _systems = DefaultRunSystems.Instance;
 
     /// <summary>La instancia del autoload. Null solo si una escena se ejecuta suelta, sin el proyecto.</summary>
@@ -93,11 +90,14 @@ public partial class RunController : Node
     }
 
     /// <summary>
-    /// Empieza una run con esa raza de club y esa semilla (RF-004): congela la instantánea de <c>/data</c>
+    /// Empieza una run con ese club y esa semilla (RF-004): congela la instantánea de <c>/data</c>
     /// (RT-061b), genera plantilla y mapas y deja la run en la entrada del acto 1. Toda la aleatoriedad
     /// posterior sale de esta semilla (RT-021).
     /// </summary>
-    public void NewRun(Race clubRace, ulong seed)
+    /// <param name="clubId">Id del club elegido en <see cref="Screens.StartScreen"/> (RF-004, <c>data/clubs/</c>).</param>
+    /// <param name="clubRace">Raza de ese club: todos los jugadores iniciales son de ella (RF-004).</param>
+    /// <param name="seed">Semilla de la run (RT-021).</param>
+    public void NewRun(string clubId, Race clubRace, ulong seed)
     {
         var files = GameData.Snapshot;
         Catalog = DataLoader.FromJson(files);
@@ -107,7 +107,7 @@ public partial class RunController : Node
         var bossSystems = new BossRunSystems(Bosses, Systems);
         _systems = bossSystems;
 
-        var setup = Systems.NewRunSetup(ClubId, clubRace, files);
+        var setup = Systems.NewRunSetup(clubId, clubRace, files);
         State = bossSystems.AssignBosses(RunEngine.Start(setup, seed, Catalog, bossSystems));
         SelectedNodeId = -1;
         LastMatch = null;

@@ -4,6 +4,10 @@
     "es": "Selección de Puerto Claro",
     "en": "Clearport All-Stars"
   },
+  "description": {
+    "es": "Lo mejor de cada casa de Puerto Claro en un once sin un solo hueco que explotar.",
+    "en": "The best of every Clearport side in one XI with no gap left to exploit."
+  },
   "race": "Human",
   "act": 3,
   "difficulty": 5,

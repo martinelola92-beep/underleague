@@ -1,6 +1,7 @@
 using Underleague.Sim.Data;
 using Underleague.Sim.Engine;
 using Underleague.Sim.Model;
+using Underleague.Sim.Run.Systems.Clubs;
 using Underleague.Sim.Run.Systems.Consumables;
 using Underleague.Sim.Run.Systems.Economy;
 using Underleague.Sim.Run.Systems.Equipment;
@@ -33,14 +34,16 @@ public sealed class StandardRunSystems : IRunSystems
     private readonly ConsumableCatalog _consumables;
     private readonly RivalCatalog _rivals;
     private readonly MapConfig _map;
+    private readonly ClubCatalog _clubs;
 
-    public StandardRunSystems(EconomyConfig economy, ItemCatalog items, ConsumableCatalog consumables, RivalCatalog rivals, MapConfig map)
+    public StandardRunSystems(EconomyConfig economy, ItemCatalog items, ConsumableCatalog consumables, RivalCatalog rivals, MapConfig map, ClubCatalog clubs)
     {
         _economy = economy ?? throw new ArgumentNullException(nameof(economy));
         _items = items ?? throw new ArgumentNullException(nameof(items));
         _consumables = consumables ?? throw new ArgumentNullException(nameof(consumables));
         _rivals = rivals ?? throw new ArgumentNullException(nameof(rivals));
         _map = map ?? throw new ArgumentNullException(nameof(map));
+        _clubs = clubs ?? throw new ArgumentNullException(nameof(clubs));
     }
 
     /// <summary>Configuración de economía de esta instancia (para tests y <c>/Balance</c>).</summary>
@@ -58,17 +61,21 @@ public sealed class StandardRunSystems : IRunSystems
     /// <summary>Estructura del mapa de esta instancia (D-2/D-10, <c>data/map/map.json</c>).</summary>
     public MapConfig Map => _map;
 
+    /// <summary>Catálogo de clubes iniciales de esta instancia (RF-004, <c>data/clubs/</c>).</summary>
+    public ClubCatalog Clubs => _clubs;
+
     /// <summary>
-    /// Construye los cuatro catálogos del paquete X de una instantánea de <c>/data</c> (el mismo
+    /// Construye los cinco catálogos del paquete X de una instantánea de <c>/data</c> (el mismo
     /// diccionario que consume <c>DataLoader.FromJson</c>). Ayudante de conveniencia para tests y
-    /// <c>/Balance</c>: evita llamar a los cuatro cargadores por separado.
+    /// <c>/Balance</c>: evita llamar a los cinco cargadores por separado.
     /// </summary>
     public static StandardRunSystems FromJson(IReadOnlyDictionary<string, string> files) => new(
         EconomyLoader.FromJson(files),
         ItemLoader.FromJson(files),
         ConsumableLoader.FromJson(files),
         RivalLoader.FromJson(files),
-        MapLoader.FromJson(files));
+        MapLoader.FromJson(files),
+        ClubLoader.FromJson(files));
 
     /// <summary>
     /// <see cref="RunSetup"/> completo para empezar una run con <b>estos</b> datos: oro de partida
@@ -76,9 +83,11 @@ public sealed class StandardRunSystems : IRunSystems
     /// (<c>data/rivals/</c>).
     ///
     /// <para>Existe porque <c>RunSetup.StartingGold</c> es un <c>init</c> que vale <b>0</b> si nadie lo
-    /// rellena, y <c>data/clubs/</c> todavía no existe: quien empezaba una run sin acordarse llegaba al
-    /// primer mercado sin un solo oro y no podía comprar nada. El valor está en datos y aquí solo se
-    /// enchufa, para que ningún llamador tenga que saberlo.</para>
+    /// rellena: quien empezaba una run sin acordarse llegaba al primer mercado sin un solo oro y no podía
+    /// comprar nada. El valor sigue saliendo de <c>economy.startingGoldByDivision</c>, no de
+    /// <c>data/clubs/</c> (que solo lo enseña, informativo, en la pantalla de selección de club: ver
+    /// <see cref="Clubs.ClubDefinition"/>), para no acoplar el arranque de la run a un dato que hoy no
+    /// varía entre clubes.</para>
     /// </summary>
     /// <param name="clubId">Id del club (RF-004).</param>
     /// <param name="race">Raza del club (RF-004).</param>
@@ -288,10 +297,35 @@ public sealed class StandardRunSystems : IRunSystems
 
     /// <inheritdoc />
     /// <remarks>
-    /// El paquete X no transforma el partido: los objetos equipados ya viajan dentro del
-    /// <c>PlayerDefinition</c> que arma <c>RunLineup</c>, y los modificadores de regla son del jefe
-    /// (paquete Y), que envuelve a esta clase con <c>BossRunSystems</c>.
+    /// Lo único que transforma el paquete X es el <b>nombre</b> del equipo del jugador (RF-004): el resto
+    /// del partido queda igual, los objetos equipados ya viajan dentro del <c>PlayerDefinition</c> que
+    /// arma <c>RunLineup</c>, y los modificadores de regla son del jefe (paquete Y), que envuelve a esta
+    /// clase con <c>BossRunSystems</c>.
+    ///
+    /// <para><c>RunEngine.BuildMatch</c> etiqueta el equipo propio con <c>state.ClubId</c>, que es un id
+    /// de datos (<c>"underleague_fc"</c>, no un nombre): sin este paso, ese id llegaba tal cual al
+    /// marcador del partido, al log de eventos (RF-121) y al informe post-partido (RF-119). Si el id
+    /// resuelve a un club conocido, se sustituye por su nombre; si no (equipos de prueba, <c>/Balance</c>,
+    /// que no usan <c>data/clubs/</c>), se deja como estaba, sin lanzar.</para>
     /// </remarks>
-    public MatchSetup TransformMatch(RunState state, MapNode node, MatchSetup setup, int playerTeamIndex, Catalog catalog) =>
-        setup;
+    public MatchSetup TransformMatch(RunState state, MapNode node, MatchSetup setup, int playerTeamIndex, Catalog catalog)
+    {
+        ArgumentNullException.ThrowIfNull(state);
+        ArgumentNullException.ThrowIfNull(setup);
+
+        var club = _clubs.Find(state.ClubId);
+        if (club is null)
+        {
+            return setup;
+        }
+
+        var own = playerTeamIndex == 0 ? setup.Home : setup.Away;
+        if (own is null || string.Equals(own.Name, club.Name.Es, StringComparison.Ordinal))
+        {
+            return setup;
+        }
+
+        var renamed = own with { Name = club.Name.Es };
+        return playerTeamIndex == 0 ? setup with { Home = renamed } : setup with { Away = renamed };
+    }
 }

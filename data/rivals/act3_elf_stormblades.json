@@ -4,6 +4,10 @@
     "es": "Hojas de Tormenta",
     "en": "Stormblades"
   },
+  "description": {
+    "es": "Todo el equipo corre para que uno solo remate: corta esa lanza y se quedan sin plan B.",
+    "en": "The whole team runs so that one man can finish: cut off the spear and there's no plan B."
+  },
   "race": "Elf",
   "act": 3,
   "difficulty": 5,

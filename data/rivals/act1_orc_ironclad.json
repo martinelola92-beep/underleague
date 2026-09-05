@@ -4,6 +4,10 @@
     "es": "Yunque Verde",
     "en": "Green Anvil"
   },
+  "description": {
+    "es": "Orcos que aguantan el golpe y lo devuelven con intereses: cuanto más les pegas, más aguantan.",
+    "en": "Orcs who take the hit and send it back with interest: the harder you hit them, the longer they stand."
+  },
   "race": "Orc",
   "act": 1,
   "difficulty": 1,

@@ -1,0 +1,56 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://underleague.dev/schemas/clubs.schema.json",
+  "title": "Underleague club",
+  "description": "data/clubs/<id>.json: club inicial (RF-004), uno por raza jugable al lanzamiento. name y description se escriben a mano (docs/estilo-descripciones.md), no son un efecto (RT-035 no aplica). startingGold y roster son informativos para la pantalla de selección de club: el oro real de la run sigue saliendo de data/economy/economy.json por división y la plantilla real sigue generándola Sim.Generation.TeamGenerator (Sim.Run.Systems.Clubs.ClubDefinition documenta el porqué). specialRule es la 'regla especial' de RF-004: vacía, o el id de un perk ya existente en data/perks/ (normalmente la habilidad racial de esa raza, ADR 0026); este fichero no define ninguna mecánica nueva.",
+  "type": "object",
+  "properties": {
+    "_doc": { "type": "string" },
+    "id": { "type": "string", "pattern": "^[a-z][a-z0-9_]*$" },
+    "race": {
+      "enum": ["Human", "Orc", "Elf", "Dwarf", "Undead", "DarkElf", "Demon", "Vampire", "Lizard"]
+    },
+    "name": { "$ref": "#/$defs/localizedName" },
+    "description": { "$ref": "#/$defs/localizedName" },
+    "startingGold": {
+      "description": "Informativo (ver arriba): la pantalla de selección lo enseña, pero el oro real de la run lo fija data/economy/economy.json por división.",
+      "type": "integer",
+      "minimum": 0
+    },
+    "specialRule": {
+      "description": "Vacía, o id de un perk existente en data/perks/ (RF-004, ADR 0026). No mecánica nueva.",
+      "type": "string",
+      "pattern": "^$|^[a-z][a-z0-9_]*$"
+    },
+    "roster": {
+      "description": "Plantilla inicial (RF-005): exactamente 10 jugadores en el mismo orden que Sim.Generation.TeamGenerator (7 titulares GK/DEF/DEF/MID/MID/MID/FWD y 3 suplentes DEF/MID/FWD). Al menos uno debe ser de rareza superior a común; no es mecánicamente verificable y queda en manos de quien autora el dato, igual que el sesgo dominante de data/races/*.json (ADR 0024).",
+      "type": "array",
+      "items": { "$ref": "#/$defs/player" },
+      "minItems": 10,
+      "maxItems": 10
+    }
+  },
+  "required": ["id", "race", "name", "description", "startingGold", "specialRule", "roster"],
+  "additionalProperties": false,
+  "$defs": {
+    "localizedName": {
+      "type": "object",
+      "properties": {
+        "es": { "type": "string", "minLength": 1 },
+        "en": { "type": "string", "minLength": 1 }
+      },
+      "required": ["es", "en"],
+      "additionalProperties": false
+    },
+    "player": {
+      "type": "object",
+      "properties": {
+        "name": { "type": "string", "minLength": 1 },
+        "position": { "enum": ["Goalkeeper", "Defender", "Midfielder", "Forward"] },
+        "rarity": { "enum": ["common", "uncommon", "rare", "legendary"] }
+      },
+      "required": ["name", "position", "rarity"],
+      "additionalProperties": false
+    }
+  }
+}

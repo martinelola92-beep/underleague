@@ -4,6 +4,10 @@
     "es": "Muralla de Escudos",
     "en": "Shieldwall"
   },
+  "description": {
+    "es": "La misma muralla de siempre, pero ahora también sabe pegar: defienden el área a base de nudillos.",
+    "en": "The same old wall, now with a mean streak: they defend the box with their knuckles."
+  },
   "race": "Dwarf",
   "act": 2,
   "difficulty": 4,

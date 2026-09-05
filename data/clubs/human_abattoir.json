@@ -1,0 +1,24 @@
+{
+  "_doc": "Club de referencia (RF-004): humanos, sin sesgo de raza marcado. specialRule apunta a la habilidad racial 'quick_learner' (ADR 0026), no a una mecánica nueva del club. startingGold es informativo (ver data/schemas/clubs.schema.json): coincide con startingGoldByDivision[0] de data/economy/economy.json.",
+  "id": "human_abattoir",
+  "race": "Human",
+  "name": { "es": "Deportivo Matadero", "en": "Abattoir United" },
+  "description": {
+    "es": "Humanos. El club de siempre: ni sobra ni falta nada, y así les va.",
+    "en": "Humans. The default club: nothing special, nothing missing, and it shows."
+  },
+  "startingGold": 10,
+  "specialRule": "quick_learner",
+  "roster": [
+    { "name": "Bruno Nieto", "position": "Goalkeeper", "rarity": "common" },
+    { "name": "Ciro Esteve", "position": "Defender", "rarity": "common" },
+    { "name": "Ada Rubio", "position": "Defender", "rarity": "common" },
+    { "name": "Dario Soler", "position": "Midfielder", "rarity": "common" },
+    { "name": "Elsa Ferrer", "position": "Midfielder", "rarity": "common" },
+    { "name": "Hugo Cano", "position": "Midfielder", "rarity": "common" },
+    { "name": "Sandro Ureña", "position": "Forward", "rarity": "uncommon" },
+    { "name": "Vito Duque", "position": "Defender", "rarity": "common" },
+    { "name": "Nora Prieto", "position": "Midfielder", "rarity": "common" },
+    { "name": "Tino Abad", "position": "Forward", "rarity": "common" }
+  ]
+}
