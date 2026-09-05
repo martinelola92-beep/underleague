@@ -35,7 +35,16 @@ public static class PerkLoader
         "id", "name", "rarity", "kind", "axis", "race", "trigger", "scope", "links", "condition",
         "effects", "elseEffects", "limit", "accumulatesAcrossMatches", "lethal", "lethalChance", "positionOnly",
         "tagsRequired", "tagsForbidden",
+
+        // Arcos de build y profundidad nativa (ADR 0051).
+        "minAct", "frequency", "family", "requiresPerks", "blocksPerks",
     };
+
+    /// <summary>Actos de una run (RF-001b). Un acto nativo fuera de este rango es error de carga.</summary>
+    public const int Acts = 3;
+
+    /// <summary>Frecuencia de un perk que no la declara (ADR 0051): la normal.</summary>
+    public const int DefaultFrequency = 100;
 
     private static readonly string[] EffectKnownKeys =
     {
@@ -180,10 +189,198 @@ public static class PerkLoader
             RejectSpeciesTags(file, condition, tagsRequired, tagsForbidden, effects, elseEffects);
         }
 
+        var (minAct, frequency, family, requires, blocks) = ParseArc(root, file, id);
+
         return new PerkDefinition(
             id, name, rarity, kind, axis, race, links, trigger, scope, conditionSource, condition,
             effects, elseEffects, limit, accumulates, lethal, lethalChance, positionOnly, tagsRequired,
-            tagsForbidden);
+            tagsForbidden, minAct, frequency, family, requires, blocks);
+    }
+
+    // ---------------------------------------------------------------- arcos de build (ADR 0051)
+
+    /// <summary>
+    /// Lee los cuatro campos de la ADR 0051. Lo que se puede comprobar con el fichero delante se
+    /// comprueba aquí; lo que exige ver el catálogo entero —que la línea exista, que sea alcanzable, que
+    /// no haya ciclos— lo comprueba <see cref="ValidateArcs"/> una vez cargados todos los perks.
+    /// </summary>
+    private static (int MinAct, int Frequency, string Family, MasterRequirement? Requires, PerkBlock Blocks) ParseArc(
+        Node root, string file, string id)
+    {
+        int minAct = root.TryProp("minAct") is { } actNode ? actNode.AsInt() : 1;
+        if (minAct < 1 || minAct > Acts)
+        {
+            throw new DataException(file, "$.minAct", $"el acto nativo tiene que estar entre 1 y {Acts} (ADR 0051)");
+        }
+
+        int frequency = root.TryProp("frequency") is { } frequencyNode ? frequencyNode.AsInt() : DefaultFrequency;
+        if (frequency < 10 || frequency > 500)
+        {
+            throw new DataException(
+                file, "$.frequency", "la frecuencia va de 10 a 500, con 100 como lo normal (ADR 0051)");
+        }
+
+        string family = root.TryProp("family") is { } familyNode ? familyNode.AsString() : string.Empty;
+
+        MasterRequirement? requires = null;
+        if (root.TryProp("requiresPerks") is { } requiresNode)
+        {
+            requiresNode.EnsureKnownKeys("family", "count");
+            int count = requiresNode.Prop("count").AsInt();
+            if (count < 2)
+            {
+                throw new DataException(
+                    file,
+                    requiresNode.Path + ".count",
+                    "un maestro exige llevar ya al menos dos perks de su línea (ADR 0051): con uno no hay arco");
+            }
+
+            requires = new MasterRequirement(requiresNode.Prop("family").AsString(), count);
+        }
+
+        var blocks = PerkBlock.None;
+        if (root.TryProp("blocksPerks") is { } blocksNode)
+        {
+            blocksNode.EnsureKnownKeys("families", "perks");
+            var families = ParseIdList(blocksNode.TryProp("families"));
+            var perks = ParseIdList(blocksNode.TryProp("perks"));
+            blocks = new PerkBlock(families, perks);
+            if (perks.Contains(id, StringComparer.Ordinal))
+            {
+                throw new DataException(file, blocksNode.Path + ".perks", "un perk no puede cerrarse a sí mismo");
+            }
+        }
+
+        if (requires is null && blocks.Any)
+        {
+            throw new DataException(
+                file,
+                "$.blocksPerks",
+                "solo un maestro (con requiresPerks) puede cerrar líneas: un perk que cierra sin exigir "
+                    + "nada es una trampa sin arco detrás (ADR 0051)");
+        }
+
+        if (requires is not null)
+        {
+            if (!blocks.Any)
+            {
+                throw new DataException(
+                    file,
+                    "$.blocksPerks",
+                    "un maestro tiene que cerrar algo (ADR 0051): sin exclusión, comprometerse no cuesta nada");
+            }
+
+            if (family.Length == 0)
+            {
+                throw new DataException(
+                    file, "$.family", "un maestro pertenece a la línea que corona (ADR 0051): declara 'family'");
+            }
+
+            if (minAct < 2)
+            {
+                throw new DataException(
+                    file, "$.minAct", "un maestro no puede salir en el acto 1 (ADR 0051): su acto nativo es 2 o 3");
+            }
+
+            if (blocks.Families.Contains(requires.Family, StringComparer.Ordinal))
+            {
+                throw new DataException(
+                    file,
+                    "$.blocksPerks.families",
+                    $"el maestro exige la línea '{requires.Family}' y la cierra a la vez: es inalcanzable");
+            }
+        }
+
+        return (minAct, frequency, family, requires, blocks);
+    }
+
+    private static IReadOnlyList<string> ParseIdList(Node? node) =>
+        node is { } list ? list.EnumerateArray().Select(j => j.AsString()).ToArray() : Array.Empty<string>();
+
+    /// <summary>
+    /// Validación de los arcos que solo se puede hacer con el catálogo entero delante (ADR 0051): que las
+    /// líneas existan, que las dependencias existan, que ningún maestro sea <b>inalcanzable</b> —su línea
+    /// tiene que tener suficientes miembros que no sean maestros, o llegar a él exigiría llegar antes a
+    /// otro maestro— y que no haya ciclos entre maestros. La llama <c>DataLoader</c> tras cargar todos los
+    /// perks; un dato inválido es un error explícito, nunca silencioso (RT-032).
+    /// </summary>
+    public static void ValidateArcs(IReadOnlyList<PerkDefinition> perks, BuildArcs arcs)
+    {
+        ArgumentNullException.ThrowIfNull(perks);
+        ArgumentNullException.ThrowIfNull(arcs);
+
+        var byId = new Dictionary<string, PerkDefinition>(StringComparer.Ordinal);
+        foreach (var perk in perks)
+        {
+            byId[perk.Id] = perk;
+        }
+
+        foreach (var perk in perks)
+        {
+            string file = "perks/" + perk.Id + ".json";
+            if (perk.HasFamily && !arcs.HasFamily(perk.Family))
+            {
+                throw new DataException(
+                    file,
+                    "$.family",
+                    $"línea desconocida '{perk.Family}': declárala en data/build/arcs.json (hay {arcs.FamilyList()})");
+            }
+
+            foreach (var blocked in perk.Blocks.Families)
+            {
+                if (!arcs.HasFamily(blocked))
+                {
+                    throw new DataException(
+                        file, "$.blocksPerks.families", $"línea desconocida '{blocked}' (hay {arcs.FamilyList()})");
+                }
+            }
+
+            foreach (var blocked in perk.Blocks.Perks)
+            {
+                if (!byId.ContainsKey(blocked))
+                {
+                    throw new DataException(
+                        file, "$.blocksPerks.perks", $"el perk bloqueado '{blocked}' no existe en el catálogo");
+                }
+            }
+
+            if (perk.Requires is not { } requirement)
+            {
+                continue;
+            }
+
+            if (!arcs.HasFamily(requirement.Family))
+            {
+                throw new DataException(
+                    file,
+                    "$.requiresPerks.family",
+                    $"línea desconocida '{requirement.Family}' (hay {arcs.FamilyList()})");
+            }
+
+            // Alcanzable: la línea tiene que poder aportar las piezas que el maestro pide SIN contar con
+            // otro maestro. Es la comprobación que descarta a la vez el maestro inalcanzable (línea con
+            // menos miembros de los que exige) y el ciclo (dos maestros que se exigen el uno al otro):
+            // si solo se cuentan piezas normales, no hay forma de construir un ciclo.
+            int reachable = 0;
+            foreach (var member in perks)
+            {
+                if (!member.IsMaster
+                    && string.Equals(member.Family, requirement.Family, StringComparison.Ordinal)
+                    && (member.Race is null || member.Race == perk.Race))
+                {
+                    reachable++;
+                }
+            }
+
+            if (reachable < requirement.Count)
+            {
+                throw new DataException(
+                    file,
+                    "$.requiresPerks",
+                    $"maestro inalcanzable: exige {requirement.Count} perks de la línea '{requirement.Family}' "
+                        + $"y solo hay {reachable} que no sean maestros y puedan aparecer en la misma run");
+            }
+        }
     }
 
     /// <summary>

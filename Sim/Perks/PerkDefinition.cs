@@ -227,6 +227,18 @@ public sealed record EffectDefinition(
 /// Relaciones direccionales que el perk necesita (RF-044, ADR 0021). Se resuelven una sola vez al
 /// construir el partido y habilitan los objetivos <c>linked</c> y <c>linkedWithTag:&lt;Tag&gt;</c>.
 /// </param>
+/// <param name="MinAct">
+/// Acto nativo (ADR 0051): a partir de qué acto empieza a aparecer en el pool de recompensas y de
+/// mercado. Por debajo solo sale <b>fuera de profundidad</b>, con un peso pequeño, y un maestro ni
+/// siquiera eso.
+/// </param>
+/// <param name="Frequency">
+/// El "commonness" de Angband (ADR 0051): cuánto sale este perk comparado con uno normal, en porcentaje.
+/// Multiplica al peso por valor de la ADR 0038 y a la curva de profundidad; no sustituye a ninguno.
+/// </param>
+/// <param name="Family">Línea del catálogo a la que pertenece (ADR 0051); cadena vacía = perk suelto.</param>
+/// <param name="Requires">Lo que exige para poder cobrarse; null = no es un maestro (ADR 0051).</param>
+/// <param name="Blocks">Lo que cierra de forma permanente en la run al aceptarlo (ADR 0051).</param>
 public sealed record PerkDefinition(
     string Id,
     LocalizedName Name,
@@ -247,4 +259,20 @@ public sealed record PerkDefinition(
     int LethalChance,
     Position? PositionOnly,
     IReadOnlyList<string> TagsRequired,
-    IReadOnlyList<string> TagsForbidden);
+    IReadOnlyList<string> TagsForbidden,
+    int MinAct,
+    int Frequency,
+    string Family,
+    MasterRequirement? Requires,
+    PerkBlock Blocks)
+{
+    /// <summary>
+    /// True si es un perk <b>maestro</b> (ADR 0051): exige llevar ya varios perks de su línea y cierra
+    /// otras de forma permanente. Son entre el 5% y el 10% del catálogo; si crecen más, el catálogo deja
+    /// de ser un roguelite de piezas sueltas y se convierte en un árbol de talentos.
+    /// </summary>
+    public bool IsMaster => Requires is not null;
+
+    /// <summary>True si el perk pertenece a alguna línea del catálogo (ADR 0051).</summary>
+    public bool HasFamily => Family.Length > 0;
+}

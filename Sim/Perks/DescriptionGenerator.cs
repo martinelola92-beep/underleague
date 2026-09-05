@@ -40,16 +40,22 @@ public static class DescriptionGenerator
     private const string StartZonesSection = "startZones";
     private const string StartFlanksSection = "startFlanks";
     private const string StatsSection = "stats";
+    private const string FamiliesSection = "families";
 
     /// <summary>Descripción completa del perk en el idioma pedido (RT-035).</summary>
     public static string Describe(PerkDefinition perk, string language, Catalog catalog)
     {
         ArgumentNullException.ThrowIfNull(catalog);
-        return Describe(perk, catalog.Localization.Get(language));
+        return Describe(perk, catalog.Localization.Get(language), catalog.Perks);
     }
 
-    /// <summary>Descripción completa del perk con unas plantillas ya resueltas.</summary>
-    public static string Describe(PerkDefinition perk, DescriptionTemplates templates)
+    /// <summary>
+    /// Descripción completa del perk con unas plantillas ya resueltas.
+    /// <paramref name="perks"/> solo hace falta para un <b>maestro</b> que cierre perks concretos por su
+    /// id (ADR 0051): hay que traducirlos a sus nombres, porque el jugador no lee identificadores
+    /// (RT-073). Un maestro que solo cierra líneas, y cualquier perk normal, se describen sin él.
+    /// </summary>
+    public static string Describe(PerkDefinition perk, DescriptionTemplates templates, PerkCatalog? perks = null)
     {
         ArgumentNullException.ThrowIfNull(perk);
         ArgumentNullException.ThrowIfNull(templates);
@@ -96,7 +102,78 @@ public static class DescriptionGenerator
             text += templates.Get(Layout, "lethalSuffix");
         }
 
+        // ADR 0051. Lo que un maestro exige y lo que cierra son parte de su dato, así que van en la
+        // descripción generada como todo lo demás (RT-035): no hay texto a mano. Y el bloqueo tiene que
+        // leerse ANTES de aceptar —un perk no se puede retirar (RF-072), así que es permanente— con la
+        // misma claridad con la que un perk letal se destaca en el ojeo (RF-013, RF-012d).
+        text += DescribeArc(perk, templates, perks);
+
         return CapitalizeFirst(text);
+    }
+
+    /// <summary>
+    /// La parte de la descripción que habla del arco de build (ADR 0051): qué línea exige el maestro y
+    /// qué cierra al aceptarlo. Cadena vacía en un perk normal, que es el 90% del catálogo.
+    /// </summary>
+    private static string DescribeArc(PerkDefinition perk, DescriptionTemplates templates, PerkCatalog? perks)
+    {
+        if (!perk.IsMaster)
+        {
+            return string.Empty;
+        }
+
+        var text = new StringBuilder();
+        var requirement = perk.Requires!;
+        string requires = templates.Get(Layout, "requiresSuffix");
+        requires = Replace(requires, "{count}", requirement.Count.ToString(CultureInfo.InvariantCulture));
+        requires = Replace(requires, "{family}", templates.Get(FamiliesSection, requirement.Family));
+        text.Append(requires);
+
+        if (!perk.Blocks.Any)
+        {
+            return text.ToString();
+        }
+
+        var closed = new List<string>(perk.Blocks.Families.Count + perk.Blocks.Perks.Count);
+        for (int i = 0; i < perk.Blocks.Families.Count; i++)
+        {
+            closed.Add(templates.Get(FamiliesSection, perk.Blocks.Families[i]));
+        }
+
+        for (int i = 0; i < perk.Blocks.Perks.Count; i++)
+        {
+            string id = perk.Blocks.Perks[i];
+            var blocked = perks?.Find(id)
+                ?? throw new InvalidOperationException(
+                    $"el maestro '{perk.Id}' cierra el perk '{id}' y hay que describirlo por su nombre: "
+                        + "pasa el catálogo a DescriptionGenerator.Describe (RT-073)");
+            closed.Add(string.Equals(templates.Language, "en", StringComparison.Ordinal)
+                ? blocked.Name.En
+                : blocked.Name.Es);
+        }
+
+        return text.Append(Replace(
+            templates.Get(Layout, "blocksSuffix"),
+            "{blocked}",
+            Join(closed, templates.Get(Layout, "blockedSeparator"), templates.Get(Layout, "blockedFinalSeparator"))))
+            .ToString();
+    }
+
+    /// <summary>Une una lista con ", " y un " y " final, que es como se lee una frase y no un volcado.</summary>
+    private static string Join(IReadOnlyList<string> parts, string separator, string finalSeparator)
+    {
+        var text = new StringBuilder();
+        for (int i = 0; i < parts.Count; i++)
+        {
+            if (i > 0)
+            {
+                text.Append(i == parts.Count - 1 ? finalSeparator : separator);
+            }
+
+            text.Append(parts[i]);
+        }
+
+        return text.ToString();
     }
 
     /// <summary>
@@ -112,14 +189,15 @@ public static class DescriptionGenerator
     /// con cada perk: un perk con una clave de plantilla que falta es un error de carga, no un texto raro
     /// en pantalla (RT-035, RT-032).
     /// </summary>
-    internal static void EnsureDescribable(PerkDefinition perk, Localization localization, string file, string jsonPath)
+    internal static void EnsureDescribable(
+        PerkDefinition perk, Localization localization, string file, string jsonPath, PerkCatalog? perks = null)
     {
         var languages = localization.All;
         for (int i = 0; i < languages.Count; i++)
         {
             try
             {
-                _ = Describe(perk, languages[i]);
+                _ = Describe(perk, languages[i], perks);
             }
             catch (InvalidOperationException ex)
             {

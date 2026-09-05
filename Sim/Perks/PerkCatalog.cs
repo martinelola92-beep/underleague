@@ -12,8 +12,15 @@ public sealed class PerkCatalog
 
     /// <summary>Construye el catálogo ordenando por id ordinal; ids repetidos son error del cargador.</summary>
     public PerkCatalog(IEnumerable<PerkDefinition> perks)
+        : this(perks, BuildArcs.None)
+    {
+    }
+
+    /// <summary>El catálogo con sus arcos de build (ADR 0051): las líneas y la curva de profundidad.</summary>
+    public PerkCatalog(IEnumerable<PerkDefinition> perks, BuildArcs arcs)
     {
         ArgumentNullException.ThrowIfNull(perks);
+        Arcs = arcs ?? throw new ArgumentNullException(nameof(arcs));
         _perks = perks.OrderBy(p => p.Id, StringComparer.Ordinal).ToArray();
         _byId = new Dictionary<string, PerkDefinition>(_perks.Length, StringComparer.Ordinal);
         foreach (var perk in _perks)
@@ -27,6 +34,53 @@ public sealed class PerkCatalog
 
     /// <summary>Perks ordenados por id ordinal ascendente.</summary>
     public IReadOnlyList<PerkDefinition> All => _perks;
+
+    /// <summary>Líneas y curva de profundidad del catálogo (ADR 0051).</summary>
+    public BuildArcs Arcs { get; }
+
+    /// <summary>
+    /// Perks maestros del catálogo (ADR 0051), por id ascendente. La ADR los acota al 5-10% del catálogo:
+    /// esa proporción se vigila con <see cref="MasterSharePercent"/>.
+    /// </summary>
+    public IReadOnlyList<PerkDefinition> Masters
+    {
+        get
+        {
+            var masters = new List<PerkDefinition>();
+            for (int i = 0; i < _perks.Length; i++)
+            {
+                if (_perks[i].IsMaster)
+                {
+                    masters.Add(_perks[i]);
+                }
+            }
+
+            return masters;
+        }
+    }
+
+    /// <summary>Porcentaje del catálogo que son maestros (ADR 0051: entre el 5% y el 10%).</summary>
+    public int MasterSharePercent => _perks.Length == 0 ? 0 : Masters.Count * 100 / _perks.Length;
+
+    /// <summary>Miembros de una línea, por id ascendente; vacío si la línea no existe (ADR 0051).</summary>
+    public IReadOnlyList<PerkDefinition> MembersOf(string family)
+    {
+        var members = new List<PerkDefinition>();
+        if (string.IsNullOrEmpty(family))
+        {
+            return members;
+        }
+
+        for (int i = 0; i < _perks.Length; i++)
+        {
+            if (string.Equals(_perks[i].Family, family, StringComparison.Ordinal))
+            {
+                members.Add(_perks[i]);
+            }
+        }
+
+        return members;
+    }
 
     /// <summary>Número de perks del catálogo.</summary>
     public int Count => _perks.Length;
