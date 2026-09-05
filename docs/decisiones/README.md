@@ -44,6 +44,7 @@ Cuándo escribir un ADR: cambio de librería o stack, frontera entre proyectos, 
 | [0044](0044-escala-de-oro.md) | El oro se cuenta en decenas: la tensión económica exige que el jugador pueda hacer la cuenta | Aceptada |
 | [0045](0045-por-que-el-desgaste-no-muerde.md) | El desgaste no mata porque siempre hay banquillo: plantilla más corta y perks letales | Aceptada, resuelta en la 0046 |
 | [0046](0046-plantilla-corta-nodo-de-inscripcion-y-perks-letales.md) | Plantilla de diez, nodo de inscripción con coste creciente y perks letales escasos y telegrafiados | Aceptada. **Modifica RF-020 y RF-011** |
+| [0047](0047-matar-al-rival.md) | Un perk letal propio no puede matar: el rival nunca entra herido y la lesión saca del campo | **Propuesta: decisión del revisor** |
 
 El hueco del 0011 corresponde a una decisión sobre el radio de adyacencia que quedó absorbida por la 0021 antes de aceptarse.
 | [0012](0012-buildswindifferently-normalizada.md) | `buildsWinDifferently` normalizada contra la referencia de la raza | **Propuesta: decisión del revisor** |
