@@ -46,6 +46,7 @@ Cuándo escribir un ADR: cambio de librería o stack, frontera entre proyectos, 
 | [0046](0046-plantilla-corta-nodo-de-inscripcion-y-perks-letales.md) | Plantilla de diez, nodo de inscripción con coste creciente y perks letales escasos y telegrafiados | Aceptada. **Modifica RF-020 y RF-011** |
 | [0047](0047-matar-al-rival.md) | Un perk letal propio no puede matar: el rival nunca entra herido y la lesión saca del campo | Sustituida por la 0048 |
 | [0048](0048-morir-estando-sano.md) | Un jugador sano puede morir; el azar se sostiene con anticipación, evitación, reducción y recuperación | Aceptada. **Modifica RF-093** |
+| [0049](0049-dos-opciones-de-recompensa.md) | La liga ofrece 1 de 2; élite 1 de 3 y jefe 2 de 3. Devuelve peso al mercado | Aceptada. **Modifica RF-071** |
 
 El hueco del 0011 corresponde a una decisión sobre el radio de adyacencia que quedó absorbida por la 0021 antes de aceptarse.
 | [0012](0012-buildswindifferently-normalizada.md) | `buildsWinDifferently` normalizada contra la referencia de la raza | **Propuesta: decisión del revisor** |

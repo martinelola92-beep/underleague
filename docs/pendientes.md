@@ -141,3 +141,5 @@ Medidas y desglose en `docs/fase2-diseno.md` §19.
 | R-15 | RF-128 | Las divisiones añaden como palanca el **oro inicial decreciente** (10 · 8 · 5 · 2) junto al encarecimiento del mercado, además de las reglas que ya listaba la tabla | ADR 0044 |
 
 | R-16 | RF-093, §8 | **Un jugador sano puede morir**: se retira la regla "un jugador en estado sano nunca puede morir" y con ella la mitigación del riesgo "muerte percibida como injusta". La sustituyen las cinco condiciones de la ADR 0048 (anticipación, evitación, reducción del riesgo, recuperación y rareza) | ADR 0048 |
+
+| R-17 | RF-071 | La recompensa de un partido de liga pasa de **1 de 3** a **1 de 2**; élite mantiene 1 de 3 con rareza mejorada y el jefe da 2 de 3. Mueve peso de las recompensas gratis al mercado | ADR 0049 |
