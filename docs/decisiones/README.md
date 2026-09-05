@@ -32,7 +32,7 @@ Cuándo escribir un ADR: cambio de librería o stack, frontera entre proyectos, 
 | [0032](0032-metricas-de-comparacion-de-builds.md) | RT-055 y la progresión se miden contra una referencia equipada, no contra una plantilla desnuda | **Propuesta: decisión del revisor** |
 | [0033](0033-los-jefes-como-puertas-de-build.md) | Los jefes son puertas de calidad de build y definen la curva de exigencia de la run | Aceptada. **Sustituye la 2.ª mitad de `scalingRewardsGoodBuilds`** |
 | [0034](0034-alinear-con-lesion-grave.md) | Alinear a un lesionado grave es posible y su precio es el riesgo de muerte; falta decidir el coste inmediato | **Propuesta: decisión del revisor** |
-| [0035](0035-escala-de-valores-por-canal.md) | Cada canal de probabilidad declara su propio escalón: un `+5` vale 13x en un canal y 1,06x en otro | Aceptada. **Resuelve D-30** |
+| [0035](0035-escala-de-valores-por-canal.md) | Cada canal de probabilidad declara su propio escalón: un `+5` vale 13x en un canal y 1,06x en otro | **Retirada** por la ADR 0050 P1 (implementada). Resolvió D-30 mientras estuvo vigente |
 | [0036](0036-que-aporta-el-equipamiento.md) | El objeto sube atributos según su rareza; el perk cambia reglas; el consumible es puntual | Aceptada |
 | [0037](0037-la-economia-como-dificultad.md) | La escasez de oro es la palanca de dificultad; se mide enfrentando tres políticas de compra | Aceptada |
 | [0038](0038-el-precio-como-palanca-de-balance.md) | Lo bueno se encarece en vez de debilitarse; y donde no hay precio, se hace menos frecuente | Aceptada |
@@ -47,14 +47,14 @@ Cuándo escribir un ADR: cambio de librería o stack, frontera entre proyectos, 
 | [0047](0047-matar-al-rival.md) | Un perk letal propio no puede matar: el rival nunca entra herido y la lesión saca del campo | Sustituida por la 0048 |
 | [0048](0048-morir-estando-sano.md) | Un jugador sano puede morir; el azar se sostiene con anticipación, evitación, reducción y recuperación | Aceptada. **Modifica RF-093** |
 | [0049](0049-dos-opciones-de-recompensa.md) | La liga ofrece 1 de 2; élite 1 de 3 y jefe 2 de 3. Devuelve peso al mercado | Aceptada. **Modifica RF-071** |
-| [0050](0050-fundamentos-matematicos.md) | Perks multiplicativos sobre cuotas, dos tiradas promediadas, curva de nivel más agresiva y límites únicos | Aceptada. **Retira la ADR 0035** |
+| [0050](0050-fundamentos-matematicos.md) | Perks multiplicativos sobre cuotas, dos tiradas promediadas, curva de nivel más agresiva y límites únicos | Aceptada. **P1, P2 y P4 implementadas**; P3 en suspenso (ADR 0057). **Retira la ADR 0035** |
 | [0051](0051-arcos-de-build-y-profundidad.md) | Perks maestros que exigen y excluyen, y profundidad nativa por acto | Aceptada |
 | [0052](0052-la-agencia-esta-en-la-formacion.md) | El indicador de riesgo no reduce muertes con formación fija; y recortar opciones eliminó la decisión en vez de moverla | **Propuesta: decisión del revisor** |
 | [0053](0053-mapa-de-cuatro-carriles.md) | El mapa se abre a cuatro carriles con divergencia y reconvergencia; los mercados dejan de ser cuello de botella | Aceptada |
-| [0054](0054-banda-del-mejor-equipo.md) | `betterTeamWinRate` pasa de 65-80 a 70-88: la banda de fase 0 medía un motor que diluía la habilidad | Aceptada. **Requisito previo de la P1** |
+| [0054](0054-banda-del-mejor-equipo.md) | `betterTeamWinRate` pasa de 65-80 a 70-88: la banda de fase 0 medía un motor que diluía la habilidad | Aceptada e **implementada** con la P1: medido 79,52, sin acercarse al techo |
 | [0055](0055-el-mercado-es-imprescindible.md) | Ganar sin pasar por el mercado debe quedar por debajo del 5%: los maestros y el equipamiento solo se compran | Aceptada |
-| [0056](0056-separacion-entre-perfiles.md) | Build buena al 60% en partidos de los actos 2 y 3; build mala por debajo del 2% de completar la run | Aceptada. **Implementa P1 y P3** |
-| [0057](0057-el-suelo-sin-build.md) | Un equipo sin build gana el 14,5%: la palanca es el peso de la build, no el oro. La P3 queda en suspenso | Aceptada. **Suspende la P3** |
+| [0056](0056-separacion-entre-perfiles.md) | Build buena al 60% en partidos de los actos 2 y 3; build mala por debajo del 2% de completar la run | Aceptada. P1 aplicada y **los cuatro objetivos siguen sin alcanzarse** (§26.7); P3 en suspenso |
+| [0057](0057-el-suelo-sin-build.md) | Un equipo sin build gana el 14,5%: la palanca es el peso de la build, no el oro. La P3 queda en suspenso | Aceptada. Suspende la P3; **su palanca queda falsificada** por la medición de la P1 (§26.6) |
 
 El hueco del 0011 corresponde a una decisión sobre el radio de adyacencia que quedó absorbida por la 0021 antes de aceptarse.
 | [0012](0012-buildswindifferently-normalizada.md) | `buildsWinDifferently` normalizada contra la referencia de la raza | **Propuesta: decisión del revisor** |

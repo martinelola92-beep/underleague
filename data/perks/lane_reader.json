@@ -19,7 +19,7 @@
       "type": "modifyProbability",
       "target": "actor",
       "probability": "intercept",
-      "valuePerCounter": 1,
+      "valuePerCounter": 50,
       "counter": "laneReaderRecoveries",
       "maxValue": 5,
       "duration": "match"

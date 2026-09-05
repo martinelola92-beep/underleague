@@ -1,9 +1,16 @@
 {
   "id": "lucky_charm",
-  "name": { "es": "Amuleto de la suerte", "en": "Lucky Charm" },
+  "name": {
+    "es": "Amuleto de la suerte",
+    "en": "Lucky Charm"
+  },
   "rarity": "uncommon",
   "family": "supernatural",
   "effects": [
-    { "type": "modifyProbability", "probability": "shotOnTarget", "value": 1000 }
+    {
+      "type": "modifyProbability",
+      "probability": "shotOnTarget",
+      "value": 50
+    }
   ]
 }

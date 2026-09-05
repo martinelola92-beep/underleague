@@ -20,7 +20,7 @@
       "type": "modifyProbability",
       "target": "opposingTeam",
       "probability": "injury",
-      "value": 3,
+      "value": 100,
       "duration": "match"
     }
   ],
@@ -30,6 +30,8 @@
   "lethal": true,
   "lethalChance": 5400,
   "positionOnly": null,
-  "tagsRequired": ["Dirty"],
+  "tagsRequired": [
+    "Dirty"
+  ],
   "tagsForbidden": []
 }

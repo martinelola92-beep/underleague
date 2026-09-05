@@ -1,7 +1,7 @@
 # 0035. La escala de valores de un perk depende del canal, no es única
 
 **Fecha:** 2026-09-05
-**Estado:** Aceptada
+**Estado:** **Retirada** por la ADR 0050 P1 (6 sep 2026), al implementarse los perks multiplicativos sobre cuotas: con cuotas un perk vale lo mismo en cualquier canal por construcción, así que la tabla de escalones deja de tener función y `tuning.probabilityChannels` desaparece de `data/sim/tuning.json`. El diagnóstico de esta ADR sigue siendo correcto y es el que motivó la P1
 **Modifica:** `docs/fase1b-diseno.md` §1.4 y `docs/estilo-descripciones.md`
 **Requisitos:** RF-065, RF-069, RT-033, RT-057
 **Resuelve:** D-30, y la causa de fondo de D-35

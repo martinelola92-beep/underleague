@@ -17,7 +17,9 @@
     "count": 2
   },
   "blocksPerks": {
-    "families": ["craft"],
+    "families": [
+      "craft"
+    ],
     "perks": []
   },
   "trigger": "MATCH_START",
@@ -29,14 +31,14 @@
       "type": "modifyProbability",
       "target": "team",
       "probability": "injure",
-      "value": 2,
+      "value": 100,
       "duration": "match"
     },
     {
       "type": "modifyProbability",
       "target": "opposingTeam",
       "probability": "severeInjury",
-      "value": 3,
+      "value": 15,
       "duration": "match"
     }
   ],

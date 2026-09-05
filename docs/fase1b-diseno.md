@@ -128,7 +128,7 @@ Comprobación obligatoria (ADR 0027): común de nivel 8 (presupuesto 306) ≈ le
 
 Cambios respecto a la fase 1:
 
-- **`value` en unidades enteras redondas, con escala propia por tipo de efecto.** `modifyProbability` va en **puntos porcentuales** (el cargador multiplica por 100 para la base interna de 10.000) y, desde la **ADR 0035**, su escala **no es única: depende del canal**. Cada canal declara su escalón en `data/sim/tuning.json` → `probabilityChannels.<canal>.step`, y un valor legal es ese escalón por **1, 2, 3, 5 o 10 pasos**. Los demás efectos no son porcentajes y tienen su propia escala, porque un `+20` de fuerza sobre un presupuesto total de ~290 puntos sería enorme y un `+5` de correa es, según `docs/balance/fase1-perks.md`, el efecto más potente del juego:
+- **`value` en unidades enteras redondas, con escala propia por tipo de efecto.** `modifyProbability` va en **porcentaje de cuota con signo** desde la **ADR 0050 P1** (`±15, ±30, ±50, ±100`, con el negativo como inverso exacto del positivo); el cargador lo convierte al multiplicador interno en base 10.000. La escala es **única para todos los canales** y la tabla de escalones por canal de la ADR 0035 queda retirada. Los demás efectos no son porcentajes y tienen su propia escala, porque un `+20` de fuerza sobre un presupuesto total de ~290 puntos sería enorme y un `+5` de correa es, según `docs/balance/fase1-perks.md`, el efecto más potente del juego:
 
 | Tipo de efecto | Unidad | Escala permitida |
 |---|---|---|
@@ -139,7 +139,7 @@ Cambios respecto a la fase 1:
 | `setState` | ticks | 5, 10, 15 |
 | `addCounter` | unidades de contador | 1, 2 |
 
-Escalones por canal (ADR 0035; el escalón se fija para que un paso valga aproximadamente lo mismo en impacto **relativo** sobre la base del canal, hasta donde el punto porcentual entero lo permite):
+*(Retirada por la ADR 0050 P1: ya no hay escalón por canal. La tabla se conserva como registro de lo que hubo.)* Escalones por canal (ADR 0035; el escalón se fijaba para que un paso valiera aproximadamente lo mismo en impacto **relativo** sobre la base del canal):
 
 | Canal | Base (10.000) | `step` | Valores legales |
 |---|---|---|---|
@@ -156,7 +156,7 @@ Escalones por canal (ADR 0035; el escalón se fija para que un paso valga aproxi
 | `dribble` | 7.200 | 5 | 5, 10, 15, 25, 50 |
 | `pass` | 7.700 | 5 | 5, 10, 15, 25, 50 |
 
-El validador rechaza valores fuera de la escala de su tipo. La comprobación por canal la hace el **cargador** (`Sim.Perks.PerkLoader`, con la escala que trae `tuning.probabilityChannels`), no el esquema JSON: un esquema no puede expresar "múltiplo del escalón declarado en otro fichero".
+El validador rechaza valores fuera de la escala de su tipo. La comprobación de `modifyProbability` la hace el **cargador** (`Sim.Perks.PerkLoader`, contra los ocho valores de `Sim.Perks.ProbabilityScale`), no el esquema JSON, que solo pone la cota de cordura -100..100.
 - **`race`**: `null` (universal) o id de raza (exclusivo, ADR 0023). Restricción de **aparición**, no de asignación.
 - **`axis`**: uno de `identity`, `accumulation`, `alignment`, `startZone`, `geometry`, `matchState`, `composition`, `proximity` (`docs/perks-ejes.md`). El validador comprueba la distribución del catálogo.
 - **`links`**: relaciones direccionales que el perk necesita (ADR 0021), de `beside`, `ahead`, `behind`, `left`, `right`, `diagonalAhead`, `diagonalBehind`. Resueltas **una vez** al construir el partido. Habilita `target: "linked"` y `target: "linkedWithTag:<Tag>"`.

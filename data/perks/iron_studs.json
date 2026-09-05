@@ -1,5 +1,5 @@
 {
-  "_doc": "ADR 0046, RF-093 vía 2. Perk LETAL de contacto: alcanza al RIVAL AL QUE SE ENTRA, así que solo mata si el herido lleva el balón, y solo presionando en el tercio rival. Un equipo que se encierra no mata con él. Cuarto canal de los cuatro letales (tackleEvasion, escalón 3 de la ADR 0035).",
+  "_doc": "ADR 0046, RF-093 vía 2. Perk LETAL de contacto: alcanza al RIVAL AL QUE SE ENTRA, así que solo mata si el herido lleva el balón, y solo presionando en el tercio rival. Un equipo que se encierra no mata con él. Cuarto canal de los cuatro letales (tackleEvasion).",
   "id": "iron_studs",
   "name": {
     "es": "Tacos de hierro",
@@ -21,7 +21,7 @@
       "type": "modifyProbability",
       "target": "opponent",
       "probability": "tackleEvasion",
-      "value": -9,
+      "value": -100,
       "duration": "play"
     }
   ],

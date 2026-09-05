@@ -316,9 +316,21 @@ internal sealed class MatchEngine : IPerkWorld
         player.EnterState(PlayerState.KnockedDown, ticks);
     }
 
-    /// <summary>Modificador de una probabilidad para el jugador; 0 si no hay perks (§2).</summary>
-    private int Probability(MatchPlayer player, ProbabilityKind kind) =>
-        _effects is null ? 0 : _effects.Modifiers.Probability(player, kind);
+    /// <summary>
+    /// Multiplicador de <b>cuota</b> de una probabilidad para el jugador (ADR 0050 P1);
+    /// <see cref="ProbabilityScale.Neutral"/> si no hay perks (§2).
+    /// </summary>
+    private int Odds(MatchPlayer player, ProbabilityKind kind) =>
+        _effects is null ? ProbabilityScale.Neutral : _effects.Modifiers.Probability(player, kind);
+
+    /// <summary>
+    /// Multiplicador de cuota de un canal que otro <b>contrarresta</b>: el del sujeto por el inverso del
+    /// de su contraparte. Es lo que expresan las dos evasiones (ADR 0026) sin volver a una resta: subir
+    /// un 30% la cuota de que te lean el pase y bajarla un 30% son la misma operación en sentidos
+    /// opuestos, y por eso se componen exactamente.
+    /// </summary>
+    private int OddsAgainst(MatchPlayer subject, ProbabilityKind kind, MatchPlayer counterpart, ProbabilityKind evasion) =>
+        ProbabilityScale.Combine(Odds(subject, kind), ProbabilityScale.Invert(Odds(counterpart, evasion)));
 
     private void AddTeam(List<MatchPlayer> players, TeamSetup team, int teamIndex)
     {
@@ -882,10 +894,15 @@ internal sealed class MatchEngine : IPerkWorld
         // ADR 0041: la técnica del que intercepta se mide contra la del que pasa, no contra el 50 del
         // nivel 1. Lo que decide una intercepción es quién lee mejor a quién, no cuánto han subido los dos.
         var pass = _tuning.Pass;
-        return pass.InterceptBaseChance
-            + (pass.InterceptTechniqueFactor * (player.Technique - passer.Technique))
-            + Probability(player, ProbabilityKind.Intercept)
-            - Probability(passer, ProbabilityKind.InterceptEvasion);
+        int chance = pass.InterceptBaseChance
+            + (pass.InterceptTechniqueFactor * (player.Technique - passer.Technique));
+
+        // ADR 0050 P1: el perk multiplica la CUOTA de interceptar, no suma puntos. Se acota antes y
+        // después: antes para que la cuota esté definida sobre la probabilidad con la que el motor
+        // resuelve de verdad (P4), y después porque el techo del canal manda sobre el perk.
+        return Bounded(ProbabilityScale.Apply(
+            Bounded(chance),
+            OddsAgainst(player, ProbabilityKind.Intercept, passer, ProbabilityKind.InterceptEvasion)));
     }
 
     private void ResolvePassArrival()
@@ -1114,15 +1131,18 @@ internal sealed class MatchEngine : IPerkWorld
             + (pass.TechniqueFactor * (passer.Technique - 50))
             + (passer.PassQualityBonus * 100)
             - (pass.DistancePenaltyPerCell * Utility.Centi(distance) / 100)
-            - (pass.PressurePenalty * pressure)
-            + Probability(passer, ProbabilityKind.Pass);
+            - (pass.PressurePenalty * pressure);
+
+        // ADR 0050 P1: la cuota de completar el pase se multiplica por el canal del pasador.
+        probability = Bounded(ProbabilityScale.Apply(
+            Bounded(probability), Odds(passer, ProbabilityKind.Pass)));
 
         // El roll se consume siempre, haya o no receptor (revisión independiente, fase 0): con
         // "receiver is not null && _rng.Chance(...)" el cortocircuito del && saltaba el Chance() entero
         // cuando no había receptor, así que el número de números que _rng.Next() consume en un pase
         // dependía de si había o no compañero visible. Con esto, el flujo de RNG solo depende de la
         // secuencia de decisiones tomadas, nunca de sus resultados intermedios.
-        bool chanceRoll = _rng.Chance(Bounded(probability));
+        bool chanceRoll = _rng.Chance(probability);
         bool succeeds = receiver is not null && chanceRoll;
         int ticks = FlightTicks(distance, _tuning.Ball.PassSpeedCellsPerTickMilli);
         Vec2 target = receiver is not null
@@ -1248,10 +1268,14 @@ internal sealed class MatchEngine : IPerkWorld
 
         // ADR 0050 P2: el tiro es una de las cuatro resoluciones decisivas y se tira contra el promedio
         // de dos, no contra una uniforme. P4: el mismo suelo y el mismo techo que las demás.
-        bool offTarget = _rng.ChanceAveraged(Bounded(shot.OffTargetBase
-            + (shot.OffTargetDistanceFactor * Utility.Centi(distance) / 100)
-            - (quality * 20)
-            - Probability(shooter, ProbabilityKind.ShotOnTarget)));
+        // ADR 0050 P1: el canal es "tiro a puerta", así que multiplica la cuota de ACERTAR y por tanto
+        // divide la de fallar, que es la que se tira aquí. Las dos cosas son la misma operación.
+        int offTargetChance = Bounded(ProbabilityScale.ApplyAveraged(
+            Bounded(shot.OffTargetBase
+                + (shot.OffTargetDistanceFactor * Utility.Centi(distance) / 100)
+                - (quality * 20)),
+            ProbabilityScale.Invert(Odds(shooter, ProbabilityKind.ShotOnTarget))));
+        bool offTarget = _rng.ChanceAveraged(offTargetChance);
 
         _report.Shots[shooter.Team]++;
         shooter.Shots++;
@@ -1330,8 +1354,8 @@ internal sealed class MatchEngine : IPerkWorld
 
             // ADR 0050 P2 y P4: promedio de dos tiradas y el suelo y techo únicos, que sustituyen al
             // 0-10.000 de aquí; el 5-95 de savePercent lo hereda esta misma cota.
-            if (_rng.ChanceAveraged(Bounded(
-                (savePercent * 100) + Probability(goalkeeper, ProbabilityKind.Save))))
+            if (_rng.ChanceAveraged(Bounded(ProbabilityScale.ApplyAveraged(
+                Bounded(savePercent * 100), Odds(goalkeeper, ProbabilityKind.Save)))))
             {
                 goalkeeper.ConsecutiveSaves++;
                 SetOwner(goalkeeper);
@@ -1428,9 +1452,11 @@ internal sealed class MatchEngine : IPerkWorld
         // reparto de defenderSpeedSharePercent—, no las tres contra el 50.
         int guard = ((dribble.DefenderSpeedSharePercent * defender.Speed)
             + ((100 - dribble.DefenderSpeedSharePercent) * defender.Strength)) / 100;
-        int win = dribble.BaseWin
-            + (dribble.AttackerTechniqueFactor * (carrier.Technique - guard))
-            + Probability(carrier, ProbabilityKind.Dribble);
+        // ApplyAveraged y no Apply: este canal se resuelve con el promedio de dos tiradas (P2), así que
+        // el multiplicador tiene que actuar sobre la probabilidad que se realiza, no sobre el parámetro.
+        int win = Bounded(ProbabilityScale.ApplyAveraged(
+            Bounded(dribble.BaseWin + (dribble.AttackerTechniqueFactor * (carrier.Technique - guard))),
+            Odds(carrier, ProbabilityKind.Dribble)));
 
         // ADR 0050 P2 y P4: el regate es una de las cuatro resoluciones decisivas.
         if (_rng.ChanceAveraged(Bounded(win)))
@@ -1473,12 +1499,15 @@ internal sealed class MatchEngine : IPerkWorld
         // ADR 0041: la falta también es relativa. Una entrada es sucia cuando el que entra es mucho más
         // fuerte que el que la recibe, no cuando es fuerte en abstracto: contra el 50 fijo, un equipo de
         // nivel 8 cometía faltas todo el rato aunque su rival fuese igual de grande.
-        int foulChance = tackle.FoulBase
-            + (tackle.FoulStrengthFactor * (tackler.Strength - carrier.Strength))
-            + (tackler.FoulChanceBonus * 100)
-            + (tackler.HardTackleBonus * 100)
-            + BiasRollShift(_tuning.Referee.BiasFoulShiftPer10, tackler.Team)
-            + Probability(tackler, ProbabilityKind.Foul);
+        // La falta es un suceso raro: no la acota P4 (su base está por debajo del suelo), pero sí la
+        // multiplica el canal del perk como cualquier otra cuota (ADR 0050 P1).
+        int foulChance = ProbabilityScale.Apply(
+            tackle.FoulBase
+                + (tackle.FoulStrengthFactor * (tackler.Strength - carrier.Strength))
+                + (tackler.FoulChanceBonus * 100)
+                + (tackler.HardTackleBonus * 100)
+                + BiasRollShift(_tuning.Referee.BiasFoulShiftPer10, tackler.Team),
+            Odds(tackler, ProbabilityKind.Foul));
 
         // La falta no es una de las cuatro resoluciones decisivas de la ADR 0050 P2 (ni la acota P4: su
         // base está por debajo del suelo); la disputa del balón sí es las dos cosas.
@@ -1529,10 +1558,9 @@ internal sealed class MatchEngine : IPerkWorld
         var tackle = _tuning.Tackle;
         int pressure = ((tackle.StrengthSharePercent * tackler.Strength)
             + ((100 - tackle.StrengthSharePercent) * tackler.Speed)) / 100;
-        return tackle.BaseWin
-            + (tackle.PressureFactor * (pressure - carrier.Technique))
-            + Probability(tackler, ProbabilityKind.Tackle)
-            - Probability(carrier, ProbabilityKind.TackleEvasion);
+        return Bounded(ProbabilityScale.ApplyAveraged(
+            Bounded(tackle.BaseWin + (tackle.PressureFactor * (pressure - carrier.Technique))),
+            OddsAgainst(tackler, ProbabilityKind.Tackle, carrier, ProbabilityKind.TackleEvasion)));
     }
 
     /// <summary>
@@ -1617,14 +1645,18 @@ internal sealed class MatchEngine : IPerkWorld
             tackler.Team,
             referee.BiasShiftFoulSeen + offBallExtra + (hard ? referee.BiasShiftHardExtra : 0));
 
-        int cardShift = Probability(tackler, ProbabilityKind.Card)
-            + BiasRollShift(referee.BiasCardShiftPer10, tackler.Team);
-        if (_rng.Chance(tackle.RedCardBase + (hard ? tackle.HardTackleRedBonus : 0) + cardShift))
+        // ADR 0050 P1: el criterio del árbitro sigue SUMANDO puntos —es un desplazamiento de la tirada,
+        // no un perk— y el canal de tarjeta multiplica la cuota del resultado de esa suma.
+        int cardOdds = Odds(tackler, ProbabilityKind.Card);
+        int cardShift = BiasRollShift(referee.BiasCardShiftPer10, tackler.Team);
+        if (_rng.Chance(ProbabilityScale.Apply(
+            tackle.RedCardBase + (hard ? tackle.HardTackleRedBonus : 0) + cardShift, cardOdds)))
         {
             SendOff(tackler);
             ShiftBiasAgainst(tackler.Team, referee.BiasShiftRedExtra);
         }
-        else if (_rng.Chance(tackle.YellowCardBase + (hard ? tackle.HardTackleYellowBonus : 0) + cardShift))
+        else if (_rng.Chance(ProbabilityScale.Apply(
+            tackle.YellowCardBase + (hard ? tackle.HardTackleYellowBonus : 0) + cardShift, cardOdds)))
         {
             if (!EmitCancellable(EventType.Card, "yellow", tackler))
             {
@@ -1677,18 +1709,20 @@ internal sealed class MatchEngine : IPerkWorld
 
         PublishBeforeResolving(EventType.Tackle, "block", blocker, opponent: target);
 
-        int foulChance = block.FoulBase
-            + (blocker.FoulChanceBonus * 100)
-            + BiasRollShift(_tuning.Referee.BiasFoulShiftPer10, blocker.Team)
-            + Probability(blocker, ProbabilityKind.Foul);
+        int foulChance = ProbabilityScale.Apply(
+            block.FoulBase
+                + (blocker.FoulChanceBonus * 100)
+                + BiasRollShift(_tuning.Referee.BiasFoulShiftPer10, blocker.Team),
+            Odds(blocker, ProbabilityKind.Foul));
 
-        int win = block.BaseWin
-            + (block.StrengthFactor * (blocker.Strength - target.Strength))
-            + (block.SpeedFactor * (blocker.Speed - target.Speed))
-            + Probability(blocker, ProbabilityKind.Tackle);
+        int win = Bounded(ProbabilityScale.Apply(
+            Bounded(block.BaseWin
+                + (block.StrengthFactor * (blocker.Strength - target.Strength))
+                + (block.SpeedFactor * (blocker.Speed - target.Speed))),
+            Odds(blocker, ProbabilityKind.Tackle)));
 
         bool isFoul = _rng.Chance(foulChance);
-        bool isWin = _rng.Chance(Bounded(win));
+        bool isWin = _rng.Chance(win);
 
         _report.Blocks++;
         Emit(
@@ -1755,9 +1789,12 @@ internal sealed class MatchEngine : IPerkWorld
             + (isFoul ? injury.OnFoulBase : 0)
             + (injury.RelativeFactor * (tackler.Strength - victim.Stamina))
             + (tackler.InjuryChanceBonus * 100)
-            - (victim.InjuryResistanceBonus * 100)
-            + Probability(tackler, ProbabilityKind.Injure)
-            + Probability(victim, ProbabilityKind.Injury);
+            - (victim.InjuryResistanceBonus * 100);
+
+        // ADR 0050 P1: dos canales concurren sobre la misma tirada —lo que el que entra lesiona y lo
+        // lesionable que es la víctima—, y como los dos son multiplicadores de cuota, se componen.
+        chance = ProbabilityScale.Apply(chance, ProbabilityScale.Combine(
+            Odds(tackler, ProbabilityKind.Injure), Odds(victim, ProbabilityKind.Injury)));
 
         // ADR 0043: el desgaste crece por acto y en el nodo de élite. Es un multiplicador sobre la
         // probabilidad ya calculada, no un término de la fórmula: en un partido suelto vale 100 y no
@@ -1769,7 +1806,8 @@ internal sealed class MatchEngine : IPerkWorld
             return;
         }
 
-        bool severe = _rng.Chance(injury.SevereShare + Probability(victim, ProbabilityKind.SevereInjury));
+        bool severe = _rng.Chance(ProbabilityScale.Apply(
+            injury.SevereShare, Odds(victim, ProbabilityKind.SevereInjury)));
 
         // La lesión se publica antes de aplicarla (§3): un perk puede anularla y el jugador sigue en el
         // campo, con el evento INJURY registrado y Detail sufijado ":cancelled".

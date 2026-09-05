@@ -19,9 +19,9 @@
       "type": "modifyProbability",
       "target": "team",
       "probability": "tackle",
-      "valuePerCounter": 3,
+      "valuePerCounter": 50,
       "counter": "captainsVoiceMatches",
-      "maxValue": 9,
+      "maxValue": 3,
       "duration": "match"
     },
     {

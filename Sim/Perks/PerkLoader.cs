@@ -16,10 +16,12 @@ namespace Underleague.Sim.Perks;
 /// </para>
 /// <para>Reglas del formato revisado que este cargador impone:</para>
 /// <list type="bullet">
-/// <item><c>value</c> de <c>modifyProbability</c> en **puntos porcentuales enteros**, múltiplo del
-/// <b>escalón de su canal</b> (ADR 0035, <c>tuning.probabilityChannels</c>) por 1, 2, 3, 5 o 10; se
-/// multiplica por 100 para la base interna de 10.000 (estilo-descripciones.md). El resto de efectos
-/// conserva su propia unidad (puntos de atributo, casillas, ticks).</item>
+/// <item><c>value</c> de <c>modifyProbability</c> es un <b>multiplicador de cuota</b> escrito como
+/// porcentaje con signo (ADR 0050 P1): <c>±15, ±30, ±50, ±100</c>, donde el negativo es el inverso
+/// exacto del positivo de la misma magnitud. El cargador lo convierte al multiplicador interno en base
+/// 10.000. Ya no hay escala por canal (la tabla de la ADR 0035 queda retirada): multiplicar cuotas hace
+/// que un perk valga lo mismo en cualquier canal por construcción. El resto de efectos conserva su
+/// propia unidad (puntos de atributo, casillas, ticks).</item>
 /// <item><c>axis</c> obligatorio, uno de los ocho ejes de <c>docs/perks-ejes.md</c>.</item>
 /// <item><c>race</c> null (universal) o id de raza (exclusivo, ADR 0023).</item>
 /// <item>Un perk universal **no puede consultar la etiqueta de especie** (ADR 0023, RF-065b): en un club
@@ -45,6 +47,13 @@ public static class PerkLoader
 
     /// <summary>Frecuencia de un perk que no la declara (ADR 0051): la normal.</summary>
     public const int DefaultFrequency = 100;
+
+    /// <summary>
+    /// Copias máximas que un <c>modifyProbability</c> con contador puede acumular (ADR 0050 P1). Diez
+    /// copias de un ×1,15 son ×4,05 y de un ×2 son ×1.024: por encima de eso el eje de acumulación deja
+    /// de ser una progresión y pasa a ser un interruptor.
+    /// </summary>
+    public const int MaxCounterStacks = 10;
 
     private static readonly string[] EffectKnownKeys =
     {
@@ -72,13 +81,12 @@ public static class PerkLoader
 
     /// <summary>
     /// Analiza el contenido de un fichero de perk. Lanza <see cref="DataException"/> si no cumple §1.4.
-    /// <paramref name="scale"/> es la escala de valores por canal de la ADR 0035
-    /// (<c>tuning.probabilityChannels</c>): sin ella no se puede decir si un <c>value</c> de
-    /// <c>modifyProbability</c> es legal, porque el escalón depende del canal.
+    /// La escala de <c>modifyProbability</c> ya no es un parámetro: desde la ADR 0050 P1 es única para
+    /// todos los canales (<see cref="ProbabilityScale"/>), y por eso la tabla por canal de la ADR 0035
+    /// desapareció de <c>tuning.json</c>.
     /// </summary>
-    public static PerkDefinition Parse(string file, string content, ProbabilityScale scale)
+    public static PerkDefinition Parse(string file, string content)
     {
-        ArgumentNullException.ThrowIfNull(scale);
         JsonDocument doc;
         try
         {
@@ -114,9 +122,9 @@ public static class PerkLoader
         string conditionSource = root.TryProp("condition") is { } conditionNode ? conditionNode.AsString() : string.Empty;
         var condition = ConditionCompiler.Compile(conditionSource, file, "$.condition");
 
-        var effects = ParseEffects(root.Prop("effects"), file, trigger, links, scale);
+        var effects = ParseEffects(root.Prop("effects"), file, trigger, links);
         var elseEffects = root.TryProp("elseEffects") is { } elseNode
-            ? ParseEffects(elseNode, file, trigger, links, scale)
+            ? ParseEffects(elseNode, file, trigger, links)
             : Array.Empty<EffectDefinition>();
         if (effects.Count == 0 && elseEffects.Count == 0)
         {
@@ -484,19 +492,19 @@ public static class PerkLoader
     // ---------------------------------------------------------------- efectos
 
     private static IReadOnlyList<EffectDefinition> ParseEffects(
-        Node node, string file, EventType trigger, IReadOnlyList<LinkRelation> links, ProbabilityScale scale)
+        Node node, string file, EventType trigger, IReadOnlyList<LinkRelation> links)
     {
         var effects = new List<EffectDefinition>();
         foreach (var item in node.EnumerateArray())
         {
-            effects.Add(ParseEffect(item, file, trigger, links, scale));
+            effects.Add(ParseEffect(item, file, trigger, links));
         }
 
         return effects;
     }
 
     private static EffectDefinition ParseEffect(
-        Node node, string file, EventType trigger, IReadOnlyList<LinkRelation> links, ProbabilityScale scale)
+        Node node, string file, EventType trigger, IReadOnlyList<LinkRelation> links)
     {
         node.EnsureKnownKeys(EffectKnownKeys);
         var type = ParseEnum<EffectType>(node.Prop("type"), "tipo de efecto");
@@ -542,24 +550,35 @@ public static class PerkLoader
             immunity = (ImmunityKind)Index(ImmunityNames, immunityNode.AsString(), immunityNode, "inmunidad");
         }
 
-        // §1.4: el dato se escribe en puntos porcentuales y el cargador lo lleva a la base interna de
-        // 10.000. Solo modifyProbability vive en esa base: los puntos de atributo, las casillas de correa
-        // y los ticks de derribo son sus propias unidades y no se tocan. Cuando el efecto escala con un
-        // contador, lo que está en puntos porcentuales es el incremento por unidad y su tope.
+        // ADR 0050 P1: el dato se escribe como porcentaje de CUOTA con signo y el cargador lo lleva al
+        // multiplicador interno en base 10.000. Solo modifyProbability vive en esa base: los puntos de
+        // atributo, las casillas de correa y los ticks de derribo son sus propias unidades y no se tocan.
+        // Cuando el efecto escala con un contador, cada unidad vale una copia más del mismo multiplicador
+        // y el tope es el multiplicador máximo que puede alcanzar.
         if (type == EffectType.ModifyProbability)
         {
             if (usesCounter)
             {
-                valuePerCounter = ToBasePoints(node, valuePerCounter, "valuePerCounter", probability, scale);
+                valuePerCounter = ToMultiplier(node, valuePerCounter, "valuePerCounter");
+
+                // Con cuotas, "por cada unidad del contador" es "una copia más del perk", así que el tope
+                // natural es un NÚMERO DE COPIAS y no otro multiplicador: un perk de ×1,3 que acumula
+                // hasta cinco veces llega a ×3,71 sin que ninguna de las cinco multiplicaciones se salga
+                // de la escala legal. Expresarlo como multiplicador dejaría el eje de acumulación (RF-070)
+                // encerrado en el ×2 de la escala, que es menos de lo que valía sumando puntos.
+                if (maxValue is < 1 or > MaxCounterStacks)
+                {
+                    throw new DataException(
+                        node.File,
+                        node.Path + ".maxValue",
+                        $"'{maxValue}' no es un tope válido: en modifyProbability con contador el tope es el "
+                            + $"número de veces que el multiplicador se acumula, entre 1 y {MaxCounterStacks} "
+                            + "(ADR 0050 P1)");
+                }
             }
             else
             {
-                value = ToBasePoints(node, value, "value", probability, scale);
-            }
-
-            if (maxValue != 0)
-            {
-                maxValue = ToBasePoints(node, maxValue, "maxValue", probability, scale);
+                value = ToMultiplier(node, value, "value");
             }
         }
 
@@ -570,21 +589,24 @@ public static class PerkLoader
             maxValue, counterDivisor, probability, duration, state, ticks, immunity);
     }
 
-    private static int ToBasePoints(Node node, int points, string field, ProbabilityKind probability, ProbabilityScale scale)
+    /// <summary>
+    /// Convierte el porcentaje de cuota con signo de <c>/data</c> en el multiplicador interno
+    /// (ADR 0050 P1). La escala es única para todos los canales, que es justo lo que multiplicar cuotas
+    /// consigue y lo que la tabla por canal de la ADR 0035 intentaba parchear.
+    /// </summary>
+    private static int ToMultiplier(Node node, int percent, string field)
     {
-        if (scale.IsLegal(probability, points))
+        if (ProbabilityScale.IsLegal(percent))
         {
-            return points * 100;
+            return ProbabilityScale.ToMultiplier(percent);
         }
 
-        string channel = ProbabilityScale.Name(probability);
         throw new DataException(
             node.File,
             node.Path + "." + field,
-            $"'{points}' no es un valor legal del canal '{channel}': su escalón es "
-                + $"{scale.Step(probability)} punto(s) porcentual(es) y la escala son 1, 2, 3, 5 o 10 pasos, "
-                + $"es decir {scale.Allowed(probability)} (ADR 0035, tuning.probabilityChannels.{channel}.step). "
-                + "El cargador multiplica el valor por 100 para la base interna de 10.000");
+            $"'{percent}' no es un valor legal de modifyProbability: un perk multiplica la CUOTA del canal "
+                + $"y la escala es {ProbabilityScale.Allowed} (ADR 0050 P1). El negativo es el inverso "
+                + "exacto del positivo de la misma magnitud: -30 es dividir por 1,3, no restar el 30%");
     }
 
     private static void ValidateEffect(
@@ -674,7 +696,7 @@ public static class PerkLoader
                 "un objetivo vinculado exige declarar 'links' con al menos una relación (ADR 0021)");
         }
 
-        if (type == EffectType.ModifyProbability && !usesCounter && value == 0)
+        if (type == EffectType.ModifyProbability && !usesCounter && value == ProbabilityScale.Neutral)
         {
             throw new DataException(file, node.Path, "modifyProbability con value 0 no hace nada");
         }

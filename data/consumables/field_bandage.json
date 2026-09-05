@@ -1,9 +1,16 @@
 {
   "id": "field_bandage",
-  "name": { "es": "Vendaje de campaña", "en": "Field Bandage" },
+  "name": {
+    "es": "Vendaje de campaña",
+    "en": "Field Bandage"
+  },
   "rarity": "common",
   "family": "medical",
   "effects": [
-    { "type": "modifyProbability", "probability": "injure", "value": -1200 }
+    {
+      "type": "modifyProbability",
+      "probability": "injure",
+      "value": -100
+    }
   ]
 }

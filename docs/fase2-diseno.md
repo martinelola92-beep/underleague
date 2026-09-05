@@ -2656,3 +2656,297 @@ con margen y el resto de métricas no empeora.
   (`economy.trainingExperience = 40`, para toda la plantilla disponible). No se ha tocado porque bajarlo
   castiga por igual a quien va al mercado y a quien no, pero es la palanca que haría que desviarse cueste
   algo de verdad si alguna vez se quiere que cueste.
+
+## 26. Decisiones de implementación del paquete AJ: los perks multiplican cuotas (ADR 0050 P1)
+
+Implementa la **P1 de la ADR 0050** —`modifyProbability` deja de sumar puntos porcentuales y pasa a
+multiplicar cuotas—, **retira la tabla de escalones por canal de la ADR 0035**, reescribe los valores de
+los 61 perks y los 4 consumibles, cambia la convención de las descripciones a proporcional, y aplica la
+banda revisada de `betterTeamWinRate` de la **ADR 0054**, que estaba acordada pero no implementada.
+
+La ADR 0057 la eligió como **palanca principal** para bajar el suelo sin build. **No lo es**, y §26.6 lo
+mide y lo explica. El paquete entrega la corrección de fondo —que era necesaria y es real— y la
+falsificación de la hipótesis de la 0057, que es lo más útil que deja.
+
+### 26.1. La fórmula, y dónde se aplica
+
+```
+cuota  = p / (1 − p)
+cuota' = cuota × k          k ∈ {1,15 · 1,3 · 1,5 · 2} y sus inversos
+p'     = cuota' / (1 + cuota')
+```
+
+En `/data` se escribe el **porcentaje de cuota con signo**: `±15, ±30, ±50, ±100`. El negativo es el
+**inverso exacto** del positivo de la misma magnitud (`-30` divide por 1,3), no su reflejo; por eso `-100`
+no es "probabilidad cero" sino "la mitad de cuota". Todo entero, base 10.000, sin coma flotante
+(`Sim.Perks.ProbabilityScale`).
+
+Tres decisiones de implementación que no estaban en la ADR y que hacían falta:
+
+**1. En los cuatro canales de tirada promediada, el multiplicador actúa sobre la probabilidad
+realizada.** La ADR 0050 P2 dejó regate, entrada, tiro a puerta y parada resolviéndose contra el promedio
+de dos uniformes, cuya acumulada es triangular: el número que el motor calcula **no** es la probabilidad
+del suceso. Multiplicar la cuota de ese parámetro habría reintroducido el defecto que la P1 viene a
+quitar: un `×2` sobre el parámetro de entrada vale **×3,64** sobre la entrada de verdad, y sobre `pass`
+—que no es promediada— vale ×2 exacto. La diferencia se veía en la curva de la ADR 0033: las builds con
+perks de entrada rendían por encima de las de intercepción sin que nada de diseño lo justificara. Se pasa
+a la probabilidad realizada, se multiplica ahí y se vuelve con la inversa
+(`ProbabilityScale.ApplyAveraged`, raíz cuadrada entera y redondeada).
+
+**2. Dos acumuladores por (jugador, canal), no uno.** El registro de modificadores guarda el producto de
+partido y el producto de jugada por separado. Con un solo acumulador habría que **dividir** para deshacer
+un modificador de duración `play`, y la división entera no es el inverso exacto de la multiplicación: el
+estado se iría desviando jugada a jugada. Con dos, deshacer es escribir el neutro y es exacto.
+
+**3. El tope de un efecto con contador es un número de copias, no un multiplicador.** "Por cada unidad del
+contador" pasa a significar "una copia más del mismo perk", es decir `k^n`. Si el tope se escribiera como
+otro multiplicador, el eje de acumulación (RF-070) quedaría encerrado en el ×2 de la escala, que es
+**menos** de lo que valía sumando puntos; escrito como copias, `×1,5` cinco veces son ×7,59 y ninguna de
+las cinco multiplicaciones se sale de la escala legal.
+
+Los canales que **restan** a otro —las dos evasiones y `shotOnTarget`, que actúa sobre la probabilidad de
+tirar fuera— se componen con el **inverso**: multiplicar la cuota de un suceso por k es exactamente
+dividir la de su contrario por k, así que el par sigue siendo consistente sin ningún caso especial.
+
+### 26.2. Cómo se reescribieron los 61 perks: la escala vieja estaba por encima del techo de la nueva
+
+Los valores no se han mapeado a ojo. Para cada efecto se ha calculado **el cociente de cuotas que producía
+de verdad** en su canal (sobre la base de trabajo del canal, y pasando por la acumulada triangular donde
+toca) y se ha elegido el `k` legal más cercano **en logaritmo**. Es la lectura literal de "conservando la
+intención de cada uno".
+
+El resultado es el hallazgo del paquete: **casi todo el catálogo estaba por encima del ×2 que la escala
+nueva permite**, y en algunos canales por dos o tres órdenes de magnitud.
+
+| Canal y valor viejo | Cociente de cuotas que producía | Valor nuevo |
+|---|---|---|
+| `pass` +25 | **×2 987** (77% → 98%, el techo) | +100 (×2) |
+| `interceptEvasion` +5 | **×256** | +100 |
+| `shotOnTarget` +25 | ×22,3 | +100 |
+| `dribble` +25 | ×12,2 | +100 |
+| `save` +15 | ×3,07 | +100 |
+| `intercept` +5 | ×3,16 | +100 |
+| `tackle` +15 | ×3,11 | +100 |
+| `tackle` −30 | ×0,029 | −100 (×0,5) |
+| `save` −25 | ×0,144 | −100 |
+| `dribble` −25 | ×0,153 | −100 |
+| `injure` +3 | ×2,58 | +100 |
+| `pass` −10 | ×0,606 | −50 (×0,667) |
+| `severeInjury` +3 | ×1,13 | +15 |
+| `tackleEvasion` +3 (Toque élfico) | ×1,25 | +30 |
+
+De los 68 efectos de probabilidad del catálogo, **48 caen en ±100**: no porque se haya querido subir el
+catálogo al máximo, sino porque el techo de la escala está por debajo de lo que valían. Solo tres efectos
+—los dos de `severeInjury` +3 y el Toque élfico— estaban dentro del rango bajo de la escala nueva. Los que más cambian son
+exactamente los que la ADR 0035 ya señalaba como accidentes de la fórmula aditiva: el pase, el tiro a
+puerta y el regate, donde un valor "pequeño" clavaba el canal en su techo.
+
+**Consecuencia directa y medible: la capa de perks es más débil que antes, y no hay forma de que no lo
+sea.** Es el precio de que un perk valga lo mismo en todos los canales con `k ≤ 2`.
+
+Los contadores van todos a `+50` por unidad con su tope en copias (3 o 5, el mismo cociente
+tope/incremento que tenían): `×1,5` cinco veces son ×7,59, frente a los ×5,6 a ×22 de los topes viejos.
+
+### 26.3. Las descripciones pasan a proporción, y lo que eso cuesta
+
+De *"suma +5% a su probabilidad de interceptar"* a *"tiene un 30% más de probabilidad de interceptar"*. La
+dirección va en la **clave de plantilla** y no en el signo del número, porque un multiplicador y su inverso
+se leen con cifras distintas: `×1,3` es "un 30% más" y `1/1,3` es "un **23%** menos", que es la reducción
+verdadera y no la del aumento que la genera. Un efecto con contador dice *"por cada X, hasta N veces"*.
+
+`docs/estilo-descripciones.md` cambia de convención y **anota la desviación**: multiplicar cuotas es
+exacto, describirlo como proporción de probabilidad no lo es. El aumento relativo real es
+`(k−1)(1−p)/(1+(k−1)p)`: con `k = 1,3` la descripción acierta en `intercept` (29,2% real frente al 30%
+escrito) y **exagera en `pass`** (5,6% real frente al 30% escrito). No existe ninguna frase corta en
+proporción que sea exacta para toda la escala de bases; la alternativa que sí lo es —hablar de **cuota**,
+"multiplica por 1,3 sus opciones de interceptar"— queda propuesta al revisor y anotada como AJ-A en
+`pendientes.md`. La convención anterior tenía el defecto simétrico y peor: la misma cifra significaba
+cosas separadas por dos órdenes de magnitud según el canal.
+
+### 26.4. La curva de la ADR 0033: doce celdas en banda, con tres jefes recalibrados
+
+Con los perks más débiles, **una build incoherente deja de castigarse a sí misma**: sus perks fallan la
+condición y cobran los `elseEffects`, que antes valían ×0,03 y ahora valen ×0,5. La escalera se comprimió
+por los dos extremos —la celda incoherente del acto 1 se fue del 26,7% al **46,1%**— y la única palanca
+que la ADR 0056 permite es recalibrar a los jefes, nunca la tabla.
+
+| Jefe | Calidad antes | Calidad después |
+|---|---|---|
+| `grimhold_guns` (acto 1) | 17 | **31** |
+| `the_hunt` (acto 2) | 44 | **46** |
+| `eternal_crown` (acto 3) | 29 | **31** |
+
+Las doce celdas, medidas con el instrumento de la puerta (32 plantillas × 4 partidos × 5 razas = 640
+partidos por celda):
+
+| Jefe | incoherente | correcta | buena | muy buena |
+|---|---|---|---|---|
+| `grimhold_guns` | 33,3 (≤35) | 70,9 (65-80) | 81,6 (75-88) | 89,8 (85-95) |
+| `the_hunt` | 14,8 (≤15) | 40,8 (35-50) | 62,8 (60-72) | 78,6 (72-85) |
+| `eternal_crown` | 5,6 (≤10) | 28,0 (15-28) | 41,6 (40-55) | 59,4 (55-70) |
+
+**Las doce dentro, y once de las doce sin necesitar el margen de medida** (la excepción sigue siendo
+`eternal_crown` / correcta, como ya ocurría antes del paquete).
+
+El coste de recalibrar el jefe del acto 1 no es pequeño y hay que decirlo: el acto 1 era "el taller"
+(ADR 0043) y ahora muerde. Las derrotas en el acto 1 pasan del **22,2% al 29,3%** del total y las runs que
+llegan al acto 2 bajan del **82,1% al 75,9%**. El reparto sigue cumpliendo la ADR 0043 —la mayoría de las
+derrotas siguen cayendo en el acto 2, 52,3%—, pero el acto 1 ya no perdona.
+
+### 26.5. RT-056, `betterTeamWinRate` y la banda de la ADR 0054
+
+Las siete métricas de sensación de fútbol **no se mueven**: se miden sobre los equipos de referencia, que
+no llevan perks. 1.000 partidos, semilla 1: alternancias 24,13 · cadena 2,26 · tiros 11,99 · resultados
+75,80 · tercio 41,73 · entradas 9,75 · lesiones 0,74. Todas IN.
+
+`betterTeamWinRate` con 20 puntos de diferencia: **79,52**, exactamente el mismo valor que antes del
+paquete y por la misma razón —los equipos de referencia no llevan perks—. La ADR 0054 subió la banda a
+**70-88** precisamente porque temía que la P1 la rompiera: **no la roza**. La banda estaba acordada pero
+seguía escrita 65-80 en `Sim/Analysis/MatchMetrics.cs` y en la puerta estadística; este paquete la
+implementa, con su constante y su comentario, y actualiza `docs/balance.md` y `Balance/README.md`.
+
+Que la métrica no se mueva es en sí mismo un dato: **`betterTeamWinRate` no mide el peso de la build**,
+solo el de los atributos. Vigilarla no habría detectado nada de lo que este paquete cambia.
+
+### 26.6. El suelo sin build: la P1 no lo mueve, y por qué
+
+**La medición principal del encargo.** Instrumento: `economy.rewardPerkWeight = 0` (las recompensas dejan
+de dar perks) y la política contextual esquivando los mercados, `runWinRate_noMarket`. 300 runs × cuatro
+semillas (1, 1001, 2001, 3001) = **1.200 runs** en cada lado.
+
+| | antes | después |
+|---|---|---|
+| **Suelo sin build** | **12,67%** | **12,08%** |
+| … por semilla | 12,00 / 13,67 / 12,33 / 12,67 | 9,33 / 12,00 / 12,67 / 14,33 |
+| Perks en el once | 1,48 | 1,44 |
+
+La diferencia es de **−0,59 puntos con un error típico de 1,34**: no se distingue de cero. El suelo **no
+ha bajado**. (El 14,5% de la ADR 0057 se midió con 200 runs y una semilla; con 1.200 el mismo instrumento
+da 12,67% antes del paquete, así que la comparación honesta es 12,67 → 12,08 y no 14,5 → 12,1.)
+
+**El diagnóstico, y es estructural.** Un equipo sin build no se enfrenta a builds: los rivales ordinarios
+de una run se generan con `RunSystems.OpponentFor` → `TeamGenerator.Generate`, **sin ningún perk**
+(`PerkAssignment.AssignInitial` solo se llama para la plantilla inicial del jugador). En los ~20 partidos
+ordinarios de una run, la capa de perks solo existe en un lado del campo. Los únicos rivales con perks son
+los **tres jefes**, que llevan catorce cada uno, y son también el único sitio donde se pierde una run
+(`defeatShare_bossMatchLost` = 100%).
+
+De ahí se sigue todo:
+
+1. La P1 hace la capa de perks **más débil** (§26.2). En un partido ordinario eso baja al que tiene build
+   y no toca al que no la tiene.
+2. Contra el jefe, que lleva catorce perks y el equipo sin build lleva uno y medio, unos perks más débiles
+   **favorecen al que no los tiene**. El suelo tendería a **subir**.
+3. Lo único que lo compensa es endurecer a los jefes (§26.4), que es una palanca de curva de dificultad y
+   afecta por igual al que construye bien y al que no.
+
+Las dos fuerzas se cancelan y el suelo se queda donde estaba. **La P1 no es una palanca sobre el suelo**,
+y la hipótesis de la ADR 0057 queda falsificada con la misma clase de medición con la que se formuló.
+
+La palanca que sí lo sería está señalada por la propia 0057 ("eso es diseño de rivales, no de economía") y
+ahora tiene nombre concreto: **que los rivales ordinarios lleven perks**. Mientras el 95% de los partidos
+de una run se juegue contra equipos sin build, ni el suelo ni la separación entre perfiles pueden depender
+de la build.
+
+### 26.7. Los cuatro objetivos de la ADR 0056
+
+1.200 runs por doctrina, semillas 1/1001/2001/3001. "Buena" es la doctrina contextual y "mediocre" la
+gastadora, que es como se midió la tabla de la ADR 0056 (la fila de 74,4 / 50,6 / 47,1 es la gastadora).
+
+| Objetivo | Hoy (antes) | Después | Meta | |
+|---|---|---|---|---|
+| Build buena, partidos de los actos 2 y 3 | 57,1 / 53,3 | **56,8 / 53,0** | 60% | **no alcanzado** |
+| Build mediocre, actos 2 y 3 | 47,3 / 44,2 | **50,0 / 45,1** | 42-45% | **no alcanzado, y empeora** |
+| Build mala, completar la run | 12,58% | **14,34%** | < 2% | **no alcanzado, y empeora** |
+| Build buena, completar la run | 19,25% | **18,00%** | 20-30%, sin subir | no sube; sigue por debajo de la banda |
+
+**Ninguno de los cuatro se cumple, y dos empeoran.** La causa es la misma de §26.6 y se ve en la
+separación: el hueco entre buena y mediocre en el acto 2 pasa de **9,8 a 6,8 puntos**. Un partido
+ordinario enfrenta una build contra un equipo **sin build**, así que la separación entre perfiles depende
+solo del valor absoluto de los perks del jugador, y la P1 lo ha bajado. Subirlo dentro de la escala no es
+posible: 48 de los 68 efectos ya están en el máximo.
+
+No se ha forzado ningún número para acercarlos. Mover cualquiera de los cuatro exige la conversación de
+curva de dificultad que la ADR 0057 dejaba prevista.
+
+### 26.8. El resto del bucle de run, antes y después
+
+1.200 runs, doctrina contextual salvo donde se indique.
+
+| | antes | después | banda |
+|---|---|---|---|
+| Tasa de victoria de la run | 19,25 | 18,00 | 20-30 |
+| … gastadora / ahorradora | 12,58 / 20,00 | 14,34 / 18,00 | INFO |
+| Ganar sin pisar mercado | 20,08 | **16,92** | < 5 (ADR 0055) |
+| Partidos por run | 13,92 | 13,20 | INFO |
+| Partidos por run completa | 19,46 | 19,44 | 18-22 |
+| Llegan al acto 2 / al acto 3 | 82,09 / 37,58 | 75,91 / 33,08 | INFO |
+| Derrotas por acto (1/2/3) | 22,2 / 55,1 / 22,7 | 29,3 / 52,3 / 18,4 | mayoría en el 2 |
+| Muertes por run | 1,54 | **1,44** | 1,5-3 |
+| Lesiones por partido (ambos) | 0,71 | 0,69 | INFO |
+| Arcos cerrados | 27,17 | 23,66 | 20-30 |
+| Perks en el once | 10,44 | 9,94 | INFO |
+| Compras por mercado | 0,94 | 0,92 | 1-2 |
+| Oro sin gastar | 11,02 | 12,10 | < 15 |
+
+`deathsPerRun` cae de 1,54 a **1,44** y sale por debajo de su banda de diseño (1,5-3). La causa está
+localizada y es de longitud de run, no de letalidad: por **partido** las muertes apenas se mueven (0,111 →
+0,109, un 1,4%) y el resto lo pone que la run es más corta (13,92 → 13,20 partidos) por el jefe del acto 1
+recalibrado. No se ha tocado `tuning.injury.lethality`: hacerlo sería tapar con una constante de muerte un
+efecto de la curva de dificultad.
+
+### 26.9. Estado de las seis puertas
+
+| Puerta | Estado |
+|---|---|
+| Sensación de fútbol (RT-056 + `betterTeamWinRate` 70-88) | **verde** |
+| Rareza y jefe final (RF-024, ADR 0027) | **verde** |
+| Equilibrio entre razas (D-29) | **verde** |
+| Curva de puertas de la ADR 0033 | **verde**, con los tres jefes recalibrados (§26.4) |
+| Run completa | **roja en una afirmación** |
+| Criterio de salida de fase 1 (builds) | **roja en dos métricas** |
+
+Tres afirmaciones fallan y **ninguna se ha relajado**: cambiar un rango es una decisión explícita del
+revisor (RT-057).
+
+**1. `buildsWinDifferently_passChain` = 1,16, pide ≥ 1,30.** Mide cuánto más alarga la cadena de pases una
+build técnica (`elf_tiki_taka`, siete copias de `fine_touch`) que una física (`orc_violence`) respecto de
+sus referencias sin perks. Con la fórmula aditiva, un `fine_touch` clavaba el pase en el techo del 98% y la
+cadena se disparaba; con cuotas, `×2` sobre una base del 77% da el 87%, y siete copias en siete jugadores
+distintos no se apilan. **Es el umbral el que estaba calibrado contra un canal saturado**, y saturar el
+canal de pase con un solo perk es justo lo que la P1 impide. Componentes medidos: la técnica alarga 1,145
+sobre su referencia y la física 0,927.
+
+**2. `badBuildsLoseToNone_elf_out_of_zone` = 45,21, pide ≤ 45,00.** Fuera por dos décimas. La build es
+mala por llevar siete `forward_line` y cuatro `own_third_anchor` en jugadores que no cumplen su condición,
+así que vive de los `elseEffects`; el castigo por perk pasa de ×0,15 a ×0,5. Misma causa que la anterior y
+del mismo signo.
+
+**3. `TheThreeDoctrinesBuyDifferently`: "la ahorradora debería terminar con más oro sin gastar que la
+contextual".** Es **ruido de muestra pequeña**, no una regresión: con las 60 runs de la puerta sale 13,29
+frente a 14,18 (orden invertido) y con 1.200 runs sale **14,86 frente a 12,10** (orden correcto y con
+margen). La afirmación compara dos medias sin ningún margen sobre una muestra en la que el error típico es
+de varios puntos; cualquier perturbación la voltea. Es un test que puede fallar por mala suerte, que es lo
+que las convenciones del proyecto prohíben, y la corrección honesta es darle muestra o margen, no
+cambiar el juego.
+
+### 26.10. Lo que queda abierto
+
+- **AJ-A · La descripción proporcional exagera en los canales de base alta** (§26.3). Decisión de
+  convención del revisor: aceptar la cota, o pasar a la formulación exacta en cuota.
+- **AJ-B · Los rivales ordinarios no llevan perks** (§26.6). Es la causa estructural de que ni el suelo ni
+  la separación entre perfiles respondan a la capa de build, y por tanto de que la P1 no pudiera ser la
+  palanca que la ADR 0057 esperaba. Es el siguiente paquete natural si se quiere mover cualquiera de los
+  cuatro objetivos de la ADR 0056.
+- **AJ-C · Dos umbrales de la puerta de fase 1 están calibrados contra la fórmula aditiva** (§26.9,
+  puntos 1 y 2). Necesitan un ADR que los revise contra el motor nuevo, o una build de medida que no
+  dependa de saturar un canal.
+- **AJ-D · `TheThreeDoctrinesBuyDifferently` es frágil por tamaño de muestra** (§26.9, punto 3).
+- **La P3 sigue suspendida** (ADR 0057) y este paquete refuerza el motivo: si la separación entre perfiles
+  no la sostiene la build, subir el crecimiento por nivel solo subiría el peso de los atributos.
+- **Z-A queda resuelta**: `data/items` y `data/consumables` pasan ya por la misma escala que los perks
+  (`EffectJson` valida contra `ProbabilityScale`), así que se acabaron las dos unidades para el mismo
+  campo.
+- **Z-B sigue abierta pero cambia de naturaleza**: reponer la mitad de intercepción del Toque élfico ya no
+  choca con ninguna escala —con cuotas `interceptEvasion` admite cualquiera de los ocho valores—, solo con
+  la necesidad de revalidar la puerta de razas.

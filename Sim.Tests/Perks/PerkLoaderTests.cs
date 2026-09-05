@@ -114,7 +114,7 @@ public sealed class PerkLoaderTests
               { "type": "modifyAttribute", "target": "withTag:Brute", "attribute": "strength", "value": 1, "duration": "match" },
               { "type": "modifyAttribute", "target": "adjacentWithTag:Fine", "attribute": "speed", "value": 1, "duration": "match" },
               { "type": "modifyLeash", "target": "adjacent", "value": 1, "duration": "play" },
-              { "type": "modifyProbability", "target": "team", "probability": "save", "value": 10, "duration": "match" }
+              { "type": "modifyProbability", "target": "team", "probability": "save", "value": 15, "duration": "match" }
             ]
             """));
 
@@ -233,11 +233,11 @@ public sealed class PerkLoaderTests
     // ---------------------------------------------------------------- formato revisado (§1.4)
 
     /// <summary>
-    /// Los puntos porcentuales del dato se convierten a la base interna de 10.000, y solo en
+    /// El porcentaje de cuota del dato se convierte al multiplicador interno (ADR 0050 P1), y solo en
     /// modifyProbability: los puntos de atributo, las casillas de correa y los ticks son otras unidades.
     /// </summary>
     [Fact]
-    public void PercentagePointsBecomeBasePoints()
+    public void OddsPercentBecomesAMultiplier()
     {
         var perk = TestPerks.Load("scaled", TestPerks.Json(
             "scaled",
@@ -249,14 +249,14 @@ public sealed class PerkLoaderTests
             ]
             """));
 
-        Assert.Equal(1500, perk.Effects[0].Value);
+        Assert.Equal(11500, perk.Effects[0].Value);
         Assert.Equal(3, perk.Effects[1].Value);
     }
 
     [Theory]
     [InlineData(7)]
     [InlineData(12)]
-    [InlineData(100)]
+    [InlineData(25)]
     [InlineData(1500)]
     [InlineData(0)]
     public void AProbabilityValueOutsideTheScaleIsALoadError(int value)
@@ -269,17 +269,22 @@ public sealed class PerkLoaderTests
     }
 
     [Theory]
+    [InlineData(-100)]
     [InlineData(-50)]
-    [InlineData(-5)]
-    [InlineData(25)]
+    [InlineData(-30)]
+    [InlineData(-15)]
+    [InlineData(15)]
+    [InlineData(30)]
     [InlineData(50)]
+    [InlineData(100)]
     public void TheWholeScaleIsAccepted(int value)
     {
         var perk = TestPerks.Load("on_scale", TestPerks.Json(
             "on_scale",
             "MATCH_START",
             $$"""[{ "type": "modifyProbability", "target": "owner", "probability": "pass", "value": {{value}}, "duration": "match" }]"""));
-        Assert.Equal(value * 100, Assert.Single(perk.Effects).Value);
+        // El negativo es el INVERSO del positivo de la misma magnitud, no su reflejo: -30 divide por 1,3.
+        Assert.Equal(ProbabilityScale.ToMultiplier(value), Assert.Single(perk.Effects).Value);
     }
 
     [Fact]
@@ -372,7 +377,7 @@ public sealed class PerkLoaderTests
     public void ALinkedTargetNeedsDeclaredLinks()
     {
         string effects =
-            """[{ "type": "modifyProbability", "target": "linked", "probability": "pass", "value": 10, "duration": "match" }]""";
+            """[{ "type": "modifyProbability", "target": "linked", "probability": "pass", "value": 30, "duration": "match" }]""";
 
         var ex = Assert.Throws<DataException>(() => TestPerks.Load(
             "orphan", TestPerks.Json("orphan", "MATCH_START", effects, axis: "alignment")));
@@ -478,7 +483,7 @@ public sealed class PerkLoaderTests
     /// <summary>
     /// El eje de acumulación necesita crecer en los tres canales que suman un número, no solo en el de
     /// atributo: un perk que mejora la intercepción partido a partido es tan natural como uno que sube la
-    /// fuerza. En modifyProbability lo que va en puntos porcentuales es el incremento por unidad y el tope.
+    /// fuerza. En modifyProbability el incremento por unidad y el tope son multiplicadores de cuota.
     /// </summary>
     [Fact]
     public void CounterScaledEffectsWorkOnProbabilityAndLeash()
@@ -489,7 +494,7 @@ public sealed class PerkLoaderTests
             """
             [
               { "type": "modifyProbability", "target": "owner", "probability": "intercept",
-                "valuePerCounter": 2, "counter": "matches", "maxValue": 10, "duration": "match" },
+                "valuePerCounter": 15, "counter": "matches", "maxValue": 5, "duration": "match" },
               { "type": "modifyLeash", "target": "owner",
                 "valuePerCounter": 5, "counter": "matches", "maxValue": 10, "counterDivisor": 4, "duration": "match" }
             ]
@@ -498,8 +503,11 @@ public sealed class PerkLoaderTests
             accumulates: true));
 
         Assert.True(perk.Effects[0].UsesCounter);
-        Assert.Equal(200, perk.Effects[0].ValuePerCounter);
-        Assert.Equal(1000, perk.Effects[0].MaxValue);
+        Assert.Equal(11500, perk.Effects[0].ValuePerCounter);
+
+        // El tope de un modifyProbability con contador es un NÚMERO DE COPIAS, no otro multiplicador
+        // (ADR 0050 P1): cinco copias de ×1,15 son ×2,01, y eso no cabría en la escala como un valor.
+        Assert.Equal(5, perk.Effects[0].MaxValue);
 
         // La correa son casillas: ni el incremento ni el tope se convierten.
         Assert.Equal(5, perk.Effects[1].ValuePerCounter);
@@ -514,7 +522,7 @@ public sealed class PerkLoaderTests
             "MATCH_START",
             """
             [{ "type": "modifyProbability", "target": "linked", "probability": "pass",
-               "valuePerCounter": 5, "counter": "matches", "maxValue": 25, "duration": "match" }]
+               "valuePerCounter": 15, "counter": "matches", "maxValue": 5, "duration": "match" }]
             """,
             axis: "alignment",
             links: """["beside"]""")));

@@ -57,11 +57,24 @@ internal static class EffectJson
 
         string probability = node.Str("probability");
         var probabilityKind = ParseProbability(node, probability);
+
+        // ADR 0050 P1: igual que en data/perks, el valor es un multiplicador de CUOTA escrito como
+        // porcentaje con signo (±15, ±30, ±50, ±100), no puntos base 10.000. La escala es la misma para
+        // objetos, consumibles y perks: un efecto no vale distinto por venir de una tienda.
+        if (!Perks.ProbabilityScale.IsLegal(value))
+        {
+            throw new DataException(
+                node.File,
+                node.Path + ".value",
+                $"'{value}' no es un valor legal de modifyProbability: multiplica la CUOTA del canal y la "
+                    + $"escala es {Perks.ProbabilityScale.Allowed} (ADR 0050 P1)");
+        }
+
         return new EffectDefinition(
             EffectType.ModifyProbability,
             Target: EffectTarget.Owner,
             Probability: probabilityKind,
-            Value: value,
+            Value: Perks.ProbabilityScale.ToMultiplier(value),
             Duration: EffectDuration.Run);
     }
 

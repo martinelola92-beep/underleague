@@ -17,7 +17,9 @@
     "count": 2
   },
   "blocksPerks": {
-    "families": ["wall"],
+    "families": [
+      "wall"
+    ],
     "perks": []
   },
   "trigger": "SHOT",
@@ -29,7 +31,7 @@
       "type": "modifyProbability",
       "target": "actor",
       "probability": "shotOnTarget",
-      "value": 15,
+      "value": 100,
       "duration": "play"
     }
   ],

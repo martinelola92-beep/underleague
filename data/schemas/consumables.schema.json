@@ -42,7 +42,7 @@
             "dribble", "tackle", "shotOnTarget", "save", "tackleEvasion", "interceptEvasion"
           ]
         },
-        "value": { "type": "integer", "minimum": -5000, "maximum": 5000 }
+        "value": { "type": "integer", "minimum": -5000, "maximum": 5000, "description": "Puntos de atributo en modifyAttribute; en modifyProbability, el PORCENTAJE DE CUOTA con signo de la ADR 0050 P1 (+-15, +-30, +-50, +-100), que comprueba el cargador." }
       },
       "required": ["type", "value"],
       "additionalProperties": false,

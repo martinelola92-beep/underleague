@@ -36,13 +36,15 @@ public sealed class DescriptionTests
         var perk = TestPerks.Load("showboat", TestPerks.Json(
             "showboat",
             "DRIBBLE_ATTEMPTED",
-            """[{ "type": "modifyProbability", "target": "actor", "probability": "dribble", "value": 15, "duration": "play" }]""",
+            """[{ "type": "modifyProbability", "target": "actor", "probability": "dribble", "value": 30, "duration": "play" }]""",
             condition: "hasTag(owner, 'Fine')",
-            elseEffects: """[{ "type": "modifyProbability", "target": "actor", "probability": "dribble", "value": -15, "duration": "play" }]"""));
+            elseEffects: """[{ "type": "modifyProbability", "target": "actor", "probability": "dribble", "value": -30, "duration": "play" }]"""));
 
+        // ADR 0050 P1: el inverso de x1,3 se lee "un 23% menos", que es la reducción de cuota verdadera,
+        // no el "-30%" que sugeriría el signo del dato.
         Assert.Equal(
-            "Al encarar, si el portador es Fino, el jugador suma +15% a su probabilidad de regate; "
-                + "si no, el jugador suma -15% a su probabilidad de regate.",
+            "Al encarar, si el portador es Fino, el jugador tiene un 30% más de probabilidad de regate; "
+                + "si no, el jugador tiene un 23% menos de probabilidad de regate.",
             Describe("es", perk));
     }
 
@@ -88,10 +90,10 @@ public sealed class DescriptionTests
     {
         var perk = LinkedPasser();
         Assert.Equal(
-            "Al empezar el partido, probabilidad de pase +10% hacia el compañero de su columna.",
+            "Al empezar el partido, un 30% más de probabilidad de pase hacia el compañero de su columna.",
             Describe("es", perk));
         Assert.Equal(
-            "When the match starts, pass chance +10% towards the partner in their column.",
+            "When the match starts, 30% more pass chance towards the partner in their column.",
             Describe("en", perk));
     }
 
@@ -101,12 +103,12 @@ public sealed class DescriptionTests
         var perk = TestPerks.Load("hub", TestPerks.Json(
             "hub",
             "MATCH_START",
-            """[{ "type": "modifyProbability", "target": "linked", "probability": "pass", "value": 5, "duration": "match" }]""",
+            """[{ "type": "modifyProbability", "target": "linked", "probability": "pass", "value": 15, "duration": "match" }]""",
             axis: "alignment",
             links: """["ahead", "behind"]"""));
 
         Assert.Equal(
-            "Al empezar el partido, probabilidad de pase +5% hacia el compañero de delante y compañero de detrás.",
+            "Al empezar el partido, un 15% más de probabilidad de pase hacia el compañero de delante y compañero de detrás.",
             Describe("es", perk));
     }
 
@@ -137,20 +139,20 @@ public sealed class DescriptionTests
     }
 
     [Fact]
-    public void CounterScaledProbabilityIsDescribedInPercentagePoints()
+    public void CounterScaledProbabilityIsDescribedAsOdds()
     {
         var perk = TestPerks.Load("grower", TestPerks.Json(
             "grower",
             "MATCH_START",
             """
             [{ "type": "modifyProbability", "target": "owner", "probability": "intercept",
-               "valuePerCounter": 2, "counter": "matches", "maxValue": 10, "duration": "match" }]
+               "valuePerCounter": 30, "counter": "matches", "maxValue": 5, "duration": "match" }]
             """,
             axis: "accumulation",
             accumulates: true));
 
         Assert.Equal(
-            "Al empezar el partido, el portador suma +2% a su probabilidad de interceptar por cada partido (máximo 10%).",
+            "Al empezar el partido, el portador tiene un 30% más de probabilidad de interceptar por cada partido (hasta 5 veces).",
             Describe("es", perk));
     }
 
@@ -167,14 +169,14 @@ public sealed class DescriptionTests
             "MATCH_START",
             """
             [{ "type": "modifyProbability", "target": "owner", "probability": "intercept",
-               "valuePerCounter": 2, "counter": "matches", "maxValue": 10, "duration": "match" },
+               "valuePerCounter": 30, "counter": "matches", "maxValue": 5, "duration": "match" },
              { "type": "addCounter", "counter": "matches", "value": 1 }]
             """,
             axis: "accumulation",
             accumulates: true));
 
         Assert.Equal(
-            "Al empezar el partido, el portador suma +2% a su probabilidad de interceptar por cada partido (máximo 10%).",
+            "Al empezar el partido, el portador tiene un 30% más de probabilidad de interceptar por cada partido (hasta 5 veces).",
             Describe("es", perk));
     }
 
@@ -193,7 +195,7 @@ public sealed class DescriptionTests
             "Al empezar el partido, el portador deja al rival derribado más tiempo con sus entradas.",
             Describe("es", Catalog.Perks.Get("hot_blooded")));
         Assert.Equal(
-            "Al empezar el partido, el portador suma +3% a su resistencia a las entradas.",
+            "Al empezar el partido, el portador tiene un 30% más de resistencia a las entradas.",
             Describe("es", Catalog.Perks.Get("elf_touch")));
         Assert.Equal(
             "Al empezar el partido, el portador no puede ser desplazado por empujones.",
@@ -229,7 +231,7 @@ public sealed class DescriptionTests
             PerkDefinition perk;
             try
             {
-                perk = PerkLoader.Parse(name, File.ReadAllText(path), TestData.LoadCatalog().Tuning.Probability);
+                perk = PerkLoader.Parse(name, File.ReadAllText(path));
             }
             catch (DataException)
             {
@@ -286,7 +288,10 @@ public sealed class DescriptionTests
             foreach (var key in new[]
             {
                 "modifyAttribute", "modifyAttributePerCounter", "modifyAttributePerCounterDivided",
-                "modifyLeash", "modifyBias", "modifyProbability", "modifyProbabilityPaired", "cancelEvent",
+                "modifyLeash", "modifyBias", "modifyProbability", "modifyProbabilityDown",
+                "modifyProbabilityPaired", "modifyProbabilityPairedDown",
+                "modifyProbabilityPerCounter", "modifyProbabilityPerCounterDown",
+                "modifyProbabilityPerCounterDivided", "modifyProbabilityPerCounterDividedDown", "cancelEvent",
                 "addCounter", "setState", "modifyKnockdownTicks", "modifyKnockdownTicksDown", "immunity",
                 "modifyExperience", "modifyExperienceDown",
             })
@@ -407,7 +412,7 @@ public sealed class DescriptionTests
     private static PerkDefinition LinkedPasser() => TestPerks.Load("column_pass", TestPerks.Json(
         "column_pass",
         "MATCH_START",
-        """[{ "type": "modifyProbability", "target": "linked", "probability": "pass", "value": 10, "duration": "match" }]""",
+        """[{ "type": "modifyProbability", "target": "linked", "probability": "pass", "value": 30, "duration": "match" }]""",
         axis: "alignment",
         links: """["beside"]"""));
 

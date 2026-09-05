@@ -89,7 +89,7 @@ Las tres puertas automáticas viven en `Sim.Tests` con `Trait("Category", "Gate"
 
 | Puerta | Fichero | Muestra | Qué defiende |
 |---|---|---|---|
-| Sensación de fútbol | `Engine/StatisticalTests.cs` | 1.000 partidos, semilla 1 | RT-056 y `betterTeamWinRate` |
+| Sensación de fútbol | `Engine/StatisticalTests.cs` | 1.000 partidos, semilla 1 | RT-056 y `betterTeamWinRate` (banda 70-88, ADR 0054) |
 | Criterio de salida de fase 1 | `Analysis/BuildGateTests.cs` | 40 plantillas × 12 partidos × 14 celdas = 6.720, semilla 1, ~30 s | Coherentes >= 58%, malas <= 45%, aleatoria 40-60%, `buildsWinDifferently`, `noDeadPerks`, RF-069 |
 | Rareza y jefe final | `Analysis/RarityAndBossTests.cs` | 24 plantillas × 20 partidos × 3 comparaciones, semilla 1 | RF-024 y la salvaguarda de la ADR 0027 |
 | Equilibrio entre razas | `Analysis/RaceBalanceTests.cs` | 250 plantillas × 4 partidos × 10 parejas, semilla 1 | D-29: ninguna raza fuera del 40-60% agrupado |
@@ -122,7 +122,7 @@ Se añaden a `summary.csv` cuando el sistema correspondiente existe:
 | Arcos de build cerrados por run | ADR 0051 | Una política que persigue un maestro llega a cerrar un arco en una fracción razonable de las runs. **Implementada** en `FullRunMetrics.MastersReached`; medido **5,5%** desde que el maestro solo se compra (ADR 0055), con la banda bajada a >= 2 y la causa en `fase2-diseno.md` §23.5 | 2 |
 | Divergencia entre builds con maestros distintos | ADR 0051, RF-032 | Dos runs de la misma raza que toman maestros distintos coinciden en menos perks que dos que toman el mismo; >= 5 puntos de diferencia. **Implementada** en `FullRunMetrics.MasterDivergence`; medido **9,0** | 2 |
 | Ganar la run sin entrar en ningún mercado | ADR 0055 | Por debajo del **5%**. **Implementada** en `FullRunMetrics.MarketlessWinRate` (la contextual con `AvoidsMarkets`); medido **23,5%**, por encima incluso de la misma política usando los mercados (20,0%) | 2 |
-| Mejores equipos ganan más con sorpresas creíbles | Fase 0 | Equipo **+20** en todos los atributos gana 65-80%; +10 es informativo y se vigila en 55-70% | 0 |
+| Mejores equipos ganan más con sorpresas creíbles | Fase 0, banda revisada por la **ADR 0054** | Equipo **+20** en todos los atributos gana **70-88%**; +10 es informativo y se vigila en 55-70%. Medido 79,52 | 0 |
 
 ## Definición de "build" para `/Balance`
 

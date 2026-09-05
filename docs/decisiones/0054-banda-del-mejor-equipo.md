@@ -1,7 +1,7 @@
 # 0054. La banda de `betterTeamWinRate` se revisa antes de aplicar P1
 
 **Fecha:** 2026-09-05
-**Estado:** Aceptada
+**Estado:** Aceptada e **implementada** al aplicar la P1 (`fase2-diseno.md` §26.5). Medido tras la P1: **79,52**, el mismo valor que antes, porque los equipos de referencia no llevan perks; la banda nueva no se roza
 **Modifica:** el rango de `betterTeamWinRate` fijado en la fase 0 (RT-056/RT-057)
 **Bloquea:** la P1 de la ADR 0050 hasta que se aplique
 

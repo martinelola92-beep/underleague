@@ -117,7 +117,7 @@ public sealed class LinkTests
     {
         var (engine, ids) = Match(
             "beside",
-            """[{ "type": "modifyProbability", "target": "linked", "probability": "pass", "value": 10, "duration": "match" }]""");
+            """[{ "type": "modifyProbability", "target": "linked", "probability": "pass", "value": 30, "duration": "match" }]""");
 
         var effects = engine.Effects!;
         var hub = engine.PlayerById(ids[4])!;
@@ -129,15 +129,15 @@ public sealed class LinkTests
         effects.Publish(MatchStart(engine));
 
         effects.Publish(Pass(engine, hub, linked));
-        Assert.Equal(1000, effects.Modifiers.Probability(hub, ProbabilityKind.Pass));
+        Assert.Equal(ProbabilityScale.ToMultiplier(30), effects.Modifiers.Probability(hub, ProbabilityKind.Pass));
 
         // Mismo portador, otro receptor: el bono no existe.
         effects.Publish(Pass(engine, hub, other));
-        Assert.Equal(0, effects.Modifiers.Probability(hub, ProbabilityKind.Pass));
+        Assert.Equal(ProbabilityScale.Neutral, effects.Modifiers.Probability(hub, ProbabilityKind.Pass));
 
         // Y no es un bono del vinculado: sus propios pases siguen igual.
         effects.Publish(Pass(engine, linked, hub));
-        Assert.Equal(0, effects.Modifiers.Probability(linked, ProbabilityKind.Pass));
+        Assert.Equal(ProbabilityScale.Neutral, effects.Modifiers.Probability(linked, ProbabilityKind.Pass));
     }
 
     /// <summary>El par es de una resolución concreta: otra probabilidad del mismo evento no lo cobra.</summary>
@@ -146,7 +146,7 @@ public sealed class LinkTests
     {
         var (engine, ids) = Match(
             "beside",
-            """[{ "type": "modifyProbability", "target": "linked", "probability": "pass", "value": 10, "duration": "match" }]""");
+            """[{ "type": "modifyProbability", "target": "linked", "probability": "pass", "value": 30, "duration": "match" }]""");
 
         var effects = engine.Effects!;
         var hub = engine.PlayerById(ids[4])!;
@@ -154,8 +154,8 @@ public sealed class LinkTests
 
         effects.Publish(MatchStart(engine));
         effects.Publish(Pass(engine, hub, linked));
-        Assert.Equal(0, effects.Modifiers.Probability(hub, ProbabilityKind.Tackle));
-        Assert.Equal(0, effects.Modifiers.Probability(hub, ProbabilityKind.Dribble));
+        Assert.Equal(ProbabilityScale.Neutral, effects.Modifiers.Probability(hub, ProbabilityKind.Tackle));
+        Assert.Equal(ProbabilityScale.Neutral, effects.Modifiers.Probability(hub, ProbabilityKind.Dribble));
     }
 
     /// <summary>Sin candidato para la relación no hay vínculo, y el perk aplica sus elseEffects (§2.4).</summary>

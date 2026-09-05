@@ -21,11 +21,49 @@ Ticks, puntos base, nombres de canales o de campos JSON, identificadores, fórmu
 
 ## Convención de porcentajes
 
-**Los perks se escriben en puntos porcentuales enteros y redondos.** El JSON declara `"value": 20`, no `"value": 2000`; el cargador convierte a la base interna de 10.000 con la que el motor resuelve. El diseñador escribe y lee la misma cifra que ve el jugador. Los valores del catálogo se limitan a una escala corta —para que cada perk tenga un tamaño reconocible y el balanceo sea comprensible— pero esa escala **es propia de cada canal** (ADR 0035): el escalón de cada canal está en `data/sim/tuning.json` → `probabilityChannels.<canal>.step` y un valor legal es ese escalón por 1, 2, 3, 5 o 10. La razón es que un punto porcentual no vale lo mismo en todos los canales: sobre `intercept` (base 250) un `+5` triplica la probabilidad y sobre `pass` (base 7.700) la sube un 6,5%. **Lo que el jugador lee no cambia**: se le sigue diciendo el valor absoluto ("+3% de probabilidad de interceptar"), que es verdad y es verificable; lo que cambia es lo que el diseñador puede escribir.
+**Un perk multiplica la cuota de su canal, y la descripción lo dice en proporción** (ADR 0050 P1). El
+JSON declara `"value": 30` y eso significa `cuota × 1,3`; el jugador lee *"un 30% más de probabilidad de
+interceptar"*. Los ocho valores legales son `±15, ±30, ±50, ±100`, iguales en **todos** los canales: el
+negativo es el **inverso exacto** del positivo de la misma magnitud —`-30` divide por 1,3, no resta el
+30%— y por eso se escribe con la cifra verdadera de la reducción, que no es la misma: `-15` se lee "un
+13% menos", `-30` "un 23% menos", `-50` "un 33% menos" y `-100` "un 50% menos".
 
-La base 10.000 se mantiene **solo** dentro del motor, donde hace falta precisión para probabilidades pequeñas (una lesión del 2,4% no se puede expresar en enteros sobre 100).
+**Proporciones, no puntos.** Es el cambio respecto de la convención anterior, y es consecuencia directa
+de la fórmula: los efectos ya no suman puntos porcentuales, multiplican cuotas. La escala por canal de la
+ADR 0035 —que existía porque un punto porcentual no valía lo mismo sobre `intercept` (base 2,5%) que sobre
+`pass` (base 77%)— **queda retirada**: multiplicando cuotas, la misma cifra vale lo mismo en cualquier
+canal por construcción, y `tuning.probabilityChannels` ya no existe.
 
-**Puntos, no proporciones.** Los efectos **suman**: un `+20` sobre una base del 22% la deja en el 42%, que son **veinte puntos porcentuales más**, no "un 20% más" (eso sería 26,4%). Las descripciones dicen "20% más de probabilidad de X" entendido como puntos, que es como lo lee cualquier jugador de un juego de este género, y nunca describen un aumento relativo como si fuera absoluto. Si algún efecto llega a ser realmente multiplicativo, se describe como "el doble" o "la mitad", nunca con un porcentaje. Confundir ambas cosas es la vía más rápida a una descripción que miente, y una descripción que miente incumple RF-012d tanto como una muerte no telegrafiada.
+La base 10.000 se mantiene **solo** dentro del motor, donde hace falta precisión para probabilidades
+pequeñas (una lesión del 2,4% no se puede expresar en enteros sobre 100). El multiplicador vive en esa
+misma base: `10000` es "no hacer nada".
+
+**Cuando el efecto se acumula**, cada unidad del contador vale exactamente **una copia más** del mismo
+multiplicador, y el tope es cuántas copias como mucho: *"un 50% más de probabilidad de regate por cada
+regate ganado, hasta cinco veces"*. Escribir el tope como copias y no como un multiplicador máximo es lo
+que deja al eje de acumulación (RF-070) crecer más allá del ×2 de la escala sin salirse de ella.
+
+### El límite de precisión de esta convención, y por qué se acepta
+
+Multiplicar cuotas es exacto; describirlo como una proporción de **probabilidad** no lo es. El aumento
+relativo real de la probabilidad es `(k−1)(1−p)/(1+(k−1)p)`: coincide con la cifra escrita cuando la base
+es pequeña y se queda por debajo cuando es grande. Con `k = 1,3`:
+
+| Canal | Base | Dice | Es |
+|---|---|---|---|
+| `intercept` | 2,5% | 30% más | 29,2% más |
+| `injure` | 2,0% | 30% más | 29,4% más |
+| `tackle` | 28% | 30% más | 19,5% más |
+| `pass` | 77% | 30% más | 5,6% más |
+
+**Esto es una desviación de "la descripción no puede mentir" y está anotada como tal**: no existe ninguna
+frase corta en proporción que sea exacta para una multiplicación de cuotas en toda la escala de bases, y
+la convención anterior ("+25% de probabilidad de pase" entendido como puntos) tenía el defecto simétrico y
+peor —la misma cifra significaba cosas que se diferenciaban en dos órdenes de magnitud según el canal—.
+La alternativa exacta es hablar de **cuota** ("multiplica por 1,3 sus opciones de interceptar"), que es
+verdad literal y encaja con la ficción del juego; queda sobre la mesa del revisor y anotada en
+`pendientes.md`. Lo que **no** se hace es describir un efecto multiplicativo como si sumara puntos: eso sí
+mentiría siempre.
 
 ## Qué se genera y qué se escribe
 

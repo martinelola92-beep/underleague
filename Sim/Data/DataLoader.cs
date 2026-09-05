@@ -127,7 +127,7 @@ public static class DataLoader
         var seenIds = new HashSet<string>(StringComparer.Ordinal);
         foreach (var (path, content) in perkFiles)
         {
-            var perk = PerkLoader.Parse(path, content, tuning.Probability);
+            var perk = PerkLoader.Parse(path, content);
             if (!seenIds.Add(perk.Id))
             {
                 throw new DataException(path, "$.id", $"id de perk repetido en el catálogo: '{perk.Id}'");
@@ -650,8 +650,7 @@ public static class DataLoader
             "regulationTicks", "goldenGoalMaxTicks", "decisionIntervalTicks", "transitionTicks",
             "assistWindowTicks", "resolution",
             "movement", "ball", "states", "pass", "dribble", "shot", "save", "tackle", "injury", "referee",
-            "block", "restart", "generation", "bodies", "actionZone", "progression",
-            "probabilityChannels");
+            "block", "restart", "generation", "bodies", "actionZone", "progression");
 
         return new Tuning(
             root.Prop("regulationTicks").AsInt(),
@@ -675,34 +674,7 @@ public static class DataLoader
             ParseGeneration(root.Prop("generation")),
             ParseBodies(root.Prop("bodies")),
             ParseActionZone(root.Prop("actionZone")),
-            ParseProgression(root.Prop("progression")),
-            ParseProbabilityChannels(root.Prop("probabilityChannels")));
-    }
-
-    /// <summary>
-    /// tuning.probabilityChannels: el escalón de cada canal de probabilidad (ADR 0035). Están los trece
-    /// de <see cref="ProbabilityKind"/> y ninguno más: un canal sin escalón sería un canal sin escala, y
-    /// un canal de más sería una errata que pasaría desapercibida.
-    /// </summary>
-    private static ProbabilityScale ParseProbabilityChannels(Json node)
-    {
-        var kinds = Enum.GetValues<ProbabilityKind>();
-        var names = new string[kinds.Length];
-        for (int i = 0; i < kinds.Length; i++)
-        {
-            names[i] = ProbabilityScale.Name(kinds[i]);
-        }
-
-        node.EnsureKnownKeys(names);
-        var steps = new int[kinds.Length];
-        for (int i = 0; i < kinds.Length; i++)
-        {
-            var channel = node.Prop(names[i]);
-            channel.EnsureKnownKeys("step");
-            steps[i] = channel.Prop("step").AsInt();
-        }
-
-        return new ProbabilityScale(steps);
+            ParseProgression(root.Prop("progression")));
     }
 
     private static MovementTuning ParseMovement(Json node)

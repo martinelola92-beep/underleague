@@ -1,7 +1,7 @@
 # 0056. Objetivos de separación entre perfiles de jugador
 
 **Fecha:** 2026-09-05
-**Estado:** Aceptada (directriz del revisor)
+**Estado:** Aceptada (directriz del revisor). **Los cuatro objetivos siguen sin alcanzarse tras la P1** y dos empeoran (`fase2-diseno.md` §26.7): buena 56,8/53,0 (meta 60), mediocre 50,0/45,1 (meta 42-45), mala completa la run el 14,34% (meta <2%), buena la completa el 18,00%. El hueco entre buena y mediocre en el acto 2 se estrecha de 9,8 a 6,8 puntos. La causa es la misma que falsifica la ADR 0057 y está en AJ-B
 **Requisitos:** RT-055, RT-056, RF-032
 **Depende de:** ADR 0054 (banda revisada) · **implementa** las P1 y P3 de la ADR 0050
 

@@ -17,7 +17,9 @@
     "count": 2
   },
   "blocksPerks": {
-    "families": ["butchery"],
+    "families": [
+      "butchery"
+    ],
     "perks": []
   },
   "trigger": "MATCH_START",
@@ -29,14 +31,14 @@
       "type": "modifyProbability",
       "target": "team",
       "probability": "pass",
-      "value": 10,
+      "value": 100,
       "duration": "match"
     },
     {
       "type": "modifyProbability",
       "target": "team",
       "probability": "interceptEvasion",
-      "value": 5,
+      "value": 100,
       "duration": "match"
     }
   ],

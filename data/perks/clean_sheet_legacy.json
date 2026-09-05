@@ -19,9 +19,9 @@
       "type": "modifyProbability",
       "target": "actor",
       "probability": "save",
-      "valuePerCounter": 5,
+      "valuePerCounter": 50,
       "counter": "cleanSheetSaves",
-      "maxValue": 25,
+      "maxValue": 5,
       "duration": "match"
     },
     {

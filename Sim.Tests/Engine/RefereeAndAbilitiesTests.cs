@@ -3,6 +3,7 @@ using Underleague.Sim.Engine;
 using Underleague.Sim.Events;
 using Underleague.Sim.Generation;
 using Underleague.Sim.Model;
+using Underleague.Sim.Perks;
 using Underleague.Sim.Random;
 
 namespace Underleague.Sim.Tests.Engine;
@@ -59,8 +60,9 @@ public sealed class RefereeAndAbilitiesTests
     /// las dos probabilidades reales del motor —la de que le roben el balón en una entrada y la de que le
     /// corten el pase—, antes y después de activar la habilidad: la primera baja, la segunda no se mueve.
     /// El reequilibrio de habilidades raciales (ADR 0026, §"Presupuesto de impacto", D-29) retiró la
-    /// mitad de intercepción porque sobre una base de 250 puntos el escalón mínimo de la escala (5 pp)
-    /// no es una evasión sino una inmunidad, y una habilidad gratis e irrenunciable no puede valer eso.
+    /// mitad de intercepción porque en la escala aditiva de entonces el valor legal más pequeño ya era
+    /// una inmunidad sobre una base de 250 puntos, y una habilidad gratis e irrenunciable no puede valer
+    /// eso. Con cuotas (ADR 0050 P1) el argumento decae, pero reponerla exige revalidar la puerta de razas.
     /// </summary>
     [Fact]
     public void AnElfEvadesTacklesBetterAndInterceptionsTheSame()
@@ -71,12 +73,15 @@ public sealed class RefereeAndAbilitiesTests
 
         int tackleBefore = engine.TackleWinChance(opponent, elf);
         int interceptBefore = engine.InterceptChance(opponent, elf);
-        int points = Catalog.Perks.Get("elf_touch").Effects[0].Value;
+        int multiplier = Catalog.Perks.Get("elf_touch").Effects[0].Value;
 
         engine.Effects!.Publish(MatchStart(engine));
 
-        // Los puntos porcentuales del perk, ya en la base 10.000 del motor (§5.2).
-        Assert.Equal(tackleBefore - points, engine.TackleWinChance(opponent, elf));
+        // ADR 0050 P1: la evasión DIVIDE la cuota de que le roben, no resta puntos, así que lo que hay
+        // que reproducir aquí es la misma operación del motor sobre la probabilidad de partida.
+        Assert.Equal(
+            ProbabilityScale.ApplyAveraged(tackleBefore, ProbabilityScale.Invert(multiplier)),
+            engine.TackleWinChance(opponent, elf));
         Assert.Equal(interceptBefore, engine.InterceptChance(opponent, elf));
     }
 

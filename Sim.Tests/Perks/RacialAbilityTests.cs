@@ -59,22 +59,24 @@ public sealed class RacialAbilityTests
     }
 
     /// <summary>
-    /// Elfos: Toque abre el canal de evasión de entrada, en puntos base sobre 10.000, y <b>solo</b> ese.
-    /// La mitad de intercepción se retiró en el reequilibrio de habilidades raciales (ADR 0026,
-    /// §"Presupuesto de impacto", D-29): sobre una base de 250 puntos, el escalón mínimo legal de la
-    /// escala (5 pp = 500 puntos) no es "esquivar mejor" sino inmunidad, así que el canal
-    /// <c>interceptEvasion</c> queda sin usar en el catálogo hasta que D-30 lo ponga en escala.
+    /// Elfos: Toque abre el canal de evasión de entrada, como <b>multiplicador de cuota</b> (ADR 0050 P1),
+    /// y <b>solo</b> ese. La mitad de intercepción se retiró en el reequilibrio de habilidades raciales
+    /// (ADR 0026, §"Presupuesto de impacto", D-29) porque en la escala aditiva de entonces el valor legal
+    /// más pequeño ya era enorme sobre una base de 250 puntos; con cuotas eso deja de ser cierto y D-30
+    /// puede reponerla, pero exige revalidar la puerta de razas y no se hace aquí.
     /// </summary>
     [Fact]
     public void ElfTouchOpensTheTackleEvasionChannelOnly()
     {
         var engine = Engine(Race.Elf);
         var elf = engine.PlayerById(1)!;
-        int points = Catalog.Perks.Get("elf_touch").Effects[0].Value;
+        int multiplier = Catalog.Perks.Get("elf_touch").Effects[0].Value;
 
         engine.Effects!.Publish(MatchStart(engine));
-        Assert.Equal(points, engine.Effects.Modifiers.Probability(elf, ProbabilityKind.TackleEvasion));
-        Assert.Equal(0, engine.Effects.Modifiers.Probability(elf, ProbabilityKind.InterceptEvasion));
+        Assert.Equal(multiplier, engine.Effects.Modifiers.Probability(elf, ProbabilityKind.TackleEvasion));
+        Assert.Equal(
+            ProbabilityScale.Neutral,
+            engine.Effects.Modifiers.Probability(elf, ProbabilityKind.InterceptEvasion));
     }
 
     /// <summary>

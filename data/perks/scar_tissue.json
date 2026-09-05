@@ -20,7 +20,7 @@
       "type": "modifyProbability",
       "target": "actor",
       "probability": "injure",
-      "valuePerCounter": 1,
+      "valuePerCounter": 50,
       "counter": "scarTissueInjuries",
       "maxValue": 3,
       "duration": "match"

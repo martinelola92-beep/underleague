@@ -54,11 +54,24 @@ Se añaden al conjunto de RT-034 y a `fase1-diseno.md` §2 cuando se implementen
 
 `stat` merece justificación: hoy un perk de acumulación necesita declarar su propio `addCounter` sobre un disparador y leerlo después, lo que gasta dos efectos y obliga a que el contador exista antes de poder usarlo. Exponer las estadísticas que el motor ya lleva para el informe post-partido (RF-119) abarata mucho toda la familia de acumulación y elimina una fuente de errores.
 
-## Escala de valores por canal (ADR 0035)
+## Escala de valores (ADR 0050 P1)
 
-Un punto porcentual no vale lo mismo en todos los canales: las bases van de 40 (`injure`) a 7.700 (`pass`), así que la misma cifra escrita en dos perks produce efectos que se diferencian en dos órdenes de magnitud. Cada canal declara su **escalón** en `data/sim/tuning.json` → `probabilityChannels.<canal>.step`, en puntos porcentuales, y un valor legal de `modifyProbability` es ese escalón por **1, 2, 3, 5 o 10 pasos**. La tabla completa está en `fase1b-diseno.md` §1.4; en corto: `intercept`, `injure`, `injury`, `foul`, `card` e `interceptEvasion` valen 1; `tackle`, `tackleEvasion` y `severeInjury` valen 3; `pass`, `dribble`, `save` y `shotOnTarget` valen 5. La comprobación la hace `Sim.Perks.PerkLoader` al cargar.
+Un perk **multiplica la cuota** del canal que toca: `cuota' = cuota × k`, con `k ∈ {1,15 · 1,3 · 1,5 · 2}`
+y sus inversos. En `/data` se escribe como el porcentaje con signo `±15, ±30, ±50, ±100`, y el negativo es
+el inverso exacto del positivo de la misma magnitud (`-30` divide por 1,3). **La escala es única para todos
+los canales**: multiplicar cuotas hace que la misma cifra valga lo mismo sobre `intercept` (base 2,5%) que
+sobre `pass` (base 77%), que es lo que la tabla de escalones por canal de la ADR 0035 intentaba parchear y
+por eso **esa tabla queda retirada** (`tuning.probabilityChannels` ya no existe). La comprobación la hace
+`Sim.Perks.PerkLoader` al cargar.
 
-Consecuencia práctica al escribir un perk: en los canales de base diminuta se escribe **1, 2 o 3**, nunca 10, salvo que se quiera de verdad un interruptor; en los de base grande, 5 a 25 es el rango normal y 50 es el techo.
+En los cuatro canales que se resuelven con el promedio de dos tiradas (ADR 0050 P2: regate, entrada, tiro
+a puerta y parada) el multiplicador se aplica sobre la probabilidad **realizada**, no sobre el parámetro:
+si no, un ×2 valdría ×3,6 en esos canales y el problema que la P1 viene a quitar volvería por la puerta de
+atrás (`ProbabilityScale.ApplyAveraged`).
+
+Cuando el efecto escala con un contador, cada unidad vale **una copia más** del mismo multiplicador
+(`k^n`) y `maxValue` es cuántas copias como mucho, no un multiplicador máximo: es lo que deja al eje de
+acumulación crecer más allá del ×2 de la escala sin salirse de ella.
 
 ## Objetivo `linked`
 

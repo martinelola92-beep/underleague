@@ -1,7 +1,7 @@
 # 0050. Cuatro correcciones a los fundamentos matemáticos
 
 **Fecha:** 2026-09-05
-**Estado:** Aceptada
+**Estado:** Aceptada. **P2, P4 y P1 implementadas** (`fase2-diseno.md` §22 y §26); **P3 en suspenso** por la ADR 0057
 **Sustituye:** la ADR 0035 (escalones por canal), una vez implementada la P1
 **Requisitos:** RT-023, RT-056, RF-069, RF-024
 **Origen:** `docs/analisis-formulas-roguelike.md`, comparación con Brogue, DCSS, Shattered PD y CDDA
@@ -55,6 +55,18 @@ Toda probabilidad se acota a **2%-98%**, en lugar de los límites ad hoc por can
 ## Consecuencias
 
 - Los valores de los 45 perks se reescriben con la escala multiplicativa.
+
+**Al implementarse la P1** (`fase2-diseno.md` §26) hay dos correcciones que anotar sobre lo que esta ADR
+daba por hecho:
+
+- **La escala vieja estaba, casi entera, por encima del techo de la nueva.** Midiendo el cociente de
+  cuotas que producía de verdad cada efecto del catálogo, 48 de los 68 caen en el ×2 (o su inverso): un
+  `pass +25` valía ×2.987 y un `interceptEvasion +5` valía ×256. La consecuencia no anticipada es que la
+  capa de perks queda **más débil** que antes, y con `k ≤ 2` no hay forma de que no lo sea.
+- **"Se espera que la ventaja medible de jugar bien suba" no se cumple para la P1.** El suelo sin build no
+  se mueve (12,67% → 12,08%, error típico 1,34) y la separación entre perfiles se estrecha. La causa está
+  medida y es estructural: los rivales ordinarios de una run no llevan perks, así que la capa de build solo
+  existe en un lado del campo salvo contra los tres jefes.
 - Las descripciones cambian de *"+5% de probabilidad de interceptar"* a *"un 30% más de probabilidad de interceptar"*. `estilo-descripciones.md` ya advierte de la confusión entre puntos y proporciones: ahora la convención pasa a ser **proporcional**, y hay que actualizar esa guía.
 - La ADR 0035 queda retirada al completarse P1.
 - Se espera que la ventaja medible de jugar bien **suba** por dos vías: menos ruido (P2) y progresión más marcada (P3).

@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://underleague.dev/schemas/perks.schema.json",
   "title": "Underleague perk",
-  "description": "data/perks/<id>.json: un perk por fichero (RT-033, docs/fase1b-diseno.md §1.4). Un perk es un dato, no código: eje, disparador, condición NCalc, efectos, vínculos, alcance y límite. NO existe campo 'description': el texto se genera desde el efecto con las plantillas de data/l10n (RT-035), así que aquí se rechaza explícitamente. Los 'value' de modifyProbability se escriben en PUNTOS PORCENTUALES enteros, multiplos del escalon de SU CANAL (ADR 0035, data/sim/tuning.json -> probabilityChannels) por 1, 2, 3, 5 o 10 pasos; eso lo comprueba el cargador, no este esquema, y multiplica por 100 para la base interna de 10.000 (docs/estilo-descripciones.md); el resto de efectos conserva su propia unidad. Un perk universal (race: null) no puede consultar la etiqueta de especie (ADR 0023, RF-065b): eso lo comprueba el cargador, porque exige leer la condición.",
+  "description": "data/perks/<id>.json: un perk por fichero (RT-033, docs/fase1b-diseno.md §1.4). Un perk es un dato, no código: eje, disparador, condición NCalc, efectos, vínculos, alcance y límite. NO existe campo 'description': el texto se genera desde el efecto con las plantillas de data/l10n (RT-035), así que aquí se rechaza explícitamente. Los 'value' de modifyProbability son MULTIPLICADORES DE CUOTA escritos como porcentaje con signo (ADR 0050 P1): +-15, +-30, +-50, +-100, y el negativo es el inverso exacto del positivo de la misma magnitud (-30 divide por 1,3). Eso lo comprueba el cargador, no este esquema, y lo convierte al multiplicador interno en base 10.000 (docs/estilo-descripciones.md); el resto de efectos conserva su propia unidad. La escala por canal de la ADR 0035 queda retirada: con cuotas, un perk vale lo mismo en cualquier canal. Un perk universal (race: null) no puede consultar la etiqueta de especie (ADR 0023, RF-065b): eso lo comprueba el cargador, porque exige leer la condición.",
   "type": "object",
   "properties": {
     "_doc": {
@@ -368,13 +368,13 @@
           "type": "integer",
           "minimum": -100000,
           "maximum": 100000,
-          "description": "Unidad propia de cada tipo de efecto: puntos de atributo, casillas de correa, ticks de derribo, puntos de criterio o, en modifyProbability y modifyExperience, PUNTOS PORCENTUALES enteros."
+          "description": "Unidad propia de cada tipo de efecto: puntos de atributo, casillas de correa, ticks de derribo, puntos de criterio, PUNTOS PORCENTUALES en modifyExperience o, en modifyProbability, el PORCENTAJE DE CUOTA con signo de la ADR 0050 P1."
         },
         "valuePerCounter": {
           "type": "integer",
           "minimum": -1000,
           "maximum": 1000,
-          "description": "Incremento por unidad de 'counter' (RF-070). Válido en modifyAttribute, modifyLeash y modifyProbability; en este último, en puntos porcentuales de la misma escala que 'value'."
+          "description": "Incremento por unidad de 'counter' (RF-070). Válido en modifyAttribute, modifyLeash y modifyProbability; en este último cada unidad vale una COPIA MÁS del mismo multiplicador de cuota (k^n), en la misma escala que 'value', y 'maxValue' es cuántas copias como mucho."
         },
         "counter": {
           "type": "string",
@@ -440,7 +440,7 @@
       "additionalProperties": false,
       "allOf": [
         {
-          "_doc": "ADR 0035: la escala de modifyProbability ya NO es unica, depende del canal (tuning.probabilityChannels.<canal>.step, y el valor es ese escalon por 1, 2, 3, 5 o 10). Un esquema JSON no puede expresar 'multiplo del escalon declarado en otro fichero', asi que aqui solo queda la cota de cordura y la comprobacion real la hace Sim.Perks.PerkLoader al cargar, que es donde la ADR la pone. El cargador multiplica valor, incremento por contador y tope por 100 para la base interna de 10.000.",
+          "_doc": "ADR 0050 P1: la escala de modifyProbability es UNICA para todos los canales y es un multiplicador de cuota escrito como porcentaje con signo: +-15, +-30, +-50, +-100. Aqui solo queda la cota de cordura -100..100; el conjunto exacto lo comprueba Sim.Perks.PerkLoader al cargar, que es donde la ADR lo pone. El cargador convierte el porcentaje al multiplicador interno en base 10.000, y el negativo es el INVERSO del positivo, no su reflejo.",
           "if": {
             "properties": {
               "type": {

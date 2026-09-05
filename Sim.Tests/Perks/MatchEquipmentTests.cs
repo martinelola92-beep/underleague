@@ -55,7 +55,7 @@ public sealed class MatchEquipmentTests
         {
             DrawbackEffects = new[]
             {
-                new EffectDefinition(EffectType.ModifyProbability, Probability: ProbabilityKind.Injury, Value: 1000, Duration: EffectDuration.Run),
+                new EffectDefinition(EffectType.ModifyProbability, Probability: ProbabilityKind.Injury, Value: ProbabilityScale.ToMultiplier(50), Duration: EffectDuration.Run),
             },
         };
 
@@ -65,7 +65,7 @@ public sealed class MatchEquipmentTests
 
         var bearer = engine.PlayerById(2)!;
         Assert.Equal(baseStrength + 18, bearer.Strength);
-        Assert.Equal(1000, engine.Effects!.Modifiers.Probability(bearer, ProbabilityKind.Injury));
+        Assert.Equal(ProbabilityScale.ToMultiplier(50), engine.Effects!.Modifiers.Probability(bearer, ProbabilityKind.Injury));
         var activation = Assert.Single(engine.Report.ItemActivations);
         Assert.Equal("cursed", activation.Detail);
         Assert.Equal(2, activation.Effects);
@@ -239,7 +239,7 @@ public sealed class MatchEquipmentTests
           "trigger": "MATCH_START",
           "scope": "any",
           "condition": "",
-          "effects": [ { "type": "modifyProbability", "target": "opposingTeam", "probability": "injury", "value": 5, "duration": "match" } ],
+          "effects": [ { "type": "modifyProbability", "target": "opposingTeam", "probability": "injury", "value": 50, "duration": "match" } ],
           "elseEffects": [],
           "accumulatesAcrossMatches": false,
           "lethal": true,

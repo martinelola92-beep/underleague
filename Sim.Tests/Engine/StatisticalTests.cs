@@ -55,7 +55,13 @@ public sealed class StatisticalTests
     [Fact]
     public void InjuriesPerMatchAreInRange() => AssertInRange(MatchMetrics.InjuriesPerMatch);
 
-    /// <summary>Fase 0: el equipo con 20 puntos más de calidad gana entre el 65% y el 80% (docs/balance.md).</summary>
+    /// <summary>
+    /// El equipo con 20 puntos más de calidad gana entre el <b>70% y el 88%</b> (ADR 0054, docs/balance.md).
+    /// La banda de fase 0 (65-80) medía un motor en el que todas las resoluciones eran lineales y de
+    /// varianza máxima; con las dos tiradas promediadas (ADR 0050 P2) el valor se fue a 79,52, a medio
+    /// punto del techo viejo, y cualquier cosa que subiera más el peso de la habilidad rompía la puerta
+    /// por hacer justo lo que se pretendía.
+    /// </summary>
     [Fact]
     public void BetterTeamWinRateIsInRange()
     {
@@ -68,8 +74,10 @@ public sealed class StatisticalTests
         foreach (var row in gated)
         {
             Assert.True(
-                row.Value is >= 65 and <= 80,
-                $"{row.Name} = {row.Value:F2}, fuera de 65..80 en {Runs} partidos con semilla {Seed}");
+                row.Value >= MatchMetrics.BetterTeamWinRateMin && row.Value <= MatchMetrics.BetterTeamWinRateMax,
+                $"{row.Name} = {row.Value:F2}, fuera de "
+                    + $"{MatchMetrics.BetterTeamWinRateMin}..{MatchMetrics.BetterTeamWinRateMax} "
+                    + $"en {Runs} partidos con semilla {Seed}");
         }
     }
 

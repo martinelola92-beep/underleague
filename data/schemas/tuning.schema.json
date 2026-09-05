@@ -63,9 +63,6 @@
     "injury": {
       "$ref": "#/$defs/injury"
     },
-    "probabilityChannels": {
-      "$ref": "#/$defs/probabilityChannels"
-    },
     "referee": {
       "$ref": "#/$defs/referee"
     },
@@ -104,7 +101,6 @@
     "save",
     "tackle",
     "injury",
-    "probabilityChannels",
     "referee",
     "block",
     "restart",
@@ -124,44 +120,6 @@
         "probabilityCeiling": { "type": "integer", "minimum": 5000, "maximum": 10000 }
       },
       "required": ["probabilityFloor", "probabilityCeiling"],
-      "additionalProperties": false
-    },
-    "channelStep": {
-      "type": "object",
-      "properties": {
-        "step": {
-          "type": "integer",
-          "minimum": 1,
-          "maximum": 50,
-          "description": "Escalon del canal en puntos porcentuales (ADR 0035). Un valor legal de modifyProbability es este escalon por 1, 2, 3, 5 o 10; eso lo comprueba Sim.Perks.PerkLoader al cargar, no este esquema."
-        }
-      },
-      "required": ["step"],
-      "additionalProperties": false
-    },
-    "probabilityChannels": {
-      "type": "object",
-      "description": "ADR 0035: escalon por canal de probabilidad. Los trece canales de Sim.Perks.ProbabilityKind, ninguno de mas ni de menos; el cargador lo vuelve a comprobar.",
-      "properties": {
-        "_doc": { "type": "string" },
-        "foul": { "$ref": "#/$defs/channelStep" },
-        "card": { "$ref": "#/$defs/channelStep" },
-        "injury": { "$ref": "#/$defs/channelStep" },
-        "injure": { "$ref": "#/$defs/channelStep" },
-        "severeInjury": { "$ref": "#/$defs/channelStep" },
-        "pass": { "$ref": "#/$defs/channelStep" },
-        "intercept": { "$ref": "#/$defs/channelStep" },
-        "dribble": { "$ref": "#/$defs/channelStep" },
-        "tackle": { "$ref": "#/$defs/channelStep" },
-        "shotOnTarget": { "$ref": "#/$defs/channelStep" },
-        "save": { "$ref": "#/$defs/channelStep" },
-        "tackleEvasion": { "$ref": "#/$defs/channelStep" },
-        "interceptEvasion": { "$ref": "#/$defs/channelStep" }
-      },
-      "required": [
-        "foul", "card", "injury", "injure", "severeInjury", "pass", "intercept",
-        "dribble", "tackle", "shotOnTarget", "save", "tackleEvasion", "interceptEvasion"
-      ],
       "additionalProperties": false
     },
     "probability": {

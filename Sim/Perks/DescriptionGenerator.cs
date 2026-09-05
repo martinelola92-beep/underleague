@@ -316,14 +316,17 @@ public static class DescriptionGenerator
             // lo que es: "el compañero de delante suma +25% a su remate". Antes se describían todos como
             // pase y salía la frase sin sentido "probabilidad de tiro a puerta +25% hacia el compañero de
             // delante" (RT-035: la descripción sale del efecto, así que tiene que salir del efecto REAL).
+            // ADR 0050 P1: la dirección va en la CLAVE y no en el signo del número, porque un
+            // multiplicador de cuota y su inverso se leen con cifras distintas: ×1,3 es "un 30% más" y
+            // 1/1,3 es "un 23% menos", que es la reducción verdadera y no la del aumento que la genera.
             EffectType.ModifyProbability
                 when effect.Target is EffectTarget.Linked or EffectTarget.LinkedWithTag
                     && effect.Probability == ProbabilityKind.Pass
-                => "modifyProbabilityPaired",
-            EffectType.ModifyProbability when effect.UsesCounter => effect.CounterDivisor > 1
-                ? "modifyProbabilityPerCounterDivided"
-                : "modifyProbabilityPerCounter",
-            EffectType.ModifyProbability => "modifyProbability",
+                => OddsKey("modifyProbabilityPaired", effect.Value),
+            EffectType.ModifyProbability when effect.UsesCounter => OddsKey(
+                effect.CounterDivisor > 1 ? "modifyProbabilityPerCounterDivided" : "modifyProbabilityPerCounter",
+                effect.ValuePerCounter),
+            EffectType.ModifyProbability => OddsKey("modifyProbability", effect.Value),
             EffectType.CancelEvent => "cancelEvent",
             EffectType.AddCounter => "addCounter",
             EffectType.SetState => "setState",
@@ -343,10 +346,12 @@ public static class DescriptionGenerator
         text = Replace(text, "{duration}", templates.Get(Durations, DurationKey(effect.Duration)));
         text = Replace(text, "{probability}", templates.Get(Probabilities, ProbabilityKey(effect.Probability)));
         text = Replace(text, "{counter}", CounterName(effect.Counter, templates));
+        text = Replace(text, "{value:odds}", Odds(effect.Value));
         text = Replace(text, "{value:+%}", Percent(effect.Value));
         text = Replace(text, "{value:+}", Signed(effect.Value));
         text = Replace(text, "{value:abs}", Math.Abs(effect.Value).ToString(CultureInfo.InvariantCulture));
         text = Replace(text, "{value}", effect.Value.ToString(CultureInfo.InvariantCulture));
+        text = Replace(text, "{valuePerCounter:odds}", Odds(effect.ValuePerCounter));
         text = Replace(text, "{valuePerCounter:+%}", Percent(effect.ValuePerCounter));
         text = Replace(text, "{valuePerCounter:+}", Signed(effect.ValuePerCounter));
         text = Replace(text, "{maxValue:%}", PlainPercent(effect.MaxValue));
@@ -519,6 +524,21 @@ public static class DescriptionGenerator
 
     private static string CounterName(string counter, DescriptionTemplates templates) =>
         counter.Length == 0 ? string.Empty : templates.Find(CountersSection, counter) ?? counter;
+
+    /// <summary>
+    /// Clave de plantilla del efecto según la dirección del multiplicador de cuota: la base para un
+    /// aumento y el sufijo "Down" para una reducción (ADR 0050 P1).
+    /// </summary>
+    private static string OddsKey(string key, int multiplier) =>
+        ProbabilityScale.IsIncrease(multiplier) ? key : key + "Down";
+
+    /// <summary>
+    /// Magnitud de un multiplicador de cuota en porcentaje, sin signo: 13, 15, 23, 30, 33, 50 o 100. La
+    /// dirección la pone la plantilla ("más"/"menos"), no el número, para que el texto nunca diga "un
+    /// -30% más".
+    /// </summary>
+    private static string Odds(int multiplier) =>
+        ProbabilityScale.ToPercent(multiplier).ToString(CultureInfo.InvariantCulture);
 
     /// <summary>Entero con signo explícito: "+3", "-3", "0".</summary>
     private static string Signed(int value) => value.ToString("+0;-0;0", CultureInfo.InvariantCulture);

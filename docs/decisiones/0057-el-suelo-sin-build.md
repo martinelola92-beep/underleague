@@ -1,7 +1,7 @@
 # 0057. Un equipo sin build gana el 14,5% de las runs, y eso es el problema de fondo
 
 **Fecha:** 2026-09-05
-**Estado:** Aceptada
+**Estado:** Aceptada; **la palanca que elige queda falsificada** al aplicarse la P1 (`fase2-diseno.md` §26.6): el suelo pasa de 12,67% a 12,08% sobre 1.200 runs por lado, una diferencia de −0,59 con error típico 1,34. La causa está medida: los rivales **ordinarios** de una run no llevan ningún perk, así que la capa de build solo existe en un lado del campo salvo contra los tres jefes, y hacer los perks más fuertes o más débiles no mueve al equipo que no los tiene. La alternativa que la propia ADR dejaba prevista —"eso es diseño de rivales"— pasa a ser la vía viva, con nombre concreto: **que los rivales ordinarios lleven perks** (AJ-B en `pendientes.md`)
 **Corrige:** la palanca elegida en la ADR 0055 y **la P3 de la ADR 0050**
 **Requisitos:** RT-055, RF-032
 **Relacionada con:** ADR 0033 (curva de puertas) y ADR 0056 (separación entre perfiles)

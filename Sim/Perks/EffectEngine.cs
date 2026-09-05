@@ -840,7 +840,18 @@ internal sealed class EffectEngine : IPerkLinks
         }
 
         int divisor = effect.CounterDivisor > 0 ? effect.CounterDivisor : 1;
-        int value = effect.ValuePerCounter * Counter(subscription.Owner, effect.Counter) / divisor;
+        int units = Counter(subscription.Owner, effect.Counter) / divisor;
+
+        // ADR 0050 P1: en el canal de probabilidad el valor es un multiplicador de CUOTA, así que "por
+        // cada unidad del contador" no es una suma sino una copia más del mismo multiplicador: n unidades
+        // valen k^n, y el tope es CUÁNTAS copias como mucho, no un multiplicador máximo.
+        if (effect.Type == EffectType.ModifyProbability)
+        {
+            int stacks = effect.MaxValue > 0 ? Math.Min(units, effect.MaxValue) : units;
+            return ProbabilityScale.Power(effect.ValuePerCounter, stacks);
+        }
+
+        int value = effect.ValuePerCounter * units;
         if (effect.MaxValue != 0)
         {
             int bound = Math.Abs(effect.MaxValue);

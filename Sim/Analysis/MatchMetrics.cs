@@ -89,6 +89,18 @@ public static class MatchMetrics
     /// <summary>Prefijo del nombre de las métricas de tasa de victoria del mejor equipo.</summary>
     public const string BetterTeamWinRatePrefix = "betterTeamWinRate_";
 
+    /// <summary>
+    /// Banda de <see cref="BetterTeamWinRatePrefix"/> con una diferencia de calidad de 20 (ADR 0054).
+    /// Sube de 65-80 a 70-88 porque la de fase 0 se fijó cuando todas las resoluciones eran lineales y de
+    /// varianza máxima, y todo lo hecho desde entonces sube el peso de la habilidad. El techo existe para
+    /// que el peor equipo pueda ganar: con 88, un equipo veinte puntos peor todavía gana una de cada
+    /// ocho veces; por encima de 90 el resultado se vuelve determinista y el partido deja de interesar.
+    /// </summary>
+    public const double BetterTeamWinRateMin = 70;
+
+    /// <inheritdoc cref="BetterTeamWinRateMin"/>
+    public const double BetterTeamWinRateMax = 88;
+
     /// <summary>Diferencia de calidad para la que betterTeamWinRate es obligatoria (fase 0, §4).</summary>
     public const int GatedQualityDifference = 20;
 
@@ -230,7 +242,7 @@ public static class MatchMetrics
                 ? (rate is >= 65 and <= 80 ? "IN" : "OUT")
                 : "INFO";
 
-            rows.Add(new MetricResult($"{BetterTeamWinRatePrefix}{pairing.HomeId}_vs_{pairing.AwayId}", rate, 65, 80, status));
+            rows.Add(new MetricResult($"{BetterTeamWinRatePrefix}{pairing.HomeId}_vs_{pairing.AwayId}", rate, BetterTeamWinRateMin, BetterTeamWinRateMax, status));
         }
 
         return rows;

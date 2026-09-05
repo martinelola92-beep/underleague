@@ -17,7 +17,9 @@
     "count": 2
   },
   "blocksPerks": {
-    "families": ["aim"],
+    "families": [
+      "aim"
+    ],
     "perks": []
   },
   "trigger": "MATCH_START",
@@ -29,14 +31,14 @@
       "type": "modifyProbability",
       "target": "team",
       "probability": "tackle",
-      "value": 15,
+      "value": 100,
       "duration": "match"
     },
     {
       "type": "modifyProbability",
       "target": "opposingTeam",
       "probability": "shotOnTarget",
-      "value": -5,
+      "value": -50,
       "duration": "match"
     }
   ],

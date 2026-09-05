@@ -20,7 +20,7 @@
       "type": "modifyProbability",
       "target": "actor",
       "probability": "injure",
-      "value": 2,
+      "value": 100,
       "duration": "play"
     }
   ],

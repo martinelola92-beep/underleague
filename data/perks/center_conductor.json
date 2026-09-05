@@ -19,7 +19,7 @@
       "type": "modifyProbability",
       "target": "team",
       "probability": "intercept",
-      "value": 3,
+      "value": 100,
       "duration": "match"
     }
   ],
@@ -28,7 +28,7 @@
       "type": "modifyProbability",
       "target": "owner",
       "probability": "pass",
-      "value": -25,
+      "value": -100,
       "duration": "match"
     }
   ],

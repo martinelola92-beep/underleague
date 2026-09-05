@@ -22,7 +22,7 @@
       "type": "modifyProbability",
       "target": "linked",
       "probability": "shotOnTarget",
-      "value": 25,
+      "value": 100,
       "duration": "match"
     }
   ],
@@ -31,7 +31,7 @@
       "type": "modifyProbability",
       "target": "team",
       "probability": "shotOnTarget",
-      "value": -25,
+      "value": -100,
       "duration": "match"
     }
   ],

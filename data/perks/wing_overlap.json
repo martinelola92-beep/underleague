@@ -23,7 +23,7 @@
       "type": "modifyProbability",
       "target": "linked",
       "probability": "dribble",
-      "value": 15,
+      "value": 100,
       "duration": "play"
     }
   ],
@@ -32,7 +32,7 @@
       "type": "modifyProbability",
       "target": "owner",
       "probability": "dribble",
-      "value": -25,
+      "value": -100,
       "duration": "play"
     }
   ],

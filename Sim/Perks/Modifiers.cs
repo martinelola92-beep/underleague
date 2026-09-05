@@ -10,8 +10,9 @@ namespace Underleague.Sim.Perks;
 /// Los modificadores de duración <c>match</c> y <c>run</c> no caducan dentro del partido, así que solo se
 /// guarda una entrada por modificador de duración <c>play</c>: lo único que hay que poder deshacer al
 /// terminar la jugada. Los de atributo y correa se aplican directamente sobre el jugador, que cachea su
-/// valor efectivo; los de probabilidad viven en una tabla plana <c>jugador x tipo</c> para que cada
-/// resolución del motor los consulte con un acceso a array.
+/// valor efectivo; los de probabilidad viven en dos tablas planas <c>jugador x tipo</c> —una de partido y
+/// otra de jugada— de <b>multiplicadores de cuota</b> (ADR 0050 P1) para que cada resolución del motor los
+/// consulte con dos accesos a array y un producto.
 /// </para>
 /// </summary>
 internal sealed class Modifiers
@@ -19,12 +20,13 @@ internal sealed class Modifiers
     private static readonly int ProbabilityKindCount = Enum.GetValues<ProbabilityKind>().Length;
 
     private readonly MatchPlayer[] _players;
-    private readonly int[] _probability;
+    private readonly int[] _matchOdds;
+    private readonly int[] _playOdds;
+    private readonly List<int> _dirtyPlayOdds = new();
     private readonly int[] _knockdownTicks;
     private readonly int[] _immunities;
     private readonly List<AttributeEntry> _playAttributes = new();
     private readonly List<LeashEntry> _playLeash = new();
-    private readonly List<ProbabilityEntry> _playProbability = new();
     private readonly List<PairEntry> _pairs = new();
 
     private EventType _eventType;
@@ -35,7 +37,10 @@ internal sealed class Modifiers
     public Modifiers(MatchPlayer[] players)
     {
         _players = players;
-        _probability = new int[players.Length * ProbabilityKindCount];
+        _matchOdds = new int[players.Length * ProbabilityKindCount];
+        _playOdds = new int[players.Length * ProbabilityKindCount];
+        Array.Fill(_matchOdds, ProbabilityScale.Neutral);
+        Array.Fill(_playOdds, ProbabilityScale.Neutral);
         _knockdownTicks = new int[players.Length];
         _immunities = new int[players.Length];
     }
@@ -70,19 +75,38 @@ internal sealed class Modifiers
         }
     }
 
-    /// <summary>Suma delta (puntos base 10000) a una probabilidad del jugador (§2, modifyProbability).</summary>
-    public void AddProbability(int playerIndex, ProbabilityKind kind, int delta, bool expiresAtPlayEnd)
+    /// <summary>
+    /// Compone un multiplicador de <b>cuota</b> sobre una probabilidad del jugador (§2,
+    /// modifyProbability; ADR 0050 P1). Apilar dos perks del mismo canal multiplica las dos cuotas, así
+    /// que la tabla guarda el producto y no una suma.
+    /// <para>
+    /// Hay dos acumuladores por (jugador, canal) y no uno: el de partido, que no caduca, y el de jugada,
+    /// que se reinicia entero en <see cref="ExpirePlayModifiers"/>. Con un solo acumulador habría que
+    /// <b>dividir</b> para deshacer un modificador de jugada, y la división entera no es el inverso
+    /// exacto de la multiplicación: el estado del partido se iría desviando jugada a jugada. Con dos, el
+    /// deshacer es escribir el neutro y es exacto.
+    /// </para>
+    /// </summary>
+    public void AddProbability(int playerIndex, ProbabilityKind kind, int multiplier, bool expiresAtPlayEnd)
     {
-        if (delta == 0)
+        if (multiplier == ProbabilityScale.Neutral)
         {
             return;
         }
 
-        _probability[(playerIndex * ProbabilityKindCount) + (int)kind] += delta;
+        int index = (playerIndex * ProbabilityKindCount) + (int)kind;
         if (expiresAtPlayEnd)
         {
-            _playProbability.Add(new ProbabilityEntry(playerIndex, kind, delta));
+            if (_playOdds[index] == ProbabilityScale.Neutral)
+            {
+                _dirtyPlayOdds.Add(index);
+            }
+
+            _playOdds[index] = ProbabilityScale.Combine(_playOdds[index], multiplier);
+            return;
         }
+
+        _matchOdds[index] = ProbabilityScale.Combine(_matchOdds[index], multiplier);
     }
 
     /// <summary>
@@ -90,14 +114,14 @@ internal sealed class Modifiers
     /// <paramref name="fromIndex"/> con <paramref name="toIndex"/>, no en las demás. Es lo que expresa
     /// "mejora el pase **hacia** ese compañero concreto" en vez de "mejora el pase".
     /// </summary>
-    public void AddPairProbability(int fromIndex, int toIndex, ProbabilityKind kind, int delta, bool expiresAtPlayEnd)
+    public void AddPairProbability(int fromIndex, int toIndex, ProbabilityKind kind, int multiplier, bool expiresAtPlayEnd)
     {
-        if (delta == 0 || fromIndex == toIndex)
+        if (multiplier == ProbabilityScale.Neutral || fromIndex == toIndex)
         {
             return;
         }
 
-        _pairs.Add(new PairEntry(fromIndex, toIndex, kind, delta, expiresAtPlayEnd));
+        _pairs.Add(new PairEntry(fromIndex, toIndex, kind, multiplier, expiresAtPlayEnd));
     }
 
     /// <summary>
@@ -115,10 +139,14 @@ internal sealed class Modifiers
         _eventOpponent = opponent?.Index ?? -1;
     }
 
-    /// <summary>Modificador acumulado de una probabilidad del jugador; 0 si no hay ninguno.</summary>
+    /// <summary>
+    /// Multiplicador de cuota acumulado de una probabilidad del jugador;
+    /// <see cref="ProbabilityScale.Neutral"/> si no hay ninguno (ADR 0050 P1).
+    /// </summary>
     public int Probability(MatchPlayer player, ProbabilityKind kind)
     {
-        int total = _probability[(player.Index * ProbabilityKindCount) + (int)kind];
+        int index = (player.Index * ProbabilityKindCount) + (int)kind;
+        int total = ProbabilityScale.Combine(_matchOdds[index], _playOdds[index]);
         if (_pairs.Count == 0)
         {
             return total;
@@ -129,7 +157,7 @@ internal sealed class Modifiers
             var pair = _pairs[i];
             if (pair.Kind == kind && pair.FromIndex == player.Index && IsCounterpartOfCurrentEvent(pair, kind))
             {
-                total += pair.Delta;
+                total = ProbabilityScale.Combine(total, pair.Multiplier);
             }
         }
 
@@ -216,15 +244,14 @@ internal sealed class Modifiers
             _players[entry.PlayerIndex].AddLeashCellDelta(-entry.Delta);
         }
 
-        for (int i = 0; i < _playProbability.Count; i++)
+        for (int i = 0; i < _dirtyPlayOdds.Count; i++)
         {
-            var entry = _playProbability[i];
-            _probability[(entry.PlayerIndex * ProbabilityKindCount) + (int)entry.Kind] -= entry.Delta;
+            _playOdds[_dirtyPlayOdds[i]] = ProbabilityScale.Neutral;
         }
 
         _playAttributes.Clear();
         _playLeash.Clear();
-        _playProbability.Clear();
+        _dirtyPlayOdds.Clear();
         _pairs.RemoveAll(static p => p.ExpiresAtPlayEnd);
     }
 
@@ -232,8 +259,6 @@ internal sealed class Modifiers
 
     private readonly record struct LeashEntry(int PlayerIndex, int Delta);
 
-    private readonly record struct ProbabilityEntry(int PlayerIndex, ProbabilityKind Kind, int Delta);
-
     private readonly record struct PairEntry(
-        int FromIndex, int ToIndex, ProbabilityKind Kind, int Delta, bool ExpiresAtPlayEnd);
+        int FromIndex, int ToIndex, ProbabilityKind Kind, int Multiplier, bool ExpiresAtPlayEnd);
 }

@@ -20,9 +20,9 @@
       "type": "modifyProbability",
       "target": "actor",
       "probability": "tackle",
-      "valuePerCounter": 3,
+      "valuePerCounter": 50,
       "counter": "pitVeteranTackles",
-      "maxValue": 15,
+      "maxValue": 5,
       "duration": "match"
     },
     {

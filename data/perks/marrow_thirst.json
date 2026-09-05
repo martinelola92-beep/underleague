@@ -1,5 +1,5 @@
 {
-  "_doc": "ADR 0046, RF-093 vía 2. Perk LETAL con la misma ventana que skullsplitter (el saque inicial es el único momento en que un herido está en el campo) pero con dos gatillos que lo estrechan: solo muerde si el portador empieza en el tercio rival, y solo lo puede llevar un Agresivo. Segundo y tercer canal de los cuatro letales: injure para el portador y severeInjury para el rival (escalones 1 y 3 de la ADR 0035).",
+  "_doc": "ADR 0046, RF-093 vía 2. Perk LETAL con la misma ventana que skullsplitter (el saque inicial es el único momento en que un herido está en el campo) pero con dos gatillos que lo estrechan: solo muerde si el portador empieza en el tercio rival, y solo lo puede llevar un Agresivo. Segundo y tercer canal de los cuatro letales: injure para el portador y severeInjury para el rival.",
   "id": "marrow_thirst",
   "name": {
     "es": "Sed de médula",
@@ -21,14 +21,14 @@
       "type": "modifyProbability",
       "target": "owner",
       "probability": "injure",
-      "value": 3,
+      "value": 100,
       "duration": "match"
     },
     {
       "type": "modifyProbability",
       "target": "opposingTeam",
       "probability": "severeInjury",
-      "value": 9,
+      "value": 50,
       "duration": "match"
     }
   ],
@@ -38,6 +38,8 @@
   "lethal": true,
   "lethalChance": 4200,
   "positionOnly": null,
-  "tagsRequired": ["Aggressive"],
+  "tagsRequired": [
+    "Aggressive"
+  ],
   "tagsForbidden": []
 }

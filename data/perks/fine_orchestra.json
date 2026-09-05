@@ -20,14 +20,14 @@
       "type": "modifyProbability",
       "target": "opposingTeam",
       "probability": "intercept",
-      "value": -2,
+      "value": -100,
       "duration": "match"
     },
     {
       "type": "modifyProbability",
       "target": "team",
       "probability": "tackleEvasion",
-      "value": 15,
+      "value": 100,
       "duration": "match"
     }
   ],
@@ -36,7 +36,7 @@
       "type": "modifyProbability",
       "target": "owner",
       "probability": "pass",
-      "value": -15,
+      "value": -100,
       "duration": "match"
     }
   ],

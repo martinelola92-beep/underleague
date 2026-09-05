@@ -20,7 +20,7 @@
       "type": "modifyProbability",
       "target": "actor",
       "probability": "severeInjury",
-      "value": 3,
+      "value": 15,
       "duration": "match"
     }
   ],

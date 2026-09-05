@@ -174,7 +174,7 @@ Una fila por jugador generado que llegó a jugar al menos un partido, con sus es
 | `ballThirdMaxShare` | <= 50 | IN/OUT | Se suman los ticks de balón por tercio de todo el lote y se toma el máximo de los tres porcentajes resultantes |
 | `tacklesPerMatch` | 6-14 | IN/OUT | Media de `Tackles` por partido |
 | `injuriesPerMatch` | 0.3-0.8 | IN/OUT | Media de `Injuries` por partido |
-| `betterTeamWinRate_<homeId>_vs_<awayId>` | 65-80 si diferencia de calidad = 20; si no, INFO | IN/OUT o INFO | Una fila por cada emparejamiento de `--teams` cuyos equipos tengan calidad distinta: tasa de victorias del equipo de mayor calidad sobre los partidos de ese emparejamiento |
+| `betterTeamWinRate_<homeId>_vs_<awayId>` | **70-88** si diferencia de calidad = 20 (ADR 0054); si no, INFO | IN/OUT o INFO | Una fila por cada emparejamiento de `--teams` cuyos equipos tengan calidad distinta: tasa de victorias del equipo de mayor calidad sobre los partidos de ese emparejamiento |
 
 ## Decisiones fuera de la especificación
 

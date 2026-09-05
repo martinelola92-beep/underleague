@@ -420,8 +420,7 @@ public sealed record Tuning(
     GenerationTuning Generation,
     BodiesTuning Bodies,
     ActionZoneTuning ActionZone,
-    ProgressionTuning Progression,
-    Underleague.Sim.Perks.ProbabilityScale Probability);
+    ProgressionTuning Progression);
 
 /// <summary>
 /// Plantillas de descripción de un idioma (data/l10n/&lt;lang&gt;/templates.json, RT-035). Se guardan

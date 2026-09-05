@@ -122,13 +122,13 @@ Ninguno aparece en rivales del acto 1 (el acto 1 es el taller, ADR 0043).
 
 | id | eje | rareza | trigger | canal | escasez | resumen |
 |---|---|---|---|---|---|---|
-| `skullsplitter` | identidad | legendary | MATCH_START | `injury` (+3) | `tagsRequired: Dirty` | el equipo rival suma +3% de lesionarse; quien saltó al campo herido, muere |
-| `marrow_thirst` | zona de inicio | rare | MATCH_START | `injure` (+3) y `severeInjury` (+9) | `tagsRequired: Aggressive` y empezar en el tercio rival | el portador lesiona más y las lesiones del rival tienden a graves |
-| `second_wound` | estado del partido | rare | INJURY | `severeInjury` (+3) | solo mientras no van ganando | al lesionarse un rival, sus lesiones tienden a graves; remata al que ya estaba tocado |
-| `iron_studs` | geometría | rare | TACKLE | `tackleEvasion` (−9) | solo presionando en el tercio rival | el rival al que entra resiste 9 puntos peor la entrada |
+| `skullsplitter` | identidad | legendary | MATCH_START | `injury` (+100) | `tagsRequired: Dirty` | el equipo rival tiene el doble de cuota de lesionarse; quien saltó al campo herido, muere |
+| `marrow_thirst` | zona de inicio | rare | MATCH_START | `injure` (+100) y `severeInjury` (+50) | `tagsRequired: Aggressive` y empezar en el tercio rival | el portador lesiona más y las lesiones del rival tienden a graves |
+| `second_wound` | estado del partido | rare | INJURY | `severeInjury` (+15) | solo mientras no van ganando | al lesionarse un rival, sus lesiones tienden a graves; remata al que ya estaba tocado |
+| `iron_studs` | geometría | rare | TACKLE | `tackleEvasion` (−100) | solo presionando en el tercio rival | el rival al que entra resiste la mitad de bien la entrada |
 
-Los valores respetan el escalón de su canal (ADR 0035): `injury`/`injure` escalón 1, `severeInjury` y
-`tackleEvasion` escalón 3.
+Los valores son **porcentajes de cuota** de la escala única de la ADR 0050 P1 (`±15, ±30, ±50, ±100`), la
+misma en todos los canales; la tabla de escalones por canal de la ADR 0035 queda retirada.
 
 **Reparto en rivales** (ADR 0046: escasos y tardíos). Acto 1: ninguno. Acto 2: `act2_orc_warband`,
 `act2_undead_deadwalkers` y `act2_dwarf_shieldwall` con `marrow_thirst`, `act2_human_tacticians` con
