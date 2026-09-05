@@ -137,3 +137,5 @@ Medidas y desglose en `docs/fase2-diseno.md` §19.
 | AB-H | **La plantilla `modifyProbabilityPaired` no la usa ningún perk.** Tras la corrección de §16.4 el tratamiento por par solo existe en el canal `pass`, y los seis perks con efecto sobre el vinculado usan `intercept`, `tackle`, `dribble` o `shotOnTarget` | Se conserva porque la mecánica existe (ADR 0021) y es el ejemplo con el que la propia ADR la introduce. **Abierta**: o el catálogo gana un perk de pase por par —que es el caso que la ADR describe— o la plantilla y la rama del motor se retiran |
 
 | R-14 | RF-020, RF-011 | La plantilla pasa de "mínimo 7, máximo 12" a **base 10 ampliable a 12** mediante un **nodo de inscripción** de coste creciente, que es una decisión de ruta. Se añade ese tipo de nodo a RF-011 | ADR 0046 |
+
+| R-15 | RF-128 | Las divisiones añaden como palanca el **oro inicial decreciente** (10 · 8 · 5 · 2) junto al encarecimiento del mercado, además de las reglas que ya listaba la tabla | ADR 0044 |

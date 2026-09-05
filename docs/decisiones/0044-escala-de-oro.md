@@ -41,6 +41,23 @@ El mismo volcado enseña un segundo desajuste que no se arregla escalando: un ob
 | Reroll | 2, +1 por uso |
 | Oro ganado en una run completa | ~100 |
 
+## El oro inicial es la primera palanca de dificultad por división
+
+El club empieza con **poco oro: el justo para comprar un artículo común en la primera tienda**. Y esa cifra **baja conforme se sube de división** (RF-128), como palanca de dificultad junto al encarecimiento del mercado.
+
+| División | Oro inicial | Qué permite en la primera tienda |
+|---|---|---|
+| Tercera | 10 | un común con holgura |
+| Segunda | 8 | un común justo |
+| Primera | 5 | solo lo más barato |
+| Mundial | 2 | nada: la primera tienda es un escaparate |
+
+**Es una palanca pequeña en números y grande en ritmo.** Diez de oro sobre los ~100 que se ganan en una run es un 10% del total: por sí sola no decide una partida. Lo que decide es **el tono del arranque** — si tu primera visita al mercado es una compra o una lista de cosas que no puedes pagar. En Mundial, empezar mirando sin tocar prepara al jugador para el resto de la división.
+
+Por eso se combina con las otras palancas de RF-128 (precios más altos, rivales mejores, sin canteranos gratis) en vez de sustituirlas.
+
+**Riesgo a vigilar**: en las divisiones altas, empezar sin oro **y** con precios más caros puede sacar al acto 1 de su función de taller (ADR 0043). La curva del acto 1 debe seguir cumpliéndose en todas las divisiones; si no, el encarecimiento tiene que empezar en el acto 2.
+
 ## Consecuencias
 
 - `data/economy/` se reescribe entero con la escala nueva, y la fórmula de precio de la ADR 0038 redondea a entero con mínimo 1.
