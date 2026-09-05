@@ -14,6 +14,7 @@
 | [entorno.md](entorno.md) | Puesta a punto de la máquina (WSL + Windows) |
 | [fase0-diseno.md](fase0-diseno.md) | Especificación de implementación de la fase 0: tipos, firmas, fórmulas, paquetes de trabajo |
 | [estilo-descripciones.md](estilo-descripciones.md) | Cómo se redacta lo que el jugador lee: una frase, efecto observable, sin implementación; convención de porcentajes |
+| [analisis-formulas-roguelike.md](analisis-formulas-roguelike.md) | Comparación de fórmulas con Brogue, DCSS, Shattered PD y CDDA, y propuesta de ajuste |
 | [curva-de-dificultad.md](curva-de-dificultad.md) | Investigación sobre dificultad, azar y retención en roguelikes, aplicada a Underleague |
 | [referencia-rune-dice.md](referencia-rune-dice.md) | Comparación con Rune Dice: qué coincide, qué falta y qué reorienta |
 | [perks-ejes.md](perks-ejes.md) | Taxonomía de ejes de activación de los perks y distribución objetivo del catálogo |
