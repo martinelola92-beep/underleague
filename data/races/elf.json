@@ -13,7 +13,14 @@
   "individualDeviation": 8,
   "traitWeights": { "Aggressive": 3, "Fast": 16, "Scorer": 12, "LongShot": 14, "Cerebral": 20, "Dirty": 4, "Resilient": 4, "Coward": 12, "Leader": 8, "Lazy": 7 },
   "names": {
-    "first": ["Aelar", "Belanor", "Caelum", "Daeris", "Elandor", "Faelar", "Galion", "Haldir", "Ithil", "Laeron", "Maeron", "Naerys", "Orophin", "Rhovan", "Sindar", "Thalion", "Vaelis", "Ysolde", "Aerin", "Celebrin", "Elowen", "Faelwen", "Ilphra", "Lorien", "Miriel", "Nimue", "Saelis", "Tauriel", "Ylwen", "Zephyra"],
-    "last": ["Hojaplata", "Vientoclaro", "Lunargenta", "Ramaluz", "Sombraverde", "Cantoalba", "Espinafina", "Brisadorada", "Rocíogris", "Fuegoquieto"]
+    "_doc": "Nombres de pila de fantasía: misma lista en los dos idiomas (docs/estilo-descripciones.md). Apellidos parlantes: equivalente del mismo registro, no traducción literal (Hojaplata -> Silverleaf).",
+    "first": {
+      "es": ["Aelar", "Belanor", "Caelum", "Daeris", "Elandor", "Faelar", "Galion", "Haldir", "Ithil", "Laeron", "Maeron", "Naerys", "Orophin", "Rhovan", "Sindar", "Thalion", "Vaelis", "Ysolde", "Aerin", "Celebrin", "Elowen", "Faelwen", "Ilphra", "Lorien", "Miriel", "Nimue", "Saelis", "Tauriel", "Ylwen", "Zephyra"],
+      "en": ["Aelar", "Belanor", "Caelum", "Daeris", "Elandor", "Faelar", "Galion", "Haldir", "Ithil", "Laeron", "Maeron", "Naerys", "Orophin", "Rhovan", "Sindar", "Thalion", "Vaelis", "Ysolde", "Aerin", "Celebrin", "Elowen", "Faelwen", "Ilphra", "Lorien", "Miriel", "Nimue", "Saelis", "Tauriel", "Ylwen", "Zephyra"]
+    },
+    "last": {
+      "es": ["Hojaplata", "Vientoclaro", "Lunargenta", "Ramaluz", "Sombraverde", "Cantoalba", "Espinafina", "Brisadorada", "Rocíogris", "Fuegoquieto"],
+      "en": ["Silverleaf", "Clearwind", "Moonsilver", "Brightbough", "Greenshade", "Dawnsong", "Finethorn", "Goldenbreeze", "Greydew", "Stillfire"]
+    }
   }
 }

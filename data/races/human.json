@@ -13,7 +13,14 @@
   "individualDeviation": 8,
   "traitWeights": { "Aggressive": 10, "Fast": 10, "Scorer": 10, "LongShot": 10, "Cerebral": 12, "Dirty": 8, "Resilient": 10, "Coward": 8, "Leader": 12, "Lazy": 10 },
   "names": {
-    "first": ["Aldo", "Bruno", "Ciro", "Dario", "Elio", "Fabio", "Gino", "Hugo", "Ivo", "Jano", "Lino", "Marco", "Nilo", "Otto", "Pino", "Remo", "Sandro", "Tino", "Ugo", "Vito", "Ada", "Bea", "Cloe", "Dora", "Elsa", "Fina", "Gala", "Ines", "Juno", "Lía", "Mara", "Nora", "Olga", "Pola", "Rita", "Sara", "Tea", "Uma", "Vera", "Zoe"],
-    "last": ["Abad", "Bravo", "Cano", "Duque", "Esteve", "Ferrer", "Gil", "Haro", "Ibarra", "Juez", "Lara", "Mora", "Nieto", "Ortiz", "Prieto", "Quiles", "Rubio", "Soler", "Tovar", "Ureña", "Vidal", "Yuste", "Zamora"]
+    "_doc": "Los humanos son la raza de referencia y usan nombres reales, así que llevan lista propia por idioma en vez del par fantasía/apellido-parlante de las demás razas (docs/estilo-descripciones.md, decisión fase Q): nombres y apellidos españoles corrientes para 'es', ingleses corrientes para 'en', sin relación de traducción entre ambos, solo el mismo registro de normalidad. Mismo número de entradas en los dos idiomas.",
+    "first": {
+      "es": ["Aldo", "Bruno", "Ciro", "Dario", "Elio", "Fabio", "Gino", "Hugo", "Ivo", "Jano", "Lino", "Marco", "Nilo", "Otto", "Pino", "Remo", "Sandro", "Tino", "Ugo", "Vito", "Ada", "Bea", "Cloe", "Dora", "Elsa", "Fina", "Gala", "Ines", "Juno", "Lía", "Mara", "Nora", "Olga", "Pola", "Rita", "Sara", "Tea", "Uma", "Vera", "Zoe"],
+      "en": ["Alan", "Brett", "Cole", "Derek", "Eddie", "Frank", "Greg", "Hank", "Ian", "Jack", "Leo", "Mark", "Neil", "Otis", "Perry", "Ross", "Sam", "Ted", "Wade", "Vince", "Amy", "Beth", "Cleo", "Dawn", "Edie", "Fay", "Gwen", "Ivy", "June", "Lily", "Maud", "Nora", "Olive", "Polly", "Rose", "Sadie", "Tess", "Uma", "Vera", "Zoe"]
+    },
+    "last": {
+      "es": ["Abad", "Bravo", "Cano", "Duque", "Esteve", "Ferrer", "Gil", "Haro", "Ibarra", "Juez", "Lara", "Mora", "Nieto", "Ortiz", "Prieto", "Quiles", "Rubio", "Soler", "Tovar", "Ureña", "Vidal", "Yuste", "Zamora"],
+      "en": ["Adams", "Baker", "Carter", "Dean", "Ellis", "Fisher", "Gray", "Hardy", "Irving", "Jennings", "Lowe", "Marsh", "Nash", "Osborne", "Price", "Quinn", "Reed", "Sharp", "Turner", "Underwood", "Vance", "Yates", "Zimmer"]
+    }
   }
 }

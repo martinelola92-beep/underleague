@@ -44,6 +44,8 @@ public static class DataLoader
         string? tuningContent = null;
         string? stylesPath = null;
         string? stylesContent = null;
+        string? arcsPath = null;
+        string? arcsContent = null;
 
         foreach (var path in files.Keys.OrderBy(p => p, StringComparer.Ordinal))
         {
@@ -71,6 +73,11 @@ public static class DataLoader
             {
                 tuningPath = path;
                 tuningContent = content;
+            }
+            else if (path == "build/arcs.json")
+            {
+                arcsPath = path;
+                arcsContent = content;
             }
             else if (path.StartsWith("perks/", StringComparison.Ordinal))
             {
@@ -109,6 +116,13 @@ public static class DataLoader
         var styles = ParseStyles(stylesPath!, stylesContent);
 
         var localization = new Localization(localizationFiles.Select(f => ParseTemplates(f.Path, f.Content)));
+
+        // Los arcos de build (ADR 0051) se cargan ANTES que los perks: sin la lista de líneas no se puede
+        // decir si el 'family' de un perk es una línea del catálogo o una errata. El fichero es opcional
+        // —un catálogo sin líneas ni profundidad sigue siendo válido, es el de antes de la ADR— pero un
+        // perk que declare línea sin él es un error explícito, no un perk con una familia fantasma.
+        var arcs = arcsContent is null ? BuildArcs.None : BuildArcs.Parse(arcsPath!, arcsContent);
+
         var perks = new List<PerkDefinition>();
         var seenIds = new HashSet<string>(StringComparer.Ordinal);
         foreach (var (path, content) in perkFiles)
@@ -119,13 +133,23 @@ public static class DataLoader
                 throw new DataException(path, "$.id", $"id de perk repetido en el catálogo: '{perk.Id}'");
             }
 
-            // Toda condición del catálogo tiene que ser describible en todos los idiomas cargados
-            // (RT-035): un texto que falta es error de carga, nunca una descripción a medias en pantalla.
-            DescriptionGenerator.EnsureDescribable(perk, localization, path, "$");
             perks.Add(perk);
         }
 
-        return new Catalog(races, styles, traits, ai, tuning, new PerkCatalog(perks), localization);
+        // Las dependencias entre perks solo se pueden comprobar con el catálogo entero delante.
+        PerkLoader.ValidateArcs(perks, arcs);
+        var catalog = new PerkCatalog(perks, arcs);
+
+        // Toda condición del catálogo tiene que ser describible en todos los idiomas cargados (RT-035):
+        // un texto que falta es error de carga, nunca una descripción a medias en pantalla. Va después de
+        // construir el catálogo porque la descripción de un maestro nombra lo que exige y lo que cierra, y
+        // eso son otros perks (ADR 0051).
+        foreach (var perk in perks)
+        {
+            DescriptionGenerator.EnsureDescribable(perk, localization, "perks/" + perk.Id + ".json", "$", catalog);
+        }
+
+        return new Catalog(races, styles, traits, ai, tuning, catalog, localization);
     }
 
     // ---- perks/*.json ----
@@ -144,6 +168,10 @@ public static class DataLoader
         // Secciones del rediseño espacial (paquete S): relaciones de vínculo (ADR 0021), inmunidades y
         // estadísticas de las funciones de condición nuevas (fase1b-diseno.md §1.5).
         "links", "immunities", "startZones", "startFlanks", "stats",
+
+        // Nombres visibles de las líneas del catálogo (ADR 0051): la descripción de un maestro dice qué
+        // línea exige y cuál cierra, y esas dos cosas son texto que ve el jugador (RT-073).
+        "families",
     };
 
     private static DescriptionTemplates ParseTemplates(string file, string content)
@@ -252,8 +280,8 @@ public static class DataLoader
 
         var namesNode = root.Prop("names");
         namesNode.EnsureKnownKeys("first", "last");
-        var firstNames = namesNode.Prop("first").EnumerateArray().Select(j => j.AsString()).ToList();
-        var lastNames = namesNode.Prop("last").EnumerateArray().Select(j => j.AsString()).ToList();
+        var firstNames = ParseLocalizedNameList(file, namesNode.Prop("first"));
+        var lastNames = ParseLocalizedNameList(file, namesNode.Prop("last"));
 
         return new RaceDefinition(
             raceId, name, speciesTag, styleTagWeights, launch, cellsOccupied, bodyRadius, discipline,
@@ -299,6 +327,26 @@ public static class DataLoader
     {
         node.EnsureKnownKeys("es", "en");
         return new LocalizedName(node.Prop("es").AsString(), node.Prop("en").AsString());
+    }
+
+    /// <summary>
+    /// data/races/*.json.names.first/last: lista de nombres con variante es/en (RF-020b, RT-073). Las
+    /// dos listas deben tener el mismo número de entradas porque Sim.Generation.NameGenerator sortea un
+    /// índice, no un idioma (docs/estilo-descripciones.md "Nombres propios"): si difirieran, el mismo
+    /// índice señalaría a un jugador distinto según el idioma activo. Dato inválido = error explícito
+    /// (RT-032), nunca un truncado o un relleno silencioso.
+    /// </summary>
+    private static LocalizedNameList ParseLocalizedNameList(string file, Json node)
+    {
+        node.EnsureKnownKeys("es", "en");
+        var es = node.Prop("es").EnumerateArray().Select(j => j.AsString()).ToList();
+        var en = node.Prop("en").EnumerateArray().Select(j => j.AsString()).ToList();
+        if (es.Count != en.Count)
+        {
+            throw new DataException(file, node.Path, $"'es' tiene {es.Count} entradas y 'en' tiene {en.Count}: deben coincidir");
+        }
+
+        return new LocalizedNameList(es, en);
     }
 
     // ---- tags/styles.json ----
@@ -600,7 +648,7 @@ public static class DataLoader
         // resto de este arreglo (revisión independiente, fase 0).
         root.EnsureKnownKeys(
             "regulationTicks", "goldenGoalMaxTicks", "decisionIntervalTicks", "transitionTicks",
-            "assistWindowTicks",
+            "assistWindowTicks", "resolution",
             "movement", "ball", "states", "pass", "dribble", "shot", "save", "tackle", "injury", "referee",
             "block", "restart", "generation", "bodies", "actionZone", "progression",
             "probabilityChannels");
@@ -611,6 +659,7 @@ public static class DataLoader
             root.Prop("decisionIntervalTicks").AsInt(),
             root.Prop("transitionTicks").AsInt(),
             root.Prop("assistWindowTicks").AsInt(),
+            ParseResolution(root.Prop("resolution")),
             ParseMovement(root.Prop("movement")),
             ParseBall(root.Prop("ball")),
             ParseStates(root.Prop("states")),
@@ -688,6 +737,11 @@ public static class DataLoader
             node.Prop("DribbleDuelCooldownTicks").AsInt(),
             node.Prop("TackleCooldownTicks").AsInt());
     }
+
+    /// <summary>tuning.resolution: el suelo y el techo únicos de la ADR 0050 P4.</summary>
+    private static ResolutionTuning ParseResolution(Json node) => new(
+        node.Prop("probabilityFloor").AsInt(),
+        node.Prop("probabilityCeiling").AsInt());
 
     private static PassTuning ParsePass(Json node)
     {

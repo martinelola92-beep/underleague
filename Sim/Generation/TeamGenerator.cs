@@ -109,10 +109,14 @@ public static class TeamGenerator
         int quality,
         StyleTag? forcedStyle)
     {
+        // Sim aún no lleva el idioma activo como parámetro (RT-012): PlayerDefinition.Name es un string
+        // plano que atraviesa Sim.Engine, así que aquí se fija a la variante es. NameGenerator ya guarda
+        // las dos variantes con el mismo índice (RT-073); mostrar la en al jugador es trabajo pendiente
+        // de quien conecte el idioma en Sim.Engine/Game.
         string name;
         do
         {
-            name = nameGenerator.Next(ref rng);
+            name = nameGenerator.Next(ref rng).Es;
         }
         while (!usedNames.Add(name));
 

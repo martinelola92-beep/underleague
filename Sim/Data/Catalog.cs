@@ -8,6 +8,21 @@ namespace Underleague.Sim.Data;
 public sealed record LocalizedName(string Es, string En);
 
 /// <summary>
+/// Lista de nombres de un generador de raza (data/races/*.json.names.first/last, RF-020b), con la
+/// misma cantidad de entradas en los dos idiomas: <see cref="Sim.Generation.NameGenerator"/> sortea un
+/// <b>índice</b>, nunca un idioma, así que ese índice tiene que señalar al mismo jugador en <see cref="Es"/>
+/// y en <see cref="En"/> (RT-073, docs/estilo-descripciones.md "Nombres propios"). Un nombre de pila de
+/// fantasía repite la misma lista en los dos idiomas; un apellido parlante lleva el equivalente del mismo
+/// registro, nunca una traducción literal. DataLoader rechaza cualquier fichero donde <c>Es.Count</c> y
+/// <c>En.Count</c> difieran.
+/// </summary>
+public sealed record LocalizedNameList(IReadOnlyList<string> Es, IReadOnlyList<string> En)
+{
+    /// <summary>Número de entradas, igual en los dos idiomas (invariante comprobado por DataLoader).</summary>
+    public int Count => Es.Count;
+}
+
+/// <summary>
 /// Definición de una raza jugable (data/races/*.json, fase1b-diseno.md §1.1). <c>SpeciesTag</c> es la
 /// etiqueta fija de especie (ADR 0024); <c>StyleTagWeights</c> es la distribución de estilo individual
 /// que Sim.Generation.PlayerGenerator sortea por jugador. <c>BodyRadius</c> en centésimas de casilla
@@ -28,8 +43,8 @@ public sealed record RaceDefinition(
     LocalizedName Description,
     int IndividualDeviation,
     IReadOnlyList<(Trait Trait, int Weight)> TraitWeights,
-    IReadOnlyList<string> FirstNames,
-    IReadOnlyList<string> LastNames);
+    LocalizedNameList FirstNames,
+    LocalizedNameList LastNames);
 
 /// <summary>
 /// Definición de una etiqueta de estilo (data/tags/styles.json, fase1b-diseno.md §1.2, ADR 0024).
@@ -277,6 +292,14 @@ public sealed record BodiesTuning(
     int MassRadiusWeight,
     int TacklePushMultiplier);
 
+/// <summary>
+/// Suelo y techo únicos de toda probabilidad de <b>resolución del balón</b> (ADR 0050 P4), en base
+/// 10.000. Sustituyen a los límites ad hoc por canal: el 500-9800 del pase, el 5-95% de la parada y la
+/// ausencia de límite en regate, entrada, intercepción, bloqueo y tiro a puerta. No alcanzan a los
+/// sucesos raros —falta, tarjeta, penalti, lesión y muerte—: ver el <c>_doc</c> del dato.
+/// </summary>
+public sealed record ResolutionTuning(int ProbabilityFloor, int ProbabilityCeiling);
+
 /// <summary>tuning.movement.</summary>
 public sealed record MovementTuning(int BaseCellsPerTickMilli, int SpeedCellsPerTickMilliPer99, int DribbleSpeedPercent, int FatigueStartTick, int FatigueMaxSlowPercent);
 
@@ -381,6 +404,7 @@ public sealed record Tuning(
     int DecisionIntervalTicks,
     int TransitionTicks,
     int AssistWindowTicks,
+    ResolutionTuning Resolution,
     MovementTuning Movement,
     BallTuning Ball,
     StatesTuning States,

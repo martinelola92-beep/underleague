@@ -13,7 +13,14 @@
   "individualDeviation": 8,
   "traitWeights": { "Aggressive": 8, "Fast": 4, "Scorer": 8, "LongShot": 10, "Cerebral": 10, "Dirty": 12, "Resilient": 28, "Coward": 2, "Leader": 14, "Lazy": 4 },
   "names": {
-    "first": ["Borin", "Dagnar", "Eldrin", "Fendrel", "Grimnir", "Hjalmar", "Ivarr", "Joric", "Kordan", "Loric", "Magnus", "Norin", "Oskar", "Ragnar", "Skorri", "Thrainn", "Ulfgar", "Varin", "Yorik", "Balder", "Astrid", "Brynja", "Dagny", "Freya", "Gerda", "Helka", "Ingrid", "Jorunn", "Runa", "Sigrun"],
-    "last": ["Barbahierro", "Yunquefirme", "Puñoroca", "Cavaprofundo", "Escudopétreo", "Martillonegro", "Vetaoro", "Golpefrío", "Tallapiedra", "Forjagrís"]
+    "_doc": "Nombres de pila de fantasía: misma lista en los dos idiomas (docs/estilo-descripciones.md). Apellidos parlantes: equivalente del mismo registro, no traducción literal (Barbahierro -> Ironbeard).",
+    "first": {
+      "es": ["Borin", "Dagnar", "Eldrin", "Fendrel", "Grimnir", "Hjalmar", "Ivarr", "Joric", "Kordan", "Loric", "Magnus", "Norin", "Oskar", "Ragnar", "Skorri", "Thrainn", "Ulfgar", "Varin", "Yorik", "Balder", "Astrid", "Brynja", "Dagny", "Freya", "Gerda", "Helka", "Ingrid", "Jorunn", "Runa", "Sigrun"],
+      "en": ["Borin", "Dagnar", "Eldrin", "Fendrel", "Grimnir", "Hjalmar", "Ivarr", "Joric", "Kordan", "Loric", "Magnus", "Norin", "Oskar", "Ragnar", "Skorri", "Thrainn", "Ulfgar", "Varin", "Yorik", "Balder", "Astrid", "Brynja", "Dagny", "Freya", "Gerda", "Helka", "Ingrid", "Jorunn", "Runa", "Sigrun"]
+    },
+    "last": {
+      "es": ["Barbahierro", "Yunquefirme", "Puñoroca", "Cavaprofundo", "Escudopétreo", "Martillonegro", "Vetaoro", "Golpefrío", "Tallapiedra", "Forjagrís"],
+      "en": ["Ironbeard", "Stoutanvil", "Stonefist", "Deepdelver", "Stoneshield", "Blackhammer", "Goldvein", "Coldstrike", "Stonecarver", "Greyforge"]
+    }
   }
 }

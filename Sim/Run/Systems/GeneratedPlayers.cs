@@ -102,7 +102,9 @@ public static class GeneratedPlayers
     {
         var raceDefinition = catalog.Race(race);
         var nameGenerator = new NameGenerator(raceDefinition);
-        string name = nameGenerator.Next(ref rng);
+        // Ver TeamGenerator.GeneratePlayer: PlayerDefinition.Name es un string plano hasta que Sim.Engine
+        // lleve el idioma activo, así que aquí se fija a la variante es (RT-073).
+        string name = nameGenerator.Next(ref rng).Es;
         var position = rng.Pick(AllPositions);
         var definition = PlayerGenerator.Generate(ref rng, catalog, raceDefinition, position, rarity, level, id: -1, name, quality);
 

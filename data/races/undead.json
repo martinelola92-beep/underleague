@@ -13,7 +13,14 @@
   "individualDeviation": 8,
   "traitWeights": { "Aggressive": 6, "Fast": 4, "Scorer": 6, "LongShot": 8, "Cerebral": 14, "Dirty": 8, "Resilient": 24, "Coward": 2, "Leader": 10, "Lazy": 18 },
   "names": {
-    "first": ["Malachar", "Vex", "Orin", "Cael", "Draven", "Malric", "Sever", "Thane", "Cyrus", "Doran", "Ezren", "Grimm", "Ilan", "Kessel", "Loth", "Mordan", "Nex", "Osric", "Ravik", "Zael", "Ashka", "Corvina", "Elowyn", "Isolde", "Lyra", "Morwen", "Neris", "Ravena", "Selis", "Vesper"],
-    "last": ["Huesoseco", "Sinaliento", "Cenizagrís", "Tumbafría", "Vozmuerta", "Osamenta", "Nochehueca", "Polvorento", "Sudariofrío", "Cripta"]
+    "_doc": "Nombres de pila de fantasía: misma lista en los dos idiomas (docs/estilo-descripciones.md). Apellidos parlantes: equivalente del mismo registro, no traducción literal (Huesoseco -> Drybone).",
+    "first": {
+      "es": ["Malachar", "Vex", "Orin", "Cael", "Draven", "Malric", "Sever", "Thane", "Cyrus", "Doran", "Ezren", "Grimm", "Ilan", "Kessel", "Loth", "Mordan", "Nex", "Osric", "Ravik", "Zael", "Ashka", "Corvina", "Elowyn", "Isolde", "Lyra", "Morwen", "Neris", "Ravena", "Selis", "Vesper"],
+      "en": ["Malachar", "Vex", "Orin", "Cael", "Draven", "Malric", "Sever", "Thane", "Cyrus", "Doran", "Ezren", "Grimm", "Ilan", "Kessel", "Loth", "Mordan", "Nex", "Osric", "Ravik", "Zael", "Ashka", "Corvina", "Elowyn", "Isolde", "Lyra", "Morwen", "Neris", "Ravena", "Selis", "Vesper"]
+    },
+    "last": {
+      "es": ["Huesoseco", "Sinaliento", "Cenizagrís", "Tumbafría", "Vozmuerta", "Osamenta", "Nochehueca", "Polvorento", "Sudariofrío", "Cripta"],
+      "en": ["Drybone", "Breathless", "Ashgrey", "Coldgrave", "Deadvoice", "Boneyard", "Hollownight", "Dustworn", "Coldshroud", "Crypt"]
+    }
   }
 }

@@ -94,12 +94,23 @@
     },
     "names": {
       "type": "object",
+      "description": "Generador de nombres de la raza (RF-020b). 'first' y 'last' llevan variante es/en (RT-073, docs/estilo-descripciones.md 'Nombres propios'): un nombre de pila de fantasía repite la misma lista en los dos idiomas porque no significa nada en ninguno; un apellido parlante lleva el equivalente del mismo registro, nunca una traducción literal. DataLoader comprueba además que 'es' y 'en' tienen el mismo número de entradas en 'first' y en 'last' (el índice sorteado tiene que señalar al mismo jugador en los dos idiomas).",
       "properties": {
         "_doc": { "type": "string" },
-        "first": { "type": "array", "items": { "type": "string", "minLength": 1 }, "minItems": 1 },
-        "last": { "type": "array", "items": { "type": "string", "minLength": 1 }, "minItems": 1 }
+        "first": { "$ref": "#/$defs/localizedNameList" },
+        "last": { "$ref": "#/$defs/localizedNameList" }
       },
       "required": ["first", "last"],
+      "additionalProperties": false
+    },
+    "localizedNameList": {
+      "type": "object",
+      "properties": {
+        "_doc": { "type": "string" },
+        "es": { "type": "array", "items": { "type": "string", "minLength": 1 }, "minItems": 1 },
+        "en": { "type": "array", "items": { "type": "string", "minLength": 1 }, "minItems": 1 }
+      },
+      "required": ["es", "en"],
       "additionalProperties": false
     }
   }

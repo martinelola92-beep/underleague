@@ -13,7 +13,14 @@
   "individualDeviation": 9,
   "traitWeights": { "Aggressive": 25, "Fast": 6, "Scorer": 8, "LongShot": 6, "Cerebral": 3, "Dirty": 18, "Resilient": 14, "Coward": 2, "Leader": 8, "Lazy": 10 },
   "names": {
-    "first": ["Grok", "Urzag", "Morg", "Thrak", "Bolg", "Gashk", "Ruk", "Zog", "Drog", "Krum", "Snaga", "Urk", "Ghash", "Lurtz", "Muzgash", "Naz", "Ogrim", "Rukh", "Shagrat", "Yagul", "Brakka", "Gorza", "Mazka", "Ulga", "Zurka", "Hrakka", "Nargla", "Torka"],
-    "last": ["Rompehuesos", "Comecráneos", "Piedraroja", "Mascadientes", "Tragaclavos", "Matabueyes", "Partecuellos", "Muerdehierro", "Sangrefría", "Pisacráneos", "Quiebraespinas", "Zampalobos"]
+    "_doc": "Nombres de pila de fantasía: misma lista en los dos idiomas (docs/estilo-descripciones.md). Apellidos parlantes: equivalente del mismo registro, no traducción literal (Rompehuesos -> Bonebreaker).",
+    "first": {
+      "es": ["Grok", "Urzag", "Morg", "Thrak", "Bolg", "Gashk", "Ruk", "Zog", "Drog", "Krum", "Snaga", "Urk", "Ghash", "Lurtz", "Muzgash", "Naz", "Ogrim", "Rukh", "Shagrat", "Yagul", "Brakka", "Gorza", "Mazka", "Ulga", "Zurka", "Hrakka", "Nargla", "Torka"],
+      "en": ["Grok", "Urzag", "Morg", "Thrak", "Bolg", "Gashk", "Ruk", "Zog", "Drog", "Krum", "Snaga", "Urk", "Ghash", "Lurtz", "Muzgash", "Naz", "Ogrim", "Rukh", "Shagrat", "Yagul", "Brakka", "Gorza", "Mazka", "Ulga", "Zurka", "Hrakka", "Nargla", "Torka"]
+    },
+    "last": {
+      "es": ["Rompehuesos", "Comecráneos", "Piedraroja", "Mascadientes", "Tragaclavos", "Matabueyes", "Partecuellos", "Muerdehierro", "Sangrefría", "Pisacráneos", "Quiebraespinas", "Zampalobos"],
+      "en": ["Bonebreaker", "Skulleater", "Redstone", "Toothgrinder", "Spikeswallower", "Oxslayer", "Neckbreaker", "Ironbiter", "Coldblood", "Skullstomper", "Spinecracker", "Wolfeater"]
+    }
   }
 }
