@@ -11,6 +11,8 @@
 | [plan-fases.md](plan-fases.md) | Fases 0-4 con criterios de salida y estado actual |
 | [pendientes.md](pendientes.md) | Decisiones abiertas e inconsistencias del documento de requisitos |
 | [decisiones/](decisiones/README.md) | Registro de decisiones de arquitectura (ADR) |
+| [ui-run-minima.md](ui-run-minima.md) | Esqueleto jugable: qué pantallas hacen falta para jugar una run entera |
+| [ui-equipo.md](ui-equipo.md) | Decisiones de la pantalla de Equipo, de las que derivan las demás |
 | [entorno.md](entorno.md) | Puesta a punto de la máquina (WSL + Windows) |
 | [fase0-diseno.md](fase0-diseno.md) | Especificación de implementación de la fase 0: tipos, firmas, fórmulas, paquetes de trabajo |
 | [estilo-descripciones.md](estilo-descripciones.md) | Cómo se redacta lo que el jugador lee: una frase, efecto observable, sin implementación; convención de porcentajes |
