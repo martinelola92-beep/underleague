@@ -42,7 +42,8 @@ Cuándo escribir un ADR: cambio de librería o stack, frontera entre proyectos, 
 | [0042](0042-el-precio-eficiente-anula-la-decision.md) | Un mercado perfectamente tasado no premia el criterio: la ADR 0037 y la 0038 se anulan entre sí | **Propuesta: decisión del revisor** |
 | [0043](0043-trampolin-y-desgaste-por-acto.md) | Cada acto tiene su función: taller, gestión y examen; el jefe es trampolín además de barrera | Aceptada. **Revisa la curva de la ADR 0033** |
 | [0044](0044-escala-de-oro.md) | El oro se cuenta en decenas: la tensión económica exige que el jugador pueda hacer la cuenta | Aceptada |
-| [0045](0045-por-que-el-desgaste-no-muerde.md) | El desgaste no mata porque siempre hay banquillo: plantilla más corta y perks letales | **Propuesta: decisión del revisor** |
+| [0045](0045-por-que-el-desgaste-no-muerde.md) | El desgaste no mata porque siempre hay banquillo: plantilla más corta y perks letales | Aceptada, resuelta en la 0046 |
+| [0046](0046-plantilla-corta-nodo-de-inscripcion-y-perks-letales.md) | Plantilla de diez, nodo de inscripción con coste creciente y perks letales escasos y telegrafiados | Aceptada. **Modifica RF-020 y RF-011** |
 
 El hueco del 0011 corresponde a una decisión sobre el radio de adyacencia que quedó absorbida por la 0021 antes de aceptarse.
 | [0012](0012-buildswindifferently-normalizada.md) | `buildsWinDifferently` normalizada contra la referencia de la raza | **Propuesta: decisión del revisor** |
