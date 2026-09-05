@@ -89,6 +89,7 @@ Todos con esquema JSON en `/data/schemas/` y validados por `tools/DataValidator`
 | `data/economy/` | Oro por acto, multiplicadores, precios, objetivos de partido excelente | RF-114g..k |
 | `data/balance/` | Configuraciones de equipos de referencia para `/Balance` | RT-052 |
 | `data/l10n/` | Plantillas de descripción y textos, es/en | RT-035, RT-073 |
+| `data/build/arcs.json` | Líneas del catálogo de perks y curva de profundidad nativa del pool | ADR 0051 |
 
 ## Formato de perk (RT-033)
 
@@ -116,6 +117,8 @@ Todos con esquema JSON en `/data/schemas/` y validados por `tools/DataValidator`
 - `effect.duration` (duración): `instant`, `play`, `match`, `run`.
 - `limit.per` (límite por): `play` (jugada), `match` (partido), `mob` (turba), `run`. (El ejemplo original decía `parte`; no existen partes, RF-055.)
 - `lethal` (letal): `true` obliga a destacar el perk en el informe de ojeo (RF-013) y es la única vía, junto a lesión grave sin tratar, de muerte (RF-093).
+- `minAct` (acto nativo) y `frequency` (frecuencia): profundidad nativa (ADR 0051). `minAct` es el acto a partir del cual el perk empieza a aparecer en el pool de recompensas y de mercado; por debajo solo sale **fuera de profundidad**, con el peso pequeño de `data/build/arcs.json`. `frequency` es el *commonness* de Angband (100 = lo normal) y multiplica al peso por valor de la ADR 0038 y a la curva de profundidad. Los objetos de `data/items/` declaran los dos campos con el mismo significado.
+- `family` (línea), `requiresPerks` y `blocksPerks`: arcos de build (ADR 0051). `family` es la línea del catálogo a la que pertenece el perk, de las declaradas en `data/build/arcs.json`; `null` = perk suelto, que es lo normal. Un perk **maestro** declara además `requiresPerks: { "family": "<línea>", "count": 2|3 }` —exige que la run lleve ya ese número de perks **distintos** de esa línea para poder cobrarlo— y `blocksPerks: { "families": [...], "perks": [...] }`, que cierra esas líneas y esos perks de forma **permanente** en esa run desde el momento en que se acepta. El bloqueo mira hacia adelante: lo que ya se lleva sigue funcionando, porque un perk no se puede retirar (RF-072). El cargador comprueba que las líneas y los perks existen, que ningún maestro es inalcanzable ni forma un ciclo, y que un maestro no sale en el acto 1.
 
 ## Funciones NCalc propias (RT-034)
 

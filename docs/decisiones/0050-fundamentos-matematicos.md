@@ -44,6 +44,8 @@ Toda probabilidad se acota a **2%-98%**, en lugar de los límites ad hoc por can
 
 **P2 y P4 primero, juntos**: son baratos, no cambian el diseño y **mejoran la calidad de todas las mediciones posteriores**. Medir P1 y P3 con menos ruido es lo que hace posible atribuir sus efectos.
 
+**Antes de P1, la ADR 0054**: la banda de `betterTeamWinRate` está a medio punto de su techo y P1 y P3 la romperían por hacer justo lo que se pretende. No es opcional ni se puede dejar para después.
+
 **P1 después, sola**, con su ronda completa de revalidación: RT-056, la curva de puertas y las seis puertas.
 
 **P3 al final**, vigilando la relación de la ADR 0027, que es la que se rompe si se hace mal.
