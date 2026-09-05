@@ -5,9 +5,11 @@
     "en": "Clean Sheet Legacy"
   },
   "rarity": "uncommon",
+  "minAct": 1,
   "kind": "filler",
   "axis": "accumulation",
   "race": null,
+  "family": null,
   "trigger": "SAVE",
   "scope": "actor",
   "links": [],

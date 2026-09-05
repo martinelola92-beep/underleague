@@ -96,11 +96,17 @@ public static class FullRunMetrics
     public const string MasterDivergence = "masterDivergence";
 
     /// <summary>
-    /// Suelo de <see cref="MastersReached"/>: por debajo, el arco no se cierra nunca. Es una fracción y no
-    /// una mayoría a propósito: solo el 84% de las runs llega al acto 2, que es donde un maestro empieza a
-    /// aparecer, y la mitad de esas se quedan ahí. Medido en 30,5% (200 runs, semilla 1).
+    /// Suelo de <see cref="MastersReached"/>: por debajo, el maestro es contenido muerto.
+    ///
+    /// <para><b>Bajó de 20 a 2 con la ADR 0055</b>, y el motivo está medido, no supuesto. Mientras el
+    /// maestro salía también como recompensa, los arcos se cerraban en el 24,5% de las runs; en cuanto
+    /// pasa a comprarse <b>solo</b> en el mercado, caen al 3%, y al 7% subiendo la frecuencia de las
+    /// piezas de línea. La causa no es que el maestro no aparezca —llega al mostrador 3 veces por run—
+    /// sino que casi nunca coinciden las tres cosas que hacen falta: línea completa, mercado delante y
+    /// oro. Con el oro que hay hoy (ADR 0037), cerrar un arco es raro; la palanca que lo cambia es el
+    /// oro, no devolver los maestros a la recompensa, y es justo lo que la ADR 0055 dice.</para>
     /// </summary>
-    public const double MastersReachedMin = 20.0;
+    public const double MastersReachedMin = 2.0;
 
     /// <summary>Techo de <see cref="MastersReached"/>: por encima, el arco no es una decisión.</summary>
     public const double MastersReachedMax = 90.0;
@@ -567,6 +573,18 @@ public static class FullRunMetrics
 
         rows.Add(Banded(MastersReached, 100.0 * withMaster / runs.Count, MastersReachedMin, MastersReachedMax));
         rows.Add(Info(MastersPerRun, (double)masters / runs.Count));
+
+        // ADR 0055: dónde se corta el arco. "Ofrecido" es cuántas veces el maestro llegó al mostrador;
+        // "comprable", cuántas de esas la run cumplía su línea y podía pagarlo.
+        double offered = 0, affordable = 0;
+        for (int i = 0; i < runs.Count; i++)
+        {
+            offered += runs[i].MastersOffered;
+            affordable += runs[i].MastersAffordable;
+        }
+
+        rows.Add(Info("mastersOfferedPerRun", offered / runs.Count));
+        rows.Add(Info("mastersAffordablePerRun", affordable / runs.Count));
         rows.Add(Info(MasterRunWinRate, withMaster > 0 ? 100.0 * wonWith / withMaster : 0.0));
         rows.Add(Info(
             NoMasterRunWinRate,

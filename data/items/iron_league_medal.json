@@ -5,6 +5,7 @@
     "en": "Iron League Medal"
   },
   "archetype": "restricted",
+  "minAct": 2,
   "race": "Human",
   "attributeBonus": {
     "strength": 10,

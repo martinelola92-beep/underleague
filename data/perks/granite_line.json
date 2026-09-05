@@ -1,0 +1,50 @@
+{
+  "_doc": "MAESTRO de La Muralla (ADR 0051). Exige llevar ya dos perks de su linea y cierra La Punteria para el resto de la run: quien se atrinchera renuncia a mejorar el remate. Empuja a los dos equipos a la vez desde el saque inicial y sobre los dos canales que deciden un 0-0 (el robo propio y el remate rival), y por eso pide una linea construida detras.",
+  "id": "granite_line",
+  "name": {
+    "es": "Línea de granito",
+    "en": "Granite Line"
+  },
+  "rarity": "rare",
+  "minAct": 2,
+  "frequency": 300,
+  "kind": "conditional",
+  "axis": "startZone",
+  "race": null,
+  "family": "wall",
+  "requiresPerks": {
+    "family": "wall",
+    "count": 2
+  },
+  "blocksPerks": {
+    "families": ["aim"],
+    "perks": []
+  },
+  "trigger": "MATCH_START",
+  "scope": "actor",
+  "links": [],
+  "condition": "startsIn(owner,'OwnThird')",
+  "effects": [
+    {
+      "type": "modifyProbability",
+      "target": "team",
+      "probability": "tackle",
+      "value": 15,
+      "duration": "match"
+    },
+    {
+      "type": "modifyProbability",
+      "target": "opposingTeam",
+      "probability": "shotOnTarget",
+      "value": -5,
+      "duration": "match"
+    }
+  ],
+  "elseEffects": [],
+  "limit": null,
+  "accumulatesAcrossMatches": false,
+  "lethal": false,
+  "positionOnly": null,
+  "tagsRequired": [],
+  "tagsForbidden": []
+}

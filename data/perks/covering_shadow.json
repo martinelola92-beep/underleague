@@ -5,9 +5,11 @@
     "en": "Covering Shadow"
   },
   "rarity": "uncommon",
+  "minAct": 1,
   "kind": "conditional",
   "axis": "alignment",
   "race": null,
+  "family": null,
   "trigger": "MATCH_START",
   "scope": "actor",
   "links": [

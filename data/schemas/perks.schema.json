@@ -45,6 +45,91 @@
         "proximity"
       ]
     },
+    "frequency": {
+      "description": "ADR 0051 (el 'commonness' de Angband): cuanto sale este perk en el pool comparado con uno normal, en porcentaje. 100 = lo normal. Multiplica al peso por valor de la ADR 0038 y a la curva de profundidad; no sustituye a ninguno de los dos. Un maestro lo sube porque es un OBJETIVO: si aparece con la frecuencia de una pieza de relleno cualquiera, el arco no se cierra nunca.",
+      "type": "integer",
+      "minimum": 10,
+      "maximum": 500
+    },
+    "minAct": {
+      "description": "ADR 0051 (profundidad nativa): acto a partir del cual el perk empieza a aparecer en el pool de recompensas y de mercado. Por debajo de el solo sale FUERA DE PROFUNDIDAD, con el peso pequeno de data/build/arcs.json, y un perk maestro ni siquiera eso. Ausente = 1.",
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 3
+    },
+    "family": {
+      "description": "ADR 0051: linea del catalogo a la que pertenece el perk, de las declaradas en data/build/arcs.json. null = perk suelto, que es lo normal: las lineas son una capa pequena sobre el catalogo, no un arbol de talentos.",
+      "oneOf": [
+        {
+          "type": "null"
+        },
+        {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9_]*$"
+        }
+      ]
+    },
+    "requiresPerks": {
+      "description": "ADR 0051: convierte el perk en MAESTRO. Exige que la run lleve ya 'count' perks DISTINTOS de la linea 'family' para poder cobrarlo. El cargador comprueba que la linea existe, que tiene suficientes miembros no maestros para llegar a ella y que el maestro no exige una linea que el mismo cierra.",
+      "oneOf": [
+        {
+          "type": "null"
+        },
+        {
+          "type": "object",
+          "properties": {
+            "family": {
+              "type": "string",
+              "pattern": "^[a-z][a-z0-9_]*$"
+            },
+            "count": {
+              "type": "integer",
+              "minimum": 2,
+              "maximum": 3
+            }
+          },
+          "required": [
+            "family",
+            "count"
+          ],
+          "additionalProperties": false
+        }
+      ]
+    },
+    "blocksPerks": {
+      "description": "ADR 0051: lineas y perks que este perk cierra de forma PERMANENTE en esa run en cuanto se acepta. Solo un maestro (con requiresPerks) puede declararlo, y el bloqueo se anuncia en la descripcion generada y en la pantalla de recompensa antes de aceptar (RF-012d, RF-072).",
+      "oneOf": [
+        {
+          "type": "null"
+        },
+        {
+          "type": "object",
+          "properties": {
+            "families": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "pattern": "^[a-z][a-z0-9_]*$"
+              },
+              "uniqueItems": true
+            },
+            "perks": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "pattern": "^[a-z][a-z0-9_]*$"
+              },
+              "uniqueItems": true
+            }
+          },
+          "required": [
+            "families",
+            "perks"
+          ],
+          "additionalProperties": false
+        }
+      ]
+    },
     "race": {
       "description": "null = perk universal; id de raza = perk exclusivo (ADR 0023). Es restricción de APARICIÓN en el pool de la run, no de asignación.",
       "oneOf": [

@@ -6,9 +6,12 @@
     "en": "Iron Studs"
   },
   "rarity": "rare",
+  "minAct": 3,
+  "frequency": 150,
   "kind": "ruleBreaker",
   "axis": "geometry",
   "race": null,
+  "family": "butchery",
   "trigger": "TACKLE",
   "scope": "actor",
   "links": [],

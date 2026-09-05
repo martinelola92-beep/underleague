@@ -5,9 +5,12 @@
     "en": "Poacher Instinct"
   },
   "rarity": "uncommon",
+  "minAct": 1,
+  "frequency": 150,
   "kind": "filler",
   "axis": "accumulation",
   "race": null,
+  "family": "aim",
   "trigger": "GOAL",
   "scope": "actor",
   "links": [],

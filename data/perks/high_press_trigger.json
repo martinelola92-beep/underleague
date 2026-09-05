@@ -5,9 +5,11 @@
     "en": "High Press Trigger"
   },
   "rarity": "uncommon",
+  "minAct": 1,
   "kind": "conditional",
   "axis": "geometry",
   "race": null,
+  "family": null,
   "trigger": "PASS_FAILED",
   "scope": "team",
   "links": [],

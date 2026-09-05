@@ -5,9 +5,11 @@
     "en": "Iron Lungs"
   },
   "rarity": "common",
+  "minAct": 1,
   "kind": "filler",
   "axis": "accumulation",
   "race": null,
+  "family": null,
   "trigger": "MATCH_START",
   "scope": "actor",
   "links": [],

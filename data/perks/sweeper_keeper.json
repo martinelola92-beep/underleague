@@ -5,9 +5,11 @@
     "en": "Sweeper Keeper"
   },
   "rarity": "common",
+  "minAct": 1,
   "kind": "filler",
   "axis": "geometry",
   "race": null,
+  "family": null,
   "trigger": "RECOVERY",
   "scope": "actor",
   "links": [],

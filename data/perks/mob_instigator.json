@@ -5,9 +5,11 @@
     "en": "Mob Instigator"
   },
   "rarity": "rare",
+  "minAct": 2,
   "kind": "ruleBreaker",
   "axis": "matchState",
   "race": null,
+  "family": null,
   "trigger": "FOUL",
   "scope": "team",
   "links": [],

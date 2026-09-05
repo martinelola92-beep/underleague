@@ -119,6 +119,9 @@ Se añaden a `summary.csv` cuando el sistema correspondiente existe:
 | Cada raza sostiene 3 builds viables distintas | RF-032 | Tres configuraciones con tasa 30-70% y perks mayoritariamente distintos | 2-3 |
 | Distribución del catálogo de perks | RF-069 | 60/30/10 ±5 puntos | 1+ |
 | Perks que acumulan entre partidos | RF-070 | >= 15 en el catálogo de lanzamiento. **Cumplido**: 15 desde el paquete Z | 2+ |
+| Arcos de build cerrados por run | ADR 0051 | Una política que persigue un maestro llega a cerrar un arco en una fracción razonable de las runs. **Implementada** en `FullRunMetrics.MastersReached`; medido **5,5%** desde que el maestro solo se compra (ADR 0055), con la banda bajada a >= 2 y la causa en `fase2-diseno.md` §23.5 | 2 |
+| Divergencia entre builds con maestros distintos | ADR 0051, RF-032 | Dos runs de la misma raza que toman maestros distintos coinciden en menos perks que dos que toman el mismo; >= 5 puntos de diferencia. **Implementada** en `FullRunMetrics.MasterDivergence`; medido **9,0** | 2 |
+| Ganar la run sin entrar en ningún mercado | ADR 0055 | Por debajo del **5%**. **Implementada** en `FullRunMetrics.MarketlessWinRate` (la contextual con `AvoidsMarkets`); medido **23,5%**, por encima incluso de la misma política usando los mercados (20,0%) | 2 |
 | Mejores equipos ganan más con sorpresas creíbles | Fase 0 | Equipo **+20** en todos los atributos gana 65-80%; +10 es informativo y se vigila en 55-70% | 0 |
 
 ## Definición de "build" para `/Balance`

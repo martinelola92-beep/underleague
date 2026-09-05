@@ -196,9 +196,21 @@ public partial class RewardScreen : Control
             1232f,
             option.Kind == RewardKind.Perk ? Style.Hole : Style.TextDim);
 
-        if (option.Carriers.Count == 0)
+        if (option.Carriers.Count == 0 || option.Block != RewardBlock.None)
         {
-            Widgets.Body(this, UiText.Get("ui.reward.blockCarrier"), new Vector2(24f, 378f), 1232f, Style.TextDim);
+            // ADR 0051: si la opción no se puede cobrar, no se enseña a quién dársela. El motivo ya está
+            // en la ficha, arriba; pintar la lista invitaría a un clic que /Sim va a rechazar.
+            Widgets.Body(
+                this,
+                option.Block switch
+                {
+                    RewardBlock.Unmet => UiText.Get("ui.reward.blockUnmet"),
+                    RewardBlock.Closed => UiText.Get("ui.reward.blockClosed"),
+                    _ => UiText.Get("ui.reward.blockCarrier"),
+                },
+                new Vector2(24f, 378f),
+                1232f,
+                Style.TextDim);
             return;
         }
 
@@ -281,16 +293,46 @@ public partial class RewardScreen : Control
         _ => UiText.Get("ui.reward.optionsLeague"),
     };
 
+    /// <summary>
+    /// Las líneas de aviso de una opción. Las dos de la ADR 0051 —qué exige un maestro y qué cierra— van
+    /// <b>primero</b> y aparecen siempre, se pueda cobrar o no: el bloqueo es permanente (RF-072) y tiene
+    /// que leerse antes de aceptar, con la misma claridad con la que el ojeo destaca un perk letal
+    /// (RF-013, RF-012d).
+    /// </summary>
     private IReadOnlyList<string> Notes(RewardOptionView option)
     {
         var notes = new List<string>();
-        if (option.Block == RewardBlock.NoCarrier)
+        if (option.Requirement is { } requirement)
         {
-            notes.Add(UiText.Get("ui.reward.blockCarrier"));
+            notes.Add(requirement.Met
+                ? UiText.Get("ui.reward.masterMet", requirement.Count, requirement.FamilyName, requirement.Held)
+                : UiText.Get(
+                    "ui.reward.masterUnmet",
+                    requirement.Count,
+                    requirement.FamilyName,
+                    requirement.Held,
+                    requirement.Missing));
         }
-        else if (option.Block == RewardBlock.RosterFull)
+
+        if (option.Closes is { } closes && closes.Names.Count > 0)
         {
-            notes.Add(UiText.Get("ui.reward.blockRoster", _run.State!.RosterSize, _run.State!.RosterCapacity));
+            notes.Add(UiText.Get("ui.reward.closes", string.Join(", ", closes.Names), closes.PerkCount));
+        }
+
+        switch (option.Block)
+        {
+            case RewardBlock.NoCarrier:
+                notes.Add(UiText.Get("ui.reward.blockCarrier"));
+                break;
+            case RewardBlock.RosterFull:
+                notes.Add(UiText.Get("ui.reward.blockRoster", _run.State!.RosterSize, _run.State!.RosterCapacity));
+                break;
+            case RewardBlock.Unmet:
+                notes.Add(UiText.Get("ui.reward.blockUnmet"));
+                break;
+            case RewardBlock.Closed:
+                notes.Add(UiText.Get("ui.reward.blockClosed"));
+                break;
         }
 
         return notes;

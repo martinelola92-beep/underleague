@@ -5,9 +5,11 @@
     "en": "Center Conductor"
   },
   "rarity": "uncommon",
+  "minAct": 1,
   "kind": "conditional",
   "axis": "startZone",
   "race": null,
+  "family": null,
   "trigger": "MATCH_START",
   "scope": "actor",
   "links": [],

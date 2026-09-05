@@ -23,13 +23,22 @@ public static class Tour
 {
     private const string Flag = "--tour";
 
+    private const string MapFlag = "--map-tour";
+
     private static readonly HashSet<string> Captured = new();
 
     /// <summary>Directorio de capturas, el mismo que documenta <c>docs/ui-equipo.md</c>.</summary>
     public const string Directory = "res://screenshots";
 
-    /// <summary>True si el juego se ha arrancado para hacer el recorrido de capturas.</summary>
-    public static bool Active => HasArgument(Flag);
+    /// <summary>True si el juego se ha arrancado para hacer alguno de los dos recorridos de capturas.</summary>
+    public static bool Active => HasArgument(Flag) || Maps;
+
+    /// <summary>
+    /// True con <c>--map-tour</c>: el recorrido corto que solo enseña el <b>mapa de los tres actos</b> y
+    /// sale. Existe porque desde la ADR 0053 el mapa es lo que más hay que mirar —cuatro carriles, más
+    /// nodos y aristas que se cruzan— y el recorrido largo solo pasa por el del acto 1.
+    /// </summary>
+    public static bool Maps => HasArgument(MapFlag);
 
     /// <summary>True si se ha arrancado con <c>--screenshots</c> (el recorrido de la pantalla de Equipo).</summary>
     public static bool Screenshots => HasArgument("--screenshots");

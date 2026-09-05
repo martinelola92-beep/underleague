@@ -5,9 +5,12 @@
     "en": "Fine Touch"
   },
   "rarity": "common",
+  "minAct": 1,
+  "frequency": 150,
   "kind": "filler",
   "axis": "identity",
   "race": null,
+  "family": "craft",
   "trigger": "MATCH_START",
   "scope": "actor",
   "links": [],

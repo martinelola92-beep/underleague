@@ -152,7 +152,7 @@ public static class MarketView
                 perk.Id,
                 perk.Name.Es,
                 string.Empty,
-                DescriptionGenerator.Describe(perk, templates),
+                DescriptionGenerator.Describe(perk, templates, catalog.Perks),
                 perk.Rarity,
                 offer.Price,
                 state.Gold >= offer.Price,

@@ -6,6 +6,7 @@
     "en": "Moonsteel Bracer"
   },
   "archetype": "restricted",
+  "minAct": 2,
   "race": "Elf",
   "attributeBonus": {
     "strength": 10,

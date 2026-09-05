@@ -6,6 +6,7 @@
   },
   "rarity": "uncommon",
   "archetype": "normal",
+  "minAct": 1,
   "attributeBonus": {
     "strength": 10,
     "stamina": 10

@@ -5,9 +5,12 @@
     "en": "Box Predator"
   },
   "rarity": "common",
+  "minAct": 1,
+  "frequency": 150,
   "kind": "filler",
   "axis": "geometry",
   "race": null,
+  "family": "aim",
   "trigger": "SHOT",
   "scope": "actor",
   "links": [],

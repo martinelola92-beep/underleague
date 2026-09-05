@@ -1,0 +1,50 @@
+{
+  "_doc": "MAESTRO de El Toque (ADR 0051). Exige dos perks de su linea y cierra La Carniceria: el equipo que juega bien renuncia a lesionar. Pide ademas una plantilla con mayoria de Finos, que es la composicion que su linea premia.",
+  "id": "first_touch_school",
+  "name": {
+    "es": "Escuela del primer toque",
+    "en": "First Touch School"
+  },
+  "rarity": "rare",
+  "minAct": 2,
+  "frequency": 300,
+  "kind": "conditional",
+  "axis": "composition",
+  "race": null,
+  "family": "craft",
+  "requiresPerks": {
+    "family": "craft",
+    "count": 2
+  },
+  "blocksPerks": {
+    "families": ["butchery"],
+    "perks": []
+  },
+  "trigger": "MATCH_START",
+  "scope": "actor",
+  "links": [],
+  "condition": "teammatesWithTag(owner,'Fine') > 1",
+  "effects": [
+    {
+      "type": "modifyProbability",
+      "target": "team",
+      "probability": "pass",
+      "value": 10,
+      "duration": "match"
+    },
+    {
+      "type": "modifyProbability",
+      "target": "team",
+      "probability": "interceptEvasion",
+      "value": 5,
+      "duration": "match"
+    }
+  ],
+  "elseEffects": [],
+  "limit": null,
+  "accumulatesAcrossMatches": false,
+  "lethal": false,
+  "positionOnly": null,
+  "tagsRequired": [],
+  "tagsForbidden": []
+}

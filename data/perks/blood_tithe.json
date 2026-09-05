@@ -1,0 +1,50 @@
+{
+  "_doc": "MAESTRO de La Carniceria (ADR 0051), el rompe-reglas de los cuatro. Exige dos perks de su linea como los demas: con tres era inalcanzable, porque las piezas de La Carniceria tienen valor medido negativo (ADR 0038) y ninguna build que mire el valor pieza a pieza llega a juntar tres. El numero es un dial en datos. Cierra El Toque. No es letal: no marca a nadie ni mata por si mismo (ADR 0048); lo que hace es que las entradas de todo el equipo lesionen mas y que la lesion del rival sea peor.",
+  "id": "blood_tithe",
+  "name": {
+    "es": "Diezmo de sangre",
+    "en": "Blood Tithe"
+  },
+  "rarity": "rare",
+  "minAct": 2,
+  "frequency": 300,
+  "kind": "ruleBreaker",
+  "axis": "composition",
+  "race": null,
+  "family": "butchery",
+  "requiresPerks": {
+    "family": "butchery",
+    "count": 2
+  },
+  "blocksPerks": {
+    "families": ["craft"],
+    "perks": []
+  },
+  "trigger": "MATCH_START",
+  "scope": "actor",
+  "links": [],
+  "condition": "teammatesWithTag(owner,'Brute') > 1",
+  "effects": [
+    {
+      "type": "modifyProbability",
+      "target": "team",
+      "probability": "injure",
+      "value": 2,
+      "duration": "match"
+    },
+    {
+      "type": "modifyProbability",
+      "target": "opposingTeam",
+      "probability": "severeInjury",
+      "value": 3,
+      "duration": "match"
+    }
+  ],
+  "elseEffects": [],
+  "limit": null,
+  "accumulatesAcrossMatches": false,
+  "lethal": false,
+  "positionOnly": null,
+  "tagsRequired": [],
+  "tagsForbidden": []
+}

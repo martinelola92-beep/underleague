@@ -6,6 +6,7 @@
   },
   "rarity": "common",
   "archetype": "fragile",
+  "minAct": 1,
   "attributeBonus": {
     "technique": 10
   },

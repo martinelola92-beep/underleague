@@ -9,7 +9,11 @@
     "effectFinalSeparator": " y ",
     "elsePrefix": "; si no, ",
     "linkSeparator": " y ",
-    "lethalSuffix": " Marca a un rival por activación, el que peor lo tiene, y puede matarlo aunque esté sano."
+    "lethalSuffix": " Marca a un rival por activación, el que peor lo tiene, y puede matarlo aunque esté sano.",
+    "requiresSuffix": " Exige llevar ya {count} perks de {family}.",
+    "blocksSuffix": " Cierra {blocked} para el resto de la run.",
+    "blockedSeparator": ", ",
+    "blockedFinalSeparator": " y "
   },
   "effects": {
     "modifyAttribute": "{target} {value:+} de {attribute} durante {duration}",
@@ -356,5 +360,11 @@
     "tacklesWon": "entradas ganadas",
     "shots": "tiros",
     "saves": "paradas"
+  },
+  "families": {
+    "wall": "La Muralla",
+    "craft": "El Toque",
+    "aim": "La Puntería",
+    "butchery": "La Carnicería"
   }
 }

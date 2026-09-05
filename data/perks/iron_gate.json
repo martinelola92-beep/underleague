@@ -5,9 +5,11 @@
     "en": "Iron Gate"
   },
   "rarity": "rare",
+  "minAct": 2,
   "kind": "ruleBreaker",
   "axis": "identity",
   "race": "Dwarf",
+  "family": null,
   "trigger": "INJURY",
   "scope": "team",
   "links": [],

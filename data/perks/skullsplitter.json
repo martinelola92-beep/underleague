@@ -6,9 +6,11 @@
     "en": "Skullsplitter"
   },
   "rarity": "legendary",
+  "minAct": 3,
   "kind": "ruleBreaker",
   "axis": "identity",
   "race": null,
+  "family": null,
   "trigger": "MATCH_START",
   "scope": "any",
   "links": [],

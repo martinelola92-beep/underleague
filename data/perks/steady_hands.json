@@ -5,9 +5,12 @@
     "en": "Steady Hands"
   },
   "rarity": "common",
+  "minAct": 1,
+  "frequency": 150,
   "kind": "filler",
   "axis": "accumulation",
   "race": null,
+  "family": "craft",
   "trigger": "PASS_COMPLETED",
   "scope": "actor",
   "links": [],

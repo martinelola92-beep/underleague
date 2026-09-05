@@ -5,9 +5,12 @@
     "en": "Safety Net"
   },
   "rarity": "common",
+  "minAct": 1,
+  "frequency": 150,
   "kind": "filler",
   "axis": "proximity",
   "race": null,
+  "family": "wall",
   "trigger": "SAVE",
   "scope": "actor",
   "links": [],

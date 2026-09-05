@@ -118,6 +118,11 @@ public static class MarketSystem
 
         var perk = catalog.Perks.Find(offer.PerkId)
             ?? throw new InvalidOperationException($"el mercado ofrece el perk '{offer.PerkId}', que no está en el catálogo");
+
+        // ADR 0051: comprar no salta el arco. Un maestro se paga cuando la línea está construida, y una
+        // línea cerrada por otro maestro no se vuelve a abrir con oro.
+        PerkPool.Require(state, perk, catalog, PerkSource.Market);
+
         var carriers = PerkPool.EligibleCarriers(state, perk, catalog);
         if (!carriers.Contains(decision.TargetPlayerId))
         {

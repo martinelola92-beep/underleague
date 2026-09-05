@@ -6,6 +6,7 @@
     "en": "Deep Road Boots"
   },
   "archetype": "restricted",
+  "minAct": 2,
   "race": "Dwarf",
   "attributeBonus": {
     "speed": 10,

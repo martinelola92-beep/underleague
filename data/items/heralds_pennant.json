@@ -6,6 +6,7 @@
     "en": "Herald's Pennant"
   },
   "archetype": "restricted",
+  "minAct": 2,
   "race": "Human",
   "attributeBonus": {
     "leash": 10,

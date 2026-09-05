@@ -85,8 +85,13 @@ public class RunEngineTests
 
         // Y la run tiene la longitud que pide el diseño: 30-36 nodos (RF-003b) y 18-22 partidos
         // (fase2-diseno.md §10). Es la comprobación que ata la lectura de RF-001 al resto de números.
+        // El tope sigue siendo 22 y el peor camino, 20 (RF-003b). El SUELO baja a 17 con la ADR 0053
+        // (fase2-diseno.md §24, AH-8): hay una capa de partido por acto que se puede esquivar, y este
+        // recorrido -que siempre coge el primer nodo disponible, o sea el carril de arriba- la esquiva
+        // cuando el servicio cae ahí. Los 18-22 de §10 los mide la política automática sobre runs
+        // completas (FullRunGateTests), no un camino ciego.
         Assert.InRange(state.NodeHistory.Count, 30, 36);
-        Assert.InRange(state.NodeHistory.Count(e => NodeKinds.IsMatch(e.Kind)), 18, 22);
+        Assert.InRange(state.NodeHistory.Count(e => NodeKinds.IsMatch(e.Kind)), 17, 22);
 
         // Y la experiencia se ha repartido: alguien ha subido de nivel por el camino (RF-025, RF-027).
         Assert.Contains(state.Roster, p => p.Experience > 0);
@@ -129,7 +134,10 @@ public class RunEngineTests
     {
         // RF-002: la run termina en victoria al derrotar al jefe del acto 3.
         var systems = new TestRunSystems { OpponentQuality = 20 };
-        var state = RunStateBuilder.From(TestRuns.Setup(quality: 80), 4114, Catalog)
+        // La semilla se elige para que el partido se gane: con calidad 80 contra 20 se gana casi
+        // siempre, pero "casi" no es "siempre", y el id del nodo de jefe -del que sale la semilla del
+        // partido- se movió con el mapa de cuatro carriles (ADR 0053).
+        var state = RunStateBuilder.From(TestRuns.Setup(quality: 80), 4115, Catalog)
             .AtAct(3)
             .BeforeBoss()
             .Build();
@@ -143,7 +151,7 @@ public class RunEngineTests
     public void WinningTheFirstBoss_OpensTheNextAct()
     {
         var systems = new TestRunSystems { OpponentQuality = 20 };
-        var state = RunStateBuilder.From(TestRuns.Setup(quality: 80), 4114, Catalog).BeforeBoss().Build();
+        var state = RunStateBuilder.From(TestRuns.Setup(quality: 80), 4115, Catalog).BeforeBoss().Build();
 
         state = RunEngine.Enter(state, state.CurrentMap.BossNodeId, Catalog, systems);
 

@@ -9,7 +9,11 @@
     "effectFinalSeparator": " and ",
     "elsePrefix": "; otherwise, ",
     "linkSeparator": " and ",
-    "lethalSuffix": " It marks one opponent per activation, whoever is worst off, and may kill them even if healthy."
+    "lethalSuffix": " It marks one opponent per activation, whoever is worst off, and may kill them even if healthy.",
+    "requiresSuffix": " Requires already carrying {count} perks from {family}.",
+    "blocksSuffix": " Closes {blocked} for the rest of the run.",
+    "blockedSeparator": ", ",
+    "blockedFinalSeparator": " and "
   },
   "effects": {
     "modifyAttribute": "{target} {value:+} {attribute} for {duration}",
@@ -356,5 +360,11 @@
     "tacklesWon": "tackles won",
     "shots": "shots",
     "saves": "saves"
+  },
+  "families": {
+    "wall": "The Wall",
+    "craft": "The Touch",
+    "aim": "The Aim",
+    "butchery": "The Butchery"
   }
 }

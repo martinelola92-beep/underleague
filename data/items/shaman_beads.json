@@ -6,6 +6,7 @@
     "en": "Shaman's Beads"
   },
   "archetype": "restricted",
+  "minAct": 2,
   "race": "Orc",
   "attributeBonus": {
     "technique": 10,

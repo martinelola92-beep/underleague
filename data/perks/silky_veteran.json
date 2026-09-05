@@ -5,9 +5,12 @@
     "en": "Silky Veteran"
   },
   "rarity": "uncommon",
+  "minAct": 1,
+  "frequency": 150,
   "kind": "filler",
   "axis": "accumulation",
   "race": null,
+  "family": "craft",
   "trigger": "DRIBBLE_WON",
   "scope": "actor",
   "links": [],

@@ -5,9 +5,12 @@
     "en": "Forward Line"
   },
   "rarity": "uncommon",
+  "minAct": 1,
+  "frequency": 150,
   "kind": "filler",
   "axis": "startZone",
   "race": null,
+  "family": "aim",
   "trigger": "MATCH_START",
   "scope": "actor",
   "links": [],

@@ -55,6 +55,15 @@ public enum ItemArchetype
 /// <param name="BreakChancePercent">Probabilidad de rotura al terminar el partido (RF-077, solo frágil); 0 en los demás.</param>
 /// <param name="Race">Raza a la que pertenece un objeto restringido; null en los universales.</param>
 /// <param name="RequiredTag">Etiqueta de especie que el portador debe llevar (restringido); vacía en los universales.</param>
+/// <param name="MinAct">
+/// Acto nativo (ADR 0051): a partir de qué acto empieza a aparecer en el pool de recompensas y de
+/// mercado. Por debajo solo sale <b>fuera de profundidad</b>, con el peso pequeño de
+/// <c>data/build/arcs.json</c>.
+/// </param>
+/// <param name="Frequency">
+/// El "commonness" de Angband (ADR 0051): cuánto sale este objeto comparado con uno normal, en
+/// porcentaje. Multiplica al peso por valor de la ADR 0038 y a la curva de profundidad.
+/// </param>
 public sealed record ItemDefinition(
     string Id,
     LocalizedName Name,
@@ -63,7 +72,9 @@ public sealed record ItemDefinition(
     Attributes Modifier,
     int BreakChancePercent,
     Race? Race,
-    string RequiredTag)
+    string RequiredTag,
+    int MinAct = 1,
+    int Frequency = 100)
 {
     /// <summary>Atributos que el objeto sube (entradas positivas de <see cref="Modifier"/>), en orden fijo.</summary>
     public IReadOnlyList<AttributeKind> Raised => Kinds(positive: true);

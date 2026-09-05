@@ -213,7 +213,7 @@ public static class PostMatchView
             rows.Add(new PerkReportRow(
                 entry.PerkId,
                 perk?.Name.Es ?? entry.PerkId,
-                perk is null ? string.Empty : DescriptionGenerator.Describe(perk, templates),
+                perk is null ? string.Empty : DescriptionGenerator.Describe(perk, templates, catalog.Perks),
                 entry.OwnerId,
                 names.GetValueOrDefault(entry.OwnerId) ?? string.Empty,
                 entry.Activations,

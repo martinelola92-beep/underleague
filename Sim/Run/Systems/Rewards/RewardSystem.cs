@@ -54,15 +54,19 @@ public static class RewardSystem
         var config = economy.RewardFor(node.Kind);
         int taken = PicksTaken(state, node.Id);
         var rng = OfferStream.For(state.Seed, node.Id, state.NodeRerolls + (taken * PickStreamStep));
-        var perkPool = PerkPool.Offerable(state, catalog);
+        var perkPool = PerkPool.Offerable(state, catalog, node.Act, PerkSource.Reward);
 
         var options = new List<RewardOption>(config.Options);
         for (int i = 0; i < config.Options; i++)
         {
-            // La rareza mejorada se sortea opción a opción y ANTES de elegir el tipo, para que el dado sea
-            // el mismo en todos los nodos: un nodo de liga tira el mismo número y siempre sale "no".
-            bool rare = rng.Range(0, 100) < config.RarityFloorPercent;
-            options.Add(PickOption(ref rng, perkPool, items, catalog, state, economy, node.Act, rare));
+            // La rareza se sortea opción a opción y ANTES de elegir el tipo, para que el dado sea el
+            // mismo en todos los nodos. Es UNA sola tirada con tres tramos —mejorada, libre y degradada—
+            // y no dos (ADR 0052 §2): con dos tiradas, dar techo de rareza a la liga habría desplazado el
+            // flujo de RNG de élite y de jefe, que no cambian.
+            int rarityRoll = rng.Range(0, 100);
+            bool rare = rarityRoll < config.RarityFloorPercent;
+            bool commonOnly = !rare && rarityRoll >= 100 - config.CommonCeilingPercent;
+            options.Add(PickOption(ref rng, perkPool, items, catalog, state, economy, node.Act, rare, commonOnly));
         }
 
         return options;
@@ -194,6 +198,11 @@ public static class RewardSystem
     private static RunState ApplyPerk(RunState state, PerkRewardOption option, ChooseReward decision, Catalog catalog)
     {
         var perk = catalog.Perks.Get(option.PerkId);
+
+        // ADR 0051: un maestro no se cobra si la run no lleva su línea, y una línea cerrada por otro
+        // maestro no se vuelve a abrir. La regla vive aquí, no en la pantalla: /Sim la hace cumplir.
+        PerkPool.Require(state, perk, catalog, PerkSource.Reward);
+
         var carriers = PerkPool.EligibleCarriers(state, perk, catalog);
         if (!carriers.Contains(decision.CarrierPlayerId))
         {
@@ -224,29 +233,34 @@ public static class RewardSystem
         RunState state,
         EconomyConfig economy,
         int act,
-        bool rarityFloor)
+        bool rarityFloor,
+        bool rarityCeiling)
     {
         int total = economy.RewardPerkWeight + economy.RewardPlayerWeight + economy.RewardItemWeight;
         int roll = rng.Range(0, total);
         bool wantsPerk = roll < economy.RewardPerkWeight;
         bool wantsPlayer = !wantsPerk && roll < economy.RewardPerkWeight + economy.RewardPlayerWeight;
 
-        if (rarityFloor)
+        if (rarityFloor || rarityCeiling)
         {
-            // Rareza mejorada (ADR 0043): la opción se sortea solo entre las que superan el común. Si el
-            // pool no tiene ninguna, se cae al pool entero en vez de dejar la opción vacía.
-            var better = new List<Perks.PerkDefinition>(perkPool.Count);
+            // Rareza mejorada (ADR 0043): la opción se sortea solo entre las que superan el común.
+            // Rareza degradada (ADR 0052 §2): solo entre las comunes. Es lo que devuelve la tercera
+            // opción de liga sin devolverle la calidad, de modo que el mercado sigue siendo donde se
+            // consigue lo bueno. Si el pool filtrado queda vacío se cae al pool entero en vez de dejar
+            // la opción vacía.
+            var filtered = new List<Perks.PerkDefinition>(perkPool.Count);
             for (int i = 0; i < perkPool.Count; i++)
             {
-                if (perkPool[i].Rarity != Rarity.Common)
+                bool common = perkPool[i].Rarity == Rarity.Common;
+                if (rarityFloor ? !common : common)
                 {
-                    better.Add(perkPool[i]);
+                    filtered.Add(perkPool[i]);
                 }
             }
 
-            if (better.Count > 0)
+            if (filtered.Count > 0)
             {
-                perkPool = better;
+                perkPool = filtered;
             }
         }
 
@@ -254,10 +268,13 @@ public static class RewardSystem
         {
             // ADR 0038: el peso del perk en el pool baja con su valor medido. Es la palanca de la vía
             // gratuita, la que el precio no puede tocar (RF-071).
+            // ADR 0051: y modulado por la profundidad nativa, que es lo que hace que el surtido
+            // mejore con la run en vez de ser el mismo en los tres actos.
             var weights = new List<int>(perkPool.Count);
             for (int i = 0; i < perkPool.Count; i++)
             {
-                weights.Add(economy.PerkValues.WeightOf(perkPool[i].Id));
+                weights.Add(PerkPool.OfferWeight(
+                    state, perkPool[i], catalog, economy.PerkValues.WeightOf(perkPool[i].Id), act));
             }
 
             return new PerkRewardOption(perkPool[WeightedPick.Index(ref rng, weights)].Id);
@@ -271,28 +288,29 @@ public static class RewardSystem
 
         // Solo los universales y los restringidos de la raza del club (ADR 0036); el frágil sale más a
         // menudo, que es la otra mitad de su compensación.
-        var itemPool = items.OfferableTo(state.ClubRace);
-        if (rarityFloor)
+        var itemPool = items.OfferableTo(state.ClubRace, act);
+        if (rarityFloor || rarityCeiling)
         {
-            var better = new List<ItemDefinition>(itemPool.Count);
+            var filtered = new List<ItemDefinition>(itemPool.Count);
             for (int i = 0; i < itemPool.Count; i++)
             {
-                if (itemPool[i].Rarity != Rarity.Common)
+                bool common = itemPool[i].Rarity == Rarity.Common;
+                if (rarityFloor ? !common : common)
                 {
-                    better.Add(itemPool[i]);
+                    filtered.Add(itemPool[i]);
                 }
             }
 
-            if (better.Count > 0)
+            if (filtered.Count > 0)
             {
-                itemPool = better;
+                itemPool = filtered;
             }
         }
 
         var itemWeights = new List<int>(itemPool.Count);
         for (int i = 0; i < itemPool.Count; i++)
         {
-            itemWeights.Add(ItemPricing.OfferWeight(itemPool[i], items.Scale));
+            itemWeights.Add(items.DepthWeight(itemPool[i], ItemPricing.OfferWeight(itemPool[i], items.Scale), act));
         }
 
         var item = itemPool[WeightedPick.Index(ref rng, itemWeights)];

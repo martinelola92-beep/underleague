@@ -5,6 +5,7 @@
     "en": "Warchief's Pauldron"
   },
   "archetype": "restricted",
+  "minAct": 2,
   "race": "Orc",
   "attributeBonus": {
     "strength": 10,

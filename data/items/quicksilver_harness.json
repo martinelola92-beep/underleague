@@ -6,6 +6,7 @@
   },
   "rarity": "rare",
   "archetype": "normal",
+  "minAct": 2,
   "attributeBonus": {
     "speed": 10,
     "technique": 10,

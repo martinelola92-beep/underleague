@@ -45,7 +45,10 @@ public static class PerkAssignment
                 continue;
             }
 
-            var candidates = Eligible(player, catalog);
+            // ADR 0051: un maestro no se regala al empezar. Es el objetivo hacia el que se construye
+            // durante la run —exige llevar ya media línea y cierra otra para siempre—, así que entrar con
+            // uno puesto sería saltarse el arco entero antes del primer partido.
+            var candidates = Eligible(player, catalog).Where(p => !p.IsMaster).ToList();
             var picked = new List<string>();
             for (int i = 0; i < wanted && candidates.Count > 0; i++)
             {

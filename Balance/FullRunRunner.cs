@@ -15,6 +15,7 @@ public sealed record FullRunResult(
     int TotalMatches,
     TimeSpan Elapsed);
 
+
 /// <summary>
 /// Modo <c>--full-runs N</c> de <c>/Balance</c> (fase2-diseno.md §10, ADR 0037): juega N runs completas
 /// con <b>cada una de las tres doctrinas de compra</b> sobre las mismas semillas y vuelca
@@ -84,12 +85,35 @@ public static class FullRunRunner
             all.AddRange(rows);
         }
 
+        // ADR 0055: la medida de control. La MISMA política contextual sobre las MISMAS semillas, jugando
+        // igual de bien todo lo demás, pero esquivando los mercados siempre que el mapa se lo permite. Su
+        // tasa de victoria es la respuesta a "¿se puede ganar sin comprar?".
+        var marketlessOptions = RunPolicyOptions.For(PurchaseDoctrine.Contextual) with
+        {
+            HeedsLethalScouting = !ignoreScouting,
+            AvoidsMarkets = true,
+        };
+        if (riskAversion is { } marketlessAversion)
+        {
+            marketlessOptions = marketlessOptions with { DeathCostPercent = marketlessAversion };
+        }
+
+        var marketless = new List<RunPlayResult>(runs);
+        for (int i = 0; i < runs; i++)
+        {
+            var setup = SetupFor(races[i % races.Count], standard, dataFiles);
+            var result = RunPolicy.Play(setup, seed + (ulong)i, catalog, standard, bosses, marketlessOptions);
+            marketless.Add(result);
+            matches += result.Matches;
+        }
+
         stopwatch.Stop();
         var metrics = FullRunMetrics.Compute(
             byDoctrine[PurchaseDoctrine.Contextual],
             byDoctrine[PurchaseDoctrine.Spender],
             byDoctrine[PurchaseDoctrine.Saver],
             standard.Economy);
+        metrics.AddRange(FullRunMetrics.Marketless(marketless));
 
         return new FullRunResult(all, metrics, matches, stopwatch.Elapsed);
     }

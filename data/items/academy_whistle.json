@@ -5,6 +5,7 @@
     "en": "Academy Whistle"
   },
   "archetype": "restricted",
+  "minAct": 2,
   "race": "Human",
   "attributeBonus": {
     "technique": 10,

@@ -5,9 +5,11 @@
     "en": "Gentle Giant"
   },
   "rarity": "rare",
+  "minAct": 2,
   "kind": "conditional",
   "axis": "alignment",
   "race": "Orc",
+  "family": null,
   "trigger": "MATCH_START",
   "scope": "actor",
   "links": [

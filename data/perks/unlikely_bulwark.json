@@ -5,9 +5,11 @@
     "en": "Unlikely Bulwark"
   },
   "rarity": "uncommon",
+  "minAct": 1,
   "kind": "conditional",
   "axis": "identity",
   "race": "Elf",
+  "family": null,
   "trigger": "MATCH_START",
   "scope": "actor",
   "links": [],

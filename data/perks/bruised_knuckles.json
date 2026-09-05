@@ -5,9 +5,12 @@
     "en": "Bruised Knuckles"
   },
   "rarity": "uncommon",
+  "minAct": 1,
+  "frequency": 150,
   "kind": "conditional",
   "axis": "accumulation",
   "race": null,
+  "family": "butchery",
   "trigger": "FOUL",
   "scope": "actor",
   "links": [],

@@ -5,9 +5,11 @@
     "en": "Scarred Veteran"
   },
   "rarity": "rare",
+  "minAct": 2,
   "kind": "filler",
   "axis": "accumulation",
   "race": null,
+  "family": null,
   "trigger": "MATCH_START",
   "scope": "actor",
   "links": [],

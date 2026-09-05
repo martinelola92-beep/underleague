@@ -5,9 +5,12 @@
     "en": "Crowd Control"
   },
   "rarity": "uncommon",
+  "minAct": 1,
+  "frequency": 150,
   "kind": "conditional",
   "axis": "proximity",
   "race": null,
+  "family": "craft",
   "trigger": "DRIBBLE_ATTEMPTED",
   "scope": "actor",
   "links": [],

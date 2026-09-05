@@ -185,6 +185,30 @@ public partial class RunController : Node
         AfterTransition();
     }
 
+    /// <summary>
+    /// Salta a la entrada de otro acto sin jugar los nodos intermedios (RT-062, vía
+    /// <see cref="RunStateBuilder"/>). Es modo de depuración: lo usa el recorrido de capturas del mapa
+    /// para enseñar los tres actos. No guarda.
+    /// </summary>
+    public void JumpToAct(int act)
+    {
+        var (state, _) = Require();
+        State = RunStateBuilder.From(state).AtAct(act).Build();
+        SelectedNodeId = -1;
+        LastMatch = null;
+        Changed();
+    }
+
+    /// <summary>Coloca la run en un nodo del acto actual sin jugar los anteriores (RT-062). Depuración y capturas.</summary>
+    public void JumpToNode(int nodeId)
+    {
+        var (state, _) = Require();
+        State = RunStateBuilder.From(state).AtNode(nodeId).Build();
+        SelectedNodeId = -1;
+        LastMatch = null;
+        Changed();
+    }
+
     /// <summary>Aplica una decisión del jugador (alineación, compra, tratamiento, recompensa, salir del nodo).</summary>
     public void Apply(RunDecision decision)
     {

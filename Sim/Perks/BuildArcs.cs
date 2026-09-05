@@ -44,16 +44,25 @@ public sealed class DepthCurve
     private readonly int[] _native;
     private readonly int[] _below;
 
-    public DepthCurve(IReadOnlyList<int> nativePercent, IReadOnlyList<int> outOfDepthPercent)
+    public DepthCurve(IReadOnlyList<int> nativePercent, IReadOnlyList<int> outOfDepthPercent, int masterPreviewPercent = 100)
     {
         ArgumentNullException.ThrowIfNull(nativePercent);
         ArgumentNullException.ThrowIfNull(outOfDepthPercent);
         _native = nativePercent.ToArray();
         _below = outOfDepthPercent.ToArray();
+        MasterPreviewPercent = masterPreviewPercent;
     }
 
     /// <summary>Sin profundidad: todo pesa lo mismo en todos los actos. Es lo que había antes de la ADR 0051.</summary>
     public static DepthCurve Flat { get; } = new(new[] { 100, 100, 100 }, new[] { 100, 100 });
+
+    /// <summary>
+    /// Peso de un maestro al que le falta una pieza de su línea, en porcentaje del que tiene cuando ya se
+    /// puede comprar (ADR 0055). Es el ajuste que separa **anunciar** el objetivo de **poder cerrarlo**:
+    /// medido, un maestro llegaba al mostrador 5,3 veces por run y solo 0,13 de ellas eran comprables,
+    /// porque casi todas las apariciones caían cuando la línea aún no estaba hecha.
+    /// </summary>
+    public int MasterPreviewPercent { get; }
 
     /// <summary>Peso completo, el del acto nativo.</summary>
     public int FullPercent => _native[0];
@@ -171,6 +180,17 @@ public sealed class BuildArcs
 
             var native = Ints(file, depthNode, "nativePercent", 3);
             var below = Ints(file, depthNode, "outOfDepthPercent", 2);
+            int preview = 100;
+            if (depthNode.TryGetProperty("masterPreviewPercent", out var previewNode))
+            {
+                if (previewNode.ValueKind != JsonValueKind.Number || !previewNode.TryGetInt32(out preview)
+                    || preview < 1 || preview > 100)
+                {
+                    throw new DataException(
+                        file, "$.depth.masterPreviewPercent", "se esperaba un entero entre 1 y 100");
+                }
+            }
+
             for (int i = 1; i < native.Count; i++)
             {
                 if (native[i] > native[i - 1])
@@ -195,7 +215,7 @@ public sealed class BuildArcs
                 }
             }
 
-            return new BuildArcs(families, new DepthCurve(native, below));
+            return new BuildArcs(families, new DepthCurve(native, below, preview));
         }
     }
 

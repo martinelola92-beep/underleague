@@ -5,9 +5,12 @@
     "en": "Pit Veteran"
   },
   "rarity": "common",
+  "minAct": 1,
+  "frequency": 150,
   "kind": "conditional",
   "axis": "accumulation",
   "race": null,
+  "family": "wall",
   "trigger": "TACKLE",
   "scope": "actor",
   "links": [],

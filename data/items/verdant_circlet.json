@@ -5,6 +5,7 @@
     "en": "Verdant Circlet"
   },
   "archetype": "restricted",
+  "minAct": 2,
   "race": "Elf",
   "attributeBonus": {
     "technique": 10,

@@ -171,6 +171,32 @@ public sealed class PerkArcTests
         Assert.Contains("maestro", error.Message, StringComparison.Ordinal);
     }
 
+    /// <summary>
+    /// ADR 0055: un maestro <b>solo se compra</b>. No sale nunca como recompensa por ganar, ni siquiera
+    /// con la línea entera construida, y cobrarlo por esa vía es un error explícito. Es la palanca que
+    /// hace del mercado parte del núcleo de la build: sin pasar por uno, el objetivo de la línea no
+    /// existe.
+    /// </summary>
+    [Fact]
+    public void AMasterIsSoldInTheMarketAndNeverGivenAsAReward()
+    {
+        var master = Catalog.Perks.Masters[0];
+        var state = With(Start(), Pieces(master.Requires!.Family).Take(master.Requires.Count).Select(p => p.Id).ToArray());
+
+        Assert.Contains(PerkPool.Offerable(state, Catalog, 3, PerkSource.Market), p => p.Id == master.Id);
+        Assert.DoesNotContain(PerkPool.Offerable(state, Catalog, 3, PerkSource.Reward), p => p.IsMaster);
+
+        Assert.Equal(PerkAvailability.Available, PerkPool.Availability(state, master, Catalog, PerkSource.Market));
+        Assert.Equal(PerkAvailability.MarketOnly, PerkPool.Availability(state, master, Catalog, PerkSource.Reward));
+
+        var error = Assert.Throws<InvalidOperationException>(
+            () => PerkPool.Require(state, master, Catalog, PerkSource.Reward));
+        Assert.Contains("mercado", error.Message, StringComparison.Ordinal);
+
+        // Y por la vía del mercado, con la línea construida, se puede.
+        PerkPool.Require(state, master, Catalog, PerkSource.Market);
+    }
+
     /// <summary>Los perks iniciales de una plantilla nunca incluyen un maestro (ADR 0051).</summary>
     [Fact]
     public void NoRosterStartsWithAMaster()

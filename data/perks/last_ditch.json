@@ -5,9 +5,12 @@
     "en": "Last Ditch"
   },
   "rarity": "uncommon",
+  "minAct": 1,
+  "frequency": 150,
   "kind": "conditional",
   "axis": "geometry",
   "race": null,
+  "family": "wall",
   "trigger": "TACKLE",
   "scope": "actor",
   "links": [],

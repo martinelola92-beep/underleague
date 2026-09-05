@@ -32,7 +32,37 @@ public enum RewardBlock
 
     /// <summary>Nadie de la plantilla puede llevar ese perk: sin slot libre, ya lo lleva, o no cumple sus etiquetas.</summary>
     NoCarrier,
+
+    /// <summary>
+    /// Es un perk <b>maestro</b> y la run todavía no lleva los perks de su línea que exige (ADR 0051).
+    /// Aparece igual, y con el recuento a la vista: es el objetivo hacia el que se construye, así que
+    /// esconderlo hasta cumplirlo sería esconder el arco entero.
+    /// </summary>
+    Unmet,
+
+    /// <summary>Un maestro ya aceptado cerró su línea para el resto de la run (ADR 0051).</summary>
+    Closed,
 }
+
+/// <summary>
+/// Lo que un perk maestro exige y cómo va la run (ADR 0051): la línea, cuántos perks pide y cuántos se
+/// llevan ya. <paramref name="FamilyName"/> viene localizado (RT-073); la interfaz no traduce ids.
+/// </summary>
+public sealed record RewardRequirement(string Family, string FamilyName, int Count, int Held)
+{
+    /// <summary>True si la run ya cumple lo que el maestro exige.</summary>
+    public bool Met => Held >= Count;
+
+    /// <summary>Piezas de la línea que faltan.</summary>
+    public int Missing => Math.Max(0, Count - Held);
+}
+
+/// <summary>
+/// Lo que aceptar esta opción <b>cierra</b> para el resto de la run (ADR 0051), ya localizado.
+/// <paramref name="PerkCount"/> son los perks del catálogo que dejarían de poder conseguirse: es la cifra
+/// que convierte "cierra una línea" en una decisión con precio.
+/// </summary>
+public sealed record RewardClosure(IReadOnlyList<string> Names, int PerkCount);
 
 /// <summary>
 /// Un jugador de la plantilla al que se le puede dar la recompensa (RF-071: "elige además a qué jugador
@@ -54,6 +84,11 @@ public sealed record RewardCarrier(
 /// <paramref name="Description"/> viene <b>generada</b> del efecto o del dato (RT-035): en esta pantalla
 /// no hay ni una frase escrita a mano.
 /// </summary>
+/// <param name="Requirement">Lo que exige, si es un maestro (ADR 0051); null en todo lo demás.</param>
+/// <param name="Closes">
+/// Lo que cierra para siempre si se acepta (ADR 0051). Nunca es null —una opción que no cierra nada trae
+/// la lista vacía— porque la pantalla tiene que poder decir "esto no cierra nada" sin comprobar nulos.
+/// </param>
 public sealed record RewardOptionView(
     int Index,
     RewardKind Kind,
@@ -64,7 +99,9 @@ public sealed record RewardOptionView(
     string Headline,
     bool NeedsCarrier,
     IReadOnlyList<RewardCarrier> Carriers,
-    RewardBlock Block);
+    RewardBlock Block,
+    RewardRequirement? Requirement = null,
+    RewardClosure? Closes = null);
 
 /// <summary>
 /// La pantalla de recompensa entera (RF-071, RF-071b, ADR 0043, ADR 0049).
@@ -149,17 +186,33 @@ public static class RewardView
             {
                 var perk = catalog.Perks.Get(perkOption.PerkId);
                 var carriers = Carriers(state, items, PerkPool.EligibleCarriers(state, perk, catalog));
+
+                // ADR 0051: qué exige, si se cumple y qué cierra. Las tres cosas se enseñan ANTES de
+                // aceptar, con la misma claridad con la que un perk letal se destaca en el ojeo
+                // (RF-013, RF-012d): un perk no se puede retirar (RF-072), así que su bloqueo es
+                // permanente y no anunciarlo sería una trampa.
+                var requirement = Requirement(state, catalog, templates, perk);
+                var closes = Closure(catalog, templates, perk);
+                var availability = PerkPool.Availability(state, perk, catalog, PerkSource.Reward);
                 return new RewardOptionView(
                     index,
                     RewardKind.Perk,
                     perk.Id,
                     perk.Name.Es,
                     perk.Rarity,
-                    DescriptionGenerator.Describe(perk, templates),
+                    DescriptionGenerator.Describe(perk, templates, catalog.Perks),
                     string.Empty,
                     NeedsCarrier: true,
                     carriers,
-                    carriers.Count == 0 ? RewardBlock.NoCarrier : RewardBlock.None);
+                    availability switch
+                    {
+                        PerkAvailability.Unmet => RewardBlock.Unmet,
+                        PerkAvailability.Closed => RewardBlock.Closed,
+                        PerkAvailability.NoCarrier => RewardBlock.NoCarrier,
+                        _ => RewardBlock.None,
+                    },
+                    requirement,
+                    closes);
             }
 
             case ItemRewardOption itemOption:
@@ -198,6 +251,54 @@ public static class RewardView
             default:
                 throw new InvalidOperationException($"tipo de recompensa no reconocido: {option.GetType().Name}");
         }
+    }
+
+    /// <summary>Lo que exige un maestro y cómo va la run; null si el perk no es un maestro (ADR 0051).</summary>
+    private static RewardRequirement? Requirement(
+        RunState state, Catalog catalog, DescriptionTemplates templates, PerkDefinition perk)
+    {
+        if (perk.Requires is not { } requirement)
+        {
+            return null;
+        }
+
+        return new RewardRequirement(
+            requirement.Family,
+            templates.Get("families", requirement.Family),
+            requirement.Count,
+            PerkPool.FamilyHeld(state, catalog, requirement.Family));
+    }
+
+    /// <summary>
+    /// Lo que la opción cierra al aceptarla, con los nombres localizados y el número de perks que
+    /// desaparecen del catálogo para esa run (ADR 0051). Null si no cierra nada.
+    /// </summary>
+    private static RewardClosure? Closure(Catalog catalog, DescriptionTemplates templates, PerkDefinition perk)
+    {
+        if (!perk.Blocks.Any)
+        {
+            return null;
+        }
+
+        var names = new List<string>(perk.Blocks.Families.Count + perk.Blocks.Perks.Count);
+        int count = 0;
+        foreach (string family in perk.Blocks.Families)
+        {
+            names.Add(templates.Get("families", family));
+            count += catalog.Perks.MembersOf(family).Count;
+        }
+
+        foreach (string id in perk.Blocks.Perks)
+        {
+            var blocked = catalog.Perks.Find(id);
+            if (blocked is not null)
+            {
+                names.Add(blocked.Name.Es);
+                count++;
+            }
+        }
+
+        return new RewardClosure(names, count);
     }
 
     /// <summary>Fichas mínimas de los portadores posibles, por id ascendente (RT-041).</summary>

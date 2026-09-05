@@ -71,10 +71,19 @@ internal static class TestPerks
         bool accumulates = false,
         string? positionOnly = null,
         string tagsRequired = "[]",
-        string tagsForbidden = "[]")
+        string tagsForbidden = "[]",
+        int minAct = 1,
+        int? frequency = null,
+        string? family = null,
+        string? requiresPerks = null,
+        string? blocksPerks = null)
     {
         string limitText = limit is null ? string.Empty : $"\"limit\": {limit},";
         string elseText = elseEffects is null ? string.Empty : $"\"elseEffects\": {elseEffects},";
+        string frequencyText = frequency is null ? string.Empty : $"\"frequency\": {frequency},";
+        string familyText = family is null ? string.Empty : $"\"family\": \"{family}\",";
+        string requiresText = requiresPerks is null ? string.Empty : $"\"requiresPerks\": {requiresPerks},";
+        string blocksText = blocksPerks is null ? string.Empty : $"\"blocksPerks\": {blocksPerks},";
         string positionText = positionOnly is null ? "null" : $"\"{positionOnly}\"";
         string raceText = race is null ? "null" : $"\"{race}\"";
         return $$"""
@@ -82,6 +91,11 @@ internal static class TestPerks
           "id": "{{id}}",
           "name": { "es": "{{id}}", "en": "{{id}}" },
           "rarity": "{{rarity}}",
+          "minAct": {{minAct}},
+          {{frequencyText}}
+          {{familyText}}
+          {{requiresText}}
+          {{blocksText}}
           "kind": "{{kind}}",
           "axis": "{{axis}}",
           "race": {{raceText}},

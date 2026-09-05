@@ -1,0 +1,34 @@
+{
+  "_doc": "Arcos de build (ADR 0051): las lineas del catalogo y la curva de profundidad nativa. Las LINEAS son las familias a las que un perk puede pertenecer ('family' en data/perks/<id>.json); un perk MAESTRO exige llevar ya N perks de su linea ('requiresPerks') y cierra otra linea para el resto de la run ('blocksPerks'). La PROFUNDIDAD es lo que pondera el pool de recompensas y de mercado por acto: cada perk y cada objeto declaran su acto nativo ('minAct') y aqui esta el peso relativo que tienen a cada distancia de el. El nombre visible de cada linea NO esta aqui: sale de data/l10n/<idioma>/templates.json, seccion 'families' (RT-035, RT-073).",
+  "families": [
+    {
+      "id": "wall",
+      "_doc": "La Muralla: entrada, cobertura y porteria. Se construye desde el propio tercio."
+    },
+    {
+      "id": "craft",
+      "_doc": "El Toque: pase, regate y evasion. Gana sin tocar al rival."
+    },
+    {
+      "id": "aim",
+      "_doc": "La Punteria: el remate. Convierte pocas ocasiones."
+    },
+    {
+      "id": "butchery",
+      "_doc": "La Carniceria: lesionar. La identidad del juego llevada al catalogo."
+    }
+  ],
+  "depth": {
+    "_doc": "Peso relativo de un perk o un objeto en el pool segun la distancia entre el acto en curso y su acto nativo. 'nativePercent[d]' es el peso a d actos POR ENCIMA del nativo: en su acto sale a peso completo y luego decae, que es lo que hace que el relleno salga sobre todo pronto y deje sitio a lo hondo. 'outOfDepthPercent[d]' es el peso a d+1 actos POR DEBAJO: la aparicion fuera de profundidad de Angband, rara y memorable, nunca imposible. Un maestro no la tiene: no aparece por debajo de su acto nativo (ADR 0051). 'masterPreviewPercent' es el peso de un maestro al que todavia le falta una pieza de su linea: aparece como ANUNCIO (el jugador ve el objetivo y sabe que existe) pero sin comerse el sitio de las veces en que se puede comprar de verdad, que son las que cierran el arco (ADR 0055).",
+    "nativePercent": [
+      100,
+      60,
+      40
+    ],
+    "outOfDepthPercent": [
+      12,
+      3
+    ],
+    "masterPreviewPercent": 20
+  }
+}

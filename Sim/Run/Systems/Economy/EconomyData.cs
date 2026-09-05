@@ -32,12 +32,20 @@ public sealed record PriceByRarity(int Common, int Uncommon, int Rare, int Legen
 /// Probabilidad, en tanto por ciento, de que una opción se sortee <b>solo</b> entre las de rareza
 /// superior a común: es la "rareza mejorada" que la ADR 0043 le da al nodo de élite.
 /// </param>
+/// <param name="CommonCeilingPercent">
+/// Probabilidad, en tanto por ciento, de que una opción se sortee <b>solo</b> entre las comunes: es la
+/// "rareza degradada" con la que la ADR 0052 §2 devuelve la <b>tercera</b> opción al partido de liga sin
+/// devolverle la calidad. Se sortea con la misma tirada que <paramref name="RarityFloorPercent"/>, desde
+/// el otro extremo, así que los dos no pueden coincidir en la misma opción y su suma no puede pasar de
+/// 100.
+/// </param>
 /// <param name="HealsRoster">Cura la plantilla entera al superarlo (RF-091, RF-092): cierra el ciclo de desgaste del acto.</param>
 public sealed record NodeRewardConfig(
     int GoldBonusPercent,
     int Options,
     int Picks,
     int RarityFloorPercent,
+    int CommonCeilingPercent,
     bool HealsRoster);
 
 /// <summary>Configuración del surtido del mercado (RF-114..114f).</summary>
@@ -323,6 +331,7 @@ public static class EconomyLoader
         node.Int("options"),
         node.Int("picks"),
         node.Int("rarityFloorPercent"),
+        node.Int("commonCeilingPercent"),
         node.Prop("healsRoster").AsBool());
 
     private static MarketConfig ReadMarket(Json node) => new(

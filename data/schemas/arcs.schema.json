@@ -1,0 +1,77 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://underleague.dev/schemas/arcs.schema.json",
+  "title": "Arcos de build y profundidad nativa (ADR 0051)",
+  "description": "data/build/arcs.json: las lineas del catalogo de perks y la curva de peso por acto del pool de recompensas y de mercado. Que perk pertenece a que linea lo declara el propio perk ('family'); aqui solo esta la lista canonica de lineas, para que una errata sea un error de carga y no una familia fantasma. El nombre visible de cada linea vive en data/l10n/<idioma>/templates.json, seccion 'families'.",
+  "type": "object",
+  "properties": {
+    "_doc": {
+      "type": "string"
+    },
+    "families": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "properties": {
+          "_doc": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_]*$"
+          }
+        },
+        "required": [
+          "id"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "depth": {
+      "type": "object",
+      "properties": {
+        "_doc": {
+          "type": "string"
+        },
+        "nativePercent": {
+          "description": "Peso relativo, en porcentaje, a 0, 1, 2... actos POR ENCIMA del acto nativo. El primer elemento es el acto nativo y tiene que ser el mayor: por debajo de el la curva solo puede decaer.",
+          "type": "array",
+          "minItems": 3,
+          "items": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100
+          }
+        },
+        "masterPreviewPercent": {
+          "description": "ADR 0055: peso de un perk maestro al que todavia le falta una pieza de su linea, en porcentaje del que tiene cuando ya se puede comprar. Pequeno a proposito: el anuncio ensena el objetivo, la compra cierra el arco.",
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 100
+        },
+        "outOfDepthPercent": {
+          "description": "Peso relativo, en porcentaje, a 1, 2... actos POR DEBAJO del acto nativo (aparicion fuera de profundidad). Pequeno a proposito: es la sorpresa, no la norma.",
+          "type": "array",
+          "minItems": 2,
+          "items": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 50
+          }
+        }
+      },
+      "required": [
+        "nativePercent",
+        "outOfDepthPercent",
+        "masterPreviewPercent"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "required": [
+    "families",
+    "depth"
+  ],
+  "additionalProperties": false
+}

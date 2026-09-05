@@ -1,0 +1,83 @@
+{
+  "_doc": "ADR 0051. Una de las DOS builds humanas que toman maestros distintos y no pueden coexistir: esta cierra La Punteria (granite_line) y La Carniceria (first_touch_school), asi que no lleva ni un perk de remate ni uno de lesion. Su pareja es human_bloodrange, que cierra justo las otras dos. Sirven para medir la divergencia que RF-032 exige (tres builds viables y DISTINTAS por raza) y el techo de RT-055.",
+  "id": "human_granite",
+  "name": "Humanos: granito y toque",
+  "race": "Human",
+  "quality": 50,
+  "perks": [
+    {
+      "slot": 0,
+      "perk": "safety_net"
+    },
+    {
+      "slot": 0,
+      "perk": "sweeper_keeper"
+    },
+    {
+      "slot": 1,
+      "perk": "own_third_anchor"
+    },
+    {
+      "slot": 1,
+      "perk": "pit_veteran"
+    },
+    {
+      "slot": 1,
+      "perk": "granite_line"
+    },
+    {
+      "slot": 2,
+      "perk": "own_third_anchor"
+    },
+    {
+      "slot": 2,
+      "perk": "back_to_back"
+    },
+    {
+      "slot": 3,
+      "perk": "fine_touch"
+    },
+    {
+      "slot": 3,
+      "perk": "steady_hands"
+    },
+    {
+      "slot": 3,
+      "perk": "first_touch_school"
+    },
+    {
+      "slot": 4,
+      "perk": "last_ditch"
+    },
+    {
+      "slot": 4,
+      "perk": "silky_veteran"
+    },
+    {
+      "slot": 5,
+      "perk": "fine_touch"
+    },
+    {
+      "slot": 5,
+      "perk": "wing_overlap"
+    },
+    {
+      "slot": 6,
+      "perk": "steady_hands"
+    },
+    {
+      "slot": 6,
+      "perk": "flank_specialist"
+    }
+  ],
+  "rarities": {
+    "1": "uncommon",
+    "3": "uncommon"
+  },
+  "styles": {
+    "3": "Fine",
+    "4": "Fine",
+    "5": "Fine"
+  },
+  "lineup": null
+}

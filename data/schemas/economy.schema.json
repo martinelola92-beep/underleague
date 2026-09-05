@@ -74,9 +74,10 @@
         "options": { "type": "integer", "minimum": 1, "maximum": 6 },
         "picks": { "type": "integer", "minimum": 0, "maximum": 4 },
         "rarityFloorPercent": { "type": "integer", "minimum": 0, "maximum": 100 },
+        "commonCeilingPercent": { "type": "integer", "minimum": 0, "maximum": 100 },
         "healsRoster": { "type": "boolean" }
       },
-      "required": ["goldBonusPercent", "options", "picks", "rarityFloorPercent", "healsRoster"],
+      "required": ["goldBonusPercent", "options", "picks", "rarityFloorPercent", "commonCeilingPercent", "healsRoster"],
       "additionalProperties": false
     },
     "nodeRewards": {

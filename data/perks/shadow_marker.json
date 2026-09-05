@@ -5,9 +5,12 @@
     "en": "Shadow Marker"
   },
   "rarity": "common",
+  "minAct": 1,
+  "frequency": 150,
   "kind": "filler",
   "axis": "proximity",
   "race": null,
+  "family": "butchery",
   "trigger": "TACKLE",
   "scope": "actor",
   "links": [],

@@ -5,9 +5,11 @@
     "en": "Deathless March"
   },
   "rarity": "rare",
+  "minAct": 2,
   "kind": "filler",
   "axis": "accumulation",
   "race": "Undead",
+  "family": null,
   "trigger": "MATCH_START",
   "scope": "actor",
   "links": [],

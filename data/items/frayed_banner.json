@@ -6,6 +6,7 @@
   },
   "rarity": "uncommon",
   "archetype": "fragile",
+  "minAct": 1,
   "attributeBonus": {
     "stamina": 10,
     "leash": 10

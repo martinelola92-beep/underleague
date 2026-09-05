@@ -5,9 +5,11 @@
     "en": "Captain's Voice"
   },
   "rarity": "uncommon",
+  "minAct": 1,
   "kind": "conditional",
   "axis": "accumulation",
   "race": null,
+  "family": null,
   "trigger": "MATCH_START",
   "scope": "actor",
   "links": [],

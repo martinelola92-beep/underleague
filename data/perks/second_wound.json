@@ -6,9 +6,11 @@
     "en": "Second Wound"
   },
   "rarity": "rare",
+  "minAct": 3,
   "kind": "ruleBreaker",
   "axis": "matchState",
   "race": null,
+  "family": null,
   "trigger": "INJURY",
   "scope": "opposingTeam",
   "links": [],

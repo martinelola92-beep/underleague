@@ -6,9 +6,12 @@
     "en": "Marrow Thirst"
   },
   "rarity": "rare",
+  "minAct": 3,
+  "frequency": 150,
   "kind": "ruleBreaker",
   "axis": "startZone",
   "race": null,
+  "family": "butchery",
   "trigger": "MATCH_START",
   "scope": "any",
   "links": [],

@@ -14,9 +14,16 @@ public sealed class ItemCatalog
     private readonly Dictionary<string, ItemDefinition> _byId;
 
     public ItemCatalog(IEnumerable<ItemDefinition> items, ItemScale scale)
+        : this(items, scale, Perks.DepthCurve.Flat)
+    {
+    }
+
+    /// <summary>El catálogo con su curva de profundidad nativa (ADR 0051).</summary>
+    public ItemCatalog(IEnumerable<ItemDefinition> items, ItemScale scale, Perks.DepthCurve depth)
     {
         ArgumentNullException.ThrowIfNull(items);
         Scale = scale ?? throw new ArgumentNullException(nameof(scale));
+        Depth = depth ?? throw new ArgumentNullException(nameof(depth));
         _items = items.OrderBy(i => i.Id, StringComparer.Ordinal).ToArray();
         _byId = new Dictionary<string, ItemDefinition>(_items.Length, StringComparer.Ordinal);
         foreach (var item in _items)
@@ -28,6 +35,9 @@ public sealed class ItemCatalog
     /// <summary>Escala del equipamiento y tabla de valor marginal (ADR 0036, ADR 0038).</summary>
     public ItemScale Scale { get; }
 
+    /// <summary>Curva de profundidad nativa del pool (ADR 0051), la misma que la del catálogo de perks.</summary>
+    public Perks.DepthCurve Depth { get; }
+
     /// <summary>Objetos ordenados por id ordinal ascendente.</summary>
     public IReadOnlyList<ItemDefinition> All => _items;
 
@@ -35,18 +45,34 @@ public sealed class ItemCatalog
     /// Objetos que pueden aparecer en una run de esa raza (ADR 0036): los universales, más los
     /// restringidos de <b>su</b> raza y ninguno más. Orden de id ordinal ascendente (RT-041).
     /// </summary>
-    public IReadOnlyList<ItemDefinition> OfferableTo(Race clubRace)
+    public IReadOnlyList<ItemDefinition> OfferableTo(Race clubRace) => OfferableTo(clubRace, act: int.MaxValue / 2);
+
+    /// <summary>
+    /// Los mismos, filtrados además por <b>profundidad nativa</b> (ADR 0051): un objeto por debajo de su
+    /// acto solo entra si la curva le deja un peso fuera de profundidad, y con ese peso pequeño.
+    /// </summary>
+    public IReadOnlyList<ItemDefinition> OfferableTo(Race clubRace, int act)
     {
         var result = new List<ItemDefinition>(_items.Length);
         foreach (var item in _items)
         {
-            if (item.Race is null || item.Race == clubRace)
+            if ((item.Race is null || item.Race == clubRace) && Depth.WeightPercent(item.MinAct, act) > 0)
             {
                 result.Add(item);
             }
         }
 
         return result;
+    }
+
+    /// <summary>
+    /// Peso del objeto en el pool de ese acto: el de la ADR 0038 modulado por la profundidad nativa de la
+    /// ADR 0051. Nunca baja de 1 mientras el objeto pueda salir.
+    /// </summary>
+    public int DepthWeight(ItemDefinition item, int valueWeight, int act)
+    {
+        ArgumentNullException.ThrowIfNull(item);
+        return Math.Max(1, valueWeight * Depth.WeightPercent(item.MinAct, act) / 100 * item.Frequency / 100);
     }
 
     /// <summary>Busca un objeto por id; null si no existe.</summary>
@@ -88,7 +114,13 @@ public static class ItemLoader
             throw new DataException("items/", "$", "no se ha encontrado ningún objeto en data/items/");
         }
 
-        return new ItemCatalog(items, scale);
+        // La curva de profundidad es la misma que la del catálogo de perks (ADR 0051): un solo fichero
+        // manda sobre lo que entra en el pool, sean perks u objetos.
+        var depth = files.TryGetValue("build/arcs.json", out var arcs)
+            ? Perks.BuildArcs.Parse("build/arcs.json", arcs).Depth
+            : Perks.DepthCurve.Flat;
+
+        return new ItemCatalog(items, scale, depth);
     }
 
     private static ItemDefinition Parse(string path, string content, ItemScale scale)
@@ -154,7 +186,22 @@ public static class ItemLoader
             throw new DataException(path, "$.breakChancePercent", "solo un objeto frágil se rompe (RF-077)");
         }
 
-        var item = new ItemDefinition(id, name, rarity, archetype, modifier, breakChance, race, requiredTag);
+        int minAct = root.OptionalInt("minAct", 1);
+        if (minAct < 1 || minAct > Perks.PerkLoader.Acts)
+        {
+            throw new DataException(
+                path, "$.minAct", $"el acto nativo tiene que estar entre 1 y {Perks.PerkLoader.Acts} (ADR 0051)");
+        }
+
+        int frequency = root.OptionalInt("frequency", Perks.PerkLoader.DefaultFrequency);
+        if (frequency < 10 || frequency > 500)
+        {
+            throw new DataException(
+                path, "$.frequency", "la frecuencia va de 10 a 500, con 100 como lo normal (ADR 0051)");
+        }
+
+        var item = new ItemDefinition(
+            id, name, rarity, archetype, modifier, breakChance, race, requiredTag, minAct, frequency);
         Validate(path, item, scale);
         return item;
     }

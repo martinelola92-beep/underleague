@@ -5,9 +5,11 @@
     "en": "Double Pivot"
   },
   "rarity": "common",
+  "minAct": 1,
   "kind": "filler",
   "axis": "alignment",
   "race": null,
+  "family": null,
   "trigger": "MATCH_START",
   "scope": "actor",
   "links": [

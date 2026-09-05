@@ -5,9 +5,11 @@
     "en": "Diagonal Press"
   },
   "rarity": "common",
+  "minAct": 1,
   "kind": "filler",
   "axis": "alignment",
   "race": null,
+  "family": null,
   "trigger": "TACKLE",
   "scope": "actor",
   "links": [

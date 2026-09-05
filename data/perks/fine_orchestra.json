@@ -5,9 +5,12 @@
     "en": "Fine Orchestra"
   },
   "rarity": "uncommon",
+  "minAct": 1,
+  "frequency": 150,
   "kind": "conditional",
   "axis": "composition",
   "race": null,
+  "family": "craft",
   "trigger": "MATCH_START",
   "scope": "actor",
   "links": [],

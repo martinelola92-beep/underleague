@@ -5,9 +5,12 @@
     "en": "Game Management"
   },
   "rarity": "common",
+  "minAct": 1,
+  "frequency": 150,
   "kind": "filler",
   "axis": "matchState",
   "race": null,
+  "family": "wall",
   "trigger": "TACKLE",
   "scope": "actor",
   "links": [],

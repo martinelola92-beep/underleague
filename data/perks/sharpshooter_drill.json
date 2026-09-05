@@ -5,9 +5,12 @@
     "en": "Sharpshooter Drill"
   },
   "rarity": "uncommon",
+  "minAct": 1,
+  "frequency": 150,
   "kind": "filler",
   "axis": "accumulation",
   "race": null,
+  "family": "aim",
   "trigger": "SHOT",
   "scope": "actor",
   "links": [],

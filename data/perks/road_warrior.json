@@ -5,9 +5,11 @@
     "en": "Road Warrior"
   },
   "rarity": "uncommon",
+  "minAct": 1,
   "kind": "conditional",
   "axis": "accumulation",
   "race": null,
+  "family": null,
   "trigger": "RECOVERY",
   "scope": "actor",
   "links": [],

@@ -1,0 +1,84 @@
+{
+  "_doc": "ADR 0051. La pareja de human_granite: misma raza y misma plantilla, maestros opuestos. Cierra La Muralla (killing_range) y El Toque (blood_tithe), asi que no lleva ni contencion ni pase. Las dos builds son la demostracion de que un maestro obliga a elegir: ninguna de las dos podria contener un solo perk de la otra.",
+  "id": "human_bloodrange",
+  "name": "Humanos: sangre y puntería",
+  "race": "Human",
+  "quality": 50,
+  "perks": [
+    {
+      "slot": 0,
+      "perk": "clean_sheet_legacy"
+    },
+    {
+      "slot": 0,
+      "perk": "scar_tissue"
+    },
+    {
+      "slot": 1,
+      "perk": "shadow_marker"
+    },
+    {
+      "slot": 1,
+      "perk": "brute_boots"
+    },
+    {
+      "slot": 1,
+      "perk": "blood_tithe"
+    },
+    {
+      "slot": 2,
+      "perk": "shadow_marker"
+    },
+    {
+      "slot": 2,
+      "perk": "brute_boots"
+    },
+    {
+      "slot": 3,
+      "perk": "bruised_knuckles"
+    },
+    {
+      "slot": 3,
+      "perk": "pack_mentality"
+    },
+    {
+      "slot": 4,
+      "perk": "shadow_marker"
+    },
+    {
+      "slot": 4,
+      "perk": "scar_tissue"
+    },
+    {
+      "slot": 5,
+      "perk": "long_range_menace"
+    },
+    {
+      "slot": 5,
+      "perk": "sharpshooter_drill"
+    },
+    {
+      "slot": 6,
+      "perk": "box_predator"
+    },
+    {
+      "slot": 6,
+      "perk": "forward_line"
+    },
+    {
+      "slot": 6,
+      "perk": "killing_range"
+    }
+  ],
+  "rarities": {
+    "1": "uncommon",
+    "6": "uncommon"
+  },
+  "styles": {
+    "1": "Brute",
+    "2": "Brute",
+    "3": "Brute",
+    "4": "Brute"
+  },
+  "lineup": null
+}

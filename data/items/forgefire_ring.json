@@ -5,6 +5,7 @@
     "en": "Forgefire Ring"
   },
   "archetype": "restricted",
+  "minAct": 2,
   "race": "Dwarf",
   "attributeBonus": {
     "strength": 10,

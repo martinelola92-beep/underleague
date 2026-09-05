@@ -5,9 +5,12 @@
     "en": "Pack Mentality"
   },
   "rarity": "uncommon",
+  "minAct": 1,
+  "frequency": 150,
   "kind": "conditional",
   "axis": "composition",
   "race": null,
+  "family": "butchery",
   "trigger": "MATCH_START",
   "scope": "actor",
   "links": [],

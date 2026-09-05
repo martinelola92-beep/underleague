@@ -5,9 +5,12 @@
     "en": "Back to Back"
   },
   "rarity": "common",
+  "minAct": 1,
+  "frequency": 150,
   "kind": "filler",
   "axis": "proximity",
   "race": null,
+  "family": "wall",
   "trigger": "TACKLE",
   "scope": "actor",
   "links": [],

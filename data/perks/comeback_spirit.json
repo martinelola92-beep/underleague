@@ -5,9 +5,11 @@
     "en": "Comeback Spirit"
   },
   "rarity": "uncommon",
+  "minAct": 1,
   "kind": "conditional",
   "axis": "matchState",
   "race": null,
+  "family": null,
   "trigger": "PLAY_START",
   "scope": "actor",
   "links": [],

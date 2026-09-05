@@ -6,6 +6,7 @@
     "en": "Swiftrot Tendons"
   },
   "archetype": "restricted",
+  "minAct": 2,
   "race": "Undead",
   "attributeBonus": {
     "speed": 10,

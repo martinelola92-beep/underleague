@@ -111,11 +111,15 @@ public static class MarketOfferGenerator
 
         // El peso de un perk en el pool es inversamente proporcional a su valor medido (ADR 0038): la
         // palanca donde el precio ya interviene es doble, pero el pool tiene que ofrecer lo caro menos.
-        var perkPool = PerkPool.Offerable(state, catalog);
+        // ADR 0051: y el acto decide qué entra. En el acto 1 el surtido es de relleno; en el 2 y el 3
+        // aparecen las piezas hondas y, si a la run le falta una sola pieza de una línea, su maestro:
+        // "me falta la tercera de la línea, la busco y la pago" es el papel que el mercado recupera.
+        var perkPool = PerkPool.Offerable(state, catalog, node.Act, PerkSource.Market);
         var perkWeights = new List<int>(perkPool.Count);
         for (int i = 0; i < perkPool.Count; i++)
         {
-            perkWeights.Add(economy.PerkValues.WeightOf(perkPool[i].Id));
+            perkWeights.Add(PerkPool.OfferWeight(
+                state, perkPool[i], catalog, economy.PerkValues.WeightOf(perkPool[i].Id), node.Act));
         }
 
         var perks = new List<PerkOffer>(market.PerkOffers);
@@ -128,11 +132,12 @@ public static class MarketOfferGenerator
 
         // Solo los universales y los restringidos de la raza del club (ADR 0036); el precio sale del
         // valor del objeto, no de su rareza (ADR 0038).
-        var itemPool = items.OfferableTo(state.ClubRace);
+        var itemPool = items.OfferableTo(state.ClubRace, node.Act);
         var itemWeights = new List<int>(itemPool.Count);
         for (int i = 0; i < itemPool.Count; i++)
         {
-            itemWeights.Add(ItemPricing.OfferWeight(itemPool[i], items.Scale));
+            itemWeights.Add(items.DepthWeight(
+                itemPool[i], ItemPricing.OfferWeight(itemPool[i], items.Scale), node.Act));
         }
 
         var itemOffers = new List<ItemOffer>(market.ItemOffers);

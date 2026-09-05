@@ -6,6 +6,7 @@
   },
   "rarity": "rare",
   "archetype": "fragile",
+  "minAct": 2,
   "attributeBonus": {
     "strength": 10,
     "speed": 10,

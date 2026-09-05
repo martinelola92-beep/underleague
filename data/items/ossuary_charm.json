@@ -5,6 +5,7 @@
     "en": "Ossuary Charm"
   },
   "archetype": "restricted",
+  "minAct": 2,
   "race": "Undead",
   "attributeBonus": {
     "strength": 10,

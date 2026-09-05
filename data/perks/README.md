@@ -23,6 +23,49 @@ Rareza: 16 `common`, 19 `rare`, 5 `legendary` (sobre 40).
 
 `elseEffects` con castigo real (no un `-3` simbólico, un `-5`/`-10`/`-15` en la misma escala que el efecto): 17 perks.
 
+## Arcos de build: líneas y maestros (ADR 0051)
+
+Cuatro **líneas** (`family` en el fichero del perk, declaradas en `data/build/arcs.json`) con siete piezas
+cada una, y **cuatro maestros**, uno por línea. Los maestros son el 6,6% del catálogo, dentro del 5-10%
+que la ADR acota: si crecen más, el catálogo deja de ser un roguelite de piezas sueltas.
+
+| línea | nombre visible | piezas | maestro | exige | cierra |
+|---|---|---|---|---|---|
+| `wall` | La Muralla | `bulwark_stance`, `own_third_anchor`, `last_ditch`, `back_to_back`, `pit_veteran`, `game_management`, `safety_net` | `granite_line` | 2 de La Muralla | La Puntería |
+| `craft` | El Toque | `fine_touch`, `steady_hands`, `silky_veteran`, `flank_specialist`, `wing_overlap`, `crowd_control`, `fine_orchestra` | `first_touch_school` | 2 de El Toque | La Carnicería |
+| `aim` | La Puntería | `box_predator`, `long_range_menace`, `cold_focus`, `forward_line`, `sharpshooter_drill`, `poacher_instinct`, `spearpoint` | `killing_range` | 2 de La Puntería | La Muralla |
+| `butchery` | La Carnicería | `bruised_knuckles`, `shadow_marker`, `scar_tissue`, `brute_boots`, `pack_mentality`, `iron_studs`, `marrow_thirst` | `blood_tithe` | 2 de La Carnicería | El Toque |
+
+Las líneas se cierran **por parejas**: La Muralla contra La Puntería y El Toque contra La Carnicería. Una
+run puede cerrar como mucho **dos** arcos, uno de cada pareja, y las dos combinaciones posibles
+(`granite_line` + `first_touch_school`, `killing_range` + `blood_tithe`) son las dos builds catalogadas
+`human_granite` y `human_bloodrange`, que no comparten un solo perk.
+
+**Un maestro solo se compra** (ADR 0055): no sale nunca como recompensa por ganar. Es lo que hace del
+mercado parte del núcleo de la build —sin pasar por uno, el objetivo de la línea no existe— y lo que
+convierte a las 28 piezas de línea (`frequency: 150`) en el camino hacia algo en vez de en piezas sueltas.
+
+El bloqueo mira **hacia adelante**: lo que ya se lleva sigue funcionando —un perk no se puede retirar
+(RF-072), así que apagarlo sería borrar algo ya pagado— y lo que desaparece es la posibilidad de
+conseguir más de esa línea en lo que queda de run. Se anuncia en la descripción generada (RT-035) y en la
+pantalla de recompensa antes de aceptar (RF-012d).
+
+## Profundidad nativa (ADR 0051)
+
+Cada perk declara `minAct` (el acto en el que empieza a aparecer) y, opcionalmente, `frequency` (el
+*commonness* de Angband, 100 = lo normal). La curva que traduce la distancia al acto nativo en peso está
+en `data/build/arcs.json`.
+
+| acto nativo | perks | criterio |
+|---|---|---|
+| 1 | 47 | todo lo demás: el acto 1 es el taller (ADR 0043) |
+| 2 | 10 | los `rare` y los cuatro maestros (`frequency: 300`, y un 20% de eso mientras les falte una pieza) |
+| 3 | 4 | los letales: `iron_studs`, `marrow_thirst`, `second_wound`, `skullsplitter` |
+
+Un perk **por debajo** de su acto nativo sale con el 12% de su peso (3% dos actos por debajo): la
+aparición *fuera de profundidad*, rara y memorable. Un **maestro no la tiene**: no aparece nunca por
+debajo del acto 2, y solo entra en el pool cuando a la run le falta como mucho una pieza de su línea.
+
 ## Perks
 
 | id | eje | raza | rareza | tipo | trigger | resumen | builds |

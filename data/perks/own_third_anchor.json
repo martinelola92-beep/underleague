@@ -5,9 +5,12 @@
     "en": "Own-Third Anchor"
   },
   "rarity": "common",
+  "minAct": 1,
+  "frequency": 150,
   "kind": "filler",
   "axis": "startZone",
   "race": null,
+  "family": "wall",
   "trigger": "MATCH_START",
   "scope": "actor",
   "links": [],

@@ -113,6 +113,25 @@ public sealed record RunPolicyOptions
     /// </summary>
     public int DeathCostPercent { get; init; } = 150;
 
+    /// <summary>
+    /// Si la política <b>persigue un maestro</b> (ADR 0051): elige la línea que más lejos tiene construida
+    /// y, a igualdad de todo lo demás, prefiere sus perks y el maestro que la corona. Es un dial de la
+    /// política, no del juego: sin él, la política automática es exactamente el jugador que la ADR
+    /// describe como el problema —el que acumula piezas sueltas— y la medición de "¿los arcos existen?"
+    /// no diría nada, porque nadie estaría intentando cerrarlos.
+    /// </summary>
+    public bool PursuesMasters { get; init; } = true;
+
+    /// <summary>
+    /// Si la política <b>esquiva los mercados</b> (ADR 0055). Es la medida de control de la métrica que
+    /// esa ADR pide: ganar la run sin entrar en ningún mercado tiene que ser prácticamente imposible
+    /// (&lt; 5%). No es una doctrina de compra —es la misma contextual jugando igual de bien todo lo
+    /// demás— y solo cambia la <b>regla 1</b>, la de elegir nodo: con el mapa de cuatro carriles (ADR
+    /// 0053) el mercado se puede esquivar en el 98,9% de los actos, así que la política lo consigue casi
+    /// siempre y entra solo cuando no hay otra ruta.
+    /// </summary>
+    public bool AvoidsMarkets { get; init; }
+
     /// <summary>Compras máximas en un mismo nodo de mercado; corta el bucle, no la política.</summary>
     public int MaxMarketActions { get; init; } = 16;
 
@@ -209,7 +228,26 @@ public sealed record RunPlayResult(
     IReadOnlyList<int> BossSamplesByAct,
 
     /// <summary>Objetos recuperados del inventario tras una muerte (ADR 0048, condición 4).</summary>
-    int ItemsRecovered)
+    int ItemsRecovered,
+
+    /// <summary>
+    /// Perks <b>maestros</b> que la plantilla lleva al terminar (ADR 0051), por id ordinal. Es la
+    /// respuesta a "¿los arcos existen?": si nunca se cierra ninguno, están mal calibrados o piden
+    /// demasiado.
+    /// </summary>
+    IReadOnlyList<string> Masters,
+
+    /// <summary>
+    /// Ids <b>distintos</b> de perk que la plantilla lleva al terminar (ADR 0051). Es con lo que se mide
+    /// si dos runs que tomaron maestros distintos construyeron builds distintas de verdad (RF-032).
+    /// </summary>
+    IReadOnlyList<string> FinalPerks,
+
+    /// <summary>Veces que un maestro estuvo en el mostrador de un mercado de esta run (ADR 0055).</summary>
+    int MastersOffered,
+
+    /// <summary>De esas, cuántas se podían cobrar y pagar (ADR 0055).</summary>
+    int MastersAffordable)
 {
     /// <summary>True si la run terminó ganando al jefe final (RF-002).</summary>
     public bool Won => Outcome == RunOutcomeKind.Victory;
@@ -325,7 +363,7 @@ public static class RunPolicy
                 : EnterService(state, node, catalog, systems, ledger);
         }
 
-        return Summarize(state, setup, seed, options, ledger);
+        return Summarize(state, setup, seed, catalog, options, ledger);
     }
 
     // ------------------------------------------------------------------ 1. qué nodo
@@ -355,7 +393,12 @@ public static class RunPolicy
             int score = node.Kind switch
             {
                 NodeKind.Clinic => needsClinic ? 100 : 20,
-                NodeKind.Market => 90,
+
+                // ADR 0055: el mercado es la parada más valiosa del mapa... salvo para la política de
+                // control, que lo esquiva siempre (int.MinValue, no un peso bajo: con cuatro carriles hay
+                // actos en los que la única ruta pasa por uno, y en ese caso entra igual porque no hay
+                // alternativa, que es exactamente lo que el 98,9% de la ADR 0053 deja fuera).
+                NodeKind.Market => options.AvoidsMarkets ? int.MinValue + 1 : 90,
                 NodeKind.Event => poor ? 40 : 25,
                 NodeKind.Training => 30,
                 NodeKind.EliteMatch => strong ? 60 : 40 - node.Difficulty,
@@ -940,6 +983,25 @@ public static class RunPolicy
         ledger.OffersSeen += counted.Offers;
         ledger.GoldAtMarketArrival += state.Gold;
         ledger.OffersAffordable += counted.Affordable;
+
+        // ADR 0055: el maestro solo se compra, así que cuántas veces llega a estar EN el mostrador —y
+        // cuántas de esas se podía comprar de verdad— es la diferencia entre "el arco no se cierra porque
+        // no aparece" y "no se cierra porque no se puede pagar". Sin las dos cifras, el 3% de arcos
+        // cerrados no dice qué hay que mover.
+        for (int i = 0; i < arrival.Perks.Count; i++)
+        {
+            if (catalog.Perks.Find(arrival.Perks[i].PerkId) is not { IsMaster: true } master)
+            {
+                continue;
+            }
+
+            ledger.MastersOffered++;
+            if (PerkPool.Availability(state, master, catalog, PerkSource.Market) == PerkAvailability.Available
+                && arrival.Perks[i].Price <= state.Gold)
+            {
+                ledger.MastersAffordable++;
+            }
+        }
         if (counted.PricedAffordable == 0)
         {
             ledger.BrokeMarketVisits++;
@@ -1132,6 +1194,7 @@ public static class RunPolicy
         // (b) Un perk para un titular (RF-114e). Dentro del presupuesto, primero el que pasa el listón de
         // la doctrina y, a igual rareza, el más barato: la escalera de la ADR 0033 la marca la
         // **densidad** de perks en el once (14 en "correcta", 17 en "muy buena").
+        string pursuedFamily = PursuedFamily(state, catalog, options);
         int bestPerk = -1, bestPerkCarrier = -1, bestPerkRank = int.MinValue;
         for (int i = 0; i < offers.Perks.Count; i++)
         {
@@ -1142,6 +1205,14 @@ public static class RunPolicy
 
             var perk = catalog.Perks.Find(offers.Perks[i].PerkId);
             if (perk is null || !ClearsTheBar(perk.Rarity, options) || !WorthASlot(perk.Id, economy, options))
+            {
+                continue;
+            }
+
+            // ADR 0051: comprar no salta el arco. Un maestro sin su línea construida no se puede cobrar,
+            // así que tampoco se puja por él.
+            if (PerkPool.Availability(state, perk, catalog, PerkSource.Market)
+                is PerkAvailability.Unmet or PerkAvailability.Closed)
             {
                 continue;
             }
@@ -1161,6 +1232,10 @@ public static class RunPolicy
                     + (perk.ElseEffects.Count == 0 ? 1_000_000 : 0)
                     - offers.Perks[i].Price
                 : Rank(perk.Rarity, offers.Perks[i].Price, options, perk.ElseEffects.Count == 0);
+
+            // ADR 0051: aquí es donde el mercado recupera el papel que el trampolín le quitó. Si a la run
+            // le falta una pieza de su línea, o el maestro está a la venta, se paga antes que nada.
+            rank += ArcPreference(perk, pursuedFamily, takeable: true) * ArcMarketWeight;
             if (rank > bestPerkRank)
             {
                 bestPerk = i;
@@ -1415,7 +1490,70 @@ public static class RunPolicy
     /// <summary>Puntuación de la mejor recompensa posible: un perk o un objeto para un titular.</summary>
     private const int BestRewardScore = 3;
 
-    private readonly record struct RewardChoice(int Index, int Carrier, int Score);
+    /// <summary>Preferencia de un maestro que ya se puede cobrar, dentro de su misma puntuación (ADR 0051).</summary>
+    private const int MasterPreference = 2;
+
+    /// <summary>Preferencia de una pieza de la línea que la run persigue (ADR 0051).</summary>
+    private const int FamilyPreference = 1;
+
+    /// <summary>
+    /// Lo que pesa la preferencia de arco en el mercado (ADR 0051). Está por encima del término de
+    /// antisinergia (un millón) para que el maestro de la línea se compre aunque haya otro perk más
+    /// valioso a la venta: la línea completa vale más que la pieza suelta, y eso es lo que se mide.
+    /// </summary>
+    private const int ArcMarketWeight = 2_000_000;
+
+    /// <summary>
+    /// La línea que la run persigue (ADR 0051): aquella de la que ya lleva más piezas y cuyo maestro
+    /// sigue siendo alcanzable. Empates por id de línea ordinal ascendente (RT-041): la política no tira
+    /// un dado para decidir su build. Cadena vacía si no persigue ninguna.
+    /// </summary>
+    private static string PursuedFamily(RunState state, Catalog catalog, RunPolicyOptions options)
+    {
+        if (!options.PursuesMasters)
+        {
+            return string.Empty;
+        }
+
+        var closed = PerkPool.ClosedBy(state, catalog);
+        string best = string.Empty;
+        int bestHeld = -1;
+        foreach (var master in catalog.Perks.Masters)
+        {
+            if (master.Requires is not { } requirement || closed.Blocks(master))
+            {
+                continue;
+            }
+
+            int held = PerkPool.FamilyHeld(state, catalog, requirement.Family);
+            if (held > bestHeld
+                || (held == bestHeld && string.CompareOrdinal(requirement.Family, best) < 0))
+            {
+                best = requirement.Family;
+                bestHeld = held;
+            }
+        }
+
+        return best;
+    }
+
+    /// <summary>
+    /// Cuánto prefiere la política este perk dentro de su puntuación (ADR 0051): el maestro que ya puede
+    /// cobrar por encima de todo, y por debajo las piezas de la línea que persigue.
+    /// </summary>
+    private static int ArcPreference(Perks.PerkDefinition perk, string pursued, bool takeable)
+    {
+        if (perk.IsMaster)
+        {
+            return takeable ? MasterPreference : 0;
+        }
+
+        return pursued.Length > 0 && string.Equals(perk.Family, pursued, StringComparison.Ordinal)
+            ? FamilyPreference
+            : 0;
+    }
+
+    private readonly record struct RewardChoice(int Index, int Carrier, int Score, int Preference = 0);
 
     private static RewardChoice PickReward(
         RunState state,
@@ -1428,16 +1566,26 @@ public static class RunPolicy
         var lineup = ChooseStarters(state, options);
         var placement = PlacementOf(lineup);
         int naked = BestStarterWithoutItem(state, lineup, options);
+        string pursued = PursuedFamily(state, catalog, options);
         var best = new RewardChoice(-1, -1, 0);
 
         for (int i = 0; i < rewards.Count; i++)
         {
-            int score, carrier = -1;
+            int score, carrier = -1, preference = 0;
             switch (rewards[i])
             {
                 case PerkRewardOption perk:
                     var definition = catalog.Perks.Find(perk.PerkId);
-                    var carriers = definition is null || !WorthASlot(perk.PerkId, economy, options)
+
+                    // ADR 0051: un maestro que la run todavía no puede sostener, o una línea que otro
+                    // maestro cerró, no son opciones: /Sim las rechazaría al cobrarlas.
+                    // "Cobrable" aquí es lo que decide el ARCO (ADR 0051, ADR 0055), no si hay portador:
+                    // eso lo resuelve la lista de portadores dos líneas más abajo y tiene su propia
+                    // puntuación.
+                    bool takeable = definition is not null
+                        && PerkPool.Availability(state, definition, catalog, PerkSource.Reward)
+                            is not (PerkAvailability.Unmet or PerkAvailability.Closed or PerkAvailability.MarketOnly);
+                    var carriers = definition is null || !takeable || !WorthASlot(perk.PerkId, economy, options)
                         ? Array.Empty<int>()
                         : PerkPool.EligibleCarriers(state, definition, catalog);
                     carrier = definition is null || carriers.Count == 0
@@ -1447,6 +1595,11 @@ public static class RunPolicy
                     if (score == 2)
                     {
                         carrier = carriers[0];
+                    }
+
+                    if (definition is not null)
+                    {
+                        preference = ArcPreference(definition, pursued, takeable);
                     }
 
                     break;
@@ -1487,9 +1640,12 @@ public static class RunPolicy
                     break;
             }
 
-            if (score > best.Score)
+            // A igual puntuación manda el arco (ADR 0051): entre dos opciones igual de buenas, la que
+            // avanza la línea que la run persigue. Es lo que convierte "coger lo mejor de tres" en
+            // "construir hacia algo", que es justo lo que el catálogo suelto no permitía.
+            if (score > best.Score || (score == best.Score && score > 0 && preference > best.Preference))
             {
-                best = new RewardChoice(i, carrier, score);
+                best = new RewardChoice(i, carrier, score, preference);
             }
         }
 
@@ -1825,6 +1981,7 @@ public static class RunPolicy
         RunState state,
         RunSetup setup,
         ulong seed,
+        Catalog catalog,
         RunPolicyOptions options,
         Ledger ledger)
     {
@@ -1857,6 +2014,16 @@ public static class RunPolicy
             foreach (var (_, value) in player.Counters)
             {
                 counters += value;
+            }
+        }
+
+        var held = PerkPool.HeldPerkIds(state);
+        var masters = new List<string>();
+        for (int i = 0; i < held.Count; i++)
+        {
+            if (catalog.Perks.Find(held[i]) is { IsMaster: true })
+            {
+                masters.Add(held[i]);
             }
         }
 
@@ -1916,7 +2083,11 @@ public static class RunPolicy
             ledger.PerksAtBossByAct,
             ledger.ItemsAtBossByAct,
             ledger.BossSamplesByAct,
-            ledger.ItemsRecovered);
+            ledger.ItemsRecovered,
+            masters,
+            held,
+            ledger.MastersOffered,
+            ledger.MastersAffordable);
     }
 
     /// <summary>
@@ -2015,6 +2186,12 @@ public static class RunPolicy
 
         /// <summary>Elecciones rechazadas porque ninguna opción encajaba (ADR 0043).</summary>
         public int RewardsDeclined;
+
+        /// <summary>Veces que un maestro estuvo en el mostrador de un mercado (ADR 0055).</summary>
+        public int MastersOffered;
+
+        /// <summary>De esas, cuántas se podían cobrar y pagar de verdad (ADR 0055).</summary>
+        public int MastersAffordable;
 
         /// <summary>Nodos recorridos, de partido y de servicio: la duración de la run en nodos (RF-003b).</summary>
         public int Nodes;

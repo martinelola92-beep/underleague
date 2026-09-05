@@ -5,6 +5,7 @@
     "en": "Windsong Sandals"
   },
   "archetype": "restricted",
+  "minAct": 2,
   "race": "Elf",
   "attributeBonus": {
     "speed": 10,

@@ -5,9 +5,11 @@
     "en": "Home Ref"
   },
   "rarity": "uncommon",
+  "minAct": 1,
   "kind": "conditional",
   "axis": "matchState",
   "race": null,
+  "family": null,
   "trigger": "FOUL",
   "scope": "actor",
   "links": [],

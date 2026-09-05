@@ -1,0 +1,43 @@
+{
+  "_doc": "MAESTRO de La Punteria (ADR 0051). Exige dos perks de su linea y cierra La Muralla: el equipo que apuesta por el gol deja de poder comprar contencion. Es el unico perk que mejora el remate de TODO el equipo, no el del portador.",
+  "id": "killing_range",
+  "name": {
+    "es": "Distancia de tiro",
+    "en": "Killing Range"
+  },
+  "rarity": "rare",
+  "minAct": 2,
+  "frequency": 300,
+  "kind": "conditional",
+  "axis": "geometry",
+  "race": null,
+  "family": "aim",
+  "requiresPerks": {
+    "family": "aim",
+    "count": 2
+  },
+  "blocksPerks": {
+    "families": ["wall"],
+    "perks": []
+  },
+  "trigger": "SHOT",
+  "scope": "team",
+  "links": [],
+  "condition": "distanceToGoal(actor) < 6",
+  "effects": [
+    {
+      "type": "modifyProbability",
+      "target": "actor",
+      "probability": "shotOnTarget",
+      "value": 15,
+      "duration": "play"
+    }
+  ],
+  "elseEffects": [],
+  "limit": null,
+  "accumulatesAcrossMatches": false,
+  "lethal": false,
+  "positionOnly": null,
+  "tagsRequired": [],
+  "tagsForbidden": []
+}

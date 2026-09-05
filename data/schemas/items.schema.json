@@ -20,6 +20,18 @@
       "description": "RF-077: tres arquetipos obligatorios en el catalogo (cursed, fragile, restricted), ademas de normal.",
       "enum": ["normal", "cursed", "fragile", "restricted"]
     },
+    "frequency": {
+      "description": "ADR 0051 (el 'commonness' de Angband): cuanto sale este objeto en el pool comparado con uno normal, en porcentaje. 100 = lo normal. Multiplica al peso por valor de la ADR 0038 y a la curva de profundidad.",
+      "type": "integer",
+      "minimum": 10,
+      "maximum": 500
+    },
+    "minAct": {
+      "description": "ADR 0051 (profundidad nativa): acto a partir del cual el objeto empieza a aparecer en el pool de recompensas y de mercado. Por debajo de el solo sale FUERA DE PROFUNDIDAD, con el peso pequeno de data/build/arcs.json. Ausente = 1.",
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 3
+    },
     "attributeBonus": {
       "description": "Modificadores de atributo del objeto. Las entradas positivas son lo que sube (tantas como su rareza permita); la unica entrada negativa, si la hay, es la contrapartida del maldito.",
       "type": "object",

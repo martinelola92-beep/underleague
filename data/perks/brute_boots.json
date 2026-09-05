@@ -5,9 +5,12 @@
     "en": "Brute Boots"
   },
   "rarity": "common",
+  "minAct": 1,
+  "frequency": 150,
   "kind": "filler",
   "axis": "identity",
   "race": null,
+  "family": "butchery",
   "trigger": "MATCH_START",
   "scope": "actor",
   "links": [],

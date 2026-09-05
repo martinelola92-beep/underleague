@@ -121,7 +121,7 @@ public static class UiText
         ["ui.map.difficulty"] = "dificultad {0}/5 · {1}",
         ["ui.map.boss"] = "jefe del acto {0}",
         ["ui.map.bossHidden"] = "su modificador de regla no se conoce hasta llegar",
-        ["ui.map.legend"] = "borde dorado: adónde puedes ir · anillo doble: mercado · relleno: por donde has pasado",
+        ["ui.map.legend"] = "borde dorado: adónde puedes ir · anillo doble: mercado · relleno: por donde has pasado · apagado: fuera de alcance desde tu carril",
         ["ui.map.state"] = "ESTADO DE LA RUN",
         ["ui.map.roster"] = "plantilla {0} de {1} · {2} caídos",
         ["ui.map.quit"] = "Guardar y salir",
