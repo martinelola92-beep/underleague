@@ -54,6 +54,7 @@ Cuándo escribir un ADR: cambio de librería o stack, frontera entre proyectos, 
 | [0054](0054-banda-del-mejor-equipo.md) | `betterTeamWinRate` pasa de 65-80 a 70-88: la banda de fase 0 medía un motor que diluía la habilidad | Aceptada. **Requisito previo de la P1** |
 | [0055](0055-el-mercado-es-imprescindible.md) | Ganar sin pasar por el mercado debe quedar por debajo del 5%: los maestros y el equipamiento solo se compran | Aceptada |
 | [0056](0056-separacion-entre-perfiles.md) | Build buena al 60% en partidos de los actos 2 y 3; build mala por debajo del 2% de completar la run | Aceptada. **Implementa P1 y P3** |
+| [0057](0057-el-suelo-sin-build.md) | Un equipo sin build gana el 14,5%: la palanca es el peso de la build, no el oro. La P3 queda en suspenso | Aceptada. **Suspende la P3** |
 
 El hueco del 0011 corresponde a una decisión sobre el radio de adyacencia que quedó absorbida por la 0021 antes de aceptarse.
 | [0012](0012-buildswindifferently-normalizada.md) | `buildsWinDifferently` normalizada contra la referencia de la raza | **Propuesta: decisión del revisor** |
