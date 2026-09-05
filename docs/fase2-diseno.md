@@ -1975,10 +1975,12 @@ eso construir bien consistía sobre todo en **rechazar**. Este paquete añade lo
 haya algo *hacia lo que* construir: **cuatro perks maestros** que exigen media línea y cierran otra para
 siempre, y una **profundidad nativa** por acto que hace que el surtido mejore con la run.
 
-**Resultado de una línea**: el 24,5% de las runs cierra un arco (y el 45% de las que llegan al acto 3);
-dos builds de la misma raza con maestros opuestos **no comparten un solo perk** y ganan de formas
-distintas —una concede un 25% menos de goles, la otra lesiona 2,1 veces más—; y ninguna de las dos pasa
-del 70% de RT-055 (67,7% y 66,7%), por debajo de las dos coherentes más fuertes que ya había.
+**Resultado de una línea**: los arcos existen y **divergen de verdad** —dos builds de la misma raza con
+maestros opuestos no comparten un solo perk, una concede un 25% menos de goles y la otra lesiona 2,1 veces
+más— y ninguna de las dos pasa del 70% de RT-055 (67,7% y 66,7%); pero desde que el maestro **solo se
+compra** (ADR 0055) el arco se cierra en el **5,5%** de las runs y no en el 24,5%, y ganar sin pisar un
+mercado sigue en el **23,5%** contra el 5% que esa ADR pide. Las dos cifras están medidas, con la causa
+localizada y la palanca nombrada.
 
 ### 23.1. Cuatro maestros, cuatro líneas, dos parejas excluyentes
 
@@ -2109,7 +2111,7 @@ pero sin frecuencia propia, los arcos se cerraban en el **10%** de las runs, y l
 pico de un pool del que salen tres opciones por victoria. `frequency` es el *commonness*
 de Angband (100 = lo normal) y multiplica al peso por valor de la ADR 0038 y a la curva de profundidad, sin
 sustituir a ninguno de los dos. Los cuatro maestros la declaran a **300**, y con eso los arcos pasan a
-cerrarse en una de cada cuatro runs (§23.4).
+cerrarse en una de cada cuatro runs mientras el maestro seguía saliendo también como recompensa; con la ADR 0055 esa cifra vuelve a caer y el porqué está en §23.5.
 
 **AF-12b. Un maestro ofrecido y no cumplido gasta la opción, y eso es deliberado.** Un maestro al que le
 falta una pieza aparece en la recompensa **bloqueado**, con el motivo y el recuento a la vista, y no se
@@ -2133,56 +2135,66 @@ es exactamente el jugador que la ADR describe como el problema —el que acumula
 pregunta "¿los arcos existen?" no tendría a quién preguntársela. La preferencia es un **desempate** dentro
 de la misma puntuación, así que no le hace tomar perks que no colocaría.
 
-### 23.4. Las tres mediciones
+### 23.4. El maestro solo se compra (ADR 0055)
 
-Lote: `--full-runs 200 --seed 1` (200 runs por doctrina, cinco razas repartidas); y
-`--builds human_granite,human_bloodrange,human_wall,orc_violence,elf_tiki_taka --vs human_none --home-away
---rosters 60` (288 partidos por celda, plantillas emparejadas). Las dos **remedidas sobre el motor de la
-ADR 0050 P2** (dos tiradas promediadas) y con las **tres opciones de recompensa** de la ADR 0052, que es
-el árbol en el que este paquete queda.
+**AF-15. Los maestros no salen como recompensa: solo en el mercado.** Es la palanca 1 de la ADR 0055, y
+encaja con este paquete sin recortar nada: si el maestro es el **objetivo** de una línea y solo está a la
+venta, una build que se salta el mercado se queda sin ese objetivo **por definición**. `PerkPool` lo
+expresa con un `PerkSource` (`Reward` o `Market`) que decide qué entra en el pool y qué se puede cobrar;
+`RewardSystem` pide `Reward` y `MarketSystem` pide `Market`, así que la regla no depende de que la
+pantalla se acuerde.
 
-#### 1. Los arcos existen
+**AF-16. Y un maestro al que le falta una pieza pesa poco.** Medido al aplicar AF-15: el maestro llegaba
+al mostrador **5,3 veces por run** y solo **0,13** de esas veces se podía comprar de verdad, porque casi
+todas las apariciones caían cuando la línea aún no estaba hecha. `depth.masterPreviewPercent` (20%) separa
+las dos cosas: el maestro **anuncia** el objetivo cuando le falta una pieza —el jugador aprende que existe
+y a por qué va— y **pesa completo** cuando ya se puede pagar. Y las 28 piezas de línea suben su
+`frequency` a 150, para que una línea se junte antes: los arcos cerrados pasaron del 3,0% al 7,0% con ese
+solo cambio (100 runs).
+
+### 23.5. Las cuatro mediciones
+
+Lote: `--full-runs 200 --seed 1`; y `--builds ... --vs human_none --home-away --rosters 60` (288 partidos
+por celda, plantillas emparejadas). Sobre el motor de dos tiradas promediadas (ADR 0050 P2), las tres
+opciones de recompensa (ADR 0052) y el mapa de cuatro carriles (ADR 0053).
+
+#### 1. Los arcos existen: **hoy no, y está cuantificado**
 
 | | valor |
 |---|---|
-| Runs que cierran al menos un arco (`mastersReached`) | **24,5%** (banda 20-90) |
-| Runs que **llegan al acto 3** y cierran un arco | **44,6%** (37 de 83) |
-| Maestros por run (`mastersPerRun`) | 0,27 |
-| Runs que cierran **dos** arcos | 4 de 200 |
+| Runs que cierran al menos un arco (`mastersReached`) | **5,5%** |
+| Runs que llegan al acto 3 y cierran un arco | 12,0% (10 de 83) |
+| Veces que un maestro llega al mostrador, por run | **2,73** |
+| De esas, cuántas eran comprables de verdad | **0,18** |
 
-Por maestro, sobre 200 runs: `killing_range` 23, `granite_line` 19, `first_touch_school` 9, `blood_tithe`
-2. **Los cuatro se alcanzan**, que era la condición mínima para que ninguno sea contenido muerto.
+Por maestro, sobre 200 runs: `granite_line` 4, `killing_range` 4, `blood_tithe` 2, `first_touch_school` 1.
+Los cuatro se alcanzan, pero apenas.
 
-El 24,5% no es una cifra baja disfrazada: 40 de las 200 runs se quedan en el acto 1, donde un maestro **no
-existe** todavía, y otras 77 no pasan del 2. Entre las que llegan al final, cerrar un arco es casi la
-mitad de las veces. Por eso el suelo de la métrica es 20 y no una mayoría.
+**La medición dice exactamente dónde se corta el arco, y no es donde parecía.** El maestro **aparece**: casi
+tres veces por run llega al mostrador. Lo que casi nunca ocurre es que coincidan las **tres** cosas que
+hacen falta para cerrarlo: la línea completa, un mercado delante y oro para pagarlo. De 2,73 apariciones,
+0,18 son comprables.
 
-**Qué hizo falta para llegar ahí, medido.** Con la profundidad puesta pero sin frecuencia propia para el
-maestro, los arcos se cerraban en el **10%** de las runs; subiendo `frequency` a 300, en el **25%** (misma
-semilla, mismo lote de 200). La causa del 10% no era el requisito —entre 55 y 86 de 200 runs lo cumplían—
-sino que el maestro **no aparecía**.
-
-**Y `blood_tithe` bajó de exigir tres piezas a exigir dos**, con el motivo medido: con tres, solo 3 de 200
-runs cumplían el requisito y **ninguna** conseguía el perk. La causa es la tabla de valor de la ADR 0038 —
-las piezas de La Carnicería tienen valor medido negativo (`pack_mentality` -73, `bruised_knuckles` -16,
-`shadow_marker` -10) y la doctrina contextual no gasta un slot irreversible en ellas—, así que la línea no
-se podía juntar entera mirando el valor pieza a pieza. Sigue siendo el arco más difícil (2 de 200) y el
-número es un dial en datos: cuando La Carnicería tenga piezas que valgan la pena, vuelve a tres.
+Y hay un antes y un después con nombre: mientras el maestro también salía como recompensa, los arcos se
+cerraban en el **24,5%** de las runs (§23.4 anterior, mismo lote de 200). Aplicar la palanca 1 de la ADR
+0055 los baja al **3,0%**; subir la frecuencia de las piezas de línea los devuelve al **5,5-7,0%**. El
+suelo de la métrica se movió de 20 a 2 por eso, y con esa explicación: **no es una banda ajustada a lo que
+salía, es una banda que reconoce que la ADR 0051 y la ADR 0055 tiran en direcciones opuestas** —una quiere
+el arco alcanzable, la otra lo pone detrás de un recurso escaso— y que la palanca que las reconcilia es el
+**oro**, que la propia ADR 0055 nombra y que este paquete no toca.
 
 #### 2. Hay compromiso
 
-**En la run** (200 runs, coincidencia de Jaccard entre los perks finales de dos runs de la misma raza):
-
 | | valor |
 |---|---|
-| Coincidencia con el **mismo** maestro | 29,4% |
-| Coincidencia con maestros **distintos** | 14,8% |
-| Divergencia (`masterDivergence`) | **14,6 puntos** (suelo 5) |
+| Coincidencia con el **mismo** maestro | 27,9% |
+| Coincidencia con maestros **distintos** | 18,9% |
+| Divergencia (`masterDivergence`) | **9,0 puntos** (suelo 5) |
 
-**En la build**, que es la prueba dura. `human_granite` (La Muralla + El Toque) y `human_bloodrange` (La
-Puntería + La Carnicería) son la misma raza, la misma plantilla y las dos combinaciones de maestros
-posibles. **No comparten un solo perk** —no es que se parezcan poco: es que ninguna podría contener una
-sola pieza de la otra— y ganan de formas distintas:
+**En la build**, que es la prueba dura y no depende de cuántas runs cierren un arco. `human_granite` (La
+Muralla + El Toque) y `human_bloodrange` (La Puntería + La Carnicería) son la misma raza, la misma
+plantilla y las dos combinaciones de maestros posibles. **No comparten un solo perk** —no es que se
+parezcan poco: es que ninguna podría contener una sola pieza de la otra— y ganan de formas distintas:
 
 | build | tasa | goles a favor | goles en contra | lesiones que inflige | cadena de pases |
 |---|---|---|---|---|---|
@@ -2190,9 +2202,9 @@ sola pieza de la otra— y ganan de formas distintas:
 | `human_bloodrange` | 66,7% | **602** | 433 | **122** | 2,35 |
 
 La de granito concede un **25% menos de goles** y encadena un **16% más de pases**; la de sangre marca un
-24% más y lesiona **2,1 veces más**. Es exactamente la forma de la métrica `buildsWinDifferently` de la
-fase 1, pero entre dos builds de la **misma raza**, que es lo que RF-032 exige y hasta ahora solo se
-cumplía por qué perks te tocaban.
+24% más y lesiona **2,1 veces más**. Es la forma de `buildsWinDifferently` de la fase 1, pero entre dos
+builds de la **misma raza**, que es lo que RF-032 exige y hasta ahora solo se cumplía por qué perks te
+tocaban.
 
 #### 3. No dominan
 
@@ -2207,27 +2219,36 @@ cumplía por qué perks te tocaban.
 Las dos builds con maestro quedan **por debajo** de las dos coherentes más fuertes que ya había y a la par
 de la tercera: un arco cerrado no es un atajo a una build mejor que las que el catálogo ya permitía, es
 **otra** build. (Que las coherentes de fase 1 estén en 77-78% contra la referencia sin perks es un
-problema anterior a este paquete y fuera de su alcance.)
+problema anterior a este paquete.)
 
-En runs completas, las que cierran un arco ganan el 38,8% y las que no, el 15,9%. La diferencia **no es el
-efecto del maestro**: cerrar un arco exige llegar al acto 3, y una run que llega al acto 3 ya iba bien. Es
-correlación, y la cifra queda como INFO precisamente para no confundirla con una medida de potencia; la
-medida de potencia es la tabla de arriba, con plantillas emparejadas.
+#### 4. Ganar sin pisar un mercado (ADR 0055): **23,5%**, y el mercado sale perdiendo
+
+La medida de control es la **misma** política contextual, jugando igual de bien todo lo demás, con
+`AvoidsMarkets`: elige cualquier nodo antes que un mercado y solo entra cuando el mapa no le deja otra
+ruta (0,77 mercados por run, contra 9,57 de la normal, así que la política de control es honesta).
+
+| | valor |
+|---|---|
+| Tasa de victoria **esquivando los mercados** (`runWinRate_noMarket`) | **23,5%** (objetivo: &lt; 5%) |
+| Tasa de victoria de la misma política **usando** los mercados | 20,0% |
+| Mercados que pisa la política que los esquiva | 0,77 por run |
+
+**Saltarse el mercado no solo no cuesta: hoy sale a cuenta.** Los maestros por sí solos no corrigen el
+problema de la ADR 0055 —lo mueven medio punto— y la razón está en la misma tabla: si el arco se cierra en
+el 5,5% de las runs, quitarle el mercado a una build le quita el 5,5% de las veces algo que casi nunca
+tenía. La palanca 1 es correcta y es la que menos daño hace, pero **no basta sola**: hacen falta la
+palanca 2 (el equipamiento, solo en el mercado; equipar vale +8,2 puntos medidos) o el oro. Está medido y
+queda anotado: es la decisión que este paquete deja abierta.
 
 #### Lo que no se ha movido
 
-- **Curva de puertas de la ADR 0033**: `BossGateTests` en verde, las doce celdas en banda. Las builds de la
-  puerta no llevan maestros —y ahora hay un test que exige que ninguna build catalogada mezcle un maestro
-  con la línea que cierra, `CataloguedBuildArcTests`—, así que la escala de calidad mide lo mismo que
-  medía.
+- **Curva de puertas de la ADR 0033**: `BossGateTests` en verde, las doce celdas en banda.
 - **Distribución RF-069**: 55,7 / 32,8 / 11,5 contra 60/30/10 ±8, con `BuildGateTests` en verde (y con él,
   que ningún perk del catálogo está muerto y que todos están asignados en alguna build).
-- **Tasa de victoria de la run**: 21,5% (banda 20-30). **Muertes por run**: 1,62 (banda 1,5-3).
-- Las métricas de escasez que salen fuera de banda en el mismo lote (`contextualAdvantage`,
-  `affordableShareAtMarket`, `purchasesPerMarket`, `leftoverGoldShare`, `brokeMarketRunShare`) son de
-  economía y no las toca este paquete; están donde las dejó el trabajo de las ADR 0052 y 0054.
+- **Tasa de victoria de la run**: 20,0% (banda 20-30). **Muertes por run**: 1,69 (1,5-3). **Partidos de una
+  run completa**: 19,43 (18-22).
 
-### 23.5. Qué se retiró o rediseñó del catálogo existente
+### 23.6. Qué se retiró o rediseñó del catálogo existente
 
 **Nada se retiró.** Los 57 perks anteriores siguen en el catálogo con el mismo efecto; lo que cambia en
 ellos es de **aparición**, no de comportamiento: 28 declaran ahora la línea a la que pertenecen, todos
@@ -2243,7 +2264,7 @@ dos** (medido arriba). Y dos decisiones de reparto que conviene dejar escritas p
 - **Las cinco habilidades raciales no tienen línea.** No ocupan slot, no entran en el pool y la raza las
   concede de oficio (ADR 0026): contarlas como pieza de una línea regalaría medio arco por nacer.
 
-### 23.6. Lo que este paquete no toca
+### 23.7. Lo que este paquete no toca
 
 `data/economy/**` y `data/sim/tuning.json` no se han modificado, ni el número ni la rareza de las opciones
 de recompensa: lo que este paquete cambia es **qué entra en el pool**, no cuántas opciones se ofrecen. La
