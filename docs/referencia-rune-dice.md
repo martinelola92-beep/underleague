@@ -75,7 +75,17 @@ Eso es directamente medible con las doctrinas que ya existen:
 
 Medido hoy: contextual 17,8% y gastadora 12,2%. **La separación entre perfiles es demasiado pequeña**: un jugador mediocre y uno bueno terminan la run casi igual de veces. Esa distancia —no la tasa absoluta— es la métrica que dice si el juego premia jugar bien, y es la que hay que abrir.
 
-## 6. Y sobre las muertes
+## 6. La plantilla se reinicia en cada división
+
+Aclaración del revisor que corrige un supuesto implícito: **cada división es una run distinta y el equipo se reinicia**. Solo se arrastran los legendarios desbloqueados, y entran sin perks ni equipamiento.
+
+Consecuencias sobre lo escrito arriba:
+
+- **La protección contra la "espiral de muerte" se relaja mucho.** Perder no arrastra castigo a la siguiente partida, así que el juego puede —y debe— castigar duro dentro de la run. Lo que sigue vigente es RF-012d: **poder perder es bueno; perder sin entender por qué, no**. La diferencia entre tensión y frustración no es cuánto pierdes, es si sabías lo que arriesgabas.
+- **La progresión de la run recupera todo su peso**: como no se hereda nada, cada partida es la historia completa de construir un equipo desde el club inicial. Eso refuerza que la curva de la ADR 0033 se mida con la densidad alcanzable en cada acto (ADR 0040).
+- **La única progresión permanente, además del legendario, es lo que aprende el jugador.** El compendio de jefes, los rivales estáticos y las descripciones honestas son el sistema de progresión real, no adornos.
+
+## 7. Y sobre las muertes
 
 *"Que se te mueran jugadores en una run no es problema. Es la dificultad del juego. Debe castigar lo suficiente."*
 

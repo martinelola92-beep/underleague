@@ -26,9 +26,29 @@ RF-127 dice: *"No hay progresión meta que otorgue poder puro acumulativo. Los d
 
 La condición para que el cambio no rompa el juego es que **la dificultad de la división suba más de lo que aporta el legendario**. La progresión meta no facilita el juego: lo hace **distinto y más difícil**, y te da una herramienta con la que afrontarlo. Es medible y pasa a ser una métrica obligatoria: la tasa de victoria en la división N con sus legendarios debe ser **igual o menor** que en la división N−1 sin ellos.
 
+## Cada división es una run distinta: la plantilla se reinicia
+
+**No hay continuidad de plantilla entre divisiones.** Cada división es una run nueva que empieza desde el club inicial; lo único que se arrastra son los legendarios desbloqueados, y **entran sin perks y sin equipamiento**, como jugadores base superiores. Todo lo demás —build, objetos, niveles, vínculos— se construye otra vez desde cero.
+
+Eso tiene tres consecuencias que ordenan el resto del diseño:
+
+1. **El legendario no da poder, da capacidad.** Llega con mejores atributos y más slots, pero vacíos: hay que llenarlos durante la run igual que los de cualquier otro. La ventaja es el techo, no el punto de partida.
+2. **Las muertes dejan de tener coste meta.** Perder a un jugador —incluido un legendario— condena como mucho la run en curso; en la siguiente vuelve. Eso permite que el desgaste sea tan duro como el juego necesita sin que arrastre castigo entre partidas, y confirma la dirección de la ADR 0034.
+3. **La única progresión permanente, además de los legendarios, es el conocimiento del jugador.** Por eso el compendio de modificadores de jefe (RF-014b), los rivales estáticos que se aprenden (RF-015) y las descripciones que no mienten (RT-035) dejan de ser comodidades y pasan a ser el sistema de progresión real.
+
+## Un desajuste que hay que resolver: cinco divisiones, tres legendarios
+
+RF-128 define **cinco** divisiones (Tercera, Segunda, Primera, Continental, Mundial) y esta ADR fija **tres** legendarios por raza. La secuencia natural —empiezas sin ninguno y ganas uno por división superada— cubre cuatro escalones, no cinco. Tres salidas:
+
+- **Cuatro divisiones** en vez de cinco, y la tabla de RF-128 se reagrupa.
+- **Cinco divisiones y la última no da legendario**, sino otro premio (un desbloqueo, un cromo, el reconocimiento).
+- **Cuatro legendarios por raza**, con el coste de arte y escritura que eso multiplica por nueve razas.
+
+Queda para el revisor. Mientras no se decida, se asume la segunda, que no cambia ningún número.
+
 ## Los legendarios mueren
 
-Un legendario desbloqueado está disponible **al empezar cada run** de esa división, pero dentro de la run es un jugador más: se lesiona, se puede quedar sin tratar y **puede morir** (RF-093). Si muere, se pierde **para esa run**, no para siempre.
+Un legendario desbloqueado está disponible **al empezar cada run** de esa división, pero dentro de la run es un jugador más: se lesiona, se puede quedar sin tratar y **puede morir** (RF-093). Si muere, se pierde **para esa run**, no para siempre — igual que el resto de la plantilla, que también se reinicia.
 
 Es la decisión que más valor añade: el desgaste de plantilla es el recurso central del juego, y un legendario inmortal sería la única pieza a la que ese recurso no afecta. Perder a un personaje con nombre y cara en el acto 2 es exactamente la historia que el juego quiere producir, y hace que la ceremonia de muerte y el memorial (RF-122) tengan a quién llorar.
 
