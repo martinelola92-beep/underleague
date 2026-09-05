@@ -40,6 +40,7 @@ Cuándo escribir un ADR: cambio de librería o stack, frontera entre proyectos, 
 | [0040](0040-densidad-de-build-por-acto.md) | La curva de puertas se mide con la build que cabe en ese acto, no con la plantilla terminada | Aceptada. **Corrige la medición de la ADR 0033** |
 | [0041](0041-lesiones-relativas-al-nivel.md) | La lesión se mide contra el rival: con niveles altos el sistema de desgaste se apagaba solo | Aceptada |
 | [0042](0042-el-precio-eficiente-anula-la-decision.md) | Un mercado perfectamente tasado no premia el criterio: la ADR 0037 y la 0038 se anulan entre sí | **Propuesta: decisión del revisor** |
+| [0043](0043-trampolin-y-desgaste-por-acto.md) | Cada acto tiene su función: taller, gestión y examen; el jefe es trampolín además de barrera | Aceptada. **Revisa la curva de la ADR 0033** |
 
 El hueco del 0011 corresponde a una decisión sobre el radio de adyacencia que quedó absorbida por la 0021 antes de aceptarse.
 | [0012](0012-buildswindifferently-normalizada.md) | `buildsWinDifferently` normalizada contra la referencia de la raza | **Propuesta: decisión del revisor** |

@@ -30,11 +30,26 @@ Y la curva de exigencia que `/Balance` debe verificar:
 
 | Puerta | Incoherente | Correcta | Buena | Muy buena |
 |---|---|---|---|---|
-| **Jefe del acto 1** | < 25% | 45-60% | 60-75% | 70-85% |
-| **Jefe del acto 2** | < 15% | 30-45% | 55-70% | 65-80% |
-| **Jefe final** | < 10% | 15-30% | 35-50% | 55-70% |
+| **Jefe del acto 1** | 20-35% | 65-80% | 75-88% | 85-95% |
+| **Jefe del acto 2** | < 15% | 35-50% | 60-72% | 72-85% |
+| **Jefe final** | < 10% | 15-28% | 40-55% | 55-70% |
 
-Lectura: una build **correcta** pasa el primer jefe con apuros y se queda por el camino; una build **buena** llega lejos pero no basta para el final; solo una build **muy buena** termina la run con holgura. Y una build incoherente no pasa la primera puerta, que es lo que convierte el acto 1 en una lección y no en un trámite.
+**El acto 1 es el taller, no el examen** (revisión del 5 de septiembre). Su jefe solo castiga a quien lo ha hecho **muy** mal: una build correcta lo pasa con comodidad y hasta una incoherente se cuela a veces. Es donde el jugador monta su build, y es lo que los datos del género respaldan —los roguelikes consolidados empiezan siendo fáciles a propósito, porque nada aleja más a un jugador nuevo que morir en los primeros minutos (`docs/curva-de-dificultad.md` §2.3).
+
+**En el acto 2 empieza la gestión**: más dificultad, más desgaste, más decisiones. Aquí una build "correcta pero no del todo buena" empieza a quedarse, y perder no resulta frustrante porque el jugador sabe en qué se ha quedado corto.
+
+**El acto 3 exige una build completa.** Superarlo significa haber hecho las cosas con cabeza, y esa es la frase que debe poder decirse al ganar.
+
+Probabilidad acumulada de completar la run que produce esta curva:
+
+| Nivel de build | Run completada |
+|---|---|
+| Incoherente | ~0,1% |
+| Correcta | ~6% |
+| Buena | ~25% |
+| Muy buena | ~44% |
+
+El 25% de una build buena coincide con la tasa de victoria global de Slay the Spire 2 sobre 240 millones de sesiones, y la distancia entre "correcta" y "buena" —de 6% a 25%, cuatro veces— es la que hace que construir bien se note.
 
 **Esto sustituye a la segunda mitad de `scalingRewardsGoodBuilds`** (D-28), que pedía que las builds malas *decayeran* a lo largo de la campaña y resultó no ser medible: todas las builds caen cuando el rival mejora, y la que más caía era la que no llevaba ningún perk. La pregunta correcta no es cuánto cae una build mala, es **si pasa la puerta**. Es más directa, más fiel a lo que el jugador vive y no exige fabricar el número.
 
