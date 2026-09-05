@@ -131,3 +131,16 @@ Límites únicos de **2% y 98%** para toda probabilidad, como el 2,5% de DCSS. P
 - [DCSS: Armour class](http://crawl.chaosforge.org/Armour_class) · [Evasion](http://crawl.chaosforge.org/Evasion) · [crawl](https://github.com/crawl/crawl)
 - [Shattered Pixel Dungeon: stats](https://pixeldungeon.fandom.com/wiki/Shattered_Pixel_Dungeon/Stats) · [repositorio](https://github.com/00-Evan/shattered-pixel-dungeon)
 - [Cataclysm: DDA](https://github.com/CleverRaven/Cataclysm-DDA)
+
+
+## Anexo: segunda tanda de referencias
+
+Analizadas diez más a petición del revisor. Tres aportan algo que las cuatro primeras no daban, y están recogidas en la **ADR 0051**:
+
+- **DRL (DoomRL)** — *master traits* con prerequisitos y **exclusiones mutuas**: la pieza que da arcos de build y obliga a comprometerse. Lo más valioso de las diez.
+- **Angband** — tablas de asignación por **profundidad nativa** con "commonness", y aparición ocasional fuera de profundidad. Da progresión al surtido, no solo a la plantilla.
+- **Sil-Q** — `1d10 + habilidad` contra `1d10 + dificultad`: confirma la P2 de la ADR 0050, y advierte de que la brecha de habilidad **no se ensancha linealmente**, lo que obliga a medir el valor marginal por acto y no solo en global.
+
+Descartadas por no aportar nada nuevo a este proyecto: **NetHack** y **GnollHack** (interacciones emergentes entre objetos, poco sobre balance numérico), **HyperRogue** (geometría hiperbólica, no aplica), **ToME** (árboles de talento, misma lección que DRL pero menos limpia para nuestro caso), **Infra Arcana**, **POWDER** y **Ananias** (simplificaciones y meta de desbloqueos ya cubiertas por las decisiones de divisiones).
+
+Fuentes: [DRL: Strategy:Traits](https://drl.chaosforge.org/wiki/Strategy:Traits) · [Angband: modifying](https://github.com/angband/angband/blob/master/docs/hacking/modifying.rst) · [Sil manual](http://www.amirrorclear.net/flowers/game/sil/v101/Sil-Manual.pdf) · [Sil-Q](https://github.com/sil-quirk/sil-q)
