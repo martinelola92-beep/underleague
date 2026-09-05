@@ -16,10 +16,11 @@
 
 **Ancho de cuatro carriles**, con la topología de Slay the Spire:
 
-1. **Divergencia y reconvergencia.** Los caminos se abren y se vuelven a cruzar; elegir una rama no cierra el mapa.
-2. **Movimiento solo a carriles contiguos**: desde el carril *i* se puede ir a *i−1*, *i* o *i+1* de la capa siguiente, si existe la arista. Esto es lo que hace que la elección tenga **memoria**: subir mucho en un acto te deja lejos de la parte baja, y volver cuesta varias capas. La decisión deja de ser local.
-3. **Los mercados dejan de ser cuello de botella**: ocupan uno o dos carriles de su capa, no la capa entera. Desviarse hacia ellos cuesta posición, y ahí vuelve la decisión que RF-002d describe.
-4. **El jefe sigue siendo capa de ancho 1**: es el final del acto y todos los caminos convergen en él. Eso no cambia.
+1. **Entrada única y apertura progresiva.** El acto empieza en **un solo nodo**, y desde ahí bifurca: 1 → 2 → 4, alcanzando el ancho completo en la tercera capa. Todo el mundo juega el mismo primer nodo, lo que da un arranque consistente, un punto de comparación entre runs y el sitio natural para la primera run guiada (RF-123).
+2. **Divergencia y reconvergencia.** A partir de ahí los caminos se abren y se vuelven a cruzar; elegir una rama no cierra el mapa.
+3. **Movimiento solo a carriles contiguos**: desde el carril *i* se puede ir a *i−1*, *i* o *i+1* de la capa siguiente, si existe la arista. Esto es lo que hace que la elección tenga **memoria**: subir mucho en un acto te deja lejos de la parte baja, y volver cuesta varias capas. La decisión deja de ser local.
+4. **Los mercados dejan de ser cuello de botella**: ocupan uno o dos carriles de su capa, no la capa entera. Desviarse hacia ellos cuesta posición, y ahí vuelve la decisión que RF-002d describe.
+5. **El jefe sigue siendo capa de ancho 1**: es el final del acto y todos los caminos convergen en él. El acto queda así **cerrado por los dos extremos** —una entrada, una salida— y abierto en medio, que es donde deben estar las decisiones.
 
 ## Lo que hay que garantizar, y es la parte difícil
 
