@@ -35,3 +35,10 @@ Modelo **B + C ligero**:
 - **Balance**: más contacto significa más entradas, más lesiones y menos intercepciones limpias. Hay que revalidar RT-056 y rehacer el ajuste. Se espera además que la velocidad recupere valor: es el atributo que más debería ganar con cuerpos y con la búsqueda de espacio de la ADR 0022, y su valor marginal es la métrica que lo comprobará. Se agrupa con las decisiones 0021 y 0022 para reajustar una sola vez.
 - **Rendimiento**: 91 pares por tick × ~1.350 ticks ≈ 123.000 comprobaciones por partido. Estimación previa a la medida: de ~520 a ~380 partidos/s, muy por encima de los 167 que exige RT-051. Se mide, no se supone.
 - Las razas grandes pasan a tener identidad mecánica: ocupan espacio de verdad.
+
+**Nota de la ADR 0061 (paquete AM):** la predicción se cumplió y la cifra de esta ADR —"+0,3 puntos por
+cada +10 en humanos, −1,2 en orcos"— **está obsoleta y no debe citarse**. Con cuerpos y `FindSpace` la
+velocidad pasó a +6,6 puntos (D-25), y medido de nuevo en la fase 2 partiendo el peso de los atributos canal
+a canal, **es el canal más caro de los seis**: partir por la mitad el peso de la velocidad en el movimiento
+cuesta 3,00 puntos de tasa de victoria del acto 2, por delante del remate (2,15) y del pase (1,18)
+(`fase2-diseno.md` §29.5).

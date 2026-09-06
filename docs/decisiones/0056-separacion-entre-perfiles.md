@@ -16,6 +16,16 @@ build buena sube de 52,43 a **57,97**. Siguen fuera: el 60% de la build buena (f
 está agotada, AL-B), la mediocre por arriba (47,94 frente a 42-45), la build mala completando la run (12,00%
 frente a < 2%) y el suelo (10,66%). Detalle en `fase2-diseno.md` §28
 
+*(Estado 2026-09-06, paquete AM / ADR 0061)*: **la última palanca de fuerza queda falsificada por
+medición**. Bajar el peso de los atributos frente a la build —la P3 al revés, AL-B— no separa perfiles: los
+atributos entran en el motor como una **diferencia**, así que curva de nivel, presupuesto de generación y
+factores del motor son la misma operación y mueven a las dos builds a la vez. En siete condiciones de 600
+runs el hueco se queda entre 9,7 y 10,4 mientras la tasa de victoria recorre veinte puntos. **Los seis
+objetivos quedan exactamente donde los dejó la ADR 0060.** Y queda medido lo que hace falta: con la buena en
+57,97 y la mediocre en 47,94, alcanzar 60 y 42-45 pide un hueco de **16,5 puntos**, un 65% más que el que
+hay. Ninguna palanca de fuerza lo da; la única viva es **AL-A** (el recorrido del catálogo por canal).
+Detalle en `fase2-diseno.md` §29
+
 **Requisitos:** RT-055, RT-056, RF-032
 **Depende de:** ADR 0054 (banda revisada) · **implementa** las P1 y P3 de la ADR 0050
 

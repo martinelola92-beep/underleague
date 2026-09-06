@@ -75,6 +75,37 @@ public static class BuildMetrics
     /// <summary>Nombre de la métrica de mayor cadena media de pases de la build técnica que de la de contacto (§8).</summary>
     public const string BuildsWinDifferentlyPassChain = "buildsWinDifferently_passChain";
 
+    /// <summary>
+    /// Umbral de <see cref="BuildsWinDifferentlyPassChain"/> (ADR 0062). <b>Contra qué se mide</b>: contra
+    /// lo que el canal de pase puede dar con la escala de cuotas, no contra un canal saturado.
+    ///
+    /// <para>El 1,30 de antes venía de la fórmula <b>aditiva</b> anterior a la ADR 0050 P1: un
+    /// <c>pass +25</c> sumaba 2.500 puntos sobre una base de 7.700 y el pase quedaba clavado en el techo
+    /// del 98%, de donde salía una cadena un 30% más larga. La escala de cuotas lo impide por
+    /// construcción. Medido aislado —una build de <b>solo</b> siete <c>fine_touch</c> sobre el once contra
+    /// <c>elf_none</c>, 2 × 1.440 partidos por escalón— el canal responde así:</para>
+    ///
+    /// <code>
+    /// ×2 (techo común, que es el que lleva la build de medida)  1,108
+    /// ×3 (techo poco común)                                     1,143
+    /// ×4 (techo raro)                                           1,155
+    /// ×6 (techo legendario)                                     1,191
+    /// </code>
+    ///
+    /// <para>Es decir: <b>ni con el techo legendario</b> siete perks de pase alargan su propia cadena un
+    /// 20%, y con el techo común —el de <c>fine_touch</c>— llegan al <b>10,8%</b>. Es el mismo hallazgo de
+    /// AL-A: en un canal de base alta multiplicar la cuota casi no compra nada. El umbral pasa a ser
+    /// exactamente ese 10,8% redondeado a la baja, o sea <b>1,11</b>: lo que el canal da con los perks que
+    /// la build de medida puede llevar legalmente.</para>
+    ///
+    /// <para>No se ha elegido el techo de la escala (1,19 / 1,24 con la normalización) porque
+    /// <c>elf_tiki_taka</c> lleva perks <b>comunes</b>: pedirle el techo legendario no es calibrar el
+    /// umbral, es cambiar la afirmación. Y cuando AL-A se resuelva y el pase recupere recorrido, este
+    /// número hay que <b>volver a derivarlo hacia arriba</b>: hoy lo acota la aritmética, no el diseño de
+    /// la build.</para>
+    /// </summary>
+    public const double MinPassChainRatio = 1.11;
+
     /// <summary>Prefijo de la métrica por perk de tasa de activación (§8: noDeadPerks, ≥ 1% de los partidos en los que está asignado).</summary>
     public const string ActivationRatePrefix = "activationRate_";
 
@@ -192,7 +223,8 @@ public static class BuildMetrics
 
     /// <summary>
     /// buildsWinDifferently (§8): la build "de contacto" produce ≥ 1,5× las lesiones que la build
-    /// "técnica", y la técnica encadena ≥ 1,3× los pases de la de contacto. Las dos magnitudes se miden
+    /// "técnica", y la técnica encadena ≥ <see cref="MinPassChainRatio"/> los pases de la de contacto
+    /// (ADR 0062; era 1,3 contra un canal que la ADR 0050 P1 hizo imposible de saturar). Las dos se miden
     /// <b>normalizadas contra la referencia sin perks de la propia raza</b> (paquete I, ADR 0012): lo que
     /// se compara es "cuánto multiplica esta build lo que ya hacía su raza", no el valor absoluto.
     ///
@@ -213,7 +245,7 @@ public static class BuildMetrics
         string? technicalBuild,
         IReadOnlyDictionary<string, string> baselineOpponentByBuild,
         double minInjuryRatio = 1.5,
-        double minPassChainRatio = 1.3)
+        double minPassChainRatio = MinPassChainRatio)
     {
         ArgumentNullException.ThrowIfNull(baselineOpponentByBuild);
 

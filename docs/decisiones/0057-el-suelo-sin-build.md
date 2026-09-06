@@ -35,7 +35,7 @@ Y choca de frente con la directriz del revisor de que **una build mala no debe c
 **El peso relativo de la build frente a los atributos es la palanca, no el oro.** Y eso reordena las dos correcciones que quedaban de la ADR 0050:
 
 - **La P1 (perks multiplicativos sobre cuotas) pasa a ser la palanca principal**, no solo una mejora de coherencia. Al hacer que cada perk pese más y de forma predecible, **no tenerlos duele más** y el suelo baja. Es exactamente lo que hace falta.
-- **La P3 (curva de nivel más agresiva) queda en suspenso.** Subir el crecimiento por nivel del 22% al 39% **sube el peso de los atributos**, que es justo el componente que sostiene ese 14,5%. Iría en contra del objetivo. Se retoma solo si, tras P1, el suelo ha bajado lo suficiente como para permitírselo.
+- **La P3 (curva de nivel más agresiva) queda en suspenso.** *(La **ADR 0061** la retira del todo: medida en los dos sentidos, ni subirla ni bajarla separa perfiles, y bajarla hunde el suelo a 5,17 rompiendo `deathsPerRun`, las derrotas del acto 1 y la tasa de victoria de la run antes de llegar al 10%.)* Subir el crecimiento por nivel del 22% al 39% **sube el peso de los atributos**, que es justo el componente que sostiene ese 14,5%. Iría en contra del objetivo. Se retoma solo si, tras P1, el suelo ha bajado lo suficiente como para permitírselo.
 
 ## Consecuencias
 

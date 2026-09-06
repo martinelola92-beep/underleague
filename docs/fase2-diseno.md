@@ -3528,3 +3528,230 @@ paquetes: el acto 1 deja de morder más. `deathsPerRun` no se mueve (1,44 → 1,
 - **La P3 sigue suspendida**, y este paquete refuerza el motivo con un número nuevo: el suelo sin build
   responde a la capa del rival (2 puntos, ADR 0058) y **sube** cuando esa capa baja (10,09 → 10,66). Los otros
   ocho puntos siguen siendo nivel y atributos, y la dirección correcta es **bajar** su peso, no subirlo.
+
+## 29. Decisiones de implementación del paquete AM: el peso de los atributos, medido y descartado (ADR 0061, ADR 0062)
+
+El encargo era **AL-B**: bajar el peso de los atributos frente a la build, la P3 de la ADR 0050 al revés,
+con el argumento de que sirve a tres objetivos a la vez —sube la build buena, hunde la que no tiene build y
+aleja a la mala de completar la run—. **Los tres efectos existen y no ocurren a la vez**, y este paquete lo
+mide antes de tocar nada, que era la otra mitad del encargo. El resultado es que **no se mueve ningún número
+de balance**: los seis objetivos quedan donde los dejó la ADR 0060 y lo que entra es medición (ADR 0061) más
+la recalibración de la única puerta roja (ADR 0062).
+
+### 29.1. El banco de pruebas, y que reproduce la ADR 0060 al decimal
+
+Mismo protocolo que §28.8: 1.200 runs por doctrina (300 × semillas 1/1001/2001/3001), doctrina contextual =
+"buena", gastadora = "mediocre" y "mala"; el suelo con `economy.rewardPerkWeight = 0` y la contextual
+esquivando mercados. Las sondas son de 600 runs (150 × las mismas cuatro semillas), que es el tamaño con el
+que se puede mirar una condición por minuto y sigue dando error típico por debajo de 1,5 puntos en el hueco.
+
+| | ADR 0060 | esta medición | ET |
+|---|---|---|---|
+| Build buena, actos 2/3 | 57,97 / 44,43 | **57,97 / 44,43** | 0,71 / 0,53 |
+| Build mediocre, actos 2/3 | 47,94 / 40,67 | **47,94 / 40,67** | 0,70 / 0,25 |
+| Build mala completa la run | 12,00 | **12,00** | 0,87 |
+| Suelo sin build | 10,66 | **10,66** | 0,56 |
+| Hueco acto 2 | 10,03 | **10,03** | 0,50 |
+| Tasa de victoria de la run | 17,00 | **17,00** | 1,28 |
+
+Es la misma semilla sobre los mismos datos, así que la coincidencia es exacta y no una validación
+estadística; lo que valida es que el banco de este paquete y el del anterior son el mismo.
+
+### 29.2. El tipo de cambio: qué compra un punto de atributo y qué compra un perk
+
+Es lo primero que pedía el encargo y lo primero que se midió. Tres unidades, todas sobre la tasa de victoria
+en partidos **ordinarios** del acto 2:
+
+| unidad | efecto | instrumento |
+|---|---|---|
+| +1 punto en **cada** atributo de toda la plantilla | **+1,33** | `generation.budgetByRarity` +25 (600 runs) |
+| +1 perk **bien puesto** en el once | **+0,93** | `rewardPerkWeight` 0: el once cae de 9,97 a 2,82 perks y la buena de 57,97 a 51,33 (1.200 runs) |
+| un nivel de toda la plantilla (+2 en cuatro atributos) | **+2,1** | `attributesPerLevel` 2 → 3 (600 runs) |
+
+**Un punto de atributo sobre la plantilla vale 1,4 perks.** Y sumando cada capa entera, con el once
+terminando la run con 9,97 perks y nivel medio 5,11: **la build completa vale +6,6 puntos y la capa de nivel
++13,6**. La segunda es el doble de la primera. Ese es el número que AL-B pedía, y confirma con una cifra el
+"los otros ocho puntos son nivel y atributos" de la ADR 0058.
+
+**Una trampa del instrumento que costó una tanda**: `generation.budgetByRarity` y `generation.budgetPerLevel`
+**no son mandos del jugador**. Los usa `PlayerGenerator` para todo el que se genera, y los tres jefes se
+generan (`quality 31, level 8, rare`), así que subir el presupuesto sube también al jefe. Los rivales
+ordinarios **no**: sus atributos están escritos a mano en `data/rivals/`. Por eso la primera tanda medía
++6,7 puntos de partido ordinario y a la vez **menos** runs completadas, que no tenía sentido hasta ver de
+dónde venía. El único mando que toca sólo al jugador es `progression.attributesPerLevel`, que es progresión
+dentro de la run y no generación.
+
+### 29.3. Ninguna forma de mover ese peso separa a los dos perfiles
+
+Siete condiciones, 600 runs cada una. Se probaron las tres formas que el encargo enumeraba —curva de nivel,
+peso de cada atributo en las fórmulas del motor, presupuesto de generación— con sus dos signos:
+
+| palanca | buena 2 | mediocre 2 | **hueco** | suelo | run buena | run mediocre |
+|---|---|---|---|---|---|---|
+| `attributesPerLevel` 0 | 42,21 | 36,02 | 6,19 | 3,17 | 5,17 | 3,67 |
+| `attributesPerLevel` 1 | 50,64 | 40,91 | **9,74** | 6,50 | 8,67 | 6,83 |
+| **base (2)** | **57,76** | **47,71** | **10,05** | 14,00 | 16,83 | 11,50 |
+| `attributesPerLevel` 3 | 62,12 | 52,39 | **9,72** | 18,00 | 20,67 | 15,00 |
+| presupuesto de generación +5 | 64,43 | 54,02 | **10,41** | 14,50 | 14,50 | 7,17 |
+| factores de atributo del motor ×0,6 | 55,47 | 47,60 | 7,87 | 10,83 | 10,17 | 7,67 |
+| factores de atributo del motor ×1,4 | 57,44 | 47,52 | **9,92** | 16,83 | 17,50 | 12,50 |
+
+(La columna "suelo" de esta tabla es `runWinRate_noMarket` **sin** anular las recompensas de perk, así que
+no es el suelo sin build de §29.1 sino su indicador barato; se compara consigo mismo, no con el 10,66.)
+
+**El hueco se queda entre 9,7 y 10,4 en todo el recorrido útil mientras la tasa de victoria se mueve veinte
+puntos.** La única celda que rompe el patrón es `attributesPerLevel = 0`, y lo rompe hacia abajo: con la
+build buena por debajo del 50% las dos entran juntas en la parte plana de la sigmoide, que es la geometría
+que la ADR 0059 ya había enunciado.
+
+Y la incompatibilidad de la ADR 0056 reaparece con signo nuevo. `attributesPerLevel = 3` **alcanza dos
+objetivos**: build buena 62,12 (meta 60) y tasa de victoria de la run 20,67, **en banda por primera vez en
+cinco paquetes**. Y rompe tres a la vez: mediocre 52,39 (meta 42-45), suelo 18,00 (meta <10) y la mala
+completando la run el 15,00% (meta <2). `attributesPerLevel = 1` hace lo contrario, y **cumple el objetivo
+del suelo por primera vez** (6,50) a cambio de dejar la build buena en 50,64.
+
+El factor global del motor (`×0,6`) merece una nota porque va en la dirección contraria a la que el encargo
+esperaba: bajarlo **estrecha** el hueco (7,87). No es una sorpresa de geometría sino una cadena de causas
+medible: el rival del acto 1 es más flojo que el jugador (46,2 de media frente a 50), así que quitar peso a
+los atributos borra la ventaja del acto 1 —la buena cae de 74,24 a 67,18—, la run llega al acto 2 con 8,67
+perks en vez de 9,86 y un nivel menos, y esa pérdida de build se paga otra vez en el acto 2. **El acto 1 es
+el taller y todo lo que lo endurece se cobra dos veces.**
+
+### 29.4. El experimento que lo cierra: compensar el rival no devuelve nada
+
+Si "el peso de los atributos" fuera un grado de libertad, bajar la curva de nivel y compensar la dificultad
+con el rival dejaría el mismo resultado medio decidido más por la build. Se hizo:
+`attributesPerLevel = 1` con los atributos de `data/rivals/` bajados **1 / 5 / 4** puntos por acto, la
+compensación calculada con el tipo de cambio de §29.2.
+
+| | base | `apl` 1 + rival compensado |
+|---|---|---|
+| buena, actos 1/2/3 | 74,24 / 57,76 / 45,90 | 73,79 / **58,12** / 44,49 |
+| mediocre, acto 2 | 47,71 | 47,30 |
+| **hueco acto 2** | **10,05** | **10,82** (ET 1,2) |
+| perks en el once | 9,86 | 9,49 |
+| tasa de victoria de la run, buena | 16,83 | **10,33** |
+| build mala completa la run | 11,50 | 5,17 |
+| **suelo sin build** | 10,66 | **5,17** |
+| muertes por run | 1,43 | **1,19** |
+| derrotas del acto 1 | 32,62 | **37,39** |
+
+**La compensación funciona exactamente donde se aplicó y el hueco no se entera** (10,82 contra 10,05, dentro
+del ruido). Lo que cambia es la run, y no por el peso de los atributos: el **jefe** es el único rival que no
+sale de `data/rivals/` y no se compensó, así que el once llega a las tres puertas cuatro puntos de atributo
+más flojo y ahí se va todo.
+
+De ahí el enunciado que la ADR 0061 recoge: **la curva de nivel no es "cuánto pesan los atributos", es la
+moneda con la que se llega al jefe.** Y el precio de usarla contra el suelo está medido: para bajarlo de
+10,66 a 5,17 hay que romper `deathsPerRun` (1,19, banda 1,5-3), las derrotas del acto 1 (37,39 sobre un
+techo de 29,74) y la tasa de victoria de la run (10,33 sobre 20-30). Los tres se rompen **antes** de que el
+suelo llegue al 10%.
+
+El experimento espejo (`attributesPerLevel` 3 con el rival subido 2/5/4) confirma la simetría: hueco 9,21,
+suelo **20,67**.
+
+### 29.5. Dos hallazgos laterales, y los dos importan
+
+**1. Los perks de la build mediocre valen negativo, y ahí está el 85% del hueco.** Con
+`rewardPerkWeight = 0` la doctrina **gastadora mejora**: 47,94 → **49,79** en el acto 2 (1.200 runs, ET
+0,74), y el hueco se hunde de 10,03 a **1,54**. Descompuesto: los perks de la build buena valen **+6,6** y
+los de la mediocre **−1,8**. Es la confirmación directa de la ADR 0060 —lo que separa es el castigo del
+perk mal puesto— y a la vez un aviso incómodo: **hoy no tener build es mejor que tener una mala**, que es lo
+contrario de lo que piden los objetivos 3 y 4 de la ADR 0056.
+
+**2. La velocidad no está muerta; la cifra de la ADR 0020 lleva dos motores de retraso.** El encargo citaba
++0,4 puntos (y −1,2 en orcos). Eso es de antes de los cuerpos con volumen, y **D-25 ya lo había corregido**
+(+6,6 con `FindSpace`). Esta medición lo confirma por otra vía: partiendo por la mitad el peso de los
+atributos **canal a canal**, el más caro de los seis es el de la velocidad.
+
+| canal cuyo peso de atributo se parte por la mitad | buena 2 | coste | hueco |
+|---|---|---|---|
+| ninguno (base) | 57,76 | — | 10,05 |
+| `movement` (velocidad) | 54,76 | **−3,00** | 7,33 |
+| `shot` (técnica y fuerza del rematador) | 55,61 | −2,15 | 8,09 |
+| `pass` (técnica del pasador y del interceptor) | 56,58 | −1,18 | 10,73 |
+| `save` (portero contra técnica del rematador) | 57,01 | −0,75 | 9,70 |
+| `dribble` (técnica contra cobertura) | 57,17 | −0,59 | 8,26 |
+| `tackle` (presión contra técnica) | 57,26 | −0,50 | 9,32 |
+
+Ninguna mitad mueve el hueco fuera del ruido, así que **el reparto tampoco separa**; pero la tabla desmiente
+que quede un atributo sin valor al que quitarle peso saliera gratis. No hay ninguno.
+
+### 29.6. La cadena de pases, recalibrada (ADR 0062)
+
+`buildsWinDifferently_passChain` era la única afirmación roja de las seis puertas: 1,16 → 1,19 → **1,23**
+contra un umbral de **1,30**. El umbral estaba calibrado contra la fórmula **aditiva**: `fine_touch` era un
+`pass +25` que sumaba 2.500 sobre una base de 7.700 y el canal se recortaba en **9.800, el 98%**; con los
+siete titulares llevándolo, la cadena salía en torno a un 30% más larga.
+
+Se midió el canal **aislado** —una build sintética de sólo siete `fine_touch` sobre el once
+(`elf_pass_only`) contra `elf_none`, 40 plantillas y 1.440 partidos por celda— recorriendo los cuatro techos
+de rareza de la ADR 0058:
+
+| multiplicador de cuota del perk de pase | cadena propia / su referencia |
+|---|---|
+| ×2 — techo **común**, el que lleva la build de medida | **1,108** |
+| ×3 — techo poco común | 1,143 |
+| ×4 — techo raro | 1,155 |
+| ×6 — techo **legendario**, el de toda la escala | 1,191 |
+
+**Ni con el techo legendario siete perks de pase alargan su propia cadena un 20%**; el 98% de la fórmula
+vieja exigiría un ×14,6, que no existe en la escala. Un umbral de 1,30 pedía algo que **ninguna build del
+catálogo puede producir**. Es AL-A otra vez, visto en longitud de cadena en vez de en tasa de victoria.
+
+`MinPassChainRatio` pasa a **1,11**: lo que el canal da con los perks que la build de medida puede llevar
+legalmente, redondeado a la baja, con la derivación escrita en `Sim.Analysis.BuildMetrics`. No se eligió el
+techo de la escala (1,19, o 1,24 normalizado) porque `elf_tiki_taka` lleva **comunes** y pedirle el techo
+legendario sería cambiar la afirmación, no calibrar el umbral. Con el número nuevo la puerta mide **1,233**
+y pasa, y el margen es atribuible: ×1,108 el canal de pase, ×1,065 los demás perks de posesión de la build,
+÷0,958 porque `orc_violence` **acorta** su propia cadena, que es la otra mitad de "ganan de formas
+distintas".
+
+### 29.7. Las seis puertas
+
+| Puerta | Estado |
+|---|---|
+| Sensación de fútbol (RT-056 + `betterTeamWinRate` 70-88, ADR 0054) | **verde**; lote de referencia de 1.000 partidos: `betterTeamWinRate_human_60_vs_human_40` **79,52** IN, y las seis métricas de RT-056 en banda (`possessionChanges` 24,13 · `passChainAvgLength` 2,26 · `shotsPerMatch` 11,99 · `tacklesPerMatch` 9,75 · `injuriesPerMatch` 0,74) |
+| Rareza y jefe final (RF-024, ADR 0027) | **verde** |
+| Equilibrio entre razas (D-29) | **verde** |
+| Curva de puertas de la ADR 0033 | **verde**, las doce celdas, **sin recalibrar ningún jefe** |
+| Run completa | **verde en los tests**; `runWinRate` sigue OUT como métrica (17,00, banda 20-30) |
+| Criterio de salida de fase 1 (builds) | **verde**, por primera vez desde la P1 (ADR 0062) |
+
+**598 de 598 tests en Release.** No queda ninguna afirmación roja; lo único fuera de banda es `runWinRate`
+como métrica, que es lo que la ADR 0061 deja abierto.
+
+### 29.8. Los seis objetivos: sin cambios, y a propósito
+
+| Objetivo (ADR 0056) | ADR 0060 | **este paquete** | ET | meta |
+|---|---|---|---|---|
+| Build buena, actos 2/3 | 57,97 / 44,43 | **57,97 / 44,43** | 0,71 / 0,53 | 60% |
+| Build mediocre, actos 2/3 | 47,94 / 40,67 | **47,94 / 40,67** | 0,70 / 0,25 | 42-45% |
+| Build mala completa la run | 12,00% | **12,00%** | 0,87 | < 2% |
+| Suelo sin build | 10,66% | **10,66%** | 0,56 | < 10% |
+| Hueco buena/mediocre, acto 2 | 10,03 | **10,03** | 0,50 | > 9,8 |
+| Tasa de victoria de la run | 17,00% | **17,00%** | 1,28 | 20-30% |
+
+Y los guardarraíles, todos donde estaban: `deathsPerRun` **1,46** (banda 1,5-3, igual que en la ADR 0060),
+derrotas del acto 1 **29,74%** (techo 29,74), las doce celdas de la ADR 0033 en banda sin recalibrar ningún
+jefe, y `betterTeamWinRate` **79,52** dentro de 70-88.
+
+### 29.9. Lo que queda abierto
+
+- **AL-B queda cerrada como falsificada** (ADR 0061). El peso de los atributos es el mismo número que la
+  fuerza del rival: entra en el motor como una **diferencia** y mueve a las dos builds a la vez. La P3 de la
+  ADR 0050 se retira en los dos sentidos.
+- **AL-A es la única palanca que queda** para los objetivos 1 y 2 de la ADR 0056, que hoy piden un hueco de
+  16,5 puntos frente a los 10,03 que hay. Cinco palancas de fuerza probadas y falsificadas en cinco
+  paquetes; la única que abrió el hueco fue la asimetría premio/castigo de la ADR 0060 y su techo está
+  medido (AL-D).
+- **AM-A (nueva)**: *no tener build es mejor que tener una mala* (§29.5). Los perks de la doctrina gastadora
+  valen −1,8 puntos en el acto 2, así que quitárselos la mejora. Mientras eso sea cierto, los objetivos
+  "suelo < 10%" y "mala < 2%" tiran en direcciones opuestas: lo que hunde a la build mala **sube** el suelo.
+- **AM-B (nueva)**: `generation.budgetByRarity` y `generation.budgetPerLevel` **también generan a los tres
+  jefes**, así que no sirven como mando del jugador; el único que lo es es
+  `progression.attributesPerLevel`. Está anotado porque costó una tanda de medición entenderlo.
+- **AJ-C queda cerrada** por la ADR 0062.
+- **AL-E queda cerrada**: el literal `65..80` de `MatchMetrics` ya no está y la clase decide con sus propias
+  constantes `BetterTeamWinRateMin`/`Max` (70-88, ADR 0054).
+- **AL-C y AL-D** sin cambios.

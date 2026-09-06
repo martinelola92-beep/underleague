@@ -55,6 +55,11 @@ Cuándo escribir un ADR: cambio de librería o stack, frontera entre proyectos, 
 | [0055](0055-el-mercado-es-imprescindible.md) | Ganar sin pasar por el mercado debe quedar por debajo del 5%: los maestros y el equipamiento solo se compran | Aceptada |
 | [0056](0056-separacion-entre-perfiles.md) | Build buena al 60% en partidos de los actos 2 y 3; build mala por debajo del 2% de completar la run | Aceptada. P1 aplicada y **los cuatro objetivos siguen sin alcanzarse** (§26.7); P3 en suspenso |
 | [0057](0057-el-suelo-sin-build.md) | Un equipo sin build gana el 14,5%: la palanca es el peso de la build, no el oro. La P3 queda en suspenso | Aceptada. Suspende la P3; **su palanca queda falsificada** por la medición de la P1 (§26.6) |
+| [0058](0058-la-exigencia-la-pone-el-rival.md) | El techo de la escala depende de la rareza y la capa de build del rival crece con el acto | Aceptada e implementada (§27); **su propio criterio de falsificación se cumple**: el hueco no se abre |
+| [0059](0059-separar-perfiles-pide-una-palanca-que-discrimine.md) | Primero el instrumento, luego el diagnóstico, y sólo entonces la palanca | Aceptada; puntos 1, 2 y 4 ejecutados, el **punto 3 falsificado** por la medición del 2 |
+| [0060](0060-el-castigo-tiene-recorrido-donde-el-premio-no-lo-tiene.md) | El perk mal puesto lo paga el equipo y el techo de la rareza no acota el castigo | Aceptada e implementada (§28). **Primer paquete que abre el hueco entre perfiles**: 6,27 → 10,03 |
+| [0061](0061-el-peso-de-los-atributos-no-es-un-grado-de-libertad.md) | El peso de los atributos frente a la build no discrimina entre perfiles: es el mismo número que la fuerza del rival | Aceptada. **Falsifica AL-B** con la medición; ningún número de balance se mueve |
+| [0062](0062-recalibrar-la-cadena-de-pases.md) | `buildsWinDifferently_passChain` pasa de 1,30 a 1,11: se medía contra un canal que la escala de cuotas ya no puede saturar | Aceptada e implementada |
 
 El hueco del 0011 corresponde a una decisión sobre el radio de adyacencia que quedó absorbida por la 0021 antes de aceptarse.
 | [0012](0012-buildswindifferently-normalizada.md) | `buildsWinDifferently` normalizada contra la referencia de la raza | **Propuesta: decisión del revisor** |

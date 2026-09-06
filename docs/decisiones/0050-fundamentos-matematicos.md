@@ -1,7 +1,7 @@
 # 0050. Cuatro correcciones a los fundamentos matemáticos
 
 **Fecha:** 2026-09-05
-**Estado:** Aceptada. **P2, P4 y P1 implementadas** (`fase2-diseno.md` §22 y §26); **P3 en suspenso** por la ADR 0057
+**Estado:** Aceptada. **P2, P4 y P1 implementadas** (`fase2-diseno.md` §22 y §26); **P3 RETIRADA** por la ADR 0061 (§29), tras estar en suspenso por la ADR 0057. Medido en los dos sentidos: subir o bajar la curva de nivel mueve a la build buena y a la mediocre por igual —el hueco se queda entre 9,7 y 10,4 mientras la tasa de victoria se mueve veinte puntos—, así que no es una palanca de separación sino un mando de dificultad
 **Sustituye:** la ADR 0035 (escalones por canal), una vez implementada la P1
 **Requisitos:** RT-023, RT-056, RF-069, RF-024
 **Nota de la ADR 0060 (paquete AL):** medido sobre partidos reales, con cuotas el recorrido de un perk lo
