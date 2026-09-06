@@ -4214,3 +4214,200 @@ Guardarraíles donde estaban: `deathsPerRun` **1,46**, derrotas del acto 1 **29,
   ordinarios". Build buena, acto 2: 57,97 con jefe y **60,37** sin él. No cambia ninguna conclusión, pero
   antes de dar el objetivo 1 por alcanzado o no hay que decir cuál de las dos métricas se quiere.
 - **AL-A, AN-A, AN-B, AL-C, AL-D y AM-B** sin cambios.
+
+## 32. Decisiones de implementación del paquete AP: cuánta discriminación se puede comprar en las puertas (ADR 0065, ADR 0066)
+
+El encargo era **AO-A**: que las tres puertas de jefe discriminen más sin mover la tabla de la ADR 0033,
+midiendo primero cuánto se puede comprar y diciendo con un número si llega. **No llega**, y la medición
+falsifica además la segunda salida que la ADR 0064 dejaba abierta (un cuarto evento filtro). Como en los
+paquetes AM, AN y AO, **no se mueve ningún número de balance**: entra medición (ADR 0065) y un arreglo de
+métrica que el revisor decidió (ADR 0066, AO-D).
+
+### 32.1. El banco, y que vuelve a reproducir la ADR 0060 al decimal
+
+Mismo protocolo que §28.8, §29.1, §30.1 y §31.1: 1.200 runs por perfil (300 × semillas 1/1001/2001/3001).
+Las sondas de la curva de puertas son de `--boss-gate` con 25 plantillas × 8 partidos por celda (12.000
+partidos, 52 s en Release).
+
+| | ADR 0064 | esta medición | ET |
+|---|---|---|---|
+| Build buena, actos 2/3 (con jefe) | 57,97 / 44,43 | **57,97 / 44,43** | 0,71 / 0,53 |
+| Build mediocre, actos 2/3 (con jefe) | 47,94 / 40,67 | **47,94 / 40,67** | 0,70 / 0,25 |
+| Build mala completa la run | 12,00 | **12,00** | 0,87 |
+| Suelo sin build | 10,66 | **10,66** | 0,56 |
+| Hueco acto 2 (con jefe) | 10,03 | **10,03** | 0,50 |
+| Tasa de victoria de la run | 17,00 | **17,00** | 1,29 |
+| Muertes por run · derrotas del acto 1 | 1,46 · 29,74 | **1,46 · 29,74** | 0,02 · 1,87 |
+| Puertas, buena · suelo | 75,33·44,25·51,00 · 70,75·35,18·44,29 | **idénticas** | |
+
+### 32.2. Las doce celdas, y las dos que sólo entran por el margen de medida
+
+Con las dos muestras del proyecto: la de la puerta de `Sim.Tests` (32 plantillas × 4 partidos por celda,
+con contadores) y la sonda de `--boss-gate` de los experimentos (25 × 8, sin contadores).
+
+| jefe | incoherente | correcta | buena | muy buena |
+|---|---|---|---|---|
+| `grimhold_guns` (puerta / sonda) | 21,6 / 18,4 [20-35] | 70,5 / 67,6 [65-80] | 80,6 / 84,6 [75-88] | 90,9 / 91,1 [85-95] |
+| `the_hunt` | 10,9 / 8,9 [<15] | 38,9 / 39,6 [35-50] | 62,7 / 66,5 [60-72] | 80,8 / 78,6 [72-85] |
+| `eternal_crown` | 2,3 / 4,3 [<10] | 26,4 / 25,0 [15-28] | **40,2 / 38,9** [40-55] | 58,6 / 62,3 [55-70] |
+
+Con la muestra de la puerta las doce celdas están en banda **sin usar** el margen de ±2,5 puntos de
+`BossGateTests.TolerancePercent`, pero la celda `buena` del jefe final está clavada en su suelo (40,2 sobre
+40; la sonda de 25 × 8 la mide en 38,9). Es la que el encargo señalaba: **la puerta más plana es también la
+que peor cumple la tabla**. Los experimentos de §32.3 se comparan siempre contra la sonda de 25 × 8.
+
+### 32.3. Los cuatro tipos de modificador de jefe borran build, y por eso aplanan la puerta
+
+Cada modificador se aísla sustituyéndolo por uno del mismo tipo incapaz de tocar nada (`banChannel` sobre
+`Card`, canal que ningún perk modifica), conservando el número que RF-001b/RF-001c exigen:
+
+| condición | incoherente | correcta | **buena** | muy buena |
+|---|---|---|---|---|
+| `grimhold_guns` sin `singleCopy` | 18,4 → 18,4 | 67,6 → 67,6 | **84,6 → 84,6** | 91,1 → **93,8** |
+| `the_hunt` sin `markStar` | 8,9 → 8,5 | 39,6 → 39,7 | **66,5 → 66,3** | 78,6 → **82,7** |
+| `eternal_crown` sin `pushBack` | 4,3 → 4,7 | 25,0 → 25,0 | **38,9 → 38,9** | 62,3 → 62,3 |
+| `eternal_crown` sin `banChannel` | 4,3 → **1,6** | 25,0 → 25,0 | **38,9 → 47,2** | 62,3 → **66,2** |
+
+- `singleCopy` y `markStar` **sólo tocan el escalón superior**: a la densidad de build que la ADR 0040 da a
+  cada acto, una build correcta ni repite perks ni concentra en un portador. Sobre la run no compran nada
+  (razón de la puerta 1: 1,065 → 1,068; de la puerta 2: 1,258 → **1,251**).
+- `iron_curtain` (el `pushBack` de columna 6) está **inerte**: no mueve ninguna celda y, sobre la run, el
+  experimento con los dos modificadores fuera devuelve *exactamente* los mismos números que el
+  experimento con sólo el `banChannel` fuera (75,33·44,25·**56,00** y 70,75·35,18·**45,33**). No hay
+  titular por delante de la columna 6 al que retrasar.
+- `sealed_goal` es el único que muerde, y muerde **al revés**: cuesta **8,3 puntos** a la celda `buena` y
+  **cero** a la `correcta`. Es un impuesto que sólo paga quien tiene build.
+
+Cambiarle el canal tampoco empina la pendiente: `save` y `intercept` cuestan más y sacan de banda al
+escalón superior (52,5 y 51,9 sobre un mínimo de 55); `dribble` y `pass` dan la misma tabla que **no tener
+modificador** (47,2 / 66,2). Empinar la puerta 3 por esa vía es quitarle el modificador al jefe final con
+otro nombre.
+
+### 32.4. Lo único que queda es la dificultad, y la tabla dice cuánta
+
+| jefe | multiplicador de cuota que la tabla permite | qué lo limita |
+|---|---|---|
+| `grimhold_guns` | **1,109 – 1,335** (sólo puede ablandarse) | por abajo la celda incoherente; por arriba la `buena` |
+| `the_hunt` | **0,821 – 1,295** | `correcta` por abajo, `buena` por arriba |
+| `eternal_crown` | **1,047 – 1,167** | `buena` por abajo (hoy fuera), `correcta` por arriba |
+
+(Los tres rangos se derivan de la sonda de 25 × 8; con la muestra de la puerta el límite inferior de
+`eternal_crown` es 1,00 en vez de 1,047, porque su celda `buena` mide 40,2 y no 38,9. La conclusión no
+cambia: el jefe final sólo admite ablandarse, y muy poco.)
+
+Comprobado en el campo: `the_hunt` de calidad 46 a **42**, el máximo que la tabla admite (celdas
+14,5 / 46,1 / 71,3 / 83,6, las cuatro dentro):
+
+| | hoy | calidad 42 | previsión del modelo |
+|---|---|---|---|
+| Puertas, buena · suelo (acto 2) | 44,25 · 35,18 | **51,77 · 43,67** | 50,4 · 41,0 |
+| Razón de la puerta 2 | 1,258 | **1,186** | 1,229 |
+| **Tasa de la run, buena** | 17,00 (ET 1,29) | **19,83** (ET 0,78) | 19,4 |
+| **SUELO** | 10,66 (ET 0,56) | **12,58** (ET 0,58) | 12,85 |
+| Muertes por run · derrotas del acto 1 | 1,46 · 29,74 | **1,55 · 30,77** | |
+
+El objetivo 4 se roza y el objetivo 5 se aleja dos puntos. El modelo acierta las dos direcciones y las dos
+magnitudes.
+
+### 32.5. La frontera, que es la respuesta con número
+
+| | razones de cuota de hoy (1,262 · 1,462 · 1,309) | con la puerta 3 empinada al máximo medido (R₃ = 1,535) |
+|---|---|---|
+| Si la buena gana el **20%** de las runs… | suelo mínimo **13,29%** | **12,17%** |
+| Si el suelo se queda en el **10%**… | buena máxima **15,63%** | **16,96%** |
+
+El punto de hoy —17,00 con un suelo de 10,66— ya está **sobre** esa frontera, y la frontera es
+prácticamente la misma con o sin la restricción de la tabla: **revisar la tabla de la ADR 0033 no
+desbloquea nada**. Lo que haría falta es elevar las tres razones de cuota a la potencia **1,622**
+(1,459 · 1,852 · 1,548), es decir que el hueco de la puerta 2 pase de **9,1 a 14,3 puntos**.
+
+Y el cuarto evento filtro tampoco: con las razones de hoy, la mejor tasa de la buena compatible con un
+suelo del 10% es 15,63% con tres puertas y 15,62 / 15,63 / 15,87 / 16,82% añadiendo una cuarta con razón
+1,065 / 1,151 / 1,258 / 1,462. **Añadir una puerta mueve el punto sobre la misma frontera, no la
+desplaza.**
+
+### 32.6. Un guardarraíl que es incompatible con el objetivo 4 por aritmética
+
+`defeatShareAct1` es la **cuota** de runs perdidas que se pierden en el acto 1, `(1 − P₁)/(1 − producto)`,
+así que sube sola cuando sube la tasa de victoria de la run aunque el acto 1 no se toque:
+
+| tasa de la run | 17,00 (hoy) | 18,67 | 19,83 | 20,00 |
+|---|---|---|---|---|
+| `defeatShareAct1` con `P₁` = 75,33 | **29,74** | 30,33 | 30,77 | **30,84** |
+
+Para que la run llegue al 20% con la cuota por debajo de 29,74 hace falta `P₁ ≥ 76,21`. **Se para aquí y
+se devuelve al revisor** en vez de compensarlo ablandando el jefe del acto 1.
+
+### 32.7. AO-D: la métrica del acto pasa a medir partidos ordinarios (ADR 0066)
+
+Decisión del revisor. `winRateAct{n}` y `matchesLostAct{n}` cuentan sólo partidos ordinarios —que es lo
+que la tabla de la ADR 0056 dice— y las cifras viejas se publican al lado como
+`winRateAct{n}_withBoss` y `matchesLostAct{n}_withBoss`. La separación es exacta: `RunPlayResult` gana
+`BossWinsByAct` (los jefes **superados** por acto) junto al `BossSamplesByAct` que ya tenía, y
+`MatchesByAct − BossSamplesByAct` / `WinsByAct − BossWinsByAct` son el partido ordinario sin inferencia.
+`BossesBeaten` no vale: sólo cuenta las puertas que dejan la run viva.
+
+| perfil | acto 2 con jefe | acto 2 **ordinarios** | acto 3 con jefe | acto 3 **ordinarios** |
+|---|---|---|---|---|
+| Build buena | 57,97 (0,71) | **60,33** (0,85) | 44,43 (0,53) | **43,30** (0,73) |
+| Build mediocre | 47,94 (0,70) | **50,42** (0,98) | 40,67 (0,25) | **38,65** (0,16) |
+| **Hueco del acto 2** | **10,03** (0,50) | **9,91** (0,87) | | |
+
+**El objetivo 1 pasa a estar alcanzado en el acto 2** (60,33 sobre una meta de 60) y sigue lejos en el 3.
+Y el hueco baja de 10,03 a 9,91 sobre un suelo de 9,8: sigue por encima, con menos margen y más error, y
+**no se compensa con ningún otro número** (RT-057).
+
+### 32.8. Las seis puertas
+
+| Puerta | Estado |
+|---|---|
+| Sensación de fútbol (RT-056 + `betterTeamWinRate` 70-88, ADR 0054) | **verde**, sin tocar `/Sim/Engine` ni `/data` |
+| Rareza y jefe final (RF-024, ADR 0027) | **verde** |
+| Equilibrio entre razas (D-29) | **verde** |
+| Curva de puertas de la ADR 0033 | **verde**, las doce celdas, **sin recalibrar ningún jefe** |
+| Run completa | **verde en los tests**; `runWinRate` sigue OUT como métrica (17,00, banda 20-30) |
+| Criterio de salida de fase 1 (builds) | **verde** |
+
+**598 de 598 tests en Release** y los 184 ficheros de `/data` validados contra esquema.
+
+### 32.9. Los seis objetivos
+
+| Objetivo (ADR 0056) | ADR 0064 | **este paquete** | ET | meta |
+|---|---|---|---|---|
+| Build buena, actos 2/3 | 57,97 / 44,43 (con jefe) | **60,33 / 43,30** (ordinarios) | 0,85 / 0,73 | 60% — **alcanzado en el acto 2** |
+| Build mediocre, actos 2/3 | 47,94 / 40,67 (con jefe) | **50,42 / 38,65** (ordinarios) | 0,98 / 0,16 | 42-45% |
+| Build mala completa la run | 12,00% | **12,00%** | 0,87 | < 2% |
+| Suelo sin build | 10,66% | **10,66%** | 0,56 | < 10% |
+| Hueco buena/mediocre, acto 2 | 10,03 (con jefe) | **9,91** (ordinarios) | 0,87 | > 9,8 |
+| Tasa de victoria de la run | 17,00% | **17,00%** | 1,29 | 20-30% |
+
+Guardarraíles donde estaban: `deathsPerRun` **1,46**, `defeatShareAct1` **29,74%**, `betterTeamWinRate`
+**79,52**, doce celdas de la ADR 0033 en banda sin recalibrar ningún jefe.
+
+### 32.10. Lo que el instrumento no puede ver
+
+`RunPolicy` **nunca lee `BossRuleModifiers`** al componer la alineación ni al repartir perks. La build
+automática **no puede prepararse contra el modificador**, que es justo lo que RF-012b y RF-014 le dan a un
+jugador humano. Todo lo medido en §32.3 sobre los modificadores es por tanto una **cota inferior de su
+valor de diseño**: se miden como impuesto puro porque quien los sufre no puede hacer nada. Antes de tocar
+un modificador de jefe por lo que aquí se mide hay que enseñarle el modificador a la política, y eso es un
+paquete propio.
+
+### 32.11. Lo que queda abierto
+
+- **AO-A queda cerrada como palanca**: ni empinar la pendiente dentro de la tabla, ni revisar la tabla, ni
+  un cuarto evento filtro hacen alcanzables los objetivos 4 y 5 a la vez. Lo que falta no es permiso para
+  mover celdas, es **razón de cuotas**.
+- **AP-A (nueva)**: los cuatro tipos de modificador de jefe borran build, así que la puerta no puede
+  endurecerse sin cobrarle a quien construye. Un modificador que cambie las reglas del campo sin tocar el
+  once del jugador sería el primero con signo neutro.
+- **AP-B (nueva)**: `defeatShareAct1 ≤ 29,74%` y `runWinRate ∈ [20,30]` son incompatibles con `P₁` donde
+  está. Decisión del revisor.
+- **AP-C (nueva)**: la política no lee el informe de ojeo del jefe (RF-012b), así que mide los cuatro
+  modificadores como impuesto puro.
+- **AO-D cerrada** por la ADR 0066.
+- **AL-A sigue siendo la decisión de fondo**, y ahora con el número que le pide la frontera: la razón de
+  cuotas de cada puerta tiene que subir un 62% en log-cuotas, y eso es fuerza del catálogo, no dificultad
+  del jefe.
+- **AM-A, AN-A, AN-B, AL-C, AL-D, AM-B y AO-B/AO-C** sin cambios; AO-B gana un tercer modo de fallo (el
+  número tiene que ser de **uno** de los dos perfiles del jugador).

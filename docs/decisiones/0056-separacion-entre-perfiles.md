@@ -58,6 +58,21 @@ victoria de la run es el producto de las tres puertas de jefe** (17,00 = 0,7533�
 partidos ordinarios no aparecen en él. La única palanca viva para los objetivos 4 y 5 es **de puerta**:
 cada una discrimina hoy 1,15 y hacen falta 1,26. Detalle en `fase2-diseno.md` §31
 
+*(Estado 2026-09-06, paquete AP / ADR 0065 y ADR 0066)*: **la última palanca que quedaba queda falsificada
+por medición, y la métrica de los objetivos 1 y 2 pasa a medir lo que esta ADR describe.** La ADR 0065
+mide que la discriminación por puerta **no se puede comprar**: los cuatro tipos de modificador de jefe
+borran build —dos de los tres que hay están inertes en los tres escalones que la tabla usa, y el que
+muerde le cuesta 8,3 puntos a la celda `buena` y cero a la `correcta`—, así que lo único que queda es la
+dificultad, que mueve a los dos perfiles a la vez. La frontera medida: **con la buena al 20% el suelo es
+como mínimo 13,29%** y con el suelo al 10% la buena gana como mucho 15,63%; el punto de hoy (17,00 con
+suelo 10,66) ya está sobre ella, **revisar la tabla de la ADR 0033 no la desplaza** y **un cuarto evento
+filtro tampoco**. Lo que haría falta es un 62% más de separación en log-cuotas, que es catálogo (**AL-A**),
+no jefe. Y la ADR 0066 —decisión del revisor— hace que `winRateAct{n}` mida **partidos ordinarios**, como
+dice la tabla de abajo: build buena **60,33 / 43,30** (ET 0,85 / 0,73) frente a 57,97 / 44,43 con jefe, y
+mediocre 50,42 / 38,65. **El objetivo 1 queda alcanzado en el acto 2** y sigue lejos en el 3; el hueco del
+acto 2 pasa de 10,03 a **9,91** (ET 0,87) sobre un suelo de 9,8, y no se compensa. Detalle en
+`fase2-diseno.md` §32
+
 **Requisitos:** RT-055, RT-056, RF-032
 **Depende de:** ADR 0054 (banda revisada) · **implementa** las P1 y P3 de la ADR 0050
 
@@ -76,8 +91,8 @@ Sobre 900 runs, partidos **ordinarios** (perder uno no termina la run, RF-002c):
 
 | Métrica | Hoy | Objetivo |
 |---|---|---|
-| Build **buena**, victoria en partidos de los actos 2 y 3 | 50-53% | **60%** |
-| Build **mediocre**, victoria en partidos de los actos 2 y 3 | 50,6% / 47,1% | **claramente por debajo**, en torno al 42-45% |
+| Build **buena**, victoria en partidos **ordinarios** de los actos 2 y 3 (ADR 0066) | 50-53% | **60%** |
+| Build **mediocre**, victoria en partidos **ordinarios** de los actos 2 y 3 (ADR 0066) | 50,6% / 47,1% | **claramente por debajo**, en torno al 42-45% |
 | Build **mala**, completar la run | 12,7% | **menos del 2%** |
 | Build buena, completar la run | 19-22% | **sin cambio**: 20-30% |
 

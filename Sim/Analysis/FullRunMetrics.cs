@@ -360,6 +360,12 @@ public static class FullRunMetrics
         long itemsRecovered = 0;
         var matchesByAct = new long[RunRules.Acts];
         var winsByAct = new long[RunRules.Acts];
+
+        // AO-D: los mismos dos contadores SIN el partido de jefe. La tabla de objetivos de la ADR 0056
+        // dice "partidos ordinarios (perder uno no termina la run, RF-002c)" y la métrica que la publica
+        // los contaba junto con la puerta; se separan y se publican las dos cifras.
+        var ordinaryMatchesByAct = new long[RunRules.Acts];
+        var ordinaryWinsByAct = new long[RunRules.Acts];
         var actSamples = new int[RunRules.Acts];
         int sinkSamples = 0, allFourAffordable = 0;
         long sinkTotal = 0;
@@ -462,6 +468,8 @@ public static class FullRunMetrics
                 goldByAct[act] += run.GoldEarnedByAct[act];
                 matchesByAct[act] += run.MatchesByAct[act];
                 winsByAct[act] += run.WinsByAct[act];
+                ordinaryMatchesByAct[act] += run.MatchesByAct[act] - run.BossSamplesByAct[act];
+                ordinaryWinsByAct[act] += run.WinsByAct[act] - run.BossWinsByAct[act];
 
                 int sinks = SinksAffordable(
                     run.GoldEarnedByAct[act], run.MatchesByAct[act], run.WinsByAct[act], run.MarketsByAct[act], economy);
@@ -568,8 +576,15 @@ public static class FullRunMetrics
 
             // Partidos ordinarios perdidos por acto: perder uno no termina la run (RF-002c), pero
             // cuesta el oro y la recompensa, así que es la medida de cuánta presión pone cada acto.
-            rows.Add(Info($"matchesLostAct{act + 1}", actSamples[act] > 0 ? (double)(matchesByAct[act] - winsByAct[act]) / actSamples[act] : 0.0));
-            rows.Add(Info($"winRateAct{act + 1}", matchesByAct[act] > 0 ? 100.0 * winsByAct[act] / matchesByAct[act] : 0.0));
+            // AO-D: hasta este paquete la cifra incluía la derrota contra el jefe, que sí termina la run.
+            rows.Add(Info($"matchesLostAct{act + 1}", actSamples[act] > 0 ? (double)(ordinaryMatchesByAct[act] - ordinaryWinsByAct[act]) / actSamples[act] : 0.0));
+
+            // AO-D: `winRateAct{n}` mide lo que la ADR 0056 dice que mide —partidos ORDINARIOS— y la
+            // cifra vieja, que incluía la puerta, se publica al lado con su propio nombre para que el
+            // cambio sea auditable contra los siete paquetes anteriores.
+            rows.Add(Info($"winRateAct{act + 1}", ordinaryMatchesByAct[act] > 0 ? 100.0 * ordinaryWinsByAct[act] / ordinaryMatchesByAct[act] : 0.0));
+            rows.Add(Info($"winRateAct{act + 1}_withBoss", matchesByAct[act] > 0 ? 100.0 * winsByAct[act] / matchesByAct[act] : 0.0));
+            rows.Add(Info($"matchesLostAct{act + 1}_withBoss", actSamples[act] > 0 ? (double)(matchesByAct[act] - winsByAct[act]) / actSamples[act] : 0.0));
 
             // ADR 0048: la banda de muertes no dice nada sin saber dónde caen. Por run empezada, no por
             // run que llega al acto: es la cifra que se suma a deathsPerRun.

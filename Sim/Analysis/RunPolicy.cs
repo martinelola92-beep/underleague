@@ -227,6 +227,14 @@ public sealed record RunPlayResult(
     /// <summary>Jefes jugados por acto, denominador de los dos de arriba.</summary>
     IReadOnlyList<int> BossSamplesByAct,
 
+    /// <summary>
+    /// Jefes <b>superados</b> por acto (AO-D). Con <see cref="BossSamplesByAct"/> es lo que permite
+    /// separar el partido de jefe de los ordinarios dentro de <c>MatchesByAct</c>/<c>WinsByAct</c>, que
+    /// los cuentan juntos. No es derivable de <see cref="BossesBeaten"/> sin error: una run que gana al
+    /// jefe y se queda sin plantilla en ese mismo nodo suma la victoria pero no el jefe superado.
+    /// </summary>
+    IReadOnlyList<int> BossWinsByAct,
+
     /// <summary>Objetos recuperados del inventario tras una muerte (ADR 0048, condición 4).</summary>
     int ItemsRecovered,
 
@@ -800,9 +808,15 @@ public static class RunPolicy
         {
             ledger.MatchesWon++;
             ledger.WinsByAct[node.Act - 1]++;
-            if (node.Kind == NodeKind.Boss && outcome.Kind != RunOutcomeKind.Defeat)
+            if (node.Kind == NodeKind.Boss)
             {
-                ledger.BossesBeaten++;
+                // AO-D: la puerta superada, se acabe la run como se acabe. BossesBeaten solo cuenta las
+                // que dejan la run viva, así que no sirve para descontar la puerta de WinsByAct.
+                ledger.BossWinsByAct[node.Act - 1]++;
+                if (outcome.Kind != RunOutcomeKind.Defeat)
+                {
+                    ledger.BossesBeaten++;
+                }
             }
         }
 
@@ -2093,6 +2107,7 @@ public static class RunPolicy
             ledger.PerksAtBossByAct,
             ledger.ItemsAtBossByAct,
             ledger.BossSamplesByAct,
+            ledger.BossWinsByAct,
             ledger.ItemsRecovered,
             masters,
             held,
@@ -2228,6 +2243,9 @@ public static class RunPolicy
 
         /// <summary>Jefes jugados por acto, para promediar los dos de arriba.</summary>
         public int[] BossSamplesByAct { get; } = new int[RunRules.Acts];
+
+        /// <summary>Jefes superados por acto (AO-D): separa la puerta de los partidos ordinarios.</summary>
+        public int[] BossWinsByAct { get; } = new int[RunRules.Acts];
 
         /// <summary>
         /// Objetos que el inventario ha recuperado de un muerto (ADR 0048, condición 4): la
