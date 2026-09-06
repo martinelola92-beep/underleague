@@ -1,6 +1,26 @@
 # 0056. Objetivos de separación entre perfiles de jugador
 
 **Fecha:** 2026-09-05
+
+## Decisión del revisor, 2026-09-06: construir mal sale peor que no construir
+
+La **ADR 0063** midió que dos de las directrices del revisor son incompatibles y le devolvió la elección.
+La doctrina gastadora **sin ningún perk** gana el **49,79%** en el acto 2, así que pedirle 42-45% es pedir,
+literalmente, que **construir mal salga peor que no construir**; y eso es lo contrario de "comprar siempre
+compensa".
+
+**El revisor elige que construir mal salga peor.** El objetivo 2 de esta ADR —build mediocre en **42-45%**—
+**se mantiene tal cual**, y con él el hecho de que el mercado pueda salirte a deber si compras sin criterio:
+es la misma idea que en cualquier roguelike de mazo, donde meter una carta mala es peor que no meter
+ninguna. Encaja con la directriz original —*"tiene que premiar al que haga buenas builds pero castigar al
+que haga malas"*— y **cierra AM-A y AN-A**.
+
+La consecuencia hay que asumirla y está medida: **el suelo sin build no se hunde por la vía del castigo**,
+porque el equipo que no compra no paga ninguno. El objetivo 4 (`suelo < 10%`) necesita una palanca que no
+sea el catálogo, y la **ADR 0064** deja identificada cuál es la única viva: la run es el **producto de las
+tres puertas de jefe** y los veinte partidos ordinarios no entran en él.
+
+**Fecha original:** 2026-09-05
 **Estado:** Aceptada (directriz del revisor). **Tras la ADR 0058 siguen sin alcanzarse, y el paquete mide
 por qué los dos primeros no pueden alcanzarse a la vez** (`fase2-diseno.md` §27.6): "buena al 60%" exige un
 rival ordinario más débil y "mediocre al 42-45%" lo exige más fuerte, y la capa de build del rival es un
