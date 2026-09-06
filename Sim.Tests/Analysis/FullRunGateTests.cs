@@ -85,6 +85,15 @@ public sealed class FullRunGateTests
     public void RunningOutOfPlayersIsNotTheUsualWayToLose() => AssertIn(FullRunMetrics.RosterDefeatShare);
 
     /// <summary>
+    /// ADR 0043 y ADR 0067: <b>el acto 1 es el taller</b>. Se mide con la tasa de derrota en partidos
+    /// <b>ordinarios</b> del acto 1 —numerador y denominador dentro del acto—, y no con
+    /// <c>defeatShareAct1</c>, que es la cuota de las runs perdidas que se pierden ahí y sube sola en
+    /// cuanto sube la tasa de victoria de la run aunque el acto 1 no se toque (ADR 0065 §4).
+    /// </summary>
+    [Fact]
+    public void Act1IsTheWorkshop() => AssertIn($"{FullRunMetrics.OrdinaryDefeatRateByActPrefix}1");
+
+    /// <summary>
     /// RF-114k: el oro medio de un acto permite usar dos o tres sumideros, <b>nunca los cuatro</b>. Los
     /// cuatro vivos en fase 2 son mercado, clínica, rerolls y salarios de mercenarios; el coste de "usar"
     /// cada uno durante un acto lo define <see cref="FullRunMetrics.SinksAffordable"/>.

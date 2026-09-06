@@ -73,6 +73,25 @@ mediocre 50,42 / 38,65. **El objetivo 1 queda alcanzado en el acto 2** y sigue l
 acto 2 pasa de 10,03 a **9,91** (ET 0,87) sobre un suelo de 9,8, y no se compensa. Detalle en
 `fase2-diseno.md` §32
 
+*(Estado 2026-09-06, paquete AQ / ADR 0067 y ADR 0068)*: **AL-A deja de ser una sospecha y pasa a tener
+presupuesto, y el presupuesto no llega.** La ADR 0068 mide que existe **un** premio que la oposición no
+puede cobrar y sólo uno —el **contador** (RF-070): `data/rivals/` no tiene dónde declararlo,
+`BossDefinition.ToTeamSetup` genera el equipo del jefe desde cero y `ApplyCounterDeltas` sólo escribe en
+la plantilla del jugador, así que los seis perks de acumulación escritos en rivales y jefes valen
+`k⁰ = 1`—. Es el primer canal en nueve paquetes que cumple la condición (a) de la ADR 0064 **por
+construcción**, y la build buena lo carga 1,7 veces más que la mediocre y 7 más que el suelo (15,82
+contadores por run frente a 9,41 y 2,22). Medido en separación de log-cuotas contra el equipo sin build
+(`S = Σ ln R`, hoy 0,884, necesaria 1,433): el eje vale hoy **0,072** y, subido al techo que la rareza
+permite en los canales con recorrido, **1,132** — potencia **1,281** de la 1,622 que pide la frontera, el
+**45% del camino**, con la run de la build buena en **19,50** y el suelo quieto en 10,83. **Y no se puede
+gastar sin recalibrar los tres jefes**: el escalón `muy buena` de la ADR 0033 y la build de la run son el
+mismo punto del eje (los dos con el contador a 5), así que al techo se salen cuatro celdas por arriba y la
+dosis que las salva no compra tasa de victoria. Falsificadas de paso dos lecturas: **quitarle el catálogo
+a la oposición baja `S`** (0,884 → 0,695) y **corregir el sesgo del instrumento antes de subir la magnitud
+empeora la run** (17,00 → 15,75). Y la ADR 0067 sustituye el guardarraíl del acto 1 —`defeatShareAct1`,
+que era una cuota— por `ordinaryDefeatRateAct1 ≤ 30`, hoy en **24,90**. **Los seis objetivos quedan
+exactamente donde los dejó la ADR 0060.** Detalle en `fase2-diseno.md` §33
+
 **Requisitos:** RT-055, RT-056, RF-032
 **Depende de:** ADR 0054 (banda revisada) · **implementa** las P1 y P3 de la ADR 0050
 

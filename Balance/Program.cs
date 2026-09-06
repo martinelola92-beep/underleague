@@ -497,6 +497,11 @@ static void WriteRunsCsv(string outDir, IReadOnlyList<RunPlayResult> runs, strin
         "goldMarket", "goldClinic", "goldEnrollment", "goldReroll", "goldWages", "goldLeft",
         "deaths", "ownInjuries", "matchInjuries", "severeInjuries", "rosterSize", "available", "averageLevel",
         "perks", "starterPerks", "items", "counters",
+
+        // ADR 0066: la puerta de jefe separada del partido ordinario con exactitud. Sin estas seis
+        // columnas la tasa de paso de cada puerta (la identidad de la ADR 0064) hay que estimarla desde
+        // `bossesBeaten`, y la estimación se come las derrotas por plantilla del nodo de jefe.
+        "bossSamples1", "bossSamples2", "bossSamples3", "bossWins1", "bossWins2", "bossWins3",
         "markets", "offersSeen", "offersAffordable", "goldAtMarkets", "brokeMarkets", "purchases", "perksBought",
         "itemsBought", "playersSigned", "youths", "mercenaries", "playersSold", "treatments", "slotsBought", "rerolls",
         "rewardsTaken", "rewardsDeclined", "nodes",
@@ -523,6 +528,8 @@ static void WriteRunsCsv(string outDir, IReadOnlyList<RunPlayResult> runs, strin
         Int(r.Deaths), Int(r.OwnInjuries), Int(r.MatchInjuries), Int(r.SevereInjuriesSuffered), Int(r.FinalRosterSize),
         Int(r.FinalAvailable), CsvWriter.F2(r.AverageLevelTimes100 / 100.0),
         Int(r.PerksOnRoster), Int(r.PerksOnStarters), Int(r.ItemsOnRoster), Int(r.AccumulatedCounters),
+        Int(r.BossSamplesByAct[0]), Int(r.BossSamplesByAct[1]), Int(r.BossSamplesByAct[2]),
+        Int(r.BossWinsByAct[0]), Int(r.BossWinsByAct[1]), Int(r.BossWinsByAct[2]),
         Int(r.MarketsVisited), Int(r.OffersSeen), Int(r.OffersAffordable), Int(r.GoldAtMarketArrival), Int(r.BrokeMarketVisits),
         Int(r.Purchases), Int(r.PerksBought),
         Int(r.ItemsBought), Int(r.PlayersSigned), Int(r.YouthsSigned), Int(r.MercenariesHired),

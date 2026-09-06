@@ -49,8 +49,48 @@ public static class FullRunMetrics
     /// <summary>Prefijo de las muertes por acto (ADR 0048): la banda 1,5-3 no dice dónde caen.</summary>
     public const string DeathsByActPrefix = "deathsAct";
 
-    /// <summary>Prefijo del reparto de las derrotas por acto (ADR 0043: la mayoría deben caer en el acto 2).</summary>
+    /// <summary>
+    /// Prefijo del reparto de las derrotas por acto (ADR 0043: la mayoría deben caer en el acto 2). Es
+    /// una <b>cuota</b> —qué porcentaje de las runs perdidas se pierde en ese acto— y por tanto
+    /// <b>no</b> mide la dureza del acto: sube sola cuando sube la tasa de victoria de la run aunque el
+    /// acto no se toque, porque su denominador encoge (ADR 0067). Para vigilar la dureza está
+    /// <see cref="OrdinaryDefeatRateByActPrefix"/>.
+    /// </summary>
     public const string DefeatShareByActPrefix = "defeatShareAct";
+
+    /// <summary>
+    /// Prefijo de la <b>tasa de derrota en partidos ordinarios</b> de cada acto (ADR 0067): partidos
+    /// ordinarios perdidos entre partidos ordinarios jugados en ese acto. Es la medida de la dureza del
+    /// acto <b>para el jugador</b>, y a diferencia de <see cref="DefeatShareByActPrefix"/> no depende de
+    /// lo que pase en los otros dos actos ni de la tasa de victoria de la run: su numerador y su
+    /// denominador viven los dos dentro del acto.
+    /// </summary>
+    public const string OrdinaryDefeatRateByActPrefix = "ordinaryDefeatRateAct";
+
+    /// <summary>
+    /// Prefijo de la tasa de paso de cada <b>puerta</b> de jefe (ADR 0064: la tasa de victoria de la run
+    /// es el producto de las tres). Exacta, no estimada: sale de <c>BossWinsByAct</c> sobre
+    /// <c>BossSamplesByAct</c> (ADR 0066) y no de <c>BossesBeaten</c>, que no cuenta la puerta que se
+    /// gana en el campo y se pierde por quedarse sin plantilla en ese mismo nodo.
+    /// </summary>
+    public const string BossWinRateByActPrefix = "bossWinRateAct";
+
+    /// <summary>
+    /// Techo de la tasa de derrota en partidos <b>ordinarios</b> del acto 1 (ADR 0067). Sustituye al
+    /// techo del 29,74% sobre <c>defeatShareAct1</c>, que era una <b>cuota</b> y por tanto incompatible
+    /// por aritmética con la banda 20-30% de <see cref="RunWinRate"/> (ADR 0065 §4): la cuota sube al
+    /// subir la tasa de victoria de la run aunque el acto 1 no se toque.
+    ///
+    /// <para>El 30 no se elige por lo que hoy mide (24,90 sobre 1.200 runs) sino por derivación: la
+    /// ADR 0043 le da al acto 1 la función de <b>taller</b> —dificultad baja, poco desgaste— y la ADR
+    /// 0054 fija en <b>70-88</b> la banda de <c>betterTeamWinRate</c>, lo que gana el mejor equipo de un
+    /// emparejamiento. En el acto 1 el jugador <b>es</b> el mejor equipo por construcción: los cinco
+    /// rivales ordinarios del acto 1 son de nivel 1-2 y suman 121-141 puntos de fuerza+velocidad+técnica
+    /// por jugador, frente a los 163-188 del acto 2 y los 201-235 del acto 3. Así que un acto 1 que sea
+    /// taller pide que el jugador gane al menos lo que gana el mejor equipo, 70%, o lo que es lo mismo,
+    /// que pierda como mucho el 30% de sus partidos ordinarios.</para>
+    /// </summary>
+    public const double OrdinaryDefeatRateAct1Max = 30.0;
 
     /// <summary>Partidos que juega una run ganada.</summary>
     public const string MatchesPerWonRun = "matchesPerWonRun";
@@ -357,6 +397,7 @@ public static class FullRunMetrics
         var perksAtBoss = new long[RunRules.Acts];
         var itemsAtBoss = new long[RunRules.Acts];
         var bossSamples = new long[RunRules.Acts];
+        var bossWins = new long[RunRules.Acts];
         long itemsRecovered = 0;
         var matchesByAct = new long[RunRules.Acts];
         var winsByAct = new long[RunRules.Acts];
@@ -459,6 +500,7 @@ public static class FullRunMetrics
                 perksAtBoss[act] += run.PerksAtBossByAct[act];
                 itemsAtBoss[act] += run.ItemsAtBossByAct[act];
                 bossSamples[act] += run.BossSamplesByAct[act];
+                bossWins[act] += run.BossWinsByAct[act];
                 if (run.MatchesByAct[act] == 0)
                 {
                     continue;
@@ -529,6 +571,26 @@ public static class FullRunMetrics
         for (int act = 0; act < RunRules.Acts; act++)
         {
             rows.Add(Info($"{DefeatShareByActPrefix}{act + 1}", defeats > 0 ? 100.0 * defeatsByAct[act] / defeats : 0.0));
+        }
+
+        // ADR 0067: la dureza de cada acto en partidos ordinarios. La del acto 1 lleva banda porque es
+        // el guardarraíl que `defeatShareAct1` no podía ser; las otras dos son INFO, para leer la curva
+        // de la ADR 0043 (taller, gestión, examen) sin tener que restar a mano.
+        for (int act = 0; act < RunRules.Acts; act++)
+        {
+            double rate = ordinaryMatchesByAct[act] > 0
+                ? 100.0 * (ordinaryMatchesByAct[act] - ordinaryWinsByAct[act]) / ordinaryMatchesByAct[act]
+                : 0.0;
+            string name = $"{OrdinaryDefeatRateByActPrefix}{act + 1}";
+            rows.Add(act == 0 ? Banded(name, rate, null, OrdinaryDefeatRateAct1Max) : Info(name, rate));
+        }
+
+        // ADR 0064: las tres puertas cuyo producto es la tasa de victoria de la run, exactas.
+        for (int act = 0; act < RunRules.Acts; act++)
+        {
+            rows.Add(Info(
+                $"{BossWinRateByActPrefix}{act + 1}",
+                bossSamples[act] > 0 ? 100.0 * bossWins[act] / bossSamples[act] : 0.0));
         }
 
         rows.Add(Info(MatchesPerWonRun, victories > 0 ? (double)wonMatches / victories : 0.0));

@@ -4411,3 +4411,265 @@ paquete propio.
   del jefe.
 - **AM-A, AN-A, AN-B, AL-C, AL-D, AM-B y AO-B/AO-C** sin cambios; AO-B gana un tercer modo de fallo (el
   número tiene que ser de **uno** de los dos perfiles del jugador).
+
+## 33. Decisiones de implementación del paquete AQ: el recorrido del catálogo, medido (ADR 0067, ADR 0068)
+
+### 33.1. El banco, y que vuelve a reproducir la ADR 0060 al decimal
+
+Mismo protocolo que §28.8, §29.1, §30.1, §31.1 y §32.1: 1.200 runs por perfil (300 × semillas
+1/1001/2001/3001), contextual = "buena", gastadora = "mediocre"/"mala", el suelo con
+`economy.rewardPerkWeight = 0` y la política que esquiva mercados. Novedad del paquete: las tres puertas
+salen ahora **exactas** de `BossWinsByAct / BossSamplesByAct` (ADR 0067) y no estimadas desde
+`BossesBeaten`, que se come la run que gana la puerta y se queda sin plantilla en ese mismo nodo.
+
+| | ADR 0065/0066 | esta medición | ET |
+|---|---|---|---|
+| Build buena, actos 2/3 (ordinarios) | 60,33 / 43,30 | **60,33 / 43,30** | 0,85 / 0,73 |
+| Build mediocre, actos 2/3 (ordinarios) | 50,42 / 38,65 | **50,42 / 38,67** | 0,98 / 0,14 |
+| Hueco del acto 2 (ordinarios) | 9,91 | **9,91** | 0,87 |
+| Build mala completa la run | 12,00 | **12,00** | 0,87 |
+| Suelo sin build | 10,66 | **10,67** | 0,56 |
+| Tasa de victoria de la run | 17,00 | **17,00** | 1,28 |
+| Muertes por run · derrotas del acto 1 | 1,46 · 29,74 | **1,46 · 29,74** | 0,02 · 1,87 |
+| Puertas, buena | 75,33 · 44,25 · 51,00 | **75,33 · 44,26 · 51,06** | |
+| Puertas, suelo | 70,75 · 35,18 · 44,29 | **70,75 · 35,19 · 44,32** | |
+
+### 33.2. La unidad de medida del paquete: la separación en log-cuotas
+
+La ADR 0065 dejó el encargo con un número: para cumplir a la vez los objetivos 4 (run de la build buena
+en 20-30%) y 5 (suelo < 10%) hay que elevar las tres razones de cuota a la potencia **1,622**. Escrito
+como una sola cifra sumable, que es como se mide aquí:
+
+```
+S = Σ ln R_n = ln 1,2624 + ln 1,4624 + ln 1,3107 = 0,8837      (hoy)
+S necesaria = 1,622 × 0,8837 = 1,4333
+```
+
+La frontera se reproduce con el mismo modelo logístico de la ADR 0065 y da lo mismo al decimal: con la
+`S` de hoy la build buena no pasa del **15,68%** con el suelo en el 10% (la ADR midió 15,63%) y con la
+buena en el 20% el suelo no baja de **13,27%** (la ADR, 13,29%). **`S` es lo único que mueve la
+frontera**; la dificultad mueve el punto sobre ella.
+
+### 33.3. La pregunta del encargo, respondida por construcción antes de medir nada
+
+> ¿Existe una forma de premio que la oposición no pueda cobrar **estructuralmente**?
+
+Sí, y es una sola: **el contador** (RF-070). Los quince perks con `accumulatesAcrossMatches` valen
+`k^n`, donde `n` es el contador que su portador ha ido cargando **a lo largo de la run**, a razón de una
+unidad por partido como mucho —`limit: {per: match, times: 1}` en los diez que se disparan en juego, y un
+solo `MATCH_START` en los otros cinco—. Y ese `n` la oposición no lo tiene:
+
+- `RivalTeamBuilder.Build` monta un `PlayerDefinition` por partido a partir de `data/rivals/`, que **no
+  tiene dónde declarar un contador**: el campo no existe en el esquema del rival.
+- `BossDefinition.ToTeamSetup` genera el equipo del jefe desde cero con `TeamGenerator.Generate` y le
+  pega los perks de su plantilla. Tampoco hay contador que pegar.
+- `ProgressionRules.ApplyCounterDeltas` sólo escribe de vuelta en la plantilla **del jugador**
+  (`MatchResolution`), que es la única que persiste entre partidos.
+
+Seis de los quince perks de acumulación están escritos en `data/rivals/` y `data/bosses/`
+—`eternal_crown` lleva `clean_sheet_legacy`—, y **los seis valen `k⁰ = 1`**: el jefe los enseña en el
+informe de ojeo y no hacen nada. Subir `valuePerCounter` es, por tanto, subir un premio que los **55
+slots de perk de los tres jefes** no pueden cobrar. Es el primer canal en nueve paquetes que cumple la
+condición (a) de la ADR 0064 **por construcción y no por calibración**, y por eso es el que este paquete
+mide.
+
+Las otras dos condiciones, medidas sobre las mismas 1.200 runs por perfil:
+
+| | contadores acumulados por run | perks de acumulación en el once |
+|---|---|---|
+| Build **buena** (contextual) | **15,82** (ET 0,50) | 3,11 |
+| Build **mediocre** (gastadora) | **9,41** (ET 0,48) | 2,72 |
+| **Sin build** (suelo) | **2,22** (ET 0,07) | 0,52 |
+
+**(b)** la build buena no lo tiene al máximo y **(c)** es un número que le pertenece más que a la
+mediocre —1,7 a 1 con sólo un 14% más de perks de acumulación— y siete veces más que al suelo, porque
+cargar un contador exige haber comprado el perk **pronto**, habérselo puesto a un titular que **sigue
+vivo** y seguir **jugando partidos**: es, literalmente, construir a lo largo de la run.
+
+### 33.4. Cuánta separación hay hoy en el catálogo, y de dónde: cuatro condiciones
+
+Cada condición se mide con el banco completo —1.200 runs de las tres doctrinas **y** 1.200 del suelo— y
+se resume en `S`. Ninguna toca `data/economy/perk-values.json`, así que la doctrina contextual **compra
+lo mismo** en todas y la diferencia es lo que el perk hace en el campo, no lo que el jugador elige (el
+mismo aislamiento que la ADR 0063 §1; se comprueba en `runs.csv`: la mezcla de perks finales cambia menos
+del 2% entre condiciones).
+
+| condición | R₁ · R₂ · R₃ | **S** | run buena | suelo |
+|---|---|---|---|---|
+| **hoy** | 1,262 · 1,462 · 1,311 | **0,8837** | 17,00 (ET 1,28) | 10,67 (ET 0,56) |
+| **sin el eje de acumulación** (`accumulatesAcrossMatches: false` en los 15) | 1,153 · 1,470 · 1,330 | **0,8119** | 15,58 (1,34) | 10,00 (0,68) |
+| **sin castigo** (`elseEffects` vacíos en los 17 perks que lo tienen) | 1,260 · 1,342 · 1,609 | **1,0013** | 15,92 (0,53) | 9,25 (0,64) |
+| **la oposición sin catálogo** (71 slots de perk fuera de `data/rivals/` y `data/bosses/`, salvo los letales) | 1,160 · 1,187 · 1,456 | **0,6952** | 37,67 (1,30) | 29,50 (1,55) |
+| **necesaria para los objetivos 4 y 5** | | **1,4333** | | |
+
+Tres lecturas, y dos de ellas falsifican algo:
+
+1. **El eje de acumulación vale hoy 0,072 de los 0,884**, el **8,1%** de toda la separación que el
+   catálogo consigue contra un equipo sin build. Y no la reparte por igual: en la puerta del acto 2 vale
+   **cero** —R₂ = 1,462 con el eje y 1,470 sin él, la misma cifra dentro del error— y la pone entera en
+   las puertas 1 y 3.
+2. **El castigo no separa a la build buena del suelo: la separa de la mediocre.** Quitarlo *sube* `S` de
+   0,884 a 1,001. No contradice la ADR 0063 —el hueco de partido ordinario entre buena y mediocre se
+   hunde de 9,91 a **4,22** al quitarlo, que es su medición reproducida— sino que dice otra cosa: **el
+   suelo no tiene build que castigar**, así que el castigo es un impuesto que la build buena paga un poco
+   y el suelo nada. Es la palanca del objetivo 2, no la de los objetivos 4 y 5.
+3. **Y la lectura ingenua de la pregunta del encargo queda falsificada.** "Que la oposición no pueda
+   cobrar el premio", entendido como *quitarle el premio a la oposición*, **baja** la separación: `S`
+   pasa de 0,884 a **0,695** mientras la run de la build buena se dispara al 37,67% y el suelo al 29,50%.
+   Es el mando de dificultad más potente medido en nueve paquetes, y es un **mando**, no una palanca:
+   entra en la misma lista que el oro, la rareza, la fuerza del rival, el peso de los atributos, el
+   ámbito del premio, el precio de perder y la calibración del jefe.
+
+> **No se trata de que la oposición deje de cobrar un premio que existe. Se trata de que exista un premio
+> que la oposición no puede encender**, y eso es el contador.
+
+### 33.5. El techo del eje: qué pasa si el contador vale lo que su rareza permite
+
+`ProbabilityScale.CounterCeilingFor` ya acota lo que puede valer **una copia** de un efecto con contador
+—común 50, poco común 100, raro 200— y el catálogo está por debajo de ese techo en los canales que la
+ADR 0060 §28.3 midió **con recorrido** (`intercept` base 2,5%, `tackle` 28%, `save`) y **en el techo** en
+los que no lo tienen (`pass` 77%, `dribble` 72%, `shotOnTarget` 78,5%). Las dos sondas suben al techo los
+efectos con contador de los canales con recorrido y dejan el resto quieto:
+
+| | R₁ · R₂ · R₃ | **S** | potencia | run buena | suelo | hueco acto 2 | muertes |
+|---|---|---|---|---|---|---|---|
+| hoy | 1,262 · 1,462 · 1,311 | 0,8837 | 1,000 | 17,00 (1,28) | 10,67 (0,56) | 9,91 | 1,46 |
+| **eje al techo, 4 canales** (`+dribble`) | 1,255 · 1,612 · 1,534 | **1,1323** | **1,281** | **19,50** (0,80) | **10,83** (0,91) | **10,79** | 1,48 |
+| **eje al techo, 3 canales** (sin `dribble`) | 1,288 · 1,579 · 1,482 | **1,1034** | **1,249** | **19,08** (0,90) | 10,83 (0,87) | 9,81 | 1,47 |
+
+**Es la primera condición en nueve paquetes en la que `S` sube.** Y sube donde tiene que subir: la run de
+la build buena gana 2,5 puntos y **el suelo no se entera** (10,67 → 10,83, dentro del error), porque un
+equipo sin build acumula 2,2 contadores por run frente a los 15,8 del que construye. La build mediocre
+tampoco: 12,00 → 11,58.
+
+La diferencia entre las dos sondas es **AL-A confirmado por tercera vez**: la de tres canales no toca
+`silky_veteran` (canal `dribble`, base 72%) y da prácticamente el mismo resultado. Subir el contador en
+un canal saturado no compra nada; el eje de acumulación vale lo que valga **el canal donde se acumula**.
+
+En la potencia que pide la frontera, el techo del eje lleva de 1,000 a **1,281**: cubre el **45%** del
+camino a 1,622. **No es suficiente, y hay que decirlo con el número: el eje de acumulación, exprimido
+hasta el techo que la rareza permite, no hace alcanzables los objetivos 4 y 5 a la vez.** Con la potencia
+1,281 la mejor combinación posible es buena 17,58% con suelo 10%, o suelo 11,69% con buena 20%.
+
+Lo que sí hace es mover el punto a **(19,50 · 10,83)**, que es mejor **en los dos ejes** que el plan de
+repliegue que el revisor fijó en la cabecera de la ADR 0065 —subir la run aceptando un suelo del 13%—.
+
+### 33.6. Y lo que impide gastarlo: el escalón `muy buena` de la ADR 0033 es el mismo punto del eje que la run
+
+La sonda de `--boss-gate` (25 plantillas × 8 partidos = 1.000 por celda) sobre la condición del eje al
+techo, contra la misma sonda sobre el catálogo de hoy:
+
+| jefe | incoherente | correcta | **buena** | **muy buena** |
+|---|---|---|---|---|
+| `grimhold_guns` hoy → eje al techo | 18,4 → **18,4** | 67,6 → **67,6** | 84,6 → **88,8** | 91,1 → **95,4** OUT |
+| `the_hunt` | 8,9 → **8,9** | 39,6 → **39,6** | 66,5 → **74,6** OUT | 78,6 → **89,2** OUT |
+| `eternal_crown` | 4,3 → **4,3** | 25,0 → **25,0** | 38,9 → **47,7** | 62,3 → **77,9** OUT |
+
+**Las columnas `incoherente` y `correcta` no se mueven ni una décima**, y las dos de arriba suben. Es
+**exactamente "empinar la pendiente `correct`→`good`"**, que es lo que la ADR 0064 pedía y la ADR 0065
+demostró que **no se puede comprar desde el lado del jefe**. Desde el lado del catálogo sí se puede: los
+escalones de abajo no llevan contadores —`*_correct` y `*_incoherent` no declaran ninguno— y los de
+arriba sí (`*_good` con 2, `*_excellent` con 5). Y de paso arregla la única celda que estaba clavada en
+su suelo: la `buena` del jefe final pasa de 38,9 (40,2 con la muestra de la puerta) a **47,7**.
+
+Pero al techo se sale de la tabla por arriba en cuatro celdas, así que hay que dosificar. Y ahí está el
+hallazgo que cierra el paquete. Se probó la dosis "**el contador paga antes y llega al mismo sitio**": la
+magnitud por copia sube al techo de rareza y `maxValue` se acorta para que el producto `k^max` no cambie
+(`battle_reader` 1,5⁵ = 7,59 → 2,0³ = 8,00, y así los seis). Medido:
+
+| | R₁ · R₂ · R₃ | S | run buena | suelo | hueco acto 2 | celdas de la ADR 0033 |
+|---|---|---|---|---|---|---|
+| hoy | 1,262 · 1,462 · 1,311 | 0,8837 | 17,00 (ET 1,28) | 10,67 (0,56) | **9,91** | 12 en banda |
+| **paga antes, mismo total** | 1,280 · 1,529 · 1,389 | **0,9993** | 17,67 (1,35) | 10,50 (0,52) | **9,43** OUT | **12 en banda** (92,9 · 79,4 · 63,9 arriba) |
+| eje al techo, 3 canales | 1,288 · 1,579 · 1,482 | 1,1034 | **19,08** (0,90) | 10,83 (0,87) | 9,81 | 4 fuera por arriba |
+
+> **El escalón `muy buena` de la tabla y la build con la que la doctrina contextual llega al jefe final
+> son el mismo punto del eje: los dos con el contador a 5.** Por eso todo lo que el eje le da a la run se
+> lo da también a la celda `muy buena`, y acortar la línea para salvar la celda se lo quita a la run en la
+> misma medida: **17,67 sobre 17,00 con ET 1,35 es la misma cifra**. La dosis que salva las doce celdas
+> sube `S` un 13% —lo cual dice que el eje *funciona*— y no lo convierte en tasa de victoria; y además
+> deja el **hueco del acto 2 en 9,43**, por debajo de su suelo de 9,8. **No se aplica**: sería mover un
+> número de balance para conseguir un efecto que cabe dentro del error típico y a cambio de un
+> guardarraíl.
+
+De donde sale lo que hay que hacer, y por qué no cabe aquí: **gastar el eje exige recalibrar los tres
+jefes a la vez**, que es lo que el guardarraíl de la ADR 0056 autoriza ("si una celda se sale, recalibras
+el jefe, nunca la tabla"). Con el eje al techo, `eternal_crown` tiene por primera vez margen para
+endurecerse —su celda `buena` pasa de 38,9 a 47,7, con 7,7 puntos por encima de su suelo de 40, que hoy
+no tiene—, `the_hunt` necesita ~4 puntos y `grimhold_guns` **no puede endurecerse** porque su celda
+`incoherente` (18,4 en la sonda, 21,6 en la puerta) ya está pegada a su mínimo de 20. Es un paquete de
+jefe con su propio banco, no un ajuste.
+
+### 33.7. La segunda palanca del mismo eje, y por qué también se cae
+
+La ADR 0063 dejó anotado como **AN-B** que `--perk-values` mide **un solo partido**, así que los quince
+perks de acumulación se miden con el contador a **cero**, es decir **inertes**. En la tabla vigente eso
+se lee perk a perk:
+
+| perk | valor medido | por qué |
+|---|---|---|
+| `clean_sheet_legacy` | **−42** | ×1,5⁵ sobre `save`, medido a ×1,5⁰ |
+| `scar_veteran` | −18 | +3 de fuerza por partido, medido a +0 |
+| `pit_veteran` | −13 | ×1,3⁵ sobre `tackle`, medido a ×1,3⁰ |
+| `lane_reader` | −8 | ×1,3⁵ sobre `intercept`, medido a ×1,3⁰ |
+| `poacher_instinct` | −6 | ×2⁵ sobre `shotOnTarget`, medido a ×2⁰ |
+
+Y `RunPolicy.WorthASlot` compara ese valor con `MinPerkValue` = 0 **sólo en la doctrina contextual**. O
+sea: **el instrumento le dice a la build buena que los perks cuyo valor sólo existe a lo largo de una run
+no valen nada, y la build buena los rechaza; la gastadora, que no pregunta, los compra.** Medido en las
+1.200 runs: la contextual termina con `clean_sheet_legacy` en 0 de 1.200 runs y `poacher_instinct` en 4;
+la gastadora, con 99 y 1.
+
+La sonda mide qué pasaría si el instrumento dejara de decirlo —los cinco negativos puestos a 0, que es lo
+mínimo para que `WorthASlot` los deje pasar; no es la corrección, es su cota:
+
+| | R₁ · R₂ · R₃ | S | run buena | suelo | perks de acumulación | contadores |
+|---|---|---|---|---|---|---|
+| hoy | 1,262 · 1,462 · 1,311 | **0,8837** | 17,00 (1,28) | 10,67 (0,56) | 3,11 | 15,82 |
+| el instrumento deja de rechazarlos | 1,123 · 1,397 · 1,275 | **0,6928** | **15,75** (1,05) | 10,58 (0,55) | **4,18** | **19,16** |
+
+**La build buena acumula un 21% más de contadores y gana un 7% menos de runs.** El sesgo de AN-B es real
+—el instrumento mide inertes unos perks que no lo son— pero **corregirlo bajando el listón sale caro**:
+a las magnitudes de hoy esos cinco perks siguen valiendo poco incluso cargados, y el slot que ocupan se
+lo quitan a uno que vale más. **El orden importa: primero la magnitud, después volver a medir el valor.**
+Queda como la segunda mitad del paquete de AQ-A, no como una palanca por su cuenta.
+
+### 33.8. Las seis puertas y las doce celdas
+
+El paquete **no toca ningún dato**, así que las doce celdas de la ADR 0033 y las bandas de RT-056 quedan
+donde estaban. Lo que sí cambia es el código de métricas (ADR 0067), y por eso se revalida entero:
+
+- **La suite completa en Release: 599/599 verdes**, una afirmación **más** que las 598 de la ADR 0065
+  (`FullRunGateTests.Act1IsTheWorkshop`); `Category=Gate` son 42 de ellas, en 51 s.
+- **Las doce celdas**, sonda de `--boss-gate` 25 × 8 sobre el catálogo sin tocar: 18,4 / 67,6 / 84,6 /
+  91,1 · 8,9 / 39,6 / 66,5 / 78,6 · 4,3 / 25,0 / 38,9 / 62,3, **idénticas al decimal** a las de §32.2. Con
+  la muestra de la puerta (32 × 4) siguen siendo las de siempre y las doce están en banda.
+- `data/` validado: 184 ficheros.
+
+### 33.9. Los seis objetivos: sin cambios, y a propósito
+
+| Objetivo (ADR 0056) | ADR 0065/0066 | este paquete | ET | meta | |
+|---|---|---|---|---|---|
+| Build buena, actos 2/3 (ordinarios) | 60,33 / 43,30 | **60,33 / 43,30** | 0,85 / 0,73 | 60% | acto 2 alcanzado |
+| Build mediocre, actos 2/3 (ordinarios) | 50,42 / 38,65 | **50,42 / 38,67** | 0,98 / 0,14 | 42-45% | se pasa 5,4 |
+| Build mala completa la run | 12,00 | **12,00** | 0,87 | < 2% | no |
+| Suelo sin build | 10,66 | **10,67** | 0,56 | < 10% | no |
+| **Hueco buena/mediocre, acto 2** | **9,91** | **9,91** | **0,87** | **> 9,8** | **sí** |
+| Tasa de victoria de la run | 17,00 | **17,00** | 1,28 | 20-30% | falta 3,0 |
+
+Guardarraíles: `deathsPerRun` **1,46**, `betterTeamWinRate` **79,52**, `randomBuildNearNone` en banda, y
+el acto 1 medido con la métrica nueva: **`ordinaryDefeatRateAct1` = 24,90** sobre un techo de 30 (la
+cuota vieja, informativa, sigue en 29,74).
+
+### 33.10. Lo que queda abierto
+
+- **AQ-A es la vía viva**: el eje de acumulación al techo de rareza en los canales con recorrido **más**
+  la recalibración de los tres jefes. Con el eje al techo hay por primera vez margen para endurecer a
+  `eternal_crown`, y `grimhold_guns` sigue sin poder endurecerse.
+- **AQ-B, AQ-C y AQ-D** quedan anotadas: la tabla es lo que acota el eje; quitarle el catálogo a la
+  oposición baja la separación; el castigo sirve al objetivo 2 y no al 4 ni al 5.
+- **AN-B se precisa**: el sesgo del instrumento es real y corregirlo *antes* de subir la magnitud empeora
+  la run. Es la segunda mitad de AQ-A, no un paquete propio.
+- **AP-B cerrada** por la ADR 0067; **AP-A y AP-C** sin cambios.
+- **AL-A deja de ser una sospecha y pasa a tener presupuesto**: el catálogo tiene 45% del camino, y el
+  55% restante no está en ninguna palanca medida. Los objetivos 4 y 5 siguen sin ser alcanzables a la vez.
