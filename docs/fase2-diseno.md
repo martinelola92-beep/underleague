@@ -4673,3 +4673,179 @@ cuota vieja, informativa, sigue en 29,74).
 - **AP-B cerrada** por la ADR 0067; **AP-A y AP-C** sin cambios.
 - **AL-A deja de ser una sospecha y pasa a tener presupuesto**: el catálogo tiene 45% del camino, y el
   55% restante no está en ninguna palanca medida. Los objetivos 4 y 5 siguen sin ser alcanzables a la vez.
+
+## 34. Decisiones de implementación del paquete AR: el eje al techo, y el jefe que no hacía falta (ADR 0069)
+
+### 34.1. El banco, y que vuelve a reproducir la ADR 0068 al decimal
+
+Mismo protocolo que §28.8 en adelante: 1.200 runs por perfil (300 × semillas 1/1001/2001/3001),
+contextual = "buena", gastadora = "mediocre"/"mala", el suelo con `economy.rewardPerkWeight = 0` y la
+política que esquiva mercados; las tres puertas exactas de `BossWinsByAct / BossSamplesByAct` (ADR 0067).
+
+| | ADR 0068 | esta medición | ET |
+|---|---|---|---|
+| Puertas, buena · suelo (base) | 75,33 · 44,26 · 51,06 / 70,75 · 35,19 · 44,32 | **75,33 · 44,25 · 51,00 / 70,75 · 35,22 · 43,99** | |
+| Tasa de victoria de la run · suelo (base) | 17,00 · 10,67 | **17,00 · 10,66** | 1,29 · 0,56 |
+| Hueco del acto 2 (base) | 9,91 | **9,91** | 0,87 |
+| Eje al techo completo (`accmax`) | 19,50 · 10,83 | **19,50 · 10,83** | 0,80 · 0,91 |
+
+La unidad es la misma de §33.2, `S = Σ ln R_n`, medida con el suelo de `runs-nomarket.csv` del lote con
+`rewardPerkWeight = 0`: **base 0,8933**, techo completo **1,1397**.
+
+### 34.2. La tabla de la ADR 0033 sólo ve dos de los siete perks que el techo mueve
+
+Los siete efectos con contador de los canales con recorrido no están repartidos por igual entre el
+instrumento y el juego. Contados sobre las veinte builds de `data/balance/builds/` (cinco razas × cuatro
+escalones) y sobre las 1.200 runs de la doctrina contextual:
+
+| perk | `*_incoherent` | `*_correct` | `*_good` | `*_excellent` | runs que terminan con él |
+|---|---|---|---|---|---|
+| `clean_sheet_legacy` | — | 5 | 5 | 5 | **2** de 1.200 |
+| `battle_reader` | — | — | 5 | **10** | 317 |
+| `silky_veteran` | — | — | — | **10** | 514 |
+| `poacher_instinct` | — | — | — | 5 | 24 |
+| `lane_reader` · `captains_voice` · `deathless_march` · `pit_veteran` | — | — | — | — | 41 · 287 · 41 · 31 |
+
+Y se comprueba desmontando el techo un perk cada vez (muestra de la puerta, 32 × 4, celdas `buena` /
+`muy buena`):
+
+| condición | `grimhold_guns` | `the_hunt` | `eternal_crown` |
+|---|---|---|---|
+| hoy | 80,6 / 90,9 | 62,7 / 80,8 | 40,2 / 58,6 |
+| sólo `lane_reader`, `captains_voice`, `deathless_march`, `pit_veteran` al techo | **80,6 / 90,9** | **62,7 / 80,8** | **40,2 / 58,6** |
+| + `battle_reader` (máx 5) y `silky_veteran` | 81,6 / 92,2 | 65,0 / 79,8 | 43,9 / **73,9** OUT |
+| + `clean_sheet_legacy` = el techo completo de la ADR 0068 | 87,0 / **95,4** | **71,2** / **85,5** OUT | 48,8 / **77,3** OUT |
+
+Los cuatro perks que las builds del instrumento no llevan **reproducen la tabla base al decimal, celda a
+celda**: es el mismo control que la ADR 0063 hizo con los `elseEffects`. Todo el desbordamiento viene de
+`clean_sheet_legacy` (seis celdas movidas, cuatro fuera de banda) y del quinto contador de
+`battle_reader`. Y `clean_sheet_legacy` es exactamente el perk que la doctrina contextual **no compra**
+—2 de 1.200 runs con el eje abajo y 2 de 1.200 con el eje al techo—, porque `--perk-values` lo mide con
+el contador a cero y le da −42 (AN-B).
+
+### 34.3. El jefe final no puede arreglar la celda que se sale
+
+| `eternal_crown` (32 × 4) | incoherente | correcta | buena | muy buena |
+|---|---|---|---|---|
+| calidad 31 | 2,3 | 26,4 | **43,9** | **73,9** |
+| calidad 33 | 2,7 | 23,8 | **36,9** | **73,1** |
+
+Dos puntos de calidad le cuestan **7,0 puntos** a la celda `buena` y **0,8** a la `muy buena` (−0,291
+frente a −0,037 en log-cuotas). La escalera `buena`→`muy buena` que el eje deja mide 1,2858 y la banda
+permite 1,2528: **ninguna dificultad de jefe mete las dos celdas a la vez**, y el mando disponible mueve
+la de abajo —la que lleva desde la ADR 0049 clavada en su suelo de 40— antes que la de arriba.
+
+Las ventanas de calidad de los otros dos, medidas: `grimhold_guns` 31 → 30 (a 28 su celda `buena` se sale
+con 88,1), `the_hunt` 46 → 45 (a 44 su `muy buena` se sale con 85,8). Se midió el banco completo con las
+dos ablandadas al límite, que es todo lo que la tabla autoriza:
+
+| | jefes sin tocar | ablandados al límite | diferencia pareada |
+|---|---|---|---|
+| Tasa de victoria de la run | **19,42** (ET 1,26) | 17,84 (ET 1,77) | **−1,58** (ET 1,42) |
+| Suelo sin build | **10,66** (ET 0,62) | 11,25 (ET 0,44) | **+0,58** (ET 0,75) |
+
+**La recalibración que la tabla autoriza está por debajo del ruido y su signo medido es el contrario.**
+No se recalibra ningún jefe: `data/bosses/` queda intacto.
+
+### 34.4. La dosis que se aplica, y las dos que no
+
+| perk | rareza · ámbito · canal | hoy | ahora | línea `k^max` |
+|---|---|---|---|---|
+| `battle_reader` | poco común · `owner` · `intercept` (2,5%) | 50, máx 5 | **100, máx 4** | 7,59 → 16 |
+| `lane_reader` | poco común · `actor` · `intercept` | 30, máx 5 | **100** | 3,71 → 32 |
+| `captains_voice` | poco común · `team` · `tackle` (37,4%) | 30, máx 3 | **100** | 2,20 → 8 |
+| `deathless_march` | raro · `team` · `tackle` | 30, máx 5 | **100** | 3,71 → 32 |
+| `pit_veteran` | común · `actor` · `tackle` | 30, máx 5 | **50** (techo) | 3,71 → 7,59 |
+| `silky_veteran` | poco común · `actor` · `dribble` | 50, máx 5 | **100** (techo) | 7,59 → 32 |
+| `clean_sheet_legacy` | poco común · `actor` · `save` | 50, máx 5 | **sin tocar** | |
+
+Dos números no llegan a su techo, y los dos por medición:
+
+- **`battle_reader` se queda en `maxValue` 4.** A `2⁵` sobre un canal de base 2,5% el portador pasa de
+  interceptar el 2,5% al 45%, y el escalón `muy buena` lleva **dos** portadores así: la celda del jefe
+  final se va a 73,9 sobre una banda que acaba en 70, y §34.3 dice que el jefe no puede recuperarla. A
+  `2⁴` la celda vuelve a 68,0 y la línea sigue valiendo más del doble que hoy.
+- **`deathless_march` se queda en 100 y no en su techo de 200.** A 200 la línea es `3⁵ = 243` sobre el
+  robo de **todo el equipo**: la cuota pasa de 0,597 a 145 y el motor la clava en su `probabilityCeiling`
+  del 98% desde el quinto partido — la patología que el comentario de `CounterCeilingFor` dice que ese
+  techo existe para evitar, y que el techo no ve porque acota **una copia** y no la línea. Medido, a 200
+  no compra nada: aparece en 42 de 1.200 runs, que ganan el 30,95% frente al 34,15% de antes del cambio
+  (n = 42 en las dos), y el banco a 100 devuelve la misma run con el suelo 0,08 más bajo.
+
+### 34.5. `--perk-values` es ciego a `valuePerCounter`, así que la segunda mitad de AQ-A no existe
+
+La ADR 0068 §5 dejó el orden escrito: "primero la magnitud, después volver a medir el valor". Se midió:
+con las mismas semillas y el mismo lote (12 plantillas × 8 partidos, semilla 5), la tabla de
+`--perk-values` sale **bit a bit idéntica** antes y después de subir el eje —los 61 perks, mismas
+victorias y mismo `valueMilli`, no sólo los seis tocados—.
+
+> El instrumento juega **un** partido y evalúa el efecto con el contador a **cero**: `k⁰ = 1` sea cual
+> sea `k`. **Re-medir la valoración después de subir la magnitud no da poco: no puede dar nada.** AN-B no
+> se corrige subiendo magnitudes; se corrige midiendo el perk a lo largo de una run, que es un
+> instrumento que no existe. `data/economy/perk-values.json` **no se regenera**.
+
+### 34.6. Las doce celdas
+
+Muestra de la puerta (32 × 4 = 640 partidos por celda), **las doce dentro de banda sin usar el margen de
+medida de ±2,5**:
+
+| jefe | incoherente | correcta | buena | muy buena |
+|---|---|---|---|---|
+| `grimhold_guns` | 21,6 [20-35] | 70,5 [65-80] | 81,6 [75-88] | 92,2 [85-95] |
+| `the_hunt` | 10,9 [<15] | 38,9 [35-50] | 65,0 [60-72] | 79,8 [72-85] |
+| `eternal_crown` | 2,3 [<10] | 26,4 [15-28] | **43,9** [40-55] | 68,0 [55-70] |
+
+La celda que la ADR 0065 señaló como la única clavada en su suelo —la `buena` del jefe final, 40,2 sobre
+un mínimo de 40— pasa a **43,9**: 3,9 puntos de margen por primera vez desde la ADR 0049. Con la sonda de
+25 × 8: 18,4 / 67,6 / 86,0 / 93,2 · 8,9 / 39,6 / 67,2 / 81,1 · 4,3 / 25,0 / 41,3 / 69,4.
+
+Suite completa en Release: **599/599**, `Category=Gate` **42/42** en 1 min. `data/` validado: 184
+ficheros. Lote de referencia (600 partidos, semilla 1): `betterTeamWinRate` **79,00** (banda 70-88),
+`injuriesPerMatch` 0,71, `tacklesPerMatch` 9,78, `passChainAvgLength` 2,25, todas IN.
+
+### 34.7. Los seis objetivos
+
+| Objetivo (ADR 0056) | ADR 0068 | este paquete | ET | meta | |
+|---|---|---|---|---|---|
+| Build buena, actos 2/3 (ordinarios) | 60,33 / 43,30 | **62,03 / 46,45** | 0,69 / 0,74 | 60% | acto 2 alcanzado |
+| Build mediocre, actos 2/3 (ordinarios) | 50,42 / 38,67 | **51,28 / 39,64** | 0,85 / 0,21 | 42-45% | se pasa 6,3 |
+| Build mala completa la run | 12,00 | **11,91** | 0,77 | < 2% | no |
+| Suelo sin build | 10,67 | **10,58** | 0,55 | < 10% | falta 0,6 |
+| **Hueco buena/mediocre, acto 2** | **9,91** | **10,75** | **0,73** | **> 9,8** | **sí** |
+| **Tasa de victoria de la run** | **17,00** | **19,42** | **1,26** | **20-30%** | **falta 0,6** |
+
+Separación y frontera:
+
+| | R₁ · R₂ · R₃ | S | potencia | run | suelo |
+|---|---|---|---|---|---|
+| hoy | 1,263 · 1,460 · 1,325 | 0,8933 | 1,000 | 17,00 | 10,66 |
+| eje al techo completo (ADR 0068) | 1,255 · 1,609 · 1,548 | 1,1397 | 1,276 | 19,50 | 10,83 |
+| **este paquete** | **1,260 · 1,599 · 1,608** | **1,1750** | **1,315** | **19,42** | **10,58** |
+| necesaria para los objetivos 4 y 5 a la vez | | 1,4489 | 1,622 | | |
+
+**La dosis que salva la tabla separa más que el techo completo** (1,1750 contra 1,1397) y con el suelo
+más bajo, porque los dos números que el techo completo añadía no separan: el quinto contador de
+`battle_reader` satura y `clean_sheet_legacy` no lo compra nadie. Con el modelo de frontera de la ADR
+0065 alimentado con la `S` nueva: con el suelo en 10% la buena gana como mucho **18,36%**, con la buena
+en 20% el suelo es como mínimo **11,17%**, y con el suelo medido (10,58) la buena gana como mucho
+**18,88%**. El punto entregado —19,42 con 10,58— está **sobre** esa frontera dentro del error típico:
+no queda intercambio, sólo más `S`.
+
+Guardarraíles: `ordinaryDefeatRateAct1` **24,66** (ET 0,64) sobre 30 · `deathsPerRun` **1,48** (0,02) ·
+`betterTeamWinRate` **79,00** · `matchesPerFullRun` 19,38 · `masterDivergence` 9,51.
+
+### 34.8. Lo que queda abierto
+
+- **AQ-A queda cerrada como palanca**: el eje de acumulación está gastado. Lo que se podía subir sin
+  romper la tabla ya está subido, y lo que quedaba —`clean_sheet_legacy` y el quinto contador de
+  `battle_reader`— sólo mueve el instrumento.
+- **AR-A, nueva**: las builds de `data/balance/builds/` no muestrean el catálogo como lo muestrea la
+  política. Es el límite que ha decidido este paquete y no se ha tocado: revisar esas builds es revisar
+  el **instrumento**, no la tabla.
+- **AR-B, nueva**: `CounterCeilingFor` acota una copia y no la línea, así que un contador de ámbito
+  `team` con `maxValue` alto puede desbordar el techo de probabilidad del canal sin salirse del techo de
+  rareza. Hoy sólo afectaba a `deathless_march`.
+- **AN-B se precisa otra vez**: no es que el instrumento infravalore a los perks de acumulación, es que
+  es **estructuralmente ciego** a su magnitud. Corregirlo es medir en campaña.
+- **AP-A y AP-C** sin cambios. Los objetivos 2 y 3 (mediocre en 42-45, mala por debajo del 2%) siguen sin
+  palanca.

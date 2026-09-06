@@ -20,7 +20,7 @@
       "type": "modifyProbability",
       "target": "actor",
       "probability": "dribble",
-      "valuePerCounter": 50,
+      "valuePerCounter": 100,
       "counter": "silkyVeteranDribbles",
       "maxValue": 5,
       "duration": "match"

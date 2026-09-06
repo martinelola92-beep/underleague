@@ -66,6 +66,7 @@ Cuándo escribir un ADR: cambio de librería o stack, frontera entre proyectos, 
 | [0066](0066-la-metrica-del-acto-mide-partidos-ordinarios.md) | `winRateAct{n}` mide partidos ordinarios, como su ADR dice; la cifra con jefe se publica al lado | Aceptada (decisión del revisor) e implementada. **Cierra AO-D**; el objetivo 1 pasa a estar alcanzado en el acto 2 |
 | [0067](0067-la-dureza-de-un-acto-no-es-una-cuota.md) | La dureza del acto 1 se vigila con la tasa de derrota en partidos ordinarios (`ordinaryDefeatRateAct1 ≤ 30`), no con la cuota de derrotas de run | Aceptada e implementada. **Cierra AP-B** |
 | [0068](0068-el-premio-que-la-run-enciende.md) | El contador (RF-070) es el único premio que la oposición no puede cobrar, y cubre el 45% de la separación que la frontera pide | Aceptada. **Primera medición en nueve paquetes en la que la razón de cuotas sube**; ningún número de balance se mueve |
+| [0069](0069-el-eje-se-gasta-donde-la-tabla-no-mira.md) | El eje de acumulación sube al techo de rareza en seis perks; la tabla de la ADR 0033 sólo ve dos de ellos y el jefe final no puede recalibrarse, así que la dosis la pone el catálogo | Aceptada e implementada. **Run 17,00 → 19,42 con el suelo en 10,58**; ningún jefe se toca |
 
 El hueco del 0011 corresponde a una decisión sobre el radio de adyacencia que quedó absorbida por la 0021 antes de aceptarse.
 | [0012](0012-buildswindifferently-normalizada.md) | `buildsWinDifferently` normalizada contra la referencia de la raza | **Propuesta: decisión del revisor** |

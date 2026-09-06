@@ -92,6 +92,25 @@ empeora la run** (17,00 → 15,75). Y la ADR 0067 sustituye el guardarraíl del 
 que era una cuota— por `ordinaryDefeatRateAct1 ≤ 30`, hoy en **24,90**. **Los seis objetivos quedan
 exactamente donde los dejó la ADR 0060.** Detalle en `fase2-diseno.md` §33
 
+*(Estado 2026-09-06, paquete AR / ADR 0069)*: **por primera vez en diez paquetes la tasa de victoria de
+la run sube sin que el suelo la siga.** El eje de acumulación sube al techo de rareza en **seis** de los
+siete efectos con contador de los canales con recorrido y **no se toca ningún jefe**: run **17,00 →
+19,42** (ET 1,26) con el suelo en **10,58** (ET 0,55), hueco del acto 2 **9,91 → 10,75** y separación
+`S` 0,8933 → **1,1750**, que es **más** que la del techo completo de la ADR 0068 (1,1397) y con el suelo
+más bajo. Las **doce celdas de la ADR 0033 quedan dentro de banda sin usar el margen de medida**, y la
+`buena` del jefe final —clavada en su suelo de 40 desde la ADR 0049— pasa a **43,9**.
+
+Y las dos mitades del plan que la ADR 0068 dejó escrito resultan falsas, las dos por la misma razón: **la
+tabla de la ADR 0033 y la run no miran a los mismos perks**. De los siete efectos que el techo mueve, las
+veinte builds del instrumento llevan **dos**; los otros cinco reproducen la tabla base al decimal, celda
+a celda. El que saca las cuatro celdas de banda es `clean_sheet_legacy`, que la doctrina contextual compra
+**2 veces en 1.200 runs** (AN-B). Y el guardarraíl de esta ADR —"si una celda se sale, recalibras el jefe,
+nunca la tabla"— **no tiene salida cuando el jefe no puede**: dos puntos de calidad de `eternal_crown` le
+cuestan 7,0 puntos a su celda `buena` y 0,8 a la `muy buena`, y ablandar los otros dos al límite que la
+tabla permite mide **−1,58** de run (ET 1,42). La tercera salida es la **dosis del catálogo**, y es la que
+se aplica. Los objetivos 2 y 3 siguen sin palanca; los 4 y 5 quedan a 0,6 cada uno y siguen siendo los dos
+extremos de la misma frontera. Detalle en `fase2-diseno.md` §34
+
 **Requisitos:** RT-055, RT-056, RF-032
 **Depende de:** ADR 0054 (banda revisada) · **implementa** las P1 y P3 de la ADR 0050
 
