@@ -346,12 +346,12 @@ public static class DescriptionGenerator
         text = Replace(text, "{duration}", templates.Get(Durations, DurationKey(effect.Duration)));
         text = Replace(text, "{probability}", templates.Get(Probabilities, ProbabilityKey(effect.Probability)));
         text = Replace(text, "{counter}", CounterName(effect.Counter, templates));
-        text = Replace(text, "{value:odds}", Odds(effect.Value));
+        text = Replace(text, "{value:odds}", Odds(effect.Value, templates));
         text = Replace(text, "{value:+%}", Percent(effect.Value));
         text = Replace(text, "{value:+}", Signed(effect.Value));
         text = Replace(text, "{value:abs}", Math.Abs(effect.Value).ToString(CultureInfo.InvariantCulture));
         text = Replace(text, "{value}", effect.Value.ToString(CultureInfo.InvariantCulture));
-        text = Replace(text, "{valuePerCounter:odds}", Odds(effect.ValuePerCounter));
+        text = Replace(text, "{valuePerCounter:odds}", Odds(effect.ValuePerCounter, templates));
         text = Replace(text, "{valuePerCounter:+%}", Percent(effect.ValuePerCounter));
         text = Replace(text, "{valuePerCounter:+}", Signed(effect.ValuePerCounter));
         text = Replace(text, "{maxValue:%}", PlainPercent(effect.MaxValue));
@@ -533,12 +533,26 @@ public static class DescriptionGenerator
         ProbabilityScale.IsIncrease(multiplier) ? key : key + "Down";
 
     /// <summary>
-    /// Magnitud de un multiplicador de cuota en porcentaje, sin signo: 13, 15, 23, 30, 33, 50 o 100. La
-    /// dirección la pone la plantilla ("más"/"menos"), no el número, para que el texto nunca diga "un
-    /// -30% más".
+    /// El factor <c>k</c> de un multiplicador de cuota, escrito tal cual: "1,15", "1,3", "1,5", "2", "3",
+    /// "4" o "6". La dirección la pone la plantilla ("multiplica"/"divide"), no el número.
+    /// <para>
+    /// <b>Habla de cuota, no de proporción de probabilidad</b> (ADR 0058). La convención anterior —"un
+    /// 30% más de probabilidad de pase" para <c>k = 1,3</c>— <b>mentía</b> en los canales de base alta:
+    /// sobre <c>pass</c> (base 77%) el aumento real de la probabilidad es del 5,6%, no del 30%. No existe
+    /// ninguna frase corta en proporción de probabilidad que sea exacta para una multiplicación de
+    /// cuotas, así que la descripción escribe la multiplicación. Es exacta en todos los canales y enseña
+    /// el modelo mental correcto: dos perks se multiplican, no se suman.
+    /// </para>
     /// </summary>
-    private static string Odds(int multiplier) =>
-        ProbabilityScale.ToPercent(multiplier).ToString(CultureInfo.InvariantCulture);
+    private static string Odds(int multiplier, DescriptionTemplates templates) =>
+        ProbabilityScale.FactorText(multiplier, DecimalSeparator(templates));
+
+    /// <summary>
+    /// Coma en español, punto en inglés. Se decide por el idioma de las plantillas y no por la cultura
+    /// del proceso, que es lo que RT-024 exige: el mismo texto en cualquier máquina.
+    /// </summary>
+    private static char DecimalSeparator(DescriptionTemplates templates) =>
+        string.Equals(templates.Language, "en", StringComparison.Ordinal) ? '.' : ',';
 
     /// <summary>Entero con signo explícito: "+3", "-3", "0".</summary>
     private static string Signed(int value) => value.ToString("+0;-0;0", CultureInfo.InvariantCulture);

@@ -23,7 +23,10 @@
         "technique": 62,
         "stamina": 72,
         "leash": 72
-      }
+      },
+      "perks": [
+        "sweeper_keeper"
+      ]
     },
     {
       "name": "Gino Ureña",
@@ -36,7 +39,11 @@
         "technique": 62,
         "stamina": 75,
         "leash": 72
-      }
+      },
+      "perks": [
+        "own_third_anchor",
+        "pit_veteran"
+      ]
     },
     {
       "name": "Hugo Zamora",
@@ -49,7 +56,10 @@
         "technique": 62,
         "stamina": 75,
         "leash": 72
-      }
+      },
+      "perks": [
+        "last_ditch"
+      ]
     },
     {
       "name": "Ivo Cano",
@@ -67,7 +77,8 @@
         "Leader"
       ],
       "perks": [
-        "battle_reader"
+        "battle_reader",
+        "captains_voice"
       ]
     },
     {
@@ -114,7 +125,8 @@
       ],
       "perks": [
         "forward_line",
-        "poacher_instinct"
+        "poacher_instinct",
+        "box_predator"
       ]
     },
     {

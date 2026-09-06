@@ -1,3 +1,4 @@
+using Underleague.Sim.Model;
 using Underleague.Sim.Perks;
 using Xunit;
 
@@ -10,16 +11,22 @@ namespace Underleague.Sim.Tests.Perks;
 /// </summary>
 public sealed class ProbabilityScaleTests
 {
-    /// <summary>Los ocho valores legales y ninguno más; el negativo es el inverso del positivo.</summary>
+    /// <summary>Los catorce valores legales y ninguno más; el negativo es el inverso del positivo.</summary>
     [Theory]
     [InlineData(15, 11500)]
     [InlineData(30, 13000)]
     [InlineData(50, 15000)]
     [InlineData(100, 20000)]
+    [InlineData(200, 30000)]
+    [InlineData(300, 40000)]
+    [InlineData(500, 60000)]
     [InlineData(-15, 8696)]
     [InlineData(-30, 7692)]
     [InlineData(-50, 6667)]
     [InlineData(-100, 5000)]
+    [InlineData(-200, 3333)]
+    [InlineData(-300, 2500)]
+    [InlineData(-500, 1667)]
     public void EachLegalPercentBecomesItsMultiplier(int percent, int expected)
     {
         Assert.True(ProbabilityScale.IsLegal(percent));
@@ -31,7 +38,8 @@ public sealed class ProbabilityScaleTests
     [InlineData(5)]
     [InlineData(20)]
     [InlineData(25)]
-    [InlineData(200)]
+    [InlineData(150)]
+    [InlineData(400)]
     [InlineData(-25)]
     public void AnythingElseIsIllegal(int percent) => Assert.False(ProbabilityScale.IsLegal(percent));
 
@@ -45,6 +53,9 @@ public sealed class ProbabilityScaleTests
     [InlineData(30)]
     [InlineData(50)]
     [InlineData(100)]
+    [InlineData(200)]
+    [InlineData(300)]
+    [InlineData(500)]
     public void APositiveAndItsNegativeCancel(int percent)
     {
         int combined = ProbabilityScale.Combine(
@@ -148,19 +159,57 @@ public sealed class ProbabilityScaleTests
     }
 
     /// <summary>
-    /// La descripción escribe la magnitud verdadera del multiplicador, no la del valor que lo genera: el
-    /// inverso de un ×1,3 se lee "un 23% menos" y no "un 30% menos" (docs/estilo-descripciones.md).
+    /// La descripción habla de <b>cuota</b> (ADR 0058): un ×1,3 se lee "multiplica por 1,3" y su inverso
+    /// "divide por 1,3". La misma cifra con dos verbos, y las dos son exactas, que es justo lo que la
+    /// convención de proporción de probabilidad no conseguía (en <c>pass</c>, base 77%, "un 30% más" era
+    /// en realidad un 5,6%).
     /// </summary>
     [Theory]
-    [InlineData(15, 15, 13)]
-    [InlineData(30, 30, 23)]
-    [InlineData(50, 50, 33)]
-    [InlineData(100, 100, 50)]
-    public void TheDescribedMagnitudeIsTheRealOne(int percent, int up, int down)
+    [InlineData(15, "1,15", "1.15")]
+    [InlineData(30, "1,3", "1.3")]
+    [InlineData(50, "1,5", "1.5")]
+    [InlineData(100, "2", "2")]
+    [InlineData(200, "3", "3")]
+    [InlineData(300, "4", "4")]
+    [InlineData(500, "6", "6")]
+    public void TheDescribedFactorIsTheSameUpAndDown(int percent, string spanish, string english)
     {
-        Assert.Equal(up, ProbabilityScale.ToPercent(ProbabilityScale.ToMultiplier(percent)));
-        Assert.Equal(down, ProbabilityScale.ToPercent(ProbabilityScale.ToMultiplier(-percent)));
-        Assert.True(ProbabilityScale.IsIncrease(ProbabilityScale.ToMultiplier(percent)));
-        Assert.False(ProbabilityScale.IsIncrease(ProbabilityScale.ToMultiplier(-percent)));
+        int up = ProbabilityScale.ToMultiplier(percent);
+        int down = ProbabilityScale.ToMultiplier(-percent);
+
+        Assert.Equal(spanish, ProbabilityScale.FactorText(up, ','));
+        Assert.Equal(spanish, ProbabilityScale.FactorText(down, ','));
+        Assert.Equal(english, ProbabilityScale.FactorText(up, '.'));
+        Assert.Equal(percent, ProbabilityScale.Magnitude(up));
+        Assert.Equal(percent, ProbabilityScale.Magnitude(down));
+        Assert.True(ProbabilityScale.IsIncrease(up));
+        Assert.False(ProbabilityScale.IsIncrease(down));
+    }
+
+    /// <summary>
+    /// El techo por rareza de la ADR 0058: cada rareza añade un escalón, y en un efecto con contador el
+    /// techo baja uno más porque el multiplicador se aplica hasta n veces.
+    /// </summary>
+    [Theory]
+    [InlineData(Rarity.Common, 100, 50)]
+    [InlineData(Rarity.Uncommon, 200, 100)]
+    [InlineData(Rarity.Rare, 300, 200)]
+    [InlineData(Rarity.Legendary, 500, 300)]
+    public void EachRarityBuysOneMoreRung(Rarity rarity, int ceiling, int counterCeiling)
+    {
+        Assert.Equal(ceiling, ProbabilityScale.CeilingFor(rarity));
+        Assert.Equal(counterCeiling, ProbabilityScale.CounterCeilingFor(rarity));
+        Assert.True(ProbabilityScale.IsLegalUpTo(ceiling, ceiling));
+        Assert.True(ProbabilityScale.IsLegalUpTo(-ceiling, ceiling));
+    }
+
+    /// <summary>Un común no puede llegar a lo que llega un legendario, y eso es lo que compra la rareza.</summary>
+    [Fact]
+    public void TheCeilingIsStrictlyBelowTheNextRarity()
+    {
+        Assert.False(ProbabilityScale.IsLegalUpTo(200, ProbabilityScale.CeilingFor(Rarity.Common)));
+        Assert.False(ProbabilityScale.IsLegalUpTo(-300, ProbabilityScale.CeilingFor(Rarity.Uncommon)));
+        Assert.False(ProbabilityScale.IsLegalUpTo(500, ProbabilityScale.CeilingFor(Rarity.Rare)));
+        Assert.True(ProbabilityScale.IsLegalUpTo(500, ProbabilityScale.CeilingFor(Rarity.Legendary)));
     }
 }

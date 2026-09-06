@@ -24,11 +24,13 @@
         "stamina": 75,
         "leash": 59
       },
+      "styleTag": "Bulwark",
       "traits": [
         "Wall"
       ],
       "perks": [
-        "iron_gate"
+        "iron_gate",
+        "safety_net"
       ]
     },
     {
@@ -43,11 +45,13 @@
         "stamina": 78,
         "leash": 59
       },
+      "styleTag": "Bulwark",
       "traits": [
         "Resilient"
       ],
       "perks": [
-        "own_third_anchor"
+        "own_third_anchor",
+        "pit_veteran"
       ]
     },
     {
@@ -62,8 +66,13 @@
         "stamina": 78,
         "leash": 59
       },
+      "styleTag": "Bulwark",
       "traits": [
         "Resilient"
+      ],
+      "perks": [
+        "bulwark_stance",
+        "last_ditch"
       ]
     },
     {
@@ -117,6 +126,7 @@
         "stamina": 72,
         "leash": 59
       },
+      "styleTag": "Brute",
       "traits": [
         "Aggressive"
       ],
@@ -135,7 +145,8 @@
         "technique": 39,
         "stamina": 78,
         "leash": 59
-      }
+      },
+      "styleTag": "Bulwark"
     },
     {
       "name": "Magnus Yunquefirme",

@@ -36,7 +36,8 @@
         "technique": 64,
         "stamina": 63,
         "leash": 60
-      }
+      },
+      "styleTag": "Fine"
     },
     {
       "name": "Haldir Lunargenta",
@@ -49,7 +50,11 @@
         "technique": 64,
         "stamina": 63,
         "leash": 60
-      }
+      },
+      "styleTag": "Fine",
+      "perks": [
+        "steady_hands"
+      ]
     },
     {
       "name": "Ithil Cantoalba",
@@ -62,7 +67,12 @@
         "technique": 77,
         "stamina": 65,
         "leash": 60
-      }
+      },
+      "styleTag": "Fine",
+      "perks": [
+        "fine_touch",
+        "fine_orchestra"
+      ]
     },
     {
       "name": "Laeron Rocíogris",
@@ -76,11 +86,13 @@
         "stamina": 65,
         "leash": 60
       },
+      "styleTag": "Fine",
       "traits": [
         "Cerebral"
       ],
       "perks": [
-        "silky_veteran"
+        "silky_veteran",
+        "wing_overlap"
       ]
     },
     {
@@ -95,6 +107,7 @@
         "stamina": 65,
         "leash": 60
       },
+      "styleTag": "Fine",
       "traits": [
         "Fast"
       ],
@@ -113,7 +126,11 @@
         "technique": 74,
         "stamina": 57,
         "leash": 60
-      }
+      },
+      "styleTag": "Fine",
+      "perks": [
+        "fine_touch"
+      ]
     },
     {
       "name": "Orophin Brisadorada",

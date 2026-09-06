@@ -1,3 +1,5 @@
+using Underleague.Sim.Model;
+
 namespace Underleague.Sim.Perks;
 
 /// <summary>
@@ -18,10 +20,19 @@ namespace Underleague.Sim.Perks;
 /// escalones por canal de la <b>ADR 0035</b>, que esta escala <b>retira</b>: con cuotas, un perk vale lo
 /// mismo en cualquier canal por construcción y ya no hace falta declarar nada por canal.</para>
 ///
-/// <para><b>Valores permitidos</b>: <c>k ∈ {1,15 · 1,3 · 1,5 · 2}</c> y sus inversos. En <c>/data</c> se
-/// escriben como el porcentaje con signo <c>±15, ±30, ±50, ±100</c>: el positivo es <c>k = 1 + n/100</c> y
-/// el negativo es su <b>inverso exacto</b>, <c>k = 1 / (1 + |n|/100)</c>. Por eso <c>-100</c> no es "cero
-/// probabilidad" sino "la mitad de cuota", que es lo que significa invertir un ×2.</para>
+/// <para><b>Valores permitidos</b>: <c>k ∈ {1,15 · 1,3 · 1,5 · 2 · 3 · 4 · 6}</c> y sus inversos. En
+/// <c>/data</c> se escriben como el porcentaje con signo <c>±15, ±30, ±50, ±100, ±200, ±300, ±500</c>: el
+/// positivo es <c>k = 1 + n/100</c> y el negativo es su <b>inverso exacto</b>,
+/// <c>k = 1 / (1 + |n|/100)</c>. Por eso <c>-100</c> no es "cero probabilidad" sino "la mitad de cuota",
+/// que es lo que significa invertir un ×2.</para>
+///
+/// <para><b>El techo depende de la rareza</b> (ADR 0058). El <c>k ≤ 2</c> plano con el que se aplicó la
+/// P1 se fijó a ojo antes de saber que el catálogo real valía de ×2 a ×2 987, y la medición lo falsificó:
+/// con un techo único la capa de perks quedó más débil que antes y el hueco entre una build buena y una
+/// mediocre se estrechó de 9,8 a 6,8 puntos. La rareza pasa a <b>comprar cuota</b> —un común mueve poco,
+/// un legendario mueve mucho— porque es lo que se paga en el mercado y lo que sueltan los jefes, así que
+/// es donde vive la decisión del jugador. Cada rareza añade un escalón de la escala:
+/// <c>común ×2 · poco común ×3 · raro ×4 · legendario ×6</c> (ver <see cref="CeilingFor"/>).</para>
 ///
 /// <para>Internamente todo es entero (RT-023): el multiplicador vive en base 10.000 igual que las
 /// probabilidades, de modo que <see cref="Neutral"/> es <c>k = 1</c>.</para>
@@ -46,15 +57,70 @@ public static class ProbabilityScale
     public const int MinMultiplier = 1;
 
     /// <summary>
-    /// Las cuatro magnitudes legales, en porcentaje de cuota. Un valor de <c>/data</c> es una de estas
-    /// con signo: positivo multiplica la cuota, negativo la divide por el mismo factor.
+    /// Las siete magnitudes legales, en porcentaje de cuota. Un valor de <c>/data</c> es una de estas
+    /// con signo: positivo multiplica la cuota, negativo la divide por el mismo factor. Siguen siendo un
+    /// conjunto pequeño y cerrado con inverso exacto —la propiedad que la P1 introdujo y que la ADR 0058
+    /// no toca—; lo que cambia es que las tres últimas solo están al alcance de las rarezas altas.
     /// </summary>
-    public static IReadOnlyList<int> Magnitudes { get; } = new[] { 15, 30, 50, 100 };
+    public static IReadOnlyList<int> Magnitudes { get; } = new[] { 15, 30, 50, 100, 200, 300, 500 };
 
-    /// <summary>Los ocho valores legales, para el mensaje de error del cargador.</summary>
-    public static string Allowed { get; } = "-100/-50/-30/-15/15/30/50/100";
+    /// <summary>
+    /// Techo de cada rareza, en porcentaje de cuota (ADR 0058). Cada rareza añade un escalón: un común
+    /// llega a ×2, un poco común a ×3, un raro a ×4 y un legendario a ×6. Un valor por encima del techo
+    /// de su rareza es un error de datos, no un aviso: es lo que hace que la rareza signifique algo
+    /// medible y no solo un color de marco.
+    /// </summary>
+    public static int CeilingFor(Rarity rarity) => rarity switch
+    {
+        Rarity.Common => 100,
+        Rarity.Uncommon => 200,
+        Rarity.Rare => 300,
+        _ => 500,
+    };
 
-    /// <summary>True si <paramref name="percent"/> es uno de los ocho valores legales.</summary>
+    /// <summary>
+    /// Techo de un efecto <b>con contador</b> de esa rareza: un escalón por debajo del de
+    /// <see cref="CeilingFor"/>. El motivo es que ahí el multiplicador no se aplica una vez sino hasta
+    /// <c>n</c> (ADR 0050 P1, el tope se escribe en copias y el total es <c>k^n</c>), así que el techo de
+    /// la rareza acota lo que vale <b>una copia</b> y no lo que vale la línea entera: con el mismo techo
+    /// que un efecto suelto, cinco copias de un raro clavarían su canal en el 98% y volvería justo la
+    /// patología que la P1 vino a quitar.
+    /// </summary>
+    public static int CounterCeilingFor(Rarity rarity) => rarity switch
+    {
+        Rarity.Common => 50,
+        Rarity.Uncommon => 100,
+        Rarity.Rare => 200,
+        _ => 300,
+    };
+
+    /// <summary>Los catorce valores legales, para el mensaje de error del cargador.</summary>
+    public static string Allowed { get; } = "-500/-300/-200/-100/-50/-30/-15/15/30/50/100/200/300/500";
+
+    /// <summary>Los valores legales que no pasan de <paramref name="ceiling"/>, para el mensaje de error.</summary>
+    public static string AllowedUpTo(int ceiling)
+    {
+        var text = new System.Text.StringBuilder();
+        for (int i = Magnitudes.Count - 1; i >= 0; i--)
+        {
+            if (Magnitudes[i] <= ceiling)
+            {
+                text.Append('-').Append(Magnitudes[i]).Append('/');
+            }
+        }
+
+        for (int i = 0; i < Magnitudes.Count; i++)
+        {
+            if (Magnitudes[i] <= ceiling)
+            {
+                text.Append(Magnitudes[i]).Append('/');
+            }
+        }
+
+        return text.ToString(0, text.Length - 1);
+    }
+
+    /// <summary>True si <paramref name="percent"/> es uno de los catorce valores legales.</summary>
     public static bool IsLegal(int percent)
     {
         int magnitude = Math.Abs(percent);
@@ -68,6 +134,10 @@ public static class ProbabilityScale
 
         return false;
     }
+
+    /// <summary>True si <paramref name="percent"/> es legal y además cabe bajo <paramref name="ceiling"/>.</summary>
+    public static bool IsLegalUpTo(int percent, int ceiling) =>
+        IsLegal(percent) && Math.Abs(percent) <= ceiling;
 
     /// <summary>
     /// Multiplicador de cuota (base 10.000) del porcentaje con signo de <c>/data</c>. El negativo es el
@@ -90,17 +160,54 @@ public static class ProbabilityScale
         return (int)((((long)Neutral * 100) + (denominator / 2)) / denominator);
     }
 
-    /// <summary>
-    /// Magnitud en porcentaje de cuota de un multiplicador, <b>sin signo</b>: es lo que la descripción
-    /// escribe ("un 30% más", "un 23% menos"). Un ×1,3 da 30 y su inverso da 23, que es la cifra
-    /// verdadera de la reducción y no la del aumento que la genera.
-    /// </summary>
-    public static int ToPercent(int multiplier) => multiplier >= Neutral
-        ? (multiplier - Neutral + 50) / 100
-        : (Neutral - multiplier + 50) / 100;
-
     /// <summary>True si el multiplicador sube la probabilidad del canal.</summary>
     public static bool IsIncrease(int multiplier) => multiplier > Neutral;
+
+    /// <summary>
+    /// Magnitud en porcentaje de cuota de un multiplicador <b>legal</b>, con independencia de su
+    /// dirección: tanto <c>×3</c> como <c>1/3</c> devuelven 200. Es lo que la descripción necesita desde
+    /// la ADR 0058, que habla de <b>cuota</b> y no de proporción de probabilidad: "multiplica por 3" y
+    /// "divide por 3" son la misma cifra con dos verbos, y las dos son exactas.
+    /// </summary>
+    public static int Magnitude(int multiplier)
+    {
+        if (multiplier <= 0)
+        {
+            // Un efecto sin multiplicador (por ejemplo el 'value' vacío de un efecto con contador, que
+            // lleva el suyo en 'valuePerCounter'): no hay magnitud que escribir y nadie la pide.
+            return 0;
+        }
+
+        int upward = multiplier >= Neutral ? multiplier : Invert(multiplier);
+        return (upward - Neutral + 50) / 100;
+    }
+
+    /// <summary>
+    /// El factor <c>k</c> de un multiplicador legal escrito como texto: "1,15", "1,3", "1,5", "2", "3",
+    /// "4" o "6" —con coma o con punto según el idioma—. Sin coma flotante y sin depender de la cultura
+    /// del proceso (RT-023, RT-024): la parte entera y la decimal salen de la magnitud entera.
+    /// </summary>
+    /// <param name="decimalSeparator">',' en español, '.' en inglés.</param>
+    public static string FactorText(int multiplier, char decimalSeparator)
+    {
+        int factor = 100 + Magnitude(multiplier);
+        int whole = factor / 100;
+        int hundredths = factor % 100;
+        if (hundredths == 0)
+        {
+            return whole.ToString(System.Globalization.CultureInfo.InvariantCulture);
+        }
+
+        var text = new System.Text.StringBuilder();
+        text.Append(whole.ToString(System.Globalization.CultureInfo.InvariantCulture)).Append(decimalSeparator);
+        text.Append((hundredths / 10).ToString(System.Globalization.CultureInfo.InvariantCulture));
+        if (hundredths % 10 != 0)
+        {
+            text.Append((hundredths % 10).ToString(System.Globalization.CultureInfo.InvariantCulture));
+        }
+
+        return text.ToString();
+    }
 
     /// <summary>
     /// Compone dos multiplicadores. Apilar dos perks es multiplicar sus cuotas, así que la composición es
@@ -131,7 +238,7 @@ public static class ProbabilityScale
     /// </summary>
     public static int Invert(int multiplier)
     {
-        if (multiplier == Neutral)
+        if (multiplier == Neutral || multiplier <= 0)
         {
             return Neutral;
         }

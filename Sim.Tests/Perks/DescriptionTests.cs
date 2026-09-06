@@ -40,11 +40,13 @@ public sealed class DescriptionTests
             condition: "hasTag(owner, 'Fine')",
             elseEffects: """[{ "type": "modifyProbability", "target": "actor", "probability": "dribble", "value": -30, "duration": "play" }]"""));
 
-        // ADR 0050 P1: el inverso de x1,3 se lee "un 23% menos", que es la reducción de cuota verdadera,
-        // no el "-30%" que sugeriría el signo del dato.
+        // ADR 0058: la descripción habla de CUOTA, así que el inverso de x1,3 se lee "divide por 1,3" y
+        // no "un 23% menos". Es la misma cifra con dos verbos y las dos son exactas; la convención de
+        // proporción de probabilidad que traía la P1 mentía en los canales de base alta (en pass, base
+        // 77%, "un 30% más" era en realidad un 5,6%).
         Assert.Equal(
-            "Al encarar, si el portador es Fino, el jugador tiene un 30% más de probabilidad de regate; "
-                + "si no, el jugador tiene un 23% menos de probabilidad de regate.",
+            "Al encarar, si el portador es Fino, el jugador multiplica por 1,3 sus opciones de regatear; "
+                + "si no, el jugador divide por 1,3 sus opciones de regatear.",
             Describe("es", perk));
     }
 
@@ -90,10 +92,10 @@ public sealed class DescriptionTests
     {
         var perk = LinkedPasser();
         Assert.Equal(
-            "Al empezar el partido, un 30% más de probabilidad de pase hacia el compañero de su columna.",
+            "Al empezar el partido, multiplica por 1,3 sus opciones de pasar hacia el compañero de su columna.",
             Describe("es", perk));
         Assert.Equal(
-            "When the match starts, 30% more pass chance towards the partner in their column.",
+            "When the match starts, multiplies their passing odds towards the partner in their column by 1.3.",
             Describe("en", perk));
     }
 
@@ -108,7 +110,7 @@ public sealed class DescriptionTests
             links: """["ahead", "behind"]"""));
 
         Assert.Equal(
-            "Al empezar el partido, un 15% más de probabilidad de pase hacia el compañero de delante y compañero de detrás.",
+            "Al empezar el partido, multiplica por 1,15 sus opciones de pasar hacia el compañero de delante y compañero de detrás.",
             Describe("es", perk));
     }
 
@@ -152,7 +154,7 @@ public sealed class DescriptionTests
             accumulates: true));
 
         Assert.Equal(
-            "Al empezar el partido, el portador tiene un 30% más de probabilidad de interceptar por cada partido (hasta 5 veces).",
+            "Al empezar el partido, el portador multiplica por 1,3 sus opciones de interceptar por cada partido (hasta 5 veces).",
             Describe("es", perk));
     }
 
@@ -176,7 +178,7 @@ public sealed class DescriptionTests
             accumulates: true));
 
         Assert.Equal(
-            "Al empezar el partido, el portador tiene un 30% más de probabilidad de interceptar por cada partido (hasta 5 veces).",
+            "Al empezar el partido, el portador multiplica por 1,3 sus opciones de interceptar por cada partido (hasta 5 veces).",
             Describe("es", perk));
     }
 
@@ -195,7 +197,7 @@ public sealed class DescriptionTests
             "Al empezar el partido, el portador deja al rival derribado más tiempo con sus entradas.",
             Describe("es", Catalog.Perks.Get("hot_blooded")));
         Assert.Equal(
-            "Al empezar el partido, el portador tiene un 30% más de resistencia a las entradas.",
+            "Al empezar el partido, el portador multiplica por 1,3 su resistencia a las entradas.",
             Describe("es", Catalog.Perks.Get("elf_touch")));
         Assert.Equal(
             "Al empezar el partido, el portador no puede ser desplazado por empujones.",

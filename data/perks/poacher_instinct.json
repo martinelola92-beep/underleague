@@ -20,7 +20,7 @@
       "type": "modifyProbability",
       "target": "actor",
       "probability": "shotOnTarget",
-      "valuePerCounter": 50,
+      "valuePerCounter": 100,
       "counter": "poacherInstinctGoals",
       "maxValue": 5,
       "duration": "match"

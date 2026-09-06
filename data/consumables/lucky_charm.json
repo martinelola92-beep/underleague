@@ -10,7 +10,7 @@
     {
       "type": "modifyProbability",
       "probability": "shotOnTarget",
-      "value": 50
+      "value": 100
     }
   ]
 }

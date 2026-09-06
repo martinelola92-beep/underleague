@@ -21,7 +21,7 @@
       "type": "modifyProbability",
       "target": "owner",
       "probability": "injure",
-      "value": 100,
+      "value": 200,
       "duration": "match"
     },
     {

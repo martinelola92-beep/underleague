@@ -37,11 +37,13 @@
         "stamina": 69,
         "leash": 60
       },
+      "styleTag": "Brute",
       "traits": [
         "Dirty"
       ],
       "perks": [
-        "crowd_control"
+        "bruised_knuckles",
+        "scar_tissue"
       ]
     },
     {
@@ -55,7 +57,11 @@
         "technique": 40,
         "stamina": 69,
         "leash": 60
-      }
+      },
+      "styleTag": "Brute",
+      "perks": [
+        "shadow_marker"
+      ]
     },
     {
       "name": "Zog Quiebraespinas",
@@ -68,7 +74,11 @@
         "technique": 53,
         "stamina": 71,
         "leash": 60
-      }
+      },
+      "styleTag": "Brute",
+      "perks": [
+        "pack_mentality"
+      ]
     },
     {
       "name": "Drog Comecráneos",
@@ -81,7 +91,11 @@
         "technique": 53,
         "stamina": 71,
         "leash": 60
-      }
+      },
+      "styleTag": "Brute",
+      "perks": [
+        "brute_boots"
+      ]
     },
     {
       "name": "Krum Tragaclavos",
@@ -108,12 +122,13 @@
         "stamina": 63,
         "leash": 60
       },
+      "styleTag": "Brute",
       "traits": [
         "Aggressive"
       ],
       "perks": [
-        "hot_blooded",
-        "marrow_thirst"
+        "marrow_thirst",
+        "bruised_knuckles"
       ]
     },
     {

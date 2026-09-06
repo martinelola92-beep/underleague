@@ -122,9 +122,9 @@ public static class PerkLoader
         string conditionSource = root.TryProp("condition") is { } conditionNode ? conditionNode.AsString() : string.Empty;
         var condition = ConditionCompiler.Compile(conditionSource, file, "$.condition");
 
-        var effects = ParseEffects(root.Prop("effects"), file, trigger, links);
+        var effects = ParseEffects(root.Prop("effects"), file, trigger, links, rarity);
         var elseEffects = root.TryProp("elseEffects") is { } elseNode
-            ? ParseEffects(elseNode, file, trigger, links)
+            ? ParseEffects(elseNode, file, trigger, links, rarity)
             : Array.Empty<EffectDefinition>();
         if (effects.Count == 0 && elseEffects.Count == 0)
         {
@@ -492,19 +492,19 @@ public static class PerkLoader
     // ---------------------------------------------------------------- efectos
 
     private static IReadOnlyList<EffectDefinition> ParseEffects(
-        Node node, string file, EventType trigger, IReadOnlyList<LinkRelation> links)
+        Node node, string file, EventType trigger, IReadOnlyList<LinkRelation> links, Rarity rarity)
     {
         var effects = new List<EffectDefinition>();
         foreach (var item in node.EnumerateArray())
         {
-            effects.Add(ParseEffect(item, file, trigger, links));
+            effects.Add(ParseEffect(item, file, trigger, links, rarity));
         }
 
         return effects;
     }
 
     private static EffectDefinition ParseEffect(
-        Node node, string file, EventType trigger, IReadOnlyList<LinkRelation> links)
+        Node node, string file, EventType trigger, IReadOnlyList<LinkRelation> links, Rarity rarity)
     {
         node.EnsureKnownKeys(EffectKnownKeys);
         var type = ParseEnum<EffectType>(node.Prop("type"), "tipo de efecto");
@@ -559,7 +559,7 @@ public static class PerkLoader
         {
             if (usesCounter)
             {
-                valuePerCounter = ToMultiplier(node, valuePerCounter, "valuePerCounter");
+                valuePerCounter = ToMultiplier(node, valuePerCounter, "valuePerCounter", rarity, forCounter: true);
 
                 // Con cuotas, "por cada unidad del contador" es "una copia más del perk", así que el tope
                 // natural es un NÚMERO DE COPIAS y no otro multiplicador: un perk de ×1,3 que acumula
@@ -578,7 +578,7 @@ public static class PerkLoader
             }
             else
             {
-                value = ToMultiplier(node, value, "value");
+                value = ToMultiplier(node, value, "value", rarity, forCounter: false);
             }
         }
 
@@ -593,21 +593,56 @@ public static class PerkLoader
     /// Convierte el porcentaje de cuota con signo de <c>/data</c> en el multiplicador interno
     /// (ADR 0050 P1). La escala es única para todos los canales, que es justo lo que multiplicar cuotas
     /// consigue y lo que la tabla por canal de la ADR 0035 intentaba parchear.
+    /// <para>
+    /// El <b>techo</b>, en cambio, no es único: depende de la rareza (ADR 0058). Un valor legal en
+    /// abstracto pero por encima del techo de su rareza es un error de datos con nombre y apellidos —dice
+    /// la rareza, el valor y el techo—, porque es la validación que hace que la rareza compre cuota de
+    /// verdad en vez de ser un color de marco.
+    /// </para>
     /// </summary>
-    private static int ToMultiplier(Node node, int percent, string field)
+    private static int ToMultiplier(Node node, int percent, string field, Rarity rarity, bool forCounter)
     {
-        if (ProbabilityScale.IsLegal(percent))
+        int ceiling = forCounter
+            ? ProbabilityScale.CounterCeilingFor(rarity)
+            : ProbabilityScale.CeilingFor(rarity);
+
+        if (ProbabilityScale.IsLegalUpTo(percent, ceiling))
         {
             return ProbabilityScale.ToMultiplier(percent);
+        }
+
+        if (ProbabilityScale.IsLegal(percent))
+        {
+            string counterNote = forCounter
+                ? " El techo de un efecto con contador es un escalón más bajo que el de su rareza, porque el "
+                    + "multiplicador se aplica hasta maxValue veces y el total es k^n (ADR 0050 P1)."
+                : string.Empty;
+
+            throw new DataException(
+                node.File,
+                node.Path + "." + field,
+                $"un perk {RarityName(rarity)} no puede llevar '{percent}': el techo de esa rareza es "
+                    + $"{ceiling} (ADR 0058) y los valores a su alcance son {ProbabilityScale.AllowedUpTo(ceiling)}."
+                    + counterNote);
         }
 
         throw new DataException(
             node.File,
             node.Path + "." + field,
             $"'{percent}' no es un valor legal de modifyProbability: un perk multiplica la CUOTA del canal "
-                + $"y la escala es {ProbabilityScale.Allowed} (ADR 0050 P1). El negativo es el inverso "
-                + "exacto del positivo de la misma magnitud: -30 es dividir por 1,3, no restar el 30%");
+                + $"y la escala es {ProbabilityScale.Allowed} (ADR 0050 P1), con el techo de su rareza "
+                + $"({RarityName(rarity)}: {ceiling}, ADR 0058). El negativo es el inverso exacto del "
+                + "positivo de la misma magnitud: -30 es dividir por 1,3, no restar el 30%");
     }
+
+    /// <summary>Nombre de la rareza tal y como se escribe en <c>/data</c>, para el mensaje de error.</summary>
+    private static string RarityName(Rarity rarity) => rarity switch
+    {
+        Rarity.Common => "common",
+        Rarity.Uncommon => "uncommon",
+        Rarity.Rare => "rare",
+        _ => "legendary",
+    };
 
     private static void ValidateEffect(
         Node node,

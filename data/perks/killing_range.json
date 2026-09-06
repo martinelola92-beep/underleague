@@ -31,7 +31,7 @@
       "type": "modifyProbability",
       "target": "actor",
       "probability": "shotOnTarget",
-      "value": 100,
+      "value": 300,
       "duration": "play"
     }
   ],

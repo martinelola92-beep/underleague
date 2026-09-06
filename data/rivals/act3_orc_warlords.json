@@ -37,13 +37,15 @@
         "stamina": 86,
         "leash": 73
       },
+      "styleTag": "Brute",
       "traits": [
         "Aggressive",
         "Dirty"
       ],
       "perks": [
         "last_ditch",
-        "skullsplitter"
+        "skullsplitter",
+        "gentle_giant"
       ]
     },
     {
@@ -57,7 +59,12 @@
         "technique": 51,
         "stamina": 86,
         "leash": 73
-      }
+      },
+      "styleTag": "Brute",
+      "perks": [
+        "shadow_marker",
+        "scar_tissue"
+      ]
     },
     {
       "name": "Krum Tragaclavos",
@@ -70,7 +77,12 @@
         "technique": 64,
         "stamina": 88,
         "leash": 73
-      }
+      },
+      "styleTag": "Brute",
+      "perks": [
+        "pack_mentality",
+        "brute_boots"
+      ]
     },
     {
       "name": "Snaga Muerdehierro",
@@ -110,11 +122,13 @@
         "stamina": 80,
         "leash": 73
       },
+      "styleTag": "Brute",
       "traits": [
         "Aggressive"
       ],
       "perks": [
-        "gentle_giant"
+        "blood_tithe",
+        "bruised_knuckles"
       ]
     },
     {

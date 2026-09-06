@@ -128,7 +128,7 @@ Comprobación obligatoria (ADR 0027): común de nivel 8 (presupuesto 306) ≈ le
 
 Cambios respecto a la fase 1:
 
-- **`value` en unidades enteras redondas, con escala propia por tipo de efecto.** `modifyProbability` va en **porcentaje de cuota con signo** desde la **ADR 0050 P1** (`±15, ±30, ±50, ±100`, con el negativo como inverso exacto del positivo); el cargador lo convierte al multiplicador interno en base 10.000. La escala es **única para todos los canales** y la tabla de escalones por canal de la ADR 0035 queda retirada. Los demás efectos no son porcentajes y tienen su propia escala, porque un `+20` de fuerza sobre un presupuesto total de ~290 puntos sería enorme y un `+5` de correa es, según `docs/balance/fase1-perks.md`, el efecto más potente del juego:
+- **`value` en unidades enteras redondas, con escala propia por tipo de efecto.** `modifyProbability` va en **porcentaje de cuota con signo** desde la **ADR 0050 P1** (`±15, ±30, ±50, ±100, ±200, ±300, ±500`, con el negativo como inverso exacto del positivo); el cargador lo convierte al multiplicador interno en base 10.000. La escala es **única para todos los canales** y la tabla de escalones por canal de la ADR 0035 queda retirada; lo que **no** es único es el **techo**, que depende de la rareza desde la **ADR 0058** (común 100, poco común 200, raro 300, legendario 500, y un escalón menos en un efecto con contador) y lo comprueba también el cargador. Los demás efectos no son porcentajes y tienen su propia escala, porque un `+20` de fuerza sobre un presupuesto total de ~290 puntos sería enorme y un `+5` de correa es, según `docs/balance/fase1-perks.md`, el efecto más potente del juego:
 
 | Tipo de efecto | Unidad | Escala permitida |
 |---|---|---|

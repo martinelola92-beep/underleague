@@ -28,7 +28,7 @@
       "type": "modifyProbability",
       "target": "owner",
       "probability": "pass",
-      "value": -100,
+      "value": -200,
       "duration": "match"
     }
   ],

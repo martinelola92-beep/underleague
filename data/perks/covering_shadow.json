@@ -21,7 +21,7 @@
       "type": "modifyProbability",
       "target": "linked",
       "probability": "intercept",
-      "value": 100,
+      "value": 200,
       "duration": "match"
     }
   ],

@@ -2950,3 +2950,291 @@ cambiar el juego.
 - **Z-B sigue abierta pero cambia de naturaleza**: reponer la mitad de intercepción del Toque élfico ya no
   choca con ninguna escala —con cuotas `interceptEvasion` admite cualquiera de los ocho valores—, solo con
   la necesidad de revalidar la puerta de razas.
+
+## 27. Decisiones de implementación del paquete AK: la exigencia la pone el rival (ADR 0058)
+
+Implementa los **tres puntos de la ADR 0058** en un solo paquete, porque los dos primeros se compensan
+entre sí: el techo de la escala de perks pasa a depender de la **rareza**, la capa de build del **rival
+ordinario crece con el acto**, y la descripción pasa a hablar de **cuota** en vez de proporción de
+probabilidad.
+
+**El resultado es una falsificación, y de las limpias.** Los dos primeros puntos hacen justo lo que la ADR
+decía que harían mecánicamente, y **aun así el objetivo central no se mueve**: el hueco entre una build
+buena y una mediocre **no se abre**, se estrecha un poco. La causa está medida y es geométrica, no de
+calibración: §27.6. El único de los cinco objetivos que se mueve de verdad es el **suelo sin build**, que
+por primera vez responde a algo.
+
+### 27.1. El techo de la escala depende de la rareza
+
+La escala gana tres magnitudes por arriba —`±200, ±300, ±500`, es decir ×3, ×4 y ×6— y **deja de ser
+plana**: cada rareza alcanza un escalón más.
+
+| Rareza | Techo | k | Techo con contador |
+|---|---|---|---|
+| Común | 100 | ×2 | 50 (×1,5) |
+| Poco común | 200 | ×3 | 100 (×2) |
+| Raro | 300 | ×4 | 200 (×3) |
+| Legendario | 500 | ×6 | 300 (×4) |
+
+Tres decisiones de implementación:
+
+**1. Ningún común baja.** El techo del común se queda donde estaba el techo único (×2), así que la tabla es
+**monótona hacia arriba**: ningún perk del catálogo se debilita por el cambio de escala. Bajar el común
+habría sido la otra forma de abrir el abanico y es peor por un motivo medido: el 43% de los perks de una
+build buena son comunes (y el 56% de los de una mediocre), así que un común más débil castiga más a quien
+construye bien.
+
+**2. El techo de un efecto con contador es un escalón más bajo.** Ahí el multiplicador se aplica hasta `n`
+veces y el total es `k^n`, así que el techo de la rareza acota lo que vale **una copia**, no la línea. Sin
+ese escalón, `steady_hands` —cuyo efecto viejo valía ×2 987— habría vuelto a clavar el pase en su techo del
+98% con cinco copias, que es exactamente la patología que la P1 vino a quitar.
+
+**3. La validación es del cargador, no del esquema.** El esquema JSON no ve la rareza del perk desde el
+efecto, así que su rango pasa a ser una cota de cordura (−500..500) y la comprobación real vive en
+`PerkLoader.ToMultiplier`, con un mensaje que dice **la rareza, el valor y el techo**. `EffectJson` hace lo
+mismo para consumibles, con la rareza del consumible: un efecto no vale distinto por venir de una tienda.
+
+### 27.2. Cómo se reasignaron los 68 efectos: el mismo método de la P1 con el techo nuevo
+
+Se reutiliza el método de §26.2 —calcular el cociente de cuotas que el efecto **aditivo viejo** producía de
+verdad en su canal (por la acumulada triangular donde toca) y elegir el valor legal más cercano **en
+logaritmo**— cambiando solo la cota. En los efectos con contador el cociente se toma **a tope de contador**
+y se le saca la raíz `n`-ésima, que es el cociente por copia.
+
+| Canal y valor viejo | Cociente real | P1 (techo ×2) | ADR 0058 |
+|---|---|---|---|
+| `pass` +25 (común) | ×2 987 | +100 | +100 |
+| `shotOnTarget` +25 (poco común) | ×22,3 | +100 | **+200** |
+| `shotOnTarget` +15 (raro) | ×4,05 | +100 | **+300** |
+| `interceptEvasion` +5 (raro) | ×256 | +100 | **+300** |
+| `intercept` +5 (poco común) | ×3,16 | +100 | **+200** |
+| `tackle` +15 (poco común) | ×3,11 | +100 | **+200** |
+| `tackle` +15 (común) | ×3,11 | +100 | +100 |
+| `tackle` −30 (poco común) | ×0,029 | −100 | **−200** |
+| `injury` +3 (legendario) | ×2,58 | +100 | **+200** |
+| `tackle` vpc3/max15 (raro) | ×3,11 en 5 copias → ×1,25 | +50 | **+30** |
+| `pass` vpc5/max25 (común) | ×2 987 en 5 copias → ×4,95 | +50 | +50 (techo) |
+
+De los 68 efectos de probabilidad, **19 pasan del ×2** (12 a +200, 2 a +300, 5 a −200) y **8 contadores
+bajan**, porque el método medido dice que su cociente por copia era de ×1,25 a ×1,37 y el `+50` uniforme de
+la P1 les venía grande. Los que más suben son los de las líneas de build —`forward_line`, `last_ditch`,
+`spearpoint`, `covering_shadow`, `crowd_control`— y **los tres maestros con recorrido**: `killing_range`
+(+300), `first_touch_school` (+300 en `interceptEvasion`) y `granite_line` (+200). `blood_tithe` **no se
+mueve** y hay que decirlo: su `injure +2` viejo valía ×2,04, así que el método lo deja en +100 aunque sea
+un maestro. La rareza abre el techo; no obliga a usarlo.
+
+### 27.3. La capa de build del rival ordinario, y la etiqueta de estilo que le faltaba
+
+Los quince rivales de `data/rivals/` pasan de **1-4 perks por plantilla sin pendiente** a **2 / 7 / 9** por
+acto. El acto 1 se queda **exactamente como estaba** (§27.7 explica por qué no se pudo subir); los actos 2
+y 3 triplican y cuadruplican su capa, hasta quedar por debajo del jugador (5,0 / 10,8 / 12,7 perks en el
+once al llegar a cada jefe) y muy por debajo de los 14 de un jefe.
+
+**El hallazgo del punto 2 es de datos, no de balance: un rival estático no tenía etiqueta de estilo.**
+`RivalTeamBuilder` escribía `StyleTag.Neutral` para todos y no la metía en `Tags`, así que media docena de
+perks del catálogo —los que consultan `hasTag(owner,'Bulwark')`, `teammatesWithTag(owner,'Fine')`,
+`hasTag(actor,'Cold')`— **no se activaban nunca** en un rival y cobraban sus `elseEffects`. El caso peor
+estaba en producción: `act1_orc_ironclad` llevaba `bulwark_stance` en su portero *Neutral*, así que el perk
+que debía darle ×2 de entrada **le dividía por 2 la de todo el equipo**. Un rival con perks de su línea se
+castigaba a sí mismo. `RivalPlayer` gana `StyleTag` (opcional, `Neutral` por omisión para no mover a nadie
+que no la declare) y `RivalTeamBuilder` la compone en `Tags` en el mismo orden que
+`PlayerGenerator`: `[SpeciesTag, StyleTag, Position, ...Traits]`.
+
+Con eso, cada rival lleva una build **legible y en su línea**, que es la mitad del encargo: el Bastión de
+Granito y los Reyes de Hierro son enanos `Bulwark` con La Muralla (`own_third_anchor`, `pit_veteran`,
+`bulwark_stance`, `last_ditch`, y el maestro `granite_line` en el acto 3); los Virtuosos y las Hojas de
+Tormenta son elfos `Fine` con El Toque (`fine_touch` repetido, `fine_orchestra`, `silky_veteran`,
+`spearpoint` y `killing_range`); la Horda y los Señores de la Guerra son orcos `Brute` con La Carnicería
+(`bruised_knuckles`, `shadow_marker`, `pack_mentality`, `brute_boots` y el maestro `blood_tithe`); los
+no-muertos son `Cold` y los humanos siguen siendo `Neutral` de manual, con perks puramente posicionales.
+Las condiciones se comprobaron una a una contra la colocación 2-3-1 real —`spearpoint` y `gentle_giant`
+exigen vínculo `ahead`, que el delantero no tiene, y `center_conductor` exige carril central, que el
+interior no ocupa—, así que ningún perk nuevo cobra su `elseEffects` por estar mal puesto.
+
+**El número de perks letales no sube**: siguen siendo cuatro rivales con uno y uno con dos, ninguno en el
+acto 1, y `deathsPerRun` no se mueve (1,44 antes y después). Lo que sí sube son las lesiones por partido
+(0,69 → 0,74) y las graves por run (1,56 → 1,88), que es lo que se espera de veinte partidos contra
+equipos con build.
+
+### 27.4. La descripción habla de cuota
+
+De *"tiene un 30% más de probabilidad de pase"* a *"multiplica por 1,3 sus opciones de pasar"* /
+*"multiplies their passing odds by 1.3"*. La convención anterior **mentía** en los canales de base alta: en
+`pass` (base 77%) el aumento real de la probabilidad con `k = 1,3` es del 5,6%, no del 30%.
+
+Tres consecuencias de implementación:
+
+- El marcador `{value:odds}` deja de rendir un porcentaje entero y rinde el **factor**: "1,15", "1,3",
+  "1,5", "2", "3", "4" o "6". Sin coma flotante y sin depender de la cultura del proceso (RT-023, RT-024):
+  la parte entera y la decimal salen de la magnitud entera, y el separador lo elige el idioma de las
+  plantillas.
+- La **dirección sigue en la clave** de plantilla, pero ahora con la **misma cifra**: `×1,3` es "multiplica
+  por 1,3" y `1/1,3` es "divide por 1,3". Se acabaron los dos números por magnitud ("un 30% más" frente a
+  "un 23% menos"), que era lo más difícil de explicar de la convención vieja.
+- La sección `probabilities` de `data/l10n/` cambia de sustantivo: "probabilidad de pase" pasa a "sus
+  opciones de pasar", "pass chance" a "their passing odds". `ProbabilityScale.ToPercent` se retira porque
+  ya no la usa nadie.
+
+Esto **cierra AJ-A** con la alternativa exacta que esa entrada dejaba sobre la mesa.
+
+### 27.5. Lo que mide cada punto por separado
+
+El punto 1 se pudo aislar barato (600 runs por lado, semillas 1 y 1001, solo la escala nueva aplicada):
+
+| | antes | solo punto 1 | error típico |
+|---|---|---|---|
+| Build buena, acto 2 | 55,97 | 56,43 | 0,90 |
+| Build mediocre, acto 2 | 50,15 | 50,64 | 0,91 |
+| **Hueco, acto 2** | **5,82** | **5,79** | **1,28** |
+
+**El techo por rareza no mueve la separación entre perfiles, y no es una cuestión de tamaño de muestra: es
+que no puede.** La razón está medida sobre la composición real de las builds (`finalPerks` de 1.200 runs
+por doctrina): una build buena lleva 42,8% de comunes, 45,5% de poco comunes, 11,4% de raros y 0,4% de
+legendarios; una mediocre, 56,2 / 35,5 / 8,2 / 0,1. Ponderando `ln(k)` por esa composición, la build buena
+sale con un multiplicador medio **un 6,9% mayor** que la mediocre. Y la sensibilidad medida es de **~1,3
+puntos de tasa de victoria por cada doblado del peso logarítmico de la capa de perks**, así que 6,9% de
+diferencia son **una décima de punto**. La rareza es demasiado parecida entre las dos builds para separarlas.
+
+El punto 2 no se puede aislar barato sin volver a medir la curva entera, y por eso la ADR los mandaba
+juntos; su efecto se lee en §27.6 como la diferencia entre "solo punto 1" y el paquete completo.
+
+### 27.6. Los cinco objetivos, y por qué el hueco se estrecha en vez de abrirse
+
+1.200 runs por doctrina (300 × semillas 1/1001/2001/3001). "Buena" es la doctrina contextual y "mediocre"
+la gastadora, como en §26.7.
+
+| Objetivo | Antes (P1) | Después | Error típico | Meta | |
+|---|---|---|---|---|---|
+| Build buena, actos 2 / 3 | 56,83 / 52,98 | **52,42 / 42,05** | 0,64 / 0,97 | 60% | **no alcanzado, y baja** |
+| Build mediocre, actos 2 / 3 | 50,02 / 45,10 | **46,14 / 34,43** | 0,67 / 1,07 | 42-45% | acto 2 en el borde; acto 3 se pasa por abajo |
+| Build mala, completar la run | 14,33% | **9,92%** | 0,86 | < 2% | no alcanzado, pero mejora un tercio |
+| Suelo sin build | 12,08% | **§27.8** | 1,3 | < 10% | |
+| **Hueco buena/mediocre, acto 2** | **6,81** | **6,28** | **1,31** | **> 9,8** | **no alcanzado, y se estrecha** |
+
+**La explicación del hueco es geométrica y conviene enunciarla bien, porque invalida la palanca, no la
+calibración.** La tasa de victoria de un partido es una sigmoide de la diferencia de fuerza entre los dos
+equipos, y su **pendiente es máxima en el 50%**. Antes del paquete, la build buena estaba en el 56,8% y la
+mediocre en el 50,0%: las dos a caballo del punto de máxima pendiente, que es donde una diferencia de
+fuerza se traduce en el mayor número de puntos posible. Subir la capa de build del rival **baja a las dos**
+y las mete en la parte plana de la curva: la misma diferencia de fuerza vale ahora menos puntos. Se ve
+sobre todo en el acto 3, donde el rival crece más: el hueco pasa de 7,88 a 7,62 con 9 perks por rival, y
+con 11 —la primera versión, medida— se hundía a **3,37**.
+
+De ahí se sigue algo que la ADR no anticipaba: **los objetivos 1 y 2 de la ADR 0056 son incompatibles entre
+sí con esta palanca.** "Build buena al 60%" exige que el rival ordinario sea **más débil** frente a una
+build buena; "build mediocre al 42-45%" exige que sea **más fuerte** frente a una mediocre. La capa de
+build del rival es un solo número y mueve a las dos en el mismo sentido: no hay ningún valor de esa palanca
+que ponga a una en el 60 y a la otra en el 43. Lo que haría falta es que la fuerza de una build **buena**
+creciera frente a la misma capa de rival —es decir, más recorrido entre "build buena" y "build mediocre" en
+el propio catálogo— y eso es lo que el punto 1 intentaba y §27.5 mide que no consigue.
+
+### 27.7. El acto 1, y el guardarraíl que se rompe igual
+
+La primera versión medida subía el acto 1 de 1-2 perks a 3. Costó 3,0 puntos de tasa de victoria en los
+partidos del acto 1 (75,17 → 72,16) y llevó las derrotas del acto 1 al **31,25%**. Con el acto 1 revertido
+a exactamente lo que era, la tasa de victoria vuelve (74,83) pero la cuota de derrotas se queda en
+**30,90%**, por encima del **29,3%** que el encargo fija como techo.
+
+**Y no es del acto 1: es del punto 1.** `defeatShareActN` es la cuota de runs que terminan en el jefe de
+ese acto, y el jefe del acto 1 lleva **catorce perks** frente a los **cinco** con los que el jugador llega.
+Subir el techo de la escala hace más fuerte a quien más perks lleva, así que el jefe del acto 1 gana peso
+relativo aunque no se le toque una cifra. Se ve aislado: con **solo el punto 1** aplicado, la cuota de
+derrotas del acto 1 ya sube (35,77% en la semilla 1, frente a 31,25% de la misma semilla antes).
+
+**No se ha recalibrado el jefe.** La ADR 0056 solo permite tocar un jefe cuando una celda de la curva de la
+ADR 0033 se sale de banda, y **las doce celdas siguen dentro** (§27.9). Recalibrar `grimhold_guns` para
+cuadrar `defeatShareAct1` sería forzar un número contra una puerta que está verde, que es justo lo que
+RT-057 prohíbe. Queda anotado como **AK-A**.
+
+### 27.8. El suelo sin build: por primera vez se mueve
+
+Mismo instrumento que §26.6: `economy.rewardPerkWeight = 0` y la política contextual esquivando los
+mercados (`runWinRate_noMarket`), 300 runs × cuatro semillas.
+
+| | P1 | ADR 0058 |
+|---|---|---|
+| **Suelo sin build** | **12,08%** | **10,08%** |
+| … por semilla | 9,33 / 12,00 / 12,67 / 14,33 | 8,67 / 9,00 / 11,67 / 11,00 |
+
+La diferencia es de **−2,00 puntos con un error típico de 1,28**: es la primera vez que el suelo responde a
+algo —la P1 lo movió −0,59 ± 1,34, indistinguible de cero— y la dirección es la que la ADR 0058 predecía.
+Sigue sin cumplir el objetivo, que era **bajar del 10%**, y se queda **en el 10,08%**: justo en la raya, y
+por encima de ella.
+
+Que se mueva confirma el diagnóstico de la ADR 0057 y de la 0058 —el suelo lo sostenían los veinte partidos
+ordinarios contra equipos sin build— y a la vez enseña su tamaño: **dar build al rival vale dos puntos de
+suelo, no siete**. Los otros diez puntos siguen siendo nivel y atributos, que es exactamente la conversación
+de la P3 que la ADR 0057 dejó suspendida, ahora con un número al lado.
+
+### 27.9. Las seis puertas
+
+| Puerta | Estado |
+|---|---|
+| Sensación de fútbol (RT-056 + `betterTeamWinRate` 70-88) | **verde** |
+| Rareza y jefe final (RF-024, ADR 0027) | **verde** |
+| Equilibrio entre razas (D-29) | **verde** |
+| Curva de puertas de la ADR 0033 | **verde**, las doce celdas y **sin recalibrar ningún jefe** |
+| Run completa | **verde en los tests**; `runWinRate` sigue OUT como métrica (15,92, banda 20-30) |
+| Criterio de salida de fase 1 (builds) | **roja en una métrica**, que antes eran dos |
+
+589 de 591 tests. La única afirmación roja es `buildsWinDifferently_passChain` = **1,19** contra un umbral
+de 1,30 (AJ-C, punto 1): mide una build técnica de siete `fine_touch`, que es **común**, así que su techo
+sigue siendo ×2 y el umbral sigue calibrado contra un canal saturado que la P1 hizo imposible.
+
+**`badBuildsLoseToNone_elf_out_of_zone` queda arreglada por el paquete**, y era la otra mitad de AJ-C: la
+build mala vive de sus `elseEffects` y `forward_line` es **poco común**, así que su castigo pasa de ×0,5 a
+×0,333 y la métrica vuelve a banda sin tocar el umbral. Es el efecto que la ADR 0058 esperaba del techo por
+rareza, y es el único sitio donde se nota.
+
+`TheThreeDoctrinesBuyDifferently` (AJ-D) pasa en esta ejecución, pero sigue siendo frágil por tamaño de
+muestra y no se da por resuelta.
+
+### 27.10. El resto del bucle de run
+
+1.200 runs, doctrina contextual salvo donde se indique.
+
+| | P1 | ADR 0058 | banda |
+|---|---|---|---|
+| Tasa de victoria de la run | 18,00 | **15,92** | 20-30 |
+| … gastadora / ahorradora | 14,33 / 18,00 | 9,92 / 13,92 | INFO |
+| Ganar sin pisar mercado | 16,92 | 15,59 | < 5 (ADR 0055) |
+| Partidos por run | 13,20 | 12,97 | INFO |
+| Partidos por run completa | 19,44 | 19,43 | 18-22 |
+| Llegan al acto 2 / al acto 3 | 75,91 / 33,08 | 74,00 / 31,75 | INFO |
+| Derrotas por acto (1/2/3) | 29,3 / 52,3 / 18,4 | **30,9** / 50,3 / 18,9 | mayoría en el 2 |
+| Muertes por run | 1,44 | 1,44 | 1,5-3 |
+| Lesiones por partido (ambos) | 0,69 | 0,74 | INFO |
+| Lesiones graves por run | 1,56 | 1,88 | INFO |
+| Perks en el once | 9,94 | 9,29 | INFO |
+| Compras por mercado | 0,92 | 0,86 | 1-2 |
+| Oro sin gastar | 10,68 | 10,89 | < 15 |
+
+La tasa de victoria de la run **baja** de 18,00 a 15,92 y se aleja de su banda por abajo. El guardarraíl del
+encargo era el contrario —que no subiera de 30— y se cumple con holgura, pero conviene decir que el paquete
+empuja el juego hacia **más difícil para todos** en vez de **más exigente con la build**, que es la
+distinción que la ADR 0058 quería hacer.
+
+### 27.11. Lo que queda abierto
+
+- **AK-A · `defeatShareAct1` sube al 30,9% con el acto 1 sin tocar** (§27.7). La causa es el techo por
+  rareza sobre los catorce perks del jefe del acto 1, no la capa del rival. Recalibrar el jefe cuadraría el
+  número pero rompería la regla de la ADR 0056 (solo se recalibra un jefe cuando su celda se sale), así que
+  es decisión del revisor: o se acepta que el acto 1 muerde más, o se revisa la fila del acto 1 de la
+  ADR 0033 (que es AJ-E con otro nombre).
+- **AK-B · La capa de build del rival y el techo por rareza no abren el hueco entre perfiles** (§27.5,
+  §27.6), y la ADR 0058 dice que eso la falsifica. Los objetivos 1 y 2 de la ADR 0056 son incompatibles con
+  cualquier palanca que mueva a las dos builds en el mismo sentido; hace falta una que aumente el
+  **recorrido del catálogo** entre una build buena y una mediocre, y la que se intentó (que la rareza
+  compre cuota) no lo consigue porque las dos builds llevan casi la misma mezcla de rarezas.
+- **AJ-A queda cerrada** por §27.4: la descripción habla de cuota y es exacta en todos los canales.
+- **AJ-B queda cerrada** por §27.3: los rivales ordinarios llevan build, con pendiente por acto y con la
+  etiqueta de estilo que sus perks necesitaban.
+- **AJ-C queda a medias**: `badBuildsLoseToNone` se arregla sola con el techo por rareza;
+  `buildsWinDifferently_passChain` sigue calibrada contra un canal saturado y necesita un ADR o una build
+  de medida que no dependa de saturar el pase.
+- **AJ-D y AJ-E siguen abiertas**; AJ-E se agrava y se relee como AK-A.
+- **`data/economy/perk-values.json` no se ha regenerado**, igual que en la P1: los valores medidos de la
+  ADR 0038 son de antes de la P1 y ahora están dos escalas atrasados. La doctrina contextual elige sus
+  perks con ellos, así que su build es peor de lo que podría ser. Regenerarlos cambia a la vez el orden de
+  compra y los pesos del pool, o sea el instrumento con el que se ha medido todo este paquete, y por eso no
+  se ha hecho aquí. **Es el primer candidato del paquete siguiente.**

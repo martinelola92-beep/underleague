@@ -15,7 +15,7 @@ namespace Underleague.Sim.Run.Systems;
 /// </summary>
 internal static class EffectJson
 {
-    public static IReadOnlyList<EffectDefinition> ReadList(Json? node)
+    public static IReadOnlyList<EffectDefinition> ReadList(Json? node, Rarity rarity)
     {
         if (node is not { } value)
         {
@@ -25,13 +25,13 @@ internal static class EffectJson
         var effects = new List<EffectDefinition>();
         foreach (var item in value.EnumerateArray())
         {
-            effects.Add(Read(item));
+            effects.Add(Read(item, rarity));
         }
 
         return effects;
     }
 
-    public static EffectDefinition Read(Json node)
+    public static EffectDefinition Read(Json node, Rarity rarity)
     {
         string type = node.Str("type");
         var effectType = type switch
@@ -59,15 +59,23 @@ internal static class EffectJson
         var probabilityKind = ParseProbability(node, probability);
 
         // ADR 0050 P1: igual que en data/perks, el valor es un multiplicador de CUOTA escrito como
-        // porcentaje con signo (±15, ±30, ±50, ±100), no puntos base 10.000. La escala es la misma para
-        // objetos, consumibles y perks: un efecto no vale distinto por venir de una tienda.
-        if (!Perks.ProbabilityScale.IsLegal(value))
+        // porcentaje con signo, no puntos base 10.000. La escala es la misma para objetos, consumibles y
+        // perks: un efecto no vale distinto por venir de una tienda. Y desde la ADR 0058 el TECHO también
+        // es el mismo, es decir el de su rareza: un consumible común no puede mover la cuota más que un
+        // perk común.
+        int ceiling = Perks.ProbabilityScale.CeilingFor(rarity);
+        if (!Perks.ProbabilityScale.IsLegalUpTo(value, ceiling))
         {
             throw new DataException(
                 node.File,
                 node.Path + ".value",
-                $"'{value}' no es un valor legal de modifyProbability: multiplica la CUOTA del canal y la "
-                    + $"escala es {Perks.ProbabilityScale.Allowed} (ADR 0050 P1)");
+                Perks.ProbabilityScale.IsLegal(value)
+                    ? $"un consumible {rarity.ToString().ToLowerInvariant()} no puede llevar '{value}': el "
+                        + $"techo de esa rareza es {ceiling} (ADR 0058) y los valores a su alcance son "
+                        + $"{Perks.ProbabilityScale.AllowedUpTo(ceiling)}"
+                    : $"'{value}' no es un valor legal de modifyProbability: multiplica la CUOTA del canal y la "
+                        + $"escala es {Perks.ProbabilityScale.Allowed} (ADR 0050 P1), con el techo de su "
+                        + $"rareza ({rarity.ToString().ToLowerInvariant()}: {ceiling}, ADR 0058)");
         }
 
         return new EffectDefinition(

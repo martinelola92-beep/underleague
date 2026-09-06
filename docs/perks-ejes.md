@@ -54,15 +54,20 @@ Se añaden al conjunto de RT-034 y a `fase1-diseno.md` §2 cuando se implementen
 
 `stat` merece justificación: hoy un perk de acumulación necesita declarar su propio `addCounter` sobre un disparador y leerlo después, lo que gasta dos efectos y obliga a que el contador exista antes de poder usarlo. Exponer las estadísticas que el motor ya lleva para el informe post-partido (RF-119) abarata mucho toda la familia de acumulación y elimina una fuente de errores.
 
-## Escala de valores (ADR 0050 P1)
+## Escala de valores (ADR 0050 P1, techo por rareza de la ADR 0058)
 
-Un perk **multiplica la cuota** del canal que toca: `cuota' = cuota × k`, con `k ∈ {1,15 · 1,3 · 1,5 · 2}`
-y sus inversos. En `/data` se escribe como el porcentaje con signo `±15, ±30, ±50, ±100`, y el negativo es
-el inverso exacto del positivo de la misma magnitud (`-30` divide por 1,3). **La escala es única para todos
-los canales**: multiplicar cuotas hace que la misma cifra valga lo mismo sobre `intercept` (base 2,5%) que
-sobre `pass` (base 77%), que es lo que la tabla de escalones por canal de la ADR 0035 intentaba parchear y
-por eso **esa tabla queda retirada** (`tuning.probabilityChannels` ya no existe). La comprobación la hace
-`Sim.Perks.PerkLoader` al cargar.
+Un perk **multiplica la cuota** del canal que toca: `cuota' = cuota × k`, con
+`k ∈ {1,15 · 1,3 · 1,5 · 2 · 3 · 4 · 6}` y sus inversos. En `/data` se escribe como el porcentaje con
+signo `±15, ±30, ±50, ±100, ±200, ±300, ±500`, y el negativo es el inverso exacto del positivo de la misma
+magnitud (`-30` divide por 1,3). **La escala es única para todos los canales**: multiplicar cuotas hace que
+la misma cifra valga lo mismo sobre `intercept` (base 2,5%) que sobre `pass` (base 77%), que es lo que la
+tabla de escalones por canal de la ADR 0035 intentaba parchear y por eso **esa tabla queda retirada**
+(`tuning.probabilityChannels` ya no existe).
+
+Lo que **sí** depende del perk es el **techo**, y depende de su **rareza** (ADR 0058): común ×2, poco común
+×3, raro ×4, legendario ×6, y un escalón menos en un efecto con contador, porque ahí el multiplicador se
+aplica hasta `n` veces. La rareza compra cuota: es lo que se paga en el mercado y lo que sueltan los jefes.
+Las dos comprobaciones —valor legal y techo de la rareza— las hace `Sim.Perks.PerkLoader` al cargar.
 
 En los cuatro canales que se resuelven con el promedio de dos tiradas (ADR 0050 P2: regate, entrada, tiro
 a puerta y parada) el multiplicador se aplica sobre la probabilidad **realizada**, no sobre el parámetro:
@@ -71,7 +76,7 @@ atrás (`ProbabilityScale.ApplyAveraged`).
 
 Cuando el efecto escala con un contador, cada unidad vale **una copia más** del mismo multiplicador
 (`k^n`) y `maxValue` es cuántas copias como mucho, no un multiplicador máximo: es lo que deja al eje de
-acumulación crecer más allá del ×2 de la escala sin salirse de ella.
+acumulación crecer más allá del techo de su rareza sin salirse de la escala.
 
 ## Objetivo `linked`
 

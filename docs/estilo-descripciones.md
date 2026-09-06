@@ -11,7 +11,7 @@ El jugador tiene que poder decidir, no auditar el código. Debe entender qué va
 | Bien | Mal | Por qué |
 |---|---|---|
 | "Mejora el pase hacia el compañero de su columna" | "+800 a `pass` sobre el objetivo `linked:ahead` durante `match`" | La segunda expone el modelo de datos |
-| "20% más de probabilidad de lesionar gravemente a un rival" | "+2000 puntos base a `severeInjury`" | Puntos base sobre 10.000 no significan nada para nadie |
+| "Multiplica por 1,5 sus opciones de causar una lesión grave" | "+2000 puntos base a `severeInjury`" | Puntos base sobre 10.000 no significan nada para nadie |
 | "Sus entradas dejan al rival derribado más tiempo" | "+12 ticks al estado `KnockedDown` del objetivo" | Los ticks son una unidad interna |
 | "El primer pase de cada jugada no puede interceptarse" | "Anula el chequeo de intercepción si `passIndexInPlay == 0`" | La primera se puede ver ocurrir; la segunda hay que creérsela |
 
@@ -19,51 +19,56 @@ El jugador tiene que poder decidir, no auditar el código. Debe entender qué va
 
 Ticks, puntos base, nombres de canales o de campos JSON, identificadores, fórmulas, umbrales internos, orden de resolución, y cualquier número que el jugador no pueda verificar mirando el partido o la ficha.
 
-## Convención de porcentajes
+## Convención de cuota
 
-**Un perk multiplica la cuota de su canal, y la descripción lo dice en proporción** (ADR 0050 P1). El
-JSON declara `"value": 30` y eso significa `cuota × 1,3`; el jugador lee *"un 30% más de probabilidad de
-interceptar"*. Los ocho valores legales son `±15, ±30, ±50, ±100`, iguales en **todos** los canales: el
-negativo es el **inverso exacto** del positivo de la misma magnitud —`-30` divide por 1,3, no resta el
-30%— y por eso se escribe con la cifra verdadera de la reducción, que no es la misma: `-15` se lee "un
-13% menos", `-30` "un 23% menos", `-50` "un 33% menos" y `-100` "un 50% menos".
+**Un perk multiplica la cuota de su canal, y la descripción escribe la multiplicación** (ADR 0058). El
+JSON declara `"value": 30` y eso significa `cuota × 1,3`; el jugador lee *"multiplica por 1,3 sus opciones
+de interceptar"* / *"multiplies their interception odds by 1.3"*. El negativo es el **inverso exacto** del
+positivo de la misma magnitud, así que se lee con la **misma cifra y el verbo contrario**: `-30` es
+*"divide por 1,3 sus opciones de interceptar"*. Nunca hay dos números que memorizar.
 
-**Proporciones, no puntos.** Es el cambio respecto de la convención anterior, y es consecuencia directa
-de la fórmula: los efectos ya no suman puntos porcentuales, multiplican cuotas. La escala por canal de la
-ADR 0035 —que existía porque un punto porcentual no valía lo mismo sobre `intercept` (base 2,5%) que sobre
-`pass` (base 77%)— **queda retirada**: multiplicando cuotas, la misma cifra vale lo mismo en cualquier
-canal por construcción, y `tuning.probabilityChannels` ya no existe.
+Los catorce valores legales son `±15, ±30, ±50, ±100, ±200, ±300, ±500`, es decir
+`k ∈ {1,15 · 1,3 · 1,5 · 2 · 3 · 4 · 6}` y sus inversos, iguales en **todos** los canales. Lo que no es
+igual para todos es el **techo**, que depende de la rareza (ADR 0058):
+
+| Rareza | Techo | k | Techo con contador |
+|---|---|---|---|
+| Común | 100 | ×2 | 50 (×1,5) |
+| Poco común | 200 | ×3 | 100 (×2) |
+| Raro | 300 | ×4 | 200 (×3) |
+| Legendario | 500 | ×6 | 300 (×4) |
+
+La rareza **compra cuota**: es lo que se paga en el mercado y lo que sueltan los jefes, así que es donde
+vive la decisión. Un perk cuyo valor pase del techo de su rareza es un error de carga, con la rareza, el
+valor y el techo en el mensaje. El techo de un efecto **con contador** es un escalón más bajo porque ahí
+el multiplicador se aplica hasta `n` veces y el total es `k^n`.
+
+**Cuota, no proporción de probabilidad.** Es el cambio respecto de la convención que trajo la P1 —"un 30%
+más de probabilidad de interceptar"— y el motivo es que aquella **mentía** en los canales de base alta. El
+aumento relativo real de la *probabilidad* es `(k−1)(1−p)/(1+(k−1)p)`, que depende de la base:
+
+| Canal | Base | Decía | Era |
+|---|---|---|---|
+| `intercept` | 2,5% | 30% más | 29,2% más |
+| `injure` | 2,0% | 30% más | 29,4% más |
+| `tackle` | 28% | 30% más | 19,5% más |
+| `pass` | 77% | 30% más | **5,6% más** |
+
+No existe ninguna frase corta en proporción de probabilidad que sea exacta para una multiplicación de
+cuotas en toda la escala de bases. Escribir la multiplicación sí lo es —en los cuatro canales de la tabla
+y en cualquier otro— y además enseña el modelo mental correcto: **dos perks se multiplican, no se suman**,
+que es exactamente lo que hace el motor. La escala por canal de la ADR 0035 sigue retirada:
+multiplicando cuotas, la misma cifra vale lo mismo en cualquier canal por construcción, y
+`tuning.probabilityChannels` ya no existe.
 
 La base 10.000 se mantiene **solo** dentro del motor, donde hace falta precisión para probabilidades
 pequeñas (una lesión del 2,4% no se puede expresar en enteros sobre 100). El multiplicador vive en esa
 misma base: `10000` es "no hacer nada".
 
 **Cuando el efecto se acumula**, cada unidad del contador vale exactamente **una copia más** del mismo
-multiplicador, y el tope es cuántas copias como mucho: *"un 50% más de probabilidad de regate por cada
-regate ganado, hasta cinco veces"*. Escribir el tope como copias y no como un multiplicador máximo es lo
-que deja al eje de acumulación (RF-070) crecer más allá del ×2 de la escala sin salirse de ella.
-
-### El límite de precisión de esta convención, y por qué se acepta
-
-Multiplicar cuotas es exacto; describirlo como una proporción de **probabilidad** no lo es. El aumento
-relativo real de la probabilidad es `(k−1)(1−p)/(1+(k−1)p)`: coincide con la cifra escrita cuando la base
-es pequeña y se queda por debajo cuando es grande. Con `k = 1,3`:
-
-| Canal | Base | Dice | Es |
-|---|---|---|---|
-| `intercept` | 2,5% | 30% más | 29,2% más |
-| `injure` | 2,0% | 30% más | 29,4% más |
-| `tackle` | 28% | 30% más | 19,5% más |
-| `pass` | 77% | 30% más | 5,6% más |
-
-**Esto es una desviación de "la descripción no puede mentir" y está anotada como tal**: no existe ninguna
-frase corta en proporción que sea exacta para una multiplicación de cuotas en toda la escala de bases, y
-la convención anterior ("+25% de probabilidad de pase" entendido como puntos) tenía el defecto simétrico y
-peor —la misma cifra significaba cosas que se diferenciaban en dos órdenes de magnitud según el canal—.
-La alternativa exacta es hablar de **cuota** ("multiplica por 1,3 sus opciones de interceptar"), que es
-verdad literal y encaja con la ficción del juego; queda sobre la mesa del revisor y anotada en
-`pendientes.md`. Lo que **no** se hace es describir un efecto multiplicativo como si sumara puntos: eso sí
-mentiría siempre.
+multiplicador, y el tope es cuántas copias como mucho: *"multiplica por 1,5 sus opciones de regatear por
+cada regate ganado, hasta cinco veces"*. Escribir el tope como copias y no como un multiplicador máximo es
+lo que deja al eje de acumulación (RF-070) crecer más allá del techo de su rareza sin salirse de la escala.
 
 ## Qué se genera y qué se escribe
 

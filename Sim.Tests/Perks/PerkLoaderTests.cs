@@ -514,6 +514,55 @@ public sealed class PerkLoaderTests
         Assert.Equal(10, perk.Effects[1].MaxValue);
     }
 
+    /// <summary>
+    /// ADR 0058: el techo de <c>modifyProbability</c> depende de la rareza, y pasárselo es un error de
+    /// datos con la rareza, el valor y el techo en el mensaje. Es la validación que hace que la rareza
+    /// compre cuota de verdad en vez de ser un color de marco.
+    /// </summary>
+    [Fact]
+    public void AValueOverTheRarityCeilingIsRejected()
+    {
+        var ex = Assert.Throws<DataException>(() => TestPerks.Load("greedy", TestPerks.Json(
+            "greedy",
+            "MATCH_START",
+            """[{ "type": "modifyProbability", "target": "owner", "probability": "pass", "value": 200, "duration": "match" }]""",
+            rarity: "common")));
+
+        Assert.Contains("common", ex.Message, StringComparison.Ordinal);
+        Assert.Contains("200", ex.Message, StringComparison.Ordinal);
+        Assert.Contains("100", ex.Message, StringComparison.Ordinal);
+
+        // El mismo valor en un perk poco común sí cabe: es exactamente lo que la rareza compra.
+        var fine = TestPerks.Load("worthy", TestPerks.Json(
+            "worthy",
+            "MATCH_START",
+            """[{ "type": "modifyProbability", "target": "owner", "probability": "pass", "value": 200, "duration": "match" }]""",
+            rarity: "uncommon"));
+        Assert.Equal(30000, fine.Effects[0].Value);
+    }
+
+    /// <summary>
+    /// El techo de un efecto con contador es un escalón más bajo (ADR 0058): el multiplicador se aplica
+    /// hasta <c>maxValue</c> veces, así que el techo acota lo que vale una copia y no la línea entera.
+    /// </summary>
+    [Fact]
+    public void ACounterValueOverTheCounterCeilingIsRejected()
+    {
+        var ex = Assert.Throws<DataException>(() => TestPerks.Load("stacker", TestPerks.Json(
+            "stacker",
+            "MATCH_START",
+            """
+            [{ "type": "modifyProbability", "target": "owner", "probability": "intercept",
+               "valuePerCounter": 100, "counter": "matches", "maxValue": 5, "duration": "match" }]
+            """,
+            rarity: "common",
+            axis: "accumulation",
+            accumulates: true)));
+
+        Assert.Contains("common", ex.Message, StringComparison.Ordinal);
+        Assert.Contains("50", ex.Message, StringComparison.Ordinal);
+    }
+
     [Fact]
     public void ACounterScaledPairIsRejected()
     {

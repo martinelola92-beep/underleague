@@ -23,7 +23,8 @@
         "technique": 79,
         "stamina": 73,
         "leash": 73
-      }
+      },
+      "styleTag": "Fine"
     },
     {
       "name": "Ithil Cantoalba",
@@ -36,7 +37,8 @@
         "technique": 79,
         "stamina": 76,
         "leash": 73
-      }
+      },
+      "styleTag": "Fine"
     },
     {
       "name": "Laeron Rocíogris",
@@ -49,7 +51,11 @@
         "technique": 79,
         "stamina": 76,
         "leash": 73
-      }
+      },
+      "styleTag": "Fine",
+      "perks": [
+        "steady_hands"
+      ]
     },
     {
       "name": "Maeron Vientoclaro",
@@ -62,7 +68,12 @@
         "technique": 92,
         "stamina": 78,
         "leash": 73
-      }
+      },
+      "styleTag": "Fine",
+      "perks": [
+        "center_conductor",
+        "spearpoint"
+      ]
     },
     {
       "name": "Naerys Sombraverde",
@@ -76,8 +87,11 @@
         "stamina": 78,
         "leash": 73
       },
+      "styleTag": "Fine",
       "perks": [
-        "center_conductor"
+        "fine_touch",
+        "silky_veteran",
+        "wing_overlap"
       ]
     },
     {
@@ -92,11 +106,12 @@
         "stamina": 78,
         "leash": 73
       },
+      "styleTag": "Fine",
       "traits": [
         "Fast"
       ],
       "perks": [
-        "spearpoint"
+        "fine_touch"
       ]
     },
     {
@@ -110,7 +125,12 @@
         "technique": 89,
         "stamina": 70,
         "leash": 73
-      }
+      },
+      "styleTag": "Fine",
+      "perks": [
+        "killing_range",
+        "poacher_instinct"
+      ]
     },
     {
       "name": "Sindar Ramaluz",

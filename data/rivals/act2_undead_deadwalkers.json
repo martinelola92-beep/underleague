@@ -24,6 +24,7 @@
         "stamina": 73,
         "leash": 61
       },
+      "styleTag": "Cold",
       "traits": [
         "Resilient"
       ],
@@ -68,7 +69,11 @@
         "technique": 64,
         "stamina": 78,
         "leash": 61
-      }
+      },
+      "styleTag": "Cold",
+      "perks": [
+        "cold_focus"
+      ]
     },
     {
       "name": "Thane Cenizagrís",
@@ -81,7 +86,11 @@
         "technique": 64,
         "stamina": 78,
         "leash": 61
-      }
+      },
+      "styleTag": "Cold",
+      "perks": [
+        "sharpshooter_drill"
+      ]
     },
     {
       "name": "Cyrus Osamenta",
@@ -94,7 +103,11 @@
         "technique": 64,
         "stamina": 78,
         "leash": 61
-      }
+      },
+      "styleTag": "Cold",
+      "perks": [
+        "long_range_menace"
+      ]
     },
     {
       "name": "Doran Sudariofrío",
@@ -108,13 +121,15 @@
         "stamina": 70,
         "leash": 61
       },
+      "styleTag": "Cold",
       "traits": [
         "Scorer",
         "Aggressive"
       ],
       "perks": [
         "long_range_menace",
-        "marrow_thirst"
+        "marrow_thirst",
+        "poacher_instinct"
       ]
     },
     {

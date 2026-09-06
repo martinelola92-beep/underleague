@@ -110,7 +110,7 @@ public static class ConsumableLoader
             "supernatural" => ConsumableFamily.Supernatural,
             var other => throw new DataException(path, "$.family", $"familia desconocida: '{other}'"),
         };
-        var effects = EffectJson.ReadList(root.Prop("effects"));
+        var effects = EffectJson.ReadList(root.Prop("effects"), rarity);
         if (effects.Count == 0)
         {
             throw new DataException(path, "$.effects", "un consumible necesita al menos un efecto");

@@ -163,8 +163,28 @@ public static class RivalLoader
             }
         }
 
-        return new RivalPlayer(name, position, rarity, level, attributes, traits, perks);
+        // ADR 0058. La etiqueta de estilo (ADR 0024) es lo que hace legible la build de un rival: media
+        // docena de perks del catálogo la consultan —hasTag(owner,'Bulwark'), teammatesWithTag(owner,
+        // 'Fine')— y hasta ahora un rival estático era SIEMPRE Neutral, así que esos perks no se activaban
+        // nunca y cobraban sus elseEffects: un rival con perks en su línea se castigaba a sí mismo. Se
+        // escribe en el dato, junto al resto de lo que define al jugador, y por omisión sigue siendo
+        // Neutral para no mover a ningún rival que no la declare.
+        var styleTag = node.TryProp("styleTag") is { } styleNode
+            ? ParseStyleTag(styleNode, styleNode.AsString())
+            : StyleTag.Neutral;
+
+        return new RivalPlayer(name, position, rarity, level, attributes, traits, perks, styleTag);
     }
+
+    private static StyleTag ParseStyleTag(Json node, string style) => style switch
+    {
+        "Neutral" => StyleTag.Neutral,
+        "Brute" => StyleTag.Brute,
+        "Fine" => StyleTag.Fine,
+        "Bulwark" => StyleTag.Bulwark,
+        "Cold" => StyleTag.Cold,
+        _ => throw new DataException(node.File, node.Path, $"etiqueta de estilo desconocida: '{style}'"),
+    };
 
     private static Position ParsePosition(Json node, string position) => position switch
     {

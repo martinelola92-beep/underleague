@@ -60,6 +60,10 @@
           "required": ["strength", "speed", "technique", "stamina", "leash"],
           "additionalProperties": false
         },
+        "styleTag": {
+          "description": "Etiqueta de estilo (ADR 0024). En un rival se escribe en vez de sortearse: es lo que hace que sus perks de linea se activen (ADR 0058). Por omision, Neutral.",
+          "enum": ["Neutral", "Brute", "Fine", "Bulwark", "Cold"]
+        },
         "traits": {
           "type": "array",
           "items": {

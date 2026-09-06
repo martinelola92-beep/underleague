@@ -24,6 +24,7 @@
         "stamina": 90,
         "leash": 72
       },
+      "styleTag": "Cold",
       "traits": [
         "Resilient"
       ],
@@ -42,7 +43,12 @@
         "technique": 62,
         "stamina": 93,
         "leash": 72
-      }
+      },
+      "styleTag": "Cold",
+      "perks": [
+        "own_third_anchor",
+        "pit_veteran"
+      ]
     },
     {
       "name": "Thane Cenizagrís",
@@ -55,7 +61,11 @@
         "technique": 62,
         "stamina": 93,
         "leash": 72
-      }
+      },
+      "styleTag": "Cold",
+      "perks": [
+        "last_ditch"
+      ]
     },
     {
       "name": "Cyrus Osamenta",
@@ -68,7 +78,12 @@
         "technique": 75,
         "stamina": 95,
         "leash": 72
-      }
+      },
+      "styleTag": "Cold",
+      "perks": [
+        "road_warrior",
+        "captains_voice"
+      ]
     },
     {
       "name": "Doran Sudariofrío",
@@ -81,7 +96,8 @@
         "technique": 75,
         "stamina": 95,
         "leash": 72
-      }
+      },
+      "styleTag": "Cold"
     },
     {
       "name": "Ezren Sinaliento",
@@ -94,7 +110,8 @@
         "technique": 75,
         "stamina": 95,
         "leash": 72
-      }
+      },
+      "styleTag": "Cold"
     },
     {
       "name": "Grimm Vozmuerta",
@@ -108,12 +125,13 @@
         "stamina": 87,
         "leash": 72
       },
-      "perks": [
-        "second_wound",
-        "hot_blooded"
-      ],
+      "styleTag": "Cold",
       "traits": [
         "Aggressive"
+      ],
+      "perks": [
+        "second_wound",
+        "cold_focus"
       ]
     },
     {
@@ -154,6 +172,7 @@
         "stamina": 87,
         "leash": 72
       },
+      "styleTag": "Cold",
       "traits": [
         "Scorer"
       ],

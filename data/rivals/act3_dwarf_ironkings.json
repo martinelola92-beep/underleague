@@ -24,11 +24,13 @@
         "stamina": 91,
         "leash": 71
       },
+      "styleTag": "Bulwark",
       "traits": [
         "Wall"
       ],
       "perks": [
-        "iron_gate"
+        "iron_gate",
+        "safety_net"
       ]
     },
     {
@@ -43,11 +45,14 @@
         "stamina": 94,
         "leash": 71
       },
+      "styleTag": "Bulwark",
       "traits": [
         "Resilient"
       ],
       "perks": [
-        "long_leash_legacy"
+        "long_leash_legacy",
+        "own_third_anchor",
+        "bulwark_stance"
       ]
     },
     {
@@ -61,7 +66,12 @@
         "technique": 49,
         "stamina": 94,
         "leash": 71
-      }
+      },
+      "styleTag": "Bulwark",
+      "perks": [
+        "pit_veteran",
+        "granite_line"
+      ]
     },
     {
       "name": "Joric Puñoroca",
@@ -114,12 +124,13 @@
         "stamina": 88,
         "leash": 71
       },
+      "styleTag": "Brute",
+      "traits": [
+        "Aggressive"
+      ],
       "perks": [
         "iron_studs",
         "marrow_thirst"
-      ],
-      "traits": [
-        "Aggressive"
       ]
     },
     {
@@ -133,7 +144,8 @@
         "technique": 49,
         "stamina": 94,
         "leash": 71
-      }
+      },
+      "styleTag": "Bulwark"
     },
     {
       "name": "Oskar Golpefrío",

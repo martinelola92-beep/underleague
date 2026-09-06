@@ -1,7 +1,17 @@
 # 0058. La exigencia de build la pone el rival, no la escala del perk
 
 **Fecha:** 2026-09-06
-**Estado:** Aceptada
+**Estado:** Aceptada e **implementada** (`fase2-diseno.md` §27); **su propio criterio de falsificación se
+cumple**. Los tres puntos están aplicados y las seis puertas siguen como estaban o mejor, pero el hueco
+entre build buena y mediocre **no se abre**: 6,81 → 6,28 puntos en el acto 2 con error típico 1,31, frente
+a los 9,8 que la ADR exige. La causa está medida y es geométrica, no de calibración (§27.6): la capa de
+build del rival es un solo número y baja a las dos builds a la vez, hacia la parte plana de la sigmoide,
+donde la misma diferencia de fuerza vale menos puntos; y el techo por rareza no separa a las dos builds
+porque llevan casi la misma mezcla de rarezas (42,8/45,5/11,4/0,4 frente a 56,2/35,5/8,2/0,1), lo que da
+solo un 6,9% de diferencia de multiplicador medio y **una décima de punto** de tasa de victoria. Lo que sí
+se mueve por primera vez es el **suelo sin build**: 12,08% → 10,08%, −2,00 con error típico 1,28. Y el
+guardarraíl de las derrotas del acto 1 se rompe (29,3% → 30,9%) por una vía que no es la capa del rival
+sino el techo por rareza sobre los catorce perks del jefe (AK-A)
 **Corrige:** el techo `k ≤ 2` que el encargo de la P1 fijó a ojo; **releva** a la ADR 0057 en la elección de palanca
 **Requisitos:** RT-055, RF-032, RF-002c
 **Relacionada con:** ADR 0033 (curva de puertas), ADR 0050 (P1), ADR 0054 (banda 70-88), ADR 0056 (separación entre perfiles)

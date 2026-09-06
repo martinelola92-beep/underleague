@@ -38,7 +38,7 @@
       "type": "modifyProbability",
       "target": "team",
       "probability": "interceptEvasion",
-      "value": 100,
+      "value": 300,
       "duration": "match"
     }
   ],

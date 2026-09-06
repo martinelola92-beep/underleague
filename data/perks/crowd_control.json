@@ -20,7 +20,7 @@
       "type": "modifyProbability",
       "target": "actor",
       "probability": "dribble",
-      "value": 100,
+      "value": 200,
       "duration": "play"
     }
   ],

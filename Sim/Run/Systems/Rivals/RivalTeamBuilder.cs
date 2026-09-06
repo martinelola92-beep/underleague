@@ -26,7 +26,8 @@ public static class RivalTeamBuilder
         for (int i = 0; i < team.Players.Count; i++)
         {
             var source = team.Players[i];
-            var tags = new List<string> { race.SpeciesTag, source.Position.ToString() };
+            // Mismo orden que Sim.Generation.PlayerGenerator: [SpeciesTag, StyleTag, Position, ...Traits].
+            var tags = new List<string> { race.SpeciesTag, source.StyleTag.ToString(), source.Position.ToString() };
             for (int t = 0; t < source.Traits.Count; t++)
             {
                 tags.Add(source.Traits[t].ToString());
@@ -45,7 +46,7 @@ public static class RivalTeamBuilder
                 PhysicalState.Healthy)
             {
                 SpeciesTag = race.SpeciesTag,
-                StyleTag = StyleTag.Neutral,
+                StyleTag = source.StyleTag,
                 Perks = source.Perks,
             });
         }

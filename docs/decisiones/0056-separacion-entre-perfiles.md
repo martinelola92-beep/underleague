@@ -1,7 +1,14 @@
 # 0056. Objetivos de separación entre perfiles de jugador
 
 **Fecha:** 2026-09-05
-**Estado:** Aceptada (directriz del revisor). **Los cuatro objetivos siguen sin alcanzarse tras la P1** y dos empeoran (`fase2-diseno.md` §26.7): buena 56,8/53,0 (meta 60), mediocre 50,0/45,1 (meta 42-45), mala completa la run el 14,34% (meta <2%), buena la completa el 18,00%. El hueco entre buena y mediocre en el acto 2 se estrecha de 9,8 a 6,8 puntos. La causa es la misma que falsifica la ADR 0057 y está en AJ-B
+**Estado:** Aceptada (directriz del revisor). **Tras la ADR 0058 siguen sin alcanzarse, y el paquete mide
+por qué los dos primeros no pueden alcanzarse a la vez** (`fase2-diseno.md` §27.6): "buena al 60%" exige un
+rival ordinario más débil y "mediocre al 42-45%" lo exige más fuerte, y la capa de build del rival es un
+solo número que mueve a las dos en el mismo sentido. Medido: buena 52,4/42,1, mediocre 46,1/34,4, la mala
+completa la run el 9,92% y el hueco del acto 2 pasa de 6,81 a 6,28 puntos. Hace falta una palanca que
+aumente el **recorrido del catálogo** entre construir bien y construir regular; la que se probó —que la
+rareza compre cuota— no lo consigue porque las dos builds llevan casi la misma mezcla de rarezas (AK-B).
+*(Estado anterior)* **Los cuatro objetivos seguían sin alcanzarse tras la P1** y dos empeoran (`fase2-diseno.md` §26.7): buena 56,8/53,0 (meta 60), mediocre 50,0/45,1 (meta 42-45), mala completa la run el 14,34% (meta <2%), buena la completa el 18,00%. El hueco entre buena y mediocre en el acto 2 se estrecha de 9,8 a 6,8 puntos. La causa es la misma que falsifica la ADR 0057 y está en AJ-B
 **Requisitos:** RT-055, RT-056, RF-032
 **Depende de:** ADR 0054 (banda revisada) · **implementa** las P1 y P3 de la ADR 0050
 

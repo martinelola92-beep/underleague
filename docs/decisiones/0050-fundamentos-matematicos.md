@@ -16,6 +16,11 @@ El análisis de cuatro roguelikes consolidados destapó que tres de nuestros fun
 
 `modifyProbability` deja de sumar puntos porcentuales y pasa a multiplicar las **cuotas**: `odds = p/(1−p)`, `odds' = odds × k`, `p' = odds'/(1+odds')`. Valores permitidos: `k ∈ {1,15 · 1,3 · 1,5 · 2}` y sus inversos.
 
+> **Corregido por la ADR 0058**: ese `k ≤ 2` era un techo fijado a ojo y la medición lo falsificó. La escala
+> gana `×3, ×4 y ×6` y el techo pasa a depender de la **rareza** (común ×2, poco común ×3, raro ×4,
+> legendario ×6; un escalón menos en un efecto con contador). Los valores permitidos son ahora los catorce
+> de `±15, ±30, ±50, ±100, ±200, ±300, ±500`.
+
 **Motivo**: con una fórmula aditiva, el mismo incremento vale cosas incomparables según la base — un `+5` multiplica por trece la probabilidad de lesionar (base 0,4%) y no mueve la de pase (base 77%). Ese defecto ya ha producido **dos fallos de balance costosos**: una habilidad racial que valía cuatro veces su presupuesto y una build catalogada como mala que ganaba por llevar tres copias de un perk de intercepción.
 
 La ADR 0035 (escalones por canal) fue el parche; multiplicar cuotas elimina el problema de raíz y **retira esa tabla**. Multiplicar cuotas, y no probabilidad, es lo que hace que funcione igual de bien cerca de 0 que cerca de 1.
@@ -67,6 +72,6 @@ daba por hecho:
   se mueve (12,67% → 12,08%, error típico 1,34) y la separación entre perfiles se estrecha. La causa está
   medida y es estructural: los rivales ordinarios de una run no llevan perks, así que la capa de build solo
   existe en un lado del campo salvo contra los tres jefes.
-- Las descripciones cambian de *"+5% de probabilidad de interceptar"* a *"un 30% más de probabilidad de interceptar"*. `estilo-descripciones.md` ya advierte de la confusión entre puntos y proporciones: ahora la convención pasa a ser **proporcional**, y hay que actualizar esa guía.
+- Las descripciones cambian de *"+5% de probabilidad de interceptar"* a *"un 30% más de probabilidad de interceptar"*. `estilo-descripciones.md` ya advierte de la confusión entre puntos y proporciones: ahora la convención pasa a ser **proporcional**, y hay que actualizar esa guía. **La ADR 0058 la corrige otra vez y la deja en cuota**: *"multiplica por 1,3 sus opciones de interceptar"*, que es exacta en todos los canales; la proporcional mentía en los de base alta.
 - La ADR 0035 queda retirada al completarse P1.
 - Se espera que la ventaja medible de jugar bien **suba** por dos vías: menos ruido (P2) y progresión más marcada (P3).

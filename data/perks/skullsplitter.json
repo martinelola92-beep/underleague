@@ -20,7 +20,7 @@
       "type": "modifyProbability",
       "target": "opposingTeam",
       "probability": "injury",
-      "value": 100,
+      "value": 200,
       "duration": "match"
     }
   ],

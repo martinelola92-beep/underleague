@@ -1,7 +1,12 @@
 # 0057. Un equipo sin build gana el 14,5% de las runs, y eso es el problema de fondo
 
 **Fecha:** 2026-09-05
-**Estado:** Aceptada; **la palanca que elige queda falsificada** al aplicarse la P1 (`fase2-diseno.md` §26.6): el suelo pasa de 12,67% a 12,08% sobre 1.200 runs por lado, una diferencia de −0,59 con error típico 1,34. La causa está medida y la **ADR 0058** la enuncia bien: los rivales ordinarios sí llevan perks, pero de **1 a 4 por plantilla y sin crecer con el acto**, frente a los 14 de un jefe y los 10-15 con los que el jugador termina la run. La capa de build está en los dos lados del campo, pero en uno es plana y mínima: por eso hacer los perks más fuertes o más débiles no mueve al equipo que no los tiene. La alternativa que la propia ADR dejaba prevista —"eso es diseño de rivales"— pasa a ser la vía viva, con nombre concreto en la **ADR 0058**: **que la capa de build del rival ordinario crezca con el acto** (AJ-B en `pendientes.md`)
+**Estado:** Aceptada; **la palanca que elige queda falsificada** al aplicarse la P1 (`fase2-diseno.md` §26.6): el suelo pasa de 12,67% a 12,08% sobre 1.200 runs por lado, una diferencia de −0,59 con error típico 1,34. La causa está medida y la **ADR 0058** la enuncia bien: los rivales ordinarios sí llevan perks, pero de **1 a 4 por plantilla y sin crecer con el acto**, frente a los 14 de un jefe y los 10-15 con los que el jugador termina la run. La capa de build está en los dos lados del campo, pero en uno es plana y mínima: por eso hacer los perks más fuertes o más débiles no mueve al equipo que no los tiene. La alternativa que la propia ADR dejaba prevista —"eso es diseño de rivales"— pasó a ser la vía viva en la
+**ADR 0058**, y **funciona, pero poco**: con los rivales ordinarios llevando 2/7/9 perks por acto el suelo
+baja de 12,08% a **10,08%** (−2,00 con error típico 1,28), la primera vez que ese número responde a algo.
+Sigue sin bajar del 10%, así que la lectura es que **dar build al rival vale dos puntos de suelo y los
+otros diez son nivel y atributos**: la conversación de la P3 que esta ADR suspendió sigue viva, ahora con
+un número al lado (`fase2-diseno.md` §27.8)
 **Corrige:** la palanca elegida en la ADR 0055 y **la P3 de la ADR 0050**
 **Requisitos:** RT-055, RF-032
 **Relacionada con:** ADR 0033 (curva de puertas) y ADR 0056 (separación entre perfiles)

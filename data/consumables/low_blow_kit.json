@@ -15,7 +15,7 @@
     {
       "type": "modifyProbability",
       "probability": "foul",
-      "value": 100
+      "value": 200
     }
   ]
 }

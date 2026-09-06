@@ -42,7 +42,7 @@
             "dribble", "tackle", "shotOnTarget", "save", "tackleEvasion", "interceptEvasion"
           ]
         },
-        "value": { "type": "integer", "minimum": -5000, "maximum": 5000, "description": "Puntos de atributo en modifyAttribute; en modifyProbability, el PORCENTAJE DE CUOTA con signo de la ADR 0050 P1 (+-15, +-30, +-50, +-100), que comprueba el cargador." }
+        "value": { "type": "integer", "minimum": -5000, "maximum": 5000, "description": "Puntos de atributo en modifyAttribute; en modifyProbability, el PORCENTAJE DE CUOTA con signo de la ADR 0050 P1 (+-15, +-30, +-50, +-100, +-200, +-300, +-500), acotado por el TECHO DE SU RAREZA de la ADR 0058 (comun 100, poco comun 200, raro 300, legendario 500), que comprueba el cargador." }
       },
       "required": ["type", "value"],
       "additionalProperties": false,

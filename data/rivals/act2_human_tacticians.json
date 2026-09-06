@@ -36,7 +36,10 @@
         "technique": 51,
         "stamina": 64,
         "leash": 61
-      }
+      },
+      "perks": [
+        "own_third_anchor"
+      ]
     },
     {
       "name": "Fabio Rubio",
@@ -49,7 +52,10 @@
         "technique": 51,
         "stamina": 64,
         "leash": 61
-      }
+      },
+      "perks": [
+        "pit_veteran"
+      ]
     },
     {
       "name": "Gino Ureña",
@@ -82,7 +88,10 @@
         "technique": 64,
         "stamina": 66,
         "leash": 61
-      }
+      },
+      "perks": [
+        "captains_voice"
+      ]
     },
     {
       "name": "Ivo Cano",
@@ -108,7 +117,10 @@
         "technique": 61,
         "stamina": 58,
         "leash": 61
-      }
+      },
+      "perks": [
+        "forward_line"
+      ]
     },
     {
       "name": "Lino Ibarra",
