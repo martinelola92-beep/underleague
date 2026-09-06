@@ -1,6 +1,21 @@
 # 0065. La puerta amplifica el hueco; no lo crea
 
 **Fecha:** 2026-09-06
+
+## Decisión del revisor, 2026-09-06: si hay que elegir, se ganan más runs
+
+La frontera medida en esta ADR dice que **el objetivo 4 (suelo < 10%) y el objetivo 5 (run de la build
+buena en 20-30%) no pueden cumplirse a la vez** con la separación de catálogo de hoy: el punto actual
+—17,00% con suelo 10,66%— ya está sobre la línea.
+
+Puesto a elegir un extremo, **el revisor prioriza que se ganen más runs**. Es decir: se acepta sentarse en
+el lado de la frontera que sube la tasa de victoria de la build buena hacia su banda 20-30%, **aceptando
+que el suelo sin build suba hasta el entorno del 13%** mientras la separación del catálogo no crezca.
+
+Esto **no cierra AL-A**: sigue siendo la única vía que permitiría cumplir los dos a la vez, y el paquete en
+curso la está midiendo. La decisión es el **plan de repliegue** si AL-A no da el +62% de separación en
+log-cuotas que la frontera exige, no una instrucción de dejar de intentarlo.
+
 **Estado:** Aceptada. **Falsifica las dos salidas que la ADR 0064 dejaba vivas** —empinar la pendiente de
 los jefes dentro de la tabla y añadir un cuarto evento filtro—, las dos por medición. No mueve ningún
 número de balance: el paquete entrega medición
