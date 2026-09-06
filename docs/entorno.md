@@ -31,6 +31,30 @@ xvfb-run -a --server-args="-screen 0 1280x800x24" ~/.local/bin/godot --path Game
 
 Cuando haga falta evaluar cómo se *siente* el juego, la opción es mover el repositorio a Windows (`C:\dev\underleague`) y trabajar desde WSL por `/mnt/c`. Coste medido de ese peaje: build de la solución 2,6 s en WSL nativo frente a 9,9 s en `/mnt/c`. La instalación de Windows se conserva por si hace falta exportar, pero no se usa para desarrollar.
 
+## Build jugable en Windows
+
+Para *jugar* la versión actual (y dar indicaciones de balance a mano) se exporta desde WSL un `.exe` de
+Windows y se deja en el escritorio:
+
+```bash
+tools/export-windows.sh            # build + export + copia a C:\Users\urban\Desktop\Underleague
+```
+
+Qué hace y qué necesita:
+
+- **Plantillas de exportación** 4.6.3 mono en `~/.local/share/godot/export_templates/4.6.3.stable.mono/`
+  (instaladas el 6 sep 2026; solo `windows_*` y `linux_*`, extraídas del `.tpz` del release de GitHub).
+- **`Game/export_presets.cfg`** con el preset `Windows Desktop` (versionado; `modify_resources=false`
+  para no depender de `rcedit`). **`Game/Underleague.Game.sln`** y el csproj llamado
+  **`Underleague.Game.csproj`**: la exportación .NET de Godot busca `<assembly_name>.sln` y
+  `<assembly_name>.csproj` dentro de `/Game`, no acepta otros nombres.
+- Se exporta en **debug** para que `Underleague.console.exe` enseñe las excepciones C#.
+- **`/data` se copia junto al `.exe`**: `GameData.FindDataDirectory` sube desde el ejecutable (en una
+  build `res://` no tiene ruta real). Cambiar un JSON en el escritorio y relanzar sirve para probar
+  ajustes sin reexportar; cambiar código C# obliga a reexportar.
+- El guardado ironman de la build vive en `%APPDATA%\Godot\app_userdata\Underleague\run.json`.
+- Comprobación desde WSL (interop de Windows): `cd /mnt/c/Users/urban/Desktop/Underleague && ./Underleague.console.exe --quit-after 180`.
+
 ## Estado el 4 de septiembre de 2026
 
 | Prerrequisito | Estado | Instalación |

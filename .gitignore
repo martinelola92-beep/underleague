@@ -12,6 +12,7 @@ TestResults/
 *.tmp
 .mono/
 export_presets.cfg
+!Game/export_presets.cfg
 export/
 
 # Rider / VS Code

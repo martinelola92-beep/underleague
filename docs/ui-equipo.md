@@ -231,7 +231,7 @@ Se enseñan como huecos, no se rellenan con mentiras:
 `GetImage()` devuelve null. Hace falta un servidor X virtual y el renderizador de software:
 
 ```bash
-dotnet build Game/Game.csproj
+dotnet build Game/Underleague.Game.csproj
 godot --headless --path Game --import
 xvfb-run -a --server-args="-screen 0 1280x800x24" \
   godot --path Game --rendering-driver opengl3 --audio-driver Dummy -- --screenshots

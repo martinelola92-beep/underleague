@@ -90,7 +90,7 @@ dotnet run --project tools/DataValidator -- data/    # esquemas de /data
 ```
 
 ```bash
-dotnet build Game/Game.csproj                  # OBLIGATORIO antes de ejecutar Godot
+dotnet build Game/Underleague.Game.csproj                  # OBLIGATORIO antes de ejecutar Godot
 godot --headless --path Game --import          # importar recursos
 godot --headless --path Game --quit-after 60   # ejecutar sin dibujar
 xvfb-run -a --server-args="-screen 0 1280x800x24" godot --path Game \
@@ -98,7 +98,7 @@ xvfb-run -a --server-args="-screen 0 1280x800x24" godot --path Game \
 ```
 
 **`dotnet build` en la raíz NO actualiza lo que Godot carga.** Godot ejecuta los ensamblados de
-`Game/.godot/mono/temp/bin/Debug/`, y solo `dotnet build Game/Game.csproj` los regenera. Con un
+`Game/.godot/mono/temp/bin/Debug/`, y solo `dotnet build Game/Underleague.Game.csproj` los regenera. Con un
 `Underleague.Sim.dll` rancio leyendo un `/data` recién cambiado, el juego **se cuelga al arrancar sin
 imprimir nada** —el cargador viejo no entiende los valores nuevos— y parece un fallo del paquete de datos
 cuando es un binario viejo. La escena de capturas solo arranca **con Xvfb**: en `--headless` no llega ni a

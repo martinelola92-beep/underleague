@@ -47,17 +47,25 @@ public static class GameData
         return files;
     }
 
-    /// <summary>Sube directorios desde el proyecto de Godot hasta encontrar <c>data/sim/tuning.json</c>.</summary>
+    /// <summary>Sube directorios desde el proyecto de Godot (o desde el ejecutable exportado) hasta encontrar <c>data/sim/tuning.json</c>.</summary>
     private static string FindDataDirectory()
     {
+        // En el editor res:// es el directorio del proyecto; en una build exportada es el .pck y
+        // GlobalizePath devuelve vacío, así que el /data va junto al ejecutable (docs/entorno.md).
         var candidates = new List<string>
         {
             ProjectSettings.GlobalizePath("res://"),
+            OS.GetExecutablePath().GetBaseDir(),
             AppContext.BaseDirectory,
         };
 
         foreach (string start in candidates)
         {
+            if (string.IsNullOrEmpty(start))
+            {
+                continue;
+            }
+
             var dir = new DirectoryInfo(start);
             while (dir is not null)
             {

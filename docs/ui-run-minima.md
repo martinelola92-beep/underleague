@@ -188,7 +188,7 @@ causal, y por eso se enseña como "en sus activaciones", que es exactamente lo q
 ### Capturas
 
 ```bash
-dotnet build Game/Game.csproj
+dotnet build Game/Underleague.Game.csproj
 godot --headless --path Game --import
 xvfb-run -a --server-args="-screen 0 1280x800x24" godot --path Game \
   --rendering-driver opengl3 --audio-driver Dummy res://Scenes/Capturas.tscn
