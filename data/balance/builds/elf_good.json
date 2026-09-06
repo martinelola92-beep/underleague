@@ -1,5 +1,5 @@
 {
-  "_doc": "Escalón \"buena\" de la escala de calidad de build de la ADR 0033, medido por la puerta de jefes (Sim.Tests/Analysis/BossGateTests.cs). Los cuatro escalones de una raza comparten calidad 50, rareza común y etiqueta de estilo impuesta: lo único que cambia entre ellos es la construcción -qué perks, dónde colocados, con qué escalado acumulado-, nunca la plantilla. Correcta y ademas con una linea de sinergia clara -la interceptacion: conductor del centro y presion alta suman al EQUIPO, la sombra de cobertura alimenta al conductor y el lector de la batalla escala- y con los dos perks de acumulacion alimentados (dos partidos de contador). Catorce perks distintos: ninguno se pierde por la clausula de exclusividad del jefe del acto 1.",
+  "_doc": "Escalon \"buena\" de la ADR 0033. REVISADO (paquete AS, ADR 0070, cierra AR-A): correcta, con la linea de sinergia de ROBO Y RECUPERACION -presion diagonal, veterano del foso, lector de carriles y la voz del capitan, que multiplica la entrada de todo el equipo- y con TRES perks de escalado ALIMENTADOS a la mitad de su pico. Tres, no siete: el banco mide que una run de la doctrina contextual termina con 3,24 perks de acumulacion distintos (mediana 3), y con siete la celda buena del jefe del acto 2 se iba a 85,4 sobre una banda que acaba en 72. Y los contadores no se escriben a ojo: son la MITAD del pico medio que el banco mide para cada contador (RF-070), que es lo que la ADR 0033 llama alimentados. Van los ultimos de su slot porque es lo que la densidad de la ADR 0040 mide.",
   "id": "elf_good",
   "name": "Elfos: buena",
   "race": "Elf",
@@ -8,19 +8,19 @@
   "perks": [
     {
       "slot": 0,
-      "perk": "safety_net"
+      "perk": "home_ref"
     },
     {
       "slot": 0,
-      "perk": "clean_sheet_legacy"
+      "perk": "sweeper_keeper"
     },
     {
       "slot": 1,
-      "perk": "own_third_anchor"
+      "perk": "covering_shadow"
     },
     {
       "slot": 1,
-      "perk": "diagonal_press"
+      "perk": "pit_veteran"
     },
     {
       "slot": 2,
@@ -28,19 +28,19 @@
     },
     {
       "slot": 2,
-      "perk": "pivot_duo"
+      "perk": "diagonal_press"
     },
     {
       "slot": 3,
-      "perk": "center_conductor"
+      "perk": "fine_orchestra"
     },
     {
       "slot": 3,
-      "perk": "covering_shadow"
+      "perk": "captains_voice"
     },
     {
       "slot": 4,
-      "perk": "high_press_trigger"
+      "perk": "wing_overlap"
     },
     {
       "slot": 4,
@@ -48,19 +48,19 @@
     },
     {
       "slot": 5,
-      "perk": "wing_overlap"
+      "perk": "crowd_control"
     },
     {
       "slot": 5,
-      "perk": "fine_orchestra"
+      "perk": "flank_specialist"
+    },
+    {
+      "slot": 6,
+      "perk": "sharpshooter_drill"
     },
     {
       "slot": 6,
       "perk": "box_predator"
-    },
-    {
-      "slot": 6,
-      "perk": "forward_line"
     }
   ],
   "lineup": null,
@@ -74,11 +74,17 @@
     "6": "Fine"
   },
   "counters": {
-    "0": {
-      "cleanSheetSaves": 2
+    "1": {
+      "pitVeteranTackles": 3
+    },
+    "3": {
+      "captainsVoiceMatches": 4
     },
     "4": {
-      "battleReaderMatches": 2
+      "battleReaderMatches": 4
+    },
+    "6": {
+      "sharpshooterShots": 2
     }
   }
 }

@@ -4849,3 +4849,134 @@ Guardarraíles: `ordinaryDefeatRateAct1` **24,66** (ET 0,64) sobre 30 · `deaths
   es **estructuralmente ciego** a su magnitud. Corregirlo es medir en campaña.
 - **AP-A y AP-C** sin cambios. Los objetivos 2 y 3 (mediocre en 42-45, mala por debajo del 2%) siguen sin
   palanca.
+
+## 35. Decisiones de implementación del paquete AS: enderezar el instrumento y volver a medirlo todo (ADR 0070, ADR 0071)
+
+### 35.1. El banco, y que reproduce la ADR 0069 al decimal
+
+Mismo protocolo que §28.8 en adelante: 1.200 runs por perfil (300 × semillas 1/1001/2001/3001),
+contextual = "buena", gastadora = "mediocre"/"mala", el suelo con `economy.rewardPerkWeight = 0` y la
+política que esquiva mercados; las tres puertas exactas de `BossWinsByAct / BossSamplesByAct`.
+
+Con la columna de diagnóstico `finalCounters` ya puesta en `runs.csv`, el banco devuelve **exactamente**
+lo que la ADR 0069 entregó —62,03 / 46,45 · 51,28 / 39,64 · 11,92 · 10,58 · 10,75 · **19,42**—, que es lo
+que autoriza a usar el diagnóstico y a atribuir todo lo que se mueve después.
+
+### 35.2. Cuánto contador produce una run: el censo
+
+`finalCounters` vuelca `contador:suma:máximo` por contador y por run (RF-070). Sobre las 1.200 runs de la
+doctrina contextual: los seis contadores que suman **uno por partido** llegan a un pico medio ponderado de
+**7,4** y mediano de **7** —`captainsVoiceMatches` 8,07 · `ironLungsMatches` 7,51 ·
+`battleReaderMatches` 7,35 · `deathlessMarchMatches` 6,27 · `longLeashMatches` 6,14 ·
+`scarVeteranMatches` 12,23—, mientras que los de suceso se quedan muy por debajo:
+`silkyVeteranDribbles` **2,56** con el perk en un tercio de las runs, `sharpshooterShots` 3,35,
+`bruisedKnucklesFouls` 2,87 y `scarTissueInjuries` 1,45.
+
+De ahí las dos decisiones del instrumento: **ocho partidos de campaña** (el contador recorre 0..7) y
+**campaña en vez de cebado**, porque un cebado plano acertaría en seis de los quince contadores.
+
+### 35.3. La campaña mueve el eje y sólo el eje: el control
+
+`--perk-values` pasa a jugar ocho partidos consecutivos arrastrando los contadores. Para saber de qué se
+mueve la tabla se midió el **control**: mismo instrumento, mismas semillas, catálogo de hoy, **arrastre
+apagado**.
+
+| | movimiento medio absoluto por fila |
+|---|---|
+| Diez paquetes sin regenerar la tabla (control − tabla entregada) | **29,0** |
+| La campaña (tabla nueva − control) | **18,1** |
+| … de los cuales, en los **15 perks del eje** | **61,4** |
+| … y en los **otros 36** | **0,0** (bit a bit idénticos) |
+
+`clean_sheet_legacy` pasa de **−42** a **+247** y la doctrina contextual pasa de comprarlo en el 0,2% de
+las runs a comprarlo en el **10,9%**. `deathless_march` 1 → 308, `battle_reader` 18 → 168,
+`captains_voice` 27 → 89, `lane_reader` −8 → 75.
+
+Y las dieciséis filas que se mueven por **ranciedad** y no por la campaña: `forward_line` −116,
+`center_conductor` −75, `fine_touch` −67, `first_touch_school` −58, `own_third_anchor` +55,
+`box_predator` +53, `flank_specialist` −51, `high_press_trigger` +50, `steady_hands` −47,
+`scar_tissue` −46, `long_range_menace` +41, `sweeper_keeper` +40, `diagonal_press` +39, `brute_boots` −37,
+`cold_focus` +35, `pivot_duo` +35, `safety_net` −35.
+
+Precisión de la tabla nueva: 3.072 partidos por perk (192 campañas × 8, semillas 5 y 11 sumadas),
+desviación por fila **17** frente a 23, dispersión real entre perks **73** frente a 50.
+
+### 35.4. Las cuatro condiciones del banco, y de qué es cada punto
+
+| | run (buena) | suelo | `S` | buena 2/3 | mediocre 2/3 | ahorradora |
+|---|---|---|---|---|---|---|
+| **A** ADR 0069 | **19,42** (1,26) | 10,58 | 1,168 | 62,03 / 46,45 | 51,28 / 39,64 | 15,25 |
+| **B** A + `deathless_march` a 4 (ADR 0071) | 19,50 (1,29) | 10,58 | 1,176 | 62,07 / 46,38 | 51,26 / 39,69 | — |
+| **C** tabla remedida **sin** arrastre | **14,75** (0,60) | 10,75 | 0,524 | 60,03 / 43,77 | 48,84 / 37,40 | **17,42** |
+| **D** tabla en **campaña** (entregado) | **16,25** (1,44) | 10,75 | 0,682 | 59,55 / 47,60 | 47,60 / 35,82 | 16,50 |
+
+**Quitar la ranciedad cuesta 4,67 puntos de run; corregir la ceguera al contador devuelve 1,50; el techo
+de línea no cuesta nada.** Y la ventaja de la doctrina que construye sobre la que sólo acapara: **+4,17**
+con la tabla rancia, **−2,67** con la tabla fresca y ciega, **−0,25** con la tabla en campaña.
+
+### 35.5. Las veinte builds, y las tres cosas que se aprendieron reescribiéndolas
+
+Regla: cada perk de una build tiene que aparecer en al menos el **15%** de las 240 runs de esa raza.
+No cambian raza, calidad, rareza, etiqueta de estilo, número de perks por escalón, rasgos, objetos ni la
+densidad por acto.
+
+1. **El orden dentro de un slot decide qué se mide.** `BuildDensity` conserva el **último** perk de cada
+   slot, así que de los 14 perks de una `correcta` la puerta mide **5** y de los 17 de una `muy buena`,
+   **11**. La primera versión cambió los perks sin cambiar el orden: las tres celdas `correcta` salieron
+   **idénticas al decimal**.
+2. **Colocar mal un perk no lo mata.** La mayoría de los frecuentes no tienen condición de colocación: el
+   primer escalón incoherente subió de 18,4 a **44,0** contra el jefe del acto 1. Lo que hace incoherente
+   a una build es el **castigo** (`elseEffects`), así que se construye con los siete perks frecuentes que
+   castigan al estar mal puestos.
+3. **Cuántos acumuladores lleva una build está medido**: 3,24 distintos por run (mediana 3) y 4,67 en las
+   runs ganadas, con el 83% de los perks de la plantilla en el once. De ahí **tres** alimentados a medio
+   pico en `buena` y **cuatro** al pico en `muy buena`. Con siete —la primera versión— la celda `buena`
+   del jefe del acto 2 se iba a 85,4 sobre una banda que acaba en 72.
+
+Los contadores dejan de escribirse a ojo: mitad del pico medido en `buena`, pico entero en `muy buena`.
+`silkyVeteranDribbles` vale 3 y no 5.
+
+### 35.6. Las doce celdas
+
+Muestra de la puerta (32 × 4 = 640 por celda), **las doce en banda sin usar el margen de ±2,5** y **sin
+tocar ningún jefe**:
+
+| jefe | incoherente | correcta | buena | muy buena |
+|---|---|---|---|---|
+| `grimhold_guns` | 28,4 [20-35] | 70,9 [65-80] | 83,8 [75-88] | **95,0** [85-95] |
+| `the_hunt` | **13,3** [<15] | **36,9** [35-50] | 62,7 [60-72] | 84,2 [72-85] |
+| `eternal_crown` | 4,8 [<10] | 24,8 [15-28] | 42,8 [40-55] | 62,5 [55-70] |
+
+Con la sonda de 25 × 8: 29,9 / 66,5 / 86,6 / 96,2 · 12,3 / 36,7 / 61,1 / 84,5 · 4,8 / 24,3 / 42,1 / 60,4.
+Tres celdas quedan ajustadas y hay que vigilarlas: las marcadas.
+
+### 35.7. Los seis objetivos
+
+| Objetivo (ADR 0056) | ADR 0069 | este paquete | ET | meta | |
+|---|---|---|---|---|---|
+| Build buena, actos 2/3 (ordinarios) | 62,03 / 46,45 | **59,55 / 47,60** | 0,73 / 0,80 | 60% | a 0,45 del acto 2 |
+| Build mediocre, actos 2/3 | 51,28 / 39,64 | **47,60 / 35,82** | 0,45 / 2,58 | 42-45% | se pasa 2,6 (antes 6,3) |
+| Build mala completa la run | 11,91 | **10,50** | 0,50 | < 2% | no |
+| Suelo sin build | 10,58 | **10,75** | 0,42 | < 10% | falta 0,75 |
+| Hueco buena/mediocre, acto 2 | 10,75 | **11,95** | 0,99 | > 9,8 | **sí** |
+| Tasa de victoria de la run | **19,42** | **16,25** | 1,44 | 20-30% | falta 3,75 |
+
+**Tres suben y tres bajan, y no se compensa ninguno.** Guardarraíles: `ordinaryDefeatRateAct1` 24,97 ·
+`matchesPerFullRun` 19,39 · `masterDivergence` 9,78 · `betterTeamWinRate` 79,00 · `injuriesPerMatch` 0,71
+· `tacklesPerMatch` 9,78 · `passChainAvgLength` 2,25 · 184 ficheros validados · **608/608 tests en
+Release, 42/42 puertas**. Se mueven `deathsPerRun` 1,48 → 1,35 y `contextualAdvantage` 4,17 → **−0,25**,
+los dos ya fuera de banda antes.
+
+### 35.8. Lo que queda abierto
+
+- **AS-A**: `WorthASlot` acepta un perk si su valor medido es **≥ 0** exacto, sobre una medida con
+  desviación de fila de 17. `steady_hands` a −1 y `safety_net` a −1 quedan rechazados de plano y caen del
+  54% al 2,4% y del 36% al 0,2% de las runs. Y con la tabla fresca la doctrina contextual **no le gana a
+  la ahorradora**. Es lo primero del paquete siguiente.
+- **AS-B**: la densidad por acto de la ADR 0040 lleva desde el paquete AA sin remedirse. Modelo
+  5,25 / 7,5 / 8,75 perks y 2,0 / 3,5 / 3,75 objetos; banco de hoy **5,3 / 11,8 / 12,4** y
+  **0,75 / 1,4 / 2,9**. Faltan perks y sobran objetos.
+- **AS-C**: las builds imponen **una sola etiqueta de estilo** a los siete titulares de una raza, y una
+  plantilla de verdad las tiene mezcladas. Es lo que hace que la run compre `cold_focus` en el 47,6% de
+  las runs con el perk muerto casi siempre, y el instrumento no puede verlo.
+- **AP-A y AP-C** sin cambios. Los objetivos 2 y 3 siguen sin palanca, y el 6 está ahora a 3,75.

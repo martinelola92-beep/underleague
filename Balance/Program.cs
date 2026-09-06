@@ -75,7 +75,7 @@ try
         // --perk-values: cuánto vale cada perk (ADR 0038). Alimenta data/economy/perk-values.json, de
         // donde sale el peso de cada perk en el pool de recompensas y en el surtido del mercado.
         var perkRows = PerkValueRunner.Run(
-            catalog, options.Seed, options.Rosters, options.RunsExplicit ? options.Runs : 16);
+            catalog, options.Seed, options.Rosters, options.RunsExplicit ? options.Runs : PerkValueRunner.CampaignMatches);
 
         WritePerkValuesCsv(options.OutDir!, perkRows);
 
@@ -509,6 +509,9 @@ static void WriteRunsCsv(string outDir, IReadOnlyList<RunPlayResult> runs, strin
         // ADR 0051: qué arco cerró la run y con qué build terminó. Sin las dos columnas no se puede
         // reconstruir a mano ni "¿los arcos existen?" ni "¿hay compromiso?".
         "masters", "finalPerks",
+
+        // Censo de contadores (AN-B, ADR 0070): "contador:suma:máximo" por contador. Diagnóstico puro.
+        "finalCounters",
     };
 
     var rows = runs.Select(r => (IReadOnlyList<string>)new[]
@@ -536,6 +539,7 @@ static void WriteRunsCsv(string outDir, IReadOnlyList<RunPlayResult> runs, strin
         Int(r.PlayersSold), Int(r.Treatments), Int(r.SlotsBought), Int(r.Rerolls),
         Int(r.RewardsTaken), Int(r.RewardsDeclined), Int(r.NodesVisited),
         string.Join(" ", r.Masters), string.Join(" ", r.FinalPerks),
+        string.Join(" ", r.FinalCounters ?? Array.Empty<string>()),
     });
 
     CsvWriter.Write(Path.Combine(outDir, fileName), header, rows);

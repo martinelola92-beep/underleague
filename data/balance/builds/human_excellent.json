@@ -1,5 +1,5 @@
 {
-  "_doc": "Escalón \"muy buena\" de la escala de calidad de build de la ADR 0033, medido por la puerta de jefes (Sim.Tests/Analysis/BossGateTests.cs). Los cuatro escalones de una raza comparten calidad 50, rareza común y etiqueta de estilo impuesta: lo único que cambia entre ellos es la construcción -qué perks, dónde colocados, con qué escalado acumulado-, nunca la plantilla. Buena, con la plantilla cuidada (dos titulares raros, NINGUN legendario: la salvaguarda de la ADR 0027 se mide sobre esta build), una segunda linea de sinergia (lider natural, +15 de entrada al equipo), la colocacion ajustada para que la punta de lanza alimente al delantero y el escalado acumulado de toda la run repartido en CUATRO acumuladores distintos con el contador al tope (parada, intercepcion, regate y remate), no cuatro copias del mismo: es lo que la costura 5 hace posible. Equipada (RF-076): los siete titulares llevan objeto, que es la otra mitad de \"ademas equipada\" de la ADR 0033. Sin legendarios ni frágiles ni restringidos: un objeto legendario romperia la salvaguarda de la ADR 0027 y uno frágil seria gratis en un partido suelto.",
+  "_doc": "Escalon \"muy buena\" de la ADR 0033: la salvaguarda de la ADR 0027 se mide sobre esta build (tres titulares poco comunes, NINGUN legendario ni raro). REVISADO (paquete AS, ADR 0070, cierra AR-A): buena, mas la segunda linea (lider natural con su rasgo, guerrero de carretera, cazagoles), equipada -los siete titulares llevan objeto, RF-076- y con CUATRO acumuladores al PICO ENTERO, que es lo que la ADR 0033 llama el escalado acumulado durante toda la run. Cuatro porque el banco mide 4,67 acumuladores distintos en la PLANTILLA de las runs que se ganan y el 83% de los perks de una plantilla estan en el once (10,27 de 12,35), o sea 3,9 en el once. Cada contador va a SU pico medido y no a un 5 plano: silkyVeteranDribbles llega a 3 y no a 5 porque un regate ganado no se acumula al ritmo de un partido jugado, y esa diferencia es real. Sin alineacion propia: la de hoy alimentaba a spearpoint, que ya no esta, y romperia los vinculos de los perks de alineacion que si estan.",
   "id": "human_excellent",
   "name": "Humanos: muy buena",
   "race": "Human",
@@ -8,7 +8,7 @@
   "perks": [
     {
       "slot": 0,
-      "perk": "safety_net"
+      "perk": "home_ref"
     },
     {
       "slot": 0,
@@ -16,63 +16,63 @@
     },
     {
       "slot": 1,
-      "perk": "own_third_anchor"
+      "perk": "covering_shadow"
     },
     {
       "slot": 1,
-      "perk": "battle_reader"
+      "perk": "pit_veteran"
+    },
+    {
+      "slot": 2,
+      "perk": "lane_reader"
+    },
+    {
+      "slot": 2,
+      "perk": "road_warrior"
     },
     {
       "slot": 2,
       "perk": "last_ditch"
     },
     {
-      "slot": 2,
-      "perk": "pivot_duo"
-    },
-    {
-      "slot": 2,
-      "perk": "battle_reader"
-    },
-    {
       "slot": 3,
-      "perk": "center_conductor"
-    },
-    {
-      "slot": 3,
-      "perk": "covering_shadow"
+      "perk": "comeback_spirit"
     },
     {
       "slot": 3,
       "perk": "natural_leader"
     },
     {
-      "slot": 4,
-      "perk": "high_press_trigger"
+      "slot": 3,
+      "perk": "captains_voice"
     },
     {
       "slot": 4,
-      "perk": "silky_veteran"
+      "perk": "wing_overlap"
+    },
+    {
+      "slot": 4,
+      "perk": "battle_reader"
     },
     {
       "slot": 5,
-      "perk": "silky_veteran"
+      "perk": "crowd_control"
     },
     {
       "slot": 5,
-      "perk": "game_management"
+      "perk": "flank_specialist"
     },
     {
       "slot": 6,
-      "perk": "box_predator"
-    },
-    {
-      "slot": 6,
-      "perk": "forward_line"
+      "perk": "sharpshooter_drill"
     },
     {
       "slot": 6,
       "perk": "poacher_instinct"
+    },
+    {
+      "slot": 6,
+      "perk": "box_predator"
     }
   ],
   "rarities": {
@@ -80,36 +80,7 @@
     "3": "uncommon",
     "6": "uncommon"
   },
-  "lineup": [
-    [
-      0,
-      2
-    ],
-    [
-      2,
-      1
-    ],
-    [
-      2,
-      3
-    ],
-    [
-      3,
-      2
-    ],
-    [
-      4,
-      1
-    ],
-    [
-      5,
-      2
-    ],
-    [
-      6,
-      2
-    ]
-  ],
+  "lineup": null,
   "styles": {
     "0": "Neutral",
     "1": "Neutral",
@@ -126,22 +97,23 @@
   },
   "counters": {
     "0": {
-      "cleanSheetSaves": 5
+      "cleanSheetSaves": 6
     },
     "1": {
-      "battleReaderMatches": 5
+      "pitVeteranTackles": 5
     },
     "2": {
-      "battleReaderMatches": 5
+      "laneReaderRecoveries": 6
+    },
+    "3": {
+      "captainsVoiceMatches": 8
     },
     "4": {
-      "silkyVeteranDribbles": 5
-    },
-    "5": {
-      "silkyVeteranDribbles": 5
+      "battleReaderMatches": 7
     },
     "6": {
-      "poacherInstinctGoals": 5
+      "sharpshooterShots": 4,
+      "poacherInstinctGoals": 4
     }
   },
   "items": {

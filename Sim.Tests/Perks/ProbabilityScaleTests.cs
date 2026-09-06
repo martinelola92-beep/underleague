@@ -203,6 +203,49 @@ public sealed class ProbabilityScaleTests
         Assert.True(ProbabilityScale.IsLegalUpTo(-ceiling, ceiling));
     }
 
+    /// <summary>
+    /// El techo de <b>línea</b> de la ADR 0071 (AR-B): acota <c>k^maxValue</c>, que es lo que el motor
+    /// aplica, y no <c>k</c>, que es lo único que acotaba el techo por rareza. Y distingue el ámbito.
+    /// </summary>
+    [Theory]
+    [InlineData(Rarity.Common, 8, 2)]
+    [InlineData(Rarity.Uncommon, 32, 8)]
+    [InlineData(Rarity.Rare, 64, 16)]
+    [InlineData(Rarity.Legendary, 128, 32)]
+    public void TheLineCeilingBoundsTheWholeLineAndKnowsTheScope(Rarity rarity, int individual, int team)
+    {
+        Assert.Equal(individual * ProbabilityScale.Neutral, ProbabilityScale.CounterLineCeilingFor(rarity, teamScope: false));
+        Assert.Equal(team * ProbabilityScale.Neutral, ProbabilityScale.CounterLineCeilingFor(rarity, teamScope: true));
+    }
+
+    /// <summary>
+    /// El caso que abrió AR-B: un raro con <c>k = 3</c> y <c>maxValue = 5</c> cabe en el techo por rareza
+    /// —que acota una unidad— y su línea vale 243, muy por encima de lo que el techo de línea permite en
+    /// ámbito de equipo. Es la comprobación de que los dos techos miden cosas distintas.
+    /// </summary>
+    [Fact]
+    public void TheRarityCeilingDoesNotBoundTheLine()
+    {
+        int perUnit = ProbabilityScale.ToMultiplier(ProbabilityScale.CounterCeilingFor(Rarity.Rare));
+        int line = ProbabilityScale.Line(perUnit, 5);
+
+        Assert.True(ProbabilityScale.IsLegalUpTo(200, ProbabilityScale.CounterCeilingFor(Rarity.Rare)));
+        Assert.Equal(243 * ProbabilityScale.Neutral, line);
+        Assert.True(line > ProbabilityScale.CounterLineCeilingFor(Rarity.Rare, teamScope: true));
+        Assert.True(line > ProbabilityScale.CounterLineCeilingFor(Rarity.Rare, teamScope: false));
+    }
+
+    /// <summary>Sólo <c>team</c> y <c>opposingTeam</c> son ámbito de equipo: los demás caen sobre un jugador.</summary>
+    [Fact]
+    public void OnlyWholeTeamTargetsCountAsTeamScope()
+    {
+        Assert.True(ProbabilityScale.IsTeamScope(EffectTarget.Team));
+        Assert.True(ProbabilityScale.IsTeamScope(EffectTarget.OpposingTeam));
+        Assert.False(ProbabilityScale.IsTeamScope(EffectTarget.Owner));
+        Assert.False(ProbabilityScale.IsTeamScope(EffectTarget.Actor));
+        Assert.False(ProbabilityScale.IsTeamScope(EffectTarget.Adjacent));
+    }
+
     /// <summary>Un común no puede llegar a lo que llega un legendario, y eso es lo que compra la rareza.</summary>
     [Fact]
     public void TheCeilingIsStrictlyBelowTheNextRarity()

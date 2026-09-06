@@ -563,6 +563,85 @@ public sealed class PerkLoaderTests
         Assert.Contains("50", ex.Message, StringComparison.Ordinal);
     }
 
+    /// <summary>
+    /// El techo de <b>línea</b> (ADR 0071, AR-B): lo que el motor aplica es <c>k^maxValue</c>, y hasta
+    /// ahora nadie lo validaba. Un poco común de ámbito de equipo con <c>k = 2</c> y <c>maxValue</c> 5
+    /// vale ×32 y su techo de línea es ×8, así que se rechaza; el mismo perk sobre el <b>portador</b>
+    /// cabe, que es lo que significa que el ámbito cuente.
+    /// </summary>
+    [Fact]
+    public void ACounterLineOverTheLineCeilingIsRejected()
+    {
+        var ex = Assert.Throws<DataException>(() => TestPerks.Load("mob", TestPerks.Json(
+            "mob",
+            "MATCH_START",
+            """
+            [{ "type": "modifyProbability", "target": "team", "probability": "tackle",
+               "valuePerCounter": 100, "counter": "matches", "maxValue": 5, "duration": "match" }]
+            """,
+            rarity: "uncommon",
+            axis: "accumulation",
+            accumulates: true)));
+
+        Assert.Contains("32", ex.Message, StringComparison.Ordinal);
+        Assert.Contains("equipo", ex.Message, StringComparison.Ordinal);
+
+        var fine = TestPerks.Load("mine", TestPerks.Json(
+            "mine",
+            "MATCH_START",
+            """
+            [{ "type": "modifyProbability", "target": "owner", "probability": "tackle",
+               "valuePerCounter": 100, "counter": "matches", "maxValue": 5, "duration": "match" }]
+            """,
+            rarity: "uncommon",
+            axis: "accumulation",
+            accumulates: true));
+        Assert.Equal(5, fine.Effects[0].MaxValue);
+    }
+
+    /// <summary>
+    /// Y la línea se acota aunque la unidad sea pequeña: un <b>común</b> con <c>k = 1,5</c> y
+    /// <c>maxValue</c> 10 cabe de sobra en el techo por rareza y su línea vale ×57,7, seis veces lo que
+    /// un común puede. Es el caso que demuestra que un techo no implica el otro.
+    /// </summary>
+    [Fact]
+    public void ASmallUnitWithALongCounterIsAlsoBounded()
+    {
+        var ex = Assert.Throws<DataException>(() => TestPerks.Load("slow", TestPerks.Json(
+            "slow",
+            "MATCH_START",
+            """
+            [{ "type": "modifyProbability", "target": "owner", "probability": "pass",
+               "valuePerCounter": 50, "counter": "matches", "maxValue": 10, "duration": "match" }]
+            """,
+            rarity: "common",
+            axis: "accumulation",
+            accumulates: true)));
+
+        Assert.Contains("8", ex.Message, StringComparison.Ordinal);
+    }
+
+    /// <summary>
+    /// Y se acota la <b>magnitud</b> de la línea, no su dirección: dividir la cuota por 1.024 desborda el
+    /// canal igual que multiplicarla por 1.024 (ADR 0071).
+    /// </summary>
+    [Fact]
+    public void ALineThatDividesIsBoundedLikeOneThatMultiplies()
+    {
+        var ex = Assert.Throws<DataException>(() => TestPerks.Load("curse", TestPerks.Json(
+            "curse",
+            "MATCH_START",
+            """
+            [{ "type": "modifyProbability", "target": "owner", "probability": "pass",
+               "valuePerCounter": -100, "counter": "matches", "maxValue": 10, "duration": "match" }]
+            """,
+            rarity: "common",
+            axis: "accumulation",
+            accumulates: true)));
+
+        Assert.Contains("8", ex.Message, StringComparison.Ordinal);
+    }
+
     [Fact]
     public void ACounterScaledPairIsRejected()
     {

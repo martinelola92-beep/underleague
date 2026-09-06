@@ -6,6 +6,7 @@ using Underleague.Sim.Generation;
 using Underleague.Sim.Model;
 using Underleague.Sim.Perks;
 using Underleague.Sim.Random;
+using ProgressionRules = Underleague.Sim.Progression.Progression;
 
 namespace Underleague.Balance;
 
@@ -31,6 +32,16 @@ public readonly record struct PerkValueRow(string PerkId, int Slot, int Matches,
 /// que vale el perk. Un perk que ningún titular generado puede llevar —los que exigen una etiqueta que
 /// el dado no da— no se mide y se queda sin entrada: pesa lo que pese el resto.</para>
 ///
+/// <para><b>Y se mide en CAMPAÑA, no en un partido suelto</b> (ADR 0070, corrige AN-B). Cada plantilla
+/// juega <see cref="CampaignMatches"/> partidos <b>consecutivos</b> arrastrando los contadores de
+/// carrera de un partido al siguiente con el mismo <c>ApplyCounterDeltas</c> que usa la run (RF-070), y
+/// el valor del perk es lo que gana sobre <b>toda</b> la campaña. Sin eso el instrumento evaluaba
+/// siempre el efecto con el contador a <b>cero</b> —<c>k⁰ = 1</c> sea cual sea <c>k</c>— y los quince
+/// perks con <c>accumulatesAcrossMatches</c> valían, para la tabla, exactamente lo que valen sin su eje:
+/// la tabla entera salía bit a bit idéntica antes y después de subir seis magnitudes al techo
+/// (ADR 0069 §34.5). La campaña es además lo único que mide cada contador a <b>su</b> ritmo: uno de
+/// partido llega a 7 en ocho partidos y uno de regate ganado se queda en 2, y esa diferencia es real.</para>
+///
 /// <para><b>Precisión.</b> Con las opciones por defecto son 256 partidos por perk, es decir una
 /// desviación de unos 3 puntos por fila. Es suficiente para una palanca de <b>frecuencia</b> con pesos
 /// acotados, y no lo es para afirmar que un perk vale exactamente X: la tabla ordena, no dictamina.</para>
@@ -42,6 +53,20 @@ public static class PerkValueRunner
 
     /// <summary>Nivel de la plantilla de prueba: el de mitad de run, donde la mayoría de los perks se usan.</summary>
     public const int Level = 4;
+
+    /// <summary>
+    /// Partidos de la campaña con la que se mide cada plantilla, es decir <b>cuántos partidos vive un
+    /// perk</b> (ADR 0070). No es un número elegido: es el que mide el banco de 1.200 runs de la doctrina
+    /// contextual. Los seis contadores que suman uno por partido —<c>ironLungsMatches</c>,
+    /// <c>battleReaderMatches</c>, <c>captainsVoiceMatches</c>, <c>deathlessMarchMatches</c>,
+    /// <c>longLeashMatches</c> y <c>scarVeteranMatches</c>— llegan al final de la run a un pico medio
+    /// ponderado por frecuencia de <b>7,4</b> y mediano de <b>7</b>, así que un perk se juega del orden de
+    /// ocho partidos y su contador recorre 0..7. La campaña reproduce ese recorrido entero en vez de
+    /// quedarse en el 0. Y se mide en campaña, y no cebando el contador a un valor fijo, porque cada
+    /// contador crece a <b>su</b> ritmo: los de partido llegan a 7 y <c>silkyVeteranDribbles</c> se queda
+    /// en 2,7 y <c>scarTissueInjuries</c> en 1,4. Un cebado plano acertaría en seis de los quince.
+    /// </summary>
+    public const int CampaignMatches = 8;
 
     /// <summary>Calidad de la plantilla de prueba (el pivote del generador).</summary>
     public const int Quality = 50;
@@ -114,16 +139,31 @@ public static class PerkValueRunner
                     ? new MatchSetup(mirror, subject, Referee)
                     : new MatchSetup(subject, mirror, Referee);
 
-                var report = Simulator.Run(
+                var result = Simulator.Run(
                     setup,
                     RngStreams.MatchSeed(seed, (perkIndex * 100_000) + (roster * matchesPerRoster) + k),
                     catalog,
-                    config).Report;
+                    config);
 
                 matches++;
-                if (report.Winner == subjectSide)
+                if (result.Report.Winner == subjectSide)
                 {
                     wins++;
+                }
+
+                // Campaña (ADR 0070): el contador de carrera pasa al partido siguiente igual que en la
+                // run (RF-070, ProgressionRules.ApplyCounterDeltas). Es lo único que se arrastra: la
+                // experiencia y las lesiones no, porque las pagarían por igual los dos lados del espejo
+                // y sólo añadirían varianza a una diferencia que ya es pequeña.
+                if (result.CounterDeltas.Count > 0)
+                {
+                    var carried = subject.Players.ToList();
+                    for (int i = 0; i < carried.Count; i++)
+                    {
+                        carried[i] = ProgressionRules.ApplyCounterDeltas(carried[i], result.CounterDeltas);
+                    }
+
+                    subject = subject with { Players = carried };
                 }
             }
         }

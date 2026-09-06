@@ -575,6 +575,8 @@ public static class PerkLoader
                             + $"número de veces que el multiplicador se acumula, entre 1 y {MaxCounterStacks} "
                             + "(ADR 0050 P1)");
                 }
+
+                ValidateCounterLine(node, valuePerCounter, maxValue, rarity, target, drawback);
             }
             else
             {
@@ -636,6 +638,54 @@ public static class PerkLoader
                 + $"({RarityName(rarity)}: {ceiling}, ADR 0058). El negativo es el inverso exacto del "
                 + "positivo de la misma magnitud: -30 es dividir por 1,3, no restar el 30%");
     }
+
+    /// <summary>
+    /// El segundo techo de un efecto con contador (ADR 0071, AR-B): el de la <b>línea completa</b>,
+    /// <c>k^maxValue</c>, que es lo que el motor aplica cuando el contador llega a su tope, y que
+    /// <see cref="ProbabilityScale.CounterCeilingFor"/> no acotaba pese a decir que sí.
+    /// <para>
+    /// Se valida aparte del techo por unidad porque son dos magnitudes distintas —una unidad del
+    /// contador y la línea entera— y ninguna implica la otra: <c>k = 1,5</c> con <c>maxValue</c> 10 cabe
+    /// en el techo de un común y vale ×57,7. Y distingue el ámbito, porque el mismo multiplicador sobre
+    /// el portador y sobre los siete titulares no vale lo mismo (ADR 0060: 2-4×).
+    /// </para>
+    /// </summary>
+    private static void ValidateCounterLine(
+        Node node, int multiplier, int maxValue, Rarity rarity, EffectTarget target, bool drawback)
+    {
+        // El castigo de un elseEffects no se compra, se elige: su techo es un escalón más alto, igual que
+        // en DrawbackCeilingFor. Aquí eso son cuatro veces la línea (dos escalones de la escala).
+        bool teamScope = ProbabilityScale.IsTeamScope(target);
+        int ceiling = ProbabilityScale.CounterLineCeilingFor(rarity, teamScope);
+        if (drawback)
+        {
+            ceiling *= 4;
+        }
+
+        // Se acota la MAGNITUD de la línea, no su dirección: multiplicar la cuota por k y dividirla por k
+        // son la misma cifra con dos verbos (ADR 0058, ProbabilityScale.Magnitude), y una línea que divide
+        // por 1.024 desborda el canal igual que una que multiplica por 1.024.
+        int line = ProbabilityScale.Line(multiplier, maxValue);
+        int upward = line >= ProbabilityScale.Neutral ? line : ProbabilityScale.Invert(line);
+        if (upward <= ceiling)
+        {
+            return;
+        }
+
+        throw new DataException(
+            node.File,
+            node.Path + ".maxValue",
+            $"la línea completa de este efecto con contador vale ×{Factor(upward)} "
+                + $"(k = ×{Factor(multiplier)} elevado a maxValue = {maxValue}) y el techo de línea de un perk "
+                + $"{RarityName(rarity)} de ámbito {(teamScope ? "de equipo" : "individual")} es "
+                + $"×{Factor(ceiling)} (ADR 0071). El techo por rareza acota lo que vale UNA unidad del "
+                + "contador; este acota lo que acaba aplicando el motor, que es k^maxValue. Baja la "
+                + "magnitud o baja maxValue.");
+    }
+
+    /// <summary>Factor de un multiplicador en base 10.000, con dos decimales, para el mensaje de error.</summary>
+    private static string Factor(int multiplier) =>
+        (multiplier / (double)ProbabilityScale.Neutral).ToString("0.##", System.Globalization.CultureInfo.InvariantCulture);
 
     /// <summary>Nombre de la rareza tal y como se escribe en <c>/data</c>, para el mensaje de error.</summary>
     private static string RarityName(Rarity rarity) => rarity switch

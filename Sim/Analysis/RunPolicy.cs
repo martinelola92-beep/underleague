@@ -258,7 +258,16 @@ public sealed record RunPlayResult(
     int MastersUnlocked,
 
     /// <summary>De esas, cuántas se podían cobrar y pagar (ADR 0055).</summary>
-    int MastersAffordable)
+    int MastersAffordable,
+
+    /// <summary>
+    /// Contadores de carrera (RF-070) que la plantilla lleva al terminar, como <c>nombre:valor</c>
+    /// sumado por contador sobre todos los jugadores vivos, y el <b>máximo</b> alcanzado por un solo
+    /// jugador en <c>nombre:valor</c> aparte. Es el diagnóstico que dice <b>cuánto contador produce una
+    /// run de verdad</b>, que es lo que <c>--perk-values</c> tiene que reproducir para no medir el eje
+    /// de acumulación con el contador a cero (AN-B, ADR 0070). No entra en ninguna métrica ni puerta.
+    /// </summary>
+    IReadOnlyList<string>? FinalCounters = null)
 {
     /// <summary>True si la run terminó ganando al jefe final (RF-002).</summary>
     public bool Won => Outcome == RunOutcomeKind.Victory;
@@ -2015,6 +2024,8 @@ public static class RunPolicy
             : Array.Empty<RunPlayer>();
 
         int levels = 0, perks = 0, starterPerks = 0, items = 0, injuries = 0, counters = 0;
+        var counterTotals = new SortedDictionary<string, int>(StringComparer.Ordinal);
+        var counterPeaks = new SortedDictionary<string, int>(StringComparer.Ordinal);
         for (int i = 0; i < state.Roster.Count; i++)
         {
             var player = state.Roster[i];
@@ -2035,10 +2046,20 @@ public static class RunPolicy
                 injuries++;
             }
 
-            foreach (var (_, value) in player.Counters)
+            foreach (var (name, value) in player.Counters)
             {
                 counters += value;
+                counterTotals[name] = counterTotals.GetValueOrDefault(name) + value;
+                counterPeaks[name] = Math.Max(counterPeaks.GetValueOrDefault(name), value);
             }
+        }
+
+        // Censo de contadores (AN-B): cuánto contador produce una run de verdad, por contador. Se vuelca
+        // en runs.csv como diagnóstico y no interviene en ninguna métrica.
+        var counterCensus = new List<string>(counterTotals.Count);
+        foreach (var (name, total) in counterTotals)
+        {
+            counterCensus.Add($"{name}:{total}:{counterPeaks[name]}");
         }
 
         var held = PerkPool.HeldPerkIds(state);
@@ -2113,7 +2134,8 @@ public static class RunPolicy
             held,
             ledger.MastersOffered,
             ledger.MastersUnlocked,
-            ledger.MastersAffordable);
+            ledger.MastersAffordable,
+            counterCensus);
     }
 
     /// <summary>

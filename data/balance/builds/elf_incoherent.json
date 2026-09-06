@@ -1,5 +1,5 @@
 {
-  "_doc": "Escalón \"incoherente\" de la escala de calidad de build de la ADR 0033, medido por la puerta de jefes (Sim.Tests/Analysis/BossGateTests.cs). Los cuatro escalones de una raza comparten calidad 50, rareza común y etiqueta de estilo impuesta: lo único que cambia entre ellos es la construcción -qué perks, dónde colocados, con qué escalado acumulado-, nunca la plantilla. Catorce perks distintos con la condicion falsa y una alineacion que rompe los siete vinculos: el ancla del propio tercio en la columna 7 y la punta de lanza sin nadie delante aplican sus elseEffects sobre TODO el equipo (-15 de entrada, -25 de remate).",
+  "_doc": "Escalon \"incoherente\" de la ADR 0033, medido por la puerta de jefes (Sim.Tests/Analysis/BossGateTests.cs). REVISADO (paquete AS, ADR 0070, cierra AR-A): los catorce perks salen del catalogo que la doctrina contextual entrega de verdad -banco de 1.200 runs, listón del 15% de presencia en las 240 runs de la raza- y lo que hace incoherente a la build no es que sean perks raros que nadie ve, sino que estan colocados DONDE SE CASTIGAN. Eso ultimo es una medicion, no una intuicion: la primera version de esta revision coloco mal perks SIN elseEffects y el escalon subio de 18,4 a 44,0 contra el jefe del acto 1, porque la mayoria de los perks frecuentes no tiene condicion de colocacion y colocarlos mal no les hace nada. Los siete ultimos de cada slot -que son los que la densidad de la ADR 0040 mide de verdad- son los siete perks frecuentes del catalogo que SI castigan al estar mal puestos (ADR 0060). La alineacion declarada rompe los vinculos de los tres perks de alineacion. Los acumuladores van sin alimentar: contador a cero vale k^0 = 1.",
   "id": "elf_incoherent",
   "name": "Elfos: incoherente",
   "race": "Elf",
@@ -8,7 +8,7 @@
   "perks": [
     {
       "slot": 0,
-      "perk": "sweeper_keeper"
+      "perk": "box_predator"
     },
     {
       "slot": 0,
@@ -16,31 +16,31 @@
     },
     {
       "slot": 1,
-      "perk": "forward_line"
+      "perk": "sharpshooter_drill"
     },
     {
       "slot": 1,
-      "perk": "brute_boots"
+      "perk": "flank_specialist"
     },
     {
       "slot": 2,
-      "perk": "own_third_anchor"
+      "perk": "iron_lungs"
     },
     {
       "slot": 2,
-      "perk": "bulwark_stance"
+      "perk": "wing_overlap"
+    },
+    {
+      "slot": 3,
+      "perk": "silky_veteran"
     },
     {
       "slot": 3,
       "perk": "center_conductor"
     },
     {
-      "slot": 3,
-      "perk": "spearpoint"
-    },
-    {
       "slot": 4,
-      "perk": "cold_focus"
+      "perk": "battle_reader"
     },
     {
       "slot": 4,
@@ -48,19 +48,19 @@
     },
     {
       "slot": 5,
-      "perk": "last_ditch"
+      "perk": "crowd_control"
     },
     {
       "slot": 5,
-      "perk": "wing_overlap"
+      "perk": "diagonal_press"
     },
     {
       "slot": 6,
-      "perk": "pack_mentality"
+      "perk": "comeback_spirit"
     },
     {
       "slot": 6,
-      "perk": "back_to_back"
+      "perk": "last_ditch"
     }
   ],
   "lineup": [
@@ -101,5 +101,6 @@
     "4": "Fine",
     "5": "Fine",
     "6": "Fine"
-  }
+  },
+  "counters": {}
 }

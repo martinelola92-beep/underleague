@@ -111,6 +111,26 @@ tabla permite mide **−1,58** de run (ET 1,42). La tercera salida es la **dosis
 se aplica. Los objetivos 2 y 3 siguen sin palanca; los 4 y 5 quedan a 0,6 cada uno y siguen siendo los dos
 extremos de la misma frontera. Detalle en `fase2-diseno.md` §34
 
+*(Estado 2026-09-06, paquete AS / ADR 0070 y ADR 0071)*: **paquete de medición, no de calibración, y lo
+que mide es que parte de lo ganado era del instrumento.** Se corrigen los dos defectos que la ADR 0069
+dejó abiertos —`--perk-values` era **estructuralmente ciego** al eje de acumulación y las veinte builds de
+`data/balance/builds/` no muestreaban el catálogo que la run reparte— y aparece un tercero que nadie
+buscaba: **la tabla de valor llevaba diez paquetes sin regenerarse** y la mitad de sus filas estaba
+desfasada más de dos desviaciones. Con el control medido (mismo instrumento, arrastre de contadores
+apagado), la atribución es exacta: **quitar la ranciedad cuesta 4,67 puntos de tasa de victoria de la run**
+(19,42 → 14,75) y **corregir la ceguera al contador devuelve 1,50** (→ **16,25**), con `S` 1,168 → 0,524 →
+**0,682**. La campaña mueve **61,4 unidades de media en los quince perks del eje y 0,0 en los otros 36**,
+bit a bit; `clean_sheet_legacy` pasa de −42 a **+247** y la doctrina contextual lo compra en el 10,9% de
+las runs en vez de en el 0,2%. Las veinte builds se reescriben contra el catálogo real y **las doce celdas
+de la ADR 0033 quedan en banda sin usar el margen de ±2,5 y sin recalibrar ningún jefe**. La ADR 0071
+cierra AR-B: el techo de un efecto con contador pasa a acotar la **línea** `k^maxValue` y a distinguir el
+ámbito de equipo, y no cuesta nada. **Tres objetivos suben y tres bajan, y no se compensa ninguno**: el
+hueco del acto 2 sube a **11,95** (el mejor en once paquetes), la mediocre baja a 47,60 (se pasa 2,6 en vez
+de 6,3) y la mala a 10,50; bajan la run (**16,25**), el suelo (10,75) y la buena del acto 2 (59,55). Y
+queda al descubierto lo que hay que mirar primero: **con la tabla fresca, la doctrina que elige por valor
+medido no le gana a la que sólo acapara** (`contextualAdvantage` 4,17 → **−0,25**), porque su listón es el
+cero exacto sobre una medida con desviación 17 (**AS-A**). Detalle en `fase2-diseno.md` §35
+
 **Requisitos:** RT-055, RT-056, RF-032
 **Depende de:** ADR 0054 (banda revisada) · **implementa** las P1 y P3 de la ADR 0050
 

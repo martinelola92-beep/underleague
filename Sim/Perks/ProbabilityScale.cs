@@ -79,12 +79,18 @@ public static class ProbabilityScale
     };
 
     /// <summary>
-    /// Techo de un efecto <b>con contador</b> de esa rareza: un escalón por debajo del de
-    /// <see cref="CeilingFor"/>. El motivo es que ahí el multiplicador no se aplica una vez sino hasta
-    /// <c>n</c> (ADR 0050 P1, el tope se escribe en copias y el total es <c>k^n</c>), así que el techo de
-    /// la rareza acota lo que vale <b>una copia</b> y no lo que vale la línea entera: con el mismo techo
-    /// que un efecto suelto, cinco copias de un raro clavarían su canal en el 98% y volvería justo la
-    /// patología que la P1 vino a quitar.
+    /// Techo de <b>una unidad</b> de un efecto con contador de esa rareza: un escalón por debajo del de
+    /// <see cref="CeilingFor"/>, porque el multiplicador no se aplica una vez sino hasta <c>n</c>
+    /// (ADR 0050 P1: el tope se escribe en copias y el total es <c>k^n</c>).
+    ///
+    /// <para><b>Este techo NO acota la línea, y hasta la ADR 0071 su comentario decía que sí</b> (AR-B).
+    /// Decía que existe para que "cinco copias de un raro no claven su canal en el 98%", y no puede
+    /// conseguirlo: acota <c>k</c>, no <c>k^maxValue</c>. Medido en el catálogo de la ADR 0069:
+    /// <c>deathless_march</c>, raro, cabía en este techo con <c>k = 3</c> y <c>maxValue = 5</c>, y su
+    /// línea valía <c>3⁵ = 243</c> sobre el robo de <b>todo el equipo</b> —la cuota del canal pasa de
+    /// 0,597 a 145 y el motor la clava en su <c>probabilityCeiling</c> del 98% desde el quinto
+    /// partido—: exactamente la patología que el comentario decía evitar. Lo que la acota es
+    /// <see cref="CounterLineCeilingFor"/>, que mira la línea entera y además el ámbito.</para>
     /// </summary>
     public static int CounterCeilingFor(Rarity rarity) => rarity switch
     {
@@ -93,6 +99,60 @@ public static class ProbabilityScale
         Rarity.Rare => 200,
         _ => 300,
     };
+
+    /// <summary>
+    /// Techo de la <b>línea completa</b> de un efecto con contador, <c>k^maxValue</c>, como multiplicador
+    /// en base 10.000 (ADR 0071, cierra AR-B). Es el techo que <see cref="CounterCeilingFor"/> decía
+    /// acotar y no acotaba.
+    ///
+    /// <para><b>Por qué hacen falta dos techos y no uno.</b> Un efecto con contador tiene dos magnitudes
+    /// distintas y sólo una estaba validada: lo que vale <b>una unidad</b> del contador (lo que el
+    /// jugador ve crecer partido a partido, acotado por rareza) y lo que vale la <b>línea entera</b> al
+    /// tope del contador (lo que el motor acaba aplicando). Con <c>maxValue</c> libre entre 1 y 10, la
+    /// segunda no está acotada por la primera: <c>k = 1,5</c> con <c>maxValue</c> 10 da ×57,7 sin salirse
+    /// del techo de un <b>común</b>.</para>
+    ///
+    /// <para><b>Y por qué el ámbito.</b> El mismo <c>k</c> sobre el portador y sobre los siete titulares
+    /// no valen lo mismo: la ADR 0060 lo midió en <b>2-4×</b> a favor del ámbito de equipo (§28.5), y el
+    /// techo de rareza no distinguía uno de otro. Se toma el extremo prudente del intervalo medido, 4×,
+    /// que son <b>dos escalones</b> de la escala: la línea de un efecto <c>team</c> u <c>opposingTeam</c>
+    /// vale un cuarto de la de un efecto sobre un solo jugador.</para>
+    ///
+    /// <para><b>De dónde salen los números del ámbito individual.</b> No de un criterio nuevo: del
+    /// catálogo que la ADR 0069 midió y entregó, convertido en regla. Ese catálogo lleva líneas de ×32 en
+    /// perks poco comunes sobre un solo jugador (<c>lane_reader</c>, <c>silky_veteran</c>,
+    /// <c>sharpshooter_drill</c>, <c>poacher_instinct</c>) con las doce celdas de la ADR 0033 en banda y
+    /// el banco de 1.200 runs medido, así que ×32 en poco común es lo que hay evidencia de que el juego
+    /// tolera. Los demás escalones se derivan de ese: común la mitad de la escala (×8), raro el doble
+    /// (×64) y legendario el doble otra vez (×128). No hay medición que sostenga los dos últimos, y por
+    /// eso están ahí como techo y no como objetivo: hoy ningún perk raro ni legendario los usa.</para>
+    /// </summary>
+    /// <param name="teamScope">
+    /// True si el efecto cae sobre un equipo entero (<c>team</c> u <c>opposingTeam</c>).
+    /// </param>
+    public static int CounterLineCeilingFor(Rarity rarity, bool teamScope)
+    {
+        int individual = rarity switch
+        {
+            Rarity.Common => 8 * Neutral,
+            Rarity.Uncommon => 32 * Neutral,
+            Rarity.Rare => 64 * Neutral,
+            _ => 128 * Neutral,
+        };
+
+        return teamScope ? individual / 4 : individual;
+    }
+
+    /// <summary>
+    /// La línea completa de un efecto con contador: <paramref name="multiplier"/> elevado a
+    /// <paramref name="maxValue"/>, que es lo que el motor aplica cuando el contador llega a su tope.
+    /// Es <see cref="Power"/> con nombre propio, para que la validación y la ADR hablen de lo mismo.
+    /// </summary>
+    public static int Line(int multiplier, int maxValue) => Power(multiplier, maxValue);
+
+    /// <summary>True si el objetivo del efecto es un equipo entero, que es lo que el techo de línea distingue.</summary>
+    public static bool IsTeamScope(EffectTarget target) =>
+        target is EffectTarget.Team or EffectTarget.OpposingTeam;
 
     /// <summary>
     /// Techo de un efecto de <c>elseEffects</c> —el <b>castigo</b> por llevar el perk donde su condición
