@@ -1,5 +1,5 @@
 {
-  "_doc": "Grupos de builds de /Balance. 'coherent'/'bad'/'random'/'baselineByRace' son los de la puerta de fase 1 (docs/fase1-diseno.md 8). 'qualityLevels' es la escala de calidad de build de la ADR 0033, que mide la puerta de jefes (Sim.Tests/Analysis/BossGateTests.cs): cuatro escalones por raza, con la misma plantilla y distinta construccion.",
+  "_doc": "Grupos de builds de /Balance. 'coherent'/'bad'/'random'/'baselineByRace' son los de la puerta de fase 1 (docs/fase1-diseno.md 8). 'random' se juzga con el MISMO techo que 'bad' (45%) desde la ADR 0078: la decision del revisor de la ADR 0056 dice que construir mal sale peor que no construir, y una build tomada al azar es una build mal construida - la propia 8 ya la lista entre las 'malas a proposito'. Sigue en su propio grupo porque es la unica cuyos perks los eligio el RNG y no un diseno adverso. 'qualityLevels' es la escala de calidad de build de la ADR 0033, que mide la puerta de jefes (Sim.Tests/Analysis/BossGateTests.cs): cuatro escalones por raza, con la misma plantilla y distinta construccion.",
   "coherent": [
     "orc_violence",
     "elf_tiki_taka",

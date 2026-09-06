@@ -5238,3 +5238,183 @@ Guardarraíles: `ordinaryDefeatRateAct1` **25,23** (0,37) sobre 30 · `deathsPer
 `leftoverGoldShare` 12,66 · 184 ficheros de `/data` validados · **608/608 tests en Release, 42/42 puertas**.
 `contextualAdvantage` baja de 3,83 a **2,50**, que es el precio de la celda y está en §37.5.
 
+
+## 38. Decisiones de implementación del paquete AV: el banco que no resolvía la frontera (ADR 0076, ADR 0077, ADR 0078)
+
+### 38.1. El encargo, y lo que apareció debajo
+
+El encargo era **AU-B** —recuperar `R₁`, que la ADR 0075 midió en 1,008— y **AU-D** —el punto fijo de las
+tasas de paso—. Los dos se han hecho, y el primero terminó falsificando su propia premisa: **`R₁` nunca se
+cayó.** El 1,008 sale de un banco de 1.200 runs cuyo error típico sobre `ln R₁` es 0,091; con 14.544 runs
+por lado la misma configuración mide **1,149**, con `ln R₁` = 0,139 ± 0,026. Es el defecto de la ADR 0074 —«un margen que vale
+1,4 desviaciones no es una cota, es una moneda»— un nivel más arriba: en el banco de runs, que es donde se
+miden los seis objetivos.
+
+### 38.2. La corrección derivada que se probó primero, y que se descarta
+
+La fórmula del listón del slot (ADR 0072) compara el valor de un perk que se coge **ahora** con el de la
+oferta que llenará ese slot **después** como si valieran lo mismo, y la run es el producto de las tres
+puertas (ADR 0064): el primero juega tres y el segundo una. La corrección es
+`listón = C · (G_fut / G_ahora)`, con `G` las puertas que quedan descontadas por las mismas tasas de paso
+que ya descuentan las ofertas. Vale **0,807 / 0,883 / 1,000** por acto y baja el listón del acto 1 de 38 a
+30. Medida: perks en la puerta 1 de 4,34 a **4,76**, puerta 1 de 71,58 a 71,17 (nada), build buena del
+acto 2 de 61,10 a **58,63** (−2,47, ET 0,80) y `masterDivergence` de 22,36 a 18,01. **Se deja
+implementada y apagada** (`--slot-gates`).
+
+### 38.3. Seis densidades y una sospecha
+
+| condición | listón acto 1 capa 0 | perks en la puerta 1 | puerta 1 (n = 1.200, ET 1,30) |
+|---|---|---|---|
+| `--min-perk-value 999999` | ∞ | 0,99 | 70,50 |
+| `--act1-pass 950 --act2-pass 900` | 48 | 3,74 | 71,75 |
+| entregado | 38 | 4,31 | 71,75 |
+| control ADR 0074 | 38 | 4,34 | 71,58 |
+| `--slot-gates` | 30 | 4,76 | 71,17 |
+| `--act1-pass 450 --act2-pass 250` | 25 | 4,80 | 71,92 |
+| `--slot-bar-off` | 0 | 5,30 | 71,67 |
+
+La densidad recorre un 42% y la puerta 0,75 puntos sobre un error típico de 1,30. No dice que la densidad
+no importe: dice que **el banco no resuelve la pregunta**.
+
+### 38.4. La muestra, derivada
+
+Criterio, escrito antes de medir y el mismo de la ADR 0074: **el hueco que se está juzgando tiene que
+valer tres errores típicos.** El hueco es el que separa el suelo mínimo que la frontera admite del 10% del
+objetivo 5. Propagando el error binomial de las seis puertas por el modelo de la ADR 0065 (Monte Carlo,
+900 sorteos):
+
+```
+ 1.200 runs/lado :  suelo mínimo 11,60  ET 1,34  ->  el hueco (1,60) vale 1,2 ET   NO RESUELVE
+ 7.272 runs/lado :  suelo mínimo 12,60  ET 0,59  ->  el hueco (2,60) vale 4,4 ET   resuelve
+14.544 runs/lado :  suelo mínimo 12,02  ET 0,41  ->  el hueco (2,02) vale 5,0 ET   RESUELVE
+derivado con la forma medida: N >= 5.339 runs/lado
+```
+
+**Se adopta 14.544 por lado, 2,7 veces el mínimo derivado**, y por un motivo medido: se jugaron **dos**
+bancos independientes de 7.272 (`--full-runs 1818` sobre 1/1001/2001/3001 y otra vez sobre
+1/10001/20001/30001, éstas sin solape de rangos de semilla) y discreparon **1,5 desviaciones** en `S`
+(0,936 contra 1,105, con ET declarado de 0,082 cada uno). El cierre es el **pool de los dos**. El banco de
+cierre pasa de 3,5 a unos **45 minutos**.
+
+**Y un segundo defecto de método, aparte.** El «ET» que los ADR 0069-0075 publican es la dispersión entre
+los **cuatro** bloques de 300 runs: un estimador con **tres grados de libertad**. En el cierre de la
+ADR 0074 los bloques dieron 22,33 / 20,67 / 19,67 / 20,33 y de ahí salió «20,75 (ET 0,57)», cuando el
+error **binomial** de una proporción sobre 1.200 runs es **1,16**; en el banco de este paquete dieron
+20,00 / 20,67 / 20,00 / 20,00, que habría publicado «ET 0,17», **siete veces menor que el real**. Con
+1.818 runs por bloque los dos coinciden (0,44 contra 0,47). **La barra de una proporción pasa a ser la
+binomial**; la dispersión entre bloques queda como diagnóstico.
+
+### 38.5. Lo que cambia al medirlo bien
+
+Mismo código, mismas semillas, mismos bloques, sólo más largos. Las **primeras 300 runs de cada bloque del
+banco grande reproducen el banco pequeño bit a bit**, así que la comparación es limpia:
+
+| | 1.200 runs/lado | **14.544 runs/lado** |
+|---|---|---|
+| Puertas, build buena | 71,75 / 49,13 / 57,48 | **72,06 ±0,37 / 48,15 ±0,49 / 56,43 ±0,70** |
+| Puertas, suelo sin build | 71,42 / 38,86 / 43,08 | **69,19 ±0,38 / 38,73 ±0,49 / 44,11 ±0,81** |
+| `R` | 1,016 / 1,520 / 1,786 | **1,149 / 1,469 / 1,641** |
+| `S` | 1,015 ± 0,201 | **1,019 ± 0,058** |
+| Tasa de victoria de la run | 20,17 ± 1,16 | **19,52 ± 0,33** |
+| Suelo sin build | 11,41 ± 1,16 | **11,31 ± 0,26** |
+| Hueco buena/mediocre, acto 2 | 13,35 | **11,03** |
+
+Tres lecturas. **`S` casi no se mueve pero su barra se divide por 3,5**, y con ella el 1,175 de la ADR 0069
+y el 1,145 de la ADR 0075 dejan de sostener una serie: todo lo publicado desde el paquete AQ cabe dentro
+de un error típico del banco con el que se midió. **La forma sí se mueve**: `ln R` = **0,139 / 0,385 /
+0,495** en vez de 0,016 / 0,418 / 0,580, una escalera creciente y suave —la que la ADR 0033 diseña, con el
+acto 1 discriminando menos porque es el taller— en vez de una primera puerta muerta y una tercera
+desbocada; y la ADR 0075 construyó su conclusión principal sobre esa forma. **Y la tasa de victoria de la
+run no estaba donde se dijo**: el estado que entregó la ADR 0074, medido con 7.272 runs, da **19,68 ±
+0,47**, no los 20,75 que publicó, y el de hoy con 14.544 da **19,52 ± 0,33**.
+
+### 38.6. El experimento de AU-B, ahora que se puede hacer
+
+`--slot-bar-off` es literalmente lo que la ADR 0075 propuso: el juego de antes de la ADR 0072, con sus 5,3
+perks en el primer jefe. Con 7.272 runs por condición:
+
+| | entregado | `--slot-bar-off` | |
+|---|---|---|---|
+| Perks del once en la puerta 1 | 4,31 | **5,29** | |
+| Puerta del acto 1 | **72,14** ±0,53 | **70,85** ±0,53 | **−1,29 (4,4 ET emparejado)** |
+| `R₁` contra el mismo suelo | **1,157** | 1,086 | −0,063 en `ln R₁` |
+| Tasa de victoria de la run | **19,57** | **16,83** | −2,74 (3,5 ET emparejado) |
+| `contextualAdvantage` | +2,24 | **−0,49** | |
+
+**Devolverle perks al acto 1 no sube `R₁`: lo baja.** El listón no gastó la primera puerta, la construyó.
+
+### 38.7. La frontera, remedida
+
+| | buena máxima con suelo = 10% | suelo mínimo con buena = 20% |
+|---|---|---|
+| ADR 0065 | 15,68% | 13,29% |
+| ADR 0075, puerta 1 donde estaba | 19,00% | 10,68% |
+| **Hoy, dificultad libre** | **17,51%** | **11,70%** |
+| **Hoy, con la puerta 1 donde está** | **17,19%** | **12,02% (ET 0,41)** |
+
+El hueco no es de 0,68 puntos sino de **2,02**, y está resuelto (**5,0 ET**). Lo que falta es elevar las
+tres razones a la potencia **1,321** —`S` = 1,345 contra 1,019—, un **+32%**. Y **la vía de la puerta del
+acto 1 no existe**: como `R₁` no vale uno, abrirla cuesta separación, y el barrido completo de 72% a ~100%
+de paso mueve el suelo mínimo de **12,02 a 11,70**. «La forma importa» sobrevive débil: la misma `S`
+repartida por igual da **12,56** contra 12,02, medio punto en vez de 1,10.
+
+### 38.8. El punto fijo de AU-D (ADR 0077)
+
+`Act2GatePassPermille` pasa de **439 a 493**; la del acto 1 se remide y **no se mueve** (71,75%, los mismos
+718). La iteración converge en **una** vuelta —el residuo cae de 57 a 3,5 milésimas y ahí se queda, bajo el
+ruido de 17— y la contracción está medida barriendo la creencia de extremo a extremo, de (450, 250) a
+(950, 900), con el listón del acto 1 recorriendo de **25 a 48**: la medición se mueve **1,7 y 3,5
+milésimas**, o sea **`L ≤ 0,03`**, único y estable por Banach. Por qué es tan plano: el listón es un
+**cuantil de 51 perks**, así que corregir diez puntos mueve `N` de 49 a 50 ofertas y **el listón sale 38 en
+los dos casos**. Coste emparejado sobre 1.200 runs: run −0,58 (ET 0,60), `masterDivergence` **+2,33**
+(0,59), el resto intacto; medido sobre 7.272 runs, −0,11.
+
+### 38.9. La banda de AU-A (ADR 0078)
+
+`randomBuildNearNone` pasa a `randomBuildLosesToNone` y su banda **40-60 pasa a un techo de ≤ 45**, el
+mismo de `badBuildsLoseToNone`. El techo **baja** (de 60 a 45) y lo que se quita es el **suelo de 40**, que
+afirmaba que construir sin criterio no puede salir claramente peor que no construir — lo contrario de lo
+que el revisor decidió en la cabecera de la ADR 0056, dicho literalmente sobre comprar *sin criterio*. El
+45 no se inventa: §8 de `fase1-diseno.md` **ya listaba `human_random` entre las «malas a propósito»**. La
+serie temporal lo respalda —50,80 → 49,3 → 55,62 → **40,62**, bajando según la ADR 0060 implementaba el
+castigo del perk mal puesto— y el margen pasa de **0,56 a 4,0 desviaciones**. Cierra de paso el techo de
+**AL-D**: la palanca del castigo ya no está acotada por esta métrica.
+
+### 38.10. Las doce celdas, medidas directamente
+
+`--boss-gate --rosters 64 --runs 16`, 5.120 partidos por celda, **dos semillas independientes**:
+
+| jefe | incoherente | correcta | buena | muy buena |
+|---|---|---|---|---|
+| `grimhold_guns` (s1 / s77) | 29,8 / 28,9 [20-35] | 68,1 / 67,5 [65-80] | 79,6 / 79,5 [75-88] | 94,4 / 94,2 [85-95] |
+| `the_hunt` (s1 / s77) | **14,6 / 14,7** [<15] | 43,2 / 40,9 [35-50] | 63,8 / 63,2 [60-72] | 84,0 / 82,1 [72-85] |
+| `eternal_crown` (s1 / s77) | 5,5 / 5,6 [<10] | 24,1 / 22,4 [15-28] | 46,3 / 44,7 [40-55] | 62,5 / 62,7 [55-70] |
+
+**Las doce dentro de banda en las dos semillas.** Nada de este paquete puede moverlas —`BossGateRunner` no
+ejecuta `RunPolicy` y `actDensity` no se toca— y en efecto no las mueve. La más ajustada sigue siendo
+`the_hunt/incoherente`, a **0,3-0,4 puntos** de su techo de 15 sobre un ET de 0,65: es **AU-C**, y este
+paquete no la empeora ni la arregla.
+
+### 38.11. Los seis objetivos
+
+Banco de cierre de **14.544 runs por lado**, error binomial:
+
+| Objetivo (ADR 0056) | ADR 0074 publicó (1.200) | ADR 0074 remedida (7.272) | **este paquete (14.544)** | meta | |
+|---|---|---|---|---|---|
+| Build buena, actos 2/3 (ordinarios) | 61,10 / 49,22 | 60,24 / 49,25 | **59,91 / 49,46** | 60% | al borde en el acto 2 |
+| Build mediocre, actos 2/3 | 47,59 / 35,14 | | **48,88 / 36,26** | 42-45% | no |
+| Build mala completa la run | 10,58 | | **10,05 ±0,25** | < 2% | no |
+| Suelo sin build | 11,33 | | **11,31 ±0,26** | < 10% | no |
+| Hueco buena/mediocre, acto 2 | 13,48 | | **11,03** | > 9,8 | sí |
+| **Tasa de victoria de la run** | 20,75 | **19,68 ±0,47** | **19,52 ±0,33** | 20-30% | **0,48 por debajo, 1,5 ET** |
+
+Guardarraíles: `ordinaryDefeatRateAct1` **25,13** sobre 30 · `deathsPerRun` **1,44** · `betterTeamWinRate`
+**79,52** (no depende de los jefes ni de la política) · `masterDivergence` **23,27** (suelo 5) ·
+`mastersReached` 19,35 · `matchesPerRun` 13,04 · `contextualAdvantage` **+1,90** · 184 ficheros de `/data`
+validados · **608/608 tests en Release, 42/42 puertas**.
+
+El renglón que hay que leer dos veces es el último: **la tasa de victoria de la run no estaba en banda
+cuando la ADR 0072 lo declaró.** No la mueve este paquete —el estado entregado por la ADR 0074 mide 19,68
+y el de hoy 19,52, con una diferencia emparejada de **−0,11 (0,4 ET)**— y la pertenencia a la banda sigue
+sin decidirse: el punto está a **0,48 puntos** del borde con un ET de 0,33, y para que eso valiera 3 ET
+harían falta del orden de **60.000 runs por lado**. Es **AV-A**.

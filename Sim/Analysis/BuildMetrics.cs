@@ -66,8 +66,22 @@ public static class BuildMetrics
     /// <summary>Prefijo de la métrica por build de <c>badBuildsLoseToNone</c> (§8: cada mala gana ≤ 45% a su referencia).</summary>
     public const string BadBuildsLoseToNonePrefix = "badBuildsLoseToNone_";
 
-    /// <summary>Prefijo de la métrica por build de <c>randomBuildNearNone</c> (§8: la build aleatoria entre 40% y 60%).</summary>
-    public const string RandomBuildNearNonePrefix = "randomBuildNearNone_";
+    /// <summary>
+    /// Techo de <see cref="BadBuildsLoseToNone"/> y de <see cref="RandomBuildsLoseToNone"/> (§8): una
+    /// build mal construida gana como mucho el 45% a la referencia sin perks de su raza. Es <b>un solo
+    /// número</b> a propósito (ADR 0078): la decisión del revisor de la ADR 0056 dice que construir mal
+    /// sale peor que no construir, y una build tomada al azar es una build mal construida — §8 ya la
+    /// listaba entre las «malas a propósito».
+    /// </summary>
+    public const double BadBuildMaxWinRate = 45.0;
+
+    /// <summary>
+    /// Prefijo de la métrica por build de <c>randomBuildLosesToNone</c> (§8, <b>ADR 0078</b>: la build
+    /// tomada al azar gana ≤ 45% a su referencia). Se llamaba <c>randomBuildNearNone</c> y afirmaba
+    /// 40-60 —"la build sin criterio se queda cerca de no construir"—, que es exactamente lo contrario de
+    /// lo que el revisor decidió en la cabecera de la ADR 0056.
+    /// </summary>
+    public const string RandomBuildLosesToNonePrefix = "randomBuildLosesToNone_";
 
     /// <summary>Nombre de la métrica de más lesiones producidas por la build de contacto que por la técnica (§8).</summary>
     public const string BuildsWinDifferentlyInjuries = "buildsWinDifferently_injuries";
@@ -173,7 +187,7 @@ public static class BuildMetrics
         var rows = new List<MetricResult>();
         rows.AddRange(CoherentBuildsBeatNone(cells, coherentBuilds, baselineOpponentByBuild));
         rows.AddRange(BadBuildsLoseToNone(cells, badBuilds, baselineOpponentByBuild));
-        rows.AddRange(RandomBuildsNearNone(cells, randomBuilds, baselineOpponentByBuild));
+        rows.AddRange(RandomBuildsLoseToNone(cells, randomBuilds, baselineOpponentByBuild));
         rows.AddRange(BuildsWinDifferently(cells, physicalBuild, technicalBuild, baselineOpponentByBuild));
         rows.AddRange(NoDeadPerksRows(perkActivations));
         rows.AddRange(Rf069Distribution(catalogPerkKinds));
@@ -193,33 +207,28 @@ public static class BuildMetrics
         IReadOnlyList<BuildCellResult> cells,
         IReadOnlyList<string> badBuilds,
         IReadOnlyDictionary<string, string> baselineOpponentByBuild,
-        double maxWinRate = 45.0) =>
+        double maxWinRate = BadBuildMaxWinRate) =>
         AtMost(cells, badBuilds, baselineOpponentByBuild, BadBuildsLoseToNonePrefix, maxWinRate);
 
-    /// <summary>randomBuildNearNone (§8): la build sin criterio queda entre 40% y 60% contra su referencia.</summary>
-    public static List<MetricResult> RandomBuildsNearNone(
+    /// <summary>
+    /// <c>randomBuildLosesToNone</c> (§8, <b>ADR 0078</b>): la build tomada al azar gana <b>≤ 45%</b> a su
+    /// referencia sin perks, el mismo techo que las demás builds mal construidas.
+    ///
+    /// <para>Era una banda <b>40-60</b> —"se queda cerca de no construir"—, escrita en la fase 1 cuando
+    /// el perk mal puesto no costaba nada. Desde la <b>ADR 0060</b> sí cuesta, y desde la decisión del
+    /// revisor de la <b>ADR 0056</b> —"construir mal sale peor que no construir", dicha literalmente
+    /// sobre comprar <i>sin criterio</i>— la banda afirma lo contrario que el diseño: su suelo de 40
+    /// obliga a que una build al azar no pueda ser claramente peor que no llevar nada. Ya vetó una vez el
+    /// diseño (AL-D: al subir el castigo del perk mal puesto la métrica cayó a 38,54 y se bajó la
+    /// palanca, no el umbral). El techo no se inventa: es el de las builds malas, y §8 ya listaba
+    /// <c>human_random</c> entre las «malas a propósito».</para>
+    /// </summary>
+    public static List<MetricResult> RandomBuildsLoseToNone(
         IReadOnlyList<BuildCellResult> cells,
         IReadOnlyList<string> randomBuilds,
         IReadOnlyDictionary<string, string> baselineOpponentByBuild,
-        double minWinRate = 40.0,
-        double maxWinRate = 60.0)
-    {
-        var rows = new List<MetricResult>();
-        foreach (var build in randomBuilds)
-        {
-            if (!TryFindCell(cells, build, baselineOpponentByBuild, out var cell))
-            {
-                continue;
-            }
-
-            double rate = cell.WinRate;
-            rows.Add(new MetricResult(
-                RandomBuildNearNonePrefix + build, rate, minWinRate, maxWinRate,
-                rate >= minWinRate && rate <= maxWinRate ? "IN" : "OUT"));
-        }
-
-        return rows;
-    }
+        double maxWinRate = BadBuildMaxWinRate) =>
+        AtMost(cells, randomBuilds, baselineOpponentByBuild, RandomBuildLosesToNonePrefix, maxWinRate);
 
     /// <summary>
     /// buildsWinDifferently (§8): la build "de contacto" produce ≥ 1,5× las lesiones que la build

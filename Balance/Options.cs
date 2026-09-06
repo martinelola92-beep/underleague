@@ -111,6 +111,15 @@ public sealed class Options
     /// <summary><c>--arc-judged</c>: la línea perseguida se juzga sin crédito de arco (medida de control).</summary>
     public bool ArcJudged { get; private set; }
 
+    /// <summary><c>--slot-gates</c>: pondera el coste de oportunidad del slot por la <b>exposición a puertas</b> (ADR 0076). Apagada por defecto: derivada, medida y descartada.</summary>
+    public bool SlotGates { get; private set; }
+
+    /// <summary><c>--act1-pass N</c>: tasa de paso de la puerta del acto 1 en milésimas que usa el listón del slot (ADR 0072); null = la de la política. Es la palanca con la que se mide el punto fijo de AU-D.</summary>
+    public int? Act1Pass { get; private set; }
+
+    /// <summary><c>--act2-pass N</c>: lo mismo para la puerta del acto 2.</summary>
+    public int? Act2Pass { get; private set; }
+
     /// <summary>Null salvo que se pase --describe [es|en]: activa el modo catálogo, con el idioma pedido (por defecto "es").</summary>
     public string? Describe { get; private set; }
 
@@ -200,6 +209,18 @@ public sealed class Options
 
                 case "--arc-judged":
                     options.ArcJudged = true;
+                    break;
+
+                case "--slot-gates":
+                    options.SlotGates = true;
+                    break;
+
+                case "--act1-pass":
+                    options.Act1Pass = ParseInt(arg, NextValue(args, ref i, arg));
+                    break;
+
+                case "--act2-pass":
+                    options.Act2Pass = ParseInt(arg, NextValue(args, ref i, arg));
                     break;
 
                 case "--risk-aversion":

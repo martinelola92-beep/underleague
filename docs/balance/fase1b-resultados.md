@@ -154,7 +154,7 @@ emparejadas, local/visitante y reparto de ids alternados (metodología del paque
 
 | Métrica | Umbral | Valor |
 |---|---|---|
-| `randomBuildNearNone_human_random` | 40-60 | **55,62** |
+| `randomBuildNearNone_human_random` | 40-60 | **55,62** | *(renombrada a `randomBuildLosesToNone` y con techo ≤ 45 por la **ADR 0078**; hoy mide 40,62)*
 | `buildsWinDifferently_injuries` (normalizada, ADR 0012) | >= 1,5 | **3,05** |
 | `buildsWinDifferently_passChain` (normalizada, ADR 0012) | >= 1,3 | **1,39** |
 | `noDeadPerks` | 0 | **0** (mínimo `home_ref` 4,4%) |

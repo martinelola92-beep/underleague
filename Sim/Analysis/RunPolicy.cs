@@ -140,15 +140,29 @@ public sealed record RunPolicyOptions
 
     /// <summary>
     /// Probabilidad de pasar la puerta del acto 1, en milésimas (ADR 0072). No es un dial: es
-    /// <c>bossWinRateAct1</c> medido sobre el banco de 1.200 runs de la doctrina contextual,
-    /// <b>71,75%</b>. Entra en el coste de oportunidad porque las ofertas de los actos siguientes sólo
-    /// existen si la run llega a ellos: sin descontarlas, el slot parece más escaso de lo que es y el
-    /// listón sube por encima de lo que la medida sostiene.
+    /// <c>bossWinRateAct1</c> medido sobre el banco de 1.200 runs de la doctrina contextual. Entra en el
+    /// coste de oportunidad porque las ofertas de los actos siguientes sólo existen si la run llega a
+    /// ellos: sin descontarlas, el slot parece más escaso de lo que es y el listón sube por encima de lo
+    /// que la medida sostiene.
+    ///
+    /// <para><b>Es autorreferente y el punto fijo está medido</b> (ADR 0077): cambiarla mueve el listón,
+    /// que mueve la run, que mueve la tasa de paso. La constante de Lipschitz de esa iteración se midió
+    /// barriendo la creencia de extremo a extremo —de (450, 250) a (950, 900) milésimas— y la medida se
+    /// movió <b>1,7 y 3,5 milésimas</b>: <b>L ≤ 0,03</b>, treinta veces por debajo del error típico de
+    /// una medición. El punto fijo es único, estable y se alcanza en <b>una</b> iteración.
+    /// <b>No se mueve</b>: mide otra vez <b>71,75%</b> (861 de 1.200), los mismos 718 milésimas que la
+    /// ADR 0072 escribió. La que estaba rancia era la del acto 2.</para>
     /// </summary>
     public int Act1GatePassPermille { get; init; } = 718;
 
-    /// <summary>Lo mismo para la puerta del acto 2: <c>bossWinRateAct2</c> medido, <b>43,9%</b>.</summary>
-    public int Act2GatePassPermille { get; init; } = 439;
+    /// <summary>
+    /// Lo mismo para la puerta del acto 2. <b>493 = 49,28%</b>, la media ponderada de las cuatro
+    /// mediciones del entorno del punto fijo (3.442 llegadas al jefe del acto 2, ET 0,85).
+    /// Las anteriores (439) se midieron sobre el banco de <b>control</b>, antes de aplicar el listón de la
+    /// ADR 0072 y antes de la recalibración de <c>the_hunt</c> de la ADR 0074, y llevaban diez puntos de
+    /// desfase (AU-D).
+    /// </summary>
+    public int Act2GatePassPermille { get; init; } = 493;
 
     /// <summary>
     /// Si una pieza de la línea que la run persigue se juzga con el <b>crédito de arco</b> sumado
@@ -161,6 +175,28 @@ public sealed record RunPolicyOptions
     /// <b>38,0%</b> de las runs. En false se mide qué cuesta el crédito.
     /// </summary>
     public bool ArcCreditsSlotBar { get; init; } = true;
+
+    /// <summary>
+    /// Si el coste de oportunidad del slot se pondera por la <b>exposición a puertas</b> (ADR 0076).
+    /// La ADR 0072 compara el valor de un perk que se coge <b>ahora</b> con el de la oferta que llenaría
+    /// ese slot <b>más adelante</b> como si valieran lo mismo, y no valen lo mismo: la run es el producto
+    /// de las tres puertas de jefe (ADR 0064), así que un perk cogido en la capa 0 del acto 1 juega las
+    /// tres y el que ocupe su slot en el acto 3 juega una. El coste de oportunidad se multiplica por
+    /// <c>G_fut / G_ahora</c>, con <c>G</c> el número esperado de puertas que quedan —descontado por las
+    /// mismas tasas de paso que descuentan las ofertas— y <c>G_fut</c> el promedio sobre las ofertas
+    /// futuras que entran en <c>N</c>. Vale 1 en el último acto, así que no toca el listón del acto 3 ni
+    /// la propiedad de la ADR 0072 de que con coste de oportunidad cero el listón es −1.
+    ///
+    /// <para><b>Está apagada, y por medición.</b> La corrección hace exactamente lo que se le pide —el
+    /// listón del acto 1 baja de 38 a 30 y la contextual llega al primer jefe con 4,76 perks en vez de
+    /// 4,34— pero <b>la puerta del acto 1 no se mueve</b> (71,17 frente a 71,58, dentro de un error
+    /// típico de 1,3) y el acto 2 se degrada: la build buena baja de 61,10 a 58,63 en partidos ordinarios
+    /// y <c>masterDivergence</c> de 22,36 a 18,01. Sigue disponible como palanca de medición
+    /// (<c>--slot-gates</c>): es una de las seis densidades con las que se midió que la puerta del acto 1
+    /// <b>no mejora</b> cuando el once llega a ella con más perks — con la muestra que resuelve, empeora
+    /// (<c>--slot-bar-off</c>, 5,29 perks, baja la puerta de 72,14 a 70,85).</para>
+    /// </summary>
+    public bool WeighsSlotBarByGateExposure { get; init; }
 
     /// <summary>
     /// Si la política <b>lee el informe de ojeo</b> (RF-013) antes de alinear: con un rival que lleva
@@ -1379,10 +1415,16 @@ public static class RunPolicy
 
         var table = economy.PerkValues;
         int free = FreeStarterPerkSlots(state, options);
-        long offers = ExpectedTakeableOffersLeft(state, node, options);
+        var horizon = SlotHorizonOf(state, node, options);
+        long offers = horizon.Offers;
         int continuation = free <= 0 || offers <= free
             ? 0
             : table.ValueAtQuantile(offers - free, offers);
+
+        if (options.WeighsSlotBarByGateExposure)
+        {
+            continuation = (int)((long)continuation * horizon.GateExposurePermille / 1000);
+        }
 
         return MeasuredValueFor(continuation, table);
     }
@@ -1407,11 +1449,32 @@ public static class RunPolicy
     }
 
     /// <summary>
-    /// Ofertas de perk cobrables que la run tiene por delante (ADR 0072): las capas que le quedan a este
-    /// acto más las de los actos que faltan, por lo que produce una capa. Es el <c>N</c> del coste de
-    /// oportunidad, y el horizonte es la run entera porque un slot dura la run entera (RF-072).
+    /// El horizonte del slot: cuántas ofertas cobrables tiene la run por delante y cuánto <b>menos</b>
+    /// tiempo de juego le queda a la oferta que llenaría el slot más adelante que al perk que se está
+    /// juzgando ahora.
     /// </summary>
-    private static long ExpectedTakeableOffersLeft(RunState state, MapNode node, RunPolicyOptions options)
+    /// <param name="Offers">
+    /// El <c>N</c> del coste de oportunidad (ADR 0072): las capas que le quedan a este acto más las de
+    /// los actos que faltan, por lo que produce una capa. El horizonte es la run entera porque un slot
+    /// dura la run entera (RF-072).
+    /// </param>
+    /// <param name="GateExposurePermille">
+    /// <c>G_fut / G_ahora</c> en milésimas (ADR 0076): puertas que juega en promedio la oferta futura
+    /// que ocuparía el slot, sobre las que juega el perk que se juzga ahora. Vale 1.000 en el último acto.
+    /// </param>
+    private readonly record struct SlotHorizon(long Offers, int GateExposurePermille);
+
+    /// <summary>
+    /// Ofertas cobrables por delante y exposición a puertas de las que llegan (ADR 0072, ADR 0076).
+    ///
+    /// <para>Las capas de este acto son seguras; las de los actos siguientes sólo llegan si la run pasa
+    /// sus puertas, así que entran descontadas por la tasa de paso medida. Las mismas tasas dan el número
+    /// esperado de puertas que quedan por jugar desde aquí (<c>G_ahora</c>) y desde donde caerá cada
+    /// oferta futura, y el cociente de los dos es lo que corrige el coste de oportunidad: la ADR 0072
+    /// comparaba un perk que juega toda la run con uno que juega el final de ella como si valieran lo
+    /// mismo. Todo en milésimas y en enteros (RT-023).</para>
+    /// </summary>
+    private static SlotHorizon SlotHorizonOf(RunState state, MapNode node, RunPolicyOptions options)
     {
         var map = state.MapOf(node.Act);
         int bossLayer = node.Layer;
@@ -1424,19 +1487,55 @@ public static class RunPolicy
             }
         }
 
-        // Las capas de este acto son seguras; las de los actos siguientes sólo llegan si la run pasa sus
-        // puertas, así que entran descontadas por la tasa de paso medida, y cada acto aporta al ritmo de
-        // ofertas cobrables que se le ha medido a él. Todo en milésimas (RT-023).
-        long layersPermille = (long)Math.Max(bossLayer - node.Layer, 0) * 1000;
-        long reachPermille = 1000;
         int lastAct = Math.Min(RunRules.Acts, node.Act + Math.Max(options.SlotHorizonActs, 1) - 1);
-        for (int act = node.Act; act < lastAct; act++)
+        int acts = lastAct - node.Act + 1;
+
+        // Probabilidad de llegar a cada acto del horizonte y capas de oferta que aporta cada uno.
+        Span<long> reach = stackalloc long[acts];
+        Span<long> layers = stackalloc long[acts];
+        reach[0] = 1000;
+        layers[0] = (long)Math.Max(bossLayer - node.Layer, 0) * 1000;
+        for (int i = 1; i < acts; i++)
         {
-            reachPermille = reachPermille * GatePassPermille(act, options) / 1000;
-            layersPermille += reachPermille * MapGenerator.DefaultPathLength;
+            reach[i] = reach[i - 1] * GatePassPermille(node.Act + i - 1, options) / 1000;
+            layers[i] = reach[i] * MapGenerator.DefaultPathLength;
         }
 
-        return layersPermille * Math.Max(options.TakeablePerkOffersPerLayerPermille, 0) / 1_000_000;
+        long layersPermille = 0;
+        for (int i = 0; i < acts; i++)
+        {
+            layersPermille += layers[i];
+        }
+
+        long offers = layersPermille * Math.Max(options.TakeablePerkOffersPerLayerPermille, 0) / 1_000_000;
+
+        // Puertas que quedan por jugar desde el acto i, condicionadas a llegar a él: la cola de reach
+        // dividida por su propio reach. Desde aquí (i = 0) el reach es 1, así que la cola es G_ahora.
+        long gatesNow = 0;
+        for (int i = 0; i < acts; i++)
+        {
+            gatesNow += reach[i];
+        }
+
+        long weighted = 0;
+        long tail = 0;
+        for (int i = acts - 1; i >= 0; i--)
+        {
+            tail += reach[i];
+            if (reach[i] > 0)
+            {
+                weighted += layers[i] * (tail * 1000 / reach[i]);
+            }
+        }
+
+        int exposure = 1000;
+        if (gatesNow > 0 && layersPermille > 0)
+        {
+            long ratio = weighted * 1000 / (gatesNow * layersPermille);
+            exposure = (int)Math.Clamp(ratio, 0, 1000);
+        }
+
+        return new SlotHorizon(offers, exposure);
     }
 
     /// <summary>Tasa medida de paso de la puerta de ese acto, en milésimas (ADR 0072).</summary>

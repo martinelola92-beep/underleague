@@ -174,6 +174,35 @@ vacía el acto 1, y recuperar esa discriminación vale hoy tanto como subir `S` 
 40) y no es de muestra: es que una build aleatoria hoy es peor que no construir, que es lo que esta ADR
 decidió (**AU-A**). Detalle en `fase2-diseno.md` §37
 
+*(Estado 2026-09-06, paquete AV / ADR 0076, ADR 0077 y ADR 0078)*: **el banco con el que se han medido los
+seis objetivos durante siete paquetes no resolvía lo que juzgaba.** El encargo era recuperar `R₁` —que la
+ADR 0075 dio en **1,008**, «la primera puerta ha dejado de discriminar»— y su premisa resulta ser un
+artefacto: con **14.544 runs por lado** en vez de 1.200, `R₁` vale **1,149** (`ln R₁` = 0,139 ± 0,026,
+cinco errores típicos sobre cero), y las primeras 300 runs de cada bloque del banco grande **reproducen el
+pequeño bit a bit**, así que no hay dos mediciones sino una y su subconjunto afortunado. Con la muestra que
+resuelve, el experimento que AU-B proponía sale al revés: **quitar el listón del slot —los 5,3 perks del
+acto 1 de antes de la ADR 0072— baja la puerta 1 de 72,14 a 70,85 (4,4 ET emparejado) y la run de 19,57 a
+16,83**; el listón no gastó la primera puerta, la **construyó**. La muestra se **deriva** con el criterio de
+la ADR 0074 —el hueco tiene que valer tres errores típicos— propagando el error binomial de las seis puertas
+por el modelo de la ADR 0065: con 1.200 runs el suelo mínimo sale **11,60 ± 1,34** (el hueco vale 1,2 ET) y
+con 14.544 sale **12,02 ± 0,41** (5,0 ET). Y aparece un segundo defecto de método: el «ET» que los
+ADR 0069-0075 publican es la dispersión de **cuatro** bloques —tres grados de libertad— y ha llegado a ser
+**siete veces** menor que el error binomial. Consecuencias sobre esta tabla: `S` casi no cambia (1,019 ±
+**0,058** contra el 1,015 del banco pequeño) pero **su barra se divide por 3,5 y con ella el 1,175 de la
+ADR 0069 y el 1,145 de la ADR 0075 dejan de sostener una serie**; **la forma sí cambia** —`ln R` = 0,139 /
+0,385 / 0,495, la escalera creciente que la ADR 0033 diseña, en vez de 0,016 / 0,418 / 0,580—; el hueco a
+los objetivos 4 y 5 es de **2,02 puntos** y hace falta un **+32%** de `S`; **la vía de la puerta del acto 1
+no existe** (como `R₁` no vale uno, abrirla cuesta separación: el barrido completo mueve el suelo mínimo de
+12,02 a 11,70); y **la tasa de victoria de la run no estaba en banda cuando la ADR 0072 lo declaró**: el
+estado de la ADR 0074 mide **19,68 ± 0,47** y el de hoy **19,52 ± 0,33**, con la banda 20-30 empezando 0,48
+puntos por encima y sin muestra asequible que lo decida (**AV-A**). La ADR 0077 cierra AU-D
+—`Act2GatePassPermille` 439 → **493**, punto fijo único y estable con `L ≤ 0,03` medido, converge en una
+vuelta— y la ADR 0078 cierra AU-A rederivando la banda de `randomBuildNearNone` **desde la decisión del
+revisor de esta ADR**: construir sin criterio tiene que salir peor que no construir, así que la banda 40-60
+pasa a un techo de **≤ 45**, el de las builds malas, entre las que §8 ya listaba a `human_random`. **Ningún
+jefe, ninguna banda de la ADR 0033, ninguna magnitud del catálogo y ningún número de economía se tocan.**
+Detalle en `fase2-diseno.md` §38
+
 **Requisitos:** RT-055, RT-056, RF-032
 **Depende de:** ADR 0054 (banda revisada) · **implementa** las P1 y P3 de la ADR 0050
 

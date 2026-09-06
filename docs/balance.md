@@ -29,6 +29,8 @@ dotnet run --project Balance -- --full-runs 300 --slot-bar-off             # el 
 dotnet run --project Balance -- --full-runs 300 --min-perk-value N         # listón constante en vez del derivado
 dotnet run --project Balance -- --full-runs 300 --min-perk-value-{reward,market} N
 dotnet run --project Balance -- --full-runs 300 --slot-horizon N --arc-judged
+dotnet run --project Balance -- --full-runs 300 --slot-gates                # coste de oportunidad ponderado por exposición a puertas (ADR 0076)
+dotnet run --project Balance -- --full-runs 300 --act{1,2}-pass N          # tasas de paso que cree la política (ADR 0077)
 dotnet run --project Balance -- --describe [es|en]                        # catálogo de perks
 ```
 
@@ -58,6 +60,20 @@ todas son medidas de control, no diales de diseño: `--slot-bar-off` vuelve al l
 mercado) sustituye el derivado por una constante, `--slot-horizon N` acorta a N actos el horizonte con el
 que se cuenta la escasez del slot, y `--arc-judged` quita el crédito de arco. Su lectura está en
 `fase2-diseno.md` §36.
+
+El paquete AV añade tres más, del mismo tipo. `--slot-gates` pondera el coste de oportunidad por la
+**exposición a puertas** —lo que la ADR 0076 derivó y la medición descartó— y `--act1-pass N` /
+`--act2-pass N` fijan las tasas de paso que la política **cree** al descontar las ofertas de los actos
+siguientes: son las que miden el punto fijo de la ADR 0077 y con las que se remiden sin recompilar. Su
+lectura está en `fase2-diseno.md` §38.
+
+**Muestra del banco de cierre (ADR 0076).** Un paquete que toque la frontera de la ADR 0065 cierra con
+**7.272 runs por lado** —`--full-runs 1818` sobre cuatro semillas, más el mismo lote con
+`economy.rewardPerkWeight = 0` para el suelo—, no con las 1.200 de los paquetes AQ-AU: con 1.200 el error
+típico del suelo mínimo que la frontera admite es **1,34** y el hueco que se juzga vale 1,2 desviaciones.
+El criterio es el de la ADR 0074 (el margen tiene que valer tres) y el mínimo derivado es 3.346. Cuesta
+unos 22 minutos. **Y la barra de error de una proporción es la binomial**: la dispersión entre los cuatro
+bloques tiene tres grados de libertad y ha publicado errores hasta siete veces menores que el real.
 
 Rendimiento: 10.000 partidos en menos de 60 s en máquina de desarrollo (RT-051). Se mide en cada ejecución y se imprime al final.
 

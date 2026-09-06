@@ -42,7 +42,7 @@ try
         // --full-runs N: N runs completas con la política automática (fase2-diseno.md §10). Responde a
         // la pregunta que la curva de puertas deja abierta: si la economía permite llegar a cada puerta
         // con la build que esa puerta exige.
-        FullRunResult full = FullRunRunner.Run(catalog, dataFiles, options.Seed, fullRuns, options.IgnoreScouting, options.RiskAversion, options.MinPerkValue, options.MinPerkValueReward, options.MinPerkValueMarket, options.SlotBarOff, options.SlotHorizon, options.ArcJudged);
+        FullRunResult full = FullRunRunner.Run(catalog, dataFiles, options.Seed, fullRuns, options.IgnoreScouting, options.RiskAversion, options.MinPerkValue, options.MinPerkValueReward, options.MinPerkValueMarket, options.SlotBarOff, options.SlotHorizon, options.ArcJudged, options.SlotGates, options.Act1Pass, options.Act2Pass);
 
         var fullSummary = full.Metrics
             .Select(m => new MetricRow(m.Name, m.Value, m.RangeMin, m.RangeMax, m.Status))

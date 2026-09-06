@@ -76,10 +76,10 @@ public sealed class BuildGateTests
     public void BadBuildsLoseToTheirBaseline() =>
         AssertAllIn(BuildMetrics.BadBuildsLoseToNonePrefix);
 
-    /// <summary>§8: la build sin criterio se queda entre el 40% y el 60%.</summary>
+    /// <summary>§8 y ADR 0078: la build tomada al azar gana ≤ 45% a su referencia, como toda build mal construida.</summary>
     [Fact]
-    public void RandomBuildStaysNearItsBaseline() =>
-        AssertAllIn(BuildMetrics.RandomBuildNearNonePrefix);
+    public void RandomBuildLosesToItsBaseline() =>
+        AssertAllIn(BuildMetrics.RandomBuildLosesToNonePrefix);
 
     /// <summary>§8: la build de contacto lesiona mucho más y la técnica encadena muchos más pases.</summary>
     [Fact]
