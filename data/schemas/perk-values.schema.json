@@ -40,6 +40,11 @@
     "valueShift": {
       "type": "integer",
       "minimum": 0
+    },
+    "rowDeviation": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Desviacion POR FILA de la medicion, en las mismas milesimas: lo que se mueve el valor de un perk entre dos lotes independientes del mismo instrumento (ADR 0070 2). Es el ruido de la medida, no la dispersion del catalogo, y es lo que impide que un umbral en el cero exacto sea un umbral (ADR 0072)."
     }
   },
   "required": [
@@ -49,6 +54,7 @@
     "valueFloor",
     "minWeight",
     "maxWeight",
+    "rowDeviation",
     "values"
   ],
   "additionalProperties": false

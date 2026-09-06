@@ -35,7 +35,21 @@ public sealed class PerkValueTable
 
     private readonly Dictionary<string, int> _values;
 
-    private PerkValueTable(Dictionary<string, int> values, int baseWeight, int referenceValue, int valueShift, int valueFloor, int minWeight, int maxWeight)
+    /// <summary>Valores de la tabla en orden ascendente; el índice i corresponde a <see cref="_cumulativeWeight"/>[i].</summary>
+    private readonly int[] _sortedValues;
+
+    /// <summary>Peso acumulado hasta ese valor incluido, en el mismo orden que <see cref="_sortedValues"/>.</summary>
+    private readonly long[] _cumulativeWeight;
+
+    private PerkValueTable(
+        Dictionary<string, int> values,
+        int baseWeight,
+        int referenceValue,
+        int valueShift,
+        int valueFloor,
+        int minWeight,
+        int maxWeight,
+        int rowDeviation)
     {
         _values = values;
         BaseWeight = baseWeight;
@@ -44,11 +58,53 @@ public sealed class PerkValueTable
         ValueFloor = valueFloor;
         MinWeight = minWeight;
         MaxWeight = maxWeight;
+        RowDeviation = rowDeviation;
+
+        // La distribución de lo que el pool OFRECE, precalculada una vez: pares (valor, peso) ordenados
+        // por valor ascendente y con el peso acumulado. Es lo que convierte "me quedan S slots y voy a
+        // ver N ofertas" en un número (ADR 0072); sin ella habría que recorrer la tabla en cada decisión.
+        var sorted = new List<KeyValuePair<string, int>>(values);
+        sorted.Sort((a, b) =>
+        {
+            int byValue = a.Value.CompareTo(b.Value);
+            return byValue != 0 ? byValue : string.CompareOrdinal(a.Key, b.Key);
+        });
+
+        _sortedValues = new int[sorted.Count];
+        _cumulativeWeight = new long[sorted.Count];
+        long cumulative = 0;
+        for (int i = 0; i < sorted.Count; i++)
+        {
+            _sortedValues[i] = sorted[i].Value;
+            cumulative += WeightFor(sorted[i].Value);
+            _cumulativeWeight[i] = cumulative;
+        }
+
+        TotalOfferWeight = cumulative;
+
+        long sum = 0;
+        for (int i = 0; i < _sortedValues.Length; i++)
+        {
+            sum += _sortedValues[i];
+        }
+
+        MeanValue = _sortedValues.Length > 0 ? (int)(sum / _sortedValues.Length) : 0;
+
+        long squares = 0;
+        for (int i = 0; i < _sortedValues.Length; i++)
+        {
+            long d = _sortedValues[i] - MeanValue;
+            squares += d * d;
+        }
+
+        ObservedDeviation = _sortedValues.Length > 0
+            ? (int)Math.Sqrt((double)squares / _sortedValues.Length)
+            : 0;
     }
 
     /// <summary>Tabla vacía: todos los perks pesan lo mismo. Es lo que usa una instantánea sin fichero de valores.</summary>
     public static PerkValueTable Uniform { get; } =
-        new(new Dictionary<string, int>(StringComparer.Ordinal), 100, 500, 500, 100, 100, 100);
+        new(new Dictionary<string, int>(StringComparer.Ordinal), 100, 500, 500, 100, 100, 100, 0);
 
     /// <summary>Peso base, el de un perk cuyo valor es exactamente el de referencia.</summary>
     public int BaseWeight { get; }
@@ -71,17 +127,73 @@ public sealed class PerkValueTable
     /// <summary>Número de perks con valor medido.</summary>
     public int Count => _values.Count;
 
+    /// <summary>
+    /// <b>Desviación por fila</b> de la medición, en las mismas milésimas (ADR 0070 §2): lo que se mueve
+    /// el valor de un perk entre dos lotes independientes del mismo instrumento. Es el ruido de la
+    /// medida, no la dispersión del catálogo, y es lo que hace que un umbral en el cero exacto no sea un
+    /// umbral (ADR 0072). Cero en una tabla que no lo declara.
+    /// </summary>
+    public int RowDeviation { get; }
+
+    /// <summary>Media de los valores medidos, en milésimas: el centro al que encoge la corrección de ruido.</summary>
+    public int MeanValue { get; }
+
+    /// <summary>
+    /// Dispersión <b>observada</b> entre perks, en milésimas. Incluye el ruido: la dispersión real del
+    /// catálogo es <c>sqrt(observada² − desviaciónDeFila²)</c>.
+    /// </summary>
+    public int ObservedDeviation { get; }
+
+    /// <summary>Peso total de la distribución de oferta; denominador de <see cref="ValueAtQuantile"/>.</summary>
+    public long TotalOfferWeight { get; }
+
+    /// <summary>
+    /// Valor por debajo del cual queda la fracción <paramref name="numerator"/>/<paramref name="denominator"/>
+    /// de lo que el pool <b>ofrece</b> (ADR 0072). Aritmética entera y determinista (RT-023): el peso
+    /// acumulado está precalculado y se recorre hasta pasar el objetivo.
+    ///
+    /// <para>Es la mitad medible del coste de oportunidad de un slot: con <c>S</c> slots libres y
+    /// <c>N</c> ofertas por delante, el slot marginal se llena con la mejor <c>S</c>-ésima de esas
+    /// <c>N</c>, o sea con el cuantil <c>1 − S/N</c> de esta distribución.</para>
+    /// </summary>
+    public int ValueAtQuantile(long numerator, long denominator)
+    {
+        if (_sortedValues.Length == 0 || denominator <= 0)
+        {
+            return 0;
+        }
+
+        if (numerator <= 0)
+        {
+            return _sortedValues[0];
+        }
+
+        if (numerator >= denominator)
+        {
+            return _sortedValues[^1];
+        }
+
+        long target = TotalOfferWeight * numerator / denominator;
+        for (int i = 0; i < _cumulativeWeight.Length; i++)
+        {
+            if (_cumulativeWeight[i] >= target)
+            {
+                return _sortedValues[i];
+            }
+        }
+
+        return _sortedValues[^1];
+    }
+
     /// <summary>Valor medido del perk, en milésimas de punto de tasa de victoria; null si no está medido.</summary>
     public int? ValueOf(string perkId) => _values.TryGetValue(perkId, out int value) ? value : null;
 
     /// <summary>Peso del perk en el pool de recompensas y en el surtido del mercado (ADR 0038).</summary>
-    public int WeightOf(string perkId)
-    {
-        if (!_values.TryGetValue(perkId, out int value))
-        {
-            return BaseWeight;
-        }
+    public int WeightOf(string perkId) =>
+        _values.TryGetValue(perkId, out int value) ? WeightFor(value) : BaseWeight;
 
+    private int WeightFor(int value)
+    {
         int divisor = Math.Max(value + ValueShift, ValueFloor);
         int weight = (int)((long)BaseWeight * ReferenceValue / divisor);
         return Math.Clamp(weight, MinWeight, MaxWeight);
@@ -123,7 +235,8 @@ public sealed class PerkValueTable
                 root.Int("valueShift"),
                 root.Int("valueFloor"),
                 root.Int("minWeight"),
-                root.Int("maxWeight"));
+                root.Int("maxWeight"),
+                root.Int("rowDeviation"));
         }
     }
 }

@@ -68,6 +68,11 @@ Cuándo escribir un ADR: cambio de librería o stack, frontera entre proyectos, 
 | [0068](0068-el-premio-que-la-run-enciende.md) | El contador (RF-070) es el único premio que la oposición no puede cobrar, y cubre el 45% de la separación que la frontera pide | Aceptada. **Primera medición en nueve paquetes en la que la razón de cuotas sube**; ningún número de balance se mueve |
 | [0069](0069-el-eje-se-gasta-donde-la-tabla-no-mira.md) | El eje de acumulación sube al techo de rareza en seis perks; la tabla de la ADR 0033 sólo ve dos de ellos y el jefe final no puede recalibrarse, así que la dosis la pone el catálogo | Aceptada e implementada. **Run 17,00 → 19,42 con el suelo en 10,58**; ningún jefe se toca |
 
+| [0070](0070-el-instrumento-media-un-catalogo-que-la-run-no-juega.md) | `--perk-values` mide en campaña de ocho partidos y las veinte builds se reescriben contra el catálogo que la run entrega | Aceptada e implementada. **Paquete de medición**: la run baja de 19,42 a 16,25 y se entrega así |
+| [0071](0071-un-techo-que-acotaba-una-copia-y-no-la-linea.md) | El techo de un efecto con contador acota la **línea** `k^maxValue` y distingue el ámbito de equipo | Aceptada e implementada. **Cierra AR-B**; no cuesta nada |
+| [0072](0072-un-slot-vale-lo-que-vale-lo-que-va-a-caber-en-el.md) | El listón de la doctrina contextual es el **coste de oportunidad medido** del slot, no una constante; el valor se corrige antes por el ruido de la tabla | Aceptada e implementada. **Cierra AS-A y AJ-D**. Run 16,25 → **20,33**, `contextualAdvantage` −0,25 → **+3,83**; ningún jefe ni banda se toca |
+| [0073](0073-la-densidad-por-acto-no-estaba-mal-de-un-lado-solo.md) | La densidad por acto se remide con anclas medidas: los perks se habían ido en el juego, los objetos en el modelo | Aceptada e implementada. **Cierra AS-B**; las doce celdas en banda sin tocar ningún jefe |
+
 El hueco del 0011 corresponde a una decisión sobre el radio de adyacencia que quedó absorbida por la 0021 antes de aceptarse.
 | [0012](0012-buildswindifferently-normalizada.md) | `buildsWinDifferently` normalizada contra la referencia de la raza | **Propuesta: decisión del revisor** |
 | [0020](0020-cuerpos-y-ocupacion.md) | Cuerpos con volumen, separación blanda y empuje | Aceptada |

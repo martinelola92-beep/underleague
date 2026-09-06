@@ -24,14 +24,24 @@ namespace Underleague.Sim.Tests.Analysis;
 /// note, sin afirmar que el diseño está donde debe.</para>
 ///
 /// <para><b>Muestra</b>: semilla 1, <see cref="Runs"/> runs por doctrina, las cinco razas de lanzamiento
-/// repartidas por igual. Unos 1.900 partidos, 11 s. Reproducible con
-/// <c>dotnet run --project Balance -c Release -- --full-runs 60 --seed 1</c>.</para>
+/// repartidas por igual. Reproducible con
+/// <c>dotnet run --project Balance -c Release -- --full-runs 240 --seed 1</c>.</para>
 /// </summary>
 [Trait("Category", "Gate")]
 public sealed class FullRunGateTests
 {
-    /// <summary>Runs por doctrina. Con 60 la tasa de victoria tiene una desviación de ~4,5 puntos.</summary>
-    private const int Runs = 60;
+    /// <summary>
+    /// Runs por doctrina. Sube de 60 a <b>240</b> en la ADR 0072, y no para que pase nada: <b>ninguna
+    /// cota se toca</b>. Con 60 la tasa de victoria tenía una desviación de ~4,5 puntos y
+    /// <c>deathsPerRun</c> una de ~0,16, o sea que su cota de no regresión —el 1,0 de
+    /// <see cref="TheMetricsThatDoNotMeetTheirDesignBandStayWhereTheyWereMeasured"/>— quedaba a <b>2,7
+    /// desviaciones</b> del valor que mide el banco de 1.200 runs (1,35 en la ADR 0070). Una cota a 2,7
+    /// desviaciones no es una cota, es una moneda: el mismo defecto que la ADR 0072 corrige en el listón
+    /// del slot, un nivel más arriba. Y se cobró: con la política de la ADR 0072 la muestra de 60 midió
+    /// <b>0,97</b> mientras el banco de 1.200 medía <b>1,42</b> —el doble de lejos y en el signo
+    /// contrario—. Con 240 la desviación baja a ~0,08 y la muestra mide 1,35, que es lo que mide el banco.
+    /// </summary>
+    private const int Runs = 240;
 
     /// <summary>Semilla del lote.</summary>
     private const ulong Seed = 1;

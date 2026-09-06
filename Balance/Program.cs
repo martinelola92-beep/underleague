@@ -42,7 +42,7 @@ try
         // --full-runs N: N runs completas con la política automática (fase2-diseno.md §10). Responde a
         // la pregunta que la curva de puertas deja abierta: si la economía permite llegar a cada puerta
         // con la build que esa puerta exige.
-        FullRunResult full = FullRunRunner.Run(catalog, dataFiles, options.Seed, fullRuns, options.IgnoreScouting, options.RiskAversion);
+        FullRunResult full = FullRunRunner.Run(catalog, dataFiles, options.Seed, fullRuns, options.IgnoreScouting, options.RiskAversion, options.MinPerkValue, options.MinPerkValueReward, options.MinPerkValueMarket, options.SlotBarOff, options.SlotHorizon, options.ArcJudged);
 
         var fullSummary = full.Metrics
             .Select(m => new MetricRow(m.Name, m.Value, m.RangeMin, m.RangeMax, m.Status))
@@ -512,6 +512,9 @@ static void WriteRunsCsv(string outDir, IReadOnlyList<RunPlayResult> runs, strin
 
         // Censo de contadores (AN-B, ADR 0070): "contador:suma:máximo" por contador. Diagnóstico puro.
         "finalCounters",
+
+        // Censo de slots y ofertas (AS-A): "acto:ofertas:slotsLibresSumados:slotsEnLaPuerta". Diagnóstico puro.
+        "slotCensus",
     };
 
     var rows = runs.Select(r => (IReadOnlyList<string>)new[]
@@ -540,6 +543,7 @@ static void WriteRunsCsv(string outDir, IReadOnlyList<RunPlayResult> runs, strin
         Int(r.RewardsTaken), Int(r.RewardsDeclined), Int(r.NodesVisited),
         string.Join(" ", r.Masters), string.Join(" ", r.FinalPerks),
         string.Join(" ", r.FinalCounters ?? Array.Empty<string>()),
+        string.Join(" ", r.SlotCensus ?? Array.Empty<string>()),
     });
 
     CsvWriter.Write(Path.Combine(outDir, fileName), header, rows);

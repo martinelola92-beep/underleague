@@ -28,70 +28,70 @@
     "Undead": "undead_none"
   },
   "actDensity": {
-    "_doc": "ADR 0040 y ADR 0043: densidad de build con la que se mide cada celda de la tabla de la ADR 0033. Remedida tras el trampolin de la ADR 0043 y la escala de oro de la ADR 0044 (500 runs, politica contextual, semilla 1): el once llega al jefe del acto 1 con 3,8 perks y 2,2 objetos, al del acto 2 con 8,2 y 4,7, y al final con 13,0 y 6,7. Cada escalon se instancia con su propia densidad alrededor de esa media, por la razon de AA-17: con una sola densidad por acto, 'buena' y 'muy buena' empatan en el acto 1. El escalon INCOHERENTE llega con MAS piezas que el correcto, y no es un error: es lo que la ADR 0043 anade al modelo. Quien construye bien RECHAZA la recompensa que no encaja (RF-071 revisado), asi que la build incoherente es la que llena todos los slots con lo que le vaya saliendo; medido en runs completas, la doctrina contextual termina con 8,9 perks en el once y la gastadora con 10,3, y gana 7 puntos mas de runs. Y medido en la puerta: al jefe final, un once incoherente de 10 perks pasa el 9,8% y uno de 5 perks el 12,0%. ADR 0049: al bajar el partido de liga de 1-de-3 a 1-de-2, la run llega a los tres jefes con MENOS build, y la densidad se remide (300 runs, contextual, semilla 1): 3,2 perks y 1,8 objetos al jefe del acto 1 (antes 3,8 y 2,2), 6,3 y 3,9 al del 2 (antes 8,2 y 4,7) y 8,6 y 5,3 al final (antes 13,0 y 6,7). La caida del acto 3 es doble: menos elecciones gratis y la carniceria de la ADR 0048, que se lleva jugadores CON sus perks puestos. Las variantes se derivan de la build completa quitando piezas (Sim.Analysis.BuildDensity), nunca se escriben a mano; 'items' solo muerde en el escalon 'muy buena', que es el unico que declara equipamiento en data/balance/builds/. counterCap es hasta donde ha podido crecer un contador de acumulacion con los partidos jugados hasta esa puerta (RF-070).",
+    "_doc": "ADR 0040 y ADR 0043: densidad de build con la que se mide cada celda de la tabla de la ADR 0033. REMEDIDA en el paquete AT (ADR 0073): llevaba desde el paquete AA sin tocarse y en ese tiempo el juego se movio dos veces. (1) OBJETOS: la ADR 0055 puso 'rewardItemWeight' a 0 -un objeto es una compra, no un trofeo- y midio que los objetos por run caian de 4,13 a 2,12; el modelo seguia declarando 2/4/6 objetos en el once cuando el banco mide 0,8/1,8/2,9 incluso en las runs GANADAS. El modelo estaba viejo, no el juego. (2) PERKS: el modelo llevaba 5,25/7,5/8,75 de media contra 5,3/11,8/12,4 del banco, y de esa diferencia la mayor parte era el JUEGO: la doctrina contextual no tenia liston de slot y acaparaba (ADR 0072). Con el liston derivado, el banco baja a 4,3/9,5/11,3 y el hueco que queda es el que se escribe aqui. Anclas, medidas sobre 1.200 runs (300 x semillas 1/1001/2001/3001) con el liston de la ADR 0072 puesto: 'incoherent' <- doctrina GASTADORA (6,67/12,44/13,38 perks y 0,76/0,99/1,99 objetos), que es la que no rechaza nada y por eso llega con MAS piezas, tal como pide la ADR 0043; 'correct' y 'good' <- doctrina CONTEXTUAL (4,34/9,47/11,34 y 0,82/1,75/3,00), con la MISMA densidad porque la ADR 0033 los separa por CALIDAD y no por numero de piezas, y la ADR 0040 dice que cada celda se mide con la densidad alcanzable en ese punto de la run; 'excellent' conserva ancla propia -y por eso no comparte la de 'good'- por la razon de AA-17: con una sola densidad por acto, 'buena' y 'muy buena' empatan en el acto 1; su ancla son las runs contextuales GANADAS (4,57/10,39/11,53 y 1,01/1,88/3,24), que es 'el escalado acumulado durante toda la run' de la ADR 0033. Las variantes se derivan de la build completa quitando piezas (Sim.Analysis.BuildDensity), nunca se escriben a mano; 'items' solo muerde en el escalon 'muy buena', que es el unico que declara equipamiento en data/balance/builds/. counterCap es hasta donde ha podido crecer un contador de acumulacion con los partidos jugados hasta esa puerta (RF-070) y NO se ha remedido en este paquete. Historico: la ADR 0049 midio 3,2 perks y 1,8 objetos al jefe del acto 1, 6,3 y 3,9 al del 2 y 8,6 y 5,3 al final; esas cifras son las que quedaron obsoletas.",
     "1": {
       "incoherent": {
-        "perks": 6,
-        "items": 2,
+        "perks": 7,
+        "items": 1,
         "counterCap": 1
       },
       "correct": {
-        "perks": 3,
+        "perks": 4,
         "items": 1,
         "counterCap": 2
       },
       "good": {
-        "perks": 5,
-        "items": 2,
+        "perks": 4,
+        "items": 1,
         "counterCap": 3
       },
       "excellent": {
-        "perks": 7,
-        "items": 3,
+        "perks": 5,
+        "items": 1,
         "counterCap": 4
       }
     },
     "2": {
       "incoherent": {
-        "perks": 8,
-        "items": 3,
+        "perks": 12,
+        "items": 1,
         "counterCap": 2
       },
       "correct": {
-        "perks": 5,
+        "perks": 9,
         "items": 2,
         "counterCap": 2
       },
       "good": {
-        "perks": 8,
-        "items": 4,
+        "perks": 9,
+        "items": 2,
         "counterCap": 4
       },
       "excellent": {
-        "perks": 9,
-        "items": 5,
+        "perks": 10,
+        "items": 2,
         "counterCap": 5
       }
     },
     "3": {
       "incoherent": {
-        "perks": 10,
+        "perks": 13,
         "items": 2,
         "counterCap": 1
       },
       "correct": {
-        "perks": 5,
-        "items": 2,
+        "perks": 11,
+        "items": 3,
         "counterCap": 2
       },
       "good": {
-        "perks": 9,
-        "items": 5,
+        "perks": 11,
+        "items": 3,
         "counterCap": 5
       },
       "excellent": {
-        "perks": 11,
-        "items": 6,
+        "perks": 12,
+        "items": 3,
         "counterCap": 5
       }
     }

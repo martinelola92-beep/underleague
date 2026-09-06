@@ -4980,3 +4980,128 @@ los dos ya fuera de banda antes.
   plantilla de verdad las tiene mezcladas. Es lo que hace que la run compre `cold_focus` en el 47,6% de
   las runs con el perk muerto casi siempre, y el instrumento no puede verlo.
 - **AP-A y AP-C** sin cambios. Los objetivos 2 y 3 siguen sin palanca, y el 6 está ahora a 3,75.
+
+## 36. Decisiones de implementación del paquete AT: el precio de un slot y la densidad que lo delataba (ADR 0072, ADR 0073)
+
+### 36.1. El banco, y que reproduce la ADR 0070 al decimal
+
+Mismo protocolo que §35: 1.200 runs por perfil (300 × semillas 1/1001/2001/3001), contextual = "buena",
+gastadora = "mediocre"/"mala", el suelo con `economy.rewardPerkWeight = 0` y la política que esquiva
+mercados. Con la columna de diagnóstico `slotCensus` puesta en `runs.csv`, el control devuelve
+**exactamente** lo que la ADR 0070 entregó —16,25 (ET 1,44) · −0,25 · 10,75 (0,42) · 59,55/47,60 ·
+47,60/35,82 · 10,50 · `deathsPerRun` 1,35 · `ordinaryDefeatRateAct1` 24,97 · `masterDivergence` 9,78 ·
+perks 5,29/11,84/12,40 · objetos 0,76/1,38/2,87—, que es lo que autoriza a atribuir todo lo que se mueve
+después.
+
+### 36.2. Los dos cambios no se pisan, y se puede demostrar
+
+**AS-A vive en la política de run y AS-B en el material de la puerta, y ningún instrumento ve los dos.**
+`BossGateRunner` juega build-contra-jefe y no ejecuta `RunPolicy`, así que **AS-A no puede mover ninguna
+de las doce celdas**; `groups.json → actDensity` sólo lo lee la puerta, así que **AS-B no puede mover
+ninguna métrica de run**. Lo único que los une es que las anclas de AS-B se miden sobre la run que AS-A
+cambia. El cuadro de dos por dos, con el mismo banco:
+
+| | modelo viejo | modelo remedido (AS-B) |
+|---|---|---|
+| **política de hoy** | run **16,25** · celdas 28,44/70,94/83,75/95,00 · 13,28/36,88/62,66/84,22 · 4,84/24,84/42,81/62,50 | run **16,25** · celdas 27,66/70,78/83,75/93,75 · 13,28/39,06/64,22/82,66 · 4,84/24,06/47,66/65,62 |
+| **+ AS-A** | run **20,33** · celdas idénticas a la casilla de su izquierda | run **20,33** · celdas 27,66/70,78/77,03/93,28 · 13,28/39,06/62,66/81,72 · 4,84/24,06/47,81/65,62 |
+
+### 36.3. El censo de slots: quince, y cincuenta ofertas
+
+`slotCensus` vuelca por acto `ofertas:cobrables:slotsLibresSumados:slotsDelOnce:perks:objetos`.
+"Cobrable" es exacto: arco abierto, portador elegible dentro del once con slot libre y colocación que
+encaja, y precio pagable si viene del mercado.
+
+| | acto 1 | acto 2 | acto 3 |
+|---|---|---|---|
+| Ofertas de perk por acto | 33,2 | 34,1 | 28,9 |
+| De ésas, **cobrables** | **25,6** | 18,4 | 8,0 |
+| Slots libres al llegar la oferta | **11,4** | 4,3 | 1,4 |
+| En la puerta: slots / perks | 15,0 / 5,3 | 15,0 / **11,8** | 14,8 / 12,4 |
+
+**El once tiene quince slots y ve del orden de cincuenta ofertas cobrables**: el slot está sobresuscrito
+más de tres veces y en el jefe del acto 2 está al 79%. El mapa produce **3,0** ofertas por capa y el
+**77,0%** son cobrables en el acto 1 —donde hay 11,4 slots libres y por tanto el filtro mide
+elegibilidad y no saturación—, de donde salen las **2,30** ofertas cobrables por capa de la ADR 0072.
+
+### 36.4. El listón, derivado: cuantil `1 − S/N` corregido por el ruido
+
+Detalle en la ADR 0072. Dos términos: el **coste de oportunidad** (el cuantil `1 − S/N` de lo que el pool
+ofrece, con `N` descontado por las tasas de paso medidas 71,8% y 43,9%) y el **ruido de la medida**
+(`rowDeviation = 17` sobre una dispersión observada de 73: factor 1,0573). Lo primero que sale de la
+fórmula es el número que la ADR 0070 señaló: **con coste de oportunidad cero el listón es −1, no 0** — el
+valor exacto de `steady_hands` y `safety_net`, los dos perks que esa ADR nombró.
+
+El listón que produce: 38 al empezar el acto 1, 26 a mitad de acto, 44 al empezar el 2, 48 al empezar el
+3 y **−1** en el último nodo de la run, donde el slot ya no tiene futuro.
+
+### 36.5. El agujero que abrió el crédito de arco mal acotado
+
+La tabla mide el perk **solo** y una pieza de línea vale además lo que abre (ADR 0051). La primera
+versión eximía a la línea perseguida entera del listón, y **los diez perks de valor negativo del catálogo
+pertenecen todos a una familia con maestro**: `spearpoint` (−141) pasó del 2,3% al **38,0%** de las runs y
+`forward_line` (−115) del 3,2% al 35,8%. Acotado a "valor del maestro entre las piezas que su línea
+exige" —104, 59, 16 y 12 para las cuatro líneas— vuelven al 2,6% y al 3,2%.
+
+### 36.6. Atribución separada
+
+| | control | + listón | + crédito de arco | modelo remedido |
+|---|---|---|---|---|
+| Tasa de victoria de la run | 16,25 (1,44) | 19,42 (0,37) | **20,33 (0,68)** | sin efecto |
+| `contextualAdvantage` | −0,25 (2,21) | 2,92 (1,24) | **+3,83 (0,67)** | sin efecto |
+| `masterDivergence` | 9,78 | 19,04 | **23,24** | sin efecto |
+| `mastersReached` | 25,16 | 14,84 | **19,25** | sin efecto |
+| Perks del once en las tres puertas | 5,29/11,84/12,40 | 3,83/8,53/10,55 | **4,34/9,48/11,34** | sin efecto |
+| Objetos del once en las tres puertas | 0,76/1,38/2,87 | 0,82/1,94/2,70 | **0,82/1,75/3,00** | sin efecto |
+| Doce celdas | ver §36.2 | sin efecto | sin efecto | **ver §36.7** |
+
+### 36.7. Las doce celdas
+
+Muestra de la puerta (32 × 4 = 640 por celda, semilla 1), **sin tocar ningún jefe ni ninguna banda**:
+
+| jefe | incoherente | correcta | buena | muy buena |
+|---|---|---|---|---|
+| `grimhold_guns` | 27,66 [20-35] | 70,78 [65-80] | 77,03 [75-88] | 93,28 [85-95] |
+| `the_hunt` | **13,28** [<15] | 39,06 [35-50] | **62,66** [60-72] | 81,72 [72-85] |
+| `eternal_crown` | 4,84 [<10] | 24,06 [15-28] | 47,81 [40-55] | 65,62 [55-70] |
+
+Dos de las tres celdas ajustadas de la ADR 0070 se despegan: `grimhold_guns` muy buena baja de 95,00
+—clavada en su techo— a 93,28, y `the_hunt` correcta sube de 36,88 a 39,06. Quedan ajustadas las marcadas.
+
+**Y un aviso que no es de este paquete**: con 64 × 8 (2.560 partidos por celda, semilla 11) `the_hunt`
+buena mide **57,81 con las densidades viejas y 57,81 con las nuevas**, y `grimhold_guns` muy buena 95,35 y
+95,00 — las dos fuera de banda, antes y después. La muestra de la puerta no resuelve ±2,5. **AT-B.**
+
+### 36.8. Los seis objetivos
+
+| Objetivo (ADR 0056) | ADR 0070 | **este paquete** | ET | meta | |
+|---|---|---|---|---|---|
+| Build buena, actos 2/3 (ordinarios) | 59,55 / 47,60 | **61,10 / 49,40** | 0,61 / 0,74 | 60% | **sí en el acto 2**; el 3 mejora 1,8 |
+| Build mediocre, actos 2/3 | 47,60 / 35,82 | **47,60 / 35,82** | 0,45 / 2,58 | 42-45% | igual (el listón sólo lo usa la contextual) |
+| Build mala completa la run | 10,50 | **10,50** | 0,50 | < 2% | igual |
+| Suelo sin build | 10,75 | **10,92** | 0,69 | < 10% | falta 0,92 (dentro del error) |
+| Hueco buena/mediocre, acto 2 | 11,95 (0,99) | **13,49** | 0,58 | > 9,8 | **sí**, el mejor medido |
+| **Tasa de victoria de la run** | 16,25 | **20,33** | 0,68 | 20-30% | **sí, por primera vez** |
+
+Guardarraíles: `ordinaryDefeatRateAct1` **25,23** (0,37) sobre un techo de 30 · `betterTeamWinRate`
+**79,52** (banda 70-88) · `matchesPerFullRun` 19,38 · `masterDivergence` **23,24** (suelo 5) ·
+`mastersReached` 19,25 (banda 2-90) · `injuriesPerMatch` 0,74 · `tacklesPerMatch` 9,75 ·
+`passChainAvgLength` 2,26 · `sinksAffordablePerAct` 2,44 · `brokeMarketRunShare` 51,83 ·
+`leftoverGoldShare` 12,86 · 184 ficheros de `/data` validados · **608/608 tests en Release, 42/42
+puertas**. `deathsPerRun` sube de **1,35 a 1,42** —hacia su banda 1,5-3, y sin ninguna constante de
+letalidad: mueren más porque las runs duran más.
+
+### 36.9. Lo que queda abierto
+
+- **AT-A**: el listón del mercado debería ser el del slot **más** el del oro, y hoy no se puede sumar —la
+  tabla de valor de objeto está en otra normalización que la de perks—. Medido que el canal existe (listón constante de 40, una
+  semilla, 300 runs, control 15,00): sólo en el mercado la run sube a **19,33** y los objetos del once en
+  el jefe del acto 2 de 1,42 a **2,57**; sólo en la recompensa sube a 18,33 y los objetos **bajan** a
+  0,95.
+- **AT-B**: la muestra de la puerta de jefes (32 × 4) no resuelve ±2,5; con 64 × 8 dos celdas se salen,
+  antes y después de este paquete.
+- **AT-C**: la tabla de valor sigue sin ser un buen predictor de lo que gana una run (ADR 0070 §4). El
+  barrido de listones constantes no tiene forma —30 → 20,9, 45 → 18,1, 60 → 18,6—, y si el orden de la
+  tabla fuera fiel la respuesta sería monótona hasta su óptimo.
+- **AS-C** sin cambios: las builds siguen imponiendo una sola etiqueta de estilo a los siete titulares.
+- **AP-A y AP-C** sin cambios. Los objetivos 2, 3 y 4 siguen sin palanca.

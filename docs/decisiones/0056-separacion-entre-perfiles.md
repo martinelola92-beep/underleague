@@ -131,6 +131,26 @@ queda al descubierto lo que hay que mirar primero: **con la tabla fresca, la doc
 medido no le gana a la que sólo acapara** (`contextualAdvantage` 4,17 → **−0,25**), porque su listón es el
 cero exacto sobre una medida con desviación 17 (**AS-A**). Detalle en `fase2-diseno.md` §35
 
+*(Estado 2026-09-06, paquete AT / ADR 0072 y ADR 0073)*: **el objetivo 6 entra en banda por primera vez, y
+la doctrina que construye vuelve a ganarle a la que sólo acapara.** La ADR 0072 sustituye el listón de la
+doctrina contextual —el cero exacto sobre una medida con desviación 17— por el **coste de oportunidad
+medido** del slot: el once tiene **quince** slots de perk y ve del orden de **cincuenta** ofertas cobrables
+en una run, así que un slot vale el cuantil `1 − S/N` de lo que el pool ofrece, y el valor medido se
+compara con él **después** de corregirlo por el ruido de la tabla. De la fórmula sale, antes que nada, el
+número que la ADR 0070 señaló: con coste de oportunidad cero el listón es **−1**, no 0 — el valor exacto
+de `steady_hands` y `safety_net`. Con el crédito de
+arco acotado —valor del maestro entre las piezas de su línea; la versión sin acotar metía `spearpoint`
+(−141) en el 38% de las runs— el banco de 1.200 runs mide **run 16,25 → 20,33** (ET 0,68),
+**`contextualAdvantage` −0,25 → +3,83** (ET 0,67), hueco del acto 2 **11,95 → 13,49**, build buena
+**61,10 / 49,40** (el objetivo 1 alcanzado en el acto 2) y `masterDivergence` 9,78 → **23,24**. La ADR 0073
+cierra AS-B midiendo que **la densidad no estaba mal de un lado solo**: los perks se habían ido en el
+**juego** (la contextual acaparaba por no tener listón; con él el banco baja de 5,3/11,8/12,4 a
+4,3/9,5/11,3) y los objetos en el **modelo** (la ADR 0055 puso `rewardItemWeight` a 0 hace cinco paquetes y
+`groups.json` nunca se remidió). **Ningún jefe, ninguna banda, ninguna magnitud del catálogo y ningún
+número de economía se tocan**; la mediocre y la mala no se mueven ni un decimal porque el listón sólo lo
+usa la contextual. Siguen fuera los objetivos 2 (47,60 frente a 42-45), 3 (10,50 frente a < 2) y 4 (suelo
+10,92). Detalle en `fase2-diseno.md` §36
+
 **Requisitos:** RT-055, RT-056, RF-032
 **Depende de:** ADR 0054 (banda revisada) · **implementa** las P1 y P3 de la ADR 0050
 

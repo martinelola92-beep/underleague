@@ -88,6 +88,29 @@ public sealed class Options
     /// </summary>
     public int? RiskAversion { get; private set; }
 
+    /// <summary>
+    /// <c>--min-perk-value N</c>: listón de valor medido que la doctrina <b>contextual</b> le exige a un
+    /// perk para gastarse un slot en él (<c>RunPolicyOptions.MinPerkValue</c>, ADR 0038). Es la palanca
+    /// con la que se mide el coste de oportunidad del slot (AS-A): null = el valor por defecto de la
+    /// política.
+    /// </summary>
+    public int? MinPerkValue { get; private set; }
+
+    /// <summary><c>--min-perk-value-reward N</c>: el mismo listón, sólo para el perk que llega de recompensa (AS-A).</summary>
+    public int? MinPerkValueReward { get; private set; }
+
+    /// <summary><c>--min-perk-value-market N</c>: el mismo listón, sólo para el perk que se compra (AS-A).</summary>
+    public int? MinPerkValueMarket { get; private set; }
+
+    /// <summary><c>--slot-bar-off</c>: la doctrina contextual vuelve al listón constante de antes de la ADR 0072 (medida de control).</summary>
+    public bool SlotBarOff { get; private set; }
+
+    /// <summary><c>--slot-horizon N</c>: cuántos actos por delante cuenta el slot como escaso (ADR 0072); null = el de la política.</summary>
+    public int? SlotHorizon { get; private set; }
+
+    /// <summary><c>--arc-judged</c>: la línea perseguida se juzga sin crédito de arco (medida de control).</summary>
+    public bool ArcJudged { get; private set; }
+
     /// <summary>Null salvo que se pase --describe [es|en]: activa el modo catálogo, con el idioma pedido (por defecto "es").</summary>
     public string? Describe { get; private set; }
 
@@ -153,6 +176,30 @@ public sealed class Options
 
                 case "--ignore-scouting":
                     options.IgnoreScouting = true;
+                    break;
+
+                case "--min-perk-value":
+                    options.MinPerkValue = ParseInt(arg, NextValue(args, ref i, arg));
+                    break;
+
+                case "--min-perk-value-reward":
+                    options.MinPerkValueReward = ParseInt(arg, NextValue(args, ref i, arg));
+                    break;
+
+                case "--min-perk-value-market":
+                    options.MinPerkValueMarket = ParseInt(arg, NextValue(args, ref i, arg));
+                    break;
+
+                case "--slot-bar-off":
+                    options.SlotBarOff = true;
+                    break;
+
+                case "--slot-horizon":
+                    options.SlotHorizon = ParseInt(arg, NextValue(args, ref i, arg));
+                    break;
+
+                case "--arc-judged":
+                    options.ArcJudged = true;
                     break;
 
                 case "--risk-aversion":

@@ -92,6 +92,77 @@ public sealed record RunPolicyOptions
     public int MinPerkValue { get; init; }
 
     /// <summary>
+    /// Listón del perk que llega <b>de recompensa</b> (RF-071), en las mismas milésimas. Null = el de
+    /// <see cref="MinPerkValue"/>. Existe separado porque el coste de aceptarlo es <b>sólo el slot</b>:
+    /// la recompensa es gratis y rechazarla no devuelve nada (desde la ADR 0055
+    /// <c>rewardItemWeight = 0</c>, así que la alternativa a un perk no es un objeto).
+    /// </summary>
+    public int? MinPerkValueReward { get; init; }
+
+    /// <summary>
+    /// Listón del perk que se <b>compra</b> en el mercado (RF-114e), en las mismas milésimas. Null = el
+    /// de <see cref="MinPerkValue"/>. Existe separado porque comprarlo cuesta el slot <b>y</b> el oro, y
+    /// el oro es lo único con lo que se compran objetos (ADR 0055): son dos costes de oportunidad
+    /// distintos y medirlos juntos no dice cuál manda.
+    /// </summary>
+    public int? MinPerkValueMarket { get; init; }
+
+    /// <summary>
+    /// Si el listón del slot es el <b>coste de oportunidad medido</b> (ADR 0072) en vez de la constante
+    /// de <see cref="MinPerkValue"/>. Con él, la doctrina contextual acepta un perk cuando su valor
+    /// <b>esperado</b> —el medido corregido por el ruido de la medida— llega a lo que ese slot vale si se
+    /// deja libre: el cuantil <c>1 − S/N</c> de lo que el pool ofrece, con <c>S</c> los slots libres del
+    /// once y <c>N</c> las ofertas cobrables que quedan por delante. En false se comporta exactamente
+    /// como antes de la ADR 0072, que es la medida de control.
+    /// </summary>
+    public bool UsesSlotOpportunityCost { get; init; } = true;
+
+    /// <summary>
+    /// Ofertas de perk <b>cobrables</b> que produce una capa del mapa, en milésimas (ADR 0072). Medido,
+    /// no elegido: el mostrador y los nodos de recompensa ponen <b>3,0</b> perks por capa (33,2 por acto
+    /// sobre 11 capas) y el <b>76,6%</b> tiene portador elegible en el once, o sea <b>2,30</b>.
+    ///
+    /// <para>El ratio se toma del <b>acto 1</b> a propósito, y no del promedio de los tres: en el acto 1
+    /// el once tiene 11,4 slots libres, así que lo que el filtro mide ahí es la <b>elegibilidad</b> —raza,
+    /// posición, etiquetas, perk repetido—, que es exógena. En los actos 2 y 3 el mismo ratio cae a 2,05
+    /// y 1,29, pero eso ya no es elegibilidad sino <b>saturación</b> de slots, que es justo lo que el
+    /// listón está decidiendo: usarlo sería medir el termómetro con el termómetro. Medido, además, la
+    /// versión por acto sale peor (17,75 de tasa de victoria frente a 18,91).</para>
+    /// </summary>
+    public int TakeablePerkOffersPerLayerPermille { get; init; } = 2300;
+
+    /// <summary>
+    /// Cuántos actos por delante cuenta el slot como escaso (ADR 0072). 3 = toda la run, que es lo que
+    /// dura un slot: un perk no se retira (RF-072). 1 mira solo al acto en curso y es la medida de
+    /// control con la que se comprueba que el horizonte importa.
+    /// </summary>
+    public int SlotHorizonActs { get; init; } = RunRules.Acts;
+
+    /// <summary>
+    /// Probabilidad de pasar la puerta del acto 1, en milésimas (ADR 0072). No es un dial: es
+    /// <c>bossWinRateAct1</c> medido sobre el banco de 1.200 runs de la doctrina contextual,
+    /// <b>71,75%</b>. Entra en el coste de oportunidad porque las ofertas de los actos siguientes sólo
+    /// existen si la run llega a ellos: sin descontarlas, el slot parece más escaso de lo que es y el
+    /// listón sube por encima de lo que la medida sostiene.
+    /// </summary>
+    public int Act1GatePassPermille { get; init; } = 718;
+
+    /// <summary>Lo mismo para la puerta del acto 2: <c>bossWinRateAct2</c> medido, <b>43,9%</b>.</summary>
+    public int Act2GatePassPermille { get; init; } = 439;
+
+    /// <summary>
+    /// Si una pieza de la línea que la run persigue se juzga con el <b>crédito de arco</b> sumado
+    /// (ADR 0051, ADR 0072). La tabla de valor mide lo que gana un equipo por llevar ese perk <b>solo</b>,
+    /// y una pieza de línea vale además lo que <b>abre</b>: es la misma ceguera que la ADR 0070 corrigió
+    /// con el contador. El crédito no es una exención: vale el valor medido del <b>maestro</b> dividido
+    /// entre las piezas que su línea exige, que es lo que aporta una pieza al desbloqueo. Sin acotarlo
+    /// —la primera versión eximía a la línea entera— los diez perks negativos del catálogo entran todos,
+    /// porque los diez pertenecen a una familia con maestro: <c>spearpoint</c> (−141) pasaba del 2,3% al
+    /// <b>38,0%</b> de las runs. En false se mide qué cuesta el crédito.
+    /// </summary>
+    public bool ArcCreditsSlotBar { get; init; } = true;
+
+    /// <summary>
     /// Si la política <b>lee el informe de ojeo</b> (RF-013) antes de alinear: con un rival que lleva
     /// perks letales, deja en el banquillo a los tocados mientras le queden siete sanos (ADR 0046).
     /// Existe como interruptor para poder medir <b>las dos</b> cifras —lo que muere quien lee el informe
@@ -267,7 +338,16 @@ public sealed record RunPlayResult(
     /// run de verdad</b>, que es lo que <c>--perk-values</c> tiene que reproducir para no medir el eje
     /// de acumulación con el contador a cero (AN-B, ADR 0070). No entra en ninguna métrica ni puerta.
     /// </summary>
-    IReadOnlyList<string>? FinalCounters = null)
+    IReadOnlyList<string>? FinalCounters = null,
+
+    /// <summary>
+    /// Censo de slots y ofertas (AS-A),
+    /// <c>acto:ofertas:slotsLibresSumados:slotsDelOnce:perksDelOnce:objetosDelOnce</c> en la puerta de ese
+    /// acto. Es el diagnóstico con el que se <b>mide</b> el coste de oportunidad de un slot de perk en vez
+    /// de suponerlo: cuántas ofertas más va a ver la run y cuántos slots le quedan por llenar. No entra en
+    /// ninguna métrica ni en ninguna puerta, exactamente igual que <see cref="FinalCounters"/>.
+    /// </summary>
+    IReadOnlyList<string>? SlotCensus = null)
 {
     /// <summary>True si la run terminó ganando al jefe final (RF-002).</summary>
     public bool Won => Outcome == RunOutcomeKind.Victory;
@@ -807,6 +887,8 @@ public static class RunPolicy
             for (int i = 0; i < starters.Count; i++)
             {
                 ledger.PerksAtBossByAct[node.Act - 1] += starters[i].Perks.Count;
+                ledger.SlotsAtBossByAct[node.Act - 1] +=
+                    Underleague.Sim.Progression.Progression.PerkSlots(starters[i].Rarity);
                 if (starters[i].Item is not null)
                 {
                     ledger.ItemsAtBossByAct[node.Act - 1]++;
@@ -1007,6 +1089,19 @@ public static class RunPolicy
             state, node, catalog, standard.Economy, standard.Items, standard.Consumables);
         var counted = CountOffers(arrival, state.Gold);
         ledger.OffersSeen += counted.Offers;
+        NotePerkOffers(
+            state,
+            node,
+            options,
+            ledger,
+            arrival.Perks.Count,
+            CountTakeablePerkOffers(
+                state,
+                catalog,
+                options,
+                arrival.Perks.Select(o => (o.PerkId, o.Price)).ToList(),
+                PerkSource.Market,
+                state.Gold));
         ledger.GoldAtMarketArrival += state.Gold;
         ledger.OffersAffordable += counted.Affordable;
 
@@ -1191,9 +1286,166 @@ public static class RunPolicy
     /// es inversamente proporcional al valor. Coger el menos malo llena un slot irreversible (RF-072) y
     /// deja fuera al perk que llegue después.
     /// </summary>
-    private static bool WorthASlot(string perkId, EconomyConfig economy, RunPolicyOptions options) =>
-        options.Doctrine != PurchaseDoctrine.Contextual
-        || (economy.PerkValues.ValueOf(perkId) ?? 0) >= options.MinPerkValue;
+    private static bool WorthASlot(
+        Perks.PerkDefinition perk,
+        EconomyConfig economy,
+        RunPolicyOptions options,
+        string pursuedFamily,
+        int arcCredit,
+        int bar)
+    {
+        if (options.Doctrine != PurchaseDoctrine.Contextual)
+        {
+            return true;
+        }
+
+        int value = economy.PerkValues.ValueOf(perk.Id) ?? 0;
+
+        // ADR 0072: la tabla mide lo que vale el perk SOLO. Una pieza de la línea que la run persigue
+        // vale además lo que ABRE (ADR 0051) —la misma ceguera que la ADR 0070 corrigió con el contador—,
+        // y eso se puede acotar: el maestro vale lo que la tabla le mide y su línea exige N piezas, así
+        // que cada pieza aporta esa N-ésima parte del desbloqueo. Un maestro cobrable no lleva crédito:
+        // su valor medido ya ES el del desbloqueo.
+        if (options.ArcCreditsSlotBar
+            && !perk.IsMaster
+            && pursuedFamily.Length > 0
+            && string.Equals(perk.Family, pursuedFamily, StringComparison.Ordinal))
+        {
+            value += arcCredit;
+        }
+
+        return value >= bar;
+    }
+
+    /// <summary>
+    /// Lo que aporta al desbloqueo una pieza de la línea <paramref name="family"/> (ADR 0072): el valor
+    /// medido de su maestro entre las piezas que exige. Cero si la línea no tiene maestro alcanzable o si
+    /// su maestro mide negativo — una línea que no paga no vale un slot de más.
+    /// </summary>
+    private static int ArcCreditFor(string family, Catalog catalog, EconomyConfig economy, RunPolicyOptions options)
+    {
+        if (!options.ArcCreditsSlotBar || family.Length == 0)
+        {
+            return 0;
+        }
+
+        foreach (var master in catalog.Perks.Masters)
+        {
+            if (master.Requires is not { } requirement
+                || !string.Equals(requirement.Family, family, StringComparison.Ordinal)
+                || requirement.Count <= 0)
+            {
+                continue;
+            }
+
+            int value = economy.PerkValues.ValueOf(master.Id) ?? 0;
+            return value > 0 ? value / requirement.Count : 0;
+        }
+
+        return 0;
+    }
+
+    /// <summary>
+    /// El listón del slot (ADR 0072), en las mismas milésimas que la tabla de valor. Se calcula
+    /// <b>una vez por decisión</b>, no por oferta: depende del estado, no del perk.
+    ///
+    /// <para>Dos términos, los dos medidos. El primero es el <b>coste de oportunidad</b>: un slot
+    /// ocupado es irreversible (RF-072), así que dejarlo libre vale lo que va a meterse en él, y con
+    /// <c>S</c> slots libres y <c>N</c> ofertas cobrables por delante eso es el cuantil
+    /// <c>1 − S/N</c> de lo que el pool ofrece. El segundo es el <b>ruido de la medida</b>: el valor de
+    /// la tabla es <c>v + ε</c> con <c>ε</c> de desviación <c>σ</c> (17, ADR 0070 §2) sobre una
+    /// dispersión observada <c>d</c>, así que el valor esperado de un perk que mide <c>m</c> no es
+    /// <c>m</c> sino <c>μ + (m − μ)·(d²−σ²)/d²</c>, y exigirle al <b>esperado</b> que llegue al coste de
+    /// oportunidad es exigirle al <b>medido</b> que llegue a <c>μ + (C − μ)·d²/(d²−σ²)</c>.</para>
+    ///
+    /// <para>Con la tabla de hoy (μ = 33, d = 73, σ = 17) el segundo término vale <b>1,06</b>, así que
+    /// sólo se nota cerca del cero: un coste de oportunidad nulo no pide 0, pide <b>−1</b>, que es el
+    /// valor exacto de <c>steady_hands</c> y <c>safety_net</c> — los dos perks que la ADR 0070 nombró al
+    /// escribir que "un umbral en el cero exacto sobre una medida con ruido no es un umbral, es una
+    /// moneda". No pasan por indulgencia: pasan porque su valor esperado empata con el de un slot al que
+    /// no le va a caber nada.</para>
+    /// </summary>
+    private static int SlotBar(RunState state, MapNode node, EconomyConfig economy, RunPolicyOptions options)
+    {
+        if (options.Doctrine != PurchaseDoctrine.Contextual)
+        {
+            return int.MinValue;
+        }
+
+        if (!options.UsesSlotOpportunityCost)
+        {
+            return options.MinPerkValue;
+        }
+
+        var table = economy.PerkValues;
+        int free = FreeStarterPerkSlots(state, options);
+        long offers = ExpectedTakeableOffersLeft(state, node, options);
+        int continuation = free <= 0 || offers <= free
+            ? 0
+            : table.ValueAtQuantile(offers - free, offers);
+
+        return MeasuredValueFor(continuation, table);
+    }
+
+    /// <summary>
+    /// Valor <b>medido</b> mínimo para que el valor <b>esperado</b> llegue a <paramref name="expected"/>,
+    /// deshaciendo el encogimiento hacia la media que impone el ruido de la tabla (ADR 0072). Entero
+    /// (RT-023). Sin desviación declarada la corrección es la identidad.
+    /// </summary>
+    private static int MeasuredValueFor(int expected, PerkValueTable table)
+    {
+        long observed = table.ObservedDeviation;
+        long sigma = table.RowDeviation;
+        long signal = (observed * observed) - (sigma * sigma);
+        if (sigma <= 0 || signal <= 0)
+        {
+            return expected;
+        }
+
+        long mean = table.MeanValue;
+        return (int)(mean + ((expected - mean) * observed * observed / signal));
+    }
+
+    /// <summary>
+    /// Ofertas de perk cobrables que la run tiene por delante (ADR 0072): las capas que le quedan a este
+    /// acto más las de los actos que faltan, por lo que produce una capa. Es el <c>N</c> del coste de
+    /// oportunidad, y el horizonte es la run entera porque un slot dura la run entera (RF-072).
+    /// </summary>
+    private static long ExpectedTakeableOffersLeft(RunState state, MapNode node, RunPolicyOptions options)
+    {
+        var map = state.MapOf(node.Act);
+        int bossLayer = node.Layer;
+        for (int i = 0; i < map.Nodes.Count; i++)
+        {
+            if (map.Nodes[i].Id == map.BossNodeId)
+            {
+                bossLayer = map.Nodes[i].Layer;
+                break;
+            }
+        }
+
+        // Las capas de este acto son seguras; las de los actos siguientes sólo llegan si la run pasa sus
+        // puertas, así que entran descontadas por la tasa de paso medida, y cada acto aporta al ritmo de
+        // ofertas cobrables que se le ha medido a él. Todo en milésimas (RT-023).
+        long layersPermille = (long)Math.Max(bossLayer - node.Layer, 0) * 1000;
+        long reachPermille = 1000;
+        int lastAct = Math.Min(RunRules.Acts, node.Act + Math.Max(options.SlotHorizonActs, 1) - 1);
+        for (int act = node.Act; act < lastAct; act++)
+        {
+            reachPermille = reachPermille * GatePassPermille(act, options) / 1000;
+            layersPermille += reachPermille * MapGenerator.DefaultPathLength;
+        }
+
+        return layersPermille * Math.Max(options.TakeablePerkOffersPerLayerPermille, 0) / 1_000_000;
+    }
+
+    /// <summary>Tasa medida de paso de la puerta de ese acto, en milésimas (ADR 0072).</summary>
+    private static int GatePassPermille(int act, RunPolicyOptions options) => act switch
+    {
+        1 => options.Act1GatePassPermille,
+        2 => options.Act2GatePassPermille,
+        _ => 0,
+    };
 
     private static RunDecision? NextMarketAction(
         RunState state,
@@ -1228,6 +1480,8 @@ public static class RunPolicy
         // la doctrina y, a igual rareza, el más barato: la escalera de la ADR 0033 la marca la
         // **densidad** de perks en el once (14 en "correcta", 17 en "muy buena").
         string pursuedFamily = PursuedFamily(state, catalog, options);
+        int arcCredit = ArcCreditFor(pursuedFamily, catalog, economy, options);
+        int bar = SlotBar(state, node, economy, options);
         int bestPerk = -1, bestPerkCarrier = -1, bestPerkRank = int.MinValue;
         for (int i = 0; i < offers.Perks.Count; i++)
         {
@@ -1237,7 +1491,9 @@ public static class RunPolicy
             }
 
             var perk = catalog.Perks.Find(offers.Perks[i].PerkId);
-            if (perk is null || !ClearsTheBar(perk.Rarity, options) || !WorthASlot(perk.Id, economy, options))
+            if (perk is null
+                || !ClearsTheBar(perk.Rarity, options)
+                || !WorthASlot(perk, economy, options, pursuedFamily, arcCredit, options.MinPerkValueMarket ?? bar))
             {
                 continue;
             }
@@ -1479,6 +1735,99 @@ public static class RunPolicy
         return state;
     }
 
+    /// <summary>
+    /// Slots de perk <b>libres</b> del once (AS-A): lo que la rareza permite (<c>PerkSlots</c>, RF-023)
+    /// menos lo que ya lleva puesto. Es el recurso escaso que un perk marginal consume para siempre
+    /// (RF-072), y por tanto la mitad del coste de oportunidad de aceptarlo.
+    /// </summary>
+    public static int FreeStarterPerkSlots(RunState state, RunPolicyOptions options)
+    {
+        ArgumentNullException.ThrowIfNull(state);
+        ArgumentNullException.ThrowIfNull(options);
+        var lineup = ChooseStarters(state, options);
+        int free = 0;
+        for (int i = 0; i < lineup.Count; i++)
+        {
+            free += Underleague.Sim.Progression.Progression.PerkSlots(lineup[i].Rarity) - lineup[i].Perks.Count;
+        }
+
+        return free < 0 ? 0 : free;
+    }
+
+    /// <summary>
+    /// Censo de ofertas de perk (AS-A): cuántas ha visto la run en este acto y con cuántos slots libres
+    /// las vio. Diagnóstico puro —no cambia ninguna decisión ni entra en ninguna métrica de puerta—, y
+    /// es lo que permite medir el coste de oportunidad de un slot en vez de suponerlo.
+    /// </summary>
+    private static void NotePerkOffers(
+        RunState state,
+        MapNode node,
+        RunPolicyOptions options,
+        Ledger ledger,
+        int offers,
+        int takeable)
+    {
+        if (offers <= 0)
+        {
+            return;
+        }
+
+        int act = node.Act - 1;
+        int free = FreeStarterPerkSlots(state, options);
+        ledger.PerkOffersByAct[act] += offers;
+        ledger.TakeablePerkOffersByAct[act] += takeable;
+        ledger.FreeSlotsAtOfferByAct[act] += free * offers;
+    }
+
+    /// <summary>
+    /// Cuántas de esas ofertas de perk podría cobrar la run <b>ahora</b> (AS-A): el arco abierto, un
+    /// portador elegible dentro del once con slot libre y colocación que encaja, y el precio pagable si
+    /// viene del mercado. Diagnóstico puro: no decide nada, sólo cuenta.
+    /// </summary>
+    private static int CountTakeablePerkOffers(
+        RunState state,
+        Catalog catalog,
+        RunPolicyOptions options,
+        IReadOnlyList<(string PerkId, int Price)> offers,
+        PerkSource source,
+        int gold)
+    {
+        if (offers.Count == 0)
+        {
+            return 0;
+        }
+
+        var lineup = ChooseStarters(state, options);
+        var placement = PlacementOf(lineup);
+        int takeable = 0;
+        for (int i = 0; i < offers.Count; i++)
+        {
+            if (source == PerkSource.Market && offers[i].Price > gold)
+            {
+                continue;
+            }
+
+            if (catalog.Perks.Find(offers[i].PerkId) is not { } perk)
+            {
+                continue;
+            }
+
+            var availability = PerkPool.Availability(state, perk, catalog, source);
+            if (availability is PerkAvailability.Unmet or PerkAvailability.Closed
+                || (source == PerkSource.Reward && availability == PerkAvailability.MarketOnly))
+            {
+                continue;
+            }
+
+            if (BestCarrier(state, perk, PerkPool.EligibleCarriers(state, perk, catalog), lineup, placement, options) >= 0)
+            {
+                takeable++;
+            }
+        }
+
+        return takeable;
+    }
+
     private static RunState TakeReward(
         RunState state,
         MapNode node,
@@ -1489,7 +1838,23 @@ public static class RunPolicy
         Ledger ledger)
     {
         var rewards = RewardSystem.Options(state, node, catalog, standard.Economy, standard.Items);
-        var choice = PickReward(state, rewards, catalog, standard.Economy, standard.Items, options);
+        var perkOptions = new List<(string PerkId, int Price)>();
+        for (int i = 0; i < rewards.Count; i++)
+        {
+            if (rewards[i] is PerkRewardOption perkOption)
+            {
+                perkOptions.Add((perkOption.PerkId, 0));
+            }
+        }
+
+        NotePerkOffers(
+            state,
+            node,
+            options,
+            ledger,
+            perkOptions.Count,
+            CountTakeablePerkOffers(state, catalog, options, perkOptions, PerkSource.Reward, int.MaxValue));
+        var choice = PickReward(state, node, rewards, catalog, standard.Economy, standard.Items, options);
 
         if (choice.Score < BestRewardScore && state.NodeRerolls == 0 && options.RerollGoldFactor != int.MaxValue)
         {
@@ -1500,7 +1865,7 @@ public static class RunPolicy
                 ledger.GoldSpentReroll += cost;
                 ledger.Rerolls++;
                 var rerolled = RewardSystem.Options(state, node, catalog, standard.Economy, standard.Items);
-                choice = PickReward(state, rerolled, catalog, standard.Economy, standard.Items, options);
+                choice = PickReward(state, node, rerolled, catalog, standard.Economy, standard.Items, options);
             }
         }
 
@@ -1590,6 +1955,7 @@ public static class RunPolicy
 
     private static RewardChoice PickReward(
         RunState state,
+        MapNode node,
         IReadOnlyList<RewardOption> rewards,
         Catalog catalog,
         EconomyConfig economy,
@@ -1600,6 +1966,8 @@ public static class RunPolicy
         var placement = PlacementOf(lineup);
         int naked = BestStarterWithoutItem(state, lineup, options);
         string pursued = PursuedFamily(state, catalog, options);
+        int arcCredit = ArcCreditFor(pursued, catalog, economy, options);
+        int bar = options.MinPerkValueReward ?? SlotBar(state, node, economy, options);
         var best = new RewardChoice(-1, -1, 0);
 
         for (int i = 0; i < rewards.Count; i++)
@@ -1618,7 +1986,7 @@ public static class RunPolicy
                     bool takeable = definition is not null
                         && PerkPool.Availability(state, definition, catalog, PerkSource.Reward)
                             is not (PerkAvailability.Unmet or PerkAvailability.Closed or PerkAvailability.MarketOnly);
-                    var carriers = definition is null || !takeable || !WorthASlot(perk.PerkId, economy, options)
+                    var carriers = definition is null || !takeable || !WorthASlot(definition, economy, options, pursued, arcCredit, bar)
                         ? Array.Empty<int>()
                         : PerkPool.EligibleCarriers(state, definition, catalog);
                     carrier = definition is null || carriers.Count == 0
@@ -2062,6 +2430,17 @@ public static class RunPolicy
             counterCensus.Add($"{name}:{total}:{counterPeaks[name]}");
         }
 
+        var slotCensus = new List<string>(RunRules.Acts);
+        for (int act = 0; act < RunRules.Acts; act++)
+        {
+            if (ledger.PerkOffersByAct[act] > 0 || ledger.SlotsAtBossByAct[act] > 0)
+            {
+                slotCensus.Add(
+                    $"{act + 1}:{ledger.PerkOffersByAct[act]}:{ledger.TakeablePerkOffersByAct[act]}:{ledger.FreeSlotsAtOfferByAct[act]}"
+                    + $":{ledger.SlotsAtBossByAct[act]}:{ledger.PerksAtBossByAct[act]}:{ledger.ItemsAtBossByAct[act]}");
+            }
+        }
+
         var held = PerkPool.HeldPerkIds(state);
         var masters = new List<string>();
         for (int i = 0; i < held.Count; i++)
@@ -2135,7 +2514,8 @@ public static class RunPolicy
             ledger.MastersOffered,
             ledger.MastersUnlocked,
             ledger.MastersAffordable,
-            counterCensus);
+            counterCensus,
+            slotCensus);
     }
 
     /// <summary>
@@ -2268,6 +2648,34 @@ public static class RunPolicy
 
         /// <summary>Jefes superados por acto (AO-D): separa la puerta de los partidos ordinarios.</summary>
         public int[] BossWinsByAct { get; } = new int[RunRules.Acts];
+
+        /// <summary>
+        /// Slots de perk del once —ocupados y libres— al entrar en el jefe de cada acto (AS-A). Con
+        /// <see cref="PerksAtBossByAct"/> es lo que dice cuántos slots quedan <b>libres</b> en la puerta,
+        /// que es la mitad del coste de oportunidad de un slot.
+        /// </summary>
+        public int[] SlotsAtBossByAct { get; } = new int[RunRules.Acts];
+
+        /// <summary>
+        /// Ofertas de perk vistas por acto (AS-A): las del mostrador al llegar a un mercado y las de los
+        /// nodos de recompensa, cobradas o no. Es la otra mitad del coste de oportunidad: cuántas veces
+        /// más va a poder llenarse ese slot antes de que la run acabe.
+        /// </summary>
+        public int[] PerkOffersByAct { get; } = new int[RunRules.Acts];
+
+        /// <summary>
+        /// Slots de perk <b>libres</b> del once en el momento de cada oferta, sumados por acto (AS-A).
+        /// Dividido por <see cref="PerkOffersByAct"/> da los slots libres medios que ve una oferta.
+        /// </summary>
+        public int[] FreeSlotsAtOfferByAct { get; } = new int[RunRules.Acts];
+
+        /// <summary>
+        /// De <see cref="PerkOffersByAct"/>, las que la run <b>podría cobrar de verdad</b> (AS-A): arco
+        /// abierto, portador elegible en el once con slot libre y colocación que encaja, y —en el
+        /// mercado— precio dentro del oro que hay. Es el denominador honesto del coste de oportunidad:
+        /// las ofertas que ningún titular puede llevar no compiten por el slot.
+        /// </summary>
+        public int[] TakeablePerkOffersByAct { get; } = new int[RunRules.Acts];
 
         /// <summary>
         /// Objetos que el inventario ha recuperado de un muerto (ADR 0048, condición 4): la

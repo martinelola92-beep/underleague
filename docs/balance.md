@@ -25,6 +25,10 @@ dotnet run --project Balance -- --boss-gate [--rosters 32] [--runs 4]     # curv
 dotnet run --project Balance -- --full-runs 500 [--seed 1]                # runs completas (fase 2)
 dotnet run --project Balance -- --full-runs 500 --ignore-scouting         # la misma run sin leer el ojeo
 dotnet run --project Balance -- --full-runs 300 --risk-aversion N         # cuánto pesa el indicador de riesgo
+dotnet run --project Balance -- --full-runs 300 --slot-bar-off             # el listón del slot apagado (ADR 0072)
+dotnet run --project Balance -- --full-runs 300 --min-perk-value N         # listón constante en vez del derivado
+dotnet run --project Balance -- --full-runs 300 --min-perk-value-{reward,market} N
+dotnet run --project Balance -- --full-runs 300 --slot-horizon N --arc-judged
 dotnet run --project Balance -- --describe [es|en]                        # catálogo de perks
 ```
 
@@ -47,6 +51,13 @@ de un titular por su exposición a un perk letal (`DeathCostPercent`): 0 ignora 
 obedece y un valor **negativo** hace lo contrario a propósito. Las dos existen para medir la **agencia**
 que la ADR 0048 declara obligatoria —si atender al indicador no cambia las muertes, el azar no tiene
 agencia— y su lectura está en `fase2-diseno.md` §21.2.
+
+Las cinco palancas de la **ADR 0072** existen para medir el listón del slot de la doctrina contextual y
+todas son medidas de control, no diales de diseño: `--slot-bar-off` vuelve al listón constante anterior,
+`--min-perk-value N` (y sus variantes `-reward` y `-market`, que lo aplican sólo a la recompensa o sólo al
+mercado) sustituye el derivado por una constante, `--slot-horizon N` acorta a N actos el horizonte con el
+que se cuenta la escasez del slot, y `--arc-judged` quita el crédito de arco. Su lectura está en
+`fase2-diseno.md` §36.
 
 Rendimiento: 10.000 partidos en menos de 60 s en máquina de desarrollo (RT-051). Se mide en cada ejecución y se imprime al final.
 
@@ -91,7 +102,7 @@ En cada commit sobre `/Sim` o `/data`:
 2. Lote de balance con el conjunto de referencia. **El build falla** si alguna build catalogada supera el 70% o baja del 30% de tasa de victoria contra la referencia (RT-055).
 3. Validación de `/data` (RT-083).
 
-Las tres puertas automáticas viven en `Sim.Tests` con `Trait("Category", "Gate")` y suman unos 40 s:
+Las puertas automáticas viven en `Sim.Tests` con `Trait("Category", "Gate")` y suman unos 75 s en Release:
 
 | Puerta | Fichero | Muestra | Qué defiende |
 |---|---|---|---|
@@ -100,7 +111,7 @@ Las tres puertas automáticas viven en `Sim.Tests` con `Trait("Category", "Gate"
 | Rareza y jefe final | `Analysis/RarityAndBossTests.cs` | 24 plantillas × 20 partidos × 3 comparaciones, semilla 1 | RF-024 y la salvaguarda de la ADR 0027 |
 | Equilibrio entre razas | `Analysis/RaceBalanceTests.cs` | 250 plantillas × 4 partidos × 10 parejas, semilla 1 | D-29: ninguna raza fuera del 40-60% agrupado |
 | **Curva de puertas de la ADR 0033** | `Analysis/BossGateTests.cs` | 32 plantillas × 4 partidos × 4 niveles × 3 jefes × 5 razas = 7.680, semilla 1, ~35 s | **La** métrica de la fase 2: cada nivel de calidad de build contra cada jefe |
-| **Run completa** | `Analysis/FullRunGateTests.cs` | 60 runs × 3 doctrinas de compra, semilla 1, ~14 s | Duración de la run, causas de derrota, RF-114k, compras por mercado, determinismo del bucle |
+| **Run completa** | `Analysis/FullRunGateTests.cs` | **240** runs × 3 doctrinas de compra, semilla 1, ~40 s (60 hasta la ADR 0072: la cota de `deathsPerRun` quedaba a 2,7 desviaciones) | Duración de la run, causas de derrota, RF-114k, compras por mercado, determinismo del bucle |
 
 **RT-055 no está automatizada**: se mide a mano con `--builds all --vs human_none`. Al cierre del paquete U
 la incumplen las razas, no las builds (elfos 67,5%, orcos 23,5% contra `human_none` sin perks); anotado como

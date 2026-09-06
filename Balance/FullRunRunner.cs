@@ -26,6 +26,23 @@ public sealed record FullRunResult(
 /// </summary>
 public static class FullRunRunner
 {
+    /// <summary>Aplica las palancas de medición de la ADR 0072 sobre unos umbrales de política.</summary>
+    private static RunPolicyOptions Tune(
+        RunPolicyOptions options,
+        int? minPerkValueReward,
+        int? minPerkValueMarket,
+        bool slotBarOff,
+        int? slotHorizon,
+        bool arcJudged) =>
+        options with
+        {
+            MinPerkValueReward = minPerkValueReward ?? options.MinPerkValueReward,
+            MinPerkValueMarket = minPerkValueMarket ?? options.MinPerkValueMarket,
+            UsesSlotOpportunityCost = !slotBarOff && options.UsesSlotOpportunityCost,
+            SlotHorizonActs = slotHorizon ?? options.SlotHorizonActs,
+            ArcCreditsSlotBar = !arcJudged && options.ArcCreditsSlotBar,
+        };
+
     /// <summary>Id del club con el que <c>/Balance</c> juega las runs (no hay <c>data/clubs/</c> todavía).</summary>
     public const string ClubId = "balance_club";
 
@@ -51,7 +68,13 @@ public static class FullRunRunner
         ulong seed,
         int runs,
         bool ignoreScouting = false,
-        int? riskAversion = null)
+        int? riskAversion = null,
+        int? minPerkValue = null,
+        int? minPerkValueReward = null,
+        int? minPerkValueMarket = null,
+        bool slotBarOff = false,
+        int? slotHorizon = null,
+        bool arcJudged = false)
     {
         ArgumentNullException.ThrowIfNull(catalog);
         ArgumentNullException.ThrowIfNull(dataFiles);
@@ -73,6 +96,13 @@ public static class FullRunRunner
             {
                 options = options with { DeathCostPercent = aversion };
             }
+
+            if (minPerkValue is { } bar)
+            {
+                options = options with { MinPerkValue = bar };
+            }
+
+            options = Tune(options, minPerkValueReward, minPerkValueMarket, slotBarOff || minPerkValue is not null, slotHorizon, arcJudged);
             var rows = new List<RunPlayResult>(runs);
             for (int i = 0; i < runs; i++)
             {
@@ -98,6 +128,13 @@ public static class FullRunRunner
         {
             marketlessOptions = marketlessOptions with { DeathCostPercent = marketlessAversion };
         }
+
+        if (minPerkValue is { } marketlessBar)
+        {
+            marketlessOptions = marketlessOptions with { MinPerkValue = marketlessBar };
+        }
+
+        marketlessOptions = Tune(marketlessOptions, minPerkValueReward, minPerkValueMarket, slotBarOff || minPerkValue is not null, slotHorizon, arcJudged);
 
         var marketless = new List<RunPlayResult>(runs);
         for (int i = 0; i < runs; i++)
