@@ -31,8 +31,8 @@ public partial class MatchScreen : Control
     /// <summary>Ticks lógicos por segundo (RT-020). A x1 el partido dura lo que duraría de verdad.</summary>
     private const float TicksPerSecond = 15f;
 
-    /// <summary>Líneas de log que se rehacen al retroceder. Más arriba no se mira; el resto vive en la barra.</summary>
-    private const int LogWindow = 160;
+    /// <summary>Alto disponible para el log; el real se recorta a un número entero de líneas en <see cref="FitLog"/>.</summary>
+    private const float LogHeight = 198f;
 
     private static readonly int[] Speeds = { 1, 4, 16 };
 
@@ -50,6 +50,7 @@ public partial class MatchScreen : Control
     private Button _play = null!;
     private Button _speed = null!;
     private Button _zone = null!;
+    private Button _marking = null!;
     private MatchPitchView _pitch = null!;
     private MatchTimelineView _timeline = null!;
 
@@ -59,6 +60,9 @@ public partial class MatchScreen : Control
 
     /// <summary>Último fotograma con el que se refrescó todo lo que no es el campo; -1 fuerza el refresco.</summary>
     private int _synced = -1;
+
+    /// <summary>Paso vertical de una línea del log, en píxeles; lo dicta la fuente, no una constante.</summary>
+    private float _logStep;
 
     private int _speedIndex;
     private bool _playing = true;
@@ -204,7 +208,7 @@ public partial class MatchScreen : Control
         _log = new RichTextLabel
         {
             Position = new Vector2(24f, 540f),
-            Size = new Vector2(864f, 198f),
+            Size = new Vector2(864f, LogHeight),
             BbcodeEnabled = true,
             ScrollActive = true,
             ScrollFollowing = true,
@@ -213,6 +217,7 @@ public partial class MatchScreen : Control
         _log.AddThemeFontSizeOverride("normal_font_size", Style.TextSmall);
         _log.AddThemeColorOverride("default_color", Style.Text);
         AddChild(_log);
+        FitLog();
 
         Widgets.Panel(this, new Rect2(908f, 516f, 360f, 234f));
         _clock = Widgets.Body(this, string.Empty, new Vector2(918f, 520f), 340f, Style.Accent);
@@ -250,12 +255,24 @@ public partial class MatchScreen : Control
             _pitch.QueueRedraw();
         };
 
-        Widgets.Button(this, UiText.Get("ui.match.end"), new Rect2(918f, 602f, 100f, 26f)).Pressed += GoToEnd;
-        Widgets.Button(this, UiText.Get("ui.match.report"), new Rect2(1026f, 602f, 232f, 26f)).Pressed += GoToReport;
+        Widgets.Button(this, UiText.Get("ui.match.end"), new Rect2(918f, 602f, 84f, 26f)).Pressed += GoToEnd;
 
+        _marking = Widgets.Button(this, UiText.Get("ui.match.markOn"), new Rect2(1008f, 602f, 106f, 26f));
+        _marking.Pressed += () =>
+        {
+            _pitch.ShowMarking = !_pitch.ShowMarking;
+            _marking.Text = UiText.Get(_pitch.ShowMarking ? "ui.match.markOn" : "ui.match.markOff");
+            _pitch.QueueRedraw();
+        };
+
+        Widgets.Button(this, UiText.Get("ui.match.report"), new Rect2(1120f, 602f, 138f, 26f)).Pressed += GoToReport;
+
+        // Tres sucesos clave en vez de cuatro: el cuarto está a un vistazo en el log y en las marcas de la
+        // barra, y el sitio que ocupaba lo necesitan las dos líneas del jugador seguido, que son las que
+        // cambian con cada clic.
         Widgets.Section(this, UiText.Get("ui.match.highlights"), new Vector2(918f, 636f), 340f);
         _highlightList = Widgets.Body(this, UiText.Get("ui.match.highlightsNone"), new Vector2(918f, 654f), 340f);
-        _selected = Widgets.Body(this, UiText.Get("ui.match.selectHint"), new Vector2(918f, 722f), 340f, Style.TextDim);
+        _selected = Widgets.Body(this, UiText.Get("ui.match.selectHint"), new Vector2(918f, 706f), 340f, Style.TextDim);
 
         Widgets.InputHelp(this, UiText.Get("ui.input.mouseMatch"), UiText.Get("ui.input.padMatch"));
 
@@ -419,14 +436,19 @@ public partial class MatchScreen : Control
         }
         else
         {
+            // Se rehace el log ENTERO, no una ventana de las últimas líneas. La ventana ahorraba unas
+            // decenas de AppendText al arrastrar hacia atrás y a cambio dejaba el minuto 10 inalcanzable:
+            // el scroll se quedaba sin nada que enseñar más arriba. Un partido completo son del orden de
+            // 150 líneas, así que rehacerlas todas cuesta menos que el redibujado que las acompaña.
             _log.Clear();
-            for (int i = Mathf.Max(0, target - LogWindow); i < target; i++)
+            for (int i = 0; i < target; i++)
             {
                 Append(_lines[i]);
             }
         }
 
         _revealed = target;
+        SnapLog();
     }
 
     private void Append(MatchLogLine line)
@@ -444,7 +466,7 @@ public partial class MatchScreen : Control
     private void SyncHighlights()
     {
         var recent = new List<string>();
-        for (int i = _revealed - 1; i >= 0 && recent.Count < 4; i--)
+        for (int i = _revealed - 1; i >= 0 && recent.Count < 3; i--)
         {
             if (_lines[i].Highlight)
             {
@@ -478,11 +500,37 @@ public partial class MatchScreen : Control
                 player.Name,
                 UiText.Get("ui.pos." + player.Role),
                 player.Number,
-                UiText.Get("ui.pstate." + trace.StateAt(_frame, i)));
+                UiText.Get("ui.pstate." + trace.StateAt(_frame, i)))
+                + "\n" + Intent(trace, i);
             return;
         }
 
         _selected.Text = UiText.Get("ui.match.selectHint");
+    }
+
+    /// <summary>
+    /// Qué está intentando hacer el jugador seguido: la acción que ganó su última tabla de utilidad
+    /// (RT-098) y, si es marcar, a quién. Es la línea que convierte "coloca" —el estado de nueve de cada
+    /// diez fichas— en una frase que dice algo.
+    /// </summary>
+    private string Intent(MatchTrace trace, int index)
+    {
+        var action = trace.ActionAt(_frame, index);
+        if (action is null)
+        {
+            return UiText.Get("ui.match.noAction");
+        }
+
+        int mark = trace.MarkTargetAt(_frame, index);
+        if (action == PlayerAction.MarkOpponent && mark >= 0)
+        {
+            return UiText.Get("ui.match.marking", trace.Players[mark].Name, trace.Players[mark].Number);
+        }
+
+        string text = UiText.Get("ui.match.doing", UiText.Get("ui.paction." + action));
+        return mark >= 0
+            ? text + " · " + UiText.Get("ui.match.markAssigned", trace.Players[mark].Number)
+            : text;
     }
 
     private void SyncState()
@@ -598,6 +646,47 @@ public partial class MatchScreen : Control
         EventType.MobStart or EventType.RefereeLeaves or EventType.MatchStart or EventType.MatchEnd => Style.Accent,
         _ => line.Side == MatchSide.Own ? Style.Text : Style.TextDim,
     };
+
+    /// <summary>
+    /// Recorta el alto del log a un número <b>entero</b> de líneas. La primera línea salía partida por
+    /// arriba porque el área visible no medía un múltiplo del paso: con <c>ScrollFollowing</c> el texto
+    /// queda pegado abajo y lo que sobra se lo come el borde de arriba, siempre los mismos píxeles. El
+    /// paso no es una constante —lo dictan la fuente y la separación del tema— así que se mide aquí.
+    /// </summary>
+    private void FitLog()
+    {
+        var font = _log.GetThemeFont("normal_font");
+        _logStep = font.GetHeight(Style.TextSmall) + _log.GetThemeConstant("line_separation");
+        if (_logStep <= 0f)
+        {
+            return;
+        }
+
+        var box = _log.GetThemeStylebox("normal");
+        float chrome = box.GetMargin(Side.Top) + box.GetMargin(Side.Bottom);
+        int lines = Mathf.Max(1, Mathf.FloorToInt((LogHeight - chrome) / _logStep));
+        _log.Size = new Vector2(_log.Size.X, (lines * _logStep) + chrome);
+        _log.GetVScrollBar().ValueChanged += _ => SnapLog();
+    }
+
+    /// <summary>
+    /// Deja el scroll del log en un múltiplo del paso de línea. Con el área visible ya ajustada esto solo
+    /// hace falta cuando el propio jugador arrastra la barra, pero es la misma cuenta y cuesta una resta.
+    /// </summary>
+    private void SnapLog()
+    {
+        if (_logStep <= 0f)
+        {
+            return;
+        }
+
+        var bar = _log.GetVScrollBar();
+        double snapped = Mathf.Floor(bar.Value / _logStep) * _logStep;
+        if (Mathf.Abs(bar.Value - snapped) > 0.01d)
+        {
+            bar.Value = snapped;
+        }
+    }
 
     /// <summary>Los corchetes son marcas de BBCode: un nombre no puede abrir una etiqueta por accidente.</summary>
     private static string Escape(string text) => text.Replace("[", "[lb]");

@@ -257,6 +257,14 @@ public static class UiText
         ["ui.match.legendBall"] = "balón",
         ["ui.match.legendCarrier"] = "lo lleva",
         ["ui.match.legendZone"] = "correa del elegido",
+        ["ui.match.legendMark"] = "marca a (asignado)",
+        ["ui.match.legendMarking"] = "yendo a por él",
+        ["ui.match.markOn"] = "Marcaje: sí",
+        ["ui.match.markOff"] = "Marcaje: no",
+        ["ui.match.doing"] = "quiere {0}",
+        ["ui.match.marking"] = "marca a {0} (dorsal {1})",
+        ["ui.match.markAssigned"] = "marca al {0}",
+        ["ui.match.noAction"] = "todavía no ha decidido nada",
         ["ui.match.noTrace"] = "este partido se reprodujo sin traza: no hay campo que enseñar",
 
         ["ui.phase.Kickoff"] = "saque",
@@ -278,6 +286,22 @@ public static class UiText
         ["ui.pstate.Injured"] = "lesionado",
         ["ui.pstate.Celebrating"] = "celebra",
         ["ui.pstate.SentOff"] = "expulsado",
+
+        // Las trece acciones de la tabla de utilidad (RT-098). Se leen detrás de "quiere ...", así que van
+        // en infinitivo: es lo que el jugador está intentando hacer, no lo que ha conseguido.
+        ["ui.paction.ChaseBall"] = "ir a por el balón",
+        ["ui.paction.MarkOpponent"] = "marcar a un rival",
+        ["ui.paction.OfferSupport"] = "ofrecerse para el pase",
+        ["ui.paction.CoverSpace"] = "cubrir su espacio",
+        ["ui.paction.Dribble"] = "regatear",
+        ["ui.paction.Shoot"] = "tirar",
+        ["ui.paction.Tackle"] = "entrar a por el balón",
+        ["ui.paction.Retreat"] = "replegarse",
+        ["ui.paction.FindSpace"] = "buscar un hueco",
+        ["ui.paction.PressCarrier"] = "presionar al que lleva el balón",
+        ["ui.paction.ShortPass"] = "dar un pase corto",
+        ["ui.paction.LongPass"] = "abrir el juego en largo",
+        ["ui.paction.Block"] = "cargar contra un rival",
 
         ["ui.ev.MatchStart"] = "empieza el partido",
         ["ui.ev.MatchEnd"] = "final del partido",

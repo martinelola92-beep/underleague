@@ -125,6 +125,53 @@ public sealed class MatchTraceTests
         Assert.Equal(result.Events.Count, next);
     }
 
+    /// <summary>
+    /// Las dos capas que explican el porqué: el objetivo de marcaje y la acción elegida. Lo que se
+    /// comprueba es que sean <b>coherentes</b> —un marcado es siempre un rival de campo que está en el
+    /// campo— y que la acción esté dentro del enum; que estén ahí lo cubre el hecho de que el partido de
+    /// referencia marque en algún tick.
+    /// </summary>
+    [Fact]
+    public void MarkingAndActionsAreRecorded()
+    {
+        var catalog = TestData.LoadCatalog();
+        var result = Simulator.Run(
+            TestMatches.Reference(catalog, Seed), Seed, catalog, SimConfig.Default with { Trace = true });
+        var trace = result.Trace!;
+
+        int assigned = 0;
+        int marking = 0;
+        for (int frame = 0; frame < trace.FrameCount; frame++)
+        {
+            for (int player = 0; player < trace.Players.Count; player++)
+            {
+                int target = trace.MarkTargetAt(frame, player);
+                if (target >= 0)
+                {
+                    assigned++;
+                    Assert.NotEqual(trace.Players[player].Team, trace.Players[target].Team);
+                    Assert.NotEqual(Sim.Model.Position.Goalkeeper, trace.Players[target].Role);
+                    Assert.True(trace.OnPitchAt(frame, target), "un marcado tiene que estar en el campo");
+                }
+
+                var action = trace.ActionAt(frame, player);
+                if (action is null)
+                {
+                    continue;
+                }
+
+                Assert.True(Enum.IsDefined(action.Value), "acción fuera del enum: " + action);
+                if (action == PlayerAction.MarkOpponent && trace.OnPitchAt(frame, player))
+                {
+                    marking++;
+                }
+            }
+        }
+
+        Assert.True(assigned > 0, "nadie tiene asignado a quién marcar en todo el partido");
+        Assert.True(marking > 0, "nadie llega a elegir MarkOpponent en todo el partido");
+    }
+
     /// <summary>Dorsales 1..N por equipo, sin repetir, y el 1 siempre para el portero.</summary>
     [Fact]
     public void NumbersAreStableAndStartAtTheGoalkeeper()

@@ -64,7 +64,12 @@ public partial class LegendView : Control
         x = Dot(font, x, 3f, Style.TeamRival, Style.Background, UiText.Get("ui.match.legendRival"));
         x = Dot(font, x, 3f, Style.Ball, Style.Ball, UiText.Get("ui.match.legendBall"), small: true);
         x = Dot(font, x, 3f, Style.TeamOwn, Style.Carrier, UiText.Get("ui.match.legendCarrier"));
-        Swatch(font, x, Style.ZoneFill, Style.ZoneEdge, false, UiText.Get("ui.match.legendZone"));
+        x = Swatch(font, x, Style.ZoneFill, Style.ZoneEdge, false, UiText.Get("ui.match.legendZone"));
+
+        // Las dos capas de marcaje: punteada la asignación de la posesión, continua el que está yendo a
+        // por su par ahora mismo (ADR 0022). Se distinguen por trazo, no por intensidad (UI-002).
+        x = Line(font, x, 4f, new Color(Style.TeamOwn, 0.55f), true, UiText.Get("ui.match.legendMark"));
+        Line(font, x, 4f, new Color(Style.TeamOwn, 0.9f), false, UiText.Get("ui.match.legendMarking"));
 
         // Orden de lectura, no orden del enum: Blocking va al final de PlayerState para no mover los
         // valores de los estados anteriores (ADR 0030 §2), pero en la leyenda su sitio es al lado de
@@ -129,10 +134,14 @@ public partial class LegendView : Control
         return x + 34f + font.GetStringSize(label, HorizontalAlignment.Left, -1f, Style.TextSmall).X + 22f;
     }
 
-    private float Line(Font font, float x, Color color, bool dashed, string label)
+    private float Line(Font font, float x, Color color, bool dashed, string label) =>
+        Line(font, x, 12f, color, dashed, label);
+
+    /// <summary>Muestra de línea a una altura dada: la leyenda del partido tiene sus filas más juntas.</summary>
+    private float Line(Font font, float x, float y, Color color, bool dashed, string label)
     {
-        var a = new Vector2(x, 12f);
-        var b = new Vector2(x + 22f, 12f);
+        var a = new Vector2(x, y + 7f);
+        var b = new Vector2(x + 22f, y + 7f);
         if (dashed)
         {
             Style.DrawDashed(this, a, b, color, 2.5f, 3f);
@@ -142,7 +151,7 @@ public partial class LegendView : Control
             DrawLine(a, b, color, 2.5f);
         }
 
-        Style.DrawText(this, font, new Vector2(x + 28f, 5f), label, Style.TextSmall, Style.TextDim);
+        Style.DrawText(this, font, new Vector2(x + 28f, y), label, Style.TextSmall, Style.TextDim);
         return x + 34f + font.GetStringSize(label, HorizontalAlignment.Left, -1f, Style.TextSmall).X + 22f;
     }
 }

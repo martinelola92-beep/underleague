@@ -88,13 +88,37 @@ public partial class CaptureRunner : Control
                 index = Nearest(trace, frame);
             }
 
-            var cell = trace.PositionAt(frame, index);
-            await Click(pitch.GlobalPosition + (new Vector2(cell.X, cell.Y) * pitch.CellSize));
+            await Click(pitch.GlobalPosition + pitch.PixelOf(trace.PositionAt(frame, index)));
             await Click(new Vector2(1215f, 583f));
             GD.Print($"campo: tick {trace.TickAt(frame)}, seguido {trace.Players[index].Name} (dorsal {trace.Players[index].Number})");
         }
 
         await Save("partido-correa");
+
+        // 2b. El marcaje (ADR 0022). Se busca un instante en el que alguien esté de verdad yendo a por su
+        //     par —la línea continua— porque MarkOpponent gana la tabla de utilidad muy de tarde en tarde:
+        //     dejar la captura al azar habría enseñado solo las asignaciones punteadas.
+        if (pitch is not null && trace is { FrameCount: > 0 })
+        {
+            await Click(new Vector2(1215f, 583f));   // apagar la correa: aquí el sujeto es el marcaje
+            int marker = -1;
+            int at = Marking(trace, out marker);
+            if (at >= 0)
+            {
+                await Click(new Vector2(918f + (340f * at / (trace.FrameCount - 1)), 551f));
+                int frame = Mathf.Clamp(pitch.Frame, 0, trace.FrameCount - 1);
+                await Click(pitch.GlobalPosition + pitch.PixelOf(trace.PositionAt(frame, marker)));
+                GD.Print($"marcaje: tick {trace.TickAt(frame)}, {trace.Players[marker].Name} marca a "
+                    + $"{(trace.MarkTargetAt(frame, marker) >= 0 ? trace.Players[trace.MarkTargetAt(frame, marker)].Name : "nadie")}");
+            }
+            else
+            {
+                GD.PushWarning("ningún jugador elige MarkOpponent en todo el partido de las capturas");
+            }
+
+            await Save("partido-marcaje");
+        }
+
         Drop(match);
 
         // 3. Informe post-partido.
@@ -224,6 +248,46 @@ public partial class CaptureRunner : Control
 
         return trace.FrameCount / 2;
     }
+
+    /// <summary>
+    /// Primer fotograma en el que un jugador lleva y seguirá llevando <c>MarkOpponent</c> un buen rato, y
+    /// quién es. Se pide una racha de 20 ticks porque la barra de reproducción mide 340 px para 1.200
+    /// fotogramas: el clic cae cerca del fotograma pedido, no exactamente en él.
+    /// </summary>
+    private static int Marking(Underleague.Sim.Engine.MatchTrace trace, out int marker)
+    {
+        const int Run = 20;
+        for (int frame = trace.FrameCount / 5; frame < trace.FrameCount - Run; frame++)
+        {
+            for (int player = 0; player < trace.Players.Count; player++)
+            {
+                if (!IsMarking(trace, frame, player))
+                {
+                    continue;
+                }
+
+                bool holds = true;
+                for (int ahead = 1; ahead <= Run && holds; ahead++)
+                {
+                    holds = IsMarking(trace, frame + ahead, player);
+                }
+
+                if (holds)
+                {
+                    marker = player;
+                    return frame + (Run / 2);
+                }
+            }
+        }
+
+        marker = -1;
+        return -1;
+    }
+
+    private static bool IsMarking(Underleague.Sim.Engine.MatchTrace trace, int frame, int player) =>
+        trace.OnPitchAt(frame, player)
+        && trace.ActionAt(frame, player) == Underleague.Sim.Engine.PlayerAction.MarkOpponent
+        && trace.MarkTargetAt(frame, player) >= 0;
 
     /// <summary>El campo del partido dentro de la pantalla instanciada, o null si no está.</summary>
     private static MatchPitchView? FindPitch(Node screen)

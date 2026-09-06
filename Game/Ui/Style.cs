@@ -62,6 +62,13 @@ public static class Style
     /// <summary>Anillo del poseedor del balón (RF-121: quién lo lleva, de un vistazo).</summary>
     public static readonly Color Carrier = new("ffffff");
 
+    /// <summary>
+    /// Bigote de intención del campo del partido: hacia dónde le manda ir su acción. Va en un gris claro
+    /// muy transparente a propósito —no es un color de equipo ni de estado— porque son doce a la vez y
+    /// tienen que leerse como una textura de movimiento, no como doce líneas que compiten con las fichas.
+    /// </summary>
+    public static readonly Color Intent = new(0.85f, 0.89f, 0.95f, 0.30f);
+
     public static readonly Color LinkLine = new(0.72f, 0.76f, 0.83f, 0.45f);
     public static readonly Color LinkCreated = new("5fd07a");
     public static readonly Color LinkBroken = new("e2585a");

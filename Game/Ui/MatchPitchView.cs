@@ -22,6 +22,13 @@ namespace Underleague.Game.Ui;
 /// <b>anillo</b> = estado del jugador (RT-089c), <b>halo blanco</b> = lleva el balón. Los estados de baja
 /// llevan además una cruz, para no depender del color (UI-002).
 /// </para>
+///
+/// <para>
+/// Encima de las fichas van las dos capas que explican <b>por qué</b> cada uno está donde está: el
+/// <b>marcaje</b> —una línea de marcador a marcado, punteada cuando solo es la asignación de la posesión
+/// y continua cuando el jugador está de verdad yendo a por su par (ADR 0022)— y la <b>intención</b>, el
+/// punto al que la acción elegida le manda ir. Las dos salen de la traza; aquí no se deduce ninguna.
+/// </para>
 /// </summary>
 public partial class MatchPitchView : Control
 {
@@ -50,8 +57,45 @@ public partial class MatchPitchView : Control
     /// <summary>Interruptor de la correa y la zona de acción del seguido (ADR 0028, ADR 0029).</summary>
     public bool ShowZone { get; set; }
 
+    /// <summary>
+    /// Interruptor de las líneas de marcaje de <b>todo</b> el campo. Apagado siguen viéndose las del
+    /// jugador seguido y las de quien está marcando de verdad en ese tick: eso nunca estorba porque casi
+    /// nunca hay más de uno.
+    /// </summary>
+    public bool ShowMarking { get; set; } = true;
+
     /// <summary>Lado de una casilla en píxeles; el campo se pinta cuadrado, como en <see cref="PitchView"/>.</summary>
-    public float CellSize => Mathf.Min(Size.X / Pitch.Columns, Size.Y / Pitch.Rows);
+    /// <summary>
+    /// Lado de la casilla en píxeles. El campo se dibuja con un margen de un radio de ficha por lado: un
+    /// jugador pegado a la banda está centrado en la línea, así que sin ese margen media ficha se sale del
+    /// control y pisa la leyenda de arriba.
+    /// </summary>
+    public float CellSize => Mathf.Min(
+        Size.X / (Pitch.Columns + (2f * TokenRadius)),
+        Size.Y / (Pitch.Rows + (2f * TokenRadius)));
+
+    /// <summary>
+    /// Esquina del campo dentro del control. Centrar reparte el margen por igual a los cuatro lados y, con
+    /// <see cref="CellSize"/> ya descontando los dos radios, deja exactamente el radio de una ficha por
+    /// lado en el eje que manda.
+    /// </summary>
+    private Vector2 Origin
+    {
+        get
+        {
+            float cell = CellSize;
+            return new Vector2(
+                (Size.X - (cell * Pitch.Columns)) / 2f,
+                (Size.Y - (cell * Pitch.Rows)) / 2f);
+        }
+    }
+
+    /// <summary>
+    /// Píxel del control donde cae un punto del campo. Lo usa quien tenga que apuntar a una ficha desde
+    /// fuera —la secuencia de capturas, sin ir más lejos— para que nadie más rehaga esta cuenta y se
+    /// desincronice del margen.
+    /// </summary>
+    public Vector2 PixelOf(Vec2 point) => Origin + ToPixels(point, CellSize);
 
     public override void _Ready() => MouseFilter = MouseFilterEnum.Stop;
 
@@ -69,6 +113,10 @@ public partial class MatchPitchView : Control
     public override void _Draw()
     {
         float cell = CellSize;
+
+        // Todo el dibujo va desplazado el margen: así las coordenadas de casilla siguen siendo las del
+        // motor y ninguna función de pintado tiene que saber del margen.
+        DrawSetTransform(Origin);
         DrawField(cell);
 
         if (Trace is not { FrameCount: > 0 } trace)
@@ -82,12 +130,16 @@ public partial class MatchPitchView : Control
             DrawZone(trace, frame, cell);
         }
 
+        DrawMarking(trace, frame, cell);
+        DrawIntent(trace, frame, cell);
+
         int carrier = trace.BallOwnerAt(frame);
         for (int i = 0; i < trace.Players.Count; i++)
         {
             DrawToken(trace, frame, i, i == carrier, cell);
         }
 
+        DrawMarkGrips(trace, frame, cell);
         DrawBall(trace, frame, carrier, cell);
         DrawPhase(trace, frame, cell);
     }
@@ -143,7 +195,7 @@ public partial class MatchPitchView : Control
                 continue;
             }
 
-            float distance = ToPixels(trace.PositionAt(frame, i), cell).DistanceTo(point);
+            float distance = PixelOf(trace.PositionAt(frame, i)).DistanceTo(point);
             if (distance <= bestDistance)
             {
                 bestDistance = distance;
@@ -232,6 +284,173 @@ public partial class MatchPitchView : Control
         Style.DrawDashed(this, home, player, Style.ZoneEdge, 1.5f, 4f);
         DrawLine(home - new Vector2(5f, 0f), home + new Vector2(5f, 0f), Style.ZoneEdge, 2f);
         DrawLine(home - new Vector2(0f, 5f), home + new Vector2(0f, 5f), Style.ZoneEdge, 2f);
+    }
+
+    /// <summary>
+    /// El marcaje (ADR 0022): una línea del marcador al marcado, en el color del marcador y con un punto
+    /// en el extremo marcado, que es lo que dice en qué sentido se lee. La asignación va <b>punteada</b>
+    /// y el marcaje en curso <b>continuo</b>: la diferencia entre "este es su par de esta posesión" y
+    /// "ahora mismo está yendo a por él" no puede depender solo del grosor (UI-002).
+    /// <para>
+    /// La distinción importa más de lo que parece: la asignación la tienen los doce jugadores de campo
+    /// todo el partido, pero <c>MarkOpponent</c> apenas gana la tabla de utilidad, así que la línea
+    /// continua es rara y la punteada es el emparejamiento latente.
+    /// </para>
+    /// </summary>
+    private void DrawMarking(MatchTrace trace, int frame, float cell)
+    {
+        float radius = cell * TokenRadius;
+        for (int i = 0; i < trace.Players.Count; i++)
+        {
+            int target = trace.MarkTargetAt(frame, i);
+            if (target < 0 || !trace.OnPitchAt(frame, i) || !trace.OnPitchAt(frame, target))
+            {
+                continue;
+            }
+
+            bool active = trace.ActionAt(frame, i) == PlayerAction.MarkOpponent;
+            bool involved = SelectedId >= 0
+                && (trace.Players[i].Id == SelectedId || trace.Players[target].Id == SelectedId);
+            if (!ShowMarking && !active && !involved)
+            {
+                continue;
+            }
+
+            var from = PositionOf(trace, frame, i, cell);
+            var to = PositionOf(trace, frame, target, cell);
+            var away = to - from;
+            float length = away.Length();
+            if (length <= radius + 6f)
+            {
+                // Encima el uno del otro: la línea sería un punto y el par ya se ve en la propia imagen.
+                continue;
+            }
+
+            away /= length;
+
+            // El recorte por el radio de las dos fichas se reparte la línea cuando no cabe entero: marcar
+            // de cerca es justo lo que hace un buen marcador, y ese es el caso en el que el trazo no puede
+            // desaparecer.
+            float trim = Mathf.Min(radius + 3f, length * 0.35f);
+            var start = from + (away * trim);
+            var end = to - (away * trim);
+            var color = trace.Players[i].Team == 0 ? Style.TeamOwn : Style.TeamRival;
+            color = new Color(color, active ? 0.9f : (involved ? 0.6f : 0.3f));
+
+            if (active)
+            {
+                DrawLine(start, end, color, 2.5f);
+            }
+            else
+            {
+                // La asignación empareja a los doce jugadores de campo, y un delantero puede tener por par
+                // a un defensa que está en la otra punta. Esas líneas larguísimas se desvanecen por el
+                // centro: siguen diciendo quién va con quién por los dos extremos, pero no cortan el campo
+                // en diagonal.
+                DrawFadingDashes(start, end, color, involved ? 1.6f : 1.2f, cell);
+            }
+
+            DrawCircle(end, active ? 3.5f : 2.5f, color);
+        }
+    }
+
+    /// <summary>
+    /// El <b>corchete</b> del marcaje en curso: un arco en el color del marcador pegado a la ficha del
+    /// marcado, por el lado desde el que le llega. Va encima de las fichas y existe porque la línea sola
+    /// no vale: cuando alguien marca bien está encima de su par, y entonces entre las dos fichas no cabe
+    /// ni un píxel de línea. El arco se ve igual a un palmo que a media cancha.
+    /// </summary>
+    private void DrawMarkGrips(MatchTrace trace, int frame, float cell)
+    {
+        float radius = cell * TokenRadius;
+        for (int i = 0; i < trace.Players.Count; i++)
+        {
+            int target = trace.MarkTargetAt(frame, i);
+            if (target < 0
+                || !trace.OnPitchAt(frame, i)
+                || !trace.OnPitchAt(frame, target)
+                || trace.ActionAt(frame, i) != PlayerAction.MarkOpponent)
+            {
+                continue;
+            }
+
+            var from = PositionOf(trace, frame, i, cell);
+            var to = PositionOf(trace, frame, target, cell);
+            var away = from - to;
+            if (away.LengthSquared() < 1f)
+            {
+                continue;
+            }
+
+            float angle = away.Angle();
+            var color = (trace.Players[i].Team == 0 ? Style.TeamOwn : Style.TeamRival).Lightened(0.3f);
+            DrawArc(to, radius + 7f, angle - 0.75f, angle + 0.75f, 16, color, 3.5f);
+        }
+    }
+
+    /// <summary>
+    /// Trazo punteado que se apaga por el centro cuanto más largo es. Es lo que permite enseñar los doce
+    /// emparejamientos a la vez sin convertir el campo en una tela de araña: los tramos pegados a las dos
+    /// fichas se ven, el vuelo entre ellas casi no.
+    /// </summary>
+    private void DrawFadingDashes(Vector2 from, Vector2 to, Color color, float width, float cell)
+    {
+        float length = from.DistanceTo(to);
+        if (length <= 0.01f)
+        {
+            return;
+        }
+
+        const float Dash = 4f;
+        var step = (to - from) / length;
+        float dip = Mathf.Clamp((length - (cell * 2.5f)) / (cell * 4f), 0f, 1f);
+
+        for (float d = 0f; d < length; d += Dash * 2f)
+        {
+            float along = (d + (Dash * 0.5f)) / length;
+            float middle = Mathf.Min(along, 1f - along) * 2f;
+            var faded = new Color(color, color.A * Mathf.Lerp(1f, Mathf.Lerp(1f, 0.10f, middle), dip));
+            DrawLine(from + (step * d), from + (step * Mathf.Min(d + Dash, length)), faded, width);
+        }
+    }
+
+    /// <summary>
+    /// A dónde intenta ir cada uno: el punto que le puso la acción elegida (<c>TargetPoint</c>). Para el
+    /// jugador seguido se pinta la línea entera hasta el destino, con un aro donde acaba; para los demás solo
+    /// un <b>bigote</b> corto en esa dirección, que es lo que hace que el campo en reposo —doce jugadores
+    /// colocándose, todos con el mismo anillo tenue— diga hacia dónde va cada uno sin llenarlo de líneas.
+    /// </summary>
+    private void DrawIntent(MatchTrace trace, int frame, float cell)
+    {
+        float radius = cell * TokenRadius;
+        for (int i = 0; i < trace.Players.Count; i++)
+        {
+            if (!trace.OnPitchAt(frame, i) || Style.IsDown(trace.StateAt(frame, i)))
+            {
+                continue;
+            }
+
+            var from = PositionOf(trace, frame, i, cell);
+            var to = ToPixels(trace.TargetAt(frame, i), cell);
+            var away = to - from;
+            float length = away.Length();
+            if (length <= radius + 5f)
+            {
+                continue;
+            }
+
+            away /= length;
+            var start = from + (away * (radius + 2f));
+            bool selected = trace.Players[i].Id == SelectedId;
+            if (!selected)
+            {
+                DrawLine(start, from + (away * Mathf.Min(length, radius + (cell * 0.30f))), Style.Intent, 2f);
+                continue;
+            }
+
+            Style.DrawDashed(this, start, to, new Color(Style.Accent, 0.85f), 1.5f, 4f);
+            DrawArc(to, 4.5f, 0f, Mathf.Tau, 16, Style.Accent, 1.5f);
+        }
     }
 
     /// <summary>Una ficha: anillo de estado, disco del equipo y dorsal dentro.</summary>

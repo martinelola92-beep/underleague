@@ -76,6 +76,10 @@ public sealed class MatchTrace
     private readonly float[] _zoneForward;
     private readonly float[] _zoneBack;
     private readonly float[] _zoneSides;
+    private readonly int[] _markTarget;
+    private readonly byte[] _action;
+    private readonly float[] _targetX;
+    private readonly float[] _targetY;
 
     internal MatchTrace(
         TracePlayer[] players,
@@ -95,7 +99,11 @@ public sealed class MatchTrace
         float[] homeY,
         float[] zoneForward,
         float[] zoneBack,
-        float[] zoneSides)
+        float[] zoneSides,
+        int[] markTarget,
+        byte[] action,
+        float[] targetX,
+        float[] targetY)
     {
         Players = players;
         RegulationTicks = regulationTicks;
@@ -116,6 +124,10 @@ public sealed class MatchTrace
         _zoneForward = zoneForward;
         _zoneBack = zoneBack;
         _zoneSides = zoneSides;
+        _markTarget = markTarget;
+        _action = action;
+        _targetX = targetX;
+        _targetY = targetY;
     }
 
     /// <summary>Las 20 fichas, ordenadas por id ascendente igual que el motor (RT-041).</summary>
@@ -176,6 +188,35 @@ public sealed class MatchTrace
             _zoneSides[slot]);
     }
 
+    /// <summary>
+    /// Índice en <see cref="Players"/> del rival al que este jugador tiene <b>asignado</b> marcar en ese
+    /// tick, o -1 si no tiene asignación (portero, jugador fuera del campo, o antes de la primera
+    /// posesión). Es la asignación estable de <c>Marking</c> (ADR 0022), que dura toda la posesión: el
+    /// jugador solo se mueve hacia ella cuando además su acción es <see cref="PlayerAction.MarkOpponent"/>
+    /// (<see cref="ActionAt"/>), y por eso las dos cosas se graban por separado.
+    /// </summary>
+    public int MarkTargetAt(int frame, int player) => _markTarget[Slot(frame, player)];
+
+    /// <summary>
+    /// Acción que la tabla de utilidad eligió para este jugador en su última decisión (RT-098), o null si
+    /// todavía no ha decidido nada. <b>No cambia cada tick</b>: se decide una vez cada
+    /// <c>tuning.decisionIntervalTicks</c> y se mantiene, así que esto es "lo que está haciendo", no "lo
+    /// que ha elegido en este tick". Es lo que distingue las cinco maneras distintas de estar
+    /// <see cref="PlayerState.Positioning"/>.
+    /// </summary>
+    public PlayerAction? ActionAt(int frame, int player)
+    {
+        byte value = _action[Slot(frame, player)];
+        return value == NoAction ? null : (PlayerAction)value;
+    }
+
+    /// <summary>
+    /// Punto al que el jugador intenta ir en ese tick: el destino que la acción elegida le puso
+    /// (<c>MatchPlayer.TargetPoint</c>), ya recortado a la zona por el motor solo en el momento de mover.
+    /// Con la acción al lado explica la mitad de lo que se ve: dónde está y hacia dónde tira.
+    /// </summary>
+    public Vec2 TargetAt(int frame, int player) => new(_targetX[Slot(frame, player)], _targetY[Slot(frame, player)]);
+
     /// <summary>Fotograma cuyo tick es el indicado, acotado al rango; los ticks van de 1 en 1 y sin huecos.</summary>
     public int FrameOfTick(int tick)
     {
@@ -189,6 +230,9 @@ public sealed class MatchTrace
     }
 
     private int Slot(int frame, int player) => (frame * Players.Count) + player;
+
+    /// <summary>Valor de <see cref="_action"/> para "todavía no ha decidido"; el enum no llega a 255.</summary>
+    internal const byte NoAction = 255;
 }
 
 /// <summary>
@@ -222,6 +266,18 @@ internal sealed class MatchTraceRecorder
     private readonly List<float> _zoneForward;
     private readonly List<float> _zoneBack;
     private readonly List<float> _zoneSides;
+    private readonly List<int> _markTarget;
+    private readonly List<byte> _action;
+    private readonly List<float> _targetX;
+    private readonly List<float> _targetY;
+
+    /// <summary>
+    /// Última acción elegida por cada jugador, indexada por su posición en el array del motor. La memoria
+    /// vive aquí y no en <c>MatchPlayer</c> a propósito: el motor decide cada
+    /// <c>tuning.decisionIntervalTicks</c> ticks y no guarda lo que eligió, y esto es información de
+    /// <b>observación</b>, no de juego. Con la traza apagada este array no existe.
+    /// </summary>
+    private readonly byte[] _lastAction;
 
     public MatchTraceRecorder(MatchPlayer[] players, int regulationTicks)
     {
@@ -239,7 +295,25 @@ internal sealed class MatchTraceRecorder
         _zoneForward = new List<float>(cells);
         _zoneBack = new List<float>(cells);
         _zoneSides = new List<float>(cells);
+        _markTarget = new List<int>(cells);
+        _action = new List<byte>(cells);
+        _targetX = new List<float>(cells);
+        _targetY = new List<float>(cells);
+
+        _lastAction = new byte[players.Length];
+        for (int i = 0; i < _lastAction.Length; i++)
+        {
+            _lastAction[i] = MatchTrace.NoAction;
+        }
     }
+
+    /// <summary>
+    /// La acción que la tabla de utilidad acaba de elegir para un jugador. Es lo único que el motor le
+    /// cuenta al grabador además del tick: la acción no se queda en <c>MatchPlayer</c>, así que si no se
+    /// anota en el momento de decidirla se pierde. <b>Solo escribe en el grabador</b>: nada de esto vuelve
+    /// al motor (RT-024).
+    /// </summary>
+    public void Decided(int player, PlayerAction action) => _lastAction[player] = (byte)action;
 
     /// <summary>
     /// Un fotograma con el estado consolidado del tick. Solo <b>lee</b>: ni toca el motor ni consume
@@ -270,6 +344,14 @@ internal sealed class MatchTraceRecorder
             _zoneForward.Add(Cells(zone.ForwardMilli));
             _zoneBack.Add(Cells(zone.BackMilli));
             _zoneSides.Add(Cells(zone.SidesMilli));
+
+            // El objetivo de marcaje se graba por índice, no por id: la traza indexa por índice y así la
+            // pantalla no tiene que buscar a nadie para pintar la línea entre marcador y marcado.
+            var mark = player.MarkTarget;
+            _markTarget.Add(mark is null || !Marking.IsValidTarget(mark, player.Team) ? -1 : mark.Index);
+            _action.Add(_lastAction[i]);
+            _targetX.Add(player.TargetPoint.X);
+            _targetY.Add(player.TargetPoint.Y);
         }
     }
 
@@ -292,7 +374,11 @@ internal sealed class MatchTraceRecorder
         _homeY.ToArray(),
         _zoneForward.ToArray(),
         _zoneBack.ToArray(),
-        _zoneSides.ToArray());
+        _zoneSides.ToArray(),
+        _markTarget.ToArray(),
+        _action.ToArray(),
+        _targetX.ToArray(),
+        _targetY.ToArray());
 
     private static float Cells(int milli) => milli == ActionZone.Unlimited ? TraceZone.Unlimited : milli / 1000f;
 

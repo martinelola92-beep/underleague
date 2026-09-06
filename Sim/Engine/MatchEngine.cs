@@ -653,6 +653,11 @@ internal sealed class MatchEngine : IPerkWorld
 
         var state = player.State;
         var action = Utility.Choose(_context, player, rows);
+
+        // La acción elegida no se guarda en el jugador (el motor la consume aquí mismo), así que la traza
+        // se entera en el único sitio donde existe. Con la traza apagada esto es una comparación con null.
+        _trace?.Decided(player.Index, action);
+
         if (rows is not null)
         {
             _report.UtilityDump = new UtilityDump(player.Id, _tick, state, rows, action);
