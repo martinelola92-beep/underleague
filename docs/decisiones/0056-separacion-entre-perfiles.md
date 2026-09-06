@@ -26,6 +26,18 @@ objetivos quedan exactamente donde los dejó la ADR 0060.** Y queda medido lo qu
 hay. Ninguna palanca de fuerza lo da; la única viva es **AL-A** (el recorrido del catálogo por canal).
 Detalle en `fase2-diseno.md` §29
 
+*(Estado 2026-09-06, paquete AO / ADR 0064)*: **la tercera salida de la ADR 0063 queda falsificada por
+medición**. Encarecer la derrota de un partido ordinario (RF-002c) no separa perfiles porque **las tres
+builds pierden el mismo número de partidos ordinarios**: 4,03 la buena, 4,16 la mediocre y 4,03 la que no
+construye —pierde a mayor ritmo pero juega menos, y la truncadura de la run compensa—. Perder ya cuesta 44
+de oro y 4 recompensas por run, el 34-39% de la economía, y las tres pagan la misma factura. Medido en cinco
+magnitudes hasta "una derrota cuesta más de lo que paga ganar": el suelo se queda en 10,7 sin orden, la
+build buena baja su tasa de victoria de la run y suben las derrotas del acto 1. **Los seis objetivos quedan
+exactamente donde los dejó la ADR 0060.** Y queda la identidad que ordena lo que falta: **la tasa de
+victoria de la run es el producto de las tres puertas de jefe** (17,00 = 0,7533·0,4425·0,5100) y los veinte
+partidos ordinarios no aparecen en él. La única palanca viva para los objetivos 4 y 5 es **de puerta**:
+cada una discrimina hoy 1,15 y hacen falta 1,26. Detalle en `fase2-diseno.md` §31
+
 **Requisitos:** RT-055, RT-056, RF-032
 **Depende de:** ADR 0054 (banda revisada) · **implementa** las P1 y P3 de la ADR 0050
 

@@ -195,8 +195,11 @@ public sealed class StandardRunSystems : IRunSystems
 
         if (!summary.Won)
         {
-            // Perder no paga (RF-114g) y no hay recompensa que elegir.
-            return state;
+            // Perder no paga (RF-114g) y no hay recompensa que elegir. Aquí solo llegan las derrotas
+            // ORDINARIAS: la derrota contra el jefe termina la run antes de AfterMatch (RunEngine).
+            int penalty = _economy.DefeatGoldPenalty
+                + (state.Gold * _economy.DefeatGoldPenaltyPercent / 100);
+            return penalty > 0 ? state.AddGold(-penalty) : state;
         }
 
         int gold = GoldCalculator.GoldForWin(state, node, summary, _economy);

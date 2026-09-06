@@ -53,6 +53,14 @@
     "rewardPerkWeight": { "type": "integer", "minimum": 0 },
     "rewardPlayerWeight": { "type": "integer", "minimum": 0 },
     "rewardItemWeight": { "type": "integer", "minimum": 0 },
+    "defeatGoldPenalty": {
+      "description": "ADR 0064: oro fijo que se pierde al perder un partido ORDINARIO (RF-002c), ademas de no cobrar la victoria ni la recompensa. Instrumento de medicion; 0 si falta y 0 en /data.",
+      "type": "integer", "minimum": 0
+    },
+    "defeatGoldPenaltyPercent": {
+      "description": "ADR 0064: porcentaje del oro EN MANO que se pierde al perder un partido ordinario. Instrumento de medicion; 0 si falta y 0 en /data.",
+      "type": "integer", "minimum": 0, "maximum": 100
+    },
     "market": { "$ref": "#/$defs/market" }
   },
   "required": [

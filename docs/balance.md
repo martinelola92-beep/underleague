@@ -35,6 +35,12 @@ plantilla, nivel medio, mercados visitados y qué se compró) más `summary.csv`
 `fase2-diseno.md` §10 y de la ADR 0037. La política automática y sus reglas están en
 `Sim.Analysis.RunPolicy` y explicadas en `docs/balance/fase2-resultados.md` §1.
 
+Escribe además **`runs-nomarket.csv`**, con las mismas columnas, para la cuarta política del modo: la
+medida de control de la ADR 0055, que es contextual pero **esquiva los mercados** y por eso no se
+distingue de la build buena en la columna `doctrine` de `runs.csv`. Es el perfil **sin build** de la ADR
+0057 —con `economy.rewardPerkWeight = 0` en `/data`— y sin este volcado no se puede desglosar por acto
+(ADR 0064, `fase2-diseno.md` §31.1).
+
 `--ignore-scouting` apaga la lectura del informe de ojeo y del indicador de riesgo al alinear
 (`RunPolicyOptions.HeedsLethalScouting`), y `--risk-aversion N` fija cuánto descuenta la política el valor
 de un titular por su exposición a un perk letal (`DeathCostPercent`): 0 ignora el número, un valor alto lo

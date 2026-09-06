@@ -136,6 +136,21 @@ public sealed record EconomyConfig(
     public PerkValueTable PerkValues { get; init; } = PerkValueTable.Uniform;
 
     /// <summary>
+    /// Oro fijo que se pierde al perder un <b>partido ordinario</b> (RF-002c), además de no cobrar la
+    /// victoria ni la recompensa. Instrumento del paquete AÑ: es la única forma de "encarecer perder"
+    /// que no toca ningún número que la oposición comparta. 0 = el juego de hoy. El oro no baja de cero
+    /// (<see cref="RunState.WithGold"/>), así que un club en la ruina no acumula deuda.
+    /// </summary>
+    public int DefeatGoldPenalty { get; init; }
+
+    /// <summary>
+    /// Porcentaje del oro <b>en mano</b> que se pierde al perder un partido ordinario. Variante del
+    /// mismo instrumento denominada en lo que el perfil sin build sí tiene de sobra (mide 22-43 de oro
+    /// sin gastar al final de la run, frente a 11 de la build buena). 0 = el juego de hoy.
+    /// </summary>
+    public int DefeatGoldPenaltyPercent { get; init; }
+
+    /// <summary>
     /// Oro de partida de la división indicada (RF-128, ADR 0044 §"el oro inicial es la primera palanca de
     /// dificultad por división"). El criterio es que el club empiece con <b>lo justo para un artículo
     /// común</b> en la primera tienda, y que en Mundial esa primera tienda sea solo un escaparate. Es una
@@ -323,6 +338,8 @@ public static class EconomyLoader
             market)
         {
             PerkValues = PerkValueTable.FromJson(files),
+            DefeatGoldPenalty = root.OptionalInt("defeatGoldPenalty", 0),
+            DefeatGoldPenaltyPercent = root.OptionalInt("defeatGoldPenaltyPercent", 0),
         };
     }
 

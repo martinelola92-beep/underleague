@@ -4015,3 +4015,202 @@ Lo único que entra en el repositorio es `--utility-census` en `/Balance` (`Util
 - **AL-A sigue abierta y sigue siendo la decisión de fondo**, ahora con una cifra por perk: 22 de los 51
   perks del catálogo, medidos sin su castigo, valen menos de un punto de tasa de victoria.
 - **AL-C, AL-D y AM-B** sin cambios.
+
+## 31. Decisiones de implementación del paquete AO: qué cuesta perder un partido ordinario (ADR 0064)
+
+El encargo era la **tercera salida de la ADR 0063** —bajar el suelo sin build por la vía de **qué cuesta
+perder un partido ordinario** (RF-002c)—, la única de las tres que nadie había medido y el último parámetro
+grande del recorrido sin caracterizar. Fase 1 medir, fase 2 sólo si la medición lo sostiene. **No lo
+sostiene**, así que, como en los paquetes AM y AN, **no se mueve ningún número de balance**: entra medición
+(ADR 0064) y un instrumento en cero.
+
+### 31.1. El banco, y que vuelve a reproducir la ADR 0060 al decimal
+
+Mismo protocolo que §28.8, §29.1 y §30.1: 1.200 runs por perfil (300 × semillas 1/1001/2001/3001),
+contextual = "buena", gastadora = "mediocre" y "mala", el suelo con `economy.rewardPerkWeight = 0` y la
+política que esquiva mercados. Las sondas son de 600 runs (300 × semillas 1 y 1001).
+
+| | ADR 0060/0061/0063 | esta medición | ET |
+|---|---|---|---|
+| Build buena, actos 2/3 | 57,97 / 44,43 | **57,97 / 44,43** | 0,71 / 0,53 |
+| Build mediocre, actos 2/3 | 47,94 / 40,67 | **47,94 / 40,67** | 0,70 / 0,25 |
+| Build mala completa la run | 12,00 | **12,00** | 0,87 |
+| Suelo sin build | 10,66 | **10,67** | 0,56 |
+| Hueco acto 2 | 10,03 | **10,03** | 0,50 |
+| Tasa de victoria de la run | 17,00 | **17,00** | 1,28 |
+| Muertes por run · derrotas del acto 1 | 1,46 · 29,74 | **1,46 · 29,74** | 0,02 · 1,87 |
+
+Para desglosar el perfil **sin build** por acto hacía falta un volcado que no existía: la política de
+control de la ADR 0055 es contextual, así que en `runs.csv` era indistinguible de la build buena. `/Balance`
+escribe ahora también **`runs-nomarket.csv`** con sus runs. Es el único cambio de instrumentación que el
+paquete necesitó para medir, y no toca ninguna métrica ni ninguna puerta.
+
+### 31.2. Separar el partido ordinario del de jefe es exacto, no una estimación
+
+La derrota contra el jefe **termina la run** (RF-002), así que la única derrota de jefe de una run es la
+terminal y se identifica con `cause = BossMatchLost` y el acto alcanzado. Los jefes ganados salen de
+`bossesBeaten`. Todo lo demás de `matchesAct{n}` —liga y élite— es ordinario, y perderlo no termina la run
+(RF-002c). No hace falta instrumentar el motor.
+
+### 31.3. Las tres builds pierden el mismo número de partidos ordinarios
+
+| perfil | ordinarios jugados | **ordinarios perdidos** | tasa de derrota ordinaria | a1 | a2 | a3 |
+|---|---|---|---|---|---|---|
+| Build **buena** | 11,09 | **4,03** | 36,3% | 1,19 | 1,74 | 1,10 |
+| Build **mediocre/mala** | 10,24 | **4,16** | 40,7% | 1,35 | 2,00 | 0,82 |
+| **Sin build** (suelo) | 10,37 | **4,03** | 38,8% | 1,24 | 1,92 | 0,88 |
+
+**4,03 contra 4,16 contra 4,03.** El equipo sin build pierde a mayor *ritmo* (38,8% frente a 36,3%) pero
+juega menos partidos, porque su run se corta antes en la puerta del jefe: **la truncadura compensa el ritmo
+casi exactamente**. Un castigo de D por derrota ordinaria es, a primer orden, un impuesto uniforme de 4·D
+por run para los tres perfiles, que es la palanca de oro de la ADR 0055 con otro nombre.
+
+### 31.3b. Un efecto colateral de haber separado el jefe: la métrica publicada incluye la puerta
+
+Separar los partidos ordinarios de los de jefe deja ver que `winRateAct{n}` —la métrica con la que se
+publican los objetivos 1 y 2 desde la ADR 0056— **cuenta también el partido de jefe**, mientras que la
+tabla de la propia ADR 0056 dice "partidos **ordinarios** (perder uno no termina la run, RF-002c)". Las dos
+cifras, sobre las mismas 1.200 runs:
+
+| perfil | acto 2 con jefe | acto 2 **sólo ordinarios** | acto 3 con jefe | acto 3 **sólo ordinarios** |
+|---|---|---|---|---|
+| Build buena | 57,97 | **60,37** | 44,43 | 43,26 |
+| Build mediocre | 47,94 | 50,42 | 40,67 | 38,64 |
+| Sin build | 50,78 | 53,45 | 39,83 | 39,07 |
+| **Hueco del acto 2** | **10,03** | **9,95** | | |
+
+No cambia ninguna conclusión —el hueco es el mismo dentro del error y los siete paquetes se comparan entre
+sí con la misma métrica— pero sí cambia **cómo se lee el objetivo 1**: medido como su ADR lo describe, la
+build buena ya está en **60,37** en el acto 2 y sigue lejos (43,26) en el 3. Queda anotado en **AO-D**; no
+se toca la métrica (RT-057).
+
+### 31.4. Y perder ya cuesta un tercio de la economía de la run
+
+| perfil | oro no cobrado | oro ganado | derrotas como % de la economía | recompensas perdidas | perks que no se compran |
+|---|---|---|---|---|---|
+| Build buena | 44,1 | 86,22 | **33,8%** | 4,03 | 1,8 |
+| Build mediocre/mala | 44,7 | 71,13 | **38,6%** | 4,16 | 1,9 |
+| Sin build | 43,6 | 77,84 | **35,9%** | 4,03 | 1,8 |
+
+Oro no cobrado = derrotas ordinarias del acto × el oro base de ese acto (9/11/13); "perks que no se
+compran" reparte ese oro a 24, el precio de un perk raro. Es el **segundo sumidero de la run** por detrás
+del mercado (63,4) y por delante de clínica + matrícula + rerolls juntos (22,0) — y las tres builds pagan
+la misma factura.
+
+### 31.5. El instrumento, y las cinco magnitudes medidas
+
+`economy.defeatGoldPenalty` (oro fijo) y `economy.defeatGoldPenaltyPercent` (porcentaje del oro **en
+mano**) se cobran en `StandardRunSystems.AfterMatch`, en la rama `!summary.Won`, que es exactamente la
+derrota ordinaria: la derrota contra el jefe no llega ahí porque `RunEngine.ResolveMatch` corta antes
+cuando el desenlace termina la run. El oro no baja de cero (`RunState.WithGold`), así que no hay deuda.
+Los dos entran en `/data` y en el esquema con valor **0**: el juego de hoy es idéntico.
+
+Las magnitudes no son tímidas: **+12 de oro por derrota es más de lo que paga ganar** (9/11/13) y **−50%
+del oro en mano** es media bolsa en cada tropiezo.
+
+| condición | buena a2 | mediocre a2 | hueco | run buena | run mala | **SUELO** | derrotas a1 | muertes |
+|---|---|---|---|---|---|---|---|---|
+| **hoy** (1.200) | 57,97 | 47,94 | 10,03 | 17,00 | 12,00 | **10,67** | 29,74 | 1,46 |
+| −50% del oro (1.200) | 57,78 | 47,34 | 10,44 | 16,33 | 8,58 | **10,58** | 31,30 | 1,48 |
+| −75% del oro (1.200) | 57,37 | 47,67 | **9,71** | 16,25 | 10,58 | **11,50** | 30,16 | 1,50 |
+| +3 de oro (600) | 57,94 | 46,87 | 11,07 | 14,67 | 9,67 | **9,50** | 29,89 | 1,39 |
+| +6 de oro (600) | 58,82 | 47,92 | 10,90 | 15,33 | 11,50 | **8,67** | 31,30 | 1,48 |
+| +12 de oro (600) | 57,39 | 48,37 | 9,01 | 14,00 | 11,50 | **11,17** | 30,60 | 1,45 |
+| −25% del oro (600) | 57,45 | 48,58 | 8,87 | 13,83 | 11,00 | **8,83** | 30,35 | 1,40 |
+
+(Las filas de 600 runs se comparan entre sí y con la base de 600 runs —buena 57,53 · mediocre 47,01 · hueco
+10,53 · run 14,83 · mala 12,00 · suelo 10,00 · derrotas a1 28,38 · muertes 1,46—, nunca con la de 1.200.
+La columna SUELO de las filas de 600 sale de la condición `rewardPerkWeight = 0` medida en paralelo.)
+
+Cuatro lecturas:
+
+1. **El suelo no se mueve y no tiene orden**: 8,67 con +6 y 11,17 con +12; 10,58 con −50% y 11,50 con −75%.
+   Es ruido alrededor de 10,7 con error típico 0,6-1,1, y el castigo más duro da el suelo **más alto**.
+2. **La build buena tampoco se mueve donde tiene que moverse** (57,97 → 57,37 en el acto 2) y **sí donde no
+   debe**: su tasa de victoria de la run baja de 17,00 a 16,25, alejándose de la meta de 20-30.
+3. **La build mala no tiene tendencia**: 12,00 → 8,58 con −50% y 10,58 con −75%. El único valor que parecía
+   una señal no sobrevive a subir el castigo.
+4. **Dos guardarraíles se mueven en contra**: las derrotas del acto 1 pasan de 29,74 a 30,2-31,3 sobre un
+   techo de 29,74, y con −75% el hueco cae a **9,71**, por debajo del suelo de 9,8.
+
+### 31.6. Por qué falla: el castigo se cobra en la moneda que sólo tiene quien construye
+
+Poder de compra destruido, sonda de 600 runs con +6 de oro por derrota:
+
+| perfil | oro gastado en mercado, hoy → con castigo | perks al final |
+|---|---|---|
+| Build buena | 63,05 → **49,09** (−22%) | 12,07 → 11,49 |
+| Build mediocre | 71,95 → 61,88 (−14%) | 14,23 → 13,70 |
+| **Sin build** | 8,94 → 5,29 | 1,56 → **1,35** |
+
+El perfil sin build termina la run con **22 de oro sin gastar y 33 quemados rerolleando recompensas que no
+quiere**: un colchón de ~55 de oro inútil que absorbe cualquier peaje antes de llegarle a la build, y la
+build que tiene son 1,6 perks. La build buena termina con **11 de oro sobre 86 ganados**: su restricción
+está apretada y el peaje le llega entero. La palanca no es neutra, es **regresiva**. Y eso vale para
+cualquier denominación pagable del castigo —oro, clínica, matrícula, perder un perk, perder un objeto—:
+todas son cosas de las que el perfil sin build tiene **menos**.
+
+### 31.7. La identidad que cierra la pregunta
+
+| perfil | puerta 1 | puerta 2 | puerta 3 | **producto** | tasa de victoria de la run |
+|---|---|---|---|---|---|
+| Build buena | 75,33 | 44,25 | 51,00 | **17,00** | **17,00** |
+| Build mediocre/mala | 68,58 | 33,29 | 52,75 | **12,04** | **12,00** |
+| Sin build | 70,75 | 35,18 | 44,29 | **11,02** | 10,67 |
+
+**La tasa de victoria de la run es, al decimal, el producto de las tres tasas de victoria contra los jefes.
+Los veinte partidos ordinarios no aparecen en el producto.** La diferencia del perfil sin build es la única
+otra vía de derrota, quedarse sin plantilla, que ocurre 0,009 veces por run. Es la frase de la ADR 0057
+—*"el jefe filtra; el resto del recorrido, no"*— convertida en aritmética, y explica por qué los partidos
+ordinarios sólo pueden actuar por el canal indirecto (menos oro → peor build → peor jefe), que es el que la
+ADR 0055 ya midió y falsificó.
+
+Y el jefe además **separa más por partido** que el partido ordinario: en el acto 2 el jefe separa 9,1
+puntos entre build buena y sin build (44,25 contra 35,18) y el ordinario 6,9 (60,37 contra 53,45). Mover
+presión del jefe al partido ordinario **reduce** la discriminación por unidad de presión.
+
+### 31.8. Las seis puertas
+
+| Puerta | Estado |
+|---|---|
+| Sensación de fútbol (RT-056 + `betterTeamWinRate` 70-88, ADR 0054) | **verde**; lote de referencia de 1.000 partidos idéntico a §29.7: `betterTeamWinRate_human_60_vs_human_40` **79,52** IN, `possessionChanges` 24,13 · `passChainAvgLength` 2,26 · `shotsPerMatch` 11,99 · `tacklesPerMatch` 9,75 · `injuriesPerMatch` 0,74 |
+| Rareza y jefe final (RF-024, ADR 0027) | **verde** |
+| Equilibrio entre razas (D-29) | **verde** |
+| Curva de puertas de la ADR 0033 | **verde**, las doce celdas, **sin recalibrar ningún jefe**; `--boss-gate` con **0 celdas OUT** |
+| Run completa | **verde en los tests**; `runWinRate` sigue OUT como métrica (17,00, banda 20-30) |
+| Criterio de salida de fase 1 (builds) | **verde** |
+
+**598 de 598 tests en Release**, y los 184 ficheros de `/data` validados contra esquema.
+
+### 31.9. Los seis objetivos: sin cambios, y a propósito
+
+| Objetivo (ADR 0056) | ADR 0063 | **este paquete** | ET | meta |
+|---|---|---|---|---|
+| Build buena, actos 2/3 | 57,97 / 44,43 | **57,97 / 44,43** | 0,71 / 0,53 | 60% |
+| Build mediocre, actos 2/3 | 47,94 / 40,67 | **47,94 / 40,67** | 0,70 / 0,25 | 42-45% |
+| Build mala completa la run | 12,00% | **12,00%** | 0,87 | < 2% |
+| Suelo sin build | 10,66% | **10,67%** | 0,56 | < 10% |
+| Hueco buena/mediocre, acto 2 | 10,03 | **10,03** | 0,50 | > 9,8 |
+| Tasa de victoria de la run | 17,00% | **17,00%** | 1,28 | 20-30% |
+
+Guardarraíles donde estaban: `deathsPerRun` **1,46**, derrotas del acto 1 **29,74%**, doce celdas de la ADR
+0033 en banda sin recalibrar ningún jefe, `betterTeamWinRate` **79,52**.
+
+### 31.10. Lo que queda abierto
+
+- **AO-A (nueva)**: la tasa de victoria de la run **es el producto de las tres puertas de jefe** y los
+  partidos ordinarios no entran en él. La única palanca que la medición deja viva para los objetivos 4 y 5
+  es **de puerta, no de recorrido**: hoy cada puerta discrimina 1,15 entre build buena y sin build y hace
+  falta 1,26 (producto 2,0 en vez de 1,54). Las dos formas permitidas por el guardarraíl son empinar la
+  pendiente `correct`→`good` de los tres jefes —el acto 3 es la puerta más plana, 25,0 → 38,9— o añadir un
+  cuarto evento filtro por run.
+- **AO-B (nueva)**: el criterio de dos condiciones que explica los siete paquetes. Una palanca separa
+  perfiles sólo si **(a)** la oposición no tiene ese número y **(b)** la build buena tampoco. Las seis de
+  las ADR 0055-0063 fallan por (a); ésta cumple (a) y falla por (b). El castigo del perk mal puesto (ADR
+  0060) sigue siendo lo único medido que cumple las dos.
+- **AM-A sigue siendo una elección del revisor**, sin cambios: la ADR 0064 sólo cierra la tercera de sus
+  tres salidas, que era la única que no era una decisión de diseño.
+- **AO-D (nueva)**: `winRateAct{n}` incluye el partido de jefe y la tabla que la publica dice "partidos
+  ordinarios". Build buena, acto 2: 57,97 con jefe y **60,37** sin él. No cambia ninguna conclusión, pero
+  antes de dar el objetivo 1 por alcanzado o no hay que decir cuál de las dos métricas se quiere.
+- **AL-A, AN-A, AN-B, AL-C, AL-D y AM-B** sin cambios.

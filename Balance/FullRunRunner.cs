@@ -11,6 +11,7 @@ namespace Underleague.Balance;
 /// <summary>Resultado del modo <c>--full-runs</c>: las runs jugadas por las tres doctrinas, sus métricas y el tiempo.</summary>
 public sealed record FullRunResult(
     IReadOnlyList<RunPlayResult> Runs,
+    IReadOnlyList<RunPlayResult> Marketless,
     IReadOnlyList<MetricResult> Metrics,
     int TotalMatches,
     TimeSpan Elapsed);
@@ -115,7 +116,7 @@ public static class FullRunRunner
             standard.Economy);
         metrics.AddRange(FullRunMetrics.Marketless(marketless, byDoctrine[PurchaseDoctrine.Contextual]));
 
-        return new FullRunResult(all, metrics, matches, stopwatch.Elapsed);
+        return new FullRunResult(all, marketless, metrics, matches, stopwatch.Elapsed);
     }
 
     /// <summary>Configuración de run de <c>/Balance</c>: oro y nodos por acto salen de <c>/data</c>.</summary>

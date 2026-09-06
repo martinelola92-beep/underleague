@@ -49,6 +49,11 @@ try
             .ToList();
 
         WriteRunsCsv(options.OutDir!, full.Runs);
+
+        // La política de control que esquiva los mercados (ADR 0055) no cabe en la columna `doctrine`
+        // de runs.csv —es contextual— y es el perfil "sin build" de la ADR 0057. Se vuelca aparte para
+        // poder desglosarla por acto como a las otras tres.
+        WriteRunsCsv(options.OutDir!, full.Marketless, "runs-nomarket.csv");
         WriteSummaryCsv(options.OutDir!, fullSummary);
 
         if (!options.Quiet)
@@ -481,7 +486,7 @@ static void WritePerkValuesCsv(string outDir, IReadOnlyList<PerkValueRow> rows)
 }
 
 /// <summary>runs.csv del modo --full-runs (fase2-diseno.md §10): una fila por run jugada.</summary>
-static void WriteRunsCsv(string outDir, IReadOnlyList<RunPlayResult> runs)
+static void WriteRunsCsv(string outDir, IReadOnlyList<RunPlayResult> runs, string fileName = "runs.csv")
 {
     string[] header =
     {
@@ -526,7 +531,7 @@ static void WriteRunsCsv(string outDir, IReadOnlyList<RunPlayResult> runs)
         string.Join(" ", r.Masters), string.Join(" ", r.FinalPerks),
     });
 
-    CsvWriter.Write(Path.Combine(outDir, "runs.csv"), header, rows);
+    CsvWriter.Write(Path.Combine(outDir, fileName), header, rows);
 
     static string Int(int value) => value.ToString(CultureInfo.InvariantCulture);
 }
