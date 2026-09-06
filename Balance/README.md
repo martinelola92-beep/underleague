@@ -35,6 +35,7 @@ Opciones (todas opcionales):
 | `--campaign N` | ninguno; activa el modo campaña | Ídem. Requiere `--builds` |
 | `--home-away` | apagado | Ídem. Aplica al modo matriz y al modo campaña |
 | `--rosters N` | 25 | Plantillas distintas generadas por build sobre las que se promedia cada celda de la matriz (paquete I). Solo aplica al modo matriz |
+| `--utility-census N` | ninguno; activa el modo censo | Censo del volcado de utilidad (RT-098) sobre N partidos del **primer emparejamiento** de `--teams`. Ver "Censo de utilidad" abajo |
 
 Salida por consola (salvo `--quiet`): tabla de `summary.csv` alineada, tiempo total y partidos/segundo. Código de salida: `0` si todas las métricas están `IN`/`INFO` (o si se usó `--match-seed`/`--describe`, que no tienen métricas), `1` si alguna está `OUT` o si una build es inválida o desconocida (`error de build: ...`).
 
@@ -127,6 +128,32 @@ codificados dentro: `/Balance` (paquete H) no las usa desde la línea de comando
 `data/balance/groups.json` (`BuildConfig.BuildGroups` en `Balance/BuildConfig.cs`) la puerta
 estadística de `Sim.Tests` (paquete I), que es quien decide los umbrales finales y las builds concretas a
 comparar en `buildsWinDifferently`.
+
+## Censo de utilidad (`--utility-census N`)
+
+Responde a **"¿por qué esta acción no gana nunca la tabla?"** separando las tres respuestas que son
+distintas entre sí: porque se **descarta** (no había a quién, o no tocaba en ese estado), porque **puntúa
+por debajo** aun siendo legal, o porque no se evalúa.
+
+`SimConfig.DumpUtility` imprime la tabla de **un** jugador en **un** tick (RT-098). El censo repite el
+**mismo** partido —mismo setup y misma semilla de motor— una vez por (jugador, tick) muestreado y acumula
+las tablas: 20 jugadores × 40 ticks (uno cada 30, hasta el 1.200) × N partidos. Es caro en partidos y
+barato en código, y a cambio mide exactamente lo que la tabla de utilidad decide, no una aproximación.
+**No toca `/Sim`.**
+
+```bash
+dotnet run --project Balance -c Release -- --utility-census 12 --seed 1
+```
+
+Columnas: `evaluada` (veces que la acción entró en una tabla), `descartada%` (de esas, cuántas se
+descartaron), `elegida`/`elegida%` (cuántas ganaron), `2a%` (cuántas quedaron segundas), `scoreMedio` y
+`scoreMax` sobre las no descartadas, y `margenMedio` (distancia media al score ganador). Sin CSV: la
+salida es la tabla por consola.
+
+**Aviso de muestreo**: se muestrean todos los estados de decisión, y las acciones con balón
+(`ShortPass`, `LongPass`, `Dribble`, `Shoot`) solo son legales para el poseedor, así que salen
+infrarrepresentadas frente al reparto de tiempo que ve el campo animado. Para las acciones sin balón el
+reparto sí es directamente comparable.
 
 ## Reproducir un partido concreto
 

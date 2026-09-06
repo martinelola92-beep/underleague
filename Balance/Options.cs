@@ -61,6 +61,12 @@ public sealed class Options
     public bool PerkValues { get; private set; }
 
     /// <summary>
+    /// <c>--utility-census N</c>: censo del volcado de utilidad (RT-098) sobre N partidos de referencia.
+    /// Herramienta de medición: no toca ninguna métrica ni ninguna puerta.
+    /// </summary>
+    public int? UtilityCensus { get; private set; }
+
+    /// <summary>
     /// Null salvo que se pase --full-runs N: juega N runs completas con la política automática de
     /// <c>Sim.Analysis.RunPolicy</c> y vuelca runs.csv (fase2-diseno.md §10).
     /// </summary>
@@ -134,6 +140,15 @@ public sealed class Options
 
                 case "--perk-values":
                     options.PerkValues = true;
+                    break;
+
+                case "--utility-census":
+                    options.UtilityCensus = ParseInt(arg, NextValue(args, ref i, arg));
+                    if (options.UtilityCensus <= 0)
+                    {
+                        throw new ArgumentException("--utility-census debe ser mayor que cero");
+                    }
+
                     break;
 
                 case "--ignore-scouting":

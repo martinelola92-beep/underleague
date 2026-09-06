@@ -60,6 +60,7 @@ Cuándo escribir un ADR: cambio de librería o stack, frontera entre proyectos, 
 | [0060](0060-el-castigo-tiene-recorrido-donde-el-premio-no-lo-tiene.md) | El perk mal puesto lo paga el equipo y el techo de la rareza no acota el castigo | Aceptada e implementada (§28). **Primer paquete que abre el hueco entre perfiles**: 6,27 → 10,03 |
 | [0061](0061-el-peso-de-los-atributos-no-es-un-grado-de-libertad.md) | El peso de los atributos frente a la build no discrimina entre perfiles: es el mismo número que la fuerza del rival | Aceptada. **Falsifica AL-B** con la medición; ningún número de balance se mueve |
 | [0062](0062-recalibrar-la-cadena-de-pases.md) | `buildsWinDifferently_passChain` pasa de 1,30 a 1,11: se medía contra un canal que la escala de cuotas ya no puede saturar | Aceptada e implementada |
+| [0063](0063-el-premio-lo-cobra-el-rival-el-castigo-no.md) | El premio del catálogo lo cobra también la oposición y el castigo no: por eso el castigo separa perfiles y su espejo es un mando de dificultad | Aceptada. **Falsifica AM-A como palanca**; ningún número de balance se mueve |
 
 El hueco del 0011 corresponde a una decisión sobre el radio de adyacencia que quedó absorbida por la 0021 antes de aceptarse.
 | [0012](0012-buildswindifferently-normalizada.md) | `buildsWinDifferently` normalizada contra la referencia de la raza | **Propuesta: decisión del revisor** |

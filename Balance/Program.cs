@@ -170,6 +170,15 @@ try
     string referenceContent = File.ReadAllText(options.TeamsPath);
     ReferenceConfig reference = ReferenceConfig.Load(referenceContent);
 
+    if (options.UtilityCensus is { } censusMatches)
+    {
+        // --utility-census N: censo del volcado de utilidad (RT-098) sobre el primer emparejamiento de
+        // reference.json. Instrumento de medición, sin métricas ni puertas.
+        var census = UtilityCensusRunner.Run(catalog, reference, options.Seed, censusMatches);
+        PrintUtilityCensus(census);
+        return 0;
+    }
+
     if (options.MatchSeed is { } matchSeed)
     {
         // --match-seed: un único partido reproducido con esa semilla de motor exacta, sin métricas de
@@ -751,6 +760,35 @@ static void PrintSummaryTable(IReadOnlyList<MetricRow> metrics)
         .ToList();
 
     PrintAlignedTable(headers, rows);
+}
+
+static void PrintUtilityCensus(IReadOnlyList<ActionCensusRow> rows)
+{
+    int decisions = rows.Sum(r => r.Chosen);
+    Console.WriteLine();
+    Console.WriteLine($"censo de utilidad (RT-098): {decisions} decisiones muestreadas");
+    string[] headers = { "accion", "evaluada", "descartada%", "elegida", "elegida%", "2a%", "scoreMedio", "scoreMax", "margenMedio" };
+    var table = rows
+        .OrderByDescending(r => r.Chosen)
+        .Select(r =>
+        {
+            int scored = r.Legal - r.Rejected;
+            return new[]
+            {
+                r.Action.ToString(),
+                r.Legal.ToString(),
+                r.Legal > 0 ? (100.0 * r.Rejected / r.Legal).ToString("F1", CultureInfo.InvariantCulture) : "-",
+                r.Chosen.ToString(),
+                decisions > 0 ? (100.0 * r.Chosen / decisions).ToString("F2", CultureInfo.InvariantCulture) : "-",
+                decisions > 0 ? (100.0 * r.RunnerUp / decisions).ToString("F2", CultureInfo.InvariantCulture) : "-",
+                scored > 0 ? ((double)r.ScoreSum / scored).ToString("F0", CultureInfo.InvariantCulture) : "-",
+                r.BestScore.ToString(),
+                scored > 0 ? ((double)r.MarginSum / scored).ToString("F0", CultureInfo.InvariantCulture) : "-",
+            };
+        })
+        .ToList();
+
+    PrintAlignedTable(headers, table);
 }
 
 static void PrintUtilityDump(UtilityDump dump)

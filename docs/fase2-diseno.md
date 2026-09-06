@@ -3755,3 +3755,263 @@ jefe, y `betterTeamWinRate` **79,52** dentro de 70-88.
 - **AL-E queda cerrada**: el literal `65..80` de `MatchMetrics` ya no está y la clase decide con sus propias
   constantes `BetterTeamWinRateMin`/`Max` (70-88, ADR 0054).
 - **AL-C y AL-D** sin cambios.
+
+## 30. Decisiones de implementación del paquete AN: de dónde sale el −1,8, las cuatro acciones muertas y por qué el premio no separa (ADR 0063)
+
+El encargo era **AM-A** —*hoy no tener build es mejor que tener una mala*— con dos mediciones obligatorias
+antes de elegir palanca y una hipótesis a falsificar: que los perks **desbloqueen comportamiento** en vez
+de mover números. Las dos mediciones están hechas; la hipótesis del encargo y la que salió de la medición
+quedan **las dos falsificadas**, y por la misma razón de fondo. Como en el paquete AM, **no se mueve
+ningún número de balance**: lo que entra es medición (ADR 0063) y un instrumento (`--utility-census`).
+
+### 30.1. El banco, y que vuelve a reproducir la ADR 0060 al decimal
+
+Mismo protocolo que §28.8 y §29.1: 1.200 runs por doctrina (300 × semillas 1/1001/2001/3001), contextual =
+"buena", gastadora = "mediocre" y "mala", el suelo con `economy.rewardPerkWeight = 0`. Las sondas son de
+600 runs (300 × semillas 1 y 1001).
+
+| | ADR 0060/0061 | esta medición | ET |
+|---|---|---|---|
+| Build buena, actos 2/3 | 57,97 / 44,43 | **57,97 / 44,43** | 0,71 / 0,53 |
+| Build mediocre, actos 2/3 | 47,94 / 40,67 | **47,94 / 40,67** | 0,70 / 0,25 |
+| Build mala completa la run | 12,00 | **12,00** | 0,87 |
+| Suelo sin build | 10,66 | **10,66** | 0,56 |
+| Hueco acto 2 | 10,03 | **10,03** | 0,50 |
+| Tasa de victoria de la run | 17,00 | **17,00** | 1,28 |
+| Muertes por run · derrotas del acto 1 | 1,46 · 29,74 | **1,46 · 29,74** | 0,02 · 1,87 |
+
+### 30.2. El −1,8 es castigo entero (fase 1.1)
+
+La condición de control es el **catálogo sin `elseEffects`**: se borran los 17 bloques de castigo de
+`data/perks/`. Es un instrumento limpio **para la doctrina gastadora**, porque su `Rank` de mercado es
+`-precio` y su `BestCarrier` devuelve el elegible de menor id: quitar los castigos no cambia qué compra ni
+dónde lo coloca, solo lo que el perk hace en el campo. (Para la contextual sí es un confundido: su `Rank`
+premia con 1.000.000 al perk que no castiga, y sin castigos ese término se aplica a todos.)
+
+| valor de los perks de recompensa, acto 2 | con castigo | sin castigo | castigo |
+|---|---|---|---|
+| Build buena | **+6,64** (ET 1,06) | +6,14 (ET 0,63) | −0,49 |
+| Build mediocre | **−1,85** (ET 1,38) | **+3,55** (ET 0,58) | **−5,40** |
+| Hueco del acto 2 | **10,03** (ET 0,50) | **4,01** (ET 0,94) | 6,02 |
+
+Tres lecturas, y las tres importan:
+
+1. **El −1,8 es castigo entero.** Los perks de la build mediocre, cuando no pueden castigar, valen +3,55.
+2. **El castigo no toca a quien construye bien**: +6,64 con castigos y +6,14 sin ellos es la misma cifra
+   dentro del error. Es la confirmación independiente del punto 2 de la ADR 0060.
+3. **El 60% del hueco es castigo.** Y sin él no hay hueco alcanzable: con `hueco = 1,54 + 2,59k` (donde
+   1,54 es la diferencia entre las dos doctrinas **sin** build y *k* el factor por el que se multiplicara
+   el premio), llegar a 9,8 sin castigo pide **k ≥ 3,19**, que deja a la build buena en el **71%** del
+   acto 2.
+
+### 30.3. Perk a perk: el castigo se concentra en cuatro, y no hay perks que resten bien puestos
+
+Se remide `--perk-values` (48 × 32, semillas 5 y 11 sumadas: 3.072 partidos por fila) sobre el catálogo sin
+castigos. **El control sale perfecto**: los 35 perks sin `elseEffects` reproducen la tabla vigente
+exactamente —diferencia media 0,0, desviación 0,3 unidades contra una desviación de fila de 23—, porque
+con los mismos datos y las mismas semillas los partidos son bit a bit los mismos. Eso convierte la
+diferencia de los 16 perks que castigan en una **medida exacta** del castigo, no en una estimación.
+
+| perk | base | sin poder castigar | castigo |
+|---|---|---|---|
+| `spearpoint` | −122 | +57 | **179** |
+| `bulwark_stance` | −46 | +16 | 62 |
+| `own_third_anchor` | −79 | −29 | 50 |
+| `gentle_giant` | +40 | +70 | 30 |
+| `last_ditch` · `fine_touch` · `pack_mentality` | 7 / 18 / 9 | 17 / 27 / 15 | 10 / 9 / 6 |
+| los otros nueve | | | ≤ 2 |
+
+Cuatro perks son el **83%** del castigo del catálogo (349 unidades) y `spearpoint` él solo el 51%. La
+unidad de la tabla son **20 por punto** de tasa de victoria, así que `spearpoint` mal puesto cuesta 8,9
+puntos.
+
+**Y la segunda mitad de la pregunta del encargo: no, no hay perks que valgan negativo estando bien
+puestos.** Dieciséis miden negativo sin poder castigar, pero entre −2,2 y −0,3 puntos contra una
+desviación de fila de 1,15; solo cuatro llegan a dos desviaciones y ninguno de los cuatro es "un perk que
+resta":
+
+- `cold_focus`, `box_predator`, `long_range_menace`, `poacher_instinct` son `actor shotOnTarget ×2` en una
+  jugada: **AL-A** puro, canal de base alta sin recorrido, y el signo es ruido alrededor de cero.
+- `clean_sheet_legacy` es un perk de **acumulación** medido con el contador a cero. El instrumento mide un
+  solo partido, así que **infravalora por construcción a los 15 perks que acumulan entre partidos**
+  (RF-070). Es un sesgo del instrumento con nombre, no del perk.
+- `iron_studs` es **letal**: matar no es una palanca de tasa de victoria y la tabla no la mide.
+
+La frase que queda es la contraria de la que el encargo temía: **el problema del catálogo no es que haya
+perks que resten, es que hay perks que no suman.** Medidos sin su castigo, **22 de los 51 valen menos de
+un punto** de tasa de victoria. Es AL-A cuantificado perk a perk.
+
+### 30.4. El censo de utilidad, y por qué cuatro acciones no ganan nunca (fase 1.2)
+
+`/Balance` gana el modo **`--utility-census N`**: repite el mismo partido de referencia una vez por
+(jugador, tick) muestreado con `SimConfig.DumpUtility` y acumula las tablas. **No toca `/Sim`**: es el
+volcado de RT-098 que ya existía, agregado. Cuesta un partido por muestra —20 jugadores × 40 ticks × N— y
+es barato en código a cambio de ser exactamente lo que la tabla de utilidad decide.
+
+Sobre 6.433 decisiones de `human_50` contra `human_50` (12 partidos, semilla 1):
+
+| acción | descartada % | elegida % | score medio | mejor score | margen medio al ganador |
+|---|---|---|---|---|---|
+| `FindSpace` | 59,4 | 39,50 | 975 | 1.497 | 3 |
+| `CoverSpace` | 9,9 | 36,59 | 395 | 955 | 335 |
+| `Retreat` | 0,0 | 18,79 | 290 | 843 | 399 |
+| `ChaseBall` | 14,5 | 2,58 | −76 | 1.255 | 807 |
+| `ShortPass` | 0,0 | 0,95 | 603 | 1.192 | 181 |
+| `MarkOpponent` | 14,5 | 0,75 | 98 | 600 | 633 |
+| `Tackle` | 7,2 | 0,28 | −684 | 887 | 1.371 |
+| `Block` | **74,9** | 0,06 | 8 | 682 | 714 |
+| `PressCarrier` | **81,5** | 0,05 | 51 | 485 | 473 |
+| `OfferSupport` | 59,4 | **0,00** | 133 | 396 | 845 |
+
+(El censo muestrea todos los estados de decisión, y los de balón —`ShortPass`, `Dribble`, `Shoot`,
+`LongPass`— solo son legales para el poseedor, así que salen infrarrepresentados frente al reparto que ve
+el campo animado. Las cuatro acciones del encargo son todas de **sin balón** y no les afecta.)
+
+Las tres respuestas que había que separar:
+
+1. **No es un peso mal puesto.** Ninguna pierde por poco: pierden por 473 a 845 puntos, y **el mejor score
+   que han sacado nunca está por debajo del score medio del ganador**.
+2. **`Block` y `PressCarrier` están descartadas el 75% y el 82% de las veces**, y no por peso: o no hay
+   rival al alcance de la carga dentro de la jugada activa (RF-057, `blockReachMaxCells` 1,2 casillas), o
+   no hay poseedor rival. Con peso infinito seguirían sin poder elegirse en tres de cada cuatro decisiones.
+3. **`OfferSupport` está dominada por construcción.** Es legal exactamente cuando lo es `FindSpace` y
+   compite con 80-160 de peso base contra 200-460, y 150 de multiplicador táctico contra 210. Es lo que
+   `fase1b-diseno.md` §16 ya decía; ahora está en la tabla.
+
+Un volcado suelto para el registro (jugador 3, tick 401, defensa sin balón): `CoverSpace` 676 gana;
+`PressCarrier` 277, `MarkOpponent` 244, `OfferSupport` y `Block` **descartadas**.
+
+### 30.5. Despertarlas cuesta la puerta de la sensación de fútbol
+
+Se sube el peso base de cada acción lo que el censo dice que hace falta para que gane —×3, ×5, ×3 y ×9— y
+se mide el lote de referencia de 600 partidos, semilla 1:
+
+| variante | entradas/partido | lesiones/partido | cadena de pases | cambios de posesión | `betterTeamWinRate` |
+|---|---|---|---|---|---|
+| **base** | 9,78 | 0,71 | 2,25 | 24,19 | 79,00 |
+| `MarkOpponent` ×3 | **0,55** OUT | 0,25 OUT | 1,63 OUT | 21,17 | 67,00 OUT |
+| `OfferSupport` ×5 | 11,94 | 0,91 OUT | 1,79 OUT | 29,15 OUT | 63,00 OUT |
+| `PressCarrier` ×3 | **2,95** OUT | 0,26 OUT | 2,25 | 22,76 | 80,00 |
+| `Block` ×9 | 9,45 | **1,31** OUT | 2,28 | 22,13 | 84,00 |
+
+Las cuatro rompen RT-056 y tres lo rompen por el mismo sitio: **la entrada y la lesión**, que es donde vive
+la ADR 0048. Reproduce lo que `fase1b-diseno.md` §21 midió en su día (presionar hundía las entradas de
+13,0 a 1,0 y las lesiones de 0,82 a 0,05) y §19 (el bloqueo a peso 300 daba 22 faltas, 2,5 rojas y 37
+incomparecencias de 40 partidos).
+
+La medición sube el peso **para los dos equipos**, así que un perk que desbloquee la conducta en un
+portador movería el mismo canal a un séptimo de escala; el signo, que es lo que importa, es el mismo. **La
+hipótesis del encargo no se sostiene y no se fuerza**: las cuatro acciones no están dormidas por descuido,
+están amortiguadas a propósito y el precio de despertarlas está medido.
+
+### 30.6. La palanca que la medición sí sostenía: el ámbito del premio
+
+De §30.2 sale una palanca con la forma correcta. Si el −1,8 es castigo entero y el premio de la mediocre ya
+es positivo, basta con que **el premio valga más**, porque el premio lo cobra sobre todo quien coloca bien
+(+6,14 contra +3,55, 1,7 a 1). Y la aritmética dice cuánto hace falta:
+
+```
+hueco = 1,54 + V_buena − V_mediocre
+comprar > no comprar  →  V_mediocre > 0
+hueco ≥ 9,8           →  V_buena ≥ 8,26      (hoy 6,64: un +24%)
+```
+
+El recorrido estaba en la propia tabla de la ADR 0060 §28.5: **el mismo efecto vale de dos a cuatro veces
+más sobre el equipo que sobre el portador** (`pass` ×2: +0,54 en el portador y +2,02 en el equipo; `tackle`
+×2: +1,81 y +4,73). El punto 2 de la ADR 0060 movió los **castigos** de `owner` a `team`; su espejo es
+mover los **premios**, y de paso arregla una asimetría que hoy se lee en la descripción generada: ocho
+perks tienen el castigo sobre el equipo y el premio sobre un solo jugador.
+
+| perk | premio antes | premio en la prueba | castigo (sin tocar) |
+|---|---|---|---|
+| `fine_touch` | `owner pass ×2` | `team pass ×2` | `team pass ÷3` |
+| `flank_specialist` | `owner dribble ×2` | `team dribble ×2` | `team dribble ÷2` |
+| `own_third_anchor` | `owner tackle ×2` | `team tackle ×2` | `team tackle ÷2` |
+| `bulwark_stance` | `owner tackle ×2` | `team tackle ×2` | `team tackle ÷2` |
+| `pivot_duo` | `linked tackle ×2` | `team tackle ×2` | `team tackle ÷3` |
+| `forward_line` | `owner shotOnTarget ×3` | `team shotOnTarget ×1,5` | `team shotOnTarget ÷2` |
+| `spearpoint` | `linked shotOnTarget ×3` | `team shotOnTarget ×1,5` | `team shotOnTarget ÷3` |
+| `covering_shadow` | `linked intercept ×3` | `team intercept ×1,5` | `team intercept ÷1,5` |
+
+Las descripciones se generan solas y quedan simétricas (RT-035): *"si el portador es Fino, **el equipo**
+multiplica por 2 sus opciones de pasar; si no, **el equipo** divide por 3 sus opciones de pasar"*.
+
+### 30.7. Y por qué se cae: el catálogo es compartido y la oposición lo lleva bien puesto
+
+Sonda de 600 runs (2 semillas), con `data/economy/perk-values.json` **regenerado** para el catálogo nuevo
+—sin regenerarlo la doctrina contextual sigue rechazando por valor medido justo los perks que se acaban de
+mejorar, y la sonda mide el instrumento en vez de la palanca—:
+
+| | base | premio al equipo |
+|---|---|---|
+| buena, acto 2 | 57,53 | **56,28** |
+| mediocre, acto 2 | 47,01 | 46,50 |
+| hueco | 10,53 | 9,78 |
+| acto 1 | 75,84 | **72,39** |
+| **derrotas del acto 1** | **28,38** | **43,98** |
+| **muertes por run** | **1,46** | **1,04** |
+| tasa de victoria de la run | 14,83 | 9,17 |
+| perks en el once | 9,92 | 8,88 |
+
+**La build buena empeora**, y dos guardarraíles se rompen a la vez (`deathsPerRun` 1,04 sobre una banda de
+1,5-3 y las derrotas del acto 1 en 43,98 sobre un techo de 29,74). La causa no es de calibración:
+
+> **Cinco de los ocho perks están en `data/rivals/` y los tres jefes los llevan.** `grimhold_guns` (acto 1)
+> tiene **14 slots de perk** —dos `own_third_anchor`, `bulwark_stance`, dos `pivot_duo`, `forward_line`—,
+> `the_hunt` otros 14 y `eternal_crown` **27**. El jugador llega a esas tres puertas con **3,2 / 6,3 /
+> 8,6** perks (`groups.json`, `actDensity`). Subir lo que da un perk **bien puesto** le da al jefe del acto
+> 1 catorce perks mejores y al jugador tres.
+
+Aislado en dos pasos:
+
+| | buena 2 | acto 1 | derrotas acto 1 | hueco | muertes | run |
+|---|---|---|---|---|---|---|
+| base | 57,53 | 75,84 | 28,38 | 10,53 | 1,46 | 14,83 |
+| premio al equipo | 56,28 | 72,39 | 43,98 | 9,78 | 1,04 | 9,17 |
+| … quitando los 8 a los **rivales** | 56,96 | 73,32 | 40,55 | 8,10 | 1,10 | 10,00 |
+| … quitándoselos también a los **jefes** | 58,48 | 76,64 | 22,62 | 9,31 | **1,68** | **23,33** |
+
+Quitárselos a los quince rivales recupera el acto 2 pero **no** el acto 1: lo que queda ahí es el jefe.
+Quitárselos también a los tres jefes son **19 slots menos**, un recorte bruto y no una recalibración, así
+que la última fila es una **cota superior** y no un resultado. Lo que demuestra es que el margen existe
+**si se recalibra a la oposición a la vez**, que es un paquete propio.
+
+### 30.8. La afirmación que cierra las seis palancas
+
+La ADR 0060 §28.10 midió la mitad: *"los tres jefes tienen sus perks bien puestos: ninguno paga el castigo
+nuevo"*. La otra mitad es la de este paquete:
+
+> **El castigo es el único canal del catálogo que la oposición no comparte.** Ni los quince rivales ni los
+> tres jefes colocan mal un perk, así que ninguno paga nunca el castigo; y todos cobran el premio, con dos
+> y tres veces más perks que el jugador en cada puerta. Por eso el castigo es la única palanca que ha
+> abierto el hueco, y por eso su espejo **no es una palanca sino un mando de dificultad**, igual que el
+> peso de los atributos de la ADR 0061.
+
+Seis palancas en cinco paquetes con una sola explicación: oro y precios (ADR 0055), lo que vale un perk
+(P1), techo por rareza y capa de build del rival (ADR 0058), pago por coherencia (ADR 0059), peso de los
+atributos (ADR 0061) y el ámbito del premio (esta) **mueven al jugador y al rival a la vez**. La del
+castigo (ADR 0060) no.
+
+### 30.9. Las seis puertas y los seis objetivos
+
+Sin cambios: no se ha tocado `/Sim` ni `/data`. **598 de 598 tests en Release** y las seis puertas verdes,
+las mismas de §29.7. Los seis objetivos, exactamente los de §29.8.
+
+Lo único que entra en el repositorio es `--utility-census` en `/Balance` (`UtilityCensusRunner.cs`,
+`Options.cs`, `Program.cs`, `README.md`), que no toca ninguna métrica ni ninguna puerta.
+
+### 30.10. Lo que queda abierto
+
+- **AM-A queda diagnosticada del todo, y devuelve una elección al revisor** (ADR 0063). *Comprar siempre
+  mejor que no comprar* es `V_mediocre > 0`, y eso **fija a la build mediocre en 49,8 o por encima**,
+  porque 49,79 es lo que gana esa misma doctrina **sin** perks. El objetivo 2 de la ADR 0056 la quiere en
+  42-45. Los dos no pueden ser verdad a la vez: "mediocre al 42-45%" *es* la frase "construir mal es peor
+  que no construir". Hay tres salidas y ninguna es una calibración.
+- **AN-A (nueva)**: el premio del catálogo no separa mientras la oposición lo comparta. Subirlo exige
+  recalibrar a la vez `data/rivals/` y los 55 slots de perk de los tres jefes.
+- **AN-B (nueva)**: `--perk-values` mide **un partido**, así que infravalora por construcción a los 15
+  perks de acumulación (RF-070), y esa tabla decide el peso del pool y el orden de compra de la doctrina
+  contextual.
+- **AL-A sigue abierta y sigue siendo la decisión de fondo**, ahora con una cifra por perk: 22 de los 51
+  perks del catálogo, medidos sin su castigo, valen menos de un punto de tasa de victoria.
+- **AL-C, AL-D y AM-B** sin cambios.
