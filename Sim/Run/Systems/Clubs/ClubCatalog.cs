@@ -73,12 +73,16 @@ public sealed class ClubCatalog
 /// <summary>Carga <c>data/clubs/*.json</c> (RT-012: sin E/S, recibe el contenido ya leído).</summary>
 public static class ClubLoader
 {
-    /// <summary>Mismo orden de posiciones que <c>Sim.Generation.TeamGenerator</c> y <c>RivalLoader</c>: 7 titulares y 3 suplentes.</summary>
+    /// <summary>
+    /// Mismo orden de posiciones que <c>Sim.Generation.TeamGenerator.ClubSubstitutePositions</c>: 7
+    /// titulares y 2 suplentes DEF/FWD (RF-020; el club del jugador ya no lleva MID suplente, a
+    /// diferencia de rivales y jefes, ver <c>RivalLoader</c>).
+    /// </summary>
     private static readonly Position[] SlotPositions =
     {
         Position.Goalkeeper, Position.Defender, Position.Defender,
         Position.Midfielder, Position.Midfielder, Position.Midfielder, Position.Forward,
-        Position.Defender, Position.Midfielder, Position.Forward,
+        Position.Defender, Position.Forward,
     };
 
     public static ClubCatalog FromJson(IReadOnlyDictionary<string, string> files)
@@ -115,7 +119,7 @@ public static class ClubLoader
         int startingGold = root.Int("startingGold");
         string specialRule = root.Str("specialRule");
 
-        var roster = new List<ClubPlayer>(10);
+        var roster = new List<ClubPlayer>(SlotPositions.Length);
         int index = 0;
         foreach (var playerNode in root.Prop("roster").EnumerateArray())
         {
@@ -125,7 +129,7 @@ public static class ClubLoader
 
         if (roster.Count != SlotPositions.Length)
         {
-            throw new DataException(path, "$.roster", $"un club necesita exactamente {SlotPositions.Length} jugadores (7 titulares y 3 suplentes, RF-005)");
+            throw new DataException(path, "$.roster", $"un club necesita exactamente {SlotPositions.Length} jugadores (7 titulares y 2 suplentes DEF/FWD, RF-005/RF-020)");
         }
 
         return new ClubDefinition(id, race, name, description, startingGold, specialRule, roster);
@@ -138,7 +142,7 @@ public static class ClubLoader
         var expected = SlotPositions[index];
         if (position != expected)
         {
-            throw new DataException(node.File, node.Path + ".position", $"el jugador {index} debe ser {expected} (mismo orden que TeamGenerator: 7 titulares GK/DEF/DEF/MID/MID/MID/FWD y 3 suplentes DEF/MID/FWD)");
+            throw new DataException(node.File, node.Path + ".position", $"el jugador {index} debe ser {expected} (mismo orden que TeamGenerator: 7 titulares GK/DEF/DEF/MID/MID/MID/FWD y 2 suplentes DEF/FWD)");
         }
 
         var rarity = node.Str("rarity") switch

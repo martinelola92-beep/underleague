@@ -42,6 +42,25 @@ public static class UiText
         ["ui.team.linkOne"] = "vínculo",
         ["ui.team.linkMany"] = "vínculos",
         ["ui.team.moreChanges"] = "y {0} cambios más en el resto de la alineación",
+
+        // Aviso al soltar a un jugador (RF-012d): un perk que se enciende o se apaga por la casilla es
+        // exactamente el tipo de consecuencia que no puede descubrirse en el informe post-partido.
+        ["ui.team.perkOn"] = "✔ {0} se activa aquí",
+        ["ui.team.perkOff"] = "✘ {0} no se activa aquí",
+        ["ui.team.perkOnOther"] = "✔ {0} de {1} se activa",
+        ["ui.team.perkOffOther"] = "✘ {0} de {1} se desactiva",
+
+        // Modo de zonas: el vocabulario que usan los perks de inicio y de vínculo, dibujado sobre la
+        // cuadrícula que describen. Los nombres de los tercios y de las bandas NO están aquí: salen de
+        // data/l10n/<idioma>/templates.json, que es de donde salen también las descripciones de los perks.
+        ["ui.team.zonesButton"] = "Zonas del campo (Y / Z)",
+        ["ui.team.zones"] = "ZONAS DE INICIO Y VÍNCULOS",
+        ["ui.team.zonesHelp"] =
+            "Los perks de inicio miran la casilla en la que alineas al jugador, no dónde acabe él durante el "
+            + "partido.\n\nEl tercio lo da la columna de esa casilla; la banda, la fila: «banda» es cualquier "
+            + "fila menos la central, que es el carril central.\n\nUn vínculo une a dos titulares que estén a "
+            + "dos casillas o menos en la dirección que pide el perk (delante, detrás, izquierda, derecha o "
+            + "en diagonal).",
         ["ui.link.Beside"] = "al lado",
         ["ui.link.Ahead"] = "delante",
         ["ui.link.Behind"] = "detrás",
@@ -82,7 +101,7 @@ public static class UiText
         ["ui.pos.Midfielder"] = "CEN",
         ["ui.pos.Forward"] = "DEL",
         ["ui.input.mouse"] = "RATÓN  clic: seleccionar · arrastrar y soltar: colocar · clic en la ficha: expandir",
-        ["ui.input.pad"] = "MANDO  cruceta: mover cursor · A: seleccionar y coger/soltar · B: cancelar · X: cobertura",
+        ["ui.input.pad"] = "MANDO  cruceta: mover cursor · A: seleccionar y coger/soltar · B: cancelar · X: cobertura · Y: zonas",
 
         // --- esqueleto jugable (docs/ui-run-minima.md) ---
         ["ui.nav.back"] = "Volver",

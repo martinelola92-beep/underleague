@@ -14,16 +14,19 @@ public sealed class EnrollmentTests
     private static RunState Start(ulong seed, int gold = 400) =>
         RunEngine.Start(SystemsTestSupport.Setup(startingGold: gold), seed, SystemsTestSupport.Catalog, SystemsTestSupport.Systems);
 
-    /// <summary>RF-005 + RF-020: el club empieza con diez y diez es exactamente su techo.</summary>
+    /// <summary>
+    /// RF-005 + RF-020: el club empieza con nueve (7 titulares y 2 suplentes) y deja un hueco libre bajo
+    /// el techo de diez, para poder fichar en el primer mercado sin vender ni descartar a nadie.
+    /// </summary>
     [Fact]
-    public void TheStartingClubIsAlreadyAtItsRosterCap()
+    public void TheStartingClubLeavesOneRosterSlotFree()
     {
         var state = Start(9001UL);
 
-        Assert.Equal(RunRules.BaseRosterSize, state.Roster.Count);
-        Assert.Equal(RunRules.BaseRosterSize, state.RosterSize);
+        Assert.Equal(9, state.Roster.Count);
+        Assert.Equal(9, state.RosterSize);
         Assert.Equal(RunRules.BaseRosterSize, state.RosterCapacity);
-        Assert.False(state.HasRosterSpace);
+        Assert.True(state.HasRosterSpace);
         Assert.Equal(RunRules.MaxEnrollmentSlots, state.EnrollmentSlotsLeft);
     }
 
@@ -34,9 +37,12 @@ public sealed class EnrollmentTests
     [Fact]
     public void NobodyJoinsAFullRoster()
     {
+        // El club empieza con un hueco libre (RF-020): se llena una vez antes de comprobar el rechazo.
         var state = Start(9002UL);
-        var newcomer = state.Roster[0] with { Id = -1 };
+        state = state.WithNewPlayer(state.Roster[0] with { Id = -1 });
+        Assert.False(state.HasRosterSpace);
 
+        var newcomer = state.Roster[0] with { Id = -1 };
         var error = Assert.Throws<InvalidOperationException>(() => state.WithNewPlayer(newcomer));
         Assert.Contains("RF-020", error.Message, StringComparison.Ordinal);
     }
@@ -114,10 +120,11 @@ public sealed class EnrollmentTests
     {
         var state = Start(9007UL);
         var fallen = state.Roster[0];
+        int rosterBefore = state.Roster.Count;
         state = state.WithPlayer(fallen with { PhysicalState = PhysicalState.Dead });
 
-        Assert.Equal(RunRules.BaseRosterSize, state.Roster.Count);
-        Assert.Equal(RunRules.BaseRosterSize - 1, state.RosterSize);
+        Assert.Equal(rosterBefore, state.Roster.Count);
+        Assert.Equal(rosterBefore - 1, state.RosterSize);
         Assert.True(state.HasRosterSpace);
         Assert.NotNull(state.FindPlayer(fallen.Id));
         Assert.Throws<ArgumentException>(() => EnrollmentSystem.Release(state, new ReleasePlayer(fallen.Id)));

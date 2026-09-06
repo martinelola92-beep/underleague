@@ -110,6 +110,10 @@
     "market": {
       "type": "object",
       "properties": {
+        "goalkeeperOffers": {
+          "description": "Numero de porteros entre los fichajes de pago del mercado (RF-114, ADR 0080): todo nodo de mercado ofrece EXACTAMENTE un portero, minimo y maximo uno. El resto de fichajes, los canteranos y los mercenarios son siempre jugadores de campo, asi que el maximo tambien queda garantizado en uno. Debe ser <= playerOffers (comprobado en EconomyLoader).",
+          "type": "integer", "minimum": 0, "maximum": 4
+        },
         "playerOffers": { "type": "integer", "minimum": 0, "maximum": 4 },
         "perkOffers": { "type": "integer", "minimum": 0, "maximum": 6 },
         "itemOffers": { "type": "integer", "minimum": 0, "maximum": 6 },
@@ -139,7 +143,7 @@
         "mercenaryQuality": { "type": "integer", "minimum": 1, "maximum": 99 }
       },
       "required": [
-        "playerOffers", "perkOffers", "itemOffers", "consumableOffers", "mercenaryOffers",
+        "goalkeeperOffers", "playerOffers", "perkOffers", "itemOffers", "consumableOffers", "mercenaryOffers",
         "youthMin", "youthMax", "playerPriceByRarity", "perkPriceByRarity", "itemPriceByRarity",
         "priceSpreadPercent", "priceBandPercent", "consumablePrice", "itemSellFractionPercent", "playerSaleBaseByRarity",
         "playerSalePerLevel", "playerSalePerPerk", "playerSalePerBond",

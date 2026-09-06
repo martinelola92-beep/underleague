@@ -23,11 +23,11 @@
       "pattern": "^$|^[a-z][a-z0-9_]*$"
     },
     "roster": {
-      "description": "Plantilla inicial (RF-005): exactamente 10 jugadores en el mismo orden que Sim.Generation.TeamGenerator (7 titulares GK/DEF/DEF/MID/MID/MID/FWD y 3 suplentes DEF/MID/FWD). Al menos uno debe ser de rareza superior a común; no es mecánicamente verificable y queda en manos de quien autora el dato, igual que el sesgo dominante de data/races/*.json (ADR 0024).",
+      "description": "Plantilla inicial (RF-005, RF-020): exactamente 9 jugadores en el mismo orden que Sim.Generation.TeamGenerator.ClubSubstitutePositions (7 titulares GK/DEF/DEF/MID/MID/MID/FWD y 2 suplentes DEF/FWD; la capacidad base sigue en 10, un hueco libre para el primer mercado). Al menos uno debe ser de rareza superior a común; no es mecánicamente verificable y queda en manos de quien autora el dato, igual que el sesgo dominante de data/races/*.json (ADR 0024).",
       "type": "array",
       "items": { "$ref": "#/$defs/player" },
-      "minItems": 10,
-      "maxItems": 10
+      "minItems": 9,
+      "maxItems": 9
     }
   },
   "required": ["id", "race", "name", "description", "startingGold", "specialRule", "roster"],

@@ -115,6 +115,44 @@ internal static class LinkGeometry
         int dr = a.Row - b.Row;
         return (dc * dc) + (dr * dr);
     }
+
+    /// <summary>
+    /// Índice del candidato de <paramref name="selfIndex"/> en esa relación, o -1 si no hay ninguno: el
+    /// compañero más cercano por <see cref="SquaredDistance"/> entre los que cumplen la relación.
+    /// <para>
+    /// Vive aquí y no en <c>LinkTable</c> porque el vínculo se decide <b>solo con casillas-hogar</b>: la
+    /// pantalla de Equipo lo resuelve sobre una alineación (<see cref="LineupPerkPreviewer"/>) y el motor
+    /// sobre los jugadores del partido, y las dos respuestas tienen que ser la misma o la
+    /// previsualización miente. Los arrays llegan <b>en orden de id ascendente</b>, así que quedarse con
+    /// el estrictamente más cercano ya desempata por id ascendente sin comparación adicional (RT-041).
+    /// </para>
+    /// </summary>
+    public static int ResolveLink(Cell[] homes, int[] teams, int selfIndex, LinkRelation relation)
+    {
+        int best = -1;
+        int bestDistance = int.MaxValue;
+        for (int j = 0; j < homes.Length; j++)
+        {
+            if (j == selfIndex || teams[j] != teams[selfIndex])
+            {
+                continue;
+            }
+
+            if (!Matches(homes[selfIndex], homes[j], teams[selfIndex], relation))
+            {
+                continue;
+            }
+
+            int distance = SquaredDistance(homes[selfIndex], homes[j]);
+            if (distance < bestDistance)
+            {
+                bestDistance = distance;
+                best = j;
+            }
+        }
+
+        return best;
+    }
 }
 
 /// <summary>
@@ -144,12 +182,22 @@ internal sealed class LinkTable
             _links[i] = -1;
         }
 
+        // La geometría del vínculo solo mira casillas-hogar y equipo, así que se resuelve con la misma
+        // función que usa la previsualización de la pantalla de Equipo (LinkGeometry.ResolveLink): dos
+        // implementaciones habrían podido divergir y la previsualización habría dejado de valer.
+        var homes = new Cell[players.Length];
+        var teams = new int[players.Length];
         for (int i = 0; i < players.Length; i++)
         {
-            var self = players[i];
+            homes[i] = players[i].HomeCell;
+            teams[i] = players[i].Team;
+        }
+
+        for (int i = 0; i < players.Length; i++)
+        {
             for (int r = 0; r < RelationCount; r++)
             {
-                _links[(i * RelationCount) + r] = Resolve(players, i, self, (LinkRelation)r);
+                _links[(i * RelationCount) + r] = LinkGeometry.ResolveLink(homes, teams, i, (LinkRelation)r);
             }
         }
     }
@@ -180,36 +228,5 @@ internal sealed class LinkTable
         }
 
         return false;
-    }
-
-    private static int Resolve(MatchPlayer[] players, int selfIndex, MatchPlayer self, LinkRelation relation)
-    {
-        int best = -1;
-        int bestDistance = int.MaxValue;
-        for (int j = 0; j < players.Length; j++)
-        {
-            var other = players[j];
-            if (j == selfIndex || other.Team != self.Team)
-            {
-                continue;
-            }
-
-            if (!LinkGeometry.Matches(self.HomeCell, other.HomeCell, self.Team, relation))
-            {
-                continue;
-            }
-
-            int distance = LinkGeometry.SquaredDistance(self.HomeCell, other.HomeCell);
-
-            // El array llega ordenado por id ascendente (RT-041), así que recorrerlo en orden y quedarse
-            // con el estrictamente más cercano ya desempata por id ascendente sin comparación adicional.
-            if (distance < bestDistance)
-            {
-                bestDistance = distance;
-                best = j;
-            }
-        }
-
-        return best;
     }
 }

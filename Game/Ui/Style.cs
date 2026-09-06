@@ -48,6 +48,21 @@ public static class Style
     public static readonly Color MarginEdge = new(0.62f, 0.86f, 1.00f, 0.60f);
 
     /// <summary>
+    /// Modo de zonas: los tres tercios de inicio de <c>startsIn</c> sobre la mitad propia. Van de frío a
+    /// cálido según se acerca la portería rival, y además llevan su nombre escrito: el color ordena, el
+    /// texto identifica (UI-002).
+    /// </summary>
+    public static readonly Color[] StartZoneFills =
+    {
+        new(0.31f, 0.68f, 0.92f, 0.16f),
+        new(0.94f, 0.71f, 0.16f, 0.14f),
+        new(0.89f, 0.35f, 0.30f, 0.18f),
+    };
+
+    /// <summary>Separadores entre tercios y entre bandas del modo de zonas, y color de sus rótulos.</summary>
+    public static readonly Color ZoneDivider = new(0.90f, 0.93f, 0.97f, 0.45f);
+
+    /// <summary>
     /// Colores de equipo del campo del partido. Son los dos tonos más separados de la paleta de
     /// posiciones, para que a 20 fichas de distancia se sepa de un vistazo de quién es cada una. El
     /// equipo del jugador es siempre el local (W-15).

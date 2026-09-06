@@ -49,7 +49,14 @@ public sealed record NodeRewardConfig(
     bool HealsRoster);
 
 /// <summary>Configuración del surtido del mercado (RF-114..114f).</summary>
+/// <param name="GoalkeeperOffers">
+/// Porteros entre los fichajes de pago (RF-114, ADR 0080): todo nodo de mercado ofrece <b>exactamente</b>
+/// un portero, mínimo y máximo uno. Sale siempre de los primeros <see cref="GoalkeeperOffers"/> fichajes de
+/// pago -nunca de un canterano ni de un mercenario, que son siempre de campo (<see cref="GeneratedPlayers.PickOutfield"/>)-
+/// así que el máximo también queda garantizado en uno.
+/// </param>
 public sealed record MarketConfig(
+    int GoalkeeperOffers,
     int PlayerOffers,
     int PerkOffers,
     int ItemOffers,
@@ -351,28 +358,47 @@ public static class EconomyLoader
         node.Int("commonCeilingPercent"),
         node.Prop("healsRoster").AsBool());
 
-    private static MarketConfig ReadMarket(Json node) => new(
-        node.Int("playerOffers"),
-        node.Int("perkOffers"),
-        node.Int("itemOffers"),
-        node.Int("consumableOffers"),
-        node.Int("mercenaryOffers"),
-        node.Int("youthMin"),
-        node.Int("youthMax"),
-        ReadPriceByRarity(node.Prop("playerPriceByRarity")),
-        ReadPriceByRarity(node.Prop("perkPriceByRarity")),
-        ReadPriceByRarity(node.Prop("itemPriceByRarity")),
-        node.Int("priceSpreadPercent"),
-        node.Int("priceBandPercent"),
-        node.Int("consumablePrice"),
-        node.Int("itemSellFractionPercent"),
-        ReadPriceByRarity(node.Prop("playerSaleBaseByRarity")),
-        node.Int("playerSalePerLevel"),
-        node.Int("playerSalePerPerk"),
-        node.Int("playerSalePerBond"),
-        node.Int("recruitQuality"),
-        node.Int("youthQuality"),
-        node.Int("mercenaryQuality"));
+    private static MarketConfig ReadMarket(Json node)
+    {
+        int goalkeeperOffers = node.Int("goalkeeperOffers");
+        int playerOffers = node.Int("playerOffers");
+
+        // ADR 0080: el portero garantizado del mercado sale siempre de los fichajes de pago, así que no
+        // puede pedirse más de un portero que fichajes haya (y menos aún de forma negativa: node.Int ya
+        // exige que el esquema fije un mínimo de 0).
+        if (goalkeeperOffers > playerOffers)
+        {
+            throw new DataException(
+                node.File,
+                node.Path,
+                $"goalkeeperOffers ({goalkeeperOffers}) no puede superar a playerOffers ({playerOffers}): "
+                    + "el portero garantizado del mercado (RF-114, ADR 0080) sale siempre de un fichaje de pago");
+        }
+
+        return new(
+            goalkeeperOffers,
+            playerOffers,
+            node.Int("perkOffers"),
+            node.Int("itemOffers"),
+            node.Int("consumableOffers"),
+            node.Int("mercenaryOffers"),
+            node.Int("youthMin"),
+            node.Int("youthMax"),
+            ReadPriceByRarity(node.Prop("playerPriceByRarity")),
+            ReadPriceByRarity(node.Prop("perkPriceByRarity")),
+            ReadPriceByRarity(node.Prop("itemPriceByRarity")),
+            node.Int("priceSpreadPercent"),
+            node.Int("priceBandPercent"),
+            node.Int("consumablePrice"),
+            node.Int("itemSellFractionPercent"),
+            ReadPriceByRarity(node.Prop("playerSaleBaseByRarity")),
+            node.Int("playerSalePerLevel"),
+            node.Int("playerSalePerPerk"),
+            node.Int("playerSalePerBond"),
+            node.Int("recruitQuality"),
+            node.Int("youthQuality"),
+            node.Int("mercenaryQuality"));
+    }
 
     private static PriceByRarity ReadPriceByRarity(Json node)
     {

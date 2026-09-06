@@ -19,8 +19,21 @@ public static class TeamGenerator
     };
 
     /// <summary>
-    /// 10 jugadores: titulares GK, DEF, DEF, MID, MID, MID, FWD (ids firstId..firstId+6) y suplentes
-    /// DEF, MID, FWD (firstId+7..firstId+9). Uno de los 10 es Rare (RF-005), elegido con rng, salvo que
+    /// Suplentes de la plantilla inicial del club del jugador (RF-005, RF-020): DEF y FWD, sin el MID
+    /// suplente porque MID es la línea con tres titulares y no necesita un cuarto; DEF cubre la línea de
+    /// dos titulares y FWD la de uno. Los rivales y los jefes siguen generándose con
+    /// <see cref="SubstitutePositions"/> (DEF, MID, FWD) y 10 jugadores en total.
+    /// </summary>
+    public static readonly IReadOnlyList<Position> ClubSubstitutePositions = new[]
+    {
+        Position.Defender, Position.Forward,
+    };
+
+    /// <summary>
+    /// Titulares GK, DEF, DEF, MID, MID, MID, FWD (ids firstId..firstId+6) y suplentes según
+    /// <paramref name="substitutePositions"/> (por defecto <see cref="SubstitutePositions"/>: DEF, MID,
+    /// FWD, 10 jugadores en total; el club del jugador pasa <see cref="ClubSubstitutePositions"/> y
+    /// genera 9). Uno de ellos es Rare (RF-005), elegido con rng, salvo que
     /// <paramref name="uniformRarity"/> fije la rareza de toda la plantilla.
     /// Decisión fuera de la especificación: Name del equipo se fija igual a teamId (Generate no recibe
     /// un nombre de equipo separado).
@@ -50,6 +63,12 @@ public static class TeamGenerator
     /// Instrumento de <c>/Balance</c>: rasgos que se añaden al jugador de ese índice, para las builds que
     /// prueban un perk con <c>tagsRequired</c> sobre un rasgo (por ejemplo <c>Leader</c>).
     /// </param>
+    /// <param name="substitutePositions">
+    /// Posiciones de los suplentes, tras los siete titulares. Null usa <see cref="SubstitutePositions"/>
+    /// (DEF, MID, FWD, 10 jugadores en total): lo que siguen generando rivales y jefes. La plantilla
+    /// inicial del club del jugador pasa <see cref="ClubSubstitutePositions"/> (DEF, FWD, 9 jugadores en
+    /// total, RF-020).
+    /// </param>
     public static TeamSetup Generate(
         ref Pcg32 rng,
         Catalog catalog,
@@ -60,13 +79,15 @@ public static class TeamGenerator
         int level = 1,
         Rarity? uniformRarity = null,
         IReadOnlyDictionary<int, StyleTag>? styleBySlot = null,
-        IReadOnlyDictionary<int, IReadOnlyList<Trait>>? extraTraitsBySlot = null)
+        IReadOnlyDictionary<int, IReadOnlyList<Trait>>? extraTraitsBySlot = null,
+        IReadOnlyList<Position>? substitutePositions = null)
     {
         var raceDefinition = catalog.Race(race);
         var nameGenerator = new NameGenerator(raceDefinition);
         var usedNames = new HashSet<string>(StringComparer.Ordinal);
 
-        int totalPlayers = StarterPositions.Length + SubstitutePositions.Length;
+        var effectiveSubstitutePositions = substitutePositions ?? SubstitutePositions;
+        int totalPlayers = StarterPositions.Length + effectiveSubstitutePositions.Count;
         int rareIndex = rng.Range(0, totalPlayers);
 
         var players = new List<PlayerDefinition>(totalPlayers);
@@ -77,7 +98,7 @@ public static class TeamGenerator
             index++;
         }
 
-        foreach (var position in SubstitutePositions)
+        foreach (var position in effectiveSubstitutePositions)
         {
             players.Add(WithExtraTraits(GeneratePlayer(ref rng, catalog, raceDefinition, nameGenerator, usedNames, position, RarityOf(uniformRarity, index, rareIndex), level, firstPlayerId + index, quality, StyleOf(styleBySlot, index)), extraTraitsBySlot, index));
             index++;

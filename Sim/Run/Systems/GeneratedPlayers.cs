@@ -49,35 +49,53 @@ public static class GeneratedPlayers
         Position.Goalkeeper, Position.Defender, Position.Midfielder, Position.Forward,
     };
 
+    /// <summary>
+    /// Posiciones de campo, sin portero (ADR 0080): array estático en el orden del enum <see cref="Position"/>
+    /// para que el sorteo sea determinista (RT-021), no un <c>Dictionary</c>/<c>HashSet</c> sin ordenar.
+    /// </summary>
+    private static readonly Position[] OutfieldPositions =
+    {
+        Position.Defender, Position.Midfielder, Position.Forward,
+    };
+
     private static readonly RarityWeights RecruitWeights = new(60, 32, 8);
     private static readonly RarityWeights MercenaryWeights = new(25, 55, 20);
     private static readonly RarityWeights RewardWeights = new(35, 50, 15);
 
+    /// <summary>Sortea una posición de campo (defensa, centrocampista o delantero), nunca portero (ADR 0080).</summary>
+    public static Position PickOutfield(ref Pcg32 rng) => rng.Pick(OutfieldPositions);
+
     /// <summary>
-    /// Fichaje de pago (RF-114): raza del club, posición y rareza sorteadas, y el <b>nivel del acto</b>
+    /// Fichaje de pago (RF-114): raza del club, rareza sorteada, y el <b>nivel del acto</b>
     /// (<c>economy.recruitLevelByAct</c>). Que un fichaje de pago entre en el nivel 1 en el acto 3 lo
     /// convierte en oro tirado: la plantilla va por el 6 o el 7 y ningún criterio razonable lo alinea,
     /// así que el mercado deja de ser un sumidero justo cuando más oro hay (medido en el paquete Z).
     /// </summary>
-    public static RunPlayer Recruit(ref Pcg32 rng, Catalog catalog, Race race, int quality, int level = 1)
+    /// <param name="position">
+    /// Posición a la que se fuerza el fichaje (RF-114, ADR 0080: el portero garantizado del mercado sale
+    /// siempre de aquí). <c>null</c> mantiene el sorteo uniforme entre las cuatro posiciones.
+    /// </param>
+    public static RunPlayer Recruit(ref Pcg32 rng, Catalog catalog, Race race, int quality, int level = 1, Position? position = null)
     {
         var rarity = RecruitWeights.Pick(ref rng);
-        return Generate(ref rng, catalog, race, rarity, quality, level, youth: false, mercenary: false, wage: 0);
+        return Generate(ref rng, catalog, race, rarity, quality, level, youth: false, mercenary: false, wage: 0, position);
     }
 
     /// <summary>Canterano gratuito (RF-114b/c): común, de la raza del club, atributos bajos, +33% de experiencia.</summary>
-    public static RunPlayer Youth(ref Pcg32 rng, Catalog catalog, Race race, int quality) =>
-        Generate(ref rng, catalog, race, Rarity.Common, quality, level: 1, youth: true, mercenary: false, wage: 0);
+    /// <param name="position">Posición a la que se fuerza el canterano; <c>null</c> mantiene el sorteo uniforme.</param>
+    public static RunPlayer Youth(ref Pcg32 rng, Catalog catalog, Race race, int quality, Position? position = null) =>
+        Generate(ref rng, catalog, race, Rarity.Common, quality, level: 1, youth: true, mercenary: false, wage: 0, position);
 
     /// <summary>
     /// Mercenario (RF-110..113): raza distinta a la del club (RF-004c), estadísticas por encima de la
     /// media de su rareza (calidad más alta), salario por partido, y cuenta como <c>Stranger</c> para las
     /// sinergias de cohesión (RF-111).
     /// </summary>
-    public static RunPlayer Mercenary(ref Pcg32 rng, Catalog catalog, Race foreignRace, int quality, int wage, int level = 1)
+    /// <param name="position">Posición a la que se fuerza el mercenario; <c>null</c> mantiene el sorteo uniforme.</param>
+    public static RunPlayer Mercenary(ref Pcg32 rng, Catalog catalog, Race foreignRace, int quality, int wage, int level = 1, Position? position = null)
     {
         var rarity = MercenaryWeights.Pick(ref rng);
-        var player = Generate(ref rng, catalog, foreignRace, rarity, quality, level, youth: false, mercenary: true, wage: wage);
+        var player = Generate(ref rng, catalog, foreignRace, rarity, quality, level, youth: false, mercenary: true, wage: wage, position);
         var tags = new List<string>(player.Tags) { "Stranger" };
         return player with { Tags = tags };
     }
@@ -98,14 +116,15 @@ public static class GeneratedPlayers
         int level,
         bool youth,
         bool mercenary,
-        int wage)
+        int wage,
+        Position? forcedPosition = null)
     {
         var raceDefinition = catalog.Race(race);
         var nameGenerator = new NameGenerator(raceDefinition);
         // Ver TeamGenerator.GeneratePlayer: PlayerDefinition.Name es un string plano hasta que Sim.Engine
         // lleve el idioma activo, así que aquí se fija a la variante es (RT-073).
         string name = nameGenerator.Next(ref rng).Es;
-        var position = rng.Pick(AllPositions);
+        var position = forcedPosition ?? rng.Pick(AllPositions);
         var definition = PlayerGenerator.Generate(ref rng, catalog, raceDefinition, position, rarity, level, id: -1, name, quality);
 
         // La experiencia tiene que corresponder al nivel con el que entra: si no, el primer partido lo

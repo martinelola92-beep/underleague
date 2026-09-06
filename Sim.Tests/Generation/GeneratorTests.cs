@@ -204,6 +204,27 @@ public class GeneratorTests
         Assert.Equal(names.Count, names.Distinct().Count());
     }
 
+    /// <summary>
+    /// RF-005/RF-020: la plantilla inicial del club del jugador pasa
+    /// <see cref="TeamGenerator.ClubSubstitutePositions"/> (DEF, FWD) y genera 9, no 10; sin el
+    /// parámetro (rivales y jefes) sigue generando 10, ver
+    /// <see cref="TeamGenerator_ProducesTenPlayersWithoutRepeatedNames"/>.
+    /// </summary>
+    [Fact]
+    public void TeamGenerator_WithClubSubstitutePositions_ProducesNinePlayers()
+    {
+        var catalog = TestData.LoadCatalog();
+        var rng = RngStreams.Generation(6, 0);
+
+        var team = TeamGenerator.Generate(ref rng, catalog, "human_50", Race.Human, 50, 1, substitutePositions: TeamGenerator.ClubSubstitutePositions);
+
+        Assert.Equal(9, team.Players.Count);
+        Assert.Equal(1, team.Players.Count(p => p.Position == Position.Goalkeeper));
+        Assert.Equal(3, team.Players.Count(p => p.Position == Position.Defender));
+        Assert.Equal(3, team.Players.Count(p => p.Position == Position.Midfielder));
+        Assert.Equal(2, team.Players.Count(p => p.Position == Position.Forward));
+    }
+
     [Fact]
     public void TeamGenerator_ProducesExpectedPositionComposition()
     {

@@ -78,7 +78,7 @@ La identidad del juego no es el fútbol, es la **carnicería administrada**: los
 - **RF-004** El jugador elige el club inicial antes de empezar. **Todos los jugadores del club inicial pertenecen a una única raza.** Cada club define esa raza, la plantilla inicial, el oro de partida y una regla especial.
 - **RF-004b** La sinergia no procede de mezclar razas, sino de las **etiquetas** que portan individuos de una misma raza, que varían entre ellos (RF-024b). Dos orcos del mismo club pueden tener perfiles opuestos y habilitar builds distintas.
 - **RF-004c** La única vía para incorporar jugadores de otra raza durante la run es el fichaje de mercenarios (RF-110).
-- **RF-005** La plantilla inicial consta de 7 titulares y 3 suplentes. Uno de los 10 es de rareza superior a común.
+- **RF-005** La plantilla inicial consta de 7 titulares y 2 suplentes (9 jugadores: DEF y FWD de refresco, sin MID de refresco). Uno de los 9 es de rareza superior a común (ADR 0079).
 - **RF-006** Al terminar una run, con victoria o derrota, se conservan todos los logros conseguidos durante ella. Los logros **no son incrementales**: desbloquean contenido (RF-125) pero nunca otorgan ventaja en la run siguiente.
 - **RF-007** El jugador puede abandonar una run desde el mapa en cualquier momento. Se aplica RF-006.
 
@@ -99,7 +99,7 @@ La identidad del juego no es el fútbol, es la **carnicería administrada**: los
 
 ### 3.3 Plantilla y jugadores
 
-- **RF-020** Tamaño de plantilla: **base 10** (la del club inicial, RF-005), **ampliable hasta 12** pagando en un **nodo de inscripción** de coste creciente. Con la plantilla llena, incorporar a un jugador exige vender o descartar a otro. El mínimo para jugar sigue siendo 5 (RF-002b).
+- **RF-020** Tamaño de plantilla: **capacidad base 10**, **ampliable hasta 12** pagando en un **nodo de inscripción** de coste creciente. La plantilla inicial es de 9 (RF-005): un hueco libre por debajo de la capacidad base desde el primer mercado, sin vender ni descartar a nadie (ADR 0079). Con la plantilla llena, incorporar a un jugador exige vender o descartar a otro. El mínimo para jugar sigue siendo 5 (RF-002b).
 - **RF-020b** Los nombres se producen con un **generador por raza** definido en `/data`. Ningún jugador se llama "Jugador 3".
 - **RF-021** Cada jugador posee: nombre, raza, **posición**, rareza, nivel, experiencia, atributos numéricos, **rasgos**, etiquetas, lista de perks, slots de equipamiento, estado físico, vínculos y salario.
 - **RF-022** Atributos numéricos, en rango 1-99: **fuerza, velocidad, técnica, resistencia y correa**. La precisión se integra en técnica; la agresividad se expresa mediante rasgos, no como cifra.
@@ -310,6 +310,7 @@ SUSTITUCION         CONSUMIBLE_USADO
 - **RF-114b** Todo nodo de mercado ofrece, además de los fichajes de pago, entre 1 y 2 **canteranos**: jugadores comunes de la raza del club, **gratuitos**, con atributos muy bajos. Amortiguan una run mala, pero solo si el jugador pasa por el nodo. Quien no tenga oro se lleva un mal jugador; quien no pase por el mercado, no se lleva nada.
 - **RF-114c** Los canteranos ganan experiencia un **33% más rápido** que el resto. Son malos hoy y potencialmente los mejores del acto 3 si se fichan pronto. Así el mercado interesa también a quien va bien, y no es solo un nodo de emergencia.
 - **RF-114d** El canterano es un jugador completo: sube de nivel, recibe perks y forma vínculos. Un canterano que llega al jefe final es una historia que el juego debe permitir.
+- **RF-114l** Los fichajes de pago del mercado garantizan **exactamente un portero**: ni más ni menos. El resto de fichajes, los canteranos y el mercenario son siempre de campo (ADR 0080).
 
 ### 3.12c Economía
 

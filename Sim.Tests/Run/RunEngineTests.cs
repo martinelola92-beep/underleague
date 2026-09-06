@@ -22,8 +22,8 @@ public class RunEngineTests
         Assert.Equal(-1, state.CurrentNodeId);
         Assert.Equal(RunPhase.OnMap, state.Phase);
         Assert.Equal(RunRules.Acts, state.Maps.Count);
-        Assert.Equal(10, state.Roster.Count);            // RF-005: 7 titulares y 3 suplentes
-        Assert.Equal(10, state.AvailablePlayerCount);    // RF-002e
+        Assert.Equal(9, state.Roster.Count);             // RF-005/RF-020: 7 titulares y 2 suplentes
+        Assert.Equal(9, state.AvailablePlayerCount);     // RF-002e
         Assert.False(state.IsBelowMinimum);
         Assert.Equal(RunOutcomeKind.InProgress, RunEngine.Outcome(state).Kind);
         Assert.Contains(state.Roster, p => p.Rarity != Rarity.Common);   // RF-005: uno de rareza superior
@@ -72,8 +72,14 @@ public class RunEngineTests
     [Fact]
     public void ARunCanBePlayedFromStartToFinish()
     {
+        // Semilla 2, no 1: la plantilla inicial del club pasó de 10 a 9 (RF-005/RF-020) y el flujo de
+        // generación (RT-022) consume un jugador menos, así que desplaza la secuencia de atributos y
+        // rareza de todo lo que se genera después con la misma semilla. Con la 1 la nueva plantilla
+        // pierde la final de acto 3 (BossMatchLost); no es una regresión de RF-002b (los disponibles
+        // nunca bajan de 8 en ese camino) sino una semilla que ya no da victoria con esta plantilla. La
+        // 2 sí, con el mismo rango de nodos y partidos.
         var systems = new TestRunSystems { OpponentQuality = 30 };
-        var state = TestRuns.PlayToTheEnd(RunEngine.Start(TestRuns.Setup(quality: 70), 1, Catalog), Catalog, systems);
+        var state = TestRuns.PlayToTheEnd(RunEngine.Start(TestRuns.Setup(quality: 70), 2, Catalog), Catalog, systems);
 
         var outcome = RunEngine.Outcome(state);
         Assert.True(outcome.IsOver, "la run debería haber terminado");

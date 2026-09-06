@@ -80,10 +80,17 @@ public static class MarketOfferGenerator
             return market.ClampToBand(price, rarityBase);
         }
 
+        // El portero garantizado del mercado (RF-114, ADR 0080: todo nodo de mercado ofrece EXACTAMENTE un
+        // portero, mínimo y máximo uno) sale siempre de los primeros market.GoalkeeperOffers fichajes de
+        // PAGO. El resto de fichajes, y siempre los canteranos y los mercenarios, son de campo
+        // (GeneratedPlayers.PickOutfield): así el máximo también queda garantizado en uno.
         var recruits = new List<PlayerOffer>(market.PlayerOffers);
         for (int i = 0; i < market.PlayerOffers; i++)
         {
-            var player = GeneratedPlayers.Recruit(ref rng, catalog, state.ClubRace, market.RecruitQuality, economy.RecruitLevel(node.Act));
+            Model.Position recruitPosition = i < market.GoalkeeperOffers
+                ? Model.Position.Goalkeeper
+                : GeneratedPlayers.PickOutfield(ref rng);
+            var player = GeneratedPlayers.Recruit(ref rng, catalog, state.ClubRace, market.RecruitQuality, economy.RecruitLevel(node.Act), recruitPosition);
             int recruitBase = market.PlayerPrice.Of(player.Rarity);
             recruits.Add(new PlayerOffer(player, Priced(ref rng, recruitBase, recruitBase)));
         }
@@ -94,7 +101,8 @@ public static class MarketOfferGenerator
         var youths = new List<PlayerOffer>(youthCount);
         for (int i = 0; i < youthCount; i++)
         {
-            var youth = GeneratedPlayers.Youth(ref rng, catalog, state.ClubRace, market.YouthQuality);
+            var youthPosition = GeneratedPlayers.PickOutfield(ref rng);
+            var youth = GeneratedPlayers.Youth(ref rng, catalog, state.ClubRace, market.YouthQuality, youthPosition);
             youths.Add(new PlayerOffer(youth, 0));
         }
 
@@ -103,7 +111,8 @@ public static class MarketOfferGenerator
         for (int i = 0; i < market.MercenaryOffers && foreignRaces.Count > 0; i++)
         {
             var race = foreignRaces[rng.Range(0, foreignRaces.Count)];
-            var mercenary = GeneratedPlayers.Mercenary(ref rng, catalog, race, market.MercenaryQuality, wage: 0, economy.RecruitLevel(node.Act));
+            var mercenaryPosition = GeneratedPlayers.PickOutfield(ref rng);
+            var mercenary = GeneratedPlayers.Mercenary(ref rng, catalog, race, market.MercenaryQuality, wage: 0, economy.RecruitLevel(node.Act), mercenaryPosition);
             // El salario depende de la rareza sorteada, así que se calcula después de generarla.
             mercenary = mercenary with { Wage = economy.MercenaryWage(mercenary.Rarity) };
             mercenaries.Add(new MercenaryOffer(mercenary));

@@ -94,7 +94,7 @@ public class RunDebugTests
         Assert.True(state.GetPlayer(2).MinorInjuries >= 1);
         Assert.True(state.GetPlayer(2).IsAvailable);
         Assert.False(state.GetPlayer(3).IsAvailable);
-        Assert.Equal(9, state.AvailablePlayerCount);
+        Assert.Equal(8, state.AvailablePlayerCount);
     }
 
     [Fact]

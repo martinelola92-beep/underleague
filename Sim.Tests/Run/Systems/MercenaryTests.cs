@@ -90,9 +90,9 @@ public sealed class MercenaryTests
     }
 
     /// <summary>
-    /// Un hueco de plantilla comprado (ADR 0046). La plantilla base son 10 y el club arranca con 10
-    /// (RF-005, RF-020), así que fichar a un mercenario de prueba exige el hueco: es exactamente lo que
-    /// pasa en la run.
+    /// Un hueco de plantilla comprado (ADR 0046), de más: el club ya arranca con 9 y un hueco libre bajo
+    /// la capacidad base de 10 (RF-005, RF-020), así que este hueco extra solo asegura que fichar al
+    /// mercenario de prueba nunca choca con el techo, aunque el test ya lo haya usado.
     /// </summary>
     private static RunState WithRoomForOneMore(RunState state) =>
         state.WithCounter(RunState.EnrollmentSlotsCounter, 1);

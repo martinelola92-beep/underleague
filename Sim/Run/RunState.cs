@@ -297,9 +297,9 @@ public static class RunRules
     public const int MinimumAvailablePlayers = 5;
 
     /// <summary>
-    /// Plantilla base (RF-020, ADR 0046): exactamente los 10 con los que empieza el club (RF-005). No es
-    /// un mínimo ni un objetivo: es el <b>techo de partida</b>. Crecer por encima exige un hueco, y el
-    /// único que los vende es el nodo de inscripción.
+    /// Capacidad base (RF-020, ADR 0046): un hueco más que la plantilla inicial de 9 (RF-005), para poder
+    /// fichar en el primer mercado. No es un mínimo ni un objetivo: es el <b>techo de partida</b>. Crecer
+    /// por encima exige un hueco, y el único que los vende es el nodo de inscripción.
     /// </summary>
     public const int BaseRosterSize = 10;
 

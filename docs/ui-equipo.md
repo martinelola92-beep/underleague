@@ -7,7 +7,8 @@ Partido, Mercado, Recompensa e Informe post-partido tienen que respetar salvo mo
 
 Implementación: `Game/Scenes/Equipo.tscn` (+ `Game/Screens/TeamScreen.cs`),
 `Game/Scenes/PlayerCard.tscn` (+ `Game/Ui/PlayerCard.cs`), `Game/Ui/PitchView.cs`,
-`Game/Ui/LegendView.cs`, `Game/Ui/Style.cs`, `Game/Ui/UiText.cs`, `Game/Data/TeamState.cs`.
+`Game/Ui/LegendView.cs`, `Game/Ui/Toast.cs`, `Game/Ui/Style.cs`, `Game/Ui/UiText.cs`,
+`Game/Data/TeamState.cs`, y en `/Sim` el previsualizador `Sim/Perks/LineupPerkPreview.cs`.
 Capturas en `Game/screenshots/`.
 
 Requisitos que cumple: UI-001..UI-006, UI-010..UI-014, UI-020, UI-021, RF-040..RF-045, RF-021..RF-023,
@@ -112,6 +113,37 @@ contenedor se recoloca solo, así que una ficha con cuatro perks legendarios no 
   en tono claro con trama y borde punteado —"hasta aquí puede llegar"—. **Solo la del jugador
   manipulado**: siete zonas asimétricas superpuestas son una mancha que no informa de nada.
 - La zona se recalcula **mientras se mueve**: lo que se ve es la zona que tendría si se soltara ahí.
+
+### Modo de zonas de inicio (botón "Zonas del campo", Z / Y)
+
+Los perks de colocación describen la cuadrícula con palabras —"empieza en el tercio rival", "en una
+banda", "en el centro del campo"— y esas palabras no correspondían a nada visible. Una pulsación pinta
+sobre la mitad propia los **tres tercios de inicio** (columnas 0-2, 3-5 y 6-7) con tres tintes y su
+nombre escrito, y las **tres bandas** por filas (la 2 es el carril central; el resto, banda), separadas
+con línea punteada para no confundirlas con los cortes de tercio. Los nombres no se escriben en la
+pantalla: salen de `startZones` y `startFlanks` de `data/l10n`, que es de donde salen las descripciones
+de los perks, así que el campo y el texto del perk no pueden llamar a lo mismo de dos maneras.
+
+Mientras está encendido, el panel de texto explica las tres cosas que el jugador no puede deducir: que
+un perk de inicio mira la **casilla de alineación** y no dónde acabe el jugador durante el partido, que
+"banda" es cualquier fila menos la central, y que un vínculo une a dos titulares a **dos casillas o
+menos** en la dirección que el perk pide (RF-044). Es excluyente con el modo de cobertura, por la misma
+razón que este lo es con la zona individual.
+
+### Aviso al soltar: qué perk se ha encendido o apagado
+
+Soltar a un jugador puede activar o desactivar un perk —suyo o de un compañero— y hasta ahora eso pasaba
+en silencio: el jugador se enteraba en el informe post-partido, que es exactamente lo que el principio
+rector prohíbe (RF-012d). Al soltar aparece un aviso de unos tres segundos sobre el borde inferior del
+panel del campo con **todos** los perks decidibles del movido —en verde los que se activan ahí, en rojo
+los que no, porque saber que ahí *no* se activa es la mitad de la decisión— y solo los **cambios** de los
+demás titulares. Un aviso nuevo sustituye al anterior; si no hay nada que decir, no hay aviso.
+
+El estado lo resuelve `Sim.Perks.LineupPerkPreviewer` (la pantalla no evalúa ninguna condición, RT-014),
+que compara dos alineaciones y responde solo por los perks que la colocación decide por completo
+—`startsIn`, `startsOn`, `linked`, `hasTag`, `teammatesWithTag`, `adjacentCount`—. Un perk cuya condición
+dependa de cómo vaya el partido (`zone`, `scoreDiff`, `stat`...) se omite: prometer una activación que el
+partido puede desmentir sería peor que callar.
 
 ## 6. Modo de cobertura del equipo
 
@@ -237,11 +269,14 @@ xvfb-run -a --server-args="-screen 0 1280x800x24" \
   godot --path Game --rendering-driver opengl3 --audio-driver Dummy -- --screenshots
 ```
 
-Deja en `Game/screenshots/` las cuatro capturas: `equipo.png` (estado inicial), `equipo-zona.png` (un
-jugador cogido, con sus dos capas y los vínculos que se crean y se rompen), `equipo-cobertura.png` (modo
-de cobertura) y `equipo-ficha.png` (ficha expandida con perk y descripción generada). Las tres últimas se
-alcanzan **con eventos de mando sintéticos**, no llamando a los métodos por dentro: la secuencia comprueba
-de paso que la navegación sin ratón lleva a los mismos estados.
+Deja en `Game/screenshots/` seis capturas: `equipo.png` (estado inicial), `equipo-zona.png` (un jugador
+cogido, con sus dos capas y los vínculos que se crean y se rompen), `equipo-cobertura.png` (modo de
+cobertura), `equipo-ficha.png` (ficha expandida con perk y descripción generada), `equipo-zonas.png`
+(modo de zonas de inicio) y `equipo-aviso.png` (el aviso de perks tras un movimiento). Todas menos la
+primera se alcanzan **con eventos de mando sintéticos**, no llamando a los métodos por dentro: la
+secuencia comprueba de paso que la navegación sin ratón lleva a los mismos estados. El movimiento de la
+última lo elige la propia secuencia previsualizando alineaciones hipotéticas, para que el aviso de la
+captura sea un aviso de verdad y no un campo mudo.
 
 El render es por software (Mesa/llvmpipe), así que las capturas valen para juzgar composición, color,
 proporción y legibilidad, **no** fluidez.

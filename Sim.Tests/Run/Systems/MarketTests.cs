@@ -108,4 +108,57 @@ public sealed class MarketTests
             Assert.Contains("Stranger", offer.Player.Tags);
         }
     }
+
+    /// <summary>
+    /// RF-114, ADR 0080: todo nodo de mercado ofrece EXACTAMENTE un portero, mínimo y máximo uno, y ese
+    /// portero sale siempre del primer fichaje de pago (nunca de un canterano ni de un mercenario).
+    /// </summary>
+    [Fact]
+    public void EveryMarketHasExactlyOneGoalkeeperAsTheFirstRecruit()
+    {
+        var node = new MapNode(201, 2, 0, 0, NodeKind.Market, Array.Empty<int>(), string.Empty, 0);
+
+        for (ulong seed = 1UL; seed <= 50UL; seed++)
+        {
+            var state = RunEngine.Start(SystemsTestSupport.Setup(), seed, SystemsTestSupport.Catalog, SystemsTestSupport.Systems);
+            var offers = MarketOfferGenerator.Generate(state, node, SystemsTestSupport.Catalog, SystemsTestSupport.Systems.Economy, SystemsTestSupport.Systems.Items, SystemsTestSupport.Systems.Consumables);
+
+            int goalkeepers =
+                offers.Recruits.Count(r => r.Player.Position == Position.Goalkeeper)
+                + offers.Youths.Count(y => y.Player.Position == Position.Goalkeeper)
+                + offers.Mercenaries.Count(m => m.Player.Position == Position.Goalkeeper);
+
+            Assert.True(goalkeepers == 1, $"semilla {seed}: se esperaba exactamente 1 portero en el mercado, hubo {goalkeepers}");
+            Assert.NotEmpty(offers.Recruits);
+            Assert.Equal(Position.Goalkeeper, offers.Recruits[0].Player.Position);
+        }
+    }
+
+    /// <summary>
+    /// RF-114, ADR 0080: sin fichajes de portero reservados (<c>goalkeeperOffers = 0</c>) no hay garantía
+    /// ninguna: el mercado puede quedarse sin ningún portero, porque canteranos y mercenarios son siempre
+    /// de campo y ya no queda ningún fichaje reservado a portero.
+    /// </summary>
+    [Fact]
+    public void WithZeroGoalkeeperOffersThereIsNoGuarantee()
+    {
+        var economy = SystemsTestSupport.Systems.Economy with
+        {
+            Market = SystemsTestSupport.Systems.Economy.Market with { GoalkeeperOffers = 0 },
+        };
+        var node = new MapNode(201, 2, 0, 0, NodeKind.Market, Array.Empty<int>(), string.Empty, 0);
+
+        for (ulong seed = 1UL; seed <= 50UL; seed++)
+        {
+            var state = RunEngine.Start(SystemsTestSupport.Setup(), seed, SystemsTestSupport.Catalog, SystemsTestSupport.Systems);
+            var offers = MarketOfferGenerator.Generate(state, node, SystemsTestSupport.Catalog, economy, SystemsTestSupport.Systems.Items, SystemsTestSupport.Systems.Consumables);
+
+            int goalkeepers =
+                offers.Recruits.Count(r => r.Player.Position == Position.Goalkeeper)
+                + offers.Youths.Count(y => y.Player.Position == Position.Goalkeeper)
+                + offers.Mercenaries.Count(m => m.Player.Position == Position.Goalkeeper);
+
+            Assert.Equal(0, goalkeepers);
+        }
+    }
 }

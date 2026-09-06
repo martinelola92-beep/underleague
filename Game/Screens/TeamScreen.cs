@@ -25,6 +25,7 @@ namespace Underleague.Game.Screens;
 public partial class TeamScreen : Control
 {
     private const string CoverageAction = "team_coverage";
+    private const string ZonesAction = "team_zones";
 
     private readonly List<PlayerCard> _cards = new();
 
@@ -35,18 +36,20 @@ public partial class TeamScreen : Control
     private Label _subtitle = null!;
     private Label _info = null!;
     private Label _lineupTable = null!;
+    private Toast _toast = null!;
 
     private int _selected = -1;
     private int _held = -1;
     private int _rosterIndex;
     private bool _focusRoster;
     private bool _coverage;
+    private bool _zones;
     private Cell _pressCell;
     private Cell _cursor = PlacementView.GoalkeeperCell;
 
     public override void _Ready()
     {
-        RegisterCoverageAction();
+        RegisterActions();
 
         _pitch = GetNode<PitchView>("Campo");
         _legend = GetNode<LegendView>("Leyenda");
@@ -66,6 +69,14 @@ public partial class TeamScreen : Control
         var coverageButton = GetNode<Button>("BotonCobertura");
         coverageButton.Text = UiText.Get("ui.team.coverageButton");
         coverageButton.Pressed += ToggleCoverage;
+
+        // El botón de zonas es el "qué significan estas palabras" de los perks de colocación: sin él, los
+        // textos "empieza en el tercio rival" o "en una banda" describen una cuadrícula que el jugador no
+        // ve. Va al lado del de cobertura porque los dos son lecturas del mismo campo, y son excluyentes.
+        var zonesButton = GetNode<Button>("BotonZonas");
+        zonesButton.Text = UiText.Get("ui.team.zonesButton");
+        zonesButton.Pressed += ToggleZones;
+
         GetNode<Label>("AyudaRaton").Text = UiText.Get("ui.input.mouse");
         GetNode<Label>("AyudaMando").Text = UiText.Get("ui.input.pad");
 
@@ -86,6 +97,11 @@ public partial class TeamScreen : Control
         {
             AddBackButton();
         }
+
+        // El aviso vive por encima de todo y no recibe ratón: se apoya en el borde inferior del panel del
+        // campo, justo encima de la ayuda de mandos, para que el ojo no tenga que salir de la cuadrícula.
+        _toast = new Toast { BottomLeft = new Vector2(410f, 726f), MaximumWidth = 846f };
+        AddChild(_toast);
 
         _pitch.State = _state;
         _pitch.CellPressed += OnCellPressed;
@@ -141,6 +157,12 @@ public partial class TeamScreen : Control
         if (@event.IsActionPressed(CoverageAction))
         {
             ToggleCoverage();
+            return;
+        }
+
+        if (@event.IsActionPressed(ZonesAction))
+        {
+            ToggleZones();
             return;
         }
 
@@ -294,14 +316,81 @@ public partial class TeamScreen : Control
     {
         int player = _held;
         _held = -1;
-        if (player >= 0 && _state.Move(player, target))
+        if (player >= 0)
         {
-            Flash(player);
-            RefreshCards();
+            // El "antes" se toma con la alineación todavía sin tocar: el aviso compara dos fotos, no
+            // recalcula nada (RT-014). Las dos las hace Sim.Perks.LineupPerkPreviewer.
+            var before = LineupPerkPreviewer.Preview(_state.Lineup, _state.Players, _state.Catalog);
+            if (_state.Move(player, target))
+            {
+                Announce(player, before, LineupPerkPreviewer.Preview(_state.Lineup, _state.Players, _state.Catalog));
+                Flash(player);
+                RefreshCards();
+            }
         }
 
         RefreshPitch();
     }
+
+    /// <summary>
+    /// Aviso de lo que la casilla acaba de encender o apagar (RF-012d). Se dicen <b>todos</b> los perks
+    /// decidibles del jugador movido —también los que siguen apagados, porque saber que ahí no se activa
+    /// es la mitad de la decisión— y solo los <b>cambios</b> de sus compañeros: los de los demás no los
+    /// ha tocado a propósito y listarlos enteros taparía el campo. Si no hay nada que decir, no hay aviso.
+    /// </summary>
+    private void Announce(
+        int playerId, IReadOnlyList<LineupPerkPreview> before, IReadOnlyList<LineupPerkPreview> after)
+    {
+        var lines = new List<ToastLine>();
+        foreach (var entry in after)
+        {
+            string? name = PerkName(entry.PerkId);
+            if (name is null)
+            {
+                continue;
+            }
+
+            bool active = entry.Status == LineupPerkStatus.Active;
+            if (entry.PlayerId == playerId)
+            {
+                lines.Add(new ToastLine(
+                    UiText.Get(active ? "ui.team.perkOn" : "ui.team.perkOff", name),
+                    active ? Style.LinkCreated : Style.LinkBroken));
+                continue;
+            }
+
+            var previous = FindPreview(before, entry.PlayerId, entry.PerkId);
+            if (previous is not null && previous.Status == entry.Status)
+            {
+                continue;
+            }
+
+            lines.Add(new ToastLine(
+                UiText.Get(
+                    active ? "ui.team.perkOnOther" : "ui.team.perkOffOther",
+                    name,
+                    _state.Find(entry.PlayerId)?.Name ?? "?"),
+                active ? Style.LinkCreated : Style.LinkBroken));
+        }
+
+        _toast.Post(lines);
+    }
+
+    private static LineupPerkPreview? FindPreview(IReadOnlyList<LineupPerkPreview> preview, int playerId, string perkId)
+    {
+        foreach (var entry in preview)
+        {
+            if (entry.PlayerId == playerId && string.Equals(entry.PerkId, perkId, StringComparison.Ordinal))
+            {
+                return entry;
+            }
+        }
+
+        return null;
+    }
+
+    /// <summary>Nombre localizado del perk, del mismo catálogo del que sale su descripción (RT-073).</summary>
+    private string? PerkName(string perkId) => _state.Catalog.Perks.Find(perkId)?.Name.Es;
 
     /// <summary>
     /// Un solo patrón de inspección (UI-001): activar a un jugador expande su ficha —solo una a la vez,
@@ -337,9 +426,26 @@ public partial class TeamScreen : Control
         }
     }
 
+    /// <summary>Los dos modos de campo son excluyentes: superpuestos no se entiende ninguno (§6).</summary>
     private void ToggleCoverage()
     {
         _coverage = !_coverage;
+        if (_coverage)
+        {
+            _zones = false;
+        }
+
+        RefreshPitch();
+    }
+
+    private void ToggleZones()
+    {
+        _zones = !_zones;
+        if (_zones)
+        {
+            _coverage = false;
+        }
+
         RefreshPitch();
     }
 
@@ -495,6 +601,7 @@ public partial class TeamScreen : Control
         _pitch.SelectedId = _selected;
         _pitch.HeldId = _held;
         _pitch.CoverageMode = _coverage;
+        _pitch.ZonesMode = _zones;
         _pitch.Coverage = _coverage ? PlacementView.Coverage(_state.Players, lineup, _state.Catalog) : null;
 
         var created = new List<PlacementLink>();
@@ -517,7 +624,7 @@ public partial class TeamScreen : Control
 
         int shown = _held >= 0 ? _held : _selected;
         _pitch.Zone = null;
-        if (!_coverage && shown >= 0 && _state.Find(shown) is { } player)
+        if (!_coverage && !_zones && shown >= 0 && _state.Find(shown) is { } player)
         {
             foreach (var slot in lineup.Slots)
             {
@@ -528,6 +635,9 @@ public partial class TeamScreen : Control
             }
         }
 
+        // En el modo de zonas la leyenda estorba: sus muestras hablan de la zona de acción y del margen,
+        // que en ese modo no se pintan. El campo se rotula a sí mismo.
+        _legend.Visible = !_zones;
         _legend.CoverageMode = _coverage;
         _legend.Moving = _held >= 0;
         _legend.QueueRedraw();
@@ -565,6 +675,17 @@ public partial class TeamScreen : Control
             lines.Add(UiText.Get("ui.team.coverage"));
             lines.Add(UiText.Get("ui.team.coverageHint", _pitch.Coverage?.Holes ?? 0));
             lines.Add(string.Empty);
+        }
+
+        // Mientras el modo de zonas está encendido, el texto de al lado explica lo que el campo dibuja:
+        // qué mira un perk de inicio (la casilla de alineación, no dónde acabe el jugador), qué cuenta
+        // como banda y qué es un vínculo (RF-044). Es la respuesta a los textos de los perks, así que
+        // ocupa el panel entero en vez de compartirlo con la selección.
+        if (_zones)
+        {
+            _info.Text = UiText.Get("ui.team.zones") + "\n\n" + UiText.Get("ui.team.zonesHelp");
+            _lineupTable.Text = string.Join("\n", LineupTable(links));
+            return;
         }
 
         int shown = _held >= 0 ? _held : _selected;
@@ -696,17 +817,23 @@ public partial class TeamScreen : Control
         return (from?.Name ?? "?") + " -> " + (to?.Name ?? "?");
     }
 
-    /// <summary>El modo de cobertura se declara en código para no depender del formato binario del InputMap.</summary>
-    private static void RegisterCoverageAction()
+    /// <summary>Los modos de campo se declaran en código para no depender del formato binario del InputMap.</summary>
+    private static void RegisterActions()
     {
-        if (InputMap.HasAction(CoverageAction))
+        Register(CoverageAction, Key.C, JoyButton.X);
+        Register(ZonesAction, Key.Z, JoyButton.Y);
+    }
+
+    private static void Register(string action, Key key, JoyButton button)
+    {
+        if (InputMap.HasAction(action))
         {
             return;
         }
 
-        InputMap.AddAction(CoverageAction);
-        InputMap.ActionAddEvent(CoverageAction, new InputEventKey { PhysicalKeycode = Key.C });
-        InputMap.ActionAddEvent(CoverageAction, new InputEventJoypadButton { ButtonIndex = JoyButton.X });
+        InputMap.AddAction(action);
+        InputMap.ActionAddEvent(action, new InputEventKey { PhysicalKeycode = key });
+        InputMap.ActionAddEvent(action, new InputEventJoypadButton { ButtonIndex = button });
     }
 
     private static bool WantsScreenshots()
@@ -764,6 +891,27 @@ public partial class TeamScreen : Control
                 _rosterIndex = IndexOfCard(FindRare());
                 Pad("ui_accept");
             }),
+            ("equipo-zonas", () =>
+            {
+                Pad("ui_cancel");
+                Pad(ZonesAction);
+            }),
+            ("equipo-aviso", () =>
+            {
+                Pad(ZonesAction);
+                _focusRoster = false;
+                EnsurePlacementPerks();
+                if (FindPerkMove() is not { } move)
+                {
+                    GD.PushWarning("ningún movimiento cambia el estado de un perk: la captura del aviso saldrá vacía");
+                    return;
+                }
+
+                _cursor = move.From;
+                Pad("ui_accept");
+                _cursor = move.To;
+                Pad("ui_accept");
+            }),
         };
 
         string directory = ProjectSettings.GlobalizePath("res://screenshots");
@@ -797,6 +945,95 @@ public partial class TeamScreen : Control
         }
 
         return 0;
+    }
+
+    /// <summary>
+    /// <b>Solo para la secuencia de capturas.</b> La plantilla de pruebas reparte los perks iniciales por
+    /// rareza (<c>PerkAssignment.AssignInitial</c>) y con esta semilla eso son cero perks en nueve de los
+    /// diez jugadores: sin ningún perk de colocación el aviso no tendría nada que decir y la captura no
+    /// enseñaría lo que documenta. Si no hay ninguno, se le pone uno real del catálogo a un titular. No
+    /// toca nada con una run detrás: ahí los perks los reparte el bucle de run.
+    /// </summary>
+    private void EnsurePlacementPerks()
+    {
+        if (RunController.Instance is { HasRun: true } || FindPerkMove() is not null)
+        {
+            return;
+        }
+
+        int midfielder = FindByPosition(SimPosition.Midfielder);
+        int defender = FindByPosition(SimPosition.Defender);
+        var players = new List<PlayerDefinition>(_state.Players.Count);
+        foreach (var player in _state.Players)
+        {
+            string? perk = player.Id == midfielder ? "flank_specialist" : player.Id == defender ? "spearpoint" : null;
+            players.Add(perk is null || player.Perks.Count > 0 ? player : player with { Perks = new[] { perk } });
+        }
+
+        _state = TeamState.Of(_state.Catalog, _state.Team with { Players = players });
+        _pitch.State = _state;
+        RefreshCards();
+    }
+
+    /// <summary>
+    /// Movimiento válido que más estados de perk cambia, para que la captura del aviso enseñe un aviso
+    /// de verdad y no un campo mudo. Se busca con el mismo previsualizador que usa el aviso
+    /// (<c>Sim.Perks.LineupPerkPreviewer</c>) sobre alineaciones hipotéticas, sin mover nada.
+    /// </summary>
+    private (Cell From, Cell To)? FindPerkMove()
+    {
+        var current = LineupPerkPreviewer.Preview(_state.Lineup, _state.Players, _state.Catalog);
+        (Cell From, Cell To)? best = null;
+        int bestScore = 0;
+
+        foreach (var slot in _state.Lineup.Slots)
+        {
+            var player = _state.Find(slot.PlayerId);
+            if (player is null || !PlacementView.CanPlace(player.Position, slot.HomeCell))
+            {
+                continue;
+            }
+
+            for (int column = 0; column < Pitch.PlacementColumns; column++)
+            {
+                for (int row = 0; row < Pitch.Rows; row++)
+                {
+                    var target = new Cell(column, row);
+                    if (target == slot.HomeCell || !PlacementView.CanPlace(player.Position, target))
+                    {
+                        continue;
+                    }
+
+                    var lineup = _state.Preview(slot.PlayerId, target);
+                    int score = Changed(current, LineupPerkPreviewer.Preview(lineup, _state.Players, _state.Catalog));
+                    if (score > bestScore)
+                    {
+                        bestScore = score;
+                        best = (slot.HomeCell, target);
+                    }
+                }
+            }
+        }
+
+        return best;
+    }
+
+    /// <summary>
+    /// Cuántos estados de perk cambia esa alineación respecto de la actual. Una activación puntúa doble:
+    /// la captura tiene que enseñar el caso bueno, no solo el aviso de que algo se ha apagado.
+    /// </summary>
+    private static int Changed(IReadOnlyList<LineupPerkPreview> current, IReadOnlyList<LineupPerkPreview> next)
+    {
+        int score = 0;
+        foreach (var entry in next)
+        {
+            if (FindPreview(current, entry.PlayerId, entry.PerkId) is { } previous && previous.Status != entry.Status)
+            {
+                score += entry.Status == LineupPerkStatus.Active ? 2 : 1;
+            }
+        }
+
+        return score;
     }
 
     /// <summary>Primer titular con perk asignado: la captura de la ficha tiene que enseñar uno de verdad.</summary>

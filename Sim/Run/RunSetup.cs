@@ -24,7 +24,7 @@ public sealed record RunSetup(
     public int StartingGold { get; init; }
 
     /// <summary>
-    /// Plantilla inicial explícita (RF-005: 7 titulares y 3 suplentes, uno de rareza superior). Si es
+    /// Plantilla inicial explícita (RF-005/RF-020: 7 titulares y 2 suplentes, uno de rareza superior). Si es
     /// null, <see cref="RunEngine.Start"/> la genera con <c>TeamGenerator</c> y
     /// <see cref="GeneratedQuality"/>, que es lo que hacen los tests y <c>/Balance</c> mientras
     /// <c>data/clubs/</c> no exista.

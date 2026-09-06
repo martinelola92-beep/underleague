@@ -688,14 +688,15 @@ public static class RunEngine
     }
 
     /// <summary>
-    /// Plantilla inicial procedural mientras <c>data/clubs/</c> no exista (paquete X): los 10 jugadores
-    /// de RF-005 con <c>TeamGenerator</c> y los perks iniciales de su rareza (RF-023), sorteados con el
-    /// flujo de generación, que es independiente del del mapa y del de los partidos (RT-022).
+    /// Plantilla inicial procedural mientras <c>data/clubs/</c> no exista (paquete X): los 9 jugadores
+    /// de RF-005/RF-020 (7 titulares y 2 suplentes DEF/FWD, un hueco libre bajo la capacidad de 10) con
+    /// <c>TeamGenerator</c> y los perks iniciales de su rareza (RF-023), sorteados con el flujo de
+    /// generación, que es independiente del del mapa y del de los partidos (RT-022).
     /// </summary>
     private static List<RunPlayer> GenerateRoster(RunSetup setup, ulong seed, Catalog catalog)
     {
         var rng = RngStreams.Generation(seed, 0);
-        var team = TeamGenerator.Generate(ref rng, catalog, setup.ClubId, setup.ClubRace, setup.GeneratedQuality, firstPlayerId: 0);
+        var team = TeamGenerator.Generate(ref rng, catalog, setup.ClubId, setup.ClubRace, setup.GeneratedQuality, firstPlayerId: 0, substitutePositions: TeamGenerator.ClubSubstitutePositions);
         var withPerks = PerkAssignment.AssignInitial(ref rng, team.Players, catalog);
 
         var roster = new List<RunPlayer>(withPerks.Count);
