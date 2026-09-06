@@ -5105,3 +5105,136 @@ letalidad: mueren más porque las runs duran más.
   tabla fuera fiel la respuesta sería monótona hasta su óptimo.
 - **AS-C** sin cambios: las builds siguen imponiendo una sola etiqueta de estilo a los siete titulares.
 - **AP-A y AP-C** sin cambios. Los objetivos 2, 3 y 4 siguen sin palanca.
+
+## 37. Decisiones de implementación del paquete AU: la muestra que resuelve el margen (ADR 0074, ADR 0075)
+
+### 37.1. El defecto, y que es el de la ADR 0072 un nivel más arriba
+
+Las doce celdas se medían con **640 partidos por celda** y se juzgaban con un margen de **±2,5**. Medido
+sobre doce semillas, el error típico de una celda con esa muestra es **1,85 puntos**: el margen valía
+**1,4 desviaciones**. Y se cobró — con 640 partidos `the_hunt/buena` medía 62,66 y su valor real es 58,30.
+
+### 37.2. El tamaño, derivado
+
+Descomponiendo la varianza con las mismas doce semillas a **dos** números de partidos por plantilla
+(32 × 4 y 32 × 8, 24 estimaciones):
+
+```
+Var(celda) = A + B/m     medido A ≈ 0 (−0,60 ± 1,5), B ≈ 16,1
+factor de diseño Var_observada / Var_binomial = 1,15   →   la varianza escala como 1/N
+```
+
+**La varianza entre plantillas no domina**: con 5 razas × 32 plantillas ya está promediada. Criterio
+escrito antes de medir —el margen de ±2,5 tiene que valer **tres** desviaciones, para que las 24
+comparaciones de borde de la tabla no salten por azar (a 2σ la probabilidad de un falso positivo en alguna
+es del 25%, a 3σ del 1,6%)—:
+
+```
+ET ≤ 0,83   →   N ≥ 1,15 · p(1−p) · 10⁴ / 0,83² = 4.172 partidos/celda   (peor caso p = 0,5)
+```
+
+Se adopta **64 × 16 = 5.120** (64 es el máximo de plantillas sin que dos razas compartan las del jefe,
+`BossRosterBlock`). Medido sobre ocho semillas, el ET de una celda va de **0,20 a 0,89** y el margen vale
+entre **2,8 y 12** desviaciones. Las doce celdas se juegan en paralelo con el desplazamiento de semilla
+fijado antes de empezar: bit a bit igual que en serie. La puerta pasa de **33 s a 1 m 38 s**; la suite
+completa en Release, de 1 m 20 s a **3 m 10 s**.
+
+### 37.3. Las doce celdas, con su error típico
+
+Ocho semillas × 5.120 partidos por celda. «ET» es el de **una** muestra de 5.120, que es lo que mide la
+puerta:
+
+| jefe | incoherente | correcta | buena | muy buena |
+|---|---|---|---|---|
+| `grimhold_guns` | 29,31 ±0,69 [20-35] | 67,85 ±0,74 [65-80] | 79,39 ±0,45 [75-88] | 94,34 ±0,20 [85-95] |
+| `the_hunt` (**quality 46**) | 12,31 ±0,42 [<15] | 37,67 ±0,63 [35-50] | **58,30 ±0,71 FUERA** [60-72] | 80,95 ±0,66 [72-85] |
+| `the_hunt` (**quality 44**, entregado) | **14,30** ±0,65 | **42,55** ±0,84 | **63,91** ±0,48 | **83,23** ±0,57 |
+| `eternal_crown` | 5,09 ±0,25 [<10] | 23,08 ±0,68 [15-28] | 44,87 ±0,89 [40-55] | 62,69 ±0,80 [55-70] |
+
+**Once estaban dentro y una fuera.** `grimhold_guns/muy buena` **no** estaba fuera: mide 94,34 y el 95,00
+del aviso de la ADR 0073 se reproduce al decimal (64 × 8, semilla 11) pero es una desviación alta de una
+muestra de 2.560; esa misma semilla con 5.120 mide 94,20.
+
+**Y la ADR 0073 arregló la mitad del problema.** Con las densidades **viejas** y la muestra nueva (dos
+semillas, ET 0,14), `grimhold_guns/muy buena` mide **95,50** —fuera— y `the_hunt/buena` **57,87**, la misma cifra que con las
+nuevas: el remedido de densidad metió una celda en banda y no movió la otra, tal como aquella ADR predijo.
+
+### 37.4. La recalibración de `the_hunt`, y por qué 44 y no 45
+
+Un punto de calidad mueve la celda `buena` **2,9 puntos** y la `incoherente` **0,8**: la primera está en la
+parte empinada de la sigmoide y la segunda en la cola, así que **la escalera se ensancha al ablandar**
+(45,6 puntos a quality 46, 46,6 a 45, **49,6 a 44**, contra los 45 que exige la fila del acto 2).
+**Maximin sobre el margen más estrecho**: con 45 el mínimo es +0,47 en `buena` (0,7 ET), con 44 es
+**+0,70 en `incoherente`** (1,1 ET). Ver **AU-C**.
+
+### 37.5. Lo que cuesta la recalibración
+
+Banco de 1.200 runs por lado, mismo protocolo que §36:
+
+| | control (q46) | **q44** | |
+|---|---|---|---|
+| Tasa de victoria de la run | 20,33 (0,68) | **20,75** (0,57) | banda 20-30 ✔ |
+| Suelo sin build | 10,92 (0,69) | **11,33** (1,23) | se aleja 0,41, no significativo |
+| **`contextualAdvantage`** | **+3,83** (0,67) | **+2,50** (0,83) | **−1,33 emparejado, ET 0,24** |
+| Hueco del acto 2 · buena actos 2/3 | 13,48 · 61,10 / 49,40 | **13,48 · 61,10 / 49,22** | intactos |
+| Mediocre actos 2/3 · mala completa | 47,59 / 35,87 · 10,50 | 47,59 / 35,14 · 10,58 | intactos |
+| Puertas, buena · suelo | 71,58·46,57·61,15 / 71,42·35,24·44,71 | 71,58·**49,59**·**58,73** / 71,42·**38,86**·**42,77** | |
+| `deathsPerRun` · `ordinaryDefeatRateAct1` | 1,42 · 25,23 | 1,45 · 25,23 | ✔ |
+
+La única cifra que se pierde es `contextualAdvantage`, y por una razón estructural: ablandar una puerta
+sube más al perfil que está más abajo en la sigmoide —la **ahorradora** pasa de 16,50 a 18,25— así que
+**comprime la ventaja de construir**. Es la ADR 0065 leída al revés.
+
+### 37.6. La otra puerta: fase 1 falla con la semilla 3
+
+| métrica | s1 | s2 | s3 | s4 | s5 | media (DT) | umbral |
+|---|---|---|---|---|---|---|---|
+| `randomBuildNearNone_human_random` | 41,67 | 40,83 | **38,75 OUT** | 41,04 | 40,83 | 40,62 (1,10) | 40-60 |
+| `coherentBuildsBeatNone_orc_mob` | 66,88 | 70,83 | 66,67 | 69,79 | 70,62 | 68,96 (2,04) | ≥ 58 |
+| `buildsWinDifferently_passChain` | 1,23 | 1,28 | 1,26 | 1,27 | 1,23 | 1,26 (0,02) | ≥ 1,11 |
+| `buildsWinDifferently_injuries` | 2,09 | 2,34 | 1,63 | 1,91 | 1,87 | 1,97 (0,27) | ≥ 1,5 |
+
+Los umbrales de tasa de victoria **siguen valiendo y con más holgura que cuando se calibraron** (5,4
+desviaciones el más ajustado, contra las 2,9 de la medición de cierre de la fase 1b). El de la build
+aleatoria **no**: 0,56 desviaciones de margen y pasa con la semilla 1 por suerte. **No se toca** — lo que
+el número dice es que una build aleatoria hoy es claramente peor que no construir, que es la decisión del
+revisor de la ADR 0056 y lo contrario de lo que afirma la banda. **AU-A.**
+
+### 37.7. La frontera, remedida (ADR 0075)
+
+| | puerta 1 | puerta 2 | puerta 3 | `S` |
+|---|---|---|---|---|
+| `R` en la ADR 0065 | 1,262 | 1,462 | 1,311 | 0,8837 |
+| `R` en la ADR 0069 | 1,260 | 1,599 | 1,608 | 1,1750 |
+| **`R` hoy** | **1,008** | **1,602** | **1,946** | **1,1450** |
+
+| | buena máxima con suelo = 10% | suelo mínimo con buena = 20% |
+|---|---|---|
+| ADR 0065 | 15,68% | **13,29%** |
+| **Hoy, dificultad libre** | **20,32%** | **9,80%** (ET 0,53) |
+| **Hoy, con la puerta 1 donde está** | **19,00%** | **10,68%** (ET 0,41) |
+| Tras la ADR 0074 | 18,51% | 11,04% |
+
+**Siguen sin caber, pero por 0,68 puntos en vez de 3,29.** Con la dificultad libre la frontera ya cruza la
+esquina, pero el óptimo que lo consigue exige que el jefe del acto 1 deje pasar a **más del 91%** de las
+runs, y la tabla no lo permite. El punto de hoy vuelve a estar **exactamente** sobre su frontera: el modelo
+predice que una run del 20,33% no puede tener un suelo por debajo del 10,91% y el banco mide **10,92%**.
+Detalle y el barrido de la puerta 1 en la ADR 0075. **AU-B.**
+
+### 37.8. Los seis objetivos
+
+| Objetivo (ADR 0056) | ADR 0072 | **este paquete** | ET | meta | |
+|---|---|---|---|---|---|
+| Build buena, actos 2/3 (ordinarios) | 61,10 / 49,40 | **61,10 / 49,22** | 0,61 / 1,59 | 60% | sí en el acto 2 |
+| Build mediocre, actos 2/3 | 47,60 / 35,82 | **47,59 / 35,14** | | 42-45% | igual |
+| Build mala completa la run | 10,50 | **10,58** | | < 2% | igual |
+| Suelo sin build | 10,92 | **11,33** | 1,23 | < 10% | se aleja 0,41 |
+| Hueco buena/mediocre, acto 2 | 13,49 | **13,48** | 0,58 | > 9,8 | sí |
+| **Tasa de victoria de la run** | 20,33 | **20,75** | 0,57 | 20-30% | **sí** |
+
+Guardarraíles: `ordinaryDefeatRateAct1` **25,23** (0,37) sobre 30 · `deathsPerRun` **1,45** · `betterTeamWinRate`
+**79,52** (sin tocar: no depende de los jefes) · `matchesPerFullRun` 19,45 · `masterDivergence` **22,36**
+(suelo 5) · `mastersReached` 20,33 · `sinksAffordablePerAct` 2,44 · `brokeMarketRunShare` 52,09 ·
+`leftoverGoldShare` 12,66 · 184 ficheros de `/data` validados · **608/608 tests en Release, 42/42 puertas**.
+`contextualAdvantage` baja de 3,83 a **2,50**, que es el precio de la celda y está en §37.5.
+

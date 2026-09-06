@@ -151,6 +151,29 @@ número de economía se tocan**; la mediocre y la mala no se mueven ni un decima
 usa la contextual. Siguen fuera los objetivos 2 (47,60 frente a 42-45), 3 (10,50 frente a < 2) y 4 (suelo
 10,92). Detalle en `fase2-diseno.md` §36
 
+*(Estado 2026-09-06, paquete AU / ADR 0074 y ADR 0075)*: **por fin se puede confiar en la puerta, y lo
+primero que dice es que una celda llevaba paquetes fuera.** La muestra de `BossGateTests` se **deriva** en
+vez de elegirse —la varianza entre plantillas ya está promediada por 5 razas × 32 plantillas (`A ≈ 0`) y la
+de la celda es 1,15 veces la binomial, así que para que el margen de ±2,5 valga **tres** desviaciones hacen
+falta **4.172** partidos por celda— y pasa de 640 a **5.120** (64 × 16), con las doce celdas en paralelo:
+ocho veces la muestra por tres veces el tiempo, y bit a bit igual. Medidas así, **once celdas estaban
+dentro y una fuera**: `the_hunt` buena **58,30** (ET 0,71), 1,70 bajo su suelo, mientras la muestra vieja la
+daba en 62,66. `grimhold_guns` muy buena **no** estaba fuera (94,34 ± 0,20): el 95,00 de la ADR 0073 se
+reproduce al decimal y es una desviación alta de 2.560 partidos. Se recalibra `the_hunt` —**quality 46 →
+44**, elección maximin sobre el margen más estrecho— y **las doce quedan dentro sin tocar la tabla, ni una
+banda, ni el margen**. Y hay que decir lo que cuesta: `contextualAdvantage` **3,83 → 2,50** (−1,33
+emparejado, ET 0,24), porque ablandar una puerta sube más al perfil que está más abajo en la sigmoide y
+**comprime la ventaja de construir** — la ADR 0065 leída al revés; la run sube a 20,75 y el suelo a 11,33,
+ninguna de las dos significativa, y el hueco del acto 2 no se mueve. La ADR 0075 recalcula la frontera con
+la `S` de hoy: **1,1450** contra la 0,8837 de la ADR 0065, y los objetivos 4 y 5 **siguen sin caber, pero
+por 0,68 puntos en vez de 3,29** (con la buena al 20%, suelo mínimo **10,68%**). Con la dificultad libre la
+frontera ya cruza la esquina —9,80%— pero el óptimo exige que el jefe del acto 1 deje pasar a más del
+**91%** de las runs, y la tabla no lo permite: **`R₁` ha caído de 1,262 a 1,008** porque el listón del slot
+vacía el acto 1, y recuperar esa discriminación vale hoy tanto como subir `S` (**AU-B**). Queda además que
+**la puerta de fase 1 falla con la semilla 3** (`randomBuildNearNone` 40,62 con DT 1,10 sobre un suelo de
+40) y no es de muestra: es que una build aleatoria hoy es peor que no construir, que es lo que esta ADR
+decidió (**AU-A**). Detalle en `fase2-diseno.md` §37
+
 **Requisitos:** RT-055, RT-056, RF-032
 **Depende de:** ADR 0054 (banda revisada) · **implementa** las P1 y P3 de la ADR 0050
 

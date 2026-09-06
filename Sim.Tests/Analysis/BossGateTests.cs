@@ -21,31 +21,41 @@ namespace Underleague.Sim.Tests.Analysis;
 /// el 2, 7 en el 3, de 100 de experiencia por partido jugado y ~6 partidos por acto) y con los
 /// modificadores de regla del jefe ya aplicados a su once.</para>
 ///
-/// <para><b>Muestra</b>: semilla <see cref="Seed"/>, <see cref="Rosters"/> plantillas ×
+/// <para><b>Muestra</b> (AT-B): semilla <see cref="Seed"/>, <see cref="Rosters"/> plantillas ×
 /// <see cref="MatchesPerRoster"/> partidos por celda (local/visitante × reparto de ids alternados) para
-/// las cinco razas de lanzamiento = <b>640 partidos por celda de la tabla</b> y 7.680 en total, unos 36 s.
-/// Los cuatro niveles de una raza comparten plantilla generada y rivales, así que la <i>escalera</i> se
-/// mide sin ruido de generación; el nivel absoluto de una celda sí lo tiene, y es grande: la varianza
-/// entre plantillas domina y una celda se mueve <b>3-4 puntos</b> al cambiar de semilla. De ahí
-/// <see cref="TolerancePercent"/>: la banda de la ADR se ensancha ese margen de medida, y los valores
-/// medidos exactos están en docs/fase2-diseno.md.</para>
+/// las cinco razas de lanzamiento = <b>5.120 partidos por celda de la tabla</b> y 61.440 en total. Las
+/// doce celdas se juegan en paralelo y el desplazamiento de semilla de cada una se fija antes de empezar,
+/// así que el resultado es bit a bit el mismo que en serie.</para>
+///
+/// <para><b>De dónde sale ese tamaño, que es derivado y no elegido.</b> La muestra anterior —32 × 4 =
+/// 640 por celda— tenía un error típico de celda de <b>1,85 puntos</b> (medido sobre doce semillas), así
+/// que el margen de <see cref="TolerancePercent"/> con el que se juzgan las celdas valía <b>1,4
+/// desviaciones</b>: no era una cota, era una moneda, y se cobró — con 640 partidos <c>the_hunt/buena</c>
+/// medía 62,66 y su valor real es 58,30. Midiendo la varianza a m = 4 y a m = 8 partidos por plantilla
+/// sale que la varianza de la celda es <b>1,15 veces la binomial</b> (la varianza entre plantillas ya la
+/// promedian las 5 razas × 64 plantillas) y por tanto escala como 1/N: para que el margen de ±2,5 sea de
+/// <b>tres</b> desviaciones hace falta ET ≤ 0,83, es decir
+/// <c>N ≥ 1,15 · p(1−p) · 10⁴ / 0,83² = 4.172</c> partidos por celda en el peor caso <c>p = 0,5</c>.
+/// 64 × 16 = 5.120 lo cumple con holgura: medido sobre ocho semillas, el error típico de una celda va de
+/// <b>0,20 a 0,89</b> y el margen de ±2,5 vale entre 2,8 y 12 desviaciones. Los valores medidos exactos
+/// están en docs/fase2-diseno.md.</para>
 /// </summary>
 [Trait("Category", "Gate")]
 public sealed class BossGateTests
 {
     /// <summary>Plantillas distintas por celda.</summary>
-    private const int Rosters = 32;
+    private const int Rosters = 64;
 
     /// <summary>Partidos por plantilla. Múltiplo de 4: local/visitante × reparto de ids.</summary>
-    private const int MatchesPerRoster = 4;
+    private const int MatchesPerRoster = 16;
 
     /// <summary>Semilla del lote.</summary>
     private const ulong Seed = 1;
 
     /// <summary>
-    /// Margen de medida con el que se ensancha la banda de la ADR 0033. No es una rebaja del criterio:
-    /// es el error de una celda con esta muestra, dominado por la varianza de generación de plantillas
-    /// (medido: la misma configuración se mueve 3-4 puntos entre semillas).
+    /// Margen de medida con el que se ensancha la banda de la ADR 0033. <b>No se toca</b> (RT-057): lo
+    /// que cambia con AT-B es la muestra, no el criterio. Con 5.120 partidos por celda este margen vale
+    /// entre 2,8 y 12 errores típicos según la celda, así que por fin es una cota y no una moneda.
     /// </summary>
     private const double TolerancePercent = 2.5;
 
@@ -260,33 +270,42 @@ public sealed class BossGateTests
         var levels = LoadQualityLevels(TestData.DataDirectory);
         var densities = LoadActDensity(TestData.DataDirectory);
 
-        var cells = new List<BossGateCell>();
-        int matchIndex = 0;
-
+        // El orden de las celdas y su desplazamiento de semilla de partido se fijan ANTES de jugar
+        // ninguna: cada celda juega Rosters x MatchesPerRoster partidos, así que su índice global es
+        // exacto y no depende de en qué orden terminen. Es lo que permite jugarlas en paralelo sin
+        // tocar el determinismo (RT-020..024): las plantillas salen de RngStreams.Generation(Seed, i) y
+        // los partidos de RngStreams.MatchSeed(Seed, índice global), los dos función pura del índice.
+        var plan = new List<(BossDefinition Boss, string Level, string BuildId, int Offset)>();
         foreach (var boss in bosses.All)
         {
             foreach (var level in BossGateMetrics.Levels)
             {
                 foreach (var buildId in levels[level].OrderBy(id => id, StringComparer.Ordinal))
                 {
-                    // ADR 0040: cada puerta se mide con las piezas que caben en su acto, derivadas de la
-                    // build completa quitando perks, objetos y contador acumulado.
-                    var density = densities.GetValueOrDefault((boss.Act, level)) ?? BuildDensity.Full;
-                    var build = builds[buildId].At(density);
-                    var slotCounters = density.CapCounters(counters.GetValueOrDefault(buildId));
-                    var cell = BossGateMetrics.PlayCell(
-                        catalog, boss, level, buildId,
-                        (roster, idBase) => WithCounters(
-                            build.ToTeamSetup(catalog, Seed, roster, idBase, boss.GatePlayerLevel, itemCatalog: items),
-                            slotCounters),
-                        Seed, Rosters, MatchesPerRoster, matchIndex, (int)build.Race);
-
-                    matchIndex += cell.Matches;
-                    cells.Add(cell);
+                    plan.Add((boss, level, buildId, plan.Count * Rosters * MatchesPerRoster));
                 }
             }
         }
 
+        var played = new BossGateCell[plan.Count];
+        Parallel.For(0, plan.Count, i =>
+        {
+            var (boss, level, buildId, offset) = plan[i];
+
+            // ADR 0040: cada puerta se mide con las piezas que caben en su acto, derivadas de la
+            // build completa quitando perks, objetos y contador acumulado.
+            var density = densities.GetValueOrDefault((boss.Act, level)) ?? BuildDensity.Full;
+            var build = builds[buildId].At(density);
+            var slotCounters = density.CapCounters(counters.GetValueOrDefault(buildId));
+            played[i] = BossGateMetrics.PlayCell(
+                catalog, boss, level, buildId,
+                (roster, idBase) => WithCounters(
+                    build.ToTeamSetup(catalog, Seed, roster, idBase, boss.GatePlayerLevel, itemCatalog: items),
+                    slotCounters),
+                Seed, Rosters, MatchesPerRoster, offset, (int)build.Race);
+        });
+
+        var cells = played.ToList();
         return new Measured(cells, BossGateMetrics.Compute(cells, bosses.All), bosses);
     }
 
