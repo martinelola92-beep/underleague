@@ -52,6 +52,9 @@ internal sealed class MatchEngine : IPerkWorld
     /// <summary>Buffer de trabajo del marcaje estable; se reutiliza para no asignar por tick (RT-051).</summary>
     private readonly bool[] _markScratch;
 
+    /// <summary>Grabador de la traza de posiciones (<see cref="MatchTrace"/>), o null si está apagada.</summary>
+    private readonly MatchTraceRecorder? _trace;
+
     private Pcg32 _rng;
     private int _bias;
     private MatchPhase _phase = MatchPhase.Kickoff;
@@ -152,6 +155,7 @@ internal sealed class MatchEngine : IPerkWorld
         _context = new UtilityContext(_players, _ball, catalog.Ai, _tuning.ActionZone);
         _context.TacticalStates[0] = TacticalState.OutOfPossession;
         _context.TacticalStates[1] = TacticalState.OutOfPossession;
+        _trace = config.Trace ? new MatchTraceRecorder(_players, _regulationTicks) : null;
     }
 
     /// <summary>Tipo de reanudación pendiente durante una fase Restart/Kickoff/Penalty (§3.8).</summary>
@@ -203,6 +207,7 @@ internal sealed class MatchEngine : IPerkWorld
         while (_phase != MatchPhase.Finished)
         {
             Step();
+            _trace?.Capture(_tick, _phase, _ball, _events.Count);
         }
 
         for (int i = 0; i < _players.Length; i++)
@@ -220,7 +225,7 @@ internal sealed class MatchEngine : IPerkWorld
             ? _effects.CounterDeltas()
             : (IReadOnlyList<PlayerCounterDelta>)Array.Empty<PlayerCounterDelta>();
 
-        return new MatchResult(_events, _report.Build(), counterDeltas);
+        return new MatchResult(_events, _report.Build(), counterDeltas, _trace?.Build());
     }
 
     // ---------------------------------------------------------------- IPerkWorld (§2, funciones NCalc)

@@ -26,12 +26,20 @@ namespace Underleague.Sim.Engine;
 /// <c>eliteScalePercent</c>): el motor no puede saber en qué acto está, así que lo recibe hecho. No toca
 /// la fórmula: la escala se aplica a su resultado, en aritmética entera (RT-023).
 /// </param>
+/// <param name="Trace">
+/// Si es true, el motor graba la <see cref="MatchTrace"/> del partido: posiciones de los 20 jugadores y
+/// del balón, poseedor y estado de cada jugador, en <b>todos</b> los ticks. Es lo que la pantalla de
+/// Partido reproduce sobre el campo. <b>Apagada por defecto y sin coste cuando lo está</b>: con false el
+/// motor no construye el grabador y no asigna ni un byte por este concepto, que es lo que permite que
+/// las tandas de <c>/Balance</c> simulen millones de partidos.
+/// </param>
 public sealed record SimConfig(
     bool CollectLog = true,
     (int PlayerId, int Tick)? DumpUtility = null,
     int? RegulationTicksOverride = null,
     int MaxDepth = 4,
-    int InjuryScalePercent = 100)
+    int InjuryScalePercent = 100,
+    bool Trace = false)
 {
     /// <summary>Configuración por defecto: con log, sin volcado de utilidad, duración reglamentaria estándar.</summary>
     public static SimConfig Default { get; } = new();
@@ -41,10 +49,14 @@ public sealed record SimConfig(
 /// Resultado de simular un partido completo: secuencia ordenada de eventos, informe final y lo que los
 /// perks que acumulan entre partidos han sumado a los contadores de cada jugador (§6, RF-070).
 /// </summary>
+/// <param name="Trace">
+/// Traza de posiciones tick a tick, o null si <c>SimConfig.Trace</c> era false (el caso normal).
+/// </param>
 public sealed record MatchResult(
     IReadOnlyList<MatchEvent> Events,
     MatchReport Report,
-    IReadOnlyList<PlayerCounterDelta> CounterDeltas);
+    IReadOnlyList<PlayerCounterDelta> CounterDeltas,
+    MatchTrace? Trace = null);
 
 /// <summary>Punto de entrada público del simulador de partidos (RT-013).</summary>
 public static class Simulator

@@ -47,6 +47,21 @@ public static class Style
     public static readonly Color MarginFill = new(0.47f, 0.80f, 1.00f, 0.07f);
     public static readonly Color MarginEdge = new(0.62f, 0.86f, 1.00f, 0.60f);
 
+    /// <summary>
+    /// Colores de equipo del campo del partido. Son los dos tonos más separados de la paleta de
+    /// posiciones, para que a 20 fichas de distancia se sepa de un vistazo de quién es cada una. El
+    /// equipo del jugador es siempre el local (W-15).
+    /// </summary>
+    public static readonly Color TeamOwn = new("4f86c6");
+
+    public static readonly Color TeamRival = new("d9544d");
+
+    /// <summary>Balón: el único elemento blanco del campo, para que no se confunda con ninguna ficha.</summary>
+    public static readonly Color Ball = new("f2f4f8");
+
+    /// <summary>Anillo del poseedor del balón (RF-121: quién lo lleva, de un vistazo).</summary>
+    public static readonly Color Carrier = new("ffffff");
+
     public static readonly Color LinkLine = new(0.72f, 0.76f, 0.83f, 0.45f);
     public static readonly Color LinkCreated = new("5fd07a");
     public static readonly Color LinkBroken = new("e2585a");
@@ -74,6 +89,41 @@ public static class Style
 
     /// <summary>Color del estado físico (UI-002: cuatro colores, y cuatro iconos en <see cref="StateIcon"/>).</summary>
     public static Color Of(PhysicalState state) => StateColors[(int)state];
+
+    /// <summary>
+    /// Color del estado de la máquina de estados del jugador (RT-089c), el anillo de cada ficha del
+    /// campo del partido. Los cuatro estados en los que el jugador <b>decide</b> —colocarse, perseguir,
+    /// regatear— y los de acción en curso llevan tonos vivos; los de baja (derribado, lesionado,
+    /// expulsado) van en gris y además pierden el anillo por una cruz, para que no dependa del color
+    /// (UI-002, <see cref="DrawDownMark"/>).
+    /// </summary>
+    public static Color Of(Underleague.Sim.Engine.PlayerState state) => state switch
+    {
+        Underleague.Sim.Engine.PlayerState.Positioning => new Color(0.42f, 0.50f, 0.59f, 0.85f),
+        Underleague.Sim.Engine.PlayerState.Chasing => new("57c2b5"),
+        Underleague.Sim.Engine.PlayerState.Dribbling => new("f0b429"),
+        Underleague.Sim.Engine.PlayerState.Passing => new("5fd07a"),
+        Underleague.Sim.Engine.PlayerState.Shooting => new("ff7a45"),
+        Underleague.Sim.Engine.PlayerState.Tackling => new("e2585a"),
+        Underleague.Sim.Engine.PlayerState.Blocking => new("c58fd0"),
+        Underleague.Sim.Engine.PlayerState.KnockedDown => new("9aa0aa"),
+        Underleague.Sim.Engine.PlayerState.Injured => new("8b2e2e"),
+        Underleague.Sim.Engine.PlayerState.Celebrating => new("ffe08a"),
+        _ => new("4a4f59"),
+    };
+
+    /// <summary>True si el estado saca al jugador de la jugada: la ficha se marca con una cruz (UI-002).</summary>
+    public static bool IsDown(Underleague.Sim.Engine.PlayerState state) =>
+        state is Underleague.Sim.Engine.PlayerState.KnockedDown
+            or Underleague.Sim.Engine.PlayerState.Injured
+            or Underleague.Sim.Engine.PlayerState.SentOff;
+
+    /// <summary>Cruz sobre una ficha fuera de la jugada; la marca de forma que acompaña al gris.</summary>
+    public static void DrawDownMark(CanvasItem target, Vector2 center, float radius, Color color)
+    {
+        target.DrawLine(center - new Vector2(radius, radius), center + new Vector2(radius, radius), color, 2f);
+        target.DrawLine(center + new Vector2(-radius, radius), center + new Vector2(radius, -radius), color, 2f);
+    }
 
     /// <summary>Rampa del mapa de calor de cobertura (ADR 0029 §4); 0 jugadores se pinta aparte, como hueco.</summary>
     public static Color CoverageColor(int count, int max)

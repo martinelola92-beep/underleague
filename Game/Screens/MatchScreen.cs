@@ -3,51 +3,62 @@ using System.Globalization;
 using Godot;
 using Underleague.Game.Autoload;
 using Underleague.Game.Ui;
+using Underleague.Sim.Engine;
 using Underleague.Sim.Events;
 using Underleague.Sim.Run.View;
 
 namespace Underleague.Game.Screens;
 
 /// <summary>
-/// Pantalla de <b>Partido</b> (RF-121, <c>ui-run-minima.md</c>): marcador, resultado y el log de eventos
-/// con scroll. <b>Sin campo animado</b>: el partido se resuelve entero y aquí se enseña lo que pasó.
+/// Pantalla de <b>Partido</b> (RF-121, <c>ui-run-minima.md</c>): el campo con las fichas moviéndose, el
+/// marcador y el log de eventos, los tres sincronizados en el mismo tick.
 /// <para>
-/// La decisión de diseño que la sostiene: el partido ya está jugado, así que <b>leer el log es
-/// opcional</b>. El jugador puede verlo caer a la velocidad que quiera, mostrarlo entero de golpe o
-/// saltar directo al informe; lo que no puede es perderse un gol o una muerte, y por eso los sucesos
-/// clave viven aparte, en la columna izquierda, y no hay que rescatarlos del scroll.
+/// El partido lo resuelve <c>/Sim</c> entero antes de pintar nada; lo que se ve aquí es su
+/// <see cref="MatchTrace"/> reproducida — un fotograma por tick lógico, sin submuestrear— y por eso se
+/// puede pausar, acelerar, ir tick a tick y sobre todo <b>retroceder</b>: un gol raro se vuelve a ver
+/// tantas veces como haga falta.
 /// </para>
 /// <para>
-/// La pantalla <b>no calcula nada del juego</b> (RT-014): el partido lo resuelve <c>/Sim</c> y el log lo
-/// compone <c>Sim.Run.View.MatchLogView</c> como dato estructurado; aquí solo se le pone la frase en
-/// español de <see cref="UiText"/> (RT-073) y se decide a qué ritmo aparece.
+/// La pantalla <b>no calcula nada del juego</b> (RT-014): las posiciones y los estados salen de la traza,
+/// el log lo compone <c>Sim.Run.View.MatchLogView</c> como dato estructurado y aquí solo se le pone la
+/// frase en español de <see cref="UiText"/> (RT-073). Lo único que se decide aquí es el ritmo al que
+/// avanza el reloj de reproducción y el suavizado entre dos ticks, que es la interpolación de render que
+/// RT-020 permite.
 /// </para>
 /// </summary>
 public partial class MatchScreen : Control
 {
-    /// <summary>Sucesos que caen por segundo a velocidad x1: un partido largo se lee en medio minuto.</summary>
-    private const float BaseRate = 22f;
+    /// <summary>Ticks lógicos por segundo (RT-020). A x1 el partido dura lo que duraría de verdad.</summary>
+    private const float TicksPerSecond = 15f;
+
+    /// <summary>Líneas de log que se rehacen al retroceder. Más arriba no se mira; el resto vive en la barra.</summary>
+    private const int LogWindow = 160;
 
     private static readonly int[] Speeds = { 1, 4, 16 };
 
     private readonly List<MatchLogLine> _lines = new();
-    private readonly List<string> _highlights = new();
 
     private RunController _run = null!;
+    private MatchTrace? _trace;
     private RichTextLabel _log = null!;
     private Label _scoreboard = null!;
     private Label _state = null!;
+    private Label _clock = null!;
     private Label _highlightList = null!;
+    private Label _selected = null!;
     private Label _progress = null!;
     private Button _play = null!;
     private Button _speed = null!;
+    private Button _zone = null!;
+    private MatchPitchView _pitch = null!;
+    private MatchTimelineView _timeline = null!;
 
+    private int _frame;
+    private double _carry;
     private int _revealed;
     private int _speedIndex;
     private bool _playing = true;
-    private float _pending;
-    private int _goalsFor;
-    private int _goalsAgainst;
+    private int _selectedId = -1;
 
     public override void _Ready()
     {
@@ -74,36 +85,58 @@ public partial class MatchScreen : Control
         }
 
         _lines.AddRange(_run.MatchLog());
+        _trace = _run.Playback.Trace;
         Build();
     }
 
     public override void _Process(double delta)
     {
-        if (!_playing || _revealed >= _lines.Count)
+        if (_trace is not { FrameCount: > 0 } trace)
         {
             return;
         }
 
-        _pending += (float)delta * BaseRate * Speeds[_speedIndex];
-        while (_pending >= 1f && _revealed < _lines.Count)
+        if (!_playing)
         {
-            _pending -= 1f;
-            Reveal(_lines[_revealed]);
-            _revealed++;
+            return;
         }
 
-        Refresh();
+        _carry += delta * TicksPerSecond * Speeds[_speedIndex];
+        int advance = (int)_carry;
+        if (advance > 0)
+        {
+            _carry -= advance;
+            _frame += advance;
+        }
+
+        if (_frame >= trace.FrameCount - 1)
+        {
+            _frame = trace.FrameCount - 1;
+            _carry = 0d;
+            _playing = false;
+            _play.Text = UiText.Get("ui.match.resume");
+        }
+
+        Sync();
     }
 
     public override void _UnhandledInput(InputEvent @event)
     {
         if (@event.IsActionPressed("ui_accept"))
         {
-            RevealAll();
+            TogglePlay();
         }
         else if (@event.IsActionPressed("ui_cancel"))
         {
             GoToReport();
+        }
+        else if (@event.IsActionPressed("ui_left"))
+        {
+            Step(-1);
+        }
+        else if (@event.IsActionPressed("ui_right"))
+        {
+            Step(1);
         }
     }
 
@@ -123,36 +156,51 @@ public partial class MatchScreen : Control
                 node.Act,
                 playback.Setup.Referee.Name));
 
-        // Marcador: ocupa la banda de arriba entera porque es lo único que el jugador mira de lejos.
-        Widgets.Panel(this, new Rect2(12f, 56f, 1256f, 84f), Style.PanelSoft);
-        var own = Widgets.Body(this, playback.OwnName, new Vector2(28f, 74f), 460f, Style.Text);
+        // Marcador: la banda de arriba entera, porque es lo único que se mira de lejos. Cada nombre va en
+        // el color con el que su equipo se pinta en el campo, para no tener que recordar quién es quién.
+        Widgets.Panel(this, new Rect2(12f, 54f, 1256f, 48f), Style.PanelSoft);
+        var own = Widgets.Body(this, playback.OwnName, new Vector2(28f, 60f), 460f, Style.TeamOwn);
         own.HorizontalAlignment = HorizontalAlignment.Right;
         own.AddThemeFontSizeOverride("font_size", Style.TextLarge);
 
-        _scoreboard = Widgets.Title(this, string.Empty, new Vector2(508f, 70f), 264f);
+        _scoreboard = Widgets.Title(this, string.Empty, new Vector2(508f, 56f), 264f);
         _scoreboard.HorizontalAlignment = HorizontalAlignment.Center;
 
-        var rival = Widgets.Body(this, playback.RivalName, new Vector2(792f, 74f), 460f, Style.TextDim);
+        var rival = Widgets.Body(this, playback.RivalName, new Vector2(792f, 60f), 460f, Style.TeamRival);
         rival.AddThemeFontSizeOverride("font_size", Style.TextLarge);
 
-        _state = Widgets.Body(this, string.Empty, new Vector2(28f, 112f), 1224f, Style.TextDim);
+        _state = Widgets.Body(this, string.Empty, new Vector2(28f, 82f), 1224f, Style.TextDim);
         _state.HorizontalAlignment = HorizontalAlignment.Center;
 
-        // Columna izquierda de 376 px, la misma que Equipo: aquí no son fichas, son los sucesos que no se
-        // pueden perder de vista (goles, tarjetas, lesiones, muertes y turba).
-        Widgets.Panel(this, new Rect2(12f, 152f, Widgets.CardColumnWidth, 588f));
-        Widgets.Section(this, UiText.Get("ui.match.highlights"), new Vector2(24f, 158f), 350f);
-        _highlightList = Widgets.Body(this, UiText.Get("ui.match.highlightsNone"), new Vector2(24f, 180f), 352f);
+        var legend = new LegendView
+        {
+            MatchMode = true,
+            Position = new Vector2(16f, 106f),
+            Size = new Vector2(1248f, 44f),
+        };
+        AddChild(legend);
 
-        Widgets.Panel(this, new Rect2(400f, 152f, 868f, 588f));
-        Widgets.Section(this, UiText.Get("ui.match.log"), new Vector2(412f, 158f), 400f);
-        _progress = Widgets.Body(this, string.Empty, new Vector2(900f, 158f), 356f, Style.TextDim);
+        // El campo: 16x5 casillas cuadradas de 70 px. Ocupa la mitad de la pantalla porque es lo que hay
+        // que mirar; el resto de la pantalla es contexto de lo que se está viendo en él.
+        Widgets.Panel(this, new Rect2(12f, 152f, 1256f, 358f));
+        _pitch = new MatchPitchView
+        {
+            Trace = _trace,
+            Position = new Vector2(80f, 156f),
+            Size = new Vector2(1120f, 350f),
+        };
+        _pitch.PlayerPicked += OnPlayerPicked;
+        AddChild(_pitch);
+
+        Widgets.Panel(this, new Rect2(12f, 516f, 888f, 234f));
+        Widgets.Section(this, UiText.Get("ui.match.log"), new Vector2(24f, 520f), 400f);
+        _progress = Widgets.Body(this, string.Empty, new Vector2(600f, 520f), 288f, Style.TextDim);
         _progress.HorizontalAlignment = HorizontalAlignment.Right;
 
         _log = new RichTextLabel
         {
-            Position = new Vector2(412f, 180f),
-            Size = new Vector2(844f, 516f),
+            Position = new Vector2(24f, 540f),
+            Size = new Vector2(864f, 198f),
             BbcodeEnabled = true,
             ScrollActive = true,
             ScrollFollowing = true,
@@ -162,33 +210,213 @@ public partial class MatchScreen : Control
         _log.AddThemeColorOverride("default_color", Style.Text);
         AddChild(_log);
 
-        _play = Widgets.Button(this, UiText.Get("ui.match.pause"), new Rect2(412f, 706f, 120f, 26f));
-        _play.Pressed += () =>
-        {
-            _playing = !_playing;
-            _play.Text = UiText.Get(_playing ? "ui.match.pause" : "ui.match.resume");
-        };
+        Widgets.Panel(this, new Rect2(908f, 516f, 360f, 234f));
+        _clock = Widgets.Body(this, string.Empty, new Vector2(918f, 520f), 340f, Style.Accent);
 
-        _speed = Widgets.Button(this, UiText.Get("ui.match.speed", Speeds[0]), new Rect2(542f, 706f, 140f, 26f));
+        _timeline = new MatchTimelineView
+        {
+            Position = new Vector2(918f, 540f),
+            Size = new Vector2(340f, 22f),
+            FrameCount = _trace?.FrameCount ?? 0,
+            Marks = BuildMarks(),
+            RegulationFrame = RegulationFrame(),
+        };
+        _timeline.Seeked += OnSeeked;
+        AddChild(_timeline);
+
+        Widgets.Button(this, UiText.Get("ui.match.stepBack"), new Rect2(918f, 570f, 60f, 26f)).Pressed += () => Step(-1);
+
+        _play = Widgets.Button(this, UiText.Get("ui.match.pause"), new Rect2(982f, 570f, 70f, 26f));
+        _play.Pressed += TogglePlay;
+
+        Widgets.Button(this, UiText.Get("ui.match.stepForward"), new Rect2(1056f, 570f, 60f, 26f)).Pressed += () => Step(1);
+
+        _speed = Widgets.Button(this, "x" + Speeds[0].ToString(CultureInfo.InvariantCulture), new Rect2(1120f, 570f, 48f, 26f));
         _speed.Pressed += () =>
         {
             _speedIndex = (_speedIndex + 1) % Speeds.Length;
-            _speed.Text = UiText.Get("ui.match.speed", Speeds[_speedIndex]);
+            _speed.Text = "x" + Speeds[_speedIndex].ToString(CultureInfo.InvariantCulture);
         };
 
-        Widgets.Button(this, UiText.Get("ui.match.all"), new Rect2(692f, 706f, 140f, 26f)).Pressed += RevealAll;
-        Widgets.Button(this, UiText.Get("ui.match.report"), new Rect2(1076f, 706f, 180f, 26f)).Pressed += GoToReport;
-        Widgets.Body(this, UiText.Get("ui.match.hint"), new Vector2(12f, 736f), 1256f, Style.TextDim);
+        _zone = Widgets.Button(this, UiText.Get("ui.match.zoneOff"), new Rect2(1172f, 570f, 86f, 26f));
+        _zone.Pressed += () =>
+        {
+            _pitch.ShowZone = !_pitch.ShowZone;
+            _zone.Text = UiText.Get(_pitch.ShowZone ? "ui.match.zoneOn" : "ui.match.zoneOff");
+            _pitch.QueueRedraw();
+        };
+
+        Widgets.Button(this, UiText.Get("ui.match.end"), new Rect2(918f, 602f, 100f, 26f)).Pressed += GoToEnd;
+        Widgets.Button(this, UiText.Get("ui.match.report"), new Rect2(1026f, 602f, 232f, 26f)).Pressed += GoToReport;
+
+        Widgets.Section(this, UiText.Get("ui.match.highlights"), new Vector2(918f, 636f), 340f);
+        _highlightList = Widgets.Body(this, UiText.Get("ui.match.highlightsNone"), new Vector2(918f, 654f), 340f);
+        _selected = Widgets.Body(this, UiText.Get("ui.match.selectHint"), new Vector2(918f, 722f), 340f, Style.TextDim);
 
         Widgets.InputHelp(this, UiText.Get("ui.input.mouseMatch"), UiText.Get("ui.input.padMatch"));
-        Refresh();
+
+        if (_trace is null)
+        {
+            _state.Text = UiText.Get("ui.match.noTrace");
+            _playing = false;
+        }
+
+        Sync();
     }
 
-    private void Reveal(MatchLogLine line)
-    {
-        _goalsFor = line.GoalsFor;
-        _goalsAgainst = line.GoalsAgainst;
+    // ------------------------------------------------------------------ controles de reproducción
 
+    private void TogglePlay()
+    {
+        if (_trace is not { FrameCount: > 0 } trace)
+        {
+            return;
+        }
+
+        // Darle a seguir con el partido terminado vuelve a empezar: es lo que se espera de un botón de
+        // reproducción al final de la cinta, y evita tener que arrastrar la barra hasta el origen.
+        if (!_playing && _frame >= trace.FrameCount - 1)
+        {
+            _frame = 0;
+        }
+
+        _playing = !_playing;
+        _carry = 0d;
+        _play.Text = UiText.Get(_playing ? "ui.match.pause" : "ui.match.resume");
+        Sync();
+    }
+
+    private void Step(int delta)
+    {
+        if (_trace is not { FrameCount: > 0 } trace)
+        {
+            return;
+        }
+
+        _playing = false;
+        _carry = 0d;
+        _play.Text = UiText.Get("ui.match.resume");
+        _frame = Mathf.Clamp(_frame + delta, 0, trace.FrameCount - 1);
+        Sync();
+    }
+
+    private void GoToEnd()
+    {
+        if (_trace is not { FrameCount: > 0 } trace)
+        {
+            return;
+        }
+
+        _playing = false;
+        _carry = 0d;
+        _play.Text = UiText.Get("ui.match.resume");
+        _frame = trace.FrameCount - 1;
+        Sync();
+    }
+
+    private void OnSeeked(int frame)
+    {
+        _playing = false;
+        _carry = 0d;
+        _play.Text = UiText.Get("ui.match.resume");
+        _frame = frame;
+        Sync();
+    }
+
+    private void OnPlayerPicked(int playerId)
+    {
+        _selectedId = playerId;
+        _pitch.SelectedId = playerId;
+        Sync();
+    }
+
+    private void GoToReport() => Nav.Go(this, Nav.Report);
+
+    // ------------------------------------------------------------------ sincronización con el tick
+
+    /// <summary>
+    /// Pone campo, marcador, reloj, barra y log en el mismo tick. Es el único sitio donde se decide qué
+    /// se está enseñando: todo lo demás cambia <c>_frame</c> y llama aquí.
+    /// </summary>
+    private void Sync()
+    {
+        if (_trace is not { FrameCount: > 0 } trace)
+        {
+            _progress.Text = UiText.Get("ui.match.progress", _lines.Count, _lines.Count);
+            return;
+        }
+
+        _frame = Mathf.Clamp(_frame, 0, trace.FrameCount - 1);
+        _pitch.Frame = _frame;
+        _pitch.Alpha = _playing ? (float)_carry : 0f;
+        _pitch.QueueRedraw();
+
+        _timeline.Frame = _frame;
+        _timeline.QueueRedraw();
+
+        int tick = trace.TickAt(_frame);
+        SyncLog(tick);
+
+        _clock.Text = UiText.Get(
+            "ui.match.clock",
+            trace.MinuteAt(_frame),
+            tick,
+            trace.TickAt(trace.FrameCount - 1),
+            UiText.Get("ui.phase." + trace.PhaseAt(_frame)));
+
+        int goalsFor = _revealed > 0 ? _lines[_revealed - 1].GoalsFor : 0;
+        int goalsAgainst = _revealed > 0 ? _lines[_revealed - 1].GoalsAgainst : 0;
+        _scoreboard.Text = goalsFor.ToString(CultureInfo.InvariantCulture) + " - " + goalsAgainst.ToString(CultureInfo.InvariantCulture);
+        _progress.Text = UiText.Get("ui.match.progress", _revealed, _lines.Count);
+
+        SyncHighlights();
+        SyncSelected(trace);
+        SyncState();
+    }
+
+    /// <summary>
+    /// El log revelado hasta el tick que se pinta. Hacia delante solo añade; al retroceder rehace la
+    /// ventana entera, que es la operación cara y por eso está acotada a <see cref="LogWindow"/> líneas.
+    /// </summary>
+    private void SyncLog(int tick)
+    {
+        int target = _revealed;
+        if (target > 0 && _lines[target - 1].Tick > tick)
+        {
+            target = 0;
+        }
+
+        while (target < _lines.Count && _lines[target].Tick <= tick)
+        {
+            target++;
+        }
+
+        if (target == _revealed)
+        {
+            return;
+        }
+
+        if (target > _revealed)
+        {
+            for (int i = _revealed; i < target; i++)
+            {
+                Append(_lines[i]);
+            }
+        }
+        else
+        {
+            _log.Clear();
+            for (int i = Mathf.Max(0, target - LogWindow); i < target; i++)
+            {
+                Append(_lines[i]);
+            }
+        }
+
+        _revealed = target;
+    }
+
+    private void Append(MatchLogLine line)
+    {
         var color = ColorOf(line);
         string minute = line.Type == EventType.MatchStart
             ? UiText.Get("ui.match.kickoff")
@@ -196,61 +424,104 @@ public partial class MatchScreen : Control
 
         _log.AppendText($"[color=#{Style.TextDim.ToHtml(false)}]{Escape(minute)}[/color]  ");
         _log.AppendText($"[color=#{color.ToHtml(false)}]{Escape(Sentence(line))}[/color]\n");
+    }
 
-        if (line.Highlight)
+    /// <summary>Los últimos sucesos que no se pueden perder de vista; la barra dice además dónde están.</summary>
+    private void SyncHighlights()
+    {
+        var recent = new List<string>();
+        for (int i = _revealed - 1; i >= 0 && recent.Count < 4; i--)
         {
-            _highlights.Add(minute + "  " + Sentence(line));
-            if (_highlights.Count > 34)
+            if (_lines[i].Highlight)
             {
-                _highlights.RemoveAt(0);
+                recent.Insert(0, UiText.Get("ui.match.minute", _lines[i].Minute) + "  " + Sentence(_lines[i]));
             }
         }
+
+        _highlightList.Text = recent.Count == 0
+            ? UiText.Get("ui.match.highlightsNone")
+            : string.Join("\n", recent);
     }
 
-    private void RevealAll()
+    private void SyncSelected(MatchTrace trace)
     {
-        while (_revealed < _lines.Count)
+        if (_selectedId < 0)
         {
-            Reveal(_lines[_revealed]);
-            _revealed++;
+            _selected.Text = UiText.Get("ui.match.selectHint");
+            return;
         }
 
-        _playing = false;
-        _play.Text = UiText.Get("ui.match.resume");
-        Refresh();
+        for (int i = 0; i < trace.Players.Count; i++)
+        {
+            var player = trace.Players[i];
+            if (player.Id != _selectedId)
+            {
+                continue;
+            }
+
+            _selected.Text = UiText.Get(
+                "ui.match.selected",
+                player.Name,
+                UiText.Get("ui.pos." + player.Role),
+                player.Number,
+                UiText.Get("ui.pstate." + trace.StateAt(_frame, i)));
+            return;
+        }
+
+        _selected.Text = UiText.Get("ui.match.selectHint");
     }
 
-    private void GoToReport() => Nav.Go(this, Nav.Report);
-
-    private void Refresh()
+    private void SyncState()
     {
-        _scoreboard.Text = _goalsFor.ToString(CultureInfo.InvariantCulture) + " - " + _goalsAgainst.ToString(CultureInfo.InvariantCulture);
-        _progress.Text = UiText.Get("ui.match.progress", _revealed, _lines.Count);
-        _highlightList.Text = _highlights.Count == 0
-            ? UiText.Get("ui.match.highlightsNone")
-            : string.Join("\n", _highlights);
-
         var playback = _run.Playback!;
         var lines = new List<string>();
         if (_revealed >= _lines.Count)
         {
             lines.Add(UiText.Get("ui.match.final", UiText.Get(playback.Won ? "ui.match.won" : "ui.match.lost")));
-            if (playback.Result.Report.WentToGoldenGoal)
-            {
-                lines.Add(UiText.Get("ui.match.golden"));
-            }
-
-            if (playback.Result.Report.Forfeit)
-            {
-                lines.Add(UiText.Get("ui.match.forfeit"));
-            }
         }
-        else if (_revealed > 0)
+
+        if (playback.Result.Report.WentToGoldenGoal)
         {
-            lines.Add(UiText.Get("ui.match.minute", _lines[_revealed - 1].Minute));
+            lines.Add(UiText.Get("ui.match.golden"));
         }
 
-        _state.Text = string.Join(" · ", lines);
+        if (playback.Result.Report.Forfeit)
+        {
+            lines.Add(UiText.Get("ui.match.forfeit"));
+        }
+
+        _state.Text = lines.Count == 0 ? UiText.Get("ui.match.hint") : string.Join(" · ", lines);
+    }
+
+    /// <summary>Marcas de la barra: un trazo por suceso clave, en el color con el que sale en el log.</summary>
+    private TimelineMark[] BuildMarks()
+    {
+        if (_trace is not { FrameCount: > 0 } trace)
+        {
+            return System.Array.Empty<TimelineMark>();
+        }
+
+        var marks = new List<TimelineMark>();
+        foreach (var line in _lines)
+        {
+            if (line.Highlight)
+            {
+                marks.Add(new TimelineMark(trace.FrameOfTick(line.Tick), ColorOf(line)));
+            }
+        }
+
+        return marks.ToArray();
+    }
+
+    /// <summary>Fotograma del final del reglamentario, o -1 si el partido no pasó de ahí.</summary>
+    private int RegulationFrame()
+    {
+        if (_trace is not { FrameCount: > 0 } trace || trace.TickAt(trace.FrameCount - 1) <= trace.RegulationTicks)
+        {
+            return -1;
+        }
+
+        return trace.FrameOfTick(trace.RegulationTicks);
     }
 
     /// <summary>

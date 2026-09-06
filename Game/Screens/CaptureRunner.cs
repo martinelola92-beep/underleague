@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using System.IO;
 using Godot;
 using Underleague.Game.Autoload;
+using Underleague.Game.Ui;
 using Underleague.Sim.Model;
 using Underleague.Sim.Run;
 
@@ -59,17 +60,49 @@ public partial class CaptureRunner : Control
 
         run.SelectedNodeId = matchNode;
 
-        // 1. Partido: el log cayendo, con el marcador al día del último suceso revelado.
-        var match = await Show("res://Scenes/Partido.tscn", frames: 150);
+        // 1. Partido: el campo con las fichas en juego. Se llega a un instante concreto arrastrando la barra
+        //    de reproducción —no dejando correr el reloj— para que la captura sea siempre la misma. El
+        //    instante se elige con la traza en la mano: uno en el que alguien lleva el balón, para que la
+        //    captura enseñe también el halo del poseedor.
+        var match = await Show("res://Scenes/Partido.tscn", frames: 8);
+        var pitch = FindPitch(match);
+        var trace = run.Playback?.Trace;
+
+        int shown = trace is { FrameCount: > 0 } ? WithCarrier(trace) : -1;
+        if (trace is not null && shown >= 0)
+        {
+            await Click(new Vector2(918f + (340f * shown / (trace.FrameCount - 1)), 551f));
+        }
+
         await Save("partido");
+
+        // 2. El mismo campo con un jugador seguido y su correa encima (ADR 0028, ADR 0029). La ficha se
+        //    pulsa en el píxel exacto donde la traza dice que está: es un clic de ratón de verdad, pero
+        //    apuntado con el dato en vez de a ojo, para que la captura no dependa de la suerte.
+        if (pitch is not null && trace is { FrameCount: > 0 })
+        {
+            int frame = Mathf.Clamp(pitch.Frame, 0, trace.FrameCount - 1);
+            int index = trace.BallOwnerAt(frame);
+            if (index < 0)
+            {
+                index = Nearest(trace, frame);
+            }
+
+            var cell = trace.PositionAt(frame, index);
+            await Click(pitch.GlobalPosition + (new Vector2(cell.X, cell.Y) * pitch.CellSize));
+            await Click(new Vector2(1215f, 583f));
+            GD.Print($"campo: tick {trace.TickAt(frame)}, seguido {trace.Players[index].Name} (dorsal {trace.Players[index].Number})");
+        }
+
+        await Save("partido-correa");
         Drop(match);
 
-        // 2. Informe post-partido.
+        // 3. Informe post-partido.
         var report = await Show("res://Scenes/Informe.tscn");
         await Save("informe");
         Drop(report);
 
-        // 3. Recompensa, con la primera opción elegida para que se vea la asignación a un jugador.
+        // 4. Recompensa, con la primera opción elegida para que se vea la asignación a un jugador.
         var reward = await Show("res://Scenes/Recompensa.tscn");
         await Click(new Vector2(60f, 96f));
         await Save("recompensa");
@@ -98,7 +131,7 @@ public partial class CaptureRunner : Control
 
         GD.Print($"recompensa cobrada: perks {perksBefore} -> {PerkCount(run)}");
 
-        // 4. Mercado: se rechazan las recompensas pendientes, se cierra el nodo y se camina hasta la
+        // 5. Mercado: se rechazan las recompensas pendientes, se cierra el nodo y se camina hasta la
         //    tienda, que RF-011b garantiza a dos saltos como máximo.
         ResolveRewards(run);
         int marketNode = WalkToMarket(run);
@@ -173,6 +206,61 @@ public partial class CaptureRunner : Control
         var image = GetViewport().GetTexture().GetImage();
         image.SavePng(Path.Combine(_directory, name + ".png"));
         GD.Print($"captura: {name}.png");
+    }
+
+    /// <summary>
+    /// Primer fotograma pasada la hora de juego en el que alguien lleva el balón: el instante que mejor
+    /// enseña de qué va la pantalla, con poseedor, presión alrededor y el marcador ya movido.
+    /// </summary>
+    private static int WithCarrier(Underleague.Sim.Engine.MatchTrace trace)
+    {
+        for (int frame = trace.FrameCount * 3 / 5; frame < trace.FrameCount; frame++)
+        {
+            if (trace.BallOwnerAt(frame) >= 0)
+            {
+                return frame;
+            }
+        }
+
+        return trace.FrameCount / 2;
+    }
+
+    /// <summary>El campo del partido dentro de la pantalla instanciada, o null si no está.</summary>
+    private static MatchPitchView? FindPitch(Node screen)
+    {
+        foreach (var child in screen.GetChildren())
+        {
+            if (child is MatchPitchView pitch)
+            {
+                return pitch;
+            }
+        }
+
+        return null;
+    }
+
+    /// <summary>Jugador más cercano al balón cuando no lo lleva nadie: siempre hay una ficha que pulsar.</summary>
+    private static int Nearest(Underleague.Sim.Engine.MatchTrace trace, int frame)
+    {
+        var ball = trace.BallAt(frame);
+        int best = 0;
+        float bestDistance = float.MaxValue;
+        for (int i = 0; i < trace.Players.Count; i++)
+        {
+            if (!trace.OnPitchAt(frame, i))
+            {
+                continue;
+            }
+
+            float distance = Underleague.Sim.Engine.Vec2.Distance(trace.PositionAt(frame, i), ball);
+            if (distance < bestDistance)
+            {
+                bestDistance = distance;
+                best = i;
+            }
+        }
+
+        return best;
     }
 
     /// <summary>Perks asignados en toda la plantilla: la forma más simple de ver si una recompensa entró.</summary>

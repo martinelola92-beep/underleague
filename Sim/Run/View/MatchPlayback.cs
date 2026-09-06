@@ -16,6 +16,9 @@ namespace Underleague.Sim.Run.View;
 /// </summary>
 public sealed record MatchPlayback(MapNode Node, MatchSetup Setup, MatchResult Result, ulong Seed)
 {
+    /// <summary>Traza de posiciones del partido, o null si se reprodujo sin ella (<c>trace: false</c>).</summary>
+    public MatchTrace? Trace => Result.Trace;
+
     /// <summary>Goles del equipo del jugador (siempre el local, W-15).</summary>
     public int GoalsFor => Result.Report.Goals[PlayerTeam];
 
@@ -45,7 +48,15 @@ public static class MatchPlaybacks
     /// Reproduce el partido del nodo indicado con el estado tal y como estaba <b>antes</b> de entrar en
     /// él. Pasar un estado posterior al partido devuelve otro partido: la plantilla ya no es la misma.
     /// </summary>
-    public static MatchPlayback Of(RunState stateBeforeMatch, int nodeId, Catalog catalog, IRunSystems? systems = null)
+    /// <param name="trace">
+    /// True para grabar además la <see cref="MatchTrace"/> del partido (posiciones y estados de los 20
+    /// jugadores y del balón, tick a tick), que es lo que la pantalla de Partido reproduce sobre el
+    /// campo. Es lo único que cambia respecto al partido de verdad, y no cambia el resultado: la traza
+    /// solo <b>lee</b> el estado del motor. Por defecto <b>apagada</b>, para que reproducir un partido
+    /// en una tanda de medición no cueste memoria.
+    /// </param>
+    public static MatchPlayback Of(
+        RunState stateBeforeMatch, int nodeId, Catalog catalog, IRunSystems? systems = null, bool trace = false)
     {
         ArgumentNullException.ThrowIfNull(stateBeforeMatch);
         ArgumentNullException.ThrowIfNull(catalog);
@@ -53,7 +64,8 @@ public static class MatchPlaybacks
 
         var node = stateBeforeMatch.GetNode(nodeId);
         var (setup, seed, _) = RunEngine.BuildMatch(stateBeforeMatch, nodeId, catalog, systems);
-        var result = Simulator.Run(setup, seed, catalog, systems.MatchConfig(stateBeforeMatch, node, catalog));
+        var config = systems.MatchConfig(stateBeforeMatch, node, catalog);
+        var result = Simulator.Run(setup, seed, catalog, trace ? config with { Trace = true } : config);
         return new MatchPlayback(node, setup, result, seed);
     }
 }

@@ -35,7 +35,10 @@ public partial class RunController
             throw new InvalidOperationException("no hay ninguna run en curso: llama antes a NewRun o a Continue");
         }
 
-        Playback = MatchPlaybacks.Of(State, nodeId, Catalog, Engine);
+        // trace: true — la pantalla de Partido reproduce el campo con la traza de posiciones tick a tick
+        // (MatchTrace). Se pide aquí y solo aquí: el partido que /Sim resuelve de verdad en Enter y los
+        // millones de partidos de /Balance siguen corriendo sin ella.
+        Playback = MatchPlaybacks.Of(State, nodeId, Catalog, Engine, trace: true);
         Enter(nodeId);
     }
 
