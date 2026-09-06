@@ -122,9 +122,9 @@ public static class PerkLoader
         string conditionSource = root.TryProp("condition") is { } conditionNode ? conditionNode.AsString() : string.Empty;
         var condition = ConditionCompiler.Compile(conditionSource, file, "$.condition");
 
-        var effects = ParseEffects(root.Prop("effects"), file, trigger, links, rarity);
+        var effects = ParseEffects(root.Prop("effects"), file, trigger, links, rarity, drawback: false);
         var elseEffects = root.TryProp("elseEffects") is { } elseNode
-            ? ParseEffects(elseNode, file, trigger, links, rarity)
+            ? ParseEffects(elseNode, file, trigger, links, rarity, drawback: true)
             : Array.Empty<EffectDefinition>();
         if (effects.Count == 0 && elseEffects.Count == 0)
         {
@@ -492,19 +492,19 @@ public static class PerkLoader
     // ---------------------------------------------------------------- efectos
 
     private static IReadOnlyList<EffectDefinition> ParseEffects(
-        Node node, string file, EventType trigger, IReadOnlyList<LinkRelation> links, Rarity rarity)
+        Node node, string file, EventType trigger, IReadOnlyList<LinkRelation> links, Rarity rarity, bool drawback)
     {
         var effects = new List<EffectDefinition>();
         foreach (var item in node.EnumerateArray())
         {
-            effects.Add(ParseEffect(item, file, trigger, links, rarity));
+            effects.Add(ParseEffect(item, file, trigger, links, rarity, drawback));
         }
 
         return effects;
     }
 
     private static EffectDefinition ParseEffect(
-        Node node, string file, EventType trigger, IReadOnlyList<LinkRelation> links, Rarity rarity)
+        Node node, string file, EventType trigger, IReadOnlyList<LinkRelation> links, Rarity rarity, bool drawback)
     {
         node.EnsureKnownKeys(EffectKnownKeys);
         var type = ParseEnum<EffectType>(node.Prop("type"), "tipo de efecto");
@@ -559,7 +559,7 @@ public static class PerkLoader
         {
             if (usesCounter)
             {
-                valuePerCounter = ToMultiplier(node, valuePerCounter, "valuePerCounter", rarity, forCounter: true);
+                valuePerCounter = ToMultiplier(node, valuePerCounter, "valuePerCounter", rarity, forCounter: true, drawback);
 
                 // Con cuotas, "por cada unidad del contador" es "una copia más del perk", así que el tope
                 // natural es un NÚMERO DE COPIAS y no otro multiplicador: un perk de ×1,3 que acumula
@@ -578,7 +578,7 @@ public static class PerkLoader
             }
             else
             {
-                value = ToMultiplier(node, value, "value", rarity, forCounter: false);
+                value = ToMultiplier(node, value, "value", rarity, forCounter: false, drawback);
             }
         }
 
@@ -600,11 +600,13 @@ public static class PerkLoader
     /// verdad en vez de ser un color de marco.
     /// </para>
     /// </summary>
-    private static int ToMultiplier(Node node, int percent, string field, Rarity rarity, bool forCounter)
+    private static int ToMultiplier(Node node, int percent, string field, Rarity rarity, bool forCounter, bool drawback)
     {
+        // El techo de un elseEffects es un escalón más alto (paquete AL): la rareza acota lo que el perk
+        // DA, no lo que quita cuando está mal puesto. Ver ProbabilityScale.DrawbackCeilingFor.
         int ceiling = forCounter
-            ? ProbabilityScale.CounterCeilingFor(rarity)
-            : ProbabilityScale.CeilingFor(rarity);
+            ? (drawback ? ProbabilityScale.CounterDrawbackCeilingFor(rarity) : ProbabilityScale.CounterCeilingFor(rarity))
+            : (drawback ? ProbabilityScale.DrawbackCeilingFor(rarity) : ProbabilityScale.CeilingFor(rarity));
 
         if (ProbabilityScale.IsLegalUpTo(percent, ceiling))
         {

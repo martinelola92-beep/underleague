@@ -94,6 +94,34 @@ public static class ProbabilityScale
         _ => 300,
     };
 
+    /// <summary>
+    /// Techo de un efecto de <c>elseEffects</c> —el <b>castigo</b> por llevar el perk donde su condición
+    /// no se cumple—, un escalón <b>por encima</b> del de <see cref="CeilingFor"/> (paquete AL).
+    ///
+    /// <para>El techo de la rareza acota <b>lo que el perk da</b>, que es lo que se paga en el mercado;
+    /// no acota lo que quita cuando está mal puesto, que no se compra: se elige. La asimetría está
+    /// medida y es de la aritmética de cuotas, no de gusto: en un canal de base alta multiplicar la
+    /// cuota <b>satura</b> —cuatro ×2 seguidos sobre el pase (base 77%) compran 0,19 puntos de tasa de
+    /// victoria— mientras que <b>dividirla no satura</b>: el mismo canal a ÷2, ÷3 y ÷4 sobre el equipo
+    /// cuesta 1,0, 2,7 y 4,4 puntos. El castigo tiene recorrido justo donde el premio no lo tiene, y es
+    /// además lo único del catálogo que <b>solo</b> paga quien construye mal (docs/fase2-diseno.md §28).</para>
+    /// </summary>
+    public static int DrawbackCeilingFor(Rarity rarity) => rarity switch
+    {
+        Rarity.Common => 200,
+        Rarity.Uncommon => 300,
+        _ => 500,
+    };
+
+    /// <summary>Techo de un <c>elseEffects</c> con contador: un escalón por encima de <see cref="CounterCeilingFor"/>.</summary>
+    public static int CounterDrawbackCeilingFor(Rarity rarity) => rarity switch
+    {
+        Rarity.Common => 100,
+        Rarity.Uncommon => 200,
+        Rarity.Rare => 300,
+        _ => 500,
+    };
+
     /// <summary>Los catorce valores legales, para el mensaje de error del cargador.</summary>
     public static string Allowed { get; } = "-500/-300/-200/-100/-50/-30/-15/15/30/50/100/200/300/500";
 

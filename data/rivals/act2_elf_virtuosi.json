@@ -1,4 +1,5 @@
 {
+  "_doc": "Paquete AL (ADR 0059 punto 4): la capa de build del rival ordinario baja de 2/7/9 a 2/1/2 perks por plantilla. Se conserva SIEMPRE el perk letal (RF-012c, ADR 0048) -quitarlo hundia deathsPerRun de 1,44 a 0,55, medido- y una pieza de la linea que da identidad al rival. Los maestros (killing_range, granite_line, blood_tithe) salen: sin su linea detras no cumplen su requiresPerks y no serian legibles. ",
   "id": "act2_elf_virtuosi",
   "name": {
     "es": "Virtuosos del Bosque",
@@ -51,10 +52,7 @@
         "stamina": 63,
         "leash": 60
       },
-      "styleTag": "Fine",
-      "perks": [
-        "steady_hands"
-      ]
+      "styleTag": "Fine"
     },
     {
       "name": "Ithil Cantoalba",
@@ -70,8 +68,7 @@
       },
       "styleTag": "Fine",
       "perks": [
-        "fine_touch",
-        "fine_orchestra"
+        "fine_touch"
       ]
     },
     {
@@ -89,10 +86,6 @@
       "styleTag": "Fine",
       "traits": [
         "Cerebral"
-      ],
-      "perks": [
-        "silky_veteran",
-        "wing_overlap"
       ]
     },
     {
@@ -110,9 +103,6 @@
       "styleTag": "Fine",
       "traits": [
         "Fast"
-      ],
-      "perks": [
-        "pivot_duo"
       ]
     },
     {
@@ -127,10 +117,7 @@
         "stamina": 57,
         "leash": 60
       },
-      "styleTag": "Fine",
-      "perks": [
-        "fine_touch"
-      ]
+      "styleTag": "Fine"
     },
     {
       "name": "Orophin Brisadorada",

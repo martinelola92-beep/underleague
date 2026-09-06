@@ -239,7 +239,7 @@ public static class MatchMetrics
             double rate = 100.0 * betterWins / played;
             int difference = Math.Abs(pairing.HomeQuality - pairing.AwayQuality);
             string status = difference == GatedQualityDifference
-                ? (rate is >= 65 and <= 80 ? "IN" : "OUT")
+                ? (rate >= BetterTeamWinRateMin && rate <= BetterTeamWinRateMax ? "IN" : "OUT")
                 : "INFO";
 
             rows.Add(new MetricResult($"{BetterTeamWinRatePrefix}{pairing.HomeId}_vs_{pairing.AwayId}", rate, BetterTeamWinRateMin, BetterTeamWinRateMax, status));

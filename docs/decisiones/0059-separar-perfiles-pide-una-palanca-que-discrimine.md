@@ -1,7 +1,15 @@
 # 0059. Separar perfiles pide una palanca que discrimine, no una que suba el listón
 
 **Fecha:** 2026-09-06
-**Estado:** Aceptada
+**Estado:** Aceptada; **puntos 1, 2 y 4 ejecutados; el punto 3 queda falsificado por la medición del punto 2**
+y lo releva la **ADR 0060** (`fase2-diseno.md` §28). Los dos hallazgos: el instrumento estaba **borroso, no
+sesgado** —a 384 partidos por perk la mitad de la varianza de la tabla era ruido— y al afinarlo **las tablas
+no se mueven** (build buena 52,43 → 52,28 en el acto 2); y **la build mediocre concentra más que la buena**
+(4,32 perks de su línea frente a 3,17; 87,2% frente a 68,8% con tres o más), así que un pago por coherencia
+le pagaría a quien no debe. Sí se confirma que concentrar satura, pero por la **base del canal** y no por el
+techo del 2%-98%. La palanca que sí discrimina es la asimetría entre premio y castigo (ADR 0060), y con ella
+el hueco del acto 2 pasa de 6,27 a **10,03** puntos: el objetivo central de la ADR 0056, alcanzado por
+primera vez
 **Corrige:** la palanca elegida en la **ADR 0058**, falsificada por su propio criterio
 **Requisitos:** RT-055, RT-057, RF-032
 **Relacionada con:** ADR 0033, ADR 0050, ADR 0056 (objetivos), ADR 0057, ADR 0058

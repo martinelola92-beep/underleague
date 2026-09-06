@@ -41,7 +41,7 @@
     },
     {
       "type": "modifyProbability",
-      "target": "owner",
+      "target": "team",
       "probability": "pass",
       "value": -50,
       "duration": "match"

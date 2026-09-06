@@ -27,7 +27,7 @@
   "elseEffects": [
     {
       "type": "modifyProbability",
-      "target": "owner",
+      "target": "team",
       "probability": "dribble",
       "value": -100,
       "duration": "match"

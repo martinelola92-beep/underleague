@@ -9,6 +9,13 @@ completa la run el 9,92% y el hueco del acto 2 pasa de 6,81 a 6,28 puntos. Hace 
 aumente el **recorrido del catálogo** entre construir bien y construir regular; la que se probó —que la
 rareza compre cuota— no lo consigue porque las dos builds llevan casi la misma mezcla de rarezas (AK-B).
 *(Estado anterior)* **Los cuatro objetivos seguían sin alcanzarse tras la P1** y dos empeoran (`fase2-diseno.md` §26.7): buena 56,8/53,0 (meta 60), mediocre 50,0/45,1 (meta 42-45), mala completa la run el 14,34% (meta <2%), buena la completa el 18,00%. El hueco entre buena y mediocre en el acto 2 se estrecha de 9,8 a 6,8 puntos. La causa es la misma que falsifica la ADR 0057 y está en AJ-B
+*(Estado 2026-09-06, paquete AL / ADR 0060)*: **el objetivo de separación se alcanza por primera vez**. Con
+el castigo del perk mal puesto pagándose en el equipo y la capa de build del rival ordinario bajada a 2/1/2,
+el hueco entre build buena y mediocre en el acto 2 pasa de 6,27 a **10,03** puntos (ET 0,50, meta > 9,8) y la
+build buena sube de 52,43 a **57,97**. Siguen fuera: el 60% de la build buena (faltan 2,0 y la capa del rival
+está agotada, AL-B), la mediocre por arriba (47,94 frente a 42-45), la build mala completando la run (12,00%
+frente a < 2%) y el suelo (10,66%). Detalle en `fase2-diseno.md` §28
+
 **Requisitos:** RT-055, RT-056, RF-032
 **Depende de:** ADR 0054 (banda revisada) · **implementa** las P1 y P3 de la ADR 0050
 

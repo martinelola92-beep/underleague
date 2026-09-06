@@ -1,4 +1,5 @@
 {
+  "_doc": "Paquete AL (ADR 0059 punto 4): la capa de build del rival ordinario baja de 2/7/9 a 2/1/2 perks por plantilla. Se conserva SIEMPRE el perk letal (RF-012c, ADR 0048) -quitarlo hundia deathsPerRun de 1,44 a 0,55, medido- y una pieza de la linea que da identidad al rival. Los maestros (killing_range, granite_line, blood_tithe) salen: sin su linea detras no cumplen su requiresPerks y no serian legibles. ",
   "id": "act2_human_tacticians",
   "name": {
     "es": "Tácticos de Puerto Claro",
@@ -36,10 +37,7 @@
         "technique": 51,
         "stamina": 64,
         "leash": 61
-      },
-      "perks": [
-        "own_third_anchor"
-      ]
+      }
     },
     {
       "name": "Fabio Rubio",
@@ -52,10 +50,7 @@
         "technique": 51,
         "stamina": 64,
         "leash": 61
-      },
-      "perks": [
-        "pit_veteran"
-      ]
+      }
     },
     {
       "name": "Gino Ureña",
@@ -73,7 +68,6 @@
         "Leader"
       ],
       "perks": [
-        "diagonal_press",
         "second_wound"
       ]
     },
@@ -88,10 +82,7 @@
         "technique": 64,
         "stamina": 66,
         "leash": 61
-      },
-      "perks": [
-        "captains_voice"
-      ]
+      }
     },
     {
       "name": "Ivo Cano",
@@ -117,10 +108,7 @@
         "technique": 61,
         "stamina": 58,
         "leash": 61
-      },
-      "perks": [
-        "forward_line"
-      ]
+      }
     },
     {
       "name": "Lino Ibarra",
@@ -136,9 +124,6 @@
       },
       "traits": [
         "Cerebral"
-      ],
-      "perks": [
-        "shadow_marker"
       ]
     },
     {

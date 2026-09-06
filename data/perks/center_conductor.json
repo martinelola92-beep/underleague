@@ -26,9 +26,9 @@
   "elseEffects": [
     {
       "type": "modifyProbability",
-      "target": "owner",
+      "target": "team",
       "probability": "pass",
-      "value": -200,
+      "value": -300,
       "duration": "match"
     }
   ],

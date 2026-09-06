@@ -1,4 +1,5 @@
 {
+  "_doc": "Paquete AL (ADR 0059 punto 4): la capa de build del rival ordinario baja de 2/7/9 a 2/1/2 perks por plantilla. Se conserva SIEMPRE el perk letal (RF-012c, ADR 0048) -quitarlo hundia deathsPerRun de 1,44 a 0,55, medido- y una pieza de la linea que da identidad al rival. Los maestros (killing_range, granite_line, blood_tithe) salen: sin su linea detras no cumplen su requiresPerks y no serian legibles. ",
   "id": "act2_orc_warband",
   "name": {
     "es": "Horda de Colmillo Rojo",
@@ -40,10 +41,6 @@
       "styleTag": "Brute",
       "traits": [
         "Dirty"
-      ],
-      "perks": [
-        "bruised_knuckles",
-        "scar_tissue"
       ]
     },
     {
@@ -58,10 +55,7 @@
         "stamina": 69,
         "leash": 60
       },
-      "styleTag": "Brute",
-      "perks": [
-        "shadow_marker"
-      ]
+      "styleTag": "Brute"
     },
     {
       "name": "Zog Quiebraespinas",
@@ -75,10 +69,7 @@
         "stamina": 71,
         "leash": 60
       },
-      "styleTag": "Brute",
-      "perks": [
-        "pack_mentality"
-      ]
+      "styleTag": "Brute"
     },
     {
       "name": "Drog Comecráneos",
@@ -92,10 +83,7 @@
         "stamina": 71,
         "leash": 60
       },
-      "styleTag": "Brute",
-      "perks": [
-        "brute_boots"
-      ]
+      "styleTag": "Brute"
     },
     {
       "name": "Krum Tragaclavos",
@@ -127,8 +115,7 @@
         "Aggressive"
       ],
       "perks": [
-        "marrow_thirst",
-        "bruised_knuckles"
+        "marrow_thirst"
       ]
     },
     {

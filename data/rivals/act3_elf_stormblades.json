@@ -1,4 +1,5 @@
 {
+  "_doc": "Paquete AL (ADR 0059 punto 4): la capa de build del rival ordinario baja de 2/7/9 a 2/1/2 perks por plantilla. Se conserva SIEMPRE el perk letal (RF-012c, ADR 0048) -quitarlo hundia deathsPerRun de 1,44 a 0,55, medido- y una pieza de la linea que da identidad al rival. Los maestros (killing_range, granite_line, blood_tithe) salen: sin su linea detras no cumplen su requiresPerks y no serian legibles. ",
   "id": "act3_elf_stormblades",
   "name": {
     "es": "Hojas de Tormenta",
@@ -52,10 +53,7 @@
         "stamina": 76,
         "leash": 73
       },
-      "styleTag": "Fine",
-      "perks": [
-        "steady_hands"
-      ]
+      "styleTag": "Fine"
     },
     {
       "name": "Maeron Vientoclaro",
@@ -69,11 +67,7 @@
         "stamina": 78,
         "leash": 73
       },
-      "styleTag": "Fine",
-      "perks": [
-        "center_conductor",
-        "spearpoint"
-      ]
+      "styleTag": "Fine"
     },
     {
       "name": "Naerys Sombraverde",
@@ -90,8 +84,7 @@
       "styleTag": "Fine",
       "perks": [
         "fine_touch",
-        "silky_veteran",
-        "wing_overlap"
+        "silky_veteran"
       ]
     },
     {
@@ -109,9 +102,6 @@
       "styleTag": "Fine",
       "traits": [
         "Fast"
-      ],
-      "perks": [
-        "fine_touch"
       ]
     },
     {
@@ -126,11 +116,7 @@
         "stamina": 70,
         "leash": 73
       },
-      "styleTag": "Fine",
-      "perks": [
-        "killing_range",
-        "poacher_instinct"
-      ]
+      "styleTag": "Fine"
     },
     {
       "name": "Sindar Ramaluz",

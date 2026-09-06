@@ -1,4 +1,5 @@
 {
+  "_doc": "Paquete AL (ADR 0059 punto 4): la capa de build del rival ordinario baja de 2/7/9 a 2/1/2 perks por plantilla. Se conserva SIEMPRE el perk letal (RF-012c, ADR 0048) -quitarlo hundia deathsPerRun de 1,44 a 0,55, medido- y una pieza de la linea que da identidad al rival. Los maestros (killing_range, granite_line, blood_tithe) salen: sin su linea detras no cumplen su requiresPerks y no serian legibles. ",
   "id": "act2_undead_deadwalkers",
   "name": {
     "es": "Caminantes Silenciosos",
@@ -27,9 +28,6 @@
       "styleTag": "Cold",
       "traits": [
         "Resilient"
-      ],
-      "perks": [
-        "deathless_march"
       ]
     },
     {
@@ -70,10 +68,7 @@
         "stamina": 78,
         "leash": 61
       },
-      "styleTag": "Cold",
-      "perks": [
-        "cold_focus"
-      ]
+      "styleTag": "Cold"
     },
     {
       "name": "Thane Cenizagrís",
@@ -87,10 +82,7 @@
         "stamina": 78,
         "leash": 61
       },
-      "styleTag": "Cold",
-      "perks": [
-        "sharpshooter_drill"
-      ]
+      "styleTag": "Cold"
     },
     {
       "name": "Cyrus Osamenta",
@@ -104,10 +96,7 @@
         "stamina": 78,
         "leash": 61
       },
-      "styleTag": "Cold",
-      "perks": [
-        "long_range_menace"
-      ]
+      "styleTag": "Cold"
     },
     {
       "name": "Doran Sudariofrío",
@@ -127,9 +116,7 @@
         "Aggressive"
       ],
       "perks": [
-        "long_range_menace",
-        "marrow_thirst",
-        "poacher_instinct"
+        "marrow_thirst"
       ]
     },
     {

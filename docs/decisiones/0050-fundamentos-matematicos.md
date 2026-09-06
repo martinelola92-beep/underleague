@@ -4,6 +4,11 @@
 **Estado:** Aceptada. **P2, P4 y P1 implementadas** (`fase2-diseno.md` §22 y §26); **P3 en suspenso** por la ADR 0057
 **Sustituye:** la ADR 0035 (escalones por canal), una vez implementada la P1
 **Requisitos:** RT-023, RT-056, RF-069, RF-024
+**Nota de la ADR 0060 (paquete AL):** medido sobre partidos reales, con cuotas el recorrido de un perk lo
+fija la **base de su canal** y no su magnitud: cuatro ×2 sobre `pass` (base 77%) compran 0,19 puntos de tasa
+de victoria y los mismos cuatro sobre `intercept` (base 2,5%) compran 15,54. La P1 igualó lo que un perk vale
+en **cuota**, no lo que vale en **tasa de victoria**. Queda anotado como AL-A.
+
 **Origen:** `docs/analisis-formulas-roguelike.md`, comparación con Brogue, DCSS, Shattered PD y CDDA
 
 ## Contexto

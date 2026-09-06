@@ -3238,3 +3238,293 @@ distinción que la ADR 0058 quería hacer.
   perks con ellos, así que su build es peor de lo que podría ser. Regenerarlos cambia a la vez el orden de
   compra y los pesos del pool, o sea el instrumento con el que se ha medido todo este paquete, y por eso no
   se ha hecho aquí. **Es el primer candidato del paquete siguiente.**
+
+## 28. Decisiones de implementación del paquete AL: el instrumento, el diagnóstico y el castigo (ADR 0059 → ADR 0060)
+
+El encargo de la **ADR 0059** fija el orden —primero el instrumento, luego el diagnóstico, y sólo entonces la
+palanca— y este paquete lo sigue literalmente. El resultado es que **los dos primeros pasos cambian la
+palanca**: la que la 0059 proponía (pagar la coherencia fuera del canal saturado) queda falsificada por su
+propia premisa antes de escribirse una línea de código, y en su sitio entra otra, medida, en la **ADR 0060**.
+Por primera vez en cuatro paquetes, **el hueco entre una build buena y una mediocre supera los 9,8 puntos**.
+
+### 28.1. El instrumento afinado: el desafine era ruido, no sesgo
+
+`data/economy/perk-values.json` llevaba dos escalas de retraso (§27.11). Se regenera, y de paso se le
+multiplica la muestra por ocho: **dos lotes independientes** de `--perk-values --rosters 48 --runs 32` con
+semillas 5 y 11, que se **suman** (3.072 partidos por perk, frente a los 384 del protocolo viejo).
+
+El tamaño no es capricho. Con 384 partidos la desviación por fila es de 2,55 puntos de tasa de victoria, o
+**51 unidades** de la escala de la tabla; la dispersión **real** entre perks, medida sobre el lote grande, es
+de **50 unidades**. Es decir: *la mitad de la varianza de la tabla vieja era ruido de medición*. Y se ve
+directamente: la diferencia entre la tabla vieja y la nueva tiene desviación **63,9**, y la diferencia entre
+dos lotes nuevos e independientes del mismo tamaño, **46,5**. La tabla vieja no estaba sesgada; estaba
+borrosa. Con 3.072 partidos la desviación por fila baja a unas **23 unidades**.
+
+Lo que sí cambia de verdad son **seis filas que no existían**: `killing_range` (+182), `granite_line` (+119),
+`first_touch_school` (+82), `blood_tithe` (+56), `second_wound` (+27) e `iron_studs` (−44). Los cuatro
+primeros son los **maestros**, y hasta ahora la doctrina contextual los puntuaba con un `?? 0`, es decir a
+mitad de tabla; ahora son lo mejor del catálogo y los persigue.
+
+### 28.2. Volver a medir con el instrumento afinado: las tablas no se mueven
+
+1.200 runs por doctrina (300 × semillas 1/1001/2001/3001), mismo protocolo que §27.6. La medición **antes**
+reproduce la ADR 0058 hasta la segunda cifra —52,43/41,99, 46,15/34,43, hueco 6,27, suelo 10,09, run
+15,92—, lo que valida el banco de pruebas antes de tocar nada.
+
+| | ADR 0058 | instrumento afinado | ET |
+|---|---|---|---|
+| Build buena, actos 2/3 | 52,43 / 41,99 | **52,28 / 42,03** | 0,29 / 1,40 |
+| Build mediocre, actos 2/3 | 46,15 / 34,43 | **45,47 / 35,52** | 0,45 / 1,42 |
+| Build mala completa la run | 9,92 | **12,17** | 0,48 |
+| Suelo sin build | 10,09 | **10,50** | 0,84 |
+| Hueco acto 2 | 6,27 | **6,81** | 0,67 |
+| Tasa de victoria de la run | 15,92 | **16,67** | 0,47 |
+
+**Respuesta a la pregunta que la ADR 0059 hacía antes de tocar nada: no, las tablas no se mueven solas.**
+Ninguna diferencia pasa de dos errores típicos salvo la de la build mala, que **empeora** 2,25 puntos: con
+los pesos del pool recalculados salen otros perks y la gastadora completa más runs. Lo que estos tres
+paquetes perseguían no era el desafine.
+
+### 28.3. ¿Concentrar satura? Sí, y no por donde se creía
+
+Medido sobre el juego real y no sobre la fórmula: perks sintéticos de `modifyProbability` puros, todos sobre
+**el mismo portador** (un interior, rareza legendaria para tener cinco slots), contra la referencia
+`human_none` con **la misma plantilla generada** y 4.800 partidos por celda (±0,72).
+
+| ×2 acumulados sobre el mismo portador | 1 perk | 2 | 3 | 4 |
+|---|---|---|---|---|
+| `pass` (base 77%) | +0,54 | +0,23 | +1,56 | **+0,19** |
+| `shotOnTarget` (base 78,5% realizada) | +1,23 | +0,27 | +0,27 | +0,73 |
+| `dribble` (base 72% realizada) | −0,67 | +1,60 | +0,58 | +0,08 |
+| `tackle` (base 28% realizada) | +1,81 | +2,42 | +4,04 | +3,79 |
+| `intercept` (base 2,5%) | +2,06 | +3,58 | +10,02 | **+15,54** |
+| **mezcla** `pass`+`tackle`+`dribble`+`intercept` | +0,54 | +1,85 | +1,48 | **+3,58** |
+
+**Cuatro ×2 concentrados en el pase compran 0,19 puntos de tasa de victoria. Los mismos cuatro ×2 repartidos
+entre cuatro canales compran 3,58.** La sospecha de la ADR 0059 se confirma, y con margen.
+
+Pero el diagnóstico que la acompañaba no es el correcto. **No es el techo del 2%-98%: es la base del canal.**
+En `pass` el primer perk ya compra medio punto —el canal está saturado desde el primero, no desde el
+tercero—, y el techo sólo interviene en el cuarto. Y en `intercept`, con base 2,5%, concentrar **no satura:
+acelera**, porque cada ×2 casi dobla una probabilidad diminuta. La "mezcla" queda en medio precisamente
+porque promedia un canal muerto con uno vivo.
+
+De ahí la lectura que ordena el resto: **el recorrido de un perk lo fija la base de su canal, no su
+magnitud**, y la mitad del catálogo vive en canales de base alta donde multiplicar la cuota no puede comprar
+tasa de victoria por mucho que se suba la magnitud. Es una consecuencia de la P1 que la ADR 0050 no
+anticipaba y que la ADR 0056 pedía con otras palabras al hablar del "recorrido del catálogo" (AK-B).
+
+### 28.4. La premisa del punto 3 de la ADR 0059 es falsa: la build mediocre es la que concentra
+
+El punto 3 de la ADR 0059 —pagar por completar una línea— se justificaba así: *"discrimina por construcción,
+una build mediocre nunca completa una línea, así que nunca cobra"*. Medido sobre los `finalPerks` de 1.200
+runs por doctrina, con las líneas de `data/build/arcs.json`:
+
+| doctrina | perks distintos | perks de su mejor línea | ≥3 de una línea | maestros cerrados |
+|---|---|---|---|---|
+| Contextual (**buena**) | 9,21 | **3,17** | 68,8% | 0,21 |
+| Ahorradora | 9,85 | 3,78 | 78,2% | 0,34 |
+| Gastadora (**mediocre**) | 10,90 | **4,32** | 87,2% | 0,44 |
+
+**Es al revés de lo que la ADR suponía.** La build que más concentra es la mediocre, y no por casualidad: la
+contextual **rechaza** perks (`WorthASlot`, ADR 0038) y termina con un perk y medio menos, mientras la
+gastadora compra todo lo barato y acumula de todo, incluida más línea. Además `PursuesMasters` está activo en
+las tres doctrinas, así que las tres persiguen arcos. Un pago por coherencia le pagaría **más a la mediocre**
+y cerraría el hueco.
+
+Se dice aquí y no en el informe porque es lo que invalida la palanca: **el punto 3 de la ADR 0059 no se
+implementa**, y la ADR 0060 recoge por qué.
+
+### 28.5. Lo que sí separa a los dos perfiles, y la asimetría que da la palanca
+
+La diferencia entre las dos doctrinas es casi exactamente **el valor medido de los perks que llevan**: 287,9
+milésimas por run la contextual frente a 69,9 la gastadora (tabla nueva, medición final). Y el mecanismo está
+en el código y es el del juego: `BestCarrier` comprueba `PerkPlacement.Fits` antes de dar un perk a un
+portador —no se gasta un slot en algo que sólo va a aplicar su castigo— y **la gastadora se salta esa
+comprobación**. "Construir bien" ya está definido operativamente en el proyecto como *poner cada perk donde
+su condición se cumple*.
+
+La palanca sale de la asimetría de la aritmética de cuotas. Mismo instrumento, un solo perk sintético, efecto
+sobre **todo el equipo**:
+
+| canal | ×1,15 | ×1,3 | ×1,5 | ×2 | ÷2 | ÷3 | ÷4 |
+|---|---|---|---|---|---|---|---|
+| `pass` | +0,52 | +2,33 | +0,85 | **+2,02** | −1,02 | −2,70 | **−4,35** |
+| `tackle` | +1,23 | −0,12 | +2,95 | +4,73 | −3,50 | −6,38 | −6,50 |
+| `dribble` | — | — | — | — | −2,33 | −5,17 | −7,65 |
+| `shotOnTarget` | +0,85 | +2,88 | +4,92 | +8,12 | −8,88 | −14,12 | −20,60 |
+| `intercept` | +2,12 | +3,23 | +3,77 | +6,98 | — | — | — |
+| `save` | +4,35 | +5,33 | +7,50 | +13,60 | — | — | — |
+
+**En un canal de base alta el premio satura y el castigo no.** Doblar la cuota de pase del equipo vale dos
+puntos y ahí se queda; dividirla vale 1,0, 2,7 y 4,4 y sigue creciendo. Y una segunda asimetría, del mismo
+lote: el mismo castigo sobre el **portador** no vale nada —de −0,15 a −0,98 puntos, dentro del ruido— y sobre
+el **equipo** vale de −1 a −8,9.
+
+De las dos sale la palanca de la ADR 0060: **el perk mal puesto lo paga el equipo, y el techo de la rareza no
+lo acota.**
+
+### 28.6. La implementación: ocho perks, un techo nuevo y una regla de carga
+
+**El castigo pasa al equipo.** Los `elseEffects` de duración `match` que apuntaban a `owner` pasan a `team`:
+`fine_touch`, `fine_orchestra`, `center_conductor`, `flank_specialist`, `forward_line`, `pivot_duo`,
+`brute_boots` y `covering_shadow`. Los de duración `play` (`diagonal_press`, `last_ditch`, `safety_net`,
+`wing_overlap`) **no se tocan**: son momentáneos y su ámbito es la acción, no el partido.
+
+**El techo de la rareza deja de acotar el castigo.** `ProbabilityScale.DrawbackCeilingFor` da un escalón más
+que `CeilingFor` (común 200, poco común 300, raro y legendario 500) y `CounterDrawbackCeilingFor` hace lo
+mismo para los efectos con contador. `PerkLoader.ParseEffects` recibe ahora un `drawback` y elige el techo;
+el mensaje de error sigue diciendo la rareza, el valor y el techo. `EffectJson` (objetos y consumibles) no
+cambia: ahí no hay condición que fallar.
+
+Con el techo nuevo suben tres castigos de canal plano: `fine_touch` y `fine_orchestra` a `team pass -200`
+(÷3) y `center_conductor` a `team pass -300` (÷4). `forward_line` **baja** de `-200` a `-100` al pasar al
+equipo, porque `shotOnTarget` sobre el equipo es cuatro veces más sensible que los demás canales (−8,88 ya a
+÷2) y a ÷3 costaría catorce puntos por un solo perk mal puesto.
+
+**Un escalón se devolvió, y esa es la única corrección forzada del paquete.** `flank_specialist` llegó a
+`team dribble -200`; con eso `randomBuildNearNone_human_random` cayó a **38,54** con banda 40-60. Se bajó la
+palanca a `-100` y la métrica vuelve a **banda sin tocar el umbral** (RT-057). `human_random` lleva
+`forward_line` en un interior y `own_third_anchor` en el delantero: dos perks mal puestos de ocho, y con el
+castigo al máximo el "azar" dejaba de estar cerca de su referencia. Ese es el **techo real** de esta palanca,
+junto con la celda `incoherente` del jefe del acto 1 (21,6 sobre un mínimo de 20).
+
+**Las descripciones se generan solas** (RT-035): *"Al empezar el partido, si el portador es Fino, el portador
+multiplica por 2 sus opciones de pasar; si no, **el equipo** divide por 3 sus opciones de pasar"*. No hay
+texto escrito a mano y las plantillas de ámbito de equipo ya existían.
+
+### 28.7. La capa del rival baja a 2/1/2, y los letales no son capa de build
+
+Punto 4 de la ADR 0059. Los quince rivales pasan de **2/7/9** perks por plantilla a **2/1/2**. El acto 1 se
+queda exactamente como estaba (AK-A). Lo que queda en los actos 2 y 3 es, en cada rival, **su perk letal si
+lo tiene** más una pieza de su línea que le da identidad; los maestros (`killing_range`, `granite_line`,
+`blood_tithe`) salen, porque sin su línea detrás no cumplen su `requiresPerks` y no serían legibles.
+
+**El hallazgo del punto: los perks letales no son capa de build.** El primer recorte los quitaba como a
+cualquier otro y `deathsPerRun` se hundió de **1,44 a 0,55**, un tercio de su valor y muy por debajo de la
+banda 1,5-3. Cinco de los quince rivales llevan uno (`marrow_thirst`, `second_wound`, `skullsplitter`,
+`iron_studs`) y **son casi toda la letalidad del juego fuera de los jefes**: la ADR 0048 vive ahí, no en la
+capa de build. Con los letales conservados, `deathsPerRun` se queda en 1,46. El coste de conservarlos son
+**3,4 puntos** de tasa de victoria de la build buena en el acto 2 (60,95 → 57,53 en la sonda de dos
+semillas): el rival que puede matarte es mucho más caro que el rival que sólo juega mejor.
+
+### 28.8. Los seis objetivos
+
+1.200 runs por doctrina (300 × semillas 1/1001/2001/3001), doctrina contextual = "buena", gastadora =
+"mediocre" y "mala", como en §26.7 y §27.6.
+
+| Objetivo | ADR 0058 | instrumento afinado | **final** | ET | meta | |
+|---|---|---|---|---|---|---|
+| Build buena, actos 2/3 | 52,43 / 41,99 | 52,28 / 42,03 | **57,97 / 44,43** | 0,71 / 0,53 | 60% | no alcanzado, faltan 2,0 |
+| Build mediocre, actos 2/3 | 46,15 / 34,43 | 45,47 / 35,52 | **47,94 / 40,67** | 0,70 / 0,25 | 42-45% | se pasa por arriba 2,9 |
+| Build mala completa la run | 9,92% | 12,17% | **12,00%** | 0,87 | < 2% | no alcanzado |
+| Suelo sin build | 10,09% | 10,50% | **10,66%** | 0,56 | < 10% | no alcanzado; sube, como estaba previsto |
+| **Hueco buena/mediocre, acto 2** | **6,27** | **6,81** | **10,03** | **0,50** | **> 9,8** | **alcanzado** |
+| Tasa de victoria de la run | 15,92% | 16,67% | **17,00%** | 1,28 | 20-30% | no alcanzado, faltan 3,0 |
+
+**El objetivo central de la ADR 0056 se alcanza por primera vez en cuatro paquetes**, y por el camino que la
+0056 pedía: no apretando a todo el mundo, sino separando. La prueba de que **el castigo sólo lo paga quien
+pone los perks donde no funcionan** es la sonda aislada: con la primera versión de la palanca —solo el cambio
+de ámbito de `owner` a `team`, sin subir ninguna magnitud— y el rival **sin tocar** (2/7/9), sobre dos
+semillas, la build buena se queda exactamente donde estaba (**52,27** frente a 52,28) y la mediocre baja de
+45,47 a **43,69**. El hueco pasa de 6,81 a **8,58** sin que la build buena se mueva un punto.
+
+Está en el borde y hay que decirlo: 10,03 con error típico 0,50 sobre un umbral de 9,8. No es un margen
+cómodo.
+
+### 28.9. Por qué el 60% no llega, medido
+
+La capa de build del rival ordinario está **agotada**. Medido en sondas de dos semillas con la palanca ya
+aplicada:
+
+| rival ordinario, perks por plantilla | build buena, acto 2 | build mediocre, acto 2 | hueco |
+|---|---|---|---|
+| 2 / 7 / 9 (ADR 0058) · palanca v1 | 52,27 | 43,69 | 8,58 |
+| 2 / 2 / 3 · palanca completa | 56,26 | 45,66 | 10,60 |
+| 2 / 1 / 2 · palanca completa | 57,53 | 46,58 | 10,96 |
+| 2 / 1 / 2 · **final**, 4 semillas | **57,97** | **47,94** | **10,03** |
+
+(Las tres primeras filas son sondas de **dos** semillas, así que se comparan entre sí y no con la última, que
+es la medición completa de 1.200 runs; "palanca v1" es solo el cambio de ámbito, sin subir magnitudes.)
+
+De 7/9 a 1/2 la build buena sube **5,7 puntos** y ahí se acaba el combustible: lo que queda en los actos 2 y 3
+es el perk letal, que no se puede quitar sin romper `deathsPerRun` (§28.7). **El 60% no es alcanzable
+retocando esta capa**, y el resto de la distancia hay que buscarlo en otra palanca o revisar el objetivo.
+
+Y aparece la incompatibilidad de la ADR 0058 con signo cambiado: bajar el rival sube **más** a la mediocre
+que a la buena (de 2/2/3 a 2/1/2, +1,27 la buena y +0,92 la mediocre en el acto 2, pero de 2/7/9 a 2/2/3
++3,99 y +1,97), porque la mediocre está más cerca del 50% y por tanto de la zona de máxima pendiente. El
+objetivo 2 (42-45%) se aleja mientras el objetivo 1 se acerca, exactamente como §27.6 predecía.
+
+### 28.10. Las seis puertas
+
+| Puerta | Estado |
+|---|---|
+| Sensación de fútbol (RT-056) | **verde**; `betterTeamWinRate` 81,68, dentro de la banda 70-88 de la ADR 0054 |
+| Rareza y jefe final (RF-024, ADR 0027) | **verde** |
+| Equilibrio entre razas (D-29) | **verde** |
+| Curva de puertas de la ADR 0033 | **verde**, las doce celdas y **sin recalibrar ningún jefe** |
+| Run completa | **verde en los tests**; `runWinRate` sigue OUT como métrica (17,00, banda 20-30) |
+| Criterio de salida de fase 1 (builds) | **roja en una métrica**, la misma que en la ADR 0058 |
+
+595 de 597 tests. La única afirmación roja sigue siendo `buildsWinDifferently_passChain`, que **mejora** de
+1,19 a **1,23** contra un umbral de 1,30 y sigue midiendo una build de siete `fine_touch` —común, techo ×2—
+contra un canal que la P1 hizo imposible de saturar (AJ-C). **No se ha tocado el umbral** (RT-057); necesita
+su propio ADR o una build de medida que no dependa de saturar el pase.
+
+Sólo la columna **incoherente** de la ADR 0033 se mueve, que es justo lo que el paquete pretende: 23,8 → 21,6
+en el acto 1, 12,3 → 10,9 en el 2 y 1,9 → 2,3 en el final. Las otras nueve celdas quedan idénticas, lo que
+confirma que **los tres jefes tienen sus perks bien puestos**: ninguno paga el castigo nuevo.
+
+### 28.11. El resto del bucle de run
+
+1.200 runs, doctrina contextual salvo donde se indique.
+
+| | ADR 0058 | final | banda |
+|---|---|---|---|
+| Tasa de victoria de la run | 15,92 | **17,00** | 20-30 |
+| … gastadora / ahorradora | 9,92 / 13,92 | 12,00 / 14,92 | INFO |
+| Ganar sin pisar mercado | 15,59 | 15,00 | < 5 (ADR 0055) |
+| Partidos por run | 12,97 | 13,18 | INFO |
+| Partidos por run completa | 19,44 | 19,46 | 18-22 |
+| Llegan al acto 2 / al acto 3 | 74,00 / 31,75 | 75,33 / 33,34 | INFO |
+| Derrotas por acto (1/2/3) | **30,9** / 50,3 / 18,9 | **29,7** / 50,6 / 19,6 | mayoría en el 2 |
+| Muertes por run | 1,44 | 1,46 | 1,5-3 |
+| Lesiones por partido (ambos) | 0,74 | 0,78 | INFO |
+| Lesiones graves por run | 1,88 | 1,78 | INFO |
+| Arcos cerrados | — | 21,09 | 20-30 |
+| Perks en el once | 9,29 | 9,97 | INFO |
+| Compras por mercado | 0,86 | 0,91 | 1-2 |
+| Oro sin gastar | 10,89 | 12,50 | < 15 |
+
+**`defeatShareAct1` baja de 30,90 a 29,74** y vuelve por debajo del techo del encargo por primera vez en tres
+paquetes: el acto 1 deja de morder más. `deathsPerRun` no se mueve (1,44 → 1,46).
+
+### 28.12. Lo que queda abierto
+
+- **AL-A · El recorrido de un perk lo fija la base de su canal** (§28.3). `pass` (77%), `dribble` (72%) y
+  `shotOnTarget` (78,5%) no pueden comprar tasa de victoria multiplicando cuotas por mucho que se suba la
+  magnitud —cuatro ×2 sobre el pase valen 0,19 puntos—, mientras `intercept` (2,5%) compra quince puntos con
+  los mismos cuatro. Es una consecuencia de la P1 que la ADR 0050 no anticipaba y es, con nombre concreto, el
+  "recorrido del catálogo" que la ADR 0056 pedía (AK-B). Arreglarlo es una decisión de fundamentos —mover
+  perks a canales con recorrido, o mover la base de los canales altos— y no cabía en este paquete.
+- **AL-B · El 60% de la build buena no es alcanzable con la capa del rival** (§28.9). Quedan 2,0 puntos y el
+  combustible se ha agotado. O se busca otra palanca (la P3 al revés: **bajar** el peso de los atributos, no
+  subirlo) o se revisa el objetivo de la ADR 0056.
+- **AL-C · Los objetivos 1 y 2 siguen siendo incompatibles**, ahora medido en las dos direcciones (§28.9):
+  bajar al rival sube más a la mediocre que a la buena. El hueco lo abre la palanca de castigo, no el rival.
+- **AL-D · `randomBuildNearNone` es el techo de la palanca de castigo** (§28.6), junto con la celda
+  `incoherente` del acto 1. Si en el futuro se quiere apretar más la incoherencia, hay que hacerlo por una vía
+  que no toque una build de perks al azar.
+- **AL-E · `/Balance` marca `betterTeamWinRate` como OUT contra un `65..80` escrito a mano** en
+  `Sim/Analysis/MatchMetrics.cs`, mientras las constantes de la misma clase y la **ADR 0054** dicen 70-88. El
+  valor medido (81,68) cumple la ADR y no cumple el literal. **No se ha tocado** (RT-057: cambiar ese número
+  hace pasar una puerta que hoy falla, y eso es decisión del revisor). Es anterior a este paquete: la misma
+  cifra sale con los datos de la ADR 0058.
+- **AK-A queda cerrada por la vía buena**: `defeatShareAct1` vuelve a 29,74 sin recalibrar el jefe.
+- **AK-B queda diagnosticada**: el recorrido del catálogo no lo limita la rareza, lo limita la base del canal
+  (AL-A).
+- **AJ-C sigue abierta a medias** y **AJ-D/AJ-E** sin cambios.
+- **La P3 sigue suspendida**, y este paquete refuerza el motivo con un número nuevo: el suelo sin build
+  responde a la capa del rival (2 puntos, ADR 0058) y **sube** cuando esa capa baja (10,09 → 10,66). Los otros
+  ocho puntos siguen siendo nivel y atributos, y la dirección correcta es **bajar** su peso, no subirlo.

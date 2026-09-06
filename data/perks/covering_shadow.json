@@ -28,7 +28,7 @@
   "elseEffects": [
     {
       "type": "modifyProbability",
-      "target": "owner",
+      "target": "team",
       "probability": "intercept",
       "value": -50,
       "duration": "match"

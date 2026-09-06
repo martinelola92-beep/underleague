@@ -56,6 +56,10 @@ public partial class MatchScreen : Control
     private int _frame;
     private double _carry;
     private int _revealed;
+
+    /// <summary>Último fotograma con el que se refrescó todo lo que no es el campo; -1 fuerza el refresco.</summary>
+    private int _synced = -1;
+
     private int _speedIndex;
     private bool _playing = true;
     private int _selectedId = -1;
@@ -327,6 +331,7 @@ public partial class MatchScreen : Control
     {
         _selectedId = playerId;
         _pitch.SelectedId = playerId;
+        _synced = -1;
         Sync();
     }
 
@@ -351,6 +356,15 @@ public partial class MatchScreen : Control
         _pitch.Alpha = _playing ? (float)_carry : 0f;
         _pitch.QueueRedraw();
 
+        // El campo se redibuja en todos los fotogramas de pantalla —es lo que suaviza el movimiento— pero
+        // el resto solo cambia cuando cambia el tick. A x1 hay 15 ticks por segundo y 60 fotogramas: sin
+        // esta puerta se estarían recomponiendo cuatro etiquetas de texto por cada tick de partido.
+        if (_frame == _synced)
+        {
+            return;
+        }
+
+        _synced = _frame;
         _timeline.Frame = _frame;
         _timeline.QueueRedraw();
 

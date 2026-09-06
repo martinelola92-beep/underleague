@@ -1,4 +1,5 @@
 {
+  "_doc": "Paquete AL (ADR 0059 punto 4): la capa de build del rival ordinario baja de 2/7/9 a 2/1/2 perks por plantilla. Se conserva SIEMPRE el perk letal (RF-012c, ADR 0048) -quitarlo hundia deathsPerRun de 1,44 a 0,55, medido- y una pieza de la linea que da identidad al rival. Los maestros (killing_range, granite_line, blood_tithe) salen: sin su linea detras no cumplen su requiresPerks y no serian legibles. ",
   "id": "act3_undead_legion",
   "name": {
     "es": "Legión Eterna",
@@ -27,9 +28,6 @@
       "styleTag": "Cold",
       "traits": [
         "Resilient"
-      ],
-      "perks": [
-        "deathless_march"
       ]
     },
     {
@@ -44,11 +42,7 @@
         "stamina": 93,
         "leash": 72
       },
-      "styleTag": "Cold",
-      "perks": [
-        "own_third_anchor",
-        "pit_veteran"
-      ]
+      "styleTag": "Cold"
     },
     {
       "name": "Thane Cenizagrís",
@@ -62,10 +56,7 @@
         "stamina": 93,
         "leash": 72
       },
-      "styleTag": "Cold",
-      "perks": [
-        "last_ditch"
-      ]
+      "styleTag": "Cold"
     },
     {
       "name": "Cyrus Osamenta",
@@ -79,11 +70,7 @@
         "stamina": 95,
         "leash": 72
       },
-      "styleTag": "Cold",
-      "perks": [
-        "road_warrior",
-        "captains_voice"
-      ]
+      "styleTag": "Cold"
     },
     {
       "name": "Doran Sudariofrío",
@@ -175,9 +162,6 @@
       "styleTag": "Cold",
       "traits": [
         "Scorer"
-      ],
-      "perks": [
-        "mob_instigator"
       ]
     }
   ]
