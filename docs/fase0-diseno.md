@@ -368,7 +368,7 @@ Términos de contexto (claves de `weights.json`, todo en enteros; distancias en 
 
 | Acción | Objetivo de movimiento | Contexto |
 |---|---|---|
-| ChaseBall | posición del balón (si vuela, su punto de llegada) | `+chaseBallLooseBonus` si suelto; `+chaseBallIncomingPassBonus` si es el receptor del pase en vuelo (y sin filtro de correa); `-chaseBallDistancePenaltyPerCell * d`; `-chaseBallNotNearestPenalty` si no es el compañero más cercano al balón (empate por id) |
+| ChaseBall | posición del balón (si vuela, su punto de llegada) | precondición dura (AW-S, docs/pendientes.md): descartada si el jugador no es el compañero más cercano al balón de su equipo (`ctx.NearestToBall[team]`, empate por id) y no es el receptor previsto de un pase en vuelo; si pasa la precondición, `+chaseBallLooseBonus` si suelto; `+chaseBallIncomingPassBonus` si es el receptor del pase en vuelo (y sin filtro de correa); `-chaseBallDistancePenaltyPerCell * d` |
 | MarkOpponent | rival de campo más cercano dentro de la correa | `-markDistancePenaltyPerCell * d`; sin candidato: descartada |
 | OfferSupport | `(carrierX + 2*dir, fila de la **casilla-hogar** acercada 1 hacia 2.5)` | `+supportAheadBonus` si el jugador está por delante del balón en sentido de ataque; `-supportCrowdedPenalty` por compañero a < 1.5 del objetivo. Solo si su equipo posee el balón; si no, descartada |
 | CoverSpace | punto del segmento balón->propia portería a distancia `LeashCells` de la casilla-hogar efectiva (acotado) | `+coverBetweenBallAndGoalBonus` si ya está entre el balón y la portería (proyección sobre X) |

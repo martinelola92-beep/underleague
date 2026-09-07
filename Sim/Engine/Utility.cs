@@ -32,7 +32,7 @@ internal sealed class UtilityContext
     /// <summary>Estado táctico por equipo (§3.4).</summary>
     public TacticalState[] TacticalStates { get; } = new TacticalState[2];
 
-    /// <summary>Compañero más cercano al balón por equipo (empate por id); término chaseBallNotNearest.</summary>
+    /// <summary>Compañero más cercano al balón por equipo (empate por id); el perseguidor designado de ChaseBall (AW-S).</summary>
     public MatchPlayer?[] NearestToBall { get; } = new MatchPlayer?[2];
 
     /// <summary>Equipo que sostiene el balón ahora mismo (dueño o vuelo); -1 si está suelto.</summary>
@@ -451,6 +451,27 @@ internal static class Utility
             return;
         }
 
+        // AW-S (docs/pendientes.md): precondición dura, no penalización. Los tres motores de referencia
+        // (docs/referencia-motores-futbol.md §6.3) descalifican a quien no es el perseguidor designado en vez
+        // de penalizarlo; con la penalización blanda (chaseBallNotNearestPenalty) el segundo y el tercer
+        // defensa más cercanos seguían pudiendo elegir perseguir. La excepción es quien ya tenía su propio
+        // motivo documentado para ir a por el balón sin ser el más cercano: el receptor previsto de un pase en
+        // vuelo (si no, el balón se quedaba suelto en el 42% de los pases, paquete E).
+        //
+        // Sin histéresis en esta pasada: los motores de referencia solo relevan al designado si un aspirante
+        // es notablemente mejor, para que la designación no oscile tick a tick. Añadir eso exige estado nuevo
+        // por equipo (persistencia del "perseguidor designado", cuándo se resetea, orden determinista de
+        // actualización) — un cambio de arquitectura mayor que se deja para una vuelta futura si el lote de
+        // balance muestra que hace falta. `ctx.NearestToBall[team]` ya se recalcula una vez por tick sin
+        // histéresis (en `MatchEngine.UpdateContextCaches`, antes de que nadie decida nada ese tick) y este
+        // cambio se apoya en eso tal cual.
+        bool isIncomingPassReceiver = ball.InFlight && !ball.IsShot && ReferenceEquals(ball.PassReceiver, p);
+        if (!ReferenceEquals(ctx.NearestToBall[p.Team], p) && !isIncomingPassReceiver)
+        {
+            eval.Discarded = true;
+            return;
+        }
+
         eval.Target = point;
         int distance = Centi(Vec2.Distance(p.Position, point));
         int score = -(context.ChaseBallDistancePenaltyPerCell * distance / 100);
@@ -459,18 +480,10 @@ internal static class Utility
             score += context.ChaseBallLooseBonus;
         }
 
-        // El receptor previsto de un pase en vuelo va a por el balón (§3.5). Sin este término gana
-        // OfferSupport y el receptor se aleja del punto de llegada mientras el pase viaja: el balón
-        // caía suelto en el 42% de los pases y la posesión duraba tres segundos (paquete E).
-        if (ball.InFlight && !ball.IsShot && ReferenceEquals(ball.PassReceiver, p))
+        if (isIncomingPassReceiver)
         {
             score += context.ChaseBallIncomingPassBonus;
             eval.IgnoreOuterLimit = true;
-        }
-
-        if (!ReferenceEquals(ctx.NearestToBall[p.Team], p))
-        {
-            score -= context.ChaseBallNotNearestPenalty;
         }
 
         eval.Context = score;

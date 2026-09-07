@@ -17,7 +17,6 @@
     "_doc": "Términos de contexto. Enteros salvo las distancias en casillas. Bloque 1: los términos de la fase 0. Bloque 2: FindSpace y PressCarrier (ADR 0022), que el paquete R dejó en código y el V trae aquí. Bloque 3: acciones de ataque diferenciadas (ADR 0030 §1); las pendientes son puntos por punto de atributo por encima de 50, con signo. Bloque 4: bloqueo sin balón (ADR 0030 §2); blockActiveRadiusCells y blockCorridorHalfWidthCells son la definición operativa de la jugada activa de RF-057, y blockReachMaxCells es el alcance de la carga. Bloque 5 (AW-Q, docs/pendientes.md; docs/referencia-motores-futbol.md §6.1): la línea defensiva de un equipo es la columna de su defensa de campo más retrasado, o la del balón si está aún más atrás, y sirve de techo dos veces sin que ningún árbitro pite nada: blockShiftLineMarginCells es la holgura con la que la casilla-hogar de un DEFENSA puede rebasar la línea PROPIA al subir el bloque, y findSpaceLineMarginCells la holgura con la que una casilla candidata de FindSpace puede rebasar la línea RIVAL, para que el delantero no acampe a espaldas de la defensa.",
     "chaseBallDistancePenaltyPerCell": 45,
     "chaseBallLooseBonus": 250,
-    "chaseBallNotNearestPenalty": 300,
     "chaseBallIncomingPassBonus": 700,
     "markDistancePenaltyPerCell": 30,
     "supportAheadBonus": 120,

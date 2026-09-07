@@ -478,7 +478,7 @@ public static class DataLoader
 
     private static readonly string[] AiContextKnownKeys =
     {
-        "chaseBallDistancePenaltyPerCell", "chaseBallLooseBonus", "chaseBallNotNearestPenalty", "chaseBallIncomingPassBonus",
+        "chaseBallDistancePenaltyPerCell", "chaseBallLooseBonus", "chaseBallIncomingPassBonus",
         "markDistancePenaltyPerCell", "supportAheadBonus", "supportCrowdedPenalty",
         "coverBetweenBallAndGoalBonus", "passOpenReceiverBonus", "passUnderPressureBonus", "passNoReceiverPenalty",
         "dribbleOpenSpaceBonus", "dribbleOpponentAheadPenalty",
@@ -556,7 +556,6 @@ public static class DataLoader
         var context = new AiContext(
             contextNode.Prop("chaseBallDistancePenaltyPerCell").AsInt(),
             contextNode.Prop("chaseBallLooseBonus").AsInt(),
-            contextNode.Prop("chaseBallNotNearestPenalty").AsInt(),
             contextNode.Prop("chaseBallIncomingPassBonus").AsInt(),
             contextNode.Prop("markDistancePenaltyPerCell").AsInt(),
             contextNode.Prop("supportAheadBonus").AsInt(),

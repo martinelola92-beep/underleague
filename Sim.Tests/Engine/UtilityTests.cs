@@ -356,7 +356,7 @@ public sealed class UtilityTests
 
         configure(baseTable);
 
-        var context = new AiContext(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1.2f, 0, 0, 0, 0);
+        var context = new AiContext(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1.2f, 0, 0, 0, 0);
         var shifts = new BlockShift[Enum.GetValues<TacticalState>().Length];
         return new AiWeights(baseTable, tacticalTable, context, shifts);
     }

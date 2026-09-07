@@ -84,7 +84,6 @@ public readonly record struct BlockShift(float Shift, int SpeedTicks);
 public sealed record AiContext(
     int ChaseBallDistancePenaltyPerCell,
     int ChaseBallLooseBonus,
-    int ChaseBallNotNearestPenalty,
     int ChaseBallIncomingPassBonus,
     int MarkDistancePenaltyPerCell,
     int SupportAheadBonus,

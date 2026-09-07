@@ -204,6 +204,80 @@ public sealed class OffBallTests
         Assert.True(attackMark * 2 < defendMark);
     }
 
+    /// <summary>
+    /// AW-S (docs/pendientes.md): ChaseBall pasa de penalizar a descalificar. Con dos defensas del mismo
+    /// equipo, solo el designado por <c>ctx.NearestToBall[team]</c> puede perseguir el balón; el resto la
+    /// tiene descartada del todo, no solo penalizada.
+    /// </summary>
+    [Fact]
+    public void ChaseBallIsDiscardedForADefenderWhoIsNotTheDesignatedChaserNorAPassReceiver()
+    {
+        var rows = ChaseBallScenario(isNearest: false, isIncomingPassReceiver: false);
+        Assert.True(Row(rows, PlayerAction.ChaseBall).Rejected);
+    }
+
+    /// <summary>
+    /// El mismo jugador, ahora designado como el más cercano al balón de su equipo, recupera ChaseBall
+    /// como acción legal con el mismo cálculo de siempre: sin ninguna resta de penalización, porque
+    /// <c>chaseBallNotNearestPenalty</c> ya no existe ni en el motor ni en los datos.
+    /// </summary>
+    [Fact]
+    public void ChaseBallIsLegalForTheDesignatedChaserWithTheSameScoreAsBefore()
+    {
+        var rows = ChaseBallScenario(isNearest: true, isIncomingPassReceiver: false);
+        var row = Row(rows, PlayerAction.ChaseBall);
+        Assert.False(row.Rejected);
+
+        // La distancia (2 casillas, dentro de la zona blanda de 3 del defensa, así que sin
+        // OutsidePenalty de por medio) es la misma con la que se construye el escenario.
+        int distanceCenti = Utility.Centi(2.0f);
+        int expected = -(Catalog.Ai.Context.ChaseBallDistancePenaltyPerCell * distanceCenti / 100)
+            + Catalog.Ai.Context.ChaseBallLooseBonus;
+        Assert.Equal(expected, row.Context);
+    }
+
+    /// <summary>
+    /// AW-S conserva la excepción del paquete E: el receptor previsto de un pase en vuelo sigue pudiendo
+    /// perseguir el balón aunque no sea el compañero más cercano de su equipo.
+    /// </summary>
+    [Fact]
+    public void ChaseBallStaysLegalForTheIncomingPassReceiverEvenWhenNotTheNearest()
+    {
+        var rows = ChaseBallScenario(isNearest: false, isIncomingPassReceiver: true);
+        Assert.False(Row(rows, PlayerAction.ChaseBall).Rejected);
+    }
+
+    /// <summary>
+    /// Escenario común a los tres tests de AW-S: dos defensas del equipo 0, el jugador 0 (siempre el
+    /// evaluado) en su casilla-hogar, con el balón suelto 2 casillas por delante (dentro de las 3 de la
+    /// zona blanda del defensa, así que la penalización de salir de zona no interfiere en el cálculo).
+    /// <paramref name="isNearest"/> designa quién es <c>ctx.NearestToBall[0]</c>; <paramref
+    /// name="isIncomingPassReceiver"/> convierte el balón en un pase en vuelo con el jugador 0 como
+    /// receptor previsto (y deja al compañero como designado).
+    /// </summary>
+    private static List<UtilityRow> ChaseBallScenario(bool isNearest, bool isIncomingPassReceiver)
+    {
+        var player = Player(0, Position.Defender, new Cell(4, 2));
+        var teammate = Player(1, Position.Defender, new Cell(9, 2));
+        var players = new[] { player, teammate };
+
+        var context = Context(Catalog.Ai, players);
+        context.Ball.Position = player.HomeCenter + new Vec2(2.0f, 0f);
+        context.NearestToBall[0] = isNearest ? player : teammate;
+
+        if (isIncomingPassReceiver)
+        {
+            context.Ball.InFlight = true;
+            context.Ball.IsShot = false;
+            context.Ball.FlightTarget = context.Ball.Position;
+            context.Ball.PassReceiver = player;
+        }
+
+        var rows = new List<UtilityRow>();
+        Utility.Choose(context, player, rows);
+        return rows;
+    }
+
     private static List<UtilityRow> TacticalRows(TacticalState state)
     {
         var midfielder = Player(0, Position.Midfielder, new Cell(7, 2));
@@ -415,7 +489,7 @@ public sealed class OffBallTests
         // Desde el paquete V viven en data/ai/weights.json (§4, decisión 20, saldada), así que el test los
         // declara aquí con los mismos valores en vez de heredarlos de una constante de Utility.
         var context = new AiContext(
-            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1.2f, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1.2f, 0, 0, 0, 0,
             FindSpaceOpponentDistanceBonusPerCell: 70,
             FindSpaceAdvanceBonusPerCell: 60,
             FindSpaceOpenLaneBonus: 200,
