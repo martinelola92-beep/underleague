@@ -130,6 +130,7 @@ cuando es un binario viejo. La escena de capturas solo arranca **con Xvfb**: en 
 | `docs/entorno.md` | WSL/Windows, instalación, cómo se compila cada parte | Al montar la máquina |
 | `docs/ui-equipo.md` | Decisiones de la pantalla de Equipo, de las que derivan las demás pantallas (UI-021) | Antes de tocar `/Game` |
 | `docs/fase2-diseno.md` | Bucle de run: mapa, economía, mercado, jefe, ironman | Fase 2 |
+| `docs/referencia-motores-futbol.md` | Conclusiones aplicables de motores de fútbol open-source (gfootball, librcsc, SimpleSoccer), con fuentes citadas | Al tocar intercepción/parada del portero (AW-A) o evaluación de línea de pase |
 
 ## Skills del proyecto (`.claude/skills/`)
 
