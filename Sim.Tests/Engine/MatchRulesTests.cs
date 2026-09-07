@@ -103,6 +103,87 @@ public sealed class MatchRulesTests
     }
 
     /// <summary>
+    /// AW-R (docs/pendientes.md): durante cualquier balón muerto (saque de banda, córner, de puerta o de
+    /// centro) el equipo entero ya no se congela — antes solo se bajaba <c>TickStateTimer</c> y los dos
+    /// enfriamientos, así que ningún jugador de campo se movía ni un centímetro durante la ventana de
+    /// reanudación. Se recorren los eventos <c>Recovery</c> con detail "throwIn"/"corner"/"goalKick"/
+    /// "kickoff" (el ejecutor los emite al resolverse el saque, <c>MatchEngine.TakeRestart</c>/
+    /// <c>TakeGoalKick</c>/<c>TakeKickoff</c>) y, para cada uno, se compara la posición de un jugador de
+    /// campo <b>que no es el ejecutor</b> entre el fotograma justo antes de que empiece la ventana
+    /// (<c>e.Tick - ticks</c>, la duración de <c>data/sim/tuning.json</c> → <c>restart.*Ticks</c>) y el
+    /// fotograma justo antes de que termine (<c>e.Tick - 1</c>, el último tick congelado antes de que
+    /// <c>ResolveRestart</c> teletransporte al ejecutor). Antes de este cambio la distancia era siempre 0;
+    /// ahora al menos un jugador se mueve una distancia no trivial (&gt; 0,3 casillas).
+    /// </summary>
+    [Fact]
+    public void FieldPlayersKeepMovingDuringADeadBall()
+    {
+        float maxMoved = 0f;
+        int windowsChecked = 0;
+
+        for (ulong seed = 1; seed <= Matches; seed++)
+        {
+            var result = Simulator.Run(
+                TestMatches.Reference(Catalog, seed), seed, Catalog, new SimConfig(CollectLog: false, Trace: true));
+            var trace = result.Trace!;
+
+            foreach (var e in result.Events)
+            {
+                if (e.Type != EventType.Recovery)
+                {
+                    continue;
+                }
+
+                int ticks = e.Detail switch
+                {
+                    "throwIn" => Catalog.Tuning.Restart.ThrowInTicks,
+                    "corner" => Catalog.Tuning.Restart.CornerTicks,
+                    "goalKick" => Catalog.Tuning.Restart.GoalKickTicks,
+                    "kickoff" => Catalog.Tuning.Restart.KickoffTicks,
+                    _ => -1,
+                };
+                if (ticks <= 1)
+                {
+                    continue;
+                }
+
+                int startFrame = trace.FrameOfTick(e.Tick - ticks);
+                int endFrame = trace.FrameOfTick(e.Tick - 1);
+                if (endFrame <= startFrame)
+                {
+                    // Ventana recortada contra el arranque de la traza (el saque inicial de partido cae
+                    // aquí): no hay margen para medir movimiento, así que no cuenta ni suma al total.
+                    continue;
+                }
+
+                windowsChecked++;
+                for (int player = 0; player < trace.Players.Count; player++)
+                {
+                    var info = trace.Players[player];
+                    if (info.Id == e.Actor
+                        || info.Role == Position.Goalkeeper
+                        || !trace.OnPitchAt(startFrame, player)
+                        || !trace.OnPitchAt(endFrame, player))
+                    {
+                        continue;
+                    }
+
+                    float moved = Vec2.Distance(trace.PositionAt(startFrame, player), trace.PositionAt(endFrame, player));
+                    if (moved > maxMoved)
+                    {
+                        maxMoved = moved;
+                    }
+                }
+            }
+        }
+
+        Assert.True(windowsChecked > 0, "el escenario tenía que producir al menos una reanudación de banda/córner/puerta/centro");
+        Assert.True(
+            maxMoved > 0.3f,
+            $"algún jugador de campo debía moverse de forma no trivial durante la ventana de reanudación, máximo observado {maxMoved}");
+    }
+
+    /// <summary>
     /// AW-C (docs/pendientes.md): un tiro fuera cae junto al poste, no en la bandera de córner. Se mide
     /// directamente sobre el cálculo del destino (accesible como <c>internal static</c> solo para esto),
     /// para las dos filas de origen del tirador, sin depender de que el motor produzca un fallo con esta

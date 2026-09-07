@@ -37,6 +37,12 @@ internal sealed class UtilityContext
 
     /// <summary>Equipo que sostiene el balón ahora mismo (dueño o vuelo); -1 si está suelto.</summary>
     public int HoldingTeam { get; set; } = -1;
+
+    /// <summary>True mientras el balón está aparcado para una reanudación (AW-R, docs/pendientes.md):
+    /// saque de banda, córner, de puerta, de centro o penalti. Quita el bono de "balón suelto" de
+    /// ChaseBall para que nadie converja sobre un balón muerto; el resto de acciones ya se autodescartan
+    /// sin él (ver AW-R en docs/pendientes.md para el porqué completo).</summary>
+    public bool BallDead { get; set; }
 }
 
 /// <summary>
@@ -443,7 +449,7 @@ internal static class Utility
     {
         var ball = ctx.Ball;
         Vec2 point = ball.InFlight ? ball.FlightTarget : ball.Position;
-        bool loose = ball.Owner is null && !ball.InFlight;
+        bool loose = ball.Owner is null && !ball.InFlight && !ctx.BallDead;
 
         if (!p.IsOutfield && (!loose || !Pitch.IsInArea(point, p.Team)))
         {

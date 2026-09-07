@@ -392,55 +392,37 @@ internal sealed class MatchEngine : IPerkWorld
 
         _bodies.BeginTick();
 
-        if (_restartTicksLeft > 0)
+        // AW-R (docs/pendientes.md): durante el balón muerto el equipo ya no se congela. UpdatePlayer corre
+        // siempre —decisión y movimiento normales, con la salvedad de ChaseBall (ver UtilityContext.BallDead)—
+        // y el ejecutor del saque queda bien colocado igualmente porque TakeRestart fija su posición a mano al
+        // resolver la reanudación. Solo se salta UpdateBall/CheckOutOfBounds mientras el balón sigue aparcado, y
+        // solo se cuenta el tick de reanudación si ya lo era ANTES de este bucle: un foul resuelto dentro de él
+        // puede pedir un penalti (SchedulePenalty -> BeginRestart) a mitad de tick, y ese primer tick de la
+        // reanudación nueva no debe descontarse dos veces ni tratarse todavía como balón parado para
+        // UpdateBall/CheckOutOfBounds (revisión independiente, fase 0, ya resuelta antes de este cambio).
+        bool wasRestarting = _restartTicksLeft > 0;
+
+        for (int i = 0; i < _players.Length; i++)
         {
-            // Con el balón muerto, el enfriamiento de entrada y de duelo de regate siguen bajando tick a
-            // tick igual que fuera de una reanudación (revisión independiente, fase 0): antes se congelaban
-            // durante Restart/Kickoff/Penalty porque solo se llamaba a TickStateTimer, y un jugador podía
-            // salir de la reanudación con un enfriamiento más largo del que tuning.json pedía.
-            for (int i = 0; i < _players.Length; i++)
-            {
-                var player = PlayerInTurnOrder(i);
-                TickStateTimer(player);
-                if (player.DribbleDuelCooldown > 0)
-                {
-                    player.DribbleDuelCooldown--;
-                }
+            UpdatePlayer(PlayerInTurnOrder(i));
+        }
 
-                if (player.TackleCooldown > 0)
-                {
-                    player.TackleCooldown--;
-                }
-            }
+        // Separación de cuerpos al final del movimiento y antes de tocar el balón (§2.1): así el balón, que
+        // sigue al poseedor, ve ya las posiciones definitivas del tick.
+        _bodies.Resolve(_players);
 
-            _bodies.Resolve(_players);
+        if (wasRestarting)
+        {
             _restartTicksLeft--;
             if (_restartTicksLeft == 0)
             {
                 ResolveRestart();
             }
         }
-        else
+        else if (_restartTicksLeft == 0)
         {
-            for (int i = 0; i < _players.Length; i++)
-            {
-                UpdatePlayer(PlayerInTurnOrder(i));
-            }
-
-            // Separación de cuerpos al final del movimiento y antes de tocar el balón (§2.1): así el
-            // balón, que sigue al poseedor, ve ya las posiciones definitivas del tick.
-            _bodies.Resolve(_players);
-
-            // Una falta resuelta dentro de este bucle puede haber pedido un penalti (SchedulePenalty ->
-            // BeginRestart), que aparca el balón en el punto de penalti y deja _restartTicksLeft > 0 a
-            // mitad de este mismo Step. Si se llamara igualmente a UpdateBall/CheckOutOfBounds, el balón
-            // aparcado se trataría como suelto y el jugador más cercano lo recogería ese mismo tick, antes
-            // de que la reanudación llegue a resolverse (revisión independiente, fase 0).
-            if (_restartTicksLeft == 0)
-            {
-                UpdateBall();
-                CheckOutOfBounds();
-            }
+            UpdateBall();
+            CheckOutOfBounds();
         }
 
         CheckForfeit();
@@ -605,6 +587,12 @@ internal sealed class MatchEngine : IPerkWorld
         {
             _context.HoldingTeam = -1;
         }
+
+        // AW-R (docs/pendientes.md): se lee ANTES del bucle de jugadores de este mismo Step, así que un
+        // foul resuelto dentro de ese bucle (que puede pedir un penalti y arrancar una reanudación nueva a
+        // mitad de tick) no se ve reflejado todavía aquí — ese primer tick de la reanudación nueva no debe
+        // tratarse como balón muerto para ChaseBall (ver el `wasRestarting` de Step()).
+        _context.BallDead = _restartTicksLeft > 0;
     }
 
     // ---------------------------------------------------------------- 3.2/3.3/3.6 jugadores

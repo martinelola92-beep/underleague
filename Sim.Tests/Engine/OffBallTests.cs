@@ -248,14 +248,36 @@ public sealed class OffBallTests
     }
 
     /// <summary>
-    /// Escenario común a los tres tests de AW-S: dos defensas del equipo 0, el jugador 0 (siempre el
+    /// AW-R (docs/pendientes.md): con el balón muerto (aparcado para una reanudación) ChaseBall sigue
+    /// siendo legal para el designado, pero deja de llevar el bono de "balón suelto"
+    /// (<c>chaseBallLooseBonus</c>) — nadie debe converger sobre un balón que no se va a mover. El resto
+    /// de la fórmula (candidato designado, penalización por distancia) no cambia.
+    /// </summary>
+    [Fact]
+    public void ChaseBallDropsTheLooseBonusWhenTheBallIsDead()
+    {
+        var alive = ChaseBallScenario(isNearest: true, isIncomingPassReceiver: false, ballDead: false);
+        var dead = ChaseBallScenario(isNearest: true, isIncomingPassReceiver: false, ballDead: true);
+
+        var aliveRow = Row(alive, PlayerAction.ChaseBall);
+        var deadRow = Row(dead, PlayerAction.ChaseBall);
+
+        Assert.False(aliveRow.Rejected);
+        Assert.False(deadRow.Rejected);
+        Assert.Equal(aliveRow.Context - Catalog.Ai.Context.ChaseBallLooseBonus, deadRow.Context);
+    }
+
+    /// <summary>
+    /// Escenario común a los tests de AW-S y AW-R: dos defensas del equipo 0, el jugador 0 (siempre el
     /// evaluado) en su casilla-hogar, con el balón suelto 2 casillas por delante (dentro de las 3 de la
     /// zona blanda del defensa, así que la penalización de salir de zona no interfiere en el cálculo).
     /// <paramref name="isNearest"/> designa quién es <c>ctx.NearestToBall[0]</c>; <paramref
     /// name="isIncomingPassReceiver"/> convierte el balón en un pase en vuelo con el jugador 0 como
-    /// receptor previsto (y deja al compañero como designado).
+    /// receptor previsto (y deja al compañero como designado). <paramref name="ballDead"/> (AW-R) marca
+    /// el balón como aparcado para una reanudación.
     /// </summary>
-    private static List<UtilityRow> ChaseBallScenario(bool isNearest, bool isIncomingPassReceiver)
+    private static List<UtilityRow> ChaseBallScenario(
+        bool isNearest, bool isIncomingPassReceiver, bool ballDead = false)
     {
         var player = Player(0, Position.Defender, new Cell(4, 2));
         var teammate = Player(1, Position.Defender, new Cell(9, 2));
@@ -264,6 +286,7 @@ public sealed class OffBallTests
         var context = Context(Catalog.Ai, players);
         context.Ball.Position = player.HomeCenter + new Vec2(2.0f, 0f);
         context.NearestToBall[0] = isNearest ? player : teammate;
+        context.BallDead = ballDead;
 
         if (isIncomingPassReceiver)
         {
