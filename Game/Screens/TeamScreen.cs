@@ -142,10 +142,14 @@ public partial class TeamScreen : Control
     /// </summary>
     private void AddBackButton()
     {
+        // AW-P (docs/pendientes.md): x=940 pisaba "BotonZonas" (900-1068, Equipo.tscn), visible en
+        // equipo-run.png con una run activa (--tour). Reubicado junto al título superior (Titulo/
+        // Subtitulo ocupan hasta x=900 en y=8-34), lejos de la fila de BotonZonas/BotonCobertura
+        // (900-1256, y=56-82) y del borde derecho del panel de campo (1268).
         var button = new Button
         {
             Text = UiText.Get("ui.nav.back"),
-            Position = new Vector2(940f, 56f),
+            Position = new Vector2(1140f, 8f),
             Size = new Vector2(120f, 26f),
             FocusMode = FocusModeEnum.None,
         };
