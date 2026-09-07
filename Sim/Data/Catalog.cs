@@ -142,7 +142,11 @@ public sealed record AiContext(
     // AW-D (docs/pendientes.md, cambio 1 de 2): hasta ahora PassOpenReceiverBonus se cobraba entero con
     // cualquier receptor legal, sin mirar si estaba delante o detrás del pasador. Penaliza solo el avance
     // negativo del receptor elegido, por casilla; un pase lateral o hacia delante no lo paga.
-    int PassBackwardPenaltyPerCell = 0);
+    int PassBackwardPenaltyPerCell = 0,
+
+    // AW-E (docs/pendientes.md, cambio 2 de 2): FindSpace solo premiaba alejarse del rival, sin mirar si
+    // la casilla candidata ya tenía compañeros — mismo radio de aglomeración que SupportCrowdedPenalty.
+    int FindSpaceCrowdedPenalty = 0);
 
 /// <summary>
 /// Pesos de la IA de utilidad (RT-093..RT-098). Las tablas Base y Tactical se guardan como arrays

@@ -40,6 +40,25 @@ public sealed class OffBallTests
     }
 
     /// <summary>
+    /// AW-E (docs/pendientes.md, cambio 2 de 2): hasta ahora <c>FindSpace</c> solo miraba al rival más
+    /// cercano, así que dos compañeros podían converger en el mismo hueco sin que nada lo evitara. Mismo
+    /// escenario que <see cref="TheChosenSpaceIsClearerThanTheStartingPoint"/>: si un compañero ya ocupa
+    /// el punto que se habría elegido sin él, la elección deja de ser ese punto.
+    /// </summary>
+    [Fact]
+    public void FindSpaceAvoidsACandidateAlreadyOccupiedByATeammate()
+    {
+        var (baselinePlayer, baselineContext) = SpaceScenario(mirrored: false);
+        Utility.Choose(baselineContext, baselinePlayer, null);
+        var previousBest = baselinePlayer.TargetPoint;
+
+        var (crowdedPlayer, crowdedContext) = SpaceScenario(mirrored: false, crowdedAt: previousBest);
+        Utility.Choose(crowdedContext, crowdedPlayer, null);
+
+        Assert.NotEqual(previousBest, crowdedPlayer.TargetPoint);
+    }
+
+    /// <summary>
     /// <c>PressCarrier</c> apunta al poseedor rival, y vale más cuando el que lleva el balón es el portero
     /// rival dentro de su área: es la presión a la salida (§2.3).
     /// </summary>
@@ -217,8 +236,10 @@ public sealed class OffBallTests
     /// <summary>
     /// Centrocampista del equipo 0 con el balón en poder de un compañero retrasado y tres rivales
     /// apiñados por delante y a un lado; <paramref name="mirrored"/> los pasa al otro lado.
+    /// <paramref name="crowdedAt"/> añade un cuarto compañero ahí, para AW-E (cambio 2 de 2): confirmar
+    /// que un candidato ya ocupado deja de ser el elegido.
     /// </summary>
-    private static (MatchPlayer Player, UtilityContext Context) SpaceScenario(bool mirrored)
+    private static (MatchPlayer Player, UtilityContext Context) SpaceScenario(bool mirrored, Vec2? crowdedAt = null)
     {
         float side = mirrored ? -1f : 1f;
         var player = Player(0, Position.Midfielder, new Cell(8, 2));
@@ -230,14 +251,21 @@ public sealed class OffBallTests
             Player(4, Position.Midfielder, new Cell(8, 3), team: 1),
         };
 
-        var players = new[] { player, carrier, opponents[0], opponents[1], opponents[2] };
+        var players = new List<MatchPlayer> { player, carrier, opponents[0], opponents[1], opponents[2] };
         player.Position = new Vec2(8.0f, 2.5f);
         carrier.Position = new Vec2(5.0f, 2.5f);
         opponents[0].Position = new Vec2(9.0f, 2.5f + (0.5f * side));
         opponents[1].Position = new Vec2(9.5f, 2.5f + (0.7f * side));
         opponents[2].Position = new Vec2(8.5f, 2.5f + (0.9f * side));
 
-        var context = Context(Weights(PlayerAction.FindSpace, 100), players);
+        if (crowdedAt is { } point)
+        {
+            var teammate = Player(5, Position.Midfielder, new Cell(8, 2));
+            teammate.Position = point;
+            players.Add(teammate);
+        }
+
+        var context = Context(Weights(PlayerAction.FindSpace, 100), players.ToArray());
         context.Ball.Owner = carrier;
         context.Ball.Position = carrier.Position;
         context.HoldingTeam = 0;
@@ -339,7 +367,8 @@ public sealed class OffBallTests
             FindSpaceOpenLaneBonus: 200,
             PressCarrierBonus: 120,
             PressDistancePenaltyPerCell: 60,
-            PressGoalkeeperExitBonus: 200);
+            PressGoalkeeperExitBonus: 200,
+            FindSpaceCrowdedPenalty: 90); // AW-E (docs/pendientes.md, cambio 2 de 2)
         return new AiWeights(baseTable, tacticalTable, context, new BlockShift[Enum.GetValues<TacticalState>().Length]);
     }
 }

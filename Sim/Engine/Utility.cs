@@ -505,6 +505,13 @@ internal static class Utility
                     score += context.FindSpaceOpenLaneBonus;
                 }
 
+                // AW-E (docs/pendientes.md, cambio 2 de 2): hasta ahora la única casilla candidata que
+                // miraba si ya había compañeros era la de OfferSupport (SupportCrowdedPenalty); FindSpace
+                // solo premiaba alejarse del rival, así que dos jugadores podían converger en el mismo
+                // hueco sin que nada lo penalizara. Mismo radio que OfferSupport (SupportCrowdRadius),
+                // para que "estar apiñado" signifique lo mismo en las dos acciones.
+                score -= context.FindSpaceCrowdedPenalty * TeammatesNear(players, p, candidate, SupportCrowdRadius);
+
                 if (!found || score > bestScore)
                 {
                     found = true;
@@ -719,6 +726,32 @@ internal static class Utility
         }
 
         return best;
+    }
+
+    /// <summary>
+    /// Compañeros de <paramref name="p"/> (sin contar a <paramref name="p"/>) a menos de
+    /// <paramref name="radius"/> casillas de <paramref name="point"/>. AW-E (docs/pendientes.md, cambio
+    /// 2 de 2): mismo cálculo que <see cref="EvaluateSupport"/> hace en línea para su propio punto de
+    /// apoyo, ahora también reutilizado por <see cref="EvaluateFindSpace"/> sobre cada casilla candidata.
+    /// </summary>
+    private static int TeammatesNear(MatchPlayer[] players, MatchPlayer p, Vec2 point, float radius)
+    {
+        int count = 0;
+        for (int i = 0; i < players.Length; i++)
+        {
+            var other = players[i];
+            if (other.Team != p.Team || ReferenceEquals(other, p) || !other.OnPitch)
+            {
+                continue;
+            }
+
+            if (Vec2.Distance(other.Position, point) < radius)
+            {
+                count++;
+            }
+        }
+
+        return count;
     }
 
     /// <summary>True si algún rival está a menos de <see cref="PassLaneRadius"/> del segmento from-&gt;to.</summary>

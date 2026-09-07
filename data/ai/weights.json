@@ -43,6 +43,7 @@
     "findSpaceOpponentDistanceBonusPerCell": 70,
     "findSpaceAdvanceBonusPerCell": 60,
     "findSpaceOpenLaneBonus": 200,
+    "findSpaceCrowdedPenalty": 50,
     "pressCarrierBonus": 60,
     "pressDistancePenaltyPerCell": 60,
     "pressGoalkeeperExitBonus": 200,

@@ -491,7 +491,7 @@ public static class DataLoader
         "dribbleTechniqueSlope", "dribbleSpeedSlope", "shootTechniqueSlope", "shootStrengthSlope",
         "blockActiveRadiusCells", "blockCorridorHalfWidthCells", "blockReachMaxCells",
         "blockTargetBonus", "blockDistancePenaltyPerCell", "blockAggressiveBonus", "blockBruteTagBonus",
-        "passBackwardPenaltyPerCell",
+        "passBackwardPenaltyPerCell", "findSpaceCrowdedPenalty",
     };
 
     private static AiWeights ParseAiWeights(string file, string content)
@@ -597,7 +597,8 @@ public static class DataLoader
             BlockDistancePenaltyPerCell: contextNode.Prop("blockDistancePenaltyPerCell").AsInt(),
             BlockAggressiveBonus: contextNode.Prop("blockAggressiveBonus").AsInt(),
             BlockBruteTagBonus: contextNode.Prop("blockBruteTagBonus").AsInt(),
-            PassBackwardPenaltyPerCell: OptionalInt(contextNode, "passBackwardPenaltyPerCell"));
+            PassBackwardPenaltyPerCell: OptionalInt(contextNode, "passBackwardPenaltyPerCell"),
+            FindSpaceCrowdedPenalty: OptionalInt(contextNode, "findSpaceCrowdedPenalty"));
 
         var shiftArray = new BlockShift[tacticalCount];
         var shiftSet = new bool[tacticalCount];
