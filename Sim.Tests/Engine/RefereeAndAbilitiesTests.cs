@@ -176,12 +176,21 @@ public sealed class RefereeAndAbilitiesTests
     [Fact]
     public void TheInitialCriterionChangesTheMatch()
     {
-        // Se mide sobre treinta semillas y no sobre una (paquete U): el criterio desplaza el umbral de
+        // Se mide sobre muchas semillas y no sobre una (paquete U): el criterio desplaza el umbral de
         // las tiradas, así que en un partido concreto puede no llegar a voltear ninguna y las dos
         // secuencias de eventos salir idénticas. Lo que RF-064 exige es el efecto, no que cada partido
         // suelto cambie: con el árbitro a favor, el local comete MENOS faltas señaladas que con el
-        // árbitro en contra, y alguna de las treinta secuencias tiene que ser distinta.
-        const int Seeds = 30;
+        // árbitro en contra, y alguna de las secuencias tiene que ser distinta.
+        // Con 30 semillas el escenario ("fragile", cinco jugadores exactos, justo en el umbral de
+        // forfeit de RF-xxx) apenas producía UNA falta en total sobre las sesenta partidos (30 semillas
+        // x 2 sesgos): la mayoría de los partidos termina antes por forfeit tras una lesión, sin tiempo
+        // a que el sesgo del árbitro se note en faltas. Con una sola falta de margen, cualquier cambio
+        // legítimo en el motor que desplace el consumo del RNG (por ejemplo AW-A, paso 1 de
+        // docs/plan-intercepcion-disparo.md, que ya no consume una tirada de parada fija por tiro) podía
+        // volcar esa única falta a la otra columna y tumbar el test "por mala suerte", que es justo lo
+        // que este fichero decía evitar al medir sobre muchas semillas en vez de una. 120 da un margen
+        // amplio (13 faltas del sesgo hostil frente a 0 del favorable, medido antes de fijar el número).
+        const int Seeds = 120;
         var setup = TestMatches.Brutal(Catalog);
         var friendly = setup with { Referee = setup.Referee with { InitialBias = 80 } };
         var hostile = setup with { Referee = setup.Referee with { InitialBias = -80 } };
@@ -205,7 +214,7 @@ public sealed class RefereeAndAbilitiesTests
                     .SequenceEqual(withHostile.Events.Select(e => (e.Type, e.Tick, e.Detail)));
         }
 
-        Assert.True(anySequenceDiffers, "el criterio inicial no cambió ningún partido de los treinta");
+        Assert.True(anySequenceDiffers, $"el criterio inicial no cambió ningún partido de los {Seeds}");
         Assert.True(
             friendlyHomeFouls < hostileHomeFouls,
             $"faltas del local con árbitro a favor {friendlyHomeFouls} frente a en contra {hostileHomeFouls}");
