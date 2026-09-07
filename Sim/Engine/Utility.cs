@@ -202,6 +202,111 @@ internal static class Utility
         new(Math.Clamp(point.X, 0f, Pitch.Columns), Math.Clamp(point.Y, 0f, Pitch.Rows));
 
     /// <summary>
+    /// Columna de la línea defensiva de <paramref name="team"/> (AW-Q, docs/pendientes.md): la de su
+    /// defensa de campo más retrasado (más cerca de su propia portería), o la del balón si el balón está
+    /// aún más retrasado hacia esa portería, lo que esté más avanzado de los dos. Mismo algoritmo que
+    /// AI_GetOffsideLine de gfootball/HELIOS-base (docs/referencia-motores-futbol.md §6.1: "segundo rival
+    /// más adelantado, excluido el más adelantado que suele ser el portero, máximo con la columna del
+    /// balón"). El portero no entra en la cuenta porque ya lo excluye <c>IsOutfield</c>: en este motor
+    /// siempre es el jugador más retrasado de los dos (RF-057b lo mantiene dentro del área), así que no
+    /// hace falta distinguirlo aparte como hacen esos motores al recorrer una lista que sí lo incluye.
+    /// <para>
+    /// No recorta al resultado contra la mitad del campo (a diferencia de gfootball): los dos usos de esta
+    /// función ya acotan el resultado por su cuenta (el techo del bloque con un margen pequeño, el recorte
+    /// de <c>FindSpace</c> con la pinza de zona existente), así que ese caso límite no hace falta aquí.
+    /// </para>
+    /// <para>
+    /// Caso degenerado sin jugadores de campo sobre el césped (equipo entero expulsado o lesionado): el
+    /// avance más retrasado se queda en 0, así que la línea es la del balón, y nunca por detrás de la
+    /// propia línea de gol.
+    /// </para>
+    /// </summary>
+    internal static float DefensiveLineColumn(MatchPlayer[] players, Vec2 ballPosition, int team)
+    {
+        int direction = Pitch.AttackDirection(team);
+        float ownGoalColumn = direction > 0 ? 0f : Pitch.Columns;
+
+        // avance(x): cuánto se ha alejado x de la portería PROPIA de team, hacia la portería rival.
+        float deepestAdvance = 0f;
+        bool any = false;
+        for (int i = 0; i < players.Length; i++)
+        {
+            var p = players[i];
+            if (p.Team != team || !p.IsOutfield || !p.OnPitch)
+            {
+                continue;
+            }
+
+            float advance = (p.Position.X - ownGoalColumn) * direction;
+            if (!any || advance < deepestAdvance)
+            {
+                deepestAdvance = advance;
+                any = true;
+            }
+        }
+
+        float ballAdvance = (ballPosition.X - ownGoalColumn) * direction;
+        float lineAdvance = MathF.Max(deepestAdvance, ballAdvance);
+        return ownGoalColumn + (lineAdvance * direction);
+    }
+
+    /// <summary>
+    /// Línea de fuera de juego que afronta <paramref name="attackingTeam"/> (AW-Q, docs/pendientes.md):
+    /// la columna del rival de campo más retrasado en su propio campo, o la del balón si el balón está más
+    /// adelantado que él, lo que esté más avanzado <b>en la dirección de ataque de
+    /// <paramref name="attackingTeam"/></b>. Es <c>AI_GetOffsideLine</c> de gfootball tal cual
+    /// (docs/referencia-motores-futbol.md §6.1, paso 3: <c>offsideLine = max(segundo_más_adelantado,
+    /// posición_del_balón)</c>), con los dos términos medidos en el marco del ATACANTE, que es lo que la
+    /// distingue de <see cref="DefensiveLineColumn"/>: aquella mide el avance desde la portería del equipo
+    /// que defiende, así que su máximo con el balón elige el punto contrario cuando el balón viene por
+    /// detrás de la defensa rival —el caso normal de una jugada de ataque— y dejaría al atacante clavado
+    /// a la altura del balón. El jugador rival escogido es el mismo en las dos (el más retrasado del
+    /// rival); solo cambia el sentido del máximo con el balón.
+    /// <para>
+    /// El portero rival queda fuera por <c>IsOutfield</c>, que es justo el paso 2 de gfootball (excluir al
+    /// más adelantado, que suele ser el portero) sin necesidad de una segunda pasada.
+    /// </para>
+    /// </summary>
+    internal static float OffsideLineColumn(MatchPlayer[] players, Vec2 ballPosition, int attackingTeam)
+    {
+        int direction = Pitch.AttackDirection(attackingTeam);
+        float ownGoalColumn = direction > 0 ? 0f : Pitch.Columns;
+
+        // avance(x): cuánto se ha alejado x de la portería propia de attackingTeam. El balón entra como un
+        // candidato más, igual que en gfootball: nunca hay fuera de juego por detrás del balón.
+        float lineAdvance = (ballPosition.X - ownGoalColumn) * direction;
+        for (int i = 0; i < players.Length; i++)
+        {
+            var p = players[i];
+            if (p.Team == attackingTeam || !p.IsOutfield || !p.OnPitch)
+            {
+                continue;
+            }
+
+            float advance = (p.Position.X - ownGoalColumn) * direction;
+            if (advance > lineAdvance)
+            {
+                lineAdvance = advance;
+            }
+        }
+
+        return ownGoalColumn + (lineAdvance * direction);
+    }
+
+    /// <summary>
+    /// Recorta <paramref name="rawX"/> contra la línea defensiva <paramref name="line"/> más un margen
+    /// (AW-Q): si la columna pedida está MÁS AVANZADA que el techo en la dirección de ataque del equipo,
+    /// se recorta; si está por detrás o justo en él, no se toca. El techo solo frena, nunca empuja hacia
+    /// adelante. Función pura y separada del bucle de <c>MatchEngine.UpdateBlockShift</c> para poder
+    /// probar la aritmética sin montar un partido (mismo criterio que <c>MatchEngine.WithinSaveReach</c>).
+    /// </summary>
+    internal static float CapToDefensiveLine(float rawX, float line, float marginCells, int direction)
+    {
+        float capX = line + (marginCells * direction);
+        return (rawX - capX) * direction > 0f ? capX : rawX;
+    }
+
+    /// <summary>
     /// Convierte una distancia en casillas al entero de centésimas usado en los términos (§3.5).
     /// Floor explícito (revisión independiente, fase 0): el cast directo a int trunca hacia cero, así que
     /// -0.5 casillas se convertía en 0 pero 0.5 se convertía en 50, un salto asimétrico justo alrededor de
@@ -479,6 +584,11 @@ internal static class Utility
 
         var carrier = ball.Owner is not null && ball.Owner.Team == p.Team ? ball.Owner : null;
         var players = ctx.Players;
+
+        // AW-Q: la línea defensiva rival no depende de la casilla candidata, así que se calcula una vez
+        // por evaluación y no una por candidato (RT-051: la evaluación no debe crecer con el tablero).
+        float marginedLine = OffsideLineColumn(players, ball.Position, p.Team)
+            + (context.FindSpaceLineMarginCells * direction);
         bool found = false;
         int bestScore = 0;
         Vec2 bestPoint = p.Position;
@@ -488,6 +598,21 @@ internal static class Utility
             for (int s = 0; s < SpaceDistances.Length; s++)
             {
                 Vec2 candidate = ClampToPitch(p.Position + (SpaceDirections[d] * SpaceDistances[s]));
+
+                // AW-Q (docs/pendientes.md), recorte posicional: la casilla candidata no puede quedar más
+                // allá de la línea defensiva rival más un margen. Sin esto el desmarque premiaba acampar a
+                // espaldas de la defensa (findSpaceAdvanceBonusPerCell crece sin techo y allí no hay
+                // rivales, así que findSpaceOpponentDistanceBonusPerCell también cobra el máximo). Es el
+                // mismo mecanismo que forceNoOffside de gfootball y el recorte de formación de HELIOS-base
+                // (docs/referencia-motores-futbol.md §6.1), y no pita nada: solo quita la casilla-objetivo.
+                // Se aplica a cualquier jugador de campo, no solo al delantero: en un desmarque cualquiera
+                // puede rebasar la línea. El recorte va ANTES de la pinza de zona para que la correa de
+                // zona siga aplicando después sobre el resultado ya recortado.
+                if ((candidate.X - marginedLine) * direction > 0f)
+                {
+                    candidate = new Vec2(marginedLine, candidate.Y);
+                }
+
                 candidate = p.Zone.Clamp(candidate, p.EffectiveHome, direction);
 
                 int space = Centi(NearestOpponentDistance(players, p.Team, candidate));

@@ -59,6 +59,34 @@ public sealed class OffBallTests
     }
 
     /// <summary>
+    /// AW-Q (docs/pendientes.md): el desmarque ya no puede elegir una casilla más allá de la línea
+    /// defensiva rival más <c>findSpaceLineMarginCells</c>. El escenario pone el balón exactamente en la
+    /// columna del rival más retrasado, así que la línea es esa columna sin ambigüedad. A/B con el mismo
+    /// escenario: con el margen abierto de par en par el hueco elegido queda por delante del techo, y con
+    /// el margen real de una casilla el objetivo se recorta al techo.
+    /// </summary>
+    [Fact]
+    public void FindSpaceDoesNotPickACellBeyondTheOpponentDefensiveLine()
+    {
+        var (uncapped, uncappedPlayer) = LineScenario(lineMargin: 20f);
+        Utility.Choose(uncapped, uncappedPlayer, null);
+
+        float line = Utility.OffsideLineColumn(uncapped.Players, uncapped.Ball.Position, 0);
+        Assert.Equal(12f, line);
+
+        Assert.True(
+            uncappedPlayer.TargetPoint.X > line + 1f,
+            $"sin techo el desmarque debía irse más allá de la línea+1 ({line + 1f}), se fue a X={uncappedPlayer.TargetPoint.X}");
+
+        var (capped, cappedPlayer) = LineScenario(lineMargin: 1f);
+        Utility.Choose(capped, cappedPlayer, null);
+
+        Assert.True(
+            cappedPlayer.TargetPoint.X <= line + 1f + 0.001f,
+            $"con techo el desmarque no podía pasar de X={line + 1f}, se fue a X={cappedPlayer.TargetPoint.X}");
+    }
+
+    /// <summary>
     /// <c>PressCarrier</c> apunta al poseedor rival, y vale más cuando el que lleva el balón es el portero
     /// rival dentro de su área: es la presión a la salida (§2.3).
     /// </summary>
@@ -272,6 +300,32 @@ public sealed class OffBallTests
         return (player, context);
     }
 
+    /// <summary>
+    /// Escenario de AW-Q: poseedor propio y balón en la columna 12, el rival más retrasado también en la
+    /// 12 —así la línea defensiva rival es 12 con cualquier lectura— y el jugador que se desmarca justo
+    /// delante, con todo el campo libre por delante para que sin techo se vaya más allá de la línea.
+    /// </summary>
+    private static (UtilityContext Context, MatchPlayer Player) LineScenario(float lineMargin)
+    {
+        var player = Player(0, Position.Forward, new Cell(12, 2));
+        var carrier = Player(1, Position.Midfielder, new Cell(12, 2));
+        var deepest = Player(2, Position.Defender, new Cell(12, 2), team: 1);
+        var other = Player(3, Position.Defender, new Cell(10, 2), team: 1);
+
+        player.Position = new Vec2(12.0f, 2.5f);
+        carrier.Position = new Vec2(12.0f, 2.5f);
+        deepest.Position = new Vec2(12.0f, 0.5f);
+        other.Position = new Vec2(10.0f, 4.5f);
+
+        var context = Context(
+            Weights(PlayerAction.FindSpace, 100, lineMargin),
+            new[] { player, carrier, deepest, other });
+        context.Ball.Owner = carrier;
+        context.Ball.Position = carrier.Position;
+        context.HoldingTeam = 0;
+        return (context, player);
+    }
+
     private static float NearestOpponent(UtilityContext context, MatchPlayer player, Vec2 point)
     {
         float best = float.MaxValue;
@@ -338,7 +392,7 @@ public sealed class OffBallTests
     }
 
     /// <summary>Pesos sintéticos: todo a 0 salvo la acción indicada, táctico neutro y contexto sin términos.</summary>
-    private static AiWeights Weights(PlayerAction action, int weight)
+    private static AiWeights Weights(PlayerAction action, int weight, float lineMargin = 1.0f)
     {
         int positions = Enum.GetValues<Position>().Length;
         int actions = Enum.GetValues<PlayerAction>().Length;
@@ -368,7 +422,8 @@ public sealed class OffBallTests
             PressCarrierBonus: 120,
             PressDistancePenaltyPerCell: 60,
             PressGoalkeeperExitBonus: 200,
-            FindSpaceCrowdedPenalty: 90); // AW-E (docs/pendientes.md, cambio 2 de 2)
+            FindSpaceCrowdedPenalty: 90, // AW-E (docs/pendientes.md, cambio 2 de 2)
+            FindSpaceLineMarginCells: lineMargin); // AW-Q (docs/pendientes.md)
         return new AiWeights(baseTable, tacticalTable, context, new BlockShift[Enum.GetValues<TacticalState>().Length]);
     }
 }

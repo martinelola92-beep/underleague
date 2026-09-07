@@ -82,7 +82,9 @@
         "blockAggressiveBonus": { "type": "integer", "minimum": 0, "maximum": 10000 },
         "blockBruteTagBonus": { "type": "integer", "minimum": 0, "maximum": 10000 },
         "passBackwardPenaltyPerCell": { "type": "integer", "minimum": 0, "maximum": 10000 },
-        "findSpaceCrowdedPenalty": { "type": "integer", "minimum": 0, "maximum": 10000 }
+        "findSpaceCrowdedPenalty": { "type": "integer", "minimum": 0, "maximum": 10000 },
+        "blockShiftLineMarginCells": { "type": "number", "minimum": 0, "maximum": 10 },
+        "findSpaceLineMarginCells": { "type": "number", "minimum": 0, "maximum": 10 }
       },
       "required": [
         "chaseBallDistancePenaltyPerCell", "chaseBallLooseBonus", "chaseBallNotNearestPenalty",
@@ -99,7 +101,8 @@
         "dribbleTechniqueSlope", "dribbleSpeedSlope", "shootTechniqueSlope", "shootStrengthSlope",
         "blockActiveRadiusCells", "blockCorridorHalfWidthCells", "blockReachMaxCells",
         "blockTargetBonus", "blockDistancePenaltyPerCell", "blockAggressiveBonus", "blockBruteTagBonus",
-        "passBackwardPenaltyPerCell", "findSpaceCrowdedPenalty"
+        "passBackwardPenaltyPerCell", "findSpaceCrowdedPenalty",
+        "blockShiftLineMarginCells", "findSpaceLineMarginCells"
       ],
       "additionalProperties": false
     },

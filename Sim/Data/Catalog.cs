@@ -146,7 +146,14 @@ public sealed record AiContext(
 
     // AW-E (docs/pendientes.md, cambio 2 de 2): FindSpace solo premiaba alejarse del rival, sin mirar si
     // la casilla candidata ya tenía compañeros — mismo radio de aglomeración que SupportCrowdedPenalty.
-    int FindSpaceCrowdedPenalty = 0);
+    int FindSpaceCrowdedPenalty = 0,
+
+    // AW-Q (docs/pendientes.md): la línea defensiva no tenía techo. Los dos márgenes en casillas son la
+    // holgura sobre la línea defensiva (Utility.DefensiveLineColumn) de sus dos usos independientes: el
+    // techo de la casilla-hogar del propio defensa en MatchEngine.UpdateBlockShift, y el recorte de la
+    // casilla candidata del desmarque en Utility.EvaluateFindSpace contra la línea RIVAL.
+    float BlockShiftLineMarginCells = 0f,
+    float FindSpaceLineMarginCells = 0f);
 
 /// <summary>
 /// Pesos de la IA de utilidad (RT-093..RT-098). Las tablas Base y Tactical se guardan como arrays

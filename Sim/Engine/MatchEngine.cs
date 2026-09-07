@@ -524,6 +524,15 @@ internal sealed class MatchEngine : IPerkWorld
             _shift[team] = current;
         }
 
+        // AW-Q: la línea defensiva de cada equipo no depende del jugador, así que se calcula una vez por
+        // equipo y no una por jugador. Con las posiciones del final del tick anterior: UpdateBlockShift
+        // corre al principio de Step(), antes de UpdatePlayer, igual que UpdateContextCaches.
+        float[] lines = { 0f, 0f };
+        for (int team = 0; team < 2; team++)
+        {
+            lines[team] = Utility.DefensiveLineColumn(_players, _ball.Position, team);
+        }
+
         for (int i = 0; i < _players.Length; i++)
         {
             var player = _players[i];
@@ -537,10 +546,27 @@ internal sealed class MatchEngine : IPerkWorld
                 continue;
             }
 
-            float offset = _shift[player.Team] * Pitch.AttackDirection(player.Team);
-            player.EffectiveHome = new Vec2(
-                Math.Clamp(player.HomeCenter.X + offset, 0f, Pitch.Columns),
-                player.HomeCenter.Y);
+            int direction = Pitch.AttackDirection(player.Team);
+            float offset = _shift[player.Team] * direction;
+            float rawX = player.HomeCenter.X + offset;
+
+            // AW-Q (docs/pendientes.md): techo del propio bloque. Hasta aquí el bloque subía las 4,0
+            // casillas de blockShift.InPossession sin comprobar nunca dónde estaba el propio defensa más
+            // retrasado ni el balón, así que la línea no tenía tope y el delantero rival podía acamparle a
+            // la espalda. El techo es la línea defensiva propia más un margen, y solo frena: si la
+            // casilla-hogar desplazada ya está por detrás, no se toca. Solo para los defensas de campo;
+            // medios y delanteros necesitan poder adelantarse y siguen sin recorte. Equivale a offsideTrapX
+            // de gfootball (docs/referencia-motores-futbol.md §6.1) y no cambia ninguna regla de juego.
+            //
+            // La línea es una caché con un tick de retraso, coherente con el resto del motor
+            // (UpdateContextCaches/NearestToBall), y por eso el cálculo no se realimenta consigo mismo.
+            if (player.Role == Position.Defender)
+            {
+                rawX = Utility.CapToDefensiveLine(
+                    rawX, lines[player.Team], _catalog.Ai.Context.BlockShiftLineMarginCells, direction);
+            }
+
+            player.EffectiveHome = new Vec2(Math.Clamp(rawX, 0f, Pitch.Columns), player.HomeCenter.Y);
         }
     }
 

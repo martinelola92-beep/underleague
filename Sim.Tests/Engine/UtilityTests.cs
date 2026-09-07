@@ -170,6 +170,129 @@ public sealed class UtilityTests
         Assert.True(Row(rows, PlayerAction.Tackle).Rejected);
     }
 
+    /// <summary>
+    /// AW-Q (docs/pendientes.md): aritmética exacta de la línea defensiva, con los dos equipos y con el
+    /// balón por delante y por detrás del defensa más retrasado. La línea es la columna del defensa de
+    /// campo más retrasado del equipo, o la del balón si el balón está más adelantado que él hacia la
+    /// portería rival, lo que esté más avanzado de los dos (docs/referencia-motores-futbol.md §6.1).
+    /// </summary>
+    [Fact]
+    public void TheDefensiveLineIsTheDeepestOutfielderOrTheBallWhicheverIsFurtherUp()
+    {
+        // Equipo 0: portería propia en la columna 0, ataca hacia columnas crecientes.
+        var home = new[]
+        {
+            Outfield(0, new Vec2(3f, 2.5f), team: 0),
+            Outfield(1, new Vec2(5f, 2.5f), team: 0),
+        };
+
+        // Balón por detrás del defensa más retrasado: manda el defensa (columna 3).
+        Assert.Equal(3f, Utility.DefensiveLineColumn(home, new Vec2(1f, 2.5f), 0));
+
+        // Balón por delante de los dos: manda el balón (columna 7), la línea sube con él.
+        Assert.Equal(7f, Utility.DefensiveLineColumn(home, new Vec2(7f, 2.5f), 0));
+
+        // Equipo 1: portería propia en la columna 16, ataca hacia columnas decrecientes; el defensa más
+        // retrasado es el de mayor columna. Avance del defensa = (12-16)·-1 = 4, del balón = (14-16)·-1 = 2,
+        // así que manda el defensa: 16 + 4·-1 = 12.
+        var away = new[]
+        {
+            Outfield(2, new Vec2(12f, 2.5f), team: 1),
+            Outfield(3, new Vec2(9f, 2.5f), team: 1),
+        };
+        Assert.Equal(12f, Utility.DefensiveLineColumn(away, new Vec2(14f, 2.5f), 1));
+        Assert.Equal(8f, Utility.DefensiveLineColumn(away, new Vec2(8f, 2.5f), 1));
+    }
+
+    /// <summary>
+    /// AW-Q: el portero no cuenta para la línea (lo excluye <c>IsOutfield</c>) y un jugador fuera del campo
+    /// tampoco. Sin jugadores de campo sobre el césped el caso degenera en la columna del balón, nunca por
+    /// detrás de la propia línea de gol: es el comportamiento que este test fija.
+    /// </summary>
+    [Fact]
+    public void TheDefensiveLineIgnoresTheGoalkeeperAndPlayersOffThePitch()
+    {
+        var keeper = Player(10, Position.Goalkeeper, new Cell(1, 2), new Attributes(50, 50, 50, 50, 50));
+        keeper.Position = new Vec2(0.5f, 2.5f);
+        var sentOff = Outfield(11, new Vec2(1f, 2.5f), team: 0);
+        sentOff.OnPitch = false;
+        var defender = Outfield(12, new Vec2(6f, 2.5f), team: 0);
+
+        // Con el portero en la 0,5 y el expulsado en la 1, la línea sigue siendo la del defensa (6).
+        Assert.Equal(6f, Utility.DefensiveLineColumn(new[] { keeper, sentOff, defender }, new Vec2(4f, 2.5f), 0));
+
+        // Sin ningún jugador de campo sobre el césped, la línea es la del balón.
+        Assert.Equal(4f, Utility.DefensiveLineColumn(new[] { keeper, sentOff }, new Vec2(4f, 2.5f), 0));
+        Assert.Equal(12f, Utility.DefensiveLineColumn(Array.Empty<MatchPlayer>(), new Vec2(12f, 2.5f), 1));
+    }
+
+    /// <summary>
+    /// AW-Q, techo del bloque: el recorte solo frena. Una casilla-hogar por delante de la línea propia más
+    /// el margen se recorta al techo; una por detrás no se toca (el techo nunca empuja hacia adelante), y
+    /// una justo en el techo tampoco. Es la aritmética exacta que aplica <c>MatchEngine.UpdateBlockShift</c>
+    /// a los defensas de campo, extraída a función pura para poder probarla sin montar un partido (mismo
+    /// criterio que <c>MatchEngine.WithinSaveReach</c> en AW-A).
+    /// </summary>
+    [Fact]
+    public void TheBlockCeilingOnlyPullsBack()
+    {
+        // Equipo 0: línea en la columna 4, margen 1,5 -> techo en la 5,5.
+        Assert.Equal(5.5f, Utility.CapToDefensiveLine(8f, 4f, 1.5f, 1));
+        Assert.Equal(5.5f, Utility.CapToDefensiveLine(5.5f, 4f, 1.5f, 1));
+        Assert.Equal(2f, Utility.CapToDefensiveLine(2f, 4f, 1.5f, 1));
+
+        // Equipo 1: ataca hacia columnas decrecientes, así que el techo está en 12 - 1,5 = 10,5 y lo que
+        // se recorta es lo que queda por DEBAJO de esa columna.
+        Assert.Equal(10.5f, Utility.CapToDefensiveLine(8f, 12f, 1.5f, -1));
+        Assert.Equal(14f, Utility.CapToDefensiveLine(14f, 12f, 1.5f, -1));
+    }
+
+    /// <summary>
+    /// AW-Q: <c>OffsideLineColumn</c> es la línea que afronta el ATACANTE, y por eso no es
+    /// <c>DefensiveLineColumn</c> del rival. Las dos eligen al mismo jugador —el rival más retrasado— pero
+    /// toman el máximo con el balón en marcos opuestos, y el caso normal de una jugada de ataque (balón
+    /// por detrás de la defensa rival) es justo donde se separan: la línea de fuera de juego se queda en
+    /// la defensa, mientras que la lectura en el marco del defensor caería sobre el balón y dejaría al
+    /// atacante clavado a su altura. Es el paso 3 de <c>AI_GetOffsideLine</c>
+    /// (docs/referencia-motores-futbol.md §6.1): <c>max(segundo_más_adelantado, balón)</c>.
+    /// </summary>
+    [Fact]
+    public void TheOffsideLineIsMeasuredFromTheAttackersOwnGoal()
+    {
+        // Equipo 0 ataca hacia columnas crecientes; los rivales del equipo 1 están en 13 (el más
+        // retrasado de los suyos) y 9, y el balón viene por detrás, en la columna 10.
+        var players = new[]
+        {
+            Outfield(0, new Vec2(11f, 2.5f), team: 0),
+            Outfield(1, new Vec2(13f, 2.5f), team: 1),
+            Outfield(2, new Vec2(9f, 2.5f), team: 1),
+        };
+        var ball = new Vec2(10f, 2.5f);
+
+        Assert.Equal(13f, Utility.OffsideLineColumn(players, ball, 0));
+
+        // La misma escena leída desde el equipo 1 da la columna del balón: correcto como techo del bloque
+        // del PROPIO equipo 1 (no subir más de un margen por delante de su hombre más retrasado o del
+        // balón), y equivocado como línea a la que recortar al atacante del equipo 0.
+        Assert.Equal(10f, Utility.DefensiveLineColumn(players, ball, 1));
+
+        // Balón por delante de la defensa rival: no hay fuera de juego por delante del balón, la línea
+        // sube con él.
+        Assert.Equal(14f, Utility.OffsideLineColumn(players, new Vec2(14f, 2.5f), 0));
+
+        // Simétrico para el equipo 1, que ataca hacia columnas decrecientes.
+        Assert.Equal(11f, Utility.OffsideLineColumn(players, new Vec2(13f, 2.5f), 1));
+        Assert.Equal(3f, Utility.OffsideLineColumn(players, new Vec2(3f, 2.5f), 1));
+    }
+
+    /// <summary>Jugador de campo sintético colocado en una posición exacta, para las pruebas de línea.</summary>
+    private static MatchPlayer Outfield(int id, Vec2 position, int team)
+    {
+        var player = Player(id, Position.Defender, new Cell(2, 2), new Attributes(50, 50, 50, 50, 50), team);
+        player.Position = position;
+        return player;
+    }
+
     private static UtilityRow Row(List<UtilityRow> rows, PlayerAction action)
     {
         foreach (var row in rows)
