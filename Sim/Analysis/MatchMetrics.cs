@@ -196,7 +196,11 @@ public static class MatchMetrics
             }
         }
 
-        rows.Add(InRange(PossessionChanges, (double)possessionChanges / n, 12, 25));
+        // ADR 0081: 12-25 medía un motor de fase 0 sin bloqueo de tiro, sin que el portero tuviera que
+        // llegar al balón y sin decisión inmediata al cambiar de posesión; con esos tres cambios (y los
+        // anteriores de AW-D/AW-E) el valor natural del motor actual va de 22,07 a 26,60 en la versión
+        // final de cada uno. El techo sube a 28, un margen sobre lo medido, no una previsión.
+        rows.Add(InRange(PossessionChanges, (double)possessionChanges / n, 12, 28));
 
         double passChainAvgLength = passChains > 0 ? (double)passChainLength / passChains : 0.0;
         rows.Add(InRange(PassChainAvgLength, passChainAvgLength, 2, 4));

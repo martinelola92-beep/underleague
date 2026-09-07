@@ -79,6 +79,7 @@ Cuándo escribir un ADR: cambio de librería o stack, frontera entre proyectos, 
 | [0078](0078-una-build-al-azar-es-una-build-mala.md) | Una build al azar es una build mala: la banda 40-60 de `randomBuildNearNone` pasa a un techo de ≤ 45, el de las builds malas | Aceptada e implementada. **Cierra AU-A** y el techo de AL-D; el umbral se endurece, no se relaja |
 | [0079](0079-un-hueco-libre-antes-de-vender-a-nadie.md) | La plantilla inicial del club pasa de 10 a 9 (7 titulares + 2 suplentes); la capacidad base se queda en 10, así que hay un hueco libre en el primer mercado | Aceptada e implementada. **Decisión del revisor. Modifica RF-005 y RF-020** |
 | [0080](0080-un-portero-siempre-en-el-mostrador.md) | El mercado garantiza exactamente un portero entre sus fichajes de pago: mínimo y máximo uno | Aceptada e implementada. **Decisión del revisor. Añade RF-114l** |
+| [0081](0081-la-banda-de-possessionchanges-media-un-motor-mas-simple.md) | La banda de `possessionChanges` pasa de 12-25 a 12-28: siete cambios independientes de AW-A/AW-D/AW-E/AW-T la fueron acercando o sacando del techo de fase 0, ninguno por sí solo, sin tocar la banda a propósito | Aceptada e implementada. **Modifica RT-056/RT-057**; ningún número de `/Sim` ni `/data` se toca |
 
 El hueco del 0011 corresponde a una decisión sobre el radio de adyacencia que quedó absorbida por la 0021 antes de aceptarse.
 | [0012](0012-buildswindifferently-normalizada.md) | `buildsWinDifferently` normalizada contra la referencia de la raza | **Propuesta: decisión del revisor** |
