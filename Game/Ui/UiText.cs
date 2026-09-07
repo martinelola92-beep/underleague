@@ -337,6 +337,7 @@ public static class UiText
         ["ui.ev.Shot"] = "{0} dispara",
         ["ui.ev.Goal"] = "GOL de {0}",
         ["ui.ev.Save"] = "{0} para el tiro de {1}",
+        ["ui.ev.ShotBlocked"] = "{0} bloquea el disparo de {1}",
         ["ui.ev.Foul"] = "{0} hace falta a {1}",
         ["ui.ev.Card"] = "{0} ve tarjeta",
         ["ui.ev.Injury"] = "{0} cae lesionado",
