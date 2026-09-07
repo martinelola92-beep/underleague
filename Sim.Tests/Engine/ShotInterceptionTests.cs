@@ -262,11 +262,20 @@ public sealed class ShotInterceptionTests
 
     /// <summary>
     /// Un intento por jugador y disparo (<c>Ball.BlockAttempted</c>). Con un radio enorme todos los
-    /// defensas de campo están dentro de él desde el primer tick de vuelo, así que **todas** sus tiradas
-    /// caen en ese tick; si el hueco por jugador no cortara, los que fallan volverían a tirar en cada tick
-    /// posterior y aparecerían bloqueos retrasados. La cuota se deja en la real para que fallen muchos: un
-    /// escenario en el que el primer defensa bloquea siempre no probaría nada. El desfase de 1 tick es el
-    /// mismo del duelo del portero.
+    /// defensas de campo <b>que pueden tocar el balón</b> están dentro de él desde el primer tick de
+    /// vuelo, así que sus tiradas caen ahí; si el hueco por jugador no cortara, los que fallan volverían a
+    /// tirar en cada tick posterior y el bloqueo tardaría en llegar sin límite razonable. La cuota se deja
+    /// en la real para que fallen muchos: un escenario en el que el primer defensa bloquea siempre no
+    /// probaría nada.
+    /// <para>
+    /// El margen no es de 1 tick sino de <see cref="MaxCanTouchBallGapTicks"/>: un defensa que en ese
+    /// primer tick esté en <c>Celebrating</c>/<c>KnockedDown</c> (<c>CanTouchBall</c> false) no entra en
+    /// el sorteo hasta que se recupera, y entonces sí es su primera tirada, no una segunda. Detectado con
+    /// una semilla real: el defensa que bloqueó había marcado un gol 30 ticks antes (exactamente
+    /// <c>states.celebratingTicks</c> de `data/sim/tuning.json`) y seguía celebrando cuando el rival tiró;
+    /// el bloqueo llegó en el mismo tick en que su celebración terminó. Es un comportamiento legítimo y
+    /// preexistente de <c>TryBlockShot</c>/<c>CanTouchBall</c>, no una segunda tirada del mismo jugador.
+    /// </para>
     /// </summary>
     [Fact]
     public void EachDefenderOnlyDisputesEachShotOnce()
@@ -288,14 +297,25 @@ public sealed class ShotInterceptionTests
                 {
                     blocked++;
                     Assert.True(
-                        shotTick >= 0 && e.Tick - shotTick <= 1,
-                        $"semilla {seed}: bloqueo en el tick {e.Tick} de un disparo del tick {shotTick}: hubo una segunda tirada");
+                        shotTick >= 0 && e.Tick - shotTick <= MaxCanTouchBallGapTicks,
+                        $"semilla {seed}: bloqueo en el tick {e.Tick} de un disparo del tick {shotTick}: " +
+                        $"más que el margen de {MaxCanTouchBallGapTicks} ticks de un CanTouchBall temporal, hubo una segunda tirada");
                 }
             }
         }
 
         Assert.True(blocked > 0, "el escenario tenía que producir bloqueos");
     }
+
+    /// <summary>
+    /// Margen de <see cref="EachDefenderOnlyDisputesEachShotOnce"/>: el mayor de los estados que excluyen
+    /// <c>CanTouchBall</c> y tienen una duración fija en `data/sim/tuning.json` (<c>celebratingTicks</c>
+    /// 30, <c>knockedDownTicks</c> 18; <c>Injured</c>/<c>SentOff</c> no tienen límite y por eso un jugador
+    /// lesionado o expulsado nunca vuelve a intentar el bloqueo del mismo tiro, lo cual es correcto). Un
+    /// vuelo de disparo real dura menos que esto (`FlightTicks` con `shotSpeedCellsPerTickMilli`), así que
+    /// el margen no enmascara una segunda tirada genuina.
+    /// </summary>
+    private const int MaxCanTouchBallGapTicks = 30;
 
     /// <summary>
     /// Fuera del radio no se bloquea: con <c>pass.interceptRadiusCells</c> a 0 la distancia nunca es menor

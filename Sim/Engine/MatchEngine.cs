@@ -1170,6 +1170,14 @@ internal sealed class MatchEngine : IPerkWorld
             && previous.State is PlayerState.Dribbling or PlayerState.Passing or PlayerState.Shooting)
         {
             previous.EnterState(PlayerState.Positioning, 0);
+
+            // Sin esto, quien pierde el balón se queda parado un tick con el objetivo de cuando
+            // regateaba: solo vuelve a decidir en su próximo turno de tuning.decisionIntervalTicks
+            // (revisión independiente tras jugar la build). Decide() no toca el balón ni consume
+            // aleatoriedad (RT-024): recalcula el objetivo de movimiento con el estado ya consolidado,
+            // así que llamarla aquí, fuera del recorrido normal de UpdatePlayer, no cambia el resultado
+            // de ningún partido salvo el propio objetivo de este jugador en este mismo tick.
+            Decide(previous);
         }
 
         _ball.Owner = player;
@@ -1207,6 +1215,15 @@ internal sealed class MatchEngine : IPerkWorld
             EndPlay("lost");
             StartPlay(player);
         }
+
+        // Simétrico a la llamada de arriba, para quien GANA el balón: sin esto, el receptor de un pase,
+        // el que intercepta, el que recupera un balón suelto, el que gana una entrada, el portero que
+        // para o el que ejecuta una reanudación se quedan parados un tick con el objetivo de cuando no
+        // tenían el balón —normalmente ya alcanzado, porque FindSpace/OfferSupport los suele llevar justo
+        // a ese punto antes de que el balón llegue— hasta su próximo turno de
+        // tuning.decisionIntervalTicks. Es el hallazgo del revisor tras jugar la build de AW-A pasos 0-3:
+        // "cuando los jugadores reciben el balón se paran en el sitio durante un tick".
+        Decide(player);
     }
 
     private void StartPlay(MatchPlayer player)
