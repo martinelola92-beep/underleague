@@ -158,6 +158,7 @@ internal sealed class MatchEngine : IPerkWorld
         _effects = anyEffects ? new EffectEngine(this, _players, _report, config.MaxDepth) : null;
 
         _ball.InterceptAttempted = new bool[_players.Length];
+        _ball.BlockAttempted = new bool[_players.Length];
         _bodies = new BodySeparation(_tuning.Bodies, _players.Length);
         _markScratch = new bool[_players.Length];
         _context = new UtilityContext(_players, _ball, catalog.Ai, _tuning.ActionZone);
@@ -848,6 +849,14 @@ internal sealed class MatchEngine : IPerkWorld
             return;
         }
 
+        // AW-A (paso 3): el bloqueo del defensa de campo va ANTES del portero porque suele estar en la
+        // trayectoria antes que él —el balón le pasa por delante a mitad de vuelo, no en la línea—, y
+        // vale para cualquier tiro, a puerta o no: quien se cruza no sabe todavía si iba a entrar.
+        if (_ball.IsShot && TryBlockShot())
+        {
+            return;
+        }
+
         // AW-A (paso 1 de docs/plan-intercepcion-disparo.md): el duelo de parada se resuelve en el tick en
         // que el portero alcanza al balón, no al llegar a la línea. Va ANTES del "FlightTicksLeft <= 0"
         // para que el propio tick de llegada cuente como oportunidad —el balón está entonces sobre la
@@ -909,6 +918,62 @@ internal sealed class MatchEngine : IPerkWorld
     }
 
     /// <summary>
+    /// ¿Bloquea un jugador de campo del equipo defensor el tiro en vuelo en este tick? (AW-A, paso 3,
+    /// <c>docs/plan-intercepcion-disparo.md</c> §5). Es <see cref="TryIntercept"/> aplicado al disparo:
+    /// mismo radio (<c>pass.interceptRadiusCells</c>), misma probabilidad
+    /// (<see cref="InterceptChance"/>) reducida por <c>shot.blockChancePercent</c>, y un solo intento por
+    /// jugador y disparo (<c>BlockAttempted</c>). El portero queda fuera: tiene su propio mecanismo en
+    /// <see cref="TryGoalkeeperReach"/> y sumar los dos le daría dos oportunidades por el mismo tiro.
+    /// <para>
+    /// Un tiro bloqueado deja el balón <b>suelto</b> donde estaba, no en posesión del que bloquea: un
+    /// bloqueo es un rebote, no un control. El último toque pasa al defensa, que es lo que decide el saque
+    /// si el balón se marcha. Los contadores ya hechos en <c>LaunchShot</c> (<c>Shots</c>,
+    /// <c>ShotsOnTarget</c>) no se deshacen: el tiro se intentó y, en el marcador de intenciones, iba
+    /// donde iba; lo que el bloqueo interrumpe es la <b>llegada</b>.
+    /// </para>
+    /// </summary>
+    private bool TryBlockShot()
+    {
+        var shooter = _ball.Shooter;
+        if (shooter is null)
+        {
+            return false;
+        }
+
+        var pass = _tuning.Pass;
+        for (int i = 0; i < _players.Length; i++)
+        {
+            var player = _players[i];
+            if (player.Team == shooter.Team || !player.IsOutfield || !CanTouchBall(player)
+                || _ball.BlockAttempted[i])
+            {
+                continue;
+            }
+
+            if (Vec2.Distance(player.Position, _ball.Position) >= pass.InterceptRadiusCells)
+            {
+                continue;
+            }
+
+            _ball.BlockAttempted[i] = true;
+            int chance = Bounded(BlockChance(InterceptChance(player, shooter), _tuning.Shot.BlockChancePercent));
+            if (!_rng.Chance(chance))
+            {
+                continue;
+            }
+
+            Emit(EventType.ShotBlocked, "blocked", player, opponent: shooter);
+            _report.ShotsBlocked[player.Team]++;
+            _ball.SetLoose(new Vec2(0f, 0f));
+            _ball.LastTouchTeam = player.Team;
+            _ball.LastTouchPlayer = player;
+            return true;
+        }
+
+        return false;
+    }
+
+    /// <summary>
     /// ¿Alcanza el portero el balón en este tick? (AW-A, paso 1). Traducción literal del bucle por ciclos
     /// de librcsc/HELIOS-base (<c>docs/referencia-motores-futbol.md</c> §1): el tick es el paso del bucle,
     /// así que no hay nada que precalcular. Devuelve true solo si el duelo acabó en parada; si el portero
@@ -950,6 +1015,14 @@ internal sealed class MatchEngine : IPerkWorld
     /// </summary>
     internal static bool WithinSaveReach(Vec2 goalkeeper, Vec2 ball, float reachCells) =>
         Vec2.Distance(goalkeeper, ball) < reachCells;
+
+    /// <summary>
+    /// Cuota de bloqueo de un tiro (AW-A, paso 3): la de intercepción del pase reducida por
+    /// <c>shot.blockChancePercent</c>. Aritmética entera con truncamiento (RT-023), sin acotar: el suelo y
+    /// el techo los pone <see cref="Bounded"/> en quien llama, como en el resto de canales.
+    /// </summary>
+    internal static int BlockChance(int interceptChance, int blockChancePercent) =>
+        interceptChance * blockChancePercent / 100;
 
     /// <summary>
     /// Acota una probabilidad de <b>resolución del balón</b> al suelo y al techo únicos de la ADR 0050 P4
@@ -1386,6 +1459,7 @@ internal sealed class MatchEngine : IPerkWorld
         _ball.LastTouchPlayer = shooter;
         _ball.LastTouchTeam = shooter.Team;
         _ball.SaveAttempted = false;
+        Array.Clear(_ball.BlockAttempted);
 
         shooter.EnterState(PlayerState.Positioning, 0);
     }

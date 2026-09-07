@@ -349,6 +349,11 @@
           "type": "integer",
           "minimum": 0,
           "maximum": 100
+        },
+        "blockChancePercent": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 100
         }
       },
       "required": [
@@ -359,7 +364,8 @@
         "pressurePenalty",
         "offTargetBase",
         "offTargetDistanceFactor",
-        "penaltyQualityBonus"
+        "penaltyQualityBonus",
+        "blockChancePercent"
       ],
       "additionalProperties": false
     },

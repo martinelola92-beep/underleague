@@ -74,6 +74,15 @@ internal sealed class Ball
     /// <summary>Un hueco por jugador: si ya intentó interceptar el pase en vuelo actual (§3.7).</summary>
     public bool[] InterceptAttempted { get; set; } = Array.Empty<bool>();
 
+    /// <summary>
+    /// Un hueco por jugador: si ya intentó bloquear el tiro en vuelo actual (AW-A, paso 3). Es el
+    /// equivalente para el disparo de <see cref="InterceptAttempted"/>, y va aparte a propósito: durante
+    /// un tiro <c>TryIntercept</c> no corre (se salta con <c>!IsShot</c>), así que
+    /// <see cref="InterceptAttempted"/> conserva el estado del último pase y no se limpia por su cuenta.
+    /// Se limpia al lanzar cada tiro.
+    /// </summary>
+    public bool[] BlockAttempted { get; set; } = Array.Empty<bool>();
+
     /// <summary>Deja el balón suelto en su posición actual con la velocidad indicada.</summary>
     public void SetLoose(Vec2 velocity)
     {

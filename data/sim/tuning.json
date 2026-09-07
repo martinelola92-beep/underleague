@@ -48,7 +48,7 @@
     "lostKnockdownTicks": 6
   },
   "shot": {
-    "_doc": "ADR 0050 P2: el tiro a puerta se tira contra el PROMEDIO DE DOS, asi que offTargetBase se reexpresa en la escala triangular -F(p)=2p2 por debajo del centro- y pasa de 2500 a 3280 para conservar el mismo 70,5 por ciento de tiros a puerta que antes; lo que cambia es la pendiente, no la media. baseQuality y los demas terminos son calidad del remate (0-100), no una probabilidad, y no los toca ni P2 ni el suelo y techo de P4. Medido en docs/fase2-diseno.md 22.",
+    "_doc": "ADR 0050 P2: el tiro a puerta se tira contra el PROMEDIO DE DOS, asi que offTargetBase se reexpresa en la escala triangular -F(p)=2p2 por debajo del centro- y pasa de 2500 a 3280 para conservar el mismo 70,5 por ciento de tiros a puerta que antes; lo que cambia es la pendiente, no la media. baseQuality y los demas terminos son calidad del remate (0-100), no una probabilidad, y no los toca ni P2 ni el suelo y techo de P4. Medido en docs/fase2-diseno.md 22. AW-A paso 3 (docs/plan-intercepcion-disparo.md 5): blockChancePercent reduce la cuota de intercepcion que ya calcula InterceptChance cuando quien la intenta es un jugador de campo del equipo defensor sobre un TIRO en vuelo, no sobre un pase; el portero no pasa por aqui, tiene su propio radio en save.",
     "baseQuality": 4625,
     "techniqueFactor": 14,
     "strengthFactor": 4,
@@ -56,7 +56,8 @@
     "pressurePenalty": 800,
     "offTargetBase": 3280,
     "offTargetDistanceFactor": 250,
-    "penaltyQualityBonus": 15
+    "penaltyQualityBonus": 15,
+    "blockChancePercent": 50
   },
   "save": {
     "_doc": "ADR 0041: el atributo relevante del portero se mide contra la TECNICA DEL REMATADOR, no contra el 50 fijo; el segundo termino es lo que este remate concreto tuvo de bueno o de malo respecto de qualityPivot (distancia, presion, penalti). basePercent sube de 50 a 54 para compensar el cambio de referencia del primer termino. ADR 0050 P2: la tirada de este canal ya no es una uniforme sino el PROMEDIO DE DOS, asi que la base se reexpresa en la escala nueva para no mover el punto de trabajo: la probabilidad efectiva es la acumulada triangular, F(p)=2p2 por debajo del centro y 1-2(1-p)2 por encima. basePercent baja de 53 a 51 para conservar la misma tasa de paradas; el 5-95 interno se queda porque acota el PORCENTAJE antes de sumarle el canal de perk, y sobre el resultado manda ya el suelo y techo unicos de P4. Medido en docs/fase2-diseno.md 22. AW-A paso 1 (docs/plan-intercepcion-disparo.md 3): reachCells es la distancia en casillas a la que el portero alcanza el balon en vuelo. El duelo se disputa en el tick en que la distancia baja de este radio, una sola vez por disparo; si el portero no llega nunca, es gol sin duelo. Valor de partida 0,9, el mismo que pass.interceptRadiusCells, para no introducir un numero nuevo sin motivo. AW-A paso 2 (docs/plan-intercepcion-disparo.md 4): diveReachCells es un segundo radio, mayor que reachCells, que solo se intenta en el tick de llegada del balon a la linea y unicamente si el radio normal nunca disputo el duelo durante el vuelo; representa la estirada desesperada del portero desplazado, y por eso el duelo se resuelve con divePenaltyPercent restado de savePercent antes del clamp 5-95, en vez de con la formula intacta del radio normal. Traduce el par usual/optimista de gfootball (AI_GetTimeNeededForDistance_ms). Valores de partida 1,5 y 20.",

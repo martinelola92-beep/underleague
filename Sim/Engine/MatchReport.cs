@@ -121,6 +121,14 @@ public sealed class MatchReport
     /// </summary>
     public int[] Saves { get; }
 
+    /// <summary>
+    /// Tiros bloqueados por un jugador de campo, por equipo, [2] (AW-A, paso 3 de
+    /// `docs/plan-intercepcion-disparo.md`). Índice = equipo del que bloquea, no el del tirador; se
+    /// incrementa junto al evento <see cref="EventType.ShotBlocked"/> en <c>TryBlockShot</c>. No es
+    /// <see cref="Blocks"/>, que cuenta bloqueos <b>sin balón</b> (ADR 0030 §2).
+    /// </summary>
+    public int[] ShotsBlocked { get; }
+
     /// <summary>Entradas totales.</summary>
     public int Tackles { get; }
 
@@ -204,6 +212,7 @@ public sealed class MatchReport
         Shots = (int[])builder.Shots.Clone();
         ShotsOnTarget = (int[])builder.ShotsOnTarget.Clone();
         Saves = (int[])builder.Saves.Clone();
+        ShotsBlocked = (int[])builder.ShotsBlocked.Clone();
         Tackles = builder.Tackles;
         Blocks = builder.Blocks;
         Fouls = builder.Fouls;
@@ -270,6 +279,9 @@ internal sealed class MatchReportBuilder
 
     /// <summary>Paradas por equipo (equipo del portero); se incrementa junto a cada evento Save (paso 0).</summary>
     public int[] Saves { get; } = new int[2];
+
+    /// <summary>Tiros bloqueados por equipo (equipo del que bloquea); junto a cada ShotBlocked (paso 3).</summary>
+    public int[] ShotsBlocked { get; } = new int[2];
 
     /// <summary>Entradas totales; se incrementa al resolver cada Tackle (3.7).</summary>
     public int Tackles { get; set; }

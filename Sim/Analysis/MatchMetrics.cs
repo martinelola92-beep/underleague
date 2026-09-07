@@ -24,7 +24,8 @@ public readonly record struct MatchSummary(
     int BallThird1,
     int BallThird2,
     int ShotsOnTarget,
-    int Saves)
+    int Saves,
+    int ShotsBlocked)
 {
     /// <summary>Resumen de un informe de partido entre homeId (equipo 0) y awayId (equipo 1).</summary>
     public static MatchSummary FromReport(MatchReport report, string homeId, string awayId) => new(
@@ -44,7 +45,8 @@ public readonly record struct MatchSummary(
         report.BallTicksByThird[1],
         report.BallTicksByThird[2],
         report.ShotsOnTarget[0] + report.ShotsOnTarget[1],
-        report.Saves[0] + report.Saves[1]);
+        report.Saves[0] + report.Saves[1],
+        report.ShotsBlocked[0] + report.ShotsBlocked[1]);
 }
 
 /// <summary>Un emparejamiento del lote con la calidad de cada equipo, para betterTeamWinRate.</summary>
@@ -102,6 +104,15 @@ public static class MatchMetrics
     /// <summary>Nombre de la métrica informativa de porcentaje de tiros a puerta que el portero para (paso 0).</summary>
     public const string SaveRate = "saveRate";
 
+    /// <summary>
+    /// Nombre de la métrica informativa de porcentaje de tiros que un jugador de campo bloquea en vuelo
+    /// (AW-A, paso 3). El denominador son <b>todos</b> los tiros, no solo los que iban a puerta: el
+    /// bloqueo ocurre antes de que se sepa si el disparo habría entrado, y un defensa se cruza igual ante
+    /// un tiro que se iba fuera. Es la diferencia con <c>saveRate</c>, que sí depende de
+    /// <c>shotsOnTarget</c> porque el portero solo dispute lo que va entre los tres palos.
+    /// </summary>
+    public const string BlockRate = "blockRate";
+
     /// <summary>Prefijo del nombre de las métricas de tasa de victoria del mejor equipo.</summary>
     public const string BetterTeamWinRatePrefix = "betterTeamWinRate_";
 
@@ -146,6 +157,7 @@ public static class MatchMetrics
         long goals = 0;
         long shotsOnTarget = 0;
         long saves = 0;
+        long shotsBlocked = 0;
         int scorelineCount = 0;
         int overFiveCount = 0;
         int drawCount = 0;
@@ -163,6 +175,7 @@ public static class MatchMetrics
             goals += match.HomeGoals + match.AwayGoals;
             shotsOnTarget += match.ShotsOnTarget;
             saves += match.Saves;
+            shotsBlocked += match.ShotsBlocked;
             thirds[0] += match.BallThird0;
             thirds[1] += match.BallThird1;
             thirds[2] += match.BallThird2;
@@ -221,6 +234,9 @@ public static class MatchMetrics
 
         double saveRate = shotsOnTarget > 0 ? 100.0 * saves / shotsOnTarget : 0.0;
         rows.Add(new MetricResult(SaveRate, saveRate, null, null, "INFO"));
+
+        double blockRate = shots > 0 ? 100.0 * shotsBlocked / shots : 0.0;
+        rows.Add(new MetricResult(BlockRate, blockRate, null, null, "INFO"));
 
         rows.AddRange(BetterTeamWinRates(matches, pairings));
         return rows;

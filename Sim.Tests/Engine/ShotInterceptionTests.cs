@@ -203,6 +203,129 @@ public sealed class ShotInterceptionTests
         }
     }
 
+    /// <summary>
+    /// AW-A paso 3 (§5 del plan): con el ajuste real (<c>shot.blockChancePercent</c> 50 sobre el mismo
+    /// radio y la misma cuota que la intercepción del pase) los jugadores de campo bloquean tiros, el
+    /// contador del informe cuadra con los eventos <c>SHOT_BLOCKED</c>, y no puede haber más bloqueos que
+    /// tiros: un tiro se bloquea una vez o ninguna.
+    /// </summary>
+    [Fact]
+    public void FieldPlayersBlockShotsWithTheRealTuning()
+    {
+        var totals = Play(Catalog);
+
+        Assert.True(totals.Blocked > 0, "con el ajuste real tenía que haber tiros bloqueados");
+        Assert.Equal(totals.Blocked, totals.BlockedEvents);
+        Assert.True(
+            totals.Blocked <= totals.Shots,
+            $"no puede haber más bloqueos ({totals.Blocked}) que tiros ({totals.Shots})");
+    }
+
+    /// <summary>
+    /// Un tiro bloqueado deja el balón <b>suelto</b>, no en posesión de nadie (un bloqueo es un rebote), y
+    /// corta el vuelo: ni gol ni parada por ese disparo. Se comprueba sobre la traza, que es lo único que
+    /// el motor expone del balón: en el tick del bloqueo no hay dueño y el balón ya no vuela. De paso
+    /// confirma que quien bloquea nunca es un portero —tiene su propio mecanismo en
+    /// <see cref="MatchEngine"/>, y sumarle este le daría dos oportunidades por el mismo tiro—.
+    /// </summary>
+    [Fact]
+    public void ABlockedShotLeavesTheBallLooseAndIsNeverTheGoalkeeper()
+    {
+        int blocked = 0;
+        for (ulong seed = 1; seed <= Matches; seed++)
+        {
+            var result = Simulator.Run(
+                TestMatches.Reference(Catalog, seed), seed, Catalog, new SimConfig(CollectLog: false, Trace: true));
+            var trace = result.Trace!;
+
+            foreach (var e in result.Events)
+            {
+                if (e.Type != EventType.ShotBlocked)
+                {
+                    continue;
+                }
+
+                blocked++;
+                Assert.Equal("blocked", e.Detail);
+
+                var blocker = trace.Players.Single(p => p.Id == e.Actor);
+                Assert.NotEqual(Position.Goalkeeper, blocker.Role);
+
+                int frame = trace.FrameOfTick(e.Tick);
+                Assert.Equal(-1, trace.BallOwnerAt(frame));
+                Assert.False(trace.BallInFlightAt(frame), $"semilla {seed}: el balón seguía volando tras el bloqueo");
+            }
+        }
+
+        Assert.True(blocked > 0, "el escenario tenía que producir bloqueos");
+    }
+
+    /// <summary>
+    /// Un intento por jugador y disparo (<c>Ball.BlockAttempted</c>). Con un radio enorme todos los
+    /// defensas de campo están dentro de él desde el primer tick de vuelo, así que **todas** sus tiradas
+    /// caen en ese tick; si el hueco por jugador no cortara, los que fallan volverían a tirar en cada tick
+    /// posterior y aparecerían bloqueos retrasados. La cuota se deja en la real para que fallen muchos: un
+    /// escenario en el que el primer defensa bloquea siempre no probaría nada. El desfase de 1 tick es el
+    /// mismo del duelo del portero.
+    /// </summary>
+    [Fact]
+    public void EachDefenderOnlyDisputesEachShotOnce()
+    {
+        var catalog = WithBlock(Catalog.Tuning.Shot.BlockChancePercent, radius: 50f);
+        int blocked = 0;
+
+        for (ulong seed = 1; seed <= Matches; seed++)
+        {
+            var result = Simulator.Run(TestMatches.Reference(catalog, seed), seed, catalog, new SimConfig(CollectLog: false));
+            int shotTick = -1;
+            foreach (var e in result.Events)
+            {
+                if (e.Type == EventType.Shot && e.Detail != "attempted")
+                {
+                    shotTick = e.Tick;
+                }
+                else if (e.Type == EventType.ShotBlocked)
+                {
+                    blocked++;
+                    Assert.True(
+                        shotTick >= 0 && e.Tick - shotTick <= 1,
+                        $"semilla {seed}: bloqueo en el tick {e.Tick} de un disparo del tick {shotTick}: hubo una segunda tirada");
+                }
+            }
+        }
+
+        Assert.True(blocked > 0, "el escenario tenía que producir bloqueos");
+    }
+
+    /// <summary>
+    /// Fuera del radio no se bloquea: con <c>pass.interceptRadiusCells</c> a 0 la distancia nunca es menor
+    /// que el radio, así que no hay un solo bloqueo en 50 partidos ni siquiera con la cuota al máximo. Es
+    /// el mismo predicado del borde que ya usa la intercepción del pase, visto desde el lado que lo apaga.
+    /// </summary>
+    [Fact]
+    public void ADefenderOutsideTheRadiusNeverBlocks()
+    {
+        var totals = Play(WithBlock(100, radius: 0f));
+
+        Assert.True(totals.Shots > 0, "el escenario tenía que producir tiros");
+        Assert.Equal(0, totals.Blocked);
+        Assert.Equal(0, totals.BlockedEvents);
+    }
+
+    /// <summary>
+    /// Aritmética exacta del factor (RT-023): la cuota de bloqueo es la de intercepción por
+    /// <c>blockChancePercent</c> entre 100, en enteros y truncando hacia cero. El acotado al suelo y al
+    /// techo lo pone quien llama, no este cálculo.
+    /// </summary>
+    [Fact]
+    public void TheBlockChanceIsTheInterceptChanceScaledDown()
+    {
+        Assert.Equal(125, MatchEngine.BlockChance(250, 50));
+        Assert.Equal(3, MatchEngine.BlockChance(7, 50));
+        Assert.Equal(0, MatchEngine.BlockChance(250, 0));
+        Assert.Equal(250, MatchEngine.BlockChance(250, 100));
+    }
+
     /// <summary>Misma división entera que <c>MatchEngine.FlightTicks</c>, que es privado.</summary>
     private static int FlightTicks(float distance, int speedMilli)
     {
@@ -210,6 +333,20 @@ public sealed class ShotInterceptionTests
         int ticks = (distanceMilli + speedMilli - 1) / speedMilli;
         return ticks < 1 ? 1 : ticks;
     }
+
+    /// <summary>Ajuste del bloqueo de tiro (AW-A paso 3), opcionalmente con otro radio de intercepción.</summary>
+    private static Catalog WithBlock(int blockChancePercent, float? radius = null) =>
+        Catalog with
+        {
+            Tuning = Catalog.Tuning with
+            {
+                Shot = Catalog.Tuning.Shot with { BlockChancePercent = blockChancePercent },
+                Pass = Catalog.Tuning.Pass with
+                {
+                    InterceptRadiusCells = radius ?? Catalog.Tuning.Pass.InterceptRadiusCells
+                }
+            }
+        };
 
     private static Catalog WithReach(float reach, float diveReach = 1.5f) =>
         Catalog with
@@ -229,11 +366,17 @@ public sealed class ShotInterceptionTests
             totals.Saves += result.Report.Saves[0] + result.Report.Saves[1];
             totals.Goals += result.Report.Goals[0] + result.Report.Goals[1];
             totals.ShotsOnTarget += result.Report.ShotsOnTarget[0] + result.Report.ShotsOnTarget[1];
+            totals.Shots += result.Report.Shots[0] + result.Report.Shots[1];
+            totals.Blocked += result.Report.ShotsBlocked[0] + result.Report.ShotsBlocked[1];
             foreach (var e in result.Events)
             {
                 if (e.Type == EventType.Save)
                 {
                     totals.SaveEvents++;
+                }
+                else if (e.Type == EventType.ShotBlocked)
+                {
+                    totals.BlockedEvents++;
                 }
             }
         }
@@ -247,5 +390,8 @@ public sealed class ShotInterceptionTests
         public int Goals;
         public int ShotsOnTarget;
         public int SaveEvents;
+        public int Shots;
+        public int Blocked;
+        public int BlockedEvents;
     }
 }

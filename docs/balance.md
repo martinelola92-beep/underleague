@@ -111,8 +111,14 @@ sistema o para explicar una fila gating. El cálculo vive en el mismo `Sim/Analy
 | `goalsPerMatch` | Goles totales (ambos equipos) por partido | INFO |
 | `shotsOnTargetShare` | Porcentaje de tiros que van a puerta (tiros a puerta / tiros totales) | INFO |
 | `saveRate` | Porcentaje de tiros a puerta que el portero para (paradas / tiros a puerta) | INFO |
+| `blockRate` | Porcentaje de tiros que un jugador de campo bloquea en vuelo (bloqueos / tiros **totales**) | INFO |
 
-Las tres últimas se añaden en el paso 0 de `docs/plan-intercepcion-disparo.md`: instrumentación pura para
+`blockRate` es del paso 3 (AW-A, bloqueo del defensa) y se mide sobre los tiros totales, no sobre los que
+iban a puerta: el bloqueo ocurre antes de saber si el disparo habría entrado, y un defensa se cruza igual
+ante un tiro que se iba fuera. Es justo la diferencia con `saveRate`, cuyo denominador sí es
+`shotsOnTarget` porque el portero solo disputa lo que va entre los tres palos.
+
+Las tres anteriores se añaden en el paso 0 de `docs/plan-intercepcion-disparo.md`: instrumentación pura para
 poder medir el efecto de los pasos siguientes (AW-A, portero debe llegar al balón) sin cambiar nada del
 motor todavía.
 

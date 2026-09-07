@@ -222,6 +222,7 @@ public sealed class MatchRulesTests
             int goals = 0;
             int shots = 0;
             int saves = 0;
+            int shotsBlocked = 0;
             int tackles = 0;
             int blocks = 0;
             int fouls = 0;
@@ -240,6 +241,9 @@ public sealed class MatchRulesTests
                         break;
                     case EventType.Save:
                         saves++;
+                        break;
+                    case EventType.ShotBlocked:
+                        shotsBlocked++;
                         break;
                     case EventType.Tackle:
                         // El bloqueo sin balón (ADR 0030 §2) reutiliza el tipo TACKLE con Detail propio y
@@ -271,6 +275,7 @@ public sealed class MatchRulesTests
             Assert.Equal(report.Goals[0] + report.Goals[1], goals);
             Assert.Equal(report.Shots[0] + report.Shots[1], shots);
             Assert.Equal(report.Saves[0] + report.Saves[1], saves);
+            Assert.Equal(report.ShotsBlocked[0] + report.ShotsBlocked[1], shotsBlocked);
             Assert.Equal(report.Tackles, tackles);
             Assert.Equal(report.Blocks, blocks);
             Assert.Equal(report.Fouls, fouls);

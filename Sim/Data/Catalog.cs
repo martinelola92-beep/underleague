@@ -325,7 +325,7 @@ public sealed record PassTuning(int BaseSuccess, int TechniqueFactor, int Distan
 public sealed record DribbleTuning(int BaseWin, int AttackerTechniqueFactor, int DefenderSpeedSharePercent, int LostKnockdownTicks);
 
 /// <summary>tuning.shot.</summary>
-public sealed record ShotTuning(int BaseQuality, int TechniqueFactor, int StrengthFactor, int DistancePenaltyPerCell, int PressurePenalty, int OffTargetBase, int OffTargetDistanceFactor, int PenaltyQualityBonus);
+public sealed record ShotTuning(int BaseQuality, int TechniqueFactor, int StrengthFactor, int DistancePenaltyPerCell, int PressurePenalty, int OffTargetBase, int OffTargetDistanceFactor, int PenaltyQualityBonus, int BlockChancePercent);
 
 /// <summary>tuning.save.</summary>
 public sealed record SaveTuning(int BasePercent, int CloseRangeCells, int AttributeWeightPercent, int ConsecutiveShotDecayPercent, int QualityWeight, int QualityPivot, float ReachCells, float DiveReachCells, int DivePenaltyPercent);
