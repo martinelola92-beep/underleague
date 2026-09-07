@@ -757,14 +757,15 @@ public static class DataLoader
 
     private static SaveTuning ParseSave(Json node)
     {
-        node.EnsureKnownKeys("basePercent", "closeRangeCells", "attributeWeightPercent", "consecutiveShotDecayPercent", "qualityWeight", "qualityPivot");
+        node.EnsureKnownKeys("basePercent", "closeRangeCells", "attributeWeightPercent", "consecutiveShotDecayPercent", "qualityWeight", "qualityPivot", "reachCells");
         return new SaveTuning(
             node.Prop("basePercent").AsInt(),
             node.Prop("closeRangeCells").AsInt(),
             node.Prop("attributeWeightPercent").AsInt(),
             node.Prop("consecutiveShotDecayPercent").AsInt(),
             node.Prop("qualityWeight").AsInt(),
-            node.Prop("qualityPivot").AsInt());
+            node.Prop("qualityPivot").AsInt(),
+            node.Prop("reachCells").AsFloat());
     }
 
     private static TackleTuning ParseTackle(Json node)

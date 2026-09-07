@@ -848,6 +848,16 @@ internal sealed class MatchEngine : IPerkWorld
             return;
         }
 
+        // AW-A (paso 1 de docs/plan-intercepcion-disparo.md): el duelo de parada se resuelve en el tick en
+        // que el portero alcanza al balón, no al llegar a la línea. Va ANTES del "FlightTicksLeft <= 0"
+        // para que el propio tick de llegada cuente como oportunidad —el balón está entonces sobre la
+        // línea, donde el portero asentado siempre está dentro del radio—, y para no partir el intento en
+        // dos sitios: aquí es el único que lo hace.
+        if (_ball.IsShot && _ball.ShotOnTarget && !_ball.SaveAttempted && TryGoalkeeperReach())
+        {
+            return;
+        }
+
         if (_ball.FlightTicksLeft <= 0)
         {
             if (_ball.IsShot)
@@ -897,6 +907,49 @@ internal sealed class MatchEngine : IPerkWorld
 
         return false;
     }
+
+    /// <summary>
+    /// ¿Alcanza el portero el balón en este tick? (AW-A, paso 1). Traducción literal del bucle por ciclos
+    /// de librcsc/HELIOS-base (<c>docs/referencia-motores-futbol.md</c> §1): el tick es el paso del bucle,
+    /// así que no hay nada que precalcular. Devuelve true solo si el duelo acabó en parada; si el portero
+    /// llegó y falló, el balón sigue volando y entra sin segundo duelo (<c>SaveAttempted</c>), y el evento
+    /// <c>Goal</c> se emite donde siempre, cuando el balón llega a la línea.
+    /// <para>
+    /// Si el portero no puede tocar el balón (derribado, lesionado, expulsado) o no está, no se marca
+    /// nada: puede volver a intentarlo en un tick posterior del mismo vuelo. Si no lo consigue nunca,
+    /// nunca hay duelo, que es la regla: sin portero al alcance no hay parada.
+    /// </para>
+    /// </summary>
+    private bool TryGoalkeeperReach()
+    {
+        var shooter = _ball.Shooter;
+        if (shooter is null)
+        {
+            return false;
+        }
+
+        var goalkeeper = _goalkeepers[1 - shooter.Team];
+        if (goalkeeper is null || !CanTouchBall(goalkeeper))
+        {
+            return false;
+        }
+
+        if (!WithinSaveReach(goalkeeper.Position, _ball.Position, _tuning.Save.ReachCells))
+        {
+            return false;
+        }
+
+        _ball.SaveAttempted = true;
+        return ResolveSaveDuel(goalkeeper, shooter);
+    }
+
+    /// <summary>
+    /// Borde del alcance del portero (AW-A, paso 1): estrictamente dentro del radio, igual que el radio de
+    /// intercepción del pase en <see cref="TryIntercept"/>. Comparación de <c>float</c> entre posiciones,
+    /// que es el único uso de coma flotante que RT-023 permite.
+    /// </summary>
+    internal static bool WithinSaveReach(Vec2 goalkeeper, Vec2 ball, float reachCells) =>
+        Vec2.Distance(goalkeeper, ball) < reachCells;
 
     /// <summary>
     /// Acota una probabilidad de <b>resolución del balón</b> al suelo y al techo únicos de la ADR 0050 P4
@@ -1332,6 +1385,7 @@ internal sealed class MatchEngine : IPerkWorld
         _ball.FlightTicksLeft = ticks;
         _ball.LastTouchPlayer = shooter;
         _ball.LastTouchTeam = shooter.Team;
+        _ball.SaveAttempted = false;
 
         shooter.EnterState(PlayerState.Positioning, 0);
     }
@@ -1374,44 +1428,58 @@ internal sealed class MatchEngine : IPerkWorld
             return;
         }
 
-        var goalkeeper = _goalkeepers[defendingTeam];
-        if (goalkeeper is not null && goalkeeper.OnPitch)
+        // AW-A (paso 1): el duelo de parada ya no se resuelve aquí. Si el portero alcanzó el balón en
+        // algún tick del vuelo, TryGoalkeeperReach lo disputó entonces —y si lo ganó, este método ni se
+        // llega a ejecutar porque el balón dejó de estar en vuelo—. Llegar hasta aquí con el tiro entre
+        // los tres palos significa una de dos: el portero nunca estuvo dentro de save.reachCells, o
+        // estuvo y perdió el duelo. En los dos casos es gol, y se emite en el tick en que el balón llega
+        // a la línea, no en el que el portero fue superado.
+        ScoreGoal(shooter);
+    }
+
+    /// <summary>
+    /// Duelo de parada (ADR 0041, ADR 0050 P2 y P4). Sale de <see cref="ResolveShotArrival"/> sin cambiar
+    /// ni un término: lo único que cambia con AW-A es <b>cuándo</b> se llama (el tick en que el portero
+    /// alcanza el balón, <see cref="TryGoalkeeperReach"/>) y que quien llama decide qué hacer si falla.
+    /// </summary>
+    /// <returns>True si el portero paró y se quedó el balón; false si el tiro sigue su camino.</returns>
+    private bool ResolveSaveDuel(MatchPlayer goalkeeper, MatchPlayer shooter)
+    {
+        int defendingTeam = goalkeeper.Team;
+        var save = _tuning.Save;
+        int relevant = _ball.ShotDistance <= save.CloseRangeCells
+            ? goalkeeper.Speed + goalkeeper.SaveBonusClose
+            : goalkeeper.Strength + goalkeeper.SaveBonusFar;
+
+        int decayFactor = Math.Clamp((100 - goalkeeper.Stamina) * 100 / 50, 20, 200);
+        int decay = save.ConsecutiveShotDecayPercent * goalkeeper.ConsecutiveSaves * decayFactor / 100;
+        // ADR 0041: el portero se mide contra el rematador, no contra el 50. El primer término es el
+        // duelo (su atributo relevante frente a la técnica del que remata) y el segundo lo que este
+        // remate concreto tuvo de bueno o de malo respecto del disparo medio (qualityPivot):
+        // distancia, presión y penalti. Queda un resto de deriva por nivel —la calidad del disparo
+        // sigue subiendo con los atributos del rematador—, pero es de un punto y pico a nivel 8
+        // frente a los cuatro que tenía la fórmula absoluta, y en el sentido contrario.
+        int savePercent = Math.Clamp(
+            save.BasePercent
+            + ((relevant - shooter.Technique) * save.AttributeWeightPercent / 50)
+            - ((_ball.ShotQuality - save.QualityPivot) * save.QualityWeight / 100)
+            - decay,
+            5,
+            95);
+
+        // ADR 0050 P2 y P4: promedio de dos tiradas y el suelo y techo únicos, que sustituyen al
+        // 0-10.000 de aquí; el 5-95 de savePercent lo hereda esta misma cota.
+        if (!_rng.ChanceAveraged(Bounded(ProbabilityScale.ApplyAveraged(
+            Bounded(savePercent * 100), Odds(goalkeeper, ProbabilityKind.Save)))))
         {
-            var save = _tuning.Save;
-            int relevant = _ball.ShotDistance <= save.CloseRangeCells
-                ? goalkeeper.Speed + goalkeeper.SaveBonusClose
-                : goalkeeper.Strength + goalkeeper.SaveBonusFar;
-
-            int decayFactor = Math.Clamp((100 - goalkeeper.Stamina) * 100 / 50, 20, 200);
-            int decay = save.ConsecutiveShotDecayPercent * goalkeeper.ConsecutiveSaves * decayFactor / 100;
-            // ADR 0041: el portero se mide contra el rematador, no contra el 50. El primer término es el
-            // duelo (su atributo relevante frente a la técnica del que remata) y el segundo lo que este
-            // remate concreto tuvo de bueno o de malo respecto del disparo medio (qualityPivot):
-            // distancia, presión y penalti. Queda un resto de deriva por nivel —la calidad del disparo
-            // sigue subiendo con los atributos del rematador—, pero es de un punto y pico a nivel 8
-            // frente a los cuatro que tenía la fórmula absoluta, y en el sentido contrario.
-            int savePercent = Math.Clamp(
-                save.BasePercent
-                + ((relevant - shooter.Technique) * save.AttributeWeightPercent / 50)
-                - ((_ball.ShotQuality - save.QualityPivot) * save.QualityWeight / 100)
-                - decay,
-                5,
-                95);
-
-            // ADR 0050 P2 y P4: promedio de dos tiradas y el suelo y techo únicos, que sustituyen al
-            // 0-10.000 de aquí; el 5-95 de savePercent lo hereda esta misma cota.
-            if (_rng.ChanceAveraged(Bounded(ProbabilityScale.ApplyAveraged(
-                Bounded(savePercent * 100), Odds(goalkeeper, ProbabilityKind.Save)))))
-            {
-                goalkeeper.ConsecutiveSaves++;
-                SetOwner(goalkeeper);
-                _report.Saves[defendingTeam]++;
-                Emit(EventType.Save, _ball.ShotIsPenalty ? "penalty" : "save", goalkeeper, opponent: shooter);
-                return;
-            }
+            return false;
         }
 
-        ScoreGoal(shooter);
+        goalkeeper.ConsecutiveSaves++;
+        SetOwner(goalkeeper);
+        _report.Saves[defendingTeam]++;
+        Emit(EventType.Save, _ball.ShotIsPenalty ? "penalty" : "save", goalkeeper, opponent: shooter);
+        return true;
     }
 
     private void ScoreGoal(MatchPlayer shooter)

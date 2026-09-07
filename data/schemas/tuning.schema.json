@@ -388,6 +388,11 @@
         },
         "qualityPivot": {
           "$ref": "#/$defs/percent"
+        },
+        "reachCells": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 20
         }
       },
       "required": [
@@ -396,7 +401,8 @@
         "attributeWeightPercent",
         "consecutiveShotDecayPercent",
         "qualityWeight",
-        "qualityPivot"
+        "qualityPivot",
+        "reachCells"
       ],
       "additionalProperties": false
     },

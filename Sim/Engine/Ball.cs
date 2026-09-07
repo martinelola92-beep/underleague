@@ -58,6 +58,13 @@ internal sealed class Ball
     /// <summary>True si el tiro en vuelo es un penalti (§3.8).</summary>
     public bool ShotIsPenalty { get; set; }
 
+    /// <summary>
+    /// Si el portero ya disputó este tiro (AW-A, paso 1): un solo duelo de parada por disparo, aunque el
+    /// balón siga volando después de perderlo. Es el equivalente para el tiro de
+    /// <see cref="InterceptAttempted"/> en el pase, y se limpia al lanzar cada tiro.
+    /// </summary>
+    public bool SaveAttempted { get; set; }
+
     /// <summary>Equipo del último jugador que tocó el balón; decide saques y recuperaciones.</summary>
     public int LastTouchTeam { get; set; } = -1;
 
