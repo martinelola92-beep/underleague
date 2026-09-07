@@ -393,6 +393,14 @@
           "type": "number",
           "minimum": 0,
           "maximum": 20
+        },
+        "diveReachCells": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 20
+        },
+        "divePenaltyPercent": {
+          "$ref": "#/$defs/percent"
         }
       },
       "required": [
@@ -402,7 +410,9 @@
         "consecutiveShotDecayPercent",
         "qualityWeight",
         "qualityPivot",
-        "reachCells"
+        "reachCells",
+        "diveReachCells",
+        "divePenaltyPercent"
       ],
       "additionalProperties": false
     },

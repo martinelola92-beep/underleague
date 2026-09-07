@@ -1432,8 +1432,29 @@ internal sealed class MatchEngine : IPerkWorld
         // algún tick del vuelo, TryGoalkeeperReach lo disputó entonces —y si lo ganó, este método ni se
         // llega a ejecutar porque el balón dejó de estar en vuelo—. Llegar hasta aquí con el tiro entre
         // los tres palos significa una de dos: el portero nunca estuvo dentro de save.reachCells, o
-        // estuvo y perdió el duelo. En los dos casos es gol, y se emite en el tick en que el balón llega
-        // a la línea, no en el que el portero fue superado.
+        // estuvo y perdió el duelo.
+        //
+        // AW-A (paso 2): en el primer caso —el radio normal nunca se disputó— queda una última
+        // oportunidad, la estirada: un radio más amplio, diveReachCells, con una penalización fija sobre
+        // savePercent. Solo se intenta aquí, en el tick de llegada, y solo una vez (si ganara, el balón ya
+        // no estaría en vuelo y este método ni se ejecutaría). Si la estirada también falla, o si el radio
+        // normal ya se había intentado, o si no hay portero disponible, es gol, y se emite en el tick en
+        // que el balón llega a la línea, no en el que el portero fue superado.
+        if (!_ball.SaveAttempted)
+        {
+            var goalkeeper = _goalkeepers[defendingTeam];
+            if (goalkeeper is not null
+                && CanTouchBall(goalkeeper)
+                && WithinSaveReach(goalkeeper.Position, _ball.Position, _tuning.Save.DiveReachCells))
+            {
+                _ball.SaveAttempted = true;
+                if (ResolveSaveDuel(goalkeeper, shooter, isDive: true))
+                {
+                    return;
+                }
+            }
+        }
+
         ScoreGoal(shooter);
     }
 
@@ -1441,9 +1462,13 @@ internal sealed class MatchEngine : IPerkWorld
     /// Duelo de parada (ADR 0041, ADR 0050 P2 y P4). Sale de <see cref="ResolveShotArrival"/> sin cambiar
     /// ni un término: lo único que cambia con AW-A es <b>cuándo</b> se llama (el tick en que el portero
     /// alcanza el balón, <see cref="TryGoalkeeperReach"/>) y que quien llama decide qué hacer si falla.
+    /// AW-A paso 2: <paramref name="isDive"/> marca la estirada del tick de llegada (radio
+    /// <c>diveReachCells</c>, mayor que <c>reachCells</c>, solo intentada si el radio normal nunca disputó
+    /// el duelo durante el vuelo); resta <c>divePenaltyPercent</c> de <c>savePercent</c> antes del clamp
+    /// final, sin tocar ningún otro término de la fórmula.
     /// </summary>
     /// <returns>True si el portero paró y se quedó el balón; false si el tiro sigue su camino.</returns>
-    private bool ResolveSaveDuel(MatchPlayer goalkeeper, MatchPlayer shooter)
+    private bool ResolveSaveDuel(MatchPlayer goalkeeper, MatchPlayer shooter, bool isDive = false)
     {
         int defendingTeam = goalkeeper.Team;
         var save = _tuning.Save;
@@ -1463,7 +1488,8 @@ internal sealed class MatchEngine : IPerkWorld
             save.BasePercent
             + ((relevant - shooter.Technique) * save.AttributeWeightPercent / 50)
             - ((_ball.ShotQuality - save.QualityPivot) * save.QualityWeight / 100)
-            - decay,
+            - decay
+            - (isDive ? save.DivePenaltyPercent : 0),
             5,
             95);
 

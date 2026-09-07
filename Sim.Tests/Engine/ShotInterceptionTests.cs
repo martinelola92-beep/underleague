@@ -47,11 +47,18 @@ public sealed class ShotInterceptionTests
     /// radio, así que no hay un solo duelo en 50 partidos y **todo** tiro a puerta acaba en gol. Es el
     /// escenario del portero inmovilizado lejos de la trayectoria del plan, expresado sobre el mismo
     /// predicado. El contraste con el radio real mide lo que la regla decide: 400 goles frente a 181.
+    /// <para>
+    /// AW-A paso 2: <c>diveReachCells</c> también va a 0 aquí. Si se dejara en su valor real (1,5) con
+    /// <c>reachCells</c> a 0, la estirada del tick de llegada SÍ se dispararía —el portero asentado casi
+    /// siempre está dentro de 1,5 casillas del balón cuando este llega a la línea— y el escenario dejaría
+    /// de ser "portero nunca al alcance, cero paradas". Con los dos radios a 0 sigue siéndolo, con o sin
+    /// estirada.
+    /// </para>
     /// </summary>
     [Fact]
     public void AGoalkeeperThatNeverReachesTheBallNeverSaves()
     {
-        var unreachable = Play(WithReach(0f));
+        var unreachable = Play(WithReach(0f, diveReach: 0f));
         var real = Play(Catalog);
 
         Assert.True(unreachable.ShotsOnTarget > 0, "el escenario tenía que producir tiros a puerta");
@@ -60,6 +67,39 @@ public sealed class ShotInterceptionTests
         Assert.True(
             unreachable.Goals > real.Goals,
             $"sin portero al alcance tenían que entrar más goles: {unreachable.Goals} frente a {real.Goals}");
+    }
+
+    /// <summary>
+    /// AW-A paso 2: con <c>reachCells</c> a 0 el radio normal nunca se dispara durante el vuelo, pero con
+    /// <c>diveReachCells</c> real (o mayor) la estirada del tick de llegada sí lo hace, así que ahora
+    /// **sí** hay paradas donde el test anterior (con los dos radios a 0) no tenía ninguna. Se fuerza
+    /// <c>basePercent</c> alto para que la penalización de la estirada no la deje en cero por ruido.
+    /// </summary>
+    [Fact]
+    public void ADivingGoalkeeperSavesShotsOutsideTheNormalReach()
+    {
+        var withDive = Catalog with
+        {
+            Tuning = Catalog.Tuning with
+            {
+                Save = Catalog.Tuning.Save with
+                {
+                    ReachCells = 0f,
+                    DiveReachCells = Catalog.Tuning.Save.DiveReachCells,
+                    BasePercent = 90
+                }
+            }
+        };
+        var withoutDive = withDive with
+        {
+            Tuning = withDive.Tuning with { Save = withDive.Tuning.Save with { DiveReachCells = 0f } }
+        };
+
+        var dive = Play(withDive);
+        var noDive = Play(withoutDive);
+
+        Assert.True(dive.Saves > 0, "con diveReachCells activo tenía que haber paradas por estirada");
+        Assert.Equal(0, noDive.Saves);
     }
 
     /// <summary>
@@ -126,6 +166,21 @@ public sealed class ShotInterceptionTests
     }
 
     /// <summary>
+    /// AW-A paso 2: la estirada usa el mismo predicado <c>WithinSaveReach</c> que el radio normal, solo con
+    /// un radio distinto (<c>diveReachCells</c>), así que el borde es igual de estricto (<c>&lt;</c>, no
+    /// <c>&lt;=</c>). No hace falta un método nuevo; basta reutilizar el mismo con el radio de la estirada.
+    /// </summary>
+    [Fact]
+    public void TheDiveReachBorderIsExact()
+    {
+        float diveReach = Catalog.Tuning.Save.DiveReachCells;
+        var ball = new Vec2(12f, 2.5f);
+
+        Assert.True(MatchEngine.WithinSaveReach(new Vec2(ball.X, ball.Y + diveReach - 0.01f), ball, diveReach));
+        Assert.False(MatchEngine.WithinSaveReach(new Vec2(ball.X, ball.Y + diveReach + 0.01f), ball, diveReach));
+    }
+
+    /// <summary>
     /// Portero inmóvil fuera de la trayectoria: en ningún tick del vuelo llega al balón, así que no hay
     /// duelo y el tiro es gol. Se le coloca sobre su propia línea de gol pero en el borde del campo, a 2,5
     /// casillas de la recta tirador→portería (3 no caben: el campo tiene 5 filas).
@@ -156,8 +211,14 @@ public sealed class ShotInterceptionTests
         return ticks < 1 ? 1 : ticks;
     }
 
-    private static Catalog WithReach(float reach) =>
-        Catalog with { Tuning = Catalog.Tuning with { Save = Catalog.Tuning.Save with { ReachCells = reach } } };
+    private static Catalog WithReach(float reach, float diveReach = 1.5f) =>
+        Catalog with
+        {
+            Tuning = Catalog.Tuning with
+            {
+                Save = Catalog.Tuning.Save with { ReachCells = reach, DiveReachCells = diveReach }
+            }
+        };
 
     private static Totals Play(Catalog catalog)
     {
