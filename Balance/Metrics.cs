@@ -33,7 +33,9 @@ public static class Metrics
                 match.Injuries,
                 match.BallThird0,
                 match.BallThird1,
-                match.BallThird2));
+                match.BallThird2,
+                match.ShotsOnTarget,
+                match.Saves));
         }
 
         var qualityById = new Dictionary<string, int>(StringComparer.Ordinal);

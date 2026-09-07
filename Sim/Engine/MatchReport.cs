@@ -114,6 +114,13 @@ public sealed class MatchReport
     /// <summary>Tiros a puerta por equipo, [2].</summary>
     public int[] ShotsOnTarget { get; }
 
+    /// <summary>
+    /// Paradas por equipo, [2] (paso 0 de `docs/plan-intercepcion-disparo.md`). Índice = equipo del
+    /// portero que para, no el del tirador; se incrementa junto al evento <see cref="EventType.Save"/>
+    /// en <c>ResolveShotArrival</c>.
+    /// </summary>
+    public int[] Saves { get; }
+
     /// <summary>Entradas totales.</summary>
     public int Tackles { get; }
 
@@ -196,6 +203,7 @@ public sealed class MatchReport
         PassChainTotalLengthByTeam = (int[])builder.PassChainTotalLengthByTeam.Clone();
         Shots = (int[])builder.Shots.Clone();
         ShotsOnTarget = (int[])builder.ShotsOnTarget.Clone();
+        Saves = (int[])builder.Saves.Clone();
         Tackles = builder.Tackles;
         Blocks = builder.Blocks;
         Fouls = builder.Fouls;
@@ -259,6 +267,9 @@ internal sealed class MatchReportBuilder
 
     /// <summary>Tiros a puerta por equipo; se incrementa cuando un Shot tiene Detail "onTarget" (3.7).</summary>
     public int[] ShotsOnTarget { get; } = new int[2];
+
+    /// <summary>Paradas por equipo (equipo del portero); se incrementa junto a cada evento Save (paso 0).</summary>
+    public int[] Saves { get; } = new int[2];
 
     /// <summary>Entradas totales; se incrementa al resolver cada Tackle (3.7).</summary>
     public int Tackles { get; set; }

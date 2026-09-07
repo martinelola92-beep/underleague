@@ -1405,6 +1405,7 @@ internal sealed class MatchEngine : IPerkWorld
             {
                 goalkeeper.ConsecutiveSaves++;
                 SetOwner(goalkeeper);
+                _report.Saves[defendingTeam]++;
                 Emit(EventType.Save, _ball.ShotIsPenalty ? "penalty" : "save", goalkeeper, opponent: shooter);
                 return;
             }

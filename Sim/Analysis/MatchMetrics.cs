@@ -22,7 +22,9 @@ public readonly record struct MatchSummary(
     int Injuries,
     int BallThird0,
     int BallThird1,
-    int BallThird2)
+    int BallThird2,
+    int ShotsOnTarget,
+    int Saves)
 {
     /// <summary>Resumen de un informe de partido entre homeId (equipo 0) y awayId (equipo 1).</summary>
     public static MatchSummary FromReport(MatchReport report, string homeId, string awayId) => new(
@@ -40,7 +42,9 @@ public readonly record struct MatchSummary(
         report.Injuries,
         report.BallTicksByThird[0],
         report.BallTicksByThird[1],
-        report.BallTicksByThird[2]);
+        report.BallTicksByThird[2],
+        report.ShotsOnTarget[0] + report.ShotsOnTarget[1],
+        report.Saves[0] + report.Saves[1]);
 }
 
 /// <summary>Un emparejamiento del lote con la calidad de cada equipo, para betterTeamWinRate.</summary>
@@ -86,6 +90,18 @@ public static class MatchMetrics
     /// <summary>Nombre de la métrica de lesiones por partido.</summary>
     public const string InjuriesPerMatch = "injuriesPerMatch";
 
+    /// <summary>
+    /// Nombre de la métrica informativa de goles por partido (ambos equipos), paso 0 de
+    /// `docs/plan-intercepcion-disparo.md`: referencia sobre la que miden los pasos 1 y 2 (AW-A).
+    /// </summary>
+    public const string GoalsPerMatch = "goalsPerMatch";
+
+    /// <summary>Nombre de la métrica informativa de porcentaje de tiros que van a puerta (paso 0).</summary>
+    public const string ShotsOnTargetShare = "shotsOnTargetShare";
+
+    /// <summary>Nombre de la métrica informativa de porcentaje de tiros a puerta que el portero para (paso 0).</summary>
+    public const string SaveRate = "saveRate";
+
     /// <summary>Prefijo del nombre de las métricas de tasa de victoria del mejor equipo.</summary>
     public const string BetterTeamWinRatePrefix = "betterTeamWinRate_";
 
@@ -127,6 +143,9 @@ public static class MatchMetrics
         long shots = 0;
         long tackles = 0;
         long injuries = 0;
+        long goals = 0;
+        long shotsOnTarget = 0;
+        long saves = 0;
         int scorelineCount = 0;
         int overFiveCount = 0;
         int drawCount = 0;
@@ -141,6 +160,9 @@ public static class MatchMetrics
             shots += match.Shots;
             tackles += match.Tackles;
             injuries += match.Injuries;
+            goals += match.HomeGoals + match.AwayGoals;
+            shotsOnTarget += match.ShotsOnTarget;
+            saves += match.Saves;
             thirds[0] += match.BallThird0;
             thirds[1] += match.BallThird1;
             thirds[2] += match.BallThird2;
@@ -188,6 +210,17 @@ public static class MatchMetrics
 
         rows.Add(InRange(TacklesPerMatch, (double)tackles / n, 6, 14));
         rows.Add(InRange(InjuriesPerMatch, (double)injuries / n, 0.3, 0.8));
+
+        // Paso 0 de docs/plan-intercepcion-disparo.md: instrumentación pura, sin banda de gating. Fijan la
+        // referencia de goalsPerMatch y saveRate que usarán los pasos 1 (AW-A) y 2 al medir el efecto de
+        // exigirle al portero llegar al balón.
+        rows.Add(new MetricResult(GoalsPerMatch, (double)goals / n, null, null, "INFO"));
+
+        double shotsOnTargetShare = shots > 0 ? 100.0 * shotsOnTarget / shots : 0.0;
+        rows.Add(new MetricResult(ShotsOnTargetShare, shotsOnTargetShare, null, null, "INFO"));
+
+        double saveRate = shotsOnTarget > 0 ? 100.0 * saves / shotsOnTarget : 0.0;
+        rows.Add(new MetricResult(SaveRate, saveRate, null, null, "INFO"));
 
         rows.AddRange(BetterTeamWinRates(matches, pairings));
         return rows;

@@ -99,6 +99,23 @@ Criterio de salida de la fase 0 e indicador permanente del equilibrio fútbol/ag
 
 Los rangos son puntos de partida. **Cambiar un rango es una decisión explícita** (RT-057): ADR en `decisiones/` con los datos que lo motivan y actualización de esta tabla en el mismo commit.
 
+### Métricas informativas
+
+No hacen fallar la puerta (`INFO` en `summary.csv`); se miden para tener referencia antes de tocar un
+sistema o para explicar una fila gating. El cálculo vive en el mismo `Sim/Analysis/MatchMetrics.cs`.
+
+| Métrica | Qué mide | Tipo |
+|---|---|---|
+| `share_over5goals` | Porcentaje de partidos con más de cinco goles totales | INFO |
+| `drawShareAtRegulation` | Porcentaje de partidos que llegan empatados al final del reglamentario (entran en gol de oro) | INFO |
+| `goalsPerMatch` | Goles totales (ambos equipos) por partido | INFO |
+| `shotsOnTargetShare` | Porcentaje de tiros que van a puerta (tiros a puerta / tiros totales) | INFO |
+| `saveRate` | Porcentaje de tiros a puerta que el portero para (paradas / tiros a puerta) | INFO |
+
+Las tres últimas se añaden en el paso 0 de `docs/plan-intercepcion-disparo.md`: instrumentación pura para
+poder medir el efecto de los pasos siguientes (AW-A, portero debe llegar al balón) sin cambiar nada del
+motor todavía.
+
 ### Cómo se leen estas métricas (medido en el paquete E)
 
 - **El cálculo es único**: `Sim/Analysis/MatchMetrics.cs`. Lo usan el lote de `/Balance` y la puerta estadística de `Sim.Tests`; no hay dos definiciones de la misma métrica.
