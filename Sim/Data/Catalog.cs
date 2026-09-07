@@ -137,7 +137,12 @@ public sealed record AiContext(
     int BlockTargetBonus = 0,
     int BlockDistancePenaltyPerCell = 0,
     int BlockAggressiveBonus = 0,
-    int BlockBruteTagBonus = 0);
+    int BlockBruteTagBonus = 0,
+
+    // AW-D (docs/pendientes.md, cambio 1 de 2): hasta ahora PassOpenReceiverBonus se cobraba entero con
+    // cualquier receptor legal, sin mirar si estaba delante o detrás del pasador. Penaliza solo el avance
+    // negativo del receptor elegido, por casilla; un pase lateral o hacia delante no lo paga.
+    int PassBackwardPenaltyPerCell = 0);
 
 /// <summary>
 /// Pesos de la IA de utilidad (RT-093..RT-098). Las tablas Base y Tactical se guardan como arrays

@@ -194,6 +194,46 @@ public sealed class AttackActionsTests
         Assert.True(Row(scenario.Rows, PlayerAction.Block).Rejected);
     }
 
+    /// <summary>
+    /// AW-D (docs/pendientes.md, cambio 1 de 2): el bonus de receptor abierto se cobraba entero sin mirar
+    /// si quedaba delante o detrás del pasador. Mismo pasador, mismo compañero, misma distancia (2
+    /// casillas); lo único que cambia es el lado. Solo el pase hacia atrás paga la penalización, y la paga
+    /// exacta: <c>PassBackwardPenaltyPerCell</c> por casilla detrás, ni una unidad más ni menos, porque
+    /// nada más en la puntuación depende de la dirección del receptor.
+    /// </summary>
+    [Fact]
+    public void ShortPassToAReceiverBehindScoresLessThanTheSamePassAhead()
+    {
+        var aheadRows = BackwardPassScenario(receiverBehind: false);
+        var behindRows = BackwardPassScenario(receiverBehind: true);
+
+        int aheadScore = Row(aheadRows, PlayerAction.ShortPass).Score;
+        int behindScore = Row(behindRows, PlayerAction.ShortPass).Score;
+
+        int expectedPenalty = 2 * Catalog.Ai.Context.PassBackwardPenaltyPerCell;
+        Assert.True(expectedPenalty > 0, "el peso real de data/ai/weights.json debía traer la penalización activada");
+        Assert.Equal(aheadScore - expectedPenalty, behindScore);
+    }
+
+    /// <summary>
+    /// AW-D (docs/pendientes.md, cambio 1 de 2, acotado): la primera versión penalizaba cualquier pase
+    /// atrás y descompensó la circulación normal en el lote de balance —la mayoría de los pases atrás son
+    /// circulación sana, no el caso que describe la anotación—. Ahora solo paga quien, además, tenía el
+    /// mismo carril libre que <c>EvaluateDribble</c> consultaría para regatear: con un rival justo delante
+    /// no hay alternativa real, y el mismo pase atrás, a la misma distancia, puntúa exactamente igual que
+    /// si el receptor hubiera estado delante.
+    /// </summary>
+    [Fact]
+    public void BackwardPassIsNotPenalizedWithoutARealDribbleAlternative()
+    {
+        var aheadRows = BackwardPassScenario(receiverBehind: false);
+        var blockedRows = BackwardPassScenario(receiverBehind: true, blockAhead: true);
+
+        Assert.Equal(
+            Row(aheadRows, PlayerAction.ShortPass).Score,
+            Row(blockedRows, PlayerAction.ShortPass).Score);
+    }
+
     // ------------------------------------------------------------------ escenarios
 
     private static (PlayerAction Chosen, List<UtilityRow> Rows) PassScenario(int technique)
@@ -227,6 +267,42 @@ public sealed class AttackActionsTests
         context.HoldingTeam = 0;
         carrier.EnterState(PlayerState.Dribbling, 0);
         return (carrier, near, far, context);
+    }
+
+    /// <summary>
+    /// Centrocampista con el balón y un único compañero legal, a 2 casillas exactas, delante o detrás
+    /// según <paramref name="receiverBehind"/>. Sin ningún otro compañero cerca de nadie, para que ni la
+    /// presión ni una banda larga compitan: la tabla solo puede diferir en el término nuevo. El rival de
+    /// relleno va lejos, detrás del pasador, salvo que <paramref name="blockAhead"/> lo ponga justo
+    /// delante —dentro de <c>DribbleAheadRadius</c>—, que es la condición que ahora exige la penalización
+    /// (AW-D, cambio 1 de 2, acotado): sin regate real disponible, el pase atrás no debe pagar nada.
+    /// </summary>
+    private static List<UtilityRow> BackwardPassScenario(bool receiverBehind, bool blockAhead = false)
+    {
+        var carrier = Player(0, Position.Midfielder, new Cell(7, 2), new Attributes(50, 50, 50, 50, 60));
+        float mateX = receiverBehind ? 5.5f : 9.5f;
+        var mate = Player(1, Position.Midfielder, new Cell((int)mateX, 2));
+        var opponent = Player(2, Position.Defender, new Cell(0, 0), team: 1);
+
+        carrier.Position = new Vec2(7.5f, PitchConstants.CenterRow);
+        mate.Position = new Vec2(mateX, PitchConstants.CenterRow);
+        // 1.8 casillas por delante: dentro de DribbleAheadRadius (2.0) para que cuente como "hay rival
+        // por delante", y fuera de PitchConstants.PressureRadius (1.0) para no meter de rondón el bonus
+        // de presión sobre el propio pasador, que confundiría la comparación de puntuaciones.
+        opponent.Position = blockAhead
+            ? new Vec2(carrier.Position.X + 1.8f, PitchConstants.CenterRow)
+            : new Vec2(0.5f, 0.5f);
+
+        var players = new[] { carrier, mate, opponent };
+        var context = Context(Catalog.Ai, players);
+        context.Ball.Owner = carrier;
+        context.Ball.Position = carrier.Position;
+        context.HoldingTeam = 0;
+        carrier.EnterState(PlayerState.Dribbling, 0);
+
+        var rows = new List<UtilityRow>();
+        Utility.Choose(context, carrier, rows);
+        return rows;
     }
 
     private static int ShootContext(float distanceFromGoal, Trait? trait = null)

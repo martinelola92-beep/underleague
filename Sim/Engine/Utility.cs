@@ -600,6 +600,7 @@ internal static class Utility
         var players = ctx.Players;
         MatchPlayer? receiver = null;
         int bestRank = 0;
+        int bestAdvance = 0;
 
         float minCells = longPass ? context.ShortPassMaxCells : 0f;
         float maxCells = longPass ? context.LongPassMaxCells : context.ShortPassMaxCells;
@@ -634,6 +635,7 @@ internal static class Utility
             {
                 receiver = mate;
                 bestRank = rank;
+                bestAdvance = advance;
             }
         }
 
@@ -645,6 +647,19 @@ internal static class Utility
         else
         {
             score = context.PassOpenReceiverBonus;
+
+            // AW-D (docs/pendientes.md, cambio 1 de 2): el bonus de arriba se cobraba entero con
+            // cualquier receptor legal, sin mirar si quedaba delante o detrás del pasador. La primera
+            // versión penalizaba TODO pase hacia atrás y descompensó la circulación normal (lote de
+            // balance: possessionChanges, passChainAvgLength, shotsPerMatch y tacklesPerMatch se salieron
+            // de rango) porque la mayoría de los pases atrás son circulación sana, no el caso que describe
+            // la anotación. Acotado: solo paga quien además tiene el mismo carril libre que
+            // EvaluateDribble consultaría para regatear — ahí sí había alternativa real y prefirió el
+            // pase atrás sin necesidad. Un pase atrás por estar acorralado no paga nada.
+            if (bestAdvance < 0 && OpponentsAheadCount(players, p, direction) == 0)
+            {
+                score += bestAdvance * context.PassBackwardPenaltyPerCell / 100;
+            }
         }
 
         score += Slope(longPass ? context.LongPassTechniqueSlope : context.ShortPassTechniqueSlope, p.Technique);
@@ -730,8 +745,25 @@ internal static class Utility
     {
         eval.Target = ClampToPitch(new Vec2(p.Position.X + direction, MoveToward(p.Position.Y, PitchConstants.CenterRow, 1f)));
 
+        int ahead = OpponentsAheadCount(ctx.Players, p, direction);
+
+        eval.Context = (ahead == 0
+                ? context.DribbleOpenSpaceBonus
+                : -(context.DribbleOpponentAheadPenalty * ahead))
+            + Slope(context.DribbleTechniqueSlope, p.Technique)
+            + Slope(context.DribbleSpeedSlope, p.Speed);
+    }
+
+    /// <summary>
+    /// Rivales dentro de <see cref="DribbleAheadRadius"/> por delante de <paramref name="p"/> (mismo
+    /// criterio que <see cref="EvaluateDribble"/> usa para decidir si hay hueco para regatear). AW-D
+    /// (docs/pendientes.md, cambio 1 de 2, acotado): también lo consulta <see cref="EvaluatePass"/>, para
+    /// no penalizar un pase hacia atrás cuando el pasador no tiene ninguna alternativa de regate real —
+    /// un pase de circulación normal, no el caso que la anotación describe.
+    /// </summary>
+    private static int OpponentsAheadCount(MatchPlayer[] players, MatchPlayer p, int direction)
+    {
         int ahead = 0;
-        var players = ctx.Players;
         for (int i = 0; i < players.Length; i++)
         {
             var other = players[i];
@@ -747,11 +779,7 @@ internal static class Utility
             }
         }
 
-        eval.Context = (ahead == 0
-                ? context.DribbleOpenSpaceBonus
-                : -(context.DribbleOpponentAheadPenalty * ahead))
-            + Slope(context.DribbleTechniqueSlope, p.Technique)
-            + Slope(context.DribbleSpeedSlope, p.Speed);
+        return ahead;
     }
 
     /// <summary>

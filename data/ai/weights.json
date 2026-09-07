@@ -24,6 +24,7 @@
     "supportCrowdedPenalty": 90,
     "coverBetweenBallAndGoalBonus": 150,
     "passOpenReceiverBonus": 220,
+    "passBackwardPenaltyPerCell": 50,
     "passUnderPressureBonus": 180,
     "passNoReceiverPenalty": 600,
     "dribbleOpenSpaceBonus": 160,
