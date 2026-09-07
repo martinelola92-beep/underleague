@@ -13,6 +13,13 @@ public enum AttributeKind
 /// <summary>Atributos de un jugador. Aritmética entera (RT-023); rango de juego 1..99.</summary>
 public readonly record struct Attributes(int Strength, int Speed, int Technique, int Stamina, int Leash)
 {
+    /// <summary>
+    /// Media simple de los cinco atributos, sin ponderar por posición (AW-M): una "valoración" al
+    /// estilo de un juego de fútbol, redondeada al entero más cercano. Vive en <c>/Sim</c> para que
+    /// <c>/Balance</c> pueda medirla igual que cualquier otro atributo.
+    /// </summary>
+    public int Average => (int)Math.Round((Strength + Speed + Technique + Stamina + Leash) / 5.0);
+
     /// <summary>Lee el atributo indicado por kind.</summary>
     public int Get(AttributeKind kind) => kind switch
     {

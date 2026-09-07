@@ -76,6 +76,7 @@ public static class UiText
         ["ui.team.dropHint"] = "suelta en una casilla de la mitad propia",
         ["ui.team.selected"] = "SELECCIONADO",
         ["ui.team.nobody"] = "selecciona a un jugador para ver su zona de acción",
+        ["ui.card.average"] = "media",
         ["ui.card.level"] = "nivel {0}",
         ["ui.card.rarity.Common"] = "común",
         ["ui.card.rarity.Rare"] = "raro",
@@ -100,8 +101,8 @@ public static class UiText
         ["ui.pos.Defender"] = "DEF",
         ["ui.pos.Midfielder"] = "CEN",
         ["ui.pos.Forward"] = "DEL",
-        ["ui.input.mouse"] = "RATÓN  clic: seleccionar · arrastrar y soltar: colocar · clic en la ficha: expandir",
-        ["ui.input.pad"] = "MANDO  cruceta: mover cursor · A: seleccionar y coger/soltar · B: cancelar · X: cobertura · Y: zonas",
+        ["ui.input.mouse"] = "RATÓN  clic: seleccionar · arrastrar y soltar: colocar · clic en la ficha: expandir (un suplente se coge y se suelta en el campo igual que un titular)",
+        ["ui.input.pad"] = "MANDO  cruceta: mover cursor · A: seleccionar y coger/soltar (también un suplente, igual que un titular) · B: cancelar · X: cobertura · Y: zonas",
 
         // --- esqueleto jugable (docs/ui-run-minima.md) ---
         ["ui.nav.back"] = "Volver",

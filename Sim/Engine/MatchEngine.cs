@@ -32,6 +32,14 @@ internal sealed class MatchEngine : IPerkWorld
     /// <summary>Velocidad con la que queda un balón suelto tras un pase fallido (§3.7).</summary>
     private const float LooseBallSpeed = 0.1f;
 
+    /// <summary>
+    /// Desviación (en filas) del destino de un tiro fuera respecto al centro de la portería (§3.7,
+    /// AW-C de docs/pendientes.md). Antes el destino era la bandera de córner (fila 0 o 5 entera): un
+    /// pelotazo a banda que no se parecía en nada a un remate desviado. Con esto el balón se queda junto
+    /// al poste, conservando el lado hacia el que se fue (<see cref="OffTargetShotTarget"/>).
+    /// </summary>
+    private const float OffTargetShotDeviationCells = 1.25f;
+
     private readonly MatchSetup _setup;
     private readonly Catalog _catalog;
     private readonly SimConfig _config;
@@ -518,6 +526,16 @@ internal sealed class MatchEngine : IPerkWorld
         for (int i = 0; i < _players.Length; i++)
         {
             var player = _players[i];
+            if (!player.IsOutfield)
+            {
+                // AW-B (docs/pendientes.md): el portero no se adelanta ni se retrasa con el bloque
+                // táctico, así que su casilla-hogar efectiva es siempre la fija (RF-057b ya le prohíbe
+                // salir del área, pero sin esta exención pagaba la correa de una zona desplazada que no
+                // le correspondía por estar fuera de ella).
+                player.EffectiveHome = player.HomeCenter;
+                continue;
+            }
+
             float offset = _shift[player.Team] * Pitch.AttackDirection(player.Team);
             player.EffectiveHome = new Vec2(
                 Math.Clamp(player.HomeCenter.X + offset, 0f, Pitch.Columns),
@@ -1297,9 +1315,7 @@ internal sealed class MatchEngine : IPerkWorld
         Emit(EventType.Shot, offTarget ? "offTarget" : "onTarget", shooter, publish: false);
         EndPlay("shot");
 
-        Vec2 target = offTarget
-            ? new Vec2(goal.X, shooter.Position.Y < PitchConstants.CenterRow ? 0f : Pitch.Rows)
-            : goal;
+        Vec2 target = offTarget ? OffTargetShotTarget(goal, shooter.Position.Y) : goal;
 
         _ball.Owner = null;
         _ball.InFlight = true;
@@ -1320,6 +1336,20 @@ internal sealed class MatchEngine : IPerkWorld
         shooter.EnterState(PlayerState.Positioning, 0);
     }
 
+    /// <summary>
+    /// Destino de un tiro que se marcha fuera (§3.7, AW-C de docs/pendientes.md): junto al poste más
+    /// cercano al punto de mira original del tirador (su fila en el momento de disparar), no la esquina
+    /// del campo. Conserva la noción de "se fue a la derecha/izquierda" sin exagerar hasta la bandera de
+    /// córner. El acotado a <c>[0, Pitch.Rows]</c> es el margen de un poste: con la desviación actual
+    /// nunca llega a activarse, pero deja el método correcto si algún día crece.
+    /// </summary>
+    internal static Vec2 OffTargetShotTarget(Vec2 goal, float shooterRow)
+    {
+        float direction = shooterRow < PitchConstants.CenterRow ? -1f : 1f;
+        float row = Math.Clamp(PitchConstants.CenterRow + (direction * OffTargetShotDeviationCells), 0f, Pitch.Rows);
+        return new Vec2(goal.X, row);
+    }
+
     private void ResolveShotArrival()
     {
         var shooter = _ball.Shooter;
@@ -1334,6 +1364,12 @@ internal sealed class MatchEngine : IPerkWorld
 
         if (!_ball.ShotOnTarget)
         {
+            // Saque de puerta siempre, con o sin el cambio de AW-C: esta rama no mira _ball.Position (el
+            // córner se decide solo en CheckOutOfBounds, que un tiro nunca alcanza porque _ball.IsShot lo
+            // salta por completo mientras vuela y ResolveShotArrival resuelve la llegada aquí mismo). Con
+            // el nuevo destino, más corto, el balón cae de todas formas junto a la portería y no en la
+            // banda, así que saque de puerta sigue siendo la lectura coherente: no hace falta enrutar a
+            // ScheduleCorner.
             ScheduleGoalKick(defendingTeam);
             return;
         }

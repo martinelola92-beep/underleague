@@ -135,6 +135,29 @@ public sealed class MarketTests
     }
 
     /// <summary>
+    /// AW-H (mitad barata, <c>docs/pendientes.md</c>): un mismo perk no puede salir dos veces en el
+    /// surtido de un mismo mercado. <c>market.PerkOffers</c> es 5 en los datos reales, así que la
+    /// condición <c>&gt;= 2</c> siempre se cumple aquí.
+    /// </summary>
+    [Fact]
+    public void MarketPerkOffersNeverRepeatAPerkWithinTheSameMarket()
+    {
+        var market = SystemsTestSupport.Systems.Economy.Market;
+        Assert.True(market.PerkOffers >= 2, "este test exige un surtido de al menos 2 perks para tener algo que comprobar");
+
+        var node = new MapNode(201, 2, 0, 0, NodeKind.Market, Array.Empty<int>(), string.Empty, 0);
+
+        for (ulong seed = 1UL; seed <= 200UL; seed++)
+        {
+            var state = RunEngine.Start(SystemsTestSupport.Setup(), seed, SystemsTestSupport.Catalog, SystemsTestSupport.Systems);
+            var offers = MarketOfferGenerator.Generate(state, node, SystemsTestSupport.Catalog, SystemsTestSupport.Systems.Economy, SystemsTestSupport.Systems.Items, SystemsTestSupport.Systems.Consumables);
+
+            var perkIds = offers.Perks.Select(p => p.PerkId).ToList();
+            Assert.Equal(perkIds.Count, perkIds.Distinct().Count());
+        }
+    }
+
+    /// <summary>
     /// RF-114, ADR 0080: sin fichajes de portero reservados (<c>goalkeeperOffers = 0</c>) no hay garantía
     /// ninguna: el mercado puede quedarse sin ningún portero, porque canteranos y mercenarios son siempre
     /// de campo y ya no queda ningún fichaje reservado a portero.

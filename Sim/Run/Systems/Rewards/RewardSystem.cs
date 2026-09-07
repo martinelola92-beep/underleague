@@ -54,7 +54,7 @@ public static class RewardSystem
         var config = economy.RewardFor(node.Kind);
         int taken = PicksTaken(state, node.Id);
         var rng = OfferStream.For(state.Seed, node.Id, state.NodeRerolls + (taken * PickStreamStep));
-        var perkPool = PerkPool.Offerable(state, catalog, node.Act, PerkSource.Reward);
+        var perkPool = new List<Perks.PerkDefinition>(PerkPool.Offerable(state, catalog, node.Act, PerkSource.Reward));
 
         var options = new List<RewardOption>(config.Options);
         for (int i = 0; i < config.Options; i++)
@@ -66,7 +66,22 @@ public static class RewardSystem
             int rarityRoll = rng.Range(0, 100);
             bool rare = rarityRoll < config.RarityFloorPercent;
             bool commonOnly = !rare && rarityRoll >= 100 - config.CommonCeilingPercent;
-            options.Add(PickOption(ref rng, perkPool, items, catalog, state, economy, node.Act, rare, commonOnly));
+            var option = PickOption(ref rng, perkPool, items, catalog, state, economy, node.Act, rare, commonOnly);
+            options.Add(option);
+
+            // Un mismo perk no puede salir dos veces en el mismo surtido (AW-H, mitad barata): si esta
+            // opción fue un perk, se saca del pool antes de sortear la siguiente opción.
+            if (option is PerkRewardOption perkOption)
+            {
+                for (int j = perkPool.Count - 1; j >= 0; j--)
+                {
+                    if (perkPool[j].Id == perkOption.PerkId)
+                    {
+                        perkPool.RemoveAt(j);
+                        break;
+                    }
+                }
+            }
         }
 
         return options;

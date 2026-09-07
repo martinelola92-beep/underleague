@@ -7,6 +7,7 @@ using Underleague.Sim.Model;
 using Underleague.Sim.Placement;
 using Underleague.Sim.Random;
 using Underleague.Sim.Run;
+using Underleague.Sim.Run.Systems.Items;
 
 namespace Underleague.Game.Data;
 
@@ -37,6 +38,14 @@ public sealed class TeamState
     }
 
     private readonly RunController? _run;
+
+    /// <summary>
+    /// <b>Solo para la secuencia de capturas</b> (AW-K): sin una run detrás (equipo de pruebas, rival de
+    /// ojeo) no hay ningún objeto equipado que enseñar, y la ficha del objeto es justo lo que hay que
+    /// fotografiar. <see cref="ForceTestItem"/> es el mismo apaño que <c>TeamScreen.EnsurePlacementPerks</c>
+    /// hace con perks, pero para objetos; nunca se usa con una run real detrás.
+    /// </summary>
+    private Dictionary<int, ItemDefinition>? _testItems;
 
     public Catalog Catalog { get; }
 
@@ -116,6 +125,51 @@ public sealed class TeamState
         }
 
         return null;
+    }
+
+    /// <summary>
+    /// Objeto equipado por el jugador (AW-K), o null si no lleva ninguno. El dato vive en la capa de run
+    /// (<c>RunPlayer.Item</c>), no en <see cref="PlayerDefinition"/>: sin run detrás (equipo de pruebas,
+    /// rival de ojeo) siempre es null, salvo que las capturas lo hayan forzado con
+    /// <see cref="ForceTestItem"/>.
+    /// </summary>
+    public ItemDefinition? EquippedItemOf(int playerId)
+    {
+        if (_testItems is not null && _testItems.TryGetValue(playerId, out var forced))
+        {
+            return forced;
+        }
+
+        if (_run is null)
+        {
+            return null;
+        }
+
+        foreach (var slot in _run.State!.Roster)
+        {
+            if (slot.Id == playerId)
+            {
+                return slot.Item is { } itemId ? _run.Systems!.Items.Find(itemId) : null;
+            }
+        }
+
+        return null;
+    }
+
+    /// <summary>
+    /// <b>Solo para la secuencia de capturas</b>: fuerza el objeto equipado de un jugador sin tocar la
+    /// run ni el catálogo, igual que <c>TeamScreen.EnsurePlacementPerks</c> fuerza perks. No hace nada
+    /// si ya hay una run real detrás: ahí el objeto lo decide el bucle de run, no una captura.
+    /// </summary>
+    public void ForceTestItem(int playerId, ItemDefinition item)
+    {
+        if (_run is { HasRun: true })
+        {
+            return;
+        }
+
+        _testItems ??= new Dictionary<int, ItemDefinition>();
+        _testItems[playerId] = item;
     }
 
     /// <summary>Jugador alineado en esa casilla, o null.</summary>

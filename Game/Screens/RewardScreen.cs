@@ -155,10 +155,14 @@ public partial class RewardScreen : Control
             _view.CanReroll);
         reroll.Pressed += Reroll;
 
+        // "Ver equipo" (AW-N) va antes del hueco donde cae el aviso de reroll: ese texto solo aparece
+        // cuando ya se ha rerolleado o no llega el oro, así que compartir la fila no lo tapa nunca (el
+        // aviso arranca 162 px más a la derecha de lo que ocupaba antes).
+        Widgets.Button(this, UiText.Get("ui.nav.team"), new Rect2(516f, 690f, 150f, 26f)).Pressed += ViewTeam;
         string rerollNote = _view.RerollUsedHere
             ? UiText.Get("ui.reward.rerollUsed")
             : _view.CanReroll ? string.Empty : UiText.Get("ui.reward.rerollPoor", _view.RerollCost, _view.Gold);
-        Widgets.Body(this, rerollNote, new Vector2(516f, 696f), 740f, Style.TextDim);
+        Widgets.Body(this, rerollNote, new Vector2(678f, 696f), 578f, Style.TextDim);
 
         _error = Widgets.Body(this, string.Empty, new Vector2(12f, 726f), 1256f, Style.Hole);
         Widgets.InputHelp(this, UiText.Get("ui.input.mouseReward"), UiText.Get("ui.input.padPending"));
@@ -284,6 +288,14 @@ public partial class RewardScreen : Control
         }
 
         Nav.Route(this);
+    }
+
+    /// <summary>Botón "Ver equipo" (AW-N): deja dicho el camino de vuelta y navega. El nodo sigue abierto
+    /// en <c>RunState</c> mientras no se elija o se rechace, así que volver no lo cierra.</summary>
+    private void ViewTeam()
+    {
+        Nav.ReturnTo = Nav.Reward;
+        Nav.Go(this, Nav.Team);
     }
 
     private string OptionsExplanation() => _view.NodeKind switch

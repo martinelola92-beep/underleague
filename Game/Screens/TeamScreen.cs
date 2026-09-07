@@ -8,6 +8,7 @@ using Underleague.Game.Ui;
 using Underleague.Sim.Model;
 using Underleague.Sim.Perks;
 using Underleague.Sim.Placement;
+using Underleague.Sim.Run.Systems.Items;
 using SimPosition = Underleague.Sim.Model.Position;
 
 namespace Underleague.Game.Screens;
@@ -125,9 +126,12 @@ public partial class TeamScreen : Control
     }
 
     /// <summary>
-    /// Vuelve a donde se estaba: al ojeo si se vino a repasar la alineación antes de un partido, y al
-    /// mapa si no. La pantalla de Equipo no sabe navegar por su cuenta —no es suya esa decisión—: mira
-    /// si hay un nodo elegido, que es el dato que lo dice.
+    /// Vuelve a donde se estaba. Si Mercado, Recompensa o Informe dejaron dicho un desvío en
+    /// <see cref="Nav.ReturnTo"/> (AW-N, botón "Ver equipo" de esas pantallas), se vuelve ahí y se
+    /// limpia el desvío para no arrastrarlo a la próxima vez que se entre a Equipo. Si no hay desvío, la
+    /// pantalla de Equipo no sabe navegar por su cuenta —no es suya esa decisión—: mira si hay un nodo
+    /// elegido, que es el dato que lo dice, y va al ojeo si se vino a repasar la alineación antes de un
+    /// partido, o al mapa si no.
     /// </summary>
     private void AddBackButton()
     {
@@ -141,6 +145,14 @@ public partial class TeamScreen : Control
         button.AddThemeFontSizeOverride("font_size", Style.TextSmall);
         button.Pressed += () =>
         {
+            if (!string.IsNullOrEmpty(Nav.ReturnTo))
+            {
+                string returnTo = Nav.ReturnTo;
+                Nav.ReturnTo = string.Empty;
+                Nav.Go(this, returnTo);
+                return;
+            }
+
             var run = RunController.Instance;
             Nav.Go(this, run is { SelectedNodeId: >= 0 } ? Nav.Scout : Nav.Map);
         };
@@ -239,7 +251,7 @@ public partial class TeamScreen : Control
         {
             if (_rosterIndex < _cards.Count)
             {
-                Toggle(_cards[_rosterIndex].PlayerId);
+                ActivateRosterCard(_cards[_rosterIndex].PlayerId);
             }
 
             return;
@@ -412,6 +424,34 @@ public partial class TeamScreen : Control
     /// <summary>Activar al ya seleccionado lo colapsa: el mismo gesto abre y cierra la ficha.</summary>
     private void Toggle(int playerId) => Select(_selected == playerId ? -1 : playerId);
 
+    /// <summary>
+    /// Activar una ficha de la lista (AW-L): el mismo gesto de siempre —clic en la ficha o botón de
+    /// acción con el foco en la plantilla— pero un suplente tiene, además, una tercera opción: cogerlo
+    /// para soltarlo en el campo, exactamente como ya se coge a un titular desde una casilla
+    /// (<see cref="OnCellPressed"/>). Coger tiene prioridad sobre expandir, así que un suplente libre no
+    /// se expande al primer toque: se expande solo si ya estaba cogido y se vuelve a tocar sin soltar
+    /// antes en una casilla, que es el gesto de cancelar.
+    /// </summary>
+    private void ActivateRosterCard(int playerId)
+    {
+        if (!_state.IsStarter(playerId) && _held < 0)
+        {
+            _held = playerId;
+            Select(playerId);
+            RefreshPitch();
+            return;
+        }
+
+        if (_held == playerId)
+        {
+            _held = -1;
+            RefreshPitch();
+            return;
+        }
+
+        Toggle(playerId);
+    }
+
     private void ApplyCardFlags()
     {
         for (int i = 0; i < _cards.Count; i++)
@@ -502,7 +542,7 @@ public partial class TeamScreen : Control
     private void OnCardActivated(int playerId)
     {
         _focusRoster = true;
-        Toggle(playerId);
+        ActivateRosterCard(playerId);
     }
 
     /// <summary>Rellena las fichas. Se llama al cambiar la alineación, no al mover el cursor.</summary>
@@ -891,6 +931,14 @@ public partial class TeamScreen : Control
                 _rosterIndex = IndexOfCard(FindRare());
                 Pad("ui_accept");
             }),
+            ("equipo-objeto", () =>
+            {
+                Pad("ui_cancel");
+                _toast.Post(Array.Empty<ToastLine>());
+                _focusRoster = true;
+                _rosterIndex = IndexOfCard(EnsurePlacementItem());
+                Pad("ui_accept");
+            }),
             ("equipo-zonas", () =>
             {
                 Pad("ui_cancel");
@@ -910,6 +958,31 @@ public partial class TeamScreen : Control
                 _cursor = move.From;
                 Pad("ui_accept");
                 _cursor = move.To;
+                Pad("ui_accept");
+            }),
+            ("equipo-suplente", () =>
+            {
+                // AW-L: un suplente se coge exactamente igual que un titular. Se coge por el flujo de
+                // mando (foco en la plantilla + botón de acción), que es el mismo camino que usa
+                // ActivateRosterCard para el clic de ratón (UI-006).
+                Pad("ui_cancel");
+                int bench = FindOutfieldBenchPlayer();
+                if (bench < 0)
+                {
+                    GD.PushWarning("no hay suplentes de campo: la captura de \"cogido\" no tiene a quién coger");
+                    return;
+                }
+
+                _focusRoster = true;
+                _rosterIndex = IndexOfCard(bench);
+                Pad("ui_accept");
+            }),
+            ("equipo-sustitucion", () =>
+            {
+                // Soltarlo sobre la casilla de un titular de campo sustituye a ese titular (Sim.Placement
+                // .PlacementView.WithPlayerAt ya lo resolvía; lo que faltaba era este camino de interfaz).
+                _focusRoster = false;
+                _cursor = FindOutfieldStarterCell();
                 Pad("ui_accept");
             }),
         };
@@ -1051,6 +1124,39 @@ public partial class TeamScreen : Control
         return -1;
     }
 
+    /// <summary>
+    /// Primer suplente que no sea portero (AW-L, solo para capturas): la sustitución que enseña la
+    /// captura tiene que poder soltarse en cualquier casilla de campo, y el portero solo puede ir a la
+    /// suya (<c>PlacementView.CanPlace</c>).
+    /// </summary>
+    private int FindOutfieldBenchPlayer()
+    {
+        foreach (var player in _state.Players)
+        {
+            if (!_state.IsStarter(player.Id) && player.Position != SimPosition.Goalkeeper)
+            {
+                return player.Id;
+            }
+        }
+
+        return -1;
+    }
+
+    /// <summary>Casilla-hogar de un titular de campo (no portero), para la captura de la sustitución.</summary>
+    private Cell FindOutfieldStarterCell()
+    {
+        foreach (var slot in _state.Lineup.Slots)
+        {
+            var player = _state.Find(slot.PlayerId);
+            if (player is not null && player.Position != SimPosition.Goalkeeper)
+            {
+                return slot.HomeCell;
+            }
+        }
+
+        return PlacementView.GoalkeeperCell;
+    }
+
     private int FindByPosition(SimPosition position)
     {
         foreach (var slot in _state.Lineup.Slots)
@@ -1063,5 +1169,37 @@ public partial class TeamScreen : Control
         }
 
         return -1;
+    }
+
+    /// <summary>
+    /// <b>Solo para la secuencia de capturas</b> (AW-K): la plantilla de pruebas no tiene ningún jugador
+    /// equipado (<c>TeamState.Load</c> no arrastra ninguna run), y sin uno la ficha no tendría delta que
+    /// enseñar ni sección de objeto real que fotografiar. Es el mismo apaño que
+    /// <see cref="EnsurePlacementPerks"/> hace con perks, pero para objetos: fuerza un maldito de verdad
+    /// (<c>berserker_totem</c>, sube fuerza/velocidad/resistencia y baja técnica) en el primer titular,
+    /// para que la captura enseñe el delta positivo y el negativo de la barra a la vez. No toca nada con
+    /// una run detrás. Devuelve el id del jugador al que se le ha puesto, para enfocar su ficha.
+    /// </summary>
+    private int EnsurePlacementItem()
+    {
+        if (_state.Lineup.Slots.Count == 0)
+        {
+            return -1;
+        }
+
+        int target = _state.Lineup.Slots[0].PlayerId;
+        if (RunController.Instance is { HasRun: true } || _state.EquippedItemOf(target) is not null)
+        {
+            return target;
+        }
+
+        var items = ItemLoader.FromJson(GameData.Snapshot);
+        if (items.Find("berserker_totem") is { } item)
+        {
+            _state.ForceTestItem(target, item);
+            RefreshCards();
+        }
+
+        return target;
     }
 }

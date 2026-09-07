@@ -89,16 +89,22 @@ instanciarla y llamar a `Bind`.
 
 - **Colapsada** (UI-011): tira de **24 px** con retrato, icono de posición, nombre y barra de estado
   físico. Nada más. Es la unidad de medida de todas las listas del juego.
-- **Expandida** (UI-012): nivel, rareza, raza, posición y etiqueta de estilo; los **cinco atributos** con
-  barra; rasgos; perks **con su descripción generada** (RT-035) y los slots libres que quedan; habilidad
-  racial; vínculos; objeto; estado; salario. **Solo una expandida a la vez**: lo garantiza la pantalla,
-  no la ficha.
+- **Expandida** (UI-012): **media de atributos** (AW-M, media simple de los cinco sin ponderar por
+  posición, en `Sim.Model.Attributes.Average`) junto a nivel, rareza, raza, posición y etiqueta de
+  estilo; los **cinco atributos** con barra —y, si el jugador lleva un objeto equipado, el delta con
+  signo y color que ese objeto le pone a cada atributo que toca (verde el que sube, rojo el que baja,
+  reutilizando `Style.LinkCreated`/`Style.LinkBroken`, los mismos del aviso de perk)—; rasgos; perks
+  **con su descripción generada** (RT-035) y los slots libres que quedan; habilidad racial; vínculos;
+  objeto (AW-K: nombre y descripción generados igual que un perk, con `ItemDescriptions.Describe`, o el
+  marcador de "sin objeto" si no lleva ninguno); estado; salario. **Solo una expandida a la vez**: lo
+  garantiza la pantalla, no la ficha.
 - **Reactiva** (UI-013): `Flash()` hace destellar la tira. Aquí lo dispara que el jugador cambie de
   casilla; en Partido lo disparará la activación de un perk, a la vez que el sprite.
 
-Los bloques cortos (rasgos, objeto, estado, salario) van en una sola línea con el título; los largos
-(perks, habilidad, vínculos) llevan título propio y texto envuelto. El alto lo calcula la ficha y el
-contenedor se recoloca solo, así que una ficha con cuatro perks legendarios no rompe la lista.
+Los bloques cortos (rasgos, estado, salario, y objeto cuando no lleva ninguno) van en una sola línea con
+el título; los largos (perks, habilidad, vínculos, y objeto cuando sí lleva uno) llevan título propio y
+texto envuelto. El alto lo calcula la ficha y el contenedor se recoloca solo, así que una ficha con
+cuatro perks legendarios no rompe la lista.
 
 ## 5. Cuadrícula, colocación y zona de acción
 
@@ -145,6 +151,24 @@ que compara dos alineaciones y responde solo por los perks que la colocación de
 dependa de cómo vaya el partido (`zone`, `scoreDiff`, `stat`...) se omite: prometer una activación que el
 partido puede desmentir sería peor que callar.
 
+### Suplentes: se cogen y se sueltan igual que un titular (AW-L)
+
+Hasta ahora activar una ficha —de titular o de suplente— hacía exactamente lo mismo: expandirla o
+colapsarla. Un suplente no tenía forma de llegar al campo salvo arrastrando a un titular hasta su casilla
+y viendo que `/Sim` ya resolvía la sustitución (`PlacementView.WithPlayerAt`, `TeamState.Move`): el hueco
+era solo de interfaz.
+
+Ahora activar a un suplente **cuando no hay nadie cogido** lo coge en vez de expandirlo —coger tiene
+prioridad sobre inspeccionar—, con el mismo pellizco visual que un titular cogido desde su casilla (borde
+de acento, la misma marca que usa `Selected`): conceptualmente es la ficha que se está manipulando, así
+que reutiliza la misma pista en vez de inventar una segunda. Soltarlo en una casilla libre lo añade a la
+alineación; soltarlo sobre un titular lo sustituye. Volver a activar la ficha del suplente cogido lo
+suelta sin colocar, el mismo gesto de cancelar que soltar donde se pulsó sobre una casilla.
+
+Los dos caminos de entrada de UI-006 llegan al mismo sitio: un clic en la ficha (`OnCardActivated`) y el
+botón de acción con el foco en la lista (`ui_accept` con `_focusRoster`) llaman al mismo método
+(`ActivateRosterCard`), así que ratón y mando cogen y sueltan a un suplente exactamente igual.
+
 ## 6. Modo de cobertura del equipo
 
 Una pulsación (X en el mando, C en el teclado) cambia el campo por el **mapa de calor de cobertura**
@@ -182,7 +206,7 @@ mando. Activar al ya activo lo colapsa.
 |---|---|---|
 | Mover el cursor | mover el ratón sobre la cuadrícula | cruceta o palanca izquierda |
 | Inspeccionar | clic en la ficha o en la casilla | **A** (`ui_accept`) |
-| Coger un jugador | pulsar sobre su casilla | **A** sobre su casilla |
+| Coger un jugador | pulsar sobre su casilla, o clic en su ficha si es suplente | **A** sobre su casilla, o con el foco en su ficha si es suplente |
 | Soltarlo | soltar el botón en otra casilla, o volver a pulsar | **A** en la casilla destino |
 | Cancelar el movimiento | — (se cancela soltando donde estaba) | **B** (`ui_cancel`) |
 | Colapsar la ficha | clic otra vez en la ficha | **B** |
@@ -229,8 +253,12 @@ indexado por clave (`ui.team.*`, `ui.card.*`, `ui.input.*`), precisamente para q
 
 Se enseñan como huecos, no se rellenan con mentiras:
 
-- **Objeto**: el equipamiento (RF-075..RF-076) es de fase 2. La ficha reserva la fila y dice
-  "sin objeto (equipamiento: fase 2)".
+- **Objeto**: resuelto (AW-K). `TeamState.EquippedItemOf(playerId)` busca el id de `RunPlayer.Item` en el
+  roster de la run y lo resuelve en `StandardRunSystems.Items`; la ficha enseña su nombre, su descripción
+  generada y el delta con signo y color en cada atributo que toca. Sigue habiendo un hueco real, no un
+  placeholder: sin run detrás (equipo de pruebas, rival de ojeo) no hay ningún dato de equipamiento que
+  leer, así que la fila se queda en "sin objeto" —el texto de la clave no se ha tocado porque sigue
+  siendo cierto, aunque ya no huela a fase 2 pendiente.
 - **Salario**: la economía (RF-114g..k) y los mercenarios (RF-110..113) son de fase 2, y `PlayerDefinition`
   no tiene salario. La ficha reserva la fila y lo dice.
 - **Club**: los clubes son datos de fase 2. **Con una run en curso** (`RunController`, `ui-run-minima.md`)
@@ -256,6 +284,12 @@ Se enseñan como huecos, no se rellenan con mentiras:
 6. Sobre el campo, **solo información transitoria**.
 7. Lo que la pantalla necesite saber del juego se le pide a `/Sim` con un método puro. Si no existe, se
    añade a `/Sim`; no se calcula en la interfaz.
+8. **"Ver equipo" vuelve adonde estaba** (AW-N): Mercado, Recompensa e Informe ofrecen un botón "Ver
+   equipo" que deja escrito su propio nombre de escena en `Nav.ReturnTo` antes de navegar a Equipo, y el
+   botón de vuelta de Equipo (`AddBackButton`) lo consume una sola vez y lo limpia. Sin desvío escrito,
+   Equipo sigue decidiendo con su lógica de siempre (Ojeo si hay un nodo elegido, si no el Mapa); con
+   desvío, gana el desvío. Es la única regla de "adónde volver" y vive en `Nav.cs`, no repartida por cada
+   pantalla que quiera ofrecer el botón.
 
 ## 13. Cómo se regeneran las capturas
 
@@ -269,14 +303,21 @@ xvfb-run -a --server-args="-screen 0 1280x800x24" \
   godot --path Game --rendering-driver opengl3 --audio-driver Dummy -- --screenshots
 ```
 
-Deja en `Game/screenshots/` seis capturas: `equipo.png` (estado inicial), `equipo-zona.png` (un jugador
+Deja en `Game/screenshots/` nueve capturas: `equipo.png` (estado inicial), `equipo-zona.png` (un jugador
 cogido, con sus dos capas y los vínculos que se crean y se rompen), `equipo-cobertura.png` (modo de
-cobertura), `equipo-ficha.png` (ficha expandida con perk y descripción generada), `equipo-zonas.png`
-(modo de zonas de inicio) y `equipo-aviso.png` (el aviso de perks tras un movimiento). Todas menos la
-primera se alcanzan **con eventos de mando sintéticos**, no llamando a los métodos por dentro: la
-secuencia comprueba de paso que la navegación sin ratón lleva a los mismos estados. El movimiento de la
-última lo elige la propia secuencia previsualizando alineaciones hipotéticas, para que el aviso de la
-captura sea un aviso de verdad y no un campo mudo.
+cobertura), `equipo-ficha.png` (ficha expandida con perk y descripción generada), `equipo-objeto.png`
+(ficha expandida con un objeto equipado: nombre y descripción generados en la sección de objeto, delta
+con signo y color junto a cada atributo que el objeto toca —verde el que sube, rojo el que baja— y la
+media de atributos en la cabecera, AW-K y AW-M), `equipo-zonas.png` (modo de zonas de inicio),
+`equipo-aviso.png` (el aviso de perks tras un movimiento), `equipo-suplente.png` (un suplente cogido
+desde su ficha, con la misma pista visual que un titular cogido, listo para soltar sobre una casilla —
+AW-L) y `equipo-sustitucion.png` (el mismo suplente ya sustituyendo a un titular de campo). Todas menos
+la primera se alcanzan **con eventos de mando sintéticos**, no llamando a los métodos por dentro: la
+secuencia comprueba de paso que la navegación sin ratón lleva a los mismos estados. El movimiento de
+`equipo-aviso.png` lo elige la propia secuencia previsualizando alineaciones hipotéticas, para que el
+aviso de la captura sea un aviso de verdad y no un campo mudo; la plantilla de pruebas no tiene ningún
+jugador equipado, así que `equipo-objeto` fuerza un objeto maldito de verdad (`berserker_totem`) en un
+titular, igual que `equipo-aviso` fuerza un perk cuando la plantilla no trae ninguno.
 
 El render es por software (Mesa/llvmpipe), así que las capturas valen para juzgar composición, color,
 proporción y legibilidad, **no** fluidez.

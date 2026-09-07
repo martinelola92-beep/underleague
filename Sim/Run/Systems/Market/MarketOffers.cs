@@ -1,4 +1,5 @@
 using Underleague.Sim.Data;
+using Underleague.Sim.Perks;
 using Underleague.Sim.Random;
 using Underleague.Sim.Run.Systems.Economy;
 using Underleague.Sim.Run.Systems.Items;
@@ -126,7 +127,7 @@ public static class MarketOfferGenerator
         // mandando (ADR 0051), el valor medido no. Es lo que devuelve al mercado el papel que la ADR 0055
         // le pide —el sitio donde está lo bueno y donde hay que pagarlo— sin tocar un solo número de
         // potencia.
-        var perkPool = PerkPool.Offerable(state, catalog, node.Act, PerkSource.Market);
+        var perkPool = new List<PerkDefinition>(PerkPool.Offerable(state, catalog, node.Act, PerkSource.Market));
         var perkWeights = new List<int>(perkPool.Count);
         for (int i = 0; i < perkPool.Count; i++)
         {
@@ -134,12 +135,17 @@ public static class MarketOfferGenerator
                 state, perkPool[i], catalog, economy.PerkValues.BaseWeight, node.Act));
         }
 
+        // Un mismo perk no puede salir dos veces en el mismo mercado (AW-H, mitad barata): tras
+        // elegirlo se saca del pool y de sus pesos, así que la siguiente vuelta ya no puede repetirlo.
         var perks = new List<PerkOffer>(market.PerkOffers);
         for (int i = 0; i < market.PerkOffers && perkPool.Count > 0; i++)
         {
-            var perk = perkPool[WeightedPick.Index(ref rng, perkWeights)];
+            int index = WeightedPick.Index(ref rng, perkWeights);
+            var perk = perkPool[index];
             int perkBase = market.PerkPrice.Of(perk.Rarity);
             perks.Add(new PerkOffer(perk.Id, Priced(ref rng, perkBase, perkBase)));
+            perkPool.RemoveAt(index);
+            perkWeights.RemoveAt(index);
         }
 
         // Solo los universales y los restringidos de la raza del club (ADR 0036); el precio sale del

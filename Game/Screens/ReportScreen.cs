@@ -38,6 +38,7 @@ public partial class ReportScreen : Control
         {
             Widgets.Background(this);
             Widgets.Header(this, UiText.Get("ui.report.title"), UiText.Get("ui.report.none"));
+            Widgets.Button(this, UiText.Get("ui.nav.team"), new Rect2(932f, 706f, 132f, 26f)).Pressed += ViewTeam;
             Widgets.Button(this, UiText.Get("ui.report.continue"), new Rect2(1076f, 706f, 180f, 26f)).Pressed += Continue;
             return;
         }
@@ -55,6 +56,15 @@ public partial class ReportScreen : Control
     }
 
     private void Continue() => Nav.Route(this);
+
+    /// <summary>Botón "Ver equipo" (AW-N): deja dicho el camino de vuelta y navega. El informe no
+    /// cambia con la run: se vuelve a pedir igual (<c>run.PostMatch()</c>), así que no hay nada que
+    /// perder al pasar por Equipo.</summary>
+    private void ViewTeam()
+    {
+        Nav.ReturnTo = Nav.Report;
+        Nav.Go(this, Nav.Team);
+    }
 
     private void Build()
     {
@@ -83,6 +93,7 @@ public partial class ReportScreen : Control
         Perks();
         Gold();
 
+        Widgets.Button(this, UiText.Get("ui.nav.team"), new Rect2(932f, 706f, 132f, 26f)).Pressed += ViewTeam;
         Widgets.Button(this, UiText.Get("ui.report.continue"), new Rect2(1076f, 706f, 180f, 26f)).Pressed += Continue;
         Widgets.InputHelp(this, UiText.Get("ui.input.mouseReport"), UiText.Get("ui.input.padPending"));
     }

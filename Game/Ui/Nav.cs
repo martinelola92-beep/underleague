@@ -41,6 +41,14 @@ public static class Nav
     public static string Missing { get; private set; } = string.Empty;
 
     /// <summary>
+    /// Adónde volver al salir de Equipo (AW-N): cualquier pantalla que ofrezca un botón "Ver equipo" deja
+    /// aquí su propio nombre de escena antes de navegar, y el botón de vuelta de Equipo lo consume una
+    /// sola vez. Vacío significa "sin desvío": Equipo decide con su lógica de siempre (Ojeo si hay un
+    /// nodo elegido, si no el Mapa).
+    /// </summary>
+    public static string ReturnTo { get; set; } = string.Empty;
+
+    /// <summary>
     /// Cambia a esa escena. Si el fichero no existe todavía, va a la pantalla provisional, que dice cuál
     /// falta y ofrece seguir: una escena que aún no está escrita no puede dejar la run bloqueada.
     /// </summary>

@@ -3,6 +3,7 @@ using Godot;
 using Underleague.Game.Data;
 using Underleague.Sim.Model;
 using Underleague.Sim.Perks;
+using Underleague.Sim.Run.Systems.Items;
 
 namespace Underleague.Game.Ui;
 
@@ -29,10 +30,11 @@ public partial class PlayerCard : Control
     private const int SectionGap = 4;
 
     private readonly List<Section> _sections = new();
-    private readonly List<(string Label, int Value)> _attributes = new();
+    private readonly List<(string Label, int Value, AttributeKind Kind)> _attributes = new();
 
     private TeamState? _state;
     private PlayerDefinition? _player;
+    private ItemDefinition? _item;
     private string _headline = string.Empty;
     private bool _expanded;
     private bool _selected;
@@ -79,6 +81,7 @@ public partial class PlayerCard : Control
     {
         _state = state;
         _player = player;
+        _item = state.EquippedItemOf(player.Id);
         _bench = !state.IsStarter(player.Id);
         _sections.Clear();
         _attributes.Clear();
@@ -88,6 +91,7 @@ public partial class PlayerCard : Control
 
         _headline = string.Join(" · ", new[]
         {
+            UiText.Get("ui.card.average") + " " + player.Attributes.Average,
             UiText.Get("ui.card.level", player.Level),
             UiText.Get("ui.card.rarity." + player.Rarity),
             catalog.Race(player.Race).Name.Es,
@@ -96,11 +100,11 @@ public partial class PlayerCard : Control
             _bench ? UiText.Get("ui.card.bench") : string.Empty,
         }).TrimEnd(' ', '·');
 
-        _attributes.Add((templates.Get("attributes", "strength"), player.Attributes.Strength));
-        _attributes.Add((templates.Get("attributes", "speed"), player.Attributes.Speed));
-        _attributes.Add((templates.Get("attributes", "technique"), player.Attributes.Technique));
-        _attributes.Add((templates.Get("attributes", "stamina"), player.Attributes.Stamina));
-        _attributes.Add((templates.Get("attributes", "leash"), player.Attributes.Leash));
+        _attributes.Add((templates.Get("attributes", "strength"), player.Attributes.Strength, AttributeKind.Strength));
+        _attributes.Add((templates.Get("attributes", "speed"), player.Attributes.Speed, AttributeKind.Speed));
+        _attributes.Add((templates.Get("attributes", "technique"), player.Attributes.Technique, AttributeKind.Technique));
+        _attributes.Add((templates.Get("attributes", "stamina"), player.Attributes.Stamina, AttributeKind.Stamina));
+        _attributes.Add((templates.Get("attributes", "leash"), player.Attributes.Leash, AttributeKind.Leash));
 
         var traits = new List<string>();
         foreach (var trait in player.Traits)
@@ -137,7 +141,18 @@ public partial class PlayerCard : Control
         }
 
         _sections.Add(new Section(UiText.Get("ui.card.links"), links.Count > 0 ? new List<string>(links) : new List<string> { UiText.Get("ui.team.linksNone") }));
-        _sections.Add(new Section(UiText.Get("ui.card.item"), new List<string> { UiText.Get("ui.card.itemNone") }, Compact: true));
+
+        if (_item is { } item)
+        {
+            _sections.Add(new Section(
+                UiText.Get("ui.card.item"),
+                new List<string> { item.Name.Es + ": " + ItemDescriptions.Describe(item, TeamState.Language) }));
+        }
+        else
+        {
+            _sections.Add(new Section(UiText.Get("ui.card.item"), new List<string> { UiText.Get("ui.card.itemNone") }, Compact: true));
+        }
+
         _sections.Add(new Section(UiText.Get("ui.card.state"), new List<string> { UiText.Get("ui.state." + player.PhysicalState) }, Compact: true));
         _sections.Add(new Section(UiText.Get("ui.card.salary"), new List<string> { UiText.Get("ui.card.salaryNone") }, Compact: true));
 
@@ -228,14 +243,24 @@ public partial class PlayerCard : Control
         }
 
         y += 4f;
-        foreach (var (label, value) in _attributes)
+        float deltaWidth = _item is not null ? 30f : 0f;
+        foreach (var (label, value, kind) in _attributes)
         {
             Style.DrawText(this, font, new Vector2(Padding, y), label, Style.TextSmall, Style.Text);
             float barLeft = Padding + 86f;
-            float barWidth = width - barLeft - Padding - 26f;
+            float barWidth = width - barLeft - Padding - 26f - deltaWidth;
             DrawRect(new Rect2(barLeft, y + 4f, barWidth, 7f), Style.Line);
             DrawRect(new Rect2(barLeft, y + 4f, barWidth * value / 99f, 7f), Style.Of(_player.Position));
-            Style.DrawText(this, font, new Vector2(width - Padding - 20f, y), value.ToString(System.Globalization.CultureInfo.InvariantCulture), Style.TextSmall, Style.Text);
+            Style.DrawText(this, font, new Vector2(width - Padding - deltaWidth - 20f, y), value.ToString(System.Globalization.CultureInfo.InvariantCulture), Style.TextSmall, Style.Text);
+
+            int delta = _item?.Modifier.Get(kind) ?? 0;
+            if (delta != 0)
+            {
+                string deltaText = (delta > 0 ? "+" : string.Empty) + delta.ToString(System.Globalization.CultureInfo.InvariantCulture);
+                var deltaColor = delta > 0 ? Style.LinkCreated : Style.LinkBroken;
+                Style.DrawText(this, font, new Vector2(width - Padding - deltaWidth, y), deltaText, Style.TextSmall, deltaColor);
+            }
+
             y += AttributeRow;
         }
 

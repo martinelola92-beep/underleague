@@ -102,6 +102,80 @@ public sealed class MatchRulesTests
         }
     }
 
+    /// <summary>
+    /// AW-C (docs/pendientes.md): un tiro fuera cae junto al poste, no en la bandera de córner. Se mide
+    /// directamente sobre el cálculo del destino (accesible como <c>internal static</c> solo para esto),
+    /// para las dos filas de origen del tirador, sin depender de que el motor produzca un fallo con esta
+    /// semilla concreta.
+    /// </summary>
+    [Fact]
+    public void OffTargetShotsLandNearTheGoalNotTheCorner()
+    {
+        var goal = Pitch.GoalCenter(0);
+
+        var fromTop = MatchEngine.OffTargetShotTarget(goal, shooterRow: 0f);
+        var fromBottom = MatchEngine.OffTargetShotTarget(goal, shooterRow: Pitch.Rows);
+
+        // Misma columna que la portería: el balón no se escapa a lo largo de la línea de fondo.
+        Assert.Equal(goal.X, fromTop.X);
+        Assert.Equal(goal.X, fromBottom.X);
+
+        // Entre 1 y 1,5 casillas del centro de la portería (RT-023: aritmética entera para todo salvo
+        // posiciones, aquí sí toca), lejos de las filas 0 y 5 que antes eran la esquina del campo.
+        Assert.InRange(MathF.Abs(fromTop.Y - PitchConstants.CenterRow), 1f, 1.5f);
+        Assert.InRange(MathF.Abs(fromBottom.Y - PitchConstants.CenterRow), 1f, 1.5f);
+        Assert.NotEqual(0f, fromTop.Y);
+        Assert.NotEqual(Pitch.Rows, fromBottom.Y);
+
+        // Conserva el lado hacia el que se fue: origen en la mitad superior desvía hacia arriba, origen
+        // en la inferior hacia abajo.
+        Assert.True(fromTop.Y < PitchConstants.CenterRow, $"fromTop.Y={fromTop.Y} debería quedar por encima del centro");
+        Assert.True(fromBottom.Y > PitchConstants.CenterRow, $"fromBottom.Y={fromBottom.Y} debería quedar por debajo del centro");
+    }
+
+    /// <summary>
+    /// AW-B (docs/pendientes.md): el portero no se desplaza con el bloque táctico. Se ejecuta un partido
+    /// completo con traza (§ MatchTrace) y se compara, fotograma a fotograma, la casilla-hogar efectiva
+    /// de cada jugador con la fija que le asigna la alineación: la del portero no debe moverse nunca,
+    /// mientras que algún jugador de campo sí, o el test sería vacuo (el bloque nunca se desplazaría).
+    /// </summary>
+    [Fact]
+    public void GoalkeeperEffectiveHomeNeverShiftsWithTheBlock()
+    {
+        var setup = TestMatches.Reference(Catalog, 1);
+        var result = Simulator.Run(setup, 1, Catalog, SimConfig.Default with { Trace = true });
+        var trace = result.Trace!;
+
+        bool anyOutfieldMoved = false;
+        for (int p = 0; p < trace.Players.Count; p++)
+        {
+            var tracePlayer = trace.Players[p];
+            var team = tracePlayer.Team == 0 ? setup.Home : setup.Away;
+            var slot = team.Lineup.Slots.Single(s => s.PlayerId == tracePlayer.Id);
+            int column = tracePlayer.Team == 0 ? slot.HomeCell.Column : Pitch.Columns - 1 - slot.HomeCell.Column;
+            var expectedHome = Pitch.CellCenter(new Cell(column, slot.HomeCell.Row));
+
+            for (int frame = 0; frame < trace.FrameCount; frame++)
+            {
+                var home = trace.ZoneAt(frame, p).Home;
+                bool matchesFixedHome = Vec2.Distance(home, expectedHome) < 0.001f;
+
+                if (tracePlayer.Role == Position.Goalkeeper)
+                {
+                    Assert.True(
+                        matchesFixedHome,
+                        $"portero {tracePlayer.Id}, fotograma {frame}: casilla-hogar efectiva {home} distinta de la fija {expectedHome}");
+                }
+                else if (!matchesFixedHome)
+                {
+                    anyOutfieldMoved = true;
+                }
+            }
+        }
+
+        Assert.True(anyOutfieldMoved, "ningún jugador de campo desplazó su casilla-hogar en todo el partido: el bloque táctico no se ejercitó");
+    }
+
     [Fact]
     public void EventTicksAreNonDecreasing()
     {

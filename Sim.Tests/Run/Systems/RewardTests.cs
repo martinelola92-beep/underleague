@@ -135,6 +135,36 @@ public sealed class RewardTests
         Assert.Equal(-1, closed.PendingNodeId);
     }
 
+    /// <summary>
+    /// AW-H (mitad barata, <c>docs/pendientes.md</c>): dentro de una misma recompensa, dos opciones de
+    /// perk no pueden salir con el mismo id, sea cual sea la rareza que cada una haya sorteado.
+    /// <c>config.Options</c> es 3 en los tres tipos de nodo (liga, élite y jefe), así que la condición
+    /// <c>&gt;= 2</c> siempre se cumple aquí.
+    /// </summary>
+    [Fact]
+    public void RewardOptionsNeverRepeatAPerkWithinTheSameReward()
+    {
+        var economy = SystemsTestSupport.Systems.Economy;
+        Assert.True(economy.RewardFor(NodeKind.LeagueMatch).Options >= 2, "este test exige al menos 2 opciones para tener algo que comprobar");
+        Assert.True(economy.RewardFor(NodeKind.EliteMatch).Options >= 2, "este test exige al menos 2 opciones para tener algo que comprobar");
+        Assert.True(economy.RewardFor(NodeKind.Boss).Options >= 2, "este test exige al menos 2 opciones para tener algo que comprobar");
+
+        foreach (var kind in new[] { NodeKind.LeagueMatch, NodeKind.EliteMatch, NodeKind.Boss })
+        {
+            for (ulong seed = 1UL; seed <= 150UL; seed++)
+            {
+                var state = RunEngine.Start(SystemsTestSupport.Setup(), seed, SystemsTestSupport.Catalog, SystemsTestSupport.Systems);
+                state = SystemsTestSupport.WithFakePendingNode(state, kind);
+                var node = state.GetNode(state.PendingNodeId);
+
+                var options = RewardSystem.Options(state, node, SystemsTestSupport.Catalog, economy, SystemsTestSupport.Systems.Items);
+                var perkIds = options.OfType<PerkRewardOption>().Select(o => o.PerkId).ToList();
+
+                Assert.Equal(perkIds.Count, perkIds.Distinct().Count());
+            }
+        }
+    }
+
     private static RunState FreshPendingReward(ulong seed)
     {
         var state = RunEngine.Start(SystemsTestSupport.Setup(), seed, SystemsTestSupport.Catalog, SystemsTestSupport.Systems);

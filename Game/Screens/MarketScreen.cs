@@ -99,6 +99,7 @@ public partial class MarketScreen : Control
         Action();
         Sell();
 
+        Widgets.Button(this, UiText.Get("ui.nav.team"), new Rect2(884f, 706f, 180f, 26f)).Pressed += ViewTeam;
         Widgets.Button(this, UiText.Get("ui.market.leave"), new Rect2(1076f, 706f, 180f, 26f)).Pressed += Leave;
         _error = Widgets.Body(this, string.Empty, new Vector2(12f, 736f), 1040f, Style.Hole);
         Widgets.InputHelp(this, UiText.Get("ui.input.mouseMarket"), UiText.Get("ui.input.padPending"));
@@ -375,6 +376,14 @@ public partial class MarketScreen : Control
         }
 
         Nav.Route(this);
+    }
+
+    /// <summary>Botón "Ver equipo" (AW-N): deja dicho el camino de vuelta y navega. El surtido y el oro
+    /// no se pierden al volver: los dos viven en <c>RunState</c>, no en esta pantalla.</summary>
+    private void ViewTeam()
+    {
+        Nav.ReturnTo = Nav.Market;
+        Nav.Go(this, Nav.Team);
     }
 
     private bool CanBuy(MarketRow row) =>
