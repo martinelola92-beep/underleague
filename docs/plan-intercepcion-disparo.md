@@ -185,6 +185,15 @@ de banda (RT-057) con los datos, en lugar de bajar el bloqueo hasta hacerlo irre
 
 ## 6. Paso 4 (§2 del informe): pasillo de pase dependiente del tiempo
 
+> **Intentado y descartado (7 sep 2026), sin commitear.** Ver `docs/pendientes.md` fila AW-A para el
+> detalle completo de las tres pruebas (radio 0,5 sobre los dos consumidores, 0,5 solo sobre `EvaluatePass`,
+> 0,3 solo sobre `EvaluatePass`). Ninguna cumplió el criterio de parada: `passChainAvgLength` se queda bajo
+> el suelo de 2 en al menos una semilla y `possessionChanges` empeora en vez de mejorar. Conclusión: la
+> premisa de SimpleSoccer (espacio continuo) no traduce bien a una rejilla de 5×16 sin un tope absoluto al
+> radio efectivo, que el diseño de abajo no incluía. No reintentar con solo un ajuste de magnitud; una
+> vuelta futura necesitaría rediseñar el crecimiento del radio (por ejemplo con un máximo absoluto en
+> casillas, no solo el factor lineal).
+
 **Regla.** `Utility.PassLaneRadius` (0,6 fijo) pasa a ser `radio + velocidad_rival × ticks` donde `ticks` es
 lo que tarda el balón en llegar al punto del segmento más cercano al rival (`distancia_desde_origen /
 passSpeed`). Un rival lejos del pasador pero cerca del receptor tiene tiempo de cerrar el pasillo; hoy no
