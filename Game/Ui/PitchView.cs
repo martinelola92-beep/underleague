@@ -51,6 +51,18 @@ public partial class PitchView : Control
     /// </summary>
     public bool ZonesMode { get; set; }
 
+    /// <summary>
+    /// Tercio a resaltar <b>él solo</b> (una clave de <see cref="ZoneHintText.ZoneKeys"/>), o null. Es lo
+    /// que se pinta mientras el ratón descansa sobre el nombre de ese tercio dentro de la descripción de
+    /// un perk (AW-F): la pregunta ahí es "¿dónde está <i>ese</i> tercio?", así que tintar los tres
+    /// respondería a otra. Es independiente de <see cref="ZonesMode"/>: funciona con el modo apagado, y
+    /// con el modo encendido se superpone como un subrayado del que se está mirando.
+    /// </summary>
+    public string? HighlightedZoneKey { get; set; }
+
+    /// <summary>Banda a resaltar ella sola (una clave de <see cref="ZoneHintText.FlankKeys"/>), o null.</summary>
+    public string? HighlightedFlankKey { get; set; }
+
     /// <summary>False si soltar en la casilla del cursor no sería una colocación válida (RF-041).</summary>
     public bool CursorValid { get; set; } = true;
 
@@ -131,6 +143,10 @@ public partial class PitchView : Control
             DrawZone(zone, cell);
         }
 
+        // El resaltado de una zona suelta va después del modo que toque y antes de la retícula: es una
+        // capa sobre el césped, como los tintes de tercio, no una marca encima de las fichas.
+        DrawHighlight(cell);
+
         DrawGrid(cell);
         if (!CoverageMode)
         {
@@ -146,6 +162,12 @@ public partial class PitchView : Control
         if (ZonesMode)
         {
             DrawStartZoneNames(cell);
+        }
+        else
+        {
+            // Con el modo de zonas encendido cada franja ya lleva su nombre escrito: repetirlo para la
+            // resaltada sería el mismo rótulo dos veces en el mismo sitio.
+            DrawHighlightNames(cell);
         }
     }
 
@@ -253,16 +275,115 @@ public partial class PitchView : Control
     /// </summary>
     private static readonly int[] ThirdBounds = { 0, 3, 6, Pitch.PlacementColumns };
 
-    /// <summary>Claves de los tres tercios en <c>startZones</c>, en el orden en el que se pintan.</summary>
-    private static readonly string[] ThirdKeys = { "OwnThird", "Middle", "AttackingThird" };
+    /// <summary>
+    /// Claves de los tres tercios y de las tres bandas, en el orden en el que se pintan. Salen de
+    /// <see cref="ZoneHintText"/> y no de una copia local para que la cuadrícula y el marcado de las
+    /// descripciones no puedan hablar de zonas distintas.
+    /// </summary>
+    private static readonly string[] ThirdKeys = ZoneHintText.ZoneKeys;
+
+    private static readonly string[] FlankKeys = ZoneHintText.FlankKeys;
+
+    /// <summary>Rectángulo de un tercio de inicio: todas sus columnas de colocación, de banda a banda.</summary>
+    private static Rect2 ThirdRect(int third, float cell) => new(
+        ThirdBounds[third] * cell,
+        0f,
+        (ThirdBounds[third + 1] - ThirdBounds[third]) * cell,
+        cell * Pitch.Rows);
+
+    /// <summary>
+    /// Rectángulo de una banda de inicio sobre la mitad propia. Las bandas parten filas, no columnas:
+    /// la central es una sola fila (<c>Pitch.Rows / 2</c>) y las otras dos son <b>todas</b> las que
+    /// quedan a cada lado, que es justo lo que el texto del perk no dejaba claro (AW-F).
+    /// </summary>
+    private static Rect2 FlankRect(int flank, float cell)
+    {
+        int center = Pitch.Rows / 2;
+        int first = flank switch { 0 => 0, 1 => center, _ => center + 1 };
+        int last = flank switch { 0 => center - 1, 1 => center, _ => Pitch.Rows - 1 };
+        return new Rect2(0f, first * cell, cell * Pitch.PlacementColumns, (last - first + 1) * cell);
+    }
+
+    private static int IndexOf(string[] keys, string? key)
+    {
+        if (key is null)
+        {
+            return -1;
+        }
+
+        for (int i = 0; i < keys.Length; i++)
+        {
+            if (string.Equals(keys[i], key, System.StringComparison.Ordinal))
+            {
+                return i;
+            }
+        }
+
+        return -1;
+    }
+
+    /// <summary>
+    /// Una sola franja resaltada, con el mismo tono de acento con el que la ficha marca la frase que la
+    /// nombra: lo que se lee y lo que se pinta son la misma cosa. Relleno <b>y</b> borde continuo, no
+    /// solo color (UI-002), y el nombre lo pone <see cref="DrawHighlightNames"/> al final.
+    /// </summary>
+    private void DrawHighlight(float cell)
+    {
+        int third = IndexOf(ThirdKeys, HighlightedZoneKey);
+        if (third >= 0)
+        {
+            Highlight(ThirdRect(third, cell));
+        }
+
+        int flank = IndexOf(FlankKeys, HighlightedFlankKey);
+        if (flank >= 0)
+        {
+            Highlight(FlankRect(flank, cell));
+        }
+    }
+
+    private void Highlight(Rect2 rect)
+    {
+        DrawRect(rect, new Color(Style.Accent, 0.15f));
+        DrawRect(rect, Style.Accent, false, 2f);
+    }
+
+    private void DrawHighlightNames(float cell)
+    {
+        if (State is null)
+        {
+            return;
+        }
+
+        var font = GetThemeDefaultFont();
+        int third = IndexOf(ThirdKeys, HighlightedZoneKey);
+        if (third >= 0)
+        {
+            // Arriba, bajo la numeración de columnas, y no abajo como el modo de zonas completo: así el
+            // sitio del rótulo dice por sí solo cuál de las dos lecturas del campo se está viendo.
+            var rect = ThirdRect(third, cell);
+            string text = State.Templates.Get("startZones", ThirdKeys[third]);
+            var size = font.GetStringSize(text, HorizontalAlignment.Left, -1f, Style.TextSmall);
+            Tag(font, new Vector2(rect.Position.X + ((rect.Size.X - size.X) / 2f), 20f), text, size);
+        }
+
+        int flank = IndexOf(FlankKeys, HighlightedFlankKey);
+        if (flank >= 0)
+        {
+            var rect = FlankRect(flank, cell);
+            string text = State.Templates.Get("startFlanks", FlankKeys[flank]);
+            var size = font.GetStringSize(text, HorizontalAlignment.Left, -1f, Style.TextSmall);
+            Tag(font, new Vector2(rect.Position.X + rect.Size.X + 10f, rect.Position.Y + ((rect.Size.Y - size.Y) / 2f)), text, size);
+        }
+    }
 
     /// <summary>
     /// Tercios de inicio y bandas sobre la mitad propia (RF-040..045). Los perks describen la cuadrícula
-    /// de alineación —"empieza en el tercio rival", "en una banda"— y hasta ahora no había forma de ver
-    /// dónde están esas zonas: este modo las dibuja con los mismos nombres con los que los perks hablan.
+    /// de alineación —"empieza en su tercio adelantado", "en cualquier fila de su izquierda"— y no había
+    /// forma de ver dónde están: este modo las dibuja con los mismos nombres con los que los perks hablan.
     /// <para>
     /// Los tres tercios se distinguen por color <b>y</b> por su nombre escrito; las tres bandas, por la
-    /// línea punteada que separa el carril central y por sus rótulos (UI-002: nunca solo el color).
+    /// línea punteada que separa la fila central y por sus rótulos (UI-002: nunca solo el color).
     /// </para>
     /// </summary>
     private void DrawStartZones(float cell)
@@ -270,12 +391,11 @@ public partial class PitchView : Control
         float height = cell * Pitch.Rows;
         for (int third = 0; third < ThirdKeys.Length; third++)
         {
-            float left = ThirdBounds[third] * cell;
-            float right = ThirdBounds[third + 1] * cell;
-            DrawRect(new Rect2(left, 0f, right - left, height), Style.StartZoneFills[third]);
+            var rect = ThirdRect(third, cell);
+            DrawRect(rect, Style.StartZoneFills[third]);
             if (third > 0)
             {
-                DrawLine(new Vector2(left, 0f), new Vector2(left, height), Style.ZoneDivider, 2f);
+                DrawLine(new Vector2(rect.Position.X, 0f), new Vector2(rect.Position.X, height), Style.ZoneDivider, 2f);
             }
         }
 
@@ -303,19 +423,18 @@ public partial class PitchView : Control
         for (int third = 0; third < ThirdKeys.Length; third++)
         {
             string text = State.Templates.Get("startZones", ThirdKeys[third]);
-            float left = ThirdBounds[third] * cell;
-            float width = (ThirdBounds[third + 1] - ThirdBounds[third]) * cell;
+            var rect = ThirdRect(third, cell);
             var size = font.GetStringSize(text, HorizontalAlignment.Left, -1f, Style.TextSmall);
-            Tag(font, new Vector2(left + ((width - size.X) / 2f), (cell * Pitch.Rows) - size.Y - 8f), text, size);
+            Tag(font, new Vector2(rect.Position.X + ((rect.Size.X - size.X) / 2f), (cell * Pitch.Rows) - size.Y - 8f), text, size);
         }
 
         // Las bandas se rotulan en la mitad rival, que está vacía: sobre la propia taparían las fichas.
-        var flanks = new[] { ("LeftFlank", 1.0f), ("Center", 2.5f), ("RightFlank", 4.0f) };
-        foreach (var (key, row) in flanks)
+        for (int flank = 0; flank < FlankKeys.Length; flank++)
         {
-            string text = State.Templates.Get("startFlanks", key);
+            string text = State.Templates.Get("startFlanks", FlankKeys[flank]);
+            var rect = FlankRect(flank, cell);
             var size = font.GetStringSize(text, HorizontalAlignment.Left, -1f, Style.TextSmall);
-            Tag(font, new Vector2((cell * Pitch.PlacementColumns) + 10f, (row * cell) - (size.Y / 2f)), text, size);
+            Tag(font, new Vector2(rect.Position.X + rect.Size.X + 10f, rect.Position.Y + ((rect.Size.Y - size.Y) / 2f)), text, size);
         }
     }
 

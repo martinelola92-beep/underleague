@@ -57,8 +57,8 @@ public static class UiText
         ["ui.team.zones"] = "ZONAS DE INICIO Y VÍNCULOS",
         ["ui.team.zonesHelp"] =
             "Los perks de inicio miran la casilla en la que alineas al jugador, no dónde acabe él durante el "
-            + "partido.\n\nEl tercio lo da la columna de esa casilla; la banda, la fila: «banda» es cualquier "
-            + "fila menos la central, que es el carril central.\n\nUn vínculo une a dos titulares que estén a "
+            + "partido.\n\nEl tercio lo da la columna de esa casilla; la banda, la fila: es banda cualquier "
+            + "fila menos la 2, que es la fila central.\n\nUn vínculo une a dos titulares que estén a "
             + "dos casillas o menos en la dirección que pide el perk (delante, detrás, izquierda, derecha o "
             + "en diagonal).",
         ["ui.link.Beside"] = "al lado",
@@ -168,7 +168,7 @@ public static class UiText
         ["ui.scout.warnSevere"] = "{0} sale con una lesión grave sin tratar: si vuelve a lesionarse, muere (RF-093)",
         ["ui.scout.warnLethal"] = "{0} puede morir en este partido: {1}",
         ["ui.scout.lineup"] = "Alinear",
-        ["ui.scout.start"] = "Empezar partido",
+        ["ui.scout.start"] = "Confirmar y jugar",
         ["ui.scout.boss"] = "MODIFICADORES DEL JEFE",
         ["ui.scout.bossHidden"] = "el modificador se descubre al llegar aquí, y ya lo has hecho",
         ["ui.scout.starters"] = "TU ONCE",

@@ -28,6 +28,10 @@ namespace Underleague.Game.Screens;
 /// <para>Nada de esto lo calcula la pantalla (RT-014): el partido lo arma <c>RunEngine.BuildMatch</c> —el
 /// mismo que se va a jugar—, los perks letales los lista <c>Sim.Perks.Scouting</c> y los riesgos,
 /// <c>RunEngine.LethalRisks</c>.</para>
+/// <para>AW-O: el botón que empieza el partido (<see cref="BuildConfirmBar"/>) no vive con "Volver" y
+/// "Alinear" arriba del todo —eso es navegación, se puede pulsar sin haber leído nada—, sino pegado al
+/// bloque de riesgo y avisos que se acaba de enseñar, con separador y color de acento propios, para que
+/// pulsarlo se sienta como confirmar el informe, no como un trámite previo a él.</para>
 /// </summary>
 public partial class ScoutScreen : Control
 {
@@ -214,6 +218,11 @@ public partial class ScoutScreen : Control
             y = Block(UiText.Get("ui.scout.warnings"), warningLines, y, Style.Accent);
         }
 
+        // AW-O: el botón de empezar va pegado a lo que se acaba de leer, no arriba del todo con "Volver"
+        // y "Alinear" (BuildButtons) — para que confirmar se sienta como confirmar el riesgo y los
+        // avisos, no como un paso de trámite anterior a ellos.
+        y = BuildConfirmBar(y);
+
         // El once con el que se juega, que es lo que el jugador cambia si el número no le gusta.
         var starters = new List<string>();
         foreach (var slot in state.Lineup.Slots)
@@ -227,6 +236,24 @@ public partial class ScoutScreen : Control
         }
 
         Block(UiText.Get("ui.scout.starters"), starters, y);
+    }
+
+    /// <summary>
+    /// AW-O: separador fino y botón de confirmación en acento, pegados al bloque de riesgo y avisos que
+    /// acaban de leerse. Antes el botón vivía en la fila de navegación de arriba (<see cref="BuildButtons"/>),
+    /// junto a "Volver" y "Alinear", con el mismo peso visual que ellos y antes de leer una sola línea del
+    /// informe: eso lo hacía sentir un paso de trámite, no la confirmación explícita que pide el revisor.
+    /// </summary>
+    private float BuildConfirmBar(float y)
+    {
+        Widgets.Panel(this, new Rect2(412f, y, 830f, 1f), Style.Line);
+        y += 14f;
+
+        var start = Widgets.Button(this, UiText.Get("ui.scout.start"), new Rect2(412f, y, 220f, 32f));
+        start.AddThemeColorOverride("font_color", Style.Accent);
+        start.Pressed += StartMatch;
+
+        return y + 32f + 16f;
     }
 
     /// <summary>Las etiquetas que más se repiten: es lo que hace reconocible a un rival (RF-015).</summary>
@@ -263,13 +290,14 @@ public partial class ScoutScreen : Control
         return y + 12f;
     }
 
+    /// <summary>
+    /// Navegación, no confirmación: "Volver" y "Alinear" se pueden pulsar sin haber leído nada. El botón
+    /// que empieza el partido vive aparte, pegado al informe (<see cref="BuildConfirmBar"/>, AW-O).
+    /// </summary>
     private void BuildButtons()
     {
         var lineup = Widgets.Button(this, UiText.Get("ui.scout.lineup"), new Rect2(1002f, 58f, 120f, 28f));
         lineup.Pressed += () => Nav.Go(this, Nav.Team);
-
-        var start = Widgets.Button(this, UiText.Get("ui.scout.start"), new Rect2(1130f, 58f, 124f, 28f));
-        start.Pressed += StartMatch;
 
         var back = Widgets.Button(this, UiText.Get("ui.nav.back"), new Rect2(886f, 58f, 100f, 28f));
         back.Pressed += () =>

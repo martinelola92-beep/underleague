@@ -44,7 +44,7 @@ la ve píxel a píxel y cualquier otra resolución la ve escalada sin recomponer
 │ · [expandida] │                                                        │
 │ SUPLENTES     │  estado de la selección   │   ALINEACIÓN (lectura en   │
 │ · ficha 24 px │  o del movimiento         │   texto de la cuadrícula)  │
-│               │                                                        │
+│               │                           │   RIESGO DE MUERTE (AW-G)  │
 │               │  RATÓN ...                                             │
 │               │  MANDO ...                                             │
 └───────────────┴────────────────────────────────────────────────────────┘
@@ -122,10 +122,10 @@ cuatro perks legendarios no rompe la lista.
 
 ### Modo de zonas de inicio (botón "Zonas del campo", Z / Y)
 
-Los perks de colocación describen la cuadrícula con palabras —"empieza en el tercio rival", "en una
-banda", "en el centro del campo"— y esas palabras no correspondían a nada visible. Una pulsación pinta
+Los perks de colocación describen la cuadrícula con palabras —"empieza en su tercio adelantado", "en
+cualquier fila de su izquierda"— y esas palabras no correspondían a nada visible. Una pulsación pinta
 sobre la mitad propia los **tres tercios de inicio** (columnas 0-2, 3-5 y 6-7) con tres tintes y su
-nombre escrito, y las **tres bandas** por filas (la 2 es el carril central; el resto, banda), separadas
+nombre escrito, y las **tres bandas** por filas (la 2 es la fila central; el resto, banda), separadas
 con línea punteada para no confundirlas con los cortes de tercio. Los nombres no se escriben en la
 pantalla: salen de `startZones` y `startFlanks` de `data/l10n`, que es de donde salen las descripciones
 de los perks, así que el campo y el texto del perk no pueden llamar a lo mismo de dos maneras.
@@ -135,6 +135,41 @@ un perk de inicio mira la **casilla de alineación** y no dónde acabe el jugado
 "banda" es cualquier fila menos la central, y que un vínculo une a dos titulares a **dos casillas o
 menos** en la dirección que el perk pide (RF-044). Es excluyente con el modo de cobertura, por la misma
 razón que este lo es con la zona individual.
+
+### El nombre de la zona, dentro del texto del perk (AW-F)
+
+El modo de zonas responde a "¿dónde están las zonas?" pero hay que saber que existe y pulsarlo, y
+mientras está encendido tiñe las tres a la vez. La pregunta que se hace de verdad se hace **leyendo la
+ficha**, y es más estrecha: "¿dónde está *ésta*?". Así que el nombre de la zona es interactivo dentro de
+la propia descripción.
+
+- El texto de los tercios y las bandas se reescribió para que se sostenga solo fuera de esta pantalla
+  (ficha, informe, Ojeo): "el tercio rival" —que se leía como el campo del rival— pasa a **"su tercio
+  adelantado"**, "el centro del campo" —que se leía como el círculo central— a **"su tercio central"**, y
+  "la banda izquierda" —que se leía como la fila 0— a **"cualquier fila de su izquierda"**. Ninguna de
+  las seis frases usa ya una palabra del terreno de juego para nombrar una franja de la cuadrícula de
+  alineación, que era el fondo de AW-F.
+- En la ficha esas seis frases van **subrayadas y en color de acento** dentro de las secciones de PERKS y
+  HABILIDAD RACIAL, las dos que pintan texto generado (RT-035). Pasar el ratón por encima abre un
+  **tooltip** con la definición exacta —qué columnas o qué filas, y que lo que cuenta es la casilla en la
+  que alineas y no dónde acabe el jugador en el partido— y, a la vez, **tiñe esa franja y sólo esa** sobre
+  la cuadrícula, con el mismo tono de acento con el que está marcada la frase, borde continuo y su nombre
+  rotulado. Funciona con el modo de zonas apagado y desde la ficha de cualquiera, titular o suplente: la
+  zona la nombra el texto, no su portador.
+- Es una ayuda **pasiva de sólo ratón**, como cualquier tooltip: no cambia ningún estado, así que no
+  necesita camino equivalente por mando (UI-006 habla de las dos formas de *hacer* cosas). El camino de
+  mando a la misma información existe y es el botón "Zonas del campo" (Z / Y).
+- Lo que dice cada explicación vive en `data/l10n/<idioma>/templates.json`, en las claves con sufijo
+  `Hint` de `startZones` y `startFlanks` —al lado de la frase corta que explican, para que no puedan
+  divergir— y está en los dos idiomas. `/Sim` no las mira: `DescriptionGenerator.Describe` sigue
+  devolviendo **texto plano y sin marcado**, que es lo que consumen el aviso, Ojeo y sus tests. El paso a
+  BBCode lo hace `Game/Ui/ZoneHintText.cs`, que busca en ese texto plano las seis frases —leídas de las
+  plantillas, nunca escritas en el código— y envuelve la primera aparición de cada una en
+  `[url=zone:AttackingThird][hint="..."]…[/hint][/url]`; `RichTextLabel` pone el tooltip y emite
+  `meta_hover_started`, y `PlayerCard` lo reenvía a la pantalla como la señal `ZoneHint`.
+- El marcado **no cambia el alto de la ficha**: el texto se le da al `RichTextLabel` ya partido en líneas
+  por `Style.Wrap` y con el autoajuste apagado, así que ocupa exactamente las mismas líneas de 14 px que
+  contaba el dibujo a mano, y la ficha mide lo mismo lleve marcado o no.
 
 ### Aviso al soltar: qué perk se ha encendido o apagado
 
@@ -193,6 +228,29 @@ no se entiende ninguna.
 - Se detallan los cambios **del jugador manipulado**, que son los que ha provocado a propósito. Los de sus
   compañeros —que también cambian, porque el vínculo es un candidato por relación— se cuentan en una línea
   de resumen en vez de llenar la pantalla.
+
+### Riesgo de muerte por titular (AW-G)
+
+Bajo la tabla de ALINEACIÓN, un segundo bloque de texto (`TituloRiesgo` / `Riesgo` en `Equipo.tscn`) lee
+el mismo riesgo de muerte por titular que el ojeo (RF-012c, `ScoutScreen.BuildReport`), pero recalculado
+sobre la alineación que se está mirando **en ese instante** —previsualización de un jugador cogido
+incluida, no solo la ya guardada—, porque RF-012c pide poder reducir el riesgo con la alineación (ADR
+0048) y eso exige ver el número moverse al mover una ficha, no solo al volver al ojeo.
+
+- Se apoya en la misma fachada que el ojeo, `RunEngine.LethalRisks(state, nodeId, catalog, systems,
+  lineup)`, con la alineación que ya calcula `RefreshPitch` (`_held >= 0 ? _state.Preview(...) :
+  _state.Lineup`) y se recalcula en el mismo punto que todo lo demás que depende de la alineación
+  (`TeamScreen.RefreshRisk`, llamado desde `RefreshPitch`).
+- **Solo se muestra con una run en curso y un nodo de partido elegido** (`RunController.Instance.HasRun`
+  y `SelectedNodeId >= 0`): sin nodo no hay rival del que salga el riesgo, y el bloque entero se oculta en
+  vez de enseñar un "sin riesgo" que no sería cierto. Fuera de una run (plantilla de pruebas, rival del
+  ojeo) tampoco se muestra.
+- Sin ningún titular con riesgo, se dice explícitamente (`ui.scout.riskNone`, reutilizada del ojeo): la
+  ausencia de riesgo es información igual de accionable que el riesgo (RF-012d).
+- El hueco donde vive: se reclamaron los últimos ~160 px del bloque VÍNCULOS (`Vinculos` pasa de
+  432-720 a 432-560 en `Equipo.tscn`), que sobraban en la práctica —el once es siempre de 7 titulares
+  (fútbol 7) y el texto de vínculos no se acerca a llenar 288 px—, así que no hace falta encoger nada más
+  ni tocar la cuadrícula, la leyenda o el panel de selección.
 
 ## 8. Un solo patrón de inspección y dos flujos de entrada
 
@@ -303,7 +361,7 @@ xvfb-run -a --server-args="-screen 0 1280x800x24" \
   godot --path Game --rendering-driver opengl3 --audio-driver Dummy -- --screenshots
 ```
 
-Deja en `Game/screenshots/` nueve capturas: `equipo.png` (estado inicial), `equipo-zona.png` (un jugador
+Deja en `Game/screenshots/` diez capturas: `equipo.png` (estado inicial), `equipo-zona.png` (un jugador
 cogido, con sus dos capas y los vínculos que se crean y se rompen), `equipo-cobertura.png` (modo de
 cobertura), `equipo-ficha.png` (ficha expandida con perk y descripción generada), `equipo-objeto.png`
 (ficha expandida con un objeto equipado: nombre y descripción generados en la sección de objeto, delta
@@ -311,13 +369,23 @@ con signo y color junto a cada atributo que el objeto toca —verde el que sube,
 media de atributos en la cabecera, AW-K y AW-M), `equipo-zonas.png` (modo de zonas de inicio),
 `equipo-aviso.png` (el aviso de perks tras un movimiento), `equipo-suplente.png` (un suplente cogido
 desde su ficha, con la misma pista visual que un titular cogido, listo para soltar sobre una casilla —
-AW-L) y `equipo-sustitucion.png` (el mismo suplente ya sustituyendo a un titular de campo). Todas menos
-la primera se alcanzan **con eventos de mando sintéticos**, no llamando a los métodos por dentro: la
-secuencia comprueba de paso que la navegación sin ratón lleva a los mismos estados. El movimiento de
-`equipo-aviso.png` lo elige la propia secuencia previsualizando alineaciones hipotéticas, para que el
-aviso de la captura sea un aviso de verdad y no un campo mudo; la plantilla de pruebas no tiene ningún
-jugador equipado, así que `equipo-objeto` fuerza un objeto maldito de verdad (`berserker_totem`) en un
-titular, igual que `equipo-aviso` fuerza un perk cuando la plantilla no trae ninguno.
+AW-L), `equipo-sustitucion.png` (el mismo suplente ya sustituyendo a un titular de campo) y
+`equipo-zona-frase.png` (la ficha de un portador de perk de zona con sus dos frases de banda marcadas, el
+tooltip nativo abierto sobre una de ellas y esa banda —y sólo ésa— teñida sobre la cuadrícula, AW-F).
+Todas menos la primera se alcanzan **con eventos de mando sintéticos**, no llamando a los métodos por
+dentro: la secuencia comprueba de paso que la navegación sin ratón lleva a los mismos estados. La
+excepción es la última: un *hover* no es una acción de entrada que se pueda inyectar, así que ese paso
+mueve el **puntero de verdad** (`Input.WarpMouse`) hasta el centro de la frase marcada —la ficha sabe
+dónde cae— y espera 1,2 s a que salte el tooltip antes de disparar; el hover que se ve en la captura es
+el hover real, no un manejador llamado a mano. El movimiento de `equipo-aviso.png` lo elige la propia
+secuencia previsualizando alineaciones hipotéticas, para que el aviso de la captura sea un aviso de
+verdad y no un campo mudo; la plantilla de pruebas no tiene ningún jugador equipado, así que
+`equipo-objeto` fuerza un objeto maldito de verdad (`berserker_totem`) en un titular, igual que
+`equipo-aviso` fuerza un perk cuando la plantilla no trae ninguno.
 
 El render es por software (Mesa/llvmpipe), así que las capturas valen para juzgar composición, color,
 proporción y legibilidad, **no** fluidez.
+
+Ninguna de las diez enseña el bloque de **riesgo de muerte** (AW-G, §7): la plantilla de pruebas con la
+que se regeneran no tiene run detrás, y ese bloque solo se muestra con una en curso. Se ve en
+`equipo-run.png`, que genera el recorrido `--tour` de `docs/ui-run-minima.md` §"Capturas", no `--screenshots`.

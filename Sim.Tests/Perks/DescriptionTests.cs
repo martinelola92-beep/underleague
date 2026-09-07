@@ -119,8 +119,8 @@ public sealed class DescriptionTests
     /// derribo se dicen como "más tiempo" (docs/estilo-descripciones.md).
     /// </summary>
     [Theory]
-    [InlineData("startsIn(owner, 'AttackingThird')", "si el portador empieza en el tercio rival")]
-    [InlineData("startsOn(owner, 'LeftFlank')", "si el portador empieza en la banda izquierda")]
+    [InlineData("startsIn(owner, 'AttackingThird')", "si el portador empieza en su tercio adelantado")]
+    [InlineData("startsOn(owner, 'LeftFlank')", "si el portador empieza en cualquier fila de su izquierda")]
     [InlineData("linked(owner, 'behind')", "si el portador tiene compañero de detrás")]
     [InlineData("nearAlly(owner, 'Brute', 2)", "si el portador tiene cerca un Bruto a 2 casillas")]
     [InlineData("nearOpponent(actor, 'Fine', 3)", "si el jugador tiene cerca un Fino rival a 3 casillas")]

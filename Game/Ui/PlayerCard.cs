@@ -32,6 +32,13 @@ public partial class PlayerCard : Control
     private readonly List<Section> _sections = new();
     private readonly List<(string Label, int Value, AttributeKind Kind)> _attributes = new();
 
+    /// <summary>
+    /// Etiquetas con BBCode para las líneas que nombran una zona de inicio. Se reutilizan de una llamada
+    /// a <see cref="Bind"/> a la siguiente en vez de crearlas y destruirlas: destruir un nodo en mitad de
+    /// un hover dejaría la señal de "he dejado de mirar" sin emitir y el campo teñido para siempre.
+    /// </summary>
+    private readonly List<RichTextLabel> _hints = new();
+
     private TeamState? _state;
     private PlayerDefinition? _player;
     private ItemDefinition? _item;
@@ -42,9 +49,23 @@ public partial class PlayerCard : Control
     private float _flash;
     private float _lastWidth;
 
+    /// <summary>Centro de la primera frase de zona marcada y qué nombra; null si la ficha no marca ninguna.</summary>
+    private Vector2? _hintPoint;
+    private (string Kind, string Value) _hintPayload;
+
     /// <summary>La ficha ha sido activada: un clic o el botón de acción del mando (UI-001, mismo gesto).</summary>
     [Signal]
     public delegate void ActivatedEventHandler(int playerId);
+
+    /// <summary>
+    /// El ratón está sobre el nombre de una zona de inicio dentro de una descripción, o ha dejado de
+    /// estarlo (AW-F). <paramref name="kind"/> es <c>"zone"</c> o <c>"flank"</c>, y <paramref name="value"/>
+    /// el nombre del valor (<c>"AttackingThird"</c>, <c>"LeftFlank"</c>...); los dos vacíos cuando se deja
+    /// de mirar. La ficha no sabe qué se hace con eso: la zona referida no depende de a quién pertenezca
+    /// la ficha, así que quien la pinte es la pantalla.
+    /// </summary>
+    [Signal]
+    public delegate void ZoneHintEventHandler(string kind, string value);
 
     /// <summary>Id del jugador que muestra; -1 si no se ha llamado a <see cref="Bind"/>.</summary>
     public int PlayerId => _player?.Id ?? -1;
@@ -130,14 +151,18 @@ public partial class PlayerCard : Control
             perkLines.Add(UiText.Get("ui.card.perkSlot"));
         }
 
-        _sections.Add(new Section(UiText.Get("ui.card.perks"), perkLines));
+        // Perks y habilidad racial son las dos secciones cuyo texto sale del generador (RT-035) y las dos
+        // únicas donde puede aparecer el nombre de un tercio o de una banda: son las que se pintan con
+        // BBCode para que esa frase tenga tooltip y resalte la zona en el campo (AW-F).
+        _sections.Add(new Section(UiText.Get("ui.card.perks"), perkLines, Rich: true));
 
         string ability = catalog.Race(player.Race).Ability;
         if (catalog.Perks.Find(ability) is { } racial)
         {
             _sections.Add(new Section(
                 UiText.Get("ui.card.ability"),
-                new List<string> { racial.Name.Es + ": " + DescriptionGenerator.Describe(racial, templates) }));
+                new List<string> { racial.Name.Es + ": " + DescriptionGenerator.Describe(racial, templates) },
+                Rich: true));
         }
 
         _sections.Add(new Section(UiText.Get("ui.card.links"), links.Count > 0 ? new List<string>(links) : new List<string> { UiText.Get("ui.team.linksNone") }));
@@ -280,7 +305,17 @@ public partial class PlayerCard : Control
             y += LineHeight;
             foreach (string entry in section.Lines)
             {
-                foreach (string line in Style.Wrap(font, entry, Style.TextSmall, textWidth - 8f))
+                var wrapped = Style.Wrap(font, entry, Style.TextSmall, textWidth - 8f);
+
+                // Una línea que nombra una zona la dibuja su RichTextLabel, colocado por Relayout con
+                // esta misma cuenta: aquí sólo se salta su hueco, que ocupa exactamente lo mismo.
+                if (section.Rich && ZoneHintText.Mentions(entry, _state.Templates))
+                {
+                    y += wrapped.Count * LineHeight;
+                    continue;
+                }
+
+                foreach (string line in wrapped)
                 {
                     Style.DrawText(this, font, new Vector2(Padding + 8f, y), line, Style.TextSmall, Style.Text);
                     y += LineHeight;
@@ -309,11 +344,21 @@ public partial class PlayerCard : Control
         Style.DrawStateIcon(this, new Vector2(width - 10f, 12f), 4f, _player.PhysicalState, stateColor);
     }
 
-    /// <summary>Recalcula el alto según el estado; la lista de la pantalla se recoloca sola.</summary>
+    /// <summary>
+    /// Recalcula el alto según el estado; la lista de la pantalla se recoloca sola. Recorre las secciones
+    /// con <b>la misma cuenta</b> que <see cref="_Draw"/> —de ahí sale el alto de la ficha— y aprovecha
+    /// el recorrido para colocar las etiquetas de las líneas con zona sobre el hueco que el dibujo deja.
+    /// El alto de esas etiquetas <b>no</b> se le pregunta al <c>RichTextLabel</c>: se le impone el que
+    /// dicta <c>Style.Wrap</c>, y por eso el texto va ya partido en líneas y con el autoajuste apagado.
+    /// Es la única forma de que la ficha mida lo mismo lleve marcado o no.
+    /// </summary>
     private void Relayout()
     {
         float height = Style.CollapsedHeight;
-        if (_expanded)
+        int used = 0;
+        _hintPoint = null;
+        _hintPayload = (string.Empty, string.Empty);
+        if (_expanded && _state is not null)
         {
             var font = GetThemeDefaultFont();
             float width = Size.X > 0f ? Size.X : 356f;
@@ -330,17 +375,128 @@ public partial class PlayerCard : Control
 
                 foreach (string entry in section.Lines)
                 {
-                    height += Style.Wrap(font, entry, Style.TextSmall, textWidth - 8f).Count * LineHeight;
+                    var wrapped = Style.Wrap(font, entry, Style.TextSmall, textWidth - 8f);
+                    if (section.Rich && ZoneHintText.Markup(entry, wrapped, _state.Templates) is { } markup)
+                    {
+                        var label = HintLabel(used++, font);
+                        label.Text = markup;
+                        label.Position = new Vector2(Padding + 8f, height);
+                        label.Size = new Vector2(textWidth - 8f, wrapped.Count * LineHeight);
+                        label.Visible = true;
+                        if (_hintPoint is null)
+                        {
+                            LocateHint(font, entry, wrapped, height);
+                        }
+                    }
+
+                    height += wrapped.Count * LineHeight;
                 }
             }
 
             height += Padding;
         }
 
+        for (int i = used; i < _hints.Count; i++)
+        {
+            _hints[i].Visible = false;
+        }
+
         CustomMinimumSize = new Vector2(0f, height);
         QueueRedraw();
     }
 
-    /// <summary>Bloque de la ficha expandida. <paramref name="Compact"/> pone título y valor en la misma línea.</summary>
-    private sealed record Section(string Title, IReadOnlyList<string> Lines, bool Compact = false);
+    /// <summary>
+    /// Etiqueta BBCode número <paramref name="index"/>, creándola si hace falta. Se configura para que
+    /// escriba <b>igual</b> que <c>Style.DrawText</c>: misma fuente, mismo cuerpo, sin recuadro y con la
+    /// separación de línea ajustada para que cada línea avance los <see cref="LineHeight"/> píxeles que
+    /// cuenta el resto de la ficha. El ratón la atraviesa (<see cref="MouseFilterEnum.Pass"/>) para que
+    /// un clic sobre el texto siga colapsando la ficha como sobre cualquier otra parte de ella.
+    /// </summary>
+    private RichTextLabel HintLabel(int index, Font font)
+    {
+        while (_hints.Count <= index)
+        {
+            var created = new RichTextLabel
+            {
+                BbcodeEnabled = true,
+                FitContent = false,
+                ScrollActive = false,
+                AutowrapMode = TextServer.AutowrapMode.Off,
+                MouseFilter = MouseFilterEnum.Pass,
+                Visible = false,
+            };
+
+            created.AddThemeFontOverride("normal_font", font);
+            created.AddThemeFontSizeOverride("normal_font_size", Style.TextSmall);
+            created.AddThemeColorOverride("default_color", Style.Text);
+            created.AddThemeConstantOverride("line_separation", Mathf.RoundToInt(LineHeight - font.GetHeight(Style.TextSmall)));
+            created.AddThemeStyleboxOverride("normal", new StyleBoxEmpty());
+            created.MetaHoverStarted += OnMetaHoverStarted;
+            created.MetaHoverEnded += OnMetaHoverEnded;
+            AddChild(created);
+            _hints.Add(created);
+        }
+
+        return _hints[index];
+    }
+
+    /// <summary>
+    /// Guarda dónde cae la primera frase de zona de la ficha. Sólo lo usa la secuencia de capturas: no
+    /// hay evento de "ratón encima" que inyectar como se inyecta una acción de mando, así que la captura
+    /// lleva el puntero de verdad hasta este punto y deja que el hover ocurra solo.
+    /// </summary>
+    private void LocateHint(Font font, string entry, IReadOnlyList<string> wrapped, float top)
+    {
+        if (_state is null)
+        {
+            return;
+        }
+
+        var spans = ZoneHintText.Spans(entry, _state.Templates);
+        if (spans.Count == 0
+            || !ZoneHintText.TryLocate(entry, wrapped, spans[0], out int line, out string prefix, out string phrase))
+        {
+            return;
+        }
+
+        float left = font.GetStringSize(prefix, HorizontalAlignment.Left, -1f, Style.TextSmall).X;
+        float span = font.GetStringSize(phrase, HorizontalAlignment.Left, -1f, Style.TextSmall).X;
+        _hintPoint = new Vector2(Padding + 8f + left + (span / 2f), top + (line * LineHeight) + (LineHeight / 2f));
+        _hintPayload = (spans[0].Kind, spans[0].Key);
+    }
+
+    /// <summary>Punto y carga de la primera frase de zona marcada (solo para la secuencia de capturas).</summary>
+    public bool TryZoneHint(out Vector2 globalPoint, out string kind, out string value)
+    {
+        globalPoint = Vector2.Zero;
+        (kind, value) = _hintPayload;
+        if (_hintPoint is not { } point)
+        {
+            return false;
+        }
+
+        globalPoint = GetGlobalTransformWithCanvas() * point;
+        return true;
+    }
+
+    private void OnMetaHoverStarted(Variant meta)
+    {
+        if (ZoneHintText.TryParse(meta.AsString(), out string kind, out string key))
+        {
+            EmitSignal(SignalName.ZoneHint, kind, key);
+        }
+    }
+
+    private void OnMetaHoverEnded(Variant meta)
+    {
+        _ = meta;
+        EmitSignal(SignalName.ZoneHint, string.Empty, string.Empty);
+    }
+
+    /// <summary>
+    /// Bloque de la ficha expandida. <paramref name="Compact"/> pone título y valor en la misma línea;
+    /// <paramref name="Rich"/> marca las secciones de texto generado, cuyas líneas pueden nombrar una
+    /// zona de inicio y entonces se pintan con un <see cref="RichTextLabel"/> en vez de a mano.
+    /// </summary>
+    private sealed record Section(string Title, IReadOnlyList<string> Lines, bool Compact = false, bool Rich = false);
 }

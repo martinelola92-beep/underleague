@@ -8,6 +8,7 @@ using Underleague.Game.Ui;
 using Underleague.Sim.Model;
 using Underleague.Sim.Perks;
 using Underleague.Sim.Placement;
+using Underleague.Sim.Run;
 using Underleague.Sim.Run.Systems.Items;
 using SimPosition = Underleague.Sim.Model.Position;
 
@@ -37,6 +38,8 @@ public partial class TeamScreen : Control
     private Label _subtitle = null!;
     private Label _info = null!;
     private Label _lineupTable = null!;
+    private Label _riskTitle = null!;
+    private Label _risk = null!;
     private Toast _toast = null!;
 
     private int _selected = -1;
@@ -58,12 +61,15 @@ public partial class TeamScreen : Control
         _subtitle = GetNode<Label>("Subtitulo");
         _info = GetNode<Label>("Info");
         _lineupTable = GetNode<Label>("Vinculos");
+        _riskTitle = GetNode<Label>("TituloRiesgo");
+        _risk = GetNode<Label>("Riesgo");
 
         GetNode<Label>("Titulo").Text = UiText.Get("ui.team.title");
         GetNode<Label>("TituloPlantilla").Text = UiText.Get("ui.team.roster");
         GetNode<Label>("TituloCampo").Text = UiText.Get("ui.team.pitch");
         GetNode<Label>("SubtituloCampo").Text = UiText.Get("ui.team.pitchHint");
         GetNode<Label>("TituloVinculos").Text = UiText.Get("ui.team.lineup");
+        _riskTitle.Text = UiText.Get("ui.scout.risk");
 
         // El modo de cobertura también tiene disparador de ratón: los dos flujos de UI-006 son completos,
         // ninguno es un añadido del otro.
@@ -72,8 +78,9 @@ public partial class TeamScreen : Control
         coverageButton.Pressed += ToggleCoverage;
 
         // El botón de zonas es el "qué significan estas palabras" de los perks de colocación: sin él, los
-        // textos "empieza en el tercio rival" o "en una banda" describen una cuadrícula que el jugador no
-        // ve. Va al lado del de cobertura porque los dos son lecturas del mismo campo, y son excluyentes.
+        // textos "empieza en su tercio adelantado" o "en una fila de su izquierda" describen una
+        // cuadrícula que el jugador no ve. Va al lado del de cobertura porque los dos son lecturas del
+        // mismo campo, y son excluyentes.
         var zonesButton = GetNode<Button>("BotonZonas");
         zonesButton.Text = UiText.Get("ui.team.zonesButton");
         zonesButton.Pressed += ToggleZones;
@@ -454,6 +461,11 @@ public partial class TeamScreen : Control
 
     private void ApplyCardFlags()
     {
+        // Colapsar una ficha esconde sus etiquetas de zona sin que llegue a emitirse el "he dejado de
+        // mirar" del hover, así que el resaltado se apaga aquí: cambiar de ficha seleccionada nunca puede
+        // dejar teñida una franja que ya no está a la vista de nadie.
+        OnCardZoneHint(string.Empty, string.Empty);
+
         for (int i = 0; i < _cards.Count; i++)
         {
             bool current = _cards[i].PlayerId == _selected;
@@ -536,6 +548,7 @@ public partial class TeamScreen : Control
         var card = scene.Instantiate<PlayerCard>();
         _roster.AddChild(card);
         card.Activated += OnCardActivated;
+        card.ZoneHint += OnCardZoneHint;
         _cards.Add(card);
     }
 
@@ -543,6 +556,20 @@ public partial class TeamScreen : Control
     {
         _focusRoster = true;
         ActivateRosterCard(playerId);
+    }
+
+    /// <summary>
+    /// El ratón descansa sobre el nombre de un tercio o de una banda dentro de la descripción de un perk
+    /// (AW-F): además del tooltip que pinta el propio <c>RichTextLabel</c>, se tiñe <b>esa</b> franja
+    /// sobre la cuadrícula, que es la respuesta a "¿dónde está eso?" sin salir de la ficha. Da igual de
+    /// quién sea la ficha —titular o suplente—: la zona la nombra el texto, no su portador. Con las dos
+    /// cadenas vacías se apaga.
+    /// </summary>
+    private void OnCardZoneHint(string kind, string value)
+    {
+        _pitch.HighlightedZoneKey = kind == ZoneHintText.ZoneKind ? value : null;
+        _pitch.HighlightedFlankKey = kind == ZoneHintText.FlankKind ? value : null;
+        _pitch.QueueRedraw();
     }
 
     /// <summary>Rellena las fichas. Se llama al cambiar la alineación, no al mover el cursor.</summary>
@@ -662,6 +689,8 @@ public partial class TeamScreen : Control
         _pitch.Created = created;
         _pitch.Broken = broken;
 
+        RefreshRisk(lineup);
+
         int shown = _held >= 0 ? _held : _selected;
         _pitch.Zone = null;
         if (!_coverage && !_zones && shown >= 0 && _state.Find(shown) is { } player)
@@ -684,6 +713,52 @@ public partial class TeamScreen : Control
         _pitch.QueueRedraw();
         UpdateInfo(links, created, broken);
     }
+
+    /// <summary>
+    /// AW-G: el mismo riesgo de muerte por titular que enseña el ojeo (RF-012c,
+    /// <c>ScoutScreen.BuildReport</c>), aquí en Equipo y sobre la alineación que se está mirando en ese
+    /// instante —la que arrastra un jugador cogido incluida, no solo la ya guardada—, porque aquí es
+    /// donde RF-012c pide que se pueda "reducir el riesgo con la alineación" (ADR 0048): sin recalcular
+    /// al mover una ficha, el jugador solo vería el número viejo.
+    /// <para>
+    /// Solo tiene sentido con una run en curso y un nodo de partido ya elegido (se viene a repasar la
+    /// alineación antes de <b>ese</b> rival); sin nodo no hay rival del que salga el riesgo y el bloque
+    /// se oculta entero, en vez de enseñar un "sin riesgo" que no sería cierto —no es que no haya riesgo,
+    /// es que todavía no hay partido que jugar.
+    /// </para>
+    /// </summary>
+    private void RefreshRisk(Lineup lineup)
+    {
+        var run = RunController.Instance;
+        if (run is not { HasRun: true } || run.SelectedNodeId < 0)
+        {
+            _riskTitle.Visible = false;
+            _risk.Visible = false;
+            return;
+        }
+
+        _riskTitle.Visible = true;
+        _risk.Visible = true;
+
+        var risks = RunEngine.LethalRisks(run.State!, run.SelectedNodeId, _state.Catalog, run.Engine, lineup);
+        var lines = new List<string>();
+        foreach (var risk in risks)
+        {
+            if (risk.Risk <= 0)
+            {
+                continue;
+            }
+
+            var player = _state.Find(risk.PlayerId);
+            lines.Add(UiText.Get("ui.scout.riskLine", player?.Name ?? "?", Percent(risk.Risk)));
+        }
+
+        _risk.Text = lines.Count > 0 ? string.Join("\n", lines) : UiText.Get("ui.scout.riskNone");
+        _risk.AddThemeColorOverride("font_color", lines.Count > 0 ? Style.Text : Style.TextDim);
+    }
+
+    /// <summary>Probabilidad en base 10.000 escrita como porcentaje con un decimal (RF-012c), igual que <c>ScoutScreen.Percent</c>.</summary>
+    private static string Percent(int risk) => UiText.Get("ui.risk.percent", risk / 100, (risk % 100) / 10);
 
     private static void Difference(IReadOnlyList<PlacementLink> from, IReadOnlyList<PlacementLink> other, List<PlacementLink> into)
     {
@@ -906,9 +981,9 @@ public partial class TeamScreen : Control
         // Las capturas 2, 3 y 4 se producen **con el flujo de mando** (eventos de acción sintéticos), no
         // llamando a los métodos por dentro: así la secuencia comprueba de paso que la navegación sin
         // ratón lleva a los mismos estados (UI-006, RT-071).
-        var steps = new (string Name, Action Setup)[]
+        var steps = new (string Name, Action Setup, bool Hover)[]
         {
-            ("equipo", () => { }),
+            ("equipo", () => { }, false),
             ("equipo-zona", () =>
             {
                 Pad("ui_right");
@@ -918,19 +993,19 @@ public partial class TeamScreen : Control
                 Pad("ui_right");
                 Pad("ui_right");
                 Pad("ui_up");
-            }),
+            }, false),
             ("equipo-cobertura", () =>
             {
                 Pad("ui_cancel");
                 Pad(CoverageAction);
-            }),
+            }, false),
             ("equipo-ficha", () =>
             {
                 Pad(CoverageAction);
                 _focusRoster = true;
                 _rosterIndex = IndexOfCard(FindRare());
                 Pad("ui_accept");
-            }),
+            }, false),
             ("equipo-objeto", () =>
             {
                 Pad("ui_cancel");
@@ -938,12 +1013,12 @@ public partial class TeamScreen : Control
                 _focusRoster = true;
                 _rosterIndex = IndexOfCard(EnsurePlacementItem());
                 Pad("ui_accept");
-            }),
+            }, false),
             ("equipo-zonas", () =>
             {
                 Pad("ui_cancel");
                 Pad(ZonesAction);
-            }),
+            }, false),
             ("equipo-aviso", () =>
             {
                 Pad(ZonesAction);
@@ -959,7 +1034,7 @@ public partial class TeamScreen : Control
                 Pad("ui_accept");
                 _cursor = move.To;
                 Pad("ui_accept");
-            }),
+            }, false),
             ("equipo-suplente", () =>
             {
                 // AW-L: un suplente se coge exactamente igual que un titular. Se coge por el flujo de
@@ -976,7 +1051,7 @@ public partial class TeamScreen : Control
                 _focusRoster = true;
                 _rosterIndex = IndexOfCard(bench);
                 Pad("ui_accept");
-            }),
+            }, false),
             ("equipo-sustitucion", () =>
             {
                 // Soltarlo sobre la casilla de un titular de campo sustituye a ese titular (Sim.Placement
@@ -984,17 +1059,47 @@ public partial class TeamScreen : Control
                 _focusRoster = false;
                 _cursor = FindOutfieldStarterCell();
                 Pad("ui_accept");
-            }),
+            }, false),
+            ("equipo-zona-frase", () =>
+            {
+                // AW-F: la ficha de un portador de perk de zona, con la frase que nombra la banda ya
+                // marcada, y el campo tiñendo esa banda sola. El hover no se puede inyectar como se
+                // inyecta una acción de mando (no hay evento de "ratón encima" que valga), así que el
+                // paso se marca como Hover y la secuencia mueve el puntero de verdad y espera a que
+                // salte el tooltip nativo antes de disparar.
+                Pad("ui_cancel");
+                _toast.Post(Array.Empty<ToastLine>());
+                int carrier = EnsureZonePerk();
+                if (carrier < 0)
+                {
+                    GD.PushWarning("ningún titular lleva un perk de zona: la captura del tooltip saldrá sin frase marcada");
+                    return;
+                }
+
+                _focusRoster = true;
+                _rosterIndex = IndexOfCard(carrier);
+                Pad("ui_accept");
+            }, true),
         };
 
         string directory = ProjectSettings.GlobalizePath("res://screenshots");
         Directory.CreateDirectory(directory);
 
-        foreach (var (name, setup) in steps)
+        foreach (var (name, setup, hover) in steps)
         {
             setup();
             await ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame);
             await ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame);
+
+            // El puntero se mueve con la lista ya recolocada —expandir una ficha desplaza a las de
+            // abajo, y eso lo resuelve el contenedor en el fotograma siguiente— y luego se espera a que
+            // pase el retardo del tooltip, que es tiempo real, no fotogramas.
+            if (hover)
+            {
+                HoverZoneHint();
+                await ToSignal(GetTree().CreateTimer(TooltipSettle), SceneTreeTimer.SignalName.Timeout);
+            }
+
             await ToSignal(RenderingServer.Singleton, "frame_post_draw");
             var image = GetViewport().GetTexture().GetImage();
             image.SavePng(Path.Combine(directory, name + ".png"));
@@ -1006,6 +1111,89 @@ public partial class TeamScreen : Control
 
     /// <summary>Inyecta una acción como si viniera del mando, por el mismo camino que la entrada real.</summary>
     private void Pad(string action) => _UnhandledInput(new InputEventAction { Action = action, Pressed = true });
+
+    /// <summary>
+    /// Segundos que la captura del tooltip espera con el puntero quieto. El retardo del tooltip nativo
+    /// (<c>gui/timers/tooltip_delay_sec</c>) es medio segundo por defecto; con el doble sobra.
+    /// </summary>
+    private const double TooltipSettle = 1.2;
+
+    /// <summary>
+    /// <b>Solo para la secuencia de capturas.</b> Lleva el puntero encima de la primera frase de zona de
+    /// la ficha enfocada, que es lo más parecido a un hover de verdad que se puede provocar: no existe
+    /// una acción de entrada de "ratón encima" que inyectar como se inyecta un botón de mando. El
+    /// resaltado del campo se pide además a mano, con la misma carga que el marcado le daría al hover,
+    /// para que la captura enseñe la zona aunque el puntero sintético no llegue a disparar
+    /// <c>meta_hover_started</c> bajo Xvfb.
+    /// </summary>
+    private void HoverZoneHint()
+    {
+        var card = _rosterIndex < _cards.Count ? _cards[_rosterIndex] : null;
+        if (card is null || !card.TryZoneHint(out var point, out string kind, out string value))
+        {
+            GD.PushWarning("la ficha enfocada no marca ninguna zona: la captura del tooltip saldrá sin resaltado");
+            return;
+        }
+
+        OnCardZoneHint(kind, value);
+        Input.WarpMouse(point);
+    }
+
+    /// <summary>
+    /// <b>Solo para la secuencia de capturas</b> (AW-F): un titular cuya ficha nombre una zona de inicio.
+    /// Si la plantilla de pruebas no trae ninguno —los perks iniciales se reparten por rareza y con esta
+    /// semilla casi nadie lleva uno—, se le pone <c>flank_specialist</c> a un centrocampista, que nombra
+    /// las dos bandas y por tanto marca dos frases. No toca nada con una run detrás.
+    /// </summary>
+    private int EnsureZonePerk()
+    {
+        int carrier = FindZonePerkCarrier();
+        if (carrier >= 0 || RunController.Instance is { HasRun: true })
+        {
+            return carrier;
+        }
+
+        int target = FindByPosition(SimPosition.Midfielder);
+        if (target < 0)
+        {
+            return -1;
+        }
+
+        var players = new List<PlayerDefinition>(_state.Players.Count);
+        foreach (var player in _state.Players)
+        {
+            players.Add(player.Id == target ? player with { Perks = new[] { "flank_specialist" } } : player);
+        }
+
+        _state = TeamState.Of(_state.Catalog, _state.Team with { Players = players });
+        _pitch.State = _state;
+        RefreshCards();
+        return FindZonePerkCarrier();
+    }
+
+    /// <summary>Primer titular con un perk cuya descripción generada nombre un tercio o una banda.</summary>
+    private int FindZonePerkCarrier()
+    {
+        foreach (var slot in _state.Lineup.Slots)
+        {
+            var player = _state.Find(slot.PlayerId);
+            if (player is null)
+            {
+                continue;
+            }
+
+            foreach (string id in player.Perks)
+            {
+                if (_state.Catalog.Perks.Find(id) is { } perk
+                    && ZoneHintText.Mentions(DescriptionGenerator.Describe(perk, _state.Templates), _state.Templates))
+                {
+                    return player.Id;
+                }
+            }
+        }
+
+        return -1;
+    }
 
     private int IndexOfCard(int playerId)
     {

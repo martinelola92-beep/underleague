@@ -1,5 +1,5 @@
 {
-  "_doc": "Plantillas de descripción de perks, objetos y consumibles (RT-035). El texto de un efecto NO se escribe a mano: se compone desde el propio dato con estas plantillas, así que descripción y efecto no pueden divergir. Marcadores: {trigger} {condition} {effects} {limit} {target} {who} {tag} {attribute} {duration} {probability} {counter} {value:+} {value:+%} {valuePerCounter:+} {maxValue} {counterDivisor} {ticks} {event} {n} {position} {zone} {detail} {a} {b}. Las claves de 'conditions' son el nombre de la función y, para las funciones que devuelven un número o texto, el nombre más el sufijo de la comparación (Lt, Le, Gt, Ge, Eq, Ne). Secciones del rediseño espacial (paquete S): 'links' nombra las relaciones direccionales de la ADR 0021 (marcador {link}), 'immunities' los efectos de tipo immunity, y 'startZones', 'startFlanks' y 'stats' los literales de las funciones startsIn, startsOn y stat (marcadores {startZone}, {startFlank}, {stat}, {cells}). Los valores porcentuales se escriben y se leen en puntos porcentuales enteros.",
+  "_doc": "Plantillas de descripción de perks, objetos y consumibles (RT-035). El texto de un efecto NO se escribe a mano: se compone desde el propio dato con estas plantillas, así que descripción y efecto no pueden divergir. Marcadores: {trigger} {condition} {effects} {limit} {target} {who} {tag} {attribute} {duration} {probability} {counter} {value:+} {value:+%} {valuePerCounter:+} {maxValue} {counterDivisor} {ticks} {event} {n} {position} {zone} {detail} {a} {b}. Las claves de 'conditions' son el nombre de la función y, para las funciones que devuelven un número o texto, el nombre más el sufijo de la comparación (Lt, Le, Gt, Ge, Eq, Ne). Secciones del rediseño espacial (paquete S): 'links' nombra las relaciones direccionales de la ADR 0021 (marcador {link}), 'immunities' los efectos de tipo immunity, y 'startZones', 'startFlanks' y 'stats' los literales de las funciones startsIn, startsOn y stat (marcadores {startZone}, {startFlank}, {stat}, {cells}). Los valores porcentuales se escriben y se leen en puntos porcentuales enteros. Las claves con sufijo 'Hint' de 'startZones' y 'startFlanks' NO las usa el generador: son la explicación larga que la pantalla de Equipo enseña en un tooltip al pasar el ratón por el nombre de la zona dentro de la descripción de un perk (AW-F).",
   "layout": {
     "plain": "{trigger}, {effects}.",
     "withCondition": "{trigger}, {condition}, {effects}.",
@@ -349,14 +349,20 @@
     "minorInjuryPenalty": "is not hampered by minor injuries"
   },
   "startZones": {
-    "OwnThird": "their own third",
-    "Middle": "midfield",
-    "AttackingThird": "the attacking third"
+    "OwnThird": "their rear third",
+    "OwnThirdHint": "Columns 0 to 2 of the placement grid,\nthe three closest to their own goal.\nWhat counts is the cell you line them up in,\nnot where they end up during the match.",
+    "Middle": "their middle third",
+    "MiddleHint": "Columns 3 to 5 of the placement grid.\nThe middle third of your eight columns,\nnot the centre circle of the pitch.",
+    "AttackingThird": "their advanced third",
+    "AttackingThirdHint": "Columns 6 and 7 of the placement grid,\nthe two most advanced you can line up in.\nNot the opponent's half: nobody starts there."
   },
   "startFlanks": {
-    "LeftFlank": "the left flank",
-    "Center": "the centre",
-    "RightFlank": "the right flank"
+    "LeftFlank": "any row on their left",
+    "LeftFlankHint": "Rows 0 and 1 of the grid: either one counts.\nLeft and right are taken from the player\nfacing the opposing goal.",
+    "Center": "the central row",
+    "CenterHint": "Row 2, the only row that is not a flank.\nThe other four are.",
+    "RightFlank": "any row on their right",
+    "RightFlankHint": "Rows 3 and 4 of the grid: either one counts.\nLeft and right are taken from the player\nfacing the opposing goal."
   },
   "stats": {
     "goals": "goals",

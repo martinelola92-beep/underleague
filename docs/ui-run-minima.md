@@ -122,8 +122,10 @@ de Equipo se siguen regenerando con `--screenshots`, como dice `ui-equipo.md` §
   de partida sale de `economy.startingGold` por división.
 - **Árbitros**: neutros y con nombre generado hasta el paquete de árbitros (RF-061); el ojeo lo dice.
 - **Alineación**: la pantalla de Equipo mueve jugadores por la cuadrícula y eso ya entra por
-  `SetLineup`, pero no hay todavía una forma de **elegir el once** distinta de intercambiar en el campo, ni
-  el indicador de riesgo por jugador dentro de la cuadrícula (RF-012c): el número está en el ojeo.
+  `SetLineup`, pero no hay todavía una forma de **elegir el once** distinta de intercambiar en el campo.
+  Desde AW-G el riesgo por titular (RF-012c) también se lee en Equipo —bajo VÍNCULOS, recalculado con
+  cada movimiento (`TeamScreen.RefreshRisk`), solo con una run en curso y un nodo elegido— pero como lista
+  de texto, no como número superpuesto en cada casilla de la cuadrícula.
 
 ---
 
