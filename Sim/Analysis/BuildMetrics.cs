@@ -86,6 +86,15 @@ public static class BuildMetrics
     /// <summary>Nombre de la métrica de más lesiones producidas por la build de contacto que por la técnica (§8).</summary>
     public const string BuildsWinDifferentlyInjuries = "buildsWinDifferently_injuries";
 
+    /// <summary>
+    /// Umbral de <see cref="BuildsWinDifferentlyInjuries"/> (ADR 0084). Era 1,5 desde la fase 1; con el motor
+    /// de AW-A/AW-T/AW-R, que lesiona algo más a <b>todas</b> las builds (más duelos tras cada balón muerto,
+    /// ADR 0082), el cociente entre la build de contacto y la técnica se comprime: medido 1,47 en el lote de
+    /// la puerta (40 plantillas × 12 partidos, semilla 1). Mismo caso y mismo precedente que
+    /// <see cref="MinPassChainRatio"/> (ADR 0062): la escala del canal cambió, el umbral se remide.
+    /// </summary>
+    public const double MinInjuryRatio = 1.4;
+
     /// <summary>Nombre de la métrica de mayor cadena media de pases de la build técnica que de la de contacto (§8).</summary>
     public const string BuildsWinDifferentlyPassChain = "buildsWinDifferently_passChain";
 
@@ -253,7 +262,7 @@ public static class BuildMetrics
         string? physicalBuild,
         string? technicalBuild,
         IReadOnlyDictionary<string, string> baselineOpponentByBuild,
-        double minInjuryRatio = 1.5,
+        double minInjuryRatio = MinInjuryRatio,
         double minPassChainRatio = MinPassChainRatio)
     {
         ArgumentNullException.ThrowIfNull(baselineOpponentByBuild);

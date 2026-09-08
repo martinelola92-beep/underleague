@@ -88,7 +88,7 @@
     "playerLevel": 5,
     "targets": {
       "incoherent": {
-        "min": 20,
+        "min": 15,
         "max": 35
       },
       "correct": {
