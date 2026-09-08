@@ -42,7 +42,7 @@ try
         // --full-runs N: N runs completas con la política automática (fase2-diseno.md §10). Responde a
         // la pregunta que la curva de puertas deja abierta: si la economía permite llegar a cada puerta
         // con la build que esa puerta exige.
-        FullRunResult full = FullRunRunner.Run(catalog, dataFiles, options.Seed, fullRuns, options.IgnoreScouting, options.RiskAversion, options.MinPerkValue, options.MinPerkValueReward, options.MinPerkValueMarket, options.SlotBarOff, options.SlotHorizon, options.ArcJudged, options.SlotGates, options.Act1Pass, options.Act2Pass);
+        FullRunResult full = FullRunRunner.Run(catalog, dataFiles, options.Seed, fullRuns, options.IgnoreScouting, options.RiskAversion, options.MinPerkValue, options.MinPerkValueReward, options.MinPerkValueMarket, options.SlotBarOff, options.SlotHorizon, options.ArcJudged, options.SlotGates, options.Act1Pass, options.Act2Pass, options.ValuesFlat);
 
         var fullSummary = full.Metrics
             .Select(m => new MetricRow(m.Name, m.Value, m.RangeMin, m.RangeMax, m.Status))
@@ -340,6 +340,9 @@ static void PrintUsage()
           --full-runs N       N runs completas por cada una de las tres doctrinas de compra de la ADR
                                0037 (contextual, gastadora, ahorradora) sobre las mismas semillas;
                                escribe runs.csv y summary.csv con las métricas de fase2-diseno.md §10
+          --values-flat       con --full-runs, la política lee el valor de cada perk en la campaña de ocho
+                               partidos con la que se mide la tabla, sea cual sea el momento de la run:
+                               es la medida de control del valor por horizonte (AV-B, ADR 0085)
         """);
 }
 
@@ -483,6 +486,26 @@ static void WritePerkValuesCsv(string outDir, IReadOnlyList<PerkValueRow> rows)
     });
 
     CsvWriter.Write(Path.Combine(outDir, "perk-values.csv"), header, data);
+
+    // La curva por indice de partido de la campania (AV-B): una fila por perk y posicion dentro de la
+    // campania, de la que sale el valor a cualquier horizonte sin volver a medir.
+    string[] curveHeader = { "perk", "matchIndex", "matches", "wins" };
+    var curve = new List<IReadOnlyList<string>>();
+    foreach (var r in rows)
+    {
+        for (int k = 0; k < r.WinsByMatch.Count; k++)
+        {
+            curve.Add(new[]
+            {
+                r.PerkId,
+                k.ToString(CultureInfo.InvariantCulture),
+                r.MatchesByMatch[k].ToString(CultureInfo.InvariantCulture),
+                r.WinsByMatch[k].ToString(CultureInfo.InvariantCulture),
+            });
+        }
+    }
+
+    CsvWriter.Write(Path.Combine(outDir, "perk-values-by-match.csv"), curveHeader, curve);
 }
 
 /// <summary>runs.csv del modo --full-runs (fase2-diseno.md §10): una fila por run jugada.</summary>
@@ -515,6 +538,7 @@ static void WriteRunsCsv(string outDir, IReadOnlyList<RunPlayResult> runs, strin
 
         // Censo de slots y ofertas (AS-A): "acto:ofertas:slotsLibresSumados:slotsEnLaPuerta". Diagnóstico puro.
         "slotCensus",
+        "perkHorizon",
     };
 
     var rows = runs.Select(r => (IReadOnlyList<string>)new[]
@@ -544,6 +568,7 @@ static void WriteRunsCsv(string outDir, IReadOnlyList<RunPlayResult> runs, strin
         string.Join(" ", r.Masters), string.Join(" ", r.FinalPerks),
         string.Join(" ", r.FinalCounters ?? Array.Empty<string>()),
         string.Join(" ", r.SlotCensus ?? Array.Empty<string>()),
+        string.Join(" ", r.PerkHorizon ?? Array.Empty<string>()),
     });
 
     CsvWriter.Write(Path.Combine(outDir, fileName), header, rows);

@@ -41,6 +41,34 @@
       "type": "integer",
       "minimum": 0
     },
+    "referenceHorizon": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "Horizonte (partidos que le quedan por jugar al perk) al que esta medido el bloque values: la campania de ocho partidos de la ADR 0070. La columna correspondiente de valuesByHorizon tiene que coincidir con values, porque son la misma medicion (AV-B)."
+    },
+    "rowDeviationByHorizon": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "integer",
+        "minimum": 0
+      },
+      "description": "Desviacion por fila a cada horizonte, del 1 al ultimo medido. No es la misma a todos: el valor a horizonte 1 sale de una fraccion de los partidos que sostienen el del horizonte maximo, asi que su ruido es mayor y el liston del slot corrige por el que toca (AV-B)."
+    },
+    "valuesByHorizon": {
+      "type": "object",
+      "propertyNames": {
+        "pattern": "^[a-z][a-z0-9_]*$"
+      },
+      "additionalProperties": {
+        "type": "array",
+        "minItems": 1,
+        "items": {
+          "type": "integer"
+        }
+      },
+      "description": "Curva de valor contra el horizonte para los perks cuyo valor depende de el (los del eje de acumulacion). El indice 0 es el horizonte 1. Los perks que no aparecen valen values a cualquier horizonte, y eso esta medido: la ADR 0070 midio que arrastrar el contador mueve 0,0 unidades en los 36 perks sin accumulatesAcrossMatches."
+    },
     "rowDeviation": {
       "type": "integer",
       "minimum": 0,

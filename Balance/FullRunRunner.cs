@@ -36,9 +36,11 @@ public static class FullRunRunner
         bool arcJudged,
         bool slotGates,
         int? act1Pass,
-        int? act2Pass) =>
+        int? act2Pass,
+        bool valuesFlat) =>
         options with
         {
+            ValuesPerkByHorizon = !valuesFlat && options.ValuesPerkByHorizon,
             MinPerkValueReward = minPerkValueReward ?? options.MinPerkValueReward,
             MinPerkValueMarket = minPerkValueMarket ?? options.MinPerkValueMarket,
             UsesSlotOpportunityCost = !slotBarOff && options.UsesSlotOpportunityCost,
@@ -83,7 +85,8 @@ public static class FullRunRunner
         bool arcJudged = false,
         bool slotGates = false,
         int? act1Pass = null,
-        int? act2Pass = null)
+        int? act2Pass = null,
+        bool valuesFlat = false)
     {
         ArgumentNullException.ThrowIfNull(catalog);
         ArgumentNullException.ThrowIfNull(dataFiles);
@@ -111,7 +114,7 @@ public static class FullRunRunner
                 options = options with { MinPerkValue = bar };
             }
 
-            options = Tune(options, minPerkValueReward, minPerkValueMarket, slotBarOff || minPerkValue is not null, slotHorizon, arcJudged, slotGates, act1Pass, act2Pass);
+            options = Tune(options, minPerkValueReward, minPerkValueMarket, slotBarOff || minPerkValue is not null, slotHorizon, arcJudged, slotGates, act1Pass, act2Pass, valuesFlat);
             var rows = new List<RunPlayResult>(runs);
             for (int i = 0; i < runs; i++)
             {
@@ -143,7 +146,7 @@ public static class FullRunRunner
             marketlessOptions = marketlessOptions with { MinPerkValue = marketlessBar };
         }
 
-        marketlessOptions = Tune(marketlessOptions, minPerkValueReward, minPerkValueMarket, slotBarOff || minPerkValue is not null, slotHorizon, arcJudged, slotGates, act1Pass, act2Pass);
+        marketlessOptions = Tune(marketlessOptions, minPerkValueReward, minPerkValueMarket, slotBarOff || minPerkValue is not null, slotHorizon, arcJudged, slotGates, act1Pass, act2Pass, valuesFlat);
 
         var marketless = new List<RunPlayResult>(runs);
         for (int i = 0; i < runs; i++)

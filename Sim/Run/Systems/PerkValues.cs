@@ -35,11 +35,33 @@ public sealed class PerkValueTable
 
     private readonly Dictionary<string, int> _values;
 
+    /// <summary>
+    /// Curva de valor contra el <b>horizonte</b> —los partidos que al perk le quedan por jugar— para los
+    /// perks cuyo valor depende de él (AV-B). El índice 0 es el horizonte 1. Los perks que no están aquí
+    /// valen <see cref="_values"/> a cualquier horizonte, y eso no es una simplificación: la ADR 0070
+    /// midió que arrastrar el contador mueve <b>0,0</b> unidades en los 36 perks sin
+    /// <c>accumulatesAcrossMatches</c> —salen bit a bit idénticos— y 61,4 de media en los quince que sí.
+    /// </summary>
+    private readonly Dictionary<string, int[]> _horizonValues;
+
     /// <summary>Valores de la tabla en orden ascendente; el índice i corresponde a <see cref="_cumulativeWeight"/>[i].</summary>
     private readonly int[] _sortedValues;
 
     /// <summary>Peso acumulado hasta ese valor incluido, en el mismo orden que <see cref="_sortedValues"/>.</summary>
     private readonly long[] _cumulativeWeight;
+
+    /// <summary>La misma distribución de oferta, una por horizonte (índice 0 = horizonte 1).</summary>
+    private readonly int[][] _sortedByHorizon;
+
+    private readonly long[][] _cumulativeByHorizon;
+
+    private readonly long[] _totalWeightByHorizon;
+
+    private readonly int[] _meanByHorizon;
+
+    private readonly int[] _observedByHorizon;
+
+    private readonly int[] _rowDeviationByHorizon;
 
     private PerkValueTable(
         Dictionary<string, int> values,
@@ -49,9 +71,16 @@ public sealed class PerkValueTable
         int valueFloor,
         int minWeight,
         int maxWeight,
-        int rowDeviation)
+        int rowDeviation,
+        Dictionary<string, int[]>? horizonValues = null,
+        int[]? rowDeviationByHorizon = null,
+        int referenceHorizon = 0)
     {
         _values = values;
+        _horizonValues = horizonValues ?? new Dictionary<string, int[]>(StringComparer.Ordinal);
+        _rowDeviationByHorizon = rowDeviationByHorizon ?? Array.Empty<int>();
+        Horizons = _rowDeviationByHorizon.Length;
+        ReferenceHorizon = referenceHorizon;
         BaseWeight = baseWeight;
         ReferenceValue = referenceValue;
         ValueShift = valueShift;
@@ -100,11 +129,73 @@ public sealed class PerkValueTable
         ObservedDeviation = _sortedValues.Length > 0
             ? (int)Math.Sqrt((double)squares / _sortedValues.Length)
             : 0;
+
+        // La misma distribución de oferta, evaluada a cada horizonte (AV-B). El PESO no cambia con el
+        // horizonte —es la palanca de frecuencia de la ADR 0038, una propiedad del pool y no del momento
+        // en que la run mira— y lo que cambia es el VALOR de cada perk. Así el listón del slot compara
+        // el perk que se juzga con la oferta que llenaría el slot **en el mismo momento**, que es
+        // exactamente lo que la tabla de un solo número no podía hacer.
+        _sortedByHorizon = new int[Horizons][];
+        _cumulativeByHorizon = new long[Horizons][];
+        _totalWeightByHorizon = new long[Horizons];
+        _meanByHorizon = new int[Horizons];
+        _observedByHorizon = new int[Horizons];
+        var ordered = new List<KeyValuePair<string, int>>(values.Count);
+        for (int h = 0; h < Horizons; h++)
+        {
+            ordered.Clear();
+            foreach (var (id, _) in values)
+            {
+                ordered.Add(new KeyValuePair<string, int>(id, ValueAt(id, h + 1)));
+            }
+
+            ordered.Sort((a, b) =>
+            {
+                int byValue = a.Value.CompareTo(b.Value);
+                return byValue != 0 ? byValue : string.CompareOrdinal(a.Key, b.Key);
+            });
+
+            var hv = new int[ordered.Count];
+            var hc = new long[ordered.Count];
+            long running = 0;
+            long total = 0;
+            for (int i = 0; i < ordered.Count; i++)
+            {
+                hv[i] = ordered[i].Value;
+                running += WeightFor(_values[ordered[i].Key]);
+                hc[i] = running;
+                total += hv[i];
+            }
+
+            _sortedByHorizon[h] = hv;
+            _cumulativeByHorizon[h] = hc;
+            _totalWeightByHorizon[h] = running;
+            int mean = hv.Length > 0 ? (int)(total / hv.Length) : 0;
+            _meanByHorizon[h] = mean;
+            long sq = 0;
+            for (int i = 0; i < hv.Length; i++)
+            {
+                long d = hv[i] - mean;
+                sq += d * d;
+            }
+
+            _observedByHorizon[h] = hv.Length > 0 ? (int)Math.Sqrt((double)sq / hv.Length) : 0;
+        }
     }
 
     /// <summary>Tabla vacía: todos los perks pesan lo mismo. Es lo que usa una instantánea sin fichero de valores.</summary>
     public static PerkValueTable Uniform { get; } =
         new(new Dictionary<string, int>(StringComparer.Ordinal), 100, 500, 500, 100, 100, 100, 0);
+
+    /// <summary>Horizontes medidos, o 0 si la tabla no trae curva (AV-B).</summary>
+    public int Horizons { get; }
+
+    /// <summary>
+    /// Horizonte al que está medido <see cref="ValueOf(string)"/>, es decir la campaña de la ADR 0070:
+    /// <b>ocho</b> partidos. Es el valor que sigue alimentando el peso del pool, porque la palanca de
+    /// frecuencia es una propiedad del perk sobre una run entera y no del momento en que se ofrece.
+    /// </summary>
+    public int ReferenceHorizon { get; }
 
     /// <summary>Peso base, el de un perk cuyo valor es exactamente el de referencia.</summary>
     public int BaseWeight { get; }
@@ -185,8 +276,86 @@ public sealed class PerkValueTable
         return _sortedValues[^1];
     }
 
+    /// <summary>
+    /// El mismo cuantil, pero sobre la distribución de oferta <b>valorada al horizonte</b>
+    /// <paramref name="horizon"/> (AV-B). Es la mitad que faltaba: la ADR 0072 comparaba el valor del
+    /// perk que se juzga con el de la oferta que llenará el slot, y los dos salían de la misma columna
+    /// medida en campaña de ocho partidos. Con la curva, los dos se leen en el mismo momento de la run.
+    /// </summary>
+    public int ValueAtQuantile(long numerator, long denominator, int horizon)
+    {
+        if (Horizons <= 0)
+        {
+            return ValueAtQuantile(numerator, denominator);
+        }
+
+        int h = Math.Clamp(horizon, 1, Horizons) - 1;
+        var values = _sortedByHorizon[h];
+        var cumulative = _cumulativeByHorizon[h];
+        if (values.Length == 0 || denominator <= 0)
+        {
+            return 0;
+        }
+
+        if (numerator <= 0)
+        {
+            return values[0];
+        }
+
+        if (numerator >= denominator)
+        {
+            return values[^1];
+        }
+
+        long target = _totalWeightByHorizon[h] * numerator / denominator;
+        for (int i = 0; i < cumulative.Length; i++)
+        {
+            if (cumulative[i] >= target)
+            {
+                return values[i];
+            }
+        }
+
+        return values[^1];
+    }
+
     /// <summary>Valor medido del perk, en milésimas de punto de tasa de victoria; null si no está medido.</summary>
     public int? ValueOf(string perkId) => _values.TryGetValue(perkId, out int value) ? value : null;
+
+    /// <summary>
+    /// Valor medido del perk <b>al horizonte que tiene</b> (AV-B): lo que gana un equipo por llevarlo si
+    /// sólo le quedan <paramref name="horizon"/> partidos por jugar. El horizonte se recorta al rango
+    /// medido, así que por debajo de 1 vale lo del primer partido y por encima del último medido vale lo
+    /// del último — la curva es plana ahí porque los contadores ya han tocado su <c>maxValue</c>.
+    ///
+    /// <para>Sin curva declarada, o para un perk que no la tiene, devuelve el valor de referencia: es la
+    /// misma cifra que <see cref="ValueOf(string)"/> y el comportamiento de antes de este cambio.</para>
+    /// </summary>
+    public int ValueAt(string perkId, int horizon)
+    {
+        if (Horizons > 0 && _horizonValues.TryGetValue(perkId, out var curve))
+        {
+            return curve[Math.Clamp(horizon, 1, curve.Length) - 1];
+        }
+
+        return _values.TryGetValue(perkId, out int value) ? value : 0;
+    }
+
+    /// <summary>Media de los valores al horizonte dado; <see cref="MeanValue"/> si la tabla no trae curva.</summary>
+    public int MeanValueAt(int horizon) =>
+        Horizons > 0 ? _meanByHorizon[Math.Clamp(horizon, 1, Horizons) - 1] : MeanValue;
+
+    /// <summary>Dispersión observada entre perks al horizonte dado.</summary>
+    public int ObservedDeviationAt(int horizon) =>
+        Horizons > 0 ? _observedByHorizon[Math.Clamp(horizon, 1, Horizons) - 1] : ObservedDeviation;
+
+    /// <summary>
+    /// Desviación <b>por fila</b> de la medida a ese horizonte. No es la misma a todos: el valor a
+    /// horizonte 1 sale de un dieciseisavo de los partidos que sostienen el de horizonte 16, así que su
+    /// ruido es mayor y el listón tiene que corregir por él y no por el de la campaña entera.
+    /// </summary>
+    public int RowDeviationAt(int horizon) =>
+        Horizons > 0 ? _rowDeviationByHorizon[Math.Clamp(horizon, 1, Horizons) - 1] : RowDeviation;
 
     /// <summary>Peso del perk en el pool de recompensas y en el surtido del mercado (ADR 0038).</summary>
     public int WeightOf(string perkId) =>
@@ -228,6 +397,54 @@ public sealed class PerkValueTable
                 values[property.Name] = property.Value.AsInt();
             }
 
+            // Curva por horizonte (AV-B). Opcional: sin ella la tabla se comporta exactamente como antes.
+            var horizonValues = new Dictionary<string, int[]>(StringComparer.Ordinal);
+            int[] rowDeviationByHorizon = Array.Empty<int>();
+            int referenceHorizon = 0;
+            if (root.TryProp("valuesByHorizon") is { } byHorizon)
+            {
+                var deviations = new List<int>();
+                foreach (var element in root.Prop("rowDeviationByHorizon").EnumerateArray())
+                {
+                    deviations.Add(element.AsInt());
+                }
+
+                rowDeviationByHorizon = deviations.ToArray();
+                referenceHorizon = root.Int("referenceHorizon");
+                foreach (var property in byHorizon.EnumerateObject())
+                {
+                    var curve = new List<int>(rowDeviationByHorizon.Length);
+                    foreach (var element in property.Value.EnumerateArray())
+                    {
+                        curve.Add(element.AsInt());
+                    }
+
+                    if (curve.Count != rowDeviationByHorizon.Length)
+                    {
+                        throw new DataException(
+                            Path,
+                            $"$.valuesByHorizon.{property.Name}",
+                            $"la curva tiene {curve.Count} horizontes y rowDeviationByHorizon declara {rowDeviationByHorizon.Length}");
+                    }
+
+                    if (referenceHorizon >= 1
+                        && referenceHorizon <= curve.Count
+                        && values.TryGetValue(property.Name, out int reference)
+                        && curve[referenceHorizon - 1] != reference)
+                    {
+                        // La columna del horizonte de referencia y `values` son la MISMA medición: si se
+                        // separan, una de las dos se ha regenerado sin la otra y el listón compararía
+                        // dos tablas distintas. Es un error explícito, no un ajuste silencioso (RT-032).
+                        throw new DataException(
+                            Path,
+                            $"$.valuesByHorizon.{property.Name}[{referenceHorizon - 1}]",
+                            $"vale {curve[referenceHorizon - 1]} y values.{property.Name} vale {reference}: son la misma medida y tienen que coincidir");
+                    }
+
+                    horizonValues[property.Name] = curve.ToArray();
+                }
+            }
+
             return new PerkValueTable(
                 values,
                 root.Int("baseWeight"),
@@ -236,7 +453,10 @@ public sealed class PerkValueTable
                 root.Int("valueFloor"),
                 root.Int("minWeight"),
                 root.Int("maxWeight"),
-                root.Int("rowDeviation"));
+                root.Int("rowDeviation"),
+                horizonValues,
+                rowDeviationByHorizon,
+                referenceHorizon);
         }
     }
 }

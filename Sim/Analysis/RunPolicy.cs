@@ -199,6 +199,26 @@ public sealed record RunPolicyOptions
     public bool WeighsSlotBarByGateExposure { get; init; }
 
     /// <summary>
+    /// Si el valor de un perk se lee <b>al horizonte que tiene</b> —los partidos que le quedan por
+    /// jugar— en vez de leerlo siempre en la campaña de ocho partidos con la que la tabla se mide
+    /// (AV-B). La tabla de la ADR 0070 es un <b>promedio de la run</b>: mide cada perk sobre ocho
+    /// partidos consecutivos con el contador recorriendo 0..7. La política, en cambio, decide en la
+    /// <b>capa 0 del acto 1</b>, donde al perk le quedan del orden de trece partidos, y en el
+    /// <b>último nodo del acto 3</b>, donde no le queda ninguno, y usaba el mismo número en los dos
+    /// sitios. Con esto puesto, el perk y la oferta que llenaría su slot se leen los dos en el mismo
+    /// momento de la run. En false se comporta exactamente como antes, que es la medida de control.
+    /// </summary>
+    public bool ValuesPerkByHorizon { get; init; } = true;
+
+    /// <summary>
+    /// Partidos que juega una capa del mapa, en milésimas (AV-B). Medido, no elegido, y con el mismo
+    /// argumento que <see cref="TakeablePerkOffersPerLayerPermille"/>: es lo que convierte las capas que
+    /// le quedan a la run —descontadas por las tasas de paso, igual que las ofertas— en los
+    /// <b>partidos</b> que le quedan al perk que se está juzgando.
+    /// </summary>
+    public int MatchesPerLayerPermille { get; init; } = 550;
+
+    /// <summary>
     /// Si la política <b>lee el informe de ojeo</b> (RF-013) antes de alinear: con un rival que lleva
     /// perks letales, deja en el banquillo a los tocados mientras le queden siete sanos (ADR 0046).
     /// Existe como interruptor para poder medir <b>las dos</b> cifras —lo que muere quien lee el informe
@@ -383,7 +403,16 @@ public sealed record RunPlayResult(
     /// de suponerlo: cuántas ofertas más va a ver la run y cuántos slots le quedan por llenar. No entra en
     /// ninguna métrica ni en ninguna puerta, exactamente igual que <see cref="FinalCounters"/>.
     /// </summary>
-    IReadOnlyList<string>? SlotCensus = null)
+    IReadOnlyList<string>? SlotCensus = null,
+
+    /// <summary>
+    /// Horizonte de los perks cobrados (AV-B), <c>acto:capa:perks:partidosRestantesSumados</c>. Es el
+    /// diagnóstico que dice <b>cuántos partidos le quedan por jugar</b> a un perk según dónde se compra,
+    /// que es lo que la tabla de valor de la ADR 0070 no distingue: la mide en campaña de ocho partidos y
+    /// la usa igual en la capa 0 del acto 1 que en el último nodo del acto 3. No entra en ninguna métrica
+    /// ni en ninguna puerta, igual que <see cref="FinalCounters"/> y <see cref="SlotCensus"/>.
+    /// </summary>
+    IReadOnlyList<string>? PerkHorizon = null)
 {
     /// <summary>True si la run terminó ganando al jefe final (RF-002).</summary>
     public bool Won => Outcome == RunOutcomeKind.Victory;
@@ -1215,6 +1244,7 @@ public static class RunPolicy
                     used.Add((MarketCategories.Perk, perk.OfferIndex));
                     ledger.PerksBought++;
                     ledger.Purchases++;
+                    NotePerkTaken(node, ledger);
                     break;
                 case BuyOffer { Category: MarketCategories.Item } item:
                     used.Add((MarketCategories.Item, item.OfferIndex));
@@ -1328,14 +1358,15 @@ public static class RunPolicy
         RunPolicyOptions options,
         string pursuedFamily,
         int arcCredit,
-        int bar)
+        int bar,
+        int horizon)
     {
         if (options.Doctrine != PurchaseDoctrine.Contextual)
         {
             return true;
         }
 
-        int value = economy.PerkValues.ValueOf(perk.Id) ?? 0;
+        int value = PerkValueOf(perk.Id, economy, options, horizon);
 
         // ADR 0072: la tabla mide lo que vale el perk SOLO. Una pieza de la línea que la run persigue
         // vale además lo que ABRE (ADR 0051) —la misma ceguera que la ADR 0070 corrigió con el contador—,
@@ -1358,7 +1389,20 @@ public static class RunPolicy
     /// medido de su maestro entre las piezas que exige. Cero si la línea no tiene maestro alcanzable o si
     /// su maestro mide negativo — una línea que no paga no vale un slot de más.
     /// </summary>
-    private static int ArcCreditFor(string family, Catalog catalog, EconomyConfig economy, RunPolicyOptions options)
+    /// <summary>
+    /// Valor medido del perk <b>al horizonte que tiene</b> (AV-B), o el de la campaña de referencia si la
+    /// tabla no trae curva o la palanca está apagada.
+    /// </summary>
+    private static int PerkValueOf(string perkId, EconomyConfig economy, RunPolicyOptions options, int horizon)
+    {
+        var table = economy.PerkValues;
+        return options.ValuesPerkByHorizon && table.Horizons > 0
+            ? table.ValueAt(perkId, horizon)
+            : table.ValueOf(perkId) ?? 0;
+    }
+
+    private static int ArcCreditFor(
+        string family, Catalog catalog, EconomyConfig economy, RunPolicyOptions options, int horizon)
     {
         if (!options.ArcCreditsSlotBar || family.Length == 0)
         {
@@ -1374,7 +1418,7 @@ public static class RunPolicy
                 continue;
             }
 
-            int value = economy.PerkValues.ValueOf(master.Id) ?? 0;
+            int value = PerkValueOf(master.Id, economy, options, horizon);
             return value > 0 ? value / requirement.Count : 0;
         }
 
@@ -1417,16 +1461,42 @@ public static class RunPolicy
         int free = FreeStarterPerkSlots(state, options);
         var horizon = SlotHorizonOf(state, node, options);
         long offers = horizon.Offers;
+        bool byHorizon = options.ValuesPerkByHorizon && table.Horizons > 0;
+        int matches = MatchHorizonOf(horizon, options);
         int continuation = free <= 0 || offers <= free
             ? 0
-            : table.ValueAtQuantile(offers - free, offers);
+            : byHorizon
+                ? table.ValueAtQuantile(offers - free, offers, matches)
+                : table.ValueAtQuantile(offers - free, offers);
 
         if (options.WeighsSlotBarByGateExposure)
         {
             continuation = (int)((long)continuation * horizon.GateExposurePermille / 1000);
         }
 
-        return MeasuredValueFor(continuation, table);
+        return byHorizon
+            ? MeasuredValueFor(continuation, table.MeanValueAt(matches), table.ObservedDeviationAt(matches), table.RowDeviationAt(matches))
+            : MeasuredValueFor(continuation, table.MeanValue, table.ObservedDeviation, table.RowDeviation);
+    }
+
+    /// <summary>
+    /// Los partidos que le quedan por jugar a un perk que se coja <b>aquí</b> (AV-B), redondeado al entero
+    /// y con un suelo de 1. Sale de las mismas capas descontadas con las que se cuentan las ofertas: si el
+    /// slot compite con las ofertas que quedan, el perk vale por los partidos que quedan, y los dos
+    /// números salen del mismo sitio.
+    /// </summary>
+    private static int MatchHorizonOf(SlotHorizon horizon, RunPolicyOptions options)
+    {
+        long matches = horizon.LayersPermille * Math.Max(options.MatchesPerLayerPermille, 0) / 1_000_000;
+        return (int)Math.Clamp(matches, 1, int.MaxValue);
+    }
+
+    /// <summary>El horizonte de partidos en el nodo dado; público sólo para el diagnóstico de /Balance.</summary>
+    public static int MatchHorizonAt(RunState state, MapNode node, RunPolicyOptions options)
+    {
+        ArgumentNullException.ThrowIfNull(state);
+        ArgumentNullException.ThrowIfNull(options);
+        return MatchHorizonOf(SlotHorizonOf(state, node, options), options);
     }
 
     /// <summary>
@@ -1434,17 +1504,17 @@ public static class RunPolicy
     /// deshaciendo el encogimiento hacia la media que impone el ruido de la tabla (ADR 0072). Entero
     /// (RT-023). Sin desviación declarada la corrección es la identidad.
     /// </summary>
-    private static int MeasuredValueFor(int expected, PerkValueTable table)
+    private static int MeasuredValueFor(int expected, int meanValue, int observedDeviation, int rowDeviation)
     {
-        long observed = table.ObservedDeviation;
-        long sigma = table.RowDeviation;
+        long observed = observedDeviation;
+        long sigma = rowDeviation;
         long signal = (observed * observed) - (sigma * sigma);
         if (sigma <= 0 || signal <= 0)
         {
             return expected;
         }
 
-        long mean = table.MeanValue;
+        long mean = meanValue;
         return (int)(mean + ((expected - mean) * observed * observed / signal));
     }
 
@@ -1462,7 +1532,12 @@ public static class RunPolicy
     /// <c>G_fut / G_ahora</c> en milésimas (ADR 0076): puertas que juega en promedio la oferta futura
     /// que ocuparía el slot, sobre las que juega el perk que se juzga ahora. Vale 1.000 en el último acto.
     /// </param>
-    private readonly record struct SlotHorizon(long Offers, int GateExposurePermille);
+    /// <param name="LayersPermille">
+    /// Las capas que le quedan a la run desde aquí, en milésimas y ya descontadas por las tasas de paso
+    /// (AV-B). Es el numerador común de las dos cuentas: por lo que produce una capa salen las
+    /// <b>ofertas</b> (<paramref name="Offers"/>) y por lo que juega una capa salen los <b>partidos</b>.
+    /// </param>
+    private readonly record struct SlotHorizon(long Offers, int GateExposurePermille, long LayersPermille);
 
     /// <summary>
     /// Ofertas cobrables por delante y exposición a puertas de las que llegan (ADR 0072, ADR 0076).
@@ -1535,7 +1610,7 @@ public static class RunPolicy
             exposure = (int)Math.Clamp(ratio, 0, 1000);
         }
 
-        return new SlotHorizon(offers, exposure);
+        return new SlotHorizon(offers, exposure, layersPermille);
     }
 
     /// <summary>Tasa medida de paso de la puerta de ese acto, en milésimas (ADR 0072).</summary>
@@ -1579,7 +1654,8 @@ public static class RunPolicy
         // la doctrina y, a igual rareza, el más barato: la escalera de la ADR 0033 la marca la
         // **densidad** de perks en el once (14 en "correcta", 17 en "muy buena").
         string pursuedFamily = PursuedFamily(state, catalog, options);
-        int arcCredit = ArcCreditFor(pursuedFamily, catalog, economy, options);
+        int horizon = MatchHorizonAt(state, node, options);
+        int arcCredit = ArcCreditFor(pursuedFamily, catalog, economy, options, horizon);
         int bar = SlotBar(state, node, economy, options);
         int bestPerk = -1, bestPerkCarrier = -1, bestPerkRank = int.MinValue;
         for (int i = 0; i < offers.Perks.Count; i++)
@@ -1592,7 +1668,7 @@ public static class RunPolicy
             var perk = catalog.Perks.Find(offers.Perks[i].PerkId);
             if (perk is null
                 || !ClearsTheBar(perk.Rarity, options)
-                || !WorthASlot(perk, economy, options, pursuedFamily, arcCredit, options.MinPerkValueMarket ?? bar))
+                || !WorthASlot(perk, economy, options, pursuedFamily, arcCredit, options.MinPerkValueMarket ?? bar, horizon))
             {
                 continue;
             }
@@ -1616,7 +1692,7 @@ public static class RunPolicy
             // Las dos puras siguen con su criterio (la gastadora, lo más barato; la ahorradora, lo más
             // raro), que es justamente lo que las hace comparables.
             int rank = options.Doctrine == PurchaseDoctrine.Contextual
-                ? (economy.PerkValues.ValueOf(perk.Id) ?? 0) * 10
+                ? PerkValueOf(perk.Id, economy, options, horizon) * 10
                     + (perk.ElseEffects.Count == 0 ? 1_000_000 : 0)
                     - offers.Perks[i].Price
                 : Rank(perk.Rarity, offers.Perks[i].Price, options, perk.ElseEffects.Count == 0);
@@ -1854,6 +1930,17 @@ public static class RunPolicy
     }
 
     /// <summary>
+    /// Anota que la run acaba de cobrar un perk en ese nodo (AV-B): dónde estaba y cuántos partidos
+    /// llevaba jugados. Diagnóstico puro; no cambia ninguna decisión ni entra en ninguna métrica.
+    /// </summary>
+    private static void NotePerkTaken(MapNode node, Ledger ledger)
+    {
+        var key = (node.Act, node.Layer);
+        var current = ledger.PerksTakenAt.GetValueOrDefault(key);
+        ledger.PerksTakenAt[key] = (current.Count + 1, current.MatchesAt + ledger.Matches);
+    }
+
+    /// <summary>
     /// Censo de ofertas de perk (AS-A): cuántas ha visto la run en este acto y con cuántos slots libres
     /// las vio. Diagnóstico puro —no cambia ninguna decisión ni entra en ninguna métrica de puerta—, y
     /// es lo que permite medir el coste de oportunidad de un slot en vez de suponerlo.
@@ -1953,6 +2040,7 @@ public static class RunPolicy
             ledger,
             perkOptions.Count,
             CountTakeablePerkOffers(state, catalog, options, perkOptions, PerkSource.Reward, int.MaxValue));
+        var chosenFrom = rewards;
         var choice = PickReward(state, node, rewards, catalog, standard.Economy, standard.Items, options);
 
         if (choice.Score < BestRewardScore && state.NodeRerolls == 0 && options.RerollGoldFactor != int.MaxValue)
@@ -1964,6 +2052,7 @@ public static class RunPolicy
                 ledger.GoldSpentReroll += cost;
                 ledger.Rerolls++;
                 var rerolled = RewardSystem.Options(state, node, catalog, standard.Economy, standard.Items);
+                chosenFrom = rerolled;
                 choice = PickReward(state, node, rerolled, catalog, standard.Economy, standard.Items, options);
             }
         }
@@ -1981,6 +2070,11 @@ public static class RunPolicy
         }
 
         ledger.RewardsTaken++;
+        if (choice.Index < chosenFrom.Count && chosenFrom[choice.Index] is PerkRewardOption)
+        {
+            NotePerkTaken(node, ledger);
+        }
+
         return RunEngine.Apply(state, new ChooseReward(choice.Index, choice.Carrier), catalog, systems);
     }
 
@@ -2065,7 +2159,8 @@ public static class RunPolicy
         var placement = PlacementOf(lineup);
         int naked = BestStarterWithoutItem(state, lineup, options);
         string pursued = PursuedFamily(state, catalog, options);
-        int arcCredit = ArcCreditFor(pursued, catalog, economy, options);
+        int horizon = MatchHorizonAt(state, node, options);
+        int arcCredit = ArcCreditFor(pursued, catalog, economy, options, horizon);
         int bar = options.MinPerkValueReward ?? SlotBar(state, node, economy, options);
         var best = new RewardChoice(-1, -1, 0);
 
@@ -2085,7 +2180,7 @@ public static class RunPolicy
                     bool takeable = definition is not null
                         && PerkPool.Availability(state, definition, catalog, PerkSource.Reward)
                             is not (PerkAvailability.Unmet or PerkAvailability.Closed or PerkAvailability.MarketOnly);
-                    var carriers = definition is null || !takeable || !WorthASlot(definition, economy, options, pursued, arcCredit, bar)
+                    var carriers = definition is null || !takeable || !WorthASlot(definition, economy, options, pursued, arcCredit, bar, horizon)
                         ? Array.Empty<int>()
                         : PerkPool.EligibleCarriers(state, definition, catalog);
                     carrier = definition is null || carriers.Count == 0
@@ -2540,6 +2635,14 @@ public static class RunPolicy
             }
         }
 
+        // Horizonte de adquisición (AV-B): los partidos que le quedaban a cada perk cuando se cobró.
+        var perkHorizon = new List<string>(ledger.PerksTakenAt.Count);
+        foreach (var key in ledger.PerksTakenAt.Keys.OrderBy(k => k.Act).ThenBy(k => k.Layer))
+        {
+            var (count, matchesAt) = ledger.PerksTakenAt[key];
+            perkHorizon.Add($"{key.Act}:{key.Layer}:{count}:{(count * ledger.Matches) - matchesAt}");
+        }
+
         var held = PerkPool.HeldPerkIds(state);
         var masters = new List<string>();
         for (int i = 0; i < held.Count; i++)
@@ -2614,7 +2717,8 @@ public static class RunPolicy
             ledger.MastersUnlocked,
             ledger.MastersAffordable,
             counterCensus,
-            slotCensus);
+            slotCensus,
+            perkHorizon);
     }
 
     /// <summary>
@@ -2775,6 +2879,15 @@ public static class RunPolicy
         /// las ofertas que ningún titular puede llevar no compiten por el slot.
         /// </summary>
         public int[] TakeablePerkOffersByAct { get; } = new int[RunRules.Acts];
+
+        /// <summary>
+        /// Perks <b>cobrados</b> por acto y capa (AV-B), y los partidos que la run llevaba jugados en ese
+        /// momento. Con los partidos totales al final da <b>cuántos partidos le quedaban por jugar al perk
+        /// cuando se compró</b>, que es lo que la tabla de valor tiene que reproducir: hoy la mide en
+        /// campaña de ocho partidos y la usa igual en la capa 0 del acto 1 —donde quedan muchos— que en el
+        /// último nodo del acto 3 —donde no queda ninguno—. Diagnóstico puro, como <see cref="SlotCensus"/>.
+        /// </summary>
+        public Dictionary<(int Act, int Layer), (int Count, int MatchesAt)> PerksTakenAt { get; } = new();
 
         /// <summary>
         /// Objetos que el inventario ha recuperado de un muerto (ADR 0048, condición 4): la

@@ -12,9 +12,36 @@ namespace Underleague.Balance;
 
 /// <summary>Valor medido de un perk: lo que gana un equipo por llevarlo frente a su espejo sin él.</summary>
 /// <param name="ValueMilli">Milésimas de punto de tasa de victoria (RT-023: aritmética entera).</param>
-public readonly record struct PerkValueRow(string PerkId, int Slot, int Matches, int Wins, int ValueMilli)
+/// <param name="WinsByMatch">
+/// Victorias por <b>índice de partido dentro de la campaña</b> (AV-B): la posición 0 es el primer partido
+/// —contador a cero— y la última, el partido <c>L−1</c>. Es lo que convierte una sola medición en la
+/// <b>curva</b> del valor contra los partidos que le quedan al perk: el valor a horizonte <c>R</c> es el
+/// acumulado de los <c>R</c> primeros índices. Diagnóstico del instrumento; no entra en ninguna puerta.
+/// </param>
+/// <param name="MatchesByMatch">Partidos jugados en cada índice, denominador de <paramref name="WinsByMatch"/>.</param>
+public readonly record struct PerkValueRow(
+    string PerkId,
+    int Slot,
+    int Matches,
+    int Wins,
+    int ValueMilli,
+    IReadOnlyList<int> WinsByMatch,
+    IReadOnlyList<int> MatchesByMatch)
 {
     public double WinRate => Matches > 0 ? 100.0 * Wins / Matches : 0.0;
+
+    /// <summary>Valor medido si el perk sólo jugara los <paramref name="horizon"/> primeros partidos.</summary>
+    public int ValueAtHorizon(int horizon)
+    {
+        int wins = 0, matches = 0;
+        for (int k = 0; k < horizon && k < WinsByMatch.Count; k++)
+        {
+            wins += WinsByMatch[k];
+            matches += MatchesByMatch[k];
+        }
+
+        return matches > 0 ? (int)Math.Round(((1000.0 * wins / matches) - 500.0) * 2.0) : 0;
+    }
 }
 
 /// <summary>
@@ -107,6 +134,8 @@ public static class PerkValueRunner
     {
         var config = new SimConfig(CollectLog: false);
         int matches = 0, wins = 0, slot = -1;
+        var winsByMatch = new int[matchesPerRoster];
+        var matchesByMatch = new int[matchesPerRoster];
 
         for (int roster = 0; roster < rosters; roster++)
         {
@@ -146,9 +175,11 @@ public static class PerkValueRunner
                     config);
 
                 matches++;
+                matchesByMatch[k]++;
                 if (result.Report.Winner == subjectSide)
                 {
                     wins++;
+                    winsByMatch[k]++;
                 }
 
                 // Campaña (ADR 0070): el contador de carrera pasa al partido siguiente igual que en la
@@ -169,7 +200,7 @@ public static class PerkValueRunner
         }
 
         int valueMilli = matches > 0 ? (int)Math.Round(((1000.0 * wins / matches) - 500.0) * 2.0) : 0;
-        return new PerkValueRow(perk.Id, slot, matches, wins, valueMilli);
+        return new PerkValueRow(perk.Id, slot, matches, wins, valueMilli, winsByMatch, matchesByMatch);
     }
 
     /// <summary>

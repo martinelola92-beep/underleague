@@ -114,6 +114,13 @@ public sealed class Options
     /// <summary><c>--slot-gates</c>: pondera el coste de oportunidad del slot por la <b>exposición a puertas</b> (ADR 0076). Apagada por defecto: derivada, medida y descartada.</summary>
     public bool SlotGates { get; private set; }
 
+    /// <summary>
+    /// <c>--values-flat</c>: la política vuelve a leer el valor de un perk en la campaña de ocho partidos
+    /// con la que se mide la tabla, sea cual sea el momento de la run (AV-B). Es la <b>medida de
+    /// control</b> del horizonte: con ella el paquete se comporta como antes.
+    /// </summary>
+    public bool ValuesFlat { get; private set; }
+
     /// <summary><c>--act1-pass N</c>: tasa de paso de la puerta del acto 1 en milésimas que usa el listón del slot (ADR 0072); null = la de la política. Es la palanca con la que se mide el punto fijo de AU-D.</summary>
     public int? Act1Pass { get; private set; }
 
@@ -211,6 +218,9 @@ public sealed class Options
                     options.ArcJudged = true;
                     break;
 
+                case "--values-flat":
+                    options.ValuesFlat = true;
+                    break;
                 case "--slot-gates":
                     options.SlotGates = true;
                     break;
