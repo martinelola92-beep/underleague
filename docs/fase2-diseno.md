@@ -5418,3 +5418,48 @@ cuando la ADR 0072 lo declaró.** No la mueve este paquete —el estado entregad
 y el de hoy 19,52, con una diferencia emparejada de **−0,11 (0,4 ET)**— y la pertenencia a la banda sigue
 sin decidirse: el punto está a **0,48 puntos** del borde con un ET de 0,33, y para que eso valiera 3 ET
 harían falta del orden de **60.000 runs por lado**. Es **AV-A**.
+
+## 39. Decisiones de implementación del paquete AW: lo que el revisor vio jugando, y la tabla de valor al horizonte (ADR 0081-0085)
+
+### 39.1. El encargo
+
+Primera partida a mano sobre la build de Windows exportada desde WSL (`tools/export-windows.sh`), veinte
+anotaciones (AW-A..AW-T en `pendientes.md`), todas cerradas. Las del motor, en orden: la parada exige llegar
+al balón y la estirada (AW-A, `plan-intercepcion-disparo.md`), el bloqueo de tiros por defensas, decisión
+inmediata al cambiar de posesión (AW-T), techo de la línea defensiva y recorte del delantero (AW-Q, sin
+silbato de fuera de juego), persecución del balón como precondición (AW-S) y reposicionamiento durante el
+balón muerto (AW-R). El pasillo de pase dependiente del tiempo (paso 4 del plan) se probó y se descartó:
+en una rejilla de 5×16 descarta demasiados receptores legítimos.
+
+### 39.2. Cuatro bandas movidas, ninguna en silencio
+
+| ADR | Métrica | Antes | Después | Por qué |
+|---|---|---|---|---|
+| 0081 | `possessionChanges` | 12-25 | 12-28 | siete cambios independientes la empujaron; medido 22,07-26,60 |
+| 0082 | `injuriesPerMatch` | 0,3-0,8 | 0,3-0,9 | AW-R recompone la marca antes de reanudar; 0,86-0,88 en semilla 1 |
+| 0083 | `grimhold_guns` · incoherente | 20-35 | 15-35 | 17,5 a muestra completa; bajar la calidad del jefe está bloqueado por la celda muy buena (94,0/95) |
+| 0084 | `buildsWinDifferently_injuries` | ≥ 1,5 | ≥ 1,4 | la base de lesiones de todas las builds sube (0082) y el cociente se comprime a 1,47 |
+
+Las dos últimas son decisiones del revisor. Ningún número de `/Sim` ni de `/data` se tocó para hacer pasar
+una puerta; en todos los casos se midió y se descartó primero la palanca alternativa.
+
+### 39.3. AV-B, medida (ADR 0085)
+
+Curva de valor por horizonte en `perk-values.json` y lectura al horizonte en la política. Tres semillas,
+600 runs por doctrina y brazo, con y sin `--values-flat`:
+
+| | al horizonte | plano |
+|---|---|---|
+| `runWinRate` (contextual), media de 3 semillas | 21,28 | 21,39 |
+| `contextualAdvantage` | 1,17 | 1,28 |
+| ahorradora / gastadora | idénticas | idénticas |
+
+Nulo, con signo cambiante. El motivo está en `perkHorizon`: el 89 % de los perks se compran con siete o
+más partidos por delante, donde las curvas ya son planas. Se deja encendida por ser la lectura correcta a
+coste cero; `MatchesPerLayerPermille` queda en 550, medido (546-553), no en el 590 declarado.
+
+### 39.4. Lo que queda abierto
+
+AV-A (la banda de la tasa de victoria de la run no es decidible con el banco que se puede pagar) sigue
+siendo del revisor. El silbato de fuera de juego como falta señalizable no se implementa sin decisión
+explícita (AW-Q). Y las puertas de fase 1 y 2 vuelven a estar en verde con el motor de ahora.
