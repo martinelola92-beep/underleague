@@ -143,6 +143,19 @@ public sealed record EconomyConfig(
     public PerkValueTable PerkValues { get; init; } = PerkValueTable.Uniform;
 
     /// <summary>
+    /// Valor medido de cada <b>objeto</b>, en la misma unidad que <see cref="PerkValues"/>
+    /// (<c>data/economy/item-values.json</c>, AT-A). Vive aquí, al lado de la tabla de perks, porque su
+    /// razón de ser es que las dos columnas se puedan comparar: un perk de recompensa cuesta el slot y
+    /// uno comprado cuesta el slot <b>y</b> el oro, y el oro es lo único con lo que se compran objetos
+    /// (ADR 0055). A diferencia de la de perks, <b>no pesa nada</b>: el peso de un objeto en el pool sale
+    /// de su precio y de su profundidad nativa, y este campo no lo toca. Una instantánea sin el fichero
+    /// no trae ningún valor medido.
+    ///
+    /// <para>Paso 1 de AT-A: la tabla se mide y se carga, y todavía no la consulta ninguna decisión.</para>
+    /// </summary>
+    public Items.ItemValueTable ItemValues { get; init; } = Items.ItemValueTable.Empty;
+
+    /// <summary>
     /// Oro fijo que se pierde al perder un <b>partido ordinario</b> (RF-002c), además de no cobrar la
     /// victoria ni la recompensa. Instrumento del paquete AÑ: es la única forma de "encarecer perder"
     /// que no toca ningún número que la oposición comparta. 0 = el juego de hoy. El oro no baja de cero
@@ -345,6 +358,7 @@ public static class EconomyLoader
             market)
         {
             PerkValues = PerkValueTable.FromJson(files),
+            ItemValues = Items.ItemValueTable.FromJson(files),
             DefeatGoldPenalty = root.OptionalInt("defeatGoldPenalty", 0),
             DefeatGoldPenaltyPercent = root.OptionalInt("defeatGoldPenaltyPercent", 0),
         };

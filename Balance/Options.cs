@@ -61,6 +61,14 @@ public sealed class Options
     public bool PerkValues { get; private set; }
 
     /// <summary>
+    /// --item-values: mide el valor de cada objeto contra su espejo sin él, con el <b>mismo</b> espejo
+    /// que --perk-values, para que las dos tablas queden en la misma unidad (AT-A, paso 1). Sin campaña:
+    /// un objeto no tiene contador de carrera. --rosters fija las parejas de plantillas y --runs los
+    /// partidos por pareja (por defecto 2: ida y vuelta).
+    /// </summary>
+    public bool ItemValues { get; private set; }
+
+    /// <summary>
     /// <c>--utility-census N</c>: censo del volcado de utilidad (RT-098) sobre N partidos de referencia.
     /// Herramienta de medición: no toca ninguna métrica ni ninguna puerta.
     /// </summary>
@@ -179,6 +187,10 @@ public sealed class Options
 
                 case "--perk-values":
                     options.PerkValues = true;
+                    break;
+
+                case "--item-values":
+                    options.ItemValues = true;
                     break;
 
                 case "--utility-census":

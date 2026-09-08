@@ -1,0 +1,32 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://underleague.dev/schemas/item-values.schema.json",
+  "title": "Underleague item value table",
+  "description": "data/economy/item-values.json: valor medido de cada objeto, en milésimas de punto de tasa de victoria y en la MISMA unidad que perk-values.json (AT-A). Se produce con /Balance --item-values. A diferencia de la tabla de perks no lleva parámetros de peso (baseWeight, referenceValue, valueShift, valueFloor, minWeight, maxWeight): el peso de un objeto en el pool sale de su precio calculado (ADR 0038) y de su profundidad nativa (ADR 0051), y esta tabla no lo toca. Tampoco lleva curva por horizonte (valuesByHorizon, referenceHorizon, rowDeviationByHorizon): la de los perks existe porque su contador de carrera crece partido a partido y un objeto no tiene ningún contador.",
+  "type": "object",
+  "properties": {
+    "_doc": {
+      "type": "string"
+    },
+    "rowDeviation": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Desviación POR FILA de la medición, en las mismas milésimas: lo que se mueve el valor de un objeto entre dos lotes independientes del mismo instrumento. Es el ruido de la medida, no la dispersión del catálogo."
+    },
+    "values": {
+      "type": "object",
+      "minProperties": 1,
+      "propertyNames": {
+        "pattern": "^[a-z][a-z0-9_]*$"
+      },
+      "additionalProperties": {
+        "type": "integer"
+      }
+    }
+  },
+  "required": [
+    "rowDeviation",
+    "values"
+  ],
+  "additionalProperties": false
+}

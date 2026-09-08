@@ -92,6 +92,39 @@ try
         return 0;
     }
 
+    if (options.ItemValues)
+    {
+        // --item-values: cuánto vale cada objeto (AT-A, paso 1), medido con el MISMO espejo que
+        // --perk-values para que las dos tablas queden en la misma unidad y algún día se puedan sumar.
+        // Alimenta data/economy/item-values.json. Sin campaña: un objeto no tiene contador de carrera.
+        var itemCatalogForValues = ItemLoader.FromJson(dataFiles);
+        var itemRows = ItemValueRunner.Run(
+            catalog,
+            itemCatalogForValues,
+            options.Seed,
+            options.Rosters,
+            options.RunsExplicit ? options.Runs : ItemValueRunner.DefaultMatchesPerRoster);
+
+        WriteItemValuesCsv(options.OutDir!, itemRows);
+
+        if (!options.Quiet)
+        {
+            Console.WriteLine();
+            ItemValueRunner.PrintTable(itemRows);
+            Console.WriteLine();
+            int unmeasured = itemCatalogForValues.All.Count - itemRows.Count;
+            Console.WriteLine(
+                $"{itemRows.Count} objetos medidos de {itemCatalogForValues.All.Count}"
+                    + (unmeasured > 0 ? $"; {unmeasured} sin portador elegible en la muestra" : string.Empty));
+            Console.WriteLine();
+            Console.WriteLine("bloque 'values' para data/economy/item-values.json:");
+            Console.WriteLine(ItemValueRunner.ToJsonValues(itemRows));
+            Console.WriteLine($"CSV escritos en {options.OutDir}");
+        }
+
+        return 0;
+    }
+
     if (options.BossGate)
     {
         // --boss-gate: la curva de puertas de la ADR 0033 con partidos directos build-contra-jefe
@@ -340,6 +373,13 @@ static void PrintUsage()
           --full-runs N       N runs completas por cada una de las tres doctrinas de compra de la ADR
                                0037 (contextual, gastadora, ahorradora) sobre las mismas semillas;
                                escribe runs.csv y summary.csv con las métricas de fase2-diseno.md §10
+          --perk-values       mide el valor de cada perk contra su espejo sin él (ADR 0038, 0070); espejo
+                               en campaña, --rosters = parejas de plantillas, --runs = partidos de la
+                               campaña (8); escribe perk-values.csv y perk-values-by-match.csv
+          --item-values       lo mismo para cada objeto, con el MISMO espejo, para que las dos tablas
+                               queden en la misma unidad (AT-A); sin campaña, porque un objeto no tiene
+                               contador de carrera: --runs = partidos por pareja (2, ida y vuelta);
+                               escribe item-values.csv
           --values-flat       con --full-runs, la política lee el valor de cada perk en la campaña de ocho
                                partidos con la que se mide la tabla, sea cual sea el momento de la run:
                                es la medida de control del valor por horizonte (AV-B, ADR 0085)
@@ -506,6 +546,23 @@ static void WritePerkValuesCsv(string outDir, IReadOnlyList<PerkValueRow> rows)
     }
 
     CsvWriter.Write(Path.Combine(outDir, "perk-values-by-match.csv"), curveHeader, curve);
+}
+
+/// <summary>item-values.csv del modo --item-values (AT-A): una fila por objeto medido.</summary>
+static void WriteItemValuesCsv(string outDir, IReadOnlyList<ItemValueRow> rows)
+{
+    string[] header = { "item", "carriers", "matches", "wins", "winRate", "valueMilli" };
+    var data = rows.Select(r => (IReadOnlyList<string>)new[]
+    {
+        r.ItemId,
+        r.Carriers.ToString(CultureInfo.InvariantCulture),
+        r.Matches.ToString(CultureInfo.InvariantCulture),
+        r.Wins.ToString(CultureInfo.InvariantCulture),
+        CsvWriter.F2(r.WinRate),
+        r.ValueMilli.ToString(CultureInfo.InvariantCulture),
+    });
+
+    CsvWriter.Write(Path.Combine(outDir, "item-values.csv"), header, data);
 }
 
 /// <summary>runs.csv del modo --full-runs (fase2-diseno.md §10): una fila por run jugada.</summary>
