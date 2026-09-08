@@ -95,7 +95,7 @@ Criterio de salida de la fase 0 e indicador permanente del equilibrio fútbol/ag
 | Distribución de resultados | Mayoría entre 1-0 y 3-2; < 5% con más de 5 goles totales; < 15% de empates **al final del reglamentario** | Marcador antes de la turba |
 | Tiempo del balón por tercio | Ningún tercio > 50% | Ticks con el balón en cada tercio de columnas |
 | Entradas por partido | 6-14 | Eventos `TACKLE` |
-| Lesiones por partido | 0,3-0,8 | Eventos `INJURY` |
+| Lesiones por partido | 0,3-0,9 (ADR 0082) | Eventos `INJURY` |
 
 Los rangos son puntos de partida. **Cambiar un rango es una decisión explícita** (RT-057): ADR en `decisiones/` con los datos que lo motivan y actualización de esta tabla en el mismo commit.
 

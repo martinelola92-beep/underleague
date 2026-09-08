@@ -226,7 +226,12 @@ public static class MatchMetrics
         rows.Add(new MetricResult(BallThirdMaxShare, ballThirdMaxShare, 0, 50, ballThirdMaxShare <= 50 ? "IN" : "OUT"));
 
         rows.Add(InRange(TacklesPerMatch, (double)tackles / n, 6, 14));
-        rows.Add(InRange(InjuriesPerMatch, (double)injuries / n, 0.3, 0.8));
+
+        // ADR 0082: 0,3-0,8 medía un motor donde el equipo se quedaba congelado en cada balón muerto; con
+        // AW-R recomponiendo la marca antes de reanudar, el peor valor medido (tres semillas de 500
+        // partidos) sube a 0,86-0,87. El techo sube a 0,90, justo por encima de lo medido, no una
+        // previsión.
+        rows.Add(InRange(InjuriesPerMatch, (double)injuries / n, 0.3, 0.9));
 
         // Paso 0 de docs/plan-intercepcion-disparo.md: instrumentación pura, sin banda de gating. Fijan la
         // referencia de goalsPerMatch y saveRate que usarán los pasos 1 (AW-A) y 2 al medir el efecto de
