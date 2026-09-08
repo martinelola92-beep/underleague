@@ -110,6 +110,9 @@ public sealed class Options
     /// <summary><c>--min-perk-value-market N</c>: el mismo listón, sólo para el perk que se compra (AS-A).</summary>
     public int? MinPerkValueMarket { get; private set; }
 
+    /// <summary><c>--min-item-value-market N</c>: el listón del <b>objeto</b> que se compra (AT-A, paso 2).</summary>
+    public int? MinItemValueMarket { get; private set; }
+
     /// <summary><c>--slot-bar-off</c>: la doctrina contextual vuelve al listón constante de antes de la ADR 0072 (medida de control).</summary>
     public bool SlotBarOff { get; private set; }
 
@@ -216,6 +219,10 @@ public sealed class Options
 
                 case "--min-perk-value-market":
                     options.MinPerkValueMarket = ParseInt(arg, NextValue(args, ref i, arg));
+                    break;
+
+                case "--min-item-value-market":
+                    options.MinItemValueMarket = ParseInt(arg, NextValue(args, ref i, arg));
                     break;
 
                 case "--slot-bar-off":

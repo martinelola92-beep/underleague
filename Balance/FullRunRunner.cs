@@ -31,6 +31,7 @@ public static class FullRunRunner
         RunPolicyOptions options,
         int? minPerkValueReward,
         int? minPerkValueMarket,
+        int? minItemValueMarket,
         bool slotBarOff,
         int? slotHorizon,
         bool arcJudged,
@@ -43,6 +44,7 @@ public static class FullRunRunner
             ValuesPerkByHorizon = !valuesFlat && options.ValuesPerkByHorizon,
             MinPerkValueReward = minPerkValueReward ?? options.MinPerkValueReward,
             MinPerkValueMarket = minPerkValueMarket ?? options.MinPerkValueMarket,
+            MinItemValueMarket = minItemValueMarket ?? options.MinItemValueMarket,
             UsesSlotOpportunityCost = !slotBarOff && options.UsesSlotOpportunityCost,
             SlotHorizonActs = slotHorizon ?? options.SlotHorizonActs,
             ArcCreditsSlotBar = !arcJudged && options.ArcCreditsSlotBar,
@@ -80,6 +82,7 @@ public static class FullRunRunner
         int? minPerkValue = null,
         int? minPerkValueReward = null,
         int? minPerkValueMarket = null,
+        int? minItemValueMarket = null,
         bool slotBarOff = false,
         int? slotHorizon = null,
         bool arcJudged = false,
@@ -114,7 +117,7 @@ public static class FullRunRunner
                 options = options with { MinPerkValue = bar };
             }
 
-            options = Tune(options, minPerkValueReward, minPerkValueMarket, slotBarOff || minPerkValue is not null, slotHorizon, arcJudged, slotGates, act1Pass, act2Pass, valuesFlat);
+            options = Tune(options, minPerkValueReward, minPerkValueMarket, minItemValueMarket, slotBarOff || minPerkValue is not null, slotHorizon, arcJudged, slotGates, act1Pass, act2Pass, valuesFlat);
             var rows = new List<RunPlayResult>(runs);
             for (int i = 0; i < runs; i++)
             {
@@ -146,7 +149,7 @@ public static class FullRunRunner
             marketlessOptions = marketlessOptions with { MinPerkValue = marketlessBar };
         }
 
-        marketlessOptions = Tune(marketlessOptions, minPerkValueReward, minPerkValueMarket, slotBarOff || minPerkValue is not null, slotHorizon, arcJudged, slotGates, act1Pass, act2Pass, valuesFlat);
+        marketlessOptions = Tune(marketlessOptions, minPerkValueReward, minPerkValueMarket, minItemValueMarket, slotBarOff || minPerkValue is not null, slotHorizon, arcJudged, slotGates, act1Pass, act2Pass, valuesFlat);
 
         var marketless = new List<RunPlayResult>(runs);
         for (int i = 0; i < runs; i++)

@@ -5463,3 +5463,46 @@ coste cero; `MatchesPerLayerPermille` queda en 550, medido (546-553), no en el 5
 AV-A (la banda de la tasa de victoria de la run no es decidible con el banco que se puede pagar) sigue
 siendo del revisor. El silbato de fuera de juego como falta señalizable no se implementa sin decisión
 explícita (AW-Q). Y las puertas de fase 1 y 2 vuelven a estar en verde con el motor de ahora.
+
+## 40. Decisiones de implementación del paquete AT-A: el objeto de mercado también cuesta el slot (ADR 0086)
+
+### 40.1. El encargo
+
+Cerrar AT-A: el listón del mercado debía ser "el del slot MÁS el del oro" y no se podía sumar porque
+`ItemScale.ValueOf` (calculado) y la tabla de perks (medida) están en normalizaciones distintas. Dos
+pasos, cada uno con su propia medición.
+
+**Paso 1 — instrumento.** `--item-values` mide cada objeto exactamente como `--perk-values` mide un perk:
+mismo espejo puro, sin campaña (un objeto no tiene contador de carrera). `data/economy/item-values.json`
+(2.016 partidos/objeto, 504 parejas × ida/vuelta × dos lotes de semilla): el **nivel** queda bien
+determinado (+37 milésimas de media, ET 4) pero la dispersión entre objetos (27) no se separa del ruido
+de fila (21) — a diferencia de la de perks (73 sobre 17), esta tabla no ordena objeto a objeto a esta
+muestra. Preguntado explícitamente, el revisor eligió avanzar con el **nivel agregado** en vez de remedir
+hasta poder ordenar.
+
+**Paso 2 — el gate (ADR 0086).** `ItemWorthASlot` aplica al bloque de compra de objetos en el mercado el
+mismo listón de coste de oportunidad que `WorthASlot` aplica a los perks (`SlotBar`, ADR 0072), pero
+comparando el **nivel** (`ItemValues.MeanValue`) en vez del valor de cada objeto. Solo el mercado: la
+recompensa no pasa por ningún listón y queda fuera de alcance.
+
+### 40.2. Lo medido
+
+`--full-runs 1.200`, dos semillas, listón real contra listón forzado abierto (`--min-item-value-market
+-1000000`, el mercado de antes de este paso):
+
+| Semilla | Δ `runWinRate` | Δ `itemsOnRoster` | Δ `perksOnStarters` | Δ `mastersReached` |
+|---|---|---|---|---|
+| 1 | +1,00 | −0,60 | +0,55 | +10,17 |
+| 7 | +0,16 | −0,62 | +0,40 | +7,08 |
+
+El efecto estructural (menos objetos, más perks y maestros) es consistente en las dos semillas: el oro
+que antes se iba en un objeto que no valía el slot pasa a un perk o maestro mejor, porque los dos
+comparten el mismo coste de oportunidad. El efecto sobre `runWinRate` en sí es positivo en las dos pero
+de magnitud ruidosa — es la métrica que AV-A ya señaló como necesitada de un banco mucho mayor para
+resolverse, y esta ADR no reclama cerrarla, solo deja anotado que el punto se mueve en su dirección.
+`FullRunGateTests` (corredores de no regresión de la ADR 0037/§19) pasa 15/15 con el gate activo.
+
+### 40.3. Lo que queda abierto
+
+AT-A cerrada. AV-A sigue siendo del revisor, con la nota nueva de que remedir su banco de cierre con el
+gate puesto podría resolverla sola.

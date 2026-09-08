@@ -108,6 +108,16 @@ public sealed record RunPolicyOptions
     public int? MinPerkValueMarket { get; init; }
 
     /// <summary>
+    /// Listón del <b>objeto</b> que se compra en el mercado (RF-076), en las mismas milésimas que
+    /// <see cref="MinPerkValueMarket"/>. Null = el listón del slot que se esté usando en ese nodo.
+    /// Existe por lo mismo que su gemelo de perks: para poder fijar un <b>listón constante</b> en las
+    /// mediciones de <c>/Balance</c> (ADR 0072/0073) y barrerlo, que es la única forma de ver si el
+    /// canal del objeto responde al listón o es plano. Es sólo el del mercado: el objeto de recompensa
+    /// no pasa por ningún listón hoy y este paquete no lo toca (AT-A, paso 2).
+    /// </summary>
+    public int? MinItemValueMarket { get; init; }
+
+    /// <summary>
     /// Si el listón del slot es el <b>coste de oportunidad medido</b> (ADR 0072) en vez de la constante
     /// de <see cref="MinPerkValue"/>. Con él, la doctrina contextual acepta un perk cuando su valor
     /// <b>esperado</b> —el medido corregido por el ruido de la medida— llega a lo que ese slot vale si se
@@ -1385,6 +1395,39 @@ public static class RunPolicy
     }
 
     /// <summary>
+    /// ¿Merece un objeto del mercado uno de los pocos slots del once? Es la gemela de
+    /// <see cref="WorthASlot"/> y pregunta lo mismo —el slot es irreversible y el que se llene hoy no lo
+    /// llena el que llegue después—, pero <b>no mira el objeto</b>: mira el <b>nivel</b> de la tabla.
+    ///
+    /// <para>La diferencia no es de gusto, es de lo que la medida aguanta (AT-A). La tabla de objetos
+    /// tiene el nivel bien determinado —media +37 milésimas, error típico 4— pero su dispersión entre
+    /// objetos (27) no llega a separarse del ruido de fila (21), así que a esta muestra <b>no ordena
+    /// objeto a objeto</b>; la de perks sí (73 contra 17), y por eso allí se puede preguntar por el perk
+    /// concreto y aquí no. Preguntar por el objeto concreto con esta tabla sería ordenar ruido.</para>
+    ///
+    /// <para>Consecuencia: el gate es todo o nada. O el catálogo de objetos vale un slot en este nodo, y
+    /// entonces se compra el que mejor encaje (ADR 0036), o no lo vale, y entonces no se compra
+    /// ninguno.</para>
+    /// </summary>
+    private static bool ItemWorthASlot(EconomyConfig economy, RunPolicyOptions options, int bar)
+    {
+        if (options.Doctrine != PurchaseDoctrine.Contextual)
+        {
+            return true;
+        }
+
+        // Sin tabla medida no hay gate, igual que un perk sin tabla no lo tendría: una instantánea de
+        // /data sin el fichero de valores tiene que comportarse como antes de medirlos, no como si todo
+        // valiera cero.
+        if (economy.ItemValues.Count == 0)
+        {
+            return true;
+        }
+
+        return economy.ItemValues.MeanValue >= bar;
+    }
+
+    /// <summary>
     /// Lo que aporta al desbloqueo una pieza de la línea <paramref name="family"/> (ADR 0072): el valor
     /// medido de su maestro entre las piezas que exige. Cero si la línea no tiene maestro alcanzable o si
     /// su maestro mide negativo — una línea que no paga no vale un slot de más.
@@ -1718,7 +1761,7 @@ public static class RunPolicy
         // **el par (objeto, portador) que mejor encaja** y las dos puras siguen comprando por rareza y
         // precio y se lo dan a quien toque.
         int naked = BestStarterWithoutItem(state, lineup, options);
-        if (naked >= 0)
+        if (naked >= 0 && ItemWorthASlot(economy, options, options.MinItemValueMarket ?? bar))
         {
             int bestItem = -1, bestItemRank = int.MinValue, bestItemCarrier = naked;
             for (int i = 0; i < offers.Items.Count; i++)

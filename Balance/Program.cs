@@ -42,7 +42,7 @@ try
         // --full-runs N: N runs completas con la política automática (fase2-diseno.md §10). Responde a
         // la pregunta que la curva de puertas deja abierta: si la economía permite llegar a cada puerta
         // con la build que esa puerta exige.
-        FullRunResult full = FullRunRunner.Run(catalog, dataFiles, options.Seed, fullRuns, options.IgnoreScouting, options.RiskAversion, options.MinPerkValue, options.MinPerkValueReward, options.MinPerkValueMarket, options.SlotBarOff, options.SlotHorizon, options.ArcJudged, options.SlotGates, options.Act1Pass, options.Act2Pass, options.ValuesFlat);
+        FullRunResult full = FullRunRunner.Run(catalog, dataFiles, options.Seed, fullRuns, options.IgnoreScouting, options.RiskAversion, options.MinPerkValue, options.MinPerkValueReward, options.MinPerkValueMarket, options.MinItemValueMarket, options.SlotBarOff, options.SlotHorizon, options.ArcJudged, options.SlotGates, options.Act1Pass, options.Act2Pass, options.ValuesFlat);
 
         var fullSummary = full.Metrics
             .Select(m => new MetricRow(m.Name, m.Value, m.RangeMin, m.RangeMax, m.Status))
@@ -380,6 +380,10 @@ static void PrintUsage()
                                queden en la misma unidad (AT-A); sin campaña, porque un objeto no tiene
                                contador de carrera: --runs = partidos por pareja (2, ida y vuelta);
                                escribe item-values.csv
+          --min-item-value-market N
+                              con --full-runs, listón constante (milésimas de punto de tasa de victoria)
+                               que la doctrina contextual le exige al catálogo de objetos para gastar un
+                               slot del once en un objeto del mercado; sin él, el listón del slot (AT-A)
           --values-flat       con --full-runs, la política lee el valor de cada perk en la campaña de ocho
                                partidos con la que se mide la tabla, sea cual sea el momento de la run:
                                es la medida de control del valor por horizonte (AV-B, ADR 0085)
