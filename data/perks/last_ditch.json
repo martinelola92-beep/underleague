@@ -24,15 +24,7 @@
       "duration": "play"
     }
   ],
-  "elseEffects": [
-    {
-      "type": "modifyProbability",
-      "target": "actor",
-      "probability": "tackle",
-      "value": -200,
-      "duration": "play"
-    }
-  ],
+  "elseEffects": [],
   "limit": null,
   "accumulatesAcrossMatches": false,
   "lethal": false,

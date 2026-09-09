@@ -24,15 +24,7 @@
       "duration": "match"
     }
   ],
-  "elseEffects": [
-    {
-      "type": "modifyProbability",
-      "target": "team",
-      "probability": "tackle",
-      "value": -100,
-      "duration": "match"
-    }
-  ],
+  "elseEffects": [],
   "limit": null,
   "accumulatesAcrossMatches": false,
   "lethal": false,

@@ -27,15 +27,7 @@
       "duration": "play"
     }
   ],
-  "elseEffects": [
-    {
-      "type": "modifyProbability",
-      "target": "owner",
-      "probability": "dribble",
-      "value": -100,
-      "duration": "play"
-    }
-  ],
+  "elseEffects": [],
   "limit": null,
   "accumulatesAcrossMatches": false,
   "lethal": false,

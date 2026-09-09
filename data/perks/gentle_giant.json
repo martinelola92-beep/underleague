@@ -25,15 +25,7 @@
       "duration": "match"
     }
   ],
-  "elseEffects": [
-    {
-      "type": "modifyAttribute",
-      "target": "owner",
-      "attribute": "strength",
-      "value": -10,
-      "duration": "match"
-    }
-  ],
+  "elseEffects": [],
   "limit": null,
   "accumulatesAcrossMatches": false,
   "lethal": false,

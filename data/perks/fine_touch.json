@@ -24,15 +24,7 @@
       "duration": "match"
     }
   ],
-  "elseEffects": [
-    {
-      "type": "modifyProbability",
-      "target": "team",
-      "probability": "pass",
-      "value": -200,
-      "duration": "match"
-    }
-  ],
+  "elseEffects": [],
   "limit": null,
   "accumulatesAcrossMatches": false,
   "lethal": false,

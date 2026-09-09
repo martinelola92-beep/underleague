@@ -22,31 +22,9 @@
       "attribute": "strength",
       "value": 10,
       "duration": "match"
-    },
-    {
-      "type": "modifyProbability",
-      "target": "owner",
-      "probability": "pass",
-      "value": -50,
-      "duration": "match"
     }
   ],
-  "elseEffects": [
-    {
-      "type": "modifyAttribute",
-      "target": "owner",
-      "attribute": "strength",
-      "value": -10,
-      "duration": "match"
-    },
-    {
-      "type": "modifyProbability",
-      "target": "team",
-      "probability": "pass",
-      "value": -50,
-      "duration": "match"
-    }
-  ],
+  "elseEffects": [],
   "limit": null,
   "accumulatesAcrossMatches": false,
   "lethal": false,

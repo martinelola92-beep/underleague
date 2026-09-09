@@ -24,15 +24,7 @@
       "duration": "play"
     }
   ],
-  "elseEffects": [
-    {
-      "type": "modifyProbability",
-      "target": "actor",
-      "probability": "save",
-      "value": -100,
-      "duration": "play"
-    }
-  ],
+  "elseEffects": [],
   "limit": null,
   "accumulatesAcrossMatches": false,
   "lethal": false,
