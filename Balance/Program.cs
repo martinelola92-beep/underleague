@@ -76,7 +76,11 @@ try
         // --perk-values: cuánto vale cada perk (ADR 0038). Alimenta data/economy/perk-values.json, de
         // donde sale el peso de cada perk en el pool de recompensas y en el surtido del mercado.
         var perkRows = PerkValueRunner.Run(
-            catalog, options.Seed, options.Rosters, options.RunsExplicit ? options.Runs : PerkValueRunner.CampaignMatches);
+            catalog,
+            options.Seed,
+            options.Rosters,
+            options.RunsExplicit ? options.Runs : PerkValueRunner.CampaignMatches,
+            options.Perks is null ? null : new HashSet<string>(options.Perks, StringComparer.Ordinal));
 
         WritePerkValuesCsv(options.OutDir!, perkRows);
 
@@ -84,6 +88,7 @@ try
         {
             Console.WriteLine();
             PerkValueRunner.PrintTable(perkRows);
+            PerkValueRunner.PrintDiagnostics(perkRows);
             Console.WriteLine();
             Console.WriteLine("bloque 'values' para data/economy/perk-values.json:");
             Console.WriteLine(PerkValueRunner.ToJsonValues(perkRows));
@@ -519,7 +524,7 @@ static void WritePlayersCsv(string outDir, IReadOnlyList<PlayerAggregate> player
 /// <summary>perk-values.csv del modo --perk-values (ADR 0038): una fila por perk medido.</summary>
 static void WritePerkValuesCsv(string outDir, IReadOnlyList<PerkValueRow> rows)
 {
-    string[] header = { "perk", "slot", "matches", "wins", "winRate", "valueMilli" };
+    string[] header = { "perk", "slot", "matches", "wins", "winRate", "controlWins", "controlWinRate", "valueMilli" };
     var data = rows.Select(r => (IReadOnlyList<string>)new[]
     {
         r.PerkId,
@@ -527,6 +532,8 @@ static void WritePerkValuesCsv(string outDir, IReadOnlyList<PerkValueRow> rows)
         r.Matches.ToString(CultureInfo.InvariantCulture),
         r.Wins.ToString(CultureInfo.InvariantCulture),
         CsvWriter.F2(r.WinRate),
+        r.ControlWins.ToString(CultureInfo.InvariantCulture),
+        CsvWriter.F2(r.ControlWinRate),
         r.ValueMilli.ToString(CultureInfo.InvariantCulture),
     });
 
@@ -534,7 +541,7 @@ static void WritePerkValuesCsv(string outDir, IReadOnlyList<PerkValueRow> rows)
 
     // La curva por indice de partido de la campania (AV-B): una fila por perk y posicion dentro de la
     // campania, de la que sale el valor a cualquier horizonte sin volver a medir.
-    string[] curveHeader = { "perk", "matchIndex", "matches", "wins" };
+    string[] curveHeader = { "perk", "matchIndex", "matches", "wins", "controlWins" };
     var curve = new List<IReadOnlyList<string>>();
     foreach (var r in rows)
     {
@@ -546,6 +553,7 @@ static void WritePerkValuesCsv(string outDir, IReadOnlyList<PerkValueRow> rows)
                 k.ToString(CultureInfo.InvariantCulture),
                 r.MatchesByMatch[k].ToString(CultureInfo.InvariantCulture),
                 r.WinsByMatch[k].ToString(CultureInfo.InvariantCulture),
+                r.ControlWinsByMatch[k].ToString(CultureInfo.InvariantCulture),
             });
         }
     }
@@ -556,7 +564,7 @@ static void WritePerkValuesCsv(string outDir, IReadOnlyList<PerkValueRow> rows)
 /// <summary>item-values.csv del modo --item-values (AT-A): una fila por objeto medido.</summary>
 static void WriteItemValuesCsv(string outDir, IReadOnlyList<ItemValueRow> rows)
 {
-    string[] header = { "item", "carriers", "matches", "wins", "winRate", "valueMilli" };
+    string[] header = { "item", "carriers", "matches", "wins", "winRate", "controlWins", "controlWinRate", "valueMilli" };
     var data = rows.Select(r => (IReadOnlyList<string>)new[]
     {
         r.ItemId,
@@ -564,6 +572,8 @@ static void WriteItemValuesCsv(string outDir, IReadOnlyList<ItemValueRow> rows)
         r.Matches.ToString(CultureInfo.InvariantCulture),
         r.Wins.ToString(CultureInfo.InvariantCulture),
         CsvWriter.F2(r.WinRate),
+        r.ControlWins.ToString(CultureInfo.InvariantCulture),
+        CsvWriter.F2(r.ControlWinRate),
         r.ValueMilli.ToString(CultureInfo.InvariantCulture),
     });
 

@@ -10,6 +10,47 @@ using ProgressionRules = Underleague.Sim.Progression.Progression;
 
 namespace Underleague.Balance;
 
+/// <summary>
+/// Contadores agregados del lado del <b>sujeto</b> y de su <b>espejo</b> en los mismos partidos (paquete
+/// AY, paso 3). No entran en la tabla ni en ninguna puerta: son el diagnóstico de <b>por qué</b> un perk
+/// mide lo que mide, y sobre todo <see cref="Activations"/>, que dice si la condición llega a cumplirse.
+/// Todo son sumas sobre los partidos medidos; se leen divididas por <c>Matches</c>.
+/// </summary>
+public readonly record struct PerkDiagnostics(
+    long Activations,
+    long GoalsFor,
+    long GoalsAgainst,
+    long ShotsFor,
+    long ShotsAgainst,
+    long TacklesSubject,
+    long TacklesMirror,
+    long FoulsSubject,
+    long FoulsMirror,
+    long CardsSubject,
+    long CardsMirror,
+    long InjuredSubject,
+    long InjuredMirror,
+    long PossessionChanges,
+    long PossessionTicksSubject)
+{
+    public static PerkDiagnostics operator +(PerkDiagnostics a, PerkDiagnostics b) => new(
+        a.Activations + b.Activations,
+        a.GoalsFor + b.GoalsFor,
+        a.GoalsAgainst + b.GoalsAgainst,
+        a.ShotsFor + b.ShotsFor,
+        a.ShotsAgainst + b.ShotsAgainst,
+        a.TacklesSubject + b.TacklesSubject,
+        a.TacklesMirror + b.TacklesMirror,
+        a.FoulsSubject + b.FoulsSubject,
+        a.FoulsMirror + b.FoulsMirror,
+        a.CardsSubject + b.CardsSubject,
+        a.CardsMirror + b.CardsMirror,
+        a.InjuredSubject + b.InjuredSubject,
+        a.InjuredMirror + b.InjuredMirror,
+        a.PossessionChanges + b.PossessionChanges,
+        a.PossessionTicksSubject + b.PossessionTicksSubject);
+}
+
 /// <summary>Valor medido de un perk: lo que gana un equipo por llevarlo frente a su espejo sin él.</summary>
 /// <param name="ValueMilli">Milésimas de punto de tasa de victoria (RT-023: aritmética entera).</param>
 /// <param name="WinsByMatch">
@@ -26,21 +67,38 @@ public readonly record struct PerkValueRow(
     int Wins,
     int ValueMilli,
     IReadOnlyList<int> WinsByMatch,
-    IReadOnlyList<int> MatchesByMatch)
+    IReadOnlyList<int> MatchesByMatch,
+    int ControlWins,
+    IReadOnlyList<int> ControlWinsByMatch,
+    PerkDiagnostics Diagnostics = default)
 {
     public double WinRate => Matches > 0 ? 100.0 * Wins / Matches : 0.0;
+
+    /// <summary>Tasa de victoria del <b>control</b>: las mismas plantillas y semillas sin el perk (paquete AY, paso 3).</summary>
+    public double ControlWinRate => Matches > 0 ? 100.0 * ControlWins / Matches : 0.0;
+
+    /// <summary>
+    /// El valor es la <b>diferencia emparejada</b> entre el brazo con el perk y su control, en milésimas
+    /// de punto de tasa de victoria y en la misma escala que antes (×2). Restar el control quita el sesgo
+    /// de la pareja de plantillas de cada perk —medido: seis perks sin efecto daban entre −33 y +5 con la
+    /// fórmula absoluta, y exactamente lo mismo su control— y la mayor parte del ruido común a los dos
+    /// brazos, que comparten plantillas y semillas.
+    /// </summary>
+    public static int PairedValueMilli(int wins, int controlWins, int matches) =>
+        matches > 0 ? (int)Math.Round(1000.0 * (wins - controlWins) / matches * 2.0) : 0;
 
     /// <summary>Valor medido si el perk sólo jugara los <paramref name="horizon"/> primeros partidos.</summary>
     public int ValueAtHorizon(int horizon)
     {
-        int wins = 0, matches = 0;
+        int wins = 0, controlWins = 0, matches = 0;
         for (int k = 0; k < horizon && k < WinsByMatch.Count; k++)
         {
             wins += WinsByMatch[k];
+            controlWins += ControlWinsByMatch[k];
             matches += MatchesByMatch[k];
         }
 
-        return matches > 0 ? (int)Math.Round(((1000.0 * wins / matches) - 500.0) * 2.0) : 0;
+        return PairedValueMilli(wins, controlWins, matches);
     }
 }
 
@@ -100,7 +158,21 @@ public static class PerkValueRunner
 
     private static readonly RefereeSetup Referee = new("Referee", RefereeTrait.Neutral, 0);
 
-    public static IReadOnlyList<PerkValueRow> Run(Catalog catalog, ulong seed, int rosters, int matchesPerRoster)
+    public static IReadOnlyList<PerkValueRow> Run(Catalog catalog, ulong seed, int rosters, int matchesPerRoster) =>
+        Run(catalog, seed, rosters, matchesPerRoster, filter: null);
+
+    /// <param name="filter">
+    /// Si no es null, sólo se miden los perks de este conjunto. El <b>índice</b> de cada perk sigue
+    /// siendo su posición en el catálogo ordenado, así que una fila filtrada sale <b>bit a bit</b> igual
+    /// que en la tabla completa con la misma semilla: es un filtro de coste, no una medición distinta.
+    /// </param>
+    /// <param name="control">
+    /// Medida de control (paquete AY, paso 3): las mismas plantillas y las mismas semillas de partido,
+    /// pero <b>sin poner el perk</b>. Es el <b>cero del instrumento</b> para esa fila; sin él no se puede
+    /// distinguir "este perk resta" de "este par de plantillas estaba desnivelado".
+    /// </param>
+    public static IReadOnlyList<PerkValueRow> Run(
+        Catalog catalog, ulong seed, int rosters, int matchesPerRoster, IReadOnlySet<string>? filter)
     {
         ArgumentNullException.ThrowIfNull(catalog);
         ArgumentOutOfRangeException.ThrowIfLessThan(rosters, 1);
@@ -114,6 +186,12 @@ public static class PerkValueRunner
 
             // La habilidad racial no ocupa slot y no se puede repartir (ADR 0026): no entra en el pool.
             if (string.Equals(perk.Id, catalog.Race(race).Ability, StringComparison.Ordinal))
+            {
+                perkIndex++;
+                continue;
+            }
+
+            if (filter is not null && !filter.Contains(perk.Id))
             {
                 perkIndex++;
                 continue;
@@ -133,10 +211,11 @@ public static class PerkValueRunner
     /// Lo que sacó una plantilla de su campaña: victorias por índice de partido, o <c>null</c> si ningún
     /// titular generado podía llevar el perk (entonces el perk entero se queda sin medir).
     /// </summary>
-    private sealed record RosterOutcome(int[] WinsByMatch);
+    private sealed record RosterOutcome(int[] WinsByMatch, int[] ControlWinsByMatch, PerkDiagnostics Diagnostics);
 
     private static PerkValueRow? Measure(
-        Catalog catalog, PerkDefinition perk, Race race, ulong seed, int rosters, int matchesPerRoster, int perkIndex)
+        Catalog catalog, PerkDefinition perk, Race race, ulong seed, int rosters, int matchesPerRoster,
+        int perkIndex)
     {
         // Las plantillas son independientes entre sí —la campaña se arrastra DENTRO de una plantilla, no
         // entre ellas— y tanto sus dados (RngStreams.Generation(seed, perkIndex*1000 + roster)) como las
@@ -154,10 +233,12 @@ public static class PerkValueRunner
                 BalanceCatalogs.Current(catalog), perk, race, seed, roster, matchesPerRoster, perkIndex);
         });
 
-        int matches = 0, wins = 0;
+        int matches = 0, wins = 0, controlWins = 0;
         const int Slot = -1;
         var winsByMatch = new int[matchesPerRoster];
+        var controlWinsByMatch = new int[matchesPerRoster];
         var matchesByMatch = new int[matchesPerRoster];
+        var diagnostics = default(PerkDiagnostics);
 
         for (int roster = 0; roster < rosters; roster++)
         {
@@ -168,22 +249,27 @@ public static class PerkValueRunner
                 return null;
             }
 
+            diagnostics += outcome.Diagnostics;
             for (int k = 0; k < matchesPerRoster; k++)
             {
                 matches++;
                 matchesByMatch[k]++;
                 wins += outcome.WinsByMatch[k];
                 winsByMatch[k] += outcome.WinsByMatch[k];
+                controlWins += outcome.ControlWinsByMatch[k];
+                controlWinsByMatch[k] += outcome.ControlWinsByMatch[k];
             }
         }
 
-        int valueMilli = matches > 0 ? (int)Math.Round(((1000.0 * wins / matches) - 500.0) * 2.0) : 0;
-        return new PerkValueRow(perk.Id, Slot, matches, wins, valueMilli, winsByMatch, matchesByMatch);
+        int valueMilli = PerkValueRow.PairedValueMilli(wins, controlWins, matches);
+        return new PerkValueRow(
+            perk.Id, Slot, matches, wins, valueMilli, winsByMatch, matchesByMatch, controlWins, controlWinsByMatch, diagnostics);
     }
 
     /// <summary>La campaña de una plantilla: <paramref name="matchesPerRoster"/> partidos consecutivos que arrastran el contador de carrera (ADR 0070).</summary>
     private static RosterOutcome? PlayRoster(
-        Catalog catalog, PerkDefinition perk, Race race, ulong seed, int roster, int matchesPerRoster, int perkIndex)
+        Catalog catalog, PerkDefinition perk, Race race, ulong seed, int roster, int matchesPerRoster,
+        int perkIndex)
     {
         var config = new SimConfig(CollectLog: false);
         var subjectRng = RngStreams.Generation(seed, (perkIndex * 1000) + roster);
@@ -202,47 +288,110 @@ public static class PerkValueRunner
         // pondría todos los perks en el portero, que es exactamente donde ninguno significa nada.
         // Lo que interesa es lo que vale el perk CUANDO CAE, y cae en cualquiera de los suyos.
         int carrier = eligible[roster % eligible.Count];
-        var players = subject.Players.ToList();
-        players[carrier] = players[carrier] with { Perks = new[] { perk.Id } };
-        subject = subject with { Players = players };
+        var armedPlayers = subject.Players.ToList();
+        armedPlayers[carrier] = armedPlayers[carrier] with { Perks = new[] { perk.Id } };
+        var armed = subject with { Players = armedPlayers };
 
+        // Dos brazos sobre las MISMAS plantillas y las MISMAS semillas de partido: el sujeto con el perk
+        // y el sujeto sin él (control). El valor es la diferencia (PerkValueRow.PairedValueMilli). Cada
+        // brazo arrastra su propia campaña.
         var winsByMatch = new int[matchesPerRoster];
+        var controlWinsByMatch = new int[matchesPerRoster];
+        var diagnostics = default(PerkDiagnostics);
         for (int k = 0; k < matchesPerRoster; k++)
         {
             bool subjectAway = (k % 2) == 1;
             int subjectSide = subjectAway ? 1 : 0;
-            var setup = subjectAway
-                ? new MatchSetup(mirror, subject, Referee)
-                : new MatchSetup(subject, mirror, Referee);
+            ulong matchSeed = RngStreams.MatchSeed(seed, (perkIndex * 100_000) + (roster * matchesPerRoster) + k);
 
-            var result = Simulator.Run(
-                setup,
-                RngStreams.MatchSeed(seed, (perkIndex * 100_000) + (roster * matchesPerRoster) + k),
-                catalog,
-                config);
-
-            if (result.Report.Winner == subjectSide)
+            var armedResult = Simulator.Run(
+                subjectAway ? new MatchSetup(mirror, armed, Referee) : new MatchSetup(armed, mirror, Referee),
+                matchSeed, catalog, config);
+            if (armedResult.Report.Winner == subjectSide)
             {
                 winsByMatch[k]++;
+            }
+
+            diagnostics += Diagnose(armedResult.Report, perk.Id, subjectSide);
+
+            var controlResult = Simulator.Run(
+                subjectAway ? new MatchSetup(mirror, subject, Referee) : new MatchSetup(subject, mirror, Referee),
+                matchSeed, catalog, config);
+            if (controlResult.Report.Winner == subjectSide)
+            {
+                controlWinsByMatch[k]++;
             }
 
             // Campaña (ADR 0070): el contador de carrera pasa al partido siguiente igual que en la
             // run (RF-070, ProgressionRules.ApplyCounterDeltas). Es lo único que se arrastra: la
             // experiencia y las lesiones no, porque las pagarían por igual los dos lados del espejo
             // y sólo añadirían varianza a una diferencia que ya es pequeña.
-            if (result.CounterDeltas.Count > 0)
-            {
-                var carried = subject.Players.ToList();
-                for (int i = 0; i < carried.Count; i++)
-                {
-                    carried[i] = ProgressionRules.ApplyCounterDeltas(carried[i], result.CounterDeltas);
-                }
+            armed = Carry(armed, armedResult);
+            subject = Carry(subject, controlResult);
+        }
 
-                subject = subject with { Players = carried };
+        return new RosterOutcome(winsByMatch, controlWinsByMatch, diagnostics);
+    }
+
+    private static TeamSetup Carry(TeamSetup team, MatchResult result)
+    {
+        if (result.CounterDeltas.Count == 0)
+        {
+            return team;
+        }
+
+        var carried = team.Players.ToList();
+        for (int i = 0; i < carried.Count; i++)
+        {
+            carried[i] = ProgressionRules.ApplyCounterDeltas(carried[i], result.CounterDeltas);
+        }
+
+        return team with { Players = carried };
+    }
+
+    /// <summary>Contadores de un partido vistos desde el lado del sujeto (diagnóstico, paquete AY paso 3).</summary>
+    private static PerkDiagnostics Diagnose(MatchReport report, string perkId, int subjectSide)
+    {
+        long activations = 0;
+        foreach (var summary in report.PerksSummary)
+        {
+            if (string.Equals(summary.PerkId, perkId, StringComparison.Ordinal))
+            {
+                activations += summary.Activations;
             }
         }
 
-        return new RosterOutcome(winsByMatch);
+        long tacklesSubject = 0, tacklesMirror = 0, foulsSubject = 0, foulsMirror = 0;
+        long cardsSubject = 0, cardsMirror = 0, injuredSubject = 0, injuredMirror = 0;
+        foreach (var player in report.Players)
+        {
+            bool mine = player.Team == subjectSide;
+            tacklesSubject += mine ? player.Tackles : 0;
+            tacklesMirror += mine ? 0 : player.Tackles;
+            foulsSubject += mine ? player.Fouls : 0;
+            foulsMirror += mine ? 0 : player.Fouls;
+            cardsSubject += mine ? player.Cards : 0;
+            cardsMirror += mine ? 0 : player.Cards;
+            injuredSubject += mine && player.Injured ? 1 : 0;
+            injuredMirror += !mine && player.Injured ? 1 : 0;
+        }
+
+        return new PerkDiagnostics(
+            activations,
+            report.Goals[subjectSide],
+            report.Goals[1 - subjectSide],
+            report.Shots[subjectSide],
+            report.Shots[1 - subjectSide],
+            tacklesSubject,
+            tacklesMirror,
+            foulsSubject,
+            foulsMirror,
+            cardsSubject,
+            cardsMirror,
+            injuredSubject,
+            injuredMirror,
+            report.PossessionChanges,
+            report.PossessionTicks[subjectSide]);
     }
 
     /// <summary>
@@ -298,6 +447,31 @@ public static class PerkValueRunner
         foreach (var row in rows.OrderByDescending(r => r.ValueMilli).ThenBy(r => r.PerkId, StringComparer.Ordinal))
         {
             Console.WriteLine($"{row.PerkId,-26} {row.Slot,4} {row.Matches,9} {row.WinRate,10:F2} {row.ValueMilli,8}");
+        }
+    }
+
+    /// <summary>
+    /// Diagnóstico por perk (paquete AY, paso 3): activaciones por partido y la diferencia sujeto−espejo
+    /// de los contadores que explican un valor negativo. No entra en ninguna tabla de datos.
+    /// </summary>
+    public static void PrintDiagnostics(IReadOnlyList<PerkValueRow> rows)
+    {
+        ArgumentNullException.ThrowIfNull(rows);
+        Console.WriteLine();
+        Console.WriteLine("diagnóstico por perk: por partido, y Δ = sujeto − espejo");
+        Console.WriteLine(
+            $"{"perk",-24} {"valor",6} {"activ",7} {"gol",6} {"Δgol",6} {"Δtiro",6} " +
+            $"{"Δentr",6} {"Δfalta",7} {"Δtarj",6} {"Δles",6} {"cambPos",8} {"posee",7}");
+        foreach (var row in rows.OrderBy(r => r.ValueMilli))
+        {
+            var d = row.Diagnostics;
+            double n = Math.Max(1, row.Matches);
+            Console.WriteLine(
+                $"{row.PerkId,-24} {row.ValueMilli,6} {d.Activations / n,7:F2} {d.GoalsFor / n,6:F2} " +
+                $"{(d.GoalsFor - d.GoalsAgainst) / n,6:F3} {(d.ShotsFor - d.ShotsAgainst) / n,6:F3} " +
+                $"{(d.TacklesSubject - d.TacklesMirror) / n,6:F3} {(d.FoulsSubject - d.FoulsMirror) / n,7:F3} " +
+                $"{(d.CardsSubject - d.CardsMirror) / n,6:F3} {(d.InjuredSubject - d.InjuredMirror) / n,6:F3} " +
+                $"{d.PossessionChanges / n,8:F2} {d.PossessionTicksSubject / n,7:F1}");
         }
     }
 }

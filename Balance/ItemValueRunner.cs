@@ -18,9 +18,13 @@ public readonly record struct ItemValueRow(
     int Carriers,
     int Matches,
     int Wins,
+    int ControlWins,
     int ValueMilli)
 {
     public double WinRate => Matches > 0 ? 100.0 * Wins / Matches : 0.0;
+
+    /// <summary>Tasa de victoria del control: las mismas plantillas y semillas sin el objeto (ADR 0087).</summary>
+    public double ControlWinRate => Matches > 0 ? 100.0 * ControlWins / Matches : 0.0;
 }
 
 /// <summary>
@@ -116,7 +120,7 @@ public static class ItemValueRunner
     }
 
     /// <summary>Lo que sacó una pareja de plantillas: portadores elegibles y victorias. <c>null</c> si nadie podía llevarlo.</summary>
-    private sealed record RosterOutcome(int Eligible, int Wins);
+    private sealed record RosterOutcome(int Eligible, int Wins, int ControlWins);
 
     private static ItemValueRow? Measure(
         Catalog catalog, ItemDefinition item, ulong seed, int rosters, int matchesPerRoster, int itemIndex)
@@ -142,7 +146,7 @@ public static class ItemValueRunner
                 BalanceCatalogs.Current(catalog), item, matchItem, race, seed, roster, matchesPerRoster, itemIndex);
         });
 
-        int matches = 0, wins = 0, carriers = 0;
+        int matches = 0, wins = 0, controlWins = 0, carriers = 0;
         for (int roster = 0; roster < rosters; roster++)
         {
             if (played[roster] is not { } outcome)
@@ -158,10 +162,12 @@ public static class ItemValueRunner
             carriers = carriers == 0 ? outcome.Eligible : Math.Min(carriers, outcome.Eligible);
             matches += matchesPerRoster;
             wins += outcome.Wins;
+            controlWins += outcome.ControlWins;
         }
 
-        int valueMilli = matches > 0 ? (int)Math.Round(((1000.0 * wins / matches) - 500.0) * 2.0) : 0;
-        return new ItemValueRow(item.Id, carriers, matches, wins, valueMilli);
+        // Diferencia emparejada contra el control (ADR 0087): quita el sesgo de la pareja de plantillas.
+        int valueMilli = matches > 0 ? (int)Math.Round(1000.0 * (wins - controlWins) / matches * 2.0) : 0;
+        return new ItemValueRow(item.Id, carriers, matches, wins, controlWins, valueMilli);
     }
 
     /// <summary>Los <paramref name="matchesPerRoster"/> partidos independientes de una pareja de plantillas (ida y vuelta).</summary>
@@ -194,33 +200,37 @@ public static class ItemValueRunner
         int carrier = eligible[roster % eligible.Count];
         var players = subject.Players.ToList();
         players[carrier] = players[carrier] with { Item = matchItem };
-        subject = subject with { Players = players };
+        var armed = subject with { Players = players };
 
-        int wins = 0;
+        // Dos brazos con las MISMAS plantillas y semillas: con el objeto y sin él (control, ADR 0087).
+        int wins = 0, controlWins = 0;
         for (int k = 0; k < matchesPerRoster; k++)
         {
             bool subjectAway = (k % 2) == 1;
             int subjectSide = subjectAway ? 1 : 0;
-            var setup = subjectAway
-                ? new MatchSetup(mirror, subject, Referee)
-                : new MatchSetup(subject, mirror, Referee);
+            ulong matchSeed = RngStreams.MatchSeed(seed, (itemIndex * 100_000) + (roster * matchesPerRoster) + k);
 
-            var result = Simulator.Run(
-                setup,
-                RngStreams.MatchSeed(seed, (itemIndex * 100_000) + (roster * matchesPerRoster) + k),
-                catalog,
-                config);
-
-            if (result.Report.Winner == subjectSide)
+            var armedResult = Simulator.Run(
+                subjectAway ? new MatchSetup(mirror, armed, Referee) : new MatchSetup(armed, mirror, Referee),
+                matchSeed, catalog, config);
+            if (armedResult.Report.Winner == subjectSide)
             {
                 wins++;
+            }
+
+            var controlResult = Simulator.Run(
+                subjectAway ? new MatchSetup(mirror, subject, Referee) : new MatchSetup(subject, mirror, Referee),
+                matchSeed, catalog, config);
+            if (controlResult.Report.Winner == subjectSide)
+            {
+                controlWins++;
             }
 
             // Aquí NO se arrastra nada al partido siguiente (a diferencia de la campaña de la
             // ADR 0070): un objeto no tiene contador de carrera que arrastrar.
         }
 
-        return new RosterOutcome(eligible.Count, wins);
+        return new RosterOutcome(eligible.Count, wins, controlWins);
     }
 
     /// <summary>

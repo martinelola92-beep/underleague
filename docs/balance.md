@@ -31,7 +31,7 @@ dotnet run --project Balance -c Release -- --full-runs 300 --min-perk-value-{rew
 dotnet run --project Balance -c Release -- --full-runs 300 --slot-horizon N --arc-judged
 dotnet run --project Balance -c Release -- --full-runs 300 --slot-gates                # coste de oportunidad ponderado por exposición a puertas (ADR 0076)
 dotnet run --project Balance -c Release -- --full-runs 300 --min-item-value-market N   # listón constante del objeto de mercado (ADR 0086)
-dotnet run --project Balance -c Release -- --perk-values --rosters N [--runs 8]        # tabla de valor de perks, espejo en campaña (ADR 0070)
+dotnet run --project Balance -c Release -- --perk-values --rosters N [--runs 8] [--perks a,b]   # tabla de valor de perks, espejo en campaña contra su control emparejado (ADR 0070, 0087)
 dotnet run --project Balance -c Release -- --item-values --rosters N [--runs 2]        # tabla de valor de objetos, mismo espejo (ADR 0086)
 dotnet run --project Balance -c Release -- --full-runs 300 --act{1,2}-pass N          # tasas de paso que cree la política (ADR 0077)
 dotnet run --project Balance -c Release -- --describe [es|en]                        # catálogo de perks

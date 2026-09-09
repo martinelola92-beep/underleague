@@ -5573,3 +5573,27 @@ resolverse, y esta ADR no reclama cerrarla, solo deja anotado que el punto se mu
 
 AT-A cerrada. AV-A sigue siendo del revisor, con la nota nueva de que remedir su banco de cierre con el
 gate puesto podría resolverla sola.
+
+## 40. Decisiones de implementación del paquete AY: ningún perk negativo, la muerte en la entrada (ADR 0087, ADR 0088)
+
+### 40.1. El encargo
+
+Tras revisar el catálogo completo, el revisor decidió tres reglas (9 sep): ningún perk perjudica al equipo que lo
+lleva —un perk mal puesto es un perk sin efecto—; la muerte sigue al mismo nivel pero nunca en el saque inicial;
+y las puertas de fase 1 arrancan en 50. `docs/plan-perks-positivos.md` es el plan; se ejecutó por pasos.
+
+### 40.2. Lo hecho y lo medido
+
+| Paso | Qué | Medido |
+|---|---|---|
+| 1 | Perk letal no puede disparar en `MATCH_START`/`PLAY_START` (cargador); la víctima es quien recibe el contacto; `skullsplitter`/`marrow_thirst` a `TACKLE`, `lethalChance` 5.400/4.200 → 1.950/1.500 | `deathsPerRun` 1,44 → 1,66 / 1,75 (en banda); `runWinRate` 20,83 / 19,83 → **17,08 / 18,00** (AY-B) |
+| 2 | 17 ramas `else` a `[]`, `brute_boots` sin `pass −50`; tabla remedida | los diez negativos suben; quedan 18 negativos por rama principal |
+| 3 | **El instrumento tenía sesgo de pareja** (ADR 0087): valor emparejado contra el control; `deathless_march` `maxValue` 4 → 3, `clean_sheet_legacy` 5 → 3 | `rowDeviation` 19 → **7**; mínimo −7; `deathless_march` 303 → 178, `clean_sheet_legacy` 186 → 98 |
+| 4b | Con dos pasos caían las celdas «muy buena» de `eternal_crown` y `the_hunt`: bandas a 50-70 y 70-85 (ADR 0089, decisión del revisor) | doce celdas dentro; escalera creciente |
+| 4 | Escalera desde 50 (ADR 0088): malas y azar en 45-55; `noDeadPerks` sobre builds coherentes | `BuildGateTests` 8/8 |
+
+### 40.3. Lo que queda
+
+Paso 5: banco de cierre con todo junto (AY-B), hueco buena/mediocre y puertas de jefes. AY-A: qué número de
+riesgo enseña el ojeo ahora que la muerte depende de que haya entrada (decisión con ADR).
+

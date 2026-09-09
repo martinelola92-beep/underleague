@@ -17,8 +17,8 @@ public sealed class PerkValueHorizonTests
     private static PerkValueTable RealTable => SystemsTestSupport.Systems.Economy.PerkValues;
 
     // Perk con curva (accumulatesAcrossMatches, ADR 0070): deathless_march.
-    // valuesByHorizon.deathless_march = [-78, 8, 95, 167, 198, 227, 251, 272, 291, 301, 310, 316, 318, 324, 323, 326]
-    // values.deathless_march = 272 (columna 8, el horizonte de referencia).
+    // valuesByHorizon.deathless_march = [0, 23, 111, 126, 150, 161, 173, 178, 183, 193, 198, 205, 200, 199, 208, 207]
+    // values.deathless_march = 178 (columna 8, el horizonte de referencia).
     private const string CurvedPerkId = "deathless_march";
 
     // Perk sin curva: vale lo mismo a cualquier horizonte.
@@ -35,7 +35,7 @@ public sealed class PerkValueHorizonTests
     public void ValueAtMatchesReferenceValueAtTheReferenceHorizon()
     {
         int? reference = RealTable.ValueOf(CurvedPerkId);
-        Assert.Equal(272, reference);
+        Assert.Equal(178, reference);
         Assert.Equal(reference, RealTable.ValueAt(CurvedPerkId, RealTable.ReferenceHorizon));
     }
 
@@ -45,9 +45,9 @@ public sealed class PerkValueHorizonTests
         // Horizonte 1 es el primer partido de la campaña: -78, y es negativo porque un acumulador que
         // todavía no ha acumulado nada no da nada y sí ocupa un slot. Por debajo de 1 no hay dato, así que
         // se recorta al primero en vez de extrapolar (RT-023: sin aritmética que invente una columna).
-        Assert.Equal(-78, RealTable.ValueAt(CurvedPerkId, 1));
-        Assert.Equal(-78, RealTable.ValueAt(CurvedPerkId, 0));
-        Assert.Equal(-78, RealTable.ValueAt(CurvedPerkId, -5));
+        Assert.Equal(0, RealTable.ValueAt(CurvedPerkId, 1));
+        Assert.Equal(0, RealTable.ValueAt(CurvedPerkId, 0));
+        Assert.Equal(0, RealTable.ValueAt(CurvedPerkId, -5));
     }
 
     [Fact]
@@ -55,15 +55,15 @@ public sealed class PerkValueHorizonTests
     {
         // Horizonte 16 es el último medido: 355. Por encima, la curva es plana porque los contadores ya
         // han tocado su maxValue y no hay más partidos que arrastrarlos.
-        Assert.Equal(326, RealTable.ValueAt(CurvedPerkId, 16));
-        Assert.Equal(326, RealTable.ValueAt(CurvedPerkId, 99));
+        Assert.Equal(207, RealTable.ValueAt(CurvedPerkId, 16));
+        Assert.Equal(207, RealTable.ValueAt(CurvedPerkId, 99));
     }
 
     [Fact]
     public void ValueAtIsFlatForAPerkWithoutACurve()
     {
         int? flatValue = RealTable.ValueOf(FlatPerkId);
-        Assert.Equal(18, flatValue);
+        Assert.Equal(7, flatValue);
 
         foreach (int horizon in new[] { 1, 4, 8, 16, 99 })
         {
@@ -103,12 +103,12 @@ public sealed class PerkValueHorizonTests
     [Fact]
     public void QuantileEdgesReturnTheBoundsOfTheOfferDistribution()
     {
-        // Extremos de la distribución de oferta sin horizonte (ADR 0072): safety_net (-55) es el
-        // mínimo medido y deathless_march (272) el máximo.
-        Assert.Equal(-55, RealTable.ValueAtQuantile(0, 10));
-        Assert.Equal(-55, RealTable.ValueAtQuantile(-5, 10));
-        Assert.Equal(272, RealTable.ValueAtQuantile(10, 10));
-        Assert.Equal(272, RealTable.ValueAtQuantile(15, 10));
+        // Extremos de la distribución de oferta sin horizonte (ADR 0072): mob_instigator (-7) es el
+        // mínimo medido y deathless_march (178) el máximo.
+        Assert.Equal(-7, RealTable.ValueAtQuantile(0, 10));
+        Assert.Equal(-7, RealTable.ValueAtQuantile(-5, 10));
+        Assert.Equal(178, RealTable.ValueAtQuantile(10, 10));
+        Assert.Equal(178, RealTable.ValueAtQuantile(15, 10));
         Assert.Equal(0, RealTable.ValueAtQuantile(5, 0));
         Assert.Equal(0, RealTable.ValueAtQuantile(5, -3));
     }
@@ -118,10 +118,10 @@ public sealed class PerkValueHorizonTests
     {
         // Los mismos bordes, con horizonte explícito: a horizonte de referencia coinciden con los de
         // arriba porque es la misma columna.
-        Assert.Equal(-55, RealTable.ValueAtQuantile(0, 10, 8));
-        Assert.Equal(-55, RealTable.ValueAtQuantile(-5, 10, 8));
-        Assert.Equal(272, RealTable.ValueAtQuantile(10, 10, 8));
-        Assert.Equal(272, RealTable.ValueAtQuantile(15, 10, 8));
+        Assert.Equal(-7, RealTable.ValueAtQuantile(0, 10, 8));
+        Assert.Equal(-7, RealTable.ValueAtQuantile(-5, 10, 8));
+        Assert.Equal(178, RealTable.ValueAtQuantile(10, 10, 8));
+        Assert.Equal(178, RealTable.ValueAtQuantile(15, 10, 8));
         Assert.Equal(0, RealTable.ValueAtQuantile(5, 0, 8));
         Assert.Equal(0, RealTable.ValueAtQuantile(5, -3, 8));
     }
@@ -174,7 +174,7 @@ public sealed class PerkValueHorizonTests
     public void LoaderRejectsAReferenceHorizonColumnThatDisagreesWithValues()
     {
         var root = ParseRealTable();
-        // Índice 7 (0-based) es el horizonte 8, el de referencia; values.deathless_march vale 272.
+        // Índice 7 (0-based) es el horizonte 8, el de referencia; values.deathless_march vale 178.
         root["valuesByHorizon"]![CurvedPerkId]![7] = 300;
 
         var ex = Assert.Throws<DataException>(() => PerkValueTable.FromJson(FilesFor(root)));

@@ -61,6 +61,14 @@ public sealed class Options
     public bool PerkValues { get; private set; }
 
     /// <summary>
+    /// <c>--perks a,b,c</c>: en <c>--perk-values</c>, mide sólo esos perks. El índice de cada perk sigue
+    /// siendo su posición en el catálogo, así que la fila sale idéntica a la de la tabla completa con la
+    /// misma semilla: es un filtro de coste para iterar, no una medición distinta.
+    /// </summary>
+    public IReadOnlyList<string>? Perks { get; private set; }
+
+
+    /// <summary>
     /// --item-values: mide el valor de cada objeto contra su espejo sin él, con el <b>mismo</b> espejo
     /// que --perk-values, para que las dos tablas queden en la misma unidad (AT-A, paso 1). Sin campaña:
     /// un objeto no tiene contador de carrera. --rosters fija las parejas de plantillas y --runs los
@@ -190,6 +198,17 @@ public sealed class Options
 
                 case "--perk-values":
                     options.PerkValues = true;
+                    break;
+
+                case "--perks":
+                    string perksValue = NextValue(args, ref i, arg);
+                    options.Perks = perksValue
+                        .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+                    if (options.Perks.Count == 0)
+                    {
+                        throw new ArgumentException("--perks requiere al menos un id de perk");
+                    }
+
                     break;
 
                 case "--item-values":

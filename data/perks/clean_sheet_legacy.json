@@ -19,9 +19,9 @@
       "type": "modifyProbability",
       "target": "actor",
       "probability": "save",
-      "valuePerCounter": 50,
+      "valuePerCounter": 30,
       "counter": "cleanSheetSaves",
-      "maxValue": 5,
+      "maxValue": 3,
       "duration": "match"
     },
     {
@@ -39,5 +39,6 @@
   "lethal": false,
   "positionOnly": "Goalkeeper",
   "tagsRequired": [],
-  "tagsForbidden": []
+  "tagsForbidden": [],
+  "_doc": "Paquete AY paso 3 (ADR 0087): valuePerCounter 50 -> 30 (30 es el escalón legal por debajo de 50, ADR 0050 P1); medido clean_sheet_legacy en 186 con el instrumento emparejado, muy por encima del siguiente perk; y el techo del contador maxValue 5 -> 3: el canal multiplica la cuota y bajar solo el paso apenas movio la medida (deathless 303 -> 251, clean_sheet 186 -> 185). Con dos pasos las celdas 'muy buena' de la ADR 0033 caian (eternal_crown 50,6 < 55, the_hunt 68,9 < 72): tres pasos es el punto intermedio."
 }

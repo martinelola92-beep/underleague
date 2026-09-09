@@ -72,12 +72,12 @@ public sealed class BuildGateTests
     public void CoherentBuildsBeatTheirBaseline() =>
         AssertAllIn(BuildMetrics.CoherentBuildsBeatNonePrefix);
 
-    /// <summary>§8: cada build mal construida a propósito gana ≤ 45% a su referencia.</summary>
+    /// <summary>§8 y paquete AY: cada build mal construida a propósito queda en 45-55% contra su referencia: un perk mal puesto no hace nada, ni resta ni suma.</summary>
     [Fact]
     public void BadBuildsLoseToTheirBaseline() =>
         AssertAllIn(BuildMetrics.BadBuildsLoseToNonePrefix);
 
-    /// <summary>§8 y ADR 0078: la build tomada al azar gana ≤ 45% a su referencia, como toda build mal construida.</summary>
+    /// <summary>§8, ADR 0078 y paquete AY: la build tomada al azar queda en 45-55% contra su referencia, como toda build mal construida.</summary>
     [Fact]
     public void RandomBuildLosesToItsBaseline() =>
         AssertAllIn(BuildMetrics.RandomBuildLosesToNonePrefix);
@@ -90,7 +90,7 @@ public sealed class BuildGateTests
         AssertIn(BuildMetrics.BuildsWinDifferentlyPassChain);
     }
 
-    /// <summary>§8/RF-070: ningún perk asignado se queda por debajo del 1% de partidos con activación.</summary>
+    /// <summary>§8/RF-070: ningún perk se queda por debajo del 1% de partidos con activación en las builds que lo colocan bien (las coherentes).</summary>
     [Fact]
     public void NoPerkIsDead() => AssertIn(BuildMetrics.NoDeadPerks);
 

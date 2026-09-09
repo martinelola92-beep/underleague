@@ -63,7 +63,7 @@ public static class BuildMetrics
     /// <summary>Prefijo de la métrica por build de <c>coherentBuildsBeatNone</c> (§8: cada coherente gana ≥ 58% a su referencia).</summary>
     public const string CoherentBuildsBeatNonePrefix = "coherentBuildsBeatNone_";
 
-    /// <summary>Prefijo de la métrica por build de <c>badBuildsLoseToNone</c> (§8: cada mala gana ≤ 45% a su referencia).</summary>
+    /// <summary>Prefijo de la métrica por build de <c>badBuildsLoseToNone</c> (§8, paquete AY: cada mala queda en 45-55% contra su referencia).</summary>
     public const string BadBuildsLoseToNonePrefix = "badBuildsLoseToNone_";
 
     /// <summary>
@@ -73,7 +73,15 @@ public static class BuildMetrics
     /// sale peor que no construir, y una build tomada al azar es una build mal construida — §8 ya la
     /// listaba entre las «malas a propósito».
     /// </summary>
-    public const double BadBuildMaxWinRate = 45.0;
+    /// <summary>
+    /// Banda de la build mal construida contra su referencia (paquete AY, escalera desde 50): desde que un
+    /// perk mal puesto no hace nada en vez de castigar, construir mal vale lo que no construir. Ni pierde
+    /// (suelo 45: si perdiera, algo estaría restando) ni gana (techo 55: si ganara, no estaría mal puesta).
+    /// Sustituye al techo de 45 de §8 y de la ADR 0078.
+    /// </summary>
+    public const double BadBuildMinWinRate = 45.0;
+
+    public const double BadBuildMaxWinRate = 55.0;
 
     /// <summary>
     /// Prefijo de la métrica por build de <c>randomBuildLosesToNone</c> (§8, <b>ADR 0078</b>: la build
@@ -198,7 +206,7 @@ public static class BuildMetrics
         rows.AddRange(BadBuildsLoseToNone(cells, badBuilds, baselineOpponentByBuild));
         rows.AddRange(RandomBuildsLoseToNone(cells, randomBuilds, baselineOpponentByBuild));
         rows.AddRange(BuildsWinDifferently(cells, physicalBuild, technicalBuild, baselineOpponentByBuild));
-        rows.AddRange(NoDeadPerksRows(perkActivations));
+        rows.AddRange(NoDeadPerksRows(perkActivations, placedBuilds: new HashSet<string>(coherentBuilds, StringComparer.Ordinal)));
         rows.AddRange(Rf069Distribution(catalogPerkKinds));
         return rows;
     }
@@ -211,16 +219,17 @@ public static class BuildMetrics
         double minWinRate = 58.0) =>
         AtLeast(cells, coherentBuilds, baselineOpponentByBuild, CoherentBuildsBeatNonePrefix, minWinRate);
 
-    /// <summary>badBuildsLoseToNone (§8): cada build mala gana ≤ 45% contra su referencia de la misma raza.</summary>
+    /// <summary>badBuildsLoseToNone (§8, paquete AY): cada build mala queda en 45-55% contra su referencia de la misma raza: no pierde, porque un perk mal puesto ya no resta, y no gana, porque no aporta.</summary>
     public static List<MetricResult> BadBuildsLoseToNone(
         IReadOnlyList<BuildCellResult> cells,
         IReadOnlyList<string> badBuilds,
         IReadOnlyDictionary<string, string> baselineOpponentByBuild,
-        double maxWinRate = BadBuildMaxWinRate) =>
-        AtMost(cells, badBuilds, baselineOpponentByBuild, BadBuildsLoseToNonePrefix, maxWinRate);
+        double maxWinRate = BadBuildMaxWinRate,
+        double minWinRate = BadBuildMinWinRate) =>
+        Within(cells, badBuilds, baselineOpponentByBuild, BadBuildsLoseToNonePrefix, minWinRate, maxWinRate);
 
     /// <summary>
-    /// <c>randomBuildLosesToNone</c> (§8, <b>ADR 0078</b>): la build tomada al azar gana <b>≤ 45%</b> a su
+    /// <c>randomBuildLosesToNone</c> (§8, <b>ADR 0078</b>): la build tomada al azar queda en <b>45-55%</b> contra su
     /// referencia sin perks, el mismo techo que las demás builds mal construidas.
     ///
     /// <para>Era una banda <b>40-60</b> —"se queda cerca de no construir"—, escrita en la fase 1 cuando
@@ -236,8 +245,9 @@ public static class BuildMetrics
         IReadOnlyList<BuildCellResult> cells,
         IReadOnlyList<string> randomBuilds,
         IReadOnlyDictionary<string, string> baselineOpponentByBuild,
-        double maxWinRate = BadBuildMaxWinRate) =>
-        AtMost(cells, randomBuilds, baselineOpponentByBuild, RandomBuildLosesToNonePrefix, maxWinRate);
+        double maxWinRate = BadBuildMaxWinRate,
+        double minWinRate = BadBuildMinWinRate) =>
+        Within(cells, randomBuilds, baselineOpponentByBuild, RandomBuildLosesToNonePrefix, minWinRate, maxWinRate);
 
     /// <summary>
     /// buildsWinDifferently (§8): la build "de contacto" produce ≥ 1,5× las lesiones que la build
@@ -335,7 +345,8 @@ public static class BuildMetrics
     /// </summary>
     public static List<MetricResult> NoDeadPerksRows(
         IReadOnlyList<PerkActivationResult> perkActivations,
-        double minActivationRatePercent = DeadPerkThresholdPercent)
+        double minActivationRatePercent = DeadPerkThresholdPercent,
+        IReadOnlySet<string>? placedBuilds = null)
     {
         var rows = new List<MetricResult>();
 
@@ -351,11 +362,23 @@ public static class BuildMetrics
                 activation.ActivationRate, minActivationRatePercent, null, "INFO"));
         }
 
-        // Fila con estado por perk: la mejor de sus builds.
+        // Fila con estado por perk: la mejor de sus builds que lo COLOCAN BIEN (placedBuilds, las
+        // coherentes). Paquete AY: desde que un perk mal puesto no hace nada, un perk que sólo aparece en
+        // builds mal construidas a propósito activa el 0 % por construcción, y eso no dice que esté
+        // muerto: dice que ninguna build coherente lo lleva. Esos quedan como INFO ("sin build que lo
+        // coloque"), no como rojo. Sin placedBuilds (llamadas antiguas), cuenta cualquier build.
         int dead = 0;
         foreach (var group in perkActivations.GroupBy(a => a.PerkId, StringComparer.Ordinal).OrderBy(g => g.Key, StringComparer.Ordinal))
         {
-            double best = group.Max(a => a.ActivationRate);
+            var placed = placedBuilds is null ? group.ToList() : group.Where(a => placedBuilds.Contains(a.Build)).ToList();
+            if (placed.Count == 0)
+            {
+                rows.Add(new MetricResult(
+                    ActivationRatePrefix + group.Key, group.Max(a => a.ActivationRate), minActivationRatePercent, null, "INFO"));
+                continue;
+            }
+
+            double best = placed.Max(a => a.ActivationRate);
             bool ok = best >= minActivationRatePercent;
             if (!ok)
             {
@@ -420,11 +443,12 @@ public static class BuildMetrics
         return rows;
     }
 
-    private static List<MetricResult> AtMost(
+    private static List<MetricResult> Within(
         IReadOnlyList<BuildCellResult> cells,
         IReadOnlyList<string> builds,
         IReadOnlyDictionary<string, string> baselineOpponentByBuild,
         string prefix,
+        double minWinRate,
         double maxWinRate)
     {
         var rows = new List<MetricResult>();
@@ -436,7 +460,8 @@ public static class BuildMetrics
             }
 
             double rate = cell.WinRate;
-            rows.Add(new MetricResult(prefix + build, rate, null, maxWinRate, rate <= maxWinRate ? "IN" : "OUT"));
+            rows.Add(new MetricResult(
+                prefix + build, rate, minWinRate, maxWinRate, rate >= minWinRate && rate <= maxWinRate ? "IN" : "OUT"));
         }
 
         return rows;

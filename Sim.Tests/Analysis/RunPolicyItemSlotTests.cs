@@ -135,21 +135,24 @@ public sealed class RunPolicyItemSlotTests
 
     /// <summary>
     /// Con el listón que la política usa de verdad —el <b>coste de oportunidad del slot</b> de la ADR
-    /// 0072, no una constante— el mercado de objetos sigue existiendo pero <b>muerde</b>: la contextual
-    /// compra bastantes menos objetos que con el gate abierto, y no cero. Los dos extremos son fallos
-    /// distintos y silenciosos: en cero el paquete habría prohibido comprar objetos en vez de exigirles
-    /// que valgan el slot; igual que abierto, el gate no estaría haciendo nada.
+    /// 0072, no una constante— el mercado de objetos <b>nunca se cierra</b>. Cuánto lo adelgaza es una medida, no una afirmación: con las tablas absolutas de
+    /// antes de la ADR 0087 descartaba algo más de la mitad; con las tablas emparejadas el nivel de los
+    /// objetos (+40) queda por encima del listón en casi todos los nodos y el gate apenas muerde. Lo que
+    /// sí sería un fallo silencioso es el cero: el paquete habría prohibido comprar objetos en vez de
+    /// exigirles que valgan el slot.
     /// </summary>
     [Fact]
-    public void TheSlotBarThinsTheItemMarketWithoutClosingIt()
+    public void TheSlotBarNeverClosesTheItemMarket()
     {
         var contextual = RunPolicyOptions.For(PurchaseDoctrine.Contextual);
 
         int free = ItemsBought(contextual with { MinItemValueMarket = BelowEveryTable });
         int gated = ItemsBought(contextual);
 
-        Assert.True(gated > 0, "con el listón del slot no se compró ni un objeto: el gate cerró el canal entero");
-        Assert.True(gated < free, $"el listón del slot no descartó ningún objeto ({gated} de {free}): el gate no hace nada");
+        // El recuento no es monótono: saltar un objeto guarda oro y más adelante se compran dos más
+        // baratos (medido: 35 con gate frente a 34 sin él). Lo único que es invariante es que el canal
+        // no se cierra; que sea un filtro lo afirma ABarAboveTheLevelOfTheTableStopsEveryMarketItem.
+        Assert.True(gated > 0, $"con el listón del slot no se compró ni un objeto (sin listón, {free}): el gate cerró el canal entero");
     }
 
     /// <summary>

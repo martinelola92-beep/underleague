@@ -19,9 +19,9 @@
       "type": "modifyProbability",
       "target": "team",
       "probability": "tackle",
-      "valuePerCounter": 100,
+      "valuePerCounter": 50,
       "counter": "deathlessMarchMatches",
-      "maxValue": 4,
+      "maxValue": 3,
       "duration": "match"
     },
     {
@@ -38,5 +38,6 @@
   "tagsRequired": [
     "Undead"
   ],
-  "tagsForbidden": []
+  "tagsForbidden": [],
+  "_doc": "Paquete AY paso 3 (ADR 0087): valuePerCounter 100 -> 50; medido deathless_march en 303 con el instrumento emparejado, muy por encima del siguiente perk; y el techo del contador maxValue 4 -> 3: el canal multiplica la cuota y bajar solo el paso apenas movio la medida (deathless 303 -> 251, clean_sheet 186 -> 185). Con dos pasos las celdas 'muy buena' de la ADR 0033 caian (eternal_crown 50,6 < 55, the_hunt 68,9 < 72): tres pasos es el punto intermedio."
 }

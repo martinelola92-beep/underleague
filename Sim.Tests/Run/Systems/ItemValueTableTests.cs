@@ -43,10 +43,12 @@ public sealed class ItemValueTableTests
     public void RealTableDeclaresItsMeasurementNoise()
     {
         // La desviación por fila es lo que impedirá que un umbral en el cero exacto sea un umbral, igual
-        // que en la tabla de perks (ADR 0072). Tiene que estar declarada y ser menor que la dispersión
-        // observada: si no, la tabla sería sólo ruido y no ordenaría nada.
+        // que en la tabla de perks (ADR 0072). Tiene que estar declarada. NO se exige que sea menor que la
+        // dispersión observada: el propio _doc de AT-A avisa de que esta tabla apenas ordena objeto a
+        // objeto (emparejada, ADR 0087: ruido 29 sobre dispersión ~27); lo que está bien determinado y
+        // lo que consume la política (ADR 0086) es el NIVEL, MeanValue.
         Assert.True(RealTable.RowDeviation > 0);
-        Assert.True(RealTable.ObservedDeviation > RealTable.RowDeviation);
+        Assert.True(RealTable.MeanValue > 0);
     }
 
     [Fact]
