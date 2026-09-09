@@ -234,7 +234,74 @@ public sealed class AttackActionsTests
             Row(blockedRows, PlayerAction.ShortPass).Score);
     }
 
+    /// <summary>
+    /// AZ-C (docs/plan-segunda-partida.md): con la portería despejada, el pase hacia atrás deja de competir
+    /// con el tiro. Portador a dos casillas de la portería rival y centrado, portero rival en su sitio, sin
+    /// ningún defensa en el corredor, y un único compañero libre dos casillas por detrás: antes ese
+    /// compañero era el único receptor legal y el pase corto (con el bono AW-D sin penalizar, RECEIVER
+    /// bonus completo) le ganaba al tiro cercano; ahora <c>EvaluatePass</c> descarta un receptor detrás del
+    /// portador cuando hay línea de tiro despejada (<c>HasClearShot</c>), se queda sin receptor y el tiro
+    /// gana sin competencia real.
+    ///
+    /// <para>Con un defensa rival a 0,5 casillas del segmento portador→portería — el mismo radio
+    /// (<c>pass.interceptRadiusCells</c>) con el que <c>MatchEngine.TryBlockShot</c> bloquea el tiro en
+    /// vuelo — la línea deja de estar despejada, el compañero vuelve a ser candidato (y, con un rival ahora
+    /// por delante, el propio AW-D no le penaliza el pase atrás) y el pase corto vuelve a ganar.</para>
+    /// </summary>
+    [Fact]
+    public void ClearShotDropsTheBackwardReceiverAndABlockedLaneRestoresIt()
+    {
+        var clear = ClearShotScenario(defenderInCorridor: false);
+        Assert.Equal(PlayerAction.Shoot, clear.Chosen);
+
+        var blocked = ClearShotScenario(defenderInCorridor: true);
+        Assert.Equal(PlayerAction.ShortPass, blocked.Chosen);
+    }
+
     // ------------------------------------------------------------------ escenarios
+
+    /// <summary>
+    /// Delantero a dos casillas de la portería rival y centrado, portero rival en su sitio (no cuenta como
+    /// rival de campo, AZ-C) y un único compañero libre dos casillas por detrás. Con
+    /// <paramref name="defenderInCorridor"/> se añade un defensa rival a 0,5 casillas del segmento
+    /// portador→portería (dentro de <c>pass.interceptRadiusCells</c>, 0,9), que además cuenta como rival
+    /// por delante del portador para <c>OpponentsAheadCount</c>.
+    /// </summary>
+    private static (PlayerAction Chosen, List<UtilityRow> Rows) ClearShotScenario(bool defenderInCorridor)
+    {
+        Vec2 goal = Pitch.GoalCenter(0);
+        var carrier = Player(0, Position.Forward, new Cell(14, 2));
+        var mate = Player(1, Position.Midfielder, new Cell(12, 2));
+        var keeper = Player(2, Position.Goalkeeper, new Cell(15, 2), team: 1);
+
+        carrier.Position = new Vec2(goal.X - 2f, PitchConstants.CenterRow);
+        mate.Position = new Vec2(goal.X - 4f, PitchConstants.CenterRow);
+        keeper.Position = new Vec2(15.5f, PitchConstants.CenterRow);
+
+        var players = new List<MatchPlayer> { carrier, mate, keeper };
+        if (defenderInCorridor)
+        {
+            // A 0,5 casillas del segmento portador->portería (dentro de interceptRadiusCells, 0,9), cerca
+            // del extremo del portador para que además quede a 0,58 casillas de él (dentro de
+            // PressureRadius, 1,0): además de tapar la línea de tiro, presiona al portador, así que el pase
+            // corto también cobra PassUnderPressureBonus — sin eso el pase (base más alto en la tabla de
+            // la posición, pero contexto más bajo que el tiro cercano) se queda por debajo del tiro incluso
+            // con receptor legal.
+            var defender = Player(3, Position.Defender, new Cell(14, 3), team: 1);
+            defender.Position = new Vec2(goal.X - 1.7f, PitchConstants.CenterRow + 0.5f);
+            players.Add(defender);
+        }
+
+        var context = Context(Catalog.Ai, players.ToArray());
+        context.Ball.Owner = carrier;
+        context.Ball.Position = carrier.Position;
+        context.HoldingTeam = 0;
+        carrier.EnterState(PlayerState.Dribbling, 0);
+
+        var rows = new List<UtilityRow>();
+        var chosen = Utility.Choose(context, carrier, rows);
+        return (chosen, rows);
+    }
 
     private static (PlayerAction Chosen, List<UtilityRow> Rows) PassScenario(int technique)
     {
@@ -405,7 +472,7 @@ public sealed class AttackActionsTests
             Position = players[0].Position,
         };
 
-        var context = new UtilityContext(players, ball, weights, Catalog.Tuning.ActionZone);
+        var context = new UtilityContext(players, ball, weights, Catalog.Tuning.ActionZone, Catalog.Tuning.Pass.InterceptRadiusCells);
         context.TacticalStates[0] = TacticalState.InPossession;
         context.TacticalStates[1] = TacticalState.OutOfPossession;
         context.NearestToBall[0] = players[0];

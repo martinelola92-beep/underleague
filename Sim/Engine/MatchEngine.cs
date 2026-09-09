@@ -83,6 +83,14 @@ internal sealed class MatchEngine : IPerkWorld
     private Vec2 _restartPoint;
     private MatchPlayer? _penaltyTaker;
 
+    /// <summary>
+    /// El jugador que va a sacar la reanudación en curso (AZ-A, docs/plan-segunda-partida.md). Se fija en
+    /// <see cref="BeginRestart"/> con la misma regla de selección que usan los métodos Take*, y se queda
+    /// quieto —<see cref="Step"/> no le llama a <see cref="UpdatePlayer"/>— durante toda la cuenta atrás del
+    /// balón muerto: antes corría la IA normal y podía alejarse del punto de saque mientras esperaba.
+    /// </summary>
+    private MatchPlayer? _restartTaker;
+
     /// <summary>True cuando hay que rehacer el emparejamiento de marcaje (cambio de posesión, §2.3).</summary>
     private bool _markingDirty = true;
 
@@ -161,7 +169,7 @@ internal sealed class MatchEngine : IPerkWorld
         _ball.BlockAttempted = new bool[_players.Length];
         _bodies = new BodySeparation(_tuning.Bodies, _players.Length);
         _markScratch = new bool[_players.Length];
-        _context = new UtilityContext(_players, _ball, catalog.Ai, _tuning.ActionZone);
+        _context = new UtilityContext(_players, _ball, catalog.Ai, _tuning.ActionZone, _tuning.Pass.InterceptRadiusCells);
         _context.TacticalStates[0] = TacticalState.OutOfPossession;
         _context.TacticalStates[1] = TacticalState.OutOfPossession;
         _trace = config.Trace ? new MatchTraceRecorder(_players, _regulationTicks) : null;
@@ -393,18 +401,26 @@ internal sealed class MatchEngine : IPerkWorld
         _bodies.BeginTick();
 
         // AW-R (docs/pendientes.md): durante el balón muerto el equipo ya no se congela. UpdatePlayer corre
-        // siempre —decisión y movimiento normales, con la salvedad de ChaseBall (ver UtilityContext.BallDead)—
-        // y el ejecutor del saque queda bien colocado igualmente porque TakeRestart fija su posición a mano al
-        // resolver la reanudación. Solo se salta UpdateBall/CheckOutOfBounds mientras el balón sigue aparcado, y
-        // solo se cuenta el tick de reanudación si ya lo era ANTES de este bucle: un foul resuelto dentro de él
-        // puede pedir un penalti (SchedulePenalty -> BeginRestart) a mitad de tick, y ese primer tick de la
-        // reanudación nueva no debe descontarse dos veces ni tratarse todavía como balón parado para
+        // siempre para el resto del equipo —decisión y movimiento normales, con la salvedad de ChaseBall
+        // (ver UtilityContext.BallDead)—. AZ-A (docs/plan-segunda-partida.md) es la excepción: el que va a
+        // sacar (_restartTaker, fijado por BeginRestart) se queda quieto toda la cuenta atrás en vez de
+        // deambular y volver de un salto al punto de saque en el último tick; los demás siguen moviéndose.
+        // Solo se salta UpdateBall/CheckOutOfBounds mientras el balón sigue aparcado, y solo se cuenta el
+        // tick de reanudación si ya lo era ANTES de este bucle: un foul resuelto dentro de él puede pedir un
+        // penalti (SchedulePenalty -> BeginRestart) a mitad de tick, y ese primer tick de la reanudación
+        // nueva no debe descontarse dos veces ni tratarse todavía como balón parado para
         // UpdateBall/CheckOutOfBounds (revisión independiente, fase 0, ya resuelta antes de este cambio).
         bool wasRestarting = _restartTicksLeft > 0;
 
         for (int i = 0; i < _players.Length; i++)
         {
-            UpdatePlayer(PlayerInTurnOrder(i));
+            var player = PlayerInTurnOrder(i);
+            if (wasRestarting && ReferenceEquals(player, _restartTaker))
+            {
+                continue;
+            }
+
+            UpdatePlayer(player);
         }
 
         // Separación de cuerpos al final del movimiento y antes de tocar el balón (§2.1): así el balón, que
@@ -2183,8 +2199,70 @@ internal sealed class MatchEngine : IPerkWorld
         _restartTicksLeft = ticks > 0 ? ticks : 1;
         _phase = phase;
         ParkBall(point);
+
+        // El saque de centro reforma el equipo antes de elegir sacador (§3.2): con las posiciones ya en
+        // HomeCenter, "el más cercano al centro" es el mismo criterio que usaba TakeKickoff con distancia
+        // a HomeCenter (revisión independiente).
+        if (kind == RestartKind.Kickoff)
+        {
+            _shift[0] = 0f;
+            _shift[1] = 0f;
+            ResetPositions();
+        }
+
+        // AZ-A: el sacador se fija una sola vez aquí, con la misma regla que antes vivía repetida en
+        // TakeRestart/TakeGoalKick/TakeKickoff (SelectTaker), y se congela desde este tick — Step no le
+        // llama a UpdatePlayer mientras _restartTaker siga siendo él. Para el penalti el tirador ya lo
+        // eligió SchedulePenalty (BestPenaltyTaker, por Technique) antes de llamar aquí; solo lo adoptamos
+        // para congelarlo igual que al resto de sacadores.
+        _restartTaker = kind == RestartKind.Penalty ? _penaltyTaker : SelectTaker(kind, team, point);
+        if (_restartTaker is not null)
+        {
+            _restartTaker.Position = point;
+            _restartTaker.Velocity = default;
+        }
+
         CancelPendingTackles();
         EndPlay("lost");
+    }
+
+    /// <summary>
+    /// Regla de selección de sacador compartida por ThrowIn/Corner/GoalKick/Kickoff (AZ-A): el jugador vivo
+    /// más cercano al punto de saque, de campo salvo en el saque de puerta con portero en el campo (se saca
+    /// desde la portería) o sin portero disponible (cualquiera puede sacar, igual que antes en el fallback
+    /// de TakeGoalKick). El penalti no pasa por aquí: su tirador lo decide BestPenaltyTaker.
+    /// </summary>
+    private MatchPlayer? SelectTaker(RestartKind kind, int team, Vec2 point)
+    {
+        if (kind == RestartKind.GoalKick)
+        {
+            var goalkeeper = _goalkeepers[team];
+            if (goalkeeper is not null && goalkeeper.OnPitch)
+            {
+                return goalkeeper;
+            }
+        }
+
+        bool outfieldOnly = kind != RestartKind.GoalKick;
+        MatchPlayer? taker = null;
+        float bestDistance = 0f;
+        for (int i = 0; i < _players.Length; i++)
+        {
+            var player = _players[i];
+            if (player.Team != team || !CanTouchBall(player) || (outfieldOnly && !player.IsOutfield))
+            {
+                continue;
+            }
+
+            float distance = Vec2.Distance(player.Position, point);
+            if (taker is null || distance < bestDistance)
+            {
+                taker = player;
+                bestDistance = distance;
+            }
+        }
+
+        return taker;
     }
 
     /// <summary>
@@ -2215,16 +2293,16 @@ internal sealed class MatchEngine : IPerkWorld
         switch (kind)
         {
             case RestartKind.ThrowIn:
-                TakeRestart(_restartTeam, _restartPoint, "throwIn", outfieldOnly: true);
+                TakeRestart(_restartPoint, "throwIn");
                 break;
             case RestartKind.Corner:
-                TakeRestart(_restartTeam, _restartPoint, "corner", outfieldOnly: true);
+                TakeRestart(_restartPoint, "corner");
                 break;
             case RestartKind.GoalKick:
-                TakeGoalKick(_restartTeam);
+                TakeRestart(_restartPoint, "goalKick");
                 break;
             case RestartKind.Kickoff:
-                TakeKickoff(_restartTeam);
+                TakeRestart(_restartPoint, "kickoff");
                 break;
             case RestartKind.Penalty:
                 TakePenalty();
@@ -2234,37 +2312,29 @@ internal sealed class MatchEngine : IPerkWorld
         }
 
         // La fase vuelve a OpenPlay/MobGoldenGoal DESPUÉS del switch (revisión independiente, fase 0):
-        // TakeRestart/TakeGoalKick/TakeKickoff emiten su Recovery mientras el saque se resuelve, y ese
-        // evento debe llevar Phase = Restart/Kickoff/Penalty, no la fase de juego abierto en la que el
-        // motor entra justo después. Si TakePenalty no encuentra tirador, llama a ScheduleGoalKick, que
-        // abre una reanudación nueva (BeginRestart dentro del propio switch) y dejará _restartTicksLeft
-        // > 0: en ese caso no se toca _phase aquí, porque BeginRestart ya la puso en Restart.
+        // TakeRestart/TakePenalty emiten su Recovery mientras el saque se resuelve, y ese evento debe
+        // llevar Phase = Restart/Kickoff/Penalty, no la fase de juego abierto en la que el motor entra
+        // justo después. Si TakePenalty no encuentra tirador, llama a ScheduleGoalKick, que abre una
+        // reanudación nueva (BeginRestart dentro del propio switch) y dejará _restartTicksLeft > 0: en ese
+        // caso no se toca _phase ni _restartTaker aquí, porque BeginRestart ya los puso al día para la
+        // reanudación nueva (fase Restart, sacador del saque de puerta).
         if (_restartTicksLeft == 0)
         {
             _phase = _goldenGoal ? MatchPhase.MobGoldenGoal : MatchPhase.OpenPlay;
+            _restartTaker = null;
         }
     }
 
-    private void TakeRestart(int team, Vec2 point, string detail, bool outfieldOnly)
+    /// <summary>
+    /// Coloca al sacador ya elegido por <see cref="BeginRestart"/> (<see cref="_restartTaker"/>) en el
+    /// punto de saque y le da la posesión. AZ-A: antes esta búsqueda se repetía aquí, en TakeGoalKick y en
+    /// TakeKickoff cada vez que se resolvía la reanudación; ahora el sacador es el mismo desde el primer
+    /// tick de la cuenta atrás (<see cref="SelectTaker"/>) y esto solo confirma su posición, absorbiendo
+    /// las centésimas que <see cref="BodySeparation.Resolve"/> le pueda haber movido en el último tick.
+    /// </summary>
+    private void TakeRestart(Vec2 point, string detail)
     {
-        MatchPlayer? taker = null;
-        float bestDistance = 0f;
-        for (int i = 0; i < _players.Length; i++)
-        {
-            var player = _players[i];
-            if (player.Team != team || !CanTouchBall(player) || (outfieldOnly && !player.IsOutfield))
-            {
-                continue;
-            }
-
-            float distance = Vec2.Distance(player.Position, point);
-            if (taker is null || distance < bestDistance)
-            {
-                taker = player;
-                bestDistance = distance;
-            }
-        }
-
+        var taker = _restartTaker;
         if (taker is null)
         {
             return;
@@ -2275,59 +2345,6 @@ internal sealed class MatchEngine : IPerkWorld
         taker.EnterState(PlayerState.Positioning, 0);
         SetOwner(taker);
         Emit(EventType.Recovery, detail, taker);
-    }
-
-    private void TakeGoalKick(int team)
-    {
-        var goalkeeper = _goalkeepers[team];
-        if (goalkeeper is null || !goalkeeper.OnPitch)
-        {
-            TakeRestart(team, _restartPoint, "goalKick", outfieldOnly: false);
-            return;
-        }
-
-        goalkeeper.Position = goalkeeper.HomeCenter;
-        goalkeeper.Velocity = new Vec2(0f, 0f);
-        goalkeeper.EnterState(PlayerState.Positioning, 0);
-        SetOwner(goalkeeper);
-        Emit(EventType.Recovery, "goalKick", goalkeeper);
-    }
-
-    private void TakeKickoff(int team)
-    {
-        _shift[0] = 0f;
-        _shift[1] = 0f;
-        ResetPositions();
-
-        var center = new Vec2(Pitch.Columns / 2f, PitchConstants.CenterRow);
-        MatchPlayer? taker = null;
-        float bestDistance = 0f;
-        for (int i = 0; i < _players.Length; i++)
-        {
-            var player = _players[i];
-            if (player.Team != team || !CanTouchBall(player) || !player.IsOutfield)
-            {
-                continue;
-            }
-
-            float distance = Vec2.Distance(player.HomeCenter, center);
-            if (taker is null || distance < bestDistance)
-            {
-                taker = player;
-                bestDistance = distance;
-            }
-        }
-
-        if (taker is null)
-        {
-            return;
-        }
-
-        taker.Position = center;
-        taker.Velocity = new Vec2(0f, 0f);
-        taker.EnterState(PlayerState.Positioning, 0);
-        SetOwner(taker);
-        Emit(EventType.Recovery, "kickoff", taker);
     }
 
     private void TakePenalty()

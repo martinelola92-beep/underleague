@@ -9,12 +9,14 @@ namespace Underleague.Sim.Engine;
 /// </summary>
 internal sealed class UtilityContext
 {
-    public UtilityContext(MatchPlayer[] players, Ball ball, AiWeights weights, ActionZoneTuning zone)
+    public UtilityContext(
+        MatchPlayer[] players, Ball ball, AiWeights weights, ActionZoneTuning zone, float shootBlockRadiusCells)
     {
         Players = players;
         Ball = ball;
         Weights = weights;
         Zone = zone;
+        ShootBlockRadiusCells = shootBlockRadiusCells;
     }
 
     /// <summary>Todos los jugadores del partido, ordenados por id ascendente (RT-041, RT-097).</summary>
@@ -28,6 +30,14 @@ internal sealed class UtilityContext
 
     /// <summary>Ajustes de la zona de acción, de data/sim/tuning.json (ADR 0028, §2.2).</summary>
     public ActionZoneTuning Zone { get; }
+
+    /// <summary>
+    /// Radio de bloqueo de un tiro (AZ-C, docs/plan-segunda-partida.md): el mismo con el que
+    /// <c>MatchEngine.TryBlockShot</c> bloquea el tiro en vuelo (<c>data/sim/tuning.json</c>,
+    /// <c>pass.interceptRadiusCells</c>). <see cref="EvaluatePass"/> lo reutiliza para decidir si el
+    /// portador tiene línea de tiro despejada, sin duplicar el número.
+    /// </summary>
+    public float ShootBlockRadiusCells { get; }
 
     /// <summary>Estado táctico por equipo (§3.4).</summary>
     public TacticalState[] TacticalStates { get; } = new TacticalState[2];
@@ -756,6 +766,15 @@ internal static class Utility
         float minCells = longPass ? context.ShortPassMaxCells : 0f;
         float maxCells = longPass ? context.LongPassMaxCells : context.ShortPassMaxCells;
 
+        // AZ-C (docs/plan-segunda-partida.md): con línea de tiro despejada, un pase hacia atrás ya no es
+        // candidato — antes de esto el receptor de mayor rank podía quedar detrás del portador aunque
+        // tirar a puerta estuviera libre, así que el equipo se pasaba el balón en vez de rematar.
+        // "Solo ante el portero": línea limpia a portería Y ningún rival de campo por delante (AZ-C).
+        // Sin la segunda mitad la precondición cubría todo el alcance de tiro y convertía demasiados
+        // pases en tiros: passChainAvgLength caía de 2,31 a 1,93 (banda 2-4).
+        bool clearShot = HasClearShot(players, p, context, ctx.ShootBlockRadiusCells)
+            && OpponentsAheadCount(players, p, direction) == 0;
+
         for (int i = 0; i < players.Length; i++)
         {
             var mate = players[i];
@@ -776,6 +795,11 @@ internal static class Utility
             }
 
             if (longPass && SegmentBlocked(players, p.Team, p.Position, mate.Position))
+            {
+                continue;
+            }
+
+            if (clearShot && (mate.Position.X - p.Position.X) * direction < 0f)
             {
                 continue;
             }
@@ -815,7 +839,9 @@ internal static class Utility
 
         score += Slope(longPass ? context.LongPassTechniqueSlope : context.ShortPassTechniqueSlope, p.Technique);
 
-        if (HasOpponentWithin(players, p, PitchConstants.PressureRadius))
+        // AZ-C: el portero rival no cuenta como presión — no se lanza a presionar como un jugador de
+        // campo, y contarlo daba PassUnderPressureBonus solo por tener al portero cerca del área.
+        if (HasOpponentWithin(players, p, PitchConstants.PressureRadius, excludeGoalkeeper: true))
         {
             score += context.PassUnderPressureBonus;
         }
@@ -831,12 +857,18 @@ internal static class Utility
     /// </summary>
     private static int Slope(int slope, int attribute) => slope * (attribute - AttributePivot);
 
-    private static bool HasOpponentWithin(MatchPlayer[] players, MatchPlayer target, float radius)
+    /// <summary>
+    /// True si algún rival vive a menos de <paramref name="radius"/> de <paramref name="target"/>.
+    /// <paramref name="excludeGoalkeeper"/> (AZ-C) saca al portero rival de la cuenta para los sitios donde
+    /// no debe contar como presión: por defecto entra, igual que antes.
+    /// </summary>
+    private static bool HasOpponentWithin(
+        MatchPlayer[] players, MatchPlayer target, float radius, bool excludeGoalkeeper = false)
     {
         for (int i = 0; i < players.Length; i++)
         {
             var other = players[i];
-            if (other.Team == target.Team || !other.OnPitch)
+            if (other.Team == target.Team || !other.OnPitch || (excludeGoalkeeper && !other.IsOutfield))
             {
                 continue;
             }
@@ -848,6 +880,44 @@ internal static class Utility
         }
 
         return false;
+    }
+
+    /// <summary>
+    /// Línea de tiro despejada del portador (AZ-C, docs/plan-segunda-partida.md): dentro de alcance de tiro
+    /// (mismo cálculo que <see cref="EvaluateShoot"/>) y sin ningún rival de campo a menos de
+    /// <paramref name="blockRadiusCells"/> del segmento portador→portería — el mismo radio con el que
+    /// <c>MatchEngine.TryBlockShot</c> bloquea el tiro en vuelo. El portero rival se excluye a propósito:
+    /// tiene su propio mecanismo de parada (<c>TryGoalkeeperReach</c>) y no cuenta como bloqueo de línea.
+    /// </summary>
+    private static bool HasClearShot(MatchPlayer[] players, MatchPlayer p, AiContext context, float blockRadiusCells)
+    {
+        if (!p.IsOutfield)
+        {
+            return false;
+        }
+
+        Vec2 goal = Pitch.GoalCenter(p.Team);
+        float rangeCells = context.ShootBaseRangeCells + p.ShootRangeBonusCells;
+        if (Vec2.Distance(p.Position, goal) > rangeCells)
+        {
+            return false;
+        }
+
+        for (int i = 0; i < players.Length; i++)
+        {
+            var other = players[i];
+            if (other.Team == p.Team || !other.OnPitch || !other.IsOutfield)
+            {
+                continue;
+            }
+
+            if (DistanceToSegment(p.Position, goal, other.Position) < blockRadiusCells)
+            {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     /// <summary>Distancia al rival más cercano a un punto; el ancho del campo si no queda ninguno.</summary>
@@ -932,11 +1002,12 @@ internal static class Utility
     }
 
     /// <summary>
-    /// Rivales dentro de <see cref="DribbleAheadRadius"/> por delante de <paramref name="p"/> (mismo
-    /// criterio que <see cref="EvaluateDribble"/> usa para decidir si hay hueco para regatear). AW-D
+    /// Rivales de campo dentro de <see cref="DribbleAheadRadius"/> por delante de <paramref name="p"/>
+    /// (mismo criterio que <see cref="EvaluateDribble"/> usa para decidir si hay hueco para regatear). AW-D
     /// (docs/pendientes.md, cambio 1 de 2, acotado): también lo consulta <see cref="EvaluatePass"/>, para
     /// no penalizar un pase hacia atrás cuando el pasador no tiene ninguna alternativa de regate real —
-    /// un pase de circulación normal, no el caso que la anotación describe.
+    /// un pase de circulación normal, no el caso que la anotación describe. AZ-C: el portero rival no
+    /// cuenta como rival "por delante" que cierre el regate o el pase; no sale de su portería a taparlo.
     /// </summary>
     private static int OpponentsAheadCount(MatchPlayer[] players, MatchPlayer p, int direction)
     {
@@ -944,7 +1015,7 @@ internal static class Utility
         for (int i = 0; i < players.Length; i++)
         {
             var other = players[i];
-            if (other.Team == p.Team || !other.OnPitch)
+            if (other.Team == p.Team || !other.OnPitch || !other.IsOutfield)
             {
                 continue;
             }

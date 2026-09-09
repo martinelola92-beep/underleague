@@ -5604,3 +5604,23 @@ AY-E). La muerte en la entrada cuesta ~3 puntos de run; los pasos 2-4 recuperan 
 AY-B (la palanca es `lethalChance` de los dos perks de rival, después de AZ) y AY-A (qué número de riesgo enseña el
 ojeo ahora que la muerte depende de que haya entrada; decisión con ADR).
 
+## 41. Decisiones de implementación del paquete AZ (segunda partida del revisor), tanda 1
+
+AZ-A, el saque que «va y vuelve», era regresión de AW-R: el perseguidor designado caminaba hasta el balón
+aparcado durante la cuenta atrás y `ResetPositions` lo devolvía al pitar (84 jugadores devueltos en
+`Chasing` sobre 50 partidos; antes de AW-R, 4). El sacador se designa y se congela al abrir la reanudación y
+la formación se recompone al pitar. AZ-C, el pase atrás solo ante el portero: el portero contaba como rival
+por delante (desactivaba la guarda de AW-D) y como presión (+180 por pasar). Precondición dura: con línea
+limpia y ningún rival de campo por delante, un receptor por detrás no es destino legal.
+
+| Métrica (2.000 partidos, semillas 1 / 7) | Antes | Después | Banda |
+|---|---|---|---|
+| `passChainAvgLength` | 2,31 / 2,64 | 2,06 / 2,19 | 2-4 |
+| `shotsPerMatch` | 10,04 / 7,47 | 10,08 / 8,32 | 8-16 |
+| `possessionChanges` | 24,0 / 22,8 | 24,6 / 23,3 | 12-28 |
+| `injuriesPerMatch` | 0,91 / 0,74 | 0,86 / 0,78 | 0,3-0,9 |
+
+La primera versión de la precondición (línea limpia en todo el alcance de tiro) hundía `passChainAvgLength`
+a 1,93 / 1,99: la mitad «ningún rival por delante» —el sentido literal de la queja— la devuelve a banda sin
+ningún número nuevo. Quedan las tandas 2-5 de `docs/plan-segunda-partida.md`.
+

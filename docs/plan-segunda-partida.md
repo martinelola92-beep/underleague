@@ -1,8 +1,7 @@
 # Plan: lo que el revisor vio en la segunda partida (paquete AZ)
 
 **Fecha:** 2026-09-09. **Origen:** siete anotaciones del revisor (`pendientes.md` AZ-A..AZ-G) tras jugar la build.
-**Estado:** diagnosticado y planificado; se ejecuta por tandas después de que aterrice AY (`plan-perks-positivos.md`),
-porque AY está midiendo sobre el árbol principal y varios pasos de aquí mueven las mismas métricas.
+**Estado:** tanda 1 hecha y medida (AZ-A, AZ-C; ver `pendientes.md`), con un rojo aceptado por el revisor hasta la tanda 3 (`buildsWinDifferently_passChain` 1,10 / umbral 1,11); tandas 2-5 pendientes. AY ya aterrizó.
 
 ## Orden de ejecución y por qué
 

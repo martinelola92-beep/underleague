@@ -480,7 +480,7 @@ public sealed class OffBallTests
             Position = players[0].Position,
         };
 
-        var context = new UtilityContext(players, ball, weights, Catalog.Tuning.ActionZone);
+        var context = new UtilityContext(players, ball, weights, Catalog.Tuning.ActionZone, Catalog.Tuning.Pass.InterceptRadiusCells);
         context.TacticalStates[0] = TacticalState.InPossession;
         context.TacticalStates[1] = TacticalState.OutOfPossession;
         context.NearestToBall[0] = players[0];
