@@ -156,6 +156,13 @@ public sealed record EconomyConfig(
     public Items.ItemValueTable ItemValues { get; init; } = Items.ItemValueTable.Empty;
 
     /// <summary>
+    /// Oro que cuesta curar una <b>lesión leve</b> en la clínica (AZ-G, ADR 0090). Menor que
+    /// <see cref="ClinicCost"/> porque la leve solo cuesta un partido al −15 % (RF-091): a igual precio
+    /// casi nunca compensaría pagar.
+    /// </summary>
+    public int ClinicMinorCost { get; init; }
+
+    /// <summary>
     /// Oro fijo que se pierde al perder un <b>partido ordinario</b> (RF-002c), además de no cobrar la
     /// victoria ni la recompensa. Instrumento del paquete AÑ: es la única forma de "encarecer perder"
     /// que no toca ningún número que la oposición comparta. 0 = el juego de hoy. El oro no baja de cero
@@ -359,6 +366,7 @@ public static class EconomyLoader
         {
             PerkValues = PerkValueTable.FromJson(files),
             ItemValues = Items.ItemValueTable.FromJson(files),
+            ClinicMinorCost = root.Int("clinicMinorCost"),
             DefeatGoldPenalty = root.OptionalInt("defeatGoldPenalty", 0),
             DefeatGoldPenaltyPercent = root.OptionalInt("defeatGoldPenaltyPercent", 0),
         };

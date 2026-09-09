@@ -295,6 +295,8 @@
     "goldenGoal": "golden goal",
     "kickoff": "kickoff",
     "throwIn": "throw-in",
+    "freeKick": "free kick",
+    "unseen": "unseen foul",
     "corner": "corner",
     "goalKick": "goal kick",
     "forfeit": "forfeit",

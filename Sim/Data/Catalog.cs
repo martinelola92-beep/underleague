@@ -377,7 +377,8 @@ public sealed record RefereeTuning(
     int BiasShiftBlockExtra,
     int BiasShiftInjuryExtra,
     int BiasShiftYellowExtra,
-    int BiasShiftRedExtra);
+    int BiasShiftRedExtra,
+    int WhistlePercent);
 
 /// <summary>
 /// tuning.block: resolución del bloqueo sin balón (ADR 0030 §2). La <b>decisión</b> de bloquear vive en
@@ -401,7 +402,7 @@ public sealed record ProgressionTuning(
     int AttributesPerLevel);
 
 /// <summary>tuning.restart.</summary>
-public sealed record RestartTuning(int ThrowInTicks, int GoalKickTicks, int CornerTicks, int KickoffTicks, int PenaltyTicks);
+public sealed record RestartTuning(int ThrowInTicks, int GoalKickTicks, int CornerTicks, int KickoffTicks, int PenaltyTicks, int FreeKickTicks, float FreeKickClearanceCells);
 
 /// <summary>
 /// Constantes de resolución del simulador (data/sim/tuning.json), un campo por clave, anidado por sección.

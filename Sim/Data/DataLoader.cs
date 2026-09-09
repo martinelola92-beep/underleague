@@ -856,7 +856,7 @@ public static class DataLoader
         node.EnsureKnownKeys(
             "biasFoulShiftPer10", "penaltyOnFoulInArea", "biasCardShiftPer10", "biasPenaltyShiftPer10",
             "biasShiftFoulSeen", "biasShiftFoulUnseen", "biasShiftHardExtra", "biasShiftBlockExtra",
-            "biasShiftInjuryExtra", "biasShiftYellowExtra", "biasShiftRedExtra");
+            "biasShiftInjuryExtra", "biasShiftYellowExtra", "biasShiftRedExtra", "whistlePercent");
         return new RefereeTuning(
             node.Prop("biasFoulShiftPer10").AsInt(),
             node.Prop("penaltyOnFoulInArea").AsInt(),
@@ -868,7 +868,8 @@ public static class DataLoader
             node.Prop("biasShiftBlockExtra").AsInt(),
             node.Prop("biasShiftInjuryExtra").AsInt(),
             node.Prop("biasShiftYellowExtra").AsInt(),
-            node.Prop("biasShiftRedExtra").AsInt());
+            node.Prop("biasShiftRedExtra").AsInt(),
+            node.Prop("whistlePercent").AsInt());
     }
 
     /// <summary>tuning.block: resolución del bloqueo sin balón (ADR 0030 §2).</summary>
@@ -889,13 +890,15 @@ public static class DataLoader
 
     private static RestartTuning ParseRestart(Json node)
     {
-        node.EnsureKnownKeys("throwInTicks", "goalKickTicks", "cornerTicks", "kickoffTicks", "penaltyTicks");
+        node.EnsureKnownKeys("throwInTicks", "goalKickTicks", "cornerTicks", "kickoffTicks", "penaltyTicks", "freeKickTicks", "freeKickClearanceCells");
         return new RestartTuning(
             node.Prop("throwInTicks").AsInt(),
             node.Prop("goalKickTicks").AsInt(),
             node.Prop("cornerTicks").AsInt(),
             node.Prop("kickoffTicks").AsInt(),
-            node.Prop("penaltyTicks").AsInt());
+            node.Prop("penaltyTicks").AsInt(),
+            node.Prop("freeKickTicks").AsInt(),
+            node.Prop("freeKickClearanceCells").AsFloat());
     }
 
     /// <summary>tuning.generation (fase1b-diseno.md §1.3, ADR 0025, ADR 0027): modelo de presupuesto de atributos.</summary>

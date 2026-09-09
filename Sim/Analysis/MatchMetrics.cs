@@ -25,7 +25,10 @@ public readonly record struct MatchSummary(
     int BallThird2,
     int ShotsOnTarget,
     int Saves,
-    int ShotsBlocked)
+    int ShotsBlocked,
+    int Fouls,
+    int YellowCards,
+    int RedCards)
 {
     /// <summary>Resumen de un informe de partido entre homeId (equipo 0) y awayId (equipo 1).</summary>
     public static MatchSummary FromReport(MatchReport report, string homeId, string awayId) => new(
@@ -46,7 +49,10 @@ public readonly record struct MatchSummary(
         report.BallTicksByThird[2],
         report.ShotsOnTarget[0] + report.ShotsOnTarget[1],
         report.Saves[0] + report.Saves[1],
-        report.ShotsBlocked[0] + report.ShotsBlocked[1]);
+        report.ShotsBlocked[0] + report.ShotsBlocked[1],
+        report.Fouls,
+        report.YellowCards,
+        report.RedCards);
 }
 
 /// <summary>Un emparejamiento del lote con la calidad de cada equipo, para betterTeamWinRate.</summary>
@@ -97,6 +103,13 @@ public static class MatchMetrics
     /// `docs/plan-intercepcion-disparo.md`: referencia sobre la que miden los pasos 1 y 2 (AW-A).
     /// </summary>
     public const string GoalsPerMatch = "goalsPerMatch";
+
+    /// <summary>Faltas ocurridas por partido, señaladas o no (AZ-E, ADR 0090). INFO.</summary>
+    public const string FoulsPerMatch = "foulsPerMatch";
+
+    public const string YellowCardsPerMatch = "yellowCardsPerMatch";
+
+    public const string RedCardsPerMatch = "redCardsPerMatch";
 
     /// <summary>Nombre de la métrica informativa de porcentaje de tiros que van a puerta (paso 0).</summary>
     public const string ShotsOnTargetShare = "shotsOnTargetShare";
@@ -156,7 +169,7 @@ public static class MatchMetrics
         long injuries = 0;
         long goals = 0;
         long shotsOnTarget = 0;
-        long saves = 0;
+        long saves = 0, fouls = 0, yellows = 0, reds = 0;
         long shotsBlocked = 0;
         int scorelineCount = 0;
         int overFiveCount = 0;
@@ -175,6 +188,9 @@ public static class MatchMetrics
             goals += match.HomeGoals + match.AwayGoals;
             shotsOnTarget += match.ShotsOnTarget;
             saves += match.Saves;
+            fouls += match.Fouls;
+            yellows += match.YellowCards;
+            reds += match.RedCards;
             shotsBlocked += match.ShotsBlocked;
             thirds[0] += match.BallThird0;
             thirds[1] += match.BallThird1;
@@ -237,6 +253,9 @@ public static class MatchMetrics
         // referencia de goalsPerMatch y saveRate que usarán los pasos 1 (AW-A) y 2 al medir el efecto de
         // exigirle al portero llegar al balón.
         rows.Add(new MetricResult(GoalsPerMatch, (double)goals / n, null, null, "INFO"));
+        rows.Add(new MetricResult(FoulsPerMatch, (double)fouls / n, null, null, "INFO"));
+        rows.Add(new MetricResult(YellowCardsPerMatch, (double)yellows / n, null, null, "INFO"));
+        rows.Add(new MetricResult(RedCardsPerMatch, (double)reds / n, null, null, "INFO"));
 
         double shotsOnTargetShare = shots > 0 ? 100.0 * shotsOnTarget / shots : 0.0;
         rows.Add(new MetricResult(ShotsOnTargetShare, shotsOnTargetShare, null, null, "INFO"));

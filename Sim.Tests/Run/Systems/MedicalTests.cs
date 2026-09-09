@@ -61,4 +61,22 @@ public sealed class MedicalTests
 
         Assert.Throws<InvalidOperationException>(() => MedicalSystem.Treat(state, new TreatPlayer(injured.Id), economy));
     }
+    /// <summary>AZ-G (ADR 0090): la clínica cura también la leve, a su propio precio, menor que el de la grave.</summary>
+    [Fact]
+    public void TreatingAMinorInjuryCuresItAtTheMinorCost()
+    {
+        var economy = SystemsTestSupport.Systems.Economy;
+        var state = RunEngine.Start(SystemsTestSupport.Setup(), 555UL, SystemsTestSupport.Catalog, SystemsTestSupport.Systems)
+            .WithGold(economy.ClinicCost + 50);
+        var bruised = state.Roster[0] with { PhysicalState = PhysicalState.MinorInjury, MinorInjuries = 2 };
+        state = state.WithPlayer(bruised);
+        state = SystemsTestSupport.WithFakePendingNode(state, NodeKind.Clinic);
+
+        var healed = MedicalSystem.Treat(state, new TreatPlayer(bruised.Id), economy);
+
+        Assert.True(economy.ClinicMinorCost < economy.ClinicCost);
+        Assert.Equal(state.Gold - economy.ClinicMinorCost, healed.Gold);
+        Assert.Equal(PhysicalState.Healthy, healed.GetPlayer(bruised.Id).PhysicalState);
+        Assert.Equal(0, healed.GetPlayer(bruised.Id).MinorInjuries);
+    }
 }

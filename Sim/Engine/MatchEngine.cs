@@ -91,6 +91,10 @@ internal sealed class MatchEngine : IPerkWorld
     /// </summary>
     private MatchPlayer? _restartTaker;
 
+    private int _freeKickFor = -1;
+
+    private Vec2 _freeKickPoint;
+
     /// <summary>True cuando hay que rehacer el emparejamiento de marcaje (cambio de posesión, §2.3).</summary>
     private bool _markingDirty = true;
 
@@ -184,6 +188,7 @@ internal sealed class MatchEngine : IPerkWorld
         Corner,
         Kickoff,
         Penalty,
+        FreeKick,
     }
 
     /// <summary>Catálogo del partido; el motor de efectos lo necesita para resolver los ids de perk.</summary>
@@ -426,6 +431,11 @@ internal sealed class MatchEngine : IPerkWorld
         // Separación de cuerpos al final del movimiento y antes de tocar el balón (§2.1): así el balón, que
         // sigue al poseedor, ve ya las posiciones definitivas del tick.
         _bodies.Resolve(_players);
+
+        if (wasRestarting && _pendingRestart == RestartKind.FreeKick)
+        {
+            EnforceFreeKickClearance();
+        }
 
         if (wasRestarting)
         {
@@ -1785,7 +1795,7 @@ internal sealed class MatchEngine : IPerkWorld
 
         if (isFoul)
         {
-            ResolveFoul(tackler, carrier);
+            WhistleOrLetPlay(tackler, carrier, offBall: false);
         }
         else if (isWin)
         {
@@ -1805,6 +1815,8 @@ internal sealed class MatchEngine : IPerkWorld
             _bodies.AddTacklePush(tackler, carrier);
             ResolveInjury(tackler, carrier, isFoul);
         }
+
+        OpenPendingFreeKick();
     }
 
     /// <summary>
@@ -1939,6 +1951,57 @@ internal sealed class MatchEngine : IPerkWorld
         {
             SchedulePenalty(carrier.Team);
         }
+
+        // AZ-D (ADR 0090): la falta señalada reanuda con el balón para el equipo que la sufre, en el
+        // punto de la falta, como una reanudación instantánea más de RF-053 (no es una pausa de RF-054).
+        // Si la falta ya ha programado un penalti, manda el penalti.
+        if (_pendingRestart == RestartKind.None)
+        {
+            _freeKickFor = carrier.Team;
+            _freeKickPoint = carrier.Position;
+        }
+    }
+
+    /// <summary>
+    /// Abre el saque de falta que <see cref="ResolveFoul"/> dejó pendiente, DESPUÉS de resolver la lesión
+    /// de la entrada: si el que sufrió la falta sale lesionado, no puede ser quien saque.
+    /// </summary>
+    private void OpenPendingFreeKick()
+    {
+        if (_freeKickFor < 0)
+        {
+            return;
+        }
+
+        int team = _freeKickFor;
+        _freeKickFor = -1;
+        if (_pendingRestart == RestartKind.None)
+        {
+            BeginRestart(RestartKind.FreeKick, team, _freeKickPoint, _tuning.Restart.FreeKickTicks, MatchPhase.Restart);
+        }
+    }
+
+    /// <summary>
+    /// AZ-E (ADR 0090): una falta que ha ocurrido se señala con <c>referee.whistlePercent</c>. La no
+    /// señalada no derriba, no saca tarjeta, no da penalti y no reanuda; queda en el registro (RF-119) y
+    /// mueve el criterio como acción sucia no vista (RF-063), igual que la que un perk anula.
+    /// </summary>
+    private void WhistleOrLetPlay(MatchPlayer offender, MatchPlayer victim, bool offBall)
+    {
+        if (_rng.Chance(_tuning.Referee.WhistlePercent * 100))
+        {
+            ResolveFoul(offender, victim, offBall);
+            return;
+        }
+
+        // La jugada ocurrió aunque el árbitro no la viera: el que entra se derriba igual (es la física de
+        // la entrada, no el castigo). Sin esto el infractor volvía a entrar al instante y las lesiones
+        // subían de 0,86 a 1,05 por partido.
+        offender.EnterState(PlayerState.KnockedDown, _tuning.States.KnockedDownTicks);
+        _report.Fouls++;
+        offender.Fouls++;
+        Emit(EventType.Foul, "unseen", offender, opponent: victim);
+        ShiftBiasAgainst(offender.Team, _tuning.Referee.BiasShiftFoulUnseen + (offBall ? _tuning.Referee.BiasShiftBlockExtra : 0));
     }
 
     /// <summary>
@@ -2001,7 +2064,7 @@ internal sealed class MatchEngine : IPerkWorld
 
         if (isFoul)
         {
-            ResolveFoul(blocker, target, offBall: true);
+            WhistleOrLetPlay(blocker, target, offBall: true);
         }
         else
         {
@@ -2020,6 +2083,8 @@ internal sealed class MatchEngine : IPerkWorld
             _bodies.AddTacklePush(blocker, target);
             ResolveInjury(blocker, target, isFoul);
         }
+
+        OpenPendingFreeKick();
     }
 
     private void SendOff(MatchPlayer player)
@@ -2232,6 +2297,40 @@ internal sealed class MatchEngine : IPerkWorld
     /// desde la portería) o sin portero disponible (cualquiera puede sacar, igual que antes en el fallback
     /// de TakeGoalKick). El penalti no pasa por aquí: su tirador lo decide BestPenaltyTaker.
     /// </summary>
+    /// <summary>
+    /// La barrera del saque de falta (AZ-D, ADR 0090): durante la cuenta atrás los rivales se mantienen a
+    /// <c>restart.freeKickClearanceCells</c> del balón. Sin ella, con el reposicionamiento durante el balón
+    /// muerto (AW-R), el infractor y sus compañeros rodeaban al que saca y la falta terminaba en otra entrada.
+    /// </summary>
+    private void EnforceFreeKickClearance()
+    {
+        float clearance = _tuning.Restart.FreeKickClearanceCells;
+        if (clearance <= 0f)
+        {
+            return;
+        }
+
+        for (int i = 0; i < _players.Length; i++)
+        {
+            var player = _players[i];
+            if (player.Team == _restartTeam || !player.OnPitch)
+            {
+                continue;
+            }
+
+            var offset = player.Position - _restartPoint;
+            float distance = offset.Length;
+            if (distance >= clearance)
+            {
+                continue;
+            }
+
+            var direction = distance > 0.001f ? offset * (1f / distance) : new Vec2(-Pitch.AttackDirection(_restartTeam), 0f);
+            player.Position = Utility.ClampToArea(_restartPoint + (direction * clearance), player.Team);
+            player.Velocity = default;
+        }
+    }
+
     private MatchPlayer? SelectTaker(RestartKind kind, int team, Vec2 point)
     {
         if (kind == RestartKind.GoalKick)
@@ -2303,6 +2402,9 @@ internal sealed class MatchEngine : IPerkWorld
                 break;
             case RestartKind.Kickoff:
                 TakeRestart(_restartPoint, "kickoff");
+                break;
+            case RestartKind.FreeKick:
+                TakeRestart(_restartPoint, "freeKick");
                 break;
             case RestartKind.Penalty:
                 TakePenalty();

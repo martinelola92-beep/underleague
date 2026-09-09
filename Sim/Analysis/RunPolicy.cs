@@ -1091,6 +1091,27 @@ public static class RunPolicy
             ledger.Treatments++;
         }
 
+        // AZ-G (ADR 0090): las leves de los titulares del siguiente partido, mientras quede el precio de
+        // una grave en reserva; un suplente no la gasta y no vale la pena pagarla.
+        var starters = ChooseStarters(state, options);
+        for (int i = 0; i < starters.Count; i++)
+        {
+            if (state.Gold - economy.ClinicMinorCost < economy.ClinicCost)
+            {
+                break;
+            }
+
+            var starter = state.GetPlayer(starters[i].Id);
+            if (starter.PhysicalState != PhysicalState.MinorInjury || starter.MinorInjuries <= 0)
+            {
+                continue;
+            }
+
+            state = RunEngine.Apply(state, new TreatPlayer(starter.Id), catalog, systems);
+            ledger.GoldSpentClinic += economy.ClinicMinorCost;
+            ledger.Treatments++;
+        }
+
         return state;
     }
 

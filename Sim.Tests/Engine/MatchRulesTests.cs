@@ -589,4 +589,64 @@ public sealed class MatchRulesTests
 
         return count;
     }
+    /// <summary>
+    /// AZ-D (ADR 0090): la falta <b>señalada</b> reanuda con el balón para el equipo que la sufre —una
+    /// <c>Recovery</c> con detalle <c>freeKick</c> de un jugador del equipo del que recibió la falta, dentro
+    /// de la cuenta atrás— y la <b>no señalada</b> (<c>Foul</c> con detalle <c>unseen</c>, AZ-E) no reanuda
+    /// nada: el juego sigue. Y las dos existen: con <c>whistlePercent</c> 80 sobre 50 partidos hay de sobra de
+    /// cada una.
+    /// </summary>
+    [Fact]
+    public void AWhistledFoulRestartsWithAFreeKickForTheFouledTeamAndAnUnseenOneDoesNot()
+    {
+        int whistled = 0, freeKicks = 0, unseen = 0, unseenFollowedByFreeKick = 0;
+        for (ulong seed = 1; seed <= 50; seed++)
+        {
+            var result = Simulator.Run(
+                TestMatches.Reference(Catalog, seed), seed, Catalog, new SimConfig(CollectLog: false));
+            var events = result.Events;
+            for (int i = 0; i < events.Count; i++)
+            {
+                var e = events[i];
+                if (e.Type != EventType.Foul)
+                {
+                    continue;
+                }
+
+                // La primera Recovery tras la falta: si es el saque de falta, el balón es del rival del infractor.
+                bool restarted = false;
+                for (int j = i + 1; j < events.Count && events[j].Tick <= e.Tick + 12; j++)
+                {
+                    if (events[j].Type != EventType.Recovery)
+                    {
+                        continue;
+                    }
+
+                    if (events[j].Detail == "freeKick")
+                    {
+                        restarted = true;
+                        Assert.NotEqual(e.Team, events[j].Team);
+                    }
+
+                    break;
+                }
+
+                if (e.Detail == "unseen")
+                {
+                    unseen++;
+                    unseenFollowedByFreeKick += restarted ? 1 : 0;
+                }
+                else
+                {
+                    whistled++;
+                    freeKicks += restarted ? 1 : 0;
+                }
+            }
+        }
+
+        Assert.True(whistled > 50, $"faltas señaladas en 50 partidos: {whistled}");
+        Assert.True(unseen > 10, $"faltas no señaladas en 50 partidos: {unseen}");
+        Assert.True(freeKicks * 100 / whistled >= 75, $"solo {freeKicks} de {whistled} faltas señaladas reanudaron con saque de falta (las demás dieron penalti o el partido acabó; medido 115 de 136)");
+        Assert.Equal(0, unseenFollowedByFreeKick);
+    }
 }

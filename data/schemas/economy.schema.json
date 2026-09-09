@@ -26,6 +26,7 @@
     "nodeRewards": { "$ref": "#/$defs/nodeRewards" },
     "excellentMatchBonusGold": { "type": "integer", "minimum": 0 },
     "clinicCost": { "type": "integer", "minimum": 0 },
+    "clinicMinorCost": { "type": "integer", "minimum": 0 },
     "enrollmentCosts": {
       "description": "ADR 0046: coste creciente de cada hueco de plantilla que vende el nodo de inscripcion. Dos entradas, una por hueco entre la base de 10 y el techo de 12 de RF-020.",
       "type": "array",
@@ -66,7 +67,7 @@
   "required": [
     "startingGoldByDivision", "goldAct1", "goldAct2", "goldAct3", "difficultyMultiplierPercent",
     "nodeRewards", "excellentMatchBonusGold",
-    "clinicCost", "enrollmentCosts", "rerollBaseCost", "rerollStepCost", "trainingExperience",
+    "clinicCost", "clinicMinorCost", "enrollmentCosts", "rerollBaseCost", "rerollStepCost", "trainingExperience",
     "eventGoldMin", "eventGoldMax", "mercenaryBaseWage", "mercenaryWagePerRarityStep",
     "mercenaryBenchAbandonMatches", "mercenaryLossStreakAbandon",
     "recruitLevelByAct", "rewardPlayerQuality", "rewardPerkWeight", "rewardPlayerWeight", "rewardItemWeight",

@@ -618,7 +618,8 @@
         "biasShiftBlockExtra": { "$ref": "#/$defs/biasPoints" },
         "biasShiftInjuryExtra": { "$ref": "#/$defs/biasPoints" },
         "biasShiftYellowExtra": { "$ref": "#/$defs/biasPoints" },
-        "biasShiftRedExtra": { "$ref": "#/$defs/biasPoints" }
+        "biasShiftRedExtra": { "$ref": "#/$defs/biasPoints" },
+        "whistlePercent": { "type": "integer", "minimum": 0, "maximum": 100, "description": "Probabilidad en tanto por ciento de señalar una falta ocurrida (AZ-E, ADR 0090)." }
       },
       "required": [
         "biasFoulShiftPer10",
@@ -631,7 +632,7 @@
         "biasShiftBlockExtra",
         "biasShiftInjuryExtra",
         "biasShiftYellowExtra",
-        "biasShiftRedExtra"
+        "biasShiftRedExtra", "whistlePercent"
       ],
       "additionalProperties": false
     },
@@ -680,14 +681,16 @@
         },
         "penaltyTicks": {
           "$ref": "#/$defs/ticks"
-        }
+        },
+        "freeKickTicks": { "$ref": "#/$defs/ticks", "description": "Ticks de cuenta atrás del saque de falta (AZ-D, ADR 0090)." },
+        "freeKickClearanceCells": { "type": "number", "minimum": 0, "description": "Distancia mínima de los rivales al balón en un saque de falta, en casillas (AZ-D, ADR 0090)." }
       },
       "required": [
         "throwInTicks",
         "goalKickTicks",
         "cornerTicks",
         "kickoffTicks",
-        "penaltyTicks"
+        "penaltyTicks", "freeKickTicks", "freeKickClearanceCells"
       ],
       "additionalProperties": false
     },

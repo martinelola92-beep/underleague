@@ -295,6 +295,8 @@
     "goldenGoal": "gol de oro",
     "kickoff": "saque inicial",
     "throwIn": "saque de banda",
+    "freeKick": "saque de falta",
+    "unseen": "falta no señalada",
     "corner": "córner",
     "goalKick": "saque de puerta",
     "forfeit": "incomparecencia",

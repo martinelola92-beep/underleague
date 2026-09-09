@@ -5624,3 +5624,14 @@ La primera versión de la precondición (línea limpia en todo el alcance de tir
 a 1,93 / 1,99: la mitad «ningún rival por delante» —el sentido literal de la queja— la devuelve a banda sin
 ningún número nuevo. Quedan las tandas 2-5 de `docs/plan-segunda-partida.md`.
 
+### 41.2. Tanda 2 (ADR 0090)
+
+La falta señalada reanuda con saque de falta para el equipo que la sufre (RF-053: instantánea, con barrera de 2
+casillas y 8 ticks de cuenta atrás); el árbitro señala el 80 % de las faltas (`whistlePercent`), y la no vista
+derriba igual, no castiga y mueve el criterio (RF-063); la clínica cura la leve a 4. Tres cosas se probaron y se
+descartaron por medición: sin barrera, las entradas subían de 10,8 a 12,5 y las lesiones a 1,11; con el saque
+abierto antes de resolver la lesión, el lesionado podía sacar; con 15 ticks, `shotsPerMatch` caía a 7,8. Cierre
+(2.000 partidos, semillas 1 / 7): `possessionChanges` 23,9 / 23,2 · `passChainAvgLength` 2,01 / 2,13 ·
+`shotsPerMatch` 9,46 / 7,95 · `injuriesPerMatch` 0,91 / 0,74 · faltas 5,17 / 3,67 · amarillas 0,27 / 0,19 ·
+rojas 0,08 / 0,04. Los porcentajes del árbitro, con su valor efectivo, están en la tabla de la ADR 0090.
+

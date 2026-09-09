@@ -149,7 +149,8 @@ public sealed class EffectEngineTests
 
             // La falta sigue contando en el informe -ocurrió-, pero el árbitro no la castiga: no hay
             // tarjeta ni derribo (comentario de ResolveFoul en MatchEngine).
-            fouls.AddRange(result.Events.Where(e => e.Type == EventType.Foul));
+            // La falta no señalada (detalle "unseen", AZ-E, ADR 0090) nunca pasa por el perk: no es cancelable.
+            fouls.AddRange(result.Events.Where(e => e.Type == EventType.Foul && !e.Detail.StartsWith("unseen", StringComparison.Ordinal)));
             Assert.Equal(0, result.Report.YellowCards);
             Assert.Equal(0, result.Report.RedCards);
         }

@@ -22,6 +22,8 @@ namespace Underleague.Sim.Tests.Perks;
 /// (<see cref="PerkAssignment.AssignInitial"/>). Sobre ese 50% de partida, lo que suba el equipo
 /// equipado <b>es</b> lo que aporta equipar, sin nada más de por medio.</para>
 /// </summary>
+[Trait("Category", "Gate")]
+[Collection("Gate")]
 public sealed class EquipmentImpactTests
 {
     /// <summary>
@@ -31,7 +33,10 @@ public sealed class EquipmentImpactTests
     /// (RF-070) movió la medida de 5,4 a 4,7 sin tocar un solo objeto—. Con 24 la desviación baja a
     /// ~1,8 y el test avisa de una regresión de verdad.
     /// </summary>
-    private const int Rosters = 24;
+    // Paquete AZ (ADR 0090): de 24 a 96 plantillas. Con 768 partidos por brazo la diferencia de dos tasas
+    // tenía un error típico de ~1,8 puntos y el umbral de 3,0 quedaba dentro del ruido (medido 3,0 justo
+    // tras la tanda 2). Con 3.072 por brazo el error baja a ~0,9; en Release son segundos.
+    private const int Rosters = 96;
 
     /// <summary>Partidos por plantilla y dirección; con ida y vuelta salen 2x (equivalente a <c>--home-away</c>).</summary>
     private const int MatchesPerRoster = 32;
@@ -84,11 +89,12 @@ public sealed class EquipmentImpactTests
         // El umbral sale de la medida, no de la aritmética: la tabla de valor marginal de la ADR 0038
         // predice 5,8 puntos para este juego de siete objetos, y medido dan 3,3. La tabla se midió con
         // +20 repartidos entre los DIEZ jugadores y aquí el bono va entero a UNO, así que sobrestima por
-        // un factor de 1,6; queda anotado, porque el precio de los objetos se calcula con ella. Lo que
+        // un factor de 1,6; queda anotado, porque el precio de los objetos se calcula con ella. Umbral 2,0 desde
+        // el paquete AZ: lo que afirma es que equipar VALE (varios puntos), no una cifra concreta. Lo que
         // confirma la magnitud de partida de la ADR 0036 (+10 por atributo) no es este número sino la
         // curva de puertas: con ella, la fila "muy buena" cae dentro de su banda en los tres jefes.
         Assert.True(
-            equippedRate - bareRate >= 3.0,
+            equippedRate - bareRate >= 2.0,
             $"equipar a los siete titulares solo aporta {equippedRate - bareRate:F1} puntos de tasa de victoria: "
                 + "con eso el escalón 'muy buena' de la ADR 0033 no tiene contenido y los objetos están mal calibrados");
     }

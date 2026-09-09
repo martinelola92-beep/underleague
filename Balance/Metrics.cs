@@ -36,7 +36,10 @@ public static class Metrics
                 match.BallThird2,
                 match.ShotsOnTarget,
                 match.Saves,
-                match.ShotsBlocked));
+                match.ShotsBlocked,
+                match.Fouls,
+                match.YellowCards,
+                match.RedCards));
         }
 
         var qualityById = new Dictionary<string, int>(StringComparer.Ordinal);

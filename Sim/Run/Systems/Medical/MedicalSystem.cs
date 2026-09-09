@@ -21,22 +21,25 @@ public static class MedicalSystem
         NodeGuards.RequireOpen(state, NodeKind.Clinic, "tratar a un jugador");
 
         var player = state.GetPlayer(decision.PlayerId);
-        if (player.PhysicalState != PhysicalState.SevereInjury)
+        bool minor = player.PhysicalState == PhysicalState.MinorInjury && player.MinorInjuries > 0;
+        if (player.PhysicalState != PhysicalState.SevereInjury && !minor)
         {
             throw new ArgumentException(
-                $"el jugador {player.Id} está {player.PhysicalState}, no lesión grave: la clínica solo trata lesiones graves (RF-092, RF-094)",
+                $"el jugador {player.Id} está {player.PhysicalState}: la clínica trata lesiones graves (RF-092, RF-094) y leves (AZ-G, ADR 0090), no a un sano",
                 nameof(decision));
         }
 
-        if (state.Gold < economy.ClinicCost)
+        // AZ-G (ADR 0090): la leve se cura a su propio precio, menor que el de la grave.
+        int cost = minor ? economy.ClinicMinorCost : economy.ClinicCost;
+        if (state.Gold < cost)
         {
             throw new ArgumentException(
-                $"tratar a {player.Id} cuesta {economy.ClinicCost} de oro y la run solo tiene {state.Gold}",
+                $"tratar a {player.Id} cuesta {cost} de oro y la run solo tiene {state.Gold}",
                 nameof(decision));
         }
 
         return state
-            .AddGold(-economy.ClinicCost)
+            .AddGold(-cost)
             .WithPlayer(player with { PhysicalState = PhysicalState.Healthy, MinorInjuries = 0 });
     }
 }
