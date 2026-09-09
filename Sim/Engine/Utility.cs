@@ -79,7 +79,6 @@ internal static class Utility
     private const float DribbleAheadRadius = 2.0f;
 
     /// <summary>Radio en el que un rival tapa la línea de pase entre el poseedor y un hueco (§2.3).</summary>
-    private const float PassLaneRadius = 0.6f;
 
     /// <summary>
     /// Atributo del jugador medio, pivote de las pendientes por atributo de la ADR 0030 §1. No es un
@@ -204,6 +203,99 @@ internal static class Utility
         p.Zone.DistanceOutside(point, p.EffectiveHome, Pitch.AttackDirection(p.Team));
 
     /// <summary>Acota un punto al rectángulo del área que defiende team, con margen (RF-057b).</summary>
+    /// <summary>
+    /// Destino de un pase al pie (AZ-B paso 1): el balón se adelanta por lo que el receptor va a poder
+    /// recorrer hacia donde <b>él</b> ha decidido ir (<c>TargetPoint</c>, elegido por su utilidad este mismo
+    /// tick), nunca más allá de su intención ni de <paramref name="maxLeadCells"/>. Antes se extrapolaba
+    /// <c>Velocity</c> —el paso del último tick, con el empuje de cuerpos dentro— durante todo el vuelo:
+    /// 1,44 casillas de adelanto medio y un 14,3 % de pases sin nadie en el destino al llegar.
+    /// </summary>
+    /// <summary>
+    /// Factor de proximidad de la intercepción (AZ-B paso 2), en tanto por ciento y aritmética entera:
+    /// 100 en el borde del radio, <paramref name="contactPercent"/> cuando el balón pasa por dentro del
+    /// cuerpo del rival, lineal entre medias. Antes la distancia no entraba en la tirada.
+    /// </summary>
+    /// <summary>
+    /// Peligro del pasillo (AZ-B paso 3), entero 0..100: 0 si ningún rival está a menos de
+    /// <paramref name="laneRadiusCells"/> del segmento, 100 si el segmento pasa por dentro del cuerpo de
+    /// alguno (<c>bodyRadius</c> de su raza), lineal entre medias, y <b>el peor</b>, no la suma. Puntúa,
+    /// nunca descarta: es la diferencia con el paso 4 descartado de <c>plan-intercepcion-disparo.md</c>.
+    /// </summary>
+    internal static int LaneDanger(MatchPlayer[] players, int team, Vec2 from, Vec2 to, float laneRadiusCells, bool ignoreGoalkeeper = false)
+    {
+        int worst = 0;
+        int radiusCenti = Centi(laneRadiusCells);
+        for (int i = 0; i < players.Length; i++)
+        {
+            var other = players[i];
+            // Para el pasillo del TIRO el portero no cuenta: el segmento al centro de la portería pasa
+            // siempre por él y su parada ya tiene su propia tirada (save.reachCells). Con él dentro, el
+            // paso 4 hundía los tiros de 11 a 4 por partido.
+            if (other.Team == team || !other.OnPitch || (ignoreGoalkeeper && !other.IsOutfield))
+            {
+                continue;
+            }
+
+            float d = DistanceToSegment(from, to, other.Position);
+            if (d >= laneRadiusCells)
+            {
+                continue;
+            }
+
+            int danger = LaneDangerPercent(Centi(d), other.BodyRadiusCentiCells, radiusCenti);
+            if (danger > worst)
+            {
+                worst = danger;
+            }
+        }
+
+        return worst;
+    }
+
+    internal static int LaneDangerPercent(int distanceCenti, int contactCenti, int radiusCenti)
+    {
+        if (distanceCenti <= contactCenti)
+        {
+            return 100;
+        }
+
+        if (distanceCenti >= radiusCenti || radiusCenti <= contactCenti)
+        {
+            return 0;
+        }
+
+        return 100 * (radiusCenti - distanceCenti) / (radiusCenti - contactCenti);
+    }
+
+    internal static int ProximityFactorPercent(int distanceCenti, int contactCenti, int radiusCenti, int contactPercent)
+    {
+        if (distanceCenti <= contactCenti)
+        {
+            return contactPercent;
+        }
+
+        if (distanceCenti >= radiusCenti || radiusCenti <= contactCenti)
+        {
+            return 100;
+        }
+
+        return 100 + ((contactPercent - 100) * (radiusCenti - distanceCenti) / (radiusCenti - contactCenti));
+    }
+
+    internal static Vec2 PassTarget(Vec2 position, Vec2 intention, int speedPerTickMilli, int ticks, float maxLeadCells)
+    {
+        var toIntention = intention - position;
+        float intent = toIntention.Length;
+        if (intent <= 0.001f)
+        {
+            return position;
+        }
+
+        float reachable = ticks * speedPerTickMilli / 1000f;
+        float lead = MathF.Min(MathF.Min(reachable, intent), maxLeadCells);
+        return ClampToPitch(position + (toIntention * (lead / intent)));
+    }
+
     public static Vec2 ClampToArea(Vec2 point, int team)
     {
         float minX = team == 0 ? 0f : Pitch.Columns - Pitch.AreaColumns + AreaMargin;
@@ -386,7 +478,7 @@ internal static class Utility
                 EvaluateDribble(ctx, p, context, direction, ref eval);
                 break;
             case PlayerAction.Shoot:
-                EvaluateShoot(p, context, ref eval);
+                EvaluateShoot(ctx, p, context, ref eval);
                 break;
             case PlayerAction.Block:
                 EvaluateBlock(ctx, p, context, ref eval);
@@ -654,7 +746,7 @@ internal static class Utility
                 int score = (context.FindSpaceOpponentDistanceBonusPerCell * space / 100)
                     + (context.FindSpaceAdvanceBonusPerCell * advance / 100);
 
-                if (carrier is not null && !SegmentBlocked(players, p.Team, carrier.Position, candidate))
+                if (carrier is not null && !SegmentBlocked(players, p.Team, carrier.Position, candidate, context.PassLaneRadiusCells))
                 {
                     score += context.FindSpaceOpenLaneBonus;
                 }
@@ -762,6 +854,7 @@ internal static class Utility
         MatchPlayer? receiver = null;
         int bestRank = 0;
         int bestAdvance = 0;
+        int bestDanger = 0;
 
         float minCells = longPass ? context.ShortPassMaxCells : 0f;
         float maxCells = longPass ? context.LongPassMaxCells : context.ShortPassMaxCells;
@@ -794,7 +887,7 @@ internal static class Utility
                 continue;
             }
 
-            if (longPass && SegmentBlocked(players, p.Team, p.Position, mate.Position))
+            if (longPass && SegmentBlocked(players, p.Team, p.Position, mate.Position, context.PassLaneRadiusCells))
             {
                 continue;
             }
@@ -806,11 +899,17 @@ internal static class Utility
 
             int advance = Centi((mate.Position.X - p.Position.X) * direction);
             int rank = p.IsOutfield ? advance - (Centi(distance) * 20 / 100) : advance;
+
+            // AZ-B paso 3: el pasillo PUNTÚA, nunca descarta. Un pasillo tapado del todo vale como
+            // retroceder passBlockedLaneRankPenalty centésimas de casilla al comparar receptores.
+            int danger = LaneDanger(players, p.Team, p.Position, mate.Position, context.PassLaneRadiusCells);
+            rank -= context.PassBlockedLaneRankPenalty * danger / 100;
             if (receiver is null || rank > bestRank)
             {
                 receiver = mate;
                 bestRank = rank;
                 bestAdvance = advance;
+                bestDanger = danger;
             }
         }
 
@@ -821,7 +920,9 @@ internal static class Utility
         }
         else
         {
-            score = context.PassOpenReceiverBonus;
+            // AZ-B paso 3: un pasillo tapado casi anula el bono del receptor abierto (200 sobre 220) pero
+            // nunca empuja la acción al acantilado de passNoReceiverPenalty.
+            score = context.PassOpenReceiverBonus - (context.PassBlockedLanePenalty * bestDanger / 100);
 
             // AW-D (docs/pendientes.md, cambio 1 de 2): el bonus de arriba se cobraba entero con
             // cualquier receptor legal, sin mirar si quedaba delante o detrás del pasador. La primera
@@ -968,8 +1069,8 @@ internal static class Utility
         return count;
     }
 
-    /// <summary>True si algún rival está a menos de <see cref="PassLaneRadius"/> del segmento from-&gt;to.</summary>
-    private static bool SegmentBlocked(MatchPlayer[] players, int team, Vec2 from, Vec2 to)
+    /// <summary>True si algún rival está a menos de <paramref name="laneRadiusCells"/> del segmento from-&gt;to.</summary>
+    private static bool SegmentBlocked(MatchPlayer[] players, int team, Vec2 from, Vec2 to, float laneRadiusCells)
     {
         for (int i = 0; i < players.Length; i++)
         {
@@ -979,7 +1080,7 @@ internal static class Utility
                 continue;
             }
 
-            if (DistanceToSegment(from, to, other.Position) < PassLaneRadius)
+            if (DistanceToSegment(from, to, other.Position) < laneRadiusCells)
             {
                 return true;
             }
@@ -1040,7 +1141,7 @@ internal static class Utility
     /// aporta sus casillas de alcance desde <c>data/traits/traits.json</c> (RT-094), así que el tirador
     /// lejano paga la rampa dos casillas más tarde que el resto. No hay ningún <c>if</c> por rasgo aquí.</para>
     /// </summary>
-    private static void EvaluateShoot(MatchPlayer p, AiContext context, ref Eval eval)
+    private static void EvaluateShoot(UtilityContext ctx, MatchPlayer p, AiContext context, ref Eval eval)
     {
         Vec2 goal = Pitch.GoalCenter(p.Team);
         float distance = Vec2.Distance(p.Position, goal);
@@ -1058,6 +1159,10 @@ internal static class Utility
         {
             score -= context.ShootBeyondRangePenaltyPerCell * (distanceCenti - rangeCenti) / 100;
         }
+
+        // AZ-B paso 4: la decisión de tirar sabe si hay un cuerpo en la línea (la física ya lo bloqueaba
+        // desde el paso 2). Es un término, no un veto: un delantero con buena técnica puede seguir tirando.
+        score -= context.ShootBlockedLanePenalty * LaneDanger(ctx.Players, p.Team, p.Position, Pitch.GoalCenter(p.Team), context.PassLaneRadiusCells, ignoreGoalkeeper: true) / 100;
 
         eval.Context = score;
     }

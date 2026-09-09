@@ -72,7 +72,7 @@ public sealed class RefereeAndAbilitiesTests
         var opponent = engine.PlayerById(101)!;
 
         int tackleBefore = engine.TackleWinChance(opponent, elf);
-        int interceptBefore = engine.InterceptChance(opponent, elf);
+        int interceptBefore = engine.InterceptChance(opponent, elf, 0.89f);
         int multiplier = Catalog.Perks.Get("elf_touch").Effects[0].Value;
 
         engine.Effects!.Publish(MatchStart(engine));
@@ -82,7 +82,7 @@ public sealed class RefereeAndAbilitiesTests
         Assert.Equal(
             ProbabilityScale.ApplyAveraged(tackleBefore, ProbabilityScale.Invert(multiplier)),
             engine.TackleWinChance(opponent, elf));
-        Assert.Equal(interceptBefore, engine.InterceptChance(opponent, elf));
+        Assert.Equal(interceptBefore, engine.InterceptChance(opponent, elf, 0.89f));
     }
 
     /// <summary>

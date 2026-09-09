@@ -121,6 +121,12 @@ public sealed class MatchReport
     /// </summary>
     public int[] Saves { get; }
 
+    /// <summary>Pases interceptados por equipo (equipo del pasador), AZ-B paso 0.</summary>
+    public int[] PassesIntercepted { get; }
+
+    /// <summary>Pases que acabaron sueltos por equipo (equipo del pasador), AZ-B paso 0.</summary>
+    public int[] PassesLoose { get; }
+
     /// <summary>
     /// Tiros bloqueados por un jugador de campo, por equipo, [2] (AW-A, paso 3 de
     /// `docs/plan-intercepcion-disparo.md`). Índice = equipo del que bloquea, no el del tirador; se
@@ -212,6 +218,8 @@ public sealed class MatchReport
         Shots = (int[])builder.Shots.Clone();
         ShotsOnTarget = (int[])builder.ShotsOnTarget.Clone();
         Saves = (int[])builder.Saves.Clone();
+        PassesIntercepted = (int[])builder.PassesIntercepted.Clone();
+        PassesLoose = (int[])builder.PassesLoose.Clone();
         ShotsBlocked = (int[])builder.ShotsBlocked.Clone();
         Tackles = builder.Tackles;
         Blocks = builder.Blocks;
@@ -279,6 +287,10 @@ internal sealed class MatchReportBuilder
 
     /// <summary>Paradas por equipo (equipo del portero); se incrementa junto a cada evento Save (paso 0).</summary>
     public int[] Saves { get; } = new int[2];
+
+    public int[] PassesIntercepted { get; } = new int[2];
+
+    public int[] PassesLoose { get; } = new int[2];
 
     /// <summary>Tiros bloqueados por equipo (equipo del que bloquea); junto a cada ShotBlocked (paso 3).</summary>
     public int[] ShotsBlocked { get; } = new int[2];

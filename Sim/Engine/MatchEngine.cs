@@ -587,6 +587,7 @@ internal sealed class MatchEngine : IPerkWorld
         Vec2 point = _ball.InFlight ? _ball.FlightTarget : _ball.Position;
         for (int i = 0; i < _players.Length; i++)
         {
+            _players[i].SpeedPerTickMilli = (int)MathF.Round(SpeedPerTick(_players[i], dribbling: false) * 1000f);
             var player = _players[i];
             if (!player.OnPitch)
             {
@@ -937,17 +938,19 @@ internal sealed class MatchEngine : IPerkWorld
                 continue;
             }
 
-            if (Vec2.Distance(player.Position, _ball.Position) >= pass.InterceptRadiusCells)
+            float distanceToBall = Vec2.Distance(player.Position, _ball.Position);
+            if (distanceToBall >= pass.InterceptRadiusCells)
             {
                 continue;
             }
 
             _ball.InterceptAttempted[i] = true;
-            if (!_rng.Chance(Bounded(InterceptChance(player, passer))))
+            if (!_rng.Chance(Bounded(InterceptChance(player, passer, distanceToBall))))
             {
                 continue;
             }
 
+            _report.PassesIntercepted[passer.Team]++;
             Emit(EventType.PassFailed, "intercepted", passer, opponent: player);
             SetOwner(player);
             Emit(EventType.Recovery, "intercepted", player);
@@ -990,13 +993,14 @@ internal sealed class MatchEngine : IPerkWorld
                 continue;
             }
 
-            if (Vec2.Distance(player.Position, _ball.Position) >= pass.InterceptRadiusCells)
+            float distanceToBall = Vec2.Distance(player.Position, _ball.Position);
+            if (distanceToBall >= pass.InterceptRadiusCells)
             {
                 continue;
             }
 
             _ball.BlockAttempted[i] = true;
-            int chance = Bounded(BlockChance(InterceptChance(player, shooter), _tuning.Shot.BlockChancePercent));
+            int chance = Bounded(BlockChance(InterceptChance(player, shooter, distanceToBall), _tuning.Shot.BlockChancePercent));
             if (!_rng.Chance(chance))
             {
                 continue;
@@ -1083,7 +1087,7 @@ internal sealed class MatchEngine : IPerkWorld
     /// (§3.7). El término de evasión es la mitad del canal Toque de los elfos (ADR 0026): la resistencia
     /// del <b>pasador</b> a que le lean el pase, que resta a quien intenta interceptarlo.
     /// </summary>
-    internal int InterceptChance(MatchPlayer player, MatchPlayer passer)
+    internal int InterceptChance(MatchPlayer player, MatchPlayer passer, float distanceToBallCells)
     {
         // ADR 0041: la técnica del que intercepta se mide contra la del que pasa, no contra el 50 del
         // nivel 1. Lo que decide una intercepción es quién lee mejor a quién, no cuánto han subido los dos.
@@ -1094,9 +1098,14 @@ internal sealed class MatchEngine : IPerkWorld
         // ADR 0050 P1: el perk multiplica la CUOTA de interceptar, no suma puntos. Se acota antes y
         // después: antes para que la cuota esté definida sobre la probabilidad con la que el motor
         // resuelve de verdad (P4), y después porque el techo del canal manda sobre el perk.
-        return Bounded(ProbabilityScale.Apply(
+        int scaled = Bounded(ProbabilityScale.Apply(
             Bounded(chance),
             OddsAgainst(player, ProbabilityKind.Intercept, passer, ProbabilityKind.InterceptEvasion)));
+
+        // AZ-B paso 2: la geometría entra en la tirada por fuera de la fórmula, como el canal de perk.
+        int factor = Utility.ProximityFactorPercent(
+            Utility.Centi(distanceToBallCells), player.BodyRadiusCentiCells, Utility.Centi(pass.InterceptRadiusCells), pass.InterceptContactPercent);
+        return Bounded(scaled * factor / 100);
     }
 
     private void ResolvePassArrival()
@@ -1122,6 +1131,11 @@ internal sealed class MatchEngine : IPerkWorld
 
         Vec2 direction = (_ball.FlightTarget - _ball.FlightOrigin).Normalized;
         _ball.SetLoose(direction * LooseBallSpeed);
+        if (passer is not null)
+        {
+            _report.PassesLoose[passer.Team]++;
+        }
+
         Emit(EventType.PassFailed, "loose", passer);
     }
 
@@ -1357,7 +1371,7 @@ internal sealed class MatchEngine : IPerkWorld
         bool succeeds = receiver is not null && chanceRoll;
         int ticks = FlightTicks(distance, _tuning.Ball.PassSpeedCellsPerTickMilli);
         Vec2 target = receiver is not null
-            ? Utility.ClampToPitch(receiver.Position + (receiver.Velocity * ticks))
+            ? Utility.PassTarget(receiver.Position, receiver.TargetPoint, receiver.SpeedPerTickMilli, ticks, pass.MaxLeadCells)
             : receiverPoint;
 
         _ball.Owner = null;

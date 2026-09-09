@@ -39,7 +39,11 @@ public static class Metrics
                 match.ShotsBlocked,
                 match.Fouls,
                 match.YellowCards,
-                match.RedCards));
+                match.RedCards,
+                match.PassesAttempted,
+                match.PassesCompleted,
+                match.PassesIntercepted,
+                match.PassesLoose));
         }
 
         var qualityById = new Dictionary<string, int>(StringComparer.Ordinal);

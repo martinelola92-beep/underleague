@@ -272,6 +272,9 @@ internal sealed class MatchPlayer
     /// <summary>Punto objetivo de movimiento, ya acotado a la correa (§3.3).</summary>
     public Vec2 TargetPoint { get; set; }
 
+    /// <summary>Casillas por tick que este jugador recorre este tick, en milésimas (entero, RT-023); lo recalcula <c>MatchEngine.UpdateContextCaches</c>. AZ-B paso 1.</summary>
+    public int SpeedPerTickMilli { get; set; }
+
     /// <summary>Receptor elegido al decidir Pass; se lee al expirar Passing.</summary>
     public MatchPlayer? PassReceiver { get; set; }
 

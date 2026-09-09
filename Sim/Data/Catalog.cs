@@ -152,7 +152,11 @@ public sealed record AiContext(
     // techo de la casilla-hogar del propio defensa en MatchEngine.UpdateBlockShift, y el recorte de la
     // casilla candidata del desmarque en Utility.EvaluateFindSpace contra la línea RIVAL.
     float BlockShiftLineMarginCells = 0f,
-    float FindSpaceLineMarginCells = 0f);
+    float FindSpaceLineMarginCells = 0f,
+    float PassLaneRadiusCells = 0.6f,
+    int PassBlockedLanePenalty = 0,
+    int PassBlockedLaneRankPenalty = 0,
+    int ShootBlockedLanePenalty = 0);
 
 /// <summary>
 /// Pesos de la IA de utilidad (RT-093..RT-098). Las tablas Base y Tactical se guardan como arrays
@@ -325,7 +329,7 @@ public sealed record BallTuning(int PassSpeedCellsPerTickMilli, int ShotSpeedCel
 public sealed record StatesTuning(int PassingTicks, int ShootingTicks, int TacklingTicks, int KnockedDownTicks, int CelebratingTicks, int DribbleDuelCooldownTicks, int TackleCooldownTicks);
 
 /// <summary>tuning.pass.</summary>
-public sealed record PassTuning(int BaseSuccess, int TechniqueFactor, int DistancePenaltyPerCell, int PressurePenalty, float InterceptRadiusCells, int InterceptBaseChance, int InterceptTechniqueFactor);
+public sealed record PassTuning(int BaseSuccess, int TechniqueFactor, int DistancePenaltyPerCell, int PressurePenalty, float InterceptRadiusCells, int InterceptBaseChance, int InterceptTechniqueFactor, float MaxLeadCells, int InterceptContactPercent);
 
 /// <summary>tuning.dribble.</summary>
 public sealed record DribbleTuning(int BaseWin, int AttackerTechniqueFactor, int DefenderSpeedSharePercent, int LostKnockdownTicks);

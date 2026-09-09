@@ -32,11 +32,14 @@
     "TackleCooldownTicks": 60
   },
   "pass": {
+    "_doc": "maxLeadCells (AZ-B paso 1, docs/plan-pases-trayectoria.md): techo absoluto, en casillas, del adelanto del pase; el destino se adelanta por lo que el receptor va a poder recorrer hacia donde su utilidad ha decidido ir (TargetPoint), nunca por la extrapolacion ciega de Velocity. 1,5 de partida (el adelanto medio medido antes era 1,44 y en el 14,3% de los pases no habia nadie en el destino al llegar). Medido: subirlo a 2,0 no cambia nada porque la cota que manda es la distancia a la intencion del receptor; lo que devuelve el recorrido hacia delante es el pase en profundidad (paso 5), no un adelanto mayor. interceptContactPercent (AZ-B paso 2): la cuota de intercepcion (y de bloqueo del tiro, que hereda la misma funcion) se multiplica por un factor de proximidad, en tanto por ciento, que vale 100 en el borde de interceptRadiusCells y sube linealmente hasta este valor cuando el balon pasa por dentro del cuerpo del rival (bodyRadius de su raza, data/races): un orco tapa mas que un elfo sin ninguna regla nueva. Antes la distancia no entraba en la tirada: un rival a 0,05 casillas tiraba lo mismo que uno a 0,85. 350 (el plan partia de 600: con 600 y el paso 3 instalado, passChainAvgLength quedaba en 1,97 en la semilla 1, bajo el suelo de 2; es el unico ajuste que el plan permite y se aplico una vez).",
     "baseSuccess": 7700,
     "techniqueFactor": 24,
     "distancePenaltyPerCell": 105,
     "pressurePenalty": 480,
     "interceptRadiusCells": 0.9,
+    "maxLeadCells": 1.5,
+    "interceptContactPercent": 350,
     "interceptBaseChance": 250,
     "interceptTechniqueFactor": 10
   },

@@ -278,7 +278,9 @@
         },
         "interceptTechniqueFactor": {
           "$ref": "#/$defs/factor"
-        }
+        },
+        "maxLeadCells": { "type": "number", "minimum": 0, "description": "Techo absoluto del adelanto del pase, en casillas (AZ-B paso 1)." },
+        "interceptContactPercent": { "type": "integer", "minimum": 100, "description": "Factor de proximidad de la intercepción en contacto, en tanto por ciento (AZ-B paso 2)." }
       },
       "required": [
         "baseSuccess",
@@ -287,7 +289,7 @@
         "pressurePenalty",
         "interceptRadiusCells",
         "interceptBaseChance",
-        "interceptTechniqueFactor"
+        "interceptTechniqueFactor", "maxLeadCells", "interceptContactPercent"
       ],
       "additionalProperties": false
     },

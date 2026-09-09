@@ -83,7 +83,11 @@
         "passBackwardPenaltyPerCell": { "type": "integer", "minimum": 0, "maximum": 10000 },
         "findSpaceCrowdedPenalty": { "type": "integer", "minimum": 0, "maximum": 10000 },
         "blockShiftLineMarginCells": { "type": "number", "minimum": 0, "maximum": 10 },
-        "findSpaceLineMarginCells": { "type": "number", "minimum": 0, "maximum": 10 }
+        "findSpaceLineMarginCells": { "type": "number", "minimum": 0, "maximum": 10 },
+        "passLaneRadiusCells": { "type": "number", "minimum": 0, "maximum": 5 },
+        "passBlockedLanePenalty": { "type": "integer", "minimum": 0, "maximum": 10000 },
+        "passBlockedLaneRankPenalty": { "type": "integer", "minimum": 0, "maximum": 10000 },
+        "shootBlockedLanePenalty": { "type": "integer", "minimum": 0, "maximum": 10000 }
       },
       "required": [
         "chaseBallDistancePenaltyPerCell", "chaseBallLooseBonus",
@@ -101,7 +105,8 @@
         "blockActiveRadiusCells", "blockCorridorHalfWidthCells", "blockReachMaxCells",
         "blockTargetBonus", "blockDistancePenaltyPerCell", "blockAggressiveBonus", "blockBruteTagBonus",
         "passBackwardPenaltyPerCell", "findSpaceCrowdedPenalty",
-        "blockShiftLineMarginCells", "findSpaceLineMarginCells"
+        "blockShiftLineMarginCells", "findSpaceLineMarginCells",
+        "passLaneRadiusCells", "passBlockedLanePenalty", "passBlockedLaneRankPenalty", "shootBlockedLanePenalty"
       ],
       "additionalProperties": false
     },

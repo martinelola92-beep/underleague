@@ -493,6 +493,7 @@ public static class DataLoader
         "blockTargetBonus", "blockDistancePenaltyPerCell", "blockAggressiveBonus", "blockBruteTagBonus",
         "passBackwardPenaltyPerCell", "findSpaceCrowdedPenalty",
         "blockShiftLineMarginCells", "findSpaceLineMarginCells",
+        "passLaneRadiusCells", "passBlockedLanePenalty", "passBlockedLaneRankPenalty", "shootBlockedLanePenalty",
     };
 
     private static AiWeights ParseAiWeights(string file, string content)
@@ -600,7 +601,11 @@ public static class DataLoader
             PassBackwardPenaltyPerCell: OptionalInt(contextNode, "passBackwardPenaltyPerCell"),
             FindSpaceCrowdedPenalty: OptionalInt(contextNode, "findSpaceCrowdedPenalty"),
             BlockShiftLineMarginCells: contextNode.Prop("blockShiftLineMarginCells").AsFloat(),
-            FindSpaceLineMarginCells: contextNode.Prop("findSpaceLineMarginCells").AsFloat());
+            FindSpaceLineMarginCells: contextNode.Prop("findSpaceLineMarginCells").AsFloat(),
+            PassLaneRadiusCells: contextNode.Prop("passLaneRadiusCells").AsFloat(),
+            PassBlockedLanePenalty: contextNode.Prop("passBlockedLanePenalty").AsInt(),
+            PassBlockedLaneRankPenalty: contextNode.Prop("passBlockedLaneRankPenalty").AsInt(),
+            ShootBlockedLanePenalty: contextNode.Prop("shootBlockedLanePenalty").AsInt());
 
         var shiftArray = new BlockShift[tacticalCount];
         var shiftSet = new bool[tacticalCount];
@@ -722,7 +727,7 @@ public static class DataLoader
 
     private static PassTuning ParsePass(Json node)
     {
-        node.EnsureKnownKeys("baseSuccess", "techniqueFactor", "distancePenaltyPerCell", "pressurePenalty", "interceptRadiusCells", "interceptBaseChance", "interceptTechniqueFactor");
+        node.EnsureKnownKeys("baseSuccess", "techniqueFactor", "distancePenaltyPerCell", "pressurePenalty", "interceptRadiusCells", "interceptBaseChance", "interceptTechniqueFactor", "maxLeadCells", "interceptContactPercent");
         return new PassTuning(
             node.Prop("baseSuccess").AsInt(),
             node.Prop("techniqueFactor").AsInt(),
@@ -730,7 +735,9 @@ public static class DataLoader
             node.Prop("pressurePenalty").AsInt(),
             node.Prop("interceptRadiusCells").AsFloat(),
             node.Prop("interceptBaseChance").AsInt(),
-            node.Prop("interceptTechniqueFactor").AsInt());
+            node.Prop("interceptTechniqueFactor").AsInt(),
+            node.Prop("maxLeadCells").AsFloat(),
+            node.Prop("interceptContactPercent").AsInt());
     }
 
     private static DribbleTuning ParseDribble(Json node)
