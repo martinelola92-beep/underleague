@@ -1144,8 +1144,8 @@ tocado no vuelve"*.
 
 | id | rareza | trigger | canal (escalón ADR 0035) | escasez | conversión |
 |---|---|---|---|---|---|
-| `skullsplitter` | legendary | MATCH_START | `injury` +3 (paso 1 ×3) | `tagsRequired: Dirty` | alta |
-| `marrow_thirst` | rare | MATCH_START | `injure` +3 y `severeInjury` +9 (pasos 1 y 3) | `Aggressive` + empezar en el tercio rival | alta |
+| `skullsplitter` | legendary | TACKLE (AY-1; era MATCH_START) | `injury` +3 (paso 1 ×3), por jugada | `tagsRequired: Dirty` | alta |
+| `marrow_thirst` | rare | TACKLE (AY-1; era MATCH_START) | `injure` +3 y `severeInjury` +9 (pasos 1 y 3), por jugada | `Aggressive` + empezar en el tercio rival | alta |
 | `second_wound` | rare | INJURY | `severeInjury` +3 | solo mientras no van ganando | baja |
 | `iron_studs` | rare | TACKLE | `tackleEvasion` −9 (paso 3 ×3) | solo presionando en el tercio rival | baja |
 
@@ -1162,6 +1162,68 @@ al partido, se ven en el informe y además restringen quién puede llevarlo en l
 texto **generado desde el dato** (RT-035), no escrito a mano. Sale, por ejemplo: *«Al empezar el partido,
 el equipo rival suma +3% a su probabilidad de lesionarse. Si alcanza a un rival que ya no está sano, lo
 mata.»*
+
+**AY-1 (9 sep 2026). La muerte sale del saque: los cuatro letales son de contacto.** Decisión del
+revisor: la muerte sigue al mismo nivel (banda `deathsPerRun` 1,5-3) pero **nunca en el saque inicial**;
+solo como consecuencia de una jugada de contacto. AC-10 describía el motor de **antes** de la ADR 0048,
+cuando solo moría quien saltaba al campo herido y por eso `MATCH_START` era la única ventana; la ADR 0048
+quitó esa puerta —un sano también muere— y dejó el disparador donde estaba, con el resultado de que
+`skullsplitter` marcaba en el saque al rival que peor lo tenía y tiraba a matar con hasta un 80 % antes de
+que nadie hubiera tocado a nadie. Eso rompe las dos primeras de las cinco condiciones de la ADR 0048 y
+RF-012d: no había jugada que ver venir. Tres cambios, y los dos primeros son **garantías del motor**, no
+convenciones del catálogo:
+
+1. **`PerkLoader` rechaza** un perk con `lethal: true` cuyo `trigger` sea `MATCH_START` o `PLAY_START`
+   (`DataException` con `$.trigger`, RT-032). Sin la regla en el cargador, basta un perk nuevo mal escrito
+   para que la muerte vuelva al minuto cero.
+2. **`EffectEngine` restringe la víctima** a quien está en la jugada cuando el disparador es de contacto
+   (`TACKLE` —que incluye el bloqueo—, `FOUL`, `INJURY`): el perk puede seguir barriendo al equipo rival
+   con sus efectos (`target: opposingTeam`), pero la tirada letal solo alcanza al actor, al objetivo o al
+   oponente del evento. Es lo que hace que la muerte se pueda **reducir con la alineación** (ADR 0048) en
+   vez de ser un impuesto sobre un once desconocido.
+3. **`skullsplitter` y `marrow_thirst` pasan a `TACKLE`** con `scope: actor`: se cobran **en cada
+   entrada** del portador. Su bonus de lesión al rival se conserva pero baja de duración de **partido a
+   jugada**, que es la condición para poder quitarles el límite sin que el multiplicador de cuota se
+   acumule solo (ADR 0050 P1: los canales se componen multiplicando, así que cuatro activaciones de un
+   ×3 valen ×81).
+
+   Medido: la primera forma probada fue la conservadora —efecto de partido cobrado en la **primera**
+   entrada, `limit` 1 por partido— y **hundió la letalidad a `deathsPerRun` 0,35**. La causa no es que
+   haya menos entradas sino que el límite **quema la activación en la primera entrada que ocurra**, y la
+   mayoría caen sobre un rival cuyo emparejamiento está a cuatro casillas o más, donde el factor de
+   cercanía vale 0: casi todas las activaciones se gastaban en una tirada que no podía matar. Sin límite,
+   cada contacto es una tirada real modulada por la distancia de emparejamiento, que es además lo que
+   mantiene viva la tercera condición de la ADR 0048 —**colocar lejos del carnicero sigue bajando el
+   número**—.
+
+La descripción generada lo dice sola (RT-035): `layout.lethalContactSuffix` sustituye a `lethalSuffix`
+cuando el perk es de contacto, y sale *«Al entrar, el equipo rival multiplica por 3 sus opciones de
+lesionarse. Puede matar al rival implicado en la jugada, aunque esté sano.»*
+
+**Calibración (`--full-runs 1200`, políticas automáticas).** Con más tiradas y más baratas, la palanca se
+movió hacia abajo y no hacia arriba: `lethalChance` de `skullsplitter` **5.400 → 1.950** y de
+`marrow_thirst` **4.200 → 1.500** (`iron_studs` 760 y `second_wound` 9.000 sin tocar; `tuning.injury.lethality`
+y `data/ai/weights.json` intactos). Serie de la calibración, semilla 1: `limit` 1/partido → **0,35** ·
+sin límite a 5.400/4.200 → **3,31** · a 2.600/2.000 → **2,12** · a 1.600/1.250 → **1,48** · a 1.950/1.500 →
+**1,66**.
+
+| | antes (semilla 1) | después (semilla 1) | después (semilla 7) |
+|---|---|---|---|
+| `deathsPerRun` (banda 1,5-3) | 1,44 **fuera** | **1,66 dentro** | **1,75 dentro** |
+| `runWinRate` (banda 20-30) | 20,83 | 17,08 | 18,00 |
+| `ordinaryDefeatRateAct1` (≤ 30) | 23,76 | 24,09 | 23,85 |
+| `severeInjuriesPerRun` | — | 2,13 | 2,13 |
+| `injuriesPerMatchBothTeams` | — | 0,93 | 0,96 |
+
+`deathsPerRun` entra en banda por primera vez; el precio es `runWinRate`, que cae ~3,5 puntos y se sale
+por abajo. **No es gratis y no se maquilla**: bajo la regla vieja el marcado era predecible —el eslabón
+más débil— y la política de alineación podía empujar la muerte hacia un jugador barato; con la víctima en
+la jugada, la muerte cae sobre quien recibe la entrada y cuesta más run. El paso 2 del plan (las ramas
+`else` dejan de castigar) empuja la victoria hacia arriba, así que el neto se mide al cierre y no se
+supone.
+
+Efecto colateral anotado en **AY-A**: el indicador de riesgo por jugador (RF-012c) pasa de número exacto a
+techo, porque suponía que el portador activa seguro y que marca al eslabón más débil.
 
 **AC-13. El reparto en rivales, y por qué siete.** Acto 1: **ninguno** (es el taller, ADR 0043). Acto 2:
 tres equipos con un letal de alta conversión y uno con `second_wound`. Acto 3: cuatro con alta conversión
@@ -1391,6 +1453,11 @@ acto a tres** por la condición 2 (AD-9).
 
 `iron_studs` es un orden de magnitud más barato porque se dispara en **cada entrada** en el tercio rival,
 no una vez por partido: su número no es comparable con los otros tres.
+
+> **Desfasada por AY-1 (9 sep 2026).** Los cuatro letales disparan hoy en contacto y los dos de arriba se
+> recalibraron a esa forma: `skullsplitter` **1.950** y `marrow_thirst` **1.500**, los dos en `TACKLE` y
+> sin límite, con lo que la nota de `iron_studs` deja de ser la excepción y pasa a ser la regla. Tabla
+> vigente y medición en **§20.3, AY-1**.
 
 ### 21.2. Las cinco condiciones de la ADR 0048, una a una y con su medida
 

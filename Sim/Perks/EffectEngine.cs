@@ -685,6 +685,15 @@ internal sealed class EffectEngine : IPerkLinks
         // tirada (MatchEngine.LethalHits). La lista se aloja únicamente si el perk es letal y es local,
         // no un buffer compartido, porque matar publica DEATH y eso puede reentrar aquí con otro perk.
         List<MatchPlayer>? victims = subscription.Perk.Lethal ? new List<MatchPlayer>() : null;
+
+        // Paquete AY: con un disparador de CONTACTO la víctima es quien recibe el contacto, y solo ella.
+        // Sin esto, un perk letal cuyo efecto barre al equipo rival (target opposingTeam) seguiría
+        // marcando "al que peor lo tiene" de todo el campo aunque el disparador fuese una entrada: se
+        // moriría alguien que no estaba en la jugada, que es exactamente lo que la ADR 0048 pide que no
+        // pase (la muerte se ve venir, se evita, y se reduce con la alineación). Restringir aquí y no en
+        // el dato lo hace garantía y no convención: el efecto de lesión puede seguir siendo de equipo
+        // —bajar al rival entero es lo que el perk hace— sin que la tirada letal se salga de la jugada.
+        bool contactTrigger = victims is not null && subscription.Perk.IsContactLethal;
         for (int i = 0; i < effects.Count; i++)
         {
             var effect = effects[i];
@@ -731,7 +740,10 @@ internal sealed class EffectEngine : IPerkLinks
             for (int t = 0; t < _targets.Count; t++)
             {
                 var player = _targets[t];
-                if (victims is not null && IsLethalVictim(subscription.Owner, player) && !victims.Contains(player))
+                if (victims is not null
+                    && IsLethalVictim(subscription.Owner, player)
+                    && (!contactTrigger || IsInThePlay(context, player))
+                    && !victims.Contains(player))
                 {
                     victims.Add(player);
                 }
@@ -831,6 +843,17 @@ internal sealed class EffectEngine : IPerkLinks
     /// </summary>
     private static bool IsLethalVictim(MatchPlayer owner, MatchPlayer candidate) =>
         candidate.Team != owner.Team && candidate.OnPitch && !candidate.Dead;
+
+    /// <summary>
+    /// True si ese jugador es uno de los que el evento nombra (actor, objetivo u oponente). En una
+    /// entrada son el que entra y el que la recibe; en una lesión, el lesionado y quien se la hizo. La
+    /// combinación con <see cref="IsLethalVictim"/> deja exactamente al rival del portador que participa
+    /// en la jugada.
+    /// </summary>
+    private static bool IsInThePlay(in ConditionContext context, MatchPlayer candidate) =>
+        ReferenceEquals(context.Actor, candidate)
+        || ReferenceEquals(context.Target, candidate)
+        || ReferenceEquals(context.Opponent, candidate);
 
     private int EffectValue(PerkSubscription subscription, EffectDefinition effect)
     {

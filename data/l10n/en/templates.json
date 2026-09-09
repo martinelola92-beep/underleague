@@ -10,6 +10,7 @@
     "elsePrefix": "; otherwise, ",
     "linkSeparator": " and ",
     "lethalSuffix": " It marks one opponent per activation, whoever is worst off, and may kill them even if healthy.",
+    "lethalContactSuffix": " It may kill the opponent involved in the play, even if healthy.",
     "requiresSuffix": " Requires already carrying {count} perks from {family}.",
     "blocksSuffix": " Closes {blocked} for the rest of the run.",
     "blockedSeparator": ", ",

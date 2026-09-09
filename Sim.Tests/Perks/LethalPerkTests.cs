@@ -202,6 +202,90 @@ public sealed class LethalPerkTests
         Assert.Contains(Scouting.LethalPerks(setup.Away, Catalog), t => t.PerkId == perk.Id);
     }
 
+    /// <summary>
+    /// Paquete AY (docs/plan-perks-positivos.md paso 1): <b>ningún letal del catálogo dispara en el
+    /// saque</b>. La garantía la da el cargador (PerkLoader), pero el catálogo real la afirma aquí: si
+    /// alguien vuelve a escribir un letal en MATCH_START, este test cae antes que la puerta de balance.
+    /// </summary>
+    [Fact]
+    public void NoLethalPerkFiresAtKickOff()
+    {
+        foreach (var perk in Catalog.Perks.All.Where(p => p.Lethal))
+        {
+            Assert.NotEqual(EventType.MatchStart, perk.Trigger);
+            Assert.NotEqual(EventType.PlayStart, perk.Trigger);
+
+            // Y los cuatro son de contacto, que es lo que hace que la víctima sea la de la jugada.
+            Assert.True(
+                perk.IsContactLethal,
+                $"el letal '{perk.Id}' dispara en {EventTypeNames.ToUpperSnake(perk.Trigger)}: la muerte tiene que ser "
+                    + "consecuencia de una jugada de contacto");
+        }
+    }
+
+    /// <summary>
+    /// Paquete AY: con un disparador de contacto <b>muere quien recibe el contacto</b>, aunque el efecto
+    /// del perk barra al equipo rival entero (<c>target: opposingTeam</c>). Es lo que convierte la muerte
+    /// en la consecuencia de una jugada que se ve venir (RF-012d) en vez de en una ejecución elegida
+    /// entre once desconocidos.
+    ///
+    /// <para>El test lo separa del criterio viejo a propósito: la víctima que nombra la entrada NO es la
+    /// que el motor habría marcado antes —"el que peor lo tiene", mayor probabilidad y, a igualdad, menor
+    /// id—, así que si la restricción no estuviera, el que moriría sería el otro.</para>
+    /// </summary>
+    [Fact]
+    public void WithAContactTriggerOnlyThePlayerInTheTackleCanDie()
+    {
+        const string SweepInjury =
+            """[{ "type": "modifyProbability", "target": "opposingTeam", "probability": "injury", "value": 30, "duration": "match" }]""";
+        var catalog = TestPerks.CatalogWith((
+            "butcher",
+            TestPerks.Json("butcher", "TACKLE", SweepInjury, rarity: "legendary", kind: "ruleBreaker")
+                .Replace("\"lethal\": false", "\"lethal\": true, \"lethalChance\": 10000", StringComparison.Ordinal)));
+
+        var setup = TestPerks.Match(catalog, 1, (1, new[] { "butcher" }));
+        var engine = TestPerks.Engine(catalog, setup);
+        var owner = engine.PlayerById(1)!;
+        var lethality = catalog.Tuning.Injury.Lethality;
+
+        var opposing = (owner.Team == 0 ? setup.Away : setup.Home).Lineup.Slots
+            .Select(slot => engine.PlayerById(slot.PlayerId)!)
+            .Select(p => (Player: p, Chance: Lethality.Chance(
+                lethality,
+                10000,
+                owner.Strength,
+                p.Stamina,
+                100,
+                Lethality.MatchupAbsolute(p.HomeCell, p.Team, owner.HomeCell, owner.Team))))
+            .ToList();
+
+        // A quién habría marcado el criterio viejo: mayor probabilidad y, a igualdad, menor id (RT-041).
+        var oldPick = opposing.OrderByDescending(x => x.Chance).ThenBy(x => x.Player.Id).First().Player;
+
+        // A quién va a entrar el portador: otro cualquiera con una probabilidad lo bastante alta como para
+        // que cuarenta entradas lo maten con certeza práctica (0,6^40 ≈ 1e-9).
+        var tackled = opposing
+            .Where(x => x.Player.Id != oldPick.Id && x.Chance >= 4000)
+            .OrderBy(x => x.Player.Id)
+            .First()
+            .Player;
+
+        for (int i = 0; i < 40; i++)
+        {
+            engine.Effects!.Publish(new MatchEvent(
+                EventType.Tackle, engine.Tick, owner.Team, owner.Id, -1, tackled.Id,
+                owner.HomeCell, Zone.Own, MatchPhase.OpenPlay, engine.BiasFor(0), 0, "attempted"));
+        }
+
+        Assert.True(tackled.Dead, "el rival al que se entró cuarenta veces no murió ninguna");
+        foreach (var (player, _) in opposing)
+        {
+            Assert.True(
+                player.Id == tackled.Id || !player.Dead,
+                $"murió el rival {player.Id}, que no estaba en la jugada: la tirada letal se salió de la entrada");
+        }
+    }
+
     /// <summary>Las dos etiquetas que exigen los letales del catálogo, para que el portador pueda llevarlos.</summary>
     private static PlayerDefinition WithTags(PlayerDefinition player)
     {

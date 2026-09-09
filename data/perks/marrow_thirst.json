@@ -1,5 +1,5 @@
 {
-  "_doc": "ADR 0046, RF-093 vía 2. Perk LETAL con la misma ventana que skullsplitter (el saque inicial es el único momento en que un herido está en el campo) pero con dos gatillos que lo estrechan: solo muerde si el portador empieza en el tercio rival, y solo lo puede llevar un Agresivo. Segundo y tercer canal de los cuatro letales: injure para el portador y severeInjury para el rival.",
+  "_doc": "ADR 0046, RF-093 vía 2; disparador movido por el paquete AY (docs/plan-perks-positivos.md paso 1). Perk LETAL de CONTACTO con la misma forma que skullsplitter —se cobra en cada entrada del portador y solo puede matar al rival al que entra— y dos gatillos que lo estrechan: solo muerde si el portador empieza en el tercio rival, y solo lo puede llevar un Agresivo. Segundo y tercer canal de los cuatro letales: injure para el portador y severeInjury para el rival, los dos durante la JUGADA de la entrada (antes duraban el partido desde el saque; ver el _doc de skullsplitter para por qué la duración baja a jugada).",
   "id": "marrow_thirst",
   "name": {
     "es": "Sed de médula",
@@ -12,8 +12,8 @@
   "axis": "startZone",
   "race": null,
   "family": "butchery",
-  "trigger": "MATCH_START",
-  "scope": "any",
+  "trigger": "TACKLE",
+  "scope": "actor",
   "links": [],
   "condition": "startsIn(owner, 'AttackingThird')",
   "effects": [
@@ -22,21 +22,21 @@
       "target": "owner",
       "probability": "injure",
       "value": 200,
-      "duration": "match"
+      "duration": "play"
     },
     {
       "type": "modifyProbability",
       "target": "opposingTeam",
       "probability": "severeInjury",
       "value": 50,
-      "duration": "match"
+      "duration": "play"
     }
   ],
   "elseEffects": [],
   "limit": null,
   "accumulatesAcrossMatches": false,
   "lethal": true,
-  "lethalChance": 4200,
+  "lethalChance": 1500,
   "positionOnly": null,
   "tagsRequired": [
     "Aggressive"

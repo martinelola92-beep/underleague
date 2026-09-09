@@ -219,8 +219,17 @@ public static class Lethality
         Chance(tuning, carrier.LethalChance, carrier.Strength, stamina, statePercent, Matchup(carrier.Home, cell));
 
     /// <summary>
-    /// Probabilidad real de morir de <b>cada</b> titular de ese once, en base 10.000 y en el orden en que
+    /// Probabilidad de morir de <b>cada</b> titular de ese once, en base 10.000 y en el orden en que
     /// llegan (RF-012c, ADR 0048).
+    ///
+    /// <para><b>Paquete AY: es un techo, ya no el número exacto.</b> Desde que un perk letal solo puede
+    /// matar al rival implicado en una jugada de contacto (<c>EffectEngine</c>), este vector supone dos
+    /// cosas que ya no se cumplen: que el portador <b>activa seguro</b> —antes disparaba en el saque;
+    /// ahora tiene que llegar a hacer una entrada— y que marca al eslabón más débil del once. Sobrestima
+    /// por tanto al marcado y enseña 0 a los demás, que sí corren riesgo si reciben la entrada. Lo que
+    /// sigue siendo exacto es <see cref="ChanceAgainst"/>: la probabilidad de morir <b>si te toca la
+    /// entrada</b>, con las tres palancas de la ADR 0048 intactas. Cambiar el significado del número que
+    /// ve el jugador es decisión de diseño con ADR (pendiente AY-A).</para>
     ///
     /// <para>Un perk letal no siega el equipo entero: <b>marca</b>
     /// <see cref="LethalityTuning.VictimsPerActivation"/> rivales por activación, y marca al que peor lo

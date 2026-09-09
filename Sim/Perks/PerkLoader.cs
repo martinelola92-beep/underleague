@@ -175,6 +175,26 @@ public static class PerkLoader
                     "un perk letal debe tener algún efecto sobre el rival (target actor, target, opponent u "
                         + "opposingTeam): matar solo puede alcanzar a un rival (RF-093)");
             }
+
+            // Paquete AY (docs/plan-perks-positivos.md paso 1): la muerte es la CONSECUENCIA DE UNA
+            // JUGADA, nunca del saque. Antes de la ADR 0048 solo moría quien saltaba al campo ya herido y
+            // el único instante en que un herido estaba en el campo era MATCH_START, así que el
+            // disparador del saque era donde el mecanismo existía; la ADR 0048 quitó esa puerta —un sano
+            // también muere— y dejó el disparador donde estaba, con el resultado de que un perk letal
+            // marcaba en el saque al rival que peor lo tenía y tiraba a matar antes de que nadie hubiera
+            // tocado a nadie. Eso rompe las dos primeras de las cinco condiciones de la ADR 0048 (se sabe
+            // antes, se puede evitar) y RF-012d: no había jugada que ver venir. La regla es del cargador y
+            // no una convención del catálogo porque es la garantía: sin ella basta un perk nuevo mal
+            // escrito para que la muerte vuelva al minuto cero.
+            if (trigger is EventType.MatchStart or EventType.PlayStart)
+            {
+                throw new DataException(
+                    file,
+                    "$.trigger",
+                    $"un perk letal no puede dispararse en {EventTypeNames.ToUpperSnake(trigger)}: la muerte solo puede ser "
+                        + "consecuencia de una jugada de contacto (TACKLE, FOUL, INJURY), que es lo que la hace "
+                        + "previsible y evitable con la alineación (RF-012d, ADR 0048)");
+            }
         }
 
         else if (lethalChance != 0)

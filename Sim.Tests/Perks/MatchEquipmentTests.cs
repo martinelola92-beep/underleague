@@ -227,6 +227,11 @@ public sealed class MatchEquipmentTests
         // es lo que sustituye a la garantía vieja: MARCA a uno por activación y marca al que peor lo
         // tiene. Con un lesionado leve en el campo, el marcado es él —su estado multiplica la tirada por
         // ocho— y muere uno solo, no el equipo entero.
+        //
+        // El disparador es MATCH_END y no MATCH_START porque desde el paquete AY el cargador prohíbe que
+        // un perk letal se cuelgue del saque (la muerte tiene que ser consecuencia de una jugada). Lo que
+        // este test mide —a cuántos marca una activación y cuánto pesa el estado— es independiente del
+        // disparador, y MATCH_END es el otro evento que ocurre exactamente una vez por partido.
         const string Lethal = """
         {
           "id": "test_lethal",
@@ -236,7 +241,7 @@ public sealed class MatchEquipmentTests
           "axis": "identity",
           "race": null,
           "links": [],
-          "trigger": "MATCH_START",
+          "trigger": "MATCH_END",
           "scope": "any",
           "condition": "",
           "effects": [ { "type": "modifyProbability", "target": "opposingTeam", "probability": "injury", "value": 50, "duration": "match" } ],

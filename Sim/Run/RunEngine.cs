@@ -337,8 +337,9 @@ public static class RunEngine
     /// la pantalla de alineación pinta el indicador y con el que una política automática decide.
     ///
     /// <para>Se compone perk a perk como probabilidad de que <b>al menos uno</b> acierte, con la misma
-    /// función que el motor usa para matar y sobre los mismos atributos base, así que no es una
-    /// estimación: es el número. Un portador que no está en el once rival no cuenta —no va a saltar al
+    /// función que el motor usa para matar y sobre los mismos atributos base. Desde el paquete AY es un
+    /// <b>techo</b> y no el número exacto, porque la víctima pasó a ser la de la jugada de contacto y el
+    /// portador ya no activa seguro: ver <c>Lethality.MarkedRisks</c> y el pendiente AY-A. Un portador que no está en el once rival no cuenta —no va a saltar al
     /// campo— y un nodo que no es de partido no tiene riesgo.</para>
     /// </summary>
     public static IReadOnlyList<LineupWarning> LethalRisks(

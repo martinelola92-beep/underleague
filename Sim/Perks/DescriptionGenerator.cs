@@ -99,7 +99,11 @@ public static class DescriptionGenerator
         // lo peor que puede pasar sin salir de ella.
         if (perk.Lethal)
         {
-            text += templates.Get(Layout, "lethalSuffix");
+            // Paquete AY: con un disparador de contacto la víctima no es "el que peor lo tiene" de todo
+            // el campo sino el rival implicado en la jugada, así que la frase tiene que decir eso. Es la
+            // misma propiedad que usa el motor para restringir la tirada (PerkDefinition.IsContactLethal):
+            // texto y efecto no pueden divergir (RT-035).
+            text += templates.Get(Layout, perk.IsContactLethal ? "lethalContactSuffix" : "lethalSuffix");
         }
 
         // ADR 0051. Lo que un maestro exige y lo que cierra son parte de su dato, así que van en la

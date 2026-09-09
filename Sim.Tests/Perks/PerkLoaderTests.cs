@@ -187,6 +187,33 @@ public sealed class PerkLoaderTests
         Assert.Contains("lethal", ex.Message, StringComparison.Ordinal);
     }
 
+    /// <summary>
+    /// Paquete AY (docs/plan-perks-positivos.md paso 1): <b>la muerte nunca en el saque</b>. Un perk
+    /// letal no puede colgarse de <c>MATCH_START</c> ni de <c>PLAY_START</c>, porque ahí no ha habido
+    /// jugada que ver venir y la muerte deja de ser previsible y evitable (RF-012d, ADR 0048). El mismo
+    /// perk con un disparador de contacto carga sin problema.
+    /// </summary>
+    [Theory]
+    [InlineData("MATCH_START")]
+    [InlineData("PLAY_START")]
+    public void ALethalPerkCannotFireAtKickOff(string trigger)
+    {
+        const string Lethal = """[{ "type": "modifyProbability", "target": "opposingTeam", "probability": "injury", "value": 30, "duration": "match" }]""";
+        string json = TestPerks.Json("bad", trigger, Lethal)
+            .Replace("\"lethal\": false", "\"lethal\": true, \"lethalChance\": 5000", StringComparison.Ordinal);
+
+        var ex = Assert.Throws<DataException>(() => TestPerks.Load("bad", json));
+        Assert.Contains("$.trigger", ex.Message, StringComparison.Ordinal);
+        Assert.Contains(trigger, ex.Message, StringComparison.Ordinal);
+
+        // El mismo perk, con contacto: carga.
+        string ok = TestPerks.Json("ok", "TACKLE", Lethal)
+            .Replace("\"lethal\": false", "\"lethal\": true, \"lethalChance\": 5000", StringComparison.Ordinal);
+        var perk = TestPerks.Load("ok", ok);
+        Assert.True(perk.Lethal);
+        Assert.True(perk.IsContactLethal);
+    }
+
     [Fact]
     public void DescriptionFieldIsRejected()
     {

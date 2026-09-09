@@ -275,4 +275,17 @@ public sealed record PerkDefinition(
 
     /// <summary>True si el perk pertenece a alguna línea del catálogo (ADR 0051).</summary>
     public bool HasFamily => Family.Length > 0;
+
+    /// <summary>
+    /// True si el perk se cuelga de un evento de <b>contacto</b>: la entrada (que incluye el bloqueo,
+    /// publicado también como <c>TACKLE</c>), la falta y la lesión. Es la propiedad que decide a quién
+    /// puede matar un perk letal —solo al rival que está en la jugada, ver <c>EffectEngine</c>— y por
+    /// tanto también qué dice de él la descripción generada (RT-035). Paquete AY: desde él, el cargador
+    /// prohíbe que un letal se cuelgue de <c>MATCH_START</c> o <c>PLAY_START</c>.
+    /// </summary>
+    public static bool IsContactTrigger(EventType trigger) =>
+        trigger is EventType.Tackle or EventType.Foul or EventType.Injury;
+
+    /// <summary>True si este perk mata, y solo puede matar, al rival implicado en la jugada.</summary>
+    public bool IsContactLethal => Lethal && IsContactTrigger(Trigger);
 }
