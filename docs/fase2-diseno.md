@@ -5592,8 +5592,15 @@ y las puertas de fase 1 arrancan en 50. `docs/plan-perks-positivos.md` es el pla
 | 4b | Con dos pasos caían las celdas «muy buena» de `eternal_crown` y `the_hunt`: bandas a 50-70 y 70-85 (ADR 0089, decisión del revisor) | doce celdas dentro; escalera creciente |
 | 4 | Escalera desde 50 (ADR 0088): malas y azar en 45-55; `noDeadPerks` sobre builds coherentes | `BuildGateTests` 8/8 |
 
-### 40.3. Lo que queda
+### 40.3. Paso 5, el neto
 
-Paso 5: banco de cierre con todo junto (AY-B), hueco buena/mediocre y puertas de jefes. AY-A: qué número de
-riesgo enseña el ojeo ahora que la muerte depende de que haya entrada (decisión con ADR).
+`--full-runs 1.200`, semillas 1 y 7, paquete completo: `runWinRate` **18,42 / 17,83** (antes de AY 20,83 / 19,83;
+tras el paso 1 solo 17,08 / 18,00), `deathsPerRun` 1,70 / 1,81 (en banda), `mastersReached` 26,7 / 28,1,
+`itemsOnRoster` 1,79 / 1,72 (el listón de objetos de la ADR 0086 ya casi no muerde con las tablas emparejadas,
+AY-E). La muerte en la entrada cuesta ~3 puntos de run; los pasos 2-4 recuperan ~1. Puertas: 42/42.
+
+### 40.4. Lo que queda
+
+AY-B (la palanca es `lethalChance` de los dos perks de rival, después de AZ) y AY-A (qué número de riesgo enseña el
+ojeo ahora que la muerte depende de que haya entrada; decisión con ADR).
 
