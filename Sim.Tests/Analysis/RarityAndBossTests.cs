@@ -30,6 +30,7 @@ namespace Underleague.Sim.Tests.Analysis;
 /// <see cref="Seed"/>, local y visitante alternados. Categoría <c>Gate</c> como el resto de puertas.</para>
 /// </summary>
 [Trait("Category", "Gate")]
+[Collection("Gate")]
 public sealed class RarityAndBossTests
 {
     private const int Rosters = 24;
@@ -101,16 +102,21 @@ public sealed class RarityAndBossTests
     /// </summary>
     private static double WinRate(string build, int level, Rarity rarity, string opponent, int opponentLevel, Rarity opponentRarity)
     {
-        var catalog = TestData.LoadCatalog();
         var builds = BuildFile.LoadAll(TestData.DataDirectory);
         var config = new SimConfig(CollectLog: false);
 
-        int matches = 0;
-        int wins = 0;
-        int matchIndex = 0;
+        // El contador secuencial arrancaba en 0 en cada llamada a WinRate y avanzaba en el orden
+        // (plantilla, partido), así que el índice global del partido k de la plantilla r es
+        // r × MatchesPerRoster + k. Escrito así es función pura del índice y las plantillas se juegan en
+        // paralelo sin mover ni una semilla (RT-020..024, RT-057).
+        var winsByRoster = new int[Rosters];
 
-        for (int roster = 0; roster < Rosters; roster++)
+        Parallel.For(0, Rosters, roster =>
         {
+            var catalog = ThreadCatalogs.Current;   // las condiciones compiladas no son reentrantes
+            int offset = roster * MatchesPerRoster;
+            int wins = 0;
+
             for (int k = 0; k < MatchesPerRoster; k++)
             {
                 bool subjectAway = (k % 2) == 1;
@@ -125,15 +131,22 @@ public sealed class RarityAndBossTests
                     ? new MatchSetup(opponentTeam, subjectTeam, Referee)
                     : new MatchSetup(subjectTeam, opponentTeam, Referee);
 
-                var report = Simulator.Run(setup, RngStreams.MatchSeed(Seed, matchIndex++), catalog, config).Report;
-                matches++;
+                var report = Simulator.Run(setup, RngStreams.MatchSeed(Seed, offset + k), catalog, config).Report;
                 if (report.Winner == (subjectAway ? 1 : 0))
                 {
                     wins++;
                 }
             }
+
+            winsByRoster[roster] = wins;
+        });
+
+        int total = 0;
+        for (int roster = 0; roster < Rosters; roster++)
+        {
+            total += winsByRoster[roster];
         }
 
-        return 100.0 * wins / matches;
+        return 100.0 * total / (Rosters * MatchesPerRoster);
     }
 }

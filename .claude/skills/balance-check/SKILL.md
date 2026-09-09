@@ -9,7 +9,7 @@ Fuente: `docs/balance.md`. Los rangos que hay allí son los vigentes; no uses ot
 
 ## Procedimiento
 
-1. Asegúrate de que compila y pasan los tests: `dotnet build Underleague.sln && dotnet test Sim.Tests`. Si el test estadístico de 1.000 partidos falla, ya tienes la respuesta; no sigas hasta entenderlo.
+1. Asegúrate de que compila y pasan los tests, **siempre en Release** (Debug es ~17x más lento, medido): `dotnet build Underleague.slnx -c Release -m:1 -v q && dotnet test Sim.Tests -c Release --filter "Category!=Gate" -m:1 -v q`. Las puertas (`--filter "Category=Gate"`) solo si el encargo cierra un hito, y en una sola invocación. Si el test estadístico de 1.000 partidos falla, ya tienes la respuesta; no sigas hasta entenderlo.
 2. Lanza el lote de referencia con la **misma semilla base** que la última medición registrada (búscala en el último commit que tocó `Balance/out/` o en `docs/balance.md`):
    ```bash
    dotnet run --project Balance -c Release -- --runs 10000 --seed 1 --teams data/balance/reference.json --out out/$(date +%F)/

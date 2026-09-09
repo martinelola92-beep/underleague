@@ -80,14 +80,17 @@ El usuario actúa **únicamente como revisor**. Claude planifica, implementa, pr
 
 ## Comandos
 
-Contrato objetivo; se actualizará cuando exista el código.
+**Siempre `-c Release`, siempre `-m:1`.** Medido el 8 sep 2026: la misma clase de tests tarda **3 m 47 s en Debug y 13 s en Release** (17x); una sesión entera corrió las puertas en Debug, troceadas por clase, y costó ~2 h que en Release son minutos. CI lo hace en Release desde el principio (`.github/workflows/ci.yml`). El `-m:1` es por la memoria del contenedor WSL (7,8 GB).
 
 ```bash
-dotnet build Underleague.sln                         # /Sim, /Sim.Tests, /Balance, /tools (sin /Game)
-dotnet test Sim.Tests                                # unitarias + estadísticas + determinismo
-dotnet run --project Balance -- --runs 10000 --seed 1 --teams data/balance/reference.json --out out/
-dotnet run --project tools/DataValidator -- data/    # esquemas de /data
+dotnet build Underleague.slnx -c Release -m:1 -v q                        # /Sim, /Sim.Tests, /Balance, /tools (sin /Game)
+dotnet test Sim.Tests -c Release --filter "Category!=Gate" -m:1 -v q      # bucle de desarrollo: 643 tests, ~25 s
+dotnet test Sim.Tests -c Release --filter "Category=Gate" -m:1 -v q       # las seis puertas estadísticas: UNA invocación, antes del commit del hito
+dotnet run --project Balance -c Release -- --runs 10000 --seed 1 --teams data/balance/reference.json --out out/ --quiet
+dotnet run --project tools/DataValidator -- data/                         # esquemas de /data
 ```
+
+Las puertas llevan `[Collection("Gate")]`: van en serie entre sí y cada una juega sus partidos en paralelo por dentro (patrón de `BossGateTests`), así que no se trocean por clase. `summary.csv` se lee con `grep -E "^métrica,"` de las filas que importan, nunca entero (>150 filas).
 
 ```bash
 dotnet build Game/Underleague.Game.csproj                  # OBLIGATORIO antes de ejecutar Godot
@@ -111,7 +114,8 @@ cuando es un binario viejo. La escena de capturas solo arranca **con Xvfb**: en 
 - Commits: `tipo(ámbito): resumen — RF-xxx/RT-xxx`, con ámbito en `sim`, `data`, `balance`, `game`, `tools`, `docs`. Un commit no mezcla `/Sim` y `/Game`.
 - C#: `nullable enable`, `TreatWarningsAsErrors` en `/Sim`, sin `dynamic`, sin reflexión en tiempo de partido. Estilo en `.editorconfig`.
 - Tests estadísticos con semilla fija y rangos de RT-056; un test que falla "por mala suerte" es un test mal escrito.
-- **Tests con criterio, no por reflejo**: ejecuta solo los tests que cubren lo que has tocado (`dotnet test --filter "FullyQualifiedName~X"`), con `-v q` y filtrando la salida a las líneas de resultado. La suite completa se lanza una vez antes del commit del hito, nunca tras cada edición. No repitas un build o test cuyo resultado ya conoces. Los subagentes siguen la misma regla.
+- **Tests con criterio, no por reflejo**: siempre `-c Release` (Debug es 17x más lento, medido). Ejecuta solo los tests que cubren lo que has tocado (`dotnet test Sim.Tests -c Release --filter "FullyQualifiedName~X" -m:1 -v q`), filtrando la salida a las líneas de resultado. El bucle de trabajo es `Category!=Gate`; las puertas (`Category=Gate`) se lanzan **una vez y en una sola invocación** antes del commit del hito, nunca tras cada edición ni troceadas por clase. No repitas un build o test cuyo resultado ya conoces. Los subagentes siguen la misma regla.
+- **El paralelismo vive en el arnés, no en `/Sim`**: `/Balance` y las puertas de `Sim.Tests` juegan sus partidos con `Parallel.For` sobre un array por índice, con cada semilla función pura del índice (`RngStreams.MatchSeed(seed, índiceGlobal)`, nunca un contador que avance) y las reducciones después, en orden — el patrón de `BossGateTests`. `/Sim` no conoce `Parallel` (RT-021) y **no es reentrante**: `CompiledCondition` guarda el contexto de evaluación en la instancia, así que cada hilo del arnés juega con **su propio `Catalog`** cargado de los mismos ficheros (`Balance/BalanceCatalogs.cs` y su gemelo en `Sim.Tests`); compartir un `Catalog` entre hilos da resultados distintos en cada ejecución. Todo bucle nuevo de partidos o runs independientes sigue ese patrón y se acepta solo con salida **byte a byte idéntica** a la secuencial; una diferencia es una carrera, nunca se arregla tocando la semilla (RT-057).
 - **El lote de `/Balance` no es un test de humo**: cuesta tiempo y tokens y su salida es larga. Se lanza cuando hay una **hipótesis concreta que medir**, no después de cada cambio. Agrupa las modificaciones en tandas y mide una vez por tanda, con el número de partidos más pequeño que resuelva la duda. La medición de referencia completa se hace una sola vez, al cerrar el trabajo. Nunca se lanza "para ver si sigue bien" algo que no se ha tocado.
 
 ## Mapa de documentación

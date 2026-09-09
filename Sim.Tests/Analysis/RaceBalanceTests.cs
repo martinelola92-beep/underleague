@@ -76,6 +76,7 @@ namespace Underleague.Sim.Tests.Analysis;
 /// </para>
 /// </summary>
 [Trait("Category", "Gate")]
+[Collection("Gate")]
 public sealed class RaceBalanceTests
 {
     /// <summary>Referencias de raza sin ningún perk, orden alfabético (docs/balance.md).</summary>
@@ -139,55 +140,81 @@ public sealed class RaceBalanceTests
     /// </summary>
     private static IReadOnlyDictionary<string, double> ComputePooledWinRates()
     {
-        var catalog = TestData.LoadCatalog();
         var builds = BuildFile.LoadAll(TestData.DataDirectory);
         var config = new SimConfig(CollectLog: false);
 
         var wins = Races.ToDictionary(r => r, _ => 0, StringComparer.Ordinal);
         var matches = Races.ToDictionary(r => r, _ => 0, StringComparer.Ordinal);
-        int matchIndex = 0;
 
+        // Las diez parejas se enumeran en el mismo orden que los dos bucles anidados de la versión
+        // secuencial (i ascendente, j > i), y cada una jugaba Rosters × MatchesPerRoster partidos con un
+        // contador global que avanzaba de uno en uno en el orden (pareja, plantilla, partido). Por tanto
+        // el índice global del partido k de la plantilla r de la pareja p es
+        // p × Rosters × MatchesPerRoster + r × MatchesPerRoster + k = (p × Rosters + r) × MatchesPerRoster + k,
+        // que es exactamente el índice de celda de este plan por MatchesPerRoster más k. Escrita así, la
+        // semilla es función pura del índice y el paralelismo no cambia la muestra (RT-020..024, RT-057).
+        var pairs = new List<(string A, string B)>();
         for (int i = 0; i < Races.Length; i++)
         {
             for (int j = i + 1; j < Races.Length; j++)
             {
-                string raceA = Races[i];
-                string raceB = Races[j];
-                var buildA = builds[raceA];
-                var buildB = builds[raceB];
+                pairs.Add((Races[i], Races[j]));
+            }
+        }
 
-                for (int roster = 0; roster < Rosters; roster++)
+        var winsA = new int[pairs.Count * Rosters];
+        var winsB = new int[pairs.Count * Rosters];
+
+        Parallel.For(0, pairs.Count * Rosters, cell =>
+        {
+            var (raceA, raceB) = pairs[cell / Rosters];
+            int roster = cell % Rosters;
+            var buildA = builds[raceA];
+            var buildB = builds[raceB];
+            var catalog = ThreadCatalogs.Current;   // las condiciones compiladas no son reentrantes
+            int offset = cell * MatchesPerRoster;
+            int aWins = 0, bWins = 0;
+
+            for (int k = 0; k < MatchesPerRoster; k++)
+            {
+                bool aAway = (k % 2) == 1;
+                bool aHasHighIds = ((k / 2) % 2) == 1;
+                int aIdBase = aHasHighIds ? SecondaryIdBase : PrimaryIdBase;
+                int bIdBase = aHasHighIds ? PrimaryIdBase : SecondaryIdBase;
+
+                var teamA = buildA.ToTeamSetup(catalog, Seed, roster, aIdBase);
+                var teamB = buildB.ToTeamSetup(catalog, Seed, roster, bIdBase);
+
+                var setup = aAway
+                    ? new MatchSetup(teamB, teamA, Referee)
+                    : new MatchSetup(teamA, teamB, Referee);
+
+                var report = Simulator.Run(setup, RngStreams.MatchSeed(Seed, offset + k), catalog, config).Report;
+
+                int aSide = aAway ? 1 : 0;
+                if (report.Winner == aSide)
                 {
-                    for (int k = 0; k < MatchesPerRoster; k++)
-                    {
-                        bool aAway = (k % 2) == 1;
-                        bool aHasHighIds = ((k / 2) % 2) == 1;
-                        int aIdBase = aHasHighIds ? SecondaryIdBase : PrimaryIdBase;
-                        int bIdBase = aHasHighIds ? PrimaryIdBase : SecondaryIdBase;
-
-                        var teamA = buildA.ToTeamSetup(catalog, Seed, roster, aIdBase);
-                        var teamB = buildB.ToTeamSetup(catalog, Seed, roster, bIdBase);
-
-                        var setup = aAway
-                            ? new MatchSetup(teamB, teamA, Referee)
-                            : new MatchSetup(teamA, teamB, Referee);
-
-                        var report = Simulator.Run(setup, RngStreams.MatchSeed(Seed, matchIndex++), catalog, config).Report;
-
-                        int aSide = aAway ? 1 : 0;
-                        matches[raceA]++;
-                        matches[raceB]++;
-                        if (report.Winner == aSide)
-                        {
-                            wins[raceA]++;
-                        }
-                        else if (report.Winner == 1 - aSide)
-                        {
-                            wins[raceB]++;
-                        }
-                    }
+                    aWins++;
+                }
+                else if (report.Winner == 1 - aSide)
+                {
+                    bWins++;
                 }
             }
+
+            winsA[cell] = aWins;
+            winsB[cell] = bWins;
+        });
+
+        // Reducción fuera del Parallel.For y en orden de índice: los enteros se suman igual en cualquier
+        // orden, pero recorrer el array de principio a fin deja el resultado ligado al plan y no al hilo.
+        for (int cell = 0; cell < winsA.Length; cell++)
+        {
+            var (raceA, raceB) = pairs[cell / Rosters];
+            matches[raceA] += MatchesPerRoster;
+            matches[raceB] += MatchesPerRoster;
+            wins[raceA] += winsA[cell];
+            wins[raceB] += winsB[cell];
         }
 
         return Races.ToDictionary(

@@ -62,6 +62,14 @@ public static class UtilityCensusRunner
             bestScore[a] = int.MinValue;
         }
 
+        // El plan del censo se fija ANTES de simular nada: una entrada por (partido, jugador, tick), con
+        // el partido y su semilla de motor ya decididos (RngStreams.Generation(seed + m, ...) y
+        // RngStreams.MatchSeed(seed, m), los dos función pura del índice). Cada entrada repite el MISMO
+        // partido con un volcado distinto, así que ninguna depende de otra y se pueden simular en
+        // paralelo escribiendo por índice; el censo se acumula después recorriendo el array en orden de
+        // índice, de forma que el resultado es bit a bit el mismo que el del bucle secuencial
+        // (RT-020..024). Es el mismo patrón que el plan de celdas de Sim.Tests/Analysis/BossGateTests.
+        var plan = new List<(MatchSetup Setup, ulong MatchSeed, int PlayerId, int Tick)>();
         for (int m = 0; m < matches; m++)
         {
             // Un partido distinto por m: plantillas nuevas (flujo de generación) y semilla de motor nueva.
@@ -93,65 +101,79 @@ public static class UtilityCensusRunner
             {
                 for (int tick = TickStride; tick <= LastTick; tick += TickStride)
                 {
-                    var config = new SimConfig(CollectLog: false, DumpUtility: (id, tick));
-                    var result = Simulator.Run(setup, matchSeed, catalog, config);
-                    var dump = result.Report.UtilityDump;
-                    if (dump is null)
-                    {
-                        continue;
-                    }
+                    plan.Add((setup, matchSeed, id, tick));
+                }
+            }
+        }
 
-                    int winner = -1, winnerScore = int.MinValue, second = -1, secondScore = int.MinValue;
-                    for (int r = 0; r < dump.Rows.Count; r++)
-                    {
-                        var row = dump.Rows[r];
-                        int index = (int)row.Action;
-                        legal[index]++;
-                        if (row.Rejected)
-                        {
-                            rejected[index]++;
-                            continue;
-                        }
+        var dumps = new UtilityDump?[plan.Count];
+        Parallel.For(0, plan.Count, index =>
+        {
+            var (setup, matchSeed, id, tick) = plan[index];
+            var config = new SimConfig(CollectLog: false, DumpUtility: (id, tick));
+            // Catálogo por hilo (BalanceCatalogs): las condiciones compiladas de los perks no son
+            // reentrantes. Los equipos ya generados valen igual: llevan los perks por id.
+            dumps[index] = Simulator.Run(setup, matchSeed, BalanceCatalogs.Current(catalog), config)
+                .Report.UtilityDump;
+        });
 
-                        scoreSum[index] += row.Score;
-                        if (row.Score > bestScore[index])
-                        {
-                            bestScore[index] = row.Score;
-                        }
+        for (int index = 0; index < dumps.Length; index++)
+        {
+            var dump = dumps[index];
+            if (dump is null)
+            {
+                continue;
+            }
 
-                        if (row.Score > winnerScore)
-                        {
-                            second = winner;
-                            secondScore = winnerScore;
-                            winner = index;
-                            winnerScore = row.Score;
-                        }
-                        else if (row.Score > secondScore)
-                        {
-                            second = index;
-                            secondScore = row.Score;
-                        }
-                    }
+            int winner = -1, winnerScore = int.MinValue, second = -1, secondScore = int.MinValue;
+            for (int r = 0; r < dump.Rows.Count; r++)
+            {
+                var row = dump.Rows[r];
+                int actionIndex = (int)row.Action;
+                legal[actionIndex]++;
+                if (row.Rejected)
+                {
+                    rejected[actionIndex]++;
+                    continue;
+                }
 
-                    if (winner < 0)
-                    {
-                        continue;
-                    }
+                scoreSum[actionIndex] += row.Score;
+                if (row.Score > bestScore[actionIndex])
+                {
+                    bestScore[actionIndex] = row.Score;
+                }
 
-                    chosen[winner]++;
-                    if (second >= 0)
-                    {
-                        runnerUp[second]++;
-                    }
+                if (row.Score > winnerScore)
+                {
+                    second = winner;
+                    secondScore = winnerScore;
+                    winner = actionIndex;
+                    winnerScore = row.Score;
+                }
+                else if (row.Score > secondScore)
+                {
+                    second = actionIndex;
+                    secondScore = row.Score;
+                }
+            }
 
-                    for (int r = 0; r < dump.Rows.Count; r++)
-                    {
-                        var row = dump.Rows[r];
-                        if (!row.Rejected)
-                        {
-                            marginSum[(int)row.Action] += winnerScore - row.Score;
-                        }
-                    }
+            if (winner < 0)
+            {
+                continue;
+            }
+
+            chosen[winner]++;
+            if (second >= 0)
+            {
+                runnerUp[second]++;
+            }
+
+            for (int r = 0; r < dump.Rows.Count; r++)
+            {
+                var row = dump.Rows[r];
+                if (!row.Rejected)
+                {
+                    marginSum[(int)row.Action] += winnerScore - row.Score;
                 }
             }
         }

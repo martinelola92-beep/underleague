@@ -184,8 +184,6 @@ public static class BuildBatchRunner
         var matchesByBuild = new Dictionary<string, int>(StringComparer.Ordinal);
 
         var stopwatch = System.Diagnostics.Stopwatch.StartNew();
-        int globalMatchIndex = 0;
-        int totalSimulated = 0;
 
         // Variantes de un emparejamiento: orientación (quién es local) x reparto de ids de jugador. El
         // reparto de ids importa porque los desempates del motor (jugador más cercano al balón, empate de
@@ -194,6 +192,14 @@ public static class BuildBatchRunner
         // 50,7% / 50,5% / 49,9%). Se alternan siempre, haya o no --home-away.
         int variants = homeAway ? 4 : 2;
 
+        // El plan de la matriz se fija ANTES de jugar ningún partido: qué plantillas juegan cada celda y
+        // el índice global del partido, que es el de su posición en el plan y por tanto una función pura
+        // de (p, k) y no un contador que avance con la ejecución. Con eso la semilla de motor de cada
+        // partido (RngStreams.MatchSeed) ya está decidida y el bucle se puede jugar en paralelo
+        // escribiendo por índice; la acumulación se hace después en orden de índice, así que el resultado
+        // es bit a bit el mismo que el del bucle secuencial (RT-020..024). Las plantillas se generan aquí,
+        // en serie, porque la caché de instancias las comparte entre celdas.
+        var plan = new List<(MatchSetup Setup, string HomeId, string AwayId, HashSet<int> HomePlayerIds)>();
         for (int p = 0; p < pairingCount; p++)
         {
             var pairing = pairings[p];
@@ -228,25 +234,46 @@ public static class BuildBatchRunner
                 TeamSetup homeTeam = swapOrientation ? teamB : teamA;
                 TeamSetup awayTeam = swapOrientation ? teamA : teamB;
 
-                var setup = new MatchSetup(homeTeam, awayTeam, Referee);
-                var homeTeamPlayerIds = new HashSet<int>(homeTeam.Players.Select(pl => pl.Id));
+                plan.Add((
+                    new MatchSetup(homeTeam, awayTeam, Referee),
+                    homeId,
+                    awayId,
+                    new HashSet<int>(homeTeam.Players.Select(pl => pl.Id))));
+            }
+        }
 
-                ulong matchSeed = RngStreams.MatchSeed(seed, globalMatchIndex);
-                globalMatchIndex++;
-                totalSimulated++;
-
-                MatchResult result;
+        int totalSimulated = plan.Count;
+        var reports = new MatchReport[plan.Count];
+        try
+        {
+            Parallel.For(0, plan.Count, i =>
+            {
+                var cell = plan[i];
+                ulong matchSeed = RngStreams.MatchSeed(seed, i);
                 try
                 {
-                    result = Simulator.Run(setup, matchSeed, catalog, new SimConfig(CollectLog: false));
+                    // Catálogo por hilo (BalanceCatalogs): las condiciones compiladas de los perks no
+                    // son reentrantes. Los equipos ya generados valen igual: llevan los perks por id.
+                    reports[i] = Simulator.Run(
+                        cell.Setup, matchSeed, BalanceCatalogs.Current(catalog), new SimConfig(CollectLog: false)).Report;
                 }
                 catch (ArgumentException ex)
                 {
-                    throw new ArgumentException($"build '{homeId}' vs '{awayId}': {ex.Message}", ex);
+                    throw new ArgumentException($"build '{cell.HomeId}' vs '{cell.AwayId}': {ex.Message}", ex);
                 }
+            });
+        }
+        catch (AggregateException aggregate) when (aggregate.InnerException is ArgumentException inner)
+        {
+            // Parallel.For envuelve lo que lance el cuerpo; el modo de consola espera el ArgumentException
+            // con su mensaje, igual que cuando el bucle era secuencial.
+            throw inner;
+        }
 
-                AccumulateMatch(cellAcc, perkAcc, matchesByBuild, result.Report, homeId, awayId, homeTeamPlayerIds);
-            }
+        for (int i = 0; i < plan.Count; i++)
+        {
+            var cell = plan[i];
+            AccumulateMatch(cellAcc, perkAcc, matchesByBuild, reports[i], cell.HomeId, cell.AwayId, cell.HomePlayerIds);
         }
 
         stopwatch.Stop();
@@ -337,12 +364,46 @@ public static class BuildBatchRunner
         var rows = new List<CampaignRow>();
         var stopwatch = System.Diagnostics.Stopwatch.StartNew();
 
-        int genIndex = 0;
-        int matchIndexGlobal = 0;
-
+        // Cada campaña es independiente de las demás —lo que se arrastra (experiencia, niveles,
+        // contadores) vive DENTRO de una campaña— y su posición global en el plan (build, c) fija sus dos
+        // desplazamientos: el de generación, que consume 1 + matchesPerCampaign índices por campaña, y el
+        // de partido, que consume matchesPerCampaign. Los dos son función pura de (build, c), nunca de un
+        // contador que avance con la ejecución, así que las campañas se juegan en paralelo escribiendo por
+        // índice y se reducen después en orden de índice: el resultado es bit a bit el mismo que el del
+        // bucle secuencial (RT-020..024).
+        int perCampaignGen = 1 + matchesPerCampaign;
+        var plan = new List<(string BuildId, int Campaign)>(orderedBuildIds.Count * campaigns);
         foreach (var buildId in orderedBuildIds)
         {
-            var build = allBuilds[buildId];
+            for (int c = 0; c < campaigns; c++)
+            {
+                plan.Add((buildId, c));
+            }
+        }
+
+        var playedCampaigns = new CampaignMatchAccumulator[plan.Count][];
+        try
+        {
+            Parallel.For(0, plan.Count, index =>
+            {
+                // Catálogo por hilo (BalanceCatalogs): las condiciones compiladas de los perks no son
+                // reentrantes. La campaña entera se juega con el mismo, generación incluida.
+                playedCampaigns[index] = PlayCampaign(
+                    BalanceCatalogs.Current(catalog), allBuilds[plan[index].BuildId], plan[index].BuildId, opponentBuild,
+                    matchesPerCampaign, seed, homeAway,
+                    index * perCampaignGen, index * matchesPerCampaign, plan[index].Campaign);
+            });
+        }
+        catch (AggregateException aggregate) when (aggregate.InnerException is ArgumentException inner)
+        {
+            // Parallel.For envuelve lo que lance el cuerpo; el modo de consola espera el
+            // ArgumentException con su mensaje, igual que cuando el bucle era secuencial.
+            throw inner;
+        }
+
+        for (int b = 0; b < orderedBuildIds.Count; b++)
+        {
+            string buildId = orderedBuildIds[b];
             var matchAcc = new CampaignMatchAccumulator[matchesPerCampaign];
             for (int m = 0; m < matchesPerCampaign; m++)
             {
@@ -351,101 +412,18 @@ public static class BuildBatchRunner
 
             for (int c = 0; c < campaigns; c++)
             {
-                int buildGenIndex = genIndex++;
-                var buildRng = RngStreams.Generation(seed, buildGenIndex);
-                int buildFirstId = 1 + (buildGenIndex * 100);
-                TeamSetup initialTeam;
-                try
-                {
-                    initialTeam = build.ToTeamSetup(ref buildRng, catalog, buildFirstId);
-                }
-                catch (ArgumentException ex)
-                {
-                    throw new ArgumentException($"build '{buildId}': {ex.Message}", ex);
-                }
-
-                var starterIds = initialTeam.Lineup.Slots.Select(s => s.PlayerId).ToList();
-                var allIds = initialTeam.Players.Select(pl => pl.Id).OrderBy(id => id).ToList();
-                var benchIds = allIds.Except(starterIds).ToList();
-                var buildPlayerIds = new HashSet<int>(allIds);
-
-                var players = initialTeam.Players.ToDictionary(pl => pl.Id);
-                var xpTotals = new Dictionary<int, int>();
-
+                var campaignAcc = playedCampaigns[(b * campaigns) + c];
                 for (int m = 0; m < matchesPerCampaign; m++)
                 {
-                    int opponentQuality = 46 + (2 * m);
-                    int oppGenIndex = genIndex++;
-                    var oppRng = RngStreams.Generation(seed, oppGenIndex);
-                    int oppFirstId = 1 + (oppGenIndex * 100);
-                    var opponentTeam = opponentBuild.ToTeamSetup(ref oppRng, catalog, oppFirstId, opponentQuality);
-
-                    var currentPlayers = players.Values.OrderBy(pl => pl.Id).ToList();
-                    var buildTeamThisMatch = initialTeam with { Players = currentPlayers };
-
-                    // Con --home-away se alterna de partido en partido dentro de la misma campaña para
-                    // que la mitad se juegue como local y la mitad como visitante (§8: elimina el sesgo
-                    // local/visitante también en la campaña).
-                    bool buildHome = !homeAway || m % 2 == 0;
-                    var homeTeam = buildHome ? buildTeamThisMatch : opponentTeam;
-                    var awayTeam = buildHome ? opponentTeam : buildTeamThisMatch;
-                    var setup = new MatchSetup(homeTeam, awayTeam, Referee);
-
-                    ulong matchSeed = RngStreams.MatchSeed(seed, matchIndexGlobal);
-                    matchIndexGlobal++;
-
-                    MatchResult result;
-                    try
-                    {
-                        result = Simulator.Run(setup, matchSeed, catalog, new SimConfig(CollectLog: false));
-                    }
-                    catch (ArgumentException ex)
-                    {
-                        throw new ArgumentException(
-                            $"build '{buildId}' (campaña {c}, partido {m + 1}): {ex.Message}", ex);
-                    }
-
-                    var report = result.Report;
-                    bool buildWon = buildHome ? report.Winner == 0 : report.Winner == 1;
-
-                    // Progresión (§6): 100% de experiencia a los 7 titulares que jugaron, 45% (tuning) a
-                    // los suplentes; niveles recalculados desde la experiencia acumulada de la campaña;
-                    // contadores de carrera sumados desde los perks accumulatesAcrossMatches del partido.
-                    var awards = ProgressionRules.AwardExperience(starterIds, benchIds, catalog.Progression);
-                    foreach (var award in awards)
-                    {
-                        xpTotals[award.PlayerId] = xpTotals.GetValueOrDefault(award.PlayerId) + award.Experience;
-                    }
-
-                    foreach (var id in allIds)
-                    {
-                        int newLevel = ProgressionRules.LevelFor(xpTotals.GetValueOrDefault(id), catalog.Progression);
-                        players[id] = ProgressionRules.LevelUp(players[id], newLevel, catalog.Progression);
-                    }
-
-                    foreach (var id in allIds)
-                    {
-                        players[id] = ProgressionRules.ApplyCounterDeltas(players[id], result.CounterDeltas);
-                    }
-
-                    int activations = report.PerkActivations.Count(a => buildPlayerIds.Contains(a.OwnerId));
-
-                    var acc = matchAcc[m];
-                    acc.Matches++;
-                    if (buildWon)
-                    {
-                        acc.Wins++;
-                    }
-
-                    acc.Activations += activations;
-                    foreach (var p in players.Values)
-                    {
-                        acc.LevelSum += p.Level;
-                        acc.StrengthSum += p.Attributes.Strength;
-                        acc.TechniqueSum += p.Attributes.Technique;
-                    }
-
-                    acc.RosterSamples += players.Count;
+                    var from = campaignAcc[m];
+                    var to = matchAcc[m];
+                    to.Matches += from.Matches;
+                    to.Wins += from.Wins;
+                    to.LevelSum += from.LevelSum;
+                    to.StrengthSum += from.StrengthSum;
+                    to.TechniqueSum += from.TechniqueSum;
+                    to.RosterSamples += from.RosterSamples;
+                    to.Activations += from.Activations;
                 }
             }
 
@@ -467,6 +445,133 @@ public static class BuildBatchRunner
 
         stopwatch.Stop();
         return new CampaignResult(rows, stopwatch.Elapsed);
+    }
+
+    /// <summary>
+    /// Una campaña: <paramref name="matchesPerCampaign"/> partidos consecutivos de la build contra
+    /// <c>human_none</c> de calidad creciente, arrastrando experiencia, niveles y contadores de carrera
+    /// entre partidos. Devuelve lo que aportó cada índice de partido a la fila de la build.
+    /// </summary>
+    private static CampaignMatchAccumulator[] PlayCampaign(
+        Catalog catalog,
+        BuildConfig build,
+        string buildId,
+        BuildConfig opponentBuild,
+        int matchesPerCampaign,
+        ulong seed,
+        bool homeAway,
+        int genIndexBase,
+        int matchIndexBase,
+        int campaignNumber)
+    {
+        var matchAcc = new CampaignMatchAccumulator[matchesPerCampaign];
+        for (int m = 0; m < matchesPerCampaign; m++)
+        {
+            matchAcc[m] = new CampaignMatchAccumulator();
+        }
+
+        int genIndex = genIndexBase;
+        int matchIndexGlobal = matchIndexBase;
+        int c = campaignNumber;
+
+        int buildGenIndex = genIndex++;
+        var buildRng = RngStreams.Generation(seed, buildGenIndex);
+        int buildFirstId = 1 + (buildGenIndex * 100);
+        TeamSetup initialTeam;
+        try
+        {
+            initialTeam = build.ToTeamSetup(ref buildRng, catalog, buildFirstId);
+        }
+        catch (ArgumentException ex)
+        {
+            throw new ArgumentException($"build '{buildId}': {ex.Message}", ex);
+        }
+
+        var starterIds = initialTeam.Lineup.Slots.Select(s => s.PlayerId).ToList();
+        var allIds = initialTeam.Players.Select(pl => pl.Id).OrderBy(id => id).ToList();
+        var benchIds = allIds.Except(starterIds).ToList();
+        var buildPlayerIds = new HashSet<int>(allIds);
+
+        var players = initialTeam.Players.ToDictionary(pl => pl.Id);
+        var xpTotals = new Dictionary<int, int>();
+
+        for (int m = 0; m < matchesPerCampaign; m++)
+        {
+            int opponentQuality = 46 + (2 * m);
+            int oppGenIndex = genIndex++;
+            var oppRng = RngStreams.Generation(seed, oppGenIndex);
+            int oppFirstId = 1 + (oppGenIndex * 100);
+            var opponentTeam = opponentBuild.ToTeamSetup(ref oppRng, catalog, oppFirstId, opponentQuality);
+
+            var currentPlayers = players.Values.OrderBy(pl => pl.Id).ToList();
+            var buildTeamThisMatch = initialTeam with { Players = currentPlayers };
+
+            // Con --home-away se alterna de partido en partido dentro de la misma campaña para
+            // que la mitad se juegue como local y la mitad como visitante (§8: elimina el sesgo
+            // local/visitante también en la campaña).
+            bool buildHome = !homeAway || m % 2 == 0;
+            var homeTeam = buildHome ? buildTeamThisMatch : opponentTeam;
+            var awayTeam = buildHome ? opponentTeam : buildTeamThisMatch;
+            var setup = new MatchSetup(homeTeam, awayTeam, Referee);
+
+            ulong matchSeed = RngStreams.MatchSeed(seed, matchIndexGlobal);
+            matchIndexGlobal++;
+
+            MatchResult result;
+            try
+            {
+                result = Simulator.Run(setup, matchSeed, catalog, new SimConfig(CollectLog: false));
+            }
+            catch (ArgumentException ex)
+            {
+                throw new ArgumentException(
+                    $"build '{buildId}' (campaña {c}, partido {m + 1}): {ex.Message}", ex);
+            }
+
+            var report = result.Report;
+            bool buildWon = buildHome ? report.Winner == 0 : report.Winner == 1;
+
+            // Progresión (§6): 100% de experiencia a los 7 titulares que jugaron, 45% (tuning) a
+            // los suplentes; niveles recalculados desde la experiencia acumulada de la campaña;
+            // contadores de carrera sumados desde los perks accumulatesAcrossMatches del partido.
+            var awards = ProgressionRules.AwardExperience(starterIds, benchIds, catalog.Progression);
+            foreach (var award in awards)
+            {
+                xpTotals[award.PlayerId] = xpTotals.GetValueOrDefault(award.PlayerId) + award.Experience;
+            }
+
+            foreach (var id in allIds)
+            {
+                int newLevel = ProgressionRules.LevelFor(xpTotals.GetValueOrDefault(id), catalog.Progression);
+                players[id] = ProgressionRules.LevelUp(players[id], newLevel, catalog.Progression);
+            }
+
+            foreach (var id in allIds)
+            {
+                players[id] = ProgressionRules.ApplyCounterDeltas(players[id], result.CounterDeltas);
+            }
+
+            int activations = report.PerkActivations.Count(a => buildPlayerIds.Contains(a.OwnerId));
+
+            var acc = matchAcc[m];
+            acc.Matches++;
+            if (buildWon)
+            {
+                acc.Wins++;
+            }
+
+            acc.Activations += activations;
+            foreach (var p in players.Values)
+            {
+                acc.LevelSum += p.Level;
+                acc.StrengthSum += p.Attributes.Strength;
+                acc.TechniqueSum += p.Attributes.Technique;
+            }
+
+            acc.RosterSamples += players.Count;
+        }
+
+        return matchAcc;
     }
 
     private static List<BuildPairing> MatrixPairings(IReadOnlyList<string> builds, string? vsId)

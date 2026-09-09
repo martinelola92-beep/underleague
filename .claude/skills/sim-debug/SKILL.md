@@ -14,7 +14,7 @@ de un lote de `/Balance`, la columna `seed` de `matches.csv` ya es la semilla de
 (`RngStreams.MatchSeed(seedBase, índice)`, no el índice); reprodúcelo con `--match-seed`:
 
 ```bash
-dotnet run --project Balance -- --match-seed <seed de la fila> --teams <mismo --teams del lote> --seed <misma --seed del lote> --log
+dotnet run --project Balance -c Release -- --match-seed <seed de la fila> --teams <mismo --teams del lote> --seed <misma --seed del lote> --log
 ```
 
 `--seed` (la base, no `--match-seed`) sigue haciendo falta porque los equipos se generan con

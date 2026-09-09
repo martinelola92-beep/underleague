@@ -118,13 +118,27 @@ public static class FullRunRunner
             }
 
             options = Tune(options, minPerkValueReward, minPerkValueMarket, minItemValueMarket, slotBarOff || minPerkValue is not null, slotHorizon, arcJudged, slotGates, act1Pass, act2Pass, valuesFlat);
+
+            // Las runs de una doctrina son independientes entre sí y su semilla es función pura del
+            // índice (seed + i), igual que el plan de celdas de BossGateTests: por eso se pueden jugar en
+            // paralelo sin tocar el determinismo (RT-020..024). El array se escribe por índice y la
+            // reducción (lista y suma de partidos) se hace después, en orden de índice, para que el
+            // resultado sea bit a bit el mismo que el del bucle secuencial. Cada hilo juega con SU
+            // catálogo (BalanceCatalogs): las condiciones compiladas de los perks no son reentrantes.
+            var played = new RunPlayResult[runs];
+            var doctrineOptions = options;
+            Parallel.For(0, runs, i =>
+            {
+                var threadCatalog = BalanceCatalogs.Current(catalog);
+                var setup = SetupFor(races[i % races.Count], standard, dataFiles);
+                played[i] = RunPolicy.Play(setup, seed + (ulong)i, threadCatalog, standard, bosses, doctrineOptions);
+            });
+
             var rows = new List<RunPlayResult>(runs);
             for (int i = 0; i < runs; i++)
             {
-                var setup = SetupFor(races[i % races.Count], standard, dataFiles);
-                var result = RunPolicy.Play(setup, seed + (ulong)i, catalog, standard, bosses, options);
-                rows.Add(result);
-                matches += result.Matches;
+                rows.Add(played[i]);
+                matches += played[i].Matches;
             }
 
             byDoctrine[doctrine] = rows;
@@ -151,13 +165,21 @@ public static class FullRunRunner
 
         marketlessOptions = Tune(marketlessOptions, minPerkValueReward, minPerkValueMarket, minItemValueMarket, slotBarOff || minPerkValue is not null, slotHorizon, arcJudged, slotGates, act1Pass, act2Pass, valuesFlat);
 
+        // Mismo plan que las doctrinas: índice -> semilla, y la reducción en orden de índice.
+        var playedMarketless = new RunPlayResult[runs];
+        var marketlessTuned = marketlessOptions;
+        Parallel.For(0, runs, i =>
+        {
+            var threadCatalog = BalanceCatalogs.Current(catalog);
+            var setup = SetupFor(races[i % races.Count], standard, dataFiles);
+            playedMarketless[i] = RunPolicy.Play(setup, seed + (ulong)i, threadCatalog, standard, bosses, marketlessTuned);
+        });
+
         var marketless = new List<RunPlayResult>(runs);
         for (int i = 0; i < runs; i++)
         {
-            var setup = SetupFor(races[i % races.Count], standard, dataFiles);
-            var result = RunPolicy.Play(setup, seed + (ulong)i, catalog, standard, bosses, marketlessOptions);
-            marketless.Add(result);
-            matches += result.Matches;
+            marketless.Add(playedMarketless[i]);
+            matches += playedMarketless[i].Matches;
         }
 
         stopwatch.Stop();

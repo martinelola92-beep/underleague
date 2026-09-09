@@ -28,6 +28,7 @@ try
     string dataPath = ResolveDataPath(options.DataPath);
     var dataFiles = LoadDataFiles(dataPath);
     Catalog catalog = DataLoader.FromJson(dataFiles);
+    BalanceCatalogs.Init(dataFiles);
 
     if (options.Describe is { } language)
     {

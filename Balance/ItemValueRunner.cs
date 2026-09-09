@@ -115,70 +115,112 @@ public static class ItemValueRunner
         return rows;
     }
 
+    /// <summary>Lo que sacó una pareja de plantillas: portadores elegibles y victorias. <c>null</c> si nadie podía llevarlo.</summary>
+    private sealed record RosterOutcome(int Eligible, int Wins);
+
     private static ItemValueRow? Measure(
         Catalog catalog, ItemDefinition item, ulong seed, int rosters, int matchesPerRoster, int itemIndex)
     {
         var race = item.Race ?? NeutralRace;
-        var config = new SimConfig(CollectLog: false);
 
         // La misma conversión que usa el bucle de run (RunEquipment.ToMatchItem), así que /Balance mide
         // el objeto que juega y no una copia hecha aquí.
         var matchItem = RunEquipment.ToMatchItem(item);
 
-        int matches = 0, wins = 0, carriers = 0;
+        // Las parejas de plantillas son independientes entre sí —aquí no hay campaña que arrastrar— y sus
+        // dados (RngStreams.Generation(seed, itemIndex*1000 + roster)) y semillas de partido
+        // (RngStreams.MatchSeed con el índice global itemIndex*100_000 + ...) son función pura del índice,
+        // nunca de un contador que avance con la ejecución. Por eso se juegan en paralelo escribiendo por
+        // índice, con la reducción después en orden de índice —incluida la de portadores, que es un
+        // mínimo— para que el resultado sea bit a bit el mismo que el del bucle secuencial (RT-020..024).
+        var played = new RosterOutcome?[rosters];
+        Parallel.For(0, rosters, roster =>
+        {
+            // Catálogo por hilo (BalanceCatalogs): las condiciones compiladas de los perks no son
+            // reentrantes. El dato es el mismo, así que la medida no cambia.
+            played[roster] = PlayRoster(
+                BalanceCatalogs.Current(catalog), item, matchItem, race, seed, roster, matchesPerRoster, itemIndex);
+        });
 
+        int matches = 0, wins = 0, carriers = 0;
         for (int roster = 0; roster < rosters; roster++)
         {
-            // Misma generación de espejo que PerkValueRunner.Measure, deliberadamente duplicada: es
-            // código privado de aquel modo y extraerlo obligaría a tocar el instrumento de perks, que
-            // sostiene una tabla ya medida. Cuatro líneas duplicadas cuestan menos que ese riesgo.
-            var subjectRng = RngStreams.Generation(seed, (itemIndex * 1000) + roster);
-            var mirrorRng = RngStreams.Generation(seed, (itemIndex * 1000) + 500 + roster);
-            var subject = TeamGenerator.Generate(ref subjectRng, catalog, "subject", race, Quality, 1, Level);
-            var mirror = TeamGenerator.Generate(ref mirrorRng, catalog, "mirror", race, Quality, 100001, Level);
-
-            var eligible = EligibleStarters(subject, item, matchItem);
-            if (eligible.Count == 0)
+            if (played[roster] is not { } outcome)
             {
                 // Ningún titular generado puede llevarlo: no se mide y se queda sin entrada, igual que
                 // un perk sin portador posible. Es más honesto que medirlo sobre un portador imposible,
-                // donde el objeto no aportaría nada (MatchItem.AppliesTo) y saldría valiendo cero.
+                // donde el objeto no aportaría nada (MatchItem.AppliesTo) y saldría valiendo cero. El
+                // bucle secuencial abandonaba en la primera plantilla sin portador; el resultado es el
+                // mismo, porque la fila entera se descarta venga de la plantilla que venga.
                 return null;
             }
 
-            carriers = carriers == 0 ? eligible.Count : Math.Min(carriers, eligible.Count);
-            int carrier = eligible[roster % eligible.Count];
-            var players = subject.Players.ToList();
-            players[carrier] = players[carrier] with { Item = matchItem };
-            subject = subject with { Players = players };
-
-            for (int k = 0; k < matchesPerRoster; k++)
-            {
-                bool subjectAway = (k % 2) == 1;
-                int subjectSide = subjectAway ? 1 : 0;
-                var setup = subjectAway
-                    ? new MatchSetup(mirror, subject, Referee)
-                    : new MatchSetup(subject, mirror, Referee);
-
-                var result = Simulator.Run(
-                    setup,
-                    RngStreams.MatchSeed(seed, (itemIndex * 100_000) + (roster * matchesPerRoster) + k),
-                    catalog,
-                    config);
-
-                matches++;
-                if (result.Report.Winner == subjectSide)
-                {
-                    wins++;
-                }
-
-                // Aquí NO se arrastra nada al partido siguiente (a diferencia de la campaña de la
-                // ADR 0070): un objeto no tiene contador de carrera que arrastrar.
-            }
+            carriers = carriers == 0 ? outcome.Eligible : Math.Min(carriers, outcome.Eligible);
+            matches += matchesPerRoster;
+            wins += outcome.Wins;
         }
 
         int valueMilli = matches > 0 ? (int)Math.Round(((1000.0 * wins / matches) - 500.0) * 2.0) : 0;
         return new ItemValueRow(item.Id, carriers, matches, wins, valueMilli);
+    }
+
+    /// <summary>Los <paramref name="matchesPerRoster"/> partidos independientes de una pareja de plantillas (ida y vuelta).</summary>
+    private static RosterOutcome? PlayRoster(
+        Catalog catalog,
+        ItemDefinition item,
+        MatchItem matchItem,
+        Race race,
+        ulong seed,
+        int roster,
+        int matchesPerRoster,
+        int itemIndex)
+    {
+        var config = new SimConfig(CollectLog: false);
+
+        // Misma generación de espejo que PerkValueRunner.PlayRoster, deliberadamente duplicada: es
+        // código privado de aquel modo y extraerlo obligaría a tocar el instrumento de perks, que
+        // sostiene una tabla ya medida. Cuatro líneas duplicadas cuestan menos que ese riesgo.
+        var subjectRng = RngStreams.Generation(seed, (itemIndex * 1000) + roster);
+        var mirrorRng = RngStreams.Generation(seed, (itemIndex * 1000) + 500 + roster);
+        var subject = TeamGenerator.Generate(ref subjectRng, catalog, "subject", race, Quality, 1, Level);
+        var mirror = TeamGenerator.Generate(ref mirrorRng, catalog, "mirror", race, Quality, 100001, Level);
+
+        var eligible = EligibleStarters(subject, item, matchItem);
+        if (eligible.Count == 0)
+        {
+            return null;
+        }
+
+        int carrier = eligible[roster % eligible.Count];
+        var players = subject.Players.ToList();
+        players[carrier] = players[carrier] with { Item = matchItem };
+        subject = subject with { Players = players };
+
+        int wins = 0;
+        for (int k = 0; k < matchesPerRoster; k++)
+        {
+            bool subjectAway = (k % 2) == 1;
+            int subjectSide = subjectAway ? 1 : 0;
+            var setup = subjectAway
+                ? new MatchSetup(mirror, subject, Referee)
+                : new MatchSetup(subject, mirror, Referee);
+
+            var result = Simulator.Run(
+                setup,
+                RngStreams.MatchSeed(seed, (itemIndex * 100_000) + (roster * matchesPerRoster) + k),
+                catalog,
+                config);
+
+            if (result.Report.Winner == subjectSide)
+            {
+                wins++;
+            }
+
+            // Aquí NO se arrastra nada al partido siguiente (a diferencia de la campaña de la
+            // ADR 0070): un objeto no tiene contador de carrera que arrastrar.
+        }
+
+        return new RosterOutcome(eligible.Count, wins);
     }
 
     /// <summary>

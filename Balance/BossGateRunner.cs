@@ -46,9 +46,14 @@ public static class BossGateRunner
         ArgumentNullException.ThrowIfNull(items);
 
         var stopwatch = System.Diagnostics.Stopwatch.StartNew();
-        var cells = new List<BossGateCell>();
-        int matchIndex = 0;
 
+        // El orden de las celdas y su desplazamiento de semilla de partido se fijan ANTES de jugar
+        // ninguna: cada celda juega Rosters x MatchesPerRoster partidos, así que su índice global es
+        // exacto y no depende de en qué orden terminen. Es lo que permite jugarlas en paralelo sin
+        // tocar el determinismo (RT-020..024): las plantillas salen de RngStreams.Generation(seed, roster)
+        // y los partidos de RngStreams.MatchSeed(seed, índice global), los dos función pura del índice.
+        // Es el mismo plan que usa la puerta de Sim.Tests/Analysis/BossGateTests.
+        var plan = new List<(BossDefinition Boss, string Level, string BuildId, BuildConfig Build, int Offset)>();
         foreach (var boss in bosses.All)
         {
             foreach (var level in BossGateMetrics.Levels)
@@ -66,27 +71,44 @@ public static class BossGateRunner
                             $"la build '{buildId}' de qualityLevels.{level} no existe en data/balance/builds/");
                     }
 
-                    // La plantilla del jugador llega a la puerta con el nivel que le da la progresión de
-                    // la run (gate.playerLevel) y con las PIEZAS que caben en ese punto de la run
-                    // (ADR 0040): la construcción es lo único que cambia entre escalones, y la densidad
-                    // lo único que cambia entre actos.
-                    var density = actDensity.TryGetValue((boss.Act, level), out var d)
-                        ? d
-                        : Underleague.Sim.Analysis.BuildDensity.Full;
-                    var atGate = (build with { Level = boss.GatePlayerLevel }).At(density);
-                    var cell = BossGateMetrics.PlayCell(
-                        catalog, boss, level, buildId,
-                        (roster, idBase) =>
-                        {
-                            var rng = RngStreams.Generation(seed, roster);
-                            return atGate.ToTeamSetup(ref rng, catalog, idBase, qualityOverride: null, items);
-                        },
-                        seed, rosters, matchesPerRoster, matchIndex, (int)build.Race);
-
-                    matchIndex += cell.Matches;
-                    cells.Add(cell);
+                    plan.Add((boss, level, buildId, build, plan.Count * rosters * matchesPerRoster));
                 }
             }
+        }
+
+        var played = new BossGateCell[plan.Count];
+        Parallel.For(0, plan.Count, i =>
+        {
+            var (boss, level, buildId, build, offset) = plan[i];
+
+            // Catálogo por hilo (BalanceCatalogs): las condiciones compiladas de los perks no son
+            // reentrantes, así que la celda entera —generación y partidos— se juega con el suyo.
+            var threadCatalog = BalanceCatalogs.Current(catalog);
+
+            // La plantilla del jugador llega a la puerta con el nivel que le da la progresión de
+            // la run (gate.playerLevel) y con las PIEZAS que caben en ese punto de la run
+            // (ADR 0040): la construcción es lo único que cambia entre escalones, y la densidad
+            // lo único que cambia entre actos.
+            var density = actDensity.TryGetValue((boss.Act, level), out var d)
+                ? d
+                : Underleague.Sim.Analysis.BuildDensity.Full;
+            var atGate = (build with { Level = boss.GatePlayerLevel }).At(density);
+            played[i] = BossGateMetrics.PlayCell(
+                threadCatalog, boss, level, buildId,
+                (roster, idBase) =>
+                {
+                    var rng = RngStreams.Generation(seed, roster);
+                    return atGate.ToTeamSetup(ref rng, threadCatalog, idBase, qualityOverride: null, items);
+                },
+                seed, rosters, matchesPerRoster, offset, (int)build.Race);
+        });
+
+        var cells = new List<BossGateCell>(plan.Count);
+        int matchIndex = 0;
+        for (int i = 0; i < plan.Count; i++)
+        {
+            cells.Add(played[i]);
+            matchIndex += played[i].Matches;
         }
 
         stopwatch.Stop();

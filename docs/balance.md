@@ -7,7 +7,7 @@ Concreta RT-050..057 y las métricas obligatorias dispersas por los requisitos (
 Consola .NET que ejecuta N partidos sin Godot y vuelca CSV.
 
 ```
-dotnet run --project Balance -- \
+dotnet run --project Balance -c Release -- \
   --runs 10000 \
   --seed 1 \
   --teams data/balance/reference.json \       # parejas o pool de equipos
@@ -20,19 +20,27 @@ dotnet run --project Balance -- \
 Modos añadidos después de la fase 0:
 
 ```
-dotnet run --project Balance -- --builds all [--vs id] [--campaign N] [--home-away] [--rosters N]
-dotnet run --project Balance -- --boss-gate [--rosters 32] [--runs 4]     # curva de la ADR 0033
-dotnet run --project Balance -- --full-runs 500 [--seed 1]                # runs completas (fase 2)
-dotnet run --project Balance -- --full-runs 500 --ignore-scouting         # la misma run sin leer el ojeo
-dotnet run --project Balance -- --full-runs 300 --risk-aversion N         # cuánto pesa el indicador de riesgo
-dotnet run --project Balance -- --full-runs 300 --slot-bar-off             # el listón del slot apagado (ADR 0072)
-dotnet run --project Balance -- --full-runs 300 --min-perk-value N         # listón constante en vez del derivado
-dotnet run --project Balance -- --full-runs 300 --min-perk-value-{reward,market} N
-dotnet run --project Balance -- --full-runs 300 --slot-horizon N --arc-judged
-dotnet run --project Balance -- --full-runs 300 --slot-gates                # coste de oportunidad ponderado por exposición a puertas (ADR 0076)
-dotnet run --project Balance -- --full-runs 300 --act{1,2}-pass N          # tasas de paso que cree la política (ADR 0077)
-dotnet run --project Balance -- --describe [es|en]                        # catálogo de perks
+dotnet run --project Balance -c Release -- --builds all [--vs id] [--campaign N] [--home-away] [--rosters N]
+dotnet run --project Balance -c Release -- --boss-gate [--rosters 32] [--runs 4]     # curva de la ADR 0033
+dotnet run --project Balance -c Release -- --full-runs 500 [--seed 1]                # runs completas (fase 2)
+dotnet run --project Balance -c Release -- --full-runs 500 --ignore-scouting         # la misma run sin leer el ojeo
+dotnet run --project Balance -c Release -- --full-runs 300 --risk-aversion N         # cuánto pesa el indicador de riesgo
+dotnet run --project Balance -c Release -- --full-runs 300 --slot-bar-off             # el listón del slot apagado (ADR 0072)
+dotnet run --project Balance -c Release -- --full-runs 300 --min-perk-value N         # listón constante en vez del derivado
+dotnet run --project Balance -c Release -- --full-runs 300 --min-perk-value-{reward,market} N
+dotnet run --project Balance -c Release -- --full-runs 300 --slot-horizon N --arc-judged
+dotnet run --project Balance -c Release -- --full-runs 300 --slot-gates                # coste de oportunidad ponderado por exposición a puertas (ADR 0076)
+dotnet run --project Balance -c Release -- --full-runs 300 --min-item-value-market N   # listón constante del objeto de mercado (ADR 0086)
+dotnet run --project Balance -c Release -- --perk-values --rosters N [--runs 8]        # tabla de valor de perks, espejo en campaña (ADR 0070)
+dotnet run --project Balance -c Release -- --item-values --rosters N [--runs 2]        # tabla de valor de objetos, mismo espejo (ADR 0086)
+dotnet run --project Balance -c Release -- --full-runs 300 --act{1,2}-pass N          # tasas de paso que cree la política (ADR 0077)
+dotnet run --project Balance -c Release -- --describe [es|en]                        # catálogo de perks
 ```
+
+Siempre `-c Release`: en Debug el motor es ~17x más lento (medido el 8 sep 2026). Todos los modos juegan sus
+partidos en paralelo (`Parallel.For` por índice, semillas función pura del índice, patrón de
+`BossGateTests`, y un `Catalog` por hilo porque las condiciones compiladas de `/Sim` no son reentrantes), con
+salida byte a byte idéntica a la secuencial para la misma semilla.
 
 `--full-runs N` juega N runs completas **con cada una de las tres doctrinas de compra de la ADR 0037**
 (contextual, gastadora, ahorradora) sobre las mismas semillas, y escribe `runs.csv` (una fila por run:

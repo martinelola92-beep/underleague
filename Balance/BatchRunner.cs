@@ -138,6 +138,13 @@ public static class BatchRunner
 
         var stopwatch = System.Diagnostics.Stopwatch.StartNew();
 
+        // El plan del lote se fija ANTES de jugar ningún partido: el índice global de cada partido sale
+        // del reparto de --runs entre emparejamientos, que ya es una función pura de (p, k), y con él la
+        // semilla de motor (RngStreams.MatchSeed). Como ninguna iteración depende de otra, el bucle se
+        // juega en paralelo escribiendo por índice y la acumulación (filas y estadísticas de jugador) se
+        // hace después en orden de índice: el resultado es bit a bit el mismo que el del bucle secuencial
+        // (RT-020..024). Es el mismo patrón que el plan de celdas de Sim.Tests/Analysis/BossGateTests.
+        var plan = new (MatchSetup Setup, string HomeId, string AwayId)[options.Runs];
         int globalIndex = 0;
         for (int p = 0; p < pairingsCount; p++)
         {
@@ -151,56 +158,68 @@ public static class BatchRunner
             int matchesForPairing = baseCount + (p < remainder ? 1 : 0);
             for (int k = 0; k < matchesForPairing; k++)
             {
-                int i = globalIndex;
-                globalIndex++;
+                plan[globalIndex++] = (setup, pairing.HomeId, pairing.AwayId);
+            }
+        }
 
-                // Semilla del partido i, derivada del flujo de partido (RT-022).
-                ulong matchSeed = RngStreams.MatchSeed(options.Seed, i);
+        var reports = new MatchReport[plan.Length];
+        Parallel.For(0, plan.Length, i =>
+        {
+            // Semilla del partido i, derivada del flujo de partido (RT-022).
+            ulong matchSeed = RngStreams.MatchSeed(options.Seed, i);
 
-                bool isFirst = i == 0;
-                var config = new SimConfig(
-                    CollectLog: isFirst && options.Log,
-                    DumpUtility: isFirst ? options.DumpUtility : null);
+            bool isFirst = i == 0;
+            var config = new SimConfig(
+                CollectLog: isFirst && options.Log,
+                DumpUtility: isFirst ? options.DumpUtility : null);
 
-                MatchResult result = Simulator.Run(setup, matchSeed, catalog, config);
+            // Catálogo por hilo (BalanceCatalogs): las condiciones compiladas de los perks no son
+            // reentrantes. Los equipos ya generados valen igual, porque llevan los perks por id.
+            reports[i] = Simulator.Run(plan[i].Setup, matchSeed, BalanceCatalogs.Current(catalog), config).Report;
+        });
 
-                var report = result.Report;
-                matches.Add(new MatchRow(
-                    Index: i,
-                    Seed: matchSeed,
-                    HomeId: pairing.HomeId,
-                    AwayId: pairing.AwayId,
-                    HomeGoals: report.Goals[0],
-                    AwayGoals: report.Goals[1],
-                    Winner: report.Winner,
-                    Ticks: report.Ticks,
-                    GoldenGoal: report.WentToGoldenGoal,
-                    Forfeit: report.Forfeit,
-                    PossessionChanges: report.PossessionChanges,
-                    PassChains: report.PassChains,
-                    PassChainTotalLength: report.PassChainTotalLength,
-                    Shots: report.Shots[0] + report.Shots[1],
-                    ShotsOnTarget: report.ShotsOnTarget[0] + report.ShotsOnTarget[1],
-                    Saves: report.Saves[0] + report.Saves[1],
-                    ShotsBlocked: report.ShotsBlocked[0] + report.ShotsBlocked[1],
-                    Tackles: report.Tackles,
-                    Blocks: report.Blocks,
-                    Fouls: report.Fouls,
-                    Yellow: report.YellowCards,
-                    Red: report.RedCards,
-                    Injuries: report.Injuries,
-                    BallThird0: report.BallTicksByThird[0],
-                    BallThird1: report.BallTicksByThird[1],
-                    BallThird2: report.BallTicksByThird[2],
-                    FinalBias: report.FinalBias));
+        for (int i = 0; i < plan.Length; i++)
+        {
+            var (_, homeId, awayId) = plan[i];
+            ulong matchSeed = RngStreams.MatchSeed(options.Seed, i);
+            bool isFirst = i == 0;
+            var report = reports[i];
 
-                AccumulatePlayers(playerLookup, report.Players);
+            matches.Add(new MatchRow(
+                Index: i,
+                Seed: matchSeed,
+                HomeId: homeId,
+                AwayId: awayId,
+                HomeGoals: report.Goals[0],
+                AwayGoals: report.Goals[1],
+                Winner: report.Winner,
+                Ticks: report.Ticks,
+                GoldenGoal: report.WentToGoldenGoal,
+                Forfeit: report.Forfeit,
+                PossessionChanges: report.PossessionChanges,
+                PassChains: report.PassChains,
+                PassChainTotalLength: report.PassChainTotalLength,
+                Shots: report.Shots[0] + report.Shots[1],
+                ShotsOnTarget: report.ShotsOnTarget[0] + report.ShotsOnTarget[1],
+                Saves: report.Saves[0] + report.Saves[1],
+                ShotsBlocked: report.ShotsBlocked[0] + report.ShotsBlocked[1],
+                Tackles: report.Tackles,
+                Blocks: report.Blocks,
+                Fouls: report.Fouls,
+                Yellow: report.YellowCards,
+                Red: report.RedCards,
+                Injuries: report.Injuries,
+                BallThird0: report.BallTicksByThird[0],
+                BallThird1: report.BallTicksByThird[1],
+                BallThird2: report.BallTicksByThird[2],
+                FinalBias: report.FinalBias));
 
-                if (isFirst)
-                {
-                    firstMatchLog = report.Log.ToArray();
-                    firstMatchDump = report.UtilityDump;
-                }
+            AccumulatePlayers(playerLookup, report.Players);
+
+            if (isFirst)
+            {
+                firstMatchLog = report.Log.ToArray();
+                firstMatchDump = report.UtilityDump;
             }
         }
 

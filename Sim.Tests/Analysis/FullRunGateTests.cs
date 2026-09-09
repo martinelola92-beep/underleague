@@ -28,6 +28,7 @@ namespace Underleague.Sim.Tests.Analysis;
 /// <c>dotnet run --project Balance -c Release -- --full-runs 240 --seed 1</c>.</para>
 /// </summary>
 [Trait("Category", "Gate")]
+[Collection("Gate")]
 public sealed class FullRunGateTests
 {
     /// <summary>
@@ -367,12 +368,17 @@ public sealed class FullRunGateTests
         var races = catalog.Races.Where(r => r.Launch).Select(r => r.Id).OrderBy(r => r).ToList();
         var options = RunPolicyOptions.For(PurchaseDoctrine.Contextual) with { HeedsLethalScouting = false };
 
-        var rows = new List<RunPlayResult>(Runs);
-        for (int i = 0; i < Runs; i++)
+        // La semilla de la run i es Seed + i, función pura del índice ya en la versión secuencial: el
+        // bucle no llevaba ningún contador aparte. Con el array pre-dimensionado, la posición i guarda la
+        // run i y el orden del resultado es el mismo que en serie, que es lo que exige el emparejamiento
+        // índice a índice con la lista contextual de NotReadingTheScoutingReportChangesHowThePolicyLinesUp
+        // (RT-013, RT-057).
+        var rows = new RunPlayResult[Runs];
+        Parallel.For(0, Runs, i =>
         {
             var setup = SetupFor(races[i % races.Count], standard, files);
-            rows.Add(RunPolicy.Play(setup, Seed + (ulong)i, catalog, standard, bosses, options));
-        }
+            rows[i] = RunPolicy.Play(setup, Seed + (ulong)i, ThreadCatalogs.Current, standard, bosses, options);
+        });
 
         return rows;
     }
@@ -385,19 +391,33 @@ public sealed class FullRunGateTests
         var bosses = BossCatalog.FromJson(files);
 
         var races = catalog.Races.Where(r => r.Launch).Select(r => r.Id).OrderBy(r => r).ToList();
-        var byDoctrine = new Dictionary<PurchaseDoctrine, IReadOnlyList<RunPlayResult>>();
+        var doctrines = new[] { PurchaseDoctrine.Contextual, PurchaseDoctrine.Spender, PurchaseDoctrine.Saver };
 
-        foreach (var doctrine in new[] { PurchaseDoctrine.Contextual, PurchaseDoctrine.Spender, PurchaseDoctrine.Saver })
+        // Las 3 × Runs runs se juegan en un solo Parallel.For sobre el índice plano, que reparte mejor
+        // que tres lotes seguidos. El bucle secuencial recorría (doctrina, run) y NO compartía contador
+        // entre doctrinas —la semilla era Seed + i con i el índice dentro de la doctrina—, así que
+        // (doctrina, i) = (idx / Runs, idx % Runs) reproduce exactamente la misma pareja
+        // (semilla, doctrina) para cada run, y el orden dentro de cada tramo del array es el de la lista
+        // secuencial (RT-013, RT-057). La partición por doctrina se hace después, en orden de índice.
+        var played = new RunPlayResult[doctrines.Length * Runs];
+        Parallel.For(0, played.Length, idx =>
         {
-            var options = RunPolicyOptions.For(doctrine);
-            var rows = new List<RunPlayResult>(Runs);
-            for (int i = 0; i < Runs; i++)
-            {
-                var setup = SetupFor(races[i % races.Count], standard, files);
-                rows.Add(RunPolicy.Play(setup, Seed + (ulong)i, catalog, standard, bosses, options));
-            }
+            var doctrine = doctrines[idx / Runs];
+            int i = idx % Runs;
+            var setup = SetupFor(races[i % races.Count], standard, files);
 
-            byDoctrine[doctrine] = rows;
+            // Catálogo por hilo: las condiciones compiladas de los perks no son reentrantes
+            // (ThreadCatalogs). standard y bosses sí se comparten: no llevan condiciones compiladas.
+            played[idx] = RunPolicy.Play(
+                setup, Seed + (ulong)i, ThreadCatalogs.Current, standard, bosses, RunPolicyOptions.For(doctrine));
+        });
+
+        var byDoctrine = new Dictionary<PurchaseDoctrine, IReadOnlyList<RunPlayResult>>();
+        for (int d = 0; d < doctrines.Length; d++)
+        {
+            var rows = new RunPlayResult[Runs];
+            Array.Copy(played, d * Runs, rows, 0, Runs);
+            byDoctrine[doctrines[d]] = rows;
         }
 
         var metrics = FullRunMetrics.Compute(

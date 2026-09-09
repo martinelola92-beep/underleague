@@ -129,78 +129,120 @@ public static class PerkValueRunner
         return rows;
     }
 
+    /// <summary>
+    /// Lo que sacó una plantilla de su campaña: victorias por índice de partido, o <c>null</c> si ningún
+    /// titular generado podía llevar el perk (entonces el perk entero se queda sin medir).
+    /// </summary>
+    private sealed record RosterOutcome(int[] WinsByMatch);
+
     private static PerkValueRow? Measure(
         Catalog catalog, PerkDefinition perk, Race race, ulong seed, int rosters, int matchesPerRoster, int perkIndex)
     {
-        var config = new SimConfig(CollectLog: false);
-        int matches = 0, wins = 0, slot = -1;
+        // Las plantillas son independientes entre sí —la campaña se arrastra DENTRO de una plantilla, no
+        // entre ellas— y tanto sus dados (RngStreams.Generation(seed, perkIndex*1000 + roster)) como las
+        // semillas de sus partidos (RngStreams.MatchSeed con el índice global perkIndex*100_000 + ...)
+        // son función pura del índice, nunca de un contador que avance con la ejecución. Por eso se
+        // juegan en paralelo escribiendo por índice, y la reducción se hace después en orden de índice:
+        // el resultado es bit a bit el mismo que el del bucle secuencial (RT-020..024). Mismo patrón que
+        // el plan de celdas de Sim.Tests/Analysis/BossGateTests.
+        var played = new RosterOutcome?[rosters];
+        Parallel.For(0, rosters, roster =>
+        {
+            // Catálogo por hilo (BalanceCatalogs): las condiciones compiladas de los perks no son
+            // reentrantes. El dato es el mismo, así que la medida no cambia.
+            played[roster] = PlayRoster(
+                BalanceCatalogs.Current(catalog), perk, race, seed, roster, matchesPerRoster, perkIndex);
+        });
+
+        int matches = 0, wins = 0;
+        const int Slot = -1;
         var winsByMatch = new int[matchesPerRoster];
         var matchesByMatch = new int[matchesPerRoster];
 
         for (int roster = 0; roster < rosters; roster++)
         {
-            var subjectRng = RngStreams.Generation(seed, (perkIndex * 1000) + roster);
-            var mirrorRng = RngStreams.Generation(seed, (perkIndex * 1000) + 500 + roster);
-            var subject = TeamGenerator.Generate(ref subjectRng, catalog, "subject", race, Quality, 1, Level);
-            var mirror = TeamGenerator.Generate(ref mirrorRng, catalog, "mirror", race, Quality, 100001, Level);
-
-            var eligible = EligibleStarters(subject, perk, catalog);
-            if (eligible.Count == 0)
+            if (played[roster] is not { } outcome)
             {
-                // Ningún titular generado puede llevarlo (etiqueta que el dado no dio): no se mide.
+                // Alguna plantilla no tenía portador posible (etiqueta que el dado no dio): el perk no se
+                // mide, igual que en el bucle secuencial, que abandonaba en cuanto se topaba con una.
                 return null;
             }
 
-            // El portador rota entre los titulares que pueden llevarlo: medir siempre sobre el slot 0
-            // pondría todos los perks en el portero, que es exactamente donde ninguno significa nada.
-            // Lo que interesa es lo que vale el perk CUANDO CAE, y cae en cualquiera de los suyos.
-            int carrier = eligible[roster % eligible.Count];
-            slot = -1;
-            var players = subject.Players.ToList();
-            players[carrier] = players[carrier] with { Perks = new[] { perk.Id } };
-            subject = subject with { Players = players };
-
             for (int k = 0; k < matchesPerRoster; k++)
             {
-                bool subjectAway = (k % 2) == 1;
-                int subjectSide = subjectAway ? 1 : 0;
-                var setup = subjectAway
-                    ? new MatchSetup(mirror, subject, Referee)
-                    : new MatchSetup(subject, mirror, Referee);
-
-                var result = Simulator.Run(
-                    setup,
-                    RngStreams.MatchSeed(seed, (perkIndex * 100_000) + (roster * matchesPerRoster) + k),
-                    catalog,
-                    config);
-
                 matches++;
                 matchesByMatch[k]++;
-                if (result.Report.Winner == subjectSide)
-                {
-                    wins++;
-                    winsByMatch[k]++;
-                }
-
-                // Campaña (ADR 0070): el contador de carrera pasa al partido siguiente igual que en la
-                // run (RF-070, ProgressionRules.ApplyCounterDeltas). Es lo único que se arrastra: la
-                // experiencia y las lesiones no, porque las pagarían por igual los dos lados del espejo
-                // y sólo añadirían varianza a una diferencia que ya es pequeña.
-                if (result.CounterDeltas.Count > 0)
-                {
-                    var carried = subject.Players.ToList();
-                    for (int i = 0; i < carried.Count; i++)
-                    {
-                        carried[i] = ProgressionRules.ApplyCounterDeltas(carried[i], result.CounterDeltas);
-                    }
-
-                    subject = subject with { Players = carried };
-                }
+                wins += outcome.WinsByMatch[k];
+                winsByMatch[k] += outcome.WinsByMatch[k];
             }
         }
 
         int valueMilli = matches > 0 ? (int)Math.Round(((1000.0 * wins / matches) - 500.0) * 2.0) : 0;
-        return new PerkValueRow(perk.Id, slot, matches, wins, valueMilli, winsByMatch, matchesByMatch);
+        return new PerkValueRow(perk.Id, Slot, matches, wins, valueMilli, winsByMatch, matchesByMatch);
+    }
+
+    /// <summary>La campaña de una plantilla: <paramref name="matchesPerRoster"/> partidos consecutivos que arrastran el contador de carrera (ADR 0070).</summary>
+    private static RosterOutcome? PlayRoster(
+        Catalog catalog, PerkDefinition perk, Race race, ulong seed, int roster, int matchesPerRoster, int perkIndex)
+    {
+        var config = new SimConfig(CollectLog: false);
+        var subjectRng = RngStreams.Generation(seed, (perkIndex * 1000) + roster);
+        var mirrorRng = RngStreams.Generation(seed, (perkIndex * 1000) + 500 + roster);
+        var subject = TeamGenerator.Generate(ref subjectRng, catalog, "subject", race, Quality, 1, Level);
+        var mirror = TeamGenerator.Generate(ref mirrorRng, catalog, "mirror", race, Quality, 100001, Level);
+
+        var eligible = EligibleStarters(subject, perk, catalog);
+        if (eligible.Count == 0)
+        {
+            // Ningún titular generado puede llevarlo (etiqueta que el dado no dio): no se mide.
+            return null;
+        }
+
+        // El portador rota entre los titulares que pueden llevarlo: medir siempre sobre el slot 0
+        // pondría todos los perks en el portero, que es exactamente donde ninguno significa nada.
+        // Lo que interesa es lo que vale el perk CUANDO CAE, y cae en cualquiera de los suyos.
+        int carrier = eligible[roster % eligible.Count];
+        var players = subject.Players.ToList();
+        players[carrier] = players[carrier] with { Perks = new[] { perk.Id } };
+        subject = subject with { Players = players };
+
+        var winsByMatch = new int[matchesPerRoster];
+        for (int k = 0; k < matchesPerRoster; k++)
+        {
+            bool subjectAway = (k % 2) == 1;
+            int subjectSide = subjectAway ? 1 : 0;
+            var setup = subjectAway
+                ? new MatchSetup(mirror, subject, Referee)
+                : new MatchSetup(subject, mirror, Referee);
+
+            var result = Simulator.Run(
+                setup,
+                RngStreams.MatchSeed(seed, (perkIndex * 100_000) + (roster * matchesPerRoster) + k),
+                catalog,
+                config);
+
+            if (result.Report.Winner == subjectSide)
+            {
+                winsByMatch[k]++;
+            }
+
+            // Campaña (ADR 0070): el contador de carrera pasa al partido siguiente igual que en la
+            // run (RF-070, ProgressionRules.ApplyCounterDeltas). Es lo único que se arrastra: la
+            // experiencia y las lesiones no, porque las pagarían por igual los dos lados del espejo
+            // y sólo añadirían varianza a una diferencia que ya es pequeña.
+            if (result.CounterDeltas.Count > 0)
+            {
+                var carried = subject.Players.ToList();
+                for (int i = 0; i < carried.Count; i++)
+                {
+                    carried[i] = ProgressionRules.ApplyCounterDeltas(carried[i], result.CounterDeltas);
+                }
+
+                subject = subject with { Players = carried };
+            }
+        }
+
+        return new RosterOutcome(winsByMatch);
     }
 
     /// <summary>

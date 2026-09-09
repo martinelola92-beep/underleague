@@ -22,6 +22,7 @@ Concreta RT-020 a RT-024, RT-041, RT-097. Requisito: **misma semilla + mismo bin
   - No usar `Math.Sin/Cos/Pow/Exp` en `/Sim`. Solo suma, resta, multiplicación, división y `MathF.Sqrt` (IEEE exacta).
   - No convertir una comparación en probabilidad: la distancia se compara con umbrales, no se mezcla con el RNG.
   - Sin `Parallel`, sin `Task`, sin SIMD en `/Sim`.
+  - El paralelismo vive en el **arnés** (`/Balance`, `Sim.Tests`), nunca en `/Sim`: `Parallel.For` por índice sobre un array pre-dimensionado, cada semilla función pura del índice (`RngStreams.MatchSeed(seed, índiceGlobal)`, nunca un contador que avance), reducciones después y en orden — el patrón de `BossGateTests`. Y **un `Catalog` por hilo**: `CompiledCondition` guarda el contexto de la evaluación en curso en la instancia y no es reentrante, así que compartir un catálogo entre hilos da resultados distintos en cada ejecución. Aceptación: salida byte a byte idéntica a la secuencial.
 - Si RT-024 detecta divergencia Windows/Linux, se migra a punto fijo Fix64 (RT-023b) mediante ADR; no antes.
 
 ## Orden

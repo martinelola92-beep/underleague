@@ -41,6 +41,7 @@ namespace Underleague.Sim.Tests.Analysis;
 /// están en docs/fase2-diseno.md.</para>
 /// </summary>
 [Trait("Category", "Gate")]
+[Collection("Gate")]
 public sealed class BossGateTests
 {
     /// <summary>Plantillas distintas por celda.</summary>
@@ -262,7 +263,6 @@ public sealed class BossGateTests
     private static Measured Run()
     {
         var files = TestData.LoadAllFiles();
-        var catalog = DataLoader.FromJson(files);
         var bosses = BossCatalog.FromJson(files);
         var builds = BuildFile.LoadAll(TestData.DataDirectory);
         var items = Underleague.Sim.Run.Systems.Items.ItemLoader.FromJson(files);
@@ -275,6 +275,7 @@ public sealed class BossGateTests
         // exacto y no depende de en qué orden terminen. Es lo que permite jugarlas en paralelo sin
         // tocar el determinismo (RT-020..024): las plantillas salen de RngStreams.Generation(Seed, i) y
         // los partidos de RngStreams.MatchSeed(Seed, índice global), los dos función pura del índice.
+        // El catálogo, en cambio, NO se puede compartir entre hilos: ver ThreadCatalogs.
         var plan = new List<(BossDefinition Boss, string Level, string BuildId, int Offset)>();
         foreach (var boss in bosses.All)
         {
@@ -297,10 +298,15 @@ public sealed class BossGateTests
             var density = densities.GetValueOrDefault((boss.Act, level)) ?? BuildDensity.Full;
             var build = builds[buildId].At(density);
             var slotCounters = density.CapCounters(counters.GetValueOrDefault(buildId));
+            // Catálogo por hilo: las condiciones compiladas de los perks guardan el contexto de la
+            // evaluación en curso en la propia instancia, así que dos hilos sobre el MISMO catálogo se
+            // pisan y mueven activaciones, goles y victorias (ver ThreadCatalogs). El dato es el mismo
+            // en todos los hilos, de modo que el resultado sigue siendo el del bucle secuencial.
+            var threadCatalog = ThreadCatalogs.Current;
             played[i] = BossGateMetrics.PlayCell(
-                catalog, boss, level, buildId,
+                threadCatalog, boss, level, buildId,
                 (roster, idBase) => WithCounters(
-                    build.ToTeamSetup(catalog, Seed, roster, idBase, boss.GatePlayerLevel, itemCatalog: items),
+                    build.ToTeamSetup(threadCatalog, Seed, roster, idBase, boss.GatePlayerLevel, itemCatalog: items),
                     slotCounters),
                 Seed, Rosters, MatchesPerRoster, offset, (int)build.Race);
         });

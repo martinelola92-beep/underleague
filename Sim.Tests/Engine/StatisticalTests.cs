@@ -18,6 +18,7 @@ namespace Underleague.Sim.Tests.Engine;
 /// lote no pueden divergir.
 /// </summary>
 [Trait("Category", "Gate")]
+[Collection("Gate")]
 public sealed class StatisticalTests
 {
     /// <summary>Partidos del lote de la puerta (RT-081).</summary>
@@ -143,8 +144,15 @@ public sealed class StatisticalTests
         int baseCount = Runs / pairingCount;
         int remainder = Runs % pairingCount;
 
-        var summaries = new List<MatchSummary>(Runs);
-        int globalIndex = 0;
+        // El plan de los 1.000 partidos se llena ANTES de jugar ninguno. El contador global de la versión
+        // secuencial avanzaba matchesForPairing = baseCount + (p < remainder ? 1 : 0) por emparejamiento,
+        // así que el índice del primer partido del emparejamiento p es
+        // p × baseCount + min(p, remainder) —los emparejamientos anteriores con un partido de más son
+        // exactamente los q < min(p, remainder)— y el del partido k es ese más k. Como el plan se llena en
+        // ese mismo orden, el índice del array ES el índice global: la semilla RngStreams.MatchSeed(Seed, i)
+        // es función pura de la posición y el orden de las 1.000 fichas coincide con el de la lista
+        // secuencial, así que la muestra de la puerta no cambia (RT-020..024, RT-057).
+        var plan = new (MatchSetup Setup, string HomeId, string AwayId)[Runs];
         for (int p = 0; p < pairingCount; p++)
         {
             var pairing = reference.Pairings[p];
@@ -154,16 +162,24 @@ public sealed class StatisticalTests
             var away = pairing.HomeId == pairing.AwayId ? twins[awayIndex] : instances[awayIndex];
             var setup = new MatchSetup(home, away, referee);
 
+            int offset = (p * baseCount) + Math.Min(p, remainder);
             int matchesForPairing = baseCount + (p < remainder ? 1 : 0);
             for (int k = 0; k < matchesForPairing; k++)
             {
-                ulong matchSeed = RngStreams.MatchSeed(Seed, globalIndex);
-                globalIndex++;
-                var result = Simulator.Run(setup, matchSeed, catalog, config);
-                summaries.Add(MatchSummary.FromReport(result.Report, pairing.HomeId, pairing.AwayId));
+                plan[offset + k] = (setup, pairing.HomeId, pairing.AwayId);
             }
         }
 
+        var played = new MatchSummary[Runs];
+        Parallel.For(0, Runs, i =>
+        {
+            var (setup, homeId, awayId) = plan[i];
+            // Catálogo por hilo: las condiciones compiladas de los perks no son reentrantes (ThreadCatalogs).
+            var result = Simulator.Run(setup, RngStreams.MatchSeed(Seed, i), ThreadCatalogs.Current, config);
+            played[i] = MatchSummary.FromReport(result.Report, homeId, awayId);
+        });
+
+        var summaries = played.ToList();
         Assert.Equal(Runs, summaries.Count);
         return MatchMetrics.Compute(summaries, reference.Pairings
             .Select(p => new MetricPairing(p.HomeId, p.AwayId, reference.QualityOf(p.HomeId), reference.QualityOf(p.AwayId)))

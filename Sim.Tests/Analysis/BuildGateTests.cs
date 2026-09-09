@@ -41,6 +41,7 @@ namespace Underleague.Sim.Tests.Analysis;
 /// </para>
 /// </summary>
 [Trait("Category", "Gate")]
+[Collection("Gate")]
 public sealed class BuildGateTests
 {
     /// <summary>Plantillas distintas sobre las que se promedia cada celda.</summary>
@@ -158,6 +159,9 @@ public sealed class BuildGateTests
 
     private static IReadOnlyList<MetricResult> Compute()
     {
+        // El catálogo de fuera del bucle solo sirve para la distribución RF-069 del final: los partidos
+        // usan el catálogo del hilo (ver ThreadCatalogs), porque las condiciones compiladas no son
+        // reentrantes.
         var catalog = TestData.LoadCatalog();
         var builds = BuildFile.LoadAll(TestData.DataDirectory);
         var groups = BuildGroupsFile.Load(TestData.DataDirectory);
@@ -173,13 +177,25 @@ public sealed class BuildGateTests
             baselines[id] = groups.BaselineByRace[builds[id].Race.ToString()];
         }
 
+        // El desplazamiento de semilla de partido de cada sujeto se fija ANTES de jugar ninguno. La
+        // versión secuencial llevaba un contador que cada celda avanzaba exactamente
+        // Rosters × MatchesPerRoster, y los bucles anidados iban (sujeto, plantilla, partido), así que el
+        // índice global del partido k de la plantilla r del sujeto s es
+        // s × Rosters × MatchesPerRoster + r × MatchesPerRoster + k. Escrita así, la semilla es función
+        // pura del índice: las celdas se juegan en paralelo y la secuencia de semillas es la misma bit a
+        // bit que en serie (RT-020..024), de modo que la puerta sigue midiendo la misma muestra (RT-057).
+        // La reducción se hace después del Parallel.For, recorriendo el array en orden de índice.
+        var played = new (BuildCellResult Subject, BuildCellResult Baseline, List<PerkActivationResult> Perks)[subjects.Count];
+        Parallel.For(0, subjects.Count, i =>
+        {
+            string id = subjects[i];
+            played[i] = RunCell(ThreadCatalogs.Current, builds, id, baselines[id], i * Rosters * MatchesPerRoster);
+        });
+
         var cells = new List<BuildCellResult>();
         var activations = new List<PerkActivationResult>();
-        int matchIndex = 0;
-
-        foreach (var id in subjects)
+        foreach (var (subject, baseline, perks) in played)
         {
-            var (subject, baseline, perks) = RunCell(catalog, builds, id, baselines[id], ref matchIndex);
             cells.Add(subject);
             cells.Add(baseline);
             activations.AddRange(perks);
@@ -196,12 +212,17 @@ public sealed class BuildGateTests
     /// (la de la build y la de la referencia, que es la que normaliza <c>buildsWinDifferently</c>) más las
     /// activaciones de los perks de la build.
     /// </summary>
+    /// <param name="matchIndexOffset">
+    /// Índice global del primer partido de la celda, para que dos celdas no compartan semilla de partido.
+    /// Es <c>índice del sujeto × Rosters × MatchesPerRoster</c>: la misma secuencia que producía el
+    /// contador secuencial.
+    /// </param>
     private static (BuildCellResult Subject, BuildCellResult Baseline, List<PerkActivationResult> Perks) RunCell(
         Catalog catalog,
         IReadOnlyDictionary<string, BuildFile> builds,
         string buildId,
         string baselineId,
-        ref int matchIndex)
+        int matchIndexOffset)
     {
         var build = builds[buildId];
         var baseline = builds[baselineId];
@@ -237,7 +258,11 @@ public sealed class BuildGateTests
                     ? new MatchSetup(baselineTeam, subjectTeam, Referee)
                     : new MatchSetup(subjectTeam, baselineTeam, Referee);
 
-                var result = Simulator.Run(setup, RngStreams.MatchSeed(Seed, matchIndex++), catalog, config);
+                var result = Simulator.Run(
+                    setup,
+                    RngStreams.MatchSeed(Seed, matchIndexOffset + (roster * MatchesPerRoster) + k),
+                    catalog,
+                    config);
                 var report = result.Report;
 
                 int subjectSide = subjectAway ? 1 : 0;

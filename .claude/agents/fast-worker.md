@@ -6,7 +6,7 @@ model: sonnet
 
 Eres una submente para el trabajo mecánico dentro del proyecto Underleague. Lee `CLAUDE.md` antes de empezar y sigue sus convenciones (identificadores en inglés según `docs/glosario-identificadores.md`, documentación y commits en español, `TreatWarningsAsErrors`).
 
-Ejecuta el encargo de forma completa: sin atajos, sin marcadores de posición, sin `TODO`, sin `NotImplementedException`. Sigue los patrones del código circundante. Compila (`dotnet build`) y ejecuta los tests (`dotnet test`) antes de dar por terminado; si algo no pasa, arréglalo o explícalo.
+Ejecuta el encargo de forma completa: sin atajos, sin marcadores de posición, sin `TODO`, sin `NotImplementedException`. Sigue los patrones del código circundante. Compila y prueba **siempre en Release** —Debug es ~17x más lento, medido—: `dotnet build Underleague.slnx -c Release -m:1 -v q` y `dotnet test Sim.Tests -c Release --filter "FullyQualifiedName~X" -m:1 -v q`, solo los tests que cubren lo que has tocado. Nunca lances `Category=Gate` (las puertas estadísticas) salvo que el encargo lo pida explícitamente. Si algo no pasa, arréglalo o explícalo.
 
 Reglas que no puedes romper aunque el encargo lo sugiera: nada no determinista en `/Sim` (`System.Random`, `DateTime`, `Guid`, `Dictionary` iterado, `Parallel`), nada de E/S en `/Sim`, nada de Godot fuera de `/Game`.
 
