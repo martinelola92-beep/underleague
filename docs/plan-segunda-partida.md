@@ -1,7 +1,7 @@
 # Plan: lo que el revisor vio en la segunda partida (paquete AZ)
 
 **Fecha:** 2026-09-09. **Origen:** siete anotaciones del revisor (`pendientes.md` AZ-A..AZ-G) tras jugar la build.
-**Estado:** tandas 1, 2 y 3 hechas y medidas (ADR 0090, ADR 0091; el paso 5 incluido); `buildsWinDifferently_passChain` volvió a verde. El revisor eligió el pase más profundo (aplicado, ADR 0091 §último: goles recuperados, tiros 7,7 / 7,1) y que las filas que siguen fuera se investiguen sin tocar bandas. Queda la tanda 4 (AZ-F, sustitución en partido).
+**Estado:** tandas 1, 2 y 3 hechas y medidas (ADR 0090, ADR 0091; el paso 5 incluido); `buildsWinDifferently_passChain` volvió a verde. El revisor eligió el pase más profundo (ADR 0091 §último), recalibrar las razas para la física nueva (ADR 0092: abanico 21,8 → 6,4, y con ello tiros 8,1 y `human_random` en banda) y cerrar las décimas por ADR (0093). Puertas en verde. Queda la tanda 4 (AZ-F, sustitución en partido).
 
 ## Orden de ejecución y por qué
 

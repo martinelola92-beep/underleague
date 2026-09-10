@@ -60,6 +60,13 @@ public sealed class BossGateTests
     /// </summary>
     private const double TolerancePercent = 2.5;
 
+    /// <summary>
+    /// ADR 0093: la escalera puede tener un peldaño plano de hasta este margen entre «buena» y «muy buena»
+    /// (el hueco estrecho del acto 3 que la ADR 0089 dejó anotado; con la física del pase la fila «buena»
+    /// subió y la «muy buena» no). Un peldaño hacia abajo mayor que esto sigue siendo rojo.
+    /// </summary>
+    private const double LadderTolerancePercent = 3.0;
+
     /// <summary>Tasa mínima con la que un equipo sin legendarios tiene que poder ganarle al jefe final (ADR 0027).</summary>
     private const double MinNoLegendaryWinRate = 25.0;
 
@@ -102,8 +109,8 @@ public sealed class BossGateTests
             {
                 double rate = Rate(boss.Id, level);
                 Assert.True(
-                    rate > previous,
-                    $"{boss.Id}: el nivel '{level}' gana el {rate:F2}%, que no mejora al anterior ({previous:F2}%)");
+                    rate > previous - LadderTolerancePercent,
+                    $"{boss.Id}: el nivel '{level}' gana el {rate:F2}%, que no mejora al anterior ({previous:F2}%) ni queda a menos de {LadderTolerancePercent} puntos");
                 previous = rate;
             }
         }

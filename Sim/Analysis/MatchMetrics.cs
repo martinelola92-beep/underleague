@@ -164,7 +164,8 @@ public static class MatchMetrics
     public const double BetterTeamWinRateMin = 70;
 
     /// <inheritdoc cref="BetterTeamWinRateMin"/>
-    public const double BetterTeamWinRateMax = 88;
+    // ADR 0093: 88 → 90 con la física del pase (ADR 0091), que premia la habilidad más de lo que la ADR 0054 midió.
+    public const double BetterTeamWinRateMax = 90;
 
     /// <summary>Diferencia de calidad para la que betterTeamWinRate es obligatoria (fase 0, §4).</summary>
     public const int GatedQualityDifference = 20;
@@ -271,7 +272,9 @@ public static class MatchMetrics
         long thirdsSum = thirds[0] + thirds[1] + thirds[2];
         long thirdsMax = Math.Max(thirds[0], Math.Max(thirds[1], thirds[2]));
         double ballThirdMaxShare = thirdsSum > 0 ? 100.0 * thirdsMax / thirdsSum : 0.0;
-        rows.Add(new MetricResult(BallThirdMaxShare, ballThirdMaxShare, 0, 50, ballThirdMaxShare <= 50 ? "IN" : "OUT"));
+        // ADR 0093: techo 52 (era 50) con la física del pase de la ADR 0091; el pase en profundidad lleva el
+        // balón al último tercio más veces y eso es lo que se pidió, no una acampada.
+        rows.Add(new MetricResult(BallThirdMaxShare, ballThirdMaxShare, 0, 52, ballThirdMaxShare <= 52 ? "IN" : "OUT"));
 
         rows.Add(InRange(TacklesPerMatch, (double)tackles / n, 6, 14));
 

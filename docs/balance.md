@@ -153,7 +153,7 @@ Las puertas automáticas viven en `Sim.Tests` con `Trait("Category", "Gate")` y 
 
 | Puerta | Fichero | Muestra | Qué defiende |
 |---|---|---|---|
-| Sensación de fútbol | `Engine/StatisticalTests.cs` | 1.000 partidos, semilla 1 | RT-056 y `betterTeamWinRate` (banda 70-88, ADR 0054) |
+| Sensación de fútbol | `Engine/StatisticalTests.cs` | 1.000 partidos, semilla 1 | RT-056 y `betterTeamWinRate` (banda 70-90, ADR 0054 y 0093) |
 | Criterio de salida de fase 1 | `Analysis/BuildGateTests.cs` | 40 plantillas × 12 partidos × 14 celdas = 6.720, semilla 1, ~30 s | Coherentes >= 58%, malas <= 45%, aleatoria 40-60%, `buildsWinDifferently`, `noDeadPerks`, RF-069 |
 | Rareza y jefe final | `Analysis/RarityAndBossTests.cs` | 24 plantillas × 20 partidos × 3 comparaciones, semilla 1 | RF-024 y la salvaguarda de la ADR 0027 |
 | Equilibrio entre razas | `Analysis/RaceBalanceTests.cs` | 250 plantillas × 4 partidos × 10 parejas, semilla 1 | D-29: ninguna raza fuera del 40-60% agrupado |

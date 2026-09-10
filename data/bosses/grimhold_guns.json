@@ -89,7 +89,7 @@
     "targets": {
       "incoherent": {
         "min": 15,
-        "max": 35
+        "max": 40
       },
       "correct": {
         "min": 65,

@@ -57,7 +57,7 @@ public sealed class StatisticalTests
     public void InjuriesPerMatchAreInRange() => AssertInRange(MatchMetrics.InjuriesPerMatch);
 
     /// <summary>
-    /// El equipo con 20 puntos más de calidad gana entre el <b>70% y el 88%</b> (ADR 0054, docs/balance.md).
+    /// El equipo con 20 puntos más de calidad gana entre el <b>70% y el 90%</b> (ADR 0054; techo 90 por la ADR 0093).
     /// La banda de fase 0 (65-80) medía un motor en el que todas las resoluciones eran lineales y de
     /// varianza máxima; con las dos tiradas promediadas (ADR 0050 P2) el valor se fue a 79,52, a medio
     /// punto del techo viejo, y cualquier cosa que subiera más el peso de la habilidad rompía la puerta

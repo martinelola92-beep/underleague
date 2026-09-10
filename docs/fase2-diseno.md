@@ -5505,6 +5505,9 @@ en una rejilla de 5×16 descarta demasiados receptores legítimos.
 | 0081 | `possessionChanges` | 12-25 | 12-28 | siete cambios independientes la empujaron; medido 22,07-26,60 |
 | 0082 | `injuriesPerMatch` | 0,3-0,8 | 0,3-0,9 | AW-R recompone la marca antes de reanudar; 0,86-0,88 en semilla 1 |
 | 0083 | `grimhold_guns` · incoherente | 20-35 | 15-35 | 17,5 a muestra completa; bajar la calidad del jefe está bloqueado por la celda muy buena (94,0/95) |
+| 0093 | `grimhold_guns` · incoherente | 15-35 | 15-40 | 36,8-38,1 con las razas de la ADR 0092: los estilos recortados quitan técnica al jefe del acto 1 tanto como a la build incoherente |
+| 0093 | `ballThirdMaxShare` | ≤ 50 | ≤ 52 | 50,4-51,3 con el pase en profundidad (ADR 0091): el balón llega al último tercio más veces, que es lo pedido |
+| 0093 | `betterTeamWinRate` 60-40 | 70-88 | 70-90 | 88,5-90,1: la física del pase premia la habilidad |
 | 0084 | `buildsWinDifferently_injuries` | ≥ 1,5 | ≥ 1,4 | la base de lesiones de todas las builds sube (0082) y el cociente se comprime a 1,47 |
 
 Las dos últimas son decisiones del revisor. Ningún número de `/Sim` ni de `/data` se tocó para hacer pasar
