@@ -51,14 +51,23 @@ internal static class MatchResolution
             playedIds.Add(lineup.Starters[i].Id);
         }
 
-        playedIds.Sort();
-
+        // ADR 0094: el suplente que entró por una sustitución forzada jugó (RF-025: 100 % de experiencia), y
+        // deja de contar como banquillo en ese partido.
         var benchIds = new List<int>(lineup.Bench.Count);
         for (int i = 0; i < lineup.Bench.Count; i++)
         {
-            benchIds.Add(lineup.Bench[i].Id);
+            int id = lineup.Bench[i].Id;
+            if (PlayedTicks(result.Report, id) > 0)
+            {
+                playedIds.Add(id);
+            }
+            else
+            {
+                benchIds.Add(id);
+            }
         }
 
+        playedIds.Sort();
         benchIds.Sort();
 
         // 1. La penalización de las lesiones leves ya se ha gastado en este partido (RF-091: "durante el
@@ -371,6 +380,19 @@ internal static class MatchResolution
         }
 
         return -1;
+    }
+
+    private static int PlayedTicks(MatchReport report, int playerId)
+    {
+        for (int i = 0; i < report.Players.Count; i++)
+        {
+            if (report.Players[i].PlayerId == playerId)
+            {
+                return report.Players[i].TicksOnPitch;
+            }
+        }
+
+        return 0;
     }
 
     private static bool Contains(IReadOnlyList<int> ids, int id)

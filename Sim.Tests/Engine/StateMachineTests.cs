@@ -48,6 +48,7 @@ public class StateMachineTests
     [InlineData(PlayerState.Injured)]
     [InlineData(PlayerState.Celebrating)]
     [InlineData(PlayerState.SentOff)]
+    [InlineData(PlayerState.Benched)]
     public void TerminalOrBusyStates_AllowNoActions(PlayerState state)
     {
         foreach (var action in Enum.GetValues<PlayerAction>())

@@ -56,6 +56,7 @@ public static class StateMachine
         PlayerState.Shooting => NoActions,
         PlayerState.Tackling => NoActions,
         PlayerState.Blocking => NoActions,
+        PlayerState.Benched => NoActions,
         PlayerState.KnockedDown => NoActions,
         PlayerState.Injured => NoActions,
         PlayerState.Celebrating => NoActions,

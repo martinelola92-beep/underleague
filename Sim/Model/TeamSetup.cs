@@ -66,4 +66,10 @@ public sealed record TeamSetup(string Id, string Name, Race Race, IReadOnlyList<
     /// </summary>
     public IReadOnlyList<Underleague.Sim.Perks.MatchConsumable> Consumables { get; init; } =
         Array.Empty<Underleague.Sim.Perks.MatchConsumable>();
+
+    /// <summary>
+    /// Sustituciones forzadas de este equipo en este partido (ADR 0094, AZ-F), parte del estado inicial
+    /// como <see cref="Consumables"/>. Quien entra tiene que estar en <c>Players</c> y no en <c>Lineup</c>.
+    /// </summary>
+    public IReadOnlyList<Substitution> Substitutions { get; init; } = Array.Empty<Substitution>();
 }

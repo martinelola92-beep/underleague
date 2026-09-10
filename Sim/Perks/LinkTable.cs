@@ -190,11 +190,18 @@ internal sealed class LinkTable
         for (int i = 0; i < players.Length; i++)
         {
             homes[i] = players[i].HomeCell;
-            teams[i] = players[i].Team;
+            // ADR 0094: el suplente en el banquillo comparte casilla-hogar con el que va a sustituir y no
+            // puede formar vínculos ni ser vinculado (entra tarde); sin equipo, la geometría no lo ve.
+            teams[i] = players[i].State == PlayerState.Benched ? -1 : players[i].Team;
         }
 
         for (int i = 0; i < players.Length; i++)
         {
+            if (teams[i] < 0)
+            {
+                continue;
+            }
+
             for (int r = 0; r < RelationCount; r++)
             {
                 _links[(i * RelationCount) + r] = LinkGeometry.ResolveLink(homes, teams, i, (LinkRelation)r);

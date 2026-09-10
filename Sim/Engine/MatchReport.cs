@@ -49,7 +49,8 @@ public sealed record PlayerMatchStats(
     int Fouls,
     int Cards,
     bool Injured,
-    int TicksOnPitch);
+    int TicksOnPitch,
+    int LeftPitchTick = -1);
 
 /// <summary>
 /// Una fila de la tabla de utilidad de una acción evaluada (RT-098). <c>Rejected</c> indica que la acción

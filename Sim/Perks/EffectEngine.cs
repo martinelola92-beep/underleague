@@ -247,6 +247,12 @@ internal sealed class EffectEngine : IPerkLinks
         for (int i = 0; i < subscriptions.Length; i++)
         {
             var subscription = subscriptions[i];
+            if (subscription.Owner.State == PlayerState.Benched)
+            {
+                // ADR 0094: en el banquillo no se juega; sus perks despiertan al entrar.
+                continue;
+            }
+
             if (!actorless && !ScopeMatches(subscription.Perk.Scope, subscription.Owner, actor, target))
             {
                 continue;
@@ -358,17 +364,29 @@ internal sealed class EffectEngine : IPerkLinks
     {
         for (int i = 0; i < _players.Length; i++)
         {
-            var owner = _players[i];
+            if (_players[i].State != PlayerState.Benched)
+            {
+                ApplyEquippedItem(_players[i]);
+            }
+        }
+    }
+
+    /// <summary>ADR 0094: el suplente entra con su objeto puesto; hasta entonces ni él ni su objeto existen para el partido.</summary>
+    internal void OnEnterPitch(MatchPlayer player) => ApplyEquippedItem(player);
+
+    private void ApplyEquippedItem(MatchPlayer owner)
+    {
+        {
             if (owner.Definition.Item is not { } item)
             {
-                continue;
+                return;
             }
 
             if (!item.AppliesTo(owner.Definition))
             {
                 _report.ItemActivations.Add(
                     new ItemActivation(item.Id, owner.Id, owner.Team, 0, "restricted:" + item.RequiredTag));
-                continue;
+                return;
             }
 
             int applied = ApplyPassiveEffects(owner, item.Effects);

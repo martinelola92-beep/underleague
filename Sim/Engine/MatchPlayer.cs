@@ -309,6 +309,9 @@ internal sealed class MatchPlayer
     /// <summary>True mientras el jugador está en el campo (no lesionado ni expulsado).</summary>
     public bool OnPitch { get; set; } = true;
 
+    /// <summary>Tick en el que dejó el campo (lesión, muerte o expulsión); −1 si sigue en él (ADR 0094).</summary>
+    public int LeftPitchTick { get; set; } = -1;
+
     /// <summary>Paradas consecutivas sin encajar; alimenta el decaimiento de parada (§3.7).</summary>
     public int ConsecutiveSaves { get; set; }
 
@@ -436,6 +439,26 @@ internal sealed class MatchPlayer
         StateTicksLeft = ticks > 0 ? ticks : 0;
     }
 
+    /// <summary>Al banquillo antes del saque (ADR 0094): como fuera del campo, con su propio estado.</summary>
+    public void Bench()
+    {
+        State = PlayerState.Benched;
+        StateTicksLeft = 0;
+        OnPitch = false;
+        Position = new Vec2(-1f, -1f);
+        Velocity = new Vec2(0f, 0f);
+    }
+
+    /// <summary>Entra al campo por una sustitución forzada (ADR 0094): en su casilla-hogar, posicionándose.</summary>
+    public void EnterPitch()
+    {
+        State = PlayerState.Positioning;
+        StateTicksLeft = 0;
+        OnPitch = true;
+        Position = HomeCenter;
+        Velocity = new Vec2(0f, 0f);
+    }
+
     /// <summary>Saca al jugador del campo (lesión o expulsión): posición (-1,-1), no decide ni cuenta.</summary>
     public void LeavePitch(PlayerState state)
     {
@@ -449,5 +472,5 @@ internal sealed class MatchPlayer
     /// <summary>Estadísticas finales del jugador para el informe.</summary>
     public PlayerMatchStats ToStats() => new(
         Id, Team, Goals, Assists, Shots, PassesAttempted, PassesCompleted,
-        Tackles, TacklesWon, Fouls, Cards, Injured, TicksOnPitch);
+        Tackles, TacklesWon, Fouls, Cards, Injured, TicksOnPitch, LeftPitchTick);
 }

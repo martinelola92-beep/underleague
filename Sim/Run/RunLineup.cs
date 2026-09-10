@@ -187,7 +187,7 @@ public static class RunLineup
             {
                 if (!Contains(starters, available[i].Id))
                 {
-                    bench.Add(available[i].ToDefinition(catalog));
+                    bench.Add(Equipped(state, available[i], available[i].ToDefinition(catalog)));
                 }
             }
         }

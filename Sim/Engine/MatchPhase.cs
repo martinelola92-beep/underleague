@@ -41,6 +41,12 @@ public enum PlayerState
     /// enum por el mismo motivo que las acciones nuevas: no mover los valores de los estados anteriores.
     /// </summary>
     Blocking,
+
+    /// <summary>
+    /// En el banquillo (ADR 0094): fuera del campo, sin decidir ni contar, y sus perks no disparan hasta que
+    /// entra por una sustitución forzada. Va al final del enum por el mismo motivo que los demás añadidos.
+    /// </summary>
+    Benched,
 }
 
 /// <summary>

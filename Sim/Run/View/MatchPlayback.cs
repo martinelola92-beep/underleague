@@ -56,16 +56,20 @@ public static class MatchPlaybacks
     /// en una tanda de medición no cueste memoria.
     /// </param>
     public static MatchPlayback Of(
-        RunState stateBeforeMatch, int nodeId, Catalog catalog, IRunSystems? systems = null, bool trace = false)
+        RunState stateBeforeMatch, int nodeId, Catalog catalog, IRunSystems? systems = null, bool trace = false, MatchDecisions? decisions = null)
     {
         ArgumentNullException.ThrowIfNull(stateBeforeMatch);
         ArgumentNullException.ThrowIfNull(catalog);
         systems ??= DefaultRunSystems.Instance;
 
         var node = stateBeforeMatch.GetNode(nodeId);
-        var (setup, seed, _) = RunEngine.BuildMatch(stateBeforeMatch, nodeId, catalog, systems);
+        decisions ??= MatchDecisions.None;
+        var (built, seed, _) = RunEngine.BuildMatch(stateBeforeMatch, nodeId, catalog, systems, decisions.ManualActivations, decisions.Substitutions);
         var config = systems.MatchConfig(stateBeforeMatch, node, catalog);
-        var result = Simulator.Run(setup, seed, catalog, trace ? config with { Trace = true } : config);
+        // ADR 0094: el rival sustituye solo con la política por defecto; los puntos de decisión del jugador
+        // (equipo 0) se quedan pendientes para que la pantalla abra la ventana (SubstitutionPoints.Pending).
+        var (setup, result) = SubstitutionPoints.ResolveAutomatically(
+            built, seed, catalog, trace ? config with { Trace = true } : config, static team => team == 1);
         return new MatchPlayback(node, setup, result, seed);
     }
 }

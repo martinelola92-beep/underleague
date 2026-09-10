@@ -97,6 +97,8 @@ public static class Simulator
 
         ValidateTeam(setup.Home, "Home", catalog);
         ValidateTeam(setup.Away, "Away", catalog);
+        ValidateSubstitutions(setup.Home, "Home");
+        ValidateSubstitutions(setup.Away, "Away");
 
         for (int i = 0; i < setup.Home.Players.Count; i++)
         {
@@ -118,6 +120,57 @@ public static class Simulator
     /// un jugador, caben en los slots de su rareza y respetan positionOnly/tagsRequired/tagsForbidden.
     /// Una build inválida no se simula: es un error de programación o de datos, no un resultado.
     /// </summary>
+    /// <summary>
+    /// ADR 0094: quien entra está en la plantilla y no alineado, nadie entra ni sale dos veces, quien sale
+    /// está alineado y el tick no es negativo. Que el que sale haya salido de verdad por lesión o muerte lo
+    /// comprueba el motor al aplicarla, porque depende del partido.
+    /// </summary>
+    private static void ValidateSubstitutions(TeamSetup team, string side)
+    {
+        var substitutions = team.Substitutions;
+        for (int i = 0; i < substitutions.Count; i++)
+        {
+            var substitution = substitutions[i];
+            if (substitution.Tick < 0)
+            {
+                throw new ArgumentException($"{side}: la sustitución del {substitution.OutPlayerId} tiene tick negativo", nameof(team));
+            }
+
+            bool inRoster = false, inLineup = false, outLineup = false;
+            for (int j = 0; j < team.Players.Count; j++)
+            {
+                inRoster |= team.Players[j].Id == substitution.InPlayerId;
+            }
+
+            for (int j = 0; j < team.Lineup.Slots.Count; j++)
+            {
+                inLineup |= team.Lineup.Slots[j].PlayerId == substitution.InPlayerId;
+                outLineup |= team.Lineup.Slots[j].PlayerId == substitution.OutPlayerId;
+            }
+
+            if (!inRoster || inLineup)
+            {
+                throw new ArgumentException(
+                    $"{side}: el sustituto {substitution.InPlayerId} tiene que estar en la plantilla y no alineado (ADR 0094)", nameof(team));
+            }
+
+            if (!outLineup)
+            {
+                throw new ArgumentException(
+                    $"{side}: el sustituido {substitution.OutPlayerId} tiene que estar alineado (ADR 0094)", nameof(team));
+            }
+
+            for (int j = 0; j < i; j++)
+            {
+                if (substitutions[j].InPlayerId == substitution.InPlayerId || substitutions[j].OutPlayerId == substitution.OutPlayerId)
+                {
+                    throw new ArgumentException(
+                        $"{side}: la sustitución del {substitution.OutPlayerId} por el {substitution.InPlayerId} repite un jugador (ADR 0094)", nameof(team));
+                }
+            }
+        }
+    }
+
     private static void ValidatePerks(TeamSetup team, string side, PlayerDefinition player, Catalog catalog)
     {
         var perks = player.Perks;

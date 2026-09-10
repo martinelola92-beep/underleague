@@ -180,7 +180,7 @@ public static class RunEngine
 
         var node = Accessible(state, nodeId);
         return node.IsMatch
-            ? ResolveMatch(state, node, catalog, systems).State
+            ? ResolveMatch(state, node, catalog, systems, MatchDecisions.None).State
             : EnterInteractive(state, node, catalog, systems);
     }
 
@@ -198,7 +198,7 @@ public static class RunEngine
     /// es justo cuando <see cref="IRunSystems.AfterMatch"/> no se llega a llamar y no hay otro sitio
     /// del que sacarlo.</para>
     /// </summary>
-    public static MatchEntry EnterMatch(RunState state, int nodeId, Catalog catalog, IRunSystems? systems = null)
+    public static MatchEntry EnterMatch(RunState state, int nodeId, Catalog catalog, IRunSystems? systems = null, MatchDecisions? decisions = null)
     {
         ArgumentNullException.ThrowIfNull(state);
         ArgumentNullException.ThrowIfNull(catalog);
@@ -221,7 +221,7 @@ public static class RunEngine
             throw new ArgumentException($"el nodo {nodeId} es de tipo {node.Kind} y no se juega", nameof(nodeId));
         }
 
-        return ResolveMatch(state, node, catalog, systems);
+        return ResolveMatch(state, node, catalog, systems, decisions ?? MatchDecisions.None);
     }
 
     /// <summary>
@@ -421,7 +421,8 @@ public static class RunEngine
         int nodeId,
         Catalog catalog,
         IRunSystems? systems = null,
-        IReadOnlyList<ManualActivation>? manualActivations = null)
+        IReadOnlyList<ManualActivation>? manualActivations = null,
+        IReadOnlyList<Substitution>? substitutions = null)
     {
         ArgumentNullException.ThrowIfNull(state);
         ArgumentNullException.ThrowIfNull(catalog);
@@ -439,9 +440,15 @@ public static class RunEngine
         // solos dentro del partido; el manual (RF-082) solo si el jugador lo pulsó, y eso llega como
         // parte del estado inicial en manualActivations (docs/arquitectura.md): volver a ejecutar el
         // partido con la misma lista reproduce exactamente lo mismo (RT-013, RT-061).
-        var home = new TeamSetup(state.ClubId, state.ClubId, state.ClubRace, lineup.Starters, lineup.Lineup)
+        // ADR 0094: los suplentes viajan en la plantilla del partido (TeamSetup.Players) para poder entrar por
+        // una sustitución forzada; quién juega lo sigue diciendo Lineup.
+        var squad = new List<PlayerDefinition>(lineup.Starters.Count + lineup.Bench.Count);
+        squad.AddRange(lineup.Starters);
+        squad.AddRange(lineup.Bench);
+        var home = new TeamSetup(state.ClubId, state.ClubId, state.ClubRace, squad, lineup.Lineup)
         {
             Consumables = state.Equipment.ForMatch(state.Consumables, manualActivations),
+            Substitutions = substitutions ?? Array.Empty<Substitution>(),
         };
         var away = systems.OpponentFor(state, node, catalog);
         var referee = systems.RefereeFor(state, node, catalog);
@@ -474,10 +481,12 @@ public static class RunEngine
             nameof(nodeId));
     }
 
-    private static MatchEntry ResolveMatch(RunState state, MapNode node, Catalog catalog, IRunSystems systems)
+    private static MatchEntry ResolveMatch(RunState state, MapNode node, Catalog catalog, IRunSystems systems, MatchDecisions decisions)
     {
-        var (setup, seed, lineup) = BuildMatch(state, node.Id, catalog, systems);
-        var result = Simulator.Run(setup, seed, catalog, systems.MatchConfig(state, node, catalog));
+        var (built, seed, lineup) = BuildMatch(state, node.Id, catalog, systems, decisions.ManualActivations, decisions.Substitutions);
+        // ADR 0094: las sustituciones que el llamador no trajo (ninguna en /Balance; las del rival siempre)
+        // se resuelven con la política por defecto volviendo a jugar el partido con ellas en el estado inicial.
+        var (setup, result) = SubstitutionPoints.ResolveAutomatically(built, seed, catalog, systems.MatchConfig(state, node, catalog));
         var applied = MatchResolution.Apply(state, node, lineup, result, catalog);
 
         var next = applied.State.WithCurrentNode(node.Id);

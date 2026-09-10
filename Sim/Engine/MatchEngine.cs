@@ -45,6 +45,10 @@ internal sealed class MatchEngine : IPerkWorld
     private readonly SimConfig _config;
     private readonly Tuning _tuning;
     private readonly MatchPlayer[] _players;
+
+    // ADR 0094: sustituciones anunciadas en el estado inicial, ordenadas por (tick, equipo, id del que entra).
+    private readonly List<(int Tick, int Team, int InId, int OutId)> _pendingSubstitutions = new();
+    private int _nextSubstitution;
     private readonly MatchPlayer?[] _goalkeepers = new MatchPlayer?[2];
     private readonly Ball _ball = new();
     private readonly UtilityContext _context;
@@ -113,9 +117,11 @@ internal sealed class MatchEngine : IPerkWorld
         AddTeam(players, setup.Away, 1);
         players.Sort(static (a, b) => a.Id.CompareTo(b.Id));
         _players = players.ToArray();
+        _pendingSubstitutions.Sort(static (a, b) =>
+            a.Tick != b.Tick ? a.Tick.CompareTo(b.Tick) : a.Team != b.Team ? a.Team.CompareTo(b.Team) : a.InId.CompareTo(b.InId));
         for (int i = 0; i < _players.Length; i++)
         {
-            if (!_players[i].IsOutfield)
+            if (!_players[i].IsOutfield && _players[i].OnPitch)
             {
                 _goalkeepers[_players[i].Team] = _players[i];
             }
@@ -123,24 +129,7 @@ internal sealed class MatchEngine : IPerkWorld
 
         // Bono de Leader (§3.5): suma de los bonos de los compañeros con casilla-hogar contigua. Las
         // casillas-hogar son fijas durante el partido, así que se resuelve una sola vez aquí.
-        for (int i = 0; i < _players.Length; i++)
-        {
-            int bonus = 0;
-            for (int j = 0; j < _players.Length; j++)
-            {
-                if (i == j || _players[j].Team != _players[i].Team || _players[j].AdjacentTeammateBonusPercent == 0)
-                {
-                    continue;
-                }
-
-                if (Pitch.AreAdjacent(_players[i].HomeCell, _players[j].HomeCell))
-                {
-                    bonus += _players[j].AdjacentTeammateBonusPercent;
-                }
-            }
-
-            _players[i].LeaderBonusPercent = bonus;
-        }
+        RecomputeLeaderBonuses();
 
         for (int i = 0; i < _players.Length; i++)
         {
@@ -383,11 +372,124 @@ internal sealed class MatchEngine : IPerkWorld
             int column = teamIndex == 0 ? slot.HomeCell.Column : Pitch.Columns - 1 - slot.HomeCell.Column;
             players.Add(new MatchPlayer(definition, teamIndex, new Cell(column, slot.HomeCell.Row), _catalog));
         }
+
+        // ADR 0094: los sustitutos de las sustituciones anunciadas nacen en el banquillo, con la casilla-hogar
+        // del que sale, y entran al principio del tick siguiente al de la salida (ApplySubstitutions).
+        // Simulator.Validate ya garantizó que existen, que no están alineados y que no se repiten.
+        var substitutions = team.Substitutions;
+        for (int i = 0; i < substitutions.Count; i++)
+        {
+            var substitution = substitutions[i];
+            PlayerDefinition? definition = null;
+            for (int j = 0; j < team.Players.Count; j++)
+            {
+                if (team.Players[j].Id == substitution.InPlayerId)
+                {
+                    definition = team.Players[j];
+                    break;
+                }
+            }
+
+            Cell homeCell = default;
+            for (int j = 0; j < slots.Count; j++)
+            {
+                if (slots[j].PlayerId == substitution.OutPlayerId)
+                {
+                    homeCell = slots[j].HomeCell;
+                    break;
+                }
+            }
+
+            int column = teamIndex == 0 ? homeCell.Column : Pitch.Columns - 1 - homeCell.Column;
+            var substitute = new MatchPlayer(definition!, teamIndex, new Cell(column, homeCell.Row), _catalog);
+            substitute.Bench();
+            players.Add(substitute);
+            _pendingSubstitutions.Add((substitution.Tick, teamIndex, substitution.InPlayerId, substitution.OutPlayerId));
+        }
+    }
+
+    /// <summary>
+    /// Bono de líder (rasgo Leader) por casillas-hogar adyacentes, solo entre jugadores en el campo: un
+    /// suplente en el banquillo ni da ni recibe hasta que entra (ADR 0094).
+    /// </summary>
+    private void RecomputeLeaderBonuses()
+    {
+        for (int i = 0; i < _players.Length; i++)
+        {
+            int bonus = 0;
+            for (int j = 0; j < _players.Length; j++)
+            {
+                if (i == j || _players[j].Team != _players[i].Team || _players[j].AdjacentTeammateBonusPercent == 0
+                    || !_players[i].OnPitch || !_players[j].OnPitch)
+                {
+                    continue;
+                }
+
+                if (Pitch.AreAdjacent(_players[i].HomeCell, _players[j].HomeCell))
+                {
+                    bonus += _players[j].AdjacentTeammateBonusPercent;
+                }
+            }
+
+            _players[i].LeaderBonusPercent = bonus;
+        }
+    }
+
+    /// <summary>
+    /// ADR 0094: las sustituciones cuyo tick es el anterior a este entran ahora, antes de que nadie decida.
+    /// El que sale tiene que haber dejado el campo por lesión o muerte en ese tick o antes; si el estado
+    /// inicial dice otra cosa, es un error explícito (RT-032), nunca una sustitución silenciosa.
+    /// </summary>
+    private void ApplySubstitutions()
+    {
+        while (_nextSubstitution < _pendingSubstitutions.Count && _pendingSubstitutions[_nextSubstitution].Tick < _tick)
+        {
+            var (tick, team, inId, outId) = _pendingSubstitutions[_nextSubstitution];
+            _nextSubstitution++;
+            MatchPlayer? entering = null, leaving = null;
+            for (int i = 0; i < _players.Length; i++)
+            {
+                if (_players[i].Id == inId)
+                {
+                    entering = _players[i];
+                }
+                else if (_players[i].Id == outId)
+                {
+                    leaving = _players[i];
+                }
+            }
+
+            if (entering is null || leaving is null || leaving.OnPitch || leaving.State == PlayerState.SentOff
+                || leaving.LeftPitchTick < 0 || leaving.LeftPitchTick > tick)
+            {
+                throw new ArgumentException(
+                    $"la sustitución del jugador {outId} por el {inId} en el tick {tick} no es legal: el que sale tiene que haber dejado el campo por lesión o muerte en ese tick o antes (ADR 0094)");
+            }
+
+            entering.EnterPitch();
+            _effects?.OnEnterPitch(entering);
+            if (!entering.IsOutfield)
+            {
+                _goalkeepers[team] = entering;
+            }
+
+            RecomputeLeaderBonuses();
+            _markingDirty = true;
+            Emit(EventType.Substitution, leaving.Dead ? "death" : "injury", entering, leaving);
+        }
+    }
+
+    /// <summary>Saca a un jugador del campo y anota el tick, que es lo que valida una sustitución (ADR 0094).</summary>
+    private void RemoveFromPitch(MatchPlayer player, PlayerState state)
+    {
+        player.LeavePitch(state);
+        player.LeftPitchTick = _tick;
     }
 
     private void Step()
     {
         _tick++;
+        ApplySubstitutions();
 
         // Consumibles condicionales (RF-081..083): se comprueban antes que nada, así que el disparador ve
         // el estado consolidado del tick anterior y lo que conceden vale ya para este tick. Sin
@@ -2175,7 +2277,7 @@ internal sealed class MatchEngine : IPerkWorld
             ParkBall(player.Position);
         }
 
-        player.LeavePitch(PlayerState.SentOff);
+        RemoveFromPitch(player, PlayerState.SentOff);
     }
 
     private void ResolveInjury(MatchPlayer tackler, MatchPlayer victim, bool isFoul)
@@ -2227,7 +2329,7 @@ internal sealed class MatchEngine : IPerkWorld
             ParkBall(victim.Position);
         }
 
-        victim.LeavePitch(PlayerState.Injured);
+        RemoveFromPitch(victim, PlayerState.Injured);
 
         // RF-093 vía 1: quien salió al campo arrastrando una lesión grave sin tratar y vuelve a
         // lesionarse, muere. Es la única consecuencia de alinearlo, y estaba anunciada antes de
@@ -2807,7 +2909,7 @@ internal sealed class MatchEngine : IPerkWorld
 
         if (victim.OnPitch)
         {
-            victim.LeavePitch(PlayerState.Injured);
+            RemoveFromPitch(victim, PlayerState.Injured);
         }
 
         Emit(EventType.Death, detail, victim);

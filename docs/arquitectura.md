@@ -77,6 +77,17 @@ Un consumible manual es una entrada del usuario en mitad de un partido determini
 
 Esta decisión mantiene RT-013 (una sola entrada pura) sin excepciones. Coste: recalcular desde el inicio, que con partidos de 60-90 s a 15 ticks/s es despreciable (RT-051).
 
+## Sustitución forzada durante el partido (AZ-F, ADR 0094)
+
+Mismo mecanismo que el consumible manual: `TeamSetup.Substitutions` (`Substitution(Tick, OutPlayerId, InPlayerId)`)
+es parte del estado inicial; el motor crea al suplente en el banquillo (`PlayerState.Benched`, sus perks no
+disparan) y lo hace entrar al principio del tick T+1 en la casilla-hogar del que salió por lesión o muerte,
+con evento `SUBSTITUTION`. `Sim.Run.SubstitutionPoints.Pending(setup, result, team)` da el primer punto de
+decisión sin resolver (tick, quién salió, candidatos) y `ResolveAutomatically` vuelve a jugar el partido con
+la política por defecto (misma posición, si no el de mayor calidad) hasta que no quede ninguno; `/Game`
+solo deja que la política resuelva al rival y abre la ventana para el equipo 0. `RunEngine.EnterMatch` y
+`MatchPlaybacks.Of` reciben `MatchDecisions` (activaciones manuales + sustituciones).
+
 ## Carga de datos y snapshot por run (RT-031, RT-061b)
 
 - `/data` se lee al arrancar, se valida (RT-032) y se compila. Un error de validación aborta con mensaje que incluye fichero, ruta JSON y regla incumplida.
