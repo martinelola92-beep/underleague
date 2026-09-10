@@ -18,7 +18,7 @@ Todos los valores numéricos de este documento son **valores de partida a calibr
   "cellsOccupied": 1,
   "bodyRadius": 30,
   "discipline": 35,
-  "attributeBias": { "strength": -12, "speed": 6, "technique": 14, "stamina": -6, "leash": 1 },
+  "attributeBias": { "strength": -6, "speed": 0, "technique": 0, "stamina": -2, "leash": 8 },
   "ability": "elf_touch",
   "description": { "es": "...", "en": "..." },
   "individualDeviation": 12,
@@ -39,7 +39,7 @@ Todos los valores numéricos de este documento son **valores de partida a calibr
 ```json
 {
   "Brute":   { "name": {"es":"Bruto","en":"Brute"}, "description": {"es":"Busca el contacto. Gana duelos y reparte daño.","en":"..."},
-               "attributeBias": { "strength": 10, "speed": -2, "technique": -8, "stamina": 4, "leash": -2 } },
+               "attributeBias": { "strength": 5, "speed": -1, "technique": -3, "stamina": 2, "leash": -1 } },
   "Fine":    { "...": "..." },
   "Bulwark": { "...": "..." },
   "Cold":    { "...": "..." },
@@ -47,7 +47,7 @@ Todos los valores numéricos de este documento son **valores de partida a calibr
 }
 ```
 
-El `attributeBias` del estilo es lo que hace que un elfo `Brute` sea de verdad más fuerte que un elfo medio (ADR 0024).
+El `attributeBias` del estilo es lo que hace que un elfo `Brute` sea de verdad más fuerte que un elfo medio (ADR 0024). Desde la ADR 0092 el sesgo de raza es de suma cero y no toca técnica ni velocidad: esas dos viven en el estilo y en los rasgos.
 
 ### 1.3 `data/sim/tuning.json` — secciones nuevas
 

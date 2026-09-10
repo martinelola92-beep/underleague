@@ -7,7 +7,7 @@
   "cellsOccupied": 1,
   "bodyRadius": 38,
   "discipline": 45,
-  "attributeBias": { "strength": 14, "speed": -4, "technique": -10, "stamina": 6, "leash": -1 },
+  "attributeBias": { "strength": 10, "speed": 0, "technique": -2, "stamina": 4, "leash": -12 },
   "ability": "hot_blooded",
   "description": { "es": "Fuerza bruta por delante de la técnica. Ganan el partido a base de contacto.", "en": "Brute strength over technique. They win matches through contact." },
   "individualDeviation": 9,

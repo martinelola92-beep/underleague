@@ -126,9 +126,12 @@ public sealed class RaceBalanceTests
             .Select(kv => $"{kv.Key}={kv.Value:F2}%")
             .ToList();
 
+        // El mensaje lleva las cinco tasas, no solo las que se salen: recalibrar una raza mueve a las otras
+        // cuatro, y sin la tabla entera cada iteración costaba una segunda medición (paquete AZ, ADR 0092).
+        string table = string.Join(", ", rates.OrderBy(kv => kv.Key, StringComparer.Ordinal).Select(kv => $"{kv.Key}={kv.Value:F2}"));
         Assert.True(
             offenders.Count == 0,
-            "razas fuera de 40%-60% contra la media de las otras cuatro (D-29): " + string.Join(", ", offenders));
+            "razas fuera de 40%-60% contra la media de las otras cuatro (D-29): " + string.Join(", ", offenders) + " | tabla: " + table);
     }
 
     /// <summary>

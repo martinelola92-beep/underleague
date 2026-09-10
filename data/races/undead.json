@@ -7,7 +7,7 @@
   "cellsOccupied": 1,
   "bodyRadius": 28,
   "discipline": 65,
-  "attributeBias": { "strength": 2, "speed": -10, "technique": 4, "stamina": 14, "leash": -2 },
+  "attributeBias": { "strength": 2, "speed": -4, "technique": 4, "stamina": 8, "leash": -10 },
   "ability": "numb",
   "description": { "es": "No sienten dolor ni miedo. Lentos pero implacables, cuesta pararlos del todo.", "en": "They feel neither pain nor fear. Slow but relentless, hard to stop for good." },
   "individualDeviation": 8,

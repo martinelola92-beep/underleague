@@ -3,22 +3,22 @@
   "Brute": {
     "name": { "es": "Bruto", "en": "Brute" },
     "description": { "es": "Busca el contacto. Gana duelos y reparte daño.", "en": "Seeks contact. Wins duels and deals out damage." },
-    "attributeBias": { "strength": 10, "speed": -2, "technique": -8, "stamina": 4, "leash": -2 }
+    "attributeBias": { "strength": 5, "speed": -1, "technique": -3, "stamina": 2, "leash": -1 }
   },
   "Fine": {
     "name": { "es": "Fino", "en": "Fine" },
     "description": { "es": "Rehúye el choque y cuida el balón. Más preciso, menos físico.", "en": "Avoids the tackle and treasures the ball. More precise, less physical." },
-    "attributeBias": { "strength": -8, "speed": 6, "technique": 10, "stamina": -4, "leash": 2 }
+    "attributeBias": { "strength": -4, "speed": 2, "technique": 4, "stamina": -2, "leash": 1 }
   },
   "Bulwark": {
     "name": { "es": "Muro", "en": "Bulwark" },
     "description": { "es": "Planta cara y no cede terreno. Sólido en el choque, corto de piernas.", "en": "Stands firm and holds ground. Solid in the tackle, short on legs." },
-    "attributeBias": { "strength": 8, "speed": -8, "technique": -4, "stamina": 8, "leash": -4 }
+    "attributeBias": { "strength": 4, "speed": -1, "technique": -1, "stamina": 4, "leash": -2 }
   },
   "Cold": {
     "name": { "es": "Frío", "en": "Cold" },
     "description": { "es": "No se altera ni se cansa. Aguanta el partido entero sin perder la cabeza.", "en": "Never rattled, never tired. Lasts the whole match without losing his head." },
-    "attributeBias": { "strength": -4, "speed": -6, "technique": 6, "stamina": 10, "leash": -6 }
+    "attributeBias": { "strength": -2, "speed": -3, "technique": 3, "stamina": 5, "leash": -3 }
   },
   "Neutral": {
     "name": { "es": "Neutro", "en": "Neutral" },

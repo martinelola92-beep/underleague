@@ -24,6 +24,8 @@ Criterio de diseño: cada habilidad usa un **canal distinto** y ninguna es "más
 
 Razas de DLC, esbozadas para comprobar que el espacio de diseño da de sí: elfos oscuros (sus faltas desplazan menos el criterio del árbitro), demonios (su masa desplaza a dos rivales a la vez), vampiros (se curan con las lesiones que provocan, RF-035), lagartos (convierten lesiones graves en leves, RF-035).
 
+> **Nota (ADR 0092, 10 sep 2026):** el sesgo de atributos «no es palanca» dejó de ser cierto con la física del pase (ADR 0091): su **suma** se cobra en silencio en todos los atributos al renormalizar, y técnica y velocidad deciden más partidos que antes. La ADR 0092 fija sesgos de suma cero, sin técnica ni velocidad en la raza, y recorta los estilos a la mitad.
+
 ## Presupuesto de impacto de una habilidad racial (añadido 2026-09-04, D-29)
 
 La tabla de arriba reparte **canales** pero no repartía **presupuesto**, y esa es la mitad que faltaba. La
