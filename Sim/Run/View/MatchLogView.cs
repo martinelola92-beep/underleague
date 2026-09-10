@@ -179,6 +179,7 @@ public static class MatchLogView
         EventType.Card => true,
         EventType.Injury => true,
         EventType.Death => true,
+        EventType.Substitution => true,
         EventType.MobStart => true,
         EventType.RefereeLeaves => true,
         EventType.MatchEnd => true,
