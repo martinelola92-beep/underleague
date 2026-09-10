@@ -296,6 +296,7 @@
     "kickoff": "saque inicial",
     "throwIn": "saque de banda",
     "freeKick": "saque de falta",
+    "beaten": "carrera perdida",
     "unseen": "falta no señalada",
     "corner": "córner",
     "goalKick": "saque de puerta",

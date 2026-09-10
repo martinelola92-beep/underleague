@@ -14,6 +14,7 @@ public class StateMachineTests
     private static readonly PlayerAction[] WithBallActions =
     {
         PlayerAction.Dribble, PlayerAction.Shoot, PlayerAction.ShortPass, PlayerAction.LongPass,
+        PlayerAction.ThroughPass,
     };
 
     [Theory]

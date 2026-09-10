@@ -1,7 +1,7 @@
 # Plan: lo que el revisor vio en la segunda partida (paquete AZ)
 
 **Fecha:** 2026-09-09. **Origen:** siete anotaciones del revisor (`pendientes.md` AZ-A..AZ-G) tras jugar la build.
-**Estado:** tandas 1 y 2 hechas y medidas (AZ-A, AZ-C, AZ-D, AZ-E, AZ-G; ADR 0090), con un rojo aceptado por el revisor hasta la tanda 3 (`buildsWinDifferently_passChain` 1,10-1,11 / umbral 1,11); tandas 3-5 pendientes.
+**Estado:** tandas 1, 2 y 3 hechas y medidas (ADR 0090, ADR 0091; el paso 5 incluido); `buildsWinDifferently_passChain` volvió a verde. Quedan cuatro filas de puerta fuera tras la física del pase, con las opciones en la ADR 0091 (decisión del revisor), y la tanda 4 (AZ-F, sustitución en partido).
 
 ## Orden de ejecución y por qué
 

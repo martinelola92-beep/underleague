@@ -156,7 +156,11 @@ public sealed record AiContext(
     float PassLaneRadiusCells = 0.6f,
     int PassBlockedLanePenalty = 0,
     int PassBlockedLaneRankPenalty = 0,
-    int ShootBlockedLanePenalty = 0);
+    int ShootBlockedLanePenalty = 0,
+    int ThroughPassLateTicks = 0,
+    int ThroughPassMarginTicks = 0,
+    int ThroughPassBase = 0,
+    int ThroughPassTechniqueSlope = 0);
 
 /// <summary>
 /// Pesos de la IA de utilidad (RT-093..RT-098). Las tablas Base y Tactical se guardan como arrays

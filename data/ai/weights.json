@@ -1,17 +1,17 @@
 {
   "_doc": "Pesos base de utilidad por posición (RT-093) y multiplicadores por estado táctico. Escala entera 0-1000. Los rasgos aplican sus multiplicadores desde data/traits/traits.json (RT-094). FindSpace y PressCarrier son las acciones sin balón de la ADR 0022; ShortPass, LongPass y Block son las tres de la ADR 0030 (el pase partido en dos bandas y el bloqueo sin balón). El pase largo lleva peso base bajo a propósito: lo levanta la pendiente por técnica de context.longPassTechniqueSlope y el rasgo Cerebral, no la tabla. Valores de partida a calibrar en el reajuste.",
   "base": {
-    "Goalkeeper":  { "ChaseBall": 300, "MarkOpponent": 0,   "OfferSupport": 0,   "CoverSpace": 500, "Dribble": 50,  "Shoot": 0,   "Tackle": 165, "Retreat": 400, "FindSpace": 0,   "PressCarrier": 0,   "ShortPass": 600, "LongPass": 320, "Block": 0 },
-    "Defender":    { "ChaseBall": 380, "MarkOpponent": 320, "OfferSupport": 80,  "CoverSpace": 420, "Dribble": 140, "Shoot": 77,  "Tackle": 255, "Retreat": 320, "FindSpace": 200, "PressCarrier": 150, "ShortPass": 500, "LongPass": 170, "Block": 35 },
-    "Midfielder":  { "ChaseBall": 420, "MarkOpponent": 240, "OfferSupport": 140, "CoverSpace": 260, "Dribble": 240, "Shoot": 188, "Tackle": 210, "Retreat": 220, "FindSpace": 380, "PressCarrier": 180, "ShortPass": 560, "LongPass": 250, "Block": 40 },
-    "Forward":     { "ChaseBall": 400, "MarkOpponent": 120, "OfferSupport": 160, "CoverSpace": 120, "Dribble": 300, "Shoot": 385, "Tackle": 128, "Retreat": 140, "FindSpace": 460, "PressCarrier": 140, "ShortPass": 420, "LongPass": 135, "Block": 55 }
+    "Goalkeeper":  { "ChaseBall": 300, "MarkOpponent": 0,   "OfferSupport": 0,   "CoverSpace": 500, "Dribble": 50,  "Shoot": 0,   "Tackle": 165, "Retreat": 400, "FindSpace": 0,   "PressCarrier": 0,   "ShortPass": 600, "LongPass": 320, "ThroughPass": 0, "Block": 0 },
+    "Defender":    { "ChaseBall": 380, "MarkOpponent": 320, "OfferSupport": 80,  "CoverSpace": 420, "Dribble": 140, "Shoot": 77,  "Tackle": 255, "Retreat": 320, "FindSpace": 200, "PressCarrier": 150, "ShortPass": 500, "LongPass": 170, "ThroughPass": 90, "Block": 35 },
+    "Midfielder":  { "ChaseBall": 420, "MarkOpponent": 240, "OfferSupport": 140, "CoverSpace": 260, "Dribble": 240, "Shoot": 188, "Tackle": 210, "Retreat": 220, "FindSpace": 380, "PressCarrier": 180, "ShortPass": 560, "LongPass": 250, "ThroughPass": 180, "Block": 40 },
+    "Forward":     { "ChaseBall": 400, "MarkOpponent": 120, "OfferSupport": 160, "CoverSpace": 120, "Dribble": 300, "Shoot": 385, "Tackle": 128, "Retreat": 140, "FindSpace": 460, "PressCarrier": 140, "ShortPass": 420, "LongPass": 135, "ThroughPass": 150, "Block": 55 }
   },
   "tactical": {
     "_doc": "Contraste ampliado (ADR 0022): con balón manda buscar espacio, sin balón mandan marcar, presionar y cubrir. Los estados de transición amortiguan el salto para que el bloque no se mueva de golpe. Block es una herramienta de ataque (ADR 0030 §2): abre hueco para el compañero que lleva el balón, así que pesa más en posesión que fuera de ella.",
-    "InPossession":        { "ChaseBall": 60,  "MarkOpponent": 30,  "OfferSupport": 150, "CoverSpace": 60,  "Dribble": 100, "Shoot": 100, "Tackle": 25,  "Retreat": 60,  "FindSpace": 210, "PressCarrier": 15,  "ShortPass": 100, "LongPass": 100, "Block": 150 },
-    "OutOfPossession":     { "ChaseBall": 125, "MarkOpponent": 150, "OfferSupport": 25,  "CoverSpace": 140, "Dribble": 100, "Shoot": 100, "Tackle": 165, "Retreat": 115, "FindSpace": 15,  "PressCarrier": 165, "ShortPass": 100, "LongPass": 100, "Block": 25 },
-    "OffensiveTransition": { "ChaseBall": 105, "MarkOpponent": 35,  "OfferSupport": 150, "CoverSpace": 60,  "Dribble": 120, "Shoot": 110, "Tackle": 30,  "Retreat": 50,  "FindSpace": 190, "PressCarrier": 25,  "ShortPass": 110, "LongPass": 105, "Block": 145 },
-    "DefensiveTransition": { "ChaseBall": 135, "MarkOpponent": 130, "OfferSupport": 25,  "CoverSpace": 125, "Dribble": 100, "Shoot": 100, "Tackle": 150, "Retreat": 140, "FindSpace": 20,  "PressCarrier": 145, "ShortPass": 100, "LongPass": 100, "Block": 35 }
+    "InPossession":        { "ChaseBall": 60,  "MarkOpponent": 30,  "OfferSupport": 150, "CoverSpace": 60,  "Dribble": 100, "Shoot": 100, "Tackle": 25,  "Retreat": 60,  "FindSpace": 210, "PressCarrier": 15,  "ShortPass": 100, "LongPass": 100, "ThroughPass": 100, "Block": 150 },
+    "OutOfPossession":     { "ChaseBall": 125, "MarkOpponent": 150, "OfferSupport": 25,  "CoverSpace": 140, "Dribble": 100, "Shoot": 100, "Tackle": 165, "Retreat": 115, "FindSpace": 15,  "PressCarrier": 165, "ShortPass": 100, "LongPass": 100, "ThroughPass": 100, "Block": 25 },
+    "OffensiveTransition": { "ChaseBall": 105, "MarkOpponent": 35,  "OfferSupport": 150, "CoverSpace": 60,  "Dribble": 120, "Shoot": 110, "Tackle": 30,  "Retreat": 50,  "FindSpace": 190, "PressCarrier": 25,  "ShortPass": 110, "LongPass": 105, "ThroughPass": 120, "Block": 145 },
+    "DefensiveTransition": { "ChaseBall": 135, "MarkOpponent": 130, "OfferSupport": 25,  "CoverSpace": 125, "Dribble": 100, "Shoot": 100, "Tackle": 150, "Retreat": 140, "FindSpace": 20,  "PressCarrier": 145, "ShortPass": 100, "LongPass": 100, "ThroughPass": 90, "Block": 35 }
   },
   "context": {
     "_doc": "Términos de contexto. Enteros salvo las distancias en casillas. Bloque 1: los términos de la fase 0. Bloque 2: FindSpace y PressCarrier (ADR 0022), que el paquete R dejó en código y el V trae aquí. Bloque 3: acciones de ataque diferenciadas (ADR 0030 §1); las pendientes son puntos por punto de atributo por encima de 50, con signo. Bloque 4: bloqueo sin balón (ADR 0030 §2); blockActiveRadiusCells y blockCorridorHalfWidthCells son la definición operativa de la jugada activa de RF-057, y blockReachMaxCells es el alcance de la carga. Bloque 5 (AW-Q, docs/pendientes.md; docs/referencia-motores-futbol.md §6.1): la línea defensiva de un equipo es la columna de su defensa de campo más retrasado, o la del balón si está aún más atrás, y sirve de techo dos veces sin que ningún árbitro pite nada: blockShiftLineMarginCells es la holgura con la que la casilla-hogar de un DEFENSA puede rebasar la línea PROPIA al subir el bloque, y findSpaceLineMarginCells la holgura con la que una casilla candidata de FindSpace puede rebasar la línea RIVAL, para que el delantero no acampe a espaldas de la defensa.",
@@ -48,6 +48,10 @@
     "passBlockedLanePenalty": 200,
     "passBlockedLaneRankPenalty": 150,
     "shootBlockedLanePenalty": 150,
+    "throughPassLateTicks": 4,
+    "throughPassMarginTicks": 3,
+    "throughPassBase": 180,
+    "throughPassTechniqueSlope": 12,
     "pressCarrierBonus": 60,
     "pressDistancePenaltyPerCell": 60,
     "pressGoalkeeperExitBonus": 200,

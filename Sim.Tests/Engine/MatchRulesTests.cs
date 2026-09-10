@@ -500,6 +500,9 @@ public sealed class MatchRulesTests
             Assert.Equal(
                 report.PassesLoose[0] + report.PassesLoose[1],
                 result.Events.Count(e => e.Type == EventType.PassFailed && e.Detail == "loose"));
+            Assert.Equal(
+                report.PassesBeaten[0] + report.PassesBeaten[1],
+                result.Events.Count(e => e.Type == EventType.PassFailed && e.Detail == "beaten"));
             Assert.Equal(report.ShotsBlocked[0] + report.ShotsBlocked[1], shotsBlocked);
             Assert.Equal(report.Tackles, tackles);
             Assert.Equal(report.Blocks, blocks);

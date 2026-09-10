@@ -151,19 +151,27 @@ public sealed class LethalPerkTests
         Assert.True(perk.Lethal);
 
         var setup = TestMatches.Reference(Catalog, 77);
-        var carrier = setup.Away.Players[0];
+        // Desde AY (paso 1) el letal solo dispara en la ENTRADA y su víctima es el rival de esa entrada, así
+        // que portador y tocado se eligen por lo que pasa en el campo: la pareja (visitante, local) con más
+        // entradas en la misma tanda de semillas (ADR 0048). Que la elección exista es justamente la palanca
+        // de colocación; medirla en vez de leerla de la formación hace que el test no dependa de cómo se
+        // mueve el fútbol (la física del pase de la ADR 0091 cambió a quién alcanza cada uno).
+        var tacklesByPair = new Dictionary<(int Tackler, int Victim), int>();
+        for (ulong seed = 60; seed < 120; seed++)
+        {
+            var result = Simulator.Run(setup, seed, Catalog, new SimConfig(CollectLog: false));
+            foreach (var e in result.Events.Where(e => e.Type == EventType.Tackle && e.Team == 1 && e.Detail != "attempted"))
+            {
+                var key = (e.Actor, e.Opponent);
+                tacklesByPair[key] = tacklesByPair.TryGetValue(key, out int n) ? n + 1 : 1;
+            }
+        }
+        var pair = tacklesByPair.OrderByDescending(kv => kv.Value).ThenBy(kv => kv.Key.Tackler).ThenBy(kv => kv.Key.Victim).First().Key;
+        var carrier = setup.Away.Players.First(p => p.Id == pair.Tackler);
         var away = setup.Away.Players
             .Select(p => p.Id == carrier.Id ? WithTags(p) with { Rarity = Rarity.Legendary, Perks = new[] { perk.Id } } : p)
             .ToList();
-        // El tocado tiene que estar al ALCANCE del portador: la letalidad cae con la distancia de
-        // emparejamiento y a cuatro casillas ya vale cero, así que se elige al titular local más cercano
-        // al portador (ADR 0048). Que la elección exista es justamente la palanca de colocación.
-        var carrierCell = setup.Away.Lineup.Slots.First(s => s.PlayerId == carrier.Id).HomeCell;
-        int nearestId = setup.Home.Lineup.Slots
-            .OrderBy(s => Lethality.Matchup(s.HomeCell, carrierCell))
-            .ThenBy(s => s.PlayerId)
-            .First()
-            .PlayerId;
+        int nearestId = pair.Victim;
         var wounded = setup.Home.Players.First(p => p.Id == nearestId);
         var home = setup.Home.Players
             .Select(p => p.Id == wounded.Id ? p with { PhysicalState = PhysicalState.MinorInjury } : p)

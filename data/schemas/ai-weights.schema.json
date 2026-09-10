@@ -87,7 +87,11 @@
         "passLaneRadiusCells": { "type": "number", "minimum": 0, "maximum": 5 },
         "passBlockedLanePenalty": { "type": "integer", "minimum": 0, "maximum": 10000 },
         "passBlockedLaneRankPenalty": { "type": "integer", "minimum": 0, "maximum": 10000 },
-        "shootBlockedLanePenalty": { "type": "integer", "minimum": 0, "maximum": 10000 }
+        "shootBlockedLanePenalty": { "type": "integer", "minimum": 0, "maximum": 10000 },
+        "throughPassLateTicks": { "type": "integer", "minimum": 0, "maximum": 60 },
+        "throughPassMarginTicks": { "type": "integer", "minimum": 0, "maximum": 60 },
+        "throughPassBase": { "type": "integer", "minimum": 0, "maximum": 10000 },
+        "throughPassTechniqueSlope": { "type": "integer", "minimum": 0, "maximum": 1000 }
       },
       "required": [
         "chaseBallDistancePenaltyPerCell", "chaseBallLooseBonus",
@@ -106,7 +110,8 @@
         "blockTargetBonus", "blockDistancePenaltyPerCell", "blockAggressiveBonus", "blockBruteTagBonus",
         "passBackwardPenaltyPerCell", "findSpaceCrowdedPenalty",
         "blockShiftLineMarginCells", "findSpaceLineMarginCells",
-        "passLaneRadiusCells", "passBlockedLanePenalty", "passBlockedLaneRankPenalty", "shootBlockedLanePenalty"
+        "passLaneRadiusCells", "passBlockedLanePenalty", "passBlockedLaneRankPenalty", "shootBlockedLanePenalty",
+        "throughPassLateTicks", "throughPassMarginTicks", "throughPassBase", "throughPassTechniqueSlope"
       ],
       "additionalProperties": false
     },
@@ -129,7 +134,7 @@
   "$defs": {
     "playerAction": {
       "type": "string",
-      "enum": ["ChaseBall", "MarkOpponent", "OfferSupport", "CoverSpace", "Dribble", "Shoot", "Tackle", "Retreat", "FindSpace", "PressCarrier", "ShortPass", "LongPass", "Block"]
+      "enum": ["ChaseBall", "MarkOpponent", "OfferSupport", "CoverSpace", "Dribble", "Shoot", "Tackle", "Retreat", "FindSpace", "PressCarrier", "ShortPass", "LongPass", "ThroughPass", "Block"]
     },
     "actionWeights": {
       "type": "object",
@@ -147,9 +152,10 @@
         "PressCarrier": { "type": "integer", "minimum": 0, "maximum": 1000 },
         "ShortPass": { "type": "integer", "minimum": 0, "maximum": 1000 },
         "LongPass": { "type": "integer", "minimum": 0, "maximum": 1000 },
+        "ThroughPass": { "type": "integer", "minimum": 0, "maximum": 1000 },
         "Block": { "type": "integer", "minimum": 0, "maximum": 1000 }
       },
-      "required": ["ChaseBall", "MarkOpponent", "OfferSupport", "CoverSpace", "Dribble", "Shoot", "Tackle", "Retreat", "FindSpace", "PressCarrier", "ShortPass", "LongPass", "Block"],
+      "required": ["ChaseBall", "MarkOpponent", "OfferSupport", "CoverSpace", "Dribble", "Shoot", "Tackle", "Retreat", "FindSpace", "PressCarrier", "ShortPass", "LongPass", "ThroughPass", "Block"],
       "additionalProperties": false
     },
     "actionPercent": {
@@ -168,9 +174,10 @@
         "PressCarrier": { "type": "integer", "minimum": 0, "maximum": 1000 },
         "ShortPass": { "type": "integer", "minimum": 0, "maximum": 1000 },
         "LongPass": { "type": "integer", "minimum": 0, "maximum": 1000 },
+        "ThroughPass": { "type": "integer", "minimum": 0, "maximum": 1000 },
         "Block": { "type": "integer", "minimum": 0, "maximum": 1000 }
       },
-      "required": ["ChaseBall", "MarkOpponent", "OfferSupport", "CoverSpace", "Dribble", "Shoot", "Tackle", "Retreat", "FindSpace", "PressCarrier", "ShortPass", "LongPass", "Block"],
+      "required": ["ChaseBall", "MarkOpponent", "OfferSupport", "CoverSpace", "Dribble", "Shoot", "Tackle", "Retreat", "FindSpace", "PressCarrier", "ShortPass", "LongPass", "ThroughPass", "Block"],
       "additionalProperties": false
     },
     "shiftEntry": {

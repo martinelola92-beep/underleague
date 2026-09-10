@@ -43,7 +43,8 @@ public static class Metrics
                 match.PassesAttempted,
                 match.PassesCompleted,
                 match.PassesIntercepted,
-                match.PassesLoose));
+                match.PassesLoose,
+                match.PassesBeaten));
         }
 
         var qualityById = new Dictionary<string, int>(StringComparer.Ordinal);

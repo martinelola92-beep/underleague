@@ -22,6 +22,9 @@ internal sealed class Ball
     /// <summary>True si el vuelo actual es un tiro; false si es un pase.</summary>
     public bool IsShot { get; set; }
 
+    /// <summary>Pase en profundidad en vuelo (AZ-B paso 5): a una casilla, lo gana quien llega antes.</summary>
+    public bool IsThroughPass { get; set; }
+
     /// <summary>Punto de partida del vuelo actual.</summary>
     public Vec2 FlightOrigin { get; set; }
 

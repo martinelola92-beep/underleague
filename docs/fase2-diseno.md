@@ -5635,3 +5635,15 @@ abierto antes de resolver la lesión, el lesionado podía sacar; con 15 ticks, `
 `shotsPerMatch` 9,46 / 7,95 · `injuriesPerMatch` 0,91 / 0,74 · faltas 5,17 / 3,67 · amarillas 0,27 / 0,19 ·
 rojas 0,08 / 0,04. Los porcentajes del árbitro, con su valor efectivo, están en la tabla de la ADR 0090.
 
+### 41.3. Tanda 3 (ADR 0091): la física del pase
+
+Pasos 0-5 de `docs/plan-pases-trayectoria.md`, medidos uno a uno (tabla completa en la ADR 0091). Lo que
+cumple lo pedido: intercepciones 4,8 → 8,5 %, pases sueltos 37 → 31 %, tiros bloqueados 2,1 → 1,3 %, cadenas
+2,01 → 2,21. Lo que queda fuera y espera al revisor: los tiros bajan a 7,3 / 6,6 (regla de parada del plan:
+el pase en profundidad termina a la altura de la línea defensiva y de ahí salen menos tiros que de la
+conducción que sustituye; ni quitarlo a los delanteros ni bajar su base lo recupera), `ballThirdMaxShare`
+52,0 / 49,9, lesiones 0,97 / 0,82 y `elf_none` 60,95. Tres ajustes del plan se usaron y se documentan:
+`maxLeadCells` no cambia nada por encima de 1,5 (la cota que manda es la intención del receptor),
+`interceptContactPercent` 600 → 350 (con 600 y el paso 3, cadenas en 1,97), `shootBlockedLanePenalty` 250 → 150
+(con 250 y el portero fuera del pasillo, tiros en 7,8; con el portero dentro, 4).
+

@@ -81,6 +81,9 @@ public enum PlayerAction
     /// </summary>
     LongPass,
 
+    /// <summary>Pase en profundidad (AZ-B paso 5, ADR 0091): a una casilla vacía por delante de un compañero en carrera; lo gana quien llega antes.</summary>
+    ThroughPass,
+
     /// <summary>
     /// Derribar a un rival <b>que no lleva el balón</b> para abrir espacio (ADR 0030 §2). Solo contra
     /// rivales dentro de la jugada activa (RF-057) y es falta casi segura si el árbitro la ve.

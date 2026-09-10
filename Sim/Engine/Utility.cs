@@ -10,13 +10,14 @@ namespace Underleague.Sim.Engine;
 internal sealed class UtilityContext
 {
     public UtilityContext(
-        MatchPlayer[] players, Ball ball, AiWeights weights, ActionZoneTuning zone, float shootBlockRadiusCells)
+        MatchPlayer[] players, Ball ball, AiWeights weights, ActionZoneTuning zone, float shootBlockRadiusCells, int passSpeedCellsPerTickMilli = 0)
     {
         Players = players;
         Ball = ball;
         Weights = weights;
         Zone = zone;
         ShootBlockRadiusCells = shootBlockRadiusCells;
+        PassSpeedCellsPerTickMilli = passSpeedCellsPerTickMilli;
     }
 
     /// <summary>Todos los jugadores del partido, ordenados por id ascendente (RT-041, RT-097).</summary>
@@ -38,6 +39,9 @@ internal sealed class UtilityContext
     /// portador tiene línea de tiro despejada, sin duplicar el número.
     /// </summary>
     public float ShootBlockRadiusCells { get; }
+
+    /// <summary>Velocidad del pase en milésimas de casilla por tick (tuning.ball), para la carrera del pase en profundidad.</summary>
+    public int PassSpeedCellsPerTickMilli { get; }
 
     /// <summary>Estado táctico por equipo (§3.4).</summary>
     public TacticalState[] TacticalStates { get; } = new TacticalState[2];
@@ -473,6 +477,9 @@ internal static class Utility
                 break;
             case PlayerAction.LongPass:
                 EvaluatePass(ctx, p, context, direction, longPass: true, ref eval);
+                break;
+            case PlayerAction.ThroughPass:
+                EvaluateThroughPass(ctx, p, context, direction, ref eval);
                 break;
             case PlayerAction.Dribble:
                 EvaluateDribble(ctx, p, context, direction, ref eval);
@@ -1141,6 +1148,131 @@ internal static class Utility
     /// aporta sus casillas de alcance desde <c>data/traits/traits.json</c> (RT-094), así que el tirador
     /// lejano paga la rampa dos casillas más tarde que el resto. No hay ningún <c>if</c> por rasgo aquí.</para>
     /// </summary>
+    private static readonly float[] ThroughPassDistances = { 2f, 3f, 4f };
+
+    /// <summary>Ticks que tarda alguien en recorrer <paramref name="distanceCells"/> a <paramref name="speedPerTickMilli"/> (entero, redondeo hacia arriba).</summary>
+    internal static int TicksToReach(float distanceCells, int speedPerTickMilli)
+    {
+        int distanceMilli = (int)MathF.Ceiling(distanceCells * 1000f);
+        int speed = speedPerTickMilli > 0 ? speedPerTickMilli : 1;
+        return (distanceMilli + speed - 1) / speed;
+    }
+
+    /// <summary>Ticks de vuelo del balón para <paramref name="distance"/> casillas a <paramref name="speedMilli"/> (el mismo cálculo que usa el motor).</summary>
+    internal static int FlightTicks(float distance, int speedMilli)
+    {
+        int distanceMilli = (int)(distance * 1000f);
+        int speed = speedMilli > 0 ? speedMilli : 1;
+        int ticks = (distanceMilli + speed - 1) / speed;
+        return ticks < 1 ? 1 : ticks;
+    }
+
+    /// <summary>
+    /// Legalidad del pase en profundidad (AZ-B paso 5): una carrera en ticks, adimensional. El receptor
+    /// puede llegar hasta <paramref name="lateTicks"/> después que el balón (que se para donde cae) y tiene
+    /// que ganarle al defensa más cercano por <paramref name="marginTicks"/>. Compara tiempos, no radios:
+    /// es lo que le faltaba al pasillo por tiempo descartado en plan-intercepcion-disparo.md.
+    /// </summary>
+    internal static bool ThroughPassIsLegal(int ticksBall, int ticksReceiver, int ticksDefender, int lateTicks, int marginTicks) =>
+        ticksReceiver <= ticksBall + lateTicks && ticksReceiver + marginTicks <= ticksDefender;
+
+    /// <summary>
+    /// Pase en profundidad (AZ-B paso 5, ADR 0091): a una casilla vacía por delante de un compañero que
+    /// <b>va hacia delante</b>, recortada por la línea de fuera de juego como en FindSpace, y legal solo si
+    /// el receptor llega antes que cualquier rival (carrera en ticks). El pasillo puntúa igual que en el
+    /// paso 3. Sin candidato legal la acción se descarta: es una acción extra, no sustituye al pase.
+    /// </summary>
+    private static void EvaluateThroughPass(UtilityContext ctx, MatchPlayer p, AiContext context, int direction, ref Eval eval)
+    {
+        var players = ctx.Players;
+        if (!p.IsOutfield)
+        {
+            eval.Discarded = true;
+            return;
+        }
+
+        float marginedLine = OffsideLineColumn(players, ctx.Ball.Position, p.Team)
+            + (context.FindSpaceLineMarginCells * direction);
+        MatchPlayer? runner = null;
+        Vec2 bestCell = p.Position;
+        int bestScore = 0;
+
+        for (int i = 0; i < players.Length; i++)
+        {
+            var mate = players[i];
+            if (mate.Team != p.Team || ReferenceEquals(mate, p) || !mate.OnPitch || !mate.IsOutfield)
+            {
+                continue;
+            }
+
+            var run = mate.TargetPoint - mate.Position;
+            float runLength = run.Length;
+            if (runLength <= 0.001f || run.X * direction <= 0f)
+            {
+                continue;
+            }
+
+            var unit = run * (1f / runLength);
+            for (int s = 0; s < ThroughPassDistances.Length; s++)
+            {
+                Vec2 cell = ClampToPitch(mate.Position + (unit * ThroughPassDistances[s]));
+                if ((cell.X - marginedLine) * direction > 0f)
+                {
+                    cell = new Vec2(marginedLine, cell.Y);
+                }
+
+                if ((cell.X - p.Position.X) * direction <= 0f)
+                {
+                    continue;
+                }
+
+                int ticksBall = FlightTicks(Vec2.Distance(p.Position, cell), ctx.PassSpeedCellsPerTickMilli);
+                int ticksReceiver = TicksToReach(Vec2.Distance(mate.Position, cell), mate.SpeedPerTickMilli);
+                int ticksDefender = int.MaxValue;
+                for (int j = 0; j < players.Length; j++)
+                {
+                    var rival = players[j];
+                    if (rival.Team == p.Team || !rival.OnPitch)
+                    {
+                        continue;
+                    }
+
+                    int t = TicksToReach(Vec2.Distance(rival.Position, cell), rival.SpeedPerTickMilli);
+                    if (t < ticksDefender)
+                    {
+                        ticksDefender = t;
+                    }
+                }
+
+                if (!ThroughPassIsLegal(ticksBall, ticksReceiver, ticksDefender, context.ThroughPassLateTicks, context.ThroughPassMarginTicks))
+                {
+                    continue;
+                }
+
+                int advance = Centi((cell.X - p.Position.X) * direction);
+                int score = context.ThroughPassBase
+                    + (context.FindSpaceAdvanceBonusPerCell * advance / 100)
+                    - (context.PassBlockedLanePenalty * LaneDanger(players, p.Team, p.Position, cell, context.PassLaneRadiusCells) / 100);
+                if (runner is null || score > bestScore || (score == bestScore && mate.Id < runner.Id))
+                {
+                    runner = mate;
+                    bestCell = cell;
+                    bestScore = score;
+                }
+            }
+        }
+
+        if (runner is null)
+        {
+            eval.Discarded = true;
+            return;
+        }
+
+        eval.Receiver = runner;
+        eval.Target = bestCell;
+        eval.Context = bestScore + Slope(context.ThroughPassTechniqueSlope, p.Technique);
+    }
+
     private static void EvaluateShoot(UtilityContext ctx, MatchPlayer p, AiContext context, ref Eval eval)
     {
         Vec2 goal = Pitch.GoalCenter(p.Team);

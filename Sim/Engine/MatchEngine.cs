@@ -173,7 +173,7 @@ internal sealed class MatchEngine : IPerkWorld
         _ball.BlockAttempted = new bool[_players.Length];
         _bodies = new BodySeparation(_tuning.Bodies, _players.Length);
         _markScratch = new bool[_players.Length];
-        _context = new UtilityContext(_players, _ball, catalog.Ai, _tuning.ActionZone, _tuning.Pass.InterceptRadiusCells);
+        _context = new UtilityContext(_players, _ball, catalog.Ai, _tuning.ActionZone, _tuning.Pass.InterceptRadiusCells, _tuning.Ball.PassSpeedCellsPerTickMilli);
         _context.TacticalStates[0] = TacticalState.OutOfPossession;
         _context.TacticalStates[1] = TacticalState.OutOfPossession;
         _trace = config.Trace ? new MatchTraceRecorder(_players, _regulationTicks) : null;
@@ -727,6 +727,7 @@ internal sealed class MatchEngine : IPerkWorld
         {
             case PlayerAction.ShortPass:
             case PlayerAction.LongPass:
+            case PlayerAction.ThroughPass:
                 if (ReferenceEquals(_ball.Owner, player))
                 {
                     player.EnterState(PlayerState.Passing, _tuning.States.PassingTicks);
@@ -1113,6 +1114,51 @@ internal sealed class MatchEngine : IPerkWorld
         var passer = _ball.Passer;
         var receiver = _ball.PassReceiver;
 
+        // AZ-B paso 5: en el pase en profundidad se lo lleva quien esté más cerca del punto de llegada,
+        // sea el corredor o un defensa (empate por id ascendente, RT-097). La carrera no tiene tirada:
+        // la resolvió la simulación tick a tick.
+        if (_ball.IsThroughPass && _ball.PassSucceeds && passer is not null)
+        {
+            MatchPlayer? first = null;
+            float firstDistance = 0f;
+            for (int i = 0; i < _players.Length; i++)
+            {
+                var candidate = _players[i];
+                if (!CanTouchBall(candidate))
+                {
+                    continue;
+                }
+
+                float d = Vec2.Distance(candidate.Position, _ball.Position);
+                if (d >= PassArrivalRadius)
+                {
+                    continue;
+                }
+
+                if (first is null || d < firstDistance || (d == firstDistance && candidate.Id < first.Id))
+                {
+                    first = candidate;
+                    firstDistance = d;
+                }
+            }
+
+            if (first is not null)
+            {
+                if (first.Team == passer.Team)
+                {
+                    receiver = first;
+                }
+                else
+                {
+                    _report.PassesBeaten[passer.Team]++;
+                    Emit(EventType.PassFailed, "beaten", passer, opponent: first);
+                    SetOwner(first);
+                    Emit(EventType.Recovery, "beaten", first);
+                    return;
+                }
+            }
+        }
+
         if (_ball.PassSucceeds && receiver is not null && CanTouchBall(receiver)
             && Vec2.Distance(receiver.Position, _ball.Position) < PassArrivalRadius)
         {
@@ -1370,13 +1416,23 @@ internal sealed class MatchEngine : IPerkWorld
         bool chanceRoll = _rng.Chance(probability);
         bool succeeds = receiver is not null && chanceRoll;
         int ticks = FlightTicks(distance, _tuning.Ball.PassSpeedCellsPerTickMilli);
-        Vec2 target = receiver is not null
-            ? Utility.PassTarget(receiver.Position, receiver.TargetPoint, receiver.SpeedPerTickMilli, ticks, pass.MaxLeadCells)
-            : receiverPoint;
+        // AZ-B paso 5: el pase en profundidad va a la casilla que eligió la utilidad (TargetPoint del
+        // pasador), no al pie del receptor; el vuelo es el mismo y la carrera la resuelve el tick a tick.
+        bool through = passer.CurrentAction == PlayerAction.ThroughPass && receiver is not null;
+        Vec2 target = through
+            ? Utility.ClampToPitch(passer.TargetPoint)
+            : receiver is not null
+                ? Utility.PassTarget(receiver.Position, receiver.TargetPoint, receiver.SpeedPerTickMilli, ticks, pass.MaxLeadCells)
+                : receiverPoint;
+        if (through)
+        {
+            ticks = Utility.FlightTicks(Vec2.Distance(passer.Position, target), _tuning.Ball.PassSpeedCellsPerTickMilli);
+        }
 
         _ball.Owner = null;
         _ball.InFlight = true;
         _ball.IsShot = false;
+        _ball.IsThroughPass = through;
         _ball.Passer = passer;
         _ball.PassReceiver = receiver;
         _ball.PassSucceeds = succeeds;
@@ -1415,13 +1471,7 @@ internal sealed class MatchEngine : IPerkWorld
         return best;
     }
 
-    private int FlightTicks(float distance, int speedMilli)
-    {
-        int distanceMilli = (int)(distance * 1000f);
-        int speed = speedMilli > 0 ? speedMilli : 1;
-        int ticks = (distanceMilli + speed - 1) / speed;
-        return ticks < 1 ? 1 : ticks;
-    }
+    private static int FlightTicks(float distance, int speedMilli) => Utility.FlightTicks(distance, speedMilli);
 
     private bool HasOpponentWithin(MatchPlayer player, float radius)
     {
