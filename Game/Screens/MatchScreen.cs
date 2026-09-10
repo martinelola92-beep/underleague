@@ -5,6 +5,8 @@ using Underleague.Game.Autoload;
 using Underleague.Game.Ui;
 using Underleague.Sim.Engine;
 using Underleague.Sim.Events;
+using Underleague.Sim.Model;
+using Underleague.Sim.Run;
 using Underleague.Sim.Run.View;
 
 namespace Underleague.Game.Screens;
@@ -68,6 +70,9 @@ public partial class MatchScreen : Control
     private bool _playing = true;
     private int _selectedId = -1;
 
+    // ADR 0094: la ventana de sustitución forzada; mientras está abierta la reproducción no avanza.
+    private Control? _window;
+
     public override void _Ready()
     {
         var run = RunController.Instance;
@@ -130,6 +135,11 @@ public partial class MatchScreen : Control
 
     public override void _UnhandledInput(InputEvent @event)
     {
+        if (_window is not null)
+        {
+            return;
+        }
+
         if (@event.IsActionPressed("ui_accept"))
         {
             TogglePlay();
@@ -354,6 +364,105 @@ public partial class MatchScreen : Control
 
     private void GoToReport() => Nav.Go(this, Nav.Report);
 
+    /// <summary>
+    /// ADR 0094 (AZ-F): si la reproducción ha llegado al tick en el que un jugador propio salió por lesión o
+    /// muerte y hay banquillo, se detiene ahí y abre la ventana. La decisión vuelve a pedir el partido con
+    /// la sustitución incluida (RF-082: la decisión es estado inicial) y se sigue desde ese tick.
+    /// </summary>
+    private void CheckSubstitution(MatchTrace trace)
+    {
+        if (_window is not null)
+        {
+            return;
+        }
+
+        var point = _run.PendingSubstitution();
+        if (point is null || trace.TickAt(_frame) < point.Tick)
+        {
+            return;
+        }
+
+        _frame = trace.FrameOfTick(point.Tick);
+        _carry = 0d;
+        _playing = false;
+        _play.Text = UiText.Get("ui.match.resume");
+        ShowSubstitutionWindow(point);
+    }
+
+    private void ShowSubstitutionWindow(SubstitutionPoint point)
+    {
+        var playback = _run.Playback!;
+        string outName = point.OutPlayerId.ToString(CultureInfo.InvariantCulture);
+        foreach (var player in playback.Setup.Home.Players)
+        {
+            if (player.Id == point.OutPlayerId)
+            {
+                outName = player.Name;
+            }
+        }
+
+        var window = new Control { Position = Vector2.Zero, Size = new Vector2(1280f, 800f) };
+        AddChild(window);
+        Widgets.Panel(window, new Rect2(0f, 0f, 1280f, 800f), new Color(0f, 0f, 0f, 0.62f));
+        float height = 150f + (point.Candidates.Count * 36f);
+        var area = new Rect2(340f, 400f - (height / 2f), 600f, height);
+        Widgets.Panel(window, area, Style.Panel);
+        Widgets.Title(window, UiText.Get("ui.match.subTitle"), new Vector2(area.Position.X + 20f, area.Position.Y + 14f), 560f);
+        Widgets.Body(
+            window,
+            UiText.Get(point.Detail == "death" ? "ui.match.subDeath" : "ui.match.subInjury", outName),
+            new Vector2(area.Position.X + 20f, area.Position.Y + 52f),
+            560f);
+        for (int i = 0; i < point.Candidates.Count; i++)
+        {
+            var candidate = point.Candidates[i];
+            string text = UiText.Get(
+                "ui.match.subCandidate",
+                candidate.Name,
+                UiText.Get("ui.pos." + candidate.Position),
+                UiText.Get("ui.state." + candidate.PhysicalState));
+            int chosenId = candidate.Id;
+            Widgets.Button(window, text, new Rect2(area.Position.X + 20f, area.Position.Y + 84f + (i * 36f), 560f, 30f)).Pressed +=
+                () => ChooseSubstitute(point, chosenId);
+        }
+
+        Widgets.Body(window, UiText.Get("ui.match.subHint"), new Vector2(area.Position.X + 20f, area.End.Y - 40f), 560f, Style.TextDim);
+        _window = window;
+    }
+
+    private void ChooseSubstitute(SubstitutionPoint point, int playerId)
+    {
+        _run.Substitute(new Substitution(point.Tick, point.OutPlayerId, playerId));
+        _window?.QueueFree();
+        _window = null;
+        ReloadPlayback(point.Tick);
+    }
+
+    /// <summary>Vuelve a cargar la reproducción tras una decisión y sigue desde <paramref name="tick"/>: hasta ahí el partido es el mismo.</summary>
+    private void ReloadPlayback(int tick)
+    {
+        _trace = _run.Playback!.Trace;
+        _pitch.Trace = _trace;
+        _lines.Clear();
+        _lines.AddRange(_run.MatchLog());
+        _log.Clear();
+        _revealed = 0;
+        _synced = -1;
+        _timeline.FrameCount = _trace?.FrameCount ?? 0;
+        _timeline.Marks = BuildMarks();
+        _timeline.RegulationFrame = RegulationFrame();
+        _timeline.QueueRedraw();
+        if (_trace is { FrameCount: > 0 } trace)
+        {
+            _frame = trace.FrameOfTick(tick);
+        }
+
+        _carry = 0d;
+        _playing = true;
+        _play.Text = UiText.Get("ui.match.pause");
+        Sync();
+    }
+
     // ------------------------------------------------------------------ sincronización con el tick
 
     /// <summary>
@@ -369,6 +478,7 @@ public partial class MatchScreen : Control
         }
 
         _frame = Mathf.Clamp(_frame, 0, trace.FrameCount - 1);
+        CheckSubstitution(trace);
         _pitch.Frame = _frame;
         _pitch.Alpha = _playing ? (float)_carry : 0f;
         _pitch.QueueRedraw();
@@ -640,6 +750,7 @@ public partial class MatchScreen : Control
     private static Color ColorOf(MatchLogLine line) => line.Type switch
     {
         EventType.Goal => Style.Accent,
+        EventType.Substitution => Style.Accent,
         EventType.Death => Style.Hole,
         EventType.Injury => Style.Of(Sim.Model.PhysicalState.SevereInjury),
         EventType.Card => Style.Of(Sim.Model.PhysicalState.MinorInjury),

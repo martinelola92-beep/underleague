@@ -1,5 +1,7 @@
 using System;
 using System.Collections.Generic;
+using Underleague.Sim.Model;
+using Underleague.Sim.Run;
 using Underleague.Sim.Run.View;
 
 namespace Underleague.Game.Autoload;
@@ -25,6 +27,38 @@ public partial class RunController
     public MatchPlayback? Playback { get; private set; }
 
     /// <summary>
+    /// ADR 0094: las decisiones del jugador dentro del partido (sustituciones forzadas) viajan como estado
+    /// inicial. El estado de ANTES del partido se guarda para volver a entrar con las decisiones nuevas:
+    /// la reproducción y la run aplican exactamente el mismo partido (RT-024).
+    /// </summary>
+    public MatchDecisions Decisions { get; private set; } = MatchDecisions.None;
+
+    private RunState? _stateBeforeMatch;
+    private int _matchNodeId = -1;
+
+    /// <summary>Primer punto de sustitución del jugador sin resolver en la reproducción actual, o <c>null</c>.</summary>
+    public SubstitutionPoint? PendingSubstitution() =>
+        Playback is null ? null : SubstitutionPoints.Pending(Playback.Setup, Playback.Result, Playback.PlayerTeam);
+
+    /// <summary>
+    /// El jugador eligió sustituto en la ventana: se vuelve a reproducir el partido con la decisión y la run
+    /// vuelve a entrar en el nodo desde el estado previo, con las mismas decisiones.
+    /// </summary>
+    public void Substitute(Substitution substitution)
+    {
+        if (State is null || Catalog is null || _stateBeforeMatch is null || _matchNodeId < 0)
+        {
+            throw new InvalidOperationException("no hay ningún partido en reproducción");
+        }
+
+        var substitutions = new List<Substitution>(Decisions.Substitutions) { substitution };
+        Decisions = Decisions with { Substitutions = substitutions };
+        Playback = MatchPlaybacks.Of(_stateBeforeMatch, _matchNodeId, Catalog, Engine, trace: true, Decisions);
+        State = _stateBeforeMatch;
+        Enter(_matchNodeId);
+    }
+
+    /// <summary>
     /// Juega el partido de ese nodo: lo reproduce para poder narrarlo y después lo resuelve de verdad con
     /// <see cref="Enter"/>, que es quien avanza el estado, guarda y avisa a las pantallas.
     /// </summary>
@@ -38,7 +72,10 @@ public partial class RunController
         // trace: true — la pantalla de Partido reproduce el campo con la traza de posiciones tick a tick
         // (MatchTrace). Se pide aquí y solo aquí: el partido que /Sim resuelve de verdad en Enter y los
         // millones de partidos de /Balance siguen corriendo sin ella.
-        Playback = MatchPlaybacks.Of(State, nodeId, Catalog, Engine, trace: true);
+        Decisions = MatchDecisions.None;
+        _stateBeforeMatch = State;
+        _matchNodeId = nodeId;
+        Playback = MatchPlaybacks.Of(State, nodeId, Catalog, Engine, trace: true, Decisions);
         Enter(nodeId);
     }
 

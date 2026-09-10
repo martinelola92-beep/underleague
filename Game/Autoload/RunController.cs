@@ -172,7 +172,7 @@ public partial class RunController : Node
         var node = state.GetNode(nodeId);
         if (node.IsMatch)
         {
-            var entry = RunEngine.EnterMatch(state, nodeId, catalog, _systems);
+            var entry = RunEngine.EnterMatch(state, nodeId, catalog, _systems, Decisions);
             LastMatch = entry;
             State = entry.State;
         }

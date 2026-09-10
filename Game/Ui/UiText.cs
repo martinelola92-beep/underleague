@@ -323,6 +323,12 @@ public static class UiText
         ["ui.paction.LongPass"] = "abrir el juego en largo",
         ["ui.paction.Block"] = "cargar contra un rival",
 
+        ["ui.match.subTitle"] = "SUSTITUCIÓN",
+        ["ui.match.subInjury"] = "{0} se ha lesionado y no puede seguir. Elige quién entra en su casilla:",
+        ["ui.match.subDeath"] = "{0} ha muerto en el campo. Elige quién entra en su casilla:",
+        ["ui.match.subCandidate"] = "{0} · {1} · {2}",
+        ["ui.match.subHint"] = "la sustitución es obligatoria mientras haya banquillo; un lesionado leve que salta al campo arriesga la vida (ADR 0048)",
+        ["ui.ev.Substitution"] = "{0} entra por {1}",
         ["ui.ev.MatchStart"] = "empieza el partido",
         ["ui.ev.MatchEnd"] = "final del partido",
         ["ui.ev.MobStart"] = "la turba invade el campo",

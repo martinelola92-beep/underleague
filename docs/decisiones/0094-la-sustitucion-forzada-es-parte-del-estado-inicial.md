@@ -1,7 +1,7 @@
 # 0094. La sustitución forzada es parte del estado inicial del partido
 
 **Fecha:** 2026-09-10
-**Estado:** Aceptada e implementada en `/Sim` (`Sim/Model/Substitution.cs`, `Sim/Run/Substitutions.cs`, `Sim/Run/MatchDecisions.cs`, `MatchEngine.ApplySubstitutions`); la ventana de `/Game` en el commit siguiente
+**Estado:** Aceptada e implementada (`/Sim`: `Sim/Model/Substitution.cs`, `Sim/Run/Substitutions.cs`, `Sim/Run/MatchDecisions.cs`, `MatchEngine.ApplySubstitutions`; `/Game`: `MatchScreen.CheckSubstitution`/`ShowSubstitutionWindow`, `RunController.Substitute`)
 **Decisión del revisor** (segunda partida, `pendientes.md` AZ-F: «cuando un jugador se lesiona/muere debe salir una ventana para elegir un sustituto durante el partido; las sustituciones voluntarias no existen en este juego»). **Modifica RF-054** (tercera pausa dramática: la ventana de sustitución) y matiza el §1 de requisitos («toda la decisión ocurre entre partidos»: salvo esta, que es forzada y solo existe si hay banquillo). **No toca RT-013**: `Simulator.Run` sigue siendo una sola entrada pura.
 **Requisitos:** RF-005, RF-025, RF-054, RF-059, RF-082, RT-013, RT-024, RT-040, RT-061
 **Relacionada:** `docs/arquitectura.md` §«Consumibles manuales durante el partido» (el precedente exacto), ADR 0048 (la muerte en el partido), `docs/plan-segunda-partida.md` tanda 4
@@ -87,6 +87,5 @@ Lo que se sabe y lo que no:
   jugador gana menos runs; sin sustituciones del rival la tasa sube a 13,8 / 18,2 (por encima de la línea de
   base, porque el propio banquillo del jugador ya cuenta).
 
-Decisión pendiente del revisor (regla de juego, se pregunta en el informe): si el rival sustituye con la
-política por defecto (simétrico, más duro: 6,8) o no sustituye (asimétrico, 13,8). El código deja las dos
-a un parámetro (`usesPolicy`) y el ADR se cierra con la elegida.
+**Decisión del revisor (10 sep): el rival también sustituye**, con la política por defecto (simétrico, más
+duro: 6,8 / 13,0 / 10,2). Es la regla 4 de arriba; `FullRunGateTests` en verde con ella (15/15).
