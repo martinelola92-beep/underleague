@@ -116,3 +116,46 @@ Referencia final, 2.000 partidos, semillas 1 / 7: `shotsPerMatch` **7,72 / 7,12*
 la semilla 1, lesiones en la semilla 1, `elf_none`, `human_random`, `eternal_crown`): **investigar la
 causa con números, sin tocar bandas**.
 
+## Investigación de lo que sigue fuera (10 sep, sin tocar bandas)
+
+Instrucción del revisor: causas con números, ninguna banda se mueve. Medido sobre el estado final de arriba.
+
+**1. Las razas (`RaceBalanceTests`, D-29, 10.000 partidos).** La tabla completa, contra la de cierre de la
+ADR 0026 (enanos 47,6 · elfos 54,1 · humanos 49,0 · orcos 51,8 · no-muertos 47,6; abanico 6,6 puntos):
+
+| Estado | enanos | elfos | humanos | orcos | no-muertos | abanico |
+|---|---|---|---|---|---|---|
+| Final (tanda 3 + ajuste) | **39,9** | **61,7** | 50,2 | 46,1 | 52,1 | 21,8 |
+| sin pase en profundidad | 41,4 | 61,0 | 48,4 | 44,5 | 54,8 | 19,6 |
+| + sin geometría de intercepción (paso 2, `interceptContactPercent` 100) | 45,2 | 56,3 | 47,4 | 48,0 | 53,1 | 11,1 |
+| + sin adelanto del pase (paso 1, `maxLeadCells` 0) | 45,1 | 57,2 | 48,1 | 45,5 | 54,2 | 12,0 |
+
+La causa principal es el **paso 2**: el factor de proximidad (hasta ×3,5 cuando el balón pasa por el cuerpo)
+multiplica una cuota de intercepción que ya depende de los atributos, así que el hueco elfo (+14 técnica,
++6 velocidad) / enano (−6, −14) se amplifica; los cuerpos no lo explican (28-38 centicasillas, casi iguales).
+El pase en profundidad añade 2 puntos más (la carrera en ticks premia la velocidad). El adelanto del pase
+no cuenta. Aun sin la tanda 3 el abanico sería ~11: el resto viene de las tandas 1-2 (pase atrás prohibido,
+saque de falta) y no se ha atribuido paso a paso. **Palancas** (decisión del revisor, ADR de balance):
+`interceptContactPercent` 350 → ~200 (devuelve parte del 8,5 % de intercepciones que se pidió), o recalibrar
+las cinco razas (presupuesto ADR 0026: ±2,5 puntos por raza, insuficiente para 22 de abanico), o que la
+cuota base de intercepción dependa menos del atributo antes de multiplicar.
+
+**2. `human_random` 55,4 (banda 45-55, ADR 0088).** Con la muestra ×4 (160 plantillas, 1.920 partidos) da
+**55,21**: no es ruido. Los siete perks de la build, emparejados a 200 partidos, valen entre 0 y 30 milésimas
+(`own_third_anchor` 30, `comeback_spirit` 30, `box_predator` 20, resto 0): ninguno se ha disparado; la build
+gana 5 puntos por acumulación de perks pequeños con el fútbol nuevo, no por uno inflado. Es una décima
+sobre el techo; se vuelve a medir después de decidir el punto 1, porque las intercepciones mueven a los
+perks de posición.
+
+**3. `eternal_crown` muy buena 51,8 no mejora a buena 54,3** (`--boss-gate`, 1.000 partidos por nivel). Las
+dos builds tienen la misma calidad (50) y difieren en dos perks de la buena (`sweeper_keeper`,
+`diagonal_press`) contra cinco de la muy buena (`clean_sheet_legacy`, `lane_reader`, `road_warrior`,
+`natural_leader`, `poacher_instinct`). Emparejados a 200 partidos: `lane_reader` 130, `clean_sheet_legacy`
+70 (tabla: 98), `diagonal_press` 10, resto 0-10. No hay perk hundido: la fila «buena» subió (48,9 → 54,3)
+porque el jefe del acto 3 sufre más el fútbol nuevo que las builds, y la muy buena no sube con ella. Es la
+escalera estrecha que la ADR 0089 dejó anotada; la palanca es la calidad del jefe (ADR 0083) o el diseño de
+las dos builds, y se decide junto con AU-C.
+
+**4. Tiros, tercio y lesiones** están explicados arriba (el pase en profundidad sustituye a la conducción;
+el tercio 50,4 y las lesiones 0,97 solo en la semilla 1, con la 7 dentro).
+
