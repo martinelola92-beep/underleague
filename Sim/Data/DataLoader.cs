@@ -495,6 +495,7 @@ public static class DataLoader
         "blockShiftLineMarginCells", "findSpaceLineMarginCells",
         "passLaneRadiusCells", "passBlockedLanePenalty", "passBlockedLaneRankPenalty", "shootBlockedLanePenalty",
         "throughPassLateTicks", "throughPassMarginTicks", "throughPassBase", "throughPassTechniqueSlope",
+        "throughPassMinCells", "throughPassMaxCells", "throughPassFreeZoneCells",
     };
 
     private static AiWeights ParseAiWeights(string file, string content)
@@ -610,7 +611,10 @@ public static class DataLoader
             ThroughPassLateTicks: contextNode.Prop("throughPassLateTicks").AsInt(),
             ThroughPassMarginTicks: contextNode.Prop("throughPassMarginTicks").AsInt(),
             ThroughPassBase: contextNode.Prop("throughPassBase").AsInt(),
-            ThroughPassTechniqueSlope: contextNode.Prop("throughPassTechniqueSlope").AsInt());
+            ThroughPassTechniqueSlope: contextNode.Prop("throughPassTechniqueSlope").AsInt(),
+            ThroughPassMinCells: contextNode.Prop("throughPassMinCells").AsInt(),
+            ThroughPassMaxCells: contextNode.Prop("throughPassMaxCells").AsInt(),
+            ThroughPassFreeZoneCells: contextNode.Prop("throughPassFreeZoneCells").AsFloat());
 
         var shiftArray = new BlockShift[tacticalCount];
         var shiftSet = new bool[tacticalCount];

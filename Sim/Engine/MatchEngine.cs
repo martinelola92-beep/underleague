@@ -1163,9 +1163,14 @@ internal sealed class MatchEngine : IPerkWorld
             && Vec2.Distance(receiver.Position, _ball.Position) < PassArrivalRadius)
         {
             SetOwner(receiver);
-            Emit(EventType.PassCompleted, "completed", passer, receiver);
+            Emit(EventType.PassCompleted, _ball.IsThroughPass ? "through" : "completed", passer, receiver);
             if (passer is not null)
             {
+                if (_ball.IsThroughPass)
+                {
+                    _report.ThroughPassesCompleted[passer.Team]++;
+                }
+
                 passer.PassesCompleted++;
                 _lastCompletedPassTick = _tick;
                 _lastCompletedPasser = passer;
@@ -1176,7 +1181,9 @@ internal sealed class MatchEngine : IPerkWorld
         }
 
         Vec2 direction = (_ball.FlightTarget - _ball.FlightOrigin).Normalized;
-        _ball.SetLoose(direction * LooseBallSpeed);
+        // AZ-B paso 5: el pase en profundidad se para donde cae (es lo que supuso la carrera en ticks de
+        // Utility.EvaluateThroughPass); el resto sigue rodando en la dirección del vuelo.
+        _ball.SetLoose(_ball.IsThroughPass ? new Vec2(0f, 0f) : direction * LooseBallSpeed);
         if (passer is not null)
         {
             _report.PassesLoose[passer.Team]++;
@@ -1427,6 +1434,7 @@ internal sealed class MatchEngine : IPerkWorld
         if (through)
         {
             ticks = Utility.FlightTicks(Vec2.Distance(passer.Position, target), _tuning.Ball.PassSpeedCellsPerTickMilli);
+            _report.ThroughPasses[passer.Team]++;
         }
 
         _ball.Owner = null;

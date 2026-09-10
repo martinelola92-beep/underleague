@@ -160,7 +160,13 @@ public sealed record AiContext(
     int ThroughPassLateTicks = 0,
     int ThroughPassMarginTicks = 0,
     int ThroughPassBase = 0,
-    int ThroughPassTechniqueSlope = 0);
+    int ThroughPassTechniqueSlope = 0,
+    // ADR 0091 (ajuste del revisor): las casillas candidatas del pase en profundidad van de Min a Max por
+    // delante del corredor, y a menos de FreeZone casillas de la portería rival no se recortan por la línea
+    // defensiva: el pase a la espalda de la defensa es exactamente lo que la acción es.
+    int ThroughPassMinCells = 2,
+    int ThroughPassMaxCells = 4,
+    float ThroughPassFreeZoneCells = 0f);
 
 /// <summary>
 /// Pesos de la IA de utilidad (RT-093..RT-098). Las tablas Base y Tactical se guardan como arrays

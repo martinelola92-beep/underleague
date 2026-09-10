@@ -1138,18 +1138,6 @@ internal static class Utility
         return ahead;
     }
 
-    /// <summary>
-    /// Tiro (ADR 0030 §1). El corte binario dentro/fuera de alcance desaparece: nadie tiene prohibido
-    /// tirar de lejos, simplemente casi nadie debería querer. Pasado el alcance del jugador, cada casilla
-    /// de más resta <c>shootBeyondRangePenaltyPerCell</c>, un múltiplo grande de la penalización normal
-    /// por distancia, así que la utilidad cae en rampa en vez de en escalón.
-    ///
-    /// <para>Quien modula esa rampa es <c>LongShot</c>, y lo hace <b>moviendo dónde empieza</b>: el rasgo
-    /// aporta sus casillas de alcance desde <c>data/traits/traits.json</c> (RT-094), así que el tirador
-    /// lejano paga la rampa dos casillas más tarde que el resto. No hay ningún <c>if</c> por rasgo aquí.</para>
-    /// </summary>
-    private static readonly float[] ThroughPassDistances = { 2f, 3f, 4f };
-
     /// <summary>Ticks que tarda alguien en recorrer <paramref name="distanceCells"/> a <paramref name="speedPerTickMilli"/> (entero, redondeo hacia arriba).</summary>
     internal static int TicksToReach(float distanceCells, int speedPerTickMilli)
     {
@@ -1177,10 +1165,12 @@ internal static class Utility
         ticksReceiver <= ticksBall + lateTicks && ticksReceiver + marginTicks <= ticksDefender;
 
     /// <summary>
-    /// Pase en profundidad (AZ-B paso 5, ADR 0091): a una casilla vacía por delante de un compañero que
-    /// <b>va hacia delante</b>, recortada por la línea de fuera de juego como en FindSpace, y legal solo si
-    /// el receptor llega antes que cualquier rival (carrera en ticks). El pasillo puntúa igual que en el
-    /// paso 3. Sin candidato legal la acción se descarta: es una acción extra, no sustituye al pase.
+    /// Pase en profundidad (AZ-B paso 5, ADR 0091): a una casilla vacía <c>throughPassMinCells..MaxCells</c>
+    /// por delante de un compañero que <b>va hacia delante</b>, recortada por la línea defensiva rival como en
+    /// FindSpace salvo en la zona libre (<c>throughPassFreeZoneCells</c> de la portería rival: el pase a la
+    /// espalda de la defensa es lo que la acción es), y legal solo si el receptor llega antes que cualquier
+    /// rival (carrera en ticks). El pasillo puntúa igual que en el paso 3. Sin candidato legal la acción se
+    /// descarta: es una acción extra, no sustituye al pase.
     /// </summary>
     private static void EvaluateThroughPass(UtilityContext ctx, MatchPlayer p, AiContext context, int direction, ref Eval eval)
     {
@@ -1193,6 +1183,7 @@ internal static class Utility
 
         float marginedLine = OffsideLineColumn(players, ctx.Ball.Position, p.Team)
             + (context.FindSpaceLineMarginCells * direction);
+        float rivalGoalColumn = direction > 0 ? Pitch.Columns : 0f;
         MatchPlayer? runner = null;
         Vec2 bestCell = p.Position;
         int bestScore = 0;
@@ -1213,10 +1204,11 @@ internal static class Utility
             }
 
             var unit = run * (1f / runLength);
-            for (int s = 0; s < ThroughPassDistances.Length; s++)
+            for (int cells = context.ThroughPassMinCells; cells <= context.ThroughPassMaxCells; cells++)
             {
-                Vec2 cell = ClampToPitch(mate.Position + (unit * ThroughPassDistances[s]));
-                if ((cell.X - marginedLine) * direction > 0f)
+                Vec2 cell = ClampToPitch(mate.Position + (unit * cells));
+                bool inFreeZone = MathF.Abs(rivalGoalColumn - cell.X) <= context.ThroughPassFreeZoneCells;
+                if (!inFreeZone && (cell.X - marginedLine) * direction > 0f)
                 {
                     cell = new Vec2(marginedLine, cell.Y);
                 }
@@ -1273,6 +1265,16 @@ internal static class Utility
         eval.Context = bestScore + Slope(context.ThroughPassTechniqueSlope, p.Technique);
     }
 
+    /// <summary>
+    /// Tiro (ADR 0030 §1). El corte binario dentro/fuera de alcance desaparece: nadie tiene prohibido
+    /// tirar de lejos, simplemente casi nadie debería querer. Pasado el alcance del jugador, cada casilla
+    /// de más resta <c>shootBeyondRangePenaltyPerCell</c>, un múltiplo grande de la penalización normal
+    /// por distancia, así que la utilidad cae en rampa en vez de en escalón.
+    ///
+    /// <para>Quien modula esa rampa es <c>LongShot</c>, y lo hace <b>moviendo dónde empieza</b>: el rasgo
+    /// aporta sus casillas de alcance desde <c>data/traits/traits.json</c> (RT-094), así que el tirador
+    /// lejano paga la rampa dos casillas más tarde que el resto. No hay ningún <c>if</c> por rasgo aquí.</para>
+    /// </summary>
     private static void EvaluateShoot(UtilityContext ctx, MatchPlayer p, AiContext context, ref Eval eval)
     {
         Vec2 goal = Pitch.GoalCenter(p.Team);

@@ -33,7 +33,9 @@ public readonly record struct MatchSummary(
     int PassesCompleted,
     int PassesIntercepted,
     int PassesLoose,
-    int PassesBeaten)
+    int PassesBeaten,
+    int ThroughPasses,
+    int ThroughPassesCompleted)
 {
     /// <summary>Resumen de un informe de partido entre homeId (equipo 0) y awayId (equipo 1).</summary>
     public static MatchSummary FromReport(MatchReport report, string homeId, string awayId) => new(
@@ -62,7 +64,9 @@ public readonly record struct MatchSummary(
         report.Players.Sum(p => p.PassesCompleted),
         report.PassesIntercepted[0] + report.PassesIntercepted[1],
         report.PassesLoose[0] + report.PassesLoose[1],
-        report.PassesBeaten[0] + report.PassesBeaten[1]);
+        report.PassesBeaten[0] + report.PassesBeaten[1],
+        report.ThroughPasses[0] + report.ThroughPasses[1],
+        report.ThroughPassesCompleted[0] + report.ThroughPassesCompleted[1]);
 }
 
 /// <summary>Un emparejamiento del lote con la calidad de cada equipo, para betterTeamWinRate.</summary>
@@ -129,6 +133,8 @@ public static class MatchMetrics
     public const string PassLooseRate = "passLooseRate";
 
     public const string PassBeatenRate = "passBeatenRate";
+    public const string ThroughPassesPerMatch = "throughPassesPerMatch";
+    public const string ThroughPassCompletionRate = "throughPassCompletionRate";
 
     /// <summary>Nombre de la métrica informativa de porcentaje de tiros que van a puerta (paso 0).</summary>
     public const string ShotsOnTargetShare = "shotsOnTargetShare";
@@ -188,7 +194,7 @@ public static class MatchMetrics
         long injuries = 0;
         long goals = 0;
         long shotsOnTarget = 0;
-        long saves = 0, fouls = 0, yellows = 0, reds = 0, passesAttempted = 0, passesCompleted = 0, passesIntercepted = 0, passesLoose = 0, passesBeaten = 0;
+        long saves = 0, fouls = 0, yellows = 0, reds = 0, passesAttempted = 0, passesCompleted = 0, passesIntercepted = 0, passesLoose = 0, passesBeaten = 0, throughPasses = 0, throughPassesCompleted = 0;
         long shotsBlocked = 0;
         int scorelineCount = 0;
         int overFiveCount = 0;
@@ -213,6 +219,8 @@ public static class MatchMetrics
             passesIntercepted += match.PassesIntercepted;
             passesLoose += match.PassesLoose;
             passesBeaten += match.PassesBeaten;
+            throughPasses += match.ThroughPasses;
+            throughPassesCompleted += match.ThroughPassesCompleted;
             yellows += match.YellowCards;
             reds += match.RedCards;
             shotsBlocked += match.ShotsBlocked;
@@ -285,6 +293,8 @@ public static class MatchMetrics
         rows.Add(new MetricResult(PassInterceptRate, 100.0 * passesIntercepted / attempted, null, null, "INFO"));
         rows.Add(new MetricResult(PassLooseRate, 100.0 * passesLoose / attempted, null, null, "INFO"));
         rows.Add(new MetricResult(PassBeatenRate, 100.0 * passesBeaten / attempted, null, null, "INFO"));
+        rows.Add(new MetricResult(ThroughPassesPerMatch, (double)throughPasses / Math.Max(1, matches.Count), null, null, "INFO"));
+        rows.Add(new MetricResult(ThroughPassCompletionRate, 100.0 * throughPassesCompleted / Math.Max(1, throughPasses), null, null, "INFO"));
 
         double shotsOnTargetShare = shots > 0 ? 100.0 * shotsOnTarget / shots : 0.0;
         rows.Add(new MetricResult(ShotsOnTargetShare, shotsOnTargetShare, null, null, "INFO"));

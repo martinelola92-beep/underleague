@@ -5647,3 +5647,9 @@ conducción que sustituye; ni quitarlo a los delanteros ni bajar su base lo recu
 `interceptContactPercent` 600 → 350 (con 600 y el paso 3, cadenas en 1,97), `shootBlockedLanePenalty` 250 → 150
 (con 250 y el portero fuera del pasillo, tiros en 7,8; con el portero dentro, 4).
 
+El revisor pidió el pase **más profundo** antes que aceptar la banda de tiros: candidatos 2-6 casillas, sin
+recorte por la línea en el último tercio, y el balón que cae sin dueño se para en la casilla (era un defecto:
+la carrera en ticks lo suponía y el motor lo soltaba rodando). Tiros 7,72 / 7,12 y goles 2,40 / 2,13, por
+encima de los de antes del paso 5: se tira menos y mejor. El censo de utilidad enseña que el pase en
+profundidad sustituye a la conducción (`Dribble` 122 → 49 por muestra), no al tiro. Tabla en la ADR 0091.
+

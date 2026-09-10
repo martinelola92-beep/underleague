@@ -1,7 +1,7 @@
 # 0091. El pase en profundidad es una carrera en ticks
 
 **Fecha:** 2026-09-10
-**Estado:** Aceptada e implementada, **medida y con un ajuste de estilo pendiente del revisor** (`shotsPerMatch`)
+**Estado:** Aceptada e implementada, medida; **ajuste de estilo del revisor aplicado** (pase más profundo, §abajo). `shotsPerMatch` queda en 7,7 / 7,1 con los goles recuperados (2,40 / 2,13); las filas que siguen fuera se investigan sin tocar bandas
 **Decisión del revisor** (segunda partida, `pendientes.md` AZ-B: «los jugadores solo pueden recibir un pase si el balón llega a donde están ellos o si el balón se ha lanzado en profundidad para que el receptor lo reciba en carrera»). **Añade una acción a RT-092** (`PlayerAction.ThroughPass`) y un desenlace del pase (`PassFailed` con detalle `beaten`).
 **Requisitos:** RT-020..024, RT-092, RT-093, RT-096, RT-097
 **Relacionada:** `docs/plan-pases-trayectoria.md` (pasos 0-5), ADR 0030 (el pase partido en bandas), ADR 0022 (`FindSpace`), `docs/referencia-motores-futbol.md` §1-2 (librcsc: intercepción en ciclos; gfootball: `ballToIntersect` contra `oppToIntersect`)
@@ -46,9 +46,9 @@ el peso base, y eso es una conversación de estilo de juego con el revisor») y 
 
 ## Lo que queda para el revisor
 
-1. **Tiros**: aceptar 7-8 por partido con el fútbol nuevo (banda 8-16 → 6-16, ADR de banda) o pedir que el
-   pase en profundidad termine más cerca de portería (candidatos a 4-6 casillas en vez de 2-4, o sin
-   recorte por la línea en el último tercio), que es cambiar el estilo.
+1. **Tiros**: ~~aceptar 7-8 por partido o pedir un pase más profundo~~ → el revisor eligió **pase más
+   profundo**; aplicado y medido en la sección siguiente. Tiros 7,7 / 7,1, goles 2,40 / 2,13 (los de antes
+   del paso 5 eran 2,37 / 2,04): se tira menos y mejor. La banda 8-16 sigue en rojo y no se toca.
 2. **Lesiones** 0,97 (semilla 1) sobre 0,9: hay más juego vivo (entradas 10,8 → 12,1); ADR 0082 ya subió el
    techo de 0,8 a 0,9 por lo mismo en AW-R. Propuesta: 0,3-1,0.
 3. **`RaceBalanceTests`** `elf_none` 60,95 sobre 60: la técnica se premia más; recalibrar `elf_touch` dentro
@@ -70,3 +70,49 @@ la formación y al portador como el jugador 0 (el portero, que no entra a nadie)
 
 Mientras tanto, `main` no se publica (`buildsWinDifferently_passChain` volvió a verde con la tanda 3, pero
 las cuatro filas de arriba siguen en rojo).
+
+## Ajuste del revisor: el pase más profundo (10 sep)
+
+Decisión del revisor ante los tiros: «pase más profundo» (candidatos más lejos del corredor y sin recorte por
+la línea defensiva en el último tercio) en vez de aceptar la banda o restringir el pase en zona de tiro. Tres
+datos nuevos en `weights.json` → `context`: `throughPassMinCells` **2**, `throughPassMaxCells` **6** (eran la
+constante 2-4), `throughPassFreeZoneCells` **5,0** (a menos de 5 casillas de la portería rival —el último
+tercio de las 16— la casilla candidata no se recorta por la línea: el pase a la espalda de la defensa es lo
+que la acción es). Dos filas INFO nuevas para verlo: `throughPassesPerMatch` y `throughPassCompletionRate`.
+
+Medido primero a 300 partidos (semilla 1) para elegir, después a 2.000 (semillas 1 / 7):
+
+| Variante | Profundidad / zona libre / lateTicks | Pases en prof. / partido | Tiros | Goles | Tercio | Lesiones |
+|---|---|---|---|---|---|---|
+| Paso 5 (referencia) | 2-4 / 0 / 4 | 7,3 | 7,27 | 2,17 | 52,1 | 1,05 |
+| 4-6 tal cual | 4-6 / 5 / 4 | **2,1** | 7,89 | 2,34 | 52,0 | 0,97 |
+| 3-5 | 3-5 / 5 / 4 | 5,0 | 7,75 | 2,32 | 50,7 | 0,99 |
+| 2-6 + zona libre | 2-6 / 5 / 4 | 8,2 | 7,33 | 2,17 | 48,8 | 0,87 |
+| **2-6 + zona libre + el balón se para** | 2-6 / 5 / 4 | 8,3 | **7,83** | **2,46** | 50,6 | 0,89 |
+| … + zona libre 8 | 2-6 / 8 / 4 | 8,1 | 7,82 | 2,41 | 50,2 | 0,87 |
+| … + lateTicks 8 | 2-6 / 5 / 8 | 8,8 | 7,54 | 2,47 | 50,5 | 0,85 |
+
+Lo que se aprendió por el camino, con el censo de utilidad (RT-098, 100 partidos) y una sonda de eventos:
+
+- **Más lejos no es más profundo**: a 4-6 casillas la carrera casi nunca es legal (el defensa más cercano
+  a la casilla suele estar a menos ticks que el corredor) y el pase pasa de 7,3 a 2,1 por partido; los tiros
+  «suben» porque el fútbol vuelve a ser el de antes del paso 5. Con 2-6 el candidato hondo gana cuando es
+  legal (`findSpaceAdvanceBonusPerCell`) y el corto sigue existiendo.
+- **El pase en profundidad sustituye a la conducción**, no al tiro: con el pase apagado se eligen 122
+  `Dribble` por cada 32 `Shoot` en la muestra; con el pase encendido, 49 `Dribble`, 29 `Shoot` y 21
+  `ThroughPass`. Los tiros que faltan son los que salían de conducir hasta la portería.
+- **Un defecto de verdad**: la legalidad supone que el balón «se para donde cae» y el corredor llega hasta
+  `lateTicks` después, pero el motor lo soltaba rodando en la dirección del vuelo como cualquier pase
+  fallido, así que la mitad de los pases legales (`throughPassCompletionRate` ~49 %: la tirada de técnica y
+  la llegada a 1 casilla) acababan en un balón que se alejaba del corredor. Ahora el pase en profundidad
+  que cae sin dueño se para en la casilla (`ResolvePassArrival`) y la carrera la termina la regla del balón
+  suelto. Es el cambio que devuelve los goles (2,17 → 2,46 en la muestra).
+
+Referencia final, 2.000 partidos, semillas 1 / 7: `shotsPerMatch` **7,72 / 7,12** (banda 8-16, sigue fuera),
+`goalsPerMatch` 2,40 / 2,13, `possessionChanges` 22,5 / 22,7, `passChainAvgLength` 2,20 / 2,33,
+`ballThirdMaxShare` 50,4 / 48,6, `injuriesPerMatch` 0,97 / 0,77, `tacklesPerMatch` 11,2 / 11,7,
+`betterTeamWinRate` 60-40 90,1 / 77,8, `passInterceptRate` 8,5 / 8,7, `throughPassesPerMatch` 8,2 / 9,3,
+`throughPassCompletionRate` 48,9 / 48,3. Instrucción del revisor para lo que sigue fuera (tiros, tercio en
+la semilla 1, lesiones en la semilla 1, `elf_none`, `human_random`, `eternal_crown`): **investigar la
+causa con números, sin tocar bandas**.
+

@@ -91,7 +91,10 @@
         "throughPassLateTicks": { "type": "integer", "minimum": 0, "maximum": 60 },
         "throughPassMarginTicks": { "type": "integer", "minimum": 0, "maximum": 60 },
         "throughPassBase": { "type": "integer", "minimum": 0, "maximum": 10000 },
-        "throughPassTechniqueSlope": { "type": "integer", "minimum": 0, "maximum": 1000 }
+        "throughPassTechniqueSlope": { "type": "integer", "minimum": 0, "maximum": 1000 },
+        "throughPassMinCells": { "type": "integer", "minimum": 1, "maximum": 16 },
+        "throughPassMaxCells": { "type": "integer", "minimum": 1, "maximum": 16 },
+        "throughPassFreeZoneCells": { "type": "number", "minimum": 0, "maximum": 16 }
       },
       "required": [
         "chaseBallDistancePenaltyPerCell", "chaseBallLooseBonus",
@@ -111,7 +114,8 @@
         "passBackwardPenaltyPerCell", "findSpaceCrowdedPenalty",
         "blockShiftLineMarginCells", "findSpaceLineMarginCells",
         "passLaneRadiusCells", "passBlockedLanePenalty", "passBlockedLaneRankPenalty", "shootBlockedLanePenalty",
-        "throughPassLateTicks", "throughPassMarginTicks", "throughPassBase", "throughPassTechniqueSlope"
+        "throughPassLateTicks", "throughPassMarginTicks", "throughPassBase", "throughPassTechniqueSlope",
+        "throughPassMinCells", "throughPassMaxCells", "throughPassFreeZoneCells"
       ],
       "additionalProperties": false
     },
