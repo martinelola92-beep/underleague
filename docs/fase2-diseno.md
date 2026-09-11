@@ -5723,3 +5723,17 @@ queden mercados en el acto.
 Con ellas: `runWinRate` 25,25 / 25,33, huecos 0,69 por run, y `brokeMarketRunShare` **de 38 a 10,8**, que es
 la primera vez que esa métrica toca el suelo de su banda de diseño. Las 43 puertas en verde.
 
+## 45. El control sin mercado compraba (ADR 0098)
+
+Preguntando por qué `runWinRate_noMarket` seguía tan alto salió un defecto del instrumento, no del diseño: la
+política de control esquiva los mercados por **ruta**, pero el mapa la mete en uno en **la mitad de las runs**
+(`marketsVisited_noMarket` 0,77 — no el 1,1 % que sugería la ADR 0053), y allí **compraba** 84 de oro de
+media. La métrica mezclaba «ganar sin comprar» (4,5 %) con «ganar comprando una vez» (19 %).
+
+Arreglado —el control no compra—, la cifra es **7,83 / 7,17**. Y con ella se cae la contradicción que la ADR
+0096 había anunciado entre la ADR 0033 y la ADR 0055: la fila «buena» de aquella mide una build **completa**
+de catorce perks sin maestros, y la run sin mercado llega con **2,81**; «sin maestros» no es «sin mercado».
+Lo que queda es una palanca nueva y medible: no comprar es en parte una **estrategia** —122 de oro sin gastar
+que van a la clínica, la mitad de muertes (1,10 contra 1,89) y más veteranía (6,88 contra 6,16)—, así que lo
+que bajaría esa tasa es encarecer o limitar el atesoramiento, no recortar recompensas.
+

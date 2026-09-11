@@ -263,9 +263,11 @@ public sealed record RunPolicyOptions
     /// Si la política <b>esquiva los mercados</b> (ADR 0055). Es la medida de control de la métrica que
     /// esa ADR pide: ganar la run sin entrar en ningún mercado tiene que ser prácticamente imposible
     /// (&lt; 5%). No es una doctrina de compra —es la misma contextual jugando igual de bien todo lo
-    /// demás— y solo cambia la <b>regla 1</b>, la de elegir nodo: con el mapa de cuatro carriles (ADR
-    /// 0053) el mercado se puede esquivar en el 98,9% de los actos, así que la política lo consigue casi
-    /// siempre y entra solo cuando no hay otra ruta.
+    /// demás— y cambia dos cosas: la <b>regla 1</b>, la de elegir nodo (el mercado vale
+    /// <c>int.MinValue</c>, así que solo entra cuando no hay otra ruta), y desde la <b>ADR 0098</b> la de
+    /// comprar: <b>no compra nunca</b>. Lo segundo hacía falta porque lo primero no basta: medido, el mapa
+    /// lo obliga a entrar en un mercado en la mitad de las runs —no en el 1,1% que sugería la ADR 0053— y
+    /// allí gastaba 84 de oro de media. Sin esta regla la métrica no medía «se puede ganar sin comprar».
     /// </summary>
     public bool AvoidsMarkets { get; init; }
 
@@ -1207,6 +1209,16 @@ public static class RunPolicy
         RunPolicyOptions options,
         Ledger ledger)
     {
+        // ADR 0098: el control de la ADR 0055 **no compra**. Esquivar el mercado es su regla, pero el mapa
+        // lo mete en uno en la mitad de las runs (marketsVisited_noMarket 0,77) y allí compraba como
+        // cualquiera: la métrica mezclaba «ganar sin comprar» con «ganar comprando una vez». Separadas las
+        // dos poblaciones sobre 1.200 runs, las que nunca compraron ganan el 4,47 % —dentro de la banda que
+        // la ADR 0055 pide— y las forzadas el 19,13 %. El control se queda con la primera.
+        if (options.AvoidsMarkets)
+        {
+            return state;
+        }
+
         // Escasez (ADR 0037): lo primero que se anota es lo que el jugador ve al llegar y cuánto de eso
         // podría pagar. Se mide **antes** de comprar, que es cuando el dilema existe.
         var arrival = MarketOfferGenerator.Generate(

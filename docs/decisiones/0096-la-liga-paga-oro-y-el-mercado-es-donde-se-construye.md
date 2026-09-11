@@ -81,20 +81,19 @@ cosa de un tercio de las runs a casi la mitad, sin que ninguna banda que estaba 
 | Subir todos los precios ×1,7 | 18,2 | 9,0 | el maestro deja de ser comprable (`mastersReached` 28) |
 | Listón de compra más alto (`--min-perk-value-market` 80 / 140) | 18,2 / 12,5 | — | el listón no era el problema: a 140 no se compra ningún maestro |
 
-## Lo que queda abierto, y por qué no es tuning
+## Lo que queda abierto
 
-`runWinRate_noMarket` **≤ 5 no es alcanzable moviendo datos**, y ahora se puede demostrar. Quitando **todas**
-las elecciones ordinarias (liga **y** élite) el control sin mercado sigue ganando el 9,5 %: lo que le queda
-son los **tres nodos de jefe**, que dan dos elecciones cada uno (ADR 0043). Y la propia curva de puertas de
-la ADR 0033 dice que una build **buena sin maestros ni objetos** —las celdas se miden exactamente así— gana
-75-88, 60-72 y 40-55 a los tres jefes: el producto de sus centros es **25,6 %**. Es decir:
+> **Corregido por la ADR 0098 (mismo día).** Esta sección afirmaba que la ADR 0033 y la ADR 0055 se
+> contradicen —las celdas de la fila «buena» multiplicadas dan 25,6 % y la banda pide ≤ 5 %—. **Era un error
+> de categoría**: la fila «buena» mide una build **completa** de catorce perks que no tiene maestros, y la run
+> sin mercado llega con 2,81. «Sin maestros» no es «sin mercado». Además el control **compraba** cuando el
+> mapa lo metía en un mercado, así que el 10,0 de aquí era una mezcla de dos poblaciones. Con el instrumento
+> arreglado la cifra es **7,83** y a la banda le faltan 2,8 puntos, no veinte. El desglose y la palanca que
+> queda (no comprar es, en parte, una estrategia: menos muertes y más veteranía) están en la ADR 0098.
 
-> La ADR 0033 afirma que se puede ganar una run de cada cuatro con una build que el mercado no ha tocado, y
-> la ADR 0055 pide que eso pase menos de una vez de cada veinte. **Las dos no pueden ser ciertas a la vez.**
-
-Es la misma clase de contradicción que AP-B, y se decide igual: o las celdas de la ADR 0033 bajan para una
-build sin maestro, o la banda de la ADR 0055 sube a lo que el diseño permite (~10 %). Queda en AZ-H para el
-revisor, ya con el número de las dos alternativas.
+Quitando **todas** las elecciones ordinarias (liga **y** élite) el control sigue ganando el 9,5 %: lo que le
+queda son los **tres nodos de jefe**, que dan dos elecciones cada uno (ADR 0043). Esa parte se mantiene: el
+trampolín por sí solo sostiene un esqueleto de build.
 
 `contextualAdvantage` ≥ 8 tampoco se ha cumplido nunca (histórico −2,1 a +5,6): la ahorradora es una
 estrategia fuerte de verdad, y el paquete acerca a las dos doctrinas en vez de separarlas. Con la regla del
