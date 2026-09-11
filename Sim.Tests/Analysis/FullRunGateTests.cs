@@ -269,7 +269,10 @@ public sealed class FullRunGateTests
         AssertBetween(FullRunMetrics.RunWinRate, 5.0, 40.0);
         AssertBetween(FullRunMetrics.AffordableShare, 25.0, 70.0);
         AssertBetween(FullRunMetrics.LeftoverGoldShare, 5.0, 32.0);
-        AssertBetween(FullRunMetrics.BrokeMarketRunShare, 20.0, 88.0);
+        // ADR 0097: cae de ~50 a ~10 al dejar la política de gastarse la última moneda, así que la cota
+        // se redibuja alrededor de lo nuevo. La banda de diseño (10-25) queda justo encima: la métrica está
+        // en su puerta, no dentro, y lo dice el lote.
+        AssertBetween(FullRunMetrics.BrokeMarketRunShare, 5.0, 25.0);
         AssertBetween(FullRunMetrics.DeathsPerRun, 1.0, 3.0);
         AssertBetween(FullRunMetrics.PurchasesPerMarket, 0.5, 2.0);
     }

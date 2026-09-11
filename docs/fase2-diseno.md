@@ -5707,3 +5707,19 @@ celdas con builds **sin maestros ni objetos**, y el producto de los centros de l
 ADR 0055 pide que eso pase menos de una vez de cada veinte. Es una contradicción del mismo tipo que AP-B y
 se decide igual (AZ-H).
 
+## 44. La inscripción deja de ser un nodo (ADR 0097)
+
+Decisión del revisor tras ver la ADR 0096: «quitaría el nodo especial del slot y lo metería como algo a
+comprar en el mercado; así simplificamos». `NodeKind.Enrollment` desaparece del mapa y `ExpandRoster` pasa a
+resolverse en el mercado, con su precio creciente intacto.
+
+Lo que enseñó el lote es que **el nodo hacía de filtro sin decirlo**: para comprar un hueco había que
+desviarse, y eso bastaba para que la política solo comprara 0,55 por run. En el mostrador, sin reglas, compra
+1,25 y llega seca al mercado siguiente (visitas sin nada que pagar: 38 % → 73 %). Hicieron falta dos reglas
+explícitas, las dos escritas ya en el espíritu de las ADR 0046 y 0037: el hueco se compra solo si después
+queda oro para un perk raro, y ninguna doctrina salvo la gastadora se gasta la última moneda mientras le
+queden mercados en el acto.
+
+Con ellas: `runWinRate` 25,25 / 25,33, huecos 0,69 por run, y `brokeMarketRunShare` **de 38 a 10,8**, que es
+la primera vez que esa métrica toca el suelo de su banda de diseño. Las 43 puertas en verde.
+

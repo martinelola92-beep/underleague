@@ -1,7 +1,7 @@
 # 0046. Plantilla de diez, nodo de inscripción y perks letales
 
 **Fecha:** 2026-09-05
-**Estado:** Aceptada (decisión del revisor)
+**Estado:** Aceptada (decisión del revisor). **El nodo de inscripción se retira en la ADR 0097** (decisión del revisor, 11 sep 2026): el hueco de plantilla se compra en el mercado. Todo lo demás de esta ADR —el coste creciente, el techo de 12, el descarte— sigue en pie.
 **Modifica:** RF-020, RF-011
 **Requisitos:** RF-002b, RF-005, RF-013, RF-093, RF-114k, RF-122
 

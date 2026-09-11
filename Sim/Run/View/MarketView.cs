@@ -79,7 +79,9 @@ public sealed record MarketScreenView(
     IReadOnlyList<MarketRow> Perks,
     IReadOnlyList<MarketRow> Items,
     IReadOnlyList<MarketRow> Consumables,
-    IReadOnlyList<MarketSaleRow> Sellable);
+    IReadOnlyList<MarketSaleRow> Sellable,
+    /// <summary>Precio del siguiente hueco de plantilla (ADR 0097), o −1 si ya se está en el techo de RF-020.</summary>
+    int RosterSlotPrice);
 
 /// <summary>
 /// Compone la pantalla de mercado desde el estado. Puro: el surtido lo deriva
@@ -240,7 +242,8 @@ public static class MarketView
             perkRows,
             itemRows,
             consumableRows,
-            Sellable(state, economy));
+            Sellable(state, economy),
+            economy.EnrollmentCost(state.Counter(RunState.EnrollmentSlotsCounter)));
     }
 
     private static MarketRow PlayerRow(

@@ -52,7 +52,7 @@ public sealed class EnrollmentTests
     public void BuyingASlotRaisesTheCapAndCostsMoreEachTime()
     {
         var economy = SystemsTestSupport.Systems.Economy;
-        var state = SystemsTestSupport.WithFakePendingNode(Start(9003UL), NodeKind.Enrollment);
+        var state = SystemsTestSupport.WithFakePendingNode(Start(9003UL), NodeKind.Market);
 
         int firstCost = economy.EnrollmentCost(0);
         int goldBefore = state.Gold;
@@ -77,7 +77,7 @@ public sealed class EnrollmentTests
     public void BuyingASlotWithoutEnoughGoldIsRejected()
     {
         var economy = SystemsTestSupport.Systems.Economy;
-        var state = SystemsTestSupport.WithFakePendingNode(Start(9004UL), NodeKind.Enrollment)
+        var state = SystemsTestSupport.WithFakePendingNode(Start(9004UL), NodeKind.Market)
             .WithGold(economy.EnrollmentCost(0) - 1);
 
         Assert.Throws<ArgumentException>(() => EnrollmentSystem.Expand(state, economy));
@@ -132,10 +132,10 @@ public sealed class EnrollmentTests
 
     /// <summary>El nodo se abre y se resuelve por la superficie pública del motor, no solo por el sistema.</summary>
     [Fact]
-    public void TheEnrollmentNodeIsPlayedThroughTheRunEngine()
+    public void TheSlotIsBoughtAtTheMarketThroughTheRunEngine()
     {
         var economy = SystemsTestSupport.Systems.Economy;
-        var state = SystemsTestSupport.WithFakePendingNode(Start(9008UL), NodeKind.Enrollment).WithPhase(RunPhase.NodeOpen);
+        var state = SystemsTestSupport.WithFakePendingNode(Start(9008UL), NodeKind.Market).WithPhase(RunPhase.NodeOpen);
 
         state = RunEngine.Apply(state, new ExpandRoster(), SystemsTestSupport.Catalog, SystemsTestSupport.Systems);
         Assert.Equal(RunRules.BaseRosterSize + 1, state.RosterCapacity);

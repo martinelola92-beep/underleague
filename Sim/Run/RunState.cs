@@ -345,7 +345,8 @@ public sealed record RunState
     /// una run guardada con otra versión no se migra en silencio (<c>modelo-datos.md</c>, "Versionado").
     /// Versión 1: primera con código (la 0 era el borrador sin implementar).
     /// </summary>
-    public const int CurrentSchemaVersion = 1;
+    // 2 (ADR 0097): desaparece NodeKind.Enrollment, que se serializaba por nombre.
+    public const int CurrentSchemaVersion = 2;
 
     /// <summary>Versión de esquema con la que se creó este estado.</summary>
     public int SchemaVersion { get; init; } = CurrentSchemaVersion;

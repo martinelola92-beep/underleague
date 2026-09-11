@@ -471,7 +471,7 @@ public static class MapGenerator
 
             indices.Sort();
 
-            var pool = new List<NodeKind> { NodeKind.Clinic, NodeKind.Training, NodeKind.Event, NodeKind.Enrollment };
+            var pool = new List<NodeKind> { NodeKind.Clinic, NodeKind.Training, NodeKind.Event };
             rng.Shuffle(pool);
 
             var forced = new List<NodeKind>(2);
@@ -479,11 +479,6 @@ public static class MapGenerator
             {
                 forced.Add(NodeKind.Clinic);
                 clinicPlaced = true;
-            }
-
-            if (l == byLayer.Count - 1)
-            {
-                forced.Add(NodeKind.Enrollment);
             }
 
             var ordered = new List<NodeKind>(pool.Count);

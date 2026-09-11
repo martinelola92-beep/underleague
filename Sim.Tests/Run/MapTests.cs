@@ -124,9 +124,8 @@ public class MapTests
             Assert.Equal(1, map.Nodes.Count(n => n.Kind == NodeKind.Boss));
             Assert.Contains(map.Nodes, n => n.Kind == NodeKind.Clinic);
 
-            // ADR 0046: y un nodo de inscripción por acto, por construcción y no por sorteo. Sin él,
-            // comprar un hueco de plantilla dependería de que el dado lo ofreciera.
-            Assert.Contains(map.Nodes, n => n.Kind == NodeKind.Enrollment);
+            // ADR 0097: ya no hay nodo de inscripción; el hueco de plantilla se compra en el mercado, y de
+            // mercado hay uno cada dos capas por construcción (se comprueba justo debajo).
             Assert.DoesNotContain(map.Nodes, n => n.Kind == NodeKind.Workshop);
 
             // Capas de mercado cada 2 (ADR 0053): son las que hacen cierta la garantía de RF-011b
@@ -144,34 +143,6 @@ public class MapTests
         }
     }
 
-    /// <summary>
-    /// ADR 0046: el nodo de inscripción es una decisión de <b>ruta</b>. Aparece en una capa que tiene
-    /// más cosas, así que ir a por un hueco de plantilla significa no ir a lo otro de esa capa, y con
-    /// cuatro carriles además cuesta carril. Lo que la ADR 0053 cambia es con qué compite: ya no solo
-    /// con otro servicio, también con un partido o con el mercado.
-    /// </summary>
-    [Fact]
-    public void TheEnrollmentNodeIsAlwaysAChoiceAgainstSomethingElse()
-    {
-        for (ulong seed = 1; seed <= 200; seed++)
-        {
-            for (int act = 1; act <= 3; act++)
-            {
-                var map = MapGenerator.Generate(seed, act, MapOptions.Default);
-                var enrollment = map.Nodes.Where(n => n.Kind == NodeKind.Enrollment).ToList();
-                Assert.NotEmpty(enrollment);
-
-                foreach (var node in enrollment)
-                {
-                    var layer = map.Nodes.Where(n => n.Layer == node.Layer).ToList();
-                    Assert.True(
-                        layer.Count > 1,
-                        $"semilla {seed}, acto {act}: el nodo de inscripción {node.Id} ocupa una capa entera y no es una elección");
-                    Assert.Contains(layer, n => n.Kind != NodeKind.Enrollment);
-                }
-            }
-        }
-    }
 
     /// <summary>
     /// ADR 0053, apertura: el acto empieza en <b>un solo nodo</b> —el mismo partido de liga para todo el

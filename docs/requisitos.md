@@ -85,7 +85,7 @@ La identidad del juego no es el fútbol, es la **carnicería administrada**: los
 ### 3.2 Mapa
 
 - **RF-010** El mapa de cada acto es un grafo dirigido con múltiples caminos, avance en una sola dirección y sin retroceso.
-- **RF-011** Tipos de nodo: partido de liga, partido de élite (mayor riesgo y recompensa), mercado, clínica, taller de implantes, entrenamiento, **inscripción** (amplía la plantilla un hueco, con coste creciente, RF-020), evento aleatorio, jefe.
+- **RF-011** Tipos de nodo: partido de liga, partido de élite (mayor riesgo y recompensa), mercado, clínica, taller de implantes, entrenamiento, evento aleatorio, jefe. *(La inscripción fue un nodo hasta la **ADR 0097**: el hueco de plantilla se compra ahora en el mercado, RF-020.)*
 - **RF-011b** Hay un nodo de mercado cada **3-4 nodos**, y desde cualquier punto del mapa debe existir un mercado alcanzable en dos saltos como máximo. Es lo que convierte jugar en inferioridad en una decisión y no en una trampa.
 - **RF-015** Los **rivales son estáticos por acto y división**: cada acto tiene un conjunto fijo de equipos rivales, diseñados a mano con una build reconocible cada uno. Lo aleatorio es el mapa, la posición de los nodos y qué rivales aparecen en qué nodo. Los rivales son personajes que el jugador aprende, y el informe de ojeo describe una build real, no un bloque de estadísticas.
 - **RF-015b** Los rivales usan consumibles y sobornos. Ambos aparecen en el informe de ojeo.
@@ -99,7 +99,7 @@ La identidad del juego no es el fútbol, es la **carnicería administrada**: los
 
 ### 3.3 Plantilla y jugadores
 
-- **RF-020** Tamaño de plantilla: **capacidad base 10**, **ampliable hasta 12** pagando en un **nodo de inscripción** de coste creciente. La plantilla inicial es de 9 (RF-005): un hueco libre por debajo de la capacidad base desde el primer mercado, sin vender ni descartar a nadie (ADR 0079). Con la plantilla llena, incorporar a un jugador exige vender o descartar a otro. El mínimo para jugar sigue siendo 5 (RF-002b).
+- **RF-020** Tamaño de plantilla: **capacidad base 10**, **ampliable hasta 12** pagando en el **mercado** un precio creciente (ADR 0097; hasta entonces era un nodo de inscripción propio). La plantilla inicial es de 9 (RF-005): un hueco libre por debajo de la capacidad base desde el primer mercado, sin vender ni descartar a nadie (ADR 0079). Con la plantilla llena, incorporar a un jugador exige vender o descartar a otro. El mínimo para jugar sigue siendo 5 (RF-002b).
 - **RF-020b** Los nombres se producen con un **generador por raza** definido en `/data`. Ningún jugador se llama "Jugador 3".
 - **RF-021** Cada jugador posee: nombre, raza, **posición**, rareza, nivel, experiencia, atributos numéricos, **rasgos**, etiquetas, lista de perks, slots de equipamiento, estado físico, vínculos y salario.
 - **RF-022** Atributos numéricos, en rango 1-99: **fuerza, velocidad, técnica, resistencia y correa**. La precisión se integra en técnica; la agresividad se expresa mediante rasgos, no como cifra.

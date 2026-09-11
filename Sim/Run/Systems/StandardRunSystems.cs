@@ -174,7 +174,6 @@ public sealed class StandardRunSystems : IRunSystems
         {
             NodeKind.Market => state.WithPendingNode(node.Id),
             NodeKind.Clinic => state.WithPendingNode(node.Id),
-            NodeKind.Enrollment => state.WithPendingNode(node.Id),
             NodeKind.Training => ServiceNodeSystem.Training(state, _economy, catalog),
             NodeKind.Event => ServiceNodeSystem.Event(state, node, _economy),
             _ => state,

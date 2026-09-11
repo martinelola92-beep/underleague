@@ -4,9 +4,11 @@ using Underleague.Sim.Run.Systems.Economy;
 namespace Underleague.Sim.Run.Systems.Nodes;
 
 /// <summary>
-/// Nodo de inscripción (ADR 0046, amplía RF-011): el despacho del presidente. Paga oro y <b>amplía la
-/// plantilla en un hueco</b>, desde la base de <see cref="RunRules.BaseRosterSize"/> hasta el techo de
-/// <see cref="RunRules.MaxRosterSize"/> (RF-020).
+/// La inscripción (ADR 0046, amplía RF-011; **ADR 0097**): paga oro y <b>amplía la plantilla en un
+/// hueco</b>, desde la base de <see cref="RunRules.BaseRosterSize"/> hasta el techo de
+/// <see cref="RunRules.MaxRosterSize"/> (RF-020). Desde la ADR 0097 <b>no es un nodo del mapa sino una
+/// compra más del mercado</b>: el derecho a tener un cuerpo más compite en el mismo mostrador que el perk
+/// y el objeto, que es donde la decisión se ve.
 ///
 /// <para>El coste es <b>creciente</b> y vive en datos (<c>economy.enrollmentCosts</c>): el primer hueco
 /// es caro y el segundo bastante más, del orden de la mitad del oro de una run entera entre los dos
@@ -21,7 +23,7 @@ namespace Underleague.Sim.Run.Systems.Nodes;
 public static class EnrollmentSystem
 {
     /// <summary>
-    /// Compra el siguiente hueco de plantilla en el nodo de inscripción abierto. Lanza si no queda hueco
+    /// Compra el siguiente hueco de plantilla en el mercado abierto (ADR 0097). Lanza si no queda hueco
     /// que comprar (ya se está en el techo de 12) o si el oro no llega.
     /// </summary>
     public static RunState Expand(RunState state, EconomyConfig economy)
@@ -29,7 +31,7 @@ public static class EnrollmentSystem
         ArgumentNullException.ThrowIfNull(state);
         ArgumentNullException.ThrowIfNull(economy);
 
-        NodeGuards.RequireOpen(state, NodeKind.Enrollment, "ampliar la plantilla");
+        NodeGuards.RequireOpen(state, NodeKind.Market, "ampliar la plantilla");
 
         int bought = state.Counter(RunState.EnrollmentSlotsCounter);
         int cost = economy.EnrollmentCost(bought);

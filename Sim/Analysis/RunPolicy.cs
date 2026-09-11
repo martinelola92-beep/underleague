@@ -569,8 +569,8 @@ public static class RunPolicy
         bool needsClinic = HasUntreatedSevereInjury(state) && state.Gold >= economy.ClinicCost;
         bool poor = state.Gold < economy.ClinicCost;
         bool strong = state.AvailablePlayerCount >= options.EliteFromAvailable;
-        bool wantsSlot = WantsRosterSlot(state, economy, options);
-
+        // ADR 0097: el hueco de plantilla se compra en el mercado, así que ya no mueve la elección de nodo
+        // por sí mismo: lo que la mueve es el mercado, que vale por los dos.
         MapNode? best = null;
         int bestScore = int.MinValue;
         for (int i = 0; i < nodes.Count; i++)
@@ -590,7 +590,6 @@ public static class RunPolicy
                 NodeKind.EliteMatch => strong ? 60 : 40 - node.Difficulty,
                 NodeKind.LeagueMatch => 50 - node.Difficulty,
                 NodeKind.Boss => 10,
-                NodeKind.Enrollment => wantsSlot ? 80 : 15,
                 _ => 0,
             };
 
@@ -1053,7 +1052,6 @@ public static class RunPolicy
         {
             NodeKind.Market => VisitMarket(state, node, catalog, standard, systems, options, ledger),
             NodeKind.Clinic => VisitClinic(state, catalog, standard.Economy, systems, options, ledger),
-            NodeKind.Enrollment => VisitEnrollment(state, catalog, standard.Economy, systems, options, ledger),
             _ => node.IsMatch
                 ? TakeRewards(state, node, catalog, standard, systems, options, ledger)
                 : state,
@@ -1161,7 +1159,12 @@ public static class RunPolicy
         return economy.EnrollmentCost(state.Counter(RunState.EnrollmentSlotsCounter));
     }
 
-    private static RunState VisitEnrollment(
+    /// <summary>
+    /// El hueco de plantilla, que desde la ADR 0097 se compra en el mercado como todo lo demás. Se resuelve
+    /// <b>antes</b> que el surtido: un hueco libre es lo que permite llevarse al canterano gratuito, y el
+    /// oro que queda después es el que compite por perks y objetos, sin reserva que apartar.
+    /// </summary>
+    private static RunState BuyRosterSlot(
         RunState state,
         Catalog catalog,
         EconomyConfig economy,
@@ -1175,6 +1178,18 @@ public static class RunPolicy
         }
 
         int cost = economy.EnrollmentCost(state.Counter(RunState.EnrollmentSlotsCounter));
+
+        // ADR 0097: en el mercado el hueco está siempre a la vista, así que hay que decir cuándo NO se
+        // compra. La ADR 0046 ya lo había escrito con otras palabras —«a esas alturas un perk raro vale más
+        // que el duodécimo cuerpo»— y antes lo imponía el mapa: había que desviarse al nodo. Aquí la regla
+        // es explícita: el hueco se compra solo si después sigue quedando oro para un perk raro. Sin esto
+        // la política compra 1,25 huecos por run y llega seca al mercado siguiente (visitas sin nada que
+        // pagar: 38 % -> 73 %).
+        if (Spendable(state, economy) < cost + economy.Market.PerkPrice.Rare)
+        {
+            return state;
+        }
+
         state = RunEngine.Apply(state, new ExpandRoster(), catalog, systems);
         ledger.GoldSpentEnrollment += cost;
         ledger.SlotsBought++;
@@ -1243,6 +1258,11 @@ public static class RunPolicy
         {
             ledger.BrokeMarketVisits++;
         }
+
+        // ADR 0097: el hueco de plantilla es la primera compra del mostrador —sin él no cabe el canterano
+        // gratuito—, pero se resuelve DESPUÉS de la foto de llegada: lo que la ADR 0037 mide es lo que el
+        // jugador ve y podría pagar al entrar, no lo que le queda después de gastar.
+        state = BuyRosterSlot(state, catalog, standard.Economy, systems, options, ledger);
 
         var used = new HashSet<(string Category, int Index)>();
         int spentHere = 0;
@@ -2357,26 +2377,28 @@ public static class RunPolicy
         HasUntreatedSevereInjury(state) ? Math.Max(0, state.Gold - economy.ClinicCost) : state.Gold;
 
     /// <summary>
-    /// Oro que la política se permite gastar <b>en el mercado</b>: además de la clínica, aparta el precio
-    /// del hueco de plantilla cuando lo necesita (ADR 0046). Sin esta reserva el nodo de inscripción es
-    /// decorado: el mercado va antes en el acto y se lleva el oro.
+    /// Oro que la política se permite gastar <b>en el mercado</b>. Hasta la ADR 0097 apartaba aquí el precio
+    /// del hueco de plantilla, porque la inscripción era un nodo aparte al que el mercado le quitaba el oro
+    /// antes de llegar; ahora el hueco se compra en este mismo mostrador y se resuelve el primero
+    /// (<see cref="BuyRosterSlot"/>), así que no hay nada que reservar: lo que queda es la reserva de la
+    /// clínica, que sigue siendo de otro nodo.
     /// </summary>
     private static int SpendableAtMarket(RunState state, EconomyConfig economy, RunPolicyOptions options)
     {
         int gold = Spendable(state, economy);
 
-        // Solo se ahorra para el PRIMER hueco. El segundo cuesta "bastante más" (ADR 0046) y la política
-        // lo compra únicamente si le sobra el oro al llegar al nodo: ahorrar para él significaría no
-        // comprar nada en el mercado durante medio acto, y a esas alturas un perk raro vale más que el
-        // duodécimo cuerpo. Medido: reservando para los dos, la plantilla vuelve a 11,2, las muertes caen
-        // a 0,22 y el gasto de mercado se hunde de 53 a 24 de oro por run.
-        if (state.Counter(RunState.EnrollmentSlotsCounter) > 0)
+        // ADR 0097: la gastadora vacía la cartera, que es lo que la define; las otras dos no se gastan la
+        // última moneda mientras les queden mercados en el acto. Llegar a un mostrador sin poder pagar nada
+        // es el peor resultado de la ADR 0037 —lo mide `brokeMarketRunShare`— y sin esta línea pasaba de
+        // 38 % a 69 % de las runs, porque la reserva del hueco de plantilla era lo único que guardaba algo.
+        // Lo que se aparta es exactamente el perk más barato del mostrador.
+        if (options.Doctrine == PurchaseDoctrine.Spender || MarketsLeftInAct(state, state.GetNode(state.PendingNodeId)) <= 1)
         {
             return gold;
         }
 
-        int slot = NeededEnrollmentCost(state, economy, options);
-        return slot > 0 ? Math.Max(0, gold - slot) : gold;
+        int floor = economy.Market.PerkPrice.Common;
+        return Math.Max(0, gold - floor);
     }
 
     private static bool HasUntreatedSevereInjury(RunState state)
