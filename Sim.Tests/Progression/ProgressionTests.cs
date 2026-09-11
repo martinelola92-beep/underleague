@@ -23,7 +23,8 @@ public sealed class ProgressionTests
     [Fact]
     public void TuningComesFromData()
     {
-        Assert.Equal(100, Tuning.MatchExperience);
+        // ADR 0095: 100 -> 140 para que la run entregue el nivel que la puerta de jefes mide (ADR 0033).
+        Assert.Equal(140, Tuning.MatchExperience);
         Assert.Equal(45, Tuning.BenchSharePercent);
         Assert.Equal(2, Tuning.AttributesPerLevel);
         Assert.Equal(new[] { 0, 100, 250, 450, 700, 1000, 1400, 1900 }, Tuning.ExperiencePerLevel);
@@ -44,21 +45,21 @@ public sealed class ProgressionTests
     [Fact]
     public void ExperienceIsFullForPlayersAndPartialForTheBench()
     {
-        // RF-025: 100% a los que jugaron, 45% a los suplentes.
+        // RF-025: 100% a los que jugaron, 45% a los suplentes (de matchExperience, 140 desde la ADR 0095).
         var awards = ProgressionRules.AwardExperience(new[] { 3, 1 }, new[] { 5, 2 }, Tuning);
 
         Assert.Equal(new[] { 1, 2, 3, 5 }, awards.Select(a => a.PlayerId).ToArray());
-        Assert.Equal(100, awards.Single(a => a.PlayerId == 1).Experience);
-        Assert.Equal(100, awards.Single(a => a.PlayerId == 3).Experience);
-        Assert.Equal(45, awards.Single(a => a.PlayerId == 2).Experience);
-        Assert.Equal(45, awards.Single(a => a.PlayerId == 5).Experience);
+        Assert.Equal(140, awards.Single(a => a.PlayerId == 1).Experience);
+        Assert.Equal(140, awards.Single(a => a.PlayerId == 3).Experience);
+        Assert.Equal(63, awards.Single(a => a.PlayerId == 2).Experience);
+        Assert.Equal(63, awards.Single(a => a.PlayerId == 5).Experience);
     }
 
     [Fact]
     public void APlayerNeverCollectsTwice()
     {
         var awards = ProgressionRules.AwardExperience(new[] { 1 }, new[] { 1 }, Tuning);
-        Assert.Equal(100, Assert.Single(awards).Experience);
+        Assert.Equal(140, Assert.Single(awards).Experience);
     }
 
     [Theory]

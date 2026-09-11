@@ -396,6 +396,8 @@ public static class FullRunMetrics
         var deathsByAct = new long[RunRules.Acts];
         var perksAtBoss = new long[RunRules.Acts];
         var itemsAtBoss = new long[RunRules.Acts];
+        var levelAtBoss = new long[RunRules.Acts];
+        var startersAtBoss = new long[RunRules.Acts];
         var bossSamples = new long[RunRules.Acts];
         var bossWins = new long[RunRules.Acts];
         long itemsRecovered = 0;
@@ -499,6 +501,8 @@ public static class FullRunMetrics
                 deathsByAct[act] += run.DeathsByAct[act];
                 perksAtBoss[act] += run.PerksAtBossByAct[act];
                 itemsAtBoss[act] += run.ItemsAtBossByAct[act];
+                levelAtBoss[act] += run.LevelAtBossByAct[act];
+                startersAtBoss[act] += run.StartersAtBossByAct[act];
                 bossSamples[act] += run.BossSamplesByAct[act];
                 bossWins[act] += run.BossWinsByAct[act];
                 if (run.MatchesByAct[act] == 0)
@@ -652,6 +656,8 @@ public static class FullRunMetrics
             // run que llega al acto: es la cifra que se suma a deathsPerRun.
             rows.Add(Info($"{DeathsByActPrefix}{act + 1}", (double)deathsByAct[act] / runs.Count));
             rows.Add(Info($"perksAtBossAct{act + 1}", bossSamples[act] > 0 ? (double)perksAtBoss[act] / bossSamples[act] : 0.0));
+            // La puerta de la ADR 0033 mide al jugador en nivel 5, 6 y 7; esta fila dice con cuál llega.
+            rows.Add(Info($"levelAtBossAct{act + 1}", startersAtBoss[act] > 0 ? (double)levelAtBoss[act] / startersAtBoss[act] : 0.0));
             rows.Add(Info($"itemsAtBossAct{act + 1}", bossSamples[act] > 0 ? (double)itemsAtBoss[act] / bossSamples[act] : 0.0));
         }
 

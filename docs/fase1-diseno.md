@@ -136,11 +136,12 @@ La condición se traduce con un *pretty-printer* sobre el AST de NCalc (visitant
 
 `Progression` (público, puro):
 - `AwardExperience(team, playedIds, benchIds, matchXp)`: 100% a los que jugaron, 45% a suplentes (`tuning.progression.matchExperience`, `benchShare`).
+- **Nota (ADR 0095, 11 sep 2026):** `matchExperience` pasa de 100 a **140** porque con 100 la run llegaba a cada jefe un nivel por debajo del que mide la puerta de la ADR 0033 (3,79 / 5,80 / 6,37 contra 5 / 6 / 7). La forma de `experiencePerLevel` no se toca y queda anotada allí.
 - `LevelFor(experience)`: tabla `tuning.progression.experiencePerLevel[8]` (acumulada). Subir de nivel: `+attributesPerLevel` (tuning, p. ej. 2) a **cada** atributo salvo correa (RF-027: solo atributos base, nunca perks). Nivel máximo 8 (RF-023). Canteranos (+33%) quedan para fase 2.
 - Contadores `run`: `PlayerDefinition` gana `IReadOnlyDictionary<string,int> Counters` (inmutable, ordenado por clave ordinal al iterar). Al terminar el partido, `MatchResult` expone `IReadOnlyList<PlayerCounterDelta>` con los contadores que los perks `accumulatesAcrossMatches: true` han sumado; la campaña los aplica al `PlayerDefinition` siguiente. Los perks con `accumulatesAcrossMatches: false` empiezan cada partido con sus contadores a 0.
 
 ```json
-"progression": { "matchExperience": 100, "benchSharePercent": 45, "experiencePerLevel": [0, 100, 250, 450, 700, 1000, 1400, 1900], "attributesPerLevel": 2 }
+"progression": { "matchExperience": 140, "benchSharePercent": 45, "experiencePerLevel": [0, 100, 250, 450, 700, 1000, 1400, 1900], "attributesPerLevel": 2 }
 ```
 
 ## 7. Catálogo de prueba (24-30 perks) y sinergias

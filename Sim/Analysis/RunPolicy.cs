@@ -361,6 +361,17 @@ public sealed record RunPlayResult(
     /// <summary>Objetos del once al entrar en el jefe de cada acto (ADR 0049).</summary>
     IReadOnlyList<int> ItemsAtBossByAct,
 
+    /// <summary>
+    /// Suma de <b>niveles</b> del once al entrar en el jefe de cada acto, con
+    /// <see cref="StartersAtBossByAct"/> de denominador. La puerta de jefes de la ADR 0033 mide con el
+    /// jugador a nivel 5, 6 y 7 en los actos 1, 2 y 3 (<c>gate.playerLevel</c> de cada jefe): esta fila es
+    /// la que dice si la run entrega de verdad ese nivel o la curva de experiencia se queda corta.
+    /// </summary>
+    IReadOnlyList<int> LevelAtBossByAct,
+
+    /// <summary>Titulares alineados al entrar en el jefe de cada acto (denominador del anterior).</summary>
+    IReadOnlyList<int> StartersAtBossByAct,
+
     /// <summary>Jefes jugados por acto, denominador de los dos de arriba.</summary>
     IReadOnlyList<int> BossSamplesByAct,
 
@@ -962,6 +973,8 @@ public static class RunPolicy
             for (int i = 0; i < starters.Count; i++)
             {
                 ledger.PerksAtBossByAct[node.Act - 1] += starters[i].Perks.Count;
+                ledger.LevelAtBossByAct[node.Act - 1] += starters[i].Level;
+                ledger.StartersAtBossByAct[node.Act - 1]++;
                 ledger.SlotsAtBossByAct[node.Act - 1] +=
                     Underleague.Sim.Progression.Progression.PerkSlots(starters[i].Rarity);
                 if (starters[i].Item is not null)
@@ -2772,6 +2785,8 @@ public static class RunPolicy
             ledger.DeathsByAct,
             ledger.PerksAtBossByAct,
             ledger.ItemsAtBossByAct,
+            ledger.LevelAtBossByAct,
+            ledger.StartersAtBossByAct,
             ledger.BossSamplesByAct,
             ledger.BossWinsByAct,
             ledger.ItemsRecovered,
@@ -2911,6 +2926,10 @@ public static class RunPolicy
         public int[] ItemsAtBossByAct { get; } = new int[RunRules.Acts];
 
         /// <summary>Jefes jugados por acto, para promediar los dos de arriba.</summary>
+        public int[] LevelAtBossByAct { get; } = new int[RunRules.Acts];
+
+        public int[] StartersAtBossByAct { get; } = new int[RunRules.Acts];
+
         public int[] BossSamplesByAct { get; } = new int[RunRules.Acts];
 
         /// <summary>Jefes superados por acto (AO-D): separa la puerta de los partidos ordinarios.</summary>

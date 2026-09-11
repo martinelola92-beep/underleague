@@ -5656,3 +5656,26 @@ la carrera en ticks lo suponía y el motor lo soltaba rodando). Tiros 7,72 / 7,1
 encima de los de antes del paso 5: se tira menos y mejor. El censo de utilidad enseña que el pase en
 profundidad sustituye a la conducción (`Dribble` 122 → 49 por muestra), no al tiro. Tabla en la ADR 0091.
 
+## 42. La tasa de victoria de la run entra en banda (ADR 0095)
+
+Cerrado AZ, `runWinRate` valía **14,50** (banda 20-30) y el **92,4 %** de las derrotas eran un partido de jefe.
+La banda resultó ser alcanzable por construcción: el producto de los centros de las celdas «buena» de la ADR
+0033 (75-88 · 60-72 · 40-55) vale **25,6 %**. Lo que fallaba era que la run no entregaba la build que la
+puerta mide.
+
+**El hallazgo que faltaba medir**: la puerta de jefes usa `gate.playerLevel` **5 / 6 / 7** y la run llegaba en
+**3,79 / 5,80 / 6,37**. La curva de experiencia (`matchExperience` 100, ~13,5 partidos por run) y la curva de
+puertas nunca se habían comparado. Fila nueva y permanente en `--full-runs`: `levelAtBossActN`.
+
+**La segunda causa**: `deathsPerRun` había subido de 1,70-1,81 (cierre de AY) a **2,62** por efecto de la
+tanda 3 (más entradas), las razas nuevas y la sustitución forzada, sin que ninguna ADR lo decidiera. Y cada
+muerte se cobra dos veces, porque el muerto se reemplaza por una firma de nivel 1.
+
+Dos palancas, las dos ya escritas en el backlog (AY-B) o derivadas de la puerta: `lethalChance` de los dos
+perks letales de rival a **1.200 / 900** y `matchExperience` a **140**. Resultado con 1.200 runs por semilla:
+`runWinRate` **22,67 / 21,00**, `deathsPerRun` 1,96 / 1,85, nivel al jefe 4,78 / 6,89 / 7,18, y las tres tasas
+de jefe en 79 / 56-57 / 51-53, que es la curva de la ADR 0033 leída en una run real. Las 43 puertas en verde.
+
+Queda fuera, anotado: la **forma** de la curva de niveles (el acto 1 se juega dos décimas corto y el 2 nueve
+décimas largo) y **AZ-H**, que el mercado no discrimina —`runWinRate_noMarket` 19,17 sobre una banda de 5—.
+

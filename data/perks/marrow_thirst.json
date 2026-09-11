@@ -36,7 +36,7 @@
   "limit": null,
   "accumulatesAcrossMatches": false,
   "lethal": true,
-  "lethalChance": 1500,
+  "lethalChance": 900,
   "positionOnly": null,
   "tagsRequired": [
     "Aggressive"

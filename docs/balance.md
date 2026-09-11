@@ -49,6 +49,12 @@ plantilla, nivel medio, mercados visitados y qué se compró) más `summary.csv`
 `fase2-diseno.md` §10 y de la ADR 0037. La política automática y sus reglas están en
 `Sim.Analysis.RunPolicy` y explicadas en `docs/balance/fase2-resultados.md` §1.
 
+**`levelAtBossActN`** (INFO, ADR 0095) es la media de nivel del once al **entrar en el jefe** de cada acto, y se lee
+contra `gate.playerLevel` de `data/bosses/*.json` (**5 / 6 / 7**): la curva de puertas de la ADR 0033 mide al jugador en
+ese nivel, así que si la run entrega menos, la puerta está midiendo un jugador que no existe y `runWinRate` se cae sin
+que ninguna celda de la tabla esté mal. Se mira junto a `perksAtBossActN` e `itemsAtBossActN`, que dicen lo mismo de los
+otros dos ejes de una build.
+
 Escribe además **`runs-nomarket.csv`**, con las mismas columnas, para la cuarta política del modo: la
 medida de control de la ADR 0055, que es contextual pero **esquiva los mercados** y por eso no se
 distingue de la build buena en la columna `doctrine` de `runs.csv`. Es el perfil **sin build** de la ADR

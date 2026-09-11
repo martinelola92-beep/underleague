@@ -28,7 +28,7 @@
   "limit": null,
   "accumulatesAcrossMatches": false,
   "lethal": true,
-  "lethalChance": 1950,
+  "lethalChance": 1200,
   "positionOnly": null,
   "tagsRequired": [
     "Dirty"
