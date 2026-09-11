@@ -27,6 +27,8 @@ public partial class NodeScreen : Control
     private MapNode _node = null!;
     private bool _entered;
     private string _message = string.Empty;
+    /// <summary>Opción de evento pendiente de señalar a quién (ADR 0100); −1 si no hay ninguna.</summary>
+    private int _eventOption = -1;
     private RunState? _before;
 
     public override void _Ready()
@@ -83,7 +85,7 @@ public partial class NodeScreen : Control
         {
             NodeKind.Clinic => BuildClinic(state, economy, y),
             NodeKind.Training => BuildSelfResolving(UiText.Get("ui.node.train"), y),
-            NodeKind.Event => BuildSelfResolving(UiText.Get("ui.node.eventGo"), y),
+            NodeKind.Event => BuildEvent(y),
             _ => y,
         };
 
@@ -102,23 +104,29 @@ public partial class NodeScreen : Control
     {
         NodeKind.Clinic => UiText.Get("ui.node.clinicTitle"),
         NodeKind.Training => UiText.Get("ui.node.trainTitle"),
-        _ => UiText.Get("ui.node.eventTitle"),
+        // ADR 0100: el título del evento es el de su carta.
+        _ => _run.Event()?.Title ?? UiText.Get("ui.node.eventTitle"),
     };
 
     private string Description(Sim.Run.Systems.Economy.EconomyConfig economy, RunState state) => _node.Kind switch
     {
         NodeKind.Clinic => UiText.Get("ui.node.clinicBody", economy.ClinicCost),
         NodeKind.Training => UiText.Get("ui.node.trainBody", economy.TrainingExperience, RunRules.YouthExperienceBonusPercent),
-        _ => UiText.Get("ui.node.eventBody", economy.EventGoldMin, economy.EventGoldMax),
+        _ => UiText.Get("ui.node.eventBody"),
     };
 
-    /// <summary>Clínica: un botón por lesionado grave, con su coste delante (RF-094).</summary>
+    /// <summary>
+    /// Clínica (RF-094, ADR 0099): tres servicios con su precio delante. La tarifa plana arriba —cura a
+    /// todos y no mira cuántos son—, y por cada lesionado dos botones: el garantizado y el del matasanos,
+    /// que cuesta una fracción y lleva sus dos porcentajes escritos. Verlos antes de elegir es lo que hace
+    /// legítimo que el matasanos pueda matar (RF-012d, ADR 0048).
+    /// </summary>
     private float BuildClinic(RunState state, Sim.Run.Systems.Economy.EconomyConfig economy, float y)
     {
         var patients = new List<RunPlayer>();
         for (int i = 0; i < state.Roster.Count; i++)
         {
-            if (state.Roster[i].PhysicalState == PhysicalState.SevereInjury)
+            if (Sim.Run.Systems.Medical.MedicalSystem.NeedsTreatment(state.Roster[i]))
             {
                 patients.Add(state.Roster[i]);
             }
@@ -137,17 +145,115 @@ public partial class NodeScreen : Control
             y += 22f;
         }
 
+        // Tarifa plana: una sola vez, arriba, con lo que costaría uno a uno al lado para que la cuenta se vea.
+        int piecemeal = 0;
         foreach (var patient in patients)
+        {
+            piecemeal += patient.PhysicalState == PhysicalState.SevereInjury ? economy.ClinicCost : economy.ClinicMinorCost;
+        }
+
+        var squad = Widgets.Button(
+            this,
+            UiText.Get("ui.node.treatSquad", economy.ClinicSquadCost, patients.Count, piecemeal),
+            new Rect2(28f, y, 520f, 28f),
+            state.Gold >= economy.ClinicSquadCost);
+        squad.Pressed += () => Decide(new TreatSquad(), UiText.Get("ui.node.treatedSquad", patients.Count));
+        y += 38f;
+
+        foreach (var patient in patients)
+        {
+            int id = patient.Id;
+            string name = patient.Name;
+            int full = patient.PhysicalState == PhysicalState.SevereInjury ? economy.ClinicCost : economy.ClinicMinorCost;
+            int risky = Sim.Run.Systems.Medical.MedicalSystem.RiskyCost(full, economy);
+
+            var button = Widgets.Button(
+                this,
+                UiText.Get("ui.node.treat", name, full),
+                new Rect2(28f, y, 360f, 28f),
+                state.Gold >= full);
+            button.Pressed += () => Decide(new TreatPlayer(id), UiText.Get("ui.node.treated", name));
+
+            var quack = Widgets.Button(
+                this,
+                UiText.Get(
+                    "ui.node.treatRisky",
+                    risky,
+                    economy.ClinicRiskyFailPercent + economy.ClinicRiskyWorsePercent,
+                    economy.ClinicRiskyWorsePercent),
+                new Rect2(396f, y, 420f, 28f),
+                state.Gold >= risky);
+            quack.Pressed += () => Decide(new TreatPlayer(id, Risky: true), UiText.Get("ui.node.treatedRisky", name));
+            y += 34f;
+        }
+
+        return y;
+    }
+
+    /// <summary>
+    /// Evento (ADR 0100): la carta con sus opciones, cada una con su línea de efecto compuesta y su coste
+    /// delante. Las que piden un cuerpo abren la lista de disponibles: el jugador señala a quién, nunca el
+    /// juego por él (RF-012d).
+    /// </summary>
+    private float BuildEvent(float y)
+    {
+        var view = _run.Event();
+        if (view is null)
+        {
+            return y;
+        }
+
+        Widgets.Body(this, view.Description, new Vector2(28f, y), 1220f, Style.TextDim);
+        y += 30f;
+
+        foreach (var option in view.Options)
         {
             var button = Widgets.Button(
                 this,
-                UiText.Get("ui.node.treat", patient.Name, economy.ClinicCost),
-                new Rect2(28f, y, 360f, 28f),
-                affordable);
-            int id = patient.Id;
-            string name = patient.Name;
-            button.Pressed += () => Decide(new TreatPlayer(id), UiText.Get("ui.node.treated", name));
+                UiText.Get("ui.node.eventOption", option.Name, option.Effect),
+                new Rect2(28f, y, 760f, 28f),
+                option.Affordable && (!option.NeedsTarget || option.Targets.Count > 0));
+            int index = option.Index;
+            bool needsTarget = option.NeedsTarget;
+            string name = option.Name;
+            button.Pressed += () =>
+            {
+                if (!needsTarget)
+                {
+                    Decide(new ChooseEventOption(index), UiText.Get("ui.node.eventChosen", name));
+                    return;
+                }
+
+                _eventOption = index;
+                _message = UiText.Get("ui.node.eventPickTarget");
+                Rebuild();
+            };
             y += 34f;
+        }
+
+        if (_eventOption < 0)
+        {
+            return y;
+        }
+
+        // El paso de señalar: la lista de disponibles, uno por botón.
+        y += 6f;
+        var targets = view.Options[_eventOption].Targets;
+        foreach (var target in targets)
+        {
+            var pick = Widgets.Button(
+                this,
+                UiText.Get("ui.node.eventTarget", target.Name, target.Detail),
+                new Rect2(60f, y, 520f, 26f));
+            int option = _eventOption;
+            int playerId = target.PlayerId;
+            string who = target.Name;
+            pick.Pressed += () =>
+            {
+                _eventOption = -1;
+                Decide(new ChooseEventOption(option, playerId), UiText.Get("ui.node.eventChosenOn", who));
+            };
+            y += 30f;
         }
 
         return y;
@@ -176,10 +282,9 @@ public partial class NodeScreen : Control
         _run.Enter(_node.Id);
         _entered = true;
 
+        // Solo el entrenamiento se resuelve solo desde la ADR 0100; el evento pide elegir.
         var after = _run.State!;
-        _message = _node.Kind == NodeKind.Training
-            ? UiText.Get("ui.node.trained", after.AvailablePlayerCount, LevelUps(_before!, after))
-            : UiText.Get("ui.node.evented", after.Gold - _before!.Gold);
+        _message = UiText.Get("ui.node.trained", after.AvailablePlayerCount, LevelUps(_before!, after));
 
         Rebuild();
     }

@@ -113,6 +113,12 @@ public partial class RunController
             : RewardView.Build(State, Catalog, Systems.Economy, Systems.Items, Data.GameData.Language);
 
     /// <summary>Surtido del nodo de mercado abierto (RF-114); null si el nodo abierto no es un mercado.</summary>
+    /// <summary>La carta del nodo de evento abierto (ADR 0100), o null si no hay ninguno.</summary>
+    public EventScreenView? Event() =>
+        State is null || Catalog is null || Systems is null
+            ? null
+            : EventView.Build(State, Catalog, Systems.Events, Data.GameData.Language);
+
     public MarketScreenView? Market() =>
         State is null || Catalog is null || Systems is null
             ? null
