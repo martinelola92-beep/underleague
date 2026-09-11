@@ -99,6 +99,7 @@ public partial class MarketScreen : Control
         Action();
         Sell();
 
+        RosterSlot();
         Widgets.Button(this, UiText.Get("ui.nav.team"), new Rect2(884f, 706f, 180f, 26f)).Pressed += ViewTeam;
         Widgets.Button(this, UiText.Get("ui.market.leave"), new Rect2(1076f, 706f, 180f, 26f)).Pressed += Leave;
         _error = Widgets.Body(this, string.Empty, new Vector2(12f, 736f), 1040f, Style.Hole);
@@ -342,6 +343,29 @@ public partial class MarketScreen : Control
         Decide(row.Category == MarketView.MercenaryCategory
             ? new HireMercenary(row.Index)
             : new BuyOffer(row.Category, row.Index, carrierId));
+    }
+
+    /// <summary>
+    /// El hueco de plantilla (ADR 0097): desde que la inscripción dejó de ser un nodo, el derecho a tener
+    /// un cuerpo más se compra aquí, en el mismo mostrador que el perk y el objeto. Con la plantilla en su
+    /// techo (RF-020) el botón desaparece y queda el rótulo.
+    /// </summary>
+    private void RosterSlot()
+    {
+        var area = new Rect2(16f, 706f, 300f, 26f);
+        if (_view.RosterSlotPrice < 0)
+        {
+            Widgets.Body(this, UiText.Get("ui.market.slotFull"), new Vector2(area.Position.X, area.Position.Y + 4f), area.Size.X, Style.TextDim);
+            return;
+        }
+
+        bool affordable = _view.Gold >= _view.RosterSlotPrice;
+        var button = Widgets.Button(
+            this,
+            UiText.Get("ui.market.slot", _view.RosterSlotPrice, _view.RosterSize, _view.RosterCapacity),
+            area,
+            affordable);
+        button.Pressed += () => Decide(new ExpandRoster());
     }
 
     private void SellSelected()

@@ -99,7 +99,7 @@ public static class Nav
         return node.Kind switch
         {
             NodeKind.Market => Market,
-            NodeKind.Clinic or NodeKind.Enrollment => Node,
+            NodeKind.Clinic => Node,
             _ => Node,
         };
     }

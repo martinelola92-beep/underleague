@@ -82,7 +82,6 @@ public partial class NodeScreen : Control
         y = _node.Kind switch
         {
             NodeKind.Clinic => BuildClinic(state, economy, y),
-            NodeKind.Enrollment => BuildEnrollment(state, economy, y),
             NodeKind.Training => BuildSelfResolving(UiText.Get("ui.node.train"), y),
             NodeKind.Event => BuildSelfResolving(UiText.Get("ui.node.eventGo"), y),
             _ => y,
@@ -102,7 +101,6 @@ public partial class NodeScreen : Control
     private string Title() => _node.Kind switch
     {
         NodeKind.Clinic => UiText.Get("ui.node.clinicTitle"),
-        NodeKind.Enrollment => UiText.Get("ui.node.enrollTitle"),
         NodeKind.Training => UiText.Get("ui.node.trainTitle"),
         _ => UiText.Get("ui.node.eventTitle"),
     };
@@ -110,10 +108,6 @@ public partial class NodeScreen : Control
     private string Description(Sim.Run.Systems.Economy.EconomyConfig economy, RunState state) => _node.Kind switch
     {
         NodeKind.Clinic => UiText.Get("ui.node.clinicBody", economy.ClinicCost),
-        NodeKind.Enrollment => UiText.Get(
-            "ui.node.enrollBody",
-            Math.Max(0, economy.EnrollmentCost(state.Counter(RunState.EnrollmentSlotsCounter))),
-            RunRules.MaxRosterSize),
         NodeKind.Training => UiText.Get("ui.node.trainBody", economy.TrainingExperience, RunRules.YouthExperienceBonusPercent),
         _ => UiText.Get("ui.node.eventBody", economy.EventGoldMin, economy.EventGoldMax),
     };
@@ -157,32 +151,6 @@ public partial class NodeScreen : Control
         }
 
         return y;
-    }
-
-    /// <summary>Inscripción: el hueco de plantilla y su coste creciente (ADR 0046).</summary>
-    private float BuildEnrollment(RunState state, Sim.Run.Systems.Economy.EconomyConfig economy, float y)
-    {
-        Widgets.Body(
-            this,
-            UiText.Get("ui.node.enrollState", state.RosterSize, state.RosterCapacity, state.EnrollmentSlotsLeft),
-            new Vector2(28f, y),
-            1220f);
-        y += 26f;
-
-        int cost = economy.EnrollmentCost(state.Counter(RunState.EnrollmentSlotsCounter));
-        if (cost < 0)
-        {
-            Widgets.Body(this, UiText.Get("ui.node.enrollFull"), new Vector2(28f, y), 1220f, Style.TextDim);
-            return y + 24f;
-        }
-
-        var button = Widgets.Button(
-            this,
-            UiText.Get("ui.node.enrollBuy", cost),
-            new Rect2(28f, y, 360f, 28f),
-            state.Gold >= cost);
-        button.Pressed += () => Decide(new ExpandRoster(), UiText.Get("ui.node.enrolled", state.RosterCapacity + 1));
-        return y + 34f;
     }
 
     /// <summary>Entrenamiento y evento: un botón que entra en el nodo, y después el resultado.</summary>
