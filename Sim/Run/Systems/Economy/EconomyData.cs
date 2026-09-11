@@ -122,8 +122,6 @@ public sealed record EconomyConfig(
     int RerollBaseCost,
     int RerollStepCost,
     int TrainingExperience,
-    int EventGoldMin,
-    int EventGoldMax,
     int MercenaryBaseWage,
     int MercenaryWagePerRarityStep,
     int MercenaryBenchAbandonMatches,
@@ -161,6 +159,22 @@ public sealed record EconomyConfig(
     /// casi nunca compensaría pagar.
     /// </summary>
     public int ClinicMinorCost { get; init; }
+
+    /// <summary>
+    /// Precio de curar a <b>toda</b> la plantilla de una vez (ADR 0099): una tarifa plana que no mira
+    /// cuántos heridos hay, así que es cara con uno y barata con cuatro. Es la decisión que la clínica no
+    /// tenía: tratar por piezas o pasar por caja una vez.
+    /// </summary>
+    public int ClinicSquadCost { get; init; }
+
+    /// <summary>Porcentaje del precio normal que cobra el matasanos (ADR 0099): más barato porque no garantiza nada.</summary>
+    public int ClinicRiskyPercent { get; init; }
+
+    /// <summary>Probabilidad de que el matasanos no cure nada (el oro se pierde igual).</summary>
+    public int ClinicRiskyFailPercent { get; init; }
+
+    /// <summary>Probabilidad de que además <b>empeore</b>: sano ← leve ← grave ← muerto, un escalón hacia abajo.</summary>
+    public int ClinicRiskyWorsePercent { get; init; }
 
     /// <summary>
     /// Oro fijo que se pierde al perder un <b>partido ordinario</b> (RF-002c), además de no cobrar la
@@ -351,8 +365,6 @@ public static class EconomyLoader
             root.Int("rerollBaseCost"),
             root.Int("rerollStepCost"),
             root.Int("trainingExperience"),
-            root.Int("eventGoldMin"),
-            root.Int("eventGoldMax"),
             root.Int("mercenaryBaseWage"),
             root.Int("mercenaryWagePerRarityStep"),
             root.Int("mercenaryBenchAbandonMatches"),
@@ -367,6 +379,10 @@ public static class EconomyLoader
             PerkValues = PerkValueTable.FromJson(files),
             ItemValues = Items.ItemValueTable.FromJson(files),
             ClinicMinorCost = root.Int("clinicMinorCost"),
+            ClinicSquadCost = root.Int("clinicSquadCost"),
+            ClinicRiskyPercent = root.Int("clinicRiskyPercent"),
+            ClinicRiskyFailPercent = root.Int("clinicRiskyFailPercent"),
+            ClinicRiskyWorsePercent = root.Int("clinicRiskyWorsePercent"),
             DefeatGoldPenalty = root.OptionalInt("defeatGoldPenalty", 0),
             DefeatGoldPenaltyPercent = root.OptionalInt("defeatGoldPenaltyPercent", 0),
         };

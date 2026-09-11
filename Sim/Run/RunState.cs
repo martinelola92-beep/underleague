@@ -479,6 +479,14 @@ public sealed record RunState
     /// </summary>
     public const string ItemStockPrefix = "itemStock:";
 
+    /// <summary>
+    /// Prefijo del contador de tiradas del matasanos por nodo (ADR 0099): <c>clinicRolls:&lt;idNodo&gt;</c>.
+    /// El flujo de RNG de la clínica es función del nodo, así que sin esto dos tratamientos arriesgados en
+    /// el mismo nodo sacarían el mismo número; el contador dice cuántas tiradas hay que saltar. Vive en
+    /// <see cref="Counters"/> por el mismo motivo que los demás: añadir un sistema sin subir la versión.
+    /// </summary>
+    public const string ClinicRollsPrefix = "clinicRolls:";
+
     /// <summary>Objetos recuperados de un muerto en toda la run, para el informe y para /Balance.</summary>
     public const string ItemsRecoveredCounter = "itemsRecovered";
 

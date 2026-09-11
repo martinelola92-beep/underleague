@@ -1,0 +1,41 @@
+{
+  "_doc": "ADR 0100: carta de evento. Cada opción declara sus efectos y su coste; la interfaz los enseña ANTES de elegir (RF-012d). Sin tiradas dentro de una opción: la apuesta es la elección, no el dado.",
+  "id": "field_school",
+  "name": {
+    "es": "La escuela de campo",
+    "en": "The field school"
+  },
+  "description": {
+    "es": "Un viejo entrenador monta su corro de barro donde puede. Cobra por adelantado.",
+    "en": "An old coach sets up his mud circle wherever he can. He charges up front."
+  },
+  "minAct": 1,
+  "weight": 100,
+  "options": [
+    {
+      "id": "pay",
+      "name": {
+        "es": "Pagar la instrucción",
+        "en": "Pay for the drilling"
+      },
+      "effects": [
+        {
+          "type": "goldShare",
+          "value": -30
+        },
+        {
+          "type": "experience",
+          "value": 90
+        }
+      ]
+    },
+    {
+      "id": "leave",
+      "name": {
+        "es": "Seguir camino",
+        "en": "Move on"
+      },
+      "effects": []
+    }
+  ]
+}

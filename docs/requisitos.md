@@ -85,7 +85,7 @@ La identidad del juego no es el fútbol, es la **carnicería administrada**: los
 ### 3.2 Mapa
 
 - **RF-010** El mapa de cada acto es un grafo dirigido con múltiples caminos, avance en una sola dirección y sin retroceso.
-- **RF-011** Tipos de nodo: partido de liga, partido de élite (mayor riesgo y recompensa), mercado, clínica, taller de implantes, entrenamiento, evento aleatorio, jefe. *(La inscripción fue un nodo hasta la **ADR 0097**: el hueco de plantilla se compra ahora en el mercado, RF-020.)*
+- **RF-011** Tipos de nodo: partido de liga, partido de élite (mayor riesgo y recompensa), mercado, clínica, taller de implantes, entrenamiento, evento aleatorio (**carta con opciones** desde la ADR 0100), jefe. *(La inscripción fue un nodo hasta la **ADR 0097**: el hueco de plantilla se compra ahora en el mercado, RF-020.)*
 - **RF-011b** Hay un nodo de mercado cada **3-4 nodos**, y desde cualquier punto del mapa debe existir un mercado alcanzable en dos saltos como máximo. Es lo que convierte jugar en inferioridad en una decisión y no en una trampa.
 - **RF-015** Los **rivales son estáticos por acto y división**: cada acto tiene un conjunto fijo de equipos rivales, diseñados a mano con una build reconocible cada uno. Lo aleatorio es el mapa, la posición de los nodos y qué rivales aparecen en qué nodo. Los rivales son personajes que el jugador aprende, y el informe de ojeo describe una build real, no un bloque de estadísticas.
 - **RF-015b** Los rivales usan consumibles y sobornos. Ambos aparecen en el informe de ojeo.
@@ -268,6 +268,7 @@ SUSTITUCION         CONSUMIBLE_USADO
   1. El jugador se alineó arrastrando una lesión grave sin tratar.
   2. Un perk rival explícitamente marcado como letal y visible en el ojeo (RF-013).
   Un jugador en estado sano **nunca** puede morir.
+- **RF-094** *(ampliado por la ADR 0099: la clínica ofrece tres servicios —por pieza, la plantilla entera a tarifa plana, y el matasanos barato y sin garantía, que puede empeorar un escalón—; los porcentajes se ven antes de elegir.)*
 - **RF-094** **Clínica**: coste alto en oro, resultado garantizado, restaura al jugador a sano sin efectos secundarios.
 - **RF-095** **Taller de implantes**: alternativa barata y arriesgada a la clínica. Antes de confirmar, el jugador ve los **tres resultados posibles con su probabilidad**:
   - **Curación completa**: el jugador vuelve a sano.

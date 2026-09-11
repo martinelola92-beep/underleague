@@ -4,6 +4,7 @@ using Underleague.Sim.Model;
 using Underleague.Sim.Run.Systems.Clubs;
 using Underleague.Sim.Run.Systems.Consumables;
 using Underleague.Sim.Run.Systems.Economy;
+using Underleague.Sim.Run.Systems.Events;
 using Underleague.Sim.Run.Systems.Equipment;
 using Underleague.Sim.Run.Systems.Items;
 using Underleague.Sim.Run.Systems.Map;
@@ -35,8 +36,9 @@ public sealed class StandardRunSystems : IRunSystems
     private readonly RivalCatalog _rivals;
     private readonly MapConfig _map;
     private readonly ClubCatalog _clubs;
+    private readonly EventCatalog _events;
 
-    public StandardRunSystems(EconomyConfig economy, ItemCatalog items, ConsumableCatalog consumables, RivalCatalog rivals, MapConfig map, ClubCatalog clubs)
+    public StandardRunSystems(EconomyConfig economy, ItemCatalog items, ConsumableCatalog consumables, RivalCatalog rivals, MapConfig map, ClubCatalog clubs, EventCatalog events)
     {
         _economy = economy ?? throw new ArgumentNullException(nameof(economy));
         _items = items ?? throw new ArgumentNullException(nameof(items));
@@ -44,6 +46,7 @@ public sealed class StandardRunSystems : IRunSystems
         _rivals = rivals ?? throw new ArgumentNullException(nameof(rivals));
         _map = map ?? throw new ArgumentNullException(nameof(map));
         _clubs = clubs ?? throw new ArgumentNullException(nameof(clubs));
+        _events = events ?? throw new ArgumentNullException(nameof(events));
     }
 
     /// <summary>Configuración de economía de esta instancia (para tests y <c>/Balance</c>).</summary>
@@ -64,6 +67,9 @@ public sealed class StandardRunSystems : IRunSystems
     /// <summary>Catálogo de clubes iniciales de esta instancia (RF-004, <c>data/clubs/</c>).</summary>
     public ClubCatalog Clubs => _clubs;
 
+    /// <summary>Catálogo de cartas de evento de esta instancia (ADR 0100, <c>data/events/</c>).</summary>
+    public EventCatalog Events => _events;
+
     /// <summary>
     /// Construye los cinco catálogos del paquete X de una instantánea de <c>/data</c> (el mismo
     /// diccionario que consume <c>DataLoader.FromJson</c>). Ayudante de conveniencia para tests y
@@ -75,7 +81,8 @@ public sealed class StandardRunSystems : IRunSystems
         ConsumableLoader.FromJson(files),
         RivalLoader.FromJson(files),
         MapLoader.FromJson(files),
-        ClubLoader.FromJson(files));
+        ClubLoader.FromJson(files),
+        EventLoader.FromJson(files));
 
     /// <summary>
     /// <see cref="RunSetup"/> completo para empezar una run con <b>estos</b> datos: oro de partida
@@ -175,7 +182,8 @@ public sealed class StandardRunSystems : IRunSystems
             NodeKind.Market => state.WithPendingNode(node.Id),
             NodeKind.Clinic => state.WithPendingNode(node.Id),
             NodeKind.Training => ServiceNodeSystem.Training(state, _economy, catalog),
-            NodeKind.Event => ServiceNodeSystem.Event(state, node, _economy),
+            // ADR 0100: el evento deja de resolverse solo; abre su carta y espera la elección.
+            NodeKind.Event => state.WithPendingNode(node.Id),
             _ => state,
         };
     }
@@ -234,6 +242,8 @@ public sealed class StandardRunSystems : IRunSystems
             SellPlayer sell => MarketSystem.Sell(state, sell, _economy),
             HireMercenary hire => MarketSystem.Hire(state, hire, catalog, _economy, _items, _consumables),
             TreatPlayer treat => MedicalSystem.Treat(state, treat, _economy),
+            TreatSquad => MedicalSystem.TreatSquad(state, _economy),
+            ChooseEventOption choice => EventSystem.Choose(state, choice, _events, catalog),
             ExpandRoster => EnrollmentSystem.Expand(state, _economy),
             ReleasePlayer release => EnrollmentSystem.Release(state, release),
             ChooseReward choose => RewardSystem.Choose(state, choose, catalog, _economy, _items),

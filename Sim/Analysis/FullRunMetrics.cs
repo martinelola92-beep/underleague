@@ -388,6 +388,7 @@ public static class FullRunMetrics
         int wonMatches = 0, wonNodes = 0, lostMatches = 0, lostNodes = 0, rewardsTaken = 0, rewardsDeclined = 0;
         var defeatsByAct = new int[RunRules.Acts];
         long goldEarned = 0, market = 0, clinic = 0, enrollment = 0, reroll = 0, wages = 0, left = 0;
+        long squadTreatments = 0, riskyTreatments = 0, eventsTaken = 0, eventsDeclined = 0;
         long slots = 0;
         long roster = 0, level = 0, perks = 0, starterPerks = 0, items = 0, injuries = 0, severe = 0, counters = 0, ownInjuries = 0, matchInjuries = 0;
         long offers = 0, affordable = 0, purchases = 0, marketVisits = 0, goldAtMarket = 0;
@@ -454,6 +455,10 @@ public static class FullRunMetrics
             goldEarned += run.GoldEarned;
             market += run.GoldSpentMarket;
             clinic += run.GoldSpentClinic;
+            squadTreatments += run.SquadTreatments;
+            eventsTaken += run.EventsTaken;
+            eventsDeclined += run.EventsDeclined;
+            riskyTreatments += run.RiskyTreatments;
             enrollment += run.GoldSpentEnrollment;
             slots += run.SlotsBought;
             reroll += run.GoldSpentReroll;
@@ -614,6 +619,14 @@ public static class FullRunMetrics
         rows.Add(Info("goldEarnedPerRun", (double)goldEarned / runs.Count));
         rows.Add(Info("goldSpentMarketPerRun", (double)market / runs.Count));
         rows.Add(Info("goldSpentClinicPerRun", (double)clinic / runs.Count));
+        // ADR 0099: los dos servicios nuevos de la clínica. Si salen a cero, el precio de la tarifa plana o
+        // el hueco del matasanos están mal puestos y el jugador tiene una opción que nadie toma.
+        rows.Add(Info("squadTreatmentsPerRun", (double)squadTreatments / runs.Count));
+        rows.Add(Info("riskyTreatmentsPerRun", (double)riskyTreatments / runs.Count));
+        // ADR 0100: cartas de evento resueltas y cartas que la política dejó pasar. Si «tomadas» sale a
+        // cero, el catálogo no ofrece nada que compita con el resto del mapa y el nodo sigue siendo relleno.
+        rows.Add(Info("eventsTakenPerRun", (double)eventsTaken / runs.Count));
+        rows.Add(Info("eventsDeclinedPerRun", (double)eventsDeclined / runs.Count));
         rows.Add(Info("goldSpentEnrollmentPerRun", (double)enrollment / runs.Count));
         rows.Add(Info("rosterSlotsBoughtPerRun", (double)slots / runs.Count));
         rows.Add(Info("goldSpentRerollPerRun", (double)reroll / runs.Count));

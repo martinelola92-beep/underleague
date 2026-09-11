@@ -1,0 +1,41 @@
+{
+  "_doc": "ADR 0100: carta de evento. Cada opción declara sus efectos y su coste; la interfaz los enseña ANTES de elegir (RF-012d). Sin tiradas dentro de una opción: la apuesta es la elección, no el dado.",
+  "id": "guild_tithe",
+  "name": {
+    "es": "El diezmo del gremio",
+    "en": "The guild tithe"
+  },
+  "description": {
+    "es": "Un recaudador con buena letra y peores modales te cierra el paso. Sus cirujanos vienen incluidos.",
+    "en": "A tax collector with neat handwriting and worse manners blocks the road. His surgeons come included."
+  },
+  "minAct": 1,
+  "weight": 100,
+  "options": [
+    {
+      "id": "pay",
+      "name": {
+        "es": "Pagar el diezmo",
+        "en": "Pay the tithe"
+      },
+      "effects": [
+        {
+          "type": "goldShare",
+          "value": -40
+        },
+        {
+          "type": "heal",
+          "value": 0
+        }
+      ]
+    },
+    {
+      "id": "leave",
+      "name": {
+        "es": "Seguir camino",
+        "en": "Move on"
+      },
+      "effects": []
+    }
+  ]
+}

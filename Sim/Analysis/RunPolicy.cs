@@ -4,8 +4,10 @@ using Underleague.Sim.Run;
 using Underleague.Sim.Run.Bosses;
 using Underleague.Sim.Run.Systems;
 using Underleague.Sim.Run.Systems.Economy;
+using Underleague.Sim.Run.Systems.Events;
 using Underleague.Sim.Run.Systems.Items;
 using Underleague.Sim.Run.Systems.Market;
+using Underleague.Sim.Run.Systems.Medical;
 using Underleague.Sim.Run.Systems.Rewards;
 
 namespace Underleague.Sim.Analysis;
@@ -271,6 +273,19 @@ public sealed record RunPolicyOptions
     /// </summary>
     public bool AvoidsMarkets { get; init; }
 
+    /// <summary>
+    /// Oro que la política le pone a cien puntos de experiencia por jugador al tasar una carta de evento
+    /// (ADR 0100). Con 6, los 90 puntos de «la escuela de campo» sobre siete titulares valen 37 de oro, que
+    /// es del orden de lo que cuesta un perk raro: la carta compite con el mercado, que es el punto.
+    /// </summary>
+    public int EventGoldPerHundredExperience { get; init; } = 6;
+
+    /// <summary>
+    /// Lo que la política suma al precio de la clínica cuando una carta pide lesionar a alguien (ADR 0100):
+    /// un cuerpo fuera no es solo el tratamiento, es el partido que se juega sin él.
+    /// </summary>
+    public int EventInjuryPremium { get; init; } = 10;
+
     /// <summary>Compras máximas en un mismo nodo de mercado; corta el bucle, no la política.</summary>
     public int MaxMarketActions { get; init; } = 16;
 
@@ -344,6 +359,16 @@ public sealed record RunPlayResult(
     int MercenariesHired,
     int PlayersSold,
     int Treatments,
+
+    /// <summary>Veces que se pagó la tarifa plana de la clínica (ADR 0099).</summary>
+    int SquadTreatments,
+
+    /// <summary>Veces que se pagó al matasanos (ADR 0099), cure o no.</summary>
+    int RiskyTreatments,
+
+    /// <summary>Cartas de evento en las que se eligió una opción, y en las que se siguió camino (ADR 0100).</summary>
+    int EventsTaken,
+    int EventsDeclined,
     int SlotsBought,
     int Rerolls,
     int RewardsTaken,
@@ -1054,6 +1079,7 @@ public static class RunPolicy
         {
             NodeKind.Market => VisitMarket(state, node, catalog, standard, systems, options, ledger),
             NodeKind.Clinic => VisitClinic(state, catalog, standard.Economy, systems, options, ledger),
+            NodeKind.Event => VisitEvent(state, node, catalog, standard, systems, options, ledger),
             _ => node.IsMatch
                 ? TakeRewards(state, node, catalog, standard, systems, options, ledger)
                 : state,
@@ -1074,6 +1100,19 @@ public static class RunPolicy
         RunPolicyOptions options,
         Ledger ledger)
     {
+        // ADR 0099: la tarifa plana es una decisión de lote, así que se mira primero. Compensa cuando curar
+        // a los que merecen tratamiento uno a uno costaría más que pasar por caja una vez.
+        int piecemeal = GuaranteedClinicBill(state, options, economy);
+        if (piecemeal > economy.ClinicSquadCost && state.Gold >= economy.ClinicSquadCost)
+        {
+            int wounded = CountTreatable(state);
+            state = RunEngine.Apply(state, new TreatSquad(), catalog, systems);
+            ledger.GoldSpentClinic += economy.ClinicSquadCost;
+            ledger.Treatments += wounded;
+            ledger.SquadTreatments++;
+            return state;
+        }
+
         for (int i = 0; i < RunRules.MaxStarters; i++)
         {
             if (state.Gold < economy.ClinicCost)
@@ -1123,6 +1162,95 @@ public static class RunPolicy
             state = RunEngine.Apply(state, new TreatPlayer(starter.Id), catalog, systems);
             ledger.GoldSpentClinic += economy.ClinicMinorCost;
             ledger.Treatments++;
+        }
+
+        return TryTheQuack(state, catalog, economy, systems, options, ledger);
+    }
+
+    /// <summary>
+    /// Lo que costaría curar uno a uno a los que la política trataría: los graves que merecen tratamiento
+    /// más las leves de los titulares. Es el número contra el que compite la tarifa plana (ADR 0099).
+    /// </summary>
+    private static int GuaranteedClinicBill(RunState state, RunPolicyOptions options, EconomyConfig economy)
+    {
+        int bill = 0;
+        var starters = ChooseStarters(state, options);
+        for (int i = 0; i < state.Roster.Count; i++)
+        {
+            var player = state.Roster[i];
+            if (player.PhysicalState == PhysicalState.SevereInjury
+                && (state.AvailablePlayerCount < options.TreatWhileAvailableBelow || Value(player, options) >= options.TreatFromValue))
+            {
+                bill += economy.ClinicCost;
+                continue;
+            }
+
+            if (player.PhysicalState == PhysicalState.MinorInjury && player.MinorInjuries > 0 && IsStarter(starters, player.Id))
+            {
+                bill += economy.ClinicMinorCost;
+            }
+        }
+
+        return bill;
+    }
+    private static bool IsStarter(IReadOnlyList<RunPlayer> starters, int id)
+    {
+        for (int i = 0; i < starters.Count; i++)
+        {
+            if (starters[i].Id == id)
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private static int CountTreatable(RunState state)
+    {
+        int count = 0;
+        for (int i = 0; i < state.Roster.Count; i++)
+        {
+            if (MedicalSystem.NeedsTreatment(state.Roster[i]))
+            {
+                count++;
+            }
+        }
+
+        return count;
+    }
+
+    /// <summary>
+    /// El matasanos (ADR 0099) en su único hueco honesto: queda un grave que merece la pena y <b>no llega el
+    /// oro</b> para el precio garantizado, pero sí para el suyo. La alternativa no es pagar menos, es no
+    /// curar; por eso la política arriesga aquí y no antes. Puede matarlo, y eso se mide en
+    /// <c>deathsPerRun</c>.
+    /// </summary>
+    private static RunState TryTheQuack(
+        RunState state,
+        Catalog catalog,
+        EconomyConfig economy,
+        IRunSystems systems,
+        RunPolicyOptions options,
+        Ledger ledger)
+    {
+        int risky = MedicalSystem.RiskyCost(economy.ClinicCost, economy);
+        while (state.Gold >= risky && state.Gold < economy.ClinicCost)
+        {
+            var patient = BestSevereInjured(state, options);
+            if (patient is null
+                || (state.AvailablePlayerCount >= options.TreatWhileAvailableBelow && Value(patient, options) < options.TreatFromValue))
+            {
+                break;
+            }
+
+            state = RunEngine.Apply(state, new TreatPlayer(patient.Id, Risky: true), catalog, systems);
+            ledger.GoldSpentClinic += risky;
+            ledger.RiskyTreatments++;
+            if (state.GetPlayer(patient.Id).PhysicalState == PhysicalState.Healthy)
+            {
+                ledger.Treatments++;
+            }
         }
 
         return state;
@@ -1196,6 +1324,121 @@ public static class RunPolicy
         ledger.GoldSpentEnrollment += cost;
         ledger.SlotsBought++;
         return state;
+    }
+
+    // ------------------------------------------------------------------ 4c. evento
+
+    /// <summary>
+    /// La carta de evento (ADR 0100). La política tasa cada opción <b>en oro</b> —lo que da, lo que cuesta y
+    /// lo que se ahorra en la clínica— y se queda con la mejor; seguir camino vale cero, así que una carta
+    /// que no ofrece nada se deja pasar. Para las opciones que piden un cuerpo elige al <b>disponible más
+    /// barato que no sea titular</b>: es lo que haría un entrenador y lo que hace que la familia de carne
+    /// por ventaja se pague con el banquillo antes que con el once.
+    /// </summary>
+    private static RunState VisitEvent(
+        RunState state,
+        MapNode node,
+        Catalog catalog,
+        StandardRunSystems standard,
+        IRunSystems systems,
+        RunPolicyOptions options,
+        Ledger ledger)
+    {
+        var card = EventSystem.Card(state, node, standard.Events);
+        var victim = CheapestBody(state, options);
+        int best = 0;
+        int chosen = -1;
+        for (int i = 0; i < card.Options.Count; i++)
+        {
+            var option = card.Options[i];
+            if (option.NeedsTarget && victim is null)
+            {
+                continue;
+            }
+
+            int worth = OptionWorth(state, option, standard.Economy, options);
+            if (worth > best)
+            {
+                best = worth;
+                chosen = i;
+            }
+        }
+
+        if (chosen < 0)
+        {
+            ledger.EventsDeclined++;
+            return state;
+        }
+
+        bool needsTarget = card.Options[chosen].NeedsTarget;
+        state = RunEngine.Apply(
+            state,
+            new ChooseEventOption(chosen, needsTarget ? victim!.Id : -1),
+            catalog,
+            systems);
+        ledger.EventsTaken++;
+        return state;
+    }
+
+    /// <summary>Lo que vale una opción, en oro: lo que da menos lo que cuesta, contando la clínica que ahorra.</summary>
+    private static int OptionWorth(RunState state, EventOption option, EconomyConfig economy, RunPolicyOptions policy)
+    {
+        int worth = 0;
+        for (int i = 0; i < option.Effects.Count; i++)
+        {
+            var effect = option.Effects[i];
+            worth += effect.Kind switch
+            {
+                EventEffectKind.Gold => effect.Value,
+                EventEffectKind.GoldShare => state.Gold * effect.Value / 100,
+                EventEffectKind.Heal => HealingWorth(state, economy, policy),
+                EventEffectKind.Experience => policy.EventGoldPerHundredExperience * effect.Value * CountStarters(state) / 100,
+                EventEffectKind.ExperienceTarget => policy.EventGoldPerHundredExperience * effect.Value / 100,
+                EventEffectKind.Injure => -(effect.Value >= 2 ? economy.ClinicCost : economy.ClinicMinorCost) - policy.EventInjuryPremium,
+                _ => 0,
+            };
+        }
+
+        return worth;
+    }
+
+    /// <summary>
+    /// Lo que vale que te curen gratis: exactamente lo que la política habría pagado en la clínica, ni un
+    /// oro más. Contar a todos los heridos —incluidos los que nunca habría tratado— hacía que una carta que
+    /// cobra por curar pareciese un chollo y la política pagaba de más por ella.
+    /// </summary>
+    private static int HealingWorth(RunState state, EconomyConfig economy, RunPolicyOptions options) =>
+        GuaranteedClinicBill(state, options, economy);
+
+    private static int CountStarters(RunState state)
+    {
+        int count = state.Lineup.Slots.Count;
+        return count > 0 ? count : RunRules.MaxStarters;
+    }
+
+    /// <summary>El cuerpo más barato que se puede ofrecer: disponible, fuera del once si lo hay, y de menor valor.</summary>
+    private static RunPlayer? CheapestBody(RunState state, RunPolicyOptions options)
+    {
+        var starters = ChooseStarters(state, options);
+        RunPlayer? best = null;
+        int bestRank = int.MaxValue;
+        for (int i = 0; i < state.Roster.Count; i++)
+        {
+            var player = state.Roster[i];
+            if (!player.IsAvailable)
+            {
+                continue;
+            }
+
+            int rank = Value(player, options) + (IsStarter(starters, player.Id) ? 1000 : 0);
+            if (rank < bestRank || (rank == bestRank && best is not null && player.Id < best.Id))
+            {
+                best = player;
+                bestRank = rank;
+            }
+        }
+
+        return best;
     }
 
     // ------------------------------------------------------------------ 5. mercado
@@ -2833,6 +3076,10 @@ public static class RunPolicy
             ledger.MercenariesHired,
             ledger.PlayersSold,
             ledger.Treatments,
+            ledger.SquadTreatments,
+            ledger.RiskyTreatments,
+            ledger.EventsTaken,
+            ledger.EventsDeclined,
             ledger.SlotsBought,
             ledger.Rerolls,
             ledger.RewardsTaken,
@@ -2926,6 +3173,14 @@ public static class RunPolicy
         public int GoldFromSales;
         public int GoldSpentMarket;
         public int GoldSpentClinic;
+
+        public int SquadTreatments;
+
+        public int EventsTaken;
+
+        public int EventsDeclined;
+
+        public int RiskyTreatments;
 
         /// <summary>Oro gastado en huecos de plantilla (ADR 0046): el sumidero nuevo.</summary>
         public int GoldSpentEnrollment;

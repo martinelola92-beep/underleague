@@ -1,0 +1,42 @@
+{
+  "_doc": "ADR 0100: carta de evento. Cada opción declara sus efectos y su coste; la interfaz los enseña ANTES de elegir (RF-012d). Sin tiradas dentro de una opción: la apuesta es la elección, no el dado.",
+  "id": "blood_pit",
+  "name": {
+    "es": "El pozo de sangre",
+    "en": "The blood pit"
+  },
+  "description": {
+    "es": "Se pelea abajo y se aprende arriba. Alguien tiene que bajar.",
+    "en": "They fight below and learn above. Someone has to go down."
+  },
+  "minAct": 1,
+  "weight": 100,
+  "options": [
+    {
+      "id": "send",
+      "name": {
+        "es": "Mandar a uno al pozo",
+        "en": "Send someone down"
+      },
+      "effects": [
+        {
+          "type": "injure",
+          "value": 1
+        },
+        {
+          "type": "experience",
+          "value": 120
+        }
+      ],
+      "needsTarget": true
+    },
+    {
+      "id": "leave",
+      "name": {
+        "es": "Seguir camino",
+        "en": "Move on"
+      },
+      "effects": []
+    }
+  ]
+}

@@ -1,0 +1,42 @@
+{
+  "_doc": "ADR 0100: carta de evento. Cada opción declara sus efectos y su coste; la interfaz los enseña ANTES de elegir (RF-012d). Sin tiradas dentro de una opción: la apuesta es la elección, no el dado.",
+  "id": "blood_oath",
+  "name": {
+    "es": "El juramento de sangre",
+    "en": "The blood oath"
+  },
+  "description": {
+    "es": "El prestamista no acepta oro como garantía. Acepta un brazo.",
+    "en": "The moneylender will not take gold as collateral. He will take an arm."
+  },
+  "minAct": 2,
+  "weight": 100,
+  "options": [
+    {
+      "id": "swear",
+      "name": {
+        "es": "Empeñar a uno",
+        "en": "Pawn a player"
+      },
+      "effects": [
+        {
+          "type": "injure",
+          "value": 2
+        },
+        {
+          "type": "gold",
+          "value": 45
+        }
+      ],
+      "needsTarget": true
+    },
+    {
+      "id": "leave",
+      "name": {
+        "es": "Seguir camino",
+        "en": "Move on"
+      },
+      "effects": []
+    }
+  ]
+}

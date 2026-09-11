@@ -1,0 +1,42 @@
+{
+  "_doc": "ADR 0100: carta de evento. Cada opción declara sus efectos y su coste; la interfaz los enseña ANTES de elegir (RF-012d). Sin tiradas dentro de una opción: la apuesta es la elección, no el dado.",
+  "id": "iron_vigil",
+  "name": {
+    "es": "La vigilia de hierro",
+    "en": "The iron vigil"
+  },
+  "description": {
+    "es": "Toda la noche en pie con la armadura puesta. El que aguanta, vuelve distinto.",
+    "en": "All night on your feet in full harness. Whoever holds out comes back changed."
+  },
+  "minAct": 1,
+  "weight": 100,
+  "options": [
+    {
+      "id": "stand",
+      "name": {
+        "es": "Poner a uno de guardia",
+        "en": "Set someone on watch"
+      },
+      "effects": [
+        {
+          "type": "injure",
+          "value": 1
+        },
+        {
+          "type": "experienceTarget",
+          "value": 260
+        }
+      ],
+      "needsTarget": true
+    },
+    {
+      "id": "leave",
+      "name": {
+        "es": "Seguir camino",
+        "en": "Move on"
+      },
+      "effects": []
+    }
+  ]
+}

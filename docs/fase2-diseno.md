@@ -5737,3 +5737,26 @@ Lo que queda es una palanca nueva y medible: no comprar es en parte una **estrat
 que van a la clínica, la mitad de muertes (1,10 contra 1,89) y más veteranía (6,88 contra 6,16)—, así que lo
 que bajaría esa tasa es encarecer o limitar el atesoramiento, no recortar recompensas.
 
+## 46. La clínica decide y el evento existe (ADR 0099 y 0100)
+
+Dos nodos que no tenían dilema, en el mismo paquete y medidos juntos.
+
+**La clínica** pasa de un servicio a tres: por pieza (el de siempre, garantizado), **la plantilla entera a
+tarifa plana** —24, calibrado para que salga a cuenta a partir de dos graves: a 30 la política la toma 0,15
+veces por run, a 24 son 0,41— y **el matasanos**, que cobra el 40 % y no garantiza nada: falla el 30 % y
+empeora un escalón el 12 %, de leve a grave y de grave a **muerto**. Que pueda matar cumple las cinco
+condiciones de la ADR 0048 y añade la única que faltaba por estrenar: que la muerte pueda venir de una
+decisión de menú. Los dos porcentajes van escritos en el botón (RF-012d).
+
+**El evento** deja de pagar 1-3 de oro —cuando un partido de liga paga veinte— y pasa a ser una **carta con
+opciones** en `data/events/`, con su esquema, su validación y su línea de efecto compuesta de plantillas
+(RT-035). Dos familias en el primer catálogo: el **oro parado**, que cobra un porcentaje de lo que llevas
+encima y es la palanca que la ADR 0098 pedía contra el atesoramiento, y **carne por ventaja**, que pide un
+cuerpo —el que tú señales— a cambio de experiencia o de oro. Ninguna opción esconde su coste y ninguna tira
+un dado por dentro: la apuesta es elegir.
+
+Medido con 1.200 runs en dos semillas: `runWinRate` 25,33 / 27,00, `deathsPerRun` 1,85, cartas resueltas 0,38
+por run (de cada tres nodos de evento que pisa, resuelve dos), tarifa plana 0,38 y matasanos 0,03. Y
+`brokeMarketRunShare` 12,9 / 11,3, **dentro de su banda de diseño en las dos semillas por primera vez**. Las
+43 puertas en verde.
+

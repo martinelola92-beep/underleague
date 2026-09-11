@@ -385,5 +385,16 @@
     "craft": "The Touch",
     "aim": "The Aim",
     "butchery": "The Butchery"
+  },
+  "eventEffects": {
+    "_doc": "ADR 0100: pieces the effect line of an event option is composed from. Option text is never hand-written (RT-035).",
+    "gold": "{0} gold",
+    "goldShare": "{0}% of the gold you carry",
+    "heal": "heals the whole squad",
+    "experience": "{0} experience for the starters",
+    "experienceTarget": "{0} experience for him",
+    "injureMinor": "leaves him with a minor injury",
+    "injureSevere": "leaves him with a severe injury",
+    "nothing": "no cost, no gain"
   }
 }

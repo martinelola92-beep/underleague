@@ -34,15 +34,20 @@ internal static class SystemsTestSupport
     /// aislada, sin depender de ganar un partido de verdad. El nodo tiene que existir en <c>state.Maps</c>
     /// porque <c>NodeGuards</c> resuelve <c>state.GetNode(state.PendingNodeId)</c>.
     /// </summary>
-    public static RunState WithFakePendingNode(RunState state, NodeKind kind)
+    public static RunState WithFakePendingNode(RunState state, NodeKind kind, int skip = 0)
     {
+        // skip: el n-ésimo nodo de ese tipo. Lo pide la clínica de la ADR 0099, cuyo flujo de RNG depende
+        // del nodo: para ver los tres desenlaces del matasanos hay que cambiar de consulta, no de semilla.
+        int seen = 0;
         for (int act = 1; act <= RunRules.Acts; act++)
         {
             var map = state.MapOf(act);
-            var node = map.Nodes.FirstOrDefault(n => n.Kind == kind);
-            if (node is not null)
+            foreach (var node in map.Nodes.Where(n => n.Kind == kind).OrderBy(n => n.Id))
             {
-                return state.WithPendingNode(node.Id);
+                if (seen++ >= skip)
+                {
+                    return state.WithPendingNode(node.Id);
+                }
             }
         }
 

@@ -1,0 +1,45 @@
+{
+  "_doc": "ADR 0100: carta de evento. Cada opción declara sus efectos y su coste; la interfaz los enseña ANTES de elegir (RF-012d). Sin tiradas dentro de una opción: la apuesta es la elección, no el dado.",
+  "id": "smugglers_cart",
+  "name": {
+    "es": "El carro del contrabandista",
+    "en": "The smuggler's cart"
+  },
+  "description": {
+    "es": "Compra lo que nadie declara. Paga en oro contante por lo que no se te ve gastar.",
+    "en": "He buys what nobody declares, and pays hard coin for what you are clearly not spending."
+  },
+  "minAct": 2,
+  "weight": 100,
+  "options": [
+    {
+      "id": "trade",
+      "name": {
+        "es": "Vaciar la bolsa",
+        "en": "Empty the purse"
+      },
+      "effects": [
+        {
+          "type": "goldShare",
+          "value": -50
+        },
+        {
+          "type": "experience",
+          "value": 60
+        },
+        {
+          "type": "heal",
+          "value": 0
+        }
+      ]
+    },
+    {
+      "id": "leave",
+      "name": {
+        "es": "Seguir camino",
+        "en": "Move on"
+      },
+      "effects": []
+    }
+  ]
+}

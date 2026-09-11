@@ -128,6 +128,7 @@ public static class RngStreams
     private const ulong MapKind = 2UL;
     private const ulong RewardsKind = 3UL;
     private const ulong GenerationKind = 4UL;
+    private const ulong ClinicKind = 5UL;
 
     /// <summary>Flujo de RNG para el partido del nodo nodeIndex de la run.</summary>
     public static Pcg32 Match(ulong runSeed, int nodeIndex) => Create(runSeed, MatchKind, nodeIndex);
@@ -144,6 +145,12 @@ public static class RngStreams
 
     /// <summary>Flujo de RNG para las recompensas del nodo nodeIndex.</summary>
     public static Pcg32 Rewards(ulong runSeed, int nodeIndex) => Create(runSeed, RewardsKind, nodeIndex);
+
+    /// <summary>
+    /// Flujo de RNG de la clínica del nodo nodeIndex (ADR 0099). Es propio y no el de recompensas para que
+    /// una tirada del matasanos no desplace lo que ofrece un nodo de recompensa (RT-022).
+    /// </summary>
+    public static Pcg32 Clinic(ulong runSeed, int nodeIndex) => Create(runSeed, ClinicKind, nodeIndex);
 
     /// <summary>Flujo de RNG para la generación de jugadores/equipos con el índice index.</summary>
     public static Pcg32 Generation(ulong runSeed, int index) => Create(runSeed, GenerationKind, index);

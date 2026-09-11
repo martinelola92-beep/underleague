@@ -169,6 +169,9 @@ public static class DataLoader
         // estadísticas de las funciones de condición nuevas (fase1b-diseno.md §1.5).
         "links", "immunities", "startZones", "startFlanks", "stats",
 
+        // ADR 0100: piezas del efecto de una opción de evento (RT-035: el texto no se escribe a mano).
+        "eventEffects",
+
         // Nombres visibles de las líneas del catálogo (ADR 0051): la descripción de un maestro dice qué
         // línea exige y cuál cierra, y esas dos cosas son texto que ve el jugador (RT-073).
         "families",

@@ -185,6 +185,12 @@ static string? MapSchemaFile(string relativePath)
         return "bosses.schema.json";
     }
 
+    if (relativePath.StartsWith("events/", StringComparison.Ordinal) && relativePath.EndsWith(".json", StringComparison.Ordinal)
+        && !relativePath[7..].Contains('/'))
+    {
+        return "events.schema.json";
+    }
+
     if (relativePath.StartsWith("items/", StringComparison.Ordinal) && relativePath.EndsWith(".json", StringComparison.Ordinal)
         && !relativePath[6..].Contains('/'))
     {

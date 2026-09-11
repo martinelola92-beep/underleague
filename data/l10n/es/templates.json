@@ -385,5 +385,16 @@
     "craft": "El Toque",
     "aim": "La Puntería",
     "butchery": "La Carnicería"
+  },
+  "eventEffects": {
+    "_doc": "ADR 0100: piezas con las que se compone el efecto de una opción de evento. El texto de la opción no se escribe a mano (RT-035): la carta trae su nombre y la línea de efecto sale de aquí.",
+    "gold": "{0} de oro",
+    "goldShare": "{0}% del oro que lleves",
+    "heal": "cura a toda la plantilla",
+    "experience": "{0} de experiencia para los titulares",
+    "experienceTarget": "{0} de experiencia para él",
+    "injureMinor": "lo deja con una lesión leve",
+    "injureSevere": "lo deja con una lesión grave",
+    "nothing": "sin coste y sin ganancia"
   }
 }

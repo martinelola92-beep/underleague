@@ -95,8 +95,21 @@ public sealed record SellPlayer(int PlayerId) : RunDecision;
 /// <summary>Ficha al mercenario indicado del surtido (RF-110..113). Paquete X.</summary>
 public sealed record HireMercenary(int OfferIndex) : RunDecision;
 
-/// <summary>Trata a un jugador en la clínica (RF-094). Paquete X.</summary>
-public sealed record TreatPlayer(int PlayerId) : RunDecision;
+/// <summary>
+/// Trata a un jugador en la clínica (RF-094). Con <paramref name="Risky"/> es el matasanos de la ADR 0099:
+/// cuesta una fracción del precio y puede no curar, o empeorar un escalón.
+/// </summary>
+public sealed record TreatPlayer(int PlayerId, bool Risky = false) : RunDecision;
+
+/// <summary>Cura a toda la plantilla por la tarifa plana de la clínica (ADR 0099).</summary>
+public sealed record TreatSquad : RunDecision;
+
+/// <summary>
+/// Elige una opción de la carta del nodo de evento abierto (ADR 0100). <paramref name="TargetPlayerId"/>
+/// solo hace falta cuando la opción señala a un jugador —la familia que cambia carne por ventaja—; en las
+/// demás se ignora.
+/// </summary>
+public sealed record ChooseEventOption(int OptionIndex, int TargetPlayerId = -1) : RunDecision;
 
 /// <summary>Elige una de las tres recompensas tras ganar un partido (RF-071). Paquete X.</summary>
 /// <param name="OptionIndex">Opción elegida, 0..2.</param>
