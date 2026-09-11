@@ -5679,3 +5679,31 @@ de jefe en 79 / 56-57 / 51-53, que es la curva de la ADR 0033 leída en una run 
 Queda fuera, anotado: la **forma** de la curva de niveles (el acto 1 se juega dos décimas corto y el 2 nueve
 décimas largo) y **AZ-H**, que el mercado no discrimina —`runWinRate_noMarket` 19,17 sobre una banda de 5—.
 
+## 43. El mercado pasa a ser de donde sale la build (ADR 0096)
+
+`runWinRate_noMarket` valía **18,3** sobre una banda de ≤ 5: esquivar todos los mercados costaba cuatro
+puntos de run y nada más. El desglose lo explicaba: el que no compra se lleva **el 83 % de los perks** del
+que compra, porque las recompensas gratis cubren casi toda la build —que es literalmente lo que la ADR 0055
+escribió al abrir la métrica—. Sus dos primeras palancas ya estaban aplicadas; quedaba la tercera, «que
+algunos partidos paguen solo oro».
+
+La liga —el nodo más común— pasa a `picks` 0 y `goldBonusPercent` 90: cambia su elección por oro. El élite y
+el jefe conservan las suyas (el trampolín de la ADR 0043 no se toca). Para que el oro nuevo no lo pague
+todo, los sumideros suben (clínica 14, inscripción 20/38, reroll 3+3) y lo que la build no necesita se
+encarece (jugadores, consumibles, objetos); **el precio de los perks no se toca**. Y la doctrina contextual
+aprende lo que la ahorradora sabía: **no se gasta un slot en un común**, porque con la liga pagando oro el
+recurso escaso dejó de ser el oro y pasó a ser el slot.
+
+Resultado con 1.200 runs en dos semillas: ganar sin comprar **10,67 / 10,75** (era 18,3), maestros comprados
+**46,2 / 44,3 %** (era 31), runs que llegan sin poder comprar 38,3 / 35,7 (era 50), y ninguna banda que
+estuviera dentro se sale (`runWinRate` 23,33 / 22,00, `sinksAffordablePerAct` 2,74 / 2,76,
+`purchasesPerMarket` 1,10 / 1,09, `deathsPerRun` 1,80 / 1,82, `contextualAdvantage` 5,42 / 4,25 sobre el
+4,75 de partida). Las 43 puertas en verde.
+
+**Y queda demostrado que el resto no es tuning.** Quitando también las elecciones de élite, el control sin
+mercado sigue ganando 9,5 %: lo que le queda son los tres nodos de jefe. La curva de la ADR 0033 mide sus
+celdas con builds **sin maestros ni objetos**, y el producto de los centros de la fila «buena» vale
+**25,6 %**. La ADR 0033 dice que se gana una run de cada cuatro con una build que el mercado no ha tocado; la
+ADR 0055 pide que eso pase menos de una vez de cada veinte. Es una contradicción del mismo tipo que AP-B y
+se decide igual (AZ-H).
+

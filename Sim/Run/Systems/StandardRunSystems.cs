@@ -216,8 +216,10 @@ public sealed class StandardRunSystems : IRunSystems
         }
 
         // Deja el nodo abierto para RF-071: el jugador elige recompensa (y puede repetir tirada una vez,
-        // RF-071b) antes de volver al mapa con LeaveNode.
-        return state.WithPendingNode(node.Id);
+        // RF-071b) antes de volver al mapa con LeaveNode. ADR 0096: un nodo que no da ninguna elección
+        // —la liga, que paga solo oro— no se queda abierto, para que la run no pase por una pantalla de
+        // recompensa vacía que se cierra sola.
+        return reward.Picks > 0 ? state.WithPendingNode(node.Id) : state;
     }
 
     /// <inheritdoc />

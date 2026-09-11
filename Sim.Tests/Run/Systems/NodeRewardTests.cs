@@ -23,7 +23,13 @@ public sealed class NodeRewardTests
 
     private static EconomyConfig Economy => Systems.Economy;
 
-    /// <summary>El escalón de oro por tipo de nodo: liga &lt; élite &lt; jefe, con el mismo acto y dificultad.</summary>
+    /// <summary>
+    /// El escalón de la ADR 0043 por tipo de nodo, leído en <b>valor total</b> desde la ADR 0096: la liga
+    /// cambió su elección por oro (<c>picks</c> 0, <c>goldBonusPercent</c> 100), así que en moneda paga
+    /// más que el élite y en total vale menos —una elección de élite vale mucho más que media parte de oro
+    /// de acto—. El jefe sigue pagando más oro que el élite <b>y</b> dando dos elecciones: el trampolín no
+    /// se toca.
+    /// </summary>
     [Fact]
     public void GoldIsTieredByNodeKind()
     {
@@ -32,9 +38,13 @@ public sealed class NodeRewardTests
         int elite = GoldFor(state, NodeKind.EliteMatch);
         int boss = GoldFor(state, NodeKind.Boss);
 
-        Assert.True(elite > league, $"el élite paga {elite} y la liga {league}");
         Assert.True(boss > elite, $"el jefe paga {boss} y el élite {elite}");
-        Assert.Equal(0, Economy.LeagueReward.GoldBonusPercent);
+        Assert.True(league > elite, $"la liga cambia su elección por oro y paga {league}, el élite {elite}");
+
+        // Y el escalón de elecciones, que es la otra mitad del valor (ADR 0096).
+        Assert.Equal(0, Economy.LeagueReward.Picks);
+        Assert.True(Economy.EliteReward.Picks >= 1);
+        Assert.True(Economy.BossReward.Picks > Economy.EliteReward.Picks);
     }
 
     /// <summary>
@@ -44,7 +54,7 @@ public sealed class NodeRewardTests
     [Fact]
     public void ABossNodeGivesTwoPicksWithDifferentOffers()
     {
-        Assert.Equal(1, Economy.LeagueReward.Picks);
+        Assert.Equal(0, Economy.LeagueReward.Picks);
         Assert.Equal(1, Economy.EliteReward.Picks);
         Assert.Equal(2, Economy.BossReward.Picks);
 
@@ -74,8 +84,9 @@ public sealed class NodeRewardTests
     [Fact]
     public void DecliningTakesNothingAndConsumesThePick()
     {
+        // Élite y no liga: desde la ADR 0096 la liga no da ninguna elección que rechazar.
         var state = SystemsTestSupport.WithFakePendingNode(
-            RunEngine.Start(SystemsTestSupport.Setup(), 6161UL, Catalog, Systems), NodeKind.LeagueMatch);
+            RunEngine.Start(SystemsTestSupport.Setup(), 6161UL, Catalog, Systems), NodeKind.EliteMatch);
         var node = state.GetNode(state.PendingNodeId);
 
         int rosterBefore = state.Roster.Count;

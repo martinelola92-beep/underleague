@@ -1386,8 +1386,31 @@ public static class RunPolicy
         }
     }
 
+    /// <summary>
+    /// El listón de rareza del mercado. La ahorradora nunca compró un común, y desde la <b>ADR 0096</b> la
+    /// contextual tampoco: con la liga pagando oro en vez de perk, el recurso escaso dejó de ser el oro y
+    /// pasó a ser el <b>slot</b> —catorce en el once, y un común ocupado ya no se puede dar a un maestro—,
+    /// así que el listón por valor medido (ADR 0038/0072) se quedaba corto y la ahorradora ganaba a la
+    /// contextual. Medido: la contextual pasa de 23,0 a 27,0 y `contextualAdvantage` de −1,0 a +7,5.
+    /// La gastadora es la que sigue comprando cualquier cosa, que es lo que la define (ADR 0037).
+    /// El fichaje de urgencia cuando faltan cuerpos es la excepción y la resuelve su llamador.
+    /// </summary>
     private static bool ClearsTheBar(Rarity rarity, RunPolicyOptions options) =>
         options.Doctrine != PurchaseDoctrine.Saver || rarity != Rarity.Common;
+
+    /// <summary>
+    /// El listón de rareza del mercado con la <b>agenda</b> del acto (ADR 0096). La ahorradora no compra un
+    /// común <b>nunca</b>, y eso no cambia. La contextual tampoco lo compra <b>mientras le queden mercados
+    /// en el acto</b>: con la liga pagando oro en vez de perk, el recurso escaso dejó de ser el oro y pasó a
+    /// ser el <b>slot</b> —catorce en el once, y uno ocupado por un común ya no se puede dar a un maestro—,
+    /// así que el listón por valor medido (ADR 0038/0072) se quedaba corto y la ahorradora le ganaba. En el
+    /// <b>último</b> mercado del acto sí lo compra: guardar el slot para un surtido que ya no va a ver no
+    /// vale nada, y es lo que sigue separando a las dos doctrinas (<c>TheThreeDoctrinesBuyDifferently</c>).
+    /// La gastadora compra cualquier cosa, que es lo que la define (ADR 0037).
+    /// </summary>
+    private static bool ClearsTheBar(Rarity rarity, RunPolicyOptions options, int marketsLeftInAct) =>
+        ClearsTheBar(rarity, options)
+        && (options.Doctrine != PurchaseDoctrine.Contextual || rarity != Rarity.Common || marketsLeftInAct <= 1);
 
     /// <summary>
     /// ¿Merece ese perk uno de los pocos slots del once? Solo la doctrina contextual lo pregunta, y lo
@@ -1709,6 +1732,9 @@ public static class RunPolicy
         HashSet<(string Category, int Index)> used,
         int alreadySpentHere)
     {
+        // ADR 0096: cuántos mercados le quedan al acto decide si un común vale un slot (ClearsTheBar).
+        int marketsLeftInAct = MarketsLeftInAct(state, node);
+
         // (a) Canteranos: gratis, así que primero y sin mirar el oro. Son además una de las tres vías de
         // recuperación que la ADR 0037 declara obligatorias para que arruinarse no sea irreversible.
         // Gratis en oro, no en plantilla: con la plantilla llena hay que hacer sitio antes (RF-020).
@@ -1744,7 +1770,7 @@ public static class RunPolicy
 
             var perk = catalog.Perks.Find(offers.Perks[i].PerkId);
             if (perk is null
-                || !ClearsTheBar(perk.Rarity, options)
+                || !ClearsTheBar(perk.Rarity, options, marketsLeftInAct)
                 || !WorthASlot(perk, economy, options, pursuedFamily, arcCredit, options.MinPerkValueMarket ?? bar, horizon))
             {
                 continue;
@@ -1806,7 +1832,7 @@ public static class RunPolicy
                 }
 
                 var rarity = offers.Items[i].Rarity;
-                if (!ClearsTheBar(rarity, options))
+                if (!ClearsTheBar(rarity, options, marketsLeftInAct))
                 {
                     continue;
                 }

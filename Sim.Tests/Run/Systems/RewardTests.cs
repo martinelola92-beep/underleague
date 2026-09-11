@@ -57,7 +57,9 @@ public sealed class RewardTests
         Assert.True(elite.RarityFloorPercent + elite.CommonCeilingPercent <= 100);
         Assert.True(boss.RarityFloorPercent + boss.CommonCeilingPercent <= 100);
 
-        Assert.Equal(1, league.Picks);
+        // ADR 0096: la liga paga oro en vez de elección; el élite y el jefe conservan las suyas.
+        Assert.Equal(0, league.Picks);
+        Assert.Equal(1, elite.Picks);
         Assert.Equal(2, boss.Picks);
     }
 
@@ -168,7 +170,8 @@ public sealed class RewardTests
     private static RunState FreshPendingReward(ulong seed)
     {
         var state = RunEngine.Start(SystemsTestSupport.Setup(), seed, SystemsTestSupport.Catalog, SystemsTestSupport.Systems);
-        return SystemsTestSupport.WithFakePendingNode(state, NodeKind.LeagueMatch);
+        // ADR 0096: la liga ya no da elección, así que el nodo con recompensa pendiente es el de élite.
+        return SystemsTestSupport.WithFakePendingNode(state, NodeKind.EliteMatch);
     }
 
     private static string Describe(RewardOption option) => option switch

@@ -55,7 +55,9 @@ public sealed class EconomyTests
         int eliteGold = GoldCalculator.GoldForWin(state, elite, Summary(elite.Id, true, 1, 0, 500, 0), economy);
         int bossGold = GoldCalculator.GoldForWin(state, boss, Summary(boss.Id, true, 1, 0, 500, 0), economy);
 
-        Assert.True(eliteGold > leagueGold);
+        // ADR 0096: la liga cambió su elección por oro, así que en MONEDA paga más que el élite; el
+        // escalón de la ADR 0043 se lee en valor total (el élite añade una elección, el jefe dos y la cura).
+        Assert.True(leagueGold > eliteGold);
         Assert.True(bossGold > eliteGold);
     }
 
