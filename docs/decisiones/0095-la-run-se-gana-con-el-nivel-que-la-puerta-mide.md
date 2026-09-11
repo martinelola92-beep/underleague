@@ -86,6 +86,13 @@ El producto de las tres tasas de jefe vale ahora 0,240 y 0,225, que es lo que la
 para una build buena. Las 43 puertas (`Category=Gate`) en verde, incluidas las seis de partido (RT-056), la de
 jefes y las de run.
 
+**Medición de cierre** (AV-A pide error, no punto): `--full-runs 2400` en las semillas 1 y 7, **4.800 runs**,
+`runWinRate` **22,42 / 21,92** → agrupado **22,17 ± 0,60** (error binomial). El suelo de la banda queda a
+**3,6 errores típicos**, así que la métrica está dentro y no es ruido de una semilla afortunada:
+es la primera vez que se puede afirmar. `deathsPerRun` 1,94 / 1,76. Las dos filas que siguen fuera se miden
+con la misma muestra: `runWinRate_noMarket` 18,29 / 16,96 (banda ≤ 5) y `contextualAdvantage` 4,75 / 3,04
+(banda ≥ 8), las dos de AZ-H.
+
 ## Consecuencias y lo que queda fuera
 
 - **AY-B cerrada.** La muerte en la entrada sigue costando puntos de run; ahora se cobra al precio que la
