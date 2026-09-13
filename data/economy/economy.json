@@ -53,6 +53,7 @@
     "playerSalePerLevel": 1,
     "playerSalePerPerk": 1,
     "playerSalePerBond": 1,
+    "playerSaleStatePercent": { "healthy": 100, "minorInjury": 50, "severeInjury": 25, "dead": 0 },
     "recruitQuality": 58,
     "youthQuality": 30,
     "mercenaryQuality": 62

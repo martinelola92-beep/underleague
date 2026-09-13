@@ -73,6 +73,20 @@ public static class MarketSystem
 
         NodeGuards.RequireOpen(state, NodeKind.Market, "vender un jugador");
         var player = state.GetPlayer(decision.PlayerId);
+
+        // ADR 0108: un fichaje que todavía no ha pasado por un partido NO SE VENDE. Sin esto, el canterano
+        // —que es gratis (RF-114b: BuyPlayer con requirePayment false)— se compraba y se vendía en el mismo
+        // nodo de mercado: 1-2 por mercado a 4 de oro cada uno, con tres mercados por acto y tres actos,
+        // hasta 72 de oro de la nada, frente a un ingreso de acto de 9/11/13. El grifo valía más que toda
+        // la economía de la run. La experiencia es la señal exacta: un recién fichado tiene 0 hasta que el
+        // equipo juega, incluso desde el banquillo.
+        if (player.Experience <= 0)
+        {
+            throw new ArgumentException(
+                $"'{player.Name}' todavía no ha jugado un partido con el club y no se puede vender (RF-114f, ADR 0108)",
+                nameof(decision));
+        }
+
         return state.WithoutPlayer(player.Id).AddGold(SalePrice(player, economy));
     }
 
@@ -86,10 +100,16 @@ public static class MarketSystem
     {
         ArgumentNullException.ThrowIfNull(player);
         ArgumentNullException.ThrowIfNull(economy);
-        return economy.Market.PlayerSaleBase.Of(player.Rarity)
+        int price = economy.Market.PlayerSaleBase.Of(player.Rarity)
             + (economy.Market.PlayerSalePerLevel * (player.Level - 1))
             + (economy.Market.PlayerSalePerPerk * player.Perks.Count)
             + (economy.Market.PlayerSalePerBond * player.Bonds.Count);
+
+        // ADR 0108: y lo que valga se cobra según en qué estado lo vendes. Un muerto no vale nada —ya no
+        // sirve para nada—, un grave un cuarto y un tocado la mitad. Vender la plantilla rota deja de ser
+        // una salida de emergencia gratuita, que es lo que convierte el desgaste en un recurso de verdad
+        // (RF-035, RF-104) en vez de en algo que se liquida en el mostrador.
+        return price * economy.Market.PlayerSaleStatePercent.Of(player.PhysicalState) / 100;
     }
 
     private static RunState BuyPlayer(RunState state, IReadOnlyList<PlayerOffer> offers, BuyOffer decision, bool requirePayment)

@@ -141,6 +141,17 @@
         "playerSalePerLevel": { "type": "integer", "minimum": 0 },
         "playerSalePerPerk": { "type": "integer", "minimum": 0 },
         "playerSalePerBond": { "type": "integer", "minimum": 0 },
+        "playerSaleStatePercent": {
+          "type": "object",
+          "properties": {
+            "healthy": { "type": "integer", "minimum": 0, "maximum": 100 },
+            "minorInjury": { "type": "integer", "minimum": 0, "maximum": 100 },
+            "severeInjury": { "type": "integer", "minimum": 0, "maximum": 100 },
+            "dead": { "type": "integer", "minimum": 0, "maximum": 100 }
+          },
+          "required": ["healthy", "minorInjury", "severeInjury", "dead"],
+          "additionalProperties": false
+        },
         "recruitQuality": { "type": "integer", "minimum": 1, "maximum": 99 },
         "youthQuality": { "type": "integer", "minimum": 1, "maximum": 99 },
         "mercenaryQuality": { "type": "integer", "minimum": 1, "maximum": 99 }
@@ -149,7 +160,7 @@
         "goalkeeperOffers", "playerOffers", "perkOffers", "itemOffers", "consumableOffers", "mercenaryOffers",
         "youthMin", "youthMax", "playerPriceByRarity", "perkPriceByRarity", "itemPriceByRarity",
         "priceSpreadPercent", "priceBandPercent", "consumablePriceByRarity", "itemSellFractionPercent", "playerSaleBaseByRarity",
-        "playerSalePerLevel", "playerSalePerPerk", "playerSalePerBond",
+        "playerSalePerLevel", "playerSalePerPerk", "playerSalePerBond", "playerSaleStatePercent",
         "recruitQuality", "youthQuality", "mercenaryQuality"
       ],
       "additionalProperties": false

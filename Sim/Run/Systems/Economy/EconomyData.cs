@@ -9,6 +9,23 @@ namespace Underleague.Sim.Run.Systems.Economy;
 /// en <c>tuning.generation.budgetByRarity</c>. La entrada de legendario existe por completitud del enum
 /// (ADR 0039): nada lo genera ni lo pone a la venta.
 /// </summary>
+/// <summary>
+/// Qué fracción de su precio vale un jugador según su estado físico (RF-114f). Un muerto no vale nada
+/// —ya no sirve para nada—, un grave vale un cuarto y un tocado la mitad: vender la plantilla rota deja
+/// de ser una salida de emergencia gratuita.
+/// </summary>
+public sealed record PlayerSaleStatePercent(int Healthy, int MinorInjury, int SevereInjury, int Dead)
+{
+    public int Of(PhysicalState state) => state switch
+    {
+        PhysicalState.Healthy => Healthy,
+        PhysicalState.MinorInjury => MinorInjury,
+        PhysicalState.SevereInjury => SevereInjury,
+        PhysicalState.Dead => Dead,
+        _ => throw new ArgumentOutOfRangeException(nameof(state)),
+    };
+}
+
 public sealed record PriceByRarity(int Common, int Uncommon, int Rare, int Legendary)
 {
     public int Of(Rarity rarity) => rarity switch
@@ -75,6 +92,7 @@ public sealed record MarketConfig(
     int PlayerSalePerLevel,
     int PlayerSalePerPerk,
     int PlayerSalePerBond,
+    PlayerSaleStatePercent PlayerSaleStatePercent,
     int RecruitQuality,
     int YouthQuality,
     int MercenaryQuality)
@@ -433,10 +451,14 @@ public static class EconomyLoader
             node.Int("playerSalePerLevel"),
             node.Int("playerSalePerPerk"),
             node.Int("playerSalePerBond"),
+            ReadSaleState(node.Prop("playerSaleStatePercent")),
             node.Int("recruitQuality"),
             node.Int("youthQuality"),
             node.Int("mercenaryQuality"));
     }
+
+    private static PlayerSaleStatePercent ReadSaleState(Json node) => new(
+        node.Int("healthy"), node.Int("minorInjury"), node.Int("severeInjury"), node.Int("dead"));
 
     private static PriceByRarity ReadPriceByRarity(Json node)
     {
