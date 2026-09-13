@@ -159,6 +159,7 @@ cuando es un binario viejo. La escena de capturas solo arranca **con Xvfb**: en 
 | `docs/entorno.md` | WSL/Windows, instalación, cómo se compila cada parte | Al montar la máquina |
 | `docs/ui-equipo.md` | Decisiones de la pantalla de Equipo, de las que derivan las demás pantallas (UI-021) | Antes de tocar `/Game` |
 | `docs/ui-partido.md` | Pantalla de Partido: geometría y cámara (ADR 0102, 0103), el intercambio ángulo/silueta, la sombra como elemento estructural, y qué le debe la vista 3D a la 2D. Es el briefing de arte | Antes de tocar la pantalla de Partido o de encargar arte |
+| `docs/estilo-visual.md` | Tono visual (Lucky Tower), los prompts de partida y **en qué chocan con RA-025/026**. Se itera | Antes de encargar arte o de escribir un prompt |
 | `docs/fase2-diseno.md` | Bucle de run: mapa, economía, mercado, jefe, ironman | Fase 2 |
 | `docs/catalogo-perks-y-objetos.md` | Catálogo derivado de `/data`: los 61 perks con su descripción generada (RT-035), los 34 objetos por arquetipo y los 4 consumibles | Al diseñar o revisar contenido de `/data`; se regenera, no se edita a mano |
 | `docs/referencia-motores-futbol.md` | Conclusiones aplicables de motores de fútbol open-source (gfootball, librcsc, SimpleSoccer), con fuentes citadas | Al tocar intercepción/parada del portero (AW-A) o evaluación de línea de pase |
