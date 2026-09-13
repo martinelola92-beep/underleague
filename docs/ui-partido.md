@@ -169,7 +169,16 @@ Mientras esa columna tenga «no», la leyenda de catorce entradas que hay sobre 
 3. **Auto-sombra en el ecuador de la cápsula** bajo el renderizador de compatibilidad, que es el de las
    capturas por Xvfb. En Forward+ —el de la build de Windows— no se ve, y el toon lo sustituye.
 4. **Humano y no-muerto no se separan** por proporción (punto 5).
-5. **La secuencia de capturas es lenta y frágil**: con renderizado por software tarda varios minutos y se
+5. **La secuencia de capturas se rompe después de `informe`.** Tras `captura: informe.png` sale
+   `ERROR: Parameter "data.tree" is null` y la ejecución muere, así que **`recompensa.png` y `mercado.png`
+   nunca se regeneran** y las que hay en el repositorio están viejas. Las nueve del partido sí salen, que
+   son las que van antes. Es anterior al trabajo de hoy y explica por qué varias ejecuciones parecían
+   «terminar bien» sin haber hecho lo que se esperaba.
+6. **Nadie elige `MarkOpponent` en el partido de las capturas.** La propia secuencia lo avisa
+   (`WARNING: ningún jugador elige MarkOpponent en todo el partido de las capturas`), de modo que
+   `partido-marcaje.png` enseña la capa de marcaje **vacía**. Puede ser de ese partido concreto o puede
+   ser que la acción esté muerta; hay que comprobarlo sobre un lote, no sobre una captura.
+7. **La secuencia es lenta y frágil**: con renderizado por software tarda varios minutos y se
    ha cortado antes de llegar a los pasos del partido más de una vez. Hay que darle margen y comprobar la
    marca de tiempo del PNG, no fiarse de que el proceso termine con código 0.
 
