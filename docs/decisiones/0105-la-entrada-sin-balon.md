@@ -129,7 +129,8 @@ Run completa (1.200 runs): `runWinRate` 25,58 → 23,50 (dentro), `deathsPerRun`
 
 - **`MarkOpponent` ha revivido de verdad**: del **1,26 % al 5,68 %** de las decisiones en el censo de
   utilidad. La capa de marcaje deja de estar vacía y `partido-marcaje.png` deja de mentir.
-- **`Block` sigue elegido el 0,00 %.** Sube de 0,42 % a 1,21 % como segunda opción y nada más. Despertarlo
-  pide subir `blockTargetBonus` (160 contra 300 de penalización por casilla), no su peso base — y eso exige
-  presupuesto de lesión que **hoy no existe**: `injuriesPerMatch` queda en 0,82 contra un techo de 0,90.
-  Ese margen de 0,08 es todo lo que hay, y no da para dos fuentes de violencia nuevas a la vez.
+- **`Block` sigue elegido el 0,00 %**, y **subirle el peso no lo arregla: medido y revertido** (CAT-F). El
+  censo de utilidad da la razón: se **descarta el 74,9 %** de las veces antes de puntuar, porque su
+  precondición es un alcance de **1,2 casillas** con una penalización de **300 por casilla**. Al alcance
+  máximo la penalización se come el bono entero. Despertarlo exige cambiar **qué es una carga**, no cuánto
+  pesa.
