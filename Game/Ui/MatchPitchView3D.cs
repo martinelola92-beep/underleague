@@ -80,8 +80,12 @@ public partial class MatchPitchView3D : SubViewportContainer
     private MeshInstance3D _ball = null!;
 
     private readonly List<MeshInstance3D> _bodies = new();
+    private readonly List<MeshInstance3D> _rings = new();
+    private readonly List<Label3D> _numbers = new();
     private readonly List<float> _heights = new();
     private readonly List<float> _radii = new();
+
+    private ArrayMesh? _ringMesh;
 
     private ImageTexture? _grassTexture;
     private ImageTexture? _whiteTexture;
@@ -152,7 +156,19 @@ public partial class MatchPitchView3D : SubViewportContainer
             body.QueueFree();
         }
 
+        foreach (var ring in _rings)
+        {
+            ring.QueueFree();
+        }
+
+        foreach (var number in _numbers)
+        {
+            number.QueueFree();
+        }
+
         _bodies.Clear();
+        _rings.Clear();
+        _numbers.Clear();
         _heights.Clear();
         _radii.Clear();
 
@@ -178,6 +194,18 @@ public partial class MatchPitchView3D : SubViewportContainer
             _bodies.Add(body);
             _heights.Add(height);
             _radii.Add(radius);
+
+            var ring = new MeshInstance3D
+            {
+                Mesh = _ringMesh,
+                MaterialOverride = RingMaterial(player.Team),
+                CastShadow = GeometryInstance3D.ShadowCastingSetting.Off,
+                Scale = new Vector3(radius, 1f, radius),
+            };
+            _world.AddChild(ring);
+            _rings.Add(ring);
+            _world.AddChild(NewNumber(player, radius, out var label));
+            _numbers.Add(label);
         }
 
         _appliedSilhouette = !SilhouetteMode;
@@ -201,6 +229,7 @@ public partial class MatchPitchView3D : SubViewportContainer
             float height = proportion.Height / proportion.Width * (radius * 2f);
 
             _bodies[i].Mesh = new CapsuleMesh { Radius = radius, Height = height, RadialSegments = 28, Rings = 12 };
+            _rings[i].Scale = new Vector3(radius, 1f, radius);
             _heights[i] = height;
             _radii[i] = radius;
         }
@@ -292,6 +321,8 @@ public partial class MatchPitchView3D : SubViewportContainer
         };
         _world.AddChild(_ground);
 
+        _ringMesh = BuildRingMesh();
+
         _ballMaterial = new StandardMaterial3D
         {
             Roughness = 0.4f,
@@ -353,6 +384,99 @@ public partial class MatchPitchView3D : SubViewportContainer
         var mesh = new ArrayMesh();
         mesh.AddSurfaceFromArrays(Mesh.PrimitiveType.Triangles, arrays);
         return mesh;
+    }
+
+    /// <summary>
+    /// La corona plana del anillo de suelo, de radio 1: se escala por jugador al radio de su cuerpo, así
+    /// que <b>el anillo es la huella real</b> que usa <c>BodySeparation</c> y no una decoración de tamaño
+    /// libre. Va en el plano XZ, sin espesor y sin proyectar sombra: lo que tiene que verse debajo es la
+    /// sombra de la cápsula (RA-008), no otra sombra más.
+    /// </summary>
+    private static ArrayMesh BuildRingMesh()
+    {
+        const int Steps = 48;
+        const float Inner = 0.82f;
+
+        var vertices = new Vector3[Steps * 2];
+        var normals = new Vector3[Steps * 2];
+        for (int i = 0; i < Steps; i++)
+        {
+            float angle = Mathf.Tau * i / Steps;
+            var direction = new Vector3(Mathf.Cos(angle), 0f, Mathf.Sin(angle));
+            vertices[i * 2] = direction * Inner;
+            vertices[(i * 2) + 1] = direction;
+            normals[i * 2] = Vector3.Up;
+            normals[(i * 2) + 1] = Vector3.Up;
+        }
+
+        var indices = new int[Steps * 6];
+        for (int i = 0; i < Steps; i++)
+        {
+            int a = i * 2;
+            int b = ((i + 1) % Steps) * 2;
+            indices[i * 6] = a;
+            indices[(i * 6) + 1] = a + 1;
+            indices[(i * 6) + 2] = b + 1;
+            indices[(i * 6) + 3] = a;
+            indices[(i * 6) + 4] = b + 1;
+            indices[(i * 6) + 5] = b;
+        }
+
+        var arrays = new Godot.Collections.Array();
+        arrays.Resize((int)Mesh.ArrayType.Max);
+        arrays[(int)Mesh.ArrayType.Vertex] = vertices;
+        arrays[(int)Mesh.ArrayType.Normal] = normals;
+        arrays[(int)Mesh.ArrayType.Index] = indices;
+
+        var mesh = new ArrayMesh();
+        mesh.AddSurfaceFromArrays(Mesh.PrimitiveType.Triangles, arrays);
+        return mesh;
+    }
+
+    /// <summary>
+    /// Anillo y dorsal van <b>sin prueba de profundidad</b>. No es un capricho: la cápsula tiene
+    /// exactamente el radio del anillo, así que desde tres cuartos se come todo el anillo menos una uña de
+    /// medio radio por delante, y el dorsal entero. Con un modelo de verdad —más estrecho que un cilindro
+    /// de radio completo, sobre todo por las piernas— el anillo se vería solo y esto se puede quitar. El
+    /// precio, mientras tanto: el anillo de quien está detrás se pinta encima de la cápsula de quien está
+    /// justo delante en la misma columna.
+    /// </summary>
+    private static StandardMaterial3D RingMaterial(int team) => new()
+    {
+        ShadingMode = BaseMaterial3D.ShadingModeEnum.Unshaded,
+        AlbedoColor = new Color(team == 0 ? Style.TeamOwn : Style.TeamRival, 0.92f),
+        Transparency = BaseMaterial3D.TransparencyEnum.Alpha,
+        CullMode = BaseMaterial3D.CullModeEnum.Disabled,
+        NoDepthTest = true,
+    };
+
+    /// <summary>
+    /// El dorsal tumbado en el suelo, dentro del anillo (<c>Label3D</c> girado -90° sobre X: su cara pasa a
+    /// mirar hacia arriba y su vertical hacia el fondo del campo, que es arriba en pantalla). Se dimensiona
+    /// contra el radio del cuerpo, no en píxeles, para que un no-muerto y un orco lo lleven proporcionado.
+    /// </summary>
+    private static Label3D NewNumber(TracePlayer player, float radius, out Label3D label)
+    {
+        const int FontPixels = 64;
+        var tint = (player.Team == 0 ? Style.TeamOwn : Style.TeamRival).Lightened(0.62f);
+
+        label = new Label3D
+        {
+            Text = player.Number.ToString(System.Globalization.CultureInfo.InvariantCulture),
+            FontSize = FontPixels,
+
+            // Alto del texto ~1,4 radios: dos cifras caben de sobra dentro del anillo (2 radios de diámetro)
+            // y siguen siendo legibles con la compresión vertical de los tres cuartos.
+            PixelSize = radius * 1.4f / FontPixels,
+            Modulate = tint,
+            OutlineSize = 14,
+            OutlineModulate = new Color(Style.Background, 0.95f),
+            Billboard = BaseMaterial3D.BillboardModeEnum.Disabled,
+            NoDepthTest = true,
+            DoubleSided = true,
+            RotationDegrees = new Vector3(-90f, 0f, 0f),
+        };
+        return label;
     }
 
     // ------------------------------------------------------------------ sincronización con el tick
@@ -427,10 +551,12 @@ public partial class MatchPitchView3D : SubViewportContainer
             };
         }
 
-        var grey = new Color(0.63f, 0.64f, 0.67f);
+        // El color de equipo va entero, el mismo que la leyenda y las fichas de la vista 2D: las dos
+        // vistas van a convivir y el jugador no puede tener que traducir de una paleta a otra. El gris de
+        // «cápsulas grises» se lo queda la luz, que es la que da el volumen.
         return new StandardMaterial3D
         {
-            AlbedoColor = grey.Lerp(team == 0 ? Style.TeamOwn : Style.TeamRival, 0.42f),
+            AlbedoColor = team == 0 ? Style.TeamOwn : Style.TeamRival,
             Roughness = 0.85f,
             Metallic = 0f,
             SpecularMode = BaseMaterial3D.SpecularModeEnum.Disabled,
@@ -458,11 +584,23 @@ public partial class MatchPitchView3D : SubViewportContainer
             if (!trace.OnPitchAt(frame, i))
             {
                 body.Visible = false;
+                _rings[i].Visible = false;
+                _numbers[i].Visible = false;
                 continue;
             }
 
             body.Visible = true;
             var at = Interpolate(trace, frame, i);
+
+            // En silueta no hay anillo ni dorsal: esa vista existe para comprobar RA-002 en blanco y negro
+            // y cualquier cosa que se le añada deja de ser la prueba que es.
+            _rings[i].Visible = !SilhouetteMode;
+            _numbers[i].Visible = !SilhouetteMode;
+
+            // Dos alturas distintas y mínimas: el anillo pegado al césped y el dorsal un pelo por encima,
+            // para que no peleen entre sí por el mismo plano.
+            _rings[i].Position = new Vector3(at.X, 0.012f, at.Y);
+            _numbers[i].Position = new Vector3(at.X, 0.024f, at.Y);
 
             // Quien está fuera de la jugada (derribado, lesionado, expulsado) se tumba: con veinte cápsulas
             // grises la postura es lo único que dice de un vistazo quién sigue jugando (UI-002 en 3D).
