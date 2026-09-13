@@ -1,5 +1,5 @@
 {
-  "_doc": "Maldito comun: sube un atributo (lo que su rareza permite) el doble, y baja el doble en velocidad. Excelente en un central de bloque bajo, ruinoso en cualquiera que tenga que cubrir campo.",
+  "_doc": "Maldito comun: sube un atributo (lo que su rareza permite) el doble, y baja el doble en velocidad. Excelente en un central de bloque bajo, ruinoso en cualquiera que tenga que cubrir campo. ADR 0107: el castigo sube para que el valor MEDIDO del maldito sea NEGATIVO. Antes {'strength': 20, 'speed': -20} valia +45; ahora {'strength': 20, 'speed': -40} vale -21. La maldicion era una ganga en los cuatro malditos -incluso brutes_pauldron, neto CERO en puntos, valia +45 porque la fuerza (111) cuesta casi el doble que la velocidad (66)-, asi que colocarlo mal no costaba nada y el arquetipo era sabor, no decision (RF-077).",
   "id": "brutes_pauldron",
   "name": {
     "es": "Hombrera del bruto",
@@ -10,6 +10,6 @@
   "minAct": 1,
   "attributeBonus": {
     "strength": 20,
-    "speed": -20
+    "speed": -40
   }
 }

@@ -1,5 +1,5 @@
 {
-  "_doc": "Maldito raro: el organizador que lo ve todo, cubre todo el campo y no gana un solo duelo. Baja fuerza, que es el atributo mas caro del catalogo.",
+  "_doc": "Maldito raro: el organizador que lo ve todo, cubre todo el campo y no gana un solo duelo. Baja fuerza, que es el atributo mas caro del catalogo. ADR 0107: el castigo sube para que el valor MEDIDO del maldito sea NEGATIVO. Antes {'technique': 20, 'stamina': 20, 'leash': 20, 'strength': -20} valia +34; ahora {'technique': 20, 'stamina': 20, 'leash': 20, 'speed': -60} vale -53. La maldicion era una ganga en los cuatro malditos -incluso brutes_pauldron, neto CERO en puntos, valia +45 porque la fuerza (111) cuesta casi el doble que la velocidad (66)-, asi que colocarlo mal no costaba nada y el arquetipo era sabor, no decision (RF-077).",
   "id": "martyrs_relic",
   "name": {
     "es": "Reliquia del mártir",
@@ -12,6 +12,6 @@
     "technique": 20,
     "stamina": 20,
     "leash": 20,
-    "strength": -20
+    "speed": -60
   }
 }

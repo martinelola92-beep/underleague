@@ -1,5 +1,5 @@
 {
-  "_doc": "Maldito poco comun: el extremo que desborda a cualquiera y al que cualquier entrada parte por la mitad, porque la resistencia es lo que aguanta la lesion.",
+  "_doc": "Maldito poco comun: el extremo que desborda a cualquiera y al que cualquier entrada parte por la mitad, porque la resistencia es lo que aguanta la lesion. ADR 0107: el castigo sube para que el valor MEDIDO del maldito sea NEGATIVO. Antes {'speed': 20, 'technique': 20, 'stamina': -20} valia +111; ahora {'speed': 20, 'technique': 20, 'strength': -30} vale -26. La maldicion era una ganga en los cuatro malditos -incluso brutes_pauldron, neto CERO en puntos, valia +45 porque la fuerza (111) cuesta casi el doble que la velocidad (66)-, asi que colocarlo mal no costaba nada y el arquetipo era sabor, no decision (RF-077).",
   "id": "glass_cannon_spikes",
   "name": {
     "es": "Tacos de cristal",
@@ -11,6 +11,6 @@
   "attributeBonus": {
     "speed": 20,
     "technique": 20,
-    "stamina": -20
+    "strength": -30
   }
 }

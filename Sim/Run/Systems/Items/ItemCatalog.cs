@@ -245,10 +245,33 @@ public static class ItemLoader
                     $"un objeto maldito baja exactamente un atributo, y este baja {lowered.Count} (ADR 0036)");
             }
 
-            if (item.Modifier.Get(lowered[0]) != -magnitude)
+            // ADR 0107: la regla vieja era "baja exactamente -magnitude", y con ella los cuatro malditos
+            // del catálogo eran una GANGA. El valor de un atributo no es el de otro (ADR 0038: fuerza 111,
+            // velocidad 66, resistencia 30), así que un -20 de velocidad no paga un +20 de fuerza: incluso
+            // brutes_pauldron, que era neto CERO en puntos, valía +45. Colocar mal un maldito no costaba
+            // nada y el arquetipo era sabor en vez de decisión, contra RF-077.
+            //
+            // La regla nueva no fija la magnitud: exige que el objeto sea un LASTRE POR DEFECTO, es decir
+            // que su valor medido con la tabla de la ADR 0038 sea NEGATIVO. Así un maldito solo compensa
+            // cuando el atributo castigado no le sirve a su portador, que es exactamente la decisión que
+            // el arquetipo promete. Y queda auto-verificable: un maldito futuro que en realidad mejore no
+            // se puede cargar.
+            // Múltiplo de la magnitud BASE (10), no de la del arquetipo (20): el castigo hay que poder
+            // afinarlo contra la tabla de valor, que es lo que decide si el objeto es un lastre.
+            int penalty = item.Modifier.Get(lowered[0]);
+            if (penalty % scale.AttributeBonus != 0)
             {
                 throw new DataException(path, "$.attributeBonus",
-                    $"un objeto maldito baja el doble: '{lowered[0]}' debería valer {-magnitude} (ADR 0036)");
+                    $"el castigo de un maldito es múltiplo de {scale.AttributeBonus} y '{lowered[0]}' vale {penalty} (ADR 0107)");
+            }
+
+            int value = scale.ValueOf(item);
+            if (value >= 0)
+            {
+                throw new DataException(path, "$.attributeBonus",
+                    $"un objeto maldito tiene que ser un lastre por defecto y éste vale {value:+0;-0;0} "
+                        + $"con la tabla de la ADR 0038 (ItemScale.ValueOf): sube el castigo de "
+                        + $"'{lowered[0]}' (ADR 0107)");
             }
         }
         else if (lowered.Count > 0)

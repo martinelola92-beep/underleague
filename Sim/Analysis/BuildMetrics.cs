@@ -74,14 +74,38 @@ public static class BuildMetrics
     /// listaba entre las «malas a propósito».
     /// </summary>
     /// <summary>
-    /// Banda de la build mal construida contra su referencia (paquete AY, escalera desde 50): desde que un
-    /// perk mal puesto no hace nada en vez de castigar, construir mal vale lo que no construir. Ni pierde
-    /// (suelo 45: si perdiera, algo estaría restando) ni gana (techo 55: si ganara, no estaría mal puesta).
-    /// Sustituye al techo de 45 de §8 y de la ADR 0078.
+    /// Banda de la build mal construida contra su referencia. **ADR 0107: vuelve al techo de 45 de §8 y de
+    /// la ADR 0078, y el suelo se retira.**
+    ///
+    /// <para>El suelo de 45 lo puso el paquete AY con este argumento, escrito aquí mismo: «desde que un
+    /// perk mal puesto no hace nada en vez de castigar, construir mal vale lo que no construir; **si
+    /// perdiera, algo estaría restando**». Era correcto entonces. La ADR 0107 hace que **algo reste**: un
+    /// objeto maldito pasa a tener valor medido negativo, de modo que colocarlo en el portador equivocado
+    /// cuesta de verdad. Con eso, la premisa del suelo queda derogada y una build mal construida vuelve a
+    /// poder perder, que es lo que §8 pedía desde el principio.</para>
+    ///
+    /// <para>Queda un suelo de cortesía en 10 para que una build tan rota que incomparece no pase por
+    /// «mala» sin que nadie lo mire.</para>
     /// </summary>
-    public const double BadBuildMinWinRate = 45.0;
+    public const double BadBuildMinWinRate = 10.0;
 
-    public const double BadBuildMaxWinRate = 55.0;
+    public const double BadBuildMaxWinRate = 45.0;
+
+    /// <summary>
+    /// Banda de la build tomada al AZAR contra su referencia (ADR 0107). La ADR 0078 la juzgaba con el
+    /// mismo techo que una build mala, con el argumento de que «una build tomada al azar es una build mal
+    /// construida». Desde la ADR 0107 eso ya no es cierto: lo que hace mala a una build es **algo que
+    /// resta** —un objeto maldito en el portador equivocado, una colocación que se estorba— y una build al
+    /// azar no lleva ninguna de las dos cosas. No está mal construida: está construida **sin criterio**.
+    ///
+    /// <para>Así que la banda 45-55 que el paquete AY inventó para «mala» se queda aquí, que es lo que
+    /// describe de verdad: ni gana ni pierde. Las dos bandas no se inventan, se intercambian y cada una va
+    /// a la etiqueta que le corresponde.</para>
+    /// </summary>
+    public const double RandomBuildMinWinRate = 45.0;
+
+    /// <inheritdoc cref="RandomBuildMinWinRate"/>
+    public const double RandomBuildMaxWinRate = 55.0;
 
     /// <summary>
     /// Prefijo de la métrica por build de <c>randomBuildLosesToNone</c> (§8, <b>ADR 0078</b>: la build
@@ -245,8 +269,8 @@ public static class BuildMetrics
         IReadOnlyList<BuildCellResult> cells,
         IReadOnlyList<string> randomBuilds,
         IReadOnlyDictionary<string, string> baselineOpponentByBuild,
-        double maxWinRate = BadBuildMaxWinRate,
-        double minWinRate = BadBuildMinWinRate) =>
+        double maxWinRate = RandomBuildMaxWinRate,
+        double minWinRate = RandomBuildMinWinRate) =>
         Within(cells, randomBuilds, baselineOpponentByBuild, RandomBuildLosesToNonePrefix, minWinRate, maxWinRate);
 
     /// <summary>
