@@ -1,6 +1,6 @@
 # Estilo visual
 
-**Versión 0 · 13 de septiembre de 2026 · NO definitivo, se itera.**
+**Versión 1 · 13 de septiembre de 2026 · NO definitivo, se itera.**
 
 Este documento fija el **tono** y sirve de base a los encargos de arte. Lo de abajo es el punto de
 partida que dio el revisor, no una decisión cerrada: se espera cambiarlo.
@@ -68,6 +68,87 @@ Se conservan tal cual los dieron, para poder comparar con lo que venga después.
 >
 > Clean graphic layout, dark fantasy comic UI icons, game asset reference layout, high resolution.
 > `--no photo realism, smooth gradients, 3d depth`
+
+---
+
+## 2bis. Los prompts adaptados (v1)
+
+**Decisión del revisor (13 sep 2026): los prompts se adaptan a lo que ya había.** Eso resuelve §4.1 a
+favor de la opción (a): **se mantienen RA-025 y RA-026**. Nada de calaveras, huesos ni marcos góticos; el
+gore es de estadio, no de mazmorra. Las razas son las cinco del lanzamiento y el HUD es el del juego que
+existe, no el de un juego con barras de vida.
+
+Estos son los prompts que se usan. Los de §2 se conservan solo para comparar.
+
+### 2bis.1 Personajes y entorno
+
+> Hand-drawn 2D concept art sheet for a dark comedy fantasy **7-a-side football** management game,
+> inspired by the art style of **Lucky Tower, Castle Crashers and Pit People**. Clean 2D vector style,
+> bold black lineart, vibrant flat colours with simple three-step cel-shading, cartoon slapstick
+> aesthetics. Every character reads as a **footballer first, monster second**: they wear team kits with
+> numbered shirts, sleeves in the team colour, boots and shin guards.
+>
+> **Top section — the five playable races, full body, readable in silhouette:**
+> - **Dwarf**, short and squat: a beard that covers half his body, and a helmet.
+> - **Human**, the neutral reference: ordinary build, nothing exaggerated.
+> - **Undead**, gaunt and narrow: exposed ribs and one empty eye socket — a footballer who happens to be
+>   dead, *not* a decorative skeleton.
+> - **Elf**, tall and thin: height, narrowness and a long mane.
+> - **Orc**, the widest: huge shoulders, long arms and tusks.
+>
+> Include one **goalkeeper variant** with a distinctive kit, and the **referee**: a single neutral-race
+> sprite with a whistle, plus small portrait busts showing different temperaments (strict, lenient, homer,
+> one-eyed, cowardly, corrupt).
+>
+> **Bottom section — environment, real football culture crossed with black humour:** a run-down municipal
+> stadium; advertising hoardings around the pitch for sinister sponsors (an undertaker, a limb clinic, a
+> butcher); hand-painted ultras banners in the stands; a manual flip-number scoreboard; a stretcher and a
+> medical bag on the touchline; **dried blood stains on the grass** as flat comic-book red shapes.
+>
+> Clean presentation on a parchment background, readability focused, NPR cartoon aesthetic, high
+> resolution.
+> `--no realistic textures, 3d render, gradients, skulls, bones, gothic architecture, obsidian, ghosts, spectral effects, dungeon imagery`
+
+### 2bis.2 Interfaz
+
+> User Interface (UI) concept art sheet for a dark comedy fantasy football management game.
+> Flash/webtoon cartoon aesthetic, thick black outlines, flat colours, high legibility.
+>
+> **Panel 1 — match view.** A **16 × 6 tile pitch seen whole**, from a **fixed three-quarter orthographic
+> camera** (no perspective, no scrolling, no zoom). Each player stands on a **coloured ring on the grass
+> bearing his shirt number**; the ring is the player's actual footprint, so a broad orc's ring is visibly
+> larger than a lean undead's. Team identity by **kit colour only**. Small comic icons above a player show
+> what he is doing — chasing, dribbling, shooting, tackling, knocked down, injured, sent off. A **score
+> banner** at the top, a **match event log** panel, and a **timeline scrub bar** with marks at the key
+> moments.
+> **This is an autobattler: there are NO health bars, NO stamina meters and NO action buttons during the
+> match.** The only live inputs are a single consumable and a forced-substitution window.
+>
+> **Panel 2 — between matches.** The **Team screen**: a placement grid where players are dragged onto
+> tiles, player cards showing five attributes and their perks, and three consumable slots. The **Market**:
+> four stalls side by side — players, perks, equipment and consumables — as item cards with a price, in
+> bold medieval display type.
+>
+> Clean graphic layout, comic UI icons, game asset reference layout, high resolution.
+> `--no photo realism, smooth gradients, 3d depth, health bars, mana bars, ability hotbars, skulls, gothic frames`
+
+### 2bis.3 Proporciones, si se piden modelos
+
+No son decorativas: **el cuerpo dibujado es el volumen que simula el motor** (`bodyRadius` de
+`data/races/`), así que un encargo de modelo tiene que respetarlas o el juego mentirá sobre quién bloquea
+a quién.
+
+| raza | ancho relativo | alto relativo | rasgo firma |
+|---|---|---|---|
+| Enano | 0,60 | 0,74 | barba y casco |
+| Orco | **0,76** | 0,86 | hombros, brazos largos, colmillos |
+| No-muerto | **0,56** | 0,87 | costillas, cuenca vacía |
+| Humano | 0,64 | 0,91 | referencia neutra |
+| Elfo | 0,60 | **1,09** | altura, estrechez, melena |
+
+**Humano y no-muerto no se distinguen por proporción** —lo midió la prueba de siluetas con cápsulas—, así
+que su separación tiene que venir entera del rasgo firma. Es la comprobación que hay que hacer en el
+primer modelo, no en el último.
 
 ---
 
@@ -162,3 +243,4 @@ paga arte de razas que no salen hasta el DLC.
 | versión | fecha | qué cambió |
 |---|---|---|
 | v0 | 13 sep 2026 | Punto de partida del revisor: tono Lucky Tower y los dos prompts de §2 |
+| **v1** | 13 sep 2026 | Prompts adaptados a lo ya decidido (§2bis): se mantienen RA-025 y RA-026 —ni calaveras ni gótico—, las cinco razas de lanzamiento con su rasgo firma, y el HUD real sin barras de vida ni botones de acción |
