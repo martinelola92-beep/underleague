@@ -7,6 +7,7 @@ using Underleague.Sim.Model;
 using Underleague.Sim.Placement;
 using Underleague.Sim.Random;
 using Underleague.Sim.Run;
+using Underleague.Sim.Run.Systems.Consumables;
 using Underleague.Sim.Run.Systems.Items;
 
 namespace Underleague.Game.Data;
@@ -170,6 +171,102 @@ public sealed class TeamState
 
         _testItems ??= new Dictionary<int, ItemDefinition>();
         _testItems[playerId] = item;
+    }
+
+    /// <summary>
+    /// <b>Solo para la secuencia de capturas</b> (CAT-B, mismo apaño que <see cref="ForceTestItem"/> para
+    /// objetos): sin run detrás no hay inventario de consumibles del que equipar nada, y la sección nueva
+    /// necesita enseñar algo más que el mensaje de vacío. Nunca se usa con una run real detrás.
+    /// </summary>
+    private ConsumableCatalog? _testConsumables;
+
+    private Dictionary<string, int>? _testConsumableStock;
+
+    private List<EquippedConsumable>? _testEquippedConsumables;
+
+    /// <summary>
+    /// Consumibles equipados de la run (CAT-B, RF-080..082), o vacío sin run detrás: sin una run no hay
+    /// inventario del que equipar nada.
+    /// </summary>
+    public IReadOnlyList<EquippedConsumable> EquippedConsumables =>
+        _testEquippedConsumables ?? _run?.State?.Consumables ?? Array.Empty<EquippedConsumable>();
+
+    /// <summary>
+    /// Consumibles del inventario, uno por copia y ordenados por id (RT-041): lo que la sección de
+    /// consumibles de Equipo enseña para elegir. Ver <see cref="RunState.OwnedConsumables"/>.
+    /// </summary>
+    public IReadOnlyList<string> OwnedConsumables
+    {
+        get
+        {
+            if (_testConsumableStock is null)
+            {
+                return _run?.State?.OwnedConsumables ?? Array.Empty<string>();
+            }
+
+            var ids = new List<string>();
+            foreach (var (id, count) in _testConsumableStock)
+            {
+                for (int i = 0; i < count; i++)
+                {
+                    ids.Add(id);
+                }
+            }
+
+            ids.Sort(StringComparer.Ordinal);
+            return ids;
+        }
+    }
+
+    /// <summary>Copias sueltas de ese consumible en el inventario.</summary>
+    public int ConsumablesOwned(string consumableId)
+    {
+        if (_testConsumableStock is not null)
+        {
+            return _testConsumableStock.TryGetValue(consumableId, out int count) ? count : 0;
+        }
+
+        return _run?.State?.ConsumablesOwned(consumableId) ?? 0;
+    }
+
+    /// <summary>
+    /// Definición de un consumible, del catálogo de <b>esta</b> run; null sin run detrás (salvo que la
+    /// secuencia de capturas haya forzado uno con <see cref="ForceTestConsumables"/>) o si el id no existe.
+    /// </summary>
+    public ConsumableDefinition? Consumable(string consumableId) =>
+        _run?.Systems?.Consumables.Find(consumableId) ?? _testConsumables?.Find(consumableId);
+
+    /// <summary>
+    /// Aplica la lista completa de consumibles equipados (CAT-B). Igual que <see cref="Move"/> con
+    /// <c>SetLineup</c>: la regla la valida <c>/Sim</c> (<c>RunEngine.Apply(SetConsumables)</c>, RF-080..082);
+    /// aquí solo se pide y se refresca la copia local. Sin run detrás no hay inventario que equipar, así
+    /// que no hace nada.
+    /// </summary>
+    public void ApplyConsumables(IReadOnlyList<EquippedConsumable> consumables)
+    {
+        if (_run is not { HasRun: true })
+        {
+            return;
+        }
+
+        _run.Apply(new SetConsumables(consumables));
+        Team = TeamOf(_run.State!, Catalog, _run.Systems);
+    }
+
+    /// <summary>
+    /// <b>Solo para la secuencia de capturas</b>: fuerza un catálogo, un inventario y unos equipados sin
+    /// tocar la run ni escribir nada de verdad. No hace nada si ya hay una run real detrás.
+    /// </summary>
+    public void ForceTestConsumables(ConsumableCatalog catalog, IReadOnlyDictionary<string, int> owned, IReadOnlyList<EquippedConsumable> equipped)
+    {
+        if (_run is { HasRun: true })
+        {
+            return;
+        }
+
+        _testConsumables = catalog;
+        _testConsumableStock = new Dictionary<string, int>(owned, StringComparer.Ordinal);
+        _testEquippedConsumables = new List<EquippedConsumable>(equipped);
     }
 
     /// <summary>Jugador alineado en esa casilla, o null.</summary>

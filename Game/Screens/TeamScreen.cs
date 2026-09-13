@@ -9,6 +9,7 @@ using Underleague.Sim.Model;
 using Underleague.Sim.Perks;
 using Underleague.Sim.Placement;
 using Underleague.Sim.Run;
+using Underleague.Sim.Run.Systems.Consumables;
 using Underleague.Sim.Run.Systems.Items;
 using SimPosition = Underleague.Sim.Model.Position;
 
@@ -38,8 +39,16 @@ public partial class TeamScreen : Control
     private Label _subtitle = null!;
     private Label _info = null!;
     private Label _lineupTable = null!;
+    private Label _lineupTitle = null!;
     private Label _riskTitle = null!;
     private Label _risk = null!;
+    private Label _pitchTitle = null!;
+    private Label _pitchSubtitle = null!;
+    private Label _mouseHelp = null!;
+    private Label _padHelp = null!;
+    private Button _zonesButton = null!;
+    private Button _coverageButton = null!;
+    private ConsumablesPanel _consumables = null!;
     private Toast _toast = null!;
 
     private int _selected = -1;
@@ -48,6 +57,7 @@ public partial class TeamScreen : Control
     private bool _focusRoster;
     private bool _coverage;
     private bool _zones;
+    private bool _consumablesMode;
     private Cell _pressCell;
     private Cell _cursor = PlacementView.GoalkeeperCell;
 
@@ -61,32 +71,58 @@ public partial class TeamScreen : Control
         _subtitle = GetNode<Label>("Subtitulo");
         _info = GetNode<Label>("Info");
         _lineupTable = GetNode<Label>("Vinculos");
+        _lineupTitle = GetNode<Label>("TituloVinculos");
         _riskTitle = GetNode<Label>("TituloRiesgo");
         _risk = GetNode<Label>("Riesgo");
+        _pitchTitle = GetNode<Label>("TituloCampo");
+        _pitchSubtitle = GetNode<Label>("SubtituloCampo");
+        _mouseHelp = GetNode<Label>("AyudaRaton");
+        _padHelp = GetNode<Label>("AyudaMando");
 
         GetNode<Label>("Titulo").Text = UiText.Get("ui.team.title");
         GetNode<Label>("TituloPlantilla").Text = UiText.Get("ui.team.roster");
-        GetNode<Label>("TituloCampo").Text = UiText.Get("ui.team.pitch");
-        GetNode<Label>("SubtituloCampo").Text = UiText.Get("ui.team.pitchHint");
-        GetNode<Label>("TituloVinculos").Text = UiText.Get("ui.team.lineup");
+        _pitchTitle.Text = UiText.Get("ui.team.pitch");
+        _pitchSubtitle.Text = UiText.Get("ui.team.pitchHint");
+        _lineupTitle.Text = UiText.Get("ui.team.lineup");
         _riskTitle.Text = UiText.Get("ui.scout.risk");
 
         // El modo de cobertura también tiene disparador de ratón: los dos flujos de UI-006 son completos,
         // ninguno es un añadido del otro.
-        var coverageButton = GetNode<Button>("BotonCobertura");
-        coverageButton.Text = UiText.Get("ui.team.coverageButton");
-        coverageButton.Pressed += ToggleCoverage;
+        _coverageButton = GetNode<Button>("BotonCobertura");
+        _coverageButton.Text = UiText.Get("ui.team.coverageButton");
+        _coverageButton.Pressed += ToggleCoverage;
 
         // El botón de zonas es el "qué significan estas palabras" de los perks de colocación: sin él, los
         // textos "empieza en su tercio adelantado" o "en una fila de su izquierda" describen una
         // cuadrícula que el jugador no ve. Va al lado del de cobertura porque los dos son lecturas del
         // mismo campo, y son excluyentes.
-        var zonesButton = GetNode<Button>("BotonZonas");
-        zonesButton.Text = UiText.Get("ui.team.zonesButton");
-        zonesButton.Pressed += ToggleZones;
+        _zonesButton = GetNode<Button>("BotonZonas");
+        _zonesButton.Text = UiText.Get("ui.team.zonesButton");
+        _zonesButton.Pressed += ToggleZones;
 
-        GetNode<Label>("AyudaRaton").Text = UiText.Get("ui.input.mouse");
-        GetNode<Label>("AyudaMando").Text = UiText.Get("ui.input.pad");
+        // CAT-B: equipar consumibles es una decisión previa al partido igual que la alineación, así que
+        // vive aquí. El botón se monta por código (no hay hueco libre en la fila de Zonas/Cobertura del
+        // .tscn) en el mismo tramo que ya usa "Volver" cuando hay una run (AddBackButton, x=1140..1260):
+        // este va justo a su izquierda, x=900..1032, donde Título/Subtítulo no llegan (offset_right=900).
+        var consumablesButton = new Button
+        {
+            Text = UiText.Get("ui.team.consumableButton"),
+            Position = new Vector2(900f, 8f),
+            Size = new Vector2(132f, 26f),
+            FocusMode = FocusModeEnum.None,
+        };
+        consumablesButton.AddThemeFontSizeOverride("font_size", Style.TextSmall);
+        consumablesButton.Pressed += ToggleConsumables;
+        AddChild(consumablesButton);
+
+        // Sustituye el panel de campo entero mientras está encendido (ApplyFieldMode): la decisión de
+        // equipar no tiene nada que ver con la cuadrícula, así que no hay nada del campo que enseñar a la
+        // vez. Ocupa el mismo hueco que Campo/Leyenda/Info/Vínculos/Riesgo, desde la fila del título de
+        // "COLOCACIÓN".
+        _consumables = new ConsumablesPanel { Position = new Vector2(410f, 58f), Visible = false };
+        AddChild(_consumables);
+
+        UpdateInputHelp();
 
         // Con una run en curso, la plantilla es la suya: esta pantalla es donde se toman todas las
         // decisiones de plantilla (UI-020) y las decisiones son sobre los jugadores de verdad. Sin run
@@ -119,6 +155,7 @@ public partial class TeamScreen : Control
         BuildRoster();
         RefreshCards();
         RefreshPitch();
+        _consumables.Rebuild(_state);
 
         if (WantsScreenshots())
         {
@@ -191,6 +228,12 @@ public partial class TeamScreen : Control
 
         if (@event.IsActionPressed("ui_cancel"))
         {
+            if (_consumablesMode)
+            {
+                ToggleConsumables();
+                return;
+            }
+
             if (_held >= 0)
             {
                 _held = -1;
@@ -482,7 +525,7 @@ public partial class TeamScreen : Control
         }
     }
 
-    /// <summary>Los dos modos de campo son excluyentes: superpuestos no se entiende ninguno (§6).</summary>
+    /// <summary>Los tres modos de campo son excluyentes: superpuestos no se entiende ninguno (§6, y CAT-B lo extiende a consumibles).</summary>
     private void ToggleCoverage()
     {
         _coverage = !_coverage;
@@ -491,7 +534,10 @@ public partial class TeamScreen : Control
             _zones = false;
         }
 
+        _consumablesMode = false;
         RefreshPitch();
+        ApplyFieldMode();
+        UpdateInputHelp();
     }
 
     private void ToggleZones()
@@ -502,7 +548,59 @@ public partial class TeamScreen : Control
             _coverage = false;
         }
 
+        _consumablesMode = false;
         RefreshPitch();
+        ApplyFieldMode();
+        UpdateInputHelp();
+    }
+
+    /// <summary>
+    /// CAT-B: a diferencia de cobertura y zonas, que solo cambian qué se lee sobre el campo, este modo
+    /// sustituye el campo entero (<see cref="ApplyFieldMode"/>): equipar consumibles no tiene nada que ver
+    /// con la cuadrícula, así que no hay nada de ella que enseñar a la vez.
+    /// </summary>
+    private void ToggleConsumables()
+    {
+        _consumablesMode = !_consumablesMode;
+        if (_consumablesMode)
+        {
+            _coverage = false;
+            _zones = false;
+            _consumables.Rebuild(_state);
+        }
+
+        RefreshPitch();
+        ApplyFieldMode();
+        UpdateInputHelp();
+    }
+
+    /// <summary>Enseña el panel de campo o el de consumibles; nunca los dos a la vez.</summary>
+    private void ApplyFieldMode()
+    {
+        bool showPitch = !_consumablesMode;
+        _pitch.Visible = showPitch;
+        _legend.Visible = showPitch && !_zones;
+        _pitchTitle.Visible = showPitch;
+        _pitchSubtitle.Visible = showPitch;
+        _zonesButton.Visible = showPitch;
+        _coverageButton.Visible = showPitch;
+        _info.Visible = showPitch;
+        _lineupTitle.Visible = showPitch;
+        _lineupTable.Visible = showPitch;
+        _riskTitle.Visible = showPitch && _riskTitle.Visible;
+        _risk.Visible = showPitch && _risk.Visible;
+        _consumables.Visible = _consumablesMode;
+    }
+
+    /// <summary>
+    /// La ayuda de mandos cambia con el modo: la sección de consumibles es hoy solo de ratón (mismo
+    /// criterio que <c>ui.input.padPending</c> en Mercado), así que la línea de mando lo dice en vez de
+    /// prometer un segundo flujo que no existe.
+    /// </summary>
+    private void UpdateInputHelp()
+    {
+        _mouseHelp.Text = _consumablesMode ? UiText.Get("ui.team.consumableInputMouse") : UiText.Get("ui.input.mouse");
+        _padHelp.Text = _consumablesMode ? UiText.Get("ui.input.padPending") : UiText.Get("ui.input.pad");
     }
 
     private void Flash(int playerId)
@@ -1084,6 +1182,21 @@ public partial class TeamScreen : Control
                 _rosterIndex = IndexOfCard(carrier);
                 Pad("ui_accept");
             }, true),
+            ("equipo-consumibles", () =>
+            {
+                // CAT-B: aquí se equipa lo que ya se compró en el mercado. La plantilla de pruebas no
+                // arrastra ninguna run (TeamState.Load no tiene inventario detrás, igual que no tiene
+                // objeto ni salario, ver ui-equipo.md §11), así que sin forzar nada la captura solo
+                // enseñaría el mensaje de inventario vacío. EnsureTestConsumables (mismo apaño que
+                // EnsurePlacementItem para objetos) le pone un inventario de verdad: uno manual, uno
+                // condicional y uno sin equipar, para que se vean las tres filas a la vez.
+                Pad("ui_cancel");
+                _toast.Post(Array.Empty<ToastLine>());
+                OnCardZoneHint(string.Empty, string.Empty);
+                EnsureTestConsumables();
+                ToggleConsumables();
+                _consumables.SelectForTest("smoke_flare");
+            }, false),
         };
 
         string directory = ProjectSettings.GlobalizePath("res://screenshots");
@@ -1393,5 +1506,36 @@ public partial class TeamScreen : Control
         }
 
         return target;
+    }
+
+    /// <summary>
+    /// <b>Solo para la secuencia de capturas</b> (CAT-B): la plantilla de pruebas no arrastra ninguna run
+    /// (<c>TeamState.Load</c>), así que sin esto la sección de consumibles enseñaría el mensaje de
+    /// inventario vacío y ninguna otra cosa. Mismo apaño que <see cref="EnsurePlacementItem"/> con los
+    /// objetos: fuerza un catálogo cargado directo de <c>/data</c> y un inventario de verdad —dos vendajes
+    /// (uno equipado como manual), una bengala equipada como condicional y un amuleto sin equipar— para
+    /// que la captura enseñe las tres filas y el panel de acción a la vez. No toca nada con una run detrás.
+    /// </summary>
+    private void EnsureTestConsumables()
+    {
+        if (RunController.Instance is { HasRun: true })
+        {
+            return;
+        }
+
+        var catalog = ConsumableLoader.FromJson(GameData.Snapshot);
+        var owned = new Dictionary<string, int>
+        {
+            ["field_bandage"] = 2,
+            ["smoke_flare"] = 1,
+            ["lucky_charm"] = 1,
+        };
+        var equipped = new[]
+        {
+            new EquippedConsumable("field_bandage", ConsumableMode.Manual, string.Empty),
+            new EquippedConsumable("smoke_flare", ConsumableMode.Conditional, "scoreBehind"),
+        };
+
+        _state.ForceTestConsumables(catalog, owned, equipped);
     }
 }
