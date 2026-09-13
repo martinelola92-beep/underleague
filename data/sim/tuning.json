@@ -23,13 +23,15 @@
     "looseBallFrictionPercent": 92
   },
   "states": {
+    "_doc": "Duraciones y enfriamientos de la maquina de estados del jugador, en ticks. OffBallTackleCooldownTicks (ADR 0105) es el enfriamiento de la entrada SIN BALON, separado y mas largo que el de la entrada normal: es la palanca que gobierna cuantas hay por partido, y es la unica continua que existe -la comparacion de utilidad entre Tackle y MarkOpponent es casi constante para un defensa, asi que el bono de la entrada se comporta como un interruptor de tres posiciones-. Medido con bono 150: 14,55 entradas por partido con 60 ticks, 13,38 con 120, 12,29 con 180 y 11,75 con 240, contra 9,19 sin la entrada sin balon.",
     "PassingTicks": 5,
     "ShootingTicks": 5,
     "TacklingTicks": 3,
     "KnockedDownTicks": 18,
     "CelebratingTicks": 30,
     "DribbleDuelCooldownTicks": 40,
-    "TackleCooldownTicks": 60
+    "TackleCooldownTicks": 60,
+    "OffBallTackleCooldownTicks": 180
   },
   "pass": {
     "_doc": "maxLeadCells (AZ-B paso 1, docs/plan-pases-trayectoria.md): techo absoluto, en casillas, del adelanto del pase; el destino se adelanta por lo que el receptor va a poder recorrer hacia donde su utilidad ha decidido ir (TargetPoint), nunca por la extrapolacion ciega de Velocity. 1,5 de partida (el adelanto medio medido antes era 1,44 y en el 14,3% de los pases no habia nadie en el destino al llegar). Medido: subirlo a 2,0 no cambia nada porque la cota que manda es la distancia a la intencion del receptor; lo que devuelve el recorrido hacia delante es el pase en profundidad (paso 5), no un adelanto mayor. interceptContactPercent (AZ-B paso 2): la cuota de intercepcion (y de bloqueo del tiro, que hereda la misma funcion) se multiplica por un factor de proximidad, en tanto por ciento, que vale 100 en el borde de interceptRadiusCells y sube linealmente hasta este valor cuando el balon pasa por dentro del cuerpo del rival (bodyRadius de su raza, data/races): un orco tapa mas que un elfo sin ninguna regla nueva. Antes la distancia no entraba en la tirada: un rival a 0,05 casillas tiraba lo mismo que uno a 0,85. 350 (el plan partia de 600: con 600 y el paso 3 instalado, passChainAvgLength quedaba en 1,97 en la semilla 1, bajo el suelo de 2; es el unico ajuste que el plan permite y se aplico una vez).",
@@ -75,11 +77,12 @@
     "divePenaltyPercent": 20
   },
   "tackle": {
-    "_doc": "ADR 0041: la PRESION del que entra -fuerza y velocidad repartidas por strengthSharePercent- contra la tecnica del conductor. foulStrengthFactor y hardTackleThreshold pasan a medirse contra la fuerza del conductor: una entrada es sucia cuando el que entra es mucho mas grande que el que la recibe, no cuando es grande en abstracto. hardTackleThreshold esta en centesimas de punto de DIFERENCIA de fuerza. ADR 0050 P2: la tirada de este canal ya no es una uniforme sino el PROMEDIO DE DOS, asi que la base se reexpresa en la escala nueva para no mover el punto de trabajo: la probabilidad efectiva es la acumulada triangular, F(p)=2p2 por debajo del centro y 1-2(1-p)2 por encima. Solo la disputa del balon (baseWin), NO la falta ni las tarjetas: baseWin pasa de 2800 a 3740 porque F(0,374)=0,28, el mismo 28 por ciento de antes con pendiente 1,5. Medido en docs/fase2-diseno.md 22.",
+    "_doc": "ADR 0041: la PRESION del que entra -fuerza y velocidad repartidas por strengthSharePercent- contra la tecnica del conductor. foulStrengthFactor y hardTackleThreshold pasan a medirse contra la fuerza del conductor: una entrada es sucia cuando el que entra es mucho mas grande que el que la recibe, no cuando es grande en abstracto. hardTackleThreshold esta en centesimas de punto de DIFERENCIA de fuerza. ADR 0050 P2: la tirada de este canal ya no es una uniforme sino el PROMEDIO DE DOS, asi que la base se reexpresa en la escala nueva para no mover el punto de trabajo: la probabilidad efectiva es la acumulada triangular, F(p)=2p2 por debajo del centro y 1-2(1-p)2 por encima. Solo la disputa del balon (baseWin), NO la falta ni las tarjetas: baseWin pasa de 2800 a 3740 porque F(0,374)=0,28, el mismo 28 por ciento de antes con pendiente 1,5. Medido en docs/fase2-diseno.md 22. ADR 0105: offBallFoulBase es la base de falta de la ENTRADA SIN BALON al marcado, que en futbol es falta por definicion; 6000 contra los 320 de la entrada normal, y el arbitro senala el 80 por ciento de ellas (referee.whistlePercent). Es el freno del sistema. No sube mas porque la lesion lo acota: con 8000, injuriesPerMatch sale de banda (0,92 en la semilla 1); con 6000 se queda en 0,82 / 0,85 y foulsPerMatch pasa de 4,34 / 3,89 a 7,76 / 6,51.",
     "baseWin": 3740,
     "pressureFactor": 20,
     "strengthSharePercent": 60,
     "foulBase": 320,
+    "offBallFoulBase": 6000,
     "foulStrengthFactor": 5,
     "hardTackleThreshold": 1500,
     "yellowCardBase": 250,

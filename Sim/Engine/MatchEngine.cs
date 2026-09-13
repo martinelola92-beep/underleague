@@ -848,7 +848,16 @@ internal sealed class MatchEngine : IPerkWorld
                 // por partido que salían cuando la utilidad elegía Tackle en cada decisión con el rival
                 // cerca, y deja el número de entradas gobernado por un valor de datos (paquete E).
                 player.EnterState(PlayerState.Tackling, _tuning.States.TacklingTicks);
-                player.TackleCooldown = _tuning.States.TackleCooldownTicks + _tuning.States.TacklingTicks;
+                // ADR 0105: la entrada SIN BALON tiene su propio enfriamiento, mas largo. Es la palanca
+                // que gobierna CUANTAS hay, y es continua: la comparacion de utilidad contra MarkOpponent
+                // no lo es -las dos son casi constantes para un defensa, asi que el bono de la entrada se
+                // comporta como un interruptor de tres posiciones (medido: 10,5 / 12,8 / 14,5 entradas por
+                // partido al pasar de 62 a 65 y a 67 puntos)-. Con el enfriamiento propio la decision
+                // puede ser holgada -si estoy pegado a mi marcado y puedo, entro- y el ritmo lo pone un
+                // tiempo de recuperacion, que es lo que de verdad se quiere dosificar.
+                player.TackleCooldown = (player.TackleOffBall
+                    ? _tuning.States.OffBallTackleCooldownTicks
+                    : _tuning.States.TackleCooldownTicks) + _tuning.States.TacklingTicks;
                 break;
             case PlayerAction.Block:
                 // El bloqueo lleva su PROPIO enfriamiento (paquete U). El paquete V lo compartía con el
@@ -1920,6 +1929,10 @@ internal sealed class MatchEngine : IPerkWorld
     private void ResolveTackle(MatchPlayer tackler)
     {
         var carrier = tackler.TackleTarget;
+        // ADR 0105: la intención con la que se decidió la entrada. Se lee aquí y se limpia enseguida para
+        // que ninguna resolución posterior herede la bandera de una decisión vieja.
+        bool offBall = tackler.TackleOffBall;
+        tackler.TackleOffBall = false;
         float reach = _catalog.Ai.Context.TackleDistanceMaxCells + TackleReachMargin;
         if (carrier is null || !carrier.OnPitch || Vec2.Distance(tackler.Position, carrier.Position) > reach)
         {
@@ -1947,8 +1960,12 @@ internal sealed class MatchEngine : IPerkWorld
         // nivel 8 cometía faltas todo el rato aunque su rival fuese igual de grande.
         // La falta es un suceso raro: no la acota P4 (su base está por debajo del suelo), pero sí la
         // multiplica el canal del perk como cualquier otra cuota (ADR 0050 P1).
+        // ADR 0105: entrar a quien no lleva el balón ES falta, así que la base es otra —offBallFoulBase—
+        // y es mucho mayor. Es el freno del sistema: sin él, pegarse sale barato y el partido deja de
+        // parecer fútbol. El resto de la fórmula (diferencia de fuerza, canal de perk, criterio) no
+        // cambia: una entrada sin balón se juzga igual, solo parte de más arriba.
         int foulChance = ProbabilityScale.Apply(
-            tackle.FoulBase
+            (offBall ? tackle.OffBallFoulBase : tackle.FoulBase)
                 + (tackle.FoulStrengthFactor * (tackler.Strength - carrier.Strength))
                 + (tackler.FoulChanceBonus * 100)
                 + (tackler.HardTackleBonus * 100)
@@ -1966,10 +1983,18 @@ internal sealed class MatchEngine : IPerkWorld
             tackler.Tackles++;
             Emit(EventType.Tackle, isFoul ? "foul" : (isWin ? "won" : "missed"), tackler, opponent: carrier, publish: false);
         }
+        else if (offBall)
+        {
+            // ADR 0105: la entrada sin balón cuenta como entrada —lo es— y por eso entra en
+            // report.Tackles y en tacklesPerMatch (RT-056). Detail propio para poder separarlas en el log.
+            _report.Tackles++;
+            tackler.Tackles++;
+            Emit(EventType.Tackle, isFoul ? "offBallFoul" : "offBallMissed", tackler, opponent: carrier, publish: false);
+        }
 
         if (isFoul)
         {
-            WhistleOrLetPlay(tackler, carrier, offBall: false);
+            WhistleOrLetPlay(tackler, carrier, offBall: offBall);
         }
         else if (isWin)
         {

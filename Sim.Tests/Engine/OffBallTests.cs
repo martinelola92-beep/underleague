@@ -324,6 +324,108 @@ public sealed class OffBallTests
     }
 
     /// <summary>Tres jugadores del equipo 0 y tres del 1, en el orden por id que usa el motor.</summary>
+    /// <summary>
+    /// ADR 0105: sin poseedor rival al alcance, un <b>defensa</b> pegado a su marcado lo tiene como
+    /// objetivo legal de entrada, con la bandera de entrada sin balón puesta para que la resolución sepa
+    /// que ésa es la falta cara.
+    /// </summary>
+    [Fact]
+    public void ADefenderTacklesHisMarkWhenNoOpponentCarriesTheBallWithinReach()
+    {
+        var (player, context) = OffBallTackleScenario(Position.Defender);
+
+        Assert.Equal(PlayerAction.Tackle, Utility.Choose(context, player, null));
+        Assert.Same(context.Players[1], player.TackleTarget);
+        Assert.True(player.TackleOffBall, "la entrada al marcado tiene que marcarse como entrada sin balón");
+    }
+
+    /// <summary>
+    /// ADR 0105 §2: un delantero no persigue a su par por el campo. Mismo escenario, otro rol: la entrada
+    /// queda fuera de alcance y no hay objetivo ni bandera.
+    /// </summary>
+    [Fact]
+    public void AForwardNeverTacklesHisMarkOffTheBall()
+    {
+        var (player, context) = OffBallTackleScenario(Position.Forward);
+
+        Assert.NotEqual(PlayerAction.Tackle, Utility.Choose(context, player, null));
+        Assert.False(player.TackleOffBall);
+    }
+
+    /// <summary>
+    /// ADR 0105 §3: quitar el balón sigue valiendo más que pegarle a quien no lo lleva. Con el poseedor
+    /// rival también al alcance, el objetivo elegido es el poseedor y la entrada deja de ser sin balón.
+    /// </summary>
+    [Fact]
+    public void TheBallCarrierBeatsTheMarkAsATackleTarget()
+    {
+        var (player, context) = OffBallTackleScenario(Position.Defender);
+        var carrier = context.Players[2];
+        carrier.Position = new Vec2(player.Position.X + 0.5f, player.Position.Y);
+        context.Ball.Position = carrier.Position;
+
+        Assert.Equal(PlayerAction.Tackle, Utility.Choose(context, player, null));
+        Assert.Same(carrier, player.TackleTarget);
+        Assert.False(player.TackleOffBall);
+    }
+
+    /// <summary>
+    /// Defensa del equipo 0 pegado a su marcado (0,6 casillas) mientras el balón lo lleva un rival lejano
+    /// pero dentro de la jugada activa de RF-057. Pesos sintéticos: solo <c>Tackle</c> puntúa, así que la
+    /// acción elegida es exactamente la respuesta a "¿tenía a quién entrar?".
+    /// </summary>
+    private static (MatchPlayer Player, UtilityContext Context) OffBallTackleScenario(Position role)
+    {
+        var players = new[]
+        {
+            Player(0, role, new Cell(3, 1)),
+            Player(1, Position.Forward, new Cell(4, 1), team: 1),
+            Player(2, Position.Midfielder, new Cell(8, 1), team: 1),
+        };
+
+        players[0].Position = new Vec2(3.5f, 1.5f);
+        players[1].Position = new Vec2(4.1f, 1.5f);
+        players[2].Position = new Vec2(8.0f, 1.5f);
+        players[0].MarkTarget = players[1];
+
+        var context = Context(OffBallTackleWeights(), players);
+        context.Ball.Owner = players[2];
+        context.Ball.Position = players[2].Position;
+        context.HoldingTeam = 1;
+        context.TacticalStates[0] = TacticalState.OutOfPossession;
+        context.TacticalStates[1] = TacticalState.InPossession;
+        return (players[0], context);
+    }
+
+    /// <summary>Pesos sintéticos con <c>Tackle</c> como única acción que puntúa y los términos de la ADR 0105.</summary>
+    private static AiWeights OffBallTackleWeights()
+    {
+        int positions = Enum.GetValues<Position>().Length;
+        int actions = Enum.GetValues<PlayerAction>().Length;
+        var baseTable = new int[positions, actions];
+        var tacticalTable = new int[Enum.GetValues<TacticalState>().Length, actions];
+        for (int s = 0; s < tacticalTable.GetLength(0); s++)
+        {
+            for (int a = 0; a < actions; a++)
+            {
+                tacticalTable[s, a] = 100;
+            }
+        }
+
+        for (int p = 0; p < positions; p++)
+        {
+            baseTable[p, (int)PlayerAction.Tackle] = 100;
+        }
+
+        var context = new AiContext(
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1.0f, 900, 195, 0, 0,
+            BlockActiveRadiusCells: 5.0f,
+            BlockCorridorHalfWidthCells: 2.0f,
+            BlockReachMaxCells: 1.2f,
+            TackleMarkTargetBonus: 150);
+        return new AiWeights(baseTable, tacticalTable, context, new BlockShift[Enum.GetValues<TacticalState>().Length]);
+    }
+
     private static MatchPlayer[] MarkingScenario()
     {
         var players = new[]

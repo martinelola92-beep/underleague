@@ -128,6 +128,7 @@ internal static class Utility
         public Vec2 Target;
         public MatchPlayer? Receiver;
         public MatchPlayer? TackleTarget;
+        public bool TackleOffBall;
         public MatchPlayer? BlockTarget;
     }
 
@@ -145,6 +146,7 @@ internal static class Utility
         Vec2 bestTarget = p.EffectiveHome;
         MatchPlayer? bestReceiver = null;
         MatchPlayer? bestTackleTarget = null;
+        bool bestTackleOffBall = false;
         MatchPlayer? bestBlockTarget = null;
 
         for (int i = 0; i < legal.Count; i++)
@@ -176,6 +178,7 @@ internal static class Utility
                 bestTarget = eval.Target;
                 bestReceiver = eval.Receiver;
                 bestTackleTarget = eval.TackleTarget;
+                bestTackleOffBall = eval.TackleOffBall;
                 bestBlockTarget = eval.BlockTarget;
             }
         }
@@ -191,6 +194,7 @@ internal static class Utility
         p.TargetPoint = bestTarget;
         p.PassReceiver = bestReceiver;
         p.TackleTarget = bestTackleTarget;
+        p.TackleOffBall = bestTackleOffBall;
         p.BlockTarget = bestBlockTarget;
         return best;
     }
@@ -491,7 +495,7 @@ internal static class Utility
                 EvaluateBlock(ctx, p, context, ref eval);
                 break;
             case PlayerAction.Tackle:
-                EvaluateTackle(p, ball, context, ref eval);
+                EvaluateTackle(ctx, p, context, ref eval);
                 break;
             case PlayerAction.Retreat:
                 EvaluateRetreat(ctx, p, context, ref eval);
@@ -1301,7 +1305,27 @@ internal static class Utility
         eval.Context = score;
     }
 
-    private static void EvaluateTackle(MatchPlayer p, Ball ball, AiContext context, ref Eval eval)
+    /// <summary>
+    /// Entrada (RF-054). Dos objetivos legales, en este orden de preferencia:
+    ///
+    /// <list type="number">
+    /// <item><b>El poseedor rival</b>, si está dentro de <c>tackleDistanceMaxCells</c>. Vale
+    /// <c>tackleBallCarrierBonus</c> y es siempre la opción mejor puntuada de las dos.</item>
+    /// <item><b>El marcado</b> (ADR 0105), si no hay poseedor rival al alcance. Vale
+    /// <c>tackleMarkTargetBonus</c>, estrictamente menor que el anterior: quitar el balón tiene que
+    /// seguir siendo mejor que pegarle a quien no lo lleva.</item>
+    /// </list>
+    ///
+    /// <para>La entrada sin balón lleva tres condiciones, y las tres son de diseño, no de implementación:
+    /// solo la deciden los <b>roles defensivos</b> (<see cref="IsDefensiveRole"/>) —un delantero no
+    /// persigue a su par por el campo, ADR 0105 §2—; el objetivo es el <b>marcado asignado</b> por
+    /// <see cref="Marking"/> y nadie más, que es lo que hace el suceso predecible antes del partido y
+    /// cierra AY-A; y el marcado tiene que estar <b>en la jugada activa</b> de RF-057
+    /// (<see cref="IsInActivePlay"/>), el mismo criterio que ya acota el bloqueo sin balón: sin él un
+    /// defensa podría ir a partir a su par al otro lado del campo, que es contacto fuera de la jugada y
+    /// el requisito no lo permite.</para>
+    /// </summary>
+    private static void EvaluateTackle(UtilityContext ctx, MatchPlayer p, AiContext context, ref Eval eval)
     {
         if (p.TackleCooldown > 0)
         {
@@ -1309,20 +1333,42 @@ internal static class Utility
             return;
         }
 
-        var carrier = ball.Owner;
-        if (carrier is null || carrier.Team == p.Team)
+        var carrier = ctx.Ball.Owner;
+        if (carrier is not null && carrier.Team != p.Team
+            && Vec2.Distance(p.Position, carrier.Position) <= context.TackleDistanceMaxCells)
         {
-            eval.Context = -context.TackleOutOfReachPenalty;
+            eval.TackleTarget = carrier;
+            eval.Target = carrier.Position;
+            eval.Context = context.TackleBallCarrierBonus;
             return;
         }
 
-        eval.TackleTarget = carrier;
-        eval.Target = carrier.Position;
-        float distance = Vec2.Distance(p.Position, carrier.Position);
-        eval.Context = distance <= context.TackleDistanceMaxCells
-            ? context.TackleBallCarrierBonus
-            : -context.TackleOutOfReachPenalty;
+        // ADR 0105: no hay poseedor rival al alcance. Queda el marcado.
+        if (p.IsOutfield && IsDefensiveRole(p.Role) && Marking.IsValidTarget(p.MarkTarget, p.Team))
+        {
+            var mark = p.MarkTarget!;
+            if (CanBeBlocked(mark)
+                && Vec2.Distance(p.Position, mark.Position) <= context.TackleDistanceMaxCells
+                && IsInActivePlay(ctx, context, mark.Position))
+            {
+                eval.TackleTarget = mark;
+                eval.TackleOffBall = true;
+                eval.Target = mark.Position;
+                eval.Context = context.TackleMarkTargetBonus;
+                return;
+            }
+        }
+
+        eval.Context = -context.TackleOutOfReachPenalty;
     }
+
+    /// <summary>
+    /// Roles que entran a su marcado sin balón (ADR 0105 §2). Defensa y centrocampista: los dos que
+    /// tienen marcaje asignado con preferencia por rol en <see cref="Marking"/> y peso real de
+    /// <c>MarkOpponent</c> en la tabla. El delantero queda fuera por decisión de la ADR.
+    /// </summary>
+    private static bool IsDefensiveRole(Position role) =>
+        role is Position.Defender;
 
     /// <summary>
     /// Bloqueo sin balón (ADR 0030 §2): cargar contra un rival que <b>no</b> lleva el balón para quitarlo

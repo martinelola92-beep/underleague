@@ -237,6 +237,9 @@
         },
         "TackleCooldownTicks": {
           "$ref": "#/$defs/ticks"
+        },
+        "OffBallTackleCooldownTicks": {
+          "$ref": "#/$defs/ticks"
         }
       },
       "required": [
@@ -246,7 +249,8 @@
         "KnockedDownTicks",
         "CelebratingTicks",
         "DribbleDuelCooldownTicks",
-        "TackleCooldownTicks"
+        "TackleCooldownTicks",
+        "OffBallTackleCooldownTicks"
       ],
       "additionalProperties": false
     },
@@ -442,6 +446,9 @@
         "foulBase": {
           "$ref": "#/$defs/probability"
         },
+        "offBallFoulBase": {
+          "$ref": "#/$defs/probability"
+        },
         "foulStrengthFactor": {
           "$ref": "#/$defs/factor"
         },
@@ -469,6 +476,7 @@
         "pressureFactor",
         "strengthSharePercent",
         "foulBase",
+        "offBallFoulBase",
         "foulStrengthFactor",
         "hardTackleThreshold",
         "yellowCardBase",

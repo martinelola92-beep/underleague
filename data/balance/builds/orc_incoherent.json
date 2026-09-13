@@ -1,10 +1,9 @@
 {
-  "_doc": "Escalon \"incoherente\" de la ADR 0033, medido por la puerta de jefes (Sim.Tests/Analysis/BossGateTests.cs). REVISADO (paquete AS, ADR 0070, cierra AR-A): los catorce perks salen del catalogo que la doctrina contextual entrega de verdad -banco de 1.200 runs, listón del 15% de presencia en las 240 runs de la raza- y lo que hace incoherente a la build no es que sean perks raros que nadie ve, sino que estan colocados DONDE SE CASTIGAN. Eso ultimo es una medicion, no una intuicion: la primera version de esta revision coloco mal perks SIN elseEffects y el escalon subio de 18,4 a 44,0 contra el jefe del acto 1, porque la mayoria de los perks frecuentes no tiene condicion de colocacion y colocarlos mal no les hace nada. Los siete ultimos de cada slot -que son los que la densidad de la ADR 0040 mide de verdad- son los siete perks frecuentes del catalogo que SI castigan al estar mal puestos (ADR 0060). La alineacion declarada rompe los vinculos de los tres perks de alineacion. Los acumuladores van sin alimentar: contador a cero vale k^0 = 1.",
+  "_doc": "Escalon MALO de la puerta de fase 1 (ADR 0106). REDEFINIDO el 13 sep 2026: la definicion anterior -catorce perks que dependen de linked() colocados para que NINGUNO resuelva- dejo de describir una build mala el dia de la ADR 0088. Desde que 'ningun perk es negativo' y la rama else no hace nada, un perk que no se dispara NO CASTIGA: no hace nada. Es decir, esa build no era mala, era NEUTRA, y el criterio 'las malas pierden <=45 %' se habia vuelto insatisfacible por construccion (CAT-E). Decision del revisor: mala es 'sin sentido, sin sinergias, con objetos mal colocados', y una plantilla con CERO perks no existe -las recompensas solo dan perks desde la ADR 0055, rewardItemWeight 0-. Asi que esta build lleva los MISMOS catorce perks que la referencia neutra (se disparan, no se suman) y se diferencia de ella en una sola cosa medible: los objetos MALDITOS en el portador equivocado. Cada maldito resta sobre lo que su rol mas necesita -menos fuerza a los centrales que entran, menos tecnica a los medios que pasan, menos velocidad al portero y al delantero-, que es exactamente la jugada de human_excellent al reves: alli el berserker_totem va a quien no necesita tecnica. Los objetos malditos SI restan de verdad (atributos, no rama else), asi que desde la ADR 0088 son la unica forma que queda de construir EN CONTRA.",
   "id": "orc_incoherent",
   "name": "Orcos: incoherente",
   "race": "Orc",
   "quality": 50,
-  "rarity": "common",
   "perks": [
     {
       "slot": 0,
@@ -12,58 +11,97 @@
     },
     {
       "slot": 0,
-      "perk": "covering_shadow"
+      "perk": "brute_boots"
     },
     {
       "slot": 1,
-      "perk": "sharpshooter_drill"
+      "perk": "pack_mentality"
     },
     {
       "slot": 1,
+      "perk": "road_warrior"
+    },
+    {
+      "slot": 2,
+      "perk": "steady_hands"
+    },
+    {
+      "slot": 2,
+      "perk": "pit_veteran"
+    },
+    {
+      "slot": 3,
+      "perk": "back_to_back"
+    },
+    {
+      "slot": 3,
       "perk": "flank_specialist"
     },
     {
-      "slot": 2,
+      "slot": 4,
+      "perk": "cold_focus"
+    },
+    {
+      "slot": 4,
+      "perk": "long_leash_legacy"
+    },
+    {
+      "slot": 5,
+      "perk": "high_press_trigger"
+    },
+    {
+      "slot": 5,
+      "perk": "home_ref"
+    },
+    {
+      "slot": 6,
       "perk": "iron_lungs"
-    },
-    {
-      "slot": 2,
-      "perk": "wing_overlap"
-    },
-    {
-      "slot": 3,
-      "perk": "silky_veteran"
-    },
-    {
-      "slot": 3,
-      "perk": "center_conductor"
-    },
-    {
-      "slot": 4,
-      "perk": "battle_reader"
-    },
-    {
-      "slot": 4,
-      "perk": "pivot_duo"
-    },
-    {
-      "slot": 5,
-      "perk": "crowd_control"
-    },
-    {
-      "slot": 5,
-      "perk": "diagonal_press"
     },
     {
       "slot": 6,
       "perk": "comeback_spirit"
-    },
-    {
-      "slot": 6,
-      "perk": "last_ditch"
     }
   ],
-  "lineup": [[1, 1], [0, 5], [7, 0], [4, 5], [2, 5], [6, 2], [3, 2]],
+  "items": {
+    "0": "brutes_pauldron",
+    "1": "martyrs_relic",
+    "2": "martyrs_relic",
+    "3": "berserker_totem",
+    "4": "berserker_totem",
+    "5": "berserker_totem",
+    "6": "brutes_pauldron"
+  },
+  "lineup": [
+    [
+      1,
+      1
+    ],
+    [
+      0,
+      5
+    ],
+    [
+      7,
+      0
+    ],
+    [
+      4,
+      5
+    ],
+    [
+      2,
+      5
+    ],
+    [
+      6,
+      2
+    ],
+    [
+      3,
+      2
+    ]
+  ],
+  "rarity": "common",
   "styles": {
     "0": "Brute",
     "1": "Brute",

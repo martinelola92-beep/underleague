@@ -166,7 +166,14 @@ public sealed record AiContext(
     // defensiva: el pase a la espalda de la defensa es exactamente lo que la acción es.
     int ThroughPassMinCells = 2,
     int ThroughPassMaxCells = 4,
-    float ThroughPassFreeZoneCells = 0f);
+    float ThroughPassFreeZoneCells = 0f,
+
+    // ADR 0105: bonus de la ENTRADA SIN BALON al marcado. Vive aquí y no en tuning.json porque es un
+    // término de la tabla de utilidad (RT-096) —Utility solo recibe AiContext, nunca TuningData— y es el
+    // gemelo directo de TackleBallCarrierBonus, que está dos líneas más arriba. El invariante que la
+    // ADR 0105 §3 exige es tackleMarkTargetBonus < tackleBallCarrierBonus: quitar el balón tiene que
+    // seguir puntuando más que pegarle a quien no lo lleva.
+    int TackleMarkTargetBonus = 0);
 
 /// <summary>
 /// Pesos de la IA de utilidad (RT-093..RT-098). Las tablas Base y Tactical se guardan como arrays
@@ -336,7 +343,7 @@ public sealed record MovementTuning(int BaseCellsPerTickMilli, int SpeedCellsPer
 public sealed record BallTuning(int PassSpeedCellsPerTickMilli, int ShotSpeedCellsPerTickMilli, int LooseBallFrictionPercent);
 
 /// <summary>tuning.states: duraciones de los estados de jugador, en ticks.</summary>
-public sealed record StatesTuning(int PassingTicks, int ShootingTicks, int TacklingTicks, int KnockedDownTicks, int CelebratingTicks, int DribbleDuelCooldownTicks, int TackleCooldownTicks);
+public sealed record StatesTuning(int PassingTicks, int ShootingTicks, int TacklingTicks, int KnockedDownTicks, int CelebratingTicks, int DribbleDuelCooldownTicks, int TackleCooldownTicks, int OffBallTackleCooldownTicks);
 
 /// <summary>tuning.pass.</summary>
 public sealed record PassTuning(int BaseSuccess, int TechniqueFactor, int DistancePenaltyPerCell, int PressurePenalty, float InterceptRadiusCells, int InterceptBaseChance, int InterceptTechniqueFactor, float MaxLeadCells, int InterceptContactPercent);
@@ -351,7 +358,7 @@ public sealed record ShotTuning(int BaseQuality, int TechniqueFactor, int Streng
 public sealed record SaveTuning(int BasePercent, int CloseRangeCells, int AttributeWeightPercent, int ConsecutiveShotDecayPercent, int QualityWeight, int QualityPivot, float ReachCells, float DiveReachCells, int DivePenaltyPercent);
 
 /// <summary>tuning.tackle.</summary>
-public sealed record TackleTuning(int BaseWin, int PressureFactor, int StrengthSharePercent, int FoulBase, int FoulStrengthFactor, int HardTackleThreshold, int YellowCardBase, int RedCardBase, int HardTackleYellowBonus, int HardTackleRedBonus, bool SecondYellowIsRed);
+public sealed record TackleTuning(int BaseWin, int PressureFactor, int StrengthSharePercent, int FoulBase, int OffBallFoulBase, int FoulStrengthFactor, int HardTackleThreshold, int YellowCardBase, int RedCardBase, int HardTackleYellowBonus, int HardTackleRedBonus, bool SecondYellowIsRed);
 
 /// <summary>tuning.injury.</summary>
 /// <summary>

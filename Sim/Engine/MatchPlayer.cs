@@ -282,6 +282,17 @@ internal sealed class MatchPlayer
     public MatchPlayer? TackleTarget { get; set; }
 
     /// <summary>
+    /// True si la entrada decidida este tick es una <b>entrada sin balón</b> al marcado (ADR 0105): no
+    /// había poseedor rival al alcance y el objetivo es <see cref="MarkTarget"/>. La escribe
+    /// <c>Utility.Choose</c> junto a <see cref="TackleTarget"/> y la lee <c>ResolveTackle</c> al expirar
+    /// Tackling, que es el único sitio donde el motor puede saber con qué intención se tiró la entrada:
+    /// deducirla de "el objetivo ya no tiene el balón" confundiría la entrada sin balón con la
+    /// <b>entrada a destiempo</b> (el conductor soltó el balón mientras duraba Tackling), que es otra
+    /// cosa y sigue pagando la falta normal.
+    /// </summary>
+    public bool TackleOffBall { get; set; }
+
+    /// <summary>
     /// Rival objetivo al decidir Block (ADR 0030 §2); se lee al expirar Blocking. Va en una propiedad
     /// propia y no en <see cref="TackleTarget"/> aunque las dos acciones nunca coincidan en el mismo
     /// tick: el volcado de utilidad y la depuración necesitan poder distinguir a quién iba a entrar un

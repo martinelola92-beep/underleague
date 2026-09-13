@@ -271,13 +271,31 @@ public sealed class MatchEquipmentTests
             Away = setup.Away with { Players = away },
         };
 
-        // Con la tirada al máximo (lethalChance 10.000) muere EXACTAMENTE uno, no los siete del campo:
-        // el perk marca a victimsPerActivation rivales por activación, y son las tres palancas del
-        // jugador —estado, aguante y casilla— las que deciden a quién.
-        var result = Underleague.Sim.Engine.Simulator.Run(setup, 21, catalog, new SimConfig(CollectLog: false));
-        var death = Assert.Single(result.Events, e => e.Type == EventType.Death && e.Detail == "perk:test_lethal");
-        Assert.Equal(0, death.Team);
-        Assert.Equal(1, result.Report.Deaths);
+        // El invariante es "marca a UNO por activación, no a los siete del campo", y es un TOPE, no una
+        // igualdad. La versión anterior afirmaba exactamente una muerte con una sola semilla y era una
+        // moneda al aire: `lethality.maxChance` acota la tirada al 80 %, así que ni con lethalChance
+        // 10.000 está garantizada. Pasaba en 29 de 40 semillas antes de la ADR 0105 y en 24 de 40 después
+        // —la 21 cayó del lado bueno al malo—, y un test que falla por mala suerte es un test mal escrito
+        // (convenciones del proyecto). Se afirma sobre doce semillas: en NINGUNA puede morir más de uno
+        // por activación, y en alguna tiene que morir, o el perk no mata.
+        int seedsWithDeath = 0;
+        for (ulong seed = 21; seed < 33; seed++)
+        {
+            var run = Underleague.Sim.Engine.Simulator.Run(setup, seed, catalog, new SimConfig(CollectLog: false));
+            var deaths = run.Events.Where(e => e.Type == EventType.Death && e.Detail == "perk:test_lethal").ToList();
+            Assert.True(deaths.Count <= 1, $"semilla {seed}: el perk marcó a {deaths.Count} rivales en una activación, y el tope es uno");
+            foreach (var d in deaths)
+            {
+                Assert.Equal(0, d.Team);
+            }
+
+            if (deaths.Count == 1)
+            {
+                seedsWithDeath++;
+            }
+        }
+
+        Assert.True(seedsWithDeath > 0, "en doce semillas el perk letal no mató a nadie: no está matando");
 
         // Y el estado sigue pesando, aunque ya no sea una puerta: el mismo jugador, en la misma casilla y
         // contra el mismo portador, muere mucho más fácil tocado que sano (ADR 0048).

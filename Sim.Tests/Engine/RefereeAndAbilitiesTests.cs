@@ -120,6 +120,10 @@ public sealed class RefereeAndAbilitiesTests
             ("sim/tuning.json", $"\"biasFoulShiftPer10\": {tuning.Referee.BiasFoulShiftPer10}", "\"biasFoulShiftPer10\": 0"),
             ("sim/tuning.json", $"\"foulBase\": {tuning.Block.FoulBase}", "\"foulBase\": 0"),
             ("sim/tuning.json", $"\"foulBase\": {tuning.Tackle.FoulBase}", "\"foulBase\": 0"),
+            // ADR 0105: la entrada sin balón tiene su propia base de falta, y es la más alta del motor.
+            // Si no se apaga aquí, el escenario deja de estar aislado: el árbitro vuelve a tener faltas
+            // que señalar y el test ya no mide lo que dice medir (medido: 6 faltas señaladas con ella).
+            ("sim/tuning.json", $"\"offBallFoulBase\": {tuning.Tackle.OffBallFoulBase}", "\"offBallFoulBase\": 0"),
             ("sim/tuning.json", $"\"foulStrengthFactor\": {tuning.Tackle.FoulStrengthFactor}", "\"foulStrengthFactor\": 0"),
             ("sim/tuning.json", $"\"onTackleBase\": {tuning.Injury.OnTackleBase}", "\"onTackleBase\": 0"),
             ("sim/tuning.json", $"\"onFoulBase\": {tuning.Injury.OnFoulBase}", "\"onFoulBase\": 0"),

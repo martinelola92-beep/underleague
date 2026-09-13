@@ -165,6 +165,7 @@ public sealed class BuildGateTests
         var catalog = TestData.LoadCatalog();
         var builds = BuildFile.LoadAll(TestData.DataDirectory);
         var groups = BuildGroupsFile.Load(TestData.DataDirectory);
+        var items = Underleague.Sim.Run.Systems.Items.ItemLoader.FromJson(TestData.LoadAllFiles());
 
         var subjects = groups.Coherent.Concat(groups.Bad).Concat(groups.Random)
             .Distinct(StringComparer.Ordinal)
@@ -189,7 +190,7 @@ public sealed class BuildGateTests
         Parallel.For(0, subjects.Count, i =>
         {
             string id = subjects[i];
-            played[i] = RunCell(ThreadCatalogs.Current, builds, id, baselines[id], i * Rosters * MatchesPerRoster);
+            played[i] = RunCell(ThreadCatalogs.Current, builds, id, baselines[id], i * Rosters * MatchesPerRoster, items);
         });
 
         var cells = new List<BuildCellResult>();
@@ -222,7 +223,8 @@ public sealed class BuildGateTests
         IReadOnlyDictionary<string, BuildFile> builds,
         string buildId,
         string baselineId,
-        int matchIndexOffset)
+        int matchIndexOffset,
+        Underleague.Sim.Run.Systems.Items.ItemCatalog items)
     {
         var build = builds[buildId];
         var baseline = builds[baselineId];
@@ -251,8 +253,11 @@ public sealed class BuildGateTests
                 int subjectIdBase = subjectHasHighIds ? SecondaryIdBase : PrimaryIdBase;
                 int baselineIdBase = subjectHasHighIds ? PrimaryIdBase : SecondaryIdBase;
 
-                var subjectTeam = build.ToTeamSetup(catalog, Seed, roster, subjectIdBase);
-                var baselineTeam = baseline.ToTeamSetup(catalog, Seed, roster, baselineIdBase);
+                // ADR 0106: las builds MALAS equipan objetos malditos en el portador equivocado, que desde
+                // la ADR 0088 es la única forma que queda de construir en contra. Sin el catálogo de
+                // objetos esta puerta no puede jugarlas — BossGateTests ya lo pasaba y ésta no.
+                var subjectTeam = build.ToTeamSetup(catalog, Seed, roster, subjectIdBase, itemCatalog: items);
+                var baselineTeam = baseline.ToTeamSetup(catalog, Seed, roster, baselineIdBase, itemCatalog: items);
 
                 var setup = subjectAway
                     ? new MatchSetup(baselineTeam, subjectTeam, Referee)
