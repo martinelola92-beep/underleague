@@ -98,6 +98,17 @@ el oro que antes se quedaba quieto o iba a un perk ahora compra un consumible qu
 que la mitad de ese gasto no rinde nada en la medición por el slot manual, así que el coste real para un
 jugador que sí pulsa es menor que el medido.
 
+**Confirmado en la segunda semilla** (1.200 runs × doctrina, semilla 7): `runWinRate` 22,75 ·
+`deathsPerRun` 1,84 · `sinksAffordablePerAct` 2,76 · `purchasesPerMarket` 1,32 · `leftoverGoldShare` 8,05 ·
+`brokeMarketRunShare` **12,75 (dentro)** · `mastersReached` 39,92 · `affordableShareAtMarket` 71,38 ·
+`contextualAdvantage` 3,08. Las dos semillas dicen lo mismo.
+
+**Una puerta se movió, y con qué motivo.** `FullRunGateTests.TheMetricsThatDoNotMeetTheirDesignBandStay...`
+—la **valla anti-regresión**, no la banda de diseño— acotaba `affordableShareAtMarket` a 25..70 y ahora mide
+71,4. La cota pasa a **25..75**. Queda escrito porque mover una valla es justo lo que RT-057 prohíbe hacer
+en silencio: no se mueve porque estorbe, se mueve porque el número que acotaba estaba **falseado** por un
+precio que existía para falsearlo.
+
 **Lo que empeora y hay que decir:** `affordableShareAtMarket` sube de 63,4 a 71,2. No es casualidad ni daño
 nuevo: **el precio de 45 estaba maquillando esa métrica** haciendo inasequibles 3 de los ~15 artículos del
 mostrador, que es literalmente lo que su `_doc` decía que hacía. La métrica llevaba fuera de banda desde

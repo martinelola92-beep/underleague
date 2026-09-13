@@ -45,9 +45,11 @@ el objetivo 6 (run en 20-30 %) y el 1 en su mitad del acto 2 están cumplidos.
 
 **Lo que sigue abierto y bloquea el cierre de la fase 2**, con su fila en `pendientes.md`:
 
-- **CAT-B** — un consumible se compra y no se puede equipar: nadie emite `SetConsumables`, ni `/Game` ni
-  la política automática. La cuarta categoría del mercado cobra oro y no devuelve nada. Es el único que no
-  es una banda sino un agujero.
+- ~~**CAT-B**~~ — **cerrada** el 13 sep 2026 (ADR 0101): el consumible se compra, se equipa en la pantalla
+  de Equipo y llega al partido, y la política automática hace lo mismo para poder medirlo. Costó 2,5 puntos
+  de `runWinRate` (25,33 → 22,8) y dejó `affordableShareAtMarket` peor (63,4 → 71,3), porque su precio de 45
+  estaba maquillando esa métrica. Queda **CAT-C**: el slot manual no se puede pulsar en `/Balance`, así que
+  la medición subestima a la familia.
 - **AL-A** — el recorrido de un perk lo fija la base de su canal, no su magnitud (×2 sobre `pass` vale 0,19
   puntos; sobre `intercept`, 15,54). Es la raíz que heredan AK-B, AO-A, AU-B y AJ-C, y bloquea los
   objetivos 4 y 5 de la ADR 0056.
@@ -141,7 +143,8 @@ Criterio de salida: el jugador dice "una run más" sin arte terminado.
 
 Criterio de salida: el partido se lee sin necesidad del log.
 
-- Pixelart definitivo y animaciones (RA-001..019b), highlights (RA-020..022, RF-115..117), vínculos (RF-100..106), gol de oro con turba (RF-055b..056), taller de prótesis (RF-095..095c), árbitro con rasgos, criterio y sobornos (RF-061..064g), ceremonia de muerte y memorial (RF-122). Git LFS (RT-004).
+- Pixelart definitivo y animaciones (RA-001..019b), highlights (RA-020..022, RF-115..117), vínculos (RF-100..106), gol de oro con turba (RF-055b..056), árbitro con rasgos, criterio y sobornos (RF-061..064g), ceremonia de muerte y memorial (RF-122). Git LFS (RT-004): **instalado** el 13 sep 2026 (3.8.0, en `~/.local/bin`; sin reglas de seguimiento todavía, porque no hay arte).
+- **El taller de prótesis (RF-095..095c) sale de la fase 3** (decisión del revisor, 13 sep 2026): pasa a una expansión futura. Consecuencia que conviene tener escrita: era el **cuarto sumidero de oro** y la palanca de fase 3 que atacaba directamente `affordableShareAtMarket` y `contextualAdvantage`, las dos métricas del mercado que llevan fuera de banda desde siempre (AZ-H). Sin él, esas dos hay que atacarlas desde dentro de la fase 2.
 - Métricas de violencia (RF-064e/g) en `/Balance`.
 
 ## Fase 4: demo de Steam
@@ -152,4 +155,4 @@ Criterio de salida: wishlists suficientes para justificar el lanzamiento.
 
 ## Después del lanzamiento
 
-Copa con semilla diaria (RF-128c, requiere RT-023b), 4 razas DLC (RF-030), rivalidades (RF-103), Steam Workshop (RT-064).
+Copa con semilla diaria (RF-128c, requiere RT-023b), 4 razas DLC (RF-030), rivalidades (RF-103), Steam Workshop (RT-064), **taller de prótesis (RF-095..095c)** — sacado de la fase 3 el 13 sep 2026 por decisión del revisor.

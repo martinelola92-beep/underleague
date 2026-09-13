@@ -267,7 +267,14 @@ public sealed class FullRunGateTests
     public void TheMetricsThatDoNotMeetTheirDesignBandStayWhereTheyWereMeasured()
     {
         AssertBetween(FullRunMetrics.RunWinRate, 5.0, 40.0);
-        AssertBetween(FullRunMetrics.AffordableShare, 25.0, 70.0);
+        // ADR 0101 (CAT-B): sube de 63,4 a 71,2 / 71,4 en las dos semillas y la cota pasa de 70 a 75.
+        // NO es una regresión disimulada: el `consumablePrice` plano de 45 estaba **maquillando** esta
+        // métrica al hacer inasequibles 3 de los ~15 artículos del mostrador —su propio _doc decía que
+        // existía para eso, porque "no lo compra nadie"—, y desde que el consumible se puede equipar el
+        // mostrador dice la verdad. Sigue muy lejos de su banda de diseño (20-35), donde lleva desde
+        // siempre (Z-K, AD-E: se opone a brokeMarketRunShare); lo que cambia es que ahora está fuera con
+        // datos honestos. Revisar esa banda es una decisión pendiente, no de este paquete.
+        AssertBetween(FullRunMetrics.AffordableShare, 25.0, 75.0);
         AssertBetween(FullRunMetrics.LeftoverGoldShare, 5.0, 32.0);
         // ADR 0097: cae de ~50 a ~10 al dejar la política de gastarse la última moneda, así que la cota
         // se redibuja alrededor de lo nuevo. La banda de diseño (10-25) queda justo encima: la métrica está
