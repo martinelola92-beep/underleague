@@ -192,6 +192,7 @@ public static class UiText
         ["ui.node.gold"] = "oro: {0}",
         ["ui.node.eventOption"] = "{0} — {1}",
         ["ui.node.eventPickTarget"] = "señala a quién",
+        ["ui.node.eventNone"] = "Este nodo ya no tiene ninguna carta que resolver. Vuelve al mapa cuando quieras.",
         ["ui.node.eventTarget"] = "{0} · {1}",
         ["ui.node.eventChosen"] = "{0}",
         ["ui.node.eventChosenOn"] = "le toca a {0}",

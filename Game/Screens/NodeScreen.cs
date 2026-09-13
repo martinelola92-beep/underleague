@@ -200,7 +200,10 @@ public partial class NodeScreen : Control
         var view = _run.Event();
         if (view is null)
         {
-            return y;
+            // BA-A: si la carta no llega, se dice por qué en vez de dejar la pantalla muda. El botón de
+            // volver al mapa está siempre activo, así que esto informa pero ya no encierra a nadie.
+            Widgets.Body(this, UiText.Get("ui.node.eventNone"), new Vector2(28f, y), 1220f, Style.TextDim);
+            return y + 30f;
         }
 
         Widgets.Body(this, view.Description, new Vector2(28f, y), 1220f, Style.TextDim);
@@ -321,7 +324,19 @@ public partial class NodeScreen : Control
     }
 
     /// <summary>Se puede salir siempre que el nodo ya se haya resuelto o abierto: nunca se queda atrapado.</summary>
-    private bool Leaveable() => _entered || _run.State!.Phase == RunPhase.NodeOpen;
+    /// <summary>
+    /// **Siempre se puede volver al mapa** (BA-A). Antes esto exigía <c>_entered || Phase == NodeOpen</c>, y
+    /// <c>_entered</c> se recalcula en cada <c>Rebuild</c>: si al resolver una carta de evento la fase dejaba
+    /// de ser <c>NodeOpen</c> con el nodo todavía seleccionado, quedaba <c>_entered</c> a false, la vista de
+    /// evento a null —así que la pantalla no dibujaba ni descripción ni opciones— y el botón de salir
+    /// deshabilitado. El jugador se quedaba encerrado y, con guardado ironman (RT-061), la única salida era
+    /// cerrar el juego y perder la run.
+    ///
+    /// <para>Habilitarlo siempre no puede corromper nada: <see cref="Leave"/> solo emite <c>LeaveNode</c> si
+    /// de verdad hay un nodo abierto, y en cualquier otro caso se limita a volver al mapa. La regla es que
+    /// **de una pantalla de nodo siempre se sale**, pase lo que pase con su contenido.</para>
+    /// </summary>
+    private static bool Leaveable() => true;
 
     private void Leave()
     {

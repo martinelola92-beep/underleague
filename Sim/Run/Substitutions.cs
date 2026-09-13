@@ -40,7 +40,7 @@ public static class SubstitutionPoints
 
             // Un INJURY cancelado por un perk queda en el registro sin que nadie salga: lo que cuenta es el
             // tick en el que el informe dice que el jugador dejó el campo.
-            if (LeftPitchTick(result.Report, e.Actor) != e.Tick || !IsLinedUp(side, e.Actor) || HasSubstitution(side, e.Actor))
+            if (LeftPitchTick(result.Report, e.Actor) != e.Tick || !WasOnPitch(side, e.Actor) || HasSubstitution(side, e.Actor))
             {
                 continue;
             }
@@ -157,6 +157,36 @@ public static class SubstitutionPoints
         return false;
     }
 
+    /// <summary>
+    /// Si ese jugador estaba en el campo: en el once inicial **o** habiendo entrado por una sustitución
+    /// anterior de este mismo partido.
+    ///
+    /// <para>BA-B: antes solo miraba <c>Lineup.Slots</c>, que es el once de salida. Un suplente que ya había
+    /// entrado no figura ahí, así que **al lesionarse él no se abría ninguna ventana de sustitución** y el
+    /// partido se quedaba esperando una decisión que el jugador no podía tomar — con la única salida de
+    /// cerrar el juego, y con guardado ironman (RT-061) eso es perder la run. Se veía sobre todo en un jefe,
+    /// que es donde hay más bajas por partido.</para>
+    /// </summary>
+    private static bool WasOnPitch(TeamSetup side, int playerId)
+    {
+        if (IsLinedUp(side, playerId))
+        {
+            return true;
+        }
+
+        var substitutions = side.Substitutions;
+        for (int i = 0; i < substitutions.Count; i++)
+        {
+            if (substitutions[i].InPlayerId == playerId)
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /// <summary>Si ese jugador salió en el once inicial. Lo usa <c>Candidates</c> para no proponer a un titular.</summary>
     private static bool IsLinedUp(TeamSetup side, int playerId)
     {
         var slots = side.Lineup.Slots;

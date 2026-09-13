@@ -154,10 +154,21 @@ public static class Simulator
                     $"{side}: el sustituto {substitution.InPlayerId} tiene que estar en la plantilla y no alineado (ADR 0094)", nameof(team));
             }
 
-            if (!outLineup)
+            // BA-B: sale del campo quien ESTABA en el campo, y eso incluye a un suplente que ya entró por
+            // una sustitución anterior de este mismo partido. Antes solo se aceptaba el once inicial, así
+            // que al lesionarse un jugador que había entrado no se le podía sustituir: el partido se
+            // quedaba esperando una decisión imposible y, con guardado ironman (RT-061), la única salida
+            // era cerrar el juego y perder la run.
+            bool cameOnEarlier = false;
+            for (int j = 0; j < i; j++)
+            {
+                cameOnEarlier |= substitutions[j].InPlayerId == substitution.OutPlayerId;
+            }
+
+            if (!outLineup && !cameOnEarlier)
             {
                 throw new ArgumentException(
-                    $"{side}: el sustituido {substitution.OutPlayerId} tiene que estar alineado (ADR 0094)", nameof(team));
+                    $"{side}: el sustituido {substitution.OutPlayerId} tiene que haber estado en el campo (ADR 0094, BA-B)", nameof(team));
             }
 
             for (int j = 0; j < i; j++)
