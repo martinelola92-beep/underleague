@@ -12,7 +12,7 @@ namespace Underleague.Sim.Tests.Perks;
 /// que <see cref="LineupPerkPreviewer"/> responde lo mismo que responderá el motor —de ahí la
 /// comprobación cruzada del final— y que calla cuando la respuesta no depende solo de la alineación.
 /// <para>
-/// La alineación es la de por defecto (2-3-1): GK (0,2); DEF (2,1),(2,3); MID (3,2),(4,1),(4,3);
+/// La alineación es la de por defecto (2-3-1, ADR 0103): GK (0,2); DEF (2,1),(2,4); MID (3,2),(4,1),(4,4);
 /// FWD (6,2). Los jugadores se escriben a mano y con ids consecutivos para que
 /// <see cref="Lineup.Default"/> reparta las casillas de forma predecible.
 /// </para>
@@ -24,7 +24,7 @@ public sealed class LineupPerkPreviewTests
     /// <summary>Casillas de la alineación por defecto, por id de jugador (1..7).</summary>
     private static readonly Cell[] DefaultCells =
     {
-        new(0, 2), new(2, 1), new(2, 3), new(3, 2), new(4, 1), new(4, 3), new(6, 2),
+        new(0, 2), new(2, 1), new(2, 4), new(3, 2), new(4, 1), new(4, 4), new(6, 2),
     };
 
     /// <summary>
@@ -42,8 +42,9 @@ public sealed class LineupPerkPreviewTests
     }
 
     /// <summary>
-    /// <c>startsOn</c> mira la fila: la central (2) es el carril, y cualquier otra es banda. Es el eje
-    /// que el jugador no adivina mirando el campo, y por eso la pantalla lo tiene que decir.
+    /// <c>startsOn</c> mira la fila: el centro son las filas 2 y 3 (ADR 0103, dos con Rows par), y
+    /// cualquier otra es banda. Es el eje que el jugador no adivina mirando el campo, y por eso la
+    /// pantalla lo tiene que decir.
     /// </summary>
     [Fact]
     public void FlankSpecialistReadsTheRowOfTheHomeCell()

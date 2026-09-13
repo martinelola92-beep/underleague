@@ -70,13 +70,18 @@ internal static class LinkGeometry
     /// <summary>Banda de inicio de la casilla-hogar, vista desde el jugador mirando a la portería rival.</summary>
     public static StartFlank FlankOfHome(Cell home, int team)
     {
-        int center = Pitch.Rows / 2;
-        if (home.Row == center)
+        // Con Rows par (6, ADR 0103) el centro geométrico del campo cae entre dos filas, no en una: la
+        // 2 y la 3. Tratar solo Pitch.Rows / 2 (la 3) como centro dejaría la fila 2 —tan cerca del centro
+        // como la 3— clasificada como banda, y las tres franjas dejarían de ser tercios exactos (2/1/3 en
+        // vez de 2/2/2 filas). Las dos filas centrales son las que dan 33/33/33.
+        int centerHigh = Pitch.Rows / 2;
+        int centerLow = centerHigh - 1;
+        if (home.Row == centerLow || home.Row == centerHigh)
         {
             return StartFlank.Center;
         }
 
-        bool lowRow = home.Row < center;
+        bool lowRow = home.Row < centerLow;
         bool left = team == 0 ? lowRow : !lowRow;
         return left ? StartFlank.LeftFlank : StartFlank.RightFlank;
     }

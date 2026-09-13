@@ -5,11 +5,11 @@ namespace Underleague.Sim.Model;
 /// <summary>Casilla discreta de la cuadrícula del campo.</summary>
 public readonly record struct Cell(int Column, int Row);
 
-/// <summary>Geometría del campo: 16x5 casillas, área de 2x3, coordenadas absolutas (RF-056, 3.1).</summary>
+/// <summary>Geometría del campo: 16x6 casillas, área de 2x4, coordenadas absolutas (RF-056, 3.1, ADR 0103).</summary>
 public static class Pitch
 {
     public const int Columns = 16;
-    public const int Rows = 5;
+    public const int Rows = 6;
     /// <summary>
     /// Columnas de colocación de una alineación, contadas desde la portería propia (RF-040..045): una
     /// casilla-hogar vive en 0..7 y el motor refleja la columna para el equipo 1. Los tercios de inicio
@@ -20,9 +20,11 @@ public static class Pitch
     public const int PlacementColumns = 8;
 
     public const int AreaColumns = 2;
-    public const int AreaRows = 3;
+    // 4 (ADR 0103): con 6 filas, 4 de 6 (67 %) es lo más cercano a conservar la proporción que cubría el
+    // área con 5 filas (3 de 5 = 60 %); bajar a 3 encogería el dominio del portero y agravaría D-21.
+    public const int AreaRows = 4;
 
-    /// <summary>True si p está dentro del área que defiende team (0: X&lt;2; 1: X&gt;14), filas 1..4.</summary>
+    /// <summary>True si p está dentro del área que defiende team (0: X&lt;2; 1: X&gt;14), filas 1..5.</summary>
     public static bool IsInArea(Vec2 p, int team)
     {
         bool xInArea = team == 0 ? p.X < AreaColumns : p.X > Columns - AreaColumns;

@@ -353,7 +353,8 @@ public sealed record RunState
     /// Versión 1: primera con código (la 0 era el borrador sin implementar).
     /// </summary>
     // 2 (ADR 0097): desaparece NodeKind.Enrollment, que se serializaba por nombre.
-    public const int CurrentSchemaVersion = 2;
+    // 3 (ADR 0103): el campo pasa de 5 a 6 filas; las casillas de la alineación (0..4) pasan a 0..5.
+    public const int CurrentSchemaVersion = 3;
 
     /// <summary>Versión de esquema con la que se creó este estado.</summary>
     public int SchemaVersion { get; init; } = CurrentSchemaVersion;

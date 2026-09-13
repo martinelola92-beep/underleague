@@ -148,7 +148,7 @@ public partial class CaptureRunner : Control
                 await Save("partido-3d-angulo-" + degrees.ToString(System.Globalization.CultureInfo.InvariantCulture));
             }
 
-            pitch3d.Elevation = 45f;
+            pitch3d.Elevation = 60f;
 
             // Modo silueta: RA-002 al pie de la letra, «toda raza debe ser reconocible en blanco y negro».
             await Click(new Vector2(1233f, 198f));

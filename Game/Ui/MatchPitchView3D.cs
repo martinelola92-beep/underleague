@@ -22,7 +22,7 @@ namespace Underleague.Game.Ui;
 /// </para>
 ///
 /// <para>
-/// <b>Escala: 1 casilla = 1 unidad de mundo.</b> El campo son 16x5 unidades en el plano XZ: la columna del
+/// <b>Escala: 1 casilla = 1 unidad de mundo.</b> El campo son 16x6 unidades en el plano XZ (ADR 0103): la columna del
 /// campo es X y la fila es Z, así que con la cámara al lado +Z el campo sale con la misma orientación que
 /// en 2D (columna 0 a la izquierda, fila 0 arriba).
 /// </para>
@@ -97,7 +97,7 @@ public partial class MatchPitchView3D : SubViewportContainer
 
     /// <summary>Elevación de la cámara en grados sobre el césped. Es <c>[Export]</c> para poder barrerla en las capturas.</summary>
     [Export]
-    public float Elevation { get; set; } = 45f;
+    public float Elevation { get; set; } = 60f;
 
     /// <summary>
     /// Alto del encuadre ortográfico en unidades de mundo (Godot mide el <c>Size</c> ortográfico en
@@ -357,7 +357,7 @@ public partial class MatchPitchView3D : SubViewportContainer
     };
 
     /// <summary>
-    /// El césped: un cuadrilátero de 16x5 en el plano XZ con los vértices y las UV puestos a mano. Se
+    /// El césped: un cuadrilátero de 16x6 en el plano XZ (ADR 0103) con los vértices y las UV puestos a mano. Se
     /// construye así y no con un <c>PlaneMesh</c> para que no haya ninguna duda sobre en qué esquina de la
     /// textura cae la casilla (0,0): la columna es X, la fila es Z y la textura se lee igual que la imagen.
     /// </summary>
@@ -659,7 +659,7 @@ public partial class MatchPitchView3D : SubViewportContainer
 
     /// <summary>
     /// El campo pintado en una textura: mitades, cuadrícula, medio campo, círculo central, las dos áreas
-    /// (2x3, <see cref="Pitch.AreaColumns"/>) y las porterías, con la misma paleta que la vista 2D. En
+    /// (2x4, <see cref="Pitch.AreaColumns"/>) y las porterías, con la misma paleta que la vista 2D. En
     /// silueta la misma geometría en blanco y gris, para no perder la referencia de casilla.
     /// </summary>
     private static ImageTexture BuildGroundTexture(bool silhouette)

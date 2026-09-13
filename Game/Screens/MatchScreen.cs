@@ -201,8 +201,9 @@ public partial class MatchScreen : Control
         };
         AddChild(legend);
 
-        // El campo: 16x5 casillas cuadradas de 70 px. Ocupa la mitad de la pantalla porque es lo que hay
-        // que mirar; el resto de la pantalla es contexto de lo que se está viendo en él.
+        // El campo: 16x6 casillas (ADR 0103) en este rectángulo de 1120x350; con seis filas la casilla ya
+        // no es cuadrada de 70 px exactos (limita la altura, no el ancho). Ocupa la mitad de la pantalla
+        // porque es lo que hay que mirar; el resto de la pantalla es contexto de lo que se está viendo en él.
         Widgets.Panel(this, new Rect2(12f, 152f, 1256f, 358f));
         _pitch = new MatchPitchView
         {

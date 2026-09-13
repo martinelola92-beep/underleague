@@ -34,10 +34,11 @@ public sealed record MatchLineup(
 /// titulares, el sobrante juega de defensa.</para>
 ///
 /// <para><b>Colocación.</b> Casillas fijas por rol, en coordenadas relativas al equipo propio (columna
-/// 0..7 desde la portería propia): portero en (0,2), defensas en (2,1) y (2,3), centrocampistas en
-/// (3,2), (4,1) y (4,3), delantero en (6,2). Es el 2-3-1 por defecto del paquete U, con el que se midió
-/// el balance de la fase 1. Con menos de 7 disponibles (RF-002d, inferioridad) sobran casillas y quedan
-/// vacías; nunca se repite una, que es lo que <c>Simulator.Run</c> rechaza.</para>
+/// 0..7 desde la portería propia): portero en (0,2), defensas en (2,1) y (2,4), centrocampistas en
+/// (3,2), (4,1) y (4,4), delantero en (6,2). Es el 2-3-1 por defecto del paquete U (con las filas de la
+/// ADR 0103, seis en vez de cinco: <see cref="Lineup.Default"/> explica el reparto de filas), con
+/// el que se midió el balance de la fase 1. Con menos de 7 disponibles (RF-002d, inferioridad) sobran
+/// casillas y quedan vacías; nunca se repite una, que es lo que <c>Simulator.Run</c> rechaza.</para>
 /// </summary>
 public static class RunLineup
 {
@@ -67,12 +68,16 @@ public static class RunLineup
                 && state.Counter(RiskCounterPrefix + player.Id.ToString(System.Globalization.CultureInfo.InvariantCulture)) > 0);
     }
 
-    private static readonly Cell[] DefenderCells = { new(2, 1), new(2, 3) };
-    private static readonly Cell[] MidfielderCells = { new(3, 2), new(4, 1), new(4, 3) };
+    // Mismas casillas que Model.Lineup.Default (ADR 0103): con Rows=6 el par defensa/mediocentro-banda se
+    // reparte en las filas 1 y 4, equidistantes del centro real (2,5), en vez de 1 y 3 como con cinco
+    // filas. Portero, mediocentro y delantero, sin pareja con la que guardar simetría, se quedan en la
+    // fila 2 (una de las dos filas centrales; la 3 serviría igual).
+    private static readonly Cell[] DefenderCells = { new(2, 1), new(2, 4) };
+    private static readonly Cell[] MidfielderCells = { new(3, 2), new(4, 1), new(4, 4) };
     private static readonly Cell[] ForwardCells = { new(6, 2) };
     private static readonly Cell[] OutfieldCells =
     {
-        new(2, 1), new(2, 3), new(3, 2), new(4, 1), new(4, 3), new(6, 2),
+        new(2, 1), new(2, 4), new(3, 2), new(4, 1), new(4, 4), new(6, 2),
     };
 
     /// <summary>
