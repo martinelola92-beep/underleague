@@ -64,6 +64,11 @@ El usuario actúa **únicamente como revisor**. Claude planifica, implementa, pr
 - **Subagentes del proyecto** (`.claude/agents/`): `fast-worker` (sonnet) para trabajo mecánico con especificación cerrada: clases a partir de interfaces, tests, datos JSON, esquemas, documentación derivada. `deep-reasoner` (opus) para razonamiento pesado: diseño de algoritmos, depuración compleja, análisis de balance, divergencias de determinismo. `Explore` para búsquedas de solo lectura. Usa `fork` solo cuando el subagente necesite todo el contexto de la sesión.
 - Cada encargo a un subagente es cerrado: qué ficheros puede tocar, qué interfaces debe respetar, qué tests deben pasar, y que no haga commit. Lanza en paralelo los encargos independientes. Siempre una revisión independiente antes de cerrar un hito.
 - **Skills y plugins**: cuando un flujo se repita o requiera conocimiento específico, crea una skill en `.claude/skills/` (plugin `skill-creator`) o instala un plugin del marketplace, y regístralo en la sección de skills de este fichero. No pidas permiso para ello.
+- **Nunca `git add -A` con subagentes en marcha.** Trabajan sobre el mismo árbol, así que barre su trabajo a
+  medias hacia tu commit: el 13 sep 2026 se colaron así cambios de `/Game` en dos commits de `/Sim` y
+  `/data` —rompiendo la regla de que un commit no mezcla `/Sim` y `/Game`— y se publicó código **sin
+  verificar**. Prepara siempre rutas explícitas (`git add Sim Sim.Tests data docs`) y mira `git status`
+  antes de commitear.
 - **Hitos**: cada entregable de `docs/plan-fases.md` termina con: build y tests en verde, lote de `/Balance` si toca `/Sim` o `/data`, revisión por subagente, commit con RF/RT, push, y actualización del estado en `plan-fases.md`.
 - **Informe al revisor**: al cerrar un hito, un resumen corto de qué se hizo, qué se midió, qué quedó fuera y qué decisiones se tomaron sin consultar (con enlace al ADR o a `pendientes.md`).
 - **No pares al cerrar un hito**: encadena con el siguiente sin esperar aprobación. Al terminar un paquete, commitea, informa en una línea y arranca el siguiente del plan. Solo se detiene el desarrollo si falta una herramienta que el revisor deba instalar, si hay que tomar una decisión de diseño que cambie una regla del juego, o si algo tiene coste económico o es irreversible fuera del repositorio.
@@ -100,6 +105,21 @@ xvfb-run -a --server-args="-screen 0 1280x800x24" godot --path Game \
   --rendering-driver opengl3 --audio-driver Dummy   # ejecutar y capturar
 ```
 
+**Las capturas salen de TRES entradas distintas, y ninguna las hace todas.** Perdido medio paquete el 13
+sep 2026 lanzando el flag equivocado una y otra vez y mirando PNG viejos:
+
+| qué quieres | cómo se saca |
+|---|---|
+| `equipo*.png` (11, pantalla de Equipo) | `-- --screenshots` |
+| `inicio`, `mapa`, `ojeo`, `equipo-run` | `-- --tour` · solo el mapa: `-- --map-tour` |
+| **`partido*`, `informe`, `recompensa`, `mercado`** | `res://Scenes/Capturas.tscn` (sin flag) |
+
+**Comprueba SIEMPRE la marca de tiempo del PNG** (`ls -la Game/screenshots/x.png`) antes de mirarlo o de
+sacar conclusiones. Que el proceso salga con código 0 **no** significa que haya escrito el fichero: con el
+flag equivocado hace once capturas de otra pantalla, no toca la que buscas y termina limpiamente. Y con
+renderizado por software la secuencia tarda **varios minutos**, así que lánzala en segundo plano y no la
+mates antes de tiempo.
+
 **`dotnet build` en la raíz NO actualiza lo que Godot carga.** Godot ejecuta los ensamblados de
 `Game/.godot/mono/temp/bin/Debug/`, y solo `dotnet build Game/Underleague.Game.csproj` los regenera. Con un
 `Underleague.Sim.dll` rancio leyendo un `/data` recién cambiado, el juego **se cuelga al arrancar sin
@@ -116,6 +136,11 @@ cuando es un binario viejo. La escena de capturas solo arranca **con Xvfb**: en 
 - Tests estadísticos con semilla fija y rangos de RT-056; un test que falla "por mala suerte" es un test mal escrito.
 - **Tests con criterio, no por reflejo**: siempre `-c Release` (Debug es 17x más lento, medido). Ejecuta solo los tests que cubren lo que has tocado (`dotnet test Sim.Tests -c Release --filter "FullyQualifiedName~X" -m:1 -v q`), filtrando la salida a las líneas de resultado. El bucle de trabajo es `Category!=Gate`; las puertas (`Category=Gate`) se lanzan **una vez y en una sola invocación** antes del commit del hito, nunca tras cada edición ni troceadas por clase. No repitas un build o test cuyo resultado ya conoces. Los subagentes siguen la misma regla.
 - **El paralelismo vive en el arnés, no en `/Sim`**: `/Balance` y las puertas de `Sim.Tests` juegan sus partidos con `Parallel.For` sobre un array por índice, con cada semilla función pura del índice (`RngStreams.MatchSeed(seed, índiceGlobal)`, nunca un contador que avance) y las reducciones después, en orden — el patrón de `BossGateTests`. `/Sim` no conoce `Parallel` (RT-021) y **no es reentrante**: `CompiledCondition` guarda el contexto de evaluación en la instancia, así que cada hilo del arnés juega con **su propio `Catalog`** cargado de los mismos ficheros (`Balance/BalanceCatalogs.cs` y su gemelo en `Sim.Tests`); compartir un `Catalog` entre hilos da resultados distintos en cada ejecución. Todo bucle nuevo de partidos o runs independientes sigue ese patrón y se acepta solo con salida **byte a byte idéntica** a la secuencial; una diferencia es una carrera, nunca se arregla tocando la semilla (RT-057).
+- **Antes de afirmar una relación geométrica, compruébala.** El 13 sep 2026 afirmé que la cámara en tres
+  cuartos empeoraba la lectura del texto tumbado al subir el ángulo, y es al revés: **lo del suelo se
+  comprime por el SENO de la elevación** (subir mejora) y **lo que está de pie por el COSENO** (subir
+  empeora). Iba en una instrucción a un subagente, que la contradijo con medidas. Una línea de aritmética
+  antes de escribirlo cuesta menos que el rodeo.
 - **El lote de `/Balance` no es un test de humo**: cuesta tiempo y tokens y su salida es larga. Se lanza cuando hay una **hipótesis concreta que medir**, no después de cada cambio. Agrupa las modificaciones en tandas y mide una vez por tanda, con el número de partidos más pequeño que resuelva la duda. La medición de referencia completa se hace una sola vez, al cerrar el trabajo. Nunca se lanza "para ver si sigue bien" algo que no se ha tocado.
 
 ## Mapa de documentación
@@ -133,6 +158,7 @@ cuando es un binario viejo. La escena de capturas solo arranca **con Xvfb**: en 
 | `docs/decisiones/` | ADRs | Antes de cambiar una decisión tomada |
 | `docs/entorno.md` | WSL/Windows, instalación, cómo se compila cada parte | Al montar la máquina |
 | `docs/ui-equipo.md` | Decisiones de la pantalla de Equipo, de las que derivan las demás pantallas (UI-021) | Antes de tocar `/Game` |
+| `docs/ui-partido.md` | Pantalla de Partido: geometría y cámara (ADR 0102, 0103), el intercambio ángulo/silueta, la sombra como elemento estructural, y qué le debe la vista 3D a la 2D. Es el briefing de arte | Antes de tocar la pantalla de Partido o de encargar arte |
 | `docs/fase2-diseno.md` | Bucle de run: mapa, economía, mercado, jefe, ironman | Fase 2 |
 | `docs/catalogo-perks-y-objetos.md` | Catálogo derivado de `/data`: los 61 perks con su descripción generada (RT-035), los 34 objetos por arquetipo y los 4 consumibles | Al diseñar o revisar contenido de `/data`; se regenera, no se edita a mano |
 | `docs/referencia-motores-futbol.md` | Conclusiones aplicables de motores de fútbol open-source (gfootball, librcsc, SimpleSoccer), con fuentes citadas | Al tocar intercepción/parada del portero (AW-A) o evaluación de línea de pase |
