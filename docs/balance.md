@@ -155,7 +155,7 @@ En cada commit sobre `/Sim` o `/data`:
 2. Lote de balance con el conjunto de referencia. **El build falla** si alguna build catalogada supera el 70% o baja del 30% de tasa de victoria contra la referencia (RT-055).
 3. Validación de `/data` (RT-083).
 
-Las puertas automáticas viven en `Sim.Tests` con `Trait("Category", "Gate")` y suman unos 75 s en Release:
+Las puertas automáticas viven en `Sim.Tests` con `Trait("Category", "Gate")`: **7 clases, 43 hechos**, unos **5 min** en Release en una sola invocación (la ADR 0074 subió `BossGateTests` a 64×16 por celda).
 
 | Puerta | Fichero | Muestra | Qué defiende |
 |---|---|---|---|
@@ -165,6 +165,9 @@ Las puertas automáticas viven en `Sim.Tests` con `Trait("Category", "Gate")` y 
 | Equilibrio entre razas | `Analysis/RaceBalanceTests.cs` | 250 plantillas × 4 partidos × 10 parejas, semilla 1 | D-29: ninguna raza fuera del 40-60% agrupado |
 | **Curva de puertas de la ADR 0033** | `Analysis/BossGateTests.cs` | 32 plantillas × 4 partidos × 4 niveles × 3 jefes × 5 razas = 7.680, semilla 1, ~35 s | **La** métrica de la fase 2: cada nivel de calidad de build contra cada jefe |
 | **Run completa** | `Analysis/FullRunGateTests.cs` | **240** runs × 3 doctrinas de compra, semilla 1, ~40 s (60 hasta la ADR 0072: la cota de `deathsPerRun` quedaba a 2,7 desviaciones) | Duración de la run, causas de derrota, RF-114k, compras por mercado, determinismo del bucle |
+| Impacto del equipamiento | `Perks/EquipmentImpactTests.cs` | build buena equipada contra la misma sin equipar | Que equipar valga varios puntos de tasa de victoria (ADR 0036) |
+
+> **Verde no quiere decir «en banda».** `FullRunGateTests.TheMetricsThatDoNotMeetTheirDesignBandStayWhereTheyWereMeasured` es una **valla anti-regresión**, no la banda de diseño: exige `runWinRate` 5-40 (diseño 20-30), `affordableShareAtMarket` 25-70 (diseño 20-35), `leftoverGoldShare` 5-32 (diseño ≤15), `brokeMarketRunShare` 5-25 (diseño 10-25), `deathsPerRun` 1-3 (diseño 1,5-3) y `purchasesPerMarket` 0,5-2 (diseño 1-2). Sirve para que un cambio no empeore lo ya medido; no para dar por cumplida una banda. Y `contextualAdvantage` no lo comprueba **ninguna** puerta.
 
 **RT-055 no está automatizada**: se mide a mano con `--builds all --vs human_none`. Al cierre del paquete U
 la incumplen las razas, no las builds (elfos 67,5%, orcos 23,5% contra `human_none` sin perks); anotado como
@@ -183,15 +186,15 @@ Se añaden a `summary.csv` cuando el sistema correspondiente existe:
 | Build de violencia con sobornos vs sin sobornos | RF-064e | Viable (>=40%) con sobornos, inviable (<30%) sin ellos | 3 |
 | Build de violencia con sobornos + 2 mitigaciones | RF-064g | Alcanza la tasa de referencia sin depender de una sola mitigación (retirar cualquiera no la hunde por debajo del 30%) | 3 |
 | Oro medio por acto | RF-114k | Permite usar 2-3 sumideros, nunca todos. **Implementada** en `FullRunMetrics.SinksAffordable`; medido 2,40 y nunca los cuatro | 2 |
-| Tasa de victoria de la run | `fase2-diseno.md` §10 | 25-40% con la política contextual. Medido **13,0%**; la banda no es compatible con la tabla de la ADR 0033 (Z-G en `pendientes.md`) | 2 |
-| Ventaja de la política contextual | ADR 0037 | >= 8 puntos sobre la gastadora y la ahorradora. Medido **+5,0** y **+0,8**; bloqueada por la ADR 0036 (Z-H) | 2 |
-| Escasez del mercado | ADR 0037 | 20-35% del surtido asequible al llegar, 1-2 compras por visita, < 15% de oro sobrante, 10-25% de runs sin poder comprar. Medido 40,5 · 1,43 · 23,2 · 49,2 (Z-K, Z-L) | 2 |
+| Tasa de victoria de la run | `fase2-diseno.md` §10 | **20-30%** con la política contextual (la ADR 0040 corrigió la banda: 25-40 no era compatible con la tabla de la ADR 0033). Medido **25,33 / 27,00** (ADR 0100), **dentro** desde la ADR 0095 | 2 |
+| Ventaja de la política contextual | ADR 0037 | >= 8 puntos sobre la gastadora y la ahorradora. Medido **4,17 / 8,00** (ADR 0100): **sigue fuera y no se ha cumplido nunca** (histórico −2,1 a +5,6). **Ninguna puerta la afirma**: es una fila `Banded` de `summary.csv` que no comprueba ningún test, así que CI no vería un empeoramiento (AZ-H) | 2 |
+| Escasez del mercado | ADR 0037 | 20-35% del surtido asequible al llegar, 1-2 compras por visita, < 15% de oro sobrante, 10-25% de runs sin poder comprar. Medido (ADR 0100) **63,4 · 1,20 · 8,67 · 12,92**: las tres últimas dentro, `affordableShareAtMarket` sigue muy fuera y se opone a las otras dos (Z-K) | 2 |
 | Cada raza sostiene 3 builds viables distintas | RF-032 | Tres configuraciones con tasa 30-70% y perks mayoritariamente distintos | 2-3 |
 | Distribución del catálogo de perks | RF-069 | 60/30/10 ±5 puntos | 1+ |
 | Perks que acumulan entre partidos | RF-070 | >= 15 en el catálogo de lanzamiento. **Cumplido**: 15 desde el paquete Z | 2+ |
-| Arcos de build cerrados por run | ADR 0051 | Una política que persigue un maestro llega a cerrar un arco en una fracción razonable de las runs. **Implementada** en `FullRunMetrics.MastersReached`; medido **5,5%** desde que el maestro solo se compra (ADR 0055), con la banda bajada a >= 2 y la causa en `fase2-diseno.md` §23.5 | 2 |
+| Arcos de build cerrados por run | ADR 0051 | Una política que persigue un maestro llega a cerrar un arco en una fracción razonable de las runs. **Implementada** en `FullRunMetrics.MastersReached`; medido **46,2 / 44,3%** tras la ADR 0096 (era 5,5% cuando el maestro solo se compraba, ADR 0055) | 2 |
 | Divergencia entre builds con maestros distintos | ADR 0051, RF-032 | Dos runs de la misma raza que toman maestros distintos coinciden en menos perks que dos que toman el mismo; >= 5 puntos de diferencia. **Implementada** en `FullRunMetrics.MasterDivergence`; medido **9,0** | 2 |
-| Ganar la run sin entrar en ningún mercado | ADR 0055 | Por debajo del **5%**. **Implementada** en `FullRunMetrics.MarketlessWinRate` (la contextual con `AvoidsMarkets`); medido **23,5%**, por encima incluso de la misma política usando los mercados (20,0%) | 2 |
+| Ganar la run sin entrar en ningún mercado | ADR 0055 | Por debajo del **5%**. **Implementada** en `FullRunMetrics.MarketlessWinRate`; medido **6,58 / 8,08** (ADR 0100): faltan ~2,8 puntos. La ADR 0098 corrigió antes el instrumento —el control compraba cuando el mapa lo obligaba a entrar— y con ello retiró la contradicción que la ADR 0096 anunciaba entre la ADR 0033 y la ADR 0055 | 2 |
 | Mejores equipos ganan más con sorpresas creíbles | Fase 0, banda revisada por la **ADR 0054** | Equipo **+20** en todos los atributos gana **70-88%**; +10 es informativo y se vigila en 55-70%. Medido 79,52 | 0 |
 
 ## Definición de "build" para `/Balance`

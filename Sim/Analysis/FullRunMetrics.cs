@@ -16,7 +16,7 @@ namespace Underleague.Sim.Analysis;
 /// </summary>
 public static class FullRunMetrics
 {
-    /// <summary>Tasa de victoria de la run con la política contextual (25-40%).</summary>
+    /// <summary>Tasa de victoria de la run con la política contextual (20-30%, ADR 0040).</summary>
     public const string RunWinRate = "runWinRate";
 
     /// <summary>Porcentaje de las <b>derrotas</b> que son por bajar de 5 jugadores (&lt; 35%).</summary>

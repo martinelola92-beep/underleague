@@ -4,35 +4,70 @@ Del §7 de requisitos, con los entregables concretos y el estado. **Regla de fas
 
 ## Estado actual
 
-**Fase 2 implementada y medida** (5 de septiembre de 2026). El bucle de run se juega entero desde
-código, es reproducible y sus decisiones tienen consecuencias medibles: mapa por actos con mercado
-garantizado, economía, mercado con canteranos y mercenarios, clínica, equipamiento, recompensas con
-reroll, tres jefes con modificadores de regla, guardado ironman y `--full-runs` con tres políticas
-automáticas. Cinco puertas automáticas en verde (`Trait("Category","Gate")`), `DataValidator` sin
-errores y la suite completa en verde.
+**Fase 2 implementada y medida; el criterio de salida operativo se cumple, el de sensación no lo he
+comprobado yo.** Última medición de cierre: **ADR 0100**, 1.200 runs × 2 semillas. Estado al **13 de
+septiembre de 2026**, tras las ADR 0095-0100 y las dos partidas jugadas por el revisor (paquetes AW y AZ,
+veintisiete anotaciones, todas cerradas).
 
-**La métrica principal de la fase, la curva de puertas de la ADR 0033, se cumple en las doce celdas**
-(`docs/fase2-diseno.md` §16.6). Lo que **no** se cumple es la mitad de las métricas de apoyo de §10 y de
-la ADR 0037, con causa identificada y número en `docs/balance/fase2-resultados.md`:
+El criterio operativo de `fase2-diseno.md` §0 —*"una run completa se puede jugar de principio a fin desde
+código, es reproducible, y sus decisiones tienen consecuencias medibles en `/Balance`"*— **se cumple**, y
+la métrica principal de la fase, **la curva de puertas de la ADR 0033, está en verde en las doce celdas**.
+El criterio nominal (*"el jugador dice «una run más»"*) solo lo puede responder el revisor.
 
-| Métrica | Rango | Medido |
-|---|---|---|
-| Curva de puertas (12 celdas, ADR 0033) | tabla de la ADR | **todas dentro** |
-| Duración de una run completa | 18-22 partidos | 20,0 |
-| Derrotas por bajar de 5 jugadores | < 35% | 0,0 |
-| Sumideros que paga el oro de un acto (RF-114k) | 2-3, nunca 4 | 2,40 |
-| Compras por visita al mercado (ADR 0037) | 1-2 | 1,43 |
-| Tasa de victoria de la run | 25-40% | **13,0** |
-| Muertes por run | 0,5-2 | **0,00** |
-| Ventaja de la política contextual (ADR 0037) | >= 8 puntos | **+5,0 / +0,8** |
-| Fracción asequible del surtido / oro sobrante / visitas en blanco | 20-35 / <15 / 10-25 | **40,5 / 23,2 / 49,2** |
+**Puertas: 7 clases, 43 hechos**, unos 5 min en Release en una sola invocación.
 
-Las cuatro cosas que hay que decidir antes de cerrar la fase están en `pendientes.md` Z-F a Z-L: que el
-club inicial traiga una build (RF-023/RF-005, exige ADR), que la banda de tasa de victoria de §10 baje a
-20-30% para ser compatible con la ADR 0033, que se aplique la **ADR 0036** (el equipamiento no vale nada
-hoy y bloquea el criterio de la ADR 0037), y que la fórmula de lesión deje de medirse contra el nivel 1
-(hoy un equipo que sube de nivel es inmune a las lesiones, y con ellas se van la clínica, las muertes y
-el desgaste).
+| Métrica | Banda | Medido (semillas 1 / 7) | |
+|---|---|---|---|
+| Curva de puertas (12 celdas, ADR 0033) | tabla de la ADR | todas dentro | ✅ |
+| Duración de una run completa | 18-22 partidos | 20,0 | ✅ |
+| Tasa de victoria de la run | 20-30 % (ADR 0040) | **25,33 / 27,00** | ✅ desde la ADR 0095 |
+| Muertes por run | 1,5-3 (ADR 0048) | 1,85 / 1,85 | ✅ |
+| Sumideros por acto (RF-114k) | 2-3, nunca 4 | 2,78 / 2,79 | ✅ |
+| Compras por visita al mercado | 1-2 | 1,20 / 1,22 | ✅ |
+| Oro sobrante | ≤ 15 % | 8,67 / 8,78 | ✅ |
+| Runs sin poder comprar | 10-25 % | 12,92 / 11,33 | ✅ en las dos semillas desde la ADR 0100 |
+| Arcos de build cerrados | ≥ 2 % | 46,2 / 44,3 | ✅ desde la ADR 0096 |
+| **Fracción asequible del surtido** | 20-35 % | **63,4 / 63,9** | ❌ y se opone a las dos anteriores (Z-K) |
+| **Ventaja de la política contextual** | ≥ 8 | **4,17 / 8,00** | ❌ **nunca cumplida** (histórico −2,1 a +5,6) |
+| **Ganar sin pasar por el mercado** | ≤ 5 % | **6,58 / 8,08** | ❌ faltan ~2,8 puntos |
+
+**Verde no quiere decir «en banda».** `FullRunGateTests.TheMetricsThatDoNotMeetTheirDesignBandStayWhereTheyWereMeasured`
+es una valla anti-regresión con cotas anchas a propósito (`runWinRate` 5-40, `affordableShareAtMarket`
+25-70, `leftoverGoldShare` 5-32, `purchasesPerMarket` 0,5-2), no la banda de diseño. Y
+`contextualAdvantage` **no lo comprueba ninguna puerta**: se calcula, se imprime en `summary.csv` y CI no
+vería un empeoramiento.
+
+**Los seis objetivos de separación entre perfiles de la ADR 0056**, que son lo que decide si construir
+bien se nota, van **2 de 6**: la build buena llega al 61,10 % de victorias ordinarias en el acto 2 pero se
+queda en 49,40 % en el acto 3 (objetivo 60), la mediocre mide 47,60 % (objetivo 42-45), la mala completa la
+run el 10,50 % de las veces (objetivo < 2) y el suelo sin build está en 10,92-11,33 % (objetivo < 10). Solo
+el objetivo 6 (run en 20-30 %) y el 1 en su mitad del acto 2 están cumplidos.
+
+**Lo que sigue abierto y bloquea el cierre de la fase 2**, con su fila en `pendientes.md`:
+
+- **CAT-B** — un consumible se compra y no se puede equipar: nadie emite `SetConsumables`, ni `/Game` ni
+  la política automática. La cuarta categoría del mercado cobra oro y no devuelve nada. Es el único que no
+  es una banda sino un agujero.
+- **AL-A** — el recorrido de un perk lo fija la base de su canal, no su magnitud (×2 sobre `pass` vale 0,19
+  puntos; sobre `intercept`, 15,54). Es la raíz que heredan AK-B, AO-A, AU-B y AJ-C, y bloquea los
+  objetivos 4 y 5 de la ADR 0056.
+- **AZ-H** — el mercado no discrimina lo suficiente; es la causa directa de las tres filas rojas de arriba.
+- **D-34** — RT-055 no se cumple (las nueve builds coherentes ganan 68,3-86,3 % a `human_none`, techo 70 %)
+  porque el punto de comparación es una plantilla con cero perks. Cambiarlo **exige un ADR**.
+- **D-28, D-30, D-31, D-33** — la segunda mitad de `scalingRewardsGoodBuilds` no es alcanzable; la escala
+  de valor de perk no cabe en una tabla única; la correa sigue sin comprar nada; falta medir el bono de
+  adyacencia de `Trait.Leader`.
+- **AY-A** — el indicador de riesgo letal dejó de ser exacto tras el paquete AY: es un techo para el
+  marcado y un cero falso para los demás, contra RF-012d. Su propia fila dice que hay que elegir **antes de
+  la siguiente build**, y la build del 13 de septiembre salió sin esa decisión tomada.
+- **AX-A** — `CompiledCondition` no es reentrante; acotado y contenido, pero cualquier `Parallel.For` nuevo
+  sobre un catálogo compartido vuelve a picar en silencio.
+
+Las cuatro decisiones que esta sección listaba en septiembre (Z-F a Z-L) ya no son las vivas: la ADR 0036
+se aplicó (Z-H, Z-L cerradas) y la ADR 0040 cambió la banda a 20-30 (Z-G cerrada).
+
+Detalle completo de las mediciones en `docs/balance/fase2-resultados.md` —cuyo §7 es de la primera
+medición y está superado en sus puntos 1 a 5— y en las ADR 0095-0100.
 
 **Fase 1 cerrada** (4 de septiembre de 2026) con el bloque de rediseño espacial (ADR 0020-0030) y su
 reajuste único (paquete U). El criterio de salida de la fase 1 —"dos builds distintas ganan de formas
@@ -97,8 +132,8 @@ Criterio de salida: dos builds distintas ganan de formas distintas y se nota.
 
 Criterio de salida: el jugador dice "una run más" sin arte terminado.
 
-- Mapa por capas (RF-010..014), 8 partidos + 1 jefe, nodos de mercado (RF-114..114f) con canteranos (RF-114b..d), lesiones y clínica (RF-090..094), equipamiento (RF-075..078), mercenarios (RF-110..113), economía (RF-114g..k), reroll (RF-071b), guardado ironman (RT-061) con snapshot de `/data` (RT-061b), modo de depuración (RT-062).
-- Máximo 30 perks y 12 objetos. **Al cierre del paquete Z: 53 perks (15 acumulativos, RF-070) y 12 objetos.**
+- Mapa por capas (RF-010..014), **35 nodos y hasta 20 partidos** por run (D-2/D-10), nodos de mercado (RF-114..114f) con canteranos (RF-114b..d), lesiones y clínica con sus tres servicios (RF-090..094, ADR 0099), nodo de evento como carta con opciones (ADR 0100, `data/events/`), equipamiento (RF-075..078, ADR 0036), mercenarios (RF-110..113), economía (RF-114g..k), reroll (RF-071b), guardado ironman (RT-061) con snapshot de `/data` (RT-061b), modo de depuración (RT-062). La ADR 0097 **retiró el nodo de inscripción**: el hueco de plantilla se compra en el mercado.
+- Máximo 30 perks y 12 objetos. **Hoy: 61 perks** (5 habilidades raciales + 56 obtenibles, 15 acumulativos por RF-070), **34 objetos** y 4 consumibles — catálogo derivado en `docs/catalogo-perks-y-objetos.md`.
 - Cierre del diseño: se resuelven las decisiones pendientes D-2, D-3, D-6, D-7, D-10. **Las cinco están
   cerradas** (paquete Z, `pendientes.md`), más D-9 (paquete Y). A partir de aquí se puede encargar arte.
 
