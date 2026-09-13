@@ -28,7 +28,7 @@ internal static class MatchResolution
     private const string SevereDetail = "severe";
 
     /// <summary>Prefijo del contador de inventario de consumibles (paquete X, X-9).</summary>
-    private const string ConsumableOwnedCounter = "consumable_owned:";
+    private const string ConsumableOwnedCounter = RunState.ConsumableOwnedPrefix;
 
     /// <summary>Resultado de aplicar un partido al estado de la run.</summary>
     internal sealed record Applied(RunState State, RunMatchSummary Summary, RunOutcome Outcome);

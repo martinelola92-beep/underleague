@@ -153,7 +153,7 @@ public static class MarketSystem
     {
         var offer = AtIndex(offers, decision.OfferIndex, "consumible");
         RequireGold(state, offer.Price);
-        string counter = "consumable_owned:" + offer.ConsumableId;
+        string counter = RunState.ConsumableOwnedPrefix + offer.ConsumableId;
         return state.AddGold(-offer.Price).WithCounter(counter, state.Counter(counter) + 1);
     }
 

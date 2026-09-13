@@ -172,7 +172,12 @@ public static class MarketOfferGenerator
         for (int i = 0; i < market.ConsumableOffers && consumables.All.Count > 0; i++)
         {
             var consumable = consumables.All[rng.Range(0, consumables.All.Count)];
-            consumableOffers.Add(new ConsumableOffer(consumable.Id, Priced(ref rng, market.ConsumablePrice, market.ConsumablePrice)));
+            // CAT-B / ADR 0101: el precio sale de la rareza como el de un perk o un objeto. Era plano y
+            // alto (45, más que un perk raro) porque el _doc de la economía daba por hecho que "no lo
+            // compra nadie": solo servía para inflar affordableShareAtMarket. Desde que se puede equipar,
+            // es un precio de verdad.
+            int basePrice = market.ConsumablePriceByRarity.Of(consumable.Rarity);
+            consumableOffers.Add(new ConsumableOffer(consumable.Id, Priced(ref rng, basePrice, basePrice)));
         }
 
         return new MarketOffers(recruits, youths, mercenaries, perks, itemOffers, consumableOffers);

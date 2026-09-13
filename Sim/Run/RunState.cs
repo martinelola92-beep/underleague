@@ -297,6 +297,13 @@ public static class RunRules
     public const int MinimumAvailablePlayers = 5;
 
     /// <summary>
+    /// Consumibles que se pueden llevar a un partido (RF-080): uno manual obligatorio (RF-082) y hasta
+    /// dos condicionales (RF-081). Lo valida <c>RunEngine.Apply(SetConsumables)</c>; la constante existe
+    /// para que la política automática y la pantalla de Equipo no repitan el número a mano.
+    /// </summary>
+    public const int MaxEquippedConsumables = 3;
+
+    /// <summary>
     /// Capacidad base (RF-020, ADR 0046): un hueco más que la plantilla inicial de 9 (RF-005), para poder
     /// fichar en el primer mercado. No es un mínimo ni un objetivo: es el <b>techo de partida</b>. Crecer
     /// por encima exige un hueco, y el único que los vende es el nodo de inscripción.
@@ -516,6 +523,48 @@ public sealed record RunState
                 for (int i = 0; i < count; i++)
                 {
                     ids.Add(key[ItemStockPrefix.Length..]);
+                }
+            }
+
+            ids.Sort(StringComparer.Ordinal);
+            return ids;
+        }
+    }
+
+    /// <summary>
+    /// Prefijo del contador de inventario de consumibles (paquete X, X-9). El mercado lo sube al comprar
+    /// (<c>MarketSystem.BuyConsumable</c>) y <c>MatchResolution.ConsumeConsumables</c> lo baja al gastarse
+    /// (RF-085). Es el gemelo de <see cref="ItemStockPrefix"/> y vivía escrito a mano en tres sitios.
+    /// </summary>
+    public const string ConsumableOwnedPrefix = "consumable_owned:";
+
+    /// <summary>Copias sueltas de ese consumible en el inventario.</summary>
+    public int ConsumablesOwned(string consumableId)
+    {
+        ArgumentException.ThrowIfNullOrEmpty(consumableId);
+        return Counter(ConsumableOwnedPrefix + consumableId);
+    }
+
+    /// <summary>
+    /// Consumibles del inventario, por id ascendente y una entrada por copia (RT-041): es lo que la
+    /// pantalla de Equipo enseña para elegir los tres de RF-080 y lo que una política automática recorre.
+    /// Mismo contrato y mismo orden que <see cref="StoredItems"/>.
+    /// </summary>
+    public IReadOnlyList<string> OwnedConsumables
+    {
+        get
+        {
+            var ids = new List<string>();
+            foreach (var (key, count) in Counters)
+            {
+                if (count <= 0 || !key.StartsWith(ConsumableOwnedPrefix, StringComparison.Ordinal))
+                {
+                    continue;
+                }
+
+                for (int i = 0; i < count; i++)
+                {
+                    ids.Add(key[ConsumableOwnedPrefix.Length..]);
                 }
             }
 
