@@ -143,6 +143,10 @@ Criterio de salida: el jugador dice "una run más" sin arte terminado.
 
 Criterio de salida: el partido se lee sin necesidad del log.
 
+**Dirección técnica decidida (ADR 0102, 13 sep 2026): 3D con toon shading y cámara ortográfica fija en tres cuartos**, que se lee como 2D. La rejilla sigue siendo 16×5 y la simulación sigue siendo plana: la tercera dimensión es **solo presentación** y cualquier altura que el render se invente es decorado que nunca se lee de vuelta. Retira el presupuesto de 115 frames de RA-017 —se paga por modelo, rig y clip, no por frame y raza— y con él RA-006, RA-007, RA-010, RA-011 y RA-015; §5 de requisitos hay que reescribirlo y hasta entonces manda el ADR. Los highlights (RA-020..022) **no se ven afectados**: nunca fueron pixelart.
+
+Orden de trabajo: (1) el ADR, hecho; (2) cámara y escena de partido con **cápsulas grises** a las proporciones de RA-002, leyendo la traza que ya existe; (3) **prueba de silueta** sobre eso —si en tres cuartos con sombra se distinguen las cinco razas y se sigue el balón, el criterio de salida está encaminado y no se ha gastado en arte—; (4) `docs/ui-partido.md` como briefing, escrito sobre una geometría ya probada, antes de encargar nada.
+
 - Pixelart definitivo y animaciones (RA-001..019b), highlights (RA-020..022, RF-115..117), vínculos (RF-100..106), gol de oro con turba (RF-055b..056), árbitro con rasgos, criterio y sobornos (RF-061..064g), ceremonia de muerte y memorial (RF-122). Git LFS (RT-004): **instalado** el 13 sep 2026 (3.8.0, en `~/.local/bin`; sin reglas de seguimiento todavía, porque no hay arte).
 - **El taller de prótesis (RF-095..095c) sale de la fase 3** (decisión del revisor, 13 sep 2026): pasa a una expansión futura. Consecuencia que conviene tener escrita: era el **cuarto sumidero de oro** y la palanca de fase 3 que atacaba directamente `affordableShareAtMarket` y `contextualAdvantage`, las dos métricas del mercado que llevan fuera de banda desde siempre (AZ-H). Sin él, esas dos hay que atacarlas desde dentro de la fase 2.
 - Métricas de violencia (RF-064e/g) en `/Balance`.
