@@ -21,11 +21,11 @@
     "human_random"
   ],
   "baselineByRace": {
-    "Human": "human_none",
-    "Orc": "orc_none",
-    "Elf": "elf_none",
-    "Dwarf": "dwarf_none",
-    "Undead": "undead_none"
+    "Human": "human_neutral",
+    "Orc": "orc_neutral",
+    "Elf": "elf_neutral",
+    "Dwarf": "dwarf_neutral",
+    "Undead": "undead_neutral"
   },
   "actDensity": {
     "_doc": "ADR 0040 y ADR 0043: densidad de build con la que se mide cada celda de la tabla de la ADR 0033. REMEDIDA en el paquete AT (ADR 0073): llevaba desde el paquete AA sin tocarse y en ese tiempo el juego se movio dos veces. (1) OBJETOS: la ADR 0055 puso 'rewardItemWeight' a 0 -un objeto es una compra, no un trofeo- y midio que los objetos por run caian de 4,13 a 2,12; el modelo seguia declarando 2/4/6 objetos en el once cuando el banco mide 0,8/1,8/2,9 incluso en las runs GANADAS. El modelo estaba viejo, no el juego. (2) PERKS: el modelo llevaba 5,25/7,5/8,75 de media contra 5,3/11,8/12,4 del banco, y de esa diferencia la mayor parte era el JUEGO: la doctrina contextual no tenia liston de slot y acaparaba (ADR 0072). Con el liston derivado, el banco baja a 4,3/9,5/11,3 y el hueco que queda es el que se escribe aqui. Anclas, medidas sobre 1.200 runs (300 x semillas 1/1001/2001/3001) con el liston de la ADR 0072 puesto: 'incoherent' <- doctrina GASTADORA (6,67/12,44/13,38 perks y 0,76/0,99/1,99 objetos), que es la que no rechaza nada y por eso llega con MAS piezas, tal como pide la ADR 0043; 'correct' y 'good' <- doctrina CONTEXTUAL (4,34/9,47/11,34 y 0,82/1,75/3,00), con la MISMA densidad porque la ADR 0033 los separa por CALIDAD y no por numero de piezas, y la ADR 0040 dice que cada celda se mide con la densidad alcanzable en ese punto de la run; 'excellent' conserva ancla propia -y por eso no comparte la de 'good'- por la razon de AA-17: con una sola densidad por acto, 'buena' y 'muy buena' empatan en el acto 1; su ancla son las runs contextuales GANADAS (4,57/10,39/11,53 y 1,01/1,88/3,24), que es 'el escalado acumulado durante toda la run' de la ADR 0033. Las variantes se derivan de la build completa quitando piezas (Sim.Analysis.BuildDensity), nunca se escriben a mano; 'items' solo muerde en el escalon 'muy buena', que es el unico que declara equipamiento en data/balance/builds/. counterCap es hasta donde ha podido crecer un contador de acumulacion con los partidos jugados hasta esa puerta (RF-070) y NO se ha remedido en este paquete. Historico: la ADR 0049 midio 3,2 perks y 1,8 objetos al jefe del acto 1, 6,3 y 3,9 al del 2 y 8,6 y 5,3 al final; esas cifras son las que quedaron obsoletas.",

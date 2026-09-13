@@ -1,0 +1,66 @@
+{
+  "_doc": "Referencia NEUTRA de la puerta de fase 1 (ADR 0104, cierra CAT-E y ataca D-34). Sustituye a <raza>_none como baseline en groups.json. El problema de _none: no lleva NINGUN perk y cualquier build lleva CATORCE, asi que compararse con ella no medIa equilibrio, medIa cuanto vale el catalogo entero, y por eso RT-055 no se cumplio nunca y el campo de seis filas (ADR 0103) puso dos puertas en rojo. Esta referencia lleva la MISMA CANTIDAD de catalogo (14 perks) y CERO coherencia, de modo que ganarle mide lo que la fase 1 dice medir: si construir bien se nota. REGLA de seleccion, declarada y reproducible con tools/build-neutral-reference.py, no elegida a mano: de data/economy/perk-values.json se toman los 14 perks cuyo valor medido esta MAS CERCA DE LA MEDIANA del catalogo elegible, descartando lo que no seria neutral -habilidades raciales, perks bloqueados por raza, posicion o etiqueta (se desperdiciarian), letales (la letalidad es una eleccion de build), maestros (exigen dos de su linea), rompe-reglas, y los que dependen de vinculos direccionales linked(), que son justamente la coherencia de COLOCACION que la puerta mide-, con tope de DOS por familia para que ninguna linea acumule cuota sobre el mismo canal. Se reparten dos por titular en orden. Alineacion por defecto (lineup null) y sin styles ni traits: la diferencia con una build coherente tiene que ser la build, no la colocacion ni el estilo.",
+  "id": "orc_neutral",
+  "name": "Orcos: referencia neutra",
+  "race": "Orc",
+  "quality": 50,
+  "perks": [
+    {
+      "slot": 0,
+      "perk": "box_predator"
+    },
+    {
+      "slot": 0,
+      "perk": "brute_boots"
+    },
+    {
+      "slot": 1,
+      "perk": "pack_mentality"
+    },
+    {
+      "slot": 1,
+      "perk": "road_warrior"
+    },
+    {
+      "slot": 2,
+      "perk": "steady_hands"
+    },
+    {
+      "slot": 2,
+      "perk": "pit_veteran"
+    },
+    {
+      "slot": 3,
+      "perk": "back_to_back"
+    },
+    {
+      "slot": 3,
+      "perk": "flank_specialist"
+    },
+    {
+      "slot": 4,
+      "perk": "cold_focus"
+    },
+    {
+      "slot": 4,
+      "perk": "long_leash_legacy"
+    },
+    {
+      "slot": 5,
+      "perk": "high_press_trigger"
+    },
+    {
+      "slot": 5,
+      "perk": "home_ref"
+    },
+    {
+      "slot": 6,
+      "perk": "iron_lungs"
+    },
+    {
+      "slot": 6,
+      "perk": "comeback_spirit"
+    }
+  ],
+  "lineup": null
+}

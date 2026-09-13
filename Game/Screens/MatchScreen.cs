@@ -34,7 +34,7 @@ public partial class MatchScreen : Control
     private const float TicksPerSecond = 15f;
 
     /// <summary>Alto disponible para el log; el real se recorta a un número entero de líneas en <see cref="FitLog"/>.</summary>
-    private const float LogHeight = 198f;
+    private const float LogHeight = 132f;
 
     private static readonly int[] Speeds = { 1, 4, 16 };
 
@@ -201,15 +201,16 @@ public partial class MatchScreen : Control
         };
         AddChild(legend);
 
-        // El campo: 16x6 casillas (ADR 0103) en este rectángulo de 1120x350; con seis filas la casilla ya
-        // no es cuadrada de 70 px exactos (limita la altura, no el ancho). Ocupa la mitad de la pantalla
-        // porque es lo que hay que mirar; el resto de la pantalla es contexto de lo que se está viendo en él.
-        Widgets.Panel(this, new Rect2(12f, 152f, 1256f, 358f));
+        // El campo: 16x6 casillas (ADR 0103) en 1120 px de ancho salen a 70 px por casilla, así que las seis
+        // filas piden 420 px de alto para que la casilla sea cuadrada (si no, el jugador no puede estimar
+        // distancias a ojo). El panel le añade el mismo margen de 4 px que tenía antes arriba y abajo. Ese
+        // alto extra (antes 350, ahora 420: +70 px) sale del panel del log y del de controles, más abajo.
+        Widgets.Panel(this, new Rect2(12f, 152f, 1256f, 428f));
         _pitch = new MatchPitchView
         {
             Trace = _trace,
             Position = new Vector2(80f, 156f),
-            Size = new Vector2(1120f, 350f),
+            Size = new Vector2(1120f, 420f),
         };
         _pitch.PlayerPicked += OnPlayerPicked;
         AddChild(_pitch);
@@ -233,14 +234,17 @@ public partial class MatchScreen : Control
         _silhouette = Widgets.Button(this, UiText.Get("ui.match.bwOff"), new Rect2(1202f, 186f, 62f, 24f), enabled: false);
         _silhouette.Pressed += ToggleSilhouette;
 
-        Widgets.Panel(this, new Rect2(12f, 516f, 888f, 234f));
-        Widgets.Section(this, UiText.Get("ui.match.log"), new Vector2(24f, 520f), 400f);
-        _progress = Widgets.Body(this, string.Empty, new Vector2(600f, 520f), 288f, Style.TextDim);
+        // El log y el panel de controles bajan y encogen exactamente el alto que ganó el campo (70 px):
+        // empezaban en y=516 y medían 234, ahora empiezan en y=586 y miden 164. Dentro, todo se reescala en
+        // la misma proporción (164/234 ≈ 0,70) para que ningún botón se quede sin sitio.
+        Widgets.Panel(this, new Rect2(12f, 586f, 888f, 164f));
+        Widgets.Section(this, UiText.Get("ui.match.log"), new Vector2(24f, 590f), 400f);
+        _progress = Widgets.Body(this, string.Empty, new Vector2(600f, 590f), 288f, Style.TextDim);
         _progress.HorizontalAlignment = HorizontalAlignment.Right;
 
         _log = new RichTextLabel
         {
-            Position = new Vector2(24f, 540f),
+            Position = new Vector2(24f, 610f),
             Size = new Vector2(864f, LogHeight),
             BbcodeEnabled = true,
             ScrollActive = true,
@@ -252,13 +256,13 @@ public partial class MatchScreen : Control
         AddChild(_log);
         FitLog();
 
-        Widgets.Panel(this, new Rect2(908f, 516f, 360f, 234f));
-        _clock = Widgets.Body(this, string.Empty, new Vector2(918f, 520f), 340f, Style.Accent);
+        Widgets.Panel(this, new Rect2(908f, 586f, 360f, 164f));
+        _clock = Widgets.Body(this, string.Empty, new Vector2(918f, 590f), 340f, Style.Accent);
 
         _timeline = new MatchTimelineView
         {
-            Position = new Vector2(918f, 540f),
-            Size = new Vector2(340f, 22f),
+            Position = new Vector2(918f, 604f),
+            Size = new Vector2(340f, 16f),
             FrameCount = _trace?.FrameCount ?? 0,
             Marks = BuildMarks(),
             RegulationFrame = RegulationFrame(),
@@ -266,21 +270,21 @@ public partial class MatchScreen : Control
         _timeline.Seeked += OnSeeked;
         AddChild(_timeline);
 
-        Widgets.Button(this, UiText.Get("ui.match.stepBack"), new Rect2(918f, 570f, 60f, 26f)).Pressed += () => Step(-1);
+        Widgets.Button(this, UiText.Get("ui.match.stepBack"), new Rect2(918f, 624f, 60f, 20f)).Pressed += () => Step(-1);
 
-        _play = Widgets.Button(this, UiText.Get("ui.match.pause"), new Rect2(982f, 570f, 70f, 26f));
+        _play = Widgets.Button(this, UiText.Get("ui.match.pause"), new Rect2(982f, 624f, 70f, 20f));
         _play.Pressed += TogglePlay;
 
-        Widgets.Button(this, UiText.Get("ui.match.stepForward"), new Rect2(1056f, 570f, 60f, 26f)).Pressed += () => Step(1);
+        Widgets.Button(this, UiText.Get("ui.match.stepForward"), new Rect2(1056f, 624f, 60f, 20f)).Pressed += () => Step(1);
 
-        _speed = Widgets.Button(this, "x" + Speeds[0].ToString(CultureInfo.InvariantCulture), new Rect2(1120f, 570f, 48f, 26f));
+        _speed = Widgets.Button(this, "x" + Speeds[0].ToString(CultureInfo.InvariantCulture), new Rect2(1120f, 624f, 48f, 20f));
         _speed.Pressed += () =>
         {
             _speedIndex = (_speedIndex + 1) % Speeds.Length;
             _speed.Text = "x" + Speeds[_speedIndex].ToString(CultureInfo.InvariantCulture);
         };
 
-        _zone = Widgets.Button(this, UiText.Get("ui.match.zoneOff"), new Rect2(1172f, 570f, 86f, 26f));
+        _zone = Widgets.Button(this, UiText.Get("ui.match.zoneOff"), new Rect2(1172f, 624f, 86f, 20f));
         _zone.Pressed += () =>
         {
             _pitch.ShowZone = !_pitch.ShowZone;
@@ -288,9 +292,9 @@ public partial class MatchScreen : Control
             _pitch.QueueRedraw();
         };
 
-        Widgets.Button(this, UiText.Get("ui.match.end"), new Rect2(918f, 602f, 84f, 26f)).Pressed += GoToEnd;
+        Widgets.Button(this, UiText.Get("ui.match.end"), new Rect2(918f, 648f, 84f, 20f)).Pressed += GoToEnd;
 
-        _marking = Widgets.Button(this, UiText.Get("ui.match.markOn"), new Rect2(1008f, 602f, 106f, 26f));
+        _marking = Widgets.Button(this, UiText.Get("ui.match.markOn"), new Rect2(1008f, 648f, 106f, 20f));
         _marking.Pressed += () =>
         {
             _pitch.ShowMarking = !_pitch.ShowMarking;
@@ -298,14 +302,14 @@ public partial class MatchScreen : Control
             _pitch.QueueRedraw();
         };
 
-        Widgets.Button(this, UiText.Get("ui.match.report"), new Rect2(1120f, 602f, 138f, 26f)).Pressed += GoToReport;
+        Widgets.Button(this, UiText.Get("ui.match.report"), new Rect2(1120f, 648f, 138f, 20f)).Pressed += GoToReport;
 
         // Tres sucesos clave en vez de cuatro: el cuarto está a un vistazo en el log y en las marcas de la
         // barra, y el sitio que ocupaba lo necesitan las dos líneas del jugador seguido, que son las que
         // cambian con cada clic.
-        Widgets.Section(this, UiText.Get("ui.match.highlights"), new Vector2(918f, 636f), 340f);
-        _highlightList = Widgets.Body(this, UiText.Get("ui.match.highlightsNone"), new Vector2(918f, 654f), 340f);
-        _selected = Widgets.Body(this, UiText.Get("ui.match.selectHint"), new Vector2(918f, 706f), 340f, Style.TextDim);
+        Widgets.Section(this, UiText.Get("ui.match.highlights"), new Vector2(918f, 672f), 340f);
+        _highlightList = Widgets.Body(this, UiText.Get("ui.match.highlightsNone"), new Vector2(918f, 688f), 340f);
+        _selected = Widgets.Body(this, UiText.Get("ui.match.selectHint"), new Vector2(918f, 718f), 340f, Style.TextDim);
 
         Widgets.InputHelp(this, UiText.Get("ui.input.mouseMatch"), UiText.Get("ui.input.padMatch"));
 
