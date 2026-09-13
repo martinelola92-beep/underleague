@@ -119,6 +119,61 @@ public partial class CaptureRunner : Control
             await Save("partido-marcaje");
         }
 
+        // 2c. ADR 0102: la prueba de geometría en 3D. Cápsulas grises a las proporciones de RA-002, cámara
+        //     ortográfica fija en tres cuartos y sombra direccional desde arriba a la izquierda (RA-005,
+        //     RA-008). Las cuatro imágenes salen del MISMO fotograma —la reproducción está parada desde el
+        //     arrastre de la barra— para que lo único que cambie entre ellas sea lo que se está juzgando.
+        var pitch3d = FindPitch3D(match);
+        if (pitch3d is not null && trace is { FrameCount: > 0 })
+        {
+            await Click(new Vector2(1233f, 170f));   // el interruptor 2D/3D, por el mismo camino que un jugador
+            if (!pitch3d.Visible)
+            {
+                GD.PushWarning("el interruptor 2D/3D no respondió al clic: se fuerza la vista para no perder la captura");
+                pitch3d.Visible = true;
+                if (pitch is not null)
+                {
+                    pitch.Visible = false;
+                }
+            }
+
+            await Settle(6);
+            await Save("partido-3d");
+
+            // El barrido de elevación: es la palanca barata del ADR 0102 si en tres cuartos no se lee.
+            foreach (int degrees in new[] { 30, 60 })
+            {
+                pitch3d.Elevation = degrees;
+                await Settle(4);
+                await Save("partido-3d-angulo-" + degrees.ToString(System.Globalization.CultureInfo.InvariantCulture));
+            }
+
+            pitch3d.Elevation = 45f;
+
+            // Modo silueta: RA-002 al pie de la letra, «toda raza debe ser reconocible en blanco y negro».
+            await Click(new Vector2(1233f, 198f));
+            if (!pitch3d.SilhouetteMode)
+            {
+                GD.PushWarning("el interruptor de silueta no respondió al clic: se fuerza el modo");
+                pitch3d.SilhouetteMode = true;
+            }
+
+            await Settle(6);
+            await Save("partido-3d-silueta");
+
+            // La captura que decide la prueba: las cinco razas de lanzamiento a la vez, en silueta. El
+            // partido de verdad enfrenta a dos razas, así que aquí se reparten las cinco entre las fichas
+            // —solo en la vista, ni la traza ni el resultado se enteran— para poder compararlas juntas.
+            pitch3d.ForceRaceParade(run.Catalog!);
+            await Settle(6);
+            await Save("partido-3d-razas");
+            GD.Print("3d: cinco razas repartidas por dorsal (enano, elfo, humano, orco, no-muerto)");
+        }
+        else
+        {
+            GD.PushWarning("no se encontró la vista 3D del campo: no hay capturas de la prueba de geometría");
+        }
+
         Drop(match);
 
         // 3. Informe post-partido.
@@ -197,6 +252,15 @@ public partial class CaptureRunner : Control
     {
         RemoveChild(instance);
         instance.QueueFree();
+    }
+
+    /// <summary>Deja pasar unos fotogramas para que la escena 3D aplique el cambio antes de la captura.</summary>
+    private async System.Threading.Tasks.Task Settle(int frames)
+    {
+        for (int i = 0; i < frames; i++)
+        {
+            await ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame);
+        }
     }
 
     /// <summary>Un clic de ratón por el mismo camino que la entrada real, para no llamar a nada por dentro.</summary>
@@ -297,6 +361,20 @@ public partial class CaptureRunner : Control
             if (child is MatchPitchView pitch)
             {
                 return pitch;
+            }
+        }
+
+        return null;
+    }
+
+    /// <summary>La vista 3D del campo dentro de la pantalla instanciada, o null si no está (ADR 0102).</summary>
+    private static MatchPitchView3D? FindPitch3D(Node screen)
+    {
+        foreach (var child in screen.GetChildren())
+        {
+            if (child is MatchPitchView3D view)
+            {
+                return view;
             }
         }
 

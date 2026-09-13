@@ -53,7 +53,10 @@ public partial class MatchScreen : Control
     private Button _speed = null!;
     private Button _zone = null!;
     private Button _marking = null!;
+    private Button _view3d = null!;
+    private Button _silhouette = null!;
     private MatchPitchView _pitch = null!;
+    private MatchPitchView3D _pitch3d = null!;
     private MatchTimelineView _timeline = null!;
 
     private int _frame;
@@ -210,6 +213,25 @@ public partial class MatchScreen : Control
         _pitch.PlayerPicked += OnPlayerPicked;
         AddChild(_pitch);
 
+        // ADR 0102: el mismo rectángulo, en 3D con cámara ortográfica fija en tres cuartos. Arranca
+        // apagado y la vista 2D se conserva: el 3D no la sustituye hasta que la iguale en legibilidad.
+        _pitch3d = new MatchPitchView3D
+        {
+            Position = _pitch.Position,
+            Size = _pitch.Size,
+            Visible = false,
+        };
+        AddChild(_pitch3d);
+        _pitch3d.Bind(_trace, _run.Playback?.Setup, _run.Catalog);
+
+        // Los dos interruptores de la vista viven en el canalón del panel del campo, que es el único hueco
+        // que queda en la pantalla y además el sitio donde se busca lo que afecta al campo.
+        _view3d = Widgets.Button(this, UiText.Get("ui.match.view2d"), new Rect2(1202f, 158f, 62f, 24f));
+        _view3d.Pressed += TogglePitch3D;
+
+        _silhouette = Widgets.Button(this, UiText.Get("ui.match.bwOff"), new Rect2(1202f, 186f, 62f, 24f), enabled: false);
+        _silhouette.Pressed += ToggleSilhouette;
+
         Widgets.Panel(this, new Rect2(12f, 516f, 888f, 234f));
         Widgets.Section(this, UiText.Get("ui.match.log"), new Vector2(24f, 520f), 400f);
         _progress = Widgets.Body(this, string.Empty, new Vector2(600f, 520f), 288f, Style.TextDim);
@@ -293,6 +315,30 @@ public partial class MatchScreen : Control
         }
 
         Sync();
+    }
+
+    // ------------------------------------------------------------------ vista del campo (ADR 0102)
+
+    /// <summary>
+    /// Cambia entre la vista 2D de siempre y la de cápsulas en 3D. Las dos leen la misma traza y el mismo
+    /// fotograma, así que el cambio es instantáneo y no mueve el reloj: es exactamente lo que hace falta
+    /// para comparar las dos en el mismo instante.
+    /// </summary>
+    private void TogglePitch3D()
+    {
+        bool on = !_pitch3d.Visible;
+        _pitch3d.Visible = on;
+        _pitch.Visible = !on;
+        _view3d.Text = UiText.Get(on ? "ui.match.view3d" : "ui.match.view2d");
+        _silhouette.Disabled = !on;
+        Sync();
+    }
+
+    /// <summary>Modo silueta del 3D (RA-002): cápsulas negras planas sobre suelo blanco, sin color de equipo.</summary>
+    private void ToggleSilhouette()
+    {
+        _pitch3d.SilhouetteMode = !_pitch3d.SilhouetteMode;
+        _silhouette.Text = UiText.Get(_pitch3d.SilhouetteMode ? "ui.match.bwOn" : "ui.match.bwOff");
     }
 
     // ------------------------------------------------------------------ controles de reproducción
@@ -443,6 +489,7 @@ public partial class MatchScreen : Control
     {
         _trace = _run.Playback!.Trace;
         _pitch.Trace = _trace;
+        _pitch3d.Bind(_trace, _run.Playback!.Setup, _run.Catalog);
         _lines.Clear();
         _lines.AddRange(_run.MatchLog());
         _log.Clear();
@@ -482,6 +529,8 @@ public partial class MatchScreen : Control
         _pitch.Frame = _frame;
         _pitch.Alpha = _playing ? (float)_carry : 0f;
         _pitch.QueueRedraw();
+        _pitch3d.Frame = _frame;
+        _pitch3d.Alpha = _pitch.Alpha;
 
         // El campo se redibuja en todos los fotogramas de pantalla —es lo que suaviza el movimiento— pero
         // el resto solo cambia cuando cambia el tick. A x1 hay 15 ticks por segundo y 60 fotogramas: sin

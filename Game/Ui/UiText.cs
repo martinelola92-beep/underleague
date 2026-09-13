@@ -280,6 +280,13 @@ public static class UiText
         ["ui.match.legendMarking"] = "yendo a por él",
         ["ui.match.markOn"] = "Marcaje: sí",
         ["ui.match.markOff"] = "Marcaje: no",
+
+        // ADR 0102: los dos interruptores de la prueba de geometría en 3D. Siguen el patrón de "Correa:" y
+        // "Marcaje:" — el botón dice el estado en el que está, no el que se pide.
+        ["ui.match.view2d"] = "3D: no",
+        ["ui.match.view3d"] = "3D: sí",
+        ["ui.match.bwOff"] = "B/N: no",
+        ["ui.match.bwOn"] = "B/N: sí",
         ["ui.match.doing"] = "quiere {0}",
         ["ui.match.marking"] = "marca a {0} (dorsal {1})",
         ["ui.match.markAssigned"] = "marca al {0}",
