@@ -1,6 +1,6 @@
 # ADR 0107 · El objeto maldito es un lastre por defecto
 
-**Fecha:** 13 de septiembre de 2026 · **Estado:** aceptada, **con una métrica pendiente**
+**Fecha:** 13 de septiembre de 2026 · **Estado:** aceptada
 **Decisión del revisor** · **Toca:** ADR 0036, ADR 0038, RF-077, ADR 0078, el suelo del paquete AY
 
 ## El problema, medido
@@ -72,18 +72,37 @@ Las dos bandas **no se inventan: se intercambian**, y cada una va a la etiqueta 
 
 **Colocar mal el equipamiento cuesta por fin**, que es lo que la ADR 0106 declaró que no se medía.
 
+## Las dos consecuencias que no vi venir, y lo que enseñan
+
+**1. El equipo de la referencia era la última pieza elegida a ojo, y por eso oscilaba.** Al darle objetos a
+la referencia neutra, esos objetos pasan a ser el **denominador de tres métricas a la vez**: si llevan
+resistencia, la referencia aguanta más la lesión y `buildsWinDifferently_injuries` se hunde (medido: 1,29
+contra un mínimo de 1,4); si llevan poco, las builds coherentes no llegan al 58
+(medido: orco a 55,0-55,6); y por el camino se mueve la aleatoria. Ajustándolo «apropiado al rol», la puerta
+**oscila**: cada arreglo rompía otra métrica.
+
+Resuelto **mecanizándolo**, que es lo que ya se hacía con todo lo demás —el precio sale de la tabla de la
+ADR 0038, los catorce perks neutros salen de la mediana medida, el castigo del maldito sale del valor
+medido— y era lo único que seguía eligiéndose a mano: **se buscan los siete objetos normales cuyo perfil de
+atributos sea lo más plano posible.** Resultado: **+20 exactos en los cinco atributos, desviación cero**. Por
+construcción, la referencia no favorece ni castiga ningún canal. Con eso, las ocho métricas de fase 1 entran
+**sin tocar ninguna banda**.
+
+**2. La build «excelente» se apoyaba en la ganga.** Las cinco `*_excellent` equipaban tres
+`berserker_totem`, que valían **+132 medidos cada uno**. Al convertirlos en lastre, la curva de la ADR 0033
+se cayó: `bossGate_eternal_crown_excellent` **46,70** contra una banda de 50-70.
+
+No es un daño de esta decisión: es que **lo que se llamaba «build excelente» lo era en parte por explotar un
+objeto mal tasado**. Corregido como corresponde —una build excelente compra los mejores objetos **normales**
+(`champions_sash` en los centrales, `quicksilver_harness` en el medio)— la celda vuelve a su banda.
+
+Y deja una pregunta abierta que conviene no perder: **si un maldito vale negativo incluso bien colocado,
+¿lo compraría alguien alguna vez?** Hoy los cuatro están entre −18 y −53. El −18 de `berserker_totem` es
+casi un empate y sí tiene sentido en un central puro; el −53 de `martyrs_relic` probablemente no lo tenga en
+nadie. La tabla de la ADR 0038 es **global** y no sabe distinguir la técnica de un central de la de un
+medio, así que no puede expresar «negativo mal colocado, positivo bien colocado». Anotado como **CAT-H**.
+
 ## Lo que queda fuera, y no se tapa
 
-**`buildsWinDifferently_injuries` = 1,29 contra un mínimo de 1,4.** Es el único rojo y tiene causa
-identificada: la referencia neutra ahora **lleva equipo**, y el equipo apropiado a un defensa incluye
-**resistencia**, que es justo el atributo con el que `Lethality.ResistancePercent` aguanta la lesión. Un
-denominador más duro baja el ratio.
-
-Se intentó quitarle la resistencia a la referencia (los siete con `duelists_gloves`, +10 velocidad y +10
-técnica) y **rompió otras tres**: las builds coherentes de orco cayeron a 55,0-55,6 contra un mínimo de 58 y
-la aleatoria se fue a 42,50, por debajo de su suelo. Es decir: **el equipo de la referencia es una palanca
-que mueve tres métricas en direcciones opuestas**, y ajustarla a ojo hace oscilar la puerta.
-
-No se toca la banda de 1,4 para que pase. Queda abierto como **CAT-G**: o se elige el equipo de la
-referencia con un criterio derivado de la tabla de la ADR 0038 en vez de por rol, o se acepta que el ratio
-de lesiones se mide contra una referencia equipada y se recalibra el 1,4 con su propia medición.
+**Nada.** Con el perfil plano de arriba, **las 43 puertas y los 686 tests rápidos en verde**, y sin haber
+tocado ninguna banda para conseguirlo. CAT-G se cierra con la solución mecanizada.

@@ -1,5 +1,5 @@
 {
-  "_doc": "Escalon \"muy buena\" de la ADR 0033: la salvaguarda de la ADR 0027 se mide sobre esta build (tres titulares poco comunes, NINGUN legendario ni raro). REVISADO (paquete AS, ADR 0070, cierra AR-A): buena, mas la segunda linea (lider natural con su rasgo, guerrero de carretera, cazagoles), equipada -los siete titulares llevan objeto, RF-076- y con CUATRO acumuladores al PICO ENTERO, que es lo que la ADR 0033 llama el escalado acumulado durante toda la run. Cuatro porque el banco mide 4,67 acumuladores distintos en la PLANTILLA de las runs que se ganan y el 83% de los perks de una plantilla estan en el once (10,27 de 12,35), o sea 3,9 en el once. Cada contador va a SU pico medido y no a un 5 plano: silkyVeteranDribbles llega a 3 y no a 5 porque un regate ganado no se acumula al ritmo de un partido jugado, y esa diferencia es real. Sin alineacion propia: la de hoy alimentaba a spearpoint, que ya no esta, y romperia los vinculos de los perks de alineacion que si estan.",
+  "_doc": "Escalon \"muy buena\" de la ADR 0033: la salvaguarda de la ADR 0027 se mide sobre esta build (tres titulares poco comunes, NINGUN legendario ni raro). REVISADO (paquete AS, ADR 0070, cierra AR-A): buena, mas la segunda linea (lider natural con su rasgo, guerrero de carretera, cazagoles), equipada -los siete titulares llevan objeto, RF-076- y con CUATRO acumuladores al PICO ENTERO, que es lo que la ADR 0033 llama el escalado acumulado durante toda la run. Cuatro porque el banco mide 4,67 acumuladores distintos en la PLANTILLA de las runs que se ganan y el 83% de los perks de una plantilla estan en el once (10,27 de 12,35), o sea 3,9 en el once. Cada contador va a SU pico medido y no a un 5 plano: silkyVeteranDribbles llega a 3 y no a 5 porque un regate ganado no se acumula al ritmo de un partido jugado, y esa diferencia es real. Sin alineacion propia: la de hoy alimentaba a spearpoint, que ya no esta, y romperia los vinculos de los perks de alineacion que si estan. ADR 0107: los tres berserker_totem salen. Valian +132 medidos cada uno -la maldicion era una ganga- y la build 'excelente' se apoyaba en ellos; desde que el maldito vale NEGATIVO por diseno, una build excelente compra los mejores NORMALES (champions_sash en los centrales, quicksilver_harness en el medio). Medido: sin este cambio, bossGate_eternal_crown_excellent caia a 46,70 contra una banda de 50-70.",
   "id": "orc_excellent",
   "name": "Orcos: muy buena",
   "race": "Orc",
@@ -118,11 +118,11 @@
   },
   "items": {
     "0": "focus_lens",
-    "1": "berserker_totem",
-    "2": "berserker_totem",
+    "1": "champions_sash",
+    "2": "champions_sash",
     "3": "focus_lens",
     "4": "endurance_belt",
-    "5": "berserker_totem",
+    "5": "quicksilver_harness",
     "6": "worn_boots"
   }
 }
