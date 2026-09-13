@@ -216,7 +216,7 @@ Un solo partido, se gastan al usarlos. El efecto **no tiene portador**: lo usa e
 
 """)
 w('| Nombre | id | Rareza | Familia | Efecto |\n|---|---|---|---|---|\n')
-PROB = {'injure': 'lesionar', 'foul': 'hacer falta', 'shotOnTarget': 'tirar a puerta', 'tackleEvasion': 'resistir entradas'}
+PROB = {'injure': 'lesionar', 'injury': 'lesionarse', 'foul': 'hacer falta', 'shotOnTarget': 'tirar a puerta', 'tackleEvasion': 'resistir entradas'}
 FAMC = {'medical': 'médica', 'dirty': 'sucia', 'supernatural': 'sobrenatural', 'tactical': 'táctica'}
 for d in sorted(cons, key=lambda d: d['id']):
     eff = []
@@ -228,17 +228,10 @@ for d in sorted(cons, key=lambda d: d['id']):
             k = 1 + abs(v) / 100
             verbo = 'multiplica' if v > 0 else 'divide'
             eff.append(f"{verbo} por {str(k).replace('.', ',').rstrip(',0') if k % 1 else int(k)} sus opciones de {PROB.get(e['probability'], e['probability'])}")
-    warn = ' ⚠' if d['id'] == 'field_bandage' else ''
-    w(f"| **{d['name']['es']}** | `{d['id']}` | {RAR[d['rarity']]} | {FAMC.get(d['family'], d['family'])} | {'; '.join(eff)}{warn} |\n")
+    w(f"| **{d['name']['es']}** | `{d['id']}` | {RAR[d['rarity']]} | {FAMC.get(d['family'], d['family'])} | {'; '.join(eff)} |\n")
 w('\n')
 
-w("""⚠ **Posible error de datos en `field_bandage`.** Usa el canal `injure`, que en el motor es la
-probabilidad de que el *entrante* lesione (`MatchEngine`: `Odds(tackler, Injure)` contra
-`Odds(victim, Injury)`). Aplicado a todo el equipo propio, un vendaje reduce a la mitad la capacidad
-de **lesionar al rival**, no la de **lesionarse**, que sería el canal `injury`. Anotado en
-`docs/pendientes.md` (CAT-A).
-
-## Cómo regenerar este documento
+w("""## Cómo regenerar este documento
 
 ```bash
 dotnet run --project Balance -c Release -- --describe es > out/describe-es.txt   # RT-035

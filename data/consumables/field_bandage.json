@@ -1,4 +1,5 @@
 {
+  "_doc": "CAT-A (13 sep 2026, decision del revisor): el canal pasa de 'injure' a 'injury'. En el motor 'injure' es la probabilidad de que el ENTRANTE lesione y 'injury' la de que la VICTIMA se lesione (MatchEngine: Odds(tackler, Injure) contra Odds(victim, Injury)), y un consumible alcanza a todo el equipo propio en el campo (EffectEngine.ResolveConsumables). Con 'injure' el vendaje reducia a la mitad la capacidad de lesionar al rival, que es lo contrario de lo que hace un vendaje y ademas duplicaba a un consumible sucio invertido; con 'injury' protege a los propios, que es lo que pide la familia medica de RF-084.",
   "id": "field_bandage",
   "name": {
     "es": "Vendaje de campaña",
@@ -9,7 +10,7 @@
   "effects": [
     {
       "type": "modifyProbability",
-      "probability": "injure",
+      "probability": "injury",
       "value": -100
     }
   ]

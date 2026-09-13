@@ -235,16 +235,10 @@ Un solo partido, se gastan al usarlos. El efecto **no tiene portador**: lo usa e
 
 | Nombre | id | Rareza | Familia | Efecto |
 |---|---|---|---|---|
-| **Vendaje de campaña** | `field_bandage` | Común | médica | divide por 2 sus opciones de lesionar ⚠ |
+| **Vendaje de campaña** | `field_bandage` | Común | médica | divide por 2 sus opciones de lesionarse |
 | **Kit de golpe bajo** | `low_blow_kit` | Poco común | sucia | +12 fuerza; multiplica por 3 sus opciones de hacer falta |
 | **Amuleto de la suerte** | `lucky_charm` | Poco común | sobrenatural | multiplica por 2 sus opciones de tirar a puerta |
 | **Bengala de humo** | `smoke_flare` | Común | táctica | multiplica por 2 sus opciones de resistir entradas |
-
-⚠ **Posible error de datos en `field_bandage`.** Usa el canal `injure`, que en el motor es la
-probabilidad de que el *entrante* lesione (`MatchEngine`: `Odds(tackler, Injure)` contra
-`Odds(victim, Injury)`). Aplicado a todo el equipo propio, un vendaje reduce a la mitad la capacidad
-de **lesionar al rival**, no la de **lesionarse**, que sería el canal `injury`. Anotado en
-`docs/pendientes.md` (CAT-A).
 
 ## Cómo regenerar este documento
 
