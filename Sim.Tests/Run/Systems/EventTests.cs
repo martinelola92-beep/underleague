@@ -29,6 +29,12 @@ public sealed class EventTests
         foreach (var card in Events.All)
         {
             Assert.InRange(card.Options.Count, 2, 4);
+
+            // BA-A: la salida por la que se RESUELVE la carta. Junto con la equivalencia de abajo
+            // -NeedsTarget si y solo si el efecto cae sobre un cuerpo- esto garantiza que toda carta tiene
+            // una opcion sin objetivo y sin coste, que es justo la que NodeScreen deja pulsable cuando el
+            // jugador no tiene oro ni nadie sano a quien senalar. Sin ella, una carta futura se abriria con
+            // todas las opciones deshabilitadas y habria que abandonar el nodo sin resolverlo.
             Assert.Contains(card.Options, o => o.Effects.Count == 0);
             Assert.InRange(card.MinAct, 1, 3);
             foreach (var option in card.Options)
