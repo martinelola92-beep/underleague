@@ -101,6 +101,7 @@ Cuándo escribir un ADR: cambio de librería o stack, frontera entre proyectos, 
 | [0100](0100-el-evento-es-una-carta-con-opciones.md) | El nodo de evento deja de pagar 1-3 de oro y pasa a ser una carta con opciones en `/data`: dos familias, el oro parado y carne por ventaja. Todo coste se ve antes de elegir | Aceptada e implementada. **Decisión del revisor. Desarrolla RF-011** |
 | [0109](0109-la-banda-de-tiros-se-calibra-contra-la-geometria.md) | La banda de tiros se calibra contra la geometría vigente: 7-15 para el campo de siete filas, y la formación por defecto NO se ensancha | Aceptada. **Decisión del revisor. RT-057** |
 | [0110](0110-remata-quien-esta-donde-hay-que-rematar.md) | `Shoot` del defensa 77 → 154 y del centrocampista 188 → 237: jugar fuera de posición deja de ser un veto y pasa a ser un coste | Aceptada e implementada. **Decisión del revisor. RT-057** |
+| [0111](0111-la-cadena-de-pases-se-calibra-contra-el-juego.md) | `passChainAvgLength` 2-4 → 1,8-3,5: la banda era del primer commit y su suelo dejaba fuera a un tercio de los partidos | Aceptada e implementada. **RT-057** |
 
 El hueco del 0011 corresponde a una decisión sobre el radio de adyacencia que quedó absorbida por la 0021 antes de aceptarse.
 | [0012](0012-buildswindifferently-normalizada.md) | `buildsWinDifferently` normalizada contra la referencia de la raza | **Propuesta: decisión del revisor** |

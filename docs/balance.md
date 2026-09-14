@@ -104,7 +104,7 @@ Criterio de salida de la fase 0 e indicador permanente del equilibrio fútbol/ag
 | Métrica | Rango objetivo | Cómo se mide |
 |---|---|---|
 | Alternancias de posesión por partido | 12-28 (ADR 0081) | Cambios de equipo poseedor |
-| Longitud media de cadena de pases | 2-4 | Pases completados consecutivos por posesión |
+| Longitud media de cadena de pases | 1,8-3,5 (ADR 0111) | Pases completados consecutivos por posesión, contando solo las posesiones con **al menos un pase** |
 | Tiros por partido (ambos equipos) | 7-15 (ADR 0109) | Eventos `SHOT` |
 | Distribución de resultados | Mayoría entre 1-0 y 3-2; < 5% con más de 5 goles totales; < 15% de empates **al final del reglamentario** | Marcador antes de la turba |
 | Tiempo del balón por tercio | Ningún tercio > 50% | Ticks con el balón en cada tercio de columnas |

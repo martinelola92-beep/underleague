@@ -251,8 +251,14 @@ public static class MatchMetrics
         // final de cada uno. El techo sube a 28, un margen sobre lo medido, no una previsión.
         rows.Add(InRange(PossessionChanges, (double)possessionChanges / n, 12, 28));
 
+        // 1,8-3,5 (ADR 0111), antes 2-4. La banda vieja se escribio en el primer commit del repositorio
+        // (requisitos v0.9, bajo el encabezado "Rango objetivo INICIAL") y nunca se reviso, mientras que
+        // alternancias, lesiones, tercio y tiros si lo hicieron (ADR 0081, 0082, 0093 y 0109). Medida la
+        // distribucion real: el 33,4 % de los partidos ya caia por debajo de 2,00 sin tocar nada, el
+        // percentil 95 POR PARTIDO es 2,77 -asi que el techo de 4 nunca se ha rozado- y el 40,5 % de las
+        // cadenas son de un solo pase. El suelo cortaba por el medio de la distribucion y el techo sobraba.
         double passChainAvgLength = passChains > 0 ? (double)passChainLength / passChains : 0.0;
-        rows.Add(InRange(PassChainAvgLength, passChainAvgLength, 2, 4));
+        rows.Add(InRange(PassChainAvgLength, passChainAvgLength, 1.8, 3.5));
 
         // 7-15 (ADR 0109), antes 8-16: la banda estaba calibrada para campos de cinco y seis filas. Con
         // SIETE los mismos siete jugadores se reparten sobre un campo un 17 % mas alto y el ataque llega
