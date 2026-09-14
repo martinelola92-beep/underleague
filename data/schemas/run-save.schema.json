@@ -101,7 +101,7 @@
         "properties": {
           "playerId": { "type": "integer", "minimum": 0 },
           "column": { "type": "integer", "minimum": 0, "maximum": 7 },
-          "row": { "type": "integer", "minimum": 0, "maximum": 5 }
+          "row": { "type": "integer", "minimum": 0, "maximum": 6 }
         },
         "required": ["playerId", "column", "row"],
         "additionalProperties": false

@@ -77,15 +77,15 @@ public static class PlacementView
     /// <c>Sim.Run.RunLineup.GoalkeeperCell</c>. Las columnas de una alineación son
     /// 0..<see cref="Pitch.PlacementColumns"/>-1 desde la portería propia.
     /// <para>
-    /// <b>No es <c>Pitch.Rows / 2</c></b>: con Rows par (6, ADR 0103) esa fórmula cae en la fila 3, no en
-    /// la 2 que usa la alineación por defecto —con Rows impar (5) coincidían por casualidad, y esa
-    /// coincidencia es justo lo que rompió en silencio al pasar a seis filas—. La comprobación de
-    /// <see cref="Sim.Engine.Simulator"/> es más permisiva (cualquier fila 1..<see cref="Pitch.AreaRows"/>
-    /// dentro del área), así que esta constante es una decisión de la pantalla de Equipo, no del motor, y
-    /// tiene que declararse igual que el resto de la alineación por defecto en vez de derivarse de Rows.
+    /// <b>Vuelve a derivarse de <c>Pitch.Rows / 2</c></b>: con Rows par (6, ADR 0103) esa fórmula caía en
+    /// la fila 3, no en la 2 que usaba entonces la alineación por defecto, y hubo que fijarla a mano para
+    /// no divergir —esa fue justo la divergencia silenciosa que rompió al pasar de cinco a seis filas—.
+    /// Con Rows impar (7) el cociente entero vuelve a caer exactamente en la fila central (3), que es la
+    /// misma que usa la alineación por defecto, así que la coincidencia deja de ser casualidad: con un
+    /// número impar de filas SIEMPRE hay una única fila central y <c>Rows / 2</c> la encuentra.
     /// </para>
     /// </summary>
-    public static Cell GoalkeeperCell => new(0, 2);
+    public static Cell GoalkeeperCell => new(0, Pitch.Rows / 2);
 
     /// <summary>
     /// True si <paramref name="position"/> puede colocarse en <paramref name="cell"/> (RF-041): la

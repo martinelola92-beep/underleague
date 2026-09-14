@@ -12,9 +12,9 @@ namespace Underleague.Sim.Tests.Perks;
 /// que <see cref="LineupPerkPreviewer"/> responde lo mismo que responderá el motor —de ahí la
 /// comprobación cruzada del final— y que calla cuando la respuesta no depende solo de la alineación.
 /// <para>
-/// La alineación es la de por defecto (2-3-1, ADR 0103): GK (0,2); DEF (2,1),(2,4); MID (3,2),(4,1),(4,4);
-/// FWD (6,2). Los jugadores se escriben a mano y con ids consecutivos para que
-/// <see cref="Lineup.Default"/> reparta las casillas de forma predecible.
+/// La alineación es la de por defecto (2-3-1, campo de siete filas, sucesora de la ADR 0103): GK (0,3);
+/// DEF (2,2),(2,4); MID (3,3),(4,2),(4,4); FWD (6,3). Los jugadores se escriben a mano y con ids
+/// consecutivos para que <see cref="Lineup.Default"/> reparta las casillas de forma predecible.
 /// </para>
 /// </summary>
 public sealed class LineupPerkPreviewTests
@@ -24,7 +24,7 @@ public sealed class LineupPerkPreviewTests
     /// <summary>Casillas de la alineación por defecto, por id de jugador (1..7).</summary>
     private static readonly Cell[] DefaultCells =
     {
-        new(0, 2), new(2, 1), new(2, 4), new(3, 2), new(4, 1), new(4, 4), new(6, 2),
+        new(0, 3), new(2, 2), new(2, 4), new(3, 3), new(4, 2), new(4, 4), new(6, 3),
     };
 
     /// <summary>
@@ -42,9 +42,9 @@ public sealed class LineupPerkPreviewTests
     }
 
     /// <summary>
-    /// <c>startsOn</c> mira la fila: el centro son las filas 2 y 3 (ADR 0103, dos con Rows par), y
-    /// cualquier otra es banda. Es el eje que el jugador no adivina mirando el campo, y por eso la
-    /// pantalla lo tiene que decir.
+    /// <c>startsOn</c> mira la fila: el centro es la fila 3 (única, con Rows impar), y cualquier otra es
+    /// banda. Es el eje que el jugador no adivina mirando el campo, y por eso la pantalla lo tiene que
+    /// decir.
     /// </summary>
     [Fact]
     public void FlankSpecialistReadsTheRowOfTheHomeCell()
@@ -66,8 +66,8 @@ public sealed class LineupPerkPreviewTests
     }
 
     /// <summary>
-    /// <c>linked(owner,'ahead')</c> se resuelve entre casillas-hogar: el defensa de (2,1) tiene delante
-    /// al centrocampista de (3,2), y el delantero de (6,2) no tiene a nadie por delante.
+    /// <c>linked(owner,'ahead')</c> se resuelve entre casillas-hogar: el defensa de (2,2) tiene delante
+    /// al centrocampista de (3,3), y el delantero de (6,3) no tiene a nadie por delante.
     /// </summary>
     [Fact]
     public void SpearpointNeedsATeammateAhead()
@@ -150,10 +150,10 @@ public sealed class LineupPerkPreviewTests
         var setup = TestMatches.Reference(Catalog, 11);
         var assignments = new (Cell Cell, string Perk)[]
         {
-            (new Cell(4, 1), "flank_specialist"),   // banda: activo, con efecto normal
-            (new Cell(3, 2), "flank_specialist"),   // carril central: inactivo, y tiene elseEffects
-            (new Cell(6, 2), "captains_voice"),     // tercio rival: inactivo, y NO tiene elseEffects
-            (new Cell(2, 1), "spearpoint"),         // tiene a alguien delante: activo
+            (new Cell(4, 2), "flank_specialist"),   // banda: activo, con efecto normal
+            (new Cell(3, 3), "flank_specialist"),   // carril central: inactivo, y tiene elseEffects
+            (new Cell(6, 3), "captains_voice"),     // tercio rival: inactivo, y NO tiene elseEffects
+            (new Cell(2, 2), "spearpoint"),         // tiene a alguien delante: activo
         };
 
         var home = WithPerksByCell(setup.Home, assignments);

@@ -5,11 +5,16 @@ namespace Underleague.Sim.Model;
 /// <summary>Casilla discreta de la cuadrícula del campo.</summary>
 public readonly record struct Cell(int Column, int Row);
 
-/// <summary>Geometría del campo: 16x6 casillas, área de 2x4, coordenadas absolutas (RF-056, 3.1, ADR 0103).</summary>
+/// <summary>Geometría del campo: 16x7 casillas, área de 2x4, coordenadas absolutas (RF-056, 3.1, ADR 0103, campo de siete filas).</summary>
 public static class Pitch
 {
     public const int Columns = 16;
-    public const int Rows = 6;
+    // 7 (13 sep 2026, decisión del revisor, sucesora de la ADR 0103): con seis filas no hay fila central
+    // -el centro geométrico cae entre la 2 y la 3- y el portero, el delantero único y el pivote único
+    // quedaban media casilla descentrados. Con siete el número es impar y vuelve a existir una única fila
+    // central (Rows / 2 = 3). La cámara en tres cuartos también encaja mejor: 16 / (7 · sen 60°) = 2,64
+    // contra un marco de pantalla de 2,67, más ajustado que el 3,08 que daba con seis filas y 60°.
+    public const int Rows = 7;
     /// <summary>
     /// Columnas de colocación de una alineación, contadas desde la portería propia (RF-040..045): una
     /// casilla-hogar vive en 0..7 y el motor refleja la columna para el equipo 1. Los tercios de inicio
@@ -20,8 +25,9 @@ public static class Pitch
     public const int PlacementColumns = 8;
 
     public const int AreaColumns = 2;
-    // 4 (ADR 0103): con 6 filas, 4 de 6 (67 %) es lo más cercano a conservar la proporción que cubría el
-    // área con 5 filas (3 de 5 = 60 %); bajar a 3 encogería el dominio del portero y agravaría D-21.
+    // 4 (se mantiene igual que con seis filas): con siete filas, 4 de 7 (57 %) es lo más cercano a
+    // conservar el 60 % histórico (3 de 5 con el campo original) sin pasarse: 5 de 7 daría el 71 %,
+    // demasiado, y bajar a 3 encogería el dominio del portero y agravaría D-21.
     public const int AreaRows = 4;
 
     /// <summary>True si p está dentro del área que defiende team (0: X&lt;2; 1: X&gt;14), filas 1..5.</summary>

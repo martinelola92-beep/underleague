@@ -101,10 +101,11 @@ public sealed class LinkTests
         Assert.Equal(StartZone.AttackingThird, LinkGeometry.ZoneOfHome(new Cell(6, 2), 0));
         Assert.Equal(StartZone.Middle, LinkGeometry.ZoneOfHome(new Cell(11, 2), 1));
 
+        // Con Rows=7 el centro vuelve a ser UNA sola fila, la 3 (Pitch.Rows / 2).
         Assert.Equal(StartFlank.LeftFlank, LinkGeometry.FlankOfHome(new Cell(4, 0), 0));
         Assert.Equal(StartFlank.RightFlank, LinkGeometry.FlankOfHome(new Cell(4, 0), 1));
-        Assert.Equal(StartFlank.Center, LinkGeometry.FlankOfHome(new Cell(4, 2), 0));
-        Assert.Equal(StartFlank.Center, LinkGeometry.FlankOfHome(new Cell(4, 2), 1));
+        Assert.Equal(StartFlank.Center, LinkGeometry.FlankOfHome(new Cell(4, 3), 0));
+        Assert.Equal(StartFlank.Center, LinkGeometry.FlankOfHome(new Cell(4, 3), 1));
     }
 
     /// <summary>

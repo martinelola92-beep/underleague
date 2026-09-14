@@ -24,7 +24,12 @@ public sealed class SubstitutionChainTests
         // Un emparejamiento muy desigual produce bajas de sobra en el equipo débil, que es lo que hace
         // falta para encadenar. Se barren semillas porque la cadena depende de que el propio suplente se
         // lesione, que es el caso raro y justo el que estaba roto.
-        for (ulong seed = 1; seed <= 60; seed++)
+        //
+        // El barrido son 400 y no 60: con 60 el test pasaba en 16x6 y se puso rojo al pasar a 16x7 (ADR
+        // 0109) sin que el mecanismo cambiara, solo porque +17 % de superficie hace más raro que el propio
+        // suplente se lesione. Un test que falla porque el campo crece es un test mal dimensionado, no una
+        // regresión. Sale por la primera semilla que encuentra el caso, así que el coste real es bajo.
+        for (ulong seed = 1; seed <= 400; seed++)
         {
             var setup = TestMatches.Build(catalog, seed, homeQuality: 15, awayQuality: 95);
             var result = Simulator.Run(setup, seed, catalog, new SimConfig(CollectLog: false));
@@ -65,7 +70,7 @@ public sealed class SubstitutionChainTests
             Assert.True(chained <= 4);
         }
 
-        Assert.Fail("en 60 semillas no se ha encadenado ninguna sustitución sobre un suplente ya entrado: "
+        Assert.Fail("en 400 semillas no se ha encadenado ninguna sustitución sobre un suplente ya entrado: "
             + "el emparejamiento del test no produce el caso que BA-B arregla");
     }
 }

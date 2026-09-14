@@ -147,7 +147,8 @@ public sealed class ShotInterceptionTests
     /// Aritmética exacta del borde (RT-023): el alcance es estrictamente menor que el radio, igual que el
     /// radio de intercepción del pase. Se comprueba sobre la geometría real de un tiro desde el centro del
     /// campo al centro de la portería: 8 casillas a 0,700 casillas/tick son 12 ticks de vuelo, y en el
-    /// tick 6 el balón está en (12; 3) (ADR 0103: <c>CenterRow</c> pasa de 2,5 a 3 con seis filas).
+    /// tick 6 el balón está en (12; 3,5) (campo de siete filas, sucesora de la ADR 0103:
+    /// <c>CenterRow</c> pasa de 3 a 3,5 con Rows=7).
     /// </summary>
     [Fact]
     public void TheReachBorderIsExact()
@@ -159,7 +160,7 @@ public sealed class ShotInterceptionTests
         Assert.Equal(12, ticks);
 
         var ball = Vec2.Lerp(origin, target, 6 / (float)ticks);
-        Assert.Equal(new Vec2(12f, 3f), ball);
+        Assert.Equal(new Vec2(12f, 3.5f), ball);
 
         Assert.True(MatchEngine.WithinSaveReach(new Vec2(ball.X, ball.Y + reach - 0.01f), ball, reach));
         Assert.False(MatchEngine.WithinSaveReach(new Vec2(ball.X, ball.Y + reach + 0.01f), ball, reach));
@@ -174,7 +175,7 @@ public sealed class ShotInterceptionTests
     public void TheDiveReachBorderIsExact()
     {
         float diveReach = Catalog.Tuning.Save.DiveReachCells;
-        var ball = new Vec2(12f, 3f);
+        var ball = new Vec2(12f, 3.5f);
 
         Assert.True(MatchEngine.WithinSaveReach(new Vec2(ball.X, ball.Y + diveReach - 0.01f), ball, diveReach));
         Assert.False(MatchEngine.WithinSaveReach(new Vec2(ball.X, ball.Y + diveReach + 0.01f), ball, diveReach));
@@ -182,9 +183,9 @@ public sealed class ShotInterceptionTests
 
     /// <summary>
     /// Portero inmóvil fuera de la trayectoria: en ningún tick del vuelo llega al balón, así que no hay
-    /// duelo y el tiro es gol. Se le coloca sobre su propia línea de gol pero en el borde del campo, a 3
-    /// casillas de la recta tirador→portería (ADR 0103: el campo tiene 6 filas y <c>CenterRow</c> es 3),
-    /// bien fuera del alcance del portero.
+    /// duelo y el tiro es gol. Se le coloca sobre su propia línea de gol pero en el borde del campo, a 3,5
+    /// casillas de la recta tirador→portería (campo de siete filas, sucesora de la ADR 0103:
+    /// <c>CenterRow</c> es 3,5), bien fuera del alcance del portero.
     /// </summary>
     [Fact]
     public void AGoalkeeperOffTheTrajectoryIsOutOfReachEveryTick()

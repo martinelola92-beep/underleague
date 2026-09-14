@@ -70,18 +70,21 @@ internal static class LinkGeometry
     /// <summary>Banda de inicio de la casilla-hogar, vista desde el jugador mirando a la portería rival.</summary>
     public static StartFlank FlankOfHome(Cell home, int team)
     {
-        // Con Rows par (6, ADR 0103) el centro geométrico del campo cae entre dos filas, no en una: la
-        // 2 y la 3. Tratar solo Pitch.Rows / 2 (la 3) como centro dejaría la fila 2 —tan cerca del centro
-        // como la 3— clasificada como banda, y las tres franjas dejarían de ser tercios exactos (2/1/3 en
-        // vez de 2/2/2 filas). Las dos filas centrales son las que dan 33/33/33.
-        int centerHigh = Pitch.Rows / 2;
-        int centerLow = centerHigh - 1;
-        if (home.Row == centerLow || home.Row == centerHigh)
+        // Con Rows impar (7, sucesora de la ADR 0103) vuelve a existir una única fila central: el centro
+        // geométrico cae exactamente en Pitch.Rows / 2 (la 3), no entre dos filas como con seis. Con seis
+        // filas hubo que tratar la 2 y la 3 como centro para conservar tercios exactos (33/33/33); con
+        // siete el centro vuelve a ser UNA sola fila, así que las bandas dejan de ser tercios iguales: el
+        // centro se estrecha a 1 fila de 7 (14 %) y cada banda pasa a 3 filas de 7 (43 %) — el 43/14/43 que
+        // tenía el campo original de cinco filas, con el mismo reparto relativo. Esto mueve
+        // 'startsOn(owner,''Center'')' y por tanto center_conductor y captains_voice: se disparan con
+        // menos alineaciones que con seis filas.
+        int center = Pitch.Rows / 2;
+        if (home.Row == center)
         {
             return StartFlank.Center;
         }
 
-        bool lowRow = home.Row < centerLow;
+        bool lowRow = home.Row < center;
         bool left = team == 0 ? lowRow : !lowRow;
         return left ? StartFlank.LeftFlank : StartFlank.RightFlank;
     }
