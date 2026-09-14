@@ -524,6 +524,7 @@ internal sealed class MatchEngine : IPerkWorld
             var player = PlayerInTurnOrder(i);
             if (wasRestarting && ReferenceEquals(player, _restartTaker))
             {
+                WalkRestartTaker(player);
                 continue;
             }
 
@@ -930,6 +931,31 @@ internal sealed class MatchEngine : IPerkWorld
             next = Utility.ClampToArea(next, player.Team);
         }
 
+        player.Velocity = next - player.Position;
+        player.Position = next;
+    }
+
+    /// <summary>
+    /// BA-D: el sacador camina hasta el punto de saque durante la cuenta atras en vez de aparecer en el.
+    ///
+    /// <para>No corre la IA —sigue congelado en el sentido de AZ-A: no decide, no persigue, no se aleja— pero
+    /// si se mueve, a su velocidad normal y en linea recta. Es el mismo desplazamiento que haria cualquier
+    /// otro jugador, asi que no hace falta ningun temporizador nuevo: si la cuenta atras no le da para
+    /// llegar, <see cref="ResolveRestart"/> le pone en el punto en el ultimo tick. El salto residual es como
+    /// mucho lo que le quedara por andar, en vez de la distancia entera.</para>
+    /// </summary>
+    private void WalkRestartTaker(MatchPlayer player)
+    {
+        var to = _restartPoint - player.Position;
+        float distance = to.Length;
+        if (distance <= 0.0001f)
+        {
+            player.Velocity = default;
+            return;
+        }
+
+        float step = SpeedPerTick(player, dribbling: false);
+        var next = distance <= step ? _restartPoint : player.Position + (to * (step / distance));
         player.Velocity = next - player.Position;
         player.Position = next;
     }
@@ -2479,11 +2505,24 @@ internal sealed class MatchEngine : IPerkWorld
         // llama a UpdatePlayer mientras _restartTaker siga siendo él. Para el penalti el tirador ya lo
         // eligió SchedulePenalty (BestPenaltyTaker, por Technique) antes de llamar aquí; solo lo adoptamos
         // para congelarlo igual que al resto de sacadores.
+        //
+        // BA-D: el sacador ya NO aparece en el punto de saque. Antes esta linea le ponia Position = point,
+        // asi que el jugador se teletransportaba a la falta y se quedaba quieto ahi toda la cuenta atras.
+        // Ahora se queda donde esta y CAMINA hasta el punto durante la cuenta atras (WalkRestartTaker), con
+        // una recolocacion de seguridad en el tick de la reanudacion si no ha llegado (ResolveRestart).
         _restartTaker = kind == RestartKind.Penalty ? _penaltyTaker : SelectTaker(kind, team, point);
         if (_restartTaker is not null)
         {
-            _restartTaker.Position = point;
             _restartTaker.Velocity = default;
+
+            // El saque de CENTRO es la excepcion, y por una razon: ahi ResetPositions acaba de devolver a
+            // los catorce jugadores a su casilla-hogar, asi que el equipo entero se recoloca por diseno y
+            // poner al sacador sobre el balon es parte de esa misma reforma. En las demas reanudaciones no
+            // se recoloca nadie, y por eso el salto del sacador se veia (BA-D).
+            if (kind == RestartKind.Kickoff)
+            {
+                _restartTaker.Position = point;
+            }
         }
 
         CancelPendingTackles();
@@ -2587,6 +2626,15 @@ internal sealed class MatchEngine : IPerkWorld
     {
         var kind = _pendingRestart;
         _pendingRestart = RestartKind.None;
+
+        // BA-D: red de seguridad. El sacador ha venido andando (WalkRestartTaker); si la cuenta atras no le
+        // ha dado para llegar, se le pone en el punto ahora. El salto que queda es lo que le faltara por
+        // andar, no la distancia entera, y ocurre en el mismo tick en el que el balon echa a rodar.
+        if (kind != RestartKind.Kickoff && _restartTaker is not null && _restartTaker.OnPitch)
+        {
+            _restartTaker.Position = _restartPoint;
+            _restartTaker.Velocity = default;
+        }
 
         switch (kind)
         {

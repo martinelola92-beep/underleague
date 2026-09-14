@@ -184,11 +184,19 @@ public sealed class MatchRulesTests
     }
 
     /// <summary>
-    /// AZ-A (docs/plan-segunda-partida.md): el sacador que designa <c>MatchEngine.BeginRestart</c>
-    /// (<c>_restartTaker</c>) se congela desde el primer tick de la cuenta atrás — antes, con AW-R, corría
-    /// la IA normal como el resto del equipo y podía alejarse del punto de saque mientras esperaba, para
-    /// volver de un salto solo en el último tick. Mismo recorrido de eventos <c>Recovery</c> que
+    /// AZ-A (docs/plan-segunda-partida.md) y BA-D: el sacador que designa <c>MatchEngine.BeginRestart</c>
+    /// (<c>_restartTaker</c>) no corre la IA durante la cuenta atrás — antes, con AW-R, corría la IA normal
+    /// como el resto del equipo y podía <b>alejarse</b> del punto de saque mientras esperaba, para volver de
+    /// un salto solo en el último tick. Mismo recorrido de eventos <c>Recovery</c> que
     /// <see cref="FieldPlayersKeepMovingDuringADeadBall"/>, pero aquí se comprueba al ejecutor (<c>e.Actor</c>).
+    ///
+    /// <para><b>Lo que se afirma es el requisito, no la implementación.</b> Hasta BA-D el sacador se
+    /// teletransportaba al punto al abrir la reanudación y se quedaba inmóvil, así que este test exigía
+    /// «no se mueve» y con eso bastaba. Desde BA-D <b>camina</b> hasta el punto —el teletransporte era
+    /// justo lo que el revisor reportó—, así que «no se mueve» era la implementación vieja y no la regla.
+    /// La regla es doble y se comprueba tick a tick: cada paso es <b>un paso</b> y no un salto, y la
+    /// distancia al punto de saque <b>nunca crece</b>. Las dos juntas son más fuertes que la anterior:
+    /// aquella habría dejado pasar un sacador que se alejara despacio.</para>
     ///
     /// <para>"Congelado" no es "posición idéntica byte a byte": <c>UpdatePlayer</c> no se le llama, así que
     /// nunca decide ni camina por su cuenta, pero <c>BodySeparation.Resolve</c> corre para todo el mundo
@@ -284,10 +292,25 @@ public sealed class MatchRulesTests
                         continue;
                     }
 
-                    float step = Vec2.Distance(trace.PositionAt(frame, takerIndex), trace.PositionAt(frame + 1, takerIndex));
+                    var before = trace.PositionAt(frame, takerIndex);
+                    var after = trace.PositionAt(frame + 1, takerIndex);
+                    float step = Vec2.Distance(before, after);
+
+                    // Un paso, no un salto. Caminar hacia el punto es legítimo (BA-D); cruzar el campo de
+                    // una vez sigue siendo el fallo que este test cubre.
                     Assert.True(
-                        step <= maxPushPerTickCells,
-                        $"semilla {seed}, tick {e.Tick} ({e.Detail}): el sacador {e.Actor} se movió {step} casillas entre los ticks {trace.TickAt(frame)} y {trace.TickAt(frame + 1)}, más que el empuje máximo de BodySeparation — parece que decidió y caminó por su cuenta");
+                        step <= maxNormalStepCells,
+                        $"semilla {seed}, tick {e.Tick} ({e.Detail}): el sacador {e.Actor} se movió {step} casillas entre los ticks {trace.TickAt(frame)} y {trace.TickAt(frame + 1)}, más que un paso normal — eso es un salto, no un desplazamiento");
+
+                    // Y el requisito de AZ-A: nunca se ALEJA del punto de saque. El balón está aparcado ahí
+                    // toda la cuenta atrás (ParkBall), así que sirve de referencia sin que el test tenga que
+                    // conocer la geometría de cada tipo de reanudación. La tolerancia es el empuje de un
+                    // tick de BodySeparation, que puede apartarlo sin que él haya decidido nada.
+                    float toPointBefore = Vec2.Distance(before, trace.BallAt(frame));
+                    float toPointAfter = Vec2.Distance(after, trace.BallAt(frame + 1));
+                    Assert.True(
+                        toPointAfter <= toPointBefore + maxPushPerTickCells,
+                        $"semilla {seed}, tick {e.Tick} ({e.Detail}): el sacador {e.Actor} se ALEJÓ del punto de saque, de {toPointBefore} a {toPointAfter} casillas — AZ-A: esperando es cuando se alejaba para volver de un salto en el último tick");
                 }
 
                 if (e.Detail != "kickoff")
