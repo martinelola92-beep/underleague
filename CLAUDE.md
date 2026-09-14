@@ -152,6 +152,7 @@ cuando es un binario viejo. La escena de capturas solo arranca **con Xvfb**: en 
 | `docs/determinismo.md` | RNG, ticks, aritmética, orden, APIs prohibidas, test RT-024 | Antes de escribir cualquier cosa en `/Sim` |
 | `docs/modelo-datos.md` | Esquema de Run, formato de perk/objeto/consumible, funciones NCalc, plantillas de descripción | Antes de tocar `/data` o el estado |
 | `docs/simulacion.md` | Tres máquinas de estado, IA de utilidad, acciones, portero, árbitro, turba | Fases 0 y 1 |
+| `docs/auditoria-ia-jugadores.md` | Auditoría medida de la IA de utilidad: jitter, márgenes, acciones muertas, estados tácticos duplicados | Antes de tocar `Utility.cs` o `data/ai/weights.json` |
 | `docs/balance.md` | Métricas RT-056 con rangos, CLI de `/Balance`, puertas de CI | Al ajustar cualquier número |
 | `docs/plan-fases.md` | Fases 0-4, criterios de salida, estado actual, backlog de fase 0 | Al planificar trabajo |
 | `docs/pendientes.md` | Decisiones abiertas e inconsistencias detectadas en los requisitos | Cuando algo no cuadre |
