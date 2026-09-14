@@ -1,5 +1,6 @@
 using Underleague.Sim.Analysis;
 using Underleague.Sim.Data;
+using Underleague.Sim.Run.Systems.Items;
 using Underleague.Sim.Engine;
 using Underleague.Sim.Model;
 using Underleague.Sim.Random;
@@ -104,7 +105,8 @@ public static class BuildBatchRunner
         bool homeAway,
         int totalRuns,
         ulong seed,
-        int rosters = DefaultRosters)
+        int rosters = DefaultRosters,
+        ItemCatalog? items = null)
     {
         ArgumentNullException.ThrowIfNull(catalog);
         ArgumentNullException.ThrowIfNull(allBuilds);
@@ -161,7 +163,7 @@ public static class BuildBatchRunner
             TeamSetup team;
             try
             {
-                team = allBuilds[id].ToTeamSetup(ref rng, catalog, idBase);
+                team = allBuilds[id].ToTeamSetup(ref rng, catalog, idBase, items: items);
             }
             catch (ArgumentException ex)
             {
@@ -340,7 +342,8 @@ public static class BuildBatchRunner
         int matchesPerCampaign,
         int campaigns,
         ulong seed,
-        bool homeAway)
+        bool homeAway,
+        ItemCatalog? items = null)
     {
         ArgumentNullException.ThrowIfNull(catalog);
         ArgumentNullException.ThrowIfNull(allBuilds);
@@ -391,7 +394,7 @@ public static class BuildBatchRunner
                 playedCampaigns[index] = PlayCampaign(
                     BalanceCatalogs.Current(catalog), allBuilds[plan[index].BuildId], plan[index].BuildId, opponentBuild,
                     matchesPerCampaign, seed, homeAway,
-                    index * perCampaignGen, index * matchesPerCampaign, plan[index].Campaign);
+                    index * perCampaignGen, index * matchesPerCampaign, plan[index].Campaign, items);
             });
         }
         catch (AggregateException aggregate) when (aggregate.InnerException is ArgumentException inner)
@@ -462,7 +465,8 @@ public static class BuildBatchRunner
         bool homeAway,
         int genIndexBase,
         int matchIndexBase,
-        int campaignNumber)
+        int campaignNumber,
+        ItemCatalog? items)
     {
         var matchAcc = new CampaignMatchAccumulator[matchesPerCampaign];
         for (int m = 0; m < matchesPerCampaign; m++)
@@ -480,7 +484,7 @@ public static class BuildBatchRunner
         TeamSetup initialTeam;
         try
         {
-            initialTeam = build.ToTeamSetup(ref buildRng, catalog, buildFirstId);
+            initialTeam = build.ToTeamSetup(ref buildRng, catalog, buildFirstId, items: items);
         }
         catch (ArgumentException ex)
         {
@@ -501,7 +505,7 @@ public static class BuildBatchRunner
             int oppGenIndex = genIndex++;
             var oppRng = RngStreams.Generation(seed, oppGenIndex);
             int oppFirstId = 1 + (oppGenIndex * 100);
-            var opponentTeam = opponentBuild.ToTeamSetup(ref oppRng, catalog, oppFirstId, opponentQuality);
+            var opponentTeam = opponentBuild.ToTeamSetup(ref oppRng, catalog, oppFirstId, opponentQuality, items);
 
             var currentPlayers = players.Values.OrderBy(pl => pl.Id).ToList();
             var buildTeamThisMatch = initialTeam with { Players = currentPlayers };

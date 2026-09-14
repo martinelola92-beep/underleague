@@ -173,7 +173,8 @@ try
         {
             int campaigns = options.RunsExplicit ? options.Runs : 60;
             CampaignResult campaign = BuildBatchRunner.RunCampaign(
-                catalog, allBuilds, buildIds, campaignLength, campaigns, options.Seed, options.HomeAway);
+                catalog, allBuilds, buildIds, campaignLength, campaigns, options.Seed, options.HomeAway,
+                ItemLoader.FromJson(dataFiles));
 
             WriteCampaignCsv(options.OutDir!, campaign.Rows);
 
@@ -192,7 +193,8 @@ try
         }
 
         BuildsMatrixResult matrix = BuildBatchRunner.RunMatrix(
-            catalog, allBuilds, buildIds, options.Vs, options.HomeAway, options.Runs, options.Seed, options.Rosters);
+            catalog, allBuilds, buildIds, options.Vs, options.HomeAway, options.Runs, options.Seed, options.Rosters,
+            ItemLoader.FromJson(dataFiles));
 
         WriteBuildsCsv(options.OutDir!, matrix.Cells);
         WritePerksCsv(options.OutDir!, matrix.PerkActivations);

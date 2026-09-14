@@ -33,9 +33,14 @@ deduce del código o de los datos), **HIPÓTESIS** (interpretación sin prueba).
    *(MEDIDO)*
 6. **El valor medido de un objeto no lo predice la suma de atributos que da.** `cracked_visor` (+10 técnica,
    suma 10) vale **62**; `moonsteel_bracer` (+30 repartidos, suma 30) vale **0**. *(MEDIDO)*
-7. **Y el orden de valor por atributo contradice el declarado.** Objetos de un solo atributo: resistencia
-   **61**, técnica **46**, correa **46**, velocidad **20**, **fuerza 2**. La ADR 0038 declara el orden
-   inverso (fuerza 111 > técnica 75 > velocidad 66 > correa 40 > resistencia 30). *(MEDIDO)*
+7. **Y el orden de valor por atributo parece el inverso del declarado.** Objetos de un solo atributo:
+   resistencia **61**, técnica **46**, correa **46**, velocidad **20**, **fuerza 2**. La ADR 0038 declara
+   fuerza 11,1 > técnica 7,5 > velocidad 6,6 > resistencia 3,0. **CORRECCIÓN (ver
+   `tres-puntos-resueltos.md`): los dos números NO miden lo mismo** —la ADR mide **+20 a toda la
+   plantilla** y el valor de objeto mide **un objeto en un jugador**—, así que compararlos directamente,
+   como hacía la primera versión de este informe, era incorrecto. Lo que sí queda en pie es que **la
+   fórmula de precio de la ADR 0038 usa una tabla de plantilla para tasar una pieza individual**, y eso sí
+   es una sustitución inválida. *(MEDIDO, con la corrección aplicada)*
 8. **Hay un objeto no maldito con valor negativo**: `weighted_wraps` (poco común, +10 fuerza +10
    resistencia) vale **−4**. Equiparlo es peor que no equipar nada, y no lo anuncia. *(MEDIDO)*
 9. **La rareza casi no predice el valor**: común 31,9 · poco común 43,8 · rara 44,4. Raro y poco común son
@@ -250,9 +255,18 @@ tirada. *(DERIVADO)*
 | velocidad | `worn_boots` | 20 |
 | **fuerza** | `iron_gauntlets` | **2** |
 
-**Este orden es el inverso del declarado en la ADR 0038** (fuerza 111 > técnica 75 > velocidad 66 > correa
-40 > resistencia 30). O la tabla de la ADR está obsoleta, o el instrumento de valor mide otra cosa. **Es la
-contradicción más accionable del informe.**
+**CORRECCIÓN sobre la primera versión de este informe.** Este orden **no** es directamente comparable con
+la tabla de la ADR 0038 (fuerza 11,1 > técnica 7,5 > velocidad 6,6 > resistencia 3,0), porque los dos
+números miden experimentos distintos: la ADR mide **+20 al atributo en toda la plantilla** y esta tabla mide
+**un objeto equipado a un jugador**. Afirmar que uno es «el inverso» del otro era un error de lectura mío y
+queda corregido.
+
+Lo que sí se sostiene, y es lo accionable: **la fórmula de precio de la ADR 0038 tasa una pieza individual
+usando una tabla de plantilla entera** (`valor(objeto) = Σ bonus × valorMarginal`). Los valores medidos por
+pieza muestran que esa sustitución no se sostiene —un +10 de fuerza mide 2 y un +10 de resistencia mide
+61—, y la explicación más probable *(HIPÓTESIS)* es que la fatiga es **por jugador**, así que un objeto de
+resistencia rinde entero en su portador, mientras que la fuerza solo paga cuando ese jugador concreto
+disputa. Detalle en `tres-puntos-resueltos.md`.
 
 **Corolarios:**
 - La suma de atributos **no predice** el valor: +30 puede valer 0 (`moonsteel_bracer`) y +10 puede valer 62.
