@@ -46,7 +46,6 @@ public partial class MatchScreen : Control
     private Label _scoreboard = null!;
     private Label _state = null!;
     private Label _clock = null!;
-    private Label _highlightList = null!;
     private Label _selected = null!;
     private Label _progress = null!;
     private Button _play = null!;
@@ -205,12 +204,12 @@ public partial class MatchScreen : Control
         // filas piden 420 px de alto para que la casilla sea cuadrada (si no, el jugador no puede estimar
         // distancias a ojo). El panel le añade el mismo margen de 4 px que tenía antes arriba y abajo. Ese
         // alto extra (antes 350, ahora 420: +70 px) sale del panel del log y del de controles, más abajo.
-        Widgets.Panel(this, new Rect2(12f, 152f, 1256f, 428f));
+        Widgets.Panel(this, new Rect2(12f, 152f, 1256f, 508f));
         _pitch = new MatchPitchView
         {
             Trace = _trace,
             Position = new Vector2(80f, 156f),
-            Size = new Vector2(1120f, 420f),
+            Size = new Vector2(1120f, 500f),
         };
         _pitch.PlayerPicked += OnPlayerPicked;
         AddChild(_pitch);
@@ -237,7 +236,7 @@ public partial class MatchScreen : Control
         // El log y el panel de controles bajan y encogen exactamente el alto que ganó el campo (70 px):
         // empezaban en y=516 y medían 234, ahora empiezan en y=586 y miden 164. Dentro, todo se reescala en
         // la misma proporción (164/234 ≈ 0,70) para que ningún botón se quede sin sitio.
-        Widgets.Panel(this, new Rect2(12f, 586f, 888f, 164f));
+        Widgets.Panel(this, new Rect2(12f, 666f, 888f, 84f));
         Widgets.Section(this, UiText.Get("ui.match.log"), new Vector2(24f, 590f), 400f);
         _progress = Widgets.Body(this, string.Empty, new Vector2(600f, 590f), 288f, Style.TextDim);
         _progress.HorizontalAlignment = HorizontalAlignment.Right;
@@ -256,12 +255,12 @@ public partial class MatchScreen : Control
         AddChild(_log);
         FitLog();
 
-        Widgets.Panel(this, new Rect2(908f, 586f, 360f, 164f));
-        _clock = Widgets.Body(this, string.Empty, new Vector2(918f, 590f), 340f, Style.Accent);
+        Widgets.Panel(this, new Rect2(908f, 666f, 360f, 84f));
+        _clock = Widgets.Body(this, string.Empty, new Vector2(918f, 670f), 340f, Style.Accent);
 
         _timeline = new MatchTimelineView
         {
-            Position = new Vector2(918f, 608f),
+            Position = new Vector2(918f, 688f),
             Size = new Vector2(340f, 16f),
             FrameCount = _trace?.FrameCount ?? 0,
             Marks = BuildMarks(),
@@ -270,21 +269,21 @@ public partial class MatchScreen : Control
         _timeline.Seeked += OnSeeked;
         AddChild(_timeline);
 
-        Widgets.Button(this, UiText.Get("ui.match.stepBack"), new Rect2(918f, 626f, 60f, 20f)).Pressed += () => Step(-1);
+        Widgets.Button(this, UiText.Get("ui.match.stepBack"), new Rect2(918f, 706f, 60f, 22f)).Pressed += () => Step(-1);
 
-        _play = Widgets.Button(this, UiText.Get("ui.match.pause"), new Rect2(982f, 626f, 70f, 20f));
+        _play = Widgets.Button(this, UiText.Get("ui.match.pause"), new Rect2(982f, 706f, 70f, 22f));
         _play.Pressed += TogglePlay;
 
-        Widgets.Button(this, UiText.Get("ui.match.stepForward"), new Rect2(1056f, 626f, 60f, 20f)).Pressed += () => Step(1);
+        Widgets.Button(this, UiText.Get("ui.match.stepForward"), new Rect2(1056f, 706f, 60f, 22f)).Pressed += () => Step(1);
 
-        _speed = Widgets.Button(this, "x" + Speeds[0].ToString(CultureInfo.InvariantCulture), new Rect2(1120f, 626f, 48f, 20f));
+        _speed = Widgets.Button(this, "x" + Speeds[0].ToString(CultureInfo.InvariantCulture), new Rect2(1120f, 706f, 48f, 22f));
         _speed.Pressed += () =>
         {
             _speedIndex = (_speedIndex + 1) % Speeds.Length;
             _speed.Text = "x" + Speeds[_speedIndex].ToString(CultureInfo.InvariantCulture);
         };
 
-        _zone = Widgets.Button(this, UiText.Get("ui.match.zoneOff"), new Rect2(1172f, 626f, 86f, 20f));
+        _zone = Widgets.Button(this, UiText.Get("ui.match.zoneOff"), new Rect2(1172f, 706f, 86f, 22f));
         _zone.Pressed += () =>
         {
             _pitch.ShowZone = !_pitch.ShowZone;
@@ -292,9 +291,9 @@ public partial class MatchScreen : Control
             _pitch.QueueRedraw();
         };
 
-        Widgets.Button(this, UiText.Get("ui.match.end"), new Rect2(918f, 650f, 84f, 20f)).Pressed += GoToEnd;
+        Widgets.Button(this, UiText.Get("ui.match.end"), new Rect2(918f, 728f, 84f, 22f)).Pressed += GoToEnd;
 
-        _marking = Widgets.Button(this, UiText.Get("ui.match.markOn"), new Rect2(1008f, 650f, 106f, 20f));
+        _marking = Widgets.Button(this, UiText.Get("ui.match.markOn"), new Rect2(1008f, 728f, 106f, 22f));
         _marking.Pressed += () =>
         {
             _pitch.ShowMarking = !_pitch.ShowMarking;
@@ -302,7 +301,7 @@ public partial class MatchScreen : Control
             _pitch.QueueRedraw();
         };
 
-        Widgets.Button(this, UiText.Get("ui.match.report"), new Rect2(1120f, 650f, 138f, 20f)).Pressed += GoToReport;
+        Widgets.Button(this, UiText.Get("ui.match.report"), new Rect2(1120f, 728f, 138f, 22f)).Pressed += GoToReport;
 
         // UN suceso clave. Eran cuatro, luego tres, y baja a uno con el campo de seis filas (ADR 0103):
         // el panel de controles perdió 70 px de alto para dárselos al campo, y un suceso clave largo se
@@ -312,9 +311,11 @@ public partial class MatchScreen : Control
         // líneas, 34) = 746, contra un borde inferior de 750. Las dos líneas del jugador seguido son las que cambian con cada clic, así que son las que
         // no pueden perderse; el resto de sucesos está a un vistazo en el log de al lado y en las marcas
         // de la barra.
-        Widgets.Section(this, UiText.Get("ui.match.highlights"), new Vector2(918f, 674f), 340f);
-        _highlightList = Widgets.Body(this, UiText.Get("ui.match.highlightsNone"), new Vector2(918f, 690f), 340f);
-        _selected = Widgets.Body(this, UiText.Get("ui.match.selectHint"), new Vector2(918f, 712f), 340f, Style.TextDim);
+        // ADR 0109: con siete filas el campo pide 500 px de alto y el panel de controles baja a 84.
+        // El bloque de SUCESOS CLAVE sale de aquí: ya estaba reducido a uno (ADR 0103) y el log, que
+        // ocupa los 888 px de al lado, enseña lo mismo y más. La línea del jugador seguido —que es la
+        // que cambia con cada clic y por tanto la que no se puede perder— se muda a la cabecera del log.
+        _selected = Widgets.Body(this, UiText.Get("ui.match.selectHint"), new Vector2(300f, 640f), 596f, Style.TextDim);
 
         Widgets.InputHelp(this, UiText.Get("ui.input.mouseMatch"), UiText.Get("ui.input.padMatch"));
 
@@ -568,8 +569,6 @@ public partial class MatchScreen : Control
         int goalsAgainst = _revealed > 0 ? _lines[_revealed - 1].GoalsAgainst : 0;
         _scoreboard.Text = goalsFor.ToString(CultureInfo.InvariantCulture) + " - " + goalsAgainst.ToString(CultureInfo.InvariantCulture);
         _progress.Text = UiText.Get("ui.match.progress", _revealed, _lines.Count);
-
-        SyncHighlights();
         SyncSelected(trace);
         SyncState();
     }
@@ -631,35 +630,7 @@ public partial class MatchScreen : Control
         _log.AppendText($"[color=#{color.ToHtml(false)}]{Escape(Sentence(line))}[/color]\n");
     }
 
-    /// <summary>Los últimos sucesos que no se pueden perder de vista; la barra dice además dónde están.</summary>
-    private void SyncHighlights()
-    {
-        var recent = new List<string>();
-        for (int i = _revealed - 1; i >= 0 && recent.Count < 1; i--)
-        {
-            if (_lines[i].Highlight)
-            {
-                recent.Insert(0, OneLine(UiText.Get("ui.match.minute", _lines[i].Minute) + "  " + Sentence(_lines[i])));
-            }
-        }
 
-        _highlightList.Text = recent.Count == 0
-            ? UiText.Get("ui.match.highlightsNone")
-            : string.Join("\n", recent);
-    }
-
-    /// <summary>
-    /// Recorta un suceso clave a UNA línea. El panel de controles perdió 70 px al darle alto al campo
-    /// (ADR 0103) y el bloque de sucesos vive entre el último botón y el borde: si un suceso se parte en
-    /// dos, el bloque crece y se come las dos líneas del jugador seguido, que son las que cambian con cada
-    /// clic. Con alto previsible —dos sucesos de una línea— el bloque cabe exacto. El suceso completo
-    /// sigue estando en el log, que es donde se lee entero.
-    /// </summary>
-    private static string OneLine(string text) =>
-        text.Length <= HighlightMaxChars ? text : text[..(HighlightMaxChars - 1)].TrimEnd() + "…";
-
-    /// <summary>Caracteres que caben en los 340 px del panel a tamaño de cuerpo, medido sobre la captura.</summary>
-    private const int HighlightMaxChars = 46;
 
     private void SyncSelected(MatchTrace trace)
     {

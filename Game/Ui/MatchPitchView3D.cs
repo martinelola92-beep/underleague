@@ -22,7 +22,7 @@ namespace Underleague.Game.Ui;
 /// </para>
 ///
 /// <para>
-/// <b>Escala: 1 casilla = 1 unidad de mundo.</b> El campo son 16x6 unidades en el plano XZ (ADR 0103): la columna del
+/// <b>Escala: 1 casilla = 1 unidad de mundo.</b> El campo son 16x7 unidades en el plano XZ (sucesora de la ADR 0103): la columna del
 /// campo es X y la fila es Z, así que con la cámara al lado +Z el campo sale con la misma orientación que
 /// en 2D (columna 0 a la izquierda, fila 0 arriba).
 /// </para>
@@ -357,7 +357,7 @@ public partial class MatchPitchView3D : SubViewportContainer
     };
 
     /// <summary>
-    /// El césped: un cuadrilátero de 16x6 en el plano XZ (ADR 0103) con los vértices y las UV puestos a mano. Se
+    /// El césped: un cuadrilátero de 16x7 en el plano XZ (sucesora de la ADR 0103) con los vértices y las UV puestos a mano. Se
     /// construye así y no con un <c>PlaneMesh</c> para que no haya ninguna duda sobre en qué esquina de la
     /// textura cae la casilla (0,0): la columna es X, la fila es Z y la textura se lee igual que la imagen.
     /// </summary>

@@ -7,7 +7,7 @@ namespace Underleague.Game.Ui;
 /// <summary>
 /// Campo del <b>partido en curso</b>: las 20 fichas y el balón en las posiciones continuas que grabó la
 /// <see cref="MatchTrace"/> de <c>/Sim</c>, tick a tick. Es la hermana de <see cref="PitchView"/> —comparte
-/// geometría (16x6, RF-056, ADR 0103) y paleta (<see cref="Style"/>)— pero pinta cosas distintas: allí hay casillas
+/// geometría (16x7, RF-056, ADR 0103, campo de siete filas) y paleta (<see cref="Style"/>)— pero pinta cosas distintas: allí hay casillas
 /// de colocación, aquí hay coordenadas continuas y una máquina de estados por jugador.
 ///
 /// <para>

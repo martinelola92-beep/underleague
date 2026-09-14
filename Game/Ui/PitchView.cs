@@ -7,7 +7,7 @@ using Underleague.Sim.Placement;
 namespace Underleague.Game.Ui;
 
 /// <summary>
-/// Cuadrícula de colocación de 16x6 (RF-040, ADR 0103) con la mitad propia utilizable (RF-041), la zona de acción
+/// Cuadrícula de colocación de 16x7 (RF-040, ADR 0103, campo de siete filas) con la mitad propia utilizable (RF-041), la zona de acción
 /// del jugador manipulado (RF-045, ADR 0029), los vínculos direccionales (RF-044, RF-106) y el modo de
 /// cobertura del equipo (ADR 0029 §4).
 /// <para>
@@ -293,16 +293,16 @@ public partial class PitchView : Control
 
     /// <summary>
     /// Rectángulo de una banda de inicio sobre la mitad propia. Las bandas parten filas, no columnas: con
-    /// Rows par (6, ADR 0103) el centro son <b>dos</b> filas (la 2 y la 3, igual que <c>FlankOfHome</c> en
-    /// <c>Sim.Perks.LinkGeometry</c>) y las otras dos bandas son <b>todas</b> las que quedan a cada lado,
-    /// que es justo lo que el texto del perk no dejaba claro (AW-F).
+    /// Rows impar (7, sucesora de la ADR 0103) vuelve a haber una única fila central
+    /// (<c>Pitch.Rows / 2</c>, igual que <c>FlankOfHome</c> en <c>Sim.Perks.LinkGeometry</c>) y las otras
+    /// dos bandas son <b>todas</b> las que quedan a cada lado, que es justo lo que el texto del perk no
+    /// dejaba claro (AW-F).
     /// </summary>
     private static Rect2 FlankRect(int flank, float cell)
     {
-        int centerHigh = Pitch.Rows / 2;
-        int centerLow = centerHigh - 1;
-        int first = flank switch { 0 => 0, 1 => centerLow, _ => centerHigh + 1 };
-        int last = flank switch { 0 => centerLow - 1, 1 => centerHigh, _ => Pitch.Rows - 1 };
+        int center = Pitch.Rows / 2;
+        int first = flank switch { 0 => 0, 1 => center, _ => center + 1 };
+        int last = flank switch { 0 => center - 1, 1 => center, _ => Pitch.Rows - 1 };
         return new Rect2(0f, first * cell, cell * Pitch.PlacementColumns, (last - first + 1) * cell);
     }
 
@@ -401,14 +401,13 @@ public partial class PitchView : Control
             }
         }
 
-        // Las bandas parten las filas, no las columnas: con Rows par (6, ADR 0103) el carril central son
-        // las filas 2 y 3, y las otras dos son las bandas. Se marcan con línea punteada para no
-        // confundirlas con los cortes de tercio.
-        int centerHigh = Pitch.Rows / 2;
-        int centerLow = centerHigh - 1;
+        // Las bandas parten las filas, no las columnas: con Rows impar (7) el carril central vuelve a ser
+        // UNA sola fila (Pitch.Rows / 2) y las otras dos son las bandas. Se marcan con línea punteada para
+        // no confundirlas con los cortes de tercio.
+        int center = Pitch.Rows / 2;
         float own = cell * Pitch.PlacementColumns;
-        Style.DrawDashed(this, new Vector2(0f, centerLow * cell), new Vector2(own, centerLow * cell), Style.ZoneDivider, 2f);
-        Style.DrawDashed(this, new Vector2(0f, (centerHigh + 1) * cell), new Vector2(own, (centerHigh + 1) * cell), Style.ZoneDivider, 2f);
+        Style.DrawDashed(this, new Vector2(0f, center * cell), new Vector2(own, center * cell), Style.ZoneDivider, 2f);
+        Style.DrawDashed(this, new Vector2(0f, (center + 1) * cell), new Vector2(own, (center + 1) * cell), Style.ZoneDivider, 2f);
     }
 
     /// <summary>
