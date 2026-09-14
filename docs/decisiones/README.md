@@ -99,6 +99,7 @@ Cuándo escribir un ADR: cambio de librería o stack, frontera entre proyectos, 
 | [0098](0098-el-control-sin-mercado-no-compra.md) | El control de la ADR 0055 compraba cuando el mapa lo obligaba a entrar en un mercado: la métrica mezclaba dos poblaciones. Ahora no compra, y la cifra real es 7,83 (no 11,75) | Aceptada e implementada. **Retira la contradicción que la ADR 0096 anunciaba entre la ADR 0033 y la ADR 0055** |
 | [0099](0099-la-clinica-ofrece-tres-servicios.md) | La clínica pasa de un servicio a tres: por pieza, la plantilla entera a tarifa plana, y el matasanos —40 % del precio, 30 % de fallo y 12 % de empeorar un escalón, hasta la muerte— | Aceptada e implementada. **Decisión del revisor. Amplía RF-094** |
 | [0100](0100-el-evento-es-una-carta-con-opciones.md) | El nodo de evento deja de pagar 1-3 de oro y pasa a ser una carta con opciones en `/data`: dos familias, el oro parado y carne por ventaja. Todo coste se ve antes de elegir | Aceptada e implementada. **Decisión del revisor. Desarrolla RF-011** |
+| [0109](0109-la-banda-de-tiros-se-calibra-contra-la-geometria.md) | La banda de tiros se calibra contra la geometría vigente: 7-15 para el campo de siete filas, y la formación por defecto NO se ensancha | Aceptada. **Decisión del revisor. RT-057** |
 
 El hueco del 0011 corresponde a una decisión sobre el radio de adyacencia que quedó absorbida por la 0021 antes de aceptarse.
 | [0012](0012-buildswindifferently-normalizada.md) | `buildsWinDifferently` normalizada contra la referencia de la raza | **Propuesta: decisión del revisor** |

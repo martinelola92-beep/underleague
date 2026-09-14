@@ -254,7 +254,12 @@ public static class MatchMetrics
         double passChainAvgLength = passChains > 0 ? (double)passChainLength / passChains : 0.0;
         rows.Add(InRange(PassChainAvgLength, passChainAvgLength, 2, 4));
 
-        rows.Add(InRange(ShotsPerMatch, (double)shots / n, 8, 16));
+        // 7-15 (ADR 0109), antes 8-16: la banda estaba calibrada para campos de cinco y seis filas. Con
+        // SIETE los mismos siete jugadores se reparten sobre un campo un 17 % mas alto y el ataque llega
+        // menos: anadir la fila cuesta ~1,0 tiro y ~0,45 goles por partido en las dos semillas, y no existe
+        // palanca local de tiro que lo recupere (docs/cierre-siete-filas.md 3). La banda se recalibra a la
+        // geometria vigente; la logica de disparo NO se toca para compensarla.
+        rows.Add(InRange(ShotsPerMatch, (double)shots / n, 7, 15));
 
         // scorelineShare_1-0_to_3-2: porcentaje de partidos cuyo marcador final tiene entre 1 y 5 goles
         // totales con diferencia de 1 o 2 goles (1-0, 2-0, 2-1, 3-1, 3-2 y sus simétricos).

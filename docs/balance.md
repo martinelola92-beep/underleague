@@ -105,7 +105,7 @@ Criterio de salida de la fase 0 e indicador permanente del equilibrio fútbol/ag
 |---|---|---|
 | Alternancias de posesión por partido | 12-28 (ADR 0081) | Cambios de equipo poseedor |
 | Longitud media de cadena de pases | 2-4 | Pases completados consecutivos por posesión |
-| Tiros por partido (ambos equipos) | 8-16 | Eventos `SHOT` |
+| Tiros por partido (ambos equipos) | 7-15 (ADR 0109) | Eventos `SHOT` |
 | Distribución de resultados | Mayoría entre 1-0 y 3-2; < 5% con más de 5 goles totales; < 15% de empates **al final del reglamentario** | Marcador antes de la turba |
 | Tiempo del balón por tercio | Ningún tercio > 50% | Ticks con el balón en cada tercio de columnas |
 | Entradas por partido | 6-14 | Eventos `TACKLE` |
