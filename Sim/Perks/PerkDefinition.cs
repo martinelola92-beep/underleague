@@ -129,6 +129,13 @@ public enum MatchStat
     TacklesWon,
     Shots,
     Saves,
+
+    /// <summary>
+    /// 1 si el jugador ha terminado el partido <b>de baja</b> —lesionado o muerto— y 0 si sigue entero.
+    /// Es lo único que distingue "sobrevivir" de "jugar", y sin ello un perk que premia terminar de pie
+    /// premiaría en realidad salir en la alineación.
+    /// </summary>
+    Down,
 }
 
 /// <summary>A quién se aplica un efecto (§2). Los objetivos colectivos se recorren por id ascendente.</summary>
@@ -183,6 +190,15 @@ public enum PerkScope
 {
     Actor,
     Target,
+
+    /// <summary>
+    /// El dueño es el <b>rival implicado</b> del evento (RF-067), no su actor. Es lo que distingue "lo
+    /// que YO le hago al rival" de "lo que le pasa al rival": en un <c>INJURY</c> el actor es la víctima
+    /// y el causante viaja en <c>Opponent</c>, así que sin este alcance un perk que cuenta la carne que
+    /// reparte cobraría también por la que reparten sus compañeros.
+    /// </summary>
+    Opponent,
+
     Team,
     OpposingTeam,
     Any,

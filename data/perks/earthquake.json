@@ -1,0 +1,36 @@
+{
+  "_doc": "Terremoto: cada entrada del portador sacude a todo el que tenga cerca. setState sobre adjacentOpponents (paquete AY-cuatro-primitivas) alcanza solo a los RIVALES a un radio real de una casilla en el instante de la entrada -nunca a un compañero, aunque este pegado- y los derriba con el mismo tiempo en el suelo que una entrada normal (tuning.sim.json States.KnockedDownTicks = 18). Es una zona de area, no un objetivo elegido: el portador no controla a cuantos alcanza, y contra un rival que juega disperso puede no tocar a nadie. Limitado a una vez por partido porque barrer varios rivales a la vez con cada entrada rompe la lectura de riesgo del partido (RF-012d).",
+  "id": "earthquake",
+  "name": {
+    "es": "Terremoto",
+    "en": "Earthquake"
+  },
+  "rarity": "rare",
+  "minAct": 2,
+  "kind": "conditional",
+  "axis": "proximity",
+  "race": null,
+  "family": null,
+  "trigger": "TACKLE",
+  "scope": "actor",
+  "links": [],
+  "condition": "",
+  "effects": [
+    {
+      "type": "setState",
+      "target": "adjacentOpponents",
+      "state": "KnockedDown",
+      "ticks": 18
+    }
+  ],
+  "elseEffects": [],
+  "limit": {
+    "per": "match",
+    "times": 1
+  },
+  "accumulatesAcrossMatches": false,
+  "lethal": false,
+  "positionOnly": null,
+  "tagsRequired": [],
+  "tagsForbidden": []
+}

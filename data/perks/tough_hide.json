@@ -1,0 +1,32 @@
+{
+  "_doc": "Curtido: la piel del portador aguanta lo que a otro le costaria una visita a la clinica. Le concede la inmunidad minorInjuryClinicCost (Sim.Run.Systems.Medical.MedicalSystem): su lesion LEVE se cura gratis en vez de a tarifa, la misma inmunidad que ya usa el servicio de plantilla entera de la clinica (ADR 0099/0100). Sin coste dentro del partido: el ahorro es de campaña, en oro entre partidos.",
+  "id": "tough_hide",
+  "name": {
+    "es": "Curtido",
+    "en": "Tough Hide"
+  },
+  "rarity": "uncommon",
+  "minAct": 1,
+  "kind": "ruleBreaker",
+  "axis": "identity",
+  "race": null,
+  "family": null,
+  "trigger": "MATCH_START",
+  "scope": "any",
+  "links": [],
+  "condition": "",
+  "effects": [
+    {
+      "type": "immunity",
+      "target": "owner",
+      "immunity": "minorInjuryClinicCost"
+    }
+  ],
+  "elseEffects": [],
+  "limit": null,
+  "accumulatesAcrossMatches": false,
+  "lethal": false,
+  "positionOnly": null,
+  "tagsRequired": [],
+  "tagsForbidden": []
+}

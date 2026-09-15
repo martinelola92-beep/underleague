@@ -1,0 +1,33 @@
+{
+  "_doc": "Guardameta clasico: un portero que nunca sale de su area, todo lo contrario del Portero libero de last_ditch/sweeper_keeper. El -2 de correa es solo del portador (target owner) y dura el partido: el guardameta queda pegado a su casilla-hogar el partido entero. Cuesta la cobertura extra que da salir a cortar un balon suelto o a rechazar fuera del area; a cambio nunca se le pilla fuera de sitio.",
+  "id": "line_keeper",
+  "name": {
+    "es": "Guardameta clásico",
+    "en": "Line Keeper"
+  },
+  "rarity": "uncommon",
+  "minAct": 1,
+  "kind": "filler",
+  "axis": "identity",
+  "race": null,
+  "family": null,
+  "trigger": "MATCH_START",
+  "scope": "any",
+  "links": [],
+  "condition": "",
+  "effects": [
+    {
+      "type": "modifyLeash",
+      "target": "owner",
+      "value": -2,
+      "duration": "match"
+    }
+  ],
+  "elseEffects": [],
+  "limit": null,
+  "accumulatesAcrossMatches": false,
+  "lethal": false,
+  "positionOnly": "Goalkeeper",
+  "tagsRequired": [],
+  "tagsForbidden": []
+}

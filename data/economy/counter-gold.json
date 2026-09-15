@@ -1,0 +1,8 @@
+{
+  "_doc": "Tarifa en oro de los contadores de partido con accumulatesAcrossMatches: true (paquete Z, primitiva D; ADR 0113 'el oro de un perk es una inversion, no un premio'). Cada entrada es cuanto paga UNA unidad del contador al resolver el partido (Sim.Run.Systems.Economy.GoldCalculator.CounterGold), leida por Sim.Run.Systems.Economy.CounterGoldTable desde la propiedad 'rates' (mapa id de contador -> entero no negativo; un contador sin entrada aqui no paga nada). Es su PROPIO canal, separado del premio de partido (GoldForWin): se cobra se gane o se pierda (RF-114g no se toca, ese RF sigue rigiendo solo el premio). Tarifas de partida de los tres perks de tanda 1 que convierten cuerpos en oro (local_idol, box_office, ad_machine): calibradas a ojo por el diseñador, PENDIENTES de la medicion de /Balance que las ajustara (que el oro de contador no se vuelva comparable al premio de una victoria, riesgo que la propia ADR 0113 señala).",
+  "rates": {
+    "localIdolGoals": 5,
+    "boxOfficeMatches": 3,
+    "adMachineInjuries": 8
+  }
+}

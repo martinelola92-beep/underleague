@@ -253,7 +253,7 @@ internal sealed class EffectEngine : IPerkLinks
                 continue;
             }
 
-            if (!actorless && !ScopeMatches(subscription.Perk.Scope, subscription.Owner, actor, target))
+            if (!actorless && !ScopeMatches(subscription.Perk.Scope, subscription.Owner, actor, target, opponent))
             {
                 continue;
             }
@@ -655,11 +655,13 @@ internal sealed class EffectEngine : IPerkLinks
         or EventType.PlayStart
         or EventType.PlayEnd;
 
-    private static bool ScopeMatches(PerkScope scope, MatchPlayer owner, MatchPlayer? actor, MatchPlayer? target) =>
+    private static bool ScopeMatches(
+        PerkScope scope, MatchPlayer owner, MatchPlayer? actor, MatchPlayer? target, MatchPlayer? opponent) =>
         scope switch
         {
             PerkScope.Actor => actor is not null && actor.Id == owner.Id,
             PerkScope.Target => target is not null && target.Id == owner.Id,
+            PerkScope.Opponent => opponent is not null && opponent.Id == owner.Id,
             PerkScope.Team => actor is not null && actor.Team == owner.Team,
             PerkScope.OpposingTeam => actor is not null && actor.Team != owner.Team,
             _ => true,
@@ -1099,6 +1101,7 @@ internal sealed class EffectEngine : IPerkLinks
         MatchStat.PassesCompleted => player.PassesCompleted,
         MatchStat.TacklesWon => player.TacklesWon,
         MatchStat.Shots => player.Shots,
+        MatchStat.Down => player.Injured || player.Dead ? 1 : 0,
         _ => _saves[player.Index],
     };
 

@@ -112,7 +112,7 @@ public static class ConditionCompiler
     };
 
     /// <summary>Nombres de las estadísticas de <c>stat</c>, en orden de <see cref="MatchStat"/>.</summary>
-    internal static readonly string[] StatNames = { "goals", "passesCompleted", "tacklesWon", "shots", "saves" };
+    internal static readonly string[] StatNames = { "goals", "passesCompleted", "tacklesWon", "shots", "saves", "down" };
 
     /// <summary>Radio máximo en casillas de nearAlly/nearOpponent: más allá cubre el campo entero.</summary>
     internal const int MaxProximityCells = 8;

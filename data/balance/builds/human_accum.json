@@ -60,6 +60,18 @@
     {
       "slot": 6,
       "perk": "silky_veteran"
+    },
+    {
+      "slot": 0,
+      "perk": "box_office"
+    },
+    {
+      "slot": 2,
+      "perk": "ad_machine"
+    },
+    {
+      "slot": 6,
+      "perk": "local_idol"
     }
   ],
   "lineup": null

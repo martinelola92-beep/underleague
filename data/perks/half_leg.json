@@ -1,0 +1,32 @@
+{
+  "_doc": "A media pierna: el portador no se resiente igual que los demas cuando arrastra una lesion leve. Le concede la inmunidad minorInjuryPenalty (RF-035), la misma que Numb da gratis a toda la plantilla no-muerta (ADR 0026): aqui cuesta un slot porque cualquier raza puede llevarla. Sin coste dentro del partido (no toca ningun atributo ni probabilidad): el ahorro es de campaña, jugando tocado sin el castigo habitual.",
+  "id": "half_leg",
+  "name": {
+    "es": "A media pierna",
+    "en": "Half a Leg"
+  },
+  "rarity": "uncommon",
+  "minAct": 1,
+  "kind": "ruleBreaker",
+  "axis": "identity",
+  "race": null,
+  "family": null,
+  "trigger": "MATCH_START",
+  "scope": "any",
+  "links": [],
+  "condition": "",
+  "effects": [
+    {
+      "type": "immunity",
+      "target": "owner",
+      "immunity": "minorInjuryPenalty"
+    }
+  ],
+  "elseEffects": [],
+  "limit": null,
+  "accumulatesAcrossMatches": false,
+  "lethal": false,
+  "positionOnly": null,
+  "tagsRequired": [],
+  "tagsForbidden": []
+}

@@ -1,0 +1,31 @@
+{
+  "_doc": "Teatrero: el portador exagera el contacto cuando le hacen falta y el arbitro se la compra. NOTA DE CARGA: el diseño describe el alcance como 'el objetivo (fouled) de la falta', pero FOUL nunca rellena el campo Target del evento -MatchEngine.ResolveFoul y WhistleOrLetPlay siempre emiten la falta con Actor=el que entra y Opponent=el que la sufre (docs/simulacion.md)-, asi que un scope 'target' literal no se dispararia jamas. El scope correcto para 'el rival implicado que no es el actor' es 'opponent' (el mismo que usa ad_machine sobre INJURY): con el, el dueño del perk es el jugador FOULEADO, que es la fantasia que pide el diseño. Sube el criterio del arbitro a favor del equipo del portador (modifyBias no mira el target del efecto, solo el equipo del dueño): cuesta que el perk no hace nada si el portador nunca es fouleado.",
+  "id": "diver",
+  "name": {
+    "es": "Teatrero",
+    "en": "Diver"
+  },
+  "rarity": "common",
+  "minAct": 1,
+  "kind": "filler",
+  "axis": "identity",
+  "race": null,
+  "family": null,
+  "trigger": "FOUL",
+  "scope": "opponent",
+  "links": [],
+  "condition": "",
+  "effects": [
+    {
+      "type": "modifyBias",
+      "value": 10
+    }
+  ],
+  "elseEffects": [],
+  "limit": null,
+  "accumulatesAcrossMatches": false,
+  "lethal": false,
+  "positionOnly": null,
+  "tagsRequired": [],
+  "tagsForbidden": []
+}

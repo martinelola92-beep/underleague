@@ -159,6 +159,7 @@
       "enum": [
         "actor",
         "target",
+        "opponent",
         "team",
         "opposingTeam",
         "any"

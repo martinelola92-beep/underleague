@@ -68,6 +68,14 @@
     {
       "slot": 6,
       "perk": "flank_specialist"
+    },
+    {
+      "slot": 0,
+      "perk": "line_keeper"
+    },
+    {
+      "slot": 1,
+      "perk": "low_block"
     }
   ],
   "rarities": {

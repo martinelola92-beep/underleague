@@ -1,0 +1,33 @@
+{
+  "_doc": "Mano de dios: solo un portero (positionOnly Goalkeeper) puede llevarlo. Cuando el equipo contrario marca (trigger GOAL, scope opposingTeam), el portador anula el gol -cancelEvent, paquete AY-cuatro-primitivas- y queda como un tiro que no llego a entrar (saque de porteria, MatchEngine.ScoreGoal). Legendario y ruleBreaker porque rompe una regla del propio juego (el gol vale), no una probabilidad: no reduce el riesgo de encajar, lo anula del todo una vez. Limitado a una vez por partido: sin el limite seria una porteria a cero garantizada.",
+  "id": "hand_of_god",
+  "name": {
+    "es": "Mano de dios",
+    "en": "Hand of God"
+  },
+  "rarity": "legendary",
+  "minAct": 3,
+  "kind": "ruleBreaker",
+  "axis": "identity",
+  "race": null,
+  "family": null,
+  "trigger": "GOAL",
+  "scope": "opposingTeam",
+  "links": [],
+  "condition": "",
+  "effects": [
+    {
+      "type": "cancelEvent"
+    }
+  ],
+  "elseEffects": [],
+  "limit": {
+    "per": "match",
+    "times": 1
+  },
+  "accumulatesAcrossMatches": false,
+  "lethal": false,
+  "positionOnly": "Goalkeeper",
+  "tagsRequired": [],
+  "tagsForbidden": []
+}

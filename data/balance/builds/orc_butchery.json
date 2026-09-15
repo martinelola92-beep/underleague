@@ -23,7 +23,10 @@
     { "slot": 6, "perk": "box_predator" },
     { "slot": 6, "perk": "forward_line" },
     { "slot": 6, "perk": "marrow_thirst" },
-    { "slot": 6, "perk": "iron_studs" }
+    { "slot": 6, "perk": "iron_studs" },
+    { "slot": 1, "perk": "dirty_play" },
+    { "slot": 2, "perk": "earthquake" },
+    { "slot": 3, "perk": "no_dying" }
   ],
   "rarities": {
     "1": "rare",

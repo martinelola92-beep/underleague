@@ -1,0 +1,32 @@
+{
+  "_doc": "Idolo local: solo un delantero (positionOnly Forward) puede llevarlo. Cada gol suyo (trigger GOAL, scope actor) llena un poco mas la grada: suma 1 al contador localIdolGoals, que acumula entre partidos (RF-070) y que data/economy/counter-gold.json convierte en oro al resolver el partido (ADR 0113, paquete Z primitiva D) -se cobra gane o pierda el equipo, porque es la inversion del slot rindiendo, no el premio de la victoria (RF-114g no se toca)-. Sin coste dentro del partido: no toca ningun atributo ni probabilidad, solo lleva la cuenta. Coste real: un slot que no hace NADA si el portador no marca.",
+  "id": "local_idol",
+  "name": {
+    "es": "Ídolo local",
+    "en": "Local Idol"
+  },
+  "rarity": "common",
+  "minAct": 1,
+  "kind": "filler",
+  "axis": "accumulation",
+  "race": null,
+  "family": null,
+  "trigger": "GOAL",
+  "scope": "actor",
+  "links": [],
+  "condition": "",
+  "effects": [
+    {
+      "type": "addCounter",
+      "counter": "localIdolGoals",
+      "value": 1
+    }
+  ],
+  "elseEffects": [],
+  "limit": null,
+  "accumulatesAcrossMatches": true,
+  "lethal": false,
+  "positionOnly": "Forward",
+  "tagsRequired": [],
+  "tagsForbidden": []
+}

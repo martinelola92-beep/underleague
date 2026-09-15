@@ -1,0 +1,32 @@
+{
+  "_doc": "Maquina de publicidad: lo que el portador le hace al rival se vende. trigger INJURY, scope OPPONENT (nuevo, PerkScope.Opponent): en un INJURY el Actor del evento es la VICTIMA y el causante viaja en el campo Opponent (MatchEngine.ResolveInjury, EmitCancellable(..., victim, opponent: tackler)), asi que con scope actor el perk contaria las lesiones que SUFRE el portador y con scope opponent cuenta solo las que EL REPARTE. Suma 1 al contador adMachineInjuries, que acumula entre partidos (RF-070) y que data/economy/counter-gold.json convierte en oro (ADR 0113): se cobra gane o pierda el partido, porque 'lo que le haces al rival se vende' aunque acabes perdiendo -es la inversion del slot rindiendo, no el premio (RF-114g no se toca)-. Sin coste dentro del partido: no toca ningun atributo ni probabilidad.",
+  "id": "ad_machine",
+  "name": {
+    "es": "Máquina de publicidad",
+    "en": "Ad Machine"
+  },
+  "rarity": "uncommon",
+  "minAct": 1,
+  "kind": "filler",
+  "axis": "accumulation",
+  "race": null,
+  "family": null,
+  "trigger": "INJURY",
+  "scope": "opponent",
+  "links": [],
+  "condition": "",
+  "effects": [
+    {
+      "type": "addCounter",
+      "counter": "adMachineInjuries",
+      "value": 1
+    }
+  ],
+  "elseEffects": [],
+  "limit": null,
+  "accumulatesAcrossMatches": true,
+  "lethal": false,
+  "positionOnly": null,
+  "tagsRequired": [],
+  "tagsForbidden": []
+}

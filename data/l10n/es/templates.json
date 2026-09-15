@@ -386,7 +386,8 @@
     "passesCompleted": "pases completados",
     "tacklesWon": "entradas ganadas",
     "shots": "tiros",
-    "saves": "paradas"
+    "saves": "paradas",
+    "down": "bajas propias"
   },
   "families": {
     "wall": "La Muralla",

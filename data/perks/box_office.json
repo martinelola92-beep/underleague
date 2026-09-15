@@ -1,0 +1,32 @@
+{
+  "_doc": "Taquillero: cada partido que el portador termina DE PIE llena un poco mas la taquilla (trigger MATCH_END, condicion stat(owner,'down')==0). Lo que se paga es SOBREVIVIR, no jugar: por eso la condicion es imprescindible y no cosmetica. Sin ella el perk premiaria salir en la alineacion, y su coste declarado -la decision de alinearlo AUNQUE este tocado, que es lo que lo mata antes- desapareceria. La estadistica 'down' se anadio para esto: vale 1 si termino lesionado o muerto. El oro lo paga data/economy/counter-gold.json (ADR 0113), se gane o se pierda el partido.",
+  "id": "box_office",
+  "name": {
+    "es": "Taquillero",
+    "en": "Box Office"
+  },
+  "rarity": "common",
+  "minAct": 1,
+  "kind": "filler",
+  "axis": "accumulation",
+  "race": null,
+  "family": null,
+  "trigger": "MATCH_END",
+  "scope": "any",
+  "links": [],
+  "condition": "stat(owner,'down') == 0",
+  "effects": [
+    {
+      "type": "addCounter",
+      "counter": "boxOfficeMatches",
+      "value": 1
+    }
+  ],
+  "elseEffects": [],
+  "limit": null,
+  "accumulatesAcrossMatches": true,
+  "lethal": false,
+  "positionOnly": null,
+  "tagsRequired": [],
+  "tagsForbidden": []
+}

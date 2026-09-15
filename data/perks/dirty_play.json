@@ -1,0 +1,40 @@
+{
+  "_doc": "Juego sucio: cuando el portador comete una falta (trigger FOUL, scope actor: el dueño es quien entra, no la victima), va mas alla de la propia entrada y deja al rival implicado -el que recibe la falta, Opponent del evento- lesionado y en el suelo. El efecto injure pasa por la MISMA formula de lesion que una entrada normal (MatchEngine.ResolveInjury), asi que puede acabar en muerte por la via 1 de RF-093 si esa victima ya arrastraba una lesion grave sin tratar; por eso el cargador exige que 'injure' se dispare siempre desde una jugada de contacto (FOUL, TACKLE, INJURY) y nunca desde el saque (ADR 0048, paquete AY). Coste: una falta mas señalada (el arbitro ya vio la entrada) y, si el rival estaba tocado, el riesgo de agravarlo. Limitado a una vez por partido.",
+  "id": "dirty_play",
+  "name": {
+    "es": "Juego sucio",
+    "en": "Dirty Play"
+  },
+  "rarity": "uncommon",
+  "minAct": 1,
+  "kind": "conditional",
+  "axis": "identity",
+  "race": null,
+  "family": null,
+  "trigger": "FOUL",
+  "scope": "actor",
+  "links": [],
+  "condition": "",
+  "effects": [
+    {
+      "type": "injure",
+      "target": "opponent"
+    },
+    {
+      "type": "setState",
+      "target": "opponent",
+      "state": "KnockedDown",
+      "ticks": 18
+    }
+  ],
+  "elseEffects": [],
+  "limit": {
+    "per": "match",
+    "times": 1
+  },
+  "accumulatesAcrossMatches": false,
+  "lethal": false,
+  "positionOnly": null,
+  "tagsRequired": [],
+  "tagsForbidden": []
+}

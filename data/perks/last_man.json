@@ -1,0 +1,35 @@
+{
+  "_doc": "Ultimo hombre: solo un defensa (positionOnly Defender) puede llevarlo. Cuando el equipo contrario dispara (trigger SHOT, scope opposingTeam: se activa con cualquier tiro rival, lo reciba o no el portador), el portador se teletransporta al punto medio entre el balon y su propia porteria (relocate/betweenBallAndOwnGoal, paquete AY-cuatro-primitivas) para cortar la linea de un posible rebote o segunda jugada. No evita el tiro en curso ni mueve a nadie mas: es pura colocacion tras el disparo. Limitado a una vez por partido para que no sea una teletransportacion a demanda en cada ataque rival.",
+  "id": "last_man",
+  "name": {
+    "es": "Último hombre",
+    "en": "Last Man"
+  },
+  "rarity": "rare",
+  "minAct": 2,
+  "kind": "conditional",
+  "axis": "geometry",
+  "race": null,
+  "family": null,
+  "trigger": "SHOT",
+  "scope": "opposingTeam",
+  "links": [],
+  "condition": "",
+  "effects": [
+    {
+      "type": "relocate",
+      "target": "owner",
+      "point": "betweenBallAndOwnGoal"
+    }
+  ],
+  "elseEffects": [],
+  "limit": {
+    "per": "match",
+    "times": 1
+  },
+  "accumulatesAcrossMatches": false,
+  "lethal": false,
+  "positionOnly": "Defender",
+  "tagsRequired": [],
+  "tagsForbidden": []
+}

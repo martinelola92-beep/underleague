@@ -386,7 +386,8 @@
     "passesCompleted": "completed passes",
     "tacklesWon": "tackles won",
     "shots": "shots",
-    "saves": "saves"
+    "saves": "saves",
+    "down": "own casualties"
   },
   "families": {
     "wall": "The Wall",

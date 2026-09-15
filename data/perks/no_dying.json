@@ -1,0 +1,33 @@
+{
+  "_doc": "Prohibido morir: cuando el motor va a matar al portador (trigger DEATH, scope actor), el efecto lo cancela -cancelEvent, paquete AY-cuatro-primitivas- y el jugador queda exactamente como si Kill nunca se hubiera llamado (vivo, en el campo, sin lesion nueva, informe sin sumar la muerte). NOTA DE CARGA sobre el limite: el diseño pide '1 por run si el cargador lo admite'. El esquema acepta 'limit.per: run' (LimitScope.Run existe), pero EffectEngine NO PERSISTE 'Uses' entre partidos -solo los CONTADORES declarados con accumulatesAcrossMatches sobreviven al pitido final (EffectEngine.SeedCounters); el contador de usos de un limite se reinicia a 0 con cada EffectEngine nuevo, uno por partido, sin excepcion para 'run'-. Escribir 'per: run' aqui prometeria una garantia que el motor no cumple (se comportaria identico a 'per: match', pero mintiendo en la descripcion generada, que dice 'una vez en la run'). Se deja en 'per: match', que es lo que el cargador admite de verdad hoy; conceder de verdad 1 muerte evitada por RUN completa exige que el limite persista como un contador mas, y eso es un cambio de motor fuera de este encargo (ver informe al revisor).",
+  "id": "no_dying",
+  "name": {
+    "es": "Prohibido morir",
+    "en": "No Dying"
+  },
+  "rarity": "legendary",
+  "minAct": 3,
+  "kind": "ruleBreaker",
+  "axis": "identity",
+  "race": null,
+  "family": null,
+  "trigger": "DEATH",
+  "scope": "actor",
+  "links": [],
+  "condition": "",
+  "effects": [
+    {
+      "type": "cancelEvent"
+    }
+  ],
+  "elseEffects": [],
+  "limit": {
+    "per": "match",
+    "times": 1
+  },
+  "accumulatesAcrossMatches": false,
+  "lethal": false,
+  "positionOnly": null,
+  "tagsRequired": [],
+  "tagsForbidden": []
+}

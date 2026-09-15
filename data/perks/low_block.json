@@ -1,0 +1,33 @@
+{
+  "_doc": "Bloque bajo: la identidad de un equipo que renuncia a presionar arriba y cierra filas cerca de su propia porteria. El -2 de correa es de EQUIPO (target team) y dura todo el partido: toda la plantilla juega mas corta y mas atras, no solo el portador. Cuesta alcance ofensivo -las bandas y la profundidad de la zona de accion se reducen para los siete titulares a la vez-, que es el precio de una defensa mas compacta. Primer perk (junto a Guardameta clasico) con modifyLeash NEGATIVO de equipo: un perk puede penalizar si expresa una identidad tactica real (decision PD-1).",
+  "id": "low_block",
+  "name": {
+    "es": "Bloque bajo",
+    "en": "Low Block"
+  },
+  "rarity": "rare",
+  "minAct": 1,
+  "kind": "filler",
+  "axis": "identity",
+  "race": null,
+  "family": null,
+  "trigger": "MATCH_START",
+  "scope": "any",
+  "links": [],
+  "condition": "",
+  "effects": [
+    {
+      "type": "modifyLeash",
+      "target": "team",
+      "value": -2,
+      "duration": "match"
+    }
+  ],
+  "elseEffects": [],
+  "limit": null,
+  "accumulatesAcrossMatches": false,
+  "lethal": false,
+  "positionOnly": null,
+  "tagsRequired": [],
+  "tagsForbidden": []
+}

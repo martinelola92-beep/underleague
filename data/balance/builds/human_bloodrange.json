@@ -68,6 +68,14 @@
     {
       "slot": 6,
       "perk": "killing_range"
+    },
+    {
+      "slot": 4,
+      "perk": "half_leg"
+    },
+    {
+      "slot": 6,
+      "perk": "diver"
     }
   ],
   "rarities": {

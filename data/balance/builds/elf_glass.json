@@ -63,6 +63,18 @@
     {
       "slot": 3,
       "perk": "spearpoint"
+    },
+    {
+      "slot": 0,
+      "perk": "hand_of_god"
+    },
+    {
+      "slot": 1,
+      "perk": "last_man"
+    },
+    {
+      "slot": 4,
+      "perk": "tough_hide"
     }
   ],
   "rarities": {

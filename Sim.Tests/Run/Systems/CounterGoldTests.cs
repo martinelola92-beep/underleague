@@ -96,9 +96,14 @@ public sealed class CounterGoldTests
         Assert.Empty(counterGold.Rows);
     }
 
-    /// <summary>Sin la instantánea de <c>counter-gold.json</c>, ningún contador paga (comportamiento de hoy).</summary>
+    /// <summary>
+    /// Sin tarifa, ningún contador paga. El test se apoyaba en que <c>data/economy/counter-gold.json</c>
+    /// no existía; ahora existe con las tarifas de la tanda 1, así que la ausencia se construye de forma
+    /// <b>explícita</b> con <see cref="CounterGoldTable.Empty"/>: lo que se quiere afirmar es que el canal
+    /// es inerte sin tarifa, no que el fichero falte.
+    /// </summary>
     [Fact]
-    public void WithoutTheFileNoCounterPaysAnything()
+    public void WithoutARateNoCounterPaysAnything()
     {
         var state = RunTestState();
         int ownPlayerId = state.Roster[0].Id;
@@ -109,7 +114,7 @@ public sealed class CounterGoldTests
         };
 
         Assert.Equal(0, CounterGoldTable.Empty.Count);
-        var economy = SystemsTestSupport.Systems.Economy;
+        var economy = SystemsTestSupport.Systems.Economy with { CounterGold = CounterGoldTable.Empty };
         Assert.Equal(0, economy.CounterGold.Count);
 
         Assert.Equal(0, GoldCalculator.CounterGold(state, summary, economy).Total);

@@ -1,0 +1,25 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://underleague.dev/schemas/counter-gold.schema.json",
+  "title": "Underleague counter gold rates",
+  "description": "data/economy/counter-gold.json: oro que paga CADA UNIDAD de un contador de partido con accumulatesAcrossMatches: true, al resolver el partido (paquete Z primitiva D, ADR 0113). Un contador sin entrada en 'rates' no paga nada (Sim.Run.Systems.Economy.CounterGoldTable.Empty). Formato de mapa id de contador -> entero, como data/economy/perk-values.json, pero sin los parametros de peso de pool: aqui no hay peso de aparicion, solo tarifa de oro, y la tarifa nunca es negativa (un contador paga, nunca cobra).",
+  "type": "object",
+  "properties": {
+    "_doc": {
+      "type": "string"
+    },
+    "rates": {
+      "type": "object",
+      "propertyNames": {
+        "pattern": "^[a-z][a-zA-Z0-9]*$"
+      },
+      "additionalProperties": {
+        "type": "integer",
+        "minimum": 0
+      }
+    }
+  },
+  "required": [
+    "rates"
+  ]
+}
