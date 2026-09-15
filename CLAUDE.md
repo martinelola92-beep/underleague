@@ -103,8 +103,9 @@ Las puertas llevan `[Collection("Gate")]`: van en serie entre sí y cada una jue
 dotnet build Game/Underleague.Game.csproj                  # OBLIGATORIO antes de ejecutar Godot
 godot --headless --path Game --import          # importar recursos
 godot --headless --path Game --quit-after 60   # ejecutar sin dibujar
-xvfb-run -a --server-args="-screen 0 1280x800x24" godot --path Game \
-  --rendering-driver opengl3 --audio-driver Dummy   # ejecutar y capturar
+# ejecutar y capturar. El `timeout` NO es opcional: sin el se queda colgado al 300% de CPU (ver convenciones)
+timeout 600 xvfb-run -a --server-args="-screen 0 1280x800x24" godot --path Game \
+  --rendering-driver opengl3 --audio-driver Dummy
 ```
 
 **Las capturas salen de TRES entradas distintas, y ninguna las hace todas.** Perdido medio paquete el 13
@@ -148,6 +149,26 @@ cuando es un binario viejo. La escena de capturas solo arranca **con Xvfb**: en 
   comprime por el SENO de la elevación** (subir mejora) y **lo que está de pie por el COSENO** (subir
   empeora). Iba en una instrucción a un subagente, que la contradijo con medidas. Una línea de aritmética
   antes de escribirlo cuesta menos que el rodeo.
+- **Nada se lanza sin plazo, y la CPU alta no es señal de progreso.** El 15 sep 2026 dejé la escena de
+  capturas **85 minutos con 4 h de CPU al 295 %** sin que escribiera un solo PNG ni imprimiera una sola
+  línea, y la miré cinco veces confundiendo "el proceso está vivo y suda" con "está avanzando". Reglas:
+  - **Todo proceso largo va envuelto en `timeout`**, siempre, sin excepción:
+    `timeout 600 xvfb-run -a … godot …`. Un proceso sin plazo es un proceso que se queda colgado toda la
+    sesión comiéndose los núcleos que necesitan los tests y los subagentes.
+  - **Presupuesto por tarea, medido, no intuido**: capturas de una pantalla ≤ **10 min** · las 43 puertas
+    ≤ **8 min** (tardan 5 m 32 s) · el bucle `Category!=Gate` ≤ **2 min** (tarda 44 s) · un lote de
+    `/Balance` lo que diga su tamaño. Si algo pasa del doble de su presupuesto, **está roto**: se mata y
+    se diagnostica, no se espera.
+  - **Se espera un ARTEFACTO, no un latido.** `pgrep`, `%CPU` y `TIME` dicen que el proceso existe, no que
+    progrese. La condición de espera es siempre un fichero escrito o una línea concreta en el log, y
+    **con marca de tiempo comprobada** (`ls -la`). Un proceso al 295 % puede estar girando en vacío.
+  - **Diagnostica por el camino barato antes de esperar más.** Aquel cuelgue se resolvió en **282 ms**:
+    un test de `/Sim` midió que el partido de referencia se juega en 191 eventos y 1.200 fotogramas, lo
+    que descartó la simulación y localizó el problema en `/Game` sin volver a lanzar Godot. Si existe una
+    medición que cuesta segundos y acota el problema, va **antes** que la segunda espera, no después.
+  - **Dos esperas fallidas cierran el asunto.** A la segunda, se anota en `docs/pendientes.md` con lo
+    medido y se sigue con el trabajo: una verificación que no llega no puede bloquear la que sí se puede
+    hacer.
 - **El lote de `/Balance` no es un test de humo**: cuesta tiempo y tokens y su salida es larga. Se lanza cuando hay una **hipótesis concreta que medir**, no después de cada cambio. Agrupa las modificaciones en tandas y mide una vez por tanda, con el número de partidos más pequeño que resuelva la duda. La medición de referencia completa se hace una sola vez, al cerrar el trabajo. Nunca se lanza "para ver si sigue bien" algo que no se ha tocado.
 
 ## Mapa de documentación
