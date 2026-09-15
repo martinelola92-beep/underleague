@@ -283,6 +283,16 @@ public sealed class DescriptionTests
 
             foreach (var trigger in Enum.GetValues<EventType>())
             {
+                // C9: PERK_TRIGGERED es un evento de PRESENTACIÓN —lo emite el motor de efectos para que la
+                // pantalla pueda atribuir una activación— y PerkLoader.ParseTrigger lo rechaza como
+                // disparador, así que el generador NUNCA puede pedir su plantilla. Este test afirma «toda
+                // clave que el generador PUEDE pedir», no «toda clave del enum»: exigir plantilla aquí
+                // obligaría a escribir en l10n un disparador que ningún perk puede declarar.
+                if (trigger == EventType.PerkTriggered)
+                {
+                    continue;
+                }
+
                 templates.Get("triggers", EventTypeNames.ToUpperSnake(trigger));
                 templates.Get("events", EventTypeNames.ToUpperSnake(trigger));
             }

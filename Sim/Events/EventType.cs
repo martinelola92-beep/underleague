@@ -28,6 +28,14 @@ public enum EventType
     Death,
     Substitution,
     ConsumableUsed,
+
+    /// <summary>
+    /// C9: un perk se ha activado. <c>Detail</c> lleva el id del perk y <c>Actor</c> su portador.
+    /// Existe para que la pantalla de partido pueda ATRIBUIR lo que ocurre —un aviso sobre la cabeza del
+    /// jugador— sin calcular ni decidir nada (RT-014). Hasta ahora la activación solo llegaba al informe
+    /// de después del partido, así que ningún perk se podía ver mientras se jugaba.
+    /// </summary>
+    PerkTriggered,
 }
 
 /// <summary>Conversión de EventType a la forma UPPER_SNAKE usada en datos y logs.</summary>
@@ -61,6 +69,7 @@ public static class EventTypeNames
         EventType.Death => "DEATH",
         EventType.Substitution => "SUBSTITUTION",
         EventType.ConsumableUsed => "CONSUMABLE_USED",
+        EventType.PerkTriggered => "PERK_TRIGGERED",
         _ => throw new ArgumentOutOfRangeException(nameof(t)),
     };
 }

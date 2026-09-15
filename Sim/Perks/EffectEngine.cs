@@ -303,6 +303,16 @@ internal sealed class EffectEngine : IPerkLinks
             }
 
             subscription.Uses++;
+
+            // C9: el mismo punto en el que la activación entra en el informe la anuncia también al flujo
+            // de eventos, que es lo único que /Game puede consumir durante el partido.
+            // El aviso es para la pantalla, así que no tiene sentido -ni debe romper el orden de
+            // MATCH_END como último evento- cuando el partido ya ha terminado.
+            if (evt.Type != EventType.MatchEnd)
+            {
+                _engine.PerkTriggered(subscription.Perk.Id, subscription.Owner);
+            }
+
             _report.PerkActivations.Add(new PerkActivation(
                 subscription.Perk.Id,
                 subscription.Owner.Id,

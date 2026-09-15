@@ -2997,6 +2997,12 @@ internal sealed class MatchEngine : IPerkWorld
     /// efectos (RT-040). <paramref name="publish"/> es false en los eventos cuya publicación ya se hizo
     /// antes de resolverlos (SHOT, TACKLE) o que se publican con la variante cancelable.
     /// </summary>
+    /// <summary>C9: ver <see cref="IPerkWorld.PerkTriggered"/>.</summary>
+    public void PerkTriggered(string perkId, MatchPlayer owner)
+    {
+        Emit(EventType.PerkTriggered, perkId, actor: owner, team: owner?.Team ?? -1, publish: false);
+    }
+
     private void Emit(
         EventType type,
         string detail,

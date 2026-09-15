@@ -24,6 +24,12 @@ internal interface IPerkWorld
     /// <summary>Tick actual del partido.</summary>
     int Tick { get; }
 
+    /// <summary>
+    /// C9: anuncia que un perk acaba de activarse, para que el render pueda atribuirlo (RT-014: consume,
+    /// no decide). No cambia nada del partido.
+    /// </summary>
+    void PerkTriggered(string perkId, MatchPlayer owner);
+
     /// <summary>True si el partido está en el gol de oro de la turba (§3.9).</summary>
     bool IsMob { get; }
 

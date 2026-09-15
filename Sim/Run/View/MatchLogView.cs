@@ -170,6 +170,10 @@ public static class MatchLogView
         EventType.PlayEnd => false,
         EventType.PassAttempted => false,
         EventType.DribbleAttempted => false,
+
+        // C9: el aviso de perk activado es presentación —el cartel de 1 s sobre la cabeza— y no
+        // una jugada. En el log sería una línea por activación sin nada que narrar.
+        EventType.PerkTriggered => false,
         _ => true,
     };
 
