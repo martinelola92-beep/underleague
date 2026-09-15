@@ -1,6 +1,7 @@
 using Godot;
 using Underleague.Sim.Engine;
 using Underleague.Sim.Model;
+using Underleague.Sim.Run.View;
 
 namespace Underleague.Game.Ui;
 
@@ -63,6 +64,13 @@ public partial class MatchPitchView : Control
     /// nunca hay más de uno.
     /// </summary>
     public bool ShowMarking { get; set; } = true;
+
+    /// <summary>
+    /// Avisos de perk activado del partido (C9), tal y como los compone <see cref="MatchFlashView"/>: por
+    /// fotograma ascendente. Aquí no se decide cuándo se activa nada —eso ya pasó en <c>/Sim</c> y llegó
+    /// como evento (RT-014)—, solo durante cuántos fotogramas se ve y dónde.
+    /// </summary>
+    public IReadOnlyList<MatchFlash> Flashes { get; set; } = System.Array.Empty<MatchFlash>();
 
     /// <summary>Lado de una casilla en píxeles; el campo se pinta cuadrado, como en <see cref="PitchView"/>.</summary>
     /// <summary>
@@ -141,6 +149,7 @@ public partial class MatchPitchView : Control
 
         DrawMarkGrips(trace, frame, cell);
         DrawBall(trace, frame, carrier, cell);
+        DrawFlashes(trace, frame, cell);
         DrawPhase(trace, frame, cell);
     }
 
@@ -450,6 +459,75 @@ public partial class MatchPitchView : Control
 
             Style.DrawDashed(this, start, to, new Color(Style.Accent, 0.85f), 1.5f, 4f);
             DrawArc(to, 4.5f, 0f, Mathf.Tau, 16, Style.Accent, 1.5f);
+        }
+    }
+
+    /// <summary>
+    /// Los avisos de perk activado que están vivos en este fotograma: un cartel con el nombre del perk
+    /// sobre la cabeza de su portador durante <see cref="MatchFlashView.DurationFrames"/> fotogramas —un
+    /// segundo a 15 ticks/s (RT-020)—, con el último tercio desvaneciéndose.
+    ///
+    /// <para>Dos avisos del mismo jugador a la vez se apilan hacia arriba en vez de pisarse: lo normal es
+    /// que no coincida ninguno, pero un perk encadenado con otro es precisamente el caso que hay que poder
+    /// leer.</para>
+    /// </summary>
+    private void DrawFlashes(MatchTrace trace, int frame, float cell)
+    {
+        if (Flashes.Count == 0)
+        {
+            return;
+        }
+
+        var font = GetThemeDefaultFont();
+        float radius = cell * TokenRadius;
+        int previous = -1;
+        int stack = 0;
+
+        for (int i = 0; i < Flashes.Count; i++)
+        {
+            var flash = Flashes[i];
+            int age = frame - flash.Frame;
+            if (age < 0)
+            {
+                // Vienen ordenados por fotograma: el primero que aún no ha empezado cierra la lista.
+                break;
+            }
+
+            if (age >= MatchFlashView.DurationFrames
+                || flash.Player >= trace.Players.Count
+                || !trace.OnPitchAt(frame, flash.Player))
+            {
+                continue;
+            }
+
+            stack = flash.Player == previous ? stack + 1 : 0;
+            previous = flash.Player;
+
+            // El último tercio se apaga: aparece de golpe —es un aviso— y se va sin cortarse en seco.
+            const float FadeFrom = MatchFlashView.DurationFrames * 2f / 3f;
+            float alpha = age <= FadeFrom
+                ? 1f
+                : 1f - ((age - FadeFrom) / (MatchFlashView.DurationFrames - FadeFrom));
+
+            var center = PositionOf(trace, frame, flash.Player, cell);
+            var size = font.GetStringSize(flash.Name, HorizontalAlignment.Left, -1f, Style.TextSmall);
+            float padding = 4f;
+            var box = new Rect2(
+                center.X - (size.X / 2f) - padding,
+                center.Y - radius - 12f - size.Y - (stack * (size.Y + (2f * padding) + 3f)),
+                size.X + (2f * padding),
+                size.Y + padding);
+
+            var teamColor = trace.Players[flash.Player].Team == 0 ? Style.TeamOwn : Style.TeamRival;
+            DrawRect(box, new Color(Style.Background, 0.88f * alpha));
+            DrawRect(box, new Color(teamColor, alpha), false, 1.5f);
+            Style.DrawText(
+                this,
+                font,
+                new Vector2(box.Position.X + padding, box.Position.Y + (padding / 2f)),
+                flash.Name,
+                Style.TextSmall,
+                new Color(Style.Text, alpha));
         }
     }
 

@@ -224,6 +224,7 @@ public partial class MatchScreen : Control
         };
         AddChild(_pitch3d);
         _pitch3d.Bind(_trace, _run.Playback?.Setup, _run.Catalog);
+        BindFlashes();
 
         // Los dos interruptores de la vista viven en el canalón del panel del campo, que es el único hueco
         // que queda en la pantalla y además el sitio donde se busca lo que afecta al campo.
@@ -495,12 +496,26 @@ public partial class MatchScreen : Control
         ReloadPlayback(point.Tick);
     }
 
+    /// <summary>
+    /// Pasa al campo los avisos de perk activado del partido (C9). La lista la compone <c>/Sim</c>
+    /// (<see cref="MatchFlashView"/>) a partir de los eventos: aquí no se decide ni se calcula nada
+    /// (RT-014), solo se entrega.
+    /// </summary>
+    private void BindFlashes()
+    {
+        var playback = _run.Playback;
+        _pitch.Flashes = _trace is null || playback is null || _run.Catalog is null
+            ? System.Array.Empty<MatchFlash>()
+            : MatchFlashView.Build(playback.Result.Events, _trace, _run.Catalog);
+    }
+
     /// <summary>Vuelve a cargar la reproducción tras una decisión y sigue desde <paramref name="tick"/>: hasta ahí el partido es el mismo.</summary>
     private void ReloadPlayback(int tick)
     {
         _trace = _run.Playback!.Trace;
         _pitch.Trace = _trace;
         _pitch3d.Bind(_trace, _run.Playback!.Setup, _run.Catalog);
+        BindFlashes();
         _lines.Clear();
         _lines.AddRange(_run.MatchLog());
         _log.Clear();

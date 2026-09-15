@@ -5,6 +5,7 @@ using Underleague.Game.Autoload;
 using Underleague.Game.Ui;
 using Underleague.Sim.Model;
 using Underleague.Sim.Run;
+using Underleague.Sim.Run.View;
 
 namespace Underleague.Game.Screens;
 
@@ -117,6 +118,53 @@ public partial class CaptureRunner : Control
             }
 
             await Save("partido-marcaje");
+        }
+
+        // 2b-bis. C9: el aviso de perk activado. Se busca el primer aviso que no caiga en el saque —los
+        //         perks de MATCH_START se cobran todos en el tick 1 y ahí no se distingue nada— y se para
+        //         la reproducción DENTRO de su segundo de vida. Si el partido de las capturas no activa
+        //         ningún perk, se dice: la captura que falta es un dato, no un fallo silencioso.
+        if (pitch is not null && trace is { FrameCount: > 0 })
+        {
+            GD.Print($"avisos de perk en el partido: {pitch.Flashes.Count}");
+            // Se prefiere un aviso que NO sea del saque —ahí se cobran de golpe todos los perks de
+            // MATCH_START y la captura no distingue una habilidad de la ceremonia inicial—, pero si el
+            // partido no tiene ninguno, el del saque también sirve: lo que se está probando es que el
+            // cartel se pinta donde y cuando toca.
+            int chosen = -1;
+            for (int i = 0; i < pitch.Flashes.Count; i++)
+            {
+                if (pitch.Flashes[i].Frame > 0)
+                {
+                    chosen = i;
+                    break;
+                }
+            }
+
+            if (chosen < 0 && pitch.Flashes.Count > 0)
+            {
+                chosen = 0;
+                GD.PushWarning("ningún perk se activa fuera del saque: la captura del aviso es la del saque");
+            }
+
+            int at = -1;
+            if (chosen >= 0)
+            {
+                var flash = pitch.Flashes[chosen];
+                at = flash.Frame + (MatchFlashView.DurationFrames / 3);
+                GD.Print($"aviso: tick {trace.TickAt(flash.Frame)}, "
+                    + $"{trace.Players[flash.Player].Name} activa '{flash.Name}'");
+            }
+
+            if (at >= 0)
+            {
+                await Click(new Vector2(918f + (340f * Mathf.Min(at, trace.FrameCount - 1) / (trace.FrameCount - 1)), 551f));
+                await Save("partido-perk");
+            }
+            else
+            {
+                GD.PushWarning("el partido de las capturas no activa ningún perk: no hay captura del aviso");
+            }
         }
 
         // 2c. ADR 0102: la prueba de geometría en 3D. Cápsulas grises a las proporciones de RA-002, cámara
