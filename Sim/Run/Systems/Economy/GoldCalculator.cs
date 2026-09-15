@@ -116,11 +116,6 @@ public static class GoldCalculator
         bool objectiveMet = ExcellentMatchObjectives.Satisfied(objective, state, summary);
         int objectiveBonus = objectiveMet ? economy.ExcellentMatchBonusGold : 0;
 
-        // Paquete Z, primitiva D: un contador de partido con tarifa (data/economy/counter-gold.json)
-        // paga oro, junto al resto y visible en el mismo desglose (RF-119).
-        var counterGoldRows = CounterGoldRows(state, summary, economy.CounterGold);
-        int counterGoldTotal = SumGold(counterGoldRows);
-
         return new GoldForWinBreakdown(
             node.Act,
             actBase,
@@ -133,10 +128,21 @@ public static class GoldCalculator
             objective,
             objectiveMet,
             objectiveBonus,
-            afterDifficulty + nodeBonus + objectiveBonus + counterGoldTotal)
-        {
-            CounterGoldRows = counterGoldRows,
-        };
+            afterDifficulty + nodeBonus + objectiveBonus);
+    }
+
+    /// <summary>
+    /// Oro que pagan los contadores de este partido, <b>se haya ganado o no</b> (ADR 0113). No es premio
+    /// de partido y por eso no entra en <see cref="Breakdown"/>: el premio lo cobra quien gana (RF-114g),
+    /// mientras que esto es el retorno de una inversión que el jugador ya pagó al gastar un slot.
+    /// </summary>
+    public static CounterGold CounterGold(RunState state, RunMatchSummary summary, EconomyConfig economy)
+    {
+        ArgumentNullException.ThrowIfNull(state);
+        ArgumentNullException.ThrowIfNull(summary);
+        ArgumentNullException.ThrowIfNull(economy);
+        var rows = CounterGoldRows(state, summary, economy.CounterGold);
+        return new CounterGold(rows, SumGold(rows));
     }
 
     /// <summary>
@@ -203,8 +209,8 @@ public static class GoldCalculator
 /// <param name="Objective">Objetivo de partido excelente anunciado en el nodo (RF-114h).</param>
 /// <param name="ObjectiveMet">True si se cumplió.</param>
 /// <param name="ObjectiveBonus">Oro que suma el objetivo cumplido; 0 si no se cumplió.</param>
-/// <param name="Total">Oro cobrado, idéntico al de <see cref="GoldCalculator.GoldForWin"/>. Incluye
-/// <see cref="CounterGoldTotal"/>.</param>
+/// <param name="Total">Oro cobrado, idéntico al de <see cref="GoldCalculator.GoldForWin"/>. <b>No</b>
+/// incluye el oro de contador, que es otro canal y se cobra también al perder (ADR 0113).</param>
 public sealed record GoldForWinBreakdown(
     int Act,
     int ActBase,
@@ -217,31 +223,7 @@ public sealed record GoldForWinBreakdown(
     ExcellentMatchObjective Objective,
     bool ObjectiveMet,
     int ObjectiveBonus,
-    int Total)
-{
-    /// <summary>
-    /// Filas de oro por contador (paquete Z, primitiva D): una por cada contador propio de este partido
-    /// que tiene tarifa en <c>data/economy/counter-gold.json</c>. Vacía si ningún perk del portador usó
-    /// un contador con tarifa, que es el caso de hoy sin esos perks en el catálogo. Propiedad añadida
-    /// fuera del constructor primario para no romper la construcción posicional existente.
-    /// </summary>
-    public IReadOnlyList<CounterGoldRow> CounterGoldRows { get; init; } = Array.Empty<CounterGoldRow>();
-
-    /// <summary>Suma de <see cref="CounterGoldRow.Gold"/> de todas las filas; 0 si no hay ninguna.</summary>
-    public int CounterGoldTotal
-    {
-        get
-        {
-            int total = 0;
-            for (int i = 0; i < CounterGoldRows.Count; i++)
-            {
-                total += CounterGoldRows[i].Gold;
-            }
-
-            return total;
-        }
-    }
-}
+    int Total);
 
 /// <summary>
 /// Una fila del oro que ha pagado un contador de partido (paquete Z, primitiva D). Es la mitad visible
@@ -254,3 +236,17 @@ public sealed record GoldForWinBreakdown(
 /// <param name="RatePerUnit">Oro que paga cada unidad, de <c>data/economy/counter-gold.json</c>.</param>
 /// <param name="Gold">Oro de esta fila: <c>Delta * RatePerUnit</c> (RT-023, aritmética entera).</param>
 public sealed record CounterGoldRow(int PlayerId, string Counter, int Delta, int RatePerUnit, int Gold);
+
+/// <summary>
+/// Oro que los contadores de un partido han pagado a la run (ADR 0113), con su desglose. Es un canal
+/// <b>aparte</b> del premio de partido: el premio lo cobra quien gana (RF-114g), y esto se cobra siempre,
+/// porque el jugador ya lo pagó por adelantado al gastar un slot en el perk. Un perk que solo rindiera en
+/// las victorias no sería una inversión, sería una propina.
+/// </summary>
+/// <param name="Rows">Una fila por contador propio con tarifa; vacía si ninguno la tiene.</param>
+/// <param name="Total">Suma de <see cref="CounterGoldRow.Gold"/> de todas las filas.</param>
+public sealed record CounterGold(IReadOnlyList<CounterGoldRow> Rows, int Total)
+{
+    /// <summary>Ningún contador ha pagado nada: lo que devuelve un partido sin perks de negocio.</summary>
+    public static CounterGold None { get; } = new(Array.Empty<CounterGoldRow>(), 0);
+}

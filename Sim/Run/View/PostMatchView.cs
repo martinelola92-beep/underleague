@@ -93,7 +93,8 @@ public sealed record PostMatchReport(
     IReadOnlyList<CasualtyRow> Casualties,
     IReadOnlyList<CardRow> Cards,
     RefereeReport Referee,
-    GoldForWinBreakdown? Gold)
+    GoldForWinBreakdown? Gold,
+    CounterGold CounterGold)
 {
     /// <summary>Muertes propias (RF-093): lo primero que el informe tiene que decir cuando las hay.</summary>
     public int Deaths
@@ -178,7 +179,13 @@ public static class PostMatchView
             // enseñara ese oro estaría mintiendo sobre un cobro que no ocurrió.
             economy is null || report.Winner != own || stateAfterMatch.Result.IsOver
                 ? null
-                : GoldCalculator.Breakdown(stateAfterMatch, playback.Node, summary, economy));
+                : GoldCalculator.Breakdown(stateAfterMatch, playback.Node, summary, economy),
+            // El oro de contador se enseña se haya ganado o no (ADR 0113): es el otro canal, y esconderlo
+            // en la derrota devolvería a la invisibilidad justo a los perks que se cobran perdiendo.
+            // Sigue callándose si la run ha terminado, por el mismo motivo que el premio: no se ingresó.
+            economy is null || stateAfterMatch.Result.IsOver
+                ? CounterGold.None
+                : GoldCalculator.CounterGold(stateAfterMatch, summary, economy));
     }
 
     /// <summary>

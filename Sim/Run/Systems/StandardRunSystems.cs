@@ -200,17 +200,30 @@ public sealed class StandardRunSystems : IRunSystems
         state = EquipmentSystem.ProcessFragileItems(state, summary, _items);
         state = MercenarySystem.Process(state, summary, _economy);
 
+        // El oro de contador NO es premio de partido (ADR 0113): se cobra igual al perder, porque el
+        // jugador ya lo pagó por adelantado gastando un slot en el perk. Es lo que separa una inversión de
+        // una propina, y es justo en las derrotas donde se cobran los perks que miden supervivencia y
+        // carne ajena. Se ingresa SIEMPRE DESPUÉS de la penalización: el porcentaje de la derrota muerde
+        // el oro que la run traía, no el retorno de la inversión de este partido.
+        int counterGold = GoldCalculator.CounterGold(state, summary, _economy).Total;
+
         if (!summary.Won)
         {
-            // Perder no paga (RF-114g) y no hay recompensa que elegir. Aquí solo llegan las derrotas
-            // ORDINARIAS: la derrota contra el jefe termina la run antes de AfterMatch (RunEngine).
+            // El PREMIO no se cobra al perder (RF-114g) y no hay recompensa que elegir. Aquí solo llegan
+            // las derrotas ORDINARIAS: la derrota contra el jefe termina la run antes de AfterMatch
+            // (RunEngine).
             int penalty = _economy.DefeatGoldPenalty
                 + (state.Gold * _economy.DefeatGoldPenaltyPercent / 100);
-            return penalty > 0 ? state.AddGold(-penalty) : state;
+            if (penalty > 0)
+            {
+                state = state.AddGold(-penalty);
+            }
+
+            return counterGold > 0 ? state.AddGold(counterGold) : state;
         }
 
         int gold = GoldCalculator.GoldForWin(state, node, summary, _economy);
-        state = state.AddGold(gold);
+        state = state.AddGold(gold + counterGold);
 
         // ADR 0043: superar el jefe cura la plantilla. Es lo que cierra el ciclo de desgaste del acto —se
         // puede exprimir la plantilla sabiendo que habrá alivio, en vez de administrar una ruina uniforme
