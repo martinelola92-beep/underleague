@@ -1,6 +1,6 @@
 # Estilo visual
 
-**Versión 2 · 15 de septiembre de 2026 · NO definitivo, se itera.**
+**Versión 3 · 15 de septiembre de 2026 · NO definitivo, se itera.**
 
 Este documento fija el **tono** y sirve de base a los encargos de arte. Lo de abajo es el punto de
 partida que dio el revisor, no una decisión cerrada: se espera cambiarlo.
@@ -237,9 +237,10 @@ paga arte de razas que no salen hasta el DLC.
    a eso, pero hay que comprobarlo en el primer modelo, no en el último.
 4. **La sangre**, que es lo más barato que más identidad da (RA-027, un nodo `Decal`): cuánta, de qué rojo
    y cuánto dura.
-5. **Anatomía correcta o deformación de tebeo** (§5bis). El boceto del revisor va por anatomía creíble y
-   §1 pide lo contrario. Condiciona el pipeline entero: con deformación, Mixamo chirría menos porque el
-   modelo ya exagera; con anatomía creíble, mocap + modelo realista dan simulador serio, no Lucky Tower.
+5. ~~**Anatomía correcta o deformación de tebeo**~~ — **CERRADA a favor de la deformación (§5ter,
+   15 sep 2026).** El motivo que la cerró no estaba sobre la mesa cuando se abrió: con cámara dinámica, el
+   acercamiento **delata** la anatomía 3D convencional. Se mantiene el corolario: con deformación, Mixamo
+   chirría menos, porque el modelo ya exagera lo que el mocap no.
 6. **Qué rasgo de CONTORNO se le inventa al no-muerto** (§5bis), porque el que tiene asignado en RA-002
    —costillas, cuenca vacía— es interior y no lee a 37 px.
 
@@ -296,8 +297,13 @@ Pero «más resolución» mezcla dos cosas muy distintas:
   escala 3x, y un humano de 12×17 base son 36×51 renderizados. **Es casi el mismo presupuesto**: el 3D no
   da más píxeles, da más libertad de forma dentro de los mismos.
 
-> **Regla para el briefing: solo cuenta el detalle que cambia el CONTORNO.** A 37 px y en blanco y negro,
-> lo que va por dentro de la silueta no existe.
+> **Regla para el briefing: en la VISTA TÁCTICA solo cuenta el detalle que cambia el CONTORNO.** A 37 px y
+> en blanco y negro, lo que va por dentro de la silueta no existe.
+
+**Matizado por §5ter (cámara dinámica):** eso sigue siendo cierto *para la vista táctica*, que es donde se
+juega el 90 % del tiempo, pero el detalle interior **ya no se descarta**: pasa a ser **detalle de segundo
+nivel**, que no se ve a 37 px y sí cobra valor a 80-120. Lo que no cambia es que **la identidad de raza
+tiene que resolverse en el contorno**, porque es a 37 px donde hay que distinguir a veinte cuerpos.
 
 **Trampa concreta que hay que resolver antes del segundo modelo:** el rasgo firma que RA-002 asigna al
 **no-muerto** es *«costillas, cuenca ocular vacía»*, y las dos cosas son detalle **interior**. No van a leer
@@ -305,6 +311,11 @@ nunca a ese tamaño, y el no-muerto es precisamente la raza que la prueba de sil
 (humano y no-muerto son la misma mancha). Hay que **inventarle un rasgo de contorno**: postura encorvada,
 algo que le falte del cuerpo, miembros de longitud rara. El humano es la referencia neutra, así que el que
 se mueve es el no-muerto.
+
+Con §5ter esto **no se ablanda, se ordena**: las costillas y la cuenca vacía **se conservan** como detalle
+de segundo nivel —a 80-120 px son justo lo que hace al no-muerto memorable—, pero **no pueden ser su único
+rasgo firma**, porque a 37 px no existen. Necesita los dos: contorno para la vista táctica, interior para
+el acercamiento.
 
 **Y construir las firmas en horizontal.** A 60° de elevación lo que está de pie se comprime por el coseno,
 y cos(60°) = 0,5: **la altura vale la mitad y la anchura vale entera**. Hombros, envergadura, volumen de
@@ -361,10 +372,127 @@ se comprueba con capturas por Xvfb — y **la escena de capturas está colgada**
 Importar y retargetear FBX y afinar un material toon a ciegas es ingrato; arreglar BA-L va antes, o se
 trabaja sin instrumentos justo en la parte que se juzga por el ojo.
 
+## 5ter. DECISIÓN: cámara dinámica y niveles de detalle
+
+**Decisión del revisor, 15 sep 2026. Registrada como ADR 0114**, porque **sustituye la parte de cámara
+fija de la ADR 0102** y eso no puede ser un ajuste silencioso (RT-057). Consolida §5bis. Conserva lo mejor de la vista táctica del autobattler y, a la vez,
+permite que los personajes 3D tengan suficiente detalle y personalidad.
+
+No queremos una cámara completamente fija ni una cámara que persiga constantemente el balón. La cámara
+tiene **cuatro estados**.
+
+### 1. Cámara táctica — 1×
+
+- Es el estado **normal** del partido.
+- Campo completo visible.
+- Los jugadores rondan los **~37 px** de ancho (la cuenta, en §5bis).
+- La lectura principal es **silueta, raza, tamaño, postura y color**.
+- **No debe interrumpirse la lectura táctica.**
+
+### 2. Cámara de acción — ~1,5-2×
+
+- Se usa de forma **suave y no intrusiva**.
+- Pequeños zooms y desplazamientos durante acciones visualmente interesantes: regates especiales,
+  entradas, tiros, perks o habilidades relevantes.
+- **No es una cinemática**: no pausa ni secuestra la simulación.
+- Transición rápida y suave.
+- Su objetivo es **apreciar mejor la animación y el diseño del personaje**, no «hacer zoom porque ha
+  ocurrido un evento».
+
+### 3. Cámara cinematográfica — ~2-3×
+
+- Reservada a acontecimientos **realmente importantes**: gol, lesión importante, muerte, tarjeta roja o
+  habilidades excepcionales.
+- Puede **cambiar ligeramente la elevación** para enseñar mejor al personaje. *(A 60° se ven coronillas:
+  para que se lea una cara hay que bajar el ángulo, y ese es el segundo eje de cámara que hay que
+  presupuestar.)*
+- **Excepcional**: no se activa ante cada tiro ni cada entrada.
+- **Solo a velocidad 1×.**
+
+### 4. Cámara de presentación — 3×/4× o superior
+
+- Menús, selección de personaje, recompensas, MVP, estadísticas y demás pantallas fuera del flujo del
+  partido.
+- Aquí sí se muestra el personaje a gran tamaño, con los detalles que durante el partido no son visibles.
+
+---
+
+### Principio de diseño
+
+**El personaje no se diseña pensando únicamente en los ~37 px de la vista táctica.** La escala objetivo es:
+
+| escala | qué tiene que conseguir |
+|---|---|
+| **~37 px** | reconocer la **raza / silueta** |
+| **~80-120 px** | reconocer y **apreciar al personaje** |
+| **300+ px** | apreciar plenamente el diseño: rostro, ropa, heridas, detalles |
+
+Esto permite personajes 3D estilizados **mucho más ricos** sin exigir que todos sus detalles sean legibles
+durante el partido.
+
+**La regla de silueta sigue siendo válida para la vista táctica**: los rasgos importantes de cada raza
+deben modificar el contorno o generar masas de color claramente distinguibles. Pero **los detalles
+interiores ya no se descartan**: pasan a ser **detalle de segundo nivel**, que cobra valor cuando la cámara
+se acerca.
+
+### Frecuencia y velocidad
+
+**No se implementa una reacción cinematográfica ante cada evento.** El partido dura **80 segundos a 1×**
+(1.200 ticks a 15/s) y genera del orden de **23 eventos notables** —medido: 12,59 entradas, 7,47 tiros,
+2,30 goles y 0,80 lesiones por partido—, o sea **uno cada 3,5 segundos**. Una cámara que hiciera zoom en
+cada uno no diría «mira esto»: sería un metrónomo.
+
+Hay que separar explícitamente dos cosas que **no son lo mismo**:
+
+| | qué lo merece |
+|---|---|
+| **Evento que puede provocar un pequeño ajuste de cámara** | tiros, entradas, regates → como mucho, movimiento/zoom de la **cámara de acción** |
+| **Evento que merece una cinemática** | gol, lesión importante, muerte, roja, habilidad excepcional → **cámara cinematográfica** |
+
+Y se acota por velocidad de reproducción:
+
+| velocidad | cámaras activas |
+|---|---|
+| **1×** | táctica + acción + cinematográfica |
+| **4×** | táctica y, como mucho, movimientos de acción no intrusivos |
+| **16×** | **solo táctica**, sin cinemáticas |
+
+### Objetivo artístico
+
+**La cámara forma parte del lenguaje visual del juego.** Queremos la sensación de un partido de fútbol
+visto como **espectáculo**, no una cámara puramente técnica ni una sucesión constante de cinemáticas. La
+vista táctica permite **entender** el partido; los acercamientos permiten **disfrutar** de los personajes;
+los momentos cinematográficos hacen que lo importante **destaque**.
+
+Esto refuerza la dirección artística híbrida: **personajes 3D estilizados + diseño de silueta inspirado en
+ilustración/cartoon + toon shading con contorno + cámara dinámica contextual.**
+
+El objetivo **no** es que el 3D parezca un modelo 3D genérico, sino que funcione como una **ilustración
+cartoon animada en 3D**. Y el zoom hace especialmente importante **exagerar anatomía, proporciones, silueta
+y deformaciones cartoon**: al acercarse la cámara, se hará más evidente si el modelo tiene una anatomía 3D
+convencional.
+
+> **Esto cierra la decisión abierta de §5.5** (anatomía correcta contra deformación de tebeo) **a favor de
+> la deformación**, y por un motivo que no estaba sobre la mesa cuando se abrió: no es solo cuestión de
+> tono, es que el acercamiento **delata** la anatomía convencional.
+
+### Lo que esto le pide a la implementación
+
+- **RT-014 se cumple sin discusión**: la cámara **consume** el flujo de eventos, no decide nada del
+  partido. Y ese flujo ya lleva todo lo necesario (`SHOT`, `TACKLE`, `GOAL`, `INJURY`, `DEATH`, `CARD` y,
+  desde la ADR 0112, `PERK_TRIGGERED`). **Cero cambios en `/Sim`.**
+- **Un solo canal de «mira esto».** El aviso de perk de la ADR 0112 —el cartel de 1 s sobre la cabeza— ya
+  es la versión barata de esta idea. Se reparten el trabajo: **el cartel marca lo pequeño y frecuente, la
+  cámara marca lo excepcional.** No se construyen dos sistemas gritando a la vez.
+- **Bloqueante práctico:** afinar el *feel* de una cámara es lo que peor se hace a ciegas, y aquí Godot
+  corre en WSL **sin editor gráfico**. Antes de invertir en esto hay que cerrar **BA-L**
+  (`pendientes.md`): la escena de capturas no produce nada.
+
 ## 6. Historial
 
 | versión | fecha | qué cambió |
 |---|---|---|
 | v0 | 13 sep 2026 | Punto de partida del revisor: tono Lucky Tower y los dos prompts de §2 |
+| **v3** | 15 sep 2026 | §5ter: **decisión de cámara dinámica y niveles de detalle** (táctica 1× / acción 1,5-2× / cinematográfica 2-3× / presentación 3×+), con el presupuesto de frecuencia medido —23 eventos notables en 80 s, uno cada 3,5 s— y el corte por velocidad de reproducción. Cierra la decisión abierta de anatomía contra deformación, y matiza la regla del contorno de §5bis: el detalle interior pasa a ser de segundo nivel en vez de descartarse |
 | **v2** | 15 sep 2026 | §5bis: 3D + Mixamo (locomoción sí, los ~10 momentos del tono no), el presupuesto real de 37 px por ficha y la regla de que solo cuenta el contorno, la trampa del rasgo interior del no-muerto, construir firmas en horizontal por el coseno, y qué robarle a Hades. Boceto del revisor en `docs/referencias/` |
 | **v1** | 13 sep 2026 | Prompts adaptados a lo ya decidido (§2bis): se mantienen RA-025 y RA-026 —ni calaveras ni gótico—, las cinco razas de lanzamiento con su rasgo firma, y el HUD real sin barras de vida ni botones de acción |

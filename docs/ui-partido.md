@@ -11,6 +11,11 @@ haciendo casi todo el trabajo narrativo.
 Decisiones de las que cuelga este documento: **ADR 0102** (3D con toon y cámara ortográfica fija en tres
 cuartos) y **ADR 0103** (el campo tiene seis filas).
 
+> **La cámara ya no es fija (ADR 0114, 15 sep 2026).** La vista táctica de este documento sigue siendo el
+> estado normal del partido y toda su geometría vale igual, pero encima hay dos estados más —**acción** y
+> **cinematográfica**— y uno de presentación fuera del partido. Eso cambia el briefing de arte: el modelo
+> ya **no** tiene que resolverlo todo en 37 px. Ver `estilo-visual.md` §5ter.
+
 ---
 
 ## 1. Geometría, y por qué no se negocia
