@@ -241,7 +241,7 @@ public sealed class StandardRunSystems : IRunSystems
             BuyOffer buy => MarketSystem.Buy(state, buy, catalog, _economy, _items, _consumables),
             SellPlayer sell => MarketSystem.Sell(state, sell, _economy),
             HireMercenary hire => MarketSystem.Hire(state, hire, catalog, _economy, _items, _consumables),
-            TreatPlayer treat => MedicalSystem.Treat(state, treat, _economy),
+            TreatPlayer treat => MedicalSystem.Treat(state, treat, _economy, catalog),
             TreatSquad => MedicalSystem.TreatSquad(state, _economy),
             ChooseEventOption choice => EventSystem.Choose(state, choice, _events, catalog),
             ExpandRoster => EnrollmentSystem.Expand(state, _economy),

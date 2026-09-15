@@ -172,7 +172,10 @@ internal static class MatchResolution
             benchIds,
             injuries,
             deaths,
-            result.Report);
+            result.Report)
+        {
+            CounterDeltas = result.CounterDeltas,
+        };
 
         var next = state
             .WithRoster(players)

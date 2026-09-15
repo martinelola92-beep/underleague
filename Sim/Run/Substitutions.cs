@@ -144,11 +144,21 @@ public static class SubstitutionPoints
         return -1;
     }
 
+    /// <summary>
+    /// Si ese jugador murió de verdad en ese tick. Una muerte <b>anulada</b> por un perk ("Prohibido
+    /// morir") queda en el registro con el detalle sufijado <c>:cancelled</c> y no cuenta: el jugador
+    /// sigue vivo, y si además deja el campo es por la lesión, que es lo que hay que decirle a quien
+    /// abre la ventana de sustitución.
+    /// </summary>
     private static bool DiedAt(IReadOnlyList<MatchEvent> events, int playerId, int tick)
     {
         for (int i = 0; i < events.Count; i++)
         {
-            if (events[i].Type == EventType.Death && events[i].Actor == playerId && events[i].Tick == tick)
+            var e = events[i];
+            if (e.Type == EventType.Death
+                && e.Actor == playerId
+                && e.Tick == tick
+                && !e.Detail.EndsWith(":cancelled", StringComparison.Ordinal))
             {
                 return true;
             }

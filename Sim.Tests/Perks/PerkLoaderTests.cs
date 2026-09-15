@@ -138,12 +138,18 @@ public sealed class PerkLoaderTests
     }
 
     [Fact]
-    public void CancelEventOnlyWithFoulCardOrInjury()
+    public void CancelEventOnlyWithFoulCardInjuryGoalOrDeath()
     {
+        // Paquete AY-cuatro-primitivas: GOAL y DEATH se suman a los tres disparadores cancelables que ya
+        // había ("Mano de dios" y "Prohibido morir"). Antes de este paquete GOAL estaba prohibido; el
+        // rechazo se comprueba ahora con SHOT, que sigue sin tener sentido con cancelEvent (el motor no lo
+        // emite con la variante cancelable, MatchEngine.Emit).
         const string Cancel = """[{ "type": "cancelEvent" }]""";
         Assert.NotNull(TestPerks.Load("saved", TestPerks.Json("saved", "CARD", Cancel)));
+        Assert.NotNull(TestPerks.Load("gods_hand", TestPerks.Json("gods_hand", "GOAL", Cancel)));
+        Assert.NotNull(TestPerks.Load("no_death", TestPerks.Json("no_death", "DEATH", Cancel)));
 
-        var ex = Assert.Throws<DataException>(() => TestPerks.Load("bad", TestPerks.Json("bad", "GOAL", Cancel)));
+        var ex = Assert.Throws<DataException>(() => TestPerks.Load("bad", TestPerks.Json("bad", "SHOT", Cancel)));
         Assert.Contains("cancelEvent", ex.Message, StringComparison.Ordinal);
     }
 

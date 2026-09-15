@@ -34,7 +34,19 @@ public sealed record RunMatchSummary(
     IReadOnlyList<int> BenchedPlayerIds,
     int OwnInjuries,
     int OwnDeaths,
-    MatchReport Report);
+    MatchReport Report)
+{
+    /// <summary>
+    /// Contadores que perks con <c>accumulatesAcrossMatches: true</c> han sumado en ESTE partido
+    /// (<c>MatchResult.CounterDeltas</c>, RF-070 §6), de cualquiera de los dos equipos y ordenados por id
+    /// de jugador y luego por nombre de contador (RT-041, heredado de <c>EffectEngine.CounterDeltas</c>).
+    /// Es lo que <see cref="Economy.GoldCalculator"/> convierte en oro cuando el contador tiene tarifa
+    /// (paquete Z, primitiva D): un contador de partido que paga oro. Propiedad añadida fuera del
+    /// constructor primario, como <c>EconomyConfig.ClinicMinorCost</c>, para no romper la construcción
+    /// posicional de los tests existentes.
+    /// </summary>
+    public IReadOnlyList<PlayerCounterDelta> CounterDeltas { get; init; } = Array.Empty<PlayerCounterDelta>();
+}
 
 /// <summary>
 /// Los huecos que el paquete W deja abiertos para los paquetes X (economía, mercado, plantilla) e Y

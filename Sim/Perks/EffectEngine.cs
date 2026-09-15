@@ -803,6 +803,15 @@ internal sealed class EffectEngine : IPerkLinks
                     case EffectType.SetState:
                         _engine.KnockDown(player, effect.Ticks);
                         break;
+                    case EffectType.Injure:
+                        // "Juego sucio": resuelve la lesión por el camino normal del motor (la misma
+                        // fórmula, el mismo flujo de dados y la misma escala por acto que una entrada), con
+                        // el portador del perk como instigador y el objetivo resuelto como víctima.
+                        _engine.ProvokeInjury(subscription.Owner, player);
+                        break;
+                    case EffectType.Relocate:
+                        Relocate(player, effect.RelocationPoint);
+                        break;
                     default:
                         break;
                 }
@@ -928,6 +937,38 @@ internal sealed class EffectEngine : IPerkLinks
     }
 
     /// <summary>
+    /// Mueve al portador al punto simbólico que declara el efecto (§2, "Último hombre"). Un balón suelto
+    /// no tiene poseedor, así que <see cref="RelocationPoint.OnBallCarrier"/> no mueve a nadie en ese
+    /// caso: no hay rival al que marcar (RT-032 no exige el dato aquí porque no es un error, es un estado
+    /// legítimo del partido que el efecto simplemente no cambia nada). Un jugador que ya no está en el
+    /// campo (lesionado, expulsado o muerto) tampoco se mueve: su posición (-1,-1) deja de significar
+    /// "en el campo" (<c>MatchPlayer.LeavePitch</c>).
+    /// </summary>
+    private void Relocate(MatchPlayer owner, RelocationPoint point)
+    {
+        if (!owner.OnPitch)
+        {
+            return;
+        }
+
+        switch (point)
+        {
+            case RelocationPoint.OnBallCarrier:
+                if (_engine.Ball.Owner is { } carrier)
+                {
+                    owner.Position = carrier.Position;
+                    owner.Velocity = new Vec2(0f, 0f);
+                }
+
+                break;
+            case RelocationPoint.BetweenBallAndOwnGoal:
+                owner.Position = Vec2.Lerp(_engine.Ball.Position, Pitch.GoalCenter(1 - owner.Team), 0.5f);
+                owner.Velocity = new Vec2(0f, 0f);
+                break;
+        }
+    }
+
+    /// <summary>
     /// Rellena el buffer de objetivos del efecto (§2). Los objetivos colectivos se recorren por id
     /// ascendente porque <see cref="_players"/> ya está ordenado así (RT-041).
     /// </summary>
@@ -978,6 +1019,12 @@ internal sealed class EffectEngine : IPerkLinks
                     && player.Id != owner.Id
                     && Pitch.AreAdjacent(owner.HomeCell, player.HomeCell)
                     && player.Definition.HasTag(effect.TargetTag),
+
+                // "Terremoto": familia DINÁMICA (ADR 0021, la misma que IPerkLinks.NearOpponent) y no la
+                // estática de Adjacent/AdjacentWithTag -que miran la casilla-hogar fija de la alineación-,
+                // porque la aglomeración que un perk de suceso provoca depende de dónde ESTÁ el portador
+                // en el instante del efecto, no de dónde arranca la formación.
+                EffectTarget.AdjacentOpponents => !sameTeam && WithinRadius(owner.Position, player.Position, AdjacentOpponentsRadiusCells),
                 _ => false,
             };
 
@@ -986,6 +1033,21 @@ internal sealed class EffectEngine : IPerkLinks
                 _targets.Add(player);
             }
         }
+    }
+
+    /// <summary>Radio real, en casillas, del objetivo <see cref="EffectTarget.AdjacentOpponents"/> ("Terremoto").</summary>
+    private const float AdjacentOpponentsRadiusCells = 1f;
+
+    /// <summary>
+    /// True si <paramref name="point"/> está a <paramref name="radiusCells"/> casillas o menos de
+    /// <paramref name="center"/>, en distancia euclídea real (al cuadrado, sin raíz). Mismo criterio de
+    /// proximidad dinámica que <see cref="Near"/>, escrito aparte porque este no filtra por etiqueta.
+    /// </summary>
+    private static bool WithinRadius(Vec2 center, Vec2 point, float radiusCells)
+    {
+        var delta = point - center;
+        float limit = radiusCells * radiusCells;
+        return ((delta.X * delta.X) + (delta.Y * delta.Y)) <= limit;
     }
 
     /// <summary>

@@ -1,5 +1,5 @@
 {
-  "_doc": "Plantillas de descripción de perks, objetos y consumibles (RT-035). El texto de un efecto NO se escribe a mano: se compone desde el propio dato con estas plantillas, así que descripción y efecto no pueden divergir. Marcadores: {trigger} {condition} {effects} {limit} {target} {who} {tag} {attribute} {duration} {probability} {counter} {value:+} {value:+%} {valuePerCounter:+} {maxValue} {counterDivisor} {ticks} {event} {n} {position} {zone} {detail} {a} {b}. Las claves de 'conditions' son el nombre de la función y, para las funciones que devuelven un número o texto, el nombre más el sufijo de la comparación (Lt, Le, Gt, Ge, Eq, Ne). Secciones del rediseño espacial (paquete S): 'links' nombra las relaciones direccionales de la ADR 0021 (marcador {link}), 'immunities' los efectos de tipo immunity, y 'startZones', 'startFlanks' y 'stats' los literales de las funciones startsIn, startsOn y stat (marcadores {startZone}, {startFlank}, {stat}, {cells}). Los valores porcentuales se escriben y se leen en puntos porcentuales enteros. Las claves con sufijo 'Hint' de 'startZones' y 'startFlanks' NO las usa el generador: son la explicación larga que la pantalla de Equipo enseña en un tooltip al pasar el ratón por el nombre de la zona dentro de la descripción de un perk (AW-F).",
+  "_doc": "Plantillas de descripción de perks, objetos y consumibles (RT-035). El texto de un efecto NO se escribe a mano: se compone desde el propio dato con estas plantillas, así que descripción y efecto no pueden divergir. Marcadores: {trigger} {condition} {effects} {limit} {target} {who} {tag} {attribute} {duration} {probability} {counter} {value:+} {value:+%} {valuePerCounter:+} {maxValue} {counterDivisor} {ticks} {event} {n} {position} {zone} {detail} {a} {b} {point}. Las claves de 'conditions' son el nombre de la función y, para las funciones que devuelven un número o texto, el nombre más el sufijo de la comparación (Lt, Le, Gt, Ge, Eq, Ne). Secciones del rediseño espacial (paquete S): 'links' nombra las relaciones direccionales de la ADR 0021 (marcador {link}), 'immunities' los efectos de tipo immunity, 'points' el punto simbólico de un efecto relocate (marcador {point}), y 'startZones', 'startFlanks' y 'stats' los literales de las funciones startsIn, startsOn y stat (marcadores {startZone}, {startFlank}, {stat}, {cells}). Los valores porcentuales se escriben y se leen en puntos porcentuales enteros. Las claves con sufijo 'Hint' de 'startZones' y 'startFlanks' NO las usa el generador: son la explicación larga que la pantalla de Equipo enseña en un tooltip al pasar el ratón por el nombre de la zona dentro de la descripción de un perk (AW-F).",
   "layout": {
     "plain": "{trigger}, {effects}.",
     "withCondition": "{trigger}, {condition}, {effects}.",
@@ -39,7 +39,9 @@
     "modifyProbabilityPerCounterDivided": "{target} multiplica por {valuePerCounter:odds} {probability} por cada {counterDivisor} de {counter} (hasta {maxValue} veces)",
     "modifyProbabilityPerCounterDividedDown": "{target} divide por {valuePerCounter:odds} {probability} por cada {counterDivisor} de {counter} (hasta {maxValue} veces)",
     "modifyLeashPerCounter": "{target} {valuePerCounter:+} de correa por cada {counter} (máximo {maxValue}) durante {duration}",
-    "modifyLeashPerCounterDivided": "{target} {valuePerCounter:+} de correa por cada {counterDivisor} de {counter} (máximo {maxValue}) durante {duration}"
+    "modifyLeashPerCounterDivided": "{target} {valuePerCounter:+} de correa por cada {counterDivisor} de {counter} (máximo {maxValue}) durante {duration}",
+    "injure": "lesiona a {target}",
+    "relocate": "{target} se reubica {point}"
   },
   "triggers": {
     "MATCH_START": "al empezar el partido",
@@ -180,6 +182,7 @@
     "opponent": "el rival",
     "owner": "el portador",
     "adjacent": "los compañeros adyacentes",
+    "adjacentOpponents": "los rivales adyacentes",
     "team": "el equipo",
     "opposingTeam": "el equipo rival",
     "withTag": "los {tag} del equipo",
@@ -355,7 +358,12 @@
   "immunities": {
     "push": "no puede ser desplazado por empujones",
     "mourning": "no entra en duelo cuando pierde a un vinculado",
-    "minorInjuryPenalty": "no sufre penalización por lesiones leves"
+    "minorInjuryPenalty": "no sufre penalización por lesiones leves",
+    "minorInjuryClinicCost": "no paga la clínica por sus lesiones leves"
+  },
+  "points": {
+    "onBallCarrier": "sobre el rival que lleva el balón",
+    "betweenBallAndOwnGoal": "entre el balón y su propia portería"
   },
   "startZones": {
     "OwnThird": "su tercio atrasado",

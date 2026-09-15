@@ -172,6 +172,14 @@ public sealed record EconomyConfig(
     public Items.ItemValueTable ItemValues { get; init; } = Items.ItemValueTable.Empty;
 
     /// <summary>
+    /// Tarifa en oro de los contadores de partido (paquete Z, primitiva D; <c>data/economy/counter-gold.json</c>).
+    /// Un contador declarado aquí paga <see cref="CounterGoldTable.RateFor"/> de oro por unidad al resolver
+    /// el partido (<see cref="GoldCalculator"/>); una instantánea sin el fichero no paga nada por ningún
+    /// contador, igual que <see cref="PerkValues"/> y <see cref="ItemValues"/> con los suyos.
+    /// </summary>
+    public CounterGoldTable CounterGold { get; init; } = CounterGoldTable.Empty;
+
+    /// <summary>
     /// Oro que cuesta curar una <b>lesión leve</b> en la clínica (AZ-G, ADR 0090). Menor que
     /// <see cref="ClinicCost"/> porque la leve solo cuesta un partido al −15 % (RF-091): a igual precio
     /// casi nunca compensaría pagar.
@@ -396,6 +404,7 @@ public static class EconomyLoader
         {
             PerkValues = PerkValueTable.FromJson(files),
             ItemValues = Items.ItemValueTable.FromJson(files),
+            CounterGold = CounterGoldTable.FromJson(files),
             ClinicMinorCost = root.Int("clinicMinorCost"),
             ClinicSquadCost = root.Int("clinicSquadCost"),
             ClinicRiskyPercent = root.Int("clinicRiskyPercent"),

@@ -41,6 +41,7 @@ public static class DescriptionGenerator
     private const string StartFlanksSection = "startFlanks";
     private const string StatsSection = "stats";
     private const string FamiliesSection = "families";
+    private const string PointsSection = "points";
 
     /// <summary>Descripción completa del perk en el idioma pedido (RT-035).</summary>
     public static string Describe(PerkDefinition perk, string language, Catalog catalog)
@@ -353,12 +354,15 @@ public static class DescriptionGenerator
             EffectType.ModifyKnockdownTicks => effect.Value >= 0 ? "modifyKnockdownTicks" : "modifyKnockdownTicksDown",
             EffectType.Immunity => "immunity",
             EffectType.ModifyExperience => effect.Value >= 0 ? "modifyExperience" : "modifyExperienceDown",
+            EffectType.Injure => "injure",
+            EffectType.Relocate => "relocate",
             _ => throw new InvalidOperationException($"tipo de efecto sin plantilla: {effect.Type}"),
         };
 
         string text = templates.Get(Effects, key);
         text = Replace(text, "{target}", DescribeTarget(effect, templates, links));
         text = Replace(text, "{immunity}", templates.Get(ImmunitiesSection, ImmunityKey(effect.Immunity)));
+        text = Replace(text, "{point}", templates.Get(PointsSection, PointKey(effect.RelocationPoint)));
         text = Replace(text, "{attribute}", templates.Get(AttributesSection, ConditionCompiler.AttributeName(effect.Attribute)));
         text = Replace(text, "{duration}", templates.Get(Durations, DurationKey(effect.Duration)));
         text = Replace(text, "{probability}", templates.Get(Probabilities, ProbabilityKey(effect.Probability)));
@@ -387,6 +391,7 @@ public static class DescriptionGenerator
             EffectTarget.Opponent => "opponent",
             EffectTarget.Owner => "owner",
             EffectTarget.Adjacent => "adjacent",
+            EffectTarget.AdjacentOpponents => "adjacentOpponents",
             EffectTarget.Team => "team",
             EffectTarget.OpposingTeam => "opposingTeam",
             EffectTarget.WithTag => "withTag",
@@ -516,7 +521,15 @@ public static class DescriptionGenerator
     {
         ImmunityKind.Push => "push",
         ImmunityKind.Mourning => "mourning",
+        ImmunityKind.MinorInjuryClinicCost => "minorInjuryClinicCost",
         _ => "minorInjuryPenalty",
+    };
+
+    /// <summary>Clave de plantilla del punto simbólico de un efecto <see cref="EffectType.Relocate"/>.</summary>
+    private static string PointKey(RelocationPoint point) => point switch
+    {
+        RelocationPoint.OnBallCarrier => "onBallCarrier",
+        _ => "betweenBallAndOwnGoal",
     };
 
     private static string ProbabilityKey(ProbabilityKind kind) => kind switch

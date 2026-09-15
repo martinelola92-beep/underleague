@@ -116,6 +116,11 @@ public static class GoldCalculator
         bool objectiveMet = ExcellentMatchObjectives.Satisfied(objective, state, summary);
         int objectiveBonus = objectiveMet ? economy.ExcellentMatchBonusGold : 0;
 
+        // Paquete Z, primitiva D: un contador de partido con tarifa (data/economy/counter-gold.json)
+        // paga oro, junto al resto y visible en el mismo desglose (RF-119).
+        var counterGoldRows = CounterGoldRows(state, summary, economy.CounterGold);
+        int counterGoldTotal = SumGold(counterGoldRows);
+
         return new GoldForWinBreakdown(
             node.Act,
             actBase,
@@ -128,7 +133,59 @@ public static class GoldCalculator
             objective,
             objectiveMet,
             objectiveBonus,
-            afterDifficulty + nodeBonus + objectiveBonus);
+            afterDifficulty + nodeBonus + objectiveBonus + counterGoldTotal)
+        {
+            CounterGoldRows = counterGoldRows,
+        };
+    }
+
+    /// <summary>
+    /// Filas de oro por contador (paquete Z, primitiva D): los contadores propios de este partido
+    /// (<see cref="RunMatchSummary.CounterDeltas"/>) que tienen tarifa en <paramref name="rates"/>. Solo
+    /// cuentan los del propio club -<paramref name="state"/> es la run, y su plantilla es la única que
+    /// puede estar en <c>state.Roster</c>-, así que un contador del rival nunca paga a este club aunque
+    /// lleve el mismo perk. Ordenadas por id de jugador y luego por nombre de contador (RT-041), heredado
+    /// del orden de <see cref="RunMatchSummary.CounterDeltas"/>.
+    /// </summary>
+    private static IReadOnlyList<CounterGoldRow> CounterGoldRows(
+        RunState state, RunMatchSummary summary, CounterGoldTable rates)
+    {
+        var deltas = summary.CounterDeltas;
+        if (deltas.Count == 0 || rates.Count == 0)
+        {
+            return Array.Empty<CounterGoldRow>();
+        }
+
+        var rows = new List<CounterGoldRow>();
+        for (int i = 0; i < deltas.Count; i++)
+        {
+            var delta = deltas[i];
+            if (state.FindPlayer(delta.PlayerId) is null)
+            {
+                continue;
+            }
+
+            int rate = rates.RateFor(delta.Counter);
+            if (rate == 0)
+            {
+                continue;
+            }
+
+            rows.Add(new CounterGoldRow(delta.PlayerId, delta.Counter, delta.Delta, rate, delta.Delta * rate));
+        }
+
+        return rows;
+    }
+
+    private static int SumGold(IReadOnlyList<CounterGoldRow> rows)
+    {
+        int total = 0;
+        for (int i = 0; i < rows.Count; i++)
+        {
+            total += rows[i].Gold;
+        }
+
+        return total;
     }
 }
 
@@ -146,7 +203,8 @@ public static class GoldCalculator
 /// <param name="Objective">Objetivo de partido excelente anunciado en el nodo (RF-114h).</param>
 /// <param name="ObjectiveMet">True si se cumplió.</param>
 /// <param name="ObjectiveBonus">Oro que suma el objetivo cumplido; 0 si no se cumplió.</param>
-/// <param name="Total">Oro cobrado, idéntico al de <see cref="GoldCalculator.GoldForWin"/>.</param>
+/// <param name="Total">Oro cobrado, idéntico al de <see cref="GoldCalculator.GoldForWin"/>. Incluye
+/// <see cref="CounterGoldTotal"/>.</param>
 public sealed record GoldForWinBreakdown(
     int Act,
     int ActBase,
@@ -159,4 +217,40 @@ public sealed record GoldForWinBreakdown(
     ExcellentMatchObjective Objective,
     bool ObjectiveMet,
     int ObjectiveBonus,
-    int Total);
+    int Total)
+{
+    /// <summary>
+    /// Filas de oro por contador (paquete Z, primitiva D): una por cada contador propio de este partido
+    /// que tiene tarifa en <c>data/economy/counter-gold.json</c>. Vacía si ningún perk del portador usó
+    /// un contador con tarifa, que es el caso de hoy sin esos perks en el catálogo. Propiedad añadida
+    /// fuera del constructor primario para no romper la construcción posicional existente.
+    /// </summary>
+    public IReadOnlyList<CounterGoldRow> CounterGoldRows { get; init; } = Array.Empty<CounterGoldRow>();
+
+    /// <summary>Suma de <see cref="CounterGoldRow.Gold"/> de todas las filas; 0 si no hay ninguna.</summary>
+    public int CounterGoldTotal
+    {
+        get
+        {
+            int total = 0;
+            for (int i = 0; i < CounterGoldRows.Count; i++)
+            {
+                total += CounterGoldRows[i].Gold;
+            }
+
+            return total;
+        }
+    }
+}
+
+/// <summary>
+/// Una fila del oro que ha pagado un contador de partido (paquete Z, primitiva D). Es la mitad visible
+/// del informe (RF-119) de un perk como "cada gol suyo llena la grada": sin esta fila, el oro que
+/// paga aparecería mezclado en el total sin que el jugador pueda ver de dónde salió.
+/// </summary>
+/// <param name="PlayerId">Jugador propio cuyo contador ha generado el oro.</param>
+/// <param name="Counter">Nombre del contador, el mismo id que declara el efecto <c>addCounter</c> del perk.</param>
+/// <param name="Delta">Unidades que ese contador sumó en este partido.</param>
+/// <param name="RatePerUnit">Oro que paga cada unidad, de <c>data/economy/counter-gold.json</c>.</param>
+/// <param name="Gold">Oro de esta fila: <c>Delta * RatePerUnit</c> (RT-023, aritmética entera).</param>
+public sealed record CounterGoldRow(int PlayerId, string Counter, int Delta, int RatePerUnit, int Gold);

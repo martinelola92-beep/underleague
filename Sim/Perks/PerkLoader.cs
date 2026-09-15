@@ -58,7 +58,7 @@ public static class PerkLoader
     private static readonly string[] EffectKnownKeys =
     {
         "type", "target", "attribute", "value", "valuePerCounter", "counter", "maxValue",
-        "counterDivisor", "probability", "duration", "state", "ticks", "immunity",
+        "counterDivisor", "probability", "duration", "state", "ticks", "immunity", "point",
     };
 
     private static readonly string[] AxisNames =
@@ -71,7 +71,10 @@ public static class PerkLoader
         "beside", "ahead", "behind", "left", "right", "diagonalAhead", "diagonalBehind",
     };
 
-    private static readonly string[] ImmunityNames = { "push", "mourning", "minorInjuryPenalty" };
+    private static readonly string[] ImmunityNames = { "push", "mourning", "minorInjuryPenalty", "minorInjuryClinicCost" };
+
+    /// <summary>Vocabulario cerrado de <see cref="RelocationPoint"/> (efecto <c>relocate</c>, RT-032).</summary>
+    private static readonly string[] RelocationPointNames = { "onBallCarrier", "betweenBallAndOwnGoal" };
 
     /// <summary>
     /// Etiquetas de especie (ADR 0024): coinciden con los ids de <see cref="Race"/>, que es lo que
@@ -201,6 +204,22 @@ public static class PerkLoader
         {
             throw new DataException(
                 file, "$.lethalChance", "solo un perk con lethal:true puede declarar lethalChance (ADR 0048)");
+        }
+
+        // Paquete AY-cuatro-primitivas: un efecto 'injure' resuelve la lesión por el camino normal del
+        // motor (MatchEngine.ResolveInjury), que puede acabar en muerte por la vía 1 de RF-093 (un titular
+        // con lesión grave sin tratar que se lesiona otra vez, MatchEngine.Kill). Es la misma garantía que
+        // el paquete AY le impuso a 'lethal' y por el mismo motivo: la muerte solo puede ser consecuencia
+        // de una jugada de contacto, nunca del saque (ADR 0048, RF-012d).
+        if (trigger is EventType.MatchStart or EventType.PlayStart && HasInjureEffect(effects, elseEffects))
+        {
+            throw new DataException(
+                file,
+                "$.trigger",
+                $"un efecto 'injure' no puede dispararse en {EventTypeNames.ToUpperSnake(trigger)}: puede "
+                    + "acabar en muerte por la vía 1 de RF-093 (una lesión grave sin tratar que se repite), así "
+                    + "que solo puede ser consecuencia de una jugada de contacto (TACKLE, FOUL, INJURY), igual "
+                    + "que un perk letal (paquete AY, ADR 0048)");
         }
 
         Position? positionOnly = null;
@@ -433,6 +452,28 @@ public static class PerkLoader
         return false;
     }
 
+    /// <summary>True si algún efecto (de <paramref name="effects"/> o <paramref name="elseEffects"/>) es <c>injure</c>.</summary>
+    private static bool HasInjureEffect(IReadOnlyList<EffectDefinition> effects, IReadOnlyList<EffectDefinition> elseEffects)
+    {
+        for (int i = 0; i < effects.Count; i++)
+        {
+            if (effects[i].Type == EffectType.Injure)
+            {
+                return true;
+            }
+        }
+
+        for (int i = 0; i < elseEffects.Count; i++)
+        {
+            if (elseEffects[i].Type == EffectType.Injure)
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     // ---------------------------------------------------------------- campos nuevos de §1.4
 
     private static IReadOnlyList<LinkRelation> ParseLinks(Node? node)
@@ -570,6 +611,20 @@ public static class PerkLoader
             immunity = (ImmunityKind)Index(ImmunityNames, immunityNode.AsString(), immunityNode, "inmunidad");
         }
 
+        // RT-032: 'point' es obligatorio en relocate (no hay un valor por defecto razonable: silenciarlo
+        // en "sobre el balón" escondería un dato incompleto) y no significa nada en cualquier otro tipo.
+        var relocationPoint = RelocationPoint.OnBallCarrier;
+        if (type == EffectType.Relocate)
+        {
+            var pointNode = node.TryProp("point")
+                ?? throw new DataException(file, node.Path, "relocate necesita 'point' (RT-032)");
+            relocationPoint = (RelocationPoint)Index(RelocationPointNames, pointNode.AsString(), pointNode, "punto de reubicación");
+        }
+        else if (node.TryProp("point") is { } strayPointNode)
+        {
+            throw new DataException(strayPointNode.File, strayPointNode.Path, "'point' solo es válido en relocate");
+        }
+
         // ADR 0050 P1: el dato se escribe como porcentaje de CUOTA con signo y el cargador lo lleva al
         // multiplicador interno en base 10.000. Solo modifyProbability vive en esa base: los puntos de
         // atributo, las casillas de correa y los ticks de derribo son sus propias unidades y no se tocan.
@@ -608,7 +663,7 @@ public static class PerkLoader
 
         return new EffectDefinition(
             type, target, targetTag, attribute, value, usesCounter, valuePerCounter, counter,
-            maxValue, counterDivisor, probability, duration, state, ticks, immunity);
+            maxValue, counterDivisor, probability, duration, state, ticks, immunity, relocationPoint);
     }
 
     /// <summary>
@@ -731,7 +786,7 @@ public static class PerkLoader
         int value)
     {
         bool instantOnly = type is EffectType.AddCounter or EffectType.ModifyBias or EffectType.SetState
-            or EffectType.CancelEvent or EffectType.Immunity;
+            or EffectType.CancelEvent or EffectType.Immunity or EffectType.Injure or EffectType.Relocate;
         if (instantOnly && duration != EffectDuration.Instant)
         {
             throw new DataException(file, node.Path, $"'{type}' solo admite duration 'instant'");
@@ -742,10 +797,15 @@ public static class PerkLoader
             throw new DataException(file, node.Path, $"'{type}' necesita una duración ('play', 'match' o 'run')");
         }
 
-        if (type == EffectType.CancelEvent && trigger is not (EventType.Card or EventType.Injury or EventType.Foul))
+        // Paquete AY-cuatro-primitivas: GOAL y DEATH se suman a los tres disparadores cancelables que ya
+        // había. Cancelar un gol lo deja como un tiro que no llegó a entrar (saque de puerta del equipo
+        // que defendía, MatchEngine.ScoreGoal); cancelar una muerte deja al jugador en el estado que
+        // tendría sin ella (MatchEngine.Kill).
+        if (type == EffectType.CancelEvent
+            && trigger is not (EventType.Card or EventType.Injury or EventType.Foul or EventType.Goal or EventType.Death))
         {
             throw new DataException(
-                file, node.Path, "cancelEvent solo es válido con trigger CARD, INJURY o FOUL");
+                file, node.Path, "cancelEvent solo es válido con trigger CARD, INJURY, FOUL, GOAL o DEATH");
         }
 
         if (type == EffectType.SetState)
@@ -755,11 +815,28 @@ public static class PerkLoader
                 throw new DataException(file, node.Path, "setState solo admite el estado 'KnockedDown'");
             }
 
-            if (target is not (EffectTarget.Target or EffectTarget.Opponent or EffectTarget.OpposingTeam))
+            if (target is not (EffectTarget.Target or EffectTarget.Opponent or EffectTarget.OpposingTeam or EffectTarget.AdjacentOpponents))
             {
                 throw new DataException(
-                    file, node.Path, "setState solo puede derribar a objetivos rivales (target, opponent, opposingTeam)");
+                    file,
+                    node.Path,
+                    "setState solo puede derribar a objetivos rivales (target, opponent, opposingTeam, adjacentOpponents)");
             }
+        }
+
+        if (type == EffectType.Injure
+            && target is not (EffectTarget.Actor or EffectTarget.Target or EffectTarget.Opponent
+                or EffectTarget.OpposingTeam or EffectTarget.AdjacentOpponents))
+        {
+            throw new DataException(
+                file,
+                node.Path,
+                "injure solo puede alcanzar a un rival (actor, target, opponent, opposingTeam, adjacentOpponents)");
+        }
+
+        if (type == EffectType.Relocate && target != EffectTarget.Owner)
+        {
+            throw new DataException(file, node.Path, "relocate solo admite target 'owner': mueve al portador, no a otro jugador");
         }
 
         if (type == EffectType.AddCounter && counter.Length == 0)

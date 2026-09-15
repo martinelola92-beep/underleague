@@ -32,6 +32,23 @@ public enum EffectType
 
     /// <summary>Modifica la experiencia que gana el portador **fuera** del partido (ADR 0026, Humanos).</summary>
     ModifyExperience,
+
+    /// <summary>
+    /// Provoca una lesión sobre el objetivo por el camino normal del motor (paquete AY-cuatro-primitivas,
+    /// "Juego sucio"): la misma fórmula, el mismo flujo de dados y la misma escala por acto que una
+    /// entrada (<c>MatchEngine.ResolveInjury</c>). Puede acabar en muerte por la vía 1 de RF-093 (una
+    /// lesión grave sin tratar que se repite), así que el cargador le impone la misma regla que a
+    /// <see cref="PerkDefinition.Lethal"/>: nunca en <c>MATCH_START</c>/<c>PLAY_START</c> (paquete AY,
+    /// ADR 0048).
+    /// </summary>
+    Injure,
+
+    /// <summary>
+    /// Mueve al portador a un punto simbólico derivado del estado del partido (paquete
+    /// AY-cuatro-primitivas, "Último hombre"): un perk no conoce coordenadas, así que el dato declara una
+    /// referencia (<see cref="RelocationPoint"/>) y el motor la resuelve en el instante del efecto.
+    /// </summary>
+    Relocate,
 }
 
 /// <summary>
@@ -95,6 +112,9 @@ public enum ImmunityKind
 
     /// <summary>La lesión leve no le penaliza los atributos entre partidos (RF-035).</summary>
     MinorInjuryPenalty,
+
+    /// <summary>No paga la factura de la clínica por una lesión leve propia (RF-094, ADR 0099).</summary>
+    MinorInjuryClinicCost,
 }
 
 /// <summary>
@@ -123,6 +143,15 @@ public enum EffectTarget
     OpposingTeam,
     WithTag,
     AdjacentWithTag,
+
+    /// <summary>
+    /// Los rivales dentro de un radio real de una casilla del portador, en el instante del efecto
+    /// (paquete AY-cuatro-primitivas, "Terremoto"). A diferencia de <see cref="Adjacent"/> y
+    /// <see cref="AdjacentWithTag"/> —que miran la casilla-hogar fija de la alineación, familia estática
+    /// de la ADR 0021— este objetivo mira la <c>Position</c> real en el momento del suceso, la misma
+    /// familia dinámica que usa <c>IPerkLinks.NearOpponent</c>. Solo alcanza a rivales.
+    /// </summary>
+    AdjacentOpponents,
 
     /// <summary>Los vinculados del portador en las relaciones que declara el perk (ADR 0021).</summary>
     Linked,
@@ -181,6 +210,24 @@ public enum ProbabilityKind
     InterceptEvasion,
 }
 
+/// <summary>
+/// Punto simbólico al que reubica un efecto <see cref="EffectType.Relocate"/> (paquete
+/// AY-cuatro-primitivas, "Último hombre"): un perk de <c>/data</c> no conoce coordenadas del campo (regla
+/// 5 de CLAUDE.md), así que declara una referencia al estado del partido y el motor la resuelve en el
+/// instante del efecto. Vocabulario cerrado: cualquier otro valor es un error de carga (RT-032).
+/// </summary>
+public enum RelocationPoint
+{
+    /// <summary>
+    /// Sobre quien tiene el balón ahora mismo; si nadie lo tiene, el efecto no mueve al portador (un
+    /// balón suelto no da un rival al que marcar).
+    /// </summary>
+    OnBallCarrier,
+
+    /// <summary>A medio camino entre el balón y la portería propia del portador, cortando la línea.</summary>
+    BetweenBallAndOwnGoal,
+}
+
 /// <summary>Límite de activaciones de un perk (§2): <c>times</c> veces por <c>per</c>.</summary>
 public sealed record LimitDefinition(LimitScope Per, int Times);
 
@@ -208,7 +255,8 @@ public sealed record EffectDefinition(
     EffectDuration Duration = EffectDuration.Instant,
     PlayerState State = PlayerState.KnockedDown,
     int Ticks = 0,
-    ImmunityKind Immunity = ImmunityKind.Push);
+    ImmunityKind Immunity = ImmunityKind.Push,
+    RelocationPoint RelocationPoint = RelocationPoint.OnBallCarrier);
 
 /// <summary>
 /// Un perk cargado de <c>data/perks/&lt;id&gt;.json</c> (RT-033). Es un dato puro: no contiene código,

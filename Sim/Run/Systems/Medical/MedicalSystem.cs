@@ -1,6 +1,9 @@
+using Underleague.Sim.Data;
 using Underleague.Sim.Model;
+using Underleague.Sim.Perks;
 using Underleague.Sim.Random;
 using Underleague.Sim.Run.Systems.Economy;
+using ProgressionRules = Underleague.Sim.Progression.Progression;
 
 namespace Underleague.Sim.Run.Systems.Medical;
 
@@ -26,7 +29,16 @@ namespace Underleague.Sim.Run.Systems.Medical;
 public static class MedicalSystem
 {
     /// <summary>Trata a un jugador. Con <c>decision.Risky</c> es el matasanos: más barato y sin garantía.</summary>
-    public static RunState Treat(RunState state, TreatPlayer decision, EconomyConfig economy)
+    public static RunState Treat(RunState state, TreatPlayer decision, EconomyConfig economy) =>
+        Treat(state, decision, economy, catalog: null);
+
+    /// <summary>
+    /// Igual, pero mirando los perks del jugador: con <paramref name="catalog"/> una inmunidad
+    /// <see cref="ImmunityKind.MinorInjuryClinicCost"/> hace que su lesión <b>leve</b> se cure sin
+    /// factura. La grave nunca se exime: el perk dice que se cura solo lo que a los demás les cuesta
+    /// dinero, no que sea invulnerable.
+    /// </summary>
+    public static RunState Treat(RunState state, TreatPlayer decision, EconomyConfig economy, Catalog? catalog)
     {
         ArgumentNullException.ThrowIfNull(state);
         ArgumentNullException.ThrowIfNull(decision);
@@ -39,6 +51,12 @@ public static class MedicalSystem
             throw new ArgumentException(
                 $"el jugador {player.Id} está {player.PhysicalState}: la clínica trata lesiones graves (RF-092, RF-094) y leves (AZ-G, ADR 0090), no a un sano",
                 nameof(decision));
+        }
+
+        // El exento no pasa por caja ni por el matasanos: su leve simplemente no llega a la clínica.
+        if (minor && catalog is not null && IsExemptFromMinorInjuryBill(player, catalog))
+        {
+            return state.WithPlayer(player with { PhysicalState = PhysicalState.Healthy, MinorInjuries = 0 });
         }
 
         // AZ-G (ADR 0090): la leve se cura a su propio precio, menor que el de la grave.
@@ -130,6 +148,18 @@ public static class MedicalSystem
     {
         ArgumentNullException.ThrowIfNull(economy);
         return Math.Max(1, fullCost * economy.ClinicRiskyPercent / 100);
+    }
+
+    /// <summary>
+    /// Si los perks del jugador le eximen de la factura por una lesión leve. Se lee sobre la definición
+    /// <b>sin</b> la penalización de la leve aplicada, igual que <c>RunState</c> cuando consulta
+    /// <see cref="ImmunityKind.MinorInjuryPenalty"/>: lo que se pregunta es qué perks lleva, no cómo de
+    /// tocado está.
+    /// </summary>
+    private static bool IsExemptFromMinorInjuryBill(RunPlayer player, Catalog catalog)
+    {
+        var definition = player.ToDefinition(catalog, applyMinorInjuryPenalty: false);
+        return ProgressionRules.HasImmunity(definition, catalog, ImmunityKind.MinorInjuryClinicCost);
     }
 
     /// <summary>Un escalón hacia abajo: leve → grave, grave → muerto (ADR 0048, ADR 0099).</summary>

@@ -347,13 +347,15 @@
             "setState",
             "modifyKnockdownTicks",
             "immunity",
-            "modifyExperience"
+            "modifyExperience",
+            "injure",
+            "relocate"
           ]
         },
         "target": {
-          "description": "Objetivo del efecto; 'withTag:<Tag>', 'adjacentWithTag:<Tag>' y 'linkedWithTag:<Tag>' llevan etiqueta. 'linked' y 'linkedWithTag' exigen declarar 'links' y, en modifyProbability, convierten el modificador en uno POR PAR (ADR 0021).",
+          "description": "Objetivo del efecto; 'withTag:<Tag>', 'adjacentWithTag:<Tag>' y 'linkedWithTag:<Tag>' llevan etiqueta. 'linked' y 'linkedWithTag' exigen declarar 'links' y, en modifyProbability, convierten el modificador en uno POR PAR (ADR 0021). 'adjacentOpponents' son los rivales a un radio real de una casilla del portador en el instante del efecto (familia dinámica de la ADR 0021, no la casilla-hogar fija de 'adjacent').",
           "type": "string",
-          "pattern": "^(actor|target|opponent|owner|adjacent|team|opposingTeam|linked|(withTag|adjacentWithTag|linkedWithTag):[A-Z][A-Za-z]*)$"
+          "pattern": "^(actor|target|opponent|owner|adjacent|adjacentOpponents|team|opposingTeam|linked|(withTag|adjacentWithTag|linkedWithTag):[A-Z][A-Za-z]*)$"
         },
         "attribute": {
           "enum": [
@@ -430,7 +432,15 @@
           "enum": [
             "push",
             "mourning",
-            "minorInjuryPenalty"
+            "minorInjuryPenalty",
+            "minorInjuryClinicCost"
+          ]
+        },
+        "point": {
+          "description": "Punto simbólico de un efecto 'relocate' (paquete AY-cuatro-primitivas, 'Último hombre'): un perk no conoce coordenadas del campo, así que declara una referencia al estado del partido y el motor la resuelve en el instante del efecto. Obligatorio en relocate y prohibido en cualquier otro tipo (lo comprueba el cargador).",
+          "enum": [
+            "onBallCarrier",
+            "betweenBallAndOwnGoal"
           ]
         }
       },

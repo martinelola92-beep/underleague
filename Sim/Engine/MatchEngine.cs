@@ -316,6 +316,12 @@ internal sealed class MatchEngine : IPerkWorld
     /// <summary>Desplaza el criterio del árbitro (efecto modifyBias, §2); positivo favorece al local.</summary>
     public void ApplyBiasDelta(int delta) => _bias = Math.Clamp(_bias + delta, -100, 100);
 
+    /// <summary>
+    /// El balón del partido (§3.7), para el efecto <c>relocate</c> (§2, "Último hombre"): quién lo tiene
+    /// ahora mismo y dónde está. Es el mismo objeto mutable que usa el motor, no una copia.
+    /// </summary>
+    internal Ball Ball => _ball;
+
     /// <summary>Derriba a un jugador (efecto setState, §2). Si llevaba el balón, queda suelto.</summary>
     public void KnockDown(MatchPlayer player, int ticks)
     {
@@ -1851,6 +1857,28 @@ internal sealed class MatchEngine : IPerkWorld
     private void ScoreGoal(MatchPlayer shooter)
     {
         int team = shooter.Team;
+
+        MatchPlayer? assistant = null;
+        if (_lastCompletedPasser is not null
+            && _lastCompletedPasser.Team == team
+            && !ReferenceEquals(_lastCompletedPasser, shooter)
+            && _tick - _lastCompletedPassTick < _tuning.AssistWindowTicks)
+        {
+            assistant = _lastCompletedPasser;
+        }
+
+        // El gol se publica ANTES de aplicarlo (mismo patrón que INJURY/CARD y ahora DEATH, §2
+        // cancelEvent): un perk como "Mano de dios" puede anularlo y el partido sigue exactamente como si
+        // el disparo no hubiera entrado -ni marcador, ni saque de centro, ni asistencia-, con el mismo
+        // desenlace que un tiro que no llega a gol (ResolveShotArrival, offTarget): saque de puerta del
+        // equipo que defendía. _lastCompletedPasser NO se limpia: si el disparo no contó, la ventana de
+        // asistencia tampoco se ha cerrado.
+        if (EmitCancellable(EventType.Goal, _goldenGoal ? "goldenGoal" : "goal", shooter, assistant))
+        {
+            ScheduleGoalKick(1 - team);
+            return;
+        }
+
         _report.Goals[team]++;
         shooter.Goals++;
 
@@ -1860,17 +1888,11 @@ internal sealed class MatchEngine : IPerkWorld
             goalkeeper.ConsecutiveSaves = 0;
         }
 
-        MatchPlayer? assistant = null;
-        if (_lastCompletedPasser is not null
-            && _lastCompletedPasser.Team == team
-            && !ReferenceEquals(_lastCompletedPasser, shooter)
-            && _tick - _lastCompletedPassTick < _tuning.AssistWindowTicks)
+        if (assistant is not null)
         {
-            assistant = _lastCompletedPasser;
             assistant.Assists++;
         }
 
-        Emit(EventType.Goal, _goldenGoal ? "goldenGoal" : "goal", shooter, assistant);
         shooter.EnterState(PlayerState.Celebrating, _tuning.States.CelebratingTicks);
         ParkBall(Pitch.GoalCenter(team));
         _lastCompletedPasser = null;
@@ -2330,6 +2352,15 @@ internal sealed class MatchEngine : IPerkWorld
 
         RemoveFromPitch(player, PlayerState.SentOff);
     }
+
+    /// <summary>
+    /// Provoca una lesión sobre <paramref name="victim"/> por el camino normal del motor (efecto
+    /// <c>injure</c>, §2, "Juego sucio"): la misma fórmula, el mismo flujo de dados (RT-021) y la misma
+    /// escala por acto (<c>SimConfig.InjuryScalePercent</c>) que una entrada, porque es literalmente
+    /// <see cref="ResolveInjury"/>. Se trata siempre como una acción deliberada (<c>isFoul: true</c>): no
+    /// es una entrada limpia que salió mal, es un perk que decide hacer daño.
+    /// </summary>
+    internal void ProvokeInjury(MatchPlayer instigator, MatchPlayer victim) => ResolveInjury(instigator, victim, isFoul: true);
 
     private void ResolveInjury(MatchPlayer tackler, MatchPlayer victim, bool isFoul)
     {
@@ -2920,15 +2951,6 @@ internal sealed class MatchEngine : IPerkWorld
     }
 
     /// <summary>
-    /// Muerte de un jugador (RF-093). <b>Solo</b> se llama desde las dos vías del requisito: un titular
-    /// que se alineó con lesión grave sin tratar y vuelve a lesionarse (<see cref="ResolveInjury"/>), y
-    /// un perk rival marcado como letal sobre alguien que ya no estaba sano (<c>EffectEngine</c>). No hay
-    /// una tercera, y por eso "un jugador sano nunca muere" es una propiedad del sistema.
-    /// <para>El jugador sale del campo con <c>PlayerState.Injured</c>: el motor no necesita un estado
-    /// propio para el muerto —lo que importa es que ya no juega— y el evento DEATH es lo que
-    /// <c>Sim.Run.MatchResolution</c> lee para pasarlo a <c>PhysicalState.Dead</c> en la plantilla.</para>
-    /// </summary>
-    /// <summary>
     /// Probabilidad de que un perk letal mate a ese rival alcanzado (RF-093 vía 2, ADR 0048). Desde que
     /// un jugador sano puede morir, alcanzar ya no es matar: se tira, y solo por los <b>marcados</b>, con
     /// <see cref="Underleague.Sim.Perks.Lethality.Chance"/>, que es <b>exactamente la misma función</b>
@@ -2964,9 +2986,34 @@ internal sealed class MatchEngine : IPerkWorld
     /// <summary>La tirada en sí, con el flujo de dados del partido (RT-021, RT-022).</summary>
     internal bool LethalRoll(int chance) => _rng.Chance(chance);
 
+    /// <summary>
+    /// Muerte de un jugador (RF-093). <b>Solo</b> se llama desde las dos vías del requisito: un titular
+    /// que se alineó con lesión grave sin tratar y vuelve a lesionarse (<see cref="ResolveInjury"/>), y
+    /// un perk rival marcado como letal sobre alguien que ya no estaba sano (<c>EffectEngine</c>). No hay
+    /// una tercera, y por eso "un jugador sano nunca muere" es una propiedad del sistema.
+    /// <para>El jugador sale del campo con <c>PlayerState.Injured</c>: el motor no necesita un estado
+    /// propio para el muerto —lo que importa es que ya no juega— y el evento DEATH es lo que
+    /// <c>Sim.Run.MatchResolution</c> lee para pasarlo a <c>PhysicalState.Dead</c> en la plantilla.</para>
+    /// <para>
+    /// Paquete AY-cuatro-primitivas: el evento se publica ANTES de aplicar la consecuencia (mismo patrón
+    /// que INJURY/CARD y ahora GOAL, §2 cancelEvent), así que un perk como "Prohibido morir" puede
+    /// anularla y dejar al jugador exactamente en el estado que tendría sin ella: en pie y en el campo si
+    /// la vía era el marcado de un perk letal (RF-093 vía 2), o ya retirado por la lesión que lo llevó
+    /// hasta aquí -pero vivo- si la vía era la reincidencia sobre una lesión grave sin tratar (vía 1,
+    /// <c>ResolveInjury</c> ya hizo su propio <c>RemoveFromPitch</c> antes de llamar aquí). Como ningún
+    /// campo se toca hasta pasar la cancelación, <c>Sim.Run.Substitutions</c> no abre una ventana de
+    /// sustitución fantasma: <c>MatchPlayer.LeftPitchTick</c> nunca coincide con el tick de una muerte
+    /// anulada, que es justo lo que esa clase comprueba.
+    /// </para>
+    /// </summary>
     internal void Kill(MatchPlayer victim, string detail)
     {
         if (victim.Dead)
+        {
+            return;
+        }
+
+        if (EmitCancellable(EventType.Death, detail, victim))
         {
             return;
         }
@@ -2984,8 +3031,6 @@ internal sealed class MatchEngine : IPerkWorld
         {
             RemoveFromPitch(victim, PlayerState.Injured);
         }
-
-        Emit(EventType.Death, detail, victim);
     }
 
     /// <summary>Registra el uso de un consumible en la secuencia de eventos (RF-080..085, RF-066).</summary>

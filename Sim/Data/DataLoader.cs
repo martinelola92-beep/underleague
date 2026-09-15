@@ -169,6 +169,9 @@ public static class DataLoader
         // estadísticas de las funciones de condición nuevas (fase1b-diseno.md §1.5).
         "links", "immunities", "startZones", "startFlanks", "stats",
 
+        // Cuatro primitivas de la tanda 1 del catálogo: punto simbólico de un efecto relocate ("Último hombre").
+        "points",
+
         // ADR 0100: piezas del efecto de una opción de evento (RT-035: el texto no se escribe a mano).
         "eventEffects",
 
