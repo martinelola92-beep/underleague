@@ -41,7 +41,7 @@
     "consumableOffers": 3,
     "mercenaryOffers": 1,
     "youthMin": 1,
-    "youthMax": 2,
+    "youthMax": 1,
     "playerPriceByRarity": [40, 60, 85, 140],
     "perkPriceByRarity": [10, 15, 24, 42],
     "itemPriceByRarity": [12, 22, 45, 85],
