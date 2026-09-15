@@ -1,0 +1,44 @@
+{
+  "_doc": "Sed acumulada: cada rival que deja en el suelo lo vuelve mas peligroso (C11). Cuenta con scope opponent, asi que solo suma la carne que reparte EL. El contador sobrevive al pitido final (accumulatesAcrossMatches) y por eso se ve subir entre partidos. Lo que cuesta: el criterio del arbitro se le gasta en la misma proporcion.",
+  "id": "gathering_thirst",
+  "name": {
+    "es": "Sed acumulada",
+    "en": "Gathering Thirst"
+  },
+  "rarity": "rare",
+  "minAct": 2,
+  "kind": "filler",
+  "axis": "accumulation",
+  "race": null,
+  "family": null,
+  "trigger": "INJURY",
+  "scope": "opponent",
+  "links": [],
+  "condition": "",
+  "effects": [
+    {
+      "type": "modifyProbability",
+      "target": "owner",
+      "probability": "injure",
+      "valuePerCounter": 30,
+      "counter": "gatheringThirstVictims",
+      "maxValue": 3,
+      "duration": "match"
+    },
+    {
+      "type": "addCounter",
+      "counter": "gatheringThirstVictims",
+      "value": 1
+    }
+  ],
+  "elseEffects": [],
+  "accumulatesAcrossMatches": true,
+  "lethal": false,
+  "positionOnly": null,
+  "tagsRequired": [],
+  "tagsForbidden": [],
+  "limit": {
+    "per": "match",
+    "times": 1
+  }
+}

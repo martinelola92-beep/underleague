@@ -1,0 +1,32 @@
+{
+  "_doc": "Rabia: si le hacen una falta, se la devuelve (C7). Se dispara con scope opponent -el dueno es quien SUFRE la falta- y marca al actor como su objetivo de entrada. Lo que se ve: lo derriban y dos jugadas despues va a por el mismo. Lo que cuesta: la devuelve donde no toca, y la amarilla se la lleva el.",
+  "id": "grudge",
+  "name": {
+    "es": "Rabia",
+    "en": "Grudge"
+  },
+  "rarity": "uncommon",
+  "minAct": 1,
+  "kind": "conditional",
+  "axis": "matchState",
+  "race": null,
+  "family": null,
+  "trigger": "FOUL",
+  "scope": "opponent",
+  "links": [],
+  "condition": "",
+  "effects": [
+    {
+      "type": "modifyTackleBias",
+      "tackleBias": "fouled",
+      "target": "actor",
+      "duration": "match"
+    }
+  ],
+  "elseEffects": [],
+  "accumulatesAcrossMatches": false,
+  "lethal": false,
+  "positionOnly": null,
+  "tagsRequired": [],
+  "tagsForbidden": []
+}

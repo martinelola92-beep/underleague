@@ -1,0 +1,31 @@
+{
+  "_doc": "Prestamo: este no se compra, se alquila. Rompe la regla de que un jugador pierde la mitad de su valor al venderse: data/economy/perk-resale.json fija su porcentaje de reventa, y el sistema toma el MAXIMO contra el del estado fisico, asi que el perk solo puede ayudar, nunca empeorar el precio. Lo que se ve en el mercado: se revende sin perder la mitad. Lo que cuesta: ocupa un slot en un cuerpo que el jugador ya sabe que no se queda.",
+  "id": "loan",
+  "name": {
+    "es": "Préstamo",
+    "en": "Loan"
+  },
+  "rarity": "uncommon",
+  "minAct": 1,
+  "kind": "ruleBreaker",
+  "axis": "identity",
+  "race": null,
+  "family": null,
+  "trigger": "MATCH_START",
+  "scope": "any",
+  "links": [],
+  "condition": "",
+  "effects": [
+    {
+      "type": "addCounter",
+      "counter": "loanMatches",
+      "value": 1
+    }
+  ],
+  "elseEffects": [],
+  "accumulatesAcrossMatches": true,
+  "lethal": false,
+  "positionOnly": null,
+  "tagsRequired": [],
+  "tagsForbidden": []
+}

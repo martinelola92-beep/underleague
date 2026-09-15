@@ -1,0 +1,33 @@
+{
+  "_doc": "Doble disparo: si la primera sale mal, la segunda sale sola. Repite el disparo DENTRO del mismo tick (RT-020: no hay tick nuevo) y la cadena la corta la profundidad de recursion, con el corte contado en el informe (RT-042). Lo que se ve: dispara, le sale rechazada y dispara otra vez antes de que nadie llegue. Lo que cuesta: se queda clavado rematando y la jugada no se recicla en pase.",
+  "id": "double_shot",
+  "name": {
+    "es": "Doble disparo",
+    "en": "Double Shot"
+  },
+  "rarity": "rare",
+  "minAct": 2,
+  "kind": "conditional",
+  "axis": "geometry",
+  "race": null,
+  "family": null,
+  "trigger": "SHOT",
+  "scope": "actor",
+  "links": [],
+  "condition": "",
+  "effects": [
+    {
+      "type": "extraAction"
+    }
+  ],
+  "elseEffects": [],
+  "accumulatesAcrossMatches": false,
+  "lethal": false,
+  "positionOnly": null,
+  "tagsRequired": [],
+  "tagsForbidden": [],
+  "limit": {
+    "per": "match",
+    "times": 1
+  }
+}

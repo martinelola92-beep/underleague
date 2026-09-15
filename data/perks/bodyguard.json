@@ -1,0 +1,35 @@
+{
+  "_doc": "Guardaespaldas: protege a un companero, y quien se le acerca lo tiene encima (C5). Exige un vinculado al lado en la alineacion (PD-2, vinculo estatico). Lo que se ve: el pequeno del equipo recibe y aparece el grande. Lo que cuesta: su marca depende de donde este otro; si el vinculado cae, el perk se apaga.",
+  "id": "bodyguard",
+  "name": {
+    "es": "Guardaespaldas",
+    "en": "Bodyguard"
+  },
+  "rarity": "uncommon",
+  "minAct": 1,
+  "kind": "conditional",
+  "axis": "alignment",
+  "race": null,
+  "family": null,
+  "trigger": "MATCH_START",
+  "scope": "any",
+  "links": [
+    "beside"
+  ],
+  "condition": "",
+  "effects": [
+    {
+      "type": "modifyMarkBias",
+      "markBias": "protectLinked",
+      "target": "linked",
+      "value": 6,
+      "duration": "match"
+    }
+  ],
+  "elseEffects": [],
+  "accumulatesAcrossMatches": false,
+  "lethal": false,
+  "positionOnly": null,
+  "tagsRequired": [],
+  "tagsForbidden": []
+}

@@ -1,0 +1,31 @@
+{
+  "_doc": "Seguro de vida: si se lo llevan, algo vuelve. El oro lo paga data/economy/death-gold.json al resolver la run; el contador de aqui deja constancia en el informe de que la poliza se cobro, para que el jugador vea de donde salio (RF-119, ADR 0113). Lo que se ve en el libro mayor: el muerto caro deja de arruinar la run. Lo que cuesta: solo paga si muere, asi que es un slot apostado a la desgracia.",
+  "id": "life_insurance",
+  "name": {
+    "es": "Seguro de vida",
+    "en": "Life Insurance"
+  },
+  "rarity": "uncommon",
+  "minAct": 1,
+  "kind": "conditional",
+  "axis": "identity",
+  "race": null,
+  "family": null,
+  "trigger": "DEATH",
+  "scope": "actor",
+  "links": [],
+  "condition": "",
+  "effects": [
+    {
+      "type": "addCounter",
+      "counter": "lifeInsuranceClaims",
+      "value": 1
+    }
+  ],
+  "elseEffects": [],
+  "accumulatesAcrossMatches": true,
+  "lethal": false,
+  "positionOnly": null,
+  "tagsRequired": [],
+  "tagsForbidden": []
+}

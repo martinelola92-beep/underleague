@@ -1,0 +1,34 @@
+{
+  "_doc": "Sombra: juega a la sombra del que va delante (C8). Exige un vinculado por delante en la alineacion (links: ahead, PD-2 usa el vinculo estatico), y se descuelga una casilla respecto a el. Lo que se ve: nunca estan los dos a la misma altura. Lo que cuesta: su altura la decide otro; si el vinculado se queda atras, el tambien.",
+  "id": "shadow",
+  "name": {
+    "es": "Sombra",
+    "en": "Shadow"
+  },
+  "rarity": "rare",
+  "minAct": 2,
+  "kind": "filler",
+  "axis": "alignment",
+  "race": null,
+  "family": null,
+  "trigger": "MATCH_START",
+  "scope": "any",
+  "links": [
+    "ahead"
+  ],
+  "condition": "",
+  "effects": [
+    {
+      "type": "shiftHome",
+      "target": "owner",
+      "value": -1,
+      "duration": "match"
+    }
+  ],
+  "elseEffects": [],
+  "accumulatesAcrossMatches": false,
+  "lethal": false,
+  "positionOnly": "Midfielder",
+  "tagsRequired": [],
+  "tagsForbidden": []
+}

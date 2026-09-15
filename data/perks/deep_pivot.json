@@ -1,0 +1,32 @@
+{
+  "_doc": "Pivote hondo: baja a buscarla entre sus centrales (C8, shiftHome negativo). Lo que se ve: en la salida de balon hay tres hombres donde habia dos. Lo que cuesta: el equipo ataca con un hombre menos por delante del balon.",
+  "id": "deep_pivot",
+  "name": {
+    "es": "Pivote hondo",
+    "en": "Deep Pivot"
+  },
+  "rarity": "uncommon",
+  "minAct": 1,
+  "kind": "filler",
+  "axis": "identity",
+  "race": null,
+  "family": null,
+  "trigger": "MATCH_START",
+  "scope": "any",
+  "links": [],
+  "condition": "",
+  "effects": [
+    {
+      "type": "shiftHome",
+      "target": "owner",
+      "value": -2,
+      "duration": "match"
+    }
+  ],
+  "elseEffects": [],
+  "accumulatesAcrossMatches": false,
+  "lethal": false,
+  "positionOnly": "Midfielder",
+  "tagsRequired": [],
+  "tagsForbidden": []
+}

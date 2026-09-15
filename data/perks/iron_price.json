@@ -1,0 +1,33 @@
+{
+  "_doc": "Pagar el hierro: cada rival que rompe se lo cobra su propio cuerpo (C4 sobre injuryChanceBonus, disparado con scope opponent para que solo cuente la carne que reparte EL, no la de sus companeros). Lo que se ve en un cuerpo: el que mas lesiona es el que acaba en la clinica. Lo que cuesta: carne propia, que es la moneda del juego.",
+  "id": "iron_price",
+  "name": {
+    "es": "Pagar el hierro",
+    "en": "Iron Price"
+  },
+  "rarity": "uncommon",
+  "minAct": 1,
+  "kind": "filler",
+  "axis": "accumulation",
+  "race": null,
+  "family": null,
+  "trigger": "INJURY",
+  "scope": "opponent",
+  "links": [],
+  "condition": "",
+  "effects": [
+    {
+      "type": "modifyTraitScalar",
+      "target": "owner",
+      "scalar": "injuryChanceBonus",
+      "value": 10,
+      "duration": "match"
+    }
+  ],
+  "elseEffects": [],
+  "accumulatesAcrossMatches": false,
+  "lethal": false,
+  "positionOnly": null,
+  "tagsRequired": [],
+  "tagsForbidden": []
+}

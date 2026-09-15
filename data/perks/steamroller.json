@@ -1,0 +1,33 @@
+{
+  "_doc": "Arrollador: al derribar a alguien no se para, sigue. La condicion es lo que lo separa de Embestida: solo encadena si el rival de la entrada QUEDO en el suelo. Lo que se ve: tumba a uno y sigue andando como si nada. Lo que cuesta: sigue de frente aunque la jugada haya cambiado de sitio.",
+  "id": "steamroller",
+  "name": {
+    "es": "Arrollador",
+    "en": "Steamroller"
+  },
+  "rarity": "rare",
+  "minAct": 2,
+  "kind": "conditional",
+  "axis": "proximity",
+  "race": null,
+  "family": null,
+  "trigger": "TACKLE",
+  "scope": "actor",
+  "links": [],
+  "condition": "stat(target,'down') == 1",
+  "effects": [
+    {
+      "type": "extraAction"
+    }
+  ],
+  "elseEffects": [],
+  "accumulatesAcrossMatches": false,
+  "lethal": false,
+  "positionOnly": null,
+  "tagsRequired": [],
+  "tagsForbidden": [],
+  "limit": {
+    "per": "match",
+    "times": 1
+  }
+}

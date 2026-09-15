@@ -1,0 +1,33 @@
+{
+  "_doc": "Embestida: avanza en linea recta y aparta lo que haya. Repite la entrada dentro del mismo tick contra el rival alcanzable mas cercano. Lo que se ve: entra por el centro y salen dos despedidos. Lo que cuesta: va en linea recta, asi que si el balon cambia de carril el ya no esta. Se diferencia de Arrollador en la condicion: Embestida entra sin mas, Arrollador solo sigue si el primero cayo.",
+  "id": "charge",
+  "name": {
+    "es": "Embestida",
+    "en": "Charge"
+  },
+  "rarity": "rare",
+  "minAct": 2,
+  "kind": "conditional",
+  "axis": "proximity",
+  "race": null,
+  "family": null,
+  "trigger": "TACKLE",
+  "scope": "actor",
+  "links": [],
+  "condition": "",
+  "effects": [
+    {
+      "type": "extraAction"
+    }
+  ],
+  "elseEffects": [],
+  "accumulatesAcrossMatches": false,
+  "lethal": false,
+  "positionOnly": null,
+  "tagsRequired": [],
+  "tagsForbidden": [],
+  "limit": {
+    "per": "match",
+    "times": 1
+  }
+}

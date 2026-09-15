@@ -1,5 +1,5 @@
 {
-  "_doc": "Build de pruebas del eje de acumulacion (docs/perks-ejes.md). No entra en ningun grupo de data/balance/groups.json: existe para que todo perk de acumulacion tenga un portador y EveryCatalogPerkIsAssignedInSomeBuild no falle. Los quince perks que acumulan entre partidos (RF-070) se reparten entre esta build y las *_excellent de la ADR 0033.",
+  "_doc": "Build de pruebas del eje de acumulacion (docs/perks-ejes.md). No entra en ningun grupo de data/balance/groups.json: existe para que todo perk de acumulacion tenga un portador y EveryCatalogPerkIsAssignedInSomeBuild no falle. Los quince perks que acumulan entre partidos (RF-070) se reparten entre esta build y las *_excellent de la ADR 0033. TANDA 2: se anaden aqui los perks de la tanda 2 que necesitan portador (EveryCatalogPerkIsAssignedInSomeBuild). Esta build esta FUERA de data/balance/groups.json a proposito, asi que no alimenta ninguna puerta calibrada; por eso se elige para esto. Los perks nuevos van al FINAL de su slot: el orden dentro de un slot es diseno (BuildDensity recorta conservando el ultimo), asi que no se reordena nada de lo que ya habia.",
   "id": "human_accum",
   "name": "Humanos: acumuladores",
   "race": "Human",
@@ -72,6 +72,34 @@
     {
       "slot": 6,
       "perk": "local_idol"
+    },
+    {
+      "slot": 5,
+      "perk": "survivor"
+    },
+    {
+      "slot": 5,
+      "perk": "life_insurance"
+    },
+    {
+      "slot": 5,
+      "perk": "inheritance"
+    },
+    {
+      "slot": 6,
+      "perk": "loan"
+    },
+    {
+      "slot": 1,
+      "perk": "high_line"
+    },
+    {
+      "slot": 4,
+      "perk": "deep_pivot"
+    },
+    {
+      "slot": 6,
+      "perk": "deep_run"
     }
   ],
   "lineup": null

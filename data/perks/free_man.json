@@ -1,0 +1,33 @@
+{
+  "_doc": "Hombre libre: nadie lo marca, porque nadie sabe que es. ES EL UNICO PERK DEL CATALOGO QUE TOCA LA IA DEL EQUIPO RIVAL -empuja el coste del reparto de marcas del OTRO equipo para que prefieran a cualquier otro-, asi que su valor se mide aparte y no con el resto. Lo que se ve: recibe solo, una y otra vez, en el mismo sitio. Lo que cuesta: ninguno propio, y ESE es su problema, por eso su precio es de rareza y de slot.",
+  "id": "free_man",
+  "name": {
+    "es": "Hombre libre",
+    "en": "Free Man"
+  },
+  "rarity": "legendary",
+  "minAct": 3,
+  "kind": "ruleBreaker",
+  "axis": "identity",
+  "race": null,
+  "family": null,
+  "trigger": "MATCH_START",
+  "scope": "any",
+  "links": [],
+  "condition": "",
+  "effects": [
+    {
+      "type": "modifyMarkBias",
+      "markBias": "avoided",
+      "target": "owner",
+      "value": 6,
+      "duration": "match"
+    }
+  ],
+  "elseEffects": [],
+  "accumulatesAcrossMatches": false,
+  "lethal": false,
+  "positionOnly": null,
+  "tagsRequired": [],
+  "tagsForbidden": []
+}

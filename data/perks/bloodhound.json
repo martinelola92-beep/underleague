@@ -1,0 +1,34 @@
+{
+  "_doc": "Perro de presa: se engancha al jugador fino del rival y no lo suelta (C5, sesgo sobre el coste de reparto de marcas). Lo que se ve: el mismo verde encima del mismo rival en tres recepciones seguidas. Lo que cuesta: deja de cubrir el hueco que le tocaba; si el crack se va a la banda, el se va detras.",
+  "id": "bloodhound",
+  "name": {
+    "es": "Perro de presa",
+    "en": "Bloodhound"
+  },
+  "rarity": "uncommon",
+  "minAct": 1,
+  "kind": "conditional",
+  "axis": "identity",
+  "race": null,
+  "family": null,
+  "trigger": "MATCH_START",
+  "scope": "any",
+  "links": [],
+  "condition": "",
+  "effects": [
+    {
+      "type": "modifyMarkBias",
+      "markBias": "preferTag",
+      "markTag": "Fine",
+      "target": "owner",
+      "value": 6,
+      "duration": "match"
+    }
+  ],
+  "elseEffects": [],
+  "accumulatesAcrossMatches": false,
+  "lethal": false,
+  "positionOnly": null,
+  "tagsRequired": [],
+  "tagsForbidden": []
+}

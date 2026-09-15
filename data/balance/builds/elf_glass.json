@@ -75,6 +75,30 @@
     {
       "slot": 4,
       "perk": "tough_hide"
+    },
+    {
+      "slot": 4,
+      "perk": "shadow"
+    },
+    {
+      "slot": 5,
+      "perk": "cannon"
+    },
+    {
+      "slot": 6,
+      "perk": "double_shot"
+    },
+    {
+      "slot": 4,
+      "perk": "free_man"
+    },
+    {
+      "slot": 2,
+      "perk": "bloodhound"
+    },
+    {
+      "slot": 2,
+      "perk": "bodyguard"
     }
   ],
   "rarities": {
@@ -86,5 +110,6 @@
     "4": "Fine",
     "5": "Fine"
   },
-  "lineup": null
+  "lineup": null,
+  "_doc": "TANDA 2: se anaden aqui los perks de la tanda 2 que necesitan portador (EveryCatalogPerkIsAssignedInSomeBuild). Esta build esta FUERA de data/balance/groups.json a proposito, asi que no alimenta ninguna puerta calibrada; por eso se elige para esto. Los perks nuevos van al FINAL de su slot: el orden dentro de un slot es diseno (BuildDensity recorta conservando el ultimo), asi que no se reordena nada de lo que ya habia."
 }

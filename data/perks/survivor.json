@@ -1,0 +1,44 @@
+{
+  "_doc": "Superviviente: cuantos mas companeros pierde, mas dificil es matarlo a el (C11). Cuenta muertes de SU equipo (scope team sobre DEATH) y baja su propia probabilidad de lesion. Lo que se ve en un cuerpo: sobrevive a la entrada que mato a otro. Lo que cuesta, y es lo que lo hace honesto: su escalada la pagan otros cuerpos, o sea que el contador SOLO sube si la run va mal.",
+  "id": "survivor",
+  "name": {
+    "es": "Superviviente",
+    "en": "Survivor"
+  },
+  "rarity": "rare",
+  "minAct": 2,
+  "kind": "filler",
+  "axis": "accumulation",
+  "race": null,
+  "family": null,
+  "trigger": "DEATH",
+  "scope": "team",
+  "links": [],
+  "condition": "",
+  "effects": [
+    {
+      "type": "modifyProbability",
+      "target": "owner",
+      "probability": "injury",
+      "valuePerCounter": -30,
+      "counter": "survivorLosses",
+      "maxValue": 3,
+      "duration": "match"
+    },
+    {
+      "type": "addCounter",
+      "counter": "survivorLosses",
+      "value": 1
+    }
+  ],
+  "elseEffects": [],
+  "accumulatesAcrossMatches": true,
+  "lethal": false,
+  "positionOnly": null,
+  "tagsRequired": [],
+  "tagsForbidden": [],
+  "limit": {
+    "per": "match",
+    "times": 1
+  }
+}

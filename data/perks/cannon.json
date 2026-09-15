@@ -1,0 +1,33 @@
+{
+  "_doc": "Canon: si ve porteria, dispara; la distancia le da igual (C4, el perk escribe shootRangeBonusCells, que hasta ahora solo escribian los rasgos). Lo que se ve: arma la pierna desde el centro del campo mientras los demas buscan el pase. Lo que cuesta: regala posesion desde lejos y el rechace cae en campo propio.",
+  "id": "cannon",
+  "name": {
+    "es": "Cañón",
+    "en": "Cannon"
+  },
+  "rarity": "rare",
+  "minAct": 2,
+  "kind": "filler",
+  "axis": "geometry",
+  "race": null,
+  "family": null,
+  "trigger": "MATCH_START",
+  "scope": "any",
+  "links": [],
+  "condition": "",
+  "effects": [
+    {
+      "type": "modifyTraitScalar",
+      "target": "owner",
+      "scalar": "shootRangeBonusCells",
+      "value": 3,
+      "duration": "match"
+    }
+  ],
+  "elseEffects": [],
+  "accumulatesAcrossMatches": false,
+  "lethal": false,
+  "positionOnly": null,
+  "tagsRequired": [],
+  "tagsForbidden": []
+}

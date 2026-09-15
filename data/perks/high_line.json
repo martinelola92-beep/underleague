@@ -1,0 +1,32 @@
+{
+  "_doc": "Linea adelantada: su defensa vive dos casillas mas arriba de lo que le tocaria (C8, shiftHome). Lo que se ve: la linea de atras juega en el medio campo. Lo que cuesta: un pase en profundidad y no hay nadie detras. Se decide al alinear, asi que el dano es previsible (regla 11).",
+  "id": "high_line",
+  "name": {
+    "es": "Línea adelantada",
+    "en": "High Line"
+  },
+  "rarity": "uncommon",
+  "minAct": 1,
+  "kind": "filler",
+  "axis": "identity",
+  "race": null,
+  "family": null,
+  "trigger": "MATCH_START",
+  "scope": "any",
+  "links": [],
+  "condition": "",
+  "effects": [
+    {
+      "type": "shiftHome",
+      "target": "owner",
+      "value": 2,
+      "duration": "match"
+    }
+  ],
+  "elseEffects": [],
+  "accumulatesAcrossMatches": false,
+  "lethal": false,
+  "positionOnly": "Defender",
+  "tagsRequired": [],
+  "tagsForbidden": []
+}

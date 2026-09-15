@@ -1,0 +1,33 @@
+{
+  "_doc": "Herencia: lo que era suyo pasa al que se queda. Al morir, un porcentaje de cada atributo pasa al vinculado (data/economy/inheritance.json). El tope esta fijado CONTRA LA PROGRESION y no a ojo: attributesPerLevel vale 2, o sea que un nivel entero da +8 repartidos, y el traspaso esta acotado a +10 -del orden de UN nivel- para que heredar no sea hacer negocio con la muerte. Lo que cuesta, y hay que vigilarlo: premia perder gente (regla 11).",
+  "id": "inheritance",
+  "name": {
+    "es": "Herencia",
+    "en": "Inheritance"
+  },
+  "rarity": "rare",
+  "minAct": 2,
+  "kind": "conditional",
+  "axis": "alignment",
+  "race": null,
+  "family": null,
+  "trigger": "DEATH",
+  "scope": "actor",
+  "links": [
+    "beside"
+  ],
+  "condition": "",
+  "effects": [
+    {
+      "type": "addCounter",
+      "counter": "inheritanceClaims",
+      "value": 1
+    }
+  ],
+  "elseEffects": [],
+  "accumulatesAcrossMatches": true,
+  "lethal": false,
+  "positionOnly": null,
+  "tagsRequired": [],
+  "tagsForbidden": []
+}

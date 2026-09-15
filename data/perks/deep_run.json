@@ -1,0 +1,39 @@
+{
+  "_doc": "Desmarque profundo: vive al borde del fuera de juego que no existe (C8, hogar adelantado y zona mas larga hacia delante). Lo que se ve: cuando el equipo recupera, el ya esta corriendo a la espalda del central. Lo que cuesta: juega solo y de espaldas al juego; si el pase no llega, no participa.",
+  "id": "deep_run",
+  "name": {
+    "es": "Desmarque profundo",
+    "en": "Deep Run"
+  },
+  "rarity": "uncommon",
+  "minAct": 1,
+  "kind": "filler",
+  "axis": "identity",
+  "race": null,
+  "family": null,
+  "trigger": "MATCH_START",
+  "scope": "any",
+  "links": [],
+  "condition": "",
+  "effects": [
+    {
+      "type": "shiftHome",
+      "target": "owner",
+      "value": 2,
+      "duration": "match"
+    },
+    {
+      "type": "modifyZoneShape",
+      "target": "owner",
+      "dimension": "forward",
+      "value": 1,
+      "duration": "match"
+    }
+  ],
+  "elseEffects": [],
+  "accumulatesAcrossMatches": false,
+  "lethal": false,
+  "positionOnly": "Forward",
+  "tagsRequired": [],
+  "tagsForbidden": []
+}

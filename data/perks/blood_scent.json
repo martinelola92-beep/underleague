@@ -1,0 +1,32 @@
+{
+  "_doc": "Olfato de sangre: va a por el que ya esta tocado (C7, sustituye al marcado como objetivo de una entrada sin balon; NUNCA al poseedor rival, la ADR 0105 queda intacta). Lo que se ve: un rival cae y el mismo jugador va derecho a el. Lo que cuesta: deja de entrar al portador, asi que el balon sigue y el rival no. Previsible en el ojeo: se lee del estado fisico del rival.",
+  "id": "blood_scent",
+  "name": {
+    "es": "Olfato de sangre",
+    "en": "Blood Scent"
+  },
+  "rarity": "uncommon",
+  "minAct": 1,
+  "kind": "conditional",
+  "axis": "identity",
+  "race": null,
+  "family": null,
+  "trigger": "MATCH_START",
+  "scope": "any",
+  "links": [],
+  "condition": "",
+  "effects": [
+    {
+      "type": "modifyTackleBias",
+      "tackleBias": "knockedDown",
+      "target": "owner",
+      "duration": "match"
+    }
+  ],
+  "elseEffects": [],
+  "accumulatesAcrossMatches": false,
+  "lethal": false,
+  "positionOnly": null,
+  "tagsRequired": [],
+  "tagsForbidden": []
+}

@@ -1,0 +1,40 @@
+{
+  "_doc": "Kamikaze: entra a todo aunque se rompa el (C4). Identidad pura, sin condicion: entra mas fuerte y se lesiona mas. Lo que se ve: entradas que ganan el balon y lo dejan a el en el suelo. Lo que cuesta: sus propias lesiones por encima de las de todo el equipo. Ejerce PD-1 -un perk puede penalizar si expresa identidad- con la penalizacion en el MISMO efecto que la ventaja.",
+  "id": "kamikaze",
+  "name": {
+    "es": "Kamikaze",
+    "en": "Kamikaze"
+  },
+  "rarity": "rare",
+  "minAct": 2,
+  "kind": "filler",
+  "axis": "identity",
+  "race": null,
+  "family": null,
+  "trigger": "MATCH_START",
+  "scope": "any",
+  "links": [],
+  "condition": "",
+  "effects": [
+    {
+      "type": "modifyTraitScalar",
+      "target": "owner",
+      "scalar": "hardTackleBonus",
+      "value": 15,
+      "duration": "match"
+    },
+    {
+      "type": "modifyTraitScalar",
+      "target": "owner",
+      "scalar": "injuryChanceBonus",
+      "value": 20,
+      "duration": "match"
+    }
+  ],
+  "elseEffects": [],
+  "accumulatesAcrossMatches": false,
+  "lethal": false,
+  "positionOnly": null,
+  "tagsRequired": [],
+  "tagsForbidden": []
+}
