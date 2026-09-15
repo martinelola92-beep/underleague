@@ -1343,12 +1343,29 @@ internal static class Utility
             return;
         }
 
-        // ADR 0105: no hay poseedor rival al alcance. Queda el marcado.
-        if (p.IsOutfield && IsDefensiveRole(p.Role) && Marking.IsValidTarget(p.MarkTarget, p.Team))
+        // ADR 0105: no hay poseedor rival al alcance. Queda el objetivo sin balón, y C7 (docs/analisis/
+        // perks-catalogo-unificado.md §3.2) deja que un perk sesgue CUÁL: el marcado sigue siendo el
+        // criterio por defecto, pero "Olfato de sangre" y "Rabia" lo sustituyen cuando aplican. No cambia
+        // la prioridad del poseedor rival de arriba (ADR 0105 sigue mandando: quitar el balón es siempre
+        // mejor que pegarle a quien no lo lleva), solo QUIÉN es el objetivo sin balón.
+        if (p.IsOutfield && IsDefensiveRole(p.Role))
         {
-            var mark = p.MarkTarget!;
-            if (CanBeBlocked(mark)
-                && Vec2.Distance(p.Position, mark.Position) <= context.TackleDistanceMaxCells
+            // El objetivo sesgado ya viene comprobado del todo (alcance, jugada activa y
+            // CanReceiveOffBallTackle, que a diferencia de CanBeBlocked SÍ admite un rival derribado): no
+            // se vuelve a pasar por CanBeBlocked, que lo rechazaría precisamente por estar en el suelo.
+            if (BiasedOffBallTackleTarget(ctx, context, p) is { } biased)
+            {
+                eval.TackleTarget = biased;
+                eval.TackleOffBall = true;
+                eval.Target = biased.Position;
+                eval.Context = context.TackleMarkTargetBonus;
+                return;
+            }
+
+            var mark = p.MarkTarget;
+            if (Marking.IsValidTarget(mark, p.Team)
+                && CanBeBlocked(mark!)
+                && Vec2.Distance(p.Position, mark!.Position) <= context.TackleDistanceMaxCells
                 && IsInActivePlay(ctx, context, mark.Position))
             {
                 eval.TackleTarget = mark;
@@ -1361,6 +1378,57 @@ internal static class Utility
 
         eval.Context = -context.TackleOutOfReachPenalty;
     }
+
+    /// <summary>
+    /// C7 (docs/analisis/perks-catalogo-unificado.md §3.2): el criterio de a quién entrar sin balón,
+    /// cuando un perk lo sesga. Dos variantes cerradas, comprobadas en este orden: el rival que le hizo la
+    /// última falta (<see cref="MatchPlayer.TackleNemesis"/>, "Rabia") y, si no aplica, el rival ya
+    /// derribado (<see cref="MatchPlayer.PreferKnockedDownTackleTarget"/>, "Olfato de sangre"). Sin
+    /// ninguna de las dos marcadas -el 99% del catálogo- devuelve null y el criterio sigue siendo el fijo
+    /// de siempre (el marcado). Usa <see cref="CanReceiveOffBallTackle"/> y no
+    /// <see cref="CanBeBlocked"/>: un rival ya derribado SÍ puede recibir una entrada -es justo el que
+    /// "olfato de sangre" busca-, mientras que <c>CanBeBlocked</c> lo excluye a propósito para la carga
+    /// sin balón (no tiene sentido cargar contra alguien que ya está en el suelo).
+    /// </summary>
+    private static MatchPlayer? BiasedOffBallTackleTarget(UtilityContext ctx, AiContext context, MatchPlayer p)
+    {
+        if (p.TackleNemesis is { } nemesis
+            && CanReceiveOffBallTackle(nemesis)
+            && nemesis.Team != p.Team
+            && Vec2.Distance(p.Position, nemesis.Position) <= context.TackleDistanceMaxCells
+            && IsInActivePlay(ctx, context, nemesis.Position))
+        {
+            return nemesis;
+        }
+
+        if (p.PreferKnockedDownTackleTarget)
+        {
+            var players = ctx.Players;
+            for (int i = 0; i < players.Length; i++)
+            {
+                var candidate = players[i];
+                if (candidate.Team != p.Team
+                    && candidate.State == PlayerState.KnockedDown
+                    && CanReceiveOffBallTackle(candidate)
+                    && Vec2.Distance(p.Position, candidate.Position) <= context.TackleDistanceMaxCells
+                    && IsInActivePlay(ctx, context, candidate.Position))
+                {
+                    return candidate;
+                }
+            }
+        }
+
+        return null;
+    }
+
+    /// <summary>
+    /// Un rival al que tiene sentido entrar SIN balón (C7): en el campo, no expulsado y no celebrando. A
+    /// diferencia de <see cref="CanBeBlocked"/> (la carga de <c>EvaluateBlock</c>) SÍ admite
+    /// <see cref="PlayerState.KnockedDown"/>: "Olfato de sangre" busca exactamente al que ya está en el
+    /// suelo.
+    /// </summary>
+    private static bool CanReceiveOffBallTackle(MatchPlayer player) =>
+        player.OnPitch && player.State is not (PlayerState.SentOff or PlayerState.Celebrating);
 
     /// <summary>
     /// Roles que entran a su marcado sin balón (ADR 0105 §2). Defensa y centrocampista: los dos que

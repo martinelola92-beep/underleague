@@ -180,6 +180,25 @@ public sealed record EconomyConfig(
     public CounterGoldTable CounterGold { get; init; } = CounterGoldTable.Empty;
 
     /// <summary>
+    /// Tarifa en oro que paga la muerte de un portador (paquete BB, consumidor Seguro de vida;
+    /// <c>data/economy/death-gold.json</c>). Canal aparte de <see cref="CounterGold"/>: se cobra una vez
+    /// por muerte, no por unidad de un contador acumulado.
+    /// </summary>
+    public DeathGoldTable DeathGold { get; init; } = DeathGoldTable.Empty;
+
+    /// <summary>
+    /// Traspaso de atributos al compañero vinculado cuando muere un portador (paquete BB, consumidor
+    /// Herencia; <c>data/economy/inheritance.json</c>).
+    /// </summary>
+    public InheritanceTable Inheritance { get; init; } = InheritanceTable.Empty;
+
+    /// <summary>
+    /// Porcentaje mínimo de reventa que garantiza un perk (paquete BB, consumidor Préstamo;
+    /// <c>data/economy/perk-resale.json</c>). Lo consulta <c>MarketSystem.SalePrice</c>.
+    /// </summary>
+    public PerkResaleTable PerkResale { get; init; } = PerkResaleTable.Empty;
+
+    /// <summary>
     /// Oro que cuesta curar una <b>lesión leve</b> en la clínica (AZ-G, ADR 0090). Menor que
     /// <see cref="ClinicCost"/> porque la leve solo cuesta un partido al −15 % (RF-091): a igual precio
     /// casi nunca compensaría pagar.
@@ -405,6 +424,9 @@ public static class EconomyLoader
             PerkValues = PerkValueTable.FromJson(files),
             ItemValues = Items.ItemValueTable.FromJson(files),
             CounterGold = CounterGoldTable.FromJson(files),
+            DeathGold = DeathGoldTable.FromJson(files),
+            Inheritance = InheritanceTable.FromJson(files),
+            PerkResale = PerkResaleTable.FromJson(files),
             ClinicMinorCost = root.Int("clinicMinorCost"),
             ClinicSquadCost = root.Int("clinicSquadCost"),
             ClinicRiskyPercent = root.Int("clinicRiskyPercent"),

@@ -22,6 +22,13 @@ internal static class Marking
     private const float RolePreferenceCells = 2.0f;
 
     /// <summary>
+    /// Radio real, en casillas, dentro del cual un rival cuenta como "cerca" del vinculado que un
+    /// Guardaespaldas protege (C5, <c>modifyMarkBias</c> con variante <c>protectLinked</c>). No es un dato
+    /// de <c>/data</c> porque el número no lo elige el perk, lo fija esta primitiva.
+    /// </summary>
+    private const float ProtectRadiusCells = 3.0f;
+
+    /// <summary>
     /// Actualiza las asignaciones de los dos equipos. Con <paramref name="force"/> se descartan las
     /// asignaciones vigentes y se rehacen todas (cambio de posesión); sin él solo se rellenan los huecos:
     /// defensores sin objetivo o con un objetivo que ya no está en el campo.
@@ -105,6 +112,30 @@ internal static class Marking
             {
                 cost -= RolePreferenceCells;
             }
+
+            // C5 (docs/analisis/perks-catalogo-unificado.md §3.2): tres términos más de preferencia sobre
+            // el mismo coste, todos data-driven vía el efecto modifyMarkBias.
+            //
+            // "Perro de presa": descuento si el candidato lleva la etiqueta que el marcador prefiere.
+            if (marker.MarkPreferredTag.Length > 0 && candidate.Definition.HasTag(marker.MarkPreferredTag))
+            {
+                cost -= marker.MarkPreferredBonusCells;
+            }
+
+            // "Guardaespaldas": descuento si el candidato está cerca del vinculado que el marcador
+            // protege. No es "distancia al vinculado" en vez de "distancia al marcador" -sería reescribir
+            // el coste entero-, es un empujón adicional sobre el mismo coste (§3.2: extiende el término
+            // existente, no lo sustituye).
+            if (marker.MarkProtect is { } protectedAlly
+                && Vec2.Distance(candidate.Position, protectedAlly.Position) <= ProtectRadiusCells)
+            {
+                cost -= marker.MarkProtectBonusCells;
+            }
+
+            // "Hombre libre": actúa sobre el emparejamiento CONTRARIO (es del candidato, no del marcador):
+            // cualquier marcador rival paga un recargo por considerarlo. Es el único de los tres que toca
+            // la IA del equipo contrario, y por eso se mide aparte (encargo, C5).
+            cost += candidate.MarkAvoidanceCells;
 
             if (best is null || cost < bestCost)
             {

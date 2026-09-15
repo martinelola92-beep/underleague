@@ -1,5 +1,5 @@
 {
-  "_doc": "Plantillas de descripción de perks, objetos y consumibles (RT-035). El texto de un efecto NO se escribe a mano: se compone desde el propio dato con estas plantillas, así que descripción y efecto no pueden divergir. Marcadores: {trigger} {condition} {effects} {limit} {target} {who} {tag} {attribute} {duration} {probability} {counter} {value:+} {value:+%} {valuePerCounter:+} {maxValue} {counterDivisor} {ticks} {event} {n} {position} {zone} {detail} {a} {b} {point}. Las claves de 'conditions' son el nombre de la función y, para las funciones que devuelven un número o texto, el nombre más el sufijo de la comparación (Lt, Le, Gt, Ge, Eq, Ne). Secciones del rediseño espacial (paquete S): 'links' nombra las relaciones direccionales de la ADR 0021 (marcador {link}), 'immunities' los efectos de tipo immunity, 'points' el punto simbólico de un efecto relocate (marcador {point}), y 'startZones', 'startFlanks' y 'stats' los literales de las funciones startsIn, startsOn y stat (marcadores {startZone}, {startFlank}, {stat}, {cells}). Los valores porcentuales se escriben y se leen en puntos porcentuales enteros. Las claves con sufijo 'Hint' de 'startZones' y 'startFlanks' NO las usa el generador: son la explicación larga que la pantalla de Equipo enseña en un tooltip al pasar el ratón por el nombre de la zona dentro de la descripción de un perk (AW-F).",
+  "_doc": "Plantillas de descripción de perks, objetos y consumibles (RT-035). El texto de un efecto NO se escribe a mano: se compone desde el propio dato con estas plantillas, así que descripción y efecto no pueden divergir. Marcadores: {trigger} {condition} {effects} {limit} {target} {who} {tag} {attribute} {duration} {probability} {counter} {value:+} {value:+%} {valuePerCounter:+} {maxValue} {counterDivisor} {ticks} {event} {n} {position} {zone} {detail} {a} {b} {point} {scalar} {dimension} {markTag}. Las claves de 'conditions' son el nombre de la función y, para las funciones que devuelven un número o texto, el nombre más el sufijo de la comparación (Lt, Le, Gt, Ge, Eq, Ne). Secciones del rediseño espacial (paquete S): 'links' nombra las relaciones direccionales de la ADR 0021 (marcador {link}), 'immunities' los efectos de tipo immunity, 'points' el punto simbólico de un efecto relocate (marcador {point}), y 'startZones', 'startFlanks' y 'stats' los literales de las funciones startsIn, startsOn y stat (marcadores {startZone}, {startFlank}, {stat}, {cells}). Los valores porcentuales se escriben y se leen en puntos porcentuales enteros. Las claves con sufijo 'Hint' de 'startZones' y 'startFlanks' NO las usa el generador: son la explicación larga que la pantalla de Equipo enseña en un tooltip al pasar el ratón por el nombre de la zona dentro de la descripción de un perk (AW-F).",
   "layout": {
     "plain": "{trigger}, {effects}.",
     "withCondition": "{trigger}, {condition}, {effects}.",
@@ -41,7 +41,18 @@
     "modifyLeashPerCounter": "{target} {valuePerCounter:+} de correa por cada {counter} (máximo {maxValue}) durante {duration}",
     "modifyLeashPerCounterDivided": "{target} {valuePerCounter:+} de correa por cada {counterDivisor} de {counter} (máximo {maxValue}) durante {duration}",
     "injure": "lesiona a {target}",
-    "relocate": "{target} se reubica {point}"
+    "relocate": "{target} se reubica {point}",
+    "modifyTraitScalar": "{target} {value:+} de {scalar}",
+    "shiftHomeForward": "{target} adelanta {value:abs} casillas su casilla-hogar en el sentido de ataque de su equipo",
+    "shiftHomeBackward": "{target} retrasa {value:abs} casillas su casilla-hogar en el sentido de ataque de su equipo",
+    "modifyZoneShape": "{target} amplía {value:abs} casillas su zona de acción hacia {dimension}",
+    "modifyZoneShapeDown": "{target} reduce {value:abs} casillas su zona de acción hacia {dimension}",
+    "modifyMarkBiasPreferTag": "{target} prefiere marcar al rival {markTag}",
+    "modifyMarkBiasProtectLinked": "protege a {target} marcando a quien le amenaza",
+    "modifyMarkBiasAvoided": "ningún marcador rival quiere hacerse cargo de {target}",
+    "modifyTackleBiasKnockedDown": "{target} prefiere entrar al rival que ya está derribado",
+    "modifyTackleBiasFouled": "va a por quien le hizo la última falta",
+    "extraAction": "{target} repite la jugada en el mismo instante"
   },
   "triggers": {
     "MATCH_START": "al empezar el partido",
@@ -364,6 +375,26 @@
   "points": {
     "onBallCarrier": "sobre el rival que lleva el balón",
     "betweenBallAndOwnGoal": "entre el balón y su propia portería"
+  },
+  "scalars": {
+    "hardTackleBonus": "bono a la entrada dura",
+    "speedBonusPercent": "bono porcentual de velocidad",
+    "shotQualityBonus": "bono de calidad de tiro",
+    "shootRangeBonusCells": "casillas de alcance de tiro",
+    "passQualityBonus": "bono de calidad de pase",
+    "foulChanceBonus": "bono a la probabilidad de falta",
+    "injuryChanceBonus": "bono a la probabilidad de lesión",
+    "fatigueResistancePercent": "resistencia porcentual a la fatiga",
+    "injuryResistanceBonus": "bono de resistencia a las lesiones",
+    "adjacentTeammateBonusPercent": "bono porcentual a los compañeros adyacentes",
+    "saveBonusClose": "bono de parada cercana",
+    "saveBonusFar": "bono de parada lejana",
+    "leashBonus": "casillas de correa"
+  },
+  "zoneDimensions": {
+    "forward": "delante",
+    "back": "atrás",
+    "sides": "los lados"
   },
   "startZones": {
     "OwnThird": "su tercio atrasado",

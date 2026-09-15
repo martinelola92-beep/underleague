@@ -1,0 +1,6 @@
+{
+  "_doc": "Porcentaje MINIMO de reventa que garantiza un perk, por encima del que le tocaria por estado fisico (paquete BB, consumidor Prestamo: 'se revende sin perder la mitad', docs/analisis/perks-catalogo-unificado.md §3.2). 'loan' es el id PROVISIONAL del perk de la tanda siguiente; si el catalogo final usa otro id hay que renombrar esta entrada junto con el (Sim.Run.Systems.Economy.PerkResaleTable.PercentFor devuelve 0 sin lanzar cuando no encuentra el perk, que Sim.Run.Systems.Market.MarketSystem.SalePrice trata como 'sin override'). MarketSystem.SalePrice toma el MAYOR entre este valor y economy.market.playerSaleStatePercent del estado fisico del jugador: el perk solo puede ayudar, nunca bajar el precio. 100 es 'vende como si estuviera sano pase lo que pase' (RF-114f no se toca para nadie mas: solo el portador del perk se salta la penalizacion por estado).",
+  "overrides": {
+    "loan": 100
+  }
+}

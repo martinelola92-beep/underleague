@@ -193,6 +193,74 @@ public static class GoldCalculator
 
         return total;
     }
+
+    /// <summary>
+    /// Oro que pagan las muertes de este partido (paquete BB, consumidor Seguro de vida), <b>se haya
+    /// ganado o no</b>: mismo canal aparte que <see cref="CounterGold"/> (ADR 0113), pagado una vez por
+    /// muerte y no por unidad de contador.
+    /// </summary>
+    public static DeathGold DeathGold(RunState state, RunMatchSummary summary, EconomyConfig economy)
+    {
+        ArgumentNullException.ThrowIfNull(state);
+        ArgumentNullException.ThrowIfNull(summary);
+        ArgumentNullException.ThrowIfNull(economy);
+        var rows = DeathGoldRows(state, summary, economy.DeathGold);
+        return new DeathGold(rows, SumDeathGold(rows));
+    }
+
+    /// <summary>
+    /// Filas de oro por muerte (paquete BB): las muertes propias de este partido
+    /// (<see cref="RunMatchSummary.DeathDetails"/>) cuyos perks tienen tarifa en <paramref name="rates"/>.
+    /// Solo cuentan las del propio club -<c>MatchResolution</c> solo registra muertes de
+    /// <c>matchEvent.Team == 0</c>-, con la misma comprobación de pertenencia a la plantilla que
+    /// <see cref="CounterGoldRows"/> por si la instantánea cambiara entre el partido y este cálculo.
+    /// Ordenadas por orden del propio evento y, dentro, por id de perk ascendente (RT-041, heredado del
+    /// orden ya ordinal de <see cref="Model.RunPlayer.Perks"/>).
+    /// </summary>
+    private static IReadOnlyList<DeathGoldRow> DeathGoldRows(
+        RunState state, RunMatchSummary summary, DeathGoldTable rates)
+    {
+        var details = summary.DeathDetails;
+        if (details.Count == 0 || rates.Count == 0)
+        {
+            return Array.Empty<DeathGoldRow>();
+        }
+
+        var rows = new List<DeathGoldRow>();
+        for (int i = 0; i < details.Count; i++)
+        {
+            var detail = details[i];
+            if (state.FindPlayer(detail.PlayerId) is null)
+            {
+                continue;
+            }
+
+            var perks = detail.Perks;
+            for (int p = 0; p < perks.Count; p++)
+            {
+                int rate = rates.RateFor(perks[p]);
+                if (rate == 0)
+                {
+                    continue;
+                }
+
+                rows.Add(new DeathGoldRow(detail.PlayerId, perks[p], rate));
+            }
+        }
+
+        return rows;
+    }
+
+    private static int SumDeathGold(IReadOnlyList<DeathGoldRow> rows)
+    {
+        int total = 0;
+        for (int i = 0; i < rows.Count; i++)
+        {
+            total += rows[i].Gold;
+        }
+
+        return total;
+    }
 }
 
 /// <summary>
@@ -249,4 +317,27 @@ public sealed record CounterGold(IReadOnlyList<CounterGoldRow> Rows, int Total)
 {
     /// <summary>Ningún contador ha pagado nada: lo que devuelve un partido sin perks de negocio.</summary>
     public static CounterGold None { get; } = new(Array.Empty<CounterGoldRow>(), 0);
+}
+
+/// <summary>
+/// Una fila del oro que ha pagado la muerte de un jugador (paquete BB, consumidor Seguro de vida). A
+/// diferencia de <see cref="CounterGoldRow"/> no hay "unidades": una muerte es un suceso único, y
+/// <see cref="Gold"/> es directamente la tarifa del perk.
+/// </summary>
+/// <param name="PlayerId">Jugador propio que ha muerto.</param>
+/// <param name="PerkId">Perk cuya tarifa ha pagado esta fila.</param>
+/// <param name="Gold">Oro de esta fila, de <c>data/economy/death-gold.json</c>.</param>
+public sealed record DeathGoldRow(int PlayerId, string PerkId, int Gold);
+
+/// <summary>
+/// Oro que las muertes de un partido han pagado a la run (paquete BB), con su desglose. Canal aparte del
+/// premio de partido y de <see cref="CounterGold"/>: se cobra se gane o se pierda, porque el jugador ya
+/// pagó por adelantado el slot del perk.
+/// </summary>
+/// <param name="Rows">Una fila por muerte con perk de tarifa; vacía si ninguna la tiene.</param>
+/// <param name="Total">Suma de <see cref="DeathGoldRow.Gold"/> de todas las filas.</param>
+public sealed record DeathGold(IReadOnlyList<DeathGoldRow> Rows, int Total)
+{
+    /// <summary>Ninguna muerte ha pagado nada: lo que devuelve un partido sin muertes o sin perks de esta tabla.</summary>
+    public static DeathGold None { get; } = new(Array.Empty<DeathGoldRow>(), 0);
 }

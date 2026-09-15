@@ -814,6 +814,38 @@ internal sealed class EffectEngine : IPerkLinks
                     case EffectType.Relocate:
                         Relocate(player, effect.RelocationPoint);
                         break;
+                    case EffectType.ModifyTraitScalar:
+                        // C4: los trece escalares de rasgo ya existían -los escribían los rasgos en el
+                        // constructor-; esto es el efecto de perk que faltaba (Cañón, Kamikaze, Pagar el
+                        // hierro).
+                        player.AddTraitScalarDelta(effect.Scalar, value);
+                        break;
+                    case EffectType.ShiftHome:
+                        // C8: se SUMA al desplazamiento de bloque táctico que MatchEngine.UpdateBlockShift
+                        // ya calculaba; no lo sustituye.
+                        player.AddHomeShiftDelta(value);
+                        break;
+                    case EffectType.ModifyZoneShape:
+                        // C8: una sola dimensión de la zona de acción, sin tocar las otras dos (a
+                        // diferencia de modifyLeash, que ensancha las tres por igual).
+                        player.AddZoneShapeDelta(effect.ZoneDimension, value);
+                        break;
+                    case EffectType.ModifyMarkBias:
+                        // C5: un término más sobre el coste de Marking.Assign, que ya tenía preferencia de
+                        // rol (Perro de presa, Guardaespaldas, Hombre libre -este último sobre el
+                        // emparejamiento CONTRARIO, ver ApplyMarkBias).
+                        ApplyMarkBias(subscription.Owner, player, effect.MarkBias, effect.MarkTag, value);
+                        break;
+                    case EffectType.ModifyTackleBias:
+                        // C7: sustituye al marcado como objetivo de una entrada sin balón (ADR 0105),
+                        // nunca al poseedor rival (Olfato de sangre, Rabia).
+                        ApplyTackleBias(subscription.Owner, player, effect.TackleBias);
+                        break;
+                    case EffectType.ExtraAction:
+                        // Doble disparo, Embestida, Arrollador: repite la acción del disparador dentro del
+                        // mismo tick (ver ExecuteExtraAction para el porqué es seguro con RT-041/RT-042).
+                        ExecuteExtraAction(subscription);
+                        break;
                     default:
                         break;
                 }
@@ -966,6 +998,97 @@ internal sealed class EffectEngine : IPerkLinks
             case RelocationPoint.BetweenBallAndOwnGoal:
                 owner.Position = Vec2.Lerp(_engine.Ball.Position, Pitch.GoalCenter(1 - owner.Team), 0.5f);
                 owner.Velocity = new Vec2(0f, 0f);
+                break;
+        }
+    }
+
+    /// <summary>
+    /// C5 (docs/analisis/perks-catalogo-unificado.md §3.2): aplica una de las tres variantes de
+    /// <c>modifyMarkBias</c> sobre el jugador que corresponda. <paramref name="target"/> es quien
+    /// <see cref="ResolveTargets"/> resolvió para este efecto -el propio portador en
+    /// <see cref="MarkBiasKind.PreferTag"/> y <see cref="MarkBiasKind.Avoided"/>, el vinculado en
+    /// <see cref="MarkBiasKind.ProtectLinked"/>-, y el cargador ya exige que el <c>target</c> del dato
+    /// case con la variante (RT-032), así que aquí no hace falta comprobarlo otra vez.
+    /// </summary>
+    private static void ApplyMarkBias(MatchPlayer owner, MatchPlayer target, MarkBiasKind kind, string markTag, int value)
+    {
+        switch (kind)
+        {
+            case MarkBiasKind.PreferTag:
+                target.MarkPreferredTag = markTag;
+                target.MarkPreferredBonusCells = value;
+                break;
+            case MarkBiasKind.ProtectLinked:
+                // El descuento es del PORTADOR (es él quien marca más barato), no del vinculado: por eso
+                // se escribe en owner y no en target, aunque target -el vinculado- es a quien apunta.
+                owner.MarkProtect = target;
+                owner.MarkProtectBonusCells = value;
+                break;
+            case MarkBiasKind.Avoided:
+                // "Hombre libre": el recargo es del candidato (target == owner aquí), y lo lee
+                // Marking.Best() para CUALQUIER marcador rival, no solo para los perks del propio equipo.
+                target.MarkAvoidanceCells = value;
+                break;
+        }
+    }
+
+    /// <summary>
+    /// C7 (docs/analisis/perks-catalogo-unificado.md §3.2): aplica una de las dos variantes de
+    /// <c>modifyTackleBias</c>. <paramref name="target"/> es quien <see cref="ResolveTargets"/> resolvió
+    /// -el propio portador en <see cref="TackleBiasKind.KnockedDown"/>, el actor (el que cometió la
+    /// falta) en <see cref="TackleBiasKind.Fouled"/>-.
+    /// </summary>
+    private static void ApplyTackleBias(MatchPlayer owner, MatchPlayer target, TackleBiasKind kind)
+    {
+        switch (kind)
+        {
+            case TackleBiasKind.KnockedDown:
+                target.PreferKnockedDownTackleTarget = true;
+                break;
+            case TackleBiasKind.Fouled:
+                // El recuerdo es del PORTADOR (a quién persigue), no del que le hizo la falta: por eso se
+                // escribe en owner con target -el actor de la falta- como valor.
+                owner.TackleNemesis = target;
+                break;
+        }
+    }
+
+    /// <summary>
+    /// Acción extra tras un evento (Doble disparo, Embestida, Arrollador; docs/analisis/perks-catalogo-
+    /// unificado.md §3.2): repite, dentro del MISMO tick, la acción que acaba de disparar la condición del
+    /// perk. Qué repetir sale del propio disparador del perk -<c>SHOT</c> o <c>TACKLE</c>, los dos únicos
+    /// que el cargador admite para <see cref="EffectType.ExtraAction"/> (RT-032)-, así que el efecto no
+    /// necesita ningún campo adicional.
+    ///
+    /// <para><b>Por qué no rompe RT-020/RT-041/RT-042.</b> <c>RepeatShot</c>/<c>RepeatTackle</c> vuelven a
+    /// llamar al mismo camino de resolución del motor (<c>LaunchShot</c>/<c>ResolveTackle</c>), que
+    /// publica sus propios eventos con <c>Publish</c>/<c>PublishAtDepth</c> a la profundidad YA
+    /// incrementada por la llamada que nos trajo aquí (<see cref="PublishAtDepth"/> hace
+    /// <c>_depth = depth + 1</c> antes de invocar <see cref="ApplyEffects"/>). Si la acción extra dispara
+    /// la MISMA condición otra vez -una cadena de disparos o entradas extra-, esa profundidad sigue
+    /// subiendo un nivel por vuelta hasta que <c>_maxDepth</c> la corta, exactamente el mismo mecanismo
+    /// que corta cualquier otra cadena de eventos anidados (RT-042), con el mismo contador observable en
+    /// el informe (<c>MatchReport.RecursionCuts</c>). No hay tick nuevo (RT-020: todo ocurre en el tick
+    /// que ya se estaba resolviendo) y el orden entre varias activaciones simultáneas de <c>extraAction</c>
+    /// sigue siendo el de <see cref="PublishAtDepth"/> -rareza descendente, id de jugador ascendente, id
+    /// de perk ascendente (RT-041)-: cada suscripción de esa lista se resuelve entera, con toda la cadena
+    /// que pueda disparar, antes de pasar a la siguiente.</para>
+    /// </summary>
+    private void ExecuteExtraAction(PerkSubscription subscription)
+    {
+        var owner = subscription.Owner;
+        if (!owner.OnPitch)
+        {
+            return;
+        }
+
+        switch (subscription.Perk.Trigger)
+        {
+            case EventType.Shot:
+                _engine.RepeatShot(owner);
+                break;
+            case EventType.Tackle:
+                _engine.RepeatTackle(owner);
                 break;
         }
     }

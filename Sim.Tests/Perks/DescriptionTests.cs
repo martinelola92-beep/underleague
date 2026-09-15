@@ -305,7 +305,13 @@ public sealed class DescriptionTests
                 "modifyProbabilityPerCounter", "modifyProbabilityPerCounterDown",
                 "modifyProbabilityPerCounterDivided", "modifyProbabilityPerCounterDividedDown", "cancelEvent",
                 "addCounter", "setState", "modifyKnockdownTicks", "modifyKnockdownTicksDown", "immunity",
-                "modifyExperience", "modifyExperienceDown",
+                "modifyExperience", "modifyExperienceDown", "injure", "relocate",
+
+                // Tanda 2 del catálogo (docs/analisis/perks-catalogo-unificado.md §3.2): C4, C5, C7, C8.
+                "modifyTraitScalar", "shiftHomeForward", "shiftHomeBackward",
+                "modifyZoneShape", "modifyZoneShapeDown",
+                "modifyMarkBiasPreferTag", "modifyMarkBiasProtectLinked", "modifyMarkBiasAvoided",
+                "modifyTackleBiasKnockedDown", "modifyTackleBiasFouled", "extraAction",
             })
             {
                 templates.Get("effects", key);
@@ -332,6 +338,16 @@ public sealed class DescriptionTests
             foreach (var key in new[] { "push", "mourning", "minorInjuryPenalty" })
             {
                 templates.Get("immunities", key);
+            }
+
+            foreach (var scalar in Enum.GetValues<TraitScalarKind>())
+            {
+                templates.Get("scalars", char.ToLowerInvariant(scalar.ToString()[0]) + scalar.ToString()[1..]);
+            }
+
+            foreach (var dimension in new[] { "forward", "back", "sides" })
+            {
+                templates.Get("zoneDimensions", dimension);
             }
 
             foreach (var key in new[] { "beside", "ahead", "behind", "left", "right", "diagonalAhead", "diagonalBehind" })

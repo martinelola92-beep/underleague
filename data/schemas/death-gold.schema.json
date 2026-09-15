@@ -1,0 +1,25 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://underleague.dev/schemas/death-gold.schema.json",
+  "title": "Underleague death gold rates",
+  "description": "data/economy/death-gold.json: oro que paga la run cuando muere un jugador que lleva un perk con tarifa aqui (paquete BB, primitiva 'run-level: oro y atributos al salir de la plantilla', consumidor Seguro de vida). Formato de mapa id de PERK (no de contador) -> entero, con el mismo criterio que data/economy/counter-gold.json: la tarifa nunca es negativa y un perk sin entrada no paga nada (Sim.Run.Systems.Economy.DeathGoldTable.Empty). Se cobra una vez por muerte, se gane o se pierda el partido, igual que el oro de contador (ADR 0113).",
+  "type": "object",
+  "properties": {
+    "_doc": {
+      "type": "string"
+    },
+    "rates": {
+      "type": "object",
+      "propertyNames": {
+        "pattern": "^[a-z][a-z0-9_]*$"
+      },
+      "additionalProperties": {
+        "type": "integer",
+        "minimum": 0
+      }
+    }
+  },
+  "required": [
+    "rates"
+  ]
+}

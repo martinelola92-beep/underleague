@@ -59,6 +59,9 @@ public static class PerkLoader
     {
         "type", "target", "attribute", "value", "valuePerCounter", "counter", "maxValue",
         "counterDivisor", "probability", "duration", "state", "ticks", "immunity", "point",
+
+        // Tanda 2 del catálogo (docs/analisis/perks-catalogo-unificado.md §3.2): C4, C5, C7, C8.
+        "scalar", "dimension", "markBias", "markTag", "tackleBias",
     };
 
     private static readonly string[] AxisNames =
@@ -75,6 +78,44 @@ public static class PerkLoader
 
     /// <summary>Vocabulario cerrado de <see cref="RelocationPoint"/> (efecto <c>relocate</c>, RT-032).</summary>
     private static readonly string[] RelocationPointNames = { "onBallCarrier", "betweenBallAndOwnGoal" };
+
+    /// <summary>
+    /// Vocabulario cerrado de <see cref="TraitScalarKind"/> (efecto <c>modifyTraitScalar</c>, C4,
+    /// RT-032): los trece escalares de rasgo de <c>MatchPlayer</c>, en el mismo orden que el enum. Un
+    /// nombre que no esté aquí -por ejemplo una errata- es un error de carga, no un escalar ignorado.
+    /// </summary>
+    private static readonly string[] TraitScalarNames =
+    {
+        "hardTackleBonus", "speedBonusPercent", "shotQualityBonus", "shootRangeBonusCells",
+        "passQualityBonus", "foulChanceBonus", "injuryChanceBonus", "fatigueResistancePercent",
+        "injuryResistanceBonus", "adjacentTeammateBonusPercent", "saveBonusClose", "saveBonusFar", "leashBonus",
+    };
+
+    /// <summary>Vocabulario cerrado de <see cref="ZoneDimension"/> (efecto <c>modifyZoneShape</c>, C8, RT-032).</summary>
+    private static readonly string[] ZoneDimensionNames = { "forward", "back", "sides" };
+
+    /// <summary>Vocabulario cerrado de <see cref="MarkBiasKind"/> (efecto <c>modifyMarkBias</c>, C5, RT-032).</summary>
+    private static readonly string[] MarkBiasNames = { "preferTag", "protectLinked", "avoided" };
+
+    /// <summary>Vocabulario cerrado de <see cref="TackleBiasKind"/> (efecto <c>modifyTackleBias</c>, C7, RT-032).</summary>
+    private static readonly string[] TackleBiasNames = { "knockedDown", "fouled" };
+
+    /// <summary>
+    /// Tope de magnitud de <c>modifyTraitScalar</c> (C4): el mismo orden que ya usan los rasgos que
+    /// escriben estos escalares hoy (<c>data/traits/*.json</c> va de 6 a 40 según el escalar), con margen.
+    /// No es una escala fina por escalar -serían trece techos distintos para trece unidades distintas- y
+    /// el catálogo real puede acotarlo más si un escalar concreto lo pide.
+    /// </summary>
+    private const int TraitScalarMagnitudeCap = 40;
+
+    /// <summary>Tope de casillas de <c>shiftHome</c> (C8): más generoso que <c>modifyLeash</c> porque desplaza identidad, no correa.</summary>
+    private const int ShiftHomeMagnitudeCap = 3;
+
+    /// <summary>Tope de casillas de <c>modifyZoneShape</c> (C8): la misma escala que <c>modifyLeash</c>.</summary>
+    private const int ZoneShapeMagnitudeCap = 2;
+
+    /// <summary>Tope de casillas de descuento/recargo de <c>modifyMarkBias</c> (C5): del orden de <c>Marking.RolePreferenceCells</c> (2 casillas), con margen.</summary>
+    private const int MarkBiasMagnitudeCap = 6;
 
     /// <summary>
     /// Etiquetas de especie (ADR 0024): coinciden con los ids de <see cref="Race"/>, que es lo que
@@ -546,6 +587,11 @@ public static class PerkLoader
                 {
                     throw new DataException(file, $"{path}[{i}].target", $"etiqueta de especie '{list[i].TargetTag}': {Why}");
                 }
+
+                if (list[i].MarkTag.Length > 0 && IsSpeciesTag(list[i].MarkTag))
+                {
+                    throw new DataException(file, $"{path}[{i}].markTag", $"etiqueta de especie '{list[i].MarkTag}': {Why}");
+                }
             }
         }
     }
@@ -625,6 +671,67 @@ public static class PerkLoader
             throw new DataException(strayPointNode.File, strayPointNode.Path, "'point' solo es válido en relocate");
         }
 
+        // C4: 'scalar' es obligatorio en modifyTraitScalar (RT-032, mismo patrón que 'point' en relocate:
+        // no hay un escalar por defecto razonable) y no significa nada en cualquier otro tipo.
+        var scalar = TraitScalarKind.HardTackleBonus;
+        if (type == EffectType.ModifyTraitScalar)
+        {
+            var scalarNode = node.TryProp("scalar")
+                ?? throw new DataException(file, node.Path, "modifyTraitScalar necesita 'scalar' (RT-032)");
+            scalar = (TraitScalarKind)Index(TraitScalarNames, scalarNode.AsString(), scalarNode, "escalar de rasgo");
+        }
+        else if (node.TryProp("scalar") is { } strayScalarNode)
+        {
+            throw new DataException(strayScalarNode.File, strayScalarNode.Path, "'scalar' solo es válido en modifyTraitScalar");
+        }
+
+        // C8: 'dimension' es obligatorio en modifyZoneShape (RT-032) y no significa nada en cualquier otro tipo.
+        var zoneDimension = ZoneDimension.Forward;
+        if (type == EffectType.ModifyZoneShape)
+        {
+            var dimensionNode = node.TryProp("dimension")
+                ?? throw new DataException(file, node.Path, "modifyZoneShape necesita 'dimension' (RT-032)");
+            zoneDimension = (ZoneDimension)Index(ZoneDimensionNames, dimensionNode.AsString(), dimensionNode, "dimensión de zona");
+        }
+        else if (node.TryProp("dimension") is { } strayDimensionNode)
+        {
+            throw new DataException(strayDimensionNode.File, strayDimensionNode.Path, "'dimension' solo es válido en modifyZoneShape");
+        }
+
+        // C5: 'markBias' es obligatorio en modifyMarkBias (RT-032) y no significa nada en cualquier otro tipo.
+        var markBias = MarkBiasKind.PreferTag;
+        if (type == EffectType.ModifyMarkBias)
+        {
+            var markBiasNode = node.TryProp("markBias")
+                ?? throw new DataException(file, node.Path, "modifyMarkBias necesita 'markBias' (RT-032)");
+            markBias = (MarkBiasKind)Index(MarkBiasNames, markBiasNode.AsString(), markBiasNode, "sesgo de marcaje");
+        }
+        else if (node.TryProp("markBias") is { } strayMarkBiasNode)
+        {
+            throw new DataException(strayMarkBiasNode.File, strayMarkBiasNode.Path, "'markBias' solo es válido en modifyMarkBias");
+        }
+
+        // 'markTag' solo tiene sentido junto a la variante preferTag de modifyMarkBias; se valida más
+        // abajo (ValidateEffect), donde ya se conoce 'markBias'.
+        string markTag = node.TryProp("markTag") is { } markTagNode ? markTagNode.AsString() : string.Empty;
+        if (markTag.Length > 0 && type != EffectType.ModifyMarkBias)
+        {
+            throw new DataException(file, node.Path, "'markTag' solo es válido en modifyMarkBias");
+        }
+
+        // C7: 'tackleBias' es obligatorio en modifyTackleBias (RT-032) y no significa nada en cualquier otro tipo.
+        var tackleBias = TackleBiasKind.KnockedDown;
+        if (type == EffectType.ModifyTackleBias)
+        {
+            var tackleBiasNode = node.TryProp("tackleBias")
+                ?? throw new DataException(file, node.Path, "modifyTackleBias necesita 'tackleBias' (RT-032)");
+            tackleBias = (TackleBiasKind)Index(TackleBiasNames, tackleBiasNode.AsString(), tackleBiasNode, "sesgo de entrada");
+        }
+        else if (node.TryProp("tackleBias") is { } strayTackleBiasNode)
+        {
+            throw new DataException(strayTackleBiasNode.File, strayTackleBiasNode.Path, "'tackleBias' solo es válido en modifyTackleBias");
+        }
+
         // ADR 0050 P1: el dato se escribe como porcentaje de CUOTA con signo y el cargador lo lleva al
         // multiplicador interno en base 10.000. Solo modifyProbability vive en esa base: los puntos de
         // atributo, las casillas de correa y los ticks de derribo son sus propias unidades y no se tocan.
@@ -659,11 +766,14 @@ public static class PerkLoader
             }
         }
 
-        ValidateEffect(node, file, trigger, type, target, duration, usesCounter, counter, counterDivisor, state, links, value);
+        ValidateEffect(
+            node, file, trigger, type, target, duration, usesCounter, counter, counterDivisor, state, links, value,
+            markBias, markTag, tackleBias);
 
         return new EffectDefinition(
             type, target, targetTag, attribute, value, usesCounter, valuePerCounter, counter,
-            maxValue, counterDivisor, probability, duration, state, ticks, immunity, relocationPoint);
+            maxValue, counterDivisor, probability, duration, state, ticks, immunity, relocationPoint,
+            scalar, zoneDimension, markBias, markTag, tackleBias);
     }
 
     /// <summary>
@@ -783,10 +893,14 @@ public static class PerkLoader
         int counterDivisor,
         PlayerState state,
         IReadOnlyList<LinkRelation> links,
-        int value)
+        int value,
+        MarkBiasKind markBias,
+        string markTag,
+        TackleBiasKind tackleBias)
     {
         bool instantOnly = type is EffectType.AddCounter or EffectType.ModifyBias or EffectType.SetState
-            or EffectType.CancelEvent or EffectType.Immunity or EffectType.Injure or EffectType.Relocate;
+            or EffectType.CancelEvent or EffectType.Immunity or EffectType.Injure or EffectType.Relocate
+            or EffectType.ExtraAction;
         if (instantOnly && duration != EffectDuration.Instant)
         {
             throw new DataException(file, node.Path, $"'{type}' solo admite duration 'instant'");
@@ -921,6 +1035,148 @@ public static class PerkLoader
             && target is not (EffectTarget.Owner or EffectTarget.Team or EffectTarget.WithTag))
         {
             throw new DataException(file, node.Path, "immunity solo admite target 'owner', 'team' o 'withTag:<Tag>'");
+        }
+
+        // ---------------------------------------------------------------- tanda 2 (C4/C5/C7/C8)
+
+        if (type == EffectType.ModifyTraitScalar)
+        {
+            if (value == 0)
+            {
+                throw new DataException(file, node.Path, "modifyTraitScalar con value 0 no hace nada");
+            }
+
+            if (Math.Abs(value) > TraitScalarMagnitudeCap)
+            {
+                throw new DataException(
+                    file,
+                    node.Path,
+                    $"'{value}' se sale de la magnitud razonable de un escalar de rasgo: entre "
+                        + $"-{TraitScalarMagnitudeCap} y {TraitScalarMagnitudeCap} (C4, del mismo orden que "
+                        + "data/traits/*.json)");
+            }
+        }
+
+        if (type == EffectType.ShiftHome)
+        {
+            if (target != EffectTarget.Owner)
+            {
+                throw new DataException(file, node.Path, "shiftHome solo admite target 'owner': desplaza al portador, no a otro jugador");
+            }
+
+            if (value == 0)
+            {
+                throw new DataException(file, node.Path, "shiftHome con value 0 no hace nada");
+            }
+
+            if (Math.Abs(value) > ShiftHomeMagnitudeCap)
+            {
+                throw new DataException(
+                    file, node.Path, $"shiftHome admite entre -{ShiftHomeMagnitudeCap} y {ShiftHomeMagnitudeCap} casillas (C8)");
+            }
+        }
+
+        if (type == EffectType.ModifyZoneShape)
+        {
+            if (target != EffectTarget.Owner)
+            {
+                throw new DataException(file, node.Path, "modifyZoneShape solo admite target 'owner'");
+            }
+
+            if (value == 0)
+            {
+                throw new DataException(file, node.Path, "modifyZoneShape con value 0 no hace nada");
+            }
+
+            if (Math.Abs(value) > ZoneShapeMagnitudeCap)
+            {
+                throw new DataException(
+                    file,
+                    node.Path,
+                    $"modifyZoneShape admite entre -{ZoneShapeMagnitudeCap} y {ZoneShapeMagnitudeCap} casillas, "
+                        + "la misma escala que modifyLeash (C8)");
+            }
+        }
+
+        if (type == EffectType.ModifyMarkBias)
+        {
+            if (value <= 0 || value > MarkBiasMagnitudeCap)
+            {
+                throw new DataException(
+                    file,
+                    node.Path,
+                    $"modifyMarkBias necesita un descuento o recargo positivo de hasta {MarkBiasMagnitudeCap} "
+                        + "casillas (C5): el signo lo pone la variante, no el dato");
+            }
+
+            switch (markBias)
+            {
+                case MarkBiasKind.PreferTag:
+                    if (target != EffectTarget.Owner)
+                    {
+                        throw new DataException(file, node.Path, "preferTag solo admite target 'owner'");
+                    }
+
+                    if (markTag.Length == 0)
+                    {
+                        throw new DataException(file, node.Path, "preferTag necesita 'markTag' (RT-032)");
+                    }
+
+                    break;
+                case MarkBiasKind.ProtectLinked:
+                    if (target != EffectTarget.Linked)
+                    {
+                        throw new DataException(file, node.Path, "protectLinked solo admite target 'linked'");
+                    }
+
+                    if (markTag.Length > 0)
+                    {
+                        throw new DataException(file, node.Path, "'markTag' no es válido en protectLinked");
+                    }
+
+                    break;
+                case MarkBiasKind.Avoided:
+                    if (target != EffectTarget.Owner)
+                    {
+                        throw new DataException(file, node.Path, "avoided solo admite target 'owner'");
+                    }
+
+                    if (markTag.Length > 0)
+                    {
+                        throw new DataException(file, node.Path, "'markTag' no es válido en avoided");
+                    }
+
+                    break;
+            }
+        }
+
+        if (type == EffectType.ModifyTackleBias)
+        {
+            switch (tackleBias)
+            {
+                case TackleBiasKind.KnockedDown when target != EffectTarget.Owner:
+                    throw new DataException(file, node.Path, "knockedDown solo admite target 'owner'");
+                case TackleBiasKind.Fouled when target != EffectTarget.Actor:
+                    throw new DataException(
+                        file, node.Path, "fouled solo admite target 'actor': quien cometió la falta");
+            }
+        }
+
+        if (type == EffectType.ExtraAction)
+        {
+            if (target != EffectTarget.Owner)
+            {
+                throw new DataException(file, node.Path, "extraAction solo admite target 'owner'");
+            }
+
+            if (trigger is not (EventType.Shot or EventType.Tackle))
+            {
+                throw new DataException(
+                    file,
+                    node.Path,
+                    "extraAction solo es válido con trigger SHOT o TACKLE: son las dos únicas acciones que "
+                        + "MatchEngine sabe repetir dentro del mismo tick (RT-032)");
+            }
         }
     }
 

@@ -1,0 +1,25 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://underleague.dev/schemas/perk-resale.schema.json",
+  "title": "Underleague perk resale overrides",
+  "description": "data/economy/perk-resale.json: porcentaje MINIMO de reventa que garantiza un perk (paquete BB, consumidor Prestamo), por encima del que le tocaria por su estado fisico (economy.market.playerSaleStatePercent). Sim.Run.Systems.Market.MarketSystem.SalePrice usa el MAYOR de los dos: el perk solo puede ayudar, nunca bajar el precio. Sin entrada aqui, el perk no cambia el porcentaje (Sim.Run.Systems.Economy.PerkResaleTable.Empty).",
+  "type": "object",
+  "properties": {
+    "_doc": {
+      "type": "string"
+    },
+    "overrides": {
+      "type": "object",
+      "propertyNames": {
+        "pattern": "^[a-z][a-z0-9_]*$"
+      },
+      "additionalProperties": {
+        "type": "integer",
+        "minimum": 0
+      }
+    }
+  },
+  "required": [
+    "overrides"
+  ]
+}

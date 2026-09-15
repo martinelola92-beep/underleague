@@ -200,12 +200,22 @@ public sealed class StandardRunSystems : IRunSystems
         state = EquipmentSystem.ProcessFragileItems(state, summary, _items);
         state = MercenarySystem.Process(state, summary, _economy);
 
+        // Herencia (paquete BB): traspasa atributos de un muerto a su vinculado ANTES de tocar el oro,
+        // porque cambia el estado de otro jugador de la plantilla, no una cifra. MatchResolution ya
+        // resolvió quién es el vinculado (geometría de la alineación inicial, RF-044); esto solo aplica el
+        // traspaso sobre el estado ya actualizado por el partido, con economy disponible.
+        state = InheritanceSystem.Apply(state, summary, _economy);
+
         // El oro de contador NO es premio de partido (ADR 0113): se cobra igual al perder, porque el
         // jugador ya lo pagó por adelantado gastando un slot en el perk. Es lo que separa una inversión de
         // una propina, y es justo en las derrotas donde se cobran los perks que miden supervivencia y
         // carne ajena. Se ingresa SIEMPRE DESPUÉS de la penalización: el porcentaje de la derrota muerde
         // el oro que la run traía, no el retorno de la inversión de este partido.
         int counterGold = GoldCalculator.CounterGold(state, summary, _economy).Total;
+
+        // El oro de muerte (paquete BB, Seguro de vida) es el mismo canal que el de contador: se cobra se
+        // gane o se pierda, porque el jugador ya pagó por adelantado el slot del perk.
+        int deathGold = GoldCalculator.DeathGold(state, summary, _economy).Total;
 
         if (!summary.Won)
         {
@@ -219,11 +229,12 @@ public sealed class StandardRunSystems : IRunSystems
                 state = state.AddGold(-penalty);
             }
 
-            return counterGold > 0 ? state.AddGold(counterGold) : state;
+            int loseGold = counterGold + deathGold;
+            return loseGold > 0 ? state.AddGold(loseGold) : state;
         }
 
         int gold = GoldCalculator.GoldForWin(state, node, summary, _economy);
-        state = state.AddGold(gold + counterGold);
+        state = state.AddGold(gold + counterGold + deathGold);
 
         // ADR 0043: superar el jefe cura la plantilla. Es lo que cierra el ciclo de desgaste del acto —se
         // puede exprimir la plantilla sabiendo que habrá alivio, en vez de administrar una ruina uniforme

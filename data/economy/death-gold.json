@@ -1,0 +1,6 @@
+{
+  "_doc": "Oro que paga la run cuando muere un jugador con un perk de esta tabla (paquete BB, primitiva 'run-level: oro y atributos al salir de la plantilla', docs/analisis/perks-catalogo-unificado.md §3.2, consumidor Seguro de vida). Mismo canal que data/economy/counter-gold.json (ADR 0113): se cobra una vez por muerte, se gane o se pierda el partido, y NO es premio de partido. 'life_insurance' es el id PROVISIONAL del perk de la tanda siguiente que consumira esta tarifa; si el catalogo final usa otro id hay que renombrar esta entrada junto con el, porque Sim.Run.Systems.Economy.DeathGoldTable.RateFor devuelve 0 sin lanzar cuando no encuentra el perk, y un perk sin tarifa aqui simplemente no paga nada (silencioso, no roto). Valor de partida calibrado a ojo por el diseñador -del orden de un premio de partido de liga del acto 1-, PENDIENTE de la medicion de /Balance que lo ajustara junto al resto del catalogo cuando el perk exista de verdad (mismo riesgo que la propia ADR 0113 señala: que el oro de un solo suceso no se vuelva comparable al premio de una victoria).",
+  "rates": {
+    "life_insurance": 8
+  }
+}

@@ -94,7 +94,8 @@ public sealed record PostMatchReport(
     IReadOnlyList<CardRow> Cards,
     RefereeReport Referee,
     GoldForWinBreakdown? Gold,
-    CounterGold CounterGold)
+    CounterGold CounterGold,
+    DeathGold DeathGold)
 {
     /// <summary>Muertes propias (RF-093): lo primero que el informe tiene que decir cuando las hay.</summary>
     public int Deaths
@@ -185,7 +186,12 @@ public static class PostMatchView
             // Sigue callándose si la run ha terminado, por el mismo motivo que el premio: no se ingresó.
             economy is null || stateAfterMatch.Result.IsOver
                 ? CounterGold.None
-                : GoldCalculator.CounterGold(stateAfterMatch, summary, economy));
+                : GoldCalculator.CounterGold(stateAfterMatch, summary, economy),
+            // El oro de muerte (paquete BB, Seguro de vida) es el mismo canal aparte que el de contador:
+            // se enseña se haya ganado o no, y se calla si la run ha terminado, por el mismo motivo.
+            economy is null || stateAfterMatch.Result.IsOver
+                ? DeathGold.None
+                : GoldCalculator.DeathGold(stateAfterMatch, summary, economy));
     }
 
     /// <summary>

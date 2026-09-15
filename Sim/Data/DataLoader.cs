@@ -178,6 +178,10 @@ public static class DataLoader
         // Nombres visibles de las líneas del catálogo (ADR 0051): la descripción de un maestro dice qué
         // línea exige y cuál cierra, y esas dos cosas son texto que ve el jugador (RT-073).
         "families",
+
+        // Tanda 2 del catálogo (docs/analisis/perks-catalogo-unificado.md §3.2): los trece escalares de
+        // rasgo de modifyTraitScalar (C4) y las tres direcciones de modifyZoneShape (C8).
+        "scalars", "zoneDimensions",
     };
 
     private static DescriptionTemplates ParseTemplates(string file, string content)

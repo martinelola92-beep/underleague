@@ -350,7 +350,13 @@
             "immunity",
             "modifyExperience",
             "injure",
-            "relocate"
+            "relocate",
+            "modifyTraitScalar",
+            "shiftHome",
+            "modifyZoneShape",
+            "modifyMarkBias",
+            "modifyTackleBias",
+            "extraAction"
           ]
         },
         "target": {
@@ -442,6 +448,52 @@
           "enum": [
             "onBallCarrier",
             "betweenBallAndOwnGoal"
+          ]
+        },
+        "scalar": {
+          "description": "C4 (docs/analisis/perks-catalogo-unificado.md §3.2): uno de los trece escalares de rasgo de MatchPlayer, que hasta ahora solo escribían los rasgos. Obligatorio en modifyTraitScalar y prohibido en cualquier otro tipo (lo comprueba el cargador).",
+          "enum": [
+            "hardTackleBonus",
+            "speedBonusPercent",
+            "shotQualityBonus",
+            "shootRangeBonusCells",
+            "passQualityBonus",
+            "foulChanceBonus",
+            "injuryChanceBonus",
+            "fatigueResistancePercent",
+            "injuryResistanceBonus",
+            "adjacentTeammateBonusPercent",
+            "saveBonusClose",
+            "saveBonusFar",
+            "leashBonus"
+          ]
+        },
+        "dimension": {
+          "description": "C8: dirección de un efecto 'modifyZoneShape'. Obligatorio en modifyZoneShape y prohibido en cualquier otro tipo (lo comprueba el cargador).",
+          "enum": [
+            "forward",
+            "back",
+            "sides"
+          ]
+        },
+        "markBias": {
+          "description": "C5: variante de un efecto 'modifyMarkBias' sobre el coste del reparto de marcas (Marking.Assign, ADR 0022). Obligatorio en modifyMarkBias y prohibido en cualquier otro tipo (lo comprueba el cargador).",
+          "enum": [
+            "preferTag",
+            "protectLinked",
+            "avoided"
+          ]
+        },
+        "markTag": {
+          "description": "C5: etiqueta de rival que prefiere la variante 'preferTag' de modifyMarkBias. Obligatoria en esa variante y prohibida en cualquier otra combinación (lo comprueba el cargador).",
+          "type": "string",
+          "pattern": "^[A-Z][A-Za-z]*$"
+        },
+        "tackleBias": {
+          "description": "C7: variante de un efecto 'modifyTackleBias' sobre el criterio de a quién entrar sin balón (ADR 0105). Obligatorio en modifyTackleBias y prohibido en cualquier otro tipo (lo comprueba el cargador).",
+          "enum": [
+            "knockedDown",
+            "fouled"
           ]
         }
       },

@@ -46,7 +46,38 @@ public sealed record RunMatchSummary(
     /// posicional de los tests existentes.
     /// </summary>
     public IReadOnlyList<PlayerCounterDelta> CounterDeltas { get; init; } = Array.Empty<PlayerCounterDelta>();
+
+    /// <summary>
+    /// Detalle de cada jugador PROPIO que ha muerto en este partido, en el orden del propio evento (RT-041,
+    /// que ya es determinista). Es la primitiva "run-level: oro y atributos al salir de la plantilla"
+    /// (paquete BB, <c>docs/analisis/perks-catalogo-unificado.md</c> §3.2): de aquí salen tanto
+    /// <see cref="Economy.GoldCalculator.DeathGold"/> (Seguro de vida) como
+    /// <see cref="Economy.InheritanceSystem"/> (Herencia). Propiedad añadida fuera del constructor
+    /// primario, como <see cref="CounterDeltas"/>, para no romper la construcción posicional de los tests
+    /// existentes. Vacía si nadie ha muerto.
+    /// </summary>
+    public IReadOnlyList<PlayerDeathDetail> DeathDetails { get; init; } = Array.Empty<PlayerDeathDetail>();
 }
+
+/// <summary>
+/// Detalle de un jugador propio que ha muerto en un partido (paquete BB, §3.2). Lo construye
+/// <c>MatchResolution</c> en el momento del evento <c>DEATH</c>, con los perks del jugador tal y como
+/// estaban en ese instante (no cambian al morir) y su compañero vinculado ya resuelto.
+/// </summary>
+/// <param name="PlayerId">Jugador que ha muerto.</param>
+/// <param name="Perks">
+/// Perks que llevaba, en orden ascendente (<see cref="Model.RunPlayer.Perks"/> ya viene ordenado así,
+/// RT-041). De aquí lee su tarifa <see cref="Economy.DeathGoldTable"/> y su traspaso
+/// <see cref="Economy.InheritanceTable"/>.
+/// </param>
+/// <param name="LinkedPlayerId">
+/// Compañero vinculado en la alineación INICIAL de este partido (<see cref="MatchLineup.Lineup"/>), o -1
+/// si ninguno de los perks del muerto declara relaciones de vínculo (<c>PerkDefinition.Links</c>) o
+/// ninguna relación resuelve candidato. Solo lo resuelve el <b>primer</b> perk con vínculo declarado, en
+/// orden ascendente: es una decisión de diseño del paquete BB, no una limitación del motor.
+/// <see cref="Economy.InheritanceSystem"/> se encarga de comprobar si sigue vivo al aplicar el traspaso.
+/// </param>
+public sealed record PlayerDeathDetail(int PlayerId, IReadOnlyList<string> Perks, int LinkedPlayerId);
 
 /// <summary>
 /// Los huecos que el paquete W deja abiertos para los paquetes X (economía, mercado, plantilla) e Y

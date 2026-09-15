@@ -1,5 +1,6 @@
 using Underleague.Sim.Data;
 using Underleague.Sim.Model;
+using Underleague.Sim.Perks;
 
 namespace Underleague.Sim.Engine;
 
@@ -37,6 +38,9 @@ internal sealed class MatchPlayer
     private readonly int _massStrengthWeight;
     private readonly int _massRadiusWeight;
     private int _leashCellDelta;
+
+    /// <summary>Casillas extra por dimensión de la zona de acción (C8, <c>modifyZoneShape</c>), en el orden de <see cref="ZoneDimension"/>.</summary>
+    private readonly int[] _zoneShapeDeltaCells = new int[3];
     private ActionZone _zone;
     private ActionZone _outerZone;
     private int _mass;
@@ -221,26 +225,26 @@ internal sealed class MatchPlayer
     /// <summary>Resistencia efectiva (§3).</summary>
     public int Stamina => _effectiveAttributes[(int)AttributeKind.Stamina];
 
-    public int HardTackleBonus { get; }
+    public int HardTackleBonus { get; private set; }
 
-    public int SpeedBonusPercent { get; }
+    public int SpeedBonusPercent { get; private set; }
 
-    public int ShotQualityBonus { get; }
+    public int ShotQualityBonus { get; private set; }
 
-    public int ShootRangeBonusCells { get; }
+    public int ShootRangeBonusCells { get; private set; }
 
-    public int PassQualityBonus { get; }
+    public int PassQualityBonus { get; private set; }
 
-    public int FoulChanceBonus { get; }
+    public int FoulChanceBonus { get; private set; }
 
-    public int InjuryChanceBonus { get; }
+    public int InjuryChanceBonus { get; private set; }
 
-    public int FatigueResistancePercent { get; }
+    public int FatigueResistancePercent { get; private set; }
 
-    public int InjuryResistanceBonus { get; }
+    public int InjuryResistanceBonus { get; private set; }
 
     /// <summary>Bono porcentual que este jugador da a los compañeros con casilla-hogar contigua (Leader, RT-094).</summary>
-    public int AdjacentTeammateBonusPercent { get; }
+    public int AdjacentTeammateBonusPercent { get; private set; }
 
     /// <summary>
     /// Suma de los bonos de los Leader del equipo con casilla-hogar contigua a la suya (§3.5). Se calcula
@@ -248,11 +252,135 @@ internal sealed class MatchPlayer
     /// </summary>
     public int LeaderBonusPercent { get; set; }
 
-    public int SaveBonusClose { get; }
+    public int SaveBonusClose { get; private set; }
 
-    public int SaveBonusFar { get; }
+    public int SaveBonusFar { get; private set; }
 
-    public int LeashBonus { get; }
+    public int LeashBonus { get; private set; }
+
+    /// <summary>
+    /// Suma delta a uno de los trece escalares de rasgo (efecto <c>modifyTraitScalar</c>, C4). Es la
+    /// misma unidad que ya usa el rasgo correspondiente (puntos, casillas o puntos porcentuales según el
+    /// escalar); el motor no distingue de dónde viene el número. <see cref="TraitScalarKind.LeashBonus"/>
+    /// recalcula la zona de acción, porque es el único de los trece que alimenta
+    /// <see cref="Recalculate"/>; los otros doce se leen directamente donde ya se leían.
+    /// </summary>
+    internal void AddTraitScalarDelta(TraitScalarKind kind, int delta)
+    {
+        if (delta == 0)
+        {
+            return;
+        }
+
+        switch (kind)
+        {
+            case TraitScalarKind.HardTackleBonus:
+                HardTackleBonus += delta;
+                break;
+            case TraitScalarKind.SpeedBonusPercent:
+                SpeedBonusPercent += delta;
+                break;
+            case TraitScalarKind.ShotQualityBonus:
+                ShotQualityBonus += delta;
+                break;
+            case TraitScalarKind.ShootRangeBonusCells:
+                ShootRangeBonusCells += delta;
+                break;
+            case TraitScalarKind.PassQualityBonus:
+                PassQualityBonus += delta;
+                break;
+            case TraitScalarKind.FoulChanceBonus:
+                FoulChanceBonus += delta;
+                break;
+            case TraitScalarKind.InjuryChanceBonus:
+                InjuryChanceBonus += delta;
+                break;
+            case TraitScalarKind.FatigueResistancePercent:
+                FatigueResistancePercent += delta;
+                break;
+            case TraitScalarKind.InjuryResistanceBonus:
+                InjuryResistanceBonus += delta;
+                break;
+            case TraitScalarKind.AdjacentTeammateBonusPercent:
+                AdjacentTeammateBonusPercent += delta;
+                break;
+            case TraitScalarKind.SaveBonusClose:
+                SaveBonusClose += delta;
+                break;
+            case TraitScalarKind.SaveBonusFar:
+                SaveBonusFar += delta;
+                break;
+            case TraitScalarKind.LeashBonus:
+                LeashBonus += delta;
+                Recalculate();
+                break;
+            default:
+                throw new ArgumentOutOfRangeException(nameof(kind));
+        }
+    }
+
+    /// <summary>
+    /// Casillas que un efecto <c>shiftHome</c> (C8) suma a la casilla-hogar efectiva de este jugador,
+    /// positivo hacia la portería rival: lo lee <c>MatchEngine.UpdateBlockShift</c> y se SUMA al
+    /// desplazamiento de bloque táctico que ya existía, no lo sustituye.
+    /// </summary>
+    public int HomeShiftCells { get; private set; }
+
+    /// <summary>Suma delta a <see cref="HomeShiftCells"/> (efecto <c>shiftHome</c>, C8).</summary>
+    internal void AddHomeShiftDelta(int delta) => HomeShiftCells += delta;
+
+    /// <summary>Suma delta a una dimensión de la zona de acción (efecto <c>modifyZoneShape</c>, C8) y recalcula.</summary>
+    internal void AddZoneShapeDelta(ZoneDimension dimension, int delta)
+    {
+        if (delta == 0)
+        {
+            return;
+        }
+
+        _zoneShapeDeltaCells[(int)dimension] += delta;
+        Recalculate();
+    }
+
+    /// <summary>
+    /// Etiqueta de rival preferida en el reparto de marcas (C5, <c>modifyMarkBias</c> con variante
+    /// <see cref="MarkBiasKind.PreferTag"/>, "Perro de presa"). Cadena vacía = sin preferencia.
+    /// </summary>
+    public string MarkPreferredTag { get; set; } = string.Empty;
+
+    /// <summary>Descuento en casillas de <see cref="MarkPreferredTag"/> sobre el coste de <see cref="Marking"/>.</summary>
+    public int MarkPreferredBonusCells { get; set; }
+
+    /// <summary>
+    /// Compañero que este jugador protege en el reparto de marcas (C5, <c>modifyMarkBias</c> con variante
+    /// <see cref="MarkBiasKind.ProtectLinked"/>, "Guardaespaldas"): un rival cerca de él es más barato de
+    /// marcar para este jugador. Null = no protege a nadie.
+    /// </summary>
+    public MatchPlayer? MarkProtect { get; set; }
+
+    /// <summary>Descuento en casillas por estar cerca de <see cref="MarkProtect"/>.</summary>
+    public int MarkProtectBonusCells { get; set; }
+
+    /// <summary>
+    /// Recargo en casillas que paga CUALQUIER marcador rival al considerar a este jugador como candidato
+    /// (C5, <c>modifyMarkBias</c> con variante <see cref="MarkBiasKind.Avoided"/>, "Hombre libre"): es la
+    /// única de las tres variantes de C5 que actúa sobre el emparejamiento del equipo CONTRARIO.
+    /// </summary>
+    public int MarkAvoidanceCells { get; set; }
+
+    /// <summary>
+    /// True si este jugador, al decidir una entrada sin balón (ADR 0105), prefiere al rival ya derribado
+    /// en vez del marcado (C7, <c>modifyTackleBias</c> con variante <see cref="TackleBiasKind.KnockedDown"/>,
+    /// "Olfato de sangre").
+    /// </summary>
+    public bool PreferKnockedDownTackleTarget { get; set; }
+
+    /// <summary>
+    /// Rival al que este jugador entra en vez de al marcado, mientras siga al alcance (C7,
+    /// <c>modifyTackleBias</c> con variante <see cref="TackleBiasKind.Fouled"/>, "Rabia"): lo escribe el
+    /// efecto en el momento de la falta y no caduca solo; un perk nuevo que lo sustituya o lo limpie es
+    /// decisión de ese perk, no de esta primitiva.
+    /// </summary>
+    public MatchPlayer? TackleNemesis { get; set; }
 
     /// <summary>Posición continua actual en casillas.</summary>
     public Vec2 Position { get; set; }
@@ -418,10 +546,13 @@ internal sealed class MatchPlayer
         int percent = _leashScaleAt1 + ((_leashScaleAt99 - _leashScaleAt1) * (leash - 1) / 98);
         int extraMilli = (LeashBonus + _leashCellDelta) * 1000;
 
+        // C8 (modifyZoneShape): a diferencia de extraMilli -que ensancha las tres direcciones por igual-,
+        // esto es un delta POR DIMENSIÓN, sin escalar por el porcentaje de correa: es "más profundidad",
+        // no "más correa", igual que extraMilli tampoco se escala por percent.
         _zone = new ActionZone(
-            ExtentMilli(_shapeForward, percent, extraMilli),
-            ExtentMilli(_shapeBack, percent, extraMilli),
-            ExtentMilli(_shapeSides, percent, extraMilli));
+            ExtentMilli(_shapeForward, percent, extraMilli + (_zoneShapeDeltaCells[(int)ZoneDimension.Forward] * 1000)),
+            ExtentMilli(_shapeBack, percent, extraMilli + (_zoneShapeDeltaCells[(int)ZoneDimension.Back] * 1000)),
+            ExtentMilli(_shapeSides, percent, extraMilli + (_zoneShapeDeltaCells[(int)ZoneDimension.Sides] * 1000)));
         _outerZone = _zone.Scaled(_outerLimitMultiplier);
     }
 

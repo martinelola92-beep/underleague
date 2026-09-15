@@ -1,0 +1,9 @@
+{
+  "_doc": "Traspaso de atributos al companero vinculado cuando muere el portador (paquete BB, consumidor Herencia, docs/analisis/perks-catalogo-unificado.md §3.2). 'inheritance' es el id PROVISIONAL del perk de la tanda siguiente; si el catalogo final usa otro id hay que renombrar esta entrada junto con el (InheritanceTable.RateFor devuelve null sin lanzar cuando no encuentra el perk, y sin entrada aqui simplemente no traspasa nada). Cada uno de los cinco atributos del muerto aporta 'percent' por ciento de SU VALOR al mismo atributo del vinculado, con el tope absoluto 'maxPerAttribute' por atributo (los dos limites a la vez, RT-023).\n\nEL TOPE SE FIJA CONTRA LA PROGRESION, NO A OJO. tuning.progression.attributesPerLevel vale 2: un nivel entero da +2 a cada atributo salvo la correa, o sea +8 en total, y el nivel maximo es 8 (RF-023). Con el tope 8 que traia este fichero al escribirse, UNA herencia valia +40 repartidos = CINCO NIVELES de golpe, concentrados en un jugador, a cambio de una muerte que la run iba a sufrir igual: eso no es heredar, es que convenga que se te muera gente. Con el tope 2, una herencia vale como mucho +10 repartidos, del orden de UN nivel para el heredero, que es lo que el perk promete -lo que era suyo pasa al que se queda- sin convertir la muerte en negocio.\n\nSIGUE SIN MEDIRSE. La cifra de cuanto gana la run sacrificando a alguien con este perk solo sale de /Balance una vez exista el perk real (comparar runWinRate y deathsPerRun con y sin builds que lo lleven). Hasta entonces esto es una cota razonada, no un valor calibrado, y la regla 11 de CLAUDE.md obliga a vigilar que el juego no empuje a sacrificar jugadores. Si el vinculado tambien ha muerto en el mismo partido no hay traspaso y no se redirige a un tercero (decision del paquete BB, ver Sim.Run.Systems.Economy.InheritanceSystem).",
+  "transfers": {
+    "inheritance": {
+      "percent": 20,
+      "maxPerAttribute": 2
+    }
+  }
+}

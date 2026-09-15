@@ -1,0 +1,40 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://underleague.dev/schemas/inheritance.schema.json",
+  "title": "Underleague inheritance transfer rates",
+  "description": "data/economy/inheritance.json: cuanto traspasa cada perk de traspaso de atributos (paquete BB, consumidor Herencia) al companero VINCULADO (misma geometria estatica que Sim.Perks.LinkGeometry, via PerkDefinition.Links) cuando el portador muere. Por cada uno de los cinco atributos del muerto, el vinculado recibe el 'percent' por ciento de SU VALOR, con un tope absoluto de 'maxPerAttribute' puntos por atributo (los dos limites a la vez: RT-023, aritmetica entera). Sin entrada aqui, el perk no traspasa nada. Si el vinculado tambien ha muerto en el mismo partido, no hay traspaso: no se redirige a un tercero (decision del paquete BB).",
+  "type": "object",
+  "properties": {
+    "_doc": {
+      "type": "string"
+    },
+    "transfers": {
+      "type": "object",
+      "propertyNames": {
+        "pattern": "^[a-z][a-z0-9_]*$"
+      },
+      "additionalProperties": {
+        "type": "object",
+        "properties": {
+          "percent": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 100
+          },
+          "maxPerAttribute": {
+            "type": "integer",
+            "minimum": 0
+          }
+        },
+        "required": [
+          "percent",
+          "maxPerAttribute"
+        ],
+        "additionalProperties": false
+      }
+    }
+  },
+  "required": [
+    "transfers"
+  ]
+}

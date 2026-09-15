@@ -49,6 +49,130 @@ public enum EffectType
     /// referencia (<see cref="RelocationPoint"/>) y el motor la resuelve en el instante del efecto.
     /// </summary>
     Relocate,
+
+    /// <summary>
+    /// C4 (docs/analisis/perks-catalogo-unificado.md §3.2): escribe sobre uno de los trece escalares de
+    /// rasgo de <see cref="Underleague.Sim.Engine.MatchPlayer"/> (Cañón, Kamikaze, Pagar el hierro). Los
+    /// trece escalares ya existían —los escriben los rasgos en el constructor—, lo que no existía era el
+    /// efecto de perk que los escribe. Vocabulario cerrado en <see cref="TraitScalarKind"/> (RT-032): un
+    /// nombre que no esté ahí es un error de carga, no un escalar que el motor ignora en silencio.
+    /// </summary>
+    ModifyTraitScalar,
+
+    /// <summary>
+    /// C8 (docs/analisis/perks-catalogo-unificado.md §3.2): desplaza la casilla-hogar efectiva del
+    /// portador (<see cref="Underleague.Sim.Engine.MatchPlayer.EffectiveHome"/>) hacia delante o hacia
+    /// atrás respecto al sentido de ataque de su equipo (Línea adelantada, Pivote hondo, Desmarque
+    /// profundo). Se suma al desplazamiento de <b>bloque</b> táctico que ya existía; no lo sustituye. El
+    /// valor son casillas enteras con signo (positivo = hacia la portería rival, RT-023).
+    /// </summary>
+    ShiftHome,
+
+    /// <summary>
+    /// C8 (docs/analisis/perks-catalogo-unificado.md §3.2): cambia la forma de la zona de acción del
+    /// portador (ADR 0028/0029) en una sola dirección (<see cref="ZoneDimension"/>), sin tocar las otras
+    /// dos: a diferencia de <c>modifyLeash</c> —que ensancha las tres direcciones por igual— este efecto
+    /// deja a un perk decir "más profundidad, sin más anchura" o al revés (Sombra). El valor son casillas
+    /// enteras con signo, en la misma escala que <c>modifyLeash</c>.
+    /// </summary>
+    ModifyZoneShape,
+
+    /// <summary>
+    /// C5 (docs/analisis/perks-catalogo-unificado.md §3.2): añade un término a la función de coste del
+    /// reparto de marcas (<see cref="Underleague.Sim.Engine.Marking"/>, ADR 0022), que ya tenía una
+    /// preferencia de rol. Tres variantes cerradas en <see cref="MarkBiasKind"/>: preferir una etiqueta
+    /// concreta de rival (Perro de presa), proteger a un vinculado marcando a quien esté cerca de él
+    /// (Guardaespaldas) y encarecer el propio marcaje para CUALQUIER marcador rival (Hombre libre, el
+    /// único de los tres que toca el emparejamiento del equipo CONTRARIO).
+    /// </summary>
+    ModifyMarkBias,
+
+    /// <summary>
+    /// C7 (docs/analisis/perks-catalogo-unificado.md §3.2): sesga el criterio con el que un jugador elige
+    /// a quién entrar sin balón (ADR 0105), que hoy es siempre el marcado asignado. Dos variantes cerradas
+    /// en <see cref="TackleBiasKind"/>: preferir al rival ya derribado (Olfato de sangre) y recordar quién
+    /// cometió la última falta para ir a por él (Rabia). No cambia la prioridad del poseedor rival, que
+    /// sigue siendo siempre la primera opción (ADR 0105): solo sustituye AL MARCADO cuando no hay balón al
+    /// alcance.
+    /// </summary>
+    ModifyTackleBias,
+
+    /// <summary>
+    /// Repite, dentro del MISMO tick, la acción que acaba de disparar este efecto (Doble disparo,
+    /// Embestida, Arrollador): solo válido con disparador <c>SHOT</c> o <c>TACKLE</c> (RT-032), que son
+    /// las dos únicas resoluciones que sabe repetir <c>MatchEngine.RepeatShot</c>/<c>RepeatTackle</c>. La
+    /// repetición vuelve a pasar por <c>EffectEngine.PublishAtDepth</c> con la profundidad ya
+    /// incrementada, así que una cadena de acciones extra usa el mismo <c>_maxDepth</c>/<c>RecursionCuts</c>
+    /// que cualquier otro evento anidado (RT-042): el corte es el de siempre, y es observable en el
+    /// informe.
+    /// </summary>
+    ExtraAction,
+}
+
+/// <summary>
+/// Vocabulario cerrado de <see cref="EffectType.ModifyTraitScalar"/> (C4, RT-032): los trece escalares de
+/// rasgo de <see cref="Underleague.Sim.Engine.MatchPlayer"/>, que hasta ahora solo escribían los rasgos en
+/// el constructor. Un nombre que no esté aquí es un error de carga.
+/// </summary>
+public enum TraitScalarKind
+{
+    HardTackleBonus,
+    SpeedBonusPercent,
+    ShotQualityBonus,
+    ShootRangeBonusCells,
+    PassQualityBonus,
+    FoulChanceBonus,
+    InjuryChanceBonus,
+    FatigueResistancePercent,
+    InjuryResistanceBonus,
+    AdjacentTeammateBonusPercent,
+    SaveBonusClose,
+    SaveBonusFar,
+    LeashBonus,
+}
+
+/// <summary>
+/// Dirección de <see cref="EffectType.ModifyZoneShape"/> (C8), en el mismo marco local que
+/// <see cref="Underleague.Sim.Engine.ActionZone"/>: adelante (hacia la portería rival), atrás (hacia la
+/// propia) o a los lados.
+/// </summary>
+public enum ZoneDimension
+{
+    Forward,
+    Back,
+    Sides,
+}
+
+/// <summary>
+/// Variante de <see cref="EffectType.ModifyMarkBias"/> (C5, docs/analisis/perks-catalogo-unificado.md
+/// §3.2): sobre qué término de la función de coste de <see cref="Underleague.Sim.Engine.Marking"/> actúa.
+/// </summary>
+public enum MarkBiasKind
+{
+    /// <summary>Descuento de coste cuando el candidato lleva la etiqueta declarada (Perro de presa).</summary>
+    PreferTag,
+
+    /// <summary>Descuento de coste cuando el candidato está cerca del vinculado que protege (Guardaespaldas).</summary>
+    ProtectLinked,
+
+    /// <summary>
+    /// Recargo de coste que paga CUALQUIER marcador rival al considerar al portador como candidato
+    /// (Hombre libre). Es la única variante que actúa sobre el emparejamiento del equipo CONTRARIO.
+    /// </summary>
+    Avoided,
+}
+
+/// <summary>
+/// Variante de <see cref="EffectType.ModifyTackleBias"/> (C7, docs/analisis/perks-catalogo-unificado.md
+/// §3.2): qué sustituye al marcado como objetivo de una entrada sin balón (ADR 0105).
+/// </summary>
+public enum TackleBiasKind
+{
+    /// <summary>Prefiere entrar al rival que ya está derribado (Olfato de sangre).</summary>
+    KnockedDown,
+
+    /// <summary>Recuerda quién cometió la última falta y va a por él (Rabia).</summary>
+    Fouled,
 }
 
 /// <summary>
@@ -272,7 +396,22 @@ public sealed record EffectDefinition(
     PlayerState State = PlayerState.KnockedDown,
     int Ticks = 0,
     ImmunityKind Immunity = ImmunityKind.Push,
-    RelocationPoint RelocationPoint = RelocationPoint.OnBallCarrier);
+    RelocationPoint RelocationPoint = RelocationPoint.OnBallCarrier,
+
+    /// <summary>Escalar de rasgo que escribe un efecto <see cref="EffectType.ModifyTraitScalar"/> (C4).</summary>
+    TraitScalarKind Scalar = TraitScalarKind.HardTackleBonus,
+
+    /// <summary>Dirección que cambia un efecto <see cref="EffectType.ModifyZoneShape"/> (C8).</summary>
+    ZoneDimension ZoneDimension = ZoneDimension.Forward,
+
+    /// <summary>Variante de un efecto <see cref="EffectType.ModifyMarkBias"/> (C5).</summary>
+    MarkBiasKind MarkBias = MarkBiasKind.PreferTag,
+
+    /// <summary>Etiqueta de rival preferida por <see cref="MarkBiasKind.PreferTag"/> (C5).</summary>
+    string MarkTag = "",
+
+    /// <summary>Variante de un efecto <see cref="EffectType.ModifyTackleBias"/> (C7).</summary>
+    TackleBiasKind TackleBias = TackleBiasKind.KnockedDown);
 
 /// <summary>
 /// Un perk cargado de <c>data/perks/&lt;id&gt;.json</c> (RT-033). Es un dato puro: no contiene código,

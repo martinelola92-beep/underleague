@@ -109,7 +109,31 @@ public static class MarketSystem
         // sirve para nada—, un grave un cuarto y un tocado la mitad. Vender la plantilla rota deja de ser
         // una salida de emergencia gratuita, que es lo que convierte el desgaste en un recurso de verdad
         // (RF-035, RF-104) en vez de en algo que se liquida en el mostrador.
-        return price * economy.Market.PlayerSaleStatePercent.Of(player.PhysicalState) / 100;
+        return price * ResaleStatePercent(player, economy) / 100;
+    }
+
+    /// <summary>
+    /// Porcentaje de estado con el que se cobra la venta (ADR 0108), salvo que alguno de los perks del
+    /// jugador garantice un mínimo más alto (paquete BB, consumidor Préstamo: "se revende sin perder la
+    /// mitad", <c>data/economy/perk-resale.json</c>). Se toma el MAYOR de los dos: el perk solo puede
+    /// ayudar, nunca bajar el precio por debajo del que ya le tocaba por su estado físico. No es un
+    /// sistema nuevo: es el modificador por perk concreto que le faltaba a <see cref="SalePrice"/>, que
+    /// ya sumaba <see cref="MarketConfig.PlayerSalePerPerk"/> por cada perk llevado.
+    /// </summary>
+    private static int ResaleStatePercent(RunPlayer player, EconomyConfig economy)
+    {
+        int percent = economy.Market.PlayerSaleStatePercent.Of(player.PhysicalState);
+        var perks = player.Perks;
+        for (int i = 0; i < perks.Count; i++)
+        {
+            int over = economy.PerkResale.PercentFor(perks[i]);
+            if (over > percent)
+            {
+                percent = over;
+            }
+        }
+
+        return percent;
     }
 
     private static RunState BuyPlayer(RunState state, IReadOnlyList<PlayerOffer> offers, BuyOffer decision, bool requirePayment)

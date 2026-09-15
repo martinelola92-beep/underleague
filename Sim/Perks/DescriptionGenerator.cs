@@ -42,6 +42,8 @@ public static class DescriptionGenerator
     private const string StatsSection = "stats";
     private const string FamiliesSection = "families";
     private const string PointsSection = "points";
+    private const string ScalarsSection = "scalars";
+    private const string ZoneDimensionsSection = "zoneDimensions";
 
     /// <summary>Descripción completa del perk en el idioma pedido (RT-035).</summary>
     public static string Describe(PerkDefinition perk, string language, Catalog catalog)
@@ -356,6 +358,30 @@ public static class DescriptionGenerator
             EffectType.ModifyExperience => effect.Value >= 0 ? "modifyExperience" : "modifyExperienceDown",
             EffectType.Injure => "injure",
             EffectType.Relocate => "relocate",
+
+            // C4: es un punto visible del mismo tipo que ya escriben los rasgos (docs/estilo-descripciones.md
+            // no lo trata como unidad interna), así que el signo va en {value:+}, igual que modifyAttribute.
+            EffectType.ModifyTraitScalar => "modifyTraitScalar",
+
+            // C8: "delante"/"detrás" se lee mejor que un número con signo (mismo criterio que modifyKnockdownTicks).
+            EffectType.ShiftHome => effect.Value >= 0 ? "shiftHomeForward" : "shiftHomeBackward",
+            EffectType.ModifyZoneShape => effect.Value >= 0 ? "modifyZoneShape" : "modifyZoneShapeDown",
+
+            // C5: las tres variantes se leen mejor como frases propias que como un "target" genérico con
+            // un {markBias} de por medio.
+            EffectType.ModifyMarkBias => effect.MarkBias switch
+            {
+                MarkBiasKind.PreferTag => "modifyMarkBiasPreferTag",
+                MarkBiasKind.ProtectLinked => "modifyMarkBiasProtectLinked",
+                _ => "modifyMarkBiasAvoided",
+            },
+
+            // C7: idem, dos frases propias en vez de un {tackleBias} genérico.
+            EffectType.ModifyTackleBias => effect.TackleBias == TackleBiasKind.Fouled
+                ? "modifyTackleBiasFouled"
+                : "modifyTackleBiasKnockedDown",
+
+            EffectType.ExtraAction => "extraAction",
             _ => throw new InvalidOperationException($"tipo de efecto sin plantilla: {effect.Type}"),
         };
 
@@ -364,6 +390,9 @@ public static class DescriptionGenerator
         text = Replace(text, "{immunity}", templates.Get(ImmunitiesSection, ImmunityKey(effect.Immunity)));
         text = Replace(text, "{point}", templates.Get(PointsSection, PointKey(effect.RelocationPoint)));
         text = Replace(text, "{attribute}", templates.Get(AttributesSection, ConditionCompiler.AttributeName(effect.Attribute)));
+        text = Replace(text, "{scalar}", templates.Get(ScalarsSection, ScalarKey(effect.Scalar)));
+        text = Replace(text, "{dimension}", templates.Get(ZoneDimensionsSection, ZoneDimensionKey(effect.ZoneDimension)));
+        text = Replace(text, "{markTag}", Tag(effect.MarkTag, templates));
         text = Replace(text, "{duration}", templates.Get(Durations, DurationKey(effect.Duration)));
         text = Replace(text, "{probability}", templates.Get(Probabilities, ProbabilityKey(effect.Probability)));
         text = Replace(text, "{counter}", CounterName(effect.Counter, templates));
@@ -530,6 +559,32 @@ public static class DescriptionGenerator
     {
         RelocationPoint.OnBallCarrier => "onBallCarrier",
         _ => "betweenBallAndOwnGoal",
+    };
+
+    /// <summary>Clave de plantilla del escalar de un efecto <see cref="EffectType.ModifyTraitScalar"/> (C4).</summary>
+    private static string ScalarKey(TraitScalarKind scalar) => scalar switch
+    {
+        TraitScalarKind.HardTackleBonus => "hardTackleBonus",
+        TraitScalarKind.SpeedBonusPercent => "speedBonusPercent",
+        TraitScalarKind.ShotQualityBonus => "shotQualityBonus",
+        TraitScalarKind.ShootRangeBonusCells => "shootRangeBonusCells",
+        TraitScalarKind.PassQualityBonus => "passQualityBonus",
+        TraitScalarKind.FoulChanceBonus => "foulChanceBonus",
+        TraitScalarKind.InjuryChanceBonus => "injuryChanceBonus",
+        TraitScalarKind.FatigueResistancePercent => "fatigueResistancePercent",
+        TraitScalarKind.InjuryResistanceBonus => "injuryResistanceBonus",
+        TraitScalarKind.AdjacentTeammateBonusPercent => "adjacentTeammateBonusPercent",
+        TraitScalarKind.SaveBonusClose => "saveBonusClose",
+        TraitScalarKind.SaveBonusFar => "saveBonusFar",
+        _ => "leashBonus",
+    };
+
+    /// <summary>Clave de plantilla de la dimensión de un efecto <see cref="EffectType.ModifyZoneShape"/> (C8).</summary>
+    private static string ZoneDimensionKey(ZoneDimension dimension) => dimension switch
+    {
+        ZoneDimension.Forward => "forward",
+        ZoneDimension.Back => "back",
+        _ => "sides",
     };
 
     private static string ProbabilityKey(ProbabilityKind kind) => kind switch

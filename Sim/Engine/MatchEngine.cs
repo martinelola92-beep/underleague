@@ -317,6 +317,14 @@ internal sealed class MatchEngine : IPerkWorld
     public void ApplyBiasDelta(int delta) => _bias = Math.Clamp(_bias + delta, -100, 100);
 
     /// <summary>
+    /// Internal solo para <c>Sim.Tests</c> (C5, docs/analisis/perks-catalogo-unificado.md §3.2): rehace el
+    /// reparto de marcas de los dos equipos desde cero, igual que <see cref="Run"/> al empezar el
+    /// partido. Deja probar <see cref="Marking"/> con posiciones y sesgos puestos a mano, sin correr un
+    /// partido entero ni exponer <c>_players</c>.
+    /// </summary>
+    internal void ForceReassignMarking() => Marking.Assign(_players, _markScratch, force: true);
+
+    /// <summary>
     /// El balón del partido (§3.7), para el efecto <c>relocate</c> (§2, "Último hombre"): quién lo tiene
     /// ahora mismo y dónde está. Es el mismo objeto mutable que usa el motor, no una copia.
     /// </summary>
@@ -620,7 +628,12 @@ internal sealed class MatchEngine : IPerkWorld
         }
     }
 
-    private void UpdateBlockShift()
+    /// <summary>
+    /// Internal en vez de private solo para que <c>Sim.Tests</c> pueda ejercitarlo directamente sobre un
+    /// motor recién construido (sin correr <see cref="Step"/>, que sí es privado): mismo patrón que
+    /// <see cref="OffTargetShotTarget"/>, expuesto solo para poder probarlo.
+    /// </summary>
+    internal void UpdateBlockShift()
     {
         for (int team = 0; team < 2; team++)
         {
@@ -665,7 +678,12 @@ internal sealed class MatchEngine : IPerkWorld
 
             int direction = Pitch.AttackDirection(player.Team);
             float offset = _shift[player.Team] * direction;
-            float rawX = player.HomeCenter.X + offset;
+
+            // C8 (docs/analisis/perks-catalogo-unificado.md §3.2, shiftHome): desplazamiento POR JUGADOR,
+            // que se SUMA al de bloque táctico y no lo sustituye (Línea adelantada, Pivote hondo,
+            // Desmarque profundo). Cero en el 99% del catálogo, así que sin el efecto esto es rawX de
+            // siempre.
+            float rawX = player.HomeCenter.X + offset + (player.HomeShiftCells * direction);
 
             // AW-Q (docs/pendientes.md): techo del propio bloque. Hasta aquí el bloque subía las 4,0
             // casillas de blockShift.InPossession sin comprobar nunca dónde estaba el propio defensa más
@@ -1734,6 +1752,89 @@ internal sealed class MatchEngine : IPerkWorld
         Array.Clear(_ball.BlockAttempted);
 
         shooter.EnterState(PlayerState.Positioning, 0);
+    }
+
+    /// <summary>
+    /// Repite el disparo del mismo jugador dentro del MISMO tick (efecto <c>extraAction</c>, "Doble
+    /// disparo", C.acción-extra de docs/analisis/perks-catalogo-unificado.md §3.2). El disparo anterior
+    /// ya dejó <c>_ball.Owner</c> en <c>null</c> y el balón en vuelo (<see cref="LaunchShot"/>), así que
+    /// esto lo recupera por decreto -es una habilidad que rompe reglas (RF-093 vía la clasificación
+    /// ABILITY, no una jugada física)- y vuelve a llamar a <see cref="LaunchShot"/>. Sus propios eventos
+    /// pasan otra vez por <c>EffectEngine.PublishAtDepth</c> con la profundidad ya incrementada (RT-042),
+    /// así que si el segundo disparo dispara la MISMA condición otra vez, el corte lo pone
+    /// <c>_maxDepth</c>/<c>RecursionCuts</c> como a cualquier otro evento anidado.
+    /// </summary>
+    internal void RepeatShot(MatchPlayer shooter)
+    {
+        if (!shooter.OnPitch)
+        {
+            return;
+        }
+
+        SetOwner(shooter);
+        LaunchShot(shooter, isPenalty: false);
+    }
+
+    /// <summary>
+    /// Repite la entrada del mismo jugador dentro del MISMO tick (efecto <c>extraAction</c>, "Embestida"/
+    /// "Arrollador", misma primitiva que <see cref="RepeatShot"/>). "Sigue andando" se lee literal: busca
+    /// el rival <b>más cercano</b> a su alcance -que puede ser distinto del que acaba de derribar, si ya
+    /// no sigue ahí- y no reintenta contra el mismo que ya tumbó salvo que sea el único al alcance. Marca
+    /// la entrada como sin balón salvo que el nuevo objetivo resulte tener el balón él mismo, para que
+    /// cuente y se narre igual que cualquier otra entrada de la ADR 0105.
+    /// </summary>
+    internal void RepeatTackle(MatchPlayer tackler)
+    {
+        if (!tackler.OnPitch)
+        {
+            return;
+        }
+
+        var target = NearestReachableRival(tackler);
+        if (target is null)
+        {
+            return;
+        }
+
+        tackler.TackleTarget = target;
+        tackler.TackleOffBall = !ReferenceEquals(_ball.Owner, target);
+        ResolveTackle(tackler);
+    }
+
+    /// <summary>
+    /// Rival en pie más cercano al alcance de una entrada (<see cref="RepeatTackle"/>): en el campo, no
+    /// expulsado, no celebrando. Recorrido por id ascendente (RT-041); a igualdad de distancia exacta se
+    /// queda el primero que encuentra, que es el de menor id.
+    /// </summary>
+    private MatchPlayer? NearestReachableRival(MatchPlayer tackler)
+    {
+        float reach = _catalog.Ai.Context.TackleDistanceMaxCells + TackleReachMargin;
+        MatchPlayer? best = null;
+        float bestDistance = 0f;
+        for (int i = 0; i < _players.Length; i++)
+        {
+            var candidate = _players[i];
+            if (candidate.Team == tackler.Team
+                || !candidate.OnPitch
+                || candidate.State is PlayerState.SentOff or PlayerState.Celebrating)
+            {
+                continue;
+            }
+
+            float distance = Vec2.Distance(tackler.Position, candidate.Position);
+            if (distance > reach)
+            {
+                continue;
+            }
+
+            if (best is null || distance < bestDistance)
+            {
+                best = candidate;
+                bestDistance = distance;
+            }
+        }
+
+        return best;
     }
 
     /// <summary>
