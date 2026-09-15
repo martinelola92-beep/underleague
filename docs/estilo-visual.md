@@ -1,6 +1,6 @@
 # Estilo visual
 
-**Versión 1 · 13 de septiembre de 2026 · NO definitivo, se itera.**
+**Versión 2 · 15 de septiembre de 2026 · NO definitivo, se itera.**
 
 Este documento fija el **tono** y sirve de base a los encargos de arte. Lo de abajo es el punto de
 partida que dio el revisor, no una decisión cerrada: se espera cambiarlo.
@@ -237,10 +237,134 @@ paga arte de razas que no salen hasta el DLC.
    a eso, pero hay que comprobarlo en el primer modelo, no en el último.
 4. **La sangre**, que es lo más barato que más identidad da (RA-027, un nodo `Decal`): cuánta, de qué rojo
    y cuánto dura.
+5. **Anatomía correcta o deformación de tebeo** (§5bis). El boceto del revisor va por anatomía creíble y
+   §1 pide lo contrario. Condiciona el pipeline entero: con deformación, Mixamo chirría menos porque el
+   modelo ya exagera; con anatomía creíble, mocap + modelo realista dan simulador serio, no Lucky Tower.
+6. **Qué rasgo de CONTORNO se le inventa al no-muerto** (§5bis), porque el que tiene asignado en RA-002
+   —costillas, cuenca vacía— es interior y no lee a 37 px.
+
+## 5bis. 3D + Mixamo, y por qué la resolución no es el problema
+
+**Conversación con el revisor, 15 sep 2026**, a partir de un boceto suyo a lápiz
+(`docs/referencias/boceto-revisor-2026-09-15.jpg`): dos figuras de pie, construcción a la vista,
+proporciones creíbles, complexión de matón de grada. La pregunta era si **3D + Mixamo** puede sustituir al
+pipeline 2D sin perder el tono de Lucky Tower.
+
+### El boceto: qué acierta y qué choca
+
+Acierta en lo que más cuesta: **la complexión lee a hincha/matón**, que sirve a RA-025 (cultura
+futbolística cruzada con humor negro) y esquiva RA-026 sin esfuerzo — ni calaveras, ni marcos góticos.
+
+Choca de frente con §1 en un eje, y hay que decidirlo: Lucky Tower pide **«reacción exagerada por encima de
+anatomía correcta»** y **«miembros de goma»**; el boceto es anatomía correcta por encima de exageración.
+No es un refinamiento, es una bifurcación, y su consecuencia ya está escrita en §1: *«si la muerte se
+dibuja solemne, el juego se vuelve deprimente»*. Con un jugador muriéndose cada dos runs, ese es el riesgo
+tonal grande del proyecto.
+
+### 3D sí; Mixamo, a medias
+
+El 3D no está en discusión: lo decidió la **ADR 0102**. Y la mitad visual de Lucky Tower —línea negra
+gruesa y color plano— sale nativa con toon shading y contorno por casco invertido.
+
+**Mixamo es mocap: movimiento anatómicamente correcto por construcción**, o sea justo lo que §1 manda
+subordinar. Pero el reparto es asimétrico y ahí está lo aprovechable:
+
+| qué | veredicto |
+|---|---|
+| **Locomoción** (correr, andar, girar, esperar) — el 90 % del tiempo en pantalla | **Mixamo vale.** A 66 px por casilla nadie lee la sutileza, y ahorra el coste combinatorio de animar raza × acción × dirección |
+| **Los ~10 momentos que llevan el tono** (la entrada que rompe, la muerte, la lesión, la celebración) | **Mixamo no vale.** La animación de muerte es el activo con más identidad del proyecto; una muerte de mocap es exactamente lo «solemne» que §1 prohíbe |
+
+**Mixamo lleva las carreras, no la carnicería. Y la carnicería es el juego.**
+
+Dos avisos más:
+- **El rig no resuelve la identidad.** Lo que separa razas —barba, costillas, melena, hombros, colmillos—
+  es trabajo de **modelado**, y Mixamo no aporta nada ahí (ver `ui-partido.md` §5).
+- **El estilo y el pipeline interactúan.** Modelo de anatomía creíble + mocap realista = simulador de
+  fútbol serio. Si se va a 3D + Mixamo, conviene un muñeco **más** caricaturesco que el boceto, no menos,
+  porque la exageración del modelo es lo único que le pelea al realismo del movimiento.
+
+### La resolución no es el cuello de botella; el contorno sí
+
+El fallo de la prueba de cápsulas (**3 de 5 razas**, `ui-partido.md` §5) es un artefacto del placeholder,
+no un límite del 3D: con modelos se recuperan todos los grados de libertad que a una cápsula le faltan.
+Pero «más resolución» mezcla dos cosas muy distintas:
+
+- **Detalle geométrico: ilimitado y gratis.** Con 20 figuras el recuento de polígonos es irrelevante.
+- **Píxeles en pantalla: fijos.** Calculado sobre el campo de siete filas: `MatchPitchView` da 1120×500 px
+  para 16×7 casillas con margen de un radio de ficha, o sea **66 px por casilla**, y una ficha mide
+  `0,28 × 2 = 0,56` casillas → **unos 37 px de ancho**. Para comparar: RA-001 autoriza el sprite 2D a
+  escala 3x, y un humano de 12×17 base son 36×51 renderizados. **Es casi el mismo presupuesto**: el 3D no
+  da más píxeles, da más libertad de forma dentro de los mismos.
+
+> **Regla para el briefing: solo cuenta el detalle que cambia el CONTORNO.** A 37 px y en blanco y negro,
+> lo que va por dentro de la silueta no existe.
+
+**Trampa concreta que hay que resolver antes del segundo modelo:** el rasgo firma que RA-002 asigna al
+**no-muerto** es *«costillas, cuenca ocular vacía»*, y las dos cosas son detalle **interior**. No van a leer
+nunca a ese tamaño, y el no-muerto es precisamente la raza que la prueba de silueta señaló como problema
+(humano y no-muerto son la misma mancha). Hay que **inventarle un rasgo de contorno**: postura encorvada,
+algo que le falte del cuerpo, miembros de longitud rara. El humano es la referencia neutra, así que el que
+se mueve es el no-muerto.
+
+**Y construir las firmas en horizontal.** A 60° de elevación lo que está de pie se comprime por el coseno,
+y cos(60°) = 0,5: **la altura vale la mitad y la anchura vale entera**. Hombros, envergadura, volumen de
+barba, apertura de cuernos, cola que sobresale — todo eso conserva su valor; ser alto o ser bajo, no. Es
+lo que explica la prueba de cápsulas: el orco salió inconfundible por ancho y el enano se quedó a medias
+porque su rasgo es la altura, que es el eje que la cámara aplasta.
+
+### Qué robarle a Hades
+
+Referencia que trajo el revisor. Lectura de sus técnicas (**interpretación, no medición**):
+
+1. **Luz de borde.** Un filo de luz que separa al personaje del fondo: es un contorno hecho de luz, y a
+   diferencia de una línea de tinta no engorda la silueta.
+2. **Separación de VALOR, no de tono.** Suelos oscuros y desaturados, personajes claros y saturados. En
+   blanco y negro el personaje sigue destacando, que es literalmente la prueba de RA-002.
+3. **El fondo se calla donde se juega.** El detalle decorativo vive en los bordes; la zona jugable es
+   plana a propósito.
+4. **Autorizar grande y mostrar pequeño.** Los personajes de Hades son sprites 2D pintados a alta
+   resolución. Refuerza lo de arriba: el cuello de botella es el diseño de forma, no los píxeles.
+5. **Y el que de verdad manda: Hades no pide leer el cuerpo.** Lo que hay que saber se dibuja en el suelo
+   con formas explícitas. El personaje solo dice *dónde está y de quién es*.
+
+**Hades no es un análogo justo**, y conviene decirlo: allí hay un héroe y unos pocos enemigos de
+arquetipos muy distintos. Aquí hay **veinte figuras** que deben distinguirse por equipo, identidad y
+estado, y catorce de ellas son «futbolistas humanoides con equipación». El problema se parece más a un RTS
+o a Into the Breach.
+
+**Pero el proyecto ya llegó solo al punto 5**: la vista 2D pinta el estado con un anillo, el poseedor con
+un halo, el marcaje con líneas y la intención con un punto. Eso es el telegrafiado de Hades aplicado, y es
+justo la deuda que `ui-partido.md` §6 le apunta a la 3D (estado y correa: la 2D los tiene, la 3D no).
+
+> **Reparto de carga que sale de todo esto:** el modelo carga **solo** con de qué equipo es (color, ya
+> resuelto) y de qué raza es (silueta, en horizontal). **Todo lo dinámico sigue en anillos, halo, sombra y
+> líneas.** A 37 px y con veinte cuerpos, pedirle al modelo que exprese el estado es pedirle lo que no
+> puede dar.
+
+Lo barato y de efecto inmediato: **luz de borde y contraste de valor contra un césped deliberadamente
+apagado.** Compra legibilidad sin pedirle un píxel más al modelo y no contradice RA-005 (luz superior
+izquierda constante) ni RA-004 (contorno oscuro teñido, nunca negro puro).
+
+### Pruebas que debe pasar el primer modelo
+
+No «¿mola?», sino dos pasa/no pasa con arnés que ya existe:
+
+1. **Silueta (RA-002).** ¿Se separan **humano y no-muerto** en blanco y negro, a 60°, a 66 px por casilla?
+   La captura es `partido-3d-silueta.png`, que no lleva anillos ni dorsales a propósito. `ui-partido.md`
+   §5 ya dejó escrito que hay que comprobarlo **en el primer modelo, no en el último**.
+2. **Mixamo contra el tono.** Una animación de derribo de Mixamo y una exagerada a mano, lado a lado a
+   escala de partido. Si a 37 px la diferencia no se ve, Mixamo gana por coste; si se ve, ya se sabe qué
+   animaciones hay que hacer a mano.
+
+**Bloqueante práctico antes de invertir en 3D:** Godot corre aquí en WSL **sin editor gráfico** y lo visual
+se comprueba con capturas por Xvfb — y **la escena de capturas está colgada** (`pendientes.md`, BA-L).
+Importar y retargetear FBX y afinar un material toon a ciegas es ingrato; arreglar BA-L va antes, o se
+trabaja sin instrumentos justo en la parte que se juzga por el ojo.
 
 ## 6. Historial
 
 | versión | fecha | qué cambió |
 |---|---|---|
 | v0 | 13 sep 2026 | Punto de partida del revisor: tono Lucky Tower y los dos prompts de §2 |
+| **v2** | 15 sep 2026 | §5bis: 3D + Mixamo (locomoción sí, los ~10 momentos del tono no), el presupuesto real de 37 px por ficha y la regla de que solo cuenta el contorno, la trampa del rasgo interior del no-muerto, construir firmas en horizontal por el coseno, y qué robarle a Hades. Boceto del revisor en `docs/referencias/` |
 | **v1** | 13 sep 2026 | Prompts adaptados a lo ya decidido (§2bis): se mantienen RA-025 y RA-026 —ni calaveras ni gótico—, las cinco razas de lanzamiento con su rasgo firma, y el HUD real sin barras de vida ni botones de acción |
