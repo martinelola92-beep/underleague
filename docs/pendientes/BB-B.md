@@ -1,12 +1,20 @@
 # BB-B — En el saque de centro los defensores van a robar el balón antes de que esté en juego.
 
-**Estado:** REJECTED bajo el diseño actual (decisión del revisor, 16 sep 2026). La inmunidad temporal
-—descrita abajo como "Implementación"— quedó **revertida del árbol** (código, no solo estado): atacaba el
-mecanismo equivocado. El problema observado es **espacial** (el defensor sigue a 0,75 casillas del balón);
-el parche era **temporal** (retrasaba `EvaluateTackle` 0,33 s sin mover a nadie). Se conserva íntegro aquí
-como intento descartado, con su evidencia, porque puede volver a probarse si cambia el sistema que lo
-rechazó. El diseño de reemplazo —una barrera geométrica compartida por las cuatro reanudaciones— se
-desarrolla en `docs/analisis/` (ver enlace al cierre de este fichero) antes de tocar código otra vez.
+**Estado:** IMPLEMENTED sin cerrar (commit `088c5ba`, 16 sep 2026). La inmunidad temporal descrita abajo
+como "Implementación" —**REJECTED**, ver su veredicto íntegro más abajo— quedó revertida del árbol en
+`ad3c472` y sustituida por una barrera geométrica: generaliza `EnforceFreeKickClearance` (ADR 0090, antes
+solo saque de falta) a las cinco reanudaciones y a la ventana posterior a tomar el saque. Design gate
+completo en `docs/analisis/bb-b-barrera-geometrica-diseno.md` (definición de "balón en juego", condición
+espacial mínima, veredicto de `game-design-review` y `architecture-review`, resultados medidos §13).
+
+**Resultado medido:** el saque de centro cierra a 0/190 disputas. Banda y puerta quedan con un residual
+por geometría de borde (banda 3/61, puerta 5/92 — mejora real sobre 5/79 y 7/84, no cierre). La falta suma
+ese mismo residual de borde más un gap distinto —la barrera protege el balón, no a los compañeros del
+sacador— y queda en 13/190. De las 43 puertas: 5 rojas antes de tocar BB-B, 5 rojas ahora, pero **no las
+mismas** (tres se arreglan, dos nuevas aparecen: `BadBuildsLoseToTheirBaseline`/`elf_out_of_zone` y
+`BetterTeamWinRateIsInRange`/`human_60_vs_human_40`). **No se cierra sin decidir** entre las cuatro salidas
+del §14 del design gate (aceptar el residual, extender la barrera al borde, extender a los compañeros del
+sacador, o revertir) y sin el veredicto del `independent-reviewer` sobre el paquete completo.
 
 ## Observación
 

@@ -30,7 +30,7 @@ a secas.
 | [BA-L2](./BA-L2.md) | `CaptureRunner` pierde el árbol de escena entre `informe` y `recompensa` | Ver fichero |
 | [BA-N](./BA-N.md) | Equipar ya no vale el escalón que la ADR 0033 exige | Ver fichero |
 | [BB-A](./BB-A.md) | Los jugadores se teletransportan al reanudar | Ver fichero |
-| [BB-B](./BB-B.md) | En el saque de centro los defensores van a robar el balón antes de que | Detenida — revisión no limpia |
+| [BB-B](./BB-B.md) | En el saque de centro los defensores van a robar el balón antes de que | IMPLEMENTED sin cerrar — barrera geométrica medida, decisión pendiente |
 | [BB-C](./BB-C.md) | «Celebra» se activa cuando ya han vuelto a su campo | Ver fichero |
 | [BB-D](./BB-D.md) | Propuesta del revisor: parar unos segundos en los eventos que detienen | Ver fichero |
 | [BB-E](./BB-E.md) | Salen dos canteranos en el mercado; debería salir uno como mucho | Cerrada |
