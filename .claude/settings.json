@@ -23,7 +23,8 @@
         "matcher": "Bash",
         "hooks": [
           { "type": "command", "command": "/home/martinelola92/underleague/.claude/hooks/sim-game-boundary.sh" },
-          { "type": "command", "command": "/home/martinelola92/underleague/.claude/hooks/subagent-add-warning.sh" }
+          { "type": "command", "command": "/home/martinelola92/underleague/.claude/hooks/subagent-add-warning.sh" },
+          { "type": "command", "command": "/home/martinelola92/underleague/.claude/hooks/build-check-before-push.sh", "timeout": 600 }
         ]
       }
     ],
