@@ -131,3 +131,9 @@ se nota en el agregado por partido. Coherente con las 43 puertas.
   `docs/pendientes/BB-O.md`: un jugador que sale del campo reteniendo el balón puede congelar el partido.
 - Pendiente, sin bloquear esta ADR: una captura de `visual-review` que demuestre en pantalla la propiedad
   "observable > invisible" que la motiva frente a la inmunidad temporal rechazada.
+- **Efecto de segundo orden medido después, en BA-N** (ADR 0116, `independent-reviewer`): cerrar la fuga
+  del penalti (§17) movió `EquippingAGoodBuildIsWorthSeveralPointsOfWinRate` de 1,7 a 3,4 puntos, sin
+  tocar ningún objeto ni perk — la misma firma que ya se documentaba aquí en general ("desplaza el
+  consumo de RNG lo suficiente para mover números de builds concretos") confirmada con un caso concreto y
+  ajeno a esta ADR. Es la evidencia que faltaba para tratar las puertas de un solo partido/semilla como un
+  problema de instrumento, no de contenido: ver `docs/pendientes/BB-P.md`.

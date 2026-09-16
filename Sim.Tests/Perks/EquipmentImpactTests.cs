@@ -91,13 +91,22 @@ public sealed class EquipmentImpactTests
         // +20 repartidos entre los DIEZ jugadores y aquí el bono va entero a UNO, así que sobrestima por
         // un factor de 1,6; queda anotado, porque el precio de los objetos se calcula con ella.
         //
-        // Umbral 1,0 desde la ADR 0116 (BA-N): con el catálogo de 94 perks lo medido cayó a 1,7 (era 3,3
-        // con 61 perks, umbral 2,0 desde el paquete AZ) — no porque los objetos rindan menos, sino porque
-        // el resto del catálogo vale más y la aportación MARGINAL de equipar se diluye en comparación
-        // (BA-N, docs/pendientes/BA-N.md). El umbral ya NO afirma "varios puntos" (ADR 0033 lo pedía en
-        // plural y el sistema actual no llega a dos con margen real de detección): afirma que equipar
-        // sigue siendo un efecto real y medible, claramente por encima del ruido de medición de este lote
-        // (~0,9 puntos a 96 plantillas), no que sea grande. Ver ADR 0116 para la calibración completa.
+        // Umbral 1,0 desde la ADR 0116 (BA-N), CORREGIDA por el independent-reviewer: el motivo original
+        // ("con 94 perks lo medido cayó a 1,7, el catálogo diluye la aportación marginal") quedó REJECTED
+        // -no solo sin aislar-. Congelando el catálogo de perks (mismo /data en cinco commits) esta misma
+        // puerta dio 1,7 / 2,1 / 1,7 / 3,0 / 3,4: el número se mueve solo porque cada cambio en /Sim
+        // (ninguno tocaba objetos ni perks) resortea los 6.144 partidos del brazo. Es el mismo mecanismo
+        // que ya documenta la ADR 0115 ("desplaza el consumo de RNG lo suficiente para mover números de
+        // builds concretos"), no un efecto del tamaño del catálogo.
+        //
+        // El motivo real de 1,0, y el que sí sostiene el umbral: el error típico de esta medición es
+        // ~0,9 puntos (arriba, ~3.072 partidos/brazo) y el valor verdadero, estimado por esos cinco
+        // puntos, ronda 2,4. Con esa varianza, un umbral de 2,0 tenía ~34 % de probabilidad de salir rojo
+        // por puro muestreo en cualquier commit que no tocara ni objetos ni perks -exactamente lo que
+        // produjo BA-M y BA-N-; 1,0 baja ese falso positivo a ~6 %. Detección real si el efecto de
+        // verdad se degradara: ~87 % de aviso si equipar dejara de aportar nada, ~41 % si aportara la
+        // mitad de lo normal -esta puerta protege "equipar hace algo", no el escalón fino de la ADR 0033-.
+        // Ver ADR 0116 para la derivación completa y `docs/pendientes/BA-N.md` para el historial.
         Assert.True(
             equippedRate - bareRate >= 1.0,
             $"equipar a los siete titulares solo aporta {equippedRate - bareRate:F1} puntos de tasa de victoria: "

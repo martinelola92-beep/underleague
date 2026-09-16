@@ -1,13 +1,14 @@
 # BA-N — Equipar ya no vale el escalón que la ADR 0033 exige
 
-**Estado:** Decisión tomada, aplicada, pendiente de confirmación del `independent-reviewer` antes de
-cerrar formalmente. Causa sigue **LIKELY** (nunca se aisló con un experimento propio; no hacía falta para
-decidir). **Decisión del revisor (16 sep 2026): Opción B** — recalibrar el umbral de la puerta, no subir
-precios de objeto. Umbral 2,0 → **1,0** (`Sim.Tests/Perks/EquipmentImpactTests.cs`), `docs/decisiones/0116-el-escalon-de-equipar-se-recalibra-contra-94-perks.md`.
-El umbral deja de afirmar "varios puntos" y pasa a afirmar "un efecto real y medible, no ruido" — 1,0
-elegido explícitamente de las dos lecturas posibles del único precedente de calibración disponible (ratio
-0,61 sobre 3,3→2,0), no una medida nueva ni una fórmula validada. La inconsistencia calculado/medido de
-objetos (ADR 0038 vs ADR 0087) **sigue sin resolver**, intacta.
+**Estado:** RESUELTA (16 sep 2026), con la causa **corregida por `independent-reviewer`** tras la primera
+pasada. **Decisión del revisor: Opción B** — recalibrar el umbral de la puerta, no subir precios de
+objeto. Umbral 2,0 → **1,0** (`Sim.Tests/Perks/EquipmentImpactTests.cs`,
+`docs/decisiones/0116-el-escalon-de-equipar-se-recalibra-contra-94-perks.md`). El número (1,0) es correcto
+y no cambió; **la causa que se le atribuyó al escribir la ADR sí era falsa y se corrigió**: no es que el
+catálogo de 94 perks diluya la aportación marginal de equipar (esa hipótesis pasa de LIKELY a
+**REJECTED**, ver más abajo), es que la puerta tiene un error típico de ~0,9 puntos y un umbral de 2,0
+tenía ~34 % de probabilidad de salir rojo por puro muestreo. La inconsistencia calculado/medido de
+objetos (ADR 0038 vs ADR 0087) **sigue sin resolver**, intacta — esta ADR nunca la tocó.
 
 ## Observación
 
@@ -24,13 +25,30 @@ equipada» necesita que equipar valga un escalón real.
 | + los 13 perks de tanda 1 | **+2,0** |
 | + los 20 perks de tanda 2 | **+1,7** — cae por debajo |
 
-## Hipótesis — LIKELY, no CONFIRMED
+## Hipótesis — REJECTED (corregida tras `independent-reviewer`)
 
-El catálogo pasó de 61 a 94 perks y se ha vuelto más fuerte en conjunto, así que la contribución
-**marginal** de los objetos encoge en comparación: no es que los objetos valgan menos, es que el resto
-vale más. Es consistente con las tres mediciones y no tiene hipótesis rival planteada, pero **no se ha
-aislado con un experimento propio** (p. ej. medir la misma puerta con el catálogo de 94 perks y los objetos
-sin tocar, aislando qué perks concretos explican la caída) — de ahí la etiqueta LIKELY y no CONFIRMED.
+**La hipótesis original**: el catálogo pasó de 61 a 94 perks y se ha vuelto más fuerte en conjunto, así
+que la contribución **marginal** de los objetos encoge en comparación. Era consistente con las tres
+medidas de la tabla de arriba y parecía no tener hipótesis rival planteada — pero nadie comprobó si el
+mismo movimiento ocurría **sin** tocar el catálogo antes de escribirla en una ADR.
+
+**Lo comprobó el revisor, con el catálogo de 94 perks congelado** (mismo `/data/perks/`, verificado byte
+a byte) **en cinco commits distintos que solo cambiaban código de `/Sim` ajeno a objetos y perks**:
+
+| commit | qué cambió | medido |
+|---|---|---|
+| `ab129d7` | (donde se escribió esta hipótesis) | 1,7 |
+| `96234de` | fix de build (BB-J) | 2,1 |
+| `ad3c472` | revert de la inmunidad del saque de centro | 1,7 |
+| `99a22c2` | tras revertir la barrera generalizada de BB-B | 3,0 |
+| `f1ce8b3` | HEAD | 3,4 |
+
+**El número se mueve 1,7 puntos sin que cambie un solo perk.** La caída 3,3→1,7 que la ADR 0116 atribuía
+al catálogo ocurre igual con el catálogo fijo: es el error de muestreo del instrumento (~0,9 puntos
+típico, confirmado empíricamente: sd de 0,78 sobre esas cinco medidas), no una tendencia real del
+tamaño del catálogo. **La hipótesis pasa de LIKELY a REJECTED** como explicación de esta caída concreta;
+sigue viva como mecanismo teórico plausible (un catálogo más fuerte SÍ podría diluir una aportación
+marginal fija) pero sin evidencia de activación — nunca se ha observado por encima del ruido.
 
 ## Decisión pendiente — dos salidas excluyentes
 
@@ -44,12 +62,21 @@ repite el error ya documentado de la ADR 0038.
 ## Antecedente
 
 **BA-M** es el primer punto de esta misma serie (el momento en que la puerta pasó de roja a verde por cero
-centésimas, con un commit que afirmaba —incorrectamente— que no movía balance). Se pliega aquí porque es la
-misma métrica y la misma causa; no se investiga por separado.
+centésimas). **Corrección tras `independent-reviewer`**: BA-M.md acusa a un commit (`a0a8b33`) de afirmar
+—incorrectamente— que no movía balance. A la luz de esta ADR, esa acusación no se sostiene: la diferencia
+que BA-M midió (2,0 frente a un umbral de 2,0, "por cero centésimas") es del orden de 0,4 errores típicos
+del instrumento (~0,9) — indistinguible de ruido de muestreo, no evidencia de que el commit ocultara un
+movimiento real. `docs/pendientes/BA-M.md` queda pendiente de su propia corrección (no se edita aquí, para
+no mezclar el cierre de dos fichas).
 
 ## Hermanos
 
-Ninguno con la misma causa. Comparte el catálogo de 94 perks con todo el trabajo de tandas 1 y 2.
+**`docs/pendientes/BB-P.md`** (nuevo, abierto de esta misma revisión): calibración de puertas
+estadísticas de un solo partido/semilla contra su error típico. Esta puerta y las 4 puertas rojas actuales
+que salieron de cerrar BB-B (`TheThreeDoctrinesBuyDifferently`, `CoherentBuildsBeatTheirBaseline`,
+`BadBuildsLoseToTheirBaseline`, `NoGateMetricIsOutOfRange`) comparten la misma firma: un valor que se mueve
+por cambios de `/Sim` ajenos a su contenido, con un margen menor que el ruido de su propio instrumento.
+BA-N deja de ser un caso aislado en cuanto se mira así.
 
 
 ## Análisis de consecuencias (16 sep 2026, orquestación de pendientes técnicos)
