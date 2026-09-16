@@ -57,18 +57,6 @@ internal sealed class UtilityContext
     /// ChaseBall para que nadie converja sobre un balón muerto; el resto de acciones ya se autodescartan
     /// sin él (ver AW-R en docs/pendientes.md para el porqué completo).</summary>
     public bool BallDead { get; set; }
-
-    /// <summary>
-    /// BB-B: el balón sigue en el saque de centro y el sacador todavía no lo ha puesto en juego —el
-    /// motor lo pone a <c>true</c> justo cuando el saque se resuelve, y a <c>false</c> en cuanto la
-    /// posesión deja de ser suya (pase, tiro, o cualquier otra forma de soltarlo). Mientras es
-    /// <c>true</c>, el equipo rival no puede disputar el balón directamente al sacador
-    /// (<see cref="EvaluateTackle"/>): la precondición de AW-S ("solo el designado persigue") ya impide
-    /// que converjan varios, pero no impedía que EL designado le entrara al sacador nada más recibir.
-    /// No es un offset ni una penalización de distancia: es un estado explícito, del mismo tipo que
-    /// <see cref="BallDead"/>.
-    /// </summary>
-    public bool KickoffPending { get; set; }
 }
 
 /// <summary>
@@ -1340,16 +1328,6 @@ internal static class Utility
     private static void EvaluateTackle(UtilityContext ctx, MatchPlayer p, AiContext context, ref Eval eval)
     {
         if (p.TackleCooldown > 0)
-        {
-            eval.Discarded = true;
-            return;
-        }
-
-        // BB-B: mientras el saque de centro sigue sin ponerse en juego, NADIE del equipo rival puede
-        // entrar -ni al poseedor (rama de abajo) ni al objetivo que el marcaje le tenga ya asignado
-        // (rama sin balón, más abajo): un marcaje que coincidiera con el sacador burlaría una guarda que
-        // solo mirase la rama del poseedor. Se descarta la acción entera, no solo un objetivo.
-        if (ctx.KickoffPending)
         {
             eval.Discarded = true;
             return;

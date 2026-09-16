@@ -1,9 +1,12 @@
 # BB-B — En el saque de centro los defensores van a robar el balón antes de que esté en juego.
 
-**Estado:** IMPLEMENTED, revisado por `independent-reviewer` — **no es un pase limpio**. La ventana sin
-disputa funciona (CONFIRMED), pero «sin regresión» no está probado y el reviewer encontró que la composición
-de puertas cambia, que el alcance de la regla no coincide con el diagnóstico original, y tres hermanos con
-la misma causa que este fichero negaba. **No se cierra. Detenido para decisión del revisor humano.**
+**Estado:** REJECTED bajo el diseño actual (decisión del revisor, 16 sep 2026). La inmunidad temporal
+—descrita abajo como "Implementación"— quedó **revertida del árbol** (código, no solo estado): atacaba el
+mecanismo equivocado. El problema observado es **espacial** (el defensor sigue a 0,75 casillas del balón);
+el parche era **temporal** (retrasaba `EvaluateTackle` 0,33 s sin mover a nadie). Se conserva íntegro aquí
+como intento descartado, con su evidencia, porque puede volver a probarse si cambia el sistema que lo
+rechazó. El diseño de reemplazo —una barrera geométrica compartida por las cuatro reanudaciones— se
+desarrolla en `docs/analisis/` (ver enlace al cierre de este fichero) antes de tocar código otra vez.
 
 ## Observación
 
