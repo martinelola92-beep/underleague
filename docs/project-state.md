@@ -17,12 +17,17 @@ PC (Steam), premium, sin online. **Estado (8 sep 2026): fases 0 y 1 cerradas; fa
 - **Paquete BB en curso**: trece anotaciones de la partida del revisor sobre gameplay, en
   `docs/pendientes/`. BB-M resuelto (no tocaba la ADR 0048). BB-G diagnosticado, sin arreglar
   (cambio de pesos de IA, requiere medición cuidadosa). BB-A/BB-C/BB-L pendientes de implementar.
-  **BB-B: dos intentos de barrera contra el robo del saque, los dos REJECTED y revertidos**
-  (inmunidad temporal; barrera geométrica generalizada a las cinco reanudaciones — el
-  `independent-reviewer` encontró el diagnóstico del residual equivocado y una regresión en una
-  métrica obligatoria de RT-056). Queda solo el bugfix independiente de `ClampToArea`/`IsOutfield`
-  heredado de ADR 0090, con su propia decisión sin resolver (`BadBuildsLoseToTheirBaseline`). Diseño
-  correcto para el próximo intento ya documentado en `docs/pendientes/BB-B.md`: proteger al compañero
-  del sacador, no al balón. **BB-N nuevo**: el saque de córner no ocurre nunca en la muestra medida.
+  **BB-B resuelta (ADR 0115, 16 sep 2026)**, tras dos intentos rechazados (inmunidad temporal;
+  barrera geométrica con tres fallos — fuga al penalti, sin techo de duración, métrica de
+  aceptación mal planteada). El tercer intento corrige los tres, verificado por el
+  `independent-reviewer` en dos rondas: 33→0 disputas reales contra el sacador en 200 partidos,
+  penalti intacto, lote de `/Balance` sin movimiento fuera del ruido. 4 puertas rojas de 43
+  (mejor que las 5 de antes), ninguna atribuible a la barrera — todas son builds concretos que
+  cruzan el margen de su puerta cuando cualquier cambio real de `/Sim` desplaza el consumo de RNG
+  (mismo patrón tres veces esta sesión; candidato a revisar el margen de esas puertas, fuera de
+  BB-B). Decisión de rango pendiente y aparte: `BadBuildsLoseToTheirBaseline`. **Hallazgos nuevos,
+  ajenos a BB-B, sin diagnosticar**: BB-N (el saque de córner no ocurre nunca en la muestra
+  medida) y BB-O (un jugador fuera del campo puede conservar el balón y congelar el partido, hasta
+  el 62 % de un partido medido, ~1 de cada 400).
 - **Auditoría de organización de trabajo** (V1→V2→V3, decisión del revisor 16 sep 2026): en migración.
   Ver `docs/analisis/auditoria-organizacion-v2.md` para el razonamiento completo.
