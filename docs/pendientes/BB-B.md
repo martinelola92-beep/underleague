@@ -1,34 +1,30 @@
 # BB-B — En el saque de centro los defensores van a robar el balón antes de que esté en juego.
 
-**Estado:** ABIERTA (16 sep 2026). Dos intentos de solución **REJECTED**, ambos con veredicto íntegro más
-abajo/en `docs/analisis/bb-b-barrera-geometrica-diseno.md`:
+**Estado:** IMPLEMENTED, tercer intento, sin cerrar (16 sep 2026). Historial completo en
+`docs/analisis/bb-b-barrera-geometrica-diseno.md`:
 
-1. **Inmunidad temporal** (`KickoffPending`): atacaba el mecanismo equivocado (temporal, no espacial) y
-   rompía puertas. Revertida en `ad3c472`.
-2. **Barrera geométrica generalizada** a las cinco reanudaciones (commit `088c5ba`): cerraba el saque de
-   centro (0/190 disputas) pero el `independent-reviewer` encontró que el diagnóstico del residual de
-   banda/puerta/falta estaba **equivocado** (no es geometría de borde — ninguna de las 21 disputas
-   residuales medidas ocurre a menos de 2,08 casillas del balón; es contacto contra un **compañero del
-   sacador** lejos del balón, la misma causa en las tres), que tocaba el penalti sin declararlo (RF-054,
-   que ADR 0090 dejaba intocado) y que rompía una métrica **obligatoria** de RT-056
-   (`betterTeamWinRate_human_60_vs_human_40`). Revertida en `<pendiente de commit>` — ver §15 del design
-   gate para el veredicto completo y la medición que lo sostiene.
-
-**Lo único que queda del segundo intento**: un bug real e independiente de ADR 0090 (`Utility.ClampToArea`
-aplicado a jugadores de campo sin comprobar `IsOutfield`, así que un rival corregido por la barrera del
-saque de falta se teletransportaba al área propia) sí se corrigió y se conserva, aislado del alcance que
-se revirtió. Con solo ese bugfix: **3 puertas rojas de 43** (mejor que las 5 de antes de tocar BB-B),
-pero abre su propia decisión sin resolver: `BadBuildsLoseToTheirBaseline` (`orc_misplaced`, `elf_brawler`)
-gana más de lo que debería contra el baseline sin perks — consecuencia de que esos dos builds ya no se
-benefician del bug del teletransporte. No se decide aquí si eso pide una ADR de rango nuevo o un ajuste a
-los dos builds.
-
-**Diagnóstico correcto para el próximo intento** (medido, no hipotético): la solución tiene que proteger
-al **compañero del sacador**, no solo al balón — en una falta (y por extensión banda/puerta) no hay reforma
-de equipo como en el saque de centro, así que un marcaje de juego abierto sigue pegado a un compañero
-lejos del balón y una barrera centrada solo en el balón nunca lo cubre. La hipótesis de "geometría de
-borde" que manejó el segundo intento está **REJECTED por medición directa** (mínimo 2,08 casillas al balón
-en las 21 disputas residuales) y no debe repetirse sin nueva evidencia que la reabra.
+1. **Inmunidad temporal** (`KickoffPending`): **REJECTED**, atacaba el mecanismo equivocado (temporal, no
+   espacial) y rompía puertas. Revertida en `ad3c472`.
+2. **Barrera geométrica generalizada** a las cinco reanudaciones (commit `088c5ba`): **REJECTED**. Cerraba
+   el saque de centro pero el `independent-reviewer` encontró tres fallos: (a) la guarda de `Step` no
+   excluía el penalti (RF-054, que ADR 0090 dejaba intocado) y le aplicaba la barrera sin que nadie lo
+   decidiera; (b) sin techo de duración, un sacador que retiene el balón mucho tiempo (medido 37 ticks
+   real) deja la barrera activa indefinidamente; (c) la métrica de aceptación medía "hubo un `Tackle` en
+   el partido durante la ventana" en vez de "el sacador fue disputado", así que contaba como violación un
+   bloqueo contra un compañero al otro lado del campo — contacto normal de juego abierto, no "robar el
+   saque". (a) rompía una métrica **obligatoria** de RT-056 (`betterTeamWinRate`). Revertido el alcance
+   generalizado en `69e0952`; se conservó el único hallazgo real e independiente, un bug de ADR 0090
+   (`Utility.ClampToArea` sin comprobar `IsOutfield`, teletransportaba a un rival de campo al área propia).
+3. **Tercer intento** (commit `<pendiente>`), corrige las tres causas exactas del punto 2: `IsClearanceRestart`
+   excluye el penalti por construcción (probado directamente), techo de duración de 30 ticks
+   (`RestartClearanceMaxTicks`, RF-052), y la medición ahora filtra por `Opponent == sacador` y distancia
+   real muestreada en cada fotograma de la ventana, no "hubo contacto en algún sitio". Medido (60
+   semillas): cero disputas contra el sacador en las cinco reanudaciones, penalti intacto,
+   `betterTeamWinRate` vuelve a verde. Quedan 3 puertas rojas — `BadBuildsLoseToTheirBaseline` (herencia
+   del bugfix de ADR 0090, sin ADR propia todavía) y, nueva, `TheThreeDoctrinesBuyDifferently` (la misma
+   puerta que rompió el **primer** intento rechazado; margen mínimo, 0,03, pero en la dirección
+   equivocada). Ver §16 del design gate para la medición completa. **Pendiente de
+   `independent-reviewer` con el historial de los tres intentos, no solo el diff del tercero.**
 
 ## Observación
 

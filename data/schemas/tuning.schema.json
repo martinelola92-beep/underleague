@@ -693,14 +693,14 @@
           "$ref": "#/$defs/ticks"
         },
         "freeKickTicks": { "$ref": "#/$defs/ticks", "description": "Ticks de cuenta atrás del saque de falta (AZ-D, ADR 0090)." },
-        "freeKickClearanceCells": { "type": "number", "minimum": 0, "description": "Distancia mínima de los rivales al balón en un saque de falta, en casillas (AZ-D, ADR 0090)." }
+        "restartClearanceCells": { "type": "number", "minimum": 0, "description": "Distancia mínima de los rivales al balón durante una reanudación (banda, córner, puerta, centro y falta -no penalti-), desde la cuenta atrás hasta que el sacador suelta el balón o expira el techo de duración. Generaliza freeKickClearanceCells (AZ-D, ADR 0090) a las cinco (BB-B, docs/analisis/bb-b-barrera-geometrica-diseno.md)." }
       },
       "required": [
         "throwInTicks",
         "goalKickTicks",
         "cornerTicks",
         "kickoffTicks",
-        "penaltyTicks", "freeKickTicks", "freeKickClearanceCells"
+        "penaltyTicks", "freeKickTicks", "restartClearanceCells"
       ],
       "additionalProperties": false
     },

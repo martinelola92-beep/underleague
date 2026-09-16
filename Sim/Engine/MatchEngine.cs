@@ -95,6 +95,21 @@ internal sealed class MatchEngine : IPerkWorld
     /// </summary>
     private MatchPlayer? _restartTaker;
 
+    /// <summary>
+    /// BB-B, tercer intento (docs/pendientes/BB-B.md, docs/analisis/bb-b-barrera-geometrica-diseno.md
+    /// §16): quién sigue teniendo el balón tras tomar una reanudación de las que llevan barrera
+    /// (<see cref="IsClearanceRestart"/> — el penalti explícitamente no, ver esa función). Se fija en
+    /// <see cref="TakeRestart"/> y se limpia en <see cref="UpdateContextCaches"/> en cuanto
+    /// <c>_ball.Owner</c> deja de ser él, o al llegar a <see cref="RestartClearanceMaxTicks"/> (techo de
+    /// RF-052, ~2 s: sin él, un sacador que retiene el balón mucho tiempo —hoy raro, medido hasta 37
+    /// ticks; con un perk de retención futuro, sin límite— convertiría la barrera en un escudo móvil de
+    /// duración libre). Mientras no sea null, <see cref="EnforceRestartClearance"/> se sigue llamando
+    /// aunque la cuenta atrás ya haya terminado.
+    /// </summary>
+    private MatchPlayer? _restartClearanceOwner;
+
+    private int _restartClearanceOwnerTicks;
+
     private int _freeKickFor = -1;
 
     private Vec2 _freeKickPoint;
@@ -169,7 +184,7 @@ internal sealed class MatchEngine : IPerkWorld
     }
 
     /// <summary>Tipo de reanudación pendiente durante una fase Restart/Kickoff/Penalty (§3.8).</summary>
-    private enum RestartKind
+    internal enum RestartKind
     {
         None,
         ThrowIn,
@@ -566,9 +581,15 @@ internal sealed class MatchEngine : IPerkWorld
         // sigue al poseedor, ve ya las posiciones definitivas del tick.
         _bodies.Resolve(_players);
 
-        if (wasRestarting && _pendingRestart == RestartKind.FreeKick)
+        // BB-B, tercer intento: la barrera corre durante la cuenta atrás de las reanudaciones que la
+        // llevan (IsClearanceRestart — el penalti queda fuera EXPLÍCITAMENTE aquí, no solo porque
+        // TakeRestart no le fije _restartClearanceOwner: el segundo intento dejó pasar que `wasRestarting`
+        // también es cierto durante la cuenta atrás del penalti, y la barrera actuaba 45 ticks sobre toda
+        // la defensa sin que nadie lo hubiera medido ni decidido — RF-054, que ADR 0090 dejaba intocado)
+        // y también en la ventana posterior a tomarla, mientras el sacador conserve el balón.
+        if ((wasRestarting && IsClearanceRestart(_pendingRestart)) || _restartClearanceOwner is not null)
         {
-            EnforceFreeKickClearance();
+            EnforceRestartClearance();
         }
 
         if (wasRestarting)
@@ -764,7 +785,34 @@ internal sealed class MatchEngine : IPerkWorld
         // mitad de tick) no se ve reflejado todavía aquí — ese primer tick de la reanudación nueva no debe
         // tratarse como balón muerto para ChaseBall (ver el `wasRestarting` de Step()).
         _context.BallDead = _restartTicksLeft > 0;
+
+        // BB-B, tercer intento: igual que BallDead arriba, se lee antes de que nadie decida este tick, así
+        // que un pase dado dentro del bucle de jugadores no libera la barrera hasta el tick siguiente — el
+        // mismo desfase de un tick que ya tenía el mecanismo del segundo intento (revisado por el
+        // independent-reviewer sin objeción en este punto). El techo de duración (RestartClearanceMaxTicks)
+        // es la red de seguridad de RF-052 (~2 s): sin él, un sacador que retiene el balón más de la cuenta
+        // deja la barrera activa indefinidamente (medido hasta 37 ticks en un saque de falta real, más del
+        // doble del techo).
+        if (_restartClearanceOwner is not null)
+        {
+            if (!ReferenceEquals(_ball.Owner, _restartClearanceOwner) || ++_restartClearanceOwnerTicks > RestartClearanceMaxTicks)
+            {
+                _restartClearanceOwner = null;
+                _restartClearanceOwnerTicks = 0;
+            }
+        }
     }
+
+    /// <summary>
+    /// Las cinco reanudaciones que llevan la barrera de distancia (BB-B): todas salvo el penalti, que
+    /// RF-054 trata aparte (si la falta ya programa penalti, <see cref="SchedulePenalty"/> manda el
+    /// penalti en vez de abrir el saque de falta) y que ADR 0090 dejó expresamente intocado.
+    /// </summary>
+    internal static bool IsClearanceRestart(RestartKind kind) =>
+        kind is RestartKind.ThrowIn or RestartKind.GoalKick or RestartKind.Corner or RestartKind.Kickoff or RestartKind.FreeKick;
+
+    /// <summary>Techo de duración de <see cref="_restartClearanceOwner"/>, ~2 s (RF-052) en ticks.</summary>
+    internal const int RestartClearanceMaxTicks = 30;
 
     // ---------------------------------------------------------------- 3.2/3.3/3.6 jugadores
 
@@ -2685,29 +2733,34 @@ internal sealed class MatchEngine : IPerkWorld
     /// de TakeGoalKick). El penalti no pasa por aquí: su tirador lo decide BestPenaltyTaker.
     /// </summary>
     /// <summary>
-    /// La barrera del saque de falta (AZ-D, ADR 0090): durante la cuenta atrás los rivales se mantienen a
-    /// <c>restart.freeKickClearanceCells</c> del balón. Sin ella, con el reposicionamiento durante el balón
-    /// muerto (AW-R), el infractor y sus compañeros rodeaban al que saca y la falta terminaba en otra
-    /// entrada.
+    /// La barrera de las reanudaciones (nacida como AZ-D/ADR 0090 solo para el saque de falta; BB-B,
+    /// tercer intento, la generaliza a las cinco de <see cref="IsClearanceRestart"/>): ningún rival puede
+    /// estar a menos de <c>restart.restartClearanceCells</c> del balón, ni durante la cuenta atrás ni
+    /// mientras el sacador conserve la posesión tras tomarla (<see cref="_restartClearanceOwner"/>, con
+    /// techo de duración).
     ///
-    /// <para>BB-B (docs/pendientes/BB-B.md) intentó generalizar este mecanismo a las cinco reanudaciones y
-    /// a la ventana posterior a tomar el saque, para cerrar el mismo problema en el saque de centro. El
-    /// independent-reviewer, con medición propia, encontró que el diagnóstico del residual estaba
-    /// equivocado (no era geometría de borde, era contacto de juego abierto lejos del balón), que la
-    /// generalización tocaba el penalti sin declararlo (RF-054, que ADR 0090 dejaba expresamente intocado)
-    /// y que rompía una métrica obligatoria de RT-056 (<c>betterTeamWinRate</c>). Se revirtió la
-    /// generalización a este alcance original; el hallazgo real (corrección de <see cref="Utility.ClampToArea"/>
-    /// sin comprobar <c>IsOutfield</c>, más abajo) sí se conserva, porque es un bug de ADR 0090 real e
-    /// independiente del alcance.</para>
+    /// <para><b>Historial de los dos intentos anteriores</b> (docs/pendientes/BB-B.md,
+    /// docs/analisis/bb-b-barrera-geometrica-diseno.md): el primero (inmunidad temporal de <c>Tackle</c>)
+    /// se rechazó por invisible. El segundo generalizó exactamente este mecanismo pero (a) medía "hubo
+    /// algún Tackle en el partido durante la ventana" en vez de "el sacador fue disputado", confundiendo
+    /// contacto normal de juego abierto lejos del balón con una brecha real de la barrera —el
+    /// independent-reviewer midió que ninguna de esas disputas ocurre a menos de 2,08 casillas del
+    /// balón—; (b) dejaba la guarda de <c>Step</c> abierta a <c>wasRestarting</c> sin comprobar el tipo,
+    /// así que actuaba también en el penalti (RF-054) sin que nadie lo hubiera decidido; y (c) rompía
+    /// <c>betterTeamWinRate</c> (métrica obligatoria de RT-056). Este tercer intento corrige las tres: la
+    /// medición se hace contra el sacador y contra la distancia real (no contra "hubo contacto en algún
+    /// sitio"), <see cref="IsClearanceRestart"/> excluye el penalti explícitamente, y se remide
+    /// <c>betterTeamWinRate</c> con las otras dos correcciones puestas antes de decidir si sigue rota.</para>
     /// </summary>
-    private void EnforceFreeKickClearance()
+    private void EnforceRestartClearance()
     {
-        float clearance = _tuning.Restart.FreeKickClearanceCells;
+        float clearance = _tuning.Restart.RestartClearanceCells;
         if (clearance <= 0f)
         {
             return;
         }
 
+        Vec2 center = _ball.Position;
         for (int i = 0; i < _players.Length; i++)
         {
             var player = _players[i];
@@ -2716,7 +2769,7 @@ internal sealed class MatchEngine : IPerkWorld
                 continue;
             }
 
-            var offset = player.Position - _restartPoint;
+            var offset = player.Position - center;
             float distance = offset.Length;
             if (distance >= clearance)
             {
@@ -2724,18 +2777,19 @@ internal sealed class MatchEngine : IPerkWorld
             }
 
             var direction = distance > 0.001f ? offset * (1f / distance) : new Vec2(-Pitch.AttackDirection(_restartTeam), 0f);
-            Vec2 corrected = Utility.ClampToPitch(_restartPoint + (direction * clearance));
+            Vec2 corrected = Utility.ClampToPitch(center + (direction * clearance));
             if (!player.IsOutfield)
             {
                 // RF-057b: el portero nunca abandona el área, ni siquiera empujado fuera de ella por esta
                 // barrera (mismo patrón que Move() y BodySeparation.Resolve, que también acotan primero al
                 // campo y solo después, si es portero, al área). El uso anterior de ClampToArea SIN esta
-                // condición (heredado de ADR 0090, corregido aquí, BB-B) teletransportaba a cualquier
-                // jugador de campo clamped -no solo al portero- al rectángulo diminuto del área propia.
-                // Límite conocido, sin corregir (independent-reviewer, docs/pendientes/BB-B.md): con el
-                // punto de saque muy cerca del área propia del portero, ClampToArea puede devolverlo
-                // DENTRO del radio de exclusión otra vez -medido 0,13 casillas en un caso de penalti al
-                // generalizar la barrera, no reproducido aquí para el saque de falta en solitario.
+                // condición (heredado de ADR 0090, corregido en el segundo intento de BB-B) teletransportaba
+                // a cualquier jugador de campo clamped -no solo al portero- al rectángulo diminuto del área
+                // propia. Límite conocido, sin corregir (independent-reviewer): con el punto de saque muy
+                // cerca del área propia, ClampToArea puede devolver al portero DENTRO del radio de
+                // exclusión otra vez -medido 0,13 casillas en un caso de penalti-. RF-057b manda sobre la
+                // barrera cuando compiten: el portero nunca sale del área aunque eso lo deje más cerca del
+                // balón que restartClearanceCells.
                 corrected = Utility.ClampToArea(corrected, player.Team);
             }
 
@@ -2868,6 +2922,8 @@ internal sealed class MatchEngine : IPerkWorld
         taker.Velocity = new Vec2(0f, 0f);
         taker.EnterState(PlayerState.Positioning, 0);
         SetOwner(taker);
+        _restartClearanceOwner = taker;
+        _restartClearanceOwnerTicks = 0;
         Emit(EventType.Recovery, detail, taker);
     }
 

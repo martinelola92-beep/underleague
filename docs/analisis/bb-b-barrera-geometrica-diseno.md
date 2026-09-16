@@ -398,3 +398,57 @@ el árbol solo-(A), y `betterTeamWinRate` vuelve a verde.
 No hay lote de `/Balance` todavía para (A) en solitario (RT-054, skill `balance-measure`): las 43 puertas y
 `Category!=Gate` bastan para verificar que no rompe nada existente, pero el rango nuevo de
 `BadBuildsLoseToTheirBaseline` pide su propio lote antes de decidir su ADR.
+
+## 16. Tercer intento — corrige las tres causas exactas que el revisor encontró
+
+Decisión del revisor (16 sep 2026, "tercer intento de BB-B ya"): reimplementar la barrera geométrica de
+las cinco reanudaciones, corrigiendo específicamente los tres fallos del §15, no repitiendo el diseño a
+ciegas.
+
+**Corrección 1 — la guarda de `Step` excluye el penalti por construcción.** Nueva función
+`IsClearanceRestart(RestartKind)`, expuesta `internal` para probarla directamente: devuelve `true` para
+`ThrowIn`/`GoalKick`/`Corner`/`Kickoff`/`FreeKick` y `false` para `Penalty`/`None`. La guarda de `Step` pasa
+de `wasRestarting` a sola a `(wasRestarting && IsClearanceRestart(_pendingRestart)) || _restartClearanceOwner is not null`.
+
+**Corrección 2 — techo de duración.** `_restartClearanceOwnerTicks` cuenta los ticks que el sacador lleva
+con el balón tras tomar la reanudación; al superar `RestartClearanceMaxTicks` (30, ~2 s por RF-052) la
+barrera se libera igual que si hubiera pasado el balón. Sin esto, un saque de falta real de la muestra
+retenía el balón 37 ticks con la barrera activa todo ese tiempo.
+
+**Corrección 3 — la medición mide el problema literal, no "hubo un Tackle en el partido".**
+`Sim.Tests/Engine/RestartClearanceTests.cs`, reescrito: `NobodyTacklesTheRestartTakerWhileTheyStillHaveTheBall`
+filtra por `Opponent == sacador` y `Detail` de disputa del balón (`won`/`missed`/`foul`, no `offBall*` ni
+`block*`); `NoRivalIsEverCloserThanTheClearanceDuringTheWindow` muestrea cada fotograma de la ventana (no
+solo el de resolución) pero limita la exigencia a los primeros `RestartClearanceMaxTicks` ticks, porque
+pasado el techo la barrera se libera **a propósito** (corrección 2) y un rival acercándose ahí es el
+comportamiento correcto, no una brecha.
+
+### Resultado medido (60 semillas)
+
+- **Cero disputas contra el sacador** en las cinco reanudaciones (incluido corner, aunque con 0 casos en
+  la muestra — BB-N). Cero fotogramas con un rival dentro del radio de exclusión **dentro del techo de
+  duración** en las cinco.
+- **El penalti queda intacto**: `IsClearanceRestart(Penalty)` es `false` por construcción, verificado con
+  una prueba directa, no con un partido completo.
+- **43 puertas**: `betterTeamWinRate_human_60_vs_human_40` **vuelve a verde** (la regresión de la métrica
+  obligatoria de RT-056 la causaba la fuga al penalti, no la barrera en sí — confirmado al excluirlo).
+  `BuildsWinDifferently`/`passChain` también verde (mejora sobre 1,08→1,09→1,11→verde de los tres intentos
+  anteriores). Quedan **3 rojas**: `BadBuildsLoseToTheirBaseline` (`elf_out_of_zone`=48,12, mismo build que
+  en el segundo intento, no los dos del bugfix en solitario), `NoGateMetricIsOutOfRange` (agrega la
+  anterior), y **nueva**: `TheThreeDoctrinesBuyDifferently` (`contextual`=1,16 vs `saver`=1,19 compras por
+  mercado — la contextual debería comprar más que la ahorradora y ahora casi empata, invertido por 0,03).
+  Mismo recuento que el árbol solo-bugfix (3), composición otra vez distinta.
+
+`TheThreeDoctrinesBuyDifferently` es la misma puerta que rompió el **primer** intento (la inmunidad
+temporal rechazada) — señal que no se investiga más aquí, se lleva íntegra al revisor: podría ser que
+cualquier cambio en la ventana de disputa de una reanudación mueva la composición de compras
+(diferenciación de doctrinas) de forma sistemática, no solo un artefacto de este diseño concreto.
+
+### Sin decidir todavía
+
+- `BadBuildsLoseToTheirBaseline` sigue sin ADR (consecuencia del bugfix de ADR 0090, no de la barrera —
+  confirmado: aparece con (A) en solitario, con distinto build cada vez).
+- `TheThreeDoctrinesBuyDifferently`, nueva, con margen mínimo (0,03) pero en la dirección equivocada.
+- Ningún lote de `/Balance` (RT-054) todavía para (A)+(B) juntos.
+- Pendiente: revisión completa del `independent-reviewer` sobre este tercer intento, con el historial
+  íntegro de los dos anteriores — no solo el diff de este.
