@@ -2,12 +2,17 @@
 
 **Nota sobre el título** (sexta ronda, `independent-reviewer`): el título describe el síntoma tal como se midió antes de esta ficha (equipar no llegaba al umbral entonces vigente, 2,0). Con el umbral ya recalibrado a 1,0 (ADR 0116) el síntoma literal del título ya no ocurre — la puerta pasa hoy con 3,4. No se renombra la ficha por las mismas razones que la ADR 0116 (enlaces cruzados); manda el contenido del Estado, no el título.
 
-**Estado:** Decisión aplicada, corregida cinco veces por `independent-reviewer` (16 sep 2026), pendiente
-de una sexta pasada de confirmación antes de darla por resuelta del todo — RT-054/RT-057 y la Regla E de
-este proyecto piden esa confirmación antes de cerrar, no una autoevaluación. **Decisión del revisor:
-Opción B** — recalibrar el umbral de la puerta, no subir precios de objeto. Umbral 2,0 → **1,0**
+**Estado:** **Cerrada** (16 sep 2026, decisión del orquestador tras seis rondas de `independent-reviewer`).
+El umbral (1,0) fue verificado de forma independiente y reproducido correctamente en las siete
+mediciones directas hechas durante la revisión (rondas 1 a 6, más la reconfirmación final); ninguna
+ronda encontró jamás un problema con el número implementado, solo con la narrativa histórica que lo
+rodeaba en la documentación. Se cierra con la **deuda documentada** de la sección de abajo en vez de
+seguir persiguiendo cifras de commits de hace dos semanas — decisión explícita del orquestador, no
+autoevaluación silenciosa (Regla E: la evidencia de las seis rondas queda escrita, no se descarta).
+**Decisión del revisor: Opción B** — recalibrar el umbral de la puerta, no subir precios de objeto.
+Umbral 2,0 → **1,0**
 (`Sim.Tests/Perks/EquipmentImpactTests.cs`, `docs/decisiones/0116-el-escalon-de-equipar-se-recalibra-contra-94-perks.md`).
-El número (1,0) es correcto y no ha cambiado en ninguna de las cinco rondas de revisión; lo que se
+El número (1,0) es correcto y no ha cambiado en ninguna de las seis rondas de revisión; lo que se
 corrigió cada vez fue la causa y el razonamiento escritos para justificarlo — ver `docs/decisiones/0116-...md`
 para el historial completo, incluida la historia real del umbral (bajado **tres** veces desde el valor
 inicial: 5,0 → 3,0 → 2,0 → 1,0). **Aviso**: el mensaje del commit `f1ce8b3` —publicado, sin editar—
@@ -19,6 +24,30 @@ aceptable para el escalón que nombra la ADR 0033, ni se comparó en coste contr
 muestra en vez de bajar el umbral (precedente propio de las dos bajadas anteriores) — ambas quedan como
 preguntas abiertas en `docs/pendientes/BB-P.md`, no como decisiones tomadas, aunque el cambio ya esté en
 `main`.
+
+## Deuda documentada al cerrar (no bloqueante)
+
+Seis rondas de `independent-reviewer` encontraron y corrigieron errores reales en la narrativa
+histórica de esta ficha y de la ADR 0116 — nunca en el umbral implementado, reproducido
+correctamente las siete veces que se midió. Se cierra BA-N con lo siguiente sin verificar al 100 %,
+en vez de seguir persiguiendo cifras de commits de hace dos semanas:
+
+- Dos filas de la tabla de catálogo congelado (ADR 0116, "Hipótesis") — `96234de`=2,1 y `ad3c472`=1,7
+  — no se han remedido en worktree; las otras tres (`ab129d7`, `99a22c2`, `f1ce8b3`) sí, al menos una
+  vez cada una, en distintas rondas.
+- Las cifras de dispersión "~3" (8 plantillas) y "~1,8" (24 plantillas) citadas en
+  `Sim.Tests/Perks/EquipmentImpactTests.cs` son extrapolaciones teóricas (escala 1/√`Rosters` desde
+  el ~0,9 medido con 96), nunca medidas directamente.
+- Puede quedar alguna otra cita histórica de un commit de hace 12 días sin verificar byte a byte;
+  el patrón de las seis rondas (una cifra nueva mal atribuida cada vez que se corregía la anterior)
+  no da garantía de que la séptima no encontraría otra.
+- El barrido que pide `docs/pendientes/BB-P.md` punto 4 ("¿hay otras ADR con un «medido: X»
+  anclado a un árbol que ya no es vigente?") no se ha hecho fuera de la propia ADR 0116.
+
+Ninguno de estos puntos afecta al umbral implementado (1,0) ni a las 43 puertas (mismas 4 rojas
+preexistentes en las siete ejecuciones de esta revisión, sin regresión nueva atribuible a ningún
+commit de esta ficha). Si en el futuro se necesita citar de nuevo el historial de esta puerta,
+remedir antes de citar, no confiar en lo escrito aquí sin volver a comprobarlo.
 
 ## Observación
 

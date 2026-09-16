@@ -28,7 +28,7 @@ a secas.
 | [BA-L](./BA-L.md) | La escena de capturas (`Scenes/Capturas.tscn`) no produce nada en esta | Cerrada |
 | [BA-M](./BA-M.md) | Origen de BA-N: la puerta de equipar pasó de roja a verde por cero cen | Cerrada |
 | [BA-L2](./BA-L2.md) | `CaptureRunner` pierde el árbol de escena entre `informe` y `recompensa` | Ver fichero |
-| [BA-N](./BA-N.md) | Equipar ya no vale el escalón que la ADR 0033 exige | Decisión aplicada (ADR 0116), pendiente de confirmación final |
+| [BA-N](./BA-N.md) | Equipar ya no vale el escalón que la ADR 0033 exige | Cerrada (ADR 0116; deuda documentada) |
 | [BB-A](./BB-A.md) | Los jugadores se teletransportan al reanudar | Ver fichero |
 | [BB-B](./BB-B.md) | En el saque de centro los defensores van a robar el balón antes de que | Resuelta (ADR 0115), tras dos intentos rechazados |
 | [BB-C](./BB-C.md) | «Celebra» se activa cuando ya han vuelto a su campo | Ver fichero |
