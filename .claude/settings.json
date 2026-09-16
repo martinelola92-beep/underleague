@@ -16,5 +16,24 @@
       "Bash(git log:*)",
       "Bash(git branch:*)"
     ]
+  },
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          { "type": "command", "command": "/home/martinelola92/underleague/.claude/hooks/sim-game-boundary.sh" },
+          { "type": "command", "command": "/home/martinelola92/underleague/.claude/hooks/subagent-add-warning.sh" }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          { "type": "command", "command": "/home/martinelola92/underleague/.claude/hooks/data-validation.sh" }
+        ]
+      }
+    ]
   }
 }

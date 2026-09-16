@@ -2,11 +2,75 @@
 
 Roguelite de gestión y autobatalla: el jugador dirige un equipo de fútbol 7 de criaturas fantásticas. Los partidos se resuelven solos en 60-90 s sobre una cuadrícula; todas las decisiones ocurren entre partidos. La identidad no es el fútbol, es la **carnicería administrada**: lesiones, muertes, prótesis y vínculos. El desgaste de la plantilla es el recurso central de la run.
 
-PC (Steam), premium, sin online. **Estado (8 sep 2026): fases 0 y 1 cerradas; fase 2 implementada y medida —bucle de run completo, tres jefes con modificadores, economía y `--full-runs` con tres políticas automáticas—, con la curva de puertas de la ADR 0033 en verde y cuatro decisiones abiertas antes de darla por cerrada (`docs/balance/fase2-resultados.md` §7). Pantalla de Equipo funcionando en Godot; build jugable exportable a Windows desde WSL (`tools/export-windows.sh`). Primera partida del revisor sobre esa build íntegramente procesada: veinte anotaciones (AW-A..AW-T en `docs/pendientes.md`), todas cerradas — intercepción del disparo tick a tick (`docs/plan-intercepcion-disparo.md`), techo de la línea defensiva, persecución del balón como precondición dura, reposicionamiento durante el balón muerto — con cuatro ADR de banda derivadas (0081-0084) y AV-B cerrada (ADR 0085: el valor de un perk se lee al horizonte y la run no lo nota). AT-A cerrada (ADR 0086). **Paquete AY (9 sep, decisión del revisor): ningún perk es negativo** —la rama `else` no hace nada (ADR 0088), la muerte solo es consecuencia de una entrada y nunca del saque (regla del cargador), el valor de un perk se mide contra su control emparejado (ADR 0087: `rowDeviation` 19 → 7, ningún perk por debajo de −7) y las puertas de fase 1 arrancan en 50 (45-55). Medido el paquete completo: `runWinRate` 18,4 / 17,8 (la muerte en la entrada cuesta ~3 puntos; AY-B, se ajusta tras AZ) con `deathsPerRun` en banda. Segunda partida del revisor (AZ, `docs/plan-segunda-partida.md`): tandas 1 y 2 cerradas —el saque ya no «va y vuelve», solo ante el portero se tira, la falta señalada reanuda con saque de falta, el árbitro señala el 80 % (ADR 0090) y la clínica cura la leve—; tanda 3 (física del pase, ADR 0091: pase al pie, intercepción con geometría, el pasillo puntúa, pase en profundidad más hondo y el balón que se para donde cae) implementada y medida; las razas recalibradas para esa física (ADR 0092: sesgos de suma cero, abanico 21,8 → 6,4). Con las razas nuevas los tiros (8,1) y `human_random` vuelven a banda; las décimas que quedaban son bandas por ADR 0093 (`ballThirdMaxShare` ≤ 52, `betterTeamWinRate` 70-90, `grimhold_guns` incoherente 15-40, peldaño plano de 3 puntos en la escalera de jefes). Puertas en verde. Tanda 4 (AZ-F): la sustitución forzada es parte del estado inicial del partido (ADR 0094, sin motor reanudable), con ventana en `/Game` y el rival sustituyendo también. **Paquete AZ cerrado.** Con él cerrado, `runWinRate` valía 14,5 y el 92 % de las derrotas eran un jefe: la run llegaba a cada jefe **un nivel por debajo** del que mide la puerta de la ADR 0033 (fila nueva `levelAtBossActN`: 3,79 / 5,80 / 6,37 contra 5 / 6 / 7) y las muertes habían subido a 2,62 sin decisión. **ADR 0095** (`lethalChance` 1.950/1.500 → 1.200/900, `matchExperience` 100 → 140) cierra AY-B y pone `runWinRate` **en banda por primera vez: 22,17 ± 0,60** con 4.800 runs (2.400 × 2 semillas), el suelo a 3,6 errores típicos con `deathsPerRun` 1,96 / 1,85 y las 43 puertas en verde. **ADR 0096** aplica la tercera palanca de la ADR 0055 (la liga paga oro en vez de elección, la contextual no gasta un slot en un común, los sumideros suben): ganar sin pasar por el mercado cae de 18,3 a **10,7** y los maestros comprados suben de 31 % a **45 %**, sin sacar de banda nada que estuviera dentro (`runWinRate` 23,3 / 22,0). **ADR 0098** corrige el instrumento de esa métrica —el control «sin mercado» compraba cuando el mapa lo obligaba a entrar— y con ello **retira la contradicción** que la ADR 0096 anunciaba entre la ADR 0033 y la ADR 0055: no existía. La cifra real de ganar sin comprar es **7,83** y a la banda le faltan 2,8 puntos; la palanca que queda es que no comprar es en parte una estrategia (122 de oro sin gastar, la mitad de muertes, más veteranía). **ADR 0099 y 0100** (decisión del revisor, mismo paquete): la clínica pasa a tener tres servicios —por pieza, la plantilla entera a tarifa plana y el matasanos, que cobra el 40 % y puede matar con su porcentaje a la vista— y el nodo de evento deja de pagar 1-3 de oro para ser una **carta con opciones** en `data/events/`, con las familias del oro parado y de carne por ventaja. Medido: `runWinRate` 25,3 / 27,0, cartas resueltas 0,38 por run y `brokeMarketRunShare` dentro de banda en las dos semillas por primera vez. **ADR 0097** (decisión del revisor): la inscripción deja de ser un nodo y el hueco de plantilla se compra en el mercado —un tipo de nodo menos y guardado v2—, con `runWinRate` 25,3 y `brokeMarketRunShare` de 38 a 10,8, en el suelo de su banda por primera vez.
-
-**Campo de siete filas (14 sep 2026, decisión del revisor, BA-C):** 16×7 en vez de 16×6 —con seis filas el centro geométrico cae *entre* dos filas y no existe fila central—, con guardado v4. Añadir la fila cuesta ~1,0 tiro y ~0,45 goles por partido y **ninguna palanca local lo recupera**, así que la **ADR 0109** recalibra la banda de tiros a la geometría vigente (8-16 → 7-15) en vez de tocar el motor, y deja escrito que ensanchar la formación o las zonas de acción destruye la profundidad de colocación. Nueve auditorías de la IA de jugadores (`docs/auditoria-ia-jugadores-1..9.md`) dejan **un solo cambio aplicado**, la **ADR 0110**: `Shoot` del defensa 77 → 154 y del centrocampista 188 → 237, porque con 77 un defensa colocado arriba nunca remataba —perdía contra su propio `ShortPass` de 500— y jugar fuera de posición costaba dos tercios del ataque (100/48/38 → 100/68/55). Rechazados y documentados: `ChaseBall pen` en todas las dosis (degrada la diferenciación de builds), el desfase de fase entre equipos (no replica entre semillas) y la histéresis. Queda **abierto** el papel del centrocampista: dispara el 6,5 % de los tiros siendo el 43 % de los jugadores de campo.
+PC (Steam), premium, sin online. **Estado del proyecto: `docs/project-state.md`** (editado a mano, no generado — actualízalo al cerrar un hito o una ADR, no aquí).
 
 La fuente de verdad del diseño es `docs/requisitos.md` (v0.9.1). Cada requisito tiene identificador (`RF-xxx` funcional, `RT-xxx` técnico, `RA-xxx` arte, `UI-xxx` interfaz): cítalos en commits, ADRs, tests y comentarios cuando implementes o discutas uno.
+
+## Cómo razonar sobre un cambio, antes de mirar un archivo
+
+*(Auditoría de organización, decisión del revisor, 16 sep 2026: `docs/analisis/auditoria-organizacion-v2.md`.)*
+No empieces por "¿qué archivo tengo que modificar?". Empieza por "¿qué concepto falta o está mal
+representado?". Antes de tocar código:
+
+1. ¿Qué está experimentando realmente el jugador?
+2. ¿Cuál debería ser el comportamiento correcto?
+3. ¿Qué regla del juego representa?
+4. ¿Qué sistema debería ser responsable de esa regla — `/Sim`, `/Game` o `/data`?
+5. ¿Es un problema aislado o hay un patrón hermano? (`docs/pendientes/README.md`)
+6. ¿Qué otros sistemas pueden sufrir la misma causa?
+7. ¿Existe ya una abstracción o convención del propio repositorio para esto? (mira antes de inventar una)
+8. ¿La solución arregla la causa o solo oculta el síntoma?
+9. ¿Qué consecuencias de segundo orden puede introducir?
+10. ¿Cómo se demuestra que funciona?
+
+**Piensa en sistemas, no en tickets.** Ante varios síntomas relacionados, busca causa común, estado común,
+evento común o regla común antes de asumir que son N problemas independientes con N arreglos.
+
+### Disparadores de skill — Regla B y Regla C
+
+- **Toda mecánica de juego nueva o modificada** (perk, rasgo, evento, regla de economía, primitiva de
+  motor) → skill `game-design-review`, **antes** de implementar.
+- **Toda frontera de proyectos, abstracción nueva o primitiva de motor** → skill `architecture-review`.
+- **Cualquier síntoma de partido, bug de comportamiento o "por qué el motor hizo X"** → skill
+  `gameplay-debug`, siempre antes de proponer una causa.
+- **Cambio que puede alterar comportamiento cuantificable** (pesos de IA, probabilidades, tablas de
+  economía, catálogo de perks/objetos) → skill `balance-measure`. No cualquier cambio en `/Sim` o `/data`:
+  una traducción, un DTO o un fix de replay no lo son.
+- **Cualquier cambio en `/Game`** → skill `visual-review` antes de declarar que algo "se ve bien".
+
+**Regla de precedencia**: si hay duda entre "esto es dato/balance" y "esto es mecánica/diseño", se ejecuta
+`game-design-review`. Cuesta poco frente al coste de implementar una mecánica mala.
+
+**Las skills se encadenan, no son excluyentes.** Una primitiva nueva típicamente pasa por
+`game-design-review` → `architecture-review` → implementación → `balance-measure` (si toca balance) →
+`build-and-test`.
+
+### Regla de evidencia — Regla A
+
+Antes de modificar código para explicar un comportamiento: consulta `docs/pendientes/` por el síntoma o el
+sistema, enumera todas las hipótesis plausibles sin fijar un número, y ordénalas por **coste de
+verificación × poder discriminativo** — no ejecutes la más barata si no distingue entre las hipótesis. **No
+se modifica código mientras exista una medición de bajo coste capaz de discriminar entre ellas.** Protocolo
+completo, con el instrumental del proyecto (RT-098, `MatchTrace`): skill `gameplay-debug`.
+
+### Estado epistemológico — Regla F
+
+Ninguna conclusión se escribe como "es así y ya está". Se etiqueta:
+
+- **CONFIRMED** — reproducida con un experimento que la aísla.
+- **LIKELY** — consistente con lo medido, sin experimento propio que la aísle de una alternativa.
+- **REJECTED** — un experimento la contradijo. Si depende de un sistema que puede cambiar (una ADR, un
+  rango de balance), se anota *"descartada bajo la ADR X"*, nunca *"falsa"* a secas — puede reabrirse si
+  ese sistema cambia. Distinta de una hipótesis **sin evidencia de activación** (mecanismo real, nunca
+  observado disparándose).
+
+### Revisión independiente — Regla E
+
+Antes de cerrar cualquier paquete que toque `/Sim`, `/data`, o una ADR: agente `independent-reviewer`. Le
+llega el problema completo (`docs/pendientes/<ID>.md` con sus hipótesis descartadas, no solo la ganadora),
+el diff, los tests — **nunca tu argumentación de por qué está bien**. Su plantilla incluye
+`DESIGN CLAIM NOT PROVEN`: tests verdes demuestran que el código hace X, nunca que X sea la mecánica
+correcta para Underleague — eso lo decide `game-design-review`.
 
 ## Stack
 
@@ -26,9 +90,9 @@ Descartados con motivo registrado en `docs/decisiones/`: ECS, aprendizaje autom�
 
 Claude Code y **Godot** corren en **WSL (Ubuntu 24.04)**. Detalle en `docs/entorno.md`.
 
-- `/Sim`, `/Sim.Tests`, `/Balance` y `/tools` son .NET puro: se compilan y prueban **en WSL** con `dotnet`. Ahí ocurre casi todo el trabajo de las fases 0-2.
-- `/Game` se compila y ejecuta con el Godot de Linux instalado en WSL (`~/.local/bin/godot`). **El editor de Windows no puede abrir el proyecto**: Godot no admite rutas UNC. No hay editor gráfico (WSLg deshabilitado en `.wslconfig`), así que las escenas se editan como texto y el resultado visual se verifica con capturas por Xvfb; la receta está en `docs/entorno.md`.
-- Instalado en WSL: .NET SDK 10.0.111 (y 8.0.130), `global.json` fija el 10; `csharp-ls` 0.27. En Windows (4 sep 2026): .NET SDK 10.0.400 y Godot 4.6.3 .NET, ambos vía winget.
+- `/Sim`, `/Sim.Tests`, `/Balance` y `/tools` son .NET puro: se compilan y prueban **en WSL** con `dotnet`.
+- `/Game` se compila y ejecuta con el Godot de Linux instalado en WSL (`~/.local/bin/godot`). **El editor de Windows no puede abrir el proyecto**: Godot no admite rutas UNC. No hay editor gráfico (WSLg deshabilitado en `.wslconfig`), así que las escenas se editan como texto y el resultado visual se verifica con capturas por Xvfb — skill `visual-review`.
+- Instalado en WSL: .NET SDK 10.0.111 (y 8.0.130), `global.json` fija el 10; `csharp-ls` 0.27. En Windows: .NET SDK 10.0.400 y Godot 4.6.3 .NET, ambos vía winget.
 
 ## Estructura de la solución (RT-010)
 
@@ -39,7 +103,7 @@ Claude Code y **Godot** corren en **WSL (Ubuntu 24.04)**. Detalle en `docs/entor
 /Game           Proyecto Godot. Referencia a /Sim
 /data           JSON: perks, objetos, razas, clubes, consumibles, pesos de IA, generadores de nombres
 /tools          Validadores de /data y scripts auxiliares
-/docs           Requisitos, arquitectura, decisiones, plan
+/docs           Requisitos, arquitectura, decisiones, plan, pendientes/, project-state.md
 ```
 
 ## Reglas sin excepción
@@ -58,145 +122,104 @@ Proceden de los requisitos técnicos y no se negocian en un PR. Si parece necesa
 10. **No se produce arte hasta cerrar el diseño de la fase 2.** Solo placeholders; el arte previo se descarta (regla de fase, §7).
 11. Principio rector de diseño: **todo lo malo que pase en un partido debe haber sido previsible** con la información previa (RF-012d). Ningún sistema nuevo introduce daño no anunciado. Desde la **ADR 0048** un jugador **sano también puede morir**, así que la previsibilidad ya no se apoya en una garantía sino en las **cinco condiciones** de esa ADR —se sabe antes, se puede evitar el partido, se puede **reducir el riesgo con la alineación**, el equipo del muerto vuelve al inventario, y la muerte es rara—: son requisito, no aspiración, y cualquier cambio que las debilite hay que medirlo.
 
+## Principios de diseño
+
+Cuando dos implementaciones técnicamente válidas son equivalentes, prioriza la que haga las reglas del
+juego más legibles para el jugador:
+
+- comportamiento observable > modificadores numéricos invisibles
+- identidad memorable > bonus genéricos
+- reglas locales > cambios globales de IA
+- eventos explícitos > transiciones invisibles
+- feedback simple > cinemáticas complejas — el jugador no necesita una escena, necesita que nada
+  desaparezca sin explicación
+- consecuencias legibles > datos internos
+- especialización significativa > combinaciones arbitrarias
+- sistemas reutilizables > excepciones
+- medición > intuición · comparación > opinión · demostración > suposición
+
 ## Modo de trabajo: desarrollo autónomo
 
 El usuario actúa **únicamente como revisor**. Claude planifica, implementa, prueba, documenta, commitea y hace push por su cuenta, y solo consulta cuando una decisión cambia una regla de juego de `docs/requisitos.md`, tiene coste económico, o es irreversible fuera del repositorio.
 
 - **Esquema 10-80-10**: la sesión principal (el modelo más capaz) hace el primer 10%, **planificar**: arquitectura, interfaces, criterios de éxito y restricciones, por escrito antes de que nadie codifique. El 80% de **ejecución** se delega a subagentes con modelos más baratos. El último 10% es **revisión** por la sesión principal contra el plan: huecos, desviaciones, qué falta antes de commitear.
-- **Subagentes del proyecto** (`.claude/agents/`): `fast-worker` (sonnet) para trabajo mecánico con especificación cerrada: clases a partir de interfaces, tests, datos JSON, esquemas, documentación derivada. `deep-reasoner` (opus) para razonamiento pesado: diseño de algoritmos, depuración compleja, análisis de balance, divergencias de determinismo. `Explore` para búsquedas de solo lectura. Usa `fork` solo cuando el subagente necesite todo el contexto de la sesión.
+- **Subagentes del proyecto** (`.claude/agents/`): `fast-worker` (sonnet) para trabajo mecánico con especificación cerrada. `deep-reasoner` (opus) para razonamiento pesado. `independent-reviewer` (opus) para revisión sin ver el razonamiento del implementador — Regla E arriba. `Explore` para búsquedas de solo lectura. Usa `fork` solo cuando el subagente necesite todo el contexto de la sesión.
 - Cada encargo a un subagente es cerrado: qué ficheros puede tocar, qué interfaces debe respetar, qué tests deben pasar, y que no haga commit. Lanza en paralelo los encargos independientes. Siempre una revisión independiente antes de cerrar un hito.
 - **Skills y plugins**: cuando un flujo se repita o requiera conocimiento específico, crea una skill en `.claude/skills/` (plugin `skill-creator`) o instala un plugin del marketplace, y regístralo en la sección de skills de este fichero. No pidas permiso para ello.
-- **Nunca `git add -A` con subagentes en marcha.** Trabajan sobre el mismo árbol, así que barre su trabajo a
-  medias hacia tu commit: el 13 sep 2026 se colaron así cambios de `/Game` en dos commits de `/Sim` y
-  `/data` —rompiendo la regla de que un commit no mezcla `/Sim` y `/Game`— y se publicó código **sin
-  verificar**. Prepara siempre rutas explícitas (`git add Sim Sim.Tests data docs`) y mira `git status`
-  antes de commitear.
-- **Hitos**: cada entregable de `docs/plan-fases.md` termina con: build y tests en verde, lote de `/Balance` si toca `/Sim` o `/data`, revisión por subagente, commit con RF/RT, push, y actualización del estado en `plan-fases.md`.
-- **Informe al revisor**: al cerrar un hito, un resumen corto de qué se hizo, qué se midió, qué quedó fuera y qué decisiones se tomaron sin consultar (con enlace al ADR o a `pendientes.md`).
-- **No pares al cerrar un hito**: encadena con el siguiente sin esperar aprobación. Al terminar un paquete, commitea, informa en una línea y arranca el siguiente del plan. Solo se detiene el desarrollo si falta una herramienta que el revisor deba instalar, si hay que tomar una decisión de diseño que cambie una regla del juego, o si algo tiene coste económico o es irreversible fuera del repositorio.
-- Si algo bloquea (herramienta que falta, credencial, decisión de diseño), se hace todo lo que no dependa de ello y se deja la pregunta al final del informe, no en medio del trabajo.
+- **Nunca `git add -A` con subagentes en marcha.** Trabajan sobre el mismo árbol, así que barre su trabajo a medias hacia tu commit. Prepara siempre rutas explícitas (`git add Sim Sim.Tests data docs`) y mira `git status` antes de commitear. Hay un hook que avisa (`.claude/hooks/subagent-add-warning.sh`), pero no sustituye a mirar `git status`.
+- **Hitos**: cada entregable termina con: build y tests en verde, lote de `/Balance` si toca `/Sim` o `/data` (skill `balance-measure`), revisión por subagente, commit con RF/RT, push, y actualización de `docs/project-state.md`.
+- **Informe al revisor**: al cerrar un hito, un resumen corto de qué se hizo, qué se midió, qué quedó fuera y qué decisiones se tomaron sin consultar (con enlace al ADR o a `docs/pendientes/`).
+- **No pares al cerrar un hito**: encadena con el siguiente sin esperar aprobación. Solo se detiene el desarrollo si falta una herramienta que el revisor deba instalar, si hay que tomar una decisión de diseño que cambie una regla del juego, o si algo tiene coste económico o es irreversible fuera del repositorio.
+- Si algo bloquea, se hace todo lo que no dependa de ello y se deja la pregunta al final del informe, no en medio del trabajo.
 
 ## Flujo de trabajo
 
-- Antes de implementar un sistema, lee su sección en `docs/requisitos.md` y el documento derivado de `docs/` (tabla abajo). Si un requisito es ambiguo o contradictorio, anótalo en `docs/pendientes.md` y aplica la lectura más conservadora; no inventes reglas de juego.
+- Antes de implementar un sistema, lee su sección en `docs/requisitos.md` y el documento derivado de `docs/` (tabla abajo). Si un requisito es ambiguo o contradictorio, anótalo en `docs/pendientes/` y aplica la lectura más conservadora; no inventes reglas de juego.
 - El estado de la run (RT-030) se define como esquema versionado **antes** de implementar sistemas que lo usen (`docs/modelo-datos.md`). Cualquier cambio de esquema sube la versión.
 - Decisión de arquitectura o cambio de rango de balance -> ADR en `docs/decisiones/` (RT-057: nunca un ajuste silencioso).
 - Cada fase tiene criterio de salida objetivo (`docs/plan-fases.md`). No se empieza la siguiente sin cumplirlo con datos de `/Balance`.
 - Cambio en `/Sim` o `/data` -> tests + lote de balance antes de darlo por terminado (RT-054).
 - Commits pequeños y frecuentes; push a `main` tras cada hito con build y tests en verde.
 
-## Comandos
+## Comandos, capturas y disciplina de procesos
 
-**Siempre `-c Release`, siempre `-m:1`.** Medido el 8 sep 2026: la misma clase de tests tarda **3 m 47 s en Debug y 13 s en Release** (17x); una sesión entera corrió las puertas en Debug, troceadas por clase, y costó ~2 h que en Release son minutos. CI lo hace en Release desde el principio (`.github/workflows/ci.yml`). El `-m:1` es por la memoria del contenedor WSL (7,8 GB).
+Ver skills **`build-and-test`** (comandos de compilación/prueba, fuente única) y **`visual-review`**
+(capturas, las tres entradas, el ciclo obligatorio). No se repiten aquí para no duplicarlos.
 
-```bash
-dotnet build Underleague.slnx -c Release -m:1 -v q                        # /Sim, /Sim.Tests, /Balance, /tools (sin /Game)
-dotnet test Sim.Tests -c Release --filter "Category!=Gate" -m:1 -v q      # bucle de desarrollo: 643 tests, ~25 s
-dotnet test Sim.Tests -c Release --filter "Category=Gate" -m:1 -v q       # las seis puertas estadísticas: UNA invocación, antes del commit del hito
-dotnet run --project Balance -c Release -- --runs 10000 --seed 1 --teams data/balance/reference.json --out out/ --quiet
-dotnet run --project tools/DataValidator -- data/                         # esquemas de /data
-```
+**Nada se lanza sin plazo, y la CPU alta no es señal de progreso.** El 15 sep 2026 se dejó la escena de
+capturas 85 minutos con 4 h de CPU al 295 % sin producir nada, confundiendo "el proceso está vivo" con
+"está avanzando". Reglas:
 
-Las puertas llevan `[Collection("Gate")]`: van en serie entre sí y cada una juega sus partidos en paralelo por dentro (patrón de `BossGateTests`), así que no se trocean por clase. `summary.csv` se lee con `grep -E "^métrica,"` de las filas que importan, nunca entero (>150 filas).
-
-```bash
-dotnet build Game/Underleague.Game.csproj                  # OBLIGATORIO antes de ejecutar Godot
-godot --headless --path Game --import          # importar recursos
-godot --headless --path Game --quit-after 60   # ejecutar sin dibujar
-# ejecutar y capturar. El `timeout` NO es opcional: sin el se queda colgado al 300% de CPU (ver convenciones)
-timeout 600 xvfb-run -a --server-args="-screen 0 1280x800x24" godot --path Game \
-  --rendering-driver opengl3 --audio-driver Dummy
-```
-
-**Las capturas salen de TRES entradas distintas, y ninguna las hace todas.** Perdido medio paquete el 13
-sep 2026 lanzando el flag equivocado una y otra vez y mirando PNG viejos:
-
-| qué quieres | cómo se saca |
-|---|---|
-| `equipo*.png` (11, pantalla de Equipo) | `-- --screenshots` |
-| `inicio`, `mapa`, `ojeo`, `equipo-run` | `-- --tour` · solo el mapa: `-- --map-tour` |
-| **`partido*`, `informe`, `recompensa`, `mercado`** | `res://Scenes/Capturas.tscn` (sin flag) |
-
-**Comprueba SIEMPRE la marca de tiempo del PNG** (`ls -la Game/screenshots/x.png`) antes de mirarlo o de
-sacar conclusiones. Que el proceso salga con código 0 **no** significa que haya escrito el fichero: con el
-flag equivocado hace once capturas de otra pantalla, no toca la que buscas y termina limpiamente. Y con
-renderizado por software la secuencia tarda **varios minutos**, así que lánzala en segundo plano y no la
-mates antes de tiempo.
-
-**`dotnet build` en la raíz NO actualiza lo que Godot carga.** Godot ejecuta los ensamblados de
-`Game/.godot/mono/temp/bin/Debug/`, y solo `dotnet build Game/Underleague.Game.csproj` los regenera. Con un
-`Underleague.Sim.dll` rancio leyendo un `/data` recién cambiado, el juego **se cuelga al arrancar sin
-imprimir nada** —el cargador viejo no entiende los valores nuevos— y parece un fallo del paquete de datos
-cuando es un binario viejo. La escena de capturas solo arranca **con Xvfb**: en `--headless` no llega ni a
-`_Ready`, así que no sirve para diagnosticar.
+- **Todo proceso largo va envuelto en `timeout`**, siempre, sin excepción.
+- **Presupuesto por tarea, medido**: capturas ≤ 10 min · las 43 puertas ≤ 8 min (tardan 5 m 32 s) · el
+  bucle `Category!=Gate` ≤ 2 min (tarda ~40 s). Al doble del presupuesto, se mata y se diagnostica.
+- **Se espera un ARTEFACTO, no un latido.** `pgrep`/`%CPU`/`TIME` dicen que el proceso existe, no que
+  progrese. La condición de espera es un fichero escrito o una línea de log, con marca de tiempo
+  comprobada.
+- **Diagnostica por el camino barato antes de esperar más.** Aquel cuelgue se resolvió en 282 ms con un
+  test de `/Sim` que descartó la simulación — si existe una medición de segundos que acota el problema,
+  va antes que la segunda espera.
+- **Dos esperas fallidas cierran el asunto.** Se anota en `docs/pendientes/` con lo medido y se sigue.
 
 ## Convenciones
 
-- **Idioma** (ADR 0009): código C#, claves JSON, ids, eventos y etiquetas en **inglés**; documentación, comentarios de diseño y commits en **español**; texto visible por el jugador siempre localizado (es/en) desde `data/l10n/`. La correspondencia con los términos del documento de requisitos está en `docs/glosario-identificadores.md`: consúltala antes de nombrar un concepto nuevo y amplíala allí.
+- **Idioma** (ADR 0009): código C#, claves JSON, ids, eventos y etiquetas en **inglés**; documentación, comentarios de diseño y commits en **español**; texto visible por el jugador siempre localizado (es/en) desde `data/l10n/`. La correspondencia con los términos del documento de requisitos está en `docs/glosario-identificadores.md`.
 - Eventos en `UPPER_SNAKE` en datos y logs (`MATCH_START`), `EventType.MatchStart` en C#. Etiquetas y rasgos en `PascalCase` (`Brute`, `Scrap`, `Aggressive`). Ids de datos en `snake_case` (`bloodlust`).
-- Commits: `tipo(ámbito): resumen — RF-xxx/RT-xxx`, con ámbito en `sim`, `data`, `balance`, `game`, `tools`, `docs`. Un commit no mezcla `/Sim` y `/Game`.
+- Commits: `tipo(ámbito): resumen — RF-xxx/RT-xxx`, con ámbito en `sim`, `data`, `balance`, `game`, `tools`, `docs`. Un commit no mezcla `/Sim` y `/Game` (hay un hook que avisa: `.claude/hooks/sim-game-boundary.sh`).
 - C#: `nullable enable`, `TreatWarningsAsErrors` en `/Sim`, sin `dynamic`, sin reflexión en tiempo de partido. Estilo en `.editorconfig`.
 - Tests estadísticos con semilla fija y rangos de RT-056; un test que falla "por mala suerte" es un test mal escrito.
-- **Tests con criterio, no por reflejo**: siempre `-c Release` (Debug es 17x más lento, medido). Ejecuta solo los tests que cubren lo que has tocado (`dotnet test Sim.Tests -c Release --filter "FullyQualifiedName~X" -m:1 -v q`), filtrando la salida a las líneas de resultado. El bucle de trabajo es `Category!=Gate`; las puertas (`Category=Gate`) se lanzan **una vez y en una sola invocación** antes del commit del hito, nunca tras cada edición ni troceadas por clase. No repitas un build o test cuyo resultado ya conoces. Los subagentes siguen la misma regla.
-- **El paralelismo vive en el arnés, no en `/Sim`**: `/Balance` y las puertas de `Sim.Tests` juegan sus partidos con `Parallel.For` sobre un array por índice, con cada semilla función pura del índice (`RngStreams.MatchSeed(seed, índiceGlobal)`, nunca un contador que avance) y las reducciones después, en orden — el patrón de `BossGateTests`. `/Sim` no conoce `Parallel` (RT-021) y **no es reentrante**: `CompiledCondition` guarda el contexto de evaluación en la instancia, así que cada hilo del arnés juega con **su propio `Catalog`** cargado de los mismos ficheros (`Balance/BalanceCatalogs.cs` y su gemelo en `Sim.Tests`); compartir un `Catalog` entre hilos da resultados distintos en cada ejecución. Todo bucle nuevo de partidos o runs independientes sigue ese patrón y se acepta solo con salida **byte a byte idéntica** a la secuencial; una diferencia es una carrera, nunca se arregla tocando la semilla (RT-057).
-- **Varias métricas independientes moviéndose juntas no son ruido.** El 14 sep 2026 acepté un candidato
-  (`ChaseBall pen=50`) descartando su puerta roja como ruido —y lo demostré con un barrido, la métrica
-  rebotaba 13 puntos—, sin mirar que **otras dos** métricas de diferenciación de builds se movían a la vez y
-  en la misma dirección. Sobre un baseline sucio no se veía; sobre uno limpio el daño era 3 rojas → 5 → 7.
-  Una métrica ruidosa aislada se descarta; tres apuntando al mismo sitio son una señal.
-- **Antes de afirmar una relación geométrica, compruébala.** El 13 sep 2026 afirmé que la cámara en tres
-  cuartos empeoraba la lectura del texto tumbado al subir el ángulo, y es al revés: **lo del suelo se
-  comprime por el SENO de la elevación** (subir mejora) y **lo que está de pie por el COSENO** (subir
-  empeora). Iba en una instrucción a un subagente, que la contradijo con medidas. Una línea de aritmética
-  antes de escribirlo cuesta menos que el rodeo.
-- **Nada se lanza sin plazo, y la CPU alta no es señal de progreso.** El 15 sep 2026 dejé la escena de
-  capturas **85 minutos con 4 h de CPU al 295 %** sin que escribiera un solo PNG ni imprimiera una sola
-  línea, y la miré cinco veces confundiendo "el proceso está vivo y suda" con "está avanzando". Reglas:
-  - **Todo proceso largo va envuelto en `timeout`**, siempre, sin excepción:
-    `timeout 600 xvfb-run -a … godot …`. Un proceso sin plazo es un proceso que se queda colgado toda la
-    sesión comiéndose los núcleos que necesitan los tests y los subagentes.
-  - **Presupuesto por tarea, medido, no intuido**: capturas de una pantalla ≤ **10 min** · las 43 puertas
-    ≤ **8 min** (tardan 5 m 32 s) · el bucle `Category!=Gate` ≤ **2 min** (tarda 44 s) · un lote de
-    `/Balance` lo que diga su tamaño. Si algo pasa del doble de su presupuesto, **está roto**: se mata y
-    se diagnostica, no se espera.
-  - **Se espera un ARTEFACTO, no un latido.** `pgrep`, `%CPU` y `TIME` dicen que el proceso existe, no que
-    progrese. La condición de espera es siempre un fichero escrito o una línea concreta en el log, y
-    **con marca de tiempo comprobada** (`ls -la`). Un proceso al 295 % puede estar girando en vacío.
-  - **Diagnostica por el camino barato antes de esperar más.** Aquel cuelgue se resolvió en **282 ms**:
-    un test de `/Sim` midió que el partido de referencia se juega en 191 eventos y 1.200 fotogramas, lo
-    que descartó la simulación y localizó el problema en `/Game` sin volver a lanzar Godot. Si existe una
-    medición que cuesta segundos y acota el problema, va **antes** que la segunda espera, no después.
-  - **Dos esperas fallidas cierran el asunto.** A la segunda, se anota en `docs/pendientes.md` con lo
-    medido y se sigue con el trabajo: una verificación que no llega no puede bloquear la que sí se puede
-    hacer.
-- **El lote de `/Balance` no es un test de humo**: cuesta tiempo y tokens y su salida es larga. Se lanza cuando hay una **hipótesis concreta que medir**, no después de cada cambio. Agrupa las modificaciones en tandas y mide una vez por tanda, con el número de partidos más pequeño que resuelva la duda. La medición de referencia completa se hace una sola vez, al cerrar el trabajo. Nunca se lanza "para ver si sigue bien" algo que no se ha tocado.
+- **El paralelismo vive en el arnés, no en `/Sim`**: `/Balance` y las puertas de `Sim.Tests` juegan sus partidos con `Parallel.For` sobre un array por índice, con cada semilla función pura del índice (`RngStreams.MatchSeed(seed, índiceGlobal)`) y las reducciones después, en orden. `/Sim` no conoce `Parallel` (RT-021) y **no es reentrante**: cada hilo del arnés juega con **su propio `Catalog`**; compartir uno entre hilos da resultados distintos en cada ejecución. Aceptación: salida byte a byte idéntica a la secuencial (ver skill `architecture-review`).
 
 ## Mapa de documentación
 
 | Documento | Contenido | Cuándo leerlo |
 |---|---|---|
 | `docs/requisitos.md` | Requisitos completos v0.9.1, fuente de verdad | Siempre que implementes algo |
+| `docs/project-state.md` | Estado vigente del proyecto, editado a mano | Al empezar una sesión |
 | `docs/arquitectura.md` | Proyectos, dependencias, superficie pública de `/Sim`, bus de eventos, carga de datos, persistencia | Antes de crear proyectos o tocar fronteras |
 | `docs/determinismo.md` | RNG, ticks, aritmética, orden, APIs prohibidas, test RT-024 | Antes de escribir cualquier cosa en `/Sim` |
 | `docs/modelo-datos.md` | Esquema de Run, formato de perk/objeto/consumible, funciones NCalc, plantillas de descripción | Antes de tocar `/data` o el estado |
-| `docs/simulacion.md` | Tres máquinas de estado, IA de utilidad, acciones, portero, árbitro, turba | Fases 0 y 1 |
-| `docs/auditoria-ia-jugadores.md` | Auditoría medida de la IA de utilidad: jitter, márgenes, acciones muertas, estados tácticos duplicados | Antes de tocar `Utility.cs` o `data/ai/weights.json` |
+| `docs/simulacion.md` | Tres máquinas de estado, IA de utilidad, acciones, portero, árbitro, turba | Antes de tocar `Utility.cs` |
 | `docs/balance.md` | Métricas RT-056 con rangos, CLI de `/Balance`, puertas de CI | Al ajustar cualquier número |
-| `docs/plan-fases.md` | Fases 0-4, criterios de salida, estado actual, backlog de fase 0 | Al planificar trabajo |
-| `docs/pendientes.md` | Decisiones abiertas e inconsistencias detectadas en los requisitos | Cuando algo no cuadre |
+| `docs/plan-fases.md` | Fases 0-4, criterios de salida, backlog | Al planificar trabajo |
+| `docs/pendientes/README.md` | Índice de problemas de gameplay activos, un fichero por problema | Ante cualquier síntoma, antes de hipotetizar (Regla A) |
 | `docs/decisiones/` | ADRs | Antes de cambiar una decisión tomada |
 | `docs/entorno.md` | WSL/Windows, instalación, cómo se compila cada parte | Al montar la máquina |
-| `docs/ui-equipo.md` | Decisiones de la pantalla de Equipo, de las que derivan las demás pantallas (UI-021) | Antes de tocar `/Game` |
-| `docs/ui-partido.md` | Pantalla de Partido: geometría y cámara (ADR 0102, 0103), el intercambio ángulo/silueta, la sombra como elemento estructural, y qué le debe la vista 3D a la 2D. Es el briefing de arte | Antes de tocar la pantalla de Partido o de encargar arte |
-| `docs/estilo-visual.md` | Tono visual (Lucky Tower), los prompts de partida y **en qué chocan con RA-025/026**. Se itera | Antes de encargar arte o de escribir un prompt |
+| `docs/ui-equipo.md` | Decisiones de la pantalla de Equipo (UI-021) | Antes de tocar `/Game` |
+| `docs/ui-partido.md` | Pantalla de Partido: geometría y cámara (ADR 0102, 0114) | Antes de tocar la pantalla de Partido o de encargar arte |
+| `docs/estilo-visual.md` | Tono visual (Lucky Tower), 3D + cámara dinámica (ADR 0114) | Antes de encargar arte o tocar la cámara |
 | `docs/fase2-diseno.md` | Bucle de run: mapa, economía, mercado, jefe, ironman | Fase 2 |
-| `docs/catalogo-perks-y-objetos.md` | Catálogo derivado de `/data`: los 61 perks con su descripción generada (RT-035), los 34 objetos por arquetipo y los 4 consumibles | Al diseñar o revisar contenido de `/data`; se regenera, no se edita a mano |
-| `docs/referencia-motores-futbol.md` | Conclusiones aplicables de motores de fútbol open-source (gfootball, librcsc, SimpleSoccer), con fuentes citadas | Al tocar intercepción/parada del portero (AW-A) o evaluación de línea de pase |
+| `docs/catalogo-perks-y-objetos.md` | Catálogo derivado de `/data`, se regenera, no se edita a mano | Al diseñar o revisar contenido de `/data` |
+| `docs/referencia-motores-futbol.md` | Conclusiones de motores de fútbol open-source, con fuentes citadas | Al tocar intercepción/parada del portero o líneas de pase |
 
 ## Skills del proyecto (`.claude/skills/`)
 
+- `gameplay-debug`: investigar un síntoma de partido, un bug de comportamiento, o "por qué el motor hizo X" — antes de escribir ningún arreglo. Regla A.
+- `game-design-review`: evaluar una mecánica nueva o modificada antes de implementarla — las diez preguntas. Regla B.
+- `architecture-review`: revisar una frontera de proyectos o una abstracción nueva antes de implementarla.
+- `balance-measure`: medir un cambio que puede alterar comportamiento cuantificable, con baseline real y behavioral audit. Regla D.
+- `visual-review`: ejecutar Godot, capturar y comparar antes de declarar que algo "se ve bien".
+- `build-and-test`: comandos de compilación, prueba y validación — fuente única.
 - `perk-authoring`: crear o revisar un perk, objeto o consumible en `/data` cumpliendo formato, límites y distribución 60/30/10.
-- `balance-check`: ejecutar el lote de `/Balance` y contrastar con los rangos de RT-056 y las métricas obligatorias.
-- `sim-debug`: reproducir un partido desde semilla, volcar la tabla de utilidad de un tick (RT-098), localizar una divergencia de determinismo.
 
-Plugins instalados a nivel de usuario: `csharp-lsp`, `commit-commands`, `claude-md-management`, `context7`, `skill-creator`, `dotnet-skills` (patrones C#/.NET, testing, rendimiento) y `godot-prompter` (55 skills de Godot 4 con ejemplos C#; se activa cuando exista `/Game`). Candidato para fase 4: plugin `godot` de Randroids-Dojo (exportación y CI de Godot, orientado a GDScript).
+Plugins instalados a nivel de usuario: `csharp-lsp`, `commit-commands`, `claude-md-management`, `context7`, `skill-creator`, `dotnet-skills` (patrones C#/.NET, testing, rendimiento) y `godot-prompter` (55 skills de Godot 4 con ejemplos C#).

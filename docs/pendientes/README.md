@@ -1,0 +1,53 @@
+# Índice de problemas de gameplay
+
+Un fichero por problema (mismo patrón que `docs/decisiones/`), no una tabla plana. Antes de
+proponer una hipótesis sobre un síntoma, consulta aquí si ya existe un fichero para él o para
+uno de sus hermanos — memoria que no se consulta es memoria inexistente
+(`docs/analisis/auditoria-organizacion-v2.md` §3).
+
+Estado epistemológico dentro de cada fichero (Regla F, ver V2/V3 de la auditoría de
+organización): una hipótesis puede estar **REJECTED** por un experimento (no vuelve a
+probarse sin evidencia nueva), **LIKELY** (consistente con lo medido pero sin experimento
+propio que la aísle), o **CONFIRMED** (reproducida). Una hipótesis rejected bajo un sistema
+puede reabrirse si ese sistema cambia — se anota "descartada bajo la ADR X", nunca "falsa"
+a secas.
+
+| Id | Título | Estado |
+|---|---|---|
+| [BA-A](./BA-A.md) | BLOQUEO: un nodo de evento sin opciones y sin salida. | Cerrada |
+| [BA-B](./BA-B.md) | BLOQUEO: en un jefe no dejó sustituir al lesionarse el segundo jugador | Cerrada |
+| [BA-C](./BA-C.md) | Con seis filas no hay fila central y la alineación queda descentrada. | Cerrada |
+| [BA-D](./BA-D.md) | Los jugadores se teletransportan al reanudar una falta. | Cerrada |
+| [BA-E](./BA-E.md) | Goles sin ángulo. | Ver fichero |
+| [BA-F](./BA-F.md) | El 3D está mal. | Ver fichero |
+| [BA-G](./BA-G.md) | Los nombres de los jugadores se repiten | Ver fichero |
+| [BA-H](./BA-H.md) | Los consumibles no se pueden usar. | Ver fichero |
+| [BA-I](./BA-I.md) | La sustitución por lesión no debería ser obligatoria | Ver fichero |
+| [BA-J](./BA-J.md) | Tras una parada, el equipo defensor debería replegarse | Ver fichero |
+| [BA-K](./BA-K.md) | Cortinilla o transición | Ver fichero |
+| [BA-L](./BA-L.md) | La escena de capturas (`Scenes/Capturas.tscn`) no produce nada en esta | Ver fichero |
+| [BA-M](./BA-M.md) | Origen de BA-N: la puerta de equipar pasó de roja a verde por cero cen | Cerrada |
+| [BA-N](./BA-N.md) | Equipar ya no vale el escalón que la ADR 0033 exige | Ver fichero |
+| [BB-A](./BB-A.md) | Los jugadores se teletransportan al reanudar | Ver fichero |
+| [BB-B](./BB-B.md) | En el saque de centro los defensores van a robar el balón antes de que | Ver fichero |
+| [BB-C](./BB-C.md) | «Celebra» se activa cuando ya han vuelto a su campo | Ver fichero |
+| [BB-D](./BB-D.md) | Propuesta del revisor: parar unos segundos en los eventos que detienen | Ver fichero |
+| [BB-E](./BB-E.md) | Salen dos canteranos en el mercado; debería salir uno como mucho | Cerrada |
+| [BB-F](./BB-F.md) | Un jugador se lesiona y no se ve en qué posición jugaba | Ver fichero |
+| [BB-G](./BB-G.md) | El balón se queda parado en el campo | Ver fichero |
+| [BB-G2](./BB-G2.md) | Riesgo latente encontrado de camino, sin evidencia de que se dispare | Ver fichero |
+| [BB-H](./BB-H.md) | «Todavía no hay eventos, habrá que diseñarlos» | Ver fichero |
+| [BB-I](./BB-I.md) | «Depredador de área» pareció activarse en un momento que no era un tir | Ver fichero |
+| [BB-J](./BB-J.md) | «Mentalidad de manada» no sirve jugando con enanos | Ver fichero |
+| [BB-K](./BB-K.md) | Dos jugadores del mismo equipo que quieren la misma casilla «bailan y  | Ver fichero |
+| [BB-L](./BB-L.md) | El lesionado «sale volando» del campo | Ver fichero |
+| [BB-M](./BB-M.md) | «Sed de médula» lesionó a un jugador lejos de la acción | Ver fichero |
+| [CAT-A](./CAT-A.md) | `field_bandage` usaba el canal `injure`, que protegía al rival. | Ver fichero |
+| [CAT-B](./CAT-B.md) | Un consumible se puede comprar pero no se puede equipar: nadie emite ` | Ver fichero |
+| [CAT-C](./CAT-C.md) | La medición no puede ejercitar el consumible manual, así que subestima | Ver fichero |
+| [CAT-D](./CAT-D.md) | ¿Una fila más de campo (16×5 → 16×6), con las DOS filas centrales como | Ver fichero |
+| [CAT-E](./CAT-E.md) | Con seis filas, todas las builds ganan más al equipo sin perks, y dos  | Ver fichero |
+| [CAT-F](./CAT-F.md) | `Block` (la carga sin balón, ADR 0030 §2) no se puede despertar subién | Ver fichero |
+| [CAT-G](./CAT-G.md) | El equipo de la referencia neutra es una palanca que mueve tres métric | Ver fichero |
+| [CAT-H](./CAT-H.md) | ¿Compraría alguien un objeto maldito? | Ver fichero |
+| [CAT-I](./CAT-I.md) | La política automática casi nunca vende, así que las reglas de venta n | Ver fichero |

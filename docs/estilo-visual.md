@@ -368,7 +368,7 @@ No «¿mola?», sino dos pasa/no pasa con arnés que ya existe:
    animaciones hay que hacer a mano.
 
 **Bloqueante práctico antes de invertir en 3D:** Godot corre aquí en WSL **sin editor gráfico** y lo visual
-se comprueba con capturas por Xvfb — y **la escena de capturas está colgada** (`pendientes.md`, BA-L).
+se comprueba con capturas por Xvfb — y **la escena de capturas está colgada** (`docs/pendientes/BA-L.md`).
 Importar y retargetear FBX y afinar un material toon a ciegas es ingrato; arreglar BA-L va antes, o se
 trabaja sin instrumentos justo en la parte que se juzga por el ojo.
 

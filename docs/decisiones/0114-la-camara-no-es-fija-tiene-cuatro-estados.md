@@ -72,5 +72,5 @@ De ahí dos reglas duras:
 
 Afinar el *feel* de una cámara es lo que peor se hace a ciegas, y aquí Godot corre en WSL **sin editor
 gráfico**: lo visual se comprueba con capturas por Xvfb. Y hoy **la escena de capturas no produce nada**
-(`docs/pendientes.md`, BA-L). Implementar esto antes de cerrar BA-L es trabajar sin instrumentos justo en
+(`docs/pendientes/BA-L.md`). Implementar esto antes de cerrar BA-L es trabajar sin instrumentos justo en
 el sistema que más se juzga por el ojo.
