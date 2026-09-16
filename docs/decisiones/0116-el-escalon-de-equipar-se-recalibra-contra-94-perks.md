@@ -1,8 +1,15 @@
 # 0116. El umbral de "equipar" se recalibra contra su propio error de medición
 
-**Fecha:** 2026-09-16 (corregida dos veces el mismo día, tras dos rondas de `independent-reviewer`)
+**Fecha:** 2026-09-16 (corregida tres veces el mismo día, tras tres rondas de `independent-reviewer`)
 **Estado:** Aceptada e implementada (`Sim.Tests/Perks/EquipmentImpactTests.cs`); documentación pendiente
-de una tercera pasada de confirmación.
+de una cuarta pasada de confirmación.
+
+**Aviso sobre el mensaje del commit `f1ce8b3`**: ese mensaje, ya publicado y sin editar (no se reescribe
+historia publicada), conserva la redacción de la primera versión de esta ADR — atribuye la caída al
+catálogo de perks, cita "1,7 medido" (en ese árbol la puerta mide 3,4; el número no se remidió al
+escribir el mensaje) y deriva el umbral por un ratio inventado. **Esta ADR manda sobre ese mensaje.** Si
+buscas por qué el umbral es 1,0 con `git log`/`git blame` y llegas primero al mensaje de `f1ce8b3`, la
+respuesta correcta está aquí, no ahí.
 **Decisión del revisor** (BA-N, `docs/pendientes/BA-N.md`). **Cambia el umbral de la puerta
 `EquippingAGoodBuildIsWorthSeveralPointsOfWinRate`** (RT-057: cambio de rango, exige ADR). No modifica
 ninguna ADR de precio de objeto (0038, 0086, 0087) ni ningún valor de `/data`.
@@ -11,29 +18,57 @@ de objeto), ADR 0087 (valor de perk medido contra su control — esta puerta ya 
 emparejamiento por semilla, ver "Instrumento", más abajo), ADR 0115 (el mecanismo real de por qué esta
 puerta se mueve, sin atribuirlo a un commit concreto).
 
-**Nota de corrección (dos rondas)**: la primera versión de esta ADR (escrita antes de pasar por
+**Nota de corrección (tres rondas)**: la primera versión de esta ADR (escrita antes de pasar por
 `independent-reviewer`) atribuía la caída del umbral al crecimiento del catálogo de perks (61→94) — esa
-causa quedó **REJECTED** con una medición de seis minutos. La segunda versión (tras la primera revisión)
-corrigió esa causa pero introdujo dos afirmaciones nuevas que una segunda revisión también refutó: que el
-cierre de la fuga del penalti de BB-B (ADR 0115) causó el movimiento de esta puerta, y que la puerta
-necesitaría adoptar comparación emparejada de la ADR 0087 (ya la tiene). El umbral implementado (1,0) no
-ha cambiado en ninguna de las dos correcciones — solo el razonamiento que lo sostiene.
+causa quedó **REJECTED** con una medición de seis minutos. La segunda versión corrigió esa causa pero
+introdujo dos afirmaciones nuevas que una segunda revisión también refutó: que el cierre de la fuga del
+penalti de BB-B (ADR 0115) causó el movimiento de esta puerta, y que la puerta necesitaría adoptar
+comparación emparejada de la ADR 0087 (ya la tiene). La tercera revisión encontró, con `git log -G` sobre
+la propia línea del umbral (no de memoria): que el "3,3 medido" que esta ADR atribuía a la elección de
+2,0 pertenece en realidad a la elección **anterior** (3,0, con 24 plantillas en vez de 96 — corregido en
+"Qué umbral existía"); que un comentario histórico del test seguía citando "768 partidos por brazo" con
+el mismo error de no contar la vuelta que ya se había corregido dos líneas más abajo para otro número; y
+que la sección "Instrumento" y `docs/pendientes/BB-P.md` prescribían un estadístico incorrecto (la RMS de
+unas diferencias que el código ni siquiera calcula, en vez de `sd/√n`) para la mejora de instrumento que
+sí falta. El umbral implementado (1,0) no ha cambiado en ninguna de las tres correcciones — solo el
+razonamiento que lo sostiene.
+
+**Lo que esta corrección deja escrito, y que las versiones anteriores no decían**: el umbral se ha bajado
+**cuatro veces** desde que existe esta puerta (5,0 → 3,0 → 2,0 → 1,0; tabla completa en "Qué umbral
+existía"), y hoy, por las propias palabras de esta ADR, protege "que equipar sigue haciendo algo", no el
+escalón fino que nombra la ADR 0033. Es un debilitamiento real de esa garantía de diseño, no solo una
+recalibración de instrumento — y el paso por `game-design-review` sobre si ese nivel de cobertura es
+aceptable no se hizo antes de aceptar esta ADR (queda como pregunta abierta en `docs/pendientes/BB-P.md`,
+punto 5, pero la decisión de facto — "sí, es aceptable" — ya está en producción).
 
 ## Qué umbral existía
 
 `EquippingAGoodBuildIsWorthSeveralPointsOfWinRate` exigía que equipar a los siete titulares de una build
 "buena" con un objeto cada uno (RF-076, mezcla de rarezas del acto 3) subiera la tasa de victoria **al
 menos 2,0 puntos** frente al mismo equipo sin objetos, sobre 96 plantillas × 32 partidos × 2 direcciones
-= 6.144 partidos por brazo. El propio test documentaba, desde que se fijó (paquete AZ), que el número no
-salía de una fórmula: lo medido en ese momento era 3,3 puntos y se eligió 2,0 como valor limpio por debajo
-de lo medido, con la única afirmación de que "equipar VALE (varios puntos), no una cifra concreta".
+= 6.144 partidos por brazo. **El umbral ya se había bajado tres veces antes de esta ADR, cada vez con más
+muestra** (verificado con `git log -G` sobre la línea del `Assert`, no de memoria):
+
+| commit | `Rosters` | umbral elegido | medido al elegirlo |
+|---|---|---|---|
+| `a91c020` (4 sep) | 8 | 5,0 | 5,4 (bajaba a 4,7 al tocar el catálogo) |
+| `76ce1c4` (4 sep) | 24 | 3,0 | **3,3** |
+| `54c6b38` (9 sep, ADR 0090) | 96 | 2,0 | **3,0** |
+| `f1ce8b3` (esta ADR) | 96 | 1,0 | ver más abajo |
+
+El "3,3" que una versión anterior de esta ADR citaba como la medida que llevó a elegir 2,0 pertenece en
+realidad al paso anterior (24 plantillas, umbral 3,0); el medido que sí llevó a elegir 2,0 fue 3,0, con la
+muestra ya en 96 plantillas — la misma que sigue vigente hoy. El test documentaba, desde que se fijó
+(paquete AZ), que el número no salía de una fórmula, con la única afirmación de que "equipar VALE (varios
+puntos), no una cifra concreta".
 
 ## Por qué deja de ser apropiado — la causa real, no la del catálogo
 
-BA-N registró la misma métrica en tres momentos sucesivos del catálogo de perks y observó una caída
-monótona (3,3 → 2,0 → 1,7) que parecía coincidir con el crecimiento de 61 a 94 perks. Esa lectura era
-razonable a primera vista, pero **falsa**: el `independent-reviewer` congeló el catálogo de perks (mismo
-`/data/perks/` verificado byte a byte en cinco commits distintos) y midió la misma puerta en cada uno:
+BA-N registró la misma métrica en tres momentos sucesivos del catálogo de perks, **siempre con 96
+plantillas** (fallaba <2,0 → 2,0 → 1,7 — ver la serie completa en `docs/pendientes/BA-N.md`), y esa caída
+parecía coincidir con el crecimiento de 61 a 94 perks. Esa lectura era razonable a primera vista, pero
+**falsa**: el `independent-reviewer` congeló el catálogo de perks (mismo `/data/perks/` verificado byte a
+byte en cinco commits distintos, todos con 96 plantillas) y midió la misma puerta en cada uno:
 
 | commit | qué cambió (nunca perks/objetos) | medido |
 |---|---|---|
@@ -60,8 +95,9 @@ ninguna medición que aísle catálogo de código para confirmarla.
 ## Qué representa ahora el umbral, y por qué es 1,0
 
 **No por una fórmula de calibración —no existe ninguna, y la primera versión de esta ADR inventó una
-(extrapolar el ratio 2,0/3,3 de un único precedente) que no está registrada en ningún sitio del proyecto
-como método válido—, sino por control de falso positivo dado el error de medición conocido.**
+(extrapolar un ratio de un precedente que además emparejaba mal dos episodios de calibración distintos,
+corregido arriba) que no está registrada en ningún sitio del proyecto como método válido—, sino por
+control de falso positivo dado el error de medición conocido.**
 
 Con el valor verdadero de esta puerta estimado en ~2,4 (media de las cinco medidas de arriba) y un error
 típico de ~0,9:
@@ -88,7 +124,7 @@ pero incompleta sin decir cuánto detecta y cuánto no. (Los cuatro porcentajes 
 de ~0,35: son órdenes de magnitud para decidir "2,0 era peor que 1,0", no una calibración fina a la
 décima.)
 
-## Instrumento: lo que de verdad falta, corregido tras una segunda revisión
+## Instrumento: lo que de verdad falta, corregido tras la segunda y la tercera revisión
 
 **La primera versión de esta sección estaba equivocada.** Decía que la puerta comparaba `bareRate` contra
 `equippedRate` como dos poblaciones independientes, sin emparejar semilla a semilla, y proponía adoptar el
@@ -98,15 +134,18 @@ dos brazos, el mismo rival `reference`, las mismas semillas de partido (`rosterS
 que cambia entre brazos es si se equipa el `Item`. Es el patrón de la ADR 0087 aplicado ya. La sd empírica
 de 0,78 (§ arriba) ya incluye ese emparejamiento; no hay margen de mejora ahí.
 
-**Lo que de verdad falta es más simple**: la puerta no calcula ni imprime su propia dispersión. El ~0,9
-de error típico vivía solo en un comentario, y confirmarlo con datos reales costó reconstruir cinco
-commits con `git worktree` — cuando la propia ejecución ya tiene, por plantilla, la diferencia entre su
-brazo equipado y su brazo sin equipar, y podría imprimir la RMS de esas 96 diferencias en el mismo
-`_output.WriteLine` que ya usa, igual que `rowDeviation` en la ADR 0087 calcula su dispersión dentro de
-una sola ejecución. Eso habría hecho innecesaria la arqueología de cinco commits para esta ADR, y es
-justo lo que `docs/pendientes/BB-P.md` pide para las otras cuatro puertas. **No se implementa aquí** —es
-una mejora de instrumento, fuera del alcance de un cambio de umbral— pero queda como el ítem concreto de
-BB-P, no como "pasar a diferencia emparejada" (que ya existe).
+**Lo que de verdad falta, corregido otra vez (tercera revisión) porque la segunda versión de esta sección
+también se equivocaba en el estadístico y en lo que el código ya hace**: el ~0,9 de error típico vivía
+solo en un comentario, y confirmarlo con datos reales costó reconstruir cinco commits con `git worktree`,
+en vez de leerse de la propia ejecución — pero `WinsOf(bool equipped)` hoy **no calcula las 96 diferencias
+por plantilla**, devuelve un único entero acumulado (`wins`) sobre las 96 plantillas y las dos direcciones;
+esas diferencias no existen en el código actual y habría que cambiar `WinsOf` para conservarlas, no es "un
+`_output.WriteLine` más". Y el estadístico correcto **no es la RMS** de esas diferencias —eso mediría algo
+del orden de 9 puntos, no 0,9, porque mezcla la dispersión con la propia magnitud del efecto— sino la
+**desviación típica de las 96 diferencias, dividida por √96** (el error típico de su media). Queda como el
+ítem concreto de `docs/pendientes/BB-P.md`, con el estadístico correcto, no como "pasar a diferencia
+emparejada" (que ya existe) ni como una RMS que daría un número diez veces mayor y llevaría a bajar la
+puerta otra vez sin necesidad.
 
 ## Lo que esta ADR explícitamente NO resuelve
 
@@ -139,7 +178,7 @@ ajenos a su contenido) pero eso todavía no está medido para ninguna de las cua
 
 ## Consecuencias
 
-- BA-N con decisión aplicada; cierre formal pendiente de una tercera confirmación del
+- BA-N con decisión aplicada; cierre formal pendiente de una cuarta confirmación del
   `independent-reviewer` sobre esta corrección.
 - El escalón "muy buena" de la ADR 0033 sigue existiendo; la puerta que lo vigila detecta su desaparición
   total con buena fiabilidad (~87 %) y una degradación parcial con fiabilidad limitada (~41 %) — queda

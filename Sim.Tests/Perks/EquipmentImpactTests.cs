@@ -33,11 +33,12 @@ public sealed class EquipmentImpactTests
     /// (RF-070) movió la medida de 5,4 a 4,7 sin tocar un solo objeto—. Con 24 la desviación baja a
     /// ~1,8 y el test avisa de una regresión de verdad.
     /// </summary>
-    // Paquete AZ (ADR 0090): de 24 a 96 plantillas. Con 768 partidos por brazo la diferencia de dos tasas
-    // tenía un error típico de ~1,8 puntos y el umbral de 3,0 quedaba dentro del ruido (medido 3,0 justo
-    // tras la tanda 2). Con 96 plantillas (6.144 partidos por brazo, MatchesPerRoster×2 direcciones) el
-    // error baja a ~0,9 -corregido aquí: decía "3.072 por brazo", que era la mitad sin contar ida y
-    // vuelta, y el propio test imprime 6144 (independent-reviewer, BA-N)-; en Release son segundos.
+    // Paquete AZ (ADR 0090): de 24 a 96 plantillas. Con 24 (1.536 partidos por brazo, 24×32×2 direcciones)
+    // la diferencia de dos tasas tenía un error típico de ~1,8 puntos y el umbral de 3,0 quedaba dentro
+    // del ruido (medido 3,0 justo tras la tanda 2). Con 96 plantillas (6.144 partidos por brazo) el error
+    // baja a ~0,9; en Release son segundos. Corregido aquí (independent-reviewer, BA-N, tercera ronda):
+    // esta nota decía "768" y luego "3.072" -las dos, la mitad de las cifras reales por no contar la
+    // vuelta (×2 direcciones)-, el mismo error de aritmética cometido dos veces en la misma frase.
     private const int Rosters = 96;
 
     /// <summary>Partidos por plantilla y dirección; con ida y vuelta salen 2x (equivalente a <c>--home-away</c>).</summary>

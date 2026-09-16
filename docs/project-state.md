@@ -29,5 +29,16 @@ PC (Steam), premium, sin online. **Estado (8 sep 2026): fases 0 y 1 cerradas; fa
   ajenos a BB-B, sin diagnosticar**: BB-N (el saque de córner no ocurre nunca en la muestra
   medida) y BB-O (un jugador fuera del campo puede conservar el balón y congelar el partido, hasta
   el 62 % de un partido medido, ~1 de cada 400).
+  **BA-N (ADR 0116, 16 sep 2026)**: umbral de `EquippingAGoodBuildIsWorthSeveralPointsOfWinRate`
+  bajado de 2,0 a 1,0 (la cuarta bajada desde que existe la puerta: 5,0→3,0→2,0→1,0). No por el
+  catálogo de 94 perks (hipótesis REJECTED tras tres rondas de `independent-reviewer`), sino porque
+  el umbral anterior tenía ~34 % de falso positivo contra su propio error de muestreo (~0,9 puntos).
+  Decisión aplicada, pendiente de una cuarta confirmación antes de darla por cerrada del todo.
+  Abierto **BB-P** (fuera de BB-B): las puertas de un solo partido/semilla se leen como causa
+  cuando son ruido de muestreo — patrón confirmado para la de equipar, candidato sin medir para las
+  4 puertas rojas que dejó BB-B. Sin resolver: la inconsistencia calculado/medido de precio de
+  objeto (ADR 0038 vs ADR 0087) que BA-N no tocó, y el pase de `game-design-review` (pendiente,
+  Regla B) sobre si el poder de detección de la puerta recalibrada (~41 % ante una caída a la
+  mitad) es aceptable para el escalón que nombra la ADR 0033.
 - **Auditoría de organización de trabajo** (V1→V2→V3, decisión del revisor 16 sep 2026): en migración.
   Ver `docs/analisis/auditoria-organizacion-v2.md` para el razonamiento completo.

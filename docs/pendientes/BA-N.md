@@ -1,19 +1,20 @@
 # BA-N — Equipar ya no vale el escalón que la ADR 0033 exige
 
-**Estado:** Decisión aplicada, corregida dos veces por `independent-reviewer` (16 sep 2026), pendiente de
-una tercera pasada de confirmación antes de darla por resuelta del todo — RT-054/RT-057 y la Regla E de
+**Estado:** Decisión aplicada, corregida tres veces por `independent-reviewer` (16 sep 2026), pendiente de
+una cuarta pasada de confirmación antes de darla por resuelta del todo — RT-054/RT-057 y la Regla E de
 este proyecto piden esa confirmación antes de cerrar, no una autoevaluación. **Decisión del revisor:
 Opción B** — recalibrar el umbral de la puerta, no subir precios de objeto. Umbral 2,0 → **1,0**
 (`Sim.Tests/Perks/EquipmentImpactTests.cs`, `docs/decisiones/0116-el-escalon-de-equipar-se-recalibra-contra-94-perks.md`).
-El número (1,0) es correcto y no ha cambiado en ninguna de las dos rondas de revisión; lo que se corrigió
-ambas veces fue la causa y el razonamiento escritos para justificarlo: primero, que el catálogo de 94
-perks diluye la aportación marginal de equipar (esa hipótesis pasa de LIKELY a **REJECTED**, ver más
-abajo); segundo, que el cierre de la fuga del penalti de BB-B causó el movimiento de esta puerta (también
-refutado — la propia tabla de commits muestra que la mayor parte del movimiento ocurrió antes de que ese
-arreglo existiera) y que la puerta necesitaba adoptar comparación emparejada (ya la tiene). La causa real,
-en ambas rondas: la puerta tiene un error típico de ~0,9 puntos y un umbral de 2,0 tenía del orden de 34 %
-de probabilidad de salir rojo por puro muestreo. La inconsistencia calculado/medido de objetos (ADR 0038
-vs ADR 0087) **sigue sin resolver**, intacta — esta ADR nunca la tocó.
+El número (1,0) es correcto y no ha cambiado en ninguna de las tres rondas de revisión; lo que se corrigió
+cada vez fue la causa y el razonamiento escritos para justificarlo — ver `docs/decisiones/0116-...md`
+para el historial completo de las tres correcciones, incluida la historia real del umbral (bajado cuatro
+veces: 5,0 → 3,0 → 2,0 → 1,0, no solo una recalibración). **Aviso**: el mensaje del commit `f1ce8b3`
+—publicado, sin editar— conserva la redacción de la primera versión (causa del catálogo, "1,7 medido"
+cuando ese árbol mide 3,4); manda la ADR 0116, no ese mensaje. La inconsistencia calculado/medido de
+objetos (ADR 0038 vs ADR 0087) **sigue sin resolver**, intacta — esta ADR nunca la tocó. Tampoco se ha
+hecho todavía el pase de `game-design-review` sobre si el poder de detección de esta puerta (~41 % ante
+una caída a la mitad) es aceptable para el escalón que nombra la ADR 0033 — queda como pregunta abierta
+en `docs/pendientes/BB-P.md`, no como decisión tomada, aunque el cambio ya esté en `main`.
 
 ## Observación
 
