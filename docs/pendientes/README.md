@@ -24,12 +24,12 @@ a secas.
 | [BA-H](./BA-H.md) | Los consumibles no se pueden usar. | Ver fichero |
 | [BA-I](./BA-I.md) | La sustitución por lesión no debería ser obligatoria | Ver fichero |
 | [BA-J](./BA-J.md) | Tras una parada, el equipo defensor debería replegarse | Ver fichero |
-| [BA-K](./BA-K.md) | Cortinilla o transición | Ver fichero |
+| [BA-K](./BA-K.md) | Cortinilla o transición | Resuelta |
 | [BA-L](./BA-L.md) | La escena de capturas (`Scenes/Capturas.tscn`) no produce nada en esta | Cerrada |
 | [BA-M](./BA-M.md) | Origen de BA-N: la puerta de equipar pasó de roja a verde por cero cen | Cerrada |
 | [BA-L2](./BA-L2.md) | `CaptureRunner` pierde el árbol de escena entre `informe` y `recompensa` | Ver fichero |
 | [BA-N](./BA-N.md) | Equipar ya no vale el escalón que la ADR 0033 exige | Cerrada (ADR 0116; deuda documentada) |
-| [BB-A](./BB-A.md) | Los jugadores se teletransportan al reanudar | Ver fichero |
+| [BB-A](./BB-A.md) | Los jugadores se teletransportan al reanudar | Resuelta |
 | [BB-B](./BB-B.md) | En el saque de centro los defensores van a robar el balón antes de que | Resuelta (ADR 0115), tras dos intentos rechazados |
 | [BB-C](./BB-C.md) | «Celebra» se activa cuando ya han vuelto a su campo | Resuelta |
 | [BB-D](./BB-D.md) | Propuesta del revisor: parar unos segundos en los eventos que detienen | Ver fichero |
@@ -41,7 +41,7 @@ a secas.
 | [BB-I](./BB-I.md) | «Depredador de área» pareció activarse en un momento que no era un tir | Ver fichero |
 | [BB-J](./BB-J.md) | «Mentalidad de manada» no sirve jugando con enanos | Ver fichero |
 | [BB-K](./BB-K.md) | Dos jugadores del mismo equipo que quieren la misma casilla «bailan y  | Ver fichero |
-| [BB-L](./BB-L.md) | El lesionado «sale volando» del campo | Ver fichero |
+| [BB-L](./BB-L.md) | El lesionado «sale volando» del campo | Resuelta |
 | [BB-M](./BB-M.md) | «Sed de médula» lesionó a un jugador lejos de la acción | Ver fichero |
 | [BB-N](./BB-N.md) | El saque de córner no ocurre nunca (0/60 partidos, dos árboles) | Abierta |
 | [BB-O](./BB-O.md) | Un jugador fuera del campo puede conservar el balón y congelar el partido | Abierta |

@@ -1,11 +1,9 @@
 # BB-A — Los jugadores se teletransportan al reanudar
 
-**Estado:** Parcialmente resuelta. **BB-C** (16 sep 2026) arregló el caso del goleador celebrando —ya no
-salta a su casilla-hogar mientras sigue en `Celebrating`—, pero es un sub-caso de esta ficha, no la
-ficha entera: los **otros diecinueve** jugadores (y el goleador mismo, una vez termina de celebrar)
-siguen saltando instantáneamente a su casilla-hogar en cada saque de centro. Eso es un problema de
-**presentación** (RT-014: el render interpola, no decide), no de lógica de `/Sim` — sigue abierto,
-extiende **BA-K**.
+**Estado:** Resuelta. Dos causas distintas, dos arreglos distintos: **BB-C** (16 sep 2026, `/Sim`) quitó el
+teletransporte real de posición que sufría el goleador celebrando; **BA-K** (16 sep 2026, `/Game`) arregló
+cómo se **ve** el salto del resto del equipo, que es real en `/Sim` (RT-020: el tick lógico es el entero,
+no hay nada que suavizar ahí) pero se enseñaba mal en el render.
 
 ## Observación
 
@@ -13,8 +11,21 @@ extiende **BA-K**.
 
 ## Análisis / estado actual
 
-**Confirmado en código.** `BeginRestart` llama a `ResetPositions()` en el saque de centro (`MatchEngine.cs:2632`), y AZ-A solo congela al **sacador**: los otros diecinueve saltan. Extiende **BA-K**. La salida que propone el revisor está en **BB-D**. **Corregido en `ResetPositions()` (BB-C)**: el jugador que sigue `Celebrating`/`KnockedDown` ya no es de los diecinueve que saltan; el resto sigue igual, sin cambios de este ciclo.
+**Confirmado en código.** `BeginRestart` llama a `ResetPositions()` en el saque de centro
+(`MatchEngine.cs`), y AZ-A solo congela al **sacador**: los otros diecinueve saltan de verdad, de una
+casilla a otra, en un solo tick — eso es correcto y no se toca (RT-020, RT-021: el motor no suaviza nada,
+solo el render interpola). **Corregido en `ResetPositions()` (BB-C)**: el jugador que sigue `Celebrating`
+ya no es de los que saltan.
+
+**Lo que sí se veía mal era el render** (BA-K, `docs/pendientes/BA-K.md`): `Interpolate`/`PositionOf`
+mezclaban con `Lerp` la posición del tick de antes del saque con la de después, así que el salto de varias
+casillas se enseñaba como un deslizamiento rapidísimo a través del campo en vez de una reforma. Arreglado:
+por encima de 0,6 casillas de salto entre dos ticks, ya no se interpola — se corta en el punto medio del
+tick (con una atenuación de opacidad en la vista 3D, la "cortinilla" que pedía el ticket). Verificado con
+captura: la reforma pasa de una masa de fichas apiñada a la formación en línea sin ningún fotograma
+intermedio deslizante.
 
 ## Hermanos
 
-Mismo hilo de causa (el reposicionamiento se resuelve por teletransporte en vez de por transición): [BB-C](./BB-C.md), [BB-D](./BB-D.md), [BB-L](./BB-L.md).
+Mismo hilo de causa (el reposicionamiento se resuelve por teletransporte en vez de por transición):
+[BA-K](./BA-K.md), [BB-C](./BB-C.md), [BB-D](./BB-D.md), [BB-L](./BB-L.md).

@@ -154,18 +154,34 @@ public partial class MatchPitchView : Control
     }
 
     /// <summary>
+    /// BA-K: misma cota que <see cref="MatchPitchView3D.TeleportThresholdCells"/> (0,6 casillas — una
+    /// zancada real mide 0,13-0,21). Por encima, el siguiente tick no es una zancada sino un
+    /// teletransporte de <c>/Sim</c> (BB-A: el saque de centro reforma diecinueve jugadores de golpe;
+    /// BB-L: alguien deja el campo hacia <c>(-1,-1)</c>), y deslizar hacia él con <c>Lerp</c> lo enseña
+    /// cruzando el campo a toda velocidad en vez de un corte.
+    /// </summary>
+    private const float TeleportThresholdCells = 0.6f;
+
+    /// <summary>
     /// Posición del jugador en píxeles, suavizada hacia el tick siguiente. La interpolación es <b>solo</b>
-    /// de dibujo: la traza no se toca y el tick lógico sigue siendo el entero (RT-020).
+    /// de dibujo: la traza no se toca y el tick lógico sigue siendo el entero (RT-020). BA-K: si el
+    /// jugador va a dejar el campo en el tick siguiente, o el salto supera
+    /// <see cref="TeleportThresholdCells"/>, no se desliza — se corta en el punto medio del tick.
     /// </summary>
     private Vector2 PositionOf(MatchTrace trace, int frame, int player, float cell)
     {
         var here = trace.PositionAt(frame, player);
-        if (Alpha <= 0f || frame + 1 >= trace.FrameCount)
+        if (Alpha <= 0f || frame + 1 >= trace.FrameCount || !trace.OnPitchAt(frame + 1, player))
         {
             return ToPixels(here, cell);
         }
 
         var next = trace.PositionAt(frame + 1, player);
+        if (Vec2.Distance(here, next) > TeleportThresholdCells)
+        {
+            return ToPixels(Alpha < 0.5f ? here : next, cell);
+        }
+
         return ToPixels(new Vec2(Mathf.Lerp(here.X, next.X, Alpha), Mathf.Lerp(here.Y, next.Y, Alpha)), cell);
     }
 

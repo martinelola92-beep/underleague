@@ -548,6 +548,10 @@ public partial class MatchPitchView3D : SubViewportContainer
             {
                 ShadingMode = BaseMaterial3D.ShadingModeEnum.Unshaded,
                 AlbedoColor = new Color(0.04f, 0.04f, 0.05f),
+                // BA-K: transparencia siempre activa (ver ApplyTrace/TeleportCutOpacity) para poder atenuar
+                // la cápsula en el corte de un teletransporte sin recrear el material cada vez; con alfa 1
+                // constante en el resto de los casos no cambia nada frente a opaco.
+                Transparency = BaseMaterial3D.TransparencyEnum.Alpha,
             };
         }
 
@@ -560,6 +564,7 @@ public partial class MatchPitchView3D : SubViewportContainer
             Roughness = 0.85f,
             Metallic = 0f,
             SpecularMode = BaseMaterial3D.SpecularModeEnum.Disabled,
+            Transparency = BaseMaterial3D.TransparencyEnum.Alpha,
 
             // La cápsula proyecta sombra en el suelo (RA-008) pero no la recibe. Una superficie tan curva
             // y tan pequeña frente al texel del mapa de sombras se auto-sombrea con un moiré o con un
@@ -591,6 +596,33 @@ public partial class MatchPitchView3D : SubViewportContainer
 
             body.Visible = true;
             var at = Interpolate(trace, frame, i);
+
+            // BA-K: en el tick de un teletransporte, el modelo se atenúa hasta casi desaparecer justo en
+            // el instante del corte (Alpha=0,5) y recupera opacidad hacia los dos bordes del tick — la
+            // "cortinilla" que avisa de que el salto fue intencional, no un fallo de interpolación. Fuera
+            // de ese tick, alfa 1 constante: no cambia nada de lo que ya se veía. Si el jugador acaba de
+            // entrar al campo este mismo tick (sustitución, expulsión revertida...), aparece con una
+            // pequeña rampa de aparición en vez de un `Visible = true` seco — mismo aviso, sentido inverso.
+            if (body.MaterialOverride is StandardMaterial3D material)
+            {
+                float opacity;
+                if (IsTeleportCut(trace, frame, i))
+                {
+                    opacity = TeleportCutOpacity(Alpha);
+                }
+                else if (frame > 0 && !trace.OnPitchAt(frame - 1, i))
+                {
+                    opacity = Mathf.Clamp(Alpha, 0.15f, 1f);
+                }
+                else
+                {
+                    opacity = 1f;
+                }
+
+                var color = material.AlbedoColor;
+                color.A = opacity;
+                material.AlbedoColor = color;
+            }
 
             // En silueta no hay anillo ni dorsal: esa vista existe para comprobar RA-002 en blanco y negro
             // y cualquier cosa que se le añada deja de ser la prueba que es.
@@ -630,18 +662,63 @@ public partial class MatchPitchView3D : SubViewportContainer
         _ball.Position = new Vector3(ball.X + offset, BallRadius, ball.Y);
     }
 
-    /// <summary>Misma interpolación que <see cref="MatchPitchView"/>: solo dibujo, la traza no se toca (RT-020).</summary>
+    /// <summary>
+    /// BA-K: por encima de esta distancia entre dos ticks consecutivos, ya no es una zancada (una zancada
+    /// real mide 0,13-0,21 casillas/tick, medido en Sim.Tests) sino un teletransporte de <c>/Sim</c> —el
+    /// saque de centro reforma diecinueve jugadores de golpe (BB-A), o alguien deja el campo hacia
+    /// <c>(-1,-1)</c> (BB-L)—. Misma cota que <c>Sim.Tests.Engine.MatchRulesTests.MaxNormalStepCells</c> y
+    /// <c>GoalCelebrationPositionTests.MaxNormalStepCells</c>: no se inventa un número nuevo para el
+    /// mismo umbral.
+    /// </summary>
+    private const float TeleportThresholdCells = 0.6f;
+
+    /// <summary>
+    /// Misma interpolación que <see cref="MatchPitchView"/>: solo dibujo, la traza no se toca (RT-020).
+    /// BA-K: cuando el siguiente tick es un teletransporte (ver <see cref="TeleportThresholdCells"/>) o el
+    /// jugador va a dejar el campo, deslizar hacia él con <c>Lerp</c> lo enseña cruzando el campo a toda
+    /// velocidad (o volando hacia <c>(-1,-1)</c> antes de desaparecer, BB-L) en vez de un corte. Se corta
+    /// en el punto medio del tick en vez de deslizar; <see cref="IsTeleportCut"/> usa la misma condición
+    /// para atenuar el modelo justo en ese instante (ApplyTrace).
+    /// </summary>
     private Vec2 Interpolate(MatchTrace trace, int frame, int player)
     {
         var here = trace.PositionAt(frame, player);
-        if (Alpha <= 0f || frame + 1 >= trace.FrameCount)
+        if (Alpha <= 0f || frame + 1 >= trace.FrameCount || !trace.OnPitchAt(frame + 1, player))
         {
             return here;
         }
 
         var next = trace.PositionAt(frame + 1, player);
+        if (Vec2.Distance(here, next) > TeleportThresholdCells)
+        {
+            return Alpha < 0.5f ? here : next;
+        }
+
         return new Vec2(Mathf.Lerp(here.X, next.X, Alpha), Mathf.Lerp(here.Y, next.Y, Alpha));
     }
+
+    /// <summary>
+    /// Mismo criterio que el corte de <see cref="Interpolate"/>: dice si este fotograma cae dentro del
+    /// tick en que un jugador se teletransporta, para que <c>ApplyTrace</c> atenúe el modelo en vez de
+    /// dejar que aparezca/desaparezca de golpe sin ningún aviso (BA-K, "cortinilla o transición").
+    /// </summary>
+    private bool IsTeleportCut(MatchTrace trace, int frame, int player)
+    {
+        if (Alpha <= 0f || frame + 1 >= trace.FrameCount || !trace.OnPitchAt(frame + 1, player))
+        {
+            return false;
+        }
+
+        return Vec2.Distance(trace.PositionAt(frame, player), trace.PositionAt(frame + 1, player)) > TeleportThresholdCells;
+    }
+
+    /// <summary>
+    /// Curva de opacidad de la cortinilla: 1 en los dos bordes del tick (0 y 1), mínimo 0,15 justo en el
+    /// punto medio (Alpha=0,5) donde <see cref="Interpolate"/> corta de golpe. No baja a 0 del todo para
+    /// que la ficha nunca desaparezca por completo -seguiría existiendo si alguien la mira fijamente-, solo
+    /// se lee como un parpadeo intencional.
+    /// </summary>
+    private static float TeleportCutOpacity(float alpha) => Mathf.Clamp(Mathf.Abs(alpha - 0.5f) * 2f, 0.15f, 1f);
 
     private Vec2 InterpolateBall(MatchTrace trace, int frame)
     {

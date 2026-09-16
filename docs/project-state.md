@@ -20,7 +20,14 @@ PC (Steam), premium, sin online. **Estado (8 sep 2026): fases 0 y 1 cerradas; fa
   `ChaseBall` perdía contra `CoverSpace`/`FindSpace` (hueco medido 152 puntos); episodios de balón
   parado ≥15 ticks bajan de 107 a 32 en 200 partidos (−70 %), 43 puertas 4 rojas → 3. Un rechazo
   inicial se corrigió tras `independent-reviewer`: la puerta que parecía empeorar no sobrevivía a
-  una segunda semilla (patrón BB-P). BB-A/BB-C/BB-L pendientes de implementar.
+  una segunda semilla (patrón BB-P). **BB-C resuelta** (`ResetPositions` ya no teletransporta al
+  goleador que sigue celebrando; revisión encontró y corrigió un alcance sin pedir —incluía
+  `KnockedDown`—, un umbral de test flojo y una afirmación de "sin relación causal" con las puertas
+  que la remedición emparejada no sostenía). **BA-K resuelta** (`/Game`: el render ya no desliza un
+  salto de varias casillas entre dos ticks —cortinilla de opacidad en 3D, corte de posición en las
+  dos vistas—, verificado con captura). **BB-A y BB-L resueltas** como consecuencia de las dos
+  anteriores. **BB-D analizada**: la pausa dramática que pedía no necesita tocar RT-020, se resuelve
+  entera en `/Game`; queda como mejora de presentación independiente, no bloqueaba a las demás.
   **BB-B resuelta (ADR 0115, 16 sep 2026)**, tras dos intentos rechazados (inmunidad temporal;
   barrera geométrica con tres fallos — fuga al penalti, sin techo de duración, métrica de
   aceptación mal planteada). El tercer intento corrige los tres, verificado por el
