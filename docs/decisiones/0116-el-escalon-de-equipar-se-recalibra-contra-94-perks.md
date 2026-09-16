@@ -1,20 +1,23 @@
 # 0116. El umbral de "equipar" se recalibra contra su propio error de medición
 
-**Fecha:** 2026-09-16 (corregida el mismo día, tras `independent-reviewer`)
-**Estado:** Aceptada e implementada (`Sim.Tests/Perks/EquipmentImpactTests.cs`)
+**Fecha:** 2026-09-16 (corregida dos veces el mismo día, tras dos rondas de `independent-reviewer`)
+**Estado:** Aceptada e implementada (`Sim.Tests/Perks/EquipmentImpactTests.cs`); documentación pendiente
+de una tercera pasada de confirmación.
 **Decisión del revisor** (BA-N, `docs/pendientes/BA-N.md`). **Cambia el umbral de la puerta
 `EquippingAGoodBuildIsWorthSeveralPointsOfWinRate`** (RT-057: cambio de rango, exige ADR). No modifica
 ninguna ADR de precio de objeto (0038, 0086, 0087) ni ningún valor de `/data`.
 **Requisitos:** RT-056, RT-057. Relacionado: ADR 0033 (el escalón "muy buena"), ADR 0038 (precio calculado
-de objeto), ADR 0087 (valor de perk medido contra su control, patrón que esta puerta no usa —ver
-"Instrumento", más abajo), ADR 0115 (el mecanismo real de por qué esta puerta se mueve).
+de objeto), ADR 0087 (valor de perk medido contra su control — esta puerta ya usa su patrón de
+emparejamiento por semilla, ver "Instrumento", más abajo), ADR 0115 (el mecanismo real de por qué esta
+puerta se mueve, sin atribuirlo a un commit concreto).
 
-**Nota de corrección**: la primera versión de esta ADR (escrita antes de pasar por
-`independent-reviewer`) atribuía la caída del umbral al crecimiento del catálogo de perks (61→94). Esa
-causa quedó **REJECTED** por el propio revisor con una medición de seis minutos que yo no había hecho
-antes de escribir la ADR. El umbral que se implementó (1,0) resultó ser correcto, pero por un motivo
-distinto del que se escribió entonces. Esta versión sustituye la causa y el razonamiento; no cambia el
-número.
+**Nota de corrección (dos rondas)**: la primera versión de esta ADR (escrita antes de pasar por
+`independent-reviewer`) atribuía la caída del umbral al crecimiento del catálogo de perks (61→94) — esa
+causa quedó **REJECTED** con una medición de seis minutos. La segunda versión (tras la primera revisión)
+corrigió esa causa pero introdujo dos afirmaciones nuevas que una segunda revisión también refutó: que el
+cierre de la fuga del penalti de BB-B (ADR 0115) causó el movimiento de esta puerta, y que la puerta
+necesitaría adoptar comparación emparejada de la ADR 0087 (ya la tiene). El umbral implementado (1,0) no
+ha cambiado en ninguna de las dos correcciones — solo el razonamiento que lo sostiene.
 
 ## Qué umbral existía
 
@@ -76,23 +79,34 @@ BA-N. 1,0 lo baja a un nivel razonable sin acercarse tanto a cero que dejara de 
 dentro de medio error típico y no distinguiría "equipar no aporta nada" de ruido puro).
 
 **Lo que esta puerta protege, con precisión, para que nadie la lea con más alcance del que tiene**: con
-umbral 1,0 y error 0,9, detecta ~87 % de las veces que equipar deje de aportar nada, y solo ~41 % de las
-veces que su aporte caiga a la mitad de lo normal. **Protege "equipar sigue haciendo algo", no el escalón
-fino de la ADR 0033** ("varios puntos" en plural). Esa afirmación más amplia y más débil sustituye a la
-frase de la primera versión ("un efecto real y medible, no ruido"), que era correcta pero incompleta sin
-decir cuánto detecta y cuánto no.
+umbral 1,0 y error 0,9, detecta del orden de 87 % de las veces que equipar deje de aportar nada, y del
+orden de 41 % de las veces que su aporte caiga a la mitad de lo normal. **Protege "equipar sigue haciendo
+algo", no el escalón fino de la ADR 0033** ("varios puntos" en plural). Esa afirmación más amplia y más
+débil sustituye a la frase de la primera versión ("un efecto real y medible, no ruido"), que era correcta
+pero incompleta sin decir cuánto detecta y cuánto no. (Los cuatro porcentajes de esta sección —34 %, 6 %,
+87 %, 41 %— salen de un valor verdadero estimado con solo cinco medidas, que tiene su propio error típico
+de ~0,35: son órdenes de magnitud para decidir "2,0 era peor que 1,0", no una calibración fina a la
+décima.)
 
-## Instrumento: por qué esta puerta es más ruidosa de lo necesario, sin arreglarlo aquí
+## Instrumento: lo que de verdad falta, corregido tras una segunda revisión
 
-El proyecto ya tiene un patrón mejor para este tipo de medida: la ADR 0087 mide el valor de un perk como
-**diferencia emparejada contra su control** (misma plantilla, misma semilla, con y sin el perk), que
-cancela buena parte de la varianza entre plantillas en vez de comparar dos poblaciones agregadas. Esta
-puerta compara `bareRate` contra `equippedRate` como dos tasas independientes sobre 96 plantillas
-distintas por brazo, sin emparejar semilla a semilla. Es probable que ese cambio de diseño del instrumento
-bajara el error típico muy por debajo de 0,9 sin tocar el número de plantillas. **No se hace en esta ADR**
-—sería una primitiva de medición nueva, fuera del alcance de un cambio de umbral— pero queda anotado como
-la mejora real pendiente, y como la pregunta ("¿existe ya una convención del repositorio para esto?") que
-debería haberse hecho antes de aceptar un umbral basado en una comparación no emparejada.
+**La primera versión de esta sección estaba equivocada.** Decía que la puerta comparaba `bareRate` contra
+`equippedRate` como dos poblaciones independientes, sin emparejar semilla a semilla, y proponía adoptar el
+patrón de diferencia emparejada de la ADR 0087. Leído el código con cuidado (`EquipmentImpactTests.cs`,
+`WinsOf`/`Build`): **la puerta ya hace exactamente eso** — el mismo `rosterSeed` genera la plantilla en los
+dos brazos, el mismo rival `reference`, las mismas semillas de partido (`rosterSeed*1000 + m`); lo único
+que cambia entre brazos es si se equipa el `Item`. Es el patrón de la ADR 0087 aplicado ya. La sd empírica
+de 0,78 (§ arriba) ya incluye ese emparejamiento; no hay margen de mejora ahí.
+
+**Lo que de verdad falta es más simple**: la puerta no calcula ni imprime su propia dispersión. El ~0,9
+de error típico vivía solo en un comentario, y confirmarlo con datos reales costó reconstruir cinco
+commits con `git worktree` — cuando la propia ejecución ya tiene, por plantilla, la diferencia entre su
+brazo equipado y su brazo sin equipar, y podría imprimir la RMS de esas 96 diferencias en el mismo
+`_output.WriteLine` que ya usa, igual que `rowDeviation` en la ADR 0087 calcula su dispersión dentro de
+una sola ejecución. Eso habría hecho innecesaria la arqueología de cinco commits para esta ADR, y es
+justo lo que `docs/pendientes/BB-P.md` pide para las otras cuatro puertas. **No se implementa aquí** —es
+una mejora de instrumento, fuera del alcance de un cambio de umbral— pero queda como el ítem concreto de
+BB-P, no como "pasar a diferencia emparejada" (que ya existe).
 
 ## Lo que esta ADR explícitamente NO resuelve
 
@@ -105,30 +119,40 @@ pregunta, que BA-N dejó explícitamente abierta, sigue abierta.
 
 ## Lo que se mide
 
-`dotnet test Sim.Tests --filter "FullyQualifiedName~EquippingAGoodBuildIsWorthSeveralPointsOfWinRate"` en
-HEAD (`f1ce8b3`): verde, **3,4 puntos medidos** — ya estaba verde con el umbral de 2,0 antes de bajarlo a
-1,0 (margen de 1,4 puntos en el momento exacto del cambio). **Este cambio no arregló ninguna puerta roja
-existente; endureció el criterio de falso positivo de una puerta que, en el momento de aplicarlo, ya
-pasaba.** Es la corrección correcta igualmente: el umbral de 2,0 seguía teniendo ~34 % de probabilidad de
-volver a salir rojo por azar en el próximo cambio de `/Sim`, con o sin relación con objetos o perks.
+`dotnet test Sim.Tests --filter "FullyQualifiedName~EquippingAGoodBuildIsWorthSeveralPointsOfWinRate"`
+(commit `f1ce8b3`, el que aplicó el cambio de umbral): verde, **3,4 puntos medidos** — ya estaba verde con
+el umbral de 2,0 antes de bajarlo a 1,0 (margen de 1,4 puntos en el momento exacto del cambio). Este número
+es una fotografía de un árbol concreto, no una constante: **vuelve a ejecutar el test para ver el valor
+vigente**, no confíes en la cifra de este párrafo más allá de para entender la magnitud del margen en el
+momento del cambio — anclar un número medido a un hash que deja de ser HEAD es precisamente el error que
+motivó esta corrección. **Este cambio no arregló ninguna puerta roja existente; endureció el criterio de
+falso positivo de una puerta que, en el momento de aplicarlo, ya pasaba.** Es la corrección correcta
+igualmente: el umbral de 2,0 seguía teniendo del orden de 34 % de probabilidad de volver a salir rojo por
+azar en el próximo cambio de `/Sim`, con o sin relación con objetos o perks.
 
-43 puertas (una invocación, sobre HEAD): sin regresión atribuible a este cambio — las 4 rojas existentes
-(`TheThreeDoctrinesBuyDifferently`, `CoherentBuildsBeatTheirBaseline`/`orc_violence`,
-`BadBuildsLoseToTheirBaseline`/`elf_out_of_zone`, `NoGateMetricIsOutOfRange`) comparten exactamente el
-mismo mecanismo causal que motivó esta ADR (puertas de una sola semilla cerca de su margen, movidas por
-cambios de `/Sim` ajenos a su contenido) y no se tocan aquí — ver `docs/pendientes/BB-P.md`.
+43 puertas (una invocación, sobre el mismo commit): sin regresión atribuible a este cambio — las 4 rojas
+existentes (`TheThreeDoctrinesBuyDifferently`, `CoherentBuildsBeatTheirBaseline`/`orc_violence`,
+`BadBuildsLoseToTheirBaseline`/`elf_out_of_zone`, `NoGateMetricIsOutOfRange`) **podrían compartir el mismo
+patrón de instrumento** (puertas de una sola semilla cerca de su margen, sensibles a cambios de `/Sim`
+ajenos a su contenido) pero eso todavía no está medido para ninguna de las cuatro — ver
+`docs/pendientes/BB-P.md`, que las trata como candidatas a comprobar, no como casos ya confirmados.
 
 ## Consecuencias
 
-- BA-N cerrada.
+- BA-N con decisión aplicada; cierre formal pendiente de una tercera confirmación del
+  `independent-reviewer` sobre esta corrección.
 - El escalón "muy buena" de la ADR 0033 sigue existiendo; la puerta que lo vigila detecta su desaparición
   total con buena fiabilidad (~87 %) y una degradación parcial con fiabilidad limitada (~41 %) — queda
   anotado para que nadie la lea como una garantía fina.
-- **ADR 0115 gana un efecto de segundo orden que no tenía anotado**: cerrar la fuga del penalti (§17 de
-  esa ADR) movió esta puerta de 1,7 a 3,4. Queda registrado aquí y referenciado desde la 0115.
-- `docs/pendientes/BA-M.md` contiene la premisa que originó este error ("la métrica es determinista, así
+- **ADR 0115 gana un dato que no tenía anotado**: a lo largo de los commits de esa sesión, esta puerta se
+  movió de 1,7 a 3,4 sin que ninguno tocara un objeto ni un perk — sin que el movimiento se pueda atribuir
+  a uno de ellos en concreto (una primera redacción de este punto sí lo atribuía al cierre de la fuga del
+  penalti; una segunda revisión lo desmintió con la propia tabla de commits y quedó corregido en la 0115).
+- `docs/pendientes/BA-M.md` contenía la premisa que originó este error ("la métrica es determinista, así
   que no es ruido" — el determinismo garantiza que la misma build da el mismo número, no que el muestreo
-  de 6.144 partidos no tenga varianza) y una acusación a un commit que, a la luz de esto, no se sostiene
-  (diferencia de 0,4 errores típicos). Pendiente de corrección aparte.
+  de 6.144 partidos no tenga varianza) y una acusación a un commit que, a la luz de esto, no se sostiene.
+  **Corregida en el mismo commit que esta ADR** (`50c2bb1`), no queda pendiente aparte.
 - Abierto `docs/pendientes/BB-P.md`: calibración de las puertas estadísticas de un solo partido/semilla
-  contra su error típico, con esta puerta y las 4 rojas actuales como primeros casos.
+  contra su error típico, con esta puerta como caso confirmado y las 4 rojas actuales como candidatas sin
+  medir todavía. Incluye el ítem de instrumento (dispersión autoinformada) que esta sección de arriba no
+  implementa.

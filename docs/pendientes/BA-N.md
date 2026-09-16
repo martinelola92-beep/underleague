@@ -1,14 +1,19 @@
 # BA-N — Equipar ya no vale el escalón que la ADR 0033 exige
 
-**Estado:** RESUELTA (16 sep 2026), con la causa **corregida por `independent-reviewer`** tras la primera
-pasada. **Decisión del revisor: Opción B** — recalibrar el umbral de la puerta, no subir precios de
-objeto. Umbral 2,0 → **1,0** (`Sim.Tests/Perks/EquipmentImpactTests.cs`,
-`docs/decisiones/0116-el-escalon-de-equipar-se-recalibra-contra-94-perks.md`). El número (1,0) es correcto
-y no cambió; **la causa que se le atribuyó al escribir la ADR sí era falsa y se corrigió**: no es que el
-catálogo de 94 perks diluya la aportación marginal de equipar (esa hipótesis pasa de LIKELY a
-**REJECTED**, ver más abajo), es que la puerta tiene un error típico de ~0,9 puntos y un umbral de 2,0
-tenía ~34 % de probabilidad de salir rojo por puro muestreo. La inconsistencia calculado/medido de
-objetos (ADR 0038 vs ADR 0087) **sigue sin resolver**, intacta — esta ADR nunca la tocó.
+**Estado:** Decisión aplicada, corregida dos veces por `independent-reviewer` (16 sep 2026), pendiente de
+una tercera pasada de confirmación antes de darla por resuelta del todo — RT-054/RT-057 y la Regla E de
+este proyecto piden esa confirmación antes de cerrar, no una autoevaluación. **Decisión del revisor:
+Opción B** — recalibrar el umbral de la puerta, no subir precios de objeto. Umbral 2,0 → **1,0**
+(`Sim.Tests/Perks/EquipmentImpactTests.cs`, `docs/decisiones/0116-el-escalon-de-equipar-se-recalibra-contra-94-perks.md`).
+El número (1,0) es correcto y no ha cambiado en ninguna de las dos rondas de revisión; lo que se corrigió
+ambas veces fue la causa y el razonamiento escritos para justificarlo: primero, que el catálogo de 94
+perks diluye la aportación marginal de equipar (esa hipótesis pasa de LIKELY a **REJECTED**, ver más
+abajo); segundo, que el cierre de la fuga del penalti de BB-B causó el movimiento de esta puerta (también
+refutado — la propia tabla de commits muestra que la mayor parte del movimiento ocurrió antes de que ese
+arreglo existiera) y que la puerta necesitaba adoptar comparación emparejada (ya la tiene). La causa real,
+en ambas rondas: la puerta tiene un error típico de ~0,9 puntos y un umbral de 2,0 tenía del orden de 34 %
+de probabilidad de salir rojo por puro muestreo. La inconsistencia calculado/medido de objetos (ADR 0038
+vs ADR 0087) **sigue sin resolver**, intacta — esta ADR nunca la tocó.
 
 ## Observación
 
@@ -62,12 +67,13 @@ repite el error ya documentado de la ADR 0038.
 ## Antecedente
 
 **BA-M** es el primer punto de esta misma serie (el momento en que la puerta pasó de roja a verde por cero
-centésimas). **Corrección tras `independent-reviewer`**: BA-M.md acusa a un commit (`a0a8b33`) de afirmar
-—incorrectamente— que no movía balance. A la luz de esta ADR, esa acusación no se sostiene: la diferencia
-que BA-M midió (2,0 frente a un umbral de 2,0, "por cero centésimas") es del orden de 0,4 errores típicos
-del instrumento (~0,9) — indistinguible de ruido de muestreo, no evidencia de que el commit ocultara un
-movimiento real. `docs/pendientes/BA-M.md` queda pendiente de su propia corrección (no se edita aquí, para
-no mezclar el cierre de dos fichas).
+centésimas). **Corregida en el mismo commit que cierra esta ficha** (`50c2bb1`): BA-M.md acusaba a un
+commit (`a0a8b33`) de afirmar —incorrectamente— que no movía balance, apoyándose en que "la métrica es
+determinista, así que no es ruido" — premisa falsa (el determinismo garantiza que la misma build da el
+mismo número, no que el muestreo de 6.144 partidos no tenga varianza). El valor de 2,0 que BA-M midió
+queda a solo ~0,4 errores típicos (~0,9) del valor verdadero estimado con las cinco medidas de esta ADR
+(~2,4) — indistinguible de ruido de muestreo, no evidencia de que `a0a8b33` moviera nada. La acusación
+queda retirada en `docs/pendientes/BA-M.md`.
 
 ## Hermanos
 

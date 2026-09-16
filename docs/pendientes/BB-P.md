@@ -41,17 +41,34 @@ no una conclusión.
 ## Qué haría falta, sin implementarlo aquí
 
 1. Medir el error típico de cada una de las cuatro candidatas (congelando lo que miden y variando código
-   ajeno de `/Sim`, como se hizo para BA-N) antes de decidir si son ruido o señal.
-2. Para las que resulten ruido: subir la muestra (el proyecto ya tiene el precedente, paquetes Z y AZ de
-   `EquipmentImpactTests.cs`) o, mejor, adoptar el patrón de diferencia **emparejada** contra un control
-   que ya usa la ADR 0087 para el valor de un perk — reduce la varianza sin más partidos.
+   ajeno de `/Sim`, como se hizo para BA-N) antes de decidir si son ruido o señal — barato: cinco
+   `dotnet test` en worktrees por puerta, no un experimento nuevo que diseñar.
+2. **Corregido tras una segunda revisión**: la primera versión de este punto proponía "pasar a diferencia
+   emparejada, patrón de la ADR 0087" para `EquipmentImpactTests.cs` — pero esa puerta **ya** empareja por
+   semilla (mismo `rosterSeed`, mismas semillas de partido, mismo rival en los dos brazos); no había
+   margen ahí. Lo que de verdad falta, y es más barato: que cada puerta **calcule e imprima su propia
+   dispersión** entre las 96 diferencias por plantilla que ya calcula (la RMS, igual que `rowDeviation` en
+   la ADR 0087), en el mismo `_output.WriteLine` que ya usa. Eso habría evitado reconstruir cinco commits
+   para conocer el ~0,9 de `EquipmentImpactTests.cs`, y convierte este punto 1 en segundos por puerta en
+   vez de una campaña de remedición. Subir la muestra (`Rosters`, precedente en los paquetes Z y AZ de ese
+   mismo fichero) sigue siendo la opción si la dispersión autoinformada confirma que hace falta más
+   potencia, pero es la segunda opción, no la primera.
 3. Ninguna corrección de umbral se decide por extrapolar un precedente de otra puerta (el error exacto que
    cometió la primera versión de la ADR 0116): cada puerta necesita su propio error típico medido.
+4. Barrido pendiente y barato, hermano de este mismo hallazgo: comprobar si otras ADR de `docs/decisiones/`
+   citan un "medido: X" anclado a un árbol que ya no es vigente, como hacía la primera versión de la ADR
+   0116 con su "1,7 medido" de once commits atrás. No se ha hecho todavía.
+5. **Decisión de diseño pendiente, no solo de instrumento** (candidata a `game-design-review`, Regla B):
+   `EquipmentImpactTests.cs` con umbral 1,0 detecta del orden de 87 % si equipar dejara de aportar nada,
+   pero solo del orden de 41 % si su aporte cayera a la mitad — ¿es aceptable que la puerta que vigila el
+   escalón "muy buena" de la ADR 0033 deje pasar más de la mitad de una degradación a la mitad? No se
+   decide aquí; queda como pregunta abierta, no como conclusión silenciosa dentro de la ADR 0116.
 
 ## Hermanos
 
 - `docs/pendientes/BA-N.md`, `docs/pendientes/BA-M.md` — el caso ya resuelto que reveló el patrón.
 - `docs/decisiones/0115-la-barrera-de-reanudacion-cubre-las-cinco-no-solo-la-falta.md` — ya lo anotaba en
   general ("la firma de puertas de un solo partido/semilla operando cerca de su margen") sin abrir ficha.
-- `docs/decisiones/0087-el-valor-de-un-perk-se-mide-contra-su-control.md` — el patrón de instrumento
-  (diferencia emparejada) que probablemente resuelve esto sin subir la muestra.
+- `docs/decisiones/0087-el-valor-de-un-perk-se-mide-contra-su-control.md` — el patrón de `rowDeviation`
+  (dispersión calculada dentro de una sola ejecución) que las puertas de tasa agregada no usan todavía,
+  no el emparejamiento por semilla, que `EquipmentImpactTests.cs` ya tiene.

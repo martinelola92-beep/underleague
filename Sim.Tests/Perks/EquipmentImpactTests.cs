@@ -35,7 +35,9 @@ public sealed class EquipmentImpactTests
     /// </summary>
     // Paquete AZ (ADR 0090): de 24 a 96 plantillas. Con 768 partidos por brazo la diferencia de dos tasas
     // tenía un error típico de ~1,8 puntos y el umbral de 3,0 quedaba dentro del ruido (medido 3,0 justo
-    // tras la tanda 2). Con 3.072 por brazo el error baja a ~0,9; en Release son segundos.
+    // tras la tanda 2). Con 96 plantillas (6.144 partidos por brazo, MatchesPerRoster×2 direcciones) el
+    // error baja a ~0,9 -corregido aquí: decía "3.072 por brazo", que era la mitad sin contar ida y
+    // vuelta, y el propio test imprime 6144 (independent-reviewer, BA-N)-; en Release son segundos.
     private const int Rosters = 96;
 
     /// <summary>Partidos por plantilla y dirección; con ida y vuelta salen 2x (equivalente a <c>--home-away</c>).</summary>
@@ -100,12 +102,15 @@ public sealed class EquipmentImpactTests
         // builds concretos"), no un efecto del tamaño del catálogo.
         //
         // El motivo real de 1,0, y el que sí sostiene el umbral: el error típico de esta medición es
-        // ~0,9 puntos (arriba, ~3.072 partidos/brazo) y el valor verdadero, estimado por esos cinco
-        // puntos, ronda 2,4. Con esa varianza, un umbral de 2,0 tenía ~34 % de probabilidad de salir rojo
-        // por puro muestreo en cualquier commit que no tocara ni objetos ni perks -exactamente lo que
-        // produjo BA-M y BA-N-; 1,0 baja ese falso positivo a ~6 %. Detección real si el efecto de
-        // verdad se degradara: ~87 % de aviso si equipar dejara de aportar nada, ~41 % si aportara la
-        // mitad de lo normal -esta puerta protege "equipar hace algo", no el escalón fino de la ADR 0033-.
+        // ~0,9 puntos (arriba, 6.144 partidos/brazo) y el valor verdadero, estimado por esos cinco
+        // puntos, ronda 2,4 -esa media es de solo cinco medidas, con su propio error típico de ~0,35, así
+        // que los porcentajes de abajo son órdenes de magnitud, no una calibración a la décima-. Con esa
+        // varianza, un umbral de 2,0 tenía del orden de 34 % de probabilidad de salir rojo por puro
+        // muestreo en cualquier commit que no tocara ni objetos ni perks -exactamente lo que produjo BA-M
+        // y BA-N-; 1,0 baja ese falso positivo a del orden de 6 %. Detección real si el efecto de
+        // verdad se degradara: del orden de 87 % de aviso si equipar dejara de aportar nada, del orden de
+        // 41 % si aportara la mitad de lo normal -esta puerta protege "equipar hace algo", no el escalón
+        // fino de la ADR 0033-.
         // Ver ADR 0116 para la derivación completa y `docs/pendientes/BA-N.md` para el historial.
         Assert.True(
             equippedRate - bareRate >= 1.0,
