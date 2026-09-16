@@ -1,6 +1,6 @@
 # BB-J — «Mentalidad de manada» no sirve jugando con enanos
 
-**Estado:** Abierta
+**Estado:** Primitiva IMPLEMENTED y VERIFIED. El perk `pack_mentality` en sí NO se ha tocado — requiere una decisión de diseño, ver abajo
 
 ## Observación
 
@@ -13,3 +13,45 @@
 ## Hermanos
 
 _(por enlazar donde se detecten; ver `README.md` del directorio)_
+
+
+## Implementación de la primitiva (16 sep 2026, orquestación de pendientes técnicos)
+
+**Confirmado antes de tocar nada** cómo se evalúan las condiciones: `ConditionCompiler` compila cada
+función una vez al cargar, y sus argumentos de tipo `Tag` son **literales de cadena fijados en el JSON**
+(`ConditionArgKind.Tag`), no expresiones que se puedan anidar en tiempo de partido. No existía una
+abstracción reutilizable para "cuenta lo mío" sin fijar una etiqueta de antemano.
+
+**Añadida `teammatesWithSameStyle(who)`**: cuenta compañeros en campo con el mismo `StyleTag` que `who`,
+resuelto en tiempo de partido a partir del propio jugador — sin etiqueta literal. Es una primitiva
+genérica, no una excepción de Manada: cualquier perk futuro de composición puede usarla.
+
+- `Sim/Perks/ConditionContext.cs` (interfaz `IPerkWorld`), `Sim/Engine/MatchEngine.cs` (implementación,
+  comparación directa de `StyleTag`), `Sim/Perks/ConditionCompiler.cs` (función nueva, argumento único
+  `Who`).
+- Plantillas es/en en `data/l10n/{es,en}/templates.json` (RT-035: seis comparadores, como
+  `teammatesWithTag`).
+- `Sim.Tests/Perks/TeammatesWithSameStyleTests.cs`: cuenta correcta excluyendo al propio portador, y el
+  caso que motivó el problema —un equipo entero del mismo estilo (enanos Bulwark) cuenta sobrado, donde
+  `teammatesWithTag(owner,'Brute')` se quedaría casi siempre en cero—.
+
+Suite completa: 757/757 en verde. `DataValidator`: 233 ficheros sin errores.
+
+## Por qué `pack_mentality.json` NO se ha tocado — límite arquitectónico real, no un olvido
+
+El **efecto** del perk apunta a `target: "withTag:Brute"` — un objetivo compilado **una sola vez, con la
+etiqueta fija en el dato** (`PerkLoader.cs`, `EffectTarget.WithTag`), igual que la condición. Cambiar solo
+la condición a `teammatesWithSameStyle(owner) > 2` dejaría un perk que **se dispara** con cualquier
+composición pero **solo beneficia a los Brute** del equipo — que pueden no existir. Sería el mismo error
+que motivó todo el paquete de organización: un test en verde, una mecánica equivocada, un perk que se
+activa y no hace nada visible.
+
+Arreglarlo de verdad exigiría una **segunda primitiva** —un objetivo de efecto que siga dinámicamente el
+estilo del portador (`withTag:<propio estilo>`), no una etiqueta fija—, y esa primitiva hoy **no tiene los
+tres consumidores** que exige PD-6 para justificarse. Es una decisión de diseño (¿vale la pena la
+primitiva por un solo perk, o se rediseña `pack_mentality` de otra forma —por ejemplo, que el bonus lo
+reciba el propio grupo contado, no una etiqueta fija—?), no un bug de implementación. Se detiene aquí.
+
+## Hermanos
+
+Ninguno detectado. La primitiva queda disponible para cualquier perk de composición futuro.

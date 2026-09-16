@@ -81,6 +81,7 @@ public static class ConditionCompiler
         new("adjacent", new[] { ConditionArgKind.Who, ConditionArgKind.Tag }, ConditionValueKind.Bool),
         new("adjacentCount", new[] { ConditionArgKind.Who, ConditionArgKind.Tag }, ConditionValueKind.Int),
         new("teammatesWithTag", new[] { ConditionArgKind.Who, ConditionArgKind.Tag }, ConditionValueKind.Int),
+        new("teammatesWithSameStyle", new[] { ConditionArgKind.Who }, ConditionValueKind.Int),
         new("distanceToGoal", new[] { ConditionArgKind.Who }, ConditionValueKind.Int),
         new("scoreDiff", Array.Empty<ConditionArgKind>(), ConditionValueKind.Int),
         new("tick", Array.Empty<ConditionArgKind>(), ConditionValueKind.Int),
@@ -696,6 +697,13 @@ public sealed class CompiledCondition
             {
                 var who = Player(args, 0);
                 args.Result = who is null ? 0 : _context.World.TeammatesWithTag(who, Text(args, 1));
+                break;
+            }
+
+            case "teammatesWithSameStyle":
+            {
+                var who = Player(args, 0);
+                args.Result = who is null ? 0 : _context.World.TeammatesWithSameStyle(who);
                 break;
             }
 

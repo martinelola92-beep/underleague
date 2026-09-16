@@ -51,6 +51,14 @@ internal interface IPerkWorld
     /// <summary>Compañeros en campo con esa etiqueta, excluido player.</summary>
     int TeammatesWithTag(MatchPlayer player, string tag);
 
+    /// <summary>
+    /// BB-J: compañeros en campo con el MISMO <c>StyleTag</c> que <paramref name="player"/>, excluido él.
+    /// A diferencia de <see cref="TeammatesWithTag"/> no recibe una etiqueta literal: la resuelve del
+    /// propio jugador en tiempo de partido, así que un perk puede preguntar "cuántos como yo" sin fijar
+    /// una raza o un estilo de antemano. Primitiva genérica, no una excepción para un perk concreto.
+    /// </summary>
+    int TeammatesWithSameStyle(MatchPlayer player);
+
     /// <summary>Contador del jugador (RF-070); 0 si no existe.</summary>
     int Counter(MatchPlayer player, string name);
 }

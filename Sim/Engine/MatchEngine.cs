@@ -95,6 +95,15 @@ internal sealed class MatchEngine : IPerkWorld
     /// </summary>
     private MatchPlayer? _restartTaker;
 
+    /// <summary>
+    /// BB-B: el sacador del saque de centro mientras el balón sigue sin ponerse en juego. Se fija al
+    /// resolver el saque (<see cref="ResolveRestart"/>) y se limpia en cuanto la posesión deja de ser
+    /// suya (<see cref="UpdateContextCaches"/>), que es lo que expone <c>UtilityContext.KickoffPending</c>
+    /// a la IA. Es un campo aparte de <see cref="_restartTaker"/> porque ese se anula justo cuando la fase
+    /// vuelve a OpenPlay -el mismo tick en el que este otro tiene que seguir vivo-.
+    /// </summary>
+    private MatchPlayer? _kickoffPendingTaker;
+
     private int _freeKickFor = -1;
 
     private Vec2 _freeKickPoint;
@@ -283,6 +292,23 @@ internal sealed class MatchEngine : IPerkWorld
         {
             var other = _players[i];
             if (other.Team == player.Team && other.Id != player.Id && other.OnPitch && other.Definition.HasTag(tag))
+            {
+                count++;
+            }
+        }
+
+        return count;
+    }
+
+    /// <inheritdoc/>
+    public int TeammatesWithSameStyle(MatchPlayer player)
+    {
+        var style = player.Definition.StyleTag;
+        int count = 0;
+        for (int i = 0; i < _players.Length; i++)
+        {
+            var other = _players[i];
+            if (other.Team == player.Team && other.Id != player.Id && other.OnPitch && other.Definition.StyleTag == style)
             {
                 count++;
             }
@@ -747,6 +773,17 @@ internal sealed class MatchEngine : IPerkWorld
         // mitad de tick) no se ve reflejado todavía aquí — ese primer tick de la reanudación nueva no debe
         // tratarse como balón muerto para ChaseBall (ver el `wasRestarting` de Step()).
         _context.BallDead = _restartTicksLeft > 0;
+
+        // BB-B: en cuanto el balón deja de ser del sacador -pase, tiro, o cualquier otra forma de
+        // soltarlo-, el saque queda puesto en juego y la precondición de EvaluateTackle deja de aplicar.
+        // Se comprueba ANTES del bucle de jugadores del tick (mismo orden que BallDead arriba), así que
+        // el propio tick en el que el sacador actúa todavía cuenta como pendiente para todos los demás.
+        if (_kickoffPendingTaker is not null && !ReferenceEquals(_ball.Owner, _kickoffPendingTaker))
+        {
+            _kickoffPendingTaker = null;
+        }
+
+        _context.KickoffPending = _kickoffPendingTaker is not null;
     }
 
     // ---------------------------------------------------------------- 3.2/3.3/3.6 jugadores
@@ -2781,6 +2818,7 @@ internal sealed class MatchEngine : IPerkWorld
                 break;
             case RestartKind.Kickoff:
                 TakeRestart(_restartPoint, "kickoff");
+                _kickoffPendingTaker = _restartTaker;
                 break;
             case RestartKind.FreeKick:
                 TakeRestart(_restartPoint, "freeKick");
