@@ -1,20 +1,22 @@
 # BA-N — Equipar ya no vale el escalón que la ADR 0033 exige
 
-**Estado:** Decisión aplicada, corregida tres veces por `independent-reviewer` (16 sep 2026), pendiente de
-una cuarta pasada de confirmación antes de darla por resuelta del todo — RT-054/RT-057 y la Regla E de
+**Estado:** Decisión aplicada, corregida cuatro veces por `independent-reviewer` (16 sep 2026), pendiente
+de una quinta pasada de confirmación antes de darla por resuelta del todo — RT-054/RT-057 y la Regla E de
 este proyecto piden esa confirmación antes de cerrar, no una autoevaluación. **Decisión del revisor:
 Opción B** — recalibrar el umbral de la puerta, no subir precios de objeto. Umbral 2,0 → **1,0**
 (`Sim.Tests/Perks/EquipmentImpactTests.cs`, `docs/decisiones/0116-el-escalon-de-equipar-se-recalibra-contra-94-perks.md`).
-El número (1,0) es correcto y no ha cambiado en ninguna de las tres rondas de revisión; lo que se corrigió
-cada vez fue la causa y el razonamiento escritos para justificarlo — ver `docs/decisiones/0116-...md`
-para el historial completo de las tres correcciones, incluida la historia real del umbral (bajado cuatro
-veces: 5,0 → 3,0 → 2,0 → 1,0, no solo una recalibración). **Aviso**: el mensaje del commit `f1ce8b3`
-—publicado, sin editar— conserva la redacción de la primera versión (causa del catálogo, "1,7 medido"
-cuando ese árbol mide 3,4); manda la ADR 0116, no ese mensaje. La inconsistencia calculado/medido de
-objetos (ADR 0038 vs ADR 0087) **sigue sin resolver**, intacta — esta ADR nunca la tocó. Tampoco se ha
-hecho todavía el pase de `game-design-review` sobre si el poder de detección de esta puerta (~41 % ante
-una caída a la mitad) es aceptable para el escalón que nombra la ADR 0033 — queda como pregunta abierta
-en `docs/pendientes/BB-P.md`, no como decisión tomada, aunque el cambio ya esté en `main`.
+El número (1,0) es correcto y no ha cambiado en ninguna de las cuatro rondas de revisión; lo que se
+corrigió cada vez fue la causa y el razonamiento escritos para justificarlo — ver `docs/decisiones/0116-...md`
+para el historial completo, incluida la historia real del umbral (bajado **tres** veces desde el valor
+inicial: 5,0 → 3,0 → 2,0 → 1,0). **Aviso**: el mensaje del commit `f1ce8b3` —publicado, sin editar—
+conserva la redacción de la primera versión (causa del catálogo, "1,7 medido" cuando ese árbol mide 3,4);
+manda la ADR 0116, no ese mensaje. La inconsistencia calculado/medido de objetos (ADR 0038 vs ADR 0087)
+**sigue sin resolver**, intacta — esta ADR nunca la tocó. Tampoco se ha hecho todavía el pase de
+`game-design-review` sobre si el poder de detección de esta puerta (~41 % ante una caída a la mitad) es
+aceptable para el escalón que nombra la ADR 0033, ni se comparó en coste contra la alternativa de subir la
+muestra en vez de bajar el umbral (precedente propio de las dos bajadas anteriores) — ambas quedan como
+preguntas abiertas en `docs/pendientes/BB-P.md`, no como decisiones tomadas, aunque el cambio ya esté en
+`main`.
 
 ## Observación
 
@@ -49,8 +51,10 @@ a byte) **en cinco commits distintos que solo cambiaban código de `/Sim` ajeno 
 | `99a22c2` | tras revertir la barrera generalizada de BB-B | 3,0 |
 | `f1ce8b3` | primer commit con el umbral en 1,0 | 3,4 |
 
-**El número se mueve 1,7 puntos sin que cambie un solo perk.** La caída 3,3→1,7 que la ADR 0116 atribuía
-al catálogo ocurre igual con el catálogo fijo: es el error de muestreo del instrumento (~0,9 puntos
+**El número se mueve 1,7 puntos sin que cambie un solo perk.** La caída que la primera versión de la ADR
+0116 atribuía al catálogo (3,0→1,7, medida con el instrumento de 96 plantillas vigente hoy — no la caída
+3,3→1,7 anotada en un primer momento, que mezclaba una medida del instrumento anterior de 24 plantillas
+con una de este) ocurre igual con el catálogo fijo: es el error de muestreo del instrumento (~0,9 puntos
 típico, confirmado empíricamente: sd de 0,78 sobre esas cinco medidas), no una tendencia real del
 tamaño del catálogo. **La hipótesis pasa de LIKELY a REJECTED** como explicación de esta caída concreta;
 sigue viva como mecanismo teórico plausible (un catálogo más fuerte SÍ podría diluir una aportación
@@ -68,7 +72,7 @@ repite el error ya documentado de la ADR 0038.
 ## Antecedente
 
 **BA-M** es el primer punto de esta misma serie (el momento en que la puerta pasó de roja a verde por cero
-centésimas). **Corregida en el mismo commit que cierra esta ficha** (`50c2bb1`): BA-M.md acusaba a un
+centésimas). **Corregida en el mismo commit que la ADR 0116** (`50c2bb1`): BA-M.md acusaba a un
 commit (`a0a8b33`) de afirmar —incorrectamente— que no movía balance, apoyándose en que "la métrica es
 determinista, así que no es ruido" — premisa falsa (el determinismo garantiza que la misma build da el
 mismo número, no que el muestreo de 6.144 partidos no tenga varianza). El valor de 2,0 que BA-M midió
@@ -135,9 +139,12 @@ Tocar `data/economy/item-values.json` (la tabla **medida**) para forzar el escal
 de las dos tablas manda en general —eso repetiría literalmente el error ya documentado de la ADR 0038 que
 el análisis sistémico corrigió una vez.
 
-### Decisión pendiente del revisor
+### Decisión pendiente del revisor (histórico, previo a la decisión — superado por el encabezado)
 
-Ninguna opción se ha implementado. Se detiene aquí conforme al criterio de parada: es una decisión de
+**Este apartado quedó escrito antes de que el revisor eligiera la Opción B** (encabezado de arriba). Se deja intacto como registro del razonamiento en el momento en que ninguna opción estaba aún tomada; no lo contradice el encabezado, lo precede. Un lector que llegue hasta aquí debe releer el encabezado,
+no concluir que "ninguna opción se ha implementado" sigue siendo cierto.
+
+Ninguna opción se había implementado en ese momento. Se detiene aquí conforme al criterio de parada: es una decisión de
 diseño de economía, no una consecuencia demostrada de la medición. Falta, además, decidir la pregunta
 más amplia que las dos opciones comparten: **¿el precio de mercado se calcula o se mide, y quién manda
 cuando difieren?** — sin esa respuesta, cualquiera de las dos es un parche sobre una inconsistencia que

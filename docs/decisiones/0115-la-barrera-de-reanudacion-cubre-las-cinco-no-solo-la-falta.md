@@ -132,12 +132,15 @@ se nota en el agregado por partido. Coherente con las 43 puertas.
 - Pendiente, sin bloquear esta ADR: una captura de `visual-review` que demuestre en pantalla la propiedad
   "observable > invisible" que la motiva frente a la inmunidad temporal rechazada.
 - **Efecto de segundo orden encontrado después, en BA-N** (ADR 0116, `independent-reviewer`) —
-  **corregido aquí tras una segunda revisión, que refutó la primera redacción**: a lo largo de los commits
-  de esta sesión (`ad3c472` → `99a22c2` → `b4ba669` → `3dd0b6d` → `8408671`), `EquippingAGoodBuildIsWorth-
-  SeveralPointsOfWinRate` se movió de 1,7 a 3,4 puntos sin que ningún commit tocara un objeto ni un perk.
-  **No se atribuye a ninguno de los cambios en concreto** —el primer intento de anotarlo aquí decía que lo
-  causó el cierre de la fuga del penalti (§17), y la propia tabla de commits lo desmiente: 1,3 de los 1,7
-  puntos ya se habían movido antes de que ese arreglo existiera—. Es la misma firma que ya documentaba
-  este párrafo en general ("desplaza el consumo de RNG lo suficiente para mover números de builds
-  concretos, **sin que ninguno tenga relación causal con el contenido de esos builds**"), confirmada con
-  un caso medido y ajeno a esta ADR, no una causa nueva que añadir. Ver `docs/pendientes/BB-P.md`.
+  **corregido dos veces tras revisiones sucesivas, que refutaron las redacciones anteriores**: entre
+  `ad3c472` (medido 1,7) y `99a22c2` (medido 3,0) — un tramo que incluye `ea1530a`, `d383328`, `088c5ba`,
+  `ae5a20b`, `69e0952`, la barrera geométrica puesta y revertida — `EquippingAGoodBuildIsWorthSeveral-
+  PointsOfWinRate` ya se había movido 1,3 de los 1,7 puntos totales, **antes de que existiera el arreglo
+  de la fuga del penalti** (`3dd0b6d`, dentro del tramo siguiente). El tramo entre `99a22c2` y `f1ce8b3`
+  (medido 3,4) incluye ese arreglo junto con `b4ba669` y `8408671`, ninguno de los tres medido por
+  separado, así que tampoco ahí se puede aislar cuál lo movió. **No se atribuye a ninguno de los cambios
+  en concreto** —el primer intento de anotarlo aquí decía que lo causó el cierre de la fuga del penalti, y
+  la propia secuencia de medidas lo desmiente—. Es la misma firma que ya documentaba este párrafo en
+  general ("desplaza el consumo de RNG lo suficiente para mover números de builds concretos, **sin que
+  ninguno tenga relación causal con el contenido de esos builds**"), confirmada con un caso medido y ajeno
+  a esta ADR, no una causa nueva que añadir. Ver `docs/pendientes/BB-P.md`.

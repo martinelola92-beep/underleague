@@ -1,8 +1,8 @@
 # 0116. El umbral de "equipar" se recalibra contra su propio error de medición
 
-**Fecha:** 2026-09-16 (corregida tres veces el mismo día, tras tres rondas de `independent-reviewer`)
+**Fecha:** 2026-09-16 (corregida cuatro veces el mismo día, tras cuatro rondas de `independent-reviewer`)
 **Estado:** Aceptada e implementada (`Sim.Tests/Perks/EquipmentImpactTests.cs`); documentación pendiente
-de una cuarta pasada de confirmación.
+de una quinta pasada de confirmación.
 
 **Aviso sobre el mensaje del commit `f1ce8b3`**: ese mensaje, ya publicado y sin editar (no se reescribe
 historia publicada), conserva la redacción de la primera versión de esta ADR — atribuye la caída al
@@ -18,7 +18,7 @@ de objeto), ADR 0087 (valor de perk medido contra su control — esta puerta ya 
 emparejamiento por semilla, ver "Instrumento", más abajo), ADR 0115 (el mecanismo real de por qué esta
 puerta se mueve, sin atribuirlo a un commit concreto).
 
-**Nota de corrección (tres rondas)**: la primera versión de esta ADR (escrita antes de pasar por
+**Nota de corrección (cuatro rondas)**: la primera versión de esta ADR (escrita antes de pasar por
 `independent-reviewer`) atribuía la caída del umbral al crecimiento del catálogo de perks (61→94) — esa
 causa quedó **REJECTED** con una medición de seis minutos. La segunda versión corrigió esa causa pero
 introdujo dos afirmaciones nuevas que una segunda revisión también refutó: que el cierre de la fuga del
@@ -30,31 +30,45 @@ la propia línea del umbral (no de memoria): que el "3,3 medido" que esta ADR at
 el mismo error de no contar la vuelta que ya se había corregido dos líneas más abajo para otro número; y
 que la sección "Instrumento" y `docs/pendientes/BB-P.md` prescribían un estadístico incorrecto (la RMS de
 unas diferencias que el código ni siquiera calcula, en vez de `sd/√n`) para la mejora de instrumento que
-sí falta. El umbral implementado (1,0) no ha cambiado en ninguna de las tres correcciones — solo el
-razonamiento que lo sostiene.
+sí falta. La cuarta revisión encontró, verificado de nuevo con `git show` sobre cada commit citado (no de memoria):
+que la tabla de "Qué umbral existía" emparejaba el valor inicial (`a91c020`, umbral 5,0) con la medida
+"5,4→4,7" que en realidad pertenece a un commit distinto (`b241611`, que solo subió `Rosters` de 8 a 24
+sin tocar el umbral — invisible para un `git log -G` sobre la línea del `Assert`, que es como se había
+reconstruido la tabla); que "el umbral ha bajado cuatro veces" era un error de cuenta repetido en cuatro
+sitios (esta ADR dos veces, `docs/pendientes/BA-N.md`, `docs/project-state.md`) — son tres bajadas desde
+un valor inicial que no es una bajada; y que esta ADR nunca comparó en coste la alternativa de subir
+`Rosters` (el propio precedente del proyecto en las dos bajadas anteriores) frente a bajar el umbral,
+antes de elegir la segunda. El umbral implementado (1,0) no ha cambiado en ninguna de las cuatro
+correcciones — solo el razonamiento que lo sostiene.
 
-**Lo que esta corrección deja escrito, y que las versiones anteriores no decían**: el umbral se ha bajado
-**cuatro veces** desde que existe esta puerta (5,0 → 3,0 → 2,0 → 1,0; tabla completa en "Qué umbral
-existía"), y hoy, por las propias palabras de esta ADR, protege "que equipar sigue haciendo algo", no el
-escalón fino que nombra la ADR 0033. Es un debilitamiento real de esa garantía de diseño, no solo una
-recalibración de instrumento — y el paso por `game-design-review` sobre si ese nivel de cobertura es
-aceptable no se hizo antes de aceptar esta ADR (queda como pregunta abierta en `docs/pendientes/BB-P.md`,
-punto 5, pero la decisión de facto — "sí, es aceptable" — ya está en producción).
+**Lo que esta corrección deja escrito, y que las versiones anteriores no decían**: el umbral ha bajado
+**tres veces** desde el 5,0 inicial (5,0 → 3,0 → 2,0 → 1,0, tres bajadas, no cuatro — el primer valor de
+la lista es el punto de partida del test, no una bajada; tabla completa en "Qué umbral existía"), y **la
+última bajada (2,0 → 1,0, esta ADR) es la única que no vino acompañada de más muestra** — las dos
+anteriores (8→24, 24→96 plantillas) sí la tuvieron. Hoy, por las propias palabras de esta ADR, la puerta
+protege "que equipar sigue haciendo algo", no el escalón fino que nombra la ADR 0033. Es un debilitamiento
+real de esa garantía de diseño, no solo una recalibración de instrumento — y el paso por
+`game-design-review` sobre si ese nivel de cobertura es aceptable no se hizo antes de aceptar esta ADR
+(queda como pregunta abierta en `docs/pendientes/BB-P.md`, punto 5, pero la decisión de facto — "sí, es
+aceptable" — ya está en producción).
 
 ## Qué umbral existía
 
 `EquippingAGoodBuildIsWorthSeveralPointsOfWinRate` exigía que equipar a los siete titulares de una build
 "buena" con un objeto cada uno (RF-076, mezcla de rarezas del acto 3) subiera la tasa de victoria **al
 menos 2,0 puntos** frente al mismo equipo sin objetos, sobre 96 plantillas × 32 partidos × 2 direcciones
-= 6.144 partidos por brazo. **El umbral ya se había bajado tres veces antes de esta ADR, cada vez con más
-muestra** (verificado con `git log -G` sobre la línea del `Assert`, no de memoria):
+= 6.144 partidos por brazo. **El umbral ya se había bajado dos veces antes de esta ADR** (verificado con
+`git log -G` sobre la línea del `Assert`, no de memoria — ese comando ve los cuatro commits que tocaron el
+umbral, pero no ve `b241611`, que cambió la muestra sin tocar el umbral; por eso la fila inicial de abajo
+no lleva una medida al lado, para no repetir el error de emparejar mal dos commits distintos que ya se
+cometió y se corrigió en las otras dos filas):
 
-| commit | `Rosters` | umbral elegido | medido al elegirlo |
+| commit | `Rosters` | umbral | nota |
 |---|---|---|---|
-| `a91c020` (4 sep) | 8 | 5,0 | 5,4 (bajaba a 4,7 al tocar el catálogo) |
-| `76ce1c4` (4 sep) | 24 | 3,0 | **3,3** |
-| `54c6b38` (9 sep, ADR 0090) | 96 | 2,0 | **3,0** |
-| `f1ce8b3` (esta ADR) | 96 | 1,0 | ver más abajo |
+| `a91c020` (4 sep) | 8 | 5,0 | valor inicial del test, no una bajada; su propio comentario dice que es "deliberadamente bajo (la mitad de lo que se mide hoy)" — medido ~10, no un número que se haya intentado precisar aquí |
+| `76ce1c4` (4 sep) | 24 | 3,0 | bajada 1; medido dan **3,3** |
+| `54c6b38` (9 sep, ADR 0090) | 96 | 2,0 | bajada 2; medido **3,0**, ya con la muestra que sigue vigente hoy |
+| `f1ce8b3` (esta ADR) | 96 | 1,0 | bajada 3; ver más abajo — misma muestra que la bajada anterior, no una muestra mayor |
 
 El "3,3" que una versión anterior de esta ADR citaba como la medida que llevó a elegir 2,0 pertenece en
 realidad al paso anterior (24 plantillas, umbral 3,0); el medido que sí llevó a elegir 2,0 fue 3,0, con la
@@ -113,6 +127,16 @@ tocara ni objetos ni perks** — es, literalmente, la definición de CLAUDE.md d
 suerte": era un umbral mal puesto para su propio ruido, y esa fragilidad es lo que produjo tanto BA-M como
 BA-N. 1,0 lo baja a un nivel razonable sin acercarse tanto a cero que dejara de significar nada (0,4 queda
 dentro de medio error típico y no distinguiría "equipar no aporta nada" de ruido puro).
+
+**Alternativa no elegida, y por qué se anota en vez de compararse en coste aquí**: las dos bajadas
+anteriores (8→24, 24→96 plantillas) subieron la muestra en vez de bajar el umbral — el precedente propio
+del proyecto es "arregla el instrumento", no "baja el listón". Subir `Rosters` otra vez (por ejemplo a
+384, que dividiría el error típico aproximadamente a la mitad y devolvería el umbral de 2,0 a un falso
+positivo del orden del 6 % sin debilitar la ADR 0033) era una alternativa real que esta ADR no llegó a
+costear en tiempo de ejecución antes de decidir bajar el umbral. Se elige bajar el umbral porque es el
+cambio mínimo que BA-N pedía (Opción B, sin tocar el instrumento), no porque se haya demostrado más barato
+que subir la muestra — queda anotado en `docs/pendientes/BB-P.md` como la opción que de verdad se
+descarta sin costear, no como una idea menor.
 
 **Lo que esta puerta protege, con precisión, para que nadie la lea con más alcance del que tiene**: con
 umbral 1,0 y error 0,9, detecta del orden de 87 % de las veces que equipar deje de aportar nada, y del
@@ -178,7 +202,7 @@ ajenos a su contenido) pero eso todavía no está medido para ninguna de las cua
 
 ## Consecuencias
 
-- BA-N con decisión aplicada; cierre formal pendiente de una cuarta confirmación del
+- BA-N con decisión aplicada; cierre formal pendiente de una quinta confirmación del
   `independent-reviewer` sobre esta corrección.
 - El escalón "muy buena" de la ADR 0033 sigue existiendo; la puerta que lo vigila detecta su desaparición
   total con buena fiabilidad (~87 %) y una degradación parcial con fiabilidad limitada (~41 %) — queda
