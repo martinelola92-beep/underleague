@@ -1,0 +1,258 @@
+# Design gate — BB-B como barrera geométrica
+
+Precede a cualquier cambio de código. Responde a los puntos 1-6 exigidos antes de tocar `/Sim`, con la
+evidencia de código que los sostiene. `docs/pendientes/BB-B.md` tiene el historial completo (parche
+temporal, veredicto del revisor, hermanos). Este fichero es el diseño de reemplazo.
+
+## 1. Qué significa "balón en juego" en una reanudación
+
+No es un instante, es un **intervalo con dos bordes**, y el motor ya distingue ambos sin necesidad de
+estado nuevo:
+
+- **Borde de entrada** (cuándo deja de estar muerto): el tick en que `ResolveRestart` llama a
+  `TakeRestart`/`TakePenalty` y le da la posesión al sacador (`SetOwner(taker)`,
+  `MatchEngine.cs:2841`). Ahí `_restartTicksLeft` llega a 0 y `ctx.BallDead` pasa a `false`
+  (`MatchEngine.cs:766`).
+- **Borde de salida del riesgo** (cuándo deja de tener sentido protegerlo): no es el mismo tick. El balón
+  está técnicamente "en juego" desde `TakeRestart`, pero **sigue en el pie del sacador** hasta que lo
+  suelta —pase, tiro, regate interrumpido por pérdida—. RF-052 pide que el primer contacto ocurra "en los
+  2 primeros segundos", no en el primer tick: el saque necesita ese margen para que el sacador decida y
+  golpee, y es exactamente la ventana que la medición del revisor cronometró en 5 ticks (0,33 s) antes del
+  parche y que **el árbol sin parchear** ya viola en 7/179 casos.
+
+Definición operativa: **"balón en juego" para efectos de esta barrera es "el sacador ya no es su dueño"**,
+no "`ctx.BallDead` es falso". Son cosas distintas y el parche descartado las confundía a medias: medía la
+segunda con un estado nuevo (`KickoffPending`) en vez de derivar la primera del dueño del balón, que el
+motor ya sabe en todo momento (`ctx.Ball.Owner`).
+
+## 2. Qué acciones quedan prohibidas durante la transición
+
+Ninguna, en el sentido de "descartar la acción". La reformulación clave del rediseño es que **no hace
+falta prohibir ninguna acción de utilidad**: `EvaluateTackle` y `EvaluateBlock` siguen evaluando exactamente
+igual que siempre. Lo que cambia es que **el rival no puede estar donde su propia evaluación necesitaría
+que estuviera** para que la entrada o la carga tengan alcance. Es la diferencia entre "no se puede hacer
+esto" (regla de comportamiento, invisible si no se ve en pantalla) y "no se puede estar aquí" (regla de
+posición, visible por construcción). El principio de CLAUDE.md "observable > invisible" se lee así: si el
+rival tiene prohibido acercarse, tiene que **verse** que no se acerca, no solo que su entrada falla en
+silencio estando pegado al sacador (que es exactamente lo que medió el revisor: 0,75 casillas de media con
+el parche puesto).
+
+## 3. Condición espacial mínima que impide el comportamiento observado
+
+Ya existe en el código, para un caso: `EnforceFreeKickClearance` (`MatchEngine.cs:2692`, ADR 0090).
+Durante la cuenta atrás del saque de falta, todo rival a menos de `freeKickClearanceCells` (**2,0**
+casillas) del balón es reubicado al borde de esa distancia, con velocidad a cero. Es una barrera real,
+observable, medida y en verde desde el 9 sep 2026.
+
+Los dos radios de acción que esta barrera tiene que superar están en `data/ai/weights.json`:
+
+| Acción | Parámetro | Valor |
+|---|---|---|
+| Entrada (`EvaluateTackle`, rama del poseedor) | `tackleDistanceMaxCells` | 1,0 |
+| Carga (`EvaluateBlock`) | `blockReachMaxCells` | 1,2 |
+
+`2,0` dobla holgadamente el mayor de los dos (0,8 casillas de margen sobre 1,2). Es el mismo motivo por el
+que ADR 0090 nunca tuvo el problema que tiene BB-B: la barrera de la falta cubre con margen ambas acciones
+sin necesidad de tocar ninguna de las dos. **No hace falta buscar un valor nuevo**: la condición mínima es
+"radio ≥ máx(tackleDistanceMaxCells, blockReachMaxCells) + margen de body separation", y 2,0 ya la cumple
+con el mismo margen que lleva siete días en producción sin regresión conocida.
+
+Lo que le falta a `EnforceFreeKickClearance` para cubrir BB-B no es el radio, es la **ventana**: solo se
+llama mientras `_restartTicksLeft > 0` (`MatchEngine.cs:569`, condicionado además a
+`_pendingRestart == RestartKind.FreeKick`), es decir, solo cubre el borde de entrada del intervalo del
+punto 1, nunca el borde de salida del riesgo. Ahí es donde vivía el hueco de BB-B, y por construcción,
+el mismo hueco existe **ya hoy** en el propio saque de falta para su ventana posterior a `TakeRestart`
+(explica por qué la tabla de hermanos de `BB-B.md` mide 7 entradas en 148 saques de falta pese a tener ya
+una barrera).
+
+## 4. Los cuatro hermanos
+
+`_restartTeam`, `_restartPoint` y `_restartTaker` ya son genéricos: `BeginRestart` los fija igual para
+`ThrowIn`, `Corner`, `GoalKick`, `Kickoff` y `FreeKick` (`MatchEngine.cs:2600-2681`), y `SelectTaker` es
+una única función compartida por los cinco (comentario AZ-A, `MatchEngine.cs:2712`). La única pieza
+específica de un tipo es la **llamada** a `EnforceFreeKickClearance`, no el estado que usa. Generalizar la
+barrera no es "arreglar 4 hermanos", es **quitar el `if (_pendingRestart == RestartKind.FreeKick)`** que
+hoy limita a uno solo un mecanismo que ya es genérico. Corner no está en la lista de hermanos de
+`BB-B.md` (0 entradas medidas) pero comparte la misma máquina de estado y no hay motivo para excluirlo del
+mismo mecanismo: se cubre gratis.
+
+## 5. `EvaluateBlock`
+
+Sí necesitaba protección (hallazgo del revisor) y la solución geométrica se la da **sin tocarlo**: si
+ningún rival puede estar a menos de 2,0 casillas del balón, ninguno puede estar a menos de
+`blockReachMaxCells` (1,2) tampoco. No hace falta un segundo guard ni distinguir `Tackle` de `Block` en
+ningún punto del diseño — es la ventaja de resolver en el espacio en vez de en la acción: cubre acciones
+que ni siquiera se han enumerado explícitamente (un tercer tipo de contacto futuro quedaría cubierto
+igual, sin cambio de código).
+
+## 6. Por qué esto no es una regla temporal invisible con otro nombre
+
+Hace falta **una pieza de estado** — saber cuándo el sacador ha soltado el balón para dejar de aplicar la
+barrera — pero la distinción con `KickoffPending` no es "tiene estado" contra "no tiene estado", es **qué
+hace el estado**: `KickoffPending` alimentaba un `if` que descartaba una acción entera sin mover a nadie
+(la pantalla no correspondía con la regla). El estado propuesto aquí (ver §7) alimenta una reubicación de
+posición, igual que ya hace `EnforceFreeKickClearance` con la cuenta atrás: la pantalla **es** la regla. Si
+se quita el flag, el efecto en pantalla desaparece con él — no hay ningún comportamiento que solo exista
+"en la cabeza" del motor.
+
+## 7. Propuesta de abstracción mínima reutilizable
+
+No es un mecanismo nuevo: es extender el que ya existe en dos ejes.
+
+1. **Generalizar la llamada**, no la lógica. `EnforceFreeKickClearance` se renombra a
+   `EnforceRestartClearance` y se llama para las cinco reanudaciones (`ThrowIn`, `Corner`, `GoalKick`,
+   `Kickoff`, `FreeKick`) durante la cuenta atrás, no solo para `FreeKick`. Cero jugadores nuevos que
+   proteger que no estuvieran ya cubiertos por el mismo bucle.
+2. **Cubrir el borde de salida del riesgo**, no solo el de entrada. Se añade un campo genérico —
+   `_restartClearanceOwner: MatchPlayer?` — fijado en `TakeRestart`/`TakePenalty` (donde ya existe la
+   variable local `taker`, para las cinco reanudaciones a la vez, sin condicional por tipo) y limpiado en
+   `UpdateContextCaches` en cuanto `ctx.Ball.Owner` deja de ser él (la misma regla de limpieza que ya tenía
+   `_kickoffPendingTaker`, generalizada). Mientras `_restartClearanceOwner` no sea null, `Step` sigue
+   llamando a `EnforceRestartClearance` aunque `_restartTicksLeft` ya sea 0.
+3. **El centro de la barrera es el balón, no el punto fijo de saque.** `EnforceFreeKickClearance` usa
+   `_restartPoint` porque durante la cuenta atrás el balón está aparcado ahí (`ParkBall`) y coinciden. Para
+   cubrir también la ventana posterior a `TakeRestart` (el sacador puede empezar a regatear) hay que medir
+   contra `_ball.Position` en vez de `_restartPoint`; en la cuenta atrás da el mismo resultado porque el
+   balón no se mueve, así que no es un cambio de comportamiento para el caso ya medido de ADR 0090, solo
+   una generalización correcta para el caso nuevo.
+4. **Un solo radio para las cinco**, no cinco parámetros. `freeKickClearanceCells` pasa a llamarse
+   `restartClearanceCells` en `RestartTuning`/`tuning.json` y se aplica a las cinco por igual. Ver §8: es
+   la pregunta abierta que corresponde a `game-design-review`, no una decisión ya tomada aquí.
+
+Ningún cambio en `Utility.cs`. Ninguna primitiva nueva en el sistema de utilidad. El área de cambio entera
+es la máquina de estado de reanudaciones en `MatchEngine.cs`, ya dueña de este mecanismo.
+
+## 8. Preguntas para `game-design-review` — resueltas
+
+1. **¿Un radio único o uno por tipo de reanudación?** **Empezar con el único valor 2,0** (el ya medido y
+   en verde por ADR 0090) para las cinco. No existe ningún RF que pida explícitamente una regla de zona
+   para el saque de puerta —a diferencia del fútbol real, donde sí es obligatoria—, así que inventarla
+   ahora sería añadir una regla nueva no pedida (protocolo de diseño, pregunta 4: "si no existe, no la
+   inventes sin decirlo"). La medición del punto 11 discrimina esto sin necesidad de decidirlo a priori:
+   si con 2,0 el saque de puerta sigue teniendo entradas en la ventana —el área mide 2×4 casillas y un
+   punto de saque cerca del borde podría dejar el radio corto en algún eje—, se escala a una regla de zona
+   como segunda vuelta, con datos. No antes.
+2. **¿Proteger también a un compañero marcado lejos del balón?** **No ampliar el diseño todavía.** RF-057
+   ya exige que el contacto ocurra solo entre quien disputa el balón o está en la trayectoria de la jugada
+   activa; un compañero marcado lejos del balón en el instante del saque —cuando el balón casi no se ha
+   movido— muy probablemente ya falla `IsInActivePlay` (ni está cerca del balón ni en el corredor hacia la
+   portería rival) sin necesidad de que la barrera lo cubra. Se mide explícitamente en el punto 11
+   (cargas a un jugador que no es el sacador, durante la ventana); solo si el número no es cero es una
+   segunda vuelta con datos, no una suposición de partida.
+3. **Duración máxima del `_restartClearanceOwner`.** **No añadir techo ahora.** Hoy no existe ningún perk
+   que premie retener el balón indefinidamente en una reanudación, así que un límite de ticks sería
+   protegerse de un caso que no puede ocurrir todavía —sobre-ingeniería, no la lectura conservadora que
+   pide CLAUDE.md ("documenta la limitación, no fabriques una excepción" aplica también al revés: no
+   fabriques la protección antes de que exista el problema). Queda **documentado como riesgo de vigilancia**
+   para cuando el catálogo C1/C2 introduzca un perk de retención de balón: en ese momento, el techo (RF-052,
+   ~2 s / 30 ticks) se añade junto con ese perk, no antes.
+
+## 8b. Alternativa considerada y descartada
+
+**Repulsión continua de movimiento** en vez de corrección posicional discreta: en lugar de reubicar
+(`clamp`) al rival que invade el radio, sesgar su vector de movimiento en `UpdatePlayer` para que nunca
+llegue a entrar. Más suave visualmente, pero rompe el patrón ya establecido (`BodySeparation.Resolve`,
+`EnforceFreeKickClearance` — ambos corrigen posición después del hecho, no antes) y es más difícil de
+mantener determinista tick a tick con aritmética entera (RT-021, RT-023) que un clamp discreto. Se
+descarta por consistencia con el mecanismo ya probado, no por inferioridad conceptual.
+
+## 9. Medición barata antes de implementar (punto 9 del proceso)
+
+No hace falta una búsqueda de parámetros: el valor candidato (2,0) ya está en producción y medido para un
+hermano. La medición barata que discrimina es una sola pregunta, no un barrido: **¿basta 2,0 aplicado a las
+cinco reanudaciones para llevar a 0 las entradas dentro de la ventana en los cuatro hermanos medidos por el
+revisor (kickoff, banda, puerta, falta), sin sacar de banda `tacklesPerMatch`/`injuriesPerMatch`
+(RT-056)?** Si la respuesta es sí con el mismo lote de 60 semillas que usó el revisor, no hace falta
+segunda vuelta. Si no, la siguiente pregunta barata es cuál de los tres hermanos concretos falla, no un
+barrido de valores.
+
+## 10. Siguiente paso
+
+Este documento es el gate previo a tocar código (puntos 1-9 del proceso). Antes de implementar:
+`game-design-review` sobre las tres preguntas del §8 (resuelto, §8/§8b), y `architecture-review` porque
+el cambio cruza estado de partido (`MatchEngine`) y posicionamiento (reubicación forzada de jugadores)
+aunque no toque `Utility.cs`.
+
+## 11. Veredicto `game-design-review` (protocolo de diez preguntas)
+
+1. **Qué experimenta el jugador**: un cordón visible alrededor del balón en toda reanudación —igual que ya
+   ve hoy en el saque de falta—, no un rival pegado sin poder actuar por una razón invisible.
+2. **Qué decisión toma el jugador**: ninguna directa (es regla de núcleo, no contenido elegible), pero sí
+   indirecta en construcción de equipo: un build de presión alta pierde la vía de "robar en el segundo 0"
+   en TODAS las reanudaciones, no solo en la falta.
+3. **Qué decisión debería tomar**: la misma — coincide con el estado ya aceptado desde ADR 0090 para la
+   falta; esto solo lo iguala en las otras cuatro.
+4. **Qué regla representa**: RF-052 de forma directa para el saque de centro. Para banda/córner/puerta
+   **no existe un RF que pida esta barrera explícitamente** — se extiende por analogía con el precedente ya
+   aceptado de ADR 0090 (que sí modificó formalmente RF-053 para la falta). Queda dicho aquí sin
+   disfrazarlo de requisito preexistente; candidato a su propio ADR al cerrar (§10).
+5. **Qué sistemas intervienen**: solo `/Sim` (`MatchEngine.cs`, `Catalog.cs`, `DataLoader.cs`) y
+   `/data/sim/tuning.json`. Cero reparto de lógica con `/Game` (RT-014 intacto): el reposicionamiento se ve
+   porque ya viaja como posición de jugador en el evento de cada tick, igual que el saque de falta hoy.
+6. **Alternativas**: la rechazada (inmunidad temporal), la propuesta (barrera geométrica, radio único) y
+   la descartada en §8b (repulsión continua de movimiento).
+7. **Trade-off**: menos robos inmediatos en cualquier reanudación a cambio de más posesión sostenida para
+   quien saca — coste de oportunidad legible para builds de presión/marcaje agresivo. Vigilar con las
+   mismas puertas que detectaron el problema del parche rechazado (`TheThreeDoctrinesBuyDifferently`,
+   `BadBuildsLoseToTheirBaseline`): la lección de `ChaseBall pen=50` (CLAUDE.md) es que varias métricas de
+   diferenciación de builds moviéndose juntas no es ruido, y ya se movieron juntas una vez con el enfoque
+   equivocado.
+8. **Cómo cambia las estrategias**: empuja a los builds de presión/marcaje agresivo (rasgo `Aggressive`,
+   tag `Brute`) a expresar su ventaja en el resto de la jugada en vez de en el primer contacto tras una
+   reanudación — no anula la estrategia, la reubica.
+9. **Puede degenerar**: un único vector identificado (retención indefinida del balón por un perk futuro),
+   sin caso hoy — documentado como vigilancia (§8, punto 3), no como excepción fabricada de antemano.
+10. **Cómo se demuestra**: §9 (medición barata, una sola pregunta) + §11 del proceso completo (métricas
+    explícitas por los cuatro hermanos) + las puertas de balance ya nombradas. Suficiente para un cambio
+    que toca `/Sim`.
+
+**Veredicto**: diseño coherente, sin regla inventada disfrazada de requisito, con un solo punto declarado
+como extensión por analogía (banda/córner/puerta bajo RF-053, no RF-052) y un riesgo de degeneración
+documentado en vez de prevenido en falso. Procede a `architecture-review`.
+
+## 12. Veredicto `architecture-review`
+
+**¿Ya existe el patrón?** Sí, y es la base entera de este diseño: `EnforceFreeKickClearance`
+(`MatchEngine.cs:2692`, ADR 0090). No se propone una abstracción nueva, se **generaliza** la que ya está en
+producción. Cumple el principio de la propia skill antes de cualquier otra pregunta.
+
+**Orden del tick (`Step`, `MatchEngine.cs:520-590`)**, verificado línea a línea:
+
+1. `UpdateContextCaches` (limpieza de `_restartClearanceOwner`) corre **antes** que nadie decida —
+   idéntico orden que ya validó el revisor para `_kickoffPendingTaker` ("VERIFIED: el orden de ticks no
+   deja hueco").
+2. El bucle de `UpdatePlayer` (donde corren `EvaluateTackle`/`EvaluateBlock`) va **antes** que
+   `EnforceRestartClearance`, en el mismo tick. Consecuencia: el clamp de un tick corrige la posición que
+   **el siguiente** tick usará para decidir, nunca la de sí mismo — el mismo desfase de un tick que ya
+   tiene `EnforceFreeKickClearance` hoy y que ya está medido y en verde. No es un desfase nuevo introducido
+   por esta generalización.
+3. El tick de transición (última cuenta atrás → primer tick de juego abierto) queda cubierto: el clamp
+   todavía corre ese tick con `wasRestarting == true`; el primer tick con `_restartClearanceOwner` activo y
+   `wasRestarting == false` hereda posiciones ya corregidas por el tick anterior. Sin hueco de un tick sin
+   protección en la transición.
+
+**Determinismo (RT-020/021/023)**: sin RNG, sin `Dictionary`/`HashSet` sin ordenar, aritmética de `Vec2` ya
+usada en el mecanismo existente. El bucle de `EnforceRestartClearance` corrige cada rival de forma
+independiente (no hay contención entre jugadores como sí la hay en `Marking.Assign`), así que iterar en
+orden de índice de array en vez de `PlayerInTurnOrder` no introduce asimetría de resultado — mismo patrón
+que ya pasa RT-024 hoy.
+
+**Esquema de datos**: renombrar `freeKickClearanceCells` → `restartClearanceCells` en
+`tuning.schema.json`/`tuning.json` **no** es un cambio de esquema versionado. RT-030 ("cualquier cambio de
+esquema sube la versión") rige el estado de la run persistido (`docs/modelo-datos.md`), no la configuración
+estática de `/data` que se valida en cada arranque (RT-032/083) y no se guarda en ninguna partida. Un
+`grep` de uso + `DataValidator` basta; no hace falta versión nueva.
+
+**RT-011/RT-014**: sin cambios. El reposicionamiento viaja como posición de jugador en los eventos ya
+existentes (igual que el saque de falta hoy); no hace falta ningún evento nuevo ni ninguna decisión nueva
+en `/Game`.
+
+**Efecto de segundo orden identificado, no bloqueante**: durante la ventana nueva (`_restartClearanceOwner`
+activo tras `TakeRestart`), un rival con `ChaseBall` activo intentará cerrar sobre el balón y el clamp lo
+devolverá cada tick — la misma interacción que ya existe hoy durante la cuenta atrás del saque de falta
+(ADR 0090 no reportó problema de "vibración" visible ni una métrica afectada por ello). Se hereda, no se
+introduce: **vigilar en la captura visual (punto 11 del proceso, `visual-review` si hace falta), no
+bloquea la implementación**.
+
+**Veredicto**: sin problema de arquitectura. Procede a implementar según §7, con las tres decisiones del
+§8 ya resueltas y el punto de vigilancia de `ChaseBall` anotado (no bloqueante).
