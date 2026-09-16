@@ -1,11 +1,13 @@
 # BA-N — Equipar ya no vale el escalón que la ADR 0033 exige
 
-**Estado:** Decisión aplicada, corregida cuatro veces por `independent-reviewer` (16 sep 2026), pendiente
-de una quinta pasada de confirmación antes de darla por resuelta del todo — RT-054/RT-057 y la Regla E de
+**Nota sobre el título** (sexta ronda, `independent-reviewer`): el título describe el síntoma tal como se midió antes de esta ficha (equipar no llegaba al umbral entonces vigente, 2,0). Con el umbral ya recalibrado a 1,0 (ADR 0116) el síntoma literal del título ya no ocurre — la puerta pasa hoy con 3,4. No se renombra la ficha por las mismas razones que la ADR 0116 (enlaces cruzados); manda el contenido del Estado, no el título.
+
+**Estado:** Decisión aplicada, corregida cinco veces por `independent-reviewer` (16 sep 2026), pendiente
+de una sexta pasada de confirmación antes de darla por resuelta del todo — RT-054/RT-057 y la Regla E de
 este proyecto piden esa confirmación antes de cerrar, no una autoevaluación. **Decisión del revisor:
 Opción B** — recalibrar el umbral de la puerta, no subir precios de objeto. Umbral 2,0 → **1,0**
 (`Sim.Tests/Perks/EquipmentImpactTests.cs`, `docs/decisiones/0116-el-escalon-de-equipar-se-recalibra-contra-94-perks.md`).
-El número (1,0) es correcto y no ha cambiado en ninguna de las cuatro rondas de revisión; lo que se
+El número (1,0) es correcto y no ha cambiado en ninguna de las cinco rondas de revisión; lo que se
 corrigió cada vez fue la causa y el razonamiento escritos para justificarlo — ver `docs/decisiones/0116-...md`
 para el historial completo, incluida la historia real del umbral (bajado **tres** veces desde el valor
 inicial: 5,0 → 3,0 → 2,0 → 1,0). **Aviso**: el mensaje del commit `f1ce8b3` —publicado, sin editar—
@@ -96,6 +98,13 @@ BA-N deja de ser un caso aislado en cuanto se mira así.
 
 ## Análisis de consecuencias (16 sep 2026, orquestación de pendientes técnicos)
 
+**Nota (sexta ronda, independent-reviewer)**: este análisis se escribió cuando la hipótesis del
+catálogo (61→94 perks diluye la aportación marginal de equipar) todavía no se había probado, y dos de sus bullets — señalados abajo — la dan por medida en presente. La sección "Hipótesis" de
+más arriba la marca **REJECTED** como explicación de la caída concreta que motivó esta ficha;
+sigue viva solo como mecanismo teórico sin evidencia de activación. El resto de este análisis —la
+inconsistencia calculado/medido de precio de objeto (ADR 0038 vs 0087) y la comparación de
+opciones (a)/(b)— no depende de esa hipótesis y sigue vigente.
+
 Leídos: ADR 0033 (define el escalón "muy buena = buena + equipada"), ADR 0038 (precio calculado de
 objeto), `docs/analisis/builds-analisis-sistemico.md` §9 (el valor calculado no predice el medido).
 
@@ -111,7 +120,8 @@ estructural que BA-N solo pone de manifiesto.
 ### Opción (a) — subir precios de objeto
 
 - **A favor**: arregla el síntoma medido directamente (el escalón "muy buena" depende de cuánto rinde
-  equipar, y hoy los objetos rinden por debajo de lo que la ADR 0033 exige).
+  equipar, y en el momento en que se midió esta caída los objetos rendían por debajo de lo que la ADR
+  0033 exige).
 - **En contra, medido**: la fórmula que fijaría cuánto subir cada objeto es la calculada (ADR 0038), que
   el propio análisis sistémico **falsó** dos veces (§9: "el orden medido es el inverso", "la suma de
   atributos no predice el valor: +30 puede valer 0 y +10 puede valer 62"). Subir precios con esa fórmula
@@ -126,9 +136,12 @@ estructural que BA-N solo pone de manifiesto.
 
 ### Opción (b) — recalibrar el umbral de `EquippingAGoodBuild` contra 94 perks
 
-- **A favor**: reconoce lo que la medición ya muestra —la contribución **marginal** de un objeto encoge
-  cuando el resto del catálogo se vuelve más fuerte, no porque el objeto valga menos en sí—. No toca
-  ninguna tabla ya falsada.
+- **A favor** (bullet escrito antes de la revisión que marcó REJECTED la causa del catálogo; se deja
+  el texto original tachado por transparencia y se sustituye el argumento vigente debajo): ~~reconoce
+  lo que la medición ya muestra —la contribución marginal de un objeto encoge cuando el resto del
+  catálogo se vuelve más fuerte, no porque el objeto valga menos en sí—~~. El argumento que sí se
+  sostiene: no toca ninguna tabla ya falsada, y no depende de identificar la causa exacta de la caída
+  medida — sea cual sea esa causa, recalibrar el umbral no reabre la inconsistencia calculado/medido.
 - **En contra**: es un ajuste de rango (RT-057, exige ADR), y el propio criterio de "muy buena = buena +
   equipada" de la ADR 0033 se vuelve más débil en términos absolutos: equipar seguiría sumando lo mismo,
   pero el examen para llamarlo "escalón real" se relaja.

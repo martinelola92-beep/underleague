@@ -28,13 +28,16 @@ public sealed class EquipmentImpactTests
 {
     /// <summary>
     /// Plantillas distintas sobre las que se promedia (equivalente a <c>--rosters</c>). Subido de 8 a 24
-    /// en <c>b241611</c> (paquete Z), sin tocar el umbral: con 8 el brazo de cada arm eran 512 partidos, la
-    /// diferencia entre arms tenía una desviación de ~3 puntos y el umbral de 5 quedaba dentro del ruido.
-    /// La medida pasó de 5,4 a 4,7 justo tras añadir ocho perks al catálogo (RF-070), pero ese movimiento
-    /// de 0,7 cabe dentro de la propia desviación de ~3 del instrumento de 8 plantillas — no es evidencia
-    /// de que el catálogo lo causara, es la misma clase de correlación temporal sin aislar que ADR 0116
-    /// (BA-N) marcó REJECTED para el paso de 61 a 94 perks. Con 24 la desviación baja a
-    /// ~1,8 y el test avisa de una regresión de verdad.
+    /// en <c>b241611</c> (paquete Z), sin tocar el umbral: con 8 el brazo de cada arm eran 512 partidos.
+    /// Remedido en worktree (sexta ronda, independent-reviewer, BA-N): con 8 plantillas la puerta daba
+    /// **8,2** en los tres commits anteriores a `b241611` y **7,4** en el último de ellos (`044eabb`); tras
+    /// `b241611` (que en el mismo commit sube `Rosters` a 24, reescribe la economía y añade ocho perks al
+    /// catálogo entre otros 40 ficheros — no un cambio aislado de catálogo) el mismo instrumento de 8
+    /// plantillas mide **4,7**. El movimiento real es de **2,7**, no de una décima suelta, y sigue sin
+    /// aislar qué parte de `b241611` lo causó — no se atribuye al catálogo de perks en concreto, es la
+    /// misma clase de correlación temporal sin aislar que ADR 0116 (BA-N) marcó REJECTED para el paso de
+    /// 61 a 94 perks. Con 24 la desviación entre arms baja a ~1,8 y el test avisa de una regresión de
+    /// verdad (cifra de dispersión sin remedir todavía; extrapolada de la de 96 plantillas por 1/√n).
     /// </summary>
     // Paquete AZ (ADR 0090): de 24 a 96 plantillas. Con 24 (1.536 partidos por brazo, 24×32×2 direcciones)
     // la diferencia de dos tasas tenía un error típico de ~1,8 puntos y el umbral de 3,0 quedaba dentro
@@ -93,9 +96,13 @@ public sealed class EquipmentImpactTests
         // de la escala no existe y la curva de puertas no se puede cumplir.
         //
         // El umbral sale de la medida, no de la aritmética: la tabla de valor marginal de la ADR 0038
-        // predice 5,8 puntos para este juego de siete objetos, y medido dan 3,3. La tabla se midió con
-        // +20 repartidos entre los DIEZ jugadores y aquí el bono va entero a UNO, así que sobrestima por
-        // un factor de 1,6; queda anotado, porque el precio de los objetos se calcula con ella.
+        // predice 5,8 puntos para este juego de siete objetos. Medido con el instrumento de 24 plantillas
+        // de `76ce1c4` (sexta ronda, independent-reviewer, BA-N): 3,3. Con el instrumento vigente de 96
+        // plantillas, la comparación equivalente es contra el valor agregado actual de esta puerta (ver
+        // "Lo que se mide" en la ADR 0116 — vuelve a ejecutar el test para el número vigente, no lo cites
+        // de memoria). La tabla se midió con +20 repartidos entre los DIEZ jugadores y aquí el bono va
+        // entero a UNO, así que sobrestima; queda anotado, porque el precio de los objetos se calcula con
+        // ella.
         //
         // Umbral 1,0 desde la ADR 0116 (BA-N), CORREGIDA por el independent-reviewer: el motivo original
         // ("con 94 perks lo medido cayó a 1,7, el catálogo diluye la aportación marginal") quedó REJECTED

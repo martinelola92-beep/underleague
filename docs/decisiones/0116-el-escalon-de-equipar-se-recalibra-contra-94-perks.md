@@ -1,8 +1,15 @@
 # 0116. El umbral de "equipar" se recalibra contra su propio error de medición
 
-**Fecha:** 2026-09-16 (corregida cuatro veces el mismo día, tras cuatro rondas de `independent-reviewer`)
+**Nota sobre el nombre del fichero** (sexta ronda, `independent-reviewer`): el nombre en disco,
+`0116-el-escalon-de-equipar-se-recalibra-contra-94-perks.md`, conserva la causa **REJECTED** (catálogo de
+94 perks) que el título de arriba ya corrigió. No se renombra —el fichero está enlazado desde
+`docs/decisiones/README.md`, `docs/pendientes/BA-N.md`, `BA-M.md`, `BB-P.md` y `docs/project-state.md`, y
+renombrarlo sin actualizar todas esas referencias a la vez dejaría enlaces rotos—, pero quede escrito:
+manda el título y el contenido, no el nombre del fichero.
+
+**Fecha:** 2026-09-16 (corregida cinco veces el mismo día, tras cinco rondas de `independent-reviewer`)
 **Estado:** Aceptada e implementada (`Sim.Tests/Perks/EquipmentImpactTests.cs`); documentación pendiente
-de una quinta pasada de confirmación.
+de una sexta pasada de confirmación.
 
 **Aviso sobre el mensaje del commit `f1ce8b3`**: ese mensaje, ya publicado y sin editar (no se reescribe
 historia publicada), conserva la redacción de la primera versión de esta ADR — atribuye la caída al
@@ -18,7 +25,7 @@ de objeto), ADR 0087 (valor de perk medido contra su control — esta puerta ya 
 emparejamiento por semilla, ver "Instrumento", más abajo), ADR 0115 (el mecanismo real de por qué esta
 puerta se mueve, sin atribuirlo a un commit concreto).
 
-**Nota de corrección (cuatro rondas)**: la primera versión de esta ADR (escrita antes de pasar por
+**Nota de corrección (cinco rondas)**: la primera versión de esta ADR (escrita antes de pasar por
 `independent-reviewer`) atribuía la caída del umbral al crecimiento del catálogo de perks (61→94) — esa
 causa quedó **REJECTED** con una medición de seis minutos. La segunda versión corrigió esa causa pero
 introdujo dos afirmaciones nuevas que una segunda revisión también refutó: que el cierre de la fuga del
@@ -38,8 +45,14 @@ reconstruido la tabla); que "el umbral ha bajado cuatro veces" era un error de c
 sitios (esta ADR dos veces, `docs/pendientes/BA-N.md`, `docs/project-state.md`) — son tres bajadas desde
 un valor inicial que no es una bajada; y que esta ADR nunca comparó en coste la alternativa de subir
 `Rosters` (el propio precedente del proyecto en las dos bajadas anteriores) frente a bajar el umbral,
-antes de elegir la segunda. El umbral implementado (1,0) no ha cambiado en ninguna de las cuatro
-correcciones — solo el razonamiento que lo sostiene.
+antes de elegir la segunda. La quinta revisión remidió en worktree el "3,0" que esta ADR atribuía a
+la elección de 2,0 con 96 plantillas (`54c6b38`) y descubrió que era, otra vez, una medida del
+instrumento **anterior** (24 plantillas — remedida igual, exactamente 3,0): el valor real con 96
+plantillas es **3,7** (corregido en "Qué umbral existía"); y que el falso positivo citado para la
+alternativa de subir `Rosters` a 384 ("~6 %") no salía de la cuenta que decía sostenerlo — el
+cálculo correcto da ~19 %, y llegar de verdad al 6 % exigiría ~1.175 plantillas, no 384. El umbral
+implementado (1,0) no ha cambiado en ninguna de las cinco correcciones — solo el razonamiento que
+lo sostiene.
 
 **Lo que esta corrección deja escrito, y que las versiones anteriores no decían**: el umbral ha bajado
 **tres veces** desde el 5,0 inicial (5,0 → 3,0 → 2,0 → 1,0, tres bajadas, no cuatro — el primer valor de
@@ -65,7 +78,7 @@ cometió y se corrigió en las otras dos filas):
 
 | commit | `Rosters` | umbral | nota |
 |---|---|---|---|
-| `a91c020` (4 sep) | 8 | 5,0 | valor inicial del test, no una bajada; su propio comentario dice que es "deliberadamente bajo (la mitad de lo que se mide hoy)" — medido ~10, no un número que se haya intentado precisar aquí |
+| `a91c020` (4 sep) | 8 | 5,0 | valor inicial del test, no una bajada; su propio comentario dice que es "deliberadamente bajo (la mitad de lo que se mide hoy)" — remedido en worktree (sexta ronda): **8,2** con 8 plantillas, no "la mitad" (61 %) de lo que su propio comentario afirmaba |
 | `76ce1c4` (4 sep) | 24 | 3,0 | bajada 1; medido dan **3,3** |
 | `54c6b38` (9 sep, ADR 0090) | 96 | 2,0 | bajada 2; medido **3,7** con 96 plantillas (remedido en worktree, quinta ronda) — el 3,0 que una versión anterior de esta fila citaba es la medida del instrumento **anterior** (24 plantillas, remedido igual: exactamente 3,0), tomada por error de la fila de `99a22c2` de la tabla de abajo |
 | `f1ce8b3` (esta ADR) | 96 | 1,0 | bajada 3; ver más abajo — misma muestra que la bajada anterior, no una muestra mayor |
@@ -74,8 +87,10 @@ El "3,3" que una versión anterior de esta ADR citaba como la medida que llevó 
 realidad al paso anterior (24 plantillas, umbral 3,0). Una corrección posterior sustituyó ese número por
 "3,0, ya con 96 plantillas" — el mismo error, un número distinto: el 3,0 vuelve a ser una medida del
 instrumento de 24 plantillas (`git show 54c6b38 -- Sim.Tests/Perks/EquipmentImpactTests.cs` ya lo decía
-en su propio comentario histórico, líneas 36-38 del fichero vigente: "el umbral de 3,0 quedaba dentro
-del ruido (medido 3,0 justo tras la tanda 2)", refiriéndose a la etapa de 24 plantillas). El medido real
+en su propio comentario histórico junto a `// Paquete AZ`: "el umbral de 3,0 quedaba dentro
+del ruido (medido 3,0 justo tras la tanda 2)", refiriéndose a la etapa de 24 plantillas — no se cita el
+número de línea porque cada corrección de este fichero lo desplaza; búscalo por el texto, no por la
+línea). El medido real
 que llevó a elegir 2,0, con la muestra ya en 96 plantillas, es **3,7** (remedido, quinta ronda, worktree
 sobre `54c6b38`). El test documentaba, desde que se fijó (paquete AZ), que el número no salía de una
 fórmula, con la única afirmación de que "equipar VALE (varios puntos), no una cifra concreta".
@@ -212,7 +227,7 @@ ajenos a su contenido) pero eso todavía no está medido para ninguna de las cua
 
 ## Consecuencias
 
-- BA-N con decisión aplicada; cierre formal pendiente de una quinta confirmación del
+- BA-N con decisión aplicada; cierre formal pendiente de una sexta confirmación del
   `independent-reviewer` sobre esta corrección.
 - El escalón "muy buena" de la ADR 0033 sigue existiendo; la puerta que lo vigila detecta su desaparición
   total con buena fiabilidad (~87 %) y una degradación parcial con fiabilidad limitada (~41 %) — queda
