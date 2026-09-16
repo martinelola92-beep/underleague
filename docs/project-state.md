@@ -16,6 +16,13 @@ PC (Steam), premium, sin online. **Estado (8 sep 2026): fases 0 y 1 cerradas; fa
   (cámara con cuatro estados). Ver `docs/analisis/perks-catalogo-unificado.md`.
 - **Paquete BB en curso**: trece anotaciones de la partida del revisor sobre gameplay, en
   `docs/pendientes/`. BB-M resuelto (no tocaba la ADR 0048). BB-G diagnosticado, sin arreglar
-  (cambio de pesos de IA, requiere medición cuidadosa). BB-A/BB-B/BB-C/BB-L pendientes de implementar.
+  (cambio de pesos de IA, requiere medición cuidadosa). BB-A/BB-C/BB-L pendientes de implementar.
+  **BB-B: dos intentos de barrera contra el robo del saque, los dos REJECTED y revertidos**
+  (inmunidad temporal; barrera geométrica generalizada a las cinco reanudaciones — el
+  `independent-reviewer` encontró el diagnóstico del residual equivocado y una regresión en una
+  métrica obligatoria de RT-056). Queda solo el bugfix independiente de `ClampToArea`/`IsOutfield`
+  heredado de ADR 0090, con su propia decisión sin resolver (`BadBuildsLoseToTheirBaseline`). Diseño
+  correcto para el próximo intento ya documentado en `docs/pendientes/BB-B.md`: proteger al compañero
+  del sacador, no al balón. **BB-N nuevo**: el saque de córner no ocurre nunca en la muestra medida.
 - **Auditoría de organización de trabajo** (V1→V2→V3, decisión del revisor 16 sep 2026): en migración.
   Ver `docs/analisis/auditoria-organizacion-v2.md` para el razonamiento completo.
