@@ -256,3 +256,90 @@ bloquea la implementación**.
 
 **Veredicto**: sin problema de arquitectura. Procede a implementar según §7, con las tres decisiones del
 §8 ya resueltas y el punto de vigilancia de `ChaseBall` anotado (no bloqueante).
+
+## 13. Resultados de la medición (punto 11 del proceso) — implementado, no cerrado
+
+Implementado exactamente según §7 (`EnforceRestartClearance`, `_restartClearanceOwner`,
+`restartClearanceCells` = 2,0 para las cinco), más una corrección encontrada al medir (§13a) y dos gaps
+reales encontrados al medir (§13b) que **no se corrigen en este commit** — son la decisión del punto 14.
+
+### 13a. Bug heredado de ADR 0090, corregido aquí
+
+`Utility.ClampToArea` acota al **área de portero** (RF-057b): en todos los demás sitios del motor
+(`Move`, `BodySeparation.Resolve`, `Utility.cs:522`) solo se llama si `!player.IsOutfield`.
+`EnforceFreeKickClearance` la llamaba **sin esa condición**, para cualquier rival — un jugador de campo
+clamped durante un saque de falta se teletransportaba al rectángulo diminuto del área propia. Nunca se
+había notado porque ninguna prueba comprobaba el desplazamiento de un rival (solo el del sacador). Al
+generalizar a saque de centro, con el balón en el centro del campo, el teletransporte se hizo evidente
+(el test `TheRestartTakerStandsStillDuringTheDeadBall` lo cazó: jugador 4 desplazado 4,11 casillas en el
+tick de resolución). Corregido: `ClampToPitch` primero, `ClampToArea` solo si `!player.IsOutfield`, mismo
+patrón que el resto del motor. Este bug **ya estaba en producción** desde ADR 0090; no es nuevo de BB-B,
+solo se descubrió aquí.
+
+### 13b. Dos gaps geométricos reales, medidos, sin corregir
+
+Con la corrección de 13a aplicada, `Sim.Tests/Engine/RestartClearanceTests.cs` (60 semillas) mide:
+
+| Reanudación | Disputas / total (antes → después) | Causa |
+|---|---|---|
+| Centro | 8/187 → **0/190** | — cerrado |
+| Banda | 5/79 → **3/61** | geometría de borde |
+| Puerta | 7/84 → **5/92** | geometría de borde |
+| Falta | no medido antes (0 protección post-saque) → **13/190** | compañero marcado sin balón (9/13) + geometría de borde (4/13) |
+
+**Geometría de borde** (banda, puerta, y 4/13 de falta): el punto de saque está sobre una línea del campo
+por construcción (banda: Y=0/Rows; puerta: X=0/Columns). Parte del círculo de exclusión de 2,0 casillas
+cae fuera del campo; `Utility.ClampToPitch` recorta la corrección a esa línea, dejando al rival más cerca
+del balón que el radio pretendido. No es el desfase de un tick esperado del mecanismo (eso se mide aparte
+y da 1/190 en falta, dentro de tolerancia) — es que el radio completo no cabe junto a un borde.
+
+**Compañero marcado sin balón** (9/13 de falta, la mayoría del residual de falta): la barrera protege un
+círculo alrededor del **balón**, no alrededor de cada jugador del equipo que saca. El saque de centro no
+sufre esto porque `ResetPositions` reforma a los catorce jugadores antes del saque, alejando a todos los
+rivales de todos; la falta no reforma a nadie, así que un marcaje de juego abierto puede seguir pegado a
+un compañero del sacador que está lejos del balón, y `Block`/el marcaje sin balón conecta ahí sin que la
+barrera lo vea. **Es exactamente la pregunta que el §8 punto 2 dejó abierta** ("¿lo cubre ya
+`IsInActivePlay`?") — medido: no lo cubre, y no es un caso raro.
+
+### Puertas (43, semilla 1, una sola invocación)
+
+| | Base (sin BB-B) | Geométrica (esta) |
+|---|---|---|
+| Rojas | 5 de 43 | 5 de 43 |
+| `TheGoldOfAnActPaysTwoOrThreeSinksAndNeverAllOfThem` | ROJA | **verde** |
+| `CoherentBuildsBeatTheirBaseline` (`orc_giants` 57,92, mín 58) | ROJA | **verde** |
+| `EquippingAGoodBuildIsWorthSeveralPointsOfWinRate` | ROJA | **verde** |
+| `BuildsWinDifferently` (`passChain`) | ROJA (1,08, mín 1,11) | ROJA (**1,11**, exacto en el borde) |
+| `NoGateMetricIsOutOfRange` | ROJA (2 métricas) | ROJA (2 métricas, **distintas**) |
+| `BadBuildsLoseToTheirBaseline` (`elf_out_of_zone` 48,75, rango 10-45) | verde | **ROJA (nueva)** |
+| `BetterTeamWinRateIsInRange` (`human_60_vs_human_40` 69,88, rango 70-90) | verde | **ROJA (nueva)** |
+
+**Misma lección de `ChaseBall pen=50` (CLAUDE.md), otra vez**: el recuento total (5→5) no dice nada por sí
+solo. Tres puertas que estaban rotas **antes de tocar BB-B** (sin relación aparente con reanudaciones)
+ahora pasan; dos puertas que estaban verdes ahora están rojas, ninguna cerca de su límite salvo
+`passChain`, que mejora pero no cruza. `badBuildsLoseToNone_elf_out_of_zone` sugiere que ese build "malo"
+lo era en parte por quedar mal parado en las reanudaciones —hipótesis, no confirmada—; `betterTeamWinRate`
+sugiere que menos robos inmediatos en cualquier reanudación nivela ligeramente a un equipo mejor contra
+uno peor. Ninguna de las dos se investiga más aquí: es la composición nueva la que hay que llevar al
+revisor, no una afirmación de "sin regresión".
+
+### Decisión pendiente (punto 14 del proceso) — no se cierra sin ella
+
+La solución geométrica funciona **por completo** para el saque de centro (el caso que abrió BB-B) y
+**reduce sustancialmente** los otros tres sin cerrarlos. Cerrar banda/puerta/falta del todo exige elegir
+entre:
+
+1. **Aceptar el residual medido** (banda 3/61, puerta 5/92, falta 13/190 — todas mejoras reales sobre el
+   estado sin protección) y las dos puertas nuevas rojas, documentando ambas como límite conocido.
+2. **Extender la barrera al borde del campo**: en vez de recortar la corrección con `ClampToPitch`,
+   deslizarla a lo largo de la línea (mantener la distancia al balón moviéndose en paralelo al borde en
+   vez de perpendicular a él) — cierra banda/puerta, no toca el gap de compañero marcado de falta.
+3. **Extender la barrera a los compañeros del sacador**, no solo al balón, para la falta — un cambio de
+   alcance real (de "nadie cerca del balón" a "nadie cerca de nadie del equipo que saca"), con su propio
+   coste de segundo orden que no se ha medido.
+4. **Revertir esta implementación** y devolver BB-B a "detenido" si el revisor considera que las dos
+   puertas nuevas rojas son peores que el problema original.
+
+No eliminado ni descartado: el código de esta sesión queda en el árbol, sin commitear, a la espera de la
+decisión del punto 14 y de la revisión completa del punto 13 (`independent-reviewer` con el problema
+entero, el parche descartado, esta hipótesis, el diff y las métricas de arriba — no solo el diff).

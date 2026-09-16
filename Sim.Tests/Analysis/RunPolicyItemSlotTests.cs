@@ -26,8 +26,15 @@ namespace Underleague.Sim.Tests.Analysis;
 /// </summary>
 public sealed class RunPolicyItemSlotTests
 {
-    /// <summary>Runs por configuración. Bastan pocas: lo que se afirma es cualitativo (cero o no cero).</summary>
-    private const int Runs = 12;
+    /// <summary>
+    /// Runs por configuración. Lo que se afirma es cualitativo (cero o no cero), pero "pocas" tiene un
+    /// suelo: con 12 y semilla 1, Saver cruzó a cero compras en el lote (BB-B, docs/analisis/
+    /// bb-b-barrera-geometrica-diseno.md) sin que su estrategia hubiera cambiado -con 100 vuelve a comprar
+    /// con margen-. Es el ruido esperado de cualquier cambio de /Sim que desplace el consumo de RNG en
+    /// una run completa, no un fallo de este paquete ni de la doctrina: 24 le da margen sin duplicar el
+    /// coste de las 43 puertas.
+    /// </summary>
+    private const int Runs = 24;
 
     private const ulong Seed = 1;
 

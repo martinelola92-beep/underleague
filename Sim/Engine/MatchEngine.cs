@@ -95,6 +95,19 @@ internal sealed class MatchEngine : IPerkWorld
     /// </summary>
     private MatchPlayer? _restartTaker;
 
+    /// <summary>
+    /// BB-B (docs/analisis/bb-b-barrera-geometrica-diseno.md §7): quién sigue teniendo el balón tras
+    /// tomar una reanudación no-penalti. Se fija en <see cref="TakeRestart"/> (las cinco reanudaciones que
+    /// pasan por ahí: banda, córner, puerta, centro y falta — el penalti no, tiene su propio
+    /// <see cref="TakePenalty"/> y sus reglas de RF-054) y se limpia en <see cref="UpdateContextCaches"/>
+    /// en cuanto <c>_ball.Owner</c> deja de ser él. Mientras no sea null, <see cref="EnforceRestartClearance"/>
+    /// se sigue llamando aunque la cuenta atrás ya haya terminado: es la ventana en la que el balón está
+    /// técnicamente en juego pero sigue en el pie del sacador, y donde el rival podía robarlo o cargar a un
+    /// compañero antes de que el parche temporal descartado (ver historial en docs/pendientes/BB-B.md)
+    /// intentara -mal- resolver lo mismo con una inmunidad invisible en vez de con distancia.
+    /// </summary>
+    private MatchPlayer? _restartClearanceOwner;
+
     private int _freeKickFor = -1;
 
     private Vec2 _freeKickPoint;
@@ -566,9 +579,13 @@ internal sealed class MatchEngine : IPerkWorld
         // sigue al poseedor, ve ya las posiciones definitivas del tick.
         _bodies.Resolve(_players);
 
-        if (wasRestarting && _pendingRestart == RestartKind.FreeKick)
+        // BB-B: la barrera corre durante la cuenta atrás de las cinco reanudaciones (antes solo la falta,
+        // ADR 0090) y también en la ventana posterior a tomarla, mientras el sacador conserve el balón
+        // (_restartClearanceOwner) — el hueco que el parche temporal descartado intentaba tapar de otra
+        // forma (docs/pendientes/BB-B.md).
+        if (wasRestarting || _restartClearanceOwner is not null)
         {
-            EnforceFreeKickClearance();
+            EnforceRestartClearance();
         }
 
         if (wasRestarting)
@@ -764,6 +781,14 @@ internal sealed class MatchEngine : IPerkWorld
         // mitad de tick) no se ve reflejado todavía aquí — ese primer tick de la reanudación nueva no debe
         // tratarse como balón muerto para ChaseBall (ver el `wasRestarting` de Step()).
         _context.BallDead = _restartTicksLeft > 0;
+
+        // BB-B: igual que BallDead arriba, se lee antes de que nadie decida este tick, así que un pase
+        // dado dentro del bucle de jugadores no libera la barrera hasta el tick siguiente — el mismo
+        // desfase de un tick que ya tenía _kickoffPendingTaker (revisado, ver docs/pendientes/BB-B.md).
+        if (_restartClearanceOwner is not null && !ReferenceEquals(_ball.Owner, _restartClearanceOwner))
+        {
+            _restartClearanceOwner = null;
+        }
     }
 
     // ---------------------------------------------------------------- 3.2/3.3/3.6 jugadores
@@ -2685,18 +2710,27 @@ internal sealed class MatchEngine : IPerkWorld
     /// de TakeGoalKick). El penalti no pasa por aquí: su tirador lo decide BestPenaltyTaker.
     /// </summary>
     /// <summary>
-    /// La barrera del saque de falta (AZ-D, ADR 0090): durante la cuenta atrás los rivales se mantienen a
-    /// <c>restart.freeKickClearanceCells</c> del balón. Sin ella, con el reposicionamiento durante el balón
-    /// muerto (AW-R), el infractor y sus compañeros rodeaban al que saca y la falta terminaba en otra entrada.
+    /// La barrera de las reanudaciones (nacida como AZ-D/ADR 0090 solo para el saque de falta; generalizada
+    /// a las cinco por BB-B, docs/analisis/bb-b-barrera-geometrica-diseno.md): ningún rival puede estar a
+    /// menos de <c>restart.restartClearanceCells</c> del balón, ni durante la cuenta atrás ni mientras el
+    /// sacador conserve la posesión tras tomarla (<see cref="_restartClearanceOwner"/>). Sin la primera
+    /// mitad, con el reposicionamiento durante el balón muerto (AW-R), el infractor y sus compañeros
+    /// rodeaban al que saca; sin la segunda, el rival podía entrarle o cargar a un compañero suyo en el
+    /// primer instante en que el balón ya estaba técnicamente en juego pero seguía en su pie (BB-B: el
+    /// parche descartado intentaba tapar ese segundo hueco con una inmunidad invisible de <c>Tackle</c> en
+    /// vez de con distancia, y dejaba <c>Block</c> sin cubrir). Mide contra <c>_ball.Position</c> y no
+    /// contra <c>_restartPoint</c>: coinciden durante la cuenta atrás porque el balón está aparcado ahí, y
+    /// solo importa la diferencia en la ventana nueva, si el sacador ya ha empezado a regatear.
     /// </summary>
-    private void EnforceFreeKickClearance()
+    private void EnforceRestartClearance()
     {
-        float clearance = _tuning.Restart.FreeKickClearanceCells;
+        float clearance = _tuning.Restart.RestartClearanceCells;
         if (clearance <= 0f)
         {
             return;
         }
 
+        Vec2 center = _ball.Position;
         for (int i = 0; i < _players.Length; i++)
         {
             var player = _players[i];
@@ -2705,7 +2739,7 @@ internal sealed class MatchEngine : IPerkWorld
                 continue;
             }
 
-            var offset = player.Position - _restartPoint;
+            var offset = player.Position - center;
             float distance = offset.Length;
             if (distance >= clearance)
             {
@@ -2713,7 +2747,18 @@ internal sealed class MatchEngine : IPerkWorld
             }
 
             var direction = distance > 0.001f ? offset * (1f / distance) : new Vec2(-Pitch.AttackDirection(_restartTeam), 0f);
-            player.Position = Utility.ClampToArea(_restartPoint + (direction * clearance), player.Team);
+            Vec2 corrected = Utility.ClampToPitch(center + (direction * clearance));
+            if (!player.IsOutfield)
+            {
+                // RF-057b: el portero nunca abandona el área, ni siquiera empujado fuera de ella por esta
+                // barrera (mismo patrón que Move() y BodySeparation.Resolve, que también acotan primero al
+                // campo y solo después, si es portero, al área). El uso anterior de ClampToArea SIN esta
+                // condición (heredado de ADR 0090, ahora corregido aquí) teletransportaba a cualquier
+                // jugador de campo clamped -no solo al portero- al rectángulo diminuto del área propia.
+                corrected = Utility.ClampToArea(corrected, player.Team);
+            }
+
+            player.Position = corrected;
             player.Velocity = default;
         }
     }
@@ -2842,6 +2887,7 @@ internal sealed class MatchEngine : IPerkWorld
         taker.Velocity = new Vec2(0f, 0f);
         taker.EnterState(PlayerState.Positioning, 0);
         SetOwner(taker);
+        _restartClearanceOwner = taker;
         Emit(EventType.Recovery, detail, taker);
     }
 
