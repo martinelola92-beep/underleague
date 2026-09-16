@@ -15,8 +15,12 @@ PC (Steam), premium, sin online. **Estado (8 sep 2026): fases 0 y 1 cerradas; fa
   ADR 0112 (aviso de perk activado), ADR 0113 (oro de perk como inversión, no premio), ADR 0114
   (cámara con cuatro estados). Ver `docs/analisis/perks-catalogo-unificado.md`.
 - **Paquete BB en curso**: trece anotaciones de la partida del revisor sobre gameplay, en
-  `docs/pendientes/`. BB-M resuelto (no tocaba la ADR 0048). BB-G diagnosticado, sin arreglar
-  (cambio de pesos de IA, requiere medición cuidadosa). BB-A/BB-C/BB-L pendientes de implementar.
+  `docs/pendientes/`. BB-M resuelto (no tocaba la ADR 0048). **BB-G resuelta (ADR 0117, 16 sep
+  2026)**: `chaseBallLooseBonus` 250→410 (`data/ai/weights.json`) porque con balón suelto y quieto
+  `ChaseBall` perdía contra `CoverSpace`/`FindSpace` (hueco medido 152 puntos); episodios de balón
+  parado ≥15 ticks bajan de 107 a 32 en 200 partidos (−70 %), 43 puertas 4 rojas → 3. Un rechazo
+  inicial se corrigió tras `independent-reviewer`: la puerta que parecía empeorar no sobrevivía a
+  una segunda semilla (patrón BB-P). BB-A/BB-C/BB-L pendientes de implementar.
   **BB-B resuelta (ADR 0115, 16 sep 2026)**, tras dos intentos rechazados (inmunidad temporal;
   barrera geométrica con tres fallos — fuga al penalti, sin techo de duración, métrica de
   aceptación mal planteada). El tercer intento corrige los tres, verificado por el

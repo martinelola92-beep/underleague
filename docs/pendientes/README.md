@@ -35,7 +35,7 @@ a secas.
 | [BB-D](./BB-D.md) | Propuesta del revisor: parar unos segundos en los eventos que detienen | Ver fichero |
 | [BB-E](./BB-E.md) | Salen dos canteranos en el mercado; debería salir uno como mucho | Cerrada |
 | [BB-F](./BB-F.md) | Un jugador se lesiona y no se ve en qué posición jugaba | Ver fichero |
-| [BB-G](./BB-G.md) | El balón se queda parado en el campo | Ver fichero |
+| [BB-G](./BB-G.md) | El balón se queda parado en el campo | Resuelta (ADR 0117) |
 | [BB-G2](./BB-G2.md) | Riesgo latente encontrado de camino, sin evidencia de que se dispare | Ver fichero |
 | [BB-H](./BB-H.md) | «Todavía no hay eventos, habrá que diseñarlos» | Ver fichero |
 | [BB-I](./BB-I.md) | «Depredador de área» pareció activarse en un momento que no era un tir | Ver fichero |
