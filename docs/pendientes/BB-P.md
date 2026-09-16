@@ -66,7 +66,8 @@ no una conclusión.
 
 ## Hermanos
 
-- `docs/pendientes/BA-N.md`, `docs/pendientes/BA-M.md` — el caso ya resuelto que reveló el patrón.
+- `docs/pendientes/BA-N.md`, `docs/pendientes/BA-M.md` — el caso que reveló el patrón (decisión aplicada,
+  pendiente de confirmación final).
 - `docs/decisiones/0115-la-barrera-de-reanudacion-cubre-las-cinco-no-solo-la-falta.md` — ya lo anotaba en
   general ("la firma de puertas de un solo partido/semilla operando cerca de su margen") sin abrir ficha.
 - `docs/decisiones/0087-el-valor-de-un-perk-se-mide-contra-su-control.md` — el patrón de `rowDeviation`

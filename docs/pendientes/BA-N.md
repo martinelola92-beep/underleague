@@ -46,7 +46,7 @@ a byte) **en cinco commits distintos que solo cambiaban código de `/Sim` ajeno 
 | `96234de` | fix de build (BB-J) | 2,1 |
 | `ad3c472` | revert de la inmunidad del saque de centro | 1,7 |
 | `99a22c2` | tras revertir la barrera generalizada de BB-B | 3,0 |
-| `f1ce8b3` | HEAD | 3,4 |
+| `f1ce8b3` | primer commit con el umbral en 1,0 | 3,4 |
 
 **El número se mueve 1,7 puntos sin que cambie un solo perk.** La caída 3,3→1,7 que la ADR 0116 atribuía
 al catálogo ocurre igual con el catálogo fijo: es el error de muestreo del instrumento (~0,9 puntos
