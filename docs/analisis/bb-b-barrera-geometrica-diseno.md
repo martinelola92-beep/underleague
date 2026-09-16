@@ -452,3 +452,53 @@ cualquier cambio en la ventana de disputa de una reanudación mueva la composici
 - Ningún lote de `/Balance` (RT-054) todavía para (A)+(B) juntos.
 - Pendiente: revisión completa del `independent-reviewer` sobre este tercer intento, con el historial
   íntegro de los dos anteriores — no solo el diff de este.
+
+## 17. Correcciones tras el veredicto del tercer intento (independent-reviewer)
+
+Verificó las tres correcciones del §16 con medición propia (200 semillas) y encontró: corrección 3
+(la métrica) VERIFIED — 33→0 disputas contra el sacador, y es la única prueba realmente no vacua; corrección
+2 (el techo) VERIFIED mecánicamente (libera en el tick 31 exacto, ni antes ni después) pero **sin pase de
+diseño ni test propio**; corrección 1 (excluir el penalti) **PARCIAL** — la guarda de la cuenta atrás
+estaba bien, pero `_restartClearanceOwner` (la cláusula del dueño) no se limpiaba hasta el
+`UpdateContextCaches` del tick siguiente, así que una falta que programa penalti a mitad del bucle de
+jugadores podía dejar la barrera activa un tick sobre el penalti (medido: 1/200 partidos, residual, no
+regresión del tamaño del segundo intento). También encontró que la prueba de distancia fallaba al ampliar
+la muestra a 200 semillas (el balón se mueve tras la corrección si el sacador regatea, así que la distancia
+real puede caer por debajo de `restartClearanceCells` sin que la barrera se rompa funcionalmente) y destapó
+un bug preexistente y ajeno a BB-B (BB-O: un dueño fantasma del balón puede congelar el partido).
+
+**Aplicado, esta misma sesión:**
+
+1. **`BeginRestart` limpia `_restartClearanceOwner` al empezar CUALQUIER reanudación nueva**, no solo al
+   cambiar de dueño: cierra la fuga al penalti por construcción, en vez de depender de que
+   `_restartClearanceOwner` nunca llegue a coincidir con un penalti por casualidad de temporización.
+2. **La prueba de distancia mide contra el alcance real de acción** (`max(tackleDistanceMaxCells,
+   blockReachMaxCells) + margen` = 1,3) en vez de contra `restartClearanceCells` a secas, que nunca fue la
+   propiedad que importaba — la barrera protege de que te quiten el balón, no de que un rival exista a
+   menos de 2,0 casillas mientras el balón se aleja regateando. Muestra ampliada a 200 semillas en las
+   cuatro pruebas del fichero.
+3. **Nueva prueba** (`TheClearanceReleasesExactlyAtTheDurationCapAndNotBefore`): busca en la muestra una
+   retención real por encima del techo y comprueba la frontera exacta, cerrando el hueco de cobertura que
+   señaló el revisor para la corrección 2.
+4. **Abierto `docs/pendientes/BB-O.md`** para el dueño fantasma del balón (ajeno a BB-B, sin diagnosticar).
+5. **`game-design-review` del techo de duración** (Regla B, pendiente porque nació como detalle de
+   implementación y resultó ser observable): protocolo de diez preguntas aplicado. Resumen del veredicto:
+   el caso que preocupa (varios rivales convergiendo de golpe al expirar el techo) ocurre hoy sin ningún
+   perk de retención de balón que lo explote —es un caso raro del juego abierto normal, medido 1-2 veces en
+   200 partidos, muy por debajo de las retenciones típicas—, así que **no se añade un evento explícito ni
+   una liberación gradual todavía**: sería protección contra un problema que no existe en el catálogo
+   actual (el principio inverso de "no fabriques la protección antes de que exista el problema"). El techo
+   se mantiene en 30 ticks tal cual, documentado explícitamente aquí como **decisión consciente, no
+   omisión**: **queda como ítem obligatorio a revisar cuando C1/C2 (el próximo catálogo) diseñe un perk
+   de retención de balón** — en ese momento sí hace falta un evento explícito o una liberación gradual,
+   porque a partir de ahí el colapso brusco deja de ser un caso raro de juego abierto y pasa a ser una
+   consecuencia legible de una elección de build (RF-012d exige que sea previsible, no que no exista).
+
+**Hecho, esta misma sesión**: ADR 0115 (`docs/decisiones/0115-la-barrera-de-reanudacion-cubre-las-cinco-no-solo-la-falta.md`),
+con nota de enmienda en la ADR 0090 (RT-057). Lote de `/Balance` (RT-054, 2.000 partidos, base contra esta
+ADR): sin movimiento fuera del ruido en ninguna métrica de RT-056, tabla completa en la propia ADR 0115.
+
+**Sigue sin hacerse**: una comprobación visual (`visual-review`) de cómo se ve la barrera en pantalla — la
+propiedad "observable > invisible" que motiva todo el rediseño frente al parche rechazado sigue sin
+demostrarse con una captura real. No bloqueante para el veredicto de cierre (el mecanismo es idéntico en
+forma al de la ADR 0090, que sí lleva siete días en producción sin queja de legibilidad), pero pendiente.

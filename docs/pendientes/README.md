@@ -30,7 +30,7 @@ a secas.
 | [BA-L2](./BA-L2.md) | `CaptureRunner` pierde el árbol de escena entre `informe` y `recompensa` | Ver fichero |
 | [BA-N](./BA-N.md) | Equipar ya no vale el escalón que la ADR 0033 exige | Ver fichero |
 | [BB-A](./BB-A.md) | Los jugadores se teletransportan al reanudar | Ver fichero |
-| [BB-B](./BB-B.md) | En el saque de centro los defensores van a robar el balón antes de que | Abierta — dos intentos rechazados y revertidos, diagnóstico correcto documentado |
+| [BB-B](./BB-B.md) | En el saque de centro los defensores van a robar el balón antes de que | Resuelta (ADR 0115), tras dos intentos rechazados |
 | [BB-C](./BB-C.md) | «Celebra» se activa cuando ya han vuelto a su campo | Ver fichero |
 | [BB-D](./BB-D.md) | Propuesta del revisor: parar unos segundos en los eventos que detienen | Ver fichero |
 | [BB-E](./BB-E.md) | Salen dos canteranos en el mercado; debería salir uno como mucho | Cerrada |
@@ -44,6 +44,7 @@ a secas.
 | [BB-L](./BB-L.md) | El lesionado «sale volando» del campo | Ver fichero |
 | [BB-M](./BB-M.md) | «Sed de médula» lesionó a un jugador lejos de la acción | Ver fichero |
 | [BB-N](./BB-N.md) | El saque de córner no ocurre nunca (0/60 partidos, dos árboles) | Abierta |
+| [BB-O](./BB-O.md) | Un jugador fuera del campo puede conservar el balón y congelar el partido | Abierta |
 | [CAT-A](./CAT-A.md) | `field_bandage` usaba el canal `injure`, que protegía al rival. | Ver fichero |
 | [CAT-B](./CAT-B.md) | Un consumible se puede comprar pero no se puede equipar: nadie emite ` | Ver fichero |
 | [CAT-C](./CAT-C.md) | La medición no puede ejercitar el consumible manual, así que subestima | Ver fichero |

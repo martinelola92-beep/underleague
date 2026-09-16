@@ -4,6 +4,9 @@
 **Estado:** Aceptada e implementada (`Sim/Engine/MatchEngine.cs`, `Sim/Run/Systems/Medical/MedicalSystem.cs`, `Sim/Analysis/RunPolicy.cs`, `data/sim/tuning.json`, `data/economy/economy.json`)
 **Decisión del revisor** (segunda partida, `pendientes.md` AZ-D, AZ-E, AZ-G). **Modifica RF-053** (añade el saque de falta a las reanudaciones instantáneas) y amplía la lectura de RF-094 (la clínica trata también la leve). RF-054 no se toca: la falta no es una pausa.
 **Requisitos:** RF-053, RF-063, RF-091, RF-094, RF-119, RT-056, RT-057
+**Nota (16 sep 2026, ADR 0115):** la barrera del punto 1 se generalizó a las otras cuatro reanudaciones y
+`restart.freeKickClearanceCells` se renombró a `restart.restartClearanceCells`. Esta ADR describe el
+estado en el que se aceptó (una sola reanudación); ver ADR 0115 para el alcance vigente.
 
 ## Lo que el revisor vio
 

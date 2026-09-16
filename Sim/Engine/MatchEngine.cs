@@ -2680,6 +2680,17 @@ internal sealed class MatchEngine : IPerkWorld
 
     private void BeginRestart(RestartKind kind, int team, Vec2 point, int ticks, MatchPhase phase)
     {
+        // BB-B, tercer intento, corrección del independent-reviewer: la ventana de la reanudación ANTERIOR
+        // (_restartClearanceOwner) no se limpiaba hasta el UpdateContextCaches del tick siguiente, así que
+        // si una falta resuelta a mitad del bucle de jugadores programaba un penalti (SchedulePenalty ->
+        // BeginRestart) mientras el sacador previo aún tenía el balón, la guarda de Step (segunda cláusula,
+        // "_restartClearanceOwner is not null") seguía viendo el dueño viejo y aplicaba la barrera a ese
+        // tick de penalti sin que IsClearanceRestart llegara a comprobarse. Medido por el revisor: 1 tick
+        // en 200 partidos. Cualquier reanudación nueva cierra la ventana de la anterior por definición, así
+        // que se limpia aquí, no solo al cambiar de dueño.
+        _restartClearanceOwner = null;
+        _restartClearanceOwnerTicks = 0;
+
         _pendingRestart = kind;
         _restartTeam = team;
         _restartPoint = point;

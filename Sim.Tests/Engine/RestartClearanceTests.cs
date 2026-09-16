@@ -5,14 +5,15 @@ using Underleague.Sim.Events;
 namespace Underleague.Sim.Tests.Engine;
 
 /// <summary>
-/// BB-B, tercer intento (docs/pendientes/BB-B.md, docs/analisis/bb-b-barrera-geometrica-diseno.md §16):
-/// nadie roba el balón al sacador de una reanudación mientras lo conserva. Sustituye la versión anterior
-/// de este fichero (revertida): esa medía "hubo algún Tackle en el partido durante la ventana", que
+/// BB-B, tercer intento (docs/pendientes/BB-B.md, docs/analisis/bb-b-barrera-geometrica-diseno.md §16-17):
+/// nadie roba el balón al sacador de una reanudación mientras lo conserva. Sustituye la versión del
+/// segundo intento (revertida): esa medía "hubo algún Tackle en el partido durante la ventana", que
 /// contaba como violación un bloqueo contra un compañero al otro lado del campo, sin relación con "robar
-/// el saque". El independent-reviewer midió que esas disputas nunca ocurren a menos de 2,08 casillas del
-/// balón (la barrera no se rompe por ahí) y que la métrica estaba mal planteada. Esta versión mide dos
-/// cosas correctas: si el SACADOR fue disputado (el problema literal de BB-B) y si algún rival estuvo
-/// alguna vez dentro del radio de exclusión durante toda la ventana, no solo en el tick de resolución.
+/// el saque" — el independent-reviewer midió que esas disputas nunca ocurren a menos de 2,08 casillas del
+/// balón. 200 semillas (no 60: a 60 la muestra es no vacua solo para kickoff; a 200 lo es para tres de
+/// las cinco — independent-reviewer, tercer intento). Mide dos cosas correctas: si el SACADOR fue
+/// disputado (el problema literal de BB-B) y si algún rival entró alguna vez en el alcance real de
+/// Tackle/Block durante la ventana, en cada fotograma, no solo en el de resolución.
 /// </summary>
 public sealed class RestartClearanceTests
 {
@@ -41,7 +42,7 @@ public sealed class RestartClearanceTests
             violationsByKind[kind] = 0;
         }
 
-        for (ulong seed = 1; seed <= 60; seed++)
+        for (ulong seed = 1; seed <= 200; seed++)
         {
             var setup = TestMatches.Reference(Catalog, seed);
             var result = Simulator.Run(setup, seed, Catalog, SimConfig.Default with { Trace = true });
@@ -64,8 +65,13 @@ public sealed class RestartClearanceTests
 
                 checkedByKind[e.Detail]++;
 
+                // El bucle también corta si el sacador deja el campo (independent-reviewer, tercer
+                // intento): un "dueño fantasma" del balón -jugador fuera del campo que conserva la
+                // posesión hasta el final, bug preexistente y ajeno a BB-B, ver docs/pendientes/BB-O.md-
+                // convertiría "la ventana" en el resto del partido y cualquier Tackle contra ese jugador
+                // contaría como una falsa violación.
                 int releaseFrame = trace.FrameOfTick(e.Tick);
-                while (releaseFrame < trace.FrameCount && trace.BallOwnerAt(releaseFrame) == taker)
+                while (releaseFrame < trace.FrameCount && trace.BallOwnerAt(releaseFrame) == taker && trace.OnPitchAt(releaseFrame, taker))
                 {
                     releaseFrame++;
                 }
@@ -86,11 +92,12 @@ public sealed class RestartClearanceTests
             }
         }
 
-        // El córner no ocurrió ni una vez en 60 semillas (BB-N, docs/pendientes/BB-N.md): se mide si
-        // aparece, pero no se exige cobertura mínima como a las otras cuatro.
+        // El córner no ocurrió ni una vez en 400 partidos medidos entre esta prueba y la del revisor
+        // (BB-N, docs/pendientes/BB-N.md): se mide si aparece, pero no se exige cobertura mínima como a
+        // las otras cuatro.
         foreach (var kind in ClearanceRestartDetails.Where(k => k != "corner"))
         {
-            Assert.True(checkedByKind[kind] > 0, $"cero reanudaciones de tipo '{kind}' en 60 partidos: la prueba no cubre nada");
+            Assert.True(checkedByKind[kind] > 0, $"cero reanudaciones de tipo '{kind}' en 200 partidos: la prueba no cubre nada");
         }
 
         foreach (var kind in ClearanceRestartDetails)
@@ -104,15 +111,22 @@ public sealed class RestartClearanceTests
     /// <summary>
     /// Evidencia de distancia (punto 11 del proceso de BB-B), corregida: muestrea CADA fotograma de la
     /// ventana, no solo el de resolución (el segundo intento solo miraba ese, y por eso no vio los
-    /// hermanos de banda/puerta que fallaban a mitad de cuenta atrás). Tolerancia de 0,25 casillas: el
-    /// desfase de un tick que <c>EnforceRestartClearance</c> tiene por diseño (corrige la posición que
-    /// usará el tick siguiente, no la de sí mismo).
+    /// hermanos de banda/puerta que fallaban a mitad de cuenta atrás).
+    ///
+    /// <para><b>Contra qué umbral, y por qué no es <c>restartClearanceCells</c> a secas</b>
+    /// (independent-reviewer, tercer intento): <c>EnforceRestartClearance</c> corrige contra la posición
+    /// del balón AL EMPEZAR el tick, antes de <c>UpdateBall</c>; si el sacador regatea, el balón sigue
+    /// moviéndose con él después de la corrección, así que la distancia real al fotograma siguiente puede
+    /// caer por debajo de <c>restartClearanceCells</c> sin que la barrera se haya roto —medido hasta 1,595
+    /// en <c>freeKick</c> con 200 semillas—. Lo que la barrera SÍ garantiza, y lo único que importa para el
+    /// problema de BB-B, es que ningún rival entra en el alcance real de <c>Tackle</c>
+    /// (<c>tackleDistanceMaxCells</c>, 1,0) ni de <c>Block</c> (<c>blockReachMaxCells</c>, 1,2): el umbral
+    /// de esta prueba es ese alcance más un margen, no el radio nominal de la barrera.</para>
     /// </summary>
     [Fact]
-    public void NoRivalIsEverCloserThanTheClearanceDuringTheWindow()
+    public void NoRivalIsEverCloserThanTheActionRangeDuringTheWindow()
     {
-        float clearance = Catalog.Tuning.Restart.RestartClearanceCells;
-        const float oneTickStepTolerance = 0.25f;
+        float actionRangeFloor = Math.Max(Catalog.Ai.Context.TackleDistanceMaxCells, Catalog.Ai.Context.BlockReachMaxCells) + 0.1f;
         var samplesByKind = new Dictionary<string, int>();
         var violationsByKind = new Dictionary<string, int>();
         float worst = float.MaxValue;
@@ -122,7 +136,7 @@ public sealed class RestartClearanceTests
             violationsByKind[kind] = 0;
         }
 
-        for (ulong seed = 1; seed <= 60; seed++)
+        for (ulong seed = 1; seed <= 200; seed++)
         {
             var setup = TestMatches.Reference(Catalog, seed);
             var result = Simulator.Run(setup, seed, Catalog, SimConfig.Default with { Trace = true });
@@ -144,7 +158,7 @@ public sealed class RestartClearanceTests
                 int takerTeam = trace.Players[taker].Team;
                 int beginFrame = trace.FrameOfTick(e.Tick);
                 int releaseFrame = beginFrame;
-                while (releaseFrame < trace.FrameCount && trace.BallOwnerAt(releaseFrame) == taker)
+                while (releaseFrame < trace.FrameCount && trace.BallOwnerAt(releaseFrame) == taker && trace.OnPitchAt(releaseFrame, taker))
                 {
                     releaseFrame++;
                 }
@@ -176,7 +190,7 @@ public sealed class RestartClearanceTests
 
                     samplesByKind[e.Detail]++;
                     worst = Math.Min(worst, nearest);
-                    if (nearest < clearance - oneTickStepTolerance)
+                    if (nearest < actionRangeFloor)
                     {
                         violationsByKind[e.Detail]++;
                     }
@@ -193,7 +207,7 @@ public sealed class RestartClearanceTests
         {
             Assert.True(
                 violationsByKind[kind] == 0,
-                $"{violationsByKind[kind]} de {samplesByKind[kind]} fotogramas de '{kind}' con un rival a menos de {clearance} casillas del balón (peor distancia medida: {worst:F2})");
+                $"{violationsByKind[kind]} de {samplesByKind[kind]} fotogramas de '{kind}' con un rival a menos de {actionRangeFloor} casillas del balón -alcance real de Tackle/Block- (peor distancia medida: {worst:F2})");
         }
     }
 
@@ -218,6 +232,80 @@ public sealed class RestartClearanceTests
         Assert.True(MatchEngine.IsClearanceRestart(MatchEngine.RestartKind.FreeKick));
         Assert.False(MatchEngine.IsClearanceRestart(MatchEngine.RestartKind.Penalty));
         Assert.False(MatchEngine.IsClearanceRestart(MatchEngine.RestartKind.None));
+    }
+
+    /// <summary>
+    /// El techo de duración (independent-reviewer, tercer intento: "no tiene test propio, es barato y es
+    /// el 100% de la corrección 2"). Busca en la muestra una retención real más larga que el techo —las
+    /// hay: un saque de falta puede llegar a 37 ticks reteniendo— y comprueba la frontera exacta: dentro
+    /// del techo, ningún rival en el alcance real de acción; en cuanto se supera, deja de exigirse (no que
+    /// falle necesariamente, que dentro del techo no se pueda decir nada — es la liberación a propósito,
+    /// no una brecha).
+    /// </summary>
+    [Fact]
+    public void TheClearanceReleasesExactlyAtTheDurationCapAndNotBefore()
+    {
+        float actionRangeFloor = Math.Max(Catalog.Ai.Context.TackleDistanceMaxCells, Catalog.Ai.Context.BlockReachMaxCells) + 0.1f;
+        int longestWindowFound = 0;
+
+        for (ulong seed = 1; seed <= 200; seed++)
+        {
+            var setup = TestMatches.Reference(Catalog, seed);
+            var result = Simulator.Run(setup, seed, Catalog, SimConfig.Default with { Trace = true });
+            var trace = result.Trace!;
+
+            foreach (var e in result.Events)
+            {
+                if (e.Type != EventType.Recovery || !ClearanceRestartDetails.Contains(e.Detail))
+                {
+                    continue;
+                }
+
+                int taker = IndexOf(trace, e.Actor);
+                if (taker < 0)
+                {
+                    continue;
+                }
+
+                int takerTeam = trace.Players[taker].Team;
+                int beginFrame = trace.FrameOfTick(e.Tick);
+                int releaseFrame = beginFrame;
+                while (releaseFrame < trace.FrameCount && trace.BallOwnerAt(releaseFrame) == taker && trace.OnPitchAt(releaseFrame, taker))
+                {
+                    releaseFrame++;
+                }
+
+                int windowLength = releaseFrame - beginFrame;
+                if (windowLength <= MatchEngine.RestartClearanceMaxTicks)
+                {
+                    continue;
+                }
+
+                longestWindowFound = Math.Max(longestWindowFound, windowLength);
+
+                // Dentro del techo (offset 0..RestartClearanceMaxTicks-1): la barrera sigue exigiéndose.
+                for (int frame = beginFrame; frame < beginFrame + MatchEngine.RestartClearanceMaxTicks; frame++)
+                {
+                    var ball = trace.BallAt(frame);
+                    for (int p = 0; p < trace.Players.Count; p++)
+                    {
+                        if (trace.Players[p].Team == takerTeam || !trace.OnPitchAt(frame, p))
+                        {
+                            continue;
+                        }
+
+                        float distance = Vec2.Distance(trace.PositionAt(frame, p), ball);
+                        Assert.True(
+                            distance >= actionRangeFloor,
+                            $"semilla {seed}, tick {e.Tick}, offset {frame - beginFrame}: rival a {distance:F2} casillas dentro del techo de duración");
+                    }
+                }
+            }
+        }
+
+        Assert.True(
+            longestWindowFound > MatchEngine.RestartClearanceMaxTicks,
+            $"ninguna ventana medida superó el techo de {MatchEngine.RestartClearanceMaxTicks} ticks en 200 partidos: la prueba no ejercita la liberación");
     }
 
     private static int IndexOf(MatchTrace trace, int playerId)

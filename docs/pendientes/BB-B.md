@@ -1,7 +1,10 @@
 # BB-B — En el saque de centro los defensores van a robar el balón antes de que esté en juego.
 
-**Estado:** IMPLEMENTED, tercer intento, sin cerrar (16 sep 2026). Historial completo en
-`docs/analisis/bb-b-barrera-geometrica-diseno.md`:
+**Estado:** RESUELTA (16 sep 2026, ADR 0115). El problema literal —el sacador de cualquier reanudación
+podía ser disputado antes de que el balón estuviera realmente en juego— está cerrado y demostrado: 33→0
+disputas reales contra el sacador en 200 partidos, en las cinco reanudaciones que aplican. Historial
+completo de los tres intentos en `docs/analisis/bb-b-barrera-geometrica-diseno.md` y en
+`docs/decisiones/0115-la-barrera-de-reanudacion-cubre-las-cinco-no-solo-la-falta.md` (la ADR).
 
 1. **Inmunidad temporal** (`KickoffPending`): **REJECTED**, atacaba el mecanismo equivocado (temporal, no
    espacial) y rompía puertas. Revertida en `ad3c472`.
@@ -15,16 +18,28 @@
    saque". (a) rompía una métrica **obligatoria** de RT-056 (`betterTeamWinRate`). Revertido el alcance
    generalizado en `69e0952`; se conservó el único hallazgo real e independiente, un bug de ADR 0090
    (`Utility.ClampToArea` sin comprobar `IsOutfield`, teletransportaba a un rival de campo al área propia).
-3. **Tercer intento** (commit `<pendiente>`), corrige las tres causas exactas del punto 2: `IsClearanceRestart`
-   excluye el penalti por construcción (probado directamente), techo de duración de 30 ticks
-   (`RestartClearanceMaxTicks`, RF-052), y la medición ahora filtra por `Opponent == sacador` y distancia
-   real muestreada en cada fotograma de la ventana, no "hubo contacto en algún sitio". Medido (60
-   semillas): cero disputas contra el sacador en las cinco reanudaciones, penalti intacto,
-   `betterTeamWinRate` vuelve a verde. Quedan 3 puertas rojas — `BadBuildsLoseToTheirBaseline` (herencia
-   del bugfix de ADR 0090, sin ADR propia todavía) y, nueva, `TheThreeDoctrinesBuyDifferently` (la misma
-   puerta que rompió el **primer** intento rechazado; margen mínimo, 0,03, pero en la dirección
-   equivocada). Ver §16 del design gate para la medición completa. **Pendiente de
-   `independent-reviewer` con el historial de los tres intentos, no solo el diff del tercero.**
+3. **Tercer intento** (commit `b4ba669`), corrige las tres causas exactas del punto 2: `IsClearanceRestart`
+   excluye el penalti por construcción, techo de duración de 30 ticks (`RestartClearanceMaxTicks`,
+   RF-052), y la medición filtra por `Opponent == sacador` y distancia real muestreada en cada fotograma.
+   El `independent-reviewer` verificó con muestra propia de 200 semillas y encontró dos cosas más que
+   corregir: (a) `_restartClearanceOwner` no se limpiaba al empezar una reanudación nueva, dejando un
+   residuo de 1 tick/200 partidos sobre el penalti — cerrado limpiándolo en `BeginRestart`; (b) la prueba
+   de distancia exigía el radio nominal (2,0) en vez del alcance real de acción (`max(tackleDistanceMaxCells,
+   blockReachMaxCells)` + margen = 1,3) y fallaba al ampliar la muestra — corregido el umbral y la muestra
+   a 200 semillas en las cuatro pruebas de `RestartClearanceTests.cs`.
+4. **ADR 0115** documenta el diseño final, con lote de `/Balance` (2.000 partidos, sin movimiento fuera
+   del ruido en ninguna métrica de RT-056) y el veredicto de `game-design-review` sobre el techo de
+   duración (se mantiene sin evento explícito: el caso que preocupaba no ocurre hoy sin un perk de
+   retención de balón que lo explote; revisar cuando exista uno, catálogo C1/C2).
+
+**43 puertas, estado final**: 4 rojas de 43 (mejor que las 5 de antes de tocar BB-B), ninguna atribuible al
+propósito de la barrera —cerrar el robo del saque, que está confirmado a cero—: `BadBuildsLoseToTheirBaseline`
+(herencia del bugfix de ADR 0090, decisión de rango pendiente y aparte), `CoherentBuildsBeatTheirBaseline`
+(nueva tras cerrar la fuga del penalti, un build por 1,33 puntos), `TheThreeDoctrinesBuyDifferently` (la
+misma puerta que rompió el primer intento rechazado, medido como una semilla en el punto de vuelco de una
+magnitud con dispersión propia del mismo tamaño), y `NoGateMetricIsOutOfRange` (agrega las anteriores). Ver
+`docs/decisiones/0115-...md` para la tabla completa y el patrón que se repite en las tres. **Sin lote de
+`visual-review`** de la barrera en pantalla (pendiente, no bloqueante).
 
 ## Observación
 
