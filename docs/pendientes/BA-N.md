@@ -24,7 +24,7 @@ preguntas abiertas en `docs/pendientes/BB-P.md`, no como decisiones tomadas, aun
 umbral de ≥2,0. El umbral existe para que la ADR 0033 tenga contenido: «muy buena» = «buena, además
 equipada» necesita que equipar valga un escalón real.
 
-## Serie medida (la misma métrica, tres puntos)
+## Serie medida (la misma métrica, cuatro puntos)
 
 | momento | valor |
 |---|---|
@@ -52,15 +52,19 @@ a byte) **en cinco commits distintos que solo cambiaban código de `/Sim` ajeno 
 | `f1ce8b3` | primer commit con el umbral en 1,0 | 3,4 |
 
 **El número se mueve 1,7 puntos sin que cambie un solo perk.** La caída que la primera versión de la ADR
-0116 atribuía al catálogo (3,0→1,7, medida con el instrumento de 96 plantillas vigente hoy — no la caída
-3,3→1,7 anotada en un primer momento, que mezclaba una medida del instrumento anterior de 24 plantillas
-con una de este) ocurre igual con el catálogo fijo: es el error de muestreo del instrumento (~0,9 puntos
+0116 atribuía al catálogo se ha citado con dos números distintos, los dos equivocados por la misma
+razón — mezclar el instrumento de 24 plantillas con el de 96 —: primero "3,3→1,7", luego "3,0→1,7". La
+caída real, remedida en worktree con el instrumento de 96 plantillas vigente hoy, es **3,7→1,7** (quinta
+ronda de revisión; el 3,0 pertenece a `54c6b38` remedido con `Rosters=24`, no con la muestra de hoy).
+Ocurre igual con el catálogo fijo: es el error de muestreo del instrumento (~0,9 puntos
 típico, confirmado empíricamente: sd de 0,78 sobre esas cinco medidas), no una tendencia real del
 tamaño del catálogo. **La hipótesis pasa de LIKELY a REJECTED** como explicación de esta caída concreta;
 sigue viva como mecanismo teórico plausible (un catálogo más fuerte SÍ podría diluir una aportación
 marginal fija) pero sin evidencia de activación — nunca se ha observado por encima del ruido.
 
-## Decisión pendiente — dos salidas excluyentes
+## Decisión pendiente — dos salidas excluyentes (histórico, previo a la decisión — superado por el encabezado)
+
+**Registrado antes de que el revisor eligiera la Opción B** (encabezado de arriba); se conserva como el razonamiento del momento en que las dos salidas seguían abiertas, no como el estado actual.
 
 - **(a)** Subir los valores de objeto para que el escalón siga existiendo.
 - **(b)** Recalibrar el umbral contra un catálogo de 94 perks. Es cambio de rango y **exige ADR** (RT-057).
@@ -72,7 +76,7 @@ repite el error ya documentado de la ADR 0038.
 ## Antecedente
 
 **BA-M** es el primer punto de esta misma serie (el momento en que la puerta pasó de roja a verde por cero
-centésimas). **Corregida en el mismo commit que la ADR 0116** (`50c2bb1`): BA-M.md acusaba a un
+centésimas). **Corregida en el mismo commit que la primera corrección de la ADR 0116** (`50c2bb1`, la ADR se creó en `f1ce8b3`): BA-M.md acusaba a un
 commit (`a0a8b33`) de afirmar —incorrectamente— que no movía balance, apoyándose en que "la métrica es
 determinista, así que no es ruido" — premisa falsa (el determinismo garantiza que la misma build da el
 mismo número, no que el muestreo de 6.144 partidos no tenga varianza). El valor de 2,0 que BA-M midió

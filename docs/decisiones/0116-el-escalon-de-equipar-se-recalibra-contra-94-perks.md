@@ -67,14 +67,18 @@ cometió y se corrigió en las otras dos filas):
 |---|---|---|---|
 | `a91c020` (4 sep) | 8 | 5,0 | valor inicial del test, no una bajada; su propio comentario dice que es "deliberadamente bajo (la mitad de lo que se mide hoy)" — medido ~10, no un número que se haya intentado precisar aquí |
 | `76ce1c4` (4 sep) | 24 | 3,0 | bajada 1; medido dan **3,3** |
-| `54c6b38` (9 sep, ADR 0090) | 96 | 2,0 | bajada 2; medido **3,0**, ya con la muestra que sigue vigente hoy |
+| `54c6b38` (9 sep, ADR 0090) | 96 | 2,0 | bajada 2; medido **3,7** con 96 plantillas (remedido en worktree, quinta ronda) — el 3,0 que una versión anterior de esta fila citaba es la medida del instrumento **anterior** (24 plantillas, remedido igual: exactamente 3,0), tomada por error de la fila de `99a22c2` de la tabla de abajo |
 | `f1ce8b3` (esta ADR) | 96 | 1,0 | bajada 3; ver más abajo — misma muestra que la bajada anterior, no una muestra mayor |
 
 El "3,3" que una versión anterior de esta ADR citaba como la medida que llevó a elegir 2,0 pertenece en
-realidad al paso anterior (24 plantillas, umbral 3,0); el medido que sí llevó a elegir 2,0 fue 3,0, con la
-muestra ya en 96 plantillas — la misma que sigue vigente hoy. El test documentaba, desde que se fijó
-(paquete AZ), que el número no salía de una fórmula, con la única afirmación de que "equipar VALE (varios
-puntos), no una cifra concreta".
+realidad al paso anterior (24 plantillas, umbral 3,0). Una corrección posterior sustituyó ese número por
+"3,0, ya con 96 plantillas" — el mismo error, un número distinto: el 3,0 vuelve a ser una medida del
+instrumento de 24 plantillas (`git show 54c6b38 -- Sim.Tests/Perks/EquipmentImpactTests.cs` ya lo decía
+en su propio comentario histórico, líneas 36-38 del fichero vigente: "el umbral de 3,0 quedaba dentro
+del ruido (medido 3,0 justo tras la tanda 2)", refiriéndose a la etapa de 24 plantillas). El medido real
+que llevó a elegir 2,0, con la muestra ya en 96 plantillas, es **3,7** (remedido, quinta ronda, worktree
+sobre `54c6b38`). El test documentaba, desde que se fijó (paquete AZ), que el número no salía de una
+fórmula, con la única afirmación de que "equipar VALE (varios puntos), no una cifra concreta".
 
 ## Por qué deja de ser apropiado — la causa real, no la del catálogo
 
@@ -130,13 +134,19 @@ dentro de medio error típico y no distinguiría "equipar no aporta nada" de rui
 
 **Alternativa no elegida, y por qué se anota en vez de compararse en coste aquí**: las dos bajadas
 anteriores (8→24, 24→96 plantillas) subieron la muestra en vez de bajar el umbral — el precedente propio
-del proyecto es "arregla el instrumento", no "baja el listón". Subir `Rosters` otra vez (por ejemplo a
-384, que dividiría el error típico aproximadamente a la mitad y devolvería el umbral de 2,0 a un falso
-positivo del orden del 6 % sin debilitar la ADR 0033) era una alternativa real que esta ADR no llegó a
-costear en tiempo de ejecución antes de decidir bajar el umbral. Se elige bajar el umbral porque es el
-cambio mínimo que BA-N pedía (Opción B, sin tocar el instrumento), no porque se haya demostrado más barato
-que subir la muestra — queda anotado en `docs/pendientes/BB-P.md` como la opción que de verdad se
-descarta sin costear, no como una idea menor.
+del proyecto es "arregla el instrumento", no "baja el listón". Subir `Rosters` otra vez dividiría el
+error típico (∝ 1/√`Rosters`), pero no lo suficiente para igualar el falso positivo de 1,0: a 384
+plantillas (×4 la muestra de hoy) el error baja a ~0,45 y el falso positivo del umbral 2,0 sería del
+orden del **19 %** (Φ((2,0−2,4)/0,45), corregido en la quinta ronda — una versión anterior de este
+párrafo decía "del orden del 6 %", una cifra que no sale de esa cuenta), lejos todavía del 6 % que da
+el umbral 1,0 hoy. Igualar ese 6 % subiendo solo la muestra exigiría del orden de **1.175 plantillas**
+(×12 la muestra de hoy), no ×4. Era una alternativa real que esta ADR no llegó a costear en tiempo de
+ejecución antes de decidir bajar el umbral, y con el número correcto sale más cara de lo que la primera
+redacción de este párrafo daba a entender — si acaso, refuerza la elección de bajar el umbral en vez de
+subir la muestra, no la debilita. Se elige bajar el umbral porque es el cambio mínimo que BA-N pedía
+(Opción B, sin tocar el instrumento), no porque se haya demostrado más barato que subir la muestra —
+queda anotado en `docs/pendientes/BB-P.md` como la opción que de verdad se descarta sin costear, no
+como una idea menor.
 
 **Lo que esta puerta protege, con precisión, para que nadie la lea con más alcance del que tiene**: con
 umbral 1,0 y error 0,9, detecta del orden de 87 % de las veces que equipar deje de aportar nada, y del

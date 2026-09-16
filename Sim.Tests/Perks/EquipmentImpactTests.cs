@@ -28,9 +28,12 @@ public sealed class EquipmentImpactTests
 {
     /// <summary>
     /// Plantillas distintas sobre las que se promedia (equivalente a <c>--rosters</c>). Subido de 8 a 24
-    /// en el paquete Z: con 8 el brazo de cada arm eran 512 partidos, la diferencia entre arms tenía una
-    /// desviación de ~3 puntos y el umbral de 5 quedaba dentro del ruido —añadir ocho perks al catálogo
-    /// (RF-070) movió la medida de 5,4 a 4,7 sin tocar un solo objeto—. Con 24 la desviación baja a
+    /// en <c>b241611</c> (paquete Z), sin tocar el umbral: con 8 el brazo de cada arm eran 512 partidos, la
+    /// diferencia entre arms tenía una desviación de ~3 puntos y el umbral de 5 quedaba dentro del ruido.
+    /// La medida pasó de 5,4 a 4,7 justo tras añadir ocho perks al catálogo (RF-070), pero ese movimiento
+    /// de 0,7 cabe dentro de la propia desviación de ~3 del instrumento de 8 plantillas — no es evidencia
+    /// de que el catálogo lo causara, es la misma clase de correlación temporal sin aislar que ADR 0116
+    /// (BA-N) marcó REJECTED para el paso de 61 a 94 perks. Con 24 la desviación baja a
     /// ~1,8 y el test avisa de una regresión de verdad.
     /// </summary>
     // Paquete AZ (ADR 0090): de 24 a 96 plantillas. Con 24 (1.536 partidos por brazo, 24×32×2 direcciones)
