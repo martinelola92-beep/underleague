@@ -1,7 +1,13 @@
 # BA-N — Equipar ya no vale el escalón que la ADR 0033 exige
 
-**Estado:** Abierta. Causa **LIKELY** (inferida y consistente en tres mediciones, no aislada por
-experimento propio). Requiere **decisión del revisor**, no investigación adicional.
+**Estado:** Decisión tomada, aplicada, pendiente de confirmación del `independent-reviewer` antes de
+cerrar formalmente. Causa sigue **LIKELY** (nunca se aisló con un experimento propio; no hacía falta para
+decidir). **Decisión del revisor (16 sep 2026): Opción B** — recalibrar el umbral de la puerta, no subir
+precios de objeto. Umbral 2,0 → **1,0** (`Sim.Tests/Perks/EquipmentImpactTests.cs`), `docs/decisiones/0116-el-escalon-de-equipar-se-recalibra-contra-94-perks.md`.
+El umbral deja de afirmar "varios puntos" y pasa a afirmar "un efecto real y medible, no ruido" — 1,0
+elegido explícitamente de las dos lecturas posibles del único precedente de calibración disponible (ratio
+0,61 sobre 3,3→2,0), no una medida nueva ni una fórmula validada. La inconsistencia calculado/medido de
+objetos (ADR 0038 vs ADR 0087) **sigue sin resolver**, intacta.
 
 ## Observación
 

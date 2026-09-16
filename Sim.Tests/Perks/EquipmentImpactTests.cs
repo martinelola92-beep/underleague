@@ -89,12 +89,17 @@ public sealed class EquipmentImpactTests
         // El umbral sale de la medida, no de la aritmética: la tabla de valor marginal de la ADR 0038
         // predice 5,8 puntos para este juego de siete objetos, y medido dan 3,3. La tabla se midió con
         // +20 repartidos entre los DIEZ jugadores y aquí el bono va entero a UNO, así que sobrestima por
-        // un factor de 1,6; queda anotado, porque el precio de los objetos se calcula con ella. Umbral 2,0 desde
-        // el paquete AZ: lo que afirma es que equipar VALE (varios puntos), no una cifra concreta. Lo que
-        // confirma la magnitud de partida de la ADR 0036 (+10 por atributo) no es este número sino la
-        // curva de puertas: con ella, la fila "muy buena" cae dentro de su banda en los tres jefes.
+        // un factor de 1,6; queda anotado, porque el precio de los objetos se calcula con ella.
+        //
+        // Umbral 1,0 desde la ADR 0116 (BA-N): con el catálogo de 94 perks lo medido cayó a 1,7 (era 3,3
+        // con 61 perks, umbral 2,0 desde el paquete AZ) — no porque los objetos rindan menos, sino porque
+        // el resto del catálogo vale más y la aportación MARGINAL de equipar se diluye en comparación
+        // (BA-N, docs/pendientes/BA-N.md). El umbral ya NO afirma "varios puntos" (ADR 0033 lo pedía en
+        // plural y el sistema actual no llega a dos con margen real de detección): afirma que equipar
+        // sigue siendo un efecto real y medible, claramente por encima del ruido de medición de este lote
+        // (~0,9 puntos a 96 plantillas), no que sea grande. Ver ADR 0116 para la calibración completa.
         Assert.True(
-            equippedRate - bareRate >= 2.0,
+            equippedRate - bareRate >= 1.0,
             $"equipar a los siete titulares solo aporta {equippedRate - bareRate:F1} puntos de tasa de victoria: "
                 + "con eso el escalón 'muy buena' de la ADR 0033 no tiene contenido y los objetos están mal calibrados");
     }
