@@ -423,7 +423,7 @@ public sealed record ProgressionTuning(
     int AttributesPerLevel);
 
 /// <summary>tuning.restart.</summary>
-public sealed record RestartTuning(int ThrowInTicks, int GoalKickTicks, int CornerTicks, int KickoffTicks, int PenaltyTicks, int FreeKickTicks, float RestartClearanceCells);
+public sealed record RestartTuning(int ThrowInTicks, int GoalKickTicks, int CornerTicks, int KickoffTicks, int PenaltyTicks, int FreeKickTicks, float FreeKickClearanceCells);
 
 /// <summary>
 /// Constantes de resolución del simulador (data/sim/tuning.json), un campo por clave, anidado por sección.

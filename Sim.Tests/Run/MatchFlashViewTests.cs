@@ -12,7 +12,11 @@ namespace Underleague.Sim.Tests.Run;
 /// </summary>
 public sealed class MatchFlashViewTests
 {
-    private const ulong Seed = 20260915UL;
+    // 14, no 20260915: con esa semilla el portador de test_flash completaba 0/3 pases (BB-B, un fix ajeno
+    // de ClampToArea/IsOutfield desplazó el consumo de RNG del partido lo suficiente para cruzar a cero —
+    // el mismo ruido de cualquier cambio de /Sim que ya se documentó en RunPolicyItemSlotTests). Con 14
+    // completa 4 de 11 intentos, con margen de verdad en vez de al borde.
+    private const ulong Seed = 14UL;
 
     /// <summary>Un perk que se cobra en cada pase completado del portador: suficiente para que salten avisos.</summary>
     private static readonly string OnPass = TestPerks.Json(

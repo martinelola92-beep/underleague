@@ -1,20 +1,34 @@
 # BB-B — En el saque de centro los defensores van a robar el balón antes de que esté en juego.
 
-**Estado:** IMPLEMENTED sin cerrar (commit `088c5ba`, 16 sep 2026). La inmunidad temporal descrita abajo
-como "Implementación" —**REJECTED**, ver su veredicto íntegro más abajo— quedó revertida del árbol en
-`ad3c472` y sustituida por una barrera geométrica: generaliza `EnforceFreeKickClearance` (ADR 0090, antes
-solo saque de falta) a las cinco reanudaciones y a la ventana posterior a tomar el saque. Design gate
-completo en `docs/analisis/bb-b-barrera-geometrica-diseno.md` (definición de "balón en juego", condición
-espacial mínima, veredicto de `game-design-review` y `architecture-review`, resultados medidos §13).
+**Estado:** ABIERTA (16 sep 2026). Dos intentos de solución **REJECTED**, ambos con veredicto íntegro más
+abajo/en `docs/analisis/bb-b-barrera-geometrica-diseno.md`:
 
-**Resultado medido:** el saque de centro cierra a 0/190 disputas. Banda y puerta quedan con un residual
-por geometría de borde (banda 3/61, puerta 5/92 — mejora real sobre 5/79 y 7/84, no cierre). La falta suma
-ese mismo residual de borde más un gap distinto —la barrera protege el balón, no a los compañeros del
-sacador— y queda en 13/190. De las 43 puertas: 5 rojas antes de tocar BB-B, 5 rojas ahora, pero **no las
-mismas** (tres se arreglan, dos nuevas aparecen: `BadBuildsLoseToTheirBaseline`/`elf_out_of_zone` y
-`BetterTeamWinRateIsInRange`/`human_60_vs_human_40`). **No se cierra sin decidir** entre las cuatro salidas
-del §14 del design gate (aceptar el residual, extender la barrera al borde, extender a los compañeros del
-sacador, o revertir) y sin el veredicto del `independent-reviewer` sobre el paquete completo.
+1. **Inmunidad temporal** (`KickoffPending`): atacaba el mecanismo equivocado (temporal, no espacial) y
+   rompía puertas. Revertida en `ad3c472`.
+2. **Barrera geométrica generalizada** a las cinco reanudaciones (commit `088c5ba`): cerraba el saque de
+   centro (0/190 disputas) pero el `independent-reviewer` encontró que el diagnóstico del residual de
+   banda/puerta/falta estaba **equivocado** (no es geometría de borde — ninguna de las 21 disputas
+   residuales medidas ocurre a menos de 2,08 casillas del balón; es contacto contra un **compañero del
+   sacador** lejos del balón, la misma causa en las tres), que tocaba el penalti sin declararlo (RF-054,
+   que ADR 0090 dejaba intocado) y que rompía una métrica **obligatoria** de RT-056
+   (`betterTeamWinRate_human_60_vs_human_40`). Revertida en `<pendiente de commit>` — ver §15 del design
+   gate para el veredicto completo y la medición que lo sostiene.
+
+**Lo único que queda del segundo intento**: un bug real e independiente de ADR 0090 (`Utility.ClampToArea`
+aplicado a jugadores de campo sin comprobar `IsOutfield`, así que un rival corregido por la barrera del
+saque de falta se teletransportaba al área propia) sí se corrigió y se conserva, aislado del alcance que
+se revirtió. Con solo ese bugfix: **3 puertas rojas de 43** (mejor que las 5 de antes de tocar BB-B),
+pero abre su propia decisión sin resolver: `BadBuildsLoseToTheirBaseline` (`orc_misplaced`, `elf_brawler`)
+gana más de lo que debería contra el baseline sin perks — consecuencia de que esos dos builds ya no se
+benefician del bug del teletransporte. No se decide aquí si eso pide una ADR de rango nuevo o un ajuste a
+los dos builds.
+
+**Diagnóstico correcto para el próximo intento** (medido, no hipotético): la solución tiene que proteger
+al **compañero del sacador**, no solo al balón — en una falta (y por extensión banda/puerta) no hay reforma
+de equipo como en el saque de centro, así que un marcaje de juego abierto sigue pegado a un compañero
+lejos del balón y una barrera centrada solo en el balón nunca lo cubre. La hipótesis de "geometría de
+borde" que manejó el segundo intento está **REJECTED por medición directa** (mínimo 2,08 casillas al balón
+en las 21 disputas residuales) y no debe repetirse sin nueva evidencia que la reabra.
 
 ## Observación
 

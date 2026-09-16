@@ -343,3 +343,58 @@ entre:
 No eliminado ni descartado: el código de esta sesión queda en el árbol, sin commitear, a la espera de la
 decisión del punto 14 y de la revisión completa del punto 13 (`independent-reviewer` con el problema
 entero, el parche descartado, esta hipótesis, el diff y las métricas de arriba — no solo el diff).
+
+## 15. Veredicto del `independent-reviewer` — el diagnóstico del §13 estaba mal, se revierte (B)
+
+El revisor midió por su cuenta (compiló los tres árboles: base, solo el bugfix de §13a, y el commit
+completo) y encontró tres cosas que cambian la decisión:
+
+1. **El commit mezclaba dos cambios sin separarlos**: el bugfix de §13a (independiente, real, hereda de
+   ADR 0090) y la generalización de la barrera (B). Separados: solo (A) da **3 puertas rojas de 43**, mejor
+   que las 5 de la base y las 5 del commit mixto. Ninguna de las opciones del §14 contemplaba esta quinta
+   salida porque ninguna medición previa las había separado.
+2. **La causa del residual del §13 era falsa.** Midió las 21 disputas residuales de banda/puerta/falta:
+   **ninguna** ocurre a menos de 2,08 casillas del balón (mínimo medido, media 2,96) — la barrera **nunca
+   se rompe por geometría de borde**, esa hipótesis está **REJECTED por medición directa**. Las 21 son
+   contacto (`block`/`offBallMissed`) contra un **compañero del sacador** lejos del balón, la misma causa
+   en las tres reanudaciones, no dos causas distintas como decía este documento.
+3. **La generalización tocaba el penalti sin declararlo.** La guarda de `Step` (`wasRestarting || ...`) es
+   cierta también para `RestartKind.Penalty`, así que la barrera actuaba 45 ticks (3 s) sobre toda la
+   defensa y el portero en cada penalti — RF-054, que ADR 0090 dejaba expresamente intocado. Medido: 223 →
+   7 frames con un defensor a menos de 1,95 casillas del balón durante esa cuenta atrás. Nadie lo había
+   medido ni decidido.
+4. La única regresión atribuible de verdad a (B) es `betterTeamWinRate_human_60_vs_human_40` (69,88,
+   mínimo 70) — **métrica obligatoria de RT-056**, verde en base y en solo-(A), roja solo con la barrera
+   generalizada puesta. `BadBuildsLoseToTheirBaseline` la rompe (A), no (B) — de hecho (B) la mejora (2
+   métricas fuera → 1).
+
+**Decisión aplicada**: se revierte (B) por completo (`_restartClearanceOwner`, la llamada generalizada, el
+uso de `_ball.Position`, el renombrado de dato) y se conserva (A) —el fix de `ClampToArea`/`IsOutfield`,
+único bug real e independiente del alcance— sobre el mecanismo original de ADR 0090 (solo saque de falta).
+Confirmado por mí, no solo por el revisor: build y `Category!=Gate` (755/755) en verde, las 43 puertas dan
+**3 rojas** (`BuildsWinDifferently`/`passChain`=1,09, `BadBuildsLoseToTheirBaseline` con dos builds fuera
+de rango, `NoGateMetricIsOutOfRange` agregando las dos) — exactamente el número que midió el revisor para
+el árbol solo-(A), y `betterTeamWinRate` vuelve a verde.
+
+**Lo que queda abierto, sin decidir todavía:**
+
+- **BB-B en sí sigue sin resolver.** El saque de centro sigue teniendo el hueco original (el parche
+  temporal descartado, luego revertido); la barrera geométrica generalizada que lo cerraba también se
+  revirtió. Vuelve a `docs/pendientes/BB-B.md` como abierto, con el diagnóstico correcto esta vez: el
+  residual no es geometría de borde, es contacto contra un compañero del sacador lejos del balón — una
+  solución futura tiene que proteger eso, no el borde del campo.
+- **`BadBuildsLoseToTheirBaseline` con (A) puesto**: dos builds (`orc_misplaced`, `elf_brawler`) ganan más
+  de lo que deberían contra el baseline sin perks. Es consecuencia de corregir un bug real de ADR 0090
+  (los jugadores ya no se teletransportan al área ajena durante un saque de falta), no una regresión que
+  se pueda revertir sin reintroducir el bug. Decisión pendiente, propia, sin resolver aquí: ¿se acepta el
+  rango nuevo con una ADR que lo mida con más partidos, o hace falta retocar los dos builds "malos" para
+  que vuelvan a perder con claridad?
+- **El saque de córner no ocurre nunca** en las muestras medidas (0 en 60 partidos, en los dos árboles).
+  Hermano nuevo, sin ficha propia todavía — candidato a `docs/pendientes/` aparte, no de este paquete.
+- El caso del portero con `ClampToArea` devolviéndolo dentro del radio de exclusión (medido en penalti, no
+  reproducido para el saque de falta en solitario) queda anotado en el código como límite conocido, sin
+  corregir.
+
+No hay lote de `/Balance` todavía para (A) en solitario (RT-054, skill `balance-measure`): las 43 puertas y
+`Category!=Gate` bastan para verificar que no rompe nada existente, pero el rango nuevo de
+`BadBuildsLoseToTheirBaseline` pide su propio lote antes de decidir su ADR.

@@ -28,13 +28,15 @@ public sealed class RunPolicyItemSlotTests
 {
     /// <summary>
     /// Runs por configuración. Lo que se afirma es cualitativo (cero o no cero), pero "pocas" tiene un
-    /// suelo: con 12 y semilla 1, Saver cruzó a cero compras en el lote (BB-B, docs/analisis/
-    /// bb-b-barrera-geometrica-diseno.md) sin que su estrategia hubiera cambiado -con 100 vuelve a comprar
-    /// con margen-. Es el ruido esperado de cualquier cambio de /Sim que desplace el consumo de RNG en
-    /// una run completa, no un fallo de este paquete ni de la doctrina: 24 le da margen sin duplicar el
-    /// coste de las 43 puertas.
+    /// suelo: con 12 y semilla 1, Saver cruzó a cero compras (BB-B, docs/pendientes/BB-B.md) sin que su
+    /// estrategia hubiera cambiado. No es un fallo de este paquete ni de la doctrina, es el ruido esperado
+    /// de cualquier cambio de /Sim que desplace el consumo de RNG en una run completa -medido: la
+    /// generalización de BB-B lo cruzó a cero con 24, y hasta corregirla y aislar el bug de ADR 0090
+    /// (independent-reviewer) seguía en cero a 30 y a 36-. Confirmado estable a 48 (Saver compra con
+    /// margen en las dos ramas medidas). Cuesta ~1 m 40 s: caro para el bucle de desarrollo, pero es el
+    /// número más pequeño que dejó de cruzar a cero, no uno elegido a ojo.
     /// </summary>
-    private const int Runs = 24;
+    private const int Runs = 48;
 
     private const ulong Seed = 1;
 

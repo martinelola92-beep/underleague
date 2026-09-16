@@ -139,14 +139,14 @@
     "foulBase": 1500
   },
   "restart": {
-    "_doc": "Cuenta atrás de cada reanudación en ticks (RF-053). freeKickTicks (AZ-D, ADR 0090): la falta señalada es una reanudación instantánea más, con cuenta atrás de 8 ticks (con 15, los ~4 s de balón parado por partido dejaban shotsPerMatch en 7,8 en la semilla 7). restartClearanceCells (BB-B, docs/analisis/bb-b-barrera-geometrica-diseno.md): barrera de 2 casillas para los rivales, generalizada de freeKickClearanceCells (nacida en ADR 0090 solo para la falta: sin ella el infractor y sus compañeros rodeaban al que saca y las entradas subían de 10,8 a 12,5 por partido) a las cinco reanudaciones —banda, córner, puerta, centro y falta— y a la ventana posterior a tomar el saque, no solo a la cuenta atrás: el hueco que dejaba esa ventana es lo que permitía robar el balón antes de que estuviera realmente en juego (RF-052).",
+    "_doc": "Cuenta atrás de cada reanudación en ticks (RF-053). freeKickTicks y freeKickClearanceCells (AZ-D, ADR 0090): la falta señalada es una reanudación instantánea más, con cuenta atrás de 8 ticks (con 15, los ~4 s de balón parado por partido dejaban shotsPerMatch en 7,8 en la semilla 7) y barrera de 2 casillas para los rivales durante la cuenta atrás (sin ella el infractor y sus compañeros rodeaban al que saca y las entradas subían de 10,8 a 12,5 por partido). BB-B (docs/pendientes/BB-B.md) intentó generalizar la barrera a las otras cuatro reanudaciones; el independent-reviewer encontró el diagnóstico del residual equivocado y una regresión en una métrica obligatoria (betterTeamWinRate), así que se revirtió al alcance original.",
     "throwInTicks": 15,
     "goalKickTicks": 15,
     "cornerTicks": 15,
     "kickoffTicks": 15,
     "penaltyTicks": 45,
     "freeKickTicks": 8,
-    "restartClearanceCells": 2.0
+    "freeKickClearanceCells": 2.0
   },
   "bodies": {
     "_doc": "Colisión y empuje entre cuerpos (ADR 0020, fase1b-diseno.md §2.1). Sin consumidor todavía en /Sim: lo añade el paquete R (Cuerpos, zona y comportamiento); se carga aquí para que exista y se valide.",

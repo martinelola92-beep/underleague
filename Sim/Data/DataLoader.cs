@@ -920,7 +920,7 @@ public static class DataLoader
 
     private static RestartTuning ParseRestart(Json node)
     {
-        node.EnsureKnownKeys("throwInTicks", "goalKickTicks", "cornerTicks", "kickoffTicks", "penaltyTicks", "freeKickTicks", "restartClearanceCells");
+        node.EnsureKnownKeys("throwInTicks", "goalKickTicks", "cornerTicks", "kickoffTicks", "penaltyTicks", "freeKickTicks", "freeKickClearanceCells");
         return new RestartTuning(
             node.Prop("throwInTicks").AsInt(),
             node.Prop("goalKickTicks").AsInt(),
@@ -928,7 +928,7 @@ public static class DataLoader
             node.Prop("kickoffTicks").AsInt(),
             node.Prop("penaltyTicks").AsInt(),
             node.Prop("freeKickTicks").AsInt(),
-            node.Prop("restartClearanceCells").AsFloat());
+            node.Prop("freeKickClearanceCells").AsFloat());
     }
 
     /// <summary>tuning.generation (fase1b-diseno.md §1.3, ADR 0025, ADR 0027): modelo de presupuesto de atributos.</summary>
