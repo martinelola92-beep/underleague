@@ -25,8 +25,9 @@ a secas.
 | [BA-I](./BA-I.md) | La sustitución por lesión no debería ser obligatoria | Ver fichero |
 | [BA-J](./BA-J.md) | Tras una parada, el equipo defensor debería replegarse | Ver fichero |
 | [BA-K](./BA-K.md) | Cortinilla o transición | Ver fichero |
-| [BA-L](./BA-L.md) | La escena de capturas (`Scenes/Capturas.tscn`) no produce nada en esta | Ver fichero |
+| [BA-L](./BA-L.md) | La escena de capturas (`Scenes/Capturas.tscn`) no produce nada en esta | Cerrada |
 | [BA-M](./BA-M.md) | Origen de BA-N: la puerta de equipar pasó de roja a verde por cero cen | Cerrada |
+| [BA-L2](./BA-L2.md) | `CaptureRunner` pierde el árbol de escena entre `informe` y `recompensa` | Ver fichero |
 | [BA-N](./BA-N.md) | Equipar ya no vale el escalón que la ADR 0033 exige | Ver fichero |
 | [BB-A](./BB-A.md) | Los jugadores se teletransportan al reanudar | Ver fichero |
 | [BB-B](./BB-B.md) | En el saque de centro los defensores van a robar el balón antes de que | Ver fichero |

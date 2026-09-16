@@ -16,7 +16,7 @@ subir empeora). Una línea de aritmética, o una captura, cuesta menos que el ro
 |---|---|
 | `equipo*.png` (11, pantalla de Equipo) | `-- --screenshots` |
 | `inicio`, `mapa`, `ojeo`, `equipo-run` | `-- --tour` · solo el mapa: `-- --map-tour` |
-| **`partido*`, `informe`, `recompensa`, `mercado`** | `res://Scenes/Capturas.tscn` (sin flag) |
+| **`partido*`, `informe`, `recompensa`, `mercado`** | `godot --path Game --scene res://Scenes/Capturas.tscn ...` |
 
 ## El ciclo obligatorio
 
@@ -25,7 +25,12 @@ subir empeora). Una línea de aritmética, o una captura, cuesta menos que el ro
    nada, y parece un fallo de `/data` cuando es un binario viejo.
 2. Ejecutar **con `timeout`, siempre** (ver la sección de convenciones de `CLAUDE.md` sobre procesos sin
    plazo): `timeout 600 xvfb-run -a --server-args="-screen 0 1280x800x24" godot --path Game
-   --rendering-driver opengl3 --audio-driver Dummy`.
+   --rendering-driver opengl3 --audio-driver Dummy` para `equipo*`/`--tour`/`--map-tour` (que sí navegan
+   solos desde la pantalla de inicio), o con `--scene res://Scenes/Capturas.tscn` para `partido*`.
+   **BA-L (16 sep 2026): el comando sin `--scene` lanza `Inicio.tscn`** (`run/main_scene` de
+   `project.godot`), que se queda esperando entrada de usuario para siempre — 85 minutos de CPU al 295 %
+   sin un solo PNG fue exactamente ese fallo, no un problema de `/Sim` ni de `/Game`. `Capturas.tscn`
+   **no** es la escena principal: sin `--scene` no se lanza nunca.
 3. **Comprobar SIEMPRE la marca de tiempo del PNG** (`ls -la Game/screenshots/x.png`) antes de mirarlo.
    Que el proceso salga con código 0 no significa que haya escrito el fichero.
 4. Mirar el fichero.
