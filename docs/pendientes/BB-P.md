@@ -25,6 +25,25 @@ típico teórico (~0,9) del tamaño de muestra de esa puerta. Detalle completo e
 y `docs/pendientes/BA-M.md` (donde el mismo patrón produjo dos hipótesis causales falsas antes de esta
 corrección).
 
+## Segundo caso confirmado con medición directa (BB-C, 16 sep 2026)
+
+`MatchRulesTests.AWhistledFoulRestartsWithAFreeKickForTheFouledTeamAndAnUnseenOneDoesNot`: con 50
+semillas fijas, el arreglo de `MatchEngine.ResetPositions` de BB-C (sin relación de código con el saque de
+falta) desplazó el recuento de un caso raro y documentado ("una falta de bloqueo durante la cuenta atrás
+de otra hereda el saque de la primera") de dentro de tolerancia a 9/167 (5,4 %, por encima del tope
+documentado del 5 %). Remedido con 250 semillas: la tasa real es **2,6 % sin el arreglo y 3,7 % con él**,
+las dos muy por debajo del tope — 50 partidos era una muestra insuficiente para una cola de ese tamaño,
+exactamente el mismo diagnóstico que el caso de equipar. Arreglado subiendo la muestra a 150 (mismo
+remedio que BA-N: subir muestra, no bajar umbral). Detalle en `docs/pendientes/BB-C.md`.
+
+**Mismo ciclo, un tercer síntoma emparentado sin puerta**: `RunEngineTests.ARunCanBePlayedFromStartToFinish`
+(una run completa con semilla fija) dejó de dar Victoria con el mismo arreglo — la instancia más extrema
+posible de este patrón, porque una run encadena 17-22 partidos y hereda la sensibilidad de cada uno. Es la
+**segunda vez** que esta prueba concreta necesita un cambio de semilla por una razón de código ajena a lo
+que prueba (la primera fue un cambio de tamaño de plantilla). No es una puerta de `Category=Gate`, pero es
+la misma firma: un test de una sola semilla/partido operando sin margen frente a cualquier cambio real de
+`/Sim`.
+
 ## Candidatas sin confirmar todavía
 
 Las 4 puertas que quedaron rojas al cerrar BB-B (`docs/decisiones/0115-la-barrera-de-reanudacion-cubre-las-cinco-no-solo-la-falta.md`),
@@ -38,7 +57,10 @@ ninguna corrección tocara los builds concretos que fallan:
 
 Ninguna de las cuatro tiene todavía su error típico medido de la misma forma que se hizo para la de
 equipar. No se puede afirmar sin medirlo que sean el mismo patrón — es la hipótesis a comprobar primero,
-no una conclusión.
+no una conclusión. **Dato adicional, no una medición del error típico**: en el ciclo de BB-C,
+`CoherentBuildsBeatTheirBaseline` y `BadBuildsLoseToTheirBaseline` se remidieron emparejadas (con/sin el
+arreglo) en dos semillas — se movieron 1-2 puntos en ambas direcciones sin patrón consistente, compatible
+con la hipótesis de ruido pero sin sustituir la medición directa que este punto sigue pidiendo.
 
 ## Qué haría falta, sin implementarlo aquí
 

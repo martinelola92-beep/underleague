@@ -31,7 +31,7 @@ a secas.
 | [BA-N](./BA-N.md) | Equipar ya no vale el escalón que la ADR 0033 exige | Cerrada (ADR 0116; deuda documentada) |
 | [BB-A](./BB-A.md) | Los jugadores se teletransportan al reanudar | Ver fichero |
 | [BB-B](./BB-B.md) | En el saque de centro los defensores van a robar el balón antes de que | Resuelta (ADR 0115), tras dos intentos rechazados |
-| [BB-C](./BB-C.md) | «Celebra» se activa cuando ya han vuelto a su campo | Ver fichero |
+| [BB-C](./BB-C.md) | «Celebra» se activa cuando ya han vuelto a su campo | Resuelta |
 | [BB-D](./BB-D.md) | Propuesta del revisor: parar unos segundos en los eventos que detienen | Ver fichero |
 | [BB-E](./BB-E.md) | Salen dos canteranos en el mercado; debería salir uno como mucho | Cerrada |
 | [BB-F](./BB-F.md) | Un jugador se lesiona y no se ve en qué posición jugaba | Ver fichero |

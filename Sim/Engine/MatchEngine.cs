@@ -2724,9 +2724,10 @@ internal sealed class MatchEngine : IPerkWorld
             _restartTaker.Velocity = default;
 
             // El saque de CENTRO es la excepcion, y por una razon: ahi ResetPositions acaba de devolver a
-            // los catorce jugadores a su casilla-hogar, asi que el equipo entero se recoloca por diseno y
-            // poner al sacador sobre el balon es parte de esa misma reforma. En las demas reanudaciones no
-            // se recoloca nadie, y por eso el salto del sacador se veia (BA-D).
+            // su casilla-hogar a todo el que va a jugar la reanudacion, asi que el equipo entero (salvo
+            // quien siga celebrando un gol, BB-C -que tampoco puede ser sacador, CanTouchBall lo excluye-)
+            // se recoloca por diseno y poner al sacador sobre el balon es parte de esa misma reforma. En
+            // las demas reanudaciones no se recoloca nadie, y por eso el salto del sacador se veia (BA-D).
             if (kind == RestartKind.Kickoff)
             {
                 _restartTaker.Position = point;
@@ -2955,12 +2956,29 @@ internal sealed class MatchEngine : IPerkWorld
         LaunchShot(taker, isPenalty: true);
     }
 
+    /// <summary>
+    /// BB-C: un goleador celebrando no se teletransporta al centro con el resto del equipo. Antes esta
+    /// función movía <c>Position</c> incondicionalmente y solo protegía el <c>State</c> de
+    /// <see cref="PlayerState.Celebrating"/> (y de <see cref="PlayerState.KnockedDown"/>, sin tocar ese
+    /// caso aquí — ver nota abajo): el marcador seguía "celebrando" en el volcado de estado mientras su
+    /// posición ya estaba de vuelta en su casilla-hogar, así que la celebración se veía en el sitio
+    /// equivocado. No puede ser designado sacador (<see cref="CanTouchBall"/> ya lo excluye), así que
+    /// dejarlo donde está no afecta a quién saca ni a la reforma del resto del equipo.
+    /// <para>
+    /// <b>`KnockedDown` queda fuera a propósito</b> (independent-reviewer, BB-C): es el mismo bug en
+    /// teoría, pero un jugador derribado es objetivo preferente de "olfato de sangre"
+    /// (<c>Utility.CanReceiveOffBallTackle</c>) y dejarlo donde cayó en vez de en su casilla-hogar cambia
+    /// a quién apunta ese perk durante el saque siguiente — un efecto de segundo orden que nadie pidió ni
+    /// midió. Candidato a su propia ficha (`docs/pendientes/BB-C.md`, sección "Hermanos"), no parte de
+    /// este cambio.
+    /// </para>
+    /// </summary>
     private void ResetPositions()
     {
         for (int i = 0; i < _players.Length; i++)
         {
             var player = _players[i];
-            if (!player.OnPitch)
+            if (!player.OnPitch || player.State is PlayerState.Celebrating)
             {
                 continue;
             }
@@ -2968,7 +2986,7 @@ internal sealed class MatchEngine : IPerkWorld
             player.Position = player.HomeCenter;
             player.Velocity = new Vec2(0f, 0f);
             player.EffectiveHome = player.HomeCenter;
-            if (player.State is not (PlayerState.Celebrating or PlayerState.KnockedDown))
+            if (player.State is not PlayerState.KnockedDown)
             {
                 player.EnterState(PlayerState.Positioning, 0);
             }

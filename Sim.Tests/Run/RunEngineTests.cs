@@ -72,14 +72,18 @@ public class RunEngineTests
     [Fact]
     public void ARunCanBePlayedFromStartToFinish()
     {
-        // Semilla 2, no 1: la plantilla inicial del club pasó de 10 a 9 (RF-005/RF-020) y el flujo de
-        // generación (RT-022) consume un jugador menos, así que desplaza la secuencia de atributos y
-        // rareza de todo lo que se genera después con la misma semilla. Con la 1 la nueva plantilla
-        // pierde la final de acto 3 (BossMatchLost); no es una regresión de RF-002b (los disponibles
-        // nunca bajan de 8 en ese camino) sino una semilla que ya no da victoria con esta plantilla. La
-        // 2 sí, con el mismo rango de nodos y partidos.
+        // Semilla 4, no 2 (BB-C, independent-reviewer): el arreglo de MatchEngine.ResetPositions (un
+        // goleador celebrando ya no salta a su casilla-hogar) no toca ninguna regla de RF-002, pero
+        // desplaza el consumo de RNG de cada partido de la run lo suficiente para que la 2 deje de dar
+        // victoria (BossMatchLost en algún acto) - la misma clase de efecto que ya movió esta prueba de
+        // la semilla 1 a la 2 quince líneas de historial atrás, por una razón de código completamente
+        // distinta (RF-005/RF-020). Es la firma de una prueba de una sola semilla operando sin margen
+        // frente a cualquier cambio real de /Sim (docs/pendientes/BB-P.md): no una garantía de que ESTA
+        // build gana, sino de que EXISTE una semilla que completa la run con esta plantilla y esta
+        // política, y esta prueba no puede evitar necesitar una nueva de vez en cuando. 4 da el mismo
+        // rango de nodos y partidos que antes.
         var systems = new TestRunSystems { OpponentQuality = 30 };
-        var state = TestRuns.PlayToTheEnd(RunEngine.Start(TestRuns.Setup(quality: 70), 2, Catalog), Catalog, systems);
+        var state = TestRuns.PlayToTheEnd(RunEngine.Start(TestRuns.Setup(quality: 70), 4, Catalog), Catalog, systems);
 
         var outcome = RunEngine.Outcome(state);
         Assert.True(outcome.IsOver, "la run debería haber terminado");

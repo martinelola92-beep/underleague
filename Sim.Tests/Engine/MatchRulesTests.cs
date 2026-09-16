@@ -209,10 +209,11 @@ public sealed class MatchRulesTests
     /// (<c>maxPushPerTickMilli × tacklePushMultiplier</c>): cualquier paso por encima solo se explica
     /// caminando por su cuenta, que es justo lo que <c>UpdatePlayer</c> saltado le impide hacer.</para>
     ///
-    /// <para>En el saque de centro, además, todo el equipo vuelve a <c>HomeCenter</c> de un salto al
-    /// <b>abrir</b> la reanudación (<c>BeginRestart</c> llama a <c>ResetPositions</c> ahí, no al
-    /// resolverla): en el fotograma de resolución (<c>e.Tick</c>, donde antes <c>TakeKickoff</c> volvía a
-    /// reformar el equipo) nadie debe desplazarse más que un paso normal.</para>
+    /// <para>En el saque de centro, además, todo el que vaya a jugar la reanudación vuelve a
+    /// <c>HomeCenter</c> de un salto al <b>abrir</b> la reanudación (<c>BeginRestart</c> llama a
+    /// <c>ResetPositions</c> ahí, no al resolverla; BB-C: quien siga celebrando un gol queda fuera de ese
+    /// salto, pero tampoco puede ser el sacador): en el fotograma de resolución (<c>e.Tick</c>, donde antes
+    /// <c>TakeKickoff</c> volvía a reformar el equipo) nadie debe desplazarse más que un paso normal.</para>
     /// </summary>
     [Fact]
     public void TheRestartTakerStandsStillDuringTheDeadBall()
@@ -625,14 +626,24 @@ public sealed class MatchRulesTests
     /// AZ-D (ADR 0090): la falta <b>señalada</b> reanuda con el balón para el equipo que la sufre —una
     /// <c>Recovery</c> con detalle <c>freeKick</c> de un jugador del equipo del que recibió la falta, dentro
     /// de la cuenta atrás— y la <b>no señalada</b> (<c>Foul</c> con detalle <c>unseen</c>, AZ-E) no reanuda
-    /// nada: el juego sigue. Y las dos existen: con <c>whistlePercent</c> 80 sobre 50 partidos hay de sobra de
-    /// cada una.
+    /// nada: el juego sigue. Y las dos existen: con <c>whistlePercent</c> 80 sobre 150 partidos hay de sobra
+    /// de cada una.
+    /// <para>
+    /// Subido de 50 a 150 partidos (BB-C, independent-reviewer): con 50 semillas fijas, el arreglo de
+    /// <see cref="MatchEngine.ResetPositions"/> (celebración, sin relación de código con el saque de
+    /// falta) desplazó el consumo de RNG lo suficiente para que <c>sameTeam</c> pasara de 9/167 (5,4 %,
+    /// justo por encima del tope) — remedido con 250 semillas: la tasa real es 2,6 % sin el arreglo y
+    /// 3,7 % con él, las dos bajo el tope del 5 %. Con 50 partidos la muestra era demasiado pequeña para
+    /// esta cola rara (~1-4 %) y cualquier cambio de `/Sim`, tenga o no relación con el saque de falta,
+    /// puede cruzar el tope por puro tamaño de muestra — la misma firma que <c>docs/pendientes/BB-P.md</c>
+    /// documenta para las puertas de build. 150 reduce ese riesgo sin encarecer el test de forma notable.
+    /// </para>
     /// </summary>
     [Fact]
     public void AWhistledFoulRestartsWithAFreeKickForTheFouledTeamAndAnUnseenOneDoesNot()
     {
         int whistled = 0, freeKicks = 0, unseen = 0, unseenFollowedByFreeKick = 0, sameTeam = 0;
-        for (ulong seed = 1; seed <= 50; seed++)
+        for (ulong seed = 1; seed <= 150; seed++)
         {
             var result = Simulator.Run(
                 TestMatches.Reference(Catalog, seed), seed, Catalog, new SimConfig(CollectLog: false));
@@ -676,8 +687,8 @@ public sealed class MatchRulesTests
             }
         }
 
-        Assert.True(whistled > 50, $"faltas señaladas en 50 partidos: {whistled}");
-        Assert.True(unseen > 10, $"faltas no señaladas en 50 partidos: {unseen}");
+        Assert.True(whistled > 150, $"faltas señaladas en 150 partidos: {whistled}");
+        Assert.True(unseen > 30, $"faltas no señaladas en 150 partidos: {unseen}");
         Assert.True(freeKicks * 100 / whistled >= 75, $"solo {freeKicks} de {whistled} faltas señaladas reanudaron con saque de falta (las demás dieron penalti o el partido acabó; medido 115 de 136)");
         // Una falta de bloqueo cometida DURANTE la cuenta atrás de otra hereda el saque pendiente de la
         // primera, que es del rival de la primera y no del suyo: es raro (medido, ~1 %) y no es un fallo
