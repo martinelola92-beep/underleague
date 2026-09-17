@@ -1,3 +1,4 @@
+using Underleague.Sim.Data;
 using Underleague.Sim.Events;
 using Underleague.Sim.Perks;
 
@@ -34,6 +35,14 @@ public enum NotReadyReason
 
     /// <summary>≥2 efectos (sin contar addCounter) de categorías de balanceo distintas: no está definido qué parámetro se ajusta.</summary>
     MultiEffectAttribution,
+
+    /// <summary>
+    /// Habilidad racial automática (<c>catalog.Race(race).Ability</c>): se asigna a TODA la plantilla de
+    /// esa raza, no ocupa slot y no es una elección de portador — el harness de portador único no puede
+    /// medirla (mismo criterio de exclusión que <c>PerkValueRunner.Run</c>, no una regla nueva).
+    /// Encontrado ejecutando el contrato de <c>READY_FOR_SCREENING</c> contra datos reales (§16.6).
+    /// </summary>
+    RacialAbility,
 }
 
 /// <summary>Motivo, dentro de <see cref="AuditReadiness.DesignReview"/>, mutuamente excluyentes (§16).</summary>
@@ -109,10 +118,25 @@ public static class PerkAudit
         _ => TriggerFrequencyCategory.Frequent, // Tackle, Shot, PassCompleted, PassFailed, DribbleAttempted, DribbleWon, Recovery, Save, ...
     };
 
-    public static PerkAuditEntry Audit(PerkDefinition perk)
+    public static PerkAuditEntry Audit(PerkDefinition perk, Catalog catalog)
     {
         ArgumentNullException.ThrowIfNull(perk);
+        ArgumentNullException.ThrowIfNull(catalog);
         var classification = PerkBalanceClassifier.Classify(perk);
+
+        // Habilidad racial automática (§16.6, encontrado ejecutando el contrato de READY_FOR_SCREENING
+        // contra datos reales — elf_touch se asigna a TODA la plantilla élfica y no ocupa slot; el
+        // harness de portador único nunca encuentra un "titular elegible" porque no es una elección de
+        // slot). Mismo criterio de exclusión que ya usa Balance/PerkValueRunner.cs; no es una regla nueva.
+        if (perk.Race is { } perkRace && string.Equals(perk.Id, catalog.Race(perkRace).Ability, StringComparison.Ordinal))
+        {
+            return new PerkAuditEntry(
+                perk.Id, perk.Effects.Select(e => e.Type).ToList(), Array.Empty<EffectTargetShape>(), false, false,
+                classification.Category, classification.Readiness, classification.PrimaryMetric,
+                AuditReadiness.NotReady, NotReadyReason.RacialAbility, DesignReviewReason.None,
+                perk.Limit is not null, ClassifyTriggerFrequency(perk.Trigger), null,
+                $"habilidad racial automática de {perkRace}: se asigna a toda la plantilla, no ocupa slot, no es medible con el harness de portador único (§16.6)");
+        }
 
         var effectTypes = perk.Effects.Select(e => e.Type).ToList();
         var targetShapes = perk.Effects
@@ -190,8 +214,8 @@ public static class PerkAudit
             finalReadiness, notReadyReason, designReviewReason, hasLimit, triggerFrequency, limitNote, notes);
     }
 
-    public static IReadOnlyList<PerkAuditEntry> AuditCatalog(IEnumerable<PerkDefinition> perks) =>
-        perks.Select(Audit).ToList();
+    public static IReadOnlyList<PerkAuditEntry> AuditCatalog(IEnumerable<PerkDefinition> perks, Catalog catalog) =>
+        perks.Select(p => Audit(p, catalog)).ToList();
 
     public static AuditSummary Summarize(IReadOnlyList<PerkAuditEntry> entries)
     {

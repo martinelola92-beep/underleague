@@ -20,6 +20,9 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Sim\Sim.csproj" />
+    <!-- Reutiliza Balance/PerkValueRunner.cs (campaña con arrastre de contador, ADR 0070/0087) para
+         los perks NeedsCampaignHarness — no se duplica su lógica (§16, encargo del 18 sep 2026). -->
+    <ProjectReference Include="..\Balance\Balance.csproj" />
   </ItemGroup>
 
 </Project>

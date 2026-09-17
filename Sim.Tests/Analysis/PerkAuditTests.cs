@@ -14,7 +14,7 @@ namespace Underleague.Sim.Tests.Analysis;
 public sealed class PerkAuditTests
 {
     private static readonly Catalog Catalog = TestData.LoadCatalog();
-    private static readonly IReadOnlyList<PerkAuditEntry> Entries = PerkAudit.AuditCatalog(Catalog.Perks.All);
+    private static readonly IReadOnlyList<PerkAuditEntry> Entries = PerkAudit.AuditCatalog(Catalog.Perks.All, Catalog);
 
     private readonly ITestOutputHelper _output;
     public PerkAuditTests(ITestOutputHelper output) => _output = output;
@@ -64,11 +64,11 @@ public sealed class PerkAuditTests
         var summary = PerkAudit.Summarize(Entries);
 
         Assert.Equal(94, summary.Total);
-        Assert.Equal(25, summary.ByReadiness[AuditReadiness.ReadyForScreening]);
+        Assert.Equal(24, summary.ByReadiness[AuditReadiness.ReadyForScreening]);
         Assert.Equal(22, summary.ByReadiness[AuditReadiness.MultiTarget]);
-        Assert.Equal(13, summary.ByReadiness[AuditReadiness.DesignReview]);
+        Assert.Equal(15, summary.ByReadiness[AuditReadiness.DesignReview]);
         Assert.Equal(27, summary.ByReadiness[AuditReadiness.NotReady]);
-        Assert.Equal(7, summary.ByReadiness[AuditReadiness.RunLevel]);
+        Assert.Equal(6, summary.ByReadiness[AuditReadiness.RunLevel]);
     }
 
     // ------------------------------------------------------------------------------------------------
@@ -78,18 +78,9 @@ public sealed class PerkAuditTests
     [Fact]
     public void NoPerkIsReadyForScreeningWithoutAKnownBandedOrBehavioralMetric()
     {
-        var unbandedMetricNames = new HashSet<string>
-        {
-            MatchMetrics.ShareOverFiveGoals, MatchMetrics.DrawShareAtRegulation, MatchMetrics.GoalsPerMatch,
-            MatchMetrics.FoulsPerMatch, MatchMetrics.YellowCardsPerMatch, MatchMetrics.RedCardsPerMatch,
-            MatchMetrics.PassCompletionRate, MatchMetrics.PassInterceptRate, MatchMetrics.PassLooseRate,
-            MatchMetrics.PassBeatenRate, MatchMetrics.ThroughPassesPerMatch, MatchMetrics.ThroughPassCompletionRate,
-            MatchMetrics.ShotsOnTargetShare, MatchMetrics.SaveRate, MatchMetrics.BlockRate,
-        };
-
         foreach (var e in Entries.Where(e => e.FinalReadiness == AuditReadiness.ReadyForScreening))
         {
-            bool usesUnbandedNumericMetric = unbandedMetricNames.Contains(e.PrimaryMetric);
+            bool usesUnbandedNumericMetric = MatchMetrics.InfoOnlyMetricNames.Contains(e.PrimaryMetric);
             Assert.False(
                 usesUnbandedNumericMetric,
                 $"{e.PerkId} está READY_FOR_SCREENING pero su métrica primaria ({e.PrimaryMetric}) es INFO, sin banda");

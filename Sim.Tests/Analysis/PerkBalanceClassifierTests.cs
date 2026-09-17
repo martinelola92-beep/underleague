@@ -63,13 +63,15 @@ public sealed class PerkBalanceClassifierTests
     }
 
     [Fact]
-    public void RefereeBiasIsMissingAggregateMetric()
+    public void RefereeBiasAggregateExistsButStillHasNoBand()
     {
-        // diver / home_ref: modifyBias, FinalBias existe por partido pero no está resumido en MatchMetrics.
+        // diver / home_ref: modifyBias. RefereeBiasMetrics.MeanBiasFavoringCarrier YA construye el
+        // agregado (18 sep 2026, punto 2 del encargo) — "la métrica existe" ya no es el problema; sigue
+        // sin banda ni ADR que diga qué sesgo es aceptable, así que sigue en DESIGN_REVIEW, no Ready.
         var result = PerkBalanceClassifier.Classify(Find("diver"));
 
         Assert.Equal(PerkBalanceCategory.RefereeBias, result.Category);
-        Assert.Equal(MetricReadiness.NotReadyMissingAggregate, result.Readiness);
+        Assert.Equal(MetricReadiness.NotReadyNoBand, result.Readiness);
     }
 
     [Fact]

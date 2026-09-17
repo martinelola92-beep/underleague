@@ -3,6 +3,7 @@ using Underleague.Sim.Data;
 using Underleague.Sim.Engine;
 using Underleague.Sim.Generation;
 using Underleague.Sim.Model;
+using Underleague.Sim.Perks;
 using Underleague.Sim.Random;
 
 namespace Underleague.Sim.Tests.Balance;
@@ -45,8 +46,57 @@ public static class PairedBalanceHarness
     /// </summary>
     public static PairedResult Run(
         Catalog catalog, string perkId, Position carrierPosition, int rosters, ulong seed,
-        Zone? exposureZone = null, bool collectExposure = false)
+        Zone? exposureZone = null, bool collectExposure = false) =>
+        Run(catalog, perkId, home => FindByPosition(home, carrierPosition), rosters, seed, exposureZone, collectExposure);
+
+    /// <summary>
+    /// Igual que la sobrecarga por posición, pero elige el portador con el mismo criterio de elegibilidad
+    /// real que usa el juego (<see cref="PerkAssignment.Eligible"/>), no una coincidencia de puesto —
+    /// necesario para el contrato de §16 (punto 5), que se aplica a cualquier `ReadyForScreening` sin
+    /// saber de antemano qué puesto le corresponde.
+    /// </summary>
+    public static PairedResult RunWithEligibleCarrier(Catalog catalog, PerkDefinition perk, int rosters, ulong seed) =>
+        Run(catalog, perk.Id, home => FindEligible(home, perk, catalog), rosters, seed, race: perk.Race);
+
+    private static int FindByPosition(TeamSetup team, Position position)
     {
+        for (int i = 0; i < team.Players.Count; i++)
+        {
+            if (team.Players[i].Position == position)
+            {
+                return i;
+            }
+        }
+
+        return -1;
+    }
+
+    /// <summary>Mismo filtro que el juego (<see cref="PerkAssignment.Eligible"/>), sobre los siete titulares.</summary>
+    private static int FindEligible(TeamSetup team, PerkDefinition perk, Catalog catalog)
+    {
+        for (int i = 0; i < 7 && i < team.Players.Count; i++)
+        {
+            foreach (var candidate in PerkAssignment.Eligible(team.Players[i], catalog))
+            {
+                if (string.Equals(candidate.Id, perk.Id, StringComparison.Ordinal))
+                {
+                    return i;
+                }
+            }
+        }
+
+        return -1;
+    }
+
+    private static PairedResult Run(
+        Catalog catalog, string perkId, Func<TeamSetup, int> selectCarrier, int rosters, ulong seed,
+        Zone? exposureZone = null, bool collectExposure = false, Race? race = null)
+    {
+        // Perks restringidos a una raza (tagsRequired/race, p. ej. iron_gate=Dwarf) nunca encontrarían un
+        // titular elegible en una plantilla neutral (Human) — mismo criterio que PerkValueRunner.Measure
+        // ("var race = perk.Race ?? NeutralRace"), no una regla nueva (§16.6, encontrado ejecutando el
+        // contrato de READY_FOR_SCREENING contra datos reales).
+        var effectiveRace = race ?? NeutralRace;
         var config = new SimConfig(CollectLog: false, Trace: collectExposure);
         var armedMatches = new List<MatchSummary>();
         var controlMatches = new List<MatchSummary>();
@@ -58,19 +108,10 @@ public static class PairedBalanceHarness
         {
             var homeRng = RngStreams.Generation(seed, roster);
             var awayRng = RngStreams.Generation(seed, 10_000 + roster);
-            var home = TeamGenerator.Generate(ref homeRng, catalog, "home", NeutralRace, Quality, 1, Level);
-            var away = TeamGenerator.Generate(ref awayRng, catalog, "away", NeutralRace, Quality, 100001, Level);
+            var home = TeamGenerator.Generate(ref homeRng, catalog, "home", effectiveRace, Quality, 1, Level);
+            var away = TeamGenerator.Generate(ref awayRng, catalog, "away", effectiveRace, Quality, 100001, Level);
 
-            int carrierSlot = -1;
-            for (int i = 0; i < home.Players.Count; i++)
-            {
-                if (home.Players[i].Position == carrierPosition)
-                {
-                    carrierSlot = i;
-                    break;
-                }
-            }
-
+            int carrierSlot = selectCarrier(home);
             if (carrierSlot < 0)
             {
                 continue;

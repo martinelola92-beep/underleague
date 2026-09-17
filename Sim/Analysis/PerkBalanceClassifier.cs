@@ -281,10 +281,16 @@ public static class PerkBalanceClassifier
                 "distribución de a quién se marca/entra (bespoke)", false, multiTarget,
                 "selección de objetivo: sin parámetro numérico que buscar, behavioral audit directo (§6.5)"),
 
+            // Corrección del 18 sep 2026 (punto 2 del encargo): RefereeBiasMetrics.MeanBiasFavoringCarrier
+            // ya construye el agregado de forma objetiva (normaliza FinalBias al equipo del portador, sin
+            // inventar nada) — la métrica EXISTE. Pero eso no la hace SUFICIENTE para balanceo automático:
+            // no hay ninguna banda RT-056 ni ADR que diga qué sesgo medio es aceptable, así que sigue
+            // siendo NotReadyNoBand (→ DESIGN_REVIEW), nunca Ready. "La métrica existe" y "la métrica basta
+            // para decidir sola" son dos preguntas distintas — no se confunden.
             EffectType.ModifyBias => new PerkClassification(
-                PerkBalanceCategory.RefereeBias, MetricReadiness.NotReadyMissingAggregate,
-                "FinalBias / faltas por equipo", true, multiTarget,
-                "FinalBias existe por partido pero MatchMetrics.Compute no lo resume (§13.4.4) — tooling puro"),
+                PerkBalanceCategory.RefereeBias, MetricReadiness.NotReadyNoBand,
+                "RefereeBiasMetrics.MeanBiasFavoringCarrier (FinalBias normalizado)", true, multiTarget,
+                "el agregado ya se puede calcular (Sim/Analysis/RefereeBiasMetrics.cs) pero no existe ninguna banda ni ADR que diga qué sesgo medio es aceptable — sigue en DESIGN_REVIEW, no Ready"),
 
             // Immunity/CancelEvent/ExtraAction NO son un bloque uniforme "Ready" (corrección de la
             // auditoría del 18 sep 2026, §16): cada uno depende de QUÉ suceso toca (el Trigger del perk

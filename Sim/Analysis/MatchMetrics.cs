@@ -151,6 +151,19 @@ public static class MatchMetrics
     /// </summary>
     public const string BlockRate = "blockRate";
 
+    /// <summary>
+    /// Los quince nombres que <see cref="Compute"/> siempre marca <c>INFO</c> (nunca IN/OUT porque nunca
+    /// tienen banda) — fuente única para que el protocolo de balanceo (§16) nunca tenga que mantener esta
+    /// lista dos veces. Si <see cref="Compute"/> añade una fila <c>INFO</c> nueva y no se añade aquí,
+    /// <c>PerkAuditTests</c>/el contrato de `READY_FOR_SCREENING` no podrán detectarla.
+    /// </summary>
+    public static readonly IReadOnlySet<string> InfoOnlyMetricNames = new HashSet<string>
+    {
+        ShareOverFiveGoals, DrawShareAtRegulation, GoalsPerMatch, FoulsPerMatch, YellowCardsPerMatch,
+        RedCardsPerMatch, PassCompletionRate, PassInterceptRate, PassLooseRate, PassBeatenRate,
+        ThroughPassesPerMatch, ThroughPassCompletionRate, ShotsOnTargetShare, SaveRate, BlockRate,
+    };
+
     /// <summary>Prefijo del nombre de las métricas de tasa de victoria del mejor equipo.</summary>
     public const string BetterTeamWinRatePrefix = "betterTeamWinRate_";
 
