@@ -1,6 +1,10 @@
 # BB-P — Las puertas de un solo partido/semilla se leen como causa cuando son ruido de muestreo
 
-**Estado:** Abierta. Patrón confirmado, sin arreglar todavía en ningún caso concreto.
+**Estado:** Patrón medido en las 3 puertas activas de `BuildGateTests` (17 sep 2026, seis semillas cada
+una). **Dos resultados distintos, no uno**: `CoherentBuildsBeatTheirBaseline` y
+`BadBuildsLoseToTheirBaseline` confirman la hipótesis de ruido (ver "Tercer caso confirmado" abajo).
+`BuildsWinDifferently`/`passChain` **no la confirma** — es una caída real, medida, anterior a esta sesión
+(ver "Cuarto caso: no es ruido" abajo), y no se toca aquí.
 
 ## Observación
 
@@ -44,29 +48,89 @@ que prueba (la primera fue un cambio de tamaño de plantilla). No es una puerta 
 la misma firma: un test de una sola semilla/partido operando sin margen frente a cualquier cambio real de
 `/Sim`.
 
-## Candidatas sin confirmar todavía
+## Tercer caso confirmado: las tres celdas de tasa de victoria son ruido (17 sep 2026)
 
-Las 4 puertas que quedaron rojas al cerrar BB-B (`docs/decisiones/0115-la-barrera-de-reanudacion-cubre-las-cinco-no-solo-la-falta.md`),
-cada una moviéndose de composición distinta en cada corrección real de `/Sim` de esa sesión sin que
-ninguna corrección tocara los builds concretos que fallan:
+Medido con el instrumento que BB-P punto 1 pedía: 6 semillas (1-6) del árbol actual (`BuildGateTests`,
+sin tocar código, solo variando la semilla del propio lote — más barato que congelar código y variar
+commits, porque aquí la pregunta es "cuánto rebota este número solo", no "quién lo movió"):
 
-- `TheThreeDoctrinesBuyDifferently` (`contextual` vs `saver`, compras por mercado)
-- `CoherentBuildsBeatTheirBaseline` (`orc_violence`, 56,67 contra suelo 58,00)
-- `BadBuildsLoseToTheirBaseline` (`elf_out_of_zone`, 49,38 contra techo 45,00)
-- `NoGateMetricIsOutOfRange` (agrega las dos anteriores)
+| métrica | umbral | media (n=6) | sd (n=6) | sd teórico (docstring) |
+|---|---|---|---|---|
+| `coherentBuildsBeatNone_orc_violence` | ≥58,00 | 59,83 | **2,33** | 2,3 |
+| `badBuildsLoseToNone_elf_brawler` | ≤45,00 | 44,76 | **2,04** | 2,3 |
+| `badBuildsLoseToNone_elf_out_of_zone` | ≤45,00 | 45,56 | **2,48** | 2,3 |
 
-Ninguna de las cuatro tiene todavía su error típico medido de la misma forma que se hizo para la de
-equipar. No se puede afirmar sin medirlo que sean el mismo patrón — es la hipótesis a comprobar primero,
-no una conclusión. **Dato adicional, no una medición del error típico**: en el ciclo de BB-C,
-`CoherentBuildsBeatTheirBaseline` y `BadBuildsLoseToTheirBaseline` se remidieron emparejadas (con/sin el
-arreglo) en dos semillas — se movieron 1-2 puntos en ambas direcciones sin patrón consistente, compatible
-con la hipótesis de ruido pero sin sustituir la medición directa que este punto sigue pidiendo.
+Valores brutos (semillas 1-6): `orc_violence` 60,00 / 57,92 / 57,29 / 60,00 / 63,96 / 59,79.
+`elf_brawler` 48,13 / 43,33 / 46,25 / 42,71 / 44,17 / 43,96. `elf_out_of_zone` 43,54 / 50,00 / 43,75 /
+44,38 / 46,88 / 44,79.
+
+**Confirma la hipótesis de BB-P al pie de la letra**: la desviación empírica coincide con el ~2,3 que el
+propio `BuildGateTests.cs` ya documentaba en su cabecera (480 partidos por celda, plantillas emparejadas),
+y las tres medias caen dentro de **menos de un sd** de su propio umbral (0,07 σ para `orc_violence`, 0,12 σ
+para `elf_brawler`, 0,22 σ para `elf_out_of_zone`). Es exactamente "un umbral sin margen frente a su
+propio ruido de muestreo", el mismo patrón que `EquippingAGoodBuildIsWorthSeveralPointsOfWinRate`. **No se
+toca ningún umbral aquí** — igual que con la puerta de equipar, cambiar un número sin una ADR (RT-057) y
+sin decidir qué margen es aceptable (candidato a `game-design-review`, como ya apunta el punto 5 de esta
+ficha) repetiría el error que corrigió la ADR 0116.
+
+## Cuarto caso: `passChain` no es ruido — es una caída real, anterior a esta sesión (17 sep 2026)
+
+Mismas 6 semillas, `buildsWinDifferently_passChain` (umbral ≥1,11, ADR 0062): **1,0977 / 1,0795 / 1,0872 /
+1,1098 / 1,0996 / 1,0487** — media **1,0871**, sd **0,0215**. **Falla en las seis semillas, no en algunas**:
+a diferencia de las tres métricas de arriba, esto no es una media que roza el umbral por los dos lados, es
+una media establemente por debajo. La firma de ruido (BB-P) no aplica aquí tal cual — hace falta otra
+explicación, y hay dos candidatas que **no son la misma**:
+
+1. **La hipótesis fácil, y falsa**: "el umbral se derivó sin margen a propósito" (ADR 0062: el 1,11 sale
+   de una build aislada de siete `fine_touch`, el techo teórico con perks comunes). **No es eso**: ADR 0062
+   documenta que la puerta, con la build real `elf_tiki_taka` completa contra `orc_violence`, medía
+   **1,233** en el momento de cerrarse (6 sep 2026) — margen real de 0,12, no cero. Verificado remidiendo
+   ese commit exacto (`05689fe`) en worktree: **1,2321**, coincide con la ADR.
+2. **Lo que sí es**: entre `05689fe` (ADR 0062, 6 sep) y `ad3c472` (revert dentro de BB-B, ya dentro de
+   esta sesión pero **antes** de que este ciclo tocara nada — BA-N, BB-G, BB-C y BA-K vienen después), el
+   valor ya había caído a **1,0836** (remedido en worktree, un solo commit, no una media). Es decir: **la
+   caída de 1,233 a ~1,09 ya había ocurrido antes de que este ciclo (BA-N→BB-G→BB-C→BA-K) tocara una sola
+   línea** — ninguno de los cuatro cambios de este ciclo es la causa. La ventana en la que ocurrió de
+   verdad son los commits entre el 6 y el 16 de septiembre — la tanda 1 y 2 del catálogo (61→94 perks) y
+   sus ADR asociadas (0090, 0105, 0110...) son las candidatas más plausibles por volumen de cambio, pero
+   **no se ha aislado el commit exacto** — eso es una investigación de `gameplay-debug` (Regla A) propia,
+   no lo que pedía medir esta ficha.
+
+**No se toca `MinPassChainRatio` aquí.** La propia ADR 0062 ya avisa que este umbral "hay que volver a
+derivarlo hacia arriba cuando AL-A se resuelva" — pero AL-A (`docs/pendientes.md`, "el recorrido de un
+perk lo fija la base de su canal, no su magnitud") sigue abierta y es una decisión de fondo, no una
+calibración de puerta. Bajar el umbral ahora, sin diagnosticar la caída, sería exactamente el error que
+corrigió la ADR 0116: cambiar un número contra un síntoma sin saber si el instrumento está bien o si el
+juego cambió de verdad. **Queda como hallazgo, no como arreglo**: hace falta (a) aislar el commit o el
+paquete que causó la caída de 1,233 a ~1,09, entre el 6 y el 16 de septiembre, y (b) decidir con esa
+causa en la mano si el umbral se recalibra (como la ADR 0116) o si es síntoma de un problema de diseño más
+profundo emparentado con AL-A.
+
+## Candidatas — actualizado tras el tercer/cuarto caso (17 sep 2026)
+
+De las 4 puertas que quedaron rojas al cerrar BB-B, **2 quedan confirmadas como ruido** (arriba:
+`CoherentBuildsBeatTheirBaseline`/`orc_violence`, `BadBuildsLoseToTheirBaseline`/`elf_out_of_zone`, sd
+empírico coincide con el teórico y las medias caen dentro de un sd de su umbral). `NoGateMetricIsOutOfRange`
+hereda esa conclusión al agregarlas. **1 queda sin confirmar todavía**:
+
+- `TheThreeDoctrinesBuyDifferently` (`contextual` vs `saver`, compras por mercado) — **no medida en este
+  ciclo**: vive en `FullRunGateTests.cs`, mide sobre runs completas (240 por doctrina), no sobre el lote
+  rápido de `BuildGateTests` (~17 s), así que barrer varias semillas cuesta minutos por semilla en vez de
+  segundos — mismo protocolo pendiente, coste distinto. No está roja ahora mismo (pasa en el árbol actual),
+  así que no bloquea nada; queda como la única candidata original de BB-B todavía sin medir.
+
+`badBuildsLoseToNone_elf_brawler` (la build que de hecho falla ahora mismo en `BadBuildsLoseToTheirBaseline`,
+no `elf_out_of_zone`, que hoy pasa) se añade a la lista de confirmadas — es la misma puerta, el mismo
+patrón, otro build concreto cruzando el margen según la semilla, que es justo el fenómeno que BB-P describe.
 
 ## Qué haría falta, sin implementarlo aquí
 
-1. Medir el error típico de cada una de las cuatro candidatas (congelando lo que miden y variando código
-   ajeno de `/Sim`, como se hizo para BA-N) antes de decidir si son ruido o señal — barato: cinco
-   `dotnet test` en worktrees por puerta, no un experimento nuevo que diseñar.
+1. **Hecho para 3 de las 4 (17 sep 2026, ver "Tercer caso" arriba)**, con una variante más barata que la
+   propuesta original: en vez de congelar código y variar 5 commits (necesario cuando la pregunta es
+   causal, como en BA-N), bastó variar la semilla del lote en el árbol actual — la pregunta aquí era
+   "cuánto rebota este número por sí solo", no "quién lo movió". Queda `TheThreeDoctrinesBuyDifferently`
+   (`FullRunGateTests`, coste por semilla mucho mayor) y, aparte, diagnosticar la caída real de `passChain`
+   (no es ruido, ver "Cuarto caso" arriba — necesita `gameplay-debug`, no una remedición más).
 2. **Corregido dos veces (segunda y tercera revisión)**: la primera versión de este punto proponía "pasar
    a diferencia emparejada, patrón de la ADR 0087" para `EquipmentImpactTests.cs` — pero esa puerta **ya**
    empareja por semilla; no había margen ahí (segunda corrección). La segunda versión decía que la puerta
@@ -94,8 +158,7 @@ con la hipótesis de ruido pero sin sustituir la medición directa que este punt
 
 ## Hermanos
 
-- `docs/pendientes/BA-N.md`, `docs/pendientes/BA-M.md` — el caso que reveló el patrón (decisión aplicada,
-  pendiente de confirmación final).
+- `docs/pendientes/BA-N.md`, `docs/pendientes/BA-M.md` — el caso que reveló el patrón (ambas cerradas).
 - `docs/decisiones/0115-la-barrera-de-reanudacion-cubre-las-cinco-no-solo-la-falta.md` — ya lo anotaba en
   general ("la firma de puertas de un solo partido/semilla operando cerca de su margen") sin abrir ficha.
 - `docs/decisiones/0087-el-valor-de-un-perk-se-mide-contra-su-control.md` — precedente de que el proyecto
