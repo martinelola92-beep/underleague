@@ -119,6 +119,73 @@ no lineal cuando coinciden en el mismo jugador. Con un único perk piloto y sin 
 sobre el mismo portador en la muestra de calibración, las dos formas miden igual; la diferencia importa
 en cuanto haya dos o más bonos activos a la vez. Queda anotado para cuando eso ocurra, no decidido ahora.
 
+### 3.1b Medición previa (17 sep 2026) — el hueco medido, y por qué no da un número único
+
+**Instrumento**: mismo principio que el volcado que fijó `chaseBallLooseBonus` (BB-G), temporal y no
+commiteado (mismo estatus que `_BBG.cs`). Sobre plantillas generadas sin ningún perk (`TeamGenerator`,
+raza neutral, calidad 50, sin `modifyUtility` ni cambio de pesos: el sistema tal cual está hoy), se buscó
+en la traza (RT-098/`MatchTrace`) todo tick de decisión en que un delantero con el balón en su tercio
+rival (`Pitch.ZoneOf == Zone.Opposing`) elige `ShortPass` — el caso exacto que describe la ficha de
+Cazagoles («en el tercio rival elige `Shoot` donde el resto elige `ShortPass`»); en ese tick exacto se
+repitió el partido con `SimConfig.DumpUtility` fijado al jugador y al tick para leer la fila completa de
+`Shoot` y de `ShortPass`.
+
+**Con la fórmula candidata de 3.1 (aditiva, `Líder=0` en la muestra — ver nota de método), el porcentaje
+que necesita `PerkActionBonusPercent(Shoot)` para que `Shoot` iguale o supere a `ShortPass` en un episodio
+concreto es exactamente**:
+
+```
+X_requerido = 100 · (ShortPass.Score − Shoot.Context) / (Shoot.Score − Shoot.Context) − 100
+```
+
+(`Shoot.Score − Shoot.Context` es el término ponderado `Base·Tactical/100·Trait/100` ya aislado del propio
+volcado, sin reconstrucción — es una lectura exacta, no una aproximación.)
+
+**Resultado, dos semillas independientes (RT-081), 15 y 17 episodios reales con fila completa**:
+
+| semilla | n | mín | p25 | mediana | p75 | máx | media |
+|---|---|---|---|---|---|---|---|
+| 1 | 15 | 1,0 % | 18,4 % | 23,9 % | 48,6 % | 121,0 % | 36,3 % |
+| 2 | 17 | 4,4 % | 13,8 % | 24,7 % | 47,5 % | 135,6 % | 34,9 % |
+
+La forma **replica**: mediana ≈ 24 % en las dos semillas, mismo rango intercuartílico (≈14-19 % a ≈47-49 %),
+misma cola larga por encima de 100 % en los casos más extremos. No es ruido de muestra pequeña — es la
+misma distribución, medida dos veces.
+
+**Por qué esto NO da un número único, a diferencia de `chaseBallLooseBonus`.** El bono de BB-G competía
+contra un rival con `Context` prácticamente fijo (`coverBetweenBallAndGoalBonus`, constante); un solo
+volcado bastaba porque el hueco no variaba con la situación. Aquí `ShortPass.Context` (la calidad del
+apoyo disponible: distancia, ángulo, si hay un compañero mejor colocado) varía mucho de un episodio a otro
+(42 a 448 en la muestra) y el bono candidato es un **factor multiplicativo** sobre el término ponderado de
+`Shoot`, no un sumando plano — así que el mismo `%` cierra un hueco pequeño con margen de sobra y deja un
+hueco grande completamente sin tocar. **No existe un porcentaje que "cierre el hueco" en el sentido de
+BB-G, porque el hueco no es uno solo: es una distribución.**
+
+**Lo que sí es defendible, y lo que no.**
+
+- **Defendible**: un porcentaje en el entorno de la mediana/RIC medida (≈20-50 %) desplaza la decisión en
+  una fracción sustancial y replicada de los episodios reales donde el sistema actual ya prefiere el pase
+  — ni tan bajo que no cambie nada observable (Tanda 0: un efecto por debajo del umbral de
+  `sweeper_keeper`, L1≈0,001, sería indistinguible de ruido), ni tan alto que fuerce `Shoot` en la
+  práctica totalidad de los casos, incluidos los de la cola (>100 %, un compañero claramente mejor
+  colocado) — eso anularía el coste que la propia ficha exige («mata jugadas que seguían vivas... con él,
+  el equipo remata peor y más», no «nunca pasa»). Rango de partida razonable: **20 %-50 %**, con la
+  mediana (≈24 %) como candidato central si hay que elegir un solo punto de arranque.
+- **No defendible**: cualquier valor fuera de ese rango elegido sin repetir esta medición — en particular,
+  algo por encima de la cola (>120 %) convertiría a Cazagoles en "dispara siempre que tenga el balón en el
+  tercio rival", que es una mecánica distinta (determinista, no probabilística) de la que describe la
+  ficha C-26.
+- **Nota de método, sin confirmar**: el cálculo asume `LeaderBonusPercent≈0` para los portadores
+  muestreados — no se puede separar de `ActionMultiplier` solo con la fila volcada (`TraitMultiplier` es
+  el producto de los dos). Es consistente con lo observado (todas las filas de `Shoot` muestran combinaciones
+  compatibles con `Líder=0`) pero no está aislado por un experimento propio: **LIKELY**, no CONFIRMED. Si
+  el piloto se instrumenta con un portador que sí tiene compañeros de casilla-hogar contigua con el rasgo
+  Líder, esta media hay que remedirla sobre ese caso concreto antes de fiarse del rango de arriba para él.
+
+**No se ha tocado `modifyUtility`, ningún peso de `data/ai/weights.json` ni ningún tope.** Este apartado
+es una medición, no una implementación: el valor final y el experimento de validación (§3.4-3.7) se
+deciden junto al revisor antes de escribir código.
+
 ### 3.2 Condición geométrica mínima
 
 `Pitch.ZoneOf(player.Position, player.Team) == Zone.Opposing`, recalculada cada tick (§1). Sin estado
