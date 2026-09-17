@@ -2828,6 +2828,116 @@ su propia predicción congelada antes de medir, como en la Fase A, y sin tocar e
 
 ---
 
+## 26. Fase B: las tres mediciones descriptivas (19 sep 2026)
+
+Ejecución de las tres preguntas congeladas en `docs/analisis/fase-b-preguntas-congeladas.md` (commit
+`e582ab0`), medidas **después** de congelarlas. Fase puramente descriptiva: no se toca el suelo del 50%,
+el circuito del 20%, `PopulationFitness`, la predicción de la Fase A, `/data` ni ningún perk.
+
+### 26.1 Q1 — Censo de familias: la predicción falla en parte
+
+```
+de-suceso            48  (51,1%)   <- la más numerosa
+una-vez-por-partido  45  (47,9%)
+por-jugada            1  ( 1,1%)
+```
+
+Desglose: `MATCH_START` 43, `TACKLE` 12, `SHOT` 7, `INJURY` 6, `FOUL` 6, `DEATH` 4, `GOAL` 3, `RECOVERY` 3,
+`MATCH_END` 2, `SAVE` 2, `DRIBBLE_ATTEMPTED` 2, `PLAY_START` 1, y uno cada uno de `PASS_FAILED`,
+`DRIBBLE_WON`, `PASS_COMPLETED`.
+
+**La predicción congelada decía que `una-vez-por-partido` sería la MÁS numerosa y al menos un tercio.
+Falla la primera parte** (`de-suceso` gana 48 a 45) **y acierta la segunda** (45 ≥ 31). Se registra el
+fallo tal cual; no se reescribe la predicción.
+
+Lo relevante para la pregunta metodológica no cambia por ello, y quizá se refuerza: **45 de 94 perks —casi
+la mitad del catálogo— tienen exposición estructuralmente binaria**, y hoy se juzgan con un suelo pensado
+para medir frecuencia.
+
+Apunte menor, verificado de paso: `PerkAudit.ClassifyTriggerFrequency` agrupa 46 perks como `AlwaysOnce`,
+de los cuales 45 son de verdad de una-vez-por-partido; el que sobra es el único `PLAY_START`, que dispara
+varias veces por partido. Es una imprecisión de una unidad en la clasificación existente, anotada, **no
+corregida aquí** (es código del protocolo).
+
+### 26.2 Q2 y Q3 — `bulwark_stance`, delta dentro del submuestreo cualificado
+
+Métrica primaria `tacklesPerMatch`; delta siempre contra los partidos de control **emparejados** (mismas
+plantillas, mismas semillas), nunca contra otros.
+
+| caso | partidos | cualificados | exposición | media armada | media control | delta | error estándar | potencia |
+|---|---|---|---|---|---|---|---|---|
+| Human, 20 plantillas | 40 | 2 | 5,0% | 7,500 | 7,500 | 0,000 | 3,536 | no |
+| Human, 120 plantillas | 240 | 18 | 7,5% | 9,444 | 9,444 | 0,000 | 1,452 | no |
+| Dwarf, 120 plantillas | 240 | 184 | 76,7% | 12,065 | 12,136 | −0,071 | 0,498 | no |
+
+**Q3 — el valor real del ×6: las tres partes se confirman.**
+
+1. La exposición apenas se mueve: **5,0% → 7,5%** (2,5 puntos). Es una proporción poblacional, y sortear
+   seis veces más portadores no la cambia.
+2. Los cualificados en términos **absolutos** crecen de **2 a 18** (×9, incluso más de lo previsto).
+3. Y por tanto el error estándar del delta condicionado cae de **3,536 a 1,452** (×2,4 mejor).
+
+**El remedio del ×6 funciona, pero no por el motivo que el protocolo le atribuye**: no arregla la
+exposición —que es lo que el protocolo mira para decidir—, arregla la **medibilidad del efecto** dentro
+del submuestreo que sí cualifica.
+
+**Q2 — el delta condicionado: confirmado, con un matiz que hay que decir.**
+
+La parte 1 se confirma: el delta condicionado es **0,000 en Human y −0,071 en Dwarf**, con exposiciones que
+difieren 10× (7,5% frente a 76,7%). La diferencia entre ambos deltas (0,071) es muy inferior a cualquiera
+de los dos errores estándar. **Una vez el portador cualifica, el mecanismo se comporta igual, viva en la
+población que viva.**
+
+La parte 2 se confirma solo a medias, y el matiz importa: predije que Dwarf tendría "bastante más opción"
+de superar el power-check. Su precisión mejora mucho (error estándar 0,498 frente a 1,452, ×3), pero
+**tampoco lo supera** — y no por falta de muestra, sino porque **el efecto medido es ≈0**. Con 184 partidos
+cualificados y ese error estándar, un efecto real de ~1,0 entradas/partido se habría detectado; el medido
+es −0,071. Mi predicción estaba redactada como si hubiera un efecto que encontrar.
+
+**Limitación honesta de este resultado**: como los dos deltas son ≈0, la confirmación de Q2.1 es de la
+forma débil —"dos ceros se parecen"—, que es menos concluyente que dos deltas no nulos coincidiendo. La
+prueba sería mucho más fuerte sobre un perk de `MATCH_START` con efecto condicionado demostrablemente
+distinto de cero. No lo hay a mano en esta familia con métrica bandeada; queda como carencia de esta fase.
+
+**Por qué el efecto sale ≈0, anotado y aparcado**: `bulwark_stance` aplica `modifyProbability(tackle,+100)`
+a **un** jugador, y `tacklesPerMatch` es el total del partido —los 14 jugadores, los dos equipos—, así que
+el efecto de un solo portador queda diluido en el agregado. Es el mismo problema de atribución de métrica
+que `cannon` (§21.3), no una cuestión de población. **Pertenece a otra rama y no se persigue aquí.**
+
+### 26.3 Qué conclusión sostiene esto, según la regla fijada antes de medir
+
+La regla congelada decía: si Q2.1 se confirma y Q3 se confirma, se sostiene
+
+> *"Para `una-vez-por-partido`, el criterio actual está confundiendo insuficiencia de oportunidades con
+> representatividad poblacional."*
+
+**Los dos se confirman, así que esa es la conclusión que la evidencia sostiene** — con la limitación de
+§26.2 (confirmación en forma débil) declarada.
+
+En concreto, para `bulwark_stance` sobre Human: el protocolo lo marca hoy `INSUFFICIENT_EVIDENCE` por
+exposición 7,5% < 50%. Pero la exposición baja **no impedía medir el efecto**: en los 18 partidos donde el
+portador cualificaba, el mecanismo estuvo plenamente activo y su delta condicionado coincide con el de una
+población donde cualifica el 77%. Lo que el 7,5% describe es **a cuánta población aplica el perk**, que es
+una observación legítima e interesante — pero es una afirmación distinta de "no hay evidencia suficiente
+para juzgarlo".
+
+Y lo contrario también quedó descartado por la propia medición: Q3.1 no falla (la exposición no sube con
+el ×6), así que la premisa de §25.3 se mantiene en pie.
+
+### 26.4 Lo que esto NO decide
+
+No cambia el suelo del 50%. La decisión sigue siendo **normativa**: incluso aceptando que para esta familia
+la exposición mide representatividad y no suficiencia, hay que decidir si el protocolo *quiere* exigir que
+un perk aplique a al menos la mitad de la población de prueba —lo cual es un criterio de diseño defendible,
+no un error— o si esa exigencia debería vivir en otro sitio, con otro nombre, separada del filtro de
+suficiencia de evidencia.
+
+Tampoco decide qué hacer con los 45 perks de la familia, ni toca el circuito, ni reabre el lote (sigue
+detenido en 5/24), ni entra en `high_line` (Δ −2,2095), que sigue siendo una discrepancia de dirección del
+efecto y sigue fuera de esta rama.
+
+---
+
 ## Hermanos
 
 - `docs/analisis/c1-piloto-cazagoles-diseno.md` — la evidencia de calibración completa (§3.1b, §5, §6,
