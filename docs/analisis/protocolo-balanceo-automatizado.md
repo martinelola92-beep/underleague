@@ -1981,6 +1981,74 @@ clasificador durante este forense.
 
 ---
 
+## 20. `SAFETY_LIMIT` comparativo (19 sep 2026): el primero de los dos huecos de §19.5.E, cerrado
+
+Encargo explícito: implementar el chequeo de seguridad comparativo antes de decidir nada sobre el
+circuito de lote. RT-056, la banda de `injuriesPerMatch` (0,30-0,90, ADR 0082) y cualquier otro umbral
+normativo quedan intactos; `/data` no se toca; el criterio de exposición no cambia. Lo único que cambia
+es CÓMO se interpreta un "OUT" del brazo armado.
+
+### 20.1 Diseño
+
+`Sim/Analysis/ComparativeSafetyCheck.cs` (nuevo, puro, sin E/S): dado el valor medio armado, la banda
+(sin tocar) y las series por partido de armado/control, devuelve uno de tres veredictos:
+
+- **`InBand`**: el armado no rompe la banda — nada que atribuir.
+- **`NotAttributable`**: el armado rompe la banda, pero el CONTROL EMPAREJADO (mismo tamaño de muestra,
+  sin el perk) también la rompe —la banda no distingue "con perk" de "sin perk" a esta escala—, o la
+  diferencia armado/control no se distingue del ruido de muestreo (reutiliza
+  `BalancePowerCheck.HasSufficientPower` tal cual, sin duplicar su lógica).
+- **`AttributableViolation`**: el armado rompe la banda, el control está dentro, y la diferencia armado/
+  control SÍ se distingue del ruido — hay evidencia real de que el perk empuja la métrica fuera de rango.
+
+`Sim.Tests/Balance/ScreeningRunner.cs` usa este veredicto en vez de la banda absoluta: solo
+`AttributableViolation` cuenta como `anyMandatoryMetricOut` para `BalanceDecisionRules.EvaluateScreening`
+(sin cambios en esa función). Un `NotAttributable` se registra como nota explicativa, no bloquea nada.
+
+### 20.2 Tests focalizados (ejecutados antes de tocar el harness real, por instrucción)
+
+`Sim.Tests/Analysis/ComparativeSafetyCheckTests.cs` (6 tests, sintéticos, sin simular ningún partido):
+mismo nivel base en ambos brazos (incluso si los dos rompen la banda) → `NotAttributable`; ruido de
+muestra pequeña sin potencia → `NotAttributable`; control ya fuera de banda → `NotAttributable`; muestra
+insuficiente para comparar → `NotAttributable`; separación real y limpia con control sano →
+`AttributableViolation`; armado ya en banda → `InBand`. Los seis pasaron a la primera.
+
+`Sim.Tests/Balance/ComparativeSafetyScreeningRegressionTests.cs` (2 tests, con partidos reales):
+`blood_scent`/`bloodhound` —el caso que motivó el cambio— ya no producen `SAFETY_LIMIT` a través de
+`ScreeningRunner.RunPerk` real, con una nota explícita del motivo.
+
+Verificado en orden, como se pidió: tests focalizados (8/8) → suite completa no-gate (895/895, sin
+regresiones) → re-ejecución del lote de 24 desde cero.
+
+### 20.3 Impacto real — tercera ejecución de los mismos cinco perks
+
+| perk | 1ª ejecución (con el bug del portero) | 2ª ejecución (portero corregido) | 3ª ejecución (+ safety comparativo) |
+|---|---|---|---|
+| `back_to_back` | `INSUFFICIENT_EVIDENCE` (0,8%) | `INSUFFICIENT_EVIDENCE` (9,6%) | `INSUFFICIENT_EVIDENCE` (9,6%, sin cambio) |
+| `blood_scent` | `SAFETY_LIMIT` | `SAFETY_LIMIT` | **`SCREENING_PASS`** |
+| `bloodhound` | `SAFETY_LIMIT` | `SCREENING_PASS` | `SCREENING_PASS` (sin cambio respecto a la 2ª) |
+| `bulwark_stance` | `INSUFFICIENT_EVIDENCE` (5,0%) | `INSUFFICIENT_EVIDENCE` (7,5%) | `INSUFFICIENT_EVIDENCE` (7,5%, sin cambio) |
+| `cannon` | `INSUFFICIENT_EVIDENCE` (delta=0) | `INSUFFICIENT_EVIDENCE` (delta=0) | `INSUFFICIENT_EVIDENCE` (delta=0, sin cambio) |
+
+Distribución de estados: `INSUFFICIENT_EVIDENCE`=3, `SCREENING_PASS`=2 (antes 1), `SAFETY_LIMIT`=0 (antes
+1). **Tasa de escalada del circuito de lote: 60% (3/5)** — baja desde el 80% de la ejecución anterior,
+pero sigue muy por encima del 20% del umbral de §9.1 punto 3. **El circuito se disparó una tercera vez, en
+el mismo punto exacto (5/24)** — el chequeo comparativo resolvió el único caso de `SAFETY_LIMIT` que
+había, pero no toca los tres `INSUFFICIENT_EVIDENCE` restantes, que son huecos de exposición/potencia
+distintos (§19.3), no de seguridad.
+
+### 20.4 Qué queda para decidir (no decidido aquí, por instrucción explícita)
+
+Con el bug de tooling corregido (§19.1) y el primero de los dos huecos de protocolo de §19.5.E cerrado
+(seguridad comparativa), lo que queda de los cinco casos ya no es tooling: es exposición estructuralmente
+baja para perks de sinergia/tag-gated (`back_to_back`, `bulwark_stance`) y potencia insuficiente para un
+efecto de ventana estrecha (`cannon`) — exactamente los huecos de CALIBRACIÓN que §5.4/§5.5 ya señalaban
+como pendientes antes de este lote. El umbral del 20% del circuito de lote sigue sin tocarse; la decisión
+de anularlo, subir su mínimo de comprobación, o dejar que siga deteniendo el lote en 5/24 sigue siendo del
+usuario, no del sistema.
+
+---
+
 ## Hermanos
 
 - `docs/analisis/c1-piloto-cazagoles-diseno.md` — la evidencia de calibración completa (§3.1b, §5, §6,
