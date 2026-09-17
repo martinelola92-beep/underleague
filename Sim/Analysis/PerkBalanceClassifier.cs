@@ -1,3 +1,4 @@
+using Underleague.Sim.Events;
 using Underleague.Sim.Model;
 using Underleague.Sim.Perks;
 
@@ -43,6 +44,16 @@ public enum PerkBalanceCategory
     BinaryEvent,
     RunLevelCounter,
     Singular,
+
+    /// <summary>
+    /// <c>AccumulatesAcrossMatches</c> con un efecto acompañante escalado por el contador
+    /// (<c>UsesCounter</c>): distinto de <see cref="RunLevelCounter"/> (que no tiene ningún efecto de
+    /// partido, solo economía) — aquí SÍ hay un mecanismo de partido, pero un partido suelto con el
+    /// contador a cero no representa su magnitud típica a mitad/final de run (§13, auditoría del 18 sep
+    /// 2026). Necesita el harness de campaña que ya existe (<c>Balance/PerkValueRunner.cs</c>, ADR 0087),
+    /// no uno nuevo — pero no el harness de partido independiente de este protocolo.
+    /// </summary>
+    AccumulatedStateBonus,
 }
 
 /// <summary>
@@ -69,6 +80,22 @@ public enum MetricReadiness
 
     /// <summary>El dato existe por partido pero no hay fila agregada en MatchMetrics — tooling puro, sin ambigüedad de diseño.</summary>
     NotReadyMissingAggregate,
+
+    /// <summary>
+    /// El efecto toca varias resoluciones a la vez y ningún dato estructural del perk (Family/
+    /// PositionOnly/tags) permite elegir automáticamente cuál es la primaria — verificado contra los
+    /// perks reales, no asumido (§16: los cuatro perks de <c>Strength</c> no declaran <c>positionOnly</c>).
+    /// Necesita `game-design-review`, no una medición.
+    /// </summary>
+    AmbiguousPrimaryMetric,
+
+    /// <summary>
+    /// <c>AccumulatesAcrossMatches</c> + efecto acompañante con <c>UsesCounter</c>: el partido suelto con
+    /// contador a cero no representa el mecanismo real. Necesita el harness de campaña existente
+    /// (<c>PerkValueRunner</c>), no el de partido independiente — no es un hueco de tooling nuevo, es una
+    /// elección de instrumento (§16).
+    /// </summary>
+    NeedsCampaignHarness,
 }
 
 /// <summary>Resultado de clasificar un perk: su categoría, qué tan lista está su métrica y cuál es.</summary>
@@ -79,6 +106,34 @@ public readonly record struct PerkClassification(
     bool HasNumericParameter,
     bool NeedsMultiTargetHarness,
     string Note);
+
+/// <summary>
+/// Forma del destinatario de un efecto (§16, auditoría del 18 sep 2026 — más preciso que el booleano
+/// <see cref="PerkClassification.NeedsMultiTargetHarness"/>, que solo dice "no es el portador solo").
+/// </summary>
+public enum EffectTargetShape
+{
+    /// <summary><see cref="EffectTarget.Owner"/>/<see cref="EffectTarget.Actor"/>: el propio portador — el harness actual ya lo mide.</summary>
+    SingleOwner,
+
+    /// <summary>
+    /// <see cref="EffectTarget.Target"/>/<see cref="EffectTarget.Opponent"/>: un único jugador por
+    /// disparo, pero NO el portador — cambia en cada evento (p. ej. el rival al que se entra). El harness
+    /// actual mide las estadísticas del portador, no las del receptor: necesita seguir a quien recibe el
+    /// efecto, no a quien lo posee.
+    /// </summary>
+    SingleOther,
+
+    /// <summary>
+    /// <see cref="EffectTarget.Team"/>/<see cref="EffectTarget.OpposingTeam"/>/<see cref="EffectTarget.WithTag"/>/
+    /// <see cref="EffectTarget.AdjacentWithTag"/>/<see cref="EffectTarget.Adjacent"/>/
+    /// <see cref="EffectTarget.AdjacentOpponents"/>/<see cref="EffectTarget.Linked"/>/
+    /// <see cref="EffectTarget.LinkedWithTag"/>: puede resolver a varios jugadores a la vez (un equipo
+    /// entero, un subconjunto por etiqueta, los vinculados —plural— del portador). El harness de un solo
+    /// portador no está diseñado para esto (§3.2 punto 7, `pack_mentality`).
+    /// </summary>
+    Population,
+}
 
 /// <summary>
 /// Clasificador determinista de perks para el protocolo de balanceo (§3/§13.4 de
@@ -145,19 +200,33 @@ public static class PerkBalanceClassifier
                 "perk sin efectos: nada que balancear");
         }
 
-        bool multiTarget = perk.Effects.Any(e => e.Target is not (EffectTarget.Owner or EffectTarget.Actor));
-        bool runLevel = perk.AccumulatesAcrossMatches
-            || (perk.Effects.Count == 1 && perk.Effects[0].Type == EffectType.AddCounter);
+        bool multiTarget = perk.Effects.Any(e => ClassifyTargetShape(e.Target) != EffectTargetShape.SingleOwner);
 
-        if (runLevel)
+        // Solo addCounter, sin ningún efecto acompañante: pura economía/progresión, sin mecanismo de
+        // partido que medir — RunLevelCounter (§3, RUN_LEVEL).
+        bool pureRunLevel = perk.Effects.Count == 1 && perk.Effects[0].Type == EffectType.AddCounter;
+        if (pureRunLevel)
         {
             return new PerkClassification(
                 PerkBalanceCategory.RunLevelCounter, MetricReadiness.Ready, "FullRunMetrics", false, multiTarget,
-                "AccumulatesAcrossMatches o addCounter en solitario: se mide con /Balance --full-runs, fuera del bucle rápido (§3, RUN_LEVEL)");
+                "addCounter en solitario, sin efecto de partido: se mide con /Balance --full-runs, fuera del bucle rápido (§3, RUN_LEVEL)");
         }
 
         // El efecto "objetivo" es el primero que no sea addCounter (§3: el contador se registra, no compite).
         var primary = perk.Effects.FirstOrDefault(e => e.Type != EffectType.AddCounter) ?? perk.Effects[0];
+
+        // AccumulatesAcrossMatches con el efecto acompañante escalado por el contador (UsesCounter): un
+        // partido suelto con el contador a cero no representa la magnitud típica a mitad/final de run —
+        // corregido en la auditoría del 18 sep 2026 (antes esto caía en el mismo "RunLevel" que la
+        // economía pura, etiqueta imprecisa: aquí SÍ hay mecanismo de partido, solo que el instrumento
+        // correcto es la campaña (PerkValueRunner), no el partido independiente de este protocolo).
+        if (perk.AccumulatesAcrossMatches && primary.UsesCounter)
+        {
+            return new PerkClassification(
+                PerkBalanceCategory.AccumulatedStateBonus, MetricReadiness.NeedsCampaignHarness,
+                DescribePrimaryMetric(primary), true, multiTarget,
+                $"{primary.Type} escalado por un contador que persiste entre partidos (AccumulatesAcrossMatches) — necesita el harness de campaña (Balance/PerkValueRunner.cs, ADR 0087), no el de partido independiente");
+        }
 
         var classification = primary.Type switch
         {
@@ -217,28 +286,136 @@ public static class PerkBalanceClassifier
                 "FinalBias / faltas por equipo", true, multiTarget,
                 "FinalBias existe por partido pero MatchMetrics.Compute no lo resume (§13.4.4) — tooling puro"),
 
-            EffectType.Immunity or EffectType.CancelEvent => new PerkClassification(
-                PerkBalanceCategory.BinaryEvent, MetricReadiness.Ready, "tasa del suceso cancelado", false, multiTarget,
-                "binario: Screening → Validation directa, sin Tuning (§6.1/§6.5)"),
+            // Immunity/CancelEvent/ExtraAction NO son un bloque uniforme "Ready" (corrección de la
+            // auditoría del 18 sep 2026, §16): cada uno depende de QUÉ suceso toca (el Trigger del perk
+            // para CancelEvent/ExtraAction, el ImmunityKind para Immunity), y varios de esos sucesos no
+            // tienen fila agregada o no tienen banda en MatchMetrics — se descubrió al auditar los 94
+            // perks reales, no estaba anticipado en la primera versión del clasificador.
+            EffectType.CancelEvent => ClassifyCancelEvent(perk.Trigger, multiTarget),
 
-            EffectType.ExtraAction => new PerkClassification(
-                PerkBalanceCategory.BinaryEvent, MetricReadiness.Ready, "frecuencia de la acción repetida", false, multiTarget,
-                "sin valor numérico propio declarado hoy"),
+            EffectType.Immunity => ClassifyImmunity(primary.Immunity, multiTarget),
+
+            EffectType.ExtraAction => ClassifyExtraAction(perk.Trigger, multiTarget),
+
+            // ModifyExperience actúa fuera del partido (ADR 0026, Humanos): dentro del partido no deja
+            // nada que un harness de partido suelto pueda medir — mismo instrumento que RunLevelCounter
+            // (progresión/economía), no un hueco de tooling de partido.
+            EffectType.ModifyExperience => new PerkClassification(
+                PerkBalanceCategory.RunLevelCounter, MetricReadiness.Ready, "FullRunMetrics", false, multiTarget,
+                "ModifyExperience actúa fuera del partido — se mide a nivel de run, no de partido suelto"),
 
             _ => new PerkClassification(
-                PerkBalanceCategory.Singular, MetricReadiness.Inferred, "universales + métrica del suceso", false, multiTarget,
-                $"{primary.Type}: caso singular, sin plantilla genérica todavía (§3)"),
+                PerkBalanceCategory.Singular, MetricReadiness.NotReadyNoMetric, "", false, multiTarget,
+                $"{primary.Type}: caso singular sin métrica agregada conocida en MatchMetrics — sin plantilla genérica todavía (§3), no se inventa una"),
         };
 
         return classification;
     }
 
+    /// <summary>
+    /// Categoría de balanceo de un efecto por su solo <see cref="EffectType"/> (§16): más simple que
+    /// <see cref="Classify"/> (que además mira el sub-tipo — <c>ProbabilityKind</c>/<c>TraitScalarKind</c>
+    /// — y el resto del perk), a propósito, para detectar atribución multi-efecto: si dos efectos de un
+    /// mismo perk caen en categorías DISTINTAS por este mapeo simple, ya hay algo que decidir (§3.2 punto
+    /// 7/8), sin necesitar el detalle fino del sub-tipo.
+    /// </summary>
+    public static PerkBalanceCategory ClassifyEffectTypeCategory(EffectType type) => type switch
+    {
+        EffectType.ModifyUtility => PerkBalanceCategory.UtilityBonus,
+        EffectType.ModifyProbability => PerkBalanceCategory.ProbabilityBonus,
+        EffectType.ModifyTraitScalar => PerkBalanceCategory.TraitScalar,
+        EffectType.ModifyAttribute => PerkBalanceCategory.Attribute,
+        EffectType.ModifyLeash or EffectType.ShiftHome or EffectType.ModifyZoneShape => PerkBalanceCategory.Geometry,
+        EffectType.ModifyMarkBias or EffectType.ModifyTackleBias => PerkBalanceCategory.TargetSelection,
+        EffectType.ModifyBias => PerkBalanceCategory.RefereeBias,
+        EffectType.Immunity or EffectType.CancelEvent or EffectType.ExtraAction => PerkBalanceCategory.BinaryEvent,
+        EffectType.AddCounter => PerkBalanceCategory.RunLevelCounter,
+        _ => PerkBalanceCategory.Singular,
+    };
+
+    /// <summary>Forma del destinatario de un <see cref="EffectTarget"/> (§16): §16 en vez de un booleano.</summary>
+    public static EffectTargetShape ClassifyTargetShape(EffectTarget target) => target switch
+    {
+        EffectTarget.Owner or EffectTarget.Actor => EffectTargetShape.SingleOwner,
+        EffectTarget.Target or EffectTarget.Opponent => EffectTargetShape.SingleOther,
+        _ => EffectTargetShape.Population, // Team/OpposingTeam/WithTag/AdjacentWithTag/Adjacent/AdjacentOpponents/Linked/LinkedWithTag
+    };
+
+    /// <summary>Nombre descriptivo de la métrica primaria de un efecto ya identificado como <see cref="MetricReadiness.NeedsCampaignHarness"/>.</summary>
+    private static string DescribePrimaryMetric(EffectDefinition effect) => effect.Type switch
+    {
+        EffectType.ModifyProbability => ProbabilityMetricName(effect.Probability),
+        EffectType.ModifyAttribute => "según atributo (ver ClassifyAttribute)",
+        EffectType.ModifyLeash or EffectType.ShiftHome or EffectType.ModifyZoneShape => MatchMetrics.BallThirdMaxShare,
+        EffectType.ModifyTraitScalar => ScalarMetricName(effect.Scalar),
+        _ => "",
+    };
+
+    /// <summary>
+    /// El evento que cancela un <see cref="EffectType.CancelEvent"/> es <c>perk.Trigger</c> (el efecto
+    /// solo cancela lo que lo disparó — RT-034, sin lógica arbitraria). Solo <c>INJURY</c> tiene banda
+    /// real hoy (injuriesPerMatch); <c>FOUL</c>/<c>CARD</c>/<c>GOAL</c> son INFO; <c>DEATH</c> no tiene
+    /// ninguna fila agregada en <see cref="MatchMetrics"/> (las muertes se cuentan a nivel de run, no de
+    /// partido suelto). Verificado contra los 4 perks reales (iron_gate/mob_instigator/hand_of_god/
+    /// no_dying), no asumido.
+    /// </summary>
+    private static PerkClassification ClassifyCancelEvent(EventType trigger, bool multiTarget) => trigger switch
+    {
+        EventType.Injury => new PerkClassification(
+            PerkBalanceCategory.BinaryEvent, MetricReadiness.Ready, MatchMetrics.InjuriesPerMatch, false, multiTarget,
+            "cancela INJURY: injuriesPerMatch ya tiene banda"),
+        EventType.Foul => new PerkClassification(
+            PerkBalanceCategory.BinaryEvent, MetricReadiness.NotReadyNoBand, MatchMetrics.FoulsPerMatch, false, multiTarget,
+            "cancela FOUL: foulsPerMatch es INFO, sin banda"),
+        EventType.Card => new PerkClassification(
+            PerkBalanceCategory.BinaryEvent, MetricReadiness.NotReadyNoBand, MatchMetrics.YellowCardsPerMatch, false, multiTarget,
+            "cancela CARD: yellowCardsPerMatch es INFO, sin banda"),
+        EventType.Goal => new PerkClassification(
+            PerkBalanceCategory.BinaryEvent, MetricReadiness.NotReadyNoBand, MatchMetrics.GoalsPerMatch, false, multiTarget,
+            "cancela GOAL: goalsPerMatch es INFO, sin banda"),
+        _ => new PerkClassification(
+            PerkBalanceCategory.BinaryEvent, MetricReadiness.NotReadyNoMetric, "", false, multiTarget,
+            $"cancela {trigger}: sin fila agregada en MatchMetrics (p. ej. DEATH se cuenta a nivel de run, no de partido)"),
+    };
+
+    /// <summary>
+    /// Los cuatro <see cref="ImmunityKind"/> (Push, Mourning, MinorInjuryPenalty, MinorInjuryClinicCost)
+    /// son desplazamiento físico o penalización/coste ENTRE partidos (RF-035, RF-094, RF-104) — ninguno
+    /// tiene fila agregada en <see cref="MatchMetrics"/>, verificado contra los 3+ perks reales
+    /// (half_leg/tough_hide/roots), no asumido. Corrige el "Ready" uniforme de la primera versión.
+    /// </summary>
+    private static PerkClassification ClassifyImmunity(ImmunityKind kind, bool multiTarget) => new(
+        PerkBalanceCategory.BinaryEvent, MetricReadiness.NotReadyNoMetric, "", false, multiTarget,
+        $"inmunidad de tipo {kind}: desplazamiento físico o coste entre partidos, sin fila agregada en MatchMetrics (§16)");
+
+    /// <summary>
+    /// <see cref="EffectType.ExtraAction"/> repite la acción que lo disparó (Doble disparo, Embestida,
+    /// Arrollador) — el disparador solo puede ser <c>SHOT</c> o <c>TACKLE</c> (RT-032), y los dos SÍ
+    /// tienen banda: la repetición es, literalmente, un shotsPerMatch/tacklesPerMatch más.
+    /// </summary>
+    private static PerkClassification ClassifyExtraAction(EventType trigger, bool multiTarget) => trigger switch
+    {
+        EventType.Shot => new PerkClassification(
+            PerkBalanceCategory.BinaryEvent, MetricReadiness.Ready, MatchMetrics.ShotsPerMatch, false, multiTarget,
+            "repite SHOT: cuenta como un shotsPerMatch más, banda ya existente"),
+        EventType.Tackle => new PerkClassification(
+            PerkBalanceCategory.BinaryEvent, MetricReadiness.Ready, MatchMetrics.TacklesPerMatch, false, multiTarget,
+            "repite TACKLE: cuenta como un tacklesPerMatch más, banda ya existente"),
+        _ => new PerkClassification(
+            PerkBalanceCategory.BinaryEvent, MetricReadiness.NotReadyNoMetric, "", false, multiTarget,
+            $"repite {trigger}: sin métrica agregada conocida para esta acción"),
+    };
+
     private static PerkClassification ClassifyAttribute(AttributeKind attribute, bool multiTarget) => attribute switch
     {
+        // Ninguno de los cuatro perks reales de Strength (brute_boots, comeback_spirit, pack_mentality,
+        // scar_veteran) declara positionOnly, y solo dos de cuatro tienen family ("butchery", una cadena
+        // libre, no un vocabulario controlado) — verificado, no asumido (§16): no hay dato estructural
+        // para elegir automáticamente cuál de las cinco resoluciones que toca Strength es la primaria.
         AttributeKind.Strength => new PerkClassification(
-            PerkBalanceCategory.Attribute, MetricReadiness.Ready,
-            "tacklesPerMatch/injuriesPerMatch (según Family/PositionOnly del propio perk)", true, multiTarget,
-            "Strength toca cinco resoluciones a la vez; la primaria la decide el dato del perk, no una medición (§13.4.1)"),
+            PerkBalanceCategory.Attribute, MetricReadiness.AmbiguousPrimaryMetric,
+            "ambiguo: tacklesPerMatch, injuriesPerMatch o shotsOnTargetShare (sin banda) según diseño", true, multiTarget,
+            "Strength toca cinco resoluciones a la vez (tackle/foul/shot/dribble/block/injury); los 4 perks reales no dan ninguna señal estructural (positionOnly/family) para elegir la primaria — necesita game-design-review, no se adivina (§13.4.1/§16)"),
         AttributeKind.Stamina => new PerkClassification(
             PerkBalanceCategory.Attribute, MetricReadiness.NotReadyNoMetric, "", true, multiTarget,
             "sin métrica de rendimiento por fase de partido (§13.4.1)"),

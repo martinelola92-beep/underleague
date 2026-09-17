@@ -42,13 +42,15 @@ public sealed class PerkBalanceClassifierTests
     }
 
     [Fact]
-    public void RunLevelCounterIsDetectedByAccumulatesAcrossMatches()
+    public void AccumulatedStateEffectIsDistinguishedFromPureRunLevel()
     {
-        // iron_lungs: addCounter + modifyAttribute(stamina), AccumulatesAcrossMatches=true.
+        // iron_lungs: addCounter + modifyAttribute(stamina) escalado por el contador,
+        // AccumulatesAcrossMatches=true — necesita el harness de campaña, no es economía pura (§16).
         var result = PerkBalanceClassifier.Classify(Find("iron_lungs"));
 
-        Assert.Equal(PerkBalanceCategory.RunLevelCounter, result.Category);
-        Assert.False(result.HasNumericParameter);
+        Assert.Equal(PerkBalanceCategory.AccumulatedStateBonus, result.Category);
+        Assert.Equal(MetricReadiness.NeedsCampaignHarness, result.Readiness);
+        Assert.True(result.HasNumericParameter);
     }
 
     [Fact]
@@ -105,12 +107,14 @@ public sealed class PerkBalanceClassifierTests
     [Fact]
     public void SingleOwnerAttributeEffectDoesNotNeedMultiTargetHarness()
     {
-        // brute_boots: modifyAttribute(strength), target=owner.
+        // brute_boots: modifyAttribute(strength), target=owner. Strength en sí es AmbiguousPrimaryMetric
+        // (§16: ningún perk real de Strength da una señal estructural para elegir la métrica) — lo que
+        // esta prueba comprueba es que el TARGET (owner) no dispara la bandera multi-objetivo.
         var result = PerkBalanceClassifier.Classify(Find("brute_boots"));
 
         Assert.Equal(PerkBalanceCategory.Attribute, result.Category);
         Assert.False(result.NeedsMultiTargetHarness);
-        Assert.Equal(MetricReadiness.Ready, result.Readiness);
+        Assert.Equal(MetricReadiness.AmbiguousPrimaryMetric, result.Readiness);
     }
 
     [Fact]
