@@ -3,8 +3,12 @@
 **Estado:** Patrón medido en las 3 puertas activas de `BuildGateTests` (17 sep 2026, seis semillas cada
 una). **Dos resultados distintos, no uno**: `CoherentBuildsBeatTheirBaseline` y
 `BadBuildsLoseToTheirBaseline` confirman la hipótesis de ruido (ver "Tercer caso confirmado" abajo).
-`BuildsWinDifferently`/`passChain` **no la confirma** — es una caída real, medida, anterior a esta sesión
-(ver "Cuarto caso: no es ruido" abajo), y no se toca aquí.
+`BuildsWinDifferently`/`passChain` **no la confirma**: es una caída real y ya diagnosticada por bisección
+en worktrees (ver "Cuarto caso" abajo) — el 61 % viene de una decisión de diseño de 9 sep ya tomada y
+documentada (ADR 0088, el malus de `brute_boots` que castigaba a `orc_violence`), el resto de dos cambios
+de balance posteriores (ADR 0109, 0110) y la física del pase (ADR 0091/0092). Ninguna causa es de esta
+sesión (BA-N→BB-G→BB-C→BA-K). No se toca ningún umbral aquí; la decisión de recalibrar queda para
+`game-design-review`.
 
 ## Observación
 
@@ -73,38 +77,57 @@ toca ningún umbral aquí** — igual que con la puerta de equipar, cambiar un n
 sin decidir qué margen es aceptable (candidato a `game-design-review`, como ya apunta el punto 5 de esta
 ficha) repetiría el error que corrigió la ADR 0116.
 
-## Cuarto caso: `passChain` no es ruido — es una caída real, anterior a esta sesión (17 sep 2026)
+## Cuarto caso: `passChain` no es ruido — causa aislada y confirmada (17 sep 2026)
 
 Mismas 6 semillas, `buildsWinDifferently_passChain` (umbral ≥1,11, ADR 0062): **1,0977 / 1,0795 / 1,0872 /
-1,1098 / 1,0996 / 1,0487** — media **1,0871**, sd **0,0215**. **Falla en las seis semillas, no en algunas**:
-a diferencia de las tres métricas de arriba, esto no es una media que roza el umbral por los dos lados, es
-una media establemente por debajo. La firma de ruido (BB-P) no aplica aquí tal cual — hace falta otra
-explicación, y hay dos candidatas que **no son la misma**:
+1,1098 / 1,0996 / 1,0487** — media **1,0871**, sd **0,0215**. Falla en las seis semillas, no en algunas: no
+es una media que roza el umbral por los dos lados, es una media establemente por debajo. La firma de ruido
+de BB-P no aplica aquí — y a diferencia de la primera versión de este hallazgo, la causa **sí se ha
+aislado**, con bisección en worktrees sobre los 149 commits entre la ADR 0062 (`05689fe`, 6 sep) y
+`ad3c472` (ya dentro de esta sesión, pero **antes** de que este ciclo —BA-N→BB-G→BB-C→BA-K— tocara nada).
 
-1. **La hipótesis fácil, y falsa**: "el umbral se derivó sin margen a propósito" (ADR 0062: el 1,11 sale
-   de una build aislada de siete `fine_touch`, el techo teórico con perks comunes). **No es eso**: ADR 0062
-   documenta que la puerta, con la build real `elf_tiki_taka` completa contra `orc_violence`, medía
-   **1,233** en el momento de cerrarse (6 sep 2026) — margen real de 0,12, no cero. Verificado remidiendo
-   ese commit exacto (`05689fe`) en worktree: **1,2321**, coincide con la ADR.
-2. **Lo que sí es**: entre `05689fe` (ADR 0062, 6 sep) y `ad3c472` (revert dentro de BB-B, ya dentro de
-   esta sesión pero **antes** de que este ciclo tocara nada — BA-N, BB-G, BB-C y BA-K vienen después), el
-   valor ya había caído a **1,0836** (remedido en worktree, un solo commit, no una media). Es decir: **la
-   caída de 1,233 a ~1,09 ya había ocurrido antes de que este ciclo (BA-N→BB-G→BB-C→BA-K) tocara una sola
-   línea** — ninguno de los cuatro cambios de este ciclo es la causa. La ventana en la que ocurrió de
-   verdad son los commits entre el 6 y el 16 de septiembre — la tanda 1 y 2 del catálogo (61→94 perks) y
-   sus ADR asociadas (0090, 0105, 0110...) son las candidatas más plausibles por volumen de cambio, pero
-   **no se ha aislado el commit exacto** — eso es una investigación de `gameplay-debug` (Regla A) propia,
-   no lo que pedía medir esta ficha.
+**No es un solo salto monótono: son al menos tres cambios de diseño independientes, dos que bajan la
+métrica y uno que la sube parcialmente.** Trayectoria medida (remedición directa en cada commit, no
+interpolada):
 
-**No se toca `MinPassChainRatio` aquí.** La propia ADR 0062 ya avisa que este umbral "hay que volver a
-derivarlo hacia arriba cuando AL-A se resuelva" — pero AL-A (`docs/pendientes.md`, "el recorrido de un
-perk lo fija la base de su canal, no su magnitud") sigue abierta y es una decisión de fondo, no una
-calibración de puerta. Bajar el umbral ahora, sin diagnosticar la caída, sería exactamente el error que
-corrigió la ADR 0116: cambiar un número contra un síntoma sin saber si el instrumento está bien o si el
-juego cambió de verdad. **Queda como hallazgo, no como arreglo**: hace falta (a) aislar el commit o el
-paquete que causó la caída de 1,233 a ~1,09, entre el 6 y el 16 de septiembre, y (b) decidir con esa
-causa en la mano si el umbral se recalibra (como la ADR 0116) o si es síntoma de un problema de diseño más
-profundo emparentado con AL-A.
+| commit | qué es | passChain | delta |
+|---|---|---|---|
+| `05689fe` (6 sep) | ADR 0062, cierre del umbral | **1,2321** | — |
+| `0916aca` | refactor del arnés a paralelo (control: no debería moverlo) | 1,2041 | −0,028 (¹) |
+| `292799a` (9 sep) | **ADR 0088 "AY paso 2": los 17 `elseEffects` pasan a `[]`, `brute_boots` pierde su `pass −50`** | **1,1142** | **−0,090** |
+| `2ae6de1` | física del pase, pasos 0-4 (ADR 0091 en curso) | 1,1424 | +0,034 |
+| `0c9ff26` | cierre de ADR 0091 + investigación de razas | 1,0987 | −0,044 |
+| `9b6f5bb` | ADR 0092, razas recalibradas para la física del pase | 1,1401 | +0,041 |
+| (estable ~65-102) | | ~1,11-1,14 | |
+| `861fd52` | ADR 0110, `Shoot` del defensa/centrocampista sube | 1,0924 | −0,023 |
+| `5d7d9c6` | ADR 0109, el campo pasa a siete filas | 1,0789 | −0,014 |
+| `ad3c472` (16 sep, ya en esta sesión) | sin relación con BA-N→BA-K | 1,0836 | (ruido de las anteriores) |
+
+(¹) Confirma que el refactor de paralelismo no rompió RT-021: sin cambio, exactamente como debía ser.
+
+**La causa dominante, mecanismo confirmado**: `292799a` (9 sep, decisión del revisor "ningún perk
+perjudica al equipo que lo lleva", ADR 0088) quita el malus `pass −50` de `brute_boots`. `orc_violence`
+—la build de contacto de referencia de esta puerta— **lleva `brute_boots` en tres jugadores**
+(`data/balance/builds/orc_violence.json`, verificado). Antes de la corrección, ese malus acortaba
+artificialmente la cadena de pases **propia** de `orc_violence` (el denominador de la razón); al quitarlo,
+esa cadena creció, y `passChainRatio = cadena_técnica / cadena_física` bajó en consecuencia — **por
+diseño, no por accidente**: es la consecuencia directa y previsible de una decisión de diseño ya tomada y
+ya documentada (ADR 0088), que nadie volvió a comprobar contra este umbral concreto. Sola, explica el
+**61 %** de la caída total (0,090 de 0,148). El resto se reparte entre la física del pase (ADR 0091, con
+recuperación parcial de la ADR 0092) y dos cambios de balance de fase 1 posteriores (ADR 0109, ADR 0110),
+ninguno relacionado entre sí ni con este ciclo.
+
+**No se toca `MinPassChainRatio` aquí**, pero la razón ya no es "hace falta diagnosticar antes" (ya está
+diagnosticado): es que recalibrar un umbral de balance es un cambio de rango (RT-057) que exige su propia
+ADR y no una entrada de una ficha de investigación. La propia ADR 0062 preveía que este número "hay que
+volver a derivarlo" cuando el canal de pase cambiara — ha cambiado, tres veces, por razones ya conocidas y
+documentadas (ADR 0088, 0091/0092, 0109/0110), no por AL-A (que sigue sin resolverse y es un problema
+distinto: el recorrido del canal `pass` en sí, no el equilibrio entre estas dos builds concretas). **Con
+la causa ya aislada, la decisión pendiente es de diseño, no de instrumento**: ¿el 1,11 debe bajar para
+reflejar el juego actual (mismo criterio que la ADR 0116), o el hueco entre `elf_tiki_taka` y
+`orc_violence` en cadena de pases debería recuperarse por otra vía (tocar `orc_violence` para que vuelva a
+acortar su cadena por una razón nueva, no por un malus que ya no existe)? Es una pregunta para
+`game-design-review` (Regla B: toca una ADR existente), no una decisión que esta ficha tome.
 
 ## Candidatas — actualizado tras el tercer/cuarto caso (17 sep 2026)
 
@@ -128,9 +151,9 @@ patrón, otro build concreto cruzando el margen según la semilla, que es justo 
 1. **Hecho para 3 de las 4 (17 sep 2026, ver "Tercer caso" arriba)**, con una variante más barata que la
    propuesta original: en vez de congelar código y variar 5 commits (necesario cuando la pregunta es
    causal, como en BA-N), bastó variar la semilla del lote en el árbol actual — la pregunta aquí era
-   "cuánto rebota este número por sí solo", no "quién lo movió". Queda `TheThreeDoctrinesBuyDifferently`
-   (`FullRunGateTests`, coste por semilla mucho mayor) y, aparte, diagnosticar la caída real de `passChain`
-   (no es ruido, ver "Cuarto caso" arriba — necesita `gameplay-debug`, no una remedición más).
+   "cuánto rebota este número por sí solo", no "quién lo movió". La cuarta (`passChain`) no era ruido y
+   se diagnosticó aparte por bisección en worktrees (ver "Cuarto caso" arriba, causa aislada y confirmada).
+   Queda `TheThreeDoctrinesBuyDifferently` (`FullRunGateTests`, coste por semilla mucho mayor) sin medir.
 2. **Corregido dos veces (segunda y tercera revisión)**: la primera versión de este punto proponía "pasar
    a diferencia emparejada, patrón de la ADR 0087" para `EquipmentImpactTests.cs` — pero esa puerta **ya**
    empareja por semilla; no había margen ahí (segunda corrección). La segunda versión decía que la puerta

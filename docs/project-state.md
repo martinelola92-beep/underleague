@@ -47,19 +47,22 @@ PC (Steam), premium, sin online. **Estado (8 sep 2026): fases 0 y 1 cerradas; fa
   Cerrada por decisión del orquestador tras seis rondas de revisión (el umbral se reprodujo correcto
   las siete veces; solo la narrativa histórica fallaba, cada vez más acotada), con deuda documentada
   en `docs/pendientes/BA-N.md` en vez de una séptima ronda.
-  **BB-P medida (17 sep 2026, seis semillas por métrica)**: de las puertas rojas que dejó BB-B,
-  `CoherentBuildsBeatTheirBaseline`/`orc_violence` y `BadBuildsLoseToTheirBaseline` confirman ruido
-  de muestreo puro (sd empírico 2,0-2,5, coincide con el 2,3 teórico ya documentado; las medias
-  caen dentro de un sd de su umbral) — mismo patrón que la puerta de equipar, ningún umbral se toca.
-  **`BuildsWinDifferently`/`passChain` NO es ruido**: falla en las seis semillas de forma estable
-  (media 1,087 contra umbral 1,11, sd solo 0,02), y remedido en worktrees resulta ser una caída real
-  desde 1,233 (medido en el commit de la ADR 0062, 6 sep) hasta ~1,08 ya **antes** de que este ciclo
-  (BA-N→BB-G→BB-C→BA-K) tocara nada — la caída ocurrió en algún commit entre el 6 y el 16 de
-  septiembre (candidata más plausible: la tanda 1/2 del catálogo, 61→94 perks), sin aislar todavía.
-  Queda como hallazgo sin diagnosticar, emparentado con AL-A (`docs/pendientes.md`); no se toca
-  `MinPassChainRatio` sin esa causa en la mano. Queda sin medir `TheThreeDoctrinesBuyDifferently`
-  (coste por semilla mucho mayor, `FullRunGateTests`) — no está roja ahora mismo. Sin resolver: la
-  inconsistencia calculado/medido de precio de objeto (ADR 0038 vs ADR 0087) que BA-N no tocó, y el
+  **BB-P medida y diagnosticada (17 sep 2026, seis semillas por métrica + bisección en worktrees)**:
+  de las puertas rojas que dejó BB-B, `CoherentBuildsBeatTheirBaseline`/`orc_violence` y
+  `BadBuildsLoseToTheirBaseline` confirman ruido de muestreo puro (sd empírico 2,0-2,5, coincide con
+  el 2,3 teórico ya documentado; las medias caen dentro de un sd de su umbral) — mismo patrón que la
+  puerta de equipar, ningún umbral se toca. **`BuildsWinDifferently`/`passChain` NO es ruido, y su
+  causa ya está aislada**: cayó de 1,233 (ADR 0062, 6 sep) a ~1,08 por al menos tres decisiones de
+  diseño independientes, todas anteriores a este ciclo (BA-N→BB-G→BB-C→BA-K) — el 61 % de la caída es
+  la ADR 0088 (9 sep, quitar los `elseEffects`) quitándole a `orc_violence` el malus `pass −50` de
+  `brute_boots` que antes acortaba su propia cadena; el resto se reparte entre la física del pase
+  (ADR 0091/0092, con recuperación parcial) y dos cambios de balance posteriores (ADR 0109, 0110).
+  Ninguna causa es un bug: son decisiones ya tomadas y documentadas que nadie volvió a comprobar
+  contra este umbral concreto. No se toca `MinPassChainRatio`: la decisión de recalibrarlo (o de
+  restaurar el hueco por otra vía) queda para `game-design-review`, no para esta ficha. Queda sin
+  medir `TheThreeDoctrinesBuyDifferently` (coste por semilla mucho mayor, `FullRunGateTests`) — no
+  está roja ahora mismo. Sin resolver: la inconsistencia calculado/medido de precio de objeto (ADR
+  0038 vs ADR 0087) que BA-N no tocó, y el
   pase de `game-design-review` (pendiente, Regla B) sobre si el poder de detección de la puerta
   recalibrada (~41 % ante una caída a la mitad) es aceptable para el escalón que nombra la ADR 0033.
 - **Auditoría de organización de trabajo** (V1→V2→V3, decisión del revisor 16 sep 2026): en migración.
