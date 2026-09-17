@@ -143,11 +143,38 @@ public static class ScreeningRunner
             }
         }
 
-        // --- Seguridad (RT-056, sobre el brazo armado) y señal sistémica (§8, sin declarar réplica). ---
+        // --- Seguridad (RT-056, comparada contra el control emparejado — §19 punto E) y señal sistémica
+        // (§8, sin declarar réplica). La banda, el rango y RT-056 no cambian: lo único que cambia es si un
+        // "OUT" del brazo armado se atribuye al perk o si el propio control ya rompe la misma banda / la
+        // diferencia armado-control no se distingue del ruido (blood_scent/bloodhound, §19.3-19.4).
         var armedMandatory = MatchMetrics.Compute(run.ArmedMatches, Array.Empty<MetricPairing>())
             .Where(m => m.RangeMin is not null && m.RangeMax is not null)
             .ToList();
-        var safetyOut = armedMandatory.Where(m => m.Status == "OUT").Select(m => $"{m.Name}={m.Value:F3} (rango {m.RangeMin:F2}..{m.RangeMax:F2})").ToList();
+        var safetyOut = new List<string>();
+        foreach (var metric in armedMandatory)
+        {
+            if (metric.Status != "OUT")
+            {
+                continue;
+            }
+
+            var armedValues = run.ArmedMatches.Select(m => PrimaryMetricPerMatch.Value(metric.Name, m)).Where(v => v.HasValue).Select(v => v!.Value).ToList();
+            var controlValues = run.ControlMatches.Select(m => PrimaryMetricPerMatch.Value(metric.Name, m)).Where(v => v.HasValue).Select(v => v!.Value).ToList();
+            var attribution = ComparativeSafetyCheck.Evaluate(metric.Value, metric.RangeMin, metric.RangeMax, armedValues, controlValues);
+
+            if (attribution == SafetyAttribution.AttributableViolation)
+            {
+                safetyOut.Add($"{metric.Name}={metric.Value:F3} (rango {metric.RangeMin:F2}..{metric.RangeMax:F2})");
+            }
+            else
+            {
+                notes.Add(
+                    $"{metric.Name}={metric.Value:F3} está fuera de la banda RT-056 ({metric.RangeMin:F2}..{metric.RangeMax:F2}) en el brazo " +
+                    "armado, pero NO se atribuye al perk: el control emparejado también rompe la banda o la diferencia armado/control " +
+                    "no se distingue del ruido de muestreo (§19, chequeo comparativo — la banda no cambia, solo la atribución).");
+            }
+        }
+
         var systemicSignals = SystemicSignals(classification.PrimaryMetric, armedMandatory, run);
 
         var exposureCheck = new ExposureCheck(exposureFraction, DiscreteExposureFloor, FloorConfidence.Assumption);
@@ -162,13 +189,13 @@ public static class ScreeningRunner
         if (decision == BalanceState.SafetyLimit)
         {
             notes.Add(
-                $"las bandas de RT-056 son absolutas (población, no comparativas armado/control) y se comprueban aquí sobre solo " +
-                $"{run.ArmedMatches.Count} partidos armados (§5.1: comprobación barata, no una prueba de potencia) — a esta escala " +
-                "un falso positivo por varianza de muestra pequeña es posible; no se confirma como regresión real sin una muestra " +
-                "mayor (Validation, §5.3), y NO se recalibra la banda aquí para decidir en un sentido u otro (§18 punto 4).");
+                $"la comprobación es comparativa (§19, punto E: control emparejado, {run.ArmedMatches.Count} partidos por brazo), no una " +
+                "banda absoluta sobre el armado solo — el control está dentro de banda Y la diferencia armado/control se distingue del " +
+                "ruido de muestreo (power-check). Sigue siendo una muestra de Screening, no de Validation (§5.3): no cierra el caso, " +
+                "pero ya no es el falso positivo de banda-absoluta-sobre-N-pequeña que motivó este cambio (§18/§19).");
             return new ScreeningResult(
                 perk.Id, BalanceState.SafetyLimit,
-                $"al menos una métrica obligatoria de RT-056 queda fuera de banda en el brazo armado: {string.Join("; ", safetyOut)}",
+                $"al menos una métrica obligatoria de RT-056 queda fuera de banda en el brazo armado, atribuible al perk (no al ruido de muestreo ni a la banda): {string.Join("; ", safetyOut)}",
                 exposureFraction, primaryDelta, powerSufficient, safetyOut, systemicSignals, null, cost, notes);
         }
 
