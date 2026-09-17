@@ -2938,6 +2938,110 @@ efecto y sigue fuera de esta rama.
 
 ---
 
+## 27. Qué significa `INSUFFICIENT_EVIDENCE`: la bifurcación, documentada (19 sep 2026)
+
+§26 dio evidencia para **separar** dos funciones que hoy comparten un número. Esta sección documenta esa
+bifurcación antes de tocar nada. No cambia el suelo del 50%, ni el circuito, ni el código, ni reclasifica
+ningún perk retroactivamente. Todo lo congelado sigue congelado.
+
+La pregunta correcta, como quedó planteada, no es *"¿está mal el 50%?"* sino **"¿qué propiedad pretende
+garantizar, y es esa propiedad necesaria para todos los tipos de perk?"**.
+
+### 27.1 No son dos significados: son tres, y el original no es ninguno de los dos
+
+Al revisar el texto del propio protocolo aparece algo que no estaba en el planteamiento: el significado
+**documentado** de `INSUFFICIENT_EVIDENCE` no es ni "no hay evidencia suficiente" ni "la población no es
+representativa". §9 lo define literalmente así:
+
+> `INSUFFICIENT_EVIDENCE` [terminal*, nuevo — **el umbral usado no está calibrado, no es una conclusión
+> sobre el perk**]
+
+Y §6.1 fija el motivo exacto: *"por debajo de un suelo de exposición **sin calibrar**"*, con la coletilla
+"NO `INSUFFICIENT_EXPOSURE` — ese estado se reserva para cuando el suelo esté medido".
+
+Es decir, hoy el mismo estado carga **tres afirmaciones distintas**:
+
+| | afirmación | sobre qué habla | vehículo actual |
+|---|---|---|---|
+| **M1** | "el umbral que hemos cruzado es una `[ASUNCIÓN]`, no un valor medido" | sobre **el protocolo**, no sobre el perk | `ExposureCheck.FloorConfidence` (ya existe en código) |
+| **M2** | "no tenemos casos suficientes para inferir el efecto" | sobre **la muestra** | ninguno propio; se infiere del mismo número |
+| **M3** | "pocos portadores generados cumplen la condición" | sobre **la población** | ninguno propio; se infiere del mismo número |
+
+Y §26 midió que, para un perk de `MATCH_START`, **las tres apuntan a sitios distintos a la vez**:
+
+- la **exposición** (7,5% en `bulwark_stance`/Human) mide **M3**;
+- el **remedio del ×6** mejora **M2** (error estándar 3,536 → 1,452) sin tocar M3 (5,0% → 7,5%);
+- y la **etiqueta** que el perk acaba llevando reporta **M1**.
+
+Que el estado sea formalmente correcto según su definición original (el suelo *no* está calibrado) no
+impide que se esté leyendo como si dijera M2 — yo mismo lo leí así al informar de §18 y §20. La
+bifurcación, por tanto, no es solo conceptual: es también una corrección de cómo veníamos interpretando
+una etiqueta cuyo significado escrito era más estrecho.
+
+### 27.2 Las dos propiedades, separadas
+
+Sin fijar umbrales ni decidir cómo afectan al veredicto:
+
+**`evidence_sufficiency`** — ¿hay casos suficientes para confiar en el resultado? Lo que la determina es el
+**número absoluto de casos cualificados** y la varianza de la métrica, no la fracción. §26 Q3 lo enseña
+directamente: 2 casos cualificados → error estándar 3,536; 18 casos → 1,452. La fracción apenas se movió.
+
+**`population_representativeness`** — ¿qué proporción de los agentes generados puede usar el perk? Es una
+**proporción poblacional**, y más simulación no la cambia: la estima mejor. `bulwark_stance` medido sobre
+Human converge a ~6-7%, que es el peso de `Bulwark` en la raza, no un artefacto de muestra pequeña.
+
+Para perks **de suceso** las dos pueden coincidir (poca exposición = pocas oportunidades = peor
+estimación). Para perks de **`MATCH_START`** se separan por completo, y ahí es donde el único número las
+confunde.
+
+### 27.3 Los 45 no son un bloque que arreglar
+
+La evidencia solo demuestra que **el significado de su exposición es distinto**, no que estén mal. Un
+`MATCH_START` al 5% puede ser tres cosas que el número por sí solo no distingue:
+
+1. una condición deliberadamente rara **pero perfectamente medible** (§26: el delta condicionado se midió
+   sin problema, y coincidió con el de una población donde cualifica el 77%);
+2. un perk **diseñado para una subpoblación**;
+3. un perk cuya condición es **tan restrictiva que merece revisión de diseño**.
+
+**Una observación que sí ayuda a separarlas**, y que no requiere medir nada nuevo: el harness asigna el
+perk a un portador **al azar**; el juego real tiene **elección del jugador**. Para un perk cuya condición
+es una propiedad **estática y visible** del portador —una etiqueta de estilo—, un jugador racional lo
+equiparía justamente sobre alguien que la cumple, así que su representatividad *en juego real* se acerca
+al 100%, no al 7,5%. §21.1 apoya que el diseño cuenta con eso: los cinco perks de etiqueta de estilo dejan
+`tagsRequired` vacío **a propósito**, delegando la elección en el jugador.
+
+En cambio, para un perk cuya condición el jugador **no puede controlar al equipar** —estado dinámico del
+partido, posición de los compañeros en ese instante— una representatividad baja sí describe algo real,
+porque no hay elección que la mejore.
+
+Esa distinción —**condición controlable por el jugador al equipar, sí o no**— es derivable de datos que ya
+existen (el tipo de la condición) y separa el caso 2 del caso 3. **No se implementa aquí**: se registra
+como la pieza que probablemente haría falta si algún día se decide actuar.
+
+### 27.4 La bifurcación, enunciada para decidir (no decidida aquí)
+
+Todo depende de qué se quiera que signifique el estado:
+
+- **Si `INSUFFICIENT_EVIDENCE` significa literalmente "no podemos inferir el efecto"**: §26 da un argumento
+  fuerte para **no** derivarlo automáticamente del 50% en la familia `MATCH_START`, porque ahí la
+  exposición no mide eso — la miden los casos cualificados, que el ×6 sí mejora.
+- **Si además se quiere exigir que un perk aplique a una fracción amplia de la población**: entonces el 50%
+  puede seguir siendo **deliberadamente normativo** —es un criterio de diseño defendible, no un error—
+  pero debería estar **separado semánticamente** del concepto de evidencia, con su propio nombre y su
+  propio estado.
+- **Y en cualquiera de los dos casos, M1 sigue siendo una tercera cosa**: mientras los suelos sigan sin
+  calibrar, el protocolo seguirá teniendo razón al decir "el umbral no está calibrado" — pero eso es una
+  afirmación sobre el protocolo, y merece no viajar disfrazada de conclusión sobre el perk.
+
+### 27.5 Estado (sin cambios)
+
+Suelo del 50% intacto. Circuito del 20% intacto. `PopulationFitness` congelado desde `e152253`, predicción
+de la Fase A congelada, preguntas de la Fase B congeladas desde `e582ab0`. Ningún perk reclasificado
+retroactivamente. Lote detenido en 5/24. `high_line` (Δ −2,2095) fuera de esta rama.
+
+---
+
 ## Hermanos
 
 - `docs/analisis/c1-piloto-cazagoles-diseno.md` — la evidencia de calibración completa (§3.1b, §5, §6,
