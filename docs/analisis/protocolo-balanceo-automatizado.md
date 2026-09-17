@@ -3042,6 +3042,78 @@ retroactivamente. Lote detenido en 5/24. `high_line` (Δ −2,2095) fuera de est
 
 ---
 
+## 28. Auditoría de cierre de la rama de exposición, y salida hacia `high_line` (19 sep 2026)
+
+### 28.1 Auditoría: **OK, sin discrepancia** entre protocolo e implementación
+
+| pregunta | respuesta, con el sitio exacto |
+|---|---|
+| ¿Dónde se calcula `exposure`? | `ScreeningRunner.DiscreteExposureFraction` (líneas 293-296): fracción de partidos armados con ≥1 activación. **Un solo sitio.** |
+| ¿Dónde se compara contra el 50%? | `ScreeningRunner.DiscreteExposureFloor = 0.5`, usado en las líneas 88, 102 y 180. **Un solo umbral.** |
+| ¿Dónde se produce `INSUFFICIENT_EVIDENCE`? | `BalanceDecisionRules.EvaluateScreening` líneas 74-76 (exposición) y 86-88 (efecto bajo el zero-floor); `ScreeningRunner` líneas 107 (exposición) y 137 (**potencia**). |
+| ¿El 50% se usa como proxy de M2/M3, o como mecanismo M1? | **Como M1.** La exposición actúa de *puerta* (¿se entra en la rama?), pero **el nombre del estado lo decide en exclusiva `FloorConfidence`**: `InsufficientExposure` si el suelo está medido, `InsufficientEvidence` si es `[ASUNCIÓN]`. El valor concreto de la exposición no interviene en esa elección. Coincide literalmente con §6.1 y §9. |
+
+Refuerzo de que no hay desvío: `ScreeningRunner` construye siempre `ExposureCheck` con
+`FloorConfidence.Assumption` (líneas 88 y 180), así que **`INSUFFICIENT_EXPOSURE` es hoy inalcanzable** —
+exactamente lo que §9 prescribe ("ese estado se reserva para cuando el suelo esté medido").
+
+El único punto donde el código pone M1 y M2 bajo la misma etiqueta es `ScreeningRunner:137` (potencia
+insuficiente → `InsufficientEvidence`), y **§5.5 lo autoriza explícitamente** ("`NEEDS_REPLICATION` o
+`INSUFFICIENT_EVIDENCE`, nunca un `ACCEPT`/`REJECT` con esa muestra"). Es decir: la mezcla de significados
+que §25-§27 identificaron **está en el diseño escrito del protocolo, no en un fallo de implementación**.
+
+**Defecto de documentación encontrado, NO corregido** (no es de código y corregirlo sería cosmético):
+§5.1 dice *"subir la muestra una vez (×3, a 120 plantillas)"*, pero 20 → 120 es **×6**. El código sigue el
+número concreto (`ExposureRetryRosters = 120`), no la etiqueta. Queda anotado por si alguien implementa
+desde el rótulo.
+
+### 28.2 Rama cerrada
+
+La cuestión metodológica de exposición / 50% / `INSUFFICIENT_EVIDENCE` **queda cerrada**: el código hace lo
+que el protocolo escrito dice, no hay bug que arreglar, y la ambigüedad conceptual ya está documentada
+(§25-§27) para cuando se quiera tomar la decisión normativa. **No se cambia el umbral, ni el circuito, ni
+se crean estados nuevos, ni se reclasifica ningún perk.** Lote detenido en 5/24.
+
+### 28.3 Salida: `high_line` — la escalada era FALSA, y el motivo es de alcance de una regla
+
+**Mecanismo localizado sin simular nada**: `high_line` es `shiftHome(owner, value: 2)` sobre un Defensa —
+desplaza su casilla-hogar dos casillas **hacia adelante**. Su métrica primaria es `ballThirdMaxShare`, que
+es una medida de **concentración** (cuota del tercio más ocupado), no una magnitud direccional. La regla
+de §18.2 compara `sign(effect.Value)` con `sign(delta)`, lo cual es válido cuando el `Value` vive en el
+mismo eje que la métrica (`modifyProbability(tackle,+100)` → más entradas) y **carece de sentido para un
+efecto de geometría**, donde `Value = 2` significa "dos casillas arriba", no "más concentración".
+
+**Diagnóstico mínimo, sin instrumentación nueva** (`BallThird0/1/2` ya están en `MatchSummary`), 40
+partidos por brazo:
+
+| brazo | tercio 0 | tercio 1 | tercio 2 | máximo (= `ballThirdMaxShare`) |
+|---|---|---|---|---|
+| armado | 29,37% | 42,30% | **28,33%** | 42,30% |
+| control | 29,94% | 44,62% | **25,44%** | 44,62% |
+| delta | −0,57 | −2,32 | **+2,89** | **−2,32** |
+
+**El balón se va hacia adelante**: el tercio atacante gana +2,89 puntos y el propio pierde. El máximo baja
+2,32 porque el tercio que era máximo (el central) cede ticks al atacante. `high_line` hace exactamente lo
+que dice su `_doc` ("la línea de atrás juega en el medio campo"); **la Δ −2,2095 es la métrica de máximo
+aplanándose, no el perk funcionando al revés**.
+
+*(Anotación de rigor: la predicción escrita antes de medir decía "el tercio central sube y el máximo baja".
+El fondo se confirma —el juego se desplaza hacia adelante, no hacia atrás— pero el detalle falla: el que
+sube es el tercio atacante, no el central.)*
+
+**Conclusión**: `DESIGN_ESCALATION` de `high_line` es un **falso positivo de la regla de §18.2**, no un
+problema de diseño del perk. Es el primer perk de geometría que alcanza esa comprobación: los otros cinco
+(`deep_pivot`, `deep_run`, `shadow`, `line_keeper`, `sweeper_keeper`) se quedaron antes en
+`INSUFFICIENT_EVIDENCE` por potencia, así que la regla nunca había llegado a dispararse sobre su familia.
+
+**Cambio mínimo propuesto, NO realizado**: acotar la regla de dirección de §18.2 a los efectos cuyo `Value`
+esté en el mismo eje que la métrica primaria (probabilidades, escalares de rasgo), y excluir explícitamente
+los de geometría (`shiftHome`, `modifyZoneShape`, `modifyLeash`), donde el signo del desplazamiento no
+predice el signo de una cuota de concentración. No se toca ni el perk, ni su valor, ni la regla, hasta que
+se decida.
+
+---
+
 ## Hermanos
 
 - `docs/analisis/c1-piloto-cazagoles-diseno.md` — la evidencia de calibración completa (§3.1b, §5, §6,
