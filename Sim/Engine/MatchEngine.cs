@@ -759,6 +759,11 @@ internal sealed class MatchEngine : IPerkWorld
                 continue;
             }
 
+            // C1 (docs/analisis/c1-piloto-cazagoles-diseno.md): la zona se recalcula aquí, antes de que
+            // nadie decida este tick, nunca dentro de Utility.cs (RT-034). Corte barato si el jugador no
+            // lleva ningún efecto modifyUtility (el caso normal).
+            player.RecomputeZoneUtilityBonus();
+
             float distance = Vec2.Distance(player.Position, point);
             if (_context.NearestToBall[player.Team] is null || distance < best[player.Team])
             {

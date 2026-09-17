@@ -574,6 +574,58 @@ internal sealed class MatchPlayer
     /// <summary>Multiplicador de rasgo acumulado para la acción (porcentaje, 100 = neutro; RT-094).</summary>
     public int ActionMultiplier(PlayerAction action) => _actionMultipliers[(int)action];
 
+    /// <summary>Un bono <c>modifyUtility</c> (C1) pendiente de evaluar cada tick; <c>Zone</c> null = siempre activo.</summary>
+    private readonly record struct ZoneUtilityBonus(PlayerAction Action, Zone? Zone, int Percent);
+
+    private readonly List<ZoneUtilityBonus> _zoneUtilityBonuses = new();
+    private readonly int[] _perkActionBonusPercent = new int[ActionCount];
+
+    /// <summary>
+    /// Registra un efecto <c>modifyUtility</c> (C1, docs/analisis/c1-piloto-cazagoles-diseno.md): se
+    /// aplica una sola vez, cuando el efecto se dispara (como <see cref="AddTraitScalarDelta"/>), y queda
+    /// pendiente de evaluación cada tick en <see cref="RecomputeZoneUtilityBonus"/> — a diferencia de los
+    /// escalares de C4, este bono no es un número fijo para todo el partido si lleva zona.
+    /// </summary>
+    internal void AddZoneUtilityBonus(PlayerAction action, Zone? zone, int percent)
+    {
+        if (percent == 0)
+        {
+            return;
+        }
+
+        _zoneUtilityBonuses.Add(new ZoneUtilityBonus(action, zone, percent));
+    }
+
+    /// <summary>
+    /// Recalcula <see cref="PerkActionBonusPercent"/> para este tick (C1): por cada bono pendiente, cuenta
+    /// solo si no lleva zona o si <see cref="Pitch.ZoneOf"/> coincide con la suya. Llamado desde
+    /// <c>MatchEngine.UpdateContextCaches</c>, el mismo sitio que ya recalcula estado por tick antes de
+    /// decidir — nunca desde <c>Utility.cs</c> (RT-034: sin perks nombrados en el motor). Corte barato:
+    /// sin ningún bono registrado (el caso normal, sin Cazagoles/Ancla en la plantilla) no toca el array.
+    /// </summary>
+    internal void RecomputeZoneUtilityBonus()
+    {
+        if (_zoneUtilityBonuses.Count == 0)
+        {
+            return;
+        }
+
+        Array.Clear(_perkActionBonusPercent, 0, _perkActionBonusPercent.Length);
+        for (int i = 0; i < _zoneUtilityBonuses.Count; i++)
+        {
+            var bonus = _zoneUtilityBonuses[i];
+            if (bonus.Zone is { } zone && Pitch.ZoneOf(Position, Team) != zone)
+            {
+                continue;
+            }
+
+            _perkActionBonusPercent[(int)bonus.Action] += bonus.Percent;
+        }
+    }
+
+    /// <summary>Bono porcentual de perk (<c>modifyUtility</c>, C1) para la acción, ya evaluado este tick.</summary>
+    public int PerkActionBonusPercent(PlayerAction action) => _perkActionBonusPercent[(int)action];
+
     /// <summary>Entra en un estado con duración; ticks &lt;= 0 deja el estado sin temporizador.</summary>
     public void EnterState(PlayerState state, int ticks)
     {

@@ -846,6 +846,12 @@ internal sealed class EffectEngine : IPerkLinks
                         // mismo tick (ver ExecuteExtraAction para el porqué es seguro con RT-041/RT-042).
                         ExecuteExtraAction(subscription);
                         break;
+                    case EffectType.ModifyUtility:
+                        // C1: registra el bono (acción, zona opcional, %); MatchEngine.UpdateContextCaches
+                        // lo reevalúa cada tick, no aquí (RT-034: nada de posición ni de motor en este
+                        // fichero, solo el registro del efecto).
+                        player.AddZoneUtilityBonus(effect.UtilityAction, effect.UtilityZone, value);
+                        break;
                     default:
                         break;
                 }

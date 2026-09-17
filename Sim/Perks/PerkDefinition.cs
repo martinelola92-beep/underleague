@@ -107,6 +107,18 @@ public enum EffectType
     /// informe.
     /// </summary>
     ExtraAction,
+
+    /// <summary>
+    /// C1 (docs/analisis/c1-piloto-cazagoles-diseno.md): suma un porcentaje al multiplicador de rasgos de
+    /// una acción concreta de <see cref="Underleague.Sim.Engine.Utility"/>, en la misma línea que ya lee
+    /// <see cref="Underleague.Sim.Engine.MatchPlayer.LeaderBonusPercent"/>. Con <see cref="EffectDefinition.UtilityZone"/>
+    /// a <c>null</c> es C1 puro (bono siempre activo mientras dure el efecto); con un valor, es C1 más la
+    /// única cláusula de C2 que ya tiene una función existente sin estado nuevo
+    /// (<see cref="Underleague.Sim.Model.Pitch.ZoneOf"/>): el bono solo cuenta mientras el portador esté
+    /// en esa zona, recalculado cada tick por <c>MatchEngine.UpdateContextCaches</c>, nunca dentro de
+    /// <c>Utility.cs</c> (RT-034: nada de perks nombrados en el motor).
+    /// </summary>
+    ModifyUtility,
 }
 
 /// <summary>
@@ -411,7 +423,17 @@ public sealed record EffectDefinition(
     string MarkTag = "",
 
     /// <summary>Variante de un efecto <see cref="EffectType.ModifyTackleBias"/> (C7).</summary>
-    TackleBiasKind TackleBias = TackleBiasKind.KnockedDown);
+    TackleBiasKind TackleBias = TackleBiasKind.KnockedDown,
+
+    /// <summary>Acción cuyo multiplicador de rasgos modifica un efecto <see cref="EffectType.ModifyUtility"/> (C1).</summary>
+    PlayerAction UtilityAction = PlayerAction.ChaseBall,
+
+    /// <summary>
+    /// Zona (<see cref="Underleague.Sim.Model.Pitch.ZoneOf"/>) en la que debe estar el portador para que
+    /// el bono de <see cref="EffectType.ModifyUtility"/> cuente; <c>null</c> = siempre activo (C1 puro,
+    /// sin la cláusula de C2 del tercio).
+    /// </summary>
+    Zone? UtilityZone = null);
 
 /// <summary>
 /// Un perk cargado de <c>data/perks/&lt;id&gt;.json</c> (RT-033). Es un dato puro: no contiene código,

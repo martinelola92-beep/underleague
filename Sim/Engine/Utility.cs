@@ -155,9 +155,13 @@ internal static class Utility
             var eval = Evaluate(ctx, p, action);
             int baseWeight = ctx.Weights.Base(p.Role, action);
             int tactical = ctx.Weights.Tactical(ctx.TacticalStates[p.Team], action);
-            // El bono de Leader de los compañeros con casilla-hogar contigua entra en el multiplicador de
-            // rasgos: la fórmula de §3.5 sigue siendo Base * Tactical / 100 * TraitMult / 100 + Context.
-            int traitMultiplier = p.ActionMultiplier(action) * (100 + p.LeaderBonusPercent) / 100;
+            // El bono de Leader de los compañeros con casilla-hogar contigua, y el de un efecto de perk
+            // modifyUtility (C1, docs/analisis/c1-piloto-cazagoles-diseno.md) si lo hay, entran los dos en
+            // el multiplicador de rasgos: la fórmula de §3.5 sigue siendo Base * Tactical / 100 * TraitMult
+            // / 100 + Context. Utility.Choose no sabe qué perk es: PerkActionBonusPercent ya llega evaluado
+            // (MatchEngine.UpdateContextCaches recalcula la zona cada tick, no aquí — RT-034).
+            int traitMultiplier = p.ActionMultiplier(action)
+                * (100 + p.LeaderBonusPercent + p.PerkActionBonusPercent(action)) / 100;
             int score = (baseWeight * tactical / 100 * traitMultiplier / 100) + eval.Context;
 
             bool rejected = eval.Discarded || eval.OutsideOuterLimit;
