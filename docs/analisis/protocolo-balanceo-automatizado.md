@@ -1697,6 +1697,14 @@ clasificados", es que **el circuito de seguridad funciona y que la calibración 
 `[ASUNCIÓN]` de §5.4, más el suelo de potencia de §5.5) no aguanta ni cinco perks reales sin escalar**, que
 es exactamente la información que el criterio de salida de esta fase pedía conocer.
 
+**Reconfirmado tras el arreglo de §19.1** (19 sep 2026, mismo día): con el bug de portador corregido, se
+volvió a ejecutar `RealScreeningLot1Tests` sobre los 24 desde el principio. El circuito se disparó
+**en el mismo punto exacto** (5/24, ahora 4/5 = 80% de escalada en vez de 100% — `bloodhound` pasa a
+`SCREENING_PASS`, los otros cuatro sin cambio de estado). Se preguntó de nuevo si anular el circuito,
+subir el mínimo de comprobación, o detenerse otra vez; **la decisión fue, de nuevo, detenerse aquí** —
+mismo criterio conservador que la primera vez, ahora con el añadido de que las causas de las cuatro
+escaladas restantes ya están investigadas (§19) y ninguna es un bug de tooling nuevo por encontrar.
+
 ### 18.4 Lo que esto confirma y lo que esto revela
 
 **Confirma que el screening está bien conectado** (no es un fallo de tooling):
