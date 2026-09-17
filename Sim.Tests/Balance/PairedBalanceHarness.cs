@@ -36,7 +36,9 @@ public static class PairedBalanceHarness
         long ArmedExposedTicks,
         IReadOnlyDictionary<PlayerAction, long> ArmedExposedActionCounts,
         IReadOnlyDictionary<PlayerAction, long> ControlExposedActionCounts,
-        long ArmedActivations);
+        long ArmedActivations,
+        IReadOnlyList<int> ArmedActivationsPerMatch,
+        long TotalSimulatedTicks);
 
     /// <summary>
     /// Ejecuta <paramref name="rosters"/> plantillas × 2 direcciones para <paramref name="perkId"/> (ya
@@ -58,6 +60,13 @@ public static class PairedBalanceHarness
     public static PairedResult RunWithEligibleCarrier(Catalog catalog, PerkDefinition perk, int rosters, ulong seed) =>
         Run(catalog, perk.Id, home => FindEligible(home, perk, catalog), rosters, seed, race: perk.Race);
 
+    /// <summary>
+    /// Expone el criterio real de selección de portador (§19: preferir campo, caer a portería) para que
+    /// el forense/diagnóstico pueda comprobar A QUÉ POSICIÓN cae un perk sin duplicar el criterio.
+    /// </summary>
+    public static int FindEligibleCarrierSlot(TeamSetup team, PerkDefinition perk, Catalog catalog) =>
+        FindEligible(team, perk, catalog);
+
     private static int FindByPosition(TeamSetup team, Position position)
     {
         for (int i = 0; i < team.Players.Count; i++)
@@ -71,16 +80,39 @@ public static class PairedBalanceHarness
         return -1;
     }
 
-    /// <summary>Mismo filtro que el juego (<see cref="PerkAssignment.Eligible"/>), sobre los siete titulares.</summary>
+    /// <summary>
+    /// Mismo filtro que el juego (<see cref="PerkAssignment.Eligible"/>), sobre los siete titulares —
+    /// pero prefiriendo un titular de campo (slots 1-6) antes que la portería (slot 0), y cayendo a la
+    /// portería solo si ningún jugador de campo es elegible. <c>TeamGenerator.StarterPositions[0]</c> es
+    /// SIEMPRE <c>Goalkeeper</c> (Sim/Generation/TeamGenerator.cs): antes de este cambio, cualquier perk
+    /// sin <c>positionOnly</c>/<c>tagsRequired</c> restrictivo se probaba SIEMPRE sobre el portero —
+    /// confirmado como la causa raíz común de varias escaladas del primer screening real (§18.3/§19,
+    /// forense del 19 sep 2026: los cinco perks del primer lote cayeron los cinco en el portero). Un
+    /// portero rara vez entra/dispara, así que medir ahí subestima sistemáticamente perks pensados para
+    /// jugadores de campo — no es un cambio de <see cref="PerkAssignment.Eligible"/> (esa función sigue
+    /// reflejando la elegibilidad REAL del juego tal cual), solo el desempate arbitrario de qué portador
+    /// concreto usa la MEDICIÓN cuando el perk no dice nada sobre la posición.
+    /// </summary>
     private static int FindEligible(TeamSetup team, PerkDefinition perk, Catalog catalog)
     {
-        for (int i = 0; i < 7 && i < team.Players.Count; i++)
+        for (int i = 1; i < 7 && i < team.Players.Count; i++)
         {
             foreach (var candidate in PerkAssignment.Eligible(team.Players[i], catalog))
             {
                 if (string.Equals(candidate.Id, perk.Id, StringComparison.Ordinal))
                 {
                     return i;
+                }
+            }
+        }
+
+        if (team.Players.Count > 0)
+        {
+            foreach (var candidate in PerkAssignment.Eligible(team.Players[0], catalog))
+            {
+                if (string.Equals(candidate.Id, perk.Id, StringComparison.Ordinal))
+                {
+                    return 0;
                 }
             }
         }
@@ -100,9 +132,10 @@ public static class PairedBalanceHarness
         var config = new SimConfig(CollectLog: false, Trace: collectExposure);
         var armedMatches = new List<MatchSummary>();
         var controlMatches = new List<MatchSummary>();
-        long armedOnPitch = 0, armedExposed = 0, armedActivations = 0;
+        long armedOnPitch = 0, armedExposed = 0, armedActivations = 0, totalTicks = 0;
         var armedCounts = new Dictionary<PlayerAction, long>();
         var controlCounts = new Dictionary<PlayerAction, long>();
+        var armedActivationsPerMatch = new List<int>();
 
         for (int roster = 0; roster < rosters; roster++)
         {
@@ -130,7 +163,10 @@ public static class PairedBalanceHarness
                 var armedSetup = subjectAway ? new MatchSetup(away, armedHome, Referee) : new MatchSetup(armedHome, away, Referee);
                 var armedResult = Simulator.Run(armedSetup, matchSeed, catalog, config);
                 armedMatches.Add(MatchSummary.FromReport(armedResult.Report, "home", "away"));
-                armedActivations += CountActivations(armedResult, perkId, carrierId);
+                long armedActivationsThisMatch = CountActivations(armedResult, perkId, carrierId);
+                armedActivations += armedActivationsThisMatch;
+                armedActivationsPerMatch.Add((int)armedActivationsThisMatch);
+                totalTicks += armedResult.Report.Ticks;
                 if (collectExposure && exposureZone is { } zone)
                 {
                     Accumulate(armedResult.Trace, carrierId, zone, armedCounts, ref armedOnPitch, ref armedExposed);
@@ -139,6 +175,7 @@ public static class PairedBalanceHarness
                 var controlSetup = subjectAway ? new MatchSetup(away, home, Referee) : new MatchSetup(home, away, Referee);
                 var controlResult = Simulator.Run(controlSetup, matchSeed, catalog, config);
                 controlMatches.Add(MatchSummary.FromReport(controlResult.Report, "home", "away"));
+                totalTicks += controlResult.Report.Ticks;
                 if (collectExposure && exposureZone is { } zoneControl)
                 {
                     long dummyOnPitch = 0, dummyExposed = 0;
@@ -147,7 +184,9 @@ public static class PairedBalanceHarness
             }
         }
 
-        return new PairedResult(armedMatches, controlMatches, armedOnPitch, armedExposed, armedCounts, controlCounts, armedActivations);
+        return new PairedResult(
+            armedMatches, controlMatches, armedOnPitch, armedExposed, armedCounts, controlCounts,
+            armedActivations, armedActivationsPerMatch, totalTicks);
     }
 
     private static long CountActivations(MatchResult result, string perkId, int carrierId)

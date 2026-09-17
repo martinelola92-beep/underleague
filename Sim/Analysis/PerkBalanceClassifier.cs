@@ -189,6 +189,18 @@ public static class PerkBalanceClassifier
         ProbabilityKind.Dribble,
     };
 
+    /// <summary>
+    /// El efecto "objetivo" de un perk (§3: el primero que no sea <see cref="EffectType.AddCounter"/>,
+    /// que se registra pero no compite por ser "el" mecanismo). Público para que el screening (§18) pueda
+    /// leer el signo de <see cref="EffectDefinition.Value"/> del mismo efecto que ya usa la clasificación,
+    /// sin repetir el criterio de selección en otro sitio.
+    /// </summary>
+    public static EffectDefinition GetPrimaryEffect(PerkDefinition perk)
+    {
+        ArgumentNullException.ThrowIfNull(perk);
+        return perk.Effects.FirstOrDefault(e => e.Type != EffectType.AddCounter) ?? perk.Effects[0];
+    }
+
     /// <summary>Clasifica un perk a partir de su efecto principal (el primero de la lista, §3.2 punto 7 para multi-efecto).</summary>
     public static PerkClassification Classify(PerkDefinition perk)
     {
@@ -213,7 +225,7 @@ public static class PerkBalanceClassifier
         }
 
         // El efecto "objetivo" es el primero que no sea addCounter (§3: el contador se registra, no compite).
-        var primary = perk.Effects.FirstOrDefault(e => e.Type != EffectType.AddCounter) ?? perk.Effects[0];
+        var primary = GetPrimaryEffect(perk);
 
         // AccumulatesAcrossMatches con el efecto acompañante escalado por el contador (UsesCounter): un
         // partido suelto con el contador a cero no representa la magnitud típica a mitad/final de run —
