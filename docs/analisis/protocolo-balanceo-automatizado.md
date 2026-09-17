@@ -2287,6 +2287,175 @@ cambiar en ninguno de los 11 casos — lo que cambia es, otra vez, la población
 
 ---
 
+## 22. Diseño: instrumentación de adecuación de población (propuesta, sin implementar)
+
+Propuesta de diseño derivada de la evidencia de §21, escrita **antes** de tocar nada. No cambia el suelo
+del 50%, ni el circuito del 20%, ni `/data`, ni los perks, ni el motor de decisión. No se implementa en
+esta sección: aquí están la forma, los criterios de aceptación y el plan de validación, para que la
+implementación posterior tenga contra qué medirse.
+
+### 22.1 Qué problema resuelve, en una frase
+
+Hoy el harness elige la población experimental sin mirar qué necesita el mecanismo que va a medir: la raza
+es `perk.Race ?? Human` y el portador es "el primer titular de campo elegible". §21 midió 11 perks y
+encontró que esa elección, no el umbral, explica 10 de los 11 casos de exposición baja — por **dos causas
+independientes**:
+
+| eje | pregunta que el harness no se hace hoy | casos medidos |
+|---|---|---|
+| **Población** (raza/composición) | ¿la etiqueta de estilo que exige la condición es común en la raza con la que estoy generando? | 8/11 (`fine_touch`, `brute_boots`, `blood_tithe`, `first_touch_school`, `fine_orchestra`, `bulwark_stance`, `back_to_back`, `shadow_marker`) |
+| **Posición** (rol del portador) | ¿el portador que he elegido ejecuta con frecuencia la acción que exige el disparador? | 3 (`cannon`, `cold_focus`, `crowd_control`; parcialmente `bruised_knuckles`) |
+
+Los dos ejes se parecen en el síntoma (exposición por debajo del suelo) y son distintos en la causa, así
+que una sola palanca no arregla los dos — `cold_focus` con la raza afín sigue en 2,5%, y `cannon` con un
+Delantero sigue sin ganar la comparación de utilidad.
+
+### 22.2 De dónde sale cada dato: cero invención, todo derivado de datos ya validados
+
+La propuesta **no introduce ningún dato nuevo ni ninguna tabla escrita a mano**. Cada pieza se deriva de
+algo que ya existe y ya está validado por esquema:
+
+| lo que hace falta saber | de dónde sale | por qué no es una invención |
+|---|---|---|
+| Qué etiqueta de estilo exige una condición | el texto de `condition` del propio perk, buscando SOLO las funciones NCalc documentadas (`hasTag`, `nearAlly`, `nearOpponent`, `teammatesWithTag`) y el conjunto CERRADO de 5 estilos de `data/tags/styles.json` | el conjunto de estilos es un enum validado por `data/schemas/races.schema.json`; cualquier cosa fuera de él es `Unknown`, no una suposición |
+| Qué raza representa ese estilo | `race.StyleTagWeights` de `data/races/*.json` (`Bulwark`→Dwarf 75, `Brute`→Orc 75, `Fine`→Elf 70, `Cold`→Undead 72, `Neutral`→Human 70) | es el mismo dato con el que `PlayerGenerator` sortea el estilo: no hay una segunda fuente de verdad |
+| Qué acción exige un disparador | el sitio del motor donde se emite ese `EventType`, leído uno a uno (`Shot`←`Shoot` sobre el tirador; `DribbleAttempted`←`Dribble` sobre el conductor; `Tackle`←`Tackle` sobre el que entra; `Foul`←consecuencia de un `Tackle`, actor = el que entra; `Injury`←actor = la **víctima**, no el que entra; `Save`←portero) | se lee del motor, no se adivina; lo que no tenga un sitio de emisión claro se queda `Unknown` |
+| Qué posiciones ejecutan esa acción | `data/ai/weights.json` → `base[rol][acción]` (p. ej. `Shoot`: Portero 0, Defensa 154, Medio 237, **Delantero 385**; `Tackle`: **Defensa 255**; `Dribble`: **Delantero 300**) | es la tabla que el propio motor usa para decidir (`Utility.Choose` → `ctx.Weights.Base(p.Role, action)`): si el juego dice que un Delantero dispara más, el harness no necesita una opinión propia |
+
+El detalle de `Injury` merece subrayarse porque desmonta el atajo fácil: el actor de un `INJURY` es **quien
+la sufre**, no quien la provoca. Un mapa ingenuo "disparador → acción del portador" clasificaría mal
+`iron_gate`/`iron_price`, que no dependen de que su portador *haga* nada. El diseño necesita, por tanto,
+distinguir tres papeles del portador ante un disparador —**ejecuta** la acción, **la sufre**, o **no hay
+acción de portador** (`MATCH_START`)— más `Unknown`.
+
+### 22.3 La pieza propuesta
+
+Una función **pura** (sin simular ningún partido, ejecutable sobre los 94 perks en milisegundos), que dado
+un perk y la población con la que se lo va a medir devuelve un diagnóstico:
+
+```
+PopulationFitness(
+    StyleTag?        RequiredStyle,      // estilo que exige la condición (null si no exige ninguno)
+    Race?            AffineRace,         // raza con el peso máximo para ese estilo
+    int              WeightInTestedRace, // peso del estilo en la raza con la que se está midiendo
+    TriggerActorRole ActorRole,          // Ejecuta(acción) | Sufre | SinAcción | Unknown
+    PlayerAction?    RequiredAction,
+    Position?        BestRoleForAction,  // rol con el peso base máximo para esa acción
+    Position?        TestedRole,
+    PopulationVerdict, PositionVerdict)
+```
+
+Y un diagnóstico combinado que **solo se usa cuando la exposición ya ha quedado por debajo del suelo**, y
+cuyo único efecto es **explicar**, nunca decidir:
+
+| estado reportado | significado |
+|---|---|
+| `WRONG_POPULATION` | existe una raza donde el estilo exigido es más común que en la usada |
+| `WRONG_POSITION` | el portador no es el rol que más ejecuta la acción del disparador |
+| `GENUINELY_RARE` | población y posición ya son las adecuadas y la exposición sigue baja |
+| `LOW_EXPOSURE` | no se pudo analizar (`Unknown` en algún eje): exposición baja sin causa atribuida |
+
+`LOW_EXPOSURE` es el **fallback honesto**, no un cajón de sastre: cualquier perk cuya condición o
+disparador no encajen en las funciones/eventos ya mapeados cae aquí, y añadir un mapeo nuevo exige leer el
+sitio de emisión correspondiente, nunca un comodín.
+
+### 22.4 Cero constantes nuevas: solo comparaciones ordinales
+
+Riesgo evidente de una propuesta así: colar umbrales inventados por la puerta de atrás ("afín si el peso
+supera X"). El diseño lo evita por construcción — **los dos veredictos son ordinales, no numéricos**:
+
+- `WrongPopulation` ⟺ la raza usada **no es** la de peso máximo para el estilo exigido.
+- `WrongPosition` ⟺ el rol del portador **no es** el de peso base máximo para la acción exigida.
+
+No hay ningún número nuevo que calibrar, y por tanto nada que recalibrar más adelante. Los pesos se
+reportan (6 vs 75, 154 vs 385) para que un humano juzgue la magnitud, pero **ninguna decisión depende de
+un corte numérico nuevo**.
+
+Dos excepciones que el diseño debe tratar explícitamente: un perk con `positionOnly` (p. ej. `safety_net`,
+Portero) no deja libertad al harness → el eje de posición es `FixedByPerk`, nunca `WrongPosition`; y un
+perk con `race` propia (p. ej. `iron_gate`, Dwarf) ya fija su población → eje de población `FixedByPerk`.
+
+### 22.5 Qué cambiaría en `ScreeningRunner`, y qué no
+
+- **Por defecto, solo reporta.** La población usada sigue siendo la de hoy; el diagnóstico se añade a
+  `ScreeningResult` y a las notas. Ningún estado final cambia, ningún perk pasa de no-PASS a PASS.
+- **Invariante de seguridad, verificable**: ninguna combinación de veredictos puede convertir una
+  exposición por debajo del suelo en `SCREENING_PASS`. Los cuatro estados de §22.3 son *etiquetas del
+  motivo*, y los cuatro siguen siendo no-PASS.
+- **Usar la población recomendada es un segundo paso, con interruptor explícito y decisión humana**
+  (§22.6), no una consecuencia automática de implementar el analizador.
+- Cuando se use una población recomendada, `ScreeningResult` y el registro de §10 deben dejar constancia
+  de **cuál** se usó: "80% de exposición" con plantilla Dwarf y con plantilla neutra no son el mismo dato y
+  no pueden guardarse como si lo fueran.
+
+### 22.6 La pregunta que esto deja abierta para el humano (no se decide aquí)
+
+Cambiar la población cambia **qué pregunta responde la medición**:
+
+- con población neutra: *"¿este perk se expone en un equipo cualquiera?"* — mide también si el perk es una
+  elección de nicho;
+- con población afín: *"¿este perk se expone en el equipo para el que está pensado?"* — mide el mecanismo
+  en su mejor caso.
+
+Las dos son legítimas y responden a cosas distintas. **El suelo del 50% se escribió sin distinguirlas**
+(§5.4), así que decidir sobre cuál de las dos se aplica es una decisión de protocolo/diseño, no una
+consecuencia técnica del analizador. El diseño deja las dos disponibles y obliga a registrar cuál se usó;
+no elige por su cuenta.
+
+### 22.7 Criterios de aceptación (falsables)
+
+La implementación se considera aceptable solo si:
+
+1. **Es pura y barata**: clasifica los 94 perks sin simular ningún partido, en un test de milisegundos.
+2. **Reproduce los 11 casos ya medidos** de §21 (8 `WRONG_POPULATION`, `cannon`/`cold_focus`/
+   `crowd_control` `WRONG_POSITION`) — condición necesaria, **no suficiente** (§22.8, el riesgo de
+   circularidad).
+3. **Acierta sobre casos no usados para construirla** (la puerta de verdad, §22.8).
+4. **No inventa**: ningún perk sin mapeo explícito recibe un veredicto distinto de `Unknown`/`LOW_EXPOSURE`;
+   test que recorre los 94 y comprueba que ningún veredicto se apoya en una función NCalc o un `EventType`
+   fuera de la lista mapeada.
+5. **Respeta el invariante de seguridad**: test sobre los 94 que comprueba que ningún diagnóstico
+   convierte una exposición bajo el suelo en `SCREENING_PASS`.
+6. **No mueve nada por defecto**: re-ejecutar el lote de 24 con el analizador activo en modo reporte
+   produce **exactamente los mismos estados finales** que hoy (`bfc82f7`), solo con notas añadidas.
+7. **Cero constantes nuevas**: revisión de que no aparece ningún umbral numérico nuevo (§22.4).
+8. **Casos fijos**: `safety_net` → posición `FixedByPerk`; `iron_gate` → población `FixedByPerk`;
+   `iron_price` (trigger `INJURY`) → `ActorRole = Sufre`, nunca `WRONG_POSITION`.
+
+### 22.8 Plan de validación, en tres fases
+
+**El riesgo central es la circularidad**: la hipótesis salió de 11 casos medidos, así que clasificarlos
+bien no demuestra nada. La validación se organiza alrededor de eso.
+
+- **Fase A — predicción a ciegas (la puerta).** Antes de medir nada más: ejecutar el analizador sobre los
+  94 perks y **congelar por escrito** su predicción de adecuación para un conjunto de perks NO usados para
+  construirlo (candidatos naturales: los que quedan del lote de 24 sin medir — `charge`, `deep_pivot`,
+  `double_shot`, `game_management`, `high_line`, `kamikaze`, `last_ditch`, `line_keeper`, `steamroller`,
+  `grudge`, `free_man`…). Después medir con la batería de §21.6 y comparar contra la predicción
+  congelada. **Si la tasa de acierto sobre los no vistos no es claramente mejor que el azar, la propuesta
+  se cae**, por muy bien que explique los 11 originales.
+  La comparación tiene que mirar **las dos direcciones**, no solo los aciertos cómodos: la mayoría de esos
+  perks no tiene condición de estilo (`charge`, `deep_pivot`, `high_line`… usan zona o marcador), así que
+  el analizador debe predecir para ellos **adecuación**, y la medición debe confirmar que cambiar de raza
+  NO les mueve la exposición. Un analizador que solo acierta cuando grita "población equivocada" es
+  inútil: lo que hay que demostrar es que también sabe callarse.
+- **Fase B — no regresión.** Re-ejecutar el lote de 24 con el analizador en modo reporte: mismos estados
+  finales, mismos costes, solo notas nuevas (criterio de aceptación 6). El circuito del 20% debe seguir
+  disparándose donde se disparaba.
+- **Fase C — decisión humana, no automática.** Solo con A y B en verde, presentar la pregunta de §22.6
+  (¿qué población define el suelo?) para que se decida si el harness pasa a *usar* la recomendación. Hasta
+  entonces, el analizador explica y no cambia nada.
+
+### 22.9 Lo que esta propuesta NO hace, explícitamente
+
+No toca el suelo del 50%, ni el 20% del circuito, ni las bandas de RT-056, ni `/data`, ni ningún perk, ni
+el motor de decisión. No convierte exposición baja en PASS. No elige población por su cuenta en el camino
+crítico. No resuelve el caso de `cannon` (segunda capa, §21.3: el bono no gana la comparación de utilidad
+ni con el portador correcto — eso es `game-design-review`, no tooling). No pretende cubrir los 94 perks:
+lo que no sepa analizar lo dice.
+
+---
+
 ## Hermanos
 
 - `docs/analisis/c1-piloto-cazagoles-diseno.md` — la evidencia de calibración completa (§3.1b, §5, §6,
