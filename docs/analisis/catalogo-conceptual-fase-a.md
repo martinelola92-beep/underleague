@@ -1168,12 +1168,16 @@ campo `Motor` de las fichas; un candidato cuenta en cada capacidad que necesita)
 
 ## Orden de trabajo que se deduce
 
-**Tanda 0 — el instrumento, antes de tocar nada.** El **histograma de acción elegida** por jugador y
-partido, y su distancia L1 contra el control emparejado de la ADR 0087. Sin él, «esto cambia la conducta»
-es una opinión, y **las tres pruebas de la Fase C tienen la prueba 3 vacía**. La línea base hay que tomarla
-**antes** del primer `modifyUtility`. *(Y hay una calibración previa: fijar el umbral midiendo parejas que
-sabemos iguales —`bulwark_stance` / `own_third_anchor`— contra parejas que sabemos distintas
-—`sweeper_keeper` / `iron_gate`.)*
+**Tanda 0 — HECHA (17 sep 2026, `docs/analisis/tanda-0-histograma-de-accion.md`).** El **histograma de
+acción elegida** por jugador y partido, y su distancia L1 contra el control emparejado de la ADR 0087,
+implementado en `Sim.Tests/Analysis/ActionHistogramTests.cs`. Sin código de motor tocado. La calibración
+prevista (`bulwark_stance`/`own_third_anchor` contra `sweeper_keeper`/`iron_gate`) salió con un matiz que
+el plan no anticipaba: `bulwark_stance` activa en solo 2 de 40 partidos (su condición de etiqueta rara vez
+la cumple un portador al azar, el mismo límite AT-C de la ADR 0087) así que su L1=0 no prueba nada por
+baja potencia; `own_third_anchor` sí activa en los 40 y su L1=0 exacto **sí** es la confirmación fuerte.
+`sweeper_keeper` (L1=0,0013, 35 activaciones) confirma que el instrumento distingue un efecto real
+pequeño de un cero. La prueba 3 de la Fase C ya tiene instrumento; sigue pendiente aplicarlo a un
+candidato real de C1 (Tanda 2).
 
 **Tanda 1 — C4 sobre `InjuryChanceBonus`, y nada más.** Es la capacidad más barata que abre una exclusión
 nueva, y abre precisamente **la que ya es la identidad del juego**: dos candidatos (`C-13` Kamikaze,

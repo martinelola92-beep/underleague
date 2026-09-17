@@ -67,3 +67,13 @@ PC (Steam), premium, sin online. **Estado (8 sep 2026): fases 0 y 1 cerradas; fa
   recalibrada (~41 % ante una caída a la mitad) es aceptable para el escalón que nombra la ADR 0033.
 - **Auditoría de organización de trabajo** (V1→V2→V3, decisión del revisor 16 sep 2026): en migración.
   Ver `docs/analisis/auditoria-organizacion-v2.md` para el razonamiento completo.
+- **Tanda 0 del catálogo conceptual, hecha (17 sep 2026)**: el histograma de acción elegida por
+  jugador/partido contra el control emparejado de la ADR 0087, prerrequisito de C1
+  (`modifyUtility`) antes de tocar el motor (`docs/analisis/tanda-0-histograma-de-accion.md`,
+  `Sim.Tests/Analysis/ActionHistogramTests.cs`). Ningún peso, perk ni tope tocado. Calibrado contra
+  cuatro perks ya existentes: confirma que `modifyProbability` no mueve el histograma
+  (`own_third_anchor`, L1=0 con activación completa) y que el instrumento distingue un efecto real
+  pequeño de un cero (`sweeper_keeper`, L1=0,0013) — con el matiz de que `bulwark_stance` activó en
+  solo 2/40 partidos, así que su propio L1=0 no prueba nada por baja potencia (mismo límite AT-C que
+  ya documentó la ADR 0087). Pendiente, no hecho aquí: aplicar el instrumento a un candidato real de
+  C1 (Tanda 2, `Cazagoles`/`Ancla`) — parada explícita hasta revisar este resultado.
