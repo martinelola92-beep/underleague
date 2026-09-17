@@ -1376,6 +1376,240 @@ exactamente por qué**: 22 por un destinatario que el harness de un solo portado
 porque el instrumento correcto es `/Balance --full-runs`, no este protocolo (`RunLevel`, que no es un
 fallo).
 
+*(Nota: §17 reclasifica dos de estos 25 tras encontrar que eran habilidades raciales automáticas, no
+elecciones de portador — el total `ReadyForScreening` final es 24, ver §17.6.)*
+
+---
+
+## 17. Infraestructura de familias enteras: qué significa que READY sea un contrato (18 sep 2026)
+
+Encargo explícito tras cerrar §16: no empezar el `SCREENING` de los 25 `ReadyForScreening` todavía.
+Primero, cerrar los bloqueos de **infraestructura** que afectan a familias enteras (no a un perk suelto) y
+demostrar con ejecuciones reales — no solo con la etiqueta del clasificador — que `READY_FOR_SCREENING`
+significa "puede recorrer el pipeline completo", no "tiene una métrica". Sin tocar `/data`, sin cambiar
+ningún valor de perk, sin cerrar Cazagoles ni Ancla, sin tocar `MinPassChainRatio`, sin gameplay, sin
+inventar bandas, sin screening masivo — solo infraestructura, clasificación, contratos y tests.
+
+### 17.1 `NeedsCampaignHarness` (17 perks): conectar el harness real, sin duplicar `PerkValueRunner`
+
+El clasificador ya sabía distinguir estos 17 perks (§16.4, punto 3); lo que faltaba era demostrar la
+tubería completa `perk real → classifier → harness de campaña correcto → control/treatment → métricas →
+decision engine` con al menos un perk real, sin reimplementar el arrastre de contador entre partidos que
+`Balance/PerkValueRunner.cs` (ADR 0070/0087) ya tiene resuelto y probado.
+
+- `Sim.Tests/Sim.Tests.csproj` gana una referencia a `Balance.csproj` (sin dependencia circular: `Balance`
+  no referencia `Sim.Tests`).
+- `Sim.Tests/Balance/CampaignBalanceHarness.cs` (nuevo): envuelve `PerkValueRunner.Run` con un filtro de un
+  solo perk (`CampaignMatches` = 8 partidos, el recorrido real del contador según ADR 0070, no un número
+  elegido aquí) y convierte la fila resultante en la observación que ya entienden
+  `BalancePowerCheck`/`BalanceDecisionRules`: la tasa de victoria emparejada como proporción binomial
+  (media *p*, varianza *p(1-p)* — la fórmula estándar, no una aproximación nueva), reutilizando
+  `PerkValueRow.PairedValueMilli`/`Wins`/`ControlWins` que la ADR 0087 ya valida.
+- `HarnessSelector.SelectHarness(PerkAuditEntry)` (nuevo, `Sim.Tests/Balance/`): dispatcher puro que decide
+  `SingleMatch`/`Campaign`/`None` a partir del veredicto de auditoría — quien orquesta el pipeline no
+  decide a mano cuándo usar cada harness.
+- **Demostración con perk real** (`Sim.Tests/Balance/CampaignBalanceHarnessTests.cs`, `pit_veteran`):
+  clasificador → `AccumulatedStateBonus`/`NeedsCampaignHarness` → auditoría → `NotReady(NeedsCampaignHarness)`
+  → `HarnessSelector` → `Campaign` → `CampaignBalanceHarness.Run` (160 partidos reales, semilla fija) →
+  armado 99 victorias (61,9 %) / control 96 victorias (60,0 %), 25 activaciones → `deltaWinRate = 0,0188`
+  → `BalancePowerCheck` (potencia insuficiente a *n*=20 plantillas) → `BalanceDecisionRules` → estado final
+  `NeedsReplication`. La tubería completa funciona de punta a punta con datos reales; el veredicto de
+  potencia insuficiente es correcto para este tamaño de muestra, no un fallo del harness.
+- **No se ha balanceado ni medido en firme ningún valor de `pit_veteran`** — es la demostración de
+  conectividad que pedía el encargo, no un cierre de balance.
+
+### 17.2 `FinalBias` (2 perks: `diver`, `home_ref`): existe el agregado, sigue sin banda
+
+`Sim/Analysis/RefereeBiasMetrics.cs` (nuevo): agregado puro sobre `(FinalBias, CarrierTeam)` —
+`BiasFavoring` normaliza `MatchEngine.BiasFor` (relativo al equipo 0) al equipo del portador,
+`MeanBiasFavoringCarrier`/`VarianceBiasFavoringCarrier` resumen una serie de partidos ya jugados
+reutilizando `BalancePowerCheck.SampleVariance`. No duplica ninguna fórmula del motor: `FinalBias` ya
+existe por partido en `MatchReport`, esto solo lo normaliza y agrega desde fuera de `/Sim` propiamente
+dicho (el fichero vive en `Sim/Analysis/`, sin E/S, pero no toca el cálculo del propio `MatchEngine`).
+
+**Distinción explícita que pedía el encargo — "que exista el agregado" no es "que sea suficiente":**
+`PerkBalanceClassifier` reclasifica `ModifyBias` de `NotReadyMissingAggregate` a `NotReadyNoBand` (test
+`RefereeBiasAggregateExistsButStillHasNoBand`, `Sim.Tests/Analysis/PerkBalanceClassifierTests.cs`). El
+motivo del cambio de nombre es literal: antes no existía ningún cálculo agregado de sesgo; ahora existe,
+pero **no hay ninguna banda RT-056 ni ADR** que diga qué rango de sesgo medio a favor del portador es
+aceptable — sin ese criterio, marcar `READY` sería inventar una banda, que el encargo prohíbe
+explícitamente. `diver`/`home_ref` siguen en `DESIGN_REVIEW` (`MissingBand`), igual que antes, solo que
+ahora la razón documentada es la correcta: falta la banda, no falta la métrica.
+
+### 17.3 Multi-target (22 perks): soporte estructural, no por perk, probado con `pack_mentality`
+
+`Sim/Analysis/EffectPopulationResolver.cs` (nuevo): resuelve, **por forma de destinatario** (no por
+tabla de casos por perk), qué índices de jugador afecta realmente un efecto sobre una plantilla ya
+generada — reutilizando `PlayerDefinition.HasTag`, el mismo primitivo que usa `EffectEngine.ResolveTargets`
+en el motor real, sin duplicar la resolución dinámica de pares/adyacencia. Tres estados honestos en vez de
+fingir una resolución:
+
+- **`Resolved`**: `Owner`/`Actor` (un destinatario), `Team`/`OpposingTeam` (equipo completo), `WithTag`
+  (los de la plantilla con esa etiqueta) — todos resolubles con los datos ya generados de `TeamSetup`.
+- **`RequiresLiveMatchState`**: `Adjacent`/`AdjacentWithTag`/`AdjacentOpponents` (adyacencia estática o
+  dinámica, ADR 0021/AY) y `Target`/`Opponent` (rival concreto del evento) — dependen de estado del
+  partido en vivo; el resolver **no inventa una aproximación**, lo deja marcado.
+- **`RequiresLinkResolution`**: `Linked`/`LinkedWithTag` — dependen de `LinkTable` (ADR 0021), no
+  reproducida aquí; tampoco se adivina quién está vinculado.
+
+**Guardia explícita contra la atribución falsa que advertía el encargo** ("efecto sobre N actores ≈ efecto
+sobre el portador" no debe pasar): `PopulationResolutionResult.AffectedCount` expone cuántos jugadores
+*distintos del portador* recibe el efecto, y el test `PackMentalityResolvesToMoreThanTheOwnerOnAtLeastOneRealRoster`
+(`Sim.Tests/Balance/EffectPopulationResolverTests.cs`) genera 30 plantillas reales con semillas distintas y
+mide el tamaño de la población real de `pack_mentality` (`WithTag:Brute`) en cada una: `2,2,1,0,2,0,1,0,1,
+1,1,1,1,0,0,1,1,1,2,1,0,1,1,1,0,0,3,1,0,0` — varía de 0 a 3 según la plantilla generada, nunca un número
+fijo asumido. 13 tests en total, cubriendo los tres estados y las formas de destinatario reales del
+catálogo.
+
+**Por qué esto no cierra `pack_mentality` como `ReadyForScreening`**: saber *a quién* afecta el efecto no
+resuelve la ambigüedad de *qué métrica* mide `Strength` en sí (§16.4, `AmbiguousPrimaryMetric` — ninguno de
+los 4 perks reales de `Strength` da una señal estructural para elegir entre tackle/foul/shot/dribble/
+block/injury) — son dos huecos distintos y `pack_mentality` los tiene ambos. Queda `MultiTarget`,
+correctamente: se resolvió la infraestructura de destinatario, no se inventó el resto.
+
+### 17.4 Los 15 `DesignReview`: auditoría de que son de verdad decisiones de diseño
+
+No se ha intentado hacer auto-tuneable ninguno de los 15 artificialmente. Por familia:
+
+- **`MissingBand` — calidad de tiro/pase/parada (11 perks: `box_predator`, `cold_focus`, `safety_net`,
+  `killing_range`, `forward_line`, `long_range_menace`, `crowd_control`, `fine_touch`,
+  `flank_specialist` y equivalentes)**: el mecanismo (`ModifyProbability` sobre `ShotOnTarget`/`Pass`/
+  `Save`) es perfectamente medible — la fila de `MatchMetrics` existe (`shotsOnTargetShare`,
+  `passCompletionRate`, `saveRate`) — pero está declarada `INFO`, sin `RangeMin`/`RangeMax` en
+  `docs/balance.md`. Falta una decisión humana: **qué rango de estas métricas es "sano" para el juego**,
+  no un dato que el tooling pueda derivar del propio perk.
+- **`MissingBand` — `CancelEvent` FOUL/GOAL (`mob_instigator`, `hand_of_god`)**: mecanismo binario claro
+  (cancela una falta/gol), pero foulsPerMatch/goalsPerMatch también son `INFO` — falta la misma decisión de
+  banda, no un problema de medición.
+- **`MissingBand` — `RefereeBias` (`diver`, `home_ref`)**: cubierto en 17.2 — el agregado ya existe, la
+  banda de sesgo aceptable no.
+- **`AmbiguousPrimaryMetric` — `Strength` (`brute_boots`, `comeback_spirit`)**: cubierto en 17.3 —
+  ambigüedad de atribución de la métrica primaria entre 5-6 resoluciones distintas, sin señal estructural
+  del propio dato (`positionOnly`, familia) para elegir. Es una pregunta de diseño ("¿qué debería mejorar
+  Strength en la práctica?"), no de tooling.
+
+En los cuatro casos, lo que falta es **un criterio que solo puede venir de una decisión de diseño humana**
+(un rango objetivo, una prioridad de atribución) — el tooling ya sabe medir el mecanismo; no le falta
+instrumento, le falta que alguien decida el número o el criterio. Ninguno se ha marcado `READY` por existir
+ya el mecanismo o el agregado.
+
+### 17.5 La prueba fundamental: el contrato de `READY_FOR_SCREENING`
+
+`Sim.Tests/Balance/ReadyContractTests.cs` (nuevo): para **todo** perk que la auditoría marca
+`ReadyForScreening`, comprueba con una ejecución real (5 plantillas, semilla fija — no cientos de
+partidos) que los diez componentes existen, no solo que la etiqueta del clasificador lo diga:
+
+1. harness válido (`HarnessSelector` da `SingleMatch`)
+2. control definido (partidos de control > 0)
+3. treatment definido (partidos armados > 0)
+4. métrica primaria válida (no vacía, no una de las 15 métricas `INFO`)
+5. baseline/control comparable (mismo número de partidos armado y control, mismas plantillas/semillas)
+6. criterio de exposición evaluable
+7. criterio de exposición insuficiente evaluable
+8. criterio de decisión (`BalanceDecisionRules.EvaluateScreening` produce un estado definido)
+9. safety metrics aplicables (las 7 métricas obligatorias de RT-056 se calculan sobre estos partidos)
+10. estrategia de búsqueda compatible (`BalanceSearchStrategy`: coherente con si el perk tiene o no
+    parámetro numérico)
+
+Si falta cualquiera, el test falla con el motivo exacto — `READY_FOR_SCREENING` deja de ser una etiqueta
+del clasificador y pasa a ser un contrato verificable, tal como pedía el encargo.
+
+**Esta prueba, ejecutándose contra datos reales, encontró dos bugs de clasificación que la auditoría
+puramente estática de §16 no podía ver:**
+
+1. **`iron_gate`** (`CancelEvent`/INJURY, `race=Dwarf`, `tagsRequired=[Dwarf]`): `PairedBalanceHarness`
+   generaba siempre plantillas `Race.Human` — nunca podía encontrar un titular elegible de raza Enana. El
+   contrato falló con "0 partidos armados". **Corregido**: `PairedBalanceHarness` acepta ahora una
+   `Race?` opcional (`RunWithEligibleCarrier` pasa `perk.Race`); la generación usa `race ?? NeutralRace` en
+   vez de una raza fija — el mismo criterio que ya usa `PerkValueRunner.Measure`
+   (`var race = perk.Race ?? NeutralRace`), no una regla nueva.
+2. **`elf_touch`** (y, revisando el mismo patrón, otros 4: `hot_blooded`, `numb`, `quick_learner`,
+   `roots` — una habilidad racial automática por raza): su propio `_doc` dice literalmente "se asigna
+   automáticamente a toda la plantilla élfica y no ocupa slot" — no es una elección de portador, así que
+   el harness de portador único nunca encontrará un "titular elegible" para él, con o sin arreglo de raza.
+   **Corregido**: `PerkAudit.Audit` gana un parámetro `Catalog` y una comprobación temprana
+   (`perk.Id == catalog.Race(perk.Race).Ability`) que enruta las habilidades raciales a
+   `NotReady(RacialAbility)` — exactamente el mismo criterio de exclusión que ya usa
+   `Balance/PerkValueRunner.cs` internamente (`if (perk.Id == catalog.Race(race).Ability) skip`); no una
+   regla inventada para esta auditoría.
+
+Tras ambos arreglos, los 24 `ReadyForScreening` restantes (25 − 1, porque `elf_touch` pasa a
+`RacialAbility`) pasan el contrato completo con ejecuciones reales. `ContractCatchesAKnownBadCaseIfSomeoneMisclassifiesIt`
+(prueba negativa sobre `mob_instigator`, un `DesignReview` real) confirma que el contrato también rechaza
+correctamente un caso que no debería pasar.
+
+### 17.6 Test con perks reales: el camino de cada estado
+
+`Sim.Tests/Balance/FivePathsDemoTests.cs` (nuevo): sin tocar `/data`, muestra el camino
+clasificador → auditoría → harness para un perk real de cada estado, sin ejecutar ningún partido (solo
+consulta de datos ya cargados y de las funciones puras de decisión):
+
+| perk | estado final | por qué | harness seleccionado |
+|---|---|---|---|
+| `own_third_anchor` | `ReadyForScreening` | `ModifyProbability(tackle)` condicionado a zona propia — mecanismo y banda confirmados desde Tanda 0 | `SingleMatch` |
+| `pit_veteran` | `NotReady`/`NeedsCampaignHarness` | `AddCounter`+`ModifyProbability(tackle)` escalado por contador que persiste entre partidos | `Campaign` |
+| `pack_mentality` | `MultiTarget` | `ModifyAttribute(strength)`, destinatario `WithTag:Brute` — afecta a varios jugadores (§17.3) | `None` |
+| `box_predator` | `DesignReview`/`MissingBand` | `ModifyProbability(shotOnTarget)` — métrica natural es `INFO`, sin banda (§17.4) | `None` |
+| `unlikely_bulwark` | `NotReady`/`MultiEffectAttribution` | `ModifyProbability(tackle)`+`ModifyLeash` — dos categorías distintas, atribución sin resolver | `None` |
+
+6 tests, todos en verde. `NoDataFileWasReadOrWrittenByThisDemo` confirma explícitamente que la demo no
+toca `/data`.
+
+### 17.7 Resultado agregado tras esta fase
+
+Los mismos cinco números de §16.1, con tres cambios, cada uno con su causa exacta: `ReadyForScreening`
+baja de 25 a **24** (`elf_touch` sale por ser habilidad racial, §17.5), `RunLevel` baja de 7 a **6**
+(`quick_learner` es también habilidad racial de su raza), y `DesignReview` sube de 13 a **15**
+(`diver`/`home_ref` se mueven aquí desde `NotReady`/`MissingAggregateMetric` — §17.2: el agregado de sesgo
+ya existe, pero sigue faltando la banda, así que el motivo correcto es `MissingBand`, no "no hay
+métrica"). El resto de la reclasificación de `NotReady` (§17.5: `roots`/`hot_blooded`/`numb` pasan de
+`MissingPrimaryMetric` a `RacialAbility` por el mismo motivo que `elf_touch`/`quick_learner`) mantiene el
+total de `NotReady` fijo en 27. Fijado como regresión en `PerkAuditTests.AggregateCountsAreFixedAsRegression`:
+
+```
+Total perks: 94
+
+ReadyForScreening: 24
+MultiTarget:       22
+DesignReview:      15
+NotReady:          27
+RunLevel:           6
+```
+
+**`NOT_READY` por motivo** (mutuamente excluyentes):
+
+```
+NeedsCampaignHarness:     17
+RacialAbility:             5   (elf_touch, hot_blooded, numb, quick_learner, roots)
+MissingPrimaryMetric:      4
+MultiEffectAttribution:    1   (unlikely_bulwark)
+```
+
+**`DESIGN_REVIEW` por motivo**:
+
+```
+MissingBand:              13
+AmbiguousPrimaryMetric:    2
+```
+
+### 17.8 Qué queda bloqueado y por qué (sin cerrar aquí)
+
+- **22 `MultiTarget`**: la infraestructura de destinatario existe (§17.3), pero el harness de
+  control/treatment para una población variable (no un solo portador) sigue sin construirse — es el
+  siguiente hueco de tooling, no de clasificación.
+- **15 `DesignReview`**: necesitan una decisión humana de banda o atribución (§17.4) — el tooling no puede
+  ni debe inventar esa decisión.
+- **22 `NotReady(NeedsCampaignHarness)`** (incluye los 17 de §16 más `poacher_instinct`/`scar_veteran`/etc.
+  ya contados ahí — el número de §17.7 es 17 tras el ajuste de `RacialAbility`, no ha cambiado el
+  mecanismo): el harness de campaña ya está conectado y demostrado (§17.1), pero solo se ha ejecutado
+  contra UN perk (`pit_veteran`) como demostración — falta recorrer los 16 restantes, deliberadamente
+  fuera de este encargo ("no screening masivo").
+- **5 `RacialAbility`**: estructuralmente no medibles con ningún harness de portador (no son una elección
+  de slot) — necesitarían, si se quisieran medir, un harness de "toda la plantilla de una raza" distinto,
+  no contemplado en este protocolo.
+- **4 `MissingPrimaryMetric`** y **1 `MultiEffectAttribution`**: sin cambios respecto a §16 — siguen
+  siendo huecos de tooling nombrados, no tocados en esta fase.
+
 ---
 
 ## Hermanos

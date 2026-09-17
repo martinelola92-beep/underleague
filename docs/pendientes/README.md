@@ -55,3 +55,4 @@ a secas.
 | [CAT-G](./CAT-G.md) | El equipo de la referencia neutra es una palanca que mueve tres métric | Ver fichero |
 | [CAT-H](./CAT-H.md) | ¿Compraría alguien un objeto maldito? | Ver fichero |
 | [CAT-I](./CAT-I.md) | La política automática casi nunca vende, así que las reglas de venta n | Ver fichero |
+| [CAT-J](./CAT-J.md) | Dos puertas de `BuildGateTests` en rojo en HEAD (elf_brawler, passChain), preexistente | Abierta |
