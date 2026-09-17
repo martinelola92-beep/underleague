@@ -2599,6 +2599,141 @@ tooling.
 
 ---
 
+## 24. Cierre metodológico: ¿existe de verdad el tercer canal? (19 sep 2026)
+
+La hipótesis del `attributeBias` (§23.3) apareció *después* de ver tres hold-outs fallidos, así que no vale
+como explicación hasta intentar falsarla con evidencia independiente. Esta sección lo intenta. Nada de lo
+que sigue modifica el analizador, la predicción congelada, el protocolo ni el circuito.
+
+### 24.1 Primero, una corrección de mi propia lectura de la Fase A
+
+Antes de investigar nada: **la cifra "especificidad 17/20" de §23.2 estaba inflada y hay que retirarla.**
+
+De los 20 perks del hold-out, **10 miden exposición 100% en las cinco razas**. No es que el analizador
+acertara con ellos: es que **no podían moverse**. Y la causa es estructural, no casual — los diez, sin
+excepción, se disparan con `MATCH_START`:
+
+```
+blood_scent  bloodhound  deep_pivot  deep_run  free_man
+high_line    kamikaze    line_keeper own_third_anchor  shadow      -> los 10, trigger MATCH_START
+```
+
+Un perk de `MATCH_START` con condición estática dispara **exactamente una vez por partido, siempre**
+(`own_third_anchor`: 1,00 activaciones/partido en las cinco razas, exposición 100% en las cinco). Su
+exposición no es una frecuencia: es un booleano disfrazado — vale 100% si la condición se cumple y 0% si
+no. Contarlo como "acierto de especificidad" es contar un caso donde la medida no podía discrepar.
+
+**Lectura corregida**: el subconjunto informativo son los **10 perks restantes**, y de ellos **3 superaron
+el corte de 25 puntos**. La especificidad real medida es **7/10**, no 17/20. El resultado sigue siendo
+favorable, pero mucho menos rotundo de lo que escribí en §23.2, y la diferencia venía de mi forma de
+contar, no de los datos.
+
+### 24.2 La prueba independiente: frecuencia bruta de los sucesos, sin ningún perk
+
+Si el canal existe, el orden de razas por **frecuencia del suceso disparador** (medida **sin equipar
+ningún perk**, así que no puede contaminarla el perk) debe reproducir el orden de razas por exposición de
+§23.2. Órdenes esperados escritos antes de medir; medición en 40 partidos por raza:
+
+| suceso medido (sin perk) | orden medido | orden esperado desde la exposición | veredicto |
+|---|---|---|---|
+| faltas del rival/partido (`grudge`) | **Orc 6,33 > Dwarf 2,83 > Human 2,42** > Undead 1,80 > Elf 1,23 | Orc > Dwarf > Human > (Elf = Undead, empatados) | **confirma** |
+| recuperaciones del portero/partido (`sweeper_keeper`) | **Dwarf 1,07** > Human 0,95 > Orc 0,90 > Elf 0,88 > **Undead 0,68** | Dwarf > Orc > Human > Elf > Undead | **confirma** los extremos; el medio, dentro del ruido |
+| entradas del defensa/partido (`charge`) | Orc 1,70 > Dwarf 1,40 > Elf 1,10 > Human 1,02 > **Undead 0,70** | Orc > Dwarf > **Undead** > Elf = Human | **confirma parcial**: acierta el podio, falla en Undead |
+
+Los atributos generados acompañan la historia: el defensa Orco sale con fuerza 70,4 y el Elfo con 61,4;
+el portero Undead es el más lento (velocidad 56,1 frente a 64,8 del Elfo).
+
+**`grudge` merece subrayarse**: su disparador es `FOUL` con `scope: opponent`. Lo que mueve su exposición
+no es nada del portador — es **cuánto falta el equipo RIVAL**, y como el harness genera los dos equipos con
+la misma raza, un rival Orco (6,33 faltas/partido, cinco veces el Elfo) lo activa diez veces más. Es un
+canal que el analizador no podría ver ni con el eje de estilo ni con el de posición: mira al portador, y
+aquí el sujeto es el rival.
+
+**`charge` no es un test limpio** y hay que decirlo: su efecto es `extraAction` sobre el propio disparador
+`TACKLE`, así que activarse le genera más entradas y más activaciones (3,12-4,75 activaciones/partido
+frente a 0,70-1,70 entradas brutas del mismo defensa sin el perk). El perk se realimenta; su exposición no
+puede leerse como medida limpia de la tasa subyacente.
+
+### 24.3 El caso negativo, buscado a propósito: `last_ditch`
+
+Paso 5 del encargo: buscar un caso donde el `attributeBias` exista pero **no** mueva la exposición, para
+comprobar que no estamos ante una explicación universal. Lo hay, y es el mejor control posible porque
+comparte disparador (`TACKLE`) y portador (Defensa) con `charge`:
+
+```
+last_ditch    Dwarf 70,0% (1,25/partido)   Orc 67,5% (1,23)   Undead 62,5% (1,02)
+              Elf 57,5% (1,23)             Human 55,0% (1,10)
+              dispersión de exposición: 15 puntos | razón max/min de la TASA: 1,22x
+```
+
+El mismo defensa, con las mismas razas, tiene una tasa **bruta** de entradas que varía 2,4× (0,70 a 1,70).
+Y sin embargo las activaciones de `last_ditch` varían solo 1,22× y su exposición 15 puntos. La variación de
+atributos está ahí y **no llega** a la exposición del perk: su condición de zona (`zone(actor) == 'Own'`) y
+su semántica por jugada absorben la diferencia.
+
+**Conclusión: la forma fuerte de la hipótesis queda REFUTADA.** No es cierto que "si el `attributeBias`
+mueve la tasa del disparador, mueve la exposición del perk". Lo que sobrevive es la forma débil:
+
+> El `attributeBias` de la raza mueve las tasas de los sucesos del partido; **si eso llega o no a la
+> exposición de un perk concreto depende del propio gating del perk y de dónde esté la métrica en su curva
+> de saturación**.
+
+### 24.4 Hallazgo colateral: la métrica de exposición satura, y eso importa más que el canal
+
+Los datos de §24.1 y §24.3 apuntan los dos al mismo sitio: **"fracción de partidos con ≥1 activación" es un
+instrumento pobre para detectar efectos de población**, porque satura por arriba. Con una tasa de ~1
+activación por partido ya está en la zona comprimida, y con un disparador `MATCH_START` está clavada en
+100% por construcción.
+
+Esto no es una propuesta de cambiar el suelo del 50% — es una observación sobre **qué mide**. Aplicado a
+las dos familias que conviven hoy bajo el mismo umbral:
+
+- **perks de suceso** (`TACKLE`/`SHOT`/`FOUL`/`RECOVERY`…): la exposición es una frecuencia real, varía de
+  forma continua y sí responde a la población (por los tres canales).
+- **perks de `MATCH_START`**: la exposición es binaria. El suelo del 50% no mide "con qué frecuencia se
+  ejercita el mecanismo" sino "¿se cumple la condición, sí o no?". Son dos preguntas distintas bajo el
+  mismo número.
+
+Queda anotado como evidencia para la decisión normativa que sigue pendiente (§22.6), no como una acción.
+
+### 24.5 Decisión sobre el tercer eje (paso 6): NO entra en `PopulationFitness`
+
+Con la evidencia de arriba, mi recomendación es **no** añadir el `attributeBias` como tercer eje del
+analizador, y el motivo no es prudencia genérica:
+
+- Los dos ejes actuales son **derivaciones estáticas** de datos validados (rareza de etiqueta, pesos base
+  por rol) y predicen de forma reproducible, con el eje de posición reproduciendo el ranking completo
+  (§23.4).
+- El tercero **no es de la misma naturaleza**: es una interacción dinámica que solo a veces llega a la
+  exposición (§24.3, refutada la forma fuerte). Modelarlo estáticamente exigiría predecir el gating propio
+  de cada perk y su punto de saturación, que **no son derivables de ninguna fuente existente**. Sería
+  exactamente el tipo de regla inventada que este protocolo lleva veinticuatro secciones evitando.
+- Y hay un caso, `grudge`, donde el sujeto del canal **ni siquiera es el portador** sino el rival: un
+  "tercer eje" centrado en el portador tampoco lo capturaría.
+
+Lo que sí sería una mejora derivable y barata —y que **no se implementa aquí**, por la misma puerta que
+prohíbe reajustar después de ver resultados— es marcar estáticamente los perks de `MATCH_START` como
+"exposición binaria: no leer de aquí un veredicto de población". Sale del propio `perk.Trigger`, no
+necesita dato nuevo, y habría evitado el error de lectura de §24.1. Queda como propuesta para una eventual
+Fase B, con su propia predicción congelada.
+
+### 24.6 Estado en que queda la Fase A
+
+- **Eje de posición: validado.** Reproduce el ranking de `data/ai/weights.json` (§23.4).
+- **Eje de estilo/raza: sensibilidad validada** (`pack_mentality`, 1/1 con la raza exacta);
+  **especificidad 7/10**, corregida a la baja desde el 17/20 que escribí en §23.2.
+- **Tercer canal (`attributeBias`): existe, confirmado independientemente en 2 de 3 casos** (`grudge`,
+  `sweeper_keeper`; `charge` no es test limpio), **y su forma fuerte queda refutada** por `last_ditch`.
+  **No entra en el analizador.**
+- **Limitación nueva y documentada**: la métrica de exposición satura; para perks de `MATCH_START` es
+  binaria.
+- **Protocolo original: intacto.** Suelo del 50%, circuito del 20%, bandas RT-056, `/data` y perks, sin
+  tocar. Lote detenido en 5/24. `high_line` (`DESIGN_ESCALATION`, Δ −2,2095) sigue apartado a propósito:
+  es una señal de dirección del efecto, no de adecuación de población, y mezclarla aquí enturbiaría la
+  lectura causal.
+
+---
+
 ## Hermanos
 
 - `docs/analisis/c1-piloto-cazagoles-diseno.md` — la evidencia de calibración completa (§3.1b, §5, §6,
