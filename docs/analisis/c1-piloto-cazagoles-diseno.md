@@ -447,6 +447,125 @@ primero"; con los tres candidatos limpios en lo demás, no se ha lanzado.
 ningún fichero en `/data/perks`. Este apartado es el resultado del experimento aprobado en §4, para
 revisar antes de elegir el candidato y cerrar C1.
 
+## 6. Comparación final contra los criterios preregistrados de §4 (17 sep 2026)
+
+Sin medir nada nuevo y sin cambiar ningún porcentaje: los seis puntos, solo con los números de §5 y los
+criterios que ya estaban escritos en §4 antes de ver el resultado.
+
+**Cifras relativas de apoyo** (derivadas de la tabla de §5, no nuevas mediciones):
+
+| candidato | ΔpassChain % | Δshots % | ΔdistTiro % | Δcuota `Shoot` (pp) | `ShortPass` del par (control→armado) | ratio beneficio/coste (Δshots%/|ΔpassChain%|) |
+|---|---|---|---|---|---|---|
+| 17% | −1,4% | +10,0% | +9,1% | +6,1 pp | 21,8%→15,7% (−28% relativo) | 7,2 |
+| 24% | −3,8% | +11,9% | +16,4% | +10,4 pp | 21,5%→11,1% (−48% relativo) | 3,1 |
+| 48% | −4,3% | +20,1% | +18,3% | +17,4 pp | 24,4%→7,0% (−71% relativo) | 4,7 |
+
+### 1. ¿Cuál cumple mejor la intención mecánica sin volverse automatismo?
+
+**24%.** Es el único de los tres sin ninguna condición de descarte de §4 cerca de cumplirse en ningún
+sentido: efecto real y visible (cuota de `Shoot` +10,4 pp), coste legible y proporcionado (`passChain`
+−3,8%, tiro un 16% más lejos de media), y `ShortPass` sigue siendo una opción real dentro de la ventana
+de exposición (11,1%, no exprimida). 17% es "seguro" pero por debajo de donde el efecto se vuelve
+inconfundible en el histograma completo (ver punto 2). 48% es el que más se acerca, de los tres, a que
+`ShortPass` deje de ser una opción real (ver punto 4).
+
+### 2. ¿17% es insuficiente, o su efecto ya basta para la ficha?
+
+**Contra el criterio preregistrado (§4.1, punto 8: ¿es indistinguible del cero informativo de
+`own_third_anchor`?), NO es insuficiente.** `L1=0,0336` está muy por encima del techo de ruido de
+calibración de Tanda 0 (`sweeper_keeper`=0,0013, con vía causal real conocida) — 17% no es un candidato
+"inútil", la hipótesis de §4.1 (que pudiera resultar indistinguible de ruido) no se confirmó.
+
+Dicho eso, el tamaño del efecto es el más pequeño de los tres en todas las métricas (cuota de `Shoot`
++6,1 pp frente a +10,4/+17,4 pp de los otros dos) y tiene el mejor ratio beneficio/coste (7,2) precisamente
+porque tanto el beneficio como el coste son los más pequeños — no porque sea la opción más eficiente en
+términos absolutos. Es una observación de diseño, no un criterio de los ocho preregistrados: si el
+objetivo declarado de la ficha es que el jugador **note** claramente "aquí no piensa: tira", un efecto de
++6 puntos porcentuales de cuota es real pero discreto. Los ocho criterios de §4.1 no exigen que el efecto
+sea *prominente*, solo que sea *distinguible de ruido* — y lo es. Que además sea *suficientemente
+llamativo* para la fantasía es una pregunta distinta, de diseño, que este documento señala pero no zanja
+con los datos ya tomados.
+
+### 3. ¿24% logra un compromiso defendible entre magnitud y coste?
+
+**Sí, contra los tres discard de §4.2**: (a) el coste no supera desproporcionadamente al beneficio — el
+`passChain` cae un 3,8% relativo mientras `shotsPerMatch` sube casi el triple en términos relativos
+(11,9%); (b) ninguna métrica de seguridad se mueve (`injuriesPerMatch` 0,407/0,420, sin patrón); (c) la
+auditoría de `distanceToGoal` muestra el coste de calidad que la ficha pide (2,62→3,05 casillas, +16%),
+no una IA que "dispara mal" sin criterio — sigue siendo una decisión con un patrón legible, no ruido. Es
+el único de los tres que pasa las tres condiciones sin quedar cerca de ninguna.
+
+### 4. ¿48% queda demasiado cerca de la condición de descarte sin cruzarla?
+
+**Sí.** No cruza la condición 4 de §4.3 (`ShortPass` no llega a "cerca de cero"), pero tres señales
+independientes de la propia tabla apuntan en la misma dirección — la misma regla que este documento ya
+aplicó en BB-P/BB-G ("dos o tres métricas apuntando al mismo sitio son señal, no ruido, aunque cada una
+por separado parezca aceptable"):
+
+- **`ShortPass` pierde el 71% relativo de su cuota** dentro del par `Shoot`/`ShortPass` (24,4%→7,0%),
+  frente al 28% (17%) y 48% (24%) de los otros dos — una aceleración, no un paso más de la misma
+  progresión.
+- **La `L1` se dispara entre 24% y 48%** (+0,0313) mucho más de lo que subió entre 17% y 24% (+0,0049):
+  6,4 veces el incremento marginal, pese a que el porcentaje solo se multiplicó por dos.
+- **La calidad del tiro se estanca mientras la cantidad no**: la distancia media del tiro casi no sube
+  entre 24% y 48% (+0,05 casillas) mientras `shotsPerMatch` sigue acelerando (+0,228 tiros, más que el
+  incremento 17%→24%). Los tiros que añade el salto de 24% a 48% no son mayoritariamente "peores
+  posiciones que antes" — son sustituciones de un pase que el volcado marcaba como netamente mejor por un
+  tiro de calidad **similar** a la que ya daba 24%, no peor. Eso es exactamente el patrón que describe la
+  condición de descarte de §4.3 (automatismo sin decisión real), medido de forma indirecta aunque el
+  número de `ShortPass` no haya llegado literalmente a cero.
+
+No se descarta 48% con los datos de hoy — no cruza el umbral escrito —, pero de los tres es el que menos
+margen tiene antes de hacerlo, y es el único donde tres señales distintas apuntan en la misma dirección.
+
+### 5. ¿Qué implican los cambios de `distanceToGoal` y `passChain`?
+
+**`distanceToGoal`**: el control se mantiene prácticamente plano en los tres candidatos (2,62-2,64
+casillas, como debe ser: el control no lleva el perk) — confirma que no hay fuga entre brazos. El
+armado sube con `X`, pero con rendimientos decrecientes: +0,24 casillas (17%), +0,17 más (24%), solo
++0,05 más (48%). La caída de calidad del tiro —el coste que la propia ficha pide ("con él, el equipo
+remata peor")— ya está mayoritariamente conseguida en 24%; subir a 48% compra sobre todo más **cantidad**
+de tiros, no más **degradación** de su calidad. Es el dato que sostiene el punto 4.
+
+**`passChain`**: cae de forma monótona pero acotada en los tres (−1,4% a −4,3% relativo), y crece mucho
+más despacio que `shotsPerMatch` o la `L1` según sube `X` — no hay un punto de quiebre brusco dentro del
+rango medido. Dicho esto, esto se mide **sobre el equipo del portador en un piloto aislado**, no es la
+misma cifra que la puerta `buildsWinDifferently_passChain` (que sigue sin usarse aquí, por instrucción
+explícita) ni es comparable numéricamente con el 1,08-1,09 de BB-P (otra población de partidos, otra
+build). El contexto de BB-P solo justifica por qué **cualquier** caída de `passChain` merece mirarse con
+cuidado en este proyecto ahora mismo, no que estas cifras concretas empeoren esa puerta.
+
+### 6. ¿Hace falta medir `ballThirdMaxShare` antes de decidir?
+
+**Depende de qué candidato se esté evaluando, no es una sola respuesta.** Para 17% y 24% nada en la
+medición actual señala una vía de riesgo activa: el aumento de tiros es moderado (+10,0%/+11,9%) y el
+resto de métricas está limpio, así que —siguiendo la propia regla de §3.6 ("lote de `/Balance` solo si
+la medición aislada por parejas no muestra nada preocupante primero")— no hay un indicio que obligue a
+medirlo todavía para decidir entre esos dos. **Para 48% sí sería necesaria antes de darlo por bueno**: es
+el candidato con el mayor aumento de tiros (+20,1%, el doble que 17%) y por tanto el de mayor exposición
+plausible a más saques de puerta y redistribución de zona — exactamente la vía causal que §3.6 ya
+señalaba, y el candidato que menos margen de seguridad tiene en todo lo demás (punto 4). No hace falta
+para elegir entre 17/24; sí haría falta antes de cerrar 48% como opción viable.
+
+### Recomendación
+
+**24%.** Es el único candidato que satisface los ocho criterios de su propia sección (§4.2) sin quedar
+cerca de ningún límite, con un efecto ya claramente distinguible de ruido (a diferencia de lo que preveía
+la hipótesis de §4.1 sobre 17%, que resultó no cumplirse, pero cuyo efecto sigue siendo el más pequeño de
+los tres) y sin las señales de automatismo que empiezan a aparecer en 48% (punto 4). No es una elección
+por ser la mediana de la distribución de §3.1b — la mediana coincide con el resultado esta vez, pero la
+razón para preferirlo es lo medido en §5/§6, no su origen estadístico.
+
+**Esto no es una declaración de valor definitivo.** Antes de cerrar C1 con 24% (o cualquier otro valor):
+falta el **lote de `/Balance` (RT-054, §3.6)** que esta fase deliberadamente no lanzó por no ser necesario
+para la comparación aislada — el paso que sigue, no una medición añadida a este documento. Si en algún
+momento se reconsiderara 48% en vez de 24%, esa reconsideración sí necesitaría además la medición de
+`ballThirdMaxShare` señalada en el punto 6 antes de poder decidir con la misma base de evidencia que aquí
+respalda a 24%.
+
+`MinPassChainRatio` sigue intacto. No se ha implementado ningún perk en `/data`, ni se ha declarado
+ningún valor definitivo.
+
 ## Hermanos
 
 - `docs/analisis/tanda-0-histograma-de-accion.md` — el instrumento que este plan reutiliza.
