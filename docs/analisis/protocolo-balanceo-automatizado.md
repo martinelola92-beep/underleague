@@ -3268,6 +3268,102 @@ contrapartida de un perk es suficiente — no para este protocolo.
 
 ---
 
+## 31. ¿Es `high_line` poder gratis? No hay evidencia para escalarlo (19 sep 2026)
+
+Rama independiente del debate del 50%. Pregunta cerrada: *¿hay evidencia suficiente para llevar
+`high_line` a revisión de diseño por poder gratis?* No se toca ningún umbral, `/data`, el perk, el lote ni
+`PopulationFitness`.
+
+### 31.1 Carencia declarada antes de medir
+
+**El proyecto no tiene definición operativa de "poder gratis".** Existe solo como la pregunta 7 de
+`.claude/skills/game-design-review/SKILL.md` ("todo lo que da algo quita algo… si no hay coste de
+oportunidad legible, probablemente sea 'poder gratis'") — un juicio cualitativo asignado explícitamente a
+revisión de diseño. No hay umbral, ni métrica, ni test. **No se inventa ninguno aquí.**
+
+Sí existe criterio para la mitad medible, y es el que se usa: ADR 0087 define la unidad de valor de un perk
+(`PerkValueRow.PairedValueMilli`, diferencia emparejada de tasa de victoria) y convierte en comprobable la
+regla "ningún perk negativo". Para el contraste se usa el criterio general del propio protocolo
+(`BalancePowerCheck`, 2×error estándar, §5.5), con varianza de proporción p(1−p) exactamente como ya hace
+`CampaignBalanceHarness.ToWinRateObservation`.
+
+La carencia **no impidió responder esta vez**, porque el resultado fue negativo y no hizo falta juzgar
+materialidad. Si el efecto hubiera salido significativo, sí habría bloqueado la conclusión — queda anotado
+para la próxima.
+
+### 31.2 Protocolo fijado antes de ejecutar
+
+200 partidos por brazo (100 plantillas × 2 direcciones); mismas plantillas, semillas y generador en los dos
+brazos (`PairedBalanceHarness`, el de todos los diagnósticos anteriores); métrica primaria la tasa de
+victoria emparejada del equipo del portador en unidades de ADR 0087; dirección esperada si hubiera ventaja,
+armado > control; criterio `BalancePowerCheck` a 2×SE, sin umbral nuevo; secundarias las 7 obligatorias de
+RT-056 más los goles encajados de §30.
+
+### 31.3 Resultado
+
+**Ventaja (métrica primaria):**
+
+```
+victorias armado   105/200  (52,50%)
+victorias control  101/200  (50,50%)
+delta               +2,00 puntos      PairedValueMilli  +40
+2×error estándar    +9,99 puntos      |delta|            2,00 puntos
+¿distinguible del ruido (§5.5)?  NO
+```
+
+**La banda de ruido es cinco veces el efecto observado.** El +2,00 es exactamente lo que produce el azar
+con 200 partidos.
+
+**Sobre la referencia de ADR 0087**: +40 queda "fuera" de su ±`rowDeviation`=7, y eso **no es
+transferible**. Aquel 7 se midió con el harness de campaña y es una desviación *entre filas*, no el error
+estándar *de esta* medición. En la misma unidad, el ruido de este harness es **±200**, así que +40 está
+muy dentro. Las dos referencias discrepan por un factor de 28 y la que aplica es la calculada sobre los
+datos propios — citar el ±7 aquí sería comparar cosas distintas para obtener una respuesta más jugosa.
+
+**Coste declarado, al mismo tamaño de muestra:**
+
+```
+goles encajados/partido   armado 1,135 | control 1,150 | delta −0,015
+2×error estándar 0,181 | |delta| 0,015     ¿distinguible?  NO
+```
+
+**El indicio de §30 se disuelve.** Con n=40 los goles encajados daban −0,400; con n=200 dan **−0,015**,
+es decir, cero. Era ruido de muestra pequeña, tal y como §30 lo marcó al publicarlo. Esta es la parte más
+importante del resultado.
+
+**Secundarias (las 7 obligatorias, todas IN):** `possessionChanges` −1,660, `passChainAvgLength` +0,083,
+`shotsPerMatch` −0,355, `scorelineShare` +0,500, `ballThirdMaxShare` −1,776, `tacklesPerMatch` −0,345,
+`injuriesPerMatch` +0,025.
+
+Lo único que sobrevive a n=200 es el efecto territorial (`ballThirdMaxShare` −1,776, coherente con el
+−2,2095 de n=40) — que es justo el que el cribado ya había confirmado, y el que §30 documentó que esa
+métrica mide mal.
+
+### 31.4 Interpretación: caso **B**
+
+De las cuatro opciones planteadas: **B, efecto pequeño e incierto**. Hay una estimación puntual positiva
+(+2,00 puntos de tasa de victoria) que la muestra **no puede resolver**. No es A (no es material según el
+criterio existente), no es C (no es detectable siquiera), y no es del todo D porque la estimación puntual
+existe y apunta en una dirección — pero está tan dentro del ruido que no sostiene nada.
+
+**Qué haría falta para cerrarlo**: detectar una ventaja de 2 puntos de tasa de victoria exige
+≈**5.000 partidos por brazo** (n ≥ 8·varianza/delta², con varianza ≈0,25). Son 25 veces esta muestra y
+12,5 veces el presupuesto de Tuning (§5.2, 400/brazo). No es una medición que este protocolo pueda
+permitirse hoy por perk.
+
+### 31.5 Respuesta
+
+> **¿Hay evidencia suficiente para llevar `high_line` a revisión de diseño por poder gratis?**
+>
+> **No.** Ni la ventaja ni la ausencia de coste están establecidas. El indicio que motivó la pregunta era
+> ruido de muestra pequeña y desaparece al multiplicar la muestra por cinco.
+
+Y una advertencia sobre la métrica, que sigue en pie de §30: aunque hubiera salido significativo, la
+métrica primaria del perk (`ballThirdMaxShare`) sigue sin representar bien un efecto geométrico. Ese
+problema es independiente de este resultado y no se ha tocado.
+
+---
+
 ## Hermanos
 
 - `docs/analisis/c1-piloto-cazagoles-diseno.md` — la evidencia de calibración completa (§3.1b, §5, §6,
