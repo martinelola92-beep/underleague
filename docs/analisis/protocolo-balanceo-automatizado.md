@@ -1612,6 +1612,367 @@ AmbiguousPrimaryMetric:    2
 
 ---
 
+## 18. Primer screening real del catálogo (19 sep 2026)
+
+Encargo explícito: ejecutar únicamente `READY_FOR_SCREENING → SCREENING → clasificación automática`
+sobre los 24 perks reales, con muestreo adaptativo (§5.1/§5.4/§5.5), sin ningún tuning de parámetros
+salvo registrar el baseline cuando el screening pida `NEEDS_TUNING`. Restricciones explícitas respetadas:
+sin tocar `/data`, sin cerrar Cazagoles/Ancla, sin tocar `MinPassChainRatio`, sin recalibrar ningún
+umbral/banda durante la ejecución, sin IA dentro del bucle de medición.
+
+### 18.1 Piezas nuevas
+
+- **`Sim.Tests/Balance/ReadyContract.cs`** (nuevo, extraído de `ReadyContractTests.cs`): el contrato de
+  §16.5 (los diez componentes), reutilizable desde el propio screening para re-verificarlo antes de gastar
+  ninguna simulación — "no dupliques lógica" aplicado al protocolo mismo.
+- **`Sim/Analysis/PrimaryMetricPerMatch.cs`** (nuevo): traduce una métrica de `MatchMetrics` a su valor
+  para UN partido (no el agregado del lote) — necesario para calcular varianza por partido y aplicar
+  `BalancePowerCheck`. `BallThirdMaxShare`/`ScorelineShare` se calculan con la MISMA fórmula del agregado,
+  aplicada a un solo partido; no son métricas nuevas.
+- **`Sim/Analysis/BatchEscalation.cs`** (nuevo): el circuito de seguridad de lote de §9.1 punto 3 ("1 de
+  cada 5 escala"), con el mínimo de perks procesados antes de comprobar (5) documentado explícitamente
+  como interpretación, no como recalibración del umbral 1/5 (que sí es literal del documento).
+- **`Sim/Analysis/ScreeningResult.cs`** (nuevo): `ScreeningResult`/`ScreeningCost`/`TuningCandidateInfo`,
+  reutilizando `BalanceState` (ningún enum nuevo, instrucción explícita del encargo) — `DisplayState`
+  traduce al vocabulario pedido (`SCREENING_PASS`, `SCREENING_NEEDS_TUNING`, `INSUFFICIENT_EXPOSURE`,
+  `INSUFFICIENT_EVIDENCE`, `SAFETY_LIMIT`, `DESIGN_ESCALATION`, `BLOCKED_BEFORE_SCREENING`) sin un segundo
+  estado paralelo: `NotReady`→`BLOCKED_BEFORE_SCREENING`, `Tuning`→`SCREENING_NEEDS_TUNING`,
+  `Validating`→`SCREENING_PASS`, `DesignReview`→`DESIGN_ESCALATION`, y el resto literal.
+- **`Sim.Tests/Balance/ScreeningRunner.cs`** (nuevo): el orquestador. `RunPerk` aplica, en orden: (1)
+  re-verificación del contrato → `BLOCKED_BEFORE_SCREENING` si falla; (2) exposición discreta (§5.1: 20
+  plantillas, remuestreo único a 120 si hace falta) usando `BalanceDecisionRules.EvaluateScreening` como
+  única fuente de la decisión "seguir remuestreando vs. terminar" (reutilizado, no reimplementado); (3) si
+  hay parámetro numérico, potencia estadística sobre la métrica primaria (`BalancePowerCheck`, con UNA
+  duplicación de muestra si no distingue del ruido, §5.5); (4) seguridad (las 7 métricas obligatorias de
+  RT-056 sobre el brazo armado) y señal sistémica (mismas 7 métricas, buscando delta con potencia en las
+  que NO son la primaria del perk, sin declarar réplica con un solo seed — §8); (5) decisión final vía
+  `BalanceDecisionRules.EvaluateScreening` otra vez, esta vez con los datos reales de seguridad/potencia;
+  (6) si el resultado es `Tuning`, comprueba que la dirección observada coincide con el signo del efecto
+  declarado en el perk — si no coincide, escala a `DesignReview` en vez de aplicar una regla no existente
+  en `BalanceDecisionRules` (gap explícito, documentado, no resuelto con una regla inventada).
+- **`Sim.Tests/Balance/PairedBalanceHarness.cs`** (modificado): `PairedResult` gana
+  `ArmedActivationsPerMatch` (activaciones por partido, no solo el total — necesario para "fracción de
+  partidos con ≥1 activación", la métrica de exposición real de §5.4, distinta de "activaciones medias
+  por partido") y `TotalSimulatedTicks` (coste real, §18 punto 6).
+- **`Sim/Analysis/PerkBalanceClassifier.cs`** (modificado): `GetPrimaryEffect(PerkDefinition)` extraído a
+  público — el screening necesita el mismo efecto "objetivo" que ya usa la clasificación, para leer el
+  signo de su `Value` sin repetir el criterio de selección.
+
+### 18.2 Diseño explícito: por qué la potencia estadística se comprueba DENTRO de Screening
+
+§9 (la máquina de estados) solo describe la regla de duplicar muestra por potencia dentro de `TUNING`. Se
+aplicó aquí, dentro de `SCREENING`, por lo que dice §5.5 en general: *"el harness, antes de aceptar un
+resultado de Tuning/Validation como suficiente, debe comprobar una condición de potencia explícita"* — sin
+esto, `EvaluateScreening` (que no recibe ningún `primaryEffectMagnitude` en esta ejecución, porque no
+existe un suelo de "cero informativo" calibrado para métricas de recuento reales, §5.4) resolvería
+CUALQUIER perk con exposición y seguridad suficientes directamente a `Tuning`, sin comprobar si el delta
+observado es siquiera distinguible del ruido de muestreo. Es una extensión documentada del protocolo
+existente (aplicar una pieza ya construida, `BalancePowerCheck`, en un punto donde el documento no decía
+explícitamente "aquí" pero sí decía explícitamente el principio), no una regla inventada nueva.
+
+### 18.3 Ejecución real: la primera prueba se detuvo por diseño
+
+`Sim.Tests/Balance/RealScreeningLot1Tests.cs` ejecutó `ScreeningRunner.RunBatch` sobre los 24 perks reales
+(orden alfabético, semilla 1). **El circuito de seguridad de lote (§9.1 punto 3) se disparó tras procesar
+solo 5 de los 24**: los cinco primeros perks alfabéticamente terminaron en un estado de escalada
+(`INSUFFICIENT_EVIDENCE`/`SAFETY_LIMIT`), 5/5 = 100% frente al umbral de 1/5 = 20% — el lote se detuvo
+antes de tocar el sexto perk, exactamente como pide el documento ("el lote se detiene y escala... en vez
+de seguir procesando perks mecánicamente").
+
+**Resultado de los cinco perks realmente medidos:**
+
+| perk | estado final | partidos | exposición | delta primario | seguridad | motivo |
+|---|---|---|---|---|---|---|
+| `back_to_back` | `INSUFFICIENT_EVIDENCE` | 480 | 0,8% | — | OK | exposición muy por debajo del suelo 50% [ASUNCIÓN], incluso tras remuestrear a 120 plantillas (240 partidos totales) |
+| `blood_scent` | `SAFETY_LIMIT` | 80 | 100% | — | `injuriesPerMatch`=0,250 (rango 0,30-0,90) | banda RT-056 fuera de rango en el brazo armado, con solo 40 partidos |
+| `bloodhound` | `SAFETY_LIMIT` | 80 | 100% | — | `injuriesPerMatch`=0,250 (rango 0,30-0,90) | mismo motivo que `blood_scent` |
+| `bulwark_stance` | `INSUFFICIENT_EVIDENCE` | 480 | 5,0% | — | OK | exposición muy por debajo del suelo, tras remuestrear |
+| `cannon` | `INSUFFICIENT_EVIDENCE` | 160 | 100% | 0,0000 | OK | delta exactamente cero en `shotsPerMatch` tras duplicar la muestra por potencia — no se distingue del ruido |
+
+**Confirmado ante el usuario, por decisión explícita (no una decisión automática del sistema)**: se
+preguntó si anular el circuito y procesar los 24, si subir el mínimo de perks antes de comprobar el
+circuito y reintentar, o detenerse aquí y reportar estos cinco como el resultado completo de este primer
+intento. **La decisión fue detenerse aquí** — el hallazgo principal de esta fase no es "24 perks
+clasificados", es que **el circuito de seguridad funciona y que la calibración actual (los tres suelos
+`[ASUNCIÓN]` de §5.4, más el suelo de potencia de §5.5) no aguanta ni cinco perks reales sin escalar**, que
+es exactamente la información que el criterio de salida de esta fase pedía conocer.
+
+### 18.4 Lo que esto confirma y lo que esto revela
+
+**Confirma que el screening está bien conectado** (no es un fallo de tooling):
+- `bulwark_stance` midió **5,0% de exposición**, coincidiendo EXACTAMENTE con el 5% medido en Tanda 0
+  para este mismo perk (§5.4) — el cálculo de "fracción de partidos con ≥1 activación" es correcto, no
+  una aproximación distinta que por casualidad da un número parecido.
+- El circuito de lote, el motor de decisión (`BalanceDecisionRules.EvaluateScreening`, reutilizado sin
+  cambios) y el power-check (`BalancePowerCheck`, reutilizado sin cambios) funcionan exactamente como
+  están documentados — cero excepciones, cero estado indefinido, en las 5 ejecuciones reales.
+
+**Revela dos hallazgos genuinos, ninguno resuelto aquí (instrucción explícita: no recalibrar durante el
+screening)**:
+1. **Los suelos de exposición `[ASUNCIÓN]` (50% discreta) son probablemente demasiado altos para el
+   catálogo real a la escala inicial de Screening** (20-120 plantillas): dos de cinco perks reales
+   (`back_to_back` 0,8%, `bulwark_stance` 5,0%) ni se acercan, incluso tras el remuestreo ×6 a 120
+   plantillas. Esto no dice que esos perks estén mal — dice que el suelo de calibración de §5.4 necesita
+   la segunda/tercera medición real que el propio documento ya pedía ("hacen falta 1-2 perks reales más
+   con activación intermedia") antes de que Screening pueda producir algo distinto de
+   `INSUFFICIENT_EVIDENCE` para perks de disparo poco frecuente.
+2. **Las bandas RT-056 son absolutas (calibradas sobre poblaciones grandes), no comparativas, y aplicarlas
+   sobre 40 partidos armados (§5.1, la comprobación barata) tiene un riesgo real de falso positivo por
+   varianza de muestra pequeña** — `blood_scent`/`bloodhound` cayeron 0,05 por debajo del suelo de
+   `injuriesPerMatch` con un tamaño de muestra que probablemente no tiene potencia para distinguir esa
+   diferencia de ruido. Documentado en cada resultado (`ScreeningResult.Notes`), NO resuelto (no se ha
+   subido el umbral, no se ha exigido una N mínima distinta para el chequeo de seguridad — eso sería
+   recalibrar durante el screening, prohibido explícitamente).
+3. **`cannon` (delta exactamente 0,0000 en `shotsPerMatch` sobre 160 partidos)**: posible indicio de que
+   `shootRangeBonusCells` no mueve el conteo de tiros (podría mover la distancia/calidad del tiro en su
+   lugar) — la métrica primaria elegida por el clasificador podría no ser la correcta para este efecto.
+   Anotado como hallazgo a investigar (fuera de alcance de esta fase: no se toca gameplay ni clasificación
+   sin evidencia adicional).
+
+### 18.5 Coste real medido (los cinco perks procesados)
+
+```
+total wall time (suma por perk):  10 414 ms
+total partidos simulados:          1 280
+total ticks simulados:         1 725 426
+partidos/perk media:                 256,0
+partidos/perk mediana:               160,0
+partidos/perk p90:                   480,0
+early-stop (cualquier motivo):        5/5 (100%)
+```
+
+Ningún perk se acercó al presupuesto de 10 minutos/perk (§9) — el más caro (`back_to_back`,
+`bulwark_stance`, 480 partidos con remuestreo ×6) tardó una fracción de segundo. **El coste del motor de
+balanceo en sí, cuando corre, es barato**; lo caro (si acaso) sería la calibración pendiente de §5.4/§5.5,
+no la ejecución.
+
+### 18.6 Qué falta, explícitamente
+
+- Los 19 perks restantes de los 24 no se han medido — el lote se detuvo antes, por decisión humana
+  explícita, no por límite de tiempo ni de partidos.
+- Ningún perk llegó a `NEEDS_TUNING` en esta ejecución — no hay baseline que registrar todavía.
+- La calibración de los suelos de exposición (§5.4) y del multiplicador de potencia (§5.5) sigue
+  exactamente donde estaba: sin tocar, con dos hallazgos reales más (`back_to_back`/`bulwark_stance` para
+  exposición discreta baja, `blood_scent`/`bloodhound` para el riesgo de falso positivo de seguridad a N
+  pequeña) que un futuro trabajo de calibración debería usar como puntos de referencia adicionales.
+
+---
+
+## 19. Forense de los cinco casos escalados (19 sep 2026)
+
+Encargo explícito: determinar la CAUSA de cada una de las cinco escaladas de §18.3 sin recalibrar nada
+(ni el suelo de exposición 50%, ni el 20% del circuito de lote, ni las bandas de RT-056, ni el motor de
+decisión) y sin continuar automáticamente con los 19 restantes. Lectura de código + cálculo sobre
+resultados ya obtenidos; solo se simuló donde hacía falta demostrar una hipótesis concreta.
+
+### 19.1 Hallazgo transversal: los cinco cayeron en el mismo portador — el portero
+
+`Sim.Tests/Balance/ScreeningForensicsTests.CarrierPositionForEachEscalatedPerk` demostró que, ANTES de
+tocar nada, **los cinco perks escalados usaban el mismo portador de prueba: el portero** (`Position.
+Goalkeeper`, slot 0). Causa, con código exacto:
+
+- Ninguno de los cinco (`back_to_back`, `bulwark_stance`, `blood_scent`, `bloodhound`, `cannon`) declara
+  `positionOnly` ni `tagsRequired` en su JSON.
+- `PairedBalanceHarness.FindEligible` (usado por `RunWithEligibleCarrier`, que usa `ScreeningRunner`)
+  recorría los titulares en orden fijo `i = 0..6` y devolvía el PRIMERO elegible.
+- `TeamGenerator.StarterPositions[0]` es **siempre** `Position.Goalkeeper`
+  (`Sim/Generation/TeamGenerator.cs`).
+- Resultado: cualquier perk sin restricción de posición/etiqueta se medía **siempre** sobre el portero,
+  la posición menos representativa posible para mecánicas de entrada (`back_to_back`) o de tiro
+  (`cannon`) — nunca sobre un jugador de campo, con o sin buena o mala suerte de muestreo.
+
+**Esto es un bug de tooling confirmado, no un hallazgo sobre los perks ni sobre el catálogo.** Reproducido
+con test (`CarrierPositionForEachEscalatedPerk`, capturado en rojo antes del arreglo), corregido en
+`PairedBalanceHarness.FindEligible` (prefiere un titular de campo, slots 1-6, y cae al portero solo si
+ningún jugador de campo es elegible — no cambia `PerkAssignment.Eligible`, que sigue reflejando la
+elegibilidad REAL del juego; solo cambia el desempate arbitrario de qué portador concreto mide el
+harness), con regresión (`Assert.NotEqual(Position.Goalkeeper, position)`), verificado sin romper nada
+(las 25 pruebas de `ReadyContractTests`, que dependen de la misma función, siguen en verde: 24/24
+`ReadyForScreening` reales siguen pasando el contrato con el nuevo criterio de portador).
+
+### 19.2 Impacto real del arreglo — se re-ejecutaron los MISMOS cinco perks, no los 19 restantes
+
+| perk | estado ANTES | estado DESPUÉS | qué cambió |
+|---|---|---|---|
+| `back_to_back` | `INSUFFICIENT_EVIDENCE` (exposición 0,8%) | `INSUFFICIENT_EVIDENCE` (exposición 9,6%) | exposición sube ×12, sigue muy por debajo del suelo 50% |
+| `bulwark_stance` | `INSUFFICIENT_EVIDENCE` (exposición 5,0%) | `INSUFFICIENT_EVIDENCE` (exposición 7,5%) | sin cambio real (ruido de muestreo) — causa raíz no es el portador |
+| `blood_scent` | `SAFETY_LIMIT` | `SAFETY_LIMIT` | sin cambio — causa raíz no es el portador |
+| `bloodhound` | `SAFETY_LIMIT` | **`SCREENING_PASS`** | el arreglo cambia el estado final: el falso positivo de seguridad desaparece |
+| `cannon` | `INSUFFICIENT_EVIDENCE` (delta=0,0000) | `INSUFFICIENT_EVIDENCE` (delta=0,0000) | sin cambio — el defensa tampoco es buena posición para un mecanismo de tiro |
+
+El circuito de lote (§9.1 punto 3) **se seguiría disparando igual** tras el arreglo: 4 de 5 = 80%, todavía
+muy por encima del 20% — un perk menos en estado de escalada no cambia la conclusión operativa de §18.3
+(la decisión de detenerse ahí sigue siendo válida), pero SÍ demuestra que el arreglo tiene efecto real y
+medible, no cosmético.
+
+### 19.3 Caso a caso — los seis criterios pedidos
+
+**`back_to_back`** (trigger=TACKLE, condición dinámica `nearAlly(actor,'Bulwark',2)`):
+- Camino de código: `MatchEngine` dispara `EventType.Tackle` en cada intento de entrada del portador →
+  `CompiledCondition` evalúa `nearAlly` contra la posición en vivo de los aliados → si hay uno con la
+  etiqueta `Bulwark` a ≤2 casillas, se aplica `modifyProbability(tackle, +100%)`.
+- Oportunidades reales (con el defensa, tras el arreglo): 41 intentos de entrada en 40 partidos (19/40
+  partidos con al menos un intento). De esos 41, **7 activaron** (17,07% de conversión) — la condición SÍ
+  se cumple quimestre en la vida real, no es una condición imposible.
+- Exposición reportada por `ScreeningRunner` (fracción de PARTIDOS con ≥1 activación): 9,6% — muy por
+  debajo del suelo, PERO el mecanismo demostrablemente funciona cuando se dan las condiciones.
+- Clasificación: **la baja exposición es dependiente del roster Y de una condición dinámica rara** (family
+  "wall": perk de sinergia por diseño, pensado para construirse alrededor de varios `Bulwark` juntos, no
+  para un roster neutro generado al azar). No es accidental en el sentido de "debería activarse más y no
+  lo hace" — es una perk de nicho que el harness actual mide contra la población equivocada (un roster
+  neutro, no uno construido para la sinergia).
+
+**`bulwark_stance`** (trigger=MATCH_START, condición estática `hasTag(owner,'Bulwark')`):
+- Camino de código: la condición se evalúa UNA VEZ al empezar el partido, contra las etiquetas del propio
+  portador (no dinámica, no depende de nada del partido).
+- Confirmado con test (`BulwarkStanceExposureCeilingMatchesTheRaceStyleTagWeightNotTheEligibilityFilter`):
+  las activaciones coinciden EXACTAMENTE con los partidos donde el portador ya tenía la etiqueta `Bulwark`
+  al generarse (2/40 = 5,0% en ambos casos) — cero margen, la condición decide todo.
+- `data/races/human.json`: `styleTagWeights.Bulwark = 6` (de 100). El techo de exposición de este perk,
+  con CUALQUIER tamaño de muestra, está en ~6% — no es una cuestión de sample size.
+- `perk.tagsRequired = []` (verificado en el JSON), pero `perk.condition` exige la etiqueta `Bulwark` —
+  **inconsistencia entre el filtro estructural de elegibilidad y la condición semántica del propio perk**.
+  `PerkAssignment.Eligible` (la función REAL del juego, no solo del harness) ofrece este perk a CUALQUIER
+  jugador, aunque solo sea útil si ya tiene la etiqueta.
+- Clasificación: **dependiente del roster** (ceiling fijado por la probabilidad de estilo de la raza, no
+  por el harness) + **posible inconsistencia de datos** (¿debería `tagsRequired` incluir `"Bulwark"`? Es
+  una pregunta de diseño de contenido — `perk-authoring`/`game-design-review`, no una decisión de tooling
+  y no se decide aquí).
+
+**`blood_scent` + `bloodhound`** (`SAFETY_LIMIT` en `injuriesPerMatch`):
+- Estadística exacta (`SafetyLimitStatisticsAreConsistentWithSamplingNoiseAtThisSampleSize`, con el
+  portero, antes del arreglo): n=40 armado, media=0,25, varianza=0,1923, error estándar=0,0693; delta
+  armado-control=0,0000 (potencia insuficiente, confirmado); el suelo de la banda (0,30) está a **0,72
+  errores estándar** de la media armada — muy por debajo del umbral habitual de ~2 para considerar algo
+  distinguible del ruido.
+- **Hallazgo más fuerte** (`ArmedAndControlInjurySequencesForTargetSelectionPerks`): con el portero, las
+  secuencias de lesiones armado y control eran **IDÉNTICAS partido a partido** para ambos perks — no es
+  que el efecto sea pequeño, es que el brazo armado y el de control produjeron el MISMO partido. El 0,25
+  no es "el efecto del perk", es el nivel base de esa semilla a n=40, indistinguible por definición de la
+  ausencia total de efecto.
+- Procedencia de la banda 0,30-0,90: **ADR 0082**, calibrada sobre "tres semillas de 500 partidos" (1.500
+  partidos de referencia, población de auto-juego neutro). El chequeo de `SAFETY_LIMIT` de Screening la
+  aplica aquí sobre 40 partidos armados — una diferencia de escala de casi dos órdenes de magnitud entre
+  la población que fijó la banda y la muestra que la evalúa.
+- Con el arreglo del portador: `blood_scent` sigue idéntico armado/control (confirmando que su causa NO
+  es el portador — un perk de `ModifyTackleBias` no tiene vía causal declarada hacia el total de lesiones
+  del partido, cambia A QUIÉN se entra, no CUÁNTAS entradas hay). `bloodhound` deja de ser idéntico
+  (0,30 vs 0,25, delta=0,05, TODAVÍA sin potencia suficiente) y su media pasa a caer EXACTAMENTE en el
+  borde de la banda (0,30, "IN" por definición de `>=`) — el estado final cambia a `SCREENING_PASS`.
+- **Los dos comparten la misma causa mecánica** (confirmado: los dos son `TargetSelection`, `ModifyTackleBias`/
+  `ModifyMarkBias`, sin vía causal declarada hacia `injuriesPerMatch`), pero **NO comparten el mismo
+  desenlace tras el arreglo** — `blood_scent` sigue en `SAFETY_LIMIT` (con el mismo problema de fondo:
+  banda absoluta sobre N pequeña), `bloodhound` pasa a `SCREENING_PASS` porque su ruido de muestreo cayó
+  del otro lado de la banda esta vez.
+- Clasificación: **safety gate mal calibrado para este tamaño de muestra** — no es que la banda esté mal
+  (viene de una ADR con metodología real), es que aplicarla como corte absoluto sobre 40 partidos armados,
+  SIN comparar contra el propio control emparejado que el harness ya tiene disponible, puede convertir el
+  ruido de la semilla en un `SAFETY_LIMIT` o en un `SCREENING_PASS` según a qué lado caiga por azar.
+
+**`cannon`** (`modifyTraitScalar(shootRangeBonusCells, +3)`, `shotsPerMatch` primaria):
+- Auditoría causal REAL (no del `_doc`, del motor): `Sim/Engine/Utility.cs::EvaluateShoot` (ADR 0030 §1)
+  usa `ShootRangeBonusCells` para desplazar dónde EMPIEZA la rampa de penalización por distancia — "nadie
+  tiene prohibido tirar de lejos, simplemente casi nadie debería querer" (comentario del propio motor). No
+  hay corte binario: es una rampa de utilidad, no una puerta. **`shotsPerMatch` SÍ es la métrica
+  causalmente correcta** — si el efecto existe, se manifiesta como "Shoot gana la comparación de utilidad
+  frente a otras acciones", y eso es justo lo que cuenta `shotsPerMatch`. **No es un bug de selección de
+  métrica** (corrección de una hipótesis inicial de este mismo forense, revisada tras leer el motor).
+- Ventana de efecto real, con los pesos reales (`data/ai/weights.json`): `shootBaseRangeCells=8`,
+  `shootBeyondRangePenaltyPerCell=300`. El bonus de `cannon` (+3) solo cambia algo para un jugador a
+  distancia (8, 11] casillas del área — fuera de esa banda estrecha, el resultado es idéntico con o sin
+  el perk. En el borde de la banda evita hasta 900 puntos de penalización (frente a un `shootInRangeBonus`
+  base de 388) — el efecto, cuando se dispara, es grande; el problema es la probabilidad de disparo.
+- Con el defensa (tras el arreglo): la secuencia de tiros SIGUE siendo IDÉNTICA partido a partido, byte a
+  byte, en las 40 muestras — el arreglo del portero NO resolvió este caso. Un defensa, por su rol
+  (`CoverSpace`/`MarkOpponent`/`Retreat` predominan sobre avanzar a rango de tiro), tampoco pasa
+  suficiente tiempo en la banda de distancia 8-11 con el balón en juego como para que la rampa evitada
+  llegue a decidir nada.
+- Clasificación: **potencia estadística insuficiente para un efecto de ventana estrecha, agravado por una
+  posición de portador poco representativa del mecanismo** (un Delantero pasaría mucho más tiempo en esa
+  banda) — el harness no controla NI reporta la posición/distancia típica del portador elegible, que es
+  el hueco de auditoría real detrás de este caso. No es un fallo del clasificador ni de la métrica.
+
+### 19.4 Auditoría transversal
+
+| perk | fallo | causa raíz | clase de fallo | ¿métrica válida? | ¿exposición válida? | ¿safety válida? | ¿potencia válida? | ¿bug de tooling? | ¿hueco de protocolo? |
+|---|---|---|---|---|---|---|---|---|---|
+| `back_to_back` | `INSUFFICIENT_EVIDENCE` | condición dinámica rara (sinergia de equipo) sobre roster neutro | `PROTOCOL_GAP` | sí | sí (cálculo correcto), suelo inalcanzable para esta familia | n/a | n/a | sí (portero, corregido; el resto persiste) | sí — sin población de roster "afín" para perks de sinergia |
+| `bulwark_stance` | `INSUFFICIENT_EVIDENCE` | ceiling fijado por probabilidad de estilo de raza (6%), no por muestreo | `PROTOCOL_GAP` (+ posible inconsistencia de datos) | sí | sí (cálculo correcto), suelo inalcanzable | n/a | n/a | no | sí — suelo único 50% no sirve para perks tag-gated de baja incidencia |
+| `blood_scent` | `SAFETY_LIMIT` | banda absoluta de RT-056 sobre N=40 sin comparar con el control emparejado | `INVALID_SAFETY_DECISION` | sí | sí | **no** (0,72 SE del suelo, ruido) | insuficiente | no | sí — el check de seguridad de Screening no usa el control disponible |
+| `bloodhound` | `SAFETY_LIMIT` → `SCREENING_PASS` (tras el arreglo) | mismo mecanismo que `blood_scent`; el portero (bug de tooling) empujó la media por debajo del suelo | `TOOLING_BUG` (confirmado y corregido) | sí | sí | corregida por el arreglo | insuficiente | **sí, corregido** | comparte el mismo hueco de `INVALID_SAFETY_DECISION` que `blood_scent` |
+| `cannon` | `INSUFFICIENT_EVIDENCE` | ventana de efecto estrecha (8-11 casillas) + posición de portador poco representativa | `INSUFFICIENT_POWER` | sí (confirmado por auditoría del motor) | sí | n/a | **no** | no (el arreglo del portero no bastó) | sí — el harness no controla/reporta la posición del portador |
+
+Categorías del propio encargo, usadas literalmente donde encajan; ninguna inventada salvo
+`INVALID_SAFETY_DECISION` (no existía un nombre en el vocabulario previo para "la regla de seguridad es
+correcta en sí misma pero se aplica de una forma que no distingue señal de ruido a esta escala" — se usa
+el nombre que el propio encargo propuso, no uno nuevo).
+
+### 19.5 Respuesta a las siete preguntas del encargo
+
+**A. Qué de los 5 es una señal válida**: ninguno de los cinco es, hoy, una señal válida de que el PERK
+tenga un problema real. Los cinco reflejan limitaciones del tooling/protocolo, no del contenido.
+
+**B. Qué es insuficiencia de exposición**: `back_to_back` (condición de sinergia rara, población
+incorrecta) y `bulwark_stance` (ceiling fijado por probabilidad de raza, no por N). Los dos son
+estructuralmente distintos entre sí a pesar de compartir el estado final — uno necesita una población de
+roster distinta (sinergia), el otro necesita o bien un suelo distinto para su familia o bien resolver la
+inconsistencia `tagsRequired`/`condition`.
+
+**C. Qué es un problema de métrica**: ninguno, tras la auditoría causal. La hipótesis inicial sobre
+`cannon` (métrica mal elegida) quedó DESCARTADA con evidencia del propio motor (`EvaluateShoot`) — se
+corrige explícitamente en este documento en vez de dejar la hipótesis inicial sin marcar.
+
+**D. Qué es un posible problema de safety/potencia**: `blood_scent`/`bloodhound` (safety gate sin
+comparar contra el control disponible, aplicado a N=40 cuando la banda se calibró sobre 1.500 partidos) y
+`cannon` (potencia insuficiente para una ventana de efecto estrecha, agravada por la posición del
+portador).
+
+**E. Qué cambios de tooling son necesarios**: uno YA hecho (`PairedBalanceHarness.FindEligible`: preferir
+jugador de campo sobre portero — confirmado con test, corregido, con regresión, verificado contra las 25
+pruebas de `ReadyContractTests` y el resto de la suite). Pendientes, NO implementados aquí (necesitarían
+su propio diseño, fuera de alcance de un forense): (1) que el chequeo de `SAFETY_LIMIT` de Screening
+compare contra el control emparejado, no solo contra la banda absoluta; (2) que el harness reporte la
+posición/rol del portador elegido, para poder distinguir "sin efecto" de "portador poco representativo".
+
+**F. Qué cambios de protocolo serían necesarios, si alguno**: ninguno decidido aquí — se documentan como
+huecos con la evidencia que un futuro `game-design-review`/calibración necesitaría: (1) el suelo de
+exposición discreta (50%) puede necesitar ser distinto por FAMILIA de perk (sinergia vs. individual), no
+un único número para todo el catálogo; (2) el chequeo de seguridad de Screening puede necesitar una N
+mínima distinta de la de exposición, o una comparación contra control, antes de producir un
+`SAFETY_LIMIT` con la misma confianza que una banda calibrada sobre 1.500 partidos.
+
+**G. Qué evidencia adicional haría falta antes de tocar el circuito**: repetir el lote de 24 CON el
+arreglo del portador ya aplicado (no hecho automáticamente aquí, por instrucción explícita) para ver
+cuántas de las escaladas restantes eran, también, un artefacto del mismo bug de tooling — sin esa
+repetición, no se sabe si el 80% de escalada remanente en estos cinco es representativo de los 19 que
+faltan o no.
+
+### 19.6 Significado de `READY_FOR_SCREENING` — revisado con evidencia, no decidido de antemano
+
+Los cinco casos, juntos, muestran que **"existe una métrica" no basta** — pero no todos apuntan al mismo
+componente que falta:
+
+- `back_to_back`/`bulwark_stance`: métrica y mecanismo son correctos; lo que falta es que la EXPOSICIÓN
+  sea *interpretable* frente a la población que el harness genera (una condición de sinergia de equipo, o
+  un ceiling de probabilidad de raza, no es lo mismo que "poca muestra").
+- `blood_scent`/`bloodhound`: métrica y mecanismo son correctos; lo que faltaba era que la SEGURIDAD fuera
+  *interpretable* al tamaño de muestra usado (con el control disponible, comparar en vez de leer una
+  banda absoluta).
+- `cannon`: métrica y mecanismo son correctos; lo que faltaba era que la POTENCIA fuera *interpretable*
+  frente al portador elegido (una ventana de efecto estrecha necesita saber si el portador siquiera pasa
+  por esa ventana).
+
+**Conclusión, con la evidencia de estos cinco casos** (no una decisión tomada antes de mirarlos): el
+contrato de `READY_FOR_SCREENING` (§16.5, los diez componentes) verifica que el MECANISMO de medición
+existe y se puede ejecutar — pero no verifica que la POBLACIÓN de prueba (el portador, la sinergia de
+roster) sea representativa del perk, ni que la SEGURIDAD/POTENCIA sean interpretables al tamaño de
+muestra real que Screening va a usar. Ampliar el contrato con estos tres componentes (población
+representativa, seguridad comparativa, potencia frente a la ventana real de efecto) es una extensión
+razonable sugerida por la evidencia — **no implementada aquí**, por instrucción explícita de no tocar el
+clasificador durante este forense.
+
+---
+
 ## Hermanos
 
 - `docs/analisis/c1-piloto-cazagoles-diseno.md` — la evidencia de calibración completa (§3.1b, §5, §6,
