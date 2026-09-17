@@ -215,21 +215,60 @@ necesite entra en el estado `BLOCKED_INFRA` (§9), no en el bucle.
 | `addCounter` solo (6) / `AccumulatesAcrossMatches` (23) | 6-23 según el corte | Medición de run, no de partido | `FullRunMetrics` correspondientes | Ninguna en este sistema | `RUN_LEVEL` (nuevo, §9) |
 | `immunity` | 5 | Cancela un suceso | Tasa del suceso + universales | Ninguna (binario) | `SCREENING` → `VALIDATING` directo |
 | `cancelEvent` | 4 | Igual | Igual | Ninguna | `SCREENING` → `VALIDATING` directo |
-| `modifyAttribute` | 5 | Depende del atributo (tabla arriba) | Según atributo — **confirmar en clasificación** | Bisección | `SCREENING`, con confirmación de métrica obligatoria |
+| `modifyAttribute: Strength/Leash` | 4+0 | Depende de la resolución que enfatiza la ficha (§13.4.1) | `tacklesPerMatch`/`injuriesPerMatch` o `ballThirdMaxShare` | Bisección | `SCREENING` |
+| `modifyAttribute: Stamina` | 1 | Rendimiento por fase de partido | **Ninguna existe** (§13.4.1) | — | `NOT_READY` (hueco de tooling, no de dato) |
+| `modifyAttribute: Speed` | 0 hoy | Cobertura/posicionamiento | `ballThirdMaxShare`/`saveRate`, sin precedente | Bisección | `SCREENING`, marcado `INFERIDO, SIN CONFIRMAR` |
+| `modifyAttribute: Technique` | 0 hoy | Calidad de pase/tiro | `passCompletionRate`/`shotsOnTargetShare`, sin banda | — | `DESIGN_REVIEW` (falta fijar banda) |
 | `modifyLeash`/`shiftHome`/`modifyZoneShape` | 5/4/1 | Geometría | `ballThirdMaxShare` + espacial | Bisección entera | `SCREENING` |
-| `modifyTraitScalar` (3 escalares con precedente) | 4 | Métrica ya asociada | Igual | Bisección lineal | `SCREENING` |
-| `modifyTraitScalar` (10 escalares sin precedente) | 0 hoy | Sin dato real todavía | Inferida, sin verificar | — | Confirmar métrica antes de `SCREENING` |
+| `modifyTraitScalar`: `InjuryResistanceBonus`/`LeashBonus` | 0 hoy | Métrica ya bandeada por categoría | `injuriesPerMatch`/`ballThirdMaxShare` | Bisección lineal | `SCREENING` |
+| `modifyTraitScalar`: `AdjacentTeammateBonusPercent` | 0 hoy | Comportamiento tipo C1 | Histograma restringido (behavioral audit) | Tripleta anclada | `SCREENING` |
+| `modifyTraitScalar`: `SpeedBonusPercent` | 0 hoy | Igual que `Speed` | Igual, sin precedente | Bisección | `SCREENING`, `INFERIDO` |
+| `modifyTraitScalar`: 6 escalares de calidad/fatiga (`ShotQualityBonus`, `PassQualityBonus`, `FoulChanceBonus`, `FatigueResistancePercent`, `SaveBonusClose`, `SaveBonusFar`) | 0 hoy | Sin banda o sin métrica (§13.4.2) | `INFO` sin rango, o ninguna | — | `DESIGN_REVIEW` o `NOT_READY` según el caso (tabla de §13.4.5) |
+| `modifyTraitScalar` (3 escalares con precedente real hoy: `injuryChanceBonus`, `hardTackleBonus`, `shootRangeBonusCells`) | 4 | Métrica ya asociada y confirmada | Igual | Bisección lineal | `SCREENING` |
 | `modifyMarkBias`/`modifyTackleBias` | 3/2 | Selección de objetivo | Distribución de objetivo (bespoke) | Ninguna | `SCREENING` → `VALIDATING` cualitativo |
-| `modifyBias` | 2 | Sesgo arbitral | `foulsPerMatch`/tarjetas por equipo | Bisección | `SCREENING` |
+| `modifyBias` | 2 | Sesgo arbitral | **Falta la fila agregada en `MatchMetrics`** (§13.4.4) | — | `NOT_READY` (tooling puro, no diseño) |
+| `ProbabilityKind.Foul`/`Card` (dentro de `modifyProbability`) | 0 hoy | Tasa de falta/tarjeta | `INFO`, sin banda (§13.4.3) | — | `DESIGN_REVIEW` |
 | `extraAction` | 3 | Repetición de acción | Frecuencia + universales | Ninguna (hoy) | `SCREENING` → `VALIDATING` directo |
 | Casos singulares (6 tipos, 1-2 c/u) | 7 | Uno a uno | Universales + la del suceso que producen | Depende | Uno a uno |
 | `modifyUtility` (C1) | 0 (inerte) | Bonus de utilidad | Histograma restringido a exposición | Tripleta anclada | `BLOCKED_INFRA` hasta que exista un perk real en `/data` |
 
 **Cobertura**: las 94 filas del catálogo caen en alguna fila de esta matriz — ninguna queda sin
-estrategia. Lo que la matriz expone (y el borrador original no decía) es que **~9 de las 22 filas**
-(atributo sin confirmar, escalar sin precedente, `Foul`/`Card` sin instancia, sesgo arbitral con métrica
-por equipo) necesitan un paso de confirmación de métrica antes de `SCREENING` que hoy no está definido
-como procedimiento, solo mencionado — hueco explícito, ver §13.
+estrategia, aunque tras §13.4 varias de ellas son explícitamente `NOT_READY`/`DESIGN_REVIEW` en vez de
+`SCREENING` — la cobertura significa "el sistema sabe qué hacer con este perk", no "puede iterarlo solo".
+
+### 3.2 Revisión de consistencia de la matriz (18 sep 2026, sin simular nada)
+
+Comprobación pedida explícitamente antes de tocar tooling — los ocho puntos, uno a uno:
+
+1. **¿Dos métricas distintas miden el mismo concepto sin justificación?** No encontrado.
+   `passChainAvgLength` (longitud de cadena) y `passCompletionRate` (% de pases completados) miden cosas
+   distintas y ambas se usan donde corresponde (§4.2).
+2. **¿Una métrica se usa fuera de su población válida?** Un caso, nuevo en esta revisión:
+   `betterTeamWinRate` (fase 0, diferencia de calidad de 20) no aparece en la matriz de perks porque no
+   aplica a un perk aislado — no había riesgo, pero queda dicho explícitamente para que nadie la añada
+   por analogía.
+3. **`Limit` vs. exposición insuficiente**: resuelto en §5.4 (leer sobre oportunidades, no sobre
+   activaciones ya limitadas).
+4. **`addCounter` según su uso real**: resuelto en §3 (solo/`AccumulatesAcrossMatches` → `RUN_LEVEL`;
+   combinado con `modifyProbability` → se mide la parte de partido suelto, el contador se registra aparte).
+5. **`modifyAttribute` según el atributo**: resuelto en §13.4.1, incorporado a la tabla de arriba.
+6. **`TraitScalarKind` no usados, sin capacidad falsa**: resuelto en §13.4.2 — la tabla marca `NOT_READY`
+   donde corresponde en vez de asumir que todos son iterables.
+7. **Perks con múltiples efectos, estrategia clara**: §3 ya cubre la unión de categorías y el caso
+   cruzado (`unlikely_bulwark`). **Hallazgo nuevo de esta revisión, no cubierto antes**: `pack_mentality`
+   (`modifyAttribute: Strength`, `target: withTag:Brute`) no afecta solo al portador — afecta a **todos**
+   los jugadores del equipo con la etiqueta `Brute`. El harness de control/armado usado hasta ahora
+   (C1/Tanda 0, un solo "portador") no está diseñado para esto: mide un jugador, no un subconjunto. Es un
+   **hueco de tooling explícito, no de dato**: hace falta una variante del harness que mida "el subconjunto
+   de jugadores con la etiqueta X", antes de que `pack_mentality` (o cualquier otro `target` distinto de
+   `owner`/`actor`) pueda entrar en `SCREENING`. Se añade a §13.
+8. **Combinación que requiera estrategia especial, explícita**: las dos ya conocidas
+   (`unlikely_bulwark`, cruza geometría+probabilidad — §3) más la nueva de arriba (`target` multi-jugador).
+
+Ninguno de los ocho puntos obligó a cambiar la filosofía del protocolo (§0.1/paso 3 del encargo): los
+hallazgos son huecos de tooling o de banda, no contradicciones en `Screening→Tuning→Validation`, la
+potencia como gate, los dos estados de insuficiencia, las siete condiciones de `BALANCED`, cero agentes
+en el camino crítico, la separación local/sistémico, ni los límites de tiempo/iteraciones.
 
 ---
 
@@ -885,6 +924,138 @@ Actualizado tras la revisión del 17 sep 2026 (antes eran seis puntos; se añade
 9. **El circuito de seguridad de lote (§9.1, "1 de cada 5 perks escala")** es una asunción sin calibrar,
    igual que los suelos de §5.4 — no hay evidencia de qué fracción de escaladas es normal en un catálogo
    sano frente a una señal de que el propio sistema está mal calibrado.
+10. **Harness para `target` multi-jugador** (§3.2, punto 7: `pack_mentality` y cualquier perk con
+    `target: withTag:...`/`linked...` distinto de `owner`/`actor`): el patrón de control/armado usado
+    hasta ahora mide un solo portador; falta la variante que mida un subconjunto de jugadores por
+    etiqueta antes de que esos perks puedan entrar en `SCREENING`.
+
+## 13.4 Resolución del paso de confirmación de métrica (18 sep 2026)
+
+Metodología: sin simular nada. Se lee dónde usa el motor cada atributo/escalar/`ProbabilityKind`
+(`grep` sobre `Sim/Engine/*.cs`), qué fila existe en `Sim/Analysis/MatchMetrics.cs` y si tiene banda o es
+`INFO`, y qué perk real de `data/perks/*.json` ya usa cada uno (si alguno).
+
+### 13.4.1 `modifyAttribute`, por atributo
+
+Precedente real hoy: **Strength** (4 perks: `brute_boots`, `comeback_spirit`, `pack_mentality`,
+`scar_veteran`) y **Stamina** (1: `iron_lungs`). `Speed`/`Technique`/`Leash`: sin ningún perk real.
+
+**Strength** — toca a la vez `ShootStrengthSlope`/`shot.StrengthFactor` (calidad de tiro),
+`tackle.FoulStrengthFactor` (umbral de falta), `tackle` pressure, `dribble` (guardia del defensor),
+`block` (resolución), e `injury.RelativeFactor` (severidad de la lesión) — verificado por `grep`, no por
+inferencia.
+1. Modifica: potencia física en cinco resoluciones a la vez.
+2. **No hay una métrica primaria única** — depende de cuál de las cinco resoluciones enfatiza la ficha.
+   `PositionOnly`/`Family`/etiquetas del propio perk (dato ya existente, sin medir nada) deciden cuál:
+   defensa/contacto → `tacklesPerMatch` (banda 6-14) o `injuriesPerMatch` (banda 0,3-0,9); delantero →
+   la calidad del tiro, que **no tiene banda** (`shotsOnTargetShare` es `INFO`, `shotsPerMatch` no
+   cambia por calidad, solo por decisión).
+3. Secundarias/seguridad: `injuriesPerMatch` siempre (vía severidad, sea cual sea la primaria);
+   `foulsPerMatch` (`INFO`, sin banda).
+4. Fuente: `MatchReport.Tackles`/`Injuries`, `MatchMetrics.Compute`.
+5-6. Baseline/tratamiento: mismo esquema de control emparejado ya usado en C1 — con y sin el delta de
+   `Strength`, mismas plantillas y semillas.
+7-8. **Exposición, tipo nuevo (ni discreta ni continua, "de resolución")**: fracción de partidos donde el
+   portador (o los que cumplan el `target`, ver el hueco de `pack_mentality` abajo) participa en al menos
+   una resolución que usa `Strength` — insuficiente si el portador casi nunca entra/tira/bloquea/regatea
+   defendido, igual que el matiz de `Limit` de §5.4 pero aplicado a la frecuencia BASE de la acción, no a
+   un efecto propio del perk.
+9. Efecto: más `Strength` → sube `tackleWinRate`/`foulRate`/severidad de lesión, o sube la calidad de tiro
+   (sin banda que lo confirme).
+10. **Automático si la ficha apunta a una resolución bandeada (tackle/injury); `DESIGN_REVIEW` si apunta
+    a calidad de tiro** (sin banda que fije "cuánto es demasiado").
+
+**Stamina** — `player.FatigueResistancePercent`, decae la velocidad menos con el cansancio; el portero
+para mejor tarde en el partido (`decayFactor`).
+1-4. **No existe ninguna métrica, ni bandeada ni `INFO`, que capture "rendimiento por fase del
+partido"** — verificado: `MatchReport` no trocea nada por tiempo, `MatchMetrics.Compute` no tiene
+ninguna fila de "primera/segunda mitad" ni de "últimos N minutos".
+10. **`NOT_READY` explícito — hueco de tooling real, no de calibración.** Haría falta una métrica nueva
+    (p. ej. goles/paradas en el último tercio del partido comparados con el resto) antes de poder medir
+    esto en absoluto. No se inventa una proxy.
+
+**Speed** — movimiento (`SpeedPerTickMilli`), `DribbleSpeedSlope`, `SaveBonusFar` del portero (guardián
+lejano), `block.SpeedFactor`. Sin ningún perk real.
+2. Candidata sin precedente: `ballThirdMaxShare`/`possessionChanges` (cobertura) o `saveRate` (`INFO`,
+   sin banda) para porteros.
+10. **Clasificación: `INFERIDO, SIN CONFIRMAR`** (no `NOT_READY`: el mecanismo y la métrica existen,
+    solo falta un perk real que confirme que es la sensible). Puede entrar en `SCREENING`, pero el
+    resultado se marca en el registro (§10) como primera medición de esta categoría, no con la misma
+    confianza que Strength/Stamina.
+
+**Technique** — `PassTechniqueSlope`, `DribbleTechniqueSlope`, `ThroughPassTechniqueSlope`,
+`ShootTechniqueSlope`, `InterceptTechniqueFactor`, guardián técnico del portero. Sin ningún perk real.
+2. Métrica natural: `passCompletionRate`/`shotsOnTargetShare` — **las dos son `INFO`, sin banda**
+   (verificado en `MatchMetrics.cs`, no supuesto).
+10. **`NOT_READY` para búsqueda automática de valor — mismo hueco que `ShotQualityBonus`/
+    `PassQualityBonus` (§13.4.2).** El sistema puede medir el número (existe el cálculo); no puede decidir
+    solo "está en rango" porque RT-056 no define ningún rango para calidad de pase/tiro. Pasa a
+    `DESIGN_REVIEW` para que se fije una banda antes de iterar un valor — no se inventa una.
+
+**Leash** (atributo, distinto de `LeashBonus` escalar y de `modifyLeash` efecto, mismo mecanismo de
+fondo) — geometría de zona de acción. Sin perk real vía `modifyAttribute`, pero el mecanismo es
+idéntico al de `modifyLeash`, que sí tiene precedente.
+10. **`READY`**: reutiliza sin cambios la categoría de Geometría ya definida en §3 (`ballThirdMaxShare`,
+    banda 0-52).
+
+### 13.4.2 `modifyTraitScalar` — los 10 escalares sin perk real hoy
+
+| Escalar | Dónde se lee (motor) | Métrica | Estado |
+|---|---|---|---|
+| `InjuryResistanceBonus` | resta a la severidad de lesión | `injuriesPerMatch` (banda 0,3-0,9) | **READY** |
+| `LeashBonus` | `Recalculate()`, zona de acción | `ballThirdMaxShare` (banda 0-52) | **READY** |
+| `AdjacentTeammateBonusPercent` | origen de `LeaderBonusPercent` (`RecomputeLeaderBonuses`, ya activo hoy vía rasgo) | histograma de acción del portador y sus vecinos (mismo instrumento que C1/Tanda 0) | **READY_VIA_BEHAVIORAL_AUDIT** (no banda RT-056, igual que `modifyUtility`) |
+| `SpeedBonusPercent` | movimiento | igual que atributo `Speed` | **INFERIDO, SIN CONFIRMAR** |
+| `ShotQualityBonus` | calidad de tiro | `shotsOnTargetShare` (`INFO`) | **NOT_READY** (sin banda) |
+| `PassQualityBonus` | calidad de pase | `passCompletionRate` (`INFO`) | **NOT_READY** (sin banda) |
+| `FoulChanceBonus` | probabilidad de falta en entrada/bloqueo | `foulsPerMatch` (`INFO`) | **NOT_READY** (sin banda) |
+| `FatigueResistancePercent` | igual que `Stamina` | ninguna | **NOT_READY** (sin métrica alguna) |
+| `SaveBonusClose` | parada cercana del portero | `saveRate` (`INFO`) | **NOT_READY** (sin banda) |
+| `SaveBonusFar` | parada lejana del portero | `saveRate` (`INFO`) | **NOT_READY** (sin banda) |
+
+**Ningún escalar sin precedente genera una capacidad falsa**: la tabla dice explícitamente, por fila, si
+el sistema puede iterarlo solo (`READY`), necesita el instrumento de comportamiento en vez de una banda
+(`READY_VIA_BEHAVIORAL_AUDIT`), necesita una primera medición sin la confianza de un precedente
+(`INFERIDO`), o no puede iterarlo todavía (`NOT_READY`, con el motivo exacto: sin banda o sin métrica).
+
+### 13.4.3 `ProbabilityKind.Foul` / `ProbabilityKind.Card`
+
+Sin ningún perk real hoy. Misma conclusión que `FoulChanceBonus`: la métrica natural
+(`foulsPerMatch`/`yellowCardsPerMatch`/`redCardsPerMatch`) es **`INFO` en las tres**, verificado en
+`MatchMetrics.cs`. **`NOT_READY` para búsqueda automática de valor** — a diferencia de `Tackle`/`Injury`
+(que sí tienen banda porque RT-056 los declaró críticos para "sensación de fútbol"), no existe ningún ADR
+que diga qué tasa de faltas/tarjetas es aceptable. Un perk de este tipo necesita `DESIGN_REVIEW` para
+fijar una banda antes de que el sistema pueda decidir solo.
+
+### 13.4.4 `modifyBias`
+
+2 perks reales (`diver`, `home_ref`). Sesga el criterio del árbitro por equipo (`ApplyBiasDelta`,
+`_bias` clamped -100..100, reportado como `FinalBias` por partido).
+**`NOT_READY` — falta la métrica agregada, no solo la banda.** `FinalBias` se guarda por partido en
+`matches.csv` pero `MatchMetrics.Compute` no lo resume en ninguna fila de `summary.csv` — verificado,
+no hay ninguna línea que lo mencione. Esto es tooling puro y sin ambigüedad de diseño (añadir una fila
+`INFO` que resuma `FinalBias`/faltas-por-equipo), no una decisión que necesite `game-design-review`; se
+lista aquí como pieza de tooling pendiente (§12), no como hueco de diseño.
+
+### 13.4.5 Síntesis
+
+| Grupo | Estado | Por qué |
+|---|---|---|
+| `Strength` (resolución bandeada), `Stamina`→no, `Leash`, `InjuryResistanceBonus`, `LeashBonus` | **READY** | banda RT-056 existente y mecanismo verificado |
+| `AdjacentTeammateBonusPercent` | **READY_VIA_BEHAVIORAL_AUDIT** | mismo instrumento que C1, sin banda agregada |
+| `Speed`, `SpeedBonusPercent` | **INFERIDO, SIN CONFIRMAR** | mecanismo y métrica existen, sin precedente real |
+| `Technique`, `ShotQualityBonus`, `PassQualityBonus`, `FoulChanceBonus`, `Foul`, `Card`, `SaveBonusClose/Far` | **NOT_READY (sin banda)** | la métrica existe como `INFO`; hace falta `DESIGN_REVIEW` para fijar un rango antes de iterar |
+| `Stamina` (perk directo), `FatigueResistancePercent` | **NOT_READY (sin métrica)** | no existe ningún cálculo de rendimiento por fase de partido |
+| `modifyBias` | **NOT_READY (falta tooling)** | la métrica agregada no está escrita, aunque el dato (`FinalBias`) ya existe por partido |
+
+**Hallazgo transversal, no anticipado en la matriz original**: seis de las nueve familias `NOT_READY`
+comparten la misma causa — **RT-056 deja deliberadamente sin banda casi todas las métricas de "calidad"**
+(pase, tiro, parada, falta/tarjeta), reservando bandas solo para las de "sensación de fútbol" agregada
+(posesión, cadena de pases, tiros, resultado, tercio, entradas, lesiones). Esto no es un error de RT-056
+—esas métricas se dejaron `INFO` a propósito, `docs/balance.md` lo dice explícitamente para varias de
+ellas— pero sí es una limitación real y ya verificada de este sistema: **cualquier perk cuyo efecto
+natural sea de calidad, no de cantidad, no puede iterarse solo hasta que alguien fije una banda.** No se
+inventa una para destrabarlo.
 
 ---
 
