@@ -235,7 +235,7 @@ public sealed class CalibrationDiagnosticsTests
             int team = trace.Players[slot].Team;
             for (int frame = 0; frame < trace.FrameCount; frame++)
             {
-                if (!trace.OnPitchAt(frame, slot) || trace.BallOwnerAt(frame) != carrierId)
+                if (!trace.OnPitchAt(frame, slot) || trace.BallOwnerAt(frame) != slot)
                 {
                     continue;
                 }
