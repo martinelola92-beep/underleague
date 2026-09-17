@@ -928,6 +928,12 @@ Actualizado tras la revisión del 17 sep 2026 (antes eran seis puntos; se añade
     `target: withTag:...`/`linked...` distinto de `owner`/`actor`): el patrón de control/armado usado
     hasta ahora mide un solo portador; falta la variante que mida un subconjunto de jugadores por
     etiqueta antes de que esos perks puedan entrar en `SCREENING`.
+11. **Tasa de victoria de entrada** (§15.3, encontrado al ejecutar el demo de extremo a extremo):
+    `tacklesPerMatch` cuenta intentos, no éxitos — un bono a la probabilidad de *ganar* una entrada
+    (`ProbabilityKind.Tackle`) necesita una fila agregada de victorias/intentos que hoy no existe en
+    `MatchMetrics.Compute` (solo hay contadores por jugador, sin resumen de partido). Sin esto, `Tackle`
+    sigue marcado `Ready` en el clasificador pero la métrica que usa es un proxy débil para el mecanismo
+    real — hueco de tooling, no de diseño.
 
 ## 13.4 Resolución del paso de confirmación de métrica (18 sep 2026)
 
@@ -1126,6 +1132,93 @@ de decidir, lo que sigue estando muy por debajo del techo de 10 minutos/perk per
 segundos" sin más. La afirmación defendible es: **minutos, no horas, con la comprobación de potencia de
 §5.5 decidiendo cuánto exactamente dentro de ese margen** — no una promesa de un número fijo de segundos
 para los 94 perks del catálogo.
+
+---
+
+## 15. Implementación del tooling mínimo (18 sep 2026)
+
+Tras cerrar §13.4 (§13.4/§3.2, commit `707598a`), se implementó el subconjunto de §12 necesario para
+demostrar que el protocolo es ejecutable — sin balancear los 94 perks, sin tocar `/data`, sin cerrar
+Cazagoles/Ancla. Todo el código es determinista; ningún agente participa en el camino de medición (§11.1).
+
+### 15.1 Qué se implementó
+
+| Pieza (§12) | Fichero | Prueba |
+|---|---|---|
+| Selección automática de métricas | `Sim/Analysis/PerkBalanceClassifier.cs` | `PerkBalanceClassifierTests.cs` — 11 casos, incluida cobertura de los 94 perks reales sin excepción |
+| Comprobación de potencia (§5.5) | `Sim/Analysis/BalancePowerCheck.cs` | `BalancePowerCheckTests.cs` — 7 casos, reproduce el hallazgo real de C1 (40 insuficiente, 200 suficiente, mismo efecto) |
+| Motor de decisión (§6) | `Sim/Analysis/BalanceDecisionRules.cs` | `BalanceDecisionRulesTests.cs` — 19 casos, incluida la comprobación de que "pasar RT-056" no basta para `BALANCED` |
+| Búsqueda de valor (§7) | `Sim/Analysis/BalanceValueSearch.cs` | tripleta anclada verificada contra los cuartiles reales de Cazagoles (§3.1b) |
+| Registro (§10) | `Sim/Analysis/BalanceRegistry.cs` (serialización pura) + `Sim.Tests/Balance/BalanceRegistryFile.cs` (E/S) | round-trip y reanudación |
+| Harness genérico de control/armado (§12, pieza 2) | `Sim.Tests/Balance/PairedBalanceHarness.cs` | ejercitado por el demo de extremo a extremo |
+| Demo de extremo a extremo | `Sim.Tests/Balance/EndToEndProtocolDemoTests.cs` | dos pruebas, ver §15.2 |
+
+**Separación deliberada**: `BalanceRegistry` (en `/Sim`) solo serializa texto — RT-012 prohíbe que `/Sim`
+toque disco, y el analizador de arquitectura del proyecto (`ArchitectureTests.
+NoReferenceToForbiddenFrameworkTypes`) directamente **prohíbe referenciar el tipo** `DateTimeOffset`
+dentro de `Underleague.Sim.dll`, no solo llamarlo — se descubrió al compilar (§15.3) y se corrigió
+guardando la marca de tiempo como texto ISO-8601, resuelta por quien orquesta, nunca por `/Sim`. La
+lectura/escritura de fichero vive en `Sim.Tests/Balance/BalanceRegistryFile.cs` (o, cuando exista el CLI
+de §12 punto 5, en `/Balance`).
+
+### 15.2 El demo de extremo a extremo, y lo que demuestra de verdad
+
+`EndToEndProtocolDemoTests` usa un perk de prueba construido en memoria (`demo_tackle_fixture`,
+`modifyProbability` sobre `Tackle`, misma condición que `own_third_anchor` ya calibrada en Tanda 0 —
+nunca escrito en `/data`) y dos pruebas:
+
+- **`ProtocolTraversesClassificationScreeningTuningAndValidation`**: clasifica el fixture, mide Screening
+  (40 partidos/brazo, semilla 1) y **se detiene correctamente en `SAFETY_LIMIT`** — `injuriesPerMatch`
+  sale de banda (0,23-0,28 contra el suelo de 0,3) por ruido de muestra pequeña, el mismo fenómeno ya
+  medido en C1 §5 con 20 plantillas. Es exactamente uno de los dos resultados que pedía el criterio de
+  éxito del encargo ("o detenerse correctamente en uno de los estados de escalado"): el sistema no fuerza
+  el resultado ni amplía la muestra a mitad de la prueba para conseguir un `BALANCED` más vistoso.
+- **`TuningAndValidationMachineryWorksOnRealSimulatedData`**: ejercita Tuning→Validation de forma
+  independiente (mismo fixture, semillas 2-3), con datos reales simulados en cada paso — tripleta,
+  monotonicidad, potencia, réplica, determinismo (RT-024) y las siete condiciones de §6.4. Con este
+  fixture concreto el resultado es `REJECT` (el delta observado es negativo y la potencia es
+  insuficiente, ver §15.3), lo cual es el comportamiento correcto: el motor de decisión no acepta un
+  candidato cuyo efecto no está ni siquiera en la dirección esperada.
+
+**Ninguna de las dos pruebas afirma que `demo_tackle_fixture` esté balanceado.** Demuestran que el
+mecanismo —clasificar, medir, decidir, registrar— corre de punta a punta sobre partidos reales sin
+excepciones, y que se detiene en un estado reconocido en vez de continuar sin evidencia.
+
+### 15.3 Dos hallazgos reales, encontrados al ejecutar el demo (no anticipados en el diseño)
+
+1. **`ProbabilityKind.ShotOnTarget`/`Save`/`Pass`/`Intercept`/`InterceptEvasion`/`Dribble` también
+   carecían de banda**, y la primera versión del clasificador (§13.4) solo marcaba `Foul`/`Card` como
+   excepción `NotReadyNoBand` — el resto de `ProbabilityBonus` se clasificaba `Ready` sin comprobar que
+   su métrica natural fuera realmente una de las siete bandeadas. El error apareció al ejecutar el demo
+   sobre datos reales (la fila `RangeMin`/`RangeMax` de `MatchMetrics.Compute` para esas métricas es
+   siempre `null`), no al releer el documento — es exactamente el tipo de error que una prueba
+   determinista sobre datos reales encuentra y una revisión de prosa no. Corregido en
+   `PerkBalanceClassifier.NoBandProbabilities`: solo `Tackle`/`TackleEvasion` (tacklesPerMatch) e
+   `Injury`/`Injure`/`SevereInjury` (injuriesPerMatch) quedan `Ready` dentro de `ModifyProbability`.
+2. **`tacklesPerMatch` cuenta intentos de entrada, no entradas ganadas** — un bono a la probabilidad de
+   *ganar* una entrada ya iniciada no tiene por qué mover el número de entradas *intentadas* (esa
+   decisión la toma `Utility.Choose`, no `ModifyProbability`). El demo lo muestra literalmente: los tres
+   candidatos (40/60/100) dieron el mismo `tacklesPerMatch` armado/control. **`tacklesPerMatch` es un
+   proxy débil para un bono de probabilidad de victoria de la entrada** — la métrica mecánicamente
+   sensible sería una tasa de victoria de entrada (`tacklesWon`/`tacklesAttempted`), que hoy **no existe
+   como fila agregada en `MatchMetrics.Compute`** (solo hay contadores por jugador, sin resumen de
+   partido). Se añade a §13 como pieza de tooling pendiente — no se inventa una tasa ni se cambia el
+   fixture para ocultar el hallazgo.
+
+### 15.4 Qué NO se implementó (a propósito, por instrucción explícita)
+
+- El CLI de `/Balance` (§12, punto 5) y el volcado de utilidad automatizado por categoría (punto 6):
+  quedan como piezas de implementación futura, no bloquean la demostración de mecanismo.
+- La variante de harness multi-objetivo (`pack_mentality` y similares, §3.2 punto 7): sigue pendiente.
+- Ninguna categoría `NOT_READY`/`DESIGN_REVIEW` de §13.4 (calidad de tiro/pase, `Stamina`, sesgo
+  arbitral) se forzó a "funcionar" para el demo — el fixture elegido es deliberadamente de la única
+  categoría ya `Ready` con precedente real (`ProbabilityBonus` sobre `Tackle`).
+- No se ha balanceado ningún perk real, no se ha tocado `/data`, no se han cerrado Cazagoles ni Ancla, y
+  `MinPassChainRatio` no ha intervenido en ningún punto de esta fase.
+
+Verificado: 802/802 pruebas no-puerta en verde (incluida `ArchitectureTests.
+NoReferenceToForbiddenFrameworkTypes`, que detectó y forzó a corregir el uso de `DateTimeOffset` en
+`/Sim`) y las 43 puertas sin ninguna nueva roja (las mismas de siempre, documentadas en BB-P).
 
 ---
 
