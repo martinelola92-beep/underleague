@@ -605,6 +605,70 @@ RT-056, que nunca se define por equipo.
 5. Si alguna métrica obligatoria sale `OUT` en el armado, 24% deja de ser defendible sin más discusión;
    no se ajusta el número para corregirlo dentro de esta fase.
 
+### Resultado
+
+Instrumento temporal (`Sim.Tests/Analysis/_C1CazagolesBalanceLote.cs`, no commiteado, borrado al terminar),
+100 plantillas × 2 direcciones × 2 semillas, 400 partidos/brazo. `Sim.Analysis.MatchMetrics.Compute`
+sobre el partido completo (los 20 jugadores), no sobre el equipo del portador.
+
+| métrica (obligatoria) | banda | armado (sem.1/sem.2/combinado) | control (sem.1/sem.2/combinado) | estado |
+|---|---|---|---|---|
+| `possessionChanges` | 12-28 | 22,24 / 21,56 / 21,90 | 22,35 / 21,76 / 22,05 | **IN** en los tres |
+| `passChainAvgLength` | 1,8-3,5 | 2,108 / 2,080 / 2,094 | 2,133 / 2,098 / 2,115 | **IN** en los tres |
+| `shotsPerMatch` | 7-15 | 8,195 / 8,055 / 8,125 | 7,775 / 7,770 / 7,772 | **IN** en los tres |
+| `scorelineShare_1-0_to_3-2` | ≥50 | 89,5 / 88,0 / 88,75 | 87,5 / 85,0 / 86,25 | **IN** en los tres |
+| `ballThirdMaxShare` | ≤52 | 46,91 / 47,42 / 47,16 | 46,18 / 46,09 / 46,14 | **IN** en los tres |
+| `tacklesPerMatch` | 6-14 | 10,33 / 10,54 / 10,43 | 10,60 / 10,72 / 10,66 | **IN** en los tres |
+| `injuriesPerMatch` | 0,3-0,9 | 0,345 / 0,495 / 0,420 | 0,360 / 0,485 / 0,422 | **IN** en los tres |
+
+**Las siete métricas obligatorias quedan `IN` en el armado, en las dos semillas y en el combinado.**
+Ninguna toca ni de lejos un borde de banda: el margen más ajustado es `ballThirdMaxShare` (47,16 contra
+un techo de 52, 4,84 puntos de margen) y `shotsPerMatch` (8,125 contra un techo de 15, casi 7 puntos).
+
+**Qué cambia** (armado vs control, criterio 2 del pre-registro — vía causal ya documentada + réplica en
+las dos semillas):
+- `ballThirdMaxShare` sube +0,72 pp (sem. 1) / +1,33 pp (sem. 2) — pequeño pero en la misma dirección en
+  las dos semillas, con la vía causal ya prevista en §3.6 (más tiros → más saques de puerta → más
+  reinicios en el tercio rival). Consistente con lo que se preguntaba en §6 punto 6: la vía existe y es
+  medible, pero a escala de partido completo (diluida entre 20 jugadores, no solo el portador) es
+  pequeña y con mucho margen de banda.
+- `shotsPerMatch` sube +0,42 (sem. 1) / +0,285 (sem. 2) — mismo signo, magnitud menor que el +0,462 de
+  §5 porque aquí se cuenta el partido entero (ambos equipos), no solo el del portador.
+- `passChainAvgLength` baja ligeramente en las dos semillas (−0,025 / −0,018) — mismo signo que el hallazgo
+  de §5 sobre el equipo del portador, diluido a escala de partido completo.
+
+**Qué NO cambia**: `tacklesPerMatch` (diferencia de −0,19 a −0,27, sin dirección consistente entre
+semillas — ruido, no efecto: Cazagoles no toca `Tackle`, exactamente la comprobación que pedía el
+pre-registro) e `injuriesPerMatch` (sin vía causal conocida, sin patrón: −0,015 en semilla 1, +0,010 en
+semilla 2).
+
+**Ninguna regresión.** Ninguna métrica obligatoria sale de banda en ningún brazo, ninguna semilla, ni el
+combinado.
+
+### ¿Sigue siendo defendible el 24%?
+
+**Sí, contra el pre-registro de este apartado**: las cinco condiciones del criterio de interpretación se
+cumplen — (1) siete de siete `IN`; (2) los movimientos que aparecen tienen vía causal ya documentada y
+replican en las dos semillas; (3) no se ha usado `BuildsWinDifferently`; (4) `MinPassChainRatio` no ha
+intervenido; (5) no ha hecho falta ajustar nada porque no hubo ningún `OUT`.
+
+**C1 no se cierra todavía.** Este lote confirma que 24% no rompe ninguna banda de sensación de fútbol,
+pero quedan, sin tocar en esta fase:
+- **El perk no existe en `/data`.** No hay fichero `data/perks/cazagoles.json`, ni soporte de esquema JSON
+  ni de `PerkLoader.cs` para los campos nuevos de `EffectDefinition` (`utilityAction`/`utilityZone`) —
+  todo lo medido usa un `PerkDefinition` construido en memoria de test. Escribirlo en `/data` es
+  `perk-authoring` (familia, rareza, `minAct`, `frequency`, RF-069, el conflicto con `C-28 Sangre fría`
+  que ya cita el catálogo conceptual): trabajo de contenido, no de mecanismo, todavía no empezado.
+- **Sin revisión independiente (Regla E).** C1 ya toca `/Sim` (commit `74b1231`); antes de cerrar el
+  paquete hace falta el paso por `independent-reviewer` con el problema completo (este documento, con sus
+  hipótesis y candidatos descartados, no solo el resultado final).
+- **RT-024 (determinismo) no se ha re-verificado con Cazagoles realmente equipado** en una plantilla de
+  prueba — solo se verificó que el motor es idéntico con C1 inerte (§5). Es una comprobación barata y
+  pendiente, no una duda abierta sobre el mecanismo.
+
+`MinPassChainRatio` sigue intacto. No se ha escrito nada en `/data/perks`, no se ha implementado el 24%
+como valor final, y C1 no se declara cerrado.
+
 ## Hermanos
 
 - `docs/analisis/tanda-0-histograma-de-accion.md` — el instrumento que este plan reutiliza.
