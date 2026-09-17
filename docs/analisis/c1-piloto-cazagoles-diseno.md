@@ -566,6 +566,45 @@ respalda a 24%.
 `MinPassChainRatio` sigue intacto. No se ha implementado ningún perk en `/data`, ni se ha declarado
 ningún valor definitivo.
 
+## 7. Lote de `/Balance` para 24% (17 sep 2026) — pre-registro antes de ejecutar
+
+RT-054/RT-055 (`docs/requisitos.md`) y `docs/balance.md` §"Métricas de sensación de fútbol (RT-056)" y
+§"Puertas de CI" son la fuente de verdad de qué mide un lote de balance y con qué banda. Se reutiliza el
+cálculo compartido `Sim.Analysis.MatchMetrics.Compute` (el mismo que usan `/Balance` y
+`Engine/StatisticalTests.cs`): ni una banda ni una fórmula nuevas.
+
+### Qué se mide
+
+Las siete métricas obligatorias de RT-056 (`possessionChanges` 12-28, `passChainAvgLength` 1,8-3,5,
+`shotsPerMatch` 7-15, `scorelineShare_1-0_to_3-2` ≥50, `ballThirdMaxShare` ≤52 — ADR 0093 corrigió el 50
+informal de la tabla resumen —, `tacklesPerMatch` 6-14, `injuriesPerMatch` 0,3-0,9) más las métricas
+`INFO` de contexto (`goalsPerMatch`, `shotsOnTargetShare`, `saveRate`, `blockRate`,
+`share_over5goals`, `drawShareAtRegulation`). `ballThirdMaxShare` es la que quedó pendiente en §6 punto 6:
+aquí se mide por primera vez.
+
+### Metodología
+
+Mismo esquema de control/armado que §5: mismas plantillas, mismas semillas, sin arrastre de campaña,
+20→100 plantillas × 2 direcciones × 2 semillas (200 partidos/brazo/semilla). A diferencia de §5, aquí las
+métricas son **de partido completo** (los 20 jugadores), no del equipo del portador — es lo que pide
+RT-056, que nunca se define por equipo.
+
+### Criterio de interpretación, fijado antes de ejecutar
+
+1. **El brazo armado tiene que seguir `IN` en las siete métricas obligatorias.** Es el mismo estándar que
+   ya se exige a cualquier partido del juego; un `OUT` en el armado es motivo de alarma inmediata,
+   independientemente de cuánto se mueva respecto al control.
+2. **Un movimiento armado-vs-control solo se lee como preocupante si tiene una vía causal ya identificada
+   en este documento (§3.6) y replica en las dos semillas** — mismo criterio de señal-vs-ruido que §3.7 y
+   §4, no uno nuevo: más tiros → posible redistribución de `ballThirdMaxShare` vía más saques de puerta;
+   `tacklesPerMatch` es la comprobación de "qué NO debería moverse" (Cazagoles no toca `Tackle`).
+3. **No se usa `BuildsWinDifferently` ni su umbral** (Cazagoles no está en sus builds de referencia,
+   instrucción ya aplicada en todo el piloto).
+4. **`MinPassChainRatio` no interviene aquí**: es el umbral de una puerta distinta (comparación entre
+   builds), no de esta medición aislada de partido completo.
+5. Si alguna métrica obligatoria sale `OUT` en el armado, 24% deja de ser defendible sin más discusión;
+   no se ajusta el número para corregirlo dentro de esta fase.
+
 ## Hermanos
 
 - `docs/analisis/tanda-0-histograma-de-accion.md` — el instrumento que este plan reutiliza.
