@@ -1220,6 +1220,162 @@ Verificado: 802/802 pruebas no-puerta en verde (incluida `ArchitectureTests.
 NoReferenceToForbiddenFrameworkTypes`, que detectó y forzó a corregir el uso de `DateTimeOffset` en
 `/Sim`) y las 43 puertas sin ninguna nueva roja (las mismas de siempre, documentadas en BB-P).
 
+## 16. Auditoría de readiness del catálogo real (18 sep 2026)
+
+Auditoría estática de los 94 perks de `data/perks/*.json` contra el clasificador (§13.4/§3.1/§3.2),
+antes de lanzar el primer `SCREENING` real. Sin simular ningún partido: `Sim.Tests/Analysis/
+PerkAuditTests.cs` (`PrintAggregateReport`, `AggregateCountsAreFixedAsRegression`) recorre el catálogo
+cargado y clasifica cada perk con `Sim/Analysis/PerkAudit.cs`, nuevo, compuesto sobre
+`PerkBalanceClassifier`. El resultado agregado queda fijado como regresión: si cambia, es porque el
+catálogo o el clasificador cambiaron, y hay que mirar por qué antes de aceptar el nuevo número.
+
+### 16.1 Resultado agregado
+
+```
+Total perks: 94
+
+ReadyForScreening: 25
+MultiTarget:       22
+DesignReview:      13
+NotReady:          27
+RunLevel:           7
+```
+
+**`NOT_READY` por motivo** (mutuamente excluyentes — cada perk cuenta en uno solo):
+
+```
+NeedsCampaignHarness:     17   (AccumulatesAcrossMatches + efecto acompañante escalado por contador)
+MissingPrimaryMetric:      7   (Immunity ×3, CancelEvent DEATH, ModifyKnockdownTicks, Relocate)
+MissingAggregateMetric:    2   (modifyBias: diver, home_ref)
+MultiEffectAttribution:    1   (unlikely_bulwark)
+```
+
+**`DESIGN_REVIEW` por motivo**:
+
+```
+MissingBand:              11   (calidad de tiro/pase/parada, CancelEvent FOUL/GOAL)
+AmbiguousPrimaryMetric:    2   (Strength sin señal estructural: brute_boots, comeback_spirit)
+```
+
+### 16.2 Tabla representativa (no las 94 filas — se generan con `dotnet test --filter
+FullyQualifiedName~PerkAuditTests.PrintAggregateReport`)
+
+| perk | effect type | target shape | readiness | blocking reason | primary metric |
+|---|---|---|---|---|---|
+| `own_third_anchor` | ModifyProbability | SingleOwner | **ReadyForScreening** | — | tacklesPerMatch |
+| `iron_price` | ModifyTraitScalar | SingleOwner | **ReadyForScreening** | — | injuriesPerMatch |
+| `sweeper_keeper` | ModifyLeash | SingleOwner | **ReadyForScreening** | — | ballThirdMaxShare |
+| `double_shot` | ExtraAction | SingleOwner | **ReadyForScreening** | — | shotsPerMatch |
+| `iron_gate` | CancelEvent | SingleOwner | **ReadyForScreening** | — | injuriesPerMatch |
+| `pack_mentality` | ModifyAttribute | Population | **MultiTarget** | — | (ambiguo, además) |
+| `pivot_duo` | ModifyProbability | Population | **MultiTarget** | — | tacklesPerMatch |
+| `dirty_play` | Injure+SetState | SingleOther | **MultiTarget** | — | — |
+| `box_predator` | ModifyProbability | SingleOwner | **DesignReview** | MissingBand | shotsOnTargetShare |
+| `brute_boots` | ModifyAttribute | SingleOwner | **DesignReview** | AmbiguousPrimaryMetric | ambiguo (3 opciones) |
+| `mob_instigator` | CancelEvent | SingleOwner | **DesignReview** | MissingBand | foulsPerMatch |
+| `poacher_instinct` | ModifyProbability+AddCounter | SingleOwner | **NotReady** | NeedsCampaignHarness | shotsOnTargetShare |
+| `unlikely_bulwark` | ModifyProbability+ModifyLeash | SingleOwner | **NotReady** | MultiEffectAttribution | tacklesPerMatch |
+| `diver` | ModifyBias | SingleOwner | **NotReady** | MissingAggregateMetric | FinalBias/faltas por equipo |
+| `roots` | Immunity | SingleOwner | **NotReady** | MissingPrimaryMetric | — |
+| `no_dying` | CancelEvent (DEATH) | SingleOwner | **NotReady** | MissingPrimaryMetric | — |
+| `loan` | AddCounter | SingleOwner | **RunLevel** | — | FullRunMetrics |
+| `quick_learner` | ModifyExperience | SingleOwner | **RunLevel** | — | FullRunMetrics |
+
+### 16.3 Los casos con atención especial que pedía el encargo
+
+- **`ProbabilityBonus` sin banda válida**: comprobación sistemática (`NoPerkIsReadyForScreeningWithoutAKnownBandedOrBehavioralMetric`,
+  §16.4), no una lista manual — compara la métrica primaria de cada `ReadyForScreening` contra el
+  conjunto de nombres `INFO` de `MatchMetrics`. Ningún perk real cae hoy en `Foul`/`Card`/`ShotOnTarget`/
+  `Save`/`Pass`/`Intercept`/`InterceptEvasion`/`Dribble` como *único* efecto (los que lo intentan, como
+  `box_predator`/`cold_focus`/`safety_net`/`killing_range`/`forward_line`/`long_range_menace`
+  (`shotOnTarget`), `crowd_control`/`fine_touch`/`flank_specialist` (`pass`), quedan correctamente en
+  `DESIGN_REVIEW`.
+- **`modifyAttribute`**: cada atributo con perk real (`Strength`, `Stamina`) tiene su propio veredicto —
+  `Strength` es `AmbiguousPrimaryMetric` (ninguno de los 4 perks reales da una señal estructural, §13.4.1),
+  `Stamina` combinado con `AccumulatesAcrossMatches` cae en `NeedsCampaignHarness` (`iron_lungs`,
+  `scar_veteran`). No se asume una capacidad por el mero hecho de que exista `TraitScalarKind`/
+  `AttributeKind` — verificado perk a perk.
+- **`addCounter`**: tres grupos reales, no supuestos — 6 perks en solitario (`RunLevel`), 17 con efecto
+  acompañante escalado por contador (`NeedsCampaignHarness`, el harness correcto es
+  `Balance/PerkValueRunner.cs`, no el de este protocolo), 0 casos de "depende de modifyProbability sin
+  contador" (los 14 `modifyProbability`+`addCounter` reales SIEMPRE usan `UsesCounter` en la parte de
+  partido, verificado — no hay ningún caso intermedio hoy).
+- **`Limit`**: ya no se confunde con exposición insuficiente (§5.4/§6.1, corregido en la revisión
+  anterior) — la auditoría añade `TriggerFrequencyCategory` (estático, por el propio `Trigger`, sin
+  simular) y anota, para cada perk con `Limit`, si su disparador ya es raro por diseño (`FOUL`/`INJURY`/
+  `GOAL`/`DEATH`) o frecuente (`TACKLE`/`SHOT`/...), sin que eso cambie el veredicto de readiness por sí
+  solo — comprobado sistemáticamente (`LimitIsNeverTreatedAsInsufficientExposureByItself`).
+- **Multi-target**: 22 perks, no solo `pack_mentality` — desglose real por forma de destinatario:
+  `Population` (`Team`/`OpposingTeam`/`WithTag`/`Adjacent`/`AdjacentOpponents`/`Linked`/`LinkedWithTag`,
+  la mayoría) y `SingleOther` (`Target`/`Opponent`: `dirty_play`, `iron_studs`) — ninguno tratado como si
+  el harness de un solo portador pudiera medirlo.
+- **Multi-efecto**: 27 perks con más de un efecto (§3). De ellos, 17 son el caso `addCounter`+
+  acompañante (resuelto arriba), 1 (`deep_run`) combina dos efectos de la MISMA categoría (Geometry) y se
+  queda `ReadyForScreening` sin ambigüedad, y 1 (`unlikely_bulwark`) combina DOS categorías distintas
+  (`ProbabilityBonus`+`Geometry`) — el único caso real de atribución no resuelta, marcado
+  `MultiEffectAttribution` en vez de asumir que el primer efecto es "el" parámetro.
+
+### 16.4 Segunda pasada — comprobación de consistencia (bugs encontrados y corregidos)
+
+Ejecutando el clasificador contra los 94 perks reales (no contra ejemplos escogidos a mano) aparecieron
+tres errores que la primera versión del clasificador (§13.4, `fd8f2d2`) no tenía cubiertos, corregidos en
+esta misma sesión con un test de regresión cada uno:
+
+1. **`Immunity`/`CancelEvent`/`ExtraAction` no eran un bloque uniforme "Ready".** La versión anterior
+   asumía que cualquier efecto binario (cancela o repite un suceso) tenía automáticamente una métrica
+   válida. Verificado que no: los cuatro `ImmunityKind` (`Push`/`Mourning`/`MinorInjuryPenalty`/
+   `MinorInjuryClinicCost`) son desplazamiento físico o coste entre partidos, sin ninguna fila en
+   `MatchMetrics` — los 3 perks reales (`half_leg`, `tough_hide`, `roots`) pasan de `Ready` a
+   `NotReady(MissingPrimaryMetric)`. `CancelEvent` depende de qué evento cancela (`perk.Trigger`): solo
+   `INJURY` (`iron_gate`) tiene banda; `FOUL`/`GOAL` (`mob_instigator`/`hand_of_god`) son INFO
+   (`DesignReview`); `DEATH` (`no_dying`) no tiene ninguna fila agregada en absoluto (`NotReady`). Solo
+   `ExtraAction` resultó estar bien: sus dos disparadores reales (`SHOT`/`TACKLE`) sí tienen banda.
+2. **El catch-all de "caso singular" marcaba `Inferred` (que el motor de decisión trata como listo para
+   `SCREENING`) con una métrica placeholder no accionable** ("universales + métrica del suceso", una
+   cadena descriptiva, no un nombre de `MatchMetrics`). Afectaba a `hot_blooded` (`ModifyKnockdownTicks`),
+   `last_man` (`Relocate`) y `quick_learner` (`ModifyExperience`) — los tres se habrían marcado listos
+   sin tener ninguna métrica real que medir. Corregido: el catch-all ahora es `NotReadyNoMetric`, y
+   `ModifyExperience` (que ya declaraba en su propio docblock que actúa fuera del partido) se reclasificó
+   a `RunLevel`, que es lo que realmente es.
+3. **`AccumulatesAcrossMatches` se trataba como un bloque uniforme "RunLevel"**, mezclando la economía
+   pura (6 perks, ningún efecto de partido) con perks que sí tienen un mecanismo de partido pero cuya
+   magnitud depende de un contador que persiste entre partidos (17 perks — un partido suelto con el
+   contador a cero no representa su comportamiento típico a mitad de run). Separados en dos categorías
+   distintas (`RunLevelCounter` vs. `AccumulatedStateBonus`/`NeedsCampaignHarness`), con la pista correcta
+   de qué instrumento usar en cada caso (`FullRunMetrics` vs. `Balance/PerkValueRunner.cs`).
+
+**Comprobaciones automáticas añadidas** (`Sim.Tests/Analysis/PerkAuditTests.cs`), para que el clasificador
+no pueda volver a marcar `READY` un caso estructuralmente no medible sin que un test falle:
+
+- `NoPerkIsReadyForScreeningWithoutAKnownBandedOrBehavioralMetric` — ningún `ReadyForScreening` usa una
+  de las 15 métricas `INFO` conocidas de `MatchMetrics`.
+- `NoPerkIsReadyForScreeningWithMultiTargetEffects` — ningún `ReadyForScreening` tiene un destinatario
+  distinto de `SingleOwner`.
+- `NoPerkIsReadyForScreeningWithUnresolvedCrossCategoryEffects` — ningún `ReadyForScreening` mezcla
+  categorías sin resolver cuál es el parámetro.
+- `NoPerkIsReadyForScreeningWhenItNeedsTheCampaignHarness` — ningún `ReadyForScreening` necesita en
+  realidad el harness de campaña.
+- `EveryNotReadyEntryHasAConcreteReason` / `EveryDesignReviewEntryHasAConcreteReason` — ningún perk
+  bloqueado se queda con un motivo `None` (el encargo: "evitar un sistema que diga NOT_READY sin explicar
+  qué falta").
+- `ReasonsAreMutuallyExclusivePerEntry` — ningún perk tiene a la vez un motivo de `NOT_READY` y uno de
+  `DESIGN_REVIEW`.
+- `LimitIsNeverTreatedAsInsufficientExposureByItself` — ningún perk con `Limit` queda bloqueado sin un
+  motivo concreto que no sea el propio `Limit`.
+- `AggregateCountsAreFixedAsRegression` — los cinco números de §16.1, fijados: si el catálogo o el
+  clasificador cambian de forma que mueva alguno, el test falla y obliga a mirar por qué.
+
+### 16.5 Respuesta al criterio de salida de esta fase
+
+**De los 94 perks reales, 25 pueden entrar automáticamente en `SCREENING` hoy** (`ReadyForScreening` —
+incluye los que no tienen parámetro numérico y por tanto saltan directo a una `VALIDATING` cualitativa,
+§6.1/§6.5: `TargetSelection` y `BinaryEvent` sin valor propio). **69 no, y para cada uno se sabe
+exactamente por qué**: 22 por un destinatario que el harness de un solo portador no soporta
+(`MultiTarget`), 13 porque la banda o la elección de métrica necesita una decisión de diseño humana
+(`DesignReview`), 27 por un hueco de tooling concreto y nombrado (`NotReady`, desglosado en §16.1), y 7
+porque el instrumento correcto es `/Balance --full-runs`, no este protocolo (`RunLevel`, que no es un
+fallo).
+
 ---
 
 ## Hermanos
