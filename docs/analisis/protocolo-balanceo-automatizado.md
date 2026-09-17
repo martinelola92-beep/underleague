@@ -2456,6 +2456,149 @@ lo que no sepa analizar lo dice.
 
 ---
 
+## 23. Fase A: medición contra la predicción congelada (19 sep 2026)
+
+Ejecución de la Fase A de §22.8 contra `docs/analisis/fase-a-prediccion-congelada.md`, congelada en el
+commit `e152253` **antes** de esta medición. El analizador no se tocó ni durante ni después: las
+discrepancias de abajo se reportan, no se corrigen.
+
+**Puertas respetadas**: `ScreeningRunner` sin modificar; ningún umbral, banda, `/data` ni perk tocados;
+la medición llama a `RunPerk` perk a perk, **no** a `RunBatch`, así que el circuito del 20% no interviene
+— el lote de §20.5 sigue detenido en 5/24 y ningún perk cambia de estado de balance por nada de esto.
+
+### 23.1 Sensibilidad: 1/1, y con la raza exacta
+
+La predicción apostaba a que, de los 81 perks fuera del conjunto de hipótesis, la raza importaría en
+**uno solo**: `pack_mentality` (`teammatesWithTag(owner,'Brute') > 2`, raza afín predicha **Orc**).
+
+```
+pack_mentality   Dwarf=0  Elf=0  Human=0  Orc=95  Undead=5     (dispersión 95)
+```
+
+Acierta la existencia del efecto **y la raza concreta**. Es la apuesta positiva más arriesgada que hacía
+el analizador y sale limpia.
+
+### 23.2 Especificidad: 17/20 — el analizador sabe callarse
+
+De los 20 `ReadyForScreening` del hold-out, la predicción decía "la raza NO debería importar" en los 20.
+Se midió cada uno sobre las cinco razas del catálogo (20 plantillas × 2 direcciones por raza). Criterio de
+lectura fijado ANTES de mirar: "la raza importa" = dispersión entre razas > 25 puntos de exposición.
+
+**17 de 20 se comportan como se predijo.** Once de ellos con dispersión 0 (exposición idéntica en las
+cinco razas). Las tres excepciones:
+
+| perk | exposición por raza | dispersión |
+|---|---|---|
+| `grudge` | Dwarf=20 Elf=5 Human=12 **Orc=52** Undead=5 | 48 |
+| `charge` | Dwarf=90 Elf=62 Human=62 **Orc=95** Undead=78 | 32 |
+| `sweeper_keeper` | **Dwarf=68** Elf=55 Human=58 Orc=62 Undead=40 | 28 |
+
+Total predicción/observación: **18/21** contando el positivo de §23.1.
+
+Las dispersiones se dan en crudo a propósito: el corte en 25 es la convención de lectura de esta
+comparación, no un umbral del protocolo. Con un corte en 40 solo discreparía `grudge`; con uno en 15
+discreparían también `game_management` (22) y `second_wound` (20). Quien revise puede aplicar el suyo.
+
+### 23.3 Qué explica las tres discrepancias: un TERCER canal, no modelado
+
+Los tres discrepantes no tienen ninguna etiqueta de estilo en su condición, y aun así la raza les mueve la
+exposición. La explicación coherente con los datos: **la raza no solo reparte etiquetas de estilo, también
+sesga atributos** (`attributeBias` por raza y por estilo, `data/races/*.json` + `data/tags/styles.json`), y
+los atributos cambian con qué frecuencia un jugador ejecuta o gana las acciones que disparan el perk. Orc
+(fuerza +10) entra más y mejor, así que un perk de `TACKLE` como `grudge` se le activa el cuádruple que a
+un Elfo.
+
+Es decir: hay **tres** canales por los que la población afecta a la exposición, no dos —
+
+1. rareza de la etiqueta de estilo (modelado, §22.4);
+2. frecuencia de la acción del disparador según el rol (modelado, §22.4b);
+3. **sesgo de atributos de la raza sobre la frecuencia/éxito de esa acción (NO modelado)**.
+
+El tercero **no se ha implementado ni se implementará a posteriori en esta fase** (la puerta del encargo es
+explícita: las discrepancias son el resultado, no un motivo para reajustar). Queda registrado como el
+hallazgo principal de la Fase A por el lado negativo: si en el futuro se decide que el harness elija
+población, este canal tendrá que entrar en el diseño o quedar declarado como limitación conocida.
+
+### 23.4 Eje de posición: el orden de exposición reproduce el orden de los pesos base
+
+El caso explícito del hold-out era `double_shot` (predicho `WrongPosition`, acción `Shoot` vía disparador,
+medido sobre un Defensa). Midiendo sobre los cuatro roles:
+
+| perk | Portero | Defensa | Medio | Delantero | pesos base de la acción (`data/ai/weights.json`) |
+|---|---|---|---|---|---|
+| `double_shot` (Shoot) | 0,0% | 2,5% | 10,0% | **90,0%** | 0 / 154 / 237 / **385** |
+| `last_ditch` (Tackle) | 10,0% | **55,0%** | 35,0% | 2,5% | 165 / **255** / 210 / 128 |
+
+**El orden de exposición medido coincide exactamente con el orden de los pesos base en los dos casos**,
+incluido el detalle fino de `last_ditch` (Portero 165 > Delantero 128 → 10% > 2,5%). La derivación del eje
+de posición desde la tabla que usa el propio motor no solo acierta el argmax: reproduce el ranking
+completo. Es el resultado más fuerte de la Fase A.
+
+Controles negativos, igual de importantes:
+
+- `steamroller` (predicho `GenuinelyRare`): **0,0% en los cuatro roles**. Su condición es
+  `stat(target,'down') == 1` — entrar a alguien ya derribado. Ningún rol lo rescata: la posición no es el
+  problema, y el analizador no lo culpó de serlo.
+- `own_third_anchor` (predicho adecuado por el eje de EFECTO): Portero 100%, Defensa 100%, Medio 0%,
+  Delantero 0% — la exposición aquí la manda la condición de zona (`startsIn(owner,'OwnThird')`), no la
+  acción. Ilustra justo la distinción que motivó el segundo eje: para un perk de tipo efecto, la
+  exposición no es el instrumento que delata el problema (fue el caso de `cannon`, exposición 100% y
+  delta 0).
+
+### 23.5 Tabla completa de la Fase A (los 20 del hold-out)
+
+Exposición y estado tomados del screening real (`ScreeningRunner.RunPerk`, que remuestrea a 120 plantillas
+cuando la exposición inicial queda bajo el suelo — por eso algunos números difieren de la sonda de 20
+plantillas de §23.2).
+
+| perk | pred. población | pred. pos. disparador | pred. pos. efecto | rol portador | exposición | activ./partidos | delta | estado screening | pred. si baja |
+|---|---|---|---|---|---|---|---|---|---|
+| `blood_scent` | NoStyleRequired | — | — | Defensa | 100,0% | 40/40 | — | SCREENING_PASS | GenuinelyRare |
+| `bloodhound` | NoStyleRequired | — | — | Defensa | 100,0% | 40/40 | — | SCREENING_PASS | GenuinelyRare |
+| `charge` | NoStyleRequired | Tackle | — | Defensa | 62,5% | 125/40 | — | SCREENING_PASS | GenuinelyRare |
+| `deep_pivot` | NoStyleRequired | — | — | Medio | 100,0% | 40/40 | 0,4465 | INSUFFICIENT_EVIDENCE | GenuinelyRare |
+| `deep_run` | NoStyleRequired | — | — | Delantero | 100,0% | 40/40 | −0,7341 | INSUFFICIENT_EVIDENCE | GenuinelyRare |
+| `double_shot` | NoStyleRequired | Shoot | — | Defensa | 1,7% | 5/40 | — | INSUFFICIENT_EVIDENCE | **WrongPosition** |
+| `free_man` | NoStyleRequired | — | — | Defensa | 100,0% | 40/40 | — | SCREENING_PASS | GenuinelyRare |
+| `game_management` | NoStyleRequired | Tackle | Tackle | Defensa | 30,8% | 15/40 | — | INSUFFICIENT_EVIDENCE | GenuinelyRare |
+| `grudge` | NoStyleRequired | Tackle | — | Defensa | 10,4% | 7/40 | — | INSUFFICIENT_EVIDENCE | GenuinelyRare |
+| `high_line` | NoStyleRequired | — | — | Defensa | 100,0% | 40/40 | −2,2095 | **DESIGN_ESCALATION** | GenuinelyRare |
+| `iron_gate` | FixedByPerk | — | — | Defensa | 22,1% | 7/40 | — | INSUFFICIENT_EVIDENCE | LowExposure |
+| `iron_price` | NoStyleRequired | — | — | Defensa | 5,0% | 1/40 | — | INSUFFICIENT_EVIDENCE | LowExposure |
+| `kamikaze` | NoStyleRequired | — | — | Defensa | 100,0% | 40/40 | −0,1500 | INSUFFICIENT_EVIDENCE | GenuinelyRare |
+| `last_ditch` | NoStyleRequired | Tackle | Tackle | Defensa | 53,7% | 44/40 | 0,1500 | INSUFFICIENT_EVIDENCE | GenuinelyRare |
+| `line_keeper` | NoStyleRequired | — | — | Portero | 100,0% | 40/40 | −0,2719 | INSUFFICIENT_EVIDENCE | GenuinelyRare |
+| `own_third_anchor` | NoStyleRequired | — | Tackle | Defensa | 100,0% | 40/40 | −0,0500 | INSUFFICIENT_EVIDENCE | GenuinelyRare |
+| `second_wound` | NoStyleRequired | — | — | Defensa | 13,3% | 3/40 | — | INSUFFICIENT_EVIDENCE | LowExposure |
+| `shadow` | NoStyleRequired | — | — | Medio | 100,0% | 40/40 | 0,0705 | INSUFFICIENT_EVIDENCE | GenuinelyRare |
+| `steamroller` | NoStyleRequired | Tackle | — | Defensa | 0,0% | 0/40 | — | INSUFFICIENT_EVIDENCE | GenuinelyRare |
+| `sweeper_keeper` | NoStyleRequired | — | — | Portero | 56,2% | 38/40 | −0,0356 | INSUFFICIENT_EVIDENCE | GenuinelyRare |
+
+**Hallazgo incidental, no buscado**: `high_line` sale `DESIGN_ESCALATION` con delta −2,2095 —
+la regla de §18.2 (efecto distinguible del ruido pero en dirección contraria a la que predice el signo del
+efecto) disparando por primera vez sobre un perk real. No se investiga aquí; queda anotado.
+
+### 23.6 Respuesta a la pregunta de la Fase A
+
+> ¿La derivación basada exclusivamente en datos existentes predice de forma reproducible qué dimensión de
+> población es relevante?
+
+**Sí, con una limitación nombrada.**
+
+- **Eje de posición: sí, con fuerza.** No solo acierta qué rol hace falta; el orden de exposición medido
+  reproduce el orden de los pesos base del motor en los dos casos con variación medible, y los controles
+  negativos (`steamroller`) no se etiquetan falsamente.
+- **Eje de estilo: sí en lo medido.** 1/1 en el positivo (con la raza exacta) y 17/20 en los negativos.
+- **Limitación: el tercer canal (sesgo de atributos por raza) existe y no está modelado** (§23.3). Explica
+  las tres discrepancias, todas en perks de acción física medidos contra Orc/Dwarf.
+
+Esto es base empírica suficiente para **discutir** si §22 se convierte en tooling del protocolo. No se
+convierte aquí: sigue desconectado del camino crítico, y la pregunta normativa de §22.6 —qué población
+define el suelo del 50%— sigue abierta y sigue siendo una decisión de protocolo, no una conclusión del
+tooling.
+
+---
+
 ## Hermanos
 
 - `docs/analisis/c1-piloto-cazagoles-diseno.md` — la evidencia de calibración completa (§3.1b, §5, §6,
