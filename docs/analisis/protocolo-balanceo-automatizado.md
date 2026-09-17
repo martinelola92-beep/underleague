@@ -2074,6 +2074,124 @@ suficiente evidencia o hacen falta más perks reales de cada familia) antes de e
 
 ---
 
+## 21. Revisión de calibración — estrictamente diagnóstica (19 sep 2026)
+
+Encargo explícito: responder "¿tenemos evidencia suficiente para justificar cambiar algo del protocolo, y
+qué experimento mínimo la produciría?" para los tres huecos de §19/§20.4, sin tocar código de producción,
+umbrales ni el circuito de lote. Todo lo de esta sección es lectura de código + medición con partidos
+reales (`Sim.Tests/Balance/CalibrationDiagnosticsTests.cs`, nuevo, diagnóstico puro — no modifica
+`ScreeningRunner`/`ComparativeSafetyCheck`/`PairedBalanceHarness`/ningún umbral).
+
+### 21.1 `back_to_back`/`bulwark_stance` — la población de prueba, no el suelo, es la causa
+
+**Evidencia nueva, medida esta sesión:**
+
+| perk | raza de prueba | peso de estilo de esa raza | exposición medida (40 partidos) |
+|---|---|---|---|
+| `bulwark_stance` | Human (la usada hoy) | `Bulwark`=6/100 | 5,0% |
+| `bulwark_stance` | Dwarf | `Bulwark`=75/100 | **80,0%** |
+| `back_to_back` | Human | `Bulwark`=6/100 | 10,0% (7 activaciones) |
+| `back_to_back` | Dwarf | `Bulwark`=75/100 | **90,0%** (101 activaciones) |
+| `shadow_marker` (comparador interno, mismo patrón: `nearAlly(actor,'Brute',2)`) | Human | `Brute`=10/100 | 22,5% |
+| `shadow_marker` | Orc | `Brute`=75/100 | **87,5%** |
+| `safety_net` (comparador de forma: `nearAlly(actor,'Defender',3)`, etiqueta de POSICIÓN, siempre presente) | Human | n/a (posición, no estilo) | **72,5%** |
+
+**Lectura**: los tres perks de "sinergia de estilo" pasan de muy por debajo del suelo (5-22,5%) a muy por
+encima (80-90%) con el ÚNICO cambio de generar el roster con la raza afín a su estilo. `safety_net` (misma
+forma de condición, `nearAlly` en 2-3 casillas, pero con una etiqueta de POSICIÓN que existe siempre)
+alcanza 72,5% incluso en un roster Human neutro — **la mecánica de proximidad dinámica en sí no es rara;
+lo que es rara es la etiqueta de ESTILO cuando se mide contra la raza equivocada**.
+
+**Instrumentación**: el harness YA puede medir esto correctamente (`PairedBalanceHarness`/
+`ScreeningRunner` no necesitan ningún cambio para calcular la exposición sobre un roster de raza
+distinta — el parámetro ya existe, `RunWithEligibleCarrier` simplemente usa `perk.Race ?? NeutralRace`, y
+`perk.Race` es `null` para toda esta familia). **Lo que falta es una función que, dada la condición NCalc
+de un perk, sugiera qué raza (o población compuesta) es la afín** — hoy no existe ese mapeo; es
+instrumentación nueva (leer qué etiqueta de estilo aparece en `condition` y consultar
+`race.StyleTagWeights`), no un cambio de balance ni de umbral.
+
+**Hallazgo adicional, catalogado, no resuelto**: `Sim.Tests/Balance/CalibrationDiagnosticsTests.
+CatalogWideStaticStyleTagConditionPerksAllShareTheSameTagsRequiredGap` confirma que los CINCO perks reales
+con condición estática `hasTag(owner/actor, ESTILO)` (`bruised_knuckles`, `brute_boots`, `bulwark_stance`,
+`cold_focus`, `fine_touch`) dejan `tagsRequired: []` — sistemático, no un error aislado de
+`bulwark_stance`. Lectura más probable: es un patrón de diseño deliberado (RF-068, "el perk consulta
+etiquetas"; se deja al jugador la decisión de en quién rinde), no una inconsistencia de datos — pero no se
+decide aquí, se deja documentado para `game-design-review` si alguna vez hace falta confirmarlo.
+
+### 21.2 `bulwark_stance` — ¿el 50% puede ser universal?
+
+**Respuesta con la evidencia de arriba: NO como suelo único sobre la población "neutral" por defecto,
+SÍ como suelo sobre la población correcta.** El 50% no está mal calibrado en sí — lo que falta es elegir
+QUÉ roster mide cada familia de perk antes de aplicar ese suelo. Un perk de sinergia de estilo medido
+contra su raza afín supera el 50% con margen (80-90%); medido contra Human (la población "neutral" que
+usa el harness hoy para TODO perk sin raza explícita) nunca podría acercarse, sin importar cuánta muestra
+se añada — coincide exactamente con la distinción que pedía el encargo: "separar el problema de rareza de
+la etiqueta del problema de tamaño de muestra". Es lo segundo lo que NO aplica aquí: más partidos con
+Human no acerca nunca `bulwark_stance` al 50%, porque el 6% es un techo de probabilidad, no de muestreo.
+
+### 21.3 `cannon` — la hipótesis de la "ventana rara" queda REFUTADA con datos nuevos
+
+`CannonCarrierTimeInTheEffectiveWindowWithTheBallInPlay` (con traza real, 20 partidos): del tiempo que el
+portador tiene el balón en posesión, **48,91% cae exactamente en la ventana de distancia (8,11] casillas**
+donde el bono de `cannon` cambiaría algo. Esto CONTRADICE la hipótesis de §19.3 ("el portador pasa poco
+tiempo ahí") — el portador SÍ está ahí casi la mitad del tiempo con el balón, y aun así el delta medido
+sigue siendo exactamente 0,0000. **Se corrige la hipótesis en vez de dejarla sin marcar**: el problema no
+es "nunca llega a la ventana", es algo que ocurre DENTRO de la ventana — posiblemente que la utilidad de
+Disparar sigue perdiendo frente a otras acciones incluso con los 900 puntos que evita el bono, o que el
+portador (un Defensa, tras el arreglo del §19.1) tiene un perfil de `Technique`/`Strength` que ya penaliza
+tanto la utilidad de Disparar que el bono de rango no basta para que compita.
+
+**Estimación analítica de volumen necesario** (misma fórmula de §5.5, ninguna calibrada nueva): con la
+varianza real observada de `shotsPerMatch` (6,869 sobre 40 partidos), el número de partidos/brazo
+necesario para distinguir un delta candidato del ruido (aproximación de varianzas iguales en los dos
+brazos) es:
+
+```
+delta candidato   n necesario por brazo (aprox.)
+0,10 tiros/partido   ≈ 5.495
+0,25 tiros/partido   ≈   879
+0,50 tiros/partido   ≈   220
+1,00 tiros/partido   ≈    55
+```
+
+Los 400 partidos/brazo de Tuning (§5.2) bastarían para un delta real de ~0,4-0,5 tiros/partido, pero NO
+para uno de 0,1-0,25 — y el delta observado hoy no es "pequeño", es CERO exacto, lo que apunta más a "el
+mecanismo no compite en absoluto en esta configuración" que a "hace falta más muestra".
+
+**Instrumentación disponible pero no usada todavía**: el motor YA tiene un volcado de utilidad por tick
+(`MatchReport.UtilityDump`/`UtilityRow`, RT-098, citado en `CLAUDE.md` como instrumento existente del
+proyecto) — el experimento mínimo que de verdad respondería "¿por qué nunca gana Disparar dentro de la
+ventana?" es volcar esa tabla para los frames donde el portador está en la ventana con el balón, en un
+lote pequeño (10-20 partidos), comparando la puntuación de `Shoot` con la de la acción elegida, con y sin
+el bono. **No implementado aquí** (RT-098 ya existe; conectarlo a este caso concreto es la extensión de
+instrumentación pendiente, no un cambio de balance).
+
+### 21.4 Tabla resumen (el formato pedido)
+
+| Hueco | Evidencia actual | Qué falta medir | Experimento mínimo | Cambio de protocolo justificado |
+|---|---|---|---|---|
+| `back_to_back`/`bulwark_stance` (exposición de sinergia de estilo) | Exposición sube de 5-22,5% a 72,5-90% con la raza afín o una etiqueta siempre presente — 4 mediciones consistentes (Dwarf/Orc/Human×3 perks) | Un mapeo perk→población afín que hoy no existe; si aplica solo a perks con condición de estilo o también a otras familias | Medir el resto de perks "nearAlly/hasTag(estilo)" del catálogo (7-8 más) contra su raza afín, para confirmar que el patrón se sostiene más allá de 3 casos | **Sí, pero no al suelo del 50%** — el cambio justificado es de INSTRUMENTACIÓN (elegir población de prueba por familia de condición), no de umbral |
+| `cannon` (potencia insuficiente, ventana estrecha) | La hipótesis "ventana rara" queda refutada (48,9% del tiempo con balón cae en la ventana); delta sigue siendo exactamente 0 | Qué pasa DENTRO de la ventana — si `Shoot` compite alguna vez en la tabla de utilidad | Volcar `UtilityDump`/RT-098 (ya existente) para los frames en ventana, 10-20 partidos, comparar `Shoot` vs. la acción elegida | **No decidido todavía** — la evidencia actual no distingue "hace falta más muestra" (caro: 220-5.495 partidos/brazo según el delta) de "el mecanismo no compite nunca" (un problema de diseño/motor, no de protocolo) |
+
+### 21.5 Recomendación sobre el PROTOCOLO (no sobre ningún perk individual)
+
+Con la evidencia de esta fase, la recomendación es **doble y asimétrica**:
+
+1. **Para la familia "sinergia de estilo/etiqueta"**: hay evidencia suficiente y consistente (4
+   mediciones, 2 razas distintas, 3 perks) para justificar una extensión de INSTRUMENTACIÓN —no de
+   umbral— que seleccione la población de prueba por familia de condición del perk en vez de usar siempre
+   la raza "neutral". El suelo del 50% no necesita cambiar; necesita aplicarse sobre la población
+   correcta. Esto es una propuesta de diseño de tooling, no una decisión tomada aquí.
+2. **Para `cannon`/potencia de ventana estrecha**: NO hay evidencia suficiente todavía para proponer un
+   cambio de protocolo concreto — falta el experimento de instrumentación de utilidad (§21.3) antes de
+   saber si el hueco es de MUESTRA (protocolo) o de MECANISMO (diseño/motor, fuera de este protocolo). Se
+   deja explícitamente como pregunta abierta, no como recomendación.
+
+Ningún umbral, banda, o regla de decisión se ha tocado en esta fase. Ningún valor de `/data` se ha
+modificado. El circuito del 20% sigue intacto, en el estado de §20.5.
+
+---
+
 ## Hermanos
 
 - `docs/analisis/c1-piloto-cazagoles-diseno.md` — la evidencia de calibración completa (§3.1b, §5, §6,
