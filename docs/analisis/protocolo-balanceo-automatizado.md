@@ -3176,6 +3176,98 @@ y esta sección solo implementa la precondición que aquel diagnóstico proponí
 
 ---
 
+## 30. Qué está evaluando el `NEEDS_TUNING` de `high_line` (19 sep 2026)
+
+Quitada la contradicción de signo espuria (§29), `high_line` queda en `SCREENING_NEEDS_TUNING`. Esta
+sección responde qué significa eso exactamente. Vuelve al juego: no toca el clasificador, ni la métrica,
+ni el perk, ni `/data`.
+
+### 30.1 La regla concreta que lo produce
+
+`BalanceDecisionRules.EvaluateScreening`, última línea:
+
+```csharp
+return hasNumericParameter ? BalanceState.Tuning : BalanceState.Validating;
+```
+
+Se llega ahí con exposición suficiente (100%), ninguna métrica obligatoria fuera de banda, potencia
+confirmada, y `hasNumericParameter = true` (la categoría `Geometry` lo pone a true).
+
+**Por tanto `NEEDS_TUNING` aquí significa literalmente**: *"hay un efecto real y distinguible del ruido, y
+existe un parámetro numérico que la fase de Tuning podría buscar"*. **No** significa "el valor actual está
+mal". Es un "procede a la siguiente fase", no un veredicto sobre el perk.
+
+La métrica y el delta detrás: **`ballThirdMaxShare`, Δ = −2,2095** (armado 42,30% frente a control 44,62%),
+que superó el power-check (|delta| ≥ 2×error estándar).
+
+### 30.2 Corrección de una medición propia (§28.3)
+
+§28.3 leyó el resultado como "el tercio **atacante** gana +2,89". **Esa lectura no era sólida**:
+`MatchReport.BallTicksByThird` se indexa por la **X absoluta** del campo (`MatchEngine.cs:3058-3061`) y
+`PairedBalanceHarness` alterna direcciones, así que en la mitad de los partidos el tercio atacante del
+portador es el 0, no el 2. Re-medido con el primitivo correcto (`Pitch.ZoneOf(balón, equipoDelPortador)`),
+40 partidos por brazo:
+
+| territorio, relativo al equipo del portador | armado | control | delta |
+|---|---|---|---|
+| tercio propio | 26,53% | 26,77% | −0,23 |
+| centro | 42,31% | 44,63% | **−2,32** |
+| **tercio rival** | 31,16% | 28,60% | **+2,56** |
+
+La conclusión de §28.3 (*el balón se va hacia adelante*) **se sostiene** — pero ahora por la vía correcta:
+el equipo del portador gana 2,56 puntos de territorio **en campo rival**, tomados del centro, no de su
+propio tercio. `high_line` hace exactamente lo que promete su `_doc`.
+
+### 30.3 ¿Es `ballThirdMaxShare` adecuada para evaluar `shiftHome(+2)`? **No**
+
+Tres razones, las tres con número:
+
+1. **Es un máximo, y por tanto no tiene dirección.** Un equipo acampado en su propio tercio y otro acampado
+   en el rival dan el mismo valor. El efecto de `high_line` **sí** tiene dirección (+2,56 en campo rival), y
+   la métrica la descarta por construcción.
+2. **Lo que midió no fue el efecto, fue su efecto colateral.** El Δ −2,2095 de la métrica coincide casi
+   exactamente con la caída del **tercio central** (−2,32), porque el centro era el tercio máximo en los dos
+   brazos. Es decir: la métrica estuvo siguiendo al tercio central, no al eje sobre el que actúa el perk.
+3. **No mide ni el beneficio ni el coste que el perk declara.** `ballThirdMaxShare` es una banda de salud de
+   RT-056 (techo 52, ADR 0093) pensada para detectar **acampada**, no para medir ventaja territorial. El
+   beneficio (línea más alta) y el coste declarado ("un pase en profundidad y no hay nadie detrás") le son
+   invisibles.
+
+**Consecuencia para el Tuning**: entrar en la fase de Tuning con esta métrica significaría **buscar el
+desplazamiento en casillas que mantenga en banda una métrica de concentración** — es decir, ajustar una
+banda de salud, no la identidad del perk. El `NEEDS_TUNING` es formalmente correcto y materialmente poco
+útil.
+
+**No se cambia la métrica.** Lo que sí queda anotado es qué sería causalmente apropiado, todo computable
+con datos que **ya existen**: para el beneficio, una cuota de territorio **direccional**
+(`Pitch.ZoneOf(balón, equipo)`, que es lo que usa esta misma sección); para el coste,
+`report.ThroughPasses` del rival y los tiros/goles encajados. Ninguna de las dos está implementada como
+métrica del protocolo, y proponerlo es una decisión de protocolo, no de esta sección.
+
+### 30.4 Hallazgo de juego, no de instrumento: el coste declarado no aparece
+
+Midiendo el coste que el propio `_doc` anuncia:
+
+| | armado | control | delta |
+|---|---|---|---|
+| pases en profundidad del rival | 6,150 | 5,550 | **+0,600** |
+| ...de esos, completados | 2,425 | 2,075 | **+0,350** |
+| tiros encajados/partido | 3,300 | 4,125 | **−0,825** |
+| goles encajados/partido | 0,900 | 1,300 | **−0,400** |
+
+El **mecanismo** del coste sí aparece —el rival intenta y completa más pases en profundidad, exactamente
+"un pase en profundidad y no hay nadie detrás"— pero la **consecuencia** no: el equipo encaja menos tiros y
+menos goles. Territorio arriba y menos goles en contra es, en esta medición, un perk sin contrapartida
+visible, lo que roza el "poder gratis" que los principios de diseño de `CLAUDE.md` marcan como señal de
+alarma ("si no hay coste de oportunidad legible…").
+
+**Límite de esta afirmación, explícito**: estos cuatro números **no han pasado ningún power-check** (n=40
+por brazo, y goles/partido es un recuento de varianza alta). Son **indicios, no un resultado establecido**,
+y no se convierten aquí en conclusión. Es material para `game-design-review`, que es quien decide si la
+contrapartida de un perk es suficiente — no para este protocolo.
+
+---
+
 ## Hermanos
 
 - `docs/analisis/c1-piloto-cazagoles-diseno.md` — la evidencia de calibración completa (§3.1b, §5, §6,
