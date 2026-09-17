@@ -284,4 +284,49 @@ public sealed class CalibrationDiagnosticsTests
         _output.WriteLine("  referencia: el lote de Tuning de §5.2 ya usa 400 partidos/brazo combinando semillas — comparar si eso");
         _output.WriteLine("  bastaría para el delta candidato más pequeño con esta varianza, antes de proponer más muestra todavía.");
     }
+
+    // ------------------------------------------------------------------------------------------------
+    // 4. La batería completa: los 7-8 perks restantes de "sinergia de estilo/etiqueta" (encargo del
+    //    19 sep 2026, tras cerrar cannon) — MISMO enfoque experimental, población afín vs. Human, sin
+    //    asumir de antemano que el patrón generaliza. Cada uno reporta el tag/condición exactos, la raza
+    //    afín usada, y una clasificación explícita: POBLACIÓN/INSTRUMENTACIÓN, CONDICIÓN GENUINAMENTE
+    //    RARA, o DISEÑO DEL PERK — no se asume ninguna de las tres antes de medir.
+    // ------------------------------------------------------------------------------------------------
+
+    public static IEnumerable<object[]> StyleSynergyPerks()
+    {
+        // perkId, tag/estilo que activa la condición, raza afín a ese estilo (data/races/*.json)
+        yield return new object[] { "bruised_knuckles", "Brute", Race.Orc };
+        yield return new object[] { "brute_boots", "Brute", Race.Orc };
+        yield return new object[] { "cold_focus", "Cold", Race.Undead };
+        yield return new object[] { "fine_touch", "Fine", Race.Elf };
+        yield return new object[] { "crowd_control", "Fine", Race.Elf }; // nearOpponent: el estilo relevante es del RIVAL, no del portador
+        yield return new object[] { "blood_tithe", "Brute", Race.Orc }; // teammatesWithTag: roster propio, no el portador individual
+        yield return new object[] { "fine_orchestra", "Fine", Race.Elf }; // ÚNICO con tagsRequired=['Fine'] ya correcto — control positivo
+        yield return new object[] { "first_touch_school", "Fine", Race.Elf };
+    }
+
+    [Theory]
+    [MemberData(nameof(StyleSynergyPerks))]
+    public void StyleSynergyFamilyExposureAffineVsHumanPopulation(string perkId, string tag, Race affineRace)
+    {
+        var perk = Catalog.Perks.All.Single(p => p.Id == perkId);
+        var human = MeasureWithRace(perk, tag, Race.Human, rosters: 20, seed: 1);
+        var affine = MeasureWithRace(perk, tag, affineRace, rosters: 20, seed: 1);
+
+        double humanExposure = human.Count == 0 ? 0.0 : 100.0 * human.Count(s => s.Activations > 0) / human.Count;
+        double affineExposure = affine.Count == 0 ? 0.0 : 100.0 * affine.Count(s => s.Activations > 0) / affine.Count;
+
+        _output.WriteLine($"{perkId} (condición: {perk.Condition}, tagsRequired=[{string.Join(",", perk.TagsRequired)}])");
+        _output.WriteLine($"  Human: {humanExposure:F1}% ({human.Count} partidos, {human.Sum(s => s.Activations)} activaciones, {human.Count(s => s.CarrierHasTag)} portadores con la etiqueta)");
+        _output.WriteLine($"  {affineRace} (afín a {tag}): {affineExposure:F1}% ({affine.Count} partidos, {affine.Sum(s => s.Activations)} activaciones, {affine.Count(s => s.CarrierHasTag)} portadores con la etiqueta)");
+
+        string classification = (humanExposure < 50.0 && affineExposure >= 50.0)
+            ? "POBLACIÓN/INSTRUMENTACIÓN (el patrón generaliza: sube del suelo solo con la raza afín)"
+            : (humanExposure < 50.0 && affineExposure < 50.0)
+                ? "CONDICIÓN GENUINAMENTE RARA o BLOQUEADA POR OTRO MOTIVO (ni la raza afín basta — no generaliza aquí sin más investigación)"
+                : "YA POR ENCIMA DEL SUELO INCLUSO EN HUMAN (no es un caso del patrón de sinergia de estilo)";
+        _output.WriteLine($"  clasificación: {classification}");
+        _output.WriteLine("");
+    }
 }
