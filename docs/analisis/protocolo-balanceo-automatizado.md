@@ -2227,6 +2227,64 @@ Con la evidencia de esta fase, la recomendación es **doble y asimétrica**:
 Ningún umbral, banda, o regla de decisión se ha tocado en esta fase. Ningún valor de `/data` se ha
 modificado. El circuito del 20% sigue intacto, en el estado de §20.5.
 
+### 21.6 La batería completa de la familia "sinergia de estilo" (19 sep 2026): NO generaliza uniformemente
+
+Encargo explícito: medir los 7-8 perks restantes con el MISMO enfoque (Human vs. raza afín), sin asumir
+de antemano que el patrón de §21.1 (población incorrecta explica todo) se sostiene. **No se sostiene
+uniformemente** — de 8 perks medidos, 5 confirman el patrón limpiamente, 1 lo confirma solo parcialmente,
+y 2 lo refutan por completo, revelando una SEGUNDA causa independiente.
+
+**Resultado completo** (`Sim.Tests/Balance/CalibrationDiagnosticsTests.StyleSynergyFamilyExposureAffineVsHumanPopulation`, 20 plantillas × 2 direcciones por raza):
+
+| perk | condición | trigger | Human | raza afín | generaliza |
+|---|---|---|---|---|---|
+| `fine_touch` | `hasTag(owner,'Fine')` | MATCH_START | 0,0% | Elf 80,0% | **sí, limpio** |
+| `fine_orchestra` | `teammatesWithTag(owner,'Fine')>2` (`tagsRequired=['Fine']` ya correcto) | MATCH_START | 0,0% (16 partidos — pocos elegibles) | Elf 80,0% | **sí, limpio** |
+| `first_touch_school` | `teammatesWithTag(owner,'Fine')>1` | MATCH_START | 0,0% | Elf 95,0% | **sí, limpio** |
+| `brute_boots` | `hasTag(owner,'Brute')` | MATCH_START | 10,0% | Orc 80,0% | **sí, limpio** |
+| `blood_tithe` | `teammatesWithTag(owner,'Brute')>1` | MATCH_START | 5,0% | Orc 100,0% | **sí, limpio** |
+| `bruised_knuckles` | `hasTag(owner,'Brute')` | **FOUL** | 2,5% | Orc 40,0% | **parcial** — sube mucho, no cruza el 50% |
+| `cold_focus` | `hasTag(actor,'Cold')` | **SHOT** | 0,0% | Undead **2,5%** | **NO generaliza** |
+| `crowd_control` | `nearOpponent(actor,'Fine',2)` | **DRIBBLE_ATTEMPTED** | 0,0% | Elf **0,0%** | **NO generaliza en absoluto** |
+
+**Lectura, sin forzar una única explicación**: los cinco que generalizan limpiamente comparten
+`trigger=MATCH_START` — la condición se evalúa UNA VEZ, sin depender de que el portador haga nada durante
+el partido. Los tres que no generalizan (o generalizan solo a medias) comparten un trigger que exige que
+el PORTADOR ejecute una acción concreta (`FOUL`, `SHOT`, `DRIBBLE_ATTEMPTED`) — y ese portador (elegido
+por `PairedBalanceHarness.FindEligibleCarrierSlot`, sin restricción de posición) puede simplemente no
+ejecutar esa acción con frecuencia, sin importar cuánto se arregle la raza. **Es exactamente el mismo
+patrón que `cannon`/§21.3** (Defensa que nunca dribla, nunca dispara) generalizado a una TERCERA familia
+de condiciones: no es solo "raza equivocada" (una causa) — es "raza equivocada" **y**, por separado,
+"posición equivocada para la frecuencia del disparador" (una segunda causa independiente, con síntomas
+parecidos pero mecanismos distintos).
+
+**`fine_orchestra` como control metodológico** (el único con `tagsRequired` ya correcto): incluso con la
+elegibilidad ya bien filtrada, Human da 0,0% porque la condición pide ADEMÁS más de dos COMPAÑEROS con la
+etiqueta — confirma que corregir `tagsRequired` NO bastaría por sí solo para esta subfamilia (la de
+recuento de compañeros); la población (raza) sigue siendo la palanca que importa, con o sin
+`tagsRequired` corregido.
+
+**Respuesta a los tres huecos que pedía el encargo, sin forzar generalización:**
+- **Problema de población/instrumentación** (arreglable con la propuesta de §21.1/§21.5): `fine_touch`,
+  `fine_orchestra`, `first_touch_school`, `brute_boots`, `blood_tithe` — 5/8, y también
+  `back_to_back`/`bulwark_stance`/`shadow_marker` de §21.1 — 8/11 en total medidos hasta ahora.
+- **Condición genuinamente rara incluso con la población correcta** (segunda causa, NO resuelta por
+  elegir raza): `cold_focus` (SHOT), `crowd_control` (DRIBBLE_ATTEMPTED) — el mismo patrón de `cannon`
+  (posición del portador incompatible con la frecuencia del disparador de su propia condición).
+- **Problema de diseño del perk**: ninguno de los 8 muestra evidencia de esto — todos los mecanismos
+  activan correctamente cuando población Y frecuencia de disparador se dan (`bruised_knuckles` al 40%
+  ya demuestra que el mecanismo funciona, solo que no con la frecuencia suficiente en esta muestra).
+
+**Justificación empírica para el protocolo, con los 11 casos medidos hasta ahora**: hay evidencia sólida
+(8/11, en dos razas distintas, con `fine_orchestra` como control positivo) para proponer una extensión de
+INSTRUMENTACIÓN de dos partes, no una: (1) elegir la raza de prueba según la etiqueta de estilo que
+referencia la condición (ya propuesto en §21.5), y (2) para condiciones con trigger de acción propia
+(`SHOT`/`SHOT_ON_TARGET`/`DRIBBLE_ATTEMPTED`/`FOUL`/`TACKLE`...), preferir un portador cuya posición
+favorezca esa acción (Delantero para disparo/regate, Defensa para entradas) — la MISMA lógica que ya
+corrigió el sesgo hacia el portero en §19.1, aplicada una capa más allá (de "cualquier jugador de campo"
+a "el jugador de campo adecuado para la acción del disparador"). El suelo del 50% sigue sin necesitar
+cambiar en ninguno de los 11 casos — lo que cambia es, otra vez, la población de prueba.
+
 ---
 
 ## Hermanos
