@@ -253,6 +253,136 @@ direcciones, como Tanda 0) antes de comprometerse a uno mayor.
 de pases, no decide si el umbral de la puerta debe cambiar — son preguntas distintas y esta ficha no
 responde a la segunda.
 
+## 4. Candidatos representativos y protocolo por candidato (17 sep 2026, sin implementar todavía)
+
+§3.1b midió una distribución (n=32, dos semillas), no un punto. Este apartado no elige el valor de
+producción: compara tres puntos **anclados en la propia tabla** (no en redondeos a ojo) para que la
+decisión final se tome con datos de los tres, no con una intuición sobre uno solo.
+
+### 4.0 Los tres candidatos, y por qué esos puntos y no otros
+
+| candidato | valor | ancla en la tabla combinada (n=32) | episodios que voltearía |
+|---|---|---|---|
+| **Bajo** | **17 %** | ≈ p25 medido (16,8 %) | 8/32 (25 %) |
+| **Central** | **24 %** | mediana medida (24,3 %) | 16/32 (50 %) |
+| **Alto** | **48 %** | ≈ p75 medido (47,8 %) | 25/32 (78 %) |
+
+Los tres son cuartiles reales de la medición, no valores redondos elegidos por conveniencia: cada uno
+tiene una lectura directa ("voltea el cuarto más fácil / la mitad / los tres cuartos más fáciles de los
+episodios medidos"). **Se descarta deliberadamente anclar un candidato en la cola (>100 %)**: por §3.1b,
+eso convertiría a Cazagoles en "dispara siempre que tenga el balón en el tercio rival" — una mecánica
+determinista, distinta de la que describe la ficha C-26, y no es lo que este piloto está diseñado para
+validar.
+
+### Protocolo común a los tres (no se repite por candidato)
+
+- **Instrumento**: extensión de `ActionHistogramTests` (Tanda 0) con el filtro de exposición de §3.3
+  (delantero + balón + `Zone.Opposing`) — igual metodología, restringida a los ticks donde Cazagoles
+  puede actuar.
+- **Control emparejado**: §3.4 (mismas plantillas y semillas, con/sin el perk, sin arrastre de campaña).
+- **Métricas principales**: §3.5 — `passChain` y `shotsPerMatch` medidos **directamente sobre el equipo
+  del portador**, nunca vía `BuildsWinDifferently` ni su umbral (Cazagoles no está en `elf_tiki_taka` ni
+  en `orc_violence`, y `passChain` ya tiene su propia causa histórica documentada en BB-P — mezclar las
+  dos cosas contaminaría cualquier lectura).
+- **Métricas de seguridad**: §3.6 (`injuriesPerMatch`, `ballThirdMaxShare`), más una comprobación nueva
+  específica de este piloto (ver "auditoría de comportamiento" en cada candidato abajo): la distribución
+  de `distanceToGoal` de los tiros que añade el perk, no solo su recuento — el aviso explícito de
+  `balance-measure` de que un agregado en banda puede esconder una IA que dispara mal.
+- **Señal contra ruido**: §3.7 (exposición comparable a `own_third_anchor`, réplica en una segunda
+  semilla independiente antes de llamar señal a cualquier delta).
+- **`MinPassChainRatio` fijo**: §3.8, sin excepción para ningún candidato.
+- **Comprobación añadida por comparar tres candidatos a la vez**: si el efecto es real, el orden esperado
+  es monótono en `X` — Alto ≥ Central ≥ Bajo en `L1` del histograma, en caída de `passChain` y en subida
+  de `shotsPerMatch`. Si ese orden **no** se cumple con los tres medidos, es una señal de que algo en la
+  medición está mal montado, no de que el mecanismo sea errático — se para y se revisa el instrumento
+  antes de interpretar cualquier candidato.
+
+### 4.1 Candidato bajo — 17 %
+
+1. **Decisiones que debería desplazar**: el cuarto de episodios donde `ShortPass` gana por el margen más
+   estrecho de la muestra (los de `X_requerido` ≤ ~17 en la tabla de §3.1b) — el apoyo disponible es
+   marginal, no claramente mejor que el tiro.
+2. **Shoot vs ShortPass (histograma restringido a exposición)**: se espera una `L1` mayor que cero pero
+   pequeña — del orden de lo que Tanda 0 midió para `sweeper_keeper` (0,0013, un efecto real pero
+   modesto) o menor. Es el candidato con más riesgo de resultar **indistinguible de ruido** incluso con
+   exposición alta.
+3. **`passChain` (equipo del portador)**: caída esperada pequeña, posiblemente dentro del margen de error
+   de la medición emparejada — no se espera un movimiento claro.
+4. **`shotsPerMatch` (equipo del portador)**: subida pequeña; el aumento debería venir mayoritariamente de
+   posiciones razonables (los tiros "casi obvios" que el sistema actual ya casi prefiere).
+5. **Activación/exposición**: mismo procedimiento que los otros dos (§3.3) — la exposición (oportunidad)
+   no depende de `X`, así que debería salir igual en los tres candidatos; solo cambia la activación
+   (efecto) medida sobre esa misma exposición.
+6. **Métricas de seguridad**: no se espera movimiento detectable en `injuriesPerMatch` ni
+   `ballThirdMaxShare` con un efecto tan pequeño; la auditoría de `distanceToGoal` sirve de referencia
+   base ("cómo es la distribución cuando el efecto es mínimo") para comparar contra los otros dos.
+7. **Señal real vs ruido**: solo se cuenta como señal si, con exposición comparable a `own_third_anchor`,
+   la `L1`/`passChain`/`shotsPerMatch` se replican en una segunda semilla en la misma dirección. Dado el
+   tamaño esperado, es el candidato con más probabilidad de no alcanzar ese listón.
+8. **Condición de descarte (aunque `Shoot` suba)**: si con exposición bien potenciada el efecto sigue sin
+   distinguirse de la `L1=0` de `own_third_anchor` (el cero informativo de Tanda 0, no el `L1=0` de
+   `bulwark_stance` por falta de activación), este candidato se descarta **no por ser perjudicial, sino
+   por ser inútil**: un piso demasiado bajo para que el jugador note el perk, que es justo lo que este
+   candidato está aquí para comprobar.
+
+### 4.2 Candidato central — 24 %
+
+1. **Decisiones que debería desplazar**: la mitad de los episodios medidos, exactamente los de
+   `X_requerido` ≤ mediana — situaciones de apoyo "normal", ni marginal ni claramente superior.
+2. **Shoot vs ShortPass**: se espera una `L1` claramente por encima de la de `sweeper_keeper` (0,0013):
+   un efecto real y visible en el perfil de conducta del portador dentro del tercio rival, no un cambio
+   cosmético.
+3. **`passChain`**: caída moderada y medible, en la misma dirección que el candidato bajo pero de mayor
+   magnitud — el primer punto donde se espera poder decir "esto mueve algo" con confianza, no solo "no se
+   puede descartar ruido".
+4. **`shotsPerMatch`**: subida moderada; la auditoría de comportamiento debería mostrar todavía una
+   mayoría de tiros en distancias razonables, con una fracción creciente (pero no dominante) de
+   posiciones más discutibles frente al candidato bajo.
+5. **Activación/exposición**: igual que 4.1.
+6. **Métricas de seguridad**: es el primer candidato donde vale la pena mirar `ballThirdMaxShare` con
+   atención (más saques de puerta tras más tiros fallados); `injuriesPerMatch` sigue sin vía causal
+   directa conocida, se comprueba como red de seguridad estándar.
+7. **Señal real vs ruido**: mismo criterio de §3.7. Es el candidato con más probabilidad a priori de
+   producir una señal replicable y de magnitud manejable — es el motivo por el que la mediana es un buen
+   punto de partida, no una conclusión.
+8. **Condición de descarte**: si `passChain` del equipo del portador cae más de lo que `shotsPerMatch`
+   justifica (el coste supera claramente al beneficio de amenaza ofensiva), si alguna métrica de
+   seguridad sale de su banda de RT-056, o si la auditoría de `distanceToGoal` muestra que la mayoría de
+   los tiros añadidos vienen de posiciones pobres (la IA "dispara mal", no "dispara más" con criterio) —
+   cualquiera de las tres, aunque `shotsPerMatch` y la `L1` "se vean bien" en agregado.
+
+### 4.3 Candidato alto — 48 %
+
+1. **Decisiones que debería desplazar**: tres cuartos de los episodios medidos; solo quedan sin voltear
+   los casos con la ventaja de `ShortPass` más clara de la muestra (apoyo claramente mejor colocado).
+2. **Shoot vs ShortPass**: se espera la mayor `L1` de los tres candidatos, con `ShortPass` reducido a una
+   fracción minoritaria de las decisiones dentro de la ventana de exposición.
+3. **`passChain`**: la mayor caída esperada de los tres. Contexto que ya tenemos (BB-P): `passChain`
+   global ya mide ~1,08-1,09 contra un umbral de puerta de 1,11, por causas ajenas a este piloto y ya
+   diagnosticadas — no se toca `MinPassChainRatio` ni se usa `BuildsWinDifferently`, pero una caída grande
+   en el equipo del portador es la señal más temprana de que este candidato es demasiado agresivo para
+   convivir con el resto del diseño, aunque la puerta en sí no la vea.
+4. **`shotsPerMatch`**: la mayor subida esperada; es también donde más riesgo hay de que la auditoría de
+   `distanceToGoal` muestre una fracción sustancial de tiros de calidad pobre — el propio mecanismo por
+   diseño empieza a ganarle a apoyos que el volcado marcaba como claramente mejores.
+5. **Activación/exposición**: igual que 4.1 y 4.2.
+6. **Métricas de seguridad**: candidato con más atención necesaria a `ballThirdMaxShare` e
+   `injuriesPerMatch` como red de seguridad, y el más informativo para la auditoría de comportamiento —
+   si en algún candidato la distribución de `distanceToGoal` se rompe, es más probable verlo aquí primero.
+7. **Señal real vs ruido**: mismo criterio de §3.7; a esta magnitud, no replicar en una segunda semilla
+   sería tan informativo como replicar (indicaría que incluso un efecto grande depende de una
+   configuración concreta de plantillas, no del mecanismo).
+8. **Condición de descarte**: las mismas tres de 4.2 (coste de `passChain` desproporcionado, salida de
+   banda RT-056, auditoría de calidad de tiro rota), más una cuarta propia de este candidato: si la
+   fracción de `ShortPass` dentro de la ventana de exposición se acerca a cero, Cazagoles deja de ser "en
+   el tercio rival prefiere tirar" (una IA sesgada, con coste) y pasa a ser "en el tercio rival solo
+   tira" (un automatismo sin decisión real) — eso contradice la propia ficha C-26 ("mata jugadas que
+   seguían vivas", no "elimina el pase como opción"), y se descarta por fidelidad de diseño aunque todas
+   las métricas numéricas parezcan aceptables.
+
+**No se ha implementado `modifyUtility` ni tocado ningún peso.** Este apartado es el protocolo de
+comparación, para revisar antes de escribir el primer código de C1.
+
 ## Hermanos
 
 - `docs/analisis/tanda-0-histograma-de-accion.md` — el instrumento que este plan reutiliza.
