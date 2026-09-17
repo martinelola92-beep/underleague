@@ -383,6 +383,70 @@ validar.
 **No se ha implementado `modifyUtility` ni tocado ningún peso.** Este apartado es el protocolo de
 comparación, para revisar antes de escribir el primer código de C1.
 
+## 5. Resultado del experimento (17 sep 2026) — mecanismo medido, valor de producción sin decidir
+
+**C1 está implementado y commiteado** (`Sim/Engine/MatchPlayer.cs`, `Sim/Engine/Utility.cs`,
+`Sim/Engine/MatchEngine.cs`, `Sim/Perks/EffectEngine.cs`, `Sim/Perks/PerkDefinition.cs`): el array
+`_perkActionBonusPercent`, el tipo de efecto `ModifyUtility` (acción + `%` + zona opcional) y el recálculo
+por tick en `MatchEngine.UpdateContextCaches` — exactamente el diseño de §1/§2. **Inerte por defecto**:
+ningún perk de `/data` lo usa todavía, y las 761 pruebas no-puerta y las mismas 43 puertas (3 rojas de
+siempre, ninguna nueva — ver `docs/pendientes/BB-P.md`) confirman que añadirlo no cambió ni un partido.
+
+**El perk de Cazagoles con cada candidato se construyó solo en memoria** (`PerkDefinition`/
+`EffectDefinition` de test, `Trigger=MATCH_START`, `condition=""`, `positionOnly=Forward`, mismo patrón
+que `deep_run.json`), no en `/data`: el valor de producción sigue sin decidir, así que no había nada que
+commitear en el catálogo todavía.
+
+### Protocolo ejecutado
+
+Control emparejado (§3.4), dos semillas independientes, filtro de exposición de §3.3
+(`Pitch.ZoneOf == Opposing`, sin exigir balón — la misma definición literal del documento). Primer lote
+pequeño (20 plantillas × 2 direcciones) mostró exposición alta (35-46%) pero `passChain`/`shotsPerMatch`
+sin monotonía entre candidatos — ruido de muestra pequeña, no un fallo del instrumento (la `L1`, que tiene
+muchísima más muestra por partido, ya era monótona en ese primer lote). Siguiendo §3.4 ("tamaño de
+muestra a decidir con la exposición medida en un primer lote pequeño... antes de comprometerse a uno
+mayor"), se subió a 100 plantillas × 2 direcciones (200 partidos/brazo/candidato/semilla, 2.400 partidos
+en total) **igual para los tres candidatos**, una sola vez, sin tocar ningún candidato por separado.
+
+### Tabla única de comparación (media de las dos semillas)
+
+| candidato | exposición (armado/control) | `L1` histograma expuesto | `passChain` (armado/control) | Δ`passChain` | `shotsPerMatch` (armado/control) | Δ`shots` | `injuriesPerMatch` (armado/control) | dist. mediana tiro, casillas (armado/control) | `Shoot`/(`Shoot`+`ShortPass`) en expuestos (armado/control) |
+|---|---|---|---|---|---|---|---|---|---|
+| **17%** | 39,5% / 40,2% | 0,0336 | 2,067 / 2,096 | −0,029 | 4,135 / 3,760 | +0,375 | 0,378 / 0,398 | 2,88 / 2,64 | 84,3% / 78,2% |
+| **24%** | 40,5% / 41,5% | 0,0385 | 2,054 / 2,135 | −0,081 | 4,342 / 3,880 | +0,462 | 0,407 / 0,420 | 3,05 / 2,62 | 88,9% / 78,5% |
+| **48%** | 40,1% / 41,3% | 0,0698 | 2,025 / 2,115 | −0,090 | 4,570 / 3,805 | +0,765 | 0,405 / 0,390 | 3,10 / 2,62 | 93,0% / 75,6% |
+
+**Monotonía Bajo ≤ Central ≤ Alto (media de las dos semillas), confirmada en las tres métricas** tras subir
+la muestra: `L1` 0,0336→0,0385→0,0698; Δ`passChain` −0,029→−0,081→−0,090; Δ`shots`
++0,375→+0,462→+0,765. Con la muestra pequeña ninguna de las dos últimas lo era (ruido, no señal); con la
+muestra grande, sí, en las dos semillas por separado.
+
+### Lectura contra los ocho puntos de §4, candidato por candidato
+
+- **17%**: la `L1` (0,0336) ya está muy por encima del techo de ruido de calibración de Tanda 0
+  (`sweeper_keeper`=0,0013) — **no resultó indistinguible de ruido**, al contrario de lo previsto en
+  §4.1: el mecanismo tiene un efecto real y medible incluso en el extremo bajo del rango. No se cumple la
+  condición de descarte de §4.1.
+- **24%**: efecto claramente mayor que 17% y menor que 48% en las tres métricas, como se esperaba. El
+  coste (`passChain` −0,081, ~−3,9% relativo) no es desproporcionado frente al beneficio (`shotsPerMatch`
+  +0,462, ~+12%); la distancia mediana de tiro sube de 2,62 a 3,05 casillas (el coste de calidad que la
+  ficha pide, no un roto). Ninguna métrica de seguridad (`injuriesPerMatch`) se mueve. No se cumple
+  ninguna condición de descarte de §4.2.
+- **48%**: mayor efecto de los tres en todo. `Shoot`/(`Shoot`+`ShortPass`) en los ticks expuestos sube de
+  ~76% (control, sin cambios entre candidatos) a **93%** — `ShortPass` queda exprimido a ~7% de las
+  decisiones con balón en el tercio rival, lejos de "nunca pasa" (condición de descarte propia de §4.3),
+  pero ya es el candidato donde más cerca está de esa línea. `injuriesPerMatch` sigue plano. No se cumple
+  ninguna condición de descarte de §4.3, pero es el que menos margen deja antes de cumplirla si se subiera
+  más.
+
+**`ballThirdMaxShare`** (§3.6) no se ha medido en este lote emparejado — la propia sección ya preveía
+diferirlo a un lote de `/Balance` "solo si la medición aislada por parejas no muestra nada preocupante
+primero"; con los tres candidatos limpios en lo demás, no se ha lanzado.
+
+**`MinPassChainRatio` no se ha tocado.** No se ha decidido ningún valor de producción ni se ha escrito
+ningún fichero en `/data/perks`. Este apartado es el resultado del experimento aprobado en §4, para
+revisar antes de elegir el candidato y cerrar C1.
+
 ## Hermanos
 
 - `docs/analisis/tanda-0-histograma-de-accion.md` — el instrumento que este plan reutiliza.
