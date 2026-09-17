@@ -1,11 +1,11 @@
 # Protocolo operativo de balanceo automatizado de perks
 
-**Fecha:** 17 sep 2026. **Estado:** diseño, sin código ni `/data` tocados. Responde al encargo de cambiar
-el objetivo del piloto C1/Cazagoles: de "cerrar un perk" a "diseñar el sistema que balancea cualquier
-perk del catálogo". Los resultados de Cazagoles (17/24/48%, `docs/analisis/c1-piloto-cazagoles-diseno.md`
-§4-§7) se usan aquí como **evidencia de calibración** del sistema — tamaños de muestra, umbrales de
-exposición, forma de la relación valor→efecto —, no como decisión definitiva de ese perk. Ancla y
-Cazagoles siguen sin cerrarse.
+**Fecha:** 17 sep 2026, **revisado** el mismo día tras una revisión crítica del propio protocolo (§0.1).
+**Estado:** diseño, sin código ni `/data` tocados. Responde al encargo de cambiar el objetivo del piloto
+C1/Cazagoles: de "cerrar un perk" a "diseñar el sistema que balancea cualquier perk del catálogo". Los
+resultados de Cazagoles (17/24/48%, `docs/analisis/c1-piloto-cazagoles-diseno.md` §4-§7) se usan aquí
+como **evidencia de calibración** del sistema — tamaños de muestra, umbrales de exposición, forma de la
+relación valor→efecto —, no como decisión definitiva de ese perk. Ancla y Cazagoles siguen sin cerrarse.
 
 ## 0. Cómo se lee este documento
 
@@ -13,9 +13,43 @@ Sigue el orden del encargo (seis fases del protocolo, medición rápida, niveles
 autogeneración de conclusiones, estrategia de búsqueda, tipos de perk, métricas, criterios de parada,
 sobreajuste, local/sistémico, catálogo completo, automatización, multiagente) y cierra con las cuatro
 preguntas operacionales (A-D) y la pregunta de velocidad. Cada umbral numérico está marcado
-**[MEDIDO]** (viene de un experimento de esta sesión), **[DERIVADO]** (se calcula de una medición ya
-hecha) o **[ASUNCIÓN — PENDIENTE DE CALIBRAR]** (no hay evidencia suficiente todavía; se dice qué falta).
-Regla F del proyecto: nada se escribe como certeza sin la evidencia que lo sostiene.
+**[MEDIDO]** (viene de un experimento de esta sesión — y, tras la revisión, se precisa si mide *tiempo*
+o *suficiencia estadística*, que no son lo mismo, §5.5), **[DERIVADO]** (se calcula de una medición ya
+hecha), **[CONVENCIÓN ESTÁNDAR, NO CALIBRADA AL PROYECTO]** (una fórmula o multiplicador estadístico
+habitual, razonable pero no verificado contra el ruido propio del motor — nuevo tras la revisión, distinto
+de una asunción inventada) o **[ASUNCIÓN — PENDIENTE DE CALIBRAR]** (no hay evidencia suficiente todavía;
+se dice qué falta y, tras la revisión, si 2-3 mediciones bastan o el hueco puede no reducirse nunca a un
+número único). Regla F del proyecto: nada se escribe como certeza sin la evidencia que lo sostiene.
+
+### 0.1 Qué cambió en la revisión del 17 sep 2026
+
+Revisión crítica pedida explícitamente antes de implementar tooling, sin nuevos experimentos (todo lo de
+abajo sale de releer lo ya medido o de inspeccionar `data/perks/*.json` con un script, no de simular
+nada nuevo):
+
+- **§5.5 (nueva)**: separa límite de tiempo, cantidad de muestra, potencia estadística y suficiencia de
+  evidencia — el borrador original los mezclaba bajo la misma etiqueta `[MEDIDO]`. Añade una comprobación
+  de potencia real (`error_estándar`) al bucle de Tuning/Validation.
+- **§5.4**: los tres suelos `[ASUNCIÓN]` se revisan al alza (más conservadores) y se corrige qué hace el
+  sistema mientras no están calibrados — nunca un estado terminal con la confianza de un umbral medido.
+  Se precisa cuáles necesitan de verdad más perks (exposición discreta, sí) y cuál puede no tener nunca un
+  número único (fidelidad de diseño).
+- **§3/§3.1 (nueva)**: la taxonomía se verificó contra los 94 perks reales (`EffectType`, `ProbabilityKind`,
+  `TraitScalarKind`, `Limit`, `AccumulatesAcrossMatches`, perks con más de un efecto) — se corrigen tres
+  afirmaciones que no encajaban con el dato real (`addCounter` no siempre escala a run; `modifyAttribute`
+  no tiene una métrica única; 10 de 13 `TraitScalarKind` no tienen ningún perk real hoy) y se añade la
+  matriz de cobertura.
+- **§6.1/§6.4/§9**: nuevo estado `INSUFFICIENT_EVIDENCE` (umbral sin calibrar) distinto de
+  `INSUFFICIENT_EXPOSURE` (umbral medido); `BALANCED` se reescribe como conjunción explícita de las siete
+  condiciones del encargo, no como "pasó RT-056"; Tuning pasa a ser opcional (perks sin parámetro numérico
+  van de Screening a Validation cualitativa directamente); nuevo estado `RUN_LEVEL` para perks de
+  contador/campaña (no es un fallo, es otro instrumento).
+- **§9.1 (nueva)**: presupuesto de lote completo (checkpoint/reanudación, circuito de seguridad si escala
+  una fracción alta de perks), que el borrador original no tenía — solo había límites por perk.
+- **§11.1 (nueva)**: hace explícito que el camino crítico es cero agentes; retira una cifra optimista
+  ("70-80% sin incidencias") que no estaba medida.
+- **§13**: de seis a nueve piezas pendientes, con el paso de "confirmación de métrica" (nuevo, de la
+  matriz de cobertura) y la distinción `Limit`-vs-exposición como huecos explícitos.
 
 ---
 
@@ -109,42 +143,93 @@ perks (`grep` sobre el catálogo, 17 sep 2026):
 
 | `EffectType` | usos hoy | qué mide el balanceo |
 |---|---|---|
-| `modifyProbability` | 54 | el `ProbabilityKind` que toca (`Foul/Card/Injury/Injure/SevereInjury/Pass/Intercept/Dribble/Tackle/ShotOnTarget/Save/TackleEvasion/InterceptEvasion`) decide la familia de métricas (§4) |
-| `addCounter` | 23 | efecto de campaña/run, no de partido suelto — normalmente escala a §8 (sistémico) |
-| `modifyLeash`, `modifyZoneShape`, `shiftHome` | 5+1+4 | geometría de zona de acción → `ballThirdMaxShare`, distribución espacial |
-| `modifyAttribute` | 5 | atributo base → cualquier resolución que lo use, indirecto |
-| `immunity` | 5 | cancela un tipo de suceso → tasa de ese suceso |
-| `modifyTraitScalar` | 4 | uno de los 13 escalares (`ShotQualityBonus`, `InjuryChanceBonus`, etc.) → la métrica de ese escalar |
-| `cancelEvent` | 4 | `FOUL`/`CARD`/`INJURY` cancelado → tasa de ese evento |
-| `modifyMarkBias`, `modifyTackleBias` | 3+2 | lógica de selección de objetivo, no un escalar — behavioral audit, no búsqueda numérica |
-| `extraAction` | 3 | repetición de acción → frecuencia de esa acción, ya la cuenta el motor |
-| `setState`, `relocate`, `modifyKnockdownTicks`, `modifyExperience`, `injure`, `modifyBias` | 1-2 c/u | casos singulares, se tratan uno a uno |
+| `modifyProbability` | 54 (34 perks solo, 14 combinados con `addCounter`, resto en otras combinaciones) | el `ProbabilityKind` que toca decide la familia de métricas (§4). **Cobertura real de `ProbabilityKind`**: 11 de los 13 valores tienen al menos un perk (`Tackle` 14, `ShotOnTarget` 9, `Intercept` 7, `Injure` 6, `Dribble` 4, `Pass` 3, `SevereInjury` 3, `TackleEvasion` 3, `Save` 2, `Injury` 2, `InterceptEvasion` 1); **`Foul` y `Card` no tienen ningún perk hoy** — su mapeo a `foulsPerMatch`/tarjetas (§4.2) es teórico, sin verificar contra un dato real |
+| `addCounter` | 23 usos, pero **solo 6 perks lo usan solo** (`loan, box_office, ad_machine, local_idol, inheritance, life_insurance`); **14 perks lo combinan con `modifyProbability`** en el mismo perk | corregido en esta revisión (ver abajo): el `addCounter` en solitario es de campaña/run; combinado con `modifyProbability`, el contador es un efecto secundario que se registra pero NO bloquea medir la parte de partido suelto |
+| `modifyLeash`, `modifyZoneShape`, `shiftHome` | 5+1+4 (1 perk combina los dos últimos: `deep_run`) | geometría de zona de acción → `ballThirdMaxShare`, distribución espacial |
+| `modifyAttribute` | 5 (3 solos, 2 combinados con `addCounter`) | **no hay una única métrica**: depende de qué atributo — `Strength`→entradas/potencia de tiro, `Technique`→calidad de pase/tiro, `Speed`→coberturas/intercepciones, `Stamina`→fatiga, `Leash`→geometría. Corregido en esta revisión: antes decía "indirecto" sin más, ahora exige que la clasificación (§11, `fast-worker`) diga explícitamente qué atributo y por tanto qué fila de esta lista aplica |
+| `immunity` | 5 | cancela un tipo de suceso → tasa de ese suceso. Sin parámetro numérico (§6.5) |
+| `modifyTraitScalar` | 4, pero **solo 3 de los 13 `TraitScalarKind` declarados tienen un perk real** (`injuryChanceBonus` ×2, `hardTackleBonus` ×1, `shootRangeBonusCells` ×1) | la métrica del escalar donde ya hay precedente (p. ej. `injuryChanceBonus`→`injuriesPerMatch`); para cualquiera de los **10 escalares sin instancia hoy** (`SpeedBonusPercent`, `ShotQualityBonus`, `PassQualityBonus`, `FoulChanceBonus`, `FatigueResistancePercent`, `InjuryResistanceBonus`, `AdjacentTeammateBonusPercent`, `SaveBonusClose`, `SaveBonusFar`, `LeashBonus`) el mapeo es una inferencia razonable, no un dato verificado — un perk nuevo con uno de estos diez pasa primero por confirmar la métrica (§6.5 ampliado) antes de Screening |
+| `cancelEvent` | 4 | `FOUL`/`CARD`/`INJURY` cancelado → tasa de ese evento. Sin parámetro numérico |
+| `modifyMarkBias`, `modifyTackleBias` | 3+2 | lógica de selección de objetivo, no un escalar — behavioral audit, no búsqueda numérica (§6.5) |
+| `modifyBias` | 2 | sesgo del criterio arbitral hacia un equipo (familia "El Árbitro" del catálogo conceptual) → `foulsPerMatch`/tarjetas **por equipo**, no agregado — el agregado de RT-056 no distinguiría el sesgo |
+| `extraAction` | 3 | repetición de acción → frecuencia de esa acción, ya la cuenta el motor. Ninguno de los tres declara hoy un valor numérico propio — sin parámetro que buscar |
+| `setState`, `relocate`, `modifyKnockdownTicks`, `modifyExperience`, `injure` | 1-2 c/u | casos singulares, se tratan uno a uno, capa común de §4.1 |
 | `modifyUtility` (C1, nuevo) | 0 (inerte) | acción + zona opcional → histograma de acción restringido a exposición (mismo instrumento de Tanda 0) |
 
-**Categorías de balanceo** (no de tipo de dato, de *qué hay que medir*), derivadas de la tabla:
+**Estructuras que no aparecían en el borrador original y sí importan** (verificado con los 94 perks
+reales, 17 sep 2026, `python3` sobre `data/perks/*.json` — sin simular nada):
 
-- **Bonus/malus de utilidad** (`modifyUtility`, y por extensión cualquier `modifyTraitScalar` que alimente
-  `Utility.Choose`): categoría de C1/Cazagoles. Métrica primaria = histograma de acción restringido a
-  exposición.
-- **Probabilidades de resolución** (`modifyProbability`): la mayoría del catálogo hoy (54/119 efectos).
-  Métrica primaria = tasa del suceso (`ProbabilityKind`) armado vs control.
-- **Escalares de rasgo** (`modifyTraitScalar`): métrica primaria = la métrica que ya existe para ese
-  escalar (p. ej. `InjuryChanceBonus` → `injuriesPerMatch`).
+- **27 de 94 perks (29%) tienen más de un efecto.** La categoría de un perk no es "una fila de la tabla",
+  es la **unión** de las categorías de sus efectos. La mayoría (14) son el caso fácil de arriba
+  (`addCounter` + `modifyProbability`, el contador no compite con la medición). Un caso cruza dos
+  categorías de verdad — `unlikely_bulwark` (`modifyLeash` + `modifyProbability`, geometría + probabilidad
+  a la vez) — y ahí la clasificación (§11) tiene que decir explícitamente cuál de los dos efectos es el
+  parámetro objetivo de la búsqueda (normalmente el que la ficha describe como rasgo distintivo), no
+  asumirlo.
+- **`elseEffects`: 0 de 94 perks lo usa hoy.** El campo existe en el esquema (`PerkDefinition.ElseEffects`)
+  pero ningún perk vivo lo activa — medir las dos ramas de un condicional es un hueco de diseño del
+  protocolo, pero no urgente: cero perks lo necesitan hoy.
+- **21 de 94 perks tienen `Limit`** (activación acotada, p. ej. una vez por partido). Ya corregido en
+  §5.4: un `Limit` puede producir activación baja **por diseño**, no por exposición insuficiente — el
+  suelo de exposición debe leerse sobre oportunidades, no sobre activaciones ya limitadas.
+- **23 de 94 perks tienen `AccumulatesAcrossMatches = true`** — casi coincide con los `addCounter`, pero
+  es el campo correcto para la regla determinista ("¿este perk necesita medición de *run*, no de
+  partido?"), no el tipo de efecto: es un booleano explícito en el dato, más fiable que inferirlo del
+  `EffectType`.
+
+**Categorías de balanceo** (no de tipo de dato, de *qué hay que medir*), revisadas:
+
+- **Bonus/malus de utilidad** (`modifyUtility`): categoría de C1/Cazagoles. Métrica primaria = histograma
+  de acción restringido a exposición. Búsqueda: tripleta anclada (§7).
+- **Probabilidades de resolución** (`modifyProbability`, sola o combinada con `addCounter`): la mayoría
+  del catálogo hoy. Métrica primaria = tasa del suceso (`ProbabilityKind`) armado vs control. Búsqueda:
+  tripleta + detección de meseta (§7).
+- **Escalares de rasgo** (`modifyTraitScalar`): métrica primaria = la del escalar, donde ya hay precedente
+  (3/13); confirmación de métrica requerida para los otros 10. Búsqueda: bisección lineal.
+- **Atributo base** (`modifyAttribute`): métrica primaria según el atributo concreto (tabla de arriba,
+  nunca "indirecto" sin más). Búsqueda: bisección sobre el delta.
 - **Geometría/posición** (`modifyZoneShape`, `shiftHome`, `modifyLeash`): métrica primaria =
-  `ballThirdMaxShare` + distribución espacial (posición media del portador).
-- **Selección de objetivo** (`modifyMarkBias`, `modifyTackleBias`): no numérico — behavioral audit
-  (distribución de a quién se marca/entra), no una búsqueda de valor.
-- **Sucesos cancelables/contadores** (`cancelEvent`, `addCounter`, `immunity`): métrica primaria = tasa
-  del suceso; `addCounter` casi siempre es de **run**, no de partido — normalmente se escala a análisis
-  sistémico (§9) en vez de resolverse en este bucle.
-- **Casos singulares** (`setState`, `relocate`, `modifyKnockdownTicks`, `modifyExperience`, `injure`,
-  `extraAction`, `modifyBias`): sin volumen suficiente para una categoría propia; se tratan con la capa
-  común (§4 "universales") y sin estrategia de búsqueda automática salvo que se acumule más de un perk
-  del mismo tipo.
+  `ballThirdMaxShare` + distribución espacial. Búsqueda: bisección entera (RT-023, aritmética entera).
+- **Selección de objetivo** (`modifyMarkBias`, `modifyTackleBias`): no numérico — behavioral audit, sin
+  búsqueda de valor (§6.5).
+- **Sesgo arbitral** (`modifyBias`): métrica por equipo, no agregada. Búsqueda: bisección sobre el delta.
+- **Sucesos binarios** (`cancelEvent`, `immunity`, la mayoría de `extraAction`): sin parámetro numérico —
+  Screening → Validation cualitativa directa (§6.1 revisado), sin pasar por Tuning.
+- **Contadores/campaña** (`addCounter` en solitario, y cualquier perk con `AccumulatesAcrossMatches =
+  true`): **no es un perk bloqueado ni fallido** — necesita otro instrumento (`FullRunMetrics`, el mismo
+  que ya usa `/Balance --full-runs`), fuera del bucle rápido de partido suelto por diseño, no por defecto
+  del sistema. Estado propio, `RUN_LEVEL` (§9), distinto de `BLOCKED_INFRA`.
+- **Casos singulares**: sin volumen suficiente para categoría propia; capa común de §4.1, sin estrategia
+  de búsqueda automática salvo que se acumule más de un perk del mismo tipo.
 
 No se listan categorías de C2/C9/C16 (situación, posesión) porque **no existen todavía como primitiva
 del motor** salvo la única cláusula de C2 que ya usa C1 (`Pitch.ZoneOf`, la zona). Un perk que las
 necesite entra en el estado `BLOCKED_INFRA` (§9), no en el bucle.
+
+### 3.1 Matriz de cobertura (para demostrar que el catálogo entero tiene una estrategia, no para balancearlo)
+
+| Tipo/combinación | # perks | Estrategia | Métricas | Búsqueda | Estado inicial |
+|---|---|---|---|---|---|
+| `modifyProbability` solo | 34 | Bono/malus de probabilidad | Tasa del `ProbabilityKind` + universales | Tripleta + meseta | `SCREENING` |
+| `modifyProbability` + `addCounter` | 14 | Igual; contador solo se registra | Igual + nota de contador | Igual | `SCREENING` |
+| `addCounter` solo (6) / `AccumulatesAcrossMatches` (23) | 6-23 según el corte | Medición de run, no de partido | `FullRunMetrics` correspondientes | Ninguna en este sistema | `RUN_LEVEL` (nuevo, §9) |
+| `immunity` | 5 | Cancela un suceso | Tasa del suceso + universales | Ninguna (binario) | `SCREENING` → `VALIDATING` directo |
+| `cancelEvent` | 4 | Igual | Igual | Ninguna | `SCREENING` → `VALIDATING` directo |
+| `modifyAttribute` | 5 | Depende del atributo (tabla arriba) | Según atributo — **confirmar en clasificación** | Bisección | `SCREENING`, con confirmación de métrica obligatoria |
+| `modifyLeash`/`shiftHome`/`modifyZoneShape` | 5/4/1 | Geometría | `ballThirdMaxShare` + espacial | Bisección entera | `SCREENING` |
+| `modifyTraitScalar` (3 escalares con precedente) | 4 | Métrica ya asociada | Igual | Bisección lineal | `SCREENING` |
+| `modifyTraitScalar` (10 escalares sin precedente) | 0 hoy | Sin dato real todavía | Inferida, sin verificar | — | Confirmar métrica antes de `SCREENING` |
+| `modifyMarkBias`/`modifyTackleBias` | 3/2 | Selección de objetivo | Distribución de objetivo (bespoke) | Ninguna | `SCREENING` → `VALIDATING` cualitativo |
+| `modifyBias` | 2 | Sesgo arbitral | `foulsPerMatch`/tarjetas por equipo | Bisección | `SCREENING` |
+| `extraAction` | 3 | Repetición de acción | Frecuencia + universales | Ninguna (hoy) | `SCREENING` → `VALIDATING` directo |
+| Casos singulares (6 tipos, 1-2 c/u) | 7 | Uno a uno | Universales + la del suceso que producen | Depende | Uno a uno |
+| `modifyUtility` (C1) | 0 (inerte) | Bonus de utilidad | Histograma restringido a exposición | Tripleta anclada | `BLOCKED_INFRA` hasta que exista un perk real en `/data` |
+
+**Cobertura**: las 94 filas del catálogo caen en alguna fila de esta matriz — ninguna queda sin
+estrategia. Lo que la matriz expone (y el borrador original no decía) es que **~9 de las 22 filas**
+(atributo sin confirmar, escalar sin precedente, `Foul`/`Card` sin instancia, sesgo arbitral con métrica
+por equipo) necesitan un paso de confirmación de métrica antes de `SCREENING` que hoy no está definido
+como procedimiento, solo mencionado — hueco explícito, ver §13.
 
 ---
 
@@ -190,18 +275,24 @@ lote pequeño de 20 plantillas en C1 §5, uno grande de 100 después de confirma
 obviamente nulo, o hay que afinar?
 
 - **Muestra inicial**: 1 semilla, 20 plantillas × 2 direcciones = **40 partidos/brazo**
-  **[MEDIDO]** — es exactamente la muestra de Tanda 0, suficiente para confirmar `own_third_anchor`
-  (activación 40/40, L1=0 informativo) y para detectar el efecto de `sweeper_keeper` (L1=0,0013, activación
-  35/40).
+  **[MEDIDO como punto de partida operativo]** — es exactamente la muestra de Tanda 0, suficiente para
+  confirmar `own_third_anchor` (activación 40/40, L1=0 informativo) y para detectar el efecto de
+  `sweeper_keeper` (L1=0,0013, activación 35/40). **Esto mide que 40 partidos bastaron para ESOS cuatro
+  perks y ESAS métricas de histograma** (con miles de ticks por partido de muestra efectiva); no está
+  demostrado que basten para cualquier perk o cualquier métrica — ver §5.5, que es la corrección real de
+  este apartado tras la revisión del 17 sep 2026.
 - **Traza**: solo ON si la categoría necesita histograma de acción (bonus de utilidad, geometría); OFF
   para el resto (más barato, `Sim.Analysis.MatchMetrics` no necesita traza).
-- **Presupuesto de tiempo**: **objetivo ≤30 s** por perk. **[DERIVADO]** de que 40 partidos con traza
-  tardaron ~2 s en este piloto (§5 de C1, primer lote) y 400 partidos sin traza tardaron ~6 s (§7 de C1);
-  40 partidos sin traza son una fracción de eso.
-- **Salidas de Screening** (§9 tiene la lista completa de estados):
-  - **`INSUFFICIENT_EXPOSURE`**: exposición por debajo del suelo (ver hueco 5.4) → subir la muestra una
-    vez (×3, a 120 plantillas) y repetir Screening; si sigue por debajo, `INSUFFICIENT_EXPOSURE` final
-    (no se sigue intentando indefinidamente).
+- **Presupuesto de tiempo**: **objetivo ≤30 s** por perk. **[MEDIDO, como techo de reloj, no como prueba
+  de suficiencia]** — 40 partidos con traza tardaron ~2 s en este piloto (§5 de C1, primer lote) y 400
+  partidos sin traza tardaron ~6 s (§7 de C1); 40 partidos sin traza son una fracción de eso. Es un
+  circuito de seguridad de tiempo (§5.5 punto 1), no una garantía de que la muestra alcanzada en ese
+  tiempo sea estadísticamente suficiente (§5.5 punto 4).
+- **Salidas de Screening** (§9 tiene la lista completa de estados; §6.1 tiene las reglas exactas):
+  - **Exposición por debajo del suelo** (§5.4) → subir la muestra una vez (×3, a 120 plantillas) y
+    repetir Screening; si sigue por debajo, el estado final es `INSUFFICIENT_EVIDENCE` (los tres suelos
+    de exposición son `[ASUNCIÓN]` hoy, así que no se puede cerrar con la confianza de
+    `INSUFFICIENT_EXPOSURE` — ver §5.4/§6.1/§9, corregido en la revisión del 17 sep 2026).
   - **Efecto ya claramente roto** (una métrica obligatoria de RT-056 ya `OUT` a esta escala, algo que en
     este piloto nunca ocurrió con un solo perk pero es la comprobación barata antes de gastar más
     muestra): saltar a un Validation reducido para confirmar y casi seguro `REJECT`/`SAFETY_LIMIT`.
@@ -217,11 +308,17 @@ obviamente nulo, o hay que afinar?
 numérico que buscar (§7 distingue esto de los perks de selección de objetivo, que no pasan por aquí).
 
 - **Muestra**: 2 semillas independientes, 100 plantillas × 2 direcciones = **200 partidos/brazo/semilla**
-  (400 partidos/brazo combinando semillas). **[MEDIDO]**: es exactamente lo que hizo falta en C1 §5 para
-  que `passChain`/`shotsPerMatch` dejaran de ser ruido y la monotonía se confirmara en las dos semillas —
-  con 40 partidos/brazo la misma medición no era monótona.
-- **Presupuesto de tiempo**: **objetivo ≤60 s por candidato**. **[MEDIDO]**: 400 partidos/brazo con traza
-  tardaron ~17 s en este piloto (tres candidatos, dos semillas, 2.400 partidos totales en 16,8 s).
+  (400 partidos/brazo combinando semillas). **[MEDIDO para el tamaño de efecto de Cazagoles]**: es
+  exactamente lo que hizo falta en C1 §5 para que `passChain`/`shotsPerMatch` dejaran de ser ruido y la
+  monotonía se confirmara en las dos semillas — con 40 partidos/brazo la misma medición no era monótona.
+  **Esto es un punto de partida operativo, no una cota estadística general** (§5.5): un perk cuyo efecto
+  esperado sea menor que el de Cazagoles, o cuya métrica objetivo tenga una tasa base más baja
+  (`injuriesPerMatch`, 0,3-0,9 por partido, es un recuento mucho más pequeño que `shotsPerMatch`,
+  7-15) necesitará más muestra para la misma confianza — el harness debe comprobarlo (§5.5), no asumirlo.
+- **Presupuesto de tiempo**: **objetivo ≤60 s por candidato**. **[MEDIDO como techo de reloj]**: 400
+  partidos/brazo con traza tardaron ~17 s en este piloto (tres candidatos, dos semillas, 2.400 partidos
+  totales en 16,8 s). Igual que en Screening, es un techo de tiempo verificado en una máquina y una carga
+  de trabajo concretas, no una garantía de que ese tiempo sea siempre suficiente para decidir.
 - **Presupuesto por perk en esta fase**: máximo **5 candidatos** o **5 minutos** de reloj, lo que llegue
   antes — igual que el resto de límites de este documento, es un límite duro, no una guía (§9).
 
@@ -232,26 +329,109 @@ numérico que buscar (§7 distingue esto de los perks de selección de objetivo,
 - **Muestra**: reutiliza los datos de Tuning del candidato elegido (no se repite la simulación si ya
   existe); añade la batería completa de RT-056 sobre partido completo (`MatchMetrics.Compute`) si Tuning
   no la calculó ya, y una comprobación de determinismo (una sola vez, no por semilla).
-- **Presupuesto de tiempo**: **objetivo ≤30 s incrementales**. **[MEDIDO]**: la batería de RT-056 sobre
-  800 partidos (2 brazos × 2 semillas × 200) tardó ~6 s en C1 §7.
-- **Salida**: `ACCEPT` (con todas las condiciones de §6) o el estado de rechazo/escalada que corresponda.
+- **Presupuesto de tiempo**: **objetivo ≤30 s incrementales**. **[MEDIDO como techo de reloj]**: la
+  batería de RT-056 sobre 800 partidos (2 brazos × 2 semillas × 200) tardó ~6 s en C1 §7.
+- **Salida**: `ACCEPT` (con todas las condiciones de §6.4, reescritas tras esta revisión) o el estado de
+  rechazo/escalada que corresponda.
 
 ### 5.4 Huecos identificados en los niveles de evidencia
+
+Los tres huecos siguen exactamente donde estaban; esta revisión (17 sep 2026) corrige **cómo se comporta
+el sistema mientras no están calibrados** (§6 tenía el fallo real: usaba estos números como si decidieran
+con la misma confianza que uno medido) y precisa, para cada uno, si de verdad hacen falta perks nuevos o
+si el hueco puede acotarse mejor con lo que ya existe.
 
 - **Suelo de exposición discreta (activación por partido).** Tanda 0 dio cuatro puntos: 100%
   (`own_third_anchor`, informativo), 87,5% (`sweeper_keeper`, informativo), 7,5% (`iron_gate`, poca
   confianza) y 5% (`bulwark_stance`, sin información). El verdadero punto de quiebre está entre 7,5% y
-  87,5% y no hay más calibración. **Provisional: 30% de partidos con ≥1 activación** como suelo de
-  `INSUFFICIENT_EXPOSURE` — marcado `[ASUNCIÓN — PENDIENTE DE CALIBRAR]`. Para cerrarlo: repetir Tanda 0
-  con dos o tres perks reales de activación intermedia (20-60%) antes de confiar en el número.
+  87,5% — un rango de 80 puntos, demasiado ancho para fijar un número con confianza. **Sí hacen falta 1-2
+  perks reales más con activación intermedia (20-60%) para estrechar el rango**; no se puede derivar de lo
+  ya medido porque no hay ningún punto dentro de ese tramo. **Provisional: 50% de partidos con ≥1
+  activación** (subido de un primer borrador de 30%, ver razón abajo) — `[ASUNCIÓN — PENDIENTE DE
+  CALIBRAR]`, deliberadamente conservador: como no se sabe si el punto de quiebre real está cerca de 10%
+  o cerca de 80%, un suelo alto sesga el sistema hacia escalar de más (pedir calibración de más) en vez
+  de aceptar de más una medición sin potencia — el coste de un falso `INSUFFICIENT_EVIDENCE` es repetir
+  trabajo; el coste de un falso `ACCEPT` es escribir un valor mal medido en `/data`.
+  **Matiz nuevo de esta revisión**: un perk con `Limit` (21 de 94 perks del catálogo hoy, p. ej.
+  `iron_gate`, 1 vez/partido) puede tener activación total baja **por diseño**, no por exposición
+  insuficiente — el suelo debe leerse sobre **oportunidades de disparo** (cuántas veces se cumplió la
+  condición antes de tocar el límite), no sobre activaciones ya limitadas, para no confundir "raro porque
+  el límite lo acota" con "raro porque la condición casi nunca se cumple". Con activaciones limitadas, el
+  sistema todavía no sabe distinguir las dos causas — es otro hueco de tooling (§13), no solo de dato.
 - **Suelo de exposición continua (fracción de ticks).** Un solo punto de calibración: Cazagoles, 35-46%,
-  con efecto real y medible. No hay un punto que haya fallado por debajo de eso con este tipo de métrica.
-  **Provisional: 20%** como suelo — **[ASUNCIÓN — PENDIENTE DE CALIBRAR]**, con el mismo remedio (medir
-  Ancla, que por diseño tendrá una exposición distinta al estar atado al tercio propio en vez del rival).
-- **Suelo de "efecto indistinguible de cero".** Se usa aquí `sweeper_keeper` (L1=0,0013) como el efecto
-  real más pequeño confirmado y `own_third_anchor` (L1=0,0000 con activación completa) como el cero
-  informativo. El hueco entre 0 y 0,0013 no está calibrado con más de un punto — **[ASUNCIÓN]**: se toma
-  0,0013 como suelo de "hay efecto" hasta tener una tercera calibración.
+  con efecto real y medible. **No se puede derivar un suelo de un solo punto** — 35% podría estar muy por
+  encima del límite real o casi rozándolo, y no hay forma de saberlo sin un segundo perk de este tipo.
+  Ancla mediría esto, pero el encargo pide explícitamente no cerrar Ancla ahora — **este hueco queda
+  aplazado, no resuelto**, hasta que exista una segunda medición continua de exposición (Ancla u otro
+  perk de zona/estado, el que llegue primero). Provisional: **25%** (subido de 20% por la misma lógica
+  conservadora que el punto anterior) — `[ASUNCIÓN — PENDIENTE DE CALIBRAR, sin fecha, bloqueado por la
+  restricción de no cerrar Ancla ahora]`.
+- **Suelo de "efecto indistinguible de cero".** `sweeper_keeper` (L1=0,0013) es el efecto real más
+  pequeño confirmado; `own_third_anchor` (L1=0,0000, activación completa) es el cero informativo. Un solo
+  punto real por debajo del cual no se sabe nada. Provisional: 0,0013 como suelo de "hay efecto" —
+  `[ASUNCIÓN]`, mismo remedio que el de exposición discreta (1-2 calibraciones más en el rango 0,0001-
+  0,001 antes de confiar en un número exacto).
+- **Suelo de "fidelidad de diseño" (cuándo un perk se ha vuelto automatismo).** Distinto de los otros
+  tres: no está claro que se reduzca nunca a **un solo número universal**. Cazagoles dio un punto
+  cualitativo (7% de cuota de `ShortPass` "queda cerca, sin cruzar"), pero la fidelidad de diseño depende
+  de la fantasía de cada ficha (lo que es "demasiado automático" para Cazagoles puede no serlo para un
+  perk cuya fantasía sea precisamente "hazlo siempre"). **No se calibra con 2-3 perks cualquiera: hace
+  falta más de un perk de la MISMA familia de diseño** (p. ej. el resto de "El Remate" en
+  `perks-catalogo-unificado.md`) para saber si el número es transferible o es propio de cada ficha. Se
+  deja explícitamente **sin umbral numérico**, con la comprobación cualitativa de §6.3 tal cual está, y
+  con la salvedad de que quizá nunca tenga un número único — no se fuerza uno.
+
+**Regla de comportamiento mientras un suelo no está calibrado** (corrección central de esta revisión, ver
+§6.1): cruzar un suelo `[ASUNCIÓN]` **nunca** produce directamente un estado terminal con la misma
+confianza que un umbral medido. Produce `INSUFFICIENT_EVIDENCE` (nuevo, §9), que dice explícitamente
+"el umbral usado no está calibrado" y cuya salida es calibrar (medir 1-2 perks de referencia adicionales,
+el remedio de arriba) o escalar a `game-design-review`, nunca inventar una decisión con la confianza de
+un umbral real.
+
+### 5.5 Cuatro cosas distintas que esta revisión separa explícitamente
+
+El borrador original marcaba "40 partidos" y "≤30 s" con la misma etiqueta `[MEDIDO]`, como si fueran la
+misma afirmación. No lo son, y tratarlas igual es exactamente el riesgo que señala la revisión: "400
+partidos tardaron X en Cazagoles" no implica "400 partidos siempre bastan".
+
+1. **Límite de tiempo** (`≤30s`/`≤60s`/`≤30s`): un techo de reloj, verificado en esta máquina con esta
+   carga de trabajo (§5.1-5.3). Es un circuito de seguridad ("si tarda más de esto, algo va mal o el perk
+   necesita otro instrumento"), no una afirmación estadística.
+2. **Cantidad de simulaciones** (40/400 partidos): un punto de partida operativo, elegido porque funcionó
+   para los efectos concretos que este piloto midió (Tanda 0, Cazagoles). Es el tamaño con el que
+   **empezar**, no el tamaño que **garantiza** una decisión fiable para cualquier perk.
+3. **Potencia/exposición necesaria**: depende del **tamaño del efecto esperado** y de la **varianza de la
+   métrica**, que cambian por perk. Una métrica de recuento con tasa base baja (`injuriesPerMatch`,
+   0,3-0,9/partido) tiene más ruido relativo que una de tasa alta (`shotsPerMatch`, 7-15/partido) para el
+   mismo número de partidos — el mismo N no da la misma potencia a las dos.
+4. **Suficiencia de evidencia**: una decisión de nivel superior (replica en dos semillas, el efecto tiene
+   vía causal, no hay descarte de seguridad) — combina las tres anteriores más la interpretación de §6, no
+   se reduce a "se han jugado N partidos".
+
+**Corrección de diseño que se sigue de esto**: la muestra fija de §5.1-5.3 deja de ser el único criterio
+de parada. El harness, antes de aceptar un resultado de Tuning/Validation como suficiente, debe comprobar
+una condición de potencia explícita y determinista sobre la métrica primaria:
+
+```
+error_estándar ≈ sqrt(varianza_observada_por_partido / n_partidos)     (fórmula estándar, no inventada
+                                                                         para este proyecto)
+SI |delta_observado| < 2 × error_estándar
+ENTONCES  el efecto no se distingue de ruido con esta muestra
+          → duplicar la muestra (hasta el límite de candidatos/tiempo de §5.2/§9) antes de decidir
+SI, agotado el límite, sigue sin distinguirse
+ENTONCES  NEEDS_REPLICATION o INSUFFICIENT_EVIDENCE, nunca un ACCEPT/REJECT con esa muestra
+```
+
+El multiplicador "2" es la convención estadística habitual (≈ intervalo de confianza del 95% para una
+normal) — **no se ha calibrado específicamente contra el ruido de este motor** (a diferencia de 40/400
+partidos, que sí vienen de datos propios). Se marca `[CONVENCIÓN ESTÁNDAR, NO CALIBRADA AL PROYECTO]`,
+una tercera etiqueta distinta de `[MEDIDO]`/`[ASUNCIÓN]`: es una fórmula genérica razonable, no un número
+que se haya inventado para que un resultado concreto encajara.
+
+Esto es lo que faltaba para que el "muestreo adaptativo" del encargo original fuera real: sin esta
+comprobación, §5.1-5.3 solo adaptaba la muestra a la **exposición** (¿hay suficientes oportunidades?), no
+a la **potencia** (¿el tamaño del efecto frente al ruido de esta métrica concreta ya es distinguible?).
+Las dos preguntas son distintas y el borrador original solo respondía la primera.
 
 ---
 
@@ -262,21 +442,31 @@ mirar el resultado del experimento siguiente.
 
 ### 6.1 Reglas de Screening
 
+**Corrección de esta revisión**: los suelos de §5.4 son `[ASUNCIÓN]`, así que cruzarlos no puede producir
+directamente el mismo estado terminal que un umbral medido. Además, Screening ahora clasifica también si
+el perk tiene un parámetro numérico que buscar (§6.5/§7): si no lo tiene, **Tuning se salta entero**.
+
 ```
-SI exposición < suelo_exposición (§5.4)
+SI exposición < suelo_exposición_provisional (§5.4, marcado [ASUNCIÓN])
   Y no se ha repetido ya con muestra ×3
 ENTONCES  repetir Screening con ×3 plantillas
 
-SI exposición < suelo_exposición
+SI exposición < suelo_exposición_provisional
   Y ya se repitió con muestra ×3
-ENTONCES  estado = INSUFFICIENT_EXPOSURE, parar
+ENTONCES  estado = INSUFFICIENT_EVIDENCE, motivo = "por debajo de un suelo de exposición sin calibrar"
+          (NO INSUFFICIENT_EXPOSURE — ese estado se reserva para cuando el suelo esté medido, §9)
 
 SI alguna métrica obligatoria de RT-056 ya está OUT a escala de Screening
 ENTONCES  estado = candidato a SAFETY_LIMIT, ejecutar Validation reducida para confirmar antes de decidir
 
-SI efecto_directo < suelo_de_cero (§5.4)
-  Y exposición >= suelo_exposición (el cero es informativo, no por falta de potencia)
+SI efecto_directo < suelo_de_cero_provisional (§5.4, marcado [ASUNCIÓN])
+  Y exposición >= suelo_exposición_provisional (el cero es informativo, no por falta de potencia)
 ENTONCES  estado = DESIGN_REVIEW, motivo = "sin efecto de comportamiento detectado"
+          (este caso SÍ puede escalar a DESIGN_REVIEW con confianza razonable, porque la exposición alta
+          ya descarta la explicación más probable de un cero falso — falta de oportunidad, no de efecto)
+
+SI el perk no tiene un parámetro numérico que buscar (selección de objetivo, binario on/off — §6.5/§7)
+ENTONCES  estado = CONTINUE, saltar Tuning, ir directo a Validation cualitativa
 
 EN OTRO CASO
   estado = CONTINUE, pasar a Tuning
@@ -294,6 +484,13 @@ tripleta = { bajo = p25 de la distribución medida, central = mediana, alto = p7
           (si no hay distribución que anclar —parámetro sin medición barata posible—, ver hueco 6.4)
 
 medir los tres candidatos con el esquema de §5.2
+
+SI, para la métrica primaria, |delta_observado| < 2 x error_estándar (§5.5, comprobación de potencia)
+  en alguno de los tres candidatos
+ENTONCES  ese candidato concreto no es interpretable todavía — duplicar su muestra (dentro del
+          presupuesto de §5.2/§9) antes de usarlo en las reglas de monotonicidad siguientes;
+          si tras duplicar sigue sin distinguirse, estado = NEEDS_REPLICATION para ese candidato,
+          no se descarta ni se acepta con esa muestra
 
 SI el efecto NO es monótono (bajo <= central <= alto, o al revés si el parámetro es negativo)
   en ninguna de las métricas primarias, en las dos semillas
@@ -342,28 +539,69 @@ ENTONCES  descartar el candidato aunque las métricas numéricas parezcan acepta
           motivo = "automatismo sin decisión real", no un número fuera de rango
 ```
 
-**Hueco explícito**: el "suelo de fidelidad de diseño" de la última regla se definió en C1 de forma
-cualitativa ("lejos de cero", "el que menos margen deja") porque solo hay un perk medido. No hay todavía
-un número (p. ej. "por debajo de 10% de cuota, se descarta") que se pueda aplicar sin mirar el perk en
-cuestión — **[ASUNCIÓN — PENDIENTE DE CALIBRAR]**: hace falta medir 2-3 perks más de esta misma familia
-(el resto de "El Remate": Sangre fría; y algún perk de "El Bloque Bajo") para saber si 7% (lo que dio 48%
-en Cazagoles) es ya demasiado poco en general o es específico de esa ficha.
+**Hueco explícito, revisado**: el "suelo de fidelidad de diseño" de la última regla se definió en C1 de
+forma cualitativa ("lejos de cero", "el que menos margen deja") porque solo hay un perk medido, y (§5.4)
+puede que no exista un único número universal — depende de la fantasía de cada ficha, no solo de la
+familia. Mientras no haya más de un perk de la misma familia medido, esta regla se aplica **siempre como
+juicio cualitativo explícito en el registro** (§10: "¿la acción alternativa sigue siendo una opción real,
+sí/no, con qué cifra"), nunca como una comparación automática contra un número — es la única regla de
+§6.3 que hoy requiere que quien cierra el perk (independent-reviewer o el humano) lea el dato, no una
+regla que el harness pueda aplicar solo.
 
-### 6.4 Reglas de Validation
+### 6.4 Reglas de Validation — qué significa `BALANCED`, exactamente
+
+Revisión explícita: `BALANCED` **no puede significar** "se encontró un valor que no rompe nada". El
+encargo pide siete condiciones; cada una se traza aquí a un mecanismo concreto ya definido en el
+documento, y si algún mecanismo todavía no existe, se dice explícitamente en vez de asumir que el
+"no romper nada" ya lo cubre.
 
 ```
-SI las siete métricas de RT-056 son IN en el armado, en las dos semillas y en el combinado
-  Y todo movimiento armado-vs-control tiene vía causal documentada y replica en las dos semillas
-  Y la comprobación de determinismo es idéntica byte a byte
-  Y ninguna condición de descarte de §6.3 se dispara
+ACCEPT exige las SIETE, todas, no un subconjunto:
+
+1. El comportamiento/intención esperados                → el candidato quedó dentro de la banda del
+   se producen                                             efecto PRIMARIO ya en Tuning (§6.2) — sin
+                                                             esto no habría llegado a Validation
+2. El efecto está en el rango objetivo definido           → mismo mecanismo que 1: la banda del efecto
+                                                             primario, definida antes de medir (§6.2)
+3. Las métricas de seguridad están dentro de límites       → las siete de RT-056, IN en armado, control
+                                                             y combinado (§5.3/§7 de C1, mecanismo ya
+                                                             probado)
+4. La evidencia es suficiente                              → la comprobación de potencia de §5.5 pasó
+                                                             para la métrica primaria Y para cualquier
+                                                             métrica de seguridad que se haya movido —
+                                                             NUEVO en esta revisión, antes no era un gate
+                                                             explícito de Validation
+5. El resultado es reproducible cuando corresponda         → réplica en dos semillas (todas las métricas
+                                                             que se usan para decidir, no solo la
+                                                             primaria) + determinismo byte a byte
+                                                             (una vez, RT-024)
+6. No hay señal de automatismo o degeneración              → la regla de fidelidad de diseño de §6.3,
+                                                             aplicada como juicio explícito (revisado
+                                                             arriba: no es automática todavía)
+7. No hay regresión sistémica relevante                    → ninguna métrica sin vía causal documentada
+                                                             se ha movido de forma replicada (§6.3/§8)
+
+SI las siete se cumplen
 ENTONCES  estado = ACCEPT (candidato listo para independent-reviewer antes de escribir /data — Regla E,
-          no lo sustituye este sistema)
+          no lo sustituye este sistema; independent-reviewer recibe las siete condiciones y su evidencia,
+          no una conclusión ya cerrada)
 
-EN CUALQUIER OTRO CASO
-  estado = REJECT si el candidato específico falla,
-  o NEEDS_REPLICATION si el resultado es limítrofe y una tercera semilla podría resolver la duda
-  (máximo UNA semilla adicional; si sigue limítrofe con tres semillas, DESIGN_REVIEW, no una cuarta)
+SI falla el punto 4 (evidencia insuficiente) en concreto, y no por cruzar un suelo [ASUNCIÓN] sino por no
+  alcanzar la potencia estadística de §5.5 con el presupuesto de muestra disponible
+ENTONCES  estado = NEEDS_REPLICATION (máximo UNA semilla adicional; si sigue sin potencia con tres
+          semillas, DESIGN_REVIEW — el problema ya no es de muestra, es de que el efecto es demasiado
+          pequeño o ruidoso para que este sistema lo resuelva solo)
+
+EN CUALQUIER OTRO FALLO (puntos 1, 2, 3, 6 o 7)
+  estado = REJECT (si es el candidato concreto el que falla) o el estado de escalada correspondiente ya
+  definido en §6.3/§9 (SAFETY_LIMIT, SYSTEMIC_REGRESSION, WEAK_EFFECT_CEILING)
 ```
+
+**Ningún candidato llega a `ACCEPT` solo por no haber roto RT-056.** Si un candidato pasa el punto 3 pero
+no se puede confirmar 1, 2, 4, 5, 6 o 7 (por ejemplo, el efecto primario nunca se confirmó con potencia
+suficiente porque Tuning se saltó por error la comprobación de §5.5), el estado correcto no es `ACCEPT`
+con una nota — es quedarse en `NEEDS_REPLICATION`/`DESIGN_REVIEW` hasta que la condición que falta se
+resuelva.
 
 ### 6.5 Hueco explícito: parámetros sin medición barata posible
 
@@ -418,24 +656,39 @@ este piloto.
 
 ## 9. Máquina de estados por perk
 
+Revisado (17 sep 2026): separa la exposición **confiable** (umbral medido) de la exposición **bajo un
+suelo sin calibrar** (`INSUFFICIENT_EVIDENCE`, nuevo — §5.4/§6.1), y añade `RUN_LEVEL` para los perks de
+campaña/contador (§3), que no son un fallo del sistema, son un instrumento distinto.
+
 ```
 NOT_READY ──(existe en /data, tiene condición/efecto ya soportado por el motor)──> SCREENING
 NOT_READY ──(necesita una primitiva que no existe: C2 completo, C9, C16...)──────> BLOCKED_INFRA
+NOT_READY ──(addCounter en solitario, o AccumulatesAcrossMatches=true, §3)───────> RUN_LEVEL [terminal
+                                                                                    para este sistema —
+                                                                                    se mide con
+                                                                                    /Balance --full-runs]
 
-SCREENING ──(exposición insuficiente incluso tras remuestrear)──> INSUFFICIENT_EXPOSURE  [terminal]
+SCREENING ──(exposición < suelo MEDIDO, tras remuestrear)────────> INSUFFICIENT_EXPOSURE  [terminal]
+SCREENING ──(exposición < suelo [ASUNCIÓN], tras remuestrear)────> INSUFFICIENT_EVIDENCE  [terminal*,
+                                                                    nuevo — el umbral usado no está
+                                                                    calibrado, no es una conclusión sobre
+                                                                    el perk]
 SCREENING ──(efecto ya rompe RT-056 a escala pequeña)───────────> SAFETY_LIMIT           [terminal]
-SCREENING ──(cero informativo, exposición alta)─────────────────> DESIGN_REVIEW          [terminal*]
-SCREENING ──(efecto real, no numérico — selección de objetivo)──> VALIDATING (cualitativo)
-SCREENING ──(efecto real, numérico)─────────────────────────────> TUNING
+SCREENING ──(cero informativo, exposición alta y MEDIDA)────────> DESIGN_REVIEW          [terminal*]
+SCREENING ──(sin parámetro numérico: on/off, selección objetivo)─> VALIDATING (cualitativo, sin Tuning)
+SCREENING ──(efecto real, con parámetro numérico)───────────────> TUNING
 
+TUNING ──(candidato sin potencia suficiente, §5.5)──────────────> duplicar su muestra, una vez, dentro
+                                                                    del presupuesto — no consume un
+                                                                    "candidato" nuevo
 TUNING ──(no monótono tras reescaneo)───────────────────────────> DESIGN_REVIEW          [terminal*]
 TUNING ──(monótono pero techo insuficiente)─────────────────────> WEAK_EFFECT_CEILING ──> DESIGN_REVIEW
 TUNING ──(presupuesto de candidatos/tiempo agotado sin ganador)──> NEEDS_REPLICATION o DESIGN_REVIEW
 TUNING ──(candidato en banda, sin descarte de seguridad)────────> VALIDATING
 
-VALIDATING ──(las siete de RT-056 IN, réplica, determinismo)────> BALANCED
-VALIDATING ──(limítrofe)─────────────────────────────────────────> NEEDS_REPLICATION (máx. 1 semilla más)
-VALIDATING ──(falla)─────────────────────────────────────────────> REJECT                [terminal]
+VALIDATING ──(las siete condiciones de §6.4, todas)─────────────> BALANCED
+VALIDATING ──(falla solo evidencia suficiente, §6.4 punto 4)────> NEEDS_REPLICATION (máx. 1 semilla más)
+VALIDATING ──(falla cualquier otra de las siete)────────────────> REJECT                [terminal]
 VALIDATING ──(mueve algo sin vía causal, replica)───────────────> SYSTEMIC_REGRESSION     [terminal*]
 
 BALANCED ──(pendiente Regla E, no lo hace este sistema)─────────> listo para independent-reviewer y
@@ -444,19 +697,54 @@ BALANCED ──(pendiente Regla E, no lo hace este sistema)───────
                                                                     revisor, nunca automática)
 ```
 
-`[terminal*]` = terminal para este sistema, no para el perk: escala a un humano/`game-design-review`, que
-puede reabrir el ciclo con un diseño distinto (no con el mismo número).
+`[terminal*]` = terminal para este sistema, no para el perk: escala a un humano/`game-design-review`
+(o, para `INSUFFICIENT_EVIDENCE`, a la calibración de §5.4), que puede reabrir el ciclo con un diseño
+distinto o con el umbral ya corregido — nunca reintentando el mismo número sin más información.
 
-**Límites duros, obligatorios** (evita perseguir una métrica indefinidamente, instrucción explícita):
-- Iteraciones de Tuning: **5 candidatos máximo**.
-- Cambios de valor por perk: **igual al límite de candidatos** (no hay un cambio "gratis" fuera de ese
-  conteo).
+**Límites duros por perk, obligatorios** (evita perseguir una métrica indefinidamente, instrucción
+explícita):
+- Iteraciones de Tuning: **5 candidatos máximo** (duplicar muestra por falta de potencia, §5.5, no cuenta
+  como candidato nuevo — es la misma medición, más precisa).
+- Cambios de valor por perk: **igual al límite de candidatos**.
 - Tiempo por perk: **10 minutos de reloj de harness**, sumando Screening+Tuning+Validation.
-  **[DERIVADO]** de que un ciclo completo de tres candidatos × dos semillas de C1 (Tuning+Validation
-  completo) tardó bajo 30 s reales — 10 minutos deja un margen de ~20× sobre lo medido, para perks más
-  caros de medir (los que necesitan traza, o categorías con auditoría de comportamiento adicional).
+  **[DERIVADO de un techo de reloj medido, no de una prueba de que 10 minutos basten siempre — §5.5]**:
+  un ciclo completo de tres candidatos × dos semillas de C1 tardó bajo 30 s reales; 10 minutos deja un
+  margen de ~20× sobre lo medido para perks más caros (traza, auditoría de comportamiento, duplicado de
+  muestra por potencia). Si un perk agota los 10 minutos sin resolver, el estado correcto es
+  `NEEDS_REPLICATION`/`DESIGN_REVIEW` (según por qué se agotó), nunca extender el presupuesto en caliente.
 - Semillas adicionales por `NEEDS_REPLICATION`: **máximo 1** (total 3 semillas); si sigue limítrofe,
   `DESIGN_REVIEW`, nunca una cuarta.
+
+### 9.1 Presupuesto global (catálogo completo, no un perk suelto)
+
+Hueco del borrador original: definía límites por perk pero ninguno para "balancea los perks del
+catálogo" como una sola orden sobre 94 perks. 10 minutos × 94 en el peor caso son ~15,7 horas si todos
+agotaran su presupuesto — no es el caso esperado (la mayoría de perks debería resolverse en Screening
+puro, segundos, y solo una fracción necesita Tuning completo), pero **no hay medición de qué fracción
+real sería**, así que no se fija un número global de tiempo total como si fuera un dato — sería la misma
+sobreinterpretación que el punto 1 de esta revisión ya corrigió.
+
+En su lugar, el presupuesto global se define por **comportamiento**, no por una cifra fija:
+
+1. **El lote nunca bloquea en un perk atascado.** Si un perk agota sus 10 minutos, se marca (con el
+   estado que corresponda) y el lote sigue con el siguiente — un perk problemático nunca consume el
+   presupuesto de los demás.
+2. **Checkpoint y reanudación, no una ventana de tiempo fija.** El registro (§10) se escribe por perk, no
+   al final del lote entero: quien invoca "balancea los perks del catálogo" puede parar la sesión en
+   cualquier momento entre perks y reanudar exactamente donde quedó, sin repetir trabajo ya hecho — es la
+   forma correcta de encajar un catálogo de 94 perks en una sesión de duración arbitraria, en vez de
+   adivinar cuánto va a tardar el conjunto.
+3. **Circuito de seguridad a nivel de lote, no solo por perk**: si una fracción alta de los perks
+   procesados en una tanda (**[ASUNCIÓN — sin calibrar]: provisionalmente 1 de cada 5**) termina en
+   `DESIGN_REVIEW`/`SYSTEMIC_REGRESSION`/`INSUFFICIENT_EVIDENCE`, el lote se detiene y escala a
+   `game-design-review` en vez de seguir procesando perks mecánicamente — muchas escaladas seguidas son
+   señal de que algo del propio sistema (una categoría mal mapeada, un suelo mal calibrado) está fallando
+   de forma sistemática, no de que el catálogo tenga mala suerte perk a perk.
+4. **Condición de abandono explícita**: si un perk concreto no puede resolverse dentro de su presupuesto
+   (10 minutos, 5 candidatos, 3 semillas — los tres límites de §9), el sistema **para y escala**, nunca
+   seguir probando valores fuera de esos límites. Es la garantía que pide el encargo: "no puedo resolver
+   este perk dentro del presupuesto → paro y escalo", aplicada literalmente en tres sitios distintos del
+   protocolo (Tuning, Validation, y ahora el lote completo).
 
 ---
 
@@ -496,13 +784,41 @@ Mapeo de roles a lo que **ya existe** en `.claude/agents/` de Underleague, no a 
 **Ningún rol usa `ai-orchestrator`.** Se revisita si en el futuro se quiere una segunda opinión de un
 proveedor distinto en el paso de Regla E (§1.5) — opcional, no parte del diseño base.
 
-**Coste de coordinación vigilado explícitamente**: el único agente que se invoca por perk de forma
-rutinaria es `fast-worker` (clasificación, una vez); `deep-reasoner`/`independent-reviewer`/
-`game-design-review` solo se invocan en estados de excepción (`NON_MONOTONIC`, `SYSTEMIC_REGRESSION`,
-`DESIGN_REVIEW`, `ACCEPT`→escritura en `/data`), que en un catálogo sano deberían ser la minoría. Para
-los 94 perks ya vivos, si (optimista) el 70-80% llega a `BALANCED`/`ACCEPT` sin incidencias, la carga de
-agentes es ~94 clasificaciones + ~20-30 diagnósticos/revisiones — minutos de latencia de LLM en total,
-frente a las decenas de minutos que costaría el propio muestreo del harness sumado en todo el catálogo.
+### 11.1 El camino crítico, explícito (revisión: comprobar que no hay dependencia innecesaria)
+
+El bucle que se ejecuta **por cada candidato, en cada iteración** es:
+
+```
+código (genera el candidato) → simulación (harness C#) → reglas de §6 (código) → siguiente candidato o fin
+```
+
+**Cero llamadas a un agente dentro de ese bucle.** Ningún estado de §9 hace que Tuning o Validation
+esperen a un modelo de lenguaje para decidir si un candidato pasa o no — esa decisión ya está en las
+reglas deterministas de §6. Los cuatro agentes de la tabla de arriba entran **fuera** de ese bucle, en
+tres momentos concretos y acotados:
+
+1. **Antes** de Screening (clasificación, `fast-worker`): una vez por perk, nunca por candidato.
+2. **Cuando** el harness marca un estado de excepción (`NON_MONOTONIC`, `SYSTEMIC_REGRESSION`,
+   `DESIGN_REVIEW`, `WEAK_EFFECT_CEILING`, `INSUFFICIENT_EVIDENCE`): `deep-reasoner`, y solo si ocurre —
+   en el camino normal (efecto real, monótono, sin regresión) esto no se invoca nunca.
+3. **Después** de `BALANCED`, antes de escribir `/data`: `independent-reviewer` (Regla E, obligatoria ya
+   hoy para cualquier cambio de `/Sim`/`/data`, con o sin este sistema — no es una dependencia que este
+   protocolo añada, es la que ya existe).
+
+**Por qué esto no es una guía sino una comprobación**: la razón por la que el diseño original (aprobado en
+la revisión anterior) ya cumplía esto es que cada rol de la tabla llevaba escrito explícitamente "una vez
+por perk"/"solo si"/"nunca en cada iteración" — esta subsección lo hace más visible, no cambia ninguna
+asignación de rol.
+
+**Coste de coordinación, con la cifra que faltaba marcada como lo que es**: el único agente rutinario por
+perk es `fast-worker` (una clasificación). Los demás son de excepción. **Cuántos perks llegan a
+`BALANCED` sin ninguna excepción es, hoy, una incógnita** — no hay medición de qué fracción del catálogo
+real activaría `deep-reasoner`/`DESIGN_REVIEW`; cualquier cifra optimista ("70-80% sin incidencias") sería
+una suposición, no un dato, y se retira del documento por esa razón. Lo que sí se sostiene sin necesitar
+esa cifra: en el **peor caso**, el número de llamadas a un agente es como mucho **una clasificación por
+perk más una revisión por cada estado de excepción**, nunca una llamada por candidato ni por iteración de
+muestreo — la latencia de un agente crece con el número de perks y de excepciones, no con el tamaño de la
+muestra de partidos, que es donde este documento sí puede prometer minutos y no horas (§14).
 
 ---
 
@@ -524,29 +840,51 @@ frente a las decenas de minutos que costaría el propio muestreo del harness sum
 6. **Volcado de utilidad automatizado por categoría** (generalización de la búsqueda de episodios de C1
    §3.1b): hoy es un instrumento temporal escrito a mano cada vez; para bonus de utilidad en general hace
    falta una versión parametrizable por acción/zona.
+7. **Comprobación de potencia estadística (§5.5)**, nueva tras la revisión: una función que, dada una
+   serie de partidos armado/control, calcule la varianza observada de la métrica primaria y decida si la
+   muestra actual distingue el efecto del ruido antes de que el motor de decisión (§6) la use — sin esto,
+   el "muestreo adaptativo" del encargo original solo se adapta a la exposición, no a la potencia real.
 
-Ninguno de los seis se implementa en esta fase, tal como pide el encargo.
+Ninguno de los siete se implementa en esta fase, tal como pide el encargo.
 
 ---
 
 ## 13. Piezas que faltan antes de poder ejecutar "Balancea los perks del catálogo"
 
+Actualizado tras la revisión del 17 sep 2026 (antes eran seis puntos; se añaden tres, se precisa uno).
+
 1. **Los seis elementos de tooling de §12**, sin excepción — hoy cada pieza se ha escrito a mano, una vez,
-   para un solo perk.
-2. **Cerrar los tres huecos de calibración de §5.4/§6.3** (suelo de exposición discreta, suelo de
-   exposición continua, suelo de fidelidad de diseño) con 2-3 perks reales más, antes de confiar los
-   umbrales `INSUFFICIENT_EXPOSURE`/`DESIGN_REVIEW` a un sistema sin supervisión.
+   para un solo perk. Incluye ahora, explícitamente, **la comprobación de potencia de §5.5**
+   (`error_estándar`, duplicar muestra si no distingue) — no estaba en la lista original porque no
+   existía como concepto hasta esta revisión.
+2. **Cerrar los huecos de calibración de §5.4/§6.3**, con matices por hueco (no los tres son iguales):
+   - Suelo de exposición discreta: 1-2 perks reales con activación 20-60% — sí hace falta medir, no se
+     puede derivar de lo ya medido (el rango sin datos es demasiado ancho).
+   - Suelo de exposición continua: al menos 1 perk más de zona/estado — bloqueado explícitamente por la
+     restricción de no cerrar Ancla ahora; queda aplazado sin fecha.
+   - Suelo de fidelidad de diseño: puede que no exista un número único — necesita perks de la MISMA
+     familia de diseño, no cualquier perk, y se trata como juicio cualitativo mientras tanto (§6.3).
 3. **El hueco de §6.5** (perks de selección de objetivo sin parámetro numérico que buscar) necesita su
-   propio protocolo de behavioral audit, todavía no diseñado en detalle — aquí solo se dice que existen y
-   que no entran en la búsqueda de valor.
-4. **Formato exacto del registro de §10** — decisión de implementación pendiente.
-5. **Decisión explícita de qué agente/skill invocar automáticamente vs. qué requiere que el humano lo
-   dispare** — este documento propone `fast-worker` automático y el resto bajo demanda, pero no se ha
-   validado con un perk real corriendo de punta a punta.
-6. **Ningún perk nuevo de C1/C2 (los 22 de `perks-catalogo-unificado.md` §3.3) puede entrar todavía**:
+   propio protocolo de behavioral audit, todavía no diseñado en detalle.
+4. **Paso de "confirmación de métrica" antes de Screening**, nuevo tras la matriz de cobertura de §3.1:
+   9 de las 22 filas de la matriz (atributo sin especificar, 10 escalares de `modifyTraitScalar` sin
+   precedente real, `Foul`/`Card` sin instancia, sesgo arbitral con métrica por equipo) necesitan que la
+   clasificación de `fast-worker` declare explícitamente qué métrica aplica antes de que el harness pueda
+   arrancar Screening — hoy solo está dicho en prosa (§3), no como paso obligatorio del flujo.
+5. **Formato exacto del registro de §10** — decisión de implementación pendiente.
+6. **Decisión explícita de qué agente/skill invocar automáticamente vs. qué requiere que el humano lo
+   dispare** — §11.1 acota el camino crítico a cero agentes, pero no se ha validado con un perk real
+   corriendo de punta a punta.
+7. **Ningún perk nuevo de C1/C2 (los 22 de `perks-catalogo-unificado.md` §3.3) puede entrar todavía**:
    siguen bloqueados por infraestructura (`BLOCKED_INFRA`) salvo Cazagoles/Ancla, que ya tienen el C1 +
    la cláusula de zona construidos (aunque no cerrados). El sistema, cuando exista, debería poder marcar
    esto automáticamente comprobando qué `EffectType`/predicado de condición usa el perk.
+8. **La distinción entre `Limit` y exposición insuficiente (§5.4/§3)** no tiene todavía un mecanismo de
+   cálculo — el harness necesita contar "oportunidades de disparo antes del límite", que hoy no es un
+   dato que `MatchReport`/`PerkActivationSummary` expongan directamente.
+9. **El circuito de seguridad de lote (§9.1, "1 de cada 5 perks escala")** es una asunción sin calibrar,
+   igual que los suelos de §5.4 — no hay evidencia de qué fracción de escaladas es normal en un catálogo
+   sano frente a una señal de que el propio sistema está mal calibrado.
 
 ---
 
@@ -560,44 +898,63 @@ Universales siempre (§4.1): exposición, activación, efecto directo, efecto de
 
 ### B. ¿Cuánto mide?
 
-Screening: 1 semilla, 40 partidos/brazo, ≤30 s. Tuning: 2 semillas, 400 partidos/brazo combinando
-semillas, ≤60 s/candidato, máximo 5 candidatos. Validation: reutiliza los datos de Tuning + batería RT-056
-completa, ≤30 s incrementales, máximo 1 semilla adicional si el resultado es limítrofe. Presupuesto duro
-por perk: **10 minutos de reloj**, agotado el cual el sistema para y escala en vez de seguir midiendo
-(§9). Todos los tamaños de muestra son valores **[MEDIDO]** de Tanda 0 y C1, no estimaciones a ojo.
+Puntos de partida operativos, no cotas estadísticas universales (§5.5): Screening arranca en 1 semilla,
+40 partidos/brazo; Tuning en 2 semillas, 400 partidos/brazo combinando semillas, máximo 5 candidatos;
+Validation reutiliza los datos de Tuning + batería RT-056 completa, máximo 1 semilla adicional si el
+resultado es limítrofe. **Antes de aceptar cualquiera de estas muestras como suficiente, el harness
+comprueba la potencia real de la métrica primaria** (`|delta| >= 2×error_estándar`, §5.5) y duplica la
+muestra si no la alcanza, dentro del presupuesto. Los techos de tiempo (`≤30s`/`≤60s`/`≤30s` por fase) son
+circuitos de seguridad de reloj, medidos en esta máquina para esta carga de trabajo — no una garantía de
+que ese tiempo sea siempre suficiente. Presupuesto duro por perk: **10 minutos de reloj**, agotado el cual
+el sistema para y escala (§9); presupuesto de lote: sin cifra de tiempo total fija, con checkpoint/
+reanudación y un circuito de seguridad si escala una fracción alta de perks seguidos (§9.1).
 
 ### C. ¿Cómo decide?
 
 Con las reglas deterministas de §6, fijadas antes de ver cada resultado: umbrales de exposición (§5.4,
-marcados como provisionales donde falta calibración), detección de monotonicidad y su ruptura (§6.2/§7),
-condiciones de descarte de seguridad y de fidelidad de diseño (§6.3), condiciones de aceptación en
-Validation (§6.4). La salida siempre es uno de los estados de §9
-(`CONTINUE/ACCEPT/REJECT/INSUFFICIENT_EXPOSURE/NEEDS_REPLICATION/SAFETY_LIMIT/SYSTEMIC_REGRESSION/
-DESIGN_REVIEW/NOT_READY/BLOCKED_INFRA/WEAK_EFFECT_CEILING`), nunca una conclusión libre.
+marcados `[ASUNCIÓN]` donde falta calibración, y que producen `INSUFFICIENT_EVIDENCE` — no un
+`INSUFFICIENT_EXPOSURE` con la confianza de un umbral medido — mientras lo estén), la comprobación de
+potencia de §5.5, detección de monotonicidad y su ruptura (§6.2/§7), condiciones de descarte de seguridad
+y de fidelidad de diseño (§6.3), y las siete condiciones explícitas de `BALANCED` (§6.4: comportamiento
+esperado, efecto en rango, seguridad, evidencia suficiente, reproducibilidad, sin automatismo, sin
+regresión sistémica — las siete, no un subconjunto). La salida siempre es uno de los estados de §9
+(`CONTINUE/ACCEPT/REJECT/INSUFFICIENT_EXPOSURE/INSUFFICIENT_EVIDENCE/NEEDS_REPLICATION/SAFETY_LIMIT/
+SYSTEMIC_REGRESSION/DESIGN_REVIEW/NOT_READY/BLOCKED_INFRA/RUN_LEVEL/WEAK_EFFECT_CEILING`), nunca una
+conclusión libre.
 
 ### D. ¿Cómo itera?
 
 Selecciona el siguiente valor según el tipo de parámetro (§7): tripleta anclada en una medición barata
 para bonus/probabilidades, bisección entera para geometría, sin búsqueda numérica para selección de
-objetivo. Reduce el paso al acercarse a la banda objetivo (elige el candidato válido de menor magnitud
-si varios cumplen). Valida el candidato elegido con la batería completa de §5.3/§6.4. Termina en
-`BALANCED` (listo para Regla E y escritura en `/data`, ambas fuera de este sistema), o en cualquiera de
-los estados terminales de §9 dentro del presupuesto de 5 candidatos/10 minutos — nunca busca
-indefinidamente.
+objetivo. Antes de usar cada candidato en las reglas de monotonicidad, comprueba que tiene potencia
+suficiente (§5.5) y duplica su muestra si no la tiene. Reduce el paso al acercarse a la banda objetivo
+(elige el candidato válido de menor magnitud si varios cumplen). Valida el candidato elegido con las
+siete condiciones explícitas de §6.4. Termina en `BALANCED` (listo para Regla E y escritura en `/data`,
+ambas fuera de este sistema), o en cualquiera de los estados terminales de §9 dentro del presupuesto de
+5 candidatos/10 minutos — nunca busca indefinidamente, ni a nivel de perk ni a nivel de lote (§9.1).
 
 ### ¿Cómo balancea un perk en minutos y no en horas?
 
 Por diseño, no por casualidad: (1) reutiliza simulaciones — Validation no repite lo que Tuning ya midió;
 (2) control/tratamiento emparejado sobre las mismas plantillas y semillas, que es lo que hizo posible usar
-solo 400 partidos/brazo en vez de miles; (3) todas las métricas de una categoría salen de la misma tanda
-de partidos, nunca se relanza la simulación por métrica; (4) early stopping en cada nivel (§5, §6);
-(5) descarte temprano en Screening antes de gastar la muestra grande de Tuning; (6) paralelización ya
-disponible en el patrón de `/Balance` (`Parallel.For` por índice, un `Catalog` por hilo); (7) cero
-llamadas a un modelo de lenguaje dentro del bucle de medición (§11) — la latencia de una API de LLM por
-iteración sería, ella sola, más lenta que las decenas de miles de partidos que este piloto ya demostró
-poder simular en segundos. La medición de C1 (tres candidatos, dos semillas, Tuning + Validation
-completos) tardó **bajo 30 segundos de cómputo real** — la cifra que sostiene que "minutos, no horas" no
-es una aspiración, es lo que ya se midió esta sesión.
+solo 400 partidos/brazo en vez de miles para el efecto que tenía Cazagoles; (3) todas las métricas de una
+categoría salen de la misma tanda de partidos, nunca se relanza la simulación por métrica; (4) early
+stopping en cada nivel (§5, §6), incluido el nuevo — duplicar solo cuando la potencia no alcanza (§5.5),
+no siempre; (5) descarte temprano en Screening antes de gastar la muestra grande de Tuning; (6)
+paralelización ya disponible en el patrón de `/Balance` (`Parallel.For` por índice, un `Catalog` por
+hilo); (7) cero llamadas a un modelo de lenguaje dentro del bucle de medición (§11.1) — la latencia de
+una API de LLM por iteración sería, ella sola, más lenta que las decenas de miles de partidos que este
+piloto ya demostró poder simular en segundos.
+
+**Con la salvedad que esta revisión obliga a hacer explícita**: la medición de C1 (tres candidatos, dos
+semillas, Tuning + Validation completos) tardó **bajo 30 segundos de cómputo real** — eso es un hecho
+medido, no una proyección. Que **ese mismo tiempo** baste para **cualquier** perk del catálogo es una
+extrapolación, no el mismo hecho: perks con métricas de tasa base más baja (`injuriesPerMatch`) o con
+`Limit` que reduce la activación pueden necesitar la duplicación de muestra de §5.5 una o más veces antes
+de decidir, lo que sigue estando muy por debajo del techo de 10 minutos/perk pero ya no es "bajo 30
+segundos" sin más. La afirmación defendible es: **minutos, no horas, con la comprobación de potencia de
+§5.5 decidiendo cuánto exactamente dentro de ese margen** — no una promesa de un número fijo de segundos
+para los 94 perks del catálogo.
 
 ---
 
