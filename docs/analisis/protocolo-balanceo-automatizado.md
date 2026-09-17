@@ -2734,6 +2734,100 @@ Fase B, con su propia predicción congelada.
 
 ---
 
+## 25. Separar las dos preguntas antes de abrir una Fase B (19 sep 2026)
+
+§24 **cierra** una línea (el tercer canal) en vez de abrir otra. Antes de decidir nada sobre los perks de
+`MATCH_START`, esta sección hace lo único que corresponde ahora: **documentar la distinción** y separar la
+pregunta metodológica de la de diseño. Aquí no se responde la segunda, no se toca el suelo del 50%, no se
+toca el circuito y no se abre la Fase B.
+
+### 25.1 Estado en que queda la línea de población
+
+**`PopulationFitness`** (congelado en `e152253`, sin tocar desde entonces):
+
+| eje | estado |
+|---|---|
+| estilo/raza → exposición | **validado parcialmente** — sensibilidad 1/1 con la raza exacta (`pack_mentality`), especificidad 7/10 sobre el subconjunto informativo (§24.1) |
+| posición del disparador → exposición | **validado** — reproduce el ranking completo de `data/ai/weights.json` (§23.4) |
+| posición del efecto → efecto | **validado** — `cannon`/`own_third_anchor`, el eje que §22 no tenía y que los criterios de aceptación destaparon |
+| `attributeBias` → exposición | **NO incorporado** — no existe una transformación estática fiable derivable de los datos (§24.5) |
+
+**Protocolo**: suelo del 50% sin modificar; circuito del 20% sin modificar; ninguna corrección retroactiva
+de los resultados de §23 (la sobreinterpretación se corrige *en §24.1*, el experimento congelado no se
+reescribe); lote detenido en 5/24.
+
+### 25.2 Las dos preguntas, separadas
+
+1. **Metodológica**: ¿debe un perk cuya exposición es **necesariamente binaria** participar en un criterio
+   cuyo objetivo es detectar población insuficientemente representada?
+2. **De diseño**: si la respuesta a (1) es sí o no, ¿qué se hace con esa información?
+
+La segunda no se aborda aquí. La primera tampoco se responde — lo que sigue es lo que hace falta tener
+delante para poder responderla, que hasta ahora estaba implícito.
+
+### 25.3 Qué mide realmente la exposición en cada familia (la distinción, documentada)
+
+El número es el mismo —"fracción de partidos con ≥1 activación"— pero **no responde a la misma pregunta**
+en las dos familias, y eso no estaba escrito en ningún sitio:
+
+**Perks de suceso** (`TACKLE`, `SHOT`, `FOUL`, `RECOVERY`…): dentro de un mismo partido el disparador
+puede darse muchas veces o ninguna. Una exposición baja significa *"el mecanismo tuvo pocas oportunidades
+dentro de los partidos"*. Es una afirmación sobre la **muestra**: más partidos añaden oportunidades de
+verdad.
+
+**Perks de `MATCH_START`**: el disparador se cumple exactamente una vez por partido, siempre. Lo que varía
+no es la frecuencia dentro del partido, sino **si el portador generado cumple o no la condición**. La
+evidencia ya medida lo enseña sin ambigüedad:
+
+- `bulwark_stance` (§21.2): los partidos con activación coinciden **exactamente** con los partidos en que
+  el portador ya traía la etiqueta `Bulwark` al generarse (2/40 y 2/40; el test afirma
+  `matchesWithActivation <= matchesWithBulwarkTag`). Su "5% de exposición" no dice "el mecanismo se ejerció
+  poco": dice **"solo el 5% de los portadores generados podía usarlo en absoluto"**.
+- `own_third_anchor` (§23.4): Portero 100%, Defensa 100%, Medio 0%, Delantero 0%. Su condición
+  (`startsIn(owner,'OwnThird')`) es una propiedad del puesto, no un suceso. La exposición es un booleano
+  por portador.
+
+Es decir: **para un perk de `MATCH_START`, la exposición ya ES una medida de representatividad de la
+población** — mide qué fracción de la población de prueba cualifica. Para un perk de suceso, mide
+oportunidad dentro del partido. Dos magnitudes distintas bajo el mismo umbral.
+
+**Consecuencia práctica que se sigue de la distinción** (observación, no propuesta): cuando un perk de
+`MATCH_START` sale con exposición baja, el remedio que el protocolo aplica hoy —remuestrear con ×6
+plantillas (§5.1)— no añade nada cualitativo: multiplica el número de portadores sorteados, pero la
+fracción que cualifica sigue siendo la misma (`bulwark_stance`: 5,0% con 20 plantillas, 7,5% con 120). En
+cambio, en los partidos donde sí cualificó, el mecanismo estuvo **plenamente activo**, así que el efecto
+es medible en ese submuestreo aunque sea pequeño. Para un perk de suceso con exposición baja, la
+situación es la contraria: ni siquiera en los partidos donde activó hubo apenas oportunidades.
+
+### 25.4 Qué evidencia haría falta para responder la pregunta metodológica
+
+Sin decidir nada, lo que haría falta tener medido:
+
+1. **Cuántos perks del catálogo están en cada familia**, derivable estáticamente de `perk.Trigger` sin
+   simular nada. Hoy se sabe que los 10 saturados del hold-out son `MATCH_START` (§24.1), pero no la
+   proporción sobre los 94.
+2. **Si el efecto de un perk de `MATCH_START` con exposición baja es medible en su submuestreo
+   cualificado** — es decir, si el delta calculado solo sobre los partidos donde la condición se cumplió
+   tiene potencia suficiente. Si la tiene, "exposición baja" no era un impedimento para medir, y el suelo
+   estaría bloqueando perks perfectamente medibles.
+3. **Si el remuestreo ×6 de §5.1 aporta algo en esta familia**, más allá de lo ya observado en
+   `bulwark_stance` (5,0% → 7,5%, dentro del ruido).
+
+Los tres son baratos y ninguno exige tocar el protocolo. Serían el contenido natural de una Fase B — con
+su propia predicción congelada antes de medir, como en la Fase A, y sin tocar el screening real.
+
+### 25.5 Lo que esta sección deliberadamente NO hace
+
+- No cambia el suelo del 50% ni el circuito del 20%.
+- No responde la pregunta de diseño (§25.2, punto 2).
+- No abre la Fase B: la propone con su alcance, nada más.
+- No toca `PopulationFitness` ni la predicción congelada.
+- **Mantiene `high_line` fuera.** Su `DESIGN_ESCALATION` (Δ −2,2095) es una discrepancia de **dirección
+  del efecto**, no de adecuación de población; mezclarlo con esta línea contaminaría la lectura causal.
+  Queda apartado, entero, para su propia investigación.
+
+---
+
 ## Hermanos
 
 - `docs/analisis/c1-piloto-cazagoles-diseno.md` — la evidencia de calibración completa (§3.1b, §5, §6,
