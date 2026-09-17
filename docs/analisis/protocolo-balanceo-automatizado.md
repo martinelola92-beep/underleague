@@ -3114,6 +3114,68 @@ se decida.
 
 ---
 
+## 29. Corrección de §18.2: la comprobación de dirección necesitaba una precondición (19 sep 2026)
+
+La regla de §18.2 —"efecto distinguible del ruido pero en dirección contraria a la que predice el signo
+del `Value` → `DESIGN_ESCALATION`"— asumía **implícitamente** que `effect.Value` y el delta de la métrica
+primaria viven en el mismo eje semántico. Esa premisa nunca se escribió y no se cumple siempre. §28.3 la
+rompió con datos: `high_line` es `shiftHome(+2)` —dos casillas hacia adelante— medido contra
+`ballThirdMaxShare`, que es una cuota de **concentración**.
+
+### 29.1 Auditoría del modelo de efectos (paso previo, sin tocar código)
+
+Categorías según la clasificación **ya existente** `PerkBalanceClassifier.ClassifyEffectTypeCategory`, y
+qué significa su `Value`:
+
+| categoría | tipos de efecto | qué es `Value` | métrica primaria | ¿comparten eje? |
+|---|---|---|---|---|
+| `ProbabilityBonus` | `modifyProbability` | delta sobre la probabilidad **del mismo suceso que la métrica cuenta** | `tacklesPerMatch`, `injuriesPerMatch` | **sí**, monótono |
+| `TraitScalar` | `modifyTraitScalar` | suma a un escalar cuya métrica asociada crece con él en los tres escalares con perk real | `injuriesPerMatch`, `tacklesPerMatch`, `shotsPerMatch` | **sí**, monótono |
+| `Geometry` | `modifyLeash`, `shiftHome`, `modifyZoneShape` | **casillas de desplazamiento** | `ballThirdMaxShare` (concentración) | **no** |
+| resto (`UtilityBonus`, `Attribute`, `TargetSelection`, `RefereeBias`, `BinaryEvent`, `RunLevelCounter`, `Singular`) | — | — | — | no llegan a la comprobación |
+
+**Solo tres categorías alcanzan hoy la comprobación**: las demás mueren antes, o por no tener parámetro
+numérico (van a `Validating`), o porque su métrica no tiene traducción por partido en
+`PrimaryMetricPerMatch` y el power-check las deja en `INSUFFICIENT_EVIDENCE`, o porque son `DesignReview`
+desde la clasificación.
+
+### 29.2 La regla general
+
+`DirectionCheck.AppliesTo(category)` — **lista blanca sobre `PerkBalanceCategory`**, no una tabla de perks:
+
+```
+aplica  ⟺  categoría ∈ { ProbabilityBonus, TraitScalar }
+```
+
+Falla de forma segura: cualquier categoría no listada —incluida una futura— no recibe la comprobación, que
+es el sentido conservador correcto (no escalar por una comparación que no significa nada). `high_line` no
+recibe ningún trato especial: queda exento **por ser de geometría**, igual que los otros cinco perks de esa
+categoría del catálogo.
+
+**Hueco latente, declarado y no cerrado**: dentro de `TraitScalar`, `injuryResistanceBonus` y `leashBonus`
+tienen semántica **inversa** (más resistencia → menos lesiones), así que producirían la misma contradicción
+espuria. Hoy es inalcanzable: **ningún perk real usa ninguno de los dos** (verificado sobre `data/perks/`).
+Cerrarlo exigiría extender a mano la tabla de semántica por escalar, que es justo el tipo de invención que
+este protocolo evita; se deja anotado para cuando exista un perk que lo active.
+
+### 29.3 El cambio
+
+`Sim/Analysis/DirectionCheck.cs` (nuevo, puro) y una sustitución en `ScreeningRunner`: donde antes se
+comparaban dos cadenas de dirección, ahora se consulta `DirectionCheck.Evaluate(categoría, Value, delta)`.
+`Contradiction` escala igual que antes; `NotApplicable` deja una nota explicativa y sigue; `Consistent` se
+comporta como siempre. No se ha tocado ningún umbral, ninguna métrica, ningún dato de `/data`,
+`PopulationFitness`, las predicciones congeladas, ni el significado de `INSUFFICIENT_EVIDENCE`.
+
+**Resultado sobre `high_line`**: pasa de `DESIGN_ESCALATION` a `SCREENING_NEEDS_TUNING`, con el **mismo**
+delta medido (−2,2095) y la misma exposición (100%). Es importante lo que eso NO significa: no es que el
+perk esté validado — es que desaparece un motivo espurio y el resto de reglas del screening decide como
+siempre.
+
+§24-§27 no se reabren y ninguna conclusión histórica se reescribe: §28.3 ya había diagnosticado el caso,
+y esta sección solo implementa la precondición que aquel diagnóstico proponía.
+
+---
+
 ## Hermanos
 
 - `docs/analisis/c1-piloto-cazagoles-diseno.md` — la evidencia de calibración completa (§3.1b, §5, §6,

@@ -216,7 +216,13 @@ public static class ScreeningRunner
         string expectedDirection = primaryEffect.Value >= 0 ? "increase" : "decrease";
         string observedDirection = primaryDelta is >= 0 ? "increase" : "decrease";
 
-        if (expectedDirection != observedDirection)
+        // §29: la comprobación solo se aplica cuando el Value del efecto y la métrica primaria comparten
+        // eje semántico (DirectionCheck, lista blanca sobre PerkBalanceCategory). Para un efecto de
+        // geometría el Value son casillas de desplazamiento y la métrica una cuota de concentración: el
+        // signo no predice nada y comparar los dos producía un falso DESIGN_ESCALATION (high_line, §28.3).
+        var direction = DirectionCheck.Evaluate(classification.Category, primaryEffect.Value, primaryDelta ?? 0.0);
+
+        if (direction == DirectionVerdict.Contradiction)
         {
             // El motor de decisión existente (§6.1) no contempla "efecto real pero en dirección contraria
             // a lo que el propio valor del efecto predice" — gap explícito (§18 punto 4): se escala, no se
@@ -229,15 +235,26 @@ public static class ScreeningRunner
                 exposureFraction, primaryDelta, powerSufficient, safetyOut, systemicSignals, null, cost, notes);
         }
 
+        if (direction == DirectionVerdict.NotApplicable)
+        {
+            notes.Add(
+                $"comprobación de dirección no aplicada (§29): el Value del efecto ({classification.Category}) no comparte eje " +
+                $"semántico con {classification.PrimaryMetric}, así que el signo del delta no puede contradecirlo.");
+        }
+
         var searchStrategy = BalanceSearchStrategy.SelectStrategy(classification.Category, true);
         var tuningInfo = new TuningCandidateInfo(
-            BaselineValue: primaryEffect.Value, CurrentValue: primaryEffect.Value, Direction: expectedDirection,
+            BaselineValue: primaryEffect.Value, CurrentValue: primaryEffect.Value,
+            Direction: direction == DirectionVerdict.NotApplicable ? "n/a (eje no comparable)" : expectedDirection,
             ObservedEffect: primaryDelta ?? 0.0, TargetRange: null, SearchStrategy: searchStrategy);
 
         return new ScreeningResult(
             perk.Id, BalanceState.Tuning,
-            $"efecto real y distinguible del ruido en {classification.PrimaryMetric} (delta={primaryDelta:F4}, dirección {observedDirection} " +
-            "según lo esperado) — necesita tuning. NO se ha buscado ningún valor nuevo (§18 punto 9): solo se registra el baseline.",
+            $"efecto real y distinguible del ruido en {classification.PrimaryMetric} (delta={primaryDelta:F4}, " +
+            (direction == DirectionVerdict.NotApplicable
+                ? "sin comprobación de dirección: el Value no comparte eje con la métrica, §29"
+                : $"dirección {observedDirection} según lo esperado") +
+            ") — necesita tuning. NO se ha buscado ningún valor nuevo (§18 punto 9): solo se registra el baseline.",
             exposureFraction, primaryDelta, powerSufficient, safetyOut, systemicSignals, tuningInfo, cost, notes);
     }
 
