@@ -2047,6 +2047,31 @@ como pendientes antes de este lote. El umbral del 20% del circuito de lote sigue
 de anularlo, subir su mínimo de comprobación, o dejar que siga deteniendo el lote en 5/24 sigue siendo del
 usuario, no del sistema.
 
+### 20.5 Decisión final de esta fase (19 sep 2026)
+
+**Decisión explícita del usuario, tras ver el 60% de escalada de §20.3**: mantener el circuito del 20%
+intacto. No anularlo, no subir su mínimo de comprobación, no procesar los 19 perks restantes todavía.
+
+**Estado resultante**: `Lote detenido en 5/24. Circuito del 20% conservado. No procesados los 19
+restantes.`
+
+**Razón registrada** (para que quien retome esto no repita el razonamiento): con los dos problemas de
+tooling reales ya corregidos (§19.1 portador, §20.1 seguridad comparativa) y la suite en verde (895/895),
+el 60% de escalada que queda ya no es ruido de instrumentación — es el circuito detectando correctamente
+que la CALIBRACIÓN del protocolo (suelo de exposición único para toda familia de perk, ausencia de un
+suelo de potencia por ventana de efecto) no está lista para el catálogo real, exactamente la función para
+la que existe (§9.1 punto 3: "señal de que algo del propio sistema está fallando de forma sistemática, no
+de que el catálogo tenga mala suerte"). Cambiar el criterio de parada ahora, solo porque el resultado es
+incómodo, sería exactamente lo que §18/§19/§20 llevan evitando desde el principio.
+
+**Siguiente fase, explícitamente NO iniciada aquí**: tratar formalmente los tres huecos de calibración
+identificados —exposición de sinergia de equipo (`back_to_back`), exposición limitada por
+etiqueta/estilo de raza (`bulwark_stance`), y potencia insuficiente para una ventana de efecto estrecha
+(`cannon`)— como una revisión de protocolo propia, sin tocar ningún umbral durante la propia evaluación.
+Necesitaría su propio alcance (qué perks/datos de referencia adicionales calibrarían cada suelo, si el
+suelo de exposición debe depender de la categoría del perk en vez de ser un único número, si existe ya
+suficiente evidencia o hacen falta más perks reales de cada familia) antes de empezar.
+
 ---
 
 ## Hermanos
