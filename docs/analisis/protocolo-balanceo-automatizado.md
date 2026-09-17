@@ -2129,49 +2129,85 @@ se añada — coincide exactamente con la distinción que pedía el encargo: "se
 la etiqueta del problema de tamaño de muestra". Es lo segundo lo que NO aplica aquí: más partidos con
 Human no acerca nunca `bulwark_stance` al 50%, porque el 6% es un techo de probabilidad, no de muestreo.
 
-### 21.3 `cannon` — la hipótesis de la "ventana rara" queda REFUTADA con datos nuevos
+### 21.3 `cannon` — experimento RT-098, con una corrección de bug propia en el camino
 
-`CannonCarrierTimeInTheEffectiveWindowWithTheBallInPlay` (con traza real, 20 partidos): del tiempo que el
-portador tiene el balón en posesión, **48,91% cae exactamente en la ventana de distancia (8,11] casillas**
-donde el bono de `cannon` cambiaría algo. Esto CONTRADICE la hipótesis de §19.3 ("el portador pasa poco
-tiempo ahí") — el portador SÍ está ahí casi la mitad del tiempo con el balón, y aun así el delta medido
-sigue siendo exactamente 0,0000. **Se corrige la hipótesis en vez de dejarla sin marcar**: el problema no
-es "nunca llega a la ventana", es algo que ocurre DENTRO de la ventana — posiblemente que la utilidad de
-Disparar sigue perdiendo frente a otras acciones incluso con los 900 puntos que evita el bono, o que el
-portador (un Defensa, tras el arreglo del §19.1) tiene un perfil de `Technique`/`Strength` que ya penaliza
-tanto la utilidad de Disparar que el bono de rango no basta para que compita.
+**Corrección de una medición anterior (Regla F)**: la cifra "48,91%" del intento inicial de esta sección
+venía de comparar mal `MatchTrace.BallOwnerAt(frame)` (que devuelve un ÍNDICE dentro de `trace.Players`,
+documentado así en el propio `MatchTrace.cs`) contra el `Id` de dominio del jugador — un bug del propio
+diagnóstico, no del motor. Corregido (comparar contra `slot`, el índice ya resuelto), la cifra real de
+"partidos con el balón asignado en la ventana" baja a 22,64% — pero, como se ve abajo, esa cifra en sí
+tampoco es la que importa: el problema es más profundo.
 
-**Estimación analítica de volumen necesario** (misma fórmula de §5.5, ninguna calibrada nueva): con la
-varianza real observada de `shotsPerMatch` (6,869 sobre 40 partidos), el número de partidos/brazo
-necesario para distinguir un delta candidato del ruido (aproximación de varianzas iguales en los dos
-brazos) es:
+**Paso 1 — ¿el portador real de `cannon` (Defensa, tras el arreglo de §19.1) llega siquiera a poder
+disparar?** `CannonDribblingStateDiagnosticTests`, con el bug de índice ya corregido: en 20 partidos
+completos, el Defensa portador **NUNCA entra en `PlayerState.Dribbling`** (0,00% de los frames en el
+campo) — y `Shoot` solo es una acción legal en ese estado (`StateMachine.LegalActions`). No es que el
+bono de `cannon` pierda la comparación de utilidad: **la tabla de utilidad de Disparar ni siquiera se
+construye para este portador**, en ningún partido de la muestra. Confirma, con una prueba mucho más
+directa que la anterior, que el problema no es "ventana rara dentro de Dribbling" sino "este portador no
+dribla". Comparando con un Delantero forzado (mismo experimento, otro puesto): sí entra en Dribbling
+(0,49% de los frames, 14/20 partidos), pero de esos solo **1 frame en 20 partidos** cae en la ventana de
+distancia (8,11] — la ventana en sí, incluso para el puesto correcto, es rarísima en términos absolutos.
+
+**Paso 2 — con un Delantero (el único portador que llega a Dribbling), ¿qué dice la tabla de utilidad
+dentro de la ventana?** `CannonUtilityDumpTests` (RT-098 conectado, 400 plantillas exploradas para reunir
+15 muestras reales de Delantero+Dribbling+ventana, armado vs. control, mismo tick, mismo estado):
 
 ```
-delta candidato   n necesario por brazo (aprox.)
-0,10 tiros/partido   ≈ 5.495
-0,25 tiros/partido   ≈   879
-0,50 tiros/partido   ≈   220
-1,00 tiros/partido   ≈    55
+muestras con fila Shoot válida: 12/15 (3 sin fila — Shoot rechazado antes de puntuar en ese instante)
+Context (armado) != Context (control) para Shoot: 10/15
+Base/Tactical/Trait SIN relación con cannon coinciden armado=control: 11/15 (confirma que no hay
+  divergencia previa de partido contaminando la comparación)
+Shoot fue la acción finalmente elegida: armado=0/15, control=0/15
 ```
 
-Los 400 partidos/brazo de Tuning (§5.2) bastarían para un delta real de ~0,4-0,5 tiros/partido, pero NO
-para uno de 0,1-0,25 — y el delta observado hoy no es "pequeño", es CERO exacto, lo que apunta más a "el
-mecanismo no compite en absoluto en esta configuración" que a "hace falta más muestra".
+Ejemplo real (roster 66): armado `Context=-253, Score=324`; control `Context=-1135, Score=-558` — un
+salto de **882 puntos** en Context, casi exactamente el máximo teórico de 900 estimado en §19.3 a partir
+de los pesos reales. El bono **sí mueve la utilidad, de forma grande y medible**. Y aun así, en los dos
+brazos, la acción elegida fue `LongPass`, no `Shoot` — Disparar seguía perdiendo la comparación con margen.
+Mismo patrón en las otras 14 muestras: ninguna tiene a `Shoot` como ganadora, ni armado ni control.
 
-**Instrumentación disponible pero no usada todavía**: el motor YA tiene un volcado de utilidad por tick
-(`MatchReport.UtilityDump`/`UtilityRow`, RT-098, citado en `CLAUDE.md` como instrumento existente del
-proyecto) — el experimento mínimo que de verdad respondería "¿por qué nunca gana Disparar dentro de la
-ventana?" es volcar esa tabla para los frames donde el portador está en la ventana con el balón, en un
-lote pequeño (10-20 partidos), comparando la puntuación de `Shoot` con la de la acción elegida, con y sin
-el bono. **No implementado aquí** (RT-098 ya existe; conectarlo a este caso concreto es la extensión de
-instrumentación pendiente, no un cambio de balance).
+**Distinguiendo las cuatro hipótesis del encargo, con esta evidencia**:
+
+- **(D) el experimento elimina el efecto**: descartada — 11/15 muestras confirman que no hay divergencia
+  de partido antes del tick medido, y el Context SÍ difiere en 10/15 cuando debería.
+- **(B) el bono ni siquiera cambia la utilidad**: descartada PARA EL DELANTERO (Context cambia, a veces
+  mucho) — pero **confirmada para el Defensa real**, por un motivo más radical: la tabla de Disparar no
+  llega a existir porque nunca hay Dribbling.
+- **(A) el bono cambia la utilidad pero Disparar sigue perdiendo**: **la explicación que sostienen los
+  datos** para el Delantero — 0/15 victorias de Disparar pese a swings de Context de cientos de puntos.
+- **(C) efecto agregado pequeño que sí justificaría más muestra**: no descartada del todo con solo 15
+  muestras (Regla F: **LIKELY**, no **CONFIRMED** — un n mayor podría revelar alguna victoria rara), pero
+  0/15 con swings grandes es una señal más compatible con "pierde de forma sistemática" que con "pierde
+  por poco, a veces".
+
+**Conclusión, en dos capas** (el portador real y el portador hipotéticamente mejor dan respuestas
+DISTINTAS, y las dos importan): con el portador que `ScreeningRunner` usa hoy (Defensa), el problema es
+de POBLACIÓN DE PRUEBA (igual que back_to_back/bulwark_stance, §21.1) — un Delantero probablemente
+generaría alguna activación. Pero incluso con un Delantero, la evidencia apunta a que el propio mecanismo
+(el bono de `cannon` frente a los pesos reales de IA) puede no ser suficiente para que Disparar compita
+nunca — eso ya NO es un problema de tooling ni de protocolo, es una pregunta de **diseño/motor** (¿el
+bono de +3 casillas es demasiado pequeño frente al resto de la tabla de utilidad?), fuera del alcance de
+este protocolo de balanceo.
+
+**Estimación analítica de volumen** (§5.5, sin calibrar nada nuevo), con la varianza real de
+`shotsPerMatch` (6,869 sobre 40 partidos): 220-5.495 partidos/brazo según el delta candidato (0,50-0,10).
+Dado lo de arriba, más muestra por sí sola probablemente NO resolvería el caso — mediría con más precisión
+un efecto que la evidencia cualitativa (0/15) sugiere que puede ser sistemáticamente nulo o casi nulo con
+el Delantero, y directamente inexistente con el Defensa.
+
+**Instrumentación**: RT-098 (`SimConfig.DumpUtility`/`UtilityDump`/`UtilityRow`) ya existía en el motor;
+esta sección lo CONECTA a `cannon` (nuevo: `Sim.Tests/Balance/CannonUtilityDumpTests.cs`,
+`CannonDribblingStateDiagnosticTests.cs`) — no se ha creado ninguna instrumentación de producción nueva,
+solo un consumidor de test de algo que ya existía.
 
 ### 21.4 Tabla resumen (el formato pedido)
 
 | Hueco | Evidencia actual | Qué falta medir | Experimento mínimo | Cambio de protocolo justificado |
 |---|---|---|---|---|
 | `back_to_back`/`bulwark_stance` (exposición de sinergia de estilo) | Exposición sube de 5-22,5% a 72,5-90% con la raza afín o una etiqueta siempre presente — 4 mediciones consistentes (Dwarf/Orc/Human×3 perks) | Un mapeo perk→población afín que hoy no existe; si aplica solo a perks con condición de estilo o también a otras familias | Medir el resto de perks "nearAlly/hasTag(estilo)" del catálogo (7-8 más) contra su raza afín, para confirmar que el patrón se sostiene más allá de 3 casos | **Sí, pero no al suelo del 50%** — el cambio justificado es de INSTRUMENTACIÓN (elegir población de prueba por familia de condición), no de umbral |
-| `cannon` (potencia insuficiente, ventana estrecha) | La hipótesis "ventana rara" queda refutada (48,9% del tiempo con balón cae en la ventana); delta sigue siendo exactamente 0 | Qué pasa DENTRO de la ventana — si `Shoot` compite alguna vez en la tabla de utilidad | Volcar `UtilityDump`/RT-098 (ya existente) para los frames en ventana, 10-20 partidos, comparar `Shoot` vs. la acción elegida | **No decidido todavía** — la evidencia actual no distingue "hace falta más muestra" (caro: 220-5.495 partidos/brazo según el delta) de "el mecanismo no compite nunca" (un problema de diseño/motor, no de protocolo) |
+| `cannon` (Defensa real: nunca dribla → Shoot nunca es legal) | 0,00% de frames en `Dribbling` en 20 partidos completos con el portador real — Shoot no es ni siquiera una acción legal, nunca | Igual que back_to_back/bulwark_stance: si un Delantero forzado sí genera actividad medible | Repetir el screening de `cannon` con un Delantero como portador (mismo tipo de arreglo de población que §21.1) | **Sí, población de prueba** — mismo diagnóstico que la familia de sinergia, aplicado a un mecanismo distinto (Dribbling, no exposición de tag) |
+| `cannon` (Delantero: sí dribla, el bono SÍ mueve la utilidad, pero pierde 0/15) | RT-098 conectado: Context cambia en 10/15 muestras (hasta +882 puntos), pero `Shoot` nunca gana la comparación final, ni armado ni control (0/15 en ambos) | Si con más muestra (n mayor a 15) `Shoot` gana alguna vez, y con qué frecuencia | Repetir el mismo volcado RT-098 con cientos de plantillas para acumular más de 15 muestras en ventana+Dribbling (la ventana en sí es rara: 1/135 frames de Dribbling de un Delantero) | **No al protocolo** — la señal cualitativa (0/15 con swings grandes) apunta a una pregunta de MECANISMO/diseño (¿el bono de +3 casillas basta frente al resto de la tabla de utilidad?), fuera de este protocolo de balanceo |
 
 ### 21.5 Recomendación sobre el PROTOCOLO (no sobre ningún perk individual)
 
@@ -2182,10 +2218,11 @@ Con la evidencia de esta fase, la recomendación es **doble y asimétrica**:
    umbral— que seleccione la población de prueba por familia de condición del perk en vez de usar siempre
    la raza "neutral". El suelo del 50% no necesita cambiar; necesita aplicarse sobre la población
    correcta. Esto es una propuesta de diseño de tooling, no una decisión tomada aquí.
-2. **Para `cannon`/potencia de ventana estrecha**: NO hay evidencia suficiente todavía para proponer un
-   cambio de protocolo concreto — falta el experimento de instrumentación de utilidad (§21.3) antes de
-   saber si el hueco es de MUESTRA (protocolo) o de MECANISMO (diseño/motor, fuera de este protocolo). Se
-   deja explícitamente como pregunta abierta, no como recomendación.
+2. **Para `cannon`**: la respuesta se partió en dos, con el experimento RT-098 de §21.3 ya hecho.
+   **Con el portador real (Defensa)**: mismo diagnóstico que el punto 1 — es un problema de POBLACIÓN DE
+   PRUEBA (nunca dribla), justificado medir con un Delantero. **Con un Delantero**: la evidencia (0/15,
+   con swings de Context grandes) apunta a un problema de MECANISMO/diseño, no de protocolo — no se
+   recomienda ningún cambio de protocolo para esta segunda capa; sería `game-design-review`, no tooling.
 
 Ningún umbral, banda, o regla de decisión se ha tocado en esta fase. Ningún valor de `/data` se ha
 modificado. El circuito del 20% sigue intacto, en el estado de §20.5.
