@@ -9,6 +9,43 @@ PC (Steam), premium, sin online. **Estado (8 sep 2026): fases 0 y 1 cerradas; fa
 **Campo de siete filas (14 sep 2026, decisión del revisor, BA-C):** 16×7 en vez de 16×6 —con seis filas el centro geométrico cae *entre* dos filas y no existe fila central—, con guardado v4. Añadir la fila cuesta ~1,0 tiro y ~0,45 goles por partido y **ninguna palanca local lo recupera**, así que la **ADR 0109** recalibra la banda de tiros a la geometría vigente (8-16 → 7-15) en vez de tocar el motor, y deja escrito que ensanchar la formación o las zonas de acción destruye la profundidad de colocación. Nueve auditorías de la IA de jugadores (`docs/auditoria-ia-jugadores-1..9.md`) dejan **un solo cambio aplicado**, la **ADR 0110**: `Shoot` del defensa 77 → 154 y del centrocampista 188 → 237, porque con 77 un defensa colocado arriba nunca remataba —perdía contra su propio `ShortPass` de 500— y jugar fuera de posición costaba dos tercios del ataque (100/48/38 → 100/68/55). Rechazados y documentados: `ChaseBall pen` en todas las dosis (degrada la diferenciación de builds), el desfase de fase entre equipos (no replica entre semillas) y la histéresis. Queda **abierto** el papel del centrocampista: dispara el 6,5 % de los tiros siendo el 43 % de los jugadores de campo.
 ---
 
+## Trabajo en curso (19 sep 2026)
+
+**Protocolo de balanceo automatizado: fase metodológica CERRADA.** `docs/analisis/protocolo-balanceo-automatizado.md`
+(§17–§34). El cribado corrió sobre el catálogo entero y su veredicto es que **ningún perk tiene hoy una
+señal de tuning real y accionable**: 19 `INSUFFICIENT_EVIDENCE`, 4 `SCREENING_PASS` vacíos (pasan por no
+tener parámetro numérico) y 1 `NEEDS_TUNING` falso (`high_line`, medido con una métrica que va al revés).
+El lote de 24 sigue detenido en 5/24 por su propio circuito de seguridad, que **no se ha tocado**.
+Instrumentos nuevos: `TerritorialBalance` (métrica territorial con dirección, sin banda y sin cablear a
+nada) y `DirectionCheck`. Informe de decisión por perk: `docs/analisis/informe-decision-catalogo.md`.
+
+**Catálogo cuadrado por raza y rasgo (decisión del revisor).** 102 perks. Las cinco razas con **2 perks
+opcionales** cada una (la habilidad racial no cuenta); `Brute`, `Fine`, `Cold` y `Neutral` con **3**.
+`Bulwark` se queda en **2**: el tercero rompe la puerta de economía (BB-U). Regla nueva del revisor, ya
+auditada sobre los 102: **un perk no puede tener dos condiciones de raza o rasgo** — `unlikely_bulwark`
+era el único infractor y se sustituyó por `duelist`. `Dwarf`, `Elf` y `Undead` reciben un 5 % de `Neutral`
+(tenían 0 %) para que los perks de ese estilo no fueran inalcanzables.
+
+**La descripción de un perk se lee en cuatro secciones** (RT-035, decisión del revisor): qué hace, sin
+título · `Condición:` · `Límite:` · `Riesgo:`. Las tres últimas solo aparecen si el perk las tiene, y qué
+merece sección propia se decidió contando perks, no a ojo. Verificado con captura en Equipo y en Mercado.
+
+**Tooltip de composición (BB-J, RF-012d)**: la ficha de jugador y el Mercado dicen cuántos de la etiqueta
+que un perk cuenta lleva ya la plantilla ("Bruto: 0 de 3"). `pack_mentality` NO se ha arreglado: la
+previsibilidad queda resuelta, el diseño del perk sigue abierto.
+
+**Puertas: 3 rojas, y ahora se sabe por qué.** `CAT-J` deja de ser una incógnita: medidas sobre ocho
+semillas, las tres métricas fallan en la **mayoría** de ellas, así que son balance real y no ruido —lo
+contrario que la puerta de equipamiento, que sí lo era (**ADR 0118**: promedia ocho semillas y sube el
+umbral de 1,0 a 1,5)—. El siguiente hilo es `buildsWinDifferently_injuries` (1,20 contra 1,40, cuatro
+errores típicos por debajo): las builds física y técnica se distinguen menos de lo que el diseño pide.
+Las 43 puertas tardan ahora **7 m 05 s**, no los 5 m 32 s que cita `CLAUDE.md`.
+
+**Patrón encontrado cinco veces en un día: el texto promete lo que el dato o el código no hacen.**
+`steamroller` (BB-Q, resuelta), `shadow`, los falsos maestros (BB-R), el generador de referencias neutras
+(BB-S) y `CaptureRunner` (BA-L2, resuelta). Los cinco salieron mirando datos, ninguno jugando. Merece una
+pasada sistemática, no cinco arreglos sueltos.
+
 ## Trabajo en curso (16 sep 2026)
 
 - **Tanda 1 y 2 de perks completas** (94 perks, siete primitivas nuevas de tanda 2 y seis de tanda 1).
