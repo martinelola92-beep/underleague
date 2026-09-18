@@ -47,6 +47,7 @@ a secas.
 | [BB-O](./BB-O.md) | Un jugador fuera del campo puede conservar el balón y congelar el partido | Abierta |
 | [BB-P](./BB-P.md) | Las puertas de un solo partido/semilla se leen como causa cuando son ruido | Abierta |
 | [BB-Q](./BB-Q.md) | «Arrollador» no se activa nunca (0/480 partidos): tres causas encadenadas | Resuelta (Alt 0: RECOVERY + detail()) |
+| [BB-R](./BB-R.md) | Dos perks dicen ser MAESTROS y no exigen ni cierran nada (ADR 0051 al 0 %) | Abierta |
 | [CAT-A](./CAT-A.md) | `field_bandage` usaba el canal `injure`, que protegía al rival. | Ver fichero |
 | [CAT-B](./CAT-B.md) | Un consumible se puede comprar pero no se puede equipar: nadie emite ` | Ver fichero |
 | [CAT-C](./CAT-C.md) | La medición no puede ejercitar el consumible manual, así que subestima | Ver fichero |
