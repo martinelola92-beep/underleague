@@ -3364,6 +3364,73 @@ problema es independiente de este resultado y no se ha tocado.
 
 ---
 
+## 32. Una métrica territorial para los efectos de geometría (19 sep 2026)
+
+Última pieza metodológica, deliberadamente acotada: **una** métrica, validada contra perks reales, y parar.
+No cambia ningún veredicto, umbral, perk ni protocolo — nada la consulta.
+
+### 32.1 La métrica
+
+`TerritorialBalance` = porcentaje de ticks de balón en el **tercio rival** menos el porcentaje en el
+**tercio propio**, relativo al equipo del portador. Positivo = se juega más en campo contrario. Rango
+−100..+100, cero = simétrico.
+
+Dos propiedades que la hacen apta donde `ballThirdMaxShare` no lo es: **tiene dirección** (un máximo no
+distingue acampar atrás de acampar arriba) y **no necesita traza** — sale de `BallThird0/1/2`, que ya viaja
+en cada `MatchSummary`. Lo único que hay que aportar es en qué equipo juega el portador, porque los tercios
+del informe son absolutos y el equipo 0 ataca hacia el tercio 2 mientras el 1 ataca hacia el 0
+(`Pitch.GoalCenter`/`Pitch.ZoneOf`).
+
+### 32.2 Validación: el catálogo ya traía el banco de pruebas
+
+No hizo falta inventar controles. Hay tres perks de `shiftHome` con desplazamientos **+2, −1 y −2**, más
+uno sin geometría. Predicción escrita antes de medir: signos correctos y orden
+`high_line` > `shadow` > `deep_pivot`. 200 partidos por brazo:
+
+| perk | `shiftHome` | puesto | **balance territorial** (delta) | `ballThirdMaxShare` (delta) |
+|---|---|---|---|---|
+| `high_line` | **+2** | Defensa | **+0,210** | −1,776 |
+| `shadow` | **−1** | Medio | **−0,185** | −0,702 |
+| `deep_pivot` | **−2** | Medio | **−2,327** | +0,197 |
+| `iron_price` | — (sin geometría) | Defensa | **0,000** | 0,000 |
+
+**Los cuatro signos correctos y el orden exacto que se predijo.** Y el control es mejor de lo esperado:
+`iron_price` da **0,000 exacto**, no "casi cero" — con plantillas y semillas idénticas, un perk que no toca
+geometría deja el reparto territorial intacto hasta el último tick.
+
+### 32.3 Lo que esto demuestra sobre la métrica actual
+
+**`ballThirdMaxShare` los ordena al revés.** `high_line` empuja hacia adelante y la métrica vieja marca
+−1,776; `deep_pivot` tira hacia atrás y marca +0,197. No es que sea imprecisa: es que su signo va en
+sentido contrario al desplazamiento, porque sigue al tercio que resulte ser máximo (§30.3) y no al eje del
+efecto. La métrica nueva los ordena bien.
+
+### 32.4 Dos observaciones que salen de paso
+
+**La asimetría de magnitud es real y es de juego**: el mismo desplazamiento de 2 casillas mueve −2,327 en
+un Medio (`deep_pivot`) y solo +0,210 en un Defensa (`high_line`), once veces menos. Tiene sentido: un
+medio retrasado se sienta justo donde está el balón y arrastra el juego; un defensa adelantado sale de una
+casilla-hogar profunda donde el balón pasa poco. Es exactamente el tipo de diferencia que la métrica vieja
+ocultaba. **No se persigue aquí**: es material para cuando toque revisar esos perks.
+
+**Se retracta la magnitud de §30.3**, no su signo. Allí, con n=40 y midiendo por traza, el balance salía
+≈+2,80 para `high_line`; con n=200 sale +0,210. Verificado que la traza graba **cada tick** y no muestrea
+(`MatchEngine.cs:236`), así que la diferencia **no es de método, es de muestra**: aquello era ruido de
+n=40. Tercera vez que un número de 40 partidos no sobrevive a 200 —junto con los goles encajados de §30 y
+la ventaja de §31—, lo que ya es un hecho de calibración útil sobre este harness: **a n=40 los signos
+aguantan, las magnitudes no**.
+
+### 32.5 Lo que NO es esto
+
+No tiene banda, ni umbral, ni `IN`/`OUT`. No la consulta `ScreeningRunner` ni ninguna regla de decisión.
+No sustituye a `ballThirdMaxShare` en el clasificador. **Convertirla en la métrica primaria de la categoría
+`Geometry` es una decisión de protocolo**, y con ella los seis perks de geometría dejarían de juzgarse con
+una métrica que va al revés — pero esa decisión no se toma aquí.
+
+Con esto se cierra la fase metodológica.
+
+---
+
 ## Hermanos
 
 - `docs/analisis/c1-piloto-cazagoles-diseno.md` — la evidencia de calibración completa (§3.1b, §5, §6,
