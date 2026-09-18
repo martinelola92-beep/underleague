@@ -3528,6 +3528,101 @@ tabla. El único que no satura es `sweeper_keeper` (54 %), y pasa el suelo igual
 
 ---
 
+## 34. El lote de 24: informe final (19 sep 2026)
+
+### 34.1 El lote se vuelve a parar en 5/24, y no se toca
+
+`RealScreeningLot1Tests` corre con el circuito de §9.1 intacto. Procesa 5 perks, 3 escalan
+(`INSUFFICIENT_EVIDENCE`), 3/5 = 60 % ≥ el 20 % del circuito, y se detiene. **Mismo punto que en §18.5.**
+No se recalibra `BatchEscalation`, no se sube el umbral, no se cambia nada para que continúe.
+
+Lo que sí se hace es **atender el aviso en vez de ignorarlo**: una pasada diagnóstica perk a perk
+(`Lot1DiagnosticSweepTests`, `ScreeningRunner.RunPerk` uno por uno) para ver qué diría el screening de los
+19 restantes. El veredicto del lote sigue siendo "detenido en 5/24"; esto es información, no una
+declaración de lote completo.
+
+### 34.2 Lo que dice el screening sobre los 24
+
+| estado | nº | perks |
+|---|---|---|
+| `INSUFFICIENT_EVIDENCE` | **19** | ver desglose abajo |
+| `SCREENING_PASS` | 4 | `blood_scent`, `bloodhound`, `charge`, `free_man` |
+| `SCREENING_NEEDS_TUNING` | **1** | `high_line` |
+
+Los 19 se parten en dos causas limpias:
+
+- **10 por exposición** < 50 %: `steamroller` 0,0 % · `double_shot` 1,7 % · `iron_price` 5,0 % ·
+  `bulwark_stance` 7,5 % · `back_to_back` 9,6 % · `grudge` 10,4 % · `second_wound` 13,3 % ·
+  `iron_gate` 22,1 % · `shadow_marker` 24,6 % · `game_management` 30,8 %.
+- **9 por potencia** (|delta| < 2×SE tras duplicar): `cannon` · `deep_pivot` · `deep_run` · `kamikaze` ·
+  `last_ditch` · `line_keeper` · `own_third_anchor` · `shadow` · `sweeper_keeper`.
+
+**Los 4 `SCREENING_PASS` son vacíos.** Los cuatro pasan por el mismo motivo literal: *"sin parámetro
+numérico (selección de objetivo, §6.5): screening no detecta necesidad de tuning"*. No es que se haya
+medido que están bien: es que no hay número que tocar, así que el screening no puede suspenderlos.
+
+**Y el único `NEEDS_TUNING` del catálogo es falso.** Es `high_line`, medido en `ballThirdMaxShare`, la
+métrica que §32/§33 demostraron que **va al revés** para geometría. §30 no le encontró coste medible y §31
+no le encontró evidencia de poder gratis.
+
+Resultado neto del protocolo sobre el catálogo entero: **cero perks con una señal de tuning real,
+medida y accionable.**
+
+### 34.3 El hallazgo estructural: el suelo del 50 % separa disparadores, no perks
+
+La escalera de exposición es **bimodal, y el corte es el tipo de disparador**:
+
+- Los **11** perks con `trigger=MATCH_START` dan **100 %** de exposición, los once. Sin excepción.
+- Los **13** con disparador de suceso (`TACKLE`/`SHOT`/`INJURY`/`FOUL`/`RECOVERY`) caen entre **0,0 % y
+  62,5 %**, y solo tres pasan del 50 %: `last_ditch` 53,7 %, `sweeper_keeper` 56,2 %, `charge` 62,5 %.
+
+El suelo del 50 % no está distinguiendo perks bien diseñados de perks raros: está distinguiendo
+**permanentes de condicionales**. Un perk de `MATCH_START` lo pasa por construcción; uno de suceso lo
+suspende casi por construcción. Esto reencuadra el debate: la pregunta no era "¿40, 50 o 60?", era **"¿por
+qué una misma regla juzga dos familias de perks que no son comparables?"**. No se decide aquí.
+
+### 34.4 Tres problemas de diseño concretos, con la evidencia que ya teníamos
+
+**`steamroller` — `stat(target,'down')` no significa lo que su autor creía. [CONFIRMED]**
+
+Su `_doc` dice: *"solo encadena si el rival de la entrada QUEDÓ EN EL SUELO"*, es decir derribado
+(`PlayerState.KnockedDown`, un estado temporal tras una entrada). Pero en el vocabulario de condiciones
+`down` es `MatchStat.Down`, y su propia documentación lo define sin ambigüedad: *"1 si el jugador ha
+terminado el partido **de baja** —lesionado o muerto—"* (`PerkDefinition.cs:269-274`), resuelto como
+`player.Injured || player.Dead` (`EffectEngine.Stat`). Son cosas distintas. El perk solo encadena si la
+entrada **lesiona o mata**, no si derriba. Medido: **0,0 % de exposición en 480 partidos** — el perk está
+efectivamente muerto en el catálogo. No es un problema de balance ni de umbral: es que el dato dice otra
+cosa que el diseño.
+
+**`cannon` y `double_shot` — el perk cae en un portador que nunca hace la acción que lo dispara.**
+
+Ninguno de los dos declara `positionOnly`, así que el titular de campo elegible es el slot 1, un
+**Defensa**.
+
+- `double_shot` (`trigger=SHOT`, sin condición): **1,7 %** de exposición. Un defensa apenas dispara, así
+  que el perk casi nunca llega a existir.
+- `cannon` (`shootRangeBonusCells +3`): exposición **100 %** —es `MATCH_START`, se aplica siempre— y
+  delta en `shotsPerMatch` de **exactamente 0,0000** en 160 partidos. El modificador se escribe y no
+  cambia nada, porque el defensa no dispara con o sin alcance extra.
+
+Es **el mismo problema con dos caras**: el perk se aplica, y la acción que le daría sentido no ocurre en
+quien lo lleva. `cannon` es el caso puro —100 % de exposición y efecto exactamente nulo— y demuestra que
+exposición alta **no** implica efecto: la exposición mide que el perk se activó, no que su mecanismo
+llegara a manifestarse.
+
+**`shadow` — el texto promete una altura relativa y el mecanismo es absoluto.** Ver §33.4: `links:
+["ahead"]` no se consulta nunca para un efecto con `target: owner`.
+
+### 34.5 Qué NO dice este informe
+
+- No declara el lote completo. Sigue detenido en 5/24 por su propio circuito.
+- No propone ningún valor nuevo para ningún perk, ni toca `/data`.
+- No resuelve el 50 %: lo reencuadra con un dato (§34.3) y para.
+- `deep_run` sigue con dos efectos sin separar (§33.6), y los perks de portero siguen midiéndose sobre un
+  portador de baja actividad (§19).
+
+---
+
 ## Hermanos
 
 - `docs/analisis/c1-piloto-cazagoles-diseno.md` — la evidencia de calibración completa (§3.1b, §5, §6,
