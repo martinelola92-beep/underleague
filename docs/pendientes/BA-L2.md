@@ -1,6 +1,7 @@
 # BA-L2 — `CaptureRunner` pierde el árbol de escena entre `informe` y `recompensa`
 
-**Estado:** Abierta. Encontrada de camino al resolver BA-L, no investigada más allá de localizarla.
+**Estado:** RESUELTA (19 sep 2026). La secuencia llega hasta el final y produce `mercado.png`. Queda un
+defecto SEPARADO destapado por el arreglo: `recompensa.png` sale en blanco (ver abajo).
 
 ## Observación
 
@@ -30,3 +31,41 @@ del árbol.
 
 Ninguno. Es un fallo de ciclo de vida propio de `CaptureRunner`, sin relación con la causa de BA-L (que era
 de comando, no de código).
+
+
+## Resolución (19 sep 2026)
+
+**Causa: `CaptureRunner` instancia las pantallas del juego como HIJAS suyas**, no como escena raíz
+(`Show()` hace `AddChild(instance)`). Cuando una de esas pantallas navega —`Nav.Go`/`Nav.Route` hacen
+`GetTree().ChangeSceneToFile(...)`— se cambia la escena RAÍZ, que es `Capturas.tscn`, y con ella se destruye
+el propio arnés. A partir de ahí `GetTree()` sobre `CaptureRunner` devuelve null y el recorrido muere.
+
+Quién navegaba, capturado en el log del arreglo:
+
+```
+captura: informe.png
+navegación silenciada (captura): se pedía ir a res://Scenes/Mapa.tscn
+```
+
+`ReportScreen._Ready()` enruta al Mapa justo después de `informe.png`. Eso explica exactamente por qué la
+secuencia moría ahí y no antes.
+
+**Arreglo**: `Nav.Suppressed` (`Game/Ui/Nav.cs`), que `CaptureRunner` enciende en `_Ready` y apaga al
+terminar. Con él, una pantalla que decida navegar deja constancia en el log y se queda donde está —que es
+lo que una captura necesita: enseñar la pantalla, no irse de ella. No afecta al juego: solo lo enciende el
+arnés.
+
+**Resultado**: la secuencia completa produce `partido*`, `partido-3d*`, `informe`, `recompensa`,
+`mercado` y `mercado-perk` (captura nueva: la columna de perks con uno elegido, para poder juzgar el panel
+de detalle, BB-J).
+
+## Defecto SEPARADO que el arreglo destapa: `recompensa.png` sale en blanco
+
+Antes no se producía; ahora se produce **vacía** (fondo gris, sin un solo control). La pista está en el
+mismo log: si `ReportScreen` pide ir al **Mapa** tras el informe, es que para entonces el estado de la run
+ya no tiene nodo abierto, así que cuando se instancia `Recompensa.tscn` no hay recompensa que enseñar y la
+pantalla se dibuja vacía.
+
+O sea: el cuelgue era el síntoma, y **el estado de la run en ese punto del recorrido también está mal**.
+No se arregla aquí porque es otra cosa: hay que revisar en qué momento la secuencia cobra o resuelve la
+recompensa (`ResolveRewards`, `run.Apply(new ChooseReward(...))`) frente a cuándo la captura.

@@ -49,11 +49,31 @@ public static class Nav
     public static string ReturnTo { get; set; } = string.Empty;
 
     /// <summary>
+    /// Silencia la navegación (BA-L2). <c>CaptureRunner</c> instancia las pantallas del juego como HIJAS
+    /// suyas, no como escena principal, así que un <see cref="Go"/> desde dentro de una de ellas cambia la
+    /// escena raíz y se lleva por delante al propio arnés de capturas: a partir de ahí
+    /// <c>GetTree()</c> devuelve null y el recorrido muere a mitad, sin llegar a <c>recompensa</c> ni a
+    /// <c>mercado</c>.
+    ///
+    /// <para>Con esto puesto, una pantalla que decida navegar —por ejemplo <c>ReportScreen._Ready</c> o
+    /// <c>RewardScreen._Ready</c> cuando no hay run— deja constancia en el log y se queda donde está, que
+    /// es justo lo que una captura necesita: enseñar la pantalla, no irse de ella. No afecta al juego: solo
+    /// lo enciende el arnés de capturas.</para>
+    /// </summary>
+    public static bool Suppressed { get; set; }
+
+    /// <summary>
     /// Cambia a esa escena. Si el fichero no existe todavía, va a la pantalla provisional, que dice cuál
     /// falta y ofrece seguir: una escena que aún no está escrita no puede dejar la run bloqueada.
     /// </summary>
     public static void Go(Godot.Node from, string scene)
     {
+        if (Suppressed)
+        {
+            GD.Print($"navegación silenciada (captura): se pedía ir a {scene}");
+            return;
+        }
+
         if (!ResourceLoader.Exists(scene))
         {
             GD.Print($"pantalla pendiente: {scene}");

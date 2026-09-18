@@ -34,6 +34,10 @@ public partial class CaptureRunner : Control
 
     public override void _Ready()
     {
+        // BA-L2: las pantallas se instancian como hijas de este nodo, así que si una de ellas navega
+        // (Nav.Go/Nav.Route) cambia la escena RAÍZ y destruye este arnés a mitad del recorrido. Se silencia
+        // la navegación mientras dura la captura; se devuelve al estado normal al terminar.
+        Nav.Suppressed = true;
         _directory = ProjectSettings.GlobalizePath("res://screenshots");
         Directory.CreateDirectory(_directory);
         _ = Capture();
@@ -272,6 +276,11 @@ public partial class CaptureRunner : Control
             await Click(new Vector2(700f, 92f));
             await Save("mercado");
 
+            // BB-J: la columna de PERKS, con uno elegido, para que se vea su panel de detalle —ahí es
+            // donde el Mercado enseña cuántos de la etiqueta que el perk cuenta lleva ya la plantilla.
+            await Click(new Vector2(470f, 95f));
+            await Save("mercado-perk");
+
             // Prueba de humo de la compra: el botón de comprar del objeto elegido.
             int goldBefore = run.State!.Gold;
             await Click(new Vector2(549f, 679f));
@@ -279,6 +288,7 @@ public partial class CaptureRunner : Control
             Drop(market);
         }
 
+        Nav.Suppressed = false;
         GetTree().Quit();
     }
 

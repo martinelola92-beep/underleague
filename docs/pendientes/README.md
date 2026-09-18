@@ -27,7 +27,7 @@ a secas.
 | [BA-K](./BA-K.md) | Cortinilla o transición | Resuelta |
 | [BA-L](./BA-L.md) | La escena de capturas (`Scenes/Capturas.tscn`) no produce nada en esta | Cerrada |
 | [BA-M](./BA-M.md) | Origen de BA-N: la puerta de equipar pasó de roja a verde por cero cen | Cerrada |
-| [BA-L2](./BA-L2.md) | `CaptureRunner` pierde el árbol de escena entre `informe` y `recompensa` | Ver fichero |
+| [BA-L2](./BA-L2.md) | `CaptureRunner` pierde el árbol de escena entre `informe` y `recompensa` | Resuelta; `recompensa.png` en blanco queda abierto |
 | [BA-N](./BA-N.md) | Equipar ya no vale el escalón que la ADR 0033 exige | Cerrada (ADR 0116; deuda documentada) |
 | [BB-A](./BB-A.md) | Los jugadores se teletransportan al reanudar | Resuelta |
 | [BB-B](./BB-B.md) | En el saque de centro los defensores van a robar el balón antes de que | Resuelta (ADR 0115), tras dos intentos rechazados |
