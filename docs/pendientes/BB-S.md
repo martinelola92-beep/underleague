@@ -1,7 +1,8 @@
 # BB-S — `build-neutral-reference.py` dice que escribe las referencias y no escribe nada
 
-**Estado:** Abierta. Detectada al borrar `pack_mentality` (19 sep 2026). No arreglada: hay que decidir si
-la herramienta escribe o si se documenta como calculadora.
+**Estado:** Arreglada a medias (19 sep 2026): la herramienta ya puede escribir, tras `--write`, y el
+docstring dice la verdad. **Queda abierto un desajuste de reparto por slot** que salió al probarlo, y que
+es más interesante que el defecto original.
 
 ## Observación
 
@@ -64,3 +65,37 @@ cuatro arreglos sueltos.
    verdad de hoy y deja el control en manos de quien mide.
 
 No se toca hasta que se decida.
+
+
+## 19 sep 2026 — arreglo, y lo que el arreglo destapa
+
+**Arreglo**: la herramienta acepta `--write`. Sin la bandera **solo imprime**, como hacía; con ella
+reescribe las cinco referencias. El docstring ya describe lo que el código hace.
+
+Escribir va detrás de una bandera **a propósito**, no por comodidad: esas cinco builds son la línea base
+contra la que miden las 43 puertas, así que reescribirlas mueve el baseline de todo el balance. Eso se
+hace mirando, no de pasada. La herramienta lo recuerda por pantalla al terminar.
+
+## El desajuste que salió al probarlo
+
+Al ejecutar `--write` sobre el árbol actual, **cambian 25 líneas en los cinco ficheros**. Comprobado: el
+**conjunto de 14 perks es idéntico** en los cinco; lo que cambia es **a qué slot va cada uno**.
+
+- La aplicación a mano (la de siempre, y la que se hizo hoy al borrar `pack_mentality`) sustituye el perk
+  **conservando su slot**.
+- La herramienta reparte la selección en **su propio orden** (el de `select()`: por distancia a la
+  mediana, desempatado por id).
+
+O sea que los ficheros en disco llevaban ya tiempo desviados del orden que la regla produce, porque cada
+edición histórica se hizo a mano. **El slot importa**: decide qué jugador lleva el perk, y eso cambia el
+partido.
+
+**Decisión (19 sep 2026): NO se adopta el orden de la herramienta.** Se revierte y se conserva el reparto
+con el que se midió todo lo que hay medido —CAT-J, la ADR 0118, las bandas de RT-056—. Adoptar el orden
+nuevo movería la línea base de las 43 puertas por un desempate arbitrario, sin ninguna decisión de diseño
+detrás. Eso es justo lo que la bandera `--write` existe para no hacer de pasada.
+
+**Lo que queda por decidir**: si la regla canónica es "el orden que produce `select()`" —y entonces hay que
+adoptarlo de una vez, midiendo el salto de las puertas y anotándolo— o si el reparto por slot es
+información independiente de la regla y la herramienta no debería tocarlo. Hasta entonces, `--write` está
+disponible pero **no es idempotente contra el árbol actual**, y eso hay que saberlo antes de usarlo.

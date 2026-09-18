@@ -1,5 +1,5 @@
 {
-  "_doc": "MAESTRO de El Toque (ADR 0051). Exige dos perks de su linea y cierra La Carniceria: el equipo que juega bien renuncia a lesionar. Pide ademas una plantilla con mayoria de Finos, que es la composicion que su linea premia.",
+  "_doc": "MAESTRO de El Toque (ADR 0051). Exige dos perks de su linea y cierra La Carniceria: el equipo que juega bien renuncia a lesionar. Pide ademas una plantilla con mayoria de Finos, que es la composicion que su linea premia. AVISO (BB-R, 19 sep 2026): este perk NO declara `requires` ni `blocks` en el dato, asi que HOY no exige nada ni cierra nada. La maquinaria de maestros de la ADR 0051 existe entera en /Sim (PerkDefinition.IsMaster, DescriptionGenerator.DescribeArc, PerkLoader) y no tiene ni un consumidor: 0 de 102 perks la usan, cuando la ADR pide entre el 5 % y el 10 % del catalogo. Lo de arriba describe la INTENCION de diseño, no lo implementado. Decidir si se rellena requires/blocks -cambio de balance real, un cierre de linea es irreversible (RF-072)- o si la ADR 0051 queda aparcada esta pendiente en docs/pendientes/BB-R.md.",
   "id": "first_touch_school",
   "name": {
     "es": "Escuela del primer toque",

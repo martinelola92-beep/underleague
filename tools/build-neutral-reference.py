@@ -4,10 +4,17 @@ Genera las cinco referencias neutras de la puerta de fase 1 (ADR 0104, cierra CA
 La regla vive aquí y no en la cabeza de nadie: si el catálogo de perks o la tabla de
 valores cambian, se vuelve a ejecutar y las referencias se recalculan solas.
 
-    python3 tools/build-neutral-reference.py
+    python3 tools/build-neutral-reference.py            # imprime la seleccion, no toca nada
+    python3 tools/build-neutral-reference.py --write     # la aplica a las cinco referencias
 
-Escribe data/balance/builds/<raza>_neutral.json y apunta baselineByRace de
-data/balance/groups.json a ellas.
+Por defecto SOLO IMPRIME. Hasta el 19 sep 2026 este docstring decia que escribia
+las builds y el codigo no escribia nada (BB-S): al borrar un perk que estaba en
+las cinco referencias, la herramienta imprimio la seleccion nueva y los ficheros
+se quedaron con el perk borrado dentro.
+
+Escribir esta detras de --write a proposito, no por comodidad: estas cinco builds
+son la LINEA BASE contra la que miden las 43 puertas, asi que reescribirlas mueve
+el baseline de todo el balance. Eso se hace mirando, no de pasada.
 """
 
 import json, glob, os, statistics
@@ -63,8 +70,35 @@ def select():
     return median, chosen
 
 
+def apply(chosen):
+    """Reescribe la lista de perks de las cinco referencias, conservando todo lo demas."""
+    ids = [pid for pid, _, _ in chosen]
+    written = []
+    for path in sorted(glob.glob(D('data', 'balance', 'builds', '*_neutral.json'))):
+        build = json.load(open(path, encoding='utf-8'))
+        slots = [entry['slot'] for entry in build['perks']]
+        if len(slots) != len(ids):
+            raise SystemExit(
+                f'{os.path.basename(path)} tiene {len(slots)} huecos y la seleccion trae {len(ids)}: '
+                'no se toca nada hasta que cuadren')
+        build['perks'] = [{'slot': slot, 'perk': pid} for slot, pid in zip(slots, ids)]
+        with open(path, 'w', encoding='utf-8') as handle:
+            handle.write(json.dumps(build, ensure_ascii=False, indent=2) + '\n')
+        written.append(os.path.basename(path))
+    return written
+
+
 if __name__ == '__main__':
+    import sys
+
     median, chosen = select()
     print(f'mediana del catálogo elegible: {median} · suma de los {PERKS}: {sum(v for _, v, _ in chosen)}')
     for pid, value, family in chosen:
         print(f'  {pid:24} {value:5}  {family}')
+
+    if '--write' in sys.argv:
+        for name in apply(chosen):
+            print(f'  escrita {name}')
+        print('Recuerda: has movido la linea base de las 43 puertas. Ejecutalas.')
+    else:
+        print('(solo impreso; --write para aplicarlo a las cinco referencias)')

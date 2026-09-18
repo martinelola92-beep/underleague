@@ -1,7 +1,8 @@
 # BB-R — Dos perks dicen ser MAESTROS y no exigen ni cierran nada
 
-**Estado:** Abierta. Detectada al preparar el cuadre de perks por raza/rasgo (19 sep 2026). Sin arreglar:
-es una decisión de diseño, no un bug de implementación.
+**Estado:** Abierta en lo de fondo; el texto ya no engaña. Los dos `_doc` llevan desde el 19 sep 2026 un
+aviso de que describen la INTENCIÓN y no lo implementado. Queda por decidir si se implementa la ADR 0051
+o si se aparca.
 
 ## Observación
 
@@ -44,3 +45,18 @@ diseño y el dato dicen cosas distintas.
 
 - `docs/pendientes/BB-Q.md` — mismo patrón, `steamroller`.
 - `docs/analisis/informe-decision-catalogo.md` — `shadow`, mismo patrón.
+
+
+## 19 sep 2026 — mitad segura aplicada
+
+Los `_doc` de `blood_tithe` y `first_touch_school` conservan su descripción de diseño —es información
+útil, y borrarla perdería el porqué— pero ahora llevan detrás un aviso explícito de que **hoy no exigen ni
+cierran nada**, con el número: **0 de 102 perks** declaran `requires`/`blocks`, cuando la ADR 0051 pide
+entre el 5 % y el 10 % del catálogo.
+
+Se elige avisar en vez de borrar la frase porque el problema no es que la intención esté escrita, es que
+se leía como si estuviera implementada. Un lector del catálogo generado ya no puede confundirlas.
+
+**Lo de fondo sigue abierto y es tuyo**: rellenar `requires`/`blocks` es un cambio de balance real —un
+cierre de línea es irreversible dentro de la run (RF-072)— y necesita su ADR. La alternativa es aparcar la
+ADR 0051 explícitamente y quitar la promesa de los dos textos.
