@@ -25,14 +25,16 @@ public sealed class DescriptionTests
     /// </summary>
     [Fact]
     public void ConditionAndLimitInSpanish() => Assert.Equal(
-        "Al entrar, el jugador +3 de fuerza durante la jugada (máximo 2 por partido)."
-            + "\nCondición: si el jugador es Bruto y si el criterio es menor que 0.",
+        "Al entrar, el jugador +3 de fuerza durante la jugada."
+            + "\nCondición: si el jugador es Bruto y si el criterio es menor que 0."
+            + "\nLímite: 2 por partido.",
         Describe("es", Bloodlust()));
 
     [Fact]
     public void ConditionAndLimitInEnglish() => Assert.Equal(
-        "On a tackle, the player +3 strength for the play (max 2 per match)."
-            + "\nCondition: if the player is Brute and if the referee bias is less than 0.",
+        "On a tackle, the player +3 strength for the play."
+            + "\nCondition: if the player is Brute and if the referee bias is less than 0."
+            + "\nLimit: 2 per match.",
         Describe("en", Bloodlust()));
 
     [Fact]
@@ -68,8 +70,8 @@ public sealed class DescriptionTests
             kind: "ruleBreaker",
             limit: """{ "per": "match", "times": 1 }"""));
 
-        Assert.Equal("En una lesión, anula la lesión (máximo 1 por partido).", Describe("es", perk));
-        Assert.Equal("On an injury, cancels the injury (max 1 per match).", Describe("en", perk));
+        Assert.Equal("En una lesión, anula la lesión.\nLímite: 1 por partido.", Describe("es", perk));
+        Assert.Equal("On an injury, cancels the injury.\nLimit: 1 per match.", Describe("en", perk));
     }
 
     [Fact]
@@ -403,7 +405,7 @@ public sealed class DescriptionTests
 
             foreach (var key in new[]
             {
-                "plain", "withCondition", "withLimit", "withConditionAndLimit",
+                "plain", "conditionLine", "limitLine", "riskLine", "lethalRisk", "lethalContactRisk",
                 "effectSeparator", "effectFinalSeparator", "elsePrefix", "linkSeparator",
             })
             {

@@ -2,16 +2,15 @@
   "_doc": "Plantillas de descripción de perks, objetos y consumibles (RT-035). El texto de un efecto NO se escribe a mano: se compone desde el propio dato con estas plantillas, así que descripción y efecto no pueden divergir. Marcadores: {trigger} {condition} {effects} {limit} {target} {who} {tag} {attribute} {duration} {probability} {counter} {value:+} {value:+%} {valuePerCounter:+} {maxValue} {counterDivisor} {ticks} {event} {n} {position} {zone} {detail} {a} {b} {point} {scalar} {dimension} {markTag}. Las claves de 'conditions' son el nombre de la función y, para las funciones que devuelven un número o texto, el nombre más el sufijo de la comparación (Lt, Le, Gt, Ge, Eq, Ne). Secciones del rediseño espacial (paquete S): 'links' nombra las relaciones direccionales de la ADR 0021 (marcador {link}), 'immunities' los efectos de tipo immunity, 'points' el punto simbólico de un efecto relocate (marcador {point}), y 'startZones', 'startFlanks' y 'stats' los literales de las funciones startsIn, startsOn y stat (marcadores {startZone}, {startFlank}, {stat}, {cells}). Los valores porcentuales se escriben y se leen en puntos porcentuales enteros. Las claves con sufijo 'Hint' de 'startZones' y 'startFlanks' NO las usa el generador: son la explicación larga que la pantalla de Equipo enseña en un tooltip al pasar el ratón por el nombre de la zona dentro de la descripción de un perk (AW-F).",
   "layout": {
     "plain": "{trigger}, {effects}.",
-    "withCondition": "{trigger}, {effects}.",
-    "withLimit": "{trigger}, {effects} ({limit}).",
-    "withConditionAndLimit": "{trigger}, {effects} ({limit}).",
     "conditionLine": "\nCondition: {condition}.",
+    "limitLine": "\nLimit: {limit}.",
+    "riskLine": "\nRisk: {risk}.",
+    "lethalRisk": "it marks one opponent per activation, whoever is worst off, and may kill them even if healthy",
+    "lethalContactRisk": "it may kill the opponent involved in the play, even if healthy",
     "effectSeparator": ", ",
     "effectFinalSeparator": " and ",
     "elsePrefix": "; otherwise, ",
     "linkSeparator": " and ",
-    "lethalSuffix": " It marks one opponent per activation, whoever is worst off, and may kill them even if healthy.",
-    "lethalContactSuffix": " It may kill the opponent involved in the play, even if healthy.",
     "requiresSuffix": " Requires already carrying {count} perks from {family}.",
     "blocksSuffix": " Closes {blocked} for the rest of the run.",
     "blockedSeparator": ", ",
@@ -215,10 +214,10 @@
     "run": "the run"
   },
   "limits": {
-    "play": "max {times} per play",
-    "match": "max {times} per match",
-    "mob": "max {times} during the mob",
-    "run": "max {times} per run"
+    "play": "{times} per play",
+    "match": "{times} per match",
+    "mob": "{times} during the mob",
+    "run": "{times} per run"
   },
   "attributes": {
     "strength": "strength",

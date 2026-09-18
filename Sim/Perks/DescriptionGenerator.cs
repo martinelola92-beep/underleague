@@ -82,45 +82,45 @@ public static class DescriptionGenerator
             ? Replace(templates.Get(Limits, LimitScopeKey(l.Per)), "{times}", l.Times.ToString(CultureInfo.InvariantCulture))
             : string.Empty;
 
-        string layoutKey = (condition.Length > 0, limit.Length > 0) switch
-        {
-            (true, true) => "withConditionAndLimit",
-            (true, false) => "withCondition",
-            (false, true) => "withLimit",
-            _ => "plain",
-        };
-
-        string text = templates.Get(Layout, layoutKey);
+        string text = templates.Get(Layout, "plain");
         text = Replace(text, "{trigger}", trigger);
         text = Replace(text, "{effects}", effects.ToString());
-        text = Replace(text, "{limit}", limit);
+
 
         // RF-093 vía 2 y RF-012d: la letalidad es parte del dato del perk, así que va en la descripción
         // generada como todo lo demás (RT-035: no hay texto de efecto escrito a mano). El informe de ojeo
         // la destaca aparte (RF-013, Scouting.LethalPerks), pero quien lea la ficha del perk tiene que ver
         // lo peor que puede pasar sin salir de ella.
-        if (perk.Lethal)
-        {
-            // Paquete AY: con un disparador de contacto la víctima no es "el que peor lo tiene" de todo
-            // el campo sino el rival implicado en la jugada, así que la frase tiene que decir eso. Es la
-            // misma propiedad que usa el motor para restringir la tirada (PerkDefinition.IsContactLethal):
-            // texto y efecto no pueden divergir (RT-035).
-            text += templates.Get(Layout, perk.IsContactLethal ? "lethalContactSuffix" : "lethalSuffix");
-        }
-
         // ADR 0051. Lo que un maestro exige y lo que cierra son parte de su dato, así que van en la
         // descripción generada como todo lo demás (RT-035): no hay texto a mano. Y el bloqueo tiene que
         // leerse ANTES de aceptar —un perk no se puede retirar (RF-072), así que es permanente— con la
         // misma claridad con la que un perk letal se destaca en el ojeo (RF-013, RF-012d).
         text += DescribeArc(perk, templates, perks);
 
-        // La condición va SIEMPRE al final, en su propia línea (encargo del revisor, 19 sep 2026): la
-        // descripción se lee en dos partes, "qué hace" y "Condición: ...". Se añade después de los avisos
-        // de letalidad y de arco a propósito — son consecuencias de lo que el perk HACE, no condiciones
-        // para que se dispare, y leerlos dentro de la línea de condición los escondería (RF-012d).
+        // Secciones, en el orden en que el jugador las necesita (encargo del revisor, 19 sep 2026): qué
+        // hace (sin título) · cuándo aplica · cuántas veces · qué puede costarle. Cada una solo aparece si
+        // el perk la tiene: 42 de los 94 tienen condición, 21 tienen límite y 4 son letales.
         if (condition.Length > 0)
         {
             text += Replace(templates.Get(Layout, "conditionLine"), "{condition}", condition);
+        }
+
+        if (limit.Length > 0)
+        {
+            text += Replace(templates.Get(Layout, "limitLine"), "{limit}", limit);
+        }
+
+        // RF-093 vía 2, RF-012d y ADR 0048: lo peor que puede pasar no se lee entre paréntesis ni al final
+        // de una frase larga. Son 4 perks de 94, y para esos cuatro es lo único que de verdad importa.
+        // Paquete AY: con un disparador de contacto la víctima no es "el que peor lo tiene" de todo el
+        // campo sino el rival implicado en la jugada — es la misma propiedad que usa el motor para
+        // restringir la tirada (PerkDefinition.IsContactLethal): texto y efecto no pueden divergir.
+        if (perk.Lethal)
+        {
+            text += Replace(
+                templates.Get(Layout, "riskLine"),
+                "{risk}",
+                templates.Get(Layout, perk.IsContactLethal ? "lethalContactRisk" : "lethalRisk"));
         }
 
         return CapitalizeFirst(text);
