@@ -1,6 +1,6 @@
 # BB-J — «Mentalidad de manada» no sirve jugando con enanos
 
-**Estado:** Primitiva IMPLEMENTED y VERIFIED. El perk `pack_mentality` en sí NO se ha tocado — requiere una decisión de diseño, ver abajo
+**Estado:** Previsibilidad RESUELTA (19 sep 2026, tooltip). La decisión de diseño sobre `pack_mentality` sigue ABIERTA — ver abajo
 
 ## Observación
 
@@ -55,3 +55,42 @@ reciba el propio grupo contado, no una etiqueta fija—?), no un bug de implemen
 ## Hermanos
 
 Ninguno detectado. La primitiva queda disponible para cualquier perk de composición futuro.
+
+
+## 19 sep 2026 — se resuelve la previsibilidad, no el perk
+
+El síntoma que abrió la ficha era *«no sirve jugando con enanos»*. Hay dos problemas dentro, y solo se
+cierra uno.
+
+**Lo que se arregla: el jugador ya no se entera después.** La ficha de jugador (Equipo, Ojeo, Fin de run)
+y la del Mercado muestran ahora, bajo cada perk que cuente una etiqueta, cuántos lleva y cuántos necesita:
+
+> `Bruto: 0 de 3 en la plantilla`
+
+Eso es RF-012d literal —lo malo se sabe antes, con la información previa— y encaja con el planteamiento
+del revisor: *un perk de rasgo **debe** rendir distinto según la plantilla; ahí entra la mano del jugador
+que sabe armar una build. Lo que no puede es enterarse en el informe post-partido.*
+
+- `Sim/Perks/PerkSquadRequirements.cs` (nuevo) y `LineupPerkRequirement` en `LineupPerkPreview.cs`.
+- `Game/Ui/PlayerCard.cs`, `Game/Screens/MarketScreen.cs`, `Game/Ui/UiText.cs`.
+
+**Lo que NO se arregla, y sigue siendo decisión de diseño.** `pack_mentality` sigue sin servir con
+enanos. El bloqueo que esta ficha ya documentaba —el efecto apunta a `withTag:Brute`, etiqueta fija en el
+dato, así que cambiar solo la condición daría un perk que se dispara y no beneficia a nadie— **no se ha
+tocado**. El tooltip no lo esquiva: lo hace visible.
+
+**Contexto de diseño que el revisor aportó y conviene no perder** (`docs/analisis/perks-condiciones-y-poblacion.md`):
+de los 94 perks, **73 son universales, 12 de rasgo y 9 de raza**, que es justo el reparto pretendido. Los
+9 de raza **declaran** su restricción; de los 12 de rasgo, solo 1 lo hace. Y **no hay que declararla en
+los otros 11**: eso los convertiría en perks de raza, lo contrario de lo que el nivel 2 pretende. Lo que
+faltaba no era una restricción — era información.
+
+**Cobertura:** 8 de los 12 de rasgo. Los otros 4 (`back_to_back`, `shadow_marker`, `crowd_control`,
+`cold_focus`) dependen de dónde estén los jugadores durante la jugada, no de la plantilla, y ahí el
+previsualizador calla a propósito: un conteo de plantilla sería una pista honesta pero **no es la
+condición**.
+
+**Verificación visual, con su límite:** la ficha de Equipo se capturó y se revisó; la línea nueva no
+aparece porque la plantilla de demo no lleva ningún perk de conteo, así que el texto está comprobado por
+test y no por captura. Del Mercado no hay captura: la secuencia de `Capturas.tscn` se detiene tras
+`informe.png` por **BA-L2**, abierta y anterior a este cambio.

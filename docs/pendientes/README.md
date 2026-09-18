@@ -39,7 +39,7 @@ a secas.
 | [BB-G2](./BB-G2.md) | Riesgo latente encontrado de camino, sin evidencia de que se dispare | Ver fichero |
 | [BB-H](./BB-H.md) | «Todavía no hay eventos, habrá que diseñarlos» | Ver fichero |
 | [BB-I](./BB-I.md) | «Depredador de área» pareció activarse en un momento que no era un tir | Ver fichero |
-| [BB-J](./BB-J.md) | «Mentalidad de manada» no sirve jugando con enanos | Ver fichero |
+| [BB-J](./BB-J.md) | «Mentalidad de manada» no sirve jugando con enanos | Previsibilidad resuelta (tooltip); diseño abierto |
 | [BB-K](./BB-K.md) | Dos jugadores del mismo equipo que quieren la misma casilla «bailan y  | Ver fichero |
 | [BB-L](./BB-L.md) | El lesionado «sale volando» del campo | Resuelta |
 | [BB-M](./BB-M.md) | «Sed de médula» lesionó a un jugador lejos de la acción | Ver fichero |
