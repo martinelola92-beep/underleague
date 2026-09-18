@@ -1,26 +1,139 @@
 {
   "id": "Dwarf",
-  "name": { "es": "Enanos", "en": "Dwarves" },
+  "name": {
+    "es": "Enanos",
+    "en": "Dwarves"
+  },
   "speciesTag": "Dwarf",
-  "styleTagWeights": { "Bulwark": 75, "Fine": 12, "Brute": 8, "Cold": 5 },
+  "styleTagWeights": {
+    "Bulwark": 70,
+    "Fine": 12,
+    "Brute": 8,
+    "Cold": 5,
+    "Neutral": 5
+  },
   "launch": true,
   "cellsOccupied": 1,
   "bodyRadius": 30,
   "discipline": 80,
-  "attributeBias": { "strength": 8, "speed": 0, "technique": 0, "stamina": 10, "leash": -18 },
+  "attributeBias": {
+    "strength": 8,
+    "speed": 0,
+    "technique": 0,
+    "stamina": 10,
+    "leash": -18
+  },
   "ability": "roots",
-  "description": { "es": "Bajos, tercos y difíciles de mover. No llegan lejos, pero donde plantan el pie se quedan.", "en": "Short, stubborn and hard to move. They don't cover much ground, but where they plant their feet, they stay." },
+  "description": {
+    "es": "Bajos, tercos y difíciles de mover. No llegan lejos, pero donde plantan el pie se quedan.",
+    "en": "Short, stubborn and hard to move. They don't cover much ground, but where they plant their feet, they stay."
+  },
   "individualDeviation": 8,
-  "traitWeights": { "Aggressive": 8, "Fast": 8, "Scorer": 8, "LongShot": 10, "Cerebral": 10, "Dirty": 12, "Resilient": 24, "Coward": 2, "Leader": 14, "Lazy": 4 },
+  "traitWeights": {
+    "Aggressive": 8,
+    "Fast": 8,
+    "Scorer": 8,
+    "LongShot": 10,
+    "Cerebral": 10,
+    "Dirty": 12,
+    "Resilient": 24,
+    "Coward": 2,
+    "Leader": 14,
+    "Lazy": 4
+  },
   "names": {
     "_doc": "Nombres de pila de fantasía: misma lista en los dos idiomas (docs/estilo-descripciones.md). Apellidos parlantes: equivalente del mismo registro, no traducción literal (Barbahierro -> Ironbeard).",
     "first": {
-      "es": ["Borin", "Dagnar", "Eldrin", "Fendrel", "Grimnir", "Hjalmar", "Ivarr", "Joric", "Kordan", "Loric", "Magnus", "Norin", "Oskar", "Ragnar", "Skorri", "Thrainn", "Ulfgar", "Varin", "Yorik", "Balder", "Astrid", "Brynja", "Dagny", "Freya", "Gerda", "Helka", "Ingrid", "Jorunn", "Runa", "Sigrun"],
-      "en": ["Borin", "Dagnar", "Eldrin", "Fendrel", "Grimnir", "Hjalmar", "Ivarr", "Joric", "Kordan", "Loric", "Magnus", "Norin", "Oskar", "Ragnar", "Skorri", "Thrainn", "Ulfgar", "Varin", "Yorik", "Balder", "Astrid", "Brynja", "Dagny", "Freya", "Gerda", "Helka", "Ingrid", "Jorunn", "Runa", "Sigrun"]
+      "es": [
+        "Borin",
+        "Dagnar",
+        "Eldrin",
+        "Fendrel",
+        "Grimnir",
+        "Hjalmar",
+        "Ivarr",
+        "Joric",
+        "Kordan",
+        "Loric",
+        "Magnus",
+        "Norin",
+        "Oskar",
+        "Ragnar",
+        "Skorri",
+        "Thrainn",
+        "Ulfgar",
+        "Varin",
+        "Yorik",
+        "Balder",
+        "Astrid",
+        "Brynja",
+        "Dagny",
+        "Freya",
+        "Gerda",
+        "Helka",
+        "Ingrid",
+        "Jorunn",
+        "Runa",
+        "Sigrun"
+      ],
+      "en": [
+        "Borin",
+        "Dagnar",
+        "Eldrin",
+        "Fendrel",
+        "Grimnir",
+        "Hjalmar",
+        "Ivarr",
+        "Joric",
+        "Kordan",
+        "Loric",
+        "Magnus",
+        "Norin",
+        "Oskar",
+        "Ragnar",
+        "Skorri",
+        "Thrainn",
+        "Ulfgar",
+        "Varin",
+        "Yorik",
+        "Balder",
+        "Astrid",
+        "Brynja",
+        "Dagny",
+        "Freya",
+        "Gerda",
+        "Helka",
+        "Ingrid",
+        "Jorunn",
+        "Runa",
+        "Sigrun"
+      ]
     },
     "last": {
-      "es": ["Barbahierro", "Yunquefirme", "Puñoroca", "Cavaprofundo", "Escudopétreo", "Martillonegro", "Vetaoro", "Golpefrío", "Tallapiedra", "Forjagrís"],
-      "en": ["Ironbeard", "Stoutanvil", "Stonefist", "Deepdelver", "Stoneshield", "Blackhammer", "Goldvein", "Coldstrike", "Stonecarver", "Greyforge"]
+      "es": [
+        "Barbahierro",
+        "Yunquefirme",
+        "Puñoroca",
+        "Cavaprofundo",
+        "Escudopétreo",
+        "Martillonegro",
+        "Vetaoro",
+        "Golpefrío",
+        "Tallapiedra",
+        "Forjagrís"
+      ],
+      "en": [
+        "Ironbeard",
+        "Stoutanvil",
+        "Stonefist",
+        "Deepdelver",
+        "Stoneshield",
+        "Blackhammer",
+        "Goldvein",
+        "Coldstrike",
+        "Stonecarver",
+        "Greyforge"
+      ]
     }
   }
 }

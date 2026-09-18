@@ -1,0 +1,33 @@
+{
+  "_doc": "Sangre en el agua: los orcos huelen la sangre ajena. Se dispara cuando se lesiona un RIVAL (scope opposingTeam) y todo el equipo entra mas fuerte el resto del partido. Lo que se ve: cae uno de ellos y los orcos se vienen arriba. Lo que cuesta: hay que romper a alguien primero, y eso se paga en faltas y tarjetas.",
+  "id": "blood_in_the_water",
+  "name": {
+    "es": "Sangre en el agua",
+    "en": "Blood in the Water"
+  },
+  "rarity": "uncommon",
+  "minAct": 1,
+  "kind": "conditional",
+  "axis": "matchState",
+  "race": "Orc",
+  "family": null,
+  "trigger": "INJURY",
+  "scope": "opposingTeam",
+  "links": [],
+  "condition": "",
+  "effects": [
+    {
+      "type": "modifyProbability",
+      "target": "team",
+      "probability": "tackle",
+      "value": 50,
+      "duration": "match"
+    }
+  ],
+  "elseEffects": [],
+  "accumulatesAcrossMatches": false,
+  "lethal": false,
+  "positionOnly": null,
+  "tagsRequired": [],
+  "tagsForbidden": []
+}

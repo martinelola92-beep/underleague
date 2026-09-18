@@ -1,0 +1,33 @@
+{
+  "_doc": "Jugador de equipo: dos corrientes se entienden sin hablar. Perk de COMPOSICION del estilo Neutral, el equivalente de Diezmo de sangre para los Bruto o Escuela del primer toque para los Fino. Exige otro Neutral ademas del portador y mejora el pase de TODO el equipo. Lo que se ve: un equipo sin estrellas que no pierde el balon. Lo que cuesta: en una plantilla especializada no se enciende nunca.",
+  "id": "squad_player",
+  "name": {
+    "es": "Jugador de equipo",
+    "en": "Squad Player"
+  },
+  "rarity": "uncommon",
+  "minAct": 1,
+  "kind": "conditional",
+  "axis": "composition",
+  "race": null,
+  "family": null,
+  "trigger": "MATCH_START",
+  "scope": "any",
+  "links": [],
+  "condition": "teammatesWithTag(owner,'Neutral') > 1",
+  "effects": [
+    {
+      "type": "modifyProbability",
+      "target": "team",
+      "probability": "pass",
+      "value": 50,
+      "duration": "match"
+    }
+  ],
+  "elseEffects": [],
+  "accumulatesAcrossMatches": false,
+  "lethal": false,
+  "positionOnly": null,
+  "tagsRequired": [],
+  "tagsForbidden": []
+}

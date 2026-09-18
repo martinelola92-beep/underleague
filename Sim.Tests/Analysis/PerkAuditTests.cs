@@ -5,7 +5,7 @@ using Xunit.Abstractions;
 namespace Underleague.Sim.Tests.Analysis;
 
 /// <summary>
-/// Auditoría estática (§16 de docs/analisis/protocolo-balanceo-automatizado.md) de los 94 perks reales:
+/// Auditoría estática (§16 de docs/analisis/protocolo-balanceo-automatizado.md) de los perks reales:
 /// sin simular ningún partido, solo consulta de datos ya cargados. Fija el resultado agregado como
 /// regresión (si cambia, es porque el catálogo o el clasificador cambiaron, y hay que mirar por qué) y
 /// comprueba sistemáticamente (no a mano) que el clasificador nunca marca `READY` un caso estructuralmente
@@ -63,10 +63,13 @@ public sealed class PerkAuditTests
         // revisar por qué antes de aceptar el nuevo número, no ajustar el test para que pase.
         var summary = PerkAudit.Summarize(Entries);
 
-        Assert.Equal(94, summary.Total);
-        Assert.Equal(24, summary.ByReadiness[AuditReadiness.ReadyForScreening]);
-        Assert.Equal(22, summary.ByReadiness[AuditReadiness.MultiTarget]);
-        Assert.Equal(15, summary.ByReadiness[AuditReadiness.DesignReview]);
+        // Sube cuando el catálogo crece a propósito: al cuadrar razas y rasgos (19 sep 2026) pasó de 94 a
+        // 105 (+12 nuevos, -1 unlikely_bulwark). Si cambia sin que nadie haya tocado /data/perks, es una
+        // regresión de la auditoría, y entonces se investiga antes de tocar el número.
+        Assert.Equal(105, summary.Total);
+        Assert.Equal(28, summary.ByReadiness[AuditReadiness.ReadyForScreening]);
+        Assert.Equal(24, summary.ByReadiness[AuditReadiness.MultiTarget]);
+        Assert.Equal(20, summary.ByReadiness[AuditReadiness.DesignReview]);
         Assert.Equal(27, summary.ByReadiness[AuditReadiness.NotReady]);
         Assert.Equal(6, summary.ByReadiness[AuditReadiness.RunLevel]);
     }
@@ -181,13 +184,19 @@ public sealed class PerkAuditTests
     }
 
     [Fact]
-    public void UnlikelyBulwarkIsMultiEffectAttributionNotSilentlyReady()
+    public void NoCatalogPerkMixesEffectCategories()
     {
-        // modifyProbability(tackle) + modifyLeash: dos categorías distintas, dos parámetros.
-        var entry = Entries.Single(e => e.PerkId == "unlikely_bulwark");
+        // `unlikely_bulwark` (modifyProbability(tackle) + modifyLeash) era el ÚNICO perk real que
+        // ejercitaba la ruta de atribución multi-efecto, y se borró el 19 sep 2026 al cuadrar razas y
+        // rasgos: violaba la regla de una sola condición de raza/rasgo (race=Elf + tagsRequired Bulwark).
+        // La ruta del clasificador sigue existiendo y sin consumidores, como la de maestros (BB-R).
+        //
+        // Lo que se fija aquí es el invariante que queda: hoy NINGÚN perk del catálogo mezcla categorías.
+        // Si aparece uno, este test lo dice y hay que volver a comprobar que se clasifica como NotReady
+        // por MultiEffectAttribution, no que pase en silencio.
+        var crossCategory = Entries.Where(e => e.HasCrossCategoryEffects).Select(e => e.PerkId).ToList();
 
-        Assert.Equal(AuditReadiness.NotReady, entry.FinalReadiness);
-        Assert.Equal(NotReadyReason.MultiEffectAttribution, entry.NotReadyReason);
+        Assert.Empty(crossCategory);
     }
 
     [Fact]

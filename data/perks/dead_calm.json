@@ -1,0 +1,33 @@
+{
+  "_doc": "Calma muerta: el de sangre fria entra igual de fuerte y no se calienta, asi que no se la pitan. Reduce su probabilidad de falta durante la jugada. Lo que se ve: entra una y otra vez y el arbitro nunca levanta el brazo. Lo que cuesta: no mejora la entrada en si, solo lo que viene despues.",
+  "id": "dead_calm",
+  "name": {
+    "es": "Calma muerta",
+    "en": "Dead Calm"
+  },
+  "rarity": "uncommon",
+  "minAct": 1,
+  "kind": "conditional",
+  "axis": "identity",
+  "race": null,
+  "family": null,
+  "trigger": "TACKLE",
+  "scope": "actor",
+  "links": [],
+  "condition": "hasTag(actor,'Cold')",
+  "effects": [
+    {
+      "type": "modifyProbability",
+      "target": "actor",
+      "probability": "foul",
+      "value": -100,
+      "duration": "play"
+    }
+  ],
+  "elseEffects": [],
+  "accumulatesAcrossMatches": false,
+  "lethal": false,
+  "positionOnly": null,
+  "tagsRequired": [],
+  "tagsForbidden": []
+}

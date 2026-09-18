@@ -1,0 +1,33 @@
+{
+  "_doc": "Descomposicion lenta: un muerto no se cansa. Sube la resistencia a la fatiga todo el partido, que es el canal que Entumecido -su habilidad racial, sobre luto y lesion leve- no toca. Lo que se ve: el unico que corre igual en el ultimo tercio. Lo que cuesta: en un partido corto no se nota.",
+  "id": "slow_decay",
+  "name": {
+    "es": "Descomposición lenta",
+    "en": "Slow Decay"
+  },
+  "rarity": "common",
+  "minAct": 1,
+  "kind": "filler",
+  "axis": "identity",
+  "race": "Undead",
+  "family": null,
+  "trigger": "MATCH_START",
+  "scope": "any",
+  "links": [],
+  "condition": "",
+  "effects": [
+    {
+      "type": "modifyTraitScalar",
+      "target": "owner",
+      "scalar": "fatigueResistancePercent",
+      "value": 25,
+      "duration": "match"
+    }
+  ],
+  "elseEffects": [],
+  "accumulatesAcrossMatches": false,
+  "lethal": false,
+  "positionOnly": null,
+  "tagsRequired": [],
+  "tagsForbidden": []
+}

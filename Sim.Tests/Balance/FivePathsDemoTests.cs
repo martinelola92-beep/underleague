@@ -21,7 +21,10 @@ public sealed class FivePathsDemoTests
     [InlineData("pit_veteran", AuditReadiness.NotReady, "addCounter+modifyProbability(tackle) escalado por contador, AccumulatesAcrossMatches — necesita el harness de campaña, no está bloqueado por falta de métrica")]
     [InlineData("pack_mentality", AuditReadiness.MultiTarget, "modifyAttribute(strength), target=withTag:Brute — afecta a varios jugadores, el harness de portador único no lo soporta")]
     [InlineData("box_predator", AuditReadiness.DesignReview, "modifyProbability(shotOnTarget) — la métrica natural (shotsOnTargetShare) es INFO en MatchMetrics, sin banda: decisión de diseño, no de tooling")]
-    [InlineData("unlikely_bulwark", AuditReadiness.NotReady, "modifyProbability(tackle)+modifyLeash — dos categorías distintas (ProbabilityBonus+Geometry), atribución sin resolver")]
+    // La quinta ruta (NotReady por atribución multi-efecto) se queda SIN ejemplo real: `unlikely_bulwark`
+    // era el único perk del catálogo que mezclaba categorías y se borró el 19 sep 2026 al cuadrar razas y
+    // rasgos. No se sustituye por otro porque no lo hay — ver PerkAuditTests.NoCatalogPerkMixesEffectCategories,
+    // que fija el invariante que queda.
     public void ShowsThePathEachRealPerkTakes(string perkId, AuditReadiness expectedReadiness, string expectedShape)
     {
         var perk = Catalog.Perks.All.Single(p => p.Id == perkId);

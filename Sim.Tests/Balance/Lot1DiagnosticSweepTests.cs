@@ -36,7 +36,7 @@ public sealed class Lot1DiagnosticSweepTests
             .OrderBy(p => p.Id, StringComparer.Ordinal)
             .ToList();
 
-        Assert.Equal(24, perks.Count);
+        Assert.Equal(28, perks.Count); // 24 en §34; 28 al cuadrar razas y rasgos (19 sep 2026)
 
         var results = new List<(PerkDefinition Perk, ScreeningResult Result, PerkClassification Classification)>();
         foreach (var perk in perks)

@@ -1,0 +1,33 @@
+{
+  "_doc": "Sin florituras: el corriente lee el pase porque no esta pensando en hacer nada bonito. Sube su probabilidad de interceptar todo el partido. Lo que se ve: el jugador del monton que siempre esta donde cae el balon. Lo que cuesta: nada espectacular; es el suelo de una plantilla, no su techo.",
+  "id": "no_nonsense",
+  "name": {
+    "es": "Sin florituras",
+    "en": "No Nonsense"
+  },
+  "rarity": "common",
+  "minAct": 1,
+  "kind": "filler",
+  "axis": "identity",
+  "race": null,
+  "family": null,
+  "trigger": "MATCH_START",
+  "scope": "any",
+  "links": [],
+  "condition": "hasTag(owner,'Neutral')",
+  "effects": [
+    {
+      "type": "modifyProbability",
+      "target": "owner",
+      "probability": "intercept",
+      "value": 50,
+      "duration": "match"
+    }
+  ],
+  "elseEffects": [],
+  "accumulatesAcrossMatches": false,
+  "lethal": false,
+  "positionOnly": null,
+  "tagsRequired": [],
+  "tagsForbidden": []
+}

@@ -1,0 +1,32 @@
+{
+  "_doc": "Comodin: el que no tiene un sitio propio acaba cubriendo todos. Le alarga la correa el partido entero. Lo que se ve: aparece en sitios que no le tocan. Lo que cuesta: cubrir mas campo es estar menos tiempo donde deberia, y eso lo paga la estructura del equipo.",
+  "id": "odd_job",
+  "name": {
+    "es": "Comodín",
+    "en": "Odd Job"
+  },
+  "rarity": "common",
+  "minAct": 1,
+  "kind": "filler",
+  "axis": "geometry",
+  "race": null,
+  "family": null,
+  "trigger": "MATCH_START",
+  "scope": "any",
+  "links": [],
+  "condition": "hasTag(owner,'Neutral')",
+  "effects": [
+    {
+      "type": "modifyLeash",
+      "target": "owner",
+      "value": 1,
+      "duration": "match"
+    }
+  ],
+  "elseEffects": [],
+  "accumulatesAcrossMatches": false,
+  "lethal": false,
+  "positionOnly": null,
+  "tagsRequired": [],
+  "tagsForbidden": []
+}

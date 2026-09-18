@@ -1,26 +1,139 @@
 {
   "id": "Elf",
-  "name": { "es": "Elfos", "en": "Elves" },
+  "name": {
+    "es": "Elfos",
+    "en": "Elves"
+  },
   "speciesTag": "Elf",
-  "styleTagWeights": { "Fine": 70, "Bulwark": 12, "Brute": 10, "Cold": 8 },
+  "styleTagWeights": {
+    "Fine": 65,
+    "Bulwark": 12,
+    "Brute": 10,
+    "Cold": 8,
+    "Neutral": 5
+  },
   "launch": true,
   "cellsOccupied": 1,
   "bodyRadius": 30,
   "discipline": 35,
-  "attributeBias": { "strength": -6, "speed": 0, "technique": 0, "stamina": -2, "leash": 8 },
+  "attributeBias": {
+    "strength": -6,
+    "speed": 0,
+    "technique": 0,
+    "stamina": -2,
+    "leash": 8
+  },
   "ability": "elf_touch",
-  "description": { "es": "Técnicos y frágiles. Ganan por velocidad y precisión, pierden si les tocan.", "en": "Technical and fragile. They win on speed and precision, and break if you touch them." },
+  "description": {
+    "es": "Técnicos y frágiles. Ganan por velocidad y precisión, pierden si les tocan.",
+    "en": "Technical and fragile. They win on speed and precision, and break if you touch them."
+  },
   "individualDeviation": 8,
-  "traitWeights": { "Aggressive": 3, "Fast": 10, "Scorer": 15, "LongShot": 17, "Cerebral": 14, "Dirty": 4, "Resilient": 4, "Coward": 12, "Leader": 8, "Lazy": 7 },
+  "traitWeights": {
+    "Aggressive": 3,
+    "Fast": 10,
+    "Scorer": 15,
+    "LongShot": 17,
+    "Cerebral": 14,
+    "Dirty": 4,
+    "Resilient": 4,
+    "Coward": 12,
+    "Leader": 8,
+    "Lazy": 7
+  },
   "names": {
     "_doc": "Nombres de pila de fantasía: misma lista en los dos idiomas (docs/estilo-descripciones.md). Apellidos parlantes: equivalente del mismo registro, no traducción literal (Hojaplata -> Silverleaf).",
     "first": {
-      "es": ["Aelar", "Belanor", "Caelum", "Daeris", "Elandor", "Faelar", "Galion", "Haldir", "Ithil", "Laeron", "Maeron", "Naerys", "Orophin", "Rhovan", "Sindar", "Thalion", "Vaelis", "Ysolde", "Aerin", "Celebrin", "Elowen", "Faelwen", "Ilphra", "Lorien", "Miriel", "Nimue", "Saelis", "Tauriel", "Ylwen", "Zephyra"],
-      "en": ["Aelar", "Belanor", "Caelum", "Daeris", "Elandor", "Faelar", "Galion", "Haldir", "Ithil", "Laeron", "Maeron", "Naerys", "Orophin", "Rhovan", "Sindar", "Thalion", "Vaelis", "Ysolde", "Aerin", "Celebrin", "Elowen", "Faelwen", "Ilphra", "Lorien", "Miriel", "Nimue", "Saelis", "Tauriel", "Ylwen", "Zephyra"]
+      "es": [
+        "Aelar",
+        "Belanor",
+        "Caelum",
+        "Daeris",
+        "Elandor",
+        "Faelar",
+        "Galion",
+        "Haldir",
+        "Ithil",
+        "Laeron",
+        "Maeron",
+        "Naerys",
+        "Orophin",
+        "Rhovan",
+        "Sindar",
+        "Thalion",
+        "Vaelis",
+        "Ysolde",
+        "Aerin",
+        "Celebrin",
+        "Elowen",
+        "Faelwen",
+        "Ilphra",
+        "Lorien",
+        "Miriel",
+        "Nimue",
+        "Saelis",
+        "Tauriel",
+        "Ylwen",
+        "Zephyra"
+      ],
+      "en": [
+        "Aelar",
+        "Belanor",
+        "Caelum",
+        "Daeris",
+        "Elandor",
+        "Faelar",
+        "Galion",
+        "Haldir",
+        "Ithil",
+        "Laeron",
+        "Maeron",
+        "Naerys",
+        "Orophin",
+        "Rhovan",
+        "Sindar",
+        "Thalion",
+        "Vaelis",
+        "Ysolde",
+        "Aerin",
+        "Celebrin",
+        "Elowen",
+        "Faelwen",
+        "Ilphra",
+        "Lorien",
+        "Miriel",
+        "Nimue",
+        "Saelis",
+        "Tauriel",
+        "Ylwen",
+        "Zephyra"
+      ]
     },
     "last": {
-      "es": ["Hojaplata", "Vientoclaro", "Lunargenta", "Ramaluz", "Sombraverde", "Cantoalba", "Espinafina", "Brisadorada", "Rocíogris", "Fuegoquieto"],
-      "en": ["Silverleaf", "Clearwind", "Moonsilver", "Brightbough", "Greenshade", "Dawnsong", "Finethorn", "Goldenbreeze", "Greydew", "Stillfire"]
+      "es": [
+        "Hojaplata",
+        "Vientoclaro",
+        "Lunargenta",
+        "Ramaluz",
+        "Sombraverde",
+        "Cantoalba",
+        "Espinafina",
+        "Brisadorada",
+        "Rocíogris",
+        "Fuegoquieto"
+      ],
+      "en": [
+        "Silverleaf",
+        "Clearwind",
+        "Moonsilver",
+        "Brightbough",
+        "Greenshade",
+        "Dawnsong",
+        "Finethorn",
+        "Goldenbreeze",
+        "Greydew",
+        "Stillfire"
+      ]
     }
   }
 }

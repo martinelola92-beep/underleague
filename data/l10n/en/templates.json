@@ -361,7 +361,8 @@
     "laneReaderRecoveries": "recovery",
     "bruisedKnucklesFouls": "foul",
     "captainsVoiceMatches": "match",
-    "scarVeteranMatches": "match"
+    "scarVeteranMatches": "match",
+    "quickStudyPasses": "pass"
   },
   "links": {
     "beside": "partner in their column",

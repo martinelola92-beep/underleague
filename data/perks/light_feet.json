@@ -1,0 +1,33 @@
+{
+  "_doc": "Pies ligeros: el elfo no evita la entrada -de eso ya va Toque elfico, su habilidad racial, sobre tackleEvasion- sino la INTERCEPCION. Juega entre lineas y el balon le llega. Lo que se ve: pases que deberian cortarse y no se cortan. Lo que cuesta: no le ayuda en el duelo, solo en la linea de pase.",
+  "id": "light_feet",
+  "name": {
+    "es": "Pies ligeros",
+    "en": "Light Feet"
+  },
+  "rarity": "uncommon",
+  "minAct": 1,
+  "kind": "filler",
+  "axis": "identity",
+  "race": "Elf",
+  "family": null,
+  "trigger": "MATCH_START",
+  "scope": "any",
+  "links": [],
+  "condition": "",
+  "effects": [
+    {
+      "type": "modifyProbability",
+      "target": "owner",
+      "probability": "interceptEvasion",
+      "value": 100,
+      "duration": "match"
+    }
+  ],
+  "elseEffects": [],
+  "accumulatesAcrossMatches": false,
+  "lethal": false,
+  "positionOnly": null,
+  "tagsRequired": [],
+  "tagsForbidden": []
+}

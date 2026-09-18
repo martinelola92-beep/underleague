@@ -1,0 +1,33 @@
+{
+  "_doc": "Hombro con hombro: el enano solo es uno mas; pegado a un companero es un muro. Sube el bonus por companero adyacente, asi que su valor lo decide la COLOCACION, no sus atributos. Lo que se ve: la pareja de enanos por la que no pasa nadie. Lo que cuesta: aislado no aporta nada, y taparle el hueco de al lado es una decision de alineacion que el rival tambien ve.",
+  "id": "shoulder_to_shoulder",
+  "name": {
+    "es": "Hombro con hombro",
+    "en": "Shoulder to Shoulder"
+  },
+  "rarity": "uncommon",
+  "minAct": 1,
+  "kind": "filler",
+  "axis": "proximity",
+  "race": "Dwarf",
+  "family": null,
+  "trigger": "MATCH_START",
+  "scope": "any",
+  "links": [],
+  "condition": "",
+  "effects": [
+    {
+      "type": "modifyTraitScalar",
+      "target": "owner",
+      "scalar": "adjacentTeammateBonusPercent",
+      "value": 30,
+      "duration": "match"
+    }
+  ],
+  "elseEffects": [],
+  "accumulatesAcrossMatches": false,
+  "lethal": false,
+  "positionOnly": null,
+  "tagsRequired": [],
+  "tagsForbidden": []
+}

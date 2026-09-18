@@ -31,3 +31,18 @@ que lo introdujo ni se ha hecho bisección — solo se confirmó que ya estaba r
 
 _(por enlazar donde se detecten; puede ser el mismo origen que otras puertas de `elf_brawler` o de
 `passChain` si existieran — no comprobado)_
+
+
+## 19 sep 2026 — el número de `elf_brawler` se mueve al cuadrar razas y rasgos
+
+Al dar a las razas sin Neutral un 5 % de esa etiqueta (`Dwarf`, `Elf`, `Undead`, restado de su etiqueta
+dominante) para que los perks de estilo Neutral no fueran inalcanzables, la composición de los elfos
+cambia (`Fine` 70 → 65) y con ella la de **todas** las builds élficas, aunque no se les tocara la lista de
+perks.
+
+- `badBuildsLoseToNone_elf_brawler`: **48,12 → 48,96** (rango 10,00..45,00). Sigue roja, algo más lejos.
+- `buildsWinDifferently_passChain`: **1,10**, sin cambio.
+
+**No es una regresión nueva**: las dos puertas ya estaban rojas antes y siguen siendo las mismas dos. Se
+anota el número nuevo para que la próxima comparación no se haga contra el viejo. La causa de fondo de
+CAT-J sigue sin investigar.

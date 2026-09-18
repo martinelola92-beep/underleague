@@ -27,7 +27,7 @@ public sealed class RealScreeningLot1Tests
             .ToHashSet(StringComparer.Ordinal);
         var perks = Catalog.Perks.All.Where(p => readyIds.Contains(p.Id)).ToList();
 
-        Assert.Equal(24, perks.Count); // regresión de §17.7 — si esto cambia, la auditoría cambió, no este test.
+        Assert.Equal(28, perks.Count); // 24 en §17.7; 28 al cuadrar razas y rasgos (19 sep 2026). Si cambia sin tocar /data, cambió la auditoría, no este test.
 
         var totalStopwatch = System.Diagnostics.Stopwatch.StartNew();
         var results = ScreeningRunner.RunBatch(Catalog, perks, seed: 1, checkpointDirectory: null);

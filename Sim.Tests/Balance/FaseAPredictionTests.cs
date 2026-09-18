@@ -82,7 +82,12 @@ public sealed class FaseAPredictionTests
             _output.WriteLine($"{group.Key}: {group.Count()}/{holdout.Count}");
         }
 
-        Assert.Equal(94, Catalog.Perks.All.Count);
+        // La predicción de Fase A se congeló sobre los 94 perks del 19 sep 2026
+        // (docs/analisis/fase-a-prediccion-congelada.md). El catálogo ha crecido desde entonces al cuadrar
+        // razas y rasgos, y los perks nuevos quedan FUERA de la predicción: ni se añaden a ella ni se
+        // rehace, porque una predicción que se reescribe al ver datos nuevos deja de serlo. Lo que se fija
+        // aquí es que los 94 originales siguen todos en el catálogo.
+        Assert.True(Catalog.Perks.All.Count >= 94, "el catálogo no puede encoger por debajo de la predicción congelada");
     }
 
     /// <summary>Rol que el harness elegiría hoy (misma función que usa el screening real), sobre la plantilla 0.</summary>

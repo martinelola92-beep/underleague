@@ -1,0 +1,40 @@
+{
+  "_doc": "Aprender sobre la marcha: la identidad humana es adaptarse, y aqui se adapta DENTRO del partido. Cada pase completado suma un contador y el pase mejora con el, hasta un tope. Lo que se ve: el humano pasa mejor en el minuto 60 que en el 5. Lo que cuesta: empieza en cero cada partido, asi que en un partido corto o sin balon no llega a nada.",
+  "id": "quick_study",
+  "name": {
+    "es": "Aprender sobre la marcha",
+    "en": "Quick Study"
+  },
+  "rarity": "rare",
+  "minAct": 2,
+  "kind": "filler",
+  "axis": "accumulation",
+  "race": "Human",
+  "family": null,
+  "trigger": "PASS_COMPLETED",
+  "scope": "actor",
+  "links": [],
+  "condition": "",
+  "effects": [
+    {
+      "type": "modifyProbability",
+      "target": "actor",
+      "probability": "pass",
+      "valuePerCounter": 50,
+      "counter": "quickStudyPasses",
+      "maxValue": 5,
+      "duration": "match"
+    },
+    {
+      "type": "addCounter",
+      "counter": "quickStudyPasses",
+      "value": 1
+    }
+  ],
+  "elseEffects": [],
+  "accumulatesAcrossMatches": false,
+  "lethal": false,
+  "positionOnly": null,
+  "tagsRequired": [],
+  "tagsForbidden": []
+}

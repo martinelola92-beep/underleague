@@ -1,0 +1,32 @@
+{
+  "_doc": "Hacer de todo: el humano no destaca en nada, pero tapa el hueco que deje cualquiera. Se dispara cuando se lesiona alguien de SU equipo (scope team) y le alarga la correa el resto del partido. Lo que se ve: cae un companero y el humano empieza a aparecer donde antes no llegaba. Lo que cuesta: si no cae nadie, el perk no existe.",
+  "id": "stand_in",
+  "name": {
+    "es": "Hacer de todo",
+    "en": "Stand-In"
+  },
+  "rarity": "uncommon",
+  "minAct": 1,
+  "kind": "filler",
+  "axis": "matchState",
+  "race": "Human",
+  "family": null,
+  "trigger": "INJURY",
+  "scope": "team",
+  "links": [],
+  "condition": "",
+  "effects": [
+    {
+      "type": "modifyLeash",
+      "target": "owner",
+      "value": 1,
+      "duration": "match"
+    }
+  ],
+  "elseEffects": [],
+  "accumulatesAcrossMatches": false,
+  "lethal": false,
+  "positionOnly": null,
+  "tagsRequired": [],
+  "tagsForbidden": []
+}

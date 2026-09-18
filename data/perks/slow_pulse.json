@@ -1,0 +1,33 @@
+{
+  "_doc": "Pulso lento: no apunta mejor -de eso va Foco frio, sobre shotOnTarget- sino que golpea mejor. Sube la calidad del tiro, no la punteria. Lo que se ve: sus disparos llegan con mas veneno aunque no vayan mas centrados. Lo que cuesta: si no dispara, no sirve de nada.",
+  "id": "slow_pulse",
+  "name": {
+    "es": "Pulso lento",
+    "en": "Slow Pulse"
+  },
+  "rarity": "common",
+  "minAct": 1,
+  "kind": "filler",
+  "axis": "identity",
+  "race": null,
+  "family": null,
+  "trigger": "MATCH_START",
+  "scope": "any",
+  "links": [],
+  "condition": "hasTag(owner,'Cold')",
+  "effects": [
+    {
+      "type": "modifyTraitScalar",
+      "target": "owner",
+      "scalar": "shotQualityBonus",
+      "value": 10,
+      "duration": "match"
+    }
+  ],
+  "elseEffects": [],
+  "accumulatesAcrossMatches": false,
+  "lethal": false,
+  "positionOnly": null,
+  "tagsRequired": [],
+  "tagsForbidden": []
+}
