@@ -3424,10 +3424,107 @@ aguantan, las magnitudes no**.
 
 No tiene banda, ni umbral, ni `IN`/`OUT`. No la consulta `ScreeningRunner` ni ninguna regla de decisión.
 No sustituye a `ballThirdMaxShare` en el clasificador. **Convertirla en la métrica primaria de la categoría
-`Geometry` es una decisión de protocolo**, y con ella los seis perks de geometría dejarían de juzgarse con
+`Geometry` es una decisión de protocolo**, y con ella los perks de geometría dejarían de juzgarse con
 una métrica que va al revés — pero esa decisión no se toma aquí.
 
 Con esto se cierra la fase metodológica.
+
+---
+
+## 33. Qué hace realmente cada perk de geometría (19 sep 2026)
+
+Primer uso de `TerritorialBalance` **como instrumento, no como criterio**: un diagnóstico descriptivo de
+los perks de geometría a 200 partidos por brazo. No se aplica ningún umbral nuevo, no se produce ningún
+veredicto `pass`/`fail`, no se toca `/data`, ningún perk, ninguna banda ni el protocolo. La métrica sigue
+sin banda y sin que la consulte ninguna regla de decisión (§32.5).
+
+Instrumento: `Sim.Tests/Balance/GeometryPerkDiagnosticTests.cs`. El conjunto de perks **no se elige a
+mano**: sale de `PerkBalanceClassifier.Classify` sobre el catálogo real filtrando
+`PerkBalanceCategory.Geometry`.
+
+### 33.1 El conjunto son SIETE, no seis
+
+`deep_pivot`, `deep_run`, `high_line`, `line_keeper`, `low_block`, `shadow`, `sweeper_keeper`. (§32.5
+decía "seis" — corregido aquí.) Dos vecinos tocan geometría y quedan fuera con motivo:
+`long_leash_legacy` (`AccumulatedStateBonus`: su `modifyLeash` escala con un contador de run, un partido
+suelto con el contador a cero no representa el mecanismo) y `unlikely_bulwark` (`ProbabilityBonus`: su
+efecto primario es `modifyProbability`, el `modifyLeash` es acompañante).
+
+### 33.2 La tabla
+
+200 partidos por brazo, mismas plantillas y semillas en los dos, raza neutral. `Δ terr.` = balance
+territorial armado − control (§32). `¿ruido?` aplica el criterio **ya existente** del proyecto (§5.5,
+2×SE sobre el valor por partido) — no es una banda ni un umbral nuevo, solo dice si el delta se separa de
+la varianza partido a partido.
+
+| perk | carrier real | efecto | expos. | Δ terr. | ¿ruido? | Δ `maxShare` | Δ goles a favor | Δ goles en contra |
+|---|---|---|---|---|---|---|---|---|
+| `deep_pivot` | Medio | `shiftHome −2` owner | 100 % | **−2,327** | ruido | +0,197 | −0,075 | −0,020 |
+| `deep_run` | Delantero | `shiftHome +2` + `zoneShape forward +1` | 100 % | **−4,302** | **distinguible** | −0,992 | +0,030 | +0,045 |
+| `high_line` | Defensa | `shiftHome +2` owner | 100 % | **+0,210** | ruido | −1,776 | +0,065 | −0,015 |
+| `line_keeper` | Portero | `modifyLeash −2` owner | 100 % | **−2,628** | ruido | −0,406 | −0,015 | **+0,055** |
+| `low_block` | Defensa (efecto de equipo) | `modifyLeash −2` **team** | 100 % | **−44,114** | **distinguible** | −10,536 | **−0,445** | −0,210 |
+| `shadow` | Medio | `shiftHome −1` owner | 100 % | **−0,185** | ruido | −0,702 | −0,130 | −0,015 |
+| `sweeper_keeper` | Portero | `modifyLeash +2` actor, `play` | **54 %** | **+0,112** | ruido | −0,118 | −0,010 | −0,005 |
+
+El brazo de control da **0,152** en los siete, como debe: mismas plantillas y semillas, así que es
+literalmente el mismo lote.
+
+### 33.3 Los tres hallazgos
+
+**1. El mismo `+2` tiene signo opuesto según quién lo reciba.** `high_line` (+2 a un Defensa) mueve el
+territorio **+0,210**; `deep_run` (+2 a un Delantero) lo mueve **−4,302**. No es una diferencia de
+magnitud: es un cambio de signo, medido con perks reales del catálogo, sin inventar ninguno. El
+modificador geométrico no determina la consecuencia; la determina la casilla-hogar de la que se parte.
+Esto es exactamente lo que `ballThirdMaxShare` no podía ver.
+
+**2. `deep_run` va en dirección contraria a su propio diseño.** Su `_doc` dice "vive al borde del fuera
+de juego… cuando el equipo recupera, él ya está corriendo a la espalda del central". Lo medido es que el
+equipo juega **4,3 puntos más atrás**, y es de los dos únicos deltas que se separan del ruido. Los goles
+no se mueven (+0,030 a favor, +0,045 en contra): el perk no compra nada. La lectura que encaja es la que
+el propio `_doc` declara como coste —"juega solo y de espaldas al juego; si el pase no llega, no
+participa"—: empujado +2 desde una casilla-hogar ya adelantada y con la zona ensanchada hacia delante,
+el delantero sale de donde vive el balón y el equipo ataca con un hombre menos. **El coste está pagando;
+el beneficio no aparece.**
+
+**3. Cinco de los siete no se separan del ruido a n=200.** Solo `deep_run` y `low_block` lo hacen. Esto
+matiza §32 sin contradecirlo: allí lo que se validó fue el **signo y el orden del agregado** (4/4
+correctos, orden exacto, control en 0,000), y eso sigue en pie; lo que se añade aquí es que **un delta
+territorial individual por debajo de ~3 puntos no es separable partido a partido a esta muestra**. Es la
+misma lección de calibración de §32.4 un escalón más arriba: a n=40 no sobreviven las magnitudes, a n=200
+no sobreviven los efectos pequeños.
+
+### 33.4 Clasificación descriptiva (no pass/fail)
+
+| perk | clase | por qué |
+|---|---|---|
+| `deep_run` | **posible problema de diseño** | efecto medible y en dirección contraria a la declarada; paga su coste sin cobrar su beneficio |
+| `low_block` | **comportamiento coherente, saldo a revisar** | hace exactamente lo que dice, y en grande; pero el balance de goles es −0,445 a favor contra −0,210 en contra: cede el doble de lo que ahorra. Su `_doc` invoca PD-1 ("un perk puede penalizar si expresa una identidad táctica real"), así que el coste es intencionado — lo que merece revisión es que sea negativo **por los dos lados** |
+| `shadow` | **posible problema de diseño** | divergencia entre texto y mecanismo: el `_doc` promete una altura *relativa* al vinculado ("si el vinculado se queda atrás, él también"), pero el efecto es un `shiftHome −1` **absoluto** sobre la casilla-hogar propia. `links: ["ahead"]` no se consulta nunca para un efecto con `target: owner` (`EffectEngine.ResolveLinkedTargets` solo se usa con `Linked`/`LinkedWithTag`), y la exposición del 100 % confirma que dispara haya o no compañero vinculado |
+| `line_keeper` | **efecto débil, con indicio de signo contrario** | Δ territorial en el ruido, y los goles en contra suben (+0,055) cuando su beneficio declarado es justo no quedar mal parado. Indicio, no conclusión: está dentro del ruido |
+| `high_line` | **efecto débil** | +0,210 en el ruido. Con §30 (sin coste medible) y §31 (sin evidencia de poder gratis), a 200 partidos este perk no mueve nada medible en ningún eje |
+| `sweeper_keeper` | **efecto débil** | el único con exposición no saturada (54 % de los partidos, 0,84 activaciones/partido) y un efecto de +0,112. Es `common` y de duración `play`, así que ser pequeño es coherente; lo que se anota es que es casi invisible |
+| `deep_pivot` | **comportamiento coherente** | signo correcto y el mayor de los `shiftHome` de portador único, aunque dentro del ruido a esta muestra |
+
+### 33.5 Un dato que respalda aparcar el 50 %
+
+Seis de los siete tienen **exposición del 100 %** (todos son `MATCH_START`). Para la categoría
+`Geometry`, la exposición no es el problema: el suelo del 50 % no habría cambiado ningún resultado de esta
+tabla. El único que no satura es `sweeper_keeper` (54 %), y pasa el suelo igualmente.
+
+### 33.6 Lo que este diagnóstico NO puede decir
+
+- **`deep_run` tiene dos efectos.** El −4,302 no se puede atribuir al `shiftHome +2` por separado del
+  `modifyZoneShape forward +1`. El experimento que lo aislaría existe y es barato, pero exige un perk
+  sintético en memoria; **no se ha hecho** y no se propone como requisito previo a la revisión de diseño.
+- **`low_block` es `target: team`.** El motor aplica la correa a los siete titulares y la simulación es
+  correcta, pero el arnés emparejado no instrumenta exposición multi-objetivo (§13 punto 10). Aquí no se
+  usa esa instrumentación, así que el número vale; la limitación se anota por si se reutiliza la fila.
+- **No hay dependencia racial que medir.** Ninguno de los siete declara `race` ni `tagsRequired`: la
+  ausencia es estructural, no un resultado negativo.
+- **`line_keeper` y `sweeper_keeper` caen en el portero** por su `positionOnly`, y §19 ya midió que el
+  portero es un portador de baja actividad. No es un sesgo del arnés aquí —es la posición que el perk
+  exige— pero condiciona cuánto puede moverse cualquier métrica agregada.
 
 ---
 
