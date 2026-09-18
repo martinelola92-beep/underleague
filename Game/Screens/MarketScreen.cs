@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using Godot;
 using Underleague.Game.Autoload;
 using Underleague.Game.Ui;
+using Underleague.Sim.Model;
+using Underleague.Sim.Perks;
 using Underleague.Sim.Run;
 using Underleague.Sim.Run.Systems.Items;
 using Underleague.Sim.Run.Systems.Market;
@@ -134,8 +136,9 @@ public partial class MarketScreen : Control
             return;
         }
 
-        foreach (var row in rows)
+        foreach (var offer in rows)
         {
+            var row = offer.Category == MarketCategories.Perk ? WithRequirementHeadline(offer) : offer;
             var card = new OptionCard();
             column.AddChild(card);
             bool selected = row.Category == _selectedCategory && row.Index == _selectedIndex;
@@ -318,12 +321,63 @@ public partial class MarketScreen : Control
             {
                 if (row.Category == _selectedCategory && row.Index == _selectedIndex)
                 {
-                    return row;
+                    return row.Category == MarketCategories.Perk ? WithRequirementHeadline(row) : row;
                 }
             }
         }
 
         return null;
+    }
+
+    /// <summary>
+    /// Cuántos de la plantilla llevan ya la etiqueta que pide el perk (RF-012d, BB-J): antes de comprarlo,
+    /// no solo tras leer su descripción. La fila de perk llega con <c>Headline</c> vacío
+    /// (<c>MarketView.Build</c>), así que se rellena aquí sin tocar <c>/Sim</c>; con varios requisitos se
+    /// unen con " · ", igual que el resto de líneas apiladas de esta pantalla.
+    /// </summary>
+    private MarketRow WithRequirementHeadline(MarketRow row)
+    {
+        var perk = _run.Catalog!.Perks.Find(row.Id);
+        if (perk is null)
+        {
+            return row;
+        }
+
+        var requirements = PerkSquadRequirements.For(perk, Squad());
+        if (requirements.Count == 0)
+        {
+            return row;
+        }
+
+        var templates = _run.Catalog.Localization.Get(Data.GameData.Language);
+        var lines = new List<string>(requirements.Count);
+        foreach (var requirement in requirements)
+        {
+            lines.Add(UiText.Get(
+                "ui.card.perkRequirement",
+                templates.Get("tags", requirement.Tag),
+                requirement.Current,
+                requirement.Required));
+        }
+
+        return row with { Headline = string.Join(" · ", lines) };
+    }
+
+    /// <summary>
+    /// Plantilla entera convertida a <see cref="PlayerDefinition"/>, igual conversión que
+    /// <c>TeamState.FromRun</c>: sin excluir a nadie, porque en el Mercado el perk todavía no tiene
+    /// portador (<see cref="PerkSquadRequirements"/>).
+    /// </summary>
+    private List<PlayerDefinition> Squad()
+    {
+        var catalog = _run.Catalog!;
+        var players = new List<PlayerDefinition>(_run.State!.Roster.Count);
+        foreach (var slot in _run.State.Roster)
+        {
+            players.Add(slot.ToDefinition(catalog));
+        }
+
+        return players;
     }
 
     private void Buy()

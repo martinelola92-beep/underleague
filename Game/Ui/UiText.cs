@@ -83,6 +83,7 @@ public static class UiText
         ["ui.card.rarity.Legendary"] = "legendario",
         ["ui.card.traits"] = "RASGOS",
         ["ui.card.perks"] = "PERKS",
+        ["ui.card.perkRequirement"] = "{0}: {1} de {2} en la plantilla",
         ["ui.card.ability"] = "HABILIDAD RACIAL",
         ["ui.card.perkSlot"] = "slot libre",
         ["ui.card.item"] = "OBJETO",

@@ -142,6 +142,18 @@ public partial class PlayerCard : Control
             if (perk is not null)
             {
                 perkLines.Add(perk.Name.Es + ": " + DescriptionGenerator.Describe(perk, templates));
+
+                // Cuántos de la plantilla llevan ya la etiqueta que cuenta el perk (RF-012d, BB-J): se sabe
+                // antes de comprar o de alinear a nadie, no solo tras leer su descripción.
+                foreach (var requirement in PerkSquadRequirements.For(perk, state.Players, player.Id))
+                {
+                    perkLines.Add(
+                        "  " + UiText.Get(
+                            "ui.card.perkRequirement",
+                            templates.Get("tags", requirement.Tag),
+                            requirement.Current,
+                            requirement.Required));
+                }
             }
         }
 
