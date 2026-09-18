@@ -65,7 +65,16 @@ public sealed class BuildGateTests
     /// <summary>Build "gana por técnica" de <c>buildsWinDifferently</c> (§8).</summary>
     private const string TechnicalBuild = "elf_tiki_taka";
 
-    private static readonly Lazy<IReadOnlyList<MetricResult>> Results = new(Compute);
+    private static readonly Lazy<IReadOnlyList<MetricResult>> Results = new(() => Compute(Seed));
+
+    /// <summary>
+    /// Las métricas de la puerta con una semilla base cualquiera. Existe para poder MEDIR la dispersión
+    /// de estas métricas entre semillas (CAT-J): la puerta usa <see cref="Seed"/> y una sola, igual que
+    /// hacía la de equipamiento antes de la ADR 0118, y hay dos métricas cuyo margen contra su rango es
+    /// del orden de su propio error de muestreo. No cambia lo que mide la puerta: con
+    /// <see cref="Seed"/> devuelve exactamente lo de siempre.
+    /// </summary>
+    internal static IReadOnlyList<MetricResult> MetricsWithSeed(ulong seed) => Compute(seed);
 
     /// <summary>§8: cada build coherente gana ≥ 58% a la referencia sin perks de su raza.</summary>
     [Fact]
@@ -157,7 +166,7 @@ public sealed class BuildGateTests
             string.Join(", ", offenders.Select(r => $"{r.Name}={r.Value:F2} (rango {r.RangeMin?.ToString("F2") ?? "-"}..{r.RangeMax?.ToString("F2") ?? "-"})")));
     }
 
-    private static IReadOnlyList<MetricResult> Compute()
+    private static IReadOnlyList<MetricResult> Compute(ulong seed)
     {
         // El catálogo de fuera del bucle solo sirve para la distribución RF-069 del final: los partidos
         // usan el catálogo del hilo (ver ThreadCatalogs), porque las condiciones compiladas no son
@@ -190,7 +199,7 @@ public sealed class BuildGateTests
         Parallel.For(0, subjects.Count, i =>
         {
             string id = subjects[i];
-            played[i] = RunCell(ThreadCatalogs.Current, builds, id, baselines[id], i * Rosters * MatchesPerRoster, items);
+            played[i] = RunCell(ThreadCatalogs.Current, builds, id, baselines[id], i * Rosters * MatchesPerRoster, items, seed);
         });
 
         var cells = new List<BuildCellResult>();
@@ -224,7 +233,8 @@ public sealed class BuildGateTests
         string buildId,
         string baselineId,
         int matchIndexOffset,
-        Underleague.Sim.Run.Systems.Items.ItemCatalog items)
+        Underleague.Sim.Run.Systems.Items.ItemCatalog items,
+        ulong seed)
     {
         var build = builds[buildId];
         var baseline = builds[baselineId];
@@ -256,8 +266,8 @@ public sealed class BuildGateTests
                 // ADR 0106: las builds MALAS equipan objetos malditos en el portador equivocado, que desde
                 // la ADR 0088 es la única forma que queda de construir en contra. Sin el catálogo de
                 // objetos esta puerta no puede jugarlas — BossGateTests ya lo pasaba y ésta no.
-                var subjectTeam = build.ToTeamSetup(catalog, Seed, roster, subjectIdBase, itemCatalog: items);
-                var baselineTeam = baseline.ToTeamSetup(catalog, Seed, roster, baselineIdBase, itemCatalog: items);
+                var subjectTeam = build.ToTeamSetup(catalog, seed, roster, subjectIdBase, itemCatalog: items);
+                var baselineTeam = baseline.ToTeamSetup(catalog, seed, roster, baselineIdBase, itemCatalog: items);
 
                 var setup = subjectAway
                     ? new MatchSetup(baselineTeam, subjectTeam, Referee)
@@ -265,7 +275,7 @@ public sealed class BuildGateTests
 
                 var result = Simulator.Run(
                     setup,
-                    RngStreams.MatchSeed(Seed, matchIndexOffset + (roster * MatchesPerRoster) + k),
+                    RngStreams.MatchSeed(seed, matchIndexOffset + (roster * MatchesPerRoster) + k),
                     catalog,
                     config);
                 var report = result.Report;
