@@ -408,8 +408,13 @@ public static class PerkBalanceClassifier
 
     /// <summary>
     /// <see cref="EffectType.ExtraAction"/> repite la acción que lo disparó (Doble disparo, Embestida,
-    /// Arrollador) — el disparador solo puede ser <c>SHOT</c> o <c>TACKLE</c> (RT-032), y los dos SÍ
-    /// tienen banda: la repetición es, literalmente, un shotsPerMatch/tacklesPerMatch más.
+    /// Arrollador) — el disparador solo puede ser <c>SHOT</c>, <c>TACKLE</c> o <c>RECOVERY</c> (RT-032), y
+    /// los tres SÍ tienen banda: la repetición es, literalmente, un shotsPerMatch/tacklesPerMatch más.
+    ///
+    /// <para><c>RECOVERY</c> repite la <b>entrada</b>, no una "recuperación" (BB-Q Alt 0: es la forma de
+    /// reaccionar al resultado de una entrada, que TACKLE no puede ver por publicarse antes de
+    /// resolverse). La métrica la fija por tanto <c>RepeatTackle</c>, que es lo que el efecto ejecuta
+    /// (<c>EffectEngine.ExecuteExtraAction</c>), no el nombre del disparador.</para>
     /// </summary>
     private static PerkClassification ClassifyExtraAction(EventType trigger, bool multiTarget) => trigger switch
     {
@@ -419,6 +424,9 @@ public static class PerkBalanceClassifier
         EventType.Tackle => new PerkClassification(
             PerkBalanceCategory.BinaryEvent, MetricReadiness.Ready, MatchMetrics.TacklesPerMatch, false, multiTarget,
             "repite TACKLE: cuenta como un tacklesPerMatch más, banda ya existente"),
+        EventType.Recovery => new PerkClassification(
+            PerkBalanceCategory.BinaryEvent, MetricReadiness.Ready, MatchMetrics.TacklesPerMatch, false, multiTarget,
+            "repite la ENTRADA tras una recuperación (RepeatTackle): cuenta como un tacklesPerMatch más, banda ya existente"),
         _ => new PerkClassification(
             PerkBalanceCategory.BinaryEvent, MetricReadiness.NotReadyNoMetric, "", false, multiTarget,
             $"repite {trigger}: sin métrica agregada conocida para esta acción"),

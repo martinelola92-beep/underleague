@@ -1094,6 +1094,12 @@ internal sealed class EffectEngine : IPerkLinks
                 _engine.RepeatShot(owner);
                 break;
             case EventType.Tackle:
+            case EventType.Recovery:
+                // RECOVERY repite la ENTRADA porque el único camino por el que un perk de recuperación
+                // puede querer encadenar es el de `Emit(Recovery, "tackle", tackler)` (MatchEngine.cs:2223),
+                // publicado justo después del derribo de :2221 — la lectura post-resolución de una entrada
+                // ganada (BB-Q, Alt 0). El propio perk acota con `detail() == 'tackle'` qué recuperación le
+                // vale; aquí no se decide nada, solo qué acción se sabe repetir.
                 _engine.RepeatTackle(owner);
                 break;
         }

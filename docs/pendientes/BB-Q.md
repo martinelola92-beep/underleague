@@ -1,7 +1,8 @@
 # BB-Q — «Arrollador» no se activa nunca (0/480 partidos)
 
-**Estado: abierta.** Diagnóstico cerrado, arreglo NO implementado: necesita una primitiva nueva del
-vocabulario de condiciones, y eso pasa por `game-design-review` + `architecture-review` antes de código.
+**Estado: RESUELTA** (19 sep 2026). Diagnóstico + revisión de arquitectura
+(`docs/analisis/bb-q-post-tackle-arquitectura.md`, Alt 0 aprobada) + arreglo + medición.
+**Exposición 0,0 % → 12,5 %** con el mismo instrumento que produjo el cero.
 
 ## Síntoma
 
@@ -95,3 +96,59 @@ de diseño/arquitectura, no de balance:
 - `docs/analisis/protocolo-balanceo-automatizado.md` §34 — de dónde sale el 0,0 %.
 - `docs/pendientes/BB-I.md` — «Depredador de área» pareció activarse cuando no era un tiro: el otro
   síntoma conocido de desajuste entre disparador y condición.
+
+
+---
+
+## Resolución (19 sep 2026)
+
+Se aplicó **Alt 0** de la revisión de arquitectura: usar el evento post-resolución que ya existía, en vez
+de una primitiva nueva. `Emit(Recovery, "tackle", tackler)` (`MatchEngine.cs:2223`) se publica justo
+después del derribo de `:2221`, así que **una entrada ganada ES un rival en el suelo**.
+
+`steamroller` pasa de `TACKLE` + `stat(target,'down') == 1` a **`RECOVERY` + `detail() == 'tackle'`**. Las
+tres causas se resuelven de golpe: el evento es post-resolución (causa 3), el `actor` está ligado (causa
+1) y no hace falta preguntar por ningún estado (causa 2). Es además el **primer uso de `detail()`** en el
+catálogo, una primitiva que llevaba implementada y sin estrenar.
+
+Infraestructura mínima (`extraAction` solo admitía `SHOT`/`TACKLE`):
+
+- `Sim/Perks/EffectEngine.cs` — `ExecuteExtraAction` traduce `RECOVERY` a `RepeatTackle`.
+- `Sim/Perks/PerkLoader.cs` — la regla RT-032 admite `RECOVERY`.
+- `Sim/Analysis/PerkBalanceClassifier.cs` — `extraAction`+`RECOVERY` → `tacklesPerMatch`. **Necesario**:
+  el clasificador mapeaba la métrica por el nombre del disparador, y sin esto `steamroller` salía
+  `NotReady`/`NotReadyNoMetric` y desaparecía del conjunto `ReadyForScreening` (24 → 23), es decir el
+  arreglo lo habría vuelto inmedible. La métrica correcta es `tacklesPerMatch` porque lo que el efecto
+  ejecuta es `RepeatTackle`, no una "recuperación".
+
+**No** se creó ningún `EventType`, ni primitiva de `PlayerState` (Alt 4), ni post-evento de TACKLE
+(Alt 2), ni se ligó `target` (Alt 3).
+
+### Medición
+
+| | antes | después |
+|---|---|---|
+| exposición (mismo instrumento, 480 partidos) | **0,0 %** | **12,5 %** |
+| activaciones (20 partidos, portador Defensa) | **0** | **3** |
+| estado del cribado | `INSUFFICIENT_EVIDENCE` (imposible) | `INSUFFICIENT_EVIDENCE` (raro) |
+| `charge` (control) | 65 | **65** |
+
+Sigue por debajo del suelo del 50 %, pero **por otro motivo**: antes la condición era imposible, ahora el
+perk es raro. Esto **no** dice si el perk es bueno o malo — solo que el mecanismo ya se manifiesta y por
+fin se puede evaluar su diseño.
+
+### Auditoría preventiva (Alt 5)
+
+`Sim.Tests/Perks/TriggerBindingAuditTests.cs`, **solo informativa**: inventaría, para los 42 perks con
+condición, qué identificadores pide cada uno frente a los que su disparador liga de verdad. Resultado:
+**ninguna condición restante pide un identificador sin ligar.** `steamroller` era el único caso del
+catálogo, y ningún perk pide `target` ni `opponent` en ninguna condición. No se ha convertido en error de
+carga todavía (RT-032/RT-083 lo pedirían, pero primero había que medir).
+
+### Efecto colateral registrado, no arreglado
+
+`FaseAMeasurementTests` tenía a `steamroller` con rol predicho `Defender`, inferido cuando su disparador
+era `TACKLE`. `PopulationFitness` está **congelado** (`e152253`) y solo mapea sitios de emisión
+verificados, así que con `RECOVERY` ya no infiere rol. Se **retiró el caso** del test en vez de tocar el
+analizador o la predicción congelada: la predicción no se ha falsado, el perk sobre el que se hizo dejó de
+existir con esa forma.

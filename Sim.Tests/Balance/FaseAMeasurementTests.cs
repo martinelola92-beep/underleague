@@ -100,7 +100,12 @@ public sealed class FaseAMeasurementTests
     [InlineData("double_shot", Position.Forward)]      // predicho WrongPosition -> debería mejorar en Delantero
     [InlineData("own_third_anchor", Position.Defender)] // predicho Adequate (eje de EFECTO) -> ya está en su rol
     [InlineData("last_ditch", Position.Defender)]       // predicho Adequate -> control negativo
-    [InlineData("steamroller", Position.Defender)]      // predicho Adequate -> control negativo
+    // `steamroller` estaba aquí con Position.Defender, predicho cuando su disparador era TACKLE.
+    // Al cerrar BB-Q pasó a RECOVERY, y `PopulationFitness.ClassifyTrigger` —congelado en e152253, y que
+    // solo mapea sitios de emisión verificados— ya no infiere rol para él. Se retira el caso en vez de
+    // tocar cualquiera de los dos lados: ni el analizador (congelado) ni la predicción (congelada en
+    // docs/analisis/fase-a-prediccion-congelada.md). La predicción no se ha falsado; el perk sobre el que
+    // se hizo dejó de existir con esa forma. Ver docs/pendientes/BB-Q.md.
     public void PositionAxis_MeasureOnEveryRoleAndCompareAgainstThePrediction(string perkId, Position predictedRole)
     {
         var perk = Catalog.Perks.All.Single(p => p.Id == perkId);

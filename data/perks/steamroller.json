@@ -1,5 +1,5 @@
 {
-  "_doc": "Arrollador: al derribar a alguien no se para, sigue. La condicion es lo que lo separa de Embestida: solo encadena si el rival de la entrada QUEDO en el suelo. Lo que se ve: tumba a uno y sigue andando como si nada. Lo que cuesta: sigue de frente aunque la jugada haya cambiado de sitio.",
+  "_doc": "Arrollador: al derribar a alguien no se para, sigue. La condicion es lo que lo separa de Embestida: solo encadena si su entrada GANO, que es justo cuando el rival queda en el suelo (MatchEngine derriba al conductor y acto seguido emite RECOVERY 'tackle'). Lo que se ve: tumba a uno y sigue andando como si nada. Lo que cuesta: sigue de frente aunque la jugada haya cambiado de sitio.",
   "id": "steamroller",
   "name": {
     "es": "Arrollador",
@@ -11,10 +11,10 @@
   "axis": "proximity",
   "race": null,
   "family": null,
-  "trigger": "TACKLE",
+  "trigger": "RECOVERY",
   "scope": "actor",
   "links": [],
-  "condition": "stat(target,'down') == 1",
+  "condition": "detail() == 'tackle'",
   "effects": [
     {
       "type": "extraAction"

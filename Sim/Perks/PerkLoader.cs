@@ -1169,13 +1169,15 @@ public static class PerkLoader
                 throw new DataException(file, node.Path, "extraAction solo admite target 'owner'");
             }
 
-            if (trigger is not (EventType.Shot or EventType.Tackle))
+            if (trigger is not (EventType.Shot or EventType.Tackle or EventType.Recovery))
             {
                 throw new DataException(
                     file,
                     node.Path,
-                    "extraAction solo es válido con trigger SHOT o TACKLE: son las dos únicas acciones que "
-                        + "MatchEngine sabe repetir dentro del mismo tick (RT-032)");
+                    "extraAction solo es válido con trigger SHOT, TACKLE o RECOVERY: son las únicas acciones "
+                        + "que MatchEngine sabe repetir dentro del mismo tick (RT-032). RECOVERY repite la "
+                        + "entrada, y es la forma de reaccionar al RESULTADO de una entrada, que TACKLE no "
+                        + "puede ver por publicarse antes de resolverse (BB-Q)");
             }
         }
     }

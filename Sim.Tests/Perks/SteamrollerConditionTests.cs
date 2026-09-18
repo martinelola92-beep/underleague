@@ -124,13 +124,16 @@ public sealed class SteamrollerConditionTests
     }
 
     /// <summary>
-    /// La consecuencia, medida: <c>steamroller</c> no se activa nunca, mientras que <c>charge</c>
-    /// —mismo disparador, mismo efecto <c>extraAction</c>, misma falta de <c>positionOnly</c>, y **sin
-    /// condición**— sí lo hace. El propio catálogo aporta el control: el <c>_doc</c> de
-    /// <c>steamroller</c> dice "la condición es lo que lo separa de Embestida".
+    /// El control del propio catálogo, medido: el <c>_doc</c> de <c>steamroller</c> dice "la condición es
+    /// lo que lo separa de Embestida". Tras cerrar BB-Q eso es lo que debe verse — <c>steamroller</c> se
+    /// activa (antes: nunca) y sigue activándose bastante menos que <c>charge</c>, que no tiene condición.
+    ///
+    /// <para>Antes del arreglo este test fijaba el bug (<c>Assert.Equal(0, steamroller)</c>). Se ha
+    /// reescrito al cerrar la ficha en vez de borrarlo: la comparación con el gemelo sigue siendo la
+    /// regresión útil.</para>
     /// </summary>
     [Fact]
-    public void SteamrollerNeverFiresWhileItsUnconditionalTwinDoes()
+    public void SteamrollerFiresButItsConditionStillSeparatesItFromItsTwin()
     {
         int steamroller = Activations("steamroller");
         int charge = Activations("charge");
@@ -138,7 +141,8 @@ public sealed class SteamrollerConditionTests
         _output.WriteLine($"activaciones en 20 partidos | steamroller: {steamroller} | charge (sin condición): {charge}");
 
         Assert.True(charge > 0, "el portador SÍ hace entradas: charge lo demuestra");
-        Assert.Equal(0, steamroller);
+        Assert.True(steamroller > 0, "tras BB-Q, Arrollador debe encadenar (antes: 0 en 480 partidos)");
+        Assert.True(steamroller < charge, "la condición debe seguir restringiendo respecto al gemelo sin condición");
     }
 
     /// <summary>
@@ -153,7 +157,7 @@ public sealed class SteamrollerConditionTests
     /// quítale el <c>Skip</c> al cerrar BB-Q y debe pasar. NO se relaja el umbral para que pase —si el
     /// arreglo no consigue ni una activación, el arreglo está mal, no el test.</para>
     /// </summary>
-    [Fact(Skip = "BB-Q abierta: quitar el Skip cuando se cierre; hoy falla a propósito (0 activaciones).")]
+    [Fact]
     public void SteamrollerChainsAtLeastOnceWhenItsCarrierWinsTackles()
     {
         Assert.True(Activations("charge") > 0, "precondición: el portador encadena con el gemelo sin condición");
