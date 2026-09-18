@@ -78,10 +78,25 @@ Los **4 restantes** quedan fuera, y el previsualizador calla a propósito:
   Brutos") sería una pista honesta pero **no es la condición**, y prometerlo sería peor que callar.
 - `cold_focus` pregunta por `actor`, no por `owner`: quién sea el actor depende del partido.
 
+## La sensibilidad racial emergente es deseada, no un defecto
+
+`grudge` no tiene ninguna condición de rasgo y aun así se expone **6,2×** mejor con orcos (12,5 % →
+77,5 %), porque los orcos cometen y sufren más faltas. Es **sensibilidad emergente**, distinta de una
+condición declarada: no sale del dato, sale de cómo juega cada raza.
+
+**Decisión de diseño (revisor, 19 sep 2026): eso es lo suyo, y no se corrige.** Un perk universal puede
+rendir mejor en unas plantillas que en otras, y encima **se puede compensar combinando**: `grudge` en un
+humano acompañado de un segundo perk agresivo vuelve a tener sentido. Es material de build, no un
+desequilibrio.
+
+Consecuencia para el instrumento, que conviene tener presente al leer cualquier número de este proyecto:
+**el arnés mide siempre UN perk aislado.** Nunca mide combinaciones. Así que una exposición baja o un
+efecto pequeño en solitario no dicen lo que ese perk vale dentro de una build — y las builds son donde el
+juego ocurre. No se persigue aquí; se anota para no confundir "flojo solo" con "flojo".
+
 ## Lo que este censo NO dice
 
-- No dice si los 73 universales son de verdad neutrales en la práctica. `grudge` no tiene ninguna
-  condición de rasgo y aun así se expone **6,2×** mejor con orcos (12,5 % → 77,5 %), porque los orcos
-  cometen y sufren más faltas. **Sensibilidad racial emergente**, distinta de una condición declarada — y
-  no medida para los otros 72.
 - No dice nada sobre potencia: solo sobre con qué frecuencia el perk llega a existir.
+- No dice nada sobre combinaciones, por lo de arriba.
+- No mide la sensibilidad racial emergente de los otros 72 universales, y tras la decisión de arriba
+  tampoco hace falta salvo que aparezca un caso extremo.
