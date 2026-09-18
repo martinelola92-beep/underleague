@@ -39,12 +39,17 @@ public sealed class PopulationFitnessTests
     [Theory]
     [InlineData("bulwark_stance", "Bulwark", "Dwarf")]
     [InlineData("back_to_back", "Bulwark", "Dwarf")]
-    [InlineData("shadow_marker", "Brute", "Orc")]
+    // shadow_marker (nearAlly(actor,'Brute',2)) se borró del catálogo (revisor, 18 sep 2026). No se
+    // sustituye: back_to_back, dos líneas más arriba, ya ejercita nearAlly() en esta misma batería — lo
+    // único que shadow_marker aportaba era la etiqueta 'Brute' en vez de 'Bulwark', irrelevante para lo
+    // que este test comprueba (que la extracción de estilo funciona, no qué etiqueta concreta lleva).
     [InlineData("fine_touch", "Fine", "Elf")]
     [InlineData("brute_boots", "Brute", "Orc")]
     [InlineData("blood_tithe", "Brute", "Orc")]
     [InlineData("first_touch_school", "Fine", "Elf")]
-    [InlineData("fine_orchestra", "Fine", "Elf")]
+    // fine_orchestra (teammatesWithTag(owner,'Fine') > 2) se borró del catálogo (revisor, 18 sep 2026). No
+    // se sustituye: first_touch_school, la línea de arriba, ya ejercita teammatesWithTag()+'Fine' —
+    // fine_orchestra era la misma forma con un umbral distinto (>2 en vez de >1), que este test no distingue.
     [InlineData("bruised_knuckles", "Brute", "Orc")]
     [InlineData("crowd_control", "Fine", "Elf")]
     public void StyleGatedPerksAreDiagnosedAsWrongPopulationOnHumanAndAdequateOnTheirAffineRace(

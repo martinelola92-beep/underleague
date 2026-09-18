@@ -42,24 +42,28 @@ public sealed class PerkSquadRequirementsTests
         Assert.False(requirement.Met);
     }
 
-    /// <summary>`pack_mentality`, el perk de BB-J: con enanos (Bulwark) no hay Brutos que contar.</summary>
+    /// <summary>
+    /// `pack_mentality` (el perk original de BB-J) se borró del catálogo; `blood_tithe` cuenta la misma
+    /// etiqueta con la misma forma (<c>teammatesWithTag(owner,'Brute') &gt; 1</c>, Required=2 en vez de 3).
+    /// Con enanos (Bulwark) no hay Brutos que contar.
+    /// </summary>
     [Fact]
-    public void PackMentalityOnADwarfSquadShowsZeroOfThree()
+    public void BloodTitheOnADwarfSquadShowsZeroOfTwo()
     {
         var requirement = PerkSquadRequirements.For(
-            Perk("pack_mentality"), Squad("Bulwark", "Bulwark", "Bulwark", "Bulwark")).Single();
+            Perk("blood_tithe"), Squad("Bulwark", "Bulwark", "Bulwark", "Bulwark")).Single();
 
         Assert.Equal("Brute", requirement.Tag);
         Assert.Equal(0, requirement.Current);
-        Assert.Equal(3, requirement.Required);
+        Assert.Equal(2, requirement.Required);
         Assert.False(requirement.Met);
     }
 
     [Fact]
-    public void PackMentalityOnAnOrcSquadIsAlreadyMet()
+    public void BloodTitheOnAnOrcSquadIsAlreadyMet()
     {
         var requirement = PerkSquadRequirements.For(
-            Perk("pack_mentality"), Squad("Brute", "Brute", "Brute", "Neutral")).Single();
+            Perk("blood_tithe"), Squad("Brute", "Brute", "Brute", "Neutral")).Single();
 
         Assert.Equal(3, requirement.Current);
         Assert.True(requirement.Met);
@@ -96,9 +100,9 @@ public sealed class PerkSquadRequirementsTests
     {
         var squad = Squad("Brute", "Brute", "Brute", "Neutral");
 
-        Assert.Equal(3, PerkSquadRequirements.For(Perk("pack_mentality"), squad).Single().Current);
-        Assert.Equal(2, PerkSquadRequirements.For(Perk("pack_mentality"), squad, ownerId: 1).Single().Current);
-        Assert.Equal(3, PerkSquadRequirements.For(Perk("pack_mentality"), squad, ownerId: 4).Single().Current);
+        Assert.Equal(3, PerkSquadRequirements.For(Perk("blood_tithe"), squad).Single().Current);
+        Assert.Equal(2, PerkSquadRequirements.For(Perk("blood_tithe"), squad, ownerId: 1).Single().Current);
+        Assert.Equal(3, PerkSquadRequirements.For(Perk("blood_tithe"), squad, ownerId: 4).Single().Current);
     }
 
     /// <summary>

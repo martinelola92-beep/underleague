@@ -35,13 +35,20 @@ public sealed class FaseAMeasurementTests
     // ------------------------------------------------------------------------------------------------
     // Prueba 1 — ESPECIFICIDAD DE RAZA. La predicción congelada dice: de los 20 ReadyForScreening del
     // hold-out, la raza no debería importar en NINGUNO; y en todo el hold-out solo debería importar en
-    // pack_mentality. Se mide sobre TODAS las razas del catálogo y se mira la dispersión.
+    // pack_mentality (borrado del catálogo, revisor 18 sep 2026 — ver el comentario dentro del test). Se
+    // mide sobre TODAS las razas del catálogo y se mira la dispersión.
     // ------------------------------------------------------------------------------------------------
 
     [Fact]
     public void RaceSpecificity_HoldOutReadyPerksPlusTheSinglePredictedPositive()
     {
-        var ids = HoldOutReadyPerkIds().Concat(new[] { "pack_mentality" }).ToList();
+        // pack_mentality (el perk de BB-J) era el único predicho positivo ("la raza SÍ importa") de toda
+        // la Fase A congelada, y se borró del catálogo (revisor, 18 sep 2026). Igual que `steamroller` más
+        // abajo, se retira sin sustituto ni recálculo: ni el analizador (congelado) ni la predicción
+        // (congelada en docs/analisis/fase-a-prediccion-congelada.md) se tocan. La predicción no se ha
+        // falsado; el perk sobre el que se hizo dejó de existir. Lo que queda de esta prueba es su mitad
+        // negativa intacta: de los ReadyForScreening del hold-out, la raza no debería importar en ninguno.
+        var ids = HoldOutReadyPerkIds().ToList();
         _output.WriteLine($"razas del catálogo, en orden de carga: {string.Join(", ", Catalog.Races.Select(r => r.Id))}");
         _output.WriteLine("perk | pred_raza_importa | raza_afin_predicha | exposicion por raza (etiquetada) | min | max | dispersion | raza_de_max | veredicto");
 

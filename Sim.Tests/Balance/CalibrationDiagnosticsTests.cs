@@ -110,24 +110,27 @@ public sealed class CalibrationDiagnosticsTests
     }
 
     [Fact]
-    public void ShadowMarkerIsTheSameShapeAsBackToBackWithADifferentStyleTag()
+    public void BackToBackIsTheOnlySurvivingMemberOfItsStyleProximityFamily()
     {
-        // Comparador interno (mismo lote de 24, no medido aún porque el circuito paró en cannon):
-        // shadow_marker usa EXACTAMENTE la misma forma (trigger=TACKLE, nearAlly(actor,'Brute',2),
-        // ProbabilityBonus/injuriesPerMatch) que back_to_back, con 'Brute' en vez de 'Bulwark'. Orc es la
-        // raza "Brute" (75%), igual que Dwarf es la raza "Bulwark".
-        var perk = Catalog.Perks.All.Single(p => p.Id == "shadow_marker");
-        Assert.Equal("nearAlly(actor,'Brute',2)", perk.Condition);
+        // Este test emparejaba back_to_back con shadow_marker: misma forma EXACTA (trigger=TACKLE,
+        // nearAlly(actor,ESTILO,2), ProbabilityBonus/injuriesPerMatch), solo cambiaba 'Bulwark' por
+        // 'Brute'. shadow_marker se borró del catálogo (revisor, 18 sep 2026) y no hay sustituto: el
+        // único otro perk del catálogo con nearAlly() es safety_net, que mira 'Defender' — una etiqueta
+        // de POSICIÓN, siempre presente en la plantilla (dos por equipo, TeamGenerator.StarterPositions),
+        // no una etiqueta de ESTILO con probabilidad de raza (ver
+        // SafetyNetIsTheSameConditionShapeButWithAnAlwaysPresentPositionTag, que ya documenta esa
+        // diferencia). El par desapareció sin sustituto: lo que queda es medir back_to_back solo.
+        var perk = Catalog.Perks.All.Single(p => p.Id == "back_to_back");
+        Assert.Equal("nearAlly(actor,'Bulwark',2)", perk.Condition);
 
-        var human = MeasureWithRace(perk, "Brute", Race.Human, rosters: 20, seed: 1);
-        var orc = MeasureWithRace(perk, "Brute", Race.Orc, rosters: 20, seed: 1);
+        var human = MeasureWithRace(perk, "Bulwark", Race.Human, rosters: 20, seed: 1);
+        var dwarf = MeasureWithRace(perk, "Bulwark", Race.Dwarf, rosters: 20, seed: 1);
 
         double humanExposure = 100.0 * human.Count(s => s.Activations > 0) / human.Count;
-        double orcExposure = 100.0 * orc.Count(s => s.Activations > 0) / orc.Count;
+        double dwarfExposure = 100.0 * dwarf.Count(s => s.Activations > 0) / dwarf.Count;
 
-        _output.WriteLine($"shadow_marker (Human, Brute=10): {humanExposure:F1}% ({human.Count} partidos)");
-        _output.WriteLine($"shadow_marker (Orc, Brute=75): {orcExposure:F1}% ({orc.Count} partidos)");
-        _output.WriteLine("Mismo patrón de forma que back_to_back — confirma que no es un caso aislado, es la familia de perks 'sinergia de estilo'.");
+        _output.WriteLine($"back_to_back (Human, Bulwark=6): {humanExposure:F1}% ({human.Count} partidos)");
+        _output.WriteLine($"back_to_back (Dwarf, Bulwark=75): {dwarfExposure:F1}% ({dwarf.Count} partidos)");
     }
 
     [Fact]
@@ -302,7 +305,13 @@ public sealed class CalibrationDiagnosticsTests
         yield return new object[] { "fine_touch", "Fine", Race.Elf };
         yield return new object[] { "crowd_control", "Fine", Race.Elf }; // nearOpponent: el estilo relevante es del RIVAL, no del portador
         yield return new object[] { "blood_tithe", "Brute", Race.Orc }; // teammatesWithTag: roster propio, no el portador individual
-        yield return new object[] { "fine_orchestra", "Fine", Race.Elf }; // ÚNICO con tagsRequired=['Fine'] ya correcto — control positivo
+        // fine_orchestra era el ÚNICO perk del catálogo con tagsRequired=['Fine'] ya correcto — el control
+        // positivo de esta batería, que contrastaba con los demás (todos con tagsRequired vacío pese a
+        // exigir una etiqueta de estilo en su condición). Se borró del catálogo (revisor, 18 sep 2026) y
+        // first_touch_school, su sustituto natural (misma etiqueta 'Fine'), NO hereda esa propiedad: su
+        // tagsRequired también está vacío (data/perks/first_touch_school.json). El control positivo no
+        // tiene sustituto hoy — ningún perk del catálogo fija tagsRequired para su propia condición de
+        // estilo — así que esta fila se retira sin reemplazo en vez de fingir uno.
         yield return new object[] { "first_touch_school", "Fine", Race.Elf };
     }
 

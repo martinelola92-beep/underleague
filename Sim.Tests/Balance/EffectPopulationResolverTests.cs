@@ -21,42 +21,25 @@ public sealed class EffectPopulationResolverTests
     public EffectPopulationResolverTests(ITestOutputHelper output) => _output = output;
 
     [Fact]
-    public void PackMentalityResolvesToMoreThanTheOwnerOnAtLeastOneRealRoster()
+    public void NoCatalogPerkUsesAWithTagTarget()
     {
-        // pack_mentality: modifyAttribute(strength), target=withTag:Brute — y su propia condición
-        // ("teammatesWithTag(owner,'Brute') > 2") ya dice que, cuando se activa, el portador tiene AL
-        // MENOS 3 compañeros con la etiqueta: la población nunca debería colapsar a "solo el portador".
-        var perk = Catalog.Perks.All.Single(p => p.Id == "pack_mentality");
-        var effect = perk.Effects.Single();
-        Assert.Equal(EffectTarget.WithTag, effect.Target);
-        Assert.Equal("Brute", effect.TargetTag);
+        // pack_mentality (modifyAttribute(strength), target=withTag:Brute) era el ÚNICO perk real que
+        // ejercitaba el soporte estructural de Population para EffectTarget.WithTag, y se borró del
+        // catálogo (revisor, 18 sep 2026). La ruta del resolutor (EffectPopulationResolver.Resolve para
+        // WithTag) sigue existiendo y sin consumidores reales, igual que la de maestros (BB-R) o la de
+        // atribución multi-efecto (PerkAuditTests.NoCatalogPerkMixesEffectCategories, el modelo exacto de
+        // este test).
+        //
+        // Lo que se fija aquí es el invariante que queda: hoy NINGÚN perk del catálogo usa
+        // target=withTag:. Si aparece uno, este test lo dice y hay que volver a comprobar que resuelve a
+        // más de un jugador en al menos una plantilla real (lo que hacía la versión anterior de este
+        // test), no que pase en silencio con una población colapsada al portador.
+        var withTagPerks = Catalog.Perks.All
+            .Where(p => p.Effects.Any(e => e.Target == EffectTarget.WithTag))
+            .Select(p => p.Id)
+            .ToList();
 
-        bool foundPopulationLargerThanOwner = false;
-        var populationSizes = new List<int>();
-
-        for (int roster = 0; roster < 30; roster++)
-        {
-            var homeRng = RngStreams.Generation(1, roster);
-            var awayRng = RngStreams.Generation(1, 10_000 + roster);
-            var home = TeamGenerator.Generate(ref homeRng, Catalog, "home", Race.Human, 50, 1, 4);
-            var away = TeamGenerator.Generate(ref awayRng, Catalog, "away", Race.Human, 50, 100001, 4);
-
-            int ownerIndex = 0; // cualquier titular sirve de portador nominal para esta comprobación
-            var result = EffectPopulationResolver.Resolve(effect.Target, effect.TargetTag, home, away, ownerIndex);
-
-            Assert.Equal(PopulationResolution.Resolved, result.Status);
-            populationSizes.Add(result.AffectedCount);
-
-            if (result.AffectedCount > 1)
-            {
-                foundPopulationLargerThanOwner = true;
-            }
-        }
-
-        _output.WriteLine($"Tamaños de población resueltos en 30 plantillas: {string.Join(",", populationSizes)}");
-        Assert.True(
-            foundPopulationLargerThanOwner,
-            "en 30 plantillas generadas, pack_mentality nunca resolvió a más de un jugador — la resolución de WithTag no está leyendo las etiquetas reales");
+        Assert.Empty(withTagPerks);
     }
 
     [Fact]

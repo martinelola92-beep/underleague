@@ -64,11 +64,15 @@ public sealed class PerkAuditTests
         var summary = PerkAudit.Summarize(Entries);
 
         // Sube cuando el catálogo crece a propósito: al cuadrar razas y rasgos (19 sep 2026) pasó de 94 a
-        // 105 (+12 nuevos, -1 unlikely_bulwark). Si cambia sin que nadie haya tocado /data/perks, es una
-        // regresión de la auditoría, y entonces se investiga antes de tocar el número.
-        Assert.Equal(105, summary.Total);
-        Assert.Equal(28, summary.ByReadiness[AuditReadiness.ReadyForScreening]);
-        Assert.Equal(24, summary.ByReadiness[AuditReadiness.MultiTarget]);
+        // 105 (+12 nuevos, -1 unlikely_bulwark). Baja cuando se borra contenido aprobado por el revisor:
+        // el 18 sep 2026 se borraron pack_mentality (MultiTarget, target=withTag:Brute) y fine_orchestra
+        // (MultiTarget, target=team+opposingTeam), y shadow_marker (ReadyForScreening, target=actor) — de
+        // 105 a 102, -1 en ReadyForScreening y -2 en MultiTarget, DesignReview/NotReady/RunLevel sin
+        // cambio. Si cambia sin que nadie haya tocado /data/perks, es una regresión de la auditoría, y
+        // entonces se investiga antes de tocar el número.
+        Assert.Equal(102, summary.Total);
+        Assert.Equal(27, summary.ByReadiness[AuditReadiness.ReadyForScreening]);
+        Assert.Equal(22, summary.ByReadiness[AuditReadiness.MultiTarget]);
         Assert.Equal(20, summary.ByReadiness[AuditReadiness.DesignReview]);
         Assert.Equal(27, summary.ByReadiness[AuditReadiness.NotReady]);
         Assert.Equal(6, summary.ByReadiness[AuditReadiness.RunLevel]);
@@ -212,7 +216,7 @@ public sealed class PerkAuditTests
 
     [Theory]
     [InlineData("bodyguard")]      // target=linked (población de vinculados)
-    [InlineData("pack_mentality")] // target=withTag:Brute
+    [InlineData("blood_tithe")]    // target=team/opposingTeam — sustituto de pack_mentality (target=withTag:Brute, borrado del catálogo)
     [InlineData("pivot_duo")]      // target=linked
     [InlineData("dirty_play")]     // target=opponent
     public void PerksWithNonOwnerTargetsAreMultiTargetNotSilentlyReady(string perkId)
@@ -224,11 +228,15 @@ public sealed class PerkAuditTests
     [Fact]
     public void StrengthAttributePerksAreDesignReviewUnlessAnotherIssueTakesPriority()
     {
-        // Strength es AmbiguousPrimaryMetric (§16) en los cuatro perks reales, pero dos de ellos tienen
-        // ADEMÁS otro bloqueo que se reporta primero (pack_mentality: target multi-jugador;
-        // scar_veteran: AccumulatesAcrossMatches+UsesCounter, necesita el harness de campaña) — un perk
-        // solo aparece en UN bucket final (§16: "no solaparse"), así que aquí solo se exige que brute_boots
-        // y comeback_spirit —sin ningún otro bloqueo— caigan limpiamente en DESIGN_REVIEW/ambiguo.
+        // Strength era AmbiguousPrimaryMetric (§16) en CUATRO perks reales: brute_boots, comeback_spirit,
+        // scar_veteran y pack_mentality. Dos tenían ADEMÁS otro bloqueo que se reportaba primero
+        // (pack_mentality: target multi-jugador; scar_veteran: AccumulatesAcrossMatches+UsesCounter,
+        // necesita el harness de campaña) — un perk solo aparece en UN bucket final (§16: "no solaparse").
+        // pack_mentality se borró del catálogo (revisor, 18 sep 2026) sin sustituto de Strength+MultiTarget
+        // (ninguno de los perks nuevos usa modifyAttribute(strength) con destinatario Population): de los
+        // cuatro Strength originales quedan tres, y ninguno de los que queda tiene ya ese segundo bloqueo
+        // de tipo MultiTarget. Aquí solo se exige que brute_boots y comeback_spirit —sin ningún otro
+        // bloqueo— caigan limpiamente en DESIGN_REVIEW/ambiguo; scar_veteran sigue teniendo el suyo propio.
         foreach (var perkId in new[] { "brute_boots", "comeback_spirit" })
         {
             var entry = Entries.Single(e => e.PerkId == perkId);
@@ -236,7 +244,6 @@ public sealed class PerkAuditTests
             Assert.Equal(DesignReviewReason.AmbiguousPrimaryMetric, entry.DesignReviewReason);
         }
 
-        Assert.Equal(AuditReadiness.MultiTarget, Entries.Single(e => e.PerkId == "pack_mentality").FinalReadiness);
         Assert.Equal(AuditReadiness.NotReady, Entries.Single(e => e.PerkId == "scar_veteran").FinalReadiness);
         Assert.Equal(NotReadyReason.NeedsCampaignHarness, Entries.Single(e => e.PerkId == "scar_veteran").NotReadyReason);
     }

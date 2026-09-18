@@ -191,29 +191,27 @@ public sealed class LineupPerkPreviewTests
     // ------------------------------------------------------------------ BB-J: el conteo del tooltip
 
     /// <summary>
-    /// BB-J: no basta con decir "no se cumple". `pack_mentality` pide <c>teammatesWithTag(owner,'Brute') &gt; 2</c>,
-    /// o sea TRES brutos además del portador, y el jugador tiene que poder ver cuántos lleva antes del
-    /// partido (RF-012d). Con dos brutos en el equipo el portador cuenta uno como compañero.
+    /// BB-J: no basta con decir "no se cumple". `pack_mentality` (borrado del catálogo, revisor) pedía
+    /// <c>teammatesWithTag(owner,'Brute') &gt; 2</c>; su sustituto <c>blood_tithe</c> cuenta la misma
+    /// etiqueta con <c>&gt; 1</c> (DOS brutos además del portador), y el jugador tiene que poder ver
+    /// cuántos lleva antes del partido (RF-012d) tanto si el requisito ya se cumple como si le falta.
     /// </summary>
-    /// <para><c>Team(n)</c> solo puede marcar DOS brutos, y nunca al portador (id 4). Que ni siquiera así
-    /// se llegue a los tres que el perk pide es exactamente el síntoma de BB-J: el tooltip es lo que
-    /// convierte ese "nunca se enciende" en información previa.</para>
     [Theory]
-    [InlineData(0, 0)]
-    [InlineData(1, 1)]
-    [InlineData(2, 2)]
-    public void PackMentalityReportsHowManyBrutesYouHaveAndHowManyYouNeed(int brutes, int expectedCurrent)
+    [InlineData(0, 0, false)]
+    [InlineData(1, 1, false)]
+    [InlineData(2, 2, true)]
+    public void BloodTitheReportsHowManyBrutesYouHaveAndHowManyYouNeed(int brutes, int expectedCurrent, bool expectedMet)
     {
-        var preview = Preview(Team(brutes), (4, "pack_mentality"));
-        var requirement = Requirement(preview, 4, "pack_mentality");
+        var preview = Preview(Team(brutes), (4, "blood_tithe"));
+        var requirement = Requirement(preview, 4, "blood_tithe");
 
         Assert.NotNull(requirement);
         Assert.Equal("teammatesWithTag", requirement!.Function);
         Assert.Equal("Brute", requirement.Tag);
         Assert.Equal(expectedCurrent, requirement.Current);
-        Assert.Equal(3, requirement.Required); // "> 2" son tres
-        Assert.False(requirement.Met, "con este banco de pruebas nunca se llega a tres: es el síntoma de BB-J");
-        Assert.Equal(requirement.Met ? LineupPerkStatus.Active : LineupPerkStatus.Inactive, Status(preview, 4, "pack_mentality"));
+        Assert.Equal(2, requirement.Required); // "> 1" son dos
+        Assert.Equal(expectedMet, requirement.Met);
+        Assert.Equal(requirement.Met ? LineupPerkStatus.Active : LineupPerkStatus.Inactive, Status(preview, 4, "blood_tithe"));
     }
 
     /// <summary>

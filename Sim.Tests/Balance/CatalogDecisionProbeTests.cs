@@ -54,10 +54,13 @@ public sealed class CatalogDecisionProbeTests
     [Fact]
     public void DoesAnyPopulationExposeThePerksThatFellShort()
     {
+        // shadow_marker estaba en este lote de baja exposición y se borró del catálogo (revisor, 18 sep
+        // 2026); se retira de la lista sin sustituto — la pregunta que responde este test es sobre ESTE
+        // perk concreto, no sobre "un perk con nearAlly('Brute',2)" en abstracto.
         string[] lowExposure =
         {
             "steamroller", "double_shot", "iron_price", "bulwark_stance", "back_to_back",
-            "grudge", "second_wound", "iron_gate", "shadow_marker", "game_management",
+            "grudge", "second_wound", "iron_gate", "game_management",
         };
 
         foreach (string id in lowExposure)

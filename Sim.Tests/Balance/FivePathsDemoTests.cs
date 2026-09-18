@@ -19,7 +19,10 @@ public sealed class FivePathsDemoTests
     [Theory]
     [InlineData("own_third_anchor", AuditReadiness.ReadyForScreening, "modifyProbability(tackle), condición de zona propia — mecanismo y banda ya confirmados desde Tanda 0")]
     [InlineData("pit_veteran", AuditReadiness.NotReady, "addCounter+modifyProbability(tackle) escalado por contador, AccumulatesAcrossMatches — necesita el harness de campaña, no está bloqueado por falta de métrica")]
-    [InlineData("pack_mentality", AuditReadiness.MultiTarget, "modifyAttribute(strength), target=withTag:Brute — afecta a varios jugadores, el harness de portador único no lo soporta")]
+    // pack_mentality (modifyAttribute(strength), target=withTag:Brute) se borró del catálogo (revisor, 18
+    // sep 2026); blood_tithe recorre el mismo camino con la misma forma de destinatario (Population, por
+    // target=team/opposingTeam en vez de withTag).
+    [InlineData("blood_tithe", AuditReadiness.MultiTarget, "modifyProbability(injure)+modifyProbability(severeInjury), target=team/opposingTeam — afecta a varios jugadores, el harness de portador único no lo soporta")]
     [InlineData("box_predator", AuditReadiness.DesignReview, "modifyProbability(shotOnTarget) — la métrica natural (shotsOnTargetShare) es INFO en MatchMetrics, sin banda: decisión de diseño, no de tooling")]
     // La quinta ruta (NotReady por atribución multi-efecto) se queda SIN ejemplo real: `unlikely_bulwark`
     // era el único perk del catálogo que mezclaba categorías y se borró el 19 sep 2026 al cuadrar razas y

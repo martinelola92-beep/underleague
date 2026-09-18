@@ -27,7 +27,11 @@ public sealed class RealScreeningLot1Tests
             .ToHashSet(StringComparer.Ordinal);
         var perks = Catalog.Perks.All.Where(p => readyIds.Contains(p.Id)).ToList();
 
-        Assert.Equal(28, perks.Count); // 24 en §17.7; 28 al cuadrar razas y rasgos (19 sep 2026). Si cambia sin tocar /data, cambió la auditoría, no este test.
+        // 24 en §17.7; 28 al cuadrar razas y rasgos (19 sep 2026); 27 tras borrar pack_mentality,
+        // shadow_marker y fine_orchestra (revisor, 18 sep 2026) — shadow_marker era ReadyForScreening, los
+        // otros dos eran MultiTarget, así que solo se pierde uno de este bucket. Si cambia sin tocar
+        // /data, cambió la auditoría, no este test.
+        Assert.Equal(27, perks.Count);
 
         var totalStopwatch = System.Diagnostics.Stopwatch.StartNew();
         var results = ScreeningRunner.RunBatch(Catalog, perks, seed: 1, checkpointDirectory: null);

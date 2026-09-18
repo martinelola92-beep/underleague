@@ -99,10 +99,13 @@ public sealed class PerkBalanceClassifierTests
     [Fact]
     public void MultiTargetEffectIsFlagged()
     {
-        // pack_mentality: modifyAttribute(strength), target=withTag:Brute — afecta a varios jugadores.
-        var result = PerkBalanceClassifier.Classify(Find("pack_mentality"));
+        // pack_mentality (modifyAttribute(strength), target=withTag:Brute) se borró del catálogo (revisor,
+        // 18 sep 2026); blood_tithe es el sustituto por etiqueta 'Brute', aunque con efectos
+        // modifyProbability en vez de modifyAttribute — la categoría cambia a ProbabilityBonus, pero lo
+        // que esta prueba comprueba (destinatario Population -> bandera multi-objetivo) es idéntico.
+        var result = PerkBalanceClassifier.Classify(Find("blood_tithe"));
 
-        Assert.Equal(PerkBalanceCategory.Attribute, result.Category);
+        Assert.Equal(PerkBalanceCategory.ProbabilityBonus, result.Category);
         Assert.True(result.NeedsMultiTargetHarness);
     }
 

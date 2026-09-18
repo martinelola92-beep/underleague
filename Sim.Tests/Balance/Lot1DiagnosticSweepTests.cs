@@ -36,7 +36,10 @@ public sealed class Lot1DiagnosticSweepTests
             .OrderBy(p => p.Id, StringComparer.Ordinal)
             .ToList();
 
-        Assert.Equal(28, perks.Count); // 24 en §34; 28 al cuadrar razas y rasgos (19 sep 2026)
+        // 24 en §34; 28 al cuadrar razas y rasgos (19 sep 2026); 27 tras borrar pack_mentality,
+        // shadow_marker y fine_orchestra (revisor, 18 sep 2026) — solo shadow_marker era
+        // ReadyForScreening, los otros dos eran MultiTarget.
+        Assert.Equal(27, perks.Count);
 
         var results = new List<(PerkDefinition Perk, ScreeningResult Result, PerkClassification Classification)>();
         foreach (var perk in perks)
