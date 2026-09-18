@@ -74,87 +74,110 @@ public sealed class EquipmentImpactTests
 
     public EquipmentImpactTests(ITestOutputHelper output) => _output = output;
 
+    /// <summary>
+    /// Bases de semilla sobre las que se promedia (BB-T, 19 sep 2026). Antes había UNA sola, la 1000, y
+    /// eso era el problema: con un error típico de ~0,9 por base contra un umbral de 1,0, esta puerta
+    /// cruzaba el listón por puro muestreo cada ~6 % de commits —el falso positivo que la ADR 0116
+    /// presupuestó y aceptó—, y ya había costado tres investigaciones (BA-M, BA-N, BB-T).
+    ///
+    /// <para>Medido en BB-T con el motor congelado byte a byte: la 1000 sale la MÁS BAJA de las ocho en
+    /// dos catálogos distintos (1,40 con 94 perks, 0,46 con 102), mientras las otras siete van de 2,0 a
+    /// 4,05. Promediando las ocho, el error típico de la media baja de ~0,9 a ~0,3.</para>
+    ///
+    /// <para><b>El umbral NO se toca aquí</b>: sigue en 1,0. Esto es solo instrumentación — primero se
+    /// mide con la muestra buena y se guarda el resultado; decidir si 1,0 se queda corto es un cambio de
+    /// rango de balance y pide su ADR (RT-057).</para>
+    /// </summary>
+    private static readonly ulong[] SeedBases = { 1000, 2000, 3000, 4000, 5000, 6000, 7000, 8000 };
+
     [Fact]
     public void EquippingAGoodBuildIsWorthSeveralPointsOfWinRate()
     {
-        int bare = WinsOf(equipped: false);
-        int equipped = WinsOf(equipped: true);
-        int matches = Rosters * MatchesPerRoster * 2;
+        int matchesPerArm = Rosters * MatchesPerRoster * 2;
 
-        double bareRate = 100.0 * bare / matches;
-        double equippedRate = 100.0 * equipped / matches;
-        _output.WriteLine($"partidos por brazo: {matches}");
-        _output.WriteLine($"sin equipar:  {bare}/{matches} = {bareRate:F1}%");
-        _output.WriteLine($"equipada:     {equipped}/{matches} = {equippedRate:F1}%");
-        _output.WriteLine($"lo que aporta equipar: {equippedRate - bareRate:+0.0;-0.0} puntos");
+        // El paralelismo vive en el arnés, nunca en /Sim: Parallel.For por índice, cada semilla función
+        // pura del índice, un Catalog por hilo (las condiciones compiladas no son reentrantes) y las
+        // reducciones después, en orden. Salida idéntica a la del bucle secuencial.
+        var bare = new int[SeedBases.Length * Rosters];
+        var equipped = new int[SeedBases.Length * Rosters];
+        Parallel.For(0, SeedBases.Length * Rosters, i =>
+        {
+            var catalog = ThreadCatalogs.Current;
+            ulong rosterSeed = SeedBases[i / Rosters] + (ulong)(i % Rosters);
+            bare[i] = WinsOfRoster(catalog, rosterSeed, equipped: false);
+            equipped[i] = WinsOfRoster(catalog, rosterSeed, equipped: true);
+        });
+
+        var deltas = new List<double>(SeedBases.Length);
+        var bareRates = new List<double>(SeedBases.Length);
+        _output.WriteLine($"partidos por brazo y base: {matchesPerArm} · bases: {SeedBases.Length} · total {2 * matchesPerArm * SeedBases.Length}");
+        _output.WriteLine("base | sin equipar | equipada | aporta");
+        for (int b = 0; b < SeedBases.Length; b++)
+        {
+            int from = b * Rosters, to = from + Rosters;
+            int bareWins = 0, equippedWins = 0;
+            for (int i = from; i < to; i++)
+            {
+                bareWins += bare[i];
+                equippedWins += equipped[i];
+            }
+
+            double bareRate = 100.0 * bareWins / matchesPerArm;
+            double equippedRate = 100.0 * equippedWins / matchesPerArm;
+            bareRates.Add(bareRate);
+            deltas.Add(equippedRate - bareRate);
+            _output.WriteLine($"{SeedBases[b],4} | {bareRate,10:F2}% | {equippedRate,7:F2}% | {equippedRate - bareRate,+6:F2}");
+        }
+
+        double mean = deltas.Average();
+        double sd = Math.Sqrt(deltas.Sum(d => (d - mean) * (d - mean)) / (deltas.Count - 1));
+        double standardError = sd / Math.Sqrt(deltas.Count);
+        _output.WriteLine("");
+        _output.WriteLine($"media {mean:F2} · sd entre bases {sd:F2} · error típico de la media {standardError:F2}");
+        _output.WriteLine($"IC95 % aproximado: [{mean - (2 * standardError):F2}, {mean + (2 * standardError):F2}]");
+        _output.WriteLine($"mínimo {deltas.Min():F2} (base {SeedBases[deltas.IndexOf(deltas.Min())]}) · máximo {deltas.Max():F2}");
 
         // El espejo tiene que estar donde debe: si el brazo sin equipar no ronda el 50%, el punto de
         // comparación está sesgado y la diferencia no significaría nada.
-        Assert.InRange(bareRate, 42.0, 58.0);
+        Assert.InRange(bareRates.Average(), 42.0, 58.0);
 
         // ADR 0033: "muy buena" = "buena, además equipada". Si equipar no da un escalón claro, ese nivel
         // de la escala no existe y la curva de puertas no se puede cumplir.
         //
-        // El umbral sale de la medida, no de la aritmética: la tabla de valor marginal de la ADR 0038
-        // predice 5,8 puntos para este juego de siete objetos. Medido con el instrumento de 24 plantillas
-        // de `76ce1c4` (sexta ronda, independent-reviewer, BA-N): 3,3. Con el instrumento vigente de 96
-        // plantillas, la comparación equivalente es contra el valor agregado actual de esta puerta (ver
-        // "Lo que se mide" en la ADR 0116 — vuelve a ejecutar el test para el número vigente, no lo cites
-        // de memoria). La tabla se midió con +20 repartidos entre los DIEZ jugadores y aquí el bono va
-        // entero a UNO, así que sobrestima; queda anotado, porque el precio de los objetos se calcula con
-        // ella.
-        //
-        // Umbral 1,0 desde la ADR 0116 (BA-N), CORREGIDA por el independent-reviewer: el motivo original
-        // ("con 94 perks lo medido cayó a 1,7, el catálogo diluye la aportación marginal") quedó REJECTED
-        // -no solo sin aislar-. Congelando el catálogo de perks (mismo /data en cinco commits) esta misma
-        // puerta dio 1,7 / 2,1 / 1,7 / 3,0 / 3,4: el número se mueve solo porque cada cambio en /Sim
-        // (ninguno tocaba objetos ni perks) resortea los 6.144 partidos del brazo. Es el mismo mecanismo
-        // que ya documenta la ADR 0115 ("desplaza el consumo de RNG lo suficiente para mover números de
-        // builds concretos"), no un efecto del tamaño del catálogo.
-        //
-        // El motivo real de 1,0, y el que sí sostiene el umbral: el error típico de esta medición es
-        // ~0,9 puntos (arriba, 6.144 partidos/brazo) y el valor verdadero, estimado por esos cinco
-        // puntos, ronda 2,4 -esa media es de solo cinco medidas, con su propio error típico de ~0,35, así
-        // que los porcentajes de abajo son órdenes de magnitud, no una calibración a la décima-. Con esa
-        // varianza, un umbral de 2,0 tenía del orden de 34 % de probabilidad de salir rojo por puro
-        // muestreo en cualquier commit que no tocara ni objetos ni perks -exactamente lo que produjo BA-M
-        // y BA-N-; 1,0 baja ese falso positivo a del orden de 6 %. Detección real si el efecto de
-        // verdad se degradara: del orden de 87 % de aviso si equipar dejara de aportar nada, del orden de
-        // 41 % si aportara la mitad de lo normal -esta puerta protege "equipar hace algo", no el escalón
-        // fino de la ADR 0033-.
-        // Ver ADR 0116 para la derivación completa y `docs/pendientes/BA-N.md` para el historial.
+        // UMBRAL 1,0, SIN TOCAR, y ahora aplicado a la MEDIA de ocho bases en vez de a una sola. Su
+        // derivación completa está en la ADR 0116 y el historial en docs/pendientes/BA-N.md; lo que
+        // cambió el 19 sep 2026 (BB-T) es la muestra, no el listón. Con el error típico de la media en
+        // ~0,3 en vez de ~0,9, este 1,0 pasa de tener ~6 % de falso positivo a ser prácticamente
+        // inalcanzable por ruido — que es justo el motivo de medirlo antes de decidir si se sube.
         Assert.True(
-            equippedRate - bareRate >= 1.0,
-            $"equipar a los siete titulares solo aporta {equippedRate - bareRate:F1} puntos de tasa de victoria: "
-                + "con eso el escalón 'muy buena' de la ADR 0033 no tiene contenido y los objetos están mal calibrados");
+            mean >= 1.0,
+            $"equipar a los siete titulares solo aporta {mean:F1} puntos de tasa de victoria de media sobre "
+                + $"{SeedBases.Length} bases de semilla: con eso el escalón 'muy buena' de la ADR 0033 no tiene "
+                + "contenido y los objetos están mal calibrados");
     }
 
-    private static int WinsOf(bool equipped)
+    private static int WinsOfRoster(Catalog catalog, ulong rosterSeed, bool equipped)
     {
         int wins = 0;
-        for (int roster = 0; roster < Rosters; roster++)
+        var challenger = Build(catalog, rosterSeed, "challenger", firstId: 0, equipped);
+        var reference = Build(catalog, rosterSeed + 500UL, "reference", firstId: 100, equipped: false);
+
+        for (int m = 0; m < MatchesPerRoster; m++)
         {
-            ulong rosterSeed = 1000UL + (ulong)roster;
-            var challenger = Build(rosterSeed, "challenger", firstId: 0, equipped);
-            var reference = Build(rosterSeed + 500UL, "reference", firstId: 100, equipped: false);
+            ulong seed = (rosterSeed * 1000UL) + (ulong)m;
+            var referee = new RefereeSetup("Neutral", RefereeTrait.Neutral, 0);
+            var config = new SimConfig(CollectLog: false);
 
-            for (int m = 0; m < MatchesPerRoster; m++)
+            // Ida: el retador juega en casa. Vuelta: el mismo emparejamiento con los campos cambiados,
+            // que es lo que hace --home-away.
+            if (Underleague.Sim.Engine.Simulator.Run(new MatchSetup(challenger, reference, referee), seed, catalog, config).Report.Winner == 0)
             {
-                ulong seed = (rosterSeed * 1000UL) + (ulong)m;
-                var referee = new RefereeSetup("Neutral", RefereeTrait.Neutral, 0);
-                var config = new SimConfig(CollectLog: false);
+                wins++;
+            }
 
-                // Ida: el retador juega en casa. Vuelta: el mismo emparejamiento con los campos
-                // cambiados, que es lo que hace --home-away.
-                if (Underleague.Sim.Engine.Simulator.Run(new MatchSetup(challenger, reference, referee), seed, Catalog, config).Report.Winner == 0)
-                {
-                    wins++;
-                }
-
-                if (Underleague.Sim.Engine.Simulator.Run(new MatchSetup(reference, challenger, referee), seed, Catalog, config).Report.Winner == 1)
-                {
-                    wins++;
-                }
+            if (Underleague.Sim.Engine.Simulator.Run(new MatchSetup(reference, challenger, referee), seed, catalog, config).Report.Winner == 1)
+            {
+                wins++;
             }
         }
 
@@ -162,11 +185,11 @@ public sealed class EquipmentImpactTests
     }
 
     /// <summary>Plantilla humana de calidad 50 con sus perks iniciales y, si toca, un objeto por titular.</summary>
-    private static TeamSetup Build(ulong seed, string id, int firstId, bool equipped)
+    private static TeamSetup Build(Catalog catalog, ulong seed, string id, int firstId, bool equipped)
     {
         var rng = RngStreams.Generation(seed, firstId);
-        var team = TeamGenerator.Generate(ref rng, Catalog, id, Race.Human, 50, firstId);
-        var players = new List<PlayerDefinition>(PerkAssignment.AssignInitial(ref rng, team.Players, Catalog));
+        var team = TeamGenerator.Generate(ref rng, catalog, id, Race.Human, 50, firstId);
+        var players = new List<PlayerDefinition>(PerkAssignment.AssignInitial(ref rng, team.Players, catalog));
 
         if (equipped)
         {
