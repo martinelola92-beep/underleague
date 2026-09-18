@@ -144,13 +144,18 @@ public sealed class EquipmentImpactTests
         // ADR 0033: "muy buena" = "buena, además equipada". Si equipar no da un escalón claro, ese nivel
         // de la escala no existe y la curva de puertas no se puede cumplir.
         //
-        // UMBRAL 1,0, SIN TOCAR, y ahora aplicado a la MEDIA de ocho bases en vez de a una sola. Su
-        // derivación completa está en la ADR 0116 y el historial en docs/pendientes/BA-N.md; lo que
-        // cambió el 19 sep 2026 (BB-T) es la muestra, no el listón. Con el error típico de la media en
-        // ~0,3 en vez de ~0,9, este 1,0 pasa de tener ~6 % de falso positivo a ser prácticamente
-        // inalcanzable por ruido — que es justo el motivo de medirlo antes de decidir si se sube.
+        // UMBRAL 1,5 (ADR 0118), aplicado a la MEDIA de ocho bases. Sustituye al 1,0 de la ADR 0116, que
+        // se fijó cuando la puerta medía con UNA sola semilla y su error típico era ~0,9.
+        //
+        // Con la muestra nueva el error típico de la media es 0,40 y el valor medido 2,54. Con eso, 1,0
+        // ya no daba falsos positivos (0,01 %) pero solo avisaba el 25 % de las veces si el efecto se
+        // halvara; 1,5 sube esa detección al 72 % manteniendo el falso positivo en 0,47 %. No se eligió
+        // 2,0 —que detectaría el 97 %— porque su falso positivo es 8,85 %, del mismo orden que el ~6 %
+        // que ya costó tres investigaciones (BA-M, BA-N, BB-T).
+        //
+        // Derivación completa y tabla en docs/decisiones/0118-*.md; historial en BA-N.md y BB-T.md.
         Assert.True(
-            mean >= 1.0,
+            mean >= 1.5,
             $"equipar a los siete titulares solo aporta {mean:F1} puntos de tasa de victoria de media sobre "
                 + $"{SeedBases.Length} bases de semilla: con eso el escalón 'muy buena' de la ADR 0033 no tiene "
                 + "contenido y los objetos están mal calibrados");
