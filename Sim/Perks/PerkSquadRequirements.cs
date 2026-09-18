@@ -16,9 +16,16 @@ namespace Underleague.Sim.Perks;
 /// evalúa la condición ni se devuelve estado: solo se recogen los conteos que aparecen en ella, y las
 /// partes que dependen de la colocación o del partido se ignoran en silencio.</para>
 ///
-/// <para>El conteo es sobre la plantilla ENTERA, sin excluir a nadie: en el Mercado no se sabe quién será
-/// el portador. En partido, <c>teammatesWithTag</c> excluye al portador y cuenta solo titulares, así que
-/// este número es una cota superior — informativa, nunca una promesa de activación.</para>
+/// <para><b>Con portador o sin él.</b> Si se pasa <c>ownerId</c> —la ficha de un jugador concreto— la
+/// lectura es la misma que hace el motor: <c>hasTag</c> mira a ESE jugador (0 o 1 de 1) y
+/// <c>teammatesWithTag</c> cuenta a los demás, excluyéndolo. Sin portador —el Mercado, donde el perk
+/// todavía no es de nadie— <c>teammatesWithTag</c> cuenta la plantilla entera, que es una cota superior, y
+/// <c>hasTag</c> <b>no se reporta</b>: "necesita a alguien con la etiqueta X" no es un conteo, y decir
+/// "8 de 1" no significaría nada. De eso ya informa el Mercado con sus portadores elegibles.</para>
+
+/// <para>En partido <c>teammatesWithTag</c> cuenta solo TITULARES; aquí se cuenta la plantilla. Con una
+/// plantilla mayor que siete, el número puede ser mayor que el que verá el motor: informativo, nunca una
+/// promesa de activación.</para>
 /// </summary>
 public static class PerkSquadRequirements
 {
@@ -26,7 +33,12 @@ public static class PerkSquadRequirements
     /// Conteos de etiqueta que pide la condición de <paramref name="perk"/>, medidos sobre
     /// <paramref name="squad"/>. Lista vacía si la condición no cuenta ninguna etiqueta.
     /// </summary>
-    public static IReadOnlyList<LineupPerkRequirement> For(PerkDefinition perk, IReadOnlyList<PlayerDefinition> squad)
+    /// <param name="ownerId">
+    /// Jugador que lleva (o llevaría) el perk, si se sabe. Con él la lectura coincide con la del motor;
+    /// sin él se cuenta la plantilla entera y los <c>hasTag</c> se omiten.
+    /// </param>
+    public static IReadOnlyList<LineupPerkRequirement> For(
+        PerkDefinition perk, IReadOnlyList<PlayerDefinition> squad, int? ownerId = null)
     {
         ArgumentNullException.ThrowIfNull(perk);
         ArgumentNullException.ThrowIfNull(squad);
@@ -34,7 +46,7 @@ public static class PerkSquadRequirements
         var found = new List<LineupPerkRequirement>();
         if (perk.CompiledCondition is { IsAlwaysTrue: false, Ast: { } ast })
         {
-            Collect(ast, squad, found, negated: false);
+            Collect(ast, squad, ownerId, found, negated: false);
         }
 
         return found;
@@ -45,16 +57,18 @@ public static class PerkSquadRequirements
     /// todo-o-nada: un nodo que no se entiende se salta sin descartar el resto.
     /// </summary>
     private static void Collect(
-        LogicalExpression node, IReadOnlyList<PlayerDefinition> squad, List<LineupPerkRequirement> found, bool negated)
+        LogicalExpression node, IReadOnlyList<PlayerDefinition> squad, int? ownerId,
+        List<LineupPerkRequirement> found, bool negated)
     {
         switch (node)
         {
-            // `hasTag(x,'Fine')` suelto: hace falta alguien que la lleve.
+            // `hasTag(owner,'Fine')`: solo tiene lectura si se sabe QUIÉN lo lleva. Sin portador, un
+            // "tienes 8 de 1" no diría nada, así que se omite.
             case NCalc.Function function when function.Identifier.Name == "hasTag":
             {
-                if (!negated && TagArgument(function) is { } tag)
+                if (!negated && ownerId is { } owner && TagArgument(function) is { } tag)
                 {
-                    found.Add(new LineupPerkRequirement("hasTag", tag, Count(squad, tag), 1));
+                    found.Add(new LineupPerkRequirement("hasTag", tag, HasTag(squad, owner, tag) ? 1 : 0, 1));
                 }
 
                 break;
@@ -63,12 +77,12 @@ public static class PerkSquadRequirements
             case UnaryExpression unary when unary.Type == UnaryExpressionType.Not:
                 // Dentro de una negación, "necesitas N" significaría lo contrario: se recorre por si hay
                 // algo más abajo, pero no se recoge nada de dentro.
-                Collect(unary.Expression, squad, found, negated: true);
+                Collect(unary.Expression, squad, ownerId, found, negated: true);
                 break;
 
             case BinaryExpression binary when binary.Type is BinaryExpressionType.And or BinaryExpressionType.Or:
-                Collect(binary.LeftExpression, squad, found, negated);
-                Collect(binary.RightExpression, squad, found, negated);
+                Collect(binary.LeftExpression, squad, ownerId, found, negated);
+                Collect(binary.RightExpression, squad, ownerId, found, negated);
                 break;
 
             // `teammatesWithTag(owner,'Fine') > 1` y `adjacentCount(owner,'Brute') >= 2`.
@@ -84,7 +98,7 @@ public static class PerkSquadRequirements
                     break;
                 }
 
-                found.Add(new LineupPerkRequirement(counter.Identifier.Name, tag, Count(squad, tag), required));
+                found.Add(new LineupPerkRequirement(counter.Identifier.Name, tag, Count(squad, ownerId, tag), required));
                 break;
             }
 
@@ -101,18 +115,32 @@ public static class PerkSquadRequirements
         _ => null,
     };
 
-    private static int Count(IReadOnlyList<PlayerDefinition> squad, string tag)
+    /// <summary>Cuántos llevan la etiqueta, excluyendo al portador si se sabe quién es (como el motor).</summary>
+    private static int Count(IReadOnlyList<PlayerDefinition> squad, int? ownerId, string tag)
     {
         int total = 0;
         for (int i = 0; i < squad.Count; i++)
         {
-            if (squad[i].HasTag(tag))
+            if (squad[i].Id != ownerId && squad[i].HasTag(tag))
             {
                 total++;
             }
         }
 
         return total;
+    }
+
+    private static bool HasTag(IReadOnlyList<PlayerDefinition> squad, int ownerId, string tag)
+    {
+        for (int i = 0; i < squad.Count; i++)
+        {
+            if (squad[i].Id == ownerId)
+            {
+                return squad[i].HasTag(tag);
+            }
+        }
+
+        return false;
     }
 
     /// <summary>Segundo argumento de la función, si es un literal de texto (la etiqueta).</summary>

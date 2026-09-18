@@ -65,17 +65,40 @@ public sealed class PerkSquadRequirementsTests
         Assert.True(requirement.Met);
     }
 
-    /// <summary>Un `hasTag` suelto: hace falta alguien que la lleve, y se dice cuántos hay.</summary>
-    [Fact]
-    public void HasTagReportsHowManyCouldCarryIt()
+    /// <summary>
+    /// `hasTag` habla del PORTADOR, no de la plantilla. Con portador conocido dice si ÉL la lleva (0 o 1
+    /// de 1); sin portador —el Mercado— se omite, porque "tienes 2 de 1" no significaría nada.
+    /// </summary>
+    [Theory]
+    [InlineData(1, 1)]  // el jugador 1 es Bulwark
+    [InlineData(2, 0)]  // el jugador 2 es Neutral
+    public void HasTagDescribesTheCarrierNotTheSquad(int ownerId, int expectedCurrent)
     {
-        var requirement = PerkSquadRequirements.For(Perk("bulwark_stance"), Squad("Bulwark", "Neutral", "Bulwark")).Single();
+        var requirement = PerkSquadRequirements
+            .For(Perk("bulwark_stance"), Squad("Bulwark", "Neutral", "Bulwark"), ownerId)
+            .Single();
 
         Assert.Equal("hasTag", requirement.Function);
         Assert.Equal("Bulwark", requirement.Tag);
-        Assert.Equal(2, requirement.Current);
+        Assert.Equal(expectedCurrent, requirement.Current);
         Assert.Equal(1, requirement.Required);
-        Assert.True(requirement.Met);
+    }
+
+    [Fact]
+    public void WithoutAnOwnerHasTagIsNotReportedAtAll()
+    {
+        Assert.Empty(PerkSquadRequirements.For(Perk("bulwark_stance"), Squad("Bulwark", "Neutral", "Bulwark")));
+    }
+
+    /// <summary>Con portador conocido, el conteo de compañeros lo EXCLUYE a él, igual que hace el motor.</summary>
+    [Fact]
+    public void TeammateCountExcludesTheCarrier()
+    {
+        var squad = Squad("Brute", "Brute", "Brute", "Neutral");
+
+        Assert.Equal(3, PerkSquadRequirements.For(Perk("pack_mentality"), squad).Single().Current);
+        Assert.Equal(2, PerkSquadRequirements.For(Perk("pack_mentality"), squad, ownerId: 1).Single().Current);
+        Assert.Equal(3, PerkSquadRequirements.For(Perk("pack_mentality"), squad, ownerId: 4).Single().Current);
     }
 
     /// <summary>
