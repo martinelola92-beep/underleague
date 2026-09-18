@@ -168,6 +168,19 @@ public static class Style
     /// <summary>Parte el texto en líneas que caben en <paramref name="maxWidth"/> (DrawString recorta, no parte).</summary>
     public static List<string> Wrap(Font font, string text, int size, float maxWidth)
     {
+        // Un salto de línea del propio texto es un corte pedido a mano: se respeta antes de medir nada.
+        // Lo usan las descripciones de perk, que separan "qué hace" de "Condición:" (RT-035).
+        if (text.Contains('\n'))
+        {
+            var pieces = new List<string>();
+            foreach (string segment in text.Split('\n'))
+            {
+                pieces.AddRange(Wrap(font, segment, size, maxWidth));
+            }
+
+            return pieces;
+        }
+
         var lines = new List<string>();
         string current = string.Empty;
         foreach (string word in text.Split(' '))
