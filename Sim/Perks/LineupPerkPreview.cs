@@ -14,8 +14,36 @@ public enum LineupPerkStatus
     Inactive,
 }
 
+/// <summary>
+/// Requisito <b>contable</b> de una condición decidible desde la alineación: cuántos hay y cuántos hacen
+/// falta. Existe para que la pantalla pueda decir "tienes 1 de 2 Finos" en vez de solo "no se cumple"
+/// (RF-012d: lo malo se sabe antes, con la información previa — BB-J).
+///
+/// <para>Solo se emite cuando la comparación tiene una lectura natural de "necesitas N": <c>&gt;</c> y
+/// <c>&gt;=</c>. Un <c>&lt;</c>, un <c>==</c> o un <c>!=</c> no se traducen a un conteo que el jugador
+/// pueda perseguir, así que no se inventa uno. Tampoco se emite desde dentro de una negación, donde
+/// "necesitas N" significaría lo contrario de lo que dice.</para>
+/// </summary>
+/// <param name="Function">Función de la condición: <c>hasTag</c>, <c>teammatesWithTag</c> o <c>adjacentCount</c>.</param>
+/// <param name="Tag">Etiqueta contada, tal cual la declara el dato (p. ej. <c>Fine</c>).</param>
+/// <param name="Current">Cuántos hay con la alineación actual.</param>
+/// <param name="Required">Cuántos hacen falta para que la condición se cumpla.</param>
+public sealed record LineupPerkRequirement(string Function, string Tag, int Current, int Required)
+{
+    /// <summary>True si el requisito ya se cumple.</summary>
+    public bool Met => Current >= Required;
+}
+
 /// <summary>Estado de un perk concreto de un titular concreto en la alineación previsualizada.</summary>
-public sealed record LineupPerkPreview(int PlayerId, string PerkId, LineupPerkStatus Status);
+/// <param name="Requirements">
+/// Requisitos contables de la condición, en el orden en que aparecen. Vacío si la condición no tiene
+/// ninguno traducible a un conteo (p. ej. solo <c>startsIn</c>/<c>linked</c>).
+/// </param>
+public sealed record LineupPerkPreview(
+    int PlayerId,
+    string PerkId,
+    LineupPerkStatus Status,
+    IReadOnlyList<LineupPerkRequirement> Requirements);
 
 /// <summary>
 /// Previsualización de los perks que decide la <b>colocación</b> (RF-012d, RF-040..045): dice, antes del
@@ -79,13 +107,14 @@ public static class LineupPerkPreviewer
                     continue;
                 }
 
-                if (!TryEvaluate(ast, board, i, out bool holds))
+                var requirements = new List<LineupPerkRequirement>();
+                if (!TryEvaluate(ast, board, i, requirements, collect: true, out bool holds))
                 {
                     continue;
                 }
 
                 result.Add(new LineupPerkPreview(
-                    definition.Id, perkId, holds ? LineupPerkStatus.Active : LineupPerkStatus.Inactive));
+                    definition.Id, perkId, holds ? LineupPerkStatus.Active : LineupPerkStatus.Inactive, requirements));
             }
         }
 
@@ -121,17 +150,19 @@ public static class LineupPerkPreviewer
     /// Evalúa el nodo sobre la alineación. Devuelve false si el nodo no es decidible desde la colocación;
     /// entonces el perk entero se omite, sin resultado parcial.
     /// </summary>
-    private static bool TryEvaluate(LogicalExpression node, Board board, int self, out bool value)
+    private static bool TryEvaluate(
+        LogicalExpression node, Board board, int self, List<LineupPerkRequirement> sink, bool collect, out bool value)
     {
         value = false;
         switch (node)
         {
             case NCalc.Function function:
-                return TryBooleanFunction(function, board, self, out value);
+                return TryBooleanFunction(function, board, self, sink, collect, out value);
 
             case UnaryExpression unary when unary.Type == UnaryExpressionType.Not:
             {
-                if (!TryEvaluate(unary.Expression, board, self, out bool inner))
+                // Dentro de una negación, "necesitas N" diría justo lo contrario: se evalúa pero no se recoge.
+                if (!TryEvaluate(unary.Expression, board, self, sink, collect: false, out bool inner))
                 {
                     return false;
                 }
@@ -142,8 +173,8 @@ public static class LineupPerkPreviewer
 
             case BinaryExpression binary when binary.Type is BinaryExpressionType.And or BinaryExpressionType.Or:
             {
-                if (!TryEvaluate(binary.LeftExpression, board, self, out bool left)
-                    || !TryEvaluate(binary.RightExpression, board, self, out bool right))
+                if (!TryEvaluate(binary.LeftExpression, board, self, sink, collect, out bool left)
+                    || !TryEvaluate(binary.RightExpression, board, self, sink, collect, out bool right))
                 {
                     return false;
                 }
@@ -161,6 +192,11 @@ public static class LineupPerkPreviewer
                     return false;
                 }
 
+                if (collect && RequiredCount(binary.Type, literal) is { } required && TextArgument(function, 1) is { } countedTag)
+                {
+                    sink.Add(new LineupPerkRequirement(function.Identifier.Name, countedTag, left, required));
+                }
+
                 value = Compare(binary.Type, left, literal);
                 return true;
             }
@@ -171,7 +207,8 @@ public static class LineupPerkPreviewer
     }
 
     /// <summary>Funciones booleanas que la alineación decide por completo.</summary>
-    private static bool TryBooleanFunction(NCalc.Function function, Board board, int self, out bool value)
+    private static bool TryBooleanFunction(
+        NCalc.Function function, Board board, int self, List<LineupPerkRequirement> sink, bool collect, out bool value)
     {
         value = false;
         if (!IsOwner(function) || TextArgument(function, 1) is not { } literal)
@@ -183,6 +220,11 @@ public static class LineupPerkPreviewer
         {
             case "hasTag":
                 value = board.Starters[self].Definition.HasTag(literal);
+                if (collect)
+                {
+                    sink.Add(new LineupPerkRequirement("hasTag", literal, value ? 1 : 0, 1));
+                }
+
                 return true;
 
             case "startsIn":
@@ -231,6 +273,17 @@ public static class LineupPerkPreviewer
     /// los titulares, que es exactamente lo que cuenta el motor: sus equivalentes de <c>MatchEngine</c>
     /// solo miran a compañeros con <c>OnPitch</c>, y al empezar el partido eso son los alineados.
     /// </summary>
+    /// <summary>
+    /// Cuántos hacen falta para satisfacer la comparación, o null si no tiene lectura de "necesitas N".
+    /// <c>&gt; 1</c> son dos; <c>&gt;= 2</c> son dos. Un <c>&lt;</c>/<c>==</c>/<c>!=</c> no se traduce.
+    /// </summary>
+    private static int? RequiredCount(BinaryExpressionType comparison, int literal) => comparison switch
+    {
+        BinaryExpressionType.Greater => literal + 1,
+        BinaryExpressionType.GreaterOrEqual => literal,
+        _ => null,
+    };
+
     private static bool TryIntegerFunction(NCalc.Function function, Board board, int self, out int value)
     {
         value = 0;

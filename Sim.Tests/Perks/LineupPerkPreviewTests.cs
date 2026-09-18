@@ -188,6 +188,81 @@ public sealed class LineupPerkPreviewTests
     private static IReadOnlyList<LineupPerkPreview> Preview(params (int PlayerId, string PerkId)[] perks) =>
         Preview(Team(), perks);
 
+    // ------------------------------------------------------------------ BB-J: el conteo del tooltip
+
+    /// <summary>
+    /// BB-J: no basta con decir "no se cumple". `pack_mentality` pide <c>teammatesWithTag(owner,'Brute') &gt; 2</c>,
+    /// o sea TRES brutos además del portador, y el jugador tiene que poder ver cuántos lleva antes del
+    /// partido (RF-012d). Con dos brutos en el equipo el portador cuenta uno como compañero.
+    /// </summary>
+    /// <para><c>Team(n)</c> solo puede marcar DOS brutos, y nunca al portador (id 4). Que ni siquiera así
+    /// se llegue a los tres que el perk pide es exactamente el síntoma de BB-J: el tooltip es lo que
+    /// convierte ese "nunca se enciende" en información previa.</para>
+    [Theory]
+    [InlineData(0, 0)]
+    [InlineData(1, 1)]
+    [InlineData(2, 2)]
+    public void PackMentalityReportsHowManyBrutesYouHaveAndHowManyYouNeed(int brutes, int expectedCurrent)
+    {
+        var preview = Preview(Team(brutes), (4, "pack_mentality"));
+        var requirement = Requirement(preview, 4, "pack_mentality");
+
+        Assert.NotNull(requirement);
+        Assert.Equal("teammatesWithTag", requirement!.Function);
+        Assert.Equal("Brute", requirement.Tag);
+        Assert.Equal(expectedCurrent, requirement.Current);
+        Assert.Equal(3, requirement.Required); // "> 2" son tres
+        Assert.False(requirement.Met, "con este banco de pruebas nunca se llega a tres: es el síntoma de BB-J");
+        Assert.Equal(requirement.Met ? LineupPerkStatus.Active : LineupPerkStatus.Inactive, Status(preview, 4, "pack_mentality"));
+    }
+
+    /// <summary>
+    /// `first_touch_school` pide <c>teammatesWithTag(owner,'Fine') &gt; 1</c>: el "1 de 2 Finos" del
+    /// encargo. Se comprueba que el umbral se traduce a DOS, no a uno.
+    /// </summary>
+    [Fact]
+    public void GreaterThanOneMeansYouNeedTwo()
+    {
+        var requirement = Requirement(Preview(Team(), (4, "first_touch_school")), 4, "first_touch_school");
+
+        Assert.NotNull(requirement);
+        Assert.Equal("Fine", requirement!.Tag);
+        Assert.Equal(2, requirement.Required);
+        Assert.Equal(0, requirement.Current);
+        Assert.False(requirement.Met);
+    }
+
+    /// <summary>Un <c>hasTag</c> también es contable: se tiene o no se tiene, 0 de 1 o 1 de 1.</summary>
+    [Theory]
+    [InlineData(0, 0)]
+    [InlineData(1, 1)]
+    public void HasTagIsReportedAsZeroOrOneOfOne(int brutes, int expectedCurrent)
+    {
+        // El id 5 (índice 4) es el primero que Team() marca como Brute.
+        var requirement = Requirement(Preview(Team(brutes), (5, "bruised_knuckles")), 5, "bruised_knuckles");
+
+        Assert.NotNull(requirement);
+        Assert.Equal("hasTag", requirement!.Function);
+        Assert.Equal("Brute", requirement.Tag);
+        Assert.Equal(expectedCurrent, requirement.Current);
+        Assert.Equal(1, requirement.Required);
+    }
+
+    /// <summary>
+    /// Una condición sin nada contable —solo geometría de colocación— no inventa un requisito: la lista
+    /// sale vacía y la pantalla no tiene nada que enseñar.
+    /// </summary>
+    [Fact]
+    public void ConditionsWithNothingToCountReportNoRequirement()
+    {
+        var preview = Preview(Team(), (5, "captains_voice"), (7, "captains_voice"));
+        Assert.Empty(preview.Single(p => p.PlayerId == 5 && p.PerkId == "captains_voice").Requirements);
+    }
+
+    private static LineupPerkRequirement? Requirement(
+        IReadOnlyList<LineupPerkPreview> preview, int playerId, string perkId) =>
+        preview.FirstOrDefault(p => p.PlayerId == playerId && p.PerkId == perkId)?.Requirements.FirstOrDefault();
+
     private static IReadOnlyList<LineupPerkPreview> Preview(
         List<PlayerDefinition> players, params (int PlayerId, string PerkId)[] perks)
     {
