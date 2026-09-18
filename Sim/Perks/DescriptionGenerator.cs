@@ -92,7 +92,6 @@ public static class DescriptionGenerator
 
         string text = templates.Get(Layout, layoutKey);
         text = Replace(text, "{trigger}", trigger);
-        text = Replace(text, "{condition}", condition);
         text = Replace(text, "{effects}", effects.ToString());
         text = Replace(text, "{limit}", limit);
 
@@ -114,6 +113,15 @@ public static class DescriptionGenerator
         // leerse ANTES de aceptar —un perk no se puede retirar (RF-072), así que es permanente— con la
         // misma claridad con la que un perk letal se destaca en el ojeo (RF-013, RF-012d).
         text += DescribeArc(perk, templates, perks);
+
+        // La condición va SIEMPRE al final, en su propia línea (encargo del revisor, 19 sep 2026): la
+        // descripción se lee en dos partes, "qué hace" y "Condición: ...". Se añade después de los avisos
+        // de letalidad y de arco a propósito — son consecuencias de lo que el perk HACE, no condiciones
+        // para que se dispare, y leerlos dentro de la línea de condición los escondería (RF-012d).
+        if (condition.Length > 0)
+        {
+            text += Replace(templates.Get(Layout, "conditionLine"), "{condition}", condition);
+        }
 
         return CapitalizeFirst(text);
     }

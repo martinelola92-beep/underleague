@@ -18,16 +18,21 @@ public sealed class DescriptionTests
 {
     private static readonly Catalog Catalog = TestPerks.CatalogWith();
 
+    /// <summary>
+    /// La descripción se lee en dos partes (encargo del revisor, 19 sep 2026): primero qué hace, sin
+    /// título, y después la condición en su propia línea. Antes iba todo en una frase, con la condición
+    /// incrustada entre el disparador y el efecto.
+    /// </summary>
     [Fact]
     public void ConditionAndLimitInSpanish() => Assert.Equal(
-        "Al entrar, si el jugador es Bruto y si el criterio es menor que 0, "
-            + "el jugador +3 de fuerza durante la jugada (máximo 2 por partido).",
+        "Al entrar, el jugador +3 de fuerza durante la jugada (máximo 2 por partido)."
+            + "\nCondición: si el jugador es Bruto y si el criterio es menor que 0.",
         Describe("es", Bloodlust()));
 
     [Fact]
     public void ConditionAndLimitInEnglish() => Assert.Equal(
-        "On a tackle, if the player is Brute and if the referee bias is less than 0, "
-            + "the player +3 strength for the play (max 2 per match).",
+        "On a tackle, the player +3 strength for the play (max 2 per match)."
+            + "\nCondition: if the player is Brute and if the referee bias is less than 0.",
         Describe("en", Bloodlust()));
 
     [Fact]
@@ -45,8 +50,9 @@ public sealed class DescriptionTests
         // proporción de probabilidad que traía la P1 mentía en los canales de base alta (en pass, base
         // 77%, "un 30% más" era en realidad un 5,6%).
         Assert.Equal(
-            "Al encarar, si el portador es Fino, el jugador multiplica por 1,3 sus opciones de regatear; "
-                + "si no, el jugador divide por 1,3 sus opciones de regatear.",
+            "Al encarar, el jugador multiplica por 1,3 sus opciones de regatear; "
+                + "si no, el jugador divide por 1,3 sus opciones de regatear."
+                + "\nCondición: si el portador es Fino.",
             Describe("es", perk));
     }
 
@@ -137,7 +143,9 @@ public sealed class DescriptionTests
             links: """["behind"]""",
             condition: condition));
 
-        Assert.Equal($"Al empezar el partido, {expected}, el portador +1 de velocidad durante el partido.", Describe("es", perk));
+        Assert.Equal(
+            $"Al empezar el partido, el portador +1 de velocidad durante el partido.\nCondición: {expected}.",
+            Describe("es", perk));
     }
 
     [Fact]
