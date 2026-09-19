@@ -1,7 +1,8 @@
 # 0114 — La cámara no es fija: tiene cuatro estados
 
 Estado: **Aceptada** (15 sep 2026, decisión del revisor). **Sustituye la parte de cámara fija de la
-ADR 0102**; el resto de la ADR 0102 —3D, toon, proyección ortográfica en tres cuartos— sigue vigente. El
+ADR 0102**; el resto de la ADR 0102 —3D, toon, proyección ortográfica en tres cuartos— sigue vigente.
+**Durante el partido, sustituida por la ADR 0120** (cámara táctica fija con gestos); fuera del partido sigue vigente. El
 desarrollo completo está en `docs/estilo-visual.md` §5ter, y el cálculo que lo sostiene en §5bis.
 
 ## Problema

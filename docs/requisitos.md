@@ -167,7 +167,7 @@ Salir de la zona no está prohibido: penaliza de forma creciente con la distanci
 
 ### 3.6 Simulación del partido
 
-- **RF-050** Un partido dura entre 60 y 90 segundos a velocidad x1. Velocidades disponibles: x1, x1.5, x2, x4 y saltar al resultado.
+- **RF-050** Un partido dura entre 60 y 90 segundos a velocidad x1. Velocidades disponibles: x1, x1.5, x2, x4 y saltar al resultado. *(Desde la **ADR 0120**: x1, x4 «retransmisión comprimida» y x16 «ir al resultado».)*
 - **RF-050b** La velocidad x4 debe ser legible. Si a x4 el partido no se entiende, es un fallo de legibilidad del núcleo, no un problema de opciones.
 - **RF-051** El partido se estructura en **jugadas**. Cada jugada resuelve en fases: recuperación, progresión, último tercio, definición.
 - **RF-052** El saque inicial coloca a ambos equipos de forma que el primer contacto ocurra en los 2 primeros segundos.
@@ -323,8 +323,8 @@ SUSTITUCION         CONSUMIBLE_USADO
 
 ### 3.13 Presentación y feedback
 
-- **RF-115** **Highlights**: paneles ilustrados que aparecen sobre el partido en eventos relevantes. Se componen por capas: fondo según tipo de evento, pose según raza y acción, y color o retrato del jugador implicado.
-- **RF-116** El sistema puntúa cada evento por relevancia (rareza del perk implicado, momento del partido, primera aparición, ajuste del marcador) y muestra como máximo **2 highlights por partido**.
+- **RF-115** **Highlights**: paneles ilustrados que aparecen sobre el partido en eventos relevantes. Se componen por capas: fondo según tipo de evento, pose según raza y acción, y color o retrato del jugador implicado. *(Sustituido en el partido por la gramática de pregón, **ADR 0120**.)*
+- **RF-116** El sistema puntúa cada evento por relevancia (rareza del perk implicado, momento del partido, primera aparición, ajuste del marcador) y muestra como máximo **2 highlights por partido**. *(Sustituido por los niveles N0–N4 con una sola voz alta, **ADR 0120**; sin tope por partido.)*
 - **RF-117** Todo highlight es saltable con cualquier tecla. En opciones puede desactivarse por separado cada tipo de notificación: highlights, texto flotante de perks, desplazamientos de criterio y anuncio de la turba.
 - **RF-118** Cada activación de perk durante el partido produce feedback visible: icono, número flotante y destello del color del perk.
 - **RF-119** **Informe post-partido**: pantalla obligatoria que lista cada perk activado, número de activaciones y contribución medible (goles, lesiones causadas, recuperaciones), más un apartado del árbitro con la evolución del criterio y las faltas no señaladas a cada equipo. Es el principal vehículo de aprendizaje del jugador.
@@ -562,14 +562,14 @@ Run
 
 ### 5.3 Highlights
 
-- **RA-020** Composición por capas: fondo según tipo de evento, pose según raza y acción, identificador del jugador.
-- **RA-021** Estilo cómic de alto contraste, paleta reducida, líneas cinéticas. No es pixelart.
-- **RA-022** Cobertura mínima: 6 tipos de evento por 3 razas del prototipo.
+- **RA-020** Composición por capas: fondo según tipo de evento, pose según raza y acción, identificador del jugador. *(Sin plan hasta que haya arte, **ADR 0120**.)*
+- **RA-021** Estilo cómic de alto contraste, paleta reducida, líneas cinéticas. No es pixelart. *(Retirado para los acontecimientos, **ADR 0120**: imprenta y heráldica, no cómic.)*
+- **RA-022** Cobertura mínima: 6 tipos de evento por 3 razas del prototipo. *(Sin plan hasta que haya arte, **ADR 0120**.)*
 
 ### 5.4 Dirección visual
 
-- **RA-025** El lenguaje visual es **cultura futbolística real** (marcadores de estadio, vallas publicitarias, pancartas de ultras, prensa deportiva) cruzada con **humor negro y gore**: sangre persistente sobre el césped, patrocinadores siniestros, comentaristas que celebran las lesiones, un mercado de fichajes que parece un matadero.
-- **RA-026** Se evita explícitamente la iconografía de calaveras, huesos y marcos góticos, que remite a Blood Bowl y a un lenguaje ajeno. El gore es de estadio, no de mazmorra.
+- **RA-025** El lenguaje visual es **cultura futbolística real** (marcadores de estadio, vallas publicitarias, pancartas de ultras, prensa deportiva) cruzada con **humor negro y gore**: sangre persistente sobre el césped, patrocinadores siniestros, comentaristas que celebran las lesiones, un mercado de fichajes que parece un matadero. *(Desde la **ADR 0120**: espectáculo popular medieval con gramática de retransmisión; se conservan el humor negro, la sangre y los patrocinadores de parodia.)*
+- **RA-026** Se evita explícitamente la iconografía de calaveras, huesos y marcos góticos, que remite a Blood Bowl y a un lenguaje ajeno. El gore es de estadio, no de mazmorra. *(Vigente; la **ADR 0120** añade: sin estética de cómic.)*
 - **RA-027** La sangre es una calcomanía persistente durante el partido y se limpia entre partidos. Es feedback y es historia del partido.
 
 ---
@@ -588,9 +588,9 @@ Run
 ### 6.2 Componente de ficha de jugador
 
 - **UI-010** La ficha tiene tres estados y es el mismo componente en Equipo, Alineación, Partido y Mercado.
-- **UI-011** **Colapsada**: una tira de 24 píxeles con retrato, icono de posición, nombre y barra de color de estado físico. Nada más.
+- **UI-011** **Colapsada**: una tira de 24 píxeles con retrato, icono de posición, nombre y barra de color de estado físico. Nada más. *(En el partido, tiras de 72 px solo del equipo propio, **ADR 0120**.)*
 - **UI-012** **Expandida**: nivel, cinco atributos, rasgos, perks con icono, objeto, vínculos, estado y salario. Solo una expandida a la vez.
-- **UI-013** **Reactiva**: cuando un perk se activa en el partido, la tira de su jugador destella a la vez que el sprite. Pulsar la tira resalta el sprite con corchetes y correa; seleccionar el sprite expande la tira. Es el índice del partido.
+- **UI-013** **Reactiva**: cuando un perk se activa en el partido, la tira de su jugador destella a la vez que el sprite. Pulsar la tira resalta el sprite con corchetes y correa; seleccionar el sprite expande la tira. Es el índice del partido. *(En el partido, la tira de 72 px del equipo propio destella con su perk, **ADR 0120**.)*
 - **UI-014** Los iconos de mejora (perks, objeto, prótesis) viven en la ficha, no sobre el sprite.
 
 ### 6.3 Pantallas
@@ -601,7 +601,7 @@ Run
 | **Equipo** | Fuera del partido. Fichas completas, cambio de alineación, posiciones, objetos entre jugadores, consumibles y sus disparadores. Es donde se toman las decisiones de plantilla | 1 |
 | Nodo de partido / ojeo | Ficha de rival, árbitro con rasgo, riesgo de lesión por jugador, objetivos de Partido excelente, botón **Empezar partido** | 2 |
 | Alineación previa | Solo la cuadrícula con la alineación de Equipo ya cargada. Se puede reposicionar o pulsar Empezar directamente | 1 |
-| Partido | Marcador con criterio del árbitro, tiras laterales, campo, log bajo el campo, consumibles, velocidad, contador de disponibles | 1 |
+| Partido | Marcador con criterio del árbitro, tiras laterales, campo, log bajo el campo, consumibles, velocidad, contador de disponibles *(ADR 0120: tablero arriba, tiras propias abajo, log en modo depuración)* | 1 |
 | Recompensa | Tres cartas con reroll | 1 |
 | Informe post-partido | Tres titulares y expansión; apartado del árbitro | 1 |
 | Mercado | Cuatro columnas, ficha en modo compra, venta | 2 |
