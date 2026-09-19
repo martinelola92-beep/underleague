@@ -1,8 +1,10 @@
 using System.Collections.Generic;
 using Godot;
+using Underleague.Game.Ui.Broadcast;
 using Underleague.Sim.Data;
 using Underleague.Sim.Engine;
 using Underleague.Sim.Model;
+using Underleague.Sim.Run.View;
 
 namespace Underleague.Game.Ui;
 
@@ -108,6 +110,25 @@ public partial class MatchPitchView3D : SubViewportContainer
     [Export]
     public float OrthoSize { get; set; } = 5.3f;
 
+    /// <summary>
+    /// Desplaza el centro de la cámara por su propio eje "arriba" en pantalla, en unidades de mundo
+    /// (revisión visual del orquestador, 19 sep 2026, bloque <c>MatchPitchView3D.cs</c> del parche de
+    /// prototipo): con la retransmisión a campo entero, el césped queda centrado verticalmente si no se
+    /// corrige, y la composición validada (<c>docs/ui/capturas/base-1280x800.jpg</c>) lo quiere bajado —
+    /// el tablero se lleva más margen arriba que las tiras abajo. Positivo baja el campo en pantalla.
+    /// </summary>
+    [Export]
+    public float PanUp { get; set; }
+
+    /// <summary>
+    /// Color plano fuera del césped (revisión visual, 19 sep 2026): por defecto el mismo
+    /// <see cref="Style.Background"/> oscuro del modo depuración (ADR 0102, cápsulas grises de prueba),
+    /// pero la retransmisión a campo entero lo sustituye por un verde de alrededores plano — sin gradas ni
+    /// vallas (regla 10 de <c>CLAUDE.md</c>) — para que fuera del rectángulo de 16x7 no se vea negro.
+    /// </summary>
+    [Export]
+    public Color SurroundColor { get; set; } = Style.Background;
+
     /// <summary>Cápsulas negras planas sobre suelo blanco, sin color de equipo: la prueba literal de RA-002.</summary>
     [Export]
     public bool SilhouetteMode { get; set; }
@@ -120,6 +141,14 @@ public partial class MatchPitchView3D : SubViewportContainer
 
     /// <summary>Fracción 0..1 hacia el fotograma siguiente. Solo suaviza el dibujo (RT-020).</summary>
     public float Alpha { get; set; }
+
+    /// <summary>
+    /// Marcas de perk del partido (<see cref="MatchFlashView"/>, ubicadas por
+    /// <see cref="Sim.Run.View.MatchMomentView"/>): las carteles de pergamino que <see cref="DrawMarks"/>
+    /// ancla sobre el jugador. No pasan por el director de presentación (ADR 0119, regla 5) — el 3D las
+    /// pinta directamente igual que <see cref="MatchPitchView.Flashes"/> las pinta en 2D.
+    /// </summary>
+    public IReadOnlyList<MomentMark> Marks { get; set; } = System.Array.Empty<MomentMark>();
 
     public override void _Ready()
     {
@@ -138,6 +167,12 @@ public partial class MatchPitchView3D : SubViewportContainer
         ApplyCamera();
         ApplyPalette();
         ApplyTrace();
+        QueueRedraw();
+    }
+
+    public override void _Draw()
+    {
+        DrawMarks();
     }
 
     /// <summary>
@@ -342,10 +377,10 @@ public partial class MatchPitchView3D : SubViewportContainer
         ApplyPalette();
     }
 
-    private static Godot.Environment BuildEnvironment(bool silhouette) => new()
+    private Godot.Environment BuildEnvironment(bool silhouette) => new()
     {
         BackgroundMode = Godot.Environment.BGMode.Color,
-        BackgroundColor = silhouette ? new Color(1f, 1f, 1f) : Style.Background,
+        BackgroundColor = silhouette ? new Color(1f, 1f, 1f) : SurroundColor,
         AmbientLightSource = Godot.Environment.AmbientSource.Color,
         AmbientLightColor = silhouette ? new Color(1f, 1f, 1f) : new Color(0.62f, 0.68f, 0.78f),
 
@@ -485,6 +520,11 @@ public partial class MatchPitchView3D : SubViewportContainer
     {
         float elevation = Mathf.DegToRad(Mathf.Clamp(Elevation, 5f, 89f));
         var center = new Vector3(Pitch.Columns / 2f, 0.35f, Pitch.Rows / 2f);
+
+        // Desplazamiento vertical (revisión visual, 19 sep 2026): mover cámara y centro juntos por el eje
+        // "arriba" real de la pantalla —(0, cos(elevación), -sen(elevación)), no el eje Y del mundo— baja
+        // el campo en pantalla sin cambiar el encuadre ortográfico ni la elevación.
+        center += new Vector3(0f, Mathf.Cos(elevation), -Mathf.Sin(elevation)) * PanUp;
 
         // La cámara mira desde el lado +Z: así el eje X del campo cae a la derecha de la pantalla y las
         // filas crecen hacia abajo, exactamente como en la vista 2D.
@@ -730,6 +770,75 @@ public partial class MatchPitchView3D : SubViewportContainer
 
         var next = trace.BallAt(frame + 1);
         return new Vec2(Mathf.Lerp(here.X, next.X, Alpha), Mathf.Lerp(here.Y, next.Y, Alpha));
+    }
+
+    // ------------------------------------------------------------------ marcas de perk (regla 5, ADR 0119)
+
+    /// <summary>
+    /// Proyección 3D→pantalla de un cartel sobre la cabeza del jugador (coordenadas locales del propio
+    /// contenedor, las mismas en las que se dibuja <see cref="DrawMarks"/>), o null si no está en el
+    /// campo en el fotograma que se pinta.
+    /// </summary>
+    private Vector2? MarkScreenPosition(int traceIndex)
+    {
+        if (Trace is not { FrameCount: > 0 } trace || traceIndex < 0 || traceIndex >= trace.Players.Count)
+        {
+            return null;
+        }
+
+        int frame = Mathf.Clamp(Frame, 0, trace.FrameCount - 1);
+        if (!trace.OnPitchAt(frame, traceIndex))
+        {
+            return null;
+        }
+
+        var at = trace.PositionAt(frame, traceIndex);
+        float height = traceIndex < _heights.Count ? _heights[traceIndex] : 1f;
+        var world = new Vector3(at.X, height + 0.35f, at.Y);
+        return _camera.UnprojectPosition(world);
+    }
+
+    /// <summary>
+    /// Carteles de pergamino de <see cref="Marks"/> vivos en el fotograma que se pinta: tamaño fijo en
+    /// pantalla, 1 s de vida (<see cref="MatchFlashView.DurationFrames"/>), pequeños si el aviso quedó
+    /// absorbido por un momento del director (<see cref="MomentMark.MomentIndex"/> &gt;= 0).
+    /// </summary>
+    private void DrawMarks()
+    {
+        if (Trace is not { FrameCount: > 0 } trace || Marks.Count == 0)
+        {
+            return;
+        }
+
+        int frame = Mathf.Clamp(Frame, 0, trace.FrameCount - 1);
+        for (int i = 0; i < Marks.Count; i++)
+        {
+            var flash = Marks[i].Flash;
+            int age = frame - flash.Frame;
+            if (age < 0 || age >= MatchFlashView.DurationFrames)
+            {
+                continue;
+            }
+
+            var screen = MarkScreenPosition(flash.Player);
+            if (screen is null)
+            {
+                continue;
+            }
+
+            DrawPlacard(screen.Value, flash.Name, small: Marks[i].MomentIndex >= 0, seed: (flash.Player * 97) + flash.Frame);
+        }
+    }
+
+    /// <summary>Un pergamino corto con el nombre del perk, centrado sobre el punto de anclaje.</summary>
+    private void DrawPlacard(Vector2 at, string text, bool small, int seed)
+    {
+        float w = small ? 96f : 156f;
+        float h = small ? 24f : 34f;
+        int size = small ? 14 : 18;
+        var topLeft = at - new Vector2(w / 2f, h + 12f);
+        Pregon.DrawParchment(this, topLeft, w, h, Pregon.Vellum, Pregon.VellumEdge, seed, amplitude: 1.2f, edgeWidth: 1.2f);
+        Style.DrawText(this, Pregon.DataSemiBold, topLeft + new Vector2(6f, 4f), text, size, Pregon.InkBrown, maxWidth: w - 12f);
     }
 
     // ------------------------------------------------------------------ textura del suelo

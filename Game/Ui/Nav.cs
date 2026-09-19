@@ -25,8 +25,15 @@ public static class Nav
     public const string End = "res://Scenes/FinDeRun.tscn";
     public const string Pending = "res://Scenes/Pendiente.tscn";
 
-    /// <summary>Pantalla de partido (marcador, resultado y log). La escribe el paquete de partido.</summary>
-    public const string Match = "res://Scenes/Partido.tscn";
+    /// <summary>
+    /// Pantalla de partido: la retransmisión con voz de pregón (ADR 0119/0120) — campo 3D, tablero, tiras
+    /// y presentaciones de momento. <see cref="MatchDebug"/> es <see cref="MatchScreen"/> (vista 2D, tick
+    /// a tick, log), accesible desde aquí con F3 sobre la misma <see cref="RunController.Playback"/>.
+    /// </summary>
+    public const string Match = "res://Scenes/Retransmision.tscn";
+
+    /// <summary>Modo depuración de la pantalla de Partido: la vista 2D de siempre, tick a tick, con log y leyenda.</summary>
+    public const string MatchDebug = "res://Scenes/Partido.tscn";
 
     /// <summary>Informe post-partido (RF-119). La escribe el paquete de partido.</summary>
     public const string Report = "res://Scenes/Informe.tscn";

@@ -137,6 +137,14 @@ public partial class MatchScreen : Control
 
     public override void _UnhandledInput(InputEvent @event)
     {
+        // ADR 0119/0120: esta pantalla es ahora el modo depuración de Partido; F3 vuelve a la
+        // retransmisión sobre la misma RunController.Playback (nada se vuelve a jugar).
+        if (@event is InputEventKey { Pressed: true, Keycode: Key.F3 })
+        {
+            Nav.Go(this, Nav.Match);
+            return;
+        }
+
         if (_window is not null)
         {
             return;
