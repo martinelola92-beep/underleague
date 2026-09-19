@@ -35,3 +35,6 @@ out/
 .DS_Store
 Thumbs.db
 tools/__pycache__/
+
+# Worktrees de encargos de OpenCode (tools/opencode-encargo.sh)
+.claude/worktrees/
