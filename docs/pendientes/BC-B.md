@@ -1,6 +1,6 @@
 # BC-B — El límite de usos de un perk no se respeta cuando su efecto vuelve a dispararlo
 
-**Estado:** Abierta · causa CONFIRMED · error puro de motor
+**Estado:** Resuelta (19 sep 2026) · el uso se consume al activarse
 
 ## Observación
 
@@ -33,6 +33,25 @@ recursión.
 Consumir el uso **antes** de aplicar los efectos (o marcar la suscripción como «en curso» durante la
 aplicación). Decidir y dejar escrito si el límite se consume al activarse o al terminar. Afecta al consumo
 de RNG de todo partido con esos perks → lote de `/Balance` y puertas.
+
+## Resolución (19 sep 2026)
+
+`subscription.Uses++` pasa a ejecutarse **antes** de `ApplyEffects` (`Sim/Perks/EffectEngine.cs`), igual que un
+consumible marca `Used` antes de aplicarse. Semántica escrita en `docs/modelo-datos.md` (`limit.per`).
+
+- **CONFIRMED también para `charge`** (lo que aquí era LIKELY): con el código anterior daba 5 activaciones por
+  partido con límite 1. `steamroller` no llegaba a encadenarse con estas plantillas.
+- Revisión independiente (40 partidos): `double_shot` 180 → 36 activaciones, 6 → 2 `SHOT` del portador en un
+  tick, cortes de recursión 36 → 0; `charge` 135 → 27, 6 → 2 `TACKLE`, 27 → 0.
+- Pruebas: `RecoveryExtraActionTests.APerkThatRetriggersItselfStillRespectsItsLimit` (activaciones ≤ límite y
+  como mucho dos acciones del portador en un tick; falla con el código anterior). `ExistingPerksAreUnchanged`
+  vuelve a fijar `charge` en 13 (los 65 se midieron con el fallo).
+- Balance: `--full-runs 300 --seed 1` antes/después sin cambios de estado (`runWinRate` 18,33 → 18,67, ruido);
+  43 puertas idénticas a la línea base del día (las mismas 3 rojas preexistentes, mismos valores).
+- **Queda abierto:** la potencia resultante de `charge` y `double_shot` no ha pasado por `game-design-review`
+  (DESIGN CLAIM NOT PROVEN de la revisión); `double_shot` sigue sin cambiar el resultado ([BC-C](./BC-C.md)).
+  Un `per: play` que cierra su jugada dentro de sus efectos recupera el uso en el mismo tick (latente: ningún
+  perk del catálogo usa `per: play`). `PerkLoader` no exige `limit` a `extraAction` (hermano latente).
 
 ## Hermanos
 

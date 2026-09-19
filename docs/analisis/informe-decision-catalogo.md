@@ -50,6 +50,10 @@ perks raros: es el banco de pruebas.**
 | `double_shot` expos. / Δ`shotsPerMatch` | 2,5 % / +0,075 | 10,0 % / +0,250 | **90,0 % / +4,425** |
 | `cannon` expos. / Δ`shotsPerMatch` | 100 % / **0,000** | 100 % / **0,000** | 100 % / +0,050 |
 
+> **Corrección (19 sep 2026, [BC-B](../pendientes/BC-B.md)):** el +4,4 de `double_shot` es un artefacto: el perk se
+> encadenaba hasta la profundidad de recursión (5 activaciones y 6 `SHOT` en un mismo tick) y no cambiaba el
+> resultado ([BC-C](../pendientes/BC-C.md)). La conclusión de abajo no vale; hay que volver a medir.
+
 **`double_shot` funciona**: con el portador correcto dispara al 90 % y mueve los tiros +4,4. **`cannon` no
 se mueve en ningún puesto** — pero su mecanismo es `shootRangeBonusCells +3`, o sea *disparar desde más
 lejos*, y **el proyecto no tiene ninguna métrica de distancia de tiro**: `MatchReport` cuenta `Shots`,

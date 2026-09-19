@@ -52,11 +52,11 @@ a secas.
 | [BB-T](./BB-T.md) | La puerta de equipamiento cae a 0,5: era RUIDO de una semilla, no el catálogo | Abierta (arreglo de instrumento) |
 | [BB-U](./BB-U.md) | Un solo perk común rompe el invariante de cero de la puerta de economía | Abierta, sin causa |
 | [BC-A](./BC-A.md) | El goleador sigue en campo rival cuando el otro equipo saca de centro | Abierta (causa CONFIRMED; rediseño de BB-C) |
-| [BC-B](./BC-B.md) | El límite de usos de un perk no se respeta cuando su efecto vuelve a dispararlo | Abierta (causa CONFIRMED) |
+| [BC-B](./BC-B.md) | El límite de usos de un perk no se respeta cuando su efecto vuelve a dispararlo | Resuelta |
 | [BC-C](./BC-C.md) | «Doble disparo» no tiene sentido y no cambia el resultado | Abierta (rediseño) |
 | [BC-D](./BC-D.md) | «Último hombre» se activa pero no hace nada | Abierta (mecánica nueva + ADR) |
-| [BC-E](./BC-E.md) | Re-simular con la sustitución elegida falla en el 9,4 % de los casos | Abierta (causa CONFIRMED) |
-| [BC-F](./BC-F.md) | Al sustituir, el partido re-simulado reasigna los dorsales | Abierta (CONFIRMED) |
+| [BC-E](./BC-E.md) | Re-simular con la sustitución elegida falla en el 9,4 % de los casos | Resuelta |
+| [BC-F](./BC-F.md) | Al sustituir, el partido re-simulado reasigna los dorsales | Resuelta |
 | [BC-G](./BC-G.md) | El balón se queda suelto en el córner y nadie lo coge | Abierta (reabre BB-G en parte) |
 | [BC-H](./BC-H.md) | El aviso de alineación incompleta es falso: el once se rellena solo | Abierta (CONFIRMED) |
 | [CAT-A](./CAT-A.md) | `field_bandage` usaba el canal `injure`, que protegía al rival. | Ver fichero |

@@ -1,6 +1,6 @@
 # BC-E — Re-simular con la sustitución elegida falla en el 9,4 % de los casos
 
-**Estado:** Abierta · causa CONFIRMED en `/Sim` · efecto en `/Game` LIKELY (no se ejecutó Godot)
+**Estado:** Resuelta (19 sep 2026) · la elección del jugador es la respuesta a su punto
 
 ## Observación
 
@@ -29,6 +29,24 @@ pulsación vuelva a fallar.
 
 Conservar las sustituciones del rival con tick < T al rejugar (sembrarlas en `ResolveAutomatically` o
 usar las del `Playback.Setup` anterior), con este caso como test de regresión.
+
+## Resolución (19 sep 2026)
+
+`SubstitutionPoints.ResolveAutomatically` (`Sim/Run/Substitutions.cs`) retira del estado inicial las
+sustituciones que trae y las trata como **respuestas**: se aplican cuando la resolución, en orden cronológico,
+llega a su punto (mismo equipo, tick y jugador que sale, candidato legal). Sin sustituciones de entrada —todo
+`/Balance` y la política automática— el comportamiento es idéntico. Una respuesta que no corresponde a ningún
+punto es `ArgumentException` al terminar (contrato de la ADR 0094, RT-032), no un descarte silencioso.
+
+- Con el código anterior existía una **segunda forma** del fallo: sin excepción, la elección del jugador se
+  **perdía en silencio** cuando la sustitución del rival se resolvía antes (`WithSubstitution` la descartaba).
+- Revisión independiente (4 suplentes por equipo, 150 semillas, flujo de `/Game` simulado): 415 puntos de
+  decisión, 0 excepciones (119 con el código anterior), 0 decisiones no aplicadas, 0 diferencias ≤T entre la
+  reproducción y la resolución de la run.
+- Pruebas en `SubstitutionTests`: `ThePlayerChoiceIsAppliedAfterEarlierRivalSubstitutions` (también por el
+  camino de la run) y `AChoiceThatAnswersNoDecisionPointIsAnExplicitError`.
+- **Sin verificar en Godot** (la ventana de `/Game` ya no debería quedarse colgada; pendiente de `visual-review`).
+  El 9,4 % → 0 % no se ha remedido sobre runs reales.
 
 ## Hermanos
 
