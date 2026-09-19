@@ -32,6 +32,31 @@ namespace Underleague.Game.Screens;
 /// </summary>
 public partial class BroadcastScreen : Control
 {
+    /// <summary>
+    /// Configuración del campo 3D para una variante de captura de profundidad
+    /// (<see cref="BroadcastCapture"/>, revisión del orquestador: «el campo debe tener más 3D, más
+    /// profundidad»). <see cref="CaptureVariant"/> es <c>null</c> en cualquier partido de verdad —la
+    /// interfaz normal no cambia— y solo lo pone el arnés de capturas antes de instanciar esta escena.
+    /// </summary>
+    public readonly record struct PitchVariant(string Label, bool Perspective, float Elevation, float Fov, bool Stadium);
+
+    /// <summary>
+    /// Override de <see cref="PitchVariant"/> para la próxima instancia que llame a <see cref="Build"/>,
+    /// o <c>null</c> para el campo de la retransmisión de siempre (<see cref="DefaultVariant"/>). Solo lo
+    /// toca <see cref="BroadcastCapture"/>; se lee una vez en <see cref="Build"/> y no se conserva entre
+    /// instancias.
+    /// </summary>
+    public static PitchVariant? CaptureVariant { get; set; }
+
+    /// <summary>
+    /// La variante elegida tras comparar A-E con capturas (revisión del orquestador, 19 sep 2026):
+    /// perspectiva FOV 30°/elevación 45°, con estadio — más profundidad que el ortográfico sin el
+    /// ensanchamiento de esquinas de un FOV más abierto. Es lo que ve cualquier partido de verdad; el modo
+    /// depuración (<see cref="MatchScreen"/>) no la usa, sigue con los valores por defecto de
+    /// <see cref="Ui.MatchPitchView3D"/> (ortográfico, sin estadio).
+    /// </summary>
+    private static readonly PitchVariant DefaultVariant = new("D", Perspective: true, Elevation: 45f, Fov: 30f, Stadium: true);
+
     private const float CanvasWidth = 1920f;
     private const float CanvasHeight = 1200f;
     private const float StripY = 1105f;
@@ -179,6 +204,11 @@ public partial class BroadcastScreen : Control
 
         BindPlayback();
 
+        // Variante de captura de profundidad (BroadcastCapture), o el campo de siempre si nadie la pidió
+        // (CaptureVariant vuelve a null justo debajo: no debe sobrevivir a esta instancia).
+        var variant = CaptureVariant;
+        CaptureVariant = null;
+
         _pitch3d = new MatchPitchView3D
         {
             // Campo entero de lado a lado (revisión visual del orquestador, 19 sep 2026, contra
@@ -189,19 +219,29 @@ public partial class BroadcastScreen : Control
             Size = new Vector2(CanvasWidth, CanvasHeight),
 
             // docs/ui/README.md §7: Size 10,75 a 16:10 (9,68 a 16:9) — ancho del campo (16) + 0,6 casillas
-            // por lado, para el lienzo entero: OrthoSize (alto) = (Columnas + 1,2) / aspecto.
+            // por lado, para el lienzo entero: OrthoSize (alto) = (Columnas + 1,2) / aspecto. Solo se lee
+            // en ortográfico (variantes A/B o el campo de siempre); en perspectiva el encaje automático de
+            // MatchPitchView3D decide la distancia y el desplazamiento por su cuenta.
             OrthoSize = (Pitch.Columns + 1.2f) / (CanvasWidth / CanvasHeight),
 
             // Bajado, no centrado (composición validada: el tablero se lleva más margen arriba que las
             // tiras abajo). 0,27 unidades de mundo: medido por píxel contra
             // docs/ui/capturas/base-1280x800.jpg (césped x45-1235, y207-658) decodificando el PNG propio
             // — la horquilla horizontal ya salía exacta con solo el ancho del OrthoSize; la vertical
-            // necesitó este ajuste. No hay una fórmula en la documentación para este valor.
+            // necesitó este ajuste. No hay una fórmula en la documentación para este valor. Solo se lee en
+            // ortográfico, por la misma razón que OrthoSize.
             PanUp = 0.27f,
 
             // Verde de alrededores plano, no el fondo casi negro del modo depuración (ADR 0102): sin
-            // gradas ni vallas (regla 10), pero tampoco negro fuera del rectángulo de 16x7.
+            // gradas ni vallas (regla 10), pero tampoco negro fuera del rectángulo de 16x7. Con Stadium
+            // activo (variantes de profundidad) queda tapado por la explanada de tierra del propio
+            // estadio; se deja igual para no bifurcar el color por variante.
             SurroundColor = new Color("33452c"),
+
+            Elevation = (variant ?? DefaultVariant).Elevation,
+            Perspective = (variant ?? DefaultVariant).Perspective,
+            Fov = (variant ?? DefaultVariant).Fov,
+            Stadium = (variant ?? DefaultVariant).Stadium,
         };
         AddChild(_pitch3d);
         _pitch3d.Bind(_trace, _playback.Setup, _catalog);
@@ -255,7 +295,7 @@ public partial class BroadcastScreen : Control
 
         _tray = new DecisionTray();
         AddChild(_tray);
-        _tray.Position = new Vector2(0f, CanvasHeight - 20f - DecisionTray.DesignHeight);
+        _tray.Position = new Vector2(0f, CanvasHeight - 12f - DecisionTray.DesignHeight);
         _tray.Size = new Vector2(CanvasWidth, DecisionTray.DesignHeight);
         _tray.Chosen += OnSubstituteChosen;
 

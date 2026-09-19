@@ -17,7 +17,11 @@ public sealed record CandidateModel(int PlayerId, string Name, string Position, 
 /// </summary>
 public partial class DecisionTray : Control
 {
-    public const float DesignHeight = 180f;
+    // 124, no 180 (campo en perspectiva, 19 sep 2026): con el borde cercano del césped anclado a y≈690 de
+    // 1280×800 (1035 lógicos), una bandeja de 180 tapaba la línea de banda, un jugador y el balón. La bandeja
+    // sustituye a las tiras y el campo tiene que verse al 100 % (docs/ui/README §7): título y fila de
+    // casillas se juntan, sin cambiar el contenido.
+    public const float DesignHeight = 124f;
 
     [Signal]
     public delegate void ChosenEventHandler(int playerId);
@@ -115,7 +119,7 @@ public partial class DecisionTray : Control
     {
         float w = Size.X, h = Size.Y;
         Pregon.DrawParchment(this, Vector2.Zero, w, h, new Color("e3d2a8"), Pregon.VellumEdge, seed: 700, amplitude: 2f, edgeWidth: 2f);
-        Style.DrawText(this, Pregon.Fell, new Vector2(20f, 8f), UiText.Get("ui.pregon.tray.caption"), Pregon.SizeHeader, Pregon.Sable, maxWidth: 600f);
+        Style.DrawText(this, Pregon.Fell, new Vector2(20f, 4f), UiText.Get("ui.pregon.tray.caption"), Pregon.SizeHeader, Pregon.Sable, maxWidth: 600f);
 
         float ry = h - 84f;
         float x = 20f;

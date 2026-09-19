@@ -186,8 +186,102 @@ public partial class BroadcastCapture : Control
             Drop(instance);
         }
 
+        // 3. Variantes de profundidad (revisión del orquestador: «el campo debe tener más 3D, más
+        // profundidad»), solo si se pidieron por línea de comandos (`-- variantes`). Reutiliza el MISMO
+        // fotograma que 'retrans-base' (estado inicial de la semilla base) y el MISMO que 'retrans-gol'
+        // (found["gol"], que puede venir de otra semilla) para que lo único que cambie entre imágenes sea
+        // la cámara, nunca el partido.
+        if (System.Array.IndexOf(OS.GetCmdlineUserArgs(), "variantes") >= 0)
+        {
+            await CaptureDepthVariants(run, baseSeed.Value, baseNode, found);
+        }
+
         Nav.Suppressed = false;
         GetTree().Quit();
+    }
+
+    /// <summary>
+    /// Las cinco variantes de cámara que se comparan (revisión del orquestador, 19 sep 2026): A es el
+    /// control (la ortográfica de siempre, sin estadio), B aísla el efecto del entorno sobre la misma
+    /// cámara, y C/D/E prueban perspectiva con distinto FOV y elevación, todas con estadio.
+    /// </summary>
+    private static readonly BroadcastScreen.PitchVariant[] DepthVariants =
+    {
+        new("A", Perspective: false, Elevation: 60f, Fov: 35f, Stadium: false),
+        new("B", Perspective: false, Elevation: 60f, Fov: 35f, Stadium: true),
+        new("C", Perspective: true, Elevation: 55f, Fov: 35f, Stadium: true),
+        new("D", Perspective: true, Elevation: 45f, Fov: 30f, Stadium: true),
+        new("E", Perspective: true, Elevation: 40f, Fov: 40f, Stadium: true),
+    };
+
+    /// <summary>
+    /// Una pasada de <c>Retransmision.tscn</c> por variante, con <see cref="BroadcastScreen.CaptureVariant"/>
+    /// puesto justo antes de instanciar (se consume solo, <see cref="BroadcastScreen.Build"/> lo vuelve a
+    /// <c>null</c>). <paramref name="found"/> es el mismo sondeo sin Godot que ya hizo <see cref="Capture"/>
+    /// para el resto de las capturas: si "gol" salió de una semilla distinta de la base, esta función abre
+    /// una segunda pasada solo para esa captura, en vez de forzar el gol a la semilla base.
+    /// </summary>
+    private async Task CaptureDepthVariants(
+        RunController run,
+        ulong baseSeed,
+        int baseNode,
+        Dictionary<string, (ulong Seed, int Node, int Frame)> found)
+    {
+        bool hasGoal = found.TryGetValue("gol", out var goal);
+        if (!hasGoal)
+        {
+            GD.Print("retransmisión (variantes): ninguna semilla sondeada tiene un momento de gol; se salta depth-*-gol");
+        }
+
+        foreach (var variant in DepthVariants)
+        {
+            BroadcastScreen.CaptureVariant = variant;
+            run.NewRun("orc_ironworks", Race.Orc, baseSeed);
+            run.SelectedNodeId = baseNode;
+
+            var instance = await Show("res://Scenes/Retransmision.tscn", frames: 10);
+            if (instance is not BroadcastScreen screen)
+            {
+                GD.PushError("res://Scenes/Retransmision.tscn no instancia BroadcastScreen: no hay capturas de variantes");
+                GetTree().Quit(1);
+                return;
+            }
+
+            await Save($"depth-{variant.Label}-base");
+
+            if (hasGoal)
+            {
+                if (goal.Seed == baseSeed && goal.Node == baseNode)
+                {
+                    screen.SeekTo(goal.Frame);
+                    await Settle(10);
+                    await Save($"depth-{variant.Label}-gol");
+                }
+                else
+                {
+                    Drop(instance);
+                    BroadcastScreen.CaptureVariant = variant;
+                    run.NewRun("orc_ironworks", Race.Orc, goal.Seed);
+                    run.SelectedNodeId = goal.Node;
+
+                    instance = await Show("res://Scenes/Retransmision.tscn", frames: 10);
+                    if (instance is not BroadcastScreen goalScreen)
+                    {
+                        GD.PushError("res://Scenes/Retransmision.tscn no instancia BroadcastScreen: no hay captura depth-gol");
+                        GetTree().Quit(1);
+                        return;
+                    }
+
+                    goalScreen.SeekTo(goal.Frame);
+                    await Settle(10);
+                    await Save($"depth-{variant.Label}-gol");
+                }
+            }
+
+            Drop(instance);
+        }
+
+        BroadcastScreen.CaptureVariant = null;
     }
 
     /// <summary>

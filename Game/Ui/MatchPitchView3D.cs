@@ -133,6 +133,32 @@ public partial class MatchPitchView3D : SubViewportContainer
     [Export]
     public bool SilhouetteMode { get; set; }
 
+    /// <summary>
+    /// Proyección en perspectiva en vez de ortográfica (revisión del orquestador, 19 sep 2026: «el campo
+    /// debe tener más 3D, más profundidad»). Por defecto <c>false</c>: el modo depuración
+    /// (<see cref="Screens.MatchScreen"/>) no toca esta propiedad y se queda exactamente como en el ADR
+    /// 0102 (ortográfico fijo en tres cuartos). Solo <see cref="Screens.BroadcastScreen"/> la activa.
+    /// </summary>
+    [Export]
+    public bool Perspective { get; set; }
+
+    /// <summary>
+    /// Campo de visión <b>vertical</b> en grados (la cámara mantiene <c>KeepAspectEnum.Height</c>), solo
+    /// leído cuando <see cref="Perspective"/> está activo. Con <see cref="Perspective"/> apagado no hace
+    /// nada: el ortográfico no tiene FOV.
+    /// </summary>
+    [Export]
+    public float Fov { get; set; } = 35f;
+
+    /// <summary>
+    /// Pistas de profundidad alrededor del campo — césped gastado, vallas con patrocinadores de parodia y
+    /// grada con público — todo marcador de posición procedural (regla 10 de <c>CLAUDE.md</c>: nada de
+    /// texturas ni modelos importados). Por defecto <c>false</c>: el modo depuración se queda con el
+    /// suelo y el fondo plano del ADR 0102, sin nada alrededor.
+    /// </summary>
+    [Export]
+    public bool Stadium { get; set; }
+
     /// <summary>Traza del partido; null mientras no haya partido reproducido.</summary>
     public MatchTrace? Trace { get; private set; }
 
@@ -356,6 +382,11 @@ public partial class MatchPitchView3D : SubViewportContainer
         };
         _world.AddChild(_ground);
 
+        if (Stadium)
+        {
+            BuildStadium();
+        }
+
         _ringMesh = BuildRingMesh();
 
         _ballMaterial = new StandardMaterial3D
@@ -518,6 +549,24 @@ public partial class MatchPitchView3D : SubViewportContainer
 
     private void ApplyCamera()
     {
+        // El modo depuración (Perspective apagado por defecto) no pasa por aquí en absoluto más que para
+        // fijar el tipo de proyección: con Perspective=false esta línea deja la cámara exactamente como
+        // antes de este cambio (ADR 0102), y ApplyOrthographicCamera es el cuerpo íntegro de la vieja
+        // ApplyCamera, sin tocar.
+        _camera.Projection = Perspective ? Camera3D.ProjectionType.Perspective : Camera3D.ProjectionType.Orthogonal;
+
+        if (Perspective)
+        {
+            ApplyPerspectiveCamera();
+        }
+        else
+        {
+            ApplyOrthographicCamera();
+        }
+    }
+
+    private void ApplyOrthographicCamera()
+    {
         float elevation = Mathf.DegToRad(Mathf.Clamp(Elevation, 5f, 89f));
         var center = new Vector3(Pitch.Columns / 2f, 0.35f, Pitch.Rows / 2f);
 
@@ -531,6 +580,180 @@ public partial class MatchPitchView3D : SubViewportContainer
         var from = center + (new Vector3(0f, Mathf.Sin(elevation), Mathf.Cos(elevation)) * CameraDistance);
         _camera.LookAtFromPosition(from, center, Vector3.Up);
         _camera.Size = Mathf.Max(OrthoSize, 0.5f);
+    }
+
+    /// <summary>
+    /// Encaje automático en perspectiva (revisión del orquestador, 19 sep 2026): en vez de una fórmula
+    /// cerrada —la proyección de un rectángulo inclinado no tiene una despejable simple para FOV y
+    /// elevación arbitrarios—, se mide la posición en pantalla de las cuatro esquinas del césped con la
+    /// propia cámara (<see cref="Camera3D.UnprojectPosition"/>) y se ajustan por bisección la distancia
+    /// (ancho/alto) y el desplazamiento vertical (posición dentro del hueco), en <see cref="SolvePerspectiveFit"/>.
+    /// El resultado se cachea en <see cref="_fitDistance"/>/<see cref="_fitPan"/> y solo se recalcula si
+    /// cambian <see cref="Elevation"/>, <see cref="Fov"/> o el tamaño del viewport.
+    /// </summary>
+    private void ApplyPerspectiveCamera()
+    {
+        EnsurePerspectiveFit();
+
+        float elevation = Mathf.DegToRad(Mathf.Clamp(Elevation, 5f, 89f));
+        var elevationUp = new Vector3(0f, Mathf.Cos(elevation), -Mathf.Sin(elevation));
+        var center = new Vector3(Pitch.Columns / 2f, 0f, Pitch.Rows / 2f) + (elevationUp * _fitPan);
+        var from = center + (new Vector3(0f, Mathf.Sin(elevation), Mathf.Cos(elevation)) * _fitDistance);
+
+        _camera.Fov = Mathf.Clamp(Fov, 1f, 179f);
+        _camera.LookAtFromPosition(from, center, Vector3.Up);
+    }
+
+    /// <summary>Último ajuste calculado por <see cref="SolvePerspectiveFit"/>, para no repetir la bisección cada fotograma.</summary>
+    private float _fitElevation = float.NaN;
+    private float _fitFov = float.NaN;
+    private Vector2I _fitViewportSize;
+    private float _fitDistance = CameraDistance;
+    private float _fitPan;
+
+    private void EnsurePerspectiveFit()
+    {
+        var size = _world.Size;
+        if (size.X <= 0 || size.Y <= 0)
+        {
+            // El SubViewport todavía no ha recibido su tamaño final del contenedor (primer fotograma tras
+            // construirse): se deja el último ajuste conocido para este fotograma y se reintenta en el
+            // siguiente, en vez de encajar contra un tamaño de 0x0.
+            return;
+        }
+
+        float elevation = Mathf.Clamp(Elevation, 5f, 89f);
+        float fov = Mathf.Clamp(Fov, 1f, 179f);
+        if (Mathf.IsEqualApprox(_fitElevation, elevation) && Mathf.IsEqualApprox(_fitFov, fov) && _fitViewportSize == size)
+        {
+            return;
+        }
+
+        (_fitDistance, _fitPan) = SolvePerspectiveFit(Mathf.DegToRad(elevation), fov, size);
+        _fitElevation = elevation;
+        _fitFov = fov;
+        _fitViewportSize = size;
+    }
+
+    /// <summary>
+    /// Rectángulo de pantalla destinado al campo, escalado al tamaño real del viewport de esta vista:
+    /// ancho 45-1235 (sigue mandando en la bisección de distancia), <see cref="FieldRect"/> alto de
+    /// referencia 200 (solo para acotar cuánto puede crecer el hueco vertical, ver
+    /// <see cref="SolvePerspectiveFit"/>) y el <b>ancla</b> del borde cercano en 690 — no 665 — con el
+    /// límite duro de las tiras en 735 (revisión del orquestador, 19 sep 2026, variante D elegida: a 602
+    /// sobraba hueco antes de las tiras; 690 deja 45px de margen contra las tiras y sube la grada, que
+    /// gana alto por arriba). Es el objetivo que persigue <see cref="SolvePerspectiveFit"/>.
+    /// </summary>
+    private static (float XMin, float XMax, float YMin, float YNearTarget, float YHardMax) FieldRect(Vector2I viewportSize)
+    {
+        float scaleX = viewportSize.X / 1280f;
+        float scaleY = viewportSize.Y / 800f;
+        return (45f * scaleX, 1235f * scaleX, 200f * scaleY, 690f * scaleY, 735f * scaleY);
+    }
+
+    /// <summary>
+    /// Bisección en dos fases, sin fórmula cerrada (ver <see cref="ApplyPerspectiveCamera"/>): primero la
+    /// <b>distancia</b> de la cámara —cuanto menos, más grande y más "3D" sale el campo— hasta la menor
+    /// que sigue cabiendo en ancho y en alto contra el <b>límite duro</b> (nunca las tiras); luego el
+    /// <b>desplazamiento vertical</b> —mismo eje "arriba en pantalla" que <see cref="PanUp"/>, aplicado a
+    /// cámara y centro por igual— para anclar el borde <b>cercano</b> (el más abajo en pantalla, el que
+    /// puede comerse las tiras) exactamente en <see cref="FieldRect"/>.YNearTarget, no para centrar el
+    /// hueco: la revisión del 19 sep 2026 pidió bajar el campo y subir la grada, así que el ancla manda
+    /// aunque sobre margen por arriba. Ninguna de las dos bisecciones usa <c>System.Random</c> (RT-021 no
+    /// aplica aquí —esto es <c>/Game</c>, no <c>/Sim</c>— pero tampoco hace falta: es determinista de
+    /// por sí, la misma entrada da siempre la misma salida).
+    /// </summary>
+    private (float Distance, float Pan) SolvePerspectiveFit(float elevationRad, float fovDeg, Vector2I viewportSize)
+    {
+        var (xMin, xMax, yMin, yNearTarget, yHardMax) = FieldRect(viewportSize);
+        float widthBudget = xMax - xMin;
+        float heightHardBudget = yHardMax - yMin;
+
+        var corners = new[]
+        {
+            new Vector3(0f, 0f, 0f),
+            new Vector3(Pitch.Columns, 0f, 0f),
+            new Vector3(0f, 0f, Pitch.Rows),
+            new Vector3(Pitch.Columns, 0f, Pitch.Rows),
+        };
+
+        _camera.Fov = fovDeg;
+
+        (float MinX, float MaxX, float MinY, float MaxY) Extent(float distance, float pan)
+        {
+            var elevationUp = new Vector3(0f, Mathf.Cos(elevationRad), -Mathf.Sin(elevationRad));
+            var center = new Vector3(Pitch.Columns / 2f, 0f, Pitch.Rows / 2f) + (elevationUp * pan);
+            var from = center + (new Vector3(0f, Mathf.Sin(elevationRad), Mathf.Cos(elevationRad)) * distance);
+            _camera.LookAtFromPosition(from, center, Vector3.Up);
+
+            float minX = float.MaxValue;
+            float maxX = float.MinValue;
+            float minY = float.MaxValue;
+            float maxY = float.MinValue;
+            foreach (var corner in corners)
+            {
+                var screen = _camera.UnprojectPosition(corner);
+                minX = Mathf.Min(minX, screen.X);
+                maxX = Mathf.Max(maxX, screen.X);
+                minY = Mathf.Min(minY, screen.Y);
+                maxY = Mathf.Max(maxY, screen.Y);
+            }
+
+            return (minX, maxX, minY, maxY);
+        }
+
+        bool FitsAt(float distance)
+        {
+            var e = Extent(distance, 0f);
+            return (e.MaxX - e.MinX) <= widthBudget && (e.MaxY - e.MinY) <= heightHardBudget;
+        }
+
+        // Cota superior defensiva: si con 80 unidades todavía no cabe (FOV muy cerrado o elevación muy
+        // rasante), se duplica hasta que quepa. No debería hacer falta con los FOV/elevaciones de las
+        // variantes de captura, pero la propiedad es de uso general.
+        float hi = 80f;
+        while (!FitsAt(hi) && hi < 5000f)
+        {
+            hi *= 2f;
+        }
+
+        float lo = 1f;
+        for (int i = 0; i < 40; i++)
+        {
+            float mid = (lo + hi) / 2f;
+            if (FitsAt(mid))
+            {
+                hi = mid;
+            }
+            else
+            {
+                lo = mid;
+            }
+        }
+
+        float distance = hi;
+
+        // El desplazamiento baja el borde CERCANO de la imagen (MaxY) cuanto más pan positivo se aplique
+        // (misma convención que PanUp: positivo baja el campo en pantalla), así que se busca por bisección
+        // en vez de despejar — no es lineal por la perspectiva. Se ancla el borde cercano, no se centra el
+        // hueco: da igual cuánto sobre por arriba, ahí es donde tiene que crecer la grada.
+        float panLo = -20f;
+        float panHi = 20f;
+        for (int i = 0; i < 40; i++)
+        {
+            float mid = (panLo + panHi) / 2f;
+            float bottom = Extent(distance, mid).MaxY;
+            if (bottom < yNearTarget)
+            {
+                panLo = mid;
+            }
+            else
+            {
+                panHi = mid;
+            }
+        }
+
+        return (distance, (panLo + panHi) / 2f);
     }
 
     private void ApplyPalette()
@@ -552,7 +775,10 @@ public partial class MatchPitchView3D : SubViewportContainer
         }
         else
         {
-            _grassTexture ??= BuildGroundTexture(false);
+            // Stadium (revisión del orquestador, «más 3D, más profundidad»): césped gastado con franjas de
+            // siega y calvas en vez del césped liso de RA-002 — la misma pista de profundidad del
+            // prototipo (docs/ui/prototipo/prototipo-ui.patch, BuildWornGrass).
+            _grassTexture ??= Stadium ? BuildWornGrass() : BuildGroundTexture(false);
             _groundMaterial.AlbedoTexture = _grassTexture;
             _groundMaterial.AlbedoColor = new Color(1f, 1f, 1f);
         }
@@ -848,6 +1074,222 @@ public partial class MatchPitchView3D : SubViewportContainer
     /// (2x4, <see cref="Pitch.AreaColumns"/>) y las porterías, con la misma paleta que la vista 2D. En
     /// silueta la misma geometría en blanco y gris, para no perder la referencia de casilla.
     /// </summary>
+    // ------------------------------------------------------------------ estadio (pistas de profundidad, Stadium)
+
+    /// <summary>
+    /// Alrededores del campo, marcador de posición procedural (regla 10 de <c>CLAUDE.md</c>): explanada
+    /// de tierra más oscura que el césped, vallas bajas con placas de patrocinadores de parodia (RA-025,
+    /// «carnicería administrada» en los rótulos, no fútbol de cristal) y una grada escalonada con público
+    /// de cápsulas de colores en el lado lejano. Adaptado de
+    /// <c>docs/ui/prototipo/prototipo-ui.patch</c> (bloque <c>MatchPitchView3D.cs</c>, <c>BuildStadium</c>):
+    /// las medidas ya encajaban con <c>Pitch.Columns</c>/<c>Pitch.Rows</c> (16x7) porque el prototipo se
+    /// escribió contra el mismo campo. Determinista: el reparto de color del público usa
+    /// <c>RandomNumberGenerator</c> con semilla fija, nunca <c>System.Random</c>.
+    /// </summary>
+    private void BuildStadium()
+    {
+        // Explanada: tierra apisonada con hierba rala alrededor del rectángulo de juego, y una franja algo
+        // más clara justo delante de la cámara (la "boca" del estadio en la tele).
+        AddBox(new Vector3(8f, -0.03f, 3.5f), new Vector3(24f, 0.04f, 13f), new Color("4b5a36"), shadow: false);
+        AddBox(new Vector3(8f, -0.02f, -0.45f), new Vector3(18.4f, 0.03f, 0.8f), new Color("6b5a3e"), shadow: false);
+
+        // Vallas de publicidad en la banda del fondo (lado lejano de la cámara): la banda cercana queda
+        // libre, como en una retransmisión de verdad, para no tapar nunca al jugador que mira la cámara.
+        var sponsors = new (string Text, Color Fill, Color Ink)[]
+        {
+            ("FUNERARIA EL ÚLTIMO SAQUE", new Color("1c1a1a"), new Color("f1e4c3")),
+            ("HIDROMIEL TRAGÓN", new Color("c9982f"), new Color("1c1a1a")),
+            ("PRÓTESIS DE ROBLE MAESE TOCÓN", new Color("f1e4c3"), new Color("3a2a1a")),
+            ("CARNICERÍA HNOS. TAJO", new Color("8f1d1d"), new Color("f1e4c3")),
+            ("UNGÜENTOS LA PATA COJA", new Color("2d5a3a"), new Color("f1e4c3")),
+            ("SEGUROS AY MADRE", new Color("1e3a6e"), new Color("c9982f")),
+        };
+
+        float segment = 17.6f / sponsors.Length;
+        for (int i = 0; i < sponsors.Length; i++)
+        {
+            float cx = -0.8f + (segment * (i + 0.5f));
+            AddBox(new Vector3(cx, 0.24f, -0.42f), new Vector3(segment - 0.06f, 0.48f, 0.08f), sponsors[i].Fill);
+            var label = new Label3D
+            {
+                Text = sponsors[i].Text,
+                Font = Pregon.DataBold,
+                FontSize = 96,
+                PixelSize = 0.0028f,
+                Modulate = sponsors[i].Ink,
+                OutlineSize = 0,
+                Position = new Vector3(cx, 0.24f, -0.37f),
+                Width = (segment - 0.2f) / 0.0028f,
+                AutowrapMode = TextServer.AutowrapMode.Off,
+                HorizontalAlignment = HorizontalAlignment.Center,
+                Shaded = false,
+                DoubleSided = false,
+            };
+            _world.AddChild(label);
+        }
+
+        // Grada escalonada de madera y piedra con público: cápsulas simples con los colores heráldicos de
+        // los dos equipos, más algo de tierra/piedra para no leerse como uniforme. Semilla fija (RT-021 no
+        // rige en /Game, pero determinismo por costumbre: la misma grada siempre pinta lo mismo).
+        var rng = new RandomNumberGenerator { Seed = 1234 };
+        var crowdColors = new[]
+        {
+            new Color("2f6fd6"), new Color("1d4590"), new Color("d63a2f"), new Color("8e231c"),
+            new Color("c9b48a"), new Color("6b5a3e"), new Color("e8dcc0"),
+        };
+        var body = new CapsuleMesh { Radius = 0.12f, Height = 0.42f, RadialSegments = 8, Rings = 2 };
+        var crowdMaterial = new StandardMaterial3D
+        {
+            VertexColorUseAsAlbedo = true,
+            Roughness = 1f,
+            SpecularMode = BaseMaterial3D.SpecularModeEnum.Disabled,
+        };
+
+        for (int tier = 0; tier < 5; tier++)
+        {
+            float z = -1.05f - (tier * 0.62f);
+            float y = 0.18f + (tier * 0.36f);
+            AddBox(new Vector3(8f, y / 2f, z), new Vector3(19.5f, y, 0.62f), tier % 2 == 0 ? new Color("5c4632") : new Color("6e5640"));
+
+            var multiMesh = new MultiMesh { TransformFormat = MultiMesh.TransformFormatEnum.Transform3D, UseColors = true, Mesh = body, InstanceCount = 62 };
+            for (int k = 0; k < multiMesh.InstanceCount; k++)
+            {
+                float x = -1.4f + (k * 0.305f) + rng.RandfRange(-0.06f, 0.06f);
+                float h = rng.RandfRange(0.9f, 1.15f);
+                var transform = new Transform3D(
+                    Basis.Identity.Scaled(new Vector3(1f, h, 1f)),
+                    new Vector3(x, y + (0.2f * h), z + rng.RandfRange(-0.12f, 0.12f)));
+                multiMesh.SetInstanceTransform(k, transform);
+                multiMesh.SetInstanceColor(k, crowdColors[rng.RandiRange(0, crowdColors.Length - 1)]);
+            }
+
+            _world.AddChild(new MultiMeshInstance3D { Multimesh = multiMesh, MaterialOverride = crowdMaterial, CastShadow = GeometryInstance3D.ShadowCastingSetting.Off });
+        }
+
+        // Remate de la grada: una viga con banderolas alternando los dos equipos.
+        AddBox(new Vector3(8f, 2.05f, -4.2f), new Vector3(19.5f, 0.12f, 0.12f), new Color("3a2a1a"));
+        for (int f = 0; f < 12; f++)
+        {
+            var flagColor = f % 2 == 0 ? new Color("2f6fd6") : new Color("d63a2f");
+            AddBox(new Vector3(-0.8f + (f * 1.6f), 1.8f, -4.15f), new Vector3(0.5f, 0.45f, 0.03f), flagColor);
+        }
+    }
+
+    /// <summary>Caja opaca, sin transparencia ni textura: el bloque de construcción de todo <see cref="BuildStadium"/>.</summary>
+    private void AddBox(Vector3 center, Vector3 size, Color color, bool shadow = true)
+    {
+        _world.AddChild(new MeshInstance3D
+        {
+            Mesh = new BoxMesh { Size = size },
+            MaterialOverride = new StandardMaterial3D { AlbedoColor = color, Roughness = 1f, SpecularMode = BaseMaterial3D.SpecularModeEnum.Disabled },
+            Position = center,
+            CastShadow = shadow ? GeometryInstance3D.ShadowCastingSetting.On : GeometryInstance3D.ShadowCastingSetting.Off,
+        });
+    }
+
+    /// <summary>
+    /// Césped de fútbol gastado (Stadium): franjas de siega por columna, calvas de tierra delante de cada
+    /// portería y en el círculo central, hierba seca junto a las bandas y alguna quemadura — la misma
+    /// pista de profundidad del prototipo (<c>BuildWornGrass</c>), sobre las líneas de <see cref="Box"/>/
+    /// <see cref="Outline"/>/<see cref="Ring"/> que ya dibujan el campo liso.
+    /// </summary>
+    private static ImageTexture BuildWornGrass()
+    {
+        int width = Pitch.Columns * GroundPixels;
+        int height = Pitch.Rows * GroundPixels;
+        var image = Image.CreateEmpty(width, height, true, Image.Format.Rgba8);
+
+        var noise = new FastNoiseLite { Seed = 11, Frequency = 0.006f, NoiseType = FastNoiseLite.NoiseTypeEnum.Simplex, FractalOctaves = 3 };
+        var fine = new FastNoiseLite { Seed = 29, Frequency = 0.09f, NoiseType = FastNoiseLite.NoiseTypeEnum.Simplex };
+        var burn = new FastNoiseLite { Seed = 5, Frequency = 0.02f, NoiseType = FastNoiseLite.NoiseTypeEnum.Cellular };
+        var lush = new Color("3b6631");
+        var lushAlt = new Color("4a7d3b");
+        var dry = new Color("8a8a45");
+        var dirt = new Color("7a5f3e");
+        var burnt = new Color("2e2a1c");
+
+        for (int y = 0; y < height; y++)
+        {
+            for (int x = 0; x < width; x++)
+            {
+                float cx = x / (float)GroundPixels;
+                float cy = y / (float)GroundPixels;
+                var c = (int)cx % 2 == 0 ? lush : lushAlt;
+
+                // Desgaste: más en las dos áreas y en el círculo central.
+                float wear = 0f;
+                wear = Mathf.Max(wear, 1f - (Mathf.Abs(cx - 1.2f) / 1.6f + Mathf.Abs(cy - 3.5f) / 2.2f));
+                wear = Mathf.Max(wear, 1f - (Mathf.Abs(cx - 14.8f) / 1.6f + Mathf.Abs(cy - 3.5f) / 2.2f));
+                wear = Mathf.Max(wear, 1f - (new Vector2(cx - 8f, cy - 3.5f).Length() / 1.6f));
+                wear = Mathf.Clamp(wear, 0f, 1f);
+
+                float n = (noise.GetNoise2D(x, y) * 0.5f) + 0.5f;
+                float f = (fine.GetNoise2D(x, y) * 0.5f) + 0.5f;
+                float edge = Mathf.Min(Mathf.Min(cy, Pitch.Rows - cy), 1.2f) / 1.2f;
+                if (n > 0.66f + (edge * 0.08f))
+                {
+                    c = c.Lerp(dry, Mathf.Clamp((n - 0.66f) / 0.2f, 0f, 1f) * 0.7f);
+                }
+
+                float bald = (wear * 0.9f) + ((n - 0.5f) * 0.6f) + ((f - 0.5f) * 0.25f);
+                if (bald > 0.55f)
+                {
+                    c = c.Lerp(dirt, Mathf.Clamp((bald - 0.55f) / 0.12f, 0f, 1f));
+                }
+
+                if (burn.GetNoise2D(x, y) > 0.86f)
+                {
+                    c = c.Lerp(burnt, 0.65f);
+                }
+
+                c = c.Lerp(Colors.Black, (f - 0.5f) * 0.08f);
+                image.SetPixel(x, y, c);
+            }
+        }
+
+        var chalk = new Color(0.93f, 0.92f, 0.86f);
+        var faint = new Color(1f, 1f, 1f, 0.07f);
+        for (int column = 1; column < Pitch.Columns; column++)
+        {
+            Blend(image, column - 0.01f, 0f, column + 0.01f, Pitch.Rows, faint);
+        }
+
+        for (int row = 1; row < Pitch.Rows; row++)
+        {
+            Blend(image, 0f, row - 0.01f, Pitch.Columns, row + 0.01f, faint);
+        }
+
+        Box(image, (Pitch.Columns / 2f) - 0.03f, 0f, (Pitch.Columns / 2f) + 0.03f, Pitch.Rows, chalk);
+        Ring(image, Pitch.Columns / 2f, Pitch.Rows / 2f, 0.9f, 0.05f, chalk);
+        Outline(image, 0f, 1f, Pitch.AreaColumns, 1f + Pitch.AreaRows, 0.045f, chalk);
+        Outline(image, Pitch.Columns - Pitch.AreaColumns, 1f, Pitch.Columns, 1f + Pitch.AreaRows, 0.045f, chalk);
+        Outline(image, 0f, 0f, Pitch.Columns, Pitch.Rows, 0.05f, chalk);
+
+        float mid = Pitch.Rows / 2f;
+        Box(image, 0f, mid - 0.9f, 0.09f, mid + 0.9f, Style.TeamOwn);
+        Box(image, Pitch.Columns - 0.09f, mid - 0.9f, Pitch.Columns, mid + 0.9f, Style.TeamRival);
+
+        image.GenerateMipmaps();
+        return ImageTexture.CreateFromImage(image);
+    }
+
+    /// <summary>Mezcla alfa sobre lo que ya hay en la imagen, en coordenadas de casilla: para líneas semitransparentes sobre el césped gastado.</summary>
+    private static void Blend(Image image, float x0, float y0, float x1, float y1, Color color)
+    {
+        int left = Mathf.Max(0, Mathf.RoundToInt(x0 * GroundPixels));
+        int right = Mathf.Min(image.GetWidth(), Mathf.RoundToInt(x1 * GroundPixels));
+        int top = Mathf.Max(0, Mathf.RoundToInt(y0 * GroundPixels));
+        int bottom = Mathf.Min(image.GetHeight(), Mathf.RoundToInt(y1 * GroundPixels));
+
+        for (int y = top; y < bottom; y++)
+        {
+            for (int x = left; x < right; x++)
+            {
+                image.SetPixel(x, y, image.GetPixel(x, y).Lerp(new Color(color.R, color.G, color.B), color.A));
+            }
+        }
+    }
+
     private static ImageTexture BuildGroundTexture(bool silhouette)
     {
         int width = Pitch.Columns * GroundPixels;
