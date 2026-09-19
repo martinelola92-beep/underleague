@@ -143,7 +143,8 @@ juego más legibles para el jugador:
 El usuario actúa **únicamente como revisor**. Claude planifica, implementa, prueba, documenta, commitea y hace push por su cuenta, y solo consulta cuando una decisión cambia una regla de juego de `docs/requisitos.md`, tiene coste económico, o es irreversible fuera del repositorio.
 
 - **Esquema 10-80-10**: la sesión principal (el modelo más capaz) hace el primer 10%, **planificar**: arquitectura, interfaces, criterios de éxito y restricciones, por escrito antes de que nadie codifique. El 80% de **ejecución** se delega a subagentes con modelos más baratos. El último 10% es **revisión** por la sesión principal contra el plan: huecos, desviaciones, qué falta antes de commitear.
-- **Subagentes del proyecto** (`.claude/agents/`): `fast-worker` (sonnet) para trabajo mecánico con especificación cerrada. `deep-reasoner` (opus) para razonamiento pesado. `independent-reviewer` (opus) para revisión sin ver el razonamiento del implementador — Regla E arriba. `Explore` para búsquedas de solo lectura. Usa `fork` solo cuando el subagente necesite todo el contexto de la sesión.
+- **Ejecutor por defecto: OpenCode** (modelos gratuitos, skill `opencode-worker`) para el trabajo mecánico con especificación cerrada; corre en un worktree aislado y solo devuelve un informe corto. Piloto en `docs/analisis/piloto-opencode.md`.
+- **Subagentes del proyecto** (`.claude/agents/`): `fast-worker` (sonnet) como reserva para encargos que necesitan algo de criterio o que OpenCode ha fallado dos veces. `deep-reasoner` (opus) para razonamiento pesado. `independent-reviewer` (opus) para revisión sin ver el razonamiento del implementador — Regla E arriba. `Explore` para búsquedas de solo lectura. Usa `fork` solo cuando el subagente necesite todo el contexto de la sesión.
 - Cada encargo a un subagente es cerrado: qué ficheros puede tocar, qué interfaces debe respetar, qué tests deben pasar, y que no haga commit. Lanza en paralelo los encargos independientes. Siempre una revisión independiente antes de cerrar un hito.
 - **Skills y plugins**: cuando un flujo se repita o requiera conocimiento específico, crea una skill en `.claude/skills/` (plugin `skill-creator`) o instala un plugin del marketplace, y regístralo en la sección de skills de este fichero. No pidas permiso para ello.
 - **Nunca `git add -A` con subagentes en marcha.** Trabajan sobre el mismo árbol, así que barre su trabajo a medias hacia tu commit. Prepara siempre rutas explícitas (`git add Sim Sim.Tests data docs`) y mira `git status` antes de commitear. Hay un hook que avisa (`.claude/hooks/subagent-add-warning.sh`), pero no sustituye a mirar `git status`.
@@ -209,6 +210,7 @@ en `docs/pendientes/` y se sigue.
 - `balance-measure`: medir un cambio que puede alterar comportamiento cuantificable, con baseline real y behavioral audit. Regla D.
 - `visual-review`: ejecutar Godot, capturar y comparar antes de declarar que algo "se ve bien".
 - `build-and-test`: comandos de compilación, prueba y validación — fuente única.
+- `opencode-worker`: delegar un encargo cerrado en OpenCode (`tools/opencode-encargo.sh`), plantilla de encargo y cuándo no delegar.
 - `perk-authoring`: crear o revisar un perk, objeto o consumible en `/data` cumpliendo formato, límites y distribución 60/30/10.
 
 Plugins instalados a nivel de usuario: `csharp-lsp`, `commit-commands`, `claude-md-management`, `context7`, `skill-creator`, `dotnet-skills` (desactivado en este proyecto por consumo: `.claude/settings.json`) y `godot-prompter` (55 skills de Godot 4 con ejemplos C#).

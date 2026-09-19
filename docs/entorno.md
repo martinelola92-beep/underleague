@@ -79,3 +79,7 @@ dotnet test Sim.Tests
 ## Claude Code
 
 Plugins instalados a nivel de usuario: `csharp-lsp`, `commit-commands`, `claude-md-management`, `context7`, `skill-creator` (marketplace oficial), `dotnet-skills` (marketplace `Aaronontheweb/dotnet-skills`; desactivado en este proyecto desde el 19 sep 2026 para no cargar ~40 skills irrelevantes en cada petición) y `godot-prompter` (marketplace `jame581/skillsmith`). Marketplace `Randroids-Dojo/skills` añadido sin instalar nada (su plugin `godot` es candidato para la fase 4). Skills del proyecto en `.claude/skills/`; subagentes del proyecto en `.claude/agents/` (`deep-reasoner` opus, `fast-worker` sonnet). Permisos preaprobados para `dotnet build/test/run` en `.claude/settings.json`.
+
+## OpenCode (ejecutor)
+
+OpenCode 1.18.31 instalado con npm en WSL (`~/.npm-global/bin/opencode`), sin credenciales: usa los modelos gratuitos de OpenCode Zen. Lee `AGENTS.md` (no `CLAUDE.md`) y los permisos de `opencode.json`. Se lanza siempre a través de `tools/opencode-encargo.sh` (skill `opencode-worker`), nunca a pelo.
