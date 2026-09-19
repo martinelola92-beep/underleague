@@ -18,10 +18,27 @@ dotnet run --project tools/DataValidator -- data/                         # esqu
 dotnet build Game/Underleague.Game.csproj                                 # OBLIGATORIO antes de ejecutar Godot (ver skill visual-review)
 ```
 
+## Leer resultados sin gastar contexto: resumidores
+
+La salida cruda de `dotnet test` y los `summary.csv` son la mayor fuente de contexto gastado en balde. Por
+defecto se leen con estos dos scripts (cero tokens de modelo, deterministas):
+
+```bash
+timeout 960 tools/test-resumen.sh Sim.Tests -c Release --filter "Category=Gate" -m:1 -v q
+#   TESTS: 43 · Failed 3 · Passed 40 · rc=1 · 7 m 05 s · trx: …   + una línea FALLA por test con su mensaje
+#   Si no compila: SIN RESULTADOS + los errores distintos del compilador. Mismos argumentos que dotnet test.
+tools/balance-resumen.py out/X/summary.csv [--base out/B/summary.csv] [--top 8] [--metric M ...]
+#   Sin --base: las filas OUT con su banda. Con --base: cambios de estado IN<->OUT y las más movidas.
+```
+
+`balance-resumen.py` no sabe de ruido entre semillas (no está en `summary.csv`): un Δ grande es un candidato
+a mirar, no una conclusión. El log y el `.trx` completos quedan en la ruta impresa por si hace falta abrirlos.
+
 ## Reglas que van con estos comandos
 
 - Las puertas (`Category=Gate`) se lanzan **una vez y en una sola invocación**, nunca tras cada edición ni
-  troceadas por clase. `summary.csv` se lee con `grep -E "^métrica,"`, nunca entero (>150 filas).
+  troceadas por clase. `summary.csv` se lee con `tools/balance-resumen.py` o con `grep -E "^métrica,"`,
+  nunca entero (>150 filas).
 - No repitas un build o test cuyo resultado ya conoces.
 - El lote de `/Balance` se lanza con una hipótesis concreta que medir — ver skill `balance-measure`.
 - Todo proceso largo va envuelto en `timeout`; ver "Disciplina de procesos" abajo para el presupuesto por

@@ -48,7 +48,9 @@ problema.
 ## Comandos
 
 Ver `build-and-test` para los comandos de compilación y prueba — no se repiten aquí. `summary.csv` se lee
-con `grep -E "^métrica,"` de las filas que importan, nunca entero.
+con `tools/balance-resumen.py <nuevo> --base <baseline> --metric <las del cambio>`, nunca entero: da los
+cambios de estado y las más movidas de **todas** las métricas, que es justo lo que pide la sección de
+arriba. El behavioral audit sigue saliendo de `matches.csv`/`players.csv`, no del resumen.
 
 ## Qué NO hace
 
