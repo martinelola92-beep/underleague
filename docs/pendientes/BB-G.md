@@ -7,6 +7,10 @@ semilla (ver "Fase 3 — Resultado" más abajo, corregido tras `independent-revi
 vivas sin probar (penalización de zona local, geometría del radio de recogida, precondición de motor con
 estado temporal) — ver el final de esa sección.
 
+> **19 sep 2026 — reabierta en parte por [BC-G](./BC-G.md):** con 1.000 partidos aparecen bloqueos de 300+ ticks
+> en esquinas (~0,3 % de partidos) y la H1 de abajo (límite duro de zona) resulta ser un mecanismo real
+> (M2 de BC-G). La resolución de la ADR 0117 sigue valiendo para el caso que midió.
+
 ## Observación
 
 «El balón se queda parado en el campo (a veces en la línea de banda o fondo). ¿No hay saques?»

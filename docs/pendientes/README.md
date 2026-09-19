@@ -34,8 +34,8 @@ a secas.
 | [BB-C](./BB-C.md) | «Celebra» se activa cuando ya han vuelto a su campo | Resuelta |
 | [BB-D](./BB-D.md) | Propuesta del revisor: parar unos segundos en los eventos que detienen | Ver fichero |
 | [BB-E](./BB-E.md) | Salen dos canteranos en el mercado; debería salir uno como mucho | Cerrada |
-| [BB-F](./BB-F.md) | Un jugador se lesiona y no se ve en qué posición jugaba | Ver fichero |
-| [BB-G](./BB-G.md) | El balón se queda parado en el campo | Resuelta (ADR 0117) |
+| [BB-F](./BB-F.md) | Un jugador se lesiona y no se ve en qué posición jugaba | Abierta; ampliada el 19 sep (la elección sí importa) |
+| [BB-G](./BB-G.md) | El balón se queda parado en el campo | Resuelta (ADR 0117); reabierta en parte por BC-G |
 | [BB-G2](./BB-G2.md) | Riesgo latente encontrado de camino, sin evidencia de que se dispare | Ver fichero |
 | [BB-H](./BB-H.md) | «Todavía no hay eventos, habrá que diseñarlos» | Ver fichero |
 | [BB-I](./BB-I.md) | «Depredador de área» pareció activarse en un momento que no era un tir | Ver fichero |
@@ -51,6 +51,14 @@ a secas.
 | [BB-S](./BB-S.md) | `build-neutral-reference.py` dice que escribe las referencias y solo imprime | Abierta |
 | [BB-T](./BB-T.md) | La puerta de equipamiento cae a 0,5: era RUIDO de una semilla, no el catálogo | Abierta (arreglo de instrumento) |
 | [BB-U](./BB-U.md) | Un solo perk común rompe el invariante de cero de la puerta de economía | Abierta, sin causa |
+| [BC-A](./BC-A.md) | El goleador sigue en campo rival cuando el otro equipo saca de centro | Abierta (causa CONFIRMED; rediseño de BB-C) |
+| [BC-B](./BC-B.md) | El límite de usos de un perk no se respeta cuando su efecto vuelve a dispararlo | Abierta (causa CONFIRMED) |
+| [BC-C](./BC-C.md) | «Doble disparo» no tiene sentido y no cambia el resultado | Abierta (rediseño) |
+| [BC-D](./BC-D.md) | «Último hombre» se activa pero no hace nada | Abierta (mecánica nueva + ADR) |
+| [BC-E](./BC-E.md) | Re-simular con la sustitución elegida falla en el 9,4 % de los casos | Abierta (causa CONFIRMED) |
+| [BC-F](./BC-F.md) | Al sustituir, el partido re-simulado reasigna los dorsales | Abierta (CONFIRMED) |
+| [BC-G](./BC-G.md) | El balón se queda suelto en el córner y nadie lo coge | Abierta (reabre BB-G en parte) |
+| [BC-H](./BC-H.md) | El aviso de alineación incompleta es falso: el once se rellena solo | Abierta (CONFIRMED) |
 | [CAT-A](./CAT-A.md) | `field_bandage` usaba el canal `injure`, que protegía al rival. | Ver fichero |
 | [CAT-B](./CAT-B.md) | Un consumible se puede comprar pero no se puede equipar: nadie emite ` | Ver fichero |
 | [CAT-C](./CAT-C.md) | La medición no puede ejercitar el consumible manual, así que subestima | Ver fichero |
