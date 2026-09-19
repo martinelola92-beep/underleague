@@ -1,6 +1,6 @@
 # Dirección de UI de Underleague
 
-**Estado (19 sep 2026): fases A–D.3 hechas con el revisor; nada implementado en `/Game`.** Este documento
+**Estado (19 sep 2026): fases A–D.3 hechas con el revisor; fase E implementada con marcadores de posición (ADR 0119, 0120).** Este documento
 fija lo acordado para que una sesión nueva pueda seguir sin la conversación. Lo marcado *provisional* se
 ajustará; lo marcado *pendiente de ADR* contradice un requisito o ADR vigente y no se implementa hasta
 registrarlo (RT-057). Etiquetas de evidencia: [HECHO] medido, [DECISIÓN] acordada, [HIPÓTESIS] por validar.
@@ -178,9 +178,21 @@ dibujo (afecta a UI-002).
 | Tabla de pantallas: «log bajo el campo» | el log pasa a depuración y a la crónica del informe |
 | ADR 0112 (cartel de perk de 1 s) | se mantiene la idea; sin carteles en el saque inicial (P1) y revisión de visibilidad de la build (P2) |
 
-## 11. Siguiente paso
+## 11. Fase E (hecha, 19 sep 2026) y siguiente paso
 
-Fase E (arquitectura): pasar por la skill `architecture-review` el director (agrupador + niveles), la
-separación de capas en `/Game` (Theme de Godot con los tokens de §1, componentes: tira, sello, estandarte,
-bando, bandeja, tablero) y el modo depuración; después las ADR de §10 y la implementación con marcadores de
-posición, verificada con `visual-review` contra `capturas/`.
+Implementado con marcadores de posición:
+
+- `/Sim`: `Sim.Run.View.MatchMomentView` — momentos, niveles, pausa, decisión y política de velocidad (ADR 0119).
+- `/Game`: `Game/Match/PresentationDirector.cs` (ritmo real, una voz alta, cola con caducidad, congelado en el
+  fotograma anterior), `Game/Screens/BroadcastScreen.cs` (`Retransmision.tscn`, ahora `Nav.Match`; **F3**
+  alterna con el modo depuración, la `MatchScreen` de siempre en `Partido.tscn`), componentes de pregón en
+  `Game/Ui/Broadcast/` con tokens y `Theme` en código (`Pregon.cs`), fuentes provisionales OFL en `Game/Fonts/`.
+- Verificación visual: `GaleriaPregon.tscn` (componentes, `pregon-*.png`) y `CapturasRetransmision.tscn`
+  (partidos reales de varias semillas, `retrans-*.png`, incluida la bandeja con sustitución real).
+  El encuadre del campo coincide al píxel con `capturas/base-1280x800.jpg`.
+
+Fuera de la fase E, pendiente: gestos de cámara (sacudida, acercamiento), grada y vallas (arte, regla 10),
+16:9 con `aspect = expand` (todas las pantallas, ADR 0119), capturas de roja y muerte (ninguna de las 12
+semillas probadas las tiene), las decisiones abiertas de §9 (C13 incluida) y P2 (visibilidad de la build,
+`game-design-review`). Siguiente paso propuesto: **partida del revisor sobre la retransmisión** (build de
+Windows) para validar ritmo y legibilidad a x1/x4/x16 antes de ajustar tiempos.

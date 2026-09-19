@@ -68,6 +68,11 @@ Quién lee del disco es siempre el llamador (`/Game`, `/Balance`, `/tools`).
 
 `/Game` reproduce la lista de eventos: interpola posiciones entre ticks, dispara animaciones, highlights (RF-115/116), texto flotante (RF-118) y log (RF-121). No tiene acceso al estado interno del simulador y no puede alterar el resultado. La velocidad x1..x4 y "saltar al resultado" (RF-050) solo cambian el ritmo de consumo de la lista. La repetición (RF-120) es volver a ejecutar `Simulator.Run` con la misma semilla y reproducir el tramo.
 
+**Director de presentación (ADR 0119).** Qué sucesos forman un momento narrable, su nivel N1–N4, si congela y
+qué se presenta a cada velocidad lo decide una vista pura de `/Sim` (`Sim.Run.View.MatchMomentView`); `/Game`
+(`PresentationDirector`) solo pone el ritmo real: duraciones, una voz alta a la vez, cola y congelado en el
+fotograma anterior al suceso. El residuo (marcador, tiras) se lee del estado en el fotograma, nunca del director.
+
 ## Consumibles manuales durante el partido (RF-082)
 
 Un consumible manual es una entrada del usuario en mitad de un partido determinista. Se modela como parte del **estado inicial**: `Simulator.Run` se llama con la lista de consumibles ya equipados y sus disparadores; el slot manual se resuelve así:

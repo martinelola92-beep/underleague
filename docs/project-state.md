@@ -11,15 +11,18 @@ PC (Steam), premium, sin online. **Estado (8 sep 2026): fases 0 y 1 cerradas; fa
 
 ## Trabajo en curso (19 sep 2026)
 
-**Fase de diseño de UI (revisor): A → D.3 hechas; dirección escrita en `docs/ui/README.md`** (con capturas y
-el parche de prototipos). Dirección: gramática de retransmisión, materia de fiesta popular medieval y **voz
-de pregón** (el cómic se descartó por infantil): estandartes heráldicos para gol/roja/lesión, banda de pregón
-para la turba, bando con lacre para la muerte, acta para el final. Medido: 8,6 momentos por partido, 14,5 de
-los 19 perks saltan en el saque, x4 = «retransmisión comprimida» (solo gol, N4 y decisiones). Composición
-validada con capturas: campo entero, tablero arriba, tiras propias abajo, la bandeja de decisión sustituye a
-las tiras, congelar el fotograma anterior al suceso. **Siguiente paso de UI: fase E** —`architecture-review`
-del director (agrupador + niveles), Theme y componentes en `/Game`— y las ADR de su §10 (RA-025/026, ADR
-0114, RF-116, UI-011/013/021). Nada implementado en `/Game` todavía.
+**UI del partido: fase E hecha (19 sep 2026) — la pantalla de Partido es ya la retransmisión con voz de
+pregón**, con marcadores de posición (`docs/ui/README.md` §11). **ADR 0119** (arquitectura): momentos, niveles,
+pausa y política de velocidad son una vista pura de `/Sim` (`MatchMomentView`, 17 tests, revisada por
+`independent-reviewer`: corregida la muerte por reincidencia partida en dos momentos, CONFIRMED 37/44); el ritmo
+real vive en `/Game` (`PresentationDirector`); el residuo sale del estado, no del director. **ADR 0120**
+(decisión del revisor): registra lo que la dirección contradice —RA-021/025, RF-050/115/116, RA-020/022, ADR
+0112/0114, UI-010/011/013, log bajo el campo— con nota en cada requisito. F3 alterna con el modo depuración (la
+`MatchScreen` de siempre). Verificado con capturas de partidos reales (`retrans-*.png`, bandeja con sustitución
+real incluida); el encuadre coincide al píxel con la captura de referencia. **Pendiente**: C13 (nivel de un
+suceso anulado) y P2 (visibilidad de la build) a `game-design-review`; gestos de cámara; 16:9; capturas de roja y
+muerte (no aparecen en 12 semillas). **Siguiente paso de UI: partida del revisor sobre la retransmisión** (build
+de Windows, `tools/export-windows.sh`) para validar ritmo y legibilidad a x1/x4/x16 antes de tocar tiempos.
 
 **Anotaciones de la partida del 19 sep: serie BC en `docs/pendientes/`.** Resueltas BC-B (el límite de usos
 de un perk se consume al activarse: `double_shot` y `charge` se encadenaban hasta 5 veces), BC-E (la
