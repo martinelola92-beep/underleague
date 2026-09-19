@@ -150,7 +150,8 @@ El usuario actúa **únicamente como revisor**. Claude planifica, implementa, pr
 - **Cada commit publicado compila por separado, no solo el HEAD final.** El 16 sep 2026 el commit `9f4d25b` (BB-J) se llevó `MatchEngine.cs` sin `Utility.cs`: `origin/main` quedó publicado y roto (`CS1061`) hasta el commit de arreglo. Un hook lo bloquea automáticamente antes de publicar: `.claude/hooks/build-check-before-push.sh` (`PreToolUse` sobre `git push`) compila en un worktree aislado cada commit del rango `@{u}..HEAD` que toque una ruta compilable (`Sim`, `Sim.Tests`, `Balance`, `tools`, `.csproj`/`.slnx`, `global.json`) y deniega el push si alguno falla. No es una alternativa a separar bien los commits, es la red de seguridad para cuando se separan mal.
 - **Hitos**: cada entregable termina con: build y tests en verde, lote de `/Balance` si toca `/Sim` o `/data` (skill `balance-measure`), revisión por subagente, commit con RF/RT, push, y actualización de `docs/project-state.md`.
 - **Informe al revisor**: al cerrar un hito, un resumen corto de qué se hizo, qué se midió, qué quedó fuera y qué decisiones se tomaron sin consultar (con enlace al ADR o a `docs/pendientes/`).
-- **No pares al cerrar un hito**: encadena con el siguiente sin esperar aprobación. Solo se detiene el desarrollo si falta una herramienta que el revisor deba instalar, si hay que tomar una decisión de diseño que cambie una regla del juego, o si algo tiene coste económico o es irreversible fuera del repositorio.
+- **Dentro de un hito no se para a pedir aprobación.** Solo se detiene el desarrollo si falta una herramienta que el revisor deba instalar, si hay que tomar una decisión de diseño que cambie una regla del juego, o si algo tiene coste económico o es irreversible fuera del repositorio.
+- **Una sesión por hito.** Al cerrar un hito, deja en `docs/project-state.md` el siguiente paso concreto (qué hito, por dónde empezar, qué leer) para que una sesión limpia arranque solo con ese fichero; da el informe y para. El revisor hace `/clear` y pide seguir. Motivo (19 sep 2026): ~85 % del consumo venía de la sesión principal arrastrando >150k de contexto durante sesiones de 8+ h.
 - Si algo bloquea, se hace todo lo que no dependa de ello y se deja la pregunta al final del informe, no en medio del trabajo.
 
 ## Flujo de trabajo
@@ -164,23 +165,10 @@ El usuario actúa **únicamente como revisor**. Claude planifica, implementa, pr
 
 ## Comandos, capturas y disciplina de procesos
 
-Ver skills **`build-and-test`** (comandos de compilación/prueba, fuente única) y **`visual-review`**
-(capturas, las tres entradas, el ciclo obligatorio). No se repiten aquí para no duplicarlos.
-
-**Nada se lanza sin plazo, y la CPU alta no es señal de progreso.** El 15 sep 2026 se dejó la escena de
-capturas 85 minutos con 4 h de CPU al 295 % sin producir nada, confundiendo "el proceso está vivo" con
-"está avanzando". Reglas:
-
-- **Todo proceso largo va envuelto en `timeout`**, siempre, sin excepción.
-- **Presupuesto por tarea, medido**: capturas ≤ 10 min · las 43 puertas ≤ 8 min (tardan 5 m 32 s) · el
-  bucle `Category!=Gate` ≤ 2 min (tarda ~40 s). Al doble del presupuesto, se mata y se diagnostica.
-- **Se espera un ARTEFACTO, no un latido.** `pgrep`/`%CPU`/`TIME` dicen que el proceso existe, no que
-  progrese. La condición de espera es un fichero escrito o una línea de log, con marca de tiempo
-  comprobada.
-- **Diagnostica por el camino barato antes de esperar más.** Aquel cuelgue se resolvió en 282 ms con un
-  test de `/Sim` que descartó la simulación — si existe una medición de segundos que acota el problema,
-  va antes que la segunda espera.
-- **Dos esperas fallidas cierran el asunto.** Se anota en `docs/pendientes/` con lo medido y se sigue.
+Ver skills **`build-and-test`** (comandos, presupuestos de tiempo, disciplina de procesos) y **`visual-review`**
+(capturas). Resumen innegociable: **todo proceso largo va en `timeout`**, se espera un **artefacto con marca de
+tiempo** (nunca CPU alta), al doble del presupuesto se mata y se diagnostica, y dos esperas fallidas se anotan
+en `docs/pendientes/` y se sigue.
 
 ## Convenciones
 
@@ -223,4 +211,4 @@ capturas 85 minutos con 4 h de CPU al 295 % sin producir nada, confundiendo "el 
 - `build-and-test`: comandos de compilación, prueba y validación — fuente única.
 - `perk-authoring`: crear o revisar un perk, objeto o consumible en `/data` cumpliendo formato, límites y distribución 60/30/10.
 
-Plugins instalados a nivel de usuario: `csharp-lsp`, `commit-commands`, `claude-md-management`, `context7`, `skill-creator`, `dotnet-skills` (patrones C#/.NET, testing, rendimiento) y `godot-prompter` (55 skills de Godot 4 con ejemplos C#).
+Plugins instalados a nivel de usuario: `csharp-lsp`, `commit-commands`, `claude-md-management`, `context7`, `skill-creator`, `dotnet-skills` (desactivado en este proyecto por consumo: `.claude/settings.json`) y `godot-prompter` (55 skills de Godot 4 con ejemplos C#).

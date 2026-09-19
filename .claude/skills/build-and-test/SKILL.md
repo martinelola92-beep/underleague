@@ -24,12 +24,28 @@ dotnet build Game/Underleague.Game.csproj                                 # OBLI
   troceadas por clase. `summary.csv` se lee con `grep -E "^métrica,"`, nunca entero (>150 filas).
 - No repitas un build o test cuyo resultado ya conoces.
 - El lote de `/Balance` se lanza con una hipótesis concreta que medir — ver skill `balance-measure`.
-- Todo proceso largo va envuelto en `timeout`; ver skill `visual-review` y la sección de convenciones de
-  `CLAUDE.md` para el presupuesto por tarea y qué cuenta como "terminado" (un artefacto con marca de
-  tiempo, nunca CPU alta).
+- Todo proceso largo va envuelto en `timeout`; ver "Disciplina de procesos" abajo para el presupuesto por
+  tarea y qué cuenta como "terminado" (un artefacto con marca de tiempo, nunca CPU alta).
 - El paralelismo del arnés (`/Balance`, puertas de `Sim.Tests`) usa `Parallel.For` por índice con semilla
   función pura del índice y un `Catalog` por hilo — ver skill `architecture-review` antes de escribir un
   bucle nuevo de partidos independientes.
+
+## Disciplina de procesos
+
+**Nada se lanza sin plazo, y la CPU alta no es señal de progreso.** El 15 sep 2026 se dejó la escena de
+capturas 85 minutos con 4 h de CPU al 295 % sin producir nada, confundiendo "el proceso está vivo" con
+"está avanzando". Reglas:
+
+- **Todo proceso largo va envuelto en `timeout`**, siempre, sin excepción.
+- **Presupuesto por tarea, medido**: capturas ≤ 10 min · las 43 puertas ≤ 8 min (tardan 5 m 32 s) · el
+  bucle `Category!=Gate` ≤ 2 min (tarda ~40 s). Al doble del presupuesto, se mata y se diagnostica.
+- **Se espera un ARTEFACTO, no un latido.** `pgrep`/`%CPU`/`TIME` dicen que el proceso existe, no que
+  progrese. La condición de espera es un fichero escrito o una línea de log, con marca de tiempo
+  comprobada.
+- **Diagnostica por el camino barato antes de esperar más.** Aquel cuelgue se resolvió en 282 ms con un
+  test de `/Sim` que descartó la simulación — si existe una medición de segundos que acota el problema,
+  va antes que la segunda espera.
+- **Dos esperas fallidas cierran el asunto.** Se anota en `docs/pendientes/` con lo medido y se sigue.
 
 ## Qué NO hace
 

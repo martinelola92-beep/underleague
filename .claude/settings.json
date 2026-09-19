@@ -22,9 +22,19 @@
       {
         "matcher": "Bash",
         "hooks": [
-          { "type": "command", "command": "/home/martinelola92/underleague/.claude/hooks/sim-game-boundary.sh" },
-          { "type": "command", "command": "/home/martinelola92/underleague/.claude/hooks/subagent-add-warning.sh" },
-          { "type": "command", "command": "/home/martinelola92/underleague/.claude/hooks/build-check-before-push.sh", "timeout": 600 }
+          {
+            "type": "command",
+            "command": "/home/martinelola92/underleague/.claude/hooks/sim-game-boundary.sh"
+          },
+          {
+            "type": "command",
+            "command": "/home/martinelola92/underleague/.claude/hooks/subagent-add-warning.sh"
+          },
+          {
+            "type": "command",
+            "command": "/home/martinelola92/underleague/.claude/hooks/build-check-before-push.sh",
+            "timeout": 600
+          }
         ]
       }
     ],
@@ -32,9 +42,15 @@
       {
         "matcher": "Edit|Write",
         "hooks": [
-          { "type": "command", "command": "/home/martinelola92/underleague/.claude/hooks/data-validation.sh" }
+          {
+            "type": "command",
+            "command": "/home/martinelola92/underleague/.claude/hooks/data-validation.sh"
+          }
         ]
       }
     ]
+  },
+  "enabledPlugins": {
+    "dotnet-skills@dotnet-skills": false
   }
 }
