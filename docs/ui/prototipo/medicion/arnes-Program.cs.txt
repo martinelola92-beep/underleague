@@ -1,0 +1,88 @@
+// Arnés desechable de medición (Fase A de UI). Juega runs completas con la política automática de
+// /Balance replicando RunPolicy.Play, intercepta MatchConfig para capturar el estado previo a cada
+// partido y lo reproduce (idéntico, determinista) para volcar su lista de sucesos en JSONL.
+using System.Reflection;
+using System.Text;
+using Underleague.Sim.Analysis;
+using Underleague.Sim.Data;
+using Underleague.Sim.Engine;
+using Underleague.Sim.Model;
+using Underleague.Sim.Run;
+using Underleague.Sim.Run.Bosses;
+using Underleague.Sim.Run.Systems;
+
+string dataRoot = args[0]; int runs = int.Parse(args[1]); ulong seed = ulong.Parse(args[2]); string outPath = args[3];
+var files = new Dictionary<string, string>(StringComparer.Ordinal);
+string schemas = Path.GetFullPath(Path.Combine(dataRoot, "schemas")) + "/";
+foreach (var f in Directory.EnumerateFiles(dataRoot, "*.json", SearchOption.AllDirectories))
+{
+    var full = Path.GetFullPath(f); if (full.StartsWith(schemas)) continue;
+    files[Path.GetRelativePath(dataRoot, full).Replace('\\', '/')] = File.ReadAllText(full);
+}
+var catalog = DataLoader.FromJson(files);
+var standard = StandardRunSystems.FromJson(files);
+var bosses = BossCatalog.FromJson(files);
+var races = catalog.Races.Where(r => r.Launch).Select(r => r.Id).OrderBy(r => r).ToList();
+
+var rp = typeof(RunPolicy);
+const BindingFlags P = BindingFlags.NonPublic | BindingFlags.Static;
+var playMatch = rp.GetMethod("PlayMatch", P)!; var enterService = rp.GetMethod("EnterService", P)!; var resolveOpen = rp.GetMethod("ResolveOpenNode", P)!;
+var ledgerT = rp.GetNestedType("Ledger", BindingFlags.NonPublic)!; var recT = rp.GetNestedType("RecordingSystems", BindingFlags.NonPublic)!;
+
+using var w = new StreamWriter(outPath, false, new UTF8Encoding(false));
+int total = 0, mismatches = 0;
+for (int i = 0; i < runs; i++)
+{
+    var options = RunPolicyOptions.For(PurchaseDoctrine.Contextual);
+    var setup = standard.NewRunSetup("balance_club", races[i % races.Count], files) with { GeneratedQuality = 50 };
+    var bossSystems = new BossRunSystems(bosses, standard);
+    var tap = new Tap(bossSystems);
+    var ledger = Activator.CreateInstance(ledgerT, true)!;
+    var systems = (IRunSystems)Activator.CreateInstance(recT, BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance, null, new object[] { tap, ledger }, null)!;
+    var state = bossSystems.AssignBosses(RunEngine.Start(setup, seed + (ulong)i, catalog, systems));
+    int m = 0;
+    for (int step = 0; step < options.MaxSteps && !RunEngine.Outcome(state).IsOver; step++)
+    {
+        if (state.Phase == RunPhase.NodeOpen) { state = (RunState)resolveOpen.Invoke(null, new object[] { state, catalog, standard, systems, options, ledger })!; continue; }
+        var nodes = RunEngine.AvailableNodes(state); if (nodes.Count == 0) break;
+        var node = RunPolicy.ChooseNode(state, nodes, standard.Economy, options);
+        if (!node.IsMatch) { state = (RunState)enterService.Invoke(null, new object[] { state, node, catalog, systems, ledger })!; continue; }
+        tap.Last = null;
+        state = (RunState)playMatch.Invoke(null, new object[] { state, node, catalog, systems, options, standard.Economy.ClinicCost, standard.Consumables, ledger })!;
+        if (tap.Last is null) { Console.Error.WriteLine($"run {i}: partido sin MatchConfig capturado"); continue; }
+        var pre = tap.Last;
+        var (built, mseed, _) = RunEngine.BuildMatch(pre, node.Id, catalog, bossSystems);
+        var (_, result) = SubstitutionPoints.ResolveAutomatically(built, mseed, catalog, bossSystems.MatchConfig(pre, node, catalog));
+        var hist = state.NodeHistory.LastOrDefault(h => h.NodeId == node.Id);
+        bool won = hist is not null && hist.Result == NodeResult.Won;
+        if ((result.Report.Winner == 0) != won) mismatches++;
+        var sb = new StringBuilder();
+        sb.Append($"{{\"run\":{i},\"m\":{m++},\"act\":{node.Act},\"kind\":\"{node.Kind}\",\"won\":{(won ? "true" : "false")},\"ticks\":{result.Report.Ticks},\"goals\":[{result.Report.Goals[0]},{result.Report.Goals[1]}],\"gg\":{(result.Report.WentToGoldenGoal ? "true" : "false")},\"forfeit\":{(result.Report.Forfeit ? "true" : "false")},\"ev\":[");
+        for (int k = 0; k < result.Events.Count; k++)
+        {
+            var e = result.Events[k];
+            if (k > 0) sb.Append(',');
+            sb.Append($"[\"{e.Type}\",{e.Tick},{e.Team},{e.Actor},{e.Target},{e.Opponent},\"{e.Phase}\",\"{e.Detail}\"]");
+        }
+        sb.Append("]}");
+        w.WriteLine(sb.ToString());
+        total++;
+    }
+    Console.Error.WriteLine($"run {i} ({races[i % races.Count]}): {m} partidos · {DateTime.Now:HH:mm:ss}");
+}
+Console.WriteLine($"partidos={total} discrepancias_ganador={mismatches}");
+
+sealed class Tap : IRunSystems
+{
+    private readonly IRunSystems _i; public RunState Last;
+    public Tap(IRunSystems inner) => _i = inner;
+    public IReadOnlyList<RunReferee> CreateReferees(ulong seed, int count, Catalog catalog) => _i.CreateReferees(seed, count, catalog);
+    public TeamSetup OpponentFor(RunState state, MapNode node, Catalog catalog) => _i.OpponentFor(state, node, catalog);
+    public RefereeSetup RefereeFor(RunState state, MapNode node, Catalog catalog) => _i.RefereeFor(state, node, catalog);
+    public SimConfig MatchConfig(RunState state, MapNode node, Catalog catalog) { Last = state; return _i.MatchConfig(state, node, catalog); }
+    public RunState OpenNode(RunState state, MapNode node, Catalog catalog) => _i.OpenNode(state, node, catalog);
+    public RunState AfterMatch(RunState state, MapNode node, RunMatchSummary summary, Catalog catalog) => _i.AfterMatch(state, node, summary, catalog);
+    public RunState ApplyDecision(RunState state, RunDecision decision, Catalog catalog) => _i.ApplyDecision(state, decision, catalog);
+    public IReadOnlyList<string> BossRuleModifiers(RunState state, MapNode node, Catalog catalog) => _i.BossRuleModifiers(state, node, catalog);
+    public MatchSetup TransformMatch(RunState state, MapNode node, MatchSetup setup, int playerTeamIndex, Catalog catalog) => _i.TransformMatch(state, node, setup, playerTeamIndex, catalog);
+}

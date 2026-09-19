@@ -1,0 +1,1712 @@
+diff -ruN a/Game/Scenes/B1.tscn b/Game/Scenes/B1.tscn
+--- a/Game/Scenes/B1.tscn	1970-01-01 01:00:00.000000000 +0100
++++ b/Game/Scenes/B1.tscn	2026-09-19 12:42:07.855110764 +0200
+@@ -0,0 +1,10 @@
++[gd_scene load_steps=2 format=3]
++
++[ext_resource type="Script" path="res://Screens/B1Capture.cs" id="1"]
++
++[node name="B1" type="Control"]
++anchors_preset = 15
++anchor_right = 1.0
++anchor_bottom = 1.0
++mouse_filter = 2
++script = ExtResource("1")
+diff -ruN a/Game/Scenes/C1.tscn b/Game/Scenes/C1.tscn
+--- a/Game/Scenes/C1.tscn	1970-01-01 01:00:00.000000000 +0100
++++ b/Game/Scenes/C1.tscn	2026-09-19 12:52:39.027368963 +0200
+@@ -0,0 +1,10 @@
++[gd_scene load_steps=2 format=3]
++
++[ext_resource type="Script" path="res://Screens/C1Capture.cs" id="1"]
++
++[node name="C1" type="Control"]
++anchors_preset = 15
++anchor_right = 1.0
++anchor_bottom = 1.0
++mouse_filter = 2
++script = ExtResource("1")
+diff -ruN a/Game/Scenes/C2C.tscn b/Game/Scenes/C2C.tscn
+--- a/Game/Scenes/C2C.tscn	1970-01-01 01:00:00.000000000 +0100
++++ b/Game/Scenes/C2C.tscn	2026-09-19 13:30:30.092296109 +0200
+@@ -0,0 +1,10 @@
++[gd_scene load_steps=2 format=3]
++
++[ext_resource type="Script" path="res://Screens/C2Check.cs" id="1"]
++
++[node name="C2C" type="Control"]
++anchors_preset = 15
++anchor_right = 1.0
++anchor_bottom = 1.0
++mouse_filter = 2
++script = ExtResource("1")
+diff -ruN a/Game/Scenes/C2P.tscn b/Game/Scenes/C2P.tscn
+--- a/Game/Scenes/C2P.tscn	1970-01-01 01:00:00.000000000 +0100
++++ b/Game/Scenes/C2P.tscn	2026-09-19 13:21:40.332079248 +0200
+@@ -0,0 +1,10 @@
++[gd_scene load_steps=2 format=3]
++
++[ext_resource type="Script" path="res://Screens/C2Play.cs" id="1"]
++
++[node name="C2P" type="Control"]
++anchors_preset = 15
++anchor_right = 1.0
++anchor_bottom = 1.0
++mouse_filter = 2
++script = ExtResource("1")
+diff -ruN a/Game/Scenes/C2S.tscn b/Game/Scenes/C2S.tscn
+--- a/Game/Scenes/C2S.tscn	1970-01-01 01:00:00.000000000 +0100
++++ b/Game/Scenes/C2S.tscn	2026-09-19 13:00:39.859562261 +0200
+@@ -0,0 +1,10 @@
++[gd_scene load_steps=2 format=3]
++
++[ext_resource type="Script" path="res://Screens/C2Search.cs" id="1"]
++
++[node name="C2S" type="Control"]
++anchors_preset = 15
++anchor_right = 1.0
++anchor_bottom = 1.0
++mouse_filter = 2
++script = ExtResource("1")
+diff -ruN a/Game/Scenes/D1.tscn b/Game/Scenes/D1.tscn
+--- a/Game/Scenes/D1.tscn	1970-01-01 01:00:00.000000000 +0100
++++ b/Game/Scenes/D1.tscn	2026-09-19 17:34:14.441532460 +0200
+@@ -0,0 +1,10 @@
++[gd_scene load_steps=2 format=3]
++
++[ext_resource type="Script" path="res://Screens/D1Tile.cs" id="1"]
++
++[node name="D1" type="Control"]
++anchors_preset = 15
++anchor_right = 1.0
++anchor_bottom = 1.0
++mouse_filter = 2
++script = ExtResource("1")
+diff -ruN a/Game/Screens/B1Capture.cs b/Game/Screens/B1Capture.cs
+--- a/Game/Screens/B1Capture.cs	1970-01-01 01:00:00.000000000 +0100
++++ b/Game/Screens/B1Capture.cs	2026-09-19 12:43:05.935133733 +0200
+@@ -0,0 +1,144 @@
++// B.1 — validación geométrica en una COPIA temporal del proyecto (fuera del repositorio).
++// Cajas grises con las medidas de la fase B sobre el campo 3D real con la cámara táctica a campo entero.
++// Uso: godot --path Game --scene res://Scenes/B1.tscn -- <hud|n3|n3dec> <salida.png>
++using System.Linq;
++using Godot;
++using Underleague.Game.Autoload;
++using Underleague.Game.Ui;
++using Underleague.Sim.Model;
++
++namespace Underleague.Game.Screens;
++
++public partial class B1Capture : Control
++{
++    private const float Extent = 16f + (2f * 0.6f);   // campo + 0,6 casillas por lado (fase B §0)
++    private MatchPitchView3D _pitch = null!;
++    private Control _overlay = null!;
++    private string _mode = "hud", _out = "";
++    private int _frame, _top = -1, _mid = -1, _hero = -1;
++
++    public override void _Ready()
++    {
++        var args = OS.GetCmdlineUserArgs();
++        if (args.Length >= 2) { _mode = args[0]; _out = args[1]; }
++        var run = RunController.Instance!;
++        run.NewRun("orc_ironworks", Race.Orc, 20260905UL);
++        int node = run.Available().First(n => n.IsMatch).Id;
++        run.PlayMatch(node);
++        var pb = run.Playback!;
++        var trace = pb.Trace!;
++
++        _pitch = new MatchPitchView3D();
++        _pitch.SetAnchorsPreset(LayoutPreset.FullRect);
++        AddChild(_pitch);
++        _pitch.Bind(trace, pb.Setup, run.Catalog);
++        _frame = trace.FrameCount * 2 / 5;
++        // peor caso del sello: un fotograma con alguien en la fila superior (y < 0,7)
++        for (int f = trace.FrameCount / 5; f < trace.FrameCount * 4 / 5; f++)
++        {
++            bool found = false;
++            for (int i = 0; i < trace.Players.Count; i++)
++                if (trace.OnPitchAt(f, i) && trace.PositionAt(f, i).Y < 0.7f) { found = true; break; }
++            if (found) { _frame = f; break; }
++        }
++        _pitch.Frame = _frame;
++
++        var ball = trace.BallAt(_frame);
++        float best = 99f, bestMid = 99f, bestHero = 99f;
++        for (int i = 0; i < trace.Players.Count; i++)
++        {
++            if (!trace.OnPitchAt(_frame, i)) continue;
++            var p = trace.PositionAt(_frame, i);
++            if (p.Y < best) { best = p.Y; _top = i; }
++            float dm = System.Math.Abs(p.Y - 3.5f) + System.Math.Abs(p.X - 8f) * 0.2f;
++            if (dm < bestMid) { bestMid = dm; _mid = i; }
++            float dh = (p.X - ball.X) * (p.X - ball.X) + (p.Y - ball.Y) * (p.Y - ball.Y);
++            if (dh < bestHero) { bestHero = dh; _hero = i; }
++        }
++
++        _overlay = new Control { MouseFilter = MouseFilterEnum.Ignore };
++        _overlay.SetAnchorsPreset(LayoutPreset.FullRect);
++        AddChild(_overlay);
++        _ = Shoot();
++    }
++
++    public override void _Process(double delta)
++    {
++        var size = _pitch.Size;
++        if (size.Y > 0) _pitch.OrthoSize = Extent / (size.X / size.Y);
++    }
++
++    private async System.Threading.Tasks.Task Shoot()
++    {
++        for (int i = 0; i < 20; i++) await ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame);
++        Build();
++        for (int i = 0; i < 6; i++) await ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame);
++        var image = GetViewport().GetTexture().GetImage();
++        image.SavePng(_out);
++        var v = GetViewportRect().Size;
++        var t = _pitch.ScreenOf(_top); var m = _pitch.ScreenOf(_mid); var h = _pitch.ScreenOf(_hero);
++        GD.Print($"B1 {_mode} ventana={DisplayServer.WindowGetSize()} lógico={v} imagen={image.GetSize()} ortho={_pitch.OrthoSize:0.00} "
++            + $"filaSup cabeza={t.Head} pie={t.Foot} · medio cabeza={m.Head} pie={m.Foot} · protagonista pie={h.Foot}");
++        GetTree().Quit();
++    }
++
++    private void Box(float x, float y, float w, float h, string text, int font, Color? fill = null)
++    {
++        var r = new ColorRect { Position = new Vector2(x, y), Size = new Vector2(w, h), Color = fill ?? new Color(0.55f, 0.55f, 0.55f, 0.92f), MouseFilter = MouseFilterEnum.Ignore };
++        _overlay.AddChild(r);
++        var l = new Label { Text = text, Position = new Vector2(6, 4), Size = new Vector2(w - 12, h - 8), AutowrapMode = TextServer.AutowrapMode.WordSmart };
++        l.AddThemeFontSizeOverride("font_size", font);
++        l.AddThemeColorOverride("font_color", new Color(0.05f, 0.05f, 0.05f));
++        r.AddChild(l);
++    }
++
++    private void Build()
++    {
++        var v = GetViewportRect().Size; float W = v.X, H = v.Y;
++        // Tablero superior (fase B §1-2): marcador 760x110, progreso 560x12, estado especial 320x40, velocidad 4x52.
++        Box((W - 760) / 2, 16, 760, 110, "⛨ NUESTRO FC        2 ║ 1        RIVAL UTD ⛨   ▮1 ✚1", 26);
++        Box((W - 560) / 2, 134, 560, 12, "", 10, new Color(0.35f, 0.35f, 0.35f, 0.95f));
++        Box((W - 320) / 2, 152, 320, 40, "TURBA · GOL DE ORO", 18);
++        for (int i = 0; i < 4; i++) Box(W - 24 - ((4 - i) * 60), 24, 52, 52, new[] { "x1", "x4", "x16", "‖" }[i], 18);
++        Box(24, 24, 64, 64, "árb.", 17);
++        // Tiras (B2): 7 x 232x72 + banquillo 150x72, ancladas abajo.
++        float y = H - 18 - 72, x0 = (W - ((7 * 232) + (6 * 12) + 24 + 150)) / 2;
++        string[] names = { "ORZUG QUIEBRAESPINAS", "GASHK TRAGACLAVOS", "RUK MUERDEHIERRO", "YAGUL COMECRÁNEOS", "THRAK DENTAZO", "URZAG PATEAMUROS", "GROM" };
++        for (int i = 0; i < 7; i++)
++        {
++            float x = x0 + (i * 244);
++            Box(x, y, 232, 72, "", 17);
++            Box(x + 4, y + 4, 64, 64, "⛨", 26, new Color(0.35f, 0.35f, 0.35f, 0.95f));
++            var l1 = new Label { Text = $"{i + 1}  {names[i]}", Position = new Vector2(x + 74, y + 8), Size = new Vector2(144, 26), ClipText = true };
++            l1.AddThemeFontSizeOverride("font_size", 18); l1.AddThemeColorOverride("font_color", Colors.Black); _overlay.AddChild(l1);
++            var l2 = new Label { Text = "◆DEL · orco   ✦2", Position = new Vector2(x + 74, y + 38), Size = new Vector2(144, 26) };
++            l2.AddThemeFontSizeOverride("font_size", 17); l2.AddThemeColorOverride("font_color", Colors.Black); _overlay.AddChild(l2);
++            Box(x + 218, y + 4, 10, 64, "", 10, new Color(0.25f, 0.25f, 0.25f, 1f));
++        }
++        Box(x0 + (7 * 244) + 12, y, 150, 72, "BANQUILLO\n2", 18);
++
++        var top = _pitch.ScreenOf(_top); var mid = _pitch.ScreenOf(_mid); var hero = _pitch.ScreenOf(_hero);
++        if (_mode == "hud")
++        {
++            // Marca de perk 120x36 pegada a la cabeza (B3) y sello N1 150x56 12 px sobre la cabeza del jugador de la fila superior.
++            if (mid.Visible) Box(mid.Head.X - 60, mid.Head.Y - 6 - 36, 120, 36, "✦ Sangre cal.", 17);
++            if (top.Visible) Box(top.Head.X - 75, top.Head.Y - 12 - 56, 150, 56, "¡FALTA!", 26);
++            return;
++        }
++
++        // N3 (B4): 820x520 en la mitad opuesta al protagonista, centrada en vertical sobre el campo, + subtítulo 820x64.
++        bool heroLeft = hero.Foot.X < W / 2;
++        float scale = _mode == "n3dec" ? 0.7f : 1f;
++        float pw = 820 * scale, ph = 520 * scale;
++        float cx = heroLeft ? (W * 0.75f) : (W * 0.25f);
++        float py = _mode == "n3dec" ? 205 : ((H - ph - 64) / 2);
++        Box(cx - (pw / 2), py, pw, ph, "VIÑETA N3\n¡CRAC!", 40);
++        Box(cx - (pw / 2), py + ph + 6, pw, 64 * scale, "ROJA · LESIÓN GRAVE", (int)(26 * scale));
++        if (hero.Visible) Box(hero.Foot.X - 40, hero.Foot.Y - 4, 80, 8, "", 8, new Color(1f, 0.2f, 0.2f, 1f));
++        if (_mode == "n3dec")
++        {
++            // Bandeja de sustitución (B6): 1200x220 sobre el tercio inferior del campo, por encima de las tiras.
++            Box((W - 1200) / 2, y - 12 - 220, 1200, 220, "SALE [tira lesionado] → ENTRA: [tira A ✓] [tira B]   ◀ ▶ elegir · confirmar", 22);
++        }
++    }
++}
+diff -ruN a/Game/Screens/C1Capture.cs b/Game/Screens/C1Capture.cs
+--- a/Game/Screens/C1Capture.cs	1970-01-01 01:00:00.000000000 +0100
++++ b/Game/Screens/C1Capture.cs	2026-09-19 12:52:39.027368963 +0200
+@@ -0,0 +1,228 @@
++// Fase C — prototipo de composición y comportamiento en una COPIA temporal (fuera del repositorio).
++// Cajas grises; nada de lenguaje visual. Uso: -- <modo> <salida.png>
++// modos: base | alt | n3 | n3dim | n4 | final | dec | sinrecambio
++using System.Collections.Generic;
++using System.Linq;
++using Godot;
++using Underleague.Game.Autoload;
++using Underleague.Game.Ui;
++using Underleague.Sim.Model;
++
++namespace Underleague.Game.Screens;
++
++public partial class C1Capture : Control
++{
++    private const float Extent = 16f + (2f * 0.6f);
++    private MatchPitchView3D _pitch = null!;
++    private Control _overlay = null!;
++    private string _mode = "base", _out = "";
++    private int _frame, _top = -1, _mid = -1, _hero = -1;
++    private readonly List<(Rect2 R, string Tag)> _placed = new();
++    private float PanPx => _mode == "alt" ? 0f : 30f;
++
++    public override void _Ready()
++    {
++        var args = OS.GetCmdlineUserArgs();
++        if (args.Length >= 2) { _mode = args[0]; _out = args[1]; }
++        var run = RunController.Instance!;
++        run.NewRun("orc_ironworks", Race.Orc, 20260905UL);
++        run.PlayMatch(run.Available().First(n => n.IsMatch).Id);
++        var pb = run.Playback!; var trace = pb.Trace!;
++        _pitch = new MatchPitchView3D();
++        _pitch.SetAnchorsPreset(LayoutPreset.FullRect);
++        AddChild(_pitch);
++        _pitch.Bind(trace, pb.Setup, run.Catalog);
++        _frame = trace.FrameCount * 2 / 5;
++        for (int f = trace.FrameCount / 5; f < trace.FrameCount * 4 / 5; f++)
++        {
++            bool found = false;
++            for (int i = 0; i < trace.Players.Count; i++) if (trace.OnPitchAt(f, i) && trace.PositionAt(f, i).Y < 0.7f) { found = true; break; }
++            if (found) { _frame = f; break; }
++        }
++        _pitch.Frame = _frame;
++        var ball = trace.BallAt(_frame); float bt = 99, bm = 99, bh = 99;
++        for (int i = 0; i < trace.Players.Count; i++)
++        {
++            if (!trace.OnPitchAt(_frame, i)) continue;
++            var p = trace.PositionAt(_frame, i);
++            if (p.Y < bt) { bt = p.Y; _top = i; }
++            float dm = System.Math.Abs(p.Y - 3.5f) + (System.Math.Abs(p.X - 8f) * 0.2f); if (dm < bm) { bm = dm; _mid = i; }
++            float dh = ((p.X - ball.X) * (p.X - ball.X)) + ((p.Y - ball.Y) * (p.Y - ball.Y)); if (dh < bh) { bh = dh; _hero = i; }
++        }
++        _overlay = new Control { MouseFilter = MouseFilterEnum.Ignore };
++        _overlay.SetAnchorsPreset(LayoutPreset.FullRect);
++        AddChild(_overlay);
++        _ = Shoot();
++    }
++
++    public override void _Process(double delta)
++    {
++        var s = _pitch.Size;
++        if (s.Y <= 0) return;
++        _pitch.OrthoSize = Extent / (s.X / s.Y);
++        _pitch.PanUp = PanPx / (s.X / Extent);
++    }
++
++    private async System.Threading.Tasks.Task Shoot()
++    {
++        for (int i = 0; i < 20; i++) await ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame);
++        Build();
++        for (int i = 0; i < 6; i++) await ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame);
++        GetViewport().GetTexture().GetImage().SavePng(_out);
++        Report();
++        GetTree().Quit();
++    }
++
++    private ColorRect Box(float x, float y, float w, float h, string text, int font, string tag = "", Color? fill = null, bool center = false)
++    {
++        var r = new ColorRect { Position = new Vector2(x, y), Size = new Vector2(w, h), Color = fill ?? new Color(0.58f, 0.58f, 0.58f, 0.94f), MouseFilter = MouseFilterEnum.Ignore };
++        _overlay.AddChild(r);
++        if (text.Length > 0)
++        {
++            var l = new Label { Text = text, Position = new Vector2(8, 4), Size = new Vector2(w - 16, h - 8), ClipText = true, AutowrapMode = TextServer.AutowrapMode.WordSmart };
++            if (center) { l.HorizontalAlignment = HorizontalAlignment.Center; l.VerticalAlignment = VerticalAlignment.Center; }
++            l.AddThemeFontSizeOverride("font_size", font);
++            l.AddThemeColorOverride("font_color", new Color(0.05f, 0.05f, 0.05f));
++            r.AddChild(l);
++        }
++        if (tag.Length > 0) _placed.Add((new Rect2(x, y, w, h), tag));
++        return r;
++    }
++
++    private void Tira(float x, float y, string name, string sub, string tag, Color? fill = null)
++    {
++        Box(x, y, 232, 72, "", 20, tag, fill);
++        Box(x + 4, y + 4, 64, 64, "⛨", 26, "", new Color(0.36f, 0.36f, 0.36f, 0.95f), true);
++        foreach (var (t, yy) in new[] { (name, 6f), (sub, 38f) })
++        {
++            var l = new Label { Text = t, Position = new Vector2(x + 74, y + yy), Size = new Vector2(142, 28), ClipText = true };
++            l.AddThemeFontSizeOverride("font_size", 20); l.AddThemeColorOverride("font_color", Colors.Black); _overlay.AddChild(l);
++        }
++        Box(x + 218, y + 4, 10, 64, "", 10, "", new Color(0.25f, 0.25f, 0.25f, 1f));
++    }
++
++    private static readonly string[] Names = { "1 ORZUG QUIEBRAESPINAS", "2 GASHK TRAGACLAVOS", "3 RUK MUERDEHIERRO", "4 YAGUL COMECRÁNEOS", "5 THRAK DENTAZO", "6 URZAG PATEAMUROS", "7 GROM" };
++
++    private void Build()
++    {
++        var v = GetViewportRect().Size; float W = v.X, H = v.Y;
++        var P = _pitch.PitchRect();
++        var hero = _pitch.ScreenOf(_hero); var top = _pitch.ScreenOf(_top); var mid = _pitch.ScreenOf(_mid);
++
++        // Escenas N4: el mundo pasa a segundo plano (hipótesis de B: escena = mundo atenuado).
++        if (_mode is "n4" or "final") Box(0, 0, W, H, "", 10, "", new Color(0f, 0f, 0f, 0.62f));
++        if (_mode == "n3dim") Box(P.Position.X, P.Position.Y, P.Size.X, P.Size.Y, "", 10, "", new Color(0f, 0f, 0f, 0.35f));
++
++        // Franja superior compacta (C13 paso 1-2): marcador 760x64, progreso 560x8, placa de estado 320x36.
++        if (_mode != "final")
++        {
++            Box(24, 12, 56, 56, "árb", 20, "hud");
++            Box((W - 760) / 2, 12, 760, 64, "⛨ NUESTRO FC      2 ║ 1      RIVAL UTD ⛨   ▮1 ✚1", 28, "hud", null, true);
++            Box((W - 560) / 2, 82, 560, 8, "", 8, "hud", new Color(0.35f, 0.35f, 0.35f, 0.95f));
++            Box((W - 320) / 2, 96, 320, 36, "TURBA · GOL DE ORO", 20, "hud", null, true);
++            for (int i = 0; i < 4; i++) Box(W - 24 - ((4 - i) * 56), 12, 48, 48, new[] { "x1", "x4", "x16", "‖" }[i], 20, "hud", null, true);
++        }
++
++        float ty = H - 18 - 72, x0 = (W - ((7 * 232) + (6 * 12) + 24 + 150)) / 2;
++        bool decision = _mode is "dec" or "sinrecambio";
++        if (!decision && _mode is not ("n4" or "final"))
++        {
++            for (int i = 0; i < 7; i++) Tira(x0 + (i * 244), ty, Names[i], "◆DEL · orco ✦2", "tiras");
++            Box(x0 + (7 * 244) + 12, ty, 150, 72, "BANQUILLO 2", 20, "tiras", null, true);
++        }
++
++        switch (_mode)
++        {
++            case "base":
++            case "alt":
++                // N1: marca de perk pegada a la cabeza; sello N2 sobre un jugador del medio;
++                // sello N1 del jugador de la fila superior desplazado LATERALMENTE hacia el centro (regla de B.1).
++                if (hero.Visible) Box(hero.Head.X - 60, hero.Head.Y - 6 - 36, 120, 36, "✦ Sangre cal.", 20, "marca");
++                if (mid.Visible) Box(mid.Head.X - 95, mid.Head.Y - 12 - 64, 190, 64, "NO LO HA VISTO", 24, "sello", null, true);
++                if (top.Visible)
++                {
++                    float sx = top.Head.X > W / 2 ? top.Head.X - 48 - 150 : top.Head.X + 48;
++                    Box(sx, top.Head.Y - 8, 150, 56, "¡FALTA!", 26, "sello", null, true);
++                }
++                break;
++            case "n3":
++            case "n3dim":
++            {
++                // N3 a 0,7x (574x364) + subtítulo, en la mitad opuesta al protagonista (C5 abierta), centrada sobre el campo.
++                float pw = 574, ph = 364, sub = 46;
++                float cx = hero.Foot.X < W / 2 ? P.Position.X + (P.Size.X * 0.75f) : P.Position.X + (P.Size.X * 0.25f);
++                float py = P.Position.Y + ((P.Size.Y - ph - sub - 6) / 2);
++                Box(cx - (pw / 2), py, pw, ph, "VIÑETA N3\n¡CRAC!", 44, "n3");
++                Box(cx - (pw / 2), py + ph + 6, pw, sub, "ROJA · LESIÓN GRAVE", 24, "n3", null, true);
++                Mark(hero);
++                break;
++            }
++            case "n4":
++            {
++                // Esquela (B5) ~900x760 centrada; el marcador sigue arriba.
++                float w = 900, h = 760, x = (W - w) / 2, y = 150 + ((H - 150 - h) / 2);
++                Box(x, y, w, h, "", 20, "n4");
++                string[] lines = { "HA CAÍDO", "⛨ 7 · ORZUG QUIEBRAESPINAS (orco)", "Rematado por «Sed de tuétano» de GRUNK (n.º 4)", "El hacha vuelve al almacén", "Disponibles 6 → 5" };
++                int[] sizes = { 56, 32, 24, 24, 24 };
++                float yy = y + 40;
++                for (int i = 0; i < lines.Length; i++) { Box(x + 60, yy, w - 120, sizes[i] + 24, lines[i], sizes[i], "", new Color(0.7f, 0.7f, 0.7f, 1f), true); yy += sizes[i] + 60; }
++                break;
++            }
++            case "final":
++            {
++                Box(200, (H - 560) / 2, 240, 560, "ESTANDARTE\nNUESTRO", 24, "n4", null, true);
++                Box(W - 440, ((H - 560) / 2) + 120, 240, 440, "ESTANDARTE\nRIVAL", 24, "n4", null, true);
++                Box((W - 1000) / 2, (H - 220) / 2, 1000, 220, "FINAL\nNUESTRO FC  2 ║ 1  RIVAL UTD", 56, "n4", null, true);
++                break;
++            }
++            case "dec":
++            case "sinrecambio":
++            {
++                // C14: la bandeja SUSTITUYE a las tiras; el campo entero sigue visible; el que sale, marcado en el campo.
++                float by = P.End.Y + 14, bh = H - 12 - by;
++                Box(24, by, W - 48, bh, "", 20, "bandeja", new Color(0.5f, 0.5f, 0.5f, 0.96f));
++                Box(40, by + 8, 200, 32, "SUSTITUCIÓN · pausa", 20, "", new Color(0.7f, 0.7f, 0.7f, 1f));
++                float ry = by + bh - 72 - 10;
++                Tira(40, ry, "4 YAGUL COMECRÁNEOS", "SALE · grave", "", new Color(0.72f, 0.45f, 0.45f, 0.95f));
++                if (_mode == "dec")
++                {
++                    Box(290, ry + 20, 60, 32, "→", 26, "", new Color(0.7f, 0.7f, 0.7f, 1f), true);
++                    Tira(370, ry, "8 BRAKK OREJAROTA", "◆DEF · sano ✓", "", new Color(0.78f, 0.78f, 0.6f, 0.98f));
++                    Tira(614, ry, "9 NARG TUERTO", "◆MED · tocado", "");
++                    Box(W - 24 - 16 - 220, ry + 10, 220, 52, "CONFIRMAR", 24, "", new Color(0.72f, 0.72f, 0.72f, 1f), true);
++                    Box(870, ry + 20, 520, 32, "◀ ▶ elegir · A / clic confirmar", 20, "", new Color(0.62f, 0.62f, 0.62f, 1f));
++                }
++                else
++                {
++                    Box(290, ry + 10, 700, 52, "SIN RECAMBIO · jugáis con 6", 26, "", new Color(0.7f, 0.7f, 0.7f, 1f), true);
++                }
++                Mark(hero);
++                break;
++            }
++        }
++    }
++
++
++    private void Mark((Vector2 Head, Vector2 Foot, bool Visible) p)
++    {
++        if (!p.Visible) return;
++        var red = new Color(0.9f, 0.15f, 0.15f, 1f);
++        Box(p.Foot.X - 48, p.Head.Y - 50, 96, 4, "", 4, "", red); Box(p.Foot.X - 48, p.Foot.Y + 14, 96, 4, "", 4, "", red);
++        Box(p.Foot.X - 48, p.Head.Y - 50, 4, p.Foot.Y - p.Head.Y + 68, "", 4, "", red); Box(p.Foot.X + 44, p.Head.Y - 50, 4, p.Foot.Y - p.Head.Y + 68, "", 4, "", red);
++    }
++
++    private void Report()
++    {
++        var P = _pitch.PitchRect(); float area = P.Size.X * P.Size.Y;
++        var hero = _pitch.ScreenOf(_hero); var top = _pitch.ScreenOf(_top);
++        var heroRect = new Rect2(hero.Foot.X - 45, hero.Head.Y - 45, 90, hero.Foot.Y - hero.Head.Y + 60);
++        var topBody = new Rect2(top.Foot.X - 45, top.Head.Y - 45, 90, top.Foot.Y - top.Head.Y + 60);
++        var byTag = _placed.GroupBy(x => x.Tag).Select(g => $"{g.Key} {g.Sum(x => x.R.Intersection(P).Area) / area:P0}");
++        bool heroHidden = _placed.Any(x => x.Tag is "n3" or "n4" or "bandeja" or "tiras" or "hud" && x.R.Intersects(heroRect));
++        bool topHidden = _placed.Any(x => x.Tag is "hud" && x.R.Intersects(topBody));
++        float hudBottom = _placed.Where(x => x.Tag == "hud").Select(x => x.R.End.Y).DefaultIfEmpty(0).Max();
++        float tirasTop = _placed.Where(x => x.Tag is "tiras" or "bandeja").Select(x => x.R.Position.Y).DefaultIfEmpty(0).Min();
++        GD.Print($"C1 {_mode} lógico={GetViewportRect().Size} campo=y{P.Position.Y:0}-{P.End.Y:0} · franjaSup hasta y{hudBottom:0} · cuerpo filaSup desde y{topBody.Position.Y:0} (choca HUD: {topHidden}) · "
++            + $"hueco campo→tiras {tirasTop - P.End.Y:0}px · campo tapado: {string.Join(", ", byTag)} · protagonista tapado: {heroHidden}");
++    }
++}
+diff -ruN a/Game/Screens/C2Check.cs b/Game/Screens/C2Check.cs
+--- a/Game/Screens/C2Check.cs	1970-01-01 01:00:00.000000000 +0100
++++ b/Game/Screens/C2Check.cs	2026-09-19 13:30:30.096296112 +0200
+@@ -0,0 +1,27 @@
++using System.Linq;
++using Godot;
++using Underleague.Game.Autoload;
++using Underleague.Sim.Model;
++using Underleague.Sim.Run;
++namespace Underleague.Game.Screens;
++public partial class C2Check : Control
++{
++    public override void _Ready()
++    {
++        var run = RunController.Instance!;
++        run.NewRun("orc_ironworks", Race.Orc, 18);
++        run.PlayMatch(run.Available().First(n => n.IsMatch).Id);
++        var p = run.PendingSubstitution()!;
++        Dump("ANTES", run, p.Tick);
++        GD.Print($"pendiente tick={p.Tick} sale={p.OutPlayerId} candidatos={string.Join(",", p.Candidates.Select(c => c.Id + ":" + c.Name))}");
++        run.Substitute(new Substitution(p.Tick, p.OutPlayerId, p.Candidates[0].Id));
++        Dump("DESPUES", run, p.Tick + 5);
++        GetTree().Quit();
++    }
++    private static void Dump(string tag, RunController run, int tick)
++    {
++        var tr = run.Playback!.Result.Trace!; int f = tr.FrameOfTick(tick);
++        var injured = tr.Players.Select((pl, i) => (pl, i)).Where(x => x.pl.Team == 0).Select(x => $"{x.pl.Id}#{x.pl.Number} {x.pl.Name} on@{tick}={tr.OnPitchAt(f, x.i)} on@{tick - 1}={tr.OnPitchAt(tr.FrameOfTick(tick - 1), x.i)}");
++        GD.Print($"{tag}: " + string.Join(" | ", injured));
++    }
++}
+diff -ruN a/Game/Screens/C2Play.cs b/Game/Screens/C2Play.cs
+--- a/Game/Screens/C2Play.cs	1970-01-01 01:00:00.000000000 +0100
++++ b/Game/Screens/C2Play.cs	2026-09-19 13:33:59.572382126 +0200
+@@ -0,0 +1,281 @@
++// Fase C.2 — prototipo de COMPORTAMIENTO en una copia temporal (fuera del repositorio). Cajas grises.
++// Uso: -- <gol|lesion|muerte> <A|B> <1|4|16> <prefijo_salida> <semilla> [nodo]
++// Tiempos = tuning provisional de la fase A (N1 1 s, N2 1,5 s, N3 3 s, N4 4 s). La elección del usuario se simula.
++using System.Collections.Generic;
++using System.Linq;
++using Godot;
++using Underleague.Game.Autoload;
++using Underleague.Game.Ui;
++using Underleague.Sim.Events;
++using Underleague.Sim.Model;
++using Underleague.Sim.Run;
++
++namespace Underleague.Game.Screens;
++
++public partial class C2Play : Control
++{
++    private const float Extent = 17.2f, PanPx = 30f;
++    private MatchPitchView3D _pitch = null!;
++    private Control _hud = null!, _fx = null!;
++    private RunController _run = null!;
++    private string _scn = "gol", _var = "A", _out = "";
++    private int _speed = 1, _event = -1, _outId = -1, _inId = -1, _slotOut = -1;
++    private float _tick, _end, _real, _zoom = 1f, _heroX, _heroY;
++    private Vector3 _focus;
++    private bool _frozen, _decided, _done;
++    private readonly List<string> _log = new();
++    private readonly List<(float T, string Kind, float Dur)> _shows = new();
++    private int _screenChanges;
++    private string[] _names = new string[7];
++    private int[] _ids = new int[7];
++    private readonly Dictionary<int, string> _state = new();
++    // Guion temporal del momento principal: lista de (inicio real relativo, fin real relativo, qué).
++    private readonly List<(float A, float B, string What)> _script = new();
++    private float _t0 = -1;   // instante real en que empieza el momento principal
++    private readonly HashSet<string> _stills = new();
++
++    public override void _Ready()
++    {
++        var a = OS.GetCmdlineUserArgs();
++        _scn = a[0]; _var = a[1]; _speed = int.Parse(a[2]); _out = a[3];
++        ulong seed = ulong.Parse(a[4]);
++        _run = RunController.Instance!;
++        _run.NewRun("orc_ironworks", Race.Orc, seed);
++        int node = a.Length > 5 ? int.Parse(a[5]) : _run.Available().First(n => n.IsMatch).Id;
++        _run.PlayMatch(node);
++        var pb = _run.Playback!;
++        if (_scn == "gol") _event = pb.Result.Events.First(e => e.Type == EventType.Goal && e.Team == 0 && e.Tick > 150).Tick;
++        else
++        {
++            var p = _run.PendingSubstitution()!;
++            _event = p.Tick; _outId = p.OutPlayerId; _inId = p.Candidates[0].Id;
++        }
++        _pitch = new MatchPitchView3D(); _pitch.SetAnchorsPreset(LayoutPreset.FullRect); AddChild(_pitch);
++        _hud = new Control { MouseFilter = MouseFilterEnum.Ignore }; _hud.SetAnchorsPreset(LayoutPreset.FullRect); AddChild(_hud);
++        _fx = new Control { MouseFilter = MouseFilterEnum.Ignore }; _fx.SetAnchorsPreset(LayoutPreset.FullRect); AddChild(_fx);
++        Rebind();
++        _tick = System.Math.Max(0, _event - 90);
++        _end = _event + 150;
++        BuildScript();
++    }
++
++    private void Rebind()
++    {
++        var pb = _run.Playback!; _pitch.Bind(pb.Result.Trace, pb.Setup, _run.Catalog);
++        var tr = pb.Result.Trace!;
++        var home = Enumerable.Range(0, tr.Players.Count).Where(i => tr.Players[i].Team == 0).ToList();
++        int f = tr.FrameOfTick((int)_tick), k = 0;
++        foreach (int i in home) if (tr.OnPitchAt(f, i) && k < 7) { _ids[k] = tr.Players[i].Id; _names[k++] = $"{tr.Players[i].Number} {tr.Players[i].Name.ToUpperInvariant()}"; }
++    }
++
++    private int Index(int playerId, int team)
++    {
++        var tr = _run.Playback!.Result.Trace!;
++        for (int i = 0; i < tr.Players.Count; i++) if (tr.Players[i].Id == playerId && tr.Players[i].Team == team) return i;
++        return -1;
++    }
++
++    // --------------------------------------------------------------- guion del momento principal
++    private void BuildScript()
++    {
++        bool fast = _speed == 16;
++        if (_scn == "gol")
++        {
++            if (!fast) _script.Add((0f, 3f, "N3"));           // viñeta 3 s congelada sobre el último fotograma antes de recolocar
++            return;
++        }
++        if (_scn == "lesion")
++        {
++            float d = fast ? 0f : 3f;
++            if (!fast) _script.Add((0f, 3f, "N3"));
++            _script.Add((d, d + 2.6f, "TRAY"));                 // decisión: 2,6 s de "usuario" simulado
++            return;
++        }
++        // muerte
++        if (fast) { _script.Add((0f, 1.0f, "ESQUELA_BORDE")); _script.Add((1.0f, 3.6f, "TRAY")); _script.Add((1.0f, 3.6f, "ESQUELA_BORDE")); return; }
++        if (_var == "A") { _script.Add((0f, 4f, "ESQUELA_CENTRO")); _script.Add((4f, 6.6f, "TRAY")); return; }
++        _script.Add((0f, 1.6f, "PUNCH")); _script.Add((0f, 99f, "RESIDUO"));
++        _script.Add((1.6f, 4.0f, "ESQUELA_BORDE")); _script.Add((4.0f, 6.6f, "TRAY")); _script.Add((4.0f, 6.6f, "ESQUELA_BORDE"));
++    }
++
++    private float ScriptEnd => _script.Count == 0 ? 0 : _script.Where(s => s.What != "RESIDUO").Max(s => s.B);
++    private bool Active(string what, float rel) => _script.Any(s => s.What == what && rel >= s.A && rel < s.B);
++
++    public override void _Process(double delta)
++    {
++        if (_done) return;
++        float dt = (float)delta; _real += dt;
++        var pb = _run.Playback!; var tr = pb.Result.Trace!;
++        // momento principal
++        if (_t0 < 0 && _tick >= _event) { _t0 = _real; _heroX = 0; if (_scn != "gol") { int hi = Index(_outId, 0); var p = tr.PositionAt(tr.FrameOfTick(_event - 1), hi); _heroX = p.X; _heroY = p.Y; } else { var b = tr.BallAt(tr.FrameOfTick(_event)); _heroX = b.X; _heroY = b.Y; } }
++        float rel = _t0 < 0 ? -1 : _real - _t0;
++        bool inMoment = rel >= 0 && rel < ScriptEnd;
++        // congelación: gol congela tras 1 s de balón muerto natural (15 ticks); lesión/muerte congelan en el acto
++        bool freeze = inMoment;   // C.2: el gol congela YA: el motor recoloca a todos en el mismo tick del gol
++        if (!_decided && rel >= 0 && _scn != "gol" && Active("TRAY", rel) && rel > _script.First(s => s.What == "TRAY").A + 2.0f) Decide();
++        if (!freeze) _tick = System.Math.Min(_tick + (15f * _speed * dt), tr.TickAt(tr.FrameCount - 1));
++        if (freeze && !_frozen) _log.Add($"congela en real={_real:0.00}s tick={_tick:0}");
++        if (!freeze && _frozen) _log.Add($"reanuda en real={_real:0.00}s tick={_tick:0}");
++        _frozen = freeze;
++        int frame = tr.FrameOfTick(freeze ? _event - 1 : (int)_tick);   // C.2: el motor cambia el estado EN el tick del suceso; se congela el anterior
++        _pitch.Frame = frame; _pitch.Alpha = freeze ? 0f : _tick - tr.TickAt(frame);
++        // cámara: campo entero + gesto (punch-in) solo en PUNCH
++        float targetZoom = rel >= 0 && Active("PUNCH", rel) ? 0.62f : 1f;
++        var targetFocus = rel >= 0 && Active("PUNCH", rel) ? new Vector3(_heroX - 8f, 0f, _heroY - 3.5f) : Vector3.Zero;
++        _zoom = Mathf.Lerp(_zoom, targetZoom, System.Math.Min(1f, dt * 8f)); _focus = _focus.Lerp(targetFocus, System.Math.Min(1f, dt * 8f));
++        var s = _pitch.Size; if (s.Y > 0) { _pitch.OrthoSize = Extent / (s.X / s.Y) * _zoom; _pitch.PanUp = PanPx / (s.X / Extent) * _zoom; _pitch.Focus = _focus; }
++        Draw(rel);
++        if (rel >= 0) Still(rel);
++        if (_tick >= _end || (_tick >= tr.TickAt(tr.FrameCount - 1) && !freeze)) Finish();
++    }
++
++    private void Decide()
++    {
++        _decided = true;
++        _run.Substitute(new Substitution(_event, _outId, _inId));
++        Rebind();
++        _log.Add($"decisión confirmada en real={_real:0.00}s (entra {_inId} por {_outId}); partido re-simulado");
++    }
++
++    // --------------------------------------------------------------- dibujo (cajas grises)
++    private readonly Color Grey = new(0.58f, 0.58f, 0.58f, 0.95f);
++    private ColorRect Box(Control parent, float x, float y, float w, float h, string text, int font, Color? c = null, float rot = 0f)
++    {
++        var r = new ColorRect { Position = new Vector2(x, y), Size = new Vector2(w, h), Color = c ?? Grey, MouseFilter = MouseFilterEnum.Ignore, Rotation = rot };
++        parent.AddChild(r);
++        if (text.Length > 0)
++        {
++            var l = new Label { Text = text, Size = new Vector2(w, h), HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center, AutowrapMode = TextServer.AutowrapMode.WordSmart };
++            l.AddThemeFontSizeOverride("font_size", font); l.AddThemeColorOverride("font_color", new Color(0.05f, 0.05f, 0.05f)); r.AddChild(l);
++        }
++        return r;
++    }
++
++    private string _lastScene = "";
++    private void Draw(float rel)
++    {
++        foreach (var c in _hud.GetChildren()) c.QueueFree();
++        foreach (var c in _fx.GetChildren()) c.QueueFree();
++        var v = GetViewportRect().Size; float W = v.X, H = v.Y;
++        var pb = _run.Playback!; var ev = pb.Result.Events; var tr = pb.Result.Trace!;
++        int now = (int)_tick;
++        int gf = ev.Count(e => e.Type == EventType.Goal && e.Team == 0 && e.Tick <= now), ga = ev.Count(e => e.Type == EventType.Goal && e.Team == 1 && e.Tick <= now);
++        int rr = ev.Count(e => e.Type == EventType.Card && e.Team == 1 && e.Detail == "red" && e.Tick <= now);
++        int rb = ev.Count(e => (e.Type == EventType.Injury || e.Type == EventType.Death) && e.Team == 1 && e.Tick <= now && !e.Detail.EndsWith(":cancelled"));
++        string scene = "";
++        // escena N4 en el centro atenúa el mundo
++        if (rel >= 0 && Active("ESQUELA_CENTRO", rel)) Box(_fx, 0, 0, W, H, "", 10, new Color(0, 0, 0, 0.62f));
++        // Tablero
++        Box(_hud, 24, 12, 56, 56, "árb", 20);
++        Box(_hud, (W - 760) / 2, 12, 760, 64, $"⛨ NUESTRO FC      {gf} ║ {ga}      RIVAL ⛨   ▮{rr} ✚{rb}", 28);
++        float prog = _tick / 1200f;
++        Box(_hud, (W - 560) / 2, 82, 560, 8, "", 8, new Color(0.35f, 0.35f, 0.35f, 0.95f));
++        Box(_hud, (W - 560) / 2, 82, 560 * System.Math.Min(1f, prog), 8, "", 8, new Color(0.85f, 0.85f, 0.85f, 1f));
++        Box(_hud, W - 24 - 4 * 68, 12, 60, 48, $"x{_speed}", 20);
++        Box(_hud, W - 24 - 3 * 68, 12, 60, 48, _frozen ? "‖ pausa" : "‖", 20, _frozen ? new Color(0.8f, 0.8f, 0.5f, 1) : null);
++        float ty = H - 18 - 72, x0 = (W - ((7 * 232) + (6 * 12) + 24 + 150)) / 2;
++        bool tray = rel >= 0 && Active("TRAY", rel);
++        if (!tray)
++        {
++            for (int i = 0; i < 7; i++)
++            {
++                bool outp = _ids[i] == _outId && _t0 >= 0 && !_decided;
++                var c = outp ? (_scn == "muerte" ? new Color(0.25f, 0.25f, 0.25f, 0.95f) : new Color(0.72f, 0.45f, 0.45f, 0.95f)) : Grey;
++                Box(_hud, x0 + i * 244, ty, 232, 72, _names[i] ?? "", 20, c);
++            }
++            Box(_hud, x0 + 7 * 244 + 12, ty, 150, 72, $"BANQUILLO {(_decided ? 1 : 2)}", 20);
++        }
++        else
++        {
++            scene += "bandeja+";
++            var P = _pitch.PitchRect(); float by = P.End.Y + 14, bh = H - 12 - by;
++            Box(_hud, 24, by, W - 48, bh, "", 20, new Color(0.5f, 0.5f, 0.5f, 0.96f));
++            float ry = by + (bh - 72) / 2;
++            Box(_hud, 40, ry, 232, 72, $"SALE · {(_scn == "muerte" ? "muerto" : "lesión")}", 20, new Color(0.72f, 0.45f, 0.45f, 0.95f));
++            float trel = rel - _script.First(s => s.What == "TRAY").A;
++            bool sel2 = trel > 0.8f && trel < 1.5f;
++            Box(_hud, 300, ry, 232, 72, "CANDIDATO A ✓", 20, !sel2 ? new Color(0.8f, 0.8f, 0.55f, 1) : Grey);
++            Box(_hud, 544, ry, 232, 72, "CANDIDATO B", 20, sel2 ? new Color(0.8f, 0.8f, 0.55f, 1) : Grey);
++            Box(_hud, W - 280, ry + 10, 240, 52, trel > 1.9f ? "✓ CONFIRMADO" : "CONFIRMAR", 22, trel > 1.9f ? new Color(0.6f, 0.8f, 0.6f, 1) : null);
++        }
++        // sellos N1/N2 y marcas de perk (x1/x4), por sucesos reales cercanos
++        if (_speed != 16)
++        {
++            float win = 15f * _speed;   // 1 s real
++            foreach (var e in ev.Where(e => e.Tick <= now && e.Tick > now - win * (e.Type == EventType.Card ? 1.5f : 1f)))
++            {
++                string label = e.Type switch { EventType.Foul => e.Detail == "unseen" ? "NO LO HA VISTO" : "¡FALTA!", EventType.Card => e.Detail == "red" ? "¡ROJA!" : "AMARILLA", EventType.PerkTriggered when e.Tick > 15 => "✦ " + e.Detail, _ => "" };
++                if (label == "") continue;
++                int pi = Index(e.Actor, e.Team); if (pi < 0) continue;
++                var sp = _pitch.ScreenOf(pi); if (!sp.Visible) continue;
++                bool perk = e.Type == EventType.PerkTriggered;
++                Box(_fx, sp.Head.X - (perk ? 85 : 120), sp.Head.Y - (perk ? 44 : 80), perk ? 170 : 240, perk ? 38 : 62, label, perk ? 20 : 24);
++                scene += perk ? "marca+" : "sello+";
++            }
++        }
++        // momento principal
++        if (rel >= 0)
++        {
++            var hero = _pitch.ScreenOf(Index(_scn == "gol" ? -99 : _outId, 0));
++            bool left = (_heroX < 8f);
++            if (Active("N3", rel)) { scene += "N3+"; DrawN3(W, H, left, rel); }
++            if (Active("ESQUELA_CENTRO", rel)) { scene += "N4centro+"; Box(_fx, (W - 900) / 2, 150 + ((H - 150 - 760) / 2), 900, 760, "HA CAÍDO\n\n⛨ nombre · posición · raza\nCausa: perk y autor\nEl objeto vuelve al almacén\nDisponibles 6 → 5", 32); }
++            if (Active("ESQUELA_BORDE", rel)) { scene += "N4borde+"; DrawEdge(W, H, left, rel, "ESQUELA_BORDE", 620, 640, "HA CAÍDO\n⛨ nombre · posición\nCausa: perk y autor\nObjeto → almacén\nDisponibles 6 → 5", 30); }
++            if (Active("RESIDUO", rel) && hero.Visible) Box(_fx, hero.Foot.X - 45, hero.Foot.Y - 6, 90, 14, "", 8, new Color(0.75f, 0.05f, 0.05f, 0.9f));
++            if (hero.Visible && _scn != "gol" && rel < ScriptEnd) { var red = new Color(0.9f, 0.15f, 0.15f); Box(_fx, hero.Foot.X - 48, hero.Head.Y - 50, 96, 4, "", 4, red); Box(_fx, hero.Foot.X - 48, hero.Foot.Y + 14, 96, 4, "", 4, red); }
++        }
++        if (scene != _lastScene) { _screenChanges++; _lastScene = scene; }
++    }
++
++    private void DrawN3(float W, float H, bool heroLeft, float rel)
++    {
++        string text = _scn == "gol" ? "¡GOOOL!\n(viñeta)" : "¡CRAC!\n(viñeta)";
++        string sub = _scn == "gol" ? "GOL · NUESTRO FC" : "LESIÓN · SALE EL N.º";
++        var P = _pitch.PitchRect();
++        if (_var == "A")
++        {
++            float pw = 574, ph = 364, cx = heroLeft ? P.Position.X + P.Size.X * 0.75f : P.Position.X + P.Size.X * 0.25f, py = P.Position.Y + (P.Size.Y - ph - 52) / 2;
++            Box(_fx, cx - pw / 2, py, pw, ph, text, 44); Box(_fx, cx - pw / 2, py + ph + 6, pw, 46, sub, 24);
++        }
++        else DrawEdge(W, H, heroLeft, rel, "N3", 560, 520, text + "\n" + sub, 40);
++    }
++
++    // Variante editorial: nace desde el borde contrario al protagonista, girada, parcialmente fuera de pantalla.
++    private void DrawEdge(float W, float H, bool heroLeft, float rel, string what, float w, float h, string text, int font)
++    {
++        var s = _script.First(x => x.What == what && rel >= x.A && rel < x.B);
++        float t = rel - s.A, tOut = s.B - rel;
++        float slide = Mathf.Clamp(System.Math.Min(t, tOut) / 0.22f, 0f, 1f);   // entra y sale deslizando ~0,22 s
++        slide = 1f - ((1f - slide) * (1f - slide));
++        bool fromRight = heroLeft;
++        float visible = w - 70;                                                  // 70 px quedan fuera de pantalla
++        float x = fromRight ? W - visible * slide : -70 - w + (visible + 70) * slide;
++        if (!fromRight) x = -70 + (visible * slide) - visible;
++        Box(_fx, x, 150, w, h, text, font, null, fromRight ? -0.06f : 0.06f);
++    }
++
++    private void Still(float rel)
++    {
++        foreach (var (at, name) in new[] { (0.1f, "a"), (1.2f, "b"), (2.6f, "c"), (4.6f, "d"), (ScriptEnd + 0.8f, "z") })
++        {
++            if (rel >= at && !_stills.Contains(name))
++            {
++                _stills.Add(name);
++                var img = GetViewport().GetTexture().GetImage(); img.SavePng($"{_out}-{name}.png");
++                var P = _pitch.PitchRect(); float area = P.Size.X * P.Size.Y, cov = 0;
++                foreach (var n in _fx.GetChildren().OfType<ColorRect>()) if (n.Size.X < 1900) cov += new Rect2(n.Position, n.Size).Intersection(P).Area;
++                var hero = _pitch.ScreenOf(Index(_outId, 0));
++                bool heroCovered = hero.Visible && _fx.GetChildren().OfType<ColorRect>().Any(n => n.Size.X > 200 && n.Size.X < 1900 && new Rect2(n.Position, n.Size).HasPoint(hero.Foot - new Vector2(0, 30)));
++                _log.Add($"foto {name} real={_real:0.00}s rel={rel:0.00}s escena=[{_lastScene}] campo tapado≈{cov / area:P0} protagonista tapado={heroCovered} congelado={_frozen}");
++            }
++        }
++    }
++
++    private void Finish()
++    {
++        _done = true;
++        _log.Add($"FIN clip: real={_real:0.00}s · cambios de escena={_screenChanges}");
++        foreach (var l in _log) GD.Print("C2 " + l);
++        GetTree().Quit();
++    }
++}
+diff -ruN a/Game/Screens/C2Search.cs b/Game/Screens/C2Search.cs
+--- a/Game/Screens/C2Search.cs	1970-01-01 01:00:00.000000000 +0100
++++ b/Game/Screens/C2Search.cs	2026-09-19 13:09:31.335784591 +0200
+@@ -0,0 +1,41 @@
++// Fase C.2 (copia temporal): busca semillas con gol propio, lesión con sustitución pendiente y muerte con sustitución pendiente.
++using System.Linq;
++using Godot;
++using Underleague.Game.Autoload;
++using Underleague.Sim.Events;
++using Underleague.Sim.Model;
++
++namespace Underleague.Game.Screens;
++
++public partial class C2Search : Control
++{
++    public override void _Ready()
++    {
++        var run = RunController.Instance!;
++        bool goal = false, inj = false, death = false;
++        goal = true; inj = true;
++        for (ulong s = 1; s <= 4000 && !(goal && inj && death); s++)
++        foreach (int nodeId in RunIds(run, s))
++        {
++            if (death) break;
++            run.NewRun("orc_ironworks", Race.Orc, s);
++            run.PlayMatch(nodeId);
++            var pb = run.Playback!; var ev = pb.Result.Events; var pend = run.PendingSubstitution();
++            var g = ev.FirstOrDefault(e => e.Type == EventType.Goal && e.Team == 0 && e.Tick > 150);
++            if (!goal && g is not null) { goal = true; GD.Print($"GOL semilla={s} tick={g.Tick} frames={pb.Result.Trace?.FrameCount} ticks={pb.Result.Report.Ticks}"); }
++            if (pend is not null)
++            {
++                var src = ev.Where(e => e.Tick <= pend.Tick && e.Tick >= pend.Tick - 3 && (e.Type == EventType.Injury || e.Type == EventType.Death)).Select(e => $"{e.Type}/{e.Detail}");
++                if (!inj && pend.Detail == "injury") { inj = true; GD.Print($"LESION semilla={s} tick={pend.Tick} sale={pend.OutPlayerId} candidatos={pend.Candidates.Count} sucesos={string.Join(",", src)}"); }
++                if (!death && pend.Detail == "death") { death = true; GD.Print($"MUERTE semilla={s} nodo={nodeId} tick={pend.Tick} sale={pend.OutPlayerId} candidatos={pend.Candidates.Count} sucesos={string.Join(",", src)}"); }
++            }
++        }
++        GetTree().Quit();
++    }
++
++    private static System.Collections.Generic.List<int> RunIds(RunController run, ulong s)
++    {
++        run.NewRun("orc_ironworks", Race.Orc, s);
++        return run.Available().Where(n => n.IsMatch).Select(n => n.Id).ToList();
++    }
++}
+diff -ruN a/Game/Screens/D1Tile.cs b/Game/Screens/D1Tile.cs
+--- a/Game/Screens/D1Tile.cs	1970-01-01 01:00:00.000000000 +0100
++++ b/Game/Screens/D1Tile.cs	2026-09-19 17:59:27.486146818 +0200
+@@ -0,0 +1,674 @@
++// Fase D.1 — muestras de estilo (style tiles) en una COPIA temporal, fuera del repositorio. No es arte final.
++// Uso: -- <A|B|C> <salida.png>   A feria pintada · B pasquín impreso · C estandarte heráldico
++using System.Collections.Generic;
++using System.Linq;
++using Godot;
++using Underleague.Game.Autoload;
++using Underleague.Game.Ui;
++using Underleague.Sim.Model;
++
++namespace Underleague.Game.Screens;
++
++/// <summary>Forma plana con contorno negro, sombra dura y trazos interiores opcionales (veta, líneas cinéticas).</summary>
++public partial class Shape : Control
++{
++    public Vector2[] Poly = System.Array.Empty<Vector2>();
++    public Color Fill = Colors.White, Line = Colors.Black, Shadow = new(0, 0, 0, 0.55f);
++    public float LineW = 4f; public Vector2 ShadowOff = new(6, 6);
++    public List<(Vector2 A, Vector2 B, Color C, float W)> Strokes = new();
++    public List<(Vector2 P, float R, Color C)> Dots = new();
++    public override void _Draw()
++    {
++        if (Poly.Length < 3) return;
++        if (ShadowOff != Vector2.Zero) DrawColoredPolygon(Poly.Select(p => p + ShadowOff).ToArray(), Shadow);
++        DrawColoredPolygon(Poly, Fill);
++        foreach (var d in Dots) DrawCircle(d.P, d.R, d.C);
++        foreach (var s in Strokes) DrawLine(s.A, s.B, s.C, s.W, true);
++        if (LineW > 0) DrawPolyline(Poly.Append(Poly[0]).ToArray(), Line, LineW, true);
++    }
++}
++
++internal static class ShapeExt
++{
++    public static T Also<T>(this T self, System.Action<T> f) { f(self); return self; }
++}
++
++public partial class D1Tile : Control
++{
++    private const float Extent = 17.2f;
++    private const string Fonts = "<FUENTES>/";
++    private MatchPitchView3D _pitch = null!;
++    private Control _o = null!;
++    private string _tile = "A", _out = "", _mode = "base"; private bool _gray;
++    private int _top = -1, _mid = -1, _hero = -1;
++    private readonly Dictionary<string, FontFile> _fonts = new();
++    private readonly RandomNumberGenerator _rng = new() { Seed = 7 };   // solo para el jitter del dibujo
++
++    // Paleta común: equipos saturados, rojo reservado a daño, oro a economía, papel y tinta.
++    private static readonly Color Ink = new("141214"), Paper = new("f1e4c3"), PaperDark = new("d9c49a");
++    private static readonly Color Ours = new("2f6fd6"), OursDark = new("1d4590"), Rival = new("d63a2f"), RivalDark = new("8e231c");
++    private static readonly Color Gold = new("f2b632"), Blood = new("b3121b"), Wood = new("7a5234"), WoodLight = new("c89b62");
++
++    public override void _Ready()
++    {
++        var a = OS.GetCmdlineUserArgs(); _tile = a[0]; _out = a[1]; _mode = a.Length > 2 ? a[2] : "base"; _gray = a.Length > 3 && a[3] == "gray";
++        var run = RunController.Instance!;
++        run.NewRun("orc_ironworks", Race.Orc, 20260905UL);
++        run.PlayMatch(run.Available().First(n => n.IsMatch).Id);
++        var pb = run.Playback!; var tr = pb.Result.Trace!;
++        _pitch = new MatchPitchView3D(); _pitch.SetAnchorsPreset(LayoutPreset.FullRect); AddChild(_pitch);
++        _pitch.Bind(tr, pb.Setup, run.Catalog);
++        int frame = tr.FrameCount * 2 / 5;
++        for (int f = tr.FrameCount / 5; f < tr.FrameCount * 4 / 5; f++)
++            if (Enumerable.Range(0, tr.Players.Count).Any(i => tr.OnPitchAt(f, i) && tr.PositionAt(f, i).Y < 0.7f)) { frame = f; break; }
++        _pitch.Frame = frame;
++        var ball = tr.BallAt(frame); float bt = 99, bm = 99, bh = 99;
++        for (int i = 0; i < tr.Players.Count; i++)
++        {
++            if (!tr.OnPitchAt(frame, i)) continue;
++            var p = tr.PositionAt(frame, i);
++            if (p.Y < bt) { bt = p.Y; _top = i; }
++            float dm = System.Math.Abs(p.Y - 3.5f) + System.Math.Abs(p.X - 8f) * 0.2f; if (dm < bm && tr.Players[i].Team == 0 && p.X > 9f) { bm = dm; _mid = i; }
++            float dh = (p.X - ball.X) * (p.X - ball.X) + (p.Y - ball.Y) * (p.Y - ball.Y); if (dh < bh) { bh = dh; _hero = i; }
++        }
++        _o = new Control { MouseFilter = MouseFilterEnum.Ignore }; _o.SetAnchorsPreset(LayoutPreset.FullRect); AddChild(_o);
++        _ = Shoot();
++    }
++
++    public override void _Process(double delta)
++    {
++        var s = _pitch.Size; if (s.Y <= 0) return;
++        _pitch.OrthoSize = Extent / (s.X / s.Y); _pitch.PanUp = 30f / (s.X / Extent);
++    }
++
++    private async System.Threading.Tasks.Task Shoot()
++    {
++        for (int i = 0; i < 20; i++) await ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame);
++        Build();
++        for (int i = 0; i < 6; i++) await ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame);
++        var img = GetViewport().GetTexture().GetImage();
++        img.SavePng(_out);
++        if (_gray)
++        {
++            // Aproximación de daltonismo: solo luminancia. Si dos cosas se distinguen aquí, no dependen del color.
++            for (int y = 0; y < img.GetHeight(); y++)
++                for (int x = 0; x < img.GetWidth(); x++)
++                {
++                    var c = img.GetPixel(x, y); float l = (0.2126f * c.R) + (0.7152f * c.G) + (0.0722f * c.B);
++                    img.SetPixel(x, y, new Color(l, l, l));
++                }
++            img.SavePng(_out.Replace(".png", "-gris.png"));
++        }
++        GetTree().Quit();
++    }
++
++    // ------------------------------------------------------------------ primitivas
++    private FontFile Font(string file)
++    {
++        if (!_fonts.TryGetValue(file, out var f)) { f = new FontFile(); f.LoadDynamicFont(Fonts + file); _fonts[file] = f; }
++        return f;
++    }
++
++    private Shape Poly(Vector2 pos, Vector2[] pts, Color fill, float lineW = 4f, float rot = 0f, Vector2? shadow = null, Color? line = null)
++    {
++        var s = new Shape { Position = pos, Poly = pts, Fill = fill, LineW = lineW, Rotation = rot, ShadowOff = shadow ?? new Vector2(6, 6), Line = line ?? Ink, MouseFilter = MouseFilterEnum.Ignore };
++        var max = pts.Aggregate(Vector2.Zero, (m, p) => new Vector2(System.Math.Max(m.X, p.X), System.Math.Max(m.Y, p.Y)));
++        s.Size = max; s.PivotOffset = max / 2;
++        _o.AddChild(s); return s;
++    }
++
++    private static Vector2[] Rect(float w, float h) => new[] { new Vector2(0, 0), new Vector2(w, 0), new Vector2(w, h), new Vector2(0, h) };
++
++    /// <summary>Rectángulo con bordes irregulares (papel rasgado, tabla desbastada): la irregularidad va al marco.</summary>
++    private Vector2[] Rough(float w, float h, float amp, int steps = 10)
++    {
++        var pts = new List<Vector2>();
++        for (int i = 0; i < steps; i++) pts.Add(new Vector2(w * i / steps, _rng.RandfRange(-amp, amp)));
++        for (int i = 0; i < steps / 2; i++) pts.Add(new Vector2(w + _rng.RandfRange(-amp, amp), h * i / (steps / 2)));
++        for (int i = steps; i > 0; i--) pts.Add(new Vector2(w * i / steps, h + _rng.RandfRange(-amp, amp)));
++        for (int i = steps / 2; i > 0; i--) pts.Add(new Vector2(_rng.RandfRange(-amp, amp), h * i / (steps / 2)));
++        return pts.ToArray();
++    }
++
++    private static Vector2[] ShieldPts(float w, float h) => new[] { new Vector2(0, 0), new Vector2(w, 0), new Vector2(w, h * 0.55f), new Vector2(w / 2, h), new Vector2(0, h * 0.55f) };
++
++    private static Vector2[] Swallowtail(float w, float h, float notch) => new[] { new Vector2(0, 0), new Vector2(w, 0), new Vector2(w, h), new Vector2(w / 2, h - notch), new Vector2(0, h) };
++
++    private static Vector2[] Burst(float r1, float r2, int n, Vector2 c)
++    {
++        var pts = new Vector2[n * 2];
++        for (int i = 0; i < n * 2; i++) { float ang = Mathf.Pi * i / n; float r = i % 2 == 0 ? r1 : r2; pts[i] = c + new Vector2(Mathf.Cos(ang) * r, Mathf.Sin(ang) * r); }
++        return pts;
++    }
++
++    private Label Text(Vector2 pos, Vector2 size, string text, string font, int px, Color color, int outline = 0, Color? outlineColor = null, float rot = 0, HorizontalAlignment h = HorizontalAlignment.Center, Vector2? shadow = null)
++    {
++        var l = new Label { Text = text, Position = pos, Size = size, HorizontalAlignment = h, VerticalAlignment = VerticalAlignment.Center, Rotation = rot, PivotOffset = size / 2, ClipText = false, MouseFilter = MouseFilterEnum.Ignore };
++        l.AddThemeFontOverride("font", Font(font)); l.AddThemeFontSizeOverride("font_size", px); l.AddThemeColorOverride("font_color", color);
++        if (outline > 0) { l.AddThemeConstantOverride("outline_size", outline); l.AddThemeColorOverride("font_outline_color", outlineColor ?? Ink); }
++        if (shadow is { } sh) { l.AddThemeColorOverride("font_shadow_color", new Color(0, 0, 0, 0.7f)); l.AddThemeConstantOverride("shadow_offset_x", (int)sh.X); l.AddThemeConstantOverride("shadow_offset_y", (int)sh.Y); l.AddThemeConstantOverride("shadow_outline_size", outline); }
++        _o.AddChild(l); return l;
++    }
++
++    /// <summary>Escudo heráldico partido: la identidad del equipo por color Y por forma (UI-002).</summary>
++    private void Heraldry(Vector2 pos, float w, float h, Color a, Color b, bool bend)
++    {
++        var sh = Poly(pos, ShieldPts(w, h), a, 3f);
++        if (bend) sh.Strokes.Add((new Vector2(0, 0), new Vector2(w, h * 0.8f), b, w * 0.28f));
++        else sh.Strokes.Add((new Vector2(w * 0.75f, 0), new Vector2(w * 0.75f, h * 0.75f), b, w * 0.5f));
++    }
++
++    // ------------------------------------------------------------------ composición común
++    private static readonly string[] Names = { "HRAKKA", "TORKA", "LURTZ", "THRAK", "RUKH", "RUK", "MAZKA" };
++    private static readonly string[] Roles = { "POR", "DEF", "DEF", "MED", "MED", "MED", "DEL" };
++
++    private void Build()
++    {
++        var v = GetViewportRect().Size; float W = v.X, H = v.Y;
++        switch (_tile) { case "A": TileA(W, H); break; case "B": TileB(W, H); break; case "S": TileS(W, H); break; case "P": TileP(W, H); break; default: TileC(W, H); break; }
++    }
++
++
++    // ============================================================ A · FERIA PINTADA (madera y pintura)
++    private void TileA(float W, float H)
++    {
++        // Marcador: tablero de madera con veta, nombres en placas crema, resultado en placas colgantes.
++        float mx = (W - 760) / 2;
++        var board = Poly(new Vector2(mx, 10), Rough(760, 66, 2.5f), Wood, 5f);
++        for (int i = 1; i < 4; i++) board.Strokes.Add((new Vector2(10, i * 16), new Vector2(750, i * 16 + _rng.RandfRange(-3, 3)), new Color("5e3d25"), 2));
++        Heraldry(new Vector2(mx + 18, 14), 44, 58, Ours, Paper, false);
++        Heraldry(new Vector2(mx + 760 - 62, 14), 44, 58, Rival, Ink, true);
++        Poly(new Vector2(mx + 72, 20), Rough(210, 44, 1.5f), Paper, 3f, 0, new Vector2(3, 3));
++        Text(new Vector2(mx + 72, 20), new Vector2(210, 44), "NUESTRO FC", "BarlowCondensed-Bold.ttf", 30, Ink);
++        Poly(new Vector2(mx + 478, 20), Rough(210, 44, 1.5f), Paper, 3f, 0, new Vector2(3, 3));
++        Text(new Vector2(mx + 478, 20), new Vector2(210, 44), "RIVAL UTD", "BarlowCondensed-Bold.ttf", 30, Ink);
++        foreach (var (x, n, rot) in new[] { (mx + 300f, "2", -0.05f), (mx + 392f, "1", 0.05f) })
++        {
++            Poly(new Vector2(x, 14), Rect(68, 84), Paper, 4f, rot);
++            Text(new Vector2(x, 14), new Vector2(68, 84), n, "AlfaSlabOne-Regular.ttf", 56, Ink, 0, null, rot);
++        }
++        Text(new Vector2(mx + 690, 78), new Vector2(70, 24), "▮1  ✚1", "BarlowCondensed-Bold.ttf", 20, Paper, 5);
++        Poly(new Vector2((W - 560) / 2, 104), Rect(560, 10), PaperDark, 3f, 0, new Vector2(3, 3));
++        Poly(new Vector2((W - 560) / 2, 104), Rect(560 * 0.62f, 10), Gold, 3f, 0, Vector2.Zero);
++        Speed(W, Wood, Paper);
++
++        // Tiras: placas de madera clara con escudo; estado como tachuela de color+forma.
++        Tiras(W, H, WoodLight, Ink, Paper, "BarlowCondensed-Bold.ttf", rough: 2f);
++
++        // Sello y marca.
++        var top = _pitch.ScreenOf(_top); var mid = _pitch.ScreenOf(_mid);
++        if (top.Visible) { float sx = top.Head.X > W / 2 ? top.Head.X - 48 - 200 : top.Head.X + 48; Poly(new Vector2(sx, top.Head.Y - 10), Rough(200, 58, 2f), Rival, 4f, -0.07f); Text(new Vector2(sx, top.Head.Y - 10), new Vector2(200, 58), "¡FALTA!", "BowlbyOneSC-Regular.ttf", 30, Paper, 6, Ink, -0.07f); }
++        if (mid.Visible) { Poly(new Vector2(mid.Head.X - 95, mid.Head.Y - 50), Rough(190, 40, 1.5f), Paper, 3f, 0.03f, new Vector2(4, 4)); Text(new Vector2(mid.Head.X - 95, mid.Head.Y - 50), new Vector2(190, 40), "✦ SANGRE CALIENTE", "BarlowCondensed-Bold.ttf", 22, Ink, 0, null, 0.03f); }
++
++        // N3 gol: viñeta de cómic desde el borde izquierdo, estallido naranja, onomatopeya.
++        var panel = Poly(new Vector2(-60, 150), Rect(620, 480), new Color("ffd23f"), 8f, 0.05f, new Vector2(10, 10));
++        var burst = Poly(new Vector2(-40, 170), Burst(250, 150, 14, new Vector2(300, 220)), new Color("ff7b2e"), 0f, 0.05f, Vector2.Zero);
++        for (int i = 0; i < 18; i++) { float ang = Mathf.Tau * i / 18; panel.Strokes.Add((new Vector2(340, 240) + new Vector2(Mathf.Cos(ang), Mathf.Sin(ang)) * 170, new Vector2(340, 240) + new Vector2(Mathf.Cos(ang), Mathf.Sin(ang)) * 330, Ink, 3)); }
++        Text(new Vector2(20, 250), new Vector2(520, 170), "¡GOOOL!", "Bangers-Regular.ttf", 128, Paper, 16, Ink, 0.05f, HorizontalAlignment.Center, new Vector2(8, 8));
++        Poly(new Vector2(30, 580), Rough(520, 58, 2f), Rival == Rival ? Ours : Ours, 5f, 0.05f);
++        Text(new Vector2(30, 580), new Vector2(520, 58), "7 · MAZKA COMECRÁNEOS", "BarlowCondensed-Bold.ttf", 32, Paper, 6, Ink, 0.05f);
++    }
++
++    // ============================================================ B · PASQUÍN IMPRESO (papel, tinta, tampón)
++    private void TileB(float W, float H)
++    {
++        float mx = (W - 760) / 2;
++        var sheet = Poly(new Vector2(mx, 8), Rough(760, 70, 3f, 16), Paper, 3f, 0, new Vector2(5, 5));
++        sheet.Strokes.Add((new Vector2(14, 60), new Vector2(746, 60), Ink, 2));
++        Poly(new Vector2(mx + 10, 16), Rect(10, 42), Ours, 0, 0, Vector2.Zero); Poly(new Vector2(mx + 740, 16), Rect(10, 42), Rival, 0, 0, Vector2.Zero);
++        Heraldry(new Vector2(mx + 28, 14), 36, 46, Ours, Paper, false); Heraldry(new Vector2(mx + 696, 14), 36, 46, Rival, Ink, true);
++        Text(new Vector2(mx + 70, 12), new Vector2(620, 50), "NUESTRO FC   2 – 1   RIVAL UTD", "AlfaSlabOne-Regular.ttf", 34, Ink);
++        Text(new Vector2(mx + 70, 58), new Vector2(620, 20), "LA GACETA DE LA LIGA · 63'", "BarlowCondensed-SemiBold.ttf", 17, Ink);
++        Text(new Vector2(mx + 660, 60), new Vector2(90, 22), "▮1 ✚1", "BarlowCondensed-Bold.ttf", 20, Blood);
++        Poly(new Vector2((W - 560) / 2, 100), Rect(560, 8), Paper, 2f, 0, new Vector2(2, 2));
++        Poly(new Vector2((W - 560) / 2, 100), Rect(560 * 0.62f, 8), Ink, 0, 0, Vector2.Zero);
++        Speed(W, Paper, Ink);
++        Tiras(W, H, Paper, Ink, Ink, "BarlowCondensed-Bold.ttf", rough: 2.5f);
++        var top = _pitch.ScreenOf(_top); var mid = _pitch.ScreenOf(_mid);
++        if (top.Visible)
++        {
++            float sx = top.Head.X > W / 2 ? top.Head.X - 48 - 210 : top.Head.X + 48;
++            var st = Poly(new Vector2(sx, top.Head.Y - 12), Rect(210, 62), new Color(1, 1, 1, 0), 5f, -0.12f, Vector2.Zero, Blood);
++            st.Strokes.Add((new Vector2(8, 8), new Vector2(202, 8), Blood, 2)); st.Strokes.Add((new Vector2(8, 54), new Vector2(202, 54), Blood, 2));
++            Text(new Vector2(sx, top.Head.Y - 12), new Vector2(210, 62), "¡FALTA!", "AlfaSlabOne-Regular.ttf", 34, Blood, 0, null, -0.12f);
++        }
++        if (mid.Visible) { Poly(new Vector2(mid.Head.X - 100, mid.Head.Y - 48), Rect(200, 38), Paper, 2.5f, 0, new Vector2(3, 3)); Text(new Vector2(mid.Head.X - 100, mid.Head.Y - 48), new Vector2(200, 38), "✦ Sangre caliente", "BarlowCondensed-Bold.ttf", 22, Ink); }
++        // N3: portada de pasquín desde el borde, con semitono y titular.
++        var page = Poly(new Vector2(-50, 146), Rough(600, 500, 4f, 14), Paper, 5f, 0.04f, new Vector2(9, 9));
++        for (int y = 0; y < 14; y++) for (int x = 0; x < 16; x++) page.Dots.Add((new Vector2(40 + x * 34 + (y % 2) * 17, 150 + y * 22), 4f + (x % 3), new Color(0.08f, 0.07f, 0.08f, 0.22f)));
++        page.Strokes.Add((new Vector2(40, 120), new Vector2(560, 120), Ink, 4)); page.Strokes.Add((new Vector2(40, 132), new Vector2(560, 132), Ink, 2));
++        Text(new Vector2(0, 160), new Vector2(560, 110), "EXTRA", "BarlowCondensed-Bold.ttf", 34, Ink, 0, null, 0.04f);
++        Text(new Vector2(0, 250), new Vector2(560, 170), "¡GOOOL!", "AlfaSlabOne-Regular.ttf", 110, Ink, 0, null, 0.04f, HorizontalAlignment.Center);
++        Text(new Vector2(0, 420), new Vector2(560, 80), "Mazka Comecráneos la clava y el\nportero rival pide la baja", "BarlowCondensed-SemiBold.ttf", 28, Ink, 0, null, 0.04f);
++        var stamp = Poly(new Vector2(380, 520), Burst(62, 48, 16, new Vector2(62, 62)), new Color(1, 1, 1, 0), 4f, 0.2f, Vector2.Zero, Blood);
++        Text(new Vector2(380, 520), new Vector2(124, 124), "2–1", "AlfaSlabOne-Regular.ttf", 36, Blood, 0, null, 0.2f);
++    }
++
++    // ============================================================ C · ESTANDARTE HERÁLDICO (tela y heráldica)
++    private void TileC(float W, float H)
++    {
++        float cx = W / 2;
++        // Dos estandartes colgando a los lados del resultado; el resultado en una placa negra.
++        Poly(new Vector2(cx - 390, 4), Swallowtail(300, 96, 22), Ours, 5f);
++        Poly(new Vector2(cx + 90, 4), Swallowtail(300, 96, 22), Rival, 5f);
++        Heraldry(new Vector2(cx - 380, 14), 40, 52, Paper, Ours, false); Heraldry(new Vector2(cx + 340, 14), 40, 52, Ink, Rival, true);
++        Text(new Vector2(cx - 336, 12), new Vector2(230, 56), "NUESTRO FC", "LuckiestGuy-Regular.ttf", 30, Paper, 6, Ink);
++        Text(new Vector2(cx + 104, 12), new Vector2(230, 56), "RIVAL UTD", "LuckiestGuy-Regular.ttf", 30, Paper, 6, Ink);
++        Poly(new Vector2(cx - 90, 8), Rect(180, 76), Ink, 4f, 0, new Vector2(6, 6), Gold);
++        Text(new Vector2(cx - 90, 8), new Vector2(180, 76), "2 · 1", "BowlbyOneSC-Regular.ttf", 50, Paper);
++        Text(new Vector2(cx + 250, 70), new Vector2(120, 24), "▮1 ✚1", "BarlowCondensed-Bold.ttf", 20, Paper, 5);
++        Poly(new Vector2(cx - 280, 104), Rect(560, 10), Paper, 3f, 0, new Vector2(3, 3));
++        Poly(new Vector2(cx - 280, 104), Rect(560 * 0.62f, 10), Gold, 3f, 0, Vector2.Zero);
++        Speed(W, Ink, Paper);
++        Tiras(W, H, Ours, Paper, Paper, "LuckiestGuy-Regular.ttf", rough: 0, ribbon: true);
++        var top = _pitch.ScreenOf(_top); var mid = _pitch.ScreenOf(_mid);
++        if (top.Visible) { float sx = top.Head.X > W / 2 ? top.Head.X - 48 - 200 : top.Head.X + 48; Poly(new Vector2(sx, top.Head.Y - 10), Swallowtail(200, 56, 12), Gold, 4f, -0.06f); Text(new Vector2(sx, top.Head.Y - 14), new Vector2(200, 56), "¡FALTA!", "LuckiestGuy-Regular.ttf", 32, Ink, 0, null, -0.06f); }
++        if (mid.Visible) { Poly(new Vector2(mid.Head.X - 95, mid.Head.Y - 50), Swallowtail(190, 42, 8), Paper, 3f, 0, new Vector2(4, 4)); Text(new Vector2(mid.Head.X - 95, mid.Head.Y - 52), new Vector2(190, 40), "✦ SANGRE CALIENTE", "BarlowCondensed-Bold.ttf", 22, Ink); }
++        // N3: gran estandarte del equipo que marca cayendo desde arriba por el borde izquierdo.
++        var flag = Poly(new Vector2(40, -20), Swallowtail(440, 700, 90), Ours, 8f, 0.03f, new Vector2(10, 10));
++        flag.Strokes.Add((new Vector2(30, 0), new Vector2(30, 640), OursDark, 12)); flag.Strokes.Add((new Vector2(410, 0), new Vector2(410, 640), OursDark, 12));
++        Heraldry(new Vector2(170, 90), 170, 210, Paper, Ours, false);
++        Text(new Vector2(40, 320), new Vector2(440, 160), "¡GOOOL!", "LuckiestGuy-Regular.ttf", 104, Gold, 14, Ink, 0.03f, HorizontalAlignment.Center, new Vector2(7, 7));
++        Text(new Vector2(40, 470), new Vector2(440, 60), "7 · MAZKA COMECRÁNEOS", "BarlowCondensed-Bold.ttf", 32, Paper, 6, Ink, 0.03f);
++    }
++
++
++    // ============================================================ S · SÍNTESIS (D.2)
++    // Madera = tablero persistente · papel y tinta = información (tiras, sellos) · tela/heráldica = identidad ·
++    // tinta de cómic = acontecimientos (N3) · prensa = consecuencias (N4, informe).
++    private void TileS(float W, float H)
++    {
++        float mx = (W - 780) / 2;
++        // Marcador: tablero de madera; estandartes cortos con escudo a cada lado; resultado en placas colgantes.
++        var board = Poly(new Vector2(mx, 10), Rough(780, 64, 2.5f), Wood, 5f);
++        for (int i = 1; i < 4; i++) board.Strokes.Add((new Vector2(10, i * 16), new Vector2(770, i * 16 + _rng.RandfRange(-3, 3)), new Color("5e3d25"), 2));
++        Poly(new Vector2(mx + 14, 16), Swallowtail(250, 62, 12), Ours, 4f, 0, new Vector2(4, 4));
++        Poly(new Vector2(mx + 516, 16), Swallowtail(250, 62, 12), Rival, 4f, 0, new Vector2(4, 4));
++        Heraldry(new Vector2(mx + 24, 20), 38, 48, Paper, Ours, false); Heraldry(new Vector2(mx + 718, 20), 38, 48, Ink, Rival, true);
++        Text(new Vector2(mx + 66, 16), new Vector2(190, 52), "NUESTRO FC", "BarlowCondensed-Bold.ttf", 30, Paper, 6, Ink);
++        Text(new Vector2(mx + 524, 16), new Vector2(190, 52), "RIVAL UTD", "BarlowCondensed-Bold.ttf", 30, Paper, 6, Ink);
++        foreach (var (x, n, rot) in new[] { (mx + 306f, "2", -0.04f), (mx + 398f, "1", 0.04f) })
++        {
++            Poly(new Vector2(x, 12), Rect(72, 82), Paper, 4f, rot);
++            Text(new Vector2(x, 12), new Vector2(72, 82), n, "AlfaSlabOne-Regular.ttf", 56, Ink, 0, null, rot);
++        }
++        // Residuo del rival junto a su nombre (C3): una tarjeta roja y una baja, en tinta sobre papel.
++        Poly(new Vector2(mx + 640, 80), Rect(96, 28), Paper, 3f, 0, new Vector2(3, 3));
++        Text(new Vector2(mx + 640, 80), new Vector2(96, 28), "▮1  ✚1", "BarlowCondensed-Bold.ttf", 20, Blood);
++        Poly(new Vector2((W - 560) / 2, 104), Rect(560, 10), PaperDark, 3f, 0, new Vector2(3, 3));
++        Poly(new Vector2((W - 560) / 2, 104), Rect(560 * 0.62f, 10), Gold, 3f, 0, Vector2.Zero);
++        Speed(W, WoodLight, Ink);
++
++        var top = _pitch.ScreenOf(_top); var mid = _pitch.ScreenOf(_mid); var hero = _pitch.ScreenOf(_hero);
++        bool decision = _mode == "n4";
++        if (!decision) Tiras(W, H, Paper, Ink, Ink, "BarlowCondensed-Bold.ttf", rough: 2.5f);
++        else Tray(W, H);
++
++        if (_mode == "base")
++        {
++            if (top.Visible)
++            {
++                float sx = top.Head.X > W / 2 ? top.Head.X - 48 - 210 : top.Head.X + 48;
++                var st = Poly(new Vector2(sx, top.Head.Y - 12), Rect(210, 62), new Color(1, 1, 1, 0), 5f, -0.12f, Vector2.Zero, Blood);
++                st.Strokes.Add((new Vector2(8, 8), new Vector2(202, 8), Blood, 2)); st.Strokes.Add((new Vector2(8, 54), new Vector2(202, 54), Blood, 2));
++                Text(new Vector2(sx, top.Head.Y - 12), new Vector2(210, 62), "¡FALTA!", "AlfaSlabOne-Regular.ttf", 34, Blood, 0, null, -0.12f);
++            }
++            if (mid.Visible) { Poly(new Vector2(mid.Head.X - 105, mid.Head.Y - 50), Rough(210, 40, 1.5f), Paper, 3f, 0, new Vector2(4, 4)); Text(new Vector2(mid.Head.X - 105, mid.Head.Y - 50), new Vector2(210, 40), "✦ Sangre caliente", "BarlowCondensed-Bold.ttf", 22, Ink); }
++            return;
++        }
++
++        if (_mode == "n3p1") { GoalProclamation(); return; }
++        if (_mode == "n3p2") { GoalBannerProclamation(); return; }
++        if (_mode == "n3g1") { GoalWoodcut(); return; }
++        if (_mode == "n3g2") { GoalConstructivist(W); return; }
++        if (_mode == "n3g3") { GoalHerald(); return; }
++        if (_mode == "n3")
++        {
++            // Viñeta de cómic desde el borde, teñida con el color del equipo que marca; onomatopeya en papel.
++            var panel = Poly(new Vector2(-60, 150), Rect(620, 480), Ours, 8f, 0.05f, new Vector2(10, 10));
++            Poly(new Vector2(-40, 170), Burst(250, 150, 14, new Vector2(300, 220)), Gold, 0f, 0.05f, Vector2.Zero);
++            for (int i = 0; i < 18; i++) { float ang = Mathf.Tau * i / 18; panel.Strokes.Add((new Vector2(340, 240) + new Vector2(Mathf.Cos(ang), Mathf.Sin(ang)) * 170, new Vector2(340, 240) + new Vector2(Mathf.Cos(ang), Mathf.Sin(ang)) * 330, Ink, 3)); }
++            Heraldry(new Vector2(400, 180), 70, 88, Paper, Ours, false);
++            Text(new Vector2(20, 250), new Vector2(520, 170), "¡GOOOL!", "Bangers-Regular.ttf", 128, Paper, 16, Ink, 0.05f, HorizontalAlignment.Center, new Vector2(8, 8));
++            Poly(new Vector2(30, 580), Rough(520, 58, 2f), Paper, 5f, 0.05f);
++            Text(new Vector2(30, 580), new Vector2(520, 58), "7 · MAZKA COMECRÁNEOS", "BarlowCondensed-Bold.ttf", 32, Ink, 0, null, 0.05f);
++            return;
++        }
++
++        // N4 · muerte, tiempo 2: el cuerpo sigue en el campo con su mancha; la esquela entra desde el borde en
++        // formato de prensa; la decisión vive donde viven las tiras.
++        if (hero.Visible)
++        {
++            Poly(new Vector2(hero.Foot.X - 70, hero.Foot.Y - 18), Burst(58, 34, 9, new Vector2(70, 24)).Select(p => new Vector2(p.X, 24 + (p.Y - 24) * 0.45f)).ToArray(), Blood, 0f, 0, Vector2.Zero);
++        }
++        var sheet = Poly(new Vector2(-40, 140), Rough(560, 620, 4f, 14), Paper, 5f, 0.03f, new Vector2(9, 9));
++        sheet.Strokes.Add((new Vector2(40, 96), new Vector2(520, 96), Ink, 4)); sheet.Strokes.Add((new Vector2(40, 108), new Vector2(520, 108), Ink, 2));
++        Poly(new Vector2(-20, 160), Rect(520, 12), Ink, 0, 0.03f, Vector2.Zero);
++        Text(new Vector2(0, 170), new Vector2(520, 70), "ESQUELA", "AlfaSlabOne-Regular.ttf", 52, Ink, 0, null, 0.03f);
++        Heraldry(new Vector2(40, 280), 70, 88, Ours, Paper, false);
++        Text(new Vector2(130, 272), new Vector2(380, 100), "MAZKA COMECRÁNEOS\nDelantero · n.º 7 · orco", "BarlowCondensed-Bold.ttf", 30, Ink, 0, null, 0.03f, HorizontalAlignment.Left);
++        Text(new Vector2(20, 390), new Vector2(480, 100), "Rematado por «Sed de tuétano»\nde Grunk, n.º 4 del rival", "BarlowCondensed-SemiBold.ttf", 28, Ink, 0, null, 0.03f);
++        Text(new Vector2(20, 500), new Vector2(480, 110), "El hacha vuelve al almacén\nDisponibles: 6 → 5", "BarlowCondensed-Bold.ttf", 28, Blood, 0, null, 0.03f);
++        Text(new Vector2(20, 610), new Vector2(480, 60), "«Murió como vivió: fuera de sitio.»", "BarlowCondensed-SemiBold.ttf", 24, Ink, 0, null, 0.03f);
++    }
++
++
++
++
++    // ============================================================ P · REGISTRO DE PREGÓN (D.3)
++    // Voz de pregón (IM Fell) para proclamar · voz de lectura (Barlow) para datos · heráldica profunda · líneas finas.
++    private static readonly Color Gules = new("8e1f1f"), GulesDark = new("5e1414"), Sable = new("1b1712");
++    private const string Digits = "Cinzel[wght].ttf", Fell = "IMFeENsc28P.ttf", FellBig = "IMFeGPsc28P.ttf", FellIt = "IMFeENit28P.ttf", Read = "BarlowCondensed-Bold.ttf", ReadS = "BarlowCondensed-SemiBold.ttf";
++
++    private void ShieldP(Vector2 pos, float w, float h, bool ours)
++    {
++        var sh = Soft(pos, ShieldPts(w, h), ours ? Azur : Gules, 2f, Sable);
++        if (ours) sh.Strokes.Add((new Vector2(w * 0.75f, 0), new Vector2(w * 0.75f, h * 0.72f), Or, w * 0.5f));
++        else sh.Strokes.Add((new Vector2(0, 0), new Vector2(w, h * 0.8f), Sable, w * 0.26f));
++    }
++
++    private void Orla(Shape s, Vector2[] outer, float inset, Color c, float wdt = 1.6f)
++    {
++        var center = outer.Aggregate(Vector2.Zero, (a, b) => a + b) / outer.Length;
++        var inner = outer.Select(q => q + (center - q).Normalized() * inset).ToArray();
++        s.Strokes.AddRange(inner.Zip(inner.Skip(1).Append(inner[0]), (a, b) => (a, b, c, wdt)));
++    }
++
++    private void TileP(float W, float H)
++    {
++        // Marcador: tablero de madera oscura; paños heráldicos con orla; resultado en placas de pergamino.
++        float mx = (W - 800) / 2;
++        var board = Soft(new Vector2(mx, 8), Rough(800, 68, 2f), new Color("4a3321"), 2.5f, Sable);
++        for (int i = 1; i < 4; i++) board.Strokes.Add((new Vector2(8, i * 17), new Vector2(792, i * 17 + _rng.RandfRange(-2, 2)), new Color("3a2718"), 1.5f));
++        foreach (var (x, ours) in new[] { (mx + 12f, true), (mx + 528f, false) })
++        {
++            var pts = Swallowtail(260, 66, 12);
++            var paño = Soft(new Vector2(x, 12), pts, ours ? Azur : Gules, 2f, Sable);
++            Orla(paño, pts, 6f, Or);
++            ShieldP(new Vector2(ours ? x + 14 : x + 206, 18), 34, 42, ours);
++            Text(new Vector2(ours ? x + 50 : x + 12, 14), new Vector2(196, 46), ours ? "Nuestro F. C." : "Rival Utd.", Fell, 32, Vellum);
++        }
++        foreach (var (x, n) in new[] { (mx + 322f, "2"), (mx + 406f, "1") })
++        {
++            var plate = Soft(new Vector2(x, 10), Rough(72, 84, 1.5f), Vellum, 2f, VellumEdge);
++            Text(new Vector2(x, 12), new Vector2(72, 82), n, Digits, 60, Sable);
++        }
++        Soft(new Vector2(mx + 656, 82), Rough(110, 28, 1f), Vellum, 1.5f, VellumEdge);
++        Text(new Vector2(mx + 656, 82), new Vector2(110, 28), "▮1 · ✚1", Read, 20, Gules);
++        Soft(new Vector2((W - 560) / 2, 106), Rect(560, 8), new Color("4a3321"), 1.5f, Sable);
++        Soft(new Vector2((W - 560) / 2, 106), Rect(560 * 0.62f, 8), Or, 0f, Or);
++        string[] sp = { "x1", "x4", "x16", "‖" };
++        for (int i = 0; i < 4; i++) { var x = W - 24 - (4 - i) * 72; Soft(new Vector2(x, 14), Rough(64, 46, 1.2f), i == 0 ? Or : new Color("4a3321"), 2f, Sable); Text(new Vector2(x, 14), new Vector2(64, 46), sp[i], Read, 24, i == 0 ? Sable : Vellum); }
++
++        var top = _pitch.ScreenOf(_top); var mid = _pitch.ScreenOf(_mid); var hero = _pitch.ScreenOf(_hero);
++        if (_mode == "muerte") TrayP(W, H); else TirasP(W, H);
++
++        switch (_mode)
++        {
++            case "base":
++                if (top.Visible)
++                {
++                    // Sello: tampón rojo sobre recorte de papel (fondo propio: se lee sobre vallas y en grises).
++                    float sx = top.Head.X > W / 2 ? top.Head.X - 48 - 220 : top.Head.X + 48;
++                    Soft(new Vector2(sx, top.Head.Y - 14), Rough(220, 66, 2.5f), Vellum, 1.5f, VellumEdge, -0.09f);
++                    var st = Poly(new Vector2(sx + 14, top.Head.Y - 4), Rect(192, 46), new Color(1, 1, 1, 0), 3f, -0.09f, Vector2.Zero, Wax);
++                    st.Strokes.Add((new Vector2(6, 6), new Vector2(186, 6), Wax, 1.5f)); st.Strokes.Add((new Vector2(6, 40), new Vector2(186, 40), Wax, 1.5f));
++                    Text(new Vector2(sx, top.Head.Y - 14), new Vector2(220, 66), "Falta", FellBig, 40, Wax, 0, null, -0.09f);
++                }
++                if (mid.Visible) { Soft(new Vector2(mid.Head.X - 110, mid.Head.Y - 50), Rough(220, 40, 1.2f), Vellum, 1.5f, VellumEdge); Text(new Vector2(mid.Head.X - 110, mid.Head.Y - 50), new Vector2(220, 40), "✦ Sangre caliente", Read, 22, Sable); }
++                return;
++            case "gol": Banner(true, "Se hace saber", "Gol", "de Mazka Comecráneos,\nal minuto sesenta y tres", "¡Viva Nuestro F. C.!"); return;
++            case "roja": Banner(false, "Se hace saber", "Expulsado", "Grunk Rompecostillas, del Rival,\npor entrar como entra la peste", "Juegan con seis"); return;
++            case "lesion": Banner(true, "Se hace saber", "Herido", "Thrak Mascadientes, medio,\ncon la pierna donde no debe", "Lesión grave · sale del campo"); return;
++            case "turba": Turba(W); return;
++            case "final": Final(W, H); return;
++            case "muerte": Obituary((hero.Head, hero.Foot, hero.Visible)); return;
++        }
++    }
++
++    /// <summary>N3 de pregón: paño tejido con orla bordada, trompeta, fórmula de bando. Color del equipo protagonista.</summary>
++    private void Banner(bool ours, string header, string title, string body, string footer)
++    {
++        var pts = Swallowtail(440, 560, 70);
++        var flag = Soft(new Vector2(60, 150), pts, ours ? Azur : Gules, 2.5f, Sable, 0.012f);
++        for (int i = 0; i < 68; i++) flag.Strokes.Add((new Vector2(4, 8 + i * 8), new Vector2(436, 8 + i * 8), new Color(0.05f, 0.05f, 0.1f, 0.18f), 1));
++        Orla(flag, pts, 14f, Or, 1.8f); Orla(flag, pts, 20f, Or, 1.2f);
++        Trumpet(new Vector2(0, 176), 470, -0.03f, 0, 0);
++        ShieldP(new Vector2(235, 200), 70, 88, ours);
++        Text(new Vector2(60, 300), new Vector2(440, 50), header.ToUpperInvariant(), Fell, 32, Or, 0, null, 0.012f);
++        Text(new Vector2(60, 344), new Vector2(440, 140), title, FellBig, title.Length > 4 ? 96 : 150, Vellum, 0, null, 0.012f);
++        Text(new Vector2(60, 488), new Vector2(440, 84), body, FellIt, 28, Vellum, 0, null, 0.012f);
++        Text(new Vector2(60, 566), new Vector2(440, 50), footer, Fell, 30, Or, 0, null, 0.012f);
++    }
++
++    /// <summary>Banda de turba: pregón a lo ancho, entre dos trompetas, sin congelar.</summary>
++    private void Turba(float W)
++    {
++        var pts = new[] { new Vector2(0, 0), new Vector2(1300, 0), new Vector2(1270, 50), new Vector2(1300, 100), new Vector2(0, 100), new Vector2(30, 50) };
++        var band = Soft(new Vector2((W - 1300) / 2, 132), pts, Vellum, 2f, VellumEdge);
++        band.Strokes.Add((new Vector2(40, 12), new Vector2(1260, 12), Gules, 2)); band.Strokes.Add((new Vector2(40, 88), new Vector2(1260, 88), Gules, 2));
++        Text(new Vector2((W - 1300) / 2, 132), new Vector2(1300, 56), "Se hace saber: el árbitro abandona el campo", Fell, 34, Sable);
++        Text(new Vector2((W - 1300) / 2, 176), new Vector2(1300, 50), "¡A la turba! · el próximo gol gana", FellIt, 30, Gules);
++        Trumpet(new Vector2((W - 1300) / 2 - 300, 170), 300, 0.02f, 0, 0);
++    }
++
++    /// <summary>N4 de muerte en formato de bando con lacre; el cuerpo y su mancha siguen a la vista.</summary>
++    private void Obituary((Vector2 Head, Vector2 Foot, bool Visible) hero)
++    {
++        if (hero.Visible) Poly(new Vector2(hero.Foot.X - 70, hero.Foot.Y - 18), Burst(58, 34, 9, new Vector2(70, 24)).Select(q => new Vector2(q.X, 24 + (q.Y - 24) * 0.45f)).ToArray(), Blood, 0f, 0, Vector2.Zero);
++        Trumpet(new Vector2(20, 190), 440, -0.05f, 240, 110);
++        var sheet = Soft(new Vector2(20, 300), Rough(560, 440, 3f, 18), Vellum, 2f, VellumEdge, 0.015f);
++        sheet.Strokes.Add((new Vector2(40, 64), new Vector2(520, 64), Brown, 1.5f)); sheet.Strokes.Add((new Vector2(40, 70), new Vector2(520, 70), Brown, 1f));
++        Text(new Vector2(20, 310), new Vector2(560, 50), "SE HACE SABER", Fell, 34, Brown, 0, null, 0.015f);
++        Text(new Vector2(20, 372), new Vector2(560, 60), "el fallecimiento de", FellIt, 30, Brown, 0, null, 0.015f);
++        Text(new Vector2(20, 420), new Vector2(560, 90), "Mazka Comecráneos", FellBig, 58, Sable, 0, null, 0.015f);
++        Text(new Vector2(20, 506), new Vector2(560, 90), "delantero, n.º 7, orco; rematado por «Sed de tuétano»\nde Grunk, del Rival, al minuto sesenta y tres", FellIt, 24, Brown, 0, null, 0.015f);
++        Text(new Vector2(20, 598), new Vector2(430, 80), "Su hacha vuelve al almacén.\nQuedan cinco en pie.", Read, 24, Gules, 0, null, 0.015f, HorizontalAlignment.Center);
++        Text(new Vector2(20, 676), new Vector2(430, 50), "«Murió como vivió: fuera de sitio.»", FellIt, 24, Brown, 0, null, 0.015f);
++        Soft(new Vector2(470, 640), Burst(48, 43, 22, new Vector2(48, 48)), Wax, 1.5f, GulesDark);
++    }
++
++    private void Final(float W, float H)
++    {
++        Poly(new Vector2(0, 0), Rect(W, H), new Color(0, 0, 0, 0.55f), 0f, 0, Vector2.Zero);
++        var sheet = Soft(new Vector2((W - 820) / 2, 200), Rough(820, 560, 3.5f, 20), Vellum, 2f, VellumEdge);
++        sheet.Strokes.Add((new Vector2(60, 110), new Vector2(760, 110), Brown, 1.5f)); sheet.Strokes.Add((new Vector2(60, 116), new Vector2(760, 116), Brown, 1f));
++        Text(new Vector2((W - 820) / 2, 220), new Vector2(820, 90), "Fin del encuentro", Fell, 56, Sable);
++        ShieldP(new Vector2(W / 2 - 300, 350), 110, 138, true); ShieldP(new Vector2(W / 2 + 190, 350), 110, 138, false);
++        Text(new Vector2(W / 2 - 170, 330), new Vector2(340, 170), "2 — 1", Digits, 110, Sable);
++        Text(new Vector2((W - 820) / 2, 520), new Vector2(820, 60), "Nuestro F. C. vence a Rival Utd.", Fell, 36, Azur);
++        Text(new Vector2((W - 820) / 2, 580), new Vector2(820, 90), "Goles de Mazka (2) y Grunk · un expulsado · un muerto\nLa crónica completa, en la gaceta de mañana", FellIt, 28, Brown);
++        Soft(new Vector2(W / 2 + 290, 640), Burst(46, 41, 22, new Vector2(46, 46)), Wax, 1.5f, GulesDark);
++    }
++
++    private void TirasP(float W, float H)
++    {
++        float ty = H - 18 - 72, x0 = (W - ((7 * 232) + (6 * 12) + 24 + 150)) / 2;
++        var states = new[] { 0, 0, 1, 0, 2, 0, 0 };
++        for (int i = 0; i < 7; i++)
++        {
++            float x = x0 + i * 244;
++            Soft(new Vector2(x, ty), Rough(232, 72, 2f), Vellum, 1.5f, VellumEdge);
++            ShieldP(new Vector2(x + 10, ty + 10), 40, 50, true);
++            Text(new Vector2(x + 10, ty + 16), new Vector2(40, 34), (i + 1).ToString(), Digits, 22, Vellum, 5, Sable);
++            Text(new Vector2(x + 58, ty + 6), new Vector2(150, 30), Names[i], Read, 24, Sable, 0, null, 0, HorizontalAlignment.Left);
++            Text(new Vector2(x + 58, ty + 38), new Vector2(150, 26), $"{Roles[i]} · orco  ✦2", ReadS, 20, Brown, 0, null, 0, HorizontalAlignment.Left);
++            Color sc = states[i] switch { 1 => Or, 2 => Gules, _ => new Color("3f7a44") };
++            var pts = states[i] switch { 1 => new[] { new Vector2(0, 0), new Vector2(22, 0), new Vector2(11, 20) }, 2 => new[] { new Vector2(0, 0), new Vector2(20, 0), new Vector2(20, 20), new Vector2(0, 20) }, _ => Burst(11, 11, 8, new Vector2(11, 11)) };
++            Soft(new Vector2(x + 202, ty + 26), pts, sc, 1.5f, Sable);
++        }
++        Soft(new Vector2(x0 + 7 * 244 + 12, ty), Rough(150, 72, 2f), Vellum, 1.5f, VellumEdge);
++        Text(new Vector2(x0 + 7 * 244 + 12, ty), new Vector2(150, 72), "Banquillo 2", Read, 24, Sable);
++    }
++
++    private void TrayP(float W, float H)
++    {
++        var P = _pitch.PitchRect(); float by = P.End.Y + 14, bh = H - 12 - by;
++        Soft(new Vector2(24, by), Rough(W - 48, bh, 2f, 24), new Color("e3d2a8"), 2f, VellumEdge);
++        Text(new Vector2(44, by + 4), new Vector2(520, 34), "Sustitución · partido en pausa", Fell, 26, Sable, 0, null, 0, HorizontalAlignment.Left);
++        float ry = by + bh - 76 - 8;
++        void Slot(float x, string name, string sub, bool selected, bool outp)
++        {
++            Soft(new Vector2(x, ry), Rough(270, 76, 1.5f), outp ? new Color("e7c3b8") : Vellum, selected ? 4f : 1.5f, selected ? Or : VellumEdge);
++            ShieldP(new Vector2(x + 10, ry + 12), 40, 50, true);
++            Text(new Vector2(x + 58, ry + 6), new Vector2(206, 32), name, Read, 24, Sable, 0, null, 0, HorizontalAlignment.Left);
++            Text(new Vector2(x + 58, ry + 40), new Vector2(206, 28), sub, ReadS, 20, Brown, 0, null, 0, HorizontalAlignment.Left);
++        }
++        Slot(44, "Sale · Mazka", "DEL · casilla D4 · muerto", false, true);
++        Text(new Vector2(320, ry + 16), new Vector2(50, 44), "→", FellBig, 40, Sable);
++        Slot(380, "8 · Brakk", "DEL · sano · recomendado", true, false);
++        Slot(664, "9 · Narg", "MED · tocado", false, false);
++        Soft(new Vector2(W - 44 - 250, ry + 8), Rough(250, 60, 1.5f), Or, 2f, Sable);
++        Text(new Vector2(W - 44 - 250, ry + 8), new Vector2(250, 60), "Confirmar", Fell, 34, Sable);
++        Text(new Vector2(960, ry + 20), new Vector2(560, 36), "◀ ▶ elegir · A / clic confirmar", ReadS, 22, Brown, 0, null, 0, HorizontalAlignment.Left);
++    }
++
++    // ---- Pregón: heraldo, trompeta con banderola, bando impreso («Se hace saber»), capitular y lacre.
++    // Menos cómic: color heráldico profundo (azur, oro), líneas finas, sombras suaves, tipo de imprenta antigua.
++    private static readonly Color Azur = new("1e3a6e"), AzurDark = new("142850"), Or = new("c9982f"), Vellum = new("efe2c0"), VellumEdge = new("b89c68"), Brown = new("3a2a1a"), Wax = new("8f1d1d");
++
++    private Shape Soft(Vector2 pos, Vector2[] pts, Color fill, float line, Color lineColor, float rot = 0f) =>
++        Poly(pos, pts, fill, line, rot, new Vector2(4, 5), lineColor).Also(sh => sh.Shadow = new Color(0, 0, 0, 0.35f));
++
++    /// <summary>Trompeta de heraldo (tubo largo y pabellón) con su banderola colgando.</summary>
++    private void Trumpet(Vector2 at, float len, float rot, float pennantW, float pennantH)
++    {
++        Soft(at, new[] { new Vector2(0, 0), new Vector2(len, -8), new Vector2(len, 4), new Vector2(0, 10) }, Or, 2f, Brown, rot);
++        Soft(at + new Vector2(len - 6, -22).Rotated(rot), new[] { new Vector2(0, 18), new Vector2(60, -10), new Vector2(66, 20), new Vector2(60, 50), new Vector2(0, 26) }, Or, 2f, Brown, rot);
++        if (pennantW <= 0) return;
++        var pen = Soft(at + new Vector2(len * 0.25f, 10).Rotated(rot), Swallowtail(pennantW, pennantH, pennantH * 0.22f), Azur, 2f, Brown, rot);
++        var inner = Swallowtail(pennantW - 16, pennantH - 14, pennantH * 0.19f).Select(q => q + new Vector2(8, 6)).ToArray();
++        pen.Strokes.AddRange(inner.Zip(inner.Skip(1).Append(inner[0]), (a, b) => (a, b, Or, 2f)));
++        Heraldry(at + new Vector2(len * 0.25f + pennantW / 2 - 22, 28).Rotated(rot), 44, 54, Vellum, Azur, false);
++    }
++
++    /// <summary>P1 · Bando del heraldo: la trompeta anuncia y el bando proclama el gol.</summary>
++    private void GoalProclamation()
++    {
++        Trumpet(new Vector2(20, 190), 440, -0.05f, 240, 110);
++        var sheet = Soft(new Vector2(20, 300), Rough(560, 420, 3f, 18), Vellum, 2f, VellumEdge, 0.015f);
++        sheet.Strokes.Add((new Vector2(40, 64), new Vector2(520, 64), Brown, 1.5f));
++        sheet.Strokes.Add((new Vector2(40, 70), new Vector2(520, 70), Brown, 1f));
++        Text(new Vector2(20, 310), new Vector2(560, 50), "SE HACE SABER", "IMFeENsc28P.ttf", 34, Brown, 0, null, 0.015f);
++        Text(new Vector2(20, 372), new Vector2(560, 150), "GOL", "IMFeGPsc28P.ttf", 150, AzurDark, 0, null, 0.015f);
++        Text(new Vector2(20, 520), new Vector2(560, 90), "de Mazka Comecráneos, al minuto sesenta y tres,\npara mayor gloria de Nuestro F. C.", "IMFeENit28P.ttf", 28, Brown, 0, null, 0.015f);
++        Text(new Vector2(20, 612), new Vector2(430, 60), "¡Viva Nuestro F. C.!", "IMFeENsc28P.ttf", 34, Azur, 0, null, 0.015f);
++        // Sello de lacre con el escudo en relieve.
++        Soft(new Vector2(470, 600), Burst(48, 43, 22, new Vector2(48, 48)), Wax, 1.5f, new Color("5e1010"));
++        Heraldry(new Vector2(500, 626), 36, 44, new Color("a92a2a"), new Color("6e1414"), false);
++    }
++
++    /// <summary>P2 · Estandarte de pregón: tela tejida en azur con orla bordada en oro, fórmula de bando.</summary>
++    private void GoalBannerProclamation()
++    {
++        var flag = Soft(new Vector2(60, 150), Swallowtail(440, 560, 70), Azur, 2.5f, Brown, 0.012f);
++        for (int i = 0; i < 70; i++) flag.Strokes.Add((new Vector2(4, 8 + i * 8), new Vector2(436, 8 + i * 8), new Color(0.05f, 0.1f, 0.2f, 0.18f), 1));
++        foreach (float inset in new[] { 14f, 20f })
++        {
++            var b = Swallowtail(440 - inset * 2, 560 - inset * 1.6f, 70 - inset * 0.3f).Select(q => q + new Vector2(inset, inset)).ToArray();
++            flag.Strokes.AddRange(b.Zip(b.Skip(1).Append(b[0]), (a, c) => (a, c, Or, 1.8f)));
++        }
++        Trumpet(new Vector2(0, 176), 470, -0.03f, 0, 0);
++        Heraldry(new Vector2(235, 200), 70, 88, Vellum, Or, false);
++        Text(new Vector2(60, 300), new Vector2(440, 50), "SE HACE SABER", "IMFeENsc28P.ttf", 32, Or, 0, null, 0.012f);
++        Text(new Vector2(60, 340), new Vector2(440, 150), "GOL", "IMFeGPsc28P.ttf", 150, Vellum, 0, null, 0.012f);
++        Text(new Vector2(60, 490), new Vector2(440, 80), "de Mazka Comecráneos,\nal minuto sesenta y tres", "IMFeENit28P.ttf", 30, Vellum, 0, null, 0.012f);
++        Text(new Vector2(60, 566), new Vector2(440, 50), "¡Viva Nuestro F. C.!", "IMFeENsc28P.ttf", 32, Or, 0, null, 0.012f);
++    }
++
++    // ---- Alternativas de gol (referencias: grabado/linóleo + Mignola · cartel constructivista · pregón del calcio storico)
++
++    /// <summary>G1 · Grabado: plancha negra tallada, rayos como gubiadas, tipo de madera en papel. Color de equipo solo como franja.</summary>
++    private void GoalWoodcut()
++    {
++        var plate = Poly(new Vector2(-50, 140), Rough(640, 520, 6f, 16), Ink, 0f, 0.035f, new Vector2(10, 10));
++        // Gubiadas: rayos tallados DENTRO de la plancha (se recortan contra su rectángulo de 640x520).
++        var c = new Vector2(90, 90);
++        for (int i = 0; i < 16; i++)
++        {
++            float ang = 0.05f + i * 0.085f;
++            var dir = new Vector2(Mathf.Cos(ang), Mathf.Sin(ang));
++            float tMax = System.Math.Min((620 - c.X) / System.Math.Max(dir.X, 0.001f), (500 - c.Y) / System.Math.Max(dir.Y, 0.001f));
++            plate.Strokes.Add((c + dir * 70, c + dir * tMax, new Color("e9dcb8"), 3f + (i % 3) * 3f));
++        }
++        Poly(new Vector2(-40, 470), new[] { new Vector2(0, 30), new Vector2(620, 0), new Vector2(620, 70), new Vector2(0, 100) }, Ours, 0f, 0.035f, Vector2.Zero);
++        Text(new Vector2(0, 250), new Vector2(560, 200), "GOL", "AlfaSlabOne-Regular.ttf", 190, Paper, 0, null, 0.035f, HorizontalAlignment.Center, new Vector2(10, 10));
++        Heraldry(new Vector2(470, 190), 64, 80, Paper, Ours, false);
++        Text(new Vector2(10, 485), new Vector2(560, 70), "MAZKA COMECRÁNEOS · MINUTO 63", "BarlowCondensed-Bold.ttf", 32, Paper, 0, null, 0.035f);
++    }
++
++    /// <summary>G2 · Cartel constructivista: banda diagonal que barre desde el borde, círculo con el marcador, tipo condensado.</summary>
++    private void GoalConstructivist(float W)
++    {
++        Poly(new Vector2(-80, 330), new[] { new Vector2(0, 110), new Vector2(1080, -60), new Vector2(1080, 120), new Vector2(0, 290) }, Ours, 0f, 0, new Vector2(12, 12));
++        Poly(new Vector2(-80, 500), new[] { new Vector2(0, 110), new Vector2(900, -30), new Vector2(900, 30), new Vector2(0, 170) }, Ink, 0f, 0, Vector2.Zero);
++        var disc = Poly(new Vector2(880, 250), Burst(118, 118, 32, new Vector2(118, 118)), Paper, 6f, 0, new Vector2(8, 8));
++        Text(new Vector2(880, 250), new Vector2(236, 236), "2–1", "AlfaSlabOne-Regular.ttf", 76, Ink);
++        Text(new Vector2(20, 380), new Vector2(760, 170), "GOL", "BowlbyOneSC-Regular.ttf", 150, Paper, 0, null, -0.155f, HorizontalAlignment.Left, new Vector2(8, 8));
++        Text(new Vector2(40, 560), new Vector2(760, 60), "MAZKA COMECRÁNEOS · 63'", "BarlowCondensed-Bold.ttf", 36, Paper, 0, null, -0.13f, HorizontalAlignment.Left);
++    }
++
++    /// <summary>G3 · Pregón heráldico: el estandarte del barrio que marca, orla tejida y la proclamación en tipo de madera.</summary>
++    private void GoalHerald()
++    {
++        var flag = Poly(new Vector2(40, 90), Swallowtail(460, 620, 80), Ours, 6f, 0.02f, new Vector2(10, 10));
++        var inner = Swallowtail(420, 580, 72).Select(p => p + new Vector2(20, 18)).ToArray();
++        var border = Poly(new Vector2(40, 90), inner, new Color(0, 0, 0, 0), 4f, 0.02f, Vector2.Zero, Gold);
++        for (int i = 0; i < 12; i++) flag.Strokes.Add((new Vector2(20, 30 + i * 46), new Vector2(440, 30 + i * 46), OursDark, 2));
++        Heraldry(new Vector2(200, 150), 140, 175, Paper, Ours, false);
++        Text(new Vector2(40, 360), new Vector2(460, 140), "GOL", "AlfaSlabOne-Regular.ttf", 130, Gold, 12, Ink, 0.02f, HorizontalAlignment.Center, new Vector2(6, 6));
++        Poly(new Vector2(0, 520), new[] { new Vector2(0, 0), new Vector2(540, 0), new Vector2(510, 34), new Vector2(540, 68), new Vector2(0, 68), new Vector2(30, 34) }, Paper, 5f, 0.02f, new Vector2(6, 6));
++        Text(new Vector2(30, 520), new Vector2(480, 68), "¡VIVA NUESTRO FC! · MAZKA, 63'", "BarlowCondensed-Bold.ttf", 32, Ink, 0, null, 0.02f);
++    }
++
++    /// <summary>Bandeja de decisión: sustituye a la fila de tiras (C14). Mismo material que las tiras (papel).</summary>
++    private void Tray(float W, float H)
++    {
++        var P = _pitch.PitchRect(); float by = P.End.Y + 14, bh = H - 12 - by;
++        Poly(new Vector2(24, by), Rough(W - 48, bh, 2.5f, 20), PaperDark, 5f, 0, new Vector2(6, 6));
++        Text(new Vector2(44, by + 6), new Vector2(360, 34), "SUSTITUCIÓN · partido en pausa", "BarlowCondensed-Bold.ttf", 24, Ink, 0, null, 0, HorizontalAlignment.Left);
++        float ry = by + bh - 76 - 8;
++        void Slot(float x, string name, string sub, Color fill, bool selected)
++        {
++            Poly(new Vector2(x, ry), Rough(260, 76, 2f), fill, selected ? 6f : 4f, 0, new Vector2(4, 4), selected ? Gold : Ink);
++            Heraldry(new Vector2(x + 10, ry + 10), 44, 56, Ours, Paper, false);
++            Text(new Vector2(x + 62, ry + 6), new Vector2(190, 32), name, "BarlowCondensed-Bold.ttf", 24, Ink, 0, null, 0, HorizontalAlignment.Left);
++            Text(new Vector2(x + 62, ry + 40), new Vector2(190, 28), sub, "BarlowCondensed-SemiBold.ttf", 20, Ink, 0, null, 0, HorizontalAlignment.Left);
++        }
++        Slot(44, "SALE · MAZKA", "DEL · casilla D4 · muerto", new Color("d9a9a0"), false);
++        Text(new Vector2(312, ry + 16), new Vector2(60, 44), "→", "AlfaSlabOne-Regular.ttf", 40, Ink);
++        Slot(380, "8 · BRAKK", "DEL · sano · ✓ recomendado", Paper, true);
++        Slot(656, "9 · NARG", "MED · tocado", Paper, false);
++        Poly(new Vector2(W - 44 - 250, ry + 8), Rect(250, 60), Gold, 5f, 0, new Vector2(5, 5));
++        Text(new Vector2(W - 44 - 250, ry + 8), new Vector2(250, 60), "CONFIRMAR", "AlfaSlabOne-Regular.ttf", 30, Ink);
++        Text(new Vector2(940, ry + 20), new Vector2(560, 36), "◀ ▶ elegir · A / clic confirmar", "BarlowCondensed-SemiBold.ttf", 22, Ink, 0, null, 0, HorizontalAlignment.Left);
++    }
++
++    // ------------------------------------------------------------------ piezas compartidas
++    private void Speed(float W, Color fill, Color ink)
++    {
++        string[] t = { "x1", "x4", "x16", "‖" };
++        for (int i = 0; i < 4; i++) { var x = W - 24 - (4 - i) * 72; Poly(new Vector2(x, 14), Rect(64, 48), i == 0 ? Gold : fill, 3f, 0, new Vector2(3, 3)); Text(new Vector2(x, 14), new Vector2(64, 48), t[i], "BarlowCondensed-Bold.ttf", 24, i == 0 ? Ink : ink); }
++    }
++
++    private void Tiras(float W, float H, Color fill, Color ink, Color nameColor, string font, float rough, bool ribbon = false)
++    {
++        float ty = H - 18 - 72, x0 = (W - ((7 * 232) + (6 * 12) + 24 + 150)) / 2;
++        var states = new[] { 0, 0, 1, 0, 2, 0, 0 };   // 0 sano · 1 tocado · 2 lesión grave
++        for (int i = 0; i < 7; i++)
++        {
++            float x = x0 + i * 244;
++            if (ribbon) Poly(new Vector2(x, ty), Swallowtail(232, 72, 0), fill, 4f, 0, new Vector2(4, 4));
++            else Poly(new Vector2(x, ty), rough > 0 ? Rough(232, 72, rough) : Rect(232, 72), fill, 4f, 0, new Vector2(4, 4));
++            Heraldry(new Vector2(x + 10, ty + 8), 44, 56, Ours, Paper, false);
++            Text(new Vector2(x + 16, ty + 22), new Vector2(32, 24), (i + 1).ToString(), "BarlowCondensed-Bold.ttf", 20, Paper, 4, Ink);
++            Text(new Vector2(x + 62, ty + 6), new Vector2(140, 30), Names[i], font, 22, nameColor, ribbon ? 4 : 0, Ink, 0, HorizontalAlignment.Left);
++            Text(new Vector2(x + 62, ty + 38), new Vector2(140, 26), $"{Roles[i]} · orco   ✦2", "BarlowCondensed-SemiBold.ttf", 20, ribbon ? Paper : ink, ribbon ? 3 : 0, Ink, 0, HorizontalAlignment.Left);
++            Color sc = states[i] switch { 1 => Gold, 2 => Blood, _ => new Color("3fae4f") };
++            var pts = states[i] switch { 1 => new[] { new Vector2(0, 0), new Vector2(22, 0), new Vector2(11, 20) }, 2 => new[] { new Vector2(0, 0), new Vector2(20, 0), new Vector2(20, 20), new Vector2(0, 20) }, _ => Burst(11, 11, 8, new Vector2(11, 11)) };
++            Poly(new Vector2(x + 200, ty + 26), pts, sc, 3f, 0, Vector2.Zero);
++        }
++        Poly(new Vector2(x0 + 7 * 244 + 12, ty), Rect(150, 72), fill, 4f, 0, new Vector2(4, 4));
++        Text(new Vector2(x0 + 7 * 244 + 12, ty), new Vector2(150, 72), "BANQUILLO 2", "BarlowCondensed-Bold.ttf", 24, ribbon ? Paper : ink, ribbon ? 4 : 0, Ink);
++    }
++}
+diff -ruN a/Game/Ui/MatchPitchView3D.cs b/Game/Ui/MatchPitchView3D.cs
+--- a/Game/Ui/MatchPitchView3D.cs	2026-09-19 17:08:41.000000000 +0200
++++ b/Game/Ui/MatchPitchView3D.cs	2026-09-19 17:52:38.317984164 +0200
+@@ -121,6 +121,29 @@
+     /// <summary>Fracción 0..1 hacia el fotograma siguiente. Solo suaviza el dibujo (RT-020).</summary>
+     public float Alpha { get; set; }
+ 
++    // B.1 (copia temporal, fuera del repo): pies y cabeza de una ficha en coordenadas del contenedor.
++    public float PanUp { get; set; }
++
++    public Vector3 Focus { get; set; }
++
++    public Rect2 PitchRect()
++    {
++        var a = _camera.UnprojectPosition(new Vector3(0f, 0f, 0f));
++        var b = _camera.UnprojectPosition(new Vector3(Pitch.Columns, 0f, Pitch.Rows));
++        return new Rect2(a, b - a);
++    }
++
++    public (Vector2 Head, Vector2 Foot, bool Visible) ScreenOf(int i)
++    {
++        if (i < 0 || i >= _bodies.Count || !_bodies[i].Visible) return (default, default, false);
++        var b = _bodies[i];
++        var aabb = b.GetAabb();
++        var p = b.GlobalPosition;
++        var head = _camera.UnprojectPosition(p + new Vector3(0f, aabb.End.Y, 0f));
++        var foot = _camera.UnprojectPosition(new Vector3(p.X, 0f, p.Z));
++        return (head, foot, true);
++    }
++
+     public override void _Ready()
+     {
+         MouseFilter = MouseFilterEnum.Ignore;
+@@ -320,6 +343,7 @@
+             CastShadow = GeometryInstance3D.ShadowCastingSetting.Off,
+         };
+         _world.AddChild(_ground);
++        BuildStadium();
+ 
+         _ringMesh = BuildRingMesh();
+ 
+@@ -488,6 +512,9 @@
+ 
+         // La cámara mira desde el lado +Z: así el eje X del campo cae a la derecha de la pantalla y las
+         // filas crecen hacia abajo, exactamente como en la vista 2D.
++        // Fase C (copia temporal): desplazar el campo en pantalla moviendo la cámara por su eje "arriba".
++        center += new Vector3(0f, Mathf.Cos(elevation), -Mathf.Sin(elevation)) * PanUp;
++        center += Focus;
+         var from = center + (new Vector3(0f, Mathf.Sin(elevation), Mathf.Cos(elevation)) * CameraDistance);
+         _camera.LookAtFromPosition(from, center, Vector3.Up);
+         _camera.Size = Mathf.Max(OrthoSize, 0.5f);
+@@ -512,7 +539,7 @@
+         }
+         else
+         {
+-            _grassTexture ??= BuildGroundTexture(false);
++            _grassTexture ??= BuildWornGrass();
+             _groundMaterial.AlbedoTexture = _grassTexture;
+             _groundMaterial.AlbedoColor = new Color(1f, 1f, 1f);
+         }
+@@ -739,6 +766,131 @@
+     /// (2x4, <see cref="Pitch.AreaColumns"/>) y las porterías, con la misma paleta que la vista 2D. En
+     /// silueta la misma geometría en blanco y gris, para no perder la referencia de casilla.
+     /// </summary>
++
++    // ============================================================ PROTOTIPO DE ENTORNO (copia temporal, fase D)
++    // Procedural, sin arte: césped gastado, vallas con patrocinadores de parodia (RA-025) y una grada escalonada.
++    private const string FontDir = "<FUENTES>/";
++
++    private static StandardMaterial3D Flat(Color c) => new() { AlbedoColor = c, Roughness = 1f, SpecularMode = BaseMaterial3D.SpecularModeEnum.Disabled };
++
++    private void AddBox(Vector3 center, Vector3 size, Color color, bool shadow = true)
++    {
++        _world.AddChild(new MeshInstance3D { Mesh = new BoxMesh { Size = size }, MaterialOverride = Flat(color), Position = center, CastShadow = shadow ? GeometryInstance3D.ShadowCastingSetting.On : GeometryInstance3D.ShadowCastingSetting.Off });
++    }
++
++    private void BuildStadium()
++    {
++        // Explanada alrededor del campo: tierra apisonada con algo de hierba rala.
++        AddBox(new Vector3(8f, -0.03f, 3.5f), new Vector3(24f, 0.04f, 13f), new Color("4b5a36"), false);
++        AddBox(new Vector3(8f, -0.02f, -0.45f), new Vector3(18.4f, 0.03f, 0.8f), new Color("6b5a3e"), false);
++
++        // Vallas de publicidad en la banda del fondo (la cercana a la cámara queda libre, como en la tele).
++        var font = new FontFile(); font.LoadDynamicFont(FontDir + "BarlowCondensed-Bold.ttf");
++        var sponsors = new (string Text, Color Fill, Color Ink)[]
++        {
++            ("FUNERARIA EL ÚLTIMO SAQUE", new Color("1c1a1a"), new Color("f1e4c3")),
++            ("HIDROMIEL TRAGÓN", new Color("c9982f"), new Color("1c1a1a")),
++            ("PRÓTESIS DE ROBLE MAESE TOCÓN", new Color("f1e4c3"), new Color("3a2a1a")),
++            ("CARNICERÍA HNOS. TAJO", new Color("8f1d1d"), new Color("f1e4c3")),
++            ("UNGÜENTOS LA PATA COJA", new Color("2d5a3a"), new Color("f1e4c3")),
++            ("SEGUROS AY MADRE", new Color("1e3a6e"), new Color("c9982f")),
++        };
++        float segment = 17.6f / sponsors.Length;
++        for (int i = 0; i < sponsors.Length; i++)
++        {
++            float cx = -0.8f + segment * (i + 0.5f);
++            AddBox(new Vector3(cx, 0.24f, -0.42f), new Vector3(segment - 0.06f, 0.48f, 0.08f), sponsors[i].Fill);
++            var label = new Label3D
++            {
++                Text = sponsors[i].Text, Font = font, FontSize = 96, PixelSize = 0.0028f, Modulate = sponsors[i].Ink, OutlineSize = 0,
++                Position = new Vector3(cx, 0.24f, -0.37f), Width = (segment - 0.2f) / 0.0028f, AutowrapMode = TextServer.AutowrapMode.Off,
++                HorizontalAlignment = HorizontalAlignment.Center, Shaded = false, DoubleSided = false,
++            };
++            _world.AddChild(label);
++        }
++
++        // Grada escalonada de madera y piedra con público: figuras simples con los colores de los dos equipos.
++        var rng = new RandomNumberGenerator { Seed = 1234 };
++        var crowdColors = new[] { new Color("2f6fd6"), new Color("1d4590"), new Color("d63a2f"), new Color("8e231c"), new Color("c9b48a"), new Color("6b5a3e"), new Color("e8dcc0") };
++        var body = new CapsuleMesh { Radius = 0.12f, Height = 0.42f, RadialSegments = 8, Rings = 2 };
++        for (int tier = 0; tier < 5; tier++)
++        {
++            float z = -1.05f - tier * 0.62f, y = 0.18f + tier * 0.36f;
++            AddBox(new Vector3(8f, y / 2f, z), new Vector3(19.5f, y, 0.62f), tier % 2 == 0 ? new Color("5c4632") : new Color("6e5640"));
++            var mm = new MultiMesh { TransformFormat = MultiMesh.TransformFormatEnum.Transform3D, UseColors = true, Mesh = body, InstanceCount = 62 };
++            for (int k = 0; k < mm.InstanceCount; k++)
++            {
++                float x = -1.4f + k * 0.305f + rng.RandfRange(-0.06f, 0.06f);
++                float h = rng.RandfRange(0.9f, 1.15f);
++                var t = new Transform3D(Basis.Identity.Scaled(new Vector3(1f, h, 1f)), new Vector3(x, y + 0.2f * h, z + rng.RandfRange(-0.12f, 0.12f)));
++                mm.SetInstanceTransform(k, t);
++                mm.SetInstanceColor(k, crowdColors[rng.RandiRange(0, crowdColors.Length - 1)]);
++            }
++            var crowdMaterial = new StandardMaterial3D { VertexColorUseAsAlbedo = true, Roughness = 1f, SpecularMode = BaseMaterial3D.SpecularModeEnum.Disabled };
++            _world.AddChild(new MultiMeshInstance3D { Multimesh = mm, MaterialOverride = crowdMaterial, CastShadow = GeometryInstance3D.ShadowCastingSetting.Off });
++        }
++        // Remate de la grada: una viga con banderolas de los dos equipos.
++        AddBox(new Vector3(8f, 2.05f, -4.2f), new Vector3(19.5f, 0.12f, 0.12f), new Color("3a2a1a"));
++        for (int f = 0; f < 12; f++)
++        {
++            var c = f % 2 == 0 ? new Color("2f6fd6") : new Color("d63a2f");
++            AddBox(new Vector3(-0.8f + f * 1.6f, 1.8f, -4.15f), new Vector3(0.5f, 0.45f, 0.03f), c);
++        }
++    }
++
++    /// <summary>Césped de fútbol gastado: franjas de siega, calvas en las zonas de juego, hierba seca y quemada.</summary>
++    private static ImageTexture BuildWornGrass()
++    {
++        int width = Pitch.Columns * GroundPixels, height = Pitch.Rows * GroundPixels;
++        var image = Image.CreateEmpty(width, height, true, Image.Format.Rgba8);
++        var noise = new FastNoiseLite { Seed = 11, Frequency = 0.006f, NoiseType = FastNoiseLite.NoiseTypeEnum.Simplex, FractalOctaves = 3 };
++        var fine = new FastNoiseLite { Seed = 29, Frequency = 0.09f, NoiseType = FastNoiseLite.NoiseTypeEnum.Simplex };
++        var burn = new FastNoiseLite { Seed = 5, Frequency = 0.02f, NoiseType = FastNoiseLite.NoiseTypeEnum.Cellular };
++        var lush = new Color("3b6631"); var lushAlt = new Color("4a7d3b"); var dry = new Color("8a8a45"); var dirt = new Color("7a5f3e"); var burnt = new Color("2e2a1c");
++        for (int y = 0; y < height; y++)
++        {
++            for (int x = 0; x < width; x++)
++            {
++                float cx = x / (float)GroundPixels, cy = y / (float)GroundPixels;
++                var c = ((int)(cx / 1f) % 2 == 0) ? lush : lushAlt;                       // franjas de siega por columna
++                // Desgaste: más en las áreas (delante de cada portería) y en el círculo central.
++                float wear = 0f;
++                wear = System.Math.Max(wear, 1f - (System.Math.Abs(cx - 1.2f) / 1.6f + System.Math.Abs(cy - 3.5f) / 2.2f));
++                wear = System.Math.Max(wear, 1f - (System.Math.Abs(cx - 14.8f) / 1.6f + System.Math.Abs(cy - 3.5f) / 2.2f));
++                wear = System.Math.Max(wear, 1f - (new Vector2(cx - 8f, cy - 3.5f).Length() / 1.6f));
++                wear = Mathf.Clamp(wear, 0f, 1f);
++                float n = noise.GetNoise2D(x, y) * 0.5f + 0.5f, f = fine.GetNoise2D(x, y) * 0.5f + 0.5f;
++                float edge = System.Math.Min(System.Math.Min(cy, Pitch.Rows - cy), 1.2f) / 1.2f;          // más seca junto a las bandas
++                if (n > 0.66f + edge * 0.08f) c = c.Lerp(dry, Mathf.Clamp((n - 0.66f) / 0.2f, 0f, 1f) * 0.7f);   // hierba seca
++                float bald = wear * 0.9f + (n - 0.5f) * 0.6f + (f - 0.5f) * 0.25f;
++                if (bald > 0.55f) c = c.Lerp(dirt, Mathf.Clamp((bald - 0.55f) / 0.12f, 0f, 1f));      // calvas de tierra
++                if (burn.GetNoise2D(x, y) > 0.86f) c = c.Lerp(burnt, 0.65f);                            // quemaduras
++                c = c.Lerp(Colors.Black, (f - 0.5f) * 0.08f);
++                image.SetPixel(x, y, c);
++            }
++        }
++        var chalk = new Color(0.93f, 0.92f, 0.86f); var faint = new Color(1f, 1f, 1f, 0.07f);
++        for (int column = 1; column < Pitch.Columns; column++) Blend(image, column - 0.01f, 0f, column + 0.01f, Pitch.Rows, faint);
++        for (int row = 1; row < Pitch.Rows; row++) Blend(image, 0f, row - 0.01f, Pitch.Columns, row + 0.01f, faint);
++        Box(image, (Pitch.Columns / 2f) - 0.03f, 0f, (Pitch.Columns / 2f) + 0.03f, Pitch.Rows, chalk);
++        Ring(image, Pitch.Columns / 2f, Pitch.Rows / 2f, 0.9f, 0.05f, chalk);
++        Outline(image, 0f, 1f, Pitch.AreaColumns, 1f + Pitch.AreaRows, 0.045f, chalk);
++        Outline(image, Pitch.Columns - Pitch.AreaColumns, 1f, Pitch.Columns, 1f + Pitch.AreaRows, 0.045f, chalk);
++        Outline(image, 0f, 0f, Pitch.Columns, Pitch.Rows, 0.05f, chalk);
++        float mid = Pitch.Rows / 2f;
++        Box(image, 0f, mid - 0.9f, 0.09f, mid + 0.9f, Style.TeamOwn);
++        Box(image, Pitch.Columns - 0.09f, mid - 0.9f, Pitch.Columns, mid + 0.9f, Style.TeamRival);
++        image.GenerateMipmaps();
++        return ImageTexture.CreateFromImage(image);
++    }
++
++    private static void Blend(Image image, float x0, float y0, float x1, float y1, Color color)
++    {
++        for (int y = Mathf.Max(0, Mathf.RoundToInt(y0 * GroundPixels)); y < Mathf.Min(image.GetHeight(), Mathf.RoundToInt(y1 * GroundPixels)); y++)
++            for (int x = Mathf.Max(0, Mathf.RoundToInt(x0 * GroundPixels)); x < Mathf.Min(image.GetWidth(), Mathf.RoundToInt(x1 * GroundPixels)); x++)
++                image.SetPixel(x, y, image.GetPixel(x, y).Lerp(new Color(color.R, color.G, color.B), color.A));
++    }
++
+     private static ImageTexture BuildGroundTexture(bool silhouette)
+     {
+         int width = Pitch.Columns * GroundPixels;
+diff -ruN a/Game/project.godot b/Game/project.godot
+--- a/Game/project.godot	2026-09-19 17:08:41.000000000 +0200
++++ b/Game/project.godot	2026-09-19 12:41:33.519097016 +0200
+@@ -12,10 +12,10 @@
+ 
+ [display]
+ 
+-window/size/viewport_width=1280
+-window/size/viewport_height=800
++window/size/viewport_width=1920
++window/size/viewport_height=1080
+ window/stretch/mode="canvas_items"
+-window/stretch/aspect="keep"
++window/stretch/aspect="expand"
+ 
+ [dotnet]
+ 

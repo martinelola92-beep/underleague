@@ -11,18 +11,15 @@ PC (Steam), premium, sin online. **Estado (8 sep 2026): fases 0 y 1 cerradas; fa
 
 ## Trabajo en curso (19 sep 2026)
 
-**Fase de diseño de UI (revisor): A → C.2 hechas en conversación, SIN ficheros en el repo.** Dirección
-aceptada: «gramática de retransmisión · materia de fiesta popular medieval · estallido de cómic» (tela y
-heráldica = identidad, madera/placas = HUD persistente, papel = información, tinta = acontecimientos).
-Fase A midió 11.176 partidos de run: 8,6 momentos narrables por partido (N1 3,8 · N2 0,85 · N3 2,8 · N4 1,16),
-**14,5 de los 19 perks por partido saltan en el saque inicial** (no son acontecimientos) y x4 con la regla
-«bajar un nivel» es más denso que x1. B/B.1/C fijaron la composición con capturas reales (campo entero a
-1920×1080, marcador compacto de 64 px arriba, campo 30 px abajo, tiras del equipo propio en la fila
-inferior, texto base de 20 px lógicos, la bandeja de decisión **sustituye** a las tiras). C.2 (vídeos
-deterministas) añadió una regla de reproducción: **congelar el fotograma anterior al suceso** (el motor
-recoloca tras el gol y retira al lesionado en el mismo tick). Siguiente paso de UI: decidir x4 (C7), cerrar
-N3 editorial desde el borde y N4 en dos tiempos, y empezar la fase D (lenguaje visual). Los prototipos viven
-en el directorio temporal de la sesión, no en el repo.
+**Fase de diseño de UI (revisor): A → D.3 hechas; dirección escrita en `docs/ui/README.md`** (con capturas y
+el parche de prototipos). Dirección: gramática de retransmisión, materia de fiesta popular medieval y **voz
+de pregón** (el cómic se descartó por infantil): estandartes heráldicos para gol/roja/lesión, banda de pregón
+para la turba, bando con lacre para la muerte, acta para el final. Medido: 8,6 momentos por partido, 14,5 de
+los 19 perks saltan en el saque, x4 = «retransmisión comprimida» (solo gol, N4 y decisiones). Composición
+validada con capturas: campo entero, tablero arriba, tiras propias abajo, la bandeja de decisión sustituye a
+las tiras, congelar el fotograma anterior al suceso. **Siguiente paso de UI: fase E** —`architecture-review`
+del director (agrupador + niveles), Theme y componentes en `/Game`— y las ADR de su §10 (RA-025/026, ADR
+0114, RF-116, UI-011/013/021). Nada implementado en `/Game` todavía.
 
 **Anotaciones de la partida del 19 sep: serie BC en `docs/pendientes/`.** Resueltas BC-B (el límite de usos
 de un perk se consume al activarse: `double_shot` y `charge` se encadenaban hasta 5 veces), BC-E (la

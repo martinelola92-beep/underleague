@@ -197,7 +197,8 @@ en `docs/pendientes/` y se sigue.
 | `docs/decisiones/` | ADRs | Antes de cambiar una decisión tomada |
 | `docs/entorno.md` | WSL/Windows, instalación, cómo se compila cada parte | Al montar la máquina |
 | `docs/ui-equipo.md` | Decisiones de la pantalla de Equipo (UI-021) | Antes de tocar `/Game` |
-| `docs/ui-partido.md` | Pantalla de Partido: geometría y cámara (ADR 0102, 0114) | Antes de tocar la pantalla de Partido o de encargar arte |
+| `docs/ui/README.md` | **Dirección de UI** acordada con el revisor: pregón/heráldica, gramática de eventos medida, velocidades, composición, ADR pendientes | Antes de tocar cualquier pantalla o el HUD del partido |
+| `docs/ui-partido.md` | Pantalla de Partido: geometría y cámara (ADR 0102, 0114) | Antes de tocar la pantalla de Partido o de encargar arte | *(parcialmente superado por `docs/ui/`)*
 | `docs/estilo-visual.md` | Tono visual (Lucky Tower), 3D + cámara dinámica (ADR 0114) | Antes de encargar arte o tocar la cámara |
 | `docs/fase2-diseno.md` | Bucle de run: mapa, economía, mercado, jefe, ironman | Fase 2 |
 | `docs/catalogo-perks-y-objetos.md` | Catálogo derivado de `/data`, se regenera, no se edita a mano | Al diseñar o revisar contenido de `/data` |
