@@ -38,3 +38,4 @@ tools/__pycache__/
 
 # Worktrees de encargos de OpenCode (tools/opencode-encargo.sh)
 .claude/worktrees/
+.claude/consultas/

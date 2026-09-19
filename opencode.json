@@ -16,5 +16,29 @@
       "git worktree*": "deny",
       "rm -rf*": "deny"
     }
+  },
+  "agent": {
+    "lector": {
+      "description": "Consultas de solo lectura sobre la documentación del repo, con citas verificables (tools/opencode-consulta.sh)",
+      "mode": "primary",
+      "permission": {
+        "edit": "deny",
+        "question": "deny",
+        "task": "deny",
+        "webfetch": "deny",
+        "bash": {
+          "*": "deny",
+          "grep *": "allow",
+          "rg *": "allow",
+          "sed -n *": "allow",
+          "head *": "allow",
+          "tail *": "allow",
+          "wc *": "allow",
+          "ls *": "allow",
+          "cat *": "allow",
+          "nl *": "allow"
+        }
+      }
+    }
   }
 }
