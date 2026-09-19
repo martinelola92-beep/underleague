@@ -160,6 +160,9 @@ dibujo (afecta a UI-002).
 - **C3** qué residuos del rival y cuánto duran · **C4** lesión leve con decisión · **C5** posición exacta de la
   N3 · **C6** cierre automático de cada presentación · **C8** cerrar la ficha expandida · **C9** árbitro
   persistente o contextual · **C10** barra de progreso con o sin minuto · **C12** nombres largos en las tiras.
+- **C13** nivel de un suceso **anulado** por un perk: la fase E lo presenta como sello N1 («anulado») sea cual
+  sea (lesión, gol, roja, muerte); un gol anulado o una muerte evitada («Prohibido morir») podrían merecer más.
+  Pendiente de `game-design-review` (revisión independiente de la ADR 0119).
 - Tamaños, ángulos, tiempos de entrada y salida: *provisionales* hasta un prototipo animado con arte.
 - Fuentes definitivas (licencias y personalidad).
 

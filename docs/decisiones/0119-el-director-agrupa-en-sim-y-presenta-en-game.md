@@ -29,8 +29,8 @@ proyecto nuevo ni una capa nueva.
 2. **¿Elimina complejidad o la mueve?** La elimina en `/Game`: sin esto, `MatchScreen` tendría que
    reconocer detalles de evento (`"severe"`, `":cancelled"`, `"red"`) y decidir fusiones. Esa lógica ya
    existe en Python y está medida; en `/Game` no se podría probar (RT-084: sin tests de interfaz). En
-   `Sim.Run.View` se prueba con xUnit y la medición de la fase A se convierte en una prueba estadística
-   reproducible en vez de un script fuera del repo.
+   `Sim.Run.View` se prueba con xUnit (invariantes y fusión; la cifra de la fase A sigue en su arnés, ver
+   Consecuencias).
 3. **Determinismo.** No toca el motor: RT-024 no cambia. La vista es determinista por construcción (orden
    por fotograma y, en empate, por índice de evento; nunca se itera un diccionario).
 4. **Paralelismo.** La prueba estadística juega sus partidos con el patrón del arnés (`Parallel.For` por
@@ -50,19 +50,21 @@ proyecto nuevo ni una capa nueva.
 ### En `/Sim` — `Sim.Run.View.MatchMomentView`
 
 - `MatchMoment(Frame, FreezeFrame, LastFrame, Level, Kind, Team, LeadPlayerId, Pauses, Decision,
-  EventIndices)`, ordenados por `Frame` y, en empate, por el primer índice de evento.
+  EventIndices, Cancelled, HasGoal)`, ordenados por `Frame` y, en empate, por el primer índice de evento.
 - **Clasificación** (tabla de `docs/ui/README.md` §4; la misma que `director.py`): falta, consumible y
-  lesión anulada → N1; amarilla y lesión leve → N2; gol, roja, lesión grave, turba y árbitro que se va → N3;
+  **cualquier suceso anulado** → N1, conservando su tipo (`Cancelled = true`; el nivel de un gol, una roja o una
+  muerte anulados queda abierto, C13); amarilla y lesión leve → N2; gol, roja, lesión grave, turba y árbitro que se va → N3;
   muerte y final → N4; el saque inicial → N3 sin cartel de perk; la sustitución sola → N1 (residuo).
 - **Fusión**: un suceso se une al momento abierto si llega en ≤ 15 ticks (1 s, RT-020) desde el último
   suceso del momento y comparte persona (actor, objetivo o rival), o si forma una cadena fija (gol → final,
   turba → árbitro se va, muerte/lesión/roja → final). El nivel del momento es el máximo; lo encabeza el
-  suceso de mayor nivel (el último en empate).
+  suceso de mayor nivel (el último en empate). Un momento cerrado por una decisión admite todavía los sucesos
+  **del mismo tick** que su origen (la muerte por reincidencia llega en el tick de la lesión: una sola decisión).
 - **Pausa**: gol, muerte y final congelan a 1×; la lesión grave propia congela; **toda decisión congela a
   cualquier velocidad**.
 - **Marcas de perk** (N1, canal propio): los `MatchFlash` de `MatchFlashView`, **sin los del primer segundo**
   del partido (P1: 14,5 de 19 perks saltan en el saque; son estado inicial, no acontecimiento). Una marca del
-  mismo jugador dentro de un momento se marca como absorbida (subtítulo del momento, no cartel aparte).
+  mismo jugador dentro del tramo de un momento (±1 s) se marca como absorbida (subtítulo del momento, no cartel aparte).
 - **Política de velocidad** (C7): una función pura dice, para un momento y una velocidad (1, 4, 16), si se
   presenta, a qué nivel y si congela. x4: solo el gol, la N4 comprimida y las decisiones; x16: solo la N4
   comprimida y las decisiones. Las duraciones en segundos **no** están aquí.
@@ -88,8 +90,11 @@ proyecto nuevo ni una capa nueva.
 
 ## Consecuencias
 
-- La medición de la fase A deja de depender de un script externo: la prueba estadística de
-  `MatchMomentView` fija la banda.
+- La prueba de `MatchMomentView` fija los **invariantes** (cada suceso en un solo momento, orden, fusión que de
+  verdad agrupa, un final por partido, momentos anteriores a una decisión idénticos tras re-simular) sobre
+  partidos de referencia. **No reproduce** la medición de la fase A, que se hizo sobre partidos de run (población
+  distinta: N2 0,39 frente a 0,85): rehacerla con partidos de run sigue dependiendo del arnés de
+  `docs/ui/prototipo/medicion/` (revisión independiente, 19 sep 2026).
 - Cambiar un nivel, una fusión o la política de velocidad es un cambio de `/Sim` con test, no un retoque de
   interfaz. Es deliberado: la gramática de eventos es una regla de presentación **medida**, y se mide.
 - Cambiar una duración, una animación o la caducidad es un cambio de `/Game`, provisional hasta el

@@ -29,3 +29,4 @@ extender a `/Sim`, quedarse en `/data`/tests/docs, o abandonar.
 
 | Fecha | Encargo | Ámbito | Modelo | Tiempo | Veredicto del script | Vueltas | Defectos hallados en revisión | Comentario |
 |---|---|---|---|---|---|---|---|---|
+| 19 sep | `momentos` (ADR 0119: `MatchMomentView` + 5 tests, ~300 líneas en `/Sim`) | `/Sim` + `Sim.Tests` | `big-pickle` → `muse-spark` | 900 s (timeout) | sin informe, sin cambios | 1 + reintento | — | Los dos modelos pasaron los 900 s leyendo contexto (≥ 25 lecturas y grep del motor) sin escribir un fichero. El proceso de reserva sobrevivió al `drop` del worktree y hubo que matarlo a mano. Pasado a `fast-worker`. Lectura: un encargo de `/Sim` de este tamaño excede lo que el piloto recomienda («piezas pequeñas»); partirlo en vista + tests habría sido más prudente |
