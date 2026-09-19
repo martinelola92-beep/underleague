@@ -23,7 +23,7 @@ requisitos vigentes.
 | **RF-115 / RA-020 / RA-022** highlights ilustrados por capas | los acontecimientos se **proclaman**: sello (N1/N2), estandarte heráldico (N3), bando con lacre y acta (N4). El panel ilustrado por capas, y su cobertura mínima, quedan sin plan hasta que haya arte |
 | **RA-021** estilo cómic de alto contraste | **retirado** para los acontecimientos: imprenta del XVII y heráldica (IM Fell, nunca gótica) |
 | **RF-116** máximo 2 highlights por partido, por puntuación | **gramática por niveles** N0–N4 con una sola voz alta a la vez: N3 en cada gol, roja, lesión grave y turba (~2,8 por partido), N4 en muerte y final. No hay tope por partido; lo limitan la rareza del suceso y la cola de la voz alta |
-| **ADR 0114** cámara de cuatro estados | **cámara táctica fija** a campo entero (ortográfica, 60°) con **gestos** (sacudida, acercamiento breve) que anuncian una clase de situación, nunca un resultado. La parte de la ADR 0114 sobre presentación fuera del partido sigue vigente |
+| **ADR 0114** cámara de cuatro estados | **cámara táctica fija** a campo entero con **gestos** (sacudida, acercamiento breve) que anuncian una clase de situación, nunca un resultado. La parte de la ADR 0114 sobre presentación fuera del partido sigue vigente |
 | **ADR 0112** cartel de perk de 1 s | se mantiene, **sin carteles en el saque inicial** (P1). La visibilidad de la build (P2: el 65 % de los partidos no enseña ningún perk propio en juego) queda para `game-design-review` |
 | **UI-010 / UI-011 / UI-013** la misma ficha de 24 px en todas las pantallas, tiras de los dos equipos | en el partido, **tiras de 72 px solo del equipo propio** (escudo, dorsal, nombre, puesto y raza, perks, estado por color **y** forma), que destellan con su perk. El rival se lee en el tablero. UI-010/011 siguen vigentes fuera del partido |
 | **§6.3** «log bajo el campo» | el log pasa al **modo depuración** y a la crónica del informe |
@@ -33,6 +33,16 @@ Sin cambios: UI-002 (color **y** forma), UI-004 (texto mínimo; la dirección pi
 efectivos a 1280×800), UI-005 (sobre el campo solo lo transitorio), RF-012d (el riesgo se explica antes del
 partido) y la regla 10 de `CLAUDE.md`: todo se implementa con **marcadores de posición**. Las fuentes (IM Fell,
 Barlow Condensed, Cinzel, licencia OFL) son provisionales.
+
+## Enmienda (19 sep 2026, revisor: «el campo debe tener más 3D, más profundidad»)
+
+La cámara táctica pasa de ortográfica a 60° a **perspectiva, FOV 30°, elevación 45°**, encajada para que el
+borde cercano del césped ocupe el ancho útil, y el campo se rodea de un **estadio procedural** de marcadores de
+posición (franjas de siega, vallas con patrocinadores de parodia, grada escalonada con público de cápsulas).
+Elegida entre cinco variantes capturadas sobre los mismos fotogramas (`Game/screenshots/depth-{A..E}-*.png`):
+la perspectiva da la profundidad; el estadio solo, con cámara ortográfica (B), no. 40°/FOV 40 (E) encogía
+demasiado el fondo. El modo depuración conserva la cámara ortográfica. Sigue siendo una cámara **fija**: los
+gestos son aparte.
 
 ## Consecuencias
 

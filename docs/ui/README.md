@@ -126,7 +126,8 @@ Descartado: «x4 = bajar un nivel» (14,3 presentaciones por minuto real, el tri
 
 ## 7. Composición [DECISIÓN, B/B.1/C]
 
-A 1920×1080, campo 16×7 **entero** con la cámara táctica fija (ortográfica, 60°, ancho del campo + 0,6
+A 1920×1080, campo 16×7 **entero** con la cámara táctica fija (*desde el 19 sep: perspectiva FOV 30°, elevación 45°, con
+estadio procedural; ADR 0120, enmienda*; antes ortográfica, 60°, ancho del campo + 0,6
 casillas por lado; `Size` 9,68 en 16:9 y 10,75 en 16:10). 1280×800 usa el lienzo lógico de 1920×1200
 escalado ×0,667.
 
