@@ -9,6 +9,17 @@ using Underleague.Sim.Run.View;
 namespace Underleague.Game.Ui;
 
 /// <summary>
+/// Una mancha de sangre persistente (RA-027, marcador de posición procedural): visible desde
+/// <see cref="MatchPitchView3D.Frame"/> igual o mayor que <paramref name="Frame"/>, así que retroceder o
+/// saltar la quita o la pone sin que <see cref="MatchPitchView3D"/> lleve ningún estado de "qué manchas ya
+/// pinté" — se lee de la lista entera cada fotograma, como cualquier otro residuo persistente (principio 5
+/// de <c>docs/ui/README.md</c>). <paramref name="Column"/>/<paramref name="Row"/> son coordenadas
+/// continuas de casilla (centro de la casilla del suceso, <c>Pitch.CellCenter</c>), <paramref name="Size"/>
+/// el radio en casillas de la calcomanía irregular.
+/// </summary>
+public readonly record struct BloodMark(int Frame, float Column, float Row, float Size);
+
+/// <summary>
 /// El mismo partido que <see cref="MatchPitchView"/>, pero en <b>3D visto por una cámara ortográfica fija
 /// en tres cuartos</b> (ADR 0102). Todavía sin toon ni modelos: <b>cápsulas grises</b> a las proporciones
 /// de RA-002 y con el radio de <c>bodyRadius</c>, que es el volumen que de verdad simula
@@ -96,6 +107,33 @@ public partial class MatchPitchView3D : SubViewportContainer
 
     private bool _built;
     private bool _appliedSilhouette;
+
+    // ------------------------------------------------------------------ gestos de cámara (docs/ui/README §4)
+
+    /// <summary>Sacudida en curso: envolvente lineal de 1 a 0 durante <see cref="_shakeDuration"/>, nunca <c>System.Random</c> (ver <see cref="ShakeOffset2D"/>).</summary>
+    private bool _shakeActive;
+    private float _shakeAmplitude;
+    private float _shakeDuration;
+    private float _shakeElapsed;
+
+    /// <summary>Acercamiento en curso: entrada/hueco/salida con suavizado (<see cref="Ease"/>), encima de la cámara ya encajada — nunca vuelve a llamar a <c>SolvePerspectiveFit</c>.</summary>
+    private bool _punchActive;
+    private Vector3 _punchTarget;
+    private float _punchZoom = 1f;
+    private float _punchInSeconds;
+    private float _punchHoldSeconds;
+    private float _punchOutSeconds;
+    private float _punchElapsed;
+
+    /// <summary>True desde que <see cref="ReleasePunch"/> corta el hueco a mano: la salida se mide desde <see cref="_punchReleasedAmount"/>, no desde 1.</summary>
+    private bool _punchReleased;
+    private float _punchReleasedAmount;
+    private float _punchReleaseElapsed;
+
+    // ------------------------------------------------------------------ sangre persistente (RA-027)
+
+    private readonly List<BloodMark> _bloodMarks = new();
+    private readonly List<MeshInstance3D> _bloodDecals = new();
 
     /// <summary>Elevación de la cámara en grados sobre el césped. Es <c>[Export]</c> para poder barrerla en las capturas.</summary>
     [Export]
@@ -190,9 +228,11 @@ public partial class MatchPitchView3D : SubViewportContainer
             return;
         }
 
+        AdvanceGestures((float)delta);
         ApplyCamera();
         ApplyPalette();
         ApplyTrace();
+        ApplyBloodMarks();
         QueueRedraw();
     }
 
@@ -293,6 +333,104 @@ public partial class MatchPitchView3D : SubViewportContainer
             _rings[i].Scale = new Vector3(radius, 1f, radius);
             _heights[i] = height;
             _radii[i] = radius;
+        }
+    }
+
+    // ------------------------------------------------------------------ gestos de cámara (docs/ui/README §4)
+
+    /// <summary>
+    /// Sacudida de cámara determinista, encima del encuadre ya calculado (nunca vuelve a encajar): un
+    /// desplazamiento lateral/vertical con envolvente lineal de 1 a 0 durante <paramref name="seconds"/>
+    /// reales de <see cref="_Process"/>, no ticks lógicos — es adorno de presentación (RT-014), la traza
+    /// no se entera. <paramref name="amplitude"/> en unidades de mundo (casillas). El patrón es
+    /// determinista por construcción (suma de senos de frecuencia fija, ver <see cref="ShakeOffset2D"/>):
+    /// nunca <c>System.Random</c>.
+    /// </summary>
+    public void Shake(float amplitude, float seconds)
+    {
+        _shakeActive = amplitude > 0f && seconds > 0f;
+        _shakeAmplitude = amplitude;
+        _shakeDuration = Mathf.Max(seconds, 0.0001f);
+        _shakeElapsed = 0f;
+    }
+
+    /// <summary>
+    /// Acercamiento de cámara: mueve el centro de mira y encoge la distancia (o el <c>Size</c> ortográfico)
+    /// hacia <paramref name="target"/> en un factor <paramref name="zoom"/>, con suavizado ease-in/ease-out
+    /// —nunca lineal—, encima de la cámara ya encajada por <c>SolvePerspectiveFit</c>/el ortográfico fijo,
+    /// sin volver a calcular ninguno de los dos. Entra en <paramref name="inSeconds"/>, se mantiene a fondo
+    /// <paramref name="holdSeconds"/> y sale en <paramref name="outSeconds"/> si nadie llama antes a
+    /// <see cref="ReleasePunch"/> — que es como se suelta de verdad en la política de gestos
+    /// (<c>BroadcastScreen</c>): <paramref name="holdSeconds"/> es solo la red de seguridad.
+    /// </summary>
+    public void PunchIn(Vector3 target, float zoom, float inSeconds, float holdSeconds, float outSeconds)
+    {
+        _punchActive = true;
+        _punchTarget = target;
+        _punchZoom = Mathf.Max(zoom, 1f);
+        _punchInSeconds = Mathf.Max(inSeconds, 0.0001f);
+        _punchHoldSeconds = Mathf.Max(holdSeconds, 0f);
+        _punchOutSeconds = Mathf.Max(outSeconds, 0.0001f);
+        _punchElapsed = 0f;
+        _punchReleased = false;
+        _punchReleaseElapsed = 0f;
+    }
+
+    /// <summary>Corta el hueco de <see cref="PunchIn"/> a mano y empieza la salida ya mismo, desde el punto en que estuviera (no necesariamente a fondo). Sin efecto si no hay ningún acercamiento activo.</summary>
+    public void ReleasePunch()
+    {
+        if (!_punchActive || _punchReleased)
+        {
+            return;
+        }
+
+        _punchReleased = true;
+        _punchReleasedAmount = PunchAmount();
+        _punchReleaseElapsed = 0f;
+    }
+
+    /// <summary>Cancela sacudida y acercamiento al instante, sin salida suave: para un <c>SeekTo</c> o un cambio de velocidad (docs/ui/README §4), no para el fin natural de un gesto.</summary>
+    public void ResetGestures()
+    {
+        _shakeActive = false;
+        _punchActive = false;
+        _punchReleased = false;
+    }
+
+    /// <summary>
+    /// Sustituye las manchas de sangre persistentes (RA-027): se reconstruyen enteras porque, tras una
+    /// sustitución, la reproducción cambia y las manchas de antes ya no valen. La forma irregular de cada
+    /// una es determinista por su índice en la lista (<see cref="BuildBloodMesh"/>), nunca por
+    /// <c>System.Random</c>.
+    /// </summary>
+    public void SetBloodMarks(IReadOnlyList<BloodMark> marks)
+    {
+        EnsureBuilt();
+
+        foreach (var decal in _bloodDecals)
+        {
+            decal.QueueFree();
+        }
+
+        _bloodDecals.Clear();
+        _bloodMarks.Clear();
+        _bloodMarks.AddRange(marks);
+
+        var material = BloodMaterial();
+        for (int i = 0; i < _bloodMarks.Count; i++)
+        {
+            var mark = _bloodMarks[i];
+            var decal = new MeshInstance3D
+            {
+                Mesh = BuildBloodMesh(i),
+                MaterialOverride = material,
+                Position = new Vector3(mark.Column, 0.006f, mark.Row),
+                Scale = new Vector3(Mathf.Max(mark.Size, 0.05f), 1f, Mathf.Max(mark.Size, 0.05f)),
+                CastShadow = GeometryInstance3D.ShadowCastingSetting.Off,
+                Visible = false,
+            };
+            _world.AddChild(decal);
+            _bloodDecals.Add(decal);
         }
     }
 
@@ -499,6 +637,77 @@ public partial class MatchPitchView3D : SubViewportContainer
         return mesh;
     }
 
+    // ------------------------------------------------------------------ sangre persistente (RA-027)
+
+    /// <summary>
+    /// Disco de radio 1 (se escala por <c>BloodMark.Size</c> al usarlo) con el borde irregular — una
+    /// calcomanía de sangre, no un círculo perfecto — determinista por <paramref name="index"/>: el mismo
+    /// índice da siempre el mismo contorno, con <see cref="Hash01"/> en vez de <c>System.Random</c>.
+    /// </summary>
+    /// <summary>
+    /// Relleno de la mancha: <c>Pregon.Blood</c> (b3121b, el rojo vivo de la UI) oscurecido ~25% — rojo
+    /// oscuro SATURADO, no negro (revisión del orquestador, 19 sep 2026: la primera versión, un albedo
+    /// plano sin más, salía casi negra bajo el renderizador de las capturas). El borde va más oscuro
+    /// todavía, por vértice (degradado Gouraud, sin textura): así se lee como una mancha con cuerpo, no
+    /// un disco de un solo tono.
+    /// </summary>
+    private static readonly Color BloodFill = new("860d14");
+    private static readonly Color BloodEdge = new("52080d");
+
+    private static ArrayMesh BuildBloodMesh(int index)
+    {
+        const int Steps = 11;
+
+        var vertices = new Vector3[Steps + 1];
+        var normals = new Vector3[Steps + 1];
+        var colors = new Color[Steps + 1];
+        vertices[0] = Vector3.Zero;
+        normals[0] = Vector3.Up;
+        colors[0] = BloodFill;
+        for (int i = 0; i < Steps; i++)
+        {
+            float angle = Mathf.Tau * i / Steps;
+            float wobble = 0.55f + (0.45f * Hash01(index, i));
+            vertices[i + 1] = new Vector3(Mathf.Cos(angle), 0f, Mathf.Sin(angle)) * wobble;
+            normals[i + 1] = Vector3.Up;
+            colors[i + 1] = BloodEdge;
+        }
+
+        var indices = new int[Steps * 3];
+        for (int i = 0; i < Steps; i++)
+        {
+            indices[i * 3] = 0;
+            indices[(i * 3) + 1] = i + 1;
+            indices[(i * 3) + 2] = ((i + 1) % Steps) + 1;
+        }
+
+        var arrays = new Godot.Collections.Array();
+        arrays.Resize((int)Mesh.ArrayType.Max);
+        arrays[(int)Mesh.ArrayType.Vertex] = vertices;
+        arrays[(int)Mesh.ArrayType.Normal] = normals;
+        arrays[(int)Mesh.ArrayType.Color] = colors;
+        arrays[(int)Mesh.ArrayType.Index] = indices;
+
+        var mesh = new ArrayMesh();
+        mesh.AddSurfaceFromArrays(Mesh.PrimitiveType.Triangles, arrays);
+        return mesh;
+    }
+
+    /// <summary>Hash determinista de dos enteros a [0,1) (clásico truco de seno·escala, sin estado ni <c>System.Random</c>): la misma pareja da siempre el mismo número.</summary>
+    private static float Hash01(int index, int i)
+    {
+        float v = Mathf.Sin((index * 12.9898f) + (i * 78.233f)) * 43758.5453f;
+        return v - Mathf.Floor(v);
+    }
+
+    /// <summary>Sin sombra propia (se lee como parte del suelo, no como un objeto sobre él); el color viene del vértice (<see cref="BuildBloodMesh"/>), no de un albedo plano.</summary>
+    private static StandardMaterial3D BloodMaterial() => new()
+    {
+        ShadingMode = BaseMaterial3D.ShadingModeEnum.Unshaded,
+        VertexColorUseAsAlbedo = true,
+        CullMode = BaseMaterial3D.CullModeEnum.Disabled,
+    };
+
     /// <summary>
     /// Anillo y dorsal van <b>sin prueba de profundidad</b>. No es un capricho: la cápsula tiene
     /// exactamente el radio del anillo, así que desde tres cuartos se come todo el anillo menos una uña de
@@ -568,18 +777,35 @@ public partial class MatchPitchView3D : SubViewportContainer
     private void ApplyOrthographicCamera()
     {
         float elevation = Mathf.DegToRad(Mathf.Clamp(Elevation, 5f, 89f));
+        var elevationUp = new Vector3(0f, Mathf.Cos(elevation), -Mathf.Sin(elevation));
         var center = new Vector3(Pitch.Columns / 2f, 0.35f, Pitch.Rows / 2f);
 
         // Desplazamiento vertical (revisión visual, 19 sep 2026): mover cámara y centro juntos por el eje
         // "arriba" real de la pantalla —(0, cos(elevación), -sen(elevación)), no el eje Y del mundo— baja
         // el campo en pantalla sin cambiar el encuadre ortográfico ni la elevación.
-        center += new Vector3(0f, Mathf.Cos(elevation), -Mathf.Sin(elevation)) * PanUp;
+        center += elevationUp * PanUp;
+
+        // Gestos (docs/ui/README §4), encima del encuadre de siempre: el modo depuración nunca los activa
+        // (Shake/PunchIn no los llama nadie ahí), así que con los dos en reposo esto da exactamente lo
+        // mismo que antes (zoomFactor=1, gestureCenter=center, shake=Vector3.Zero).
+        var (gestureCenter, zoomFactor) = ApplyPunch(center);
+        DebugCenter = gestureCenter;
+        DebugDistance = CameraDistance;
+        DebugZoomFactor = zoomFactor;
 
         // La cámara mira desde el lado +Z: así el eje X del campo cae a la derecha de la pantalla y las
         // filas crecen hacia abajo, exactamente como en la vista 2D.
-        var from = center + (new Vector3(0f, Mathf.Sin(elevation), Mathf.Cos(elevation)) * CameraDistance);
-        _camera.LookAtFromPosition(from, center, Vector3.Up);
-        _camera.Size = Mathf.Max(OrthoSize, 0.5f);
+        var from = gestureCenter + (new Vector3(0f, Mathf.Sin(elevation), Mathf.Cos(elevation)) * CameraDistance);
+
+        var shake = ShakeWorldOffset(elevationUp);
+        from += shake;
+        gestureCenter += shake;
+
+        _camera.LookAtFromPosition(from, gestureCenter, Vector3.Up);
+
+        // El ortográfico no tiene distancia que encoger (no cambia el encuadre): el acercamiento aquí es
+        // el Size, al revés que en perspectiva.
+        _camera.Size = Mathf.Max(OrthoSize / zoomFactor, 0.5f);
     }
 
     /// <summary>
@@ -598,10 +824,195 @@ public partial class MatchPitchView3D : SubViewportContainer
         float elevation = Mathf.DegToRad(Mathf.Clamp(Elevation, 5f, 89f));
         var elevationUp = new Vector3(0f, Mathf.Cos(elevation), -Mathf.Sin(elevation));
         var center = new Vector3(Pitch.Columns / 2f, 0f, Pitch.Rows / 2f) + (elevationUp * _fitPan);
-        var from = center + (new Vector3(0f, Mathf.Sin(elevation), Mathf.Cos(elevation)) * _fitDistance);
+
+        // Gestos (docs/ui/README §4), encima del encaje ya calculado por EnsurePerspectiveFit — nunca
+        // vuelve a llamar a SolvePerspectiveFit: el acercamiento solo mueve el centro y encoge la
+        // distancia ya encajada.
+        var (gestureCenter, zoomFactor) = ApplyPunch(center);
+        float distance = _fitDistance / zoomFactor;
+        DebugCenter = gestureCenter;
+        DebugDistance = distance;
+        DebugZoomFactor = zoomFactor;
+        var from = gestureCenter + (new Vector3(0f, Mathf.Sin(elevation), Mathf.Cos(elevation)) * distance);
+
+        var shake = ShakeWorldOffset(elevationUp);
+        from += shake;
+        gestureCenter += shake;
 
         _camera.Fov = Mathf.Clamp(Fov, 1f, 179f);
+        _camera.LookAtFromPosition(from, gestureCenter, Vector3.Up);
+    }
+
+    // ------------------------------------------------------------------ diagnóstico (BroadcastCapture)
+
+    /// <summary>Centro de mira efectivo del último fotograma (con el gesto ya mezclado, si había alguno): para medir un acercamiento en vez de suponerlo.</summary>
+    public Vector3 DebugCenter { get; private set; }
+
+    /// <summary>Distancia de cámara efectiva del último fotograma (perspectiva) — en ortográfico es <see cref="CameraDistance"/> sin más, el zoom ahí va por <see cref="Camera3D.Size"/>.</summary>
+    public float DebugDistance { get; private set; }
+
+    /// <summary>Factor de zoom del acercamiento en el último fotograma: 1 = sin acercamiento.</summary>
+    public float DebugZoomFactor { get; private set; }
+
+    /// <summary>Las cuatro esquinas del césped proyectadas con la cámara TAL COMO ESTÁ AHORA (tras el último <c>ApplyCamera</c>): orden (0,0,0)/(Columnas,0,0)/(0,0,Filas)/(Columnas,0,Filas).</summary>
+    public Vector2[] DebugPitchCorners() => new[]
+    {
+        _camera.UnprojectPosition(new Vector3(0f, 0f, 0f)),
+        _camera.UnprojectPosition(new Vector3(Pitch.Columns, 0f, 0f)),
+        _camera.UnprojectPosition(new Vector3(0f, 0f, Pitch.Rows)),
+        _camera.UnprojectPosition(new Vector3(Pitch.Columns, 0f, Pitch.Rows)),
+    };
+
+    /// <summary>El centro/distancia (u <see cref="OrthoSize"/>) que habría SIN ningún gesto, para comparar contra <see cref="DebugCenter"/>/<see cref="DebugDistance"/>/<see cref="DebugZoomFactor"/> sin tener que capturar otro fotograma aparte.</summary>
+    public (Vector3 Center, float Distance) DebugUnpunchedRig()
+    {
+        float elevation = Mathf.DegToRad(Mathf.Clamp(Elevation, 5f, 89f));
+        var elevationUp = new Vector3(0f, Mathf.Cos(elevation), -Mathf.Sin(elevation));
+        return Perspective
+            ? (new Vector3(Pitch.Columns / 2f, 0f, Pitch.Rows / 2f) + (elevationUp * _fitPan), _fitDistance)
+            : (new Vector3(Pitch.Columns / 2f, 0.35f, Pitch.Rows / 2f) + (elevationUp * PanUp), CameraDistance);
+    }
+
+    /// <summary>La proyección de <paramref name="world"/> con la cámara TAL COMO ESTÁ AHORA (gesto incluido, si hay uno activo).</summary>
+    public Vector2 DebugProject(Vector3 world) => _camera.UnprojectPosition(world);
+
+    /// <summary>
+    /// La proyección de <paramref name="world"/> con el encuadre de <see cref="DebugUnpunchedRig"/> —sin
+    /// ningún gesto—, para comparar contra <see cref="DebugProject"/> sin tener que capturar otro
+    /// fotograma aparte. Cambia la transformada de la cámara para medir y la repone antes de devolver el
+    /// control: no deja rastro en lo que se dibuje después.
+    /// </summary>
+    public Vector2 DebugProjectUnpunched(Vector3 world)
+    {
+        var (center, distance) = DebugUnpunchedRig();
+        float elevation = Mathf.DegToRad(Mathf.Clamp(Elevation, 5f, 89f));
+        var from = center + (new Vector3(0f, Mathf.Sin(elevation), Mathf.Cos(elevation)) * distance);
+
+        var savedTransform = _camera.GlobalTransform;
         _camera.LookAtFromPosition(from, center, Vector3.Up);
+        var projected = _camera.UnprojectPosition(world);
+        _camera.GlobalTransform = savedTransform;
+        return projected;
+    }
+
+    // ------------------------------------------------------------------ matemática de los gestos
+
+    /// <summary>Avanza los relojes reales de sacudida y acercamiento (RT-020 no aplica: esto es <c>/Game</c>, tiempo real de presentación, no ticks lógicos).</summary>
+    private void AdvanceGestures(float delta)
+    {
+        if (_shakeActive)
+        {
+            _shakeElapsed += delta;
+            if (_shakeElapsed >= _shakeDuration)
+            {
+                _shakeActive = false;
+            }
+        }
+
+        if (!_punchActive)
+        {
+            return;
+        }
+
+        if (_punchReleased)
+        {
+            _punchReleaseElapsed += delta;
+            if (_punchReleaseElapsed >= _punchOutSeconds)
+            {
+                _punchActive = false;
+            }
+
+            return;
+        }
+
+        _punchElapsed += delta;
+        if (_punchElapsed >= _punchInSeconds + _punchHoldSeconds + _punchOutSeconds)
+        {
+            // Nadie llamó a ReleasePunch a tiempo: se apaga solo por la red de seguridad del propio hueco.
+            _punchActive = false;
+        }
+    }
+
+    /// <summary>0 (sin acercar) .. 1 (a fondo), con <see cref="Ease"/> en la entrada y en la salida.</summary>
+    private float PunchAmount()
+    {
+        if (!_punchActive)
+        {
+            return 0f;
+        }
+
+        if (_punchReleased)
+        {
+            float t = Mathf.Clamp(_punchReleaseElapsed / _punchOutSeconds, 0f, 1f);
+            return _punchReleasedAmount * (1f - Ease(t));
+        }
+
+        if (_punchElapsed < _punchInSeconds)
+        {
+            return Ease(_punchElapsed / _punchInSeconds);
+        }
+
+        float afterIn = _punchElapsed - _punchInSeconds;
+        if (afterIn < _punchHoldSeconds)
+        {
+            return 1f;
+        }
+
+        float outT = Mathf.Clamp((afterIn - _punchHoldSeconds) / _punchOutSeconds, 0f, 1f);
+        return 1f - Ease(outT);
+    }
+
+    /// <summary>Suavizado cúbico (smoothstep), ease-in/ease-out simétrico: 0 y 1 con derivada nula, nunca lineal.</summary>
+    private static float Ease(float t) => t <= 0f ? 0f : (t >= 1f ? 1f : t * t * (3f - (2f * t)));
+
+    /// <summary>El centro y el factor de zoom ya mezclados con el acercamiento en curso (1 = sin acercamiento).</summary>
+    /// <summary>
+    /// Amplía ALREDEDOR de <see cref="_punchTarget"/>, no recentra la escena en él (revisión del
+    /// orquestador, 19 sep 2026: recentrar deja hueco vacío al lado contrario y mueve todo lo que no es
+    /// el objetivo). La fórmula clásica de "zoom hacia un punto" —<c>center' = lerp(center, target, 1 -
+    /// 1/zoom)</c>, con la distancia (o el <c>Size</c> ortográfico) dividida por el mismo <c>zoom</c>— deja
+    /// el píxel proyectado de <c>target</c> fijo: el nuevo ojo cae exactamente sobre el rayo ojo-objetivo
+    /// de antes (demostrable por álgebra: <c>from' = target - (target-from)/zoom</c>), así que la
+    /// proyección de <c>target</c> no depende de la distancia, solo de la dirección, que no cambia.
+    /// </summary>
+    private (Vector3 Center, float ZoomFactor) ApplyPunch(Vector3 center)
+    {
+        float amount = PunchAmount();
+        if (amount <= 0f)
+        {
+            return (center, 1f);
+        }
+
+        float zoomFactor = Mathf.Lerp(1f, _punchZoom, amount);
+        float towardTarget = 1f - (1f / zoomFactor);
+        return (center.Lerp(_punchTarget, towardTarget), zoomFactor);
+    }
+
+    /// <summary>
+    /// Desplazamiento 2D de la sacudida en este instante: suma de senos de frecuencia FIJA (nunca
+    /// <c>System.Random</c>, determinista por construcción — la misma entrada da siempre la misma salida)
+    /// con una envolvente que decae linealmente de 1 a 0 durante toda la duración: un gesto de cámara, no
+    /// un temblor aleatorio.
+    /// </summary>
+    private Vector2 ShakeOffset2D()
+    {
+        if (!_shakeActive)
+        {
+            return Vector2.Zero;
+        }
+
+        float envelope = 1f - Mathf.Clamp(_shakeElapsed / _shakeDuration, 0f, 1f);
+        float t = _shakeElapsed;
+        float x = (Mathf.Sin(t * 37.1f) + (0.5f * Mathf.Sin((t * 61.7f) + 2.1f))) / 1.5f;
+        float y = (Mathf.Sin((t * 29.3f) + 1.7f) + (0.5f * Mathf.Sin((t * 53.9f) + 0.4f))) / 1.5f;
+        return new Vector2(x, y) * _shakeAmplitude * envelope;
+    }
+
+    /// <summary>La sacudida en unidades de mundo, sobre el eje X del campo y el eje "arriba en pantalla" (<paramref name="elevationUp"/>) — nunca el eje Y del mundo, igual que <see cref="PanUp"/>.</summary>
+    private Vector3 ShakeWorldOffset(Vector3 elevationUp)
+    {
+        var offset = ShakeOffset2D();
+        return offset == Vector2.Zero ? Vector3.Zero : (Vector3.Right * offset.X) + (elevationUp * offset.Y);
     }
 
     /// <summary>Último ajuste calculado por <see cref="SolvePerspectiveFit"/>, para no repetir la bisección cada fotograma.</summary>
@@ -838,6 +1249,19 @@ public partial class MatchPitchView3D : SubViewportContainer
             // dirección del toon del ADR 0102: la forma la dice la rampa de luz, no la sombra.
             DisableReceiveShadows = true,
         };
+    }
+
+    /// <summary>
+    /// Visibilidad de las manchas de sangre (RA-027): cada una se ve desde su propio fotograma en
+    /// adelante, sin ningún estado propio de "qué se pintó ya" — retroceder o saltar con la barra
+    /// simplemente vuelve a evaluar la misma condición contra el <see cref="Frame"/> que toque.
+    /// </summary>
+    private void ApplyBloodMarks()
+    {
+        for (int i = 0; i < _bloodDecals.Count; i++)
+        {
+            _bloodDecals[i].Visible = _bloodMarks[i].Frame <= Frame;
+        }
     }
 
     private void ApplyTrace()

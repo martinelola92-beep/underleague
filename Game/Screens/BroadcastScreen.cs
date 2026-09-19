@@ -96,6 +96,58 @@ public partial class BroadcastScreen : Control
     private MatchMoment? _lastVoiceMoment;
     private SubstitutionPoint? _pendingPoint;
 
+    // ------------------------------------------------------------------ gestos de cámara (docs/ui/README §4)
+
+    /// <summary>
+    /// Un tiro para el gesto de cámara: TODOS los tiros lo reciben, cualquiera que sea su resultado —eso
+    /// es lo que hace que el acercamiento no delate el gol (última regla de §4: «no zoom = gol»)— con la
+    /// misma duración mínima de mantenimiento real (<see cref="ShotPunchHoldSeconds"/>), independiente de
+    /// cuándo o cómo resuelva el tiro (revisión del orquestador, 19 sep 2026: un tiro a bocajarro que
+    /// resuelve en el mismo tick tenía antes ventana cero y por tanto ningún gesto — eso SÍ correlaciona
+    /// con el resultado). Si el tiro acaba en gol, el acercamiento se suelta antes, al empezar el
+    /// estandarte (<see cref="ShowGoalBanner"/>), con su salida normal — la reproducción se congela ahí y
+    /// no tiene sentido seguir acercando a un tiro que ya se ha convertido en otra cosa.
+    /// </summary>
+    private readonly record struct ShotGesture(int StartFrame, Cell Cell);
+
+    // Acercamiento del tiro (docs/ui/README §4, valores provisionales — marcador de posición procedural,
+    // regla 10 de CLAUDE.md): ×1,15, entrada 0,25 s, mantenimiento mínimo 0,35 s reales, salida 0,4 s.
+    private const float ShotPunchZoom = 1.15f;
+    private const float ShotPunchInSeconds = 0.25f;
+    private const float ShotPunchHoldSeconds = 0.35f;
+    private const float ShotPunchOutSeconds = 0.4f;
+
+    private readonly List<ShotGesture> _shotGestures = new();
+    private int _nextShotGestureIndex;
+
+    // Sacudida de gol/roja/lesión grave (docs/ui/README §4: gol es "suave", roja y lesión grave "más
+    // cortas"): valores provisionales, marcador de posición procedural hasta que haya arte.
+    private const float GoalShakeAmplitude = 0.05f;
+    private const float GoalShakeSeconds = 0.35f;
+    private const float CardOrInjuryShakeAmplitude = 0.08f;
+    private const float CardOrInjuryShakeSeconds = 0.18f;
+
+    // Muerte, dos tiempos (docs/ui/README §4): el acercamiento entra en 0,4 s —más pausado que el del
+    // tiro, tono de la escena— y se suelta A MANO (ver StartDeathTwoStage/ReleasePunch), nunca por su
+    // propio hueco: HoldSeconds es solo la red de seguridad si algo impidiera llamar a ReleasePunch.
+    private const float DeathPunchZoom = 1.35f;
+    private const float DeathPunchInSeconds = 0.4f;
+    private const float DeathPunchHoldSeconds = 20f;
+    private const float DeathPunchOutSeconds = 0.5f;
+
+    /// <summary>El bando de una muerte espera este tiempo real desde que el campo empieza a contarla (docs/ui/README §4: «dos tiempos»): el campo cuenta la muerte primero.</summary>
+    private const float DeathEdictDelaySeconds = 1.2f;
+
+    private MatchEvent? _pendingDeathEvent;
+    private float _deathEdictDelay;
+    private bool _deathTrayPending;
+
+    // Tamaño de la mancha de sangre en casillas, por gravedad (RA-027, marcador de posición procedural):
+    // leve pequeña, grave mediana, muerte grande.
+    private const float BloodSizeMinorInjury = 0.32f;
+    private const float BloodSizeSevereInjury = 0.5f;
+    private const float BloodSizeDeath = 0.8f;
+
     /// <summary>
     /// El momento que tiene la reproducción congelada, o null si no está congelada (revisión visual del
     /// orquestador, principio 5: mientras se proclama un suceso, su residuo — tablero, tiras, residuo del
@@ -164,12 +216,20 @@ public partial class BroadcastScreen : Control
 
         ApplyPresentation(result);
 
-        if (result.AwaitingDecision)
+        // Muerte, dos tiempos (docs/ui/README §4): si el bando quedó pendiente de su retardo, la bandeja
+        // se abre cuando toque (UpdateDeathEdict más abajo), no aquí — el campo cuenta la muerte primero.
+        if (result.AwaitingDecision && !_deathTrayPending)
         {
             OpenDecision();
         }
 
         Sync();
+
+        // Gestos SOLO a x1 (docs/ui/README §4: «la velocidad degrada la presentación, nunca la
+        // información»): a x4/x16 ningún tiro dispara el acercamiento, pero el bando/la bandeja de una
+        // muerte siguen su propio reloj igual — son información, no adorno de cámara.
+        UpdateShotGesture(Speeds[_speedIndex] == 1);
+        UpdateDeathEdict((float)delta);
     }
 
     public override void _UnhandledInput(InputEvent @event)
@@ -246,6 +306,7 @@ public partial class BroadcastScreen : Control
         AddChild(_pitch3d);
         _pitch3d.Bind(_trace, _playback.Setup, _catalog);
         _pitch3d.Marks = _moments.Marks;
+        BuildBloodMarks();
 
         _board = new BroadcastBoard();
         AddChild(_board);
@@ -318,6 +379,7 @@ public partial class BroadcastScreen : Control
 
         _moments = MatchMomentView.Build(_playback.Setup, _playback.Result, _catalog);
         _director = new PresentationDirector(_moments.Moments, DirectorTimings.Default);
+        BuildShotGestures();
     }
 
     // ------------------------------------------------------------------ decisión (ADR 0094)
@@ -389,6 +451,13 @@ public partial class BroadcastScreen : Control
         _pendingPoint = null;
         _run.Substitute(new Substitution(point.Tick, point.OutPlayerId, playerId));
 
+        // Al resolver la decisión se suelta cualquier acercamiento en curso (docs/ui/README §4: el de
+        // muerte, si lo había, se soltaba "al terminar la voz o al resolver la decisión" — esto es lo
+        // segundo). Sin efecto si no había ninguno.
+        _pitch3d.ReleasePunch();
+        _pendingDeathEvent = null;
+        _deathTrayPending = false;
+
         _tray.Visible = false;
         foreach (var strip in _strips)
         {
@@ -408,6 +477,7 @@ public partial class BroadcastScreen : Control
         _director.Resolve();
         _pitch3d.Bind(_trace, _playback.Setup, _catalog);
         _pitch3d.Marks = _moments.Marks;
+        BuildBloodMarks();
 
         _frame = decisionFrame;
         _carry = 0d;
@@ -416,6 +486,13 @@ public partial class BroadcastScreen : Control
         _lastStampMoment = null;
         _lastVoiceMoment = null;
         _synced = -1;
+
+        // La reproducción cambia con la sustitución (docs/ui/README §4/RA-027): BindPlayback ya reconstruyó
+        // la lista de tiros, y aquí se resincroniza el puntero al fotograma de la decisión para no repetir
+        // un tiro que ya quedó atrás ni perder uno que caiga justo después.
+        ResyncShotGestures(_frame);
+        _pitch3d.ResetGestures();
+
         Sync();
     }
 
@@ -459,6 +536,17 @@ public partial class BroadcastScreen : Control
         if (_matchEnded || result.Voice == _lastVoiceMoment)
         {
             return;
+        }
+
+        // Muerte, dos tiempos (docs/ui/README §4): «se suelta cuando termina la voz o al resolver la
+        // decisión» — esto es lo primero. Si la que se va es una muerte SIN decisión (con decisión, el
+        // director la deja fija como voz hasta Resolve() y nunca llega aquí mientras se espera), se suelta
+        // el acercamiento y se limpia cualquier bando pendiente que no le hubiera dado tiempo a salir.
+        if (_lastVoiceMoment?.Kind == MomentKind.Death && result.Voice != _lastVoiceMoment)
+        {
+            _pitch3d.ReleasePunch();
+            _pendingDeathEvent = null;
+            _deathTrayPending = false;
         }
 
         _lastVoiceMoment = result.Voice;
@@ -529,7 +617,7 @@ public partial class BroadcastScreen : Control
             var death = FindHeadEvent(moment);
             if (death is not null)
             {
-                ShowDeathEdict(death);
+                StartDeathTwoStage(moment, death);
             }
 
             return;
@@ -627,6 +715,19 @@ public partial class BroadcastScreen : Control
             UiText.Get("ui.pregon.banner.goalTitle"),
             UiText.Get("ui.pregon.banner.goalBody", scorer, minute),
             UiText.Get("ui.pregon.banner.goalFooter", team));
+
+        // El tiro que trajo este gol puede seguir con su acercamiento activo (mantenimiento mínimo real,
+        // UpdateShotGesture): se suelta aquí, al empezar el estandarte, con su salida normal — no tiene
+        // sentido seguir acercando a un tiro que ya se ha convertido en el gol (revisión del orquestador,
+        // 19 sep 2026). Sin efecto si ya se había soltado solo.
+        _pitch3d.ReleasePunch();
+
+        // Sacudida suave al empezar la presentación (docs/ui/README §4), SOLO a x1 — a x4/x16 la
+        // velocidad degrada la presentación, nunca la información (principio 10).
+        if (Speeds[_speedIndex] == 1)
+        {
+            _pitch3d.Shake(GoalShakeAmplitude, GoalShakeSeconds);
+        }
     }
 
     private void ShowRedBanner(MatchEvent card)
@@ -642,6 +743,12 @@ public partial class BroadcastScreen : Control
             UiText.Get("ui.pregon.banner.redTitle"),
             UiText.Get("ui.pregon.banner.redBody", name, team),
             UiText.Get("ui.pregon.banner.redFooter", remaining));
+
+        // Sacudida más corta que la del gol (docs/ui/README §4), SOLO a x1.
+        if (Speeds[_speedIndex] == 1)
+        {
+            _pitch3d.Shake(CardOrInjuryShakeAmplitude, CardOrInjuryShakeSeconds);
+        }
     }
 
     private void ShowInjuryBanner(MatchEvent injury)
@@ -656,10 +763,58 @@ public partial class BroadcastScreen : Control
             UiText.Get("ui.pregon.banner.injuryTitle"),
             UiText.Get("ui.pregon.banner.injuryBody", name, position),
             UiText.Get("ui.pregon.banner.injuryFooter"));
+
+        // Sacudida más corta que la del gol (docs/ui/README §4), SOLO a x1.
+        if (Speeds[_speedIndex] == 1)
+        {
+            _pitch3d.Shake(CardOrInjuryShakeAmplitude, CardOrInjuryShakeSeconds);
+        }
     }
 
     private void ShowMobBand() =>
         _band.Show(UiText.Get("ui.pregon.turba.header"), UiText.Get("ui.pregon.turba.body"));
+
+    /// <summary>
+    /// Primer tiempo de la muerte (docs/ui/README §4): el campo la cuenta con un acercamiento hacia su
+    /// casilla, con la reproducción ya congelada por el director; el bando (segundo tiempo) espera
+    /// <see cref="DeathEdictDelaySeconds"/> reales, contados por <see cref="UpdateDeathEdict"/>. Si el
+    /// momento también trae una decisión (<paramref name="moment"/>.Decision), la bandeja espera lo mismo
+    /// —aparecen juntos, per §4— en vez de abrirse ya (el director la deja congelada de todas formas: el
+    /// director no distingue "voz" de "decisión" para el reloj, este retardo es puro residuo visual).
+    /// </summary>
+    private void StartDeathTwoStage(MatchMoment moment, MatchEvent death)
+    {
+        var center = Pitch.CellCenter(death.Cell);
+        _pitch3d.PunchIn(new Vector3(center.X, 0f, center.Y), DeathPunchZoom, DeathPunchInSeconds, DeathPunchHoldSeconds, DeathPunchOutSeconds);
+        _pendingDeathEvent = death;
+        _deathEdictDelay = DeathEdictDelaySeconds;
+        _deathTrayPending = moment.Decision;
+    }
+
+    /// <summary>Cuenta atrás real del bando de una muerte pendiente; no hace nada si no hay ninguna.</summary>
+    private void UpdateDeathEdict(float delta)
+    {
+        if (_pendingDeathEvent is null)
+        {
+            return;
+        }
+
+        _deathEdictDelay -= delta;
+        if (_deathEdictDelay > 0f)
+        {
+            return;
+        }
+
+        var death = _pendingDeathEvent;
+        _pendingDeathEvent = null;
+        ShowDeathEdict(death);
+
+        if (_deathTrayPending)
+        {
+            _deathTrayPending = false;
+            OpenDecision();
+        }
+    }
 
     private void ShowDeathEdict(MatchEvent death)
     {
@@ -816,6 +971,111 @@ public partial class BroadcastScreen : Control
         }
 
         return (cards, casualties);
+    }
+
+    // ------------------------------------------------------------------ gestos derivados de eventos crudos
+
+    /// <summary>
+    /// Reconstruye la lista de ventanas de tiro (<see cref="BindPlayback"/>: al construir y tras cada
+    /// sustitución, porque la reproducción cambia). El tiro no es un <see cref="MatchMoment"/> —N0, sin
+    /// agrupador— así que se lee directamente de <c>Result.Events</c>, no del director.
+    /// </summary>
+    private void BuildShotGestures()
+    {
+        _shotGestures.Clear();
+        _nextShotGestureIndex = 0;
+
+        if (_trace is null)
+        {
+            return;
+        }
+
+        var events = _playback.Result.Events;
+        for (int i = 0; i < events.Count; i++)
+        {
+            if (events[i].Type == EventType.Shot)
+            {
+                _shotGestures.Add(new ShotGesture(_trace.FrameOfTick(events[i].Tick), events[i].Cell));
+            }
+        }
+    }
+
+    /// <summary>Recoloca el puntero de tiros pendientes al fotograma indicado: para <see cref="SeekTo"/> y tras una sustitución, igual que <c>PresentationDirector.Seek</c> hace con los momentos.</summary>
+    private void ResyncShotGestures(int frame)
+    {
+        _nextShotGestureIndex = 0;
+        while (_nextShotGestureIndex < _shotGestures.Count && _shotGestures[_nextShotGestureIndex].StartFrame < frame)
+        {
+            _nextShotGestureIndex++;
+        }
+    }
+
+    /// <summary>
+    /// Dispara el acercamiento de CUALQUIER tiro cuyo fotograma se alcance, con la misma duración mínima
+    /// de mantenimiento real (<see cref="ShotPunchHoldSeconds"/>) siempre — <c>MatchPitchView3D.PunchIn</c>
+    /// se suelta solo cuando pasa esa duración, o antes si <see cref="ShowGoalBanner"/> lo suelta a mano
+    /// porque el tiro se convirtió en gol. <paramref name="gesturesAllowed"/> es SOLO a x1 (docs/ui/README
+    /// §4): a otra velocidad el puntero sigue avanzando igual —para no acumular tiros atrasados que se
+    /// disparasen todos de golpe al volver a x1— pero no se llama a <c>PunchIn</c>.
+    /// </summary>
+    private void UpdateShotGesture(bool gesturesAllowed)
+    {
+        while (_nextShotGestureIndex < _shotGestures.Count && _shotGestures[_nextShotGestureIndex].StartFrame <= _frame)
+        {
+            var shot = _shotGestures[_nextShotGestureIndex];
+            _nextShotGestureIndex++;
+
+            if (gesturesAllowed)
+            {
+                var center = Pitch.CellCenter(shot.Cell);
+                _pitch3d.PunchIn(new Vector3(center.X, 0f, center.Y), ShotPunchZoom, ShotPunchInSeconds, ShotPunchHoldSeconds, ShotPunchOutSeconds);
+            }
+        }
+    }
+
+    /// <summary>
+    /// Reconstruye las manchas de sangre persistentes (RA-027) de <see cref="Sim.Events.EventType.Injury"/>
+    /// no anulada y <see cref="Sim.Events.EventType.Death"/>, en la casilla del evento: leve pequeña, grave
+    /// mediana, muerte grande. Se llama al construir y tras cada sustitución (la reproducción cambia).
+    /// </summary>
+    private void BuildBloodMarks()
+    {
+        var marks = new List<BloodMark>();
+        if (_trace is not null)
+        {
+            var events = _playback.Result.Events;
+            for (int i = 0; i < events.Count; i++)
+            {
+                var e = events[i];
+                if (IsCancelled(e))
+                {
+                    continue;
+                }
+
+                float size;
+                if (e.Type == EventType.Death)
+                {
+                    size = BloodSizeDeath;
+                }
+                else if (e.Type == EventType.Injury && e.Detail == "severe")
+                {
+                    size = BloodSizeSevereInjury;
+                }
+                else if (e.Type == EventType.Injury && e.Detail == "minor")
+                {
+                    size = BloodSizeMinorInjury;
+                }
+                else
+                {
+                    continue;
+                }
+
+                var center = Pitch.CellCenter(e.Cell);
+                marks.Add(new BloodMark(_trace.FrameOfTick(e.Tick), center.X, center.Y, size));
+            }
+        }
+
+        _pitch3d.SetBloodMarks(marks);
     }
 
     private int CountOnPitch(int team)
@@ -1021,6 +1281,11 @@ public partial class BroadcastScreen : Control
     {
         _speedIndex = Mathf.Clamp(index, 0, Speeds.Length - 1);
         _board.SetSpeedIndex(_speedIndex);
+
+        // Un cambio de velocidad cancela los gestos en curso (docs/ui/README §4): solo el adorno de
+        // cámara — el bando/la bandeja de una muerte pendiente siguen su reloj real igual, son
+        // información, no gesto (principio 10).
+        _pitch3d.ResetGestures();
     }
 
     private void OnPauseToggled()
@@ -1038,6 +1303,15 @@ public partial class BroadcastScreen : Control
 
     /// <summary>Traza del partido en reproducción, o null si todavía no hay ninguna.</summary>
     public MatchTrace? Trace => _trace;
+
+    /// <summary>
+    /// El campo 3D, público solo para el arnés de capturas (<see cref="BroadcastCapture"/>): las capturas
+    /// de gesto avanzan el reloj real a mano, llamando a <c>_Process</c> con deltas fijos en vez de
+    /// esperar fotogramas del motor (deterministas, docs/ui/README §4) — y como <c>_Process</c> de este
+    /// campo es un nodo hijo aparte, el motor lo seguiría llamando por su cuenta con un delta real sin
+    /// control mientras se espera a que se dibuje, así que también hay que congelarlo y avanzarlo a mano.
+    /// </summary>
+    public MatchPitchView3D Pitch3D => _pitch3d;
 
     /// <summary>
     /// Lleva la pantalla a ese fotograma y deja que el director lo presente: usado por
@@ -1077,6 +1351,14 @@ public partial class BroadcastScreen : Control
 
         _bench.Visible = true;
 
+        // Gestos (docs/ui/README §4): un SeekTo cancela cualquiera en curso y resincroniza el puntero de
+        // tiros con el nuevo fotograma, igual que el director descarta lo pendiente en su propio Seek.
+        _pitch3d.ResetGestures();
+        ResyncShotGestures(_frame);
+        _pendingDeathEvent = null;
+        _deathTrayPending = false;
+        _deathEdictDelay = 0f;
+
         _director.Seek(_frame);
 
         var result = _director.Advance(_frame, 0d, Speeds[_speedIndex]);
@@ -1084,7 +1366,7 @@ public partial class BroadcastScreen : Control
         _frame = Mathf.Clamp(result.DisplayFrame, 0, trace.FrameCount - 1);
         _residueMoment = result.Frozen ? result.Voice : null;
         ApplyPresentation(result);
-        if (result.AwaitingDecision)
+        if (result.AwaitingDecision && !_deathTrayPending)
         {
             OpenDecision();
         }

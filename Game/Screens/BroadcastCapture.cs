@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using Godot;
 using Underleague.Game.Autoload;
 using Underleague.Game.Ui;
+using Underleague.Sim.Events;
 using Underleague.Sim.Model;
 using Underleague.Sim.Run;
 using Underleague.Sim.Run.View;
@@ -45,10 +46,19 @@ public partial class BroadcastCapture : Control
         ("roja", static m => m.Kind == MomentKind.Red && !m.Cancelled),
         ("lesion", static m => m.Kind == MomentKind.SevereInjury && !m.Cancelled),
         ("turba", static m => m.Kind is MomentKind.Mob or MomentKind.RefereeLeaves && !m.Cancelled),
-        ("muerte", static m => m.Kind == MomentKind.Death && !m.Cancelled),
+
+        // "muerte" NO va aquí (revisión del orquestador, gestos de cámara): tiene su propio sondeo más
+        // ancho (hasta ~60 semillas, ver Capture) y su propia captura en dos tiempos
+        // (retrans-muerte-1/2.png), no la genérica de este array.
         ("final", static m => m.Kind == MomentKind.FullTime),
         ("decision", static m => m.Decision),
     };
+
+    /// <summary>1 s a 15 ticks/s (RT-020): tope de espera al sondear la resolución de un tiro, solo para elegir cuál capturar — el gesto en juego (BroadcastScreen) ya no depende de esto, dispara con cualquier tiro.</summary>
+    private const int ShotGestureMaxTicks = 15;
+
+    /// <summary>Semillas deterministas adicionales para el sondeo ancho de "muerte" (hasta ~60 en total con <see cref="Seeds"/>), solo si ninguna de las doce de siempre la tiene.</summary>
+    private const int ExtraDeathSeeds = 48;
 
     private string _directory = string.Empty;
 
@@ -78,6 +88,14 @@ public partial class BroadcastCapture : Control
         var found = new Dictionary<string, (ulong Seed, int Node, int Frame)>();
         ulong? baseSeed = null;
         int baseNode = -1;
+
+        // Tiro que NO acaba en gol (para retrans-tiro: el gesto no puede delatar el resultado) y sangre
+        // (cualquier partido con al menos una lesión/muerte no anulada, capturado en su propio fotograma
+        // de "final" para que las manchas ya estén todas puestas): no son MatchMoment (N0, sin agrupador),
+        // así que se leen de Result.Events directamente, no de Kinds.
+        (ulong Seed, int Node, int StartFrame, int ReleaseFrame, Cell Cell)? foundShot = null;
+        (ulong Seed, int Node, int Frame)? foundBlood = null;
+        (ulong Seed, int Node, int Frame)? foundDeath = null;
 
         foreach (var seed in Seeds)
         {
@@ -112,6 +130,10 @@ public partial class BroadcastCapture : Control
                     }
                 }
             }
+
+            foundShot ??= FindShotWithoutGoal(playback, seed, node);
+            foundBlood ??= FindBlood(playback, moments, seed, node);
+            foundDeath ??= FindDeath(moments, seed, node);
         }
 
         if (baseSeed is null)
@@ -131,6 +153,58 @@ public partial class BroadcastCapture : Control
             {
                 GD.Print($"retransmisión: ninguna de las {Seeds.Length} semillas probadas tiene un momento de tipo '{label}'; se salta la captura");
             }
+        }
+
+        if (foundShot is { } shotHit)
+        {
+            GD.Print($"retransmisión: 'tiro' (sin gol) en la semilla {shotHit.Seed}, nodo {shotHit.Node}, fotograma {shotHit.StartFrame}");
+        }
+        else
+        {
+            GD.Print($"retransmisión: ninguna de las {Seeds.Length} semillas probadas tiene un tiro que no acabe en gol; se salta retrans-tiro");
+        }
+
+        if (foundBlood is { } bloodHit)
+        {
+            GD.Print($"retransmisión: 'sangre' en la semilla {bloodHit.Seed}, nodo {bloodHit.Node}, fotograma {bloodHit.Frame}");
+        }
+        else
+        {
+            GD.Print($"retransmisión: ninguna de las {Seeds.Length} semillas probadas tiene una lesión o muerte no anulada; se salta retrans-sangre");
+        }
+
+        // Muerte: sondeo ancho (hasta ~ExtraDeathSeeds más, RA-020 la hace rara a propósito) solo si las
+        // doce de siempre no dieron ninguna.
+        int extraDeathSeedsTried = 0;
+        if (foundDeath is null)
+        {
+            for (ulong seed = 500000UL; extraDeathSeedsTried < ExtraDeathSeeds; seed++, extraDeathSeedsTried++)
+            {
+                run.NewRun("orc_ironworks", Race.Orc, seed);
+                int node = FirstOfKind(run, n => n.IsMatch);
+                if (node < 0)
+                {
+                    continue;
+                }
+
+                var playback = MatchPlaybacks.Of(run.State!, node, run.Catalog!, run.Engine, trace: true, MatchDecisions.None);
+                var moments = MatchMomentView.Build(playback.Setup, playback.Result, run.Catalog!).Moments;
+                foundDeath = FindDeath(moments, seed, node);
+                if (foundDeath is not null)
+                {
+                    break;
+                }
+            }
+        }
+
+        int deathSeedsTried = Seeds.Length + extraDeathSeedsTried;
+        if (foundDeath is { } deathHit)
+        {
+            GD.Print($"retransmisión: 'muerte' en la semilla {deathHit.Seed}, nodo {deathHit.Node}, fotograma {deathHit.Frame} (probadas {deathSeedsTried} semillas)");
+        }
+        else
+        {
+            GD.Print($"retransmisión: ninguna de las {deathSeedsTried} semillas probadas tiene un momento de muerte; se salta retrans-muerte-1/retrans-muerte-2");
         }
 
         // 2. Una pasada de Godot por cada semilla distinta que hizo falta (normalmente 2-4, no las 12): la
@@ -167,6 +241,17 @@ public partial class BroadcastCapture : Control
 
             if (!savedBase)
             {
+                // Referencia para comparar con retrans-tiro (revisión del orquestador): centro/distancia
+                // y esquinas del césped SIN ningún gesto activo.
+                var basePitch3d = screen.Pitch3D;
+                GD.Print(
+                    $"retrans-base: centro efectivo={basePitch3d.DebugCenter}, "
+                    + $"distancia efectiva={basePitch3d.DebugDistance:0.###}, zoom={basePitch3d.DebugZoomFactor:0.###}");
+                foreach (var corner in basePitch3d.DebugPitchCorners())
+                {
+                    GD.Print($"  esquina del césped en pantalla: {corner}");
+                }
+
                 await Save("retrans-base");
                 savedBase = true;
             }
@@ -181,6 +266,104 @@ public partial class BroadcastCapture : Control
                 {
                     await CaptureAfterDecision(screen);
                 }
+            }
+
+            Drop(instance);
+        }
+
+        // 2b. Gestos de cámara (docs/ui/README §4): tiro (el gesto no puede delatar el resultado, así que
+        // se captura A MITAD del acercamiento de un tiro que no acaba en gol) y muerte en dos tiempos (el
+        // campo la cuenta primero, el bando 1,2 s después). Avanzan el reloj real a mano —_Process con
+        // deltas fijos, nunca Settle/dormir— para que la captura sea siempre la misma, sin depender de
+        // cuánto tarde el motor en pintar un fotograma de verdad.
+        if (foundShot is { } shot)
+        {
+            run.NewRun("orc_ironworks", Race.Orc, shot.Seed);
+            run.SelectedNodeId = shot.Node;
+
+            var instance = await Show("res://Scenes/Retransmision.tscn", frames: 10);
+            if (instance is BroadcastScreen screen)
+            {
+                GoManual(screen);
+                screen.SeekTo(shot.StartFrame);
+
+                // ~0,417 s reales: pasado el "inSeconds" (0,25 s) del acercamiento del tiro
+                // (BroadcastScreen.ShotPunchInSeconds) y dentro del mantenimiento mínimo (0,25-0,60 s,
+                // ShotPunchHoldSeconds=0,35 s) — a fondo, no a mitad de entrada.
+                StepManual(screen, 1.0 / 60.0, 25);
+
+                // Medir, no suponer (revisión del orquestador, 19 sep 2026): centro/distancia efectivos
+                // contra los que habría sin gesto, las cuatro esquinas del césped proyectadas, y el
+                // píxel del propio objetivo del acercamiento —tiene que quedarse prácticamente fijo, eso
+                // es lo que demuestra que amplía ALREDEDOR del punto y no recentra la escena en él.
+                var pitch3d = screen.Pitch3D;
+                var (unpunchedCenter, unpunchedDistance) = pitch3d.DebugUnpunchedRig();
+                GD.Print(
+                    $"retrans-tiro: centro efectivo={pitch3d.DebugCenter} (sin gesto {unpunchedCenter}), "
+                    + $"distancia efectiva={pitch3d.DebugDistance:0.###} (sin gesto {unpunchedDistance:0.###}), "
+                    + $"zoom={pitch3d.DebugZoomFactor:0.###}");
+                foreach (var corner in pitch3d.DebugPitchCorners())
+                {
+                    GD.Print($"  esquina del césped en pantalla: {corner}");
+                }
+
+                var targetCenter = Pitch.CellCenter(shot.Cell);
+                var targetWorld = new Vector3(targetCenter.X, 0f, targetCenter.Y);
+                var targetPunched = pitch3d.DebugProject(targetWorld);
+                var targetUnpunched = pitch3d.DebugProjectUnpunched(targetWorld);
+
+                // DebugProject trabaja en el lienzo lógico de 1920x1200 del SubViewport (docs/ui/README
+                // §7): a pantalla real (1280x800, ×0,667) para que el "~10 px" del encargo sea en los
+                // píxeles que de verdad se ven, no en los del lienzo.
+                const float CanvasToScreen = 1280f / 1920f;
+                float targetShiftScreenPx = targetPunched.DistanceTo(targetUnpunched) * CanvasToScreen;
+                GD.Print(
+                    $"  objetivo del acercamiento ({shot.Cell}): sin gesto {targetUnpunched} con gesto {targetPunched} "
+                    + $"(lienzo) -> desplazamiento {targetShiftScreenPx:0.##}px en pantalla real");
+
+                await Save("retrans-tiro");
+            }
+
+            Drop(instance);
+        }
+
+        if (foundBlood is { } blood)
+        {
+            run.NewRun("orc_ironworks", Race.Orc, blood.Seed);
+            run.SelectedNodeId = blood.Node;
+
+            var instance = await Show("res://Scenes/Retransmision.tscn", frames: 10);
+            if (instance is BroadcastScreen screen)
+            {
+                screen.SeekTo(blood.Frame);
+                await Settle(10);
+                await Save("retrans-sangre");
+            }
+
+            Drop(instance);
+        }
+
+        if (foundDeath is { } death)
+        {
+            run.NewRun("orc_ironworks", Race.Orc, death.Seed);
+            run.SelectedNodeId = death.Node;
+
+            var instance = await Show("res://Scenes/Retransmision.tscn", frames: 10);
+            if (instance is BroadcastScreen screen)
+            {
+                GoManual(screen);
+                screen.SeekTo(death.Frame);
+
+                // Primer tiempo: el acercamiento ya se nota, el bando todavía no (el retardo son 1,2 s
+                // reales, BroadcastScreen.DeathEdictDelaySeconds) — unos pocos pasos pequeños, lejos de
+                // ese retardo.
+                StepManual(screen, 1.0 / 60.0, 6);
+                await Save("retrans-muerte-1");
+
+                // Segundo tiempo: se pasa el retardo del bando con margen (1,2 s) sin acercarse al hueco
+                // de espera del acercamiento (HoldSeconds = 20 s en BroadcastScreen).
+                StepManual(screen, 1.0 / 15.0, 20);
+                await Save("retrans-muerte-2");
             }
 
             Drop(instance);
@@ -324,6 +507,29 @@ public partial class BroadcastCapture : Control
         }
     }
 
+    /// <summary>
+    /// A partir de aquí el reloj real de <paramref name="screen"/> —y el de su campo 3D, un nodo hijo con
+    /// su propio <c>_Process</c>— lo controla esta clase a mano con <see cref="StepManual"/>: sin esto, el
+    /// motor seguiría llamando a los dos por su cuenta con un delta real sin control mientras
+    /// <see cref="Save"/> espera a que se dibuje el fotograma, y las capturas de gesto (tiro, muerte) no
+    /// serían siempre las mismas.
+    /// </summary>
+    private static void GoManual(BroadcastScreen screen)
+    {
+        screen.SetProcess(false);
+        screen.Pitch3D.SetProcess(false);
+    }
+
+    /// <summary>Avanza <paramref name="screen"/> (y su campo 3D) <paramref name="times"/> veces con el mismo <paramref name="delta"/> fijo: determinista, nada de dormir ni esperar fotogramas del motor.</summary>
+    private static void StepManual(BroadcastScreen screen, double delta, int times)
+    {
+        for (int i = 0; i < times; i++)
+        {
+            screen._Process(delta);
+            screen.Pitch3D._Process(delta);
+        }
+    }
+
     private async Task Save(string name)
     {
         await ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame);
@@ -345,4 +551,167 @@ public partial class BroadcastCapture : Control
 
         return -1;
     }
+
+    /// <summary>
+    /// Un tiro de <paramref name="playback"/> cuya resolución —el próximo
+    /// <see cref="EventType.Goal"/>/<see cref="EventType.Save"/>/<see cref="EventType.ShotBlocked"/> de la
+    /// lista, un único balón en vuelo a la vez— NO es un gol: para retrans-tiro, que tiene que demostrar
+    /// que el gesto no delata el resultado. Descarta los de ventana casi nula (un tiro a bocajarro puede
+    /// resolverse en el mismo tick que se lanza: RA-005, un balón que ya está prácticamente en la
+    /// portería) — revisión del orquestador, 19 sep 2026, ese fue el primero que salió y no dio tiempo a
+    /// que se notara ningún acercamiento — y se queda con el de ventana MÁS LARGA de todo el partido, no
+    /// el primero que encuentra. Null si este partido no tiene ninguno así.
+    /// </summary>
+    private static (ulong Seed, int Node, int StartFrame, int ReleaseFrame, Cell Cell)? FindShotWithoutGoal(MatchPlayback playback, ulong seed, int node)
+    {
+        const int MinWindowTicks = 6; // deja tiempo de sobra para pasar el "inSeconds" (0,25 s ~ 4 ticks) del acercamiento antes de la resolución.
+
+        var trace = playback.Trace;
+        if (trace is null)
+        {
+            return null;
+        }
+
+        var events = playback.Result.Events;
+        int bestStartTick = -1;
+        int bestReleaseTick = -1;
+        int bestWindow = -1;
+        Cell bestCell = default;
+        for (int i = 0; i < events.Count; i++)
+        {
+            if (events[i].Type != EventType.Shot)
+            {
+                continue;
+            }
+
+            int startTick = events[i].Tick;
+            int releaseTick = startTick + ShotGestureMaxTicks;
+            EventType? resolution = null;
+            for (int j = i + 1; j < events.Count; j++)
+            {
+                if (events[j].Type is EventType.Goal or EventType.Save or EventType.ShotBlocked)
+                {
+                    resolution = events[j].Type;
+                    releaseTick = Math.Min(releaseTick, events[j].Tick);
+                    break;
+                }
+            }
+
+            if (resolution == EventType.Goal)
+            {
+                continue;
+            }
+
+            int window = releaseTick - startTick;
+            if (window >= MinWindowTicks && window > bestWindow)
+            {
+                bestWindow = window;
+                bestStartTick = startTick;
+                bestReleaseTick = releaseTick;
+                bestCell = events[i].Cell;
+            }
+        }
+
+        return bestStartTick < 0 ? null : (seed, node, trace.FrameOfTick(bestStartTick), trace.FrameOfTick(bestReleaseTick), bestCell);
+    }
+
+    /// <summary>
+    /// Un fotograma de JUEGO CORRIENTE de este partido, posterior a la última lesión/muerte no anulada
+    /// (para que ya estén todas las manchas puestas) y anterior al final — sin caer dentro de la ventana
+    /// de presentación de ningún momento (revisión del orquestador: no bajo el acta ni ningún otro
+    /// estandarte/sello, que atenúan el campo). Null si este partido no tiene sangre que enseñar, o si no
+    /// se encuentra ningún hueco así.
+    /// </summary>
+    private static (ulong Seed, int Node, int Frame)? FindBlood(MatchPlayback playback, IReadOnlyList<MatchMoment> moments, ulong seed, int node)
+    {
+        var trace = playback.Trace;
+        if (trace is null)
+        {
+            return null;
+        }
+
+        var events = playback.Result.Events;
+        int lastBloodTick = -1;
+        for (int i = 0; i < events.Count; i++)
+        {
+            var e = events[i];
+            if (IsCancelledEvent(e) || e.Type is not (EventType.Death or EventType.Injury))
+            {
+                continue;
+            }
+
+            lastBloodTick = Math.Max(lastBloodTick, e.Tick);
+        }
+
+        if (lastBloodTick < 0)
+        {
+            return null;
+        }
+
+        int fullTimeFrame = -1;
+        for (int i = 0; i < moments.Count; i++)
+        {
+            if (moments[i].Kind == MomentKind.FullTime)
+            {
+                fullTimeFrame = moments[i].Frame;
+                break;
+            }
+        }
+
+        if (fullTimeFrame < 0)
+        {
+            return null;
+        }
+
+        int afterFrame = trace.FrameOfTick(lastBloodTick);
+        int? quiet = FindQuietFrame(moments, afterFrame, fullTimeFrame);
+        return quiet is int frame ? (seed, node, frame) : null;
+    }
+
+    /// <summary>
+    /// Un fotograma en <c>(afterFrame, beforeFrame)</c> que no cae dentro de la ventana de presentación de
+    /// NINGÚN momento (un margen de <see cref="QuietMargin"/> fotogramas alrededor de su
+    /// <c>MatchMoment.Frame</c> — generoso a propósito, cubre de sobra un sello N1 corto o una voz N3/N4
+    /// larga): empieza cerca del final y retrocede, para quedar lo más lejos posible de la última sangre
+    /// y lo más cerca posible del final sin tocar su propia presentación.
+    /// </summary>
+    private static int? FindQuietFrame(IReadOnlyList<MatchMoment> moments, int afterFrame, int beforeFrame)
+    {
+        const int QuietMargin = 60; // 4 s a 15 ticks/s: más que cualquier duración de sello/voz de docs/ui/README §4.
+        for (int candidate = beforeFrame - QuietMargin; candidate > afterFrame; candidate -= 15)
+        {
+            bool clear = true;
+            for (int i = 0; i < moments.Count; i++)
+            {
+                if (Math.Abs(moments[i].Frame - candidate) < QuietMargin)
+                {
+                    clear = false;
+                    break;
+                }
+            }
+
+            if (clear)
+            {
+                return candidate;
+            }
+        }
+
+        return null;
+    }
+
+    /// <summary>La primera muerte no anulada (propia o rival, da igual el equipo) de estos momentos.</summary>
+    private static (ulong Seed, int Node, int Frame)? FindDeath(IReadOnlyList<MatchMoment> moments, ulong seed, int node)
+    {
+        for (int i = 0; i < moments.Count; i++)
+        {
+            if (moments[i].Kind == MomentKind.Death && !moments[i].Cancelled)
+            {
+                return (seed, node, moments[i].Frame);
+            }
+        }
+
+        return null;
+    }
+
+    private static bool IsCancelledEvent(MatchEvent e) => e.Detail.EndsWith(":cancelled", StringComparison.Ordinal);
 }
