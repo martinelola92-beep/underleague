@@ -192,7 +192,14 @@ Implementado con marcadores de posición:
   (partidos reales de varias semillas, `retrans-*.png`, incluida la bandeja con sustitución real).
   El encuadre del campo coincide al píxel con `capturas/base-1280x800.jpg`.
 
-Fuera de la fase E, pendiente: gestos de cámara (sacudida, acercamiento), grada y vallas (arte, regla 10),
+Hecho después (19 sep 2026, a petición del revisor): **campo en perspectiva con estadio procedural** (ADR 0120,
+enmienda) y **gestos de cámara solo a x1** —acercamiento ×1,15 alrededor del punto en *todo* tiro (mínimo 0,35 s,
+acabe o no en gol: el gesto no delata el resultado), sacudida en gol, roja y lesión grave, y la muerte en dos
+tiempos (acercamiento ×1,35 y el bando 1,2 s después)— más la **sangre persistente** (RA-027) en la casilla de
+cada lesión y muerte, visible según el fotograma (retroceder la quita). Capturas `retrans-tiro.png` y
+`retrans-sangre.png`. La muerte en dos tiempos está sin capturar: ninguna de 60 semillas probadas tiene una.
+
+Pendiente: arte de grada y vallas (regla 10),
 16:9 con `aspect = expand` (todas las pantallas, ADR 0119), capturas de roja y muerte (ninguna de las 12
 semillas probadas las tiene), las decisiones abiertas de §9 (C13 incluida) y P2 (visibilidad de la build,
 `game-design-review`). Siguiente paso propuesto: **partida del revisor sobre la retransmisión** (build de
