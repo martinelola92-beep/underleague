@@ -36,7 +36,16 @@ cmd_run() {
   for attempt in 1 2; do
     m=$model; [ "$attempt" = 2 ] && m=$MODEL_FALLBACK
     s=$(date +%s)
-    (cd "$wt" && timeout "$TIMEOUT" opencode run -m "$m" "$(cat "$enc")") > "$log" 2>&1; rc=$?
+    # OpenCode a veces no sale al terminar la sesión (medido 19 sep 2026: informe completo y proceso vivo
+    # 10 min después). Se espera el ARTEFACTO —la línea NOTAS: del informe— y se cierra el grupo de procesos.
+    ( cd "$wt" && exec setsid opencode run -m "$m" "$(cat "$enc")" ) > "$log" 2>&1 &
+    local pid=$! end=$(( s + TIMEOUT )); rc=""
+    while kill -0 "$pid" 2>/dev/null; do
+      if strip < "$log" | grep -q '^NOTAS:'; then sleep 3; kill -TERM -- -"$pid" 2>/dev/null; rc=0; break; fi
+      if [ "$(date +%s)" -ge "$end" ]; then kill -TERM -- -"$pid" 2>/dev/null; rc=124; break; fi
+      sleep 2
+    done
+    wait "$pid" 2>/dev/null; rc=${rc:-$?}
     echo "EJECUTOR: $m · rc=$rc · $(( $(date +%s) - s )) s · intento $attempt"
     strip < "$log" | grep -q '^ESTADO:' && break
     if [ "$attempt" = 1 ] && [ -z "$(changed "$wt")" ]; then continue; fi
