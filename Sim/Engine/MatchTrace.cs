@@ -12,9 +12,11 @@ namespace Underleague.Sim.Engine;
 /// <param name="Name">Nombre visible, para la ficha seleccionada.</param>
 /// <param name="Initials">Hasta dos iniciales del nombre, para cuando el dorsal no basta.</param>
 /// <param name="Number">
-/// Dorsal 1..N dentro de su equipo. <b>No existe en el modelo</b> (un jugador de la run no tiene número):
-/// lo asigna la traza ordenando el equipo por posición y después por id, así que el portero siempre es el
-/// 1 y el mismo jugador lleva el mismo dorsal en cada reproducción del mismo partido (RT-021).
+/// Dorsal dentro de su equipo: 1..N para los titulares y, detrás, el de cada suplente según su puesto en la
+/// plantilla (puede haber huecos: un suplente que no juega conserva su número). <b>No existe en el modelo</b> (un jugador de la run no tiene número):
+/// lo asigna la traza ordenando a los titulares por posición y después por id, y a los suplentes detrás en
+/// el orden de la plantilla, así que el portero titular siempre es el 1 y el mismo jugador lleva el mismo dorsal en
+/// cada reproducción del mismo partido, entre o no un suplente (RT-021, BC-F).
 /// </param>
 public sealed record TracePlayer(int Id, int Team, Position Role, string Name, string Initials, int Number);
 
@@ -279,11 +281,11 @@ internal sealed class MatchTraceRecorder
     /// </summary>
     private readonly byte[] _lastAction;
 
-    public MatchTraceRecorder(MatchPlayer[] players, int regulationTicks)
+    public MatchTraceRecorder(MatchPlayer[] players, int regulationTicks, MatchSetup setup)
     {
         _source = players;
         _regulationTicks = regulationTicks;
-        _players = Describe(players);
+        _players = Describe(players, setup);
 
         int cells = ExpectedFrames * players.Length;
         _x = new List<float>(cells);
@@ -386,8 +388,14 @@ internal sealed class MatchTraceRecorder
     /// Los datos fijos de cada ficha, con el dorsal repartido por equipo. El orden del reparto es
     /// (posición, id) ascendente —el mismo criterio determinista de RT-041— así que el portero es el 1 y
     /// el resto numera de atrás hacia delante.
+    /// <para>
+    /// BC-F: solo los <b>titulares</b> entran en ese reparto. Los suplentes (ADR 0094: nacen en el banquillo)
+    /// numeran detrás, en el orden de la plantilla del equipo, cuenten o no con una sustitución en este
+    /// partido. Así el dorsal no depende de quién entra: antes, el suplente que entraba se intercalaba por
+    /// posición y renumeraba a sus compañeros al volver a jugar el partido con la sustitución.
+    /// </para>
     /// </summary>
-    private static TracePlayer[] Describe(MatchPlayer[] players)
+    private static TracePlayer[] Describe(MatchPlayer[] players, MatchSetup setup)
     {
         var numbers = new int[players.Length];
         for (int team = 0; team < 2; team++)
@@ -397,11 +405,46 @@ internal sealed class MatchTraceRecorder
             {
                 for (int i = 0; i < players.Length; i++)
                 {
-                    if (players[i].Team == team && (int)players[i].Role == role)
+                    if (players[i].Team == team && players[i].State != PlayerState.Benched && (int)players[i].Role == role)
                     {
                         numbers[i] = next++;
                     }
                 }
+            }
+
+            var squad = (team == 0 ? setup.Home : setup.Away).Players;
+            for (int s = 0; s < squad.Count; s++)
+            {
+                bool starter = false;
+                int benched = -1;
+                for (int i = 0; i < players.Length; i++)
+                {
+                    if (players[i].Team != team || players[i].Id != squad[s].Id)
+                    {
+                        continue;
+                    }
+
+                    if (players[i].State == PlayerState.Benched)
+                    {
+                        benched = i;
+                    }
+                    else
+                    {
+                        starter = true;
+                    }
+                }
+
+                if (starter)
+                {
+                    continue;
+                }
+
+                if (benched >= 0)
+                {
+                    numbers[benched] = next;
+                }
+
+                next++;
             }
         }
 

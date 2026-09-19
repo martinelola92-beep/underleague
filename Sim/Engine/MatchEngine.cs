@@ -180,7 +180,7 @@ internal sealed class MatchEngine : IPerkWorld
         _context = new UtilityContext(_players, _ball, catalog.Ai, _tuning.ActionZone, _tuning.Pass.InterceptRadiusCells, _tuning.Ball.PassSpeedCellsPerTickMilli);
         _context.TacticalStates[0] = TacticalState.OutOfPossession;
         _context.TacticalStates[1] = TacticalState.OutOfPossession;
-        _trace = config.Trace ? new MatchTraceRecorder(_players, _regulationTicks) : null;
+        _trace = config.Trace ? new MatchTraceRecorder(_players, _regulationTicks, setup) : null;
     }
 
     /// <summary>Tipo de reanudación pendiente durante una fase Restart/Kickoff/Penalty (§3.8).</summary>

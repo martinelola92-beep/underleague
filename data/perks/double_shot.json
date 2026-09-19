@@ -1,5 +1,5 @@
 {
-  "_doc": "Doble disparo: si la primera sale mal, la segunda sale sola. Repite el disparo DENTRO del mismo tick (RT-020: no hay tick nuevo) y la cadena la corta la profundidad de recursion, con el corte contado en el informe (RT-042). Lo que se ve: dispara, le sale rechazada y dispara otra vez antes de que nadie llegue. Lo que cuesta: se queda clavado rematando y la jugada no se recicla en pase.",
+  "_doc": "Doble disparo: repite el disparo UNA vez DENTRO del mismo tick (RT-020: no hay tick nuevo); el limite de 1 por partido se consume al activarse, asi que ya no se encadena hasta la profundidad de recursion (BC-B). Su texto promete 'si la primera sale mal' y hoy no cambia el resultado: rediseno abierto en docs/pendientes/BC-C.md.",
   "id": "double_shot",
   "name": {
     "es": "Doble disparo",

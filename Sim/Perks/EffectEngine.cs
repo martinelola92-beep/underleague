@@ -289,6 +289,11 @@ internal sealed class EffectEngine : IPerkLinks
                 continue;
             }
 
+            // BC-B: el uso se consume ANTES de aplicar los efectos. Si un efecto vuelve a publicar el mismo
+            // evento (extraAction -> SHOT), la llamada anidada ya ve el límite alcanzado; con el incremento
+            // detrás, el perk se encadenaba hasta MaxDepth y un `limit` de 1 daba 5 activaciones.
+            subscription.Uses++;
+
             _depth = depth + 1;
             try
             {
@@ -301,8 +306,6 @@ internal sealed class EffectEngine : IPerkLinks
             {
                 _depth = depth;
             }
-
-            subscription.Uses++;
 
             // C9: el mismo punto en el que la activación entra en el informe la anuncia también al flujo
             // de eventos, que es lo único que /Game puede consumir durante el partido.

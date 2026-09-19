@@ -140,12 +140,51 @@ public sealed class RecoveryExtraActionTests
     }
 
     /// <summary>
+    /// BC-B: un perk cuyo efecto vuelve a publicar su propio disparador (extraAction) no pasa de su límite.
+    /// Con el uso consumido después de aplicar los efectos, la llamada anidada no lo veía y el perk se
+    /// encadenaba hasta la profundidad máxima: <c>double_shot</c> daba siempre 5 activaciones con límite 1.
+    /// </summary>
+    /// <para>La fila de <c>steamroller</c> es solo de guarda: con estas plantillas no llegaba a encadenarse
+    /// ni con el fallo. Las otras dos fallan con el código anterior (5 activaciones y 6 acciones en un tick).</para>
+    [Theory]
+    [InlineData("double_shot", 6, EventType.Shot, true)]
+    [InlineData("charge", 1, EventType.Tackle, true)]
+    [InlineData("steamroller", 1, EventType.Tackle, false)]
+    public void APerkThatRetriggersItselfStillRespectsItsLimit(string perkId, int slot, EventType repeated, bool mustActivate)
+    {
+        var limit = Catalog.Perks.All.Single(p => p.Id == perkId).Limit;
+        Assert.NotNull(limit);
+        int active = 0;
+        for (int i = 0; i < Matches; i++)
+        {
+            var result = Play(i, perkId, out int carrierId, slot);
+            int n = Activations(result, perkId, carrierId);
+            Assert.InRange(n, 0, limit!.Times);
+            active += n > 0 ? 1 : 0;
+
+            // Lo observable: la acción repetida del portador ocurre como mucho dos veces en un mismo tick
+            // (la suya y UNA extra), no hasta la profundidad de recursión.
+            int most = result.Events.Where(e => e.Type == repeated && e.Actor == carrierId)
+                .GroupBy(e => e.Tick).Select(g => g.Count()).DefaultIfEmpty(0).Max();
+            Assert.InRange(most, 0, 2);
+        }
+
+        _output.WriteLine($"{perkId}: se activa en {active} de {Matches} partidos, nunca más de {limit!.Times} vez por partido");
+        if (mustActivate)
+        {
+            Assert.True(active > 0, $"{perkId} no se activa en ningún partido: la prueba no demostraría nada");
+        }
+    }
+
+    /// <summary>
     /// <c>charge</c> y los tres perks que ya usaban RECOVERY no se mueven. Valores fijados contra el
-    /// árbol SIN el cambio (medidos con `git stash`, disciplina de la skill `balance-measure`): mismas
-    /// semillas, mismas plantillas.
+    /// árbol SIN el cambio de BB-Q (medidos con `git stash`, disciplina de la skill `balance-measure`): mismas
+    /// semillas, mismas plantillas. <c>charge</c> se volvió a fijar con BC-B (65 → 13): los 65 se midieron con el fallo
+    /// del límite (el perk se encadenaba dentro de su propia activación), imposibles con un límite de 1 por
+    /// partido en 20 partidos.
     /// </summary>
     [Theory]
-    [InlineData("charge", 1, 65)]
+    [InlineData("charge", 1, 13)]
     [InlineData("lane_reader", 1, 19)]
     [InlineData("road_warrior", 1, 0)]
     [InlineData("sweeper_keeper", 0, 23)]
@@ -157,7 +196,7 @@ public sealed class RecoveryExtraActionTests
             total += Activations(Play(i, perkId, out int carrierId, slot), perkId, carrierId);
         }
 
-        _output.WriteLine($"{perkId}: {total} activaciones en {Matches} partidos (baseline sin el cambio: {expected})");
+        _output.WriteLine($"{perkId}: {total} activaciones en {Matches} partidos (valor fijado: {expected})");
         Assert.Equal(expected, total);
     }
 }

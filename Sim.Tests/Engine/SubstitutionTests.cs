@@ -108,6 +108,106 @@ public sealed class SubstitutionTests
         Assert.Equal(result.Events, Simulator.Run(resolved, seed, Catalog, Config).Events);
     }
 
+    /// <summary>
+    /// BC-E: la elección del jugador llega como sustitución del estado inicial y el rival sustituyó ANTES de
+    /// ese tick. Con la elección fija desde el tick 0 y sin las sustituciones del rival, el partido divergía
+    /// antes de T y el motor rechazaba la sustitución (9,4 % de los puntos del jugador en 400 runs). Ahora la
+    /// elección es la respuesta a su punto y se aplica al llegar a él, después de las del rival.
+    /// </summary>
+    [Fact]
+    public void ThePlayerChoiceIsAppliedAfterEarlierRivalSubstitutions()
+    {
+        var (setup, seed, point, resolved) = PlayerPointAfterRivalSubstitution();
+        var other = point.Candidates.First(c => c.Id != SubstitutionPolicy.Default(point, setup.Home.Players.First(p => p.Id == point.OutPlayerId)).Id);
+        var choice = setup with { Home = setup.Home with { Substitutions = new[] { new Substitution(point.Tick, point.OutPlayerId, other.Id) } } };
+
+        var (final, result) = SubstitutionPoints.ResolveAutomatically(choice, seed, Catalog, Config, static team => team == 1);
+
+        Assert.Contains(new Substitution(point.Tick, point.OutPlayerId, other.Id), final.Home.Substitutions);
+        foreach (var earlier in resolved.Away.Substitutions.Where(s => s.Tick < point.Tick))
+        {
+            Assert.Contains(earlier, final.Away.Substitutions);
+        }
+
+        // Hasta T el partido es el mismo que el que vio el jugador cuando se le abrió la ventana.
+        var shown = Simulator.Run(resolved, seed, Catalog, Config).Events.Where(e => e.Tick <= point.Tick).ToList();
+        Assert.Equal(shown, result.Events.Where(e => e.Tick <= point.Tick).ToList());
+        Assert.Contains(result.Events, e => e.Type == EventType.Substitution && e.Actor == other.Id && e.Tick == point.Tick + 1);
+
+        // El camino de la run (RunEngine.ResolveMatch: política para los dos equipos) aplica la misma elección.
+        var (run, _) = SubstitutionPoints.ResolveAutomatically(choice, seed, Catalog, Config);
+        Assert.Contains(new Substitution(point.Tick, point.OutPlayerId, other.Id), run.Home.Substitutions);
+    }
+
+    /// <summary>
+    /// BC-E (revisión): una elección que no responde a ningún punto de decisión no se descarta en silencio,
+    /// es un error explícito (ADR 0094, RT-032).
+    /// </summary>
+    [Fact]
+    public void AChoiceThatAnswersNoDecisionPointIsAnExplicitError()
+    {
+        var (setup, seed, point, _) = PlayerPointAfterRivalSubstitution();
+        var displaced = setup with { Home = setup.Home with { Substitutions = new[] { new Substitution(point.Tick + 1, point.OutPlayerId, point.Candidates[0].Id) } } };
+        Assert.Throws<ArgumentException>(() => SubstitutionPoints.ResolveAutomatically(displaced, seed, Catalog, Config, static team => team == 1));
+        Assert.Throws<ArgumentException>(() => SubstitutionPoints.ResolveAutomatically(displaced, seed, Catalog, Config));
+    }
+
+    /// <summary>
+    /// BC-F: el dorsal no depende de quién entra. Los titulares conservan su número con y sin sustitución, y
+    /// el suplente lleva el que le toca por su orden en la plantilla (el segundo suplente, el 9).
+    /// </summary>
+    [Fact]
+    public void ASubstitutionDoesNotRenumberTheTeam()
+    {
+        var (setup, seed, _, point) = FirstDecisionPoint();
+        var traced = Config with { Trace = true };
+        var before = Simulator.Run(setup, seed, Catalog, traced).Trace!;
+        var home = setup.Home with { Substitutions = new[] { new Substitution(point.Tick, point.OutPlayerId, 51) } };
+        var after = Simulator.Run(setup with { Home = home }, seed, Catalog, traced).Trace!;
+
+        foreach (var player in before.Players.Where(p => p.Team == 0))
+        {
+            Assert.Equal(player.Number, after.Players.Single(p => p.Team == 0 && p.Id == player.Id).Number);
+        }
+
+        Assert.Equal(9, after.Players.Single(p => p.Team == 0 && p.Id == 51).Number);
+        var numbers = after.Players.Where(p => p.Team == 0).Select(p => p.Number).ToList();
+        Assert.Equal(numbers.Count, numbers.Distinct().Count());
+    }
+
+    /// <summary>
+    /// Dos equipos frágiles y sucios con dos suplentes cada uno: se lesionan los dos. Busca un punto de
+    /// decisión del jugador (equipo 0) con alguna sustitución del rival anterior, resolviendo al rival con la
+    /// política como hace la pantalla de Partido (<c>MatchPlaybacks.Of</c>).
+    /// </summary>
+    private static (MatchSetup Setup, ulong Seed, SubstitutionPoint Point, MatchSetup Resolved) PlayerPointAfterRivalSubstitution()
+    {
+        var positions = new[] { Position.Goalkeeper, Position.Defender, Position.Defender, Position.Midfielder, Position.Midfielder, Position.Midfielder, Position.Forward };
+        var fragile = new Attributes(1, 50, 50, 1, 99);
+        var traits = new[] { Trait.Aggressive, Trait.Dirty };
+        TeamSetup Team(string id, int first)
+        {
+            PlayerDefinition Make(int pid, Position position) =>
+                new(pid, id + pid, Race.Human, position, Rarity.Common, 1, fragile, traits, new[] { "Neutral", position.ToString(), "Aggressive", "Dirty" }, PhysicalState.Healthy);
+            var starters = positions.Select((position, i) => Make(first + i, position)).ToList();
+            var players = new List<PlayerDefinition>(starters) { Make(first + 50, Position.Defender), Make(first + 51, Position.Forward) };
+            return new TeamSetup(id, id, Race.Human, players, Lineup.Default(starters));
+        }
+
+        var setup = new MatchSetup(Team("home", 0), Team("away", 100), new RefereeSetup("Neutral", RefereeTrait.Neutral, 0));
+        for (ulong seed = 1; seed < 400; seed++)
+        {
+            var (resolved, result) = SubstitutionPoints.ResolveAutomatically(setup, seed, Catalog, Config, static team => team == 1);
+            var point = SubstitutionPoints.Pending(resolved, result, 0);
+            if (point is not null && point.Candidates.Count == 2 && resolved.Away.Substitutions.Any(s => s.Tick < point.Tick))
+            {
+                return (setup, seed, point, resolved);
+            }
+        }
+
+        throw new Xunit.Sdk.XunitException("ninguna semilla da un punto del jugador después de una sustitución del rival: el escenario ya no lesiona a los dos");
+    }
+
     [Fact]
     public void TheDefaultPolicyPrefersTheSamePositionAndThenQuality()
     {

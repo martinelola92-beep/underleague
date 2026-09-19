@@ -60,7 +60,9 @@ public static class SubstitutionPoints
     /// <summary>
     /// Juega el partido y, mientras un equipo al que <paramref name="usesPolicy"/> dé el visto bueno tenga un
     /// punto de decisión pendiente, añade la sustitución de la política por defecto y vuelve a jugar. Converge
-    /// en tantas vueltas como suplentes hay. Devuelve el estado inicial final (con las sustituciones) y su
+    /// en tantas vueltas como suplentes hay. Las sustituciones que ya trae <paramref name="setup"/> se tratan
+    /// como respuestas del jugador a su punto de decisión y se aplican al llegar a él, sin política (BC-E).
+    /// Devuelve el estado inicial final (con las sustituciones) y su
     /// resultado, que es el que se aplica a la run y el que se reproduce (RT-024).
     /// </summary>
     public static (MatchSetup Setup, MatchResult Result) ResolveAutomatically(
@@ -70,6 +72,24 @@ public static class SubstitutionPoints
         ArgumentNullException.ThrowIfNull(catalog);
         ArgumentNullException.ThrowIfNull(config);
         usesPolicy ??= static _ => true;
+
+        // BC-E: las sustituciones que ya trae el estado inicial (las que eligió el jugador en /Game) son
+        // RESPUESTAS a un punto de decisión, no hechos fijos desde el tick 0. Se retiran del estado inicial y
+        // se aplican cuando la resolución, en orden cronológico, llega a ese punto. Con ellas fijas desde el
+        // principio, una sustitución del rival anterior a T —que se resuelve después— hacía divergir el
+        // partido antes de T, el que sale ya no se lesionaba en T y el motor rechazaba la sustitución (9,4 %
+        // de los puntos del jugador). Sin sustituciones de entrada (todo /Balance) nada cambia.
+        var answers = Answers(setup);
+        var used = new bool[answers.Count];
+        if (answers.Count > 0)
+        {
+            setup = setup with
+            {
+                Home = setup.Home with { Substitutions = Array.Empty<Substitution>() },
+                Away = setup.Away with { Substitutions = Array.Empty<Substitution>() },
+            };
+        }
+
         var result = Simulator.Run(setup, seed, catalog, config);
         for (int round = 0; round < 32; round++)
         {
@@ -77,37 +97,112 @@ public static class SubstitutionPoints
             // después de T, así que las anteriores siguen siendo válidas y las posteriores (calculadas sobre
             // un futuro que ya no existe) se descartan y se vuelven a resolver en la vuelta siguiente.
             SubstitutionPoint? point = null;
+            int pointAnswer = -1;
             for (int team = 0; team < 2; team++)
             {
-                if (!usesPolicy(team))
+                var candidate = Pending(setup, result, team);
+                if (candidate is null)
                 {
                     continue;
                 }
 
-                var candidate = Pending(setup, result, team);
-                if (candidate is not null && (point is null || candidate.Tick < point.Tick))
+                int answer = AnswerFor(answers, used, candidate);
+                if (answer < 0 && !usesPolicy(team))
+                {
+                    continue;
+                }
+
+                if (point is null || candidate.Tick < point.Tick)
                 {
                     point = candidate;
+                    pointAnswer = answer;
                 }
             }
 
             if (point is null)
             {
+                // Una respuesta que el partido no llegó a pedir no se descarta en silencio: el llamador pidió
+                // una sustitución que no corresponde a ningún punto de decisión, y eso es un error explícito
+                // (ADR 0094: «lo demás es ArgumentException»; RT-032).
+                for (int i = 0; i < answers.Count; i++)
+                {
+                    if (!used[i])
+                    {
+                        var (team, orphan) = answers[i];
+                        throw new ArgumentException(
+                            $"la sustitución del equipo {team} en el tick {orphan.Tick} (sale {orphan.OutPlayerId}, entra {orphan.InPlayerId}) no corresponde a ningún punto de decisión del partido");
+                    }
+                }
+
                 return (setup, result);
             }
 
             var side = point.Team == 0 ? setup.Home : setup.Away;
             var outPlayer = FindPlayer(side, point.OutPlayerId);
-            var chosen = SubstitutionPolicy.Default(point, outPlayer);
+            int chosenId;
+            if (pointAnswer >= 0)
+            {
+                used[pointAnswer] = true;
+                chosenId = answers[pointAnswer].Substitution.InPlayerId;
+            }
+            else
+            {
+                chosenId = SubstitutionPolicy.Default(point, outPlayer).Id;
+            }
             setup = setup with
             {
-                Home = WithSubstitution(setup.Home, point.Team == 0 ? new Substitution(point.Tick, point.OutPlayerId, chosen.Id) : null, point.Tick),
-                Away = WithSubstitution(setup.Away, point.Team == 1 ? new Substitution(point.Tick, point.OutPlayerId, chosen.Id) : null, point.Tick),
+                Home = WithSubstitution(setup.Home, point.Team == 0 ? new Substitution(point.Tick, point.OutPlayerId, chosenId) : null, point.Tick),
+                Away = WithSubstitution(setup.Away, point.Team == 1 ? new Substitution(point.Tick, point.OutPlayerId, chosenId) : null, point.Tick),
             };
             result = Simulator.Run(setup, seed, catalog, config);
         }
 
         throw new InvalidOperationException("la resolución automática de sustituciones no converge (ADR 0094)");
+    }
+
+    /// <summary>Las sustituciones que trae el estado inicial, con su equipo, en el orden de la plantilla.</summary>
+    private static List<(int Team, Substitution Substitution)> Answers(MatchSetup setup)
+    {
+        var answers = new List<(int Team, Substitution Substitution)>();
+        for (int i = 0; i < setup.Home.Substitutions.Count; i++)
+        {
+            answers.Add((0, setup.Home.Substitutions[i]));
+        }
+
+        for (int i = 0; i < setup.Away.Substitutions.Count; i++)
+        {
+            answers.Add((1, setup.Away.Substitutions[i]));
+        }
+
+        return answers;
+    }
+
+    /// <summary>
+    /// La respuesta a <paramref name="point"/>: mismo equipo, mismo tick, mismo jugador que sale y un
+    /// candidato que siga siendo legal. Si el partido ya no llega a ese punto, o el elegido dejó de ser
+    /// candidato, no hay respuesta: el punto queda para la política o, si el equipo no la usa, pendiente, y la
+    /// respuesta sin usar hace fallar la resolución al terminar. Devuelve su índice, o -1.
+    /// </summary>
+    private static int AnswerFor(List<(int Team, Substitution Substitution)> answers, bool[] used, SubstitutionPoint point)
+    {
+        for (int i = 0; i < answers.Count; i++)
+        {
+            var (team, answer) = answers[i];
+            if (used[i] || team != point.Team || answer.Tick != point.Tick || answer.OutPlayerId != point.OutPlayerId)
+            {
+                continue;
+            }
+
+            for (int j = 0; j < point.Candidates.Count; j++)
+            {
+                if (point.Candidates[j].Id == answer.InPlayerId)
+                {
+                    return i;
+                }
+            }
+        }
+
+        return -1;
     }
 
     /// <summary>Las sustituciones del equipo hasta <paramref name="tick"/> incluido, más <paramref name="added"/> si la hay.</summary>
