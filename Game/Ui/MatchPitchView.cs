@@ -535,7 +535,9 @@ public partial class MatchPitchView : Control
                 size.Y + padding);
 
             var teamColor = trace.Players[flash.Player].Team == 0 ? Style.TeamOwn : Style.TeamRival;
-            DrawRect(box, new Color(Style.Background, 0.88f * alpha));
+            // Pergamino, no el fondo de la pantalla: desde el retinte de pregón, Style.Background es madera
+            // oscura y el texto es tinta, así que el cartel quedaba oscuro sobre oscuro.
+            DrawRect(box, new Color(Style.Panel, 0.92f * alpha));
             DrawRect(box, new Color(teamColor, alpha), false, 1.5f);
             Style.DrawText(
                 this,
@@ -628,8 +630,8 @@ public partial class MatchPitchView : Control
         string text = UiText.Get("ui.phase." + phase);
         var size = font.GetStringSize(text, HorizontalAlignment.Left, -1f, Style.TextSmall);
         var at = new Vector2((cell * Pitch.Columns) - size.X - 12f, 6f);
-        DrawRect(new Rect2(at - new Vector2(6f, 2f), size + new Vector2(12f, 8f)), new Color(Style.Background, 0.75f));
-        Style.DrawText(this, font, at, text, Style.TextSmall, Style.Accent);
+        DrawRect(new Rect2(at - new Vector2(6f, 2f), size + new Vector2(12f, 8f)), new Color(Style.Panel, 0.92f));
+        Style.DrawText(this, font, at, text, Style.TextSmall, Style.Text);
     }
 
     private static int IndexOf(MatchTrace trace, int playerId)

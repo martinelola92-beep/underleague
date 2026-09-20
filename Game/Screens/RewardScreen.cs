@@ -83,6 +83,7 @@ public partial class RewardScreen : Control
 
     private void Build()
     {
+        Layout.CenterLegacy(this);
         Widgets.Background(this);
         Widgets.Header(
             this,

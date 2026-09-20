@@ -60,6 +60,7 @@ public partial class ScoutScreen : Control
         var node = state.GetNode(_nodeId);
         var (setup, _, _) = RunEngine.BuildMatch(state, _nodeId, catalog, run.Engine);
 
+        Layout.CenterLegacy(this);
         Widgets.Background(this);
         Widgets.Header(this, UiText.Get("ui.scout.title"), UiText.Get(
             "ui.scout.subtitle",
@@ -246,11 +247,16 @@ public partial class ScoutScreen : Control
     /// </summary>
     private float BuildConfirmBar(float y)
     {
-        Widgets.Panel(this, new Rect2(412f, y, 830f, 1f), Style.Line);
+        // Una raya, no una tarjeta: parchment:false, si no ParchmentPanel intentaría rasgar un borde
+        // sobre un rectángulo de 1 px de alto.
+        Widgets.Panel(this, new Rect2(412f, y, 830f, 1f), Style.Line, parchment: false);
         y += 14f;
 
         var start = Widgets.Button(this, UiText.Get("ui.scout.start"), new Rect2(412f, y, 220f, 32f));
-        start.AddThemeColorOverride("font_color", Style.Accent);
+
+        // Sin tinte dorado: Style.Accent es un dorado pensado para leerse sobre madera o como una cifra
+        // suelta, no como texto de botón sobre la placa de pergamino (BuildLegacyTheme ya le da tinta
+        // oscura legible); el borde de foco en dorado del Theme ya distingue este botón cuando toca.
         start.Pressed += StartMatch;
 
         return y + 32f + 16f;

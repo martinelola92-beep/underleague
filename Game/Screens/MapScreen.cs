@@ -42,6 +42,7 @@ public partial class MapScreen : Control
         }
 
         _run = run;
+        Layout.CenterLegacy(this);
         Widgets.Background(this);
         _subtitle = Widgets.Header(this, UiText.Get("ui.map.title"), string.Empty);
 

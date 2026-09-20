@@ -187,7 +187,11 @@ public partial class PitchView : Control
     private void DrawCoordinates(float cell)
     {
         var font = GetThemeDefaultFont();
-        var color = new Color(Style.TextDim, 0.55f);
+
+        // Sobre el césped, no sobre pergamino: Style.TextDim es ahora tinta oscura para leerse sobre
+        // papel (retinte del encargo pregon-resto) y aquí sería invisible. Style.GrassLabel es el tono
+        // claro reservado a lo que se escribe directamente sobre el campo.
+        var color = new Color(Style.GrassLabel, 0.55f);
         for (int column = 0; column < Pitch.Columns; column++)
         {
             Style.DrawText(this, font, new Vector2((column * cell) + 3f, 2f), column.ToString(System.Globalization.CultureInfo.InvariantCulture), Style.TextSmall, color);
@@ -441,10 +445,14 @@ public partial class PitchView : Control
         }
     }
 
-    /// <summary>Rótulo con fondo: sobre el césped y sobre las fichas, el texto solo se lee con respaldo.</summary>
+    /// <summary>
+    /// Rótulo con fondo: sobre el césped y sobre las fichas, el texto solo se lee con respaldo. Es una
+    /// mini etiqueta de papel (Style.Panel, pergamino), no la madera de Style.Background: la tinta de
+    /// Style.Text es oscura desde el retinte del encargo pregon-resto y sobre madera se perdería.
+    /// </summary>
     private void Tag(Font font, Vector2 topLeft, string text, Vector2 size)
     {
-        DrawRect(new Rect2(topLeft - new Vector2(4f, 2f), size + new Vector2(8f, 4f)), new Color(Style.Background, 0.82f));
+        DrawRect(new Rect2(topLeft - new Vector2(4f, 2f), size + new Vector2(8f, 4f)), new Color(Style.Panel, 0.92f));
         Style.DrawText(this, font, topLeft, text, Style.TextSmall, Style.Text);
     }
 
@@ -474,7 +482,10 @@ public partial class PitchView : Control
 
                 string label = count.ToString(System.Globalization.CultureInfo.InvariantCulture);
                 var size = font.GetStringSize(label, HorizontalAlignment.Left, -1f, Style.TextLarge);
-                Style.DrawText(this, font, rect.Position + ((rect.Size - size) / 2f) - new Vector2(0f, 2f), label, Style.TextLarge, count == 0 ? Style.Hole : Style.Text);
+
+                // Directamente sobre el mapa de calor del césped, sin papel debajo: Style.GrassLabel, no
+                // Style.Text (tinta oscura desde el retinte, invisible aquí).
+                Style.DrawText(this, font, rect.Position + ((rect.Size - size) / 2f) - new Vector2(0f, 2f), label, Style.TextLarge, count == 0 ? Style.Hole : Style.GrassLabel);
             }
         }
     }

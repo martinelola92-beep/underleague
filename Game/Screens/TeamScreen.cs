@@ -5,6 +5,7 @@ using Godot;
 using Underleague.Game.Autoload;
 using Underleague.Game.Data;
 using Underleague.Game.Ui;
+using Underleague.Game.Ui.Broadcast;
 using Underleague.Sim.Model;
 using Underleague.Sim.Perks;
 using Underleague.Sim.Placement;
@@ -63,6 +64,8 @@ public partial class TeamScreen : Control
 
     public override void _Ready()
     {
+        Layout.CenterLegacy(this);
+
         RegisterActions();
 
         _pitch = GetNode<PitchView>("Campo");
@@ -641,7 +644,10 @@ public partial class TeamScreen : Control
     {
         var label = new Label { Text = text };
         label.AddThemeFontSizeOverride("font_size", Style.TextSmall);
-        label.AddThemeColorOverride("font_color", Style.Accent);
+
+        // Rubrica, como Widgets.Section: TITULARES/SUPLENTES es una cabecera de sección sobre el
+        // pergamino de PanelPlantilla, y el dorado de Style.Accent se lee peor ahí que sobre madera.
+        label.AddThemeColorOverride("font_color", Pregon.Wax);
         _roster.AddChild(label);
     }
 

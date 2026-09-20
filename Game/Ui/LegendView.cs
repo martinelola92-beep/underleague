@@ -22,6 +22,15 @@ public partial class LegendView : Control
     /// </summary>
     public bool MatchMode { get; set; }
 
+    /// <summary>
+    /// Color del texto de la leyenda; <c>null</c> usa <see cref="Style.TextDim"/> (la tinta oscura del
+    /// retinte de pregón, correcta en Equipo, donde la leyenda vive sobre el panel de pergamino de
+    /// Campo). La vista 2D de depuración del Partido no cambia con este encargo (docs/ui/README.md §3) y
+    /// coloca la leyenda directamente sobre la madera del fondo, sin panel debajo, así que
+    /// <c>MatchScreen</c> le pasa un tono claro en vez de heredar el que ahora es oscuro.
+    /// </summary>
+    public Color? TextColor { get; set; }
+
     public override void _Ready() => MouseFilter = MouseFilterEnum.Ignore;
 
     public override void _Draw()
@@ -111,7 +120,7 @@ public partial class LegendView : Control
         float radius = small ? 4f : 8f;
         DrawCircle(center, radius, fill);
         DrawArc(center, radius + 2f, 0f, Mathf.Tau, 20, ring, 2f);
-        Style.DrawText(this, font, new Vector2(x + 24f, y + 1f), label, Style.TextSmall, Style.TextDim);
+        Style.DrawText(this, font, new Vector2(x + 24f, y + 1f), label, Style.TextSmall, TextColor ?? Style.TextDim);
         return x + 30f + font.GetStringSize(label, HorizontalAlignment.Left, -1f, Style.TextSmall).X + 14f;
     }
 
@@ -130,7 +139,7 @@ public partial class LegendView : Control
             DrawRect(rect, edge, false, 2f);
         }
 
-        Style.DrawText(this, font, new Vector2(x + 28f, 5f), label, Style.TextSmall, Style.TextDim);
+        Style.DrawText(this, font, new Vector2(x + 28f, 5f), label, Style.TextSmall, TextColor ?? Style.TextDim);
         return x + 34f + font.GetStringSize(label, HorizontalAlignment.Left, -1f, Style.TextSmall).X + 22f;
     }
 
@@ -151,7 +160,7 @@ public partial class LegendView : Control
             DrawLine(a, b, color, 2.5f);
         }
 
-        Style.DrawText(this, font, new Vector2(x + 28f, y), label, Style.TextSmall, Style.TextDim);
+        Style.DrawText(this, font, new Vector2(x + 28f, y), label, Style.TextSmall, TextColor ?? Style.TextDim);
         return x + 34f + font.GetStringSize(label, HorizontalAlignment.Left, -1f, Style.TextSmall).X + 22f;
     }
 }

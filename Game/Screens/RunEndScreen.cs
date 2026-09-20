@@ -40,6 +40,7 @@ public partial class RunEndScreen : Control
         var outcome = run.Outcome();
         bool victory = outcome.Kind == RunOutcomeKind.Victory;
 
+        Layout.CenterLegacy(this);
         Widgets.Background(this);
         Widgets.Header(
             this,

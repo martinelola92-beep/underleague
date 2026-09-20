@@ -44,6 +44,7 @@ public partial class PlaceholderScreen : Control
             child.QueueFree();
         }
 
+        Layout.CenterLegacy(this);
         Widgets.Background(this);
         Widgets.Header(this, UiText.Get("ui.nav.pendingTitle"), _missing);
         Widgets.Panel(this, new Rect2(12f, 52f, 1256f, 690f));

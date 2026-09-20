@@ -5,6 +5,7 @@ using Godot;
 using Underleague.Game.Autoload;
 using Underleague.Game.Data;
 using Underleague.Game.Ui;
+using Underleague.Game.Ui.Broadcast;
 using Underleague.Sim.Data;
 using Underleague.Sim.Perks;
 using Underleague.Sim.Run;
@@ -48,6 +49,8 @@ public partial class StartScreen : Control
             return;
         }
 
+        Layout.CenterLegacy(this);
+
         _catalog = DataLoader.FromJson(GameData.Snapshot);
         _clubs = ClubLoader.FromJson(GameData.Snapshot);
 
@@ -88,7 +91,7 @@ public partial class StartScreen : Control
             y += 32f;
         }
 
-        _chosen = Widgets.Body(this, string.Empty, new Vector2(24f, y + 8f), 340f, Style.Accent);
+        _chosen = Widgets.Body(this, string.Empty, new Vector2(24f, y + 8f), 340f, Pregon.Wax);
         _description = Widgets.Body(this, string.Empty, new Vector2(24f, y + 30f), 340f);
     }
 
@@ -123,7 +126,9 @@ public partial class StartScreen : Control
             exists ? UiText.Get("ui.nav.continue") : UiText.Get("ui.start.noSave"),
             new Vector2(412f, 278f),
             830f,
-            exists ? Style.Accent : Style.TextDim);
+            // Rubrica, no dorado: Style.Accent es un dorado pensado para leerse sobre madera, no sobre
+            // el pergamino de este panel.
+            exists ? Pregon.Wax : Style.TextDim);
 
         if (!exists)
         {
@@ -154,7 +159,7 @@ public partial class StartScreen : Control
 
         foreach (var (candidate, button) in _clubButtons)
         {
-            button.AddThemeColorOverride("font_color", candidate.Id == club.Id ? Style.Accent : Style.Text);
+            button.AddThemeColorOverride("font_color", candidate.Id == club.Id ? Pregon.Wax : Style.Text);
         }
     }
 

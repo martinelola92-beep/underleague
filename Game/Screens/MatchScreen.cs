@@ -173,6 +173,7 @@ public partial class MatchScreen : Control
         var playback = _run.Playback!;
         var node = playback.Node;
 
+        Layout.CenterLegacy(this);
         Widgets.Background(this);
         Widgets.Header(
             this,
@@ -205,6 +206,10 @@ public partial class MatchScreen : Control
             MatchMode = true,
             Position = new Vector2(16f, 106f),
             Size = new Vector2(1248f, 44f),
+
+            // Vive en el hueco entre el marcador y el panel del campo, sobre la madera del fondo sin
+            // ningún pergamino debajo: Style.TextDim (tinta oscura desde el retinte) se perdería ahí.
+            TextColor = Style.OnWood,
         };
         AddChild(legend);
 
@@ -469,7 +474,9 @@ public partial class MatchScreen : Control
 
         var window = new Control { Position = Vector2.Zero, Size = new Vector2(1280f, 800f) };
         AddChild(window);
-        Widgets.Panel(window, new Rect2(0f, 0f, 1280f, 800f), new Color(0f, 0f, 0f, 0.62f));
+        // Cortina modal, no pergamino: sin parchment:false el rasgado de ParchmentPanel se dibujaría
+        // sobre un rectángulo semitransparente que cubre la pantalla entera, donde no pinta nada.
+        Widgets.Panel(window, new Rect2(0f, 0f, 1280f, 800f), new Color(0f, 0f, 0f, 0.62f), parchment: false);
         float height = 150f + (point.Candidates.Count * 36f);
         var area = new Rect2(340f, 400f - (height / 2f), 600f, height);
         Widgets.Panel(window, area, Style.Panel);

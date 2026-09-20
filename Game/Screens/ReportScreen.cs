@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using Godot;
 using Underleague.Game.Autoload;
 using Underleague.Game.Ui;
+using Underleague.Game.Ui.Broadcast;
 using Underleague.Sim.Run.View;
 
 namespace Underleague.Game.Screens;
@@ -36,6 +37,7 @@ public partial class ReportScreen : Control
         var report = run.PostMatch();
         if (report is null)
         {
+            Layout.CenterLegacy(this);
             Widgets.Background(this);
             Widgets.Header(this, UiText.Get("ui.report.title"), UiText.Get("ui.report.none"));
             Widgets.Button(this, UiText.Get("ui.nav.team"), new Rect2(932f, 706f, 132f, 26f)).Pressed += ViewTeam;
@@ -68,6 +70,7 @@ public partial class ReportScreen : Control
 
     private void Build()
     {
+        Layout.CenterLegacy(this);
         Widgets.Background(this);
         Widgets.Header(
             this,
@@ -232,7 +235,9 @@ public partial class ReportScreen : Control
 
         if (_report.Items.Count > 0)
         {
-            AddLine(column, UiText.Get("ui.report.items"), Style.Accent);
+            // Rubrica, como Widgets.Section: es una cabecera de sub-lista sobre el pergamino de la
+            // columna de perks, y el dorado de Style.Accent se lee peor ahí que sobre madera.
+            AddLine(column, UiText.Get("ui.report.items"), Pregon.Wax);
             foreach (var item in _report.Items)
             {
                 var card = new OptionCard();
@@ -240,7 +245,10 @@ public partial class ReportScreen : Control
                 card.Bind(
                     0,
                     UiText.Get("ui.reward.badgeItem"),
-                    Style.LinkLine,
+
+                    // Style.LinkLine es un gris translúcido para el césped de PitchView, no una placa
+                    // opaca de distintivo sobre pergamino: se lavaba casi invisible ahí.
+                    Style.NeutralBadge,
                     UiText.Get("ui.report.itemRow", item.ItemName, item.OwnerName),
                     string.Empty,
                     item.Restricted ? UiText.Get("ui.report.itemRestricted") : string.Empty,

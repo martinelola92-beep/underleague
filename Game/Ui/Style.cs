@@ -15,6 +15,18 @@ namespace Underleague.Game.Ui;
 /// estado físico color e icono, y las dos capas de la zona de acción se distinguen por tono <b>y</b> por
 /// tipo de borde (sólido frente a punteado con trama).
 /// </para>
+/// <para>
+/// <b>Voz de pregón (encargo pregon-resto, ADR 0120):</b> desde el 20 sep 2026 la paleta deja el tema
+/// oscuro de cristal y pasa a la de <c>docs/ui/README.md</c> §1 — madera oscura de fondo, pergamino para
+/// los paneles, tinta parda para el texto, dorado para lo destacado — con los MISMOS nombres de token, así
+/// que ninguna pantalla vieja tiene que tocarse para heredarla. Dos tokens quedan fuera a propósito:
+/// <see cref="Hole"/> (sigue siendo un rojo claro: lo usa <c>PitchView</c> sobre el césped oscuro, que no
+/// cambia, y un rojo tan oscuro como la sangre heráldica se volvería invisible ahí) y los colores de
+/// equipo (siguen siendo azur/gules, ya lo eran). <see cref="OnWood"/>, <see cref="GrassLabel"/> y
+/// <see cref="NeutralBadge"/> son nuevos: hacen falta porque algunos textos viven directamente sobre la
+/// madera del fondo o sobre el césped, sin un panel de pergamino debajo, y el mismo tono que ahora lee
+/// bien sobre pergamino (tinta oscura) sería invisible ahí.
+/// </para>
 /// </summary>
 public static class Style
 {
@@ -27,13 +39,48 @@ public static class Style
     /// <summary>Alto de la ficha colapsada (UI-011): una tira de 24 px, ni uno más.</summary>
     public const int CollapsedHeight = 24;
 
-    public static readonly Color Background = new("14171c");
-    public static readonly Color Panel = new("1c2027");
-    public static readonly Color PanelSoft = new("242933");
-    public static readonly Color Text = new("e6e9ee");
-    public static readonly Color TextDim = new("97a0ae");
-    public static readonly Color Accent = new("f0b429");
-    public static readonly Color Line = new("39404d");
+    /// <summary>Fondo de pantalla: madera oscura, la estructura persistente (docs/ui/README.md §1).</summary>
+    public static readonly Color Background = new("241a10");
+
+    /// <summary>Panel de contenido: pergamino. <see cref="Widgets.Panel"/> le añade el borde rasgado.</summary>
+    public static readonly Color Panel = new("efe2c0");
+
+    /// <summary>Segundo tono de pergamino, algo más cálido: paneles destacados (ficha expandida, marcador).</summary>
+    public static readonly Color PanelSoft = new("e6d2a0");
+
+    /// <summary>Cuerpo de texto sobre pergamino: tinta parda (nunca sobre madera ni césped sin más).</summary>
+    public static readonly Color Text = new("3a2a1a");
+
+    /// <summary>Texto secundario sobre pergamino: la misma tinta, algo más clara.</summary>
+    public static readonly Color TextDim = new("6b5335");
+
+    /// <summary>Dorado: lo destacado y la economía.</summary>
+    public static readonly Color Accent = new("c9982f");
+
+    /// <summary>Borde de pergamino y líneas finas sobre pergamino.</summary>
+    public static readonly Color Line = new("b89c68");
+
+    /// <summary>
+    /// Texto claro para lo que vive directamente sobre <see cref="Background"/> (madera), sin un panel de
+    /// pergamino debajo: la ayuda de entrada al pie de casi toda pantalla, el subtítulo de la cabecera.
+    /// <see cref="Text"/>/<see cref="TextDim"/> son tinta oscura a propósito para leerse sobre pergamino —
+    /// sobre madera oscura serían invisibles.
+    /// </summary>
+    public static readonly Color OnWood = new("cdb98c");
+
+    /// <summary>
+    /// Texto para lo que se escribe directamente sobre el césped del campo de colocación (<c>PitchView</c>),
+    /// sin backdrop de papel: coordenadas de la cuadrícula, el número de cobertura. El césped no cambia
+    /// con el resto del retinte (docs/ui/README.md §8), así que sigue necesitando un tono claro.
+    /// </summary>
+    public static readonly Color GrassLabel = new("e8ddc0");
+
+    /// <summary>
+    /// Distintivo neutro para lo que antes tomaba prestado <see cref="LinkLine"/> (un gris translúcido
+    /// pensado para dibujarse sobre césped, no como una placa opaca sobre pergamino): el "CONS" del
+    /// Mercado y el "ITEM" del Informe.
+    /// </summary>
+    public static readonly Color NeutralBadge = new("5c6f8f");
 
     public static readonly Color Grass = new("223028");
     public static readonly Color GrassOwn = new("2a3b31");
@@ -87,7 +134,16 @@ public static class Style
     public static readonly Color LinkLine = new(0.72f, 0.76f, 0.83f, 0.45f);
     public static readonly Color LinkCreated = new("5fd07a");
     public static readonly Color LinkBroken = new("e2585a");
+
+    /// <summary>
+    /// Rojo claro deliberadamente <b>fuera</b> del retinte de pregón: <c>PitchView</c> lo pinta sobre el
+    /// césped oscuro (que no cambia) para el hueco de cobertura y el cursor inválido, y necesita ser
+    /// claro ahí. Donde este mismo token se usaba como texto de aviso sobre un panel de pergamino
+    /// (Mercado, Recompensa...) sigue leyéndose — no es tinta oscura, pero tampoco tan claro como para
+    /// perderse en el pergamino — y no hacía falta partirlo en dos tokens para eso.
+    /// </summary>
     public static readonly Color Hole = new("e2585a");
+
     public static readonly Color Cursor = new("f0b429");
 
     private static readonly Color[] PositionColors =
@@ -320,17 +376,20 @@ public static class Style
         new("d9544d"), // 5
     };
 
+    // Oscurecidos respecto al tema oscuro original (retoque del encargo pregon-resto, punto 4: "contraste
+    // de los iconos de nodo del Mapa sobre pergamino"): los tonos claros pensados para un fondo casi
+    // negro se lavaban sobre el pergamino claro del panel del grafo.
     private static readonly Color[] NodeColors =
     {
-        new("8fa4c0"), // partido de liga
-        new("c58fd0"), // partido de élite
-        new("57c2b5"), // mercado
-        new("6fb3e0"), // clínica
-        new("9aa0aa"), // taller (fase 3)
-        new("b0c96a"), // entrenamiento
-        new("d8b25e"), // evento
-        new("d9544d"), // jefe
-        new("d2a0c8"), // inscripción
+        new("3f5a80"), // partido de liga
+        new("7d4a91"), // partido de élite
+        new("1f7d70"), // mercado
+        new("2d6ea3"), // clínica
+        new("5f6570"), // taller (fase 3)
+        new("6f8a34"), // entrenamiento
+        new("8a6a2a"), // evento
+        new("a33530"), // jefe
+        new("925c85"), // inscripción
     };
 
     /// <summary>Color del nivel de dificultad, 1..5 (RF-012).</summary>

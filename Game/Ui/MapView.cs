@@ -105,7 +105,11 @@ public partial class MapView : Control
 
                 bool live = node.Id == CurrentNodeId && Contains(AvailableIds, node.Next[i]);
                 bool open = _reachable.Contains(node.Id) && _reachable.Contains(node.Next[i]);
-                var color = live ? Style.Accent : new Color(Style.Line, open ? 1f : 0.35f);
+
+                // Style.Line es el tono de borde del pergamino (retinte del encargo pregon-resto): claro
+                // y pensado para un filete fino, no para una arista que tiene que leerse a distancia sobre
+                // el mismo pergamino. Style.TextDim, más oscuro, aguanta mejor el contraste aquí.
+                var color = live ? Style.Accent : new Color(Style.TextDim, open ? 1f : 0.35f);
                 float width = live ? 2.5f : 1f;
 
                 // Del borde al borde: con cuatro carriles hay cruces, y una línea que muere en el centro

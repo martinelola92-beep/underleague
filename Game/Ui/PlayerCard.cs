@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using Godot;
 using Underleague.Game.Data;
+using Underleague.Game.Ui.Broadcast;
 using Underleague.Sim.Model;
 using Underleague.Sim.Perks;
 using Underleague.Sim.Run.Systems.Items;
@@ -304,7 +305,10 @@ public partial class PlayerCard : Control
         foreach (var section in _sections)
         {
             y += SectionGap;
-            Style.DrawText(this, font, new Vector2(Padding, y), section.Title, Style.TextSmall, Style.Accent);
+
+            // Rubrica, no dorado: es una cabecera de subsección sobre el pergamino de la ficha
+            // expandida, y el dorado de Style.Accent se lee peor ahí que sobre madera.
+            Style.DrawText(this, font, new Vector2(Padding, y), section.Title, Style.TextSmall, Pregon.Wax);
 
             if (section.Compact)
             {

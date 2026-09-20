@@ -87,6 +87,7 @@ public partial class MarketScreen : Control
 
     private void Build()
     {
+        Layout.CenterLegacy(this);
         Widgets.Background(this);
         Widgets.Header(
             this,
@@ -578,7 +579,11 @@ public partial class MarketScreen : Control
             MarketCategories.Player => Style.Of(Sim.Model.Position.Midfielder),
             MarketCategories.Perk => Style.Accent,
             MarketCategories.Item => Style.Of(Sim.Model.Position.Defender),
-            _ => Style.LinkLine,
+
+            // Style.LinkLine es un gris translúcido pensado para dibujarse sobre el césped de PitchView,
+            // no como una placa opaca de distintivo sobre el pergamino de OptionCard: se lavaba casi
+            // invisible ahí. Style.NeutralBadge es el mismo papel, opaco.
+            _ => Style.NeutralBadge,
         };
     }
 }

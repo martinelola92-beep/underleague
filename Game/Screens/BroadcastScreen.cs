@@ -58,8 +58,21 @@ public partial class BroadcastScreen : Control
     private static readonly PitchVariant DefaultVariant = new("D", Perspective: true, Elevation: 45f, Fov: 30f, Stadium: true);
 
     private const float CanvasWidth = 1920f;
-    private const float CanvasHeight = 1200f;
-    private const float StripY = 1105f;
+
+    /// <summary>Margen entre el borde inferior de las tiras de jugador y el borde del lienzo.</summary>
+    private const float StripBottomMargin = 23f;
+
+    /// <summary>
+    /// Alto del lienzo lógico. <b>No</b> es una constante (RA-027, tarea 16:9): sale de
+    /// <see cref="CanvasWidth"/> por el aspecto real del área lógica (<c>GetViewport().GetVisibleRect()</c>)
+    /// en cada <see cref="Build"/> — 1200 a 16:10 (el de siempre, sin cambios), 1080 a 16:9. Todo lo
+    /// anclado al fondo del lienzo (tiras, bandeja) se calcula relativo a este valor, nunca a un número
+    /// fijo, para que la composición no se corte cuando el aspecto cambia.
+    /// </summary>
+    private float _canvasHeight = 1200f;
+
+    /// <summary>Y de las tiras de jugador y la banqueta, pegadas al borde inferior del lienzo real.</summary>
+    private float _stripY;
 
     /// <summary>Ticks lógicos por segundo (RT-020).</summary>
     private const float TicksPerSecond = 15f;
@@ -251,16 +264,22 @@ public partial class BroadcastScreen : Control
     private void Build()
     {
         _catalog = _run.Catalog!;
-        Size = new Vector2(CanvasWidth, CanvasHeight);
+
+        // Alto real del lienzo (RA-027, tarea 16:9): 1920 de ancho por el aspecto del área lógica —1200
+        // a 16:10, 1080 a 16:9—, nunca un número fijo. Se lee antes de nada que dependa de ella.
+        var viewport = GetViewport().GetVisibleRect().Size;
+        _canvasHeight = viewport is { X: > 0f, Y: > 0f } ? CanvasWidth * (viewport.Y / viewport.X) : 1200f;
+        _stripY = _canvasHeight - PlayerStrip.DesignHeight - StripBottomMargin;
+
+        Size = new Vector2(CanvasWidth, _canvasHeight);
         Position = Vector2.Zero;
         Theme = Pregon.BuildTheme();
         MouseFilter = MouseFilterEnum.Stop;
 
-        var viewport = GetViewport().GetVisibleRect().Size;
         float scale = viewport.X > 0f ? viewport.X / CanvasWidth : 1f;
         Scale = new Vector2(scale, scale);
 
-        Widgets.Panel(this, new Rect2(Vector2.Zero, new Vector2(CanvasWidth, CanvasHeight)), new Color("2a2418"));
+        Widgets.Panel(this, new Rect2(Vector2.Zero, new Vector2(CanvasWidth, _canvasHeight)), new Color("2a2418"));
 
         BindPlayback();
 
@@ -276,13 +295,13 @@ public partial class BroadcastScreen : Control
             // tiras, no una franja recortada — la que probé antes dejaba negro alrededor y no es lo que
             // pide la composición validada.
             Position = Vector2.Zero,
-            Size = new Vector2(CanvasWidth, CanvasHeight),
+            Size = new Vector2(CanvasWidth, _canvasHeight),
 
             // docs/ui/README.md §7: Size 10,75 a 16:10 (9,68 a 16:9) — ancho del campo (16) + 0,6 casillas
             // por lado, para el lienzo entero: OrthoSize (alto) = (Columnas + 1,2) / aspecto. Solo se lee
             // en ortográfico (variantes A/B o el campo de siempre); en perspectiva el encaje automático de
             // MatchPitchView3D decide la distancia y el desplazamiento por su cuenta.
-            OrthoSize = (Pitch.Columns + 1.2f) / (CanvasWidth / CanvasHeight),
+            OrthoSize = (Pitch.Columns + 1.2f) / (CanvasWidth / _canvasHeight),
 
             // Bajado, no centrado (composición validada: el tablero se lleva más margen arriba que las
             // tiras abajo). 0,27 unidades de mundo: medido por píxel contra
@@ -320,14 +339,14 @@ public partial class BroadcastScreen : Control
         {
             var strip = new PlayerStrip();
             AddChild(strip);
-            strip.Position = new Vector2(x0 + (i * 244f), StripY);
+            strip.Position = new Vector2(x0 + (i * 244f), _stripY);
             strip.Size = new Vector2(PlayerStrip.DesignWidth, PlayerStrip.DesignHeight);
             _strips.Add(strip);
         }
 
         _bench = new BenchPlaque();
         AddChild(_bench);
-        _bench.Position = new Vector2(x0 + (7 * 244f) + 12f, StripY);
+        _bench.Position = new Vector2(x0 + (7 * 244f) + 12f, _stripY);
         _bench.Size = new Vector2(BenchPlaque.DesignWidth, BenchPlaque.DesignHeight);
 
         _stamp = new Stamp();
@@ -352,11 +371,11 @@ public partial class BroadcastScreen : Control
         _record = new MatchRecord();
         AddChild(_record);
         _record.Position = Vector2.Zero;
-        _record.Size = new Vector2(CanvasWidth, CanvasHeight);
+        _record.Size = new Vector2(CanvasWidth, _canvasHeight);
 
         _tray = new DecisionTray();
         AddChild(_tray);
-        _tray.Position = new Vector2(0f, CanvasHeight - 12f - DecisionTray.DesignHeight);
+        _tray.Position = new Vector2(0f, _canvasHeight - 12f - DecisionTray.DesignHeight);
         _tray.Size = new Vector2(CanvasWidth, DecisionTray.DesignHeight);
         _tray.Chosen += OnSubstituteChosen;
 
