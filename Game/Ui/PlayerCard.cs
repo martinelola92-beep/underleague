@@ -54,6 +54,62 @@ public partial class PlayerCard : Control
     private bool _bench;
     private float _flash;
     private float _lastWidth;
+    private DropHighlight _drop;
+    private DropSlotKind _dropSlot;
+
+    /// <summary>
+    /// Estado de destino de arrastre (encargo mercado-arrastrar, UI-006): mientras el Mercado tiene una
+    /// carta de artículo cogida, cada ficha de la plantilla se pinta como <see cref="Valid"/> o
+    /// <see cref="Invalid"/> según si ese jugador puede llevarlo (<c>MarketRow.Carriers</c>), <b>todas a la
+    /// vez</b> y no solo la que el ratón toca — es la respuesta visual a "qué huecos aceptan esto" antes de
+    /// soltar. <see cref="None"/> fuera de un arrastre.
+    /// </summary>
+    public enum DropHighlight
+    {
+        None,
+        Valid,
+        Invalid,
+    }
+
+    /// <summary>Qué hueco de la tira se resalta mientras <see cref="Drop"/> es <see cref="DropHighlight.Valid"/>.</summary>
+    public enum DropSlotKind
+    {
+        None,
+        Perk,
+        Item,
+    }
+
+    /// <summary>Ver <see cref="DropHighlight"/>. La pantalla lo fija sobre <b>todas</b> las fichas a la vez al coger un artículo.</summary>
+    public DropHighlight Drop
+    {
+        get => _drop;
+        set
+        {
+            if (_drop == value)
+            {
+                return;
+            }
+
+            _drop = value;
+            QueueRedraw();
+        }
+    }
+
+    /// <summary>Hueco que <see cref="Drop"/> señala (perk u objeto); <see cref="DropSlotKind.None"/> si no aplica.</summary>
+    public DropSlotKind TargetSlot
+    {
+        get => _dropSlot;
+        set
+        {
+            if (_dropSlot == value)
+            {
+                return;
+            }
+
+            _dropSlot = value;
+            QueueRedraw();
+        }
+    }
 
     /// <summary>Centro de la primera frase de zona marcada y qué nombra; null si la ficha no marca ninguna.</summary>
     private Vector2? _hintPoint;
@@ -269,6 +325,19 @@ public partial class PlayerCard : Control
             DrawRect(new Rect2(Vector2.Zero, Size), Style.Accent, false, 1f);
         }
 
+        // Destino de arrastre (encargo mercado-arrastrar): un tinte por encima del fondo de siempre, no
+        // en vez de él, para que la ficha siga siendo la misma ficha —color de raza, hueco de perk y de
+        // objeto— y solo cambie si acepta lo que se está arrastrando (UI-002: color y borde juntos).
+        if (_drop == DropHighlight.Valid)
+        {
+            DrawRect(new Rect2(Vector2.Zero, Size), new Color(Style.LinkCreated, 0.22f));
+            DrawRect(new Rect2(Vector2.Zero, Size), Style.LinkCreated, false, 2f);
+        }
+        else if (_drop == DropHighlight.Invalid)
+        {
+            DrawRect(new Rect2(Vector2.Zero, Size), new Color(Style.LinkBroken, 0.16f));
+        }
+
         if (_flash > 0f)
         {
             DrawRect(new Rect2(Vector2.Zero, new Vector2(width, Style.CollapsedHeight)), new Color(Style.Accent, _flash * 0.55f));
@@ -391,6 +460,19 @@ public partial class PlayerCard : Control
         }
 
         DrawItemSlot(new Vector2(slotsRight - 5f, 12f), 4f, _item is not null);
+
+        // Anillo extra sobre el hueco al que apunta un arrastre válido (encargo mercado-arrastrar): el
+        // hueco de perk señala el siguiente libre; el de objeto, el cuadrado, se ocupe o no —un objeto
+        // siempre sustituye al anterior, nunca hace falta uno vacío.
+        if (_drop == DropHighlight.Valid && _dropSlot == DropSlotKind.Perk && _perkCount < _perkSlots)
+        {
+            DrawArc(new Vector2(slotsLeft + (_perkCount * 8f) + 4f, 12f), 5f, 0f, Mathf.Tau, 12, Style.LinkCreated, 2f);
+        }
+        else if (_drop == DropHighlight.Valid && _dropSlot == DropSlotKind.Item)
+        {
+            var center = new Vector2(slotsRight - 5f, 12f);
+            DrawRect(new Rect2(center - new Vector2(6f, 6f), new Vector2(12f, 12f)), Style.LinkCreated, false, 2f);
+        }
 
         var stateColor = Style.Of(_player.PhysicalState);
         DrawRect(new Rect2(width - StateZoneWidth, 3f, 8f, Style.CollapsedHeight - 6f), stateColor);

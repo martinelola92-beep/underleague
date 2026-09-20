@@ -5,6 +5,7 @@ using Underleague.Game.Autoload;
 using Underleague.Game.Ui;
 using Underleague.Sim.Model;
 using Underleague.Sim.Run;
+using Underleague.Sim.Run.Systems.Market;
 using Underleague.Sim.Run.View;
 
 namespace Underleague.Game.Screens;
@@ -273,18 +274,78 @@ public partial class CaptureRunner : Control
         else
         {
             var market = await Show("res://Scenes/Mercado.tscn");
-            await Click(new Vector2(700f, 92f));
-            await Save("mercado");
 
-            // BB-J: la columna de PERKS, con uno elegido, para que se vea su panel de detalle —ahí es
-            // donde el Mercado enseña cuántos de la etiqueta que el perk cuenta lleva ya la plantilla.
-            await Click(new Vector2(470f, 95f));
-            await Save("mercado-perk");
+            // Encargo mercado-arrastrar (UI-010): la ficha de la plantilla también se puede ampliar aquí,
+            // igual que en Equipo — un clic sobre el primer titular, por el mismo camino que un jugador de
+            // verdad, para que la captura base enseñe el retrato en medallón grande y las secciones
+            // completas, no solo la tira colapsada. Se vuelve a colapsar antes de seguir: el resto de la
+            // secuencia busca cartas por posición real en el árbol (<see cref="FindPlayerCard"/>) y una
+            // ficha ampliada empuja a las de abajo fuera del scroll visible.
+            int firstRosterId = run.State is { Roster.Count: > 0 } ? run.State.Roster[0].Id : -1;
+            if (firstRosterId >= 0 && FindPlayerCard(market, firstRosterId) is { } firstCard)
+            {
+                await Click(firstCard.GetGlobalRect().GetCenter());
+                await Save("mercado");
 
-            // Prueba de humo de la compra: el botón de comprar del objeto elegido.
-            int goldBefore = run.State!.Gold;
-            await Click(new Vector2(549f, 679f));
-            GD.Print($"compra: oro {goldBefore} -> {run.State!.Gold}");
+                if (FindPlayerCard(market, firstRosterId) is { } expandedCard)
+                {
+                    await Click(expandedCard.GetGlobalRect().GetCenter());
+                }
+            }
+            else
+            {
+                GD.PushWarning("no se encontró la ficha del primer jugador: la captura base del Mercado no enseña ninguna ficha ampliada");
+                await Save("mercado");
+            }
+
+            // Encargo mercado-arrastrar (UI-001, UI-006): un arrastre de verdad, no un clic. Se busca el
+            // primer perk que se pueda pagar y que tenga a quién dárselo (Sim.Run.View.MarketRow.Carriers,
+            // la misma lista que valida la compra), se localiza su carta y la ficha de su primer portador
+            // por posición real en el árbol —nunca por pixel a ciegas— y se arrastra la una hasta la otra.
+            var marketView = run.Market();
+            int perkIndex = -1;
+            int carrierId = -1;
+            if (marketView is not null)
+            {
+                foreach (var perk in marketView.Perks)
+                {
+                    if (perk.Affordable && perk.Carriers.Count > 0)
+                    {
+                        perkIndex = perk.Index;
+                        carrierId = perk.Carriers[0].PlayerId;
+                        break;
+                    }
+                }
+            }
+
+            if (perkIndex < 0)
+            {
+                GD.PushWarning("ningún perk del mercado tiene comprador elegible: no hay captura de arrastre");
+            }
+            else
+            {
+                var offerCard = FindOfferCard(market, MarketCategories.Perk, perkIndex);
+                var targetCard = FindPlayerCard(market, carrierId);
+                if (targetCard is null || offerCard is null)
+                {
+                    GD.PushWarning("no se localizó la carta del perk o la ficha de su portador: no hay captura de arrastre");
+                }
+                else
+                {
+                    var cardCenter = offerCard.GetGlobalRect().GetCenter();
+                    var targetCenter = targetCard.GetGlobalRect().GetCenter();
+                    int goldBefore = run.State!.Gold;
+
+                    await Press(cardCenter);
+                    await Move(targetCenter);
+                    await Save("mercado-arrastre");
+
+                    await Release(targetCenter);
+                    await Save("mercado-asignado");
+                    GD.Print($"arrastre: perk #{perkIndex} -> jugador {carrierId}, oro {goldBefore} -> {run.State!.Gold}");
+                }
+            }
+
             Drop(market);
         }
 
@@ -324,17 +385,18 @@ public partial class CaptureRunner : Control
     /// <summary>Un clic de ratón por el mismo camino que la entrada real, para no llamar a nada por dentro.</summary>
     private async System.Threading.Tasks.Task Click(Vector2 at)
     {
+        var physical = ToPhysical(at);
         GetViewport().PushInput(new InputEventMouseButton
         {
-            Position = at,
-            GlobalPosition = at,
+            Position = physical,
+            GlobalPosition = physical,
             ButtonIndex = MouseButton.Left,
             Pressed = true,
         });
         GetViewport().PushInput(new InputEventMouseButton
         {
-            Position = at,
-            GlobalPosition = at,
+            Position = physical,
+            GlobalPosition = physical,
             ButtonIndex = MouseButton.Left,
             Pressed = false,
         });
@@ -343,6 +405,122 @@ public partial class CaptureRunner : Control
         {
             await ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame);
         }
+    }
+
+    /// <summary>Empieza un arrastre: solo el botón abajo, por el mismo camino que un clic de verdad.</summary>
+    private async System.Threading.Tasks.Task Press(Vector2 at)
+    {
+        var physical = ToPhysical(at);
+        GetViewport().PushInput(new InputEventMouseButton
+        {
+            Position = physical,
+            GlobalPosition = physical,
+            ButtonIndex = MouseButton.Left,
+            Pressed = true,
+        });
+
+        for (int i = 0; i < 2; i++)
+        {
+            await ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame);
+        }
+    }
+
+    /// <summary>Mueve el ratón sin soltar: dispara los <c>MouseEntered</c>/<c>MouseExited</c> de las cartas por las que pasa.</summary>
+    private async System.Threading.Tasks.Task Move(Vector2 at)
+    {
+        var physical = ToPhysical(at);
+        GetViewport().PushInput(new InputEventMouseMotion { Position = physical, GlobalPosition = physical });
+
+        for (int i = 0; i < 4; i++)
+        {
+            await ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame);
+        }
+    }
+
+    /// <summary>Suelta donde esté el ratón en ese instante: el gesto que cierra un arrastre de verdad.</summary>
+    private async System.Threading.Tasks.Task Release(Vector2 at)
+    {
+        var physical = ToPhysical(at);
+        GetViewport().PushInput(new InputEventMouseButton
+        {
+            Position = physical,
+            GlobalPosition = physical,
+            ButtonIndex = MouseButton.Left,
+            Pressed = false,
+        });
+
+        for (int i = 0; i < 4; i++)
+        {
+            await ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame);
+        }
+    }
+
+    /// <summary>
+    /// <c>Viewport.PushInput</c> inyecta al mismo nivel que un evento real del sistema de ventanas, así
+    /// que espera <b>pixeles físicos de la ventana</b> — mientras que <c>Control.GetGlobalRect()</c> (de
+    /// donde salen todos los puntos que clica esta escena) da coordenadas en el lienzo lógico que
+    /// <c>window/stretch/mode="canvas_items"</c> escala para pintar. A resolución 1280x800 (la de siempre
+    /// en estas capturas) los dos espacios coinciden y el desajuste no se nota; a 1920x1080 (16:9, la que
+    /// pide el encargo <c>mercado-arrastrar</c>) el lienzo lógico crece a ~1422x800 (<c>Layout.LegacySize</c>
+    /// más el sobreancho de 16:9) y hace falta este factor, o el clic cae varias cartas a un lado de la
+    /// que se ve en pantalla.
+    /// </summary>
+    private Vector2 ToPhysical(Vector2 logical)
+    {
+        var visible = GetViewport().GetVisibleRect().Size;
+        var window = (Vector2)DisplayServer.WindowGetSize();
+        if (visible.X <= 0f || visible.Y <= 0f)
+        {
+            return logical;
+        }
+
+        return new Vector2(logical.X * window.X / visible.X, logical.Y * window.Y / visible.Y);
+    }
+
+    /// <summary>
+    /// La carta de un artículo arrastrable del Mercado, por categoría e índice de dato —los metadatos que
+    /// <c>MarketScreen.DraggableColumn</c> deja en cada carta—, nunca por una franja de pixel adivinada: el
+    /// área lógica real crece en 16:9 y <c>Layout</c> centra la pantalla dentro de ella (docs/entorno.md),
+    /// así que dos columnas pueden solaparse en X según la resolución de captura.
+    /// </summary>
+    private static OptionCard? FindOfferCard(Node root, string category, int index)
+    {
+        foreach (var child in root.GetChildren())
+        {
+            if (child is OptionCard card
+                && card.HasMeta("marketCategory")
+                && card.GetMeta("marketCategory").AsString() == category
+                && card.GetMeta("marketIndex").AsInt32() == index)
+            {
+                return card;
+            }
+
+            if (FindOfferCard(child, category, index) is { } found)
+            {
+                return found;
+            }
+        }
+
+        return null;
+    }
+
+    /// <summary>La ficha de ese jugador en el árbol vivo, sea cual sea la pantalla que la contenga.</summary>
+    private static PlayerCard? FindPlayerCard(Node root, int playerId)
+    {
+        foreach (var child in root.GetChildren())
+        {
+            if (child is PlayerCard card && card.PlayerId == playerId)
+            {
+                return card;
+            }
+
+            if (FindPlayerCard(child, playerId) is { } found)
+            {
+                return found;
+            }
+        }
+
+        return null;
     }
 
     private async System.Threading.Tasks.Task Save(string name)

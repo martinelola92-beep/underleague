@@ -534,8 +534,32 @@ public static class UiText
         ["ui.input.padMatch"] = "MANDO  A: pausa y continuar · izquierda/derecha: un tick atrás o adelante · B: ir al informe · F3: retransmisión",
         ["ui.input.mouseReport"] = "RATÓN  rueda: recorrer los perks activados · clic en Continuar para seguir",
         ["ui.input.mouseReward"] = "RATÓN  clic en una opción: elegirla · clic en un jugador: dársela",
-        ["ui.input.mouseMarket"] = "RATÓN  clic en un artículo: verlo · clic en Comprar o en Vender para cerrar el trato",
+        // Encargo mercado-arrastrar (20 sep 2026, UI-001/UI-006): el desplegable de "a quién se lo doy"
+        // desaparece, así que la ayuda de entrada describe el arrastre, no un clic. Es el mismo patrón
+        // mouseX/padX que ya usan partido (mouseMatch/padMatch): antes solo había mouseMarket, porque el
+        // mando no estaba implementado en esta pantalla (ui.input.padPending); ahora lo está.
+        ["ui.input.mouseMarket"] =
+            "RATÓN  arrastra la carta de un perk, un objeto o un consumible hasta el hueco de un jugador o "
+            + "la bolsa del equipo; suelta fuera para cancelar sin coste. Jugadores, venta y ampliar plantilla se compran con un clic.",
+        ["ui.input.padMarket"] =
+            "MANDO  A coge la carta señalada, la cruceta mueve el cursor por la plantilla y la bolsa, A suelta, "
+            + "B cancela. Fichar jugadores, vender y ampliar plantilla siguen siendo solo de ratón.",
         ["ui.market.sellNobody"] = "elige a quién vender en la lista",
+
+        // Encargo mercado-arrastrar (20 sep 2026, UI-001/UI-006/UI-010): perk, objeto y consumible se
+        // compran arrastrando su carta hasta el hueco de un jugador o la bolsa del equipo, en vez de con
+        // el desplegable "QUIÉN LO LLEVA" (ui.market.carrier, ya sin uso).
+        ["ui.market.bagTitle"] = "BOLSA DEL EQUIPO",
+        ["ui.market.bagHint"] = "suelta aquí un consumible",
+        ["ui.market.detailNone"] = "pasa el ratón o el cursor por un artículo para verlo aquí",
+        ["ui.market.holding"] = "SUJETANDO:",
+        ["ui.market.dragToPlayer"] = "arrastra la carta hasta el hueco de un jugador de la plantilla",
+        ["ui.market.dragToBag"] = "arrastra la carta hasta la bolsa del equipo",
+        ["ui.market.reasonPerkCarrier"] = "{0} no puede llevar este perk: sin hueco libre, ya lo lleva, o no cumple sus etiquetas",
+        ["ui.market.reasonItemCarrier"] = "{0} no puede llevar este objeto",
+        ["ui.market.reasonWrongPlayer"] = "esto se suelta sobre la bolsa del equipo, no sobre un jugador",
+        ["ui.market.reasonWrongBag"] = "esto se suelta sobre un jugador de la plantilla, no sobre la bolsa",
+        ["ui.market.reasonOk"] = "suelta aquí para comprarlo y asignarlo",
 
         // --- sección de consumibles de Equipo (CAT-B, RF-080..085) ---
         ["ui.team.consumableButton"] = "Consumibles",
