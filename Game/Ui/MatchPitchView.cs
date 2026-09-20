@@ -255,9 +255,14 @@ public partial class MatchPitchView : Control
 
         DrawLine(new Vector2(width / 2f, 0f), new Vector2(width / 2f, height), Style.GrassLine, 2f);
         DrawArc(new Vector2(width / 2f, height / 2f), cell * 0.9f, 0f, Mathf.Tau, 40, Style.GrassLine, 2f);
-        DrawRect(new Rect2(0f, cell, cell * Pitch.AreaColumns, cell * Pitch.AreaRows), Style.GrassLine, false, 2f);
+
+        // Banda [AreaTop, AreaBottom) centrada (ADR 0121), no un desplazamiento fijo de 1: es la misma
+        // franja con la que /Sim pita penalti (Pitch.IsInArea).
+        float areaTop = cell * Pitch.AreaTop;
+        float areaHeight = cell * (Pitch.AreaBottom - Pitch.AreaTop);
+        DrawRect(new Rect2(0f, areaTop, cell * Pitch.AreaColumns, areaHeight), Style.GrassLine, false, 2f);
         DrawRect(
-            new Rect2(cell * (Pitch.Columns - Pitch.AreaColumns), cell, cell * Pitch.AreaColumns, cell * Pitch.AreaRows),
+            new Rect2(cell * (Pitch.Columns - Pitch.AreaColumns), areaTop, cell * Pitch.AreaColumns, areaHeight),
             Style.GrassLine,
             false,
             2f);

@@ -23,6 +23,11 @@ subir empeora). Una línea de aritmética, o una captura, cuesta menos que el ro
 1. `dotnet build Game/Underleague.Game.csproj` — Godot ejecuta `Game/.godot/mono/temp/bin/Debug/`, no lo
    que compila `dotnet build` en la raíz. Con un `.dll` rancio el juego se cuelga al arrancar sin imprimir
    nada, y parece un fallo de `/data` cuando es un binario viejo.
+   **Y compila el `Debug`, no solo el `Release`** (20 sep 2026): compilar únicamente `-c Release` deja a
+   Godot ejecutando el `Debug` viejo, así que las capturas salen con el código **anterior** y parece que el
+   cambio no ha hecho nada. Costó media ronda de trabajo perseguir un medallón que sí estaba bien escrito.
+   Si una captura no refleja un cambio que crees hecho, esta es la primera hipótesis, y se descarta en
+   segundos metiendo un color de diagnóstico imposible y volviendo a capturar.
 2. Ejecutar **con `timeout`, siempre** (ver la sección de convenciones de `CLAUDE.md` sobre procesos sin
    plazo): `timeout 600 xvfb-run -a --server-args="-screen 0 1280x800x24" godot --path Game
    --rendering-driver opengl3 --audio-driver Dummy` para `equipo*`/`--tour`/`--map-tour` (que sí navegan

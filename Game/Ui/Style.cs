@@ -69,9 +69,11 @@ public static class Style
     public static readonly Color OnWood = new("cdb98c");
 
     /// <summary>
-    /// Texto para lo que se escribe directamente sobre el césped del campo de colocación (<c>PitchView</c>),
-    /// sin backdrop de papel: coordenadas de la cuadrícula, el número de cobertura. El césped no cambia
-    /// con el resto del retinte (docs/ui/README.md §8), así que sigue necesitando un tono claro.
+    /// Texto claro sin backdrop de papel, para lo que se escribe directamente sobre un fondo oscuro que
+    /// no es pergamino. Ya no la usa <c>PitchView</c> (encargo pizarra, 20 sep 2026: su campo de
+    /// colocación pasó a pizarrón y usa <see cref="Chalkboard.Chalk"/>, su propia tiza) ni
+    /// <c>MatchPitchView</c>/<c>MatchPitchView3D</c> (siguen en césped, <see cref="Grass"/>, y no rotulan
+    /// coordenadas sobre él). Se conserva por si otra pantalla la necesita.
     /// </summary>
     public static readonly Color GrassLabel = new("e8ddc0");
 

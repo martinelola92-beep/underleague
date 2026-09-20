@@ -10,7 +10,14 @@ namespace Underleague.Game.Ui;
 /// Es la ficha de jugador de <c>ui-equipo.md</c> §4 aplicada a lo que no es un jugador: el mismo alto de
 /// tira (UI-011), los mismos dos tamaños de texto (UI-004), el mismo patrón de inspección —activar
 /// expande, activar otra vez colapsa (UI-001)— y la misma regla de una sola expandida a la vez, que la
-/// impone la pantalla y no la ficha. La usan Recompensa y Mercado.
+/// impone la pantalla y no la ficha. La usan Recompensa, Mercado e Informe.
+/// </para>
+/// <para>
+/// <b>Dos tamaños, nunca dos diseños</b> (decisión del revisor, 20 sep 2026): <see cref="Bind"/> con
+/// <c>large: true</c> agranda el distintivo y sube el nombre y el precio/coste a <see cref="Style.TextLarge"/>
+/// —la "carta grande" que usa Recompensa al elegir—, pero es la misma cabecera, el mismo cuerpo y la
+/// misma señal <see cref="ActivatedEventHandler"/>; ningún llamador existente tiene que cambiar, porque
+/// <c>large</c> por defecto es <c>false</c>.
 /// </para>
 /// </summary>
 public partial class OptionCard : Control
@@ -30,7 +37,16 @@ public partial class OptionCard : Control
     private bool _selected;
     private bool _dimmed;
     private bool _alwaysOpen;
+    private bool _large;
     private float _lastWidth;
+
+    /// <summary>
+    /// Cabecera de 24 px de UI-011 en la tira; 40 px con distintivo y nombre más grandes en la carta
+    /// grande (<see cref="Bind"/>, <c>large</c>). Mismo componente, dos tamaños, nunca dos diseños
+    /// (decisión del revisor, 20 sep 2026): la carta grande es la que usa Recompensa al elegir, con sitio
+    /// de sobra para leer sin tener que expandir.
+    /// </summary>
+    private float HeaderHeight => _large ? 40f : Style.CollapsedHeight;
 
     /// <summary>La ficha ha sido activada: un clic o el botón de acción (UI-001, mismo gesto).</summary>
     [Signal]
@@ -89,7 +105,8 @@ public partial class OptionCard : Control
         string headline,
         string description,
         IReadOnlyList<string>? notes = null,
-        bool alwaysOpen = false)
+        bool alwaysOpen = false,
+        bool large = false)
     {
         Index = index;
         _badge = badge;
@@ -99,6 +116,7 @@ public partial class OptionCard : Control
         _headline = headline;
         _description = description;
         _alwaysOpen = alwaysOpen;
+        _large = large;
         _notes.Clear();
         if (notes is not null)
         {
@@ -116,7 +134,7 @@ public partial class OptionCard : Control
     public override void _Ready()
     {
         MouseFilter = MouseFilterEnum.Stop;
-        CustomMinimumSize = new Vector2(0f, Style.CollapsedHeight);
+        CustomMinimumSize = new Vector2(0f, HeaderHeight);
     }
 
     public override void _Notification(int what)
@@ -151,19 +169,39 @@ public partial class OptionCard : Control
         var text = _dimmed ? Style.TextDim : Style.Text;
 
         // Distintivo: color y forma juntos (UI-002). El cuadrado de color lleva al lado sus tres letras,
-        // así que el tipo de artículo se lee sin depender del color.
-        DrawRect(new Rect2(6f, 7f, 10f, 10f), _dimmed ? new Color(_badgeColor, 0.45f) : _badgeColor);
-        Style.DrawText(this, font, new Vector2(22f, 5f), _badge, Style.TextSmall, _dimmed ? Style.TextDim : _badgeColor);
-
-        float rightWidth = _right.Length == 0
-            ? 0f
-            : font.GetStringSize(_right, HorizontalAlignment.Left, -1f, Style.TextSmall).X;
-        float titleLeft = 22f + 42f;
-        Style.DrawText(this, font, new Vector2(titleLeft, 5f), _title, Style.TextSmall, text, width - titleLeft - rightWidth - 12f);
-
-        if (_right.Length > 0)
+        // así que el tipo de artículo se lee sin depender del color. Mismo diseño en los dos tamaños; la
+        // carta grande (Recompensa) solo lo agranda y sube el nombre y el precio a la letra de título.
+        if (_large)
         {
-            Style.DrawText(this, font, new Vector2(width - rightWidth - Padding, 5f), _right, Style.TextSmall, _dimmed ? Style.TextDim : Style.Accent);
+            DrawRect(new Rect2(8f, 8f, 20f, 20f), _dimmed ? new Color(_badgeColor, 0.45f) : _badgeColor);
+            Style.DrawText(this, font, new Vector2(32f, 12f), _badge, Style.TextSmall, _dimmed ? Style.TextDim : _badgeColor);
+
+            float largeRightWidth = _right.Length == 0
+                ? 0f
+                : font.GetStringSize(_right, HorizontalAlignment.Left, -1f, Style.TextLarge).X;
+            const float largeTitleLeft = 80f;
+            Style.DrawText(this, font, new Vector2(largeTitleLeft, 8f), _title, Style.TextLarge, text, width - largeTitleLeft - largeRightWidth - 12f);
+
+            if (_right.Length > 0)
+            {
+                Style.DrawText(this, font, new Vector2(width - largeRightWidth - Padding, 8f), _right, Style.TextLarge, _dimmed ? Style.TextDim : Style.Accent);
+            }
+        }
+        else
+        {
+            DrawRect(new Rect2(6f, 7f, 10f, 10f), _dimmed ? new Color(_badgeColor, 0.45f) : _badgeColor);
+            Style.DrawText(this, font, new Vector2(22f, 5f), _badge, Style.TextSmall, _dimmed ? Style.TextDim : _badgeColor);
+
+            float rightWidth = _right.Length == 0
+                ? 0f
+                : font.GetStringSize(_right, HorizontalAlignment.Left, -1f, Style.TextSmall).X;
+            float titleLeft = 22f + 42f;
+            Style.DrawText(this, font, new Vector2(titleLeft, 5f), _title, Style.TextSmall, text, width - titleLeft - rightWidth - 12f);
+
+            if (_right.Length > 0)
+            {
+                Style.DrawText(this, font, new Vector2(width - rightWidth - Padding, 5f), _right, Style.TextSmall, _dimmed ? Style.TextDim : Style.Accent);
+            }
         }
 
         if (!_expanded)
@@ -171,7 +209,7 @@ public partial class OptionCard : Control
             return;
         }
 
-        float y = Style.CollapsedHeight + 4f;
+        float y = HeaderHeight + (_large ? 6f : 4f);
         float textWidth = width - (Padding * 2);
 
         if (_headline.Length > 0)
@@ -205,13 +243,13 @@ public partial class OptionCard : Control
     /// <summary>Recalcula el alto según el estado; el contenedor se recoloca solo.</summary>
     private void Relayout()
     {
-        float height = Style.CollapsedHeight;
+        float height = HeaderHeight;
         if (_expanded || _alwaysOpen)
         {
             var font = GetThemeDefaultFont();
             float width = Size.X > 0f ? Size.X : 296f;
             float textWidth = width - (Padding * 2);
-            height += 4f;
+            height += _large ? 6f : 4f;
             if (_headline.Length > 0)
             {
                 height += Style.Wrap(font, _headline, Style.TextSmall, textWidth).Count * LineHeight;

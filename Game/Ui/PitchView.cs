@@ -128,6 +128,15 @@ public partial class PitchView : Control
         }
 
         float cell = CellSize;
+
+        // Marco de madera de la pizarra, ceñido al área útil de la cuadrícula (0,0)-(cell*Columns,
+        // cell*Rows) — el mismo rectángulo que usan CellAt/CenterOf, nunca el Size del control completo
+        // (arreglo del revisor, 20 sep 2026: desbordaba hasta el borde del panel aunque la cuadrícula, ya
+        // limitada por la altura, no llegara a llenarlo).
+        var boardSize = new Vector2(cell * Pitch.Columns, cell * Pitch.Rows);
+        int frameSeed = Mathf.RoundToInt(boardSize.X * 7f) + Mathf.RoundToInt(boardSize.Y * 13f);
+        Chalkboard.DrawFrame(this, boardSize, 6f, frameSeed);
+
         DrawField(cell);
 
         if (CoverageMode)
@@ -173,11 +182,17 @@ public partial class PitchView : Control
 
     private void DrawField(float cell)
     {
-        DrawRect(new Rect2(0f, 0f, cell * Pitch.Columns, cell * Pitch.Rows), Style.Grass);
-        DrawRect(new Rect2(0f, 0f, cell * Pitch.PlacementColumns, cell * Pitch.Rows), Style.GrassOwn);
-        DrawLine(new Vector2(cell * Pitch.Columns / 2f, 0f), new Vector2(cell * Pitch.Columns / 2f, cell * Pitch.Rows), Style.GrassLine, 2f);
-        DrawRect(new Rect2(0f, cell, cell * Pitch.AreaColumns, cell * Pitch.AreaRows), Style.GrassLine, false, 2f);
-        DrawRect(new Rect2(cell * (Pitch.Columns - Pitch.AreaColumns), cell, cell * Pitch.AreaColumns, cell * Pitch.AreaRows), Style.GrassLine, false, 2f);
+        DrawRect(new Rect2(0f, 0f, cell * Pitch.Columns, cell * Pitch.Rows), Chalkboard.Slate);
+        DrawRect(new Rect2(0f, 0f, cell * Pitch.PlacementColumns, cell * Pitch.Rows), Chalkboard.SlateOwn);
+
+        // Línea de medio campo y áreas: de tiza, no de línea de césped (decisión del revisor, pizarra).
+        // La banda del área es [AreaTop, AreaBottom) (ADR 0121), centrada, no un desplazamiento fijo de 1:
+        // es la misma franja con la que /Sim pita penalti (Pitch.IsInArea).
+        Chalkboard.ChalkLine(this, new Vector2(cell * Pitch.Columns / 2f, 0f), new Vector2(cell * Pitch.Columns / 2f, cell * Pitch.Rows), Chalkboard.Chalk, 2f, seed: 5, segments: 7);
+        float areaTop = cell * Pitch.AreaTop;
+        float areaHeight = cell * (Pitch.AreaBottom - Pitch.AreaTop);
+        Chalkboard.ChalkRect(this, new Rect2(0f, areaTop, cell * Pitch.AreaColumns, areaHeight), Chalkboard.Chalk, 2f, seed: 11);
+        Chalkboard.ChalkRect(this, new Rect2(cell * (Pitch.Columns - Pitch.AreaColumns), areaTop, cell * Pitch.AreaColumns, areaHeight), Chalkboard.Chalk, 2f, seed: 23);
     }
 
     /// <summary>
@@ -188,10 +203,10 @@ public partial class PitchView : Control
     {
         var font = GetThemeDefaultFont();
 
-        // Sobre el césped, no sobre pergamino: Style.TextDim es ahora tinta oscura para leerse sobre
-        // papel (retinte del encargo pregon-resto) y aquí sería invisible. Style.GrassLabel es el tono
-        // claro reservado a lo que se escribe directamente sobre el campo.
-        var color = new Color(Style.GrassLabel, 0.55f);
+        // Sobre la pizarra, no sobre pergamino: Style.TextDim es tinta oscura para leerse sobre papel
+        // (retinte del encargo pregon-resto) y aquí sería invisible. Chalkboard.Chalk es la tiza con la
+        // que se escribe directamente sobre el pizarrón.
+        var color = new Color(Chalkboard.Chalk, 0.55f);
         for (int column = 0; column < Pitch.Columns; column++)
         {
             Style.DrawText(this, font, new Vector2((column * cell) + 3f, 2f), column.ToString(System.Globalization.CultureInfo.InvariantCulture), Style.TextSmall, color);
@@ -203,16 +218,21 @@ public partial class PitchView : Control
         }
     }
 
+    /// <summary>
+    /// Retícula de tiza: la misma información que antes (16x7 casillas), pero cada línea con su propio
+    /// desvío determinista (decisión del revisor, pizarra) en vez del trazo limpio del césped.
+    /// </summary>
     private void DrawGrid(float cell)
     {
+        var color = new Color(Chalkboard.Chalk, 0.4f);
         for (int column = 0; column <= Pitch.Columns; column++)
         {
-            DrawLine(new Vector2(column * cell, 0f), new Vector2(column * cell, cell * Pitch.Rows), Style.GrassLine, 1f);
+            Chalkboard.ChalkLine(this, new Vector2(column * cell, 0f), new Vector2(column * cell, cell * Pitch.Rows), color, 1f, seed: 101 + column, amplitude: 1f, segments: 6);
         }
 
         for (int row = 0; row <= Pitch.Rows; row++)
         {
-            DrawLine(new Vector2(0f, row * cell), new Vector2(cell * Pitch.Columns, row * cell), Style.GrassLine, 1f);
+            Chalkboard.ChalkLine(this, new Vector2(0f, row * cell), new Vector2(cell * Pitch.Columns, row * cell), color, 1f, seed: 211 + row, amplitude: 1f, segments: 6);
         }
     }
 
@@ -261,14 +281,16 @@ public partial class PitchView : Control
             return;
         }
 
-        _ = from;
+        // Semilla determinista de la casilla y el lado: la misma arista se dibuja siempre con el mismo
+        // trazo de tiza, independientemente del orden en que el HashSet la recorra.
+        int seed = (from.Column * 47) + (from.Row * 13) + (neighbour.Column * 5) + (neighbour.Row * 31);
         if (dashed)
         {
-            Style.DrawDashed(this, a, b, color, 2f);
+            Chalkboard.ChalkDashedLine(this, a, b, color, 2f, seed);
         }
         else
         {
-            DrawLine(a, b, color, 2f);
+            Chalkboard.ChalkLine(this, a, b, color, 2f, seed, amplitude: 1f, segments: 3);
         }
     }
 
@@ -401,7 +423,7 @@ public partial class PitchView : Control
             DrawRect(rect, Style.StartZoneFills[third]);
             if (third > 0)
             {
-                DrawLine(new Vector2(rect.Position.X, 0f), new Vector2(rect.Position.X, height), Style.ZoneDivider, 2f);
+                Chalkboard.ChalkLine(this, new Vector2(rect.Position.X, 0f), new Vector2(rect.Position.X, height), Style.ZoneDivider, 2f, seed: 300 + third, segments: 6);
             }
         }
 
@@ -410,8 +432,8 @@ public partial class PitchView : Control
         // no confundirlas con los cortes de tercio.
         int center = Pitch.Rows / 2;
         float own = cell * Pitch.PlacementColumns;
-        Style.DrawDashed(this, new Vector2(0f, center * cell), new Vector2(own, center * cell), Style.ZoneDivider, 2f);
-        Style.DrawDashed(this, new Vector2(0f, (center + 1) * cell), new Vector2(own, (center + 1) * cell), Style.ZoneDivider, 2f);
+        Chalkboard.ChalkDashedLine(this, new Vector2(0f, center * cell), new Vector2(own, center * cell), Style.ZoneDivider, 2f, seed: 401);
+        Chalkboard.ChalkDashedLine(this, new Vector2(0f, (center + 1) * cell), new Vector2(own, (center + 1) * cell), Style.ZoneDivider, 2f, seed: 402);
     }
 
     /// <summary>
@@ -483,9 +505,9 @@ public partial class PitchView : Control
                 string label = count.ToString(System.Globalization.CultureInfo.InvariantCulture);
                 var size = font.GetStringSize(label, HorizontalAlignment.Left, -1f, Style.TextLarge);
 
-                // Directamente sobre el mapa de calor del césped, sin papel debajo: Style.GrassLabel, no
-                // Style.Text (tinta oscura desde el retinte, invisible aquí).
-                Style.DrawText(this, font, rect.Position + ((rect.Size - size) / 2f) - new Vector2(0f, 2f), label, Style.TextLarge, count == 0 ? Style.Hole : Style.GrassLabel);
+                // Directamente sobre el mapa de calor de la pizarra, sin papel debajo: tiza, no
+                // Style.Text (tinta oscura pensada para pergamino, invisible aquí).
+                Style.DrawText(this, font, rect.Position + ((rect.Size - size) / 2f) - new Vector2(0f, 2f), label, Style.TextLarge, count == 0 ? Style.Hole : Chalkboard.Chalk);
             }
         }
     }
@@ -549,13 +571,16 @@ public partial class PitchView : Control
         a += direction * cell * 0.24f;
         b -= direction * cell * 0.24f;
 
+        // Vínculo de tiza (decisión del revisor, pizarra): semilla propia por par de jugadores, así que
+        // el mismo vínculo se dibuja siempre con el mismo trazo.
+        int seed = (link.FromPlayerId * 131) + (link.ToPlayerId * 7);
         if (dashed)
         {
-            Style.DrawDashed(this, a, b, color, width);
+            Chalkboard.ChalkDashedLine(this, a, b, color, width, seed);
         }
         else
         {
-            DrawLine(a, b, color, width);
+            Chalkboard.ChalkLine(this, a, b, color, width, seed, amplitude: 1.2f, segments: 4);
         }
 
         if (arrow)
@@ -566,9 +591,13 @@ public partial class PitchView : Control
     }
 
     /// <summary>
-    /// Fichas del campo: círculos de colores (fase 1, sin arte). Color por posición, silueta por posición
-    /// (UI-002) y grosor de contorno para el jugador seleccionado. El estado físico y las mejoras viven
-    /// en la ficha, nunca sobre el sprite (UI-005, UI-014).
+    /// Fichas del campo: el mismo medallón de <see cref="Medallion"/> que la ficha de la lista (UI-010,
+    /// decisión del revisor: "cada vez que usemos ficha de jugador, el diseño debe ser el mismo"), a
+    /// tamaño de casilla. <b>El medallón añade identidad, no sustituye la información que ya había</b>
+    /// (arreglo del revisor, 20 sep 2026): el anillo del medallón sigue siendo el color de posición —no
+    /// el bronce genérico de la lista— y el anillo de selección/cogido de siempre se pinta igual que
+    /// antes, fuera del medallón. El estado físico y las mejoras siguen viviendo solo en la ficha de la
+    /// lista (UI-005, UI-014).
     /// </summary>
     private void DrawTokens(float cell)
     {
@@ -588,15 +617,14 @@ public partial class PitchView : Control
 
             bool held = slot.PlayerId == HeldId;
             var center = held ? CenterOf(Cursor) : CenterOf(slot.HomeCell);
-            var color = Style.Of(player.Position);
+            var positionColor = Style.Of(player.Position);
 
             if (held)
             {
-                DrawArc(CenterOf(slot.HomeCell), radius, 0f, Mathf.Tau, 24, new Color(color, 0.35f), 2f);
+                DrawArc(CenterOf(slot.HomeCell), radius, 0f, Mathf.Tau, 24, new Color(positionColor, 0.35f), 2f);
             }
 
-            DrawCircle(center, radius, color);
-            Style.DrawPositionIcon(this, center, radius * 0.45f, player.Position, Style.Background);
+            Medallion.Draw(this, center, radius, player.Race, player.Position, player.Id, positionColor);
 
             if (slot.PlayerId == SelectedId)
             {

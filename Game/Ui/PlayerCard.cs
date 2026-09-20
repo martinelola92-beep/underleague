@@ -30,6 +30,9 @@ public partial class PlayerCard : Control
     private const int LineHeight = 14;
     private const int SectionGap = 4;
 
+    /// <summary>Radio del medallón grande de la ficha expandida (UI-012). El de la tira es fijo en <see cref="DrawStrip"/>.</summary>
+    private const float PortraitRadius = 22f;
+
     private readonly List<Section> _sections = new();
     private readonly List<(string Label, int Value, AttributeKind Kind)> _attributes = new();
 
@@ -43,6 +46,8 @@ public partial class PlayerCard : Control
     private TeamState? _state;
     private PlayerDefinition? _player;
     private ItemDefinition? _item;
+    private int _perkSlots;
+    private int _perkCount;
     private string _headline = string.Empty;
     private bool _expanded;
     private bool _selected;
@@ -164,6 +169,11 @@ public partial class PlayerCard : Control
             perkLines.Add(UiText.Get("ui.card.perkSlot"));
         }
 
+        // Huecos de perk y de objeto, ocupados y libres: se ven sin expandir la ficha (decisión del
+        // revisor, 20 sep 2026), no solo leyendo la sección de perks de la ficha expandida.
+        _perkSlots = slots;
+        _perkCount = player.Perks.Count;
+
         // Perks y habilidad racial son las dos secciones cuyo texto sale del generador (RT-035) y las dos
         // únicas donde puede aparecer el nombre de un tercio o de una banda: son las que se pintan con
         // BBCode para que esa frase tenga tooltip y resalte la zona en el campo (AW-F).
@@ -274,13 +284,22 @@ public partial class PlayerCard : Control
         float y = Style.CollapsedHeight + 6f;
         float textWidth = width - (Padding * 2);
 
-        foreach (string line in Style.Wrap(font, _headline, Style.TextSmall, textWidth))
+        // Medallón grande (UI-010): el mismo retrato de la tira, a más tamaño, junto a la cabecera.
+        float headlineLeft = Padding + (PortraitRadius * 2f) + 8f;
+        var headlineLines = Style.Wrap(font, _headline, Style.TextSmall, width - headlineLeft - Padding);
+        float headlineHeight = headlineLines.Count * LineHeight;
+        float portraitBlockHeight = Mathf.Max(headlineHeight, PortraitRadius * 2f);
+
+        Medallion.Draw(this, new Vector2(Padding + PortraitRadius, y + (portraitBlockHeight / 2f)), PortraitRadius, _player.Race, _player.Position, _player.Id);
+
+        float headlineY = y + Mathf.Max(0f, (portraitBlockHeight - headlineHeight) / 2f);
+        foreach (string line in headlineLines)
         {
-            Style.DrawText(this, font, new Vector2(Padding, y), line, Style.TextSmall, Style.TextDim);
-            y += LineHeight;
+            Style.DrawText(this, font, new Vector2(headlineLeft, headlineY), line, Style.TextSmall, Style.TextDim);
+            headlineY += LineHeight;
         }
 
-        y += 4f;
+        y += portraitBlockHeight + 4f;
         float deltaWidth = _item is not null ? 30f : 0f;
         foreach (var (label, value, kind) in _attributes)
         {
@@ -340,7 +359,11 @@ public partial class PlayerCard : Control
         }
     }
 
-    /// <summary>La tira de 24 px de UI-011, idéntica en los tres estados: es el ancla visual del componente.</summary>
+    /// <summary>
+    /// La tira de 24 px de UI-011, idéntica en los tres estados: es el ancla visual del componente
+    /// (UI-010). Retrato en medallón (<see cref="Medallion"/>), nombre, huecos de perk y de objeto —
+    /// ocupados y libres, decisión del revisor 20 sep 2026— y estado físico por color y forma.
+    /// </summary>
     private void DrawStrip(Font font, float width)
     {
         if (_player is null)
@@ -348,16 +371,57 @@ public partial class PlayerCard : Control
             return;
         }
 
-        var color = Style.Of(_player.Position);
-        DrawCircle(new Vector2(14f, 12f), 8f, color);
-        Style.DrawPositionIcon(this, new Vector2(14f, 12f), 4f, _player.Position, Style.Background);
-        Style.DrawPositionIcon(this, new Vector2(32f, 12f), 5f, _player.Position, Style.TextDim);
+        Medallion.Draw(this, new Vector2(13f, 12f), 10f, _player.Race, _player.Position, _player.Id);
 
-        Style.DrawText(this, font, new Vector2(44f, 5f), _player.Name, Style.TextSmall, Style.Text, width - 44f - 34f);
+        const float StateZoneWidth = 24f;
+        const float StateGap = 6f;
+        float slotsWidth = (_perkSlots * 8f) + 14f;
+        float slotsRight = width - StateZoneWidth - StateGap;
+        float slotsLeft = slotsRight - slotsWidth;
+
+        float nameLeft = 30f;
+        Style.DrawText(this, font, new Vector2(nameLeft, 5f), _player.Name, Style.TextSmall, Style.Text, slotsLeft - nameLeft - 6f);
+
+        // Hueco de perk: punto lleno (dorado) si está ocupado, anillo hueco si está libre. Hueco de
+        // objeto: mismo criterio pero en cuadrado, para que la forma —no solo el relleno— diga si es un
+        // perk o el objeto (UI-002).
+        for (int i = 0; i < _perkSlots; i++)
+        {
+            DrawSlotDot(new Vector2(slotsLeft + (i * 8f) + 4f, 12f), 3f, i < _perkCount);
+        }
+
+        DrawItemSlot(new Vector2(slotsRight - 5f, 12f), 4f, _item is not null);
 
         var stateColor = Style.Of(_player.PhysicalState);
-        DrawRect(new Rect2(width - 24f, 3f, 8f, Style.CollapsedHeight - 6f), stateColor);
+        DrawRect(new Rect2(width - StateZoneWidth, 3f, 8f, Style.CollapsedHeight - 6f), stateColor);
         Style.DrawStateIcon(this, new Vector2(width - 10f, 12f), 4f, _player.PhysicalState, stateColor);
+    }
+
+    /// <summary>Hueco de perk (UI-002: relleno = ocupado, anillo hueco = libre; nunca solo un color distinto).</summary>
+    private void DrawSlotDot(Vector2 center, float radius, bool filled)
+    {
+        if (filled)
+        {
+            DrawCircle(center, radius, Style.Accent);
+        }
+        else
+        {
+            DrawArc(center, radius, 0f, Mathf.Tau, 12, Style.Line, 1f);
+        }
+    }
+
+    /// <summary>Hueco de objeto: mismo criterio que <see cref="DrawSlotDot"/> pero en cuadrado, para distinguirlo por forma.</summary>
+    private void DrawItemSlot(Vector2 center, float half, bool filled)
+    {
+        var rect = new Rect2(center - new Vector2(half, half), new Vector2(half * 2f, half * 2f));
+        if (filled)
+        {
+            DrawRect(rect, Style.Accent);
+        }
+        else
+        {
+            DrawRect(rect, Style.Line, false, 1f);
+        }
     }
 
     /// <summary>
@@ -379,7 +443,13 @@ public partial class PlayerCard : Control
             var font = GetThemeDefaultFont();
             float width = Size.X > 0f ? Size.X : 356f;
             float textWidth = width - (Padding * 2);
-            height += 6f + (Style.Wrap(font, _headline, Style.TextSmall, textWidth).Count * LineHeight) + 4f;
+
+            // Misma cuenta que el bloque de cabecera de _Draw: el alto que gana el medallón grande
+            // cuando el nombre no llena las dos líneas que le da su ancho reducido.
+            float headlineLeft = Padding + (PortraitRadius * 2f) + 8f;
+            int headlineLineCount = Style.Wrap(font, _headline, Style.TextSmall, width - headlineLeft - Padding).Count;
+            float portraitBlockHeight = Mathf.Max(headlineLineCount * LineHeight, PortraitRadius * 2f);
+            height += 6f + portraitBlockHeight + 4f;
             height += _attributes.Count * AttributeRow;
             foreach (var section in _sections)
             {
