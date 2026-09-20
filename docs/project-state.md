@@ -9,6 +9,41 @@ PC (Steam), premium, sin online. **Estado (8 sep 2026): fases 0 y 1 cerradas; fa
 **Campo de siete filas (14 sep 2026, decisión del revisor, BA-C):** 16×7 en vez de 16×6 —con seis filas el centro geométrico cae *entre* dos filas y no existe fila central—, con guardado v4. Añadir la fila cuesta ~1,0 tiro y ~0,45 goles por partido y **ninguna palanca local lo recupera**, así que la **ADR 0109** recalibra la banda de tiros a la geometría vigente (8-16 → 7-15) en vez de tocar el motor, y deja escrito que ensanchar la formación o las zonas de acción destruye la profundidad de colocación. Nueve auditorías de la IA de jugadores (`docs/auditoria-ia-jugadores-1..9.md`) dejan **un solo cambio aplicado**, la **ADR 0110**: `Shoot` del defensa 77 → 154 y del centrocampista 188 → 237, porque con 77 un defensa colocado arriba nunca remataba —perdía contra su propio `ShortPass` de 500— y jugar fuera de posición costaba dos tercios del ataque (100/48/38 → 100/68/55). Rechazados y documentados: `ChaseBall pen` en todas las dosis (degrada la diferenciación de builds), el desfase de fase entre equipos (no replica entre semillas) y la histéresis. Queda **abierto** el papel del centrocampista: dispara el 6,5 % de los tiros siendo el 43 % de los jugadores de campo.
 ---
 
+## Auditoría de identidad (20 sep 2026) — ¿es el juego un generador de historias?
+
+`docs/analisis/auditoria-identidad-generador-de-historias.md`. Auditoría de **producto**, no de balance:
+seis auditorías en paralelo más un lote propio de 500 partidos. **No se ha cambiado ni una línea del juego.**
+
+**Tesis, con tres medidas que convergen: el juego ya produce los sucesos; lo que no produce es atribución.**
+El **67,8 %** de los partidos tiene un suceso excepcional (lesión 53 %, turba 27,6 %, roja 12 %,
+incomparecencia 4 %) — la oferta no es el cuello de botella. Pero **14 de los 26 `EventType` no llegan nunca
+al jugador** (pase, entrada, recuperación, intercepción y **parada** incluidos), el cartel de perk lleva el
+nombre y nunca el efecto (0,9 por partido, 65 % de partidos sin ninguno), y **`RunPlayer` no persiste ni un
+hecho** de lo que el motor ya calcula en `PlayerMatchStats`. **Corolario: no añadir sucesos raros nuevos
+hasta que los existentes se lean.**
+
+**Dos piezas construidas y desconectadas.** (1) `modifyUtility` (C1) está en el motor, pilotada y medida al
+24 % con RT-056 en verde, y **no está en el enum de `perks.schema.json`**: ningún dato puede usarla.
+(2) `MatchLogView` (crónica RF-121) existe y no se usa en `ReportScreen`.
+
+**Hallazgos nuevos del patrón «el texto promete lo que el código no hace»** (eran cinco, esta auditoría
+añade nueve): **la turba no existe** —`CheckEndConditions:3102` hace cuatro cosas y ningún cambio de regla,
+en el 27,6 % de los partidos—; **el portero no puede salir del área** (`GoalkeeperLeftArea` nunca puede ser
+`true`, el rasgo `Rusher` no puede cumplir su nombre); **`kamikaze` e `iron_price` son ventaja pura vendida
+como sacrificio** (CONFIRMED en `ResolveInjury:2545`: `injuryChanceBonus` es lo que le hacen a la víctima,
+y no existe término de autolesión — afecta a PD-1, que se apoya en ellos); `numb` concede inmunidad al luto
+(RF-104 sin implementar); prótesis y vínculos no existen; `AERIAL_DUEL` nunca se emite; 13 plantillas de
+acontecimiento sin versión `en` (ADR 0009).
+
+**Los dos primeros pasos recomendados**: persistir `PlayerMatchStats` en `RunPlayer` (desbloquea RF-122,
+hoy imposible aunque se implemente) y meter `modifyUtility` en el esquema con un perk que lo use.
+
+**Cinco preguntas para el revisor** en §20, y la primera es la de fondo: **`CLAUDE.md` dice que el desgaste
+es el recurso central de la *run* y `economy.json` lo implementa por *acto*** (`healsRoster` en el jefe, con
+`_doc` que lo declara deliberado). Las dos no pueden ser verdad.
+
+Ficha nueva: `docs/pendientes/BE-A.md` (el centrocampista nunca entra a su marcado sin balón).
+
 ## Trabajo en curso (19 sep 2026)
 
 **UI del partido: fase E hecha (19 sep 2026) — la pantalla de Partido es ya la retransmisión con voz de

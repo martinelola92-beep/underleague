@@ -70,3 +70,4 @@ a secas.
 | [CAT-I](./CAT-I.md) | La política automática casi nunca vende, así que las reglas de venta n | Ver fichero |
 | [CAT-J](./CAT-J.md) | Dos puertas de `BuildGateTests` en rojo en HEAD (elf_brawler, passChain), preexistente | Abierta |
 | [BD-A](./BD-A.md) | Reparto de los penaltis por fila: el sesgo arriba/abajo era ruido (se invierte con 3.000 partidos); queda abierta la concentración en las filas centrales. | Abierta (reducida) |
+| [BE-A](./BE-A.md) | El centrocampista nunca entra a su marcado sin balón: el comentario dice «Defensa y centrocampista» y el código dice `Defender` | Abierta, sin medir |
