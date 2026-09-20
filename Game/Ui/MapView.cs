@@ -37,7 +37,10 @@ public partial class MapView : Control
     private readonly HashSet<int> _reachable = new();
 
     /// <summary>Radio del glifo de nodo. El jefe se dibuja algo mayor.</summary>
-    private const float NodeRadius = 12f;
+    // 12 a 15 (revisión de reparto del revisor, 20 sep 2026): con la leyenda fuera de esta columna el
+    // pergamino del grafo gana todo el ancho de la parte derecha, y ese ancho de sobra es precisamente lo
+    // que pide agrandar el glifo -"que el grafo respire, iconos más legibles"-.
+    private const float NodeRadius = 15f;
 
     /// <summary>Se pulsó un nodo accesible.</summary>
     [Signal]
@@ -86,7 +89,6 @@ public partial class MapView : Control
 
         Layout();
         MarkReachable();
-        var font = ThemeDB.FallbackFont;
 
         // Primero las aristas, para que ningún glifo quede partido por una línea.
         foreach (var node in Map.Nodes)
@@ -123,12 +125,12 @@ public partial class MapView : Control
         {
             if (_positions.TryGetValue(node.Id, out var center))
             {
-                DrawNode(node, center, font);
+                DrawNode(node, center);
             }
         }
     }
 
-    private void DrawNode(MapNode node, Vector2 center, Font font)
+    private void DrawNode(MapNode node, Vector2 center)
     {
         bool available = Contains(AvailableIds, node.Id);
         bool visited = Contains(VisitedIds, node.Id);
@@ -137,14 +139,19 @@ public partial class MapView : Control
         var color = Style.Of(node.Kind);
         float radius = node.Kind == NodeKind.Boss ? NodeRadius + 3f : NodeRadius;
 
+        // El estado del nodo -accesible, visitado, fuera de alcance- sigue siendo relleno y anillo, como
+        // antes del icono (encargo mapa-pregon): el icono se dibuja encima, nunca lo sustituye.
+        float ink;
         if (visited || current)
         {
             DrawCircle(center, radius, new Color(color, 0.85f));
+            ink = 1f;
         }
         else
         {
             DrawCircle(center, radius, new Color(color, available ? 0.35f : open ? 0.16f : 0.07f));
             DrawArc(center, radius, 0f, Mathf.Tau, 24, new Color(color, available ? 0.95f : open ? 0.45f : 0.18f), 1.5f);
+            ink = available ? 1f : open ? 0.55f : 0.20f;
         }
 
         // El mercado, con anillo doble: es el nodo que salva runs y tiene que verse a golpe de vista
@@ -159,30 +166,18 @@ public partial class MapView : Control
             DrawArc(center, radius + 7f, 0f, Mathf.Tau, 28, Style.Accent, node.Id == HighlightedId ? 3f : 1.5f);
         }
 
+        // El icono del tipo (UI-002: color y forma) sustituye al círculo liso con tres letras. Se pinta
+        // siempre, también apagado, para que el camino que ya no se puede alcanzar se siga leyendo como
+        // un mapa y no como una fila de manchas sin identidad.
+        NodeIcon.Draw(this, node.Kind, center, radius * 0.82f, new Color(Style.Text, ink));
+
+        // El distintivo de dificultad (RF-012) va a la esquina del glifo, no en el centro: ahora el
+        // centro lo ocupa el icono del tipo de nodo.
         if (node.IsMatch && node.Difficulty > 0)
         {
-            // El distintivo de dificultad (RF-012) se apaga con el nodo: si no, la parte del acto que ya
-            // no se puede alcanzar es lo que más brilla del mapa.
-            float ink = available || visited || current ? 1f : open ? 0.55f : 0.20f;
-            Style.DrawDifficultyIcon(this, center, 5f, node.Difficulty, new Color(Style.DifficultyColor(node.Difficulty), ink));
+            var badge = center + new Vector2(radius * 0.62f, radius * 0.62f);
+            Style.DrawDifficultyIcon(this, badge, 4.5f, node.Difficulty, new Color(Style.DifficultyColor(node.Difficulty), ink));
         }
-
-        // La etiqueta solo donde importa: con 36 nodos por acto, poner el texto también bajo lo que ya
-        // no se puede alcanzar convierte el grafo en una mancha.
-        if (!open && !visited && !current)
-        {
-            return;
-        }
-
-        string label = UiText.Get("ui.kind.short." + node.Kind);
-        var size = font.GetStringSize(label, HorizontalAlignment.Left, -1f, Style.TextSmall);
-        Style.DrawText(
-            this,
-            font,
-            new Vector2(center.X - (size.X / 2f), center.Y + radius + 3f),
-            label,
-            Style.TextSmall,
-            available ? Style.Text : Style.TextDim);
     }
 
     /// <summary>

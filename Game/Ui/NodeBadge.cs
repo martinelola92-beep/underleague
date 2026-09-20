@@ -4,9 +4,10 @@ using Underleague.Sim.Run;
 namespace Underleague.Game.Ui;
 
 /// <summary>
-/// El distintivo de un nodo en una lista: un disco del color de su tipo con, si es un partido, la
-/// <b>silueta de su dificultad</b> dentro (RF-012). Color y forma juntos, como pide UI-002: los cinco
-/// niveles se distinguen sin percibir el color, y el número va al lado en texto.
+/// El distintivo de un nodo en una lista: el anillo de color de su tipo con el <see cref="NodeIcon"/> de
+/// su tipo encima y, si es un partido, la <b>silueta de su dificultad</b> a la esquina (RF-012). Color y
+/// forma juntos, como pide UI-002, en dos capas: el tipo de nodo en el icono central, el nivel de
+/// dificultad en el distintivo pequeño.
 /// </summary>
 public partial class NodeBadge : Control
 {
@@ -32,9 +33,14 @@ public partial class NodeBadge : Control
             DrawArc(center, 8f, 0f, Mathf.Tau, 20, color, 1.5f);
         }
 
+        // El icono del tipo (UI-002: color y forma), no un círculo liso — mismo glifo que MapView y
+        // MapLegend (encargo mapa-pregon).
+        NodeIcon.Draw(this, Node.Kind, center, 9.5f, Style.Text);
+
         if (Node.IsMatch && Node.Difficulty > 0)
         {
-            Style.DrawDifficultyIcon(this, center, 6f, Node.Difficulty, Style.DifficultyColor(Node.Difficulty));
+            // A la esquina, no al centro: el centro lo ocupa ahora el icono del tipo.
+            Style.DrawDifficultyIcon(this, center + new Vector2(8f, 8f), 4.2f, Node.Difficulty, Style.DifficultyColor(Node.Difficulty));
         }
     }
 }
