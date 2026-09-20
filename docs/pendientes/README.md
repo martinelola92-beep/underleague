@@ -69,4 +69,4 @@ a secas.
 | [CAT-H](./CAT-H.md) | ¿Compraría alguien un objeto maldito? | Ver fichero |
 | [CAT-I](./CAT-I.md) | La política automática casi nunca vende, así que las reglas de venta n | Ver fichero |
 | [CAT-J](./CAT-J.md) | Dos puertas de `BuildGateTests` en rojo en HEAD (elf_brawler, passChain), preexistente | Abierta |
-| [BD-A](./BD-A.md) | Las faltas de área se reparten 3 a 1 entre la mitad de abajo y la de arriba (hallazgo de la ADR 0121). | Abierta |
+| [BD-A](./BD-A.md) | Reparto de los penaltis por fila: el sesgo arriba/abajo era ruido (se invierte con 3.000 partidos); queda abierta la concentración en las filas centrales. | Abierta (reducida) |

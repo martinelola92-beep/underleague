@@ -85,8 +85,10 @@ hipótesis pero **no la aísla del ruido**: LIKELY, no CONFIRMED (revisión inde
 idéntico antes y después (2,41) y su recorrido no toca ningún borde, ni el viejo ni el nuevo. El movimiento de
 la máxima (4,33 → 4,73) es divergencia de RNG aguas abajo, la misma causa que los valores dorados.
 
-El desequilibrio entre las filas 2 y 4 (5 contra 14) **no lo explica esta ADR y es mayor que lo que arregla**:
-queda abierto en [`docs/pendientes/BD-A.md`](../pendientes/BD-A.md), no descartado como ruido.
+El desequilibrio entre las filas 2 y 4 (5 contra 14) que la revisión independiente señaló como asimetría mayor
+y ajena resultó ser **ruido de muestra**: con 3.000 partidos se invierte (67 contra 21). Queda en
+[`docs/pendientes/BD-A.md`](../pendientes/BD-A.md) lo único que sobrevive, que es por qué los penaltis se
+concentran en las filas centrales.
 
 Tres valores dorados de `RecoveryExtraActionTests` se re-midieron (entradas 31→24 con la semilla 0,
 `lane_reader` 19→18 y `sweeper_keeper` 23→24): consecuencia esperada de mover `ClampToArea`, el mismo patrón
