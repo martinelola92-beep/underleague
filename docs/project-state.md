@@ -44,6 +44,23 @@ es el recurso central de la *run* y `economy.json` lo implementa por *acto*** (`
 
 Ficha nueva: `docs/pendientes/BE-A.md` (el centrocampista nunca entra a su marcado sin balón).
 
+**Decisión del revisor sobre la auditoría (20 sep 2026): ADR 0122.** «Underleague no necesita más
+emergencias, ni más sinergias, ni más contenido: necesita **convertir su simulación en memoria**.» Tres
+fases y no se empieza una sin la anterior: **Fase 1** (1A historial individual persistente + 1B **un**
+perk conductual con `modifyUtility`) → **Fase 2** (que el partido cuente lo que ya ocurre: `SAVE`,
+`TACKLE`, `RECOVERY`, crónica, cartel de perk con su efecto, dorsales) → **Fase 3** (turba, prótesis,
+nemesis). **No se toca el catálogo de 102 perks.** El criterio de aceptación es conductual, no de balance:
+*«¿puedo reconocer en el campo qué tipo de jugador es?»* y *«¿me estoy acordando de mis jugadores?»*.
+
+**SIGUIENTE PASO CONCRETO (sesión limpia): Fase 1A.** Leer `docs/plan-fase-memoria-y-atribucion.md`
+entero y `docs/decisiones/0122-*.md`. Empezar por `architecture-review` sobre la única decisión de
+frontera abierta: si el historial va en un registro nuevo de `RunPlayer` o reutiliza `Counters` (el plan
+argumenta que reutilizarlo lo haría rehén de las reglas de perk). Dato que el plan ya verificó y que
+cambia el tamaño del trabajo: de los seis campos que pide el revisor, **lesiones causadas y muertes
+causadas no las atribuye el motor hoy** — `Kill(victim, detail)` no recibe al matador, y su única llamada
+está dentro de `ResolveInjury`, que sí conoce al `tackler`. Sube `CurrentSchemaVersion` 4 → 5. Criterio
+duro: **1A no debe mover ninguna de las 43 puertas**; si las mueve, ha tocado el consumo de RNG.
+
 ## Trabajo en curso (19 sep 2026)
 
 **UI del partido: fase E hecha (19 sep 2026) — la pantalla de Partido es ya la retransmisión con voz de
