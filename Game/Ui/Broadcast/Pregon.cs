@@ -278,7 +278,7 @@ public static class Pregon
     /// Trompeta de heraldo: tubo y pabellón en oro, la voz visual del pregón (<see cref="HeraldBanner"/>,
     /// <see cref="ProclamationBand"/>, <see cref="Edict"/>). <paramref name="rotationDeg"/> en grados.
     /// </summary>
-    public static void DrawTrumpet(CanvasItem target, Vector2 at, float len, float rotationDeg)
+    public static void DrawTrumpet(CanvasItem target, Vector2 at, float len, float rotationDeg, bool mirror = false)
     {
         float rot = Mathf.DegToRad(rotationDeg);
         Tilted(target, at, rot, () =>
@@ -292,7 +292,7 @@ public static class Pregon
                 new Vector2(len - 6, -22));
             target.DrawColoredPolygon(bell, Or);
             target.DrawPolyline(Close(bell), InkBrown, 2f, true);
-        });
+        }, mirror ? new Vector2(-1f, 1f) : Vector2.One);
     }
 
     /// <summary>Como <see cref="Style.DrawText"/>, pero centrado en <paramref name="width"/> (acta final, títulos del bando).</summary>
@@ -400,10 +400,60 @@ public static class Pregon
     /// la repone al terminar. Así se tuercen sellos y placas 2-4° sin que el resto del <c>_Draw</c> herede
     /// el giro.
     /// </summary>
-    public static void Tilted(CanvasItem target, Vector2 origin, float rotation, Action draw)
+    public static void Tilted(CanvasItem target, Vector2 origin, float rotation, Action draw, Vector2? scale = null)
     {
-        target.DrawSetTransform(origin, rotation, Vector2.One);
+        target.DrawSetTransform(origin, rotation, scale ?? Vector2.One);
         draw();
         target.DrawSetTransform(Vector2.Zero, 0f, Vector2.One);
+    }
+
+    // ------------------------------------------------------------------ formas del estandarte (HeraldBanner)
+
+    /// <summary>
+    /// Píldora/estadio: rectángulo con los dos extremos redondeados en semicírculo — el varal de madera en
+    /// el que se enrolla un pergamino colgado (<see cref="HeraldBanner"/>), nunca una tela plana.
+    /// </summary>
+    public static Vector2[] StadiumPoly(float w, float h, int capSteps = 12)
+    {
+        float r = h / 2f;
+        float straight = System.Math.Max(0f, w - h);
+        var pts = new List<Vector2>((capSteps * 2) + 6);
+        pts.Add(new Vector2(r, 0f));
+        pts.Add(new Vector2(r + straight, 0f));
+        for (int i = 0; i <= capSteps; i++)
+        {
+            float a = -Mathf.Pi / 2f + (Mathf.Pi * i / capSteps);
+            pts.Add(new Vector2(r + straight + (r * Mathf.Cos(a)), r + (r * Mathf.Sin(a))));
+        }
+
+        pts.Add(new Vector2(r + straight, h));
+        pts.Add(new Vector2(r, h));
+        for (int i = 0; i <= capSteps; i++)
+        {
+            float a = (Mathf.Pi / 2f) + (Mathf.Pi * i / capSteps);
+            pts.Add(new Vector2(r + (r * Mathf.Cos(a)), r + (r * Mathf.Sin(a))));
+        }
+
+        return pts.ToArray();
+    }
+
+    /// <summary>Corona pequeña de tres puntas (pie del estandarte de gol, boceto del revisor): marcador de posición procedural, nunca un icono importado.</summary>
+    /// <summary>
+    /// Corona de tres puntas TRIANGULARES separadas sobre una banda (revisión del revisor, 20 sep 2026:
+    /// la primera versión salía "un borrón negro" — puntas demasiado finas y pegadas entre sí, que a
+    /// tamaño pequeño se fundían). Perímetro sin autointersección, recorrido en un solo sentido: banda →
+    /// punta derecha → vuelta a la banda → punta central (más alta) → vuelta a la banda → punta
+    /// izquierda → vuelta a la banda → cierre.
+    /// </summary>
+    public static Vector2[] CrownPoly(float w, float h)
+    {
+        float bandTop = h * 0.62f;
+        return new[]
+        {
+            new Vector2(0f, h), new Vector2(w, h), new Vector2(w, bandTop),
+            new Vector2(w * (5f / 6f), bandTop), new Vector2(w * (5f / 6f), 0f), new Vector2(w * (4f / 6f), bandTop),
+            new Vector2(w * (3.5f / 6f), bandTop), new Vector2(w * 0.5f, -h * 0.18f), new Vector2(w * (2.5f / 6f), bandTop),
+            new Vector2(w * (2f / 6f), bandTop), new Vector2(w * (1f / 6f), 0f), new Vector2(0f, bandTop),
+        };
     }
 }

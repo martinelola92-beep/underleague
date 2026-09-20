@@ -252,6 +252,18 @@ public partial class BroadcastCapture : Control
                     GD.Print($"  esquina del césped en pantalla: {corner}");
                 }
 
+                // Medir la portería, no suponerla (revisión del revisor, 20 sep 2026): las dos esquinas de
+                // la boca de cada portería tienen que caer EXACTAMENTE sobre la recta entre las dos
+                // esquinas del césped a esa misma X (0 o 16) — es geometría de proyectiva pura, una recta
+                // en el mundo siempre proyecta a una recta en pantalla.
+                for (int team = 0; team < 2; team++)
+                {
+                    foreach (var corner in basePitch3d.DebugGoalMouth(team))
+                    {
+                        GD.Print($"  boca de la portería {team} en pantalla: {corner}");
+                    }
+                }
+
                 await Save("retrans-base");
                 savedBase = true;
             }

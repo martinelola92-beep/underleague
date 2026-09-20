@@ -18,9 +18,6 @@ public partial class BroadcastBoard : Control
     /// <summary>Alto de diseño: tablero, placas colgantes y barra de progreso, sin la grada.</summary>
     public const float DesignHeight = 116f;
 
-    /// <summary>Ancho reservado en el borde derecho a los cuatro botones de velocidad y pausa.</summary>
-    private const float SpeedZoneWidth = 336f;
-
     [Signal]
     public delegate void SpeedChosenEventHandler(int index);
 
@@ -118,17 +115,30 @@ public partial class BroadcastBoard : Control
             DrawLine(new Vector2(8f, y), new Vector2(w - 8f, y + Pregon.Jitter(400 + i, 2f)), new Color("3a2718"), 1.5f);
         }
 
-        // El paño rival deja sitio a los botones de velocidad (SpeedZoneWidth) — si se pegan al borde
-        // derecho como el propio, los botones lo tapan por encima (BB-broadcast, visto en la galería).
-        float rivalX = w - 260f - SpeedZoneWidth;
-        DrawTeamPanel(new Vector2(12f, 10f), ours: true, _own);
-        DrawTeamPanel(new Vector2(rivalX, 10f), ours: false, _rival);
-        DrawScorePlate(new Vector2((w / 2f) - 84f, 8f), _ownScore, seed: 10);
-        DrawScorePlate(new Vector2((w / 2f) + 12f, 8f), _rivalScore, seed: 11);
+        // Nombres centrados pegados al marcador (revisión del revisor, 20 sep 2026): un solo bloque
+        // [paño propio][cifra propia][cifra rival][paño rival], centrado en la franja — ya no en los
+        // bordes. Los botones de velocidad, a la derecha, quedan lejos de sobra del bloque (no hace falta
+        // reservarles sitio: a 1920 de ancho el bloque nunca llega tan lejos).
+        const float PanelWidth = 260f;
+        const float ScoreWidth = 72f;
+        const float PanelScoreGap = 16f;
+        float blockWidth = (2f * PanelWidth) + (2f * ScoreWidth) + (2f * PanelScoreGap);
+        float blockX = (w - blockWidth) / 2f;
+        float ownPanelX = blockX;
+        float ownScoreX = ownPanelX + PanelWidth + PanelScoreGap;
+        float rivalScoreX = ownScoreX + ScoreWidth;
+        float rivalPanelX = rivalScoreX + ScoreWidth + PanelScoreGap;
+
+        DrawTeamPanel(new Vector2(ownPanelX, 10f), ours: true, _own);
+        DrawTeamPanel(new Vector2(rivalPanelX, 10f), ours: false, _rival);
+        DrawScorePlate(new Vector2(ownScoreX, 8f), _ownScore, seed: 10);
+        DrawScorePlate(new Vector2(rivalScoreX, 8f), _rivalScore, seed: 11);
 
         if (!string.IsNullOrEmpty(_rivalResidue))
         {
-            var at = new Vector2(rivalX + 152f, 74f);
+            // Junto a su paño (C3), ahora a la derecha del paño rival en vez de "cerca del borde": el paño
+            // ya no vive en el borde.
+            var at = new Vector2(rivalPanelX + PanelWidth + 12f, 74f);
             Pregon.DrawParchment(this, at, 108f, 26f, Pregon.Vellum, Pregon.VellumEdge, seed: 12, amplitude: 1f, edgeWidth: 1.5f);
             Style.DrawText(this, Pregon.DataBold, at + new Vector2(6f, 3f), _rivalResidue, Pregon.SizeDataSmall, Pregon.Gules);
         }

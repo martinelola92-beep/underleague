@@ -863,6 +863,18 @@ public partial class MatchPitchView3D : SubViewportContainer
         _camera.UnprojectPosition(new Vector3(Pitch.Columns, 0f, Pitch.Rows)),
     };
 
+    /// <summary>Las dos esquinas de la boca de la portería del equipo <paramref name="team"/> (suelo, y=0) proyectadas con la cámara actual — para comprobar que caen sobre la línea de fondo pintada, no a un lado.</summary>
+    public Vector2[] DebugGoalMouth(int team)
+    {
+        float goalLineX = team == 0 ? 0f : Pitch.Columns;
+        float mid = Pitch.Rows / 2f;
+        return new[]
+        {
+            _camera.UnprojectPosition(new Vector3(goalLineX, 0f, mid - 0.9f)),
+            _camera.UnprojectPosition(new Vector3(goalLineX, 0f, mid + 0.9f)),
+        };
+    }
+
     /// <summary>El centro/distancia (u <see cref="OrthoSize"/>) que habría SIN ningún gesto, para comparar contra <see cref="DebugCenter"/>/<see cref="DebugDistance"/>/<see cref="DebugZoomFactor"/> sin tener que capturar otro fotograma aparte.</summary>
     public (Vector3 Center, float Distance) DebugUnpunchedRig()
     {
@@ -1519,38 +1531,27 @@ public partial class MatchPitchView3D : SubViewportContainer
 
         // Vallas de publicidad en la banda del fondo (lado lejano de la cámara): la banda cercana queda
         // libre, como en una retransmisión de verdad, para no tapar nunca al jugador que mira la cámara.
-        var sponsors = new (string Text, Color Fill, Color Ink)[]
-        {
-            ("FUNERARIA EL ÚLTIMO SAQUE", new Color("1c1a1a"), new Color("f1e4c3")),
-            ("HIDROMIEL TRAGÓN", new Color("c9982f"), new Color("1c1a1a")),
-            ("PRÓTESIS DE ROBLE MAESE TOCÓN", new Color("f1e4c3"), new Color("3a2a1a")),
-            ("CARNICERÍA HNOS. TAJO", new Color("8f1d1d"), new Color("f1e4c3")),
-            ("UNGÜENTOS LA PATA COJA", new Color("2d5a3a"), new Color("f1e4c3")),
-            ("SEGUROS AY MADRE", new Color("1e3a6e"), new Color("c9982f")),
-        };
-
-        float segment = 17.6f / sponsors.Length;
-        for (int i = 0; i < sponsors.Length; i++)
+        float segment = 17.6f / SponsorBoards.Length;
+        for (int i = 0; i < SponsorBoards.Length; i++)
         {
             float cx = -0.8f + (segment * (i + 0.5f));
-            AddBox(new Vector3(cx, 0.24f, -0.42f), new Vector3(segment - 0.06f, 0.48f, 0.08f), sponsors[i].Fill);
-            var label = new Label3D
-            {
-                Text = sponsors[i].Text,
-                Font = Pregon.DataBold,
-                FontSize = 96,
-                PixelSize = 0.0028f,
-                Modulate = sponsors[i].Ink,
-                OutlineSize = 0,
-                Position = new Vector3(cx, 0.24f, -0.37f),
-                Width = (segment - 0.2f) / 0.0028f,
-                AutowrapMode = TextServer.AutowrapMode.Off,
-                HorizontalAlignment = HorizontalAlignment.Center,
-                Shaded = false,
-                DoubleSided = false,
-            };
-            _world.AddChild(label);
+            AddBox(new Vector3(cx, 0.24f, -0.42f), new Vector3(segment - 0.06f, 0.48f, 0.08f), SponsorBoards[i].Fill);
+            _world.AddChild(NewSponsorLabel(SponsorBoards[i], new Vector3(cx, 0.24f, -0.37f), segment, 0f));
         }
+
+        // Vallas detrás de las porterías: DESCARTADAS (revisión del revisor, 20 sep 2026, tercera pasada).
+        // Una valla "paralela a la línea de fondo" tiene su eje largo en Z, el mismo eje por el que mira
+        // esta cámara — así que, se vea o no desde aquí, siempre se proyecta en diagonal/escorzada, nunca
+        // como un tablón de frente (a 1,2 casillas se leía como "una pila de tablas de canto"; a 1,6, más
+        // baja y sin carteles, sencillamente no se distingue del fondo). El revisor autorizó explícitamente
+        // dejarlas solo en el lado lejano si esto pasaba (§ese encargo): los patrocinadores siguen ahí, en
+        // la valla de más abajo, que sí es frontal a la cámara.
+
+        // Porterías con volumen (postes, larguero y red procedural) en las dos líneas de fondo (columna 0
+        // y columna 16), en el color de quien la defiende — sustituyen a la barra plana que antes pintaba
+        // BuildWornGrass en la textura del césped.
+        BuildGoal(0f, 0);
+        BuildGoal(Pitch.Columns, 1);
 
         // Grada escalonada de madera y piedra con público: cápsulas simples con los colores heráldicos de
         // los dos equipos, más algo de tierra/piedra para no leerse como uniforme. Semilla fija (RT-021 no
@@ -1597,6 +1598,173 @@ public partial class MatchPitchView3D : SubViewportContainer
             var flagColor = f % 2 == 0 ? new Color("2f6fd6") : new Color("d63a2f");
             AddBox(new Vector3(-0.8f + (f * 1.6f), 1.8f, -4.15f), new Vector3(0.5f, 0.45f, 0.03f), flagColor);
         }
+    }
+
+    /// <summary>Los mismos rótulos de parodia para las dos vallas (la del fondo lejano y las de las dos porterías): «reutiliza las que ya existen» (revisión del revisor, 20 sep 2026), un solo sitio, no dos catálogos.</summary>
+    private static readonly (string Text, Color Fill, Color Ink)[] SponsorBoards =
+    {
+        ("FUNERARIA EL ÚLTIMO SAQUE", new Color("1c1a1a"), new Color("f1e4c3")),
+        ("HIDROMIEL TRAGÓN", new Color("c9982f"), new Color("1c1a1a")),
+        ("PRÓTESIS DE ROBLE MAESE TOCÓN", new Color("f1e4c3"), new Color("3a2a1a")),
+        ("CARNICERÍA HNOS. TAJO", new Color("8f1d1d"), new Color("f1e4c3")),
+        ("UNGÜENTOS LA PATA COJA", new Color("2d5a3a"), new Color("f1e4c3")),
+        ("SEGUROS AY MADRE", new Color("1e3a6e"), new Color("c9982f")),
+    };
+
+    /// <summary>Un rótulo de valla, girado <paramref name="rotationYDeg"/> grados en Y (0 para la única valla que queda, la del fondo lejano — ver <see cref="BuildStadium"/> sobre por qué no hay vallas en las porterías).</summary>
+    private static Label3D NewSponsorLabel((string Text, Color Fill, Color Ink) sponsor, Vector3 position, float segment, float rotationYDeg) => new()
+    {
+        Text = sponsor.Text,
+        Font = Pregon.DataBold,
+        FontSize = 96,
+        PixelSize = 0.0028f,
+        Modulate = sponsor.Ink,
+        OutlineSize = 0,
+        Position = position,
+        RotationDegrees = new Vector3(0f, rotationYDeg, 0f),
+        Width = (segment - 0.2f) / 0.0028f,
+        AutowrapMode = TextServer.AutowrapMode.Off,
+        HorizontalAlignment = HorizontalAlignment.Center,
+        Shaded = false,
+        DoubleSided = false,
+    };
+
+    /// <summary>
+    /// Portería con volumen (revisión del revisor, 20 sep 2026, TERCERA pasada: «se ve como un alambre» —
+    /// la red de líneas de 1 px no se lee a tamaño real): postes y larguero MÁS GRUESOS
+    /// (<c>Post</c> 0,12, antes 0,08) y una red de barras finas de verdad (<see cref="AddNetGrid"/>, cajas
+    /// con grosor, no líneas), más densa, blanca y con una sombra suave y plana en el suelo
+    /// (<see cref="AddGoalGroundShadow"/>) — se lee como portería a 1920x1080 sin ampliar. Plantada
+    /// exactamente sobre la línea de fondo (<paramref name="goalLineX"/> = 0 o
+    /// <see cref="Pitch.Columns"/>), y=0, red hacia fuera del campo — comprobado por proyección con
+    /// <c>Camera3D.UnprojectPosition</c>, no a ojo. Sustituye a la barra plana que pintaba
+    /// <see cref="BuildWornGrass"/> en la textura del césped.
+    /// </summary>
+    private void BuildGoal(float goalLineX, int team)
+    {
+        const float HalfWidth = 0.9f;
+        const float Height = 0.9f;
+        const float Depth = 0.55f;
+        const float Post = 0.12f;
+        float mid = Pitch.Rows / 2f;
+
+        // Team 0 defiende en X=0 y su red se abre hacia X negativo (fuera del campo); team 1 en X=Columnas
+        // hacia X positivo — siempre hacia afuera, nunca invadiendo el rectángulo de juego.
+        float dir = team == 0 ? -1f : 1f;
+        float backX = goalLineX + (dir * Depth);
+        float xMin = Mathf.Min(goalLineX, backX);
+        var color = team == 0 ? Style.TeamOwn : Style.TeamRival;
+
+        AddBox(new Vector3(goalLineX, Height / 2f, mid - HalfWidth), new Vector3(Post, Height, Post), color);
+        AddBox(new Vector3(goalLineX, Height / 2f, mid + HalfWidth), new Vector3(Post, Height, Post), color);
+        AddBox(new Vector3(goalLineX, Height, mid), new Vector3(Post, Post, (HalfWidth * 2f) + Post), color);
+        AddGoalGroundShadow(goalLineX, backX, mid - HalfWidth - 0.15f, mid + HalfWidth + 0.15f);
+
+        var net = new Color(0.97f, 0.97f, 0.98f, 0.88f);
+        var xAxis = new Vector3(1f, 0f, 0f);
+        var yAxis = new Vector3(0f, 1f, 0f);
+        var zAxis = new Vector3(0f, 0f, 1f);
+
+        // Fondo: red vertical al final del volumen, de poste a poste y de suelo a larguero.
+        AddNetGrid(new Vector3(backX, 0f, mid - HalfWidth), zAxis, yAxis, HalfWidth * 2f, Height, 9, 6, net);
+
+        // Techo: de la boca al fondo, a la altura del larguero.
+        AddNetGrid(new Vector3(xMin, Height, mid - HalfWidth), xAxis, zAxis, Depth, HalfWidth * 2f, 4, 9, net);
+
+        // Los dos lados: de la boca al fondo, en cada poste.
+        AddNetGrid(new Vector3(xMin, 0f, mid - HalfWidth), xAxis, yAxis, Depth, Height, 4, 6, net);
+        AddNetGrid(new Vector3(xMin, 0f, mid + HalfWidth), xAxis, yAxis, Depth, Height, 4, 6, net);
+    }
+
+    /// <summary>
+    /// Mancha plana y semitransparente en el suelo, bajo la portería (revisión del revisor, 20 sep 2026):
+    /// una sombra suave garantizada, sin depender de cómo el renderizador de las capturas sombree postes
+    /// finos (ya documentado más arriba como poco fiable para geometría delgada).
+    /// </summary>
+    private void AddGoalGroundShadow(float x0, float x1, float z0, float z1)
+    {
+        float xMin = Mathf.Min(x0, x1);
+        float xMax = Mathf.Max(x0, x1);
+        var vertices = new[]
+        {
+            new Vector3(xMin, 0.004f, z0), new Vector3(xMax, 0.004f, z0),
+            new Vector3(xMax, 0.004f, z1), new Vector3(xMin, 0.004f, z1),
+        };
+        var normals = new[] { Vector3.Up, Vector3.Up, Vector3.Up, Vector3.Up };
+        var indices = new[] { 0, 1, 2, 0, 2, 3 };
+
+        var arrays = new Godot.Collections.Array();
+        arrays.Resize((int)Mesh.ArrayType.Max);
+        arrays[(int)Mesh.ArrayType.Vertex] = vertices;
+        arrays[(int)Mesh.ArrayType.Normal] = normals;
+        arrays[(int)Mesh.ArrayType.Index] = indices;
+
+        var mesh = new ArrayMesh();
+        mesh.AddSurfaceFromArrays(Mesh.PrimitiveType.Triangles, arrays);
+
+        _world.AddChild(new MeshInstance3D
+        {
+            Mesh = mesh,
+            MaterialOverride = new StandardMaterial3D
+            {
+                AlbedoColor = new Color(0f, 0f, 0f, 0.22f),
+                ShadingMode = BaseMaterial3D.ShadingModeEnum.Unshaded,
+                Transparency = BaseMaterial3D.TransparencyEnum.Alpha,
+                CullMode = BaseMaterial3D.CullModeEnum.Disabled,
+            },
+            CastShadow = GeometryInstance3D.ShadowCastingSetting.Off,
+        });
+    }
+
+    /// <summary>
+    /// Rejilla de la red de una portería (<see cref="BuildGoal"/>), sobre un rectángulo plano definido por
+    /// <paramref name="origin"/> y los dos ejes <paramref name="uAxis"/>/<paramref name="vAxis"/>
+    /// (unitarios): barras finas CON GROSOR de verdad —cajas, no <c>Mesh.PrimitiveType.Lines</c> (revisión
+    /// del revisor, 20 sep 2026: una línea de 1 px de motor se ve como alambre a cualquier distancia, no
+    /// como cuerda) — así que a 1920x1080 sin ampliar se lee como red. Marcador de posición procedural:
+    /// nunca una textura ni un modelo importado (regla 10 de <c>CLAUDE.md</c>).
+    /// </summary>
+    private void AddNetGrid(Vector3 origin, Vector3 uAxis, Vector3 vAxis, float uLen, float vLen, int cellsU, int cellsV, Color color)
+    {
+        const float Thickness = 0.02f;
+        var material = new StandardMaterial3D
+        {
+            AlbedoColor = color,
+            ShadingMode = BaseMaterial3D.ShadingModeEnum.Unshaded,
+            Transparency = BaseMaterial3D.TransparencyEnum.Alpha,
+            CullMode = BaseMaterial3D.CullModeEnum.Disabled,
+        };
+
+        // Hilos "verticales" (a lo largo de v, uno por cada paso de u): grosor en u y en la normal del
+        // plano (uAxis x vAxis), largo vLen en v.
+        var thickAcrossV = (Vector3.One - vAxis) * Thickness;
+        for (int i = 0; i <= cellsU; i++)
+        {
+            float u = uLen * i / cellsU;
+            var center = origin + (uAxis * u) + (vAxis * (vLen / 2f));
+            AddNetStrand(center, (vAxis * vLen) + thickAcrossV, material);
+        }
+
+        // Hilos "horizontales" (a lo largo de u, uno por cada paso de v): grosor en v y en la normal,
+        // largo uLen en u.
+        var thickAcrossU = (Vector3.One - uAxis) * Thickness;
+        for (int j = 0; j <= cellsV; j++)
+        {
+            float v = vLen * j / cellsV;
+            var center = origin + (vAxis * v) + (uAxis * (uLen / 2f));
+            AddNetStrand(center, (uAxis * uLen) + thickAcrossU, material);
+        }
+    }
+
+    private void AddNetStrand(Vector3 center, Vector3 size, StandardMaterial3D material)
+    {
+        _world.AddChild(new MeshInstance3D
+        {
+            Mesh = new BoxMesh { Size = size },
+            MaterialOverride = material,
+            Position = center,
+            CastShadow = GeometryInstance3D.ShadowCastingSetting.Off,
+        });
     }
 
     /// <summary>Caja opaca, sin transparencia ni textura: el bloque de construcción de todo <see cref="BuildStadium"/>.</summary>
@@ -1685,14 +1853,13 @@ public partial class MatchPitchView3D : SubViewportContainer
 
         Box(image, (Pitch.Columns / 2f) - 0.03f, 0f, (Pitch.Columns / 2f) + 0.03f, Pitch.Rows, chalk);
         Ring(image, Pitch.Columns / 2f, Pitch.Rows / 2f, 0.9f, 0.05f, chalk);
-        Outline(image, 0f, 1f, Pitch.AreaColumns, 1f + Pitch.AreaRows, 0.045f, chalk);
-        Outline(image, Pitch.Columns - Pitch.AreaColumns, 1f, Pitch.Columns, 1f + Pitch.AreaRows, 0.045f, chalk);
+        Outline(image, 0f, Pitch.AreaTop, Pitch.AreaColumns, Pitch.AreaBottom, 0.045f, chalk);
+        Outline(image, Pitch.Columns - Pitch.AreaColumns, Pitch.AreaTop, Pitch.Columns, Pitch.AreaBottom, 0.045f, chalk);
         Outline(image, 0f, 0f, Pitch.Columns, Pitch.Rows, 0.05f, chalk);
 
-        float mid = Pitch.Rows / 2f;
-        Box(image, 0f, mid - 0.9f, 0.09f, mid + 0.9f, Style.TeamOwn);
-        Box(image, Pitch.Columns - 0.09f, mid - 0.9f, Pitch.Columns, mid + 0.9f, Style.TeamRival);
-
+        // La barra plana de portería que había aquí (revisión del revisor, 20 sep 2026) la sustituye
+        // BuildGoal en BuildStadium: una portería con volumen (postes, larguero y red) de verdad, no un
+        // rectángulo pintado en el césped.
         image.GenerateMipmaps();
         return ImageTexture.CreateFromImage(image);
     }
@@ -1741,8 +1908,8 @@ public partial class MatchPitchView3D : SubViewportContainer
         Box(image, (Pitch.Columns / 2f) - 0.03f, 0f, (Pitch.Columns / 2f) + 0.03f, Pitch.Rows, line);
         Ring(image, Pitch.Columns / 2f, Pitch.Rows / 2f, 0.9f, 0.06f, line);
 
-        Outline(image, 0f, 1f, Pitch.AreaColumns, 1f + Pitch.AreaRows, 0.05f, line);
-        Outline(image, Pitch.Columns - Pitch.AreaColumns, 1f, Pitch.Columns, 1f + Pitch.AreaRows, 0.05f, line);
+        Outline(image, 0f, Pitch.AreaTop, Pitch.AreaColumns, Pitch.AreaBottom, 0.05f, line);
+        Outline(image, Pitch.Columns - Pitch.AreaColumns, Pitch.AreaTop, Pitch.Columns, Pitch.AreaBottom, 0.05f, line);
         Outline(image, 0f, 0f, Pitch.Columns, Pitch.Rows, 0.05f, line);
 
         // Las porterías en el color del equipo que las defiende, como en 2D: es lo que dice hacia dónde
