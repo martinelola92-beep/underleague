@@ -95,10 +95,11 @@ public partial class Stamp : Control
                 DrawLine(new Vector2(10f, h - 10f), new Vector2(w - 10f, 10f), new Color("5a5248"), 3f);
             }
 
-            // Perk y consumible son la voz de dato (Barlow), no la voz que proclama (Fell): son un
-            // recuento en curso, no un suceso arbitrado.
+            // Perk y consumible son la voz de dato (Barlow), no la voz que proclama (Grenze Gotisch): son
+            // un recuento en curso, no un suceso arbitrado. La talla grande/pequeña la decide el tamaño de
+            // letra, no el fichero — Grenze Gotisch es una sola familia variable para las dos tallas.
             bool dataVoice = _tone is StampTone.Perk or StampTone.Consumable;
-            var font = dataVoice ? Pregon.DataBold : (_large ? Pregon.FellBig : Pregon.Fell);
+            var font = dataVoice ? Pregon.DataBold : Pregon.Titular;
             int size = dataVoice ? Pregon.SizeData : (_large ? Pregon.SizeTitleSmall / 2 : Pregon.SizeHeader);
 
             // La cruz médica de MinorInjury vive en x 10-20 (revisión del orquestador, 19 sep 2026: se

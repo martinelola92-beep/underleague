@@ -44,7 +44,7 @@ public partial class MatchRecord : Control
         DrawLine(sheetAt + new Vector2(60f, 110f), sheetAt + new Vector2(sw - 60f, 110f), Pregon.InkBrown, 1.5f);
         DrawLine(sheetAt + new Vector2(60f, 116f), sheetAt + new Vector2(sw - 60f, 116f), Pregon.InkBrown, 1f);
 
-        Pregon.DrawFittedTitle(this, Pregon.Fell, sheetAt + new Vector2(0f, 24f), UiText.Get("ui.pregon.record.title"), Pregon.SizeTitleSmall - 6, Pregon.Sable, sw);
+        Pregon.DrawFittedTitle(this, Pregon.Titular, sheetAt + new Vector2(0f, 24f), UiText.Get("ui.pregon.record.title"), Pregon.SizeTitleSmall - 6, Pregon.Sable, sw);
 
         Pregon.DrawShield(this, sheetAt + new Vector2((sw / 2f) - 300f, 150f), 110f, 138f, ours: true);
         Pregon.DrawShield(this, sheetAt + new Vector2((sw / 2f) + 190f, 150f), 110f, 138f, ours: false);
@@ -54,7 +54,7 @@ public partial class MatchRecord : Control
         string line = _ownScore >= _rivalScore
             ? UiText.Get("ui.pregon.record.winner", _own, _rival)
             : UiText.Get("ui.pregon.record.winner", _rival, _own);
-        Pregon.DrawTextCentered(this, Pregon.Fell, sheetAt + new Vector2(0f, 320f), line, Pregon.SizeHeader, Pregon.Azur, sw);
-        Pregon.DrawWrappedText(this, Pregon.FellItalic, sheetAt + new Vector2(0f, 380f), _footer, Pregon.SizeBody, Pregon.InkBrown, sw, centered: true);
+        Pregon.DrawTextCentered(this, Pregon.Titular, sheetAt + new Vector2(0f, 320f), line, Pregon.SizeHeader, Pregon.Azur, sw);
+        Pregon.DrawWrappedText(this, Pregon.SerifItalic, sheetAt + new Vector2(0f, 380f), _footer, Pregon.SizeBody, Pregon.InkBrown, sw, centered: true);
     }
 }

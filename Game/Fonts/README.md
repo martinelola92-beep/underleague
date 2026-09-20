@@ -6,15 +6,19 @@ Licencia SIL Open Font License 1.1 (texto en `*-OFL.txt`), descargadas de `githu
 
 | Fichero | Familia | Voz |
 |---|---|---|
-| `IMFellEnglishSC.ttf` | IM Fell English SC (Igino Marini) | proclamar |
-| `IMFellGreatPrimerSC.ttf` | IM Fell Great Primer SC | proclamar, cuerpo grande |
-| `IMFellEnglish-Italic.ttf` | IM Fell English Italic | proclamar, subtítulo |
+| `IMFellEnglishSC.ttf` | IM Fell English SC (Igino Marini) | **sin uso** desde el 20 sep 2026 (cargable, ver enmienda) |
+| `IMFellGreatPrimerSC.ttf` | IM Fell Great Primer SC | **sin uso**, ver arriba |
+| `IMFellEnglish-Italic.ttf` | IM Fell English Italic | **sin uso**, ver arriba |
 | `BarlowCondensed-Bold.ttf`, `-SemiBold.ttf` | Barlow Condensed | datos |
 | `Cinzel-Variable.ttf` | Cinzel | cifras del marcador |
-| `GrenzeGotisch-Variable.ttf` | Grenze Gotisch | **proclamar** (titulares): gótica legible |
-| `Grenze-Variable.ttf`, `Grenze-Italic-Variable.ttf` | Grenze | serif intermedia entre romana y gótica |
+| `GrenzeGotisch-Variable.ttf` | Grenze Gotisch | **titular**: lo que proclama (estandarte, bando, acta, sellos, cabeceras de bandeja, escudo del tablero, títulos de pantalla) |
+| `Grenze-Variable.ttf` | Grenze | **cuerpo y subtítulo**: lo que se lee seguido (etiqueta de sección, subtítulo) |
+| `Grenze-Italic-Variable.ttf` | Grenze Italic | la misma voz de cuerpo, en cursiva (crónica, pie de bando/estandarte) |
 
-**20 sep 2026, decisión del revisor**: la voz de proclamar pasa de IM Fell (romana pura) a la familia
-**Grenze**, diseñada expresamente como punto intermedio entre la romana y la gótica, con **Grenze Gotisch**
-para los titulares. Deja sin efecto el «nunca gótica» de la ADR 0120 §1 (ver su enmienda). IM Fell se queda
-en el repositorio mientras se compara.
+**20 sep 2026, decisión del revisor** («letra gótica en algún sitio, o una serif intermedia»): la voz de
+proclamar pasa de IM Fell (romana pura) a **Grenze Gotisch**, diseñada expresamente como punto intermedio
+entre la romana y la gótica; el resto de la voz serif pasa a **Grenze** (y su cursiva). Deja sin efecto el
+«nunca gótica» de la ADR 0120 §1 (ver su enmienda) — RA-026 sigue prohibiendo la iconografía gótica
+(calaveras, marcos), que es un problema distinto del de la tipografía. IM Fell se queda en el repositorio,
+cargable desde `Pregon.Fell`/`FellBig`/`FellItalic`, sin llamadas en el resto del árbol, por si el revisor
+quiere volver a ella.

@@ -59,18 +59,44 @@ public static class Pregon
     private static FontFile? _fell;
     private static FontFile? _fellBig;
     private static FontFile? _fellItalic;
+    private static FontFile? _titular;
+    private static FontFile? _serif;
+    private static FontFile? _serifItalic;
     private static FontFile? _dataBold;
     private static FontFile? _dataSemiBold;
     private static FontFile? _score;
 
-    /// <summary>IM Fell English SC: la voz que proclama (cabeceras, «Se hace saber», títulos cortos).</summary>
+    /// <summary>
+    /// IM Fell English SC: la voz que proclama en su versión original (romana pura). Sin uso desde el 20
+    /// sep 2026 (decisión del revisor: «letra gótica en algún sitio, o una serif intermedia») — la
+    /// proclama pasa a <see cref="Titular"/> y el resto de la voz serif a <see cref="Serif"/>. Se deja
+    /// cargable, sin llamadas en el resto del árbol, por si el revisor quiere volver a ella.
+    /// </summary>
     public static Font Fell => LoadFont(ref _fell, "res://Fonts/IMFellEnglishSC.ttf");
 
-    /// <summary>IM Fell Great Primer SC: la misma voz, para el cuerpo grande del título (GOL, HERIDO...).</summary>
+    /// <summary>IM Fell Great Primer SC: la misma voz, para el cuerpo grande del título. Sin uso, ver <see cref="Fell"/>.</summary>
     public static Font FellBig => LoadFont(ref _fellBig, "res://Fonts/IMFellGreatPrimerSC.ttf");
 
-    /// <summary>IM Fell English Italic: la voz que proclama en el cuerpo y el pie del bando.</summary>
+    /// <summary>IM Fell English Italic: la misma voz, en cursiva. Sin uso, ver <see cref="Fell"/>.</summary>
     public static Font FellItalic => LoadFont(ref _fellItalic, "res://Fonts/IMFellEnglish-Italic.ttf");
+
+    /// <summary>
+    /// Grenze Gotisch: la voz que proclama — titulares y anuncios cortos (estandarte, bando, acta, sellos,
+    /// cabeceras de bandeja, escudo del tablero, títulos de pantalla). Diseñada como punto intermedio entre
+    /// romana y gótica (decisión del revisor, 20 sep 2026: sustituye a <see cref="Fell"/>/<see cref="FellBig"/>
+    /// en ese papel). Una sola familia variable para las dos tallas de título: el tamaño lo decide el
+    /// llamador, no el fichero.
+    /// </summary>
+    public static Font Titular => LoadFont(ref _titular, "res://Fonts/GrenzeGotisch-Variable.ttf");
+
+    /// <summary>
+    /// Grenze: la serif de cuerpo y subtítulos — lo que se lee seguido, no lo que se proclama (etiqueta de
+    /// sección, subtítulo). Sustituye a <see cref="Fell"/> en ese papel (decisión del revisor, 20 sep 2026).
+    /// </summary>
+    public static Font Serif => LoadFont(ref _serif, "res://Fonts/Grenze-Variable.ttf");
+
+    /// <summary>Grenze Italic: la misma serif de cuerpo, en cursiva — sustituye a <see cref="FellItalic"/>.</summary>
+    public static Font SerifItalic => LoadFont(ref _serifItalic, "res://Fonts/Grenze-Italic-Variable.ttf");
 
     /// <summary>Barlow Condensed Bold: la voz de los datos (nombres, tiras, botones).</summary>
     public static Font DataBold => LoadFont(ref _dataBold, "res://Fonts/BarlowCondensed-Bold.ttf");
@@ -113,7 +139,7 @@ public static class Pregon
             DefaultFontSize = SizeData,
         };
 
-        AddLabelVariation(theme, "ProclaimLabel", Fell, SizeHeader);
+        AddLabelVariation(theme, "ProclaimLabel", Titular, SizeHeader);
         AddLabelVariation(theme, "DataLabel", DataBold, SizeData);
         AddLabelVariation(theme, "ScoreLabel", Score, SizeScoreBoard);
         return theme;

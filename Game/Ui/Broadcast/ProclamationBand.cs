@@ -54,7 +54,7 @@ public partial class ProclamationBand : Control
 
         Pregon.DrawTrumpet(this, new Vector2(48f, 46f), 240f, 2f);
 
-        Style.DrawText(this, Pregon.Fell, new Vector2(380f, 14f), _header, Pregon.SizeHeader, Pregon.Sable, maxWidth: w - 760f);
-        Style.DrawText(this, Pregon.FellItalic, new Vector2(380f, 56f), _body, Pregon.SizeBody, Pregon.Gules, maxWidth: w - 760f);
+        Style.DrawText(this, Pregon.Titular, new Vector2(380f, 14f), _header, Pregon.SizeHeader, Pregon.Sable, maxWidth: w - 760f);
+        Style.DrawText(this, Pregon.SerifItalic, new Vector2(380f, 56f), _body, Pregon.SizeBody, Pregon.Gules, maxWidth: w - 760f);
     }
 }

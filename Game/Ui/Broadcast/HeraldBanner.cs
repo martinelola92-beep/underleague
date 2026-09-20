@@ -89,17 +89,17 @@ public partial class HeraldBanner : Control
         // El bloque de texto ocupa la mayor parte del pergamino (revisión del revisor: «el texto nada en
         // el centro», hoy menos margen y letra más grande): de bodyY+100 a bodyY+bodyH-70, ~76% del alto
         // del cuerpo.
-        Pregon.DrawFittedTitle(this, Pregon.Fell, new Vector2(tx, bodyY + 102f), _header, Pregon.SizeHeader, Pregon.InkBrown, tw);
+        Pregon.DrawFittedTitle(this, Pregon.Titular, new Vector2(tx, bodyY + 102f), _header, Pregon.SizeHeader, Pregon.InkBrown, tw);
 
         // «GOL» con el mismo peso visual que el boceto del revisor: ~55% del ancho del pergamino, no del
         // ancho de la columna de texto — se centra dentro de tw con su propio ancho más estrecho.
         int titlePreferred = _title.Length > 4 ? Pregon.SizeTitleSmall : 340;
         float titleMaxWidth = _title.Length > 4 ? tw : bodyW * 0.55f;
         float titleX = tx + ((tw - titleMaxWidth) / 2f);
-        Pregon.DrawFittedTitle(this, Pregon.FellBig, new Vector2(titleX, bodyY + 156f), _title, titlePreferred, primary, titleMaxWidth);
+        Pregon.DrawFittedTitle(this, Pregon.Titular, new Vector2(titleX, bodyY + 156f), _title, titlePreferred, primary, titleMaxWidth);
 
-        Pregon.DrawWrappedText(this, Pregon.FellItalic, new Vector2(tx, bodyY + 372f), _body, Pregon.SizeBody, Pregon.InkBrown, tw, centered: true);
-        Pregon.DrawFittedTitle(this, Pregon.Fell, new Vector2(tx, bodyY + 452f), _footer, Pregon.SizeHeader, Pregon.InkBrown, tw);
+        Pregon.DrawWrappedText(this, Pregon.SerifItalic, new Vector2(tx, bodyY + 372f), _body, Pregon.SizeBody, Pregon.InkBrown, tw, centered: true);
+        Pregon.DrawFittedTitle(this, Pregon.Titular, new Vector2(tx, bodyY + 452f), _footer, Pregon.SizeHeader, Pregon.InkBrown, tw);
 
         // Corona al pie, cerrando la proclama: puntas separadas, no una mancha (revisión del revisor).
         DrawCrown(new Vector2(DesignWidth / 2f, bodyY + bodyH - 44f), secondary);

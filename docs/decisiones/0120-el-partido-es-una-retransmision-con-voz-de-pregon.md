@@ -44,6 +44,22 @@ la perspectiva da la profundidad; el estadio solo, con cámara ortográfica (B),
 demasiado el fondo. El modo depuración conserva la cámara ortográfica. Sigue siendo una cámara **fija**: los
 gestos son aparte.
 
+## Enmienda (20 sep 2026, revisor: «letra gótica en algún sitio, o cambiar la serif por una de aspecto un
+poco más gótico, intermedio entre las dos»)
+
+La voz que proclama deja de ser **IM Fell** (imprenta del XVII, romana pura) y pasa a **Grenze Gotisch**
+para los titulares (estandarte, bando, acta, sellos, cabeceras de bandeja, escudo del tablero, títulos de
+pantalla) y **Grenze**, con su cursiva, para el resto de la voz serif (subtítulos, etiquetas de sección,
+cuerpo). Deja sin efecto el «IM Fell, nunca gótica» de §1 y de la fila RA-021 de la tabla de §1: la
+dirección pedía evitar la gótica por asociación con *grimdark* de calaveras y pinchos (RA-026), no por
+legibilidad; Grenze Gotisch está diseñada expresamente como punto intermedio entre romana y gótica, y la
+prohibición de RA-026 sigue intacta para la **iconografía** (calaveras, marcos), que es un problema
+distinto del de la tipografía. Revisado con capturas a 1920×1080 (`Game/screenshots/retrans-*.png`,
+`informe.png`, `mercado.png`): legible en las tres tallas usadas (títulos grandes, cabeceras de 26 px
+lógicos, título de pantalla de 17 px lógicos). IM Fell se queda en el repositorio (`Game/Fonts/`), cargable
+pero sin uso en el árbol, por si se quiere volver a ella. Detalle de qué componente usa cada voz:
+`Game/Fonts/README.md` y los comentarios de `Game/Ui/Broadcast/Pregon.cs`.
+
 ## Consecuencias
 
 - `docs/requisitos.md` anota cada requisito afectado con un puntero a esta ADR; el texto original no se borra.

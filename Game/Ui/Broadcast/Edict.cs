@@ -40,11 +40,11 @@ public partial class Edict : Control
         DrawLine(sheetAt + new Vector2(40f, 64f), sheetAt + new Vector2(520f, 64f), Pregon.InkBrown, 1.5f);
         DrawLine(sheetAt + new Vector2(40f, 70f), sheetAt + new Vector2(520f, 70f), Pregon.InkBrown, 1f);
 
-        Style.DrawText(this, Pregon.Fell, sheetAt + new Vector2(20f, 10f), UiText.Get("ui.pregon.edict.said"), Pregon.SizeHeader, Pregon.InkBrown, maxWidth: 520f);
-        Style.DrawText(this, Pregon.FellItalic, sheetAt + new Vector2(20f, 72f), UiText.Get("ui.pregon.edict.deathOf"), Pregon.SizeBody, Pregon.InkBrown, maxWidth: 520f);
-        int nameSize = Pregon.FitTitleSize(Pregon.FellBig, _name, Pregon.SizeTitleSmall - 8, 520f);
-        Pregon.DrawTextEllipsized(this, Pregon.FellBig, sheetAt + new Vector2(20f, 118f), _name, nameSize, Pregon.Sable, 520f);
-        Pregon.DrawWrappedText(this, Pregon.FellItalic, sheetAt + new Vector2(20f, 206f), _body, Pregon.SizeEssential + 4, Pregon.InkBrown, 520f);
+        Style.DrawText(this, Pregon.Titular, sheetAt + new Vector2(20f, 10f), UiText.Get("ui.pregon.edict.said"), Pregon.SizeHeader, Pregon.InkBrown, maxWidth: 520f);
+        Style.DrawText(this, Pregon.SerifItalic, sheetAt + new Vector2(20f, 72f), UiText.Get("ui.pregon.edict.deathOf"), Pregon.SizeBody, Pregon.InkBrown, maxWidth: 520f);
+        int nameSize = Pregon.FitTitleSize(Pregon.Titular, _name, Pregon.SizeTitleSmall - 8, 520f);
+        Pregon.DrawTextEllipsized(this, Pregon.Titular, sheetAt + new Vector2(20f, 118f), _name, nameSize, Pregon.Sable, 520f);
+        Pregon.DrawWrappedText(this, Pregon.SerifItalic, sheetAt + new Vector2(20f, 206f), _body, Pregon.SizeEssential + 4, Pregon.InkBrown, 520f);
 
         var wax = new Vector2(450f, sheetAt.Y + 340f);
         DrawColoredPolygon(ShiftedBurst(wax, 48f, 43f, 22), Pregon.Wax);

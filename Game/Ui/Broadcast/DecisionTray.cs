@@ -119,7 +119,7 @@ public partial class DecisionTray : Control
     {
         float w = Size.X, h = Size.Y;
         Pregon.DrawParchment(this, Vector2.Zero, w, h, new Color("e3d2a8"), Pregon.VellumEdge, seed: 700, amplitude: 2f, edgeWidth: 2f);
-        Style.DrawText(this, Pregon.Fell, new Vector2(20f, 4f), UiText.Get("ui.pregon.tray.caption"), Pregon.SizeHeader, Pregon.Sable, maxWidth: 600f);
+        Style.DrawText(this, Pregon.Titular, new Vector2(20f, 4f), UiText.Get("ui.pregon.tray.caption"), Pregon.SizeHeader, Pregon.Sable, maxWidth: 600f);
 
         float ry = h - 84f;
         float x = 20f;
@@ -136,7 +136,7 @@ public partial class DecisionTray : Control
         }
 
         x += OutgoingWidth + 20f;
-        Style.DrawText(this, Pregon.FellBig, new Vector2(x, ry + 6f), UiText.Get("ui.pregon.tray.arrow"), Pregon.SizeTitleSmall / 2, Pregon.Sable, maxWidth: 50f);
+        Style.DrawText(this, Pregon.Titular, new Vector2(x, ry + 6f), UiText.Get("ui.pregon.tray.arrow"), Pregon.SizeTitleSmall / 2, Pregon.Sable, maxWidth: 50f);
         x += 60f;
 
         _candidateRects.Clear();
@@ -155,7 +155,7 @@ public partial class DecisionTray : Control
         float confirmW = 220f;
         _confirmRect = new Rect2(w - 20f - confirmW, ry + 8f, confirmW, 60f);
         Pregon.DrawParchment(this, new Vector2(_confirmRect.Position.X, _confirmRect.Position.Y), confirmW, 60f, Pregon.Or, Pregon.Sable, seed: 701, amplitude: 1.5f, edgeWidth: 2f);
-        Pregon.DrawTextCentered(this, Pregon.Fell, _confirmRect.Position + new Vector2(0f, 14f), UiText.Get("ui.pregon.tray.confirm"), Pregon.SizeHeader, Pregon.Sable, confirmW);
+        Pregon.DrawTextCentered(this, Pregon.Titular, _confirmRect.Position + new Vector2(0f, 14f), UiText.Get("ui.pregon.tray.confirm"), Pregon.SizeHeader, Pregon.Sable, confirmW);
 
         Style.DrawText(this, Pregon.DataSemiBold, new Vector2(x, ry + 24f), UiText.Get("ui.pregon.tray.hint"), Pregon.SizeDataSmall, Pregon.InkBrown, maxWidth: _confirmRect.Position.X - x - 20f);
     }

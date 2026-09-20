@@ -179,7 +179,7 @@ public partial class BroadcastBoard : Control
         Pregon.DrawShield(this, new Vector2(shieldX, at.Y + 6f), 34f, 42f, ours);
 
         float textX = ours ? at.X + 50f : at.X + 12f;
-        Pregon.DrawTextEllipsized(this, Pregon.Fell, new Vector2(textX, at.Y + 12f), name, Pregon.SizeHeader, Pregon.Vellum, 196f);
+        Pregon.DrawTextEllipsized(this, Pregon.Titular, new Vector2(textX, at.Y + 12f), name, Pregon.SizeHeader, Pregon.Vellum, 196f);
     }
 
     private void DrawScorePlate(Vector2 at, int score, int seed)

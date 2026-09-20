@@ -18,7 +18,7 @@ namespace Underleague.Game.Ui;
 /// <b>Voz de pregón (encargo pregon-resto):</b> desde el 20 sep 2026 <see cref="Panel"/> dibuja pergamino
 /// con borde rasgado (<see cref="ParchmentPanel"/>), <see cref="Header"/> dibuja un tablero de madera, y
 /// <see cref="BuildLegacyTheme"/> —aplicado por <see cref="Layout.CenterLegacy"/> a toda pantalla vieja—
-/// pone IM Fell en los títulos, Barlow Condensed en botones y datos, y la placa de pergamino de los
+/// pone Grenze Gotisch en los títulos, Barlow Condensed en botones y datos, y la placa de pergamino de los
 /// botones, <b>incluidos</b> los pocos botones que vienen ya maquetados en un <c>.tscn</c>
 /// (<c>Equipo.tscn</c>) en vez de nacer aquí: por eso el estilo del botón vive en el <c>Theme</c> del
 /// tipo base <c>Button</c> y no en cada instancia — un <c>Theme</c> alcanza a los hijos de la escena,
@@ -85,20 +85,25 @@ public static class Widgets
         return panel;
     }
 
-    /// <summary>Título: el tamaño grande de UI-004, en IM Fell. Tinta parda salvo que se pida otro color.</summary>
+    /// <summary>
+    /// Título: el tamaño grande de UI-004, en Grenze Gotisch —la voz que proclama (decisión del revisor,
+    /// 20 sep 2026: sustituye a IM Fell en ese papel)—. Tinta parda salvo que se pida otro color.
+    /// </summary>
     public static Label Title(Control parent, string text, Vector2 at, float width = 600f, Color? color = null) =>
-        Label(parent, text, at, width, Style.TextLarge, color ?? Style.Text, Pregon.Fell);
+        Label(parent, text, at, width, Style.TextLarge, color ?? Style.Text, Pregon.Titular);
 
     /// <summary>Cuerpo de texto: el tamaño pequeño de UI-004, en Barlow Condensed.</summary>
     public static Label Body(Control parent, string text, Vector2 at, float width = 600f, Color? color = null) =>
         Label(parent, text, at, width, Style.TextSmall, color ?? Style.Text, Pregon.DataSemiBold);
 
     /// <summary>
-    /// Etiqueta de sección: cuerpo en IM Fell y en rubrica —el rojo de lacre con el que un manuscrito
-    /// destaca sus cabeceras—, que se lee mejor sobre pergamino que el dorado de <see cref="Style.Accent"/>.
+    /// Etiqueta de sección: se lee seguido, no se proclama (a 12 px la gótica de <see cref="Pregon.Titular"/>
+    /// pierde legibilidad) — en Grenze (<see cref="Pregon.Serif"/>) y en rubrica —el rojo de lacre con el
+    /// que un manuscrito destaca sus cabeceras—, que se lee mejor sobre pergamino que el dorado de
+    /// <see cref="Style.Accent"/>.
     /// </summary>
     public static Label Section(Control parent, string text, Vector2 at, float width = 600f) =>
-        Label(parent, text, at, width, Style.TextSmall, Pregon.Wax, Pregon.Fell);
+        Label(parent, text, at, width, Style.TextSmall, Pregon.Wax, Pregon.Serif);
 
     private static Label Label(Control parent, string text, Vector2 at, float width, int size, Color color, Font font)
     {

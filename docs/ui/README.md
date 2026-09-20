@@ -30,9 +30,14 @@ y las mediciones: `prototipo/README.md`.
   infantil. Los acontecimientos se proclaman como un pregonero con imprenta.
 - Color: heráldica profunda — nuestro equipo azur y oro, el rival gules y sable; pergamino y tinta parda para
   lo impreso; el rojo sangre solo para daño y muerte; el oro también para economía.
-- Dos voces tipográficas (fuentes libres, provisionales): **IM Fell** (imprenta del XVII, romana, nunca
-  gótica) para proclamar; **Barlow Condensed** para datos. Cifras del marcador en **Cinzel**. Texto esencial a
-  **20 px lógicos** como mínimo (C15: sale a ~13 px efectivos en 1280×800; UI-004 pide ≥11).
+- Dos voces tipográficas (fuentes libres, provisionales): **Grenze Gotisch** (punto intermedio entre romana
+  y gótica) para los titulares que proclaman (estandarte, bando, acta, sellos, cabeceras de bandeja, escudo
+  del tablero, títulos de pantalla); **Grenze**, con su cursiva, para el resto de la voz serif (subtítulos,
+  etiquetas de sección, cuerpo); **Barlow Condensed** para datos. Cifras del marcador en **Cinzel**. Texto
+  esencial a **20 px lógicos** como mínimo (C15: sale a ~13 px efectivos en 1280×800; UI-004 pide ≥11).
+  *(20 sep 2026, decisión del revisor: sustituye a IM Fell —romana pura, nunca gótica— en la voz que
+  proclama; enmienda de la ADR 0120. RA-026 sigue prohibiendo la iconografía gótica —calaveras, marcos—,
+  que es un problema distinto del de la tipografía.)*
 - Irregularidad en el **marco** (bordes rasgados, placas torcidas 2–4°), nunca en el contenido que se lee.
 - Diferenciación de Blood Bowl: tela/madera/papel en vez de metal/piedra, día y color en vez de *grimdark*,
   heráldica y pregón en vez de calaveras y pinchos, humor en los textos.
