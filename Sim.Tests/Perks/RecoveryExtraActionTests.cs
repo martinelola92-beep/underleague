@@ -111,9 +111,15 @@ public sealed class RecoveryExtraActionTests
     /// eventos TACKLE que antes del cambio. Los valores son los medidos sobre el árbol limpio con
     /// <c>git stash</c> (disciplina de la skill <c>balance-measure</c>), semilla a semilla. Si la
     /// evaluación se hubiera duplicado, estas cuentas subirían.</para>
+    ///
+    /// <para>La semilla 0 se refijó a 24 (antes 31) con la ADR 0121: centrar el área del portero cambia
+    /// <c>Utility.ClampToArea</c>, así que el portero se mueve distinto tick a tick y el consumo de RNG
+    /// del partido diverge aguas abajo, aunque TACKLE siga evaluándose una sola vez. No es una regresión
+    /// de este test, es la colateral esperada de un cambio determinista de geometría (medido en el mismo
+    /// encargo de la ADR).</para>
     /// </summary>
     [Theory]
-    [InlineData(0, 31)]
+    [InlineData(0, 24)]
     [InlineData(1, 21)]
     [InlineData(2, 26)]
     [InlineData(3, 10)]
@@ -182,12 +188,18 @@ public sealed class RecoveryExtraActionTests
     /// semillas, mismas plantillas. <c>charge</c> se volvió a fijar con BC-B (65 → 13): los 65 se midieron con el fallo
     /// del límite (el perk se encadenaba dentro de su propia activación), imposibles con un límite de 1 por
     /// partido en 20 partidos.
+    ///
+    /// <para><c>lane_reader</c> (19 → 18) y <c>sweeper_keeper</c> (23 → 24) se refijaron con la ADR 0121:
+    /// centrar el área del portero desplaza <c>Utility.ClampToArea</c>, así que el consumo de RNG diverge
+    /// aguas abajo (misma causa que <see cref="TackleStreamIsUnchangedForAMatchWithNoPerks"/>).
+    /// <c>sweeper_keeper</c> es justo el perk del portero, así que es el más esperable de los dos en
+    /// moverse.</para>
     /// </summary>
     [Theory]
     [InlineData("charge", 1, 13)]
-    [InlineData("lane_reader", 1, 19)]
+    [InlineData("lane_reader", 1, 18)]
     [InlineData("road_warrior", 1, 0)]
-    [InlineData("sweeper_keeper", 0, 23)]
+    [InlineData("sweeper_keeper", 0, 24)]
     public void ExistingPerksAreUnchanged(string perkId, int slot, int expected)
     {
         int total = 0;

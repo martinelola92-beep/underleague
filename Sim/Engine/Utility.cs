@@ -313,7 +313,7 @@ internal static class Utility
         float minX = team == 0 ? 0f : Pitch.Columns - Pitch.AreaColumns + AreaMargin;
         float maxX = team == 0 ? Pitch.AreaColumns - AreaMargin : Pitch.Columns;
         float x = Math.Clamp(point.X, minX, maxX);
-        float y = Math.Clamp(point.Y, 1f, Pitch.AreaRows + 1f);
+        float y = Math.Clamp(point.Y, Pitch.AreaTop, Pitch.AreaBottom);
         return new Vec2(x, y);
     }
 

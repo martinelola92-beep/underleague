@@ -328,16 +328,23 @@ public static class Simulator
 
             // El portero se refleja tal cual para el equipo 1 (MatchEngine.AddTeam solo invierte la
             // columna), así que su casilla-hogar en coordenadas relativas debe caer ya dentro de su propia
-            // área: columna dentro de las AreaColumns desde su portería y fila en 1..AreaRows. Sin esta
-            // comprobación, un portero alineado fuera del área nunca dispara GoalkeeperLeftArea porque
-            // "salir" no tiene sentido si nunca estuvo dentro (revisión independiente, fase 0).
+            // área: columna dentro de las AreaColumns desde su portería y el CENTRO de la fila (fila + 0,5)
+            // dentro de la banda [AreaTop, AreaBottom], centrada en Rows/2 (ADR 0121: filas 1..5 con los
+            // valores actuales). Sin esta comprobación, un portero alineado fuera del área nunca dispara
+            // GoalkeeperLeftArea porque "salir" no tiene sentido si nunca estuvo dentro (revisión
+            // independiente, fase 0).
+            float goalkeeperRowCenter = slot.HomeCell.Row + 0.5f;
             if (definition.Position == Position.Goalkeeper
-                && (slot.HomeCell.Column >= Pitch.AreaColumns || slot.HomeCell.Row < 1 || slot.HomeCell.Row > Pitch.AreaRows))
+                && (slot.HomeCell.Column >= Pitch.AreaColumns
+                    || goalkeeperRowCenter < Pitch.AreaTop
+                    || goalkeeperRowCenter > Pitch.AreaBottom))
             {
+                int minRow = (int)MathF.Ceiling(Pitch.AreaTop - 0.5f);
+                int maxRow = (int)MathF.Floor(Pitch.AreaBottom - 0.5f);
                 throw new ArgumentException(
                     $"el equipo {side} ('{team.Id}') alinea al portero {slot.PlayerId} en la casilla "
                         + $"({slot.HomeCell.Column},{slot.HomeCell.Row}); debe estar dentro de su área "
-                        + $"(columna < {Pitch.AreaColumns}, fila entre 1 y {Pitch.AreaRows})",
+                        + $"(columna < {Pitch.AreaColumns}, fila entre {minRow} y {maxRow})",
                     nameof(team));
             }
 

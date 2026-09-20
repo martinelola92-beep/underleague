@@ -27,14 +27,22 @@ public static class Pitch
     public const int AreaColumns = 2;
     // 4 (se mantiene igual que con seis filas): con siete filas, 4 de 7 (57 %) es lo más cercano a
     // conservar el 60 % histórico (3 de 5 con el campo original) sin pasarse: 5 de 7 daría el 71 %,
-    // demasiado, y bajar a 3 encogería el dominio del portero y agravaría D-21.
+    // demasiado, y bajar a 3 encogería el dominio del portero y agravaría D-21. La altura de la banda no
+    // cambia; lo que cambia (ADR 0121) es dónde cae: antes pegada arriba (1 fila libre arriba, 2 abajo),
+    // ahora centrada en el eje Rows/2.
     public const int AreaRows = 4;
 
-    /// <summary>True si p está dentro del área que defiende team (0: X&lt;2; 1: X&gt;14), filas 1..5.</summary>
+    /// <summary>Borde superior de la banda del área, centrada en Rows/2 (ADR 0121): 1,5 con los valores actuales.</summary>
+    public const float AreaTop = (Rows - AreaRows) / 2f;
+
+    /// <summary>Borde inferior de la banda del área, centrada en Rows/2 (ADR 0121): 5,5 con los valores actuales.</summary>
+    public const float AreaBottom = (Rows + AreaRows) / 2f;
+
+    /// <summary>True si p está dentro del área que defiende team (0: X&lt;2; 1: X&gt;14), banda [AreaTop, AreaBottom].</summary>
     public static bool IsInArea(Vec2 p, int team)
     {
         bool xInArea = team == 0 ? p.X < AreaColumns : p.X > Columns - AreaColumns;
-        bool yInArea = p.Y >= 1f && p.Y <= AreaRows + 1f;
+        bool yInArea = p.Y >= AreaTop && p.Y <= AreaBottom;
         return xInArea && yInArea;
     }
 
