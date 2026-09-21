@@ -9,6 +9,21 @@ PC (Steam), premium, sin online. **Estado (8 sep 2026): fases 0 y 1 cerradas; fa
 **Campo de siete filas (14 sep 2026, decisión del revisor, BA-C):** 16×7 en vez de 16×6 —con seis filas el centro geométrico cae *entre* dos filas y no existe fila central—, con guardado v4. Añadir la fila cuesta ~1,0 tiro y ~0,45 goles por partido y **ninguna palanca local lo recupera**, así que la **ADR 0109** recalibra la banda de tiros a la geometría vigente (8-16 → 7-15) en vez de tocar el motor, y deja escrito que ensanchar la formación o las zonas de acción destruye la profundidad de colocación. Nueve auditorías de la IA de jugadores (`docs/auditoria-ia-jugadores-1..9.md`) dejan **un solo cambio aplicado**, la **ADR 0110**: `Shoot` del defensa 77 → 154 y del centrocampista 188 → 237, porque con 77 un defensa colocado arriba nunca remataba —perdía contra su propio `ShortPass` de 500— y jugar fuera de posición costaba dos tercios del ataque (100/48/38 → 100/68/55). Rechazados y documentados: `ChaseBall pen` en todas las dosis (degrada la diferenciación de builds), el desfase de fase entre equipos (no replica entre semillas) y la histéresis. Queda **abierto** el papel del centrocampista: dispara el 6,5 % de los tiros siendo el 43 % de los jugadores de campo.
 ---
 
+## Plan de evolución vigente (21 sep 2026): `docs/plan-evolucion-knavall.md`
+
+Ocho fases ordenadas por impacto/coste, derivadas de la ADR 0123 y la 0122. **F1 memoria** (historial de
+jugador + `RivalHistory` de lectura pura + `clanId`) y **F2 atribución** (`SAVE`, cartel de perk con su
+efecto, nombres de rivales, crónica conectada, dorsales estables) son las de mayor impacto y **ninguna de
+las seis decisiones abiertas las bloquea**: ese es el argumento para empezar por ahí. Siguen **F3
+intención** (abrir `modifyUtility`, rasgos nuevos en `/data`; único riesgo alto de la primera mitad: es un
+recalibrado y `injuriesPerMatch` está en 0,81 con techo 0,90), **F4 verdad** (la pasada sistemática sobre
+los nueve casos de divergencia declarado/implementado), **F5 espectáculo** (el hueco real es el momento de
+**remontada**) y **F6 re-skin**, adelantable. **F7 turba** y **F8 memoria entre runs** van al final y están
+*gated*.
+
+Regla dura de F1: **no se construye memoria que nadie vea** — cada pieza sale con su superficie mínima.
+Criterio de F1: las 43 puertas **idénticas** a la línea base; si se mueven, ha tocado el consumo de RNG.
+
 ## Dirección vigente: **ADR 0123 — Knavall: Rise to Rule** (21 sep 2026)
 
 ADR paraguas y documento de dirección. Separa **decisiones de producto** (nombre y lenguaje del mundo —
