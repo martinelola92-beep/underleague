@@ -115,3 +115,5 @@ El hueco del 0011 corresponde a una decisión sobre el radio de adyacencia que q
 | [0020](0020-cuerpos-y-ocupacion.md) | Cuerpos con volumen, separación blanda y empuje | Aceptada |
 | [0021](0021-adyacencia-estatica-y-proximidad.md) | Adyacencia resuelta antes del partido; proximidad dinámica aparte | Aceptada |
 | [0022](0022-roles-y-ocupacion-de-espacio.md) | Comportamiento sin balón: contraste táctico y búsqueda de espacio | Aceptada |
+| [0122](0122-primero-memoria-y-atribucion-no-mas-contenido.md) | Primero memoria y atribución; contenido nuevo, después | Aceptada |
+| [0123](0123-knavall-rise-to-rule-direccion-maestra.md) | **Knavall: Rise to Rule** — dirección maestra (decisiones de producto vs aspiraciones) | Aceptada |

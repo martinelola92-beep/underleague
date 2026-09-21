@@ -9,6 +9,23 @@ PC (Steam), premium, sin online. **Estado (8 sep 2026): fases 0 y 1 cerradas; fa
 **Campo de siete filas (14 sep 2026, decisión del revisor, BA-C):** 16×7 en vez de 16×6 —con seis filas el centro geométrico cae *entre* dos filas y no existe fila central—, con guardado v4. Añadir la fila cuesta ~1,0 tiro y ~0,45 goles por partido y **ninguna palanca local lo recupera**, así que la **ADR 0109** recalibra la banda de tiros a la geometría vigente (8-16 → 7-15) en vez de tocar el motor, y deja escrito que ensanchar la formación o las zonas de acción destruye la profundidad de colocación. Nueve auditorías de la IA de jugadores (`docs/auditoria-ia-jugadores-1..9.md`) dejan **un solo cambio aplicado**, la **ADR 0110**: `Shoot` del defensa 77 → 154 y del centrocampista 188 → 237, porque con 77 un defensa colocado arriba nunca remataba —perdía contra su propio `ShortPass` de 500— y jugar fuera de posición costaba dos tercios del ataque (100/48/38 → 100/68/55). Rechazados y documentados: `ChaseBall pen` en todas las dosis (degrada la diferenciación de builds), el desfase de fase entre equipos (no replica entre semillas) y la histéresis. Queda **abierto** el papel del centrocampista: dispara el 6,5 % de los tiros siendo el 43 % de los jugadores de campo.
 ---
 
+## Dirección vigente: **ADR 0123 — Knavall: Rise to Rule** (21 sep 2026)
+
+ADR paraguas y documento de dirección. Separa **decisiones de producto** (nombre y lenguaje del mundo —
+*to knav* / *knaved* / *Knavall* —, premisa del torneo que otorga el derecho a gobernar, bucle de partido
+automático de ~90 s, `SIMULACIÓN → EVENTOS → PRESENTATION DIRECTOR`, comentarista de texto con voz
+selectiva ES/EN, meta que desbloquea posibilidades y nunca estadísticas) de **aspiraciones** con su señal
+de verificación. **El renombrado a Knavall está decidido y NO ejecutado**: es mecánico (1.691 apariciones
+en 411 ficheros; las 23 de `/data` son títulos de esquema, ningún id), cabe en un commit aislado.
+
+Corrige el estado del que partía el plan propuesto: el `PresentationDirector` **ya existe** y la ADR 0119
+ya separó simulación y presentación (`MatchScreen` es hoy el modo depuración, F3; la pantalla real es
+`BroadcastScreen`); el catálogo son **102** perks, no 94; y la run completa ya existe y está medida, así
+que lo que falta del vertical slice **no son partidos sino el rival recurrente** — que cuesta cero
+cambios de esquema. Falta el momento de **remontada**, que no existe.
+
+Seis decisiones pendientes del revisor listadas al final de la ADR.
+
 ## Auditoría de identidad (20 sep 2026) — ¿es el juego un generador de historias?
 
 `docs/analisis/auditoria-identidad-generador-de-historias.md`. Auditoría de **producto**, no de balance:
