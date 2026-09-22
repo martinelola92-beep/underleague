@@ -19,6 +19,7 @@ public readonly record struct MatchSummary(
     int PassChainTotalLength,
     int Shots,
     int Tackles,
+    int OffBallTackles,
     int Injuries,
     int BallThird0,
     int BallThird1,
@@ -50,6 +51,7 @@ public readonly record struct MatchSummary(
         report.PassChainTotalLength,
         report.Shots[0] + report.Shots[1],
         report.Tackles,
+        report.OffBallTackles,
         report.Injuries,
         report.BallTicksByThird[0],
         report.BallTicksByThird[1],
@@ -106,8 +108,17 @@ public static class MatchMetrics
     /// <summary>Nombre de la métrica del tercio más ocupado por el balón.</summary>
     public const string BallThirdMaxShare = "ballThirdMaxShare";
 
-    /// <summary>Nombre de la métrica de entradas por partido.</summary>
+    /// <summary>
+    /// Nombre de la métrica de entradas <b>al portador</b> por partido. Desde la ADR 0125 D1 no incluye la
+    /// entrada al marcado sin balón, que va en <see cref="OffBallTacklesPerMatch"/>.
+    /// </summary>
     public const string TacklesPerMatch = "tacklesPerMatch";
+
+    /// <summary>
+    /// Nombre de la métrica de entradas al marcado <b>sin balón</b> por partido (ADR 0125 D1). INFO y sin
+    /// banda: no se inventa un rango antes de tener la distribución.
+    /// </summary>
+    public const string OffBallTacklesPerMatch = "offBallTacklesPerMatch";
 
     /// <summary>Nombre de la métrica de lesiones por partido.</summary>
     public const string InjuriesPerMatch = "injuriesPerMatch";
@@ -152,7 +163,7 @@ public static class MatchMetrics
     public const string BlockRate = "blockRate";
 
     /// <summary>
-    /// Los quince nombres que <see cref="Compute"/> siempre marca <c>INFO</c> (nunca IN/OUT porque nunca
+    /// Los dieciséis nombres que <see cref="Compute"/> siempre marca <c>INFO</c> (nunca IN/OUT porque nunca
     /// tienen banda) — fuente única para que el protocolo de balanceo (§16) nunca tenga que mantener esta
     /// lista dos veces. Si <see cref="Compute"/> añade una fila <c>INFO</c> nueva y no se añade aquí,
     /// <c>PerkAuditTests</c>/el contrato de `READY_FOR_SCREENING` no podrán detectarla.
@@ -162,6 +173,7 @@ public static class MatchMetrics
         ShareOverFiveGoals, DrawShareAtRegulation, GoalsPerMatch, FoulsPerMatch, YellowCardsPerMatch,
         RedCardsPerMatch, PassCompletionRate, PassInterceptRate, PassLooseRate, PassBeatenRate,
         ThroughPassesPerMatch, ThroughPassCompletionRate, ShotsOnTargetShare, SaveRate, BlockRate,
+        OffBallTacklesPerMatch,
     };
 
     /// <summary>Prefijo del nombre de las métricas de tasa de victoria del mejor equipo.</summary>
@@ -205,6 +217,7 @@ public static class MatchMetrics
         long passChainLength = 0;
         long shots = 0;
         long tackles = 0;
+        long offBallTackles = 0;
         long injuries = 0;
         long goals = 0;
         long shotsOnTarget = 0;
@@ -223,6 +236,7 @@ public static class MatchMetrics
             passChainLength += match.PassChainTotalLength;
             shots += match.Shots;
             tackles += match.Tackles;
+            offBallTackles += match.OffBallTackles;
             injuries += match.Injuries;
             goals += match.HomeGoals + match.AwayGoals;
             shotsOnTarget += match.ShotsOnTarget;
@@ -300,7 +314,17 @@ public static class MatchMetrics
         // balón al último tercio más veces y eso es lo que se pidió, no una acampada.
         rows.Add(new MetricResult(BallThirdMaxShare, ballThirdMaxShare, 0, 52, ballThirdMaxShare <= 52 ? "IN" : "OUT"));
 
+        // ADR 0125 D1: la banda 6-14 se calibró como métrica de FÚTBOL —disputar el balón—, así que desde
+        // esa ADR cuenta solo la entrada al portador. La banda NO se toca en esa ADR, pero mantenerla es
+        // una decisión, no una consecuencia: la población que la calibró es la misma clase de suceso, sí,
+        // pero corría en 9,19-11,23 (valores de antes de la ADR 0105, que es la que metió la entrada sin
+        // balón) y hoy corre en 6,92-10,42 según la plantilla (cinco semillas de 500 partidos, 22 sep
+        // 2026). El suelo de 6,00 es ahora el límite vivo de esta métrica; moverlo sería RT-057.
         rows.Add(InRange(TacklesPerMatch, (double)tackles / n, 6, 14));
+
+        // Entradas al marcado sin balón (ADR 0105), medidas aparte desde la ADR 0125 D1. INFO y SIN banda
+        // a propósito: la banda se fija en una ADR posterior, con la distribución delante.
+        rows.Add(new MetricResult(OffBallTacklesPerMatch, (double)offBallTackles / n, null, null, "INFO"));
 
         // ADR 0082: 0,3-0,8 medía un motor donde el equipo se quedaba congelado en cada balón muerto; con
         // AW-R recomponiendo la marca antes de reanudar, el peor valor medido (tres semillas de 500

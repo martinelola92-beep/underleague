@@ -81,12 +81,12 @@ dotnet run --project Balance -- --builds orc_violence,elf_tiki_taka,orc_misplace
 dotnet run --project Balance -- --builds all --runs 1300 --home-away --out out/f1
 ```
 
-Escribe `builds.csv` (`build,opponent,matches,winRate,goalsFor,goalsAgainst,injuriesFor,injuriesAgainst,tacklesPerMatch,passChainAvgLength,activationsPerMatch`)
+Escribe `builds.csv` (`build,opponent,matches,winRate,goalsFor,goalsAgainst,injuriesFor,injuriesAgainst,tacklesPerMatch,offBallTacklesPerMatch,passChainAvgLength,activationsPerMatch`)
 y `perks.csv` (`perkId,build,activations,matchesWithActivation,activationRate`), con una fila por cada perk
 que la build asigna estáticamente a algún titular aunque nunca llegue a activarse (0% es justo lo que
 `noDeadPerks` de `Sim/Analysis/BuildMetrics.cs` necesita poder detectar).
 
-- `injuriesFor`/`injuriesAgainst`, `tacklesPerMatch`: se reparten por equipo con `PlayerMatchStats.Team`
+- `injuriesFor`/`injuriesAgainst`, `tacklesPerMatch`, `offBallTacklesPerMatch`: se reparten por equipo con `PlayerMatchStats.Team`
   (`injuriesFor` = lesiones sufridas por los propios jugadores de `build`; `injuriesAgainst` = lesiones que
   `build` le ha causado al rival).
 - `passChainAvgLength`: se reparte por equipo con `MatchReport.PassChainsByTeam` /
@@ -184,7 +184,7 @@ Una fila por partido simulado con éxito.
 
 Una fila por jugador generado que llegó a jugar al menos un partido, con sus estadísticas acumuladas a lo largo de **todos** los partidos del lote en los que participó (decisión fuera de la especificación: el formato de `players.csv` no está detallado en `docs/fase0-diseno.md` §4, solo se menciona su existencia).
 
-`playerId,teamId,name,race,position,rarity,matches,goals,assists,shots,passesAttempted,passesCompleted,tackles,tacklesWon,fouls,cards,injuries,ticksOnPitch`
+`playerId,teamId,name,race,position,rarity,matches,goals,assists,shots,passesAttempted,passesCompleted,tackles,offBallTackles,tacklesWon,fouls,cards,injuries,ticksOnPitch,injuriesCaused,deathsCaused`
 
 ### `summary.csv`
 
@@ -199,7 +199,8 @@ Una fila por jugador generado que llegó a jugar al menos un partido, con sus es
 | `share_over5goals` | < 5 | INFO | Porcentaje de partidos con más de 5 goles totales |
 | `drawShareAtRegulation` | < 15 | INFO | Porcentaje de partidos que llegaron empatados al final del reglamentario (`WentToGoldenGoal`) |
 | `ballThirdMaxShare` | <= 50 | IN/OUT | Se suman los ticks de balón por tercio de todo el lote y se toma el máximo de los tres porcentajes resultantes |
-| `tacklesPerMatch` | 6-14 | IN/OUT | Media de `Tackles` por partido |
+| `tacklesPerMatch` | 6-14 | IN/OUT | Media de `Tackles` (entradas **al portador**) por partido. Desde la ADR 0125 D1 no incluye la entrada sin balón |
+| `offBallTacklesPerMatch` | — | INFO | Media de `OffBallTackles` (entradas al marcado **sin balón**) por partido (ADR 0125 D1) |
 | `injuriesPerMatch` | 0.3-0.8 | IN/OUT | Media de `Injuries` por partido |
 | `betterTeamWinRate_<homeId>_vs_<awayId>` | **70-88** si diferencia de calidad = 20 (ADR 0054); si no, INFO | IN/OUT o INFO | Una fila por cada emparejamiento de `--teams` cuyos equipos tengan calidad distinta: tasa de victorias del equipo de mayor calidad sobre los partidos de ese emparejamiento |
 

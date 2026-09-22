@@ -26,6 +26,7 @@ public sealed record MatchRow(
     int Saves,
     int ShotsBlocked,
     int Tackles,
+    int OffBallTackles,
     int Blocks,
     int Fouls,
     int YellowCards,
@@ -67,6 +68,7 @@ public sealed class PlayerAggregate
     public int PassesAttempted;
     public int PassesCompleted;
     public int Tackles;
+    public int OffBallTackles;
     public int TacklesWon;
     public int Fouls;
     public int Cards;
@@ -215,6 +217,7 @@ public static class BatchRunner
                 Saves: report.Saves[0] + report.Saves[1],
                 ShotsBlocked: report.ShotsBlocked[0] + report.ShotsBlocked[1],
                 Tackles: report.Tackles,
+                OffBallTackles: report.OffBallTackles,
                 Blocks: report.Blocks,
                 Fouls: report.Fouls,
                 YellowCards: report.YellowCards,
@@ -318,6 +321,7 @@ public static class BatchRunner
             aggregate.PassesAttempted += stat.PassesAttempted;
             aggregate.PassesCompleted += stat.PassesCompleted;
             aggregate.Tackles += stat.Tackles;
+            aggregate.OffBallTackles += stat.OffBallTackles;
             aggregate.TacklesWon += stat.TacklesWon;
             aggregate.Fouls += stat.Fouls;
             aggregate.Cards += stat.Cards;
@@ -398,6 +402,7 @@ public static class BatchRunner
                 Saves: report.Saves[0] + report.Saves[1],
                 ShotsBlocked: report.ShotsBlocked[0] + report.ShotsBlocked[1],
                 Tackles: report.Tackles,
+                OffBallTackles: report.OffBallTackles,
                 Blocks: report.Blocks,
                 Fouls: report.Fouls,
                 YellowCards: report.YellowCards,

@@ -464,7 +464,15 @@ internal sealed class MatchPlayer
 
     public int PassesCompleted { get; set; }
 
+    /// <summary>
+    /// Entradas al <b>portador</b> del balón (ADR 0125 D1). No incluye la entrada al marcado sin balón,
+    /// que se cuenta en <see cref="OffBallTackles"/>: disputar el balón y golpear a quien no lo lleva son
+    /// dos sucesos distintos y se miden con reglas distintas.
+    /// </summary>
     public int Tackles { get; set; }
+
+    /// <summary>Entradas al marcado <b>sin balón</b> (ADR 0105, separadas de <see cref="Tackles"/> por la ADR 0125 D1).</summary>
+    public int OffBallTackles { get; set; }
 
     public int TacklesWon { get; set; }
 
@@ -672,5 +680,5 @@ internal sealed class MatchPlayer
     /// <summary>Estadísticas finales del jugador para el informe.</summary>
     public PlayerMatchStats ToStats() => new(
         Id, Team, Goals, Assists, Shots, PassesAttempted, PassesCompleted,
-        Tackles, TacklesWon, Fouls, Cards, Injured, TicksOnPitch, InjuriesCaused, DeathsCaused, LeftPitchTick);
+        Tackles, OffBallTackles, TacklesWon, Fouls, Cards, Injured, TicksOnPitch, InjuriesCaused, DeathsCaused, LeftPitchTick);
 }

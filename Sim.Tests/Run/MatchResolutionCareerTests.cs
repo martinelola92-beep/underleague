@@ -36,6 +36,7 @@ public sealed class MatchResolutionCareerTests
         int goals = 0,
         int assists = 0,
         int tackles = 0,
+        int offBallTackles = 0,
         int tacklesWon = 0,
         int fouls = 0,
         int cards = 0,
@@ -43,7 +44,7 @@ public sealed class MatchResolutionCareerTests
         int ticksOnPitch = 900,
         int injuriesCaused = 0,
         int deathsCaused = 0) =>
-        new(playerId, team, goals, assists, 0, 0, 0, tackles, tacklesWon, fouls, cards, injured,
+        new(playerId, team, goals, assists, 0, 0, 0, tackles, offBallTackles, tacklesWon, fouls, cards, injured,
             ticksOnPitch, injuriesCaused, deathsCaused);
 
     private static MatchResult ResultWith(

@@ -450,7 +450,7 @@ static void WriteMatchesCsv(string outDir, IReadOnlyList<MatchRow> matches)
     {
         "index", "seed", "homeId", "awayId", "homeGoals", "awayGoals", "winner", "ticks", "goldenGoal",
         "forfeit", "possessionChanges", "passChains", "passChainAvgLength", "shots", "shotsOnTarget",
-        "tackles", "blocks", "fouls", "yellow", "red", "injuries", "ballThird0", "ballThird1", "ballThird2", "finalBias",
+        "tackles", "offBallTackles", "blocks", "fouls", "yellow", "red", "injuries", "ballThird0", "ballThird1", "ballThird2", "finalBias",
     };
 
     var rows = matches.Select(m =>
@@ -474,6 +474,7 @@ static void WriteMatchesCsv(string outDir, IReadOnlyList<MatchRow> matches)
             m.Shots.ToString(),
             m.ShotsOnTarget.ToString(),
             m.Tackles.ToString(),
+            m.OffBallTackles.ToString(),
             m.Blocks.ToString(),
             m.Fouls.ToString(),
             m.Yellow.ToString(),
@@ -494,7 +495,7 @@ static void WritePlayersCsv(string outDir, IReadOnlyList<PlayerAggregate> player
     string[] header =
     {
         "playerId", "teamId", "name", "race", "position", "rarity", "matches", "goals", "assists",
-        "shots", "passesAttempted", "passesCompleted", "tackles", "tacklesWon", "fouls", "cards",
+        "shots", "passesAttempted", "passesCompleted", "tackles", "offBallTackles", "tacklesWon", "fouls", "cards",
         "injuries", "ticksOnPitch", "injuriesCaused", "deathsCaused",
     };
 
@@ -513,6 +514,7 @@ static void WritePlayersCsv(string outDir, IReadOnlyList<PlayerAggregate> player
         p.PassesAttempted.ToString(),
         p.PassesCompleted.ToString(),
         p.Tackles.ToString(),
+        p.OffBallTackles.ToString(),
         p.TacklesWon.ToString(),
         p.Fouls.ToString(),
         p.Cards.ToString(),
@@ -736,7 +738,8 @@ static void WriteBuildsCsv(string outDir, IReadOnlyList<BuildCellResult> cells)
     string[] header =
     {
         "build", "opponent", "matches", "winRate", "goalsFor", "goalsAgainst", "injuriesFor",
-        "injuriesAgainst", "tacklesPerMatch", "passChainAvgLength", "activationsPerMatch",
+        "injuriesAgainst", "tacklesPerMatch", "offBallTacklesPerMatch", "passChainAvgLength",
+        "activationsPerMatch",
     };
 
     var rows = cells.Select(c => (IReadOnlyList<string>)new[]
@@ -750,6 +753,7 @@ static void WriteBuildsCsv(string outDir, IReadOnlyList<BuildCellResult> cells)
         c.InjuriesFor.ToString(),
         c.InjuriesAgainst.ToString(),
         CsvWriter.F2(c.TacklesPerMatch),
+        CsvWriter.F2(c.OffBallTacklesPerMatch),
         CsvWriter.F2(c.PassChainAvgLength),
         CsvWriter.F2(c.ActivationsPerMatch),
     });
@@ -802,7 +806,8 @@ static void PrintBuildsTable(IReadOnlyList<BuildCellResult> cells)
     string[] headers =
     {
         "build", "opponent", "matches", "winRate", "goalsFor", "goalsAgainst", "injuriesFor",
-        "injuriesAgainst", "tacklesPerMatch", "passChainAvgLength", "activationsPerMatch",
+        "injuriesAgainst", "tacklesPerMatch", "offBallTacklesPerMatch", "passChainAvgLength",
+        "activationsPerMatch",
     };
 
     var rows = cells
@@ -810,7 +815,7 @@ static void PrintBuildsTable(IReadOnlyList<BuildCellResult> cells)
         {
             c.Build, c.Opponent, c.Matches.ToString(), CsvWriter.F2(c.WinRate), c.GoalsFor.ToString(),
             c.GoalsAgainst.ToString(), c.InjuriesFor.ToString(), c.InjuriesAgainst.ToString(),
-            CsvWriter.F2(c.TacklesPerMatch), CsvWriter.F2(c.PassChainAvgLength), CsvWriter.F2(c.ActivationsPerMatch),
+            CsvWriter.F2(c.TacklesPerMatch), CsvWriter.F2(c.OffBallTacklesPerMatch), CsvWriter.F2(c.PassChainAvgLength), CsvWriter.F2(c.ActivationsPerMatch),
         })
         .ToList();
 

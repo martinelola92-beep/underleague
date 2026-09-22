@@ -103,3 +103,67 @@ recalibrar la banda —lo que arrastra `deathsPerRun` y es decisión del revisor
 ## Hermanos
 
 `docs/pendientes/BE-A.md` · ADR 0105 (enmendada) · `docs/analisis/auditoria-conceptual-narrativa.md` §E
+
+---
+
+## Enmienda de medida — D1 implementada y medida (22 sep 2026)
+
+**D1 está implementada; D2 y D3 no.** `report.Tackles` y `PlayerMatchStats.Tackles` cuentan desde hoy solo
+la entrada al portador; la entrada al marcado sin balón va en `OffBallTackles` y sale como
+`offBallTacklesPerMatch` (INFO, sin banda). La partición está probada por test contra el flujo de eventos,
+en el agregado y por jugador (`MatchRulesTests.CarrierAndOffBallTacklesArePartitionedNotMixed`).
+
+**La separación no mueve el juego** *(CONFIRMED)*: sobre el mismo lote de 500 partidos con el que se
+escribió esta ADR, las otras 24 filas de `summary.csv` salen idénticas a la línea base y, partido a
+partido, **todas** las columnas de `matches.csv` coinciden en los 500, con
+`base.tackles == tackles + offBallTackles` exacto (verificado por la revisión independiente). Es
+contabilidad, no comportamiento.
+
+**Aviso sobre estas cifras: son de la semilla 1, que es el extremo del rango.** En `reference.json` la
+semilla genera también las plantillas; con cinco, `offBallTacklesPerMatch` recorre **0,99-5,09**,
+`tacklesPerMatch` **6,92-10,42** e `injuriesPerMatch` **0,43-0,81**. La banda de la métrica nueva se fija
+en una ADR posterior y **con varias semillas** (precedente: ADR 0082, tres).
+
+| | `tacklesPerMatch` | `offBallTacklesPerMatch` | `injuriesPerMatch` | `foulsPerMatch` |
+|---|---|---|---|---|
+| base (mezcladas) | 12,01 | — | 0,81 | 7,50 |
+| separadas (D1) | **6,92** | **5,09** | 0,81 | 7,50 |
+| `tackleMarkTargetBonus` 0 | 7,78 | 0,98 | 0,70 | 4,87 |
+
+**Tres correcciones a lo que esta ADR daba por supuesto**, todas medidas y detalladas en
+`docs/pendientes/BE-A.md`:
+
+1. **El valor separado es 6,92, no ~9,19.** El 9,19 que circulaba era otro experimento (la métrica
+   mezclada con la entrada sin balón apagada), no una separación.
+2. **El margen de `tacklesPerMatch` está por abajo, no por arriba.** 6,92 con suelo 6,00 deja 0,92, y la
+   entrada sin balón **sustituye** disputas además de sumarse (apagándola suben a 7,78). El riesgo de
+   techo que describe la sección «Riesgo declarado» se midió con el instrumento mezclado; el riesgo real
+   de D2 sobre esta métrica es el suelo. `injuriesPerMatch` (0,81 / 0,90) sigue siendo la restricción que
+   manda, y de ella la entrada sin balón vale hoy ~0,11.
+3. **D3, tal como está escrita, no se cumple sola.** «Un puesto con bono 0 no entra nunca» es falso: con
+   `tackleMarkTargetBonus` en 0 quedan 0,98 entradas sin balón por partido, porque `offBall` es la
+   intención con la que se decidió la entrada y esa intención puede ganar la utilidad sin bono. Si D2
+   sustituye la guarda de rol por el mapa de bonos, hace falta **descalificar explícitamente** el bono 0.
+
+**Una decisión queda abierta y va con D2**: `extraAction` sobre `TACKLE`/`RECOVERY` (`charge`,
+`steamroller`) está clasificado como medible con `tacklesPerMatch`, pero `RepeatTackle` marca la
+repetición como sin balón salvo que el nuevo objetivo lleve el balón, así que en el caso común el efecto
+cae ahora en la métrica **sin banda**. No se ha tocado la clasificación en este paquete: cambiarla mueve el
+inventario de perks medibles que `PerkAuditTests` fija con cuentas exactas, y eso es protocolo (RT-057).
+
+**Mantener la banda 6-14 es una decisión, no una consecuencia.** La población es la misma clase de suceso
+que la calibró —antes de la ADR 0105, `tacklesPerMatch` era ya solo la entrada al portador y valía 9,19—,
+pero hoy esa población corre un tercio más abajo. La banda se conserva porque nada la ha invalidado, no
+porque el número encaje holgado: **el suelo de 6,00 es desde hoy el límite vivo de la métrica**, y quien
+lo mueva abre ADR (RT-057).
+
+**La carrera del jugador no se toca**: `RunCareer.Tackles` sigue sumando las dos entradas. Estrecharla
+sería decidir qué recuerda una run de un jugador (RF-122) y eso es `game-design-review`, no un efecto
+colateral de arreglar un instrumento.
+
+**Por qué `injuriesPerMatch` sí sigue mezclando las dos poblaciones** (~14 % de las lesiones y ~35 % de
+las faltas vienen hoy de la entrada sin balón): porque mide **daño**, no fútbol. Una lesión es una lesión
+venga de donde venga; disputar el balón y golpear a quien no lo lleva, no. Esa es la línea, y es la que
+explica por qué se separa una métrica y no la otra.
+
+`offBallTacklesPerMatch` no recibe banda hasta tener la distribución de D2 delante.

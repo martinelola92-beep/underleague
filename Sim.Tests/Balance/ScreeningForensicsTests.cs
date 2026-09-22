@@ -71,7 +71,11 @@ public sealed class ScreeningForensicsTests
                 long activations = result.Report.PerksSummary
                     .Where(s => string.Equals(s.PerkId, perk.Id, StringComparison.Ordinal) && s.OwnerId == carrierId)
                     .Sum(s => s.Activations);
-                stats.Add(new CarrierMatchStat(playerStats.Tackles, hasBulwark, (int)activations));
+                // Denominador de "% de intentos de entrada que activan el efecto": el disparador es el
+                // evento TACKLE, que publican por igual la entrada al portador y la sin balón, así que la
+                // exposición son los dos contadores sumados (ADR 0125 D1 los separó; leer solo uno inflaría
+                // la tasa hasta ~3x si el portador del perk es defensa).
+                stats.Add(new CarrierMatchStat(playerStats.Tackles + playerStats.OffBallTackles, hasBulwark, (int)activations));
             }
         }
 

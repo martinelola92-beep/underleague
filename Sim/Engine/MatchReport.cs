@@ -36,6 +36,8 @@ public sealed record ConsumableActivation(string ConsumableId, int Team, int Tic
 public sealed record PlayerCounterDelta(int PlayerId, string Counter, int Delta);
 
 /// <summary>Estadísticas de un jugador en un partido concreto.</summary>
+/// <param name="Tackles">Entradas al portador del balón (ADR 0125 D1): disputas del balón, y solo eso.</param>
+/// <param name="OffBallTackles">Entradas al marcado sin balón (ADR 0105), separadas de <paramref name="Tackles"/> por la ADR 0125 D1.</param>
 /// <param name="InjuriesCaused">Lesiones que este jugador ha causado a rivales (RF-122, ADR 0124).</param>
 /// <param name="DeathsCaused">Muertes que este jugador ha causado a rivales (RF-122, ADR 0124).</param>
 public sealed record PlayerMatchStats(
@@ -47,6 +49,7 @@ public sealed record PlayerMatchStats(
     int PassesAttempted,
     int PassesCompleted,
     int Tackles,
+    int OffBallTackles,
     int TacklesWon,
     int Fouls,
     int Cards,
@@ -149,8 +152,21 @@ public sealed class MatchReport
     /// </summary>
     public int[] ShotsBlocked { get; }
 
-    /// <summary>Entradas totales.</summary>
+    /// <summary>
+    /// Entradas al <b>portador</b> del balón. Es la población que mide <c>tacklesPerMatch</c> (RT-056) con
+    /// su banda 6-14, calibrada como métrica de fútbol: disputar el balón.
+    /// <para>La entrada al marcado <b>sin balón</b> se cuenta aparte, en <see cref="OffBallTackles"/>
+    /// (ADR 0125 D1). Hasta esa ADR las dos sumaban aquí, así que la métrica mezclaba dos poblaciones y
+    /// cualquier apertura de la entrada sin balón salía «fuera de banda» por construcción.</para>
+    /// </summary>
     public int Tackles { get; }
+
+    /// <summary>
+    /// Entradas al marcado <b>sin balón</b> (ADR 0105; separadas de <see cref="Tackles"/> por la ADR 0125
+    /// D1). Golpear a quien no lleva el balón no es disputarlo: se mide con
+    /// <c>offBallTacklesPerMatch</c>, INFO y sin banda hasta que haya distribución con la que fijarla.
+    /// </summary>
+    public int OffBallTackles { get; }
 
     /// <summary>
     /// Bloqueos sin balón totales (ADR 0030 §2). Cuenta aparte de <see cref="Tackles"/> a propósito: la
@@ -239,6 +255,7 @@ public sealed class MatchReport
         ThroughPassesCompleted = (int[])builder.ThroughPassesCompleted.Clone();
         ShotsBlocked = (int[])builder.ShotsBlocked.Clone();
         Tackles = builder.Tackles;
+        OffBallTackles = builder.OffBallTackles;
         Blocks = builder.Blocks;
         Fouls = builder.Fouls;
         YellowCards = builder.YellowCards;
@@ -318,8 +335,11 @@ internal sealed class MatchReportBuilder
     /// <summary>Tiros bloqueados por equipo (equipo del que bloquea); junto a cada ShotBlocked (paso 3).</summary>
     public int[] ShotsBlocked { get; } = new int[2];
 
-    /// <summary>Entradas totales; se incrementa al resolver cada Tackle (3.7).</summary>
+    /// <summary>Entradas al portador; se incrementa al resolver cada Tackle con disputa del balón (3.7).</summary>
     public int Tackles { get; set; }
+
+    /// <summary>Entradas al marcado sin balón; se incrementa al resolver cada Tackle sin disputa (ADR 0125 D1).</summary>
+    public int OffBallTackles { get; set; }
 
     /// <summary>Bloqueos sin balón totales; se incrementa al resolver cada Block (ADR 0030 §2).</summary>
     public int Blocks { get; set; }

@@ -2204,10 +2204,11 @@ internal sealed class MatchEngine : IPerkWorld
         }
         else if (offBall)
         {
-            // ADR 0105: la entrada sin balón cuenta como entrada —lo es— y por eso entra en
-            // report.Tackles y en tacklesPerMatch (RT-056). Detail propio para poder separarlas en el log.
-            _report.Tackles++;
-            tackler.Tackles++;
+            // ADR 0125 D1: la entrada sin balón se cuenta APARTE. Es una entrada —lo es—, pero
+            // tacklesPerMatch mide disputar el balón y golpear a quien no lo lleva no lo es: sumarlas
+            // juntas (como hacía la ADR 0105) mezclaba dos poblaciones bajo una sola banda de fútbol.
+            _report.OffBallTackles++;
+            tackler.OffBallTackles++;
             Emit(EventType.Tackle, isFoul ? "offBallFoul" : "offBallMissed", tackler, opponent: carrier, publish: false);
         }
 

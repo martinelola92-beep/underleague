@@ -30,6 +30,7 @@ public static class Metrics
                 match.PassChainTotalLength,
                 match.Shots,
                 match.Tackles,
+                match.OffBallTackles,
                 match.Injuries,
                 match.BallThird0,
                 match.BallThird1,

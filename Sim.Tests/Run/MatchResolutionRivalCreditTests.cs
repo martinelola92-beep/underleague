@@ -34,7 +34,7 @@ public sealed class MatchResolutionRivalCreditTests
     }
 
     private static PlayerMatchStats Stats(int playerId, int team, int ticksOnPitch = 900) =>
-        new(playerId, team, 0, 0, 0, 0, 0, 0, 0, 0, 0, false, ticksOnPitch, 0, 0);
+        new(playerId, team, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, false, ticksOnPitch, 0, 0);
 
     private static MatchResult ResultWith(IReadOnlyList<PlayerMatchStats> stats, IReadOnlyList<MatchEvent> events)
     {

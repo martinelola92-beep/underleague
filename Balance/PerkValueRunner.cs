@@ -366,8 +366,13 @@ public static class PerkValueRunner
         foreach (var player in report.Players)
         {
             bool mine = player.Team == subjectSide;
-            tacklesSubject += mine ? player.Tackles : 0;
-            tacklesMirror += mine ? 0 : player.Tackles;
+            // Las DOS entradas, sumadas (ADR 0125 D1 las separó en contadores distintos): esta columna es
+            // un diagnóstico de "¿este perk hizo que su equipo entrara más?", y un perk cuyo mecanismo es
+            // la entrada sin balón —charge, steamroller, cualquiera que vaya por hardTackleBonus— saldría
+            // en 0 si aquí solo se leyera la disputa del balón. Separarlas es lo correcto para la MÉTRICA
+            // de fútbol, no para contar lo que el perk provocó.
+            tacklesSubject += mine ? player.Tackles + player.OffBallTackles : 0;
+            tacklesMirror += mine ? 0 : player.Tackles + player.OffBallTackles;
             foulsSubject += mine ? player.Fouls : 0;
             foulsMirror += mine ? 0 : player.Fouls;
             cardsSubject += mine ? player.Cards : 0;

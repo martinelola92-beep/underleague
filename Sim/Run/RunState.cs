@@ -265,7 +265,11 @@ public sealed record RunPlayer(
                 Matches = career.Matches + (stats.TicksOnPitch > 0 ? 1 : 0),
                 Goals = career.Goals + stats.Goals,
                 Assists = career.Assists + stats.Assists,
-                Tackles = career.Tackles + stats.Tackles,
+                // ADR 0125 D1 separa la MÉTRICA, no la memoria: la carrera sigue contando las dos
+                // entradas juntas, que es lo que contaba antes. Estrechar lo que una run recuerda de un
+                // jugador sería una decisión de diseño sobre RF-122 —y pasa por game-design-review—, no un
+                // efecto colateral de arreglar un instrumento de medida.
+                Tackles = career.Tackles + stats.Tackles + stats.OffBallTackles,
                 TacklesWon = career.TacklesWon + stats.TacklesWon,
                 Fouls = career.Fouls + stats.Fouls,
                 Cards = career.Cards + stats.Cards,

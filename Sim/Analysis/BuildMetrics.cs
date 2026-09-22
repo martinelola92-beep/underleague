@@ -17,6 +17,7 @@ public readonly record struct BuildCellResult(
     int InjuriesFor,
     int InjuriesAgainst,
     int Tackles,
+    int OffBallTackles,
     int PassChains,
     int PassChainTotalLength,
     int Activations)
@@ -28,7 +29,11 @@ public readonly record struct BuildCellResult(
     /// <summary>Lesiones que esta build le ha causado al rival por partido (las que "produce", §8).</summary>
     public double InjuriesCausedPerMatch => Matches > 0 ? (double)InjuriesAgainst / Matches : 0.0;
 
+    /// <summary>Entradas al portador por partido de esta build (ADR 0125 D1: ya no incluye las de sin balón).</summary>
     public double TacklesPerMatch => Matches > 0 ? (double)Tackles / Matches : 0.0;
+
+    /// <summary>Entradas al marcado sin balón por partido de esta build (ADR 0125 D1).</summary>
+    public double OffBallTacklesPerMatch => Matches > 0 ? (double)OffBallTackles / Matches : 0.0;
 
     public double PassChainAvgLength => PassChains > 0 ? (double)PassChainTotalLength / PassChains : 0.0;
 

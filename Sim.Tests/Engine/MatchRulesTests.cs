@@ -467,6 +467,7 @@ public sealed class MatchRulesTests
             int saves = 0;
             int shotsBlocked = 0;
             int tackles = 0;
+            int offBallTackles = 0;
             int blocks = 0;
             int fouls = 0;
             int injuries = 0;
@@ -489,11 +490,17 @@ public sealed class MatchRulesTests
                         shotsBlocked++;
                         break;
                     case EventType.Tackle:
-                        // El bloqueo sin balón (ADR 0030 §2) reutiliza el tipo TACKLE con Detail propio y
-                        // se cuenta aparte: report.Tackles sigue siendo "disputas del balón" (RT-056).
+                        // El tipo TACKLE lo comparten TRES sucesos distintos, cada uno con su Detail y su
+                        // contador: el bloqueo sin balón (ADR 0030 §2), la entrada al marcado sin balón
+                        // (ADR 0105) y la entrada al portador. report.Tackles es solo la última —disputar
+                        // el balón, que es lo que mide tacklesPerMatch (RT-056)— desde la ADR 0125 D1.
                         if (e.Detail.StartsWith("block", StringComparison.Ordinal))
                         {
                             blocks++;
+                        }
+                        else if (e.Detail.StartsWith("offBall", StringComparison.Ordinal))
+                        {
+                            offBallTackles++;
                         }
                         else
                         {
@@ -529,12 +536,59 @@ public sealed class MatchRulesTests
                 result.Events.Count(e => e.Type == EventType.PassFailed && e.Detail == "beaten"));
             Assert.Equal(report.ShotsBlocked[0] + report.ShotsBlocked[1], shotsBlocked);
             Assert.Equal(report.Tackles, tackles);
+            Assert.Equal(report.OffBallTackles, offBallTackles);
             Assert.Equal(report.Blocks, blocks);
             Assert.Equal(report.Fouls, fouls);
             Assert.Equal(report.Injuries, injuries);
             Assert.Equal(0, deaths);
             Assert.Equal(0, report.Deaths);
         }
+    }
+
+    /// <summary>
+    /// ADR 0125 D1: la entrada al portador y la entrada al marcado sin balón se cuentan por separado, y la
+    /// separación es una <b>partición</b> —ninguna resolución se pierde ni se cuenta dos veces—, tanto en
+    /// el informe como por jugador. La tercera afirmación es la que impide que el test sea vacuo: la
+    /// entrada sin balón se dispara de verdad en el conjunto de referencia, así que si alguien volviera a
+    /// sumarlas juntas, la primera aserción fallaría.
+    /// </summary>
+    [Fact]
+    public void CarrierAndOffBallTacklesArePartitionedNotMixed()
+    {
+        int offBallTotal = 0;
+
+        for (ulong seed = 1; seed <= Matches; seed++)
+        {
+            var result = Run(seed);
+            var report = result.Report;
+
+            int carrierEvents = result.Events.Count(e => e.Type == EventType.Tackle
+                && e.Detail is "foul" or "won" or "missed");
+            int offBallEvents = result.Events.Count(e => e.Type == EventType.Tackle
+                && e.Detail.StartsWith("offBall", StringComparison.Ordinal));
+
+            Assert.Equal(carrierEvents, report.Tackles);
+            Assert.Equal(offBallEvents, report.OffBallTackles);
+
+            // El reparto por jugador es el mismo reparto: players.csv y el agregado no pueden divergir.
+            Assert.Equal(report.Tackles, report.Players.Sum(p => p.Tackles));
+            Assert.Equal(report.OffBallTackles, report.Players.Sum(p => p.OffBallTackles));
+
+            // Y ningún Detail de TACKLE se queda fuera de las tres familias conocidas. Sin esto, un Detail
+            // nuevo caería por descarte en el contador del portador (que es lo que hacía el else de
+            // ReportCountersAgreeWithTheEventStream) y nadie se enteraría.
+            Assert.All(
+                result.Events.Where(e => e.Type == EventType.Tackle),
+                e => Assert.True(
+                    e.Detail is "attempted" or "foul" or "won" or "missed"
+                        || e.Detail.StartsWith("offBall", StringComparison.Ordinal)
+                        || e.Detail.StartsWith("block", StringComparison.Ordinal),
+                    $"Detail de TACKLE no clasificado: «{e.Detail}»"));
+
+            offBallTotal += report.OffBallTackles;
+        }
+
+        Assert.True(offBallTotal > 0, $"ninguna entrada sin balón en {Matches} partidos: el test no demuestra nada");
     }
 
     [Fact]

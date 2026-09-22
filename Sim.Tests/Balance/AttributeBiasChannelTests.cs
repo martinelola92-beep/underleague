@@ -89,7 +89,12 @@ public sealed class AttributeBiasChannelTests
                 {
                     if (stats.PlayerId == defenderId)
                     {
-                        defenderTackles += stats.Tackles;
+                        // Lo que este canal mide es cuántas veces se le dispara el suceso TACKLE al
+                        // defensa, que es a lo que liga charge/last_ditch — y el evento TACKLE lo publican
+                        // por igual la entrada al portador y la entrada sin balón. Desde la ADR 0125 D1
+                        // son dos contadores, así que la exposición es la SUMA: leer solo Tackles dejaría
+                        // fuera dos tercios de las entradas de un defensa (0,67 de 1,94 medidas).
+                        defenderTackles += stats.Tackles + stats.OffBallTackles;
                     }
                 }
 

@@ -66,6 +66,7 @@ public static class BuildBatchRunner
         public int InjuriesFor;
         public int InjuriesAgainst;
         public int Tackles;
+        public int OffBallTackles;
         public int PassChains;
         public int PassChainTotalLength;
         public int Activations;
@@ -292,7 +293,7 @@ public static class BuildBatchRunner
             .Select(kv => new BuildCellResult(
                 kv.Key.Build, kv.Key.Opponent, kv.Value.Matches, kv.Value.Wins,
                 kv.Value.GoalsFor, kv.Value.GoalsAgainst, kv.Value.InjuriesFor, kv.Value.InjuriesAgainst,
-                kv.Value.Tackles, kv.Value.PassChains, kv.Value.PassChainTotalLength, kv.Value.Activations))
+                kv.Value.Tackles, kv.Value.OffBallTackles, kv.Value.PassChains, kv.Value.PassChainTotalLength, kv.Value.Activations))
             .OrderBy(c => c.Build, StringComparer.Ordinal)
             .ThenBy(c => c.Opponent, StringComparer.Ordinal)
             .ToList();
@@ -606,7 +607,8 @@ public static class BuildBatchRunner
     /// Un partido entre dos builds da datos para las dos celdas de la matriz a la vez: (home,away) desde
     /// la perspectiva de home y (away,home) desde la de away. tacklesPerMatch e injuriesFor/Against se
     /// reparten por equipo con PlayerMatchStats.Team; passChainAvgLength es una estadística de todo el
-    /// partido (no se atribuye a un lado) y se suma igual a las dos celdas.
+    /// partido (no se atribuye a un lado) y se suma igual a las dos celdas. offBallTacklesPerMatch se
+    /// reparte igual que tacklesPerMatch, y por lo mismo (ADR 0125 D1).
     /// </summary>
     private static void AccumulateMatch(
         Dictionary<(string Build, string Opponent), CellAccumulator> cellAcc,
@@ -621,12 +623,13 @@ public static class BuildBatchRunner
         int awayGoals = report.Goals[1];
         bool homeWon = report.Winner == 0;
 
-        int tacklesHome = 0, tacklesAway = 0, injuriesHome = 0, injuriesAway = 0;
+        int tacklesHome = 0, tacklesAway = 0, offBallHome = 0, offBallAway = 0, injuriesHome = 0, injuriesAway = 0;
         foreach (var stat in report.Players)
         {
             if (stat.Team == 0)
             {
                 tacklesHome += stat.Tackles;
+                offBallHome += stat.OffBallTackles;
                 if (stat.Injured)
                 {
                     injuriesHome++;
@@ -635,6 +638,7 @@ public static class BuildBatchRunner
             else
             {
                 tacklesAway += stat.Tackles;
+                offBallAway += stat.OffBallTackles;
                 if (stat.Injured)
                 {
                     injuriesAway++;
@@ -658,9 +662,9 @@ public static class BuildBatchRunner
         // Las cadenas de pases van por equipo (paquete I): la fila de cada build recibe las suyas, no las
         // del partido entero, que es lo que buildsWinDifferently necesita comparar.
         AddCell(cellAcc, homeBuild, awayBuild, homeWon, homeGoals, awayGoals, injuriesHome, injuriesAway,
-            tacklesHome, report.PassChainsByTeam[0], report.PassChainTotalLengthByTeam[0], activationsHome);
+            tacklesHome, offBallHome, report.PassChainsByTeam[0], report.PassChainTotalLengthByTeam[0], activationsHome);
         AddCell(cellAcc, awayBuild, homeBuild, !homeWon, awayGoals, homeGoals, injuriesAway, injuriesHome,
-            tacklesAway, report.PassChainsByTeam[1], report.PassChainTotalLengthByTeam[1], activationsAway);
+            tacklesAway, offBallAway, report.PassChainsByTeam[1], report.PassChainTotalLengthByTeam[1], activationsAway);
 
         matchesByBuild[homeBuild] = matchesByBuild.GetValueOrDefault(homeBuild) + 1;
         matchesByBuild[awayBuild] = matchesByBuild.GetValueOrDefault(awayBuild) + 1;
@@ -687,6 +691,7 @@ public static class BuildBatchRunner
         int injuriesFor,
         int injuriesAgainst,
         int tackles,
+        int offBallTackles,
         int passChains,
         int passChainTotalLength,
         int activations)
@@ -709,6 +714,7 @@ public static class BuildBatchRunner
         acc.InjuriesFor += injuriesFor;
         acc.InjuriesAgainst += injuriesAgainst;
         acc.Tackles += tackles;
+        acc.OffBallTackles += offBallTackles;
         acc.PassChains += passChains;
         acc.PassChainTotalLength += passChainTotalLength;
         acc.Activations += activations;

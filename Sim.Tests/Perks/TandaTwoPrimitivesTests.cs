@@ -247,7 +247,8 @@ public sealed class TandaTwoPrimitivesTests
     /// "Embestida"/"Arrollador": la MISMA idea sobre una entrada -repite dentro del mismo tick, corte por
     /// profundidad-, pero con <c>MatchEngine.ResolveTackle</c> en vez de <c>LaunchShot</c>: cada nivel de
     /// la cadena busca el rival alcanzable más cercano y entra de verdad (cuenta como entrada sin balón,
-    /// ADR 0105).
+    /// ADR 0105). Desde la ADR 0125 D1 eso se lee en <c>OffBallTackles</c>, no en <c>Tackles</c>: aquí no
+    /// hay portador (<c>Ball.Owner = null</c>), así que ninguna de las dos repeticiones disputa el balón.
     /// </summary>
     [Fact]
     public void ExtraActionOnTackleRepeatsARealOffBallTackleWithinTheSameTickAndCutsAtMaxDepth()
@@ -263,12 +264,13 @@ public sealed class TandaTwoPrimitivesTests
         rival.Position = new Vec2(5.5f, 3f);
         engine.Ball.Owner = null;
 
-        Assert.Equal(0, tackler.Tackles);
+        Assert.Equal(0, tackler.OffBallTackles);
         Assert.Equal(0, engine.Report.RecursionCuts);
 
         engine.Effects!.Publish(Tackle(engine, tackler));
 
-        Assert.Equal(2, tackler.Tackles);
+        Assert.Equal(2, tackler.OffBallTackles);
+        Assert.Equal(0, tackler.Tackles);
         Assert.Equal(1, engine.Report.RecursionCuts);
     }
 

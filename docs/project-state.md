@@ -31,20 +31,59 @@ no desplaza ni una tirada.
 Sabe cuántas veces pasó algo, no cuándo. Fue una decisión de la ADR 0124 (claves libres para no subir
 esquema) y basta para F1; **una crónica ordenada en F2 necesitaría otra estructura**.
 
+## ADR 0125 D1 hecha: la entrada sin balón ya tiene métrica propia (22 sep 2026)
+
+`tacklesPerMatch` cuenta desde hoy **solo la entrada al portador** y la entrada al marcado sin balón sale
+aparte en **`offBallTacklesPerMatch`** (INFO, sin banda). El motor no cambia: `MatchEngine` ya distinguía
+las dos ramas, solo dejaban de distinguirse al agregar. Separado en el informe, por jugador y en
+`matches.csv`/`players.csv`/`builds.csv`. **La carrera del jugador NO se separa**: sigue sumando las dos,
+porque estrechar lo que una run recuerda (RF-122) es diseño, no instrumento.
+
+**Medido (500 partidos, semilla 1, contra línea base tomada en HEAD limpio el mismo día):**
+
+| | `tacklesPerMatch` | `offBallTacklesPerMatch` | `injuriesPerMatch` | `foulsPerMatch` |
+|---|---|---|---|---|
+| base (mezcladas) | 12,01 | — | 0,81 | 7,50 |
+| separadas | **6,92** | **5,09** | 0,81 | 7,50 |
+| `tackleMarkTargetBonus` 0 | 7,78 | 0,98 | 0,70 | 4,87 |
+
+Las otras 24 filas de `summary.csv` **idénticas**, las 43 puertas reproducen la línea base **exactamente**
+(`elf_brawler` 48,54 · `elf_out_of_zone` 46,04 · `injuries` 1,30) y, partido a partido, las 500 filas de
+`matches.csv` coinciden columna a columna: no desplaza ni una tirada.
+
+**Las cifras de esa tabla son de la semilla 1, que es el extremo.** Con cinco semillas (la semilla genera
+también las plantillas) `offBallTacklesPerMatch` recorre **0,99-5,09**, `tacklesPerMatch` **6,92-10,42** e
+`injuriesPerMatch` **0,43-0,81**. Dos consecuencias para D2: la banda de la métrica nueva se fija con
+varias semillas (precedente ADR 0082, tres), y separar **casi dobla la dispersión** de `tacklesPerMatch`
+entre plantillas (rango 2,02 → 3,50 sobre una banda de anchura 8).
+
+**Mientras D2 no llegue, el proyecto supervisa menos violencia que antes**: ~5 sucesos por partido (semilla
+1) pasan de una métrica con banda IN/OUT a una `INFO` sin banda y fuera del power-check del screening. Es
+lo correcto —la banda de fútbol no debe juzgar un puñetazo— pero el único raíl que queda es
+`injuriesPerMatch`.
+
+**Tres cosas que esta sesión midió y que cambian lo que se creía** (detalle y etiquetas de evidencia en
+`docs/pendientes/BE-A.md`, enmienda en la propia ADR 0125):
+
+1. **La previsión de ~9,19 era falsa**: el valor separado es **6,92**. El 9,19 era otro experimento (la
+   métrica mezclada con la entrada sin balón apagada) y hoy ese mismo experimento da 7,78.
+2. **El margen de `tacklesPerMatch` está por el suelo, no por el techo.** 6,92 con suelo 6,00, y la entrada
+   sin balón **sustituye** disputas además de sumarse. El «riesgo de techo» de la ADR 0125 se razonó con el
+   instrumento mezclado.
+3. **`bono 0` no desactiva la entrada sin balón**: con `tackleMarkTargetBonus` en 0 quedan 0,98 por partido.
+   La premisa de D3 («un puesto con bono 0 no entra nunca») **exige una descalificación explícita** en el
+   código; no sale sola del dato.
+
+Además, con el instrumento corregido el defensa y el centrocampista **disputan el balón casi lo mismo**
+(0,67 vs 0,64 por partido-jugador): el 65,3 % de las «entradas» del defensa no eran disputas.
+
 ## Siguiente paso concreto (sesión limpia, 22 sep 2026)
 
-**F1 está cerrada. El siguiente paquete es la ADR 0125** (entrada sin balón), y su primera mitad es
-**gratis y sin riesgo de balance**: separar `tacklesPerMatch` (que hoy mezcla entrada al portador y
-entrada al marcado bajo una banda calibrada como métrica de fútbol) y añadir `offBallTacklesPerMatch`
-como `INFO` sin banda.
-
-**Aviso para quien lo haga:** al separarlas, `tacklesPerMatch` baja de 12,01 a **~9,19** *(cifra ya medida,
-en el `_doc` de `data/sim/tuning.json`)*. Sigue dentro de su banda 6-14, pero **es un cambio de definición,
-no de comportamiento**, y por tanto **la línea base emparejada deja de servir para esa métrica**: hay que
-tomar una nueva. Los otros valores no se mueven.
-
-La segunda mitad (bono por puesto) es la arriesgada: `injuriesPerMatch` está en 0,81 con techo 0,90 y
-abrir la entrada a los tres roles la llevaba a 1,34.
+**La segunda mitad de la ADR 0125 (D2 bono por puesto + D3 los tres roles de campo)**, que es la
+arriesgada: `injuriesPerMatch` está en 0,81 con techo 0,90 y abrir la entrada a los tres roles la llevaba a
+1,34 *(medido con el instrumento viejo; hay que rehacer esa tabla con el nuevo)*. Empezar por
+`docs/pendientes/BE-A.md`, que ya trae el reparto por puesto separado, y por la enmienda al final de la ADR
+0125. Vigilar **dos** métricas, no una: `injuriesPerMatch` por arriba y `tacklesPerMatch` por abajo.
 
 **Decisiones del revisor pendientes de ejecutar** (ADR escritas, nada implementado): **0125** (entrada sin
 balón con métrica propia y bono por puesto), **0126** (clanes canónicos: ~110-120 jugadores escritos),
@@ -52,8 +91,13 @@ balón con métrica propia y bono por puesto), **0126** (clanes canónicos: ~110
 perfil entre runs, que no existe). Las tres primeras tocan balance y van con lote.
 
 **Línea base de puertas vigente**: `elf_brawler` 48,54 · `elf_out_of_zone` 46,04 · `injuries` 1,30.
-Medida cuatro veces idéntica el 22 sep en worktree limpio sobre HEAD. **Cualquier paquete de contabilidad
-debe reproducirla exactamente**; si se mueve, ha desplazado el consumo de RNG.
+Medida cinco veces idéntica el 22 sep en worktree limpio, la última ya con la ADR 0125 D1 dentro.
+**Cualquier paquete de contabilidad debe reproducirla exactamente**; si se mueve, ha desplazado el consumo
+de RNG.
+
+**Línea base de `/Balance` vigente** (500 partidos, semilla 1, `reference.json`): `tacklesPerMatch` **6,92**
+· `offBallTacklesPerMatch` **5,09** · `injuriesPerMatch` 0,81 · `foulsPerMatch` 7,50. **Ninguna lectura de
+`tacklesPerMatch` anterior al 22 sep 2026 es comparable con esta**: mezclaba dos poblaciones.
 
 ## F1 (memoria) — mitad de `/Sim` CERRADA (22 sep 2026)
 

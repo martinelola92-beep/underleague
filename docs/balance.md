@@ -93,7 +93,7 @@ Rendimiento: 10.000 partidos en menos de 60 s en máquina de desarrollo (RT-051)
 
 Salida (`summary.csv` + `matches.csv` + `perks.csv`):
 
-- `matches.csv`: `seed`, `teamA`, `teamB`, `goalsA`, `goalsB`, `winner`, `ticks`, `possessionChanges` (alternancias), `avgPassChain` (cadena media de pases), `shots`, `tackles`, `fouls`, `cards`, `injuries`, `deaths`, `mob` (bool, turba), `finalBias` (criterio final), `ballTimeByThird` (tiempo del balón por tercio).
+- `matches.csv`: `seed`, `teamA`, `teamB`, `goalsA`, `goalsB`, `winner`, `ticks`, `possessionChanges` (alternancias), `avgPassChain` (cadena media de pases), `shots`, `tackles`, `offBallTackles`, `fouls`, `cards`, `injuries`, `deaths`, `mob` (bool, turba), `finalBias` (criterio final), `ballTimeByThird` (tiempo del balón por tercio).
 - `perks.csv`: `perkId`, `activations`, `matchesWithActivation`, `contribution` (goles, lesiones, recuperaciones).
 - `summary.csv`: cada métrica de la tabla siguiente con valor (`value`), rango (`range`) y `IN|OUT` (dentro/fuera de rango).
 
@@ -108,8 +108,18 @@ Criterio de salida de la fase 0 e indicador permanente del equilibrio fútbol/ag
 | Tiros por partido (ambos equipos) | 7-15 (ADR 0109) | Eventos `SHOT` |
 | Distribución de resultados | Mayoría entre 1-0 y 3-2; < 5% con más de 5 goles totales; < 15% de empates **al final del reglamentario** | Marcador antes de la turba |
 | Tiempo del balón por tercio | Ningún tercio > 50% | Ticks con el balón en cada tercio de columnas |
-| Entradas por partido | 6-14 | Eventos `TACKLE` |
+| Entradas **al portador** por partido | 6-14 | Eventos `TACKLE` con disputa del balón (`won`/`missed`/`foul`) |
 | Lesiones por partido | 0,3-0,9 (ADR 0082) | Eventos `INJURY` |
+
+**La entrada sin balón no entra en esa banda** (ADR 0125 D1). `tacklesPerMatch` se calibró como métrica de
+fútbol —disputar el balón— y golpear a quien no lo lleva no lo es; desde la ADR 0105 las dos se sumaban
+juntas, así que la banda describía dos poblaciones mezcladas y cualquier apertura de la entrada sin balón
+salía «fuera de banda» por construcción. La entrada sin balón se mide aparte, en `offBallTacklesPerMatch`
+(INFO, **sin banda** hasta que una ADR posterior la fije con la distribución delante).
+
+**Cualquier lectura de `tacklesPerMatch` anterior al 22 sep 2026 mezcla las dos poblaciones** y no es
+comparable con las de después: medido en el conjunto de referencia (500 partidos, semilla 1), 12,01
+mezcladas se separan en **6,92 al portador + 5,09 sin balón**, sin que el motor cambie ni una tirada.
 
 Los rangos son puntos de partida. **Cambiar un rango es una decisión explícita** (RT-057): ADR en `decisiones/` con los datos que lo motivan y actualización de esta tabla en el mismo commit.
 
@@ -126,6 +136,7 @@ sistema o para explicar una fila gating. El cálculo vive en el mismo `Sim/Analy
 | `shotsOnTargetShare` | Porcentaje de tiros que van a puerta (tiros a puerta / tiros totales) | INFO |
 | `saveRate` | Porcentaje de tiros a puerta que el portero para (paradas / tiros a puerta) | INFO |
 | `blockRate` | Porcentaje de tiros que un jugador de campo bloquea en vuelo (bloqueos / tiros **totales**) | INFO |
+| `offBallTacklesPerMatch` | Entradas al marcado **sin balón** por partido (eventos `TACKLE` con detalle `offBallFoul`/`offBallMissed`) | INFO |
 
 `blockRate` es del paso 3 (AW-A, bloqueo del defensa) y se mide sobre los tiros totales, no sobre los que
 iban a puerta: el bloqueo ocurre antes de saber si el disparo habría entrado, y un defensa se cruza igual

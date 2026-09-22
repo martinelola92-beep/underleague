@@ -244,6 +244,7 @@ public sealed class BuildGateTests
         int subjectGoals = 0, baselineGoals = 0;
         int subjectInjured = 0, baselineInjured = 0;
         int subjectTackles = 0, baselineTackles = 0;
+        int subjectOffBallTackles = 0, baselineOffBallTackles = 0;
         int subjectChains = 0, subjectChainLength = 0;
         int baselineChains = 0, baselineChainLength = 0;
         int subjectActivations = 0;
@@ -300,6 +301,7 @@ public sealed class BuildGateTests
                     if (isSubject)
                     {
                         subjectTackles += stat.Tackles;
+                        subjectOffBallTackles += stat.OffBallTackles;
                         if (stat.Injured)
                         {
                             subjectInjured++;
@@ -308,6 +310,7 @@ public sealed class BuildGateTests
                     else
                     {
                         baselineTackles += stat.Tackles;
+                        baselineOffBallTackles += stat.OffBallTackles;
                         if (stat.Injured)
                         {
                             baselineInjured++;
@@ -340,11 +343,13 @@ public sealed class BuildGateTests
 
         var subjectCell = new BuildCellResult(
             buildId, baselineId, matches, subjectWins, subjectGoals, baselineGoals,
-            subjectInjured, baselineInjured, subjectTackles, subjectChains, subjectChainLength, subjectActivations);
+            subjectInjured, baselineInjured, subjectTackles, subjectOffBallTackles, subjectChains, subjectChainLength,
+            subjectActivations);
 
         var baselineCell = new BuildCellResult(
             baselineId, buildId, matches, matches - subjectWins, baselineGoals, subjectGoals,
-            baselineInjured, subjectInjured, baselineTackles, baselineChains, baselineChainLength, 0);
+            baselineInjured, subjectInjured, baselineTackles, baselineOffBallTackles, baselineChains,
+            baselineChainLength, 0);
 
         var perkRows = assignedPerks
             .Select(p => new PerkActivationResult(p, buildId, matches, perkMatches[p]))
