@@ -340,6 +340,46 @@ public sealed class OffBallTests
     }
 
     /// <summary>
+    /// ADR 0129, la mitad que importa: <b>haber pegado a quien no llevaba el balón no impide
+    /// disputarlo</b>. Con el enfriamiento de la entrada sin balón corriendo, el mismo jugador sigue
+    /// entrando al poseedor rival. Con el contador compartido de antes, esta entrada se descartaba durante
+    /// los 12 segundos del enfriamiento largo, que es el defecto que la ADR arregla.
+    /// </summary>
+    [Fact]
+    public void TheOffBallCooldownDoesNotBlockTacklingTheBallCarrier()
+    {
+        var (player, context) = OffBallTackleScenario(Position.Defender);
+        var carrier = context.Players[1];
+        context.Ball.Owner = carrier;
+        context.Ball.Position = carrier.Position;
+        player.OffBallTackleCooldown = 5;
+
+        Assert.Equal(PlayerAction.Tackle, Utility.Choose(context, player, null));
+        Assert.Same(carrier, player.TackleTarget);
+        Assert.False(player.TackleOffBall, "disputar el balón no es una entrada sin balón");
+    }
+
+    /// <summary>
+    /// Y la simétrica: el enfriamiento de la entrada al portador no abre la puerta a pegarle a otro. Cada
+    /// contador gobierna <b>su</b> acción, y el freno de la ADR 0105 sigue intacto — volver a pegar sin
+    /// balón sigue costando el enfriamiento largo.
+    /// </summary>
+    [Fact]
+    public void EachCooldownOnlyBlocksItsOwnTackle()
+    {
+        // Sin poseedor al alcance: con el enfriamiento de la entrada sin balón corriendo, no hay entrada.
+        var (blocked, blockedContext) = OffBallTackleScenario(Position.Defender);
+        blocked.OffBallTackleCooldown = 5;
+        Assert.NotEqual(PlayerAction.Tackle, Utility.Choose(blockedContext, blocked, null));
+
+        // El mismo escenario con el OTRO enfriamiento corriendo sí entra: son contadores distintos.
+        var (free, freeContext) = OffBallTackleScenario(Position.Defender);
+        free.TackleCooldown = 5;
+        Assert.Equal(PlayerAction.Tackle, Utility.Choose(freeContext, free, null));
+        Assert.True(free.TackleOffBall);
+    }
+
+    /// <summary>
     /// ADR 0125 D3: quién entra sin balón lo decide el <b>dato</b>, no el rol. Un ajuste de 0 es la forma
     /// explícita de decir "este puesto no entra nunca", y tiene que cumplirse aunque la entrada sea la
     /// única acción que puntúa en la tabla —que es justo el caso de este escenario sintético—. La ADR 0125

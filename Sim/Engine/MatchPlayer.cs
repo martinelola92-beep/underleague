@@ -431,8 +431,21 @@ internal sealed class MatchPlayer
     /// <summary>Ticks que faltan para poder volver a disputar un regate (§3.7).</summary>
     public int DribbleDuelCooldown { get; set; }
 
-    /// <summary>Ticks que faltan para poder volver a decidir una entrada (§3.5); mientras sea &gt; 0, Tackle se descarta.</summary>
+    /// <summary>
+    /// Ticks que faltan para poder volver a disputar el balón con una entrada (§3.5); mientras sea
+    /// &gt; 0, la entrada <b>al portador</b> se descarta. No gobierna la entrada sin balón, que tiene el
+    /// suyo desde la ADR 0129 (<see cref="OffBallTackleCooldown"/>).
+    /// </summary>
     public int TackleCooldown { get; set; }
+
+    /// <summary>
+    /// Ticks que faltan para poder volver a entrar al marcado <b>sin balón</b> (ADR 0105); mientras sea
+    /// &gt; 0, esa entrada se descarta. Contador propio desde la <b>ADR 0129</b>, por la misma razón por la
+    /// que el bloqueo tiene el suyo (paquete U): compartirlo con el de la entrada al portador hacía que
+    /// <b>pegarle a quien no lleva el balón dejara al jugador sin poder disputarlo</b> durante todo el
+    /// enfriamiento largo, que son 12 segundos con el valor vigente.
+    /// </summary>
+    public int OffBallTackleCooldown { get; set; }
 
     /// <summary>
     /// Ticks que faltan para poder volver a decidir un bloqueo sin balón (ADR 0030 §2); mientras sea

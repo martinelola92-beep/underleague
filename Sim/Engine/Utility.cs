@@ -1334,19 +1334,29 @@ internal static class Utility
     /// </summary>
     private static void EvaluateTackle(UtilityContext ctx, MatchPlayer p, AiContext context, ref Eval eval)
     {
-        if (p.TackleCooldown > 0)
-        {
-            eval.Discarded = true;
-            return;
-        }
-
+        // ADR 0129: cada entrada comprueba SU propio enfriamiento. Haber pegado a quien no llevaba el
+        // balón no puede impedir disputarlo.
         var carrier = ctx.Ball.Owner;
         if (carrier is not null && carrier.Team != p.Team
             && Vec2.Distance(p.Position, carrier.Position) <= context.TackleDistanceMaxCells)
         {
+            // Con un poseedor rival al alcance la entrada es SIEMPRE a él (ADR 0105): si está en
+            // enfriamiento, no se sustituye por pegarle a otro.
+            if (p.TackleCooldown > 0)
+            {
+                eval.Discarded = true;
+                return;
+            }
+
             eval.TackleTarget = carrier;
             eval.Target = carrier.Position;
             eval.Context = context.TackleBallCarrierBonus;
+            return;
+        }
+
+        if (p.OffBallTackleCooldown > 0)
+        {
+            eval.Discarded = true;
             return;
         }
 

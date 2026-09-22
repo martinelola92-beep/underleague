@@ -107,13 +107,34 @@ contra de la propia ADR. Ningún valor del mapa lo evita.
    Separarlos sube `tacklesPerMatch` de 6,92 a 7,86 sin tocar un número, **pero hunde la build violenta**
    (`orc_violence` 54,17 contra un mínimo de 58). Problema propio, con precedente propio: merece su ADR.
 
+## ADR 0129 — cada entrada paga su propio enfriamiento (22 sep 2026, Opción 2 del revisor)
+
+`MatchPlayer.TackleCooldown` era **un contador único** para dos acciones distintas: pegarle a quien no
+lleva el balón dejaba al jugador **sin poder disputarlo** 12 segundos. Es el mismo defecto que el paquete U
+ya arregló para el bloqueo (ADR 0030 §2), aplicado al caso que se quedó fuera.
+
+Separado, y con los dos enfriamientos absorbiendo lo que el arreglo libera (`TackleCooldownTicks` 60 → 90,
+`OffBallTackleCooldownTicks` 180 → 280): `tacklesPerMatch` **6,92 → 7,65**, faltas 7,54 (antes 7,50),
+lesiones **0,79** (antes 0,81), entradas sin balón 4,55. Las 43 puertas siguen en 3 rojas y
+`elf_out_of_zone` pasa a **verde**; `coherentBuildsBeatNone_orc_violence`, que el cambio rompía sin
+compensar, vuelve a banda.
+
+**Lo que empeora y no se arregla ahí**: `buildsWinDifferently_injuries` 1,30 → 1,14 (umbral 1,40, ya roja).
+Si el contacto es más accesible para todos, distingue menos. **No se recalibra el umbral**: es exactamente
+lo que la Opción 3 debe recuperar moviendo la diferenciación al canal de rasgo, y bajar la puerta antes de
+medirlo sería ajustarla al resultado.
+
 ## Siguiente paso concreto (sesión limpia, 22 sep 2026)
 
-**Elegir entre las tres opciones del final de `docs/pendientes/BE-A.md`** (aceptar el aplanamiento y
-recolocar la curva de puertas de builds · separar el contador de enfriamiento en su propia ADR y
-recalibrar después · o mover el ajuste al **multiplicador de rasgo** para que diferencie la agresividad y
-no el puesto). Leer la ficha y las **dos enmiendas** al final de la ADR 0125; los CSV de las siete
-configuraciones están en `out/D2-*`. Recomendación de la sesión: la segunda y luego la tercera.
+**La Opción 3**, que el revisor pidió después de la 2: que el ajuste de la entrada sin balón entre en el
+**multiplicador de rasgo** en vez de sumarse después, para que lo que diferencie sea la **agresividad** y
+no el puesto — que es lo que la ADR 0125 pedía con sus palabras («los defensas *y los más agresivos*») y lo
+único que no aplana la identidad de build por construcción. Con ella cerrada, recomponer el mapa por puesto
+de la ADR 0125 D2 y **entonces** volver a mirar `buildsWinDifferently_injuries`, que es la puerta que la
+0129 comprimió a 1,14 a propósito sin recalibrar.
+
+Contexto: `docs/pendientes/BE-A.md` (las tres opciones con sus números), las **dos enmiendas** al final de
+la ADR 0125 y la **ADR 0129**. Los CSV de las configuraciones medidas están en `out/D2-*`.
 
 **Decisiones del revisor pendientes de ejecutar** (ADR escritas, nada implementado): **0125** (entrada sin
 balón con métrica propia y bono por puesto), **0126** (clanes canónicos: ~110-120 jugadores escritos),

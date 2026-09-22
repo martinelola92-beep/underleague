@@ -844,6 +844,11 @@ internal sealed class MatchEngine : IPerkWorld
             player.TackleCooldown--;
         }
 
+        if (player.OffBallTackleCooldown > 0)
+        {
+            player.OffBallTackleCooldown--;
+        }
+
         if (player.BlockCooldown > 0)
         {
             player.BlockCooldown--;
@@ -950,9 +955,17 @@ internal sealed class MatchEngine : IPerkWorld
                 // partido al pasar de 62 a 65 y a 67 puntos)-. Con el enfriamiento propio la decision
                 // puede ser holgada -si estoy pegado a mi marcado y puedo, entro- y el ritmo lo pone un
                 // tiempo de recuperacion, que es lo que de verdad se quiere dosificar.
-                player.TackleCooldown = (player.TackleOffBall
-                    ? _tuning.States.OffBallTackleCooldownTicks
-                    : _tuning.States.TackleCooldownTicks) + _tuning.States.TacklingTicks;
+                // ADR 0129: cada entrada paga SU propio enfriamiento, como ya hacía el bloqueo desde el
+                // paquete U. Volver a pegar sin balón sigue costando OffBallTackleCooldownTicks —el freno
+                // no se toca— pero disputar el balón deja de pagar por haber pegado.
+                if (player.TackleOffBall)
+                {
+                    player.OffBallTackleCooldown = _tuning.States.OffBallTackleCooldownTicks + _tuning.States.TacklingTicks;
+                }
+                else
+                {
+                    player.TackleCooldown = _tuning.States.TackleCooldownTicks + _tuning.States.TacklingTicks;
+                }
                 break;
             case PlayerAction.Block:
                 // El bloqueo lleva su PROPIO enfriamiento (paquete U). El paquete V lo compartía con el

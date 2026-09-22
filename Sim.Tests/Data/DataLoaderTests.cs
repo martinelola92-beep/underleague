@@ -161,7 +161,10 @@ public class DataLoaderTests
         Assert.Equal(60, catalog.Tuning.Save.QualityWeight);
         Assert.Equal(300, catalog.Tuning.Tackle.HardTackleYellowBonus);
         Assert.Equal(20, catalog.Tuning.Tackle.HardTackleRedBonus);
-        Assert.Equal(60, catalog.Tuning.States.TackleCooldownTicks);
+        // 60 -> 90 con la ADR 0129: al dejar de compartir contador con la entrada sin balón, las disputas
+        // del balón dejaron de estar bloqueadas por los golpes y subieron de 6,92 a 7,86 por partido; este
+        // enfriamiento absorbe lo liberado sin tocar el freno de la entrada sin balón.
+        Assert.Equal(90, catalog.Tuning.States.TackleCooldownTicks);
     }
 
     [Fact]

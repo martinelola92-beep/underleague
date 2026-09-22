@@ -185,7 +185,15 @@ el contador separado: cuanto más universal es pegar, menos distingue a un equip
 `especialización significativa > combinaciones arbitrarias` tirando en contra de la ADR 0125 D2, y no lo
 arregla ningún valor del mapa —lo probé en siete configuraciones—.
 
-### Las tres decisiones que le quedan al revisor
+### Decisión del revisor (22 sep 2026): **Opción 2 y luego Opción 3**
+
+La 2 está hecha: **ADR 0129**, cada entrada paga su propio enfriamiento. Las disputas del balón dejan de
+estar bloqueadas por los golpes (6,92 → 7,65 con los dos enfriamientos recalibrados a 90/280), las faltas y
+las lesiones quedan donde estaban (7,54 contra 7,50 · 0,79 contra 0,81) y `orc_violence` vuelve a verde.
+Las 43 puertas bajan de 3 rojas a 3, con `elf_out_of_zone` pasando a verde. `buildsWinDifferently_injuries`
+baja a 1,14 y **no se recalibra ahí**: es justo lo que la Opción 3 debe recuperar.
+
+### Las tres decisiones, tal como se dejaron escritas
 
 1. **Aceptar el aplanamiento** y publicar D2/D3 con el orden correcto, cambiando `orc_misplaced` por
    `elf_out_of_zone` en la lista de puertas rojas conocidas y `buildsWinDifferently_injuries` de 1,30 a
