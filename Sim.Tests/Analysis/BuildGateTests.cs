@@ -50,8 +50,14 @@ public sealed class BuildGateTests
     /// <summary>Partidos por plantilla (múltiplo de 4: local/visitante × reparto de ids).</summary>
     private const int MatchesPerRoster = 12;
 
-    /// <summary>Semilla base del lote de la puerta.</summary>
-    private const ulong Seed = 1;
+    /// <summary>
+    /// Las <b>ocho</b> bases de semilla que promedia la puerta (ADR 0131). Era una sola, y con una sola
+    /// estas métricas miden <b>una plantilla concreta</b>: CAT-J midió dispersiones de sd 1,6 a 3,2 puntos
+    /// en las de build, del orden del margen contra su propio rango. El precedente es la <b>ADR 0118</b>,
+    /// que hizo justo esto con la puerta de equipar tras tres falsos positivos seguidos
+    /// (<c>docs/pendientes/BB-P.md</c>): <i>subir la muestra en vez de bajar el umbral</i>.
+    /// </summary>
+    private static readonly ulong[] SeedBases = { 1, 2, 3, 4, 5, 6, 7, 8 };
 
     /// <summary>Primer id de jugador del equipo que lleva los ids bajos.</summary>
     private const int PrimaryIdBase = 1;
@@ -65,7 +71,51 @@ public sealed class BuildGateTests
     /// <summary>Build "gana por técnica" de <c>buildsWinDifferently</c> (§8).</summary>
     private const string TechnicalBuild = "elf_tiki_taka";
 
-    private static readonly Lazy<IReadOnlyList<MetricResult>> Results = new(() => Compute(Seed));
+    private static readonly Lazy<IReadOnlyList<MetricResult>> Results = new(ComputeAveraged);
+
+    /// <summary>
+    /// Las métricas de la puerta promediadas sobre <see cref="SeedBases"/>: cada métrica es la media de su
+    /// valor en las ocho plantillas, y el estado IN/OUT se recalcula sobre esa media contra el mismo rango
+    /// de siempre. Las filas informativas siguen siendo informativas.
+    ///
+    /// <para>El paralelismo vive en el arnés (CLAUDE.md): cada pasada ya reparte sus partidos con
+    /// <c>Parallel.For</c> por índice y un <c>Catalog</c> por hilo; las ocho pasadas van en serie entre sí
+    /// y la reducción es después, en orden.</para>
+    /// </summary>
+    private static IReadOnlyList<MetricResult> ComputeAveraged()
+    {
+        var passes = new IReadOnlyList<MetricResult>[SeedBases.Length];
+        for (int i = 0; i < SeedBases.Length; i++)
+        {
+            passes[i] = Compute(SeedBases[i]);
+        }
+
+        var averaged = new List<MetricResult>(passes[0].Count);
+        foreach (var first in passes[0])
+        {
+            double sum = 0;
+            int count = 0;
+            for (int i = 0; i < passes.Length; i++)
+            {
+                var row = passes[i].SingleOrDefault(r => string.Equals(r.Name, first.Name, StringComparison.Ordinal));
+                if (row is null)
+                {
+                    continue;
+                }
+
+                sum += row.Value;
+                count++;
+            }
+
+            double mean = count > 0 ? sum / count : first.Value;
+            string status = first.Status == "INFO"
+                ? "INFO"
+                : (first.RangeMin is double min && mean < min) || (first.RangeMax is double max && mean > max) ? "OUT" : "IN";
+            averaged.Add(new MetricResult(first.Name, mean, first.RangeMin, first.RangeMax, status));
+        }
+
+        return averaged;
+    }
 
     /// <summary>
     /// Las métricas de la puerta con una semilla base cualquiera. Existe para poder MEDIR la dispersión

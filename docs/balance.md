@@ -121,6 +121,13 @@ salía «fuera de banda» por construcción. La entrada sin balón se mide apart
 comparable con las de después: medido en el conjunto de referencia (500 partidos, semilla 1), 12,01
 mezcladas se separan en **6,92 al portador + 5,09 sin balón**, sin que el motor cambie ni una tirada.
 
+**Las puertas de build se miden sobre ocho plantillas, no una** (ADR 0131). En `reference.json` y en las
+builds la semilla genera también los rosters, así que una sola semilla mide *una plantilla concreta*: la
+dispersión medida es de sd 1,6 a 3,2 puntos, del orden del margen de varias de esas métricas contra su
+propio rango. `BuildGateTests` promedia las ocho bases y recalcula IN/OUT sobre la media. Mismo patrón que
+la ADR 0118 aplicó a la puerta de equipar. Consecuencia práctica: **una lectura de una sola semilla no es
+evidencia** para mover nada de este grupo — el diagnóstico está en `CatJSeedDispersionTests`.
+
 Los rangos son puntos de partida. **Cambiar un rango es una decisión explícita** (RT-057): ADR en `decisiones/` con los datos que lo motivan y actualización de esta tabla en el mismo commit.
 
 ### Métricas informativas

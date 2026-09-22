@@ -124,13 +124,24 @@ public static class BuildMetrics
     public const string BuildsWinDifferentlyInjuries = "buildsWinDifferently_injuries";
 
     /// <summary>
-    /// Umbral de <see cref="BuildsWinDifferentlyInjuries"/> (ADR 0084). Era 1,5 desde la fase 1; con el motor
-    /// de AW-A/AW-T/AW-R, que lesiona algo más a <b>todas</b> las builds (más duelos tras cada balón muerto,
-    /// ADR 0082), el cociente entre la build de contacto y la técnica se comprime: medido 1,47 en el lote de
-    /// la puerta (40 plantillas × 12 partidos, semilla 1). Mismo caso y mismo precedente que
+    /// Umbral de <see cref="BuildsWinDifferentlyInjuries"/> (ADR 0131). Era 1,5 desde la fase 1 y 1,4 desde
+    /// la ADR 0084, las dos veces por la misma razón: el motor pasó a lesionar algo más a <b>todas</b> las
+    /// builds y el cociente entre la de contacto y la técnica se comprime. Mismo precedente que
     /// <see cref="MinPassChainRatio"/> (ADR 0062): la escala del canal cambió, el umbral se remide.
+    ///
+    /// <para><b>1,4 → 1,1 con la muestra nueva.</b> Hasta la ADR 0131 esta métrica se medía sobre
+    /// <b>una</b> plantilla y salía roja en 6 de las 8 bases de semilla: el umbral no describía el motor,
+    /// describía la semilla 1. Con la puerta promediando las ocho, lo medido es <b>media 1,29 · sd 0,23 ·
+    /// error típico de la media 0,08</b>. Un umbral de 1,4 está por encima de la media: sería rojo siempre.
+    /// Con 1,1 el falso positivo baja al ~1 % y la puerta sigue avisando si la diferenciación se pierde de
+    /// verdad —con el cociente real en 1,05 salta el 73 % de las veces—, que es lo único que puede afirmar
+    /// con esta dispersión.</para>
+    ///
+    /// <para>Lo que <b>no</b> dice este número: que 1,29 sea suficiente diferenciación. Que la build de
+    /// contacto lesione solo un 29 % más que la técnica es deuda de diseño anotada, no un rango que se
+    /// arregle bajándolo otra vez.</para>
     /// </summary>
-    public const double MinInjuryRatio = 1.4;
+    public const double MinInjuryRatio = 1.1;
 
     /// <summary>Nombre de la métrica de mayor cadena media de pases de la build técnica que de la de contacto (§8).</summary>
     public const string BuildsWinDifferentlyPassChain = "buildsWinDifferently_passChain";

@@ -70,6 +70,7 @@ a secas.
 | [CAT-I](./CAT-I.md) | La política automática casi nunca vende, así que las reglas de venta n | Ver fichero |
 | [CAT-J](./CAT-J.md) | Dos puertas de `BuildGateTests` en rojo en HEAD (elf_brawler, passChain), preexistente | Abierta |
 | [BD-A](./BD-A.md) | Reparto de los penaltis por fila: el sesgo arriba/abajo era ruido (se invierte con 3.000 partidos); queda abierta la concentración en las filas centrales. | Abierta (reducida) |
+| [BF-A](./BF-A.md) | `elf_brawler`, una build mala a propósito, gana el 46,6 % contra su referencia (techo 45): el único rojo verdadero de las 43 puertas tras la ADR 0131 | Abierta, medida en 8 plantillas |
 | [BE-A](./BE-A.md) | El centrocampista nunca entra a su marcado sin balón: el comentario dice «Defensa y centrocampista» y el código dice `Defender` | **Instrumento y mecanismo hechos** (D1 métrica separada · D2/D3 mapa por puesto y guarda por dato · ADR 0129 enfriamiento propio de cada entrada). **Sigue abierta la apertura a centrocampista y delantero**: el ajuste es un interruptor y la tasa la fija un enfriamiento global, así que el orden pedido no es alcanzable. La Opción 3 (ajuste por multiplicador de rasgo) se implementó, se midió y se **descartó** con evidencia en la ficha |
 | [BE-B](./BE-B.md) | Un perk `injure` con `target: "actor"` acreditaría lesiones al compañero o a la propia víctima | Abierta, sin evidencia de activación |
 | [BE-C](./BE-C.md) | `MatchResolution` trata el partido completo en un sitio y solo hasta la derrota en otro | Abierta, sin medir |

@@ -11,7 +11,7 @@ Release (17x). El `-m:1` es por la memoria del contenedor WSL (7,8 GB).
 ```bash
 dotnet build Underleague.slnx -c Release -m:1 -v q                        # /Sim, /Sim.Tests, /Balance, /tools (sin /Game)
 dotnet test Sim.Tests -c Release --filter "Category!=Gate" -m:1 -v q      # bucle de desarrollo, ~40 s
-dotnet test Sim.Tests -c Release --filter "Category=Gate" -m:1 -v q       # las 43 puertas estadísticas: UNA invocación, antes del commit del hito, ≤8 min
+dotnet test Sim.Tests -c Release --filter "Category=Gate" -m:1 -v q       # las 43 puertas estadísticas: UNA invocación, antes del commit del hito, ~9 min
 dotnet test Sim.Tests -c Release --filter "FullyQualifiedName~X" -m:1 -v q   # solo lo que cubre el cambio, durante el desarrollo
 dotnet run --project Balance -c Release -- --runs 10000 --seed 1 --teams data/balance/reference.json --out out/ --quiet
 dotnet run --project tools/DataValidator -- data/                         # esquemas de /data, tras CUALQUIER cambio en data/**
@@ -54,7 +54,7 @@ capturas 85 minutos con 4 h de CPU al 295 % sin producir nada, confundiendo "el 
 "está avanzando". Reglas:
 
 - **Todo proceso largo va envuelto en `timeout`**, siempre, sin excepción.
-- **Presupuesto por tarea, medido**: capturas ≤ 10 min · las 43 puertas ≤ 8 min (tardan 5 m 32 s) · el
+- **Presupuesto por tarea, medido**: capturas ≤ 10 min · las 43 puertas ≤ 11 min (tardan 8 m 41 s desde la ADR 0131, que hace que la puerta de build promedie ocho plantillas en vez de una) · el
   bucle `Category!=Gate` ≤ 2 min (tarda ~40 s). Al doble del presupuesto, se mata y se diagnostica.
 - **Se espera un ARTEFACTO, no un latido.** `pgrep`/`%CPU`/`TIME` dicen que el proceso existe, no que
   progrese. La condición de espera es un fichero escrito o una línea de log, con marca de tiempo
