@@ -185,7 +185,49 @@ el contador separado: cuanto más universal es pegar, menos distingue a un equip
 `especialización significativa > combinaciones arbitrarias` tirando en contra de la ADR 0125 D2, y no lo
 arregla ningún valor del mapa —lo probé en siete configuraciones—.
 
-### Decisión del revisor (22 sep 2026): **Opción 2 y luego Opción 3**
+### Decisión del revisor (22 sep 2026): **Opción 2 y luego Opción 3**. La 2 está dentro; **la 3, REJECTED**
+
+**Opción 2 — hecha** (ADR 0129): cada entrada paga su propio enfriamiento. Las disputas del balón dejan de
+estar bloqueadas por los golpes (6,92 → 7,65 con los dos enfriamientos recalibrados a 90/280), faltas y
+lesiones quedan donde estaban (7,54 contra 7,50 · 0,79 contra 0,81) y `orc_violence` vuelve a verde.
+
+**Opción 3 — implementada, medida y descartada.** Se escribió entera: el ajuste por puesto pasaba por
+`ActionMultiplier(Tackle)` dentro del evaluador y el valor publicado bajaba de 150 a 110. En la semilla 1
+**las 43 puertas salían en verde por primera vez**. La revisión independiente lo desmontó y lo comprobé yo:
+
+1. **La premisa era falsa.** El carácter ya diferenciaba la entrada sin balón, porque el multiplicador de
+   rasgo ya multiplica el `Tackle` base, que es lo que decide la comparación. *Medido por raza (500
+   partidos, semilla 1, entradas sin balón por defensa-partido, **antes** del cambio):* elfo **0,087** ·
+   humano 1,063 · orco **2,476**. Ya eran **28 a 1**. *(CONFIRMED.)*
+2. **Todo el efecto del cambio cabía en 29 sucesos.** Con el ajuste por rasgo a 110: los defensas elfos
+   pasan de **29 entradas sin balón a exactamente 0**, los humanos bajan un 1,3 % y los orcos un 1,0 %. No
+   era una redistribución por carácter: era apagar a una raza. *(CONFIRMED.)*
+3. **Las 43 verdes eran suerte de semilla.** Con el instrumento que el propio proyecto tiene para esto
+   (`CatJSeedDispersionTests`, 8 bases de semilla), `buildsWinDifferently_injuries` da media **1,29 antes y
+   1,29 después** —el cambio medio por semilla es −0,01— y sigue fallando en **5 de 8** plantillas. La
+   única mejora grande es la de la semilla 1, que es justo con la que mide la puerta. *(Medición de la
+   revisión independiente; no la he reproducido.)*
+4. **Rompía la invariante que el cargador dice proteger.** Un jugador `Aggressive` + `Dirty` acumula
+   ×200, y 110 × 200 / 100 = **220**, por encima de `tackleBallCarrierBonus` (195): pegarle a quien no
+   lleva el balón puntuaría más que quitárselo, que es justo lo que la ADR 0105 §3 prohíbe. El cargador
+   valida el valor **publicado**, no el efectivo. *(CONFIRMED, aritmética.)*
+5. **Y el repositorio ya tenía la forma buena diez líneas más abajo**: `BlockAggressiveBonus` (260) y
+   `BlockBruteTagBonus` (200) resuelven exactamente «que el carácter decida» con **bonos con nombre, en
+   `/data`, condicionados a un rasgo o a una etiqueta**. Eso es legible en la ficha de un jugador; un
+   multiplicador oculto no.
+
+**Qué queda de la Opción 3, entonces**: si se quiere que el carácter pese **más** en la entrada sin balón,
+la forma es un bono con nombre al estilo `BlockAggressiveBonus`, no un multiplicador sobre el ajuste de
+puesto — y hay que validarlo con **al menos tres semillas**, no con la de la puerta. Pero antes conviene
+responder a la pregunta que las mediciones dejan abierta: con 28 a 1 entre orco y elfo, **¿hace falta?**
+
+**Otra cosa que la revisión dejó demostrada y corrige a esta ficha**: «no se puede abrir el mapa al
+centrocampista» es **demasiado fuerte**. Con el centrocampista a 40 y enfriamiento 1000, el lote no tiene
+**ninguna** métrica fuera de banda (`injuriesPerMatch` 0,88 sobre un techo de 0,90). Lo que sí está
+demostrado es que **el orden pedido no es alcanzable**: el ajuste es un interruptor y la tasa la fija un
+enfriamiento global, así que todo puesto activado converge (defensa 0,52 · centrocampista 0,51).
+
+
 
 La 2 está hecha: **ADR 0129**, cada entrada paga su propio enfriamiento. Las disputas del balón dejan de
 estar bloqueadas por los golpes (6,92 → 7,65 con los dos enfriamientos recalibrados a 90/280), las faltas y

@@ -124,22 +124,46 @@ Si el contacto es más accesible para todos, distingue menos. **No se recalibra 
 lo que la Opción 3 debe recuperar moviendo la diferenciación al canal de rasgo, y bajar la puerta antes de
 medirlo sería ajustarla al resultado.
 
+## La Opción 3 se implementó, se midió y se descartó (22 sep 2026)
+
+El ajuste por puesto pasando por `ActionMultiplier(Tackle)`, con el valor publicado bajando a 110, dejaba
+**las 43 puertas en verde** en la semilla 1. **No se ha commiteado**, y el motivo está medido en
+`docs/pendientes/BE-A.md`:
+
+- **la premisa era falsa**: el carácter ya diferenciaba (elfo 0,087 · humano 1,063 · orco **2,476**
+  entradas sin balón por defensa-partido, *antes* del cambio: 28 a 1), porque el multiplicador de rasgo ya
+  multiplica el `Tackle` base;
+- **todo el efecto cabía en 29 sucesos**: los defensas elfos pasaban de 29 entradas sin balón a **0** y el
+  resto se movía ~1 %. No era diferenciar por carácter, era apagar una raza;
+- **las 43 verdes eran suerte de semilla**: con las 8 bases de `CatJSeedDispersionTests`,
+  `buildsWinDifferently_injuries` da media 1,29 antes y 1,29 después, y sigue fallando en 5 de 8;
+- **rompía la invariante de la ADR 0105 §3**: agresivo + sucio acumula ×200 y 110 × 200 / 100 = 220, por
+  encima de `tackleBallCarrierBonus` (195). El cargador valida el valor publicado, no el efectivo;
+- y el repositorio **ya tenía la forma legible** para lo mismo: `BlockAggressiveBonus` /
+  `BlockBruteTagBonus`, bonos con nombre en `/data` condicionados a un rasgo.
+
+**Aviso que arrastra a la ADR 0129**: sus mejoras de puerta (`elf_out_of_zone` a verde, `orc_violence`
+recuperada) también están medidas **en la semilla 1**. La dispersión entre plantillas de estas métricas de
+build es grande (sd 0,18-0,23 en un umbral de 1,40); cualquier lectura futura de la curva de puertas de
+build debería usar tres semillas o las ocho de CAT-J, no una.
+
 ## Siguiente paso concreto (sesión limpia, 22 sep 2026)
 
-**La Opción 3**, que el revisor pidió después de la 2: que el ajuste de la entrada sin balón entre en el
-**multiplicador de rasgo** en vez de sumarse después, para que lo que diferencie sea la **agresividad** y
-no el puesto — que es lo que la ADR 0125 pedía con sus palabras («los defensas *y los más agresivos*») y lo
-único que no aplana la identidad de build por construcción. Con ella cerrada, recomponer el mapa por puesto
-de la ADR 0125 D2 y **entonces** volver a mirar `buildsWinDifferently_injuries`, que es la puerta que la
-0129 comprimió a 1,14 a propósito sin recalibrar.
+Antes de tocar la entrada sin balón otra vez: **decidir si hace falta**. Con 28 a 1 entre orco y elfo, la
+diferenciación por carácter ya existe; la pregunta abierta es si se quiere **más**, y si la forma debe ser
+un bono con nombre al estilo `BlockAggressiveBonus` —legible en la ficha del jugador— en vez de un
+multiplicador oculto. Eso es `game-design-review`, no calibración. Y lo que falta para abrir el mapa al
+centrocampista y al delantero sigue siendo darles algo mejor que hacer sin balón, más un enfriamiento
+**por puesto** si se quiere que el defensa pegue más que ellos.
 
 Contexto: `docs/pendientes/BE-A.md` (las tres opciones con sus números), las **dos enmiendas** al final de
 la ADR 0125 y la **ADR 0129**. Los CSV de las configuraciones medidas están en `out/D2-*`.
 
-**Decisiones del revisor pendientes de ejecutar** (ADR escritas, nada implementado): **0125** (entrada sin
-balón con métrica propia y bono por puesto), **0126** (clanes canónicos: ~110-120 jugadores escritos),
-**0127** (elenco de fichajes por raza: ~300-325), **0128** (legendario como premio, **bloqueada** por el
-perfil entre runs, que no existe). Las tres primeras tocan balance y van con lote.
+**Decisiones del revisor pendientes de ejecutar** (ADR escritas, nada implementado): **0126** (clanes
+canónicos: ~110-120 jugadores escritos), **0127** (elenco de fichajes por raza: ~300-325), **0128**
+(legendario como premio, **bloqueada** por el perfil entre runs, que no existe). La **0125 está
+implementada** (D1 métrica separada, D2/D3 mapa por puesto y guarda por dato) y la **0129** también. Las
+dos primeras tocan balance y van con lote.
 
 **Línea base de puertas vigente**: `elf_brawler` 48,54 · `elf_out_of_zone` 46,04 · `injuries` 1,30.
 Medida cinco veces idéntica el 22 sep en worktree limpio, la última ya con la ADR 0125 D1 dentro.
