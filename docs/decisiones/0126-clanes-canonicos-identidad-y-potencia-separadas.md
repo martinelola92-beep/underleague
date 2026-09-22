@@ -156,3 +156,61 @@ los tres actos que esta ADR propone. Para responder con precisión a «2-3 veces
 haría falta repetir el censo con un conjunto sintético de 10 ids en los tres actos. **No se hizo a
 propósito**: es una decisión de qué mundo simular, no de cómo medir. Queda como el siguiente paso antes de
 escribir los diez ficheros.
+
+---
+
+## Enmienda (22 sep 2026) — la potencia también se autoriza
+
+**El revisor corrige la arquitectura propuesta arriba**, y la corrección es mejor que la propuesta:
+
+> «Creo que la potencia debería ser autorizada también. Lo que cambia es que en el acto 1 te saldrán los
+> jugadores que determinemos como comunes para siempre, y a medida que avanzas a esos los sustituirán los
+> de rareza superiores y mejores stats. Creo que esto facilita el balance porque podremos ajustar jugadores
+> concretos para balancear el winrate.»
+
+### Qué cambia respecto a la propuesta original
+
+Queda **descartada** la tabla de escalado por acto. No hay fórmula: **cada jugador tiene sus atributos
+escritos**, y lo que cambia con el acto es **qué jugadores del clan salen al campo**. El acto 1 alinea a
+los comunes; los actos siguientes los sustituyen por los de rareza superior.
+
+### Por qué es mejor, y no es una cuestión de gusto
+
+**Una fórmula solo puede mover a todos a la vez; un jugador escrito se puede tocar solo.** Si `runWinRate`
+se va por arriba en el acto 2, con escalado calculado hay que mover la curva entera —y arrastrar los otros
+dos actos—; con potencia autorizada se baja a un jugador concreto de un clan concreto. **Es más superficie
+de balance, pero también mucha más resolución**, y el proyecto ya tiene el instrumental para medirla
+(`--boss-gate`, las 43 puertas, `perk-values`).
+
+Además desactiva el riesgo 1 de arriba (que un escalado calculado no reprodujera la curva medida): ya no
+hay escalado que calibrar, porque los atributos por acto se escriben como están escritos hoy.
+
+### Lo que esto cuesta, que es más de lo que la ADR estimaba
+
+La estimación original de **100 jugadores** (10 clanes × 10) **se queda corta**. Si el acto 1 alinea diez
+comunes y el acto 3 alinea diez de rareza superior, un clan necesita una **plantilla mayor que su once**.
+Orden de magnitud: **15-25 jugadores por clan → 150-250 jugadores con nombre**, contra los 73 únicos de
+hoy. Sigue siendo trabajo de contenido delegable, pero **no son 27 nombres nuevos: son del orden de 100-180**.
+
+### La pregunta que esta enmienda deja abierta
+
+Las dos frases del revisor admiten dos lecturas y hay que elegir una antes de escribir:
+
+- *«a esos los sustituirán los de rareza superiores»* → la plantilla del acto 3 es **gente distinta**.
+- *«que te enfrentes a ellos en el acto 3 y sean mucho mejores… los rivales también mejoran con el tiempo»*
+  → es **la misma gente**, mejor.
+
+**Propuesta para resolverlo, pendiente de confirmación:** las dos, por capas. Un **núcleo** de 4-6
+jugadores por clan —el portero, el capitán, la estrella— **persiste en los tres actos con su propio bloque
+de atributos por acto** (es la misma persona, que mejora: preserva el reconocimiento), y el **relleno**
+común **se sustituye** por fichajes de mayor rareza (es el club que se refuerza: preserva la sensación de
+progresión). Así «Grimnir Cavaprofundo sigue siendo su portero, pero ahora tiene detrás a gente seria».
+
+### Orden de trabajo, corregido por el revisor
+
+> «Primero el cambio y luego medir y ajustar si es necesario.»
+
+Se retira el gate de medición previa que esta ADR imponía. **Se implementa, se mide y se ajusta.** Es
+defendible: el censo sintético que se pedía respondía una pregunta que el propio cambio responde de forma
+definitiva. **El gate de balance sí se mantiene**: las 43 puertas emparejadas y las siete métricas de
+RT-056 antes de dar el paquete por cerrado.
