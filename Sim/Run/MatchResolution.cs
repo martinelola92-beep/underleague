@@ -1,8 +1,10 @@
+using System.Globalization;
 using Underleague.Sim.Data;
 using Underleague.Sim.Engine;
 using Underleague.Sim.Events;
 using Underleague.Sim.Model;
 using Underleague.Sim.Perks;
+using Underleague.Sim.Run.Systems.Rivals;
 using ProgressionRules = Underleague.Sim.Progression.Progression;
 
 namespace Underleague.Sim.Run;
@@ -217,6 +219,13 @@ internal static class MatchResolution
         var next = state
             .WithRoster(players)
             .WithNodeCompleted(node.Id, node.Kind, won ? NodeResult.Won : NodeResult.Lost);
+
+        // 4b. Memoria de "quién knaveó a quién" contra un rival concreto (BE-B, enmienda de la ADR 0124,
+        //     tabla "Dónde vive cada memoria"). Pasada APARTE de la del paso 2: esa mira solo Team 0 y para
+        //     en defeatTick (BE-C, semántica que no se toca aquí); esta mira los eventos de los dos
+        //     bandos y no se detiene, porque no cambia el estado de la plantilla ni el resultado del
+        //     partido -es contabilidad pura sobre RunState.Counters (RT-054)-.
+        next = ApplyRivalCredits(next, node, players, result.Events);
 
         // El almacén se rellena en orden de id de objeto (RT-041), no en orden de muerte.
         recovered.Sort(StringComparer.Ordinal);
@@ -483,6 +492,104 @@ internal static class MatchResolution
         }
 
         return -1;
+    }
+
+    /// <summary>
+    /// Construye y aplica los deltas de <see cref="RunState.RivalCreditPrefix"/> (BE-B): recorre
+    /// <paramref name="events"/> en su orden ya determinista (RT-041) buscando lesiones y muertes con
+    /// causante conocido en las que un lado es la plantilla propia y el otro un rival de
+    /// <see cref="RivalTeamBuilder"/>. Aritmética entera, sin RNG (RT-021, RT-023): un evento solo suma
+    /// una unidad al contador de su par exacto.
+    /// </summary>
+    private static RunState ApplyRivalCredits(
+        RunState state, MapNode node, IReadOnlyList<RunPlayer> players, IReadOnlyList<MatchEvent> events)
+    {
+        if (node.OpponentId.Length == 0)
+        {
+            // Nodo procedural sin catálogo de rivales (RF-015): no hay identidad de clan estable con la
+            // que relacionar nada en partidos posteriores. Mismo guardia que Systems.Rivals.RivalHistory.
+            return state;
+        }
+
+        if (node.Kind == NodeKind.Boss)
+        {
+            // El nodo de jefe guarda un OpponentId FANTASMA: NodeKinds.IsMatch lo cuenta como partido, así
+            // que consume un hueco del cursor de MapGenerator y se queda con el id de un rival de catálogo
+            // que nadie juega ahí (BossRunSystems construye el equipo de data/bosses/). Sin esta guarda,
+            // los hechos de un jefe se acreditarían al clan equivocado y la memoria mentiría.
+            //
+            // Hoy el par (jefe, propio) ya se descartaría más abajo porque el jefe usa
+            // DefaultRunSystems.OpponentFirstPlayerId (1.000.000) y el índice saldría negativo, pero eso
+            // es un accidente de los rangos numéricos, no una decisión: mover cualquiera de las dos
+            // constantes lo rompería en silencio. Mismo motivo por el que RivalHistory excluye Boss.
+            return state;
+        }
+
+        var deltas = new Dictionary<string, int>();
+        for (int i = 0; i < events.Count; i++)
+        {
+            var matchEvent = events[i];
+            if (matchEvent.Detail.EndsWith(CancelledSuffix, StringComparison.Ordinal))
+            {
+                // Un perk que anula una lesión o una muerte no acredita nada (mismo criterio que la
+                // atribución de RunCareer, ADR 0124).
+                continue;
+            }
+
+            string kind = matchEvent.Type switch
+            {
+                EventType.Injury => "Injury",
+                EventType.Death => "Death",
+                _ => string.Empty,
+            };
+            if (kind.Length == 0 || matchEvent.Opponent < 0)
+            {
+                // Sin causante (Kill/EmitCancellable sin matador) no hay par que registrar.
+                continue;
+            }
+
+            bool victimIsOwn = IndexOf(players, matchEvent.Actor) >= 0;
+            bool causerIsOwn = IndexOf(players, matchEvent.Opponent) >= 0;
+            if (victimIsOwn == causerIsOwn)
+            {
+                // Los dos propios, los dos rivales, o un id que no aparece en ninguno de los dos bandos
+                // (por ejemplo un jefe fuera del rango de RivalTeamBuilder): no es un par propio x rival.
+                continue;
+            }
+
+            int rivalId = victimIsOwn ? matchEvent.Opponent : matchEvent.Actor;
+            int rivalIndex = rivalId - RivalTeamBuilder.OpponentFirstPlayerId;
+            if (rivalIndex < 0)
+            {
+                // No viene de RivalTeamBuilder (rango de id fuera del rival de datos): sin índice estable
+                // dentro del fichero JSON del clan, no hay con qué relacionarlo en partidos posteriores.
+                continue;
+            }
+
+            int ownId = victimIsOwn ? matchEvent.Actor : matchEvent.Opponent;
+            string direction = victimIsOwn ? "suffered" : "caused";
+            string key = RunState.RivalCreditPrefix + node.OpponentId + ":"
+                + rivalIndex.ToString(CultureInfo.InvariantCulture) + ":"
+                + ownId.ToString(CultureInfo.InvariantCulture) + ":"
+                + direction + kind;
+
+            deltas[key] = deltas.TryGetValue(key, out int current) ? current + 1 : 1;
+        }
+
+        if (deltas.Count == 0)
+        {
+            return state;
+        }
+
+        var keys = new List<string>(deltas.Keys);
+        keys.Sort(StringComparer.Ordinal);
+        var next = state;
+        for (int i = 0; i < keys.Count; i++)
+        {
+            next = next.WithCounter(keys[i], next.Counter(keys[i]) + deltas[keys[i]]);
+        }
+
+        return next;
     }
 
     private static int PlayedTicks(MatchReport report, int playerId)

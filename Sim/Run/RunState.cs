@@ -651,6 +651,46 @@ public sealed record RunState
     }
 
     /// <summary>
+    /// Prefijo de la memoria de "quién knaveó a quién" (BE-B, enmienda de la ADR 0124, corrigiendo su
+    /// tabla «Dónde vive cada memoria»: citaba esta clave como si ya existiera, y era un plan, no código).
+    /// Vive en <see cref="Counters"/> por el mismo motivo que <see cref="ItemStockPrefix"/> y
+    /// <see cref="ConsumableOwnedPrefix"/> -clave libre para no subir de versión cada vez que entra un
+    /// sistema-, y es el gemelo de vocabulario <b>abierto</b> de <see cref="RunCareer"/> (vocabulario
+    /// <b>cerrado</b>, por jugador propio): un rival no vive lo que vive la run entera con nombre propio en
+    /// <c>RunState</c>, así que no puede tener una propiedad tipada.
+    ///
+    /// <para><b>Formato de la clave</b> (cuatro campos tras el prefijo, separados por <c>:</c>):</para>
+    /// <code>
+    /// rivalCredit:&lt;opponentId&gt;:&lt;rivalIndex&gt;:&lt;ownPlayerId&gt;:&lt;causedInjury|causedDeath|sufferedInjury|sufferedDeath&gt;
+    /// </code>
+    /// <list type="bullet">
+    /// <item><description><c>opponentId</c> es <see cref="MapNode.OpponentId"/>: el id del clan
+    /// rival (<c>data/rivals/</c>, RF-015). Sin catálogo de rivales (nodo procedural, cadena vacía) no hay
+    /// identidad de clan estable y no se registra nada -mismo guardia que ya usa
+    /// <see cref="Systems.Rivals.RivalHistory"/> para el mismo motivo-.</description></item>
+    /// <item><description><c>rivalIndex</c> es el índice del jugador rival dentro de la lista de ese
+    /// clan en el fichero JSON: <c>id de jugador - <see cref="Systems.Rivals.RivalTeamBuilder.OpponentFirstPlayerId"/></c>
+    /// (verificado: así asigna <see cref="Systems.Rivals.RivalTeamBuilder.Build"/> los ids). Junto con
+    /// <c>opponentId</c> identifica de forma estable y determinista a <b>ese</b> individuo rival, no solo
+    /// a su clan.</description></item>
+    /// <item><description><c>ownPlayerId</c> es el id, dentro de <c>RunState</c>, del jugador de la
+    /// plantilla propia del par -la víctima si la dirección es <c>suffered</c>, el causante si es
+    /// <c>caused</c>-.</description></item>
+    /// <item><description>El último campo junta dirección y hecho en una sola palabra para no dejar
+    /// ambigüedad en el número de segmentos: <c>caused*</c> es un jugador <b>propio</b> lesionando o
+    /// matando a este rival; <c>suffered*</c> es este rival lesionando o matando a un jugador
+    /// <b>propio</b>. Las dos direcciones producen historia (RF-125 cuenta lesiones causadas; el bando de
+    /// muerte de F2 querrá poder decir "a manos de quién").</description></item>
+    /// </list>
+    /// <para>El valor del contador es cuántas veces ha pasado ese hecho concreto, acumulado a lo largo de
+    /// toda la run (nunca se reinicia, igual que <see cref="ItemStockPrefix"/>). Lo escribe
+    /// <see cref="MatchResolution"/>, en una pasada que excluye los eventos anulados (mismo criterio que
+    /// la atribución de <see cref="RunCareer"/>) y no cambia ninguna tirada: es contabilidad pura sobre la
+    /// secuencia de eventos que el motor ya produjo.</para>
+    /// </summary>
+    public const string RivalCreditPrefix = "rivalCredit:";
+
+    /// <summary>
     /// Jugadores que <b>ocupan plantilla</b> (RF-020): todos menos los muertos. El muerto se queda en
     /// <see cref="Roster"/> para el memorial (RF-122) pero deja su sitio libre: morir cuesta un jugador,
     /// no un jugador y su hueco.

@@ -75,3 +75,4 @@ a secas.
 | [BE-C](./BE-C.md) | `MatchResolution` trata el partido completo en un sitio y solo hasta la derrota en otro | Abierta, sin medir |
 | [BE-D](./BE-D.md) | RF-125 será subcontable si se suma `Career` de la plantilla (`WithoutPlayer` pierde contribuciones) | Abierta, de diseño |
 | [BE-E](./BE-E.md) | Un jugador legendario no puede aparecer nunca; hay precio de compra para él | Diseño resuelto (ADR 0128); abierta la incoherencia de dato |
+| [BE-F](./BE-F.md) | `NodeKinds.IsMatch` incluye `Boss`: el nodo de jefe guarda un `opponentId` fantasma y cada consumidor debe acordarse de excluirlo | Abierta, de primitiva |
