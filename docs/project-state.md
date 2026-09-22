@@ -9,6 +9,27 @@ PC (Steam), premium, sin online. **Estado (8 sep 2026): fases 0 y 1 cerradas; fa
 **Campo de siete filas (14 sep 2026, decisión del revisor, BA-C):** 16×7 en vez de 16×6 —con seis filas el centro geométrico cae *entre* dos filas y no existe fila central—, con guardado v4. Añadir la fila cuesta ~1,0 tiro y ~0,45 goles por partido y **ninguna palanca local lo recupera**, así que la **ADR 0109** recalibra la banda de tiros a la geometría vigente (8-16 → 7-15) en vez de tocar el motor, y deja escrito que ensanchar la formación o las zonas de acción destruye la profundidad de colocación. Nueve auditorías de la IA de jugadores (`docs/auditoria-ia-jugadores-1..9.md`) dejan **un solo cambio aplicado**, la **ADR 0110**: `Shoot` del defensa 77 → 154 y del centrocampista 188 → 237, porque con 77 un defensa colocado arriba nunca remataba —perdía contra su propio `ShortPass` de 500— y jugar fuera de posición costaba dos tercios del ataque (100/48/38 → 100/68/55). Rechazados y documentados: `ChaseBall pen` en todas las dosis (degrada la diferenciación de builds), el desfase de fase entre equipos (no replica entre semillas) y la histéresis. Queda **abierto** el papel del centrocampista: dispara el 6,5 % de los tiros siendo el 43 % de los jugadores de campo.
 ---
 
+## Siguiente paso concreto (sesión limpia, 22 sep 2026)
+
+**Cerrar F1 con su superficie en `/Game`**, que es lo único que falta. Hoy hay **tres memorias
+construidas y ninguna visible**: la carrera de cada jugador (`RunPlayer.Career`), el historial de
+enfrentamientos (`RivalHistory`) y los pares knaveador-víctima (`RunState.Counters`, prefijo
+`rivalCredit:`). La regla de la fase es que **no se construye memoria que nadie vea**, y ahora mismo se
+está incumpliendo. Leer `docs/plan-evolucion-knavall.md` §F1 punto 6 y §F2.
+
+En su **propio commit** (un commit no mezcla `/Sim` y `/Game`): la ficha de jugador enseña la carrera, y
+el cartel del nodo dice contra quién se juega, cuántas veces y con qué resultado. `visual-review` antes de
+declarar que se ve bien.
+
+**Decisiones del revisor pendientes de ejecutar** (ADR escritas, nada implementado): **0125** (entrada sin
+balón con métrica propia y bono por puesto), **0126** (clanes canónicos: ~110-120 jugadores escritos),
+**0127** (elenco de fichajes por raza: ~300-325), **0128** (legendario como premio, **bloqueada** por el
+perfil entre runs, que no existe). Las tres primeras tocan balance y van con lote.
+
+**Línea base de puertas vigente**: `elf_brawler` 48,54 · `elf_out_of_zone` 46,04 · `injuries` 1,30.
+Medida cuatro veces idéntica el 22 sep en worktree limpio sobre HEAD. **Cualquier paquete de contabilidad
+debe reproducirla exactamente**; si se mueve, ha desplazado el consumo de RNG.
+
 ## F1 (memoria) — mitad de `/Sim` CERRADA (22 sep 2026)
 
 **ADR 0124** y su enmienda. `RunPlayer.Career` (registro tipado, vocabulario cerrado que nunca topa ni se
@@ -25,10 +46,11 @@ grave era que el matador **rival** no se persistía en ningún sitio, así que l
 título. También faltaba `game-design-review` (Regla B): tres reglas de juego quedan decididas en la
 enmienda, y una de ellas importa porque **RF-125 pone un umbral de 30 lesiones por run**.
 
-**Pendiente para cerrar F1**: la **superficie mínima** en `/Game` —que la ficha de jugador enseñe la
-carrera—, en su propio commit (un commit no mezcla `/Sim` y `/Game`). Regla que no se negocia: *no se
-construye memoria que nadie vea*. Y **`clanId`** queda fuera hasta que el revisor decida qué clanes son el
-mismo a través de actos: es contenido, no mecanismo.
+**BE-B cerrada (22 sep)**: los pares (causante, víctima) se guardan en contadores de clave libre
+—`rivalCredit:<clan>:<índice>:<propio>:<hecho>`—, sin subir esquema y en las dos direcciones. La revisión
+añadió la exclusión explícita del nodo de jefe, que se descartaba por accidente de los rangos de id.
+
+**`clanId` queda absorbido por la ADR 0126**, que va más allá: clanes canónicos con plantilla escrita.
 
 Fichas nuevas de la revisión: `BE-B` (`injure` con `target: actor`), `BE-C` (`MatchResolution` y
 `defeatTick`), `BE-D` (RF-125 subcontable).
