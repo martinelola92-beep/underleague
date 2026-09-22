@@ -62,6 +62,11 @@ capturas 85 minutos con 4 h de CPU al 295 % sin producir nada, confundiendo "el 
 - **Diagnostica por el camino barato antes de esperar más.** Aquel cuelgue se resolvió en 282 ms con un
   test de `/Sim` que descartó la simulación — si existe una medición de segundos que acota el problema,
   va antes que la segunda espera.
+- **No toques `/data` mientras corre un lote o una puerta.** Cada clase de test carga el catálogo cuando
+  xUnit la inicializa, no al arrancar la ejecución, así que una edición a mitad de pasada contamina solo
+  algunas clases y el resultado parece válido. Pasó el 22 sep 2026 (un experimento con
+  `tackleMarkTargetBonus` durante las 43 puertas: hubo que tirar la pasada entera y repetirla). Si hay que
+  medir con `/data` distinto mientras algo corre, se copia el árbol y se pasa `--data <copia>`.
 - **Dos esperas fallidas cierran el asunto.** Se anota en `docs/pendientes/` con lo medido y se sigue.
 
 ## Qué NO hace
