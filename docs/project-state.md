@@ -9,17 +9,42 @@ PC (Steam), premium, sin online. **Estado (8 sep 2026): fases 0 y 1 cerradas; fa
 **Campo de siete filas (14 sep 2026, decisión del revisor, BA-C):** 16×7 en vez de 16×6 —con seis filas el centro geométrico cae *entre* dos filas y no existe fila central—, con guardado v4. Añadir la fila cuesta ~1,0 tiro y ~0,45 goles por partido y **ninguna palanca local lo recupera**, así que la **ADR 0109** recalibra la banda de tiros a la geometría vigente (8-16 → 7-15) en vez de tocar el motor, y deja escrito que ensanchar la formación o las zonas de acción destruye la profundidad de colocación. Nueve auditorías de la IA de jugadores (`docs/auditoria-ia-jugadores-1..9.md`) dejan **un solo cambio aplicado**, la **ADR 0110**: `Shoot` del defensa 77 → 154 y del centrocampista 188 → 237, porque con 77 un defensa colocado arriba nunca remataba —perdía contra su propio `ShortPass` de 500— y jugar fuera de posición costaba dos tercios del ataque (100/48/38 → 100/68/55). Rechazados y documentados: `ChaseBall pen` en todas las dosis (degrada la diferenciación de builds), el desfase de fase entre equipos (no replica entre semillas) y la histéresis. Queda **abierto** el papel del centrocampista: dispara el 6,5 % de los tiros siendo el 43 % de los jugadores de campo.
 ---
 
+## **FASE 1 (memoria) CERRADA** (22 sep 2026)
+
+Las tres memorias construidas **y visibles**, que era la condición que faltaba (*no se construye memoria
+que nadie vea*):
+
+- **Carrera del jugador** — sección `CARRERA` en la ficha: «14 partidos · 3 goles · 9 entradas ganadas ·
+  2 lesiones causadas · 1 muerte causada». No aparece con `Matches == 0`.
+- **Reencuentro con un clan** — en el ojeo: «Yunque Verde · 2.ª vez · ganaste».
+- **Par knaveador-víctima** — debajo: «tu Balder Cavaprofundo ha lesionado a su Grok Comecráneos».
+
+Las dos pantallas quedan **enganchadas a la secuencia de capturas** (`--screenshots` y `--tour-rivalry`),
+así que se regresionan solas. Capturas en `Game/screenshots/`: `equipo-ficha.png`, `ojeo.png` (primer
+encuentro) y `ojeo-reencuentro.png`.
+
+**Medido cinco veces: 43 puertas idénticas a la línea base de HEAD** (`elf_brawler` 48,54 ·
+`elf_out_of_zone` 46,04 · `injuries` 1,30), en worktree limpio. Todo el paquete es contabilidad y lectura:
+no desplaza ni una tirada.
+
+**Limitación de diseño anotada, no descubierta tarde:** `rivalCredit:` es un **contador, no una bitácora**.
+Sabe cuántas veces pasó algo, no cuándo. Fue una decisión de la ADR 0124 (claves libres para no subir
+esquema) y basta para F1; **una crónica ordenada en F2 necesitaría otra estructura**.
+
 ## Siguiente paso concreto (sesión limpia, 22 sep 2026)
 
-**Cerrar F1 con su superficie en `/Game`**, que es lo único que falta. Hoy hay **tres memorias
-construidas y ninguna visible**: la carrera de cada jugador (`RunPlayer.Career`), el historial de
-enfrentamientos (`RivalHistory`) y los pares knaveador-víctima (`RunState.Counters`, prefijo
-`rivalCredit:`). La regla de la fase es que **no se construye memoria que nadie vea**, y ahora mismo se
-está incumpliendo. Leer `docs/plan-evolucion-knavall.md` §F1 punto 6 y §F2.
+**F1 está cerrada. El siguiente paquete es la ADR 0125** (entrada sin balón), y su primera mitad es
+**gratis y sin riesgo de balance**: separar `tacklesPerMatch` (que hoy mezcla entrada al portador y
+entrada al marcado bajo una banda calibrada como métrica de fútbol) y añadir `offBallTacklesPerMatch`
+como `INFO` sin banda.
 
-En su **propio commit** (un commit no mezcla `/Sim` y `/Game`): la ficha de jugador enseña la carrera, y
-el cartel del nodo dice contra quién se juega, cuántas veces y con qué resultado. `visual-review` antes de
-declarar que se ve bien.
+**Aviso para quien lo haga:** al separarlas, `tacklesPerMatch` baja de 12,01 a **~9,19** *(cifra ya medida,
+en el `_doc` de `data/sim/tuning.json`)*. Sigue dentro de su banda 6-14, pero **es un cambio de definición,
+no de comportamiento**, y por tanto **la línea base emparejada deja de servir para esa métrica**: hay que
+tomar una nueva. Los otros valores no se mueven.
+
+La segunda mitad (bono por puesto) es la arriesgada: `injuriesPerMatch` está en 0,81 con techo 0,90 y
+abrir la entrada a los tres roles la llevaba a 1,34.
 
 **Decisiones del revisor pendientes de ejecutar** (ADR escritas, nada implementado): **0125** (entrada sin
 balón con métrica propia y bono por puesto), **0126** (clanes canónicos: ~110-120 jugadores escritos),
