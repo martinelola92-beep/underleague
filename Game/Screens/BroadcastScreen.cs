@@ -535,6 +535,23 @@ public partial class BroadcastScreen : Control
 
     // ------------------------------------------------------------------ presentaciones (director)
 
+    /// <summary>
+    /// El sonido del momento, cuando el momento <b>empieza</b> a presentarse. Se llama desde los dos
+    /// canales —sello y voz alta— justo donde cada uno detecta que ha cambiado de momento, así que suena
+    /// una vez por momento y no una vez por fotograma.
+    ///
+    /// <para>La pantalla no elige qué fichero suena ni sabe cuántos hay: pide un pool
+    /// (<see cref="MomentSounds"/>) y el <c>AudioManager</c> reparte las variantes. Si el pool aún no tiene
+    /// sonidos, la llamada es un no-op.</para>
+    /// </summary>
+    private static void PlayMomentSound(MatchMoment moment)
+    {
+        if (MomentSounds.PoolFor(moment.Kind) is { } pool)
+        {
+            AudioManager.Instance?.PlayRandomSfx(pool);
+        }
+    }
+
     private void ApplyPresentation(DirectorFrame result)
     {
         if (result.Stamp != _lastStampMoment)
@@ -547,6 +564,7 @@ public partial class BroadcastScreen : Control
             else
             {
                 PresentStamp(result.Stamp);
+                PlayMomentSound(result.Stamp);
             }
         }
 
@@ -569,6 +587,11 @@ public partial class BroadcastScreen : Control
         }
 
         _lastVoiceMoment = result.Voice;
+        if (result.Voice is not null)
+        {
+            PlayMomentSound(result.Voice);
+        }
+
         _banner.Visible = false;
         _band.Visible = false;
         _edict.Visible = false;
