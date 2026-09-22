@@ -1547,6 +1547,18 @@ internal static class Utility
     /// </summary>
     private static bool IsInActivePlay(UtilityContext ctx, AiContext context, Vec2 point)
     {
+        // ADR 0132: con el balón MUERTO no hay jugada activa, así que no hay contacto legítimo con nadie
+        // (RF-057: solo entre quienes disputan el balón o están en la trayectoria de la jugada). Sin esto,
+        // durante la cuenta atrás de una reanudación el balón sigue en su sitio y la geometría de abajo
+        // declaraba "en jugada" a todo el que estuviera cerca: el que iba a sacar recibía entradas y
+        // cargas mientras esperaba, y el empuje acumulado lo desplazaba del punto de saque.
+        // Acota las DOS acciones que usan este criterio —la entrada sin balón (ADR 0105) y el bloqueo
+        // sin balón (ADR 0030 §2)—, que es donde estaba la causa común.
+        if (ctx.BallDead)
+        {
+            return false;
+        }
+
         Vec2 ball = ctx.Ball.Position;
         if (Vec2.Distance(ball, point) <= context.BlockActiveRadiusCells)
         {

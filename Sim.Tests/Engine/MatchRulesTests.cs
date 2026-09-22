@@ -325,6 +325,18 @@ public sealed class MatchRulesTests
                     continue;
                 }
 
+                // El saque de centro del FINAL DEL REGLAMENTARIO (el que abre el gol de oro y la turba)
+                // reforma el equipo a propósito: se programa y se resuelve en el mismo tick, así que el
+                // ResetPositions legítimo de §3.2 cae dentro del intervalo que mide este bloque y los once
+                // "saltan" a su casilla-hogar. No es el fallo que este test cubre —ResetPositions colándose
+                // en la resolución de un saque NORMAL—, así que se excluye por lo que lo distingue: ocurre
+                // exactamente en el tick en que acaba el reglamentario. Antes no aparecía en la muestra
+                // porque ninguna de las 50 semillas llegaba empatada a ese tick con saque de centro.
+                if (e.Tick == Catalog.Tuning.RegulationTicks)
+                {
+                    continue;
+                }
+
                 kickoffResolutionsChecked++;
                 for (int player = 0; player < trace.Players.Count; player++)
                 {

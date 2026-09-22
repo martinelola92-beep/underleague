@@ -240,9 +240,15 @@ public sealed class FullRunGateTests
 
         Assert.True(spender > saver, $"la gastadora compra {spender:F2} por mercado y la ahorradora {saver:F2}");
         Assert.True(contextual > saver, $"la contextual compra {contextual:F2} por mercado y la ahorradora {saver:F2}");
+        // Con el margen a la vista: sin él, un fallo de esta aserción no distingue "la economía se ha
+        // invertido" de "las dos doctrinas empatan y el signo baila" (23 sep 2026).
+        double saverLeftover = LeftoverShare(PurchaseDoctrine.Saver);
+        double contextualLeftover = LeftoverShare(PurchaseDoctrine.Contextual);
         Assert.True(
-            LeftoverShare(PurchaseDoctrine.Saver) > LeftoverShare(PurchaseDoctrine.Contextual),
-            "la ahorradora debería terminar la run con más oro sin gastar que la contextual");
+            saverLeftover > contextualLeftover,
+            $"la ahorradora debería terminar la run con más oro sin gastar que la contextual: "
+                + $"ahorradora {saverLeftover:F2} contra contextual {contextualLeftover:F2} "
+                + $"(diferencia {saverLeftover - contextualLeftover:F2})");
     }
 
     /// <summary>

@@ -112,7 +112,12 @@ public sealed class RecoveryExtraActionTests
     /// <c>git stash</c> (disciplina de la skill <c>balance-measure</c>), semilla a semilla. Si la
     /// evaluación se hubiera duplicado, estas cuentas subirían.</para>
     ///
-    /// <para><b>Las cuatro primeras se refijaron con la ADR 0129</b> (24→28, 21→20, 26→24, 10→15; la
+    /// <para><b>Las cinco se refijan con las ADR 0132 y 0133</b> (28→19, 20→18, 24→33, 15→15, 7→15): el
+    /// balón muerto deja de contar como jugada activa —durante una reanudación ya no hay entradas ni
+    /// cargas— y el centrocampista pasa a entrar a su marcado, así que el flujo de TACKLE cambia por
+    /// diseño.</para>
+    ///
+    /// <para><b>Las cuatro primeras se habían refijado con la ADR 0129</b> (24→28, 21→20, 26→24, 10→15; la
     /// semilla 4 no se movió): separar el contador de enfriamiento de las dos entradas cambia qué puede
     /// decidir cada jugador tick a tick y el consumo de RNG diverge aguas abajo. Lo que este test fija no
     /// es cuántas entradas hay —eso lo miden las puertas— sino que una <b>tanda de perks</b> no toque el
@@ -125,11 +130,11 @@ public sealed class RecoveryExtraActionTests
     /// encargo de la ADR).</para>
     /// </summary>
     [Theory]
-    [InlineData(0, 28)]
-    [InlineData(1, 20)]
-    [InlineData(2, 24)]
+    [InlineData(0, 19)]
+    [InlineData(1, 18)]
+    [InlineData(2, 33)]
     [InlineData(3, 15)]
-    [InlineData(4, 7)]
+    [InlineData(4, 15)]
     public void TackleStreamIsUnchangedForAMatchWithNoPerks(int index, int expectedTackleEvents)
     {
         var result = Play(index, perkId: null, out _);
@@ -201,13 +206,14 @@ public sealed class RecoveryExtraActionTests
     /// <c>sweeper_keeper</c> es justo el perk del portero, así que es el más esperable de los dos en
     /// moverse. Y otra vez con la ADR 0129 (24 → 19), por la misma clase de razón: el contador separado
     /// cambia el consumo de RNG aguas abajo. <c>charge</c>, <c>lane_reader</c> y <c>road_warrior</c> no se
-    /// mueven.</para>
+    /// mueven. Y otra vez con las ADR 0132/0133: <c>charge</c> 13 → 10, <c>lane_reader</c> 18 → 16 y
+    /// <c>sweeper_keeper</c> 19 → 14.</para>
     /// </summary>
     [Theory]
-    [InlineData("charge", 1, 13)]
-    [InlineData("lane_reader", 1, 18)]
+    [InlineData("charge", 1, 10)]
+    [InlineData("lane_reader", 1, 16)]
     [InlineData("road_warrior", 1, 0)]
-    [InlineData("sweeper_keeper", 0, 19)]
+    [InlineData("sweeper_keeper", 0, 14)]
     public void ExistingPerksAreUnchanged(string perkId, int slot, int expected)
     {
         int total = 0;

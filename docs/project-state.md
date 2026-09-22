@@ -124,6 +124,33 @@ Si el contacto es más accesible para todos, distingue menos. **No se recalibra 
 lo que la Opción 3 debe recuperar moviendo la diferenciación al canal de rasgo, y bajar la puerta antes de
 medirlo sería ajustarla al resultado.
 
+## BE-A CERRADA: el centrocampista entra a su marcado (23 sep 2026)
+
+**ADR 0133.** `tackleMarkTargetBonus` queda en `Defender 150 · Midfielder −40 · Forward 0` con el
+enfriamiento sin balón en 400. El centrocampista entra **con ajuste negativo**, que es la única forma: su
+alternativa le gana por 104 puntos, así que cualquier positivo lo **satura** (medido con 40: la misma tasa
+que el defensa y las lesiones en 1,07 sobre un techo de 0,90). Ni una línea de `/Sim`: el mecanismo ya
+estaba, faltaba el número.
+
+**El defensa va por delante en las cinco plantillas medidas** (DEF 0,24-0,91 · MID 0,09-0,26 entradas sin
+balón por partido-jugador), con `injuriesPerMatch` entre 0,47 y 0,81 y ninguna métrica obligatoria cambiando
+de estado. En las puertas de build con el instrumento de ocho de la ADR 0131: `orc_violence` y `orc_mob`
+**mejoran**, `elf_brawler` mejora, `elf_out_of_zone` empeora 0,8 sobre un error típico de 1,09. Lo que
+parecía aplanamiento de identidad de build era **ruido de una semilla**.
+
+**Se pudo cerrar ahora por dos cosas que no eran de BE-A**: la **ADR 0129** (cada entrada paga su propio
+enfriamiento) dio el margen de `tacklesPerMatch`, y la **ADR 0131** (las puertas de build promedian ocho
+plantillas) deshizo el falso aplanamiento.
+
+**ADR 0132, de propina y con el mismo origen**: `IsInActivePlay` era pura geometría y no sabía si el balón
+estaba en juego, así que durante una reanudación al que iba a sacar **le entraban y le cargaban** mientras
+esperaba (RF-057 lo prohíbe: con el balón muerto no hay jugada activa). Arreglado donde vive la regla, así
+que acota a la vez la entrada sin balón y el bloqueo. Devuelve 0,04 de presupuesto de lesión.
+
+**Lo que queda abierto**: [BF-C](pendientes/BF-C.md) — el delantero sigue en 0 porque pega sin balón por un
+hueco, no por identidad: su `Tackle` (211) ya gana a su `MarkOpponent` (180). Abrirlo cuesta 0,07 de
+lesiones por un defecto. Y [BF-A](pendientes/BF-A.md), el único rojo verdadero de las puertas.
+
 ## La Opción 3 se implementó, se midió y se descartó (22 sep 2026)
 
 El ajuste por puesto pasando por `ActionMultiplier(Tackle)`, con el valor publicado bajando a 110, dejaba
@@ -147,7 +174,15 @@ recuperada) también están medidas **en la semilla 1**. La dispersión entre pl
 build es grande (sd 0,18-0,23 en un umbral de 1,40); cualquier lectura futura de la curva de puertas de
 build debería usar tres semillas o las ocho de CAT-J, no una.
 
-## Siguiente paso concreto (sesión limpia, 22 sep 2026)
+## Siguiente paso concreto (sesión limpia, 23 sep 2026)
+
+**[BF-C](pendientes/BF-C.md): qué hace un delantero cuando su equipo no tiene el balón.** Es lo único que
+queda para poder abrirle la entrada al marcado, y no es calibración: hoy su mejor acción fuera de posesión
+es pegar. La medida barata que discrimina ya existe (`ActionHistogramTests`, el histograma de acción por
+puesto). Después, [BF-A](pendientes/BF-A.md): `elf_brawler`, una build mala a propósito, gana el 46,6 %
+contra su referencia.
+
+### Contexto anterior, por si hace falta
 
 Antes de tocar la entrada sin balón otra vez: **decidir si hace falta**. Con 28 a 1 entre orco y elfo, la
 diferenciación por carácter ya existe; la pregunta abierta es si se quiere **más**, y si la forma debe ser

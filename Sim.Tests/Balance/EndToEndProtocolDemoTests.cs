@@ -26,7 +26,12 @@ namespace Underleague.Sim.Tests.Balance;
 public sealed class EndToEndProtocolDemoTests
 {
     private const int ScreeningRosters = 20;
-    private const int TuningRosters = 20; // escala reducida a propósito (ver el docblock de la clase)
+    // 20 -> 60 (23 sep 2026). A 20 plantillas el paso de seguridad mide RT-056 sobre 40 partidos, donde
+    // injuriesPerMatch tiene un error típico de ~0,08 contra una banda de 0,30-0,90: el suelo no significa
+    // nada a esa escala y la demostración enseñaba a comprobar una banda sin muestra para comprobarla —lo
+    // destapó la ADR 0132, que al quitar el contacto durante el balón muerto bajó las lesiones lo justo
+    // para cruzarlo—. La demostración sigue siendo pequeña a propósito; el paso de seguridad, no.
+    private const int TuningRosters = 60;
     private static readonly Catalog BaseCatalog = TestData.LoadCatalog();
 
     private readonly ITestOutputHelper _output;
@@ -174,7 +179,13 @@ public sealed class EndToEndProtocolDemoTests
                 .Where(m => m.RangeMin is not null && m.RangeMax is not null)
                 .Select(m => new PairedMetric(m.Name, m.Value, m.Value, m.RangeMin, m.RangeMax))
                 .ToList());
-        Assert.False(chosenFailsSafety, "el candidato central no debería romper RT-056 a esta escala de demostración");
+        // Si rompe, la demostración tiene que decir QUÉ rompe: sin esto el fallo es un booleano y la
+        // siguiente persona repite la investigación entera (pasó el 23 sep 2026).
+        var chosenOut = chosen.Metrics.Where(m => m.Status == "OUT").Select(m => $"{m.Name}={m.Value:F2} [{m.RangeMin:F2},{m.RangeMax:F2}]").ToList();
+        _output.WriteLine($"Seguridad del candidato central ({chosen.Value}): {(chosenOut.Count == 0 ? "todo en banda" : string.Join(" · ", chosenOut))}");
+        Assert.False(
+            chosenFailsSafety,
+            "el candidato central no debería romper RT-056 a esta escala de demostración: " + string.Join(" · ", chosenOut));
 
         bool chosenHasPower = BalancePowerCheck.HasSufficientPower(
             chosen.ArmedMean - chosen.ControlMean, chosen.ArmedVariance, TuningRosters * 2,

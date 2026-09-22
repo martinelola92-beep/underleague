@@ -187,7 +187,8 @@ public class DataLoaderTests
     public void FromJson_OffBallTackleAdjustMissingAPosition_Throws()
     {
         var files = TestData.LoadAllFiles();
-        files["ai/weights.json"] = files["ai/weights.json"].Replace("\"Midfielder\": 0,\n      \"Forward\": 0", "\"Forward\": 0", StringComparison.Ordinal);
+        files["ai/weights.json"] = System.Text.RegularExpressions.Regex.Replace(
+            files["ai/weights.json"], "\\s*\"Midfielder\": -?\\d+,", string.Empty);
 
         var ex = Assert.Throws<DataException>(() => DataLoader.FromJson(files));
         Assert.Equal("ai/weights.json", ex.File);
@@ -279,7 +280,12 @@ public class DataLoaderTests
         var catalog = TestData.LoadCatalog();
 
         Assert.Equal(150, catalog.Ai.OffBallTackleAdjust(Position.Defender));
-        Assert.Equal(0, catalog.Ai.OffBallTackleAdjust(Position.Midfielder));
+
+        // El centrocampista entra desde la ADR 0133, con un ajuste NEGATIVO: su alternativa (MarkOpponent)
+        // le gana por 104 puntos, así que un número por debajo de 0 lo deja entrando de vez en cuando en
+        // vez de saturado. El delantero sigue en 0 —no entra— porque abrirlo cuesta presupuesto de lesión
+        // por un comportamiento que existe solo porque sus acciones sin balón son peores que pegar (BF-C).
+        Assert.Equal(-40, catalog.Ai.OffBallTackleAdjust(Position.Midfielder));
         Assert.Equal(0, catalog.Ai.OffBallTackleAdjust(Position.Forward));
         Assert.Equal(0, catalog.Ai.OffBallTackleAdjust(Position.Goalkeeper));
     }
