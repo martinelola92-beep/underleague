@@ -113,3 +113,46 @@ entonces hay que hablar de `MapGenerator` — que es una ADR distinta y mucho m�
 
 `scratchpad/analisis-equipos-cerrados.md` · ADR 0123 (gates 2 y 4) · ADR 0092 (no se reabre) ·
 `docs/pendientes/BE-C.md`
+
+---
+
+## Censo de encuentros (22 sep 2026) — MEDIDO, y desbloquea esta ADR
+
+Instrumento: `Sim.Tests/Analysis/_RivalCensusTests.cs` (temporal, `Category=Diagnostic`), 500 semillas,
+recorriendo el camino con la **política real** (`RunPolicy.ChooseNode` acoplada, no reimplementada), sin
+jugar partidos, excluyendo el nodo de jefe.
+
+| métrica | run completa | acto 1 | acto 2 | acto 3 |
+|---|---|---|---|---|
+| partidos de liga/élite | 16,58 | 4,85 | 5,87 | 5,85 |
+| rivales distintos (media/mín/máx) | **11,46** / 8 / 14 | 3,50 / 2 / 5 | 4,04 / 2 / 5 | 3,92 / 2 / 5 |
+| repeticiones del más repetido (media/máx) | **2,48** / 4 | 2,01 / 3 | 2,19 / 3 | 2,23 / 4 |
+| runs con ≥1 rival repetido | **100,0 %** | 90,6 % | 98,6 % | 99,2 % |
+| runs con algún rival 3+ veces | **47,2 %** | 10,8 % | 20,4 % | 23,4 % |
+
+**El reencuentro ya existe y es universal.** No hay una sola run de las 500 que no repita rival, y casi la
+mitad se cruza tres veces o más con alguno. La causa es aritmética y **dentro del acto**: 5-6 partidos
+contra un conjunto de 5 ids.
+
+### Qué cambia esto en la ADR
+
+**Reencuadra la propuesta, y la refuerza.** Los clanes canónicos **no tienen que crear el reencuentro**:
+ya ocurre en el 100 % de las runs. Lo que compran es que **sea reconocible**. Hoy el jugador se cruza dos
+veces con el mismo fichero y **no puede saberlo**, porque los nombres rotan entre actos y el mismo nombre
+cambia de puesto. *Toda la materia prima está ahí y se está tirando por un problema de rotulado.*
+
+### Corrección de una corrección
+
+La primera versión de `auditoria-conceptual-narrativa.md` §0.1 afirmaba que la repetición estaba
+«garantizada por palomar en los actos 2 y 3». Se retiró el 22 sep por **falsa en su derivación** —
+`nodesPerAct` son capas, no nodos. Esta medición muestra que **la conclusión sí era cierta**, por una vía
+distinta: el palomar opera dentro del acto, con 5-6 partidos contra 5 ids. *La afirmación era correcta por
+accidente y ahora está medida; el razonamiento que la sostenía seguía siendo inválido.*
+
+### Límite declarado de esta medición
+
+Mide el **catálogo de hoy** (15 equipos con ámbito de acto), **no** el pool de 10 clanes compartidos entre
+los tres actos que esta ADR propone. Para responder con precisión a «2-3 veces contra 1,1» en ese mundo
+haría falta repetir el censo con un conjunto sintético de 10 ids en los tres actos. **No se hizo a
+propósito**: es una decisión de qué mundo simular, no de cómo medir. Queda como el siguiente paso antes de
+escribir los diez ficheros.
