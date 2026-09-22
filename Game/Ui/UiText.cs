@@ -85,6 +85,20 @@ public static class UiText
         ["ui.card.perks"] = "PERKS",
         ["ui.card.perkRequirement"] = "{0}: {1} de {2} en la plantilla",
         ["ui.card.ability"] = "HABILIDAD RACIAL",
+
+        // Carrera (RF-122, ADR 0124, F1 §6): CareerLines omite toda cifra a cero salvo los partidos, así
+        // que solo hacen falta el singular y el plural de cada campo mostrado.
+        ["ui.card.career"] = "CARRERA",
+        ["ui.card.careerMatches"] = "{0} partidos",
+        ["ui.card.careerMatch"] = "1 partido",
+        ["ui.card.careerGoals"] = "{0} goles",
+        ["ui.card.careerGoal"] = "1 gol",
+        ["ui.card.careerTacklesWon"] = "{0} entradas ganadas",
+        ["ui.card.careerTackleWon"] = "1 entrada ganada",
+        ["ui.card.careerInjuriesCaused"] = "{0} lesiones causadas",
+        ["ui.card.careerInjuryCaused"] = "1 lesión causada",
+        ["ui.card.careerDeathsCaused"] = "{0} muertes causadas",
+        ["ui.card.careerDeathCaused"] = "1 muerte causada",
         ["ui.card.perkSlot"] = "slot libre",
         ["ui.card.item"] = "OBJETO",
         ["ui.card.itemNone"] = "sin objeto (equipamiento: fase 2)",
@@ -217,6 +231,16 @@ public static class UiText
         ["ui.scout.boss"] = "MODIFICADORES DEL JEFE",
         ["ui.scout.bossHidden"] = "el modificador se descubre al llegar aquí, y ya lo has hecho",
         ["ui.scout.starters"] = "TU ONCE",
+
+        // Memoria del rival (F1 §6, ADR 0124): reencuentro contra un clan ya visto, y el par
+        // knaveador-víctima más destacado si lo hay (BE-B). Nunca en el nodo de jefe (ScoutScreen lo filtra).
+        ["ui.scout.rivalRepeat"] = "{0} · {1}.ª vez · {2}",
+        ["ui.scout.rivalRepeatWon"] = "ganaste",
+        ["ui.scout.rivalRepeatLost"] = "perdiste",
+        ["ui.scout.rivalCreditCausedInjury"] = "tu {0} ha lesionado a su {1}",
+        ["ui.scout.rivalCreditCausedDeath"] = "tu {0} ha matado a su {1}",
+        ["ui.scout.rivalCreditSufferedInjury"] = "su {1} ha lesionado a tu {0}",
+        ["ui.scout.rivalCreditSufferedDeath"] = "su {1} ha matado a tu {0}",
 
         ["ui.node.clinicTitle"] = "CLÍNICA",
         ["ui.node.clinicBody"] = "tres servicios: por pieza a {0} de oro y garantizado, la plantilla entera a tarifa plana, o el matasanos a una fracción y sin garantía (ADR 0099)",

@@ -4,6 +4,7 @@ using Underleague.Game.Data;
 using Underleague.Game.Ui.Broadcast;
 using Underleague.Sim.Model;
 using Underleague.Sim.Perks;
+using Underleague.Sim.Run;
 using Underleague.Sim.Run.Systems.Items;
 
 namespace Underleague.Game.Ui;
@@ -242,6 +243,19 @@ public partial class PlayerCard : Control
                 UiText.Get("ui.card.ability"),
                 new List<string> { racial.Name.Es + ": " + DescriptionGenerator.Describe(racial, templates) },
                 Rich: true));
+        }
+
+        // Carrera (RF-122, ADR 0124, F1 §6): la única memoria de las tres del hito que se lee en esta
+        // ficha -RivalHistory y RivalCredits son de rival y viven en el cartel del nodo (ScoutScreen), no
+        // aquí-. Sin partidos jugados no hay historia que contar (regla dura de la ADR: "un partido cuenta
+        // solo si se pisó el campo"), así que la sección entera desaparece en vez de enseñar una fila de
+        // ceros.
+        if (state.CareerOf(player.Id) is { Matches: > 0 } career)
+        {
+            // No Compact: la línea junta hasta cinco cifras y se sale del ancho de una sola línea con una
+            // carrera larga (14 partidos, goles, entradas, lesiones y muertes causadas a la vez); envuelve
+            // igual que VÍNCULOS.
+            _sections.Add(new Section(UiText.Get("ui.card.career"), CareerLines(career)));
         }
 
         _sections.Add(new Section(UiText.Get("ui.card.links"), links.Count > 0 ? new List<string>(links) : new List<string> { UiText.Get("ui.team.linksNone") }));
@@ -660,6 +674,42 @@ public partial class PlayerCard : Control
         _ = meta;
         EmitSignal(SignalName.ZoneHint, string.Empty, string.Empty);
     }
+
+    /// <summary>
+    /// Una línea compacta con la carrera (RF-122): partidos siempre, y el resto de cifras solo si valen
+    /// algo -"las cifras que valen cero se omiten, salvo partidos" (encargo F1 §6). Prioriza lo que cuenta
+    /// una historia (goles, entradas ganadas, lesiones y muertes causadas) en vez de volcar los once
+    /// campos de <see cref="RunCareer"/>.
+    /// </summary>
+    private static List<string> CareerLines(RunCareer career)
+    {
+        var parts = new List<string> { Plural(career.Matches, "ui.card.careerMatch", "ui.card.careerMatches") };
+
+        if (career.Goals > 0)
+        {
+            parts.Add(Plural(career.Goals, "ui.card.careerGoal", "ui.card.careerGoals"));
+        }
+
+        if (career.TacklesWon > 0)
+        {
+            parts.Add(Plural(career.TacklesWon, "ui.card.careerTackleWon", "ui.card.careerTacklesWon"));
+        }
+
+        if (career.InjuriesCaused > 0)
+        {
+            parts.Add(Plural(career.InjuriesCaused, "ui.card.careerInjuryCaused", "ui.card.careerInjuriesCaused"));
+        }
+
+        if (career.DeathsCaused > 0)
+        {
+            parts.Add(Plural(career.DeathsCaused, "ui.card.careerDeathCaused", "ui.card.careerDeathsCaused"));
+        }
+
+        return new List<string> { string.Join(" · ", parts) };
+    }
+
+    private static string Plural(int value, string singularKey, string pluralKey) =>
+        value == 1 ? UiText.Get(singularKey) : UiText.Get(pluralKey, value);
 
     /// <summary>
     /// Bloque de la ficha expandida. <paramref name="Compact"/> pone título y valor en la misma línea;

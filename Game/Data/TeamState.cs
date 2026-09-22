@@ -173,6 +173,54 @@ public sealed class TeamState
         _testItems[playerId] = item;
     }
 
+    /// <summary>Ver <see cref="ForceTestCareer"/>: solo para la secuencia de capturas.</summary>
+    private Dictionary<int, RunCareer>? _testCareers;
+
+    /// <summary>
+    /// Carrera del jugador (RF-122, ADR 0124, F1 §6): el registro tipado que solo vive en
+    /// <see cref="RunPlayer.Career"/>, no en <see cref="PlayerDefinition"/>. Null sin run detrás (equipo
+    /// de pruebas, rival de ojeo) -mismo patrón que <see cref="EquippedItemOf"/>-, salvo que la secuencia
+    /// de capturas la haya forzado con <see cref="ForceTestCareer"/>.
+    /// </summary>
+    public RunCareer? CareerOf(int playerId)
+    {
+        if (_testCareers is not null && _testCareers.TryGetValue(playerId, out var forced))
+        {
+            return forced;
+        }
+
+        if (_run is null)
+        {
+            return null;
+        }
+
+        foreach (var slot in _run.State!.Roster)
+        {
+            if (slot.Id == playerId)
+            {
+                return slot.Career;
+            }
+        }
+
+        return null;
+    }
+
+    /// <summary>
+    /// <b>Solo para la secuencia de capturas</b>: fuerza la carrera de un jugador sin tocar la run ni el
+    /// catálogo, igual que <see cref="ForceTestItem"/>. No hace nada si ya hay una run real detrás: ahí la
+    /// carrera la acumula <c>MatchResolution</c>, no una captura.
+    /// </summary>
+    public void ForceTestCareer(int playerId, RunCareer career)
+    {
+        if (_run is { HasRun: true })
+        {
+            return;
+        }
+
+        _testCareers ??= new Dictionary<int, RunCareer>();
+        _testCareers[playerId] = career;
+    }
+
     /// <summary>
     /// <b>Solo para la secuencia de capturas</b> (CAT-B, mismo apaño que <see cref="ForceTestItem"/> para
     /// objetos): sin run detrás no hay inventario de consumibles del que equipar nada, y la sección nueva

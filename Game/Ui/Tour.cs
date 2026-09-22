@@ -25,13 +25,15 @@ public static class Tour
 
     private const string MapFlag = "--map-tour";
 
+    private const string RivalryFlag = "--tour-rivalry";
+
     private static readonly HashSet<string> Captured = new();
 
     /// <summary>Directorio de capturas, el mismo que documenta <c>docs/ui-equipo.md</c>.</summary>
     public const string Directory = "res://screenshots";
 
-    /// <summary>True si el juego se ha arrancado para hacer alguno de los dos recorridos de capturas.</summary>
-    public static bool Active => HasArgument(Flag) || Maps;
+    /// <summary>True si el juego se ha arrancado para hacer alguno de los tres recorridos de capturas.</summary>
+    public static bool Active => HasArgument(Flag) || Maps || Rivalry;
 
     /// <summary>
     /// True con <c>--map-tour</c>: el recorrido corto que solo enseña el <b>mapa de los tres actos</b> y
@@ -39,6 +41,15 @@ public static class Tour
     /// nodos y aristas que se cruzan— y el recorrido largo solo pasa por el del acto 1.
     /// </summary>
     public static bool Maps => HasArgument(MapFlag);
+
+    /// <summary>
+    /// True con <c>--tour-rivalry</c>: el mismo recorrido que <c>--tour</c> hasta el ojeo, pero
+    /// <c>ScoutScreen</c> siembra ahí un reencuentro y un knaveo de prueba (F1 §6, ADR 0124) antes de
+    /// capturar "ojeo-reencuentro.png", y sale sin seguir a Equipo. Un primer <c>--tour</c> normal nunca
+    /// puede enseñar esa línea: el mapa recién generado no ha jugado nada todavía. Mismo espíritu que
+    /// <c>TeamScreen.EnsureTestCareer</c>, pero para el cartel del nodo en vez de la ficha.
+    /// </summary>
+    public static bool Rivalry => HasArgument(RivalryFlag);
 
     /// <summary>True si se ha arrancado con <c>--screenshots</c> (el recorrido de la pantalla de Equipo).</summary>
     public static bool Screenshots => HasArgument("--screenshots");

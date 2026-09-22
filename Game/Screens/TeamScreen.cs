@@ -1111,7 +1111,9 @@ public partial class TeamScreen : Control
             {
                 Pad(CoverageAction);
                 _focusRoster = true;
-                _rosterIndex = IndexOfCard(FindRare());
+                int rare = FindRare();
+                EnsureTestCareer(rare);
+                _rosterIndex = IndexOfCard(rare);
                 Pad("ui_accept");
             }, false),
             ("equipo-objeto", () =>
@@ -1512,6 +1514,37 @@ public partial class TeamScreen : Control
         }
 
         return target;
+    }
+
+    /// <summary>
+    /// <b>Solo para la secuencia de capturas</b> (F1 §6, ADR 0124): la plantilla de pruebas no arrastra
+    /// ninguna run (<c>TeamState.Load</c>), así que sin esto la sección de carrera nunca aparecería en
+    /// "equipo-ficha" -<c>RunCareer</c> solo vive en <c>RunPlayer</c>, que sin run no existe- y la captura
+    /// no enseñaría lo que documenta el hito. Mismo apaño que <see cref="EnsurePlacementItem"/> con los
+    /// objetos: una carrera de verdad (goles, entradas ganadas, una lesión y una muerte causadas, todas a
+    /// la vez para que la línea se vea completa) en el mismo jugador que ya enfoca esta captura. No toca
+    /// nada con una run detrás: ahí la carrera la acumula <c>MatchResolution</c>, no una captura.
+    /// </summary>
+    private void EnsureTestCareer(int playerId)
+    {
+        if (playerId < 0 || RunController.Instance is { HasRun: true })
+        {
+            return;
+        }
+
+        _state.ForceTestCareer(playerId, new RunCareer(
+            Matches: 14,
+            Goals: 3,
+            Assists: 2,
+            Tackles: 20,
+            TacklesWon: 9,
+            Fouls: 4,
+            Cards: 1,
+            InjuriesCaused: 2,
+            DeathsCaused: 1,
+            InjuriesSuffered: 1,
+            TicksOnPitch: 12_000));
+        RefreshCards();
     }
 
     /// <summary>

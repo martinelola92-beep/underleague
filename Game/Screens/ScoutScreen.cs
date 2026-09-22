@@ -58,6 +58,15 @@ public partial class ScoutScreen : Control
         var state = run.State!;
         var catalog = run.Catalog!;
         var node = state.GetNode(_nodeId);
+
+        // Solo bajo --tour-rivalry (Tour.Rivalry, capturas): siembra un reencuentro y un knaveo de prueba
+        // sin tocar RunController.State -state es una copia local, RunState es inmutable-, para que el
+        // cartel de reencuentro quede regresionado igual que la carrera (EnsureTestCareer).
+        if (Tour.Rivalry)
+        {
+            state = EnsureTestRivalry(state, node);
+        }
+
         var (setup, _, _) = RunEngine.BuildMatch(state, _nodeId, catalog, run.Engine);
 
         Layout.CenterLegacy(this);
@@ -69,13 +78,20 @@ public partial class ScoutScreen : Control
             UiText.Get("ui.difficulty." + (node.Difficulty <= 0 ? 5 : node.Difficulty))));
 
         var rivalTeam = _run.Systems?.Rivals.Find(node.OpponentId);
-        BuildRivalList(catalog, setup.Away, rivalTeam);
+        BuildRivalList(state, node, catalog, setup.Away, rivalTeam);
         BuildReport(state, catalog, node, setup);
         BuildButtons();
 
         Widgets.InputHelp(this, UiText.Get("ui.input.mouseOnly"), UiText.Get("ui.input.padPending"));
 
-        if (Tour.Active)
+        if (Tour.Rivalry)
+        {
+            // Captura y sale sin seguir a Equipo: --tour-rivalry existe solo para esta una captura, y
+            // continuar reescribiría equipo-run.png con la misma copia local ya usada más arriba (BE-B: no
+            // tocar ficheros que no pide este encargo).
+            Tour.Step(this, "ojeo-reencuentro", null);
+        }
+        else if (Tour.Active)
         {
             Tour.Step(this, "ojeo", () => Nav.Go(this, Nav.Team));
         }
@@ -86,8 +102,16 @@ public partial class ScoutScreen : Control
     /// UI-010). Encabezada por su <b>nombre</b> y su línea de ojeo (RF-015): antes de esto, la sección se
     /// llamaba genéricamente "plantilla rival" y no había ni rastro del nombre del equipo, ni siquiera el
     /// id de datos ("act1_elf_swiftwing") que sí se ve en el marcador del partido.
+    /// <para>
+    /// F1 §6 (ADR 0124, memoria del rival): si ya se ha jugado contra este clan, una línea dice cuántas
+    /// veces y cómo salió la última (<see cref="RivalHistory"/>) y, si hay un hecho que contar, el par
+    /// knaveador-víctima más destacado (<see cref="RivalCredits"/>). <b>Nunca en el nodo de jefe</b>
+    /// (<paramref name="node"/>.Kind == <see cref="NodeKind.Boss"/>): guarda un <c>opponentId</c> fantasma
+    /// que no representa un enfrentamiento real contra ese clan -mismo motivo por el que
+    /// <see cref="RivalHistory.Encounters"/> lo excluye por dentro.
+    /// </para>
     /// </summary>
-    private void BuildRivalList(Sim.Data.Catalog catalog, TeamSetup away, RivalTeam? rivalTeam)
+    private void BuildRivalList(RunState state, MapNode node, Sim.Data.Catalog catalog, TeamSetup away, RivalTeam? rivalTeam)
     {
         Widgets.Panel(this, new Rect2(12f, 52f, Widgets.CardColumnWidth, 690f));
         Widgets.Section(this, UiText.Get("ui.scout.rival"), new Vector2(24f, 60f), 340f);
@@ -98,6 +122,11 @@ public partial class ScoutScreen : Control
             Widgets.Body(this, rivalTeam.Name.Es, new Vector2(24f, 80f), 340f, Style.Accent);
             var descriptionLabel = Widgets.Body(this, rivalTeam.Description.Es, new Vector2(24f, 98f), 340f, Style.TextDim);
             listTop = 98f + descriptionLabel.Size.Y + 10f;
+
+            if (node.Kind != NodeKind.Boss)
+            {
+                listTop = BuildRivalryLines(state, node.OpponentId, rivalTeam, listTop);
+            }
         }
 
         _rival = TeamState.Of(catalog, away);
@@ -121,6 +150,83 @@ public partial class ScoutScreen : Control
             card.Activated += OnCardActivated;
             _cards.Add(card);
         }
+    }
+
+    /// <summary>
+    /// F1 §6: reencuentro y, si sale barato, el par knaveador-víctima más destacado. La primera vez que se
+    /// ve a un clan no hay nada nuevo que decir (<see cref="RivalHistory.HasFaced"/> falso), así que el
+    /// bloque entero desaparece -no se enseña una línea vacía. Devuelve la <c>y</c> siguiente.
+    /// </summary>
+    private float BuildRivalryLines(RunState state, string opponentId, RivalTeam rivalTeam, float y)
+    {
+        var encounters = RivalHistory.Against(state, opponentId);
+        if (encounters.Count == 0)
+        {
+            return y;
+        }
+
+        var last = encounters[^1];
+        string result = UiText.Get(last.Result == NodeResult.Won ? "ui.scout.rivalRepeatWon" : "ui.scout.rivalRepeatLost");
+        var repeatLabel = Widgets.Body(
+            this,
+            UiText.Get("ui.scout.rivalRepeat", rivalTeam.Name.Es, encounters.Count + 1, result),
+            new Vector2(24f, y),
+            340f,
+            Style.Accent);
+        y += repeatLabel.Size.Y + 4f;
+
+        // Sin cronología real (RivalCredits.MostNotable no es "lo último que pasó", ver su comentario): el
+        // hecho más severo/repetido contra este clan, si lo hay y se puede resolver a nombres sin cruzar
+        // una frontera fea (el índice ya viene validado por MatchResolution, pero el catálogo de rivales
+        // puede haber cambiado entre versiones de datos, así que se comprueba el rango igualmente).
+        if (RivalCredits.MostNotable(state, opponentId) is { } credit
+            && credit.RivalIndex >= 0 && credit.RivalIndex < rivalTeam.Players.Count
+            && state.FindPlayer(credit.OwnPlayerId) is { } ownPlayer)
+        {
+            string rivalPlayerName = rivalTeam.Players[credit.RivalIndex].Name;
+            string creditKey = credit.Kind switch
+            {
+                RivalCreditKind.CausedInjury => "ui.scout.rivalCreditCausedInjury",
+                RivalCreditKind.CausedDeath => "ui.scout.rivalCreditCausedDeath",
+                RivalCreditKind.SufferedInjury => "ui.scout.rivalCreditSufferedInjury",
+                _ => "ui.scout.rivalCreditSufferedDeath",
+            };
+            var creditLabel = Widgets.Body(
+                this,
+                UiText.Get(creditKey, ownPlayer.Name, rivalPlayerName),
+                new Vector2(24f, y),
+                340f,
+                Style.TextDim);
+            y += creditLabel.Size.Y + 4f;
+        }
+
+        return y + 6f;
+    }
+
+    /// <summary>
+    /// <b>Solo para la captura de verificación</b>, y solo bajo <c>--tour-rivalry</c>
+    /// (<see cref="Tour.Rivalry"/>): mismo apaño que <c>TeamScreen.EnsureTestCareer</c> pero para el
+    /// cartel de reencuentro. Un <c>--tour</c> normal nunca puede enseñar la línea de reencuentro ni la de
+    /// knaveo: el mapa recién generado no ha jugado nada todavía. No toca <c>RunController.State</c> -el
+    /// guardado real de la run-: <see cref="RunState"/> es inmutable, así que esto solo construye una copia
+    /// local a partir del estado que <see cref="_Ready"/> ya iba a leer, con un encuentro previo contra
+    /// este mismo nodo (<see cref="RunState.WithNodeCompleted"/>) y un hecho de
+    /// <see cref="RunState.RivalCreditPrefix"/> real, en el formato exacto que documenta esa constante -el
+    /// mismo que escribe <c>MatchResolution</c> (BE-B)-. No hace nada si el nodo no tiene rival de catálogo
+    /// o es el jefe: mismas guardas que la producción (<see cref="MapNode.OpponentId"/>,
+    /// <see cref="NodeKind.Boss"/>).
+    /// </summary>
+    private static RunState EnsureTestRivalry(RunState state, MapNode node)
+    {
+        if (node.OpponentId.Length == 0 || node.Kind == NodeKind.Boss)
+        {
+            return state;
+        }
+
+        var withEncounter = state.WithNodeCompleted(node.Id, node.Kind, NodeResult.Won);
+        string key = RunState.RivalCreditPrefix + node.OpponentId + ":0:"
+            + withEncounter.Roster[0].Id.ToString(System.Globalization.CultureInfo.InvariantCulture) + ":causedInjury";
+        return withEncounter.WithCounter(key, 3);
     }
 
     /// <summary>Activar expande una ficha y solo una (UI-012), igual que en Equipo.</summary>
