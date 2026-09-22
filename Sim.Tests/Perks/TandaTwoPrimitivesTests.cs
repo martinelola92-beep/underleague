@@ -274,6 +274,45 @@ public sealed class TandaTwoPrimitivesTests
         Assert.Equal(1, engine.Report.RecursionCuts);
     }
 
+    /// <summary>
+    /// <b>El agujero conocido de la regla «0 = ese puesto no entra nunca» (ADR 0125 D3), fijado aquí para
+    /// que nadie vuelva a escribirla como cerrada.</b> Esa regla la cumple <c>Utility.EvaluateTackle</c>,
+    /// que es quien DECIDE; <c>MatchEngine.RepeatTackle</c> no decide, ejecuta un efecto de perk
+    /// (<c>extraAction</c>) y marca la entrada como sin balón si el objetivo no lleva el balón, sin
+    /// consultar el mapa por puesto. Un delantero con ajuste 0 y "Embestida" produce, por tanto, entradas
+    /// sin balón.
+    ///
+    /// <para>Estado: <b>mecanismo real, sin evidencia de activación</b> (Regla F). Los dos perks que lo
+    /// disparan —<c>charge</c> y <c>steamroller</c>— no están asignados a ningún no-defensa en
+    /// <c>/data</c>, así que hoy no ocurre en ningún lote; el conjunto de referencia no lleva perks. Va con
+    /// la decisión abierta de <c>extraAction</c> en <c>docs/pendientes/BE-A.md</c>. Este test no aprueba el
+    /// comportamiento: lo deja escrito para que cambiarlo sea deliberado.</para>
+    /// </summary>
+    [Fact]
+    public void RepeatTackleIgnoresThePerPositionMapAndIsTheKnownGapOfTheZeroRule()
+    {
+        const string Extra = """[{ "type": "extraAction" }]""";
+        var catalog = TestPerks.CatalogWith(("bulldozer", TestPerks.Json("bulldozer", "TACKLE", Extra, scope: "actor")));
+        Assert.Equal(0, catalog.Ai.OffBallTackleAdjust(Position.Forward));
+
+        var setup = TestPerks.Match(catalog, 1, (6, new[] { "bulldozer" })); // home forward, ajuste 0
+        var engine = TestPerks.Engine(catalog, setup, maxDepth: 1);
+        var tackler = engine.PlayerById(6)!;
+        var rival = engine.PlayerById(106)!;
+
+        tackler.Position = new Vec2(5f, 3f);
+        rival.Position = new Vec2(5.5f, 3f);
+        engine.Ball.Owner = null;
+
+        engine.Effects!.Publish(Tackle(engine, tackler));
+
+        Assert.True(
+            tackler.OffBallTackles > 0,
+            "RepeatTackle no mira el mapa por puesto: si esto deja de cumplirse, la regla «0 = nunca» pasó "
+                + "a ser cierta de verdad y hay que actualizar la ADR 0125 y docs/pendientes/BE-A.md");
+        Assert.Equal(0, tackler.Tackles);
+    }
+
     // ---------------------------------------------------------------- ayudantes: C5
 
     /// <summary>
@@ -409,7 +448,7 @@ public sealed class TandaTwoPrimitivesTests
             RetreatAtHomePenalty: 0);
 
         var shifts = new BlockShift[Enum.GetValues<TacticalState>().Length];
-        return new AiWeights(baseTable, tacticalTable, context, shifts);
+        return new AiWeights(baseTable, tacticalTable, TestData.OffBallTackleAdjust(), context, shifts);
     }
 
     private static UtilityContext ShootContext(AiWeights weights, MatchPlayer shooter)

@@ -166,14 +166,7 @@ public sealed record AiContext(
     // defensiva: el pase a la espalda de la defensa es exactamente lo que la acción es.
     int ThroughPassMinCells = 2,
     int ThroughPassMaxCells = 4,
-    float ThroughPassFreeZoneCells = 0f,
-
-    // ADR 0105: bonus de la ENTRADA SIN BALON al marcado. Vive aquí y no en tuning.json porque es un
-    // término de la tabla de utilidad (RT-096) —Utility solo recibe AiContext, nunca TuningData— y es el
-    // gemelo directo de TackleBallCarrierBonus, que está dos líneas más arriba. El invariante que la
-    // ADR 0105 §3 exige es tackleMarkTargetBonus < tackleBallCarrierBonus: quitar el balón tiene que
-    // seguir puntuando más que pegarle a quien no lo lleva.
-    int TackleMarkTargetBonus = 0);
+    float ThroughPassFreeZoneCells = 0f);
 
 /// <summary>
 /// Pesos de la IA de utilidad (RT-093..RT-098). Las tablas Base y Tactical se guardan como arrays
@@ -183,12 +176,14 @@ public sealed class AiWeights
 {
     private readonly int[,] _base;
     private readonly int[,] _tactical;
+    private readonly int[] _offBallTackle;
     private readonly BlockShift[] _shift;
 
-    internal AiWeights(int[,] baseTable, int[,] tacticalTable, AiContext context, BlockShift[] shift)
+    internal AiWeights(int[,] baseTable, int[,] tacticalTable, int[] offBallTackle, AiContext context, BlockShift[] shift)
     {
         _base = baseTable;
         _tactical = tacticalTable;
+        _offBallTackle = offBallTackle;
         Context = context;
         _shift = shift;
     }
@@ -198,6 +193,32 @@ public sealed class AiWeights
 
     /// <summary>Multiplicador táctico (porcentaje, 100 = neutro) de la acción a en el estado s.</summary>
     public int Tactical(TacticalState s, PlayerAction a) => _tactical[(int)s, (int)a];
+
+    /// <summary>
+    /// Ajuste de utilidad de la ENTRADA SIN BALÓN al marcado, <b>por puesto</b> (ADR 0125 D2; antes, desde
+    /// la ADR 0105, era un entero plano igual para todos). Es un ajuste con <b>signo</b>, no un bono: sin
+    /// balón, la entrada de un delantero ya gana a sus propias alternativas (<c>Tackle</c> 211 contra
+    /// <c>MarkOpponent</c> 180 tras el multiplicador táctico), mientras que la de un defensa pierde por 180
+    /// contra la suya, así que igualar los puestos por arriba invierte el orden que pide la ADR.
+    ///
+    /// <para><b>0 significa que ese puesto no DECIDE entrar nunca</b>, y se comprueba explícitamente en
+    /// <c>Utility.EvaluateTackle</c>: no sale solo del dato. Está medido (22 sep 2026) que con el término
+    /// en 0 seguían ocurriendo 0,98 entradas sin balón por partido, porque la acción puede ganar la
+    /// comparación sin ningún ajuste.</para>
+    ///
+    /// <para><b>Alcance exacto de ese "nunca": la decisión, no el motor entero.</b>
+    /// <c>MatchEngine.RepeatTackle</c> —el efecto <c>extraAction</c> de "Embestida"/"Arrollador"— no
+    /// decide: ejecuta, y marca la entrada como sin balón sin consultar este mapa, así que un puesto con 0
+    /// todavía puede producir entradas sin balón por esa vía. Mecanismo real, <b>sin evidencia de
+    /// activación</b>: ningún no-defensa lleva esos perks en <c>/data</c>. Fijado por
+    /// <c>TandaTwoPrimitivesTests.RepeatTackleIgnoresThePerPositionMapAndIsTheKnownGapOfTheZeroRule</c> y
+    /// abierto en <c>docs/pendientes/BE-A.md</c>.</para>
+    ///
+    /// <para>El invariante de la ADR 0105 §3 sigue vigente para cada puesto: el ajuste nunca llega a
+    /// <see cref="AiContext.TackleBallCarrierBonus"/> —quitar el balón siempre puntúa más que pegarle a
+    /// quien no lo lleva—. Lo valida <c>DataLoader</c>.</para>
+    /// </summary>
+    public int OffBallTackleAdjust(Position p) => _offBallTackle[(int)p];
 
     /// <summary>Términos de contexto compartidos por todas las posiciones.</summary>
     public AiContext Context { get; }

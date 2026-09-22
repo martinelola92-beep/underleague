@@ -167,3 +167,44 @@ venga de donde venga; disputar el balón y golpear a quien no lo lleva, no. Esa 
 explica por qué se separa una métrica y no la otra.
 
 `offBallTacklesPerMatch` no recibe banda hasta tener la distribución de D2 delante.
+
+
+---
+
+## Segunda enmienda — D2/D3: estructura implementada, calibración devuelta al revisor (22 sep 2026)
+
+**Implementado**: `tackleMarkTargetBonus` es ya un **mapa por puesto** con esquema propio y los cuatro
+puestos obligatorios; `Utility.IsDefensiveRole` **se ha borrado** —quién entra sin balón lo decide el
+dato—; y **0 significa que ese puesto no DECIDE entrar nunca**, comprobado en el código, porque la primera
+enmienda midió que un 0 no desactiva la acción por sí solo. *El alcance de ese «nunca» es la decisión, no
+el motor entero*: `MatchEngine.RepeatTackle` (el efecto `extraAction`) puede fabricar una entrada sin balón
+sin mirar el mapa — agujero conocido, **sin evidencia de activación**, con test propio y anotado en la
+ficha junto a la decisión abierta de `extraAction`, que resulta ser el mismo problema por dos caminos. Con el mapa en `Defender: 150 · Midfielder: 0 ·
+Forward: 0` el juego es **byte a byte el de antes**: la palanca está montada y sin estrenar.
+
+**No implementado**: abrir los tres puestos de verdad. Se midieron siete configuraciones y **todas las que
+consiguen el reparto pedido rompen algo**:
+
+- con el ajuste solo (190 / −40 / −221, enfriamiento 280) el orden sale bien —DEF 1,21 · MID 0,23 ·
+  FWD 0,14 por partido-jugador— pero `tacklesPerMatch` cae a **6,26 sobre un suelo de 6,00**;
+- añadiendo el contador de enfriamiento separado y recalibrando, las dos bandas quedan cómodas
+  (`tacklesPerMatch` 7,31 · `injuriesPerMatch` 0,80) pero caen **dos puertas más**;
+- y el patrón que comparten todas: **repartir la violencia entre los tres puestos aplana la diferenciación
+  de builds** (`buildsWinDifferently_injuries` 1,30 → 1,21 → 1,05). Ningún valor del mapa lo evita.
+
+**Dos hallazgos que esta enmienda añade a la ADR**, los dos medidos y detallados en `docs/pendientes/BE-A.md`:
+
+1. **Por qué salía el orden invertido**, que la ADR midió sin explicar: sin balón, la entrada de un
+   delantero ya gana a sus propias alternativas (211 contra 180) mientras que la de un defensa pierde por
+   180 contra la suya. El delantero no necesita bono; **necesita que se le reste**. Por eso el mapa lleva
+   signo.
+2. **El enfriamiento de la entrada es un contador único**: pegar sin balón impide disputar el balón
+   durante todo el enfriamiento largo. Separarlos —lo que el paquete U ya hizo con el bloqueo— sube
+   `tacklesPerMatch` de 6,92 a 7,86 sin tocar un número, **pero hunde la build violenta** (`orc_violence`
+   54,17 contra un mínimo de 58). Es un problema propio, con precedente propio, y merece su ADR.
+
+**Lo que decide el revisor** (las tres opciones, con su coste, están en la ficha): aceptar el aplanamiento
+y recolocar la curva de puertas de builds; separar el contador de enfriamiento en una ADR aparte y
+recalibrar después; o cambiar el canal para que el ajuste entre en el **multiplicador de rasgo** y sea la
+agresividad —no el puesto— lo que diferencie, que es lo que esta misma ADR pedía con las palabras del
+revisor («los defensas y **los más agresivos**»).

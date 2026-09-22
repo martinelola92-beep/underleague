@@ -175,6 +175,112 @@ public class DataLoaderTests
         Assert.Contains("context", ex.JsonPath);
     }
 
+    /// <summary>
+    /// ADR 0125 D2: el mapa por puesto de la entrada sin balón tiene los cuatro puestos <b>obligatorios</b>.
+    /// Que falte uno es un error explícito, nunca un 0 implícito — porque 0 significa "este puesto no
+    /// entra nunca" y esa decisión tiene que estar escrita, no omitida (RT-032).
+    /// </summary>
+    [Fact]
+    public void FromJson_OffBallTackleAdjustMissingAPosition_Throws()
+    {
+        var files = TestData.LoadAllFiles();
+        files["ai/weights.json"] = files["ai/weights.json"].Replace("\"Midfielder\": 0,\n      \"Forward\": 0", "\"Forward\": 0", StringComparison.Ordinal);
+
+        var ex = Assert.Throws<DataException>(() => DataLoader.FromJson(files));
+        Assert.Equal("ai/weights.json", ex.File);
+        Assert.Contains("Midfielder", ex.Message, StringComparison.Ordinal);
+    }
+
+    /// <summary>Un puesto que no existe no se ignora: el fichero es inválido.</summary>
+    [Fact]
+    public void FromJson_OffBallTackleAdjustWithAnUnknownPosition_Throws()
+    {
+        var files = TestData.LoadAllFiles();
+        files["ai/weights.json"] = files["ai/weights.json"].Replace("\"Forward\": 0", "\"Sweeper\": 0", StringComparison.Ordinal);
+
+        var ex = Assert.Throws<DataException>(() => DataLoader.FromJson(files));
+        Assert.Equal("ai/weights.json", ex.File);
+        Assert.Contains("Sweeper", ex.Message, StringComparison.Ordinal);
+    }
+
+    /// <summary>
+    /// El invariante de la ADR 0105 §3, ahora comprobado puesto a puesto: quitar el balón tiene que seguir
+    /// puntuando más que pegarle a quien no lo lleva, así que ningún ajuste puede llegar a
+    /// <c>tackleBallCarrierBonus</c>.
+    /// </summary>
+    [Fact]
+    public void FromJson_OffBallTackleAdjustReachingTheCarrierBonus_Throws()
+    {
+        var files = TestData.LoadAllFiles();
+        files["ai/weights.json"] = files["ai/weights.json"].Replace("\"Defender\": 150", "\"Defender\": 195", StringComparison.Ordinal);
+
+        var ex = Assert.Throws<DataException>(() => DataLoader.FromJson(files));
+        Assert.Equal("ai/weights.json", ex.File);
+        Assert.Contains("tackleBallCarrierBonus", ex.Message, StringComparison.Ordinal);
+    }
+
+    /// <summary>
+    /// Una clave <b>numérica</b> no es un puesto: <c>Enum.TryParse</c> la aceptaría ("3" es
+    /// <c>Forward</c>), rellenando un puesto en silencio y colándose además por la comprobación de
+    /// completitud. Con "7" —fuera del enum— indexaría el array y reventaría con una excepción de runtime
+    /// en vez de con un error de dato. Las dos tienen que dar <see cref="DataException"/>.
+    /// </summary>
+    [Theory]
+    [InlineData("3")]
+    [InlineData("7")]
+    public void FromJson_OffBallTackleAdjustWithANumericPositionKey_Throws(string key)
+    {
+        var files = TestData.LoadAllFiles();
+        files["ai/weights.json"] = files["ai/weights.json"].Replace("\"Forward\": 0", $"\"{key}\": 0", StringComparison.Ordinal);
+
+        var ex = Assert.Throws<DataException>(() => DataLoader.FromJson(files));
+        Assert.Equal("ai/weights.json", ex.File);
+        Assert.Contains("posición desconocida", ex.Message, StringComparison.Ordinal);
+    }
+
+    /// <summary>
+    /// Una clave repetida es JSON válido y gana la última, así que apagaría el único puesto activo sin un
+    /// solo error — ni el esquema detecta duplicados. Aquí es un error explícito.
+    /// </summary>
+    [Fact]
+    public void FromJson_OffBallTackleAdjustWithADuplicatePosition_Throws()
+    {
+        var files = TestData.LoadAllFiles();
+        files["ai/weights.json"] = files["ai/weights.json"].Replace("\"Defender\": 150", "\"Defender\": 150,\n      \"Defender\": 0", StringComparison.Ordinal);
+
+        var ex = Assert.Throws<DataException>(() => DataLoader.FromJson(files));
+        Assert.Equal("ai/weights.json", ex.File);
+        Assert.Contains("repite el puesto", ex.Message, StringComparison.Ordinal);
+    }
+
+    /// <summary>El portero solo admite 0: cualquier otro valor sería un dato inerte que parece hacer algo.</summary>
+    [Fact]
+    public void FromJson_OffBallTackleAdjustForTheGoalkeeper_MustBeZero()
+    {
+        var files = TestData.LoadAllFiles();
+        files["ai/weights.json"] = files["ai/weights.json"].Replace("\"Goalkeeper\": 0", "\"Goalkeeper\": 150", StringComparison.Ordinal);
+
+        var ex = Assert.Throws<DataException>(() => DataLoader.FromJson(files));
+        Assert.Equal("ai/weights.json", ex.File);
+        Assert.Contains("el portero no entra sin balón", ex.Message, StringComparison.Ordinal);
+    }
+
+    /// <summary>
+    /// El reparto <b>publicado</b>, fijado aquí para que abrir un puesto sea un acto deliberado y no un
+    /// descuido que solo aparezca siete minutos después en las 43 puertas (ADR 0125 D2: la calibración que
+    /// abre los tres puestos está medida y pendiente de decisión, `docs/pendientes/BE-A.md`).
+    /// </summary>
+    [Fact]
+    public void FromJson_ThePublishedOffBallTackleMapIsTodaysDistribution()
+    {
+        var catalog = TestData.LoadCatalog();
+
+        Assert.Equal(150, catalog.Ai.OffBallTackleAdjust(Position.Defender));
+        Assert.Equal(0, catalog.Ai.OffBallTackleAdjust(Position.Midfielder));
+        Assert.Equal(0, catalog.Ai.OffBallTackleAdjust(Position.Forward));
+        Assert.Equal(0, catalog.Ai.OffBallTackleAdjust(Position.Goalkeeper));
+    }
+
     [Fact]
     public void FromJson_UnknownKeyInTuningSection_Throws()
     {

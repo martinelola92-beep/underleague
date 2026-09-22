@@ -70,7 +70,7 @@ a secas.
 | [CAT-I](./CAT-I.md) | La política automática casi nunca vende, así que las reglas de venta n | Ver fichero |
 | [CAT-J](./CAT-J.md) | Dos puertas de `BuildGateTests` en rojo en HEAD (elf_brawler, passChain), preexistente | Abierta |
 | [BD-A](./BD-A.md) | Reparto de los penaltis por fila: el sesgo arriba/abajo era ruido (se invierte con 3.000 partidos); queda abierta la concentración en las filas centrales. | Abierta (reducida) |
-| [BE-A](./BE-A.md) | El centrocampista nunca entra a su marcado sin balón: el comentario dice «Defensa y centrocampista» y el código dice `Defender` | **Primera mitad cerrada** (ADR 0125 D1: métrica separada y medida, 12,01 → 6,92 + 5,09). D2/D3 abiertas |
+| [BE-A](./BE-A.md) | El centrocampista nunca entra a su marcado sin balón: el comentario dice «Defensa y centrocampista» y el código dice `Defender` | **Instrumento y mecanismo hechos** (D1: métrica separada; D2/D3: mapa por puesto y guarda por dato, con el mapa en el reparto de hoy). **Abierta la calibración**: abrir los tres puestos aplana la diferenciación de builds — tres decisiones para el revisor en la ficha |
 | [BE-B](./BE-B.md) | Un perk `injure` con `target: "actor"` acreditaría lesiones al compañero o a la propia víctima | Abierta, sin evidencia de activación |
 | [BE-C](./BE-C.md) | `MatchResolution` trata el partido completo en un sitio y solo hasta la derrota en otro | Abierta, sin medir |
 | [BE-D](./BE-D.md) | RF-125 será subcontable si se suma `Career` de la plantilla (`WithoutPlayer` pierde contribuciones) | Abierta, de diseño |

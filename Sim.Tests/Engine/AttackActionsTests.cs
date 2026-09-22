@@ -509,6 +509,6 @@ public sealed class AttackActionsTests
             shifts[s] = Catalog.Ai.Shift((TacticalState)s);
         }
 
-        return new AiWeights(baseTable, tacticalTable, Catalog.Ai.Context, shifts);
+        return new AiWeights(baseTable, tacticalTable, TestData.OffBallTackleAdjust(), Catalog.Ai.Context, shifts);
     }
 }

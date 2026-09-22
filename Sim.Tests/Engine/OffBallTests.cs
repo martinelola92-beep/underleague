@@ -340,13 +340,51 @@ public sealed class OffBallTests
     }
 
     /// <summary>
-    /// ADR 0105 §2: un delantero no persigue a su par por el campo. Mismo escenario, otro rol: la entrada
-    /// queda fuera de alcance y no hay objetivo ni bandera.
+    /// ADR 0125 D3: quién entra sin balón lo decide el <b>dato</b>, no el rol. Un ajuste de 0 es la forma
+    /// explícita de decir "este puesto no entra nunca", y tiene que cumplirse aunque la entrada sea la
+    /// única acción que puntúa en la tabla —que es justo el caso de este escenario sintético—. La ADR 0125
+    /// D1 midió que un 0 <b>no</b> desactiva la acción por sí solo (quedaban 0,98 entradas sin balón por
+    /// partido con el término plano en 0): si alguien quita la comprobación del código, este test cae.
+    /// </summary>
+    [Theory]
+    [InlineData(Position.Defender)]
+    [InlineData(Position.Midfielder)]
+    [InlineData(Position.Forward)]
+    public void AZeroAdjustMeansThatPositionNeverTacklesOffTheBall(Position role)
+    {
+        var (player, context) = OffBallTackleScenario(role, adjust: 0);
+
+        Assert.NotEqual(PlayerAction.Tackle, Utility.Choose(context, player, null));
+        Assert.False(player.TackleOffBall);
+    }
+
+    /// <summary>
+    /// Y con ajuste distinto de 0 entra <b>cualquiera</b> de los tres puestos de campo, incluido el
+    /// delantero, que la ADR 0105 §2 dejaba fuera por rol: es la mitad "D3" de la enmienda. El portero no
+    /// aparece aquí porque queda fuera por <c>IsOutfield</c>, no por este número.
+    /// </summary>
+    [Theory]
+    [InlineData(Position.Defender)]
+    [InlineData(Position.Midfielder)]
+    [InlineData(Position.Forward)]
+    public void ANonZeroAdjustLetsThatPositionTackleItsMarkOffTheBall(Position role)
+    {
+        var (player, context) = OffBallTackleScenario(role, adjust: 150);
+
+        Assert.Equal(PlayerAction.Tackle, Utility.Choose(context, player, null));
+        Assert.Same(context.Players[1], player.TackleTarget);
+        Assert.True(player.TackleOffBall);
+    }
+
+    /// <summary>
+    /// El portero no entra sin balón <b>aunque el dato se lo permita</b>: lo excluye <c>IsOutfield</c>
+    /// —no tiene marca asignada—, y esa es una regla de motor, no un número que se pueda cambiar desde
+    /// /data por accidente.
     /// </summary>
     [Fact]
-    public void AForwardNeverTacklesHisMarkOffTheBall()
+    public void TheGoalkeeperNeverTacklesOffTheBallEvenWithANonZeroAdjust()
     {
-        var (player, context) = OffBallTackleScenario(Position.Forward);
+        var (player, context) = OffBallTackleScenario(Position.Goalkeeper, adjust: 150);
 
         Assert.NotEqual(PlayerAction.Tackle, Utility.Choose(context, player, null));
         Assert.False(player.TackleOffBall);
@@ -374,7 +412,7 @@ public sealed class OffBallTests
     /// pero dentro de la jugada activa de RF-057. Pesos sintéticos: solo <c>Tackle</c> puntúa, así que la
     /// acción elegida es exactamente la respuesta a "¿tenía a quién entrar?".
     /// </summary>
-    private static (MatchPlayer Player, UtilityContext Context) OffBallTackleScenario(Position role)
+    private static (MatchPlayer Player, UtilityContext Context) OffBallTackleScenario(Position role, int adjust = 150)
     {
         var players = new[]
         {
@@ -388,7 +426,7 @@ public sealed class OffBallTests
         players[2].Position = new Vec2(8.0f, 1.5f);
         players[0].MarkTarget = players[1];
 
-        var context = Context(OffBallTackleWeights(), players);
+        var context = Context(OffBallTackleWeights(role, adjust), players);
         context.Ball.Owner = players[2];
         context.Ball.Position = players[2].Position;
         context.HoldingTeam = 1;
@@ -398,7 +436,7 @@ public sealed class OffBallTests
     }
 
     /// <summary>Pesos sintéticos con <c>Tackle</c> como única acción que puntúa y los términos de la ADR 0105.</summary>
-    private static AiWeights OffBallTackleWeights()
+    private static AiWeights OffBallTackleWeights(Position role = Position.Defender, int adjust = 150)
     {
         int positions = Enum.GetValues<Position>().Length;
         int actions = Enum.GetValues<PlayerAction>().Length;
@@ -421,9 +459,12 @@ public sealed class OffBallTests
             0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1.0f, 900, 195, 0, 0,
             BlockActiveRadiusCells: 5.0f,
             BlockCorridorHalfWidthCells: 2.0f,
-            BlockReachMaxCells: 1.2f,
-            TackleMarkTargetBonus: 150);
-        return new AiWeights(baseTable, tacticalTable, context, new BlockShift[Enum.GetValues<TacticalState>().Length]);
+            BlockReachMaxCells: 1.2f);
+        var offBall = new int[positions];
+        offBall[(int)role] = adjust;
+        return new AiWeights(
+            baseTable, tacticalTable, offBall, context,
+            new BlockShift[Enum.GetValues<TacticalState>().Length]);
     }
 
     private static MatchPlayer[] MarkingScenario()
@@ -623,6 +664,8 @@ public sealed class OffBallTests
             PressGoalkeeperExitBonus: 200,
             FindSpaceCrowdedPenalty: 90, // AW-E (docs/pendientes.md, cambio 2 de 2)
             FindSpaceLineMarginCells: lineMargin); // AW-Q (docs/pendientes.md)
-        return new AiWeights(baseTable, tacticalTable, context, new BlockShift[Enum.GetValues<TacticalState>().Length]);
+        return new AiWeights(
+            baseTable, tacticalTable, TestData.OffBallTackleAdjust(), context,
+            new BlockShift[Enum.GetValues<TacticalState>().Length]);
     }
 }

@@ -196,10 +196,9 @@ public sealed class TackleBiasTests
             TackleBallCarrierBonus: 200,
             RetreatDistanceBonusPerCell: 0,
             RetreatAtHomePenalty: 0,
-            BlockActiveRadiusCells: 50f,
-            TackleMarkTargetBonus: 100);
+            BlockActiveRadiusCells: 50f);
 
         var shifts = new BlockShift[Enum.GetValues<TacticalState>().Length];
-        return new AiWeights(baseTable, tacticalTable, context, shifts);
+        return new AiWeights(baseTable, tacticalTable, TestData.OffBallTackleAdjust(defender: 100), context, shifts);
     }
 }

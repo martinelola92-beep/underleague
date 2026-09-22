@@ -252,6 +252,8 @@ public sealed class ActionZoneTests
         }
 
         var context = new AiContext(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1.2f, 0, 0, 0, 0);
-        return new AiWeights(baseTable, tacticalTable, context, new BlockShift[Enum.GetValues<TacticalState>().Length]);
+        return new AiWeights(
+            baseTable, tacticalTable, TestData.OffBallTackleAdjust(), context,
+            new BlockShift[Enum.GetValues<TacticalState>().Length]);
     }
 }

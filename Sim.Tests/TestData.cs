@@ -1,4 +1,5 @@
 using Underleague.Sim.Data;
+using Underleague.Sim.Model;
 
 namespace Underleague.Sim.Tests;
 
@@ -53,5 +54,20 @@ internal static class TestData
         }
 
         throw new DirectoryNotFoundException($"No se encontró data/sim/tuning.json subiendo directorios desde {AppContext.BaseDirectory}");
+    }
+
+    /// <summary>
+    /// Tabla de ajuste de la entrada sin balón por puesto (ADR 0125 D2) para los <see cref="AiWeights"/>
+    /// que un test construye a mano. El portero siempre 0: no tiene marca asignada. Los valores por
+    /// defecto dejan la acción apagada en los tres puestos, así que un test que no la ejercita no la
+    /// enciende sin querer.
+    /// </summary>
+    public static int[] OffBallTackleAdjust(int defender = 0, int midfielder = 0, int forward = 0)
+    {
+        var table = new int[Enum.GetValues<Position>().Length];
+        table[(int)Position.Defender] = defender;
+        table[(int)Position.Midfielder] = midfielder;
+        table[(int)Position.Forward] = forward;
+        return table;
     }
 }

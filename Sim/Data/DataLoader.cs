@@ -625,8 +625,68 @@ public static class DataLoader
             ThroughPassTechniqueSlope: contextNode.Prop("throughPassTechniqueSlope").AsInt(),
             ThroughPassMinCells: contextNode.Prop("throughPassMinCells").AsInt(),
             ThroughPassMaxCells: contextNode.Prop("throughPassMaxCells").AsInt(),
-            ThroughPassFreeZoneCells: contextNode.Prop("throughPassFreeZoneCells").AsFloat(),
-            TackleMarkTargetBonus: contextNode.Prop("tackleMarkTargetBonus").AsInt());
+            ThroughPassFreeZoneCells: contextNode.Prop("throughPassFreeZoneCells").AsFloat());
+
+        // ADR 0125 D2: el ajuste de la entrada sin balón es un mapa por puesto, con la misma forma que la
+        // tabla `base` —el único patrón por puesto que ya existe en este fichero—, y con signo. Los cuatro
+        // puestos son obligatorios: que falte uno es un error explícito, nunca un 0 implícito, porque 0
+        // significa "este puesto no entra nunca" y eso tiene que estar escrito, no omitido (RT-032).
+        var offBallTackle = new int[positionCount];
+        var offBallTackleSet = new bool[positionCount];
+        var offBallNode = contextNode.Prop("tackleMarkTargetBonus");
+        foreach (var (posKey, value) in offBallNode.EnumerateObjectEntries())
+        {
+            // Enum.TryParse acepta cadenas NUMÉRICAS ("3" -> Forward, "7" -> un valor inexistente que
+            // reventaría al indexar), así que una clave numérica podría rellenar un puesto en silencio y
+            // hasta colarse por la comprobación de completitud de abajo. Se exige nombre y que el valor
+            // exista (RT-032: un dato inválido es un error explícito, nunca silencioso).
+            if (!Enum.TryParse<Position>(posKey, out var position)
+                || !Enum.IsDefined(position)
+                || char.IsDigit(posKey[0]))
+            {
+                throw new DataException(file, value.Path, $"posición desconocida '{posKey}'");
+            }
+
+            // Una clave repetida es JSON válido y gana la última, así que apagar el único puesto activo
+            // sería un cambio de juego sin un solo error. Aquí es un error.
+            if (offBallTackleSet[(int)position])
+            {
+                throw new DataException(file, value.Path, $"tackleMarkTargetBonus repite el puesto '{position}'");
+            }
+
+            int adjust = value.AsInt();
+
+            // El portero no entra sin balón nunca —no tiene marca asignada y lo excluye IsOutfield—, así
+            // que cualquier valor distinto de 0 sería un dato inerte que parece hacer algo.
+            if (position == Position.Goalkeeper && adjust != 0)
+            {
+                throw new DataException(
+                    file,
+                    value.Path,
+                    $"tackleMarkTargetBonus[Goalkeeper] = {adjust}: el portero no entra sin balón (lo excluye "
+                        + "IsOutfield, no este número), así que solo admite 0");
+            }
+            if (adjust >= context.TackleBallCarrierBonus)
+            {
+                throw new DataException(
+                    file,
+                    value.Path,
+                    $"tackleMarkTargetBonus[{position}] = {adjust} llega o supera tackleBallCarrierBonus "
+                        + $"({context.TackleBallCarrierBonus}): quitar el balón tiene que seguir puntuando "
+                        + "más que pegarle a quien no lo lleva (ADR 0105 §3)");
+            }
+
+            offBallTackle[(int)position] = adjust;
+            offBallTackleSet[(int)position] = true;
+        }
+
+        for (int i = 0; i < positionCount; i++)
+        {
+            if (!offBallTackleSet[i])
+            {
+                throw new DataException(file, offBallNode.Path, $"falta tackleMarkTargetBonus para el puesto '{(Position)i}'");
+            }
+        }
 
         var shiftArray = new BlockShift[tacticalCount];
         var shiftSet = new bool[tacticalCount];
@@ -651,7 +711,7 @@ public static class DataLoader
             }
         }
 
-        return new AiWeights(baseTable, tacticalTable, context, shiftArray);
+        return new AiWeights(baseTable, tacticalTable, offBallTackle, context, shiftArray);
     }
 
     private static void EnsureComplete(string file, string path, bool[,] set, int dim0, int dim1)

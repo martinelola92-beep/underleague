@@ -77,13 +77,43 @@ lo correcto —la banda de fútbol no debe juzgar un puñetazo— pero el único
 Además, con el instrumento corregido el defensa y el centrocampista **disputan el balón casi lo mismo**
 (0,67 vs 0,64 por partido-jugador): el 65,3 % de las «entradas» del defensa no eran disputas.
 
+## ADR 0125 D2/D3: la palanca está montada, la calibración es decisión del revisor (22 sep 2026)
+
+`tackleMarkTargetBonus` es ya un **mapa por puesto con signo**, la guarda `IsDefensiveRole` **no existe**
+—quién entra sin balón lo decide el dato— y **0 significa «ese puesto no entra nunca»**, comprobado en el
+código —con un alcance exacto: **la decisión**, no el motor entero, porque `RepeatTackle` puede fabricar
+una entrada sin balón sin mirar el mapa (agujero conocido, **sin evidencia de activación**, con test
+propio)—. Publicado con `Defender: 150 · Midfielder: 0 · Forward: 0`: el juego es **byte a byte el de
+antes** (comparado columna a columna en dos semillas), las 43 puertas reproducen la línea base exacta y
+**1.110 tests** pasan. El cargador rechaza con error explícito los siete modos de dato malo del mapa,
+incluidos los dos silenciosos que encontró la revisión —clave numérica (`"3"` era `Forward`) y clave
+repetida (apagaba el único puesto activo sin un solo error)—, y el reparto publicado está fijado por test.
+
+**Por qué no se ha abierto de verdad**: se midieron **siete configuraciones** y todas las que consiguen el
+reparto pedido rompen algo. El orden correcto (DEF 1,21 · MID 0,23 · FWD 0,14) deja `tacklesPerMatch` en
+**6,26 sobre un suelo de 6,00**; arreglarlo requiere separar el contador de enfriamiento —que además
+descubre un problema real, ver abajo— y eso cuesta **dos puertas más**. Y el patrón que comparten todas:
+repartir la violencia entre los tres puestos **aplana la diferenciación de builds**
+(`buildsWinDifferently_injuries` 1,30 → 1,21 → 1,05), que es `especialización significativa` tirando en
+contra de la propia ADR. Ningún valor del mapa lo evita.
+
+**Dos hallazgos nuevos, medidos** (detalle en `docs/pendientes/BE-A.md`):
+
+1. **Por qué salía el orden invertido**, que la ADR 0125 midió sin explicar: sin balón, la entrada de un
+   delantero ya gana a sus propias alternativas (211 contra 180) y la de un defensa pierde por 180 contra
+   la suya. El delantero no necesita bono, necesita que se le **reste** — de ahí que el mapa lleve signo.
+2. **El enfriamiento de la entrada es un contador único**: pegar sin balón deja al jugador sin poder
+   **disputar** el balón durante 12-36 s. Es el mismo caso que el paquete U ya resolvió para el bloqueo.
+   Separarlos sube `tacklesPerMatch` de 6,92 a 7,86 sin tocar un número, **pero hunde la build violenta**
+   (`orc_violence` 54,17 contra un mínimo de 58). Problema propio, con precedente propio: merece su ADR.
+
 ## Siguiente paso concreto (sesión limpia, 22 sep 2026)
 
-**La segunda mitad de la ADR 0125 (D2 bono por puesto + D3 los tres roles de campo)**, que es la
-arriesgada: `injuriesPerMatch` está en 0,81 con techo 0,90 y abrir la entrada a los tres roles la llevaba a
-1,34 *(medido con el instrumento viejo; hay que rehacer esa tabla con el nuevo)*. Empezar por
-`docs/pendientes/BE-A.md`, que ya trae el reparto por puesto separado, y por la enmienda al final de la ADR
-0125. Vigilar **dos** métricas, no una: `injuriesPerMatch` por arriba y `tacklesPerMatch` por abajo.
+**Elegir entre las tres opciones del final de `docs/pendientes/BE-A.md`** (aceptar el aplanamiento y
+recolocar la curva de puertas de builds · separar el contador de enfriamiento en su propia ADR y
+recalibrar después · o mover el ajuste al **multiplicador de rasgo** para que diferencie la agresividad y
+no el puesto). Leer la ficha y las **dos enmiendas** al final de la ADR 0125; los CSV de las siete
+configuraciones están en `out/D2-*`. Recomendación de la sesión: la segunda y luego la tercera.
 
 **Decisiones del revisor pendientes de ejecutar** (ADR escritas, nada implementado): **0125** (entrada sin
 balón con métrica propia y bono por puesto), **0126** (clanes canónicos: ~110-120 jugadores escritos),

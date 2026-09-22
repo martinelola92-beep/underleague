@@ -98,10 +98,114 @@ medida arriba, y hay que comprobarlo en el lote de D2 —con varias semillas, no
 La restricción que la ADR llama «la que manda» —`injuriesPerMatch` en 0,81 con techo 0,90— **no cambia**:
 la separación es de medida y las lesiones se tiran igual.
 
+## D2/D3 — la estructura está, la calibración es del revisor (22 sep 2026)
+
+**Hecho y commiteado**: el ajuste de la entrada sin balón es un **mapa por puesto**
+(`data/ai/weights.json` → `context.tackleMarkTargetBonus`, con esquema propio y los cuatro puestos
+obligatorios), la guarda `IsDefensiveRole` **ya no existe** —quién entra lo decide el dato— y **0 significa
+que ese puesto no DECIDE entrar nunca**, comprobado explícitamente en el código porque está medido que un 0
+no desactiva nada por sí solo. Con `Defender: 150 · Midfielder: 0 · Forward: 0` el lote sale **byte a byte
+idéntico** a antes: es el mismo juego, con la palanca ya montada.
+
+> **El alcance de ese «nunca» es la decisión, no el motor entero** *(lo encontró la revisión independiente;
+> mecanismo real, **sin evidencia de activación**)*. `MatchEngine.RepeatTackle` —el efecto `extraAction` de
+> «Embestida»/«Arrollador»— no decide: ejecuta, y marca la entrada como sin balón sin consultar el mapa, así
+> que un delantero con ajuste 0 y uno de esos perks **sí** produce entradas sin balón. Hoy no ocurre en
+> ningún lote (ningún no-defensa lleva `charge` ni `steamroller` en `/data`, y el conjunto de referencia no
+> lleva perks) y **no es una regresión** —con la guarda vieja el agujero era idéntico—, pero estaba escrito
+> como cerrado en cuatro sitios y no lo era. Ahora lo fija un test
+> (`RepeatTackleIgnoresThePerPositionMapAndIsTheKnownGapOfTheZeroRule`) y va con la decisión abierta de
+> `extraAction`, que resulta ser **el mismo problema visto dos veces**: por la métrica y por la regla.
+
+**El cargador es la última línea, no el esquema** (RT-032). Rechaza con `DataException`: el formato viejo
+(entero plano), un puesto que falta, un puesto desconocido, una **clave numérica** —`"3"` sería `Forward` y
+se colaba en silencio—, una **clave repetida** —apagaba el único puesto activo sin un solo error—, un
+ajuste que llega a `tackleBallCarrierBonus`, y un portero con un valor distinto de 0, que sería un dato
+inerte con aspecto de hacer algo. Los siete casos tienen test, y el reparto publicado también: abrir un
+puesto tiene que ser deliberado, no un descuido que aparezca siete minutos después en las puertas.
+
+**No hecho**: abrir de verdad los tres puestos. No porque falte trabajo, sino porque **las tres
+calibraciones que lo consiguen rompen algo**, y elegir cuál se rompe es decisión del revisor.
+
+### Lo que dice la tabla de utilidad, antes de medir nada
+
+Sin balón, la entrada compite contra la mejor alternativa del propio puesto (`Base × Tactical / 100`):
+
+| puesto | `Tackle` | mejor alternativa | hueco que el ajuste debe cubrir |
+|---|---|---|---|
+| Defensa | 420 | `MarkOpponent` 600 | **+180** |
+| Centrocampista | 346 | `MarkOpponent` 450 | **+104** |
+| Delantero | 211 | `MarkOpponent` 180 | **−31** (ya gana sin ajuste) |
+
+**Esto explica el «orden invertido» que la ADR 0125 midió sin explicar.** Con el bono plano de 150 el
+margen efectivo era −30 para el defensa, +46 para el centrocampista y **+181** para el delantero: al abrir
+el rol salía FWD 2,29 y MID 2,74 contra DEF 1,64 porque las alternativas del delantero son malas, no
+porque entre mucho. **Consecuencia: para que el defensa quede por delante, el mapa tiene que poder
+RESTAR.** El «bono» es un ajuste con signo, y así está implementado.
+
+### Lo medido (500 partidos por configuración; DEF/MID/FWD = ajuste, entradas sin balón por partido-jugador)
+
+| configuración | `tacklesPerMatch` | sin balón | `injuries` | reparto | veredicto |
+|---|---|---|---|---|---|
+| hoy (150 / 0 / 0) | 6,92 | 5,09 | 0,81 | DEF 1,27 · MID 0 · FWD 0 | el centrocampista no existe en la fase sin balón |
+| 190 / −40 / −221, enfr. 280 | **6,26** | 6,50 | 0,85 | DEF 1,21 · MID 0,23 · FWD 0,14 | orden correcto, pero el **suelo de 6,00 a 0,26** |
+| + contador de enfriamiento separado, enfr. 550, entrada al portador 120 | 7,31 | 5,36 | **0,80** | DEF 0,99 · MID 0,19 · FWD 0,13 | las dos bandas cómodas… y **rompe la identidad de las builds** |
+
+El defensa está **saturado**: entre 80 y 150 de ajuste su tasa no se mueve (1,26-1,27). Su palanca no es el
+ajuste sino el enfriamiento, que es **global**: no se puede bajar al defensa sin bajar a todos. Por eso
+abrir los otros dos puestos es una **redistribución**, no una suma, y por eso hace falta un tercer número.
+
+### El hallazgo que hay debajo, y su precio *(CONFIRMED, aislado)*
+
+**`MatchPlayer.TackleCooldown` es un contador único**: una entrada sin balón lo pone a
+`OffBallTackleCooldownTicks` (hoy 180 ticks; en las pruebas hasta 550) y `Utility` descarta con él
+**cualquier** entrada, también la del portador. O sea: **pegarle a quien no lleva el balón deja al jugador
+sin poder disputarlo durante 12-36 segundos.** Es exactamente el caso que el proyecto ya resolvió para el
+bloqueo en el paquete U —contadores separados, *«disputar el balón deja de pagar por haber cargado»*— y
+explica por qué al dar papel al centrocampista caían las disputas: no es un coste de diseño, es un
+contador compartido.
+
+Separarlos funciona: con el dato de hoy, `tacklesPerMatch` sube de **6,92 a 7,86** sin tocar ningún número.
+**Pero tiene un precio medido, y es el que bloquea el paquete**: con el contador separado y el dato de hoy,
+la puerta `coherentBuildsBeatNone_orc_violence` cae a **54,17** (mínimo 58) — la build violenta deja de
+ganar lo que debe. Aislado: el mapa por puesto **no** la rompe (pasa con D2/D3 puro), el contador separado
+**sí**, con el dato intacto.
+
+### Estado de las 43 puertas en cada rama
+
+| | rojas | cuáles |
+|---|---|---|
+| línea base (HEAD) | 3 | `elf_brawler` 48,54 · `elf_out_of_zone` 46,04 · `injuries` 1,30 |
+| D2/D3 puro (190 / −40 / −221, enfr. 280) | 3 | `orc_misplaced` 46,88 **(nueva)** · `elf_brawler` 46,25 (mejora) · `injuries` 1,21 (empeora) |
+| + contador separado + enfr. 550 / 120 | 5 | las anteriores más `orc_violence` 56,88 y `TheThreeDoctrinesBuyDifferently` |
+
+**El patrón que las tres comparten**: repartir la violencia entre los tres puestos **aplana la
+diferenciación de builds**. `buildsWinDifferently_injuries` baja de 1,30 a 1,21 con D2/D3 puro y a 1,05 con
+el contador separado: cuanto más universal es pegar, menos distingue a un equipo violento. Es
+`especialización significativa > combinaciones arbitrarias` tirando en contra de la ADR 0125 D2, y no lo
+arregla ningún valor del mapa —lo probé en siete configuraciones—.
+
+### Las tres decisiones que le quedan al revisor
+
+1. **Aceptar el aplanamiento** y publicar D2/D3 con el orden correcto, cambiando `orc_misplaced` por
+   `elf_out_of_zone` en la lista de puertas rojas conocidas y `buildsWinDifferently_injuries` de 1,30 a
+   1,21. Es la lectura literal de la ADR 0125.
+2. **Separar el contador de enfriamiento** (su propio ADR: es una regla de motor, tiene precedente en el
+   paquete U y arregla un problema real) y **entonces** recalibrar la curva de puertas de builds, que es
+   lo que se rompe.
+3. **Cambiar el canal**: que el ajuste sin balón entre en el **multiplicador de rasgo** en vez de sumarse
+   después, para que «los más agresivos» —que es lo que la ADR pedía— sea lo que diferencie, y no el
+   puesto. No está medido; es el único camino que no aplana la identidad *por construcción*.
+
+Mi recomendación, si sirve: **la 2 y luego la 3**. La 1 compra el reparto por puesto pagando identidad de
+build, que es justo lo que el proyecto dice que vale más.
+
 ## Lo que sigue abierto
 
-- La guarda `IsDefensiveRole` sigue siendo `Position.Defender`: el síntoma original **no está arreglado**,
-  y no debe arreglarse suelto, sino con el bono por puesto de D2 (abrirlo sin el mapa da 23,86/27,64).
+- **El síntoma original sigue vivo, pero ya no por el código**: la guarda `IsDefensiveRole` ha
+  desaparecido y quién entra lo decide el dato; lo que mantiene fuera al centrocampista es que su ajuste
+  vale 0, y cambiarlo es la decisión de arriba. El comentario y el código ya no se contradicen, que era la
+  mitad del hallazgo.
 - El papel del centrocampista (`docs/project-state.md`: dispara el 6,5 % de los tiros siendo el 43 % de los
   jugadores de campo) sigue sin cerrar. Ahora se sabe que en la fase sin balón tampoco disputa menos que el
   defensa: disputa lo mismo y pega cero.

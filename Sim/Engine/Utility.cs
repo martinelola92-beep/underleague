@@ -1315,14 +1315,17 @@ internal static class Utility
     /// <list type="number">
     /// <item><b>El poseedor rival</b>, si está dentro de <c>tackleDistanceMaxCells</c>. Vale
     /// <c>tackleBallCarrierBonus</c> y es siempre la opción mejor puntuada de las dos.</item>
-    /// <item><b>El marcado</b> (ADR 0105), si no hay poseedor rival al alcance. Vale
-    /// <c>tackleMarkTargetBonus</c>, estrictamente menor que el anterior: quitar el balón tiene que
-    /// seguir siendo mejor que pegarle a quien no lo lleva.</item>
+    /// <item><b>El marcado</b> (ADR 0105), si no hay poseedor rival al alcance. Vale el
+    /// <c>tackleMarkTargetBonus</c> <b>de su puesto</b> (ADR 0125 D2), un ajuste con signo y siempre
+    /// estrictamente menor que el anterior: quitar el balón tiene que seguir siendo mejor que pegarle a
+    /// quien no lo lleva.</item>
     /// </list>
     ///
     /// <para>La entrada sin balón lleva tres condiciones, y las tres son de diseño, no de implementación:
-    /// solo la deciden los <b>roles defensivos</b> (<see cref="IsDefensiveRole"/>) —un delantero no
-    /// persigue a su par por el campo, ADR 0105 §2—; el objetivo es el <b>marcado asignado</b> por
+    /// la decide el <b>ajuste por puesto</b> del dato (<see cref="AiWeights.OffBallTackleAdjust"/>), que
+    /// en 0 significa que ese puesto no entra nunca —desde la ADR 0125 D2/D3 pueden los tres roles de
+    /// campo, con el defensa por delante, y ya no hay guarda por rol en el código—; el objetivo es el
+    /// <b>marcado asignado</b> por
     /// <see cref="Marking"/> y nadie más, que es lo que hace el suceso predecible antes del partido y
     /// cierra AY-A; y el marcado tiene que estar <b>en la jugada activa</b> de RF-057
     /// (<see cref="IsInActivePlay"/>), el mismo criterio que ya acota el bloqueo sin balón: sin él un
@@ -1352,7 +1355,16 @@ internal static class Utility
         // criterio por defecto, pero "Olfato de sangre" y "Rabia" lo sustituyen cuando aplican. No cambia
         // la prioridad del poseedor rival de arriba (ADR 0105 sigue mandando: quitar el balón es siempre
         // mejor que pegarle a quien no lo lleva), solo QUIÉN es el objetivo sin balón.
-        if (p.IsOutfield && IsDefensiveRole(p.Role))
+        // ADR 0125 D2/D3: quién DECIDE entrar sin balón lo dice el dato, no una guarda por rol. El ajuste
+        // por puesto en 0 es la forma explícita de decir "este puesto no entra nunca" — y hay que
+        // comprobarlo aquí, porque un 0 no desactiva nada por sí solo: medido, con el término plano en 0
+        // seguían ocurriendo 0,98 entradas sin balón por partido. El portero queda fuera por IsOutfield:
+        // no tiene marca asignada.
+        // El "nunca" alcanza a esta decisión, no al motor entero: MatchEngine.RepeatTackle ejecuta el
+        // efecto extraAction sin pasar por aquí y sin mirar el mapa (agujero conocido, sin evidencia de
+        // activación en /data; docs/pendientes/BE-A.md).
+        int offBallAdjust = ctx.Weights.OffBallTackleAdjust(p.Role);
+        if (p.IsOutfield && offBallAdjust != 0)
         {
             // El objetivo sesgado ya viene comprobado del todo (alcance, jugada activa y
             // CanReceiveOffBallTackle, que a diferencia de CanBeBlocked SÍ admite un rival derribado): no
@@ -1362,7 +1374,7 @@ internal static class Utility
                 eval.TackleTarget = biased;
                 eval.TackleOffBall = true;
                 eval.Target = biased.Position;
-                eval.Context = context.TackleMarkTargetBonus;
+                eval.Context = offBallAdjust;
                 return;
             }
 
@@ -1375,7 +1387,7 @@ internal static class Utility
                 eval.TackleTarget = mark;
                 eval.TackleOffBall = true;
                 eval.Target = mark.Position;
-                eval.Context = context.TackleMarkTargetBonus;
+                eval.Context = offBallAdjust;
                 return;
             }
         }
@@ -1433,14 +1445,6 @@ internal static class Utility
     /// </summary>
     private static bool CanReceiveOffBallTackle(MatchPlayer player) =>
         player.OnPitch && player.State is not (PlayerState.SentOff or PlayerState.Celebrating);
-
-    /// <summary>
-    /// Roles que entran a su marcado sin balón (ADR 0105 §2). Defensa y centrocampista: los dos que
-    /// tienen marcaje asignado con preferencia por rol en <see cref="Marking"/> y peso real de
-    /// <c>MarkOpponent</c> en la tabla. El delantero queda fuera por decisión de la ADR.
-    /// </summary>
-    private static bool IsDefensiveRole(Position role) =>
-        role is Position.Defender;
 
     /// <summary>
     /// Bloqueo sin balón (ADR 0030 §2): cargar contra un rival que <b>no</b> lleva el balón para quitarlo
