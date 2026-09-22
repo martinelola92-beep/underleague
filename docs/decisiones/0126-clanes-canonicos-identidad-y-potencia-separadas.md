@@ -214,3 +214,46 @@ Se retira el gate de medición previa que esta ADR imponía. **Se implementa, se
 defendible: el censo sintético que se pedía respondía una pregunta que el propio cambio responde de forma
 definitiva. **El gate de balance sí se mantiene**: las 43 puertas emparejadas y las siete métricas de
 RT-056 antes de dar el paquete por cerrado.
+
+---
+
+## Segunda enmienda (22 sep 2026) — **la primera enmienda interpretó mal al revisor. Queda anulada.**
+
+La enmienda anterior daba por hecho que «a esos los sustituirán los de rareza superior» se refería a las
+plantillas rivales. **Se refería al mercado.** Aclaración del revisor:
+
+> «Los que se sustituyen por rarezas superiores son los jugadores del mercado, no los equipos rivales. Los
+> equipos rivales mejoran por subida de nivel, porque han jugado y han ganado experiencia. Esta ganancia no
+> hay que simularla: creamos una constante que suba su dificultad y listo, sin tener que crear un motor que
+> lo haga al mismo ritmo que nuestro equipo. Es como Gary de Pokémon: cada vez que te enfrentas, sus
+> pokémon son de mayor nivel y tiene alguno nuevo bueno.»
+
+**Queda anulada la primera enmienda y se restituye la arquitectura original de esta ADR**, con una
+precisión que la mejora.
+
+### La arquitectura, ya sin ambigüedad
+
+- **Un clan = una plantilla autorizada, escrita una sola vez.** La misma gente en los tres actos.
+- **El acto aporta la potencia mediante una constante de dificultad**, no simulando experiencia. *No hace
+  falta un motor de progresión del rival: es una constante.*
+- **Opcionalmente, un clan gana uno o dos jugadores nuevos buenos en los actos altos** — el «pokémon nuevo»
+  de la analogía. Es contenido barato y refuerza la sensación de que el club se ha reforzado sin romper el
+  reconocimiento del núcleo.
+
+### La constante no puede ser `attributesPerLevel`
+
+Se conserva el hallazgo medido de más arriba, porque sigue vigente y **acota cómo debe ser esa constante**:
+la curva real sube **+72** por jugador del acto 1 al 2, y `Progression.LevelUp` con `attributesPerLevel: 2`
+da **+8**. **La constante de dificultad del rival es suya propia y vive en `/data`**, no es la progresión
+del jugador. Calibrada para reproducir la curva ya medida (227 → 299 → 365), el balance se conserva por
+construcción.
+
+### El coste vuelve a bajar
+
+La primera enmienda estimó 150-250 jugadores escritos. Con la arquitectura correcta son **10 clanes × 10 =
+100**, más unos 10-20 refuerzos para los actos altos: **~110-120**. Y los **fichajes no pertenecen a ningún
+clan** (ADR 0127), así que no se suman aquí.
+
+*Lección de proceso, anotada: la primera enmienda se escribió sin pedir aclaración sobre una frase que
+admitía dos lecturas, y las dos estaban documentadas en la propia ADR como pregunta abierta. Había que
+haber preguntado antes de escribir.*

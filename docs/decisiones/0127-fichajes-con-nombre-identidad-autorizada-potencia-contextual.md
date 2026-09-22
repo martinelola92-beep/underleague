@@ -146,3 +146,34 @@ asumible como trabajo delegable, pero **es el coste real de la propuesta y convi
 
 *Palanca para reducirlo, si hiciera falta: bajar la frecuencia del portero garantizado, u ofrecerlo solo
 cuando al jugador le falte uno. Es decisión aparte y no se toma aquí.*
+
+---
+
+## Enmienda (22 sep 2026) — el elenco es por RAZA, no por clan; y la rareza se desplaza con el acto
+
+Aclaración del revisor:
+
+> «Los fichajes no tienen clan asignado. Todos los clanes de una raza comparten el mismo set de fichajes.
+> Solo el equipo inicial del clan es característico. […] En el mercado, a medida que avanzas, a los comunes
+> los sustituyen los de rareza superior y mejores stats.»
+
+### Dos consecuencias
+
+**1. El elenco es por raza y lo comparten los dos clanes de esa raza.** El dimensionado medido arriba
+(~60-65 por raza, ~300-325 en total) **no cambia** —ya estaba calculado por raza—, pero se confirma que no
+hay que multiplicarlo por clan. Lo característico de un clan es **su plantilla inicial**, que ya existe en
+`data/clubs/*.json`.
+
+**2. La distribución de rareza del mercado debe desplazarse con el acto, y hoy NO lo hace.** *(MEDIDO)*
+`GeneratedPlayers.RecruitWeights` es una constante `(60, 32, 8)` **igual en los tres actos**, y el censo lo
+confirma: 60,1 / 31,8 / 8,1 agregado. Para que «a los comunes los sustituyan los de rareza superior» hace
+falta **una tabla de pesos de rareza por acto** en `/data`, que hoy no existe.
+
+*Riesgo declarado: mover esa tabla cambia el poder adquisitivo efectivo del mercado y toca `runWinRate`,
+`affordableShareAtMarket` y `brokeMarketRunShare`. Es un cambio de balance, no de contenido, y va con lote.*
+
+### El coste real de esta ADR, ya cerrado
+
+**~300-325 jugadores con nombre** (5 razas × ~62). Es **el grueso del contenido** de las dos ADR juntas:
+la 0126 son ~110-120. *Si hubiera que recortar, la palanca es aceptar más repetición dentro de una run —
+el elenco por raza, no los clanes.*

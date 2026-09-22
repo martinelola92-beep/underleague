@@ -121,3 +121,4 @@ El hueco del 0011 corresponde a una decisión sobre el radio de adyacencia que q
 | [0124](0124-historial-de-carrera-y-atribucion-de-muerte.md) | Historial de carrera tipado y atribución de lesión y muerte | Aceptada |
 | [0126](0126-clanes-canonicos-identidad-y-potencia-separadas.md) | Clanes canónicos: un nombre, un clan, un puesto; identidad y potencia separadas | **Propuesta: decisión del revisor** |
 | [0127](0127-fichajes-con-nombre-identidad-autorizada-potencia-contextual.md) | Los fichajes tienen nombre: identidad autorizada, potencia contextual | **Propuesta: decisión del revisor** |
+| [0128](0128-el-legendario-es-el-premio-de-ganar-una-run.md) | El legendario es el premio de ganar una run con un clan (excepción declarada a RF-006) | **Propuesta: decisión del revisor**, bloqueada por el perfil |

@@ -1,6 +1,6 @@
 # BE-E — Un jugador legendario no puede aparecer nunca, y hay un precio para él
 
-Estado: **abierta, CONFIRMED por lectura de código**. Encontrada el 22 sep 2026 midiendo el censo de
+Estado: **parte de diseño RESUELTA por la ADR 0128** (el legendario no sale del mercado a propósito: es el premio de ganar una run con un clan). **Queda abierta la incoherencia de dato**: `playerPriceByRarity` declara un precio de compra para una rareza que el mercado no puede ofrecer. CONFIRMED por lectura de código. Encontrada el 22 sep 2026 midiendo el censo de
 ofertas de mercado para la ADR 0127 — de camino, no buscándola.
 
 ## Síntoma
