@@ -72,6 +72,8 @@ public sealed class PlayerAggregate
     public int Cards;
     public int Injuries;
     public int TicksOnPitch;
+    public int InjuriesCaused;
+    public int DeathsCaused;
 }
 
 /// <summary>Resultado completo de un lote de /Balance.</summary>
@@ -321,6 +323,8 @@ public static class BatchRunner
             aggregate.Cards += stat.Cards;
             aggregate.Injuries += stat.Injured ? 1 : 0;
             aggregate.TicksOnPitch += stat.TicksOnPitch;
+            aggregate.InjuriesCaused += stat.InjuriesCaused;
+            aggregate.DeathsCaused += stat.DeathsCaused;
         }
     }
 

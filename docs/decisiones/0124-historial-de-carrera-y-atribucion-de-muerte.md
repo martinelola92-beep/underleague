@@ -126,3 +126,73 @@ No es una inconsistencia, es la consecuencia de la decisión 1:
 - `docs/decisiones/0122-primero-memoria-y-atribucion-no-mas-contenido.md`
 - `docs/plan-evolucion-knavall.md` §F1 · `docs/plan-fase-memoria-y-atribucion.md` (corregido por esta ADR
   en el número de llamantes de `Kill` y en la opcionalidad del parámetro)
+
+---
+
+# Enmienda (22 sep 2026) — tras la revisión independiente
+
+La revisión independiente (Regla E) encontró cuatro fallos reales y un hueco de proceso: **faltaba
+`game-design-review`** (Regla B). Tenía razón: lo justifiqué como fontanería y hay **tres reglas de juego**
+dentro. Se responden aquí, y se corrige lo demás antes de commitear.
+
+## Las tres reglas de juego, decididas
+
+### R1 · Un partido cuenta solo si se pisó el campo (`TicksOnPitch > 0`)
+
+**No existe en `docs/requisitos.md`: es una regla nueva y se declara como tal.** Lo que el jugador lee en
+el obituario es una carrera («11 partidos»), y un suplente que no llegó a entrar no puede reclamarlos sin
+que la cifra mienta. *Alternativa considerada y descartada*: contar convocatorias aparte de partidos
+jugados — añade un campo al vocabulario cerrado para una distinción que el obituario no necesita. El
+banquillo ya tiene su propio coste en otro sitio (`MatchesBenched`, RF-111), así que esto no introduce un
+castigo nuevo. **Se demuestra** con un test de suplente que no entra: `Matches` no sube y el resto de la
+carrera queda intacta.
+
+### R2 · Una muerte por reincidencia suma a la vez lesión y muerte al mismo causante
+
+**Se conserva, y ahora es una decisión, no un accidente.** No es doble contabilidad de un hecho: son **dos
+hechos distintos sobre un mismo acto**. RF-093 vía 1 define la muerte como *una lesión grave sin tratar que
+se repite* — la lesión **ocurrió**, y además el jugador murió.
+
+Importa porque **RF-125 pone un umbral**: «provocar 30 lesiones en una sola run desbloquea orcos».
+*Alternativa considerada y descartada*: que la muerte excluya la lesión. Se rechaza porque haría que el
+logro de las 30 lesiones fuera **más difícil cuanto más letal** sea la build — exactamente al revés de lo
+que pide un desbloqueo de orcos. **Se demuestra** con un test que fija el doble conteo.
+
+### R3 · El vocabulario cerrado se amplía con el lado de la víctima
+
+**Se corrige la decisión original.** RF-122 pide un obituario «con **sus** estadísticas de la run», y el
+vocabulario cerrado solo guardaba lo que el jugador **hizo**, nunca lo que **sufrió** ni **a manos de
+quién**. Cerrar un vocabulario es un acto de diseño y reabrirlo después cuesta otro salto de esquema, así
+que se amplía ahora:
+
+- `RunCareer` gana **`InjuriesSuffered`**.
+- El evento `DEATH` pasa a emitirse **con el matador como `opponent`**, igual que ya hace `INJURY`
+  (`EmitCancellable(EventType.Injury, …, opponent: tackler)`). Así `PlayerDeathDetail` puede registrar a
+  quién, y el bando de muerte podrá decir «a manos de X» en F2.
+
+**Esto cierra el fallo más grave de la revisión:** la ADR se titulaba «atribución de muerte» y, cuando el
+matador era un **rival**, no guardaba nada — que es precisamente el caso que da nombre al juego («ese clan
+me knaveó al capitán»). Los tests verdes demostraban que un entero subía durante el partido, no que la
+muerte quedara atribuida.
+
+## Correcciones aceptadas antes de commitear
+
+| # | qué | por qué |
+|---|---|---|
+| 1 | **Tests de `MatchResolution` paso 3b** | es el **único** camino de producción que escribe `Career` y no tenía ni un test: un `with` mal puesto pasaba los 1.073 |
+| 2 | **`RivalHistory`: corregir su documentación** | decía implementar «quién knaveó a quién» y su tipo no lleva **ningún id de jugador**: es un historial de enfrentamientos. Habría sido el décimo caso del patrón «el texto promete lo que el código no hace» **dentro del paquete que existe para arreglarlo** |
+| 3 | **Emitir `InjuriesCaused`/`DeathsCaused` en `/Balance`** | la propia ADR lo listaba como efecto de segundo orden y no se hizo. Sin salir por el arnés **no son medibles**, y «medición > intuición» es principio rector |
+| 4 | **Mover los dos campos nuevos al final de `PlayerMatchStats`** | se insertaron entre `Injured` y `TicksOnPitch`; al final es más barato para cualquier consumidor posicional futuro |
+| 5 | **Arreglar el aserto que pasa por construcción** | `Assert.Equal(0, victim.InjuriesCaused)` era cierto aunque el `++` estuviera mal puesto |
+| 6 | **Corregir la tabla «Dónde vive cada memoria»** | citaba la memoria de rival en `RunState.Counters` como si existiera; es un plan, no código |
+
+## Anotado y aplazado, con ficha
+
+- `injure` con `target: "actor"` permitiría acreditar lesiones a un compañero o a la propia víctima. **Mecanismo
+  real sin evidencia de activación** (ningún dato lo usa), pero el mensaje del cargador ya es falso.
+- El paso 3b aplica las estadísticas del partido completo **ignorando `defeatTick`**, al contrario que el
+  bucle de bajas del mismo fichero.
+- `MatchResolution.PlayedTicks` busca por `PlayerId` **sin filtrar equipo** — hermano del mismo patrón.
+- RF-125 será **subcontable** si se suma `Career.InjuriesCaused` de la plantilla: las contribuciones de un
+  jugador vendido o dado de baja desaparecen con `WithoutPlayer`.
+- `RunCareer` es un historial **solo de partido**: las lesiones de carta de evento no entran.

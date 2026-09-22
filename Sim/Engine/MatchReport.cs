@@ -36,6 +36,8 @@ public sealed record ConsumableActivation(string ConsumableId, int Team, int Tic
 public sealed record PlayerCounterDelta(int PlayerId, string Counter, int Delta);
 
 /// <summary>Estadísticas de un jugador en un partido concreto.</summary>
+/// <param name="InjuriesCaused">Lesiones que este jugador ha causado a rivales (RF-122, ADR 0124).</param>
+/// <param name="DeathsCaused">Muertes que este jugador ha causado a rivales (RF-122, ADR 0124).</param>
 public sealed record PlayerMatchStats(
     int PlayerId,
     int Team,
@@ -50,6 +52,8 @@ public sealed record PlayerMatchStats(
     int Cards,
     bool Injured,
     int TicksOnPitch,
+    int InjuriesCaused,
+    int DeathsCaused,
     int LeftPitchTick = -1);
 
 /// <summary>

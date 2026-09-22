@@ -1,4 +1,5 @@
 using Underleague.Sim.Data;
+using Underleague.Sim.Engine;
 using Underleague.Sim.Model;
 using Underleague.Sim.Run.Systems.Items;
 using ProgressionRules = Underleague.Sim.Progression.Progression;
@@ -25,6 +26,30 @@ public enum BondKind
 
 /// <summary>Vínculo de un jugador con otro. Sin signo: no existen vínculos negativos en el lanzamiento (I-3).</summary>
 public sealed record RunBond(int OtherPlayerId, BondKind Kind);
+
+/// <summary>
+/// Historial de carrera de un jugador de la run (RF-122, ADR 0124): vocabulario cerrado de hechos
+/// acumulados partido a partido, que <b>nunca topa ni se reinicia</b> -a diferencia de
+/// <see cref="RunPlayer.Counters"/>, gobernado por la semántica de perk (RF-070, topes <c>maxValue</c>).
+/// Mezclar los dos ciclos de vida en la misma bolsa habría dejado que una regla futura de perk truncara
+/// el historial en silencio (ADR 0124, decisión 1). Aritmética entera (RT-023).
+/// </summary>
+public sealed record RunCareer(
+    int Matches,
+    int Goals,
+    int Assists,
+    int Tackles,
+    int TacklesWon,
+    int Fouls,
+    int Cards,
+    int InjuriesCaused,
+    int DeathsCaused,
+    int InjuriesSuffered,
+    int TicksOnPitch)
+{
+    /// <summary>Instancia vacía compartida: el caso normal es no haber jugado ningún partido todavía.</summary>
+    public static RunCareer None { get; } = new(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+}
 
 /// <summary>Prótesis instalada en un jugador (RF-095). Fase 3; el campo existe desde la versión 1 del esquema.</summary>
 public sealed record RunProsthesis(string Slot, string Effect);
@@ -179,6 +204,13 @@ public sealed record RunPlayer(
     public IReadOnlyDictionary<string, int> BondProgress { get; init; } = NoCounters;
 
     /// <summary>
+    /// Historial de carrera acumulado (RF-122, ADR 0124): vocabulario cerrado, vive lo que vive el
+    /// jugador y no se topa nunca -a diferencia de <see cref="Counters"/>. Alimenta el futuro obituario
+    /// (RF-122); esta ADR solo lo acumula, no lo presenta.
+    /// </summary>
+    public RunCareer Career { get; init; } = RunCareer.None;
+
+    /// <summary>
     /// True si el jugador puede alinearse: sano o con lesión leve. La lesión grave impide jugar hasta
     /// recibir tratamiento (RF-092) y el muerto no vuelve (RF-093). Es el predicado que cuenta para el
     /// mínimo de 5 de RF-002b/RF-002e.
@@ -215,6 +247,34 @@ public sealed record RunPlayer(
         }
 
         return this with { BondProgress = sorted };
+    }
+
+    /// <summary>
+    /// Copia sumando al historial de carrera las estadísticas de un partido recién jugado (RF-122, ADR
+    /// 0124). Aritmética entera (RT-023); <see cref="RunCareer.Matches"/> solo sube si el jugador llegó a
+    /// pisar el campo (<see cref="PlayerMatchStats.TicksOnPitch"/> &gt; 0).
+    /// </summary>
+    public RunPlayer WithCareerFrom(PlayerMatchStats stats)
+    {
+        ArgumentNullException.ThrowIfNull(stats);
+        var career = Career;
+        return this with
+        {
+            Career = career with
+            {
+                Matches = career.Matches + (stats.TicksOnPitch > 0 ? 1 : 0),
+                Goals = career.Goals + stats.Goals,
+                Assists = career.Assists + stats.Assists,
+                Tackles = career.Tackles + stats.Tackles,
+                TacklesWon = career.TacklesWon + stats.TacklesWon,
+                Fouls = career.Fouls + stats.Fouls,
+                Cards = career.Cards + stats.Cards,
+                InjuriesCaused = career.InjuriesCaused + stats.InjuriesCaused,
+                DeathsCaused = career.DeathsCaused + stats.DeathsCaused,
+                InjuriesSuffered = career.InjuriesSuffered + (stats.Injured ? 1 : 0),
+                TicksOnPitch = career.TicksOnPitch + stats.TicksOnPitch,
+            },
+        };
     }
 
     /// <summary>
@@ -356,7 +416,8 @@ public sealed record RunState
     // 3 (ADR 0103): el campo pasa de 5 a 6 filas; las casillas de la alineación (0..4) pasan a 0..5.
     // 4 (sucesora de la ADR 0103): el campo pasa de 6 a 7 filas; las casillas de la alineación (0..5)
     // pasan a 0..6.
-    public const int CurrentSchemaVersion = 4;
+    // 5 (ADR 0124): cada jugador gana un objeto "career" con su historial de carrera acumulado.
+    public const int CurrentSchemaVersion = 5;
 
     /// <summary>Versión de esquema con la que se creó este estado.</summary>
     public int SchemaVersion { get; init; } = CurrentSchemaVersion;

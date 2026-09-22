@@ -472,6 +472,12 @@ internal sealed class MatchPlayer
 
     public int Cards { get; set; }
 
+    /// <summary>Lesiones causadas a rivales (RF-122, ADR 0124); se incrementa en <c>MatchEngine.ResolveInjury</c>.</summary>
+    public int InjuriesCaused { get; set; }
+
+    /// <summary>Muertes causadas a rivales (RF-122, ADR 0124); se incrementa en <c>MatchEngine.Kill</c>.</summary>
+    public int DeathsCaused { get; set; }
+
     public bool Injured { get; set; }
 
     /// <summary>
@@ -666,5 +672,5 @@ internal sealed class MatchPlayer
     /// <summary>Estadísticas finales del jugador para el informe.</summary>
     public PlayerMatchStats ToStats() => new(
         Id, Team, Goals, Assists, Shots, PassesAttempted, PassesCompleted,
-        Tackles, TacklesWon, Fouls, Cards, Injured, TicksOnPitch, LeftPitchTick);
+        Tackles, TacklesWon, Fouls, Cards, Injured, TicksOnPitch, InjuriesCaused, DeathsCaused, LeftPitchTick);
 }

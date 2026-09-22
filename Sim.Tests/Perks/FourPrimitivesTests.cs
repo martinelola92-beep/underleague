@@ -179,7 +179,7 @@ public sealed class FourPrimitivesTests
         var victim = engine.PlayerById(1)!;
         Vec2 before = victim.Position;
 
-        engine.Kill(victim, "perk:test_lethal");
+        engine.Kill(victim, "perk:test_lethal", killer: null);
 
         // El jugador queda exactamente como si Kill nunca se hubiera llamado (RF-093, ADR 0048): vivo, en
         // el campo, en su sitio, y el marcador de muertes del informe no sube.

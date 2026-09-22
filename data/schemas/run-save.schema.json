@@ -286,13 +286,35 @@
         },
         "mourning": { "type": "integer", "minimum": 0 },
         "counters": { "$ref": "#/$defs/intMap" },
-        "bondProgress": { "$ref": "#/$defs/intMap" }
+        "bondProgress": { "$ref": "#/$defs/intMap" },
+        "career": {
+          "description": "Historial de carrera acumulado, vocabulario cerrado que nunca se topa ni se reinicia (RF-122, ADR 0124).",
+          "type": "object",
+          "properties": {
+            "matches": { "type": "integer", "minimum": 0 },
+            "goals": { "type": "integer", "minimum": 0 },
+            "assists": { "type": "integer", "minimum": 0 },
+            "tackles": { "type": "integer", "minimum": 0 },
+            "tacklesWon": { "type": "integer", "minimum": 0 },
+            "fouls": { "type": "integer", "minimum": 0 },
+            "cards": { "type": "integer", "minimum": 0 },
+            "injuriesCaused": { "type": "integer", "minimum": 0 },
+            "deathsCaused": { "type": "integer", "minimum": 0 },
+            "injuriesSuffered": { "type": "integer", "minimum": 0 },
+            "ticksOnPitch": { "type": "integer", "minimum": 0 }
+          },
+          "required": [
+            "matches", "goals", "assists", "tackles", "tacklesWon", "fouls", "cards",
+            "injuriesCaused", "deathsCaused", "injuriesSuffered", "ticksOnPitch"
+          ],
+          "additionalProperties": false
+        }
       },
       "required": [
         "id", "name", "race", "position", "rarity", "level", "experience", "attributes", "traits",
         "tags", "speciesTag", "styleTag", "perks", "item", "physicalState", "minorInjuries",
         "prostheses", "wage", "isMercenary", "isYouth", "matchesBenched", "bonds", "mourning",
-        "counters", "bondProgress"
+        "counters", "bondProgress", "career"
       ],
       "additionalProperties": false
     },

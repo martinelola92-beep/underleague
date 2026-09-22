@@ -77,7 +77,14 @@ public sealed record RunMatchSummary(
 /// orden ascendente: es una decisión de diseño del paquete BB, no una limitación del motor.
 /// <see cref="Economy.InheritanceSystem"/> se encarga de comprobar si sigue vivo al aplicar el traspaso.
 /// </param>
-public sealed record PlayerDeathDetail(int PlayerId, IReadOnlyList<string> Perks, int LinkedPlayerId);
+/// <param name="KillerPlayerId">
+/// Id del jugador que causó la muerte (RF-122, ADR 0124, enmienda R3), leído del <c>Opponent</c> del
+/// evento DEATH (<see cref="Engine.MatchEngine.Kill"/>), o -1 si no hubo matador. Puede ser un jugador
+/// del <b>rival</b> —el caso que da nombre al juego— o un compañero, si la vía letal fue un perk propio.
+/// Solo dato: qué se enseña con esto es F2 (RF-122, obituario), no esta ADR.
+/// </param>
+public sealed record PlayerDeathDetail(
+    int PlayerId, IReadOnlyList<string> Perks, int LinkedPlayerId, int KillerPlayerId = -1);
 
 /// <summary>
 /// Los huecos que el paquete W deja abiertos para los paquetes X (economía, mercado, plantilla) e Y

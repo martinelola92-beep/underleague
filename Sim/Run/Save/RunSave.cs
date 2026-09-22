@@ -374,6 +374,24 @@ public static class RunSave
         w.WriteNumber("mourning", player.Mourning);
         WriteInts(w, "counters", player.Counters);
         WriteInts(w, "bondProgress", player.BondProgress);
+        WriteCareer(w, player.Career);
+        w.WriteEndObject();
+    }
+
+    private static void WriteCareer(Utf8JsonWriter w, RunCareer career)
+    {
+        w.WriteStartObject("career");
+        w.WriteNumber("matches", career.Matches);
+        w.WriteNumber("goals", career.Goals);
+        w.WriteNumber("assists", career.Assists);
+        w.WriteNumber("tackles", career.Tackles);
+        w.WriteNumber("tacklesWon", career.TacklesWon);
+        w.WriteNumber("fouls", career.Fouls);
+        w.WriteNumber("cards", career.Cards);
+        w.WriteNumber("injuriesCaused", career.InjuriesCaused);
+        w.WriteNumber("deathsCaused", career.DeathsCaused);
+        w.WriteNumber("injuriesSuffered", career.InjuriesSuffered);
+        w.WriteNumber("ticksOnPitch", career.TicksOnPitch);
         w.WriteEndObject();
     }
 
@@ -583,10 +601,29 @@ public static class RunSave
                 Mourning = Int(element, "mourning", path),
                 Counters = ReadInts(element, "counters", path),
                 BondProgress = ReadInts(element, "bondProgress", path),
+                Career = ReadCareer(element, path),
             });
         }
 
         return roster;
+    }
+
+    private static RunCareer ReadCareer(JsonElement parent, string path)
+    {
+        var career = Prop(parent, "career", path);
+        string careerPath = $"{path}.career";
+        return new RunCareer(
+            Int(career, "matches", careerPath),
+            Int(career, "goals", careerPath),
+            Int(career, "assists", careerPath),
+            Int(career, "tackles", careerPath),
+            Int(career, "tacklesWon", careerPath),
+            Int(career, "fouls", careerPath),
+            Int(career, "cards", careerPath),
+            Int(career, "injuriesCaused", careerPath),
+            Int(career, "deathsCaused", careerPath),
+            Int(career, "injuriesSuffered", careerPath),
+            Int(career, "ticksOnPitch", careerPath));
     }
 
     private static Lineup ReadLineup(JsonElement root)

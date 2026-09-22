@@ -901,7 +901,7 @@ internal sealed class EffectEngine : IPerkLinks
                 victims.RemoveAt(pick);
                 if (_engine.LethalRoll(best))
                 {
-                    _engine.Kill(marked, "perk:" + subscription.Perk.Id);
+                    _engine.Kill(marked, "perk:" + subscription.Perk.Id, subscription.Owner);
                 }
             }
         }

@@ -129,11 +129,14 @@ internal static class MatchResolution
                     // geometría estática que usa el motor en partido (no toca Sim/Perks ni Sim/Engine),
                     // pero SIN comprobar aquí si ya ha muerto: esa comprobación la hace
                     // Economy.InheritanceSystem contra el estado final, porque es allí donde también se
-                    // resuelve el caso "el vinculado muere DESPUÉS, en este mismo partido".
+                    // resuelve el caso "el vinculado muere DESPUÉS, en este mismo partido". El matador
+                    // (enmienda R3 de ADR 0124) sale directo del Opponent del evento DEATH, que MatchEngine
+                    // ya rellena con quien mata (rival o propio); -1 si no hubo matador.
                     deathDetails.Add(new PlayerDeathDetail(
                         players[index].Id,
                         players[index].Perks,
-                        ResolveLinkedTeammate(lineup, players[index], catalog)));
+                        ResolveLinkedTeammate(lineup, players[index], catalog),
+                        matchEvent.Opponent));
 
                     // ADR 0048, condición 4 ("se puede rehacer"): el objeto del muerto VUELVE AL
                     // INVENTARIO, no se entierra con él. Es la mitad recuperable de una muerte y la que
@@ -160,6 +163,23 @@ internal static class MatchResolution
 
         // 3. Experiencia (RF-025) y nivel (RF-027), con los multiplicadores de perk fuera de partido.
         ApplyProgression(players, playedIds, benchIds, result, catalog);
+
+        // 3b. Historial de carrera (RF-122, ADR 0124): solo la plantilla PROPIA (Team 0). Los jugadores
+        //     rivales también producen PlayerMatchStats y se descartan, como en el resto de este método
+        //     (línea de arriba, "matchEvent.Team != 0"). Se recorre la plantilla por id ascendente
+        //     (RT-041); PlayerMatchStats.TicksOnPitch decide si el partido cuenta para RunCareer.Matches.
+        var ownStats = result.Report.Players;
+        for (int i = 0; i < players.Count; i++)
+        {
+            for (int s = 0; s < ownStats.Count; s++)
+            {
+                if (ownStats[s].Team == 0 && ownStats[s].PlayerId == players[i].Id)
+                {
+                    players[i] = players[i].WithCareerFrom(ownStats[s]);
+                    break;
+                }
+            }
+        }
 
         // 4. Partidos seguidos en el banquillo: los mercenarios abandonan tras 3 (RF-111). Quien los
         //    hace marcharse es el paquete X; el contador es del estado y se lleva aquí.

@@ -495,7 +495,7 @@ static void WritePlayersCsv(string outDir, IReadOnlyList<PlayerAggregate> player
     {
         "playerId", "teamId", "name", "race", "position", "rarity", "matches", "goals", "assists",
         "shots", "passesAttempted", "passesCompleted", "tackles", "tacklesWon", "fouls", "cards",
-        "injuries", "ticksOnPitch",
+        "injuries", "ticksOnPitch", "injuriesCaused", "deathsCaused",
     };
 
     var rows = players.Select(p => (IReadOnlyList<string>)new[]
@@ -518,6 +518,8 @@ static void WritePlayersCsv(string outDir, IReadOnlyList<PlayerAggregate> player
         p.Cards.ToString(),
         p.Injuries.ToString(),
         p.TicksOnPitch.ToString(),
+        p.InjuriesCaused.ToString(),
+        p.DeathsCaused.ToString(),
     });
 
     CsvWriter.Write(Path.Combine(outDir, "players.csv"), header, rows);

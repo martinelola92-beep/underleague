@@ -2572,6 +2572,7 @@ internal sealed class MatchEngine : IPerkWorld
 
         _report.Injuries++;
         victim.Injured = true;
+        tackler.InjuriesCaused++;
 
         // Lesionar a un rival mueve el criterio en contra aunque no haya habido falta (RF-063): es la
         // acción sucia más visible que existe y el árbitro toma nota igual.
@@ -2589,7 +2590,7 @@ internal sealed class MatchEngine : IPerkWorld
         // confirmar la alineación (RunEngine.LineupWarnings, RF-012d).
         if (victim.Definition.PhysicalState == PhysicalState.SevereInjury)
         {
-            Kill(victim, "severeInjury");
+            Kill(victim, "severeInjury", tackler);
         }
     }
 
@@ -3239,15 +3240,24 @@ internal sealed class MatchEngine : IPerkWorld
     /// sustitución fantasma: <c>MatchPlayer.LeftPitchTick</c> nunca coincide con el tick de una muerte
     /// anulada, que es justo lo que esa clase comprueba.
     /// </para>
+    /// <para>
+    /// ADR 0124: <paramref name="killer"/> es <b>nullable y sin valor por defecto</b> a propósito. El tipo
+    /// admite "no hubo matador" (habrá vías futuras sin uno), pero al no tener valor por defecto el
+    /// compilador obliga a cada llamante nuevo a decidir explícitamente en vez de perder la atribución en
+    /// silencio. Cuando no es null, se incrementa su <see cref="MatchPlayer.DeathsCaused"/> (RF-122) y se
+    /// emite como <c>Opponent</c> del evento DEATH, igual que INJURY ya hace con el que placa (enmienda
+    /// R3): así <c>Sim.Run.MatchResolution</c> puede registrar a quién atribuir la muerte, incluida la de
+    /// un rival, que es el caso que da nombre al juego.
+    /// </para>
     /// </summary>
-    internal void Kill(MatchPlayer victim, string detail)
+    internal void Kill(MatchPlayer victim, string detail, MatchPlayer? killer)
     {
         if (victim.Dead)
         {
             return;
         }
 
-        if (EmitCancellable(EventType.Death, detail, victim))
+        if (EmitCancellable(EventType.Death, detail, victim, opponent: killer))
         {
             return;
         }
@@ -3255,6 +3265,10 @@ internal sealed class MatchEngine : IPerkWorld
         victim.Dead = true;
         victim.Injured = true;
         _report.Deaths++;
+        if (killer is not null)
+        {
+            killer.DeathsCaused++;
+        }
 
         if (ReferenceEquals(_ball.Owner, victim))
         {
