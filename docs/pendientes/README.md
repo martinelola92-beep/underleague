@@ -74,3 +74,4 @@ a secas.
 | [BE-B](./BE-B.md) | Un perk `injure` con `target: "actor"` acreditaría lesiones al compañero o a la propia víctima | Abierta, sin evidencia de activación |
 | [BE-C](./BE-C.md) | `MatchResolution` trata el partido completo en un sitio y solo hasta la derrota en otro | Abierta, sin medir |
 | [BE-D](./BE-D.md) | RF-125 será subcontable si se suma `Career` de la plantilla (`WithoutPlayer` pierde contribuciones) | Abierta, de diseño |
+| [BE-E](./BE-E.md) | Un jugador legendario no puede aparecer nunca (`RarityWeights` solo tiene tres campos) y hay precio para él | Abierta, CONFIRMED |

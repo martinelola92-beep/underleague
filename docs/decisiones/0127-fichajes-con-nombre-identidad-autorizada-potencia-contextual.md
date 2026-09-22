@@ -91,3 +91,58 @@ punto de cometer.
 
 ADR 0126 (clanes canónicos, mismo principio) · ADR 0123 §D9 (la meta desbloquea posibilidades, nunca
 estadísticas) · RF-005, RF-020, RF-020b, RF-110..114
+
+---
+
+## Censo de ofertas (22 sep 2026) — MEDIDO, y dimensiona el elenco
+
+Instrumento temporal `Sim.Tests/Analysis/_MarketOfferCensusTests.cs`, 300 runs completas jugadas de
+verdad con la doctrina contextual, misma población que `matchesPerFullRun` (19,32).
+
+| cifra | media | mín | máx |
+|---|---|---|---|
+| **mercados visitados por run** | **8,66** | 3 | 14 |
+| — por acto (1/2/3) | 3,92 / 3,08 / 1,66 | | |
+| **ofertas de fichaje por run** (sin canteranos ni mercenarios) | **25,97** | 9 | 42 |
+| ofertas de mercenario por run *(aparte, RF-110..114)* | 8,66 | 3 | 14 |
+
+Rareza: común 60,1 % · poco común 31,8 % · rara 8,1 % · **legendaria 0 %**.
+Puesto: **portero 33,3 % (exacto)** · defensa 22,5 % · delantero 22,2 % · centrocampista 22,0 %.
+
+**Son siempre 3 por mercado** — confirmado por lectura de código, no por muestreo: el bucle de
+`MarketOfferGenerator` es incondicional y los filtros de oro y hueco actúan solo al comprar. Así que
+«ofertas por run» = 3 × mercados, exacto.
+
+*El desglose por rareza y puesto es una estimación declarada como tal por quien la midió: el surtido se
+regeneró sobre un nodo representativo por capa en vez de reconstruir el nodo exacto visitado. El sesgo
+afecta a cuántas capas contribuyen, nunca a la distribución dentro de ellas.*
+
+### Dos hallazgos que cambian el dimensionado
+
+**1. Los fichajes son de la raza del club** *(LEÍDO: `GeneratedPlayers.Recruit` toma la raza; solo el
+mercenario toma `foreignRace`)*. **El elenco hay que multiplicarlo por cinco.**
+
+**2. Un tercio de las ofertas son porteros, y solo hace falta uno.** `market.goalkeeperOffers: 1` fija que
+el primero de los tres fichajes sea siempre portero — decisión deliberada de la ADR 0080, porque antes el
+42 % de los mercados no ofrecía ninguno. Consecuencia: **8,66 ofertas de portero por run para un puesto
+del que se necesita uno**. *Al escribir el elenco NO hay que replicar esa proporción: es una regla de
+surtido por mercado, no una necesidad de plantilla.*
+
+### El elenco, dimensionado
+
+Con la regla del revisor —la mitad de los fichajes sale dos veces por run y la otra mitad una sola, «si no
+lo compras en ese momento pierdes el tren»— las 25,97 ofertas equivalen a **~17,3 jugadores distintos por
+run** (25,97 / 1,5).
+
+| | ofertas/run | distintos/run | elenco por raza para reencuentro cada ~4-5 runs |
+|---|---|---|---|
+| campo | 17,3 | ~11,5 | **50-55** |
+| portero | 8,66 | ~5,8 | **8-12** *(se repiten más, y conviene: se aprenden)* |
+| **total por raza** | 25,97 | ~17,3 | **~60-65** |
+
+**Orden de magnitud del contenido: 300-325 jugadores con nombre** (5 razas × ~62). Sumado a los 150-250 de
+los clanes rivales de la ADR 0126, el proyecto pasa a tener del orden de **500 personajes escritos**. Es
+asumible como trabajo delegable, pero **es el coste real de la propuesta y conviene verlo junto**.
+
+*Palanca para reducirlo, si hiciera falta: bajar la frecuencia del portero garantizado, u ofrecerlo solo
+cuando al jugador le falte uno. Es decisión aparte y no se toma aquí.*
