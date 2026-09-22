@@ -117,3 +117,5 @@ El hueco del 0011 corresponde a una decisión sobre el radio de adyacencia que q
 | [0022](0022-roles-y-ocupacion-de-espacio.md) | Comportamiento sin balón: contraste táctico y búsqueda de espacio | Aceptada |
 | [0122](0122-primero-memoria-y-atribucion-no-mas-contenido.md) | Primero memoria y atribución; contenido nuevo, después | Aceptada |
 | [0123](0123-knavall-rise-to-rule-direccion-maestra.md) | **Knavall: Rise to Rule** — dirección maestra (decisiones de producto vs aspiraciones) | Aceptada |
+| [0125](0125-entrada-sin-balon-metrica-propia-y-bono-por-puesto.md) | La entrada sin balón tiene métrica propia y bono por puesto (enmienda la 0105) | Aceptada, pendiente de medir |
+| [0124](0124-historial-de-carrera-y-atribucion-de-muerte.md) | Historial de carrera tipado y atribución de lesión y muerte | Aceptada |

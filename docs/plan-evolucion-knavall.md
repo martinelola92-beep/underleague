@@ -36,8 +36,8 @@ Tres huecos de distinto precio, y conviene no confundirlos:
 - **Jugador propio**: el motor calcula `PlayerMatchStats` (goles, asistencias, entradas, faltas, minutos) y
   `RunPlayer` **no persiste ninguna**. Además **no atribuye** lesiones ni muertes causadas: `Kill(victim,
   detail)` no recibe al matador. *Coste: pequeño + un trozo de motor.*
-- **Rival dentro de la run**: los rivales **ya reaparecen** (garantizado por palomar en los actos 2 y 3), el
-  emparejamiento (`opponentId`) y el resultado ya están guardados, y la identidad del jugador rival ya es
+- **Rival dentro de la run**: los rivales **ya reaparecen** (con qué frecuencia exacta **sigue sin medir**: la afirmación
+  del palomar quedó retirada el 22 sep 2026), el emparejamiento (`opponentId`) y el resultado ya están guardados, y la identidad del jugador rival ya es
   estable. Lo único que falta es dejar de tirar el hecho en `MatchResolution.cs:96`. *Coste: **cero cambios
   de esquema**.*
 - **Entre runs**: `Sim/Run/Save/` contiene un único fichero. No hay perfil. *Coste: sistema de persistencia

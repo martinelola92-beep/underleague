@@ -28,9 +28,16 @@ no se puede construir una narrativa de rivalidades. **La primera mitad es cierta
   (`:687-700`) es el puente que une nodo → rival.
 - **Los rivales ya se repiten, por construcción**: `MapGenerator.cs:597` reparte
   `opponents[opponentCursor % opponents.Count]` — cíclico, con reposición, **sin deduplicación**.
-- Y se repiten **obligatoriamente**: `nodesPerAct [11,12,12]` da **6+7+7 = 20 partidos** (17 contra
-  `data/rivals/` y 3 jefes), y hay **5 rivales por acto**. Con 6 partidos de liga por acto contra 5
-  rivales, en los actos 2 y 3 la repetición está **garantizada por palomar, en cualquier semilla**.
+- Y se repiten **con frecuencia**: `nodesPerAct [11,12,12]` da **6+7+7 = 20 partidos** (17 contra
+  `data/rivals/` y 3 jefes), contra **5 rivales por acto**.
+
+> **CORRECCIÓN (22 sep 2026).** La primera versión de este documento afirmaba que la repetición estaba
+> **«garantizada por palomar en los actos 2 y 3»**. **Es falso y queda retirado.** `nodesPerAct` son
+> **capas, no nodos**: el presupuesto real (`MapGenerator`, `budget = pathLength*60/100 - 2`, que ya
+> cuenta la capa 0 y el jefe) deja **4-5 partidos de liga por acto contra un conjunto de 5 rivales**, así
+> que el palomar no se sigue. **La tasa real de repetición sigue SIN MEDIR** — es la medición que este
+> mismo documento propone como primer paso de la Fase 1C y que no se ha hecho. Nada de lo que se construya
+> sobre «el jugador ya se cruza varias veces con el mismo clan» puede darse por cierto hasta medirlo.
 
 **Conclusión: el juego ya tiene rivalidades. Lo que no tiene es memoria de ellas.** Hoy el jugador ve dos
 veces el mismo escudo y el juego se comporta como si fuera la primera — lo cual, de paso, roza RF-012d.
@@ -428,8 +435,9 @@ del campo.** Propongo añadir la memoria de rival como **Fase 1C**, y advierto d
 2. Registrar el hecho en `MatchResolution.cs:197`: quién lesionó/mató a quién, vía contador de clave libre.
 3. **Campo `clanId` en el esquema de rival** + los 15 ficheros, para que un clan cruce de acto.
 4. **Experimento previo y barato, antes de nada**: barrer `MapGenerator.Generate` sobre N semillas y medir
-   **cuántos clanes distintos ve de verdad una run**. El palomar ya garantiza repetición en los actos 2 y 3;
-   falta la tasa exacta. Sin partidos, sin motor: es un bucle.
+   **cuántos clanes distintos ve de verdad una run**. **Sube a la primera posición del roadmap**: retirada
+   la afirmación del palomar (§0.1), la frecuencia de repetición es una incógnita, y de ella depende si la
+   rivalidad recurrente existe hoy o hay que construirla. Sin partidos, sin motor: es un bucle.
 
 ### Fase 1B (ya acordada) — Abrir `modifyUtility`
 Sin cambios respecto a la ADR 0122. Con el añadido de §E: **rasgos nuevos en `/data`** como paso previo de
