@@ -71,3 +71,6 @@ a secas.
 | [CAT-J](./CAT-J.md) | Dos puertas de `BuildGateTests` en rojo en HEAD (elf_brawler, passChain), preexistente | Abierta |
 | [BD-A](./BD-A.md) | Reparto de los penaltis por fila: el sesgo arriba/abajo era ruido (se invierte con 3.000 partidos); queda abierta la concentración en las filas centrales. | Abierta (reducida) |
 | [BE-A](./BE-A.md) | El centrocampista nunca entra a su marcado sin balón: el comentario dice «Defensa y centrocampista» y el código dice `Defender` | Abierta, sin medir |
+| [BE-B](./BE-B.md) | Un perk `injure` con `target: "actor"` acreditaría lesiones al compañero o a la propia víctima | Abierta, sin evidencia de activación |
+| [BE-C](./BE-C.md) | `MatchResolution` trata el partido completo en un sitio y solo hasta la derrota en otro | Abierta, sin medir |
+| [BE-D](./BE-D.md) | RF-125 será subcontable si se suma `Career` de la plantilla (`WithoutPlayer` pierde contribuciones) | Abierta, de diseño |
