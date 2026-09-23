@@ -920,3 +920,49 @@ pools** para que un gol sea la red *y* la grada, y una muerte el jadeo *y* el cu
   rutas están dentro). Pasar los largos a OGG quitaría ~20 MB del árbol y casi nada del juego, así que la
   pregunta es solo de comodidad del repositorio — y **es material del revisor, no se recodifica sin
   preguntar**.
+
+---
+
+## Modelos 3D: maqueta con humanos, y el balón deja de ir raso (23 sep 2026)
+
+Dos encargos del revisor sobre la misma pantalla, y **ningún cambio en `/Sim` ni en `/data`**.
+
+### El balón tenía altura y nadie la leía — [BI-B], CERRADA en la vista 3D
+
+Reportado jugando la build: *«no se ve el arco del balón. Lo veo raso siempre»*. La causa se aisló **con un
+grep**, sin tocar código: `MatchTrace.BallHeightAt` tenía **cero consumidores** en todo el repositorio. La
+ADR 0135 dio altura al vuelo en `/Sim`, la traza la guardaba, y `MatchPitchView3D` colocaba el balón en una
+constante. Nada falló en verde porque esa ADR se midió con métricas de `/Balance`, que no necesitan render.
+
+Arreglado: la vista lee la altura e **interpola entre los dos ticks con el mismo `Alpha`** que la posición
+(un arco, no una escalera de 15 escalones por segundo), y el balón en vuelo lleva **sombra en el césped**
+que se encoge con la altura — sin una referencia fija en el suelo, subir el balón en una cámara en tres
+cuartos es indistinguible de alejarlo. Verificado en captura: `retrans-modelos.png`, balón a **1,394
+casillas** de alto, con la sombra debajo. La vista **2D de depuración se queda raso a propósito**: es la
+pantalla que el revisor llamó desfasada.
+
+**Patrón para vigilar**, no anécdota: *un dato nuevo en `/Sim` sin consumidor en `/Game`*. Merece un grep
+de consumidores cada vez que una ADR añade estado a la traza.
+
+### Maqueta de modelos humanoides (solo humanos)
+
+Material: **Universal Animation Library 2 de Quaternius, CC0** (`Game/models/`, 8 MB, con su licencia al
+lado), maniquí de 1,829 de alto con 43 animaciones. Es **material provisional** y la regla 10 sigue en pie:
+no se produce arte hasta cerrar el diseño de la fase 2. Existe para **decidir mirándolo**.
+
+`Game/Ui/PlayerModel.cs` cuelga el modelo **del mismo nodo que ya movía la cápsula**, así que hereda
+posición y no se enteran ni el anillo, ni el dorsal, ni la sangre, ni la cámara; a la cápsula se le quita la
+malla y se queda de hueso. Escala medida del propio modelo contra la altura que manda la raza, giro hacia
+donde se va, `Walk_Carry_Loop` con la velocidad de la traza y `LayToIdle` congelado en su primer fotograma
+—que es el cuerpo en el suelo— para el derribado, en vez de tumbar el hueso noventa grados. Si el fichero
+no está, `TryCreate` devuelve `null` y el jugador se queda con su cápsula: la maqueta no puede romper nada.
+
+Captura nueva `retrans-modelos.png` (club humano, la pantalla de **pregón**, no la de depuración) y
+`partido-3d-razas-color.png`, que además es la primera imagen en color de las cinco razas juntas.
+
+**Lo aprendido en la primera captura, que es el valor de la maqueta:** un humanoide a la altura de la raza
+**se lee peor que la cápsula** a la distancia de cámara actual —el cuerpo es delgado y el campo entero cabe
+en 1.280 px—, y los modelos salían en **T-pose** porque nadie había llamado a la postura. Lo segundo está
+arreglado; lo primero es la decisión que la maqueta pone sobre la mesa: **o la cámara se acerca, o las
+criaturas son más corpulentas que un humano de proporciones reales**. Las proporciones de raza ya lo dicen
+(humano 12 de ancho por 17 de alto: un cuerpo mucho más recio que un maniquí de 1,83 por 0,5).
