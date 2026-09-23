@@ -71,6 +71,36 @@ public sealed class MatchResolutionRivalCreditTests
         Assert.Equal(0, applied.State.Counter(Key(3, causer.Id, "sufferedInjury")));
     }
 
+    /// <summary>
+    /// BE-F: <b>el nodo de jefe no acredita a nadie</b>, aunque su <c>OpponentId</c> sea el de un clan real
+    /// del catálogo. Ese id es un <b>fantasma</b>: el equipo del jefe lo construye <c>BossRunSystems</c>
+    /// desde <c>data/bosses/</c>, así que acreditarle los hechos escribiría la memoria del clan
+    /// equivocado — «tu Balder lesionó a su Grok» contra alguien a quien nunca se enfrentó.
+    ///
+    /// <para>Es el gemelo de <c>RivalHistoryTests.EncountersExcludeTheBossNode</c>, que sí existía. Esta
+    /// rama, la de <c>ApplyRivalCredits</c>, no la ejercitaba ningún test: se podía invertir el predicado
+    /// y toda la suite seguía verde (revisión independiente, 23 sep 2026). El caso usa <b>el mismo
+    /// <c>OpponentId</c></b> que los tests de liga de arriba, para que la única diferencia sea el
+    /// <c>NodeKind</c>.</para>
+    /// </summary>
+    [Fact]
+    public void TheBossNodeCreditsNothingEvenThoughItCarriesACatalogOpponentId()
+    {
+        var state = BaseState();
+        var causer = state.Roster[0];
+        int rivalId = RivalTeamBuilder.OpponentFirstPlayerId + 3;
+        var lineup = LineupFor(new[] { causer });
+        var stats = new[] { Stats(causer.Id, 0) };
+        var events = new[] { InjuryEvent(team: 1, actor: rivalId, opponent: causer.Id) };
+        var boss = new MapNode(102, 1, 0, 0, NodeKind.Boss, Array.Empty<int>(), OpponentId, 3);
+
+        var applied = MatchResolution.Apply(state, boss, lineup, ResultWith(stats, events), Catalog);
+
+        Assert.DoesNotContain(
+            applied.State.Counters.Keys,
+            k => k.StartsWith(RunState.RivalCreditPrefix, StringComparison.Ordinal));
+    }
+
     /// <summary>Un rival lesiona a un jugador propio: sube la clave de la OTRA dirección, "sufferedInjury".</summary>
     [Fact]
     public void RivalInjuringAnOwnPlayerCreditsSufferedInjuryForThatPair()

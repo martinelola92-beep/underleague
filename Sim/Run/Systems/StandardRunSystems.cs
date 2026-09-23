@@ -129,7 +129,7 @@ public sealed class StandardRunSystems : IRunSystems
         // El jefe lo calibra el paquete Y contra la tabla de la ADR 0033 (data/bosses/): mientras no
         // exista, el mismo procedural de DefaultRunSystems, que ya sube la calidad para un jefe
         // (BossQualityBonus). Es un rival estático más (data/rivals/) para liga y élite.
-        if (node.Kind != NodeKind.Boss && node.OpponentId.Length > 0)
+        if (NodeKinds.IsCatalogRivalMatch(node.Kind) && node.OpponentId.Length > 0)
         {
             var team = _rivals.Find(node.OpponentId);
             if (team is not null)

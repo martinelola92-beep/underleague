@@ -945,7 +945,11 @@ public static class PerkLoader
             throw new DataException(
                 file,
                 node.Path,
-                "injure solo puede alcanzar a un rival (actor, target, opponent, opposingTeam, adjacentOpponents)");
+                "injure solo admite objetivos de jugador (actor, target, opponent, opposingTeam, "
+                    + "adjacentOpponents). Ojo: actor y target son quien dispara el evento y a quién "
+                    + "apunta, y NO tienen por qué ser rivales -un pase los resuelve a compañeros-, asi "
+                    + "que un injure con esos objetivos puede herir a los propios; lo que no hace es "
+                    + "acreditarselo a nadie (BE-F, MatchEngine.ResolveInjury compara equipo)");
         }
 
         if (type == EffectType.Relocate && target != EffectTarget.Owner)

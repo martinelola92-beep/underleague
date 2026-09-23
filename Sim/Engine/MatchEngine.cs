@@ -2617,7 +2617,18 @@ internal sealed class MatchEngine : IPerkWorld
 
         _report.Injuries++;
         victim.Injured = true;
-        tackler.InjuriesCaused++;
+
+        // BE-B: sólo cuenta si la víctima es del otro equipo, que es lo que el campo dice de sí mismo
+        // ("lesiones causadas a rivales", RF-122) y lo que RF-125 premia. Sin esta comparación, un perk
+        // injure con target "actor" —que el cargador admite— acreditaría al portador por lesionar a un
+        // compañero, o a la víctima por lesionarse a sí misma, y desde la ADR 0124 eso se GUARDA: dejaría
+        // de ser un detalle interno para desbloquear contenido. Se filtra al acreditar y no al resolver,
+        // a propósito: la lesión ocurre igual, sólo que no se apunta como mérito. Así un perk de daño
+        // amigo sigue siendo diseñable sin contaminar el logro (docs/pendientes/BE-B.md).
+        if (tackler.Team != victim.Team)
+        {
+            tackler.InjuriesCaused++;
+        }
 
         // Lesionar a un rival mueve el criterio en contra aunque no haya habido falta (RF-063): es la
         // acción sucia más visible que existe y el árbitro toma nota igual.
@@ -3164,6 +3175,24 @@ internal sealed class MatchEngine : IPerkWorld
 
     // ---------------------------------------------------------------- 3.9/3.10 fin y métricas
 
+    /// <summary>
+    /// Jugadores en el campo por debajo de los cuales un equipo no comparece (RF-059). Era un 5 literal;
+    /// lo nombra BE-C, porque mide lo mismo que <c>RunRules.MinimumAvailablePlayers</c> —cuándo un equipo
+    /// deja de poder jugar— y nada ataba los dos números. Vigilado en
+    /// <c>Sim.Tests/Run/ForfeitThresholdTests.cs</c>.
+    ///
+    /// <para><b>Lo que esta coincidencia NO garantiza.</b> Se llegó a escribir aquí que, por ser los
+    /// jugadores del campo un subconjunto de los disponibles, el partido siempre terminaría por
+    /// incomparecencia antes de que la plantilla cruzara su mínimo — y por tanto que no existiría ninguna
+    /// ventana posterior a <c>defeatTick</c>. <b>Es falso</b>, y la revisión independiente lo refutó con un
+    /// experimento: <c>RunLineup.CanStart</c> admite al lesionado grave marcado (RF-093 vía 1), que
+    /// <c>RunState.IsAvailable</c> **no** cuenta como disponible. Un once puede tener siete en el campo con
+    /// cinco disponibles, y entonces una lesión grave más fija <c>defeatTick</c> mientras el partido sigue.
+    /// La ventana existe; es rara y de gravedad baja porque la run ya ha terminado. Ver
+    /// <c>docs/pendientes/BE-C.md</c>.</para>
+    /// </summary>
+    internal const int MinimumPlayersOnPitch = 5;
+
     private void CheckForfeit()
     {
         if (_phase == MatchPhase.Finished)
@@ -3176,7 +3205,7 @@ internal sealed class MatchEngine : IPerkWorld
 
         int home = CountOnPitch(0);
         int away = CountOnPitch(1);
-        if (home >= 5 && away >= 5)
+        if (home >= MinimumPlayersOnPitch && away >= MinimumPlayersOnPitch)
         {
             return;
         }
@@ -3189,13 +3218,13 @@ internal sealed class MatchEngine : IPerkWorld
         // posesión, visitante). El Detail sigue siendo "forfeit": para el informe es una incomparecencia,
         // no un desempate de partido completo.
         int winner;
-        if (home < 5 && away < 5)
+        if (home < MinimumPlayersOnPitch && away < MinimumPlayersOnPitch)
         {
             winner = home != away ? (home > away ? 0 : 1) : TiebreakWinner();
         }
         else
         {
-            winner = home < 5 ? 1 : 0;
+            winner = home < MinimumPlayersOnPitch ? 1 : 0;
         }
 
         EndMatch(winner, "forfeit");
@@ -3426,7 +3455,8 @@ internal sealed class MatchEngine : IPerkWorld
         victim.Dead = true;
         victim.Injured = true;
         _report.Deaths++;
-        if (killer is not null)
+        // BE-B, el hermano que su ficha no recogía: mismo filtro y mismo motivo que InjuriesCaused.
+        if (killer is not null && killer.Team != victim.Team)
         {
             killer.DeathsCaused++;
         }

@@ -511,17 +511,12 @@ internal static class MatchResolution
             return state;
         }
 
-        if (node.Kind == NodeKind.Boss)
+        if (!NodeKinds.IsCatalogRivalMatch(node.Kind))
         {
-            // El nodo de jefe guarda un OpponentId FANTASMA: NodeKinds.IsMatch lo cuenta como partido, así
-            // que consume un hueco del cursor de MapGenerator y se queda con el id de un rival de catálogo
-            // que nadie juega ahí (BossRunSystems construye el equipo de data/bosses/). Sin esta guarda,
-            // los hechos de un jefe se acreditarían al clan equivocado y la memoria mentiría.
-            //
-            // Hoy el par (jefe, propio) ya se descartaría más abajo porque el jefe usa
-            // DefaultRunSystems.OpponentFirstPlayerId (1.000.000) y el índice saldría negativo, pero eso
-            // es un accidente de los rangos numéricos, no una decisión: mover cualquiera de las dos
-            // constantes lo rompería en silencio. Mismo motivo por el que RivalHistory excluye Boss.
+            // El nodo de jefe guarda un OpponentId FANTASMA y sus hechos se acreditarían al clan
+            // equivocado (BE-F). La pregunta es "¿enfrente hay un clan del catálogo?", no "¿aquí se
+            // juega?", y desde BE-F la primitiva la responde por su nombre en vez de dejarla a que cada
+            // consumidor se acuerde de excluir Boss a mano.
             return state;
         }
 
@@ -592,11 +587,23 @@ internal static class MatchResolution
         return next;
     }
 
+    /// <summary>
+    /// Ticks que jugó un jugador <b>de la plantilla propia</b> (equipo 0) en este partido. Decide quién
+    /// cuenta como "jugó" para la experiencia y para el contador de banquillo.
+    ///
+    /// <para>El <c>Team == 0</c> es de BE-C. Buscar sólo por id era inocuo <b>por accidente</b>: los
+    /// rivales arrancan sus ids en 1.000.000 o 2.000.000 y la plantilla propia crece de decenas en
+    /// decenas, así que los rangos no se solapan. Pero esa separación no la fuerza ningún assert, y el día
+    /// que se estrechara —un <c>OpponentFirstPlayerId</c> más bajo, o ids propios que dejaran de
+    /// reiniciarse por run— esto habría dado los ticks del rival equivocado <b>en silencio</b>, sin
+    /// excepción y sin test que lo viera. Es el mismo filtro que el paso 3b ya hace catorce líneas más
+    /// arriba.</para>
+    /// </summary>
     private static int PlayedTicks(MatchReport report, int playerId)
     {
         for (int i = 0; i < report.Players.Count; i++)
         {
-            if (report.Players[i].PlayerId == playerId)
+            if (report.Players[i].PlayerId == playerId && report.Players[i].Team == 0)
             {
                 return report.Players[i].TicksOnPitch;
             }

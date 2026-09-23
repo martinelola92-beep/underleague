@@ -40,7 +40,7 @@ public static class RivalHistory
         for (int i = 0; i < history.Count; i++)
         {
             var entry = history[i];
-            if (!NodeKinds.IsMatch(entry.Kind) || entry.Kind == NodeKind.Boss)
+            if (!NodeKinds.IsCatalogRivalMatch(entry.Kind))
             {
                 continue;
             }
