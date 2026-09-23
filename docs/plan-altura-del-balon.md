@@ -225,7 +225,29 @@ que el riesgo de determinismo se descubra **antes** de haber invertido en el res
 
 ---
 
-## 5. Lo que hay que decidir antes del paso 2
+## 5. Decidido (23 sep 2026) — ADR 0135
+
+Las cuatro preguntas de abajo ya tienen respuesta y están registradas en
+[ADR 0135](./decisiones/0135-el-balon-tiene-altura.md):
+
+1. **La portería gana alto y ancho, y la puntería se dispersa** según técnica y presión. Es lo que hace que
+   la altura signifique algo, y de paso cierra la decisión abierta 1 de `plan-intercepcion-disparo.md` §8,
+   que llevaba esperando desde AW-A. Aparecen el tiro por la escuadra y el que se va por encima.
+2. **El alcance es una esfera**: cuanto más alto va el balón, menos lejos se llega en el plano. Menos
+   legible que un cilindro, más fiel — y la fidelidad es el criterio que fijó el revisor.
+3. **Atrapar o despejar se deduce del margen**, sin tirada. Cero consumo de RNG añadido por esta rama.
+4. **La dirección del rechace se deriva geométricamente**, con un sesgo hacia fuera en el caso del portero
+   (despejar a córner es lo que hace un portero de verdad), y ese sesgo es dato de `tuning`.
+
+### Lo que queda por decidir, ahora sí, y no bloquea el paso 1
+
+- **Cuánto**: alto y ancho concretos de la portería, gravedad, restitución del bote, magnitud del rechace y
+  radio de la esfera. Son números, y salen del lote, no de una conversación. El plan los fija con valores
+  de partida y los mueve **uno por vez** (`balance-measure`).
+- **Qué pasa con un tiro que el portero despeja hacia su propia portería**: ¿puede ser gol en propia? Es una
+  regla nueva y no hace falta resolverla hasta el paso 4.
+
+## 6. Lo que se decidió antes (histórico)
 
 Preguntas de diseño que no tienen respuesta evidente y que conviene cerrar con el revisor, porque cambian
 lo que se implementa:
