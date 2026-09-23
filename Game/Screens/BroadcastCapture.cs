@@ -391,6 +391,45 @@ public partial class BroadcastCapture : Control
             await CaptureDepthVariants(run, baseSeed.Value, baseNode, found);
         }
 
+        // 4. MAQUETA de modelos humanoides + ARCO del balón (23 sep 2026). Necesita un club HUMANO —el
+        // resto del recorrido juega con orcos y la maqueta solo viste a los humanos— y busca el fotograma
+        // de mayor altura del balón, que es el que enseña las dos cosas a la vez: los modelos en el campo
+        // y una pelota por el aire con su sombra. Las dos son provisionales (regla 10: nada de arte hasta
+        // cerrar el diseño de la fase 2) y esta captura existe para poder DECIDIR mirándolas.
+        run.NewRun("human_abattoir", Race.Human, baseSeed.Value);
+        int humanNode = FirstOfKind(run, n => n.IsMatch);
+        if (humanNode >= 0)
+        {
+            run.SelectedNodeId = humanNode;
+            var humanInstance = await Show("res://Scenes/Retransmision.tscn", frames: 10);
+            if (humanInstance is BroadcastScreen humanScreen && run.Playback?.Trace is { } humanTrace)
+            {
+                int peakFrame = 0;
+                float peak = 0f;
+                for (int f = 0; f < humanTrace.FrameCount; f++)
+                {
+                    float h = humanTrace.BallHeightAt(f);
+                    if (h > peak)
+                    {
+                        peak = h;
+                        peakFrame = f;
+                    }
+                }
+
+                GoManual(humanScreen);
+                humanScreen.SeekTo(peakFrame);
+                StepManual(humanScreen, 1.0 / 60.0, 6);
+                await Save("retrans-modelos");
+                GD.Print($"retrans-modelos: club humano; balón a {peak:0.###} casillas de alto en el fotograma {peakFrame} de {humanTrace.FrameCount}");
+            }
+
+            Drop(humanInstance);
+        }
+        else
+        {
+            GD.PushWarning("el club humano no tiene ningún nodo de partido: se salta retrans-modelos");
+        }
+
         Nav.Suppressed = false;
         GetTree().Quit();
     }

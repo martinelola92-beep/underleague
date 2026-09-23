@@ -92,7 +92,18 @@ public partial class MatchPitchView3D : SubViewportContainer
     private MeshInstance3D _ground = null!;
     private MeshInstance3D _ball = null!;
 
+    /// <summary>Disco en el césped bajo el balón en vuelo: sin él, subir el balón no se lee como altura.</summary>
+    private MeshInstance3D? _ballShadow;
+
     private readonly List<MeshInstance3D> _bodies = new();
+
+    /// <summary>
+    /// <b>Maqueta</b> (23 sep 2026): el modelo humanoide de los humanos, <c>null</c> para el resto. Cuelga
+    /// de <see cref="_bodies"/>, así que se mueve y se libera con la cápsula sin tocar nada más. Ver
+    /// <see cref="PlayerModel"/> para qué es y qué no es.
+    /// </summary>
+    private readonly List<PlayerModel?> _models = new();
+
     private readonly List<MeshInstance3D> _rings = new();
     private readonly List<Label3D> _numbers = new();
     private readonly List<float> _heights = new();
@@ -268,6 +279,7 @@ public partial class MatchPitchView3D : SubViewportContainer
         }
 
         _bodies.Clear();
+        _models.Clear();
         _rings.Clear();
         _numbers.Clear();
         _heights.Clear();
@@ -295,6 +307,24 @@ public partial class MatchPitchView3D : SubViewportContainer
             _bodies.Add(body);
             _heights.Add(height);
             _radii.Add(radius);
+
+            // MAQUETA (23 sep 2026, encargo del revisor): solo los humanos llevan modelo, para poder
+            // comparar las dos cosas en la misma imagen. Si el modelo no está, TryCreate devuelve null y
+            // el jugador se queda con su cápsula: la maqueta no puede romper la vista.
+            PlayerModel? model = null;
+            if (race == Race.Human)
+            {
+                model = PlayerModel.TryCreate(height);
+                if (model is not null)
+                {
+                    // La cápsula se queda sin malla y pasa a ser solo el hueso que transforma al modelo:
+                    // posición, altura y postura las sigue mandando ApplyTrace, sin enterarse de nada.
+                    body.Mesh = null;
+                    body.AddChild(model);
+                }
+            }
+
+            _models.Add(model);
 
             var ring = new MeshInstance3D
             {
@@ -329,7 +359,33 @@ public partial class MatchPitchView3D : SubViewportContainer
             var proportion = RaceProportions[race];
             float height = proportion.Height / proportion.Width * (radius * 2f);
 
-            _bodies[i].Mesh = new CapsuleMesh { Radius = radius, Height = height, RadialSegments = 28, Rings = 12 };
+            // Con la maqueta puesta, la ficha que reciba "humano" enseña el modelo y las otras cuatro su
+            // cápsula: si se le devolviera la malla a una ficha con modelo se verían las dos cosas a la vez.
+            // El desfile REPARTE razas que el partido no tiene —aquí no juega ningún humano—, así que si a
+            // esta ficha le toca humano y no traía modelo, se le crea ahora: sin esto la maqueta no se ve
+            // en la única captura donde se pueden comparar las cinco razas juntas.
+            if (race == Race.Human && _models[i] is null)
+            {
+                var created = PlayerModel.TryCreate(height);
+                if (created is not null)
+                {
+                    _bodies[i].AddChild(created);
+                    _models[i] = created;
+                    if (_bodies[i].MaterialOverride is { } current)
+                    {
+                        created.Paint(current);
+                    }
+                }
+            }
+
+            if (_models[i] is { } humanoid)
+            {
+                humanoid.Visible = race == Race.Human;
+            }
+
+            _bodies[i].Mesh = _models[i] is not null && race == Race.Human
+                ? null
+                : new CapsuleMesh { Radius = radius, Height = height, RadialSegments = 28, Rings = 12 };
             _rings[i].Scale = new Vector3(radius, 1f, radius);
             _heights[i] = height;
             _radii[i] = radius;
@@ -540,6 +596,24 @@ public partial class MatchPitchView3D : SubViewportContainer
             CastShadow = GeometryInstance3D.ShadowCastingSetting.On,
         };
         _world.AddChild(_ball);
+
+        // La sombra del balón en vuelo: un disco plano pegado al césped, oscuro y semitransparente. No es
+        // una sombra de motor (el balón ya proyecta la suya, pero con una luz en tres cuartos cae lejos y
+        // no dice la altura): es un marcador de POSICIÓN en el suelo, que es lo que falta para leer un
+        // arco. Invisible mientras el balón va raso.
+        _ballShadow = new MeshInstance3D
+        {
+            Mesh = new SphereMesh { Radius = BallRadius * 0.95f, Height = 0.01f, RadialSegments = 14, Rings = 2 },
+            MaterialOverride = new StandardMaterial3D
+            {
+                ShadingMode = BaseMaterial3D.ShadingModeEnum.Unshaded,
+                AlbedoColor = new Color(0f, 0f, 0f, 0.35f),
+                Transparency = BaseMaterial3D.TransparencyEnum.Alpha,
+            },
+            CastShadow = GeometryInstance3D.ShadowCastingSetting.Off,
+            Visible = false,
+        };
+        _world.AddChild(_ballShadow);
 
         _appliedSilhouette = !SilhouetteMode;
         ApplyCamera();
@@ -1220,7 +1294,13 @@ public partial class MatchPitchView3D : SubViewportContainer
 
         for (int i = 0; i < _bodies.Count && i < Trace.Players.Count; i++)
         {
-            _bodies[i].MaterialOverride = BodyMaterial(Trace.Players[i].Team);
+            var material = BodyMaterial(Trace.Players[i].Team);
+            _bodies[i].MaterialOverride = material;
+
+            // El modelo comparte el MISMO material que su cápsula, no una copia: así la atenuación del
+            // corte de teletransporte (BA-K), que ApplyTrace escribe sobre el material de la cápsula, le
+            // llega también al modelo sin que ApplyTrace tenga que saber que existe.
+            _models[i]?.Paint(material);
         }
     }
 
@@ -1281,6 +1361,11 @@ public partial class MatchPitchView3D : SubViewportContainer
         if (Trace is not { FrameCount: > 0 } trace || _bodies.Count == 0)
         {
             _ball.Visible = false;
+            if (_ballShadow is not null)
+            {
+                _ballShadow.Visible = false;
+            }
+
             return;
         }
 
@@ -1338,16 +1423,36 @@ public partial class MatchPitchView3D : SubViewportContainer
 
             // Quien está fuera de la jugada (derribado, lesionado, expulsado) se tumba: con veinte cápsulas
             // grises la postura es lo único que dice de un vistazo quién sigue jugando (UI-002 en 3D).
-            if (Style.IsDown(trace.StateAt(frame, i)))
+            bool down = Style.IsDown(trace.StateAt(frame, i));
+            var model = _models[i];
+
+            if (model is null)
             {
-                body.Transform = new Transform3D(
-                    new Basis(new Vector3(0f, 0f, 1f), Mathf.Pi / 2f),
-                    new Vector3(at.X, _radii[i], at.Y));
+                body.Transform = down
+                    ? new Transform3D(new Basis(new Vector3(0f, 0f, 1f), Mathf.Pi / 2f), new Vector3(at.X, _radii[i], at.Y))
+                    : new Transform3D(Basis.Identity, new Vector3(at.X, _heights[i] / 2f, at.Y));
+                continue;
             }
-            else
+
+            // MAQUETA: al modelo no se le tumba girando el hueso noventa grados —eso deja un cuerpo tieso
+            // como una tabla—, se le pone la postura de estar en el suelo. El hueso se queda siempre
+            // derecho y el modelo gira hacia donde va.
+            body.Transform = new Transform3D(Basis.Identity, new Vector3(at.X, _heights[i] / 2f, at.Y));
+
+            // La velocidad sale de los dos fotogramas que la interpolación ya usa, convertida a casillas
+            // por segundo (ticks lógicos a 15/s, RT-020). El modelo solo MIRA lo que la traza escribió: no
+            // decide nada del partido (RT-014).
+            var here = trace.PositionAt(frame, i);
+            var next = frame + 1 < trace.FrameCount && trace.OnPitchAt(frame + 1, i)
+                ? trace.PositionAt(frame + 1, i)
+                : here;
+            var step = new Vector2(next.X - here.X, next.Y - here.Y);
+            if (step.Length() > TeleportThresholdCells)
             {
-                body.Transform = new Transform3D(Basis.Identity, new Vector3(at.X, _heights[i] / 2f, at.Y));
+                step = Vector2.Zero;
             }
+
+            model.Pose(step * TicksPerSecond, down);
         }
 
         var ball = InterpolateBall(trace, frame);
@@ -1360,8 +1465,37 @@ public partial class MatchPitchView3D : SubViewportContainer
             offset = (trace.Players[carrier].Team == 0 ? 1f : -1f) * (_radii[carrier] + BallRadius + 0.06f);
         }
 
+        // La ALTURA del balón (ADR 0135 pasos 1-2). Hasta el 23 sep 2026 esta vista lo dibujaba a altura
+        // constante: la simulación calculaba el vuelo, la traza lo guardaba en `BallHeightAt` y **nadie lo
+        // leía** —la métrica tenía cero consumidores en todo el repositorio—, así que el balón se veía
+        // raso siempre y el tiro alto, el centro y el palo no se distinguían de un pase al pie. Lo reportó
+        // el revisor jugando; la causa se encontró con un grep, sin tocar código.
+        //
+        // Se interpola entre los dos ticks igual que la posición, con el mismo Alpha, para que el arco sea
+        // una curva y no una escalera de 15 escalones por segundo.
+        float height = trace.BallHeightAt(frame);
+        if (Alpha > 0f && frame + 1 < trace.FrameCount)
+        {
+            height = Mathf.Lerp(height, trace.BallHeightAt(frame + 1), Alpha);
+        }
+
         _ball.Visible = true;
-        _ball.Position = new Vector3(ball.X + offset, BallRadius, ball.Y);
+        _ball.Position = new Vector3(ball.X + offset, BallRadius + Mathf.Max(0f, height), ball.Y);
+
+        // La sombra en el suelo, que es lo que convierte "una pelota más arriba en la pantalla" en "una
+        // pelota por el aire": sin una referencia fija en el césped, subir el balón en una cámara en tres
+        // cuartos es indistinguible de alejarlo. Se encoge con la altura, como una sombra de verdad.
+        if (_ballShadow is not null)
+        {
+            bool airborne = height > 0.02f;
+            _ballShadow.Visible = airborne;
+            if (airborne)
+            {
+                float shrink = 1f / (1f + height * 0.7f);
+                _ballShadow.Scale = new Vector3(shrink, 1f, shrink);
+                _ballShadow.Position = new Vector3(ball.X + offset, 0.008f, ball.Y);
+            }
+        }
     }
 
     /// <summary>
@@ -1373,6 +1507,9 @@ public partial class MatchPitchView3D : SubViewportContainer
     /// mismo umbral.
     /// </summary>
     private const float TeleportThresholdCells = 0.6f;
+
+    /// <summary>Ticks lógicos por segundo (RT-020): convierte el paso entre fotogramas en velocidad.</summary>
+    private const float TicksPerSecond = 15f;
 
     /// <summary>
     /// Misma interpolación que <see cref="MatchPitchView"/>: solo dibujo, la traza no se toca (RT-020).

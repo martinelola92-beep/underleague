@@ -221,6 +221,13 @@ public partial class CaptureRunner : Control
             await Settle(6);
             await Save("partido-3d-razas");
             GD.Print("3d: cinco razas repartidas por dorsal (enano, elfo, humano, orco, no-muerto)");
+
+            // Y las mismas cinco en color, que es como el jugador las va a ver. La silueta prueba RA-002;
+            // esta prueba el tamaño relativo y, desde el 23 sep 2026, es la única imagen donde se ve la
+            // MAQUETA de modelo humanoide (solo los humanos lo llevan, ver PlayerModel).
+            pitch3d.SilhouetteMode = false;
+            await Settle(6);
+            await Save("partido-3d-razas-color");
         }
         else
         {
