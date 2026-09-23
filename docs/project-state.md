@@ -482,10 +482,13 @@ no poder jugar un titular, los demás **conservan su casilla** en vez de recoloc
 uno: «que siga jugando» reventaba con el suplente que ya había entrado; dos decisiones sobre el mismo
 jugador componían `After1 + After2 − base`; y el rechazo reabría su ventana. Y una cosa mayor: **quien se
 queda tocado multiplica por ocho su probabilidad de morir** (`hurtInThisMatch`, rama inalcanzable hasta
-ahora) y la bandeja anunciaba solo el −15 %. Se le ha puesto el número, pero **la pregunta de diseño sigue
-abierta y es del revisor**: con el ×8 a la vista, ¿sigue siendo una decisión? **(E) nunca pasó por
-`game-design-review`** —la nota de diseño la excluyó y se metió después—, y `/Balance` no puede opinar
-porque la política automática nunca la ejerce.
+ahora) y la bandeja anunciaba solo el −15 %. Se le ha puesto el número, y **el revisor cierra la
+pregunta de diseño (23 sep)**: *«el player sabe que dejar un lesionado sube sus posibilidades de morir, es
+su decisión»*. El multiplicador no es un defecto que corregir sino el contenido de la decisión; la única
+condición era que se supiera antes de elegir, y con `PlayOnRisk` en la bandeja se sabe. **BA-I y BB-F
+quedan cerradas; BC-H conserva su mitad de antes del partido.** Deuda escrita, no tapada: (E) no pasó por
+`game-design-review` y el canje **no está medido** —ni puede estarlo hoy, porque la política automática
+nunca lo ejerce, el mismo hueco que CAT-C tiene con el consumible manual—.
 
 **Siguiente paso, decidido por el revisor (23 sep 2026): [BB-K], [BB-N] y [BB-O].** Los tres son síntomas de
 comportamiento del partido, así que entran por la skill `gameplay-debug` —Regla A, ninguna causa antes de

@@ -1,6 +1,9 @@
 # BA-I — La sustitución por lesión no debería ser obligatoria
 
-**Estado:** Abierta
+**Estado:** **CERRADA (23 sep 2026, ADR 0134 apartado E)**. La sustitución deja de ser obligatoria y la
+lesión leve deja de sacar del campo. El revisor cierra además la pregunta que quedaba —que quedarse suba
+la probabilidad de morir del tocado es la decisión, no un defecto— con la condición de que se vea antes
+de elegir, que es lo que hace `SubstitutionPoint.PlayOnRisk`.
 
 ## Observación
 

@@ -96,12 +96,23 @@ candidatos («si le entran, muere: X %»). Sin él, quedarse se anunciaba como �
 cobraba como «×8 de morir», que es exactamente el daño no anunciado que prohíben RF-012d y la regla 11 del
 `CLAUDE.md`. Con él, la bandeja enseña el riesgo de **todas** las respuestas y no solo el de los suplentes.
 
-**Queda una pregunta de diseño sin responder, y no la responde esta ADR**: con el ×8 a la vista, ¿sigue
-siendo «seguir jugando» una decisión, o es siempre mala contra un rival con perk letal y siempre buena
-contra el resto? No se puede medir con `/Balance` —la política automática nunca la ejerce— y **(E) no pasó
-por `game-design-review`**: la nota de diseño previa la excluyó explícitamente («es otra mecánica, mayor») y
-cuando el revisor la metió a mitad del paquete no se rehicieron las diez preguntas. Es deuda declarada, no
-un descuido silencioso.
+**Decisión del revisor (23 sep 2026), sobre el ×8 ya medido y ya visible en la bandeja: se queda así.**
+*«El player sabe que dejar un lesionado sube sus posibilidades de morir. Es su decisión.»* El multiplicador
+no es un defecto que corregir sino el contenido de la decisión: quedarse es arriesgar al que ya está tocado,
+y la única condición era que se supiera antes de elegir. Con `PlayOnRisk` en la bandeja —junto al de cada
+candidato, en la misma frase y las mismas unidades— se sabe, así que RF-012d y la regla 11 quedan
+satisfechas por información, no por suavizar el número.
+
+Lo que esto convierte en decisión legible: contra un rival sin perk letal, quedarse cuesta el −15 % y poco
+más; contra uno que sí lo lleva, quedarse es poner al más frágil justo donde más duele. Las dos cosas se
+leen en la misma bandeja antes de pulsar.
+
+**Deuda de proceso que se deja escrita, no tapada**: (E) no pasó por `game-design-review` —la nota de diseño
+previa la excluyó explícitamente («es otra mecánica, mayor») y se incorporó a mitad del paquete—, así que
+las diez preguntas no se rehicieron con ella dentro. El revisor ha resuelto la pregunta de diseño que
+quedaba; lo que sigue sin existir es una **medición** del canje, y no puede existir con los instrumentos de
+hoy: la política automática de `/Balance` nunca ejerce (D) ni (E). Medirlo exigiría darle una doctrina de
+decisión, que es el mismo hueco que [CAT-C](../pendientes/CAT-C.md) tiene abierto para el consumible manual.
 
 Además de eso, quien se queda arrastra desde ese tick la penalización de RF-091 en vez de esperar al final
 del partido para notarla.

@@ -1,6 +1,8 @@
 # BB-F — Un jugador se lesiona y no se ve en qué posición jugaba
 
-**Estado:** Abierta
+**Estado:** **CERRADA (23 sep 2026, ADR 0134)**. La queja literal ya estaba resuelta en la pantalla que se
+juega —el análisis apuntaba a la vista de depuración, ver la corrección de abajo—; lo que faltaba de
+verdad, el riesgo por candidato y las otras dos respuestas, entra con la ADR 0134.
 
 ## Observación
 
