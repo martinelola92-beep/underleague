@@ -966,3 +966,37 @@ en 1.280 px—, y los modelos salían en **T-pose** porque nadie había llamado 
 arreglado; lo primero es la decisión que la maqueta pone sobre la mesa: **o la cámara se acerca, o las
 criaturas son más corpulentas que un humano de proporciones reales**. Las proporciones de raza ya lo dicen
 (humano 12 de ancho por 17 de alto: un cuerpo mucho más recio que un maniquí de 1,83 por 0,5).
+
+### Segundo pack: el de fútbol (23 sep 2026, mismo día)
+
+El revisor dejó después un **Soccer Game Pack de Mixamo** (`C:\Users\urban\Downloads\NewAnimations`) y
+la maqueta pasa a usarlo: personaje `X Bot` con malla y **15 clips de fútbol de verdad** en
+`Game/models/soccer/` — trote, carrera, chut, remate de cabeza, entrada, trompicón, cuerpo en el suelo,
+levantarse, recepción, saque de banda, penalti y cuatro de portero.
+
+**Los clips se aplican sin reorientar nada, y eso se midió antes de escribir el código** con una sonda
+nueva (`Scenes/SondaModelo.tscn`, `Game/Screens/ModelProbe.cs`): personaje y clips traen los **mismos 65
+huesos** `mixamorig_*` y las pistas apuntan a `Skeleton3D:mixamorig_…`, que es exactamente la jerarquía del
+personaje. Se cargan una vez en una `AnimationLibrary` compartida y cada jugador la monta. Si no hubieran
+coincidido, habría hecho falta reescribir las rutas o reorientar con `SkeletonProfileHumanoid`.
+
+**La sonda se queda** porque el patrón se repite: dos veces con el pack anterior se perdió una ronda de
+capturas de diez minutos por suponer lo que trae un fichero importado (el importador de glTF **quita el
+sufijo `_Loop`** de los nombres; un modelo sin animación arrancada se queda en T).
+
+Mapeo por estado de la traza (`StateAt`, el modelo no decide nada, RT-014): quieto → espera de campo o
+**de portero** según el puesto · moviéndose → trote o carrera según la velocidad real, con el ritmo
+escalado · disparando o pasando → chut · entrando → entrada · derribado o lesionado → trompicón y, cuando
+su propio reloj acaba, cuerpo en el suelo en bucle.
+
+**Lo que aún falta**: no hay **celebración** en el pack (se queda en la espera) y la **estirada del
+portero** no está enganchada porque depende de un evento —una parada— y no del estado del jugador, que es
+lo único que la maqueta mira. El pack de Quaternius se conserva **sin usar**: trae un juego `Zombie_*`
+completo que le vendrá bien a los no-muertos.
+
+**Y la pregunta de skins, contestada al revisor**: Mixamo tiene un **auto-rigger** que engancha cualquier
+malla humanoide a este mismo esqueleto, así que el personaje es sustituible sin tocar código —la tabla de
+clips es lo único que sabe de ficheros—. Fuentes CC0 que encajan con las razas: KayKit (esqueletos, orcos),
+Quaternius, Kenney. **Aviso de licencia**: el material de Mixamo se usa dentro de un juego pero no se
+redistribuye como asset; para enviar en Steam, CC0 es el camino sin ataduras y esto es un marcador de
+posición.
