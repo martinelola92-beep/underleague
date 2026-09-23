@@ -1,8 +1,9 @@
 # BE-F — `NodeKinds.IsMatch` incluye `Boss`, y cada consumidor nuevo tiene que acordarse de excluirlo
 
-Estado: **abierta, de diseño de primitiva**. No es un fallo: es un patrón que ya ha estado a punto de
-morder **tres veces en un solo día** (22 sep 2026), lo que sugiere que el problema es la primitiva y no
-quien la usa. `CLAUDE.md`: *piensa en sistemas, no en tickets.*
+Estado: **RESUELTA la lectura (23 sep 2026, opción 2)**; **abierto el dato** — el nodo de jefe sigue
+guardando el `opponentId` fantasma, y quitarlo exige regenerar todos los mapas. No era un fallo: era un
+patrón que estuvo a punto de morder **tres veces en un solo día** (22 sep 2026), lo que apuntaba a la
+primitiva y no a quien la usa. `CLAUDE.md`: *piensa en sistemas, no en tickets.*
 
 ## El hecho
 
@@ -45,6 +46,38 @@ fantasma deja de ser un dato inerte y pasa a poder escribir una mentira en el hi
 
 **Recomendación provisional: la 2.** Es la que elimina la clase de error en vez de parchear el caso.
 No se toca sin `architecture-review`: es una primitiva compartida.
+
+## Resuelta con la opción 2 (23 sep 2026), tras `architecture-review`
+
+`NodeKinds.IsCatalogRivalMatch(kind)` —liga y élite, nunca el jefe— convive con `IsMatch`, que se queda
+como está. Los dos consumidores que excluían `Boss` a mano pasan a preguntarlo por su nombre:
+`RivalHistory` y `MatchResolution.ApplyRivalCredits`. Contrato fijado en
+`Sim.Tests/Run/NodeKindsTests.cs`, con un caso que recorre el enum entero para que un `NodeKind` nuevo
+obligue a decidir en vez de heredar un silencio.
+
+**Lo que dijo la revisión de arquitectura, punto por punto:**
+
+- **Frontera**: el cambio queda **entero dentro de `/Sim`**. `IsMatch` es público y lo consumen doce
+  sitios de `/Game`, pero allí la pregunta que hacen —"¿aquí se juega?"— sigue siendo la correcta, así que
+  no se toca ninguno y no hay commit que mezcle proyectos.
+- **¿Elimina complejidad o la mueve?** La elimina: dos condiciones compuestas escritas de **dos formas
+  distintas** pasan a un predicado con nombre. Pero el argumento de peso es otro: convierte una **omisión
+  silenciosa** en una **elección visible**.
+- **Determinismo**: predicado puro; los dos call sites cambian a una expresión **booleanamente
+  equivalente**. Inerte por construcción, RT-024 intacto.
+
+**Precisión que la revisión añadió y que este fichero no decía**: la opción 2 **no elimina la clase de
+error, la mitiga**. Quien escriba `IsMatch` por costumbre sigue teniendo el bug; el predicado nuevo lo hace
+fácil de evitar, no imposible. Eliminarla de verdad exigiría **renombrar `IsMatch`** para que el nombre
+viejo no compile y obligue a leer los 28 call sites — pero doce están en `/Game`, así que rompería la regla
+de no mezclar `/Sim` y `/Game` en un commit, por un beneficio que no lo paga. Se acepta la mitigación, y se
+dice.
+
+**Lo que sigue abierto, y por qué no se toca**: el nodo de jefe **sigue guardando** el `opponentId`
+fantasma. Esto arregla la **lectura**, no el **dato**. La opción 1 es la que lo arreglaría de raíz, y sigue
+rechazada por el mismo motivo: `MapGenerator` consume el flujo `RngStreams.Map` y mover su cursor
+regeneraría todos los mapas de todas las semillas, invalidando la referencia de balance entera. Si algún
+día hay que regenerar los mapas por otra razón, esta va en el mismo viaje.
 
 ## Hermanos
 

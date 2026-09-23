@@ -1,7 +1,8 @@
 # BE-D — RF-125 («30 lesiones en una run») será subcontable si se suma `Career` de la plantilla
 
-Estado: **abierta, de diseño, antes de implementar el logro**. Encontrada el 22 sep 2026 por el
-`independent-reviewer` como efecto de segundo orden de la ADR 0124.
+Estado: **RESUELTA de diseño (23 sep 2026)** — el contador es de la run, no de la plantilla, y lo dicta
+RF-125b. Queda por implementar cuando exista RF-125, que depende del perfil entre runs (gate 4 de la ADR
+0123). Encontrada el 22 sep 2026 por el `independent-reviewer` como efecto de segundo orden de la ADR 0124.
 
 ## El problema
 
@@ -22,6 +23,32 @@ que hizo el CLUB o lo que hicieron los jugadores que siguen vivos en la plantill
   clave libre (sin subir versión de esquema).
 - Si cuenta a los jugadores, el comportamiento actual es correcto y lo que hay que arreglar es la
   **expectativa**, no el número.
+
+## Resuelta por lectura de requisito (23 sep 2026): el contador es del CLUB
+
+No hacía falta una decisión nueva: **RF-125b ya la tenía tomada.** Dice que los logros de desbloqueo son
+visibles *«con su progreso, para que el jugador pueda perseguirlos de forma deliberada»*. Un progreso que
+**baja** cuando vendes a alguien no se puede perseguir de forma deliberada — el jugador no tiene manera de
+saber que vender a un veterano le va a quitar veinte lesiones del marcador—. Sumar `Career` de la
+plantilla viva incumple RF-125b por construcción, así que queda descartado como implementación de RF-125.
+
+**El contador pertenece a la run**, en `RunState.Counters` con clave libre (sin subir versión de esquema,
+como ya hizo la ADR 0124). Cuenta lo que hizo **el club**: un jugador vendido, dado de baja o muerto no
+borra el daño que ya provocó, igual que no devuelve el oro que ganó.
+
+Hay un segundo argumento, que esta ficha ya apuntaba sin sacarle la consecuencia: **el contador de run
+cierra además el hueco de las cartas de evento.** `RunCareer` sólo recoge lo que pasa en un partido, así
+que las lesiones que provocan los eventos de `data/events/` no entran en él por diseño. Un contador que
+vive en la run puede sumar desde donde haga falta, y entonces «30 lesiones» significa treinta lesiones,
+no «treinta lesiones de las que cuentan».
+
+**No se implementa aquí**: RF-125 (el desbloqueo de razas) no existe todavía, y su hogar natural es el
+perfil entre runs, que es el gate 4 de la ADR 0123 y sigue bloqueado. Lo que esta ficha deja resuelto es
+**cómo se cuenta cuando se implemente**, que era justo lo que estaba sin decidir y lo que habría llevado a
+la implementación obvia y equivocada.
+
+`RunCareer` se queda como está: es el historial **del jugador**, y para eso —la ficha, la memoria de un
+veterano— está bien que se vaya con él cuando se va.
 
 ## Nota
 

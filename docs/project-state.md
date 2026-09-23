@@ -534,6 +534,72 @@ motor.
   punto de cobertura por id ascendente, como ya hace `Marking`. **Es un hito aparte**: cambia
   comportamiento defensivo real y pide baseline y las 43 puertas.
 
+## La familia BE cerrada (23 sep 2026)
+
+Las cinco fichas que el `independent-reviewer` dejó abiertas sobre la ADR 0124. **Cuatro comparten
+patrón**, y verlo junto cambió tres de los cuatro arreglos: *un contador que cuenta cosas que no debería,
+porque no filtra por equipo, por parte del partido o por tipo de nodo*. Ninguna se veía jugando: las
+encontró leyendo código.
+
+- **[BE-B] cerrada.** `InjuriesCaused` comparaba equipos con nadie: un perk `injure` con `target: "actor"`
+  —que el cargador admite— habría acreditado al portador por lesionar a un compañero, y desde la ADR 0124
+  eso **se guarda** y RF-125 pone un logro encima. Arreglado filtrando **al acreditar y no al resolver**,
+  que deja diseñable un perk de daño amigo sin contaminar el logro. Se **descartó** prohibir
+  `target: "actor"`: el fallo era de contabilidad, y cerrar esa puerta habría quitado una vía de diseño
+  legítima en un juego cuya identidad es la carnicería administrada. **La ficha no recogía el hermano**:
+  `DeathsCaused` tenía el mismo descuido, y también está arreglado.
+- **[BE-C] a medias, y con una conclusión falsa que hubo que retirar.** El síntoma 2 (`PlayedTicks` sin
+  filtro de equipo) está arreglado: era inocuo **por accidente** —los rangos de id no se solapan— y habría
+  fallado en silencio el día que se estrecharan. El síntoma 1 **sigue abierto**: se llegó a cerrar con un
+  argumento estructural —«los del campo son un subconjunto de los disponibles, así que no hay ventana
+  posterior a `defeatTick`»— que la revisión independiente **refutó con un experimento**. `CanStart` deja
+  salir al lesionado grave marcado (RF-093 vía 1) y `IsAvailable` no lo cuenta: puede haber **siete en el
+  campo con cinco disponibles**, y entonces `defeatTick` se fija mientras el partido sigue. La ventana
+  existe; es rara y de gravedad baja. Sí se arregló de paso que `CheckForfeit` llevaba **tres** `5`
+  literales sin atar a `RunRules.MinimumAvailablePlayers`: ahora hay constante y test, con su
+  documentación diciendo que es condición **necesaria y no suficiente**.
+
+  **Lo que más conviene recordar de este paquete no es el arreglo, es el fallo de método**: esa conclusión
+  se escribió como teorema **dentro de `/Sim`**, donde un lector futuro ya no la comprobaría, a partir de
+  un razonamiento que nadie había verificado. Regla F. Lo que un comentario afirme como estructural, o lo
+  demuestra un test, o se escribe como *«medido, no demostrado»*.
+- **[BE-D] resuelta sin decisión nueva: la tenía RF-125b.** Exige que el progreso de un logro se pueda
+  perseguir «de forma deliberada», y un contador que **baja** al vender un jugador no cumple eso. Así que
+  el contador de RF-125 es **del club** y vive en la run, no en la plantilla. Segundo motivo que la ficha
+  apuntaba sin rematar: un contador de run recoge también las lesiones de las cartas de evento, que
+  `RunCareer` deja fuera por diseño. No se implementa: RF-125 depende del perfil entre runs (gate 4 de la
+  ADR 0123).
+- **[BE-F] cerrada la lectura, en cuatro consumidores** (uno más de los dos que la ficha nombraba: la
+  revisión encontró `StandardRunSystems.OpponentFor` escribiendo la exclusión a mano por cuarta vez). `NodeKinds.IsCatalogRivalMatch` separa «¿aquí se juega?» de «¿enfrente hay
+  un clan del catálogo?», y los dos sitios que excluían `Boss` a mano ahora lo preguntan por su nombre.
+  Pasó por `architecture-review`, que añadió una precisión que la ficha no hacía: **mitiga la clase de
+  error, no la elimina** —quien escriba `IsMatch` por costumbre sigue teniendo el bug— y eliminarla exigiría
+  renombrar `IsMatch` en 28 sitios, doce en `/Game`, rompiendo la regla de no mezclar proyectos.
+  **Sigue abierto el dato**: el nodo de jefe guarda el `opponentId` fantasma, y quitarlo obliga a mover el
+  cursor de `MapGenerator`, que regeneraría todos los mapas de todas las semillas.
+- **[BE-E] reducida.** El diseño ya lo cerró la ADR 0128; la incoherencia de dato se documenta en vez de
+  quitarse, porque el esquema y el cargador exigen cuatro valores para **todos** los `*ByRarity` y quitar
+  uno sólo aquí cambiaría una incoherencia pequeña por una irregularidad estructural. **Queda abierto** lo
+  de fondo: el legendario tiene 5 slots de perk y ese techo de build es inalcanzable mientras la ADR 0128
+  siga bloqueada.
+
+**Todo el paquete es inerte**: 1 140 tests en verde y **byte a byte idéntico** al baseline en los dos
+lotes, el de 10 000 partidos y el de 500 runs completas (`summary.csv`, `runs.csv`, `runs-nomarket.csv`).
+Era lo esperado —ningún dato de hoy ejercita ninguno de los caminos— y es justo lo que lo hace seguro.
+
+**La revisión independiente cambió el paquete en cinco sitios**, y conviene leerla entera antes de tocar
+nada de esta familia: refutó el argumento de BE-C (arriba); encontró que los dos `if` de BE-B **no tenían
+ningún test** y se podían borrar con la suite en verde (ahora hay cuatro, y tres fallan sin el arreglo);
+que la rama nueva de `ApplyRivalCredits` tampoco estaba cubierta (ahora sí, con nodo `Boss`); que la ficha
+BE-B se cerraba declarando una acción **no hecha** —el mensaje de `PerkLoader`, ya corregido—; y que el
+`_doc` que BE-E añadía **contradecía al esquema**, además de descubrir que ese mismo `_doc` cita cifras
+obsoletas de los campos que documenta.
+
+Y un hallazgo que no era del paquete pero lo destapó: **[BH-B]**, el nodo de jefe se presenta en el mapa y
+en el ojeo con el **nombre de un clan de liga** (9 de 9 semillas medidas). La auditoría de BE-F no lo vio
+porque buscó por `IsMatch` y estos dos sitios leen `OpponentId` directamente — *el grep equivocado para la
+pregunta que se estaba haciendo*. Es `/Game`, así que va aparte y pide `visual-review`.
+
 **Siguiente paso: el arreglo de [BB-K]**, que ya tiene diagnóstico y nota de diseño y sólo le falta
 implementar y medir (`balance-measure` con baseline del mismo árbol y las 43 puertas). Antes de tocarlo,
 leer la nota de diseño del propio fichero: la recomendación es repartir el punto de cobertura por id

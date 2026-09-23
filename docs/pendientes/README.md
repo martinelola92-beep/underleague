@@ -46,11 +46,11 @@ viva anotada.
 | [BC-G](./BC-G.md) | El balón se queda suelto en el córner y nadie lo coge | Abierta (reabre BB-G en parte) |
 | [BC-H](./BC-H.md) | El aviso de alineación incompleta es falso: el once se rellena solo | Resuelta la mitad de dentro (ADR 0134); abierta RF-002d antes del partido y la captura que lo regresione |
 | [BD-A](./BD-A.md) | El reparto de los penaltis por fila: el sesgo arriba/abajo era ruido; queda la concentración en las filas centrales | Abierta (reducida) |
-| [BE-B](./BE-B.md) | Un perk `injure` con `target: "actor"` acreditaría lesiones al compañero o a la propia víctima | Abierta, sin evidencia de activación |
-| [BE-C](./BE-C.md) | `MatchResolution` trata el partido completo en un sitio y solo hasta la derrota en otro | Abierta, sin medir |
-| [BE-D](./BE-D.md) | RF-125 será subcontable si se suma `Career` de la plantilla (`WithoutPlayer` pierde contribuciones) | Abierta, de diseño |
-| [BE-E](./BE-E.md) | Un jugador legendario no puede aparecer nunca; hay precio de compra para él | Diseño resuelto (ADR 0128); abierta la incoherencia de dato |
-| [BE-F](./BE-F.md) | `NodeKinds.IsMatch` incluye `Boss`: el nodo de jefe guarda un `opponentId` fantasma y cada consumidor debe acordarse de excluirlo | Abierta, de primitiva |
+| [BE-B](./BE-B.md) | Un perk `injure` con `target: "actor"` acreditaría lesiones al compañero o a la propia víctima | Resuelta la atribución (23 sep 2026: los dos contadores comparan equipo, con tests). **Viva**: `ResolveInjury` sigue haciendo `ShiftBiasAgainst` sin comparar equipos, así que lesionar a un compañero mueve el criterio del árbitro en tu contra — eso cambia el partido y pide medición propia |
+| [BE-C](./BE-C.md) | `MatchResolution` trata el partido completo en un sitio y solo hasta la derrota en otro | Resuelto el síntoma 2 (`PlayedTicks` compara equipo). **Viva y reabierta**: la ventana posterior a `defeatTick` **SÍ existe** —`CanStart` deja salir al lesionado grave marcado y `IsAvailable` no lo cuenta—, contra lo que se llegó a escribir. Rara y de gravedad baja, sin decidir si se arregla |
+| [BE-F](./BE-F.md) | `NodeKinds.IsMatch` incluye `Boss`: el nodo de jefe guarda un `opponentId` fantasma | Resuelta la lectura en `/Sim` (`IsCatalogRivalMatch`, cuatro consumidores). **Viva**: el nodo sigue **guardando** el id fantasma, y quitarlo obliga a mover el cursor de `MapGenerator` (regeneraría todos los mapas). Ver [BH-B](./BH-B.md) |
+| [BH-B](./BH-B.md) | El nodo de jefe se presenta con el nombre de un clan de liga, en el mapa y en el ojeo | Abierta, **CONFIRMED** (9 de 9 semillas). Es `/Game` leyendo el `opponentId` fantasma de [BE-F](./BE-F.md); pide `visual-review` |
+| [BE-E](./BE-E.md) | Un jugador legendario no puede aparecer nunca | Reducida (23 sep 2026): diseño resuelto (ADR 0128) y dato documentado. **Queda** el techo de 5 slots de perk, inalcanzable mientras la ADR 0128 siga bloqueada |
 | [BF-A](./BF-A.md) | `elf_brawler`, una build mala a propósito, gana el 46,6 % contra su referencia (techo 45): el único rojo verdadero de las 43 puertas tras la ADR 0131 | Abierta, medida en 8 plantillas |
 | [BF-B](./BF-B.md) | Tres puertas que deciden con una semilla o sin margen (rareza, `orc_misplaced`, doctrinas): el patrón que la ADR 0131 arregló en las de build | Abierta, medida |
 | [BF-C](./BF-C.md) | El delantero pega sin balón porque sus alternativas fuera de posesión son peores que pegar (`Tackle` 211 contra `MarkOpponent` 180) | Abierta, medida |
@@ -91,6 +91,7 @@ viva anotada.
 | [BC-B](./BC-B.md) | El límite de usos de un perk no se respeta cuando su efecto vuelve a dispararlo | Resuelta (19 sep 2026) |
 | [BC-E](./BC-E.md) | Re-simular con la sustitución elegida falla en el 9,4 % de los casos | Resuelta (19 sep 2026) |
 | [BC-F](./BC-F.md) | Al sustituir, el partido re-simulado reasigna los dorsales | Resuelta (19 sep 2026) |
+| [BE-D](./BE-D.md) | RF-125 será subcontable si se suma `Career` de la plantilla | **RESUELTA de diseño (23 sep 2026)**: lo dicta RF-125b — el contador es del club y vive en la run. A implementar con RF-125 |
 | [BE-A](./BE-A.md) | El centrocampista nunca entra a su marcado sin balón: el comentario dice «Defensa y centrocampista» y el código dice `Defender` | **CERRADA (23 sep 2026, ADR 0133)**: entra, con el defensa por delante en las cinco plantillas medidas. Lo que queda es el delantero, en [BF-C](./BF-C.md) |
 | [CAT-A](./CAT-A.md) | `field_bandage` usaba el canal `injure`, que protegía al rival | Cerrada (13 sep 2026): `injure` → `injury`. Dejó abierto CAT-B |
 | [CAT-B](./CAT-B.md) | Un consumible se puede comprar pero no se puede equipar: nadie emite `SetConsumables` | Cerrada (ADR 0101). Dejó abierto CAT-C |
