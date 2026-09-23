@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Globalization;
 using Godot;
 using Underleague.Game.Autoload;
 using Underleague.Game.Data;
@@ -306,7 +307,9 @@ public partial class ScoutScreen : Control
 
         y = Block(UiText.Get("ui.scout.risk"), riskLines, y, riskLines.Count > 0 && risks.Count > 0 ? Style.Text : Style.TextDim);
 
-        // Lo que hay que advertir antes de confirmar (RF-012d, RF-002d, RF-093).
+        // Lo que hay que advertir antes de confirmar (RF-012d, RF-002d, RF-093), y el once con el que se va
+        // a jugar de verdad (ADR 0134): los dos salen de RunLineup.Effective, no de la alineación guardada.
+        var effective = RunLineup.Effective(state);
         var warnings = RunEngine.LineupWarnings(state, node.Id, catalog, _run.Engine);
         var warningLines = new List<string>();
         foreach (var warning in warnings)
@@ -314,7 +317,12 @@ public partial class ScoutScreen : Control
             var player = state.FindPlayer(warning.PlayerId);
             warningLines.Add(warning.Kind switch
             {
-                LineupWarningKind.Shorthanded => UiText.Get("ui.scout.warnShorthanded"),
+                // ADR 0134: ahora significa inferioridad REAL —ni con el banquillo se llega a siete—, así
+                // que el número sale del once efectivo y no está fijo como antes.
+                LineupWarningKind.Shorthanded => UiText.Get(
+                    "ui.scout.warnShorthanded",
+                    effective.Lineup.Slots.Count.ToString(CultureInfo.InvariantCulture)),
+                LineupWarningKind.FilledFromBench => UiText.Get("ui.scout.warnFilled", player?.Name ?? "?"),
                 LineupWarningKind.SevereInjuryDeathRisk => UiText.Get("ui.scout.warnSevere", player?.Name ?? "?"),
                 _ => UiText.Get("ui.scout.warnLethal", player?.Name ?? "?", Percent(warning.Risk)),
             });
@@ -330,15 +338,19 @@ public partial class ScoutScreen : Control
         // avisos, no como un paso de trámite anterior a ellos.
         y = BuildConfirmBar(y);
 
-        // El once con el que se juega, que es lo que el jugador cambia si el número no le gusta.
+        // El once con el que se juega, que es lo que el jugador cambia si el número no le gusta. Hasta la
+        // ADR 0134 esta lista enseñaba la alineación GUARDADA, así que decía una cosa y saltaba al campo
+        // otra; ahora es el once efectivo y el que entra de oficio va marcado, porque de eso trataba BC-H.
         var starters = new List<string>();
-        foreach (var slot in state.Lineup.Slots)
+        foreach (var slot in effective.Lineup.Slots)
         {
             var player = state.FindPlayer(slot.PlayerId);
             if (player is not null)
             {
+                bool filled = effective.FilledIds.Contains(player.Id);
                 starters.Add($"{player.Name} · {UiText.Get("ui.pos." + player.Position)} · "
-                    + $"{UiText.Get("ui.state." + player.PhysicalState)} · ({slot.HomeCell.Column},{slot.HomeCell.Row})");
+                    + $"{UiText.Get("ui.state." + player.PhysicalState)} · ({slot.HomeCell.Column},{slot.HomeCell.Row})"
+                    + (filled ? " · " + UiText.Get("ui.scout.startersFilled") : string.Empty));
             }
         }
 

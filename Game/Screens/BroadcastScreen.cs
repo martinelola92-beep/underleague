@@ -378,6 +378,7 @@ public partial class BroadcastScreen : Control
         _tray.Position = new Vector2(0f, _canvasHeight - 12f - DecisionTray.DesignHeight);
         _tray.Size = new Vector2(CanvasWidth, DecisionTray.DesignHeight);
         _tray.Chosen += OnSubstituteChosen;
+        _tray.OptionChosen += OnOptionChosen;
 
         Sync();
     }
@@ -396,7 +397,7 @@ public partial class BroadcastScreen : Control
             return;
         }
 
-        _moments = MatchMomentView.Build(_playback.Setup, _playback.Result, _catalog);
+        _moments = MatchMomentView.Build(_playback.Setup, _playback.Result, _catalog, 0, _run.Decisions.Declines);
         _director = new PresentationDirector(_moments.Moments, DirectorTimings.Default);
         BuildShotGestures();
     }
@@ -435,28 +436,47 @@ public partial class BroadcastScreen : Control
 
         _bench.Visible = false;
 
-        var slot = FindSlot(_playback.Setup.Home, point.OutPlayerId);
-        string square = slot is null ? "?" : SquareLabel(slot.HomeCell);
+        // ADR 0134: la casilla y el puesto los trae ya el punto de decisión, calculados en /Sim; la pantalla
+        // no los deduce. El estado distingue leve de grave porque de eso depende que quepa seguir jugando.
+        string square = SquareLabel(point.OutCell);
         string outState = point.Detail == "death"
             ? UiText.Get("ui.pregon.tray.outState.death")
-            : UiText.Get("ui.pregon.tray.outState.injury");
+            : UiText.Get(point.CanPlayOn ? "ui.pregon.tray.outState.injuryMinor" : "ui.pregon.tray.outState.injurySevere");
 
         _tray.SetOutgoing(new OutgoingModel(point.OutPlayerId, outPlayer.Name, UiText.Get("ui.pos." + outPlayer.Position), square, outState));
 
-        var recommended = SubstitutionPolicy.Default(point, outPlayer);
         var candidates = new List<CandidateModel>(point.Candidates.Count);
         for (int i = 0; i < point.Candidates.Count; i++)
         {
             var candidate = point.Candidates[i];
+            int risk = i < point.CandidateRisks.Count ? point.CandidateRisks[i] : 0;
             candidates.Add(new CandidateModel(
                 candidate.Id,
                 candidate.Name,
                 UiText.Get("ui.pos." + candidate.Position),
                 UiText.Get("ui.state." + candidate.PhysicalState),
-                candidate.Id == recommended.Id));
+                candidate.Id == point.DefaultCandidateId,
+                risk > 0 ? UiText.Get("ui.pregon.tray.candidateRisk", RiskLabel(risk)) : string.Empty));
         }
 
-        _tray.SetCandidates(candidates);
+        // Las otras dos respuestas al mismo punto (ADR 0134 D y E). «Que siga jugando» solo cuando la lesión
+        // fue leve: lo decide /Sim, no esta pantalla.
+        var options = new List<TrayOption>(2)
+        {
+            new("decline", UiText.Get("ui.pregon.tray.decline"), UiText.Get("ui.pregon.tray.declineSub")),
+        };
+        if (point.CanPlayOn)
+        {
+            // El inmune (ADR 0026) no paga el −15 %, así que no se le anuncia; el riesgo letal sí lo paga,
+            // y va aparte porque es el coste dominante de quedarse (ADR 0134 E).
+            options.Add(new TrayOption(
+                "playOn",
+                UiText.Get("ui.pregon.tray.playOn"),
+                UiText.Get(point.PlayOnImmune ? "ui.pregon.tray.playOnSubImmune" : "ui.pregon.tray.playOnSub"),
+                point.PlayOnRisk > 0 ? UiText.Get("ui.pregon.tray.candidateRisk", RiskLabel(point.PlayOnRisk)) : string.Empty));
+        }
+
+        _tray.SetCandidates(candidates, options);
     }
 
     private void OnSubstituteChosen(int playerId)
@@ -469,7 +489,39 @@ public partial class BroadcastScreen : Control
         var point = _pendingPoint;
         _pendingPoint = null;
         _run.Substitute(new Substitution(point.Tick, point.OutPlayerId, playerId));
+        AfterDecision(point);
+    }
 
+    /// <summary>
+    /// Las otras dos respuestas al punto de decisión (ADR 0134): dejar el hueco o que el lesionado leve siga
+    /// jugando. Acaban en el mismo sitio que la sustitución —se vuelve a reproducir el partido con la
+    /// decisión dentro— porque para la pantalla las tres son lo mismo: una decisión que cambia el partido
+    /// desde ese tick.
+    /// </summary>
+    private void OnOptionChosen(string kind)
+    {
+        if (_pendingPoint is null)
+        {
+            return;
+        }
+
+        var point = _pendingPoint;
+        _pendingPoint = null;
+        if (kind == "playOn")
+        {
+            _run.PlayOn(point);
+        }
+        else
+        {
+            _run.Decline(point);
+        }
+
+        AfterDecision(point);
+    }
+
+    /// <summary>Lo que hay que rehacer en la pantalla después de cualquiera de las tres respuestas.</summary>
+    private void AfterDecision(SubstitutionPoint point)
+    {
         // Al resolver la decisión se suelta cualquier acercamiento en curso (docs/ui/README §4: el de
         // muerte, si lo había, se soltaba "al terminar la voz o al resolver la decisión" — esto es lo
         // segundo). Sin efecto si no había ninguno.
@@ -528,6 +580,9 @@ public partial class BroadcastScreen : Control
 
         return null;
     }
+
+    /// <summary>El riesgo en base 10.000 como porcentaje con un decimal, igual que lo escribe el Ojeo.</summary>
+    private static string RiskLabel(int risk) => UiText.Get("ui.risk.percent", risk / 100, (risk % 100) / 10);
 
     private static string SquareLabel(Cell cell) =>
         ((char)('A' + Mathf.Clamp(cell.Column, 0, 7))).ToString(CultureInfo.InvariantCulture)

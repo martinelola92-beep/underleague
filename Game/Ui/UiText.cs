@@ -223,7 +223,12 @@ public static class UiText
         ["ui.scout.riskLine"] = "{0}: {1}",
         ["ui.scout.riskNone"] = "sin riesgo de muerte con esta alineación",
         ["ui.scout.warnings"] = "ANTES DE CONFIRMAR",
-        ["ui.scout.warnShorthanded"] = "juegas en inferioridad: con 5 en campo, una sola baja termina la run (RF-002d)",
+        // ADR 0134: hasta entonces este aviso saltaba con la alineación GUARDADA incompleta y mentía —el
+        // once se rellenaba solo hasta siete—. Ahora solo sale cuando la inferioridad es real, y dice con
+        // cuántos se juega en vez de llevar el 5 escrito dentro.
+        ["ui.scout.warnShorthanded"] = "juegas en inferioridad: solo hay {0} para el campo, y con 5 una sola baja termina la run (RF-002d)",
+        ["ui.scout.warnFilled"] = "{0} sale de oficio: tú no lo alineaste, y el hueco lo ha tapado el equipo",
+        ["ui.scout.startersFilled"] = "de oficio",
         ["ui.scout.warnSevere"] = "{0} sale con una lesión grave sin tratar: si vuelve a lesionarse, muere (RF-093)",
         ["ui.scout.warnLethal"] = "{0} puede morir en este partido: {1}",
         ["ui.scout.lineup"] = "Alinear",
@@ -669,6 +674,20 @@ public static class UiText
         ["ui.pregon.record.hint"] = "Intro para ver el informe",
         ["ui.pregon.tray.outState.death"] = "muerto",
         ["ui.pregon.tray.outState.injury"] = "lesionado",
+        // ADR 0134: la bandeja distingue leve de grave porque de eso depende que quepa «que siga jugando».
+        ["ui.pregon.tray.outState.injuryMinor"] = "tocado",
+        ["ui.pregon.tray.outState.injurySevere"] = "lesión grave",
+        ["ui.pregon.tray.decline"] = "Que se quede el hueco",
+        // Los subtítulos de la bandeja caben en ~24 caracteres: con cinco respuestas la fila reparte el
+        // ancho y cada casilla baja a ~135 px (medido en `pregon-bandeja.png`, 23 sep 2026, donde la
+        // primera versión cortaba en «…y no expon» y en «−15» sin el «%»).
+        ["ui.pregon.tray.declineSub"] = "juegas con uno menos",
+        ["ui.pregon.tray.playOn"] = "Que siga jugando",
+        ["ui.pregon.tray.playOnSub"] = "se queda tocado: −15 %",
+        ["ui.pregon.tray.playOnSubImmune"] = "no la acusa: entero",
+        // La condición es parte de la frase, a propósito: este número NO es el del Ojeo («puede morir en
+        // este partido»), que reparte el riesgo por el once. Este dice qué pasa SI le entran (ADR 0134 C).
+        ["ui.pregon.tray.candidateRisk"] = "si le entran, muere: {0}",
     };
 
     /// <summary>Texto de la clave; si falta, la propia clave (un texto que falta debe verse, no ocultarse).</summary>

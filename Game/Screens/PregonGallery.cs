@@ -182,11 +182,27 @@ public partial class PregonGallery : Control
 
         _bench.Visible = false;
         _tray.SetOutgoing(new OutgoingModel(7, "Mazka", UiText.Get("ui.pos.Forward"), outSquare, outState));
-        _tray.SetCandidates(new[]
-        {
-            new CandidateModel(8, recommendedName, UiText.Get("ui.pos.Forward"), UiText.Get("ui.state.Healthy"), Recommended: true),
-            new CandidateModel(9, "Narg", UiText.Get("ui.pos.Midfielder"), UiText.Get("ui.state.MinorInjury"), Recommended: false),
-        });
+        // La galería enseña la bandeja en su caso más cargado (ADR 0134): dos candidatos con riesgo y las
+        // dos respuestas que no son un candidato, que es lo que tiene que caber sin comerse el Confirmar.
+        _tray.SetCandidates(
+            new[]
+            {
+                new CandidateModel(
+                    8, recommendedName, UiText.Get("ui.pos.Forward"), UiText.Get("ui.state.Healthy"),
+                    Recommended: true, UiText.Get("ui.pregon.tray.candidateRisk", "1,4 %")),
+                new CandidateModel(
+                    9, "Narg", UiText.Get("ui.pos.Midfielder"), UiText.Get("ui.state.MinorInjury"),
+                    Recommended: false, UiText.Get("ui.pregon.tray.candidateRisk", "6,2 %")),
+            },
+            new[]
+            {
+                new TrayOption("decline", UiText.Get("ui.pregon.tray.decline"), UiText.Get("ui.pregon.tray.declineSub")),
+                // Con su riesgo: quedarse tocado multiplica la probabilidad de morir (ADR 0134 E), y la
+                // galería tiene que enseñar el caso peor, que es el que puede no caber.
+                new TrayOption(
+                    "playOn", UiText.Get("ui.pregon.tray.playOn"), UiText.Get("ui.pregon.tray.playOnSub"),
+                    UiText.Get("ui.pregon.tray.candidateRisk", "23,7 %")),
+            });
     }
 
     private void Reset()

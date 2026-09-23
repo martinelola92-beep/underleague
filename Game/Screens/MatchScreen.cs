@@ -481,9 +481,13 @@ public partial class MatchScreen : Control
         var area = new Rect2(340f, 400f - (height / 2f), 600f, height);
         Widgets.Panel(window, area, Style.Panel);
         Widgets.Title(window, UiText.Get("ui.match.subTitle"), new Vector2(area.Position.X + 20f, area.Position.Y + 14f), 560f);
+        // El puesto y la casilla del que sale (BB-F). Esta es la vista de DEPURACIÓN (Nav.MatchDebug); la
+        // que juega el revisor es la bandeja de pregón de BroadcastScreen, que además ofrece las otras dos
+        // respuestas de la ADR 0134. Aquí basta con que el dato no falte, no con reproducir la bandeja.
         Widgets.Body(
             window,
-            UiText.Get(point.Detail == "death" ? "ui.match.subDeath" : "ui.match.subInjury", outName),
+            UiText.Get(point.Detail == "death" ? "ui.match.subDeath" : "ui.match.subInjury", outName)
+                + $" · {UiText.Get("ui.pos." + point.OutPosition)} · ({point.OutCell.Column},{point.OutCell.Row})",
             new Vector2(area.Position.X + 20f, area.Position.Y + 52f),
             560f);
         for (int i = 0; i < point.Candidates.Count; i++)

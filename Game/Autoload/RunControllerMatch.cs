@@ -38,7 +38,9 @@ public partial class RunController
 
     /// <summary>Primer punto de sustitución del jugador sin resolver en la reproducción actual, o <c>null</c>.</summary>
     public SubstitutionPoint? PendingSubstitution() =>
-        Playback is null ? null : SubstitutionPoints.Pending(Playback.Setup, Playback.Result, Playback.PlayerTeam);
+        Playback is null || Catalog is null
+            ? null
+            : SubstitutionPoints.Pending(Playback.Setup, Playback.Result, Playback.PlayerTeam, Catalog, Decisions.Declines);
 
     /// <summary>
     /// El jugador eligió sustituto en la ventana: se vuelve a reproducir el partido con la decisión y la run
@@ -52,7 +54,75 @@ public partial class RunController
         }
 
         var substitutions = new List<Substitution>(Decisions.Substitutions) { substitution };
-        Decisions = Decisions with { Substitutions = substitutions };
+        Answer(Decisions with { Substitutions = substitutions });
+    }
+
+    /// <summary>
+    /// «Que se quede el hueco» (ADR 0134 D): el jugador rechaza el sustituto y juega el resto del partido
+    /// con una casilla vacía. Es la inferioridad voluntaria de RF-002d ejercida durante el partido, y la
+    /// razón para tomarla es de desgaste, no táctica: el que entra también puede morir.
+    /// </summary>
+    public void Decline(SubstitutionPoint point)
+    {
+        ArgumentNullException.ThrowIfNull(point);
+        var declines = new List<DeclinedSubstitution>(Decisions.Declines)
+        {
+            new(point.Tick, point.OutPlayerId),
+        };
+        Answer(Decisions with { Declines = declines });
+    }
+
+    /// <summary>
+    /// «Que siga jugando» (ADR 0134 E): el lesionado <b>leve</b> no deja el campo, a cambio de arrastrar ya
+    /// la penalización de RF-091 el resto del partido.
+    ///
+    /// <para>El precio lo calcula <c>/Sim</c>, no esta pantalla: <c>AttributesWithExtraMinorInjuries</c>
+    /// vuelve a construir el partido con una lesión leve más para este jugador, así que sale del mismo
+    /// pipeline que sus atributos normales —equipo y reposición incluidos— y la inmunidad de los no-muertos
+    /// (ADR 0026) se resuelve sola. El <c>extra</c> cuenta las veces que ya se ha quedado en este partido,
+    /// para que dos lesiones compongan como componen dos entre partidos.</para>
+    /// </summary>
+    public void PlayOn(SubstitutionPoint point)
+    {
+        ArgumentNullException.ThrowIfNull(point);
+        if (State is null || Catalog is null || _stateBeforeMatch is null)
+        {
+            throw new InvalidOperationException("no hay ningún partido en reproducción");
+        }
+
+        if (!point.CanPlayOn)
+        {
+            throw new InvalidOperationException(
+                $"el jugador {point.OutPlayerId} no puede seguir jugando: solo la lesión leve deja quedarse (ADR 0134 E)");
+        }
+
+        int extra = 1;
+        for (int i = 0; i < Decisions.PlayOns.Count; i++)
+        {
+            if (Decisions.PlayOns[i].PlayerId == point.OutPlayerId)
+            {
+                extra++;
+            }
+        }
+
+        var after = RunLineup.AttributesWithExtraMinorInjuries(_stateBeforeMatch, Catalog, point.OutPlayerId, extra);
+        var playOns = new List<PlayOn>(Decisions.PlayOns) { new(point.Tick, point.OutPlayerId, after) };
+        Answer(Decisions with { PlayOns = playOns });
+    }
+
+    /// <summary>
+    /// Lo que comparten las tres respuestas: se vuelve a reproducir el partido con la decisión dentro y la
+    /// run vuelve a entrar en el nodo desde el estado previo, así que la reproducción y lo que se aplica de
+    /// verdad son el mismo partido (ADR 0094, RT-024).
+    /// </summary>
+    private void Answer(MatchDecisions decisions)
+    {
+        if (State is null || Catalog is null || _stateBeforeMatch is null || _matchNodeId < 0)
+        {
+            throw new InvalidOperationException("no hay ningún partido en reproducción");
+        }
+
+        Decisions = decisions;
         Playback = MatchPlaybacks.Of(_stateBeforeMatch, _matchNodeId, Catalog, Engine, trace: true, Decisions);
         State = _stateBeforeMatch;
         Enter(_matchNodeId);
