@@ -1452,7 +1452,7 @@ public partial class MatchPitchView3D : SubViewportContainer
                 step = Vector2.Zero;
             }
 
-            model.Pose(step * TicksPerSecond, down);
+            model.Pose(step * TicksPerSecond, trace.StateAt(frame, i));
         }
 
         var ball = InterpolateBall(trace, frame);

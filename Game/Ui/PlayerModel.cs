@@ -1,5 +1,6 @@
 using System;
 using Godot;
+using Underleague.Sim.Engine;
 
 namespace Underleague.Game.Ui;
 
@@ -15,10 +16,22 @@ namespace Underleague.Game.Ui;
 /// la vista —anillo, dorsal, sangre, cortinilla de teletransporte, cámara— tenga que enterarse. A la
 /// cápsula se le quita la malla y se queda como el <i>hueso</i> que la transforma.</para>
 ///
-/// <para><b>Lo que la maqueta NO hace</b>, y conviene saberlo antes de mirarla: no hay animación de golpeo
-/// ni de entrada —la biblioteca es genérica y no trae fútbol—, el color de equipo se pinta encima del
-/// maniquí (pierde su propia textura, que es gris de todos modos) y por eso <b>no le llega la atenuación
-/// del corte de teletransporte</b>, que sigue viviendo en el material de la cápsula.</para>
+/// <para><b>Qué animación tiene cada cosa</b>, con lo que el pack da de sí —es una biblioteca genérica de
+/// aventura y <b>no trae fútbol</b>: ni carrera, ni caída, ni golpeo de balón—:</para>
+/// <list type="bullet">
+/// <item>quieto → <c>Idle_FoldArms</c> · andando → <c>Walk_Carry</c>, acelerado con la velocidad real de
+/// la traza, que es la <b>carrera fingida</b> mientras no haya una de verdad;</item>
+/// <item>entrando → <c>Slide_Start</c>, una barrida, que es literalmente una entrada de fútbol;</item>
+/// <item>derribado o lesionado → <c>Hit_Knockback</c> y, cuando acaba, <c>LayToIdle</c> congelado en su
+/// primer fotograma, el cuerpo en el suelo. Es lo más cercano a caerse que hay;</item>
+/// <item>celebrando → <c>Idle_Rail_Call</c>, brazo en alto;</item>
+/// <item><b>disparar y pasar se quedan sin animación</b>: no hay ningún golpeo en el pack y un puñetazo
+/// puesto donde va una patada se lee peor que la locomoción. Es el hueco que pide un clip de verdad.</item>
+/// </list>
+///
+/// <para>El color de equipo se pinta encima del maniquí (pierde su propia textura, que es gris de todos
+/// modos). Y el pack trae además un juego <c>Zombie_*</c> completo —paso y espera— que es un regalo para
+/// los no-muertos el día que la maqueta pase de los humanos.</para>
 /// </summary>
 public sealed partial class PlayerModel : Node3D
 {
@@ -40,11 +53,27 @@ public sealed partial class PlayerModel : Node3D
     private const string WalkAnimation = "Walk_Carry";
 
     /// <summary>
-    /// Derribado. Se congela en su <b>primer</b> fotograma, que es el cuerpo en el suelo: la animación va
+    /// Ya en el suelo. Se congela en su <b>primer</b> fotograma, que es el cuerpo tumbado: la animación va
     /// de tumbado a de pie, así que su inicio es exactamente la postura que hace falta y no hay que
     /// adivinar dónde acaba un derribo.
     /// </summary>
     private const string DownAnimation = "LayToIdle";
+
+    /// <summary>
+    /// El derribo en sí: sale despedido. Es lo más cercano a «caerse» que trae el pack —no hay ninguna
+    /// caída— y encadena bien con <see cref="DownAnimation"/>, que recoge el cuerpo cuando termina.
+    /// </summary>
+    private const string KnockbackAnimation = "Hit_Knockback";
+
+    /// <summary>
+    /// La entrada: una <b>barrida</b>. Es la que mejor encaja de las 43 y no hace falta inventarse nada
+    /// —una entrada de fútbol es literalmente esto—; el pack la trae porque es un deslizamiento de
+    /// aventura.
+    /// </summary>
+    private const string TackleAnimation = "Slide_Start";
+
+    /// <summary>Celebrar: el gesto de llamada del pack, brazo en alto. No hay una celebración propiamente dicha.</summary>
+    private const string CelebrateAnimation = "Idle_Rail_Call";
 
     /// <summary>Por debajo de esto se considera quieto (casillas por segundo).</summary>
     private const float MovingThreshold = 0.15f;
@@ -148,23 +177,10 @@ public sealed partial class PlayerModel : Node3D
     /// fotogramas de la traza, en casillas por segundo: <b>el modelo no decide nada</b>, solo mira lo que
     /// la simulación ya escribió (RT-014).
     /// </summary>
-    public void Pose(Vector2 velocity, bool down)
+    public void Pose(Vector2 velocity, PlayerState state)
     {
         if (_anim is null)
         {
-            return;
-        }
-
-        if (down)
-        {
-            if (_playing != DownAnimation)
-            {
-                _playing = DownAnimation;
-                _anim.Play(DownAnimation);
-                _anim.Seek(0d, update: true);
-                _anim.Pause();
-            }
-
             return;
         }
 
@@ -172,11 +188,60 @@ public sealed partial class PlayerModel : Node3D
         if (speed > MovingThreshold)
         {
             // Mirar hacia donde se va. Solo cuando hay movimiento de verdad: con el jugador parado, el
-            // ruido de la interpolación le haría girar sobre sí mismo.
+            // ruido de la interpolación le haría girar sobre sí mismo. Se hace antes de elegir la postura
+            // para que también la barrida y el derribo salgan orientados.
             _facing = Mathf.Atan2(velocity.X, velocity.Y) + FacingOffset;
             Rotation = new Vector3(0f, _facing, 0f);
         }
 
+        // Lo que el jugador ESTÁ haciendo manda sobre si se mueve o no: la simulación ya lo dice por
+        // jugador y por fotograma (`MatchTrace.StateAt`), así que el modelo no tiene que adivinarlo ni
+        // decidir nada (RT-014).
+        switch (state)
+        {
+            case PlayerState.KnockedDown:
+            case PlayerState.Injured:
+                // Dos tiempos: sale despedido y después se queda en el suelo. El encadenado se hace por
+                // el reloj de la propia animación, no por un temporizador aparte.
+                if (_playing == KnockbackAnimation)
+                {
+                    if (!_anim.IsPlaying())
+                    {
+                        Hold(DownAnimation);
+                    }
+                }
+                else if (_playing != DownAnimation)
+                {
+                    _playing = KnockbackAnimation;
+                    _anim.SpeedScale = 1f;
+                    _anim.Play(KnockbackAnimation);
+                }
+
+                return;
+
+            case PlayerState.Tackling:
+                if (_playing != TackleAnimation)
+                {
+                    _playing = TackleAnimation;
+                    _anim.SpeedScale = 1f;
+                    _anim.Play(TackleAnimation);
+                }
+
+                return;
+
+            case PlayerState.Celebrating:
+                if (_playing != CelebrateAnimation)
+                {
+                    _playing = CelebrateAnimation;
+                    _anim.SpeedScale = 1f;
+                    _anim.Play(CelebrateAnimation);
+                }
+
+                return;
+        }
+
+        // Disparar y pasar NO tienen animación: el pack no trae ningún golpeo de balón (ver el resumen de
+        // la clase). Se quedan con la locomoción, que es mejor que un puñetazo puesto donde va una patada.
         string wanted = speed > MovingThreshold ? WalkAnimation : IdleAnimation;
         if (_playing != wanted)
         {
@@ -187,6 +252,16 @@ public sealed partial class PlayerModel : Node3D
         _anim.SpeedScale = wanted == WalkAnimation
             ? Mathf.Clamp(speed / WalkReferenceSpeed, 0.5f, 2.5f)
             : 1f;
+    }
+
+    /// <summary>Congela una animación en su primer fotograma: la postura, sin el movimiento.</summary>
+    private void Hold(string name)
+    {
+        _playing = name;
+        _anim!.SpeedScale = 1f;
+        _anim.Play(name);
+        _anim.Seek(0d, update: true);
+        _anim.Pause();
     }
 
     /// <summary>El <see cref="AnimationPlayer"/> esté donde esté en el árbol importado: el importador de glTF no garantiza dónde lo cuelga.</summary>

@@ -421,6 +421,43 @@ public partial class BroadcastCapture : Control
                 StepManual(humanScreen, 1.0 / 60.0, 6);
                 await Save("retrans-modelos");
                 GD.Print($"retrans-modelos: club humano; balón a {peak:0.###} casillas de alto en el fotograma {peakFrame} de {humanTrace.FrameCount}");
+
+                // Y un cuerpo en el suelo, que es la postura que más importa en este juego: el primer
+                // fotograma en que un humano está derribado o lesionado. Sin mirarla no se puede decir que
+                // el derribo "se ve bien" — con la cápsula era un giro de noventa grados y con modelo es
+                // una animación que puede quedarse a medias o atravesar el césped.
+                int downFrame = -1;
+                for (int f = 0; f < humanTrace.FrameCount && downFrame < 0; f++)
+                {
+                    for (int p = 0; p < humanTrace.Players.Count; p++)
+                    {
+                        if (humanTrace.Players[p].Team != 0 || !humanTrace.OnPitchAt(f, p))
+                        {
+                            continue;
+                        }
+
+                        var st = humanTrace.StateAt(f, p);
+                        if (st is Sim.Engine.PlayerState.KnockedDown or Sim.Engine.PlayerState.Injured)
+                        {
+                            downFrame = f;
+                            break;
+                        }
+                    }
+                }
+
+                if (downFrame >= 0)
+                {
+                    // Unos fotogramas después del derribo: el tiempo que tarda el empujón en dar paso al
+                    // cuerpo tumbado, que es el encadenado que hay que comprobar.
+                    humanScreen.SeekTo(downFrame);
+                    StepManual(humanScreen, 1.0 / 60.0, 45);
+                    await Save("retrans-modelos-derribo");
+                    GD.Print($"retrans-modelos-derribo: humano en el suelo desde el fotograma {downFrame}");
+                }
+                else
+                {
+                    GD.Print("retrans-modelos-derribo: ningún humano acaba en el suelo en este partido; se salta");
+                }
             }
 
             Drop(humanInstance);
