@@ -1,6 +1,6 @@
 # CAT-D — ¿Una fila más de campo (16×5 → 16×6), con las DOS filas centrales como «centro»?
 
-**Estado:** Abierta
+**Estado:** Cerrada (ADR 0103) — ver "Análisis / estado actual". Dejó abierto CAT-E
 
 ## Observación
 

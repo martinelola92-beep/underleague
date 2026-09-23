@@ -1,6 +1,6 @@
 # CAT-G — El equipo de la referencia neutra es una palanca que mueve tres métricas en direcciones opuestas.
 
-**Estado:** Abierta
+**Estado:** Cerrada (ADR 0107) — ver "Análisis / estado actual"
 
 ## Observación
 

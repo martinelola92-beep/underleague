@@ -1,6 +1,6 @@
 # CAT-A — `field_bandage` usaba el canal `injure`, que protegía al rival.
 
-**Estado:** Abierta
+**Estado:** Cerrada (13 sep 2026) — ver "Análisis / estado actual". Dejó abierto CAT-B
 
 ## Observación
 

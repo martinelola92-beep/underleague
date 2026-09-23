@@ -1,6 +1,6 @@
 # CAT-B — Un consumible se puede comprar pero no se puede equipar: nadie emite `SetConsumables`.
 
-**Estado:** Abierta
+**Estado:** Cerrada (ADR 0101) — ver "Análisis / estado actual". Dejó abierto CAT-C
 
 ## Observación
 
