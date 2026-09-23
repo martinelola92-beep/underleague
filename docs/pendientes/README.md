@@ -22,7 +22,7 @@ viva anotada.
 
 | Id | Título | Estado |
 |---|---|---|
-| [BA-E](./BA-E.md) | Goles sin ángulo | Abierta, medida: la vía A queda RECHAZADA por coste (ADR 0111); la C sigue disponible |
+| [BA-E](./BA-E.md) | Goles sin ángulo | Abierta, medida (A RECHAZADA por la ADR 0111, C disponible). **Vía nueva 23 sep**: la acción «centrar» del §7 de `plan-altura-del-balon.md` le da al delantero la alternativa que a la vía B le faltaba |
 | [BA-F](./BA-F.md) | El 3D está mal | Abierta: decidir si se acepta perspectiva contra la ortográfica de la ADR 0102 |
 | [BA-G](./BA-G.md) | Los nombres de los jugadores se repiten | Abierta: el sorteo de `data/*/names` no tiene memoria dentro de la run |
 | [BA-H](./BA-H.md) | Los consumibles no se pueden usar | Abierta: CAT-B dio el equipado; falta el uso en vivo (RF-082, `ManualActivation`) |

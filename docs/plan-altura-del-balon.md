@@ -416,6 +416,61 @@ estable.
 defensa y del centrocampista, y esto los toca de lleno. Necesita `game-design-review` propio antes de
 implementar, y enmienda a esta ADR.
 
+## 7. «Centrar»: la acción que falta, y por qué desbloquea el paso 3 (decisión del revisor, 23 sep 2026)
+
+> «Eso creo que también arregla el problema de que el delantero se posiciona en la línea de fondo creyendo
+> que es el mejor sitio cuando en realidad no lo es. También forzará que centre balones buscando compañeros
+> rematadores en mejor posición.»
+
+**El diagnóstico ya estaba fichado y medido**: [BA-E](./pendientes/BA-E.md), «goles sin ángulo». El
+**32,4 % de los tiros** sale con apertura < 0,5 y produce el **37,1 % de los goles** —convierten **mejor**
+que la media— y el **30,1 %** se tiran a menos de una casilla de la línea de fondo.
+
+Y ahí está el aviso que cambia el plan: **la palanca que el revisor ha elegido para el paso 3 —el ángulo en
+la utilidad de `Shoot`— es la vía (B) de BA-E, y ya se midió: pone SEIS puertas en rojo**, acorta la cadena
+de pases y sube los tiros a 8,33. La vía (A), corregir `FindSpace`, está **RECHAZADA** por la ADR 0111 con
+ocho puertas en rojo, y dejó escrita la lección: *cambiar la regla de desmarque global aplana el juego de
+colocación; la corrección buena tendrá que ser **local** al delantero en zona de remate*.
+
+**Por qué el centro lo cambia todo.** La (B) rompía porque le quitaba el tiro al delantero **y no le daba
+nada a cambio**: sin ángulo y sin alternativa, la jugada se moría y la cadena se acortaba. Con el centro,
+el delantero sin ángulo no pierde la jugada, **la transforma**. Y es local por definición, que es
+exactamente lo que la ADR 0111 pedía.
+
+### Qué es «centrar», según el revisor
+
+1. **Un pase alto** a un compañero cerca del área.
+2. Ese compañero **remata sin controlar**: no recibe y luego dispara, remata de primeras.
+3. Para distinguir el remate del tiro normal, el revisor sugiere apoyarlo en **fuerza** en vez de técnica.
+
+Eso último es una decisión de diseño con buena pinta: el tiro es **técnica** (colocar) y el remate es
+**fuerza** (llegar y empujarla). Da identidad distinta a dos acciones que si no serían la misma con otro
+nombre, y encaja con `identidad memorable > bonus genéricos`. Hay criaturas que rematan y criaturas que
+disparan, y eso es una decisión de alineación.
+
+### Lo que reabre, y hay que hacerlo a conciencia
+
+**Los pases siguen rasos por decisión explícita de esta misma ADR** (§2), para no mezclar con la
+calibración de la ADR 0091. **Un centro es un pase alto, así que esa exclusión se reabre.** No se cuela de
+pasada: es el primer pase con altura del motor y necesita su propia medición.
+
+### Autorización del revisor sobre las puertas
+
+> «las puertas están rojas pero hay que ignorarlas hasta implementar acción "centrar"»
+
+**Queda autorizado avanzar con puertas en rojo** mientras el sistema esté a medias. El motivo es sólido: el
+ángulo en la utilidad **sin** el centro es un sistema incompleto, y medirlo contra las puertas sería medir
+un estado que nadie quiere enviar. Las puertas vuelven a ser criterio de parada **cuando el centro esté
+dentro**, no antes.
+
+Dos cosas que conviene no perder de vista mientras tanto:
+
+- **Cuatro puertas ya estaban rojas antes de todo esto** y son de [BF-B](./pendientes/BF-B.md)
+  (`orc_misplaced` 45,18, rareza 43,75, doctrinas), no de esta familia. Comprobado contra árbol limpio.
+  No confundir unas con otras al leer el rojo.
+- **Hay que medir la (B) otra vez, con el centro dentro.** Las seis puertas rojas son de la (B) *sola*.
+  Volver a intentarla sin la alternativa sería repetir un experimento cuyo resultado ya conocemos.
+
 ## 5. Decidido (23 sep 2026) — ADR 0135
 
 Las cuatro preguntas de abajo ya tienen respuesta y están registradas en

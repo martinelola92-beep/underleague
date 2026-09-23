@@ -1,6 +1,9 @@
 # BA-E — Goles sin ángulo.
 
-**Estado:** Abierta
+**Estado:** Abierta — **con vía nueva desde el 23 sep 2026**: la ADR 0135 y la acción «centrar» del
+§7 de `docs/plan-altura-del-balon.md` atacan esto por donde la ADR 0111 dejó dicho que había que
+atacarlo —**local al delantero en zona de remate**, no global—. La vía (B) vuelve a estar sobre la mesa
+**pero sólo con el centro implementado**: sola ya se midió y pone seis puertas en rojo.
 
 ## Observación
 
@@ -12,4 +15,9 @@
 
 ## Hermanos
 
-_(por enlazar donde se detecten; ver `README.md` del directorio)_
+- `docs/plan-altura-del-balon.md` §7 y **[ADR 0135](../decisiones/0135-el-balon-tiene-altura.md)** — el
+  revisor llega al mismo diagnóstico jugando («el delantero se posiciona en la línea de fondo creyendo que
+  es el mejor sitio cuando en realidad no lo es») y propone la pieza que faltaba: **centrar**. La (B) de
+  esta ficha rompía porque le quitaba el tiro al delantero sin darle nada a cambio; con el centro, la
+  jugada no se muere, se transforma.
+- [BF-C](./BF-C.md) — el delantero fuera de posesión, la otra mitad de sus malas alternativas.

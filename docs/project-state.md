@@ -645,18 +645,68 @@ Medido: cambian **todos** los partidos y el agregado no se mueve (`goalsPerMatch
 `possessionChanges` 21,75 → 21,66, ninguna fuera de banda). Era lo previsto — con el portero midiendo su
 alcance en el plano, la altura todavía no decide nada.
 
-**Siguiente paso: el 3** — el alcance vertical, que es donde la altura empieza a importar y donde el lote
-va a moverse de verdad. **Antes de darlo, leer §4.ter del plan**, porque hay un hallazgo que lo condiciona:
-la altura de llegada de los tiros tiene **mediana 0,250 y máximo 0,589** contra una portería de 0,70 de
-alto, así que los disparos llegan en la mitad baja y **casi ninguno se acerca al larguero**. Si casi ningún
-tiro va alto, el alcance vertical del portero apenas se ejercitará y el paso 3 mediría poco. Hay que
-decidir antes si la altura debe depender tanto de la calidad, o si un tiro puede ser **alto y malo a la
-vez**, que es lo que pasa en el fútbol de verdad.
+**Paso 2b hecho** (decisión del revisor sobre la marcha): **el marco es físico**. Los postes no lo eran
+—«poste» sólo salía en comentarios— y la altura, atada a la calidad, llegaba con máximo 0,453 contra un
+larguero a 0,70: el **0,00 %** se le acercaba, o sea que el larguero habría sido decorativo. Van juntas
+porque sin marco, desatar la altura la haría gratis. La puntería pasa a ser **intención + error** —un
+delantero malo también *quiere* meterla por la escuadra, lo que le distingue es si lo consigue— y el marco
+rechaza con evento propio `SHOT_POST`. Medido: **1,44 % de los disparos al marco**, uno cada nueve
+partidos, `goalsPerMatch` 2,79 → 2,73, ninguna métrica fuera de banda.
 
-Y queda sin verificar, dicho como tal: la explicación natural de por qué los goles no se movieron sería que
-la dispersión no saca al balón del alcance del portero (`save.reachCells` 0,9 contra semiancho 1,0). **No
-está comprobada** —la sonda que se escribió medía el final del vuelo, que para un tiro parado no es la
-línea de gol—, y es justo lo que el paso 3 tiene que resolver.
+El primer intento del marco estuvo mal y queda escrito por qué: acotar el punto de mira y preguntar después
+concentra en el borde **toda** la masa de los tiros que se habrían ido, o sea palo garantizado — 18,5 % de
+los disparos y los goles cayendo a 1,27.
+
+---
+
+## Siguiente paso: el 3, «la portería disponible» — y NO se puede empezar por el ángulo
+
+El revisor amplía el paso 3 (enmienda 2 de la ADR 0135): el **ángulo** del tirador, los **rivales que
+tapan** y la **colocación del portero** deben entrar en la puntería **y en la decisión de disparar**. Y
+añade el diagnóstico que lo ata todo:
+
+> «el delantero se posiciona en la línea de fondo creyendo que es el mejor sitio cuando en realidad no lo
+> es. También forzará que centre balones buscando compañeros rematadores en mejor posición.»
+
+**Eso ya está fichado y medido en [BA-E]**, y el aviso es serio: **la palanca elegida es la vía (B) de esa
+ficha y ya se midió — pone SEIS puertas en rojo** y acorta la cadena de pases. La vía (A) está RECHAZADA
+(ADR 0111) con ocho puertas en rojo, y dejó dicho que *la corrección buena tendrá que ser **local** al
+delantero en zona de remate*.
+
+**Por eso el orden es: primero «centrar», después el ángulo.** La (B) rompía porque le quitaba el tiro al
+delantero **sin darle nada a cambio**: sin ángulo y sin alternativa, la jugada se muere y la cadena se
+acorta. Con el centro, la transforma. Y es local por definición, que es lo que la ADR 0111 pedía.
+
+**Qué es «centrar»** (especificación del revisor, §7 de `docs/plan-altura-del-balon.md`): un **pase alto**
+a un compañero cerca del área, que **remata sin controlar** —de primeras, no recibe y luego dispara—, y
+apoyado en **fuerza** en vez de técnica para distinguirlo del tiro. Eso le da identidad propia: el tiro es
+colocar, el remate es llegar y empujarla, y hay criaturas para cada cosa.
+
+**Reabre una exclusión a conciencia**: los pases siguen **rasos** por decisión explícita de la ADR 0135, y
+un centro es un pase alto. Es el primer pase con altura del motor y necesita su propia medición.
+
+### Autorización expresa del revisor sobre las puertas
+
+> «las puertas están rojas pero hay que ignorarlas hasta implementar acción "centrar"»
+
+**Se puede avanzar con puertas en rojo** mientras el sistema esté a medias: el ángulo sin el centro es un
+sistema incompleto y medirlo contra las puertas sería medir un estado que nadie quiere enviar. Vuelven a
+ser criterio de parada **cuando el centro esté dentro**, no antes. Dos avisos para no confundirse leyendo
+el rojo:
+
+- **Cuatro puertas ya estaban rojas antes de toda esta familia** y son de [BF-B] (`orc_misplaced` 45,18,
+  rareza 43,75, doctrinas), comprobado contra árbol limpio. No son de aquí.
+- **La (B) hay que remedirla con el centro dentro.** Las seis rojas son de la (B) *sola*; repetirla sin la
+  alternativa sería repetir un experimento cuyo resultado ya se conoce.
+
+### Y el resto del paso 3, cuando el centro esté
+
+El alcance de portero y defensas pasa a **esférico**. **Orden obligatorio: ángulo y oclusión primero, el
+portero después** — el portero introduce un bucle (el tirador reacciona a él y él ya reacciona al balón) y
+si todos los tiros van al lado contrario, `saveRate` se desploma. Queda sin verificar, dicho como tal: la explicación natural de por qué los goles no se movieron en el paso
+2 sería que la dispersión no saca al balón del alcance del portero (`save.reachCells` 0,9 contra semiancho
+1,0). **No está comprobada** —la sonda que se escribió medía el final del vuelo, que para un tiro parado no
+es la línea de gol—, y es justo lo que el paso 3 tiene que resolver.
 
 **Y antes de dar el paso 4 (el rechace), releer §3.ter**: esto reabre la **ADR 0117**
 (`chaseBallLooseBonus` se calibró con balones que recorren 1,25 casillas) y despierta
