@@ -142,9 +142,31 @@ public sealed partial class AudioManager : Node
 
         DiscoverPools(AudioRoot, string.Empty);
 
-        GD.Print(_pools.Count == 0
-            ? $"[audio] sin pools en {AudioRoot}: el juego queda en silencio hasta que haya ficheros"
-            : $"[audio] {_pools.Count} pools cargados desde {AudioRoot}");
+        if (_pools.Count == 0)
+        {
+            GD.Print($"[audio] sin pools en {AudioRoot}: el juego queda en silencio hasta que haya ficheros");
+            return;
+        }
+
+        // El recuento de SONIDOS, no solo el de pools: con solo el de pools, la duplicación que la revisión
+        // encontró era invisible desde la consola. Un pool con el doble de variantes de las que hay en la
+        // carpeta se ve aquí de un vistazo, y con --audio-trace se ve carpeta a carpeta.
+        int total = 0;
+        foreach (var pool in _pools)
+        {
+            total += pool.Value.Count;
+        }
+
+        GD.Print($"[audio] {_pools.Count} pools · {total} sonidos cargados desde {AudioRoot}");
+        if (Trace)
+        {
+            var names = new List<string>(_pools.Keys);
+            names.Sort(StringComparer.Ordinal);
+            foreach (string name in names)
+            {
+                GD.Print($"[audio]   {name}: {_pools[name].Count}");
+            }
+        }
     }
 
     /// <summary>
@@ -374,23 +396,31 @@ public sealed partial class AudioManager : Node
             return;
         }
 
-        var streams = new List<AudioStream>();
+        // Godot sirve los recursos importados: en el proyecto aparecen el fuente Y su "algo.wav.import",
+        // y en una build exportada puede aparecer solo uno de los dos. Se normaliza a la ruta del recurso
+        // y **se quitan los repetidos**: sin esa criba, cada variante entraba DOS veces en su bolsa —dos
+        // seguidas iguales dejaban de ser imposibles, que es justo lo que la bolsa promete— y los pools de
+        // un solo fichero contaban dos. Lo encontró la revisión independiente midiendo los identificadores
+        // de instancia, no leyendo el código: el fallo era invisible mientras las carpetas estaban vacías.
+        var names = new SortedSet<string>(StringComparer.Ordinal);
         foreach (string file in dir.GetFiles())
         {
-            // Godot sirve los recursos importados: en una build exportada el fichero fuente aparece como
-            // "algo.wav.import" o directamente como "algo.wav", según el modo. Se normaliza a la ruta del
-            // recurso y se deja que ResourceLoader diga si existe.
             string name = file.EndsWith(".import", StringComparison.Ordinal)
                 ? file[..^".import".Length]
                 : file;
 
-            if (!IsAudio(name))
+            if (IsAudio(name))
             {
-                continue;
+                names.Add(name);
             }
+        }
 
-            string resourcePath = $"{path}/{name}";
-            if (ResourceLoader.Load(resourcePath) is AudioStream stream)
+        // Orden estable por nombre (lo da el SortedSet): la bolsa baraja, pero el punto de partida no
+        // depende del orden en que el sistema de ficheros devuelva las entradas.
+        var streams = new List<AudioStream>();
+        foreach (string name in names)
+        {
+            if (ResourceLoader.Load($"{path}/{name}") is AudioStream stream)
             {
                 streams.Add(stream);
             }
@@ -398,9 +428,6 @@ public sealed partial class AudioManager : Node
 
         if (streams.Count > 0 && poolName.Length > 0)
         {
-            // Orden estable por nombre: la bolsa baraja, pero el punto de partida no depende del orden en
-            // que el sistema de ficheros devuelva las entradas.
-            streams.Sort(static (a, b) => string.CompareOrdinal(a.ResourcePath, b.ResourcePath));
             _pools[poolName] = new SoundPool(streams);
         }
 
@@ -438,6 +465,9 @@ public sealed partial class AudioManager : Node
             _all = all;
             _bag = new List<AudioStream>(all.Count);
         }
+
+        /// <summary>Variantes del pool. Solo para el volcado de arranque: que se vea si alguna está repetida.</summary>
+        public int Count => _all.Count;
 
         public AudioStream Next(Random rng)
         {

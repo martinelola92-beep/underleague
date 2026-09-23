@@ -578,7 +578,14 @@ public partial class BroadcastScreen : Control
         // la lista de tiros, y aquí se resincroniza el puntero al fotograma de la decisión para no repetir
         // un tiro que ya quedó atrás ni perder uno que caiga justo después.
         ResyncShotGestures(_frame);
-        ResyncEventSounds(_frame);
+
+        // El audio se resincroniza al fotograma SIGUIENTE, igual que el director hace con los momentos
+        // (`_director.Seek(decisionFrame + 1)` arriba): la decisión se abre EN el fotograma de la lesión y
+        // ese suceso ya sonó antes de abrirse la bandeja, así que resincronizar al propio fotograma lo
+        // dejaba pendiente y **el hueso crujía dos veces por la misma lesión**. Lo encontró la revisión
+        // independiente; el hermano de este desfase sigue en `ResyncShotGestures` y está anotado en
+        // `docs/pendientes/BI-A.md` porque arreglarlo mueve la cámara y quiere su propia comprobación.
+        ResyncEventSounds(_frame + 1);
         _pitch3d.ResetGestures();
 
         Sync();
@@ -618,7 +625,7 @@ public partial class BroadcastScreen : Control
     /// </summary>
     private static void PlayMomentSound(MatchMoment moment)
     {
-        foreach (string pool in MomentSounds.PoolsFor(moment.Kind))
+        foreach (string pool in MomentSounds.PoolsFor(moment.Kind, moment.Team))
         {
             AudioManager.Instance?.PlayRandomSfx(pool);
         }
@@ -1175,10 +1182,27 @@ public partial class BroadcastScreen : Control
             }
 
             var pools = MatchEventSounds.PoolsFor(e);
-            if (pools.Length > 0)
+            if (pools.Length == 0)
             {
-                _eventSounds.Add(new EventSound(_trace.FrameOfTick(e.Tick), pools));
+                continue;
             }
+
+            int frame = _trace.FrameOfTick(e.Tick);
+
+            // El mismo pool no suena dos veces en el mismo fotograma. No es cosmética: el motor emite
+            // Injury y Death del MISMO jugador en el mismo tick (ver `CanFuse` en MatchMomentView), y los
+            // dos piden `combat/crush` — se oían dos crujidos solapados, con tono distinto, para un solo
+            // hueso. Lo encontró la revisión independiente.
+            if (_eventSounds.Count > 0)
+            {
+                var previous = _eventSounds[^1];
+                if (previous.StartFrame == frame && ReferenceEquals(previous.Pools, pools))
+                {
+                    continue;
+                }
+            }
+
+            _eventSounds.Add(new EventSound(frame, pools));
         }
     }
 

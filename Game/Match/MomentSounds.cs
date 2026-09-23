@@ -31,8 +31,13 @@ public static class MomentSounds
     // está mirando mientras el árbitro la saca.
     private static readonly string[] Boo = { "crowd/boo" };
 
-    // El gol son dos cosas a la vez y ninguna sobra: el balón entrando y la grada reventando.
-    private static readonly string[] Goal = { "football/goal", "crowd/goal" };
+    // El gol son dos cosas a la vez y ninguna sobra: el balón entrando y la grada. Pero la grada **es la
+    // tuya**: el marcador, el estandarte y el «¡Viva Altos Hornos FC!» ya cuentan el partido desde tu lado,
+    // y una grada reventando de alegría cuando te marcan daba la información al revés en el momento más
+    // cargado del partido (lo encontró la revisión independiente). El balón suena igual en los dos casos
+    // —la red no toma partido—; lo que cambia es quién grita.
+    private static readonly string[] GoalFor = { "football/goal", "crowd/goal" };
+    private static readonly string[] GoalAgainst = { "football/goal", "crowd/boo" };
 
     // Las dos lesiones comparten pool a propósito: lo que cambia entre una leve y una grave no es el
     // sonido del jugador, es todo lo demás (el congelado, el estandarte, la bandeja). El impacto —el
@@ -47,20 +52,27 @@ public static class MomentSounds
     // sostiene el momento ella sola.
     private static readonly string[] RefereeLeaves = { "referee/horn", "crowd/boo" };
 
-    // Pitido final: el silbato y la grada. Suena igual se gane o se pierda —el resultado lo cuenta el
-    // acta, no el sonido— y eso evita que el audio adelante una información que la pantalla aún no ha dado.
-    private static readonly string[] FullTime = { "referee/whistle", "crowd/cheer" };
+    // Pitido final: el silbato, y nada más. Llevaba `crowd/cheer` y la revisión independiente tenía razón
+    // en tumbarlo: **la grada aplaudía una derrota**. La reacción correcta depende del resultado, que este
+    // nivel no conoce —lo conoce la pantalla, que ya enseña el acta—, así que se elige el silencio antes
+    // que una emoción equivocada. Anotado en `docs/pendientes/BI-A.md`.
+    private static readonly string[] FullTime = { "referee/whistle" };
 
     /// <summary>
     /// Los pools que suenan en ese momento, en orden. Lista vacía si el momento no suena.
     /// </summary>
-    public static string[] PoolsFor(MomentKind kind) => kind switch
+    /// <param name="kind">El momento.</param>
+    /// <param name="team">De quién es el momento: 0 tu equipo, 1 el rival. Solo lo mira el gol.</param>
+    public static string[] PoolsFor(MomentKind kind, int team) => kind switch
     {
         MomentKind.Kickoff => Whistle,
         MomentKind.Foul => Whistle,
+
+        // La tarjeta se abuchea sea de quien sea: lo que la grada abuchea es al árbitro, no al castigado.
         MomentKind.Yellow => Boo,
         MomentKind.Red => Boo,
-        MomentKind.Goal => Goal,
+
+        MomentKind.Goal => team == 0 ? GoalFor : GoalAgainst,
         MomentKind.MinorInjury => Pain,
         MomentKind.SevereInjury => Pain,
         MomentKind.Death => Death,
