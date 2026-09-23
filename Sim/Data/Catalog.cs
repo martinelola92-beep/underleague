@@ -414,7 +414,9 @@ public sealed record ShotTuning(
     int GoalHalfWidthCellsMilli,
     int GoalHeightCellsMilli,
     int ArcCellsPerCellMilli,
-    int PostThicknessCellsMilli);
+    int PostThicknessCellsMilli,
+    int MinAimApertureCenti,
+    int OffTargetAperturePenalty);
 
 /// <summary>tuning.save.</summary>
 /// <summary>

@@ -853,7 +853,7 @@ public static class DataLoader
             "baseQuality", "techniqueFactor", "strengthFactor", "distancePenaltyPerCell", "pressurePenalty",
             "offTargetBase", "offTargetDistanceFactor", "penaltyQualityBonus", "blockChancePercent",
             "goalHalfWidthCellsMilli", "goalHeightCellsMilli", "arcCellsPerCellMilli",
-            "postThicknessCellsMilli");
+            "postThicknessCellsMilli", "minAimApertureCenti", "offTargetAperturePenalty");
         return new ShotTuning(
             node.Prop("baseQuality").AsInt(),
             node.Prop("techniqueFactor").AsInt(),
@@ -867,7 +867,9 @@ public static class DataLoader
             node.Prop("goalHalfWidthCellsMilli").AsInt(),
             node.Prop("goalHeightCellsMilli").AsInt(),
             node.Prop("arcCellsPerCellMilli").AsInt(),
-            node.Prop("postThicknessCellsMilli").AsInt());
+            node.Prop("postThicknessCellsMilli").AsInt(),
+            node.Prop("minAimApertureCenti").AsInt(),
+            node.Prop("offTargetAperturePenalty").AsInt());
     }
 
     private static CrossTuning ParseCross(Json node)

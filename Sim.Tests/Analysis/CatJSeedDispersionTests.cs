@@ -27,7 +27,7 @@ public sealed class CatJSeedDispersionTests
     private readonly ITestOutputHelper _output;
     public CatJSeedDispersionTests(ITestOutputHelper output) => _output = output;
 
-    [Fact(Skip = "Diagnóstico bajo demanda: ocho pasadas completas de la puerta, ~1 m 45 s. Quita el Skip para remedir CAT-J.")]
+    [Fact(Skip = "Diagnóstico bajo demanda: ocho pasadas completas de la puerta, ~1 m 50 s. Quita el Skip para remedir CAT-J.")]
     public void HowMuchDoTheRedGateMetricsMoveBetweenSeeds()
     {
         string[] watched =
@@ -36,6 +36,8 @@ public sealed class CatJSeedDispersionTests
             "badBuildsLoseToNone_elf_brawler",
             "badBuildsLoseToNone_elf_out_of_zone",
             "buildsWinDifferently_passChain",
+            "badBuildsLoseToNone_orc_misplaced",
+            "coherentBuildsBeatNone_orc_violence",
         };
 
         var byMetric = watched.ToDictionary(m => m, _ => new List<double>(), StringComparer.Ordinal);

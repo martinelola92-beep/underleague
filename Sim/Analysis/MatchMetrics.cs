@@ -50,7 +50,9 @@ public readonly record struct MatchSummary(
     /// <summary>De los tiros de apertura baja, cuántos acabaron en gol (ADR 0136).</summary>
     int LowApertureGoals,
     /// <summary>Tiros ejecutados desde la línea de fondo (ADR 0136).</summary>
-    int BylineShots)
+    int BylineShots,
+    /// <summary>Tiros que dieron en el marco (ADR 0135 paso 2b, al informe en el 3a).</summary>
+    int ShotPosts)
 {
     /// <summary>Resumen de un informe de partido entre homeId (equipo 0) y awayId (equipo 1).</summary>
     public static MatchSummary FromReport(MatchReport report, string homeId, string awayId) => new(
@@ -89,7 +91,8 @@ public readonly record struct MatchSummary(
         report.ShotApertureSum,
         report.LowApertureShots,
         report.LowApertureGoals,
-        report.BylineShots);
+        report.BylineShots,
+        report.ShotPosts);
 }
 
 /// <summary>Un emparejamiento del lote con la calidad de cada equipo, para betterTeamWinRate.</summary>
@@ -189,6 +192,9 @@ public static class MatchMetrics
     /// <summary>De los tiros, porcentaje ejecutado desde la línea de fondo (ADR 0136).</summary>
     public const string BylineShotShare = "bylineShotShare";
 
+    /// <summary>De los tiros, porcentaje que dio en el marco (ADR 0135 paso 2b/3a).</summary>
+    public const string ShotPostShare = "shotPostShare";
+
     /// <summary>Nombre de la métrica informativa de porcentaje de tiros que van a puerta (paso 0).</summary>
     public const string ShotsOnTargetShare = "shotsOnTargetShare";
 
@@ -266,7 +272,7 @@ public static class MatchMetrics
         long shotsOnTarget = 0;
         long saves = 0, fouls = 0, yellows = 0, reds = 0, passesAttempted = 0, passesCompleted = 0, passesIntercepted = 0, passesLoose = 0, passesBeaten = 0, throughPasses = 0, throughPassesCompleted = 0;
         long shotsBlocked = 0;
-        long crosses = 0, crossesVolleyed = 0, volleyGoals = 0, shotApertureSum = 0, lowApertureShots = 0, lowApertureGoals = 0, bylineShots = 0;
+        long crosses = 0, crossesVolleyed = 0, volleyGoals = 0, shotApertureSum = 0, lowApertureShots = 0, lowApertureGoals = 0, bylineShots = 0, shotPosts = 0;
         int scorelineCount = 0;
         int overFiveCount = 0;
         int drawCount = 0;
@@ -300,6 +306,7 @@ public static class MatchMetrics
             lowApertureShots += match.LowApertureShots;
             lowApertureGoals += match.LowApertureGoals;
             bylineShots += match.BylineShots;
+            shotPosts += match.ShotPosts;
             yellows += match.YellowCards;
             reds += match.RedCards;
             shotsBlocked += match.ShotsBlocked;
@@ -406,6 +413,7 @@ public static class MatchMetrics
         rows.Add(new MetricResult(LowApertureShotShare, 100.0 * lowApertureShots / Math.Max(1, shots), null, null, "INFO"));
         rows.Add(new MetricResult(LowApertureGoalShare, 100.0 * lowApertureGoals / Math.Max(1, goals), null, null, "INFO"));
         rows.Add(new MetricResult(BylineShotShare, 100.0 * bylineShots / Math.Max(1, shots), null, null, "INFO"));
+        rows.Add(new MetricResult(ShotPostShare, 100.0 * shotPosts / Math.Max(1, shots), null, null, "INFO"));
 
         double shotsOnTargetShare = shots > 0 ? 100.0 * shotsOnTarget / shots : 0.0;
         rows.Add(new MetricResult(ShotsOnTargetShare, shotsOnTargetShare, null, null, "INFO"));

@@ -54,7 +54,8 @@ public static class Metrics
                 match.ShotApertureSum,
                 match.LowApertureShots,
                 match.LowApertureGoals,
-                match.BylineShots));
+                match.BylineShots,
+                match.ShotPosts));
         }
 
         var qualityById = new Dictionary<string, int>(StringComparer.Ordinal);

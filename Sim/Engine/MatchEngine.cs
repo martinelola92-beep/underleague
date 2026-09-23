@@ -2001,14 +2001,28 @@ internal sealed class MatchEngine : IPerkWorld
             quality = Math.Clamp(quality + shot.PenaltyQualityBonus, 5, 95);
         }
 
+        // ADR 0136: el censo de apertura de BA-E deja de ser un script y pasa a ser instrumento del motor.
+        // Se mide AQUI, con la posicion desde la que se disparo, porque despues ya no se sabe: el balon se
+        // mueve. Es la cifra que decide si el centro arreglo lo que venia a arreglar.
+        // ADR 0135 paso 3a: y desde aqui ya no es solo un censo, es un termino del tiro, asi que se
+        // calcula ANTES de la tirada de dentro/fuera. No consume RNG -es geometria pura-, de modo que
+        // adelantarla no desplaza el flujo por si sola.
+        int aperture = Utility.ApertureCenti(shooter.Position, goal);
+
         // ADR 0050 P2: el tiro es una de las cuatro resoluciones decisivas y se tira contra el promedio
         // de dos, no contra una uniforme. P4: el mismo suelo y el mismo techo que las demás.
         // ADR 0050 P1: el canal es "tiro a puerta", así que multiplica la cuota de ACERTAR y por tanto
         // divide la de fallar, que es la que se tira aquí. Las dos cosas son la misma operación.
+        // ADR 0135 paso 3a: la apertura entra DONDE YA ESTABA LA DISTANCIA, con la misma forma y en la
+        // misma expresión, para no abrir un segundo camino que pueda contradecir al primero. Un penalti
+        // se tira de frente (apertura 100) y por tanto no paga nada, y un remate de centro llega de
+        // frente por definición de la acción, así que paga poco: las dos cosas son consecuencia de la
+        // geometría, no excepciones escritas a mano.
         int offTargetChance = Bounded(ProbabilityScale.ApplyAveraged(
             Bounded(shot.OffTargetBase
                 + (volley ? cross.VolleyOffTargetPenalty : 0)
                 + (shot.OffTargetDistanceFactor * Utility.Centi(distance) / 100)
+                + (shot.OffTargetAperturePenalty * (100 - aperture) / 100)
                 - (quality * 20)),
             ProbabilityScale.Invert(Odds(shooter, ProbabilityKind.ShotOnTarget))));
         bool offTarget = _rng.ChanceAveraged(offTargetChance);
@@ -2016,10 +2030,6 @@ internal sealed class MatchEngine : IPerkWorld
         _report.Shots[shooter.Team]++;
         shooter.Shots++;
 
-        // ADR 0136: el censo de apertura de BA-E deja de ser un script y pasa a ser instrumento del motor.
-        // Se mide AQUI, con la posicion desde la que se disparo, porque despues ya no se sabe: el balon se
-        // mueve. Es la cifra que decide si el centro arreglo lo que venia a arreglar.
-        int aperture = Utility.ApertureCenti(shooter.Position, goal);
         _report.ShotApertureSum += aperture;
         _ball.ShotAperture = aperture;
         if (aperture < LowApertureThreshold)
@@ -2047,7 +2057,7 @@ internal sealed class MatchEngine : IPerkWorld
         // altura al balón no cambiaría nada.
         var aim = offTarget
             ? OffTargetAim(goal, shooter.Position.Y)
-            : OnTargetAim(goal, quality);
+            : OnTargetAim(goal, quality, aperture);
         Vec2 target = aim.Point;
 
         _ball.Owner = null;
@@ -2193,12 +2203,40 @@ internal sealed class MatchEngine : IPerkWorld
     /// <para>Con el portero todavía midiendo su alcance en el plano (paso 3), esto no cambia ningún
     /// desenlace: importa a partir del paso siguiente, cuando alcanzar el balón dependa también de a qué
     /// altura pasa.</para>
+    ///
+    /// <para><b>ADR 0135 paso 3a — la apertura divide el error, y eso es trigonometría, no una
+    /// penalización.</b> El error de un tirador no vive en el plano de la portería: vive en su pie, y es
+    /// <b>angular</b>. Un golpeo que le desvía el balón una distancia <i>m</i> perpendicular a su línea de
+    /// tiro cruza el plano de la portería desplazado <b><i>m</i>/cos θ</b>, y <c>cos θ</c> es exactamente
+    /// <see cref="Utility.ApertureCenti"/>/100. Demostración: dirección <c>u = (cos θ, sin θ)</c>, offset
+    /// <c>m·(−sin θ, cos θ)</c>, prolongar hasta <c>x = goal.X</c> da
+    /// <c>Y = m·cos θ + m·tan θ·sin θ = m/cos θ</c>. Desde el cordel el mismo golpeo se va cinco veces más
+    /// lejos del punto buscado, y ésa es la razón real —medible, no opinable— de que tirar desde la línea
+    /// de fondo sea mala idea. Hasta hoy el motor no la tenía: el 32,4 % de los tiros salía con apertura
+    /// &lt; 0,5 y producía el 37,1 % de los goles ([BA-E], o sea que <b>convertían mejor</b> que la media).
+    /// </para>
+    ///
+    /// <para><b>Sólo se divide el ERROR, nunca la intención</b>, que es la misma frase del paso 2b sin
+    /// excepción nueva: el rincón sigue estando donde estaba y el delantero malo sigue queriendo meterla
+    /// por la escuadra; lo que cambia es cuánto le cuesta acertarlo. Y sólo la <b>horizontal</b>: el ángulo
+    /// que se modela es el del plano, el vuelo más largo también ensancharía el error vertical, y meter las
+    /// dos cosas en el mismo lote impediría atribuir nada. Queda anotado como candidato, no olvidado.</para>
     /// </summary>
-    private ShotAim OnTargetAim(Vec2 goal, int quality)
+    private ShotAim OnTargetAim(Vec2 goal, int quality, int apertureCenti)
     {
         float halfWidth = _tuning.Shot.GoalHalfWidthCellsMilli / 1000f;
         float height = _tuning.Shot.GoalHeightCellsMilli / 1000f;
         float precision = Math.Clamp(quality, 0, 100) / 100f;
+
+        // 1/cos θ es una ASÍNTOTA: desde el cordel exacto la apertura es 0 y el error sería infinito. El
+        // suelo es la guarda numérica de esa identidad, no un ajuste de dificultad, y por eso es un dato.
+        // OJO al leer esto: el valor PUBLICADO es 100, que hace el factor exactamente 1 —el paso 3a va
+        // apagado a la espera de una decisión del revisor—. Y hay algo más que conviene saber antes de
+        // encenderlo: medido, esta división aporta el 19 % del efecto y la penalización de la tirada de
+        // dentro/fuera el 89 %, porque OnTargetAim acota la mira al marco y la geometría no puede sacar
+        // el balón de la portería (ficha BH-C).
+        int floored = Math.Max(apertureCenti, _tuning.Shot.MinAimApertureCenti);
+        float apertureFactor = 100f / floored;
 
         // A DÓNDE APUNTA. A un rincón, que es donde el portero no llega, y arriba o abajo indistintamente.
         // La intención no depende de lo bueno que sea el tirador: un delantero malo también QUIERE meterla
@@ -2213,7 +2251,7 @@ internal sealed class MatchEngine : IPerkWorld
         // larguero a 0,70; el 0,00 % en la banda del marco). Con el larguero ya físico, eso dejaba media
         // portería sin riesgo.
         float spread = 1f - precision;
-        float rowError = (_rng.Range(-1000, 1001) / 1000f) * spread * halfWidth * AimErrorScale;
+        float rowError = (_rng.Range(-1000, 1001) / 1000f) * spread * halfWidth * AimErrorScale * apertureFactor;
         float zError = (_rng.Range(-1000, 1001) / 1000f) * spread * height * AimErrorScale;
 
         // Se guarda el punto CRUDO además del acotado: es lo que decide si dio en la madera. Acotar aquí
@@ -2373,6 +2411,7 @@ internal sealed class MatchEngine : IPerkWorld
             return false;
         }
 
+        _report.ShotPosts++;
         Emit(EventType.ShotPost, crossbar ? "crossbar" : "post", shooter);
 
         // Hacia el campo: el balón vuelve por donde vino, desviado, y con algo de bote.

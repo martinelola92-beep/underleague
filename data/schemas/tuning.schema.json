@@ -390,6 +390,17 @@
           "type": "integer",
           "minimum": 0,
           "maximum": 100
+        },
+        "minAimApertureCenti": {
+          "description": "ADR 0135 paso 3a: SUELO de la apertura cuando divide el error de puntería. El error de un tirador es angular, en su pie, así que en el plano de la portería se desplaza 1/cos(ángulo) = 1/apertura — una asíntota: desde el cordel exacto la apertura es 0 y el error sería infinito. Este suelo es el multiplicador máximo del error. Guarda numérica de una asíntota, no un ajuste de dificultad. Se publica en 100, que hace el divisor exactamente 1: el paso 3a de la ADR 0135 va apagado a la espera de una decisión del revisor (ficha BA-E).",
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 100
+        },
+        "offTargetAperturePenalty": {
+          "description": "ADR 0135 paso 3a: cuánto sube la cuota de irse FUERA por cada centésima de apertura que falta (apertura 100 = de frente, no suma nada; apertura 0 = suma entero). Misma escala y misma expresión que offTargetDistanceFactor, a propósito: la apertura entra donde ya entra la distancia, no por un camino nuevo. Sin este término, dividir el error sólo produce tiros recortados al marco —una fábrica de palos— porque quien decide si el disparo va dentro es esta tirada y no la geometría (ficha BH-C). Se publica en 0: medido, este término es quien produce el 89 % del efecto del paso 3a, así que encenderlo es la decisión, no un ajuste.",
+          "type": "integer",
+          "minimum": 0
         }
       },
       "required": [
@@ -405,7 +416,9 @@
         "goalHalfWidthCellsMilli",
         "goalHeightCellsMilli",
         "arcCellsPerCellMilli",
-        "postThicknessCellsMilli"
+        "postThicknessCellsMilli",
+        "minAimApertureCenti",
+        "offTargetAperturePenalty"
       ],
       "additionalProperties": false
     },

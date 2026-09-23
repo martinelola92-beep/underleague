@@ -171,6 +171,14 @@ public sealed class MatchReport
     public int BylineShots { get; }
 
     /// <summary>
+    /// Disparos que dieron en el marco (ADR 0135 paso 2b). Se promueve a instrumento del informe en el
+    /// paso 3a por la misma razón por la que la ADR 0136 promovió el censo de apertura: es el <b>riesgo
+    /// declarado</b> del paso —dividir el error de puntería por la apertura podría convertir el motor en
+    /// una fábrica de palos— y un riesgo que sólo se puede medir con un script aparte no se vigila.
+    /// </summary>
+    public int ShotPosts { get; }
+
+    /// <summary>
     /// Tiros bloqueados por un jugador de campo, por equipo, [2] (AW-A, paso 3 de
     /// `docs/plan-intercepcion-disparo.md`). Índice = equipo del que bloquea, no el del tirador; se
     /// incrementa junto al evento <see cref="EventType.ShotBlocked"/> en <c>TryBlockShot</c>. No es
@@ -286,6 +294,7 @@ public sealed class MatchReport
         LowApertureShots = builder.LowApertureShots;
         LowApertureGoals = builder.LowApertureGoals;
         BylineShots = builder.BylineShots;
+        ShotPosts = builder.ShotPosts;
         ShotsBlocked = (int[])builder.ShotsBlocked.Clone();
         Tackles = builder.Tackles;
         OffBallTackles = builder.OffBallTackles;
@@ -378,6 +387,8 @@ internal sealed class MatchReportBuilder
     public int LowApertureGoals { get; set; }
 
     public int BylineShots { get; set; }
+
+    public int ShotPosts { get; set; }
 
     /// <summary>Tiros bloqueados por equipo (equipo del que bloquea); junto a cada ShotBlocked (paso 3).</summary>
     public int[] ShotsBlocked { get; } = new int[2];
