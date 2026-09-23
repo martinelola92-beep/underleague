@@ -29,6 +29,11 @@ namespace Underleague.Game.Ui;
 /// <see cref="AnimationLibrary"/> compartida y cada jugador la monta en su reproductor. Si los esqueletos
 /// no coincidieran haría falta reescribir las rutas o reorientar con <c>SkeletonProfileHumanoid</c>.</para>
 ///
+/// <para><b>Un mensaje de cierre que NO es un fallo</b>: al salir, Godot avisa de «3 resources still in use
+/// at exit». Son el personaje, la biblioteca y su animación, que viven en cachés <c>static</c> a propósito
+/// —se cargan una vez para los catorce jugadores— y por tanto aún están referenciadas cuando el proceso
+/// termina. Queda anotado aquí para que nadie lo persiga: no hay fuga en tiempo de juego.</para>
+///
 /// <para><b>Lo que sigue faltando</b>: no hay <b>celebración</b> en el pack (se queda en la espera) y la
 /// <b>estirada del portero</b> no está enganchada porque depende de un evento —una parada— y no del estado
 /// del jugador, que es lo único que esta clase mira.</para>
@@ -43,6 +48,12 @@ public sealed partial class PlayerModel : Node3D
 
     /// <summary>Nombre de la biblioteca que se monta en cada reproductor; prefija a todas las claves.</summary>
     private const string Library = "soccer";
+
+    /// <summary>
+    /// El hueso raíz del esqueleto de Mixamo, el que lleva el desplazamiento del clip. Es el que se fija
+    /// para dejar la animación <b>en el sitio</b> (ver <see cref="PinInPlace"/>). Con otro pack cambia.
+    /// </summary>
+    private const string RootBone = ":mixamorig_Hips";
 
     /// <summary>
     /// Los clips, con la clave por la que los pide el código, el fichero del que salen y si van en bucle.
@@ -68,6 +79,13 @@ public sealed partial class PlayerModel : Node3D
         ("gk_save", "goalkeeper diving save", false),
         ("gk_catch", "goalkeeper catch", false),
     };
+
+    /// <summary>
+    /// Fundido entre posturas. Sin él, pasar de correr a chutar es un corte seco —la pose salta en un
+    /// fotograma— y a veinte jugadores a la vez se nota como un tirón. 0,15 s es el rango que la práctica
+    /// da por bueno para algo que tiene que seguir leyéndose como respuesta inmediata (0,1-0,2 s).
+    /// </summary>
+    private const float BlendSeconds = 0.15f;
 
     /// <summary>Por debajo de esto se considera quieto (casillas por segundo).</summary>
     private const float MovingThreshold = 0.15f;
@@ -247,7 +265,7 @@ public sealed partial class PlayerModel : Node3D
 
         _playing = key;
         _anim!.SpeedScale = 1f;
-        _anim.Play($"{Library}/{key}");
+        _anim.Play($"{Library}/{key}", BlendSeconds);
     }
 
     /// <summary>Un golpe seco que se deja terminar: mientras dure, ninguna otra postura lo interrumpe.</summary>
@@ -284,6 +302,12 @@ public sealed partial class PlayerModel : Node3D
             {
                 var clip = player.GetAnimation(names[0]);
                 clip.LoopMode = loop ? Animation.LoopModeEnum.Linear : Animation.LoopModeEnum.None;
+                float drift = PinInPlace(clip);
+                if (drift > 0.01f)
+                {
+                    GD.Print($"[modelos] '{key}': deriva horizontal {drift:0.##} m quitada del hueso raíz");
+                }
+
                 library.AddAnimation(key, clip);
             }
             else
@@ -295,6 +319,57 @@ public sealed partial class PlayerModel : Node3D
         }
 
         return library;
+    }
+
+    /// <summary>
+    /// Deja el clip <b>en el sitio</b>: fija a su valor inicial el desplazamiento horizontal del hueso
+    /// raíz y conserva el vertical. Devuelve cuánto se desplazaba, en metros del modelo, para poder
+    /// decirlo en consola.
+    ///
+    /// <para><b>Por qué hay que hacerlo, y por qué no es un parche.</b> Estos clips vienen con el
+    /// desplazamiento horneado en la raíz (<i>root motion</i>): al correr, la animación se lleva al modelo
+    /// hacia delante y lo saca de su anillo, y al cambiar de postura vuelve de golpe a su sitio — lo
+    /// reportó el revisor jugando. En Underleague eso está mal <b>por construcción</b>: la posición de cada
+    /// jugador la manda <c>/Sim</c> tick a tick y el render no mueve a nadie (RT-014). Un clip que mueve al
+    /// modelo es el render decidiendo dónde está un jugador, que es justo la frontera que el proyecto no
+    /// cruza. Equivale a la casilla «In Place» de Mixamo, aplicada al cargar para no depender de cómo se
+    /// descargó cada fichero.</para>
+    ///
+    /// <para>El vertical <b>se conserva</b> a propósito: es el balanceo del cuerpo al correr y el bajar al
+    /// suelo del trompicón. Quitarlo dejaría un muñeco deslizándose.</para>
+    /// </summary>
+    private static float PinInPlace(Animation clip)
+    {
+        float drift = 0f;
+        for (int track = 0; track < clip.GetTrackCount(); track++)
+        {
+            if (clip.TrackGetType(track) != Animation.TrackType.Position3D)
+            {
+                continue;
+            }
+
+            // Solo la raíz: el resto de huesos SÍ deben moverse, son el cuerpo.
+            if (!clip.TrackGetPath(track).ToString().EndsWith(RootBone, StringComparison.Ordinal))
+            {
+                continue;
+            }
+
+            int keys = clip.TrackGetKeyCount(track);
+            if (keys == 0)
+            {
+                continue;
+            }
+
+            var origin = (Vector3)clip.TrackGetKeyValue(track, 0);
+            for (int key = 0; key < keys; key++)
+            {
+                var value = (Vector3)clip.TrackGetKeyValue(track, key);
+                drift = Math.Max(drift, new Vector2(value.X - origin.X, value.Z - origin.Z).Length());
+                clip.TrackSetKeyValue(track, key, new Vector3(origin.X, value.Y, origin.Z));
+            }
+        }
+
+        return drift;
     }
 
     /// <summary>El <see cref="AnimationPlayer"/> esté donde esté en el árbol importado: el importador no garantiza dónde lo cuelga.</summary>
