@@ -726,7 +726,62 @@ los disparos y los goles cayendo a 1,27.
 
 ---
 
-## Siguiente paso: el 3, «la portería disponible» — y NO se puede empezar por el ángulo
+## El paso 3a, hecho y medido — y NO enviado (23 sep 2026)
+
+**Está implementado, probado, documentado y commiteado, pero va APAGADO por dato**
+(`minAimApertureCenti: 100`, que hace el divisor exactamente 1, y `offTargetAperturePenalty: 0`).
+Verificado con `cmp`: el build publicado es **byte a byte** HEAD anterior en 20 000 partidos de dos
+semillas. Encenderlo son dos números.
+
+**Lo que consigue encendido**, que es real y era el objetivo de [BA-E]: la ventaja de conversión del tiro
+sin ángulo —convertía **mejor** que la media— muere, de 1,42 / 1,31 a **1,09 / 1,03**, y sin tocar la IA
+(`passChainAvgLength` no se mueve). Coste: `goalsPerMatch` 2,46 → 2,20 y `shotsOnTargetShare` 72 → 66.
+
+**Lo que impide enviarlo**: cuatro puertas rojas sobre las dos del baseline. Tres se despejaron —dos son
+preexistentes ([BF-A] ya lo dice de `elf_brawler`), una es ruido (0,03 sobre el tope con error típico
+0,92), y `bossGate_grimhold_guns` se arregla **sin tocar la banda**, ablandando el jefe (`quality` 31 → 27)
+como hicieron las ADR 0049, 0050 P2 y 0074—. Queda **`buildsWinDifferently_injuries`**, de ≥1,10 a
+**1,04**, fuera en 7 de 8 semillas. La ADR 0131 calibró ese umbral midiendo media 1,29 y dejó escrito que
+**no es un rango que se arregle bajándolo otra vez**. Hay lectura alternativa anotada (sd 0,17 pone el
+borde a ~1 error típico). **Decisión del revisor, pendiente.**
+
+### Lo que la revisión independiente refutó, y hay que leer antes de retomarlo
+
+1. **El efecto NO lo produce la trigonometría.** El barrido movía la penalización dejando el suelo siempre
+   activo, así que nunca midió el término solo. Medido: **penalización sola → ventaja 0,978** (89 % del
+   recorrido); geometría sola → 1,235 (19 %). **Esto es la vía (C) de BA-E con rampa**, la que el revisor
+   declinó el 14 sep.
+2. **Por tanto el `game-design-review` que se hizo no cubre la mecánica que actúa** (se hizo sobre la
+   división). Encenderla pide uno propio.
+3. **La geometría no puede hablar**, y eso es estructural: [BH-C](./pendientes/BH-C.md), ficha nueva. El
+   recorte al marco amortigua **toda** mecánica de puntería —cualquier término que ensanche el error se
+   manifiesta como palos, no como fallos—. **Conviene resolverla antes del paso 3c**, que concentra masa
+   justo en la línea del poste.
+
+### Por dónde empezar la siguiente sesión
+
+**La recomendación es atacar [BH-C] antes que decidir sobre el umbral de lesiones**: con el recorte
+arreglado —que la mira cruda decida dentro/fuera, o sea el «error angular completo», alternativa 1 de §10
+del plan— la geometría pasa a ser portante y puede que la penalización plana no haga falta. El precio es
+que rehace la calibración del 70,5 % de la ADR 0050 P2, así que necesita su propio paso.
+
+Leer, en este orden: `docs/pendientes/BA-E.md`, `docs/pendientes/BH-C.md`,
+`docs/plan-altura-del-balon.md` §10–§11.ter, y la enmienda 3 de la ADR 0135.
+
+**Deuda anotada del paso**: faltan tests de la división trigonométrica a nivel de `OnTargetAim` con RNG
+fijo, del penalti, del remate de centro, y uno que fije los valores publicados de `tuning.json` (hoy no
+los cubre ninguno: los cuatro tests los sobrescriben). Y dos afirmaciones que se escribieron como
+comprobadas y no lo están: que el penalti no paga apertura, y que el remate «llega de frente por
+definición» —`EvaluateCross` sólo exige apertura **mejor**, no de frente—.
+
+---
+
+## Después del paso 3a: lo que ya estaba en cola
+
+*(Lo de abajo es el planteamiento del paso 3 tal y como se escribió **antes** de medirlo, y se conserva
+porque el 3b y el 3c siguen vivos. Dos avisos al leerlo: la autorización para avanzar con puertas en rojo
+**ya caducó** —era «hasta implementar centrar», y el centro está dentro desde la ADR 0136—, y el orden
+«ángulo primero, portero después» sigue en pie pero ahora con [BH-C] por delante.)*
 
 El revisor amplía el paso 3 (enmienda 2 de la ADR 0135): el **ángulo** del tirador, los **rivales que
 tapan** y la **colocación del portero** deben entrar en la puntería **y en la decisión de disparar**. Y
