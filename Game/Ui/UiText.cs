@@ -417,6 +417,10 @@ public static class UiText
         ["ui.ev.Goal"] = "GOL de {0}",
         ["ui.ev.Save"] = "{0} para el tiro de {1}",
         ["ui.ev.ShotBlocked"] = "{0} bloquea el disparo de {1}",
+        // ADR 0135 paso 2b y ADR 0136. Faltaban las dos: UiText.Get devuelve la CLAVE cuando no encuentra
+        // la entrada, así que un tiro al palo se narraba como el literal "ui.ev.ShotPost".
+        ["ui.ev.ShotPost"] = "{0} estrella el balón en la madera",
+        ["ui.ev.Cross"] = "{0} pone el centro para {1}",
         ["ui.ev.Foul"] = "{0} hace falta a {1}",
         ["ui.ev.Card"] = "{0} ve tarjeta",
         ["ui.ev.Injury"] = "{0} cae lesionado",
