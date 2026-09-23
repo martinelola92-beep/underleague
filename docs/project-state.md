@@ -1000,3 +1000,58 @@ clips es lo único que sabe de ficheros—. Fuentes CC0 que encajan con las raza
 Quaternius, Kenney. **Aviso de licencia**: el material de Mixamo se usa dentro de un juego pero no se
 redistribuye como asset; para enviar en Steam, CC0 es el camino sin ataduras y esto es un marcador de
 posición.
+
+---
+
+## ADR 0137 — Conducir es un compromiso (23 sep 2026, decisión del revisor)
+
+El revisor, jugando: *«el balón no va en sus pies»* y después *«debería existir conducción con duración
+porque si no el regate tampoco entra en juego»*. **Tenía razón, y se midió antes de tocar nada**: el regate
+ocurría **0,85 veces por partido** (contra 8,6 tiros, 12,5 entradas, ~43 pases) y **no estaba instrumentado
+en ninguna parte** — ni métrica en `/Balance`, ni campo en el informe, y `MatchLogView` lo omite. La
+instrumentación nueva es `Sim.Tests/Balance/DribbleMeasurementTests.cs`.
+
+**El cambio es pequeño porque el patrón ya existía**: `PlayerState.Dribbling` ya movía al portador con el
+balón: lo que faltaba era la **duración**. Se entraba con `EnterState(Dribbling, 0)` y, siendo un estado de
+decisión, el portador volvía a decidir cada 2 ticks, donde la utilidad prefería el pase. Ahora entra con
+`dribble.driveTicks` y la puerta de decisión respeta el contador —**comprobado inerte** para los otros dos
+estados de decisión, que entran con 0 en las dieciocho llamadas del motor— con un invariante nuevo:
+**conducir exige llevar el balón**, y si te lo quitan el estado se corta en el acto.
+
+**Medido en seis configuraciones y cinco pasadas de las 43 puertas** (tabla completa en la ADR):
+
+| | base | enviado (`driveTicks` 12) |
+|---|---|---|
+| regates intentados por partido | 0,85 | **2,69** |
+| ticks conduciendo | 3,31 % | **9,02 %** |
+| duración de una conducción | 5,45 t (0,36 s) | **15,4 t (1,03 s)** |
+| puertas rojas | 2 | **3** |
+
+**El fútbol no se mueve**: lote de 2.000 × 2 semillas contra línea base propia, ninguna métrica fuera de
+banda y ninguna cambia de estado (`possessionChanges` 21,70 · `passChainAvgLength` 1,99 · `shotsPerMatch`
+8,61 · `injuriesPerMatch` 0,72). 1.175 tests en verde, determinismo incluido.
+
+**Tres cosas medidas que refutan ideas propias**, y valen más que el cambio:
+
+1. **La duración proporcional a la técnica no arregla nada.** Parecía la solución elegante —que la
+   conducción *diferenciara* en vez de aplanar— y da **5 rojas** en vez de 3. El término se queda en `/data`
+   con cuota 0, inerte y comprobado cifra por cifra.
+2. **«El mejor equipo gana menos» no replica**: la semilla 1 decía −4,50 y la semilla 7 dice +1,80. REJECTED.
+3. **La hipótesis del derribo del duelo es falsa**: bajar `lostKnockdownTicks` de 6 a 3 deja
+   `orc_violence` en **57,16, idéntico**. No participa.
+
+**Queda abierto para el revisor**: `coherentBuildsBeatNone_orc_violence` (57,16 contra mínimo 58) rompe en
+**las cinco dosis**, así que es la mecánica y no la calibración, y **sin explicación medida todavía**; y
+`badBuildsLoseToNone_elf_out_of_zone` (46,04 contra techo 45). A cambio, la conducción **arregla**
+`orc_misplaced` y mejora `elf_brawler` (47,01 → 45,55). Decisión: compensar de otro modo o mover esas dos
+bandas con los datos de la ADR (RT-057).
+
+**Aviso que vale más que este paquete**: varias puertas están **a distancia de ruido** de su umbral
+—doctrinas falló por 0,09, `ordinaryDefeatRateAct1` por 0,04, `orc_violence` por 0,06 en una dosis—. Leer
+una sola pasada como «esto rompe X» es sobreinterpretar.
+
+### Siguiente paso concreto (sesión limpia)
+
+Leer `docs/decisiones/0137-conduccion-con-duracion.md` y `docs/pendientes/BI-D.md`. Decidir las dos puertas
+abiertas. Si se quiere entender `orc_violence` antes de decidir, el camino es `gameplay-debug` sobre el
+escenario de esa puerta (`BuildGateTests`), porque la causa **no** es el derribo del duelo.

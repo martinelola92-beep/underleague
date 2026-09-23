@@ -119,11 +119,24 @@
       "description": "ADR 0050 P4: suelo y techo unicos de las probabilidades de resolucion del balon (base 10000).",
       "type": "object",
       "properties": {
-        "_doc": { "type": "string" },
-        "probabilityFloor": { "type": "integer", "minimum": 0, "maximum": 5000 },
-        "probabilityCeiling": { "type": "integer", "minimum": 5000, "maximum": 10000 }
+        "_doc": {
+          "type": "string"
+        },
+        "probabilityFloor": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 5000
+        },
+        "probabilityCeiling": {
+          "type": "integer",
+          "minimum": 5000,
+          "maximum": 10000
+        }
       },
-      "required": ["probabilityFloor", "probabilityCeiling"],
+      "required": [
+        "probabilityFloor",
+        "probabilityCeiling"
+      ],
       "additionalProperties": false
     },
     "probability": {
@@ -297,8 +310,16 @@
         "interceptTechniqueFactor": {
           "$ref": "#/$defs/factor"
         },
-        "maxLeadCells": { "type": "number", "minimum": 0, "description": "Techo absoluto del adelanto del pase, en casillas (AZ-B paso 1)." },
-        "interceptContactPercent": { "type": "integer", "minimum": 100, "description": "Factor de proximidad de la intercepción en contacto, en tanto por ciento (AZ-B paso 2)." }
+        "maxLeadCells": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Techo absoluto del adelanto del pase, en casillas (AZ-B paso 1)."
+        },
+        "interceptContactPercent": {
+          "type": "integer",
+          "minimum": 100,
+          "description": "Factor de proximidad de la intercepción en contacto, en tanto por ciento (AZ-B paso 2)."
+        }
       },
       "required": [
         "baseSuccess",
@@ -307,7 +328,9 @@
         "pressurePenalty",
         "interceptRadiusCells",
         "interceptBaseChance",
-        "interceptTechniqueFactor", "maxLeadCells", "interceptContactPercent"
+        "interceptTechniqueFactor",
+        "maxLeadCells",
+        "interceptContactPercent"
       ],
       "additionalProperties": false
     },
@@ -328,13 +351,21 @@
         },
         "lostKnockdownTicks": {
           "$ref": "#/$defs/ticks"
+        },
+        "driveTicks": {
+          "$ref": "#/$defs/ticks"
+        },
+        "driveTicksTechniqueSharePercent": {
+          "$ref": "#/$defs/percent"
         }
       },
       "required": [
         "baseWin",
         "attackerTechniqueFactor",
         "defenderSpeedSharePercent",
-        "lostKnockdownTicks"
+        "lostKnockdownTicks",
+        "driveTicks",
+        "driveTicksTechniqueSharePercent"
       ],
       "additionalProperties": false
     },
@@ -425,12 +456,16 @@
     "cross": {
       "type": "object",
       "properties": {
-        "_doc": { "type": "string" },
+        "_doc": {
+          "type": "string"
+        },
         "peakHeightCellsMilli": {
           "description": "ADR 0136: altura del vuelo del centro en milésimas de casilla y en ABSOLUTO (FlightArc es el pico de la parábola, porque 4t(1-t) vale 1 en t=0,5). Tiene que superar pass.interceptRadiusCells, o el centro se intercepta como un pase raso y la acción no hace nada.",
           "$ref": "#/$defs/milli"
         },
-        "volleyBaseQuality": { "$ref": "#/$defs/probability" },
+        "volleyBaseQuality": {
+          "$ref": "#/$defs/probability"
+        },
         "volleyTechniqueFactor": {
           "description": "ADR 0136: deliberadamente MENOR que shot.techniqueFactor. El tiro es colocar; el remate es llegar y empujarla.",
           "$ref": "#/$defs/factor"
@@ -586,7 +621,11 @@
         "actScalePercent": {
           "description": "ADR 0043: desgaste creciente por acto. Multiplicador en tanto por ciento sobre la probabilidad de lesion, uno por acto. Solo lo aplica el bucle de run (IRunSystems.MatchConfig); un partido suelto vale 100.",
           "type": "array",
-          "items": { "type": "integer", "minimum": 0, "maximum": 1000 },
+          "items": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 1000
+          },
           "minItems": 3,
           "maxItems": 3
         },
@@ -700,14 +739,33 @@
           "minimum": -10000,
           "maximum": 10000
         },
-        "biasShiftFoulSeen": { "$ref": "#/$defs/biasPoints" },
-        "biasShiftFoulUnseen": { "$ref": "#/$defs/biasPoints" },
-        "biasShiftHardExtra": { "$ref": "#/$defs/biasPoints" },
-        "biasShiftBlockExtra": { "$ref": "#/$defs/biasPoints" },
-        "biasShiftInjuryExtra": { "$ref": "#/$defs/biasPoints" },
-        "biasShiftYellowExtra": { "$ref": "#/$defs/biasPoints" },
-        "biasShiftRedExtra": { "$ref": "#/$defs/biasPoints" },
-        "whistlePercent": { "type": "integer", "minimum": 0, "maximum": 100, "description": "Probabilidad en tanto por ciento de señalar una falta ocurrida (AZ-E, ADR 0090)." }
+        "biasShiftFoulSeen": {
+          "$ref": "#/$defs/biasPoints"
+        },
+        "biasShiftFoulUnseen": {
+          "$ref": "#/$defs/biasPoints"
+        },
+        "biasShiftHardExtra": {
+          "$ref": "#/$defs/biasPoints"
+        },
+        "biasShiftBlockExtra": {
+          "$ref": "#/$defs/biasPoints"
+        },
+        "biasShiftInjuryExtra": {
+          "$ref": "#/$defs/biasPoints"
+        },
+        "biasShiftYellowExtra": {
+          "$ref": "#/$defs/biasPoints"
+        },
+        "biasShiftRedExtra": {
+          "$ref": "#/$defs/biasPoints"
+        },
+        "whistlePercent": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 100,
+          "description": "Probabilidad en tanto por ciento de señalar una falta ocurrida (AZ-E, ADR 0090)."
+        }
       },
       "required": [
         "biasFoulShiftPer10",
@@ -720,7 +778,8 @@
         "biasShiftBlockExtra",
         "biasShiftInjuryExtra",
         "biasShiftYellowExtra",
-        "biasShiftRedExtra", "whistlePercent"
+        "biasShiftRedExtra",
+        "whistlePercent"
       ],
       "additionalProperties": false
     },
@@ -734,18 +793,43 @@
       "description": "Resolución del bloqueo sin balón (ADR 0030 §2).",
       "type": "object",
       "properties": {
-        "_doc": { "type": "string" },
-        "blockingTicks": { "$ref": "#/$defs/ticks" },
-        "cooldownTicks": { "$ref": "#/$defs/ticks" },
-        "baseWin": { "$ref": "#/$defs/probability" },
-        "strengthFactor": { "type": "integer", "minimum": 0, "maximum": 1000 },
-        "speedFactor": { "type": "integer", "minimum": 0, "maximum": 1000 },
-        "knockdownTicks": { "$ref": "#/$defs/ticks" },
-        "foulBase": { "$ref": "#/$defs/probability" }
+        "_doc": {
+          "type": "string"
+        },
+        "blockingTicks": {
+          "$ref": "#/$defs/ticks"
+        },
+        "cooldownTicks": {
+          "$ref": "#/$defs/ticks"
+        },
+        "baseWin": {
+          "$ref": "#/$defs/probability"
+        },
+        "strengthFactor": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1000
+        },
+        "speedFactor": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1000
+        },
+        "knockdownTicks": {
+          "$ref": "#/$defs/ticks"
+        },
+        "foulBase": {
+          "$ref": "#/$defs/probability"
+        }
       },
       "required": [
-        "blockingTicks", "cooldownTicks", "baseWin", "strengthFactor", "speedFactor",
-        "knockdownTicks", "foulBase"
+        "blockingTicks",
+        "cooldownTicks",
+        "baseWin",
+        "strengthFactor",
+        "speedFactor",
+        "knockdownTicks",
+        "foulBase"
       ],
       "additionalProperties": false
     },
@@ -770,15 +854,24 @@
         "penaltyTicks": {
           "$ref": "#/$defs/ticks"
         },
-        "freeKickTicks": { "$ref": "#/$defs/ticks", "description": "Ticks de cuenta atrás del saque de falta (AZ-D, ADR 0090)." },
-        "restartClearanceCells": { "type": "number", "minimum": 0, "description": "Distancia mínima de los rivales al balón durante una reanudación (banda, córner, puerta, centro y falta -no penalti-), desde la cuenta atrás hasta que el sacador suelta el balón o expira el techo de duración. Generaliza freeKickClearanceCells (AZ-D, ADR 0090) a las cinco (BB-B, docs/analisis/bb-b-barrera-geometrica-diseno.md)." }
+        "freeKickTicks": {
+          "$ref": "#/$defs/ticks",
+          "description": "Ticks de cuenta atrás del saque de falta (AZ-D, ADR 0090)."
+        },
+        "restartClearanceCells": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Distancia mínima de los rivales al balón durante una reanudación (banda, córner, puerta, centro y falta -no penalti-), desde la cuenta atrás hasta que el sacador suelta el balón o expira el techo de duración. Generaliza freeKickClearanceCells (AZ-D, ADR 0090) a las cinco (BB-B, docs/analisis/bb-b-barrera-geometrica-diseno.md)."
+        }
       },
       "required": [
         "throwInTicks",
         "goalKickTicks",
         "cornerTicks",
         "kickoffTicks",
-        "penaltyTicks", "freeKickTicks", "restartClearanceCells"
+        "penaltyTicks",
+        "freeKickTicks",
+        "restartClearanceCells"
       ],
       "additionalProperties": false
     },
@@ -846,47 +939,120 @@
     "rarityBudget": {
       "type": "object",
       "properties": {
-        "_doc": { "type": "string" },
-        "common": { "type": "integer", "minimum": 0, "maximum": 500 },
-        "uncommon": { "type": "integer", "minimum": 0, "maximum": 500 },
-        "rare": { "type": "integer", "minimum": 0, "maximum": 500 },
-        "legendary": { "type": "integer", "minimum": 0, "maximum": 500 }
+        "_doc": {
+          "type": "string"
+        },
+        "common": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 500
+        },
+        "uncommon": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 500
+        },
+        "rare": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 500
+        },
+        "legendary": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 500
+        }
       },
-      "required": ["common", "uncommon", "rare", "legendary"],
+      "required": [
+        "common",
+        "uncommon",
+        "rare",
+        "legendary"
+      ],
       "additionalProperties": false
     },
     "attributeRange": {
       "type": "object",
       "properties": {
-        "_doc": { "type": "string" },
-        "min": { "type": "integer", "minimum": 1, "maximum": 99 },
-        "max": { "type": "integer", "minimum": 1, "maximum": 99 }
+        "_doc": {
+          "type": "string"
+        },
+        "min": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 99
+        },
+        "max": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 99
+        }
       },
-      "required": ["min", "max"],
+      "required": [
+        "min",
+        "max"
+      ],
       "additionalProperties": false
     },
     "rarityRange": {
       "type": "object",
       "properties": {
-        "_doc": { "type": "string" },
-        "common": { "$ref": "#/$defs/attributeRange" },
-        "uncommon": { "$ref": "#/$defs/attributeRange" },
-        "rare": { "$ref": "#/$defs/attributeRange" },
-        "legendary": { "$ref": "#/$defs/attributeRange" }
+        "_doc": {
+          "type": "string"
+        },
+        "common": {
+          "$ref": "#/$defs/attributeRange"
+        },
+        "uncommon": {
+          "$ref": "#/$defs/attributeRange"
+        },
+        "rare": {
+          "$ref": "#/$defs/attributeRange"
+        },
+        "legendary": {
+          "$ref": "#/$defs/attributeRange"
+        }
       },
-      "required": ["common", "uncommon", "rare", "legendary"],
+      "required": [
+        "common",
+        "uncommon",
+        "rare",
+        "legendary"
+      ],
       "additionalProperties": false
     },
     "attributeShare": {
       "type": "object",
       "description": "Porcentajes 0..100 que deben sumar 100 (DataLoader lo comprueba).",
       "properties": {
-        "_doc": { "type": "string" },
-        "strength": { "type": "integer", "minimum": 0, "maximum": 100 },
-        "speed": { "type": "integer", "minimum": 0, "maximum": 100 },
-        "technique": { "type": "integer", "minimum": 0, "maximum": 100 },
-        "stamina": { "type": "integer", "minimum": 0, "maximum": 100 },
-        "leash": { "type": "integer", "minimum": 0, "maximum": 100 }
+        "_doc": {
+          "type": "string"
+        },
+        "strength": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 100
+        },
+        "speed": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 100
+        },
+        "technique": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 100
+        },
+        "stamina": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 100
+        },
+        "leash": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 100
+        }
       },
       "required": [
         "strength",
@@ -900,50 +1066,120 @@
     "positionShare": {
       "type": "object",
       "properties": {
-        "_doc": { "type": "string" },
-        "Goalkeeper": { "$ref": "#/$defs/attributeShare" },
-        "Defender": { "$ref": "#/$defs/attributeShare" },
-        "Midfielder": { "$ref": "#/$defs/attributeShare" },
-        "Forward": { "$ref": "#/$defs/attributeShare" }
+        "_doc": {
+          "type": "string"
+        },
+        "Goalkeeper": {
+          "$ref": "#/$defs/attributeShare"
+        },
+        "Defender": {
+          "$ref": "#/$defs/attributeShare"
+        },
+        "Midfielder": {
+          "$ref": "#/$defs/attributeShare"
+        },
+        "Forward": {
+          "$ref": "#/$defs/attributeShare"
+        }
       },
-      "required": ["Goalkeeper", "Defender", "Midfielder", "Forward"],
+      "required": [
+        "Goalkeeper",
+        "Defender",
+        "Midfielder",
+        "Forward"
+      ],
       "additionalProperties": false
     },
     "positionFloorEntry": {
       "type": "object",
       "description": "Suelo adicional por atributo, solo para los atributos que la posición necesita garantizados; ninguna clave es obligatoria.",
       "properties": {
-        "_doc": { "type": "string" },
-        "strength": { "type": "integer", "minimum": 1, "maximum": 99 },
-        "speed": { "type": "integer", "minimum": 1, "maximum": 99 },
-        "technique": { "type": "integer", "minimum": 1, "maximum": 99 },
-        "stamina": { "type": "integer", "minimum": 1, "maximum": 99 },
-        "leash": { "type": "integer", "minimum": 1, "maximum": 99 }
+        "_doc": {
+          "type": "string"
+        },
+        "strength": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 99
+        },
+        "speed": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 99
+        },
+        "technique": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 99
+        },
+        "stamina": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 99
+        },
+        "leash": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 99
+        }
       },
       "additionalProperties": false
     },
     "positionFloors": {
       "type": "object",
       "properties": {
-        "_doc": { "type": "string" },
-        "Goalkeeper": { "$ref": "#/$defs/positionFloorEntry" },
-        "Defender": { "$ref": "#/$defs/positionFloorEntry" },
-        "Midfielder": { "$ref": "#/$defs/positionFloorEntry" },
-        "Forward": { "$ref": "#/$defs/positionFloorEntry" }
+        "_doc": {
+          "type": "string"
+        },
+        "Goalkeeper": {
+          "$ref": "#/$defs/positionFloorEntry"
+        },
+        "Defender": {
+          "$ref": "#/$defs/positionFloorEntry"
+        },
+        "Midfielder": {
+          "$ref": "#/$defs/positionFloorEntry"
+        },
+        "Forward": {
+          "$ref": "#/$defs/positionFloorEntry"
+        }
       },
-      "required": ["Goalkeeper", "Defender", "Midfielder", "Forward"],
+      "required": [
+        "Goalkeeper",
+        "Defender",
+        "Midfielder",
+        "Forward"
+      ],
       "additionalProperties": false
     },
     "bodies": {
       "type": "object",
       "description": "Colisión y empuje entre cuerpos (ADR 0020, fase1b-diseno.md §2.1). Sin consumidor todavía en /Sim (paquete R).",
       "properties": {
-        "_doc": { "type": "string" },
-        "separationEnabled": { "type": "boolean" },
-        "maxPushPerTickMilli": { "$ref": "#/$defs/milli" },
-        "massStrengthWeight": { "type": "integer", "minimum": 0, "maximum": 100 },
-        "massRadiusWeight": { "type": "integer", "minimum": 0, "maximum": 100 },
-        "tacklePushMultiplier": { "type": "integer", "minimum": 0, "maximum": 2000 }
+        "_doc": {
+          "type": "string"
+        },
+        "separationEnabled": {
+          "type": "boolean"
+        },
+        "maxPushPerTickMilli": {
+          "$ref": "#/$defs/milli"
+        },
+        "massStrengthWeight": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 100
+        },
+        "massRadiusWeight": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 100
+        },
+        "tacklePushMultiplier": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 2000
+        }
       },
       "required": [
         "separationEnabled",
@@ -958,47 +1194,111 @@
       "type": "object",
       "description": "Casillas relativas a la casilla-hogar efectiva; -1 = sin límite en esa dirección (ADR 0028).",
       "properties": {
-        "_doc": { "type": "string" },
-        "forward": { "type": "integer", "minimum": -1, "maximum": 20 },
-        "back": { "type": "integer", "minimum": -1, "maximum": 20 },
-        "sides": { "type": "integer", "minimum": -1, "maximum": 20 }
+        "_doc": {
+          "type": "string"
+        },
+        "forward": {
+          "type": "integer",
+          "minimum": -1,
+          "maximum": 20
+        },
+        "back": {
+          "type": "integer",
+          "minimum": -1,
+          "maximum": 20
+        },
+        "sides": {
+          "type": "integer",
+          "minimum": -1,
+          "maximum": 20
+        }
       },
-      "required": ["forward", "back", "sides"],
+      "required": [
+        "forward",
+        "back",
+        "sides"
+      ],
       "additionalProperties": false
     },
     "actionZoneShape": {
       "type": "object",
       "properties": {
-        "_doc": { "type": "string" },
-        "Goalkeeper": { "$ref": "#/$defs/zoneShape" },
-        "Defender": { "$ref": "#/$defs/zoneShape" },
-        "Midfielder": { "$ref": "#/$defs/zoneShape" },
-        "Forward": { "$ref": "#/$defs/zoneShape" }
+        "_doc": {
+          "type": "string"
+        },
+        "Goalkeeper": {
+          "$ref": "#/$defs/zoneShape"
+        },
+        "Defender": {
+          "$ref": "#/$defs/zoneShape"
+        },
+        "Midfielder": {
+          "$ref": "#/$defs/zoneShape"
+        },
+        "Forward": {
+          "$ref": "#/$defs/zoneShape"
+        }
       },
-      "required": ["Goalkeeper", "Defender", "Midfielder", "Forward"],
+      "required": [
+        "Goalkeeper",
+        "Defender",
+        "Midfielder",
+        "Forward"
+      ],
       "additionalProperties": false
     },
     "leashScalePercent": {
       "type": "object",
       "properties": {
-        "_doc": { "type": "string" },
-        "at1": { "type": "integer", "minimum": 0, "maximum": 1000 },
-        "at99": { "type": "integer", "minimum": 0, "maximum": 1000 }
+        "_doc": {
+          "type": "string"
+        },
+        "at1": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1000
+        },
+        "at99": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1000
+        }
       },
-      "required": ["at1", "at99"],
+      "required": [
+        "at1",
+        "at99"
+      ],
       "additionalProperties": false
     },
     "actionZone": {
       "type": "object",
       "description": "Zona de acción con forma que sustituye al radio de correa duro (ADR 0028, fase1b-diseno.md §1.3, §2.2). Sin consumidor todavía en /Sim (paquete R).",
       "properties": {
-        "_doc": { "type": "string" },
-        "shape": { "$ref": "#/$defs/actionZoneShape" },
-        "scaleFromLeashPercent": { "$ref": "#/$defs/leashScalePercent" },
-        "outerLimitMultiplier": { "type": "integer", "minimum": 0, "maximum": 2000 },
-        "outsidePenaltyPerCell": { "$ref": "#/$defs/penalty" },
-        "disciplineWeightPercent": { "type": "integer", "minimum": 0, "maximum": 1000 },
-        "retreatBonusOutsidePerCell": { "$ref": "#/$defs/penalty" }
+        "_doc": {
+          "type": "string"
+        },
+        "shape": {
+          "$ref": "#/$defs/actionZoneShape"
+        },
+        "scaleFromLeashPercent": {
+          "$ref": "#/$defs/leashScalePercent"
+        },
+        "outerLimitMultiplier": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 2000
+        },
+        "outsidePenaltyPerCell": {
+          "$ref": "#/$defs/penalty"
+        },
+        "disciplineWeightPercent": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1000
+        },
+        "retreatBonusOutsidePerCell": {
+          "$ref": "#/$defs/penalty"
+        }
       },
       "required": [
         "shape",

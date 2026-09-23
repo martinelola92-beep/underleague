@@ -35,7 +35,10 @@ public sealed class DribbleMeasurementTests
         int Possessions,
         int OwnedTicks,
         int TotalTicks,
-        int LongestRun);
+        int LongestRun,
+        int DribblingTicks,
+        int DribbleRuns,
+        int LongestDribbleRun);
 
     [Fact]
     public void DribbleAndPossession_HowMuchIsThereToday()
@@ -53,7 +56,8 @@ public sealed class DribbleMeasurementTests
 
         // Reducción después, en orden de índice (RT-041): el resultado no depende de qué hilo acabó antes.
         double attempted = 0, won = 0, lost = 0, possessions = 0, ownedShare = 0, longest = 0, meanRun = 0;
-        int longestEver = 0;
+        double dribbling = 0, dribbleRuns = 0, dribbleRunLength = 0;
+        int longestEver = 0, longestDribbleEver = 0;
         for (int i = 0; i < Matches; i++)
         {
             var s = samples[i];
@@ -65,6 +69,10 @@ public sealed class DribbleMeasurementTests
             longest += s.LongestRun;
             meanRun += s.Possessions == 0 ? 0 : (double)s.OwnedTicks / s.Possessions;
             longestEver = Math.Max(longestEver, s.LongestRun);
+            dribbling += s.DribblingTicks;
+            dribbleRuns += s.DribbleRuns;
+            dribbleRunLength += s.DribbleRuns == 0 ? 0 : (double)s.DribblingTicks / s.DribbleRuns;
+            longestDribbleEver = Math.Max(longestDribbleEver, s.LongestDribbleRun);
         }
 
         _output.WriteLine($"{Matches} partidos, emparejamiento de referencia, semilla {BaseSeed}");
@@ -76,6 +84,10 @@ public sealed class DribbleMeasurementTests
         _output.WriteLine($"  duración media de una posesión : {meanRun / Matches:0.##} ticks ({meanRun / Matches / 15.0:0.###} s)");
         _output.WriteLine($"  posesión más larga (media)     : {longest / Matches:0.##} ticks ({longest / Matches / 15.0:0.###} s)");
         _output.WriteLine($"  posesión más larga (máximo)    : {longestEver} ticks ({longestEver / 15.0:0.###} s)");
+        _output.WriteLine($"  ticks CONDUCIENDO por partido  : {dribbling / Matches:0.#} de 1200 ({100.0 * dribbling / Matches / 1200:0.##} %)");
+        _output.WriteLine($"  conducciones por partido       : {dribbleRuns / Matches:0.#}");
+        _output.WriteLine($"  duración media de conducir     : {dribbleRunLength / Matches:0.##} ticks ({dribbleRunLength / Matches / 15.0:0.###} s)");
+        _output.WriteLine($"  conducción más larga (máximo)  : {longestDribbleEver} ticks ({longestDribbleEver / 15.0:0.###} s)");
 
         // Lo único que se afirma: que la medición ha corrido de verdad sobre partidos con traza.
         Assert.True(possessions > 0, "ningún partido registró posesión: la medición no vale");
@@ -101,13 +113,38 @@ public sealed class DribbleMeasurementTests
             }
         }
 
-        // La posesión se lee de la traza, que es donde vive tick a tick quién lleva el balón.
+        // La posesión y el estado se leen de la traza, que es donde viven tick a tick quién lleva el balón
+        // y qué está haciendo cada jugador.
         int possessions = 0, owned = 0, longest = 0, current = 0, previous = -1, total = 0;
+        int dribblingTicks = 0, dribbleRuns = 0, longestDribble = 0;
+        var dribbleRun = new int[24];
         if (result.Trace is { FrameCount: > 0 } trace)
         {
             total = trace.FrameCount;
             for (int f = 0; f < trace.FrameCount; f++)
             {
+                // Cuántos ticks pasa CUALQUIERA conduciendo, y en rachas de cuántos ticks seguidos. Es la
+                // pregunta que los eventos de duelo no responden: un duelo solo salta si hay un rival a
+                // 0,8 casillas, así que 0,85 duelos por partido no dice cuánto se conduce.
+                for (int p = 0; p < trace.Players.Count && p < dribbleRun.Length; p++)
+                {
+                    if (trace.OnPitchAt(f, p) && trace.StateAt(f, p) == PlayerState.Dribbling)
+                    {
+                        dribblingTicks++;
+                        dribbleRun[p]++;
+                        if (dribbleRun[p] == 1)
+                        {
+                            dribbleRuns++;
+                        }
+
+                        longestDribble = Math.Max(longestDribble, dribbleRun[p]);
+                    }
+                    else
+                    {
+                        dribbleRun[p] = 0;
+                    }
+                }
+
                 int owner = trace.BallOwnerAt(f);
                 if (owner >= 0)
                 {
@@ -129,6 +166,6 @@ public sealed class DribbleMeasurementTests
             }
         }
 
-        return new Sample(attempted, won, lost, possessions, owned, total, longest);
+        return new Sample(attempted, won, lost, possessions, owned, total, longest, dribblingTicks, dribbleRuns, longestDribble);
     }
 }

@@ -868,13 +868,41 @@ internal sealed class MatchEngine : IPerkWorld
             player.BlockCooldown--;
         }
 
+        // Un estado de decisión CON contador no vuelve a decidir hasta que se le acaba: es lo que hace de
+        // la conducción un compromiso y no una intención que se reevalúa cada dos ticks. Comprobado antes
+        // de añadirlo: hoy los tres estados de decisión —Positioning, Chasing, Dribbling— se entran
+        // SIEMPRE con 0 en las dieciocho llamadas del motor, así que esta condición es inerte para todo lo
+        // que ya existía y solo la nota la conducción (`dribble.driveTicks`).
         if (StateMachine.IsDecisionState(player.State)
+            && player.StateTicksLeft == 0
             && (_tick + player.Id) % _tuning.DecisionIntervalTicks == 0)
         {
             Decide(player);
         }
 
         ExecuteAction(player);
+    }
+
+    /// <summary>
+    /// Cuántos ticks dura la conducción de este jugador. <c>driveTicksTechniqueSharePercent</c> reparte la
+    /// duración entre una parte fija y una parte que **depende de su técnica**: con 0 todos conducen igual
+    /// —la versión plana, que es la que se midió primero— y con 100 la duración es proporcional a la
+    /// técnica, así que un bicho torpe apenas conduce y uno técnico se va con el balón.
+    ///
+    /// <para>No es adorno: la versión plana <b>aplana la diferenciación de builds</b> (medido: dos puertas
+    /// de build en rojo), porque conducir es una ventaja que no mira de quién es el balón. Repartir la
+    /// duración por técnica convierte la conducción en lo que el diseño quería —que la técnica <i>se
+    /// vea</i>— en vez de en un poder gratis para todos.</para>
+    ///
+    /// <para>Aritmética entera (RT-023): nada de <c>float</c> en algo que decide un contador de estado.</para>
+    /// </summary>
+    private int DriveTicks(MatchPlayer player)
+    {
+        var dribble = _tuning.Dribble;
+        int share = Math.Clamp(dribble.DriveTicksTechniqueSharePercent, 0, 100);
+        int scaled = (100 - share) + (share * player.Technique / 99);
+        int ticks = dribble.DriveTicks * scaled / 100;
+        return ticks > 0 ? ticks : 1;
     }
 
     private void TickStateTimer(MatchPlayer player)
@@ -999,7 +1027,19 @@ internal sealed class MatchEngine : IPerkWorld
             case PlayerAction.Dribble:
                 if (ReferenceEquals(_ball.Owner, player))
                 {
-                    player.EnterState(PlayerState.Dribbling, 0);
+                    // CONDUCCIÓN CON DURACIÓN (decisión del revisor, 23 sep 2026). Antes se entraba con
+                    // contador 0: `Dribbling` es un estado de decisión, así que el portador volvía a
+                    // decidir cada `decisionIntervalTicks` y la utilidad casi siempre prefería el pase.
+                    // Medido antes de tocarlo: se conducía 7,3 veces por partido, 5,45 ticks cada vez —el
+                    // 3,31 % del partido—, con lo que la técnica del conductor era invisible y el regate
+                    // ocurría 0,85 veces por partido.
+                    //
+                    // Con `driveTicks` la conducción es un COMPROMISO: durante esos ticks el portador
+                    // avanza con el balón y no puede pasar ni tirar. Eso es lo que la hace una decisión con
+                    // coste —más tiempo con el balón es más exposición a la entrada y a la lesión— en vez
+                    // de un modificador invisible. El patrón no es nuevo: es el mismo `EnterState(estado,
+                    // ticks)` que el bloqueo usa desde el paquete U.
+                    player.EnterState(PlayerState.Dribbling, DriveTicks(player));
                 }
 
                 break;
@@ -1021,6 +1061,18 @@ internal sealed class MatchEngine : IPerkWorld
                 Move(player, dribbling: false);
                 break;
             case PlayerState.Dribbling:
+                // CONDUCIR EXIGE LLEVAR EL BALÓN. Con la conducción comprometida (`dribble.driveTicks`)
+                // esto pasa a ser obligatorio: si el balón se lo quitan a mitad de la conducción —un duelo
+                // perdido, una entrada, una intercepción— el portador se quedaría avanzando al 80 % detrás
+                // de un balón que ya no es suyo, y encima sin poder decidir hasta que se le acabase el
+                // contador. Se corta en el acto y vuelve a decidir en su siguiente turno.
+                if (!ReferenceEquals(_ball.Owner, player))
+                {
+                    player.EnterState(PlayerState.Positioning, 0);
+                    Move(player, dribbling: false);
+                    break;
+                }
+
                 TryDribbleDuel(player);
                 if (player.State == PlayerState.Dribbling)
                 {

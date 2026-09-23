@@ -839,12 +839,14 @@ public static class DataLoader
 
     private static DribbleTuning ParseDribble(Json node)
     {
-        node.EnsureKnownKeys("baseWin", "attackerTechniqueFactor", "defenderSpeedSharePercent", "lostKnockdownTicks");
+        node.EnsureKnownKeys("baseWin", "attackerTechniqueFactor", "defenderSpeedSharePercent", "lostKnockdownTicks", "driveTicks", "driveTicksTechniqueSharePercent");
         return new DribbleTuning(
             node.Prop("baseWin").AsInt(),
             node.Prop("attackerTechniqueFactor").AsInt(),
             node.Prop("defenderSpeedSharePercent").AsInt(),
-            node.Prop("lostKnockdownTicks").AsInt());
+            node.Prop("lostKnockdownTicks").AsInt(),
+            node.Prop("driveTicks").AsInt(),
+            node.Prop("driveTicksTechniqueSharePercent").AsInt());
     }
 
     private static ShotTuning ParseShot(Json node)

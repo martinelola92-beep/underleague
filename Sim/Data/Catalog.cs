@@ -398,7 +398,7 @@ public sealed record StatesTuning(int PassingTicks, int ShootingTicks, int Tackl
 public sealed record PassTuning(int BaseSuccess, int TechniqueFactor, int DistancePenaltyPerCell, int PressurePenalty, float InterceptRadiusCells, int InterceptBaseChance, int InterceptTechniqueFactor, float MaxLeadCells, int InterceptContactPercent);
 
 /// <summary>tuning.dribble.</summary>
-public sealed record DribbleTuning(int BaseWin, int AttackerTechniqueFactor, int DefenderSpeedSharePercent, int LostKnockdownTicks);
+public sealed record DribbleTuning(int BaseWin, int AttackerTechniqueFactor, int DefenderSpeedSharePercent, int LostKnockdownTicks, int DriveTicks, int DriveTicksTechniqueSharePercent);
 
 /// <summary>tuning.shot.</summary>
 public sealed record ShotTuning(
