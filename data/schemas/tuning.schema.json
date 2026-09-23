@@ -374,6 +374,10 @@
           "description": "ADR 0135 paso 2: alto de la portería en milésimas de casilla. Con 700 y un semiancho de 1000, la proporción alto/ancho es ~1:3, la de una portería real. De aquí sale 'se fue por encima'.",
           "$ref": "#/$defs/milli"
         },
+        "postThicknessCellsMilli": {
+          "description": "ADR 0135 paso 2b: grosor del marco en milésimas de casilla. Un disparo que cruza la línea a menos de esta distancia del poste o del larguero DA EN EL MARCO y sale rechazado en vez de ser gol. No es el grosor real de un poste -sería invisible a esta escala-, es cuánto margen de error convierte un tiro al rincón en un tiro a la madera.",
+          "$ref": "#/$defs/milli"
+        },
         "arcCellsPerCellMilli": {
           "description": "ADR 0135 paso 2: cuánto se eleva el tiro a mitad de vuelo por cada casilla de distancia, en milésimas. Es la comba del disparo, no su altura de llegada: un tiro lejano describe más parábola. Sólo afecta a por dónde PASA el balón, que es lo que el paso 3 usará para decidir si alguien lo alcanza.",
           "$ref": "#/$defs/milli"
@@ -396,7 +400,8 @@
         "blockChancePercent",
         "goalHalfWidthCellsMilli",
         "goalHeightCellsMilli",
-        "arcCellsPerCellMilli"
+        "arcCellsPerCellMilli",
+        "postThicknessCellsMilli"
       ],
       "additionalProperties": false
     },

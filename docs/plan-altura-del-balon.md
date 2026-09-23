@@ -251,7 +251,7 @@ que el riesgo de determinismo se descubra **antes** de haber invertido en el res
 | **0** | Instrumentación: medir la referencia actual entera (tiros, paradas, bloqueos, córners, duración, posesiones) | Sin baseline no hay nada que comparar, y las semillas van a cambiar todas |
 | **1** ✅ | `Ball` gana `Z`/`VelocityZ`, gravedad y bote, y la recogida pasa a medirse por barrido; **ninguna regla del partido los usa todavía** | Aísla el riesgo de determinismo. Si RT-024 diverge, se descubre aquí y no mezclado con reglas nuevas |
 | **2** ✅ | El tiro sale con altura y con puntería dispersa; la portería gana alto y ancho; un tiro puede irse por encima | Primera regla nueva visible. Medido: el agregado no se mueve, porque el portero todavía alcanza en el plano |
-| **3** | El alcance vertical: portero y defensas sólo tocan lo que alcanzan | Es lo que el revisor señaló como el motivo de la altura |
+| **3** | **La portería disponible**: ángulo del tirador, rivales que tapan y colocación del portero deciden la puntería **y si merece la pena tirar**; el alcance de portero y defensas pasa a ser esférico | Ángulo y portero son la misma pregunta vista desde los dos lados. Decisión del revisor, ampliada (§6) |
 | **4** | **El rechace**: el toque defensivo atrapa o desvía, y lo desviado sale con velocidad y altura | Lo que cierra [BB-N](./pendientes/BB-N.md). Va al final porque necesita los tres pasos anteriores |
 | **5** | `/Game` dibuja la altura | Una línea, pero pide `visual-review` |
 | **6** | *(aparte, otra tanda)* altura por raza | Reabre la ADR 0092 y pide su propio calibrado |
@@ -339,6 +339,82 @@ mitad baja y **casi ninguno se acerca al larguero**. Es consecuencia directa de 
 vertical: **si casi ningún tiro va alto, ese alcance apenas se ejercitará** y el paso 3 mediría poco. Antes
 de darlo hay que decidir si la altura debe depender tanto de la calidad, o si un tiro puede ser alto y malo
 a la vez — que es lo que pasa en el fútbol de verdad.
+
+## 4.quater El paso 2b: el marco es físico (23 sep 2026)
+
+A la vista del paso 2, el revisor añade dos cosas:
+
+> «El alto puede ser malo a su vez porque puede irse por encima del larguero o pegar en él (creo que los
+> postes actualmente no son físicos pero deberían serlo)».
+
+Las dos van juntas y se hicieron a la vez, porque **sin marco, desatar la altura la haría gratis**: un tiro
+alto sería siempre mejor que uno raso. El palo es lo que le pone precio a buscar la escuadra.
+
+**Comprobado antes de tocar nada**: «poste» sólo aparecía en comentarios, nunca como colisión. Y la
+medición dio la razón al revisor por partida doble — con la altura atada a la calidad, los disparos
+llegaban con **máximo 0,453** contra un larguero a 0,70, así que **el 0,00 % se le acercaba**: el larguero
+habría sido decorativo.
+
+**Qué cambió.** La puntería pasa de «alcance proporcional a la calidad» a **intención + error**: el tirador
+apunta a un punto de la portería —arriba o abajo, a un lado o a otro, sin que su habilidad decida la
+intención— y la calidad gobierna **cuánto falla**. Un delantero malo también *quiere* meterla por la
+escuadra; lo que le distingue es si lo consigue. El marco tiene grosor (`postThicknessCellsMilli` 60) y un
+disparo que cruza pegado al hierro sale rechazado con velocidad y altura, con evento propio
+(`SHOT_POST`, detalle `post` o `crossbar`).
+
+**El primer intento estuvo mal y conviene que conste por qué.** Acotaba el punto de mira al marco y luego
+preguntaba si estaba en la banda del borde: eso concentra en el borde exacto **toda** la masa de los tiros
+que se habrían ido fuera, así que el palo quedaba garantizado. Resultado medido: **18,5 % de los disparos
+al marco** y los goles cayendo de 2,79 a **1,27** por partido. Se arregló guardando el punto **crudo**, sin
+acotar, y midiendo una banda **centrada** en el borde: da en la madera lo que pasaba por el filo, no lo que
+hubo que recortar.
+
+**Medido**, 10 000 partidos contra el baseline previo a toda la ADR:
+
+| | baseline | paso 2b |
+|---|---|---|
+| tiros al marco | — | **1,44 %** de los disparos · 0,107 por partido |
+| `goalsPerMatch` | 2,79 | 2,73 |
+| `shotsPerMatch` (7-15) | 8,92 | 9,00 |
+| `saveRate` | 52,84 | 52,38 |
+| `possessionChanges` (12-28) | 21,75 | 21,82 |
+| `scorelineShare_1-0_to_3-2` (50-100) | 86,58 | 86,66 |
+| métricas fuera de banda | ninguna | **ninguna** |
+
+Un palo cada nueve partidos: raro y memorable, que es lo que se buscaba, y cuesta 0,06 goles por partido.
+
+**Decisión tomada aquí**: el marco **siempre** rechaza, nunca mete el balón dentro. En el fútbol de verdad
+un tiro al palo puede entrar, pero permitirlo añadiría una tirada más a un camino que ya tiene tres, por
+uno de los sucesos más raros de un partido. Si alguna vez interesa, es una línea.
+
+## 6. El paso 3, ampliado por decisión del revisor (23 sep 2026)
+
+> «la dispersión atada a la calidad debería considerar trigonométricamente dónde está el que dispara, qué
+> ángulo tiene a portería, qué rivales tiene en frente y dónde está posicionado el portero»
+
+Y, preguntado por el alcance, el revisor elige que eso entre **también en la decisión de disparar**, no sólo
+en la puntería.
+
+**Qué falta hoy.** `quality` ya integra técnica, distancia y presión de rivales cercanos. No conoce **nada**
+de lo demás: ni el ángulo a portería, ni quién tapa la trayectoria, ni dónde está el portero. Tirar desde
+el vértice del área cuesta lo mismo que desde el punto de penalti salvo por la distancia.
+
+**Por qué el ángulo es el que más cambia el juego.** Desde la banda la portería se ve como una rendija: el
+margen de error útil se estrecha, así que fallar es geométricamente más probable aunque el tirador sea
+igual de bueno. Al entrar también en la utilidad, las criaturas dejarán de disparar desde donde no deben y
+buscarán el pase — o sea, **colocar a los tuyos en el centro pasa a importar**, que es una decisión de
+alineación y ahí es donde vive este juego.
+
+**El riesgo, dicho antes de empezar: el portero introduce un bucle.** El tirador reaccionaría al portero, y
+el portero ya reacciona al balón. Si todos los tiros van siempre al lado contrario, `saveRate` se desploma
+y hay que recalibrarlo entero. **Por eso el orden importa: ángulo y oclusión primero, portero después.** El
+ángulo es geometría pura, sin realimentación, y se mide limpio; el portero va encima de un modelo ya
+estable.
+
+**Lo que va a moverse, y hay que vigilarlo desde el primer lote**: `shotsPerMatch`, `passChainAvgLength`,
+`possessionChanges` y, sobre todo, **las puertas de build** — la ADR 0110 calibró los pesos de `Shoot` del
+defensa y del centrocampista, y esto los toca de lleno. Necesita `game-design-review` propio antes de
+implementar, y enmienda a esta ADR.
 
 ## 5. Decidido (23 sep 2026) — ADR 0135
 

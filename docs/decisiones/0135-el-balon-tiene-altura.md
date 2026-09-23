@@ -1,7 +1,7 @@
 # ADR 0135 — El balón tiene altura, y el toque defensivo puede desviarlo
 
 **Fecha:** 23 sep 2026
-**Estado:** Aceptada (decisión del revisor) — **implementación por pasos, sin empezar**
+**Estado:** Aceptada (decisión del revisor) — **pasos 1, 2 y 2b hechos**; el 3 ampliado por la enmienda 2
 **Cierra:** [BB-N](../pendientes/BB-N.md) (el córner que no ocurre nunca), y la decisión abierta 1 de `docs/plan-intercepcion-disparo.md` §8 (anchura de la portería)
 **Diseño previo:** `docs/plan-altura-del-balon.md` (`game-design-review`, diez preguntas)
 **Requisitos:** RF-050, RF-057, RF-012d · extiende la [ADR 0091](./0091-el-pase-en-profundidad-es-una-carrera.md) sin tocar el pase · reabre la [ADR 0117](./0117-el-balon-suelto-se-persigue.md)
@@ -102,6 +102,50 @@ el cambio producirá balones incogibles — el síntoma opuesto al que se busca,
 divergencia entre Windows y Linux. La naturaleza del riesgo no cambia —ya hay `float` en posiciones— pero
 la cantidad sí. Por eso el paso 1 del plan mete la física **sin que nada la use**: si RT-024 diverge, se
 descubre antes de haber invertido en las reglas.
+
+## Enmienda 1 (23 sep 2026): el marco es físico, y la altura se desata de la calidad
+
+A la vista del paso 2, el revisor añade:
+
+> «El alto puede ser malo a su vez porque puede irse por encima del larguero o pegar en él (creo que los
+> postes actualmente no son físicos pero deberían serlo)».
+
+Comprobado: los postes **no** eran físicos —«poste» sólo aparecía en comentarios— y la medición dio la
+razón por partida doble. Con la altura atada a la calidad, los disparos llegaban con **máximo 0,453**
+contra un larguero a 0,70: **el 0,00 % se le acercaba**, así que el larguero habría sido decorativo.
+
+Las dos cosas van juntas porque **sin marco, desatar la altura la haría gratis**: un tiro alto sería
+siempre mejor que uno raso. La puntería pasa a ser **intención + error** —el tirador apunta donde quiere y
+la calidad gobierna cuánto falla, porque un delantero malo también *quiere* meterla por la escuadra— y el
+marco tiene grosor, con evento propio `SHOT_POST`.
+
+**El marco siempre rechaza, nunca mete el balón dentro.** En el fútbol de verdad un tiro al palo puede
+entrar; permitirlo añadiría una tirada más a un camino que ya tiene tres, por uno de los sucesos más raros
+de un partido.
+
+Medido, 10 000 partidos: **1,44 % de los disparos al marco** (0,107 por partido, uno cada nueve),
+`goalsPerMatch` 2,79 → 2,73, ninguna métrica fuera de banda.
+
+## Enmienda 2 (23 sep 2026): el paso 3 pasa a ser «la portería disponible»
+
+> «la dispersión atada a la calidad debería considerar trigonométricamente dónde está el que dispara, qué
+> ángulo tiene a portería, qué rivales tiene en frente y dónde está posicionado el portero»
+
+El revisor decide además que eso entre **también en la decisión de disparar**, no sólo en la puntería.
+
+Hoy `quality` integra técnica, distancia y presión, y **no conoce ni el ángulo, ni la oclusión, ni al
+portero**: tirar desde el vértice del área cuesta lo mismo que desde el punto de penalti salvo por la
+distancia. Al entrar en la utilidad, las criaturas dejarán de disparar desde donde no deben, y **colocar a
+los tuyos en el centro pasará a importar** — una decisión de alineación, que es donde vive el juego.
+
+**Orden obligatorio: ángulo y oclusión primero, portero después.** El portero introduce un bucle de
+realimentación —el tirador reacciona a él y él ya reacciona al balón—, y si todos los tiros van al lado
+contrario, `saveRate` se desploma. El ángulo es geometría pura y se mide limpio.
+
+Toca la IA de utilidad, así que **mueve el estilo de juego**: hay que vigilar `shotsPerMatch`,
+`passChainAvgLength`, `possessionChanges` y sobre todo **las puertas de build**, porque la ADR 0110
+calibró los pesos de `Shoot` del defensa y del centrocampista. Pide `game-design-review` propio antes de
+implementar.
 
 ## Alternativas rechazadas
 

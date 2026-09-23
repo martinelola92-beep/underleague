@@ -145,13 +145,19 @@ public sealed class RecoveryExtraActionTests
     /// una huella exacta de un flujo aleatorio, así que su coste de mantenimiento es alto y lo que
     /// demuestra —que nadie cambió estos perks— es poco frente a ese coste. Vale la pena replantearlo la
     /// próxima vez que estorbe, en vez de regenerarlo una tercera.</para>
+    /// <para><b>Y una tercera vez, también el 23 sep 2026</b> (paso 2b de la ADR 0135: el tiro apunta a un
+    /// punto disperso de la portería con intención + error, y el marco pasa a ser físico y rechaza): los
+    /// cinco índices se refijan a 17 / 13 / 26 / 8 / 16 (el 3 no se movió). Van ya <b>tres regeneraciones en
+    /// el mismo día</b>, todas por el mismo motivo —el test fija una huella exacta de un flujo aleatorio que
+    /// cualquier cambio de puntería o de geometría del disparo desplaza—, así que la próxima vez que este
+    /// test estorbe toca replantearlo en serio, no regenerarlo una cuarta.</para>
     /// </summary>
     [Theory]
-    [InlineData(0, 18)]
-    [InlineData(1, 8)]
-    [InlineData(2, 47)]
+    [InlineData(0, 17)]
+    [InlineData(1, 13)]
+    [InlineData(2, 26)]
     [InlineData(3, 8)]
-    [InlineData(4, 18)]
+    [InlineData(4, 16)]
     public void TackleStreamIsUnchangedForAMatchWithNoPerks(int index, int expectedTackleEvents)
     {
         var result = Play(index, perkId: null, out _);
@@ -244,12 +250,17 @@ public sealed class RecoveryExtraActionTests
     /// una huella exacta de un flujo aleatorio, así que su coste de mantenimiento es alto y lo que
     /// demuestra —que nadie cambió estos perks— es poco frente a ese coste. Vale la pena replantearlo la
     /// próxima vez que estorbe, en vez de regenerarlo una tercera.</para>
+    /// <para><b>Y una tercera vez, también el 23 sep 2026</b> (paso 2b de la ADR 0135: el tiro apunta a un
+    /// punto disperso de la portería con intención + error, y el marco pasa a ser físico y rechaza):
+    /// <c>charge</c> 13 → 11, <c>lane_reader</c> 17 → 19, <c>sweeper_keeper</c> 14 → 17. Van ya <b>tres
+    /// regeneraciones en el mismo día</b>, todas por el mismo motivo — la próxima vez que este test estorbe
+    /// toca replantearlo en serio, no regenerarlo una cuarta.</para>
     /// </summary>
     [Theory]
-    [InlineData("charge", 1, 13)]
-    [InlineData("lane_reader", 1, 17)]
+    [InlineData("charge", 1, 11)]
+    [InlineData("lane_reader", 1, 19)]
     [InlineData("road_warrior", 1, 0)]
-    [InlineData("sweeper_keeper", 0, 14)]
+    [InlineData("sweeper_keeper", 0, 17)]
     public void ExistingPerksAreUnchanged(string perkId, int slot, int expected)
     {
         int total = 0;

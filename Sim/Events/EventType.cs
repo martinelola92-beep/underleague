@@ -22,6 +22,15 @@ public enum EventType
     Goal,
     Save,
     ShotBlocked,
+
+    /// <summary>
+    /// El disparo dio en el marco (ADR 0135 paso 2b). <c>Detail</c> distingue <c>post</c> de
+    /// <c>crossbar</c>. Tiene evento propio y no un detalle de <see cref="ShotBlocked"/> porque no es un
+    /// bloqueo —nadie lo hizo, lo hizo la madera— y porque contaminaría <c>ShotsBlocked</c>, que mide el
+    /// mérito defensivo. Y porque un tiro al palo es de las cosas que un jugador recuerda de un partido:
+    /// los principios del proyecto prefieren el evento explícito a la transición invisible.
+    /// </summary>
+    ShotPost,
     Foul,
     Card,
     Injury,
@@ -63,6 +72,7 @@ public static class EventTypeNames
         EventType.Goal => "GOAL",
         EventType.Save => "SAVE",
         EventType.ShotBlocked => "SHOT_BLOCKED",
+        EventType.ShotPost => "SHOT_POST",
         EventType.Foul => "FOUL",
         EventType.Card => "CARD",
         EventType.Injury => "INJURY",

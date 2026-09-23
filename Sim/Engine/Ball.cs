@@ -46,6 +46,16 @@ internal sealed class Ball
     /// </summary>
     public float FlightArc { get; set; }
 
+    /// <summary>
+    /// Desvío del punto de mira respecto al centro de la portería, <b>sin acotar</b> al marco, y altura
+    /// igualmente cruda (ADR 0135 paso 2b). Son lo que decide si el disparo dio en la madera: el punto ya
+    /// acotado no sirve, porque en él se acumulan todos los tiros que se habrían ido fuera.
+    /// </summary>
+    public float ShotRawOffCentre { get; set; }
+
+    /// <summary>Altura cruda del punto de mira; ver <see cref="ShotRawOffCentre"/>.</summary>
+    public float ShotRawHeight { get; set; }
+
     /// <summary>Poseedor actual; null si el balón está suelto o en vuelo.</summary>
     public MatchPlayer? Owner { get; set; }
 

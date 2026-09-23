@@ -1920,6 +1920,8 @@ internal sealed class MatchEngine : IPerkWorld
         _ball.FlightOrigin = shooter.Position;
         _ball.FlightTarget = target;
         _ball.FlightTargetZ = aim.Height;
+        _ball.ShotRawOffCentre = aim.RawOffCentre;
+        _ball.ShotRawHeight = aim.RawHeight;
         _ball.FlightArc = distance * (_tuning.Shot.ArcCellsPerCellMilli / 1000f);
         int ticks = FlightTicks(Vec2.Distance(shooter.Position, target), _tuning.Ball.ShotSpeedCellsPerTickMilli);
         _ball.FlightTicksTotal = ticks;
@@ -2023,7 +2025,14 @@ internal sealed class MatchEngine : IPerkWorld
     /// nunca llega a activarse, pero deja el método correcto si algún día crece.
     /// </summary>
     /// <summary>Punto al que va un disparo: dónde cruza la línea de gol y a qué altura (ADR 0135 paso 2).</summary>
-    private readonly record struct ShotAim(Vec2 Point, float Height);
+    /// <summary>
+    /// Punto al que va un disparo (ADR 0135 paso 2). <paramref name="RawOffCentre"/> y
+    /// <paramref name="RawHeight"/> son el punto <b>sin acotar</b> al marco: hacen falta para saber si el
+    /// disparo dio en la madera, porque un valor ya acotado al borde no distingue «raspó el palo» de «se
+    /// quedó pegado a él después de recortarlo», y acotar primero concentraría en el borde exacto toda la
+    /// masa de los tiros que se habrían ido fuera.
+    /// </summary>
+    private readonly record struct ShotAim(Vec2 Point, float Height, float RawOffCentre, float RawHeight);
 
     /// <summary>
     /// Punto de mira de un tiro que va <b>dentro</b> de los tres palos (ADR 0135 paso 2).
@@ -2042,17 +2051,49 @@ internal sealed class MatchEngine : IPerkWorld
     {
         float halfWidth = _tuning.Shot.GoalHalfWidthCellsMilli / 1000f;
         float height = _tuning.Shot.GoalHeightCellsMilli / 1000f;
+        float precision = Math.Clamp(quality, 0, 100) / 100f;
 
-        // De 0 a 1: cuánto del rincón alcanza este disparo. Un tiro de calidad 5 se queda en el 5 % del
-        // camino al poste; uno de 95, casi lo toca.
-        float reach = Math.Clamp(quality, 0, 100) / 100f;
-        float spread = (_rng.Range(-1000, 1001) / 1000f) * reach;
-        float rise = (_rng.Range(0, 1001) / 1000f) * reach;
+        // A DÓNDE APUNTA. A un rincón, que es donde el portero no llega, y arriba o abajo indistintamente.
+        // La intención no depende de lo bueno que sea el tirador: un delantero malo también QUIERE meterla
+        // por la escuadra. Lo que le distingue es si lo consigue.
+        float intendedRow = (_rng.Range(-1000, 1001) / 1000f) * halfWidth * CornerAimFraction;
+        float intendedZ = (_rng.Range(0, 1001) / 1000f) * height * CornerAimFraction;
+
+        // EL ERROR es lo que separa a un buen tirador de uno malo, y va en las dos dimensiones. Un mal
+        // golpeo se va tan arriba como a un lado, que es la mitad de las formas de fallar un disparo y
+        // hasta ahora no existía: la altura estaba atada a la calidad, así que un tiro malo era siempre
+        // raso y NINGÚN disparo llegaba a acercarse al larguero (medido: altura máxima 0,453 contra un
+        // larguero a 0,70; el 0,00 % en la banda del marco). Con el larguero ya físico, eso dejaba media
+        // portería sin riesgo.
+        float spread = 1f - precision;
+        float rowError = (_rng.Range(-1000, 1001) / 1000f) * spread * halfWidth * AimErrorScale;
+        float zError = (_rng.Range(-1000, 1001) / 1000f) * spread * height * AimErrorScale;
+
+        // Se guarda el punto CRUDO además del acotado: es lo que decide si dio en la madera. Acotar aquí
+        // y preguntar después sería un artefacto —todo tiro que se habría ido fuera quedaría exactamente
+        // en el borde, o sea palo garantizado—, y así fue como el primer intento produjo el 18,5 % de los
+        // disparos al marco, con los goles cayendo de 2,79 a 1,27 por partido.
+        float rawRow = intendedRow + rowError;
+        float rawZ = intendedZ + zError;
+        float row = Math.Clamp(rawRow, -halfWidth, halfWidth);
+        float z = Math.Clamp(rawZ, 0f, height);
 
         return new ShotAim(
-            new Vec2(goal.X, Math.Clamp(PitchConstants.CenterRow + (spread * halfWidth), 0f, Pitch.Rows)),
-            rise * height);
+            new Vec2(goal.X, Math.Clamp(PitchConstants.CenterRow + row, 0f, Pitch.Rows)),
+            z,
+            MathF.Abs(rawRow),
+            rawZ);
     }
+
+    /// <summary>
+    /// Fracción de la portería dentro de la que se reparte la INTENCIÓN de un disparo: nadie apunta al
+    /// hierro, así que el punto buscado se queda en el 80 % interior y es el error el que puede llevarlo
+    /// hasta la madera (ADR 0135 paso 2b).
+    /// </summary>
+    private const float CornerAimFraction = 0.8f;
+
+    /// <summary>Cuánto pesa el error de puntería frente al tamaño de la portería (ADR 0135 paso 2b).</summary>
+    private const float AimErrorScale = 0.45f;
 
     /// <summary>
     /// Punto de mira de un tiro que se marcha <b>fuera</b> (ADR 0135 paso 2). Conserva el destino de
@@ -2071,10 +2112,11 @@ internal sealed class MatchEngine : IPerkWorld
         {
             // Por encima: cruza la línea entre los palos, pero más alto que el larguero.
             float row = Math.Clamp(PitchConstants.CenterRow + (_rng.Range(-1000, 1001) / 1000f), 0f, Pitch.Rows);
-            return new ShotAim(new Vec2(goal.X, row), height * 1.5f);
+            return new ShotAim(new Vec2(goal.X, row), height * 1.5f, MathF.Abs(row - PitchConstants.CenterRow), height * 1.5f);
         }
 
-        return new ShotAim(OffTargetShotTarget(goal, shooterRow), height * 0.5f);
+        var outside = OffTargetShotTarget(goal, shooterRow);
+        return new ShotAim(outside, height * 0.5f, MathF.Abs(outside.Y - PitchConstants.CenterRow), height * 0.5f);
     }
 
     internal static Vec2 OffTargetShotTarget(Vec2 goal, float shooterRow)
@@ -2135,8 +2177,71 @@ internal sealed class MatchEngine : IPerkWorld
             }
         }
 
+        // ADR 0135 paso 2b: el marco es físico. Va DESPUÉS del portero a propósito —una parada es una
+        // parada, aunque el balón fuera a dar en el palo— y antes del gol: un disparo que cruza la línea
+        // pegado al hierro no entra, rebota. Hasta aquí los postes sólo existían en los comentarios.
+        if (TryHitFrame(shooter))
+        {
+            return;
+        }
+
         ScoreGoal(shooter);
     }
+
+    /// <summary>
+    /// ¿El disparo dio en el marco? (ADR 0135 paso 2b). Mira dónde cruza la línea de gol: si pasa a menos
+    /// de <c>postThicknessCellsMilli</c> del poste o del larguero, es madera y no gol.
+    ///
+    /// <para><b>Por qué el palo hace falta y no es adorno.</b> Sin él, apuntar al rincón —que es donde el
+    /// portero no llega— sería gratis, y la altura del disparo no tendría ningún precio: un tiro alto
+    /// sería siempre mejor que uno raso. El marco es lo que le pone coste a buscar la escuadra, y lo que
+    /// hace que un mal golpeo pueda castigarse por arriba y no sólo por los lados.</para>
+    ///
+    /// <para><b>El rechace sale hacia el campo</b>, con parte de la velocidad que traía el disparo y algo
+    /// de altura: un balón que pega en la madera no se queda muerto en la línea. Es la primera vez que un
+    /// toque devuelve el balón vivo al área — el resto llega en el paso 4.</para>
+    ///
+    /// <para><b>Decisión tomada aquí y anotada</b>: el marco <b>siempre</b> rechaza, nunca mete el balón
+    /// dentro. En el fútbol de verdad un tiro al palo puede entrar; permitirlo aquí añadiría una tirada
+    /// más a un camino que ya tiene tres, y el rebote que sí entra es de los sucesos más raros de un
+    /// partido. Si alguna vez interesa, es una línea.</para>
+    /// </summary>
+    private bool TryHitFrame(MatchPlayer shooter)
+    {
+        float thickness = _tuning.Shot.PostThicknessCellsMilli / 1000f;
+        if (thickness <= 0f)
+        {
+            return false;
+        }
+
+        float halfWidth = _tuning.Shot.GoalHalfWidthCellsMilli / 1000f;
+        float height = _tuning.Shot.GoalHeightCellsMilli / 1000f;
+
+        // Banda CENTRADA en el borde, y medida sobre el punto crudo: da en la madera lo que pasaba justo
+        // por el filo, no todo lo que hubo que recortar para que entrara.
+        bool post = MathF.Abs(_ball.ShotRawOffCentre - halfWidth) <= thickness;
+        bool crossbar = MathF.Abs(_ball.ShotRawHeight - height) <= thickness;
+        if (!crossbar && !post)
+        {
+            return false;
+        }
+
+        Emit(EventType.ShotPost, crossbar ? "crossbar" : "post", shooter);
+
+        // Hacia el campo: el balón vuelve por donde vino, desviado, y con algo de bote.
+        int direction = Pitch.AttackDirection(shooter.Team);
+        float speed = _tuning.Ball.ShotSpeedCellsPerTickMilli / 1000f * FramePostReboundPercent / 100f;
+        float sideways = _ball.FlightTarget.Y < PitchConstants.CenterRow ? -1f : 1f;
+        _ball.SetLoose(
+            new Vec2(-direction * speed, sideways * speed * 0.5f),
+            crossbar ? speed : speed * 0.5f);
+        _ball.LastTouchTeam = shooter.Team;
+        _ball.LastTouchPlayer = shooter;
+        return true;
+    }
+
+    /// <summary>Porcentaje de la velocidad del disparo que conserva el balón tras pegar en el marco.</summary>
+    private const float FramePostReboundPercent = 45f;
 
     /// <summary>
     /// Duelo de parada (ADR 0041, ADR 0050 P2 y P4). Sale de <see cref="ResolveShotArrival"/> sin cambiar

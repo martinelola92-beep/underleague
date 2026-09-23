@@ -390,7 +390,8 @@ public sealed record ShotTuning(
     int BlockChancePercent,
     int GoalHalfWidthCellsMilli,
     int GoalHeightCellsMilli,
-    int ArcCellsPerCellMilli);
+    int ArcCellsPerCellMilli,
+    int PostThicknessCellsMilli);
 
 /// <summary>tuning.save.</summary>
 public sealed record SaveTuning(int BasePercent, int CloseRangeCells, int AttributeWeightPercent, int ConsecutiveShotDecayPercent, int QualityWeight, int QualityPivot, float ReachCells, float DiveReachCells, int DivePenaltyPercent);

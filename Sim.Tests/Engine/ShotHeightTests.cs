@@ -130,44 +130,81 @@ public sealed class ShotHeightTests
             $"los goles siguen concentrados en el centro de la portería: sólo {offCentre} de {rows.Count} fuera del centro exacto");
     }
 
+    // RETIRADO (23 sep 2026): había aquí un test que comprobaba que los goles cruzan la línea dentro del
+    // semiancho y por debajo del larguero, midiendo la posición del balón en el fotograma ANTERIOR al gol.
+    // Medía mal: en ese fotograma el balón todavía está volando y no ha llegado a la línea, así que su
+    // fila es un punto intermedio de la trayectoria y no el de cruce -de ahí "gol con fila 2,23" en una
+    // portería de ±1-. El punto de cruce es el destino del vuelo, que la traza no expone. Lo que el test
+    // quería comprobar lo garantiza el código por construcción (el punto de mira se acota al marco antes
+    // de volar) y lo que sí es observable -que un tiro al hierro no es gol- lo cubre el test de abajo.
+    // Se retira en vez de relajarlo hasta que pase, que habría dejado un verde que no significa nada.
+
     /// <summary>
-    /// La geometría de la portería es coherente con la de fuera: un tiro a puerta cruza la línea
-    /// <b>dentro</b> del semiancho declarado, y por debajo del larguero.
+    /// ADR 0135 paso 2b: <b>el marco es físico y rechaza.</b> Antes los postes sólo existían en los
+    /// comentarios: un disparo que cruzaba la línea pegado al hierro era gol como cualquier otro.
+    ///
+    /// <para>Sin el marco, apuntar al rincón —que es donde el portero no llega— sería gratis y un tiro
+    /// alto sería siempre mejor que uno raso. El palo es lo que le pone precio a buscar la escuadra.</para>
     /// </summary>
     [Fact]
-    public void ShotsOnTargetStayInsideTheDeclaredGoalMouth()
+    public void ShotsCanHitTheWoodworkAndDoNotCountAsGoals()
     {
-        float halfWidth = Catalog.Tuning.Shot.GoalHalfWidthCellsMilli / 1000f;
-        float height = Catalog.Tuning.Shot.GoalHeightCellsMilli / 1000f;
-        var offences = new List<string>();
+        int frames = 0;
+        int shots = 0;
+        var afterFrame = new List<string>();
 
-        for (ulong seed = 1; seed <= Matches; seed++)
+        for (ulong seed = 1; seed <= 400; seed++)
         {
             var result = Simulator.Run(TestMatches.Reference(Catalog, seed), seed, Catalog, SimConfig.Default with { Trace = true });
             var trace = result.Trace!;
+            var events = result.Events;
 
-            foreach (var e in result.Events)
+            for (int i = 0; i < events.Count; i++)
             {
-                if (e.Type != EventType.Goal)
+                if (events[i].Type == EventType.Shot && events[i].Detail != "attempted")
+                {
+                    shots++;
+                    continue;
+                }
+
+                if (events[i].Type != EventType.ShotPost)
                 {
                     continue;
                 }
 
-                int frame = trace.FrameOfTick(e.Tick);
-                if (frame <= 0 || frame >= trace.FrameCount)
+                frames++;
+                Assert.True(
+                    events[i].Detail is "post" or "crossbar",
+                    $"detalle inesperado en el tiro al marco: '{events[i].Detail}'");
+
+                // Un tiro al marco NO es gol: no puede haber un Goal en el mismo tick.
+                for (int j = i + 1; j < events.Count && events[j].Tick == events[i].Tick; j++)
                 {
-                    continue;
+                    if (events[j].Type == EventType.Goal)
+                    {
+                        afterFrame.Add($"semilla {seed}: gol en el mismo tick que un tiro al marco (tick {events[i].Tick})");
+                    }
                 }
 
-                float row = trace.BallAt(frame - 1).Y;
-                float z = trace.BallHeightAt(frame - 1);
-                if (MathF.Abs(row - 3.5f) > halfWidth + 0.01f || z > height + 0.01f)
+                // Y el balón queda VIVO, que es lo que distingue un rechace de un balón muerto: sale del
+                // marco con velocidad. Que alguien lo recoja al tick siguiente NO es un fallo -un rechace
+                // que cae a los pies de un delantero es exactamente lo que se buscaba-, así que lo que se
+                // comprueba es que sale con velocidad, no que nadie lo coja.
+                int f = trace.FrameOfTick(events[i].Tick);
+                if (f + 1 < trace.FrameCount
+                    && trace.BallOwnerAt(f + 1) < 0
+                    && Vec2.Distance(trace.BallAt(f), trace.BallAt(f + 1)) < 0.01f)
                 {
-                    offences.Add($"semilla {seed}: gol con fila {row:F2} y altura {z:F2} (portería ±{halfWidth} y {height} de alto)");
+                    afterFrame.Add($"semilla {seed}: el balón se quedó muerto en el marco en vez de rechazar");
                 }
             }
         }
 
-        Assert.True(offences.Count == 0, string.Join("\n", offences.Take(5)));
+        Assert.True(frames > 0, $"ningún tiro dio en el marco en 400 partidos ({shots} tiros)");
+        Assert.True(afterFrame.Count == 0, string.Join("\n", afterFrame.Take(5)));
+
+        // Raro, pero no anecdótico: en el fútbol real el marco se lleva el 1-2 % de los disparos.
+        double share = frames * 100.0 / Math.Max(shots, 1);
+        Assert.InRange(share, 0.3, 5.0);
     }
 }
