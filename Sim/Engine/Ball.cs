@@ -32,6 +32,20 @@ internal sealed class Ball
     /// <summary>Velocidad vertical, en casillas por tick. Positiva hacia arriba (ADR 0135).</summary>
     public float VelocityZ { get; set; }
 
+    /// <summary>
+    /// Altura a la que llega el vuelo actual, en casillas (ADR 0135 paso 2). Cero para un pase, que sigue
+    /// siendo raso; para un tiro es el punto de la portería al que se apuntó, o por dónde se fue si iba
+    /// fuera.
+    /// </summary>
+    public float FlightTargetZ { get; set; }
+
+    /// <summary>
+    /// Comba del vuelo: cuánto se eleva el balón a mitad de camino <b>por encima</b> de la recta que une
+    /// origen y destino (ADR 0135 paso 2). Es lo que distingue un disparo de un rayo láser, y lo que el
+    /// paso 3 usará para saber si a un defensa el balón le pasa por encima.
+    /// </summary>
+    public float FlightArc { get; set; }
+
     /// <summary>Poseedor actual; null si el balón está suelto o en vuelo.</summary>
     public MatchPlayer? Owner { get; set; }
 
@@ -117,6 +131,8 @@ internal sealed class Ball
         Velocity = velocity;
         Z = 0f;
         VelocityZ = 0f;
+        FlightTargetZ = 0f;
+        FlightArc = 0f;
     }
 
     /// <summary>
@@ -142,5 +158,7 @@ internal sealed class Ball
         Velocity = new Vec2(0f, 0f);
         Z = 0f;
         VelocityZ = 0f;
+        FlightTargetZ = 0f;
+        FlightArc = 0f;
     }
 }

@@ -838,7 +838,10 @@ public static class DataLoader
 
     private static ShotTuning ParseShot(Json node)
     {
-        node.EnsureKnownKeys("baseQuality", "techniqueFactor", "strengthFactor", "distancePenaltyPerCell", "pressurePenalty", "offTargetBase", "offTargetDistanceFactor", "penaltyQualityBonus", "blockChancePercent");
+        node.EnsureKnownKeys(
+            "baseQuality", "techniqueFactor", "strengthFactor", "distancePenaltyPerCell", "pressurePenalty",
+            "offTargetBase", "offTargetDistanceFactor", "penaltyQualityBonus", "blockChancePercent",
+            "goalHalfWidthCellsMilli", "goalHeightCellsMilli", "arcCellsPerCellMilli");
         return new ShotTuning(
             node.Prop("baseQuality").AsInt(),
             node.Prop("techniqueFactor").AsInt(),
@@ -848,7 +851,10 @@ public static class DataLoader
             node.Prop("offTargetBase").AsInt(),
             node.Prop("offTargetDistanceFactor").AsInt(),
             node.Prop("penaltyQualityBonus").AsInt(),
-            node.Prop("blockChancePercent").AsInt());
+            node.Prop("blockChancePercent").AsInt(),
+            node.Prop("goalHalfWidthCellsMilli").AsInt(),
+            node.Prop("goalHeightCellsMilli").AsInt(),
+            node.Prop("arcCellsPerCellMilli").AsInt());
     }
 
     private static SaveTuning ParseSave(Json node)

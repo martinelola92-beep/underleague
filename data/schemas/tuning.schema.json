@@ -366,6 +366,18 @@
           "minimum": 0,
           "maximum": 100
         },
+        "goalHalfWidthCellsMilli": {
+          "description": "ADR 0135 paso 2: semiancho de la portería en milésimas de casilla, medido sobre la fila (Y) desde el centro del campo. Con 1000 la portería ocupa 2 de las 7 filas. Encaja con offTargetShotDeviationCells (1,25), que deja el tiro fuera justo por detrás del poste.",
+          "$ref": "#/$defs/milli"
+        },
+        "goalHeightCellsMilli": {
+          "description": "ADR 0135 paso 2: alto de la portería en milésimas de casilla. Con 700 y un semiancho de 1000, la proporción alto/ancho es ~1:3, la de una portería real. De aquí sale 'se fue por encima'.",
+          "$ref": "#/$defs/milli"
+        },
+        "arcCellsPerCellMilli": {
+          "description": "ADR 0135 paso 2: cuánto se eleva el tiro a mitad de vuelo por cada casilla de distancia, en milésimas. Es la comba del disparo, no su altura de llegada: un tiro lejano describe más parábola. Sólo afecta a por dónde PASA el balón, que es lo que el paso 3 usará para decidir si alguien lo alcanza.",
+          "$ref": "#/$defs/milli"
+        },
         "blockChancePercent": {
           "type": "integer",
           "minimum": 0,
@@ -381,7 +393,10 @@
         "offTargetBase",
         "offTargetDistanceFactor",
         "penaltyQualityBonus",
-        "blockChancePercent"
+        "blockChancePercent",
+        "goalHalfWidthCellsMilli",
+        "goalHeightCellsMilli",
+        "arcCellsPerCellMilli"
       ],
       "additionalProperties": false
     },

@@ -63,6 +63,7 @@ public sealed class MatchTrace
     private readonly byte[] _phase;
     private readonly float[] _ballX;
     private readonly float[] _ballY;
+    private readonly float[] _ballZ;
     private readonly int[] _ballOwner;
     private readonly bool[] _ballInFlight;
 
@@ -90,6 +91,7 @@ public sealed class MatchTrace
         byte[] phase,
         float[] ballX,
         float[] ballY,
+        float[] ballZ,
         int[] ballOwner,
         bool[] ballInFlight,
         int[] eventsUpTo,
@@ -114,6 +116,7 @@ public sealed class MatchTrace
         _phase = phase;
         _ballX = ballX;
         _ballY = ballY;
+        _ballZ = ballZ;
         _ballOwner = ballOwner;
         _ballInFlight = ballInFlight;
         _eventsUpTo = eventsUpTo;
@@ -152,6 +155,13 @@ public sealed class MatchTrace
 
     /// <summary>Posición continua del balón, en casillas.</summary>
     public Vec2 BallAt(int frame) => new(_ballX[frame], _ballY[frame]);
+
+    /// <summary>
+    /// Altura del balón en el fotograma, en casillas (ADR 0135). La graba <c>/Sim</c> para que la pantalla
+    /// pueda dibujarla sin calcular nada (RT-014): hasta ahora el balón se pintaba a altura fija, así que
+    /// en un render 3D todos los tiros eran rasos.
+    /// </summary>
+    public float BallHeightAt(int frame) => _ballZ[frame];
 
     /// <summary>Índice en <see cref="Players"/> de quien lleva el balón; -1 si está suelto o en vuelo.</summary>
     public int BallOwnerAt(int frame) => _ballOwner[frame];
@@ -255,6 +265,7 @@ internal sealed class MatchTraceRecorder
     private readonly List<byte> _phase = new(ExpectedFrames);
     private readonly List<float> _ballX = new(ExpectedFrames);
     private readonly List<float> _ballY = new(ExpectedFrames);
+    private readonly List<float> _ballZ = new(ExpectedFrames);
     private readonly List<int> _ballOwner = new(ExpectedFrames);
     private readonly List<bool> _ballInFlight = new(ExpectedFrames);
     private readonly List<int> _eventsUpTo = new(ExpectedFrames);
@@ -328,6 +339,7 @@ internal sealed class MatchTraceRecorder
         _phase.Add((byte)phase);
         _ballX.Add(ball.Position.X);
         _ballY.Add(ball.Position.Y);
+        _ballZ.Add(ball.Z);
         _ballOwner.Add(ball.Owner is null ? -1 : ball.Owner.Index);
         _ballInFlight.Add(ball.InFlight);
         _eventsUpTo.Add(eventCount);
@@ -365,6 +377,7 @@ internal sealed class MatchTraceRecorder
         _phase.ToArray(),
         _ballX.ToArray(),
         _ballY.ToArray(),
+        _ballZ.ToArray(),
         _ballOwner.ToArray(),
         _ballInFlight.ToArray(),
         _eventsUpTo.ToArray(),

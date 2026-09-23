@@ -137,13 +137,21 @@ public sealed class RecoveryExtraActionTests
     /// métrica se sale de banda (<c>possessionChanges</c> 21,75 → 21,81, <c>scorelineShare</c> 86,58 →
     /// 86,35), mismo precedente que AW-A en <c>docs/pendientes.md</c>. Cualquier cambio futuro del motor
     /// que mueva dónde o cuándo se consume RNG va a volver a obligar a regenerar estos valores.</para>
+    /// <para><b>Y otra vez el mismo día, con el paso 2 de la ADR 0135</b> (el tiro apunta a un punto
+    /// disperso de la portería en vez de a su centro, lo que añade tres tiradas por disparo): los cinco
+    /// índices se refijan a 18 / 8 / 47 / 8 / 18 y los perks a <c>charge</c> 13, <c>lane_reader</c> 17,
+    /// <c>sweeper_keeper</c> 14. Ninguno de los dos cambios toca el comportamiento medido; los dos mueven
+    /// el RNG. Que haya hecho falta regenerarlos <b>dos veces en un día</b> dice algo del propio test: fija
+    /// una huella exacta de un flujo aleatorio, así que su coste de mantenimiento es alto y lo que
+    /// demuestra —que nadie cambió estos perks— es poco frente a ese coste. Vale la pena replantearlo la
+    /// próxima vez que estorbe, en vez de regenerarlo una tercera.</para>
     /// </summary>
     [Theory]
-    [InlineData(0, 19)]
-    [InlineData(1, 18)]
-    [InlineData(2, 30)]
-    [InlineData(3, 15)]
-    [InlineData(4, 15)]
+    [InlineData(0, 18)]
+    [InlineData(1, 8)]
+    [InlineData(2, 47)]
+    [InlineData(3, 8)]
+    [InlineData(4, 18)]
     public void TackleStreamIsUnchangedForAMatchWithNoPerks(int index, int expectedTackleEvents)
     {
         var result = Play(index, perkId: null, out _);
@@ -228,12 +236,20 @@ public sealed class RecoveryExtraActionTests
     /// siempre. Mismo precedente que AW-A (<c>docs/pendientes.md</c>): cualquier cambio futuro del motor
     /// que mueva dónde o cuándo se consume RNG va a obligar a regenerar estos valores otra vez, y eso no
     /// es una regresión de estos perks sino la firma esperada de un desplazamiento de semillas.</para>
+    /// <para><b>Y otra vez el mismo día, con el paso 2 de la ADR 0135</b> (el tiro apunta a un punto
+    /// disperso de la portería en vez de a su centro, lo que añade tres tiradas por disparo): los cinco
+    /// índices se refijan a 18 / 8 / 47 / 8 / 18 y los perks a <c>charge</c> 13, <c>lane_reader</c> 17,
+    /// <c>sweeper_keeper</c> 14. Ninguno de los dos cambios toca el comportamiento medido; los dos mueven
+    /// el RNG. Que haya hecho falta regenerarlos <b>dos veces en un día</b> dice algo del propio test: fija
+    /// una huella exacta de un flujo aleatorio, así que su coste de mantenimiento es alto y lo que
+    /// demuestra —que nadie cambió estos perks— es poco frente a ese coste. Vale la pena replantearlo la
+    /// próxima vez que estorbe, en vez de regenerarlo una tercera.</para>
     /// </summary>
     [Theory]
-    [InlineData("charge", 1, 11)]
-    [InlineData("lane_reader", 1, 18)]
+    [InlineData("charge", 1, 13)]
+    [InlineData("lane_reader", 1, 17)]
     [InlineData("road_warrior", 1, 0)]
-    [InlineData("sweeper_keeper", 0, 11)]
+    [InlineData("sweeper_keeper", 0, 14)]
     public void ExistingPerksAreUnchanged(string perkId, int slot, int expected)
     {
         int total = 0;

@@ -1151,6 +1151,13 @@ internal sealed class MatchEngine : IPerkWorld
         float t = _ball.FlightTicksTotal <= 0 ? 1f : elapsed / (float)_ball.FlightTicksTotal;
         _ball.Position = Vec2.Lerp(_ball.FlightOrigin, _ball.FlightTarget, t);
 
+        // ADR 0135 paso 2: la altura del vuelo. Sale de la recta origen->destino más una comba, en vez de
+        // integrar la gravedad tick a tick como hace el balón suelto. No es incoherencia: el vuelo YA es
+        // interpolado en X y en Y —FlightTicks fija de antemano cuánto dura—, así que darle a la altura
+        // física libre obligaría a que el tiempo de vuelo saliera de la física y no al revés, que es un
+        // motor distinto. Un pase deja las dos en cero y sigue siendo raso, exactamente como antes.
+        _ball.Z = (_ball.FlightTargetZ * t) + (_ball.FlightArc * 4f * t * (1f - t));
+
         if (!_ball.IsShot && TryIntercept())
         {
             return;
@@ -1892,7 +1899,15 @@ internal sealed class MatchEngine : IPerkWorld
         Emit(EventType.Shot, offTarget ? "offTarget" : "onTarget", shooter, publish: false);
         EndPlay("shot");
 
-        Vec2 target = offTarget ? OffTargetShotTarget(goal, shooter.Position.Y) : goal;
+        // ADR 0135 paso 2: hasta aquí, TODO tiro a puerta apuntaba al centro exacto de la portería y
+        // ninguno tenía altura. La tirada de arriba sigue mandando -decide si va dentro o fuera, con la
+        // calibración de la ADR 0050 P2 intacta- y lo que se añade es DÓNDE dentro o fuera, que es lo que
+        // hace que la altura signifique algo: sin dispersión, todos los tiros irían al mismo punto y dar
+        // altura al balón no cambiaría nada.
+        var aim = offTarget
+            ? OffTargetAim(goal, shooter.Position.Y)
+            : OnTargetAim(goal, quality);
+        Vec2 target = aim.Point;
 
         _ball.Owner = null;
         _ball.InFlight = true;
@@ -1904,6 +1919,8 @@ internal sealed class MatchEngine : IPerkWorld
         _ball.ShotIsPenalty = isPenalty;
         _ball.FlightOrigin = shooter.Position;
         _ball.FlightTarget = target;
+        _ball.FlightTargetZ = aim.Height;
+        _ball.FlightArc = distance * (_tuning.Shot.ArcCellsPerCellMilli / 1000f);
         int ticks = FlightTicks(Vec2.Distance(shooter.Position, target), _tuning.Ball.ShotSpeedCellsPerTickMilli);
         _ball.FlightTicksTotal = ticks;
         _ball.FlightTicksLeft = ticks;
@@ -2005,6 +2022,61 @@ internal sealed class MatchEngine : IPerkWorld
     /// córner. El acotado a <c>[0, Pitch.Rows]</c> es el margen de un poste: con la desviación actual
     /// nunca llega a activarse, pero deja el método correcto si algún día crece.
     /// </summary>
+    /// <summary>Punto al que va un disparo: dónde cruza la línea de gol y a qué altura (ADR 0135 paso 2).</summary>
+    private readonly record struct ShotAim(Vec2 Point, float Height);
+
+    /// <summary>
+    /// Punto de mira de un tiro que va <b>dentro</b> de los tres palos (ADR 0135 paso 2).
+    ///
+    /// <para><b>La calidad decide cuánto se acerca a la escuadra.</b> Un disparo malo se queda cerca del
+    /// centro de la portería, que es donde el portero está; uno bueno puede irse a buscar un rincón. No se
+    /// inventa una fórmula nueva para eso: <paramref name="quality"/> ya integra técnica, distancia y
+    /// presión (<c>LaunchShot</c>), así que se reutiliza en vez de añadir un segundo camino que pudiera
+    /// contradecir al primero.</para>
+    ///
+    /// <para>Con el portero todavía midiendo su alcance en el plano (paso 3), esto no cambia ningún
+    /// desenlace: importa a partir del paso siguiente, cuando alcanzar el balón dependa también de a qué
+    /// altura pasa.</para>
+    /// </summary>
+    private ShotAim OnTargetAim(Vec2 goal, int quality)
+    {
+        float halfWidth = _tuning.Shot.GoalHalfWidthCellsMilli / 1000f;
+        float height = _tuning.Shot.GoalHeightCellsMilli / 1000f;
+
+        // De 0 a 1: cuánto del rincón alcanza este disparo. Un tiro de calidad 5 se queda en el 5 % del
+        // camino al poste; uno de 95, casi lo toca.
+        float reach = Math.Clamp(quality, 0, 100) / 100f;
+        float spread = (_rng.Range(-1000, 1001) / 1000f) * reach;
+        float rise = (_rng.Range(0, 1001) / 1000f) * reach;
+
+        return new ShotAim(
+            new Vec2(goal.X, Math.Clamp(PitchConstants.CenterRow + (spread * halfWidth), 0f, Pitch.Rows)),
+            rise * height);
+    }
+
+    /// <summary>
+    /// Punto de mira de un tiro que se marcha <b>fuera</b> (ADR 0135 paso 2). Conserva el destino de
+    /// siempre —junto al poste, <see cref="OffTargetShotTarget"/>— y le añade la vía que no existía: irse
+    /// <b>por encima del larguero</b>. Antes todo tiro desviado se iba por un lado, lo cual en un render
+    /// 3D se ve raro y, sobre todo, deja sin representar la mitad de las formas de fallar un disparo.
+    ///
+    /// <para>El desenlace no cambia —saque de puerta en los dos casos, como hasta ahora—: lo que cambia es
+    /// lo que el jugador ve y, desde el paso 4, por dónde sale el balón si alguien lo toca de camino.</para>
+    /// </summary>
+    private ShotAim OffTargetAim(Vec2 goal, float shooterRow)
+    {
+        float height = _tuning.Shot.GoalHeightCellsMilli / 1000f;
+        bool over = _rng.Range(0, 2) == 0;
+        if (over)
+        {
+            // Por encima: cruza la línea entre los palos, pero más alto que el larguero.
+            float row = Math.Clamp(PitchConstants.CenterRow + (_rng.Range(-1000, 1001) / 1000f), 0f, Pitch.Rows);
+            return new ShotAim(new Vec2(goal.X, row), height * 1.5f);
+        }
+
+        return new ShotAim(OffTargetShotTarget(goal, shooterRow), height * 0.5f);
+    }
+
     internal static Vec2 OffTargetShotTarget(Vec2 goal, float shooterRow)
     {
         float direction = shooterRow < PitchConstants.CenterRow ? -1f : 1f;
