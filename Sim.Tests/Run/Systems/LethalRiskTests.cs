@@ -48,13 +48,17 @@ public sealed class LethalRiskTests
     [Fact]
     public void MovingThePlayersChangesTheNumber()
     {
-        var (state, node) = StateAtLethalMatch();
+        // Escenario con víctima DE CAMPO: contra el portero esta palanca no existe (casilla fija, RF-041).
+        var (state, node) = StateAtLethalMatchWithOutfieldVictim();
         var baseline = Total(RunEngine.LethalRisks(state, node.Id, SystemsTestSupport.Catalog, SystemsTestSupport.Systems));
         Assert.True(baseline > 0, "el rival de este nodo no amenaza a nadie: el escenario no prueba nada");
 
         // (a) Colocación: llevar al marcado a la casilla más lejos del carnicero le baja el número. Es
         // literalmente "alejarlo de la banda peligrosa" de la ADR 0048.
-        var slots = new List<LineupSlot>(state.Lineup.Slots);
+        // Sobre el ONCE EFECTIVO, no sobre la alineación guardada (ADR 0134): los riesgos que devuelve
+        // LethalRisks son los de quien va a jugar, relleno incluido, así que buscar sus casillas en la
+        // guardada fallaba para el que entra de oficio, que no está en ella.
+        var slots = new List<LineupSlot>(RunLineup.Effective(state).Lineup.Slots);
         var original = RunEngine.LethalRisks(state, node.Id, SystemsTestSupport.Catalog, SystemsTestSupport.Systems);
         int marked = original.OrderByDescending(r => r.Risk).ThenBy(r => r.PlayerId).First().PlayerId;
 
@@ -62,6 +66,7 @@ public sealed class LethalRiskTests
             SystemsTestSupport.Systems.OpponentFor(state, node, SystemsTestSupport.Catalog), SystemsTestSupport.Catalog);
         int a = slots.FindIndex(s => s.PlayerId == marked);
         int b = FarthestSlot(slots, carriers);
+        Assert.True(b >= 0, "no hay ninguna casilla de campo a la que mover al marcado");
         Assert.NotEqual(a, b);
 
         var swapped = new List<LineupSlot>(slots);
@@ -220,13 +225,28 @@ public sealed class LethalRiskTests
     }
 
     /// <summary>Índice del titular más lejos de todos los portadores, por emparejamiento (ADR 0048).</summary>
+    /// <summary>
+    /// La casilla DE CAMPO más lejana de cualquier portador letal.
+    ///
+    /// <para>La portería queda fuera a propósito (ADR 0134): es casilla fija del portero (RF-041) y además
+    /// la más lejana del rival, así que sin excluirla este helper la elegía siempre y el test acababa
+    /// pidiendo una colocación ilegal —un jugador de campo en el área propia—. Pasaba en verde porque
+    /// <c>LethalRisks</c> leía las casillas que se le daban sin preguntarse si el partido podría jugarlas;
+    /// desde que mira el once efectivo, no. Lo que el test quiere probar es la palanca de la ADR 0048,
+    /// «alejarlo de la banda peligrosa», y esa se ejerce entre casillas de campo.</para>
+    /// </summary>
     private static int FarthestSlot(
         IReadOnlyList<LineupSlot> slots, IReadOnlyList<Lethality.LethalCarrier> carriers)
     {
-        int best = 0;
+        int best = -1;
         int bestDistance = -1;
         for (int i = 0; i < slots.Count; i++)
         {
+            if (slots[i].HomeCell.Equals(RunLineup.GoalkeeperCell))
+            {
+                continue;
+            }
+
             int distance = int.MaxValue;
             for (int c = 0; c < carriers.Count; c++)
             {
@@ -259,6 +279,43 @@ public sealed class LethalRiskTests
         { 3, 4, 5, 7, 9, 10, 11, 13, 17, 21, 24, 25, 27, 28, 30, 33, 35, 36, 39, 41, 45, 46, 48, 50,
           31337, 4242, 90210, 1234, 777, 20250905, 5150, 8675309, 112358, 606, 2718281, 31415, 99991,
           424242, 13, 271828, 55555, 1618033, 101, 202, 303, 404, 505, 606060, 7007, 80808, 909090 };
+
+    /// <summary>
+    /// Una run parada delante de un partido letal <b>cuya víctima marcada es un jugador de campo</b>.
+    ///
+    /// <para>Hace falta un escenario así para probar la palanca de colocación, y no vale cualquiera:
+    /// medido sobre 23 escenarios letales (semillas 1..60), en <b>11</b> el marcado es el portero y en
+    /// <b>12</b> un jugador de campo. Contra el portero la palanca de colocación no existe —su casilla es
+    /// fija por RF-041— y al jugador le quedan las otras dos de la ADR 0048, sentarlo o curarlo. Ver el
+    /// pendiente BG-B.</para>
+    /// </summary>
+    private static (RunState State, MapNode Node) StateAtLethalMatchWithOutfieldVictim()
+    {
+        foreach (ulong seed in LethalSearchSeeds)
+        {
+            if (SearchLethalMatch(seed) is not { } found)
+            {
+                continue;
+            }
+
+            var risks = RunEngine.LethalRisks(
+                found.State, found.Node.Id, SystemsTestSupport.Catalog, SystemsTestSupport.Systems);
+            var top = risks.Where(r => r.Risk > 0).OrderByDescending(r => r.Risk).ThenBy(r => r.PlayerId).ToList();
+            if (top.Count == 0)
+            {
+                continue;
+            }
+
+            var slots = RunLineup.Effective(found.State).Lineup.Slots;
+            if (!slots.First(s => s.PlayerId == top[0].PlayerId).HomeCell.Equals(RunLineup.GoalkeeperCell))
+            {
+                return found;
+            }
+        }
+
+        throw new InvalidOperationException(
+            "ninguna semilla da un partido letal cuya víctima marcada sea un jugador de campo");
+    }
 
     /// <summary>Una run parada delante de un partido cuyo rival lleva algún perk letal.</summary>
     private static (RunState State, MapNode Node) StateAtLethalMatch()

@@ -99,6 +99,8 @@ public static class Simulator
         ValidateTeam(setup.Away, "Away", catalog);
         ValidateSubstitutions(setup.Home, "Home");
         ValidateSubstitutions(setup.Away, "Away");
+        ValidatePlayOns(setup.Home, "Home");
+        ValidatePlayOns(setup.Away, "Away");
 
         for (int i = 0; i < setup.Home.Players.Count; i++)
         {
@@ -177,6 +179,81 @@ public static class Simulator
                 {
                     throw new ArgumentException(
                         $"{side}: la sustitución del {substitution.OutPlayerId} por el {substitution.InPlayerId} repite un jugador (ADR 0094)", nameof(team));
+                }
+            }
+        }
+    }
+
+    /// <summary>
+    /// ADR 0134 (E): quien se queda en el campo pudo estar en el campo, y no se pide dos veces. Que la
+    /// lesión ocurriera de verdad, y que fuera leve, no se puede saber aquí —depende del partido—: lo
+    /// comprueba el motor al llegar al tick, como hace con las sustituciones.
+    ///
+    /// <para><b>«Pudo estar en el campo» es el once inicial o un suplente que ya entró</b>, exactamente el
+    /// criterio de <c>SubstitutionPoints.WasOnPitch</c>, que es quien decide si un lesionado abre ventana:
+    /// si solo valiera la alineación, el segundo lesionado de cualquier partido violento —el suplente que
+    /// entró por el primero— abriría una ventana con la opción de quedarse y responderla reventaría el
+    /// partido. Es la misma trampa de BA-B, que allí costó una run entera con guardado ironman (RT-061).
+    /// El predicado está repetido, y no compartido, porque <c>/Sim/Engine</c> no puede depender de
+    /// <c>/Sim/Run</c> (RT-011): si uno cambia, hay que buscar el otro.</para>
+    /// </summary>
+    private static void ValidatePlayOns(TeamSetup team, string side)
+    {
+        var playOns = team.PlayOns;
+        for (int i = 0; i < playOns.Count; i++)
+        {
+            var playOn = playOns[i];
+            if (playOn is null)
+            {
+                throw new ArgumentException(
+                    $"{side}: el «sigue jugando» de la posición {i} está vacío (ADR 0134 E)", nameof(team));
+            }
+
+            // Los atributos que trae la decisión son el precio de quedarse, así que no pueden faltar.
+            // Attributes es un struct, de modo que a uno que falta no lo delata un null sino un cero: el
+            // rango legal es 1..99 y lo garantiza Attributes.Clamp. Un PlayOn construido a medias —con
+            // After en default— dejaría al jugador en el campo sin pagar nada, que es justo la opción
+            // gratis que el apartado E existe para que no exista.
+            for (int kind = 0; kind <= (int)AttributeKind.Leash; kind++)
+            {
+                if (playOn.After.Get((AttributeKind)kind) < 1)
+                {
+                    throw new ArgumentException(
+                        $"{side}: el «sigue jugando» del {playOn.PlayerId} en el tick {playOn.Tick} trae atributos sin rellenar ({(AttributeKind)kind} = {playOn.After.Get((AttributeKind)kind)}, el rango legal es 1..99) (ADR 0134 E)",
+                        nameof(team));
+                }
+            }
+
+            if (playOn.Tick < 0)
+            {
+                throw new ArgumentException($"{side}: el «sigue jugando» del {playOn.PlayerId} tiene tick negativo", nameof(team));
+            }
+
+            bool couldBeOnPitch = false;
+            for (int j = 0; j < team.Lineup.Slots.Count; j++)
+            {
+                couldBeOnPitch |= team.Lineup.Slots[j].PlayerId == playOn.PlayerId;
+            }
+
+            // Que la sustitución sea anterior al tick de la lesión no se comprueba aquí: depende de cómo
+            // fue el partido, y el motor solo encuentra el PlayOn si el jugador estaba en el campo.
+            for (int j = 0; j < team.Substitutions.Count; j++)
+            {
+                couldBeOnPitch |= team.Substitutions[j].InPlayerId == playOn.PlayerId;
+            }
+
+            if (!couldBeOnPitch)
+            {
+                throw new ArgumentException(
+                    $"{side}: el jugador {playOn.PlayerId} no puede seguir jugando porque no llegó a estar en el campo (ADR 0134 E)", nameof(team));
+            }
+
+            for (int j = 0; j < i; j++)
+            {
+                if (playOns[j].PlayerId == playOn.PlayerId && playOns[j].Tick == playOn.Tick)
+                {
+                    throw new ArgumentException(
+                        $"{side}: el «sigue jugando» del {playOn.PlayerId} en el tick {playOn.Tick} está repetido (ADR 0134 E)", nameof(team));
                 }
             }
         }

@@ -134,7 +134,18 @@ public static class MatchMomentView
     /// que atar un momento.
     /// </summary>
     /// <param name="playerTeam">Equipo del jugador (0 local, 1 visitante): decide pausa propia y decisión.</param>
-    public static MatchMoments Build(MatchSetup setup, MatchResult result, Catalog catalog, int playerTeam = 0)
+    /// <param name="declined">
+    /// Puntos ya respondidos con «que se quede el hueco» (ADR 0134 D). <b>Hay que pasarlos</b>: un rechazo
+    /// no cambia el partido —no entra nadie, no se vuelve a simular—, así que sin ellos el punto sigue
+    /// pendiente, la reproducción vuelve a parar en ese tick y la bandeja se reabre, o peor, se abre
+    /// enseñando el punto siguiente en el tick del anterior.
+    /// </param>
+    public static MatchMoments Build(
+        MatchSetup setup,
+        MatchResult result,
+        Catalog catalog,
+        int playerTeam = 0,
+        IReadOnlyList<DeclinedSubstitution>? declined = null)
     {
         ArgumentNullException.ThrowIfNull(setup);
         ArgumentNullException.ThrowIfNull(result);
@@ -148,7 +159,7 @@ public static class MatchMomentView
 
         var trace = result.Trace;
         var events = result.Events;
-        var pending = SubstitutionPoints.Pending(setup, result, playerTeam);
+        var pending = SubstitutionPoints.Pending(setup, result, playerTeam, catalog, declined);
 
         var moments = Group(events, trace.FrameOfTick, playerTeam, pending);
         var flashes = MatchFlashView.Build(events, trace, catalog);

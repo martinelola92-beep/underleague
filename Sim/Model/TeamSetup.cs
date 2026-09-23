@@ -84,4 +84,17 @@ public sealed record TeamSetup(string Id, string Name, Race Race, IReadOnlyList<
     /// como <see cref="Consumables"/>. Quien entra tiene que estar en <c>Players</c> y no en <c>Lineup</c>.
     /// </summary>
     public IReadOnlyList<Substitution> Substitutions { get; init; } = Array.Empty<Substitution>();
+
+    /// <summary>
+    /// Lesionados leves que este equipo ha decidido <b>no</b> retirar (ADR 0134 E), parte del estado inicial
+    /// como <see cref="Substitutions"/>. Cada uno tiene que estar en <c>Lineup</c> y haberse lesionado
+    /// levemente en su tick; lo demás es <c>ArgumentException</c>.
+    ///
+    /// <para><b>El rechazo del sustituto no vive aquí</b>, ni en <see cref="Substitutions"/> con un
+    /// centinela: «que se quede el hueco» no produce ningún hecho que el motor deba ejecutar, así que se
+    /// queda en <c>MatchDecisions</c> y el motor no llega a enterarse. Un centinela habría obligado a cada
+    /// consumidor de la lista a acordarse de excluirlo, que es el patrón por el que sigue abierto el
+    /// pendiente BE-F.</para>
+    /// </summary>
+    public IReadOnlyList<PlayOn> PlayOns { get; init; } = Array.Empty<PlayOn>();
 }

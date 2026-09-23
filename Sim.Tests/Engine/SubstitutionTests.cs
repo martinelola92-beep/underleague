@@ -42,7 +42,7 @@ public sealed class SubstitutionTests
         for (ulong seed = 1; seed < 60; seed++)
         {
             var result = Simulator.Run(setup, seed, Catalog, Config);
-            var point = SubstitutionPoints.Pending(setup, result, 0);
+            var point = SubstitutionPoints.Pending(setup, result, 0, Catalog);
             if (point is not null && point.Tick < Catalog.Tuning.RegulationTicks - 30)
             {
                 return (setup, seed, result, point);
@@ -76,7 +76,7 @@ public sealed class SubstitutionTests
 
         var stats = Assert.Single(result.Report.Players, p => p.PlayerId == chosen.Id);
         Assert.True(stats.TicksOnPitch > 0, "el suplente entró pero no jugó ni un tick");
-        var pending = SubstitutionPoints.Pending(setup with { Home = home }, result, 0);
+        var pending = SubstitutionPoints.Pending(setup with { Home = home }, result, 0, Catalog);
         Assert.True(pending is null || pending.OutPlayerId != point.OutPlayerId, "la salida ya sustituida sigue pendiente");
     }
 
@@ -102,8 +102,8 @@ public sealed class SubstitutionTests
         var (setup, seed, _, _) = FirstDecisionPoint();
         var (resolved, result) = SubstitutionPoints.ResolveAutomatically(setup, seed, Catalog, Config);
 
-        Assert.Null(SubstitutionPoints.Pending(resolved, result, 0));
-        Assert.Null(SubstitutionPoints.Pending(resolved, result, 1));
+        Assert.Null(SubstitutionPoints.Pending(resolved, result, 0, Catalog));
+        Assert.Null(SubstitutionPoints.Pending(resolved, result, 1, Catalog));
         Assert.InRange(resolved.Home.Substitutions.Count, 1, 2);
         Assert.Equal(result.Events, Simulator.Run(resolved, seed, Catalog, Config).Events);
     }
@@ -198,7 +198,7 @@ public sealed class SubstitutionTests
         for (ulong seed = 1; seed < 400; seed++)
         {
             var (resolved, result) = SubstitutionPoints.ResolveAutomatically(setup, seed, Catalog, Config, static team => team == 1);
-            var point = SubstitutionPoints.Pending(resolved, result, 0);
+            var point = SubstitutionPoints.Pending(resolved, result, 0, Catalog);
             if (point is not null && point.Candidates.Count == 2 && resolved.Away.Substitutions.Any(s => s.Tick < point.Tick))
             {
                 return (setup, seed, point, resolved);
@@ -218,7 +218,19 @@ public sealed class SubstitutionTests
 
         var outDefender = Make(1, Position.Defender, weak);
         var candidates = new[] { Make(10, Position.Forward, strong), Make(11, Position.Defender, weak), Make(12, Position.Defender, weak) };
-        var point = new SubstitutionPoint(0, 5, 1, "injury", candidates);
+        // Los campos que la ADR 0134 (C) añadió al punto son informativos —los pinta la ventana— y
+        // SubstitutionPolicy.Default no los lee: aquí van coherentes con el punto (sale el defensa 1 de su
+        // casilla) y en neutro, sin riesgo letal. El segundo Assert reutiliza a propósito la misma lista de
+        // candidatos con otro jugador saliente para comprobar la regla de puesto.
+        var point = new SubstitutionPoint(
+            0, 5, 1, "injury", candidates,
+            OutPosition: Position.Defender,
+            OutCell: new Cell(2, 2),
+            CanPlayOn: false,
+            CandidateRisks: new int[candidates.Length],
+            DefaultCandidateId: 11,
+            PlayOnRisk: 0,
+            PlayOnImmune: false);
 
         Assert.Equal(11, SubstitutionPolicy.Default(point, outDefender).Id);
         var outMidfielder = Make(2, Position.Midfielder, weak);

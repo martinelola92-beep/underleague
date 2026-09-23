@@ -11,6 +11,15 @@ namespace Underleague.Sim.Run;
 public enum LineupWarningKind
 {
     /// <summary>
+    /// Este titular <b>no lo puso el jugador</b>: la alineación guardada tenía un hueco y
+    /// <c>RunLineup.Effective</c> lo completó por rol y por id (ADR 0134). Va primero de las advertencias
+    /// de ese jugador porque es la que explica por qué aparece en las demás — enterarse de que alguien
+    /// puede morir es inútil si además no sabías que jugaba (RF-012c, RF-012d, condición 3 de la ADR 0048).
+    /// No es un aviso de peligro: es el aviso de que hay una decisión sin tomar.
+    /// </summary>
+    FilledFromBench,
+
+    /// <summary>
     /// Un titular sale al campo con una lesión grave sin tratar: si vuelve a lesionarse, <b>muere</b>
     /// (RF-093 vía 1). Es una decisión legítima del jugador —el precedente es RF-002d— pero la interfaz
     /// tiene que decirlo de forma explícita antes de confirmar.
@@ -260,16 +269,36 @@ public static class RunEngine
     /// interfaz desde <c>data/l10n</c>.
     ///
     /// <para>Ordenado: primero la advertencia de equipo, si la hay, y luego las de jugador por id
-    /// ascendente. Con <paramref name="lineup"/> a null se examina la alineación guardada.</para>
+    /// ascendente.</para>
+    ///
+    /// <para><b>Se examina el once efectivo</b> (<c>RunLineup.Effective</c>), no la alineación guardada —
+    /// ADR 0134. Antes miraba la guardada y por eso el aviso mentía: gritaba «juegas en inferioridad»
+    /// cuando el partido iba a completarse solo hasta siete, y callaba sobre el que entraba de relleno.
+    /// Ahora <see cref="LineupWarningKind.Shorthanded"/> significa inferioridad <b>real</b> —ni con el
+    /// banquillo se llega a siete— y cada hueco tapado de oficio sale como
+    /// <see cref="LineupWarningKind.FilledFromBench"/>.</para>
+    ///
+    /// <para>Un <paramref name="lineup"/> explícito es una <b>intención que prever</b>, no un once ya
+    /// cerrado: se completa igual que la guardada. Si no se completara, la previsión de la pantalla de
+    /// Equipo enseñaría seis mientras el partido juega siete, que es exactamente el engaño que esta ADR
+    /// cierra.</para>
     /// </summary>
     public static IReadOnlyList<LineupWarning> LineupWarnings(RunState state, Lineup? lineup = null)
     {
         ArgumentNullException.ThrowIfNull(state);
-        var slots = (lineup ?? state.Lineup).Slots;
+        var effective = RunLineup.Effective(state, lineup);
+        var slots = effective.Lineup.Slots;
         var warnings = new List<LineupWarning>();
         if (slots.Count < RunRules.MaxStarters)
         {
             warnings.Add(new LineupWarning(LineupWarningKind.Shorthanded, -1));
+        }
+
+        // Los de relleno van por id ascendente porque Effective ya los devuelve así (RT-041).
+        var filled = effective.FilledIds;
+        for (int i = 0; i < filled.Count; i++)
+        {
+            warnings.Add(new LineupWarning(LineupWarningKind.FilledFromBench, filled[i]));
         }
 
         var ids = new List<int>(slots.Count);
@@ -349,7 +378,11 @@ public static class RunEngine
         ArgumentNullException.ThrowIfNull(catalog);
         systems ??= DefaultRunSystems.Instance;
 
-        var slots = (lineup ?? state.Lineup).Slots;
+        // ADR 0134: el riesgo se calcula sobre el ONCE EFECTIVO y no sobre la alineación guardada ni sobre
+        // la intención tal cual llega. Con la guardada, el jugador que el motor mete de relleno jugaba sin
+        // indicador de riesgo de muerte —RF-012c incumplido— y con él la condición 3 de la ADR 0048: no se
+        // puede reducir con la alineación el riesgo de alguien que no sabías que iba a jugar.
+        var slots = RunLineup.Effective(state, lineup).Lineup.Slots;
         var risks = new List<LineupWarning>(slots.Count);
 
         var node = state.GetNode(nodeId);
@@ -422,7 +455,8 @@ public static class RunEngine
         Catalog catalog,
         IRunSystems? systems = null,
         IReadOnlyList<ManualActivation>? manualActivations = null,
-        IReadOnlyList<Substitution>? substitutions = null)
+        IReadOnlyList<Substitution>? substitutions = null,
+        IReadOnlyList<PlayOn>? playOns = null)
     {
         ArgumentNullException.ThrowIfNull(state);
         ArgumentNullException.ThrowIfNull(catalog);
@@ -449,6 +483,11 @@ public static class RunEngine
         {
             Consumables = state.Equipment.ForMatch(state.Consumables, manualActivations),
             Substitutions = substitutions ?? Array.Empty<Substitution>(),
+
+            // ADR 0134 E: el lesionado leve que el jugador decidió no retirar. Es la única de las tres
+            // respuestas al punto de decisión que el motor necesita conocer; el rechazo se queda en
+            // MatchDecisions y la sustitución ya viaja arriba.
+            PlayOns = playOns ?? Array.Empty<PlayOn>(),
         };
         var away = systems.OpponentFor(state, node, catalog);
         var referee = systems.RefereeFor(state, node, catalog);
@@ -483,10 +522,12 @@ public static class RunEngine
 
     private static MatchEntry ResolveMatch(RunState state, MapNode node, Catalog catalog, IRunSystems systems, MatchDecisions decisions)
     {
-        var (built, seed, lineup) = BuildMatch(state, node.Id, catalog, systems, decisions.ManualActivations, decisions.Substitutions);
+        var (built, seed, lineup) = BuildMatch(
+            state, node.Id, catalog, systems, decisions.ManualActivations, decisions.Substitutions, decisions.PlayOns);
         // ADR 0094: las sustituciones que el llamador no trajo (ninguna en /Balance; las del rival siempre)
         // se resuelven con la política por defecto volviendo a jugar el partido con ellas en el estado inicial.
-        var (setup, result) = SubstitutionPoints.ResolveAutomatically(built, seed, catalog, systems.MatchConfig(state, node, catalog));
+        var (setup, result) = SubstitutionPoints.ResolveAutomatically(
+            built, seed, catalog, systems.MatchConfig(state, node, catalog), usesPolicy: null, decisions.Declines);
         var applied = MatchResolution.Apply(state, node, lineup, result, catalog);
 
         var next = applied.State.WithCurrentNode(node.Id);
@@ -600,36 +641,9 @@ public static class RunEngine
             }
         }
 
-        return MarkSevereInjuryRisks(state, slots).WithLineup(decision.Lineup);
-    }
-
-    /// <summary>
-    /// Deja anotado en el estado quién sale al campo con una lesión grave sin tratar, y borra la marca de
-    /// quien ya no lo hace (RF-093 vía 1). La marca vale para <b>este</b> partido: sin ella,
-    /// <c>RunLineup</c> no alinea a un lesionado grave ni aunque su nombre siga en la alineación
-    /// guardada, de modo que arriesgarse es siempre una decisión tomada, nunca una herencia.
-    /// </summary>
-    private static RunState MarkSevereInjuryRisks(RunState state, IReadOnlyList<LineupSlot> slots)
-    {
-        var next = state;
-        foreach (var (name, value) in state.Counters)
-        {
-            if (value != 0 && name.StartsWith(RunLineup.RiskCounterPrefix, StringComparison.Ordinal))
-            {
-                next = next.WithCounter(name, 0);
-            }
-        }
-
-        for (int i = 0; i < slots.Count; i++)
-        {
-            var player = state.FindPlayer(slots[i].PlayerId);
-            if (player is { PhysicalState: PhysicalState.SevereInjury })
-            {
-                next = next.WithCounter(RunLineup.RiskCounterPrefix + player.Id.ToString(System.Globalization.CultureInfo.InvariantCulture), 1);
-            }
-        }
-
-        return next;
+        // La marca de «alineado a sabiendas con lesión grave» (RF-093 vía 1) la pone RunLineup, que es
+        // quien la lee en CanStart y quien tiene que poner la misma al PREVER una alineación (ADR 0134).
+        return RunLineup.MarkSevereInjuryRisks(state, slots).WithLineup(decision.Lineup);
     }
 
     private static RunState ApplyConsumables(RunState state, SetConsumables decision)

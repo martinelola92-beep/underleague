@@ -20,6 +20,31 @@ public sealed record MatchLineup(
     int EmergencyGoalkeeperId);
 
 /// <summary>
+/// <b>El once efectivo</b> (ADR 0134): quién va a saltar al campo de verdad, que no es lo mismo que
+/// <c>RunState.Lineup</c>. Esa es la alineación <b>guardada</b> —la intención del jugador—, y el partido se
+/// juega con la que <see cref="RunLineup.Build"/> construye completando los huecos por rol y por id
+/// (RF-002d). Mientras ese cálculo vivió solo dentro de <c>Build</c>, todos los de fuera —el aviso previo,
+/// el riesgo letal de RF-012c, «TU ONCE»— lo volvían a derivar de la guardada y decían otra cosa que la que
+/// pasaba, que es la contradicción entre dos representaciones del mismo hecho que RT-014 prohíbe.
+/// </summary>
+/// <param name="Lineup">La colocación con la que se juega, casillas incluidas.</param>
+/// <param name="FilledIds">
+/// Los que entran <b>de relleno</b>: están en el once efectivo y no en la alineación guardada, así que el
+/// jugador no los puso. Por id ascendente (RT-041). Es lo que permite que el aviso diga «entra X de oficio»
+/// en vez de mentir con una inferioridad que no va a ocurrir, y lo que obliga a que el riesgo de muerte de
+/// RF-012c les alcance: no se puede reducir con la alineación (condición 3 de la ADR 0048) el riesgo de
+/// alguien que no sabías que jugaba.
+/// </param>
+public sealed record EffectiveLineup(Lineup Lineup, IReadOnlyList<int> FilledIds)
+{
+    /// <summary>
+    /// Inferioridad <b>real</b> (RF-002d): ni con el banquillo entero se llega a once. Distinto de que la
+    /// alineación guardada tenga huecos, que es lo que el aviso confundía.
+    /// </summary>
+    public bool IsShorthanded => Lineup.Slots.Count < RunRules.MaxStarters;
+}
+
+/// <summary>
 /// Construye la alineación con la que se entra en un nodo de partido. Es responsabilidad del paquete W
 /// porque es lo que cierra el contrato con <c>Simulator.Run</c>, que exige entre 5 y 7 titulares y
 /// <b>exactamente un portero</b>.
@@ -56,6 +81,43 @@ public static class RunLineup
     public static Cell GoalkeeperCell { get; } = new(0, 3);
 
     /// <summary>
+    /// Deja anotado en el estado quién sale al campo con una lesión grave sin tratar, y borra la marca de
+    /// quien ya no lo hace (RF-093 vía 1). La marca vale para <b>este</b> partido: sin ella,
+    /// <see cref="CanStart"/> no alinea a un lesionado grave ni aunque su nombre siga en la alineación
+    /// guardada, de modo que arriesgarse es siempre una decisión tomada, nunca una herencia.
+    ///
+    /// <para>Vive aquí, junto a <see cref="CanStart"/> —que es quien la lee— y no en <c>RunEngine</c>,
+    /// porque la usan dos: confirmar una alineación (<c>Apply(SetLineup)</c>) y <b>prever</b> una
+    /// (<see cref="Effective"/>). Si la previsión no marcara igual que la confirmación, enseñaría un once
+    /// distinto del que saldría al pulsar el botón.</para>
+    /// </summary>
+    public static RunState MarkSevereInjuryRisks(RunState state, IReadOnlyList<LineupSlot> slots)
+    {
+        ArgumentNullException.ThrowIfNull(state);
+        ArgumentNullException.ThrowIfNull(slots);
+        var next = state;
+        foreach (var (name, value) in state.Counters)
+        {
+            if (value != 0 && name.StartsWith(RiskCounterPrefix, StringComparison.Ordinal))
+            {
+                next = next.WithCounter(name, 0);
+            }
+        }
+
+        for (int i = 0; i < slots.Count; i++)
+        {
+            var player = state.FindPlayer(slots[i].PlayerId);
+            if (player is { PhysicalState: PhysicalState.SevereInjury })
+            {
+                next = next.WithCounter(
+                    RiskCounterPrefix + player.Id.ToString(System.Globalization.CultureInfo.InvariantCulture), 1);
+            }
+        }
+
+        return next;
+    }
+
+    /// <summary>
     /// True si este jugador puede salir al campo: disponible (sano o con lesión leve, RF-090/091) o bien
     /// con lesión grave y marcado explícitamente para arriesgarse (RF-093). El muerto, nunca.
     /// </summary>
@@ -87,6 +149,126 @@ public static class RunLineup
     {
         ArgumentNullException.ThrowIfNull(state);
         return Build(state, null).Lineup;
+    }
+
+    /// <summary>
+    /// El once efectivo de esta plantilla: <b>quién juega de verdad</b> y quién entra de relleno (ADR 0134).
+    ///
+    /// <para><b>Es literalmente la misma llamada que construye el partido</b>, con el catálogo a null para
+    /// no convertir a <see cref="PlayerDefinition"/>: no es una reimplementación «de acuerdo» con
+    /// <see cref="Build"/> que haya que mantener sincronizada, es <see cref="Build"/>. Esa era la causa de
+    /// [BC-H] —el aviso previo y el riesgo letal de RF-012c derivaban el once por su cuenta de la
+    /// alineación guardada— y por eso el arreglo no es «calcularlo igual en los dos sitios» sino que solo
+    /// exista un sitio.</para>
+    ///
+    /// <para>Pide una run viva: por debajo de <c>RunRules.MinimumAvailablePlayers</c> lanza, igual que
+    /// <see cref="Build"/>, porque RF-002b dice que ahí la run ya había terminado.</para>
+    /// </summary>
+    /// <param name="intended">
+    /// La intención que se quiere resolver, o null para la alineación guardada. Sirve para <b>prever</b>:
+    /// la pantalla de Equipo pregunta «si confirmo ESTA colocación, ¿quién juega y qué riesgo corre?»
+    /// mientras el jugador arrastra fichas. Se completa igual que la guardada —si no, la previsión
+    /// enseñaría seis y el partido jugaría siete, que es el mismo engaño que esta ADR cierra— y los
+    /// <see cref="EffectiveLineup.FilledIds"/> se cuentan contra ella, no contra lo guardado.
+    /// </param>
+    public static EffectiveLineup Effective(RunState state, Lineup? intended = null)
+    {
+        ArgumentNullException.ThrowIfNull(state);
+        if (intended is not null)
+        {
+            // Prever es responder «¿qué pasaría SI confirmo esto?», así que hay que marcar lo mismo que
+            // marcaría confirmarlo. Sin esto, un lesionado grave puesto a mano no pasaba CanStart —su marca
+            // de riesgo la pone RunEngine.Apply(SetLineup), que aún no ha corrido— y la previsión lo
+            // sustituía por un suplente: el aviso de «puede morir» (RF-093 vía 1) desaparecía justo antes
+            // de confirmar, que es el único momento en que sirve de algo (RF-012d).
+            state = MarkSevereInjuryRisks(state.WithLineup(intended), intended.Slots);
+        }
+
+        var slots = Build(state, null).Lineup;
+
+        var saved = state.Lineup.Slots;
+        var filled = new List<int>();
+        for (int i = 0; i < slots.Slots.Count; i++)
+        {
+            int id = slots.Slots[i].PlayerId;
+            bool wasChosen = false;
+            for (int j = 0; j < saved.Count; j++)
+            {
+                wasChosen |= saved[j].PlayerId == id;
+            }
+
+            if (!wasChosen)
+            {
+                filled.Add(id);
+            }
+        }
+
+        filled.Sort();
+        return new EffectiveLineup(slots, filled);
+    }
+
+    /// <summary>
+    /// Los atributos que este titular tendría <b>si arrastrase <paramref name="extra"/> lesiones leves
+    /// más</b> — el precio de «seguir jugando» de la ADR 0134 E, que viaja resuelto dentro de
+    /// <see cref="PlayOn"/> porque el motor no puede calcularlo (ver el doc de ese record).
+    ///
+    /// <para><b>Se obtiene volviendo a construir el partido</b> con una sola entrada cambiada, y no con una
+    /// fórmula aparte, porque la fórmula aparte estaría mal: al atributo de un titular no solo le afecta la
+    /// penalización de RF-091, también el equipo que lleva (<c>Equipped</c>) y la reposición si juega fuera
+    /// de su puesto o de portero de emergencia (<c>Repositioned</c>). Reproducir ese orden a mano sería
+    /// exactamente la segunda implementación «de acuerdo» con la primera que esta ADR existe para eliminar.
+    /// Cuesta un <see cref="Build"/> de más en una pulsación de interfaz, que no está en ningún camino
+    /// caliente.</para>
+    /// </summary>
+    public static Attributes AttributesWithExtraMinorInjuries(RunState state, Catalog catalog, int playerId, int extra)
+    {
+        ArgumentNullException.ThrowIfNull(state);
+        ArgumentNullException.ThrowIfNull(catalog);
+        if (extra < 1)
+        {
+            throw new ArgumentOutOfRangeException(nameof(extra), extra, "seguir jugando cuesta al menos una lesión leve");
+        }
+
+        var roster = new List<RunPlayer>(state.Roster);
+        bool found = false;
+        for (int i = 0; i < roster.Count; i++)
+        {
+            if (roster[i].Id == playerId)
+            {
+                roster[i] = roster[i] with { MinorInjuries = roster[i].MinorInjuries + extra };
+                found = true;
+            }
+        }
+
+        if (!found)
+        {
+            throw new ArgumentException($"el jugador {playerId} no está en la plantilla", nameof(playerId));
+        }
+
+        var hurt = Build(state.WithRoster(roster), catalog);
+        for (int i = 0; i < hurt.Starters.Count; i++)
+        {
+            if (hurt.Starters[i].Id == playerId)
+            {
+                return hurt.Starters[i].Attributes;
+            }
+        }
+
+        // También en el banquillo: un suplente que ya entró por una sustitución está EN EL CAMPO y puede
+        // lesionarse y quedarse (SubstitutionPoints.WasOnPitch lo cuenta, el motor lo acepta y la bandeja se
+        // lo ofrece), pero para RunLineup.Build sigue siendo banquillo porque no estaba en el once inicial.
+        // Buscarlo solo entre titulares hacía que pulsar «que siga jugando» sobre él lanzara — con ironman,
+        // una run. Es el mismo patrón que ValidatePlayOns tuvo que arreglar una capa más abajo.
+        for (int i = 0; i < hurt.Bench.Count; i++)
+        {
+            if (hurt.Bench[i].Id == playerId)
+            {
+                return hurt.Bench[i].Attributes;
+            }
+        }
+
+        throw new ArgumentException(
+            $"el jugador {playerId} no está ni en el once ni en el banquillo de este partido", nameof(playerId));
     }
 
     /// <summary>
@@ -169,10 +351,11 @@ public static class RunLineup
             }
         }
 
-        foreach (var player in outfield)
+        var cells = PlaceOutfield(state, outfield, taken);
+        for (int p = 0; p < outfield.Count; p++)
         {
-            var cell = CellFor(player.Position, taken);
-            taken.Add(cell);
+            var player = outfield[p];
+            var cell = cells[p];
             slots.Add(new LineupSlot(player.Id, cell));
             if (catalog is null)
             {
@@ -328,6 +511,68 @@ public static class RunLineup
 
         cell = default;
         return false;
+    }
+
+    /// <summary>
+    /// La casilla de cada titular de campo, <b>respetando la que el jugador le dio</b> en la alineación
+    /// guardada y repartiendo el 2-3-1 por rol solo entre los que no tienen ninguna (ADR 0134).
+    ///
+    /// <para><b>Hasta aquí la colocación del jugador se tiraba.</b> Este método reasignaba las siete
+    /// casillas por rol siempre, así que arrastrar un defensa al puesto de delantero en la pantalla de
+    /// Equipo se guardaba en el estado y después <c>Build</c> lo devolvía a su casilla de defensa. El
+    /// síntoma que lo destapó: el indicador de riesgo de RF-012c <b>sí</b> leía las casillas guardadas, de
+    /// modo que mover fichas movía el número y no movía el partido — el jugador «reducía el riesgo con la
+    /// alineación» (condición 3 de la ADR 0048) contra una colocación que no se iba a jugar. Lo dejó a la
+    /// vista el test <c>LethalRiskTests.MovingThePlayersChangesTheNumber</c> en cuanto los avisos pasaron a
+    /// mirar el once efectivo. Detalle en el pendiente BG-B.</para>
+    ///
+    /// <para>Dos pasadas, no una, y es lo que hace que el resultado no dependa del orden: primero se
+    /// reclaman todas las casillas elegidas, y solo después se rellenan las libres por rol. En una sola
+    /// pasada, el relleno de un jugador temprano podría ocupar la casilla que otro había elegido.</para>
+    ///
+    /// <para>Sin alineación guardada —el arranque de la run, <see cref="Default"/>, y todo lo que compone
+    /// con <see cref="Compose"/>, incluidas las políticas de <c>/Balance</c>— no hay ninguna casilla que
+    /// reclamar y sale exactamente el mismo 2-3-1 de antes.</para>
+    /// </summary>
+    private static List<Cell> PlaceOutfield(RunState state, List<RunPlayer> outfield, List<Cell> taken)
+    {
+        var chosen = new Cell?[outfield.Count];
+        var saved = state.Lineup.Slots;
+        for (int i = 0; i < outfield.Count; i++)
+        {
+            for (int j = 0; j < saved.Count; j++)
+            {
+                if (saved[j].PlayerId != outfield[i].Id)
+                {
+                    continue;
+                }
+
+                // La portería es casilla fija (RF-041) y ya la ocupa el portero, de emergencia o no: una
+                // alineación guardada que mande ahí a un jugador de campo no puede cumplirse.
+                var cell = saved[j].HomeCell;
+                if (!cell.Equals(GoalkeeperCell) && !Taken(taken, cell))
+                {
+                    chosen[i] = cell;
+                    taken.Add(cell);
+                }
+
+                break;
+            }
+        }
+
+        var cells = new List<Cell>(outfield.Count);
+        for (int i = 0; i < outfield.Count; i++)
+        {
+            var cell = chosen[i] ?? CellFor(outfield[i].Position, taken);
+            if (chosen[i] is null)
+            {
+                taken.Add(cell);
+            }
+
+            cells.Add(cell);
+        }
+
+        return cells;
     }
 
     private static Cell CellFor(Position position, List<Cell> taken) => NextCell(position, taken);

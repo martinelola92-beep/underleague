@@ -227,7 +227,7 @@ public sealed class MatchMomentViewTests
             // garantía (ADR 0094) comparar contra un partido con otra sustitución de por medio.
             for (int round = 0; round < 32; round++)
             {
-                var point = SubstitutionPoints.Pending(currentSetup, currentResult, team: 0);
+                var point = SubstitutionPoints.Pending(currentSetup, currentResult, team: 0, catalog);
                 if (point is null)
                 {
                     break;

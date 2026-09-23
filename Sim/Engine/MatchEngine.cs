@@ -2584,6 +2584,16 @@ internal sealed class MatchEngine : IPerkWorld
             return;
         }
 
+        // ADR 0134 (E): «seguir jugando» es la tercera respuesta al punto de decisión y llega resuelta en el
+        // estado inicial. Se consulta aquí, con la lesión ya consumada pero antes de tocar nada, porque una
+        // petición ilegal aborta el partido entero (RT-032) y no debe dejar media lesión aplicada.
+        var playOn = FindPlayOn(victim);
+        if (playOn is not null && (severe || victim.Definition.PhysicalState == PhysicalState.SevereInjury))
+        {
+            throw new ArgumentException(
+                $"seguir jugando con el jugador {victim.Id} en el tick {_tick} no es legal: solo la lesión leve deja quedarse en el campo, y esta lo saca de él (ADR 0134 E, RF-092)");
+        }
+
         _report.Injuries++;
         victim.Injured = true;
         tackler.InjuriesCaused++;
@@ -2592,9 +2602,21 @@ internal sealed class MatchEngine : IPerkWorld
         // acción sucia más visible que existe y el árbitro toma nota igual.
         ShiftBiasAgainst(tackler.Team, _tuning.Referee.BiasShiftInjuryExtra);
 
+        // El balón se suelta aunque el lesionado se quede (ADR 0134 E, deliberado): el golpe corta la
+        // jugada y el balón queda donde estaba, y como el jugador sigue en esa casilla es el mejor
+        // colocado para recuperarlo. No es una pérdida automática de posesión y no hay que "arreglarlo".
         if (ReferenceEquals(_ball.Owner, victim))
         {
             ParkBall(victim.Position);
+        }
+
+        if (playOn is not null)
+        {
+            // No sale del campo y, por tanto, LeftPitchTick se queda en -1: el punto de decisión deja de
+            // pender sin ningún registro aparte (ADR 0134 E). La lesión ya está contada arriba, que es lo
+            // que la run apunta al acabar el partido.
+            ApplyPlayOnAttributes(victim, playOn.After);
+            return;
         }
 
         RemoveFromPitch(victim, PlayerState.Injured);
@@ -2606,6 +2628,82 @@ internal sealed class MatchEngine : IPerkWorld
         {
             Kill(victim, "severeInjury", tackler);
         }
+    }
+
+    /// <summary>
+    /// El <see cref="PlayOn"/> que el estado inicial trae para esta víctima en este tick, o null (ADR 0134
+    /// E). Bucle por índice sobre una lista que en la inmensa mayoría de los partidos está vacía —la
+    /// política automática de <c>/Balance</c> siempre sustituye—: sin ningún <c>PlayOn</c> el coste es leer
+    /// un <c>Count</c>, como el grabador de traza apagado (<c>SimConfig.Trace</c>).
+    /// </summary>
+    private PlayOn? FindPlayOn(MatchPlayer victim)
+    {
+        var playOns = victim.Team == 0 ? _setup.Home.PlayOns : _setup.Away.PlayOns;
+        for (int i = 0; i < playOns.Count; i++)
+        {
+            if (playOns[i].Tick == _tick && playOns[i].PlayerId == victim.Id)
+            {
+                return playOns[i];
+            }
+        }
+
+        return null;
+    }
+
+    /// <summary>
+    /// El precio de quedarse (ADR 0134 E): el lesionado leve que no deja el campo pasa a tener desde este
+    /// tick los atributos que trae la decisión. Sin ese coste, quedarse sería estrictamente mejor que
+    /// sustituir y no habría decisión que tomar.
+    ///
+    /// <para><b>El motor no calcula el precio, lo ejecuta.</b> La penalización de RF-091 es lineal en las
+    /// lesiones acumuladas y el atributo con el que el jugador entra al partido ya trae aplicadas las
+    /// anteriores, así que descontarle aquí otro 15 % compondría multiplicativamente y daría un número
+    /// distinto del de la campaña —y desde el atributo del partido no se puede recuperar el de la
+    /// plantilla—. Lo resuelve <c>/Sim/Run</c> con el mismo <c>RunPlayer.ToDefinition</c> de siempre, que ya
+    /// decide la inmunidad (<c>ImmunityKind.MinorInjuryPenalty</c>, ADR 0026), el truncamiento y que la
+    /// correa no se toque. Ver la documentación de <see cref="PlayOn"/>.</para>
+    ///
+    /// <para>Por eso se recorren los <b>cinco</b> atributos sin excepciones: el que no deba cambiar llega
+    /// igual al base y su delta es 0. La decisión de cuáles bajan es de quien calcula, no de aquí.</para>
+    ///
+    /// <para><b><paramref name="after"/> es un destino, no un descuento</b>, y por eso con una segunda
+    /// lesión en el mismo partido hay que aplicar solo el <b>incremento</b>. Sumar
+    /// <c>after − base</c> dos veces deja el efectivo en <c>After1 + After2 − base</c> —medido: base
+    /// 20/50/33/7/99 acababa en 11/27/18/2/54 en vez de 14/35/23/4/69, y con un tercero se saldría del
+    /// rango legal—. El destino anterior no hace falta guardarlo: está en el estado inicial, que es la
+    /// lista de <see cref="PlayOn"/> del propio equipo.</para>
+    /// </summary>
+    private void ApplyPlayOnAttributes(MatchPlayer victim, Attributes after)
+    {
+        var previous = PreviousPlayOn(victim);
+        for (int i = 0; i <= (int)AttributeKind.Leash; i++)
+        {
+            var kind = (AttributeKind)i;
+            int from = previous?.After.Get(kind) ?? victim.BaseAttribute(kind);
+            victim.AddAttributeDelta(kind, after.Get(kind) - from);
+        }
+    }
+
+    /// <summary>
+    /// El <see cref="PlayOn"/> anterior de este jugador en este partido —el de mayor tick por debajo del
+    /// actual—, o null si es el primero. Orden explícito por tick (RT-041): con dos decisiones en el mismo
+    /// tick el resultado sería ambiguo, y eso ya lo rechaza <c>Simulator.ValidatePlayOns</c>.
+    /// </summary>
+    private PlayOn? PreviousPlayOn(MatchPlayer victim)
+    {
+        var playOns = victim.Team == 0 ? _setup.Home.PlayOns : _setup.Away.PlayOns;
+        PlayOn? best = null;
+        for (int i = 0; i < playOns.Count; i++)
+        {
+            var candidate = playOns[i];
+            if (candidate.PlayerId == victim.Id && candidate.Tick < _tick
+                && (best is null || candidate.Tick > best.Tick))
+            {
+                best = candidate;
+            }
+        }
+
+        return best;
     }
 
     // ---------------------------------------------------------------- 3.8 fuera, reanudaciones

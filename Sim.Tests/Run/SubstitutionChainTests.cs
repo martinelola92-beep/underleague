@@ -37,7 +37,7 @@ public sealed class SubstitutionChainTests
             int chained = 0;
             for (int step = 0; step < 4; step++)
             {
-                var point = SubstitutionPoints.Pending(setup, result, team: 0);
+                var point = SubstitutionPoints.Pending(setup, result, team: 0, catalog);
                 if (point is null || point.Candidates.Count == 0)
                 {
                     break;

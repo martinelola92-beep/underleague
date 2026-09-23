@@ -1239,7 +1239,11 @@ internal sealed class EffectEngine : IPerkLinks
         MatchStat.PassesCompleted => player.PassesCompleted,
         MatchStat.TacklesWon => player.TacklesWon,
         MatchStat.Shots => player.Shots,
-        MatchStat.Down => player.Injured || player.Dead ? 1 : 0,
+        // ADR 0134 E: «caído» es quien ya no está, no quien está tocado. Desde que el lesionado leve puede
+        // quedarse (PlayOn), Injured deja de implicar que haya salido del campo, y un perk con ámbito de
+        // compañeros caídos contaría a uno que sigue corriendo. Con toda lesión apartando —lo de hasta
+        // ahora— las dos expresiones valen lo mismo, así que esto no mueve ninguna tirada existente.
+        MatchStat.Down => (player.Injured || player.Dead) && !player.OnPitch ? 1 : 0,
         _ => _saves[player.Index],
     };
 
