@@ -33,9 +33,8 @@ viva anotada.
 | [BB-H](./BB-H.md) | «Todavía no hay eventos, habrá que diseñarlos» | Abierta: existen seis cartas, pero 0,38 resueltas por run — es densidad y catálogo, no ausencia |
 | [BB-I](./BB-I.md) | «Depredador de área» pareció activarse en un momento que no era un tiro | BLOCKED / NEEDS-REPRODUCTION: falta la semilla |
 | [BB-J](./BB-J.md) | «Mentalidad de manada» no sirve jugando con enanos | Previsibilidad resuelta (tooltip); diseño abierto |
-| [BB-K](./BB-K.md) | Dos jugadores del mismo equipo que quieren la misma casilla «bailan y parpadean» | Abierta; pendiente de reproducir |
-| [BB-N](./BB-N.md) | El saque de córner no ocurre nunca (0/60 partidos, dos árboles) | Abierta |
-| [BB-O](./BB-O.md) | Un jugador fuera del campo puede conservar el balón y congelar el partido | Abierta |
+| [BB-K](./BB-K.md) | Dos jugadores del mismo equipo que quieren la misma casilla «bailan y parpadean» | Abierta, **causa CONFIRMED**: `CoverSpace` es la única acción de colocación que no mira a los compañeros; nota de diseño hecha, arreglo pendiente de medir |
+| [BB-N](./BB-N.md) | El saque de córner no ocurre nunca (1 en 2000 partidos) | Abierta, **causa CONFIRMED**: ningún toque defensivo manda el balón fuera por el fondo; decisión del revisor entre modelarlo o retirarlo |
 | [BB-P](./BB-P.md) | Las puertas de un solo partido/semilla se leen como causa cuando son ruido | Abierta |
 | [BB-R](./BB-R.md) | Dos perks dicen ser MAESTROS y no exigen ni cierran nada (ADR 0051 al 0 %) | Abierta |
 | [BB-S](./BB-S.md) | `build-neutral-reference.py` dice que escribe las referencias y solo imprime | Abierta |
@@ -58,6 +57,7 @@ viva anotada.
 | [BG-A](./BG-A.md) | Tres sitios más tratan la alineación guardada como si fuera el once que juega; el peor reparte experiencia de carta | Abierta: la ADR 0134 la deja fuera a propósito porque mueve balance |
 | [BG-B](./BG-B.md) | La colocación del jugador se tiraba al construir el partido y el indicador de riesgo no se enteraba: mover fichas movía el número, no el partido | Arreglada (ADR 0134); abierto medir las formaciones que ahora sí son posibles, y el jefe que empuja casillas |
 | [BG-C](./BG-C.md) | Tres contratos que solo se sostenían porque nadie podía ejercerlos: `PlayOn` huérfano en silencio, `SetLineup` sin validar casillas, dos APIs que pasan a lanzar | Abierta, sin evidencia de activación |
+| [BH-A](./BH-A.md) | El motor no tiene ninguna defensa contra el silencio: un partido puede congelarse 49 s y nadie se entera | Abierta, de primitiva; nace de la revisión de BB-O. La opción barata es una puerta de test, sin tocar `/Sim` |
 | [CAT-C](./CAT-C.md) | La medición no puede ejercitar el consumible manual, así que subestima a la familia | Abierta: las cifras de la ADR 0101 son una cota inferior |
 | [CAT-E](./CAT-E.md) | Con seis filas, todas las builds ganan más al equipo sin perks, y dos puertas de fase 1 se ponen rojas | Abierta: la ADR 0104 NO la cerró (la referencia no era la variable); decisión del revisor pendiente entre tres salidas |
 | [CAT-F](./CAT-F.md) | `Block` (la carga sin balón, ADR 0030 §2) no se puede despertar subiéndole el peso | Abierta, con diagnóstico: el peso no es la palanca, se descarta el 74,9 % antes de puntuar |
@@ -86,6 +86,7 @@ viva anotada.
 | [BB-G](./BB-G.md) | El balón se queda parado en el campo | Resuelta (ADR 0117); la parte que queda viva se sigue en [BC-G](./BC-G.md) |
 | [BB-L](./BB-L.md) | El lesionado «sale volando» del campo | Resuelta (con BA-K) |
 | [BB-M](./BB-M.md) | «Sed de médula» lesionó a un jugador lejos de la acción | Resuelta; causa CONFIRMED, sin cambio de regla pendiente |
+| [BB-O](./BB-O.md) | Un jugador fuera del campo puede conservar el balón y congelar el partido | **CERRADA (23 sep 2026)**: `TakeRestart` daba el saque a un jugador retirado durante la cuenta atrás. Reproducido tick a tick (semilla 144, árbol del 16 sep) y verificado: 2 episodios → 0, e inerte en HEAD |
 | [BB-Q](./BB-Q.md) | «Arrollador» no se activa nunca (0/480 partidos): tres causas encadenadas | Resuelta (Alt 0: RECOVERY + `detail()`); exposición 0,0 % → 12,5 % |
 | [BC-B](./BC-B.md) | El límite de usos de un perk no se respeta cuando su efecto vuelve a dispararlo | Resuelta (19 sep 2026) |
 | [BC-E](./BC-E.md) | Re-simular con la sustitución elegida falla en el 9,4 % de los casos | Resuelta (19 sep 2026) |

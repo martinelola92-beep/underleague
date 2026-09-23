@@ -490,15 +490,61 @@ quedan cerradas; BC-H conserva su mitad de antes del partido.** Deuda escrita, n
 `game-design-review` y el canje **no está medido** —ni puede estarlo hoy, porque la política automática
 nunca lo ejerce, el mismo hueco que CAT-C tiene con el consumible manual—.
 
-**Siguiente paso, decidido por el revisor (23 sep 2026): [BB-K], [BB-N] y [BB-O].** Los tres son síntomas de
-comportamiento del partido, así que entran por la skill `gameplay-debug` —Regla A, ninguna causa antes de
-medir— y conviene mirarlos juntos: los tres hablan de jugadores o del balón atascados en el campo
-(oscilación entre dos que quieren la misma casilla, el córner que no ocurre nunca en 60 partidos, y el
-portador fuera del campo que congela el partido), así que antes de tratarlos como tres arreglos hay que
-buscarles causa, estado o regla común.
+**BB-K, BB-N y BB-O, medidos los tres (23 sep 2026).** Entraron por `gameplay-debug` con una sola sonda de
+4 000 partidos que midió los tres síntomas a la vez. **No tienen causa común**: la sospecha de que "los
+tres hablan de cosas atascadas en el campo" resultó falsa, y cada uno vive en una parte distinta del
+motor.
 
-Pendiente de decisión del revisor, sin bloquear lo anterior: el **apartado E** de la ADR 0134 con el ×8
-letal a la vista (leer «Lo que la revisión independiente dejó abierto»). Y después, por este orden:
-[BG-B] medir formaciones no-2-3-1 y el jefe que empuja casillas, [BC-H] el escenario de captura con un
-titular no disponible y luego el hueco deliberado antes del partido, [BG-C] los tres contratos, [BG-A] la
-experiencia de carta.
+- **[BB-O] CERRADA.** Causa CONFIRMED y reproducida tick a tick: el sacador de una reanudación se elige una
+  vez y **no se revalida**, así que uno lesionado durante la cuenta atrás recibía igualmente la posesión
+  —fuera del campo— y congelaba el partido hasta el final (semilla 144 del árbol del 16 sep: 740 de 1 200
+  fotogramas sin un solo evento). La hipótesis que el propio fichero daba por principal —que el camino de
+  lesión no soltaba el balón— era **falsa**: los tres caminos de salida sí lo sueltan, desde el commit
+  inicial. Arreglado con la revalidación del sacador, un invariante en `UpdateBall` y una guardia en
+  `WalkRestartTaker`. Medido **inerte** en HEAD (lote de 10 000 partidos byte a byte idéntico al
+  baseline). **La revisión independiente reprodujo el bug y el arreglo en HEAD** forzando el disparador
+  (326-1 185 fotogramas congelados → 0), retiró del diff un cambio en `ParkBall` que era código muerto,
+  encontró vivo el hermano de `WalkRestartTaker` —arreglado en el mismo paquete— y halló que la guardia
+  cierra de paso un **segundo fallo**: a un expulsado le borraba el `SentOff` y dejaba pasar una
+  sustitución que la ADR 0094 prohíbe.
+
+  **Lo que no se consiguió, y consta**: no hay test que dispare el caso de forma natural. La hipótesis de
+  que lo mantenía en cero la barrera de BB-B quedó **REJECTED** —con `restartClearanceCells` a 0, en 8 000
+  partidos y 123 134 reanudaciones el sacador es retirado 0 veces—. Queda **LIKELY** que lo desactivara la
+  ADR 0134 E, por la que la lesión leve ya no saca del campo, que es justo lo que retiraba al sacador en el
+  caso del 16 sep.
+
+  De la revisión sale además **[BH-A]**, pendiente nuevo: el motor **no tiene ninguna defensa contra el
+  silencio**. BB-O se arregló por su camino, pero cualquier otro estado que no progrese sigue pudiendo
+  congelar un partido 49 s sin que nadie se entere. La opción barata es una puerta de test, sin tocar
+  `/Sim`.
+- **[BB-N] causa CONFIRMED, decisión del revisor pendiente.** El córner no es imposible: es **1 de cada
+  3 290** llegadas a la línea de fondo (1 en 2 000 partidos, contra 3 289 saques de puerta). La lógica que
+  decide córner o saque de puerta es correcta; lo que falta son las dos vías por las que un **defensor**
+  manda el balón fuera por su propio fondo: el tiro en vuelo se salta `CheckOutOfBounds` por completo y
+  siempre resuelve saque de puerta, y un bloqueo defensivo deja el balón **parado**. Hay que decidir entre
+  modelarlo (ADR) o retirar `RestartKind.Corner` para que el código no prometa una regla que no ocurre.
+- **[BB-K] causa CONFIRMED, arreglo diseñado y sin implementar.** 12 160 episodios de oscilación en 2 000
+  partidos (6 por partido, 0,8 s de media), el **98,3 % durante `CoverSpace`** y con un compañero a 0,14
+  casillas persiguiendo **el mismo punto**. `CoverSpace` es la única acción de colocación frecuente que no
+  mira a los compañeros: `OfferSupport` y `FindSpace` ya penalizan el apiñamiento. Se descartaron por
+  medición dos hipótesis atractivas: que sólo oscilara el cuerpo con el destino fijo (sólo el 18,5 % de los
+  episodios), y que la geometría amplificara el movimiento del balón (amplificación mediana **0,25**: en
+  realidad amortigua). La nota de diseño con las diez preguntas está en el fichero; recomienda repartir el
+  punto de cobertura por id ascendente, como ya hace `Marking`. **Es un hito aparte**: cambia
+  comportamiento defensivo real y pide baseline y las 43 puertas.
+
+**Siguiente paso: el arreglo de [BB-K]**, que ya tiene diagnóstico y nota de diseño y sólo le falta
+implementar y medir (`balance-measure` con baseline del mismo árbol y las 43 puertas). Antes de tocarlo,
+leer la nota de diseño del propio fichero: la recomendación es repartir el punto de cobertura por id
+ascendente y el riesgo a vigilar es que el segundo defensa abandone el centro y abra pasillo.
+
+**Dos decisiones esperan al revisor**, ninguna bloquea lo anterior: (1) **[BB-N]**, si el córner se modela
+o se retira; (2) el **apartado E** de la ADR 0134 con el ×8 letal a la vista (leer «Lo que la revisión
+independiente dejó abierto»). Y una pregunta menor que salió de BB-O y no se coló en su arreglo: **¿debería
+poder sacar una reanudación un jugador derribado o celebrando?** Hoy puede; cambiarlo mueve 3 partidos de
+cada 10 000.
+
+Después, por este orden: [BG-B] medir formaciones no-2-3-1 y el jefe que empuja casillas, [BC-H] el
+escenario de captura con un titular no disponible y luego el hueco deliberado antes del partido, [BG-C]
+los tres contratos, [BG-A] la experiencia de carta.
