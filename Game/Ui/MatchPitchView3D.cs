@@ -314,7 +314,7 @@ public partial class MatchPitchView3D : SubViewportContainer
             PlayerModel? model = null;
             if (race == Race.Human)
             {
-                model = PlayerModel.TryCreate(height);
+                model = PlayerModel.TryCreate(height, IsKeeper(setup, player));
                 if (model is not null)
                 {
                     // La cápsula se queda sin malla y pasa a ser solo el hueso que transforma al modelo:
@@ -366,7 +366,7 @@ public partial class MatchPitchView3D : SubViewportContainer
             // en la única captura donde se pueden comparar las cinco razas juntas.
             if (race == Race.Human && _models[i] is null)
             {
-                var created = PlayerModel.TryCreate(height);
+                var created = PlayerModel.TryCreate(height, keeper: i == 0);
                 if (created is not null)
                 {
                     _bodies[i].AddChild(created);
@@ -488,6 +488,24 @@ public partial class MatchPitchView3D : SubViewportContainer
             _world.AddChild(decal);
             _bloodDecals.Add(decal);
         }
+    }
+
+    /// <summary>
+    /// Si ese jugador es el portero, para que la maqueta le ponga la postura de portero en vez de la de
+    /// campo. Mismo criterio que <see cref="RaceOf"/>: se busca su definición en la plantilla de su equipo.
+    /// </summary>
+    private static bool IsKeeper(MatchSetup setup, TracePlayer player)
+    {
+        var squad = player.Team == 0 ? setup.Home.Players : setup.Away.Players;
+        foreach (var definition in squad)
+        {
+            if (definition.Id == player.Id)
+            {
+                return definition.Position == Sim.Model.Position.Goalkeeper;
+            }
+        }
+
+        return false;
     }
 
     private static Race RaceOf(MatchSetup setup, TracePlayer player)
