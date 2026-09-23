@@ -850,3 +850,70 @@ mueve 3 partidos de cada 10 000.
 Después, por este orden: [BG-B] medir formaciones no-2-3-1 y el jefe que empuja casillas, [BC-H] el
 escenario de captura con un titular no disponible y luego el hueco deliberado antes del partido, [BG-C]
 los tres contratos, [BG-A] la experiencia de carta.
+
+---
+
+## El audio suena por primera vez (23 sep 2026)
+
+El revisor dejó **57 ficheros** en `Game/audio` (efectos, dos músicas y un ambiente) y el paquete los pone
+a sonar. Todo es presentación: **ni una línea de `/Sim` ni de `/data`**, y por eso no lleva lote de
+`/Balance` —el disparador de `balance-measure` es «¿puede alterar una métrica cuantificable?», y esto no
+puede: no toca una sola tirada—.
+
+**Lo que ya había** era el `AudioManager` (pools por carpeta, bolsa barajada, variación de tono) y la capa
+de momentos, escritos el día anterior contra carpetas vacías. **Lo que faltaba era todo lo demás.**
+
+### Tres cosas nuevas
+
+1. **Infraestructura**: `Game/default_bus_layout.tres` con tres buses (`SFX`, `Music` a −6 dB, `Ambience` a
+   −12 dB) —antes no existía ninguno y todo caía en `Master`, sin control separado—; el bucle activado en
+   los `.import` de música y ambiente (es un ajuste de importación, el código no puede ponerlo); y el
+   indicador **`--audio-trace`**, que escribe una línea por reproducción para poder **demostrar qué suena
+   sin altavoz** —en WSL no hay tarjeta de sonido y las capturas corren con `--audio-driver Dummy`—.
+2. **Música y ambiente** (`Game/Ui/ScreenAudio.cs`, aplicado desde `Nav.Go`): menú antes de empezar y al
+   morir, una única música **continua** para todo el rato entre partidos —el gestor no la reinicia al
+   cambiar de pantalla, porque para el jugador mapa, mercado y equipo son el mismo sitio— y **silencio
+   musical en el partido**, con el estadio en bucle por debajo. Ahí la banda sonora son los eventos.
+3. **La capa de campo** (`Game/Match/MatchEventSounds.cs`), que es la que faltaba de verdad: cuelga de los
+   **eventos crudos** —balón, golpeo, entrada, caída, hueso— y no de los momentos. Usa el mismo patrón de
+   puntero que los gestos de tiro (lista precalculada en `BindPlayback`, resincronizada en cada salto), así
+   que un evento suena una sola vez aunque el director congele encima. **Solo a ×1**, misma regla que los
+   gestos (`docs/ui/README` §6, ampliada): a ×16 serían dieciséis golpes por segundo.
+
+**Por qué dos capas y no una**: un momento llega cuando se *presenta*, y solo hay 8,6 por partido. Un pase
+o una entrada no son momentos y son casi todo lo que pasa. Con una sola capa el campo sonaría ocho veces
+por partido y estaría mudo el resto. Donde las dos tienen algo que decir no se repiten: el hueso cruje en
+la casilla (campo) y el grito llega con el sello (retransmisión), y el desfase natural entre suceso y
+presentación las ordena sin que nadie sincronice nada. La tabla de momentos pasa a devolver **varios
+pools** para que un gol sea la red *y* la grada, y una muerte el jadeo *y* el cuerno.
+
+### Medido
+
+- **Traza del recorrido de retransmisión**: 24 reproducciones, las dos capas presentes —silbato ×6,
+  `ball_hit` ×4, `grunt` ×3, `pain` ×2, `fall` ×2, gol + grada, `cheer`, `boo`, `crush`, `kick`— y
+  **ningún `drop`**: los ocho reproductores sobran. 18 pools cargados; el único que se pide y está vacío es
+  `sfx/referee/horn`, que se anuncia una vez y no rompe nada.
+- **La música y el ambiente no los ejercita el arnés de capturas** (navega con `Nav.Suppressed`), así que
+  se comprobaron aparte, en headless con la traza: `music/menu` al abrir el inicio y **un solo**
+  `music/map` en todo el recorrido `--tour` pese a pasar por mapa, ojeo y equipo — que es exactamente la
+  propiedad que se quería (no reiniciar la pista al cambiar de pantalla).
+- **El audio no mueve un píxel** [CONFIRMED]: el recorrido se corrió con el paquete (A, B) y **con los
+  cambios de audio apartados** (C, con `git stash` y los dos ficheros nuevos fuera del árbol). A-vs-C da
+  exactamente lo mismo que A-vs-B: **0,00 % en seis capturas** y 1,5-3,3 % en las cuatro que avanzan con
+  reloj real —que varían igual entre dos pasadas idénticas—. El ruido es del arnés, no del cambio.
+- **Hallazgo lateral, y no es de este paquete**: contra las capturas **comprometidas** la diferencia llega
+  al **70 %** (`retrans-tiro`) y al 39 % (`retrans-lesion`). Los PNG de HEAD son de `3d46624`, **anterior a
+  tres commits de `/Sim`** que cambian el tiro (altura del balón, marco físico, centro). **La red de
+  regresión visual lleva estancada desde entonces**: se regeneran en este paquete, en un commit aparte,
+  para que la próxima comparación signifique algo.
+
+### Lo que queda
+
+- **Pools vacíos**, que suenan a nada y no rompen nada: `combat/tackle`, `combat/heavy_hit`,
+  `combat/medium_hit`, `combat/light_hit`, `football/net`, `referee/horn`. Los dos primeros son los que más
+  se notarían —hoy la entrada se apoya en `players/grunt`—. Cuando haya ficheros es **una línea de la
+  tabla**, no un cambio de diseño.
+- **Nadie llama a `SetBusVolumeLinear`**: no hay pantalla de ajustes. Los tres buses están para eso.
+- **27 MB de WAV sin comprimir** entran en el repositorio con este paquete (los aplausos de la grada pesan
+  3 MB cada uno, 17 s en estéreo sin comprimir). Pasarlos a OGG, que es lo que el propio README pide para
+  lo largo, quitaría ~20 MB — **es material del revisor y no se recodifica sin preguntar**.
