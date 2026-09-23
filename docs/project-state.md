@@ -633,10 +633,30 @@ cerca»—, pero **ninguna métrica se sale de banda**. Conviene no confundir la
 adelante **todos** los pasos moverán todas las semillas, y el recuento de partidos distintos no es una
 medida del efecto. Baseline previo guardado en `out/baseline-altura/`.
 
-**Siguiente paso: el 2** del plan — el tiro sale con altura y la portería gana alto; un tiro por encima es
-saque de puerta. Es la primera regla nueva visible y mueve goles, así que lote obligatorio. Antes, releer
-§5 del plan: quedan por fijar **los números** (alto y ancho de portería, gravedad, restitución, magnitud
-del rechace, radio de la esfera), que salen del lote y se mueven **uno por vez**.
+**Paso 2 hecho**: la portería gana alto y ancho (1,0 de semiancho y 0,70 de alto, proporción ~1:3), el tiro
+apunta a un punto **disperso** dentro de ella en vez de a su centro exacto, el vuelo describe una parábola,
+y un tiro desviado puede irse **por encima del larguero** —vía que no existía—. La traza graba la altura.
+La dispersión sale de la **calidad** del disparo, que ya integra técnica, distancia y presión, para no
+abrir un segundo camino que pudiera contradecir al primero. La tirada de dentro/fuera **no se tocó**: se
+consideró derivarla de la geometría y se descartó por no rehacer la calibración del 70,5 % en el mismo paso
+que introduce la altura.
+
+Medido: cambian **todos** los partidos y el agregado no se mueve (`goalsPerMatch` 2,79 → 2,81,
+`possessionChanges` 21,75 → 21,66, ninguna fuera de banda). Era lo previsto — con el portero midiendo su
+alcance en el plano, la altura todavía no decide nada.
+
+**Siguiente paso: el 3** — el alcance vertical, que es donde la altura empieza a importar y donde el lote
+va a moverse de verdad. **Antes de darlo, leer §4.ter del plan**, porque hay un hallazgo que lo condiciona:
+la altura de llegada de los tiros tiene **mediana 0,250 y máximo 0,589** contra una portería de 0,70 de
+alto, así que los disparos llegan en la mitad baja y **casi ninguno se acerca al larguero**. Si casi ningún
+tiro va alto, el alcance vertical del portero apenas se ejercitará y el paso 3 mediría poco. Hay que
+decidir antes si la altura debe depender tanto de la calidad, o si un tiro puede ser **alto y malo a la
+vez**, que es lo que pasa en el fútbol de verdad.
+
+Y queda sin verificar, dicho como tal: la explicación natural de por qué los goles no se movieron sería que
+la dispersión no saca al balón del alcance del portero (`save.reachCells` 0,9 contra semiancho 1,0). **No
+está comprobada** —la sonda que se escribió medía el final del vuelo, que para un tiro parado no es la
+línea de gol—, y es justo lo que el paso 3 tiene que resolver.
 
 **Y antes de dar el paso 4 (el rechace), releer §3.ter**: esto reabre la **ADR 0117**
 (`chaseBallLooseBonus` se calibró con balones que recorren 1,25 casillas) y despierta

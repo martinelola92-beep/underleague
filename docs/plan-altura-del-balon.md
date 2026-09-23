@@ -250,7 +250,7 @@ que el riesgo de determinismo se descubra **antes** de haber invertido en el res
 |---|---|---|
 | **0** | Instrumentación: medir la referencia actual entera (tiros, paradas, bloqueos, córners, duración, posesiones) | Sin baseline no hay nada que comparar, y las semillas van a cambiar todas |
 | **1** ✅ | `Ball` gana `Z`/`VelocityZ`, gravedad y bote, y la recogida pasa a medirse por barrido; **ninguna regla del partido los usa todavía** | Aísla el riesgo de determinismo. Si RT-024 diverge, se descubre aquí y no mezclado con reglas nuevas |
-| **2** | El tiro sale con altura; la portería gana alto; un tiro por encima es saque de puerta | Primera regla nueva visible. Mueve goles: lote obligatorio |
+| **2** ✅ | El tiro sale con altura y con puntería dispersa; la portería gana alto y ancho; un tiro puede irse por encima | Primera regla nueva visible. Medido: el agregado no se mueve, porque el portero todavía alcanza en el plano |
 | **3** | El alcance vertical: portero y defensas sólo tocan lo que alcanzan | Es lo que el revisor señaló como el motivo de la altura |
 | **4** | **El rechace**: el toque defensivo atrapa o desvía, y lo desviado sale con velocidad y altura | Lo que cierra [BB-N](./pendientes/BB-N.md). Va al final porque necesita los tres pasos anteriores |
 | **5** | `/Game` dibuja la altura | Una línea, pero pide `visual-review` |
@@ -292,6 +292,53 @@ es el agregado, y el agregado está quieto. Conviene no confundir las dos cosas,
 partidos como si fuera un efecto va a estar siempre ahí.
 
 **RT-024 en verde**, que era la razón de ser del paso: la aritmética nueva no rompe el determinismo.
+
+## 4.ter Paso 2, hecho y medido (23 sep 2026)
+
+La portería gana geometría (`goalHalfWidthCellsMilli` 1000, `goalHeightCellsMilli` 700 — proporción ~1:3,
+la de una portería real), el tiro apunta a un punto **disperso** dentro de ella en vez de a su centro
+exacto, y el vuelo describe una **parábola** (`arcCellsPerCellMilli` 80). La traza graba la altura para que
+`/Game` pueda dibujarla sin calcular nada (RT-014). Un tiro desviado puede ahora irse **por encima del
+larguero**, vía que antes no existía: todos se iban por un lado.
+
+**La dispersión sale de la calidad del disparo**, que ya integra técnica, distancia y presión, en vez de
+inventar una fórmula nueva que pudiera contradecirla: un tiro malo se queda cerca del centro —donde está el
+portero— y uno bueno puede buscar un rincón.
+
+**La tirada de dentro/fuera no se toca.** Sigue decidiendo la calibración de la ADR 0050 P2; lo que se
+añade es *dónde* dentro o fuera. Se consideró derivar «fuera» de la propia geometría y eliminar esa tirada
+—más elegante—, y se descartó: habría rehecho de cero la calibración del 70,5 % de tiros a puerta en el
+mismo paso que introduce la altura, y entonces ninguna desviación del lote sería atribuible.
+
+**Medido**, lote de 10 000 partidos contra el paso 1:
+
+| | paso 1 | paso 2 |
+|---|---|---|
+| partidos distintos | — | **10 000 de 10 000** |
+| `goalsPerMatch` | 2,79 | 2,81 |
+| `saveRate` | 52,84 | 52,78 |
+| `shotsPerMatch` (7-15) | 8,92 | 8,90 |
+| `possessionChanges` (12-28) | 21,75 | 21,66 |
+| `scorelineShare_1-0_to_3-2` (50-100) | 86,58 | 86,37 |
+| métricas fuera de banda | ninguna | **ninguna** |
+
+Cambian **todos** los partidos —tres tiradas nuevas por disparo desplazan el RNG desde el primer tiro— y el
+agregado no se mueve. Era lo previsto: con el portero midiendo todavía su alcance en el plano, la altura no
+decide nada.
+
+**Lo que NO se sabe, y conviene que conste.** La explicación natural de por qué los goles no se mueven sería
+que la dispersión no saca al balón del alcance del portero (`save.reachCells` 0,9 contra un semiancho de
+1,0). **No está verificada**: la sonda que se escribió para comprobarlo medía el último fotograma del
+vuelo, que para un tiro parado o bloqueado no es la línea de gol, así que respondía a otra pregunta. Queda
+como hipótesis **sin aislar**, y es justo la que el paso 3 tiene que resolver.
+
+**Un hallazgo que sí es firme y que cambia el paso 3.** La altura de llegada de los tiros a puerta tiene
+mediana **0,250** y máximo **0,589**, contra una portería de **0,70** de alto: los disparos llegan en la
+mitad baja y **casi ninguno se acerca al larguero**. Es consecuencia directa de atar la altura a la calidad
+—con calidad media 46, el techo alcanzable es 0,32—. Importa porque el paso 3 da al portero un alcance
+vertical: **si casi ningún tiro va alto, ese alcance apenas se ejercitará** y el paso 3 mediría poco. Antes
+de darlo hay que decidir si la altura debe depender tanto de la calidad, o si un tiro puede ser alto y malo
+a la vez — que es lo que pasa en el fútbol de verdad.
 
 ## 5. Decidido (23 sep 2026) — ADR 0135
 
