@@ -450,3 +450,52 @@ pasada sistemática, no cinco arreglos sueltos.
   solo 2/40 partidos, así que su propio L1=0 no prueba nada por baja potencia (mismo límite AT-C que
   ya documentó la ADR 0087). Pendiente, no hecho aquí: aplicar el instrumento a un candidato real de
   C1 (Tanda 2, `Cazagoles`/`Ancla`) — parada explícita hasta revisar este resultado.
+
+## ADR 0134 — el once efectivo, y lo que destapó (23 sep 2026)
+
+Paquete de la familia **BA-I + BB-F + BC-H** (el revisor pidió tratarlos como una sola tarea). No eran tres
+defectos de interfaz: faltaba un concepto. `/Sim` decidía quién juega dentro de `RunLineup.Build` y **todos
+los consumidores de fuera lo volvían a derivar de `state.Lineup`**, que es la intención guardada. De ahí
+salían los tres síntomas y **dos incumplimientos**: RF-002d (jugar en inferioridad es una decisión legítima
+que era imposible mientras hubiera banquillo, con un aviso que además mentía) y RF-012c/RF-012d + condición 3
+de la ADR 0048 (el jugador de relleno jugaba **sin indicador de riesgo de muerte**).
+
+**Lo que más importa de todo el paquete no estaba en el encargo:** `RunLineup.Build` **tiraba la colocación
+del jugador** y reasignaba las siete casillas por rol en cada partido. Como el indicador de riesgo sí leía
+las casillas guardadas, **mover fichas movía el número y no movía el partido**. Lo destapó un test que ya
+existía y que era vacío sin saberlo —pasaba en verde ejerciendo una colocación ilegal, el portero fuera de
+su área—. Arreglado (`RunLineup.PlaceOutfield`); queda abierto en [BG-B] medir las formaciones que ahora sí
+son posibles, que el balance de fase 1 **nunca ha visto**, y el jefe que empuja casillas fuera de `Effective`.
+
+**Decisión del revisor a mitad de paquete**: la lesión **leve** ya no saca del campo si el jugador no quiere.
+La ventana pasa a tener tres respuestas —sustituir, dejar el hueco, seguir jugando—. El precio viaja
+calculado desde `/Sim/Run` (`PlayOn.After`) porque la penalización de RF-091 es **lineal** y aplicarla dentro
+del motor compondría multiplicativamente: con una sola lesión previa, un atributo de 99 daba 71 en vez de 69.
+
+**Medido**: huella de determinismo `209287DE9EDC1BB0` **intacta** (ningún partido de estado inicial fijo se
+mueve); 43 puertas con las **mismas 4 rojas** de la línea base (`orc_misplaced` 45,18 y rareza 43,75
+idénticas), salvo la de doctrinas −0,12 → −0,11, que es consecuencia directa de respetar la colocación —al
+no poder jugar un titular, los demás **conservan su casilla** en vez de recolocarse el equipo entero—.
+**LIKELY, no CONFIRMED**: no se aisló revirtiendo solo ese cambio.
+
+**La revisión independiente encontró tres fallos de programa con reproducción**, arreglados con test cada
+uno: «que siga jugando» reventaba con el suplente que ya había entrado; dos decisiones sobre el mismo
+jugador componían `After1 + After2 − base`; y el rechazo reabría su ventana. Y una cosa mayor: **quien se
+queda tocado multiplica por ocho su probabilidad de morir** (`hurtInThisMatch`, rama inalcanzable hasta
+ahora) y la bandeja anunciaba solo el −15 %. Se le ha puesto el número, pero **la pregunta de diseño sigue
+abierta y es del revisor**: con el ×8 a la vista, ¿sigue siendo una decisión? **(E) nunca pasó por
+`game-design-review`** —la nota de diseño la excluyó y se metió después—, y `/Balance` no puede opinar
+porque la política automática nunca la ejerce.
+
+**Siguiente paso, decidido por el revisor (23 sep 2026): [BB-K], [BB-N] y [BB-O].** Los tres son síntomas de
+comportamiento del partido, así que entran por la skill `gameplay-debug` —Regla A, ninguna causa antes de
+medir— y conviene mirarlos juntos: los tres hablan de jugadores o del balón atascados en el campo
+(oscilación entre dos que quieren la misma casilla, el córner que no ocurre nunca en 60 partidos, y el
+portador fuera del campo que congela el partido), así que antes de tratarlos como tres arreglos hay que
+buscarles causa, estado o regla común.
+
+Pendiente de decisión del revisor, sin bloquear lo anterior: el **apartado E** de la ADR 0134 con el ×8
+letal a la vista (leer «Lo que la revisión independiente dejó abierto»). Y después, por este orden:
+[BG-B] medir formaciones no-2-3-1 y el jefe que empuja casillas, [BC-H] el escenario de captura con un
+titular no disponible y luego el hueco deliberado antes del partido, [BG-C] los tres contratos, [BG-A] la
+experiencia de carta.

@@ -57,6 +57,9 @@ viva anotada.
 | [BF-A](./BF-A.md) | `elf_brawler`, una build mala a propósito, gana el 46,6 % contra su referencia (techo 45): el único rojo verdadero de las 43 puertas tras la ADR 0131 | Abierta, medida en 8 plantillas |
 | [BF-B](./BF-B.md) | Tres puertas que deciden con una semilla o sin margen (rareza, `orc_misplaced`, doctrinas): el patrón que la ADR 0131 arregló en las de build | Abierta, medida |
 | [BF-C](./BF-C.md) | El delantero pega sin balón porque sus alternativas fuera de posesión son peores que pegar (`Tackle` 211 contra `MarkOpponent` 180) | Abierta, medida |
+| [BG-A](./BG-A.md) | Tres sitios más tratan la alineación guardada como si fuera el once que juega; el peor reparte experiencia de carta | Abierta: la ADR 0134 la deja fuera a propósito porque mueve balance |
+| [BG-B](./BG-B.md) | La colocación del jugador se tiraba al construir el partido y el indicador de riesgo no se enteraba: mover fichas movía el número, no el partido | Arreglada (ADR 0134); abierto medir las formaciones que ahora sí son posibles, y el jefe que empuja casillas |
+| [BG-C](./BG-C.md) | Tres contratos que solo se sostenían porque nadie podía ejercerlos: `PlayOn` huérfano en silencio, `SetLineup` sin validar casillas, dos APIs que pasan a lanzar | Abierta, sin evidencia de activación |
 | [CAT-C](./CAT-C.md) | La medición no puede ejercitar el consumible manual, así que subestima a la familia | Abierta: las cifras de la ADR 0101 son una cota inferior |
 | [CAT-E](./CAT-E.md) | Con seis filas, todas las builds ganan más al equipo sin perks, y dos puertas de fase 1 se ponen rojas | Abierta: la ADR 0104 NO la cerró (la referencia no era la variable); decisión del revisor pendiente entre tres salidas |
 | [CAT-F](./CAT-F.md) | `Block` (la carga sin balón, ADR 0030 §2) no se puede despertar subiéndole el peso | Abierta, con diagnóstico: el peso no es la palanca, se descarta el 74,9 % antes de puntuar |

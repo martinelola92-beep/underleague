@@ -36,6 +36,35 @@ riesgos; aviso distinto para «hueco rellenado con X» e «inferioridad real», 
 Decidir en `game-design-review` si el relleno automático se mantiene (UI-003) o pide confirmación, y si
 RF-002d debe poder elegirse.
 
+## Resolución parcial 23 sep 2026 — ADR 0134
+
+La causa quedó establecida y es más grande que este pendiente: **no existe el concepto de «once efectivo»**.
+`/Sim` decide quién juega dentro de `RunLineup.Build` y todos los consumidores de fuera vuelven a derivarlo
+de `state.Lineup`, que es la intención guardada. La ADR 0134 lo convierte en **una sola computación**
+(`RunLineup.Effective`) que alimenta el aviso, `LethalRisks` y «TU ONCE», y separa el aviso de **relleno**
+(`FilledFromBench`) del de **inferioridad real** (`Shorthanded`).
+
+Con eso se cierran los dos incumplimientos que este pendiente destapó: el aviso deja de mentir, y **el
+jugador de relleno pasa a recibir su indicador de riesgo de muerte** — lo que faltaba era RF-012c, y con él
+la condición 3 de la ADR 0048 («se puede reducir el riesgo con la alineación»), que no se puede cumplir
+sobre alguien que no sabes que juega. El `LIKELY` de arriba queda **CONFIRMED** y resuelto.
+
+**Queda abierta la mitad de antes del partido.** RF-002d dice que jugar en inferioridad es una *decisión
+legítima*, y mientras haya banquillo sigue sin poder elegirse: el relleno la impide. La ADR 0134 da la mitad
+de dentro del partido («que se quede el hueco») y deja decidido el mecanismo para la otra —la marca explícita
+de contadores de `RunLineup.RiskCounterPrefix`, que no sube la versión del guardado (W-11)—, pero no la
+implementa, porque hace falta tocar el editor de colocación de la pantalla de Equipo.
+
+**Dos pasos concretos, en este orden:**
+
+1. **Un escenario de captura con un titular no disponible.** Hoy la secuencia (`--tour`, `ojeo.png`) arranca
+   con la plantilla sana, así que no hay hueco, no sale ningún aviso y el `FilledFromBench` nuevo **no se
+   regresiona solo**: lo cubren los tests de `/Sim` y nada más. Es barato y es lo que convierte el arreglo en
+   permanente, igual que hizo el paquete de memoria de la fase 1.
+2. **El hueco deliberado antes del partido**, con el mecanismo ya decidido arriba.
+
+Tres instancias más de la misma causa, fuera del paquete porque mueven balance: [BG-A](./BG-A.md).
+
 ## Hermanos
 
 [BA-I](./BA-I.md), [BB-F](./BB-F.md).
