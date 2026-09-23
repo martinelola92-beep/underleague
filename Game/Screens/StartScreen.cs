@@ -51,6 +51,10 @@ public partial class StartScreen : Control
 
         Layout.CenterLegacy(this);
 
+        // La única pantalla que pide su propia música: es la escena principal del proyecto, así que Godot
+        // la carga sin pasar por Nav.Go, que es donde ScreenAudio decide para todas las demás.
+        ScreenAudio.Apply(Nav.Start);
+
         _catalog = DataLoader.FromJson(GameData.Snapshot);
         _clubs = ClubLoader.FromJson(GameData.Snapshot);
 

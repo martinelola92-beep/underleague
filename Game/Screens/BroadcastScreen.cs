@@ -133,6 +133,20 @@ public partial class BroadcastScreen : Control
     private readonly List<ShotGesture> _shotGestures = new();
     private int _nextShotGestureIndex;
 
+    // ------------------------------------------------------------------ capa de campo (audio)
+
+    /// <summary>
+    /// Un sonido del campo listo para sonar: el fotograma del evento y los pools que le tocan
+    /// (<see cref="MatchEventSounds"/>). Se precalcula en <see cref="BindPlayback"/> por la misma razón que
+    /// los gestos de tiro —recorrer 3.000 eventos en cada fotograma para encontrar los de <i>este</i> es
+    /// trabajo que se hace una vez— y se consume con un puntero, así que un evento suena <b>una sola vez</b>
+    /// aunque el director congele la reproducción encima de él.
+    /// </summary>
+    private readonly record struct EventSound(int StartFrame, string[] Pools);
+
+    private readonly List<EventSound> _eventSounds = new();
+    private int _nextEventSoundIndex;
+
     // Sacudida de gol/roja/lesión grave (docs/ui/README §4: gol es "suave", roja y lesión grave "más
     // cortas"): valores provisionales, marcador de posición procedural hasta que haya arte.
     private const float GoalShakeAmplitude = 0.05f;
@@ -242,6 +256,7 @@ public partial class BroadcastScreen : Control
         // información»): a x4/x16 ningún tiro dispara el acercamiento, pero el bando/la bandeja de una
         // muerte siguen su propio reloj igual — son información, no adorno de cámara.
         UpdateShotGesture(Speeds[_speedIndex] == 1);
+        UpdateEventSounds(Speeds[_speedIndex] == 1);
         UpdateDeathEdict((float)delta);
     }
 
@@ -400,6 +415,7 @@ public partial class BroadcastScreen : Control
         _moments = MatchMomentView.Build(_playback.Setup, _playback.Result, _catalog, 0, _run.Decisions.Declines);
         _director = new PresentationDirector(_moments.Moments, DirectorTimings.Default);
         BuildShotGestures();
+        BuildEventSounds();
     }
 
     // ------------------------------------------------------------------ decisión (ADR 0094)
@@ -562,6 +578,7 @@ public partial class BroadcastScreen : Control
         // la lista de tiros, y aquí se resincroniza el puntero al fotograma de la decisión para no repetir
         // un tiro que ya quedó atrás ni perder uno que caiga justo después.
         ResyncShotGestures(_frame);
+        ResyncEventSounds(_frame);
         _pitch3d.ResetGestures();
 
         Sync();
@@ -601,7 +618,7 @@ public partial class BroadcastScreen : Control
     /// </summary>
     private static void PlayMomentSound(MatchMoment moment)
     {
-        if (MomentSounds.PoolFor(moment.Kind) is { } pool)
+        foreach (string pool in MomentSounds.PoolsFor(moment.Kind))
         {
             AudioManager.Instance?.PlayRandomSfx(pool);
         }
@@ -1131,6 +1148,77 @@ public partial class BroadcastScreen : Control
     }
 
     /// <summary>
+    /// Reconstruye la <b>capa de campo</b> del audio (<see cref="MatchEventSounds"/>) desde los eventos
+    /// crudos, igual que <see cref="BuildShotGestures"/> y por el mismo motivo: el balón, la entrada y el
+    /// hueso no son momentos —nadie los cuenta— así que no llegan por el director.
+    ///
+    /// <para>Un evento <b>anulado</b> no suena: si la jugada no cuenta, tampoco hizo ruido (mismo criterio
+    /// que el marcador y las manchas de sangre, <see cref="IsCancelled"/>).</para>
+    /// </summary>
+    private void BuildEventSounds()
+    {
+        _eventSounds.Clear();
+        _nextEventSoundIndex = 0;
+
+        if (_trace is null)
+        {
+            return;
+        }
+
+        var events = _playback.Result.Events;
+        for (int i = 0; i < events.Count; i++)
+        {
+            var e = events[i];
+            if (IsCancelled(e))
+            {
+                continue;
+            }
+
+            var pools = MatchEventSounds.PoolsFor(e);
+            if (pools.Length > 0)
+            {
+                _eventSounds.Add(new EventSound(_trace.FrameOfTick(e.Tick), pools));
+            }
+        }
+    }
+
+    /// <summary>Recoloca el puntero de la capa de campo, igual que <see cref="ResyncShotGestures"/>: tras un salto no se sueltan de golpe todos los sonidos que quedaron atrás.</summary>
+    private void ResyncEventSounds(int frame)
+    {
+        _nextEventSoundIndex = 0;
+        while (_nextEventSoundIndex < _eventSounds.Count && _eventSounds[_nextEventSoundIndex].StartFrame < frame)
+        {
+            _nextEventSoundIndex++;
+        }
+    }
+
+    /// <summary>
+    /// Suelta los sonidos de campo cuyo fotograma se haya alcanzado. <paramref name="allowed"/> es SOLO a
+    /// ×1, misma regla que los gestos (docs/ui/README §4: «la velocidad degrada la presentación, nunca la
+    /// información»): a ×16 esto serían dieciséis golpes por segundo, que no es un partido, es un
+    /// zumbido. El puntero avanza igual —si no, al volver a ×1 sonaría de golpe todo lo saltado— y los
+    /// momentos siguen sonando a cualquier velocidad, porque son lo que se está contando.
+    /// </summary>
+    private void UpdateEventSounds(bool allowed)
+    {
+        while (_nextEventSoundIndex < _eventSounds.Count && _eventSounds[_nextEventSoundIndex].StartFrame <= _frame)
+        {
+            var sound = _eventSounds[_nextEventSoundIndex];
+            _nextEventSoundIndex++;
+
+            if (!allowed)
+            {
+                continue;
+            }
+
+            foreach (string pool in sound.Pools)
+            {
+                AudioManager.Instance?.PlayRandomSfx(pool);
+            }
+        }
+    }
+
+    /// <summary>
     /// Reconstruye las manchas de sangre persistentes (RA-027) de <see cref="Sim.Events.EventType.Injury"/>
     /// no anulada y <see cref="Sim.Events.EventType.Death"/>, en la casilla del evento: leve pequeña, grave
     /// mediana, muerte grande. Se llama al construir y tras cada sustitución (la reproducción cambia).
@@ -1452,6 +1540,7 @@ public partial class BroadcastScreen : Control
         // tiros con el nuevo fotograma, igual que el director descarta lo pendiente en su propio Seek.
         _pitch3d.ResetGestures();
         ResyncShotGestures(_frame);
+        ResyncEventSounds(_frame);
         _pendingDeathEvent = null;
         _deathTrayPending = false;
         _deathEdictDelay = 0f;

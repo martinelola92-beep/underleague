@@ -85,11 +85,16 @@ public static class Nav
         {
             GD.Print($"pantalla pendiente: {scene}");
             Missing = scene;
+            ScreenAudio.Apply(Pending);
             from.GetTree().ChangeSceneToFile(Pending);
             return;
         }
 
         Missing = string.Empty;
+
+        // El fondo cambia con la pantalla y por el mismo camino (ScreenAudio): así ninguna pantalla nueva
+        // tiene que acordarse de su música, y el fundido empieza antes del cambio de escena, no después.
+        ScreenAudio.Apply(scene);
         from.GetTree().ChangeSceneToFile(scene);
     }
 

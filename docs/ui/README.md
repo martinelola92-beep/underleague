@@ -129,6 +129,20 @@ velocidad**; los gestos de cámara anticipan una **clase** de situación, nunca 
 
 Descartado: «x4 = bajar un nivel» (14,3 presentaciones por minuto real, el triple que x1).
 
+**El audio hereda esta tabla** (23 sep 2026). Dos capas, y solo una degrada con la velocidad:
+
+- **Retransmisión** (`Game/Match/MomentSounds.cs`): cuelga del `MomentKind` y suena **a cualquier
+  velocidad**, porque es lo que se está contando — es información, como el estandarte o la bandeja.
+- **Campo** (`Game/Match/MatchEventSounds.cs`): cuelga del evento crudo —balón, golpeo, entrada, caída,
+  hueso— y suena **solo a ×1**, misma regla que los gestos de cámara. A ×16 serían dieciséis golpes por
+  segundo: no es un partido, es un zumbido.
+
+Un momento llega cuando se *presenta* y solo hay 8,6 por partido (§5); un pase o una entrada no son
+momentos y son casi todo lo que pasa. Con una sola capa el campo sonaría ocho veces por partido y estaría
+mudo el resto, así que las dos son necesarias y **ninguna repite lo de la otra**: el hueso cruje en la
+casilla y el grito llega con el sello. Cómo se añaden ficheros y cómo se demuestra qué suena sin altavoz
+(`--audio-trace`): `Game/audio/README.md`.
+
 ## 7. Composición [DECISIÓN, B/B.1/C]
 
 A 1920×1080, campo 16×7 **entero** con la cámara táctica fija (*desde el 19 sep: perspectiva FOV 30°, elevación 45°, con

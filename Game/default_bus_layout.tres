@@ -1,0 +1,28 @@
+[gd_resource type="AudioBusLayout" format=3]
+
+; Tres buses bajo Master, que es lo que el audio del juego necesita separar:
+;   Music     — pregón y mapa; se baja entera cuando habla el partido
+;   SFX       — golpes, balón, grada, árbitro (AudioManager.PlayRandomSfx)
+;   Ambience  — el estadio de fondo durante el partido, en bucle
+; Sin este fichero Godot manda todo a Master y los deslizadores de volumen no pueden separar nada.
+; Los -6 dB de Music son la mezcla de partida: el partido se oye por encima de su propia música.
+
+[resource]
+bus/1/name = &"Music"
+bus/1/solo = false
+bus/1/mute = false
+bus/1/bypass_fx = false
+bus/1/volume_db = -6.0
+bus/1/send = &"Master"
+bus/2/name = &"SFX"
+bus/2/solo = false
+bus/2/mute = false
+bus/2/bypass_fx = false
+bus/2/volume_db = 0.0
+bus/2/send = &"Master"
+bus/3/name = &"Ambience"
+bus/3/solo = false
+bus/3/mute = false
+bus/3/bypass_fx = false
+bus/3/volume_db = -12.0
+bus/3/send = &"Master"

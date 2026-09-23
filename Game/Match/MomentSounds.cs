@@ -1,59 +1,77 @@
+using System;
 using Underleague.Sim.Run.View;
 
 namespace Underleague.Game.Match;
 
 /// <summary>
-/// Qué pool de sonido le corresponde a cada <see cref="MomentKind"/>. Es la <b>única</b> tabla que traduce
-/// el vocabulario de la simulación al de audio: el resto del juego pide un pool por nombre y el
-/// <c>AudioManager</c> elige la variante, así que añadir <c>heavy_hit_06.wav</c> no toca nada de aquí.
+/// Qué suena en cada <see cref="MomentKind"/>: la <b>capa de retransmisión</b>, la que subraya lo que el
+/// pregón está contando. La otra capa, la del campo, es <see cref="MatchEventSounds"/> y cuelga de los
+/// eventos crudos.
+///
+/// <para><b>Un momento puede sonar en varias capas a la vez</b> y por eso devuelve una lista: un gol es la
+/// red <i>y</i> la grada, una muerte es el jadeo <i>y</i> el cuerno. Son sucesos distintos que ocurren
+/// juntos, no un sonido con dos mitades — y separados, cada uno se puede cambiar solo.</para>
 ///
 /// <para><b>Qué se oye es una decisión de presentación</b> (ADR 0119: la simulación produce momentos, el
 /// director decide cómo se presentan). Por eso la tabla vive en <c>/Game</c> y no en <c>/Sim</c>, y por eso
 /// un momento puede no tener sonido: el silencio también se elige.</para>
 ///
-/// <para><b>Lo que falta y dónde irá</b>: los pools de <c>combat/</c> —golpe ligero, medio, fuerte,
-/// aplastamiento, entrada, caída— no cuelgan de un momento sino de un <b>evento</b> suelto del partido
-/// (TACKLE, INJURY, el derribo). Esa capa necesita que la pantalla recorra los eventos de cada fotograma,
-/// que hoy no hace; el árbol de carpetas ya está puesto para cuando se haga, y el gesto será el mismo:
-/// <c>AudioManager.PlayRandomSfx("combat/heavy_hit")</c>.</para>
+/// <para>Ningún nombre de fichero aparece aquí: se pide un pool y el <c>AudioManager</c> reparte las
+/// variantes, así que añadir <c>Crowd_Gasp_04.wav</c> no toca esta tabla. Un pool que todavía no tiene
+/// ficheros tampoco es un problema: la llamada es un no-op anotado una vez.</para>
 /// </summary>
 public static class MomentSounds
 {
+    private static readonly string[] None = Array.Empty<string>();
+
+    // El silbato abre el partido y corta la falta: es el mismo sonido y el mismo gesto.
+    private static readonly string[] Whistle = { "referee/whistle" };
+
+    // La tarjeta no suena a silbato —ya sonó—, suena a grada. Es la reacción, que es lo que el jugador
+    // está mirando mientras el árbitro la saca.
+    private static readonly string[] Boo = { "crowd/boo" };
+
+    // El gol son dos cosas a la vez y ninguna sobra: el balón entrando y la grada reventando.
+    private static readonly string[] Goal = { "football/goal", "crowd/goal" };
+
+    // Las dos lesiones comparten pool a propósito: lo que cambia entre una leve y una grave no es el
+    // sonido del jugador, es todo lo demás (el congelado, el estandarte, la bandeja). El impacto —el
+    // hueso— lo pone la capa de campo, que suena antes: primero el golpe, después el grito.
+    private static readonly string[] Pain = { "players/pain" };
+
+    // La muerte es un vacío y un anuncio: la grada toma aire y suena el cuerno. No hay estruendo aquí —el
+    // crujido ya sonó en la capa de campo, en la casilla, medio segundo antes.
+    private static readonly string[] Death = { "crowd/gasp", "death" };
+
+    // El árbitro se va: el cuerno del final anticipado y la bronca. Mientras no haya cuerno, la bronca
+    // sostiene el momento ella sola.
+    private static readonly string[] RefereeLeaves = { "referee/horn", "crowd/boo" };
+
+    // Pitido final: el silbato y la grada. Suena igual se gane o se pierda —el resultado lo cuenta el
+    // acta, no el sonido— y eso evita que el audio adelante una información que la pantalla aún no ha dado.
+    private static readonly string[] FullTime = { "referee/whistle", "crowd/cheer" };
+
     /// <summary>
-    /// El pool del momento, o <c>null</c> si ese momento no suena. Un pool que todavía no tiene ficheros
-    /// no es un problema: el <c>AudioManager</c> lo ignora en silencio.
+    /// Los pools que suenan en ese momento, en orden. Lista vacía si el momento no suena.
     /// </summary>
-    public static string? PoolFor(MomentKind kind) => kind switch
+    public static string[] PoolsFor(MomentKind kind) => kind switch
     {
-        // El silbato abre el partido y corta la falta: es el mismo sonido y el mismo gesto.
-        MomentKind.Kickoff => "referee/whistle",
-        MomentKind.Foul => "referee/whistle",
-
-        // La tarjeta no suena a silbato —ya sonó—, suena a grada. Es la reacción, que es lo que el jugador
-        // está mirando mientras el árbitro la saca.
-        MomentKind.Yellow => "crowd/boo",
-        MomentKind.Red => "crowd/boo",
-
-        MomentKind.Goal => "football/goal",
-
-        // Las dos lesiones comparten pool a propósito: lo que cambia entre una leve y una grave no es el
-        // sonido del jugador, es todo lo demás (el congelado, el estandarte, la bandeja).
-        MomentKind.MinorInjury => "players/pain",
-        MomentKind.SevereInjury => "players/pain",
-
-        // La muerte es un vacío, no un estruendo: la grada toma aire.
-        MomentKind.Death => "crowd/gasp",
-
-        // La turba entra al campo y el árbitro se va: bocina para el final del reglamentario y para el
-        // pitido final, abucheo para la turba.
-        MomentKind.Mob => "crowd/boo",
-        MomentKind.RefereeLeaves => "referee/horn",
-        MomentKind.FullTime => "referee/horn",
+        MomentKind.Kickoff => Whistle,
+        MomentKind.Foul => Whistle,
+        MomentKind.Yellow => Boo,
+        MomentKind.Red => Boo,
+        MomentKind.Goal => Goal,
+        MomentKind.MinorInjury => Pain,
+        MomentKind.SevereInjury => Pain,
+        MomentKind.Death => Death,
+        MomentKind.Mob => Boo,
+        MomentKind.RefereeLeaves => RefereeLeaves,
+        MomentKind.FullTime => FullTime,
 
         // Sin sonido a propósito: son decisiones de gestión, no sucesos del campo. Ponerles un efecto
         // convertiría en espectáculo algo que el jugador está leyendo.
-        MomentKind.Consumable => null,
-        MomentKind.Substitution => null,
-        _ => null,
+        MomentKind.Consumable => None,
+        MomentKind.Substitution => None,
+        _ => None,
     };
 }
