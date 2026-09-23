@@ -15,6 +15,11 @@ Fuente de rangos: `docs/balance.md`. No uses otros valores.
 ## Antes de medir
 
 1. **Una hipótesis por tanda.** Nunca varios parámetros a la vez.
+   **Y si el cambio introduce DOS términos nuevos, hay que medir cada uno con el otro APAGADO**, no barrer
+   uno dejando el otro en su valor activo. El 23 sep 2026 el paso 3a de la ADR 0135 barrió la penalización
+   con el suelo trigonométrico siempre puesto, nunca midió la celda «penalización sola», y de ahí salió una
+   ADR afirmando que el efecto lo producía la geometría. Lo produce la penalización: 89 % contra 19 %. Lo
+   destapó la revisión independiente, no el barrido. Son 2N celdas, no N.
 2. **Baseline del mismo árbol, no de memoria.** `git stash push --include-untracked`, medir en HEAD limpio,
    `git stash pop`, medir con el cambio. Comparar los dos números reales, no lo que "se sabe" que valía
    antes — un commit puede haber movido algo sin decirlo (fue el caso real de `a0a8b33`, que afirmaba no
