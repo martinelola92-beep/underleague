@@ -316,6 +316,7 @@
         "PASS_ATTEMPTED",
         "PASS_COMPLETED",
         "PASS_FAILED",
+        "CROSS",
         "DRIBBLE_ATTEMPTED",
         "DRIBBLE_WON",
         "DRIBBLE_LOST",

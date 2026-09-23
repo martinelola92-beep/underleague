@@ -166,7 +166,21 @@ public sealed record AiContext(
     // defensiva: el pase a la espalda de la defensa es exactamente lo que la acción es.
     int ThroughPassMinCells = 2,
     int ThroughPassMaxCells = 4,
-    float ThroughPassFreeZoneCells = 0f);
+    float ThroughPassFreeZoneCells = 0f,
+    // ADR 0136 (centrar). El alcance y la zona de remate son las dos precondiciones DURAS de la acción
+    // -sin compañero al alcance y cerca del área no hay centro-; el resto puntúa, nunca descarta, que es
+    // la forma que el repositorio ya usa desde el paso 3 de la ADR 0091.
+    float CrossMinCells = 0f,
+    float CrossMaxCells = 0f,
+    float CrossTargetGoalDistanceCells = 0f,
+    int CrossBase = 0,
+    int CrossApertureGainPerCenti = 0,
+    int CrossBlockedLanePenalty = 0,
+    // Que el rematador esté marcado PUNTÚA, no descarta (ADR 0136, enmienda): un centro es el balón que se
+    // pone CUANDO el área está poblada. La primera versión copió del pase raso la precondición «receptor
+    // libre» y dejó el centro en 0,54 por partido.
+    int CrossMarkedTargetPenalty = 0,
+    int CrossTechniqueSlope = 0);
 
 /// <summary>
 /// Pesos de la IA de utilidad (RT-093..RT-098). Las tablas Base y Tactical se guardan como arrays
@@ -187,6 +201,15 @@ public sealed class AiWeights
         Context = context;
         _shift = shift;
     }
+
+    /// <summary>
+    /// Los mismos pesos con otro <see cref="Context"/>. Existe para que una prueba pueda mover <b>un</b>
+    /// término de contexto sobre los pesos reales, en vez de reconstruir a mano las dos tablas enteras
+    /// —que es lo que se venía haciendo y lo que hace que un test mida un juego que no es el publicado—.
+    /// Comparte los arrays a propósito: nadie los muta después de cargar.
+    /// </summary>
+    internal AiWeights WithContext(AiContext context) =>
+        new(_base, _tactical, _offBallTackle, context, _shift);
 
     /// <summary>Peso base de la acción a para la posición p.</summary>
     public int Base(Position p, PlayerAction a) => _base[(int)p, (int)a];
@@ -394,6 +417,32 @@ public sealed record ShotTuning(
     int PostThicknessCellsMilli);
 
 /// <summary>tuning.save.</summary>
+/// <summary>
+/// Centro y remate (ADR 0136). <b>La comba es lo que hace que el centro exista</b>: el balón pasa por
+/// encima del radio de intercepción a mitad de vuelo, que es la única diferencia física entre un centro y
+/// un pase largo.
+/// <para>
+/// <c>peakHeightCellsMilli</c> es la altura del vuelo <b>en absoluto</b>, no por casilla de distancia. Se
+/// probó lo segundo primero y un test lo tumbó antes de medir nada: un centro corto desde el cordel (3,6
+/// casillas) hacía pico <b>0,897</b> contra un radio de 0,9, así que la mitad de los centros se
+/// interceptaban igual que un pase raso y la acción no habría hecho nada. Una altura fija además es lo
+/// que hace un centro de verdad —se levanta para salvar a los defensas, no en proporción a lo lejos que
+/// se esté— y deja la invariante «un centro SIEMPRE despega por encima del radio» comprobable con un solo
+/// número.
+/// </para>
+/// <para>
+/// El remate invierte los factores del tiro a propósito (<c>ShotTuning</c>: técnica 14, fuerza 4): el tiro
+/// es <b>colocar</b> y el remate es <b>llegar y empujarla</b>. Y paga
+/// <c>volleyOffTargetPenalty</c> de puntería por no controlar el balón antes de golpearlo.
+/// </para>
+/// </summary>
+public sealed record CrossTuning(
+    int PeakHeightCellsMilli,
+    int VolleyBaseQuality,
+    int VolleyTechniqueFactor,
+    int VolleyStrengthFactor,
+    int VolleyOffTargetPenalty);
+
 public sealed record SaveTuning(int BasePercent, int CloseRangeCells, int AttributeWeightPercent, int ConsecutiveShotDecayPercent, int QualityWeight, int QualityPivot, float ReachCells, float DiveReachCells, int DivePenaltyPercent);
 
 /// <summary>tuning.tackle.</summary>
@@ -487,6 +536,7 @@ public sealed record Tuning(
     PassTuning Pass,
     DribbleTuning Dribble,
     ShotTuning Shot,
+    CrossTuning Cross,
     SaveTuning Save,
     TackleTuning Tackle,
     InjuryTuning Injury,

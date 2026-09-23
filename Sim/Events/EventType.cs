@@ -45,6 +45,16 @@ public enum EventType
     /// de después del partido, así que ningún perk se podía ver mientras se jugaba.
     /// </summary>
     PerkTriggered,
+
+    /// <summary>
+    /// Centro (ADR 0136). <c>Detail</c> distingue <c>attempted</c> (sale el centro), <c>volleyed</c> (un
+    /// compañero lo remató de primeras) y <c>loose</c> (llegó y no lo remató nadie). Tiene evento propio
+    /// y no un detalle de <see cref="PassCompleted"/> porque la jugada que cuenta no es «llegó el pase»
+    /// sino «llegó el balón al área y alguien lo empujó»: es la unidad narrativa que el jugador recuerda,
+    /// y los principios del proyecto prefieren el evento explícito a la transición invisible.
+    /// <para>Se añade al FINAL del enum a propósito: así ningún valor numérico de los anteriores cambia.</para>
+    /// </summary>
+    Cross,
 }
 
 /// <summary>Conversión de EventType a la forma UPPER_SNAKE usada en datos y logs.</summary>
@@ -80,6 +90,7 @@ public static class EventTypeNames
         EventType.Substitution => "SUBSTITUTION",
         EventType.ConsumableUsed => "CONSUMABLE_USED",
         EventType.PerkTriggered => "PERK_TRIGGERED",
+        EventType.Cross => "CROSS",
         _ => throw new ArgumentOutOfRangeException(nameof(t)),
     };
 }

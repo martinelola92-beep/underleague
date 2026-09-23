@@ -132,3 +132,8 @@ El hueco del 0011 corresponde a una decisión sobre el radio de adyacencia que q
 | [0128](0128-el-legendario-es-el-premio-de-ganar-una-run.md) | El legendario es el premio de ganar una run con un clan (excepción declarada a RF-006) | **Propuesta: decisión del revisor**, bloqueada por el perfil |
 | [0129](0129-cada-entrada-paga-su-propio-enfriamiento.md) | `TackleCooldown` deja de ser un contador único: cada entrada, con o sin balón, paga su propio enfriamiento | Aceptada. **Decisión del revisor** |
 | [0131](0131-las-puertas-de-build-promedian-ocho-plantillas.md) | Las puertas de build de fase 1 promedian ocho plantillas en vez de una sola semilla, y con esa muestra `MinInjuryRatio` baja de 1,4 a 1,1 | Aceptada |
+| [0132](0132-con-el-balon-muerto-no-hay-jugada-activa.md) | Con el balón muerto no hay jugada activa: `IsInActivePlay` deja de ser pura geometría (RF-057) | Aceptada |
+| [0133](0133-el-centrocampista-entra-a-su-marcado.md) | El centrocampista entra a su marcado con ajuste negativo, y el delantero no | Aceptada |
+| [0134](0134-el-once-efectivo.md) | El once efectivo: quién juega se calcula una vez y se enseña | Aceptada |
+| [0135](0135-el-balon-tiene-altura.md) | El balón tiene altura, y el toque defensivo puede desviarlo | Aceptada. **Decisión del revisor** |
+| [0136](0136-centrar-el-pase-alto-que-se-remata.md) | Centrar: el pase alto al área que se remata sin controlar, apoyado en fuerza | Aceptada. **Decisión del revisor** |

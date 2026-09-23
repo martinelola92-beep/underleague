@@ -507,6 +507,8 @@ public static class DataLoader
         "throughPassLateTicks", "throughPassMarginTicks", "throughPassBase", "throughPassTechniqueSlope",
         "throughPassMinCells", "throughPassMaxCells", "throughPassFreeZoneCells",
         "tackleMarkTargetBonus",
+        "crossMinCells", "crossMaxCells", "crossTargetGoalDistanceCells", "crossBase", "crossApertureGainPerCenti",
+        "crossBlockedLanePenalty", "crossMarkedTargetPenalty", "crossTechniqueSlope",
     };
 
     private static AiWeights ParseAiWeights(string file, string content)
@@ -625,7 +627,15 @@ public static class DataLoader
             ThroughPassTechniqueSlope: contextNode.Prop("throughPassTechniqueSlope").AsInt(),
             ThroughPassMinCells: contextNode.Prop("throughPassMinCells").AsInt(),
             ThroughPassMaxCells: contextNode.Prop("throughPassMaxCells").AsInt(),
-            ThroughPassFreeZoneCells: contextNode.Prop("throughPassFreeZoneCells").AsFloat());
+            ThroughPassFreeZoneCells: contextNode.Prop("throughPassFreeZoneCells").AsFloat(),
+            CrossMinCells: contextNode.Prop("crossMinCells").AsFloat(),
+            CrossMaxCells: contextNode.Prop("crossMaxCells").AsFloat(),
+            CrossTargetGoalDistanceCells: contextNode.Prop("crossTargetGoalDistanceCells").AsFloat(),
+            CrossBase: contextNode.Prop("crossBase").AsInt(),
+            CrossApertureGainPerCenti: contextNode.Prop("crossApertureGainPerCenti").AsInt(),
+            CrossBlockedLanePenalty: contextNode.Prop("crossBlockedLanePenalty").AsInt(),
+            CrossMarkedTargetPenalty: contextNode.Prop("crossMarkedTargetPenalty").AsInt(),
+            CrossTechniqueSlope: contextNode.Prop("crossTechniqueSlope").AsInt());
 
         // ADR 0125 D2: el ajuste de la entrada sin balón es un mapa por puesto, con la misma forma que la
         // tabla `base` —el único patrón por puesto que ya existe en este fichero—, y con signo. Los cuatro
@@ -740,7 +750,7 @@ public static class DataLoader
         root.EnsureKnownKeys(
             "regulationTicks", "goldenGoalMaxTicks", "decisionIntervalTicks", "transitionTicks",
             "assistWindowTicks", "resolution",
-            "movement", "ball", "states", "pass", "dribble", "shot", "save", "tackle", "injury", "referee",
+            "movement", "ball", "states", "pass", "dribble", "shot", "cross", "save", "tackle", "injury", "referee",
             "block", "restart", "generation", "bodies", "actionZone", "progression");
 
         return new Tuning(
@@ -756,6 +766,7 @@ public static class DataLoader
             ParsePass(root.Prop("pass")),
             ParseDribble(root.Prop("dribble")),
             ParseShot(root.Prop("shot")),
+            ParseCross(root.Prop("cross")),
             ParseSave(root.Prop("save")),
             ParseTackle(root.Prop("tackle")),
             ParseInjury(root.Prop("injury")),
@@ -857,6 +868,19 @@ public static class DataLoader
             node.Prop("goalHeightCellsMilli").AsInt(),
             node.Prop("arcCellsPerCellMilli").AsInt(),
             node.Prop("postThicknessCellsMilli").AsInt());
+    }
+
+    private static CrossTuning ParseCross(Json node)
+    {
+        node.EnsureKnownKeys(
+            "peakHeightCellsMilli", "volleyBaseQuality", "volleyTechniqueFactor", "volleyStrengthFactor",
+            "volleyOffTargetPenalty");
+        return new CrossTuning(
+            node.Prop("peakHeightCellsMilli").AsInt(),
+            node.Prop("volleyBaseQuality").AsInt(),
+            node.Prop("volleyTechniqueFactor").AsInt(),
+            node.Prop("volleyStrengthFactor").AsInt(),
+            node.Prop("volleyOffTargetPenalty").AsInt());
     }
 
     private static SaveTuning ParseSave(Json node)

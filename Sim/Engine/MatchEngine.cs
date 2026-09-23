@@ -40,6 +40,14 @@ internal sealed class MatchEngine : IPerkWorld
     /// </summary>
     private const float OffTargetShotDeviationCells = 1.25f;
 
+    /// <summary>
+    /// Umbral de «tiro sin ángulo» (ADR 0136): apertura &lt; 50 centésimas, o sea más de 60° fuera de la
+    /// perpendicular a la línea de gol. Es el corte exacto con el que se midió
+    /// <c>docs/ba-e-goles-sin-angulo.md</c> §1, y se conserva idéntico a propósito: una métrica que cambia
+    /// de definición entre la medición del problema y la de la solución no demuestra nada.
+    /// </summary>
+    private const int LowApertureThreshold = 50;
+
     private readonly MatchSetup _setup;
     private readonly Catalog _catalog;
     private readonly SimConfig _config;
@@ -936,6 +944,10 @@ internal sealed class MatchEngine : IPerkWorld
             case PlayerAction.ShortPass:
             case PlayerAction.LongPass:
             case PlayerAction.ThroughPass:
+            // ADR 0136: centrar es un pase, y entra por el mismo estado. Lo que lo distingue -que vuela
+            // alto y que al llegar se remata- lo decide LaunchPass mirando la accion elegida, igual que
+            // ya hacia con el pase en profundidad.
+            case PlayerAction.Cross:
                 if (ReferenceEquals(_ball.Owner, player))
                 {
                     player.EnterState(PlayerState.Passing, _tuning.States.PassingTicks);
@@ -1211,7 +1223,12 @@ internal sealed class MatchEngine : IPerkWorld
                 continue;
             }
 
-            float distanceToBall = Vec2.Distance(player.Position, _ball.Position);
+            // ADR 0136: el alcance pasa de circulo en el plano a ESFERA, que es la linea que dejo escrita
+            // la revision de arquitectura de la ADR 0135. Para los tres pases rasos (z = 0) es el calculo
+            // de antes, bit a bit -el atajo de ReachDistance lo garantiza-, asi que esto no mueve ni una
+            // tirada de la circulacion normal. Para un centro es lo que hace que la accion exista: a
+            // mitad de vuelo el balon va por encima del radio y no hay intercepcion posible.
+            float distanceToBall = ReachDistance(player.Position, _ball.Position, _ball.Z);
             if (distanceToBall >= pass.InterceptRadiusCells)
             {
                 continue;
@@ -1330,6 +1347,24 @@ internal sealed class MatchEngine : IPerkWorld
     /// intercepción del pase en <see cref="TryIntercept"/>. Comparación de <c>float</c> entre posiciones,
     /// que es el único uso de coma flotante que RT-023 permite.
     /// </summary>
+    /// <summary>
+    /// Distancia de alcance a un balon que tiene altura (ADR 0135, ADR 0136): <b>esfera</b>, no cilindro
+    /// —cuanto mas alto va el balon, menos lejos se llega en el plano—, que es la decision 3 de la ADR
+    /// 0135. Con el balon en el suelo devuelve exactamente <see cref="Vec2.Distance"/>, sin pasar por la
+    /// raiz: no es una optimizacion, es lo que garantiza que un pase raso siga dando el MISMO numero que
+    /// antes de existir la altura.
+    /// </summary>
+    internal static float ReachDistance(Vec2 from, Vec2 ballPosition, float ballZ)
+    {
+        float plane = Vec2.Distance(from, ballPosition);
+        if (ballZ <= 0f)
+        {
+            return plane;
+        }
+
+        return MathF.Sqrt((plane * plane) + (ballZ * ballZ));
+    }
+
     internal static bool WithinSaveReach(Vec2 goalkeeper, Vec2 ball, float reachCells) =>
         Vec2.Distance(goalkeeper, ball) < reachCells;
 
@@ -1434,6 +1469,31 @@ internal sealed class MatchEngine : IPerkWorld
         if (_ball.PassSucceeds && receiver is not null && CanTouchBall(receiver)
             && Vec2.Distance(receiver.Position, _ball.Position) < PassArrivalRadius)
         {
+            // ADR 0136: un centro NO se controla, se remata de primeras. Es la mitad que hace que la
+            // accion sea una jugada y no un pase largo con otro nombre: el que llega no decide nada, ya
+            // decidio el que centro. Se compara en el plano a proposito (revision de arquitectura, §9):
+            // un centro llega con FlightTargetZ = 0, la parabola vuelve al suelo en el destino.
+            if (_ball.IsCross && passer is not null)
+            {
+                _report.CrossesVolleyed[passer.Team]++;
+                Emit(EventType.Cross, "volleyed", passer, receiver);
+
+                // El centro cuenta como pase completado a efectos de CADENA y de ASISTENCIA, porque lo
+                // es: el balon fue de un jugador a otro. Tiene que ir ANTES del remate, que cierra la
+                // jugada (EndPlay) y vuelca _playPasses.
+                passer.PassesCompleted++;
+                _lastCompletedPassTick = _tick;
+                _lastCompletedPasser = passer;
+                _playPasses++;
+
+                // Mismo decreto que RepeatShot: se le da el balon y dispara en el mismo tick, asi que
+                // nadie lo ve nunca en posesion. La diferencia con un tiro esta toda en la CALIDAD, que
+                // LaunchShot calcula con los factores invertidos.
+                SetOwner(receiver);
+                LaunchShot(receiver, isPenalty: false, volley: true);
+                return;
+            }
+
             SetOwner(receiver);
             Emit(EventType.PassCompleted, _ball.IsThroughPass ? "through" : "completed", passer, receiver);
             if (passer is not null)
@@ -1450,6 +1510,11 @@ internal sealed class MatchEngine : IPerkWorld
 
             _playPasses++;
             return;
+        }
+
+        if (_ball.IsCross && passer is not null)
+        {
+            Emit(EventType.Cross, "loose", passer, receiver);
         }
 
         Vec2 direction = (_ball.FlightTarget - _ball.FlightOrigin).Normalized;
@@ -1622,6 +1687,18 @@ internal sealed class MatchEngine : IPerkWorld
         _ball.PassReceiver = null;
         _ball.Passer = null;
         _ball.Shooter = null;
+
+        // Revisión independiente: aquí NACE el defecto que la ADR 0136 arregló en LaunchPass. Recuperar el
+        // balón limpiaba media docena de campos del vuelo y dejaba los de altura sin tocar, así que el
+        // siguiente vuelo los heredaba. Arreglarlo sólo en quien lanza deja el patrón vivo para la próxima
+        // regla que lea uno de estos campos fuera de vuelo. Se limpia donde el vuelo termina.
+        _ball.IsCross = false;
+        _ball.IsThroughPass = false;
+        _ball.FlightArc = 0f;
+        _ball.FlightTargetZ = 0f;
+        _ball.Z = 0f;
+        _ball.ShotIsVolley = false;
+        _ball.ShotAperture = 0;
         _ball.Velocity = new Vec2(0f, 0f);
         _ball.Position = player.Position;
         _ball.LastTouchPlayer = player;
@@ -1755,6 +1832,13 @@ internal sealed class MatchEngine : IPerkWorld
         // AZ-B paso 5: el pase en profundidad va a la casilla que eligió la utilidad (TargetPoint del
         // pasador), no al pie del receptor; el vuelo es el mismo y la carrera la resuelve el tick a tick.
         bool through = passer.CurrentAction == PlayerAction.ThroughPass && receiver is not null;
+        // Revisión independiente: si el receptor elegido ya no está en el campo, la línea de arriba lo
+        // sustituye por el compañero más adelantado — y ése NO cumple ninguna de las dos precondiciones
+        // duras del centro (podría estar a una casilla, en campo propio y con peor apertura). Un centro a
+        // un sustituto no es un centro: la acción degenera a pase raso, que es el caso z = 0 del modelo.
+        bool cross = passer.CurrentAction == PlayerAction.Cross
+            && receiver is not null
+            && ReferenceEquals(receiver, passer.PassReceiver);
         Vec2 target = through
             ? Utility.ClampToPitch(passer.TargetPoint)
             : receiver is not null
@@ -1770,6 +1854,20 @@ internal sealed class MatchEngine : IPerkWorld
         _ball.InFlight = true;
         _ball.IsShot = false;
         _ball.IsThroughPass = through;
+        _ball.IsCross = cross;
+
+        // ADR 0136: TODO pase fija su altura de vuelo explicitamente, tambien los tres rasos. Antes no la
+        // tocaba ninguno: FlightTargetZ y FlightArc los escribia solo LaunchShot y nadie los limpiaba al
+        // recuperar el balon (SetOwner no los toca), asi que el primer pase despues de una parada heredaba
+        // la comba y la altura de llegada del tiro parado. Hasta hoy eso era inerte -ninguna regla leia
+        // _ball.Z, solo la traza-, pero con la intercepcion en esfera de este mismo paquete un pase raso
+        // cualquiera habria volado alto y se habria vuelto ininterceptable. Se arregla en el sitio donde
+        // vive la regla: un pase declara su altura, no la hereda.
+        _ball.FlightTargetZ = 0f;
+        // FlightArc ES la altura del pico (4t(1-t) vale 1 en t=0,5), asi que la comba del centro se
+        // declara en absoluto y no por casilla recorrida: un centro se levanta para salvar a los
+        // defensas, no en proporcion a lo lejos que este el que centra. Ver CrossTuning.
+        _ball.FlightArc = cross ? _tuning.Cross.PeakHeightCellsMilli / 1000f : 0f;
         _ball.Passer = passer;
         _ball.PassReceiver = receiver;
         _ball.PassSucceeds = succeeds;
@@ -1780,6 +1878,12 @@ internal sealed class MatchEngine : IPerkWorld
         _ball.LastTouchPlayer = passer;
         _ball.LastTouchTeam = passer.Team;
         Array.Clear(_ball.InterceptAttempted);
+
+        if (cross)
+        {
+            _report.Crosses[passer.Team]++;
+            Emit(EventType.Cross, "attempted", passer, receiver);
+        }
 
         passer.EnterState(PlayerState.Positioning, 0);
     }
@@ -1849,7 +1953,15 @@ internal sealed class MatchEngine : IPerkWorld
         return count;
     }
 
-    private void LaunchShot(MatchPlayer shooter, bool isPenalty)
+    /// <param name="volley">
+    /// ADR 0136: el disparo es un <b>remate de primeras</b> a un centro. Cambia dos cosas y sólo dos —la
+    /// calidad, que invierte los factores del tiro para apoyarse en la <b>fuerza</b>, y la puntería, que
+    /// paga <c>volleyOffTargetPenalty</c> por golpear sin controlar—. Todo lo demás (la tirada de
+    /// dentro/fuera, el punto de mira, el marco, el bloqueo, la parada y la llegada) es exactamente el de
+    /// un tiro, porque un remate <b>es</b> un tiro: el proyecto prefiere reutilizar el sistema a abrirle
+    /// una excepción.
+    /// </param>
+    private void LaunchShot(MatchPlayer shooter, bool isPenalty, bool volley = false)
     {
         if (!ReferenceEquals(_ball.Owner, shooter))
         {
@@ -1866,12 +1978,23 @@ internal sealed class MatchEngine : IPerkWorld
         float distance = Vec2.Distance(shooter.Position, goal);
         int pressure = isPenalty ? 0 : CountOpponentsWithin(shooter, PitchConstants.PressureRadius);
 
-        int raw = shot.BaseQuality
-            + (shot.TechniqueFactor * shooter.Technique)
-            + (shot.StrengthFactor * shooter.Strength)
-            + (shooter.ShotQualityBonus * 100)
-            - (shot.DistancePenaltyPerCell * Utility.Centi(distance) / 100)
-            - (shot.PressurePenalty * pressure);
+        // ADR 0136: el tiro es COLOCAR (técnica) y el remate es LLEGAR Y EMPUJARLA (fuerza). Son los
+        // mismos términos con los factores invertidos, no una fórmula nueva: así las dos acciones no se
+        // pueden contradecir y el reparto entre ellas es un dato, no una rama de código.
+        var cross = _tuning.Cross;
+        int raw = volley
+            ? cross.VolleyBaseQuality
+                + (cross.VolleyTechniqueFactor * shooter.Technique)
+                + (cross.VolleyStrengthFactor * shooter.Strength)
+                + (shooter.ShotQualityBonus * 100)
+                - (shot.DistancePenaltyPerCell * Utility.Centi(distance) / 100)
+                - (shot.PressurePenalty * pressure)
+            : shot.BaseQuality
+                + (shot.TechniqueFactor * shooter.Technique)
+                + (shot.StrengthFactor * shooter.Strength)
+                + (shooter.ShotQualityBonus * 100)
+                - (shot.DistancePenaltyPerCell * Utility.Centi(distance) / 100)
+                - (shot.PressurePenalty * pressure);
         int quality = Math.Clamp(raw / 100, 5, 95);
         if (isPenalty)
         {
@@ -1884,6 +2007,7 @@ internal sealed class MatchEngine : IPerkWorld
         // divide la de fallar, que es la que se tira aquí. Las dos cosas son la misma operación.
         int offTargetChance = Bounded(ProbabilityScale.ApplyAveraged(
             Bounded(shot.OffTargetBase
+                + (volley ? cross.VolleyOffTargetPenalty : 0)
                 + (shot.OffTargetDistanceFactor * Utility.Centi(distance) / 100)
                 - (quality * 20)),
             ProbabilityScale.Invert(Odds(shooter, ProbabilityKind.ShotOnTarget))));
@@ -1891,6 +2015,23 @@ internal sealed class MatchEngine : IPerkWorld
 
         _report.Shots[shooter.Team]++;
         shooter.Shots++;
+
+        // ADR 0136: el censo de apertura de BA-E deja de ser un script y pasa a ser instrumento del motor.
+        // Se mide AQUI, con la posicion desde la que se disparo, porque despues ya no se sabe: el balon se
+        // mueve. Es la cifra que decide si el centro arreglo lo que venia a arreglar.
+        int aperture = Utility.ApertureCenti(shooter.Position, goal);
+        _report.ShotApertureSum += aperture;
+        _ball.ShotAperture = aperture;
+        if (aperture < LowApertureThreshold)
+        {
+            _report.LowApertureShots++;
+        }
+
+        if (MathF.Abs(goal.X - shooter.Position.X) < 1f)
+        {
+            _report.BylineShots++;
+        }
+
         if (!offTarget)
         {
             _report.ShotsOnTarget[shooter.Team]++;
@@ -1917,6 +2058,8 @@ internal sealed class MatchEngine : IPerkWorld
         _ball.ShotQuality = quality;
         _ball.ShotDistance = distance;
         _ball.ShotIsPenalty = isPenalty;
+        _ball.ShotIsVolley = volley;
+        _ball.IsCross = false;
         _ball.FlightOrigin = shooter.Position;
         _ball.FlightTarget = target;
         _ball.FlightTargetZ = aim.Height;
@@ -1951,8 +2094,12 @@ internal sealed class MatchEngine : IPerkWorld
             return;
         }
 
+        // Revisión independiente: el disparo repetido conserva la identidad del que repite. Sin esto, un
+        // "Doble disparo" sobre un REMATE repetía con técnica en vez de con fuerza y el gol no contaba en
+        // VolleyGoals: la primera mitad de la jugada era un remate y la segunda otra cosa.
+        bool volley = _ball.ShotIsVolley;
         SetOwner(shooter);
-        LaunchShot(shooter, isPenalty: false);
+        LaunchShot(shooter, isPenalty: false, volley: volley);
     }
 
     /// <summary>
@@ -2320,6 +2467,16 @@ internal sealed class MatchEngine : IPerkWorld
 
         _report.Goals[team]++;
         shooter.Goals++;
+        if (_ball.ShotIsVolley)
+        {
+            _report.VolleyGoals[team]++;
+        }
+
+        if (_ball.ShotAperture < LowApertureThreshold)
+        {
+            _report.LowApertureGoals++;
+        }
+
 
         var goalkeeper = _goalkeepers[1 - team];
         if (goalkeeper is not null)
@@ -2827,6 +2984,89 @@ internal sealed class MatchEngine : IPerkWorld
 
     /// <summary>Id del dueño del balón, o -1 si está suelto o en vuelo.</summary>
     internal int BallOwnerIdForTest => _ball.Owner?.Id ?? -1;
+
+    // ---------------------------------------------------------------- enganches de prueba (ADR 0136)
+    //
+    // El centro sí lo ejercita el lote, pero el lote mide agregados: no puede demostrar que un centro
+    // concreto vuele por encima de quien lo interceptaría, ni que el que lo recibe no llegue a ser dueño
+    // del balón. Eso son afirmaciones sobre UN vuelo, y se comprueban colocando el vuelo a mano.
+
+    /// <summary>
+    /// Coloca a dos jugadores y lanza un centro del primero al segundo, saltándose la utilidad. No
+    /// inventa ninguna regla: llama a <see cref="LaunchPass"/> exactamente como lo haría el motor tras
+    /// elegir <see cref="PlayerAction.Cross"/>.
+    /// </summary>
+    internal void ForcePassForTest(
+        int team, int passerIndex, Vec2 passerAt, int receiverIndex, Vec2 receiverAt, PlayerAction action,
+        int intendedReceiverIndex = -1)
+    {
+        var passer = _players[passerIndex];
+        var receiver = _players[receiverIndex];
+        passer.Position = passerAt;
+        receiver.Position = receiverAt;
+        receiver.TargetPoint = receiverAt;
+        SetOwner(passer);
+        passer.CurrentAction = action;
+        // intendedReceiverIndex permite montar el caso en que la utilidad eligió a UNO y, cinco ticks
+        // después, LaunchPass tiene que sustituirlo porque ya no está en el campo.
+        passer.PassReceiver = intendedReceiverIndex >= 0 ? _players[intendedReceiverIndex] : receiver;
+        LaunchPass(passer);
+    }
+
+    /// <summary>
+    /// Saca a un jugador del campo, para montar el caso del receptor que desaparece entre la decisión y el
+    /// lanzamiento. <c>OnPitch</c> es un flag propio y no se deriva del estado, así que hay que bajarlo:
+    /// es exactamente lo que mira <see cref="LaunchPass"/>.
+    /// </summary>
+    internal void SendOffForTest(int playerIndex)
+    {
+        _players[playerIndex].EnterState(PlayerState.SentOff, 0);
+        _players[playerIndex].OnPitch = false;
+    }
+
+    /// <summary>Un tick de vuelo: la física del balón en vuelo y sus reglas, sin mover jugadores.</summary>
+    internal void StepFlightForTest() => UpdateFlight();
+
+    /// <summary>True mientras el balón viaja.</summary>
+    internal bool BallInFlightForTest => _ball.InFlight;
+
+    /// <summary>True si el vuelo actual es un tiro (un remate lo es).</summary>
+    internal bool BallIsShotForTest => _ball.IsShot;
+
+    /// <summary>True si el vuelo actual es un centro.</summary>
+    internal bool BallIsCrossForTest => _ball.IsCross;
+
+    /// <summary>Posición actual del balón.</summary>
+    internal Vec2 BallPositionForTest => _ball.Position;
+
+    /// <summary>Coloca a un jugador, para montar escenarios de una sola jugada.</summary>
+    internal void PlaceForTest(int playerIndex, Vec2 at)
+    {
+        _players[playerIndex].Position = at;
+        _players[playerIndex].TargetPoint = at;
+    }
+
+    /// <summary>Índice en el array de jugadores del primer jugador de campo de un equipo, más un desplazamiento.</summary>
+    internal int OutfieldIndexForTest(int team, int offset)
+    {
+        int seen = 0;
+        for (int i = 0; i < _players.Length; i++)
+        {
+            if (_players[i].Team != team || !_players[i].IsOutfield)
+            {
+                continue;
+            }
+
+            if (seen == offset)
+            {
+                return i;
+            }
+
+            seen++;
+        }
+
+        throw new ArgumentOutOfRangeException(nameof(offset));
+    }
 
     private void ResolveInjury(MatchPlayer tackler, MatchPlayer victim, bool isFoul)
     {
@@ -3846,6 +4086,7 @@ internal sealed class MatchEngine : IPerkWorld
         EventType.Death => "dies",
         EventType.Substitution => "comes on for",
         EventType.ConsumableUsed => "uses",
+        EventType.Cross => "crosses to",
         _ => "acts",
     };
 }

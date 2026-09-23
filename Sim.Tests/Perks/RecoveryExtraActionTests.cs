@@ -103,68 +103,45 @@ public sealed class RecoveryExtraActionTests
     }
 
     /// <summary>
-    /// TACKLE no se evalúa dos veces. Alt 1 (publicar además el evento TACKLE resuelto) se descartó
-    /// precisamente porque habría duplicado la evaluación de los 12 perks con trigger TACKLE y los 7 con
-    /// SHOT; este test fija que Alt 0 no la ha introducido por otra vía.
+    /// <b>Sin perks, la capacidad RECOVERY→<c>RepeatTackle</c> no hace absolutamente nada</b>, que es la
+    /// afirmación de BB-Q Alt 0. Y ésta es la forma de comprobarla que <b>no</b> depende del flujo de
+    /// aleatoriedad: una entrada repetida es, por construcción, un <b>segundo</b> <c>TACKLE</c> del mismo
+    /// jugador en el <b>mismo tick</b> —<c>MatchEngine.RepeatTackle</c> se ejecuta dentro de la resolución
+    /// del primero—. Sin perks eso no puede ocurrir nunca; y si el motor dejara de evaluar TACKLE tampoco
+    /// habría entradas, así que se comprueban las dos mitades.
     ///
-    /// <para>La comprobación es diferencial: un partido SIN ningún perk produce exactamente los mismos
-    /// eventos TACKLE que antes del cambio. Los valores son los medidos sobre el árbol limpio con
-    /// <c>git stash</c> (disciplina de la skill <c>balance-measure</c>), semilla a semilla. Si la
-    /// evaluación se hubiera duplicado, estas cuentas subirían.</para>
-    ///
-    /// <para><b>Las cinco se refijan con las ADR 0132 y 0133</b> (28→19, 20→18, 24→33, 15→15, 7→15): el
-    /// balón muerto deja de contar como jugada activa —durante una reanudación ya no hay entradas ni
-    /// cargas— y el centrocampista pasa a entrar a su marcado, así que el flujo de TACKLE cambia por
-    /// diseño.</para>
-    ///
-    /// <para><b>Las cuatro primeras se habían refijado con la ADR 0129</b> (24→28, 21→20, 26→24, 10→15; la
-    /// semilla 4 no se movió): separar el contador de enfriamiento de las dos entradas cambia qué puede
-    /// decidir cada jugador tick a tick y el consumo de RNG diverge aguas abajo. Lo que este test fija no
-    /// es cuántas entradas hay —eso lo miden las puertas— sino que una <b>tanda de perks</b> no toque el
-    /// flujo de TACKLE sin que nadie lo note.</para>
-    ///
-    /// <para>La semilla 0 se refijó a 24 (antes 31) con la ADR 0121: centrar el área del portero cambia
-    /// <c>Utility.ClampToArea</c>, así que el portero se mueve distinto tick a tick y el consumo de RNG
-    /// del partido diverge aguas abajo, aunque TACKLE siga evaluándose una sola vez. No es una regresión
-    /// de este test, es la colateral esperada de un cambio determinista de geometría (medido en el mismo
-    /// encargo de la ADR).</para>
-    ///
-    /// <para><b>La semilla 2 se refijó a 30 (antes 33) el 23 sep 2026 con la ADR 0135</b>: la recogida del
-    /// balón suelto pasa a medirse contra el segmento recorrido en el tick y no contra el punto final, así
-    /// que el primer balón suelto de cada partido cambia de tick (o de quién lo recoge) y el consumo de
-    /// RNG diverge aguas abajo, igual que en los reajustes anteriores — TACKLE sigue evaluándose una sola
-    /// vez, no hay comportamiento nuevo detrás. Medido en el lote de 10.000 partidos de la ADR: ninguna
-    /// métrica se sale de banda (<c>possessionChanges</c> 21,75 → 21,81, <c>scorelineShare</c> 86,58 →
-    /// 86,35), mismo precedente que AW-A en <c>docs/pendientes.md</c>. Cualquier cambio futuro del motor
-    /// que mueva dónde o cuándo se consume RNG va a volver a obligar a regenerar estos valores.</para>
-    /// <para><b>Y otra vez el mismo día, con el paso 2 de la ADR 0135</b> (el tiro apunta a un punto
-    /// disperso de la portería en vez de a su centro, lo que añade tres tiradas por disparo): los cinco
-    /// índices se refijan a 18 / 8 / 47 / 8 / 18 y los perks a <c>charge</c> 13, <c>lane_reader</c> 17,
-    /// <c>sweeper_keeper</c> 14. Ninguno de los dos cambios toca el comportamiento medido; los dos mueven
-    /// el RNG. Que haya hecho falta regenerarlos <b>dos veces en un día</b> dice algo del propio test: fija
-    /// una huella exacta de un flujo aleatorio, así que su coste de mantenimiento es alto y lo que
-    /// demuestra —que nadie cambió estos perks— es poco frente a ese coste. Vale la pena replantearlo la
-    /// próxima vez que estorbe, en vez de regenerarlo una tercera.</para>
-    /// <para><b>Y una tercera vez, también el 23 sep 2026</b> (paso 2b de la ADR 0135: el tiro apunta a un
-    /// punto disperso de la portería con intención + error, y el marco pasa a ser físico y rechaza): los
-    /// cinco índices se refijan a 17 / 13 / 26 / 8 / 16 (el 3 no se movió). Van ya <b>tres regeneraciones en
-    /// el mismo día</b>, todas por el mismo motivo —el test fija una huella exacta de un flujo aleatorio que
-    /// cualquier cambio de puntería o de geometría del disparo desplaza—, así que la próxima vez que este
-    /// test estorbe toca replantearlo en serio, no regenerarlo una cuarta.</para>
+    /// <para><b>Por qué ya no fija el número exacto de eventos.</b> Fijaba una <b>huella</b> del flujo de
+    /// RNG —17 / 13 / 26 / 8 / 16 en su última versión— y hubo que regenerarla <b>tres veces el mismo
+    /// día</b> (ADR 0135, pasos 1, 2 y 2b), siempre por el mismo motivo: cualquier cambio de puntería o de
+    /// geometría del disparo desplaza el consumo de aleatoriedad y con él todos los partidos, sin que el
+    /// comportamiento medido cambie. El propio test dejó escrito que a la cuarta tocaba replantearlo en
+    /// serio en vez de regenerarlo. Ésta es la cuarta (ADR 0136, la acción <c>Cross</c>), y esto es el
+    /// replanteo: se afirma la <b>regla</b>, que es estable, en vez de la huella, que no lo es.</para>
     /// </summary>
     [Theory]
-    [InlineData(0, 17)]
-    [InlineData(1, 13)]
-    [InlineData(2, 26)]
-    [InlineData(3, 8)]
-    [InlineData(4, 16)]
-    public void TackleStreamIsUnchangedForAMatchWithNoPerks(int index, int expectedTackleEvents)
+    [InlineData(0)]
+    [InlineData(1)]
+    [InlineData(2)]
+    [InlineData(3)]
+    [InlineData(4)]
+    public void WithNoPerksNobodyEverTacklesTwiceInTheSameTick(int index)
     {
         var result = Play(index, perkId: null, out _);
-        int events = result.Events.Count(e => e.Type == EventType.Tackle);
-        _output.WriteLine($"semilla {index}: {events} eventos TACKLE (baseline sin el cambio: {expectedTackleEvents})");
-        Assert.Equal(expectedTackleEvents, events);
+
+        var tackles = result.Events.Where(e => e.Type == EventType.Tackle).ToList();
+        Assert.True(tackles.Count > 0, $"semilla {index}: sin entradas, este test no comprueba nada");
+
+        var seen = new HashSet<(int Tick, int Actor)>();
+        foreach (var tackle in tackles)
+        {
+            Assert.True(
+                seen.Add((tackle.Tick, tackle.Actor)),
+                $"semilla {index}: el jugador {tackle.Actor} entró dos veces en el tick {tackle.Tick} sin llevar ningún perk");
+        }
+
+        _output.WriteLine($"semilla {index}: {tackles.Count} eventos TACKLE, ninguno repetido en el mismo tick");
     }
+
 
     /// <summary>La recursión sigue acotada por <c>_maxDepth</c> (RT-042): el partido termina y el corte es finito.</summary>
     [Fact]
@@ -217,51 +194,38 @@ public sealed class RecoveryExtraActionTests
     }
 
     /// <summary>
-    /// <c>charge</c> y los tres perks que ya usaban RECOVERY no se mueven. Valores fijados contra el
-    /// árbol SIN el cambio de BB-Q (medidos con `git stash`, disciplina de la skill `balance-measure`): mismas
-    /// semillas, mismas plantillas. <c>charge</c> se volvió a fijar con BC-B (65 → 13): los 65 se midieron con el fallo
-    /// del límite (el perk se encadenaba dentro de su propia activación), imposibles con un límite de 1 por
-    /// partido en 20 partidos.
+    /// Los cuatro perks que ya usaban RECOVERY <b>siguen comportándose igual</b>: los tres que se activan
+    /// se siguen activando, y <c>road_warrior</c> —cuya condición no la cumple una entrada— <b>sigue sin
+    /// activarse nunca</b>. Esa última fila es la que de verdad vigila BB-Q Alt 0: si la capacidad nueva
+    /// hubiera ensanchado el disparador, <c>road_warrior</c> empezaría a saltar.
     ///
-    /// <para><c>lane_reader</c> (19 → 18) y <c>sweeper_keeper</c> (23 → 24) se refijaron con la ADR 0121:
-    /// centrar el área del portero desplaza <c>Utility.ClampToArea</c>, así que el consumo de RNG diverge
-    /// aguas abajo (misma causa que <see cref="TackleStreamIsUnchangedForAMatchWithNoPerks"/>).
-    /// <c>sweeper_keeper</c> es justo el perk del portero, así que es el más esperable de los dos en
-    /// moverse. Y otra vez con la ADR 0129 (24 → 19), por la misma clase de razón: el contador separado
-    /// cambia el consumo de RNG aguas abajo. <c>charge</c>, <c>lane_reader</c> y <c>road_warrior</c> no se
-    /// mueven. Y otra vez con las ADR 0132/0133: <c>charge</c> 13 → 10, <c>lane_reader</c> 18 → 16 y
-    /// <c>sweeper_keeper</c> 19 → 14.</para>
+    /// <para><b>Por qué es una banda y ya no un número exacto.</b> Fijaba el total exacto de activaciones
+    /// en veinte partidos y hubo que regenerarlo <b>cinco veces</b> —ADR 0121, 0129, 0132/0133, y tres
+    /// veces el mismo 23 sep 2026 con los pasos 1, 2 y 2b de la ADR 0135—, siempre por lo mismo: el total
+    /// es una <b>huella del flujo de aleatoriedad</b>, y cualquier cambio del motor que mueva dónde se
+    /// consume RNG la desplaza sin que estos perks hayan cambiado. El propio test dejó escrito que a la
+    /// cuarta tocaba replantearlo en serio. Ésta es la cuarta (ADR 0136, la acción <c>Cross</c>).</para>
     ///
-    /// <para><b>Regenerados el 23 sep 2026 con la ADR 0135</b> (altura del balón, y la recogida del balón
-    /// suelto medida contra el segmento recorrido en el tick y no contra el punto final): <c>charge</c>
-    /// 10 → 11, <c>lane_reader</c> 16 → 18, <c>sweeper_keeper</c> 14 → 11. Misma causa que en los cuatro
-    /// reajustes anteriores: el primer balón suelto de cada partido pasa a resolverse distinto y el flujo
-    /// de RNG diverge aguas abajo, sin que el comportamiento de estos perks haya cambiado — medido en el
-    /// lote de 10.000 partidos de la ADR, ninguna métrica se sale de banda (<c>possessionChanges</c>
-    /// 21,75 → 21,81, <c>scorelineShare</c> 86,58 → 86,35). <c>road_warrior</c> se queda en 0, como
-    /// siempre. Mismo precedente que AW-A (<c>docs/pendientes.md</c>): cualquier cambio futuro del motor
-    /// que mueva dónde o cuándo se consume RNG va a obligar a regenerar estos valores otra vez, y eso no
-    /// es una regresión de estos perks sino la firma esperada de un desplazamiento de semillas.</para>
-    /// <para><b>Y otra vez el mismo día, con el paso 2 de la ADR 0135</b> (el tiro apunta a un punto
-    /// disperso de la portería en vez de a su centro, lo que añade tres tiradas por disparo): los cinco
-    /// índices se refijan a 18 / 8 / 47 / 8 / 18 y los perks a <c>charge</c> 13, <c>lane_reader</c> 17,
-    /// <c>sweeper_keeper</c> 14. Ninguno de los dos cambios toca el comportamiento medido; los dos mueven
-    /// el RNG. Que haya hecho falta regenerarlos <b>dos veces en un día</b> dice algo del propio test: fija
-    /// una huella exacta de un flujo aleatorio, así que su coste de mantenimiento es alto y lo que
-    /// demuestra —que nadie cambió estos perks— es poco frente a ese coste. Vale la pena replantearlo la
-    /// próxima vez que estorbe, en vez de regenerarlo una tercera.</para>
-    /// <para><b>Y una tercera vez, también el 23 sep 2026</b> (paso 2b de la ADR 0135: el tiro apunta a un
-    /// punto disperso de la portería con intención + error, y el marco pasa a ser físico y rechaza):
-    /// <c>charge</c> 13 → 11, <c>lane_reader</c> 17 → 19, <c>sweeper_keeper</c> 14 → 17. Van ya <b>tres
-    /// regeneraciones en el mismo día</b>, todas por el mismo motivo — la próxima vez que este test estorbe
-    /// toca replantearlo en serio, no regenerarlo una cuarta.</para>
+    /// <para><b>El techo es ~2× el valor observado, y eso es deliberado.</b> La primera versión de esta
+    /// banda la puso en 40-60 y la revisión independiente encontró el agujero: un encadenamiento <b>×2</b>
+    /// (11→22, 19→38, 17→34) cabía dentro, y encadenarse es exactamente el fallo que BC-B encontró —
+    /// <c>double_shot</c> pasando de 1 a 5 activaciones por partido—. Con el techo en 25 / 40 / 35 un ×2
+    /// se sale y un desplazamiento de semillas no.</para>
     /// </summary>
     [Theory]
-    [InlineData("charge", 1, 11)]
-    [InlineData("lane_reader", 1, 19)]
-    [InlineData("road_warrior", 1, 0)]
-    [InlineData("sweeper_keeper", 0, 17)]
-    public void ExistingPerksAreUnchanged(string perkId, int slot, int expected)
+    [InlineData("charge", 1, 1, 25)]
+    [InlineData("lane_reader", 1, 1, 40)]
+    // ADR 0136: road_warrior estuvo clavado en 0 a través de CINCO desplazamientos de semilla, y con el
+    // centro pasa a 1 en veinte partidos. Medido que lo causa el centro y no la deriva: con el centro
+    // apagado por dato (crossTargetGoalDistanceCells = 0) los cuatro perks reproducen EXACTAMENTE sus
+    // valores antiguos (charge 11, lane_reader 19, sweeper_keeper 17, road_warrior 0). Y la vía es real y
+    // prevista: un centro que nadie remata deja el balón suelto en el área, alguien lo recupera, y eso es
+    // un RECOVERY —el disparador de este perk—. No es el disparador ensanchándose, es que ahora hay
+    // recuperaciones donde antes no las había. La banda se abre lo justo para eso.
+    [InlineData("road_warrior", 1, 0, 5)]
+    [InlineData("sweeper_keeper", 0, 1, 35)]
+
+    public void ExistingPerksAreUnchanged(string perkId, int slot, int min, int max)
     {
         int total = 0;
         for (int i = 0; i < Matches; i++)
@@ -269,7 +233,9 @@ public sealed class RecoveryExtraActionTests
             total += Activations(Play(i, perkId, out int carrierId, slot), perkId, carrierId);
         }
 
-        _output.WriteLine($"{perkId}: {total} activaciones en {Matches} partidos (valor fijado: {expected})");
-        Assert.Equal(expected, total);
+        _output.WriteLine($"{perkId}: {total} activaciones en {Matches} partidos (banda {min}-{max})");
+        Assert.True(
+            total >= min && total <= max,
+            $"{perkId}: {total} activaciones en {Matches} partidos, fuera de la banda {min}-{max}");
     }
 }

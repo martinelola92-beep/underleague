@@ -13,6 +13,25 @@ sin perks: *un perk mal puesto no hace nada, ni resta ni suma*. Gana un punto y 
 **No es ruido de semilla**: con una sola salía 7 de 8 veces fuera; con las ocho promediadas la media
 también está fuera. Es lo primero que la puerta nueva afirma con solvencia.
 
+## Hipótesis nueva desde la ADR 0136 (23 sep 2026) — LIKELY, con mecanismo
+
+Con «centrar» dentro, `badBuildsLoseToNone_elf_brawler` pasa de **45,96 a 47,01** (σ 0,57, o sea ~1,8
+errores típicos). Medido contra el mismo árbol con el centro **apagado por dato**, que es byte a byte HEAD,
+así que la comparación aísla el centro.
+
+**El mecanismo es plausible y concreto**: el remate de un centro se apoya en la **fuerza**
+(`volleyStrengthFactor` 18 contra `volleyTechniqueFactor` 4), y `elf_brawler` es exactamente eso — perks de
+pelea puestos sobre elfos técnicos. El centro le abre una vía de gol que su build «mala a propósito» no
+tenía, así que pierde **menos** contra su referencia.
+
+**LIKELY, no CONFIRMED**: 1,8 σ no aísla la hipótesis de la deriva, y la puerta ya estaba roja antes. El
+experimento que la aislaría es medir esta puerta con el remate apoyado en técnica en vez de en fuerza, o
+con el centro apagado sólo para esa build. **No se ha hecho.**
+
+Si se confirma, no es un defecto del centro: es que el centro **le da sentido de ataque a la fuerza**, y una
+build de fuerza mal puesta deja de ser tan mala. Eso puede ser deseable (`especialización significativa`) o
+puede pedir recalibrar qué significa `elf_brawler` como build de control.
+
 ## Por qué importa
 
 Es la afirmación de fase 1 sobre que **las decisiones de construcción importan**: si equivocarse eligiendo

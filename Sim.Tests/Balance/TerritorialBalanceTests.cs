@@ -34,7 +34,8 @@ public sealed class TerritorialBalanceTests
         // Un partido con el balón repartido a partes iguales entre los dos tercios extremos da 0 para los
         // dos equipos; y un partido volcado da valores opuestos. Sin simular nada.
         var balanced = new MatchSummary("home", "away", 0, 0, 0, false, 0, 0, 0, 0, 0, 0, 0,
-            BallThird0: 100, BallThird1: 100, BallThird2: 100, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+            BallThird0: 100, BallThird1: 100, BallThird2: 100, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0);
         Assert.Equal(0.0, TerritorialBalance.ForMatch(balanced, 0), 6);
         Assert.Equal(0.0, TerritorialBalance.ForMatch(balanced, 1), 6);
 

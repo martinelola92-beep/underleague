@@ -174,7 +174,74 @@ recuperada) también están medidas **en la semilla 1**. La dispersión entre pl
 build es grande (sd 0,18-0,23 en un umbral de 1,40); cualquier lectura futura de la curva de puertas de
 build debería usar tres semillas o las ocho de CAT-J, no una.
 
+## ADR 0136 — «Centrar» está dentro, y los tiros desde la línea de fondo se quedan en la mitad (23 sep 2026)
+
+Paso **2c** de la ADR 0135, intercalado por decisión del revisor **antes** del paso 3 y con motivo medido:
+el ángulo en la utilidad de `Shoot` es la vía (B) de [BA-E](pendientes/BA-E.md) y sola pone seis puertas en
+rojo, porque le quita el tiro al delantero **sin darle nada a cambio**.
+
+**Qué es**: un pase **alto** al área a un compañero con mejor apertura a portería que el pasador, que lo
+**remata de primeras sin controlarlo**. El remate pasa por `LaunchShot` con los mismos términos y los
+factores **invertidos** (fuerza 18 / técnica 4, contra 4 / 14 del tiro): el tiro es *colocar* y el remate es
+*llegar y empujarla*. Y la intercepción del pase pasa de círculo en el plano a **esfera**, que es lo que
+hace que el centro exista: a mitad de vuelo el balón va por encima del radio.
+
+**Medido, 10.000 partidos × 2 semillas:**
+
+| | baseline | con el centro |
+|---|---|---|
+| centros por partido | 0 | **2,13 / 2,33** |
+| tiros sin ángulo (apertura < 0,5) | 25,77 / 29,00 % | **14,31 / 14,86 %** |
+| tiros desde la línea de fondo | 23,30 / 26,53 % | **13,04 / 13,43 %** |
+| apertura media | 69,11 / 65,59 | **78,52 / 77,35** |
+| goles por partido | 2,73 / 2,35 | 2,46 / 2,07 |
+
+Es del mismo orden que la palanca **(A)** de BA-E, que la ADR 0111 rechazó por poner **ocho** puertas en
+rojo. Ésta no pone ninguna: **41 de 43**, y las dos rojas son `orc_misplaced` 45,05 (BF-B) y `elf_brawler`
+47,01 (BF-A), en valores indistinguibles de los que sus fichas documentan.
+
+**El experimento salió separable, y eso es la mitad del valor del paquete.** Con el centro apagado por dato
+(`crossTargetGoalDistanceCells = 0`) el árbol es **byte a byte HEAD**: 0 de 10.000 partidos difieren. Ocurre
+porque los dos defectos latentes que se arreglaron por el camino **se cancelan por construcción**. Así que
+todo lo medido arriba es del centro y de nada más, sin argumentarlo.
+
+**Dos defectos latentes encontrados y arreglados en la causa:**
+1. `FlightArc`/`FlightTargetZ` los escribía sólo `LaunchShot` y nadie los limpiaba, así que **el primer pase
+   después de una parada heredaba la comba del tiro parado**. Inerte mientras nada leía `_ball.Z`; con la
+   esfera habría dado pases rasos **ininterceptables**.
+2. `MatchPlayer.ActionCount` estaba clavado a `(int)PlayerAction.Block + 1`, o sea «la última acción más
+   uno» — una trampa que salta justo al hacer lo que el propio enum manda (añadir al final, RT-097).
+   Añadir `Cross` reventó 234 tests con `IndexOutOfRange`.
+
+**Y un test replanteado, no regenerado**: `RecoveryExtraActionTests` fijaba una **huella exacta del flujo de
+RNG** y llevaba cinco regeneraciones, tres el mismo día. Su propio comentario decía que a la cuarta tocaba
+replantearlo. Ahora afirma la **regla** —sin perks nadie entra dos veces en el mismo tick— y bandas, no la
+huella.
+
+**Lo que queda abierto y es lo primero de la próxima sesión:**
+- **−0,27 goles por partido**, coste real y consistente. **Aparcado por decisión del revisor**: «ya
+  miraremos más adelante si la precisión debe ponderar más».
+- **El paso 3 de la ADR 0135** (ángulo y oclusión en la puntería *y* en la utilidad de `Shoot`, portero
+  después). Ahora sí tiene alternativa que ofrecer. **Hay que REMEDIR la vía (B)**, no dar por buenas sus
+  seis puertas rojas de cuando se midió sola.
+- `crossMarkedTargetPenalty` se publica en **0** a propósito (el precio de rematar marcado ya lo cobra
+  `shot.pressurePenalty` en la resolución); queda como palanca si algún día interesa.
+
+
 ## Siguiente paso concreto (sesión limpia, 23 sep 2026)
+
+**El paso 3 de la [ADR 0135](decisiones/0135-el-balon-tiene-altura.md), «la portería disponible»**, que es
+lo que el centro acaba de desbloquear. Por dónde empezar: `docs/plan-altura-del-balon.md` §6 (el paso 3
+ampliado) y §7 (por qué el orden importaba), y la enmienda 2 de la ADR 0135. **Orden obligatorio dentro del
+paso: ángulo y oclusión primero, portero después** —el portero introduce un bucle de realimentación y
+hundiría `saveRate`—. Y lo primero que hay que hacer es **remedir la vía (B)** con el centro dentro: sus
+seis puertas rojas son de cuando se midió sola, sin alternativa que ofrecerle al delantero.
+
+Lleva `game-design-review` propio (lo pide la enmienda 2) porque toca la IA de utilidad, y hay que vigilar
+`shotsPerMatch`, `passChainAvgLength`, `possessionChanges` y **sobre todo las puertas de build**: la ADR
+0110 calibró los pesos de `Shoot` del defensa y del centrocampista.
+
+### Después del paso 3
 
 **[BF-C](pendientes/BF-C.md): qué hace un delantero cuando su equipo no tiene el balón.** Es lo único que
 queda para poder abrirle la entrada al marcado, y no es calibración: hoy su mejor acción fuera de posesión

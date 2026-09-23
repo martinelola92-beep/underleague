@@ -251,6 +251,7 @@ que el riesgo de determinismo se descubra **antes** de haber invertido en el res
 | **0** | Instrumentación: medir la referencia actual entera (tiros, paradas, bloqueos, córners, duración, posesiones) | Sin baseline no hay nada que comparar, y las semillas van a cambiar todas |
 | **1** ✅ | `Ball` gana `Z`/`VelocityZ`, gravedad y bote, y la recogida pasa a medirse por barrido; **ninguna regla del partido los usa todavía** | Aísla el riesgo de determinismo. Si RT-024 diverge, se descubre aquí y no mezclado con reglas nuevas |
 | **2** ✅ | El tiro sale con altura y con puntería dispersa; la portería gana alto y ancho; un tiro puede irse por encima | Primera regla nueva visible. Medido: el agregado no se mueve, porque el portero todavía alcanza en el plano |
+| **2c** ✅ | **«Centrar»**: pase alto al área, remate sin controlar apoyado en fuerza, e intercepción en esfera. Medido: tiros desde la línea de fondo **a la mitad** (23,3/26,5 → 13,0/13,4 %), a costa de −0,27 goles | [ADR 0136](./decisiones/0136-centrar-el-pase-alto-que-se-remata.md). Va **antes** del 3 y no es un capricho de orden: el ángulo en la utilidad sin el centro es la vía (B) de BA-E, que ya se midió sola y pone seis puertas en rojo |
 | **3** | **La portería disponible**: ángulo del tirador, rivales que tapan y colocación del portero deciden la puntería **y si merece la pena tirar**; el alcance de portero y defensas pasa a ser esférico | Ángulo y portero son la misma pregunta vista desde los dos lados. Decisión del revisor, ampliada (§6) |
 | **4** | **El rechace**: el toque defensivo atrapa o desvía, y lo desviado sale con velocidad y altura | Lo que cierra [BB-N](./pendientes/BB-N.md). Va al final porque necesita los tres pasos anteriores |
 | **5** | `/Game` dibuja la altura | Una línea, pero pide `visual-review` |
@@ -520,3 +521,223 @@ lo que se implementa:
   dimensiones. Su estructura por pasos es el modelo de éste.
 - `docs/referencia-motores-futbol.md` §1 — por qué la intercepción no es una técnica aparte sino no saltarse
   el bucle normal; el mismo argumento vale para la altura.
+
+---
+
+## 8. `game-design-review` de «centrar» — las diez preguntas (23 sep 2026)
+
+Regla B. Se responde **antes** de tocar código. El §7 recoge la decisión del revisor y el porqué; esto es
+el diseño concreto que se va a implementar, con los hechos del motor levantados leyendo el código, no
+supuestos.
+
+### Los hechos de partida, comprobados en el código
+
+1. **No existe ninguna acción de pase con altura.** Las tres que hay (`ShortPass`, `LongPass`,
+   `ThroughPass`) pasan por `LaunchPass`, que no toca `FlightTargetZ` ni `FlightArc`: el pase es el caso
+   `z = 0` del modelo del paso 1.
+2. **La intercepción del pase es un círculo en el plano**: `TryIntercept` compara
+   `Vec2.Distance(jugador, balón) < pass.interceptRadiusCells` (0,9). **No mira `_ball.Z`.** Si un centro
+   se lanzara hoy, volaría alto y lo interceptarían igual: la altura no valdría para nada.
+3. **El vuelo ya sabe describir una parábola.** `UpdateFlight` calcula
+   `Z = FlightTargetZ·t + FlightArc·4·t·(1−t)`. Con `FlightTargetZ = 0` y `FlightArc > 0` sale
+   exactamente un centro: sube, y vuelve al suelo al llegar. **Cero física nueva.**
+4. **El receptor de un pase en vuelo ya corre a buscarlo**: `chaseBallIncomingPassBonus` (700) se lo da
+   `EvaluateChaseBall` a quien sea `ball.PassReceiver`. Un centro lo hereda gratis: el rematador va a la
+   cita sin código nuevo.
+5. **La calidad del tiro ya reparte entre técnica y fuerza** (`techniqueFactor` 14, `strengthFactor` 4).
+   El remate no necesita una fórmula nueva: necesita **los mismos factores con los pesos al revés**.
+6. **`EventType.AerialDuel` existe en el enum y no se emite nunca.** Hueco reservado, no se usa aquí.
+
+### 1. ¿Qué experimenta el jugador?
+
+Hoy ve a su delantero correr hasta el cordel y fusilar desde donde no hay portería. Lo ha dicho él mismo y
+está medido: **32,4 % de los tiros con apertura < 0,5**, **30,1 % a menos de una casilla de la línea de
+fondo** (BA-E §1). Con el centro ve otra cosa: el delantero llega al fondo, **levanta la cabeza** y pone el
+balón al área; el balón **vuela por encima** del defensa que hoy lo interceptaría; y un compañero llega de
+frente y **la empuja de primeras**. El gol deja de venir de un ángulo imposible y viene de un remate.
+
+### 2. ¿Qué decisión toma el jugador con esto?
+
+Una de **alineación**, que es donde vive este juego: *a quién pongo para rematar*. Hasta hoy la fuerza
+servía para entrar, para aguantar y un poco para tirar (`strengthFactor` 4 contra `techniqueFactor` 14). Con
+el remate apoyado en fuerza, un bruto lento pasa a tener un sitio en ataque que antes no tenía, y la
+pregunta «¿pongo al técnico o al bestia arriba?» deja de tener una respuesta única.
+
+### 3. ¿Qué decisión DEBERÍA tomar? ¿Coincide?
+
+Sí, y además es la que el proyecto lleva pidiendo desde la ADR 0111: *la corrección buena tendrá que ser
+**local** al delantero en zona de remate*. El centro es local por construcción —sólo existe cerca del área—
+y no toca la regla global de desmarque que ya se rechazó por aplanar el juego de colocación.
+
+### 4. ¿Qué regla del juego representa?
+
+**Ninguna escrita: es regla nueva, y se dice claro.** RF-057 y siguientes describen tiro y parada, no el
+centro. Extiende la ADR 0135 (altura) y **reabre a conciencia su propia exclusión** de §2 —«los pases
+siguen rasos»— para un único caso, con su medición propia: es el primer pase con altura del motor. No toca
+la calibración del pase de la ADR 0091, que sigue rigiendo los tres pases rasos.
+
+### 5. ¿Qué sistemas intervienen?
+
+- `/Sim`: `PlayerAction.Cross` **al final del enum** (RT-097: añadir al final no altera el desempate de las
+  anteriores), `StateMachine.WithBallActions`, `Utility.EvaluateCross`, `MatchEngine.LaunchCross`,
+  `ResolveCrossArrival`, `LaunchVolley`, y `TryIntercept` pasando de círculo a **esfera**.
+- `/data`: `ai/weights.json` (peso base por puesto, táctico, y los términos de contexto), `sim/tuning.json`
+  (comba del centro, alcance, calidad del remate) y sus dos esquemas.
+- `/Game`: **nada en este paquete.** El balón alto ya lo dibuja el paso 5 de la ADR 0135, que sigue
+  pendiente. La frontera se respeta: `/Sim` decide, `/Game` dibujará.
+- `MatchTrace` ya graba la altura desde el paso 2.
+
+### 6. ¿Hay alternativas? Tres, consideradas
+
+- **Un centro que es un pase raso más, sin altura.** Más barato y no reabre nada. **Rechazada**: sin altura
+  el centro lo intercepta el mismo defensa que intercepta todo lo demás, y entonces no es un centro, es un
+  `LongPass` con otro nombre. Lo que hace que la jugada exista es volar por encima.
+- **Que el rematador controle y luego dispare** (un pase normal al área). **Rechazada por el revisor**, y
+  con razón mecánica: si controla, la acción no se distingue de un pase y el ángulo lo vuelve a decidir el
+  tirador. El remate de primeras es lo que convierte la posición del rematador en la decisión.
+- **Que el remate sea una acción sin balón del rematador** (él decide rematar) en vez de una consecuencia
+  de la llegada del centro. **Rechazada**: obligaría a que dos jugadores coordinaran decisiones en ticks
+  distintos, que es justo la clase de estado compartido que el repositorio evita. El centro es una decisión
+  de **uno**; el remate es la resolución de esa decisión.
+
+### 7. ¿Qué trade-off introduce? ¿Hay coste de oportunidad legible?
+
+Sí, y es doble.
+
+- **Para el que centra**: renuncia a tirar. Su tiro sin ángulo convertía al 37,1 % de los goles con el
+  32,4 % de los tiros —*mejor* que la media (BA-E)—, así que el centro **tiene que competir contra algo que
+  hoy funciona demasiado bien**. Se paga con una tirada de pase más y con que el remate sea de peor calidad
+  media que un tiro.
+- **Para el que alinea**: un rematador fuerte arriba es un jugador que no está defendiendo ni pasando. La
+  fuerza deja de ser sólo el atributo de la violencia.
+
+`identidad memorable > bonus genéricos`: el tiro es **colocar** (técnica) y el remate es **llegar y
+empujarla** (fuerza). Dos acciones que si compartieran fórmula serían la misma con otro nombre.
+
+### 8. ¿Cómo cambia las estrategias posibles?
+
+Abre una combinación que hoy no existe: **banda + área**. Un extremo que llega al fondo deja de ser un
+error de colocación y pasa a ser la mitad de una jugada; la otra mitad es alguien fuerte en el centro. Y le
+da sentido de ataque a rasgos y razas que hoy sólo valen para pegar (`Brute`, orco). No se añade contenido:
+se le da uso al que ya hay.
+
+### 9. ¿Puede degenerar? Cuatro sitios, con su guarda
+
+1. **El centro sustituye al pase normal en todo el campo.** Guarda: sólo hay candidato si el compañero está
+   **cerca del área rival** y **con mejor apertura que el centrador**, y el centro tiene su propio alcance.
+   Fuera de la zona de remate la acción no tiene receptor y se descarta.
+2. **El remate se vuelve la máquina de goles y `goalsPerMatch` se dispara.** Es el riesgo real, porque el
+   remate ocurre de frente a portería, que es donde mejor se convierte. Guardas: tirada de pase del centro,
+   calidad de remate por debajo de la del tiro salvo para los fuertes, penalización propia de puntería
+   (rematar sin controlar es más difícil que tirar), y el rematador tiene que estar **libre de presión**,
+   como cualquier receptor de pase hoy. Criterio de parada: `goalsPerMatch` y
+   `scorelineShare_1-0_to_3-2`, que es puerta.
+3. **El centro alarga la cadena artificialmente.** `passChainAvgLength` (banda 2-4) es una de las que la
+   vía (B) rompía. El centro **cuenta como pase de la cadena**, porque lo es; lo que hay que vigilar es que
+   no la infle. Se mide.
+4. **Un centro que nadie remata deja el balón muerto en el área**, que es [BC-G](./pendientes/BC-G.md) sin
+   arreglar. Guarda de alcance: un centro fallado queda suelto **igual que cualquier pase fallado**, con la
+   misma velocidad y la misma fricción. **No se inventa aquí el despeje**: eso es el paso 4 de la ADR 0135.
+
+**Regla 11 (nada malo sin ser previsible):** el centro no añade ninguna vía de daño. No hay lesión, ni
+muerte, ni falta nueva. Un remate es un tiro, y un tiro no hiere a nadie.
+
+### 10. ¿Cómo se demuestra que funciona?
+
+- **Tests de motor**: que un centro vuela por encima del radio de intercepción a mitad de vuelo y **no se
+  puede interceptar** ahí (y sí al salir y al llegar, donde va bajo); que el receptor remata **sin llegar a
+  ser dueño del balón**; que un remate de un jugador fuerte tiene mejor calidad que el del mismo jugador
+  con la fuerza baja, y **al revés que el tiro** con la técnica; que un centro sin rematador no se elige;
+  que RT-024 sigue en verde.
+- **Lote de `/Balance`**, 10.000 partidos, contra el baseline del mismo árbol (HEAD tras el paso 2b), con
+  **todas** las métricas. Nuevas: `crossesPerMatch`, `crossCompletionRate`, `volleyShotShare`,
+  `volleyGoalShare`.
+- **BA-E medida otra vez**: el censo de apertura de `docs/ba-e-goles-sin-angulo.md` §1 —% de tiros con
+  apertura < 0,5, % desde la línea de fondo, apertura media— **antes y después**. Es el motivo del cambio y
+  es la cifra que decide si funcionó.
+- **Las 43 puertas** vuelven a ser criterio de parada en cuanto el centro esté dentro (§7), contando que
+  **cuatro ya estaban rojas y son de [BF-B](./pendientes/BF-B.md)**, no de esta familia.
+- **La vía (B) se REMIDE con el centro dentro.** Las seis rojas conocidas son de la (B) *sola*; darlas por
+  buenas sería repetir un experimento cuyo resultado ya se conoce sin la pieza que lo cambia.
+
+### Veredicto
+
+**Aprobado para implementar**, en dos paquetes y en este orden, que es el que impuso el revisor y tiene
+motivo medido:
+
+1. **«Centrar»** (este diseño). Con su lote y su medición de BA-E.
+2. **El paso 3** de la ADR 0135 —ángulo y oclusión en la puntería *y* en la utilidad de `Shoot`, portero
+   después— sobre un motor que ya tiene la alternativa. Antes del centro, quitarle el tiro al delantero es
+   quitarle la jugada; después, es transformarla.
+
+## 9. Veredicto de `architecture-review` de «centrar» (23 sep 2026)
+
+**Aprobado, con una tabla que es el entregable de la revisión.**
+
+**1. Fronteras.** No se toca ninguna: `/Game` no cambia en este paquete (el dibujo del balón alto sigue
+siendo el paso 5), `/Sim` sigue sin E/S y el render seguirá consumiendo eventos. `MatchTrace` ya graba la
+altura desde el paso 2.
+
+**2. ¿Elimina complejidad o la mueve?** Hay que decirlo como en la revisión de la propia ADR 0135: el
+centro **añade** complejidad —una acción más, un camino de llegada más—, y la justificación es el producto,
+no la elegancia. Lo que sí **quita** una incoherencia es el punto 5: hoy el balón tiene altura y una de las
+preguntas de proximidad finge que no.
+
+**3. El patrón ya existe en el repositorio, y se usa tal cual.** No se inventa nada:
+- una acción nueva va **al final del enum** `PlayerAction`, que es lo que su propio comentario manda para
+  no alterar el desempate de las anteriores (RT-097);
+- el alcance esférico es la línea que ya dejó escrita la revisión de la ADR 0135:
+  `sqrt(distancia2D² + altura²) < alcance`, sin `Vec3` y sin tocar las posiciones de los catorce jugadores;
+- las magnitudes verticales van como **enteros en milésimas** en `tuning` (`…Milli`), como
+  `arcCellsPerCellMilli` y `gravityCellsPerTickSqMilli`;
+- la apertura entra en la utilidad como **entero en centésimas**, como todo lo demás (RT-023). El `float`
+  se queda en la geometría, igual que hoy.
+
+**4. Determinismo.** Aritmética entera en la utilidad y en la calidad; `float` sólo en posiciones y en la
+raíz del alcance, que es la misma clase que `Vec2.Distance` usa en cada tick desde el primer commit. Sin
+`Dictionary` iterado, sin RNG nuevo salvo la tirada de pase del centro —que es la que ya hace todo pase— y
+las del remate, que son las del tiro. RT-024 se comprueba antes del lote.
+
+**5. Efecto de segundo orden: las cinco preguntas de «¿quién está cerca del balón?», decididas a la vez.**
+La ADR 0135 §3.quater exigía enumerarlas y decidirlas juntas, no según fueran apareciendo síntomas. Son
+éstas, con el sitio exacto y **cuándo** le toca a cada una:
+
+| sitio | ¿pasa a esfera? | cuándo, y por qué |
+|---|---|---|
+| `TryIntercept` (pase en vuelo) | **sí, en este paquete** | Es la razón de ser del centro: si el defensa intercepta un balón que le pasa a casi casilla y media por encima, la altura no significa nada y el centro es un `LongPass` con otro nombre. |
+| `TryBlockShot` (bloqueo de campo) | sí | **Paso 3** («el alcance de porteros y defensas pasa a ser esférico»). Moverlo aquí mezclaría el efecto del centro con el de un cambio que baja `blockRate`, y ninguna desviación del lote sería atribuible. |
+| `TryGoalkeeperReach` y la estirada | sí | **Paso 3**, y además es el que trae el bucle de realimentación que la enmienda 2 de la ADR 0135 manda medir aparte. |
+| recogida del balón suelto (`UpdateLooseBall`) | sí | **Paso 4**. Hoy **no hay caso**: todo balón suelto sale con `z = 0` y el único camino que le daría altura es el rechace, que es justamente el paso 4. Cambiarlo ahora sería código sin nada que lo ejercite. |
+| llegada del pase y del centro (`PassArrivalRadius`) | **no, nunca** | Un centro llega con `FlightTargetZ = 0`: la parábola vuelve al suelo en el destino. Comparar en el plano es correcto, no una omisión. |
+
+**6. Paralelismo.** Nada de estado compartido nuevo: la decisión es de un jugador y la resolución vive en
+el tick. `/Balance` y las puertas siguen como están, cada hilo con su `Catalog`.
+
+**7. Una consecuencia del cargador, a favor.** `EnsureComplete` exige que **toda** pareja (puesto, acción) y
+(estado táctico, acción) esté en `data/ai/weights.json`. Añadir `Cross` al enum hace que el juego **no
+arranque** hasta que el dato esté completo, con error explícito y ruta (RT-032). No hay forma de colar la
+acción a medias.
+
+### 9.bis ¿Y una librería de físicas, en vez de escribirla? (pregunta del revisor, 23 sep 2026)
+
+> «No reinventes la rueda, si hay librerías de físicas opensource que puedas usar hazlo»
+
+**No en `/Sim`, y el motivo no es el gusto por escribirlo todo.**
+
+1. **Ya estaba descartado con motivo registrado.** [ADR 0002](./decisiones/0002-sim-independiente-de-godot.md):
+   *«el movimiento se implementa con vectores propios, no con el motor de físicas»*, y `CLAUDE.md` lista
+   «motor de físicas de Godot para el partido» entre los descartes. Reabrirlo pide ADR **antes** de
+   escribir código.
+2. **Aquí no hay física de cuerpos rígidos que resolver.** El balón interpola un vuelo sobre un número
+   fijo de ticks, le suma **una línea** de parábola, integra gravedad y bote en ~6 líneas (paso 1) y
+   pregunta distancias. No hay contactos, ni masas, ni restricciones, ni *broadphase*. Una librería
+   resolvería un problema que este juego no tiene, sobre una cuadrícula de 16×7 a 15 ticks lógicos.
+3. **Y el que decide: RT-024 corre en CI en Windows y Linux.** Ninguna de las candidatas
+   —BepuPhysics v2, Jitter2, los *ports* de Box2D, la física de Godot— promete resultados bit a bit
+   idénticos entre plataformas y compiladores; usan rutas SIMD y órdenes de iteración internos. Cambiar
+   una puerta verde por una dependencia que no se puede arreglar cuando falle es exactamente el riesgo
+   que el troceado de esta ADR existe para evitar: el paso 1 metió la física **sin que nada la usara**
+   para descubrir una divergencia antes de invertir en las reglas.
+
+**Dónde sí cabría algún día**: en `/Game`, para el rebote **visual** del balón, que no decide nada del
+partido (RT-014). Anotado, no hecho.

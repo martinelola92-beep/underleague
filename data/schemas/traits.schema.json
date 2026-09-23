@@ -41,7 +41,7 @@
   "$defs": {
     "playerAction": {
       "type": "string",
-      "enum": ["ChaseBall", "MarkOpponent", "OfferSupport", "CoverSpace", "Dribble", "Shoot", "Tackle", "Retreat", "FindSpace", "PressCarrier", "ShortPass", "LongPass", "Block"]
+      "enum": ["ChaseBall", "MarkOpponent", "OfferSupport", "CoverSpace", "Dribble", "Shoot", "Tackle", "Retreat", "FindSpace", "PressCarrier", "ShortPass", "LongPass", "Block", "Cross"]
     },
     "localizedName": {
       "type": "object",
@@ -70,7 +70,8 @@
         "PressCarrier": { "type": "integer", "minimum": 0, "maximum": 1000 },
         "ShortPass": { "type": "integer", "minimum": 0, "maximum": 1000 },
         "LongPass": { "type": "integer", "minimum": 0, "maximum": 1000 },
-        "Block": { "type": "integer", "minimum": 0, "maximum": 1000 }
+        "Block": { "type": "integer", "minimum": 0, "maximum": 1000 },
+        "Cross": { "type": "integer", "minimum": 0, "maximum": 1000 }
       },
       "additionalProperties": false
     },

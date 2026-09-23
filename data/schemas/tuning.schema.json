@@ -54,6 +54,9 @@
     "shot": {
       "$ref": "#/$defs/shot"
     },
+    "cross": {
+      "$ref": "#/$defs/cross"
+    },
     "save": {
       "$ref": "#/$defs/save"
     },
@@ -98,6 +101,7 @@
     "pass",
     "dribble",
     "shot",
+    "cross",
     "save",
     "tackle",
     "injury",
@@ -402,6 +406,37 @@
         "goalHeightCellsMilli",
         "arcCellsPerCellMilli",
         "postThicknessCellsMilli"
+      ],
+      "additionalProperties": false
+    },
+    "cross": {
+      "type": "object",
+      "properties": {
+        "_doc": { "type": "string" },
+        "peakHeightCellsMilli": {
+          "description": "ADR 0136: altura del vuelo del centro en milésimas de casilla y en ABSOLUTO (FlightArc es el pico de la parábola, porque 4t(1-t) vale 1 en t=0,5). Tiene que superar pass.interceptRadiusCells, o el centro se intercepta como un pase raso y la acción no hace nada.",
+          "$ref": "#/$defs/milli"
+        },
+        "volleyBaseQuality": { "$ref": "#/$defs/probability" },
+        "volleyTechniqueFactor": {
+          "description": "ADR 0136: deliberadamente MENOR que shot.techniqueFactor. El tiro es colocar; el remate es llegar y empujarla.",
+          "$ref": "#/$defs/factor"
+        },
+        "volleyStrengthFactor": {
+          "description": "ADR 0136: deliberadamente MAYOR que shot.strengthFactor y que volleyTechniqueFactor. Es lo que da identidad propia al rematador frente al tirador.",
+          "$ref": "#/$defs/factor"
+        },
+        "volleyOffTargetPenalty": {
+          "description": "ADR 0136: se suma a shot.offTargetBase en el remate. El precio de golpear sin controlar el balón antes.",
+          "$ref": "#/$defs/probability"
+        }
+      },
+      "required": [
+        "peakHeightCellsMilli",
+        "volleyBaseQuality",
+        "volleyTechniqueFactor",
+        "volleyStrengthFactor",
+        "volleyOffTargetPenalty"
       ],
       "additionalProperties": false
     },

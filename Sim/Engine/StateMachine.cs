@@ -27,6 +27,7 @@ public static class StateMachine
         PlayerAction.Shoot,
         PlayerAction.ShortPass,
         PlayerAction.LongPass, PlayerAction.ThroughPass,
+        PlayerAction.Cross,
     };
 
     private static readonly PlayerAction[] NoActions = Array.Empty<PlayerAction>();

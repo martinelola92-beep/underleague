@@ -489,6 +489,9 @@ internal static class Utility
             case PlayerAction.ThroughPass:
                 EvaluateThroughPass(ctx, p, context, direction, ref eval);
                 break;
+            case PlayerAction.Cross:
+                EvaluateCross(ctx, p, context, ref eval);
+                break;
             case PlayerAction.Dribble:
                 EvaluateDribble(ctx, p, context, direction, ref eval);
                 break;
@@ -1271,6 +1274,135 @@ internal static class Utility
         eval.Receiver = runner;
         eval.Target = bestCell;
         eval.Context = bestScore + Slope(context.ThroughPassTechniqueSlope, p.Technique);
+    }
+
+    /// <summary>
+    /// <b>Apertura</b> de un punto a la portería que ataca <paramref name="goal"/>, en centésimas (0..100):
+    /// el coseno del ángulo entre la línea a portería y la perpendicular a la línea de gol, que es
+    /// <c>|dx| / distancia</c>. Vale <b>100 de frente</b> a la portería y <b>0 desde la propia línea de
+    /// fondo</b>, que es exactamente «sin ángulo».
+    ///
+    /// <para>Es la misma magnitud con la que se midió BA-E (<c>docs/ba-e-goles-sin-angulo.md</c> §1), y se
+    /// usa aquí a propósito: la cifra que decide si el centro funcionó es la misma que documentó el
+    /// problema. Entero, como todo lo que entra en la utilidad (RT-023).</para>
+    /// </summary>
+    internal static int ApertureCenti(Vec2 point, Vec2 goal)
+    {
+        float distance = Vec2.Distance(point, goal);
+        if (distance <= 0.001f)
+        {
+            // Sobre la línea de gol misma: de frente por convenio, y no hay división por cero.
+            return 100;
+        }
+
+        int aperture = Centi(MathF.Abs(goal.X - point.X) / distance);
+        return aperture < 0 ? 0 : (aperture > 100 ? 100 : aperture);
+    }
+
+    /// <summary>
+    /// Centrar (ADR 0136): un pase <b>alto</b> a un compañero de la zona de remate que tiene <b>mejor
+    /// apertura a portería</b> que el propio pasador, y que al llegar el balón lo remata sin controlarlo
+    /// (<c>MatchEngine.LaunchVolley</c>).
+    ///
+    /// <para><b>Dos precondiciones duras y ninguna más.</b> El compañero tiene que estar al alcance del
+    /// centro (<c>crossMaxCells</c>) y dentro de la zona de remate
+    /// (<c>crossTargetGoalDistanceCells</c> de la portería rival), y su apertura tiene que ser
+    /// <b>estrictamente mejor</b> que la del pasador: un centro a alguien peor colocado no es un centro,
+    /// es un mal pase. Sin candidato la acción se descarta, igual que hace
+    /// <see cref="EvaluateThroughPass"/> sin corredor — no paga una penalización como el pase normal,
+    /// porque un centro sin rematador no es una jugada peor: no es una jugada.</para>
+    ///
+    /// <para><b>Lo que hace la acción local</b>, que es lo que la ADR 0111 exigía después de rechazar la
+    /// corrección global de <c>FindSpace</c>, es el término de apertura ganada: paga por centésima de
+    /// mejora, así que un centro desde el cordel a alguien de frente cobra casi todo y un centro entre dos
+    /// posiciones parecidas no cobra nada. La acción sólo existe donde el problema existe.</para>
+    ///
+    /// <para><b>Por qué el pasillo pesa menos aquí.</b> <c>crossBlockedLanePenalty</c> es menor que el del
+    /// pase raso a propósito: el balón pasa por <b>encima</b> del pasillo a mitad de vuelo, y quien decide
+    /// de verdad es la física (<c>MatchEngine.TryIntercept</c> mide en esfera). El término sigue existiendo
+    /// porque en los extremos del vuelo el balón va bajo y un rival pegado al centrador sí lo corta.</para>
+    /// </summary>
+    private static void EvaluateCross(UtilityContext ctx, MatchPlayer p, AiContext context, ref Eval eval)
+    {
+        if (!p.IsOutfield)
+        {
+            eval.Discarded = true;
+            return;
+        }
+
+        var players = ctx.Players;
+        Vec2 goal = Pitch.GoalCenter(p.Team);
+        int ownAperture = ApertureCenti(p.Position, goal);
+
+        MatchPlayer? receiver = null;
+        int bestRank = 0;
+        int bestGain = 0;
+        int bestDanger = 0;
+        int bestMarked = 0;
+
+        for (int i = 0; i < players.Length; i++)
+        {
+            var mate = players[i];
+            if (mate.Team != p.Team || ReferenceEquals(mate, p) || !mate.OnPitch || !mate.IsOutfield)
+            {
+                continue;
+            }
+
+            // Un centro es un balon LARGO al area: por debajo de CrossMinCells no es un centro, es un
+            // pase corto con comba, y permitirlo haria que la accion se colara dentro del area rival.
+            float distance = Vec2.Distance(p.Position, mate.Position);
+            if (distance < context.CrossMinCells || distance > context.CrossMaxCells)
+            {
+                continue;
+            }
+
+            if (Vec2.Distance(mate.Position, goal) > context.CrossTargetGoalDistanceCells)
+            {
+                continue;
+            }
+
+            int gain = ApertureCenti(mate.Position, goal) - ownAperture;
+            if (gain <= 0)
+            {
+                continue;
+            }
+
+            // Que el rematador esté marcado PUNTÚA, no descarta. El primer intento copió del pase raso la
+            // precondición «receptor sin rivales cerca» y dejaba el centro en medio centro por partido: es
+            // importar la regla del pase al suelo a la acción cuyo propósito es precisamente no jugar por
+            // el suelo. Un centro es el balón que pones CUANDO el área está poblada, y el que remata lo
+            // hace en disputa —por eso el remate ya cuesta calidad y puntería—. Además es la convención
+            // del repositorio desde el paso 3 de la ADR 0091: el pasillo puntúa, nunca descarta.
+            int marked = HasOpponentWithin(players, mate, PitchConstants.PressureRadius) ? 1 : 0;
+
+            int danger = LaneDanger(players, p.Team, p.Position, mate.Position, context.PassLaneRadiusCells);
+            int rank = (context.CrossApertureGainPerCenti * gain)
+                - (context.CrossBlockedLanePenalty * danger / 100)
+                - (context.CrossMarkedTargetPenalty * marked);
+
+            // Empate por id de jugador ascendente (RT-041, RT-097).
+            if (receiver is null || rank > bestRank || (rank == bestRank && mate.Id < receiver.Id))
+            {
+                receiver = mate;
+                bestRank = rank;
+                bestGain = gain;
+                bestDanger = danger;
+                bestMarked = marked;
+            }
+        }
+
+        if (receiver is null)
+        {
+            eval.Discarded = true;
+            return;
+        }
+
+        eval.Receiver = receiver;
+        eval.Context = context.CrossBase
+            + (context.CrossApertureGainPerCenti * bestGain)
+            - (context.CrossBlockedLanePenalty * bestDanger / 100)
+            - (context.CrossMarkedTargetPenalty * bestMarked)
+            + Slope(context.CrossTechniqueSlope, p.Technique);
     }
 
     /// <summary>

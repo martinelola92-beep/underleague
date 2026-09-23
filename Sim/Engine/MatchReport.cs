@@ -144,6 +144,32 @@ public sealed class MatchReport
     /// <summary>Pases en profundidad que llegaron a un compañero, por equipo del pasador.</summary>
     public int[] ThroughPassesCompleted { get; }
 
+    /// <summary>Centros intentados por equipo (ADR 0136).</summary>
+    public int[] Crosses { get; }
+
+    /// <summary>Centros que acabaron en remate de primeras, por equipo (ADR 0136).</summary>
+    public int[] CrossesVolleyed { get; }
+
+    /// <summary>Remates de primeras que acabaron en gol, por equipo (ADR 0136).</summary>
+    public int[] VolleyGoals { get; }
+
+    /// <summary>
+    /// Suma de la <b>apertura</b> (0..100) de todos los disparos del partido, para poder promediarla
+    /// (ADR 0136). La apertura es el coseno del ángulo a portería: 100 de frente, 0 desde la línea de
+    /// fondo. Es la magnitud con la que se midió [BA-E] y la cifra que decide si el centro funcionó, así
+    /// que deja de ser un censo de un script y pasa a ser instrumento del motor.
+    /// </summary>
+    public int ShotApertureSum { get; }
+
+    /// <summary>Disparos con apertura &lt; 50, el «tiro sin ángulo» de BA-E (ADR 0136).</summary>
+    public int LowApertureShots { get; }
+
+    /// <summary>Goles nacidos de un disparo con apertura &lt; 50 (ADR 0136): BA-E medía que convertían MEJOR.</summary>
+    public int LowApertureGoals { get; }
+
+    /// <summary>Disparos lanzados a menos de una casilla de la línea de gol (ADR 0136).</summary>
+    public int BylineShots { get; }
+
     /// <summary>
     /// Tiros bloqueados por un jugador de campo, por equipo, [2] (AW-A, paso 3 de
     /// `docs/plan-intercepcion-disparo.md`). Índice = equipo del que bloquea, no el del tirador; se
@@ -253,6 +279,13 @@ public sealed class MatchReport
         PassesBeaten = (int[])builder.PassesBeaten.Clone();
         ThroughPasses = (int[])builder.ThroughPasses.Clone();
         ThroughPassesCompleted = (int[])builder.ThroughPassesCompleted.Clone();
+        Crosses = (int[])builder.Crosses.Clone();
+        CrossesVolleyed = (int[])builder.CrossesVolleyed.Clone();
+        VolleyGoals = (int[])builder.VolleyGoals.Clone();
+        ShotApertureSum = builder.ShotApertureSum;
+        LowApertureShots = builder.LowApertureShots;
+        LowApertureGoals = builder.LowApertureGoals;
+        BylineShots = builder.BylineShots;
         ShotsBlocked = (int[])builder.ShotsBlocked.Clone();
         Tackles = builder.Tackles;
         OffBallTackles = builder.OffBallTackles;
@@ -331,6 +364,20 @@ internal sealed class MatchReportBuilder
     public int[] ThroughPasses { get; } = new int[2];
 
     public int[] ThroughPassesCompleted { get; } = new int[2];
+
+    public int[] Crosses { get; } = new int[2];
+
+    public int[] CrossesVolleyed { get; } = new int[2];
+
+    public int[] VolleyGoals { get; } = new int[2];
+
+    public int ShotApertureSum { get; set; }
+
+    public int LowApertureShots { get; set; }
+
+    public int LowApertureGoals { get; set; }
+
+    public int BylineShots { get; set; }
 
     /// <summary>Tiros bloqueados por equipo (equipo del que bloquea); junto a cada ShotBlocked (paso 3).</summary>
     public int[] ShotsBlocked { get; } = new int[2];

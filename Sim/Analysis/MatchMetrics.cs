@@ -36,7 +36,21 @@ public readonly record struct MatchSummary(
     int PassesLoose,
     int PassesBeaten,
     int ThroughPasses,
-    int ThroughPassesCompleted)
+    int ThroughPassesCompleted,
+    /// <summary>Centros de los dos equipos sumados (ADR 0136).</summary>
+    int Crosses,
+    /// <summary>De los centros anteriores, cuántos se remataron de volea (ADR 0136).</summary>
+    int CrossesVolleyed,
+    /// <summary>Goles marcados de volea, de los dos equipos sumados (ADR 0136).</summary>
+    int VolleyGoals,
+    /// <summary>Suma de la apertura angular de cada tiro hacia portería, en unidades del motor (ADR 0136).</summary>
+    int ShotApertureSum,
+    /// <summary>Tiros con apertura angular baja, es decir, con poco ángulo de gol disponible (ADR 0136).</summary>
+    int LowApertureShots,
+    /// <summary>De los tiros de apertura baja, cuántos acabaron en gol (ADR 0136).</summary>
+    int LowApertureGoals,
+    /// <summary>Tiros ejecutados desde la línea de fondo (ADR 0136).</summary>
+    int BylineShots)
 {
     /// <summary>Resumen de un informe de partido entre homeId (equipo 0) y awayId (equipo 1).</summary>
     public static MatchSummary FromReport(MatchReport report, string homeId, string awayId) => new(
@@ -68,7 +82,14 @@ public readonly record struct MatchSummary(
         report.PassesLoose[0] + report.PassesLoose[1],
         report.PassesBeaten[0] + report.PassesBeaten[1],
         report.ThroughPasses[0] + report.ThroughPasses[1],
-        report.ThroughPassesCompleted[0] + report.ThroughPassesCompleted[1]);
+        report.ThroughPassesCompleted[0] + report.ThroughPassesCompleted[1],
+        report.Crosses[0] + report.Crosses[1],
+        report.CrossesVolleyed[0] + report.CrossesVolleyed[1],
+        report.VolleyGoals[0] + report.VolleyGoals[1],
+        report.ShotApertureSum,
+        report.LowApertureShots,
+        report.LowApertureGoals,
+        report.BylineShots);
 }
 
 /// <summary>Un emparejamiento del lote con la calidad de cada equipo, para betterTeamWinRate.</summary>
@@ -147,6 +168,27 @@ public static class MatchMetrics
     public const string ThroughPassesPerMatch = "throughPassesPerMatch";
     public const string ThroughPassCompletionRate = "throughPassCompletionRate";
 
+    /// <summary>Centros por partido, de los dos equipos sumados (ADR 0136).</summary>
+    public const string CrossesPerMatch = "crossesPerMatch";
+
+    /// <summary>De los centros, porcentaje que se remata de volea (ADR 0136).</summary>
+    public const string CrossVolleyRate = "crossVolleyRate";
+
+    /// <summary>De los goles, porcentaje marcado de volea (ADR 0136).</summary>
+    public const string VolleyGoalShare = "volleyGoalShare";
+
+    /// <summary>Apertura angular media por tiro, en unidades del motor (ADR 0136).</summary>
+    public const string ShotAperture = "shotAperture";
+
+    /// <summary>De los tiros, porcentaje con apertura angular baja (ADR 0136).</summary>
+    public const string LowApertureShotShare = "lowApertureShotShare";
+
+    /// <summary>De los goles, porcentaje marcado con apertura angular baja (ADR 0136).</summary>
+    public const string LowApertureGoalShare = "lowApertureGoalShare";
+
+    /// <summary>De los tiros, porcentaje ejecutado desde la línea de fondo (ADR 0136).</summary>
+    public const string BylineShotShare = "bylineShotShare";
+
     /// <summary>Nombre de la métrica informativa de porcentaje de tiros que van a puerta (paso 0).</summary>
     public const string ShotsOnTargetShare = "shotsOnTargetShare";
 
@@ -173,7 +215,8 @@ public static class MatchMetrics
         ShareOverFiveGoals, DrawShareAtRegulation, GoalsPerMatch, FoulsPerMatch, YellowCardsPerMatch,
         RedCardsPerMatch, PassCompletionRate, PassInterceptRate, PassLooseRate, PassBeatenRate,
         ThroughPassesPerMatch, ThroughPassCompletionRate, ShotsOnTargetShare, SaveRate, BlockRate,
-        OffBallTacklesPerMatch,
+        OffBallTacklesPerMatch, CrossesPerMatch, CrossVolleyRate, VolleyGoalShare, ShotAperture,
+        LowApertureShotShare, LowApertureGoalShare, BylineShotShare,
     };
 
     /// <summary>Prefijo del nombre de las métricas de tasa de victoria del mejor equipo.</summary>
@@ -223,6 +266,7 @@ public static class MatchMetrics
         long shotsOnTarget = 0;
         long saves = 0, fouls = 0, yellows = 0, reds = 0, passesAttempted = 0, passesCompleted = 0, passesIntercepted = 0, passesLoose = 0, passesBeaten = 0, throughPasses = 0, throughPassesCompleted = 0;
         long shotsBlocked = 0;
+        long crosses = 0, crossesVolleyed = 0, volleyGoals = 0, shotApertureSum = 0, lowApertureShots = 0, lowApertureGoals = 0, bylineShots = 0;
         int scorelineCount = 0;
         int overFiveCount = 0;
         int drawCount = 0;
@@ -249,6 +293,13 @@ public static class MatchMetrics
             passesBeaten += match.PassesBeaten;
             throughPasses += match.ThroughPasses;
             throughPassesCompleted += match.ThroughPassesCompleted;
+            crosses += match.Crosses;
+            crossesVolleyed += match.CrossesVolleyed;
+            volleyGoals += match.VolleyGoals;
+            shotApertureSum += match.ShotApertureSum;
+            lowApertureShots += match.LowApertureShots;
+            lowApertureGoals += match.LowApertureGoals;
+            bylineShots += match.BylineShots;
             yellows += match.YellowCards;
             reds += match.RedCards;
             shotsBlocked += match.ShotsBlocked;
@@ -346,6 +397,15 @@ public static class MatchMetrics
         rows.Add(new MetricResult(PassBeatenRate, 100.0 * passesBeaten / attempted, null, null, "INFO"));
         rows.Add(new MetricResult(ThroughPassesPerMatch, (double)throughPasses / Math.Max(1, matches.Count), null, null, "INFO"));
         rows.Add(new MetricResult(ThroughPassCompletionRate, 100.0 * throughPassesCompleted / Math.Max(1, throughPasses), null, null, "INFO"));
+
+        // ADR 0136 («centrar»): instrumentación pura del centro y la volea, sin banda de gating todavía.
+        rows.Add(new MetricResult(CrossesPerMatch, (double)crosses / n, null, null, "INFO"));
+        rows.Add(new MetricResult(CrossVolleyRate, 100.0 * crossesVolleyed / Math.Max(1, crosses), null, null, "INFO"));
+        rows.Add(new MetricResult(VolleyGoalShare, 100.0 * volleyGoals / Math.Max(1, goals), null, null, "INFO"));
+        rows.Add(new MetricResult(ShotAperture, (double)shotApertureSum / Math.Max(1, shots), null, null, "INFO"));
+        rows.Add(new MetricResult(LowApertureShotShare, 100.0 * lowApertureShots / Math.Max(1, shots), null, null, "INFO"));
+        rows.Add(new MetricResult(LowApertureGoalShare, 100.0 * lowApertureGoals / Math.Max(1, goals), null, null, "INFO"));
+        rows.Add(new MetricResult(BylineShotShare, 100.0 * bylineShots / Math.Max(1, shots), null, null, "INFO"));
 
         double shotsOnTargetShare = shots > 0 ? 100.0 * shotsOnTarget / shots : 0.0;
         rows.Add(new MetricResult(ShotsOnTargetShare, shotsOnTargetShare, null, null, "INFO"));

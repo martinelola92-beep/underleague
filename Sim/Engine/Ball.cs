@@ -68,6 +68,14 @@ internal sealed class Ball
     /// <summary>Pase en profundidad en vuelo (AZ-B paso 5): a una casilla, lo gana quien llega antes.</summary>
     public bool IsThroughPass { get; set; }
 
+    /// <summary>
+    /// Centro en vuelo (ADR 0136). Es el único pase que vuela <b>alto</b>: cambia dos cosas y sólo dos,
+    /// que el balón se pueda colar por encima del que intentaría interceptarlo
+    /// (<c>MatchEngine.TryIntercept</c> mide en esfera) y que al llegar el receptor <b>remate en vez de
+    /// controlar</b> (<c>MatchEngine.ResolvePassArrival</c>).
+    /// </summary>
+    public bool IsCross { get; set; }
+
     /// <summary>Punto de partida del vuelo actual.</summary>
     public Vec2 FlightOrigin { get; set; }
 
@@ -105,6 +113,16 @@ internal sealed class Ball
     public bool ShotIsPenalty { get; set; }
 
     /// <summary>
+    /// True si el tiro en vuelo es un <b>remate de primeras</b> a un centro (ADR 0136). Sólo lo usan los
+    /// contadores: la parada, el marco y la llegada tratan un remate exactamente como un tiro, porque lo
+    /// es. Lo que distingue al remate ya se gastó al calcular su calidad.
+    /// </summary>
+    public bool ShotIsVolley { get; set; }
+
+    /// <summary>Apertura (0..100) desde la que se lanzó el tiro en vuelo (ADR 0136), para atribuirle el gol.</summary>
+    public int ShotAperture { get; set; }
+
+    /// <summary>
     /// Si el portero ya disputó este tiro (AW-A, paso 1): un solo duelo de parada por disparo, aunque el
     /// balón siga volando después de perderlo. Es el equivalente para el tiro de
     /// <see cref="InterceptAttempted"/> en el pase, y se limpia al lanzar cada tiro.
@@ -135,6 +153,7 @@ internal sealed class Ball
         Owner = null;
         InFlight = false;
         IsShot = false;
+        IsCross = false;
         PassReceiver = null;
         Passer = null;
         Shooter = null;
@@ -161,6 +180,7 @@ internal sealed class Ball
         Owner = null;
         InFlight = false;
         IsShot = false;
+        IsCross = false;
         PassReceiver = null;
         Passer = null;
         Shooter = null;

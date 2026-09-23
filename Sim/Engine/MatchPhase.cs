@@ -95,4 +95,13 @@ public enum PlayerAction
     /// rivales dentro de la jugada activa (RF-057) y es falta casi segura si el árbitro la ve.
     /// </summary>
     Block,
+
+    /// <summary>
+    /// Centrar (ADR 0136): un pase <b>alto</b> al área rival a un compañero con mejor apertura a portería
+    /// que la que tiene el pasador, que lo <b>remata sin controlar</b>. Es el primer pase con altura del
+    /// motor —la ADR 0135 §2 dejó los pases rasos a propósito y esta acción reabre esa exclusión para un
+    /// único caso—, y existe para que el delantero sin ángulo tenga algo que hacer que no sea fusilar
+    /// desde el cordel (BA-E).
+    /// </summary>
+    Cross,
 }

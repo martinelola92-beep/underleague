@@ -389,6 +389,14 @@
           "minimum": 1,
           "maximum": 16
         },
+        "crossMinCells": { "type": "number", "minimum": 0, "maximum": 16 },
+        "crossMaxCells": { "type": "number", "minimum": 0, "maximum": 16 },
+        "crossTargetGoalDistanceCells": { "type": "number", "minimum": 0, "maximum": 16 },
+        "crossBase": { "type": "integer", "minimum": -2000, "maximum": 2000 },
+        "crossApertureGainPerCenti": { "type": "integer", "minimum": 0, "maximum": 100 },
+        "crossBlockedLanePenalty": { "type": "integer", "minimum": 0, "maximum": 2000 },
+        "crossMarkedTargetPenalty": { "type": "integer", "minimum": 0, "maximum": 2000 },
+        "crossTechniqueSlope": { "type": "integer", "minimum": -50, "maximum": 50 },
         "throughPassFreeZoneCells": {
           "type": "number",
           "minimum": 0,
@@ -454,7 +462,15 @@
         "throughPassTechniqueSlope",
         "throughPassMinCells",
         "throughPassMaxCells",
-        "throughPassFreeZoneCells"
+        "throughPassFreeZoneCells",
+        "crossMinCells",
+        "crossMaxCells",
+        "crossTargetGoalDistanceCells",
+        "crossBase",
+        "crossApertureGainPerCenti",
+        "crossBlockedLanePenalty",
+        "crossMarkedTargetPenalty",
+        "crossTechniqueSlope"
       ],
       "additionalProperties": false
     },
@@ -511,7 +527,8 @@
         "ShortPass",
         "LongPass",
         "ThroughPass",
-        "Block"
+        "Block",
+        "Cross"
       ]
     },
     "actionWeights": {
@@ -589,6 +606,11 @@
           "type": "integer",
           "minimum": 0,
           "maximum": 1000
+        },
+        "Cross": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1000
         }
       },
       "required": [
@@ -605,7 +627,8 @@
         "ShortPass",
         "LongPass",
         "ThroughPass",
-        "Block"
+        "Block",
+        "Cross"
       ],
       "additionalProperties": false
     },
@@ -684,6 +707,11 @@
           "type": "integer",
           "minimum": 0,
           "maximum": 1000
+        },
+        "Cross": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1000
         }
       },
       "required": [
@@ -700,7 +728,8 @@
         "ShortPass",
         "LongPass",
         "ThroughPass",
-        "Block"
+        "Block",
+        "Cross"
       ],
       "additionalProperties": false
     },

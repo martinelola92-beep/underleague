@@ -47,7 +47,14 @@ public static class Metrics
                 match.PassesLoose,
                 match.PassesBeaten,
                 match.ThroughPasses,
-                match.ThroughPassesCompleted));
+                match.ThroughPassesCompleted,
+                match.Crosses,
+                match.CrossesVolleyed,
+                match.VolleyGoals,
+                match.ShotApertureSum,
+                match.LowApertureShots,
+                match.LowApertureGoals,
+                match.BylineShots));
         }
 
         var qualityById = new Dictionary<string, int>(StringComparer.Ordinal);

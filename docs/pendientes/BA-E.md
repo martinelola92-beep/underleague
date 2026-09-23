@@ -1,6 +1,37 @@
 # BA-E — Goles sin ángulo.
 
-**Estado:** Abierta — **con vía nueva desde el 23 sep 2026**: la ADR 0135 y la acción «centrar» del
+**Estado:** **Medida y atacada con éxito parcial (23 sep 2026)** — la
+[ADR 0136](../decisiones/0136-centrar-el-pase-alto-que-se-remata.md) mete **«centrar»** en el motor y
+**los tiros desde la línea de fondo se quedan en la mitad**. Con el censo convertido en instrumento del
+motor y medido con 10.000 partidos × 2 semillas contra un baseline que es byte a byte HEAD:
+
+| | baseline | con el centro |
+|---|---|---|
+| tiros sin ángulo (apertura < 0,5) | 25,77 / 29,00 % | **14,31 / 14,86 %** |
+| tiros desde la línea de fondo | 23,30 / 26,53 % | **13,04 / 13,43 %** |
+| apertura media de los tiros | 69,11 / 65,59 | **78,52 / 77,35** |
+| goles por partido | 2,73 / 2,35 | 2,46 / 2,07 |
+
+Es del mismo orden que la palanca **(A)** —32,4 → 12,2 %—, que la ADR 0111 rechazó por poner **ocho
+puertas en rojo**; ésta no pone ninguna. **Ojo con comparar contra el 32,4 % histórico**: aquel censo se
+midió sobre un motor anterior a los pasos 1, 2 y 2b de la ADR 0135 y con un instrumento ad-hoc; las cifras
+de arriba son todas del mismo instrumento y el mismo árbol.
+
+**Lo que queda**: −0,27 goles por partido, coste real y consistente en las dos semillas, **aparcado por
+decisión del revisor** («ya miraremos más adelante si la precisión debe ponderar más»). Y la vía (B) —el
+ángulo en la utilidad de `Shoot`, paso 3 de la ADR 0135— sigue pendiente y ahora **sí** tiene alternativa
+que ofrecer: hay que **remedirla**, no dar por buenas sus seis puertas rojas de cuando se midió sola.
+
+**Estado anterior:** Abierta — **con la pieza que faltaba ya implementada (23 sep 2026)**: la
+[ADR 0136](../decisiones/0136-centrar-el-pase-alto-que-se-remata.md) mete **«centrar»** en el motor —un
+pase alto al área que un compañero con mejor apertura remata sin controlar, apoyado en fuerza—, y con ella
+el **censo de apertura de esta ficha deja de ser un script y pasa a ser instrumento del motor**
+(`shotAperture`, `lowApertureShotShare`, `lowApertureGoalShare`, `bylineShotShare`), medido en el disparo
+con el mismo umbral (apertura < 0,5) con el que se midió el problema. **Pendiente del lote**: hasta que
+esté, no se puede decir si el 32,4 % baja. La vía (B) —el ángulo en la utilidad de `Shoot`— se **remide**
+después, con el centro dentro; sus seis puertas rojas son de cuando se midió sola.
+
+**Estado anterior:** Abierta — **con vía nueva desde el 23 sep 2026**: la ADR 0135 y la acción «centrar» del
 §7 de `docs/plan-altura-del-balon.md` atacan esto por donde la ADR 0111 dejó dicho que había que
 atacarlo —**local al delantero en zona de remate**, no global—. La vía (B) vuelve a estar sobre la mesa
 **pero sólo con el centro implementado**: sola ya se midió y pone seis puertas en rojo.

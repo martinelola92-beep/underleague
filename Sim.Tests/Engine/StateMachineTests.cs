@@ -15,6 +15,8 @@ public class StateMachineTests
     {
         PlayerAction.Dribble, PlayerAction.Shoot, PlayerAction.ShortPass, PlayerAction.LongPass,
         PlayerAction.ThroughPass,
+        // ADR 0136: centrar es una acción CON balón, como los otros tres pases.
+        PlayerAction.Cross,
     };
 
     [Theory]

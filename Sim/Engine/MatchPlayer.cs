@@ -11,7 +11,15 @@ namespace Underleague.Sim.Engine;
 /// </summary>
 internal sealed class MatchPlayer
 {
-    private const int ActionCount = (int)PlayerAction.Block + 1;
+    /// <summary>
+    /// Número de acciones de <see cref="PlayerAction"/>. Se cuenta del enum, <b>no</b> se escribe como
+    /// «la última + 1»: eso era lo que había, clavado a <c>Block</c>, y convertía en trampa silenciosa
+    /// justamente lo que el propio enum manda hacer —añadir las acciones nuevas al final para no mover el
+    /// desempate de las anteriores (RT-097)—. Al añadir <c>Cross</c> (ADR 0136) reventó por
+    /// <c>IndexOutOfRange</c> en cuanto un rasgo tocó el último hueco. Contarlo del enum quita el
+    /// acoplamiento entero: el mismo patrón que <c>DataLoader</c> y <c>EffectEngine</c> ya usaban.
+    /// </summary>
+    private static readonly int ActionCount = Enum.GetValues<PlayerAction>().Length;
 
     /// <summary>Número de atributos de <see cref="AttributeKind"/>.</summary>
     private const int AttributeCount = (int)AttributeKind.Leash + 1;
