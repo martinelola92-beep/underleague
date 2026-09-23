@@ -49,8 +49,10 @@ heavy_hit_02.wav
 El nombre no lo lee nadie —el gestor coge todo lo que haya en la carpeta—, pero numerar ordena y evita
 duplicados. Formatos reconocidos: `.wav`, `.ogg`, `.mp3`.
 
-**WAV 16 bits a 44,1 kHz para efectos** (Godot los guarda sin comprimir y suenan sin latencia de
-descodificación) y **OGG para música o ambientes largos**. El MP3 mete silencio al principio: no usarlo en
+**WAV 16 bits a 44,1 kHz para efectos** y **OGG para música o ambientes largos**. Godot **no** guarda los
+WAV tal cual: el importador los pasa a QOA (`compress/mode=2`, el valor por defecto), que es compresión
+ligera y de descodificación barata, pensada justo para esto. Medido el 23 sep 2026: 24 MB de WAV en el
+árbol viajan como ~6 MB dentro del `.pck`. Lo que pesa en el repositorio es el fuente, no la build. El MP3 mete silencio al principio: no usarlo en
 efectos salvo que el arranque no importe (el cuerno de `sfx/death/` es MP3 y se le tolera porque no tiene
 que caer en un fotograma exacto). Un fundido de 2-5 ms al principio y al final evita los chasquidos.
 

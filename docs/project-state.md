@@ -915,5 +915,8 @@ pools** para que un gol sea la red *y* la grada, y una muerte el jadeo *y* el cu
   tabla**, no un cambio de diseño.
 - **Nadie llama a `SetBusVolumeLinear`**: no hay pantalla de ajustes. Los tres buses están para eso.
 - **27 MB de WAV sin comprimir** entran en el repositorio con este paquete (los aplausos de la grada pesan
-  3 MB cada uno, 17 s en estéreo sin comprimir). Pasarlos a OGG, que es lo que el propio README pide para
-  lo largo, quitaría ~20 MB — **es material del revisor y no se recodifica sin preguntar**.
+  3 MB cada uno, 17 s en estéreo). Es **peso de repositorio, no de build**: el importador los pasa a QOA y
+  los 57 ficheros viajan como ~6 MB dentro del `.pck` de 9 MB (comprobado en la build de Windows, las 57
+  rutas están dentro). Pasar los largos a OGG quitaría ~20 MB del árbol y casi nada del juego, así que la
+  pregunta es solo de comodidad del repositorio — y **es material del revisor, no se recodifica sin
+  preguntar**.
