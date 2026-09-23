@@ -1,6 +1,45 @@
 # BA-E — Goles sin ángulo.
 
-**Estado:** **Medida y atacada con éxito parcial (23 sep 2026)** — la
+**Estado:** **Abierta. Medida a fondo, NO cerrada, y con dos afirmaciones mías refutadas (23 sep 2026).**
+El paso 3a-i de la ADR 0135 se midió entero y **se envía apagado por dato**
+(`minAimApertureCenti: 100`, `offTargetAperturePenalty: 0`), así que **en el build publicado la ventaja de
+conversión sigue en 1,42 / 1,31 y aquí no hay nada cerrado.**
+
+**Lo que sí quedó establecido**, con baseline byte a byte contra HEAD en 20 000 partidos:
+
+| | apagado (lo publicado) | encendido |
+|---|---|---|
+| goles sin ángulo / tiros sin ángulo | 1,42 · 1,31 | **1,09 · 1,03** |
+| `goalsPerMatch` | 2,46 · 1,71 | 2,20 · 1,56 |
+| `shotsOnTargetShare` | 72,1 | 65,8 |
+
+**Refutación 1 — esto SÍ es la vía (C).** Se escribió aquí que no lo era, «porque aquella era una
+penalización plana y ésta una identidad trigonométrica». La revisión independiente midió la celda que el
+barrido original no midió —el término **sin** la trigonometría— y sale: la penalización sola deja la
+ventaja en **0,978**, o sea el **89 %** del recorrido; la trigonometría sola cubre el **19 %**. El trabajo
+lo hace `offTargetAperturePenalty * (100 − apertura) / 100`, que es una penalización elegida a mano,
+lineal en (1 − cos θ). **Es la vía (C) con rampa en vez de escalón**, y el revisor la declinó el 14 sep.
+Como el efecto lo produce esa mecánica y no la geometría, **el `game-design-review` que se hizo (sobre la
+división trigonométrica) no cubre la mecánica que de verdad actúa**: hace falta uno propio antes de
+encenderla.
+
+**Refutación 2 — la geometría no puede hablar.** `OnTargetAim` acota la mira al marco, así que un tiro cuya
+mira cruda se va tres semianchos se recorta al poste y **sigue contando como tiro a puerta**. Multiplicar
+el error por 1/apertura no saca el balón de la portería: sólo lo empuja contra el borde (palos 1,12 →
+1,91 %). Es un artefacto estructural que afecta a **cualquier** mecánica de precisión futura, no sólo a
+ésta — ficha propia en [BH-C](./BH-C.md).
+
+**Por qué se envía apagado.** Encendido pone **cuatro puertas rojas** sobre las dos del baseline. Tres son
+preexistentes o ruido; la que manda es `buildsWinDifferently_injuries`, que pasa de ≥1,10 a **1,04** (ocho
+semillas: media 1,04, sd 0,17, fuera en 7 de 8). La ADR 0131 calibró ese umbral midiendo media 1,29 y
+eligiéndolo para que saltara «con el cociente real en 1,05», y dejó escrito que **no es un rango que se
+arregle bajándolo otra vez**. Lectura alternativa disponible y anotada: con sd 0,17 el borde cae a ~1
+error típico, así que también se puede leer como banda estrecha frente al ruido de semilla. Las dos
+lecturas están sobre la mesa; **decisión del revisor pendiente**.
+
+Sigue pendiente la vía (B), el ángulo en la utilidad de `Shoot` — el paso 3b.
+
+**Estado anterior:** **Medida y atacada con éxito parcial (23 sep 2026)** — la
 [ADR 0136](../decisiones/0136-centrar-el-pase-alto-que-se-remata.md) mete **«centrar»** en el motor y
 **los tiros desde la línea de fondo se quedan en la mitad**. Con el censo convertido en instrumento del
 motor y medido con 10.000 partidos × 2 semillas contra un baseline que es byte a byte HEAD:

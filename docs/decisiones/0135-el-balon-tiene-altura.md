@@ -169,3 +169,65 @@ Por pasos, cada uno con su lote (`docs/plan-altura-del-balon.md` §4). En conjun
   `shotsPerMatch` y `blockRate`.
 - BB-N medida de nuevo: los córners tienen que pasar de ~1 por cada 2 000 partidos a una cifra de fútbol.
 - `visual-review`: capturas del balón en alto, que hoy es imposible.
+
+## Enmienda 3 (23 sep 2026): el paso 3a — la apertura divide el error, y eso es trigonometría
+
+La enmienda 2 pedía que la puntería *«considerase trigonométricamente»* el ángulo del tirador. Al buscar
+la fórmula resultó que **no hay que elegir ninguna**: la petición tiene una respuesta exacta.
+
+> El error de un tirador no vive en el plano de la portería, vive en su pie, y es **angular**. Un golpeo
+> que le desvía el balón una distancia *m* perpendicular a su línea de tiro cruza el plano de la portería
+> desplazado **`m / cos θ`**, y `cos θ` es exactamente `Utility.ApertureCenti / 100` — la magnitud con la
+> que ya se midió BA-E.
+
+Así que el paso 3a **no añade una penalización por mal ángulo: corrige una suposición equivocada**. El
+motor daba por hecho que el error de puntería era el mismo en el plano de la portería lo tirases desde
+donde lo tirases, y eso sólo es cierto de frente. Desde el cordel (apertura 0,2) el mismo golpeo se va
+**cinco veces** más lejos del punto buscado. Ésa es la razón real, medible y no opinable, de que tirar
+desde la línea de fondo sea mala idea, y hasta hoy el motor no la tenía.
+
+**Dos entradas, ninguna nueva.** La apertura entra donde ya entraba la distancia, con la misma forma:
+
+1. `minAimApertureCenti` es el **suelo** con el que la apertura divide el error en `OnTargetAim`. Existe
+   porque `1/cos θ` es una asíntota, no para ajustar dificultad. 20 = multiplicador máximo ×5.
+2. `offTargetAperturePenalty` suma a la cuota de **irse fuera** por centésima de apertura que falta, en la
+   misma expresión y la misma escala que `offTargetDistanceFactor`. Sin él, dividir el error sólo produce
+   tiros recortados al marco —una fábrica de palos—, porque quien decide si el disparo va dentro es esa
+   tirada y no la geometría.
+
+Se divide **sólo el error y sólo en horizontal**: la intención sigue siendo el rincón (un delantero malo
+también quiere meterla por la escuadra, paso 2b) y el error vertical se deja quieto a propósito, para que
+el lote sea atribuible. El penalti no paga nada —se tira de frente— y el remate de centro paga poco,
+porque llega de frente por definición de la acción: las dos cosas son consecuencia de la geometría, no
+excepciones escritas a mano.
+
+**Esto revive la vía (C) de [BA-E], que el revisor declinó el 14 sep** («no aplicar C»).
+
+> **CORRECCIÓN (revisión independiente, 23 sep 2026).** Esta enmienda afirmaba que no era la (C) «porque
+> aquella era una penalización plana y ésta una identidad trigonométrica». **Es falso, y lo desmiente la
+> medición.** El barrido original movía la penalización dejando siempre el suelo activo, así que nunca
+> midió el término **sin** la trigonometría. Medida esa celda: la penalización **sola** deja la ventaja de
+> conversión en **0,978** —el 89 % del recorrido— y la trigonometría sola cubre el 19 %.
+> `offTargetAperturePenalty * (100 − apertura) / 100` es una penalización elegida a mano, lineal en
+> (1 − cos θ): **la vía (C) con rampa en vez de escalón**. La geometría no puede hacer más porque
+> `OnTargetAim` acota la mira al marco (ver §11.bis del plan y [BH-C](../pendientes/BH-C.md)).
+>
+> Dos consecuencias que hay que respetar antes de encender nada: el `game-design-review` de §10 se hizo
+> **sobre la división trigonométrica**, así que **la mecánica que de verdad actúa no ha pasado design
+> review**; y la (C) es una vía que el revisor declinó una vez, de modo que encenderla es una decisión
+> suya, no un paso de implementación.
+
+**Estado del paso 3a: NO enviado.** Los dos valores se publican **apagados**
+(`minAimApertureCenti: 100`, que hace el divisor exactamente 1, y `offTargetAperturePenalty: 0`). Encendido
+pone cuatro puertas rojas sobre las dos del baseline, y la que manda —`buildsWinDifferently_injuries`, de
+≥1,10 a 1,04— es la que la ADR 0131 dejó escrito que **no se arregla bajándola otra vez**. El mecanismo
+queda implementado, medido y documentado, a la espera de esa decisión.
+
+**El paso 3 queda partido**, y el orden no es opcional: **3a la resolución** (esta enmienda), **3b la
+utilidad** —la vía (B) de BA-E remedida—, **3c el portero y el alcance esférico**. La (B) sola ya falló
+una vez; lo que la hace distinta ahora no es sólo que exista el centro, es que **primero se hace verdad la
+geometría y después se le enseña a la IA**. Pedirle al delantero que temiera un peligro que el motor no
+aplicaba era pedirle que aprendiera algo falso.
+
+Las diez preguntas de `game-design-review`, con la demostración de la identidad y las cuatro guardas de
+degeneración, en `docs/plan-altura-del-balon.md` §10.
