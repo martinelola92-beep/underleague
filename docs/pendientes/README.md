@@ -34,7 +34,7 @@ viva anotada.
 | [BB-I](./BB-I.md) | «Depredador de área» pareció activarse en un momento que no era un tiro | BLOCKED / NEEDS-REPRODUCTION: falta la semilla |
 | [BB-J](./BB-J.md) | «Mentalidad de manada» no sirve jugando con enanos | Previsibilidad resuelta (tooltip); diseño abierto |
 | [BB-K](./BB-K.md) | Dos jugadores del mismo equipo que quieren la misma casilla «bailan y parpadean» | Abierta, **causa CONFIRMED**: `CoverSpace` es la única acción de colocación que no mira a los compañeros; nota de diseño hecha, arreglo pendiente de medir |
-| [BB-N](./BB-N.md) | El saque de córner no ocurre nunca (1 en 2000 partidos) | Abierta, **causa CONFIRMED**: ningún toque defensivo manda el balón fuera por el fondo; decisión del revisor entre modelarlo o retirarlo |
+| [BB-N](./BB-N.md) | El saque de córner no ocurre nunca (1 en 2000 partidos) | Causa CONFIRMED y **decidido: se modela** ([ADR 0135](../decisiones/0135-el-balon-tiene-altura.md), el balón gana altura y el toque defensivo puede desviarlo). Se cierra con el paso 4 del plan |
 | [BB-P](./BB-P.md) | Las puertas de un solo partido/semilla se leen como causa cuando son ruido | Abierta |
 | [BB-R](./BB-R.md) | Dos perks dicen ser MAESTROS y no exigen ni cierran nada (ADR 0051 al 0 %) | Abierta |
 | [BB-S](./BB-S.md) | `build-neutral-reference.py` dice que escribe las referencias y solo imprime | Abierta |

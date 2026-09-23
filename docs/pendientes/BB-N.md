@@ -1,6 +1,6 @@
 # BB-N — El saque de córner no ocurre nunca
 
-**Estado:** Abierta — **causa CONFIRMED (23 sep 2026)**, decisión de diseño pendiente
+**Estado:** Abierta — causa CONFIRMED y **decisión tomada (23 sep 2026): se modela**, vía [ADR 0135](../decisiones/0135-el-balon-tiene-altura.md). Se cierra con el paso 4 de `docs/plan-altura-del-balon.md`
 
 ## Observación
 
@@ -55,7 +55,17 @@ programa" queda REJECTED en sentido literal; la buena es "la condición es casi 
   fondo**, que falle, que ruede hasta salir dentro de ese margen de 1,25 casillas, y que ni su portero ni
   nadie toque por el camino — justo la zona donde el portero está siempre. De ahí el 1 de 2000.
 
-## Qué decisión queda
+## Decidido: se modela (23 sep 2026)
+
+**El revisor decide modelar el córner**, y con él algo mayor: que el balón tenga altura y que un toque
+defensivo pueda desviarlo en vez de atraparlo siempre. La salida **B** —retirar `RestartKind.Corner`—
+queda **rechazada**.
+
+Todo el diseño está en **[ADR 0135](../decisiones/0135-el-balon-tiene-altura.md)** y en
+`docs/plan-altura-del-balon.md`. Esta ficha se cierra cuando el paso 4 de ese plan esté medido y los
+córners aparezcan con una frecuencia de fútbol.
+
+## Qué decisión quedaba
 
 No es un bug con arreglo evidente: es una **regla de fútbol que el motor no modela**. Las dos salidas
 posibles cambian el partido y necesitan `game-design-review` y ADR antes de tocar código:

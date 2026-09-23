@@ -600,16 +600,60 @@ en el ojeo con el **nombre de un clan de liga** (9 de 9 semillas medidas). La au
 porque buscó por `IsMatch` y estos dos sitios leen `OpponentId` directamente — *el grep equivocado para la
 pregunta que se estaba haciendo*. Es `/Game`, así que va aparte y pide `visual-review`.
 
-**Siguiente paso: el arreglo de [BB-K]**, que ya tiene diagnóstico y nota de diseño y sólo le falta
+## En curso: la altura del balón y el rechace (ADR 0135, 23 sep 2026)
+
+**El revisor decide modelar el córner**, y por el camino algo más grande: *«el balón debe tener físicas lo
+más fieles posibles a la realidad y el juego tiene que sentirse real»*, y *«igual es el momento de darle
+altura al balón, esto puede ser importante a la hora de decidir cómo se intercepta»*. Elegidas, con las
+alternativas delante: **física real con `z` y gravedad** (frente a altura derivada sin estado), **portería
+con alto y ancho y puntería dispersa** (frente a declarar sólo la altura), y **alcance esférico** (frente a
+cilíndrico, más legible pero menos fiel).
+
+Todo está en **[ADR 0135](./decisiones/0135-el-balon-tiene-altura.md)** y en
+**`docs/plan-altura-del-balon.md`**, que lleva las diez preguntas de `game-design-review`, el veredicto de
+`architecture-review` y el troceado en seis pasos. **Leer los dos antes de seguir.**
+
+Lo que hizo falta saber antes de diseñar nada, medido: 5,69 tiros a puerta y 3,18 paradas por partido, y
+**cero rechaces** —el bloqueo deja el balón con velocidad cero y la parada siempre da posesión al portero—,
+que es la causa de que [BB-N] midiera 1 córner en 2 000 partidos. Y el balón se dibuja con altura
+constante, así que en un render 3D **todos los tiros son rasos**. El tercer hecho es el que hace atractiva
+la decisión: la ficha del enano ya dice «**Bajos**» y el motor no lo sabe, porque `bodyRadius` es un radio
+horizontal para separar cuerpos.
+
+**Dos decisiones de arquitectura** que conviene no volver a discutir: la altura es **del balón, no del
+espacio** (nada de `Vec3` global: el 99 % del motor no necesita altura, y el patrón del repo es añadir un
+escalar al actor, no una dimensión al mundo); y las magnitudes verticales van en **milésimas enteras** en
+`tuning`, como `shotSpeedCellsPerTickMilli`, con la altura en `float` igual que la X y la Y.
+
+**Paso 1 hecho** (`Ball.Z`/`VelocityZ`, gravedad, bote, y la recogida medida **por barrido** del segmento
+recorrido en vez de contra el punto final). RT-024 **en verde**, que era la razón de ser del paso. Se
+predijo que sería inerte y **no lo fue**: el barrido cambia 7 153 partidos de 10 000 porque desplaza el RNG
+—y además es un cambio de regla pequeño y deliberado, «se coge el balón si pasó cerca, no sólo si acabó
+cerca»—, pero **ninguna métrica se sale de banda**. Conviene no confundir las dos cosas: de aquí en
+adelante **todos** los pasos moverán todas las semillas, y el recuento de partidos distintos no es una
+medida del efecto. Baseline previo guardado en `out/baseline-altura/`.
+
+**Siguiente paso: el 2** del plan — el tiro sale con altura y la portería gana alto; un tiro por encima es
+saque de puerta. Es la primera regla nueva visible y mueve goles, así que lote obligatorio. Antes, releer
+§5 del plan: quedan por fijar **los números** (alto y ancho de portería, gravedad, restitución, magnitud
+del rechace, radio de la esfera), que salen del lote y se mueven **uno por vez**.
+
+**Y antes de dar el paso 4 (el rechace), releer §3.ter**: esto reabre la **ADR 0117**
+(`chaseBallLooseBonus` se calibró con balones que recorren 1,25 casillas) y despierta
+**[BC-G]** (el balón muerto en el córner, tres mecanismos CONFIRMED sin arreglar). La métrica que más va a
+empujar es **`possessionChanges`**, hoy en 21,75 con techo 28.
+
+---
+
+**También pendiente: el arreglo de [BB-K]**, que ya tiene diagnóstico y nota de diseño y sólo le falta
 implementar y medir (`balance-measure` con baseline del mismo árbol y las 43 puertas). Antes de tocarlo,
 leer la nota de diseño del propio fichero: la recomendación es repartir el punto de cobertura por id
 ascendente y el riesgo a vigilar es que el segundo defensa abandone el centro y abra pasillo.
 
-**Dos decisiones esperan al revisor**, ninguna bloquea lo anterior: (1) **[BB-N]**, si el córner se modela
-o se retira; (2) el **apartado E** de la ADR 0134 con el ×8 letal a la vista (leer «Lo que la revisión
-independiente dejó abierto»). Y una pregunta menor que salió de BB-O y no se coló en su arreglo: **¿debería
-poder sacar una reanudación un jugador derribado o celebrando?** Hoy puede; cambiarlo mueve 3 partidos de
-cada 10 000.
+**Una decisión espera al revisor**: el **apartado E** de la ADR 0134 con el ×8 letal a la vista (leer «Lo
+que la revisión independiente dejó abierto»). Y una pregunta menor que salió de BB-O y no se coló en su
+arreglo: **¿debería poder sacar una reanudación un jugador derribado o celebrando?** Hoy puede; cambiarlo
+mueve 3 partidos de cada 10 000.
 
 Después, por este orden: [BG-B] medir formaciones no-2-3-1 y el jefe que empuja casillas, [BC-H] el
 escenario de captura con un titular no disponible y luego el hueco deliberado antes del partido, [BG-C]

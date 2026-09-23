@@ -208,6 +208,39 @@ No son efectos colaterales: son cosas que hoy están dormidas porque el balón n
 - **La métrica que más va a empujar es `possessionChanges`** (banda 12-28, ADR 0081): todo rechace es una
   posesión que cambia. Es el criterio de parada más probable del lote, por delante de los goles.
 
+## 3.quater Veredicto de `architecture-review` (23 sep 2026)
+
+**Aprobado, con dos precisiones que cambian la implementación.**
+
+**1. La altura es del balón, no del espacio. Nada de `Vec3` global.** El campo sigue siendo 2D y los
+jugadores siguen corriendo por el suelo: sólo `Ball` gana altura, y los jugadores ganan un **escalar** de
+alcance vertical. Migrar `Vec2` a `Vec3` tocaría las posiciones de los catorce jugadores, `Zone`,
+`BodySeparation`, `Marking`, `Utility` entero, `ClampToPitch`, la traza y `/Game` — cientos de sitios, de
+los cuales **el 99 % no necesita altura para nada**. Y encaja con el patrón que el repositorio ya usa:
+cuando un actor necesita una magnitud nueva se le añade un escalar (`BodyRadius`, `SaveBonusClose`), no se
+le añade una dimensión al mundo. El alcance esférico sale entonces de una línea:
+`sqrt(distancia2D² + altura²) < alcance`.
+
+**2. Las magnitudes verticales siguen el patrón del repo: milésimas enteras en `tuning`, posición en
+`float`.** No hace falta inventar nada: `shotSpeedCellsPerTickMilli` (700), `baseCellsPerTickMilli` (131) y
+`maxPushPerTickMilli` (60) ya son enteros en milésimas que se convierten a float al aplicarlos, y
+`docs/determinismo.md` acepta `float` para posiciones con reglas de orden. La gravedad y la velocidad
+vertical inicial entran como `…Milli` enteros; la altura acumulada es `float`, con **exactamente el mismo
+estatus de determinismo que la X y la Y de hoy**. Esto rebaja el riesgo 3.1 del plan: no se añade una clase
+nueva de aritmética, se añade más de la que ya hay.
+
+**Lo que esta revisión NO puede decir a favor del cambio**, y conviene no fingir lo contrario: **añade
+complejidad, no la elimina ni la mueve**. La pregunta 2 del protocolo existe para rechazar abstracciones
+que sólo cambian de sitio el problema; aquí la justificación no es la simplicidad sino el producto —una
+decisión del revisor con las alternativas delante—. Lo honesto es declararlo, no construirle un argumento
+de elegancia que no tiene.
+
+**Efecto de segundo orden que hay que enumerar antes, no arreglar de uno en uno.** Igual que
+`LeavePitch → (-1,-1)` afectó a *toda* lectura de posición en el tick de salida, una altura mayor que cero
+afecta a **toda pregunta del tipo «¿quién está cerca del balón?»**: `UpdateLooseBall` (¿se recoge un balón
+por el aire?), `TryIntercept`, `PickupRadius`, `CheckOutOfBounds` (¿sale por arriba?) y el duelo de regate.
+Hay que listarlos y decidir cada uno **a la vez**, no según vayan apareciendo síntomas.
+
 ## 4. Troceado propuesto
 
 Cada paso termina con build, tests, lote y commit propio, como manda `CLAUDE.md`. El orden está elegido para
@@ -216,7 +249,7 @@ que el riesgo de determinismo se descubra **antes** de haber invertido en el res
 | paso | qué | por qué en este orden |
 |---|---|---|
 | **0** | Instrumentación: medir la referencia actual entera (tiros, paradas, bloqueos, córners, duración, posesiones) | Sin baseline no hay nada que comparar, y las semillas van a cambiar todas |
-| **1** | `Ball` gana `Z`/`VelocityZ`, gravedad y bote; **nada más los usa**. Los tiros salen con `z = 0` | Aísla el riesgo de determinismo. Si RT-024 diverge, se descubre aquí y no mezclado con reglas nuevas |
+| **1** ✅ | `Ball` gana `Z`/`VelocityZ`, gravedad y bote, y la recogida pasa a medirse por barrido; **ninguna regla del partido los usa todavía** | Aísla el riesgo de determinismo. Si RT-024 diverge, se descubre aquí y no mezclado con reglas nuevas |
 | **2** | El tiro sale con altura; la portería gana alto; un tiro por encima es saque de puerta | Primera regla nueva visible. Mueve goles: lote obligatorio |
 | **3** | El alcance vertical: portero y defensas sólo tocan lo que alcanzan | Es lo que el revisor señaló como el motivo de la altura |
 | **4** | **El rechace**: el toque defensivo atrapa o desvía, y lo desviado sale con velocidad y altura | Lo que cierra [BB-N](./pendientes/BB-N.md). Va al final porque necesita los tres pasos anteriores |
@@ -224,6 +257,41 @@ que el riesgo de determinismo se descubra **antes** de haber invertido en el res
 | **6** | *(aparte, otra tanda)* altura por raza | Reabre la ADR 0092 y pide su propio calibrado |
 
 ---
+
+## 4.bis Paso 1, hecho y medido (23 sep 2026)
+
+`Ball` tiene `Z` y `VelocityZ`; `UpdateBallHeight` aplica gravedad y bote con
+`gravityCellsPerTickSqMilli` (20) y `bounceRestitutionPercent` (45), y corta el bote cuando ya no
+levantaría el balón más de lo que la gravedad se come en un tick —sin ese corte un balón botaría infinitas
+veces cada vez más bajo y nunca quedaría quieto—. La recogida pasa a medirse **contra el segmento
+recorrido**, no contra el punto final.
+
+**Lo que se predijo mal, y es la lección del paso:** se dijo que este paso sería **inerte byte a byte**
+porque ninguna regla usa todavía la altura. **No lo es**, y no por la altura sino por el barrido: medir
+contra el segmento da una distancia **siempre menor o igual** que medir contra el punto final, así que a
+veces el balón se recoge un tick antes o lo recoge otro. Eso **es un cambio de regla**, pequeño y
+deliberado —«se coge el balón si pasó cerca, no sólo si acabó cerca»—, y presentarlo como parte de «la
+física aislada» habría sido colar una regla dentro de un cambio que se anunciaba neutro. Es el mismo error
+que ya se pagó hoy en [BB-O](./pendientes/BB-O.md) con una guardia más ancha que el bug.
+
+**Medido**, lote de 10 000 partidos contra el baseline del mismo árbol:
+
+| | baseline | paso 1 |
+|---|---|---|
+| partidos distintos | — | **7 153 de 10 000** |
+| `possessionChanges` (12-28) | 21,75 | **21,81** |
+| `scorelineShare_1-0_to_3-2` (50-100) | 86,58 | **86,35** |
+| `blockRate` | 1,34 | 1,30 |
+| `injuriesPerMatch` (0,30-0,90) | 0,71 | 0,72 |
+| métricas fuera de banda | ninguna | **ninguna** |
+
+Los 7 153 partidos distintos **no** quieren decir que el juego haya cambiado: el flujo de RNG se desplaza
+desde el primer balón suelto de cada partido y a partir de ahí todo diverge. Lo que dice si el juego cambió
+es el agregado, y el agregado está quieto. Conviene no confundir las dos cosas, porque de aquí en adelante
+**todos** los pasos van a mover todas las semillas (ADR 0135) y la tentación de leer el recuento de
+partidos como si fuera un efecto va a estar siempre ahí.
+
+**RT-024 en verde**, que era la razón de ser del paso: la aritmética nueva no rompe el determinismo.
 
 ## 5. Decidido (23 sep 2026) — ADR 0135
 
