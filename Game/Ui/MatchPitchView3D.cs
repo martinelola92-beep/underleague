@@ -940,6 +940,29 @@ public partial class MatchPitchView3D : SubViewportContainer
     /// <summary>Centro de mira efectivo del último fotograma (con el gesto ya mezclado, si había alguno): para medir un acercamiento en vez de suponerlo.</summary>
     public Vector3 DebugCenter { get; private set; }
 
+    /// <summary>
+    /// Dónde está dibujado el balón y dónde el jugador que lo lleva, en el mundo, <b>tal y como se ven en
+    /// este fotograma</b>. Para poder medir «el balón va en sus pies» con un número en vez de mirando una
+    /// captura: el revisor lo reportó de vista y de vista se puede confundir con un problema de cámara.
+    /// <c>Carrier</c> es -1 si el balón no tiene dueño.
+    /// </summary>
+    public (Vector3 Ball, Vector3 Carrier, int Index) DebugBall()
+    {
+        if (Trace is not { FrameCount: > 0 } trace)
+        {
+            return (_ball.Position, Vector3.Zero, -1);
+        }
+
+        int frame = Mathf.Clamp(Frame, 0, trace.FrameCount - 1);
+        int carrier = trace.BallOwnerAt(frame);
+        if (carrier < 0 || carrier >= _bodies.Count)
+        {
+            return (_ball.Position, Vector3.Zero, -1);
+        }
+
+        return (_ball.Position, _bodies[carrier].Position, carrier);
+    }
+
     /// <summary>Distancia de cámara efectiva del último fotograma (perspectiva) — en ortográfico es <see cref="CameraDistance"/> sin más, el zoom ahí va por <see cref="Camera3D.Size"/>.</summary>
     public float DebugDistance { get; private set; }
 
@@ -1460,27 +1483,38 @@ public partial class MatchPitchView3D : SubViewportContainer
             // La velocidad sale de los dos fotogramas que la interpolación ya usa, convertida a casillas
             // por segundo (ticks lógicos a 15/s, RT-020). El modelo solo MIRA lo que la traza escribió: no
             // decide nada del partido (RT-014).
-            var here = trace.PositionAt(frame, i);
-            var next = frame + 1 < trace.FrameCount && trace.OnPitchAt(frame + 1, i)
-                ? trace.PositionAt(frame + 1, i)
-                : here;
-            var step = new Vector2(next.X - here.X, next.Y - here.Y);
-            if (step.Length() > TeleportThresholdCells)
-            {
-                step = Vector2.Zero;
-            }
-
-            model.Pose(step * TicksPerSecond, trace.StateAt(frame, i));
+            model.Pose(StepOf(trace, frame, i) * TicksPerSecond, trace.StateAt(frame, i));
         }
 
         var ball = InterpolateBall(trace, frame);
         int carrier = trace.BallOwnerAt(frame);
-        float offset = 0f;
+        var offset = Vector2.Zero;
         if (carrier >= 0 && carrier < _radii.Count)
         {
-            // Igual que en 2D: con dueño el balón está exactamente encima de él, así que se aparta hacia la
-            // portería que ataca para que se le vea a los pies y no dentro de la cápsula.
-            offset = (trace.Players[carrier].Team == 0 ? 1f : -1f) * (_radii[carrier] + BallRadius + 0.06f);
+            // Con dueño, la traza pone el balón EXACTAMENTE encima de él, así que la vista lo aparta para
+            // que se le vea. Dos decisiones, las dos reportadas por el revisor («el balón no va en sus
+            // pies, no se nota como si lo controlara»):
+            //
+            // 1. SE APARTA HACIA DONDE CORRE, no hacia la portería. Antes el desvío era siempre en el eje
+            //    largo del campo, así que un jugador que subía por la banda llevaba el balón de costado —y
+            //    conducir es empujarlo hacia delante—. Si está parado no hay dirección que seguir y se
+            //    recupera la portería que ataca, que es hacia donde mira.
+            //
+            // 2. MUCHO MÁS CERCA cuando hay modelo. La separación de antes era radio + balón + holgura =
+            //    0,51 casillas, que a la escala del campo (un humano de 1,8 m mide 0,907 casillas, así que
+            //    una casilla son ~2 m) es UN METRO por delante del jugador: el balón iba suelto, no
+            //    conducido. Al pie le corresponden ~0,35 m, que son 0,175 casillas. La cápsula conserva la
+            //    separación de siempre porque es gorda de verdad y el balón se le metería dentro.
+            var direction = StepOf(trace, frame, carrier);
+            var unit = direction.LengthSquared() > 0.000001f
+                ? direction.Normalized()
+                : new Vector2(trace.Players[carrier].Team == 0 ? 1f : -1f, 0f);
+
+            float distance = _models[carrier] is not null
+                ? _radii[carrier] * FeetOffsetFactor
+                : _radii[carrier] + BallRadius + 0.06f;
+
+            offset = unit * distance;
         }
 
         // La ALTURA del balón (ADR 0135 pasos 1-2). Hasta el 23 sep 2026 esta vista lo dibujaba a altura
@@ -1498,7 +1532,7 @@ public partial class MatchPitchView3D : SubViewportContainer
         }
 
         _ball.Visible = true;
-        _ball.Position = new Vector3(ball.X + offset, BallRadius + Mathf.Max(0f, height), ball.Y);
+        _ball.Position = new Vector3(ball.X + offset.X, BallRadius + Mathf.Max(0f, height), ball.Y + offset.Y);
 
         // La sombra en el suelo, que es lo que convierte "una pelota más arriba en la pantalla" en "una
         // pelota por el aire": sin una referencia fija en el césped, subir el balón en una cámara en tres
@@ -1511,7 +1545,7 @@ public partial class MatchPitchView3D : SubViewportContainer
             {
                 float shrink = 1f / (1f + height * 0.7f);
                 _ballShadow.Scale = new Vector3(shrink, 1f, shrink);
-                _ballShadow.Position = new Vector3(ball.X + offset, 0.008f, ball.Y);
+                _ballShadow.Position = new Vector3(ball.X + offset.X, 0.008f, ball.Y + offset.Y);
             }
         }
     }
@@ -1528,6 +1562,30 @@ public partial class MatchPitchView3D : SubViewportContainer
 
     /// <summary>Ticks lógicos por segundo (RT-020): convierte el paso entre fotogramas en velocidad.</summary>
     private const float TicksPerSecond = 15f;
+
+    /// <summary>
+    /// A qué fracción del radio del cuerpo lleva el balón un jugador CON MODELO: 0,55 × 0,32 ≈ 0,175
+    /// casillas, que a la escala del campo son los ~35 cm de un balón al pie. Escala con el radio de la
+    /// raza a propósito: el balón va a los pies de quien lo lleva, y un enano y un orco no son iguales.
+    /// </summary>
+    private const float FeetOffsetFactor = 0.55f;
+
+    /// <summary>
+    /// Cuánto se mueve ese jugador entre este fotograma y el siguiente, en casillas por tick. Es la
+    /// dirección en la que corre, y de ella salen <b>dos</b> cosas: hacia dónde mira su modelo y hacia
+    /// dónde lleva el balón. Un salto mayor que <see cref="TeleportThresholdCells"/> no es una zancada
+    /// sino un teletransporte de <c>/Sim</c> (BA-K), y no cuenta como dirección.
+    /// </summary>
+    private Vector2 StepOf(MatchTrace trace, int frame, int player)
+    {
+        var here = trace.PositionAt(frame, player);
+        var next = frame + 1 < trace.FrameCount && trace.OnPitchAt(frame + 1, player)
+            ? trace.PositionAt(frame + 1, player)
+            : here;
+
+        var step = new Vector2(next.X - here.X, next.Y - here.Y);
+        return step.Length() > TeleportThresholdCells ? Vector2.Zero : step;
+    }
 
     /// <summary>
     /// Misma interpolación que <see cref="MatchPitchView"/>: solo dibujo, la traza no se toca (RT-020).

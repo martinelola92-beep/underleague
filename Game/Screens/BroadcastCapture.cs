@@ -445,6 +445,115 @@ public partial class BroadcastCapture : Control
                     }
                 }
 
+                // Y un humano CONDUCIENDO: dueño del balón y en movimiento. Es la postura que el revisor
+                // no veía bien («el balón no va en sus pies, no se nota como si lo controlara»), así que es
+                // la que hay que mirar para decir que está arreglada.
+                // Hace falta una conducción SOSTENIDA, no un fotograma suelto: el reloj real avanza un par
+                // de ticks entre el salto y la captura, y si se elige el instante justo en que alguien
+                // toca el balón, para cuando se dibuja ya está suelto. Se busca una ventana de nueve
+                // fotogramas con el mismo dueño moviéndose y se captura por el medio.
+                // Se busca la posesión MÁS LARGA de un humano y, dentro de ella, un fotograma en el que de
+                // verdad se esté moviendo. Exigir movimiento en todos los fotogramas de una ventana no
+                // valía: nadie lo cumplía —dato del motor, no del render: un portador pasa enseguida y a
+                // veces se queda quieto un tick—, así que el criterio es «misma posesión, y en ESTE
+                // fotograma corre».
+                int carryFrame = -1;
+                int longestRun = 0;
+                int runOwner = -1;
+                int runStart = 0;
+                for (int f = 1; f + 1 < humanTrace.FrameCount; f++)
+                {
+                    int owner = humanTrace.BallOwnerAt(f);
+                    bool mine = owner >= 0 && owner < humanTrace.Players.Count && humanTrace.Players[owner].Team == 0;
+                    if (!mine)
+                    {
+                        runOwner = -1;
+                        continue;
+                    }
+
+                    if (owner != runOwner)
+                    {
+                        runOwner = owner;
+                        runStart = f;
+                    }
+
+                    int length = f - runStart + 1;
+                    var a = humanTrace.PositionAt(f, owner);
+                    var b = humanTrace.PositionAt(f + 1, owner);
+                    float step = new Vector2(b.X - a.X, b.Y - a.Y).Length();
+
+                    if (length > longestRun)
+                    {
+                        longestRun = length;
+                    }
+
+                    // Que la posesión siga dos ticks MÁS: entre el salto y el dibujo el reloj real avanza
+                    // ~1,5 ticks (medido: se pidió el 18 y se dibujó el 19), y con posesiones de 5 ticks
+                    // de media eso basta para caerse fuera y medir un balón sin dueño.
+                    bool lasts = f + 2 < humanTrace.FrameCount
+                        && humanTrace.BallOwnerAt(f + 1) == owner
+                        && humanTrace.BallOwnerAt(f + 2) == owner;
+
+                    if (carryFrame < 0 && length >= 2 && lasts && step > 0.05f && step < 0.6f)
+                    {
+                        carryFrame = f;
+                    }
+                }
+
+                // Y el reparto completo, que es lo que de verdad explica la sensación de «no lo controla»:
+                // cuántos ticks del partido tiene el balón DUEÑO, cuántas posesiones hay y cuánto dura la
+                // más larga de cualquier equipo. Si el balón está suelto casi siempre, ninguna colocación
+                // del render lo arregla.
+                int owned = 0;
+                int runs = 0;
+                int longestAny = 0;
+                int current = 0;
+                int previous = -1;
+                for (int f = 0; f < humanTrace.FrameCount; f++)
+                {
+                    int owner = humanTrace.BallOwnerAt(f);
+                    if (owner >= 0)
+                    {
+                        owned++;
+                        current = owner == previous ? current + 1 : 1;
+                        if (current == 1)
+                        {
+                            runs++;
+                        }
+
+                        longestAny = Math.Max(longestAny, current);
+                    }
+                    else
+                    {
+                        current = 0;
+                    }
+
+                    previous = owner;
+                }
+
+                GD.Print($"retrans-modelos-conduccion: posesión propia más larga {longestRun} ticks ({longestRun / 15f:0.##} s) · "
+                    + $"con dueño {owned} de {humanTrace.FrameCount} ticks ({100f * owned / humanTrace.FrameCount:0.#} %) · "
+                    + $"{runs} posesiones · la más larga de cualquiera {longestAny} ticks ({longestAny / 15f:0.##} s)");
+
+                if (carryFrame >= 0)
+                {
+                    // Un tick antes, porque el reloj real avanza ~1,5 ticks hasta que se dibuja.
+                    humanScreen.SeekTo(Math.Max(0, carryFrame - 1));
+                    StepManual(humanScreen, 1.0 / 60.0, 6);
+                    await Save("retrans-modelos-conduccion");
+
+                    // Medir, no mirar: la separación entre el balón dibujado y el jugador que lo lleva, en
+                    // casillas. Al pie le corresponden ~0,175 (unos 35 cm a la escala del campo).
+                    var (ballAt, carrierAt, carrierIndex) = humanScreen.Pitch3D.DebugBall();
+                    float apart = new Vector2(ballAt.X - carrierAt.X, ballAt.Z - carrierAt.Z).Length();
+                    GD.Print($"retrans-modelos-conduccion: fotograma {carryFrame}, portador {carrierIndex}, "
+                        + $"balón a {apart:0.###} casillas del jugador (objetivo ~0,175; al pie), dibujado en el fotograma {humanScreen.Pitch3D.Frame}");
+                }
+                else
+                {
+                    GD.Print("retrans-modelos-conduccion: ningún humano conduce el balón en este partido; se salta");
+                }
+
                 if (downFrame >= 0)
                 {
                     // Unos fotogramas después del derribo: el tiempo que tarda el empujón en dar paso al
