@@ -568,7 +568,13 @@ internal sealed class MatchEngine : IPerkWorld
         for (int i = 0; i < _players.Length; i++)
         {
             var player = PlayerInTurnOrder(i);
-            if (wasRestarting && ReferenceEquals(player, _restartTaker))
+            // El "player.OnPitch" es de BB-O: a un sacador que salió del campo durante la cuenta atrás se
+            // le seguía caminando hacia el punto de saque, lo que le sobrescribía el (-1,-1) que
+            // LeavePitch deja como marca de "fuera del campo" y no se lo devolvía nunca (medido en el
+            // escenario forzado: 337 fotogramas con OnPitch=false y una posición válida de campo). Los
+            // consumidores de /Sim filtran por OnPitch, así que no cambiaba ningún resultado, pero la
+            // traza sí lo enseñaba y /Game la lee. Es la convención que fijaron BB-M y BA-L.
+            if (wasRestarting && ReferenceEquals(player, _restartTaker) && player.OnPitch)
             {
                 WalkRestartTaker(player);
                 continue;
@@ -1110,6 +1116,21 @@ internal sealed class MatchEngine : IPerkWorld
     {
         if (_ball.Owner is not null)
         {
+            // BB-O: red de seguridad por invariante — el balón no puede pertenecer a quien no está en el
+            // campo. Si ocurre, el partido se congela entero y en silencio: nadie puede robárselo
+            // (ResolveTackle sale por !carrier.OnPitch), él no ejecuta su acción (UpdatePlayer sale por
+            // !player.OnPitch) y no existe ningún temporizador de inactividad. Reproducido en el árbol del
+            // 16 sep 2026 (commit 3dd0b6d), semilla 144: 740 de 1200 fotogramas sin un solo evento
+            // (docs/pendientes/BB-O.md). Los tres caminos de salida del campo ya sueltan el balón antes de
+            // retirar al jugador; esta guardia cubre cualquier otro, conocido o no. Se aparca en la última
+            // posición conocida del balón —la del tick anterior, válida—, porque la del dueño ya es
+            // (-1,-1) desde LeavePitch.
+            if (!_ball.Owner.OnPitch)
+            {
+                ParkBall(Utility.ClampToPitch(_ball.Position));
+                return;
+            }
+
             _ball.Position = _ball.Owner.Position;
             return;
         }
@@ -2998,19 +3019,19 @@ internal sealed class MatchEngine : IPerkWorld
         switch (kind)
         {
             case RestartKind.ThrowIn:
-                TakeRestart(_restartPoint, "throwIn");
+                TakeRestart(kind, _restartPoint, "throwIn");
                 break;
             case RestartKind.Corner:
-                TakeRestart(_restartPoint, "corner");
+                TakeRestart(kind, _restartPoint, "corner");
                 break;
             case RestartKind.GoalKick:
-                TakeRestart(_restartPoint, "goalKick");
+                TakeRestart(kind, _restartPoint, "goalKick");
                 break;
             case RestartKind.Kickoff:
-                TakeRestart(_restartPoint, "kickoff");
+                TakeRestart(kind, _restartPoint, "kickoff");
                 break;
             case RestartKind.FreeKick:
-                TakeRestart(_restartPoint, "freeKick");
+                TakeRestart(kind, _restartPoint, "freeKick");
                 break;
             case RestartKind.Penalty:
                 TakePenalty();
@@ -3040,9 +3061,37 @@ internal sealed class MatchEngine : IPerkWorld
     /// tick de la cuenta atrás (<see cref="SelectTaker"/>) y esto solo confirma su posición, absorbiendo
     /// las centésimas que <see cref="BodySeparation.Resolve"/> le pueda haber movido en el último tick.
     /// </summary>
-    private void TakeRestart(Vec2 point, string detail)
+    private void TakeRestart(RestartKind kind, Vec2 point, string detail)
     {
         var taker = _restartTaker;
+
+        // BB-O: el sacador se elige una sola vez, al empezar la cuenta atrás (SelectTaker, que sí filtra
+        // por CanTouchBall), y hasta aquí no se volvía a mirar. Durante la espera los demás siguen
+        // jugando (AW-R), así que al sacador le pueden hacer una entrada sin balón y dejarlo fuera del
+        // campo; entonces esto le devolvía a una casilla válida y le daba la posesión. Reproducido:
+        // semilla 144 del árbol del 16 sep, tick 452 lesión del 102 durante el Restart, tick 461 el saque
+        // de banda se lo dan a él ya retirado. Se reelige en vez de abortar, que es lo que haría el
+        // árbitro: la reanudación la saca otro.
+        //
+        // La condición es OnPitch y no CanTouchBall a propósito, aunque el hermano TakePenalty use
+        // CanTouchBall: ese además excluye KnockedDown y Celebrating, que SÍ están en el campo, y un
+        // jugador en el campo ejecuta su acción, así que no puede congelar nada. Para los otros dos
+        // estados las dos condiciones son equivalentes: Injured y SentOff solo los pone RemoveFromPitch,
+        // que llama a LeavePitch y apaga OnPitch en la misma línea, de modo que no existe un jugador
+        // Injured o SentOff que siga en el campo. Usar CanTouchBall aquí movía 3 partidos de cada 10 000
+        // ajenos a este bug (medido contra baseline), y además darle el saque a alguien le hace
+        // EnterState(Positioning), o sea que sacar te levanta del derribo y te corta la celebración: eso
+        // es una regla de juego aparte, anotada en docs/pendientes/BB-O.md, no parte de este arreglo.
+        //
+        // De paso cierra un segundo fallo de la misma causa: a un expulsado, TakeRestart le hacía
+        // EnterState(Positioning) y le borraba el SentOff, con lo que ApplySubstitutions dejaba pasar una
+        // sustitución que la ADR 0094 prohíbe.
+        if (taker is not null && !taker.OnPitch)
+        {
+            taker = SelectTaker(kind, _restartTeam, point);
+            _restartTaker = taker;
+        }
+
         if (taker is null)
         {
             return;
