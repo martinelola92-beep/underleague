@@ -781,11 +781,15 @@ public static class DataLoader
 
     private static BallTuning ParseBall(Json node)
     {
-        node.EnsureKnownKeys("passSpeedCellsPerTickMilli", "shotSpeedCellsPerTickMilli", "looseBallFrictionPercent");
+        node.EnsureKnownKeys(
+            "passSpeedCellsPerTickMilli", "shotSpeedCellsPerTickMilli", "looseBallFrictionPercent",
+            "gravityCellsPerTickSqMilli", "bounceRestitutionPercent");
         return new BallTuning(
             node.Prop("passSpeedCellsPerTickMilli").AsInt(),
             node.Prop("shotSpeedCellsPerTickMilli").AsInt(),
-            node.Prop("looseBallFrictionPercent").AsInt());
+            node.Prop("looseBallFrictionPercent").AsInt(),
+            node.Prop("gravityCellsPerTickSqMilli").AsInt(),
+            node.Prop("bounceRestitutionPercent").AsInt());
     }
 
     private static StatesTuning ParseStates(Json node)

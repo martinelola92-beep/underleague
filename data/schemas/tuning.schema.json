@@ -202,12 +202,22 @@
         },
         "looseBallFrictionPercent": {
           "$ref": "#/$defs/percent"
+        },
+        "gravityCellsPerTickSqMilli": {
+          "description": "ADR 0135: aceleración de la gravedad en milésimas de casilla por tick al cuadrado. Gobierna cuánto tarda en caer un balón por alto y, con ella, si da tiempo a que alguien llegue. Entera en milésimas como el resto de velocidades del motor; la altura resultante es float, con el mismo estatus que la X y la Y.",
+          "$ref": "#/$defs/milli"
+        },
+        "bounceRestitutionPercent": {
+          "description": "ADR 0135: porcentaje de velocidad vertical que conserva el balón al botar contra el césped. Con 45 un balón bota a menos de la mitad de alto cada vez y se para pronto, que es lo que hace un balón de fútbol sobre hierba.",
+          "$ref": "#/$defs/percent"
         }
       },
       "required": [
         "passSpeedCellsPerTickMilli",
         "shotSpeedCellsPerTickMilli",
-        "looseBallFrictionPercent"
+        "looseBallFrictionPercent",
+        "gravityCellsPerTickSqMilli",
+        "bounceRestitutionPercent"
       ],
       "additionalProperties": false
     },

@@ -13,6 +13,25 @@ internal sealed class Ball
     /// <summary>Velocidad del balón suelto, en casillas por tick.</summary>
     public Vec2 Velocity { get; set; }
 
+    /// <summary>
+    /// Altura del balón sobre el césped, en casillas (ADR 0135). Cero es el suelo, que es donde el balón
+    /// ha estado siempre hasta esta ADR.
+    ///
+    /// <para>La altura es del BALÓN, no del espacio: el campo sigue siendo 2D y los jugadores corren por
+    /// el suelo. Se descartó migrar <see cref="Vec2"/> a tres dimensiones porque habría tocado las
+    /// posiciones de los catorce jugadores, las zonas, la separación de cuerpos, el marcaje y la traza —y
+    /// el 99 % de eso no necesita altura para nada—. El patrón del repositorio es añadir un escalar al
+    /// actor que lo necesita, no una dimensión al mundo.</para>
+    ///
+    /// <para><c>float</c> con el mismo estatus de determinismo que la X y la Y (RT-023, posiciones); las
+    /// magnitudes que la gobiernan —gravedad, impulso— son enteras en milésimas en <c>tuning</c>, como
+    /// <c>shotSpeedCellsPerTickMilli</c> ya lo es.</para>
+    /// </summary>
+    public float Z { get; set; }
+
+    /// <summary>Velocidad vertical, en casillas por tick. Positiva hacia arriba (ADR 0135).</summary>
+    public float VelocityZ { get; set; }
+
     /// <summary>Poseedor actual; null si el balón está suelto o en vuelo.</summary>
     public MatchPlayer? Owner { get; set; }
 
@@ -96,6 +115,18 @@ internal sealed class Ball
         Passer = null;
         Shooter = null;
         Velocity = velocity;
+        Z = 0f;
+        VelocityZ = 0f;
+    }
+
+    /// <summary>
+    /// Deja el balón suelto con velocidad en el plano <b>y en vertical</b> (ADR 0135): es lo que usa un
+    /// rechace, que sale del punto de contacto hacia algún sitio y por el aire.
+    /// </summary>
+    public void SetLoose(Vec2 velocity, float velocityZ)
+    {
+        SetLoose(velocity);
+        VelocityZ = velocityZ;
     }
 
     /// <summary>Detiene el balón en un punto concreto sin dueño (reanudaciones).</summary>
@@ -109,5 +140,7 @@ internal sealed class Ball
         Shooter = null;
         Position = position;
         Velocity = new Vec2(0f, 0f);
+        Z = 0f;
+        VelocityZ = 0f;
     }
 }

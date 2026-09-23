@@ -128,11 +128,20 @@ public sealed class RecoveryExtraActionTests
     /// del partido diverge aguas abajo, aunque TACKLE siga evaluándose una sola vez. No es una regresión
     /// de este test, es la colateral esperada de un cambio determinista de geometría (medido en el mismo
     /// encargo de la ADR).</para>
+    ///
+    /// <para><b>La semilla 2 se refijó a 30 (antes 33) el 23 sep 2026 con la ADR 0135</b>: la recogida del
+    /// balón suelto pasa a medirse contra el segmento recorrido en el tick y no contra el punto final, así
+    /// que el primer balón suelto de cada partido cambia de tick (o de quién lo recoge) y el consumo de
+    /// RNG diverge aguas abajo, igual que en los reajustes anteriores — TACKLE sigue evaluándose una sola
+    /// vez, no hay comportamiento nuevo detrás. Medido en el lote de 10.000 partidos de la ADR: ninguna
+    /// métrica se sale de banda (<c>possessionChanges</c> 21,75 → 21,81, <c>scorelineShare</c> 86,58 →
+    /// 86,35), mismo precedente que AW-A en <c>docs/pendientes.md</c>. Cualquier cambio futuro del motor
+    /// que mueva dónde o cuándo se consume RNG va a volver a obligar a regenerar estos valores.</para>
     /// </summary>
     [Theory]
     [InlineData(0, 19)]
     [InlineData(1, 18)]
-    [InlineData(2, 33)]
+    [InlineData(2, 30)]
     [InlineData(3, 15)]
     [InlineData(4, 15)]
     public void TackleStreamIsUnchangedForAMatchWithNoPerks(int index, int expectedTackleEvents)
@@ -208,12 +217,23 @@ public sealed class RecoveryExtraActionTests
     /// cambia el consumo de RNG aguas abajo. <c>charge</c>, <c>lane_reader</c> y <c>road_warrior</c> no se
     /// mueven. Y otra vez con las ADR 0132/0133: <c>charge</c> 13 → 10, <c>lane_reader</c> 18 → 16 y
     /// <c>sweeper_keeper</c> 19 → 14.</para>
+    ///
+    /// <para><b>Regenerados el 23 sep 2026 con la ADR 0135</b> (altura del balón, y la recogida del balón
+    /// suelto medida contra el segmento recorrido en el tick y no contra el punto final): <c>charge</c>
+    /// 10 → 11, <c>lane_reader</c> 16 → 18, <c>sweeper_keeper</c> 14 → 11. Misma causa que en los cuatro
+    /// reajustes anteriores: el primer balón suelto de cada partido pasa a resolverse distinto y el flujo
+    /// de RNG diverge aguas abajo, sin que el comportamiento de estos perks haya cambiado — medido en el
+    /// lote de 10.000 partidos de la ADR, ninguna métrica se sale de banda (<c>possessionChanges</c>
+    /// 21,75 → 21,81, <c>scorelineShare</c> 86,58 → 86,35). <c>road_warrior</c> se queda en 0, como
+    /// siempre. Mismo precedente que AW-A (<c>docs/pendientes.md</c>): cualquier cambio futuro del motor
+    /// que mueva dónde o cuándo se consume RNG va a obligar a regenerar estos valores otra vez, y eso no
+    /// es una regresión de estos perks sino la firma esperada de un desplazamiento de semillas.</para>
     /// </summary>
     [Theory]
-    [InlineData("charge", 1, 10)]
-    [InlineData("lane_reader", 1, 16)]
+    [InlineData("charge", 1, 11)]
+    [InlineData("lane_reader", 1, 18)]
     [InlineData("road_warrior", 1, 0)]
-    [InlineData("sweeper_keeper", 0, 14)]
+    [InlineData("sweeper_keeper", 0, 11)]
     public void ExistingPerksAreUnchanged(string perkId, int slot, int expected)
     {
         int total = 0;

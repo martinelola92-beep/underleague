@@ -281,13 +281,21 @@ public sealed class LethalRiskTests
           424242, 13, 271828, 55555, 1618033, 101, 202, 303, 404, 505, 606060, 7007, 80808, 909090 };
 
     /// <summary>
-    /// Una run parada delante de un partido letal <b>cuya víctima marcada es un jugador de campo</b>.
+    /// Una run parada delante de un partido letal <b>cuya víctima marcada es un jugador de campo, y para
+    /// la que la palanca de colocación baja de verdad su número</b>.
     ///
     /// <para>Hace falta un escenario así para probar la palanca de colocación, y no vale cualquiera:
     /// medido sobre 23 escenarios letales (semillas 1..60), en <b>11</b> el marcado es el portero y en
     /// <b>12</b> un jugador de campo. Contra el portero la palanca de colocación no existe —su casilla es
     /// fija por RF-041— y al jugador le quedan las otras dos de la ADR 0048, sentarlo o curarlo. Ver el
     /// pendiente BG-B.</para>
+    ///
+    /// <para>No basta con que el marcado sea de campo: si su casilla actual ya empata en distancia con la
+    /// más lejana de todos los portadores —<c>ProximityPercent</c> tiene suelo
+    /// (<see cref="Lethality.ProximityPercent"/>), así que a partir de cierta distancia alejar más no baja
+    /// nada— mover al marcado no cambia su número y <c>MovingThePlayersChangesTheNumber</c> no tendría
+    /// nada que demostrar. <see cref="CanExercisePlacementLever"/> repite el movimiento del test antes de
+    /// aceptar el escenario, así que solo se devuelven runs donde la palanca funciona de verdad.</para>
     /// </summary>
     private static (RunState State, MapNode Node) StateAtLethalMatchWithOutfieldVictim()
     {
@@ -307,14 +315,60 @@ public sealed class LethalRiskTests
             }
 
             var slots = RunLineup.Effective(found.State).Lineup.Slots;
-            if (!slots.First(s => s.PlayerId == top[0].PlayerId).HomeCell.Equals(RunLineup.GoalkeeperCell))
+            if (slots.First(s => s.PlayerId == top[0].PlayerId).HomeCell.Equals(RunLineup.GoalkeeperCell))
+            {
+                continue;
+            }
+
+            if (CanExercisePlacementLever(found.State, found.Node))
             {
                 return found;
             }
         }
 
         throw new InvalidOperationException(
-            "ninguna semilla da un partido letal cuya víctima marcada sea un jugador de campo");
+            "ninguna semilla da un partido letal cuya víctima marcada sea un jugador de campo Y para la "
+            + "que alejarlo de los portadores letales le baje de verdad el riesgo (la palanca de "
+            + "colocación no es útil en ningún escenario encontrado)");
+    }
+
+    /// <summary>
+    /// Repite, fuera del test, exactamente el movimiento de colocación que
+    /// <see cref="MovingThePlayersChangesTheNumber"/> va a hacer: busca al marcado de mayor riesgo, lo
+    /// intercambia con la casilla de campo más lejana de los portadores letales (<see cref="FarthestSlot"/>)
+    /// y comprueba que su riesgo baja de verdad. Un escenario donde el marcado ya está en la casilla más
+    /// lejana —o donde alejarlo más no cambia nada porque el suelo de <c>ProximityPercent</c> ya se
+    /// alcanzó— no sirve para probar la palanca, así que la búsqueda lo descarta en vez de dejar que el
+    /// test falle con un mensaje que no señala la causa.
+    /// </summary>
+    private static bool CanExercisePlacementLever(RunState state, MapNode node)
+    {
+        var slots = new List<LineupSlot>(RunLineup.Effective(state).Lineup.Slots);
+        var original = RunEngine.LethalRisks(state, node.Id, SystemsTestSupport.Catalog, SystemsTestSupport.Systems);
+        if (!original.Any(r => r.Risk > 0))
+        {
+            return false;
+        }
+
+        int marked = original.OrderByDescending(r => r.Risk).ThenBy(r => r.PlayerId).First().PlayerId;
+        var carriers = Lethality.CarriersOf(
+            SystemsTestSupport.Systems.OpponentFor(state, node, SystemsTestSupport.Catalog), SystemsTestSupport.Catalog);
+
+        int a = slots.FindIndex(s => s.PlayerId == marked);
+        int b = FarthestSlot(slots, carriers);
+        if (a < 0 || b < 0 || a == b)
+        {
+            return false;
+        }
+
+        var swapped = new List<LineupSlot>(slots);
+        swapped[a] = swapped[a] with { HomeCell = slots[b].HomeCell };
+        swapped[b] = swapped[b] with { HomeCell = slots[a].HomeCell };
+        var moved = RunEngine.LethalRisks(
+            state, node.Id, SystemsTestSupport.Catalog, SystemsTestSupport.Systems, new Lineup(swapped));
+
+        return moved.Any(r => r.PlayerId == marked)
+            && moved.Single(r => r.PlayerId == marked).Risk < original.Single(r => r.PlayerId == marked).Risk;
     }
 
     /// <summary>Una run parada delante de un partido cuyo rival lleva algún perk letal.</summary>

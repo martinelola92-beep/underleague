@@ -361,7 +361,12 @@ public sealed record ResolutionTuning(int ProbabilityFloor, int ProbabilityCeili
 public sealed record MovementTuning(int BaseCellsPerTickMilli, int SpeedCellsPerTickMilliPer99, int DribbleSpeedPercent, int FatigueStartTick, int FatigueMaxSlowPercent);
 
 /// <summary>tuning.ball.</summary>
-public sealed record BallTuning(int PassSpeedCellsPerTickMilli, int ShotSpeedCellsPerTickMilli, int LooseBallFrictionPercent);
+public sealed record BallTuning(
+    int PassSpeedCellsPerTickMilli,
+    int ShotSpeedCellsPerTickMilli,
+    int LooseBallFrictionPercent,
+    int GravityCellsPerTickSqMilli,
+    int BounceRestitutionPercent);
 
 /// <summary>tuning.states: duraciones de los estados de jugador, en ticks.</summary>
 public sealed record StatesTuning(int PassingTicks, int ShootingTicks, int TacklingTicks, int KnockedDownTicks, int CelebratingTicks, int DribbleDuelCooldownTicks, int TackleCooldownTicks, int OffBallTackleCooldownTicks);

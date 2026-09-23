@@ -1459,8 +1459,10 @@ internal sealed class MatchEngine : IPerkWorld
 
     private void UpdateLooseBall()
     {
+        var from = _ball.Position;
         _ball.Position += _ball.Velocity;
         _ball.Velocity *= _tuning.Ball.LooseBallFrictionPercent / 100f;
+        UpdateBallHeight();
 
         MatchPlayer? nearest = null;
         float bestDistance = 0f;
@@ -1472,7 +1474,13 @@ internal sealed class MatchEngine : IPerkWorld
                 continue;
             }
 
-            float distance = Vec2.Distance(player.Position, _ball.Position);
+            // Barrido, no punto final (ADR 0135). Antes se medía la distancia al sitio donde el balón había
+            // ACABADO el tick, lo cual basta mientras el balón suelto vaya despacio: hoy sale a 0,1
+            // casillas por tick y no se salta nada. Con el rechace pasará a viajar varias veces más
+            // rápido, y un balón que cruza entero el radio de recogida entre dos ticks se volvería
+            // INCOGIBLE -el síntoma contrario al que se busca, y primo de BB-G-. Se mide contra el
+            // segmento recorrido.
+            float distance = DistanceToSegment(player.Position, from, _ball.Position);
             if (distance >= PickupRadius)
             {
                 continue;
@@ -1496,6 +1504,55 @@ internal sealed class MatchEngine : IPerkWorld
         {
             Emit(EventType.Recovery, "loose", nearest);
         }
+    }
+
+    /// <summary>
+    /// Gravedad y bote del balón suelto (ADR 0135). La velocidad vertical baja una gravedad por tick y,
+    /// cuando el balón toca el césped, rebota conservando <c>bounceRestitutionPercent</c> de lo que traía.
+    ///
+    /// <para>Se para del todo cuando el rebote ya no levantaría el balón más de lo que la gravedad se lo
+    /// come en un tick: sin ese corte, un balón botaría infinitas veces cada vez más bajo y nunca quedaría
+    /// quieto, que es el clásico de toda física de rebote.</para>
+    /// </summary>
+    private void UpdateBallHeight()
+    {
+        float gravity = _tuning.Ball.GravityCellsPerTickSqMilli / 1000f;
+        if (_ball.Z <= 0f && _ball.VelocityZ <= 0f)
+        {
+            _ball.Z = 0f;
+            _ball.VelocityZ = 0f;
+            return;
+        }
+
+        _ball.VelocityZ -= gravity;
+        _ball.Z += _ball.VelocityZ;
+        if (_ball.Z > 0f)
+        {
+            return;
+        }
+
+        _ball.Z = 0f;
+        float bounce = -_ball.VelocityZ * (_tuning.Ball.BounceRestitutionPercent / 100f);
+        _ball.VelocityZ = bounce > gravity ? bounce : 0f;
+    }
+
+    /// <summary>
+    /// Distancia de un punto al segmento recorrido por el balón en este tick (ADR 0135). Sólo
+    /// <c>+ - * /</c> y una raíz, que es lo que <c>docs/determinismo.md</c> permite en coma flotante.
+    /// </summary>
+    private static float DistanceToSegment(Vec2 point, Vec2 from, Vec2 to)
+    {
+        float dx = to.X - from.X;
+        float dy = to.Y - from.Y;
+        float lengthSquared = (dx * dx) + (dy * dy);
+        if (lengthSquared <= 0f)
+        {
+            return Vec2.Distance(point, to);
+        }
+
+        float t = (((point.X - from.X) * dx) + ((point.Y - from.Y) * dy)) / lengthSquared;
+        t = t < 0f ? 0f : (t > 1f ? 1f : t);
+        return Vec2.Distance(point, new Vec2(from.X + (t * dx), from.Y + (t * dy)));
     }
 
     private bool CanTouchBall(MatchPlayer player) =>
@@ -2567,6 +2624,32 @@ internal sealed class MatchEngine : IPerkWorld
     /// es una entrada limpia que salió mal, es un perk que decide hacer daño.
     /// </summary>
     internal void ProvokeInjury(MatchPlayer instigator, MatchPlayer victim) => ResolveInjury(instigator, victim, isFoul: true);
+
+    // ---------------------------------------------------------------- enganches de prueba (ADR 0135)
+    //
+    // La física de altura del paso 1 no la ejercita todavía ninguna regla del partido -los tiros siguen
+    // saliendo rasos-, así que el lote de balance no puede demostrar que funcione: sólo que no estorba.
+    // Estos cuatro enganches existen para que Sim.Tests pueda darle altura al balón a mano y comprobar
+    // que cae, bota y se para. Mismo patrón que IsClearanceRestart, que ya se expuso para poder probarla.
+
+    /// <summary>Deja el balón suelto en un punto, con velocidad en el plano y en vertical.</summary>
+    internal void SetLooseForTest(Vec2 position, Vec2 velocity, float velocityZ)
+    {
+        _ball.Park(position);
+        _ball.SetLoose(velocity, velocityZ);
+    }
+
+    /// <summary>Un tick de balón: sólo la física del balón suelto, sin mover jugadores ni decidir nada.</summary>
+    internal void StepBallForTest() => UpdateLooseBall();
+
+    /// <summary>Aparca el balón, igual que una reanudación.</summary>
+    internal void ParkBallForTest(Vec2 position) => ParkBall(position);
+
+    /// <summary>Altura actual del balón, en casillas.</summary>
+    internal float BallHeightForTest => _ball.Z;
+
+    /// <summary>Id del dueño del balón, o -1 si está suelto o en vuelo.</summary>
+    internal int BallOwnerIdForTest => _ball.Owner?.Id ?? -1;
 
     private void ResolveInjury(MatchPlayer tackler, MatchPlayer victim, bool isFoul)
     {
