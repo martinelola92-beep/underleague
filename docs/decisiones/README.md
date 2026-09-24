@@ -137,3 +137,5 @@ El hueco del 0011 corresponde a una decisión sobre el radio de adyacencia que q
 | [0134](0134-el-once-efectivo.md) | El once efectivo: quién juega se calcula una vez y se enseña | Aceptada |
 | [0135](0135-el-balon-tiene-altura.md) | El balón tiene altura, y el toque defensivo puede desviarlo | Aceptada. **Decisión del revisor** |
 | [0136](0136-centrar-el-pase-alto-que-se-remata.md) | Centrar: el pase alto al área que se remata sin controlar, apoyado en fuerza | Aceptada. **Decisión del revisor** |
+| [0137](0137-conduccion-con-duracion.md) | Conducir es un compromiso con duración, no una intención que se reevalúa cada dos ticks | Aceptada. **Decisión del revisor** |
+| [0138](0138-el-equipo-percibe-y-el-portador-decide.md) | El equipo percibe (presión, apertura, marcaje, peligro) y el portador tiene respuestas: proteger y despejar | Aceptada. **Decisión del revisor** |

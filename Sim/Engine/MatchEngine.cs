@@ -799,6 +799,8 @@ internal sealed class MatchEngine : IPerkWorld
             _context.HoldingTeam = -1;
         }
 
+        UpdatePerception();
+
         // AW-R (docs/pendientes.md): se lee ANTES del bucle de jugadores de este mismo Step, así que un
         // foul resuelto dentro de ese bucle (que puede pedir un penalti y arrancar una reanudación nueva a
         // mitad de tick) no se ve reflejado todavía aquí — ese primer tick de la reanudación nueva no debe
@@ -821,6 +823,150 @@ internal sealed class MatchEngine : IPerkWorld
             }
         }
     }
+
+    /// <summary>
+    /// Percepción compartida del equipo (Gameplay AI Foundations Pass, P1 / D1 de
+    /// <c>docs/plan-gameplay-ai-foundations.md</c>). Se calcula una vez por tick, antes de que nadie
+    /// decida, y vive en <see cref="UtilityContext"/> porque ése es ya el sitio del proyecto para «la
+    /// vista del mundo que necesita la IA» (RT-051).
+    ///
+    /// <para>Lo que cachea no es información nueva: es información que <b>cada evaluador redescubría por
+    /// su cuenta</b>, con el resultado de que un jugador no podía decidir en función de lo que le pasa a
+    /// un compañero —no tenía forma barata de saberlo—. Con esto, «mi compañero está libre», «a mí me
+    /// aprietan» y «esto es peligroso» son hechos del equipo, no cálculos privados.</para>
+    ///
+    /// <para>Radios: se reutiliza <see cref="PitchConstants.PressureRadius"/>, que es ya la definición de
+    /// «me aprietan» del motor, y el alcance de tiro de <c>/data</c> como definición de «peligro» —el
+    /// balón amenaza mi portería cuando está a distancia de disparo de ella—. No se inventa ningún número
+    /// nuevo: el protocolo de arquitectura pide buscar la convención existente antes de crear una.</para>
+    /// </summary>
+    private void UpdatePerception()
+    {
+        _context.Tick = _tick;
+        _context.Carrier[0] = null;
+        _context.Carrier[1] = null;
+        if (_ball.Owner is { } owner && owner.OnPitch)
+        {
+            _context.Carrier[owner.Team] = owner;
+        }
+
+        const int PressureRadiusCenti = (int)(PitchConstants.PressureRadius * 100f);
+
+        for (int i = 0; i < _players.Length; i++)
+        {
+            _context.Pressure[i] = 0;
+            _context.PressureCount[i] = 0;
+            _context.Openness[i] = 0;
+            _context.Marked[i] = false;
+            _context.AttackingDepth[i] = false;
+        }
+
+        for (int i = 0; i < _players.Length; i++)
+        {
+            var player = _players[i];
+            if (!player.OnPitch)
+            {
+                continue;
+            }
+
+            // Quién me marca: Marking ya empareja marcador -> marcado y nadie leía nunca la dirección
+            // contraria, que es justo la que necesita el que va a recibir el balón.
+            if (player.MarkTarget is { } marked && marked.OnPitch)
+            {
+                _context.Marked[marked.Index] = true;
+            }
+
+            int nearestCenti = int.MaxValue;
+            int count = 0;
+            for (int j = 0; j < _players.Length; j++)
+            {
+                var other = _players[j];
+                if (other.Team == player.Team || !other.OnPitch || !CanPressure(other))
+                {
+                    continue;
+                }
+
+                int distanceCenti = Utility.Centi(Vec2.Distance(player.Position, other.Position));
+                if (distanceCenti >= PressureRadiusCenti)
+                {
+                    continue;
+                }
+
+                count++;
+                if (distanceCenti < nearestCenti)
+                {
+                    nearestCenti = distanceCenti;
+                }
+            }
+
+            _context.PressureCount[player.Index] = count;
+            _context.Pressure[player.Index] = count == 0
+                ? 0
+                : 100 - (nearestCenti * 100 / PressureRadiusCenti);
+        }
+
+        // P3: una oferta de pase al espacio caduca sola. Mientras esté viva, su destinatario cuenta como
+        // «atacando la profundidad», que es lo que sus compañeros necesitan saber de él —y lo que hace que
+        // el pase en profundidad deje de ser un monólogo del pasador—.
+        for (int team = 0; team < 2; team++)
+        {
+            ref var intent = ref _context.Intent[team];
+            if (intent.PasserIndex < 0)
+            {
+                continue;
+            }
+
+            var receiver = _players[intent.ReceiverIndex];
+            if (_tick > intent.ExpiresTick || !receiver.OnPitch)
+            {
+                intent.PasserIndex = -1;
+                continue;
+            }
+
+            _context.AttackingDepth[intent.ReceiverIndex] = true;
+        }
+
+        // La apertura se deriva de la presión y del marcaje, en una segunda pasada para que los dos
+        // términos estén ya completos: estar marcado nunca deja a nadie del todo libre.
+        for (int i = 0; i < _players.Length; i++)
+        {
+            var player = _players[i];
+            int openness = 100 - _context.Pressure[player.Index];
+            if (_context.Marked[player.Index])
+            {
+                openness = openness * MarkedOpennessPercent / 100;
+            }
+
+            _context.Openness[player.Index] = player.OnPitch ? openness : 0;
+        }
+
+        float dangerRadius = _catalog.Ai.Context.ShootBaseRangeCells;
+        for (int team = 0; team < 2; team++)
+        {
+            var ownGoal = Pitch.GoalCenter(1 - team);
+            float distance = Vec2.Distance(_ball.Position, ownGoal);
+            int danger = dangerRadius <= 0f
+                ? 0
+                : 100 - (Utility.Centi(distance) * 100 / Utility.Centi(dangerRadius));
+            _context.Danger[team] = Math.Clamp(danger, 0, 100);
+        }
+    }
+
+    /// <summary>
+    /// Un rival solo aprieta si está en condiciones de disputar: el que está en el suelo, lesionado,
+    /// celebrando o expulsado ocupa espacio pero no presiona a nadie. Es la misma distinción que ya hacen
+    /// <see cref="Utility"/> para el bloqueo y la entrada sin balón.
+    /// </summary>
+    private static bool CanPressure(MatchPlayer player) =>
+        player.State is not (PlayerState.KnockedDown or PlayerState.Injured
+            or PlayerState.Celebrating or PlayerState.SentOff or PlayerState.Benched);
+
+    /// <summary>
+    /// Cuánta apertura conserva un jugador que además está marcado. No es un número de balance sino la
+    /// definición de que marcaje y presión son cosas distintas: un marcador a tres casillas no te aprieta,
+    /// pero tampoco te deja libre del todo.
+    /// </summary>
+    private const int MarkedOpennessPercent = 60;
 
     /// <summary>
     /// Las cinco reanudaciones que llevan la barrera de distancia (BB-B): todas salvo el penalti, que
@@ -921,7 +1067,18 @@ internal sealed class MatchEngine : IPerkWorld
         switch (player.State)
         {
             case PlayerState.Passing:
-                LaunchPass(player);
+                // El despeje comparte el armado con el pase y se separa aquí: no es un pase sin receptor,
+                // es una renuncia a la posesión, y su geometría (lejos de la portería propia, alto y sin
+                // destinatario) no tiene nada que ver con la de un pase.
+                if (player.CurrentAction == PlayerAction.Clear)
+                {
+                    LaunchClear(player);
+                }
+                else
+                {
+                    LaunchPass(player);
+                }
+
                 break;
             case PlayerState.Shooting:
                 LaunchShot(player, isPenalty: false);
@@ -979,6 +1136,7 @@ internal sealed class MatchEngine : IPerkWorld
                 if (ReferenceEquals(_ball.Owner, player))
                 {
                     player.EnterState(PlayerState.Passing, _tuning.States.PassingTicks);
+                    PublishPassIntent(player, action);
                 }
 
                 break;
@@ -1043,6 +1201,27 @@ internal sealed class MatchEngine : IPerkWorld
                 }
 
                 break;
+            case PlayerAction.Shield:
+                if (ReferenceEquals(_ball.Owner, player))
+                {
+                    // Mismo patrón que la conducción (ADR 0137): proteger es un COMPROMISO con duración,
+                    // no una intención que se reevalúa cada dos ticks. Si fuera un estado sin contador, el
+                    // portador volvería a decidir en el acto y la protección no existiría como conducta
+                    // observable — que es exactamente lo que le pasaba al regate antes de la ADR 0137.
+                    player.EnterState(PlayerState.Shielding, _tuning.States.ShieldingTicks);
+                }
+
+                break;
+            case PlayerAction.Clear:
+                if (ReferenceEquals(_ball.Owner, player))
+                {
+                    // El despeje comparte el ARMADO del pase —golpear un balón lleva su tiempo y ese
+                    // tiempo es el que da opción a que te entren antes— y se separa de él al ejecutarlo,
+                    // en TickStateTimer. Reutilizar el estado evita un estado nuevo que no aportaría nada.
+                    player.EnterState(PlayerState.Passing, _tuning.States.PassingTicks);
+                }
+
+                break;
             case PlayerAction.ChaseBall:
                 player.EnterState(PlayerState.Chasing, 0);
                 break;
@@ -1051,6 +1230,43 @@ internal sealed class MatchEngine : IPerkWorld
                 break;
         }
     }
+
+    /// <summary>
+    /// Publica la oferta de pase al espacio que el receptor puede atender durante el armado (P3,
+    /// <c>docs/plan-gameplay-ai-foundations.md</c>).
+    ///
+    /// <para><b>Sólo los balones al espacio publican oferta.</b> Un pase al pie —corto o largo— no le pide
+    /// nada al receptor: <see cref="Utility.PassTarget"/> ya adelanta el balón a donde él ha decidido ir,
+    /// así que no hay nada que coordinar. El pase en profundidad y el centro sí: los dos van a un sitio
+    /// donde todavía no hay nadie, y sin que el receptor salga hacia allí son una apuesta del pasador.</para>
+    ///
+    /// <para>La oferta caduca al acabar el armado más un margen: el receptor debe seguir corriendo el
+    /// instante en que el balón ya vuela, no plantarse en cuanto sale.</para>
+    /// </summary>
+    private void PublishPassIntent(MatchPlayer passer, PlayerAction action)
+    {
+        if (action is not (PlayerAction.ThroughPass or PlayerAction.Cross))
+        {
+            return;
+        }
+
+        if (passer.PassReceiver is not { } receiver || !receiver.OnPitch)
+        {
+            return;
+        }
+
+        ref var intent = ref _context.Intent[passer.Team];
+        intent.PasserIndex = passer.Index;
+        intent.ReceiverIndex = receiver.Index;
+        intent.Target = action == PlayerAction.ThroughPass ? passer.TargetPoint : receiver.Position;
+        intent.ExpiresTick = _tick + _tuning.States.PassingTicks + PassIntentGraceTicks;
+    }
+
+    /// <summary>
+    /// Ticks que una oferta de pase sigue en pie <b>después</b> de que el balón salga. No es un número de
+    /// balance: es que el que ataca el espacio no deja de correr en el instante del golpeo.
+    /// </summary>
+    private const int PassIntentGraceTicks = 6;
 
     private void ExecuteAction(MatchPlayer player)
     {
@@ -1079,6 +1295,21 @@ internal sealed class MatchEngine : IPerkWorld
                     Move(player, dribbling: true);
                 }
 
+                break;
+            case PlayerState.Shielding:
+                // Proteger exige llevar el balón, por el mismo motivo que conducir (ADR 0137): si te lo
+                // quitan a mitad, seguir "protegiendo" un balón que ya no es tuyo es un estado imposible.
+                if (!ReferenceEquals(_ball.Owner, player))
+                {
+                    player.EnterState(PlayerState.Positioning, 0);
+                    Move(player, dribbling: false);
+                    break;
+                }
+
+                // El que protege NO pasa por TryDribbleDuel: no está intentando irse de nadie, está
+                // aguantando. Quien decide si le quitan el balón es la entrada del rival, y allí
+                // (TackleWinChance) el que protege resiste con su fuerza.
+                Move(player, dribbling: true);
                 break;
             default:
                 player.Velocity = new Vec2(0f, 0f);
@@ -1564,6 +1795,14 @@ internal sealed class MatchEngine : IPerkWorld
             return;
         }
 
+        // Gameplay AI Foundations Pass, P4: un despeje que aterriza NO es un pase fallado. Cae donde cae y
+        // queda en disputa, que es justo su propósito — y es la entrada de la segunda jugada.
+        if (_ball.IsClearance)
+        {
+            _ball.SetLoose(new Vec2(0f, 0f));
+            return;
+        }
+
         if (_ball.IsCross && passer is not null)
         {
             Emit(EventType.Cross, "loose", passer, receiver);
@@ -1938,6 +2177,72 @@ internal sealed class MatchEngine : IPerkWorld
         }
 
         passer.EnterState(PlayerState.Positioning, 0);
+    }
+
+    /// <summary>
+    /// Despejar (Gameplay AI Foundations Pass, P4). El balón sale <b>lejos de la portería propia y alto</b>,
+    /// sin destinatario, y al caer no es de nadie.
+    ///
+    /// <para><b>Por qué no es un pase largo sin receptor.</b> Un pase elige a alguien y tira una cuota de
+    /// éxito; un despeje no elige a nadie y no hay nada que fallar. Lo único que decide el que despeja es
+    /// <b>cuánto</b> la manda, y eso sale de su FUERZA: son los factores del remate de la ADR 0136
+    /// invertidos, por el mismo motivo que allí —golpear no es colocar—.</para>
+    ///
+    /// <para>La dispersión lateral es deliberada y es lo que hace que el despeje no sea un pase encubierto:
+    /// nadie despeja <i>a</i> un sitio. Consume una tirada del flujo del partido, que es la única forma
+    /// legítima de meter azar aquí (RT-021).</para>
+    /// </summary>
+    private void LaunchClear(MatchPlayer player)
+    {
+        if (!ReferenceEquals(_ball.Owner, player))
+        {
+            player.EnterState(PlayerState.Positioning, 0);
+            return;
+        }
+
+        var clear = _tuning.Clear;
+        int direction = Pitch.AttackDirection(player.Team);
+
+        float distance = clear.BaseDistanceCells
+            + (clear.StrengthDistanceMilliPerPoint * (player.Strength - 50) / 1000f);
+        if (distance < 1f)
+        {
+            distance = 1f;
+        }
+
+        // La tirada se consume SIEMPRE, con dispersión o sin ella, por el mismo motivo que la documenta
+        // LaunchPass: el número de tiradas que gasta una acción no puede depender de sus datos.
+        int spread = _rng.Range(-clear.SpreadRows, clear.SpreadRows + 1);
+
+        var target = Utility.ClampToPitch(new Vec2(
+            player.Position.X + (distance * direction),
+            player.Position.Y + spread));
+
+        int ticks = Utility.FlightTicks(
+            Vec2.Distance(player.Position, target), _tuning.Ball.PassSpeedCellsPerTickMilli);
+
+        _ball.Owner = null;
+        _ball.InFlight = true;
+        _ball.IsShot = false;
+        _ball.IsThroughPass = false;
+        _ball.IsCross = false;
+        _ball.IsClearance = true;
+        _ball.FlightTargetZ = 0f;
+        _ball.FlightArc = clear.PeakHeightCellsMilli / 1000f;
+        _ball.Passer = player;
+        _ball.PassReceiver = null;
+        _ball.PassSucceeds = false;
+        _ball.FlightOrigin = player.Position;
+        _ball.FlightTarget = target;
+        _ball.FlightTicksTotal = ticks;
+        _ball.FlightTicksLeft = ticks;
+        _ball.LastTouchPlayer = player;
+        _ball.LastTouchTeam = player.Team;
+        Array.Clear(_ball.InterceptAttempted);
+
+        _report.Clearances[player.Team]++;
+        Emit(EventType.Clearance, "attempted", player);
+        player.EnterState(PlayerState.Positioning, 0);
     }
 
     private MatchPlayer? MostAdvancedTeammate(MatchPlayer passer)
@@ -2767,8 +3072,18 @@ internal sealed class MatchEngine : IPerkWorld
         var tackle = _tuning.Tackle;
         int pressure = ((tackle.StrengthSharePercent * tackler.Strength)
             + ((100 - tackle.StrengthSharePercent) * tackler.Speed)) / 100;
+
+        // Gameplay AI Foundations Pass, P2: el que PROTEGE resiste con su FUERZA y no con su técnica, y
+        // además suma una resistencia fija. Las dos mitades dicen lo mismo desde dos sitios: proteger es
+        // la respuesta del fuerte a que le aprieten, igual que regatear es la del técnico. Sin el cambio
+        // de atributo, proteger sería un bono plano que favorecería igual al elfo delicado, que es
+        // justamente lo contrario de `identidad memorable > bonus genéricos`.
+        bool shielding = carrier.State == PlayerState.Shielding;
+        int defended = shielding ? carrier.Strength : carrier.Technique;
+        int resistance = shielding ? tackle.ShieldResistance : 0;
+
         return Bounded(ProbabilityScale.ApplyAveraged(
-            Bounded(tackle.BaseWin + (tackle.PressureFactor * (pressure - carrier.Technique))),
+            Bounded(tackle.BaseWin + (tackle.PressureFactor * (pressure - defended)) - resistance),
             OddsAgainst(tackler, ProbabilityKind.Tackle, carrier, ProbabilityKind.TackleEvasion)));
     }
 
@@ -3136,6 +3451,82 @@ internal sealed class MatchEngine : IPerkWorld
         _players[playerIndex].Position = at;
         _players[playerIndex].TargetPoint = at;
     }
+
+    // ------------------------------------------- enganches de prueba (Gameplay AI Foundations Pass)
+    //
+    // El encargo prohíbe expresamente medir este paquete con lotes: lo que hay que demostrar no es una
+    // frecuencia sino que las ramas nuevas EXISTEN y son ALCANZABLES. Eso se comprueba montando la
+    // situación futbolística a mano y preguntándole a la utilidad qué haría, que es lo que hacen estos
+    // dos enganches. Mismo patrón y mismo motivo que los de la ADR 0136.
+
+    /// <summary>
+    /// Qué elegiría este jugador <b>ahora mismo</b>, corriendo antes la misma preparación por tick que
+    /// corre el motor. No inventa ninguna regla ni salta ningún filtro: es <see cref="Utility.Choose"/>
+    /// sobre el contexto real.
+    /// </summary>
+    internal PlayerAction ChooseForTest(int playerIndex)
+    {
+        UpdateTacticalState();
+        UpdateContextCaches();
+        return Utility.Choose(_context, _players[playerIndex], null);
+    }
+
+    /// <summary>
+    /// Le da el balón a un jugador colocándolo antes, para montar la situación del portador.
+    ///
+    /// <para><b>Y lo deja decidiendo, no ejecutando.</b> <see cref="SetOwner"/> termina llamando a
+    /// <see cref="Decide"/> —para que quien recibe el balón no se quede parado un tick—, así que al volver
+    /// el jugador ya está en <c>Passing</c>, <c>Shooting</c> o lo que haya elegido, y esos estados no
+    /// permiten ninguna acción. Un escenario montado a mano que preguntara ahí qué elegiría obtendría
+    /// siempre el repliegue de reserva, y un test que comprobara «no elige proteger» pasaría por el motivo
+    /// equivocado. Se le devuelve a <c>Dribbling</c>, que es el estado desde el que un portador decide.</para>
+    /// </summary>
+    internal void GiveBallForTest(int playerIndex, Vec2 at)
+    {
+        _players[playerIndex].Position = at;
+        _players[playerIndex].TargetPoint = at;
+        SetOwner(_players[playerIndex]);
+        _players[playerIndex].EnterState(PlayerState.Dribbling, 0);
+    }
+
+    /// <summary>Lanza un despeje de este jugador, igual que lo haría el motor al expirar el armado.</summary>
+    internal void ForceClearForTest(int playerIndex)
+    {
+        _players[playerIndex].CurrentAction = PlayerAction.Clear;
+        LaunchClear(_players[playerIndex]);
+    }
+
+    /// <summary>True si el vuelo actual es un despeje.</summary>
+    internal bool BallIsClearanceForTest => _ball.IsClearance;
+
+    /// <summary>Presión percibida sobre un jugador (0-100) tras la preparación del tick.</summary>
+    internal int PressureForTest(int playerIndex) => _context.Pressure[_players[playerIndex].Index];
+
+    /// <summary>Apertura percibida de un jugador (0-100) tras la preparación del tick.</summary>
+    internal int OpennessForTest(int playerIndex) => _context.Openness[_players[playerIndex].Index];
+
+    /// <summary>Peligro percibido sobre la portería de un equipo (0-100) tras la preparación del tick.</summary>
+    internal int DangerForTest(int team) => _context.Danger[team];
+
+    /// <summary>Recalcula la percepción compartida sin avanzar el partido.</summary>
+    internal void RefreshPerceptionForTest()
+    {
+        UpdateTacticalState();
+        UpdateContextCaches();
+    }
+
+    /// <summary>Pone a un jugador a proteger el balón, para comprobar qué le cuesta a quien le entra.</summary>
+    internal void ForceShieldForTest(int playerIndex) =>
+        _players[playerIndex].EnterState(PlayerState.Shielding, _tuning.States.ShieldingTicks);
+
+    /// <summary>Jugador por índice del array del motor, para montar escenarios y leer sus atributos.</summary>
+    internal MatchPlayer PlayerAtForTest(int playerIndex) => _players[playerIndex];
+
+    /// <summary>Estado actual de un jugador.</summary>
+    internal PlayerState StateForTest(int playerIndex) => _players[playerIndex].State;
+
+    /// <summary>Punto de llegada del vuelo actual.</summary>
+    internal Vec2 FlightTargetForTest => _ball.FlightTarget;
 
     /// <summary>Índice en el array de jugadores del primer jugador de campo de un equipo, más un desplazamiento.</summary>
     internal int OutfieldIndexForTest(int team, int offset)

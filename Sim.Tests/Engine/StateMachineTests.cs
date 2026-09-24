@@ -17,6 +17,9 @@ public class StateMachineTests
         PlayerAction.ThroughPass,
         // ADR 0136: centrar es una acción CON balón, como los otros tres pases.
         PlayerAction.Cross,
+        // ADR 0138: las dos respuestas que le faltaban al portador. Proteger conserva el balón sin
+        // avanzar; despejar renuncia a él. Las dos exigen llevarlo, así que son acciones CON balón.
+        PlayerAction.Shield, PlayerAction.Clear,
     };
 
     [Theory]
@@ -31,13 +34,20 @@ public class StateMachineTests
         }
     }
 
-    [Fact]
-    public void Dribbling_AllowsOnlyWithBallActions()
+    /// <summary>
+    /// Proteger es un estado de decisión con duración (ADR 0138), igual que conducir: mientras dura no se
+    /// decide, y al expirar el portador vuelve a tener delante <b>todas</b> las acciones con balón. Por eso
+    /// comparte tabla con <see cref="PlayerState.Dribbling"/> y no tiene una propia.
+    /// </summary>
+    [Theory]
+    [InlineData(PlayerState.Dribbling)]
+    [InlineData(PlayerState.Shielding)]
+    public void WithBallStates_AllowOnlyWithBallActions(PlayerState state)
     {
         foreach (var action in Enum.GetValues<PlayerAction>())
         {
             bool expected = WithBallActions.Contains(action);
-            Assert.Equal(expected, StateMachine.CanPerform(PlayerState.Dribbling, action));
+            Assert.Equal(expected, StateMachine.CanPerform(state, action));
         }
     }
 

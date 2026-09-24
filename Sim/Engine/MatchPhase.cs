@@ -47,6 +47,15 @@ public enum PlayerState
     /// entra por una sustitución forzada. Va al final del enum por el mismo motivo que los demás añadidos.
     /// </summary>
     Benched,
+
+    /// <summary>
+    /// Protegiendo el balón (Gameplay AI Foundations Pass, P2). Estado de decisión <b>con duración</b>,
+    /// hermano exacto de <see cref="Dribbling"/> desde la ADR 0137: se entra con un contador, durante ese
+    /// tiempo el portador no vuelve a decidir, y si pierde el balón se corta en el acto. La diferencia con
+    /// conducir es lo que hace con el cuerpo —no avanza hacia la portería, se interpone— y con qué
+    /// atributo resiste.
+    /// </summary>
+    Shielding,
 }
 
 /// <summary>
@@ -104,4 +113,24 @@ public enum PlayerAction
     /// desde el cordel (BA-E).
     /// </summary>
     Cross,
+
+    /// <summary>
+    /// Proteger el balón (Gameplay AI Foundations Pass, D4): el portador <b>conserva el balón sin
+    /// avanzar</b>, de espaldas al rival que le aprieta, y resiste la entrada con su <b>fuerza</b> en vez
+    /// de con su técnica.
+    ///
+    /// <para>Es acción propia y no «conducir con otro contexto» porque su consecuencia sobre el balón es
+    /// distinta: conducir avanza y expone, proteger renuncia a avanzar a cambio de no perderlo. Es la
+    /// respuesta que le faltaba al portador presionado, que hoy solo puede elegir entre tirar el balón o
+    /// que se lo quiten (regla 17 del encargo: una acción nueva solo si su consecuencia es propia).</para>
+    /// </summary>
+    Shield,
+
+    /// <summary>
+    /// Despejar (Gameplay AI Foundations Pass, D4): el balón sale <b>alto, largo y sin receptor</b> y
+    /// queda en disputa. No es un pase malo: es la renuncia deliberada a la posesión para alejar el
+    /// peligro de la portería propia, y por eso tiene consecuencia propia —produce un balón aéreo que
+    /// nadie posee, que es la entrada del duelo aéreo y de la segunda jugada—.
+    /// </summary>
+    Clear,
 }

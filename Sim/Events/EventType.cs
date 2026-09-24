@@ -55,6 +55,15 @@ public enum EventType
     /// <para>Se añade al FINAL del enum a propósito: así ningún valor numérico de los anteriores cambia.</para>
     /// </summary>
     Cross,
+
+    /// <summary>
+    /// Despeje (Gameplay AI Foundations Pass, P4). <c>Detail</c> distingue <c>attempted</c> (sale el
+    /// despeje) y <c>duel</c> (alguien lo disputa en el aire). Tiene evento propio porque para el jugador
+    /// es una jugada reconocible —«la sacó de la línea»— y no un pase que salió mal, que es como lo leería
+    /// si reutilizara <see cref="PassFailed"/>.
+    /// <para>Al FINAL del enum, por el mismo motivo que <see cref="Cross"/>.</para>
+    /// </summary>
+    Clearance,
 }
 
 /// <summary>Conversión de EventType a la forma UPPER_SNAKE usada en datos y logs.</summary>
@@ -91,6 +100,7 @@ public static class EventTypeNames
         EventType.ConsumableUsed => "CONSUMABLE_USED",
         EventType.PerkTriggered => "PERK_TRIGGERED",
         EventType.Cross => "CROSS",
+        EventType.Clearance => "CLEARANCE",
         _ => throw new ArgumentOutOfRangeException(nameof(t)),
     };
 }

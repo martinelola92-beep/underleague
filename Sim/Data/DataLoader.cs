@@ -509,6 +509,9 @@ public static class DataLoader
         "tackleMarkTargetBonus",
         "crossMinCells", "crossMaxCells", "crossTargetGoalDistanceCells", "crossBase", "crossApertureGainPerCenti",
         "crossBlockedLanePenalty", "crossMarkedTargetPenalty", "crossTechniqueSlope",
+        "shieldBase", "shieldMinPressure", "shieldPressureBonusPerCenti", "shieldStrengthSlope",
+        "clearBase", "clearMinDanger", "clearDangerBonusPerCenti", "clearPressureBonusPerCenti",
+        "findSpaceIntentBonus", "findSpaceIntentRadiusCells",
     };
 
     private static AiWeights ParseAiWeights(string file, string content)
@@ -635,7 +638,17 @@ public static class DataLoader
             CrossApertureGainPerCenti: contextNode.Prop("crossApertureGainPerCenti").AsInt(),
             CrossBlockedLanePenalty: contextNode.Prop("crossBlockedLanePenalty").AsInt(),
             CrossMarkedTargetPenalty: contextNode.Prop("crossMarkedTargetPenalty").AsInt(),
-            CrossTechniqueSlope: contextNode.Prop("crossTechniqueSlope").AsInt());
+            CrossTechniqueSlope: contextNode.Prop("crossTechniqueSlope").AsInt(),
+            ShieldBase: contextNode.Prop("shieldBase").AsInt(),
+            ShieldMinPressure: contextNode.Prop("shieldMinPressure").AsInt(),
+            ShieldPressureBonusPerCenti: contextNode.Prop("shieldPressureBonusPerCenti").AsInt(),
+            ShieldStrengthSlope: contextNode.Prop("shieldStrengthSlope").AsInt(),
+            ClearBase: contextNode.Prop("clearBase").AsInt(),
+            ClearMinDanger: contextNode.Prop("clearMinDanger").AsInt(),
+            ClearDangerBonusPerCenti: contextNode.Prop("clearDangerBonusPerCenti").AsInt(),
+            ClearPressureBonusPerCenti: contextNode.Prop("clearPressureBonusPerCenti").AsInt(),
+            FindSpaceIntentBonus: contextNode.Prop("findSpaceIntentBonus").AsInt(),
+            FindSpaceIntentRadiusCells: contextNode.Prop("findSpaceIntentRadiusCells").AsFloat());
 
         // ADR 0125 D2: el ajuste de la entrada sin balón es un mapa por puesto, con la misma forma que la
         // tabla `base` —el único patrón por puesto que ya existe en este fichero—, y con signo. Los cuatro
@@ -750,7 +763,7 @@ public static class DataLoader
         root.EnsureKnownKeys(
             "regulationTicks", "goldenGoalMaxTicks", "decisionIntervalTicks", "transitionTicks",
             "assistWindowTicks", "resolution",
-            "movement", "ball", "states", "pass", "dribble", "shot", "cross", "save", "tackle", "injury", "referee",
+            "movement", "ball", "states", "pass", "dribble", "shot", "cross", "clear", "save", "tackle", "injury", "referee",
             "block", "restart", "generation", "bodies", "actionZone", "progression");
 
         return new Tuning(
@@ -767,6 +780,7 @@ public static class DataLoader
             ParseDribble(root.Prop("dribble")),
             ParseShot(root.Prop("shot")),
             ParseCross(root.Prop("cross")),
+            ParseClear(root.Prop("clear")),
             ParseSave(root.Prop("save")),
             ParseTackle(root.Prop("tackle")),
             ParseInjury(root.Prop("injury")),
@@ -805,7 +819,7 @@ public static class DataLoader
 
     private static StatesTuning ParseStates(Json node)
     {
-        node.EnsureKnownKeys("PassingTicks", "ShootingTicks", "TacklingTicks", "KnockedDownTicks", "CelebratingTicks", "DribbleDuelCooldownTicks", "TackleCooldownTicks", "OffBallTackleCooldownTicks");
+        node.EnsureKnownKeys("PassingTicks", "ShootingTicks", "TacklingTicks", "KnockedDownTicks", "CelebratingTicks", "DribbleDuelCooldownTicks", "TackleCooldownTicks", "OffBallTackleCooldownTicks", "ShieldingTicks");
         return new StatesTuning(
             node.Prop("PassingTicks").AsInt(),
             node.Prop("ShootingTicks").AsInt(),
@@ -814,7 +828,8 @@ public static class DataLoader
             node.Prop("CelebratingTicks").AsInt(),
             node.Prop("DribbleDuelCooldownTicks").AsInt(),
             node.Prop("TackleCooldownTicks").AsInt(),
-            node.Prop("OffBallTackleCooldownTicks").AsInt());
+            node.Prop("OffBallTackleCooldownTicks").AsInt(),
+            node.Prop("ShieldingTicks").AsInt());
     }
 
     /// <summary>tuning.resolution: el suelo y el techo únicos de la ADR 0050 P4.</summary>
@@ -902,9 +917,20 @@ public static class DataLoader
             node.Prop("divePenaltyPercent").AsInt());
     }
 
+    /// <summary>tuning.clear — el despeje (Gameplay AI Foundations Pass, P4).</summary>
+    private static ClearTuning ParseClear(Json node)
+    {
+        node.EnsureKnownKeys("baseDistanceCells", "strengthDistanceMilliPerPoint", "peakHeightCellsMilli", "spreadRows");
+        return new ClearTuning(
+            node.Prop("baseDistanceCells").AsFloat(),
+            node.Prop("strengthDistanceMilliPerPoint").AsInt(),
+            node.Prop("peakHeightCellsMilli").AsInt(),
+            node.Prop("spreadRows").AsInt());
+    }
+
     private static TackleTuning ParseTackle(Json node)
     {
-        node.EnsureKnownKeys("baseWin", "pressureFactor", "strengthSharePercent", "foulBase", "offBallFoulBase", "foulStrengthFactor", "hardTackleThreshold", "yellowCardBase", "redCardBase", "hardTackleYellowBonus", "hardTackleRedBonus", "secondYellowIsRed");
+        node.EnsureKnownKeys("baseWin", "pressureFactor", "strengthSharePercent", "foulBase", "offBallFoulBase", "foulStrengthFactor", "hardTackleThreshold", "yellowCardBase", "redCardBase", "hardTackleYellowBonus", "hardTackleRedBonus", "secondYellowIsRed", "shieldResistance");
         return new TackleTuning(
             node.Prop("baseWin").AsInt(),
             node.Prop("pressureFactor").AsInt(),
@@ -917,7 +943,8 @@ public static class DataLoader
             node.Prop("redCardBase").AsInt(),
             node.Prop("hardTackleYellowBonus").AsInt(),
             node.Prop("hardTackleRedBonus").AsInt(),
-            node.Prop("secondYellowIsRed").AsBool());
+            node.Prop("secondYellowIsRed").AsBool(),
+            node.Prop("shieldResistance").AsInt());
     }
 
     private static InjuryTuning ParseInjury(Json node)

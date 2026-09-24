@@ -28,6 +28,10 @@ public static class StateMachine
         PlayerAction.ShortPass,
         PlayerAction.LongPass, PlayerAction.ThroughPass,
         PlayerAction.Cross,
+        // Gameplay AI Foundations Pass, P2/P4: las dos respuestas que le faltaban al portador —aguantar el
+        // balón cuando le aprietan y renunciar a él cuando el peligro lo pide—.
+        PlayerAction.Shield,
+        PlayerAction.Clear,
     };
 
     private static readonly PlayerAction[] NoActions = Array.Empty<PlayerAction>();
@@ -53,6 +57,9 @@ public static class StateMachine
         PlayerState.Positioning => WithoutBallActions,
         PlayerState.Chasing => WithoutBallActions,
         PlayerState.Dribbling => WithBallActions,
+        // Proteger es un compromiso con duración igual que conducir (ADR 0137): mientras dura no se
+        // decide, y al expirar el portador vuelve a tener delante todas las acciones con balón.
+        PlayerState.Shielding => WithBallActions,
         PlayerState.Passing => NoActions,
         PlayerState.Shooting => NoActions,
         PlayerState.Tackling => NoActions,
@@ -65,7 +72,7 @@ public static class StateMachine
         _ => throw new ArgumentOutOfRangeException(nameof(state)),
     };
 
-    /// <summary>True si en state el jugador evalúa la utilidad de sus acciones (Positioning, Chasing, Dribbling).</summary>
+    /// <summary>True si en state el jugador evalúa la utilidad de sus acciones (Positioning, Chasing, Dribbling, Shielding).</summary>
     public static bool IsDecisionState(PlayerState state) =>
-        state is PlayerState.Positioning or PlayerState.Chasing or PlayerState.Dribbling;
+        state is PlayerState.Positioning or PlayerState.Chasing or PlayerState.Dribbling or PlayerState.Shielding;
 }

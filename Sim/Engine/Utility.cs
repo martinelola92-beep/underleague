@@ -18,6 +18,17 @@ internal sealed class UtilityContext
         Zone = zone;
         ShootBlockRadiusCells = shootBlockRadiusCells;
         PassSpeedCellsPerTickMilli = passSpeedCellsPerTickMilli;
+
+        // -1 y no el 0 por defecto del struct: el índice 0 es un jugador real, así que un array recién
+        // creado diría que hay una oferta de pase en vigor desde el primer tick.
+        Intent[0].PasserIndex = -1;
+        Intent[1].PasserIndex = -1;
+
+        Pressure = new int[players.Length];
+        PressureCount = new int[players.Length];
+        Openness = new int[players.Length];
+        Marked = new bool[players.Length];
+        AttackingDepth = new bool[players.Length];
     }
 
     /// <summary>Todos los jugadores del partido, ordenados por id ascendente (RT-041, RT-097).</summary>
@@ -43,6 +54,12 @@ internal sealed class UtilityContext
     /// <summary>Velocidad del pase en milésimas de casilla por tick (tuning.ball), para la carrera del pase en profundidad.</summary>
     public int PassSpeedCellsPerTickMilli { get; }
 
+    /// <summary>
+    /// Tick actual del partido. Lo necesita la caducidad de las intenciones de pase (P3): una oferta vale
+    /// mientras dure el armado del pase y un poco más, no para siempre.
+    /// </summary>
+    public int Tick { get; set; }
+
     /// <summary>Estado táctico por equipo (§3.4).</summary>
     public TacticalState[] TacticalStates { get; } = new TacticalState[2];
 
@@ -52,11 +69,102 @@ internal sealed class UtilityContext
     /// <summary>Equipo que sostiene el balón ahora mismo (dueño o vuelo); -1 si está suelto.</summary>
     public int HoldingTeam { get; set; } = -1;
 
+    // ------------------------------------------------------------ P1: percepción compartida del equipo
+    //
+    // Gameplay AI Foundations Pass, D1 (docs/plan-gameplay-ai-foundations.md). UtilityContext ya ERA la
+    // capa de percepción compartida del proyecto —«la vista del mundo que necesita la IA, rellenada una vez
+    // por tick y reutilizada en todas las decisiones de ese tick», RT-051—, así que la percepción del
+    // equipo se añade AQUÍ en vez de en un sistema paralelo.
+    //
+    // No es azúcar: hoy cada Evaluate* redescubre por candidato, por jugador y por tick lo mismo
+    // (NearestOpponentDistance, TeammatesNear, quién lleva el balón). Cachearlo una vez QUITA trabajo
+    // cuadrático repetido, que es la única justificación que el protocolo de architecture-review acepta
+    // para una abstracción nueva.
+    //
+    // Todo entero y todo indexado por MatchPlayer.Index, rellenado en orden de id ascendente: ningún
+    // Dictionary, ningún orden que dependa del tick (RT-041, RT-097, RT-023).
+
+    /// <summary>Portador del balón de cada equipo, o null si ese equipo no lo tiene.</summary>
+    public MatchPlayer?[] Carrier { get; } = new MatchPlayer?[2];
+
+    /// <summary>
+    /// Presión rival sobre cada jugador, 0-100: 100 pegado al cuerpo del rival más cercano, 0 a partir de
+    /// <c>perceptionPressureRadiusCells</c>. Es "cuánto me aprietan", el término que el portador, el pase,
+    /// el despeje y la fatiga necesitan y que hoy cada uno calcula por su cuenta.
+    /// </summary>
+    public int[] Pressure { get; }
+
+    /// <summary>Cuántos rivales hay dentro del radio de presión de cada jugador.</summary>
+    public int[] PressureCount { get; }
+
+    /// <summary>
+    /// Cuán libre está cada jugador para recibir, 0-100. Es el complemento de <see cref="Pressure"/>
+    /// recortado por el marcaje: estar marcado nunca deja a nadie completamente libre.
+    /// </summary>
+    public int[] Openness { get; }
+
+    /// <summary>True si algún rival tiene a este jugador como <c>MarkTarget</c>. <see cref="Marking"/> ya
+    /// calcula el emparejamiento marcador → marcado; nadie leía la dirección contraria.</summary>
+    public bool[] Marked { get; }
+
+    /// <summary>
+    /// True si este jugador está atacando el espacio a la espalda de la defensa rival. Lo escribe el
+    /// arranque coordinado (P3) cuando un compañero le ofrece un pase en profundidad; en P1 es siempre
+    /// false y nadie lo lee todavía.
+    /// </summary>
+    public bool[] AttackingDepth { get; }
+
+    /// <summary>
+    /// Amenaza sobre la portería que defiende cada equipo, 0-100: 100 con el balón en la línea de gol, 0 a
+    /// partir de <c>perceptionDangerRadiusCells</c>. Es lo que distingue «despejar» de «jugarla».
+    /// </summary>
+    public int[] Danger { get; } = new int[2];
+
     /// <summary>True mientras el balón está aparcado para una reanudación (AW-R, docs/pendientes.md):
     /// saque de banda, córner, de puerta, de centro o penalti. Quita el bono de "balón suelto" de
     /// ChaseBall para que nadie converja sobre un balón muerto; el resto de acciones ya se autodescartan
     /// sin él (ver AW-R en docs/pendientes.md para el porqué completo).</summary>
     public bool BallDead { get; set; }
+
+    /// <summary>
+    /// Intención de pase en vigor de cada equipo (P3). Es <b>una oferta, no una orden</b>: el receptor
+    /// puede ignorarla, y por eso vive en el contexto y no en un campo del receptor.
+    /// </summary>
+    public PassIntent[] Intent { get; } = new PassIntent[2];
+}
+
+/// <summary>
+/// Una intención de pase publicada por un pasador durante el <b>armado</b> del pase (P3 del Gameplay AI
+/// Foundations Pass).
+///
+/// <para><b>Por qué no hace falta ningún sistema nuevo.</b> El pase ya tenía una ventana: el pasador entra
+/// en <c>Passing</c> y el balón no sale hasta <c>states.PassingTicks</c> ticks después. Esa ventana, que
+/// ya existía y no hacía nada, <b>es</b> el canal del arranque coordinado: durante ella el receptor ve que
+/// le están ofreciendo un balón a la espalda de la defensa y puede salir hacia allí, de modo que cuando el
+/// pase se lanza —<c>Utility.PassTarget</c> ya adelanta el balón a donde el receptor va a estar— los dos
+/// están de acuerdo. Un bus de mensajes o una cola de intenciones habría sido un sistema paralelo para
+/// algo que el motor ya sabía hacer.</para>
+///
+/// <para>Una por equipo y con caducidad en ticks: si dos compañeros arman un pase en el mismo tick, gana
+/// el último en el recorrido del bucle, que es determinista (RT-041).</para>
+/// </summary>
+internal struct PassIntent
+{
+    /// <summary>Índice del que ofrece el pase; -1 si no hay intención en vigor.</summary>
+    public int PasserIndex;
+
+    /// <summary>Índice del compañero al que va dirigida.</summary>
+    public int ReceiverIndex;
+
+    /// <summary>Casilla a la que se ofrece el balón.</summary>
+    public Vec2 Target;
+
+    /// <summary>Último tick en que la oferta sigue en pie.</summary>
+    public int ExpiresTick;
+
+    /// <summary>True si la oferta sigue viva en el tick indicado y va dirigida a ese jugador.</summary>
+    public readonly bool OfferedTo(int playerIndex, int tick) =>
+        PasserIndex >= 0 && ReceiverIndex == playerIndex && tick <= ExpiresTick;
 }
 
 /// <summary>
@@ -513,6 +621,12 @@ internal static class Utility
             case PlayerAction.PressCarrier:
                 EvaluatePress(ctx, p, ref eval);
                 break;
+            case PlayerAction.Shield:
+                EvaluateShield(ctx, p, context, ref eval);
+                break;
+            case PlayerAction.Clear:
+                EvaluateClear(ctx, p, context, ref eval);
+                break;
             default:
                 throw new ArgumentOutOfRangeException(nameof(action));
         }
@@ -563,7 +677,81 @@ internal static class Utility
     private static bool IsMovementAction(PlayerAction action) =>
         action is PlayerAction.ChaseBall or PlayerAction.MarkOpponent or PlayerAction.OfferSupport
             or PlayerAction.CoverSpace or PlayerAction.Dribble or PlayerAction.Retreat
-            or PlayerAction.FindSpace or PlayerAction.PressCarrier;
+            or PlayerAction.FindSpace or PlayerAction.PressCarrier
+            // Proteger mueve al portador —poco y apartándose del que le aprieta— así que su destino pasa
+            // por el mismo recorte de zona que el resto: no es una excepción espacial.
+            or PlayerAction.Shield;
+
+    /// <summary>
+    /// Cuánto se aparta del rival el que protege el balón, en casillas. No es un número de balance sino la
+    /// definición de la acción: proteger es <b>interponer el cuerpo</b>, no huir ni avanzar. Si fuera
+    /// mayor sería conducir de espaldas; si fuera cero, el portador sería una estatua y el rival le
+    /// rodearía sin esfuerzo.
+    /// </summary>
+    private const float ShieldStepCells = 0.35f;
+
+    /// <summary>
+    /// Proteger el balón (Gameplay AI Foundations Pass, P2). Precondición <b>dura</b>: sin nadie
+    /// apretando no hay nada que proteger, y la acción ni se puntúa. Es la misma forma que ya usan el
+    /// centro (compañero en la zona de remate) y la entrada (rival al alcance): una precondición que
+    /// describe la <i>situación futbolística</i>, no una penalización enorme que la disfrace.
+    ///
+    /// <para>Lo demás puntúa: cuanto más te aprietan, más vale aguantar; y la fuerza es lo que hace
+    /// viable aguantar, igual que la técnica es lo que hace viable regatear.</para>
+    /// </summary>
+    private static void EvaluateShield(UtilityContext ctx, MatchPlayer p, AiContext context, ref Eval eval)
+    {
+        if (!ReferenceEquals(ctx.Ball.Owner, p))
+        {
+            eval.Discarded = true;
+            return;
+        }
+
+        int pressure = ctx.Pressure[p.Index];
+        if (pressure < context.ShieldMinPressure)
+        {
+            eval.Discarded = true;
+            return;
+        }
+
+        // El cuerpo se interpone entre el balón y quien aprieta: el portador se aparta del rival más
+        // cercano, que es exactamente lo que hace un delantero de espaldas.
+        var presser = NearestOpponent(ctx, p);
+        Vec2 away = presser is null
+            ? new Vec2(0f, 0f)
+            : (p.Position - presser.Position).Normalized;
+        eval.Target = ClampToPitch(p.Position + (away * ShieldStepCells));
+
+        eval.Context = context.ShieldBase
+            + (context.ShieldPressureBonusPerCenti * pressure)
+            + Slope(context.ShieldStrengthSlope, p.Strength);
+    }
+
+    /// <summary>
+    /// Despejar (Gameplay AI Foundations Pass, P4). Simétrica de <see cref="EvaluateShield"/>: la
+    /// precondición dura es el <b>peligro</b>, porque un despeje sin peligro no es prudencia, es regalar el
+    /// balón. Puntúan el peligro y la presión; la fuerza <b>no</b> entra en la decisión —entra en la
+    /// distancia que recorre el balón, que es donde se nota quién despeja—.
+    /// </summary>
+    private static void EvaluateClear(UtilityContext ctx, MatchPlayer p, AiContext context, ref Eval eval)
+    {
+        if (!ReferenceEquals(ctx.Ball.Owner, p))
+        {
+            eval.Discarded = true;
+            return;
+        }
+
+        int danger = ctx.Danger[p.Team];
+        if (danger < context.ClearMinDanger)
+        {
+            eval.Discarded = true;
+            return;
+        }
+
+        eval.Context = context.ClearBase
+            + (context.ClearDangerBonusPerCenti * danger)
+            + (context.ClearPressureBonusPerCenti * ctx.Pressure[p.Index]);
+    }
 
     private static void EvaluateChaseBall(UtilityContext ctx, MatchPlayer p, AiContext context, ref Eval eval)
     {
@@ -728,6 +916,13 @@ internal static class Utility
         // por evaluación y no una por candidato (RT-051: la evaluación no debe crecer con el tablero).
         float marginedLine = OffsideLineColumn(players, ball.Position, p.Team)
             + (context.FindSpaceLineMarginCells * direction);
+
+        // P3: la oferta de pase al espacio, leída una vez por evaluación y no una por candidato (RT-051).
+        var intent = ctx.Intent[p.Team];
+        bool offered = intent.OfferedTo(p.Index, ctx.Tick);
+        Vec2 intentTarget = offered ? intent.Target : default;
+        int intentRadiusCenti = offered ? Centi(context.FindSpaceIntentRadiusCells) : 0;
+
         bool found = false;
         int bestScore = 0;
         Vec2 bestPoint = p.Position;
@@ -775,6 +970,22 @@ internal static class Utility
                 // hueco sin que nada lo penalizara. Mismo radio que OfferSupport (SupportCrowdRadius),
                 // para que "estar apiñado" signifique lo mismo en las dos acciones.
                 score -= context.FindSpaceCrowdedPenalty * TeammatesNear(players, p, candidate, SupportCrowdRadius);
+
+                // P3, ARRANQUE COORDINADO: si un compañero está armando ahora mismo un balón al espacio
+                // dirigido a mí, las casillas cercanas a ese espacio valen más. El pase en profundidad
+                // dejaba de ser un monólogo justo aquí: antes el pasador leía el destino que el receptor
+                // ya había elegido por su cuenta, y el receptor no se enteraba de nada.
+                //
+                // Suma, no manda: un desmarque claramente mejor por espacio o por línea de pase sigue
+                // ganando, y eso es deliberado —una intención es una oferta, no una orden—.
+                if (intentRadiusCenti > 0)
+                {
+                    int toIntent = Centi(Vec2.Distance(candidate, intentTarget));
+                    if (toIntent < intentRadiusCenti)
+                    {
+                        score += context.FindSpaceIntentBonus * (intentRadiusCenti - toIntent) / intentRadiusCenti;
+                    }
+                }
 
                 if (!found || score > bestScore)
                 {

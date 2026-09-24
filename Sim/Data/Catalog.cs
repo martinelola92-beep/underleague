@@ -180,7 +180,31 @@ public sealed record AiContext(
     // pone CUANDO el área está poblada. La primera versión copió del pase raso la precondición «receptor
     // libre» y dejó el centro en 0,54 por partido.
     int CrossMarkedTargetPenalty = 0,
-    int CrossTechniqueSlope = 0);
+    int CrossTechniqueSlope = 0,
+
+    // Gameplay AI Foundations Pass, P2 — PROTEGER. La acción solo existe cuando hay alguien apretando: sin
+    // presión no hay nada de lo que proteger el balón, así que ShieldMinPressure es precondición DURA (la
+    // misma forma que CrossTargetGoalDistanceCells, no una penalización grande). Lo demás puntúa: cuanto
+    // más te aprietan más vale aguantar, y la fuerza es el atributo que lo hace viable.
+    int ShieldBase = 0,
+    int ShieldMinPressure = 0,
+    int ShieldPressureBonusPerCenti = 0,
+    int ShieldStrengthSlope = 0,
+
+    // Gameplay AI Foundations Pass, P4 — DESPEJAR. Simétrico al anterior: un despeje sin peligro es
+    // regalar el balón, así que ClearMinDanger es la precondición dura. El peligro y la presión puntúan;
+    // la fuerza NO entra en la decisión (entra en la distancia, que es donde se nota).
+    int ClearBase = 0,
+    int ClearMinDanger = 0,
+    int ClearDangerBonusPerCenti = 0,
+    int ClearPressureBonusPerCenti = 0,
+
+    // Gameplay AI Foundations Pass, P3 — ARRANQUE COORDINADO. Cuando un compañero está armando un pase al
+    // espacio dirigido A MÍ, las casillas candidatas de mi desmarque que caen cerca de ese espacio valen
+    // más. No es una orden: es un sumando más en la misma comparación, así que un desmarque claramente
+    // mejor sigue ganando. El radio dice hasta dónde "cerca" significa algo.
+    int FindSpaceIntentBonus = 0,
+    float FindSpaceIntentRadiusCells = 0f);
 
 /// <summary>
 /// Pesos de la IA de utilidad (RT-093..RT-098). Las tablas Base y Tactical se guardan como arrays
@@ -392,7 +416,7 @@ public sealed record BallTuning(
     int BounceRestitutionPercent);
 
 /// <summary>tuning.states: duraciones de los estados de jugador, en ticks.</summary>
-public sealed record StatesTuning(int PassingTicks, int ShootingTicks, int TacklingTicks, int KnockedDownTicks, int CelebratingTicks, int DribbleDuelCooldownTicks, int TackleCooldownTicks, int OffBallTackleCooldownTicks);
+public sealed record StatesTuning(int PassingTicks, int ShootingTicks, int TacklingTicks, int KnockedDownTicks, int CelebratingTicks, int DribbleDuelCooldownTicks, int TackleCooldownTicks, int OffBallTackleCooldownTicks, int ShieldingTicks = 0);
 
 /// <summary>tuning.pass.</summary>
 public sealed record PassTuning(int BaseSuccess, int TechniqueFactor, int DistancePenaltyPerCell, int PressurePenalty, float InterceptRadiusCells, int InterceptBaseChance, int InterceptTechniqueFactor, float MaxLeadCells, int InterceptContactPercent);
@@ -448,7 +472,7 @@ public sealed record CrossTuning(
 public sealed record SaveTuning(int BasePercent, int CloseRangeCells, int AttributeWeightPercent, int ConsecutiveShotDecayPercent, int QualityWeight, int QualityPivot, float ReachCells, float DiveReachCells, int DivePenaltyPercent);
 
 /// <summary>tuning.tackle.</summary>
-public sealed record TackleTuning(int BaseWin, int PressureFactor, int StrengthSharePercent, int FoulBase, int OffBallFoulBase, int FoulStrengthFactor, int HardTackleThreshold, int YellowCardBase, int RedCardBase, int HardTackleYellowBonus, int HardTackleRedBonus, bool SecondYellowIsRed);
+public sealed record TackleTuning(int BaseWin, int PressureFactor, int StrengthSharePercent, int FoulBase, int OffBallFoulBase, int FoulStrengthFactor, int HardTackleThreshold, int YellowCardBase, int RedCardBase, int HardTackleYellowBonus, int HardTackleRedBonus, bool SecondYellowIsRed, int ShieldResistance = 0);
 
 /// <summary>tuning.injury.</summary>
 /// <summary>
@@ -525,6 +549,22 @@ public sealed record RestartTuning(int ThrowInTicks, int GoalKickTicks, int Corn
 /// como clase estática), muy por encima del umbral fijado para el arreglo; se retiran del esquema, del
 /// catálogo y del parser en vez de cablearlas en silencio. Ver el informe del hito para el detalle.
 /// </summary>
+/// <summary>
+/// tuning.clear — el despeje (Gameplay AI Foundations Pass, P4). Un despeje no es un pase largo sin
+/// receptor: es un balón que sale <b>lejos y alto</b> para que el peligro se aleje de la portería propia,
+/// y que al caer <b>no es de nadie</b>. La distancia depende de la fuerza porque despejar es golpear, no
+/// colocar —los factores son los del remate invertidos, igual que hizo la ADR 0136 con el centro—.
+/// </summary>
+/// <param name="BaseDistanceCells">Casillas que recorre el despeje de un jugador de fuerza 50.</param>
+/// <param name="StrengthDistanceMilliPerPoint">Milésimas de casilla más por punto de fuerza sobre 50.</param>
+/// <param name="PeakHeightCellsMilli">Altura del pico de la parábola, en milésimas de casilla.</param>
+/// <param name="SpreadRows">Dispersión lateral en filas: un despeje no elige destino, lo aproxima.</param>
+public sealed record ClearTuning(
+    float BaseDistanceCells,
+    int StrengthDistanceMilliPerPoint,
+    int PeakHeightCellsMilli,
+    int SpreadRows);
+
 public sealed record Tuning(
     int RegulationTicks,
     int GoldenGoalMaxTicks,
@@ -539,6 +579,7 @@ public sealed record Tuning(
     DribbleTuning Dribble,
     ShotTuning Shot,
     CrossTuning Cross,
+    ClearTuning Clear,
     SaveTuning Save,
     TackleTuning Tackle,
     InjuryTuning Injury,

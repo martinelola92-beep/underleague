@@ -33,7 +33,8 @@
     "CelebratingTicks": 30,
     "DribbleDuelCooldownTicks": 40,
     "TackleCooldownTicks": 90,
-    "OffBallTackleCooldownTicks": 400
+    "OffBallTackleCooldownTicks": 400,
+    "ShieldingTicks": 12
   },
   "pass": {
     "_doc": "maxLeadCells (AZ-B paso 1, docs/plan-pases-trayectoria.md): techo absoluto, en casillas, del adelanto del pase; el destino se adelanta por lo que el receptor va a poder recorrer hacia donde su utilidad ha decidido ir (TargetPoint), nunca por la extrapolacion ciega de Velocity. 1,5 de partida (el adelanto medio medido antes era 1,44 y en el 14,3% de los pases no habia nadie en el destino al llegar). Medido: subirlo a 2,0 no cambia nada porque la cota que manda es la distancia a la intencion del receptor; lo que devuelve el recorrido hacia delante es el pase en profundidad (paso 5), no un adelanto mayor. interceptContactPercent (AZ-B paso 2): la cuota de intercepcion (y de bloqueo del tiro, que hereda la misma funcion) se multiplica por un factor de proximidad, en tanto por ciento, que vale 100 en el borde de interceptRadiusCells y sube linealmente hasta este valor cuando el balon pasa por dentro del cuerpo del rival (bodyRadius de su raza, data/races): un orco tapa mas que un elfo sin ninguna regla nueva. Antes la distancia no entraba en la tirada: un rival a 0,05 casillas tiraba lo mismo que uno a 0,85. 350 (el plan partia de 600: con 600 y el paso 3 instalado, passChainAvgLength quedaba en 1,97 en la semilla 1, bajo el suelo de 2; es el unico ajuste que el plan permite y se aplico una vez).",
@@ -82,6 +83,13 @@
     "volleyStrengthFactor": 18,
     "volleyOffTargetPenalty": 800
   },
+  "clear": {
+    "_doc": "Gameplay AI Foundations Pass P4: el despeje. Un despeje NO es un pase largo sin receptor -es la renuncia deliberada a la posesion para alejar el balon de la porteria propia- y por eso el balon cae SIN DUENO y en disputa, que es la entrada del duelo aereo y de la segunda jugada. La distancia depende de la FUERZA porque despejar es golpear y no colocar, el mismo reparto invertido que la ADR 0136 le dio al remate de centro. peakHeightCellsMilli se iguala al del centro (1400) a proposito: es la altura a la que el motor YA SABE que un balon pasa por encima de un defensa -medida en la ADR 0136 con la intercepcion en esfera- y no hay motivo para inventar otra. spreadRows es que un despeje APROXIMA el destino en vez de elegirlo. VALORES DE PARTIDA SIN CALIBRAR: este paquete tiene prohibido el tuning contra lotes (docs/plan-gameplay-ai-foundations.md 20).",
+    "baseDistanceCells": 6.0,
+    "strengthDistanceMilliPerPoint": 40,
+    "peakHeightCellsMilli": 1400,
+    "spreadRows": 2
+  },
   "save": {
     "_doc": "ADR 0041: el atributo relevante del portero se mide contra la TECNICA DEL REMATADOR, no contra el 50 fijo; el segundo termino es lo que este remate concreto tuvo de bueno o de malo respecto de qualityPivot (distancia, presion, penalti). basePercent sube de 50 a 54 para compensar el cambio de referencia del primer termino. ADR 0050 P2: la tirada de este canal ya no es una uniforme sino el PROMEDIO DE DOS, asi que la base se reexpresa en la escala nueva para no mover el punto de trabajo: la probabilidad efectiva es la acumulada triangular, F(p)=2p2 por debajo del centro y 1-2(1-p)2 por encima. basePercent baja de 53 a 51 para conservar la misma tasa de paradas; el 5-95 interno se queda porque acota el PORCENTAJE antes de sumarle el canal de perk, y sobre el resultado manda ya el suelo y techo unicos de P4. Medido en docs/fase2-diseno.md 22. AW-A paso 1 (docs/plan-intercepcion-disparo.md 3): reachCells es la distancia en casillas a la que el portero alcanza el balon en vuelo. El duelo se disputa en el tick en que la distancia baja de este radio, una sola vez por disparo; si el portero no llega nunca, es gol sin duelo. Valor de partida 0,9, el mismo que pass.interceptRadiusCells, para no introducir un numero nuevo sin motivo. AW-A paso 2 (docs/plan-intercepcion-disparo.md 4): diveReachCells es un segundo radio, mayor que reachCells, que solo se intenta en el tick de llegada del balon a la linea y unicamente si el radio normal nunca disputo el duelo durante el vuelo; representa la estirada desesperada del portero desplazado, y por eso el duelo se resuelve con divePenaltyPercent restado de savePercent antes del clamp 5-95, en vez de con la formula intacta del radio normal. Traduce el par usual/optimista de gfootball (AI_GetTimeNeededForDistance_ms). Valores de partida 1,5 y 20.",
     "basePercent": 51,
@@ -107,7 +115,8 @@
     "redCardBase": 10,
     "hardTackleYellowBonus": 300,
     "hardTackleRedBonus": 20,
-    "secondYellowIsRed": true
+    "secondYellowIsRed": true,
+    "shieldResistance": 1000
   },
   "injury": {
     "_doc": "ADR 0041: probabilidad = onTackleBase (+onFoulBase si hubo falta) + relativeFactor*(fuerza del que entra - resistencia de la victima). Sin ninguna constante de por medio: un nivel 8 que entra a otro nivel 8 lesiona aproximadamente lo mismo que un nivel 1 contra otro nivel 1. ADR 0043: el desgaste crece por acto (actScalePercent, un multiplicador en tanto por ciento sobre esa probabilidad, sin tocar la formula) y el partido de elite anade su propio recargo (eliteScalePercent). Solo los aplica el bucle de run, que es quien sabe en que acto y en que nodo esta; un partido suelto usa SimConfig.Default y por tanto el 100%. ADR 0050 P2: la lesion NO es una de las cuatro resoluciones decisivas y su tirada sigue siendo uniforme, pero onTackleBase baja de 175 a 140 porque el promedio de dos sube la actividad del partido un 3 por ciento (mas entradas, mas bloqueos, mas faltas) y con 175 injuriesPerMatch se iba a 0,80-0,81, justo en el techo de RT-056. Con 140 vuelve a 0,75-0,76, el valor de siempre. La correccion parece grande para un desvio del 7 por ciento porque onTackleBase solo aporta un tercio de la probabilidad: el resto sale del termino relativo y de onFoulBase. Medido en docs/fase2-diseno.md 22.",

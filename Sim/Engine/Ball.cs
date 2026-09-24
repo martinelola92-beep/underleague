@@ -76,6 +76,14 @@ internal sealed class Ball
     /// </summary>
     public bool IsCross { get; set; }
 
+    /// <summary>
+    /// Despeje en vuelo (Gameplay AI Foundations Pass, P4). Es el único vuelo <b>sin destinatario</b>: no
+    /// hay receptor al que llegar ni tirada de éxito que resolver, así que al aterrizar el balón
+    /// simplemente queda suelto y en disputa. Sin esta marca, la llegada lo trataría como un pase fallado
+    /// y emitiría PASS_FAILED, que es mentira: nadie ha fallado nada.
+    /// </summary>
+    public bool IsClearance { get; set; }
+
     /// <summary>Punto de partida del vuelo actual.</summary>
     public Vec2 FlightOrigin { get; set; }
 
@@ -154,6 +162,7 @@ internal sealed class Ball
         InFlight = false;
         IsShot = false;
         IsCross = false;
+        IsClearance = false;
         PassReceiver = null;
         Passer = null;
         Shooter = null;
@@ -181,6 +190,7 @@ internal sealed class Ball
         InFlight = false;
         IsShot = false;
         IsCross = false;
+        IsClearance = false;
         PassReceiver = null;
         Passer = null;
         Shooter = null;

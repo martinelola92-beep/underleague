@@ -150,6 +150,9 @@ public sealed class MatchReport
     /// <summary>Centros que acabaron en remate de primeras, por equipo (ADR 0136).</summary>
     public int[] CrossesVolleyed { get; }
 
+    /// <summary>Despejes intentados por equipo (Gameplay AI Foundations Pass, P4).</summary>
+    public int[] Clearances { get; }
+
     /// <summary>Remates de primeras que acabaron en gol, por equipo (ADR 0136).</summary>
     public int[] VolleyGoals { get; }
 
@@ -289,6 +292,7 @@ public sealed class MatchReport
         ThroughPassesCompleted = (int[])builder.ThroughPassesCompleted.Clone();
         Crosses = (int[])builder.Crosses.Clone();
         CrossesVolleyed = (int[])builder.CrossesVolleyed.Clone();
+        Clearances = (int[])builder.Clearances.Clone();
         VolleyGoals = (int[])builder.VolleyGoals.Clone();
         ShotApertureSum = builder.ShotApertureSum;
         LowApertureShots = builder.LowApertureShots;
@@ -377,6 +381,9 @@ internal sealed class MatchReportBuilder
     public int[] Crosses { get; } = new int[2];
 
     public int[] CrossesVolleyed { get; } = new int[2];
+
+    /// <summary>Despejes intentados por equipo (Gameplay AI Foundations Pass, P4).</summary>
+    public int[] Clearances { get; } = new int[2];
 
     public int[] VolleyGoals { get; } = new int[2];
 

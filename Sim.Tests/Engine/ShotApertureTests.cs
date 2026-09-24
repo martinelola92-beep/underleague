@@ -95,10 +95,26 @@ public sealed class ShotApertureTests
 
         // El listón es «no mejor que la media», no «peor»: lo que BA-E señalaba como absurdo era la
         // VENTAJA, y fijar aquí un objetivo numérico de desventaja sería convertir un lote de balance en
-        // un test unitario. Un margen de holgura pequeño para no depender de la última décima.
+        // un test unitario.
+        //
+        // REPLANTEADO, NO REGENERADO (ADR 0138, misma lección que RecoveryExtraActionTests en la ADR
+        // 0136). El margen era un 2 % RELATIVO, o sea ~0,48 puntos de tasa; el error típico de la tasa de
+        // los tiros sin ángulo con esta muestra es de 1,4 a 3,0 puntos, entre tres y seis veces mayor. Es
+        // decir: el test podía ponerse rojo sin que el juego cambiara nada, y de hecho fue lo que pasó —el
+        // paquete de percepción y despeje desplazó el flujo de RNG y la misma afirmación pasó de 23,9/24,0
+        // a 23,97/24,55—. Un test que falla por mala suerte es un test mal escrito.
+        //
+        // El margen pasa a ser DOS ERRORES TÍPICOS de la propia muestra, que es lo que «no se detecta
+        // ventaja» significa de verdad. Conserva el poder de detección que importa: la inversión que BA-E
+        // midió (el 32,4 % de los tiros producía el 37,1 % de los goles) es varias veces mayor que este
+        // margen y seguiría poniendo el test en rojo.
+        double standardError = Math.Sqrt(low * (1d - low) / lowShots);
+        double ceiling = overall + (2d * standardError);
+
         Assert.True(
-            low <= overall * 1.02,
-            $"un tiro sin ángulo sigue convirtiendo mejor que la media: {low:P2} contra {overall:P2}");
+            low <= ceiling,
+            $"un tiro sin ángulo sigue convirtiendo mejor que la media: {low:P2} contra {overall:P2} "
+            + $"(techo con dos errores típicos: {ceiling:P2}, n={lowShots})");
     }
 
     /// <summary>

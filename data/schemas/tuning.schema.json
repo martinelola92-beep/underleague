@@ -57,6 +57,9 @@
     "cross": {
       "$ref": "#/$defs/cross"
     },
+    "clear": {
+      "$ref": "#/$defs/clear"
+    },
     "save": {
       "$ref": "#/$defs/save"
     },
@@ -102,6 +105,7 @@
     "dribble",
     "shot",
     "cross",
+    "clear",
     "save",
     "tackle",
     "injury",
@@ -267,6 +271,10 @@
         },
         "OffBallTackleCooldownTicks": {
           "$ref": "#/$defs/ticks"
+        },
+        "ShieldingTicks": {
+          "description": "Gameplay AI Foundations Pass P2: cuánto dura el compromiso de proteger el balón. Mismo patrón que dribble.driveTicks (ADR 0137): mientras dura, el portador no vuelve a decidir.",
+          "$ref": "#/$defs/ticks"
         }
       },
       "required": [
@@ -277,7 +285,8 @@
         "CelebratingTicks",
         "DribbleDuelCooldownTicks",
         "TackleCooldownTicks",
-        "OffBallTackleCooldownTicks"
+        "OffBallTackleCooldownTicks",
+        "ShieldingTicks"
       ],
       "additionalProperties": false
     },
@@ -453,6 +462,43 @@
       ],
       "additionalProperties": false
     },
+    "clear": {
+      "type": "object",
+      "properties": {
+        "_doc": {
+          "type": "string"
+        },
+        "baseDistanceCells": {
+          "description": "Casillas que recorre el despeje de un jugador de fuerza 50.",
+          "type": "number",
+          "minimum": 0,
+          "maximum": 16
+        },
+        "strengthDistanceMilliPerPoint": {
+          "description": "Milésimas de casilla más de alcance por punto de fuerza sobre 50: despejar es golpear, no colocar.",
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 500
+        },
+        "peakHeightCellsMilli": {
+          "description": "Altura del pico de la parábola. Igualada a cross.peakHeightCellsMilli: es la altura que el motor ya sabe que salva a un defensa (ADR 0136).",
+          "$ref": "#/$defs/milli"
+        },
+        "spreadRows": {
+          "description": "Dispersión lateral en filas. Un despeje APROXIMA el destino en vez de elegirlo.",
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 7
+        }
+      },
+      "required": [
+        "baseDistanceCells",
+        "strengthDistanceMilliPerPoint",
+        "peakHeightCellsMilli",
+        "spreadRows"
+      ],
+      "additionalProperties": false
+    },
     "cross": {
       "type": "object",
       "properties": {
@@ -582,6 +628,12 @@
         },
         "secondYellowIsRed": {
           "type": "boolean"
+        },
+        "shieldResistance": {
+          "description": "Gameplay AI Foundations Pass P2: lo que le resta a la entrada que el portador esté PROTEGIENDO el balón. Va junto al cambio de atributo defendido: protegiendo se resiste con fuerza, no con técnica.",
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 5000
         }
       },
       "required": [
@@ -596,7 +648,8 @@
         "redCardBase",
         "hardTackleYellowBonus",
         "hardTackleRedBonus",
-        "secondYellowIsRed"
+        "secondYellowIsRed",
+        "shieldResistance"
       ],
       "additionalProperties": false
     },

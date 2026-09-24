@@ -397,6 +397,16 @@
         "crossBlockedLanePenalty": { "type": "integer", "minimum": 0, "maximum": 2000 },
         "crossMarkedTargetPenalty": { "type": "integer", "minimum": 0, "maximum": 2000 },
         "crossTechniqueSlope": { "type": "integer", "minimum": -50, "maximum": 50 },
+        "shieldBase": { "type": "integer", "minimum": 0, "maximum": 2000 },
+        "shieldMinPressure": { "type": "integer", "minimum": 0, "maximum": 100 },
+        "shieldPressureBonusPerCenti": { "type": "integer", "minimum": 0, "maximum": 50 },
+        "shieldStrengthSlope": { "type": "integer", "minimum": -50, "maximum": 50 },
+        "clearBase": { "type": "integer", "minimum": 0, "maximum": 2000 },
+        "clearMinDanger": { "type": "integer", "minimum": 0, "maximum": 100 },
+        "clearDangerBonusPerCenti": { "type": "integer", "minimum": 0, "maximum": 50 },
+        "clearPressureBonusPerCenti": { "type": "integer", "minimum": 0, "maximum": 50 },
+        "findSpaceIntentBonus": { "type": "integer", "minimum": 0, "maximum": 2000 },
+        "findSpaceIntentRadiusCells": { "type": "number", "minimum": 0, "maximum": 16 },
         "throughPassFreeZoneCells": {
           "type": "number",
           "minimum": 0,
@@ -470,6 +480,16 @@
         "crossApertureGainPerCenti",
         "crossBlockedLanePenalty",
         "crossMarkedTargetPenalty",
+        "shieldBase",
+        "shieldMinPressure",
+        "shieldPressureBonusPerCenti",
+        "shieldStrengthSlope",
+        "clearBase",
+        "clearMinDanger",
+        "clearDangerBonusPerCenti",
+        "clearPressureBonusPerCenti",
+        "findSpaceIntentBonus",
+        "findSpaceIntentRadiusCells",
         "crossTechniqueSlope"
       ],
       "additionalProperties": false
@@ -528,7 +548,9 @@
         "LongPass",
         "ThroughPass",
         "Block",
-        "Cross"
+        "Cross",
+        "Shield",
+        "Clear"
       ]
     },
     "actionWeights": {
@@ -611,6 +633,16 @@
           "type": "integer",
           "minimum": 0,
           "maximum": 1000
+        },
+        "Shield": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1000
+        },
+        "Clear": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1000
         }
       },
       "required": [
@@ -628,7 +660,9 @@
         "LongPass",
         "ThroughPass",
         "Block",
-        "Cross"
+        "Cross",
+        "Shield",
+        "Clear"
       ],
       "additionalProperties": false
     },
@@ -712,6 +746,16 @@
           "type": "integer",
           "minimum": 0,
           "maximum": 1000
+        },
+        "Shield": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1000
+        },
+        "Clear": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1000
         }
       },
       "required": [
@@ -729,7 +773,9 @@
         "LongPass",
         "ThroughPass",
         "Block",
-        "Cross"
+        "Cross",
+        "Shield",
+        "Clear"
       ],
       "additionalProperties": false
     },
