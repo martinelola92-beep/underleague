@@ -188,6 +188,14 @@ internal sealed class MatchEngine : IPerkWorld
         _context = new UtilityContext(_players, _ball, catalog.Ai, _tuning.ActionZone, _tuning.Pass.InterceptRadiusCells, _tuning.Ball.PassSpeedCellsPerTickMilli);
         _context.TacticalStates[0] = TacticalState.OutOfPossession;
         _context.TacticalStates[1] = TacticalState.OutOfPossession;
+
+        // ADR 0140: la orden táctica es estado INICIAL, como la alineación y los consumibles. No puede
+        // cambiar durante el partido —todas las decisiones del jugador ocurren entre partidos— y por eso
+        // se lee una vez aquí y no cada tick.
+        _context.Order[0] = setup.Home.Order;
+        _context.Order[1] = setup.Away.Order;
+        _context.UrgencyTarget[0] = setup.Home.Order;
+        _context.UrgencyTarget[1] = setup.Away.Order;
         _trace = config.Trace ? new MatchTraceRecorder(_players, _regulationTicks, setup) : null;
     }
 
@@ -840,9 +848,59 @@ internal sealed class MatchEngine : IPerkWorld
     /// balón amenaza mi portería cuando está a distancia de disparo de ella—. No se inventa ningún número
     /// nuevo: el protocolo de arquitectura pide buscar la convención existente antes de crear una.</para>
     /// </summary>
+    /// <summary>
+    /// Urgencia de cada equipo (ADR 0140): cuánto le empujan el marcador y el minuto a salirse de la orden
+    /// con la que salió.
+    ///
+    /// <para>Crece con las <b>dos</b> cosas a la vez, y tiene que ser así: el mismo 0-1 no pide lo mismo en
+    /// el minuto 10 que en el 89, y tres goles abajo no piden lo mismo que uno. La diferencia de goles
+    /// <b>satura</b> —a partir de cierto punto un equipo no puede atacar «más que con todo»— y el tiempo
+    /// no: va de 0 a 100 según lo consumido del tiempo reglamentario.</para>
+    ///
+    /// <para>Durante la prórroga de turba el tiempo reglamentario ya está consumido, así que la urgencia
+    /// se queda al máximo que permita el marcador, que es exactamente lo que describe un gol de oro.</para>
+    /// </summary>
+    private void UpdateUrgency()
+    {
+        int elapsedPercent = _regulationTicks <= 0
+            ? 100
+            : Math.Clamp(_tick * 100 / _regulationTicks, 0, 100);
+
+        int perGoal = _catalog.Ai.Context.UrgencyPerGoalPercent;
+
+        for (int team = 0; team < 2; team++)
+        {
+            int difference = _report.Goals[team] - _report.Goals[1 - team];
+            _context.UrgencyTarget[team] = difference == 0
+                ? _context.Order[team]
+                : difference < 0 ? Mentality.Offensive : Mentality.Defensive;
+            _context.Urgency[team] = UrgencyPercent(difference, elapsedPercent, perGoal);
+        }
+    }
+
+    /// <summary>
+    /// La urgencia, como función pura (ADR 0140): 0-100 a partir de la diferencia de goles, de lo
+    /// consumido del tiempo reglamentario y de cuánto pesa cada gol.
+    ///
+    /// <para>Se expone aparte para poder afirmarla sin simular un partido entero, que es el patrón que el
+    /// repositorio ya usa con <c>Utility.OffsideLineColumn</c> y <c>MatchEngine.ReachDistance</c>: una
+    /// regla que se puede escribir como función se prueba como función.</para>
+    /// </summary>
+    internal static int UrgencyPercent(int goalDifference, int elapsedPercent, int perGoalPercent)
+    {
+        if (goalDifference == 0 || perGoalPercent <= 0)
+        {
+            return 0;
+        }
+
+        int byScore = Math.Min(100, Math.Abs(goalDifference) * perGoalPercent);
+        return Math.Clamp(elapsedPercent, 0, 100) * byScore / 100;
+    }
+
     private void UpdatePerception()
     {
         _context.Tick = _tick;
+        UpdateUrgency();
         _context.Carrier[0] = null;
         _context.Carrier[1] = null;
         if (_ball.Owner is { } owner && owner.OnPitch)
@@ -3754,6 +3812,12 @@ internal sealed class MatchEngine : IPerkWorld
 
     /// <summary>Estado actual de un jugador.</summary>
     internal PlayerState StateForTest(int playerIndex) => _players[playerIndex].State;
+
+    /// <summary>Urgencia percibida por un equipo (0-100) tras la preparación del tick.</summary>
+    internal int UrgencyForTest(int team) => _context.Urgency[team];
+
+    /// <summary>Hacia qué mentalidad le empuja el marcador a un equipo.</summary>
+    internal Mentality UrgencyTargetForTest(int team) => _context.UrgencyTarget[team];
 
     /// <summary>Punto de llegada del vuelo actual.</summary>
     internal Vec2 FlightTargetForTest => _ball.FlightTarget;

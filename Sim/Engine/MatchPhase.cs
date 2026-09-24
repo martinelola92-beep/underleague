@@ -21,6 +21,19 @@ public enum TacticalState
     DefensiveTransition,
 }
 
+/// <summary>
+/// Mentalidad de un equipo (ADR 0140). No es un quinto estado táctico: es un <b>eje aparte</b> que
+/// multiplica sobre los cuatro de posesión, y por eso el jugador puede elegirlo sin que el motor tenga que
+/// saber dos cosas a la vez. La <b>orden del jugador</b> fija la fila de partida y la <b>urgencia</b>
+/// —marcador y minuto— la desplaza sin llegar a sustituirla: es una preferencia, no una instrucción.
+/// </summary>
+public enum Mentality
+{
+    Defensive,
+    Neutral,
+    Offensive,
+}
+
 /// <summary>Máquina de estados de un jugador durante el partido.</summary>
 public enum PlayerState
 {

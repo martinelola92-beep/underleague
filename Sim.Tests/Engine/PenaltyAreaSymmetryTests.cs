@@ -317,6 +317,6 @@ public sealed class PenaltyAreaSymmetryTests
             RetreatAtHomePenalty: 0);
 
         var shifts = new BlockShift[Enum.GetValues<TacticalState>().Length];
-        return new AiWeights(baseTable, tacticalTable, TestData.OffBallTackleAdjust(), context, shifts);
+        return new AiWeights(baseTable, tacticalTable, TestData.NeutralMentality(), TestData.OffBallTackleAdjust(), context, shifts);
     }
 }

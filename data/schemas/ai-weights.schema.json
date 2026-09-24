@@ -64,6 +64,30 @@
       ],
       "additionalProperties": false
     },
+    "mentality": {
+      "type": "object",
+      "description": "ADR 0140: multiplicador porcentual (100 = neutro) por mentalidad y acción. Eje aparte del estado táctico; se multiplica sobre él.",
+      "properties": {
+        "_doc": {
+          "type": "string"
+        },
+        "Defensive": {
+          "$ref": "#/$defs/actionPercent"
+        },
+        "Neutral": {
+          "$ref": "#/$defs/actionPercent"
+        },
+        "Offensive": {
+          "$ref": "#/$defs/actionPercent"
+        }
+      },
+      "required": [
+        "Defensive",
+        "Neutral",
+        "Offensive"
+      ],
+      "additionalProperties": false
+    },
     "context": {
       "type": "object",
       "description": "Términos de contexto de la utilidad. Enteros salvo las dos distancias en casillas.",
@@ -407,6 +431,7 @@
         "clearPressureBonusPerCenti": { "type": "integer", "minimum": 0, "maximum": 50 },
         "findSpaceIntentBonus": { "type": "integer", "minimum": 0, "maximum": 2000 },
         "findSpaceIntentRadiusCells": { "type": "number", "minimum": 0, "maximum": 16 },
+        "urgencyPerGoalPercent": { "type": "integer", "minimum": 0, "maximum": 200 },
         "throughPassFreeZoneCells": {
           "type": "number",
           "minimum": 0,
@@ -490,6 +515,7 @@
         "clearPressureBonusPerCenti",
         "findSpaceIntentBonus",
         "findSpaceIntentRadiusCells",
+        "urgencyPerGoalPercent",
         "crossTechniqueSlope"
       ],
       "additionalProperties": false
@@ -526,6 +552,7 @@
   "required": [
     "base",
     "tactical",
+    "mentality",
     "context",
     "blockShift"
   ],

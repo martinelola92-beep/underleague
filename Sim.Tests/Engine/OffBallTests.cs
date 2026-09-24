@@ -503,7 +503,7 @@ public sealed class OffBallTests
         var offBall = new int[positions];
         offBall[(int)role] = adjust;
         return new AiWeights(
-            baseTable, tacticalTable, offBall, context,
+            baseTable, tacticalTable, TestData.NeutralMentality(), offBall, context,
             new BlockShift[Enum.GetValues<TacticalState>().Length]);
     }
 
@@ -705,7 +705,7 @@ public sealed class OffBallTests
             FindSpaceCrowdedPenalty: 90, // AW-E (docs/pendientes.md, cambio 2 de 2)
             FindSpaceLineMarginCells: lineMargin); // AW-Q (docs/pendientes.md)
         return new AiWeights(
-            baseTable, tacticalTable, TestData.OffBallTackleAdjust(), context,
+            baseTable, tacticalTable, TestData.NeutralMentality(), TestData.OffBallTackleAdjust(), context,
             new BlockShift[Enum.GetValues<TacticalState>().Length]);
     }
 }

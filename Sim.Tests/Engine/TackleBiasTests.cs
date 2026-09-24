@@ -199,6 +199,6 @@ public sealed class TackleBiasTests
             BlockActiveRadiusCells: 50f);
 
         var shifts = new BlockShift[Enum.GetValues<TacticalState>().Length];
-        return new AiWeights(baseTable, tacticalTable, TestData.OffBallTackleAdjust(defender: 100), context, shifts);
+        return new AiWeights(baseTable, tacticalTable, TestData.NeutralMentality(), TestData.OffBallTackleAdjust(defender: 100), context, shifts);
     }
 }

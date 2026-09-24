@@ -86,6 +86,17 @@ public sealed record TeamSetup(string Id, string Name, Race Race, IReadOnlyList<
     public IReadOnlyList<Substitution> Substitutions { get; init; } = Array.Empty<Substitution>();
 
     /// <summary>
+    /// Orden táctica con la que este equipo sale al campo (ADR 0140): cuánto riesgo quiere correr. Parte
+    /// del estado inicial como la alineación y los consumibles —todas las decisiones del jugador ocurren
+    /// entre partidos—, y por eso es <c>init</c> y no algo que se pueda cambiar en vivo.
+    ///
+    /// <para><b>Es una preferencia, no una instrucción</b>: la urgencia del marcador y del minuto la
+    /// desplaza durante el partido sin llegar a sustituirla. Un equipo al que le quedan segundos y va
+    /// perdiendo ataca aunque su orden fuera defensiva, y eso es deliberado.</para>
+    /// </summary>
+    public Underleague.Sim.Engine.Mentality Order { get; init; } = Underleague.Sim.Engine.Mentality.Neutral;
+
+    /// <summary>
     /// Lesionados leves que este equipo ha decidido <b>no</b> retirar (ADR 0134 E), parte del estado inicial
     /// como <see cref="Substitutions"/>. Cada uno tiene que estar en <c>Lineup</c> y haberse lesionado
     /// levemente en su tick; lo demás es <c>ArgumentException</c>.

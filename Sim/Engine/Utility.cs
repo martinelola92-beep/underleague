@@ -63,6 +63,21 @@ internal sealed class UtilityContext
     /// <summary>Estado táctico por equipo (§3.4).</summary>
     public TacticalState[] TacticalStates { get; } = new TacticalState[2];
 
+    /// <summary>Orden táctica con la que sale cada equipo (ADR 0140); la elige el jugador antes del partido.</summary>
+    public Mentality[] Order { get; } = new Mentality[2];
+
+    /// <summary>
+    /// Hacia qué mentalidad empuja el marcador a cada equipo (ADR 0140): <c>Offensive</c> al que va
+    /// perdiendo, <c>Defensive</c> al que va ganando, su propia orden si están empatados.
+    /// </summary>
+    public Mentality[] UrgencyTarget { get; } = new Mentality[2];
+
+    /// <summary>
+    /// Cuánto empuja ese marcador, 0-100 (ADR 0140). Crece con la diferencia de goles <b>y con lo cerca
+    /// que está el final</b>: el mismo 0-1 no pide lo mismo en el minuto 10 que en el 89.
+    /// </summary>
+    public int[] Urgency { get; } = new int[2];
+
     /// <summary>Compañero más cercano al balón por equipo (empate por id); el perseguidor designado de ChaseBall (AW-S).</summary>
     public MatchPlayer?[] NearestToBall { get; } = new MatchPlayer?[2];
 
@@ -263,6 +278,7 @@ internal static class Utility
             var eval = Evaluate(ctx, p, action);
             int baseWeight = ctx.Weights.Base(p.Role, action);
             int tactical = ctx.Weights.Tactical(ctx.TacticalStates[p.Team], action);
+            int mentality = EffectiveMentality(ctx, p.Team, action);
             // El bono de Leader de los compañeros con casilla-hogar contigua, y el de un efecto de perk
             // modifyUtility (C1, docs/analisis/c1-piloto-cazagoles-diseno.md) si lo hay, entran los dos en
             // el multiplicador de rasgos: la fórmula de §3.5 sigue siendo Base * Tactical / 100 * TraitMult
@@ -270,11 +286,14 @@ internal static class Utility
             // (MatchEngine.UpdateContextCaches recalcula la zona cada tick, no aquí — RT-034).
             int traitMultiplier = p.ActionMultiplier(action)
                 * (100 + p.LeaderBonusPercent + p.PerkActionBonusPercent(action)) / 100;
-            int score = (baseWeight * tactical / 100 * traitMultiplier / 100) + eval.Context;
+            int score = (baseWeight * tactical / 100 * mentality / 100 * traitMultiplier / 100) + eval.Context;
 
             bool rejected = eval.Discarded || eval.OutsideOuterLimit;
+            // El volcado (RT-098) publica la mentalidad DENTRO del multiplicador táctico y no como una
+            // columna nueva: lo que explica una decisión es el producto, y añadir una columna obligaría a
+            // cambiar todos los consumidores del volcado para que la cuenta siguiera cuadrando.
             rows?.Add(new UtilityRow(
-                action, score, baseWeight, tactical, traitMultiplier, eval.Context,
+                action, score, baseWeight, tactical * mentality / 100, traitMultiplier, eval.Context,
                 rejected, eval.OutsideCentiCells > 0, eval.OutsideCentiCells));
 
             if (rejected)
@@ -309,6 +328,32 @@ internal static class Utility
         p.TackleOffBall = bestTackleOffBall;
         p.BlockTarget = bestBlockTarget;
         return best;
+    }
+
+
+    /// <summary>
+    /// Multiplicador de mentalidad de <paramref name="team"/> para esta acción (ADR 0140), ya mezclado con
+    /// la urgencia.
+    ///
+    /// <para>La orden del jugador fija el punto de partida y la urgencia lo <b>desplaza</b> hacia la
+    /// mentalidad que pide el marcador, en proporción a lo urgente que sea: con urgencia 0 manda la orden
+    /// y con urgencia 100 manda el marcador. Es una mezcla y no un salto porque un equipo no cambia de
+    /// carácter de golpe en el minuto 80: empieza a estirarse antes.</para>
+    ///
+    /// <para>Aritmética entera (RT-023). Si la orden ya coincide con lo que pide el marcador —un equipo
+    /// ofensivo que va perdiendo— la mezcla no hace nada, que es justo lo que debe pasar.</para>
+    /// </summary>
+    private static int EffectiveMentality(UtilityContext ctx, int team, PlayerAction action)
+    {
+        int ordered = ctx.Weights.Mentality(ctx.Order[team], action);
+        int urgency = ctx.Urgency[team];
+        if (urgency <= 0)
+        {
+            return ordered;
+        }
+
+        int target = ctx.Weights.Mentality(ctx.UrgencyTarget[team], action);
+        return ordered + ((target - ordered) * urgency / 100);
     }
 
     /// <summary>

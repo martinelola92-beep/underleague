@@ -358,6 +358,6 @@ public sealed class UtilityTests
 
         var context = new AiContext(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1.2f, 0, 0, 0, 0);
         var shifts = new BlockShift[Enum.GetValues<TacticalState>().Length];
-        return new AiWeights(baseTable, tacticalTable, TestData.OffBallTackleAdjust(), context, shifts);
+        return new AiWeights(baseTable, tacticalTable, TestData.NeutralMentality(), TestData.OffBallTackleAdjust(), context, shifts);
     }
 }

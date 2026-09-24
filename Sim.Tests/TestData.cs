@@ -70,4 +70,25 @@ internal static class TestData
         table[(int)Position.Forward] = forward;
         return table;
     }
+
+    /// <summary>
+    /// Tabla de mentalidad neutra (ADR 0140): 100 en todo, para los tests que construyen unos pesos a mano
+    /// y no están probando la mentalidad. Neutro <b>es</b> 100 por definición, así que esto no fija ningún
+    /// valor de balance: deja la mentalidad fuera de la cuenta, que es lo que esos tests quieren.
+    /// </summary>
+    public static int[,] NeutralMentality()
+    {
+        int mentalities = Enum.GetValues<Underleague.Sim.Engine.Mentality>().Length;
+        int actions = Enum.GetValues<Underleague.Sim.Engine.PlayerAction>().Length;
+        var table = new int[mentalities, actions];
+        for (int m = 0; m < mentalities; m++)
+        {
+            for (int a = 0; a < actions; a++)
+            {
+                table[m, a] = 100;
+            }
+        }
+
+        return table;
+    }
 }

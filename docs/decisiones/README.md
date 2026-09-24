@@ -140,3 +140,4 @@ El hueco del 0011 corresponde a una decisión sobre el radio de adyacencia que q
 | [0137](0137-conduccion-con-duracion.md) | Conducir es un compromiso con duración, no una intención que se reevalúa cada dos ticks | Aceptada. **Decisión del revisor** |
 | [0138](0138-el-equipo-percibe-y-el-portador-decide.md) | El equipo percibe (presión, apertura, marcaje, peligro) y el portador tiene respuestas: proteger y despejar | Aceptada. **Decisión del revisor** |
 | [0139](0139-el-balon-aereo-el-duelo-y-la-segunda-jugada.md) | El balón aéreo: la altura parte la recogida en tres, el duelo se resuelve con atributos y el cabezazo abre la segunda jugada | Aceptada. **Decisión del revisor** |
+| [0140](0140-marcador-minuto-y-orden-tactica.md) | Marcador, minuto y orden táctica: la mentalidad es un eje aparte que multiplica sobre el estado de posesión | Aceptada. **Decisión del revisor** |

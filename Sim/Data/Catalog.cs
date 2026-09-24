@@ -204,7 +204,12 @@ public sealed record AiContext(
     // más. No es una orden: es un sumando más en la misma comparación, así que un desmarque claramente
     // mejor sigue ganando. El radio dice hasta dónde "cerca" significa algo.
     int FindSpaceIntentBonus = 0,
-    float FindSpaceIntentRadiusCells = 0f);
+    float FindSpaceIntentRadiusCells = 0f,
+
+    // ADR 0140 — URGENCIA. Cuánto pesa cada gol de diferencia en la urgencia de un equipo, en tanto por
+    // ciento. Con 60, ir uno abajo vale 60 y ir dos o más satura en 100: la urgencia crece con el
+    // marcador, pero deja de crecer en algún punto porque un equipo no puede atacar «más que con todo».
+    int UrgencyPerGoalPercent = 0);
 
 /// <summary>
 /// Pesos de la IA de utilidad (RT-093..RT-098). Las tablas Base y Tactical se guardan como arrays
@@ -214,13 +219,15 @@ public sealed class AiWeights
 {
     private readonly int[,] _base;
     private readonly int[,] _tactical;
+    private readonly int[,] _mentality;
     private readonly int[] _offBallTackle;
     private readonly BlockShift[] _shift;
 
-    internal AiWeights(int[,] baseTable, int[,] tacticalTable, int[] offBallTackle, AiContext context, BlockShift[] shift)
+    internal AiWeights(int[,] baseTable, int[,] tacticalTable, int[,] mentalityTable, int[] offBallTackle, AiContext context, BlockShift[] shift)
     {
         _base = baseTable;
         _tactical = tacticalTable;
+        _mentality = mentalityTable;
         _offBallTackle = offBallTackle;
         Context = context;
         _shift = shift;
@@ -233,13 +240,20 @@ public sealed class AiWeights
     /// Comparte los arrays a propósito: nadie los muta después de cargar.
     /// </summary>
     internal AiWeights WithContext(AiContext context) =>
-        new(_base, _tactical, _offBallTackle, context, _shift);
+        new(_base, _tactical, _mentality, _offBallTackle, context, _shift);
 
     /// <summary>Peso base de la acción a para la posición p.</summary>
     public int Base(Position p, PlayerAction a) => _base[(int)p, (int)a];
 
     /// <summary>Multiplicador táctico (porcentaje, 100 = neutro) de la acción a en el estado s.</summary>
     public int Tactical(TacticalState s, PlayerAction a) => _tactical[(int)s, (int)a];
+
+    /// <summary>
+    /// Multiplicador de mentalidad (porcentaje, 100 = neutro) de la acción a con la mentalidad m (ADR
+    /// 0140). Es un eje <b>aparte</b> del estado táctico y se multiplica sobre él: el contraste
+    /// posesión/no posesión sigue siendo el mismo, y encima se aplica cuánto riesgo quiere el equipo.
+    /// </summary>
+    public int Mentality(Mentality m, PlayerAction a) => _mentality[(int)m, (int)a];
 
     /// <summary>
     /// Ajuste de utilidad de la ENTRADA SIN BALÓN al marcado, <b>por puesto</b> (ADR 0125 D2; antes, desde

@@ -512,16 +512,18 @@ public static class DataLoader
         "shieldBase", "shieldMinPressure", "shieldPressureBonusPerCenti", "shieldStrengthSlope",
         "clearBase", "clearMinDanger", "clearDangerBonusPerCenti", "clearPressureBonusPerCenti",
         "findSpaceIntentBonus", "findSpaceIntentRadiusCells",
+        "urgencyPerGoalPercent",
     };
 
     private static AiWeights ParseAiWeights(string file, string content)
     {
         var doc = JsonDocument.Parse(content);
         var root = new Json(doc.RootElement, file, "$");
-        root.EnsureKnownKeys("base", "tactical", "context", "blockShift");
+        root.EnsureKnownKeys("base", "tactical", "mentality", "context", "blockShift");
 
         int positionCount = Enum.GetValues<Position>().Length;
         int tacticalCount = Enum.GetValues<TacticalState>().Length;
+        int mentalityCount = Enum.GetValues<Mentality>().Length;
         int actionCount = Enum.GetValues<PlayerAction>().Length;
 
         var baseTable = new int[positionCount, actionCount];
@@ -569,6 +571,32 @@ public static class DataLoader
         }
 
         EnsureComplete(file, root.Prop("tactical").Path, tacticalSet, tacticalCount, actionCount);
+
+        // ADR 0140: la mentalidad se carga igual que el estado táctico —tabla completa, sin huecos— porque
+        // un hueco aquí no sería un cero: sería multiplicar por cero una acción entera para un equipo
+        // entero, y eso tiene que ser un error de dato explícito (RT-032).
+        var mentalityTable = new int[mentalityCount, actionCount];
+        var mentalitySet = new bool[mentalityCount, actionCount];
+        foreach (var (mentalityKey, mentalityNode) in root.Prop("mentality").EnumerateObjectEntries())
+        {
+            if (!Enum.TryParse<Mentality>(mentalityKey, out var mentality))
+            {
+                throw new DataException(file, mentalityNode.Path, $"mentalidad desconocida '{mentalityKey}'");
+            }
+
+            foreach (var (actionKey, value) in mentalityNode.EnumerateObjectEntries())
+            {
+                if (!Enum.TryParse<PlayerAction>(actionKey, out var action))
+                {
+                    throw new DataException(file, value.Path, $"acción desconocida '{actionKey}'");
+                }
+
+                mentalityTable[(int)mentality, (int)action] = value.AsInt();
+                mentalitySet[(int)mentality, (int)action] = true;
+            }
+        }
+
+        EnsureComplete(file, root.Prop("mentality").Path, mentalitySet, mentalityCount, actionCount);
 
         var contextNode = root.Prop("context");
         contextNode.EnsureKnownKeys(AiContextKnownKeys);
@@ -648,7 +676,8 @@ public static class DataLoader
             ClearDangerBonusPerCenti: contextNode.Prop("clearDangerBonusPerCenti").AsInt(),
             ClearPressureBonusPerCenti: contextNode.Prop("clearPressureBonusPerCenti").AsInt(),
             FindSpaceIntentBonus: contextNode.Prop("findSpaceIntentBonus").AsInt(),
-            FindSpaceIntentRadiusCells: contextNode.Prop("findSpaceIntentRadiusCells").AsFloat());
+            FindSpaceIntentRadiusCells: contextNode.Prop("findSpaceIntentRadiusCells").AsFloat(),
+            UrgencyPerGoalPercent: contextNode.Prop("urgencyPerGoalPercent").AsInt());
 
         // ADR 0125 D2: el ajuste de la entrada sin balón es un mapa por puesto, con la misma forma que la
         // tabla `base` —el único patrón por puesto que ya existe en este fichero—, y con signo. Los cuatro
@@ -734,7 +763,7 @@ public static class DataLoader
             }
         }
 
-        return new AiWeights(baseTable, tacticalTable, offBallTackle, context, shiftArray);
+        return new AiWeights(baseTable, tacticalTable, mentalityTable, offBallTackle, context, shiftArray);
     }
 
     private static void EnsureComplete(string file, string path, bool[,] set, int dim0, int dim1)
