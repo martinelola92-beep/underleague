@@ -1149,6 +1149,11 @@ internal sealed class MatchEngine : IPerkWorld
             player.AerialCooldown--;
         }
 
+        if (player.GrudgeTicks > 0 && --player.GrudgeTicks == 0)
+        {
+            player.GrudgeTarget = null;
+        }
+
         UpdateEnergy(player);
 
         // Un estado de decisión CON contador no vuelve a decidir hasta que se le acaba: es lo que hace de
@@ -3718,7 +3723,15 @@ internal sealed class MatchEngine : IPerkWorld
     /// </summary>
     private void WhistleOrLetPlay(MatchPlayer offender, MatchPlayer victim, bool offBall)
     {
-        if (_rng.Chance(_tuning.Referee.WhistlePercent * 100))
+        // ADR 0145, RF-055d: LA TURBA ES EL ÚNICO TRAMO DEL PARTIDO SIN ÁRBITRO, y hasta ahora eso era una
+        // frase. En la prórroga de gol de oro no se pita nada: la jugada sigue, el que entra se lleva su
+        // derribo —eso es física, no castigo— y no hay falta, ni tarjeta, ni reanudación que pare el juego.
+        // Es la ventana de las builds de violencia y el mayor riesgo de las técnicas, que es literalmente
+        // lo que el requisito promete.
+        //
+        // Se resuelve aquí y no subiendo la tolerancia con un número: quitar al árbitro es una REGLA, y
+        // hacerlo con una probabilidad al 99 % sería dejar un 1 % de partido en el que la regla no vale.
+        if (!IsMob && _rng.Chance(_tuning.Referee.WhistlePercent * 100))
         {
             ResolveFoul(offender, victim, offBall);
             return;
@@ -4094,6 +4107,7 @@ internal sealed class MatchEngine : IPerkWorld
 
         _report.Injuries++;
         victim.Injured = true;
+        RaiseGrudgeAgainst(tackler, victim);
 
         // BE-B: sólo cuenta si la víctima es del otro equipo, que es lo que el campo dice de sí mismo
         // ("lesiones causadas a rivales", RF-122) y lo que RF-125 premia. Sin esta comparación, un perk
@@ -4145,6 +4159,55 @@ internal sealed class MatchEngine : IPerkWorld
     /// política automática de <c>/Balance</c> siempre sustituye—: sin ningún <c>PlayOn</c> el coste es leer
     /// un <c>Count</c>, como el grabador de traza apagado (<c>SimConfig.Trace</c>).
     /// </summary>
+    /// <summary>
+    /// Les pone ganas al culpable (ADR 0145): los compañeros de la víctima <b>que estaban cerca</b> pasan a
+    /// valorar más entrarle o cargarle a él durante un rato.
+    ///
+    /// <para><b>Cerca, y no todo el equipo</b>, por dos motivos. Uno de diseño: `reglas locales &gt;
+    /// cambios globales de IA` — lo que enciende la represalia es haberlo visto, y eso es una regla que el
+    /// jugador puede entender mirando el campo. Y uno de honestidad: encenderla en los siete haría que la
+    /// lesión cambiara el comportamiento del equipo entero de golpe, que es indistinguible de un script.</para>
+    ///
+    /// <para>Nunca contra un compañero y nunca contra uno mismo: la atribución de la ADR 0124 ya tuvo que
+    /// aprender esa distinción y no hay motivo para volver a perderla aquí.</para>
+    /// </summary>
+    private void RaiseGrudgeAgainst(MatchPlayer offender, MatchPlayer victim)
+    {
+        if (offender.Team == victim.Team)
+        {
+            return;
+        }
+
+        int ticks = _tuning.States.GrudgeTicks;
+        if (ticks <= 0)
+        {
+            return;
+        }
+
+        for (int i = 0; i < _players.Length; i++)
+        {
+            var mate = _players[i];
+            if (mate.Team != victim.Team || ReferenceEquals(mate, victim) || !mate.OnPitch)
+            {
+                continue;
+            }
+
+            if (Vec2.Distance(mate.Position, victim.Position) > GrudgeWitnessCells)
+            {
+                continue;
+            }
+
+            mate.GrudgeTarget = offender;
+            mate.GrudgeTicks = ticks;
+        }
+    }
+
+    /// <summary>
+    /// A qué distancia se considera que un compañero <b>vio</b> la entrada. No es balance: es la definición
+    /// de testigo, y es lo que mantiene la represalia local.
+    /// </summary>
+    private const float GrudgeWitnessCells = 4f;
+
     private PlayOn? FindPlayOn(MatchPlayer victim)
     {
         var playOns = victim.Team == 0 ? _setup.Home.PlayOns : _setup.Away.PlayOns;

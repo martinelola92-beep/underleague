@@ -886,6 +886,21 @@ internal static class Utility
             eval.Context -= context.TiredEffortPenalty * p.TiredPercent / 100;
         }
 
+        // ADR 0145: REPRESALIA. Si el objetivo de esta entrada o de esta carga es justo el que le rompió a
+        // un compañero delante de mí, vale más. Se aplica aquí, sobre el objetivo YA elegido por cada
+        // evaluador, porque el rencor no cambia a quién voy: cambia cuánto me apetece ir.
+        if (!eval.Discarded && p.GrudgeTicks > 0 && p.GrudgeTarget is { } grudge)
+        {
+            bool againstGrudge =
+                (action == PlayerAction.Tackle && ReferenceEquals(eval.TackleTarget, grudge))
+                || (action == PlayerAction.Block && ReferenceEquals(eval.BlockTarget, grudge));
+
+            if (againstGrudge)
+            {
+                eval.Context += context.GrudgeBonus;
+            }
+        }
+
         if (eval.Discarded || !IsMovementAction(action))
         {
             return eval;

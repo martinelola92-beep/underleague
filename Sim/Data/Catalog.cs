@@ -233,7 +233,12 @@ public sealed record AiContext(
     // están apretando, aunque eso signifique ir hacia atrás.
     int SupportBase = 0,
     int SupportMinCarrierPressure = 0,
-    int SupportPressedBonusPerCenti = 0);
+    int SupportPressedBonusPerCenti = 0,
+
+    // ADR 0145 — REPRESALIA. Lo que vale más entrarle o cargarle al que acaba de romperte a un compañero
+    // delante de ti. Es un SUMANDO, no una orden: el jugador sigue comparando, y si entrar no era buena
+    // idea sigue sin serlo. El encargo lo pide así de forma explícita.
+    int GrudgeBonus = 0);
 
 /// <summary>
 /// Pesos de la IA de utilidad (RT-093..RT-098). Las tablas Base y Tactical se guardan como arrays
@@ -463,7 +468,7 @@ public sealed record BallTuning(
     int HeaderLiftCellsPerTickMilli = 0);
 
 /// <summary>tuning.states: duraciones de los estados de jugador, en ticks.</summary>
-public sealed record StatesTuning(int PassingTicks, int ShootingTicks, int TacklingTicks, int KnockedDownTicks, int CelebratingTicks, int DribbleDuelCooldownTicks, int TackleCooldownTicks, int OffBallTackleCooldownTicks, int ShieldingTicks = 0, int AerialCooldownTicks = 0);
+public sealed record StatesTuning(int PassingTicks, int ShootingTicks, int TacklingTicks, int KnockedDownTicks, int CelebratingTicks, int DribbleDuelCooldownTicks, int TackleCooldownTicks, int OffBallTackleCooldownTicks, int ShieldingTicks = 0, int AerialCooldownTicks = 0, int GrudgeTicks = 0);
 
 /// <summary>tuning.pass.</summary>
 public sealed record PassTuning(int BaseSuccess, int TechniqueFactor, int DistancePenaltyPerCell, int PressurePenalty, float InterceptRadiusCells, int InterceptBaseChance, int InterceptTechniqueFactor, float MaxLeadCells, int InterceptContactPercent, int LoftedPeakHeightCellsMilli = 0);

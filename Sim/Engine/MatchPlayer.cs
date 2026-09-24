@@ -538,6 +538,20 @@ internal sealed class MatchPlayer
     /// </summary>
     public int AerialCooldown { get; set; }
 
+    /// <summary>
+    /// Rival al que este jugador le tiene ganas ahora mismo, por haberle roto a un compañero delante de él
+    /// (ADR 0145), o null. <b>Caduca</b>: ver <see cref="GrudgeTicks"/>.
+    ///
+    /// <para>No es <see cref="TackleNemesis"/>, que es de un perk, no caduca nunca y <b>sustituye</b> el
+    /// objetivo de la entrada. Éste no sustituye nada: sólo hace que entrarle a ése valga más que entrarle
+    /// a otro, así que el jugador sigue decidiendo — que es lo que el encargo pide expresamente al prohibir
+    /// que la represalia sea «lesión → ataque automático al culpable».</para>
+    /// </summary>
+    public MatchPlayer? GrudgeTarget { get; set; }
+
+    /// <summary>Ticks que le quedan al rencor. Al llegar a cero se olvida el objetivo.</summary>
+    public int GrudgeTicks { get; set; }
+
     /// <summary>Tarjetas amarillas acumuladas (la segunda es roja si lo dice tuning).</summary>
     public int YellowCards { get; set; }
 

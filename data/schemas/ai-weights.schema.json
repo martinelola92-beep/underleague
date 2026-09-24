@@ -439,6 +439,7 @@
         "supportBase": { "type": "integer", "minimum": 0, "maximum": 2000 },
         "supportMinCarrierPressure": { "type": "integer", "minimum": 0, "maximum": 100 },
         "supportPressedBonusPerCenti": { "type": "integer", "minimum": 0, "maximum": 50 },
+        "grudgeBonus": { "type": "integer", "minimum": 0, "maximum": 2000 },
         "throughPassFreeZoneCells": {
           "type": "number",
           "minimum": 0,
@@ -530,6 +531,7 @@
         "supportBase",
         "supportMinCarrierPressure",
         "supportPressedBonusPerCenti",
+        "grudgeBonus",
         "crossTechniqueSlope"
       ],
       "additionalProperties": false

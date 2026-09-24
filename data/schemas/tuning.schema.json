@@ -346,6 +346,10 @@
           "description": "Gameplay AI Foundations Pass P2: cuánto dura el compromiso de proteger el balón. Mismo patrón que dribble.driveTicks (ADR 0137): mientras dura, el portador no vuelve a decidir.",
           "$ref": "#/$defs/ticks"
         },
+        "GrudgeTicks": {
+          "description": "ADR 0145: cuánto le dura a un jugador el rencor contra el rival que le rompió a un compañero delante. Caduca a propósito: una represalia que no caduca deja de ser una reacción y pasa a ser un rasgo.",
+          "$ref": "#/$defs/ticks"
+        },
         "AerialCooldownTicks": {
           "description": "ADR 0139: ticks que un jugador tarda en poder volver a disputar un balón por alto. Estructural, no calibración: sin él, el que cabecea sigue pegado al balón y lo vuelve a disputar al tick siguiente —medido, 88 duelos aéreos por partido—.",
           "$ref": "#/$defs/ticks"
@@ -361,7 +365,8 @@
         "TackleCooldownTicks",
         "OffBallTackleCooldownTicks",
         "ShieldingTicks",
-        "AerialCooldownTicks"
+        "AerialCooldownTicks",
+        "GrudgeTicks"
       ],
       "additionalProperties": false
     },

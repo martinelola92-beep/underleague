@@ -516,6 +516,7 @@ public static class DataLoader
         "passReceiverPressureRankPenalty", "passReceiverPressurePenalty", "passReceiverHoldSlope",
         "tiredEffortPenalty",
         "supportBase", "supportMinCarrierPressure", "supportPressedBonusPerCenti",
+        "grudgeBonus",
     };
 
     private static AiWeights ParseAiWeights(string file, string content)
@@ -687,7 +688,8 @@ public static class DataLoader
             TiredEffortPenalty: contextNode.Prop("tiredEffortPenalty").AsInt(),
             SupportBase: contextNode.Prop("supportBase").AsInt(),
             SupportMinCarrierPressure: contextNode.Prop("supportMinCarrierPressure").AsInt(),
-            SupportPressedBonusPerCenti: contextNode.Prop("supportPressedBonusPerCenti").AsInt());
+            SupportPressedBonusPerCenti: contextNode.Prop("supportPressedBonusPerCenti").AsInt(),
+            GrudgeBonus: contextNode.Prop("grudgeBonus").AsInt());
 
         // ADR 0125 D2: el ajuste de la entrada sin balón es un mapa por puesto, con la misma forma que la
         // tabla `base` —el único patrón por puesto que ya existe en este fichero—, y con signo. Los cuatro
@@ -863,7 +865,7 @@ public static class DataLoader
 
     private static StatesTuning ParseStates(Json node)
     {
-        node.EnsureKnownKeys("PassingTicks", "ShootingTicks", "TacklingTicks", "KnockedDownTicks", "CelebratingTicks", "DribbleDuelCooldownTicks", "TackleCooldownTicks", "OffBallTackleCooldownTicks", "ShieldingTicks", "AerialCooldownTicks");
+        node.EnsureKnownKeys("PassingTicks", "ShootingTicks", "TacklingTicks", "KnockedDownTicks", "CelebratingTicks", "DribbleDuelCooldownTicks", "TackleCooldownTicks", "OffBallTackleCooldownTicks", "ShieldingTicks", "AerialCooldownTicks", "GrudgeTicks");
         return new StatesTuning(
             node.Prop("PassingTicks").AsInt(),
             node.Prop("ShootingTicks").AsInt(),
@@ -874,7 +876,8 @@ public static class DataLoader
             node.Prop("TackleCooldownTicks").AsInt(),
             node.Prop("OffBallTackleCooldownTicks").AsInt(),
             node.Prop("ShieldingTicks").AsInt(),
-            node.Prop("AerialCooldownTicks").AsInt());
+            node.Prop("AerialCooldownTicks").AsInt(),
+            node.Prop("GrudgeTicks").AsInt());
     }
 
     /// <summary>tuning.resolution: el suelo y el techo únicos de la ADR 0050 P4.</summary>
