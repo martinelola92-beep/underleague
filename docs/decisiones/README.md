@@ -146,3 +146,4 @@ El hueco del 0011 corresponde a una decisión sobre el radio de adyacencia que q
 | [0143](0143-el-balon-parado-es-una-jugada.md) | El balón parado es una jugada: el sacador decide dentro de su reanudación, y el área del penalti se vacía y se mantiene vacía | Aceptada. **Decisión del revisor** |
 | [0144](0144-el-censo-de-utilidad-y-la-descarga.md) | El censo de utilidad como instrumento del motor, y `OfferSupport` pasa a ser la descarga al compañero apretado | Aceptada. **Decisión del revisor** |
 | [0145](0145-represalia-y-turba-sin-arbitro.md) | Represalia como preferencia temporal y local, y la turba sin árbitro (RF-055d) | Aceptada. **Decisión del revisor** |
+| [0146](0146-modify-utility-alcanzable.md) | `modifyUtility` deja de ser inalcanzable: entra en el esquema, con techo C10 sacado de la tabla real y plantillas de descripción | Aceptada. **Decisión del revisor** |

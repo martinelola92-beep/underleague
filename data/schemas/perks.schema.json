@@ -357,7 +357,8 @@
             "modifyZoneShape",
             "modifyMarkBias",
             "modifyTackleBias",
-            "extraAction"
+            "extraAction",
+            "modifyUtility"
           ]
         },
         "target": {
@@ -495,6 +496,36 @@
           "enum": [
             "knockedDown",
             "fouled"
+          ]
+        },
+        "utilityAction": {
+          "description": "C1 (ADR 0146): acción cuya INTENCIÓN modifica un efecto 'modifyUtility'. Obligatorio en modifyUtility y prohibido en cualquier otro tipo (lo comprueba el cargador). Es el único canal del motor que cambia lo que un jugador QUIERE hacer, en vez de si le sale.",
+          "enum": [
+            "ChaseBall",
+            "MarkOpponent",
+            "OfferSupport",
+            "CoverSpace",
+            "Dribble",
+            "Shoot",
+            "Tackle",
+            "Retreat",
+            "FindSpace",
+            "PressCarrier",
+            "ShortPass",
+            "LongPass",
+            "ThroughPass",
+            "Block",
+            "Cross",
+            "Shield",
+            "Clear"
+          ]
+        },
+        "utilityZone": {
+          "description": "C1 (ADR 0146): tercio del campo en el que cuenta el bono de 'modifyUtility'. Opcional: sin él el bono vale siempre.",
+          "enum": [
+            "Own",
+            "Middle",
+            "Opposing"
           ]
         }
       },

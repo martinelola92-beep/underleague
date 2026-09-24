@@ -62,6 +62,10 @@ public static class PerkLoader
 
         // Tanda 2 del catálogo (docs/analisis/perks-catalogo-unificado.md §3.2): C4, C5, C7, C8.
         "scalar", "dimension", "markBias", "markTag", "tackleBias",
+
+        // C1 (modifyUtility, ADR 0146): la acción cuya intención se modifica y, opcionalmente, el tercio
+        // del campo en el que cuenta.
+        "utilityAction", "utilityZone",
     };
 
     private static readonly string[] AxisNames =
@@ -392,6 +396,49 @@ public static class PerkLoader
     /// otro maestro— y que no haya ciclos entre maestros. La llama <c>DataLoader</c> tras cargar todos los
     /// perks; un dato inválido es un error explícito, nunca silencioso (RT-032).
     /// </summary>
+    /// <summary>
+    /// Techo C10 de <c>modifyUtility</c> (ADR 0146): un bono de intención sobre una acción que <b>ese
+    /// puesto no puede elegir nunca</b> es letra muerta, y la letra muerta en <c>/data</c> es un error
+    /// explícito, no un perk que no hace nada (RT-032).
+    ///
+    /// <para>El caso que el plan nombraba —«un ×3 a <c>Shoot</c> en un portero tiene que ser un error de
+    /// datos»— sale de aquí sin ninguna regla especial: el peso base de <c>Shoot</c> para el portero es
+    /// <b>cero</b>, y un porcentaje de cero es cero. Comprobarlo contra la tabla real en vez de contra una
+    /// lista escrita a mano es lo que hace que la regla siga valiendo cuando la tabla cambie.</para>
+    ///
+    /// <para>Sólo se puede comprobar con el catálogo y los pesos delante a la vez, así que vive aquí y no
+    /// en el cargador de un fichero, igual que <see cref="ValidateArcs"/>.</para>
+    /// </summary>
+    public static void ValidateUtilityEffects(IReadOnlyList<PerkDefinition> perks, AiWeights ai)
+    {
+        for (int i = 0; i < perks.Count; i++)
+        {
+            var perk = perks[i];
+            if (perk.PositionOnly is not { } position)
+            {
+                continue;
+            }
+
+            foreach (var effect in perk.Effects)
+            {
+                if (effect.Type != EffectType.ModifyUtility)
+                {
+                    continue;
+                }
+
+                if (ai.Base(position, effect.UtilityAction) == 0)
+                {
+                    throw new DataException(
+                        "perks/" + perk.Id + ".json",
+                        "$.effects",
+                        $"modifyUtility sobre '{effect.UtilityAction}' en un perk exclusivo de {position}: el peso "
+                            + "base de esa acción para ese puesto es cero, así que el bono no puede cambiar "
+                            + "ninguna decisión (RT-032)");
+                }
+            }
+        }
+    }
+
     public static void ValidateArcs(IReadOnlyList<PerkDefinition> perks, BuildArcs arcs)
     {
         ArgumentNullException.ThrowIfNull(perks);
@@ -732,6 +779,35 @@ public static class PerkLoader
             throw new DataException(strayTackleBiasNode.File, strayTackleBiasNode.Path, "'tackleBias' solo es válido en modifyTackleBias");
         }
 
+        // C1 (ADR 0146): 'utilityAction' es obligatorio en modifyUtility —un bono de intención sin decir a
+        // QUÉ intención no significa nada— y no vale en ningún otro tipo. 'utilityZone' es opcional: sin
+        // ella el bono vale siempre; con ella sólo en ese tercio del campo.
+        var utilityAction = PlayerAction.ChaseBall;
+        Zone? utilityZone = null;
+        if (type == EffectType.ModifyUtility)
+        {
+            var actionNode = node.TryProp("utilityAction")
+                ?? throw new DataException(file, node.Path, "modifyUtility necesita 'utilityAction' (RT-032)");
+            utilityAction = ParseEnum<PlayerAction>(actionNode, "acción");
+
+            if (node.TryProp("utilityZone") is { } zoneNode)
+            {
+                utilityZone = ParseEnum<Zone>(zoneNode, "tercio del campo");
+            }
+        }
+        else
+        {
+            if (node.TryProp("utilityAction") is { } strayAction)
+            {
+                throw new DataException(strayAction.File, strayAction.Path, "'utilityAction' solo es válido en modifyUtility");
+            }
+
+            if (node.TryProp("utilityZone") is { } strayZone)
+            {
+                throw new DataException(strayZone.File, strayZone.Path, "'utilityZone' solo es válido en modifyUtility");
+            }
+        }
+
         // ADR 0050 P1: el dato se escribe como porcentaje de CUOTA con signo y el cargador lo lleva al
         // multiplicador interno en base 10.000. Solo modifyProbability vive en esa base: los puntos de
         // atributo, las casillas de correa y los ticks de derribo son sus propias unidades y no se tocan.
@@ -773,7 +849,7 @@ public static class PerkLoader
         return new EffectDefinition(
             type, target, targetTag, attribute, value, usesCounter, valuePerCounter, counter,
             maxValue, counterDivisor, probability, duration, state, ticks, immunity, relocationPoint,
-            scalar, zoneDimension, markBias, markTag, tackleBias);
+            scalar, zoneDimension, markBias, markTag, tackleBias, utilityAction, utilityZone);
     }
 
     /// <summary>

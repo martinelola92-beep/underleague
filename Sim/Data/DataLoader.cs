@@ -138,6 +138,7 @@ public static class DataLoader
 
         // Las dependencias entre perks solo se pueden comprobar con el catálogo entero delante.
         PerkLoader.ValidateArcs(perks, arcs);
+        PerkLoader.ValidateUtilityEffects(perks, ai);
         var catalog = new PerkCatalog(perks, arcs);
 
         // Toda condición del catálogo tiene que ser describible en todos los idiomas cargados (RT-035):
@@ -168,6 +169,9 @@ public static class DataLoader
         // Secciones del rediseño espacial (paquete S): relaciones de vínculo (ADR 0021), inmunidades y
         // estadísticas de las funciones de condición nuevas (fase1b-diseno.md §1.5).
         "links", "immunities", "startZones", "startFlanks", "stats",
+
+        // C1 (ADR 0146): los nombres legibles de las acciones, para describir un efecto modifyUtility.
+        "actions",
 
         // Cuatro primitivas de la tanda 1 del catálogo: punto simbólico de un efecto relocate ("Último hombre").
         "points",

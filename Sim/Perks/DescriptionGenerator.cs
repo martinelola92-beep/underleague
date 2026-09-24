@@ -32,6 +32,7 @@ public static class DescriptionGenerator
     private const string TagsSection = "tags";
     private const string PositionsSection = "positions";
     private const string ZonesSection = "zones";
+    private const string ActionsSection = "actions";
     private const string DetailsSection = "details";
     private const string EventsSection = "events";
     private const string CountersSection = "counters";
@@ -390,6 +391,10 @@ public static class DescriptionGenerator
                 : "modifyTackleBiasKnockedDown",
 
             EffectType.ExtraAction => "extraAction",
+
+            // C1 (ADR 0146): dos frases, porque la cláusula de tercio cambia lo que el jugador tiene que
+            // entender. «Quiere tirar más» y «quiere tirar más cuando está arriba» no son la misma promesa.
+            EffectType.ModifyUtility => effect.UtilityZone is null ? "modifyUtility" : "modifyUtilityInZone",
             _ => throw new InvalidOperationException($"tipo de efecto sin plantilla: {effect.Type}"),
         };
 
@@ -398,6 +403,8 @@ public static class DescriptionGenerator
         text = Replace(text, "{immunity}", templates.Get(ImmunitiesSection, ImmunityKey(effect.Immunity)));
         text = Replace(text, "{point}", templates.Get(PointsSection, PointKey(effect.RelocationPoint)));
         text = Replace(text, "{attribute}", templates.Get(AttributesSection, ConditionCompiler.AttributeName(effect.Attribute)));
+        text = Replace(text, "{action}", templates.Get(ActionsSection, effect.UtilityAction.ToString()));
+        text = Replace(text, "{utilityZone}", templates.Get(ZonesSection, (effect.UtilityZone ?? Underleague.Sim.Model.Zone.Own).ToString()));
         text = Replace(text, "{scalar}", templates.Get(ScalarsSection, ScalarKey(effect.Scalar)));
         text = Replace(text, "{dimension}", templates.Get(ZoneDimensionsSection, ZoneDimensionKey(effect.ZoneDimension)));
         text = Replace(text, "{markTag}", Tag(effect.MarkTag, templates));

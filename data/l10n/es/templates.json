@@ -52,7 +52,9 @@
     "modifyMarkBiasAvoided": "ningún marcador rival quiere hacerse cargo de {target}",
     "modifyTackleBiasKnockedDown": "{target} prefiere entrar al rival que ya está derribado",
     "modifyTackleBiasFouled": "va a por quien le hizo la última falta",
-    "extraAction": "{target} repite la jugada en el mismo instante"
+    "extraAction": "{target} repite la jugada en el mismo instante",
+    "modifyUtility": "{target} quiere {action} más",
+    "modifyUtilityInZone": "{target} quiere {action} más en la zona {utilityZone}"
   },
   "triggers": {
     "MATCH_START": "al empezar el partido",
@@ -294,6 +296,25 @@
     "Defender": "defensa",
     "Midfielder": "centrocampista",
     "Forward": "delantero"
+  },
+  "actions": {
+    "ChaseBall": "ir a por el balón",
+    "MarkOpponent": "marcar",
+    "OfferSupport": "ofrecerse en corto",
+    "CoverSpace": "cubrir",
+    "Dribble": "conducir",
+    "Shoot": "tirar",
+    "Tackle": "entrar",
+    "Retreat": "replegarse",
+    "FindSpace": "buscar espacio",
+    "PressCarrier": "presionar",
+    "ShortPass": "tocar en corto",
+    "LongPass": "abrir el juego",
+    "ThroughPass": "buscar la espalda",
+    "Block": "cargar",
+    "Cross": "centrar",
+    "Shield": "proteger el balón",
+    "Clear": "despejar"
   },
   "zones": {
     "Own": "propia",

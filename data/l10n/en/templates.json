@@ -52,7 +52,9 @@
     "modifyMarkBiasAvoided": "no rival marker wants to take on {target}",
     "modifyTackleBiasKnockedDown": "{target} prefers to tackle the rival who is already down",
     "modifyTackleBiasFouled": "goes after whoever fouled them last",
-    "extraAction": "{target} repeats the play in the same instant"
+    "extraAction": "{target} repeats the play in the same instant",
+    "modifyUtility": "{target} wants {action} more",
+    "modifyUtilityInZone": "{target} wants {action} more in the {utilityZone} third"
   },
   "triggers": {
     "MATCH_START": "when the match starts",
@@ -294,6 +296,25 @@
     "Defender": "defender",
     "Midfielder": "midfielder",
     "Forward": "forward"
+  },
+  "actions": {
+    "ChaseBall": "chasing the ball",
+    "MarkOpponent": "marking",
+    "OfferSupport": "offering a short outlet",
+    "CoverSpace": "covering",
+    "Dribble": "driving",
+    "Shoot": "shooting",
+    "Tackle": "tackling",
+    "Retreat": "dropping back",
+    "FindSpace": "finding space",
+    "PressCarrier": "pressing",
+    "ShortPass": "short passing",
+    "LongPass": "switching play",
+    "ThroughPass": "playing in behind",
+    "Block": "charging",
+    "Cross": "crossing",
+    "Shield": "shielding the ball",
+    "Clear": "clearing"
   },
   "zones": {
     "Own": "own",
