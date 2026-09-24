@@ -67,6 +67,12 @@ internal sealed class UtilityContext
     public Mentality[] Order { get; } = new Mentality[2];
 
     /// <summary>
+    /// Cuántas casillas puede salirse del área el portero de cada equipo <b>en este tick</b> (ADR 0141).
+    /// Cero —lo normal— es el portero acotado de siempre.
+    /// </summary>
+    public float[] KeeperExitCells { get; } = new float[2];
+
+    /// <summary>
     /// Hacia qué mentalidad empuja el marcador a cada equipo (ADR 0140): <c>Offensive</c> al que va
     /// perdiendo, <c>Defensive</c> al que va ganando, su propia orden si están empatados.
     /// </summary>
@@ -461,13 +467,23 @@ internal static class Utility
         return ClampToPitch(position + (toIntention * (lead / intent)));
     }
 
-    public static Vec2 ClampToArea(Vec2 point, int team)
+    public static Vec2 ClampToArea(Vec2 point, int team) => ClampToArea(point, team, 0f);
+
+    /// <summary>
+    /// Acota un punto al área que defiende <paramref name="team"/>, <b>ensanchada</b> en
+    /// <paramref name="extraCells"/> casillas (ADR 0141).
+    ///
+    /// <para>Con <c>extraCells = 0</c> es el clamp de siempre, bit a bit. Con un valor positivo es el
+    /// único sitio por el que un portero puede salir del área, y por eso la salida es una <b>excepción
+    /// acotada</b> y no un permiso: el portero nunca deja de estar acotado, se le mueve el límite.</para>
+    /// </summary>
+    public static Vec2 ClampToArea(Vec2 point, int team, float extraCells)
     {
-        float minX = team == 0 ? 0f : Pitch.Columns - Pitch.AreaColumns + AreaMargin;
-        float maxX = team == 0 ? Pitch.AreaColumns - AreaMargin : Pitch.Columns;
+        float minX = team == 0 ? 0f : Pitch.Columns - Pitch.AreaColumns + AreaMargin - extraCells;
+        float maxX = team == 0 ? Pitch.AreaColumns - AreaMargin + extraCells : Pitch.Columns;
         float x = Math.Clamp(point.X, minX, maxX);
-        float y = Math.Clamp(point.Y, Pitch.AreaTop, Pitch.AreaBottom);
-        return new Vec2(x, y);
+        float y = Math.Clamp(point.Y, Pitch.AreaTop - extraCells, Pitch.AreaBottom + extraCells);
+        return ClampToPitch(new Vec2(x, y));
     }
 
     /// <summary>Acota un punto al rectángulo del campo.</summary>
@@ -685,7 +701,7 @@ internal static class Utility
         Vec2 clamped = ClampToZone(p, raw);
         if (!p.IsOutfield)
         {
-            clamped = ClampToArea(clamped, p.Team);
+            clamped = ClampToArea(clamped, p.Team, ctx.KeeperExitCells[p.Team]);
         }
 
         float outside = DistanceOutsideZone(p, clamped);
@@ -804,7 +820,12 @@ internal static class Utility
         Vec2 point = ball.InFlight ? ball.FlightTarget : ball.Position;
         bool loose = ball.Owner is null && !ball.InFlight && !ctx.BallDead;
 
-        if (!p.IsOutfield && (!loose || !Pitch.IsInArea(point, p.Team)))
+        // ADR 0141: el portero persigue el balón suelto DENTRO de su área... y también fuera de ella
+        // cuando este tick se le permite salir. Sin esta segunda mitad, ensanchar el clamp no habría
+        // servido de nada: el clamp decide hasta dónde puede llegar, pero esta precondición decide si
+        // quiere ir, y con ella cerrada el rasgo «Sale mucho» seguiría sin poder cumplir su nombre —que
+        // es exactamente el defecto que esta ADR viene a arreglar—.
+        if (!p.IsOutfield && (!loose || !CanKeeperReachLoose(ctx, p, point)))
         {
             eval.Discarded = true;
             return;
@@ -853,6 +874,29 @@ internal static class Utility
     /// Si todavía no hay asignación (arranque del partido antes de la primera posesión, o un contexto de
     /// prueba construido a mano) se usa el rival más cercano, que es el comportamiento de la fase 0.
     /// </summary>
+
+    /// <summary>
+    /// ¿Está ese balón suelto dentro de lo que el portero puede cubrir <b>este tick</b> (ADR 0141)? Su área
+    /// siempre; y, cuando se le permite salir, el área ensanchada por el mismo número que le mueve el
+    /// límite de movimiento. Los dos sitios leen la misma cifra a propósito: si la decisión y el clamp
+    /// pudieran discrepar, el portero querría ir a sitios a los que no puede llegar.
+    /// </summary>
+    private static bool CanKeeperReachLoose(UtilityContext ctx, MatchPlayer p, Vec2 point)
+    {
+        if (Pitch.IsInArea(point, p.Team))
+        {
+            return true;
+        }
+
+        float extra = ctx.KeeperExitCells[p.Team];
+        if (extra <= 0f)
+        {
+            return false;
+        }
+
+        return Vec2.Distance(ClampToArea(point, p.Team), point) <= extra;
+    }
+
     private static void EvaluateMark(UtilityContext ctx, MatchPlayer p, AiContext context, ref Eval eval)
     {
         if (!p.IsOutfield)
@@ -1129,6 +1173,8 @@ internal static class Utility
         int bestRank = 0;
         int bestAdvance = 0;
         int bestDanger = 0;
+        int bestPressure = 0;
+        int bestHold = 0;
 
         float minCells = longPass ? context.ShortPassMaxCells : 0f;
         float maxCells = longPass ? context.LongPassMaxCells : context.ShortPassMaxCells;
@@ -1156,10 +1202,13 @@ internal static class Utility
                 continue;
             }
 
-            if (HasOpponentWithin(players, mate, PitchConstants.PressureRadius))
-            {
-                continue;
-            }
+            // ADR 0141: EL RECEPTOR PRESIONADO YA NO SE DESCARTA. Antes bastaba con tener un rival dentro
+            // del radio para dejar de ser candidato, así que el pase era binario —libre o inexistente— y
+            // los atributos del que recibe no entraban en la decisión por ningún sitio. Ahora la presión
+            // sobre él RESTA al compararlo con los demás, igual que ya hacía el pasillo tapado desde el
+            // paso 3 de la ADR 0091. El descarte duro se queda sólo donde describe una situación
+            // imposible, no una mala.
+            int matePressure = ctx.Pressure[mate.Index];
 
             if (longPass && SegmentBlocked(players, p.Team, p.Position, mate.Position, context.PassLaneRadiusCells))
             {
@@ -1178,12 +1227,15 @@ internal static class Utility
             // retroceder passBlockedLaneRankPenalty centésimas de casilla al comparar receptores.
             int danger = LaneDanger(players, p.Team, p.Position, mate.Position, context.PassLaneRadiusCells);
             rank -= context.PassBlockedLaneRankPenalty * danger / 100;
+            rank -= context.PassReceiverPressureRankPenalty * matePressure / 100;
             if (receiver is null || rank > bestRank)
             {
                 receiver = mate;
                 bestRank = rank;
                 bestAdvance = advance;
                 bestDanger = danger;
+                bestPressure = matePressure;
+                bestHold = HoldUnderPressure(mate);
             }
         }
 
@@ -1210,6 +1262,17 @@ internal static class Utility
             {
                 score += bestAdvance * context.PassBackwardPenaltyPerCell / 100;
             }
+
+            // ADR 0141: meterle el balón a alguien presionado cuesta, y cuesta MENOS si ese alguien
+            // aguanta. Con el valor publicado, un receptor totalmente presionado y del montón anula el
+            // bono de «receptor abierto»: el pase sigue siendo posible —a veces es el único— pero deja de
+            // ser el pase cómodo que era antes por no mirar a quién se la das.
+            int holdRelief = Slope(context.PassReceiverHoldSlope, bestHold);
+            int pressureCost = context.PassReceiverPressurePenalty - holdRelief;
+            if (pressureCost > 0)
+            {
+                score -= pressureCost * bestPressure / 100;
+            }
         }
 
         score += Slope(longPass ? context.LongPassTechniqueSlope : context.ShortPassTechniqueSlope, p.Technique);
@@ -1224,6 +1287,17 @@ internal static class Utility
         eval.Receiver = receiver;
         eval.Context = score;
     }
+
+
+    /// <summary>
+    /// Lo que un jugador aporta a <b>aguantar un balón que le llega con un rival encima</b> (ADR 0141):
+    /// la media de su técnica y su fuerza.
+    ///
+    /// <para>Las dos, y no una: recibir presionado es controlarla <i>y</i> que no te la quiten. Un técnico
+    /// frágil y un armario torpe resuelven la misma jugada por caminos distintos, y el motor no tiene
+    /// motivo para preferir a ninguno de los dos.</para>
+    /// </summary>
+    private static int HoldUnderPressure(MatchPlayer player) => (player.Technique + player.Strength) / 2;
 
     /// <summary>
     /// Término de utilidad que aporta un atributo a una acción (ADR 0030 §1): <c>pendiente × (atributo −

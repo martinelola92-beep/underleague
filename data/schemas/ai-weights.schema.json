@@ -432,6 +432,9 @@
         "findSpaceIntentBonus": { "type": "integer", "minimum": 0, "maximum": 2000 },
         "findSpaceIntentRadiusCells": { "type": "number", "minimum": 0, "maximum": 16 },
         "urgencyPerGoalPercent": { "type": "integer", "minimum": 0, "maximum": 200 },
+        "passReceiverPressureRankPenalty": { "type": "integer", "minimum": 0, "maximum": 2000 },
+        "passReceiverPressurePenalty": { "type": "integer", "minimum": 0, "maximum": 2000 },
+        "passReceiverHoldSlope": { "type": "integer", "minimum": -50, "maximum": 50 },
         "throughPassFreeZoneCells": {
           "type": "number",
           "minimum": 0,
@@ -516,6 +519,9 @@
         "findSpaceIntentBonus",
         "findSpaceIntentRadiusCells",
         "urgencyPerGoalPercent",
+        "passReceiverPressureRankPenalty",
+        "passReceiverPressurePenalty",
+        "passReceiverHoldSlope",
         "crossTechniqueSlope"
       ],
       "additionalProperties": false

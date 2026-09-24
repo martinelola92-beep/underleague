@@ -897,10 +897,57 @@ internal sealed class MatchEngine : IPerkWorld
         return Math.Clamp(elapsedPercent, 0, 100) * byScore / 100;
     }
 
+    /// <summary>
+    /// Cuánto puede salirse del área el portero de cada equipo <b>en este tick</b> (ADR 0141).
+    ///
+    /// <para>Hasta aquí <c>GoalkeeperLeftArea</c> era inalcanzable —<c>Move</c> acotaba al área dos veces—
+    /// y el rasgo <b>Sale mucho</b> no podía cumplir su nombre: sólo multiplicaba su <c>ChaseBall</c>, que
+    /// el propio clamp anulaba. Las dos cosas se arreglan aquí, y con una regla que <b>no</b> convierte al
+    /// portero adelantado en comportamiento permanente, que es lo que el encargo prohíbe expresamente.</para>
+    ///
+    /// <para>Dos motivos para salir, y ninguno es «porque sí»:</para>
+    /// <list type="bullet">
+    /// <item><b>El balón suelto cerca del área</b>, que es lo que significa ser un portero que sale — y por
+    /// eso sólo lo hace quien lleva el rasgo, no todos.</item>
+    /// <item><b>La urgencia</b>: perdiendo y con el partido acabándose. La misma cifra que mueve al resto
+    /// del equipo mueve al portero, así que no hace falta inventar un segundo reloj.</item>
+    /// </list>
+    /// </summary>
+    private void UpdateKeeperExit()
+    {
+        var goalkeeperTuning = _tuning.Goalkeeper;
+        for (int team = 0; team < 2; team++)
+        {
+            _context.KeeperExitCells[team] = 0f;
+            var keeper = _goalkeepers[team];
+            if (keeper is null || !keeper.OnPitch || _context.BallDead)
+            {
+                continue;
+            }
+
+            bool urgent = _context.UrgencyTarget[team] == Mentality.Offensive
+                && _context.Urgency[team] >= goalkeeperTuning.ExitUrgencyPercent;
+
+            // El rasgo, no su efecto secundario: preguntar por el multiplicador de ChaseBall funcionaría
+            // hoy —sólo Rusher lo toca entre los tres rasgos de portero— pero ataría esta regla a un dato
+            // que puede cambiar sin que nadie relacione las dos cosas.
+            bool sweeping = keeper.HasTrait(Trait.Rusher)
+                && _ball.Owner is null
+                && !_ball.InFlight
+                && Vec2.Distance(keeper.Position, _ball.Position) <= goalkeeperTuning.ExitCells;
+
+            if (urgent || sweeping)
+            {
+                _context.KeeperExitCells[team] = goalkeeperTuning.ExitCells;
+            }
+        }
+    }
+
     private void UpdatePerception()
     {
         _context.Tick = _tick;
         UpdateUrgency();
+        UpdateKeeperExit();
         _context.Carrier[0] = null;
         _context.Carrier[1] = null;
         if (_ball.Owner is { } owner && owner.OnPitch)
@@ -1385,7 +1432,7 @@ internal sealed class MatchEngine : IPerkWorld
         Vec2 target = Utility.ClampToZone(player, player.TargetPoint);
         if (!player.IsOutfield)
         {
-            target = Utility.ClampToArea(target, player.Team);
+            target = Utility.ClampToArea(target, player.Team, _context.KeeperExitCells[player.Team]);
         }
 
         Vec2 delta = target - player.Position;
@@ -1399,7 +1446,7 @@ internal sealed class MatchEngine : IPerkWorld
         next = Utility.ClampToPitch(next);
         if (!player.IsOutfield)
         {
-            next = Utility.ClampToArea(next, player.Team);
+            next = Utility.ClampToArea(next, player.Team, _context.KeeperExitCells[player.Team]);
         }
 
         player.Velocity = next - player.Position;
@@ -3112,11 +3159,77 @@ internal sealed class MatchEngine : IPerkWorld
         }
 
         goalkeeper.ConsecutiveSaves++;
-        SetOwner(goalkeeper);
         _report.Saves[defendingTeam]++;
-        Emit(EventType.Save, _ball.ShotIsPenalty ? "penalty" : "save", goalkeeper, opponent: shooter);
+        ResolveSaveOutcome(goalkeeper, shooter, isDive);
         return true;
     }
+
+    /// <summary>
+    /// Qué pasa DESPUÉS de que el portero gane el duelo (ADR 0141). Hasta aquí siempre atrapaba, así que
+    /// una parada cerraba la jugada y el rechace no existía — y con él no existía la segunda jugada, que
+    /// es la fuente de gol que el encargo pedía abrir.
+    ///
+    /// <para>Son tres jugadas distintas para el jugador y se deciden en dos pasos:</para>
+    /// <list type="number">
+    /// <item><b>¿La bloca?</b> Tirada con sus atributos contra lo bueno que fuera el remate, y con una
+    /// penalización fuerte si la parada fue una estirada: <b>estirándose no se atrapa</b>.</item>
+    /// <item><b>Si no la bloca, ¿dónde va?</b> Lo decide la <b>geometría del tiro</b> y no otra tirada: un
+    /// balón que iba al rincón se saca por la línea de fondo —córner—, y uno centrado vuelve al área, que
+    /// es de donde salen los goles de rechace. Usar el desvío que el disparo ya traía calculado evita
+    /// inventar una segunda tirada y hace la regla legible: se ve de dónde sale cada resultado.</item>
+    /// </list>
+    /// </summary>
+    private void ResolveSaveOutcome(MatchPlayer goalkeeper, MatchPlayer shooter, bool isDive)
+    {
+        var save = _tuning.Save;
+        int defendingTeam = goalkeeper.Team;
+        int relevant = _ball.ShotDistance <= save.CloseRangeCells
+            ? goalkeeper.Speed + goalkeeper.SaveBonusClose
+            : goalkeeper.Strength + goalkeeper.SaveBonusFar;
+
+        int catchPercent = Math.Clamp(
+            save.CatchBasePercent
+            + ((relevant - AttributePivot) * save.CatchAttributeWeightPercent / 50)
+            - ((_ball.ShotQuality - save.QualityPivot) * save.CatchQualityWeight / 100)
+            - (isDive ? save.CatchDivePenaltyPercent : 0),
+            5,
+            95);
+
+        if (_rng.Chance(catchPercent * 100))
+        {
+            SetOwner(goalkeeper);
+            Emit(EventType.Save, _ball.ShotIsPenalty ? "penalty" : "held", goalkeeper, opponent: shooter);
+            return;
+        }
+
+        // Al rincón: se saca por la línea de fondo. El córner es del que atacaba.
+        if (MathF.Abs(_ball.ShotRawOffCentre) >= save.CornerOffCentreCells)
+        {
+            _report.SavesToCorner[defendingTeam]++;
+            Emit(EventType.Save, "corner", goalkeeper, opponent: shooter);
+            CancelInFlightPass();
+            float cornerX = defendingTeam == 0 ? 0f : Pitch.Columns;
+            float cornerY = _ball.Position.Y < PitchConstants.CenterRow ? 0f : Pitch.Rows;
+            ScheduleCorner(shooter.Team, new Vec2(cornerX, cornerY));
+            return;
+        }
+
+        // Rechace: el balón sale hacia el campo y queda EN DISPUTA. Aquí nace la segunda jugada.
+        int direction = Pitch.AttackDirection(defendingTeam);
+        float lateral = _ball.ShotRawOffCentre >= 0f ? 1f : -1f;
+        var speed = new Vec2(
+            direction * (save.ParrySpeedCellsPerTickMilli / 1000f),
+            lateral * (save.ParrySpeedCellsPerTickMilli / 2000f));
+
+        _report.SavesParried[defendingTeam]++;
+        Emit(EventType.Save, "parried", goalkeeper, opponent: shooter);
+        _ball.SetLoose(speed, save.ParryLiftCellsPerTickMilli / 1000f);
+        _ball.LastTouchPlayer = goalkeeper;
+        _ball.LastTouchTeam = defendingTeam;
+    }
+
+    /// <summary>Atributo del jugador medio; el mismo pivote que usa <see cref="Utility"/>.</summary>
+    private const int AttributePivot = 50;
 
     private void ScoreGoal(MatchPlayer shooter)
     {
@@ -3815,6 +3928,9 @@ internal sealed class MatchEngine : IPerkWorld
 
     /// <summary>Urgencia percibida por un equipo (0-100) tras la preparación del tick.</summary>
     internal int UrgencyForTest(int team) => _context.Urgency[team];
+
+    /// <summary>Casillas que el portero de un equipo puede salirse del área ahora mismo.</summary>
+    internal float KeeperExitCellsForTest(int team) => _context.KeeperExitCells[team];
 
     /// <summary>Hacia qué mentalidad le empuja el marcador a un equipo.</summary>
     internal Mentality UrgencyTargetForTest(int team) => _context.UrgencyTarget[team];

@@ -156,6 +156,12 @@ public sealed class MatchReport
     /// <summary>Duelos aéreos ganados por equipo (ADR 0139).</summary>
     public int[] AerialDuels { get; }
 
+    /// <summary>Paradas que acabaron en rechace, por equipo (ADR 0141).</summary>
+    public int[] SavesParried { get; }
+
+    /// <summary>Paradas que acabaron en córner, por equipo (ADR 0141).</summary>
+    public int[] SavesToCorner { get; }
+
     /// <summary>Remates de primeras que acabaron en gol, por equipo (ADR 0136).</summary>
     public int[] VolleyGoals { get; }
 
@@ -297,6 +303,8 @@ public sealed class MatchReport
         CrossesVolleyed = (int[])builder.CrossesVolleyed.Clone();
         Clearances = (int[])builder.Clearances.Clone();
         AerialDuels = (int[])builder.AerialDuels.Clone();
+        SavesParried = (int[])builder.SavesParried.Clone();
+        SavesToCorner = (int[])builder.SavesToCorner.Clone();
         VolleyGoals = (int[])builder.VolleyGoals.Clone();
         ShotApertureSum = builder.ShotApertureSum;
         LowApertureShots = builder.LowApertureShots;
@@ -391,6 +399,12 @@ internal sealed class MatchReportBuilder
 
     /// <summary>Duelos aéreos ganados por equipo (ADR 0139).</summary>
     public int[] AerialDuels { get; } = new int[2];
+
+    /// <summary>Paradas que acabaron en rechace, por equipo (ADR 0141).</summary>
+    public int[] SavesParried { get; } = new int[2];
+
+    /// <summary>Paradas que acabaron en córner, por equipo (ADR 0141).</summary>
+    public int[] SavesToCorner { get; } = new int[2];
 
     public int[] VolleyGoals { get; } = new int[2];
 

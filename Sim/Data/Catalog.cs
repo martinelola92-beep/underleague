@@ -209,7 +209,15 @@ public sealed record AiContext(
     // ADR 0140 — URGENCIA. Cuánto pesa cada gol de diferencia en la urgencia de un equipo, en tanto por
     // ciento. Con 60, ir uno abajo vale 60 y ir dos o más satura en 100: la urgencia crece con el
     // marcador, pero deja de crecer en algún punto porque un equipo no puede atacar «más que con todo».
-    int UrgencyPerGoalPercent = 0);
+    int UrgencyPerGoalPercent = 0,
+
+    // ADR 0141 — EL RECEPTOR IMPORTA. Hasta aquí un compañero con un rival encima quedaba DESCARTADO como
+    // receptor, sin más: el pase era binario —libre o inexistente— y los atributos del que recibe no
+    // entraban en la decisión en ningún sitio. Ahora estar presionado PUNTÚA en contra, y lo que lo
+    // compensa es la capacidad del receptor de aguantar el balón.
+    int PassReceiverPressureRankPenalty = 0,
+    int PassReceiverPressurePenalty = 0,
+    int PassReceiverHoldSlope = 0);
 
 /// <summary>
 /// Pesos de la IA de utilidad (RT-093..RT-098). Las tablas Base y Tactical se guardan como arrays
@@ -492,7 +500,27 @@ public sealed record CrossTuning(
     int VolleyStrengthFactor,
     int VolleyOffTargetPenalty);
 
-public sealed record SaveTuning(int BasePercent, int CloseRangeCells, int AttributeWeightPercent, int ConsecutiveShotDecayPercent, int QualityWeight, int QualityPivot, float ReachCells, float DiveReachCells, int DivePenaltyPercent);
+public sealed record SaveTuning(
+    int BasePercent,
+    int CloseRangeCells,
+    int AttributeWeightPercent,
+    int ConsecutiveShotDecayPercent,
+    int QualityWeight,
+    int QualityPivot,
+    float ReachCells,
+    float DiveReachCells,
+    int DivePenaltyPercent,
+
+    // ADR 0141 — QUÉ PASA DESPUÉS DE PARARLA. Hasta aquí el portero que ganaba el duelo ATRAPABA SIEMPRE,
+    // así que una parada cerraba la jugada y no existía el rechace. Estas cinco cifras deciden si la
+    // blocó, la rechazó o la mandó a córner, que son tres jugadas distintas para el jugador.
+    int CatchBasePercent = 0,
+    int CatchAttributeWeightPercent = 0,
+    int CatchQualityWeight = 0,
+    int CatchDivePenaltyPercent = 0,
+    float CornerOffCentreCells = 0f,
+    int ParrySpeedCellsPerTickMilli = 0,
+    int ParryLiftCellsPerTickMilli = 0);
 
 /// <summary>tuning.tackle.</summary>
 public sealed record TackleTuning(int BaseWin, int PressureFactor, int StrengthSharePercent, int FoulBase, int OffBallFoulBase, int FoulStrengthFactor, int HardTackleThreshold, int YellowCardBase, int RedCardBase, int HardTackleYellowBonus, int HardTackleRedBonus, bool SecondYellowIsRed, int ShieldResistance = 0);
@@ -560,6 +588,15 @@ public sealed record ProgressionTuning(
     int AttributesPerLevel);
 
 /// <summary>tuning.restart.</summary>
+/// <summary>
+/// tuning.goalkeeper — cuándo y cuánto puede salirse del área el portero (ADR 0141). Bloque propio y no
+/// una clave más de <c>save</c>: la parada y la salida son dos cosas distintas, y meterlas juntas invitaría
+/// a calibrarlas como si fueran una.
+/// </summary>
+/// <param name="ExitCells">Casillas que se ensancha el área cuando se le permite salir. Nunca deja de estar acotado: se le mueve el límite.</param>
+/// <param name="ExitUrgencyPercent">Urgencia mínima (ADR 0140) para que el portero suba por necesidad de gol. Alta a propósito: salir no puede ser común.</param>
+public sealed record GoalkeeperTuning(float ExitCells, int ExitUrgencyPercent);
+
 public sealed record RestartTuning(int ThrowInTicks, int GoalKickTicks, int CornerTicks, int KickoffTicks, int PenaltyTicks, int FreeKickTicks, float RestartClearanceCells);
 
 /// <summary>
@@ -604,6 +641,7 @@ public sealed record Tuning(
     CrossTuning Cross,
     ClearTuning Clear,
     SaveTuning Save,
+    GoalkeeperTuning Goalkeeper,
     TackleTuning Tackle,
     InjuryTuning Injury,
     RefereeTuning Referee,

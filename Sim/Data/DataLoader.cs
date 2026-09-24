@@ -513,6 +513,7 @@ public static class DataLoader
         "clearBase", "clearMinDanger", "clearDangerBonusPerCenti", "clearPressureBonusPerCenti",
         "findSpaceIntentBonus", "findSpaceIntentRadiusCells",
         "urgencyPerGoalPercent",
+        "passReceiverPressureRankPenalty", "passReceiverPressurePenalty", "passReceiverHoldSlope",
     };
 
     private static AiWeights ParseAiWeights(string file, string content)
@@ -677,7 +678,10 @@ public static class DataLoader
             ClearPressureBonusPerCenti: contextNode.Prop("clearPressureBonusPerCenti").AsInt(),
             FindSpaceIntentBonus: contextNode.Prop("findSpaceIntentBonus").AsInt(),
             FindSpaceIntentRadiusCells: contextNode.Prop("findSpaceIntentRadiusCells").AsFloat(),
-            UrgencyPerGoalPercent: contextNode.Prop("urgencyPerGoalPercent").AsInt());
+            UrgencyPerGoalPercent: contextNode.Prop("urgencyPerGoalPercent").AsInt(),
+            PassReceiverPressureRankPenalty: contextNode.Prop("passReceiverPressureRankPenalty").AsInt(),
+            PassReceiverPressurePenalty: contextNode.Prop("passReceiverPressurePenalty").AsInt(),
+            PassReceiverHoldSlope: contextNode.Prop("passReceiverHoldSlope").AsInt());
 
         // ADR 0125 D2: el ajuste de la entrada sin balón es un mapa por puesto, con la misma forma que la
         // tabla `base` —el único patrón por puesto que ya existe en este fichero—, y con signo. Los cuatro
@@ -792,7 +796,7 @@ public static class DataLoader
         root.EnsureKnownKeys(
             "regulationTicks", "goldenGoalMaxTicks", "decisionIntervalTicks", "transitionTicks",
             "assistWindowTicks", "resolution",
-            "movement", "ball", "states", "pass", "dribble", "shot", "cross", "clear", "save", "tackle", "injury", "referee",
+            "movement", "ball", "states", "pass", "dribble", "shot", "cross", "clear", "save", "goalkeeper", "tackle", "injury", "referee",
             "block", "restart", "generation", "bodies", "actionZone", "progression");
 
         return new Tuning(
@@ -811,6 +815,7 @@ public static class DataLoader
             ParseCross(root.Prop("cross")),
             ParseClear(root.Prop("clear")),
             ParseSave(root.Prop("save")),
+            ParseGoalkeeper(root.Prop("goalkeeper")),
             ParseTackle(root.Prop("tackle")),
             ParseInjury(root.Prop("injury")),
             ParseReferee(root.Prop("referee")),
@@ -940,7 +945,7 @@ public static class DataLoader
 
     private static SaveTuning ParseSave(Json node)
     {
-        node.EnsureKnownKeys("basePercent", "closeRangeCells", "attributeWeightPercent", "consecutiveShotDecayPercent", "qualityWeight", "qualityPivot", "reachCells", "diveReachCells", "divePenaltyPercent");
+        node.EnsureKnownKeys("basePercent", "closeRangeCells", "attributeWeightPercent", "consecutiveShotDecayPercent", "qualityWeight", "qualityPivot", "reachCells", "diveReachCells", "divePenaltyPercent", "catchBasePercent", "catchAttributeWeightPercent", "catchQualityWeight", "catchDivePenaltyPercent", "cornerOffCentreCells", "parrySpeedCellsPerTickMilli", "parryLiftCellsPerTickMilli");
         return new SaveTuning(
             node.Prop("basePercent").AsInt(),
             node.Prop("closeRangeCells").AsInt(),
@@ -950,7 +955,14 @@ public static class DataLoader
             node.Prop("qualityPivot").AsInt(),
             node.Prop("reachCells").AsFloat(),
             node.Prop("diveReachCells").AsFloat(),
-            node.Prop("divePenaltyPercent").AsInt());
+            node.Prop("divePenaltyPercent").AsInt(),
+            node.Prop("catchBasePercent").AsInt(),
+            node.Prop("catchAttributeWeightPercent").AsInt(),
+            node.Prop("catchQualityWeight").AsInt(),
+            node.Prop("catchDivePenaltyPercent").AsInt(),
+            node.Prop("cornerOffCentreCells").AsFloat(),
+            node.Prop("parrySpeedCellsPerTickMilli").AsInt(),
+            node.Prop("parryLiftCellsPerTickMilli").AsInt());
     }
 
     /// <summary>tuning.clear — el despeje (Gameplay AI Foundations Pass, P4).</summary>
@@ -962,6 +974,15 @@ public static class DataLoader
             node.Prop("strengthDistanceMilliPerPoint").AsInt(),
             node.Prop("peakHeightCellsMilli").AsInt(),
             node.Prop("spreadRows").AsInt());
+    }
+
+    /// <summary>tuning.goalkeeper — la salida del área (ADR 0141).</summary>
+    private static GoalkeeperTuning ParseGoalkeeper(Json node)
+    {
+        node.EnsureKnownKeys("exitCells", "exitUrgencyPercent");
+        return new GoalkeeperTuning(
+            node.Prop("exitCells").AsFloat(),
+            node.Prop("exitUrgencyPercent").AsInt());
     }
 
     private static TackleTuning ParseTackle(Json node)

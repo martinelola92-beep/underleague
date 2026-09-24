@@ -63,6 +63,9 @@
     "save": {
       "$ref": "#/$defs/save"
     },
+    "goalkeeper": {
+      "$ref": "#/$defs/goalkeeper"
+    },
     "tackle": {
       "$ref": "#/$defs/tackle"
     },
@@ -107,6 +110,7 @@
     "cross",
     "clear",
     "save",
+    "goalkeeper",
     "tackle",
     "injury",
     "referee",
@@ -606,6 +610,40 @@
         },
         "divePenaltyPercent": {
           "$ref": "#/$defs/percent"
+        },
+        "catchBasePercent": {
+          "description": "ADR 0141: base de que el portero BLOQUE el balón en vez de rechazarlo, una vez ya ha ganado el duelo de la parada.",
+          "$ref": "#/$defs/percent"
+        },
+        "catchAttributeWeightPercent": {
+          "description": "ADR 0141: cuánto ayuda a blocar el atributo relevante del portero. Un portero bueno atrapa lo que otro sólo despeja.",
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 200
+        },
+        "catchQualityWeight": {
+          "description": "ADR 0141: cuánto le cuesta blocar un remate bueno. Un balón que va con todo se rechaza, no se atrapa.",
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 200
+        },
+        "catchDivePenaltyPercent": {
+          "description": "ADR 0141: lo que se pierde de blocar cuando la parada fue una estirada. Estirándose no se atrapa: se saca como se puede.",
+          "$ref": "#/$defs/percent"
+        },
+        "cornerOffCentreCells": {
+          "description": "ADR 0141: a partir de este desvío respecto al centro de la portería, el rechace sale por la línea de fondo (córner) en vez de volver al área. Lo decide la GEOMETRÍA del tiro, no una tirada.",
+          "type": "number",
+          "minimum": 0,
+          "maximum": 8
+        },
+        "parrySpeedCellsPerTickMilli": {
+          "description": "ADR 0141: a qué velocidad sale el balón rechazado. Es lo que decide si al rematador le da tiempo a la segunda jugada.",
+          "$ref": "#/$defs/milli"
+        },
+        "parryLiftCellsPerTickMilli": {
+          "description": "ADR 0141: cuánto se eleva el rechace, para que pueda caer en la banda del cabezazo.",
+          "$ref": "#/$defs/milli"
         }
       },
       "required": [
@@ -617,7 +655,37 @@
         "qualityPivot",
         "reachCells",
         "diveReachCells",
-        "divePenaltyPercent"
+        "divePenaltyPercent",
+        "catchBasePercent",
+        "catchAttributeWeightPercent",
+        "catchQualityWeight",
+        "catchDivePenaltyPercent",
+        "cornerOffCentreCells",
+        "parrySpeedCellsPerTickMilli",
+        "parryLiftCellsPerTickMilli"
+      ],
+      "additionalProperties": false
+    },
+    "goalkeeper": {
+      "type": "object",
+      "properties": {
+        "_doc": {
+          "type": "string"
+        },
+        "exitCells": {
+          "description": "ADR 0141: casillas que se ensancha el área cuando se le permite salir. El portero nunca deja de estar acotado: se le mueve el límite.",
+          "type": "number",
+          "minimum": 0,
+          "maximum": 16
+        },
+        "exitUrgencyPercent": {
+          "description": "ADR 0141: urgencia mínima (ADR 0140) para que el portero suba por necesidad de gol. Alta a propósito: salir no puede ser común.",
+          "$ref": "#/$defs/percent"
+        }
+      },
+      "required": [
+        "exitCells",
+        "exitUrgencyPercent"
       ],
       "additionalProperties": false
     },
