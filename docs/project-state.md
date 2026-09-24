@@ -9,6 +9,49 @@ PC (Steam), premium, sin online. **Estado (8 sep 2026): fases 0 y 1 cerradas; fa
 **Campo de siete filas (14 sep 2026, decisión del revisor, BA-C):** 16×7 en vez de 16×6 —con seis filas el centro geométrico cae *entre* dos filas y no existe fila central—, con guardado v4. Añadir la fila cuesta ~1,0 tiro y ~0,45 goles por partido y **ninguna palanca local lo recupera**, así que la **ADR 0109** recalibra la banda de tiros a la geometría vigente (8-16 → 7-15) en vez de tocar el motor, y deja escrito que ensanchar la formación o las zonas de acción destruye la profundidad de colocación. Nueve auditorías de la IA de jugadores (`docs/auditoria-ia-jugadores-1..9.md`) dejan **un solo cambio aplicado**, la **ADR 0110**: `Shoot` del defensa 77 → 154 y del centrocampista 188 → 237, porque con 77 un defensa colocado arriba nunca remataba —perdía contra su propio `ShortPass` de 500— y jugar fuera de posición costaba dos tercios del ataque (100/48/38 → 100/68/55). Rechazados y documentados: `ChaseBall pen` en todas las dosis (degrada la diferenciación de builds), el desfase de fase entre equipos (no replica entre semillas) y la histéresis. Queda **abierto** el papel del centrocampista: dispara el 6,5 % de los tiros siendo el 43 % de los jugadores de campo.
 ---
 
+## GAMEPLAY AI FOUNDATIONS PASS — COMPLETO (24 sep 2026)
+
+**Encargo del revisor.** Plan: `docs/plan-gameplay-ai-foundations.md`. **Informe completo:
+`docs/informe-gameplay-ai-foundations.md`** — léelo antes que esta sección si vas a seguir.
+
+Nueve ADR (**0138-0146**), ocho commits, **1.222 tests en verde** y 241 ficheros de `/data` válidos.
+**No se ha balanceado nada**, que es lo que el encargo manda: los lotes sólo se usaron como *smoke*.
+
+Qué tiene el motor que antes no tenía: percepción compartida del equipo · proteger y despejar · arranque
+coordinado · la altura del balón significando algo, con duelo aéreo, cabezazo y segunda jugada · marcador,
+minuto y **orden táctica del jugador** · un portero que decide (tres finales de parada, el receptor
+importa, y puede salir) · el cansancio como recurso · el balón parado como jugada con decisión · el censo
+de utilidad como instrumento · represalia · **la turba sin árbitro** (RF-055d, prometido desde siempre) ·
+y `modifyUtility` alcanzable desde `/data`.
+
+**De quince acciones a diecisiete**, y sólo dos: `Shield` y `Clear`. Todo lo demás salió de contexto,
+percepción y utilidad, que es la regla 17 del encargo.
+
+### Lo que la fase siguiente tiene que mirar primero
+
+- **Los tiros han bajado**: `shotsPerMatch` 7,17 (semilla 1) y **5,66** (semilla 7) contra una banda 7-15;
+  goles 1,89 / 1,32 contra ~2,4 de antes. Tres causas a la vez, todas queridas.
+- **La curva de jefes de la ADR 0033 se cae entera** (`grimhold_guns` 58,1 / 68,3 / 81,4). Es la puerta
+  nueva y la que más dice: con menos goles, la economía de la run se desplaza. **Primer sitio al que
+  mirar.**
+- 43 puertas: **39 verdes, 4 rojas** (HEAD traía 3). Las otras tres ya estaban y tienen ficha (BF-A, BF-B).
+- El portero recupera mucho más (37 → 123 en veinte partidos, medido).
+
+### SIGUIENTE PASO CONCRETO (sesión limpia)
+
+**Gameplay AI Balance & Measurement Pass**, que es la fase que el encargo dejó explícitamente separada.
+Leer `docs/informe-gameplay-ai-foundations.md` §8 y §9, y la sección de la curva de jefes. El instrumento
+nuevo es **`UtilityCensus`** (`SimConfig.Census`): da frecuencia por acción, por puesto y **por motivo de
+descarte**, que es la fotografía que el bloque 22 del encargo pide y que las nueve auditorías de IA echaron
+de menos.
+
+**No empezar por subir pesos.** El censo distingue «se descarta» de «compite y pierde», y son arreglos
+opuestos.
+
+Pendiente aparte, y es `/Game`: **el selector de orden táctica** (sin él la decisión no existe para el
+jugador) y pintar el estado `Shielding`. Va en su propio commit — `/Sim` y `/Game` no se mezclan.
+
+
 ## **FASE 1 (memoria) CERRADA** (22 sep 2026)
 
 Las tres memorias construidas **y visibles**, que era la condición que faltaba (*no se construye memoria
