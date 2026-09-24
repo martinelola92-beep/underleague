@@ -222,16 +222,80 @@ internal sealed class MatchPlayer
     public MatchPlayer? MarkTarget { get; set; }
 
     /// <summary>Fuerza efectiva: base de nivel más modificadores activos, acotada a 1..99 (§3).</summary>
-    public int Strength => _effectiveAttributes[(int)AttributeKind.Strength];
+    public int Strength => Tired(_effectiveAttributes[(int)AttributeKind.Strength]);
 
     /// <summary>Velocidad efectiva (§3).</summary>
-    public int Speed => _effectiveAttributes[(int)AttributeKind.Speed];
+    public int Speed => Tired(_effectiveAttributes[(int)AttributeKind.Speed]);
 
     /// <summary>Técnica efectiva (§3).</summary>
-    public int Technique => _effectiveAttributes[(int)AttributeKind.Technique];
+    public int Technique => Tired(_effectiveAttributes[(int)AttributeKind.Technique]);
 
-    /// <summary>Resistencia efectiva (§3).</summary>
+    /// <summary>
+    /// Resistencia efectiva (§3). <b>No</b> la toca el cansancio, y es deliberado: el aguante es lo que
+    /// gobierna cuánto te cansas, así que restárselo a sí mismo haría una espiral —cuanto más cansado,
+    /// menos aguante, más te cansas— que ninguna decisión del jugador podría anticipar (RF-012d).
+    /// </summary>
     public int Stamina => _effectiveAttributes[(int)AttributeKind.Stamina];
+
+    // ------------------------------------------------------------------ ADR 0142: el cansancio
+
+    /// <summary>Energía máxima. La escala es de mil para poder cobrar esfuerzos pequeños sin redondear a cero.</summary>
+    public const int MaxEnergy = 1000;
+
+    /// <summary>
+    /// Energía que le queda, de 0 a <see cref="MaxEnergy"/>. Se gasta por <b>lo que hace</b> —correr,
+    /// llevar el balón, pegarse— y se recupera al no hacerlo, no por el reloj.
+    /// </summary>
+    public int Energy { get; private set; } = MaxEnergy;
+
+    /// <summary>
+    /// Puntos de atributo que el cansancio le está quitando ahora mismo. Los fija el motor una vez por
+    /// tick a partir de <see cref="Energy"/>; vive aquí para que los accesores de atributo puedan
+    /// aplicarlo <b>en un solo sitio</b>.
+    /// </summary>
+    public int FatiguePenaltyPoints { get; set; }
+
+    /// <summary>
+    /// El atributo tal y como lo nota el partido: el suyo menos lo que el cansancio le esté quitando, con
+    /// suelo en 1.
+    ///
+    /// <para><b>Por qué aquí y no en cada fórmula.</b> El cansancio tenía que llegar a la velocidad, a la
+    /// puntería, a la fuerza en un duelo, al regate, al pase, al tiro y a la propia decisión —las
+    /// pendientes por atributo de la utilidad—. Repartirlo por los siete sitios habría sido siete reglas
+    /// que se pueden desincronizar; aplicarlo donde se lee el atributo es <b>una</b>, y no hay ningún
+    /// consumidor que se pueda olvidar de ella.</para>
+    /// </summary>
+    private int Tired(int attribute)
+    {
+        int tired = attribute - FatiguePenaltyPoints;
+        return tired < 1 ? 1 : tired;
+    }
+
+    /// <summary>Cuánto está cansado, 0-100. Cero es entero; cien, vacío.</summary>
+    public int TiredPercent => (MaxEnergy - Energy) * 100 / MaxEnergy;
+
+    /// <summary>Cobra un esfuerzo, en milésimas de la energía máxima. Nunca baja de cero.</summary>
+    public void SpendEnergy(int amount)
+    {
+        if (amount <= 0)
+        {
+            return;
+        }
+
+        Energy = Energy > amount ? Energy - amount : 0;
+    }
+
+    /// <summary>Devuelve energía por no estar esforzándose. Nunca pasa del máximo.</summary>
+    public void RecoverEnergy(int amount)
+    {
+        if (amount <= 0)
+        {
+            return;
+        }
+
+        int recovered = Energy + amount;
+        Energy = recovered > MaxEnergy ? MaxEnergy : recovered;
+    }
 
     public int HardTackleBonus { get; private set; }
 

@@ -39,6 +39,9 @@
     "movement": {
       "$ref": "#/$defs/movement"
     },
+    "fatigue": {
+      "$ref": "#/$defs/fatigue"
+    },
     "ball": {
       "$ref": "#/$defs/ball"
     },
@@ -102,6 +105,7 @@
     "assistWindowTicks",
     "resolution",
     "movement",
+    "fatigue",
     "ball",
     "states",
     "pass",
@@ -196,20 +200,58 @@
         },
         "dribbleSpeedPercent": {
           "$ref": "#/$defs/percent"
-        },
-        "fatigueStartTick": {
-          "$ref": "#/$defs/ticks"
-        },
-        "fatigueMaxSlowPercent": {
-          "$ref": "#/$defs/percent"
         }
       },
       "required": [
         "baseCellsPerTickMilli",
         "speedCellsPerTickMilliPer99",
-        "dribbleSpeedPercent",
-        "fatigueStartTick",
-        "fatigueMaxSlowPercent"
+        "dribbleSpeedPercent"
+      ],
+      "additionalProperties": false
+    },
+    "fatigue": {
+      "type": "object",
+      "properties": {
+        "_doc": {
+          "type": "string"
+        },
+        "runCostPerTick": {
+          "description": "ADR 0142: coste de correr un tick a tope, en milésimas de energía. Se cobra en proporción a lo que se corre de verdad, así que colocarse no cuesta lo mismo que perseguir.",
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1000
+        },
+        "carryCostPerTick": {
+          "description": "ADR 0142: coste extra por tick de llevar el balón (conducir o proteger). Llevarlo cansa más que correr suelto, y ése es el precio de la conducción de la ADR 0137.",
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1000
+        },
+        "contactCost": {
+          "description": "ADR 0142: coste de un esfuerzo puntual —una entrada, una carga, un salto—. Es lo que hace que la violencia también se pague con piernas.",
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1000
+        },
+        "recoverPerTick": {
+          "description": "ADR 0142: energía recuperada por tick sin esforzarse, antes de aplicar el aguante. Con esto existe la gestión del esfuerzo: parar recupera.",
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1000
+        },
+        "maxPenaltyPoints": {
+          "description": "ADR 0142: puntos de atributo que quita el cansancio con la energía a cero. Llega a velocidad, puntería, duelos, pase, tiro y decisión por un solo sitio.",
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 98
+        }
+      },
+      "required": [
+        "runCostPerTick",
+        "carryCostPerTick",
+        "contactCost",
+        "recoverPerTick",
+        "maxPenaltyPoints"
       ],
       "additionalProperties": false
     },

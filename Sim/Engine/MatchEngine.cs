@@ -1124,6 +1124,8 @@ internal sealed class MatchEngine : IPerkWorld
             player.AerialCooldown--;
         }
 
+        UpdateEnergy(player);
+
         // Un estado de decisión CON contador no vuelve a decidir hasta que se le acaba: es lo que hace de
         // la conducción un compromiso y no una intención que se reevalúa cada dos ticks. Comprobado antes
         // de añadirlo: hoy los tres estados de decisión —Positioning, Chasing, Dribbling— se entran
@@ -1152,6 +1154,65 @@ internal sealed class MatchEngine : IPerkWorld
     ///
     /// <para>Aritmética entera (RT-023): nada de <c>float</c> en algo que decide un contador de estado.</para>
     /// </summary>
+
+    /// <summary>
+    /// Cansancio y recuperación de un jugador en este tick (ADR 0142).
+    ///
+    /// <para>La recuperación se aplica <b>siempre</b> y el gasto se suma encima: así un jugador parado
+    /// recupera, uno que trota se mantiene y uno que persigue se vacía, sin necesidad de decidir en qué
+    /// «modo» está. El gasto de correr se cobra en proporción a lo que <b>de verdad</b> se ha movido, que
+    /// es la diferencia entre colocarse y esprintar.</para>
+    ///
+    /// <para>El aguante gobierna la recuperación y <c>FatigueResistancePercent</c> abarata el gasto: el
+    /// escalar de rasgo que ya existía y no hacía nada útil pasa a hacer exactamente lo que dice.</para>
+    /// </summary>
+    /// <summary>
+    /// Paso por tick de un jugador de atributos medios, en centésimas de casilla: la vara con la que se
+    /// mide el esfuerzo. Constante durante el partido a propósito — si midiera contra el paso de cada uno,
+    /// correr «a tope» costaría lo mismo al rápido que al lento, que es justo lo contrario de lo que pasa.
+    /// </summary>
+    private int ReferenceStepCenti =>
+        Utility.Centi((_tuning.Movement.BaseCellsPerTickMilli
+            + (_tuning.Movement.SpeedCellsPerTickMilliPer99 * 50 / 99)) / 1000f);
+
+    private void UpdateEnergy(MatchPlayer player)
+    {
+        var fatigue = _tuning.Fatigue;
+
+        // Recuperar: el aguante manda. Con aguante 99 se recupera casi el doble que con 1.
+        player.RecoverEnergy(fatigue.RecoverPerTick * (50 + player.Stamina) / 100);
+
+        // El gasto se cobra por el TERRENO QUE DE VERDAD SE RECORRE, medido contra el paso de un jugador
+        // medio, no contra el paso máximo del propio jugador. La diferencia importa y no es cosmética: con
+        // la segunda forma, un jugador ya cansado —que corre más despacio porque su velocidad efectiva ha
+        // bajado— seguía pagando el precio completo por ir «a tope», así que el cansancio no se frenaba a
+        // sí mismo nunca. Midiendo terreno, cansarse abarata el siguiente tick, que es lo que hace que el
+        // recurso tenga estado estacionario en vez de un acantilado.
+        int spent = fatigue.RunCostPerTick * Utility.Centi(player.Velocity.Length) / ReferenceStepCenti;
+
+        if (player.State is PlayerState.Dribbling or PlayerState.Shielding)
+        {
+            spent += fatigue.CarryCostPerTick;
+        }
+
+        if (player.State is PlayerState.Tackling or PlayerState.Blocking)
+        {
+            spent += fatigue.ContactCost;
+        }
+
+        if (player.FatigueResistancePercent != 0)
+        {
+            spent = spent * 100 / (100 + player.FatigueResistancePercent);
+        }
+
+        player.SpendEnergy(spent);
+
+        // El castigo de atributo se recalcula aquí, una vez por tick y por jugador: los accesores de
+        // atributo lo leen muchas veces por tick y no pueden estar dividiendo cada vez.
+        player.FatiguePenaltyPoints =
+            fatigue.MaxPenaltyPoints * (MatchPlayer.MaxEnergy - player.Energy) / MatchPlayer.MaxEnergy;
+    }
+
     private int DriveTicks(MatchPlayer player)
     {
         var dribble = _tuning.Dribble;
@@ -1496,22 +1557,10 @@ internal sealed class MatchEngine : IPerkWorld
 
         milli = milli * percent / 100;
 
-        if (_tick > movement.FatigueStartTick)
-        {
-            int span = RegulationTicks - movement.FatigueStartTick;
-            if (span > 0)
-            {
-                int progress = Math.Clamp((_tick - movement.FatigueStartTick) * 1000 / span, 0, 1000);
-                int slow = movement.FatigueMaxSlowPercent * (100 - player.Stamina) / 100 * progress / 100;
-                if (player.FatigueResistancePercent != 0)
-                {
-                    slow = slow * (100 - player.FatigueResistancePercent) / 100;
-                }
-
-                milli = milli * (1000 - Math.Clamp(slow, 0, 990)) / 1000;
-            }
-        }
-
+        // ADR 0142: aquí ya no hay ninguna rampa del reloj. La velocidad cae porque `player.Speed` es el
+        // atributo YA cansado —el cansancio se aplica donde se lee el atributo, en un solo sitio— y eso es
+        // lo que hace que cansarse llegue también a la puntería, a los duelos, al pase y a la decisión sin
+        // repetir la regla siete veces.
         return milli / 1000f;
     }
 
@@ -4347,9 +4396,49 @@ internal sealed class MatchEngine : IPerkWorld
                 corrected = Utility.ClampToArea(corrected, player.Team);
             }
 
-            player.Position = corrected;
+            // DEFECTO LATENTE, encontrado por el Gameplay AI Foundations Pass (ADR 0142). Con el punto de
+            // saque pegado a una banda, el empujón puede caer FUERA del campo, y acotarlo devolvía al rival
+            // más cerca del balón que la propia barrera —medido: 1,26 casillas con la barrera en 1,30, un
+            // rival en la línea de banda exacta (y = 0,00)—. La barrera de BB-B existe precisamente para
+            // que nadie pueda entrar ni cargar durante la reanudación, así que un hueco de 4 centésimas es
+            // el hueco entero. Se desliza POR la línea hasta cumplir la distancia en vez de conformarse.
+            player.Position = SlideAlongPitchToClear(center, corrected, clearance);
             player.Velocity = default;
         }
+    }
+
+    /// <summary>
+    /// Si acotar al campo dejó el punto dentro de la barrera, lo desliza <b>por la línea</b> hasta la
+    /// distancia pedida (ADR 0142). Es el mismo punto de la circunferencia de exclusión, pero buscado por
+    /// el eje que el campo no ha recortado.
+    ///
+    /// <para>Si ni siquiera deslizando se llega —el balón está tan pegado a la esquina que la barrera no
+    /// cabe en el campo—, se devuelve lo mejor de los dos, que es lo único honesto: la geometría no da más
+    /// de sí y la alternativa sería sacar a un jugador del campo.</para>
+    /// </summary>
+    private static Vec2 SlideAlongPitchToClear(Vec2 center, Vec2 point, float clearance)
+    {
+        float distance = Vec2.Distance(point, center);
+        if (distance >= clearance)
+        {
+            return point;
+        }
+
+        float dy = point.Y - center.Y;
+        float remaining = (clearance * clearance) - (dy * dy);
+        if (remaining <= 0f)
+        {
+            return point;
+        }
+
+        // SIEMPRE hacia el lado en el que el jugador ya está. Probar también el lado contrario cerraba
+        // más huecos pero cruzaba al jugador por delante del balón: medido, un salto de 3,85 casillas en
+        // un solo fotograma, que es justo el defecto que BA-K arregló en el render. Una barrera no puede
+        // teletransportar a nadie; si por su lado no se cumple, se deja lo que había y se documenta.
+        float dx = MathF.Sqrt(remaining);
+        float sign = point.X >= center.X ? 1f : -1f;
+        var slid = Utility.ClampToPitch(new Vec2(center.X + (sign * dx), point.Y));
+        return Vec2.Distance(slid, center) >= clearance ? slid : point;
     }
 
     private MatchPlayer? SelectTaker(RestartKind kind, int team, Vec2 point)

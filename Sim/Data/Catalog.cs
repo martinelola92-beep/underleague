@@ -217,7 +217,13 @@ public sealed record AiContext(
     // compensa es la capacidad del receptor de aguantar el balón.
     int PassReceiverPressureRankPenalty = 0,
     int PassReceiverPressurePenalty = 0,
-    int PassReceiverHoldSlope = 0);
+    int PassReceiverHoldSlope = 0,
+
+    // ADR 0142 — EL CANSADO DEJA DE PRESIONAR. El cansancio ya llega a casi toda la utilidad por las
+    // pendientes de atributo (un cansado regatea, pasa y tira peor porque sus atributos son peores), pero
+    // las acciones de ESFUERZO —perseguir, presionar, pegarse— no tienen pendiente de atributo y se
+    // quedarían fuera justo donde el cansancio se nota más en un campo de verdad.
+    int TiredEffortPenalty = 0);
 
 /// <summary>
 /// Pesos de la IA de utilidad (RT-093..RT-098). Las tablas Base y Tactical se guardan como arrays
@@ -427,7 +433,7 @@ public sealed record BodiesTuning(
 public sealed record ResolutionTuning(int ProbabilityFloor, int ProbabilityCeiling);
 
 /// <summary>tuning.movement.</summary>
-public sealed record MovementTuning(int BaseCellsPerTickMilli, int SpeedCellsPerTickMilliPer99, int DribbleSpeedPercent, int FatigueStartTick, int FatigueMaxSlowPercent);
+public sealed record MovementTuning(int BaseCellsPerTickMilli, int SpeedCellsPerTickMilliPer99, int DribbleSpeedPercent);
 
 /// <summary>tuning.ball.</summary>
 public sealed record BallTuning(
@@ -597,6 +603,23 @@ public sealed record ProgressionTuning(
 /// <param name="ExitUrgencyPercent">Urgencia mínima (ADR 0140) para que el portero suba por necesidad de gol. Alta a propósito: salir no puede ser común.</param>
 public sealed record GoalkeeperTuning(float ExitCells, int ExitUrgencyPercent);
 
+/// <summary>
+/// tuning.fatigue — el cansancio como <b>recurso</b> (ADR 0142). Sustituye a la rampa global del reloj que
+/// había en <c>movement</c>, que vaciaba a todo el mundo por igual desde un minuto fijo y hacía que el
+/// aguante fuera casi decorativo.
+/// </summary>
+/// <param name="RunCostPerTick">Coste de correr un tick a tope, en milésimas de energía. Proporcional a lo que se corre de verdad.</param>
+/// <param name="CarryCostPerTick">Coste extra por tick de llevar el balón (conducir o proteger): cuesta más que correr suelto.</param>
+/// <param name="ContactCost">Coste de un esfuerzo puntual: una entrada, una carga, un salto.</param>
+/// <param name="RecoverPerTick">Energía que se recupera por tick sin esforzarse, antes de aplicar el aguante.</param>
+/// <param name="MaxPenaltyPoints">Puntos de atributo que quita el cansancio con la energía a cero.</param>
+public sealed record FatigueTuning(
+    int RunCostPerTick,
+    int CarryCostPerTick,
+    int ContactCost,
+    int RecoverPerTick,
+    int MaxPenaltyPoints);
+
 public sealed record RestartTuning(int ThrowInTicks, int GoalKickTicks, int CornerTicks, int KickoffTicks, int PenaltyTicks, int FreeKickTicks, float RestartClearanceCells);
 
 /// <summary>
@@ -642,6 +665,7 @@ public sealed record Tuning(
     ClearTuning Clear,
     SaveTuning Save,
     GoalkeeperTuning Goalkeeper,
+    FatigueTuning Fatigue,
     TackleTuning Tackle,
     InjuryTuning Injury,
     RefereeTuning Referee,

@@ -514,6 +514,7 @@ public static class DataLoader
         "findSpaceIntentBonus", "findSpaceIntentRadiusCells",
         "urgencyPerGoalPercent",
         "passReceiverPressureRankPenalty", "passReceiverPressurePenalty", "passReceiverHoldSlope",
+        "tiredEffortPenalty",
     };
 
     private static AiWeights ParseAiWeights(string file, string content)
@@ -681,7 +682,8 @@ public static class DataLoader
             UrgencyPerGoalPercent: contextNode.Prop("urgencyPerGoalPercent").AsInt(),
             PassReceiverPressureRankPenalty: contextNode.Prop("passReceiverPressureRankPenalty").AsInt(),
             PassReceiverPressurePenalty: contextNode.Prop("passReceiverPressurePenalty").AsInt(),
-            PassReceiverHoldSlope: contextNode.Prop("passReceiverHoldSlope").AsInt());
+            PassReceiverHoldSlope: contextNode.Prop("passReceiverHoldSlope").AsInt(),
+            TiredEffortPenalty: contextNode.Prop("tiredEffortPenalty").AsInt());
 
         // ADR 0125 D2: el ajuste de la entrada sin balón es un mapa por puesto, con la misma forma que la
         // tabla `base` —el único patrón por puesto que ya existe en este fichero—, y con signo. Los cuatro
@@ -796,7 +798,7 @@ public static class DataLoader
         root.EnsureKnownKeys(
             "regulationTicks", "goldenGoalMaxTicks", "decisionIntervalTicks", "transitionTicks",
             "assistWindowTicks", "resolution",
-            "movement", "ball", "states", "pass", "dribble", "shot", "cross", "clear", "save", "goalkeeper", "tackle", "injury", "referee",
+            "movement", "fatigue", "ball", "states", "pass", "dribble", "shot", "cross", "clear", "save", "goalkeeper", "tackle", "injury", "referee",
             "block", "restart", "generation", "bodies", "actionZone", "progression");
 
         return new Tuning(
@@ -816,6 +818,7 @@ public static class DataLoader
             ParseClear(root.Prop("clear")),
             ParseSave(root.Prop("save")),
             ParseGoalkeeper(root.Prop("goalkeeper")),
+            ParseFatigue(root.Prop("fatigue")),
             ParseTackle(root.Prop("tackle")),
             ParseInjury(root.Prop("injury")),
             ParseReferee(root.Prop("referee")),
@@ -829,13 +832,11 @@ public static class DataLoader
 
     private static MovementTuning ParseMovement(Json node)
     {
-        node.EnsureKnownKeys("baseCellsPerTickMilli", "speedCellsPerTickMilliPer99", "dribbleSpeedPercent", "fatigueStartTick", "fatigueMaxSlowPercent");
+        node.EnsureKnownKeys("baseCellsPerTickMilli", "speedCellsPerTickMilliPer99", "dribbleSpeedPercent");
         return new MovementTuning(
             node.Prop("baseCellsPerTickMilli").AsInt(),
             node.Prop("speedCellsPerTickMilliPer99").AsInt(),
-            node.Prop("dribbleSpeedPercent").AsInt(),
-            node.Prop("fatigueStartTick").AsInt(),
-            node.Prop("fatigueMaxSlowPercent").AsInt());
+            node.Prop("dribbleSpeedPercent").AsInt());
     }
 
     private static BallTuning ParseBall(Json node)
@@ -977,6 +978,18 @@ public static class DataLoader
     }
 
     /// <summary>tuning.goalkeeper — la salida del área (ADR 0141).</summary>
+    /// <summary>tuning.fatigue — el cansancio como recurso (ADR 0142).</summary>
+    private static FatigueTuning ParseFatigue(Json node)
+    {
+        node.EnsureKnownKeys("runCostPerTick", "carryCostPerTick", "contactCost", "recoverPerTick", "maxPenaltyPoints");
+        return new FatigueTuning(
+            node.Prop("runCostPerTick").AsInt(),
+            node.Prop("carryCostPerTick").AsInt(),
+            node.Prop("contactCost").AsInt(),
+            node.Prop("recoverPerTick").AsInt(),
+            node.Prop("maxPenaltyPoints").AsInt());
+    }
+
     private static GoalkeeperTuning ParseGoalkeeper(Json node)
     {
         node.EnsureKnownKeys("exitCells", "exitUrgencyPercent");

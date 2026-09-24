@@ -13,9 +13,15 @@
   "movement": {
     "baseCellsPerTickMilli": 131,
     "speedCellsPerTickMilliPer99": 28,
-    "dribbleSpeedPercent": 80,
-    "fatigueStartTick": 600,
-    "fatigueMaxSlowPercent": 25
+    "dribbleSpeedPercent": 80
+  },
+  "fatigue": {
+    "_doc": "ADR 0142: el cansancio como RECURSO, no como rampa del reloj. La version anterior vaciaba a todo el mundo por igual a partir de un minuto fijo, asi que el aguante era casi decorativo y no habia nada que gestionar. Ahora se gasta por lo que cada uno HACE -correr, llevar el balon, pegarse- y se recupera al no hacerlo, con el aguante gobernando la recuperacion y fatigueResistancePercent (rasgo que ya existia y no hacia nada util) abaratando el gasto. El efecto llega a TODO por un solo sitio: el cansancio resta puntos de atributo, y los atributos ya los leen la velocidad, la punteria, los duelos, el pase, el tiro y las propias pendientes de la utilidad. recoverPerTick NO es un valor de partida a ojo: es el PUNTO DE EQUILIBRIO del recurso. Medido que un jugador se mueve el 72 por ciento de lo que podria moverse (ciclo de trabajo medio de 20 partidos), asi que con recuperacion 5 NO EXISTIA equilibrio -todo el que jugaba caia a cero y se quedaba ahi: 129 de 280 jugadores acababan exactamente a cero y la mediana era 6-. Eso es la barra que el encargo rechaza, no un recurso. Con 7 el equilibrio de un aguante medio cae cerca de ese mismo ciclo, y el resultado medido en 20 partidos es lo que se buscaba: mediana 447 de 1000 y jugadores repartidos de 0 a 1000, en vez de la bimodal de antes (mediana 6, 129 de 280 exactamente a cero). El AGUANTE mueve el punto de equilibrio, asi que quien corre mas o aguanta menos se vacia y el resto no. Elegir este numero NO es calibrar una frecuencia de juego: es que el recurso tenga estado estacionario en vez de un acantilado, que es lo que el encargo llama estado imposible. Ajustar esto no es calibrar una frecuencia: es que el sistema tenga estado estacionario en vez de un acantilado. VALORES DE PARTIDA SIN CALIBRAR en el resto (docs/plan-gameplay-ai-foundations.md 20).",
+    "runCostPerTick": 9,
+    "carryCostPerTick": 4,
+    "contactCost": 25,
+    "recoverPerTick": 7,
+    "maxPenaltyPoints": 25
   },
   "ball": {
     "passSpeedCellsPerTickMilli": 250,

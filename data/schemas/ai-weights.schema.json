@@ -435,6 +435,7 @@
         "passReceiverPressureRankPenalty": { "type": "integer", "minimum": 0, "maximum": 2000 },
         "passReceiverPressurePenalty": { "type": "integer", "minimum": 0, "maximum": 2000 },
         "passReceiverHoldSlope": { "type": "integer", "minimum": -50, "maximum": 50 },
+        "tiredEffortPenalty": { "type": "integer", "minimum": 0, "maximum": 2000 },
         "throughPassFreeZoneCells": {
           "type": "number",
           "minimum": 0,
@@ -522,6 +523,7 @@
         "passReceiverPressureRankPenalty",
         "passReceiverPressurePenalty",
         "passReceiverHoldSlope",
+        "tiredEffortPenalty",
         "crossTechniqueSlope"
       ],
       "additionalProperties": false

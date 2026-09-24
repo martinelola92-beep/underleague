@@ -102,6 +102,8 @@
     "passReceiverPressureRankPenalty": 150,
     "passReceiverPressurePenalty": 220,
     "passReceiverHoldSlope": 3,
+
+    "tiredEffortPenalty": 260,
     "pressCarrierBonus": 60,
     "pressDistancePenaltyPerCell": 60,
     "pressGoalkeeperExitBonus": 200,

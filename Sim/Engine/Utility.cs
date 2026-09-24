@@ -692,6 +692,14 @@ internal static class Utility
                 throw new ArgumentOutOfRangeException(nameof(action));
         }
 
+        // ADR 0142: el cansado deja de presionar. Es la mitad del cansancio que las pendientes de
+        // atributo no cubren —perseguir, presionar y pegarse no tienen pendiente— y es justo donde más se
+        // nota en un campo de verdad: no es que el cansado persiga peor, es que deja de ir.
+        if (!eval.Discarded && IsEffortAction(action) && p.TiredPercent > 0)
+        {
+            eval.Context -= context.TiredEffortPenalty * p.TiredPercent / 100;
+        }
+
         if (eval.Discarded || !IsMovementAction(action))
         {
             return eval;
@@ -734,6 +742,15 @@ internal static class Utility
             * p.Discipline / 100
             * zone.DisciplineWeightPercent / 100;
     }
+
+    /// <summary>
+    /// Las acciones que se pagan con piernas (ADR 0142). No incluye conducir ni proteger: ésas ya cuestan
+    /// energía al ejecutarse y además pierden solas al cansarse, porque su utilidad va por pendiente de
+    /// técnica. Aquí están las que, sin esto, un jugador vacío seguiría eligiendo igual que entero.
+    /// </summary>
+    private static bool IsEffortAction(PlayerAction action) =>
+        action is PlayerAction.ChaseBall or PlayerAction.PressCarrier
+            or PlayerAction.Tackle or PlayerAction.Block;
 
     private static bool IsMovementAction(PlayerAction action) =>
         action is PlayerAction.ChaseBall or PlayerAction.MarkOpponent or PlayerAction.OfferSupport

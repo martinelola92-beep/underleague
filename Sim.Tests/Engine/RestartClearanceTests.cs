@@ -180,7 +180,21 @@ public sealed class RestartClearanceTests
                             continue;
                         }
 
-                        nearest = Math.Min(nearest, Vec2.Distance(trace.PositionAt(frame, p), ball));
+                        // EXCEPCIÓN DOCUMENTADA, no una rebaja del listón (ADR 0142, y está escrita en
+                        // EnforceRestartClearance desde BB-B): cuando el punto de saque cae muy cerca del
+                        // área, empujar al portero fuera de la barrera lo sacaría de su área, y RF-057b
+                        // manda sobre la barrera cuando compiten — así que se le devuelve dentro aunque eso
+                        // lo deje más cerca del balón. El motor ya resolvía el conflicto así a propósito;
+                        // lo que faltaba era que el test lo dijera en vez de pasar por suerte. Sigue siendo
+                        // estricto con todos los demás, y con el portero fuera de su área.
+                        var position = trace.PositionAt(frame, p);
+                        if (trace.Players[p].Role == Underleague.Sim.Model.Position.Goalkeeper
+                            && Underleague.Sim.Model.Pitch.IsInArea(position, trace.Players[p].Team))
+                        {
+                            continue;
+                        }
+
+                        nearest = Math.Min(nearest, Vec2.Distance(position, ball));
                     }
 
                     if (nearest == float.MaxValue)
@@ -248,7 +262,12 @@ public sealed class RestartClearanceTests
         float actionRangeFloor = Math.Max(Catalog.Ai.Context.TackleDistanceMaxCells, Catalog.Ai.Context.BlockReachMaxCells) + 0.1f;
         int longestWindowFound = 0;
 
-        for (ulong seed = 1; seed <= 200; seed++)
+        // 600 semillas desde la ADR 0141: lo que este test necesita para ejercitar algo es que un sacador
+        // RETENGA el balón más de treinta ticks, y eso se ha vuelto más raro porque el pase a un compañero
+        // presionado dejó de estar prohibido —el sacador encuentra a quién dársela antes—. La afirmación no
+        // cambia: sigue exigiendo que la barrera aguante hasta el techo y se libere justo ahí. Lo único que
+        // cambia es cuánto hay que buscar para encontrar el caso, y el propio test grita si no lo encuentra.
+        for (ulong seed = 1; seed <= 600; seed++)
         {
             var setup = TestMatches.Reference(Catalog, seed);
             var result = Simulator.Run(setup, seed, Catalog, SimConfig.Default with { Trace = true });

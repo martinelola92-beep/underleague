@@ -194,8 +194,16 @@ public sealed class RefereeAndAbilitiesTests
         // volcar esa única falta a la otra columna y tumbar el test "por mala suerte", que es justo lo
         // que este fichero decía evitar al medir sobre muchas semillas en vez de una. 120 da un margen
         // amplio (13 faltas del sesgo hostil frente a 0 del favorable, medido antes de fijar el número).
+        //
+        // REPLANTEADO otra vez (ADR 0142): el escenario "brutal" dejó de producir faltas del local. Con el
+        // cansancio como recurso, un equipo de aguante 1 se vacía muy deprisa contra uno de aguante 99, el
+        // partido se va todavía antes por incomparecencia y el local no llega a cometer NINGUNA falta —cero
+        // contra cero, así que el test ya no podía distinguir nada—. El escenario era el problema: se eligió
+        // por sus lesiones, no por sus faltas, y medir el criterio del árbitro sobre faltas pide un partido
+        // normal, que produce varias por partido. Con los equipos de referencia la muestra es de cientos de
+        // faltas en vez de una docena, que es lo que este test quiso ser desde el principio.
         const int Seeds = 120;
-        var setup = TestMatches.Brutal(Catalog);
+        var setup = TestMatches.Reference(Catalog, 1);
         var friendly = setup with { Referee = setup.Referee with { InitialBias = 80 } };
         var hostile = setup with { Referee = setup.Referee with { InitialBias = -80 } };
 

@@ -93,13 +93,34 @@ public sealed class MatchRulesTests
         Assert.True(forfeits > 0, "el emparejamiento de prueba debe producir al menos una incomparecencia en 20 semillas");
     }
 
+    /// <summary>
+    /// <b>El portero sale del área, pero es raro.</b>
+    ///
+    /// <para>REPLANTEADO (ADR 0141), y aquí el test cambia porque cambió la regla, no porque estorbara.
+    /// Este test afirmaba que el portero <b>nunca</b> salía, y era verdad por un motivo que no era una
+    /// decisión de diseño sino una limitación: <c>Move</c> acotaba al área dos veces, así que
+    /// <c>GoalkeeperLeftArea</c> era inalcanzable <i>por construcción</i> y el rasgo «Sale mucho» no podía
+    /// cumplir su nombre. El encargo del revisor pide expresamente que las dos cosas sean alcanzables.</para>
+    ///
+    /// <para>Lo que se vigila ahora es la otra mitad de la regla, que es la que de verdad importa y la que
+    /// el encargo protege: <b>que no se convierta en comportamiento permanente</b>. Un portero suelto por
+    /// el campo en la mayoría de los partidos sería un juego distinto, no un portero que sale.</para>
+    /// </summary>
     [Fact]
-    public void GoalkeeperNeverLeavesTheArea()
+    public void ElPorteroSaleDelAreaPeroEsRaro()
     {
+        int left = 0;
         for (ulong seed = 1; seed <= Matches; seed++)
         {
-            Assert.False(Run(seed).Report.GoalkeeperLeftArea, $"semilla {seed}: un portero salió de su área");
+            if (Run(seed).Report.GoalkeeperLeftArea)
+            {
+                left++;
+            }
         }
+
+        Assert.True(
+            left * 2 < Matches,
+            $"un portero salió del área en {left} de {Matches} partidos: eso ya no es salir, es vivir fuera");
     }
 
     /// <summary>
