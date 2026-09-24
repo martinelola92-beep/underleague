@@ -164,20 +164,26 @@ public sealed class ShotApertureTests
     {
         Assert.InRange(Catalog.Tuning.Shot.MinAimApertureCenti, 1, 100);
 
-        int tight = Goals(WithAperture());
-        int wild = Goals(WithAperture(minAperture: 1));
-        Assert.True(tight != wild, "bajar el suelo de apertura no cambió nada: el suelo no está en el camino");
+        // REPLANTEADO (ADR 0144). Comparaba GOLES TOTALES de doscientos cuarenta partidos con el suelo en
+        // dos valores, y dejó de detectar nada en cuanto los disparos sin ángulo se hicieron raros — que es
+        // exactamente lo que la ADR 0136 (el centro) y este pass venían a conseguir. El proxy se rompió por
+        // haber acertado, no por haber fallado. Lo que el test afirma —que el suelo ACOTA el error— es una
+        // regla aritmética sobre una asíntota, y se comprueba como tal.
+        const int Floor = 20;
 
-        static int Goals(Catalog catalog)
-        {
-            int goals = 0;
-            for (ulong seed = 1; seed <= 120; seed++)
-            {
-                var r = Simulator.Run(TestMatches.Reference(catalog, seed), seed, catalog, SimConfig.Default).Report;
-                goals += r.Goals[0] + r.Goals[1];
-            }
+        // Por encima del suelo manda la apertura real: el factor es 1/cos θ y crece al cerrarse el ángulo.
+        Assert.True(
+            MatchEngine.AimApertureFactor(40, Floor) > MatchEngine.AimApertureFactor(80, Floor),
+            "cerrar el ángulo tenía que multiplicar más el error");
 
-            return goals;
-        }
+        // Por debajo del suelo el factor NO sigue creciendo: eso es acotar la asíntota.
+        Assert.Equal(
+            MatchEngine.AimApertureFactor(Floor, Floor),
+            MatchEngine.AimApertureFactor(1, Floor));
+
+        // Y el suelo hace trabajo: bajarlo deja crecer el error donde antes lo frenaba.
+        Assert.True(
+            MatchEngine.AimApertureFactor(1, 1) > MatchEngine.AimApertureFactor(1, Floor),
+            "bajar el suelo de apertura no cambió nada: el suelo no está en el camino");
     }
 }

@@ -144,3 +144,4 @@ El hueco del 0011 corresponde a una decisión sobre el radio de adyacencia que q
 | [0141](0141-el-portero-decide.md) | El portero decide: la parada tiene tres finales, el receptor de un pase importa, y salir del área es una excepción acotada | Aceptada. **Decisión del revisor** |
 | [0142](0142-el-cansancio-como-recurso.md) | El cansancio como recurso: se gasta por lo que uno hace, se recupera, y llega a todo por los atributos | Aceptada. **Decisión del revisor** |
 | [0143](0143-el-balon-parado-es-una-jugada.md) | El balón parado es una jugada: el sacador decide dentro de su reanudación, y el área del penalti se vacía y se mantiene vacía | Aceptada. **Decisión del revisor** |
+| [0144](0144-el-censo-de-utilidad-y-la-descarga.md) | El censo de utilidad como instrumento del motor, y `OfferSupport` pasa a ser la descarga al compañero apretado | Aceptada. **Decisión del revisor** |

@@ -4,6 +4,81 @@ using Underleague.Sim.Model;
 namespace Underleague.Sim.Engine;
 
 /// <summary>
+/// Censo de decisiones de la IA (ADR 0144): por cada acción y cada decisión del partido, cuántas veces se
+/// <b>eligió</b>, cuántas se <b>descartó</b> por precondición y cuántas <b>compitió y perdió</b>, más lo
+/// lejos que se quedó del ganador cuando perdió.
+///
+/// <para><b>Por qué hace falta y por qué es permanente.</b> Las nueve auditorías de IA del proyecto
+/// midieron esto con scripts de usar y tirar, y su propia conclusión fue que «descartada» y «pierde» piden
+/// arreglos <b>opuestos</b>: a una acción descartada no la despierta ningún peso, y a una que pierde no la
+/// arregla tocarle la precondición. Sin separarlo, cualquier intento de resucitar una acción muerta es a
+/// ciegas. La auditoría dejó anotado que estas métricas «nunca se instalaron como permanentes»; ésta lo es.</para>
+///
+/// <para>Es <b>contabilidad pura</b>: no consume aleatoriedad, no decide nada y está apagado por defecto
+/// (<c>SimConfig.Census</c> es null), así que no puede cambiar ningún partido. Los arrays van por índice de
+/// <see cref="PlayerAction"/> y por puesto, sin ningún diccionario (RT-041).</para>
+/// </summary>
+public sealed class UtilityCensus
+{
+    private static readonly int Actions = Enum.GetValues<PlayerAction>().Length;
+    private static readonly int Roles = Enum.GetValues<Position>().Length;
+
+    /// <summary>Veces que cada acción fue la elegida, por puesto.</summary>
+    public long[,] Chosen { get; } = new long[Roles, Actions];
+
+    /// <summary>Veces que cada acción se descartó por precondición, por puesto.</summary>
+    public long[,] Discarded { get; } = new long[Roles, Actions];
+
+    /// <summary>Veces que cada acción compitió y perdió, por puesto.</summary>
+    public long[,] Lost { get; } = new long[Roles, Actions];
+
+    /// <summary>Suma de lo que le faltó a cada acción para ganar, cuando compitió y perdió.</summary>
+    public long[,] LostByTotal { get; } = new long[Roles, Actions];
+
+    /// <summary>Cuántas veces se decidió algo, por puesto: el denominador de todo lo demás.</summary>
+    public long[] Decisions { get; } = new long[Roles];
+
+    /// <summary>Veces que una acción fue elegida, sumando puestos.</summary>
+    public long ChosenTotal(PlayerAction action) => Sum(Chosen, action);
+
+    /// <summary>Veces que una acción se descartó, sumando puestos.</summary>
+    public long DiscardedTotal(PlayerAction action) => Sum(Discarded, action);
+
+    /// <summary>Veces que una acción compitió y perdió, sumando puestos.</summary>
+    public long LostTotal(PlayerAction action) => Sum(Lost, action);
+
+    /// <summary>Lo que de media le faltó para ganar cuando compitió y perdió; 0 si nunca compitió.</summary>
+    public long AverageGap(PlayerAction action)
+    {
+        long lost = LostTotal(action);
+        return lost == 0 ? 0 : Sum(LostByTotal, action) / lost;
+    }
+
+    /// <summary>Decisiones totales del censo.</summary>
+    public long DecisionsTotal()
+    {
+        long total = 0;
+        for (int r = 0; r < Roles; r++)
+        {
+            total += Decisions[r];
+        }
+
+        return total;
+    }
+
+    private static long Sum(long[,] table, PlayerAction action)
+    {
+        long total = 0;
+        for (int r = 0; r < Roles; r++)
+        {
+            total += table[r, (int)action];
+        }
+
+        return total;
+    }
+}
+
+/// <summary>
 /// Vista del mundo que necesita la IA de utilidad (§3.5). El motor la rellena una vez por tick y la
 /// reutiliza en todas las decisiones de ese tick: no se asigna nada por evaluación (RT-051).
 /// </summary>
@@ -80,6 +155,9 @@ internal sealed class UtilityContext
 
     /// <summary>Tipo de la reanudación que se está ejecutando; sólo vale si <see cref="RestartTakerIndex"/> lo es.</summary>
     public MatchEngine.RestartKind RestartTakerKind { get; set; }
+
+    /// <summary>Censo de decisiones, o null (el caso normal). Contabilidad pura: ver <see cref="UtilityCensus"/>.</summary>
+    public UtilityCensus? Census { get; set; }
 
     /// <summary>
     /// Hacia qué mentalidad empuja el marcador a cada equipo (ADR 0140): <c>Offensive</c> al que va
@@ -217,6 +295,12 @@ internal static class Utility
     /// <summary>Radio de aglomeración alrededor del punto de apoyo (§3.5).</summary>
     private const float SupportCrowdRadius = 1.5f;
 
+    /// <summary>
+    /// A qué distancia del portador se ofrece la descarga (ADR 0144). No es balance: es la definición de
+    /// «corto». Más lejos sería un desmarque, y para eso ya está <see cref="EvaluateFindSpace"/>.
+    /// </summary>
+    private const float OutletCells = 1.6f;
+
     /// <summary>Distancia por delante en la que un rival estorba al regate (§3.5).</summary>
     private const float DribbleAheadRadius = 2.0f;
 
@@ -278,6 +362,15 @@ internal static class Utility
     public static PlayerAction Choose(UtilityContext ctx, MatchPlayer p, List<UtilityRow>? rows)
     {
         var legal = StateMachine.LegalActions(p.State);
+
+        // Con el censo encendido se piden las filas aunque nadie las haya pedido para el volcado: son el
+        // mismo dato y duplicar el cálculo sería tener dos verdades sobre la misma decisión.
+        if (ctx.Census is not null)
+        {
+            rows ??= CensusRows;
+            rows.Clear();
+        }
+
         int bestScore = 0;
         bool found = false;
         var best = PlayerAction.Retreat;
@@ -346,6 +439,8 @@ internal static class Utility
             bestTarget = p.EffectiveHome;
         }
 
+        RecordCensus(ctx, p, rows, best, bestScore, found);
+
         p.CurrentAction = best;
         p.TargetPoint = bestTarget;
         p.PassReceiver = bestReceiver;
@@ -402,6 +497,55 @@ internal static class Utility
 
         int target = ctx.Weights.Mentality(ctx.UrgencyTarget[team], action);
         return ordered + ((target - ordered) * urgency / 100);
+    }
+
+
+    /// <summary>
+    /// Buffer reutilizable de filas para el censo: se vacía en cada decisión, así que no asigna por
+    /// decisión (RT-051). No es compartido entre hilos porque <c>/Sim</c> no es reentrante y cada hilo del
+    /// arnés juega con su propio catálogo y su propio motor.
+    /// </summary>
+    [ThreadStatic]
+    private static List<UtilityRow>? _censusRows;
+
+    private static List<UtilityRow> CensusRows => _censusRows ??= new List<UtilityRow>();
+
+    /// <summary>
+    /// Apunta en el censo qué pasó con cada acción en esta decisión (ADR 0144): elegida, descartada por
+    /// precondición, o compitió y perdió — y por cuánto.
+    /// </summary>
+    private static void RecordCensus(
+        UtilityContext ctx, MatchPlayer p, List<UtilityRow>? rows, PlayerAction best, int bestScore, bool found)
+    {
+        var census = ctx.Census;
+        if (census is null || rows is null)
+        {
+            return;
+        }
+
+        int role = (int)p.Role;
+        census.Decisions[role]++;
+
+        for (int i = 0; i < rows.Count; i++)
+        {
+            var row = rows[i];
+            int action = (int)row.Action;
+
+            if (row.Rejected)
+            {
+                census.Discarded[role, action]++;
+                continue;
+            }
+
+            if (found && row.Action == best)
+            {
+                census.Chosen[role, action]++;
+                continue;
+            }
+
+            census.Lost[role, action]++;
+            census.LostByTotal[role, action] += bestScore - row.Score;
+        }
     }
 
     /// <summary>
@@ -999,6 +1143,25 @@ internal static class Utility
         return nearest;
     }
 
+    /// <summary>
+    /// <b>La descarga</b> (ADR 0144): venir <b>corto</b> a dar salida a un compañero al que están
+    /// apretando, aunque eso signifique ir hacia atrás.
+    ///
+    /// <para><b>Por qué cambia entera.</b> Esta acción llevaba muerta desde que la ADR 0022 creó
+    /// <see cref="EvaluateFindSpace"/> «para sustituir su punto fijo» y nadie la retiró. Iba a un punto
+    /// fijo dos casillas por delante del portador, competía contra dieciséis candidatos evaluados y perdía
+    /// siempre: medido con el censo, <b>0,01 elecciones por mil decisiones</b> y un hueco medio de 803
+    /// puntos las pocas veces que llegaba a competir. No estaba mal calibrada: no representaba ninguna
+    /// situación que FindSpace no cubriera mejor.</para>
+    ///
+    /// <para>Ahora sí tiene la suya, y es la que le faltaba al motor desde que el portador puede verse
+    /// atrapado (ADR 0141): cuando a tu compañero le aprietan, alguien tiene que ofrecerse <b>cerca</b>.
+    /// FindSpace busca alejarse de los rivales y avanzar; esto es lo contrario, y por eso no se pisan.</para>
+    ///
+    /// <para>Precondición dura: <b>sin un compañero apretado no hay descarga que dar</b>. Es la misma forma
+    /// que proteger y despejar (ADR 0138) — describir la situación en vez de disfrazarla con una
+    /// penalización enorme.</para>
+    /// </summary>
     private static void EvaluateSupport(UtilityContext ctx, MatchPlayer p, AiContext context, int direction, ref Eval eval)
     {
         if (!p.IsOutfield || ctx.HoldingTeam != p.Team)
@@ -1007,35 +1170,37 @@ internal static class Utility
             return;
         }
 
-        var ball = ctx.Ball;
-        float carrierX = ball.Owner is not null ? ball.Owner.Position.X : ball.Position.X;
+        var carrier = ctx.Carrier[p.Team];
+        if (carrier is null || ReferenceEquals(carrier, p))
+        {
+            eval.Discarded = true;
+            return;
+        }
 
-        // "Y propia acercada 1 hacia 2.5" (§3.5) se toma sobre la fila de la casilla-hogar, no sobre la Y
-        // instantánea: con la Y instantánea el punto de apoyo se recalcula cada decisión y todo el bloque
-        // converge en pocos ticks a la fila 2.5, se solapa y el partido se bloquea (ver informe del paquete B).
-        var target = ClampToPitch(new Vec2(carrierX + (2f * direction), MoveToward(p.EffectiveHome.Y, PitchConstants.CenterRow, 1f)));
+        int pressure = ctx.Pressure[carrier.Index];
+        if (pressure < context.SupportMinCarrierPressure)
+        {
+            eval.Discarded = true;
+            return;
+        }
+
+        // El punto de descarga es cerca del portador y por MI lado: el que se ofrece no cruza el campo, se
+        // acerca. Si estamos superpuestos se toma la dirección de ataque, que al menos es una salida.
+        var offset = p.Position - carrier.Position;
+        var away = offset.Length > 0.01f ? offset.Normalized : new Vec2(direction, 0f);
+        var target = ClampToPitch(carrier.Position + (away * OutletCells));
         eval.Target = target;
 
-        int score = 0;
-        if ((p.Position.X - carrierX) * direction > 0f)
+        int score = context.SupportBase + (context.SupportPressedBonusPerCenti * pressure);
+
+        // Una salida por delante sigue valiendo más que una por detrás, en igualdad de todo lo demás.
+        if ((target.X - carrier.Position.X) * direction > 0f)
         {
             score += context.SupportAheadBonus;
         }
 
-        var players = ctx.Players;
-        for (int i = 0; i < players.Length; i++)
-        {
-            var other = players[i];
-            if (other.Team != p.Team || ReferenceEquals(other, p) || !other.OnPitch)
-            {
-                continue;
-            }
-
-            if (Vec2.Distance(other.Position, target) < SupportCrowdRadius)
-            {
-                score -= context.SupportCrowdedPenalty;
-            }
-        }
+        // Y no vale amontonarse: si ya hay alguien ofreciéndose ahí, el segundo no aporta nada.
+        score -= context.SupportCrowdedPenalty * TeammatesNear(ctx.Players, p, target, SupportCrowdRadius);
 
         eval.Context = score;
     }

@@ -186,6 +186,7 @@ internal sealed class MatchEngine : IPerkWorld
         _bodies = new BodySeparation(_tuning.Bodies, _players.Length);
         _markScratch = new bool[_players.Length];
         _context = new UtilityContext(_players, _ball, catalog.Ai, _tuning.ActionZone, _tuning.Pass.InterceptRadiusCells, _tuning.Ball.PassSpeedCellsPerTickMilli);
+        _context.Census = config.Census;
         _context.TacticalStates[0] = TacticalState.OutOfPossession;
         _context.TacticalStates[1] = TacticalState.OutOfPossession;
 
@@ -834,7 +835,8 @@ internal sealed class MatchEngine : IPerkWorld
         // doble del techo).
         if (_restartClearanceOwner is not null)
         {
-            if (!ReferenceEquals(_ball.Owner, _restartClearanceOwner) || ++_restartClearanceOwnerTicks > RestartClearanceMaxTicks)
+            if (ShouldReleaseClearance(
+                ReferenceEquals(_ball.Owner, _restartClearanceOwner), ++_restartClearanceOwnerTicks))
             {
                 _restartClearanceOwner = null;
                 _restartClearanceOwnerTicks = 0;
@@ -1093,6 +1095,19 @@ internal sealed class MatchEngine : IPerkWorld
 
     /// <summary>Techo de duración de <see cref="_restartClearanceOwner"/>, ~2 s (RF-052) en ticks.</summary>
     internal const int RestartClearanceMaxTicks = 30;
+
+    /// <summary>
+    /// ¿Se libera ya la barrera de la reanudación? (RF-052). Se libera si el sacador ha soltado el balón o
+    /// si ha pasado el techo de duración, <b>no antes</b>.
+    ///
+    /// <para>Función pura (ADR 0144) porque la rama del techo dejó de ocurrir en partidos normales: desde
+    /// que el sacador decide dentro de su reanudación (ADR 0143) y puede dársela a un compañero presionado
+    /// (ADR 0141), encuentra destinatario en unos pocos ticks y nunca retiene treinta. La red de seguridad
+    /// sigue siendo necesaria —un sacador que se atasque no puede congelar la barrera— pero perseguirla por
+    /// semillas era buscar un caso que el motor ya no produce.</para>
+    /// </summary>
+    internal static bool ShouldReleaseClearance(bool stillHasTheBall, int ticksHeld) =>
+        !stillHasTheBall || ticksHeld > RestartClearanceMaxTicks;
 
     // ---------------------------------------------------------------- 3.2/3.3/3.6 jugadores
 
@@ -2934,6 +2949,18 @@ internal sealed class MatchEngine : IPerkWorld
     /// quedó pegado a él después de recortarlo», y acotar primero concentraría en el borde exacto toda la
     /// masa de los tiros que se habrían ido fuera.
     /// </summary>
+    /// <summary>
+    /// Cuánto multiplica el error de puntería la apertura a portería (ADR 0135 paso 3a), con su suelo.
+    ///
+    /// <para>Expuesto como función pura (ADR 0144) por el mismo motivo que <c>UrgencyPercent</c> y
+    /// <c>ReachDistance</c>: <b>1/cos θ es una asíntota</b>, y que el suelo la acote es una regla, no una
+    /// estadística. Comprobarlo simulando doscientos cuarenta partidos y comparando goles totales era un
+    /// proxy frágil que dejó de detectar nada en cuanto los disparos sin ángulo se hicieron raros — que es
+    /// justamente lo que la ADR 0136 y este pass venían a conseguir.</para>
+    /// </summary>
+    internal static float AimApertureFactor(int apertureCenti, int floorCenti) =>
+        100f / Math.Max(apertureCenti, Math.Max(floorCenti, 1));
+
     private readonly record struct ShotAim(Vec2 Point, float Height, float RawOffCentre, float RawHeight);
 
     /// <summary>
@@ -2980,8 +3007,7 @@ internal sealed class MatchEngine : IPerkWorld
         // encenderlo: medido, esta división aporta el 19 % del efecto y la penalización de la tirada de
         // dentro/fuera el 89 %, porque OnTargetAim acota la mira al marco y la geometría no puede sacar
         // el balón de la portería (ficha BH-C).
-        int floored = Math.Max(apertureCenti, _tuning.Shot.MinAimApertureCenti);
-        float apertureFactor = 100f / floored;
+        float apertureFactor = AimApertureFactor(apertureCenti, _tuning.Shot.MinAimApertureCenti);
 
         // A DÓNDE APUNTA. A un rincón, que es donde el portero no llega, y arriba o abajo indistintamente.
         // La intención no depende de lo bueno que sea el tirador: un delantero malo también QUIERE meterla

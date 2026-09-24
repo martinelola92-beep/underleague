@@ -39,7 +39,8 @@ public sealed record SimConfig(
     int? RegulationTicksOverride = null,
     int MaxDepth = 4,
     int InjuryScalePercent = 100,
-    bool Trace = false)
+    bool Trace = false,
+    UtilityCensus? Census = null)
 {
     /// <summary>Configuración por defecto: con log, sin volcado de utilidad, duración reglamentaria estándar.</summary>
     public static SimConfig Default { get; } = new();

@@ -223,7 +223,17 @@ public sealed record AiContext(
     // pendientes de atributo (un cansado regatea, pasa y tira peor porque sus atributos son peores), pero
     // las acciones de ESFUERZO —perseguir, presionar, pegarse— no tienen pendiente de atributo y se
     // quedarían fuera justo donde el cansancio se nota más en un campo de verdad.
-    int TiredEffortPenalty = 0);
+    int TiredEffortPenalty = 0,
+
+    // ADR 0144 — LA DESCARGA. OfferSupport llevaba muerta desde que la ADR 0022 creó FindSpace «para
+    // sustituir su punto fijo» y nadie la retiró: iba a un punto fijo dos casillas por delante del
+    // portador, competía contra dieciséis candidatos evaluados y perdía SIEMPRE (medido: 0,01 elecciones
+    // por mil decisiones, y un hueco medio de 803 puntos cuando llegaba a competir). Ahora representa una
+    // situación futbolística propia que FindSpace no cubre: venir CORTO a dar salida a un compañero al que
+    // están apretando, aunque eso signifique ir hacia atrás.
+    int SupportBase = 0,
+    int SupportMinCarrierPressure = 0,
+    int SupportPressedBonusPerCenti = 0);
 
 /// <summary>
 /// Pesos de la IA de utilidad (RT-093..RT-098). Las tablas Base y Tactical se guardan como arrays

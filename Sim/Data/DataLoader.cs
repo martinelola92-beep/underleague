@@ -515,6 +515,7 @@ public static class DataLoader
         "urgencyPerGoalPercent",
         "passReceiverPressureRankPenalty", "passReceiverPressurePenalty", "passReceiverHoldSlope",
         "tiredEffortPenalty",
+        "supportBase", "supportMinCarrierPressure", "supportPressedBonusPerCenti",
     };
 
     private static AiWeights ParseAiWeights(string file, string content)
@@ -683,7 +684,10 @@ public static class DataLoader
             PassReceiverPressureRankPenalty: contextNode.Prop("passReceiverPressureRankPenalty").AsInt(),
             PassReceiverPressurePenalty: contextNode.Prop("passReceiverPressurePenalty").AsInt(),
             PassReceiverHoldSlope: contextNode.Prop("passReceiverHoldSlope").AsInt(),
-            TiredEffortPenalty: contextNode.Prop("tiredEffortPenalty").AsInt());
+            TiredEffortPenalty: contextNode.Prop("tiredEffortPenalty").AsInt(),
+            SupportBase: contextNode.Prop("supportBase").AsInt(),
+            SupportMinCarrierPressure: contextNode.Prop("supportMinCarrierPressure").AsInt(),
+            SupportPressedBonusPerCenti: contextNode.Prop("supportPressedBonusPerCenti").AsInt());
 
         // ADR 0125 D2: el ajuste de la entrada sin balón es un mapa por puesto, con la misma forma que la
         // tabla `base` —el único patrón por puesto que ya existe en este fichero—, y con signo. Los cuatro
