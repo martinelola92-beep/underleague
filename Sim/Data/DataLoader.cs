@@ -980,12 +980,13 @@ public static class DataLoader
     /// <summary>tuning.clear — el despeje (Gameplay AI Foundations Pass, P4).</summary>
     private static ClearTuning ParseClear(Json node)
     {
-        node.EnsureKnownKeys("baseDistanceCells", "strengthDistanceMilliPerPoint", "peakHeightCellsMilli", "spreadRows");
+        node.EnsureKnownKeys("baseDistanceCells", "strengthDistanceMilliPerPoint", "peakHeightCellsMilli", "spreadRows", "pressurePenaltyCells");
         return new ClearTuning(
             node.Prop("baseDistanceCells").AsFloat(),
             node.Prop("strengthDistanceMilliPerPoint").AsInt(),
             node.Prop("peakHeightCellsMilli").AsInt(),
-            node.Prop("spreadRows").AsInt());
+            node.Prop("spreadRows").AsInt(),
+            node.Prop("pressurePenaltyCells").AsFloat());
     }
 
     /// <summary>tuning.goalkeeper — la salida del área (ADR 0141).</summary>
@@ -1128,7 +1129,9 @@ public static class DataLoader
 
     private static RestartTuning ParseRestart(Json node)
     {
-        node.EnsureKnownKeys("throwInTicks", "goalKickTicks", "cornerTicks", "kickoffTicks", "penaltyTicks", "freeKickTicks", "restartClearanceCells");
+        node.EnsureKnownKeys(
+            "throwInTicks", "goalKickTicks", "cornerTicks", "kickoffTicks", "penaltyTicks", "freeKickTicks",
+            "restartClearanceCells", "kickoffMaxWaitTicks", "inPlaceCells");
         return new RestartTuning(
             node.Prop("throwInTicks").AsInt(),
             node.Prop("goalKickTicks").AsInt(),
@@ -1136,7 +1139,9 @@ public static class DataLoader
             node.Prop("kickoffTicks").AsInt(),
             node.Prop("penaltyTicks").AsInt(),
             node.Prop("freeKickTicks").AsInt(),
-            node.Prop("restartClearanceCells").AsFloat());
+            node.Prop("restartClearanceCells").AsFloat(),
+            node.Prop("kickoffMaxWaitTicks").AsInt(),
+            node.Prop("inPlaceCells").AsFloat());
     }
 
     /// <summary>tuning.generation (fase1b-diseno.md §1.3, ADR 0025, ADR 0027): modelo de presupuesto de atributos.</summary>

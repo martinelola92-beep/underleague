@@ -98,7 +98,8 @@
   },
   "clear": {
     "_doc": "Gameplay AI Foundations Pass P4: el despeje. Un despeje NO es un pase largo sin receptor -es la renuncia deliberada a la posesion para alejar el balon de la porteria propia- y por eso el balon cae SIN DUENO y en disputa, que es la entrada del duelo aereo y de la segunda jugada. La distancia depende de la FUERZA porque despejar es golpear y no colocar, el mismo reparto invertido que la ADR 0136 le dio al remate de centro. peakHeightCellsMilli se iguala al del centro (1400) a proposito: es la altura a la que el motor YA SABE que un balon pasa por encima de un defensa -medida en la ADR 0136 con la intercepcion en esfera- y no hay motivo para inventar otra. spreadRows es que un despeje APROXIMA el destino en vez de elegirlo. VALORES DE PARTIDA SIN CALIBRAR: este paquete tiene prohibido el tuning contra lotes (docs/plan-gameplay-ai-foundations.md 20).",
-    "baseDistanceCells": 6.0,
+    "baseDistanceCells": 9.0,
+    "pressurePenaltyCells": 4.0,
     "strengthDistanceMilliPerPoint": 40,
     "peakHeightCellsMilli": 1400,
     "spreadRows": 2
@@ -191,14 +192,16 @@
     "foulBase": 1500
   },
   "restart": {
-    "_doc": "Cuenta atrás de cada reanudación en ticks (RF-053). freeKickTicks (AZ-D, ADR 0090): la falta señalada es una reanudación instantánea más, con cuenta atrás de 8 ticks (con 15, los ~4 s de balón parado por partido dejaban shotsPerMatch en 7,8 en la semilla 7). restartClearanceCells (BB-B, tercer intento, docs/analisis/bb-b-barrera-geometrica-diseno.md §16): barrera de 2 casillas para los rivales, generalizada de freeKickClearanceCells (ADR 0090, solo la falta) a las cinco reanudaciones que no son el penalti -banda, córner, puerta, centro y falta-, con techo de duración de 30 ticks (RestartClearanceMaxTicks, RF-052). El segundo intento medía mal el residual y rompía betterTeamWinRate sin excluir el penalti explícitamente; este corrige ambas cosas antes de remedir.",
+    "_doc": "Cuenta atrás de cada reanudación en ticks (RF-053). freeKickTicks (AZ-D, ADR 0090): la falta señalada es una reanudación instantánea más, con cuenta atrás de 8 ticks (con 15, los ~4 s de balón parado por partido dejaban shotsPerMatch en 7,8 en la semilla 7). restartClearanceCells (BB-B, tercer intento, docs/analisis/bb-b-barrera-geometrica-diseno.md §16): barrera de 2 casillas para los rivales, generalizada de freeKickClearanceCells (ADR 0090, solo la falta) a las cinco reanudaciones que no son el penalti -banda, córner, puerta, centro y falta-, con techo de duración de 30 ticks (RestartClearanceMaxTicks, RF-052). El segundo intento medía mal el residual y rompía betterTeamWinRate sin excluir el penalti explícitamente; este corrige ambas cosas antes de remedir. kickoffMaxWaitTicks e inPlaceCells (BC-A, 24 sep 2026, decisión del revisor): tras un gol el equipo vuelve a su formación ANDANDO, no de golpe, así que el saque de centro espera a que estén colocados. El tope de 180 ticks (12 s) es lo que tarda el goleador -que celebra treinta ticks y luego cruza el campo-: medido, con 90 se quedaba fuera de sitio el 39 % de las veces. El reloj del PARTIDO está parado mientras tanto (MatchEngine._clockTick), así que esperar no cuesta minutos de fútbol, sólo reloj de pared, que es lo que el revisor autorizó expresamente.",
     "throwInTicks": 15,
     "goalKickTicks": 15,
     "cornerTicks": 15,
     "kickoffTicks": 15,
     "penaltyTicks": 45,
     "freeKickTicks": 8,
-    "restartClearanceCells": 2.0
+    "restartClearanceCells": 2.0,
+    "kickoffMaxWaitTicks": 180,
+    "inPlaceCells": 0.6
   },
   "bodies": {
     "_doc": "Colisión y empuje entre cuerpos (ADR 0020, fase1b-diseno.md §2.1). Sin consumidor todavía en /Sim: lo añade el paquete R (Cuerpos, zona y comportamiento); se carga aquí para que exista y se valide.",

@@ -635,7 +635,20 @@ public sealed record FatigueTuning(
     int RecoverPerTick,
     int MaxPenaltyPoints);
 
-public sealed record RestartTuning(int ThrowInTicks, int GoalKickTicks, int CornerTicks, int KickoffTicks, int PenaltyTicks, int FreeKickTicks, float RestartClearanceCells);
+public sealed record RestartTuning(
+    int ThrowInTicks,
+    int GoalKickTicks,
+    int CornerTicks,
+    int KickoffTicks,
+    int PenaltyTicks,
+    int FreeKickTicks,
+    float RestartClearanceCells,
+
+    // BC-A: el saque de centro no arranca hasta que el equipo ha vuelto andando a su formación. Tope en
+    // ticks para que un derribado o un caso raro no congelen el partido, y tolerancia en casillas para no
+    // exigir el punto exacto —a un jugador que anda le sobra con estar EN su sitio, no clavado en él—.
+    int KickoffMaxWaitTicks = 0,
+    float InPlaceCells = 0f);
 
 /// <summary>
 /// Constantes de resolución del simulador (data/sim/tuning.json), un campo por clave, anidado por sección.
@@ -661,7 +674,12 @@ public sealed record ClearTuning(
     float BaseDistanceCells,
     int StrengthDistanceMilliPerPoint,
     int PeakHeightCellsMilli,
-    int SpreadRows);
+    int SpreadRows,
+
+    // BI-F: casillas de alcance que se pierden cuando al que despeja lo tienen encima. Un despeje apurado
+    // no llega donde uno golpeado con tiempo, y sin esta distinción el saque de puerta —que se golpea
+    // SOLO y con el balón parado— llegaba tan corto como un despeje angustiado y caía entre los rivales.
+    float PressurePenaltyCells = 0f);
 
 public sealed record Tuning(
     int RegulationTicks,

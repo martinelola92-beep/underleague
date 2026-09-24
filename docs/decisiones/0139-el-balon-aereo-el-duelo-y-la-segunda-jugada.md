@@ -154,3 +154,41 @@ No se toca nada de esto aquí, y es deliberado:
   partidos). Toca la ficha **BD-A**.
 - **`high_line` cambia de signo** en el cribado. Su test dejaba clavado que el delta fuera negativo «como
   en §23.5»: era una medición del motor de aquel día, no una regla, y se ha replanteado.
+
+## ENMIENDA (24 sep 2026, BI-F): el duelo aéreo es sólo **mientras el balón baja**
+
+El revisor, jugando: *«el portero intenta sacar de puerta con balón aéreo pero los jugadores rivales están
+demasiado cerca y lo interceptan»*. **El §4 de esta ADR ya decía la regla correcta** —«el duelo se resuelve
+durante el vuelo, cuando el balón **baja** a la altura de un salto»— pero el código sólo comprobaba la
+**banda de altura**, no la fase del vuelo. La regla estaba escrita en la ADR y no en el motor.
+
+El efecto medido: el delantero que presiona cabeceaba el saque de puerta **a medio metro de la bota del
+portero**, antes de que el balón llegara a despegar. La firma que lo destapó es que la altura **máxima** del
+vuelo era **1,07** cuando la parábola del despeje tiene el pico en **1,40**: un vuelo que no alcanza su
+propio pico es un vuelo **interrumpido**.
+
+**Un balón que sube va a favor de quien lo golpeó y nadie debería quitárselo en el primer metro; uno que
+baja es de quien salte.** Es la diferencia entre disputar un balón y taparle la salida a alguien pegándole
+al balón en la bota.
+
+### Y la presión acorta el despeje
+
+Un despeje libre y uno angustiado llegaban **exactamente igual de lejos**, que es lo que hacía que el saque
+de puerta —golpeado **solo** y con el balón parado— cayera entre los rivales. Se añade
+`clear.pressurePenaltyCells`, que sale de la percepción compartida (ADR 0138) sin recalcular nada: el
+alcance base sube y la presión sobre el que despeja lo recorta.
+
+No es una acción nueva ni un modificador invisible: es la distinción legible entre despejar con tiempo y
+despejar con alguien en la nuca.
+
+| dato | valor | por qué ése |
+|---|---|---|
+| `clear.baseDistanceCells` | 9,0 | lo que llega un despeje **sin nadie encima**, que es el caso del saque de puerta |
+| `clear.pressurePenaltyCells` | 4,0 | con presión máxima el despeje se queda en 5 casillas: sale del área, no cruza el campo |
+
+**Remedido**: la altura máxima del vuelo tras el saque pasa de **1,07** (pico truncado) a **1,40** (la
+parábola entera). Ficha completa: `docs/pendientes/BI-F.md`.
+
+**Queda abierto, y no se toca aquí**: quién gana la segunda jugada en el medio campo. A los sesenta ticks el
+balón sigue suelto la mayoría de las veces y el rival lo recupera tan a menudo como el que sacó. Es la misma
+familia que BI-D y es calibración, no mecanismo.

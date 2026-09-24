@@ -1093,6 +1093,82 @@ bandas con los datos de la ADR (RT-057).
 —doctrinas falló por 0,09, `ordinaryDefeatRateAct1` por 0,04, `orc_violence` por 0,06 en una dosis—. Leer
 una sola pasada como «esto rompe X» es sobreinterpretar.
 
+## Tres defectos reportados jugando, arreglados y medidos (24 sep 2026)
+
+El revisor probó la build y reportó tres cosas. Las tres están cerradas, con ficha, enmienda de ADR y test
+permanente; ninguna se arregló antes de medir.
+
+| ficha | síntoma | causa real | estado |
+|---|---|---|---|
+| [BI-E](./pendientes/BI-E.md) | ping-pong de cabezazos en el centro del campo | el cabezazo conservaba la altura y empujaba hacia ARRIBA, y los dos equipos se cancelaban | cerrada · cadena 80 → 2 |
+| [BC-A](./pendientes/BC-A.md) | el goleador se queda en campo rival mientras el rival saca de centro | `ResetPositions` teletransportaba, y BB-C había tenido que eximir al que celebra | cerrada · 85,7 % → **0,0 %** |
+| [BI-F](./pendientes/BI-F.md) | el saque de puerta se lo cabecean de vuelta en la bota del portero | el duelo aéreo se disputaba también **en la subida**, contra lo que la propia ADR 0139 §4 decía | cerrada · vuelo truncado 1,07 → 1,40 |
+
+**En BI-F la hipótesis del revisor sobre el mecanismo era la equivocada y el síntoma que describía era
+exacto.** Decía «el portero no le da suficiente vuelo»; medido, el portero sí levanta el balón (mediana
+1,33). Lo que pasaba es que nadie le dejaba despegar. Es el caso de manual para la Regla A: la hipótesis
+natural habría llevado a subir un número que ya estaba bien.
+
+### El reloj del partido se separa del tick del motor
+
+Decisión del revisor, textual: *«en todas las paradas de juego debemos dar tiempo para que los jugadores se
+reposicionen de manera natural, sin teletransportes. No me importa que se alargue el tiempo de gameplay (el
+reloj del partido seguiría parado)»*. Enmienda a la **ADR 0143**.
+
+**Consecuencia medida que hay que tener presente**: el tiempo muerto ya no se descuenta de
+`regulationTicks`, así que un partido contiene **más fútbol real** que antes. Lote de 2.000 partidos contra
+línea base propia, **todo dentro de banda**: `shotsPerMatch` 8,30 → **10,48**, `goalsPerMatch` 2,14 →
+**2,67**, `possessionChanges` 22,64 → **27,03** (techo 28), ticks de motor 1.400 → **1.724**.
+
+**Dos cosas que el revisor tiene que decidir, las dos con número y ninguna tocada:**
+
+1. **El partido dura ~115 s de reloj de pared** contra los **60-90 s** de `docs/requisitos.md`. Lo autorizó
+   expresamente, así que no se ha tocado; la palanca, si se quiere volver a esa ventana, es
+   `regulationTicks`, y bajarla es decisión de requisitos.
+2. **`possessionChanges` se acerca al techo** (27,03 contra 28): la primera que se saldría si el fútbol
+   sigue creciendo.
+
+### Dos trampas que costaron caro, escritas para no repetirlas
+
+- **Partir una función en dos perdió una guarda.** `ResetPositions` → `PlaceEveryoneHome` /
+  `SendEveryoneHome` se dejó por el camino `!player.OnPitch`, lo que colocaba en el campo, **desde el tick
+  0**, al suplente de una sustitución programada (ADR 0094). El partido divergía entero y cuatro tests de
+  run se caían con «la sustitución no es legal». Antes de dar con ello se gastaron **dos hipótesis
+  razonadas y ninguna medida**, las dos REJECTED. Lo resolvió leer el diff buscando *qué cambia el partido
+  en el tick 0*, que era la única clase de causa compatible con el síntoma.
+- **Una métrica puede quedarse con una premisa caducada.** `ballThirdMaxShare` contaba el balón parado a
+  propósito «porque durante las reanudaciones el reloj sigue». Al parar el reloj, la métrica leía una
+  **parada** como territorio: 40,94 → 52,74, fuera de banda, sin que el juego se hubiera concentrado en
+  ningún tercio. Arreglado el instrumento, **ninguna métrica queda fuera**.
+
+### Hallazgo nuevo, abierto: [BI-G](./pendientes/BI-G.md)
+
+Al remedir se destapó que **el protocolo de balance mide los perks de entrada con una métrica que no puede
+responder**: `tacklesPerMatch` cuenta entradas **intentadas** (`_report.Tackles++` es incondicional) y
+`PerkBalanceClassifier` la usa como métrica primaria de `ProbabilityKind.Tackle`, que sólo decide las
+**ganadas**. Medido: idéntica —10,10— con el parámetro en 5, 15, 30, 40 y 60, y lo mismo a 300 plantillas
+que a 60. El test que lo cubría estaba en verde **por un empate**, no por una demostración. Arreglarlo pide
+llevar `TacklesWon` a `MatchSummary`, una banda RT-056 y su ADR: no cabía en un arreglo de reanudación.
+
+Es el tercer caso en dos días del mismo patrón (con BC-D y la ADR 0146): *el texto promete lo que el dato o
+el código no hacen*.
+
+### Las puertas, como foto
+
+**5 rojas, las mismas cinco que ya traía `main`**: la curva de jefes, las tres de `BuildGateTests` y
+`RaceBalanceTests`. Este trabajo **no añade ninguna** y mueve dos hacia su banda (`undead_none` 62,38 →
+61,90; `elf_out_of_zone` 46,69 → 45,31). Ojo: `RaceBalanceTests` **no estaba roja en la foto del pass** y sí
+lo está en `main` desde el arreglo de BI-E — anotado ahí como LIKELY, sin experimento que lo aísle.
+
+### Siguiente paso concreto (sesión limpia)
+
+Leer esta sección del 24 sep y `docs/pendientes/BI-G.md`. Dos decisiones esperan al revisor, las dos con
+número: si `regulationTicks` baja para devolver el partido a los 60-90 s de `docs/requisitos.md`, y si se
+abre el paquete de BI-G (métrica de entradas ganadas con banda RT-056 + ADR). Si se prefiere seguir con
+gameplay antes que con balance, la cola sigue siendo `docs/pendientes/BI-D.md` (nadie conduce el balón).
+
+---
+
 ### Siguiente paso concreto (sesión limpia)
 
 Leer `docs/decisiones/0137-conduccion-con-duracion.md` y `docs/pendientes/BI-D.md`. Decidir las dos puertas

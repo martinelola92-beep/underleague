@@ -73,3 +73,114 @@ situaciones distintas.
   Aparecerá en la medición y es el efecto buscado.
 - El penalti coloca a doce jugadores cada vez que ocurre, lo que **cambia las posiciones** de todo el mundo
   en ese tramo y, con ello, el rechace y la segunda jugada posteriores.
+
+## ENMIENDA (24 sep 2026, BC-A y BI-F): la reanudación **espera**, y no coloca a nadie de golpe
+
+El revisor, jugando: *«cuando un jugador mete gol se queda en campo rival y el rival saca de centro con el
+jugador todavía ahí. En general en todas las paradas de juego debemos dar tiempo para que los jugadores se
+reposicionen de manera natural, sin teletransportes. No me importa que se alargue el tiempo de gameplay (el
+reloj del partido seguiría parado)»*.
+
+Esta ADR hizo del balón parado una jugada para **el sacador**. Le faltaba la otra mitad: para **los otros
+once** seguía siendo un teletransporte. `ResetPositions` ponía a todo el mundo en su casilla de golpe, y
+como la ADR anterior (BB-C) había tenido que eximir de eso al que celebra —para que la celebración no se
+viera en el sitio equivocado—, el goleador se quedaba donde estaba. Medido: **el 85,7 % de los goles**, y
+siempre él solo.
+
+Los dos defectos eran el mismo: **una reanudación que coloca a la gente de golpe no puede hacer nada con el
+que no se deja colocar.**
+
+### 1 · El reloj del partido se separa del tick del motor
+
+`_clockTick` sólo avanza con el **balón en juego**; `_tick` sigue contando siempre, porque es la secuencia
+de la que cuelgan enfriamientos, traza y eventos. Sin esta separación, esperar a que la gente se coloque
+costaría minutos de fútbol y **un gol en el minuto 80 acortaría el partido más que uno en el 10**. Con el
+reloj parado, el partido dura lo que dice `regulationTicks` de juego real y lo que haga falta de reloj de
+pared — que es exactamente lo que pasa en un campo, y lo que el revisor autorizó expresamente.
+
+### 2 · El saque de centro devuelve al equipo **andando**, y espera a que lleguen
+
+Sólo el saque de centro: es la única reanudación que reordena a los once. En un saque de banda o un córner
+la gente sigue jugando (AW-R) y eso está bien.
+
+**La espera es adaptativa, no una cuenta atrás fija, y eso es una decisión.** Una cuenta atrás fija habría
+que dimensionarla para el peor caso —el goleador, que celebra treinta ticks y luego cruza el campo entero—
+y entonces **todos** los saques de centro pagarían ese peor caso. El tope (`kickoffMaxWaitTicks`, 180 ticks)
+existe sólo para que un derribado, que no anda, no congele el partido.
+
+**Trampa medida, y costó una iteración**: fijar `TargetPoint` y confiar **no funciona** — `Decide()` lo
+sobrescribe al tick siguiente con lo que diga la utilidad. La primera versión dejó **3,14** jugadores en
+campo rival al sacar, **peor que el teletransporte** (1,00). Hay que caminarlos explícitamente, como ya
+hacía `WalkRestartTaker` con el sacador.
+
+| | antes | primera versión | ahora |
+|---|---|---|---|
+| goleador en campo rival al sacar | **85,7 %** | 39,1 % | **0,0 %** |
+| jugadores del equipo que marcó en campo rival | 1,00 | 3,14 | **0,00** |
+
+Test permanente: `Sim.Tests/Engine/KickoffFormationTests.cs`, hermano del de BB-C. Hacen falta los dos:
+aquel prohíbe teletransportar al que celebra, éste exige que acabe volviendo. Con uno solo, cualquiera de
+los dos arreglos rompe al otro.
+
+### 3 · En un saque de puerta los rivales salen del área
+
+Es la regla del fútbol y era la mitad que le faltaba a la barrera genérica de dos casillas (BB-B):
+**apartarse dos casillas del balón no impide estar dentro del área esperando el rechace**, así que el
+delantero que presiona se quedaba dentro y cabeceaba el saque de vuelta. Reutiliza la misma salida por el
+borde más cercano que el penalti del §2 de esta ADR — un rival al que el árbitro manda salir del área sale
+**por donde está**, no por donde le venga bien al motor.
+
+## Consecuencias de la enmienda
+
+- **El partido dura más en reloj de pared** y lo mismo en minutos de fútbol. Es lo pedido, y hay que tenerlo
+  en cuenta al medir cualquier cosa por tick de motor en vez de por tick de reloj.
+- **Cualquier métrica que dividiera por `_tick` ahora divide por `_clockTick`** (urgencia por minuto, fin de
+  tiempo reglamentario, gol de oro). Un sitio que se dejara con `_tick` acortaría el partido en silencio.
+- **Trampa que costó cuatro tests de run en rojo**: partir `ResetPositions` en dos perdió por el camino la
+  guarda `!player.OnPitch`, lo que colocaba en el campo, desde el tick 0, al suplente que trae una
+  sustitución programada (ADR 0094). El partido divergía entero, el que se lesionaba en el tick T dejaba de
+  lesionarse y el motor rechazaba la sustitución. Detalle y las dos hipótesis equivocadas que precedieron a
+  la buena, en `docs/pendientes/BC-A.md`.
+
+### 4 · Y una métrica que había que arreglar detrás: el reparto por tercios
+
+Parar el reloj tiene una consecuencia que no es de juego sino de **instrumento**, y hay que escribirla
+(RT-057). `docs/balance.md` justificaba que `ballThirdMaxShare` contara el balón parado con estas palabras:
+*«durante las reanudaciones el reloj sigue y el balón está quieto en el punto del saque; el tiempo muerto es
+parte del reparto»*. **La premisa era el reloj**, y el reloj se ha parado.
+
+Con el saque de centro esperando a que el equipo vuelva andando, el balón puede pasarse hasta 180 ticks
+inmóvil en el círculo central. Medido en un lote de 2.000 partidos contra línea base propia:
+`ballThirdMaxShare` **40,94 → 52,74**, fuera de banda — y sin que el juego se hubiera concentrado en ningún
+tercio. La métrica estaba leyendo una **parada** como territorio.
+
+El reparto por tercios pasa a acumular sólo con el balón en juego, que es la misma condición de
+`_clockTick`: la misma decisión aplicada al mismo problema, no un parche para poner una puerta en verde.
+Remedido, **ninguna métrica queda fuera de banda**.
+
+**Hermano anotado y no tocado**: `PossessionTicks` sigue contando los ticks de la cuenta atrás en los que el
+sacador tiene el balón. Ninguna métrica de posesión se sale hoy, así que ampliar el cambio sería moverlo sin
+una medición que lo pida.
+
+### Lo que este cambio SÍ mueve, y se deja medido sin tocar
+
+El reloj parado significa que un partido contiene **más fútbol real** que antes, porque el tiempo muerto ya
+no se descuenta de `regulationTicks`. No es un efecto secundario: es la consecuencia directa de lo que se
+pidió. Medido (2.000 partidos, semilla 1, contra línea base propia), **todo dentro de banda**:
+
+| métrica | antes | después |
+|---|---|---|
+| `shotsPerMatch` | 8,30 | **10,48** |
+| `goalsPerMatch` | 2,14 | **2,67** |
+| `possessionChanges` | 22,64 | **27,03** (techo 28) |
+| `foulsPerMatch` | 4,73 | 5,40 |
+| ticks de motor por partido | 1.400 | **1.724** |
+
+**No se calibra nada de esto aquí**, y es deliberado. Dos cosas para la fase de balance, las dos con número:
+
+1. **`possessionChanges` se acerca al techo** (27,03 contra 28). Es la primera que se saldría si el fútbol
+   sigue creciendo.
+2. **El partido dura ~115 s de reloj de pared** (1.724 ticks a 15/s) contra los **60-90 s** que fija
+   `docs/requisitos.md`. El revisor autorizó expresamente que se alargara, así que no se toca; pero si se
+   quiere devolver el partido a esa ventana, la palanca es `regulationTicks`, y bajarla es una decisión de
+   requisitos, no de este arreglo.

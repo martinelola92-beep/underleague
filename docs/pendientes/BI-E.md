@@ -90,3 +90,16 @@ ping-pong bombeando el balón hacia arriba**; ahora es 0,0 %. Con `aerialReachHe
 del centro en 1,4, **ningún balón legítimo pasa por encima de todo el mundo**, así que el caso «no lo toca
 nadie» de la ADR 0139 no se da nunca en un partido real. O sobra la altura, o el centro tiene que volar más
 alto. Es decisión de balance y va a la fase siguiente.
+
+## Efecto de segundo orden que aparece después: la puerta de razas
+
+**LIKELY, y no medido con un experimento que lo aísle.** El informe del pass fotografió las 43 puertas con
+**4 rojas** y `RaceBalanceTests` entre las verdes. Medido el 24 sep sobre `main` ya con este arreglo dentro
+(commit `37c9254`), esa puerta está **roja**: `undead_none = 62,38 %` contra un techo del 60 %.
+
+Entre las dos fotos sólo está este cambio, así que es el sospechoso natural —el cabezazo que baja el balón
+mueve dónde acaba cada balón aéreo, y los no-muertos son la raza cuyo perfil más depende de eso—, pero **no
+hay experimento propio que lo separe** de los otros commits del mismo día. No pasa de LIKELY.
+
+Los arreglos posteriores de BC-A y BI-F la dejan en **61,90 %**: la acercan, no la arreglan. Es calibración
+y le toca a la fase de balance.

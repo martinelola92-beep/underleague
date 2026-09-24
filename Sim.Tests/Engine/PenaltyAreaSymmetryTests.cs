@@ -50,7 +50,20 @@ public sealed class PenaltyAreaSymmetryTests
     // dónde acaba el balón y los penaltis en las filas 1 y 5 se hicieron más raros. Ampliar la muestra es
     // lo único que se puede hacer sin tocar el juego: el test no falla por un reparto asimétrico, falla
     // por no poder discriminar. Que la tasa haya bajado queda anotado para la fase de balance (BD-A).
-    private const int Matches = 4500;
+    //
+    // 4500 -> 9000 (24 sep 2026, BC-A y BI-F): otra vez lo mismo, y por lo mismo. Los arreglos de la
+    // reanudación y del saque de puerta vuelven a mover dónde acaba el balón y la muestra de filas
+    // extremas cae a 13. Medido, 4500 partidos, penaltis por fila:
+    //
+    //   antes    [0, 12, 99, 15, 13, 20, 0] = 159
+    //   después  [0,  7, 76,  6, 47,  6, 0] = 142
+    //
+    // Conviene leer las dos cifras que importan antes de ampliar por inercia: el reparto que este test
+    // afirma -filas 1 contra 5- pasa de 12/20 a 7/6, o sea MÁS simétrico que antes, y de regalo las filas
+    // 2 y 4, que son el hallazgo abierto de BD-A, pasan de 99/13 a 76/47. Lo único que empeora es la
+    // POTENCIA: 13 no llega al suelo de 20. Se dobla la muestra (13 x 2 = 26, con margen) y se anota el
+    // movimiento de BD-A, que sigue siendo cosa de la fase de balance y no de aquí.
+    private const int Matches = 9000;
 
     /// <summary>Mínimo de penaltis en las filas 1+5 para que la comparación tenga algo que discriminar.</summary>
     private const int MinimumExtremeRowSample = 20;

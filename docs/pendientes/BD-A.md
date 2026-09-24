@@ -60,3 +60,25 @@ del centro de la portería— o no; nadie lo ha mirado.
 Un penalti es la consecuencia más cara de una entrada, y la previsibilidad (RF-012d, regla 11) se apoya en
 que el riesgo sea el mismo en sitios equivalentes del campo. Si atacar por una banda es sistemáticamente más
 caro, es una regla oculta que nadie ha decidido.
+
+## Tercera medición (24 sep 2026, 4.500 partidos): los arreglos de BC-A y BI-F mueven el reparto, y a mejor
+
+Medido al remedir `PenaltyAreaSymmetryTests` tras los arreglos de reanudación (BC-A) y saque de puerta
+(BI-F). Mismo emparejamiento y misma semilla (777), penaltis por fila:
+
+| | fila 0 | 1 | 2 | 3 | 4 | 5 | 6 | total |
+|---|---|---|---|---|---|---|---|---|
+| antes | 0 | 12 | **99** | 15 | **13** | 20 | 0 | 159 |
+| después | 0 | 7 | **76** | 6 | **47** | 6 | 0 | 142 |
+
+**La asimetría 2-contra-4 que abrió esta ficha se reduce mucho**: de 99/13 (7,6 a 1) a 76/47 (1,6 a 1). No
+se buscaba —ninguno de los dos arreglos apunta a esto— así que es una pista sobre la causa, no un cierre:
+lo que cambió fue **dónde acaba el balón** (el duelo aéreo sólo mientras baja, los rivales fuera del área en
+el saque de puerta, la presión acortando el despeje) y el reparto por filas se movió detrás.
+
+**LIKELY**: la asimetría 2/4 nunca fue del área ni del arbitraje, sino de por dónde llegaba el balón al
+área. No hay experimento propio que lo aísle todavía, así que no pasa de LIKELY.
+
+**Efecto colateral que sí hubo que atender**: las filas extremas (1 y 5) caen de 32 a 13 penaltis en 4.500
+partidos, por debajo del suelo de potencia del test, que ha tenido que doblar la muestra a 9.000. El reparto
+entre ellas, en cambio, mejora: 12/20 pasa a 7/6.

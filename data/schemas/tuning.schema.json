@@ -569,6 +569,12 @@
           "description": "Altura del pico de la parábola. Igualada a cross.peakHeightCellsMilli: es la altura que el motor ya sabe que salva a un defensa (ADR 0136).",
           "$ref": "#/$defs/milli"
         },
+        "pressurePenaltyCells": {
+          "description": "BI-F: casillas de alcance que pierde un despeje por tener al rival encima. Sin esta distinción, un saque de puerta —golpeado solo y con el balón parado— llegaba tan corto como un despeje angustiado y caía entre los rivales.",
+          "type": "number",
+          "minimum": 0,
+          "maximum": 16
+        },
         "spreadRows": {
           "description": "Dispersión lateral en filas. Un despeje APROXIMA el destino en vez de elegirlo.",
           "type": "integer",
@@ -580,7 +586,8 @@
         "baseDistanceCells",
         "strengthDistanceMilliPerPoint",
         "peakHeightCellsMilli",
-        "spreadRows"
+        "spreadRows",
+        "pressurePenaltyCells"
       ],
       "additionalProperties": false
     },
@@ -1064,6 +1071,15 @@
           "type": "number",
           "minimum": 0,
           "description": "Distancia mínima de los rivales al balón durante una reanudación (banda, córner, puerta, centro y falta -no penalti-), desde la cuenta atrás hasta que el sacador suelta el balón o expira el techo de duración. Generaliza freeKickClearanceCells (AZ-D, ADR 0090) a las cinco (BB-B, docs/analisis/bb-b-barrera-geometrica-diseno.md)."
+        },
+        "kickoffMaxWaitTicks": {
+          "$ref": "#/$defs/ticks",
+          "description": "Techo de la espera del saque de centro (BC-A): el equipo vuelve a su formación ANDANDO, así que la cuenta atrás no expira hasta que todos están en su sitio o se agota este tope. Existe para que un derribado no congele el partido."
+        },
+        "inPlaceCells": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Casillas de tolerancia para dar a un jugador por colocado en su casilla-hogar durante esa espera (BC-A). Exigir el punto exacto alargaría cada saque de centro hasta el tope."
         }
       },
       "required": [
@@ -1073,7 +1089,9 @@
         "kickoffTicks",
         "penaltyTicks",
         "freeKickTicks",
-        "restartClearanceCells"
+        "restartClearanceCells",
+        "kickoffMaxWaitTicks",
+        "inPlaceCells"
       ],
       "additionalProperties": false
     },

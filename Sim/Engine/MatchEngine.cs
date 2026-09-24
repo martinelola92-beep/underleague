@@ -64,6 +64,21 @@ internal sealed class MatchEngine : IPerkWorld
     private readonly MatchReportBuilder _report = new();
     private readonly float[] _shift = new float[2];
     private readonly int _regulationTicks;
+
+    /// <summary>
+    /// Reloj del PARTIDO, en ticks (BC-A, decisión del revisor 24 sep 2026). No es lo mismo que
+    /// <c>_tick</c>: el tick del motor cuenta siempre —secuencia, enfriamientos, traza, eventos— y este
+    /// sólo avanza con el <b>balón en juego</b>.
+    ///
+    /// <para><b>Por qué hacen falta dos.</b> Desde que una reanudación espera a que los jugadores se
+    /// coloquen andando, su duración depende de dónde estuvieran, y eso no puede comerse tiempo de fútbol:
+    /// un gol en el minuto 80 acortaría el partido más que uno en el 10. Con el reloj parado durante la
+    /// reanudación, el partido dura lo que dice <c>regulationTicks</c> de juego real y lo que haga falta de
+    /// reloj de pared, que es exactamente lo que pasa en un campo.</para>
+    /// </summary>
+    private int _clockTick;
+
+
     private readonly EffectEngine? _effects;
 
     /// <summary>Separación blanda entre cuerpos del tick (ADR 0020); guarda su propio buffer de empuje.</summary>
@@ -92,6 +107,12 @@ internal sealed class MatchEngine : IPerkWorld
     private RestartKind _pendingRestart = RestartKind.None;
     private int _restartTeam = -1;
     private int _restartTicksLeft;
+
+    /// <summary>
+    /// Ticks que lleva el saque de centro esperando a que el equipo termine de volver andando (BC-A).
+    /// Sólo cuenta cuando la cuenta atrás ya expiró y todavía falta gente por colocarse.
+    /// </summary>
+    private int _restartWaitTicks;
     private Vec2 _restartPoint;
     private MatchPlayer? _penaltyTaker;
 
@@ -222,7 +243,7 @@ internal sealed class MatchEngine : IPerkWorld
     public int GoalsOf(int team) => _report.Goals[team];
 
     /// <summary>Ticks que quedan de tiempo reglamentario; 0 en la prórroga de turba (RF-083, "últimos 20 segundos").</summary>
-    public int TicksLeftInRegulation => Math.Max(0, _regulationTicks - _tick);
+    public int TicksLeftInRegulation => Math.Max(0, _regulationTicks - _clockTick);
 
     /// <summary>Motor de efectos del partido, o null si ningún jugador en campo lleva perks.</summary>
     public EffectEngine? Effects => _effects;
@@ -241,7 +262,7 @@ internal sealed class MatchEngine : IPerkWorld
     /// <summary>Ejecuta el partido completo y devuelve eventos e informe (§3.2).</summary>
     public MatchResult Run()
     {
-        ResetPositions();
+        PlaceEveryoneHome();
         Marking.Assign(_players, _markScratch, force: true);
         _ball.Park(new Vec2(Pitch.Columns / 2f, PitchConstants.CenterRow));
         Emit(EventType.MatchStart, "kickoff");
@@ -552,6 +573,14 @@ internal sealed class MatchEngine : IPerkWorld
     private void Step()
     {
         _tick++;
+
+        // BC-A: el reloj del partido sólo corre con el balón en juego. Una reanudación que espera a que
+        // todos se coloquen no puede descontar tiempo de fútbol.
+        if (_restartTicksLeft == 0)
+        {
+            _clockTick++;
+        }
+
         ApplySubstitutions();
 
         // Consumibles condicionales (RF-081..083): se comprueban antes que nada, así que el disparador ve
@@ -597,6 +626,26 @@ internal sealed class MatchEngine : IPerkWorld
                 continue;
             }
 
+            // BC-A: en el SAQUE DE CENTRO —y sólo en él— el equipo vuelve a su formación andando, en vez
+            // de decidir. Es la única reanudación que reordena a los once: en un saque de banda o un
+            // córner la gente sigue jugando (AW-R) y eso está bien, pero después de un gol todo el mundo
+            // tiene que volver a su sitio, y hacerlo decidiendo no lo hace nadie.
+            //
+            // Fijar el TargetPoint y confiar NO funciona, y costó una medición descubrirlo: Decide() lo
+            // sobrescribe en el tick siguiente con lo que diga la utilidad, así que la gente se quedaba
+            // donde estaba. Medido: 3,14 jugadores en campo rival al sacar, peor que el teletransporte.
+            if (wasRestarting && _pendingRestart == RestartKind.Kickoff && player.OnPitch
+                && player.State is not (PlayerState.KnockedDown or PlayerState.Injured or PlayerState.SentOff))
+            {
+                TickStateTimer(player);
+                if (player.OnPitch && player.State is not PlayerState.Celebrating)
+                {
+                    WalkHome(player);
+                }
+
+                continue;
+            }
+
             UpdatePlayer(player);
         }
 
@@ -615,6 +664,18 @@ internal sealed class MatchEngine : IPerkWorld
             EnforceRestartClearance();
         }
 
+        // BI-F: EN UN SAQUE DE PUERTA LOS RIVALES ESTÁN FUERA DEL ÁREA. Es la regla del fútbol y era lo
+        // que faltaba: con la barrera genérica de dos casillas, el delantero que presiona se quedaba
+        // DENTRO del área y cabeceaba el saque de vuelta. Medido: sesenta ticks después del saque el balón
+        // estaba a 3,8 casillas de la portería propia —en nuestro propio tercio— y suelto.
+        //
+        // Reutiliza la misma salida por el borde más cercano que el penalti (ADR 0143): un rival al que
+        // el árbitro manda salir del área sale por donde está, no por donde le venga bien al motor.
+        if (wasRestarting && _pendingRestart == RestartKind.GoalKick)
+        {
+            ClearAreaOfOpponents(_restartTeam);
+        }
+
         // ADR 0143: el área del penalti se mantiene vacía TODA la cuenta atrás, no sólo al abrirla. Desde
         // AW-R el equipo no se congela durante el balón muerto, así que vaciarla una vez y confiar deja
         // que la gente vuelva a entrar andando — medido: tres jugadores dentro en el fotograma del
@@ -630,7 +691,26 @@ internal sealed class MatchEngine : IPerkWorld
             _restartTicksLeft--;
             if (_restartTicksLeft == 0)
             {
-                ResolveRestart();
+                // BC-A: EL SAQUE DE CENTRO ESPERA. Es la única reanudación que manda a los once a su
+                // formación, y desde que vuelven ANDANDO (SendEveryoneHome) su duración no puede ser un
+                // número fijo: depende de dónde estuvieran. Una cuenta atrás fija habría que dimensionarla
+                // para el peor caso —el goleador, que celebra treinta ticks y luego cruza el campo entero—
+                // y entonces TODOS los saques de centro pagarían ese peor caso.
+                //
+                // El tope existe para que un derribado, que no anda, no congele el partido; y el reloj del
+                // partido está parado mientras tanto (_clockTick), así que esperar no cuesta fútbol.
+                if (_pendingRestart == RestartKind.Kickoff
+                    && _restartWaitTicks < _tuning.Restart.KickoffMaxWaitTicks
+                    && !EveryoneInPlace())
+                {
+                    _restartWaitTicks++;
+                    _restartTicksLeft = 1;
+                }
+                else
+                {
+                    _restartWaitTicks = 0;
+                    ResolveRestart();
+                }
             }
         }
         else if (_restartTicksLeft == 0)
@@ -876,7 +956,7 @@ internal sealed class MatchEngine : IPerkWorld
     {
         int elapsedPercent = _regulationTicks <= 0
             ? 100
-            : Math.Clamp(_tick * 100 / _regulationTicks, 0, 100);
+            : Math.Clamp(_clockTick * 100 / _regulationTicks, 0, 100);
 
         int perGoal = _catalog.Ai.Context.UrgencyPerGoalPercent;
 
@@ -1553,6 +1633,53 @@ internal sealed class MatchEngine : IPerkWorld
     /// llegar, <see cref="ResolveRestart"/> le pone en el punto en el ultimo tick. El salto residual es como
     /// mucho lo que le quedara por andar, en vez de la distancia entera.</para>
     /// </summary>
+    /// <summary>
+    /// Lleva a un jugador hacia su casilla a su velocidad normal, sin decidir (BC-A). Es
+    /// <see cref="WalkRestartTaker"/> aplicado al resto del equipo durante el saque de centro.
+    /// </summary>
+    private void WalkHome(MatchPlayer player)
+    {
+        var to = player.HomeCenter - player.Position;
+        float distance = to.Length;
+        float step = SpeedPerTick(player, dribbling: false);
+        if (distance <= step || distance <= 0f)
+        {
+            player.Position = player.HomeCenter;
+            player.Velocity = new Vec2(0f, 0f);
+            return;
+        }
+
+        var next = player.Position + (to * (step / distance));
+        player.Velocity = next - player.Position;
+        player.Position = next;
+    }
+
+    /// <summary>
+    /// ¿Ha vuelto todo el mundo a su casilla? (BC-A.) El sacador no cuenta —va al punto de saque, no a su
+    /// sitio—, ni el derribado, que no puede andar y sólo haría que la espera llegara siempre al tope.
+    /// El que celebra SÍ cuenta: es justo el que hay que esperar.
+    /// </summary>
+    private bool EveryoneInPlace()
+    {
+        float tolerance = _tuning.Restart.InPlaceCells;
+        for (int i = 0; i < _players.Length; i++)
+        {
+            var player = _players[i];
+            if (!player.OnPitch || ReferenceEquals(player, _restartTaker)
+                || player.State is PlayerState.KnockedDown or PlayerState.Injured or PlayerState.SentOff)
+            {
+                continue;
+            }
+
+            if ((player.Position - player.HomeCenter).Length > tolerance)
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
     private void WalkRestartTaker(MatchPlayer player)
     {
         var to = _restartPoint - player.Position;
@@ -2133,6 +2260,20 @@ internal sealed class MatchEngine : IPerkWorld
             return false;
         }
 
+        // BI-F: SÓLO MIENTRAS BAJA. La ADR 0139 §4 ya lo decía —«el duelo se resuelve durante el vuelo,
+        // cuando el balón BAJA a la altura de un salto»— pero el código sólo miraba la altura, así que el
+        // balón se disputaba también EN LA SUBIDA, a medio metro del que acababa de golpearlo. El efecto
+        // medido era que un saque de puerta se lo cabeceaba de vuelta el delantero que presionaba antes de
+        // que el balón llegara a despegar: sesenta ticks después seguía a 3,8 casillas de nuestra portería.
+        //
+        // Un balón que sube va A FAVOR de quien lo golpeó y nadie debería poder quitárselo en el primer
+        // metro; uno que baja es de quien salte. Es la diferencia entre disputar un balón y taparle la
+        // salida a alguien pegándole al balón en la bota.
+        if (_ball.FlightTicksTotal > 0 && _ball.FlightTicksLeft * 2 > _ball.FlightTicksTotal)
+        {
+            return false;
+        }
+
         var candidates = new MatchPlayer?[2];
         var distances = new float[2];
         for (int i = 0; i < _players.Length; i++)
@@ -2620,8 +2761,16 @@ internal sealed class MatchEngine : IPerkWorld
         var clear = _tuning.Clear;
         int direction = Pitch.AttackDirection(player.Team);
 
+        // BI-F: LA PRESIÓN ACORTA EL DESPEJE. Medido jugando: el saque de puerta caía entre los rivales
+        // porque un despeje libre y uno angustiado llegaban exactamente igual de lejos. Un saque de puerta
+        // se golpea SOLO, con el balón parado y sin nadie encima —la barrera los mantiene a dos casillas—,
+        // así que ahora llega lo que debe llegar; y un central con un delantero en la nuca la manda mucho
+        // menos lejos, que es lo que pasa en un campo.
+        //
+        // Sale de la percepción compartida (P1), así que no hace falta recalcular nada aquí.
         float distance = clear.BaseDistanceCells
-            + (clear.StrengthDistanceMilliPerPoint * (player.Strength - 50) / 1000f);
+            + (clear.StrengthDistanceMilliPerPoint * (player.Strength - 50) / 1000f)
+            - (clear.PressurePenaltyCells * _context.Pressure[player.Index] / 100f);
         if (distance < 1f)
         {
             distance = 1f;
@@ -4404,7 +4553,7 @@ internal sealed class MatchEngine : IPerkWorld
         {
             _shift[0] = 0f;
             _shift[1] = 0f;
-            ResetPositions();
+            SendEveryoneHome();
         }
 
         // AZ-A: el sacador se fija una sola vez aquí, con la misma regla que antes vivía repetida en
@@ -4471,6 +4620,26 @@ internal sealed class MatchEngine : IPerkWorld
             }
 
             player.Position = PushOutOfArea(player.Position, defendingTeam);
+            player.Velocity = default;
+        }
+    }
+
+    /// <summary>
+    /// Saca del área de <paramref name="team"/> a todos sus rivales (BI-F). Es la regla del saque de
+    /// puerta, y la mitad que le faltaba a la barrera genérica: apartarse dos casillas del balón no impide
+    /// estar dentro del área esperando el rechace.
+    /// </summary>
+    private void ClearAreaOfOpponents(int team)
+    {
+        for (int i = 0; i < _players.Length; i++)
+        {
+            var player = _players[i];
+            if (!player.OnPitch || player.Team == team || !Pitch.IsInArea(player.Position, team))
+            {
+                continue;
+            }
+
+            player.Position = PushOutOfArea(player.Position, team);
             player.Velocity = default;
         }
     }
@@ -4810,12 +4979,23 @@ internal sealed class MatchEngine : IPerkWorld
     /// este cambio.
     /// </para>
     /// </summary>
-    private void ResetPositions()
+    /// <summary>
+    /// Coloca a todo el mundo en su casilla <b>de golpe</b>. Sólo para el arranque del partido, que no es
+    /// una reanudación: ahí no hay nada que respetar porque nadie venía de ningún sitio. La versión que sí
+    /// es una reanudación es <see cref="SendEveryoneHome"/>, y no teletransporta a nadie.
+    /// </summary>
+    private void PlaceEveryoneHome()
     {
         for (int i = 0; i < _players.Length; i++)
         {
             var player = _players[i];
-            if (!player.OnPitch || player.State is PlayerState.Celebrating)
+
+            // El suplente que trae una sustitución programada (ADR 0094) ya está en este array, en el
+            // banquillo y en (-1,-1). Colocarlo en su casilla-hogar lo mete en el campo desde el tick 0 y
+            // hace divergir el partido ENTERO: el que se lesionaba en el tick T deja de lesionarse y la
+            // sustitución que le corresponde se vuelve ilegal. Costó cuatro tests de run en rojo y dos
+            // hipótesis equivocadas; el guardia estaba en ResetPositions y se perdió al partirla en dos.
+            if (!player.OnPitch)
             {
                 continue;
             }
@@ -4823,14 +5003,45 @@ internal sealed class MatchEngine : IPerkWorld
             player.Position = player.HomeCenter;
             player.Velocity = new Vec2(0f, 0f);
             player.EffectiveHome = player.HomeCenter;
-            if (player.State is not PlayerState.KnockedDown)
+            player.TargetPoint = player.HomeCenter;
+            player.EnterState(PlayerState.Positioning, 0);
+        }
+    }
+
+    /// <summary>
+    /// Manda a todo el mundo a su casilla <b>andando</b> (BC-A, decisión del revisor 24 sep 2026).
+    ///
+    /// <para><b>Antes teletransportaba.</b> Ponía <c>Position = HomeCenter</c> de golpe, y encima saltaba a
+    /// quien celebraba (BB-C), así que el goleador se quedaba en campo rival mientras el otro equipo sacaba
+    /// de centro — medido: <b>el 85,7 % de los goles</b>, y siempre él solo. Los dos defectos eran el mismo:
+    /// una reanudación que coloca a la gente de golpe no puede hacer nada con el que no se deja colocar.</para>
+    ///
+    /// <para>Ahora nadie salta: se les fija el destino y <see cref="WalkHome"/> los lleva. La reanudación
+    /// espera a que lleguen (<see cref="EveryoneInPlace"/>) y el reloj del partido está parado mientras
+    /// tanto, así que la espera no cuesta fútbol.</para>
+    /// </summary>
+    private void SendEveryoneHome()
+    {
+        for (int i = 0; i < _players.Length; i++)
+        {
+            var player = _players[i];
+            if (!player.OnPitch)
+            {
+                continue;
+            }
+
+            player.EffectiveHome = player.HomeCenter;
+            player.TargetPoint = player.HomeCenter;
+
+            // Al que celebra se le deja terminar; su contador corre igual y al acabar vuelve andando como
+            // los demás. Al derribado también: levantarse lleva su tiempo y es parte de la jugada.
+            if (player.State is PlayerState.Positioning or PlayerState.Chasing)
             {
                 player.EnterState(PlayerState.Positioning, 0);
             }
-
-            player.TargetPoint = player.HomeCenter;
         }
     }
+
 
     // ---------------------------------------------------------------- 3.9/3.10 fin y métricas
 
@@ -4905,10 +5116,28 @@ internal sealed class MatchEngine : IPerkWorld
 
     private void AccumulateMetrics()
     {
-        float third = Pitch.Columns / 3f;
-        float x = _ball.Position.X;
-        int index = x < third ? 0 : (x < 2f * third ? 1 : 2);
-        _report.BallTicksByThird[index]++;
+        // BC-A: EL REPARTO POR TERCIOS SÓLO CUENTA CON EL BALÓN EN JUEGO. `docs/balance.md` decía que
+        // contar el balón parado era deliberado «porque durante las reanudaciones el reloj sigue y el balón
+        // está quieto en el punto del saque». Esa premisa dejó de ser cierta el día que el reloj del
+        // partido se paró (_clockTick): ahora una reanudación puede durar lo que haga falta, y con el saque
+        // de centro esperando a que el equipo vuelva andando, el balón se pasa hasta 180 ticks inmóvil en
+        // el círculo central.
+        //
+        // Medido, lote de 2.000 partidos contra línea base propia: `ballThirdMaxShare` saltaba de 40,94 a
+        // 52,74 y se salía de banda. Eso no es que el juego se concentre en un tercio, es la métrica
+        // contando una PARADA como si fuera territorio — un artefacto del instrumento, no fútbol. Es el
+        // mismo razonamiento que _clockTick y la misma decisión aplicada al mismo problema.
+        //
+        // Hermano anotado y NO tocado aquí: `PossessionTicks` sigue contando los ticks en los que el
+        // sacador tiene el balón durante la cuenta atrás. Ninguna métrica de posesión se sale de banda hoy,
+        // así que ampliarlo sería un cambio sin medición que lo pida.
+        if (_restartTicksLeft == 0)
+        {
+            float third = Pitch.Columns / 3f;
+            float x = _ball.Position.X;
+            int index = x < third ? 0 : (x < 2f * third ? 1 : 2);
+            _report.BallTicksByThird[index]++;
+        }
 
         if (_ball.Owner is not null)
         {
@@ -4938,7 +5167,7 @@ internal sealed class MatchEngine : IPerkWorld
     {
         if (!_goldenGoal)
         {
-            if (_tick < RegulationTicks)
+            if (_clockTick < RegulationTicks)
             {
                 return;
             }
@@ -4959,7 +5188,7 @@ internal sealed class MatchEngine : IPerkWorld
             return;
         }
 
-        if (_tick < RegulationTicks + _tuning.GoldenGoalMaxTicks)
+        if (_clockTick < RegulationTicks + _tuning.GoldenGoalMaxTicks)
         {
             return;
         }

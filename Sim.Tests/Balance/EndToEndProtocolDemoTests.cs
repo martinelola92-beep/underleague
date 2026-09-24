@@ -308,7 +308,36 @@ public sealed class EndToEndProtocolDemoTests
 
         bool monotonic = BalanceDecisionRules.IsMonotonic(deltas, increasing: true);
         _output.WriteLine($"Monotonía: {monotonic}");
-        Assert.True(monotonic, "más tackle probability debería subir tacklesPerMatch de forma monótona en la tripleta — si no, es una señal real, no se fuerza");
+
+        // BI-G (24 sep 2026): AQUÍ HABÍA UNA ASERCIÓN QUE NO PODÍA SER CIERTA. Exigía que la tripleta
+        // subiera `tacklesPerMatch` de forma monótona, y `tacklesPerMatch` cuenta entradas INTENTADAS
+        // —`_report.Tackles++` es incondicional en `ResolveTackle`—, mientras que `ProbabilityKind.Tackle`
+        // sólo decide las GANADAS. Medido: el brazo armado da 10,10 idéntico con el parámetro en 5, 15,
+        // 30, 40 y 60, y a 300 plantillas igual que a 60. Estaba en verde porque los tres deltas salían
+        // EXACTAMENTE iguales (0,10) y `IsMonotonic` acepta la igualdad: un empate, no una demostración.
+        //
+        // No se silencia una señal, se retira una aserción que nunca pudo señalar nada. La señal real -que
+        // el clasificador elige como métrica primaria de los perks de entrada la única que no puede
+        // moverse con su parámetro- está abierta en `docs/pendientes/BI-G.md`, y arreglarla pide una
+        // métrica con banda RT-056 y su ADR, no un retoque aquí.
+        //
+        // Sin monotonía el protocolo escala a DESIGN_REVIEW en vez de elegir un ganador a ciegas, que es
+        // lo que su hermano `ProtocolTraversesClassificationScreeningTuningAndValidation` ya hace y
+        // documenta como el comportamiento correcto.
+        if (!monotonic)
+        {
+            _output.WriteLine("Sin respuesta monótona: el protocolo escala a DESIGN_REVIEW (BI-G).");
+        }
+
+        // Lo que sí es verdad y sí hay que proteger: el fixture DISPARA. Si deja de activarse, la
+        // demostración no mide nada y este test tiene que ponerse en rojo — esta vez por algo real.
+        foreach (var (value, run) in byCandidate)
+        {
+            double activations = (double)run.ArmedActivations / run.ArmedMatches.Count;
+            Assert.True(
+                activations > 0,
+                $"el fixture no se activó ni una vez con el candidato {value}: la demostración no mide nada");
+        }
 
         var chosen = candidateMetrics[1];
         var mandatoryPaired = chosen.Metrics
