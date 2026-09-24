@@ -112,10 +112,31 @@ Valores de partida **sin calibrar**, elegidos por analogía y documentados en el
 |---|---|---|
 | `ball.controlHeightCells` | 0,5 | media casilla: la altura a la que una pelota deja de jugarse con el pie |
 | `ball.aerialReachHeightCells` | 1,7 | por debajo de `cross.peakHeightCellsMilli` (1,4 de pico sobre la recta), que es lo que hace que un centro siga pasando por arriba en su tramo alto |
-| `ball.headerSpeedCellsPerTickMilli` | 180 | entre el balón suelto y el pase: un cabezazo no es un golpeo limpio |
-| `ball.headerLiftCellsPerTickMilli` | 60 | lo justo para que caiga más adelante en vez de quedarse raso |
+| `ball.headerSpeedCellsPerTickMilli` | ~~180~~ **320** | corregido por la enmienda de BI-E: 180 era más lento que un pase y el balón no salía del grupo |
+| `ball.headerDropCellsPerTickMilli` | **150** | corregido por la enmienda de BI-E: era `headerLift` 60 **hacia arriba**, y el balón se quedaba a la altura de la cabeza |
 | `pass.loftedPeakHeightCellsMilli` | 700 | **la mitad** del centro, por el motivo del §6 |
 | `states.AerialCooldownTicks` | 12 | estructural, no calibración: lo que hace falta para que el mismo jugador no cabecee dos veces el mismo balón |
+
+## ENMIENDA (24 sep 2026, BI-E): el cabezazo baja el balón
+
+El revisor, jugando la build: *«el mayor problema es el ping-pong cuando disputan un balón elevado. El
+balón no cae fácilmente»*. **El enfriamiento del §5 no era la causa completa.**
+
+Medido con la traza del balón en 30 partidos: cadenas de **hasta ochenta** duelos seguidos, con el balón
+recorriendo **0,72 casillas** entre uno y otro y pasando el **18,9 %** del partido en la banda aérea. La
+causa, aislada: el cabezazo **conservaba la altura y además empujaba hacia arriba**, y los dos equipos lo
+cabeceaban en direcciones opuestas, cancelándose. Ni subía ni bajaba ni avanzaba.
+
+El enfriamiento sí funcionaba: el hueco medio entre duelos encadenados era de **7,5 ticks**, menor que los
+doce del contador, así que por definición **los que repetían eran otros jugadores**. Subirlo sólo habría
+hecho que la cadena la siguieran jugadores cada vez más lejanos.
+
+**Un cabezazo empuja el balón hacia abajo**, y sale más rápido en horizontal (180 → 320 milésimas: era más
+lento que un pase). El dato deja de llamarse `headerLift` y pasa a ser `headerDrop`, porque un término
+llamado «elevación» que hace caer el balón es una mentira en `/data`.
+
+Cadena más larga **80 → 2**. Y el 3,4 % de fotogramas por encima del alcance del salto pasa a **0,0 %**:
+era el propio ping-pong bombeando el balón hacia arriba. Ficha completa: `docs/pendientes/BI-E.md`.
 
 ## Lo que este paquete deja anotado para la fase de balance
 
@@ -125,6 +146,9 @@ No se toca nada de esto aquí, y es deliberado:
   triple viene entero de la rama aérea (medido apagándola por dato). Es la excepción del §2 funcionando;
   si la tasa es la correcta lo dirá la medición, no este paquete.
 - **Abrir el centro al duelo aéreo**, hoy excluido a propósito (§4).
+- **La tercera altura está muerta**: con el alcance del salto en 1,7 y el pico del centro en 1,4, ningún
+  balón legítimo pasa por encima de todo el mundo (medido tras BI-E: 0,0 % de fotogramas). O sobra la
+  altura, o el centro tiene que volar más alto.
 - **Los penaltis en las filas extremas se hicieron más raros**, lo bastante para dejar a
   `PenaltyAreaSymmetryTests` sin muestra con la que discriminar (hubo que ampliarla de 3.000 a 4.500
   partidos). Toca la ficha **BD-A**.

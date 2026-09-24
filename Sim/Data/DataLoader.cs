@@ -854,7 +854,7 @@ public static class DataLoader
         node.EnsureKnownKeys(
             "passSpeedCellsPerTickMilli", "shotSpeedCellsPerTickMilli", "looseBallFrictionPercent",
             "gravityCellsPerTickSqMilli", "bounceRestitutionPercent",
-            "controlHeightCells", "aerialReachHeightCells", "headerSpeedCellsPerTickMilli", "headerLiftCellsPerTickMilli");
+            "controlHeightCells", "aerialReachHeightCells", "headerSpeedCellsPerTickMilli", "headerDropCellsPerTickMilli");
         return new BallTuning(
             node.Prop("passSpeedCellsPerTickMilli").AsInt(),
             node.Prop("shotSpeedCellsPerTickMilli").AsInt(),
@@ -864,7 +864,7 @@ public static class DataLoader
             node.Prop("controlHeightCells").AsFloat(),
             node.Prop("aerialReachHeightCells").AsFloat(),
             node.Prop("headerSpeedCellsPerTickMilli").AsInt(),
-            node.Prop("headerLiftCellsPerTickMilli").AsInt());
+            node.Prop("headerDropCellsPerTickMilli").AsInt());
     }
 
     private static StatesTuning ParseStates(Json node)

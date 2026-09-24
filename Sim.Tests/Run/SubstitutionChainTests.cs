@@ -29,7 +29,12 @@ public sealed class SubstitutionChainTests
         // 0109) sin que el mecanismo cambiara, solo porque +17 % de superficie hace más raro que el propio
         // suplente se lesione. Un test que falla porque el campo crece es un test mal dimensionado, no una
         // regresión. Sale por la primera semilla que encuentra el caso, así que el coste real es bajo.
-        for (ulong seed = 1; seed <= 400; seed++)
+        // 400 -> 1500 semillas (BI-E, 24 sep 2026): lo que este test necesita es que un SUPLENTE YA
+        // ENTRADO se lesione, y con las lesiones en 0,65-0,70 por partido tras el Gameplay AI Foundations
+        // Pass ese encadenamiento se ha hecho más raro. La afirmación —que la ventana se vuelve a ofrecer
+        // sobre quien ya entró, que es lo que BA-B arregla— no cambia; lo que cambia es cuánto hay que
+        // buscar para encontrar el caso. El propio test grita si no lo encuentra.
+        for (ulong seed = 1; seed <= 1500; seed++)
         {
             var setup = TestMatches.Build(catalog, seed, homeQuality: 15, awayQuality: 95);
             var result = Simulator.Run(setup, seed, catalog, new SimConfig(CollectLog: false));
@@ -70,7 +75,7 @@ public sealed class SubstitutionChainTests
             Assert.True(chained <= 4);
         }
 
-        Assert.Fail("en 400 semillas no se ha encadenado ninguna sustitución sobre un suplente ya entrado: "
+        Assert.Fail("en mil quinientas semillas no se ha encadenado ninguna sustitución sobre un suplente ya entrado: "
             + "el emparejamiento del test no produce el caso que BA-B arregla");
     }
 }

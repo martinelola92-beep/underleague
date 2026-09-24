@@ -465,7 +465,7 @@ public sealed record BallTuning(
     float ControlHeightCells = 0f,
     float AerialReachHeightCells = 0f,
     int HeaderSpeedCellsPerTickMilli = 0,
-    int HeaderLiftCellsPerTickMilli = 0);
+    int HeaderDropCellsPerTickMilli = 0);
 
 /// <summary>tuning.states: duraciones de los estados de jugador, en ticks.</summary>
 public sealed record StatesTuning(int PassingTicks, int ShootingTicks, int TacklingTicks, int KnockedDownTicks, int CelebratingTicks, int DribbleDuelCooldownTicks, int TackleCooldownTicks, int OffBallTackleCooldownTicks, int ShieldingTicks = 0, int AerialCooldownTicks = 0, int GrudgeTicks = 0);

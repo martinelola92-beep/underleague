@@ -2254,9 +2254,18 @@ internal sealed class MatchEngine : IPerkWorld
         header.AerialCooldown = _tuning.States.AerialCooldownTicks;
         int direction = Pitch.AttackDirection(header.Team);
 
+        // BI-E: UN CABEZAZO DEVUELVE EL BALÓN AL JUEGO, no lo mantiene en el aire. La primera versión le
+        // daba impulso hacia ARRIBA y conservaba la altura, así que el balón ni subía ni bajaba: se
+        // quedaba a la altura de la cabeza mientras los dos equipos se lo cabeceaban en direcciones
+        // opuestas, cancelándose. Medido: cadenas de hasta OCHENTA duelos seguidos, con el balón
+        // recorriendo 0,72 casillas entre uno y otro y el 18,9 % del partido en la banda aérea.
+        //
+        // Ahora el cabezazo lo empuja hacia ABAJO. No es un ajuste de intensidad: es que la mecánica haga
+        // lo que su nombre dice. El duelo aéreo sigue existiendo y sigue decidiéndose con el cuerpo —lo
+        // que cambia es que se resuelve UNA vez y el balón vuelve al suelo, que es donde se juega.
         _ball.Head(
             new Vec2(direction * (ballTuning.HeaderSpeedCellsPerTickMilli / 1000f), 0f),
-            ballTuning.HeaderLiftCellsPerTickMilli / 1000f);
+            -(ballTuning.HeaderDropCellsPerTickMilli / 1000f));
 
         _ball.LastTouchPlayer = header;
         _ball.LastTouchTeam = header.Team;

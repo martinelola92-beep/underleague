@@ -291,11 +291,11 @@
           "maximum": 6
         },
         "headerSpeedCellsPerTickMilli": {
-          "description": "ADR 0139: a qué velocidad sale el balón cabeceado. Un cabezazo PROLONGA la jugada, no la cierra: el balón sigue suelto y eso es la segunda jugada.",
+          "description": "ADR 0139: a qué velocidad sale el balón cabeceado. Un cabezazo PROLONGA la jugada, no la cierra: el balón sigue suelto y eso es la segunda jugada. BI-E lo sube de 180 a 320 —era más lento que un pase— porque con la velocidad vieja el balón no salía del grupo y lo cabeceaba el siguiente.",
           "$ref": "#/$defs/milli"
         },
-        "headerLiftCellsPerTickMilli": {
-          "description": "ADR 0139: cuánto se eleva el balón cabeceado, para que caiga más adelante en vez de quedarse raso al instante.",
+        "headerDropCellsPerTickMilli": {
+          "description": "BI-E: con qué velocidad DESCENDENTE sale el balón cabeceado. Era un impulso hacia arriba (headerLift) y con él el balón se quedaba a la altura de la cabeza: medidas cadenas de hasta ochenta duelos seguidos, con el balón recorriendo 0,72 casillas entre uno y otro. Un cabezazo devuelve el balón al suelo, que es donde se juega.",
           "$ref": "#/$defs/milli"
         }
       },
@@ -308,7 +308,7 @@
         "controlHeightCells",
         "aerialReachHeightCells",
         "headerSpeedCellsPerTickMilli",
-        "headerLiftCellsPerTickMilli"
+        "headerDropCellsPerTickMilli"
       ],
       "additionalProperties": false
     },

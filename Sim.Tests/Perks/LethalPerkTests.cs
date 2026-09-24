@@ -186,8 +186,13 @@ public sealed class LethalPerkTests
         // muere y muere MÁS que cualquier compañero sano, que es lo que queda de la regla vieja de
         // RF-093 —el estado dejó de ser una puerta y pasó a ser un multiplicador— y lo que hace que
         // sentarlo sea una jugada y no una superstición.
+        //
+        // 60 -> 360 semillas (BI-E, 24 sep 2026): con las muertes más raras tras el Gameplay AI
+        // Foundations Pass, sesenta partidos daban UNA muerte del tocado y UNA de un sano, así que la
+        // comparación se decidía por un suceso y empataba. La afirmación no cambia —el tocado tiene que
+        // morir más— y lo único que hace falta es una muestra con la que se pueda distinguir.
         var deathsByPlayer = new Dictionary<int, int>();
-        for (ulong seed = 60; seed < 120; seed++)
+        for (ulong seed = 60; seed < 420; seed++)
         {
             var result = Simulator.Run(setup, seed, Catalog, new SimConfig(CollectLog: false));
             foreach (var e in result.Events.Where(e => e.Type == EventType.Death && e.Detail == "perk:" + perk.Id))
@@ -198,7 +203,7 @@ public sealed class LethalPerkTests
 
         Assert.True(
             deathsByPlayer.TryGetValue(wounded.Id, out int woundedDeaths) && woundedDeaths > 0,
-            "el jugador que saltó al campo tocado no murió ni una vez en sesenta partidos");
+            "el jugador que saltó al campo tocado no murió ni una vez en la tanda");
         foreach (var (id, count) in deathsByPlayer)
         {
             Assert.True(

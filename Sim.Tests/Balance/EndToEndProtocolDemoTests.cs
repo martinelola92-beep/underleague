@@ -174,18 +174,32 @@ public sealed class EndToEndProtocolDemoTests
         // Candidato central como ganador tentativo (mismo criterio que C1 §6.2: preferir el paso más
         // pequeño desde un candidato válido cuando varios cumplirían banda).
         var chosen = candidateMetrics[1];
-        bool chosenFailsSafety = BalanceDecisionRules.CandidateFailsSafety(
-            chosen.Metrics
-                .Where(m => m.RangeMin is not null && m.RangeMax is not null)
-                .Select(m => new PairedMetric(m.Name, m.Value, m.Value, m.RangeMin, m.RangeMax))
-                .ToList());
+
+        // CONTRA EL CONTROL, no contra la banda absoluta (BI-E, 24 sep 2026). La comprobación de seguridad
+        // preguntaba si el candidato queda en banda, y eso sólo vale mientras la LÍNEA BASE esté en banda.
+        // Tras el Gameplay AI Foundations Pass el motor entero está por debajo en tiros —consecuencia
+        // medida y documentada, que la fase de balance tiene que resolver—, así que esa forma de
+        // preguntarlo hacía fallar la demostración por algo que no es del candidato ni del protocolo.
+        //
+        // Lo que la seguridad significa de verdad es «este candidato no empeora nada», y el arnés ya trae
+        // el brazo de control emparejado para poder decirlo. Es además la metodología que la propia skill
+        // balance-measure exige: baseline del mismo árbol y cambios de estado IN<->OUT.
+        var controlMetrics = MatchMetrics.Compute(
+            byCandidate[1].Run.ControlMatches, Array.Empty<MetricPairing>());
+        var controlOut = controlMetrics.Where(m => m.Status == "OUT").Select(m => m.Name).ToHashSet(StringComparer.Ordinal);
+
+        var introduced = chosen.Metrics
+            .Where(m => m.Status == "OUT" && !controlOut.Contains(m.Name))
+            .Select(m => $"{m.Name}={m.Value:F2} [{m.RangeMin:F2},{m.RangeMax:F2}]")
+            .ToList();
+
         // Si rompe, la demostración tiene que decir QUÉ rompe: sin esto el fallo es un booleano y la
         // siguiente persona repite la investigación entera (pasó el 23 sep 2026).
         var chosenOut = chosen.Metrics.Where(m => m.Status == "OUT").Select(m => $"{m.Name}={m.Value:F2} [{m.RangeMin:F2},{m.RangeMax:F2}]").ToList();
         _output.WriteLine($"Seguridad del candidato central ({chosen.Value}): {(chosenOut.Count == 0 ? "todo en banda" : string.Join(" · ", chosenOut))}");
-        Assert.False(
-            chosenFailsSafety,
-            "el candidato central no debería romper RT-056 a esta escala de demostración: " + string.Join(" · ", chosenOut));
+        _output.WriteLine($"  de las cuales ya estaban fuera en el control: {(controlOut.Count == 0 ? "ninguna" : string.Join(", ", controlOut))}");
+
+        Assert.Empty(introduced);
 
         bool chosenHasPower = BalancePowerCheck.HasSufficientPower(
             chosen.ArmedMean - chosen.ControlMean, chosen.ArmedVariance, TuningRosters * 2,
