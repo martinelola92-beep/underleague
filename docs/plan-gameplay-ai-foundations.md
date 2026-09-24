@@ -239,20 +239,20 @@ RF/RT. **Ningún paquete ajusta un peso para perseguir una frecuencia.**
 | # | Paquete | Depende de | Núcleo del cambio |
 |---|---|---|---|
 | P1 | Percepción compartida (`TeamContext`) ✅ | — | `UtilityContext` + `UpdateContextCaches` |
-| P2 | Portador completo: `Shield`, y utilidad del portador con presión y espacio | P1 | `PlayerAction`, `StateMachine`, `Utility` |
+| P2 | Portador completo ✅: `Shield`, y utilidad del portador con presión y espacio | P1 | `PlayerAction`, `StateMachine`, `Utility` |
 | P3 | Intención compartida y arranque coordinado ✅ | P1, P2 | `Intent` en el contexto, `EvaluateFindSpace` |
-| P4 | Balón aéreo: `Clear`, altura general, rechace, duelo aéreo, segunda jugada | P1 | `Ball`, `UpdateFlight`, `AERIAL_DUEL` |
-| P5 | Portero: resultado de parada, saque evaluado, salida condicionada | P1, P4 | `ResolveSaveDuel`, `ClampToArea` |
-| P6 | Marcador, minuto y urgencia | P1 | `Utility.Choose`, `weights.json` |
-| P7 | Órdenes Defensive/Neutral/Offensive | P6 | `MatchSetup`, `weights.json` |
-| P8 | Fatiga como recurso | P1 | `MatchPlayer.Energy`, `SpeedPerTick`, utilidad |
-| P9 | Balón parado como fase con decisión | P1, P4 | `BeginRestart`/`ResolveRestart`/`TakeRestart` |
-| P10 | Acciones muertas: `OfferSupport`, `PressCarrier`, `Block` — causa por causa | P1, P6 | gates de `Utility` |
-| P11 | Centrocampista todocampista | P1, P10 | contexto por puesto, sin bonus arbitrarios |
-| P12 | Represalia | P1 | `ResolveInjury`, utilidad |
-| P13 | Turba `Lawless` | P6 | árbitro, faltas, tarjetas |
-| P14 | `modifyUtility` en el esquema + rasgos que hoy no pueden manifestarse | P2..P13 | `perks.schema.json`, `PerkLoader` |
-| P15 | Tests de integración de cadena + informe | todo | `Sim.Tests` |
+| P4 | Balón aéreo ✅: `Clear`, altura general, rechace, duelo aéreo, segunda jugada | P1 | `Ball`, `UpdateFlight`, `AERIAL_DUEL` |
+| P5 | Portero ✅: resultado de parada, saque evaluado, salida condicionada | P1, P4 | `ResolveSaveDuel`, `ClampToArea` |
+| P6 | Marcador, minuto y urgencia ✅ | P1 | `Utility.Choose`, `weights.json` |
+| P7 | Órdenes Defensive/Neutral/Offensive ✅ | P6 | `MatchSetup`, `weights.json` |
+| P8 | Fatiga como recurso ✅ | P1 | `MatchPlayer.Energy`, `SpeedPerTick`, utilidad |
+| P9 | Balón parado como fase con decisión ✅ | P1, P4 | `BeginRestart`/`ResolveRestart`/`TakeRestart` |
+| P10 | Acciones muertas ✅: `OfferSupport`, `PressCarrier`, `Block` — causa por causa | P1, P6 | gates de `Utility` |
+| P11 | Centrocampista todocampista ✅ (medido, sin cambios) | P1, P10 | contexto por puesto, sin bonus arbitrarios |
+| P12 | Represalia ✅ | P1 | `ResolveInjury`, utilidad |
+| P13 | Turba `Lawless` ✅ | P6 | árbitro, faltas, tarjetas |
+| P14 | `modifyUtility` en el esquema ✅ + rasgos que hoy no pueden manifestarse | P2..P13 | `perks.schema.json`, `PerkLoader` |
+| P15 | Tests de integración de cadena + informe ✅ | todo | `Sim.Tests` |
 
 ## Lo que este plan NO hace, y es deliberado
 
