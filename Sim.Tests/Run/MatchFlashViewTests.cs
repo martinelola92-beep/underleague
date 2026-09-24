@@ -12,17 +12,23 @@ namespace Underleague.Sim.Tests.Run;
 /// </summary>
 public sealed class MatchFlashViewTests
 {
-    // 14, no 20260915: con esa semilla el portador de test_flash completaba 0/3 pases (BB-B, un fix ajeno
-    // de ClampToArea/IsOutfield desplazó el consumo de RNG del partido lo suficiente para cruzar a cero —
-    // el mismo ruido de cualquier cambio de /Sim que ya se documentó en RunPolicyItemSlotTests). Con 14
-    // completa 4 de 11 intentos, con margen de verdad en vez de al borde.
-    private const ulong Seed = 14UL;
+    // La semilla se BUSCA, no se clava (ADR 0139). Estuvo clavada en 20260915, hubo que cambiarla a 14
+    // cuando BB-B desplazó el consumo de RNG, y el paquete de percepción y balón aéreo la habría dejado
+    // otra vez sin activaciones que examinar. Qué semilla produce pases completados es una huella del
+    // flujo de aleatoriedad, no una propiedad de la vista de avisos: buscarla deja el test afirmando lo
+    // que quiere afirmar —que toda activación se convierte en un aviso, en su fotograma y sobre su
+    // ficha— y lo hace inmune a esto para siempre.
+    private static ulong Seed => SeedValue.Value;
+
 
     /// <summary>Un perk que se cobra en cada pase completado del portador: suficiente para que salten avisos.</summary>
     private static readonly string OnPass = TestPerks.Json(
         "test_flash",
         "PASS_COMPLETED",
         """[ { "type": "modifyProbability", "target": "actor", "probability": "pass", "value": 15, "duration": "match" } ]""");
+
+    private static readonly Lazy<ulong> SeedValue = new(() =>
+        TestPerks.SeedWithActivations(TestPerks.CatalogWith(("test_flash", OnPass)), "test_flash", playerId: 1));
 
     [Fact]
     public void EveryActivationBecomesAFlashOnItsFrameAndOnItsPlayer()

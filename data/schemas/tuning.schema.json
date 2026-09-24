@@ -231,6 +231,26 @@
         "bounceRestitutionPercent": {
           "description": "ADR 0135: porcentaje de velocidad vertical que conserva el balón al botar contra el césped. Con 45 un balón bota a menos de la mitad de alto cada vez y se para pronto, que es lo que hace un balón de fútbol sobre hierba.",
           "$ref": "#/$defs/percent"
+        },
+        "controlHeightCells": {
+          "description": "ADR 0139: hasta esta altura el balón se CONTROLA con el pie y la recogida es la de siempre. Por encima ya no se controla: se cabecea.",
+          "type": "number",
+          "minimum": 0,
+          "maximum": 4
+        },
+        "aerialReachHeightCells": {
+          "description": "ADR 0139: hasta esta altura el balón se alcanza SALTANDO (cabezazo, y duelo aéreo si hay rivales). Por encima no lo toca nadie, y ésa es la razón de que un centro o un despeje puedan pasar por encima de todo el mundo.",
+          "type": "number",
+          "minimum": 0,
+          "maximum": 6
+        },
+        "headerSpeedCellsPerTickMilli": {
+          "description": "ADR 0139: a qué velocidad sale el balón cabeceado. Un cabezazo PROLONGA la jugada, no la cierra: el balón sigue suelto y eso es la segunda jugada.",
+          "$ref": "#/$defs/milli"
+        },
+        "headerLiftCellsPerTickMilli": {
+          "description": "ADR 0139: cuánto se eleva el balón cabeceado, para que caiga más adelante en vez de quedarse raso al instante.",
+          "$ref": "#/$defs/milli"
         }
       },
       "required": [
@@ -238,7 +258,11 @@
         "shotSpeedCellsPerTickMilli",
         "looseBallFrictionPercent",
         "gravityCellsPerTickSqMilli",
-        "bounceRestitutionPercent"
+        "bounceRestitutionPercent",
+        "controlHeightCells",
+        "aerialReachHeightCells",
+        "headerSpeedCellsPerTickMilli",
+        "headerLiftCellsPerTickMilli"
       ],
       "additionalProperties": false
     },
@@ -275,6 +299,10 @@
         "ShieldingTicks": {
           "description": "Gameplay AI Foundations Pass P2: cuánto dura el compromiso de proteger el balón. Mismo patrón que dribble.driveTicks (ADR 0137): mientras dura, el portador no vuelve a decidir.",
           "$ref": "#/$defs/ticks"
+        },
+        "AerialCooldownTicks": {
+          "description": "ADR 0139: ticks que un jugador tarda en poder volver a disputar un balón por alto. Estructural, no calibración: sin él, el que cabecea sigue pegado al balón y lo vuelve a disputar al tick siguiente —medido, 88 duelos aéreos por partido—.",
+          "$ref": "#/$defs/ticks"
         }
       },
       "required": [
@@ -286,7 +314,8 @@
         "DribbleDuelCooldownTicks",
         "TackleCooldownTicks",
         "OffBallTackleCooldownTicks",
-        "ShieldingTicks"
+        "ShieldingTicks",
+        "AerialCooldownTicks"
       ],
       "additionalProperties": false
     },
@@ -328,6 +357,10 @@
           "type": "integer",
           "minimum": 100,
           "description": "Factor de proximidad de la intercepción en contacto, en tanto por ciento (AZ-B paso 2)."
+        },
+        "loftedPeakHeightCellsMilli": {
+          "description": "ADR 0139: altura del pico de un pase LARGO que sale elevado porque tiene el pasillo tapado. Menor que la del centro: levantar la pelota por encima de un rival no es lo mismo que colgarla al área.",
+          "$ref": "#/$defs/milli"
         }
       },
       "required": [
@@ -339,7 +372,8 @@
         "interceptBaseChance",
         "interceptTechniqueFactor",
         "maxLeadCells",
-        "interceptContactPercent"
+        "interceptContactPercent",
+        "loftedPeakHeightCellsMilli"
       ],
       "additionalProperties": false
     },

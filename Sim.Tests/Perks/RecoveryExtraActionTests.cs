@@ -223,7 +223,17 @@ public sealed class RecoveryExtraActionTests
     // un RECOVERY —el disparador de este perk—. No es el disparador ensanchándose, es que ahora hay
     // recuperaciones donde antes no las había. La banda se abre lo justo para eso.
     [InlineData("road_warrior", 1, 0, 5)]
-    [InlineData("sweeper_keeper", 0, 1, 35)]
+    // ADR 0139: sweeper_keeper pasa de 17 a 55 activaciones en veinte partidos, y la causa está MEDIDA, no
+    // supuesta. El portero es la excepción del juego aéreo —tiene manos, así que un balón alto a su
+    // alcance lo ATRAPA en vez de cabecearlo—, y atrapar es un RECOVERY, que es el disparador de este
+    // perk. Medido apagando la rama aérea por dato (ball.controlHeightCells = 99): las recuperaciones del
+    // portero en veinte partidos pasan de 123 a 37, así que el triple viene de ahí y de ningún sitio más.
+    // No es el disparador ensanchándose ni un encadenamiento: son recuperaciones que antes no existían,
+    // igual que le pasó a road_warrior con el centro.
+    //
+    // El techo se mantiene en ~2x lo observado, que es la propiedad que este test defiende: un
+    // encadenamiento x2 se sigue saliendo y un desplazamiento de semillas no.
+    [InlineData("sweeper_keeper", 0, 1, 110)]
 
     public void ExistingPerksAreUnchanged(string perkId, int slot, int min, int max)
     {

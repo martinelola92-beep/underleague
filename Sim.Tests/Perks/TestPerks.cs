@@ -1,4 +1,5 @@
 using Underleague.Sim.Data;
+using Underleague.Sim.Events;
 using Underleague.Sim.Engine;
 using Underleague.Sim.Generation;
 using Underleague.Sim.Model;
@@ -116,6 +117,39 @@ internal static class TestPerks
     }
 
     /// <summary>Partido de referencia (dos equipos humanos de calidad 50) con perks asignados por id.</summary>
+    /// <summary>
+    /// Primera semilla del rango que produce al menos <paramref name="minimum"/> activaciones del perk
+    /// indicado, con la asignación indicada.
+    ///
+    /// <para><b>Por qué existe.</b> Varios tests de vista necesitan «un partido en el que este perk salte
+    /// unas cuantas veces» y lo resolvían clavando una semilla a mano. Es una huella del flujo de
+    /// aleatoriedad, no una propiedad del sistema que prueban: <b>cualquier</b> cambio de <c>/Sim</c> la
+    /// desplaza y el test se queda sin activaciones que examinar, que es exactamente lo que ya pasó una
+    /// vez con BB-B —el propio comentario de <c>MatchFlashViewTests</c> lo cuenta— y ha vuelto a pasar con
+    /// el paquete de percepción y balón aéreo. Buscar la semilla en vez de clavarla deja los tests
+    /// afirmando lo que de verdad quieren afirmar, y los hace inmunes a esto para siempre.</para>
+    ///
+    /// <para>El recorrido es determinista y empieza por la semilla más baja, así que el partido elegido es
+    /// siempre el mismo mientras el motor no cambie, y cuando cambie será otro igual de válido.</para>
+    /// </summary>
+    public static ulong SeedWithActivations(
+        Catalog catalog, string perkId, int playerId, int minimum = 3, ulong maxSeed = 400UL)
+    {
+        for (ulong seed = 1; seed <= maxSeed; seed++)
+        {
+            var setup = Match(catalog, seed, (playerId, new[] { perkId }));
+            var result = Simulator.Run(setup, seed, catalog, SimConfig.Default);
+            int activations = result.Events.Count(e => e.Type == EventType.PerkTriggered);
+            if (activations >= minimum)
+            {
+                return seed;
+            }
+        }
+
+        throw new InvalidOperationException(
+            $"ninguna semilla hasta {maxSeed} activa '{perkId}' al menos {minimum} veces");
+    }
+
     public static MatchSetup Match(Catalog catalog, ulong seed, params (int PlayerId, string[] Perks)[] assignments)
     {
         var setup = TestMatches.Reference(catalog, seed);

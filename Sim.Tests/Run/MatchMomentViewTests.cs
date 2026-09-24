@@ -25,14 +25,19 @@ public sealed class MatchMomentViewTests
 
     public MatchMomentViewTests(ITestOutputHelper output) => _output = output;
 
-    // Mismo perk y misma semilla que MatchFlashViewTests: se cobra en cada pase completado del portador,
-    // así que hay marcas de sobra para comprobar dónde caen respecto al primer segundo y a los momentos.
-    private const ulong FlashSeed = 14UL;
+    // Mismo perk y misma regla que MatchFlashViewTests: la semilla se BUSCA en vez de clavarse, porque
+    // «qué partido tiene pases completados del portador» es una huella del flujo de aleatoriedad y
+    // cualquier cambio de /Sim la desplaza (ADR 0139).
+    private static ulong FlashSeed => FlashSeedValue.Value;
+
 
     private static readonly string OnPass = TestPerks.Json(
         "test_flash",
         "PASS_COMPLETED",
         """[ { "type": "modifyProbability", "target": "actor", "probability": "pass", "value": 15, "duration": "match" } ]""");
+
+    private static readonly Lazy<ulong> FlashSeedValue = new(() =>
+        TestPerks.SeedWithActivations(TestPerks.CatalogWith(("test_flash", OnPass)), "test_flash", playerId: 1));
 
     private const ulong BandSeed = 20260919UL;
     private const int BandRuns = 200;

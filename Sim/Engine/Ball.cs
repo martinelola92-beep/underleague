@@ -183,6 +183,21 @@ internal sealed class Ball
         VelocityZ = velocityZ;
     }
 
+    /// <summary>
+    /// Prolonga un balón suelto <b>sin bajarlo al suelo</b>: es lo que hace un cabezazo (ADR 0139).
+    ///
+    /// <para>Existe porque <see cref="SetLoose(Vec2, float)"/> pone <see cref="Z"/> a cero —un rechace
+    /// sale del punto de contacto, que está en el suelo—, y un balón cabeceado sigue por el aire desde
+    /// donde estaba. Usar allí el método equivocado teletransportaría el balón al césped en el instante
+    /// del salto.</para>
+    /// </summary>
+    public void Head(Vec2 velocity, float velocityZ)
+    {
+        float height = Z;
+        SetLoose(velocity, velocityZ);
+        Z = height;
+    }
+
     /// <summary>Detiene el balón en un punto concreto sin dueño (reanudaciones).</summary>
     public void Park(Vec2 position)
     {

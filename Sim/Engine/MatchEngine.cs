@@ -1014,6 +1014,11 @@ internal sealed class MatchEngine : IPerkWorld
             player.BlockCooldown--;
         }
 
+        if (player.AerialCooldown > 0)
+        {
+            player.AerialCooldown--;
+        }
+
         // Un estado de decisión CON contador no vuelve a decidir hasta que se le acaba: es lo que hace de
         // la conducción un compromiso y no una intención que se reevalúa cada dos ticks. Comprobado antes
         // de añadirlo: hoy los tres estados de decisión —Positioning, Chasing, Dribbling— se entran
@@ -1453,6 +1458,19 @@ internal sealed class MatchEngine : IPerkWorld
         // motor distinto. Un pase deja las dos en cero y sigue siendo raso, exactamente como antes.
         _ball.Z = (_ball.FlightTargetZ * t) + (_ball.FlightArc * 4f * t * (1f - t));
 
+        // ADR 0139: un DESPEJE se puede pelear en el aire mientras baja. Va antes de la intercepción
+        // porque a esa altura el balón no está al alcance del pie: lo que se disputa es un salto, y el
+        // modelo correcto es el cabezazo, no el corte.
+        //
+        // Sólo el despeje, y es deliberado: el centro pasa por encima de quien lo intentaría cortar
+        // porque la ADR 0136 lo decidió así y ésa es la razón de que la acción exista. Abrir el centro al
+        // duelo aéreo cambiaría una mecánica ya medida, así que queda anotado como candidato para la fase
+        // de balance, no como algo que este paquete se lleva por delante de camino.
+        if (_ball.IsClearance && TryAerialChallenge())
+        {
+            return;
+        }
+
         if (!_ball.IsShot && TryIntercept())
         {
             return;
@@ -1827,12 +1845,31 @@ internal sealed class MatchEngine : IPerkWorld
         _ball.Velocity *= _tuning.Ball.LooseBallFrictionPercent / 100f;
         UpdateBallHeight();
 
-        MatchPlayer? nearest = null;
-        float bestDistance = 0f;
+        // ADR 0139: LA ALTURA EMPIEZA A SIGNIFICAR ALGO EN LA RECOGIDA. La ADR 0135 le dio altura al balón
+        // y la recogida nunca la miró: un balón a dos casillas del césped se cogía con el pie igual que
+        // uno parado. Ahora hay tres casos, que son tres jugadas distintas:
+        //
+        //   z <= controlHeight            -> se CONTROLA (lo de siempre)
+        //   controlHeight < z <= aerialReach -> se CABECEA, y si hay rivales es DUELO AÉREO
+        //   z > aerialReach               -> no lo toca nadie
+        //
+        // El tercero es el que hace que un centro y un despeje existan: pasan por encima de todos.
+        var ballTuning = _tuning.Ball;
+        if (_ball.Z > ballTuning.AerialReachHeightCells)
+        {
+            return;
+        }
+
+        bool aerial = _ball.Z > ballTuning.ControlHeightCells;
+
+        // Un candidato por equipo, el más cercano de cada uno: así «disputado» significa que llegan los
+        // dos, y el desempate no depende de en qué orden se recorra el array (RT-041).
+        var candidates = new MatchPlayer?[2];
+        var distances = new float[2];
         for (int i = 0; i < _players.Length; i++)
         {
             var player = _players[i];
-            if (!CanTouchBall(player))
+            if (!CanTouchBall(player) || (aerial && player.AerialCooldown > 0))
             {
                 continue;
             }
@@ -1849,24 +1886,196 @@ internal sealed class MatchEngine : IPerkWorld
                 continue;
             }
 
-            if (nearest is null || distance < bestDistance)
+            if (candidates[player.Team] is null || distance < distances[player.Team])
             {
-                nearest = player;
-                bestDistance = distance;
+                candidates[player.Team] = player;
+                distances[player.Team] = distance;
             }
         }
 
-        if (nearest is null)
+        if (candidates[0] is null && candidates[1] is null)
         {
             return;
         }
 
-        int previousTouchTeam = _ball.LastTouchTeam;
-        SetOwner(nearest);
-        if (previousTouchTeam >= 0 && previousTouchTeam != nearest.Team)
+        MatchPlayer winner;
+        bool contested = candidates[0] is not null && candidates[1] is not null;
+        if (contested)
         {
-            Emit(EventType.Recovery, "loose", nearest);
+            winner = ResolveBallContest(candidates[0]!, distances[0], candidates[1]!, distances[1], aerial);
+            if (aerial)
+            {
+                _report.AerialDuels[winner.Team]++;
+                Emit(EventType.AerialDuel, "won", winner, opponent: Other(winner, candidates));
+            }
         }
+        else
+        {
+            winner = candidates[0] ?? candidates[1]!;
+        }
+
+        // Un cabezazo PROLONGA la jugada, no la cierra: el balón sigue suelto y sale hacia donde ataca
+        // quien salta. Eso es la segunda jugada, y es la diferencia entre «el balón aéreo existe» y «el
+        // balón aéreo produce fútbol». El portero es la excepción y no por capricho: tiene manos, así que
+        // un balón alto a su alcance lo ATRAPA en vez de cabecearlo.
+        if (aerial && winner.IsOutfield)
+        {
+            HeadBallOn(winner);
+            return;
+        }
+
+        int previousTouchTeam = _ball.LastTouchTeam;
+        SetOwner(winner);
+        if (previousTouchTeam >= 0 && previousTouchTeam != winner.Team)
+        {
+            Emit(EventType.Recovery, "loose", winner);
+        }
+    }
+
+    /// <summary>
+    /// ¿Salta alguien a disputar el balón que baja? (ADR 0139). Es el hermano en vuelo de la disputa del
+    /// balón suelto: mismos pesos, mismo evento, misma consecuencia —quien gana lo <b>cabecea</b> y el
+    /// balón sigue vivo—.
+    ///
+    /// <para>Se mide en el <b>plano</b> y no en esfera, a diferencia de la intercepción: el que salta ya
+    /// está contando con subir, así que lo que decide si llega es dónde está, no cuánto mide el balón.
+    /// La altura ya ha hecho su trabajo antes, dejando fuera todo lo que va por encima del salto.</para>
+    /// </summary>
+    private bool TryAerialChallenge()
+    {
+        var ballTuning = _tuning.Ball;
+        if (_ball.Z <= ballTuning.ControlHeightCells || _ball.Z > ballTuning.AerialReachHeightCells)
+        {
+            return false;
+        }
+
+        var candidates = new MatchPlayer?[2];
+        var distances = new float[2];
+        for (int i = 0; i < _players.Length; i++)
+        {
+            var player = _players[i];
+            if (!CanTouchBall(player) || player.AerialCooldown > 0)
+            {
+                continue;
+            }
+
+            float distance = Vec2.Distance(player.Position, _ball.Position);
+            if (distance >= PickupRadius)
+            {
+                continue;
+            }
+
+            if (candidates[player.Team] is null || distance < distances[player.Team])
+            {
+                candidates[player.Team] = player;
+                distances[player.Team] = distance;
+            }
+        }
+
+        if (candidates[0] is null && candidates[1] is null)
+        {
+            return false;
+        }
+
+        MatchPlayer winner;
+        if (candidates[0] is not null && candidates[1] is not null)
+        {
+            winner = ResolveBallContest(candidates[0]!, distances[0], candidates[1]!, distances[1], aerial: true);
+            _report.AerialDuels[winner.Team]++;
+            Emit(EventType.AerialDuel, "won", winner, opponent: Other(winner, candidates));
+        }
+        else
+        {
+            winner = candidates[0] ?? candidates[1]!;
+        }
+
+        if (!winner.IsOutfield)
+        {
+            SetOwner(winner);
+            return true;
+        }
+
+        HeadBallOn(winner);
+        return true;
+    }
+
+    /// <summary>El otro candidato de la disputa, para poder nombrar a los dos en el evento.</summary>
+    private static MatchPlayer? Other(MatchPlayer winner, MatchPlayer?[] candidates) =>
+        ReferenceEquals(winner, candidates[0]) ? candidates[1] : candidates[0];
+
+    /// <summary>
+    /// Quién se lleva un balón que disputan los dos equipos (ADR 0139).
+    ///
+    /// <para><b>No gana automáticamente el más cercano</b>, que es lo que hacía el motor hasta ahora y lo
+    /// que convertía toda segunda jugada en una cuestión de geometría. Gana una tirada ponderada por lo
+    /// que de verdad decide ese duelo, y la distancia sigue contando —estar más cerca ayuda, pero ya no
+    /// basta—:</para>
+    /// <list type="bullet">
+    /// <item>en el aire manda el <b>cuerpo</b>: fuerza y tamaño, porque saltar a disputar un balón alto es
+    /// un choque, y porque así un bicho grande gana lo que le corresponde por ser grande;</item>
+    /// <item>en el suelo mandan <b>técnica y velocidad</b>: llegar y quedársela es control, no choque.</item>
+    /// </list>
+    ///
+    /// <para>Aritmética entera y un único <c>Range</c> por disputa (RT-021, RT-023). El orden de los dos
+    /// pesos lo fija el índice de equipo, no la distancia, para que la tirada no dependa de cuál estaba
+    /// más cerca.</para>
+    /// </summary>
+    private MatchPlayer ResolveBallContest(
+        MatchPlayer home, float homeDistance, MatchPlayer away, float awayDistance, bool aerial)
+    {
+        if (aerial)
+        {
+            // Saltan los DOS, así que los dos pagan el enfriamiento. Cobrárselo sólo al ganador dejaría al
+            // perdedor disputando solo el tick siguiente, que es el mismo ping-pong por otra puerta.
+            home.AerialCooldown = _tuning.States.AerialCooldownTicks;
+            away.AerialCooldown = _tuning.States.AerialCooldownTicks;
+        }
+
+        int homeWeight = ContestWeight(home, homeDistance, aerial);
+        int awayWeight = ContestWeight(away, awayDistance, aerial);
+        int total = homeWeight + awayWeight;
+        if (total <= 0)
+        {
+            // Sólo si los dos quedan a cero: se resuelve por id ascendente, como cualquier empate (RT-097).
+            return home.Id <= away.Id ? home : away;
+        }
+
+        return _rng.Range(0, total) < homeWeight ? home : away;
+    }
+
+    /// <summary>Peso de un jugador en la disputa: lo que aporta él, por lo cerca que llega.</summary>
+    private static int ContestWeight(MatchPlayer player, float distance, bool aerial)
+    {
+        int attribute = aerial
+            ? player.Strength + player.BodyRadiusCentiCells
+            : player.Technique + player.Speed;
+
+        int proximity = Utility.Centi(PickupRadius) - Utility.Centi(distance);
+        if (proximity < 1)
+        {
+            proximity = 1;
+        }
+
+        return attribute * proximity;
+    }
+
+    /// <summary>
+    /// El que gana el balón por alto lo <b>cabecea hacia donde ataca</b>, y el balón sigue suelto (ADR
+    /// 0139). No toma posesión: un cabezazo en disputa no es un control, y tratarlo como tal borraría la
+    /// segunda jugada justo donde nace.
+    /// </summary>
+    private void HeadBallOn(MatchPlayer header)
+    {
+        var ballTuning = _tuning.Ball;
+        header.AerialCooldown = _tuning.States.AerialCooldownTicks;
+        int direction = Pitch.AttackDirection(header.Team);
+
+        _ball.Head(
+            new Vec2(direction * (ballTuning.HeaderSpeedCellsPerTickMilli / 1000f), 0f),
+            ballTuning.HeaderLiftCellsPerTickMilli / 1000f);
+
+        _ball.LastTouchPlayer = header;
+        _ball.LastTouchTeam = header.Team;
     }
 
     /// <summary>
@@ -2159,6 +2368,21 @@ internal sealed class MatchEngine : IPerkWorld
         // declara en absoluto y no por casilla recorrida: un centro se levanta para salvar a los
         // defensas, no en proporcion a lo lejos que este el que centra. Ver CrossTuning.
         _ball.FlightArc = cross ? _tuning.Cross.PeakHeightCellsMilli / 1000f : 0f;
+
+        // ADR 0139: EL PASE LARGO SE LEVANTA CUANDO HAY ALGUIEN EN MEDIO. Hasta aquí el balón sólo dejaba
+        // el suelo en un tiro y en un centro, así que el pase largo con el pasillo tapado era un balón
+        // raso que se comía el primer rival —y el término que lo penaliza en la utilidad estaba, en el
+        // fondo, castigando al pasador por una limitación del motor y no por una mala decisión—.
+        //
+        // No es una acción nueva (regla 17 del encargo): es el mismo LongPass, que cambia de trayectoria
+        // cuando la situación lo pide. Se levanta menos que un centro a propósito: pasar por encima de un
+        // rival no es colgarla al área.
+        if (!cross && !through && passer.CurrentAction == PlayerAction.LongPass
+            && Utility.LaneDanger(_players, passer.Team, passer.Position, target, pass.InterceptRadiusCells) > 0)
+        {
+            _ball.FlightArc = pass.LoftedPeakHeightCellsMilli / 1000f;
+        }
+
         _ball.Passer = passer;
         _ball.PassReceiver = receiver;
         _ball.PassSucceeds = succeeds;
@@ -3387,6 +3611,12 @@ internal sealed class MatchEngine : IPerkWorld
 
     /// <summary>Altura actual del balón, en casillas.</summary>
     internal float BallHeightForTest => _ball.Z;
+
+    /// <summary>Pone el balón a una altura concreta, para montar un balón aéreo sin simular su vuelo.</summary>
+    internal void SetBallHeightForTest(float height) => _ball.Z = height;
+
+    /// <summary>Velocidad actual del balón suelto.</summary>
+    internal Vec2 BallVelocityForTest => _ball.Velocity;
 
     /// <summary>Id del dueño del balón, o -1 si está suelto o en vuelo.</summary>
     internal int BallOwnerIdForTest => _ball.Owner?.Id ?? -1;

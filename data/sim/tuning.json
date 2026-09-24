@@ -22,7 +22,11 @@
     "shotSpeedCellsPerTickMilli": 700,
     "looseBallFrictionPercent": 92,
     "gravityCellsPerTickSqMilli": 20,
-    "bounceRestitutionPercent": 45
+    "bounceRestitutionPercent": 45,
+    "controlHeightCells": 0.5,
+    "aerialReachHeightCells": 1.7,
+    "headerSpeedCellsPerTickMilli": 180,
+    "headerLiftCellsPerTickMilli": 60
   },
   "states": {
     "_doc": "Duraciones y enfriamientos de la maquina de estados del jugador, en ticks. ADR 0129: cada entrada paga SU propio contador -TackleCooldown para la disputa del balon, OffBallTackleCooldown para el golpe al marcado-, como ya hacia el bloqueo desde el paquete U; antes compartian uno solo y pegarle a quien no llevaba el balon dejaba al jugador sin poder disputarlo 12 segundos. Al separarlos las disputas subieron de 6,92 a 7,86 por partido y las entradas sin balon de 5,09 a 5,67, asi que los dos enfriamientos absorben lo liberado: TackleCooldownTicks 60 -> 90 y OffBallTackleCooldownTicks 180 -> 280, con lo que faltas (7,54 contra 7,50) y lesiones (0,79 contra 0,81) quedan donde estaban y las disputas suben a 7,65, que es lo que el arreglo pretendia. OffBallTackleCooldownTicks (ADR 0105) es el enfriamiento de la entrada SIN BALON, separado y mas largo que el de la entrada normal: es la palanca que gobierna cuantas hay por partido, y es la unica continua que existe -la comparacion de utilidad entre Tackle y MarkOpponent es casi constante para un defensa, asi que el bono de la entrada se comporta como un interruptor de tres posiciones-. Medido con bono 150: 14,55 entradas por partido con 60 ticks, 13,38 con 120, 12,29 con 180 y 11,75 con 240, contra 9,19 sin la entrada sin balon. AVISO (ADR 0125 D1, 22 sep 2026): esas cinco cifras son la METRICA MEZCLADA -entrada al portador mas entrada sin balon sumadas-, que es como se median antes de separarlas, y NO son comparables con el tacklesPerMatch de hoy. Con el enfriamiento de entonces (180, contador compartido) el mismo lote daba 6,92 al portador mas 5,09 sin balon; con el punto de trabajo vigente de la ADR 0129 (90/280, contadores separados) da 7,65 y 4,55. El 9,19 no es la separacion: es otro experimento, la metrica mezclada con la entrada sin balon apagada, y en el arbol de hoy ese experimento da 7,78.",
@@ -34,7 +38,8 @@
     "DribbleDuelCooldownTicks": 40,
     "TackleCooldownTicks": 90,
     "OffBallTackleCooldownTicks": 400,
-    "ShieldingTicks": 12
+    "ShieldingTicks": 12,
+    "AerialCooldownTicks": 12
   },
   "pass": {
     "_doc": "maxLeadCells (AZ-B paso 1, docs/plan-pases-trayectoria.md): techo absoluto, en casillas, del adelanto del pase; el destino se adelanta por lo que el receptor va a poder recorrer hacia donde su utilidad ha decidido ir (TargetPoint), nunca por la extrapolacion ciega de Velocity. 1,5 de partida (el adelanto medio medido antes era 1,44 y en el 14,3% de los pases no habia nadie en el destino al llegar). Medido: subirlo a 2,0 no cambia nada porque la cota que manda es la distancia a la intencion del receptor; lo que devuelve el recorrido hacia delante es el pase en profundidad (paso 5), no un adelanto mayor. interceptContactPercent (AZ-B paso 2): la cuota de intercepcion (y de bloqueo del tiro, que hereda la misma funcion) se multiplica por un factor de proximidad, en tanto por ciento, que vale 100 en el borde de interceptRadiusCells y sube linealmente hasta este valor cuando el balon pasa por dentro del cuerpo del rival (bodyRadius de su raza, data/races): un orco tapa mas que un elfo sin ninguna regla nueva. Antes la distancia no entraba en la tirada: un rival a 0,05 casillas tiraba lo mismo que uno a 0,85. 350 (el plan partia de 600: con 600 y el paso 3 instalado, passChainAvgLength quedaba en 1,97 en la semilla 1, bajo el suelo de 2; es el unico ajuste que el plan permite y se aplico una vez).",
@@ -46,7 +51,8 @@
     "maxLeadCells": 1.5,
     "interceptContactPercent": 350,
     "interceptBaseChance": 250,
-    "interceptTechniqueFactor": 10
+    "interceptTechniqueFactor": 10,
+    "loftedPeakHeightCellsMilli": 700
   },
   "dribble": {
     "_doc": "ADR 0041: la tecnica del conductor contra la COBERTURA del defensor, no las tres cifras contra el 50 fijo. cobertura = (defenderSpeedSharePercent*velocidad + resto*fuerza)/100. Subir de nivel a los dos no mueve el duelo. ADR 0050 P2: la tirada de este canal ya no es una uniforme sino el PROMEDIO DE DOS, asi que la base se reexpresa en la escala nueva para no mover el punto de trabajo: la probabilidad efectiva es la acumulada triangular, F(p)=2p2 por debajo del centro y 1-2(1-p)2 por encima. baseWin pasa de 7200 a 6260 porque F(0,626)=0,72: el mismo 72 por ciento de antes, escrito en la escala nueva. Lo que cambia no es el punto de trabajo sino la PENDIENTE, que pasa de 1 a 1,5: la misma diferencia de tecnica mueve el duelo vez y media mas. Medido en docs/fase2-diseno.md 22.",

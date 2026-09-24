@@ -111,15 +111,32 @@ public class RunEngineTests
     public void LosingAnOrdinaryMatch_DoesNotEndTheRun()
     {
         // RF-002c: perder un partido ordinario no termina la run.
+        //
+        // La DERROTA es la precondición del test, no lo que afirma, así que la semilla se busca en vez de
+        // clavarse (ADR 0139): con 555 clavada, un equipo de calidad 20 ganaba a uno de 99 en cuanto el
+        // motor cambiaba lo suficiente, y el test fallaba sin que la regla que vigila tuviera nada que
+        // ver. Se recorre en orden ascendente, así que sigue siendo determinista.
         var systems = new TestRunSystems { OpponentQuality = 99 };
-        var state = RunEngine.Start(TestRuns.Setup(quality: 20), 555, Catalog);
+        RunState? lost = null;
+        MapNode? lostNode = null;
 
-        var (walked, node) = TestRuns.WalkToMatch(state, Catalog, systems);
-        state = RunEngine.Enter(walked, node.Id, Catalog, systems);
+        for (ulong seed = 555; seed < 555 + 40 && lost is null; seed++)
+        {
+            var state = RunEngine.Start(TestRuns.Setup(quality: 20), seed, Catalog);
+            var (walked, node) = TestRuns.WalkToMatch(state, Catalog, systems);
+            var played = RunEngine.Enter(walked, node.Id, Catalog, systems);
 
-        Assert.Equal(NodeResult.Lost, state.NodeHistory.Single(e => e.NodeId == node.Id).Result);
-        Assert.False(RunEngine.Outcome(state).IsOver);
-        Assert.Equal(RunPhase.OnMap, state.Phase);
+            if (played.NodeHistory.Single(e => e.NodeId == node.Id).Result == NodeResult.Lost)
+            {
+                lost = played;
+                lostNode = node;
+            }
+        }
+
+        Assert.True(lost is not null, "ninguna de las cuarenta semillas produjo una derrota ordinaria");
+        Assert.Equal(NodeResult.Lost, lost!.NodeHistory.Single(e => e.NodeId == lostNode!.Id).Result);
+        Assert.False(RunEngine.Outcome(lost).IsOver);
+        Assert.Equal(RunPhase.OnMap, lost.Phase);
     }
 
     [Fact]

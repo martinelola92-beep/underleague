@@ -45,7 +45,12 @@ public sealed class PenaltyAreaSymmetryTests
     /// variados; el mismo emparejamiento fijo con semillas de partido distintas da una tasa de penaltis
     /// por partido similar (≈0,042 aquí contra ≈0,12-0,13 allí, del mismo orden).
     /// </summary>
-    private const int Matches = 3000;
+    // 4500 desde la ADR 0139: con 3000 la muestra de filas extremas cayó a 19 —por debajo del mínimo de
+    // 20 que el propio test exige para pronunciarse— porque el paquete de balón aéreo y despeje cambió
+    // dónde acaba el balón y los penaltis en las filas 1 y 5 se hicieron más raros. Ampliar la muestra es
+    // lo único que se puede hacer sin tocar el juego: el test no falla por un reparto asimétrico, falla
+    // por no poder discriminar. Que la tasa haya bajado queda anotado para la fase de balance (BD-A).
+    private const int Matches = 4500;
 
     /// <summary>Mínimo de penaltis en las filas 1+5 para que la comparación tenga algo que discriminar.</summary>
     private const int MinimumExtremeRowSample = 20;

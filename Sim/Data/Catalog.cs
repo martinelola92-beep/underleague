@@ -413,13 +413,22 @@ public sealed record BallTuning(
     int ShotSpeedCellsPerTickMilli,
     int LooseBallFrictionPercent,
     int GravityCellsPerTickSqMilli,
-    int BounceRestitutionPercent);
+    int BounceRestitutionPercent,
+
+    // Gameplay AI Foundations Pass, P4 — LA ALTURA EMPIEZA A SIGNIFICAR ALGO. Hasta aquí un balón podía
+    // recogerse estuviera a la altura que estuviera: la ADR 0135 le dio altura al balón y nadie la
+    // consultaba al recogerlo. Estas tres cifras parten la recogida en tres casos que son tres jugadas
+    // distintas: controlar (raso), cabecear (a la altura de un salto) y nada (por encima de todos).
+    float ControlHeightCells = 0f,
+    float AerialReachHeightCells = 0f,
+    int HeaderSpeedCellsPerTickMilli = 0,
+    int HeaderLiftCellsPerTickMilli = 0);
 
 /// <summary>tuning.states: duraciones de los estados de jugador, en ticks.</summary>
-public sealed record StatesTuning(int PassingTicks, int ShootingTicks, int TacklingTicks, int KnockedDownTicks, int CelebratingTicks, int DribbleDuelCooldownTicks, int TackleCooldownTicks, int OffBallTackleCooldownTicks, int ShieldingTicks = 0);
+public sealed record StatesTuning(int PassingTicks, int ShootingTicks, int TacklingTicks, int KnockedDownTicks, int CelebratingTicks, int DribbleDuelCooldownTicks, int TackleCooldownTicks, int OffBallTackleCooldownTicks, int ShieldingTicks = 0, int AerialCooldownTicks = 0);
 
 /// <summary>tuning.pass.</summary>
-public sealed record PassTuning(int BaseSuccess, int TechniqueFactor, int DistancePenaltyPerCell, int PressurePenalty, float InterceptRadiusCells, int InterceptBaseChance, int InterceptTechniqueFactor, float MaxLeadCells, int InterceptContactPercent);
+public sealed record PassTuning(int BaseSuccess, int TechniqueFactor, int DistancePenaltyPerCell, int PressurePenalty, float InterceptRadiusCells, int InterceptBaseChance, int InterceptTechniqueFactor, float MaxLeadCells, int InterceptContactPercent, int LoftedPeakHeightCellsMilli = 0);
 
 /// <summary>tuning.dribble.</summary>
 public sealed record DribbleTuning(int BaseWin, int AttackerTechniqueFactor, int DefenderSpeedSharePercent, int LostKnockdownTicks, int DriveTicks, int DriveTicksTechniqueSharePercent);

@@ -39,13 +39,18 @@ public sealed class HighLineNoLongerFalselyEscalatesTests
     [Fact]
     public void ThePerkStillGoesThroughEveryOtherScreeningRule()
     {
-        // El delta sigue siendo el mismo que midió §23.5: no se ha tocado el mecanismo, solo la regla que
-        // lo interpretaba. Y el estado final lo sigue decidiendo el motor de decisión, no este test.
+        // Lo que este test afirma es que el perk SIGUE PASANDO por el resto del cribado: que produce una
+        // medida y un estado definido, no que la medida valga tal cosa.
+        //
+        // REPLANTEADO (ADR 0139): fijaba además que el delta fuera NEGATIVO, «como en §23.5». Eso no es una
+        // regla del sistema sino una medición del motor tal y como estaba aquel día, y el Gameplay AI
+        // Foundations Pass cambia el motor a propósito —percepción compartida, proteger, despejar, juego
+        // aéreo—, así que el signo puede cambiar sin que nada esté roto. Volver a clavar el signo nuevo
+        // sería repetir el error con otra cifra. El valor se imprime para que la fase de balance lo lea.
         var perk = Catalog.Perks.All.Single(p => p.Id == "high_line");
         var result = ScreeningRunner.RunPerk(Catalog, perk, seed: 1);
 
         Assert.NotNull(result.PrimaryDelta);
-        Assert.True(result.PrimaryDelta < 0, "el delta medido sigue siendo negativo, como en §23.5");
         Assert.True(Enum.IsDefined(result.FinalState));
         _output.WriteLine($"estado final tras la corrección: {result.DisplayState} (delta {result.PrimaryDelta:F4})");
     }

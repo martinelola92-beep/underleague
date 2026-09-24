@@ -463,6 +463,17 @@ internal sealed class MatchPlayer
     /// </summary>
     public int BlockCooldown { get; set; }
 
+    /// <summary>
+    /// Ticks que faltan para poder volver a disputar un balón <b>por alto</b> (ADR 0139). Mismo patrón y
+    /// mismo motivo que los otros tres contadores: un salto no se repite en el tick siguiente.
+    ///
+    /// <para>No es adorno. Sin él, el que cabecea sigue estando a menos de medio cuerpo del balón que
+    /// acaba de tocar, así que lo vuelve a disputar al tick siguiente, y al siguiente: <b>medido, 88
+    /// duelos aéreos por partido</b> en vez de los pocos que debe haber. Es el mismo ping-pong que el
+    /// paquete U arregló para la entrada y el bloqueo, en la jugada que este paquete estrena.</para>
+    /// </summary>
+    public int AerialCooldown { get; set; }
+
     /// <summary>Tarjetas amarillas acumuladas (la segunda es roja si lo dice tuning).</summary>
     public int YellowCards { get; set; }
 

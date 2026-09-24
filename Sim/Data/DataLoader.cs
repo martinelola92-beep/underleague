@@ -808,18 +808,23 @@ public static class DataLoader
     {
         node.EnsureKnownKeys(
             "passSpeedCellsPerTickMilli", "shotSpeedCellsPerTickMilli", "looseBallFrictionPercent",
-            "gravityCellsPerTickSqMilli", "bounceRestitutionPercent");
+            "gravityCellsPerTickSqMilli", "bounceRestitutionPercent",
+            "controlHeightCells", "aerialReachHeightCells", "headerSpeedCellsPerTickMilli", "headerLiftCellsPerTickMilli");
         return new BallTuning(
             node.Prop("passSpeedCellsPerTickMilli").AsInt(),
             node.Prop("shotSpeedCellsPerTickMilli").AsInt(),
             node.Prop("looseBallFrictionPercent").AsInt(),
             node.Prop("gravityCellsPerTickSqMilli").AsInt(),
-            node.Prop("bounceRestitutionPercent").AsInt());
+            node.Prop("bounceRestitutionPercent").AsInt(),
+            node.Prop("controlHeightCells").AsFloat(),
+            node.Prop("aerialReachHeightCells").AsFloat(),
+            node.Prop("headerSpeedCellsPerTickMilli").AsInt(),
+            node.Prop("headerLiftCellsPerTickMilli").AsInt());
     }
 
     private static StatesTuning ParseStates(Json node)
     {
-        node.EnsureKnownKeys("PassingTicks", "ShootingTicks", "TacklingTicks", "KnockedDownTicks", "CelebratingTicks", "DribbleDuelCooldownTicks", "TackleCooldownTicks", "OffBallTackleCooldownTicks", "ShieldingTicks");
+        node.EnsureKnownKeys("PassingTicks", "ShootingTicks", "TacklingTicks", "KnockedDownTicks", "CelebratingTicks", "DribbleDuelCooldownTicks", "TackleCooldownTicks", "OffBallTackleCooldownTicks", "ShieldingTicks", "AerialCooldownTicks");
         return new StatesTuning(
             node.Prop("PassingTicks").AsInt(),
             node.Prop("ShootingTicks").AsInt(),
@@ -829,7 +834,8 @@ public static class DataLoader
             node.Prop("DribbleDuelCooldownTicks").AsInt(),
             node.Prop("TackleCooldownTicks").AsInt(),
             node.Prop("OffBallTackleCooldownTicks").AsInt(),
-            node.Prop("ShieldingTicks").AsInt());
+            node.Prop("ShieldingTicks").AsInt(),
+            node.Prop("AerialCooldownTicks").AsInt());
     }
 
     /// <summary>tuning.resolution: el suelo y el techo únicos de la ADR 0050 P4.</summary>
@@ -839,7 +845,7 @@ public static class DataLoader
 
     private static PassTuning ParsePass(Json node)
     {
-        node.EnsureKnownKeys("baseSuccess", "techniqueFactor", "distancePenaltyPerCell", "pressurePenalty", "interceptRadiusCells", "interceptBaseChance", "interceptTechniqueFactor", "maxLeadCells", "interceptContactPercent");
+        node.EnsureKnownKeys("baseSuccess", "techniqueFactor", "distancePenaltyPerCell", "pressurePenalty", "interceptRadiusCells", "interceptBaseChance", "interceptTechniqueFactor", "maxLeadCells", "interceptContactPercent", "loftedPeakHeightCellsMilli");
         return new PassTuning(
             node.Prop("baseSuccess").AsInt(),
             node.Prop("techniqueFactor").AsInt(),
@@ -849,7 +855,8 @@ public static class DataLoader
             node.Prop("interceptBaseChance").AsInt(),
             node.Prop("interceptTechniqueFactor").AsInt(),
             node.Prop("maxLeadCells").AsFloat(),
-            node.Prop("interceptContactPercent").AsInt());
+            node.Prop("interceptContactPercent").AsInt(),
+            node.Prop("loftedPeakHeightCellsMilli").AsInt());
     }
 
     private static DribbleTuning ParseDribble(Json node)
