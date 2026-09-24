@@ -143,3 +143,4 @@ El hueco del 0011 corresponde a una decisión sobre el radio de adyacencia que q
 | [0140](0140-marcador-minuto-y-orden-tactica.md) | Marcador, minuto y orden táctica: la mentalidad es un eje aparte que multiplica sobre el estado de posesión | Aceptada. **Decisión del revisor** |
 | [0141](0141-el-portero-decide.md) | El portero decide: la parada tiene tres finales, el receptor de un pase importa, y salir del área es una excepción acotada | Aceptada. **Decisión del revisor** |
 | [0142](0142-el-cansancio-como-recurso.md) | El cansancio como recurso: se gasta por lo que uno hace, se recupera, y llega a todo por los atributos | Aceptada. **Decisión del revisor** |
+| [0143](0143-el-balon-parado-es-una-jugada.md) | El balón parado es una jugada: el sacador decide dentro de su reanudación, y el área del penalti se vacía y se mantiene vacía | Aceptada. **Decisión del revisor** |

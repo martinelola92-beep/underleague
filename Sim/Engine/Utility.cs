@@ -73,6 +73,15 @@ internal sealed class UtilityContext
     public float[] KeeperExitCells { get; } = new float[2];
 
     /// <summary>
+    /// Índice del jugador que está ejecutando una reanudación <b>en este mismo tick</b>, o -1 (ADR 0143).
+    /// Mientras lo es, no tiene delante todas las acciones con balón: tiene las de <i>su</i> reanudación.
+    /// </summary>
+    public int RestartTakerIndex { get; set; } = -1;
+
+    /// <summary>Tipo de la reanudación que se está ejecutando; sólo vale si <see cref="RestartTakerIndex"/> lo es.</summary>
+    public MatchEngine.RestartKind RestartTakerKind { get; set; }
+
+    /// <summary>
     /// Hacia qué mentalidad empuja el marcador a cada equipo (ADR 0140): <c>Offensive</c> al que va
     /// perdiendo, <c>Defensive</c> al que va ganando, su propia orden si están empatados.
     /// </summary>
@@ -281,6 +290,16 @@ internal static class Utility
         for (int i = 0; i < legal.Count; i++)
         {
             var action = legal[i];
+
+            // ADR 0143: una reanudación no es «el balón en los pies y a jugar». Un saque de banda no se
+            // remata, de un córner no se chuta a puerta y de un saque de puerta no se sale regateando.
+            // Filtrar aquí —y no corregir la acción después de elegirla— es lo que hace que la decisión
+            // sea de verdad la de esa jugada: la utilidad compara sólo entre lo que se puede hacer.
+            if (ctx.RestartTakerIndex == p.Index && !RestartAllows(ctx.RestartTakerKind, action))
+            {
+                continue;
+            }
+
             var eval = Evaluate(ctx, p, action);
             int baseWeight = ctx.Weights.Base(p.Role, action);
             int tactical = ctx.Weights.Tactical(ctx.TacticalStates[p.Team], action);
@@ -336,6 +355,29 @@ internal static class Utility
         return best;
     }
 
+
+
+    /// <summary>
+    /// Qué puede hacer quien ejecuta cada reanudación (ADR 0143). No es una lista de balance sino las
+    /// reglas del fútbol escritas una vez:
+    /// <list type="bullet">
+    /// <item>de un <b>saque de banda</b> sólo sale un pase —ni tiro, ni regate, ni centro: no se saca con
+    /// el pie—;</item>
+    /// <item>de un <b>córner</b> sale un pase corto o un balón al área, nunca un disparo directo;</item>
+    /// <item>de un <b>saque de puerta</b>, un pase o un despeje: no se sale regateando desde la portería;</item>
+    /// <item>de un <b>saque de centro</b>, un pase;</item>
+    /// <item>de una <b>falta</b>, cualquier cosa — incluido el <b>tiro directo</b>, que es lo que la hace
+    /// una jugada y no una reanudación más.</item>
+    /// </list>
+    /// </summary>
+    private static bool RestartAllows(MatchEngine.RestartKind kind, PlayerAction action) => kind switch
+    {
+        MatchEngine.RestartKind.ThrowIn => action is PlayerAction.ShortPass or PlayerAction.LongPass,
+        MatchEngine.RestartKind.Corner => action is PlayerAction.ShortPass or PlayerAction.LongPass or PlayerAction.Cross,
+        MatchEngine.RestartKind.GoalKick => action is PlayerAction.ShortPass or PlayerAction.LongPass or PlayerAction.Clear,
+        MatchEngine.RestartKind.Kickoff => action is PlayerAction.ShortPass or PlayerAction.LongPass,
+        _ => true,
+    };
 
     /// <summary>
     /// Multiplicador de mentalidad de <paramref name="team"/> para esta acción (ADR 0140), ya mezclado con

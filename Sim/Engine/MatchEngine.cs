@@ -614,6 +614,16 @@ internal sealed class MatchEngine : IPerkWorld
             EnforceRestartClearance();
         }
 
+        // ADR 0143: el área del penalti se mantiene vacía TODA la cuenta atrás, no sólo al abrirla. Desde
+        // AW-R el equipo no se congela durante el balón muerto, así que vaciarla una vez y confiar deja
+        // que la gente vuelva a entrar andando — medido: tres jugadores dentro en el fotograma del
+        // lanzamiento. Es el mismo patrón que la barrera de BB-B, y va aparte porque RF-054 excluye el
+        // penalti de aquélla a propósito: son dos reglas distintas para dos situaciones distintas.
+        if (wasRestarting && _pendingRestart == RestartKind.Penalty)
+        {
+            ClearPenaltyArea();
+        }
+
         if (wasRestarting)
         {
             _restartTicksLeft--;
@@ -4325,8 +4335,68 @@ internal sealed class MatchEngine : IPerkWorld
             }
         }
 
+        if (kind == RestartKind.Penalty)
+        {
+            ClearPenaltyArea();
+        }
+
         CancelPendingTackles();
         EndPlay("lost");
+    }
+
+    /// <summary>
+    /// Vacía el área para el penalti (ADR 0143, RF-054): dentro se quedan <b>sólo el lanzador y el portero
+    /// que lo defiende</b>, que es la regla del fútbol y la única forma de que un penalti se parezca a un
+    /// penalti en vez de a un tiro con doce personas alrededor.
+    ///
+    /// <para>A los demás se les saca por el borde más cercano del área, no a una posición inventada: es el
+    /// mismo criterio que la barrera de reanudación usa para apartar a un rival, y deja a cada uno lo más
+    /// cerca posible de donde estaba.</para>
+    ///
+    /// <para>No toca al portero <b>del equipo que lanza</b> si por lo que sea estuviera ahí: su área es la
+    /// otra, así que nunca es este caso.</para>
+    /// </summary>
+    private void ClearPenaltyArea()
+    {
+        int defendingTeam = 1 - _restartTeam;
+        var keeper = _goalkeepers[defendingTeam];
+
+        for (int i = 0; i < _players.Length; i++)
+        {
+            var player = _players[i];
+            if (!player.OnPitch
+                || ReferenceEquals(player, _restartTaker)
+                || ReferenceEquals(player, keeper)
+                || !Pitch.IsInArea(player.Position, defendingTeam))
+            {
+                continue;
+            }
+
+            player.Position = PushOutOfArea(player.Position, defendingTeam);
+            player.Velocity = default;
+        }
+    }
+
+    /// <summary>Saca un punto del área que defiende <paramref name="team"/> por su borde más cercano.</summary>
+    private static Vec2 PushOutOfArea(Vec2 point, int team)
+    {
+        const float Margin = 0.1f;
+        float frontier = team == 0 ? Pitch.AreaColumns + Margin : Pitch.Columns - Pitch.AreaColumns - Margin;
+
+        // Tres salidas posibles: por delante del área o por cualquiera de las dos bandas de la franja. Se
+        // toma la más corta, que es lo que haría un jugador al que el árbitro le manda salir.
+        float toFront = MathF.Abs(point.X - frontier);
+        float toTop = point.Y - (Pitch.AreaTop - Margin);
+        float toBottom = (Pitch.AreaBottom + Margin) - point.Y;
+
+        if (toFront <= toTop && toFront <= toBottom)
+        {
+            return Utility.ClampToPitch(new Vec2(frontier, point.Y));
+        }
+
+        return toTop <= toBottom
+            ? Utility.ClampToPitch(new Vec2(point.X, Pitch.AreaTop - Margin))
+            : Utility.ClampToPitch(new Vec2(point.X, Pitch.AreaBottom + Margin));
     }
 
     /// <summary>
@@ -4592,7 +4662,17 @@ internal sealed class MatchEngine : IPerkWorld
         taker.Position = point;
         taker.Velocity = new Vec2(0f, 0f);
         taker.EnterState(PlayerState.Positioning, 0);
+
+        // ADR 0143: el sacador decide DENTRO de esta reanudación. SetOwner ya termina llamando a Decide
+        // —lo hace desde AW-A para que quien recibe el balón no se quede un tick parado—, así que la
+        // decisión ya ocurría aquí; lo que faltaba era que fuera la decisión de ESTA jugada y no la de un
+        // portador cualquiera. La marca se pone justo antes y se quita justo después: dura un tick porque
+        // la reanudación dura un tick.
+        _context.RestartTakerIndex = taker.Index;
+        _context.RestartTakerKind = kind;
         SetOwner(taker);
+        _context.RestartTakerIndex = -1;
+
         _restartClearanceOwner = taker;
         _restartClearanceOwnerTicks = 0;
         Emit(EventType.Recovery, detail, taker);
