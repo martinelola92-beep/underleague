@@ -1197,7 +1197,34 @@ tiempo a asimilar que ha pasado algo… viendo el gameplay hay veces que no te e
 reanudaciones por igual, o sea **13 m en horizontal y 19 m en vertical** — más que la barrera real en los
 dos ejes y **seis veces** la distancia de un saque de banda. No representa ninguna regla del fútbol.
 
+### HECHO (24 sep 2026, madrugada) — ADR 0147 implementada y publicada
+
+`tacklesPerMatch` **5,69 fuera → 8,79 IN**, que era lo que motivaba todo, y **ninguna métrica de partido
+fuera de banda**. Pausa graduada por tipo, casilla de saque de centro comprimida hacia el medio campo, y
+enfriamientos/energía corriendo mientras uno se recoloca.
+
+**Dos cosas publicadas ROTAS y anotadas, a propósito:**
+
+1. **El partido es bastante más violento**: faltas 4,73 → **7,96**, entradas sin balón 2,45 → **4,62**,
+   `injuriesPerMatch` 0,55 → **0,82 contra un techo de 0,90**. Atribuí dos tercios a la compresión del saque
+   de centro y **lo medí**: con `kickoffPushCells` en 1,5 la violencia **no baja, sube** (faltas 8,08,
+   lesiones 0,90 justo en el techo). **Hipótesis REJECTED**; el dial sigue sin encontrar. Por dónde seguir:
+   el **enfriamiento en balón parado**, que es el mecanismo anticipado en la nota de diseño y nunca aislado.
+2. **`FullRunGateTests…NeverAllOfThem` rota**: 0 → 0,186, y **RF-114k dice que nunca caben los cuatro
+   sumideros**. LIKELY: el partido es más caótico (`betterTeamWinRate` 88,29 → 80,78), el jugador gana menos
+   y los rerolls salen más baratos. Sin aislar.
+
+Puertas: **6 rojas contra las 7** que traía `main`; se arreglan las dos de `tacklesPerMatch` y mejoran
+cuatro heredadas.
+
 ### Siguiente paso concreto (sesión limpia)
+
+**Decidir las dos de arriba con el revisor**, y luego seguir la cola que él fijó:
+[BI-D](./pendientes/BI-D.md) (alargar la conducción, aprobada) → [BI-H](./pendientes/BI-H.md) (la
+interacción visual con el balón, que **debe cubrir también tiro, parada y saques** — todo lo que implique
+contacto con el balón).
+
+*(La descripción del paquete que sigue quedó cumplida; se deja por su contexto.)*
 
 **Implementar el paquete.** Arrancar leyendo sólo `docs/plan-balon-parado-posicional.md` (se basta) y
 `docs/decisiones/0143-el-balon-parado-es-una-jugada.md`, que es la ADR que se enmienda. Orden:

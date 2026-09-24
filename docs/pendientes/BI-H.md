@@ -27,6 +27,16 @@ Estado: **ABIERTA, encargo del revisor en cola** (24 sep 2026). Reportada viendo
 > *Antes de implementar, revisa cómo está estructurada actualmente la interacción jugador-balón y propón la
 > solución mínima que consiga una mejora visible.»*
 
+## Alcance ampliado por el revisor (24 sep 2026)
+
+> *«Sobre la pelota BI-H debe aplicarse también a tiro, parada, saque… Todo lo que implique contacto con
+> balón. Hay que mejorarlo un poco.»*
+
+O sea que no es sólo la recepción y la conducción: **todo contacto**. La lista, para que nadie la reduzca a
+lo fácil: recepción, control, conducción, pase, **tiro**, **parada del portero**, despeje, cabezazo y los
+**saques** (banda, puerta, córner, falta, centro). Y el listón lo fija él: *«un poco»* — mejora perceptual
+visible, no un sistema.
+
 ## Lo que ya se sabe antes de empezar, y acota el trabajo
 
 **Esto es `/Game`, no `/Sim`, y la frontera aquí no es negociable.** La posición del balón la decide el
