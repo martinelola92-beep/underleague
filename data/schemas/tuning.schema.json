@@ -569,12 +569,6 @@
           "description": "Altura del pico de la parábola. Igualada a cross.peakHeightCellsMilli: es la altura que el motor ya sabe que salva a un defensa (ADR 0136).",
           "$ref": "#/$defs/milli"
         },
-        "pressurePenaltyCells": {
-          "description": "BI-F: casillas de alcance que pierde un despeje por tener al rival encima. Sin esta distinción, un saque de puerta —golpeado solo y con el balón parado— llegaba tan corto como un despeje angustiado y caía entre los rivales.",
-          "type": "number",
-          "minimum": 0,
-          "maximum": 16
-        },
         "spreadRows": {
           "description": "Dispersión lateral en filas. Un despeje APROXIMA el destino en vez de elegirlo.",
           "type": "integer",
@@ -586,8 +580,7 @@
         "baseDistanceCells",
         "strengthDistanceMilliPerPoint",
         "peakHeightCellsMilli",
-        "spreadRows",
-        "pressurePenaltyCells"
+        "spreadRows"
       ],
       "additionalProperties": false
     },

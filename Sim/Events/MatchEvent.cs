@@ -19,4 +19,13 @@ public sealed record MatchEvent(
     MatchPhase Phase,
     int Bias,
     int DistanceToGoal,
-    string Detail);
+    string Detail,
+
+    /// <summary>
+    /// Tick del RELOJ DEL PARTIDO (BC-A): el que sólo corre con el balón en juego, y del que sale el
+    /// minuto que lee el jugador. <see cref="Tick"/> es el tick del motor, que cuenta también las
+    /// reanudaciones y por tanto ya no sirve para decir en qué minuto pasó algo — desde que la reanudación
+    /// espera a que el equipo se recoloque, un partido de 90 minutos termina pasado el tick 1.700 y el
+    /// minuto calculado sobre él se iba a 123.
+    /// </summary>
+    int ClockTick = 0);

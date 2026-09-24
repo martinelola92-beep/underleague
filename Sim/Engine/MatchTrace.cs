@@ -60,6 +60,7 @@ public readonly record struct TraceZone(Vec2 Home, int Direction, float Forward,
 public sealed class MatchTrace
 {
     private readonly int[] _tick;
+    private readonly int[] _clockTick;
     private readonly byte[] _phase;
     private readonly float[] _ballX;
     private readonly float[] _ballY;
@@ -107,12 +108,14 @@ public sealed class MatchTrace
         int[] markTarget,
         byte[] action,
         float[] targetX,
-        float[] targetY)
+        float[] targetY,
+        int[] clockTick)
     {
         Players = players;
         RegulationTicks = regulationTicks;
         FrameCount = tick.Length;
         _tick = tick;
+        _clockTick = clockTick;
         _phase = phase;
         _ballX = ballX;
         _ballY = ballY;
@@ -148,7 +151,14 @@ public sealed class MatchTrace
     public int TickAt(int frame) => _tick[frame];
 
     /// <summary>Minuto de 0..90 (y más en la prórroga de turba) del fotograma; el jugador lee minutos.</summary>
-    public int MinuteAt(int frame) => RegulationTicks <= 0 ? 0 : _tick[frame] * 90 / RegulationTicks;
+    public int MinuteAt(int frame) => RegulationTicks <= 0 ? 0 : _clockTick[frame] * 90 / RegulationTicks;
+
+    /// <summary>
+    /// Tick del RELOJ DEL PARTIDO del fotograma (BC-A): sólo corre con el balón en juego. Es de donde sale
+    /// <see cref="MinuteAt"/>; <see cref="TickAt"/> sigue siendo el tick del motor, que cuenta también las
+    /// reanudaciones.
+    /// </summary>
+    public int ClockTickAt(int frame) => _clockTick[frame];
 
     /// <summary>Fase del partido en el fotograma (saque, juego, reanudación, penalti, turba).</summary>
     public MatchPhase PhaseAt(int frame) => (MatchPhase)_phase[frame];
@@ -262,6 +272,7 @@ internal sealed class MatchTraceRecorder
     private readonly int _regulationTicks;
 
     private readonly List<int> _tick = new(ExpectedFrames);
+    private readonly List<int> _clockTick = new(ExpectedFrames);
     private readonly List<byte> _phase = new(ExpectedFrames);
     private readonly List<float> _ballX = new(ExpectedFrames);
     private readonly List<float> _ballY = new(ExpectedFrames);
@@ -333,9 +344,10 @@ internal sealed class MatchTraceRecorder
     /// aleatoriedad, así que un partido con traza y el mismo partido sin ella son el mismo partido
     /// (RT-024).
     /// </summary>
-    public void Capture(int tick, MatchPhase phase, Ball ball, int eventCount)
+    public void Capture(int tick, int clockTick, MatchPhase phase, Ball ball, int eventCount)
     {
         _tick.Add(tick);
+        _clockTick.Add(clockTick);
         _phase.Add((byte)phase);
         _ballX.Add(ball.Position.X);
         _ballY.Add(ball.Position.Y);
@@ -393,7 +405,8 @@ internal sealed class MatchTraceRecorder
         _markTarget.ToArray(),
         _action.ToArray(),
         _targetX.ToArray(),
-        _targetY.ToArray());
+        _targetY.ToArray(),
+        _clockTick.ToArray());
 
     private static float Cells(int milli) => milli == ActionZone.Unlimited ? TraceZone.Unlimited : milli / 1000f;
 

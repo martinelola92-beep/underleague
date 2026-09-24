@@ -1115,18 +1115,35 @@ Decisión del revisor, textual: *«en todas las paradas de juego debemos dar tie
 reposicionen de manera natural, sin teletransportes. No me importa que se alargue el tiempo de gameplay (el
 reloj del partido seguiría parado)»*. Enmienda a la **ADR 0143**.
 
-**Consecuencia medida que hay que tener presente**: el tiempo muerto ya no se descuenta de
-`regulationTicks`, así que un partido contiene **más fútbol real** que antes. Lote de 2.000 partidos contra
-línea base propia, **todo dentro de banda**: `shotsPerMatch` 8,30 → **10,48**, `goalsPerMatch` 2,14 →
-**2,67**, `possessionChanges` 22,64 → **27,03** (techo 28), ticks de motor 1.400 → **1.724**.
+**Consecuencia medida**: el tiempo muerto ya no se descuenta de `regulationTicks`, así que un partido
+contiene **más fútbol real**. Lote de 2.000 partidos contra línea base propia: `shotsPerMatch` 8,30 →
+**9,91** (IN), `goalsPerMatch` 2,14 → **2,55**, `possessionChanges` 22,64 → **24,81** (IN).
 
-**Dos cosas que el revisor tiene que decidir, las dos con número y ninguna tocada:**
+**Y una métrica se sale, y se deja salida a propósito: `tacklesPerMatch` 6,86 → 5,69**, por debajo de su
+suelo RT-056 de 6,00. No es ruido (falla en las semillas 1 y 13, pasa en la 7) y **no la causa ninguna de
+las piezas que uno esperaría**. Aislado apagando cada cambio, 2.000 partidos cada uno:
 
-1. **El partido dura ~115 s de reloj de pared** contra los **60-90 s** de `docs/requisitos.md`. Lo autorizó
-   expresamente, así que no se ha tocado; la palanca, si se quiere volver a esa ventana, es
-   `regulationTicks`, y bajarla es decisión de requisitos.
-2. **`possessionChanges` se acerca al techo** (27,03 contra 28): la primera que se saldría si el fútbol
-   sigue creciendo.
+| configuración | `tacklesPerMatch` |
+|---|---|
+| línea base | **6,86** |
+| todo puesto | **5,69** |
+| sin el duelo aéreo sólo-en-bajada | 5,50 |
+| sin vaciar el área del saque de puerta | 5,68 |
+| **sin parar el reloj** | **4,68** |
+
+Lo causa **la reposición andando en sí**, y la explicación es legible: un equipo que se recoloca de verdad
+tras un gol **presiona menos** que uno teletransportado a casa que luego deriva hacia el balón durante la
+cuenta atrás. Es el comportamiento pedido, con su precio.
+
+**Tres cosas que el revisor tiene que decidir, las tres con número y ninguna tocada:**
+
+1. **`tacklesPerMatch` fuera de banda.** O se acepta un fútbol con menos entradas y se mueve el suelo con
+   datos (RT-057), o se decide que la reposición debe dejar a alguien adelantado. Mover el suelo para poner
+   la puerta en verde sin decidirlo sería exactamente lo que se retiró del despeje en este mismo trabajo.
+2. **El partido dura ~115 s de reloj de pared** contra los **60-90 s** de `docs/requisitos.md`. Lo autorizó
+   expresamente, así que no se ha tocado; la palanca es `regulationTicks`, y bajarla es decisión de
+   requisitos.
+3. **Abrir el paquete de [BI-G](./pendientes/BI-G.md)** (métrica de entradas ganadas con banda RT-056 + ADR).
 
 ### Dos trampas que costaron caro, escritas para no repetirlas
 
@@ -1155,10 +1172,14 @@ el código no hacen*.
 
 ### Las puertas, como foto
 
-**5 rojas, las mismas cinco que ya traía `main`**: la curva de jefes, las tres de `BuildGateTests` y
-`RaceBalanceTests`. Este trabajo **no añade ninguna** y mueve dos hacia su banda (`undead_none` 62,38 →
-61,90; `elf_out_of_zone` 46,69 → 45,31). Ojo: `RaceBalanceTests` **no estaba roja en la foto del pass** y sí
-lo está en `main` desde el arreglo de BI-E — anotado ahí como LIKELY, sin experimento que lo aísle.
+**7 rojas contra las 5 que ya traía `main`** (la curva de jefes, tres de `BuildGateTests` y
+`RaceBalanceTests`). De las cinco heredadas, **cuatro mejoran** —`undead_none` 62,38 → 60,58,
+`elf_out_of_zone` vuelve a banda, `elf_brawler` 47,47 → 45,18, `orc_misplaced` 46,90 → 45,10— y **la nueva
+es una sola métrica**, `tacklesPerMatch`, que arrastra sus dos tests. Está explicada y aislada arriba, y se
+deja roja a propósito: es la decisión 1.
+
+Ojo con una herencia: `RaceBalanceTests` **no estaba roja en la foto del pass** y sí lo está en `main` desde
+el arreglo de BI-E — anotado ahí como LIKELY, sin experimento que lo aísle.
 
 ### Siguiente paso concreto (sesión limpia)
 

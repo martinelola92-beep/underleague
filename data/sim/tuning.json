@@ -98,8 +98,7 @@
   },
   "clear": {
     "_doc": "Gameplay AI Foundations Pass P4: el despeje. Un despeje NO es un pase largo sin receptor -es la renuncia deliberada a la posesion para alejar el balon de la porteria propia- y por eso el balon cae SIN DUENO y en disputa, que es la entrada del duelo aereo y de la segunda jugada. La distancia depende de la FUERZA porque despejar es golpear y no colocar, el mismo reparto invertido que la ADR 0136 le dio al remate de centro. peakHeightCellsMilli se iguala al del centro (1400) a proposito: es la altura a la que el motor YA SABE que un balon pasa por encima de un defensa -medida en la ADR 0136 con la intercepcion en esfera- y no hay motivo para inventar otra. spreadRows es que un despeje APROXIMA el destino en vez de elegirlo. VALORES DE PARTIDA SIN CALIBRAR: este paquete tiene prohibido el tuning contra lotes (docs/plan-gameplay-ai-foundations.md 20).",
-    "baseDistanceCells": 9.0,
-    "pressurePenaltyCells": 4.0,
+    "baseDistanceCells": 6.0,
     "strengthDistanceMilliPerPoint": 40,
     "peakHeightCellsMilli": 1400,
     "spreadRows": 2

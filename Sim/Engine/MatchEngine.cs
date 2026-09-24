@@ -271,7 +271,7 @@ internal sealed class MatchEngine : IPerkWorld
         while (_phase != MatchPhase.Finished)
         {
             Step();
-            _trace?.Capture(_tick, _phase, _ball, _events.Count);
+            _trace?.Capture(_tick, _clockTick, _phase, _ball, _events.Count);
         }
 
         for (int i = 0; i < _players.Length; i++)
@@ -2761,16 +2761,8 @@ internal sealed class MatchEngine : IPerkWorld
         var clear = _tuning.Clear;
         int direction = Pitch.AttackDirection(player.Team);
 
-        // BI-F: LA PRESIÓN ACORTA EL DESPEJE. Medido jugando: el saque de puerta caía entre los rivales
-        // porque un despeje libre y uno angustiado llegaban exactamente igual de lejos. Un saque de puerta
-        // se golpea SOLO, con el balón parado y sin nadie encima —la barrera los mantiene a dos casillas—,
-        // así que ahora llega lo que debe llegar; y un central con un delantero en la nuca la manda mucho
-        // menos lejos, que es lo que pasa en un campo.
-        //
-        // Sale de la percepción compartida (P1), así que no hace falta recalcular nada aquí.
         float distance = clear.BaseDistanceCells
-            + (clear.StrengthDistanceMilliPerPoint * (player.Strength - 50) / 1000f)
-            - (clear.PressurePenaltyCells * _context.Pressure[player.Index] / 100f);
+            + (clear.StrengthDistanceMilliPerPoint * (player.Strength - 50) / 1000f);
         if (distance < 1f)
         {
             distance = 1f;
@@ -4571,15 +4563,17 @@ internal sealed class MatchEngine : IPerkWorld
         {
             _restartTaker.Velocity = default;
 
-            // El saque de CENTRO es la excepcion, y por una razon: ahi ResetPositions acaba de devolver a
-            // su casilla-hogar a todo el que va a jugar la reanudacion, asi que el equipo entero (salvo
-            // quien siga celebrando un gol, BB-C -que tampoco puede ser sacador, CanTouchBall lo excluye-)
-            // se recoloca por diseno y poner al sacador sobre el balon es parte de esa misma reforma. En
-            // las demas reanudaciones no se recoloca nadie, y por eso el salto del sacador se veia (BA-D).
-            if (kind == RestartKind.Kickoff)
-            {
-                _restartTaker.Position = point;
-            }
+            // BC-A, revisión independiente: AQUÍ HABÍA UNA EXCEPCIÓN PARA EL SAQUE DE CENTRO, y se cae con
+            // el teletransporte. Su justificación era que «ResetPositions acaba de devolver a su
+            // casilla-hogar a todo el que va a jugar la reanudación, así que poner al sacador sobre el
+            // balón es parte de esa misma reforma»: era cierta cuando la reforma era un salto colectivo, y
+            // dejó de serlo en el momento en que el equipo vuelve andando.
+            //
+            // Sin quitarla, el sacador pasaba a ser EL ÚNICO que salta —cruzando el campo en un fotograma
+            // y quedándose solo en el círculo central mientras los otros trece caminan—, que es la
+            // regresión de BA-D reintroducida por la puerta de atrás: el salto no se arregló nunca, sólo
+            // lo tapaba el salto de los demás. Ahora viene andando como todo el mundo (WalkRestartTaker) y
+            // le cubre la misma red de seguridad de ResolveRestart que a las otras cinco reanudaciones.
         }
 
         if (kind == RestartKind.Penalty)
@@ -4800,7 +4794,15 @@ internal sealed class MatchEngine : IPerkWorld
                 continue;
             }
 
-            float distance = Vec2.Distance(player.Position, point);
+            // BC-A, revisión independiente: EN EL SAQUE DE CENTRO SE MIDE DESDE LA CASILLA-HOGAR, no desde
+            // donde esté. El criterio escrito es «el más cercano al centro» con el equipo ya formado, y
+            // funcionaba porque la reforma colocaba a todos en HomeCenter antes de elegir. Desde que
+            // vuelven andando, medir la posición actual elegiría a quien el azar del gol dejó cerca del
+            // círculo —a menudo un central que había subido—: un cambio de regla que nadie decidió. Se
+            // hace explícito lo que antes salía por accidente.
+            float distance = kind == RestartKind.Kickoff
+                ? Vec2.Distance(player.HomeCenter, point)
+                : Vec2.Distance(player.Position, point);
             if (taker is null || distance < bestDistance)
             {
                 taker = player;
@@ -4839,7 +4841,9 @@ internal sealed class MatchEngine : IPerkWorld
         // BA-D: red de seguridad. El sacador ha venido andando (WalkRestartTaker); si la cuenta atras no le
         // ha dado para llegar, se le pone en el punto ahora. El salto que queda es lo que le faltara por
         // andar, no la distancia entera, y ocurre en el mismo tick en el que el balon echa a rodar.
-        if (kind != RestartKind.Kickoff && _restartTaker is not null && _restartTaker.OnPitch)
+        // BC-A: ya NO se excluye el saque de centro. Se excluía porque su sacador llegaba teletransportado
+        // y no necesitaba red; desde que viene andando la necesita igual que los demás.
+        if (_restartTaker is not null && _restartTaker.OnPitch)
         {
             _restartTaker.Position = _restartPoint;
             _restartTaker.Velocity = default;
@@ -5128,9 +5132,9 @@ internal sealed class MatchEngine : IPerkWorld
         // contando una PARADA como si fuera territorio — un artefacto del instrumento, no fútbol. Es el
         // mismo razonamiento que _clockTick y la misma decisión aplicada al mismo problema.
         //
-        // Hermano anotado y NO tocado aquí: `PossessionTicks` sigue contando los ticks en los que el
-        // sacador tiene el balón durante la cuenta atrás. Ninguna métrica de posesión se sale de banda hoy,
-        // así que ampliarlo sería un cambio sin medición que lo pida.
+        // `PossessionTicks` no necesita la misma guarda, y conviene decir por qué para que nadie la añada:
+        // `Ball.Park` pone `Owner = null` al abrir la reanudación, así que durante la cuenta atrás el balón
+        // no tiene dueño y la posesión ya no acumulaba nada.
         if (_restartTicksLeft == 0)
         {
             float third = Pitch.Columns / 3f;
@@ -5231,6 +5235,7 @@ internal sealed class MatchEngine : IPerkWorld
         _phase = MatchPhase.Finished;
         _report.Winner = winner;
         _report.Ticks = _tick;
+        _report.ClockTicks = _clockTick;
         Emit(EventType.MatchEnd, detail, team: winner);
     }
 
@@ -5260,7 +5265,8 @@ internal sealed class MatchEngine : IPerkWorld
             _phase,
             _bias,
             Utility.Centi(Vec2.Distance(position, Pitch.GoalCenter(reference))),
-            detail);
+            detail,
+            _clockTick);
     }
 
     /// <summary>

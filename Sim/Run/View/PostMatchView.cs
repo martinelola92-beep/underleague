@@ -169,7 +169,7 @@ public static class PostMatchView
             report.Winner == own,
             report.WentToGoldenGoal,
             report.Forfeit,
-            MatchLogView.Minute(report.Ticks, regulationTicks),
+            MatchLogView.Minute(report.ClockTicks, regulationTicks),
             PerkRows(report, events, catalog, templates, names, own, playback.Setup),
             ItemRows(report, items, templates, names, own),
             Casualties(events, names, playback.Setup, own, regulationTicks, catalog),
@@ -322,7 +322,7 @@ public static class PostMatchView
                 names.GetValueOrDefault(matchEvent.Actor) ?? string.Empty,
                 positions.GetValueOrDefault(matchEvent.Actor, Position.Midfielder),
                 kind,
-                MatchLogView.Minute(matchEvent.Tick, regulationTicks),
+                MatchLogView.Minute(matchEvent.ClockTick, regulationTicks),
                 Cause(matchEvent, names, catalog)));
         }
 
@@ -368,7 +368,7 @@ public static class PostMatchView
                 names.GetValueOrDefault(matchEvent.Actor) ?? string.Empty,
                 matchEvent.Team == ownTeam ? MatchSide.Own : MatchSide.Rival,
                 matchEvent.Detail.StartsWith(RedDetail, StringComparison.Ordinal),
-                MatchLogView.Minute(matchEvent.Tick, regulationTicks)));
+                MatchLogView.Minute(matchEvent.ClockTick, regulationTicks)));
         }
 
         return rows;

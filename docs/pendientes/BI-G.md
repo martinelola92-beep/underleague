@@ -37,7 +37,10 @@ if (carrierHasBall)
     _report.Tackles++;   // <- incondicional
 ```
 
-**`Tackles` cuenta entradas INTENTADAS.** Se incrementa siempre que se entra a un portador, gane o pierda.
+**`Tackles` cuenta entradas INTENTADAS.** Se incrementa dentro de `if (carrierHasBall)` y **antes** de mirar
+`isWin`, así que suma se gane o se pierda la entrada. *(Una primera versión de esta ficha decía
+«incondicional»; no lo es, y la precisión importa porque el `if` es justo lo que separa esta métrica de
+`offBallTacklesPerMatch`.)*
 `ProbabilityKind.Tackle` sólo entra en `win`, que decide `TacklesWon`. Intentar una entrada lo decide la IA
 de utilidad; ganarla, la probabilidad. Son dos cosas distintas y la ADR 0125 D1 ya había separado
 `tacklesPerMatch` de `offBallTacklesPerMatch` por una razón de la misma familia.
@@ -48,9 +51,16 @@ Y sin embargo `PerkBalanceClassifier.ProbabilityMetricName` dice:
 ProbabilityKind.Tackle or ProbabilityKind.TackleEvasion => MatchMetrics.TacklesPerMatch,
 ```
 
-**El clasificador elige, como métrica primaria de toda la familia de perks de entrada, la única que por
-construcción no puede moverse con su parámetro.** Cualquier perk de entrada que pase por el protocolo se
-calibraría contra un número inerte, y el protocolo concluiría «sin efecto» sobre perks que sí lo tienen.
+**El clasificador elige, como métrica primaria de toda la familia de perks de entrada, una que su parámetro
+casi no mueve — y cuando la mueve, la mueve al revés.** Conviene ser exacto, porque el arreglo depende de
+cuál de las dos cosas sea: la tabla de arriba no es plana del todo, baja de **10,10 a 9,96** al pasar de 60
+a 100. Eso no es inercia, es una **respuesta de segundo orden de signo contrario**: más entradas ganadas →
+el portador pierde el balón antes → hay menos portadores a los que entrar → **menos entradas intentadas**.
+
+Para un clasificador eso es **peor** que una métrica inerte: una inerte se detecta (delta cero), y ésta da
+señal pequeña y en dirección equivocada, que es justo lo que un protocolo automático interpretaría como «el
+perk empeora la métrica». Lo demostrado es *«no responde de forma monótona creciente»*; *«no puede
+responder»* sería pasarse, y lo corrige la revisión independiente.
 
 ## Por qué no se arregla aquí
 

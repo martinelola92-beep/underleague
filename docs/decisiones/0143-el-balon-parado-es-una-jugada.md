@@ -158,29 +158,59 @@ El reparto por tercios pasa a acumular sólo con el balón en juego, que es la m
 `_clockTick`: la misma decisión aplicada al mismo problema, no un parche para poner una puerta en verde.
 Remedido, **ninguna métrica queda fuera de banda**.
 
-**Hermano anotado y no tocado**: `PossessionTicks` sigue contando los ticks de la cuenta atrás en los que el
-sacador tiene el balón. Ninguna métrica de posesión se sale hoy, así que ampliar el cambio sería moverlo sin
-una medición que lo pida.
+**`PossessionTicks` no necesita la misma guarda**: `Ball.Park` pone `Owner = null` al abrir la reanudación,
+así que durante la cuenta atrás el balón no tiene dueño y la posesión nunca acumuló nada. *(Este párrafo
+decía lo contrario —«sigue contando los ticks en los que el sacador tiene el balón»— y era falso: la
+revisión independiente lo comprobó en `Sim/Engine/Ball.cs`. Se deja el rastro porque el pendiente fantasma
+que creaba es exactamente el defecto que BI-G bautiza en este mismo commit.)*
 
 ### Lo que este cambio SÍ mueve, y se deja medido sin tocar
 
 El reloj parado significa que un partido contiene **más fútbol real** que antes, porque el tiempo muerto ya
 no se descuenta de `regulationTicks`. No es un efecto secundario: es la consecuencia directa de lo que se
-pidió. Medido (2.000 partidos, semilla 1, contra línea base propia), **todo dentro de banda**:
+pidió. Medido (2.000 partidos, semilla 1, contra línea base propia):
 
-| métrica | antes | después |
-|---|---|---|
-| `shotsPerMatch` | 8,30 | **10,48** |
-| `goalsPerMatch` | 2,14 | **2,67** |
-| `possessionChanges` | 22,64 | **27,03** (techo 28) |
-| `foulsPerMatch` | 4,73 | 5,40 |
-| ticks de motor por partido | 1.400 | **1.724** |
+| métrica | antes | después | |
+|---|---|---|---|
+| `shotsPerMatch` | 8,30 | **9,91** | IN |
+| `goalsPerMatch` | 2,14 | **2,55** | INFO |
+| `possessionChanges` | 22,64 | **24,81** | IN |
+| **`tacklesPerMatch`** | **6,86** | **5,69** | **FUERA (suelo 6,00)** |
+| ticks de motor por partido | 1.400 | ~1.700 | |
 
-**No se calibra nada de esto aquí**, y es deliberado. Dos cosas para la fase de balance, las dos con número:
+### Una métrica se sale, y NO se toca: `tacklesPerMatch`
 
-1. **`possessionChanges` se acerca al techo** (27,03 contra 28). Es la primera que se saldría si el fútbol
-   sigue creciendo.
-2. **El partido dura ~115 s de reloj de pared** (1.724 ticks a 15/s) contra los **60-90 s** que fija
+Cae un **17 %** y se va por debajo de su suelo RT-056. No es ruido de semilla —falla en las semillas 1
+(5,85) y 13 (5,78) y pasa en la 7— y **no es ninguna de las piezas que uno esperaría**. Aislado apagando
+cada cambio por separado, 2.000 partidos cada uno:
+
+| configuración | `tacklesPerMatch` |
+|---|---|
+| línea base, antes de todo esto | **6,86** |
+| todo puesto | **5,69** |
+| sin el duelo aéreo sólo-en-bajada (BI-F) | 5,50 |
+| sin vaciar el área en el saque de puerta (BI-F) | 5,68 |
+| **sin parar el reloj** | **4,68** |
+
+Quitar cualquiera de las otras piezas **no lo recupera**, y parar el reloj lo **mitiga** (añade fútbol, y
+con él entradas). Lo que lo causa es **la reposición andando en sí**: manteniendo el reloj constante, volver
+a la formación cuesta 6,86 → 4,68.
+
+**Y la explicación es legible, que es lo que la hace creíble**: un equipo que se recoloca de verdad en su
+formación tras un gol **presiona menos** que uno al que se teletransportaba a casa y que acto seguido
+derivaba hacia el balón durante la cuenta atrás. Menos gente fuera de sitio persiguiendo, menos entradas.
+Es exactamente el comportamiento que se pidió, con su precio.
+
+**No se calibra, y es deliberado**: el revisor dijo que no se balancea todavía, y mover un suelo RT-056 para
+poner una puerta en verde sería justo lo que la ADR 0139 ya tuvo que retirar en este mismo trabajo. Queda
+como **decisión del revisor**, con los números puestos: o se acepta un fútbol con menos entradas y se mueve
+el suelo con datos (RT-057), o se decide que la reposición tiene que dejar a alguien adelantado.
+
+### Y lo demás para la fase de balance
+
+1. **El partido dura ~115 s de reloj de pared** (a 15/s) contra los **60-90 s** que fija
    `docs/requisitos.md`. El revisor autorizó expresamente que se alargara, así que no se toca; pero si se
    quiere devolver el partido a esa ventana, la palanca es `regulationTicks`, y bajarla es una decisión de
    requisitos, no de este arreglo.
+2. **`possessionChanges` sube a 24,81** contra un techo de 28: margen, pero es la siguiente candidata si el
+   fútbol sigue creciendo.

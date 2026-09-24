@@ -674,12 +674,7 @@ public sealed record ClearTuning(
     float BaseDistanceCells,
     int StrengthDistanceMilliPerPoint,
     int PeakHeightCellsMilli,
-    int SpreadRows,
-
-    // BI-F: casillas de alcance que se pierden cuando al que despeja lo tienen encima. Un despeje apurado
-    // no llega donde uno golpeado con tiempo, y sin esta distinción el saque de puerta —que se golpea
-    // SOLO y con el balón parado— llegaba tan corto como un despeje angustiado y caía entre los rivales.
-    float PressurePenaltyCells = 0f);
+    int SpreadRows);
 
 public sealed record Tuning(
     int RegulationTicks,

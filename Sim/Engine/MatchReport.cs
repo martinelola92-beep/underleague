@@ -92,8 +92,15 @@ public sealed class MatchReport
     /// <summary>Equipo ganador, 0 o 1; nunca hay empate (gol de oro; desempate si se agota el tiempo, 3.9).</summary>
     public int Winner { get; }
 
-    /// <summary>Tick en el que terminó el partido.</summary>
+    /// <summary>Tick en el que terminó el partido. Es el tick del MOTOR: cuenta también las reanudaciones.</summary>
     public int Ticks { get; }
+
+    /// <summary>
+    /// Ticks de RELOJ DEL PARTIDO al terminar (BC-A): sólo los jugados con el balón en juego. Es el que
+    /// hay que usar para decir en qué minuto pasó algo; <see cref="Ticks"/> es tiempo de pared y desde que
+    /// la reanudación espera a que el equipo se recoloque los dos números ya no coinciden.
+    /// </summary>
+    public int ClockTicks { get; }
 
     /// <summary>True si el partido llegó a MobGoldenGoal.</summary>
     public bool WentToGoldenGoal { get; }
@@ -284,6 +291,7 @@ public sealed class MatchReport
         Goals = (int[])builder.Goals.Clone();
         Winner = builder.Winner;
         Ticks = builder.Ticks;
+        ClockTicks = builder.ClockTicks;
         WentToGoldenGoal = builder.WentToGoldenGoal;
         Forfeit = builder.Forfeit;
         PossessionChanges = builder.PossessionChanges;
@@ -349,6 +357,9 @@ internal sealed class MatchReportBuilder
 
     /// <summary>Tick en el que terminó el partido; se fija en el último tick del bucle (3.2).</summary>
     public int Ticks { get; set; }
+
+    /// <summary>Ticks de reloj del partido al terminar (BC-A); ver el doc de MatchReport.ClockTicks.</summary>
+    public int ClockTicks { get; set; }
 
     /// <summary>Se pone a true si el partido entra en fase MobGoldenGoal (3.9).</summary>
     public bool WentToGoldenGoal { get; set; }

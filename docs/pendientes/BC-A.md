@@ -112,3 +112,24 @@ entonces **todos** los saques de centro pagarían ese peor caso. La espera adapt
 campo rival en el fotograma del saque de centro. Es el hermano de `GoalCelebrationPositionTests` (BB-C) y
 hacen falta los dos: aquel prohíbe teletransportar al que celebra, éste exige que acabe volviendo. Con uno
 solo, cualquiera de los dos arreglos rompe al otro.
+
+## Hermanos que la revisión independiente dejó enumerados, y siguen abiertos
+
+El revisor pidió *«en general en TODAS las paradas de juego»*, y este arreglo es sólo el del saque de
+centro. Lo que queda, con su sitio en el código, para que no haya que volver a buscarlo:
+
+- **`EnforceRestartClearance`** (`MatchEngine.cs`, barrera de BB-B): coloca **de golpe** al rival que está
+  demasiado cerca del balón, en las cinco reanudaciones. Medido durante el saque de centro, 178.953
+  fotogramas de 40 semillas: **48 (0,027 %)** superan el paso andando, con un **máximo de 2,11 casillas**.
+  Es un empujón acotado y puntual, no un cruce de campo — por eso `NobodyJumpsDuringTheKickoff` lo tolera
+  con una cota de 2,5 y lo dice—, pero sigue siendo un teletransporte.
+- **`ClearPenaltyArea`** y **`ClearAreaOfOpponents`** (saque de puerta, nuevo en BI-F): vacían el área
+  moviendo a la gente de golpe, cada tick de la cuenta atrás.
+- **La red de seguridad de `ResolveRestart`**: coloca al sacador en el punto si no le ha dado tiempo a
+  llegar. Es deliberada (BA-D) y el salto que queda es sólo lo que le faltara por andar, pero es un salto.
+- **`EnforceRestartClearance` no filtra a quien celebra**: ya estaba anotado arriba en esta ficha y sigue
+  sin medir.
+
+Ninguno se toca aquí: cada uno necesita su medición y su decisión de diseño, y mezclarlos con el saque de
+centro habría hecho imposible saber cuál arregló qué —que es justo el error que BI-F cometió con sus tres
+piezas a la vez—.

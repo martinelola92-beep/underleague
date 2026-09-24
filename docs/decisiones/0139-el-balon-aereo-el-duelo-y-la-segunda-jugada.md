@@ -171,23 +171,25 @@ propio pico es un vuelo **interrumpido**.
 baja es de quien salte.** Es la diferencia entre disputar un balón y taparle la salida a alguien pegándole
 al balón en la bota.
 
-### Y la presión acorta el despeje
+### La presión acortando el despeje: PROPUESTA RETIRADA antes de publicar
 
-Un despeje libre y uno angustiado llegaban **exactamente igual de lejos**, que es lo que hacía que el saque
-de puerta —golpeado **solo** y con el balón parado— cayera entre los rivales. Se añade
-`clear.pressurePenaltyCells`, que sale de la percepción compartida (ADR 0138) sin recalcular nada: el
-alcance base sube y la presión sobre el que despeja lo recorta.
+Esta enmienda llevaba una tercera pieza —subir `clear.baseDistanceCells` de 6,0 a 9,0 y restar un
+`clear.pressurePenaltyCells`— y **la revisión independiente la tumbó con razón**. Se deja escrita porque el
+motivo del rechazo es más útil que la pieza:
 
-No es una acción nueva ni un modificador invisible: es la distinción legible entre despejar con tiempo y
-despejar con alguien en la nuca.
+- **Era tuning prohibido por el propio dato.** El `_doc` del bloque `clear` dice literalmente *«VALORES DE
+  PARTIDA SIN CALIBRAR: este paquete tiene prohibido el tuning contra lotes»*. Un **+50 %** justificado con
+  prosa, sin una medición que separe 9 de 7 o de 12.
+- **Era una mecánica nueva sin `game-design-review`** (Regla B), y la defensa que se le escribió —«no es un
+  modificador invisible»— era **falsa**: no hay evento ni marca en la traza que le diga al jugador que ese
+  despeje salió corto por presión. Invisible es exactamente lo que era.
 
-| dato | valor | por qué ése |
-|---|---|---|
-| `clear.baseDistanceCells` | 9,0 | lo que llega un despeje **sin nadie encima**, que es el caso del saque de puerta |
-| `clear.pressurePenaltyCells` | 4,0 | con presión máxima el despeje se queda en 5 casillas: sale del área, no cruza el campo |
+La idea puede ser buena —un despeje apurado **debería** llegar menos lejos— y queda como candidato con su
+pregunta de diseño planteada: cómo hacerla observable. No entra por la puerta de atrás de un arreglo de bug.
 
-**Remedido**: la altura máxima del vuelo tras el saque pasa de **1,07** (pico truncado) a **1,40** (la
-parábola entera). Ficha completa: `docs/pendientes/BI-F.md`.
+**Remedido, con la pieza que sí se queda**: la altura máxima del vuelo tras el saque pasa de **1,07** (pico
+truncado) a **1,40** (la parábola entera) — y lo explica entera el duelo en bajada, porque
+`peakHeightCellsMilli` vale 1.400 y no se tocó. Ficha completa: `docs/pendientes/BI-F.md`.
 
 **Queda abierto, y no se toca aquí**: quién gana la segunda jugada en el medio campo. A los sesenta ticks el
 balón sigue suelto la mayoría de las veces y el rival lo recupera tan a menudo como el que sacó. Es la misma

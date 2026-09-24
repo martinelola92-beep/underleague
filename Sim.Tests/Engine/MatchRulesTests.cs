@@ -49,7 +49,10 @@ public sealed class MatchRulesTests
             var report = Run(seed).Report;
             if (report.WentToGoldenGoal)
             {
-                Assert.True(report.Ticks > Catalog.Tuning.RegulationTicks, $"semilla {seed}: gol de oro sin agotar el reglamentario");
+                // BC-A: con el RELOJ DEL PARTIDO, no con el tick del motor. `report.Ticks` es tiempo de
+                // pared y desde que la reanudación espera supera SIEMPRE el reglamentario (1.724 contra
+                // 1.200 en un partido normal), así que la aserción se había vuelto tautológica.
+                Assert.True(report.ClockTicks > Catalog.Tuning.RegulationTicks, $"semilla {seed}: gol de oro sin agotar el reglamentario");
             }
             else if (!report.Forfeit)
             {
@@ -168,8 +171,30 @@ public sealed class MatchRulesTests
                     continue;
                 }
 
-                int startFrame = trace.FrameOfTick(e.Tick - ticks);
                 int endFrame = trace.FrameOfTick(e.Tick - 1);
+
+                // BC-A: LA CUENTA ATRÁS DEL SAQUE DE CENTRO YA NO DURA `KickoffTicks`. Dura eso MÁS lo que
+                // el equipo tarde en volver andando a su formación, así que una ventana fija de 15 ticks
+                // medía los últimos 15 de una espera en la que ya no se mueve nadie: las dos aserciones de
+                // este test pasaban SOLAS. Lo destapó la revisión independiente, y es justo el test que
+                // tenía que haber cazado que el sacador del saque de centro seguía teletransportándose.
+                //
+                // La ventana se toma ahora de la traza: hacia atrás mientras dure la misma fase.
+                int startFrame;
+                if (e.Detail == "kickoff")
+                {
+                    startFrame = endFrame;
+                    var restartPhase = trace.PhaseAt(endFrame);
+                    while (startFrame > 0 && trace.PhaseAt(startFrame - 1) == restartPhase)
+                    {
+                        startFrame--;
+                    }
+                }
+                else
+                {
+                    startFrame = trace.FrameOfTick(e.Tick - ticks);
+                }
+
                 if (endFrame <= startFrame)
                 {
                     // Ventana recortada contra el arranque de la traza (el saque inicial de partido cae
@@ -353,7 +378,10 @@ public sealed class MatchRulesTests
                 // en la resolución de un saque NORMAL—, así que se excluye por lo que lo distingue: ocurre
                 // exactamente en el tick en que acaba el reglamentario. Antes no aparecía en la muestra
                 // porque ninguna de las 50 semillas llegaba empatada a ese tick con saque de centro.
-                if (e.Tick == Catalog.Tuning.RegulationTicks)
+                // BC-A: se compara el RELOJ DEL PARTIDO. Con el tick del motor esta guarda no coincidía ya
+                // nunca —el reglamentario termina en un tick de motor mayor que `RegulationTicks`— y se
+                // había quedado muerta, dejando pasar el caso que excluye a propósito.
+                if (e.ClockTick == Catalog.Tuning.RegulationTicks)
                 {
                     continue;
                 }

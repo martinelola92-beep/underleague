@@ -980,13 +980,12 @@ public static class DataLoader
     /// <summary>tuning.clear — el despeje (Gameplay AI Foundations Pass, P4).</summary>
     private static ClearTuning ParseClear(Json node)
     {
-        node.EnsureKnownKeys("baseDistanceCells", "strengthDistanceMilliPerPoint", "peakHeightCellsMilli", "spreadRows", "pressurePenaltyCells");
+        node.EnsureKnownKeys("baseDistanceCells", "strengthDistanceMilliPerPoint", "peakHeightCellsMilli", "spreadRows");
         return new ClearTuning(
             node.Prop("baseDistanceCells").AsFloat(),
             node.Prop("strengthDistanceMilliPerPoint").AsInt(),
             node.Prop("peakHeightCellsMilli").AsInt(),
-            node.Prop("spreadRows").AsInt(),
-            node.Prop("pressurePenaltyCells").AsFloat());
+            node.Prop("spreadRows").AsInt());
     }
 
     /// <summary>tuning.goalkeeper — la salida del área (ADR 0141).</summary>

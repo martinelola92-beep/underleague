@@ -311,8 +311,8 @@ public sealed class EndToEndProtocolDemoTests
 
         // BI-G (24 sep 2026): AQUÍ HABÍA UNA ASERCIÓN QUE NO PODÍA SER CIERTA. Exigía que la tripleta
         // subiera `tacklesPerMatch` de forma monótona, y `tacklesPerMatch` cuenta entradas INTENTADAS
-        // —`_report.Tackles++` es incondicional en `ResolveTackle`—, mientras que `ProbabilityKind.Tackle`
-        // sólo decide las GANADAS. Medido: el brazo armado da 10,10 idéntico con el parámetro en 5, 15,
+        // —`_report.Tackles++` está dentro de `if (carrierHasBall)` y ANTES de mirar `isWin`—, mientras que
+        // `ProbabilityKind.Tackle` sólo decide las GANADAS. Medido: el brazo armado da 10,10 idéntico con el parámetro en 5, 15,
         // 30, 40 y 60, y a 300 plantillas igual que a 60. Estaba en verde porque los tres deltas salían
         // EXACTAMENTE iguales (0,10) y `IsMonotonic` acepta la igualdad: un empate, no una demostración.
         //

@@ -39,10 +39,34 @@ que baja es de quien salte.
 2. **En un saque de puerta los rivales salen del área**, que es la regla del fútbol. La barrera genérica de
    dos casillas dejaba al que presiona **dentro** del área esperando el rechace. Reutiliza la misma salida
    por el borde más cercano que el penalti (ADR 0143).
-3. **La presión acorta el despeje.** Un despeje libre y uno angustiado llegaban exactamente igual de lejos.
-   Ahora el alcance base sube y la presión sobre el que despeja lo recorta: un saque de puerta se golpea
-   **solo** y con el balón parado, así que llega lo que debe; un central con un delantero en la nuca la
-   manda mucho menos lejos.
+3. ~~**La presión acorta el despeje.**~~ **RETIRADA antes de publicar**, por la revisión independiente, y
+   la retirada vale más que la pieza. Eran dos cosas a la vez y las dos mal traídas:
+
+   - **`clear.baseDistanceCells` 6,0 → 9,0** es un **+50 %** a un número cuyo propio `_doc` en
+     `data/sim/tuning.json` dice, con esas palabras, *«VALORES DE PARTIDA SIN CALIBRAR: este paquete tiene
+     prohibido el tuning contra lotes»*. Justificado con prosa, sin una medición que distinga 9 de 7 o de
+     12, y en el mismo trabajo que cita la instrucción del revisor de no calibrar.
+   - **`clear.pressurePenaltyCells`** es una **mecánica nueva** y no pasó por `game-design-review`
+     (Regla B). Y la defensa que se le escribió —«no es un modificador invisible, es la distinción legible
+     entre despejar con tiempo y con alguien en la nuca»— **no era cierta**: no hay evento, ni detalle en
+     el despeje, ni nada en la traza que le diga al jugador que ese despeje salió corto por presión. Es
+     literalmente un modificador numérico invisible, y el principio del proyecto es el contrario.
+
+   Puede ser la mecánica correcta —despejar apurado **debería** llegar menos lejos—; lo que falta es el
+   paso que lo decida. Queda como candidato para `game-design-review`, con la pregunta de diseño ya
+   planteada: cómo se hace **observable**.
+
+## Qué queda, y qué quedó sin aislar
+
+Tras la retirada, el arreglo son **dos** piezas: el duelo aéreo sólo en bajada y los rivales fuera del área.
+
+**Y hay que decir que el experimento estaba confundido**: las tres piezas se cambiaron juntas y se midió una
+sola cifra. La remedición de abajo (vuelo 1,07 → 1,40) la explica **entera la pieza 1**, porque la altura de
+pico es `clear.peakHeightCellsMilli = 1400` y no se tocó. La pieza 2 —los rivales fuera del área— sigue
+**sin medición propia** que la aísle: es la regla del fútbol y responde literalmente a lo que el revisor
+describió («los jugadores rivales están demasiado cerca»), pero no hay número que diga cuánto aporta.
+Anotado, no tapado. Además **teletransporta** (`ClearAreaOfOpponents`), lo que la pone en la lista de
+hermanos de [BC-A](./BC-A.md).
 
 ## Remedición
 

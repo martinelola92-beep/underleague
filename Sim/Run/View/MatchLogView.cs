@@ -125,7 +125,7 @@ public static class MatchLogView
 
             lines.Add(new MatchLogLine(
                 matchEvent.Tick,
-                Minute(matchEvent.Tick, regulationTicks),
+                Minute(matchEvent.ClockTick, regulationTicks),
                 matchEvent.Type,
                 detail,
                 cancelled,
@@ -156,7 +156,14 @@ public static class MatchLogView
         return result;
     }
 
-    /// <summary>Minuto de un partido de 90 equivalente al tick indicado; la prórroga de turba pasa de 90.</summary>
+    /// <summary>
+    /// Minuto de un partido de 90 equivalente al tick indicado; la prórroga de turba pasa de 90.
+    ///
+    /// <para><b>El tick que se le pasa tiene que ser el del RELOJ DEL PARTIDO</b> (<c>MatchEvent.ClockTick</c>,
+    /// <c>MatchReport.ClockTicks</c>), nunca el del motor (BC-A). Desde que la reanudación espera a que el
+    /// equipo se recoloque, un partido de 90 minutos termina pasado el tick 1.700 de motor con
+    /// <c>regulationTicks</c> en 1.200: pasarle el del motor pintaba el pitido final en el minuto 123.</para>
+    /// </summary>
     public static int Minute(int tick, int regulationTicks) =>
         regulationTicks <= 0 ? 0 : tick * RegulationMinutes / regulationTicks;
 

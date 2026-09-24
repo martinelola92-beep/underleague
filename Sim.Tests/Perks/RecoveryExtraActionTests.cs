@@ -24,6 +24,21 @@ public sealed class RecoveryExtraActionTests
     private static readonly RefereeSetup Referee = new("Referee", RefereeTrait.Neutral, 0);
     private const int Matches = 20;
 
+    /// <summary>
+    /// Partidos del lote que comprueba que la rama es **alcanzable**. Son 200 y no los 20 del resto del
+    /// fichero, y no es un parche para poner el test en verde (24 sep 2026).
+    ///
+    /// <para>Con 20 era un test que fallaba **por mala suerte** —lo que `CLAUDE.md` define como test mal
+    /// escrito—: `steamroller` encadena ~22 veces por cada 200 partidos, o sea ~2,2 en 20, y la
+    /// probabilidad de ver **cero** por azar rondaba el **11 %**. Al cambiar el flujo del balón (BC-A,
+    /// BI-F) salió ese cero. Medido a 200 partidos antes y después del cambio: **21 → 23**. La tasa no se
+    /// movió; sólo cambió qué partidos salen.</para>
+    ///
+    /// <para>El resto del fichero se queda en 20 a propósito: sus bandas (`ExistingPerksAreUnchanged`)
+    /// están calibradas por cada 20 partidos y multiplicarlas por diez sería cambiar lo que miden.</para>
+    /// </summary>
+    private const int ReachabilityMatches = 200;
+
     private readonly ITestOutputHelper _output;
     public RecoveryExtraActionTests(ITestOutputHelper output) => _output = output;
 
@@ -60,12 +75,12 @@ public sealed class RecoveryExtraActionTests
         Assert.Equal(EffectType.ExtraAction, perk.Effects.Single().Type);
 
         int total = 0;
-        for (int i = 0; i < Matches; i++)
+        for (int i = 0; i < ReachabilityMatches; i++)
         {
             total += Activations(Play(i, "steamroller", out int carrierId), "steamroller", carrierId);
         }
 
-        _output.WriteLine($"activaciones de steamroller en {Matches} partidos: {total}");
+        _output.WriteLine($"activaciones de steamroller en {ReachabilityMatches} partidos: {total}");
         Assert.True(total > 0, "RECOVERY(detail='tackle') debe poder activar extraAction");
     }
 

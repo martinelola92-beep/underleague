@@ -21,6 +21,18 @@ public sealed class SteamrollerConditionTests
     private static readonly Catalog Catalog = TestData.LoadCatalog();
     private static readonly RefereeSetup Referee = new("Referee", RefereeTrait.Neutral, 0);
 
+    /// <summary>
+    /// Partidos del lote de alcanzabilidad. **20 → 200 (24 sep 2026)**, y no es un parche para poner el
+    /// test en verde: con 20 era un test que fallaba **por mala suerte**, que es lo que `CLAUDE.md` define
+    /// como test mal escrito.
+    ///
+    /// <para>Medido a 200 partidos, antes y después del trabajo de BC-A/BI-F: <c>steamroller</c> encadena
+    /// **21 → 23** veces y <c>charge</c> **103 → 96**. La tasa no se movió; lo que se movió fue qué
+    /// partidos salen. Con una media de ~2,2 activaciones en 20 partidos, la probabilidad de ver **cero**
+    /// por azar rondaba el **11 %** — y eso es exactamente lo que pasó al cambiar el flujo del balón.</para>
+    /// </summary>
+    private const int ActivationMatches = 200;
+
     private readonly ITestOutputHelper _output;
     public SteamrollerConditionTests(ITestOutputHelper output) => _output = output;
 
@@ -166,10 +178,13 @@ public sealed class SteamrollerConditionTests
             "Arrollador debe encadenar alguna vez cuando su entrada derriba al rival (docs/pendientes/BB-Q.md)");
     }
 
+    /// <summary>
+    /// Activaciones del perk en <see cref="ActivationMatches"/> partidos con el portador fijo.
+    /// </summary>
     private static int Activations(string perkId)
     {
         int total = 0;
-        for (int i = 0; i < 20; i++)
+        for (int i = 0; i < ActivationMatches; i++)
         {
             var result = PlayOne(i, perkId, out int carrierId);
             foreach (var summary in result.Report.PerksSummary)
