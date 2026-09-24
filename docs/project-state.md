@@ -1181,12 +1181,48 @@ deja roja a propósito: es la decisión 1.
 Ojo con una herencia: `RaceBalanceTests` **no estaba roja en la foto del pass** y sí lo está en `main` desde
 el arreglo de BI-E — anotado ahí como LIKELY, sin experimento que lo aísle.
 
+## El balón parado como fase posicional — diseño cerrado, implementación pendiente (24 sep 2026)
+
+El revisor encargó generalizar la reposición de las reanudaciones. **La nota de diseño está hecha y
+aprobada**: `docs/plan-balon-parado-posicional.md`, con las diez preguntas de `game-design-review`, el
+análisis de cómo se coloca un equipo de verdad en cada reanudación y la conversión a la cuadrícula
+(1 columna ≈ 6,6 m, 1 fila ≈ 9,7 m; la barrera de 9,15 m son **1,4 columnas**).
+
+**Lo decidido por el revisor**: la pausa es **graduada**, no binaria — centro, córner y saque de puerta
+largas; falta de tiro media; banda corta pero no cero. Y el motivo es **legibilidad**, no fidelidad: *«dar
+tiempo a asimilar que ha pasado algo… viendo el gameplay hay veces que no te enteras qué pasa»*. La
+**colocación** sí sigue el fútbol: el saque de banda no recoloca a nadie.
+
+**Hallazgo de dato que sale del análisis**: `restartClearanceCells` vale 2,0 casillas para las cinco
+reanudaciones por igual, o sea **13 m en horizontal y 19 m en vertical** — más que la barrera real en los
+dos ejes y **seis veces** la distancia de un saque de banda. No representa ninguna regla del fútbol.
+
 ### Siguiente paso concreto (sesión limpia)
 
-Leer esta sección del 24 sep y `docs/pendientes/BI-G.md`. Dos decisiones esperan al revisor, las dos con
-número: si `regulationTicks` baja para devolver el partido a los 60-90 s de `docs/requisitos.md`, y si se
-abre el paquete de BI-G (métrica de entradas ganadas con banda RT-056 + ADR). Si se prefiere seguir con
-gameplay antes que con balance, la cola sigue siendo `docs/pendientes/BI-D.md` (nadie conduce el balón).
+**Implementar el paquete.** Arrancar leyendo sólo `docs/plan-balon-parado-posicional.md` (se basta) y
+`docs/decisiones/0143-el-balon-parado-es-una-jugada.md`, que es la ADR que se enmienda. Orden:
+
+1. **`architecture-review` antes de escribir código** — es primitiva de motor y las plantillas de
+   colocación van en `/data` por RT-031, así que hay frontera que revisar.
+2. **ADR que enmienda RF-050, RF-053 y RF-054.** Son requisitos funcionales, no rangos de balance, y lo que
+   se ha decidido los contradice: RF-053 dice que las reanudaciones son instantáneas y no paran el reloj, y
+   RF-054 que sólo paran el partido el penalti y la roja. Sin esa ADR no se toca `docs/requisitos.md`
+   (RT-057).
+3. Implementar, medir `tacklesPerMatch` (que es lo que motivó todo: 5,69 contra suelo 6,00) y **vigilar el
+   presupuesto de reloj de pared**: estimado ~135 s, y el que más pesa es el **saque de puerta** (~7 por
+   partido × pausa larga ≈ 315 ticks), no el córner.
+4. Arreglar de paso que durante la espera no corran energía ni enfriamientos, con el principio que lo
+   ordena: **lo físico sigue el reloj de pared, lo que es disputa sigue el reloj del partido**. Ojo al
+   precio: abarata el cansancio (ADR 0142) y la nota de diseño deja tres salidas planteadas, ninguna
+   decidida.
+
+**Después, y en este orden**: [BI-D](./pendientes/BI-D.md) (alargar la conducción, **ya aprobado por el
+revisor**) y luego [BI-H](./pendientes/BI-H.md) (la interacción visual jugador-balón, encargo en cola). Ese
+orden no es casual: BI-H es pulir cómo se ve jugar con los pies, y hoy el balón tiene dueño el 32,3 % del
+partido en posesiones de 0,33 s — no hay casi nada que lucir hasta que BI-D esté.
+
+**Y dos decisiones de balance siguen esperando**, las dos con número: si `regulationTicks` baja para
+devolver el partido a los 60-90 s de RF-050, y si se abre [BI-G](./pendientes/BI-G.md).
 
 ---
 
