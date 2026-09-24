@@ -113,6 +113,20 @@ internal sealed class MatchEngine : IPerkWorld
     /// Sólo cuenta cuando la cuenta atrás ya expiró y todavía falta gente por colocarse.
     /// </summary>
     private int _restartWaitTicks;
+
+    /// <summary>
+    /// A dónde va cada jugador durante la reanudación en curso (ADR 0147), o <c>null</c> si esta
+    /// reanudación no recoloca a nadie. Es la generalización de lo que BC-A hizo sólo para el saque de
+    /// centro: en vez de «todos a su casilla-hogar», <b>cada reanudación dice dónde va cada uno</b>.
+    ///
+    /// <para>No se reutiliza <c>TargetPoint</c> —<c>Decide()</c> lo sobrescribe al tick siguiente, medido
+    /// en BC-A— ni <c>EffectiveHome</c>, que es del sistema de correa y formación. Se reserva una vez, en
+    /// el constructor, porque el motor no asigna memoria por tick (RT-051).</para>
+    /// </summary>
+    private readonly Vec2[] _restartSpot;
+
+    /// <summary>¿La reanudación en curso recoloca al equipo? Si no, nadie camina y nadie espera.</summary>
+    private bool _restartRepositions;
     private Vec2 _restartPoint;
     private MatchPlayer? _penaltyTaker;
 
@@ -161,6 +175,7 @@ internal sealed class MatchEngine : IPerkWorld
         AddTeam(players, setup.Away, 1);
         players.Sort(static (a, b) => a.Id.CompareTo(b.Id));
         _players = players.ToArray();
+        _restartSpot = new Vec2[_players.Length];
         _pendingSubstitutions.Sort(static (a, b) =>
             a.Tick != b.Tick ? a.Tick.CompareTo(b.Tick) : a.Team != b.Team ? a.Team.CompareTo(b.Team) : a.InId.CompareTo(b.InId));
         for (int i = 0; i < _players.Length; i++)
@@ -626,21 +641,29 @@ internal sealed class MatchEngine : IPerkWorld
                 continue;
             }
 
-            // BC-A: en el SAQUE DE CENTRO —y sólo en él— el equipo vuelve a su formación andando, en vez
-            // de decidir. Es la única reanudación que reordena a los once: en un saque de banda o un
-            // córner la gente sigue jugando (AW-R) y eso está bien, pero después de un gol todo el mundo
-            // tiene que volver a su sitio, y hacerlo decidiendo no lo hace nadie.
+            // ADR 0147: EN UNA REANUDACIÓN QUE RECOLOCA, el equipo va a su sitio ANDANDO en vez de decidir.
+            // Empezó siendo sólo el saque de centro (BC-A) y ahora lo dice la propia reanudación:
+            // `_restartSpot` lleva a dónde va cada uno. En las que NO recolocan —el saque de banda, que en
+            // el fútbol real tampoco reorganiza a nadie— la gente sigue jugando (AW-R), que está bien.
             //
             // Fijar el TargetPoint y confiar NO funciona, y costó una medición descubrirlo: Decide() lo
             // sobrescribe en el tick siguiente con lo que diga la utilidad, así que la gente se quedaba
             // donde estaba. Medido: 3,14 jugadores en campo rival al sacar, peor que el teletransporte.
-            if (wasRestarting && _pendingRestart == RestartKind.Kickoff && player.OnPitch
+            if (wasRestarting && _restartRepositions && player.OnPitch
                 && player.State is not (PlayerState.KnockedDown or PlayerState.Injured or PlayerState.SentOff))
             {
                 TickStateTimer(player);
+                if (player.OnPitch)
+                {
+                    // ADR 0147: el cuerpo corre igual que jugando —recolocarse cansa y los enfriamientos
+                    // bajan—. Lo que NO corre en una reanudación es decidir. Antes esto hacía `continue`
+                    // antes de UpdatePlayer y congelaba las dos cosas (revisión independiente).
+                    TickBody(player);
+                }
+
                 if (player.OnPitch && player.State is not PlayerState.Celebrating)
                 {
-                    WalkHome(player);
+                    WalkTo(player, _restartSpot[player.Index]);
                 }
 
                 continue;
@@ -699,7 +722,7 @@ internal sealed class MatchEngine : IPerkWorld
                 //
                 // El tope existe para que un derribado, que no anda, no congele el partido; y el reloj del
                 // partido está parado mientras tanto (_clockTick), así que esperar no cuesta fútbol.
-                if (_pendingRestart == RestartKind.Kickoff
+                if (_restartRepositions
                     && _restartWaitTicks < _tuning.Restart.KickoffMaxWaitTicks
                     && !EveryoneInPlace())
                 {
@@ -1204,6 +1227,43 @@ internal sealed class MatchEngine : IPerkWorld
             return;
         }
 
+        TickBody(player);
+
+        // Un estado de decisión CON contador no vuelve a decidir hasta que se le acaba: es lo que hace de
+        // la conducción un compromiso y no una intención que se reevalúa cada dos ticks. Comprobado antes
+        // de añadirlo: hoy los tres estados de decisión —Positioning, Chasing, Dribbling— se entran
+        // SIEMPRE con 0 en las dieciocho llamadas del motor, así que esta condición es inerte para todo lo
+        // que ya existía y solo la nota la conducción (`dribble.driveTicks`).
+        if (StateMachine.IsDecisionState(player.State)
+            && player.StateTicksLeft == 0
+            && (_tick + player.Id) % _tuning.DecisionIntervalTicks == 0)
+        {
+            Decide(player);
+        }
+
+        ExecuteAction(player);
+    }
+
+    /// <summary>
+    /// Lo que le pasa al CUERPO de un jugador en un tick: enfriamientos y energía. Se separó de
+    /// <c>UpdatePlayer</c> para poder correrlo también mientras se recoloca en una reanudación (ADR 0147).
+    ///
+    /// <para><b>El principio que decide qué corre aquí y qué no</b>: <i>lo físico sigue el reloj de pared,
+    /// lo que es disputa sigue el reloj del partido</i>. Un jugador <b>sí</b> recupera el resuello durante
+    /// una parada —por eso los equipos pierden tiempo— y un enfriamiento de entrada es físico: los dos
+    /// corren con el tick del motor, no con <c>_clockTick</c>. Lo que no corre en una reanudación es
+    /// <b>decidir</b>.</para>
+    ///
+    /// <para>Antes de existir este método, la rama del saque de centro hacía <c>continue</c> antes de
+    /// <c>UpdatePlayer</c> y congelaba las dos cosas: cruzar el campo andando tras un gol no costaba
+    /// energía y los enfriamientos no bajaban. Lo señaló la revisión independiente.</para>
+    ///
+    /// <para><b>Tiene un precio anotado en la ADR 0147</b>: cada tick parado es recuperación gratis, así
+    /// que alargar las reanudaciones abarata el cansancio (ADR 0142). Las salidas están planteadas en
+    /// <c>docs/plan-balon-parado-posicional.md</c> y ninguna decidida.</para>
+    /// </summary>
+    private void TickBody(MatchPlayer player)
+    {
         if (player.DribbleDuelCooldown > 0)
         {
             player.DribbleDuelCooldown--;
@@ -1235,20 +1295,6 @@ internal sealed class MatchEngine : IPerkWorld
         }
 
         UpdateEnergy(player);
-
-        // Un estado de decisión CON contador no vuelve a decidir hasta que se le acaba: es lo que hace de
-        // la conducción un compromiso y no una intención que se reevalúa cada dos ticks. Comprobado antes
-        // de añadirlo: hoy los tres estados de decisión —Positioning, Chasing, Dribbling— se entran
-        // SIEMPRE con 0 en las dieciocho llamadas del motor, así que esta condición es inerte para todo lo
-        // que ya existía y solo la nota la conducción (`dribble.driveTicks`).
-        if (StateMachine.IsDecisionState(player.State)
-            && player.StateTicksLeft == 0
-            && (_tick + player.Id) % _tuning.DecisionIntervalTicks == 0)
-        {
-            Decide(player);
-        }
-
-        ExecuteAction(player);
     }
 
     /// <summary>
@@ -1634,17 +1680,18 @@ internal sealed class MatchEngine : IPerkWorld
     /// mucho lo que le quedara por andar, en vez de la distancia entera.</para>
     /// </summary>
     /// <summary>
-    /// Lleva a un jugador hacia su casilla a su velocidad normal, sin decidir (BC-A). Es
-    /// <see cref="WalkRestartTaker"/> aplicado al resto del equipo durante el saque de centro.
+    /// Lleva a un jugador hacia un punto a su velocidad normal, sin decidir (BC-A, generalizado por la
+    /// ADR 0147). Es <see cref="WalkRestartTaker"/> aplicado al resto del equipo durante una reanudación
+    /// que recoloca.
     /// </summary>
-    private void WalkHome(MatchPlayer player)
+    private void WalkTo(MatchPlayer player, Vec2 destination)
     {
-        var to = player.HomeCenter - player.Position;
+        var to = destination - player.Position;
         float distance = to.Length;
         float step = SpeedPerTick(player, dribbling: false);
         if (distance <= step || distance <= 0f)
         {
-            player.Position = player.HomeCenter;
+            player.Position = destination;
             player.Velocity = new Vec2(0f, 0f);
             return;
         }
@@ -1655,23 +1702,44 @@ internal sealed class MatchEngine : IPerkWorld
     }
 
     /// <summary>
-    /// ¿Ha vuelto todo el mundo a su casilla? (BC-A.) El sacador no cuenta —va al punto de saque, no a su
-    /// sitio—, ni el derribado, que no puede andar y sólo haría que la espera llegara siempre al tope.
-    /// El que celebra SÍ cuenta: es justo el que hay que esperar.
+    /// ¿Están ya las posiciones como la reanudación exige? (BC-A; ADR 0147.)
+    ///
+    /// <para><b>Comprueba la REGLA, no el punto exacto</b>, y eso es una corrección medida, no una
+    /// relajación. La primera versión exigía a cada jugador estar a menos de <c>inPlaceCells</c> de su
+    /// casilla de saque, y con el equipo comprimido hacia el medio campo esa condición es
+    /// <b>inalcanzable</b>: la separación de cuerpos (ADR 0020) los empuja unos de otros y nunca se posan
+    /// todos a la vez en su punto —medido: <b>79 de 120</b> saques de centro agotaban el tope de espera, y
+    /// dos jugadores acababan desplazados a las filas 2,34 y 4,66 empujándose entre sí—. Esperar a una
+    /// formación exacta es esperar a algo que el motor no puede producir.</para>
+    ///
+    /// <para>Lo que sí se puede exigir, y además es <b>literalmente el reglamento</b>, es que nadie pise el
+    /// campo contrario y que el equipo que no saca esté fuera del círculo central. Es la condición que el
+    /// árbitro comprueba de verdad antes de pitar.</para>
+    ///
+    /// <para>El sacador no cuenta —va al punto de saque, que está en la línea—, ni el derribado, que no
+    /// puede andar y sólo haría que la espera llegara siempre al tope. El que celebra SÍ cuenta: es justo
+    /// el que hay que esperar.</para>
     /// </summary>
     private bool EveryoneInPlace()
     {
-        float tolerance = _tuning.Restart.InPlaceCells;
+        var restart = _tuning.Restart;
+        float middle = Pitch.Columns / 2f;
         for (int i = 0; i < _players.Length; i++)
         {
             var player = _players[i];
-            if (!player.OnPitch || ReferenceEquals(player, _restartTaker)
+            if (!player.OnPitch || !player.IsOutfield || ReferenceEquals(player, _restartTaker)
                 || player.State is PlayerState.KnockedDown or PlayerState.Injured or PlayerState.SentOff)
             {
                 continue;
             }
 
-            if ((player.Position - player.HomeCenter).Length > tolerance)
+            int direction = Pitch.AttackDirection(player.Team);
+            float limit = player.Team == _restartTeam
+                ? middle
+                : middle - (direction * restart.CentreCircleCells);
+
+            // "Antes de la línea" para el que ataca hacia columnas altas es estar por debajo de ella.
+            if (direction > 0 ? player.Position.X > limit : player.Position.X < limit)
             {
                 return false;
             }
@@ -4541,11 +4609,19 @@ internal sealed class MatchEngine : IPerkWorld
         // El saque de centro reforma el equipo antes de elegir sacador (§3.2): con las posiciones ya en
         // HomeCenter, "el más cercano al centro" es el mismo criterio que usaba TakeKickoff con distancia
         // a HomeCenter (revisión independiente).
-        if (kind == RestartKind.Kickoff)
+        // ADR 0147: la reanudación decide si recoloca y a dónde va cada uno. Hoy sólo el saque de centro
+        // reorganiza al equipo; el saque de banda no lo hace en el fútbol real y por eso tampoco aquí.
+        _restartRepositions = kind == RestartKind.Kickoff;
+        _restartWaitTicks = 0;
+        if (_restartRepositions)
         {
             _shift[0] = 0f;
             _shift[1] = 0f;
             SendEveryoneHome();
+            for (int i = 0; i < _players.Length; i++)
+            {
+                _restartSpot[i] = KickoffSpot(_players[i], team);
+            }
         }
 
         // AZ-A: el sacador se fija una sola vez aquí, con la misma regla que antes vivía repetida en
@@ -4616,6 +4692,47 @@ internal sealed class MatchEngine : IPerkWorld
             player.Position = PushOutOfArea(player.Position, defendingTeam);
             player.Velocity = default;
         }
+    }
+
+    /// <summary>
+    /// Dónde espera un jugador un saque de centro (ADR 0147). <b>No es su casilla de reposo</b>, y ésa es
+    /// justamente la corrección: en el fútbol real nadie aguarda el saque replegado en su sitio, el equipo
+    /// se <b>comprime hacia el medio campo</b> y el delantero espera en la línea.
+    ///
+    /// <para>Mandar a todos a <c>HomeCenter</c> dejaba al equipo saliendo del saque perfectamente formado
+    /// y <b>presionando mucho menos</b> que cuando se le teletransportaba y luego derivaba hacia el balón
+    /// durante la cuenta atrás. Es la causa aislada de que <c>tacklesPerMatch</c> cayera de 6,86 a 5,69.</para>
+    ///
+    /// <para>Dos reglas del fútbol acotan el empuje, y las dos son del reglamento, no de balance: <b>nadie
+    /// pisa el campo contrario</b> antes del saque, y <b>el equipo que NO saca se queda fuera del círculo
+    /// central</b> hasta que el balón está en juego. El portero no se mueve de su sitio: su correa es el
+    /// área (RF-057b).</para>
+    /// </summary>
+    private Vec2 KickoffSpot(MatchPlayer player, int takingTeam)
+    {
+        var home = player.HomeCenter;
+        if (!player.IsOutfield)
+        {
+            return home;
+        }
+
+        var restart = _tuning.Restart;
+        int direction = Pitch.AttackDirection(player.Team);
+        float middle = Pitch.Columns / 2f;
+        float column = home.X + (direction * restart.KickoffPushCells);
+
+        // Sin pisar el campo contrario.
+        float ownHalfLimit = middle - (direction * restart.OwnHalfMarginCells);
+        column = direction > 0 ? MathF.Min(column, ownHalfLimit) : MathF.Max(column, ownHalfLimit);
+
+        // Y el que no saca, además, fuera del círculo central.
+        if (player.Team != takingTeam)
+        {
+            float circleEdge = middle - (direction * restart.CentreCircleCells);
+            column = direction > 0 ? MathF.Min(column, circleEdge) : MathF.Max(column, circleEdge);
+        }
+
+        return new Vec2(column, home.Y);
     }
 
     /// <summary>
@@ -5020,7 +5137,7 @@ internal sealed class MatchEngine : IPerkWorld
     /// de centro — medido: <b>el 85,7 % de los goles</b>, y siempre él solo. Los dos defectos eran el mismo:
     /// una reanudación que coloca a la gente de golpe no puede hacer nada con el que no se deja colocar.</para>
     ///
-    /// <para>Ahora nadie salta: se les fija el destino y <see cref="WalkHome"/> los lleva. La reanudación
+    /// <para>Ahora nadie salta: se les fija el destino y <see cref="WalkTo"/> los lleva. La reanudación
     /// espera a que lleguen (<see cref="EveryoneInPlace"/>) y el reloj del partido está parado mientras
     /// tanto, así que la espera no cuesta fútbol.</para>
     /// </summary>

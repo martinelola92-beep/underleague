@@ -773,7 +773,11 @@ public sealed class MatchRulesTests
 
                 // La primera Recovery tras la falta: si es el saque de falta, el balón es del rival del infractor.
                 bool restarted = false;
-                for (int j = i + 1; j < events.Count && events[j].Tick <= e.Tick + 12; j++)
+                // ADR 0147: la ventana sale del DATO, no de un 12 cableado. Cuando `freeKickTicks` pasó
+                // de 8 a 20 —la pausa graduada—, este test dejó de ver un solo saque de falta de 558 y lo
+                // llamó regresión del motor: no lo era, era que la reanudación ya no cabía en su ventana.
+                int window = Catalog.Tuning.Restart.FreeKickTicks + 4;
+                for (int j = i + 1; j < events.Count && events[j].Tick <= e.Tick + window; j++)
                 {
                     if (events[j].Type != EventType.Recovery)
                     {

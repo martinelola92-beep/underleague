@@ -1073,6 +1073,24 @@
           "type": "number",
           "minimum": 0,
           "description": "Casillas de tolerancia para dar a un jugador por colocado en su casilla-hogar durante esa espera (BC-A). Exigir el punto exacto alargaría cada saque de centro hasta el tope."
+        },
+        "kickoffPushCells": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 8,
+          "description": "Columnas que el equipo se comprime hacia el medio campo para un saque de centro (ADR 0147): en el fútbol real nadie espera el saque en su casilla de reposo."
+        },
+        "ownHalfMarginCells": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 8,
+          "description": "Margen en columnas que separa del medio campo al equipo que se coloca para un saque de centro; ninguno de los dos puede pisar el campo contrario (ADR 0147)."
+        },
+        "centreCircleCells": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 8,
+          "description": "Radio del círculo central en columnas (9,15 m ≈ 1,4 columnas). El equipo que NO saca tiene que quedarse fuera hasta que el balón esté en juego (ADR 0147)."
         }
       },
       "required": [
@@ -1084,7 +1102,10 @@
         "freeKickTicks",
         "restartClearanceCells",
         "kickoffMaxWaitTicks",
-        "inPlaceCells"
+        "inPlaceCells",
+        "kickoffPushCells",
+        "ownHalfMarginCells",
+        "centreCircleCells"
       ],
       "additionalProperties": false
     },

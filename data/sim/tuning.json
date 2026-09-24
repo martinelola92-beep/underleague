@@ -191,16 +191,19 @@
     "foulBase": 1500
   },
   "restart": {
-    "_doc": "Cuenta atrás de cada reanudación en ticks (RF-053). freeKickTicks (AZ-D, ADR 0090): la falta señalada es una reanudación instantánea más, con cuenta atrás de 8 ticks (con 15, los ~4 s de balón parado por partido dejaban shotsPerMatch en 7,8 en la semilla 7). restartClearanceCells (BB-B, tercer intento, docs/analisis/bb-b-barrera-geometrica-diseno.md §16): barrera de 2 casillas para los rivales, generalizada de freeKickClearanceCells (ADR 0090, solo la falta) a las cinco reanudaciones que no son el penalti -banda, córner, puerta, centro y falta-, con techo de duración de 30 ticks (RestartClearanceMaxTicks, RF-052). El segundo intento medía mal el residual y rompía betterTeamWinRate sin excluir el penalti explícitamente; este corrige ambas cosas antes de remedir. kickoffMaxWaitTicks e inPlaceCells (BC-A, 24 sep 2026, decisión del revisor): tras un gol el equipo vuelve a su formación ANDANDO, no de golpe, así que el saque de centro espera a que estén colocados. El tope de 180 ticks (12 s) es lo que tarda el goleador -que celebra treinta ticks y luego cruza el campo-: medido, con 90 se quedaba fuera de sitio el 39 % de las veces. El reloj del PARTIDO está parado mientras tanto (MatchEngine._clockTick), así que esperar no cuesta minutos de fútbol, sólo reloj de pared, que es lo que el revisor autorizó expresamente.",
-    "throwInTicks": 15,
-    "goalKickTicks": 15,
-    "cornerTicks": 15,
+    "_doc": "Cuenta atras de cada reanudacion en ticks (RF-053, reescrito por la ADR 0147). LA PAUSA ES GRADUADA Y NO ARBITRARIA: dura lo que hace falta para dos cosas distintas -que el equipo se RECOLOQUE y que el espectador ENTIENDA lo que ha pasado-. Decision del revisor viendo la build: 'cornrner y puerta paran el reloj para dar tiempo a asimilar que ha pasado algo; con banda se para pero mucho menos (hay veces que no te enteras que pasa)'. Largas (45): corner y saque de puerta. El saque de puerta esta aqui por LEGIBILIDAD y no por colocacion -no recoloca a nadie- y es el mas caro del presupuesto de reloj de pared: ~7 por partido contra ~2 del corner, asi que si hay que recortar se recorta aqui primero. Media (20): la falta, que antes valia 8 (AZ-D, ADR 0090). Corta pero NO instantanea (20): el saque de banda, que en el futbol real no recoloca a nadie pero tiene que verse. El saque de centro mantiene 15 mas la espera adaptativa. restartClearanceCells (BB-B): barrera de 2 casillas, que el analisis de la ADR 0147 destapo que son 13 m en horizontal y 19 m en vertical -mas que la barrera real de 9,15 m en los dos ejes y seis veces los 2 m de un saque de banda-, asi que no representa ninguna regla concreta y queda anotado para su propia medicion. kickoffMaxWaitTicks e inPlaceCells (BC-A): la reanudacion que recoloca espera a que lleguen andando, con tope para que un derribado no congele el partido. kickoffPushCells, ownHalfMarginCells y centreCircleCells (ADR 0147): en un saque de centro real nadie esta en su casilla de REPOSO -el equipo se comprime hacia el medio campo y el delantero espera en la linea-, asi que la casilla de saque es la de formacion empujada hacia el centro, sin cruzar la linea y, el que no saca, fuera del circulo central.",
+    "throwInTicks": 20,
+    "goalKickTicks": 45,
+    "cornerTicks": 45,
     "kickoffTicks": 15,
     "penaltyTicks": 45,
-    "freeKickTicks": 8,
+    "freeKickTicks": 20,
     "restartClearanceCells": 2.0,
     "kickoffMaxWaitTicks": 180,
-    "inPlaceCells": 0.6
+    "inPlaceCells": 0.6,
+    "kickoffPushCells": 2.5,
+    "ownHalfMarginCells": 0.5,
+    "centreCircleCells": 1.4
   },
   "bodies": {
     "_doc": "Colisión y empuje entre cuerpos (ADR 0020, fase1b-diseno.md §2.1). Sin consumidor todavía en /Sim: lo añade el paquete R (Cuerpos, zona y comportamiento); se carga aquí para que exista y se valide.",

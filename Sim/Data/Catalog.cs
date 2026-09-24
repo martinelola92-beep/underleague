@@ -648,7 +648,14 @@ public sealed record RestartTuning(
     // ticks para que un derribado o un caso raro no congelen el partido, y tolerancia en casillas para no
     // exigir el punto exacto —a un jugador que anda le sobra con estar EN su sitio, no clavado en él—.
     int KickoffMaxWaitTicks = 0,
-    float InPlaceCells = 0f);
+    float InPlaceCells = 0f,
+
+    // ADR 0147: la casilla de saque de centro no es la de reposo. En el fútbol real el equipo se comprime
+    // hacia el medio campo y el delantero espera en la línea; con todos replegados en su casilla-hogar el
+    // equipo salía del saque perfectamente formado y presionando mucho menos (medido: tacklesPerMatch).
+    float KickoffPushCells = 0f,
+    float OwnHalfMarginCells = 0f,
+    float CentreCircleCells = 0f);
 
 /// <summary>
 /// Constantes de resolución del simulador (data/sim/tuning.json), un campo por clave, anidado por sección.

@@ -1130,7 +1130,8 @@ public static class DataLoader
     {
         node.EnsureKnownKeys(
             "throwInTicks", "goalKickTicks", "cornerTicks", "kickoffTicks", "penaltyTicks", "freeKickTicks",
-            "restartClearanceCells", "kickoffMaxWaitTicks", "inPlaceCells");
+            "restartClearanceCells", "kickoffMaxWaitTicks", "inPlaceCells",
+            "kickoffPushCells", "ownHalfMarginCells", "centreCircleCells");
         return new RestartTuning(
             node.Prop("throwInTicks").AsInt(),
             node.Prop("goalKickTicks").AsInt(),
@@ -1140,7 +1141,10 @@ public static class DataLoader
             node.Prop("freeKickTicks").AsInt(),
             node.Prop("restartClearanceCells").AsFloat(),
             node.Prop("kickoffMaxWaitTicks").AsInt(),
-            node.Prop("inPlaceCells").AsFloat());
+            node.Prop("inPlaceCells").AsFloat(),
+            node.Prop("kickoffPushCells").AsFloat(),
+            node.Prop("ownHalfMarginCells").AsFloat(),
+            node.Prop("centreCircleCells").AsFloat());
     }
 
     /// <summary>tuning.generation (fase1b-diseno.md §1.3, ADR 0025, ADR 0027): modelo de presupuesto de atributos.</summary>

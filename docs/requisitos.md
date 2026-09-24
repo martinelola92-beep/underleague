@@ -167,12 +167,23 @@ Salir de la zona no está prohibido: penaliza de forma creciente con la distanci
 
 ### 3.6 Simulación del partido
 
-- **RF-050** Un partido dura entre 60 y 90 segundos a velocidad x1. Velocidades disponibles: x1, x1.5, x2, x4 y saltar al resultado. *(Desde la **ADR 0120**: x1, x4 «retransmisión comprimida» y x16 «ir al resultado».)*
+- **RF-050** Un partido dura entre 60 y 90 segundos **de juego** a velocidad x1. Velocidades disponibles: x1, x1.5, x2, x4 y saltar al resultado. *(Desde la **ADR 0120**: x1, x4 «retransmisión comprimida» y x16 «ir al resultado».)* *(Desde la **ADR 0147**: el reloj del partido **se para en las reanudaciones**, así que esos 60-90 s son de balón en juego y el **reloj de pared es mayor** —estimado ~135 s—. Decisión del revisor: «no me importa alargar el tiempo si eso produce mejor sensación». El número deja de ser una banda y pasa a ser un **techo vigilado**: se mide en cada lote y un exceso se discute, no se descubre.)*
 - **RF-050b** La velocidad x4 debe ser legible. Si a x4 el partido no se entiende, es un fallo de legibilidad del núcleo, no un problema de opciones.
 - **RF-051** El partido se estructura en **jugadas**. Cada jugada resuelve en fases: recuperación, progresión, último tercio, definición.
 - **RF-052** El saque inicial coloca a ambos equipos de forma que el primer contacto ocurra en los 2 primeros segundos.
-- **RF-053** Las reanudaciones (banda, córner, saque de puerta) son instantáneas, con una animación superpuesta de 1 segundo que **no** detiene el reloj.
-- **RF-054** Solo detienen el partido: penalti y tarjeta roja. Son los únicos puntos de pausa dramática.
+- **RF-053** *(reescrito por la **ADR 0147**; antes decía que las reanudaciones eran instantáneas y no detenían el reloj)* Las reanudaciones **duran**, y **el reloj del partido está parado mientras tanto**. Duran lo que hace falta para dos cosas distintas que no hay que confundir —que el equipo se **recoloque** y que el espectador **entienda lo que ha pasado**—, así que la pausa es graduada:
+
+  | reanudación | ¿recoloca al equipo? | pausa |
+  |---|---|---|
+  | saque de centro | sí, entero | larga |
+  | córner | sí, entero y con papeles | larga |
+  | saque de puerta | no (sólo vaciar el área) | larga — **por legibilidad**, no por colocación |
+  | falta de tiro | barrera + área | media |
+  | saque de banda | **no** — ajuste local, como en el fútbol | **corta, pero no instantánea** |
+  | falta lejana | no | corta |
+
+  Nadie se teletransporta: se llega **andando** (ADR 0143, enmienda de BC-A).
+- **RF-054** *(acotado por la **ADR 0147**)* El penalti y la tarjeta roja son los únicos puntos de **pausa dramática**: los únicos en los que el partido se detiene **para contar algo**. Ya no son los únicos que detienen el reloj —RF-053 lo para en todas las reanudaciones—, y la diferencia entre una pausa dramática y una reanudación es **qué se cuenta en ella**, no si el reloj corre.
 - **RF-055** El tiempo reglamentario es **una sola fase** con reglas normales durante el 100% del partido. La variación en el arbitraje procede exclusivamente del rasgo y el criterio del árbitro (3.6b), no del reloj.
 - **RF-055b** **Gol de oro de la turba.** Solo si el partido termina en empate, se juega una prórroga a gol de oro: el primer gol decide. Al empezar, **el árbitro abandona el campo**: no se señala ninguna falta ni se muestra ninguna tarjeta, y el criterio deja de aplicarse. El campo se estrecha 1 fila por lado, el público invade **casillas fijas y anunciadas** (siempre las mismas filas exteriores), y la velocidad global sube un 15%. Al ser las casillas conocidas, la prórroga es un problema de colocación anticipable, no un castigo aleatorio (RF-012d).
 - **RF-055d** La turba es el único tramo del partido sin árbitro. Las builds de violencia tienen ahí su ventana natural y las builds técnicas su mayor riesgo, lo que da a ambos bandos un motivo para buscar o evitar el empate.
