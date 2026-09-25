@@ -12,6 +12,24 @@ public enum MatchPhase
     Finished,
 }
 
+/// <summary>
+/// Tipo de reanudación pendiente durante una fase <see cref="MatchPhase.Restart"/>, <c>Kickoff</c> o
+/// <c>Penalty</c> (§3.8). Vivía anidado y <c>internal</c> dentro de <c>MatchEngine</c>; se muda aquí, con
+/// los demás estados del partido, porque **es un estado del partido y no un detalle del motor**, y porque
+/// el render lo necesita: sin él <c>/Game</c> no puede distinguir un saque de banda de uno de puerta, y
+/// los gestos de saque (BI-H) no se pueden enganchar.
+/// </summary>
+public enum RestartKind
+{
+    None,
+    ThrowIn,
+    GoalKick,
+    Corner,
+    Kickoff,
+    Penalty,
+    FreeKick,
+}
+
 /// <summary>Estado táctico de un equipo respecto a la posesión del balón.</summary>
 public enum TacticalState
 {

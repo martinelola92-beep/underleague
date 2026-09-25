@@ -62,6 +62,8 @@ public sealed class MatchTrace
     private readonly int[] _tick;
     private readonly int[] _clockTick;
     private readonly byte[] _phase;
+    private readonly byte[] _restart;
+    private readonly int[] _restartTaker;
     private readonly float[] _ballX;
     private readonly float[] _ballY;
     private readonly float[] _ballZ;
@@ -90,6 +92,8 @@ public sealed class MatchTrace
         int regulationTicks,
         int[] tick,
         byte[] phase,
+        byte[] restart,
+        int[] restartTaker,
         float[] ballX,
         float[] ballY,
         float[] ballZ,
@@ -117,6 +121,8 @@ public sealed class MatchTrace
         _tick = tick;
         _clockTick = clockTick;
         _phase = phase;
+        _restart = restart;
+        _restartTaker = restartTaker;
         _ballX = ballX;
         _ballY = ballY;
         _ballZ = ballZ;
@@ -162,6 +168,22 @@ public sealed class MatchTrace
 
     /// <summary>Fase del partido en el fotograma (saque, juego, reanudación, penalti, turba).</summary>
     public MatchPhase PhaseAt(int frame) => (MatchPhase)_phase[frame];
+
+    /// <summary>
+    /// Qué reanudación está pendiente en ese fotograma, o <see cref="RestartKind.None"/> si el balón está
+    /// en juego. <see cref="PhaseAt"/> solo dice que hay un <c>Restart</c>, no de qué tipo, y sin el tipo
+    /// el render no puede distinguir un saque de banda —que se hace con las MANOS— de uno de puerta
+    /// (BI-H). Es un byte por fotograma, el mismo coste que la fase.
+    /// </summary>
+    public RestartKind RestartAt(int frame) => (RestartKind)_restart[frame];
+
+    /// <summary>
+    /// Índice del jugador que va a poner el balón en juego durante una reanudación, o -1. Hace falta
+    /// porque durante la espera **el balón no tiene dueño** —medido: 0 de 549 fotogramas de reanudación en
+    /// un partido— así que el render no puede deducir quién saca mirando la posesión, y adivinarlo por
+    /// cercanía sería inventarse una regla en la vista.
+    /// </summary>
+    public int RestartTakerAt(int frame) => _restartTaker[frame];
 
     /// <summary>Posición continua del balón, en casillas.</summary>
     public Vec2 BallAt(int frame) => new(_ballX[frame], _ballY[frame]);
@@ -274,6 +296,8 @@ internal sealed class MatchTraceRecorder
     private readonly List<int> _tick = new(ExpectedFrames);
     private readonly List<int> _clockTick = new(ExpectedFrames);
     private readonly List<byte> _phase = new(ExpectedFrames);
+    private readonly List<byte> _restart = new(ExpectedFrames);
+    private readonly List<int> _restartTaker = new(ExpectedFrames);
     private readonly List<float> _ballX = new(ExpectedFrames);
     private readonly List<float> _ballY = new(ExpectedFrames);
     private readonly List<float> _ballZ = new(ExpectedFrames);
@@ -344,11 +368,13 @@ internal sealed class MatchTraceRecorder
     /// aleatoriedad, así que un partido con traza y el mismo partido sin ella son el mismo partido
     /// (RT-024).
     /// </summary>
-    public void Capture(int tick, int clockTick, MatchPhase phase, Ball ball, int eventCount)
+    public void Capture(int tick, int clockTick, MatchPhase phase, RestartKind restart, MatchPlayer? restartTaker, Ball ball, int eventCount)
     {
         _tick.Add(tick);
         _clockTick.Add(clockTick);
         _phase.Add((byte)phase);
+        _restart.Add((byte)restart);
+        _restartTaker.Add(restartTaker is null ? -1 : restartTaker.Index);
         _ballX.Add(ball.Position.X);
         _ballY.Add(ball.Position.Y);
         _ballZ.Add(ball.Z);
@@ -387,6 +413,8 @@ internal sealed class MatchTraceRecorder
         _regulationTicks,
         _tick.ToArray(),
         _phase.ToArray(),
+        _restart.ToArray(),
+        _restartTaker.ToArray(),
         _ballX.ToArray(),
         _ballY.ToArray(),
         _ballZ.ToArray(),

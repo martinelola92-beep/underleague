@@ -236,16 +236,16 @@ public sealed class RestartClearanceTests
     [Fact]
     public void OnlyTheFiveNonPenaltyRestartsCarryTheClearance()
     {
-        // [Theory]/[InlineData] no puede llevar MatchEngine.RestartKind en la firma pública del método
+        // [Theory]/[InlineData] no puede llevar RestartKind en la firma pública del método
         // (CS0051: el enum es internal, aunque InternalsVisibleTo lo haga visible aquí) — de ahí las seis
         // aserciones sueltas en vez de datos parametrizados.
-        Assert.True(MatchEngine.IsClearanceRestart(MatchEngine.RestartKind.ThrowIn));
-        Assert.True(MatchEngine.IsClearanceRestart(MatchEngine.RestartKind.Corner));
-        Assert.True(MatchEngine.IsClearanceRestart(MatchEngine.RestartKind.GoalKick));
-        Assert.True(MatchEngine.IsClearanceRestart(MatchEngine.RestartKind.Kickoff));
-        Assert.True(MatchEngine.IsClearanceRestart(MatchEngine.RestartKind.FreeKick));
-        Assert.False(MatchEngine.IsClearanceRestart(MatchEngine.RestartKind.Penalty));
-        Assert.False(MatchEngine.IsClearanceRestart(MatchEngine.RestartKind.None));
+        Assert.True(MatchEngine.IsClearanceRestart(RestartKind.ThrowIn));
+        Assert.True(MatchEngine.IsClearanceRestart(RestartKind.Corner));
+        Assert.True(MatchEngine.IsClearanceRestart(RestartKind.GoalKick));
+        Assert.True(MatchEngine.IsClearanceRestart(RestartKind.Kickoff));
+        Assert.True(MatchEngine.IsClearanceRestart(RestartKind.FreeKick));
+        Assert.False(MatchEngine.IsClearanceRestart(RestartKind.Penalty));
+        Assert.False(MatchEngine.IsClearanceRestart(RestartKind.None));
     }
 
     /// <summary>

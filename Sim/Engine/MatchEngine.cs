@@ -236,18 +236,6 @@ internal sealed class MatchEngine : IPerkWorld
         _trace = config.Trace ? new MatchTraceRecorder(_players, _regulationTicks, setup) : null;
     }
 
-    /// <summary>Tipo de reanudación pendiente durante una fase Restart/Kickoff/Penalty (§3.8).</summary>
-    internal enum RestartKind
-    {
-        None,
-        ThrowIn,
-        GoalKick,
-        Corner,
-        Kickoff,
-        Penalty,
-        FreeKick,
-    }
-
     /// <summary>Catálogo del partido; el motor de efectos lo necesita para resolver los ids de perk.</summary>
     public Catalog Catalog => _catalog;
 
@@ -286,7 +274,7 @@ internal sealed class MatchEngine : IPerkWorld
         while (_phase != MatchPhase.Finished)
         {
             Step();
-            _trace?.Capture(_tick, _clockTick, _phase, _ball, _events.Count);
+            _trace?.Capture(_tick, _clockTick, _phase, _pendingRestart, _restartTaker, _ball, _events.Count);
         }
 
         for (int i = 0; i < _players.Length; i++)

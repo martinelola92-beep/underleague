@@ -154,7 +154,7 @@ internal sealed class UtilityContext
     public int RestartTakerIndex { get; set; } = -1;
 
     /// <summary>Tipo de la reanudación que se está ejecutando; sólo vale si <see cref="RestartTakerIndex"/> lo es.</summary>
-    public MatchEngine.RestartKind RestartTakerKind { get; set; }
+    public RestartKind RestartTakerKind { get; set; }
 
     /// <summary>Censo de decisiones, o null (el caso normal). Contabilidad pura: ver <see cref="UtilityCensus"/>.</summary>
     public UtilityCensus? Census { get; set; }
@@ -465,12 +465,12 @@ internal static class Utility
     /// una jugada y no una reanudación más.</item>
     /// </list>
     /// </summary>
-    private static bool RestartAllows(MatchEngine.RestartKind kind, PlayerAction action) => kind switch
+    private static bool RestartAllows(RestartKind kind, PlayerAction action) => kind switch
     {
-        MatchEngine.RestartKind.ThrowIn => action is PlayerAction.ShortPass or PlayerAction.LongPass,
-        MatchEngine.RestartKind.Corner => action is PlayerAction.ShortPass or PlayerAction.LongPass or PlayerAction.Cross,
-        MatchEngine.RestartKind.GoalKick => action is PlayerAction.ShortPass or PlayerAction.LongPass or PlayerAction.Clear,
-        MatchEngine.RestartKind.Kickoff => action is PlayerAction.ShortPass or PlayerAction.LongPass,
+        RestartKind.ThrowIn => action is PlayerAction.ShortPass or PlayerAction.LongPass,
+        RestartKind.Corner => action is PlayerAction.ShortPass or PlayerAction.LongPass or PlayerAction.Cross,
+        RestartKind.GoalKick => action is PlayerAction.ShortPass or PlayerAction.LongPass or PlayerAction.Clear,
+        RestartKind.Kickoff => action is PlayerAction.ShortPass or PlayerAction.LongPass,
         _ => true,
     };
 
