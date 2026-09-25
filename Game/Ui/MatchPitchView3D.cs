@@ -1020,8 +1020,34 @@ public partial class MatchPitchView3D : SubViewportContainer
         string cuerpo = parts.Count == 0
             ? "NINGUNA"
             : string.Join(" · ", parts.OrderBy(e => e.Key.ToString(), System.StringComparer.Ordinal).Select(e => $"{e.Key} {e.Value}"));
+        // Reparto de reanudaciones: cuántos fotogramas hay de cada tipo y en cuántos el sacador tiene
+        // ya el balón, que es la condición del gesto. Si un tipo tiene fotogramas pero ninguno con dueño,
+        // el gesto no puede dispararse y el problema es ESE, no el clip.
+        var restarts = new Dictionary<RestartKind, (int Frames, int Owned)>();
+        for (int f = 0; f < trace.FrameCount; f++)
+        {
+            var kind = trace.RestartAt(f);
+            if (kind == RestartKind.None)
+            {
+                continue;
+            }
+
+           var acc = restarts.GetValueOrDefault(kind);
+            restarts[kind] = (acc.Frames + 1, acc.Owned + (trace.RestartTakerAt(f) >= 0 ? 1 : 0));
+        }
+
+        string saques = restarts.Count == 0
+            ? "NINGUNA"
+            : string.Join(" · ", restarts.OrderBy(e => e.Key.ToString(), System.StringComparer.Ordinal)
+                .Select(e => $"{e.Key} {e.Value.Frames}f/{e.Value.Owned} con sacador"));
+
+        var detalles = _events is null
+            ? "-"
+            : string.Join(",", _events.Where(e => e.Type == EventType.Save).Select(e => e.Detail).DefaultIfEmpty("ninguna"));
+
         string fuente = _events is null ? "SIN EVENTOS (Bind no los recibió)" : $"{_events.Count} eventos";
-        return $"gestos: {gestos} | ancla con dueño: {cuerpo} | {fuente}";
+        _ = saques;
+        return $"gestos: {gestos} | ancla con dueño: {cuerpo} | {fuente} | reanudaciones: {saques} | paradas: {detalles}";
     }
 
     public (Vector3 Ball, Vector3 Carrier, int Index) DebugBall()
@@ -1718,26 +1744,19 @@ public partial class MatchPitchView3D : SubViewportContainer
     /// </summary>
     private ContactCue CueFor(MatchTrace trace, int frame, int player)
     {
-        // La RECEPCIÓN va primero y NO depende de los eventos: es el fotograma en que el balón pasa a
-        // tener dueño después de venir volando. Se mira la traza hacia atrás, que ya está entera en
-        // memoria —esto es reproducir un partido ya jugado, no predecirlo—.
-        //
-        // Estaba detrás de la guarda de `_events` y por eso no se disparaba NUNCA: el primer volcado de
-        // `DebugContacts()` dio «gestos: NINGUNO» en un partido entero. Una captura no lo habría enseñado.
-        if (trace.BallOwnerAt(frame) == player && frame > 0 && trace.BallOwnerAt(frame - 1) != player
-            && trace.BallInFlightAt(frame - 1))
+        // LOS SAQUES. El que tiene el balón durante una reanudación es el que la va a poner en juego, y
+        // con qué la pone depende del tipo: el de banda es el único que se hace **con las manos**. La
+        // traza lleva el tipo desde BI-H (`RestartAt`); antes solo había un `Restart` genérico y por eso
+        // el clip `throwin` estaba cargado y sin usar.
+        if (trace.RestartTakerAt(frame) == player)
         {
-            return ContactCue.Receive;
-        }
-
-        // El PENALTI es una fase propia del partido, así que el que tiene el balón durante ella lo está
-        // colocando para tirarlo. Los demás saques —banda, puerta, córner, falta— NO se pueden distinguir
-        // desde aquí: `MatchPhase` sólo tiene un `Restart` genérico y la traza no lleva el tipo de
-        // reanudación, así que el gesto de saque de banda (`throwin`, cargado y sin usar) sigue sin poder
-        // engancharse hasta que `/Sim` lo exponga. Queda anotado en BI-H, no simulado a ojo desde la vista.
-        if (trace.PhaseAt(frame) == MatchPhase.Penalty && trace.BallOwnerAt(frame) == player)
-        {
-            return ContactCue.Penalty;
+            switch (trace.RestartAt(frame))
+            {
+                case RestartKind.ThrowIn:
+                    return ContactCue.ThrowIn;
+                case RestartKind.Penalty:
+                    return ContactCue.Penalty;
+            }
         }
 
         if (_events is null)
@@ -1763,7 +1782,11 @@ public partial class MatchPitchView3D : SubViewportContainer
             switch (ev.Type)
             {
                 case EventType.Save:
-                    return ContactCue.Save;
+                    // El propio evento dice cómo fue: `held` es atraparla contra el pecho y el resto
+                    // —`parried`, `corner`, `penalty`— es estirarse a despejarla. Son dos clips distintos
+                    // y los dos estaban cargados sin usar. No hacía falta tocar `/Sim` para esto: el
+                    // `Detail` es texto corto, en inglés y estable, y ya lo traía.
+                    return ev.Detail == "held" ? ContactCue.Catch : ContactCue.Save;
                 case EventType.AerialDuel:
                     return ContactCue.Header;
                 case EventType.Clearance:
@@ -1771,6 +1794,17 @@ public partial class MatchPitchView3D : SubViewportContainer
                     // balón, no el evento, que es el mismo en los dos casos.
                     return trace.BallHeightAt(frame) >= HeadContactHeightCells ? ContactCue.Header : ContactCue.None;
             }
+        }
+
+        // La RECEPCIÓN va la ÚLTIMA, y el orden importa: es el fotograma en que el balón pasa a tener
+        // dueño viniendo en vuelo, y eso describe también una parada atrapada. Estaba la primera, así que
+        // devolvía `Receive` y las paradas no llegaban nunca a mirarse: el volcado daba `Save 1` con
+        // cinco paradas en el partido, cuatro de ellas atrapadas, escondidas entre los 36 `Receive`. Lo
+        // específico manda sobre lo genérico.
+        if (trace.BallOwnerAt(frame) == player && frame > 0 && trace.BallOwnerAt(frame - 1) != player
+            && trace.BallInFlightAt(frame - 1))
+        {
+            return ContactCue.Receive;
         }
 
         return ContactCue.None;

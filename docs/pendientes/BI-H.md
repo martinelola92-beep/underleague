@@ -329,3 +329,65 @@ dibujados entre 3,3 y 4,9 veces más grandes de lo que les correspondería por e
 siquiera es cuadrada en metros. Es deliberado —a escala del campo serían motas invisibles— pero significa
 que **«realista» no es un objetivo alcanzable aquí, sólo una dirección**, y que cualquier futura discusión
 de proporciones (porterías, áreas, distancia de barrera) tiene que partir de esto y no de los metros.
+
+---
+
+## Segunda pasada: los saques y la parada atrapada (25 sep 2026)
+
+Cierra lo que la primera pasada dejó bloqueado. **Dos de los tres bloqueos eran falsos.**
+
+### `gk_catch` no necesitaba nada de `/Sim`
+
+El evento `Save` **ya traía la respuesta en `Detail`**: `"held"` (atrapada contra el pecho), `"parried"`
+(rechace), `"corner"`, `"penalty"`. Son dos gestos distintos y los dos clips estaban cargados sin usar. La
+primera pasada lo anotó como «bloqueado porque ningún evento distingue atrapar de despejar» **sin haber
+mirado el `Detail`**, que es texto corto, en inglés y estable por contrato.
+
+### Los saques sí necesitaban `/Sim`, y dos cosas distintas
+
+1. **El tipo de reanudación.** `RestartKind` ya existía, pero `internal` y anidado dentro de `MatchEngine`.
+   Se muda a `MatchPhase.cs` —donde viven los demás estados del partido, porque **es un estado del partido
+   y no un detalle del motor**— y se hace público. Se graba en la traza como un byte por fotograma, el
+   mismo patrón y el mismo coste que `_phase`.
+2. **Quién saca**, y esto sólo salió por medir. El primer intento disparaba el gesto sobre el **dueño del
+   balón** durante la reanudación. Medido: `FreeKick 160f/**0** con dueño · GoalKick 180f/**0** · Kickoff
+   209f/**0**`. **Durante la espera el balón no tiene dueño en ningún fotograma**, así que la condición no
+   podía cumplirse nunca. El motor sí sabe quién saca (`_restartTaker`, que ya usaba para hacerle andar),
+   así que se expone como `RestartTakerAt`. Verificado después: **160/160, 180/180, 209/209**, el 100 % de
+   los fotogramas de reanudación con sacador identificado. Adivinarlo en la vista por cercanía al balón
+   habría sido inventarse una regla de juego en el render.
+
+### Un fallo de precedencia, y la medición lo demuestra sin ambigüedad
+
+La primera pasada puso la **recepción** al principio de `CueFor`. Pero una parada atrapada **es** el
+portero haciéndose dueño de un balón en vuelo, así que devolvía `Receive` y no llegaba nunca a mirar el
+evento: el volcado daba `Save 1` con **cinco paradas en el partido, cuatro de ellas `held`**.
+
+Con los eventos delante y la recepción al final:
+
+| | antes | después |
+|---|---|---|
+| `Receive` | 36 | **32** |
+| `Catch` | 0 | **4** |
+| `Save` | 1 | 1 |
+
+**La suma se conserva** (36 = 32 + 4): los cuatro `held` estaban escondidos dentro de las recepciones. Lo
+específico manda sobre lo genérico.
+
+### Estado del alcance del revisor
+
+| contacto | gesto | estado |
+|---|---|---|
+| recepción, control | `receive` | **32 por partido** |
+| conducción, pase, tiro | `kick` + ancla al pie | por estado, ya estaba |
+| cabezazo, duelo aéreo | `header` | **2 por partido** |
+| despeje alto | `header` | por altura del balón |
+| parada rechazada | `gk_save` | **1 por partido** |
+| **parada atrapada** | `gk_catch` | **4 por partido** |
+| **saque de banda** | `throwin` | enganchado; **sin ocasión** en el partido medido |
+| **penalti** | `penalty` | enganchado; **sin ocasión** en el partido medido |
+| saque de puerta, córner, falta, centro | pie | el sacador golpea; sin clip propio en el pack |
+
+Los dos «sin ocasión» quedan como **sin evidencia de activación** —mecanismo real, nunca observado
+disparándose—, que no es lo mismo que «no funciona». El cableado sí está verificado: el sacador se
+identifica en el 100 % de los fotogramas de reanudación.
