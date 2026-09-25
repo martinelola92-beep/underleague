@@ -38,7 +38,10 @@ public sealed class DribbleMeasurementTests
         int LongestRun,
         int DribblingTicks,
         int DribbleRuns,
-        int LongestDribbleRun);
+        int LongestDribbleRun,
+        int RunsEndedStillOwner,
+        int RunsEndedBallGone,
+        int RunsStillOpenAtEnd);
 
     [Fact]
     public void DribbleAndPossession_HowMuchIsThereToday()
@@ -56,7 +59,7 @@ public sealed class DribbleMeasurementTests
 
         // Reducción después, en orden de índice (RT-041): el resultado no depende de qué hilo acabó antes.
         double attempted = 0, won = 0, lost = 0, possessions = 0, ownedShare = 0, longest = 0, meanRun = 0;
-        double dribbling = 0, dribbleRuns = 0, dribbleRunLength = 0;
+        double dribbling = 0, dribbleRuns = 0, dribbleRunLength = 0, endedOwner = 0, endedGone = 0, stillOpen = 0, frames = 0;
         int longestEver = 0, longestDribbleEver = 0;
         for (int i = 0; i < Matches; i++)
         {
@@ -73,6 +76,10 @@ public sealed class DribbleMeasurementTests
             dribbleRuns += s.DribbleRuns;
             dribbleRunLength += s.DribbleRuns == 0 ? 0 : (double)s.DribblingTicks / s.DribbleRuns;
             longestDribbleEver = Math.Max(longestDribbleEver, s.LongestDribbleRun);
+            endedOwner += s.RunsEndedStillOwner;
+            endedGone += s.RunsEndedBallGone;
+            stillOpen += s.RunsStillOpenAtEnd;
+            frames += s.TotalTicks;
         }
 
         _output.WriteLine($"{Matches} partidos, emparejamiento de referencia, semilla {BaseSeed}");
@@ -84,10 +91,30 @@ public sealed class DribbleMeasurementTests
         _output.WriteLine($"  duración media de una posesión : {meanRun / Matches:0.##} ticks ({meanRun / Matches / 15.0:0.###} s)");
         _output.WriteLine($"  posesión más larga (media)     : {longest / Matches:0.##} ticks ({longest / Matches / 15.0:0.###} s)");
         _output.WriteLine($"  posesión más larga (máximo)    : {longestEver} ticks ({longestEver / 15.0:0.###} s)");
-        _output.WriteLine($"  ticks CONDUCIENDO por partido  : {dribbling / Matches:0.#} de 1200 ({100.0 * dribbling / Matches / 1200:0.##} %)");
+        // El denominador es la traza REAL, no el literal 1200. Desde la ADR 0147 el reloj del partido
+        // (_clockTick) y el del motor (_tick) divergen —las reanudaciones consumen ticks de motor sin
+        // consumir partido—, así que dividir por 1200 mide otra cosa desde entonces y siempre al alza.
+        _output.WriteLine($"  fotogramas por partido         : {frames / Matches:0.#} (el literal de antes era 1200)");
+        _output.WriteLine($"  ticks CONDUCIENDO por partido  : {dribbling / Matches:0.#} ({(frames == 0 ? 0 : 100.0 * dribbling / frames):0.##} % de la traza)");
         _output.WriteLine($"  conducciones por partido       : {dribbleRuns / Matches:0.#}");
         _output.WriteLine($"  duración media de conducir     : {dribbleRunLength / Matches:0.##} ticks ({dribbleRunLength / Matches / 15.0:0.###} s)");
         _output.WriteLine($"  conducción más larga (máximo)  : {longestDribbleEver} ticks ({longestDribbleEver / 15.0:0.###} s)");
+
+        // BI-D: POR QUÉ termina una conducción. Con el contador en driveTicks, una conducción que acaba
+        // con el balón todavía en los pies es una que AGOTÓ su compromiso; una que acaba sin balón es una
+        // que CORTARON. Distinguirlas es lo que separa «la dosis es corta» de «el partido no la deja
+        // durar», y las dos piden arreglos opuestos.
+        double endedTotal = endedOwner + endedGone;
+        _output.WriteLine($"  conducciones terminadas CON balón (agotan el contador) : {endedOwner / Matches:0.##} por partido ({(endedTotal == 0 ? 0 : 100.0 * endedOwner / endedTotal):0.#} %)");
+        _output.WriteLine($"  conducciones terminadas SIN balón (las cortan)         : {endedGone / Matches:0.##} por partido ({(endedTotal == 0 ? 0 : 100.0 * endedGone / endedTotal):0.#} %)");
+        _output.WriteLine($"  conducciones aún vivas al acabar el partido            : {stillOpen / Matches:0.##} por partido");
+
+        // Las tres salidas tienen que sumar exactamente las rachas contadas: si un cambio futuro en las
+        // transiciones de estado rompe la clasificación, este Assert lo dice en vez de dejar que el
+        // porcentaje mienta.
+        Assert.True(
+            Math.Abs(endedOwner + endedGone + stillOpen - dribbleRuns) < 0.5,
+            $"las conducciones clasificadas ({endedOwner + endedGone + stillOpen}) no cuadran con las contadas ({dribbleRuns})");
 
         // Lo único que se afirma: que la medición ha corrido de verdad sobre partidos con traza.
         Assert.True(possessions > 0, "ningún partido registró posesión: la medición no vale");
@@ -117,7 +144,8 @@ public sealed class DribbleMeasurementTests
         // y qué está haciendo cada jugador.
         int possessions = 0, owned = 0, longest = 0, current = 0, previous = -1, total = 0;
         int dribblingTicks = 0, dribbleRuns = 0, longestDribble = 0;
-        var dribbleRun = new int[24];
+        int endedStillOwner = 0, endedBallGone = 0, stillOpen = 0;
+        var dribbleRun = new int[result.Trace?.Players.Count ?? 0];
         if (result.Trace is { FrameCount: > 0 } trace)
         {
             total = trace.FrameCount;
@@ -126,7 +154,7 @@ public sealed class DribbleMeasurementTests
                 // Cuántos ticks pasa CUALQUIERA conduciendo, y en rachas de cuántos ticks seguidos. Es la
                 // pregunta que los eventos de duelo no responden: un duelo solo salta si hay un rival a
                 // 0,8 casillas, así que 0,85 duelos por partido no dice cuánto se conduce.
-                for (int p = 0; p < trace.Players.Count && p < dribbleRun.Length; p++)
+                for (int p = 0; p < dribbleRun.Length; p++)
                 {
                     if (trace.OnPitchAt(f, p) && trace.StateAt(f, p) == PlayerState.Dribbling)
                     {
@@ -141,6 +169,20 @@ public sealed class DribbleMeasurementTests
                     }
                     else
                     {
+                        // La racha que acaba en este fotograma: si el balón sigue siendo suyo, la
+                        // conducción terminó por su cuenta; si no, se la quitaron.
+                        if (dribbleRun[p] > 0)
+                        {
+                            if (trace.BallOwnerAt(f) == p)
+                            {
+                                endedStillOwner++;
+                            }
+                            else
+                            {
+                                endedBallGone++;
+                            }
+                        }
+
                         dribbleRun[p] = 0;
                     }
                 }
@@ -166,6 +208,17 @@ public sealed class DribbleMeasurementTests
             }
         }
 
-        return new Sample(attempted, won, lost, possessions, owned, total, longest, dribblingTicks, dribbleRuns, longestDribble);
+        // Una conducción todavía viva en el último fotograma no pasa por la rama que clasifica, así que
+        // se cuenta aparte: sin esto desaparecería en silencio y endedOwner+endedGone no cuadraría con
+        // dribbleRuns (la revisión independiente del 25 sep lo pidió, y el Assert de abajo lo fija).
+        for (int p = 0; p < dribbleRun.Length; p++)
+        {
+            if (dribbleRun[p] > 0)
+            {
+                stillOpen++;
+            }
+        }
+
+        return new Sample(attempted, won, lost, possessions, owned, total, longest, dribblingTicks, dribbleRuns, longestDribble, endedStillOwner, endedBallGone, stillOpen);
     }
 }

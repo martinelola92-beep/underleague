@@ -39,3 +39,8 @@ tools/__pycache__/
 # Worktrees de encargos de OpenCode (tools/opencode-encargo.sh)
 .claude/worktrees/
 .claude/consultas/
+
+# Excepción: los volcados de balance que sostienen una ADR o una ficha de docs/pendientes/ SÍ se versionan.
+# Sin ellos, una decisión de balance queda escrita sin su evidencia y no se puede rehacer (RT-057). El
+# resto de CSV —out/, lotes de /Balance, sondas de un rato— sigue fuera.
+!docs/balance/**/*.csv

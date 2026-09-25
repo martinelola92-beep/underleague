@@ -1,6 +1,8 @@
 # ADR 0137 — Conducir es un compromiso, no una intención que se reevalúa cada dos ticks
 
-Fecha: 23 sep 2026 · Estado: **implementada, con dos puertas de build en rojo pendientes de decisión**
+Fecha: 23 sep 2026 · Estado: **implementada y enmendada el 25 sep 2026** — de las dos puertas que dejó
+abiertas, una **no era suya** (medido, ver la enmienda al final) y la otra tiene mecanismo medido y decisión
+tomada. La dosis se confirma en `driveTicks: 12`.
 Decisión del revisor. Ficha: [BI-D](../pendientes/BI-D.md). Encadenada tras `game-design-review` y
 `architecture-review`.
 
@@ -108,3 +110,47 @@ derribo del duelo.
 Tres puertas en rojo contra dos de la base, el fútbol intacto en dos semillas, y dos decisiones abiertas
 para el revisor: si `coherentBuildsBeatNone_orc_violence` y `badBuildsLoseToNone_elf_out_of_zone` se
 compensan de otro modo, o si sus bandas se mueven con los datos de esta ADR (RT-057).
+
+---
+
+## Enmienda (25 sep 2026): una de las dos puertas que esta ADR se atribuyó no es suya
+
+Esta ADR se cerró con dos puertas «pendientes de decisión» y un misterio declarado: *«queda sin explicación
+medida por qué la conducción cuesta ~1 punto a la build violenta»*. Al ir a decidirlas se remidió primero,
+porque entre medias entró el **balón parado posicional (ADR 0147)** y el árbol ya no era el mismo.
+Instrumento nuevo: `Sim.Tests/Analysis/DribbleGateContrastTests.cs`, que vuelca **las catorce celdas** de la
+puerta —no sólo las rojas— con su media sobre las ocho bases de semilla **y el valor por semilla**, que es
+lo que permite saber si una diferencia entre dos árboles es señal. Volcados en `docs/balance/bi-d/`.
+
+**1. `coherentBuildsBeatNone_orc_violence`: la atribución no se sostiene. LIKELY.** Δ(0→12) = −0,26 ± 1,00
+y Δ(0→18) = +0,03 ± 1,0: **plana en las tres dosis**. El mecanismo que esta ADR propuso —más conducción, más
+duelos, más defensores derribados— exige que el efecto crezca con la dosis, y no crece. Dicho con
+honestidad: ese contraste **no tiene potencia para rechazar un efecto de −1 punto**; lo que cierra el caso
+es la planitud en dosis más un tratamiento mucho mayor que tampoco la movió (la ADR 0147 subió las faltas
+un 68 % y la celda pasó de 57,16 a 57,24). El misterio se disuelve porque **no hay efecto que explicar**,
+no porque se haya medido su ausencia. Y la celda no está establecidamente roja en ninguna dosis: 57,50
+contra 58 son 0,5 ET. Pasa a [CAT-J](../pendientes/CAT-J.md).
+
+**2. `badBuildsLoseToNone_elf_out_of_zone` sí es suya: +2,97 (4,9 σ). CONFIRMED.** Pero **sólo esa**. La
+lectura tentadora —«las builds mal construidas pierden menos cuanto más se conduce»— **no se sostiene**:
+`elf_brawler` (+0,8 σ) y `orc_misplaced` (+0,5 σ) están bajo el ruido, y `human_scattered` se mueve al
+revés con **−2,1 σ**. Entre las coherentes suben dos con señal (`human_counter` +3,0 σ, `orc_giants`
++2,0 σ). La conducción mueve celdas en las dos direcciones y sin patrón por familia; el mecanismo queda
+**sin demostrar**.
+
+**3. La dosis se queda en 12.** La 18 restaura exactamente la conducción que esta ADR envió (15,23 t contra
+15,4 t) y el riesgo que pedía (35,8 % de conducciones perdidas contra 24,3 %), pero sube significativamente
+dos celdas de builds malas hacia su techo (+5,1 σ y +2,4 σ). La 0 deja `noDeadPerks` en 0,12: la conducción
+**resucita `crowd_control`**, de 1,80 % a 13,15 % de activación, y ese argumento a favor de la mecánica no
+estaba aquí. **Aviso**: los tres cruces concretos del techo de 45 que produce la dosis 18 están dentro del
+ruido contra el umbral (0,4-0,9 ET) — lo que decide es el contraste pareado, no la posición contra la banda.
+
+**4. Las cifras de conducción de esta ADR ya no describen el juego.** La conducción se ha encogido sola:
+cuota real **9,02 % → 2,52 %** de los ticks. Dos mecanismos, y ninguno es que la corten (el 75,7 % agota su
+contador): se decide conducir un **44 % menos** que entonces (4,1 contra 7,3 conducciones por partido, las
+dos con el parámetro a 0) y las rachas ya no se **reencadenan**. Detalle y etiquetas en
+[BI-D](../pendientes/BI-D.md).
+
+**5. Aviso de instrumentación que afecta a todo el proyecto**: el porcentaje de esta ADR se calculaba sobre
+el literal `1200`. Desde la ADR 0147 un partido dura **1.825,8 fotogramas** de motor, así que cualquier
+métrica expresada «de 1.200» está inflada un 52 %.

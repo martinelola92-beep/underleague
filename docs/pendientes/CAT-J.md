@@ -4,6 +4,11 @@
 de semillas, así que son señales de balance reales, no falsos positivos de muestreo. Sin investigar la
 causa todavía. **No se ha tocado ningún rango.**
 
+**Al día (25 sep 2026):** entra una cuarta métrica, `coherentBuildsBeatNone_orc_violence`, que venía mal
+atribuida a la conducción — ver la sección del final. Y la puerta ya promedia **ocho semillas** desde la
+ADR 0131, así que el punto 2 de la decisión de abajo («no se aplica el arreglo de ocho semillas») quedó
+superado por esa ADR: lo que sigue vigente es el punto 1, **no se toca ningún rango**.
+
 ## Qué falla HOY
 
 ```
@@ -78,3 +83,34 @@ diferenciación física/técnica está aplanada es plausible que sea la misma ca
 - ADR 0118 / `BB-T` — la puerta que SÍ era ruido de semilla, y el método con el que se midió ésta.
 - `BB-P` — "las puertas de un solo partido/semilla se leen como causa cuando son ruido". Esta ficha es el
   caso contrario y conviene que conste: **también se puede descartar ruido con el mismo método**.
+
+---
+
+## Entra una cuarta métrica: `coherentBuildsBeatNone_orc_violence` (25 sep 2026)
+
+Llega desde [BI-D](./BI-D.md), donde estaba **mal atribuida**: la ADR 0137 (conducción con duración) la dio
+por rota por la conducción. Medida en tres dosis, mismo árbol, mismas ocho semillas, contraste pareado:
+
+| `driveTicks` | 0 | 12 (enviado) | 18 |
+|---|---|---|---|
+| `coherentBuildsBeatNone_orc_violence` | 57,50 | 57,24 | 57,53 |
+
+Δ(0→12) = **−0,26 ± 1,00**, Δ(0→18) = **+0,03 ± 1,0**. **LIKELY que no sea de la conducción** — dicho con
+precisión: el contraste **no tiene potencia** para rechazar el «~1 punto» que la ADR afirmaba; lo que
+sostiene la conclusión es que el efecto es **plano en la dosis** cuando el mecanismo propuesto exigiría que
+creciera.
+
+**Ojo al entrar**: las tres métricas originales de esta ficha se validaron con `CatJSeedDispersionTests`.
+Ésta entra con su dispersión medida (sd 2,4-2,7 entre semillas, **ET 0,84-0,94**), y con eso **no está
+establecidamente roja**: 57,50 contra un mínimo de 58 son **0,5 ET**. Se mide como OUT porque la puerta
+juzga la media. Es, de las cuatro, la más frágil.
+
+**Lo que sí está REJECTED, y con un tratamiento grande**: que el canal sea el **volumen de contacto**. La
+ADR 0147 subió las faltas un 68 % (4,73 → 7,96 por partido) y las lesiones de 0,55 a 0,82, y la celda no se
+movió (57,16 → 57,24). Es el argumento fuerte del expediente, más que cualquier contraste de dosis.
+
+Pista para quien la retome: la build es un **motor de acumulación con disparador**, no de fuerza bruta.
+Cinco `bruised_knuckles` (se dispara con `FOUL`, +30 de `injure` por falta acumulada, tope ×3), un
+`scar_tissue` (con `INJURY`) y tres `brute_boots`. Si el volumen de faltas no la mueve, lo siguiente es
+medir si esos contadores **llegan a acumular** dentro de un partido, o si el tope ×3 se alcanza tan tarde
+que el partido ya está decidido.

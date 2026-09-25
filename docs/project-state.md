@@ -1217,13 +1217,74 @@ enfriamientos/energía corriendo mientras uno se recoloca.
 Puertas: **6 rojas contra las 7** que traía `main`; se arreglan las dos de `tacklesPerMatch` y mejoran
 cuatro heredadas.
 
+## Conducción cerrada: tres dosis, con su error típico delante (25 sep 2026)
+
+El revisor: *«ponte entonces primero a cerrar conducción»*. Se cerró **remidiendo**, no leyendo la ADR: el
+balón parado posicional entró entre medias, así que lo que la ADR 0137 dejó «pendiente de decisión» ya no
+era medible desde aquel árbol.
+
+**Lección del paquete, y va primero porque es la que se repite**: la primera versión de este cierre midió
+las catorce celdas —el acierto— y luego **leyó sus medias como si no tuvieran error**. La revisión
+independiente lo tumbó, y tenía razón: existía una medición de coste cero capaz de discriminar (la
+dispersión entre semillas, que `CatJSeedDispersionTests` ya hacía) y no se corrió. **Tres de las cuatro
+conclusiones no sobrevivieron al error típico.** Regla A, incumplida por el mismo que la cita.
+
+| celda | 0 | **12** | 18 | Δ(0→12) | ET | σ |
+|---|---|---|---|---|---|---|
+| `badBuildsLoseToNone_elf_out_of_zone` | 42,45 | **45,42** ❌ | 45,86 ❌ | **+2,97** | 0,60 | **+4,9** |
+| `coherentBuildsBeatNone_human_counter` | 76,82 | 78,18 | 78,57 | +1,35 | 0,45 | **+3,0** |
+| `badBuildsLoseToNone_human_scattered` | 31,48 | 29,90 | 32,14 | **−1,59** | 0,74 | **−2,1** |
+| `badBuildsLoseToNone_elf_brawler` | 43,62 | 44,38 | 45,68 ❌ | +0,76 | 0,97 | +0,8 |
+| `badBuildsLoseToNone_orc_misplaced` | 44,35 | 44,90 | 45,31 ❌ | +0,55 | 1,11 | +0,5 |
+| `coherentBuildsBeatNone_orc_violence` | 57,50 ❌ | 57,24 ❌ | 57,53 ❌ | **−0,26** | 1,00 | −0,3 |
+
+1. **`orc_violence` no es de la conducción — LIKELY, no CONFIRMED.** Plana en las tres dosis (Δ 0→18 =
+   +0,03), cuando el mecanismo que la ADR 0137 propuso exigiría que creciera. El contraste **no tiene
+   potencia** para rechazar el «~1 punto» que aquella afirmaba; lo que cierra el caso es la planitud más un
+   tratamiento mucho mayor que tampoco la movió: la ADR 0147 subió las faltas **+68 %** y la celda pasó de
+   57,16 a 57,24. Y no está establecidamente roja en ninguna dosis (57,50 contra 58 son 0,5 ET). Pasa a
+   [CAT-J](./pendientes/CAT-J.md).
+2. **«Las builds malas pierden menos cuanto más se conduce» — REJECTED, y era el titular.** Sólo
+   `elf_out_of_zone` pasa de 2 σ; dos están bajo el ruido y la cuarta va **al revés y significativa**. Entre
+   las coherentes suben dos con señal. La conducción mueve celdas en las dos direcciones sin patrón por
+   familia; el mecanismo queda **sin demostrar**.
+3. **La dosis se queda en 12.** La 18 restaura exactamente la conducción de la ADR 0137 (15,23 t contra
+   15,4 t) y su riesgo (35,8 % cortadas), pero sube con señal dos celdas de builds malas (+5,1 σ, +2,4 σ).
+   La 0 mata un perk: la conducción **resucita `crowd_control`**, de 1,80 % a 13,15 %.
+4. **Un denominador roto en todo el proyecto**: los porcentajes «de 1.200 ticks» se calculan sobre un
+   literal, y desde la ADR 0147 un partido dura **1.825,8 fotogramas** de motor. Todo porcentaje así está
+   inflado un 52 %. La cuota real de conducción no es 3,84 % sino **2,52 %**, contra el 9,02 % de la ADR
+   0137: se ha encogido **3,6 veces**.
+5. **Y no es porque la corten**: el 75,7 % de las conducciones agota su contador con el balón en los pies.
+   Son dos caídas — hoy se **decide conducir un 44 % menos** (4,1 contra 7,3 por partido, las dos con el
+   parámetro a 0: mismo ajuste, distinto árbol) y las rachas ya no se **reencadenan**.
+
+**No se ha tocado `/Sim` ni `/data`**: el paquete es instrumentación en `/Sim.Tests`, los tres volcados en
+`docs/balance/bi-d/` y documentación.
+
+**Queda abierto, y es del revisor**: `elf_out_of_zone` = 45,42 contra un techo de 45, causa CONFIRMED y
+mecanismo sin demostrar. **No se movió la banda** (precedente CAT-J, y moverla abriría la puerta a la dosis
+18). La pregunta es de diseño: *¿puede una vía de ganar que no consulta los perks erosionar el principio de
+que construir mal sale peor que no construir?* — y se le entrega con el efecto que aguanta el muestreo
+(+2,97, 4,9 σ), no con la distancia al techo (0,42, que con ET 0,64 es ruido con signo).
+
+**Y el hallazgo grande que no tiene dueño**: por qué se decide conducir un 44 % menos que hace dos días. El
+hermano a mirar primero es **`Shielding`**, gemelo exacto de `Dribbling` desde la ADR 0137, **sin ninguna
+instrumentación**, y que compite por las mismas decisiones del portador.
+
+---
+
 ### Siguiente paso concreto (sesión limpia)
 
-**Decidir las dos de arriba con el revisor**, y luego seguir la cola que él fijó:
-[BI-D](./pendientes/BI-D.md) (alargar la conducción, aprobada) → [BI-H](./pendientes/BI-H.md) (la
-interacción visual con el balón, que **debe cubrir también tiro, parada y saques** — todo lo que implique
-contacto con el balón — y, desde el 25 sep, **anclarse a la parte del cuerpo que toca**: pies, cuerpo,
-cabeza y manos, no sólo los pies).
+**Decidir las dos de arriba con el revisor.** [BI-D](./pendientes/BI-D.md) ya está **cerrada** (25 sep,
+sección de arriba), así que lo que queda de la cola es [BI-H](./pendientes/BI-H.md): la interacción visual
+con el balón, que **debe cubrir también tiro, parada y saques** —todo lo que implique contacto— y, desde el
+25 sep, **anclarse a la parte del cuerpo que toca**: pies, cuerpo, cabeza y manos, no sólo los pies.
+
+Y ojo a un dato de BI-D que **le afecta directamente**: la conducción es hoy el **2,52 %** de los ticks del
+partido, no el 9,02 % que midió la ADR 0137. Sigue habiendo poco que lucir conduciendo, y ahora se sabe que
+son dos caídas (se decide conducir un 44 % menos y las rachas ya no se reencadenan) y que subir la dosis
+**no** es la salida.
 
 *(La descripción del paquete que sigue quedó cumplida; se deja por su contexto.)*
 
