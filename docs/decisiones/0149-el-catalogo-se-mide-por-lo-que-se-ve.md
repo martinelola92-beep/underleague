@@ -1,6 +1,6 @@
 # ADR 0149 — El catálogo se mide por lo que se ve, no sólo por lo que rompe
 
-Fecha: 25 sep 2026 · Estado: **aceptada, decisión del revisor**
+Fecha: 25 sep 2026 · Estado: **aceptada, decisión del revisor** · **enmendada el mismo día** (ver al final)
 Reescribe **RF-069** y sube `docs/requisitos.md` a **v0.10**. Cierra [BK-A](../pendientes/BK-A.md).
 Auditorías que la sostienen: [13B](../analisis/perks-auditoria-potencial-visual.md),
 [13C](../analisis/perks-auditoria-situaciones.md). Diseño derivado:
@@ -107,3 +107,24 @@ es correcto es otra decisión.
   cosas distintas y los dos hacen falta.
 - **Prohibir `modifyProbability`**: es tirar el soporte con el contenido. La probabilidad es exactamente lo
   que decide si el cañonazo entra o se va a la grada, y el revisor lo pide así.
+
+---
+
+## Enmienda del 25 sep 2026 — el suelo de Conducta se retira
+
+**Qué se retira**: la cuota `Conducta ≥ 25 %` de RF-069a. El grado sigue existiendo y sigue siendo
+necesario; lo que deja de existir es su **suelo**.
+
+**Por qué, y el motivo es que un dato la tumbó**: el suelo se fijó por intuición al redactar esta ADR, sin
+nada que lo respaldara. Al escribir el catálogo que el encargo realmente implica
+—[`perks-catalogo-de-actos.md`](../analisis/perks-catalogo-de-actos.md), 65 fichas— el reparto sale
+**91 % Acto / 9 % Conducta** *(MEDIDO sobre el propio fichero)*. No falta conducta por descuido: **el
+encargo pide actos**, y llegar al 25 % de conducta habría sido empeorar el catálogo para cumplir un número
+inventado.
+
+**Lo que NO se toca, porque es lo que sí traduce el encargo del revisor**: `Acto ≥ 50 %` y **ningún perk
+tiene efectos exclusivamente de soporte** (RF-069b). El catálogo las cumple con **91 %** y **0 %**.
+
+**Lección, más que la corrección**: una cuota puesta a ojo el mismo día que se escribe el requisito es
+exactamente la clase de número que el proyecto no admite en `/Sim` ni en `/data`, y tampoco debería admitir
+en `/docs`. La ADR original debió dejarla marcada como provisional o no ponerla.

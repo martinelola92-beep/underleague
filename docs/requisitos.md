@@ -248,12 +248,13 @@ SUSTITUCION         CONSUMIBLE_USADO
 - **RF-069** El catálogo de perks se mide en **dos ejes ortogonales**. Un perk declara su grado en cada uno
   (ADR 0149). Los dos son comprobables al cargar (RT-032).
 
-  **RF-069a — Visibilidad: cuánto se ve.**
+  **RF-069a — Visibilidad: cuánto se ve.** *(El grado Conducta es válido y necesario, pero no lleva cuota:
+  el suelo del 25 % que fijó la ADR 0149 se retiró el mismo día, ver su enmienda.)*
 
 | Grado | Descripción | Cuota |
 |---|---|---|
 | **Acto** | Produce un **suceso nombrado**, reconocible en el instante en que ocurre y atribuible a su portador: un cañonazo, un sombrerito, un derribo en cadena, un balón que vuelve. Lleva enfriamiento (RF-069c) | **≥ 50 %** |
-| **Conducta** | Cambia de forma observable **lo que el jugador hace** a lo largo del partido: dónde se coloca, hasta dónde se aleja, a quién marca, qué decide | ≥ 25 % |
+| **Conducta** | Cambia de forma observable **lo que el jugador hace** a lo largo del partido: dónde se coloca, hasta dónde se aleja, a quién marca, qué decide | *sin cuota* |
 | **Soporte** | Ajusta magnitudes: probabilidad, atributo, escalar de rasgo, contador | ≤ 25 % |
 
   **RF-069b — Las estadísticas son soporte, no contenido.** *Ningún perk tiene efectos exclusivamente de
