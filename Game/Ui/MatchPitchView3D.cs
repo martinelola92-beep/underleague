@@ -54,7 +54,30 @@ public partial class MatchPitchView3D : SubViewportContainer
     private const int GroundPixels = 64;
 
     /// <summary>Radio del balón en casillas. El mismo que la vista 2D, para que se lean igual de grandes.</summary>
-    private const float BallRadius = 0.13f;
+    /// <summary>
+    /// El radio del balón dibujado, en casillas. **Es puramente de presentación**: solo lo usan la malla,
+    /// la sombra y el offset de respaldo. El radio que importa para el juego es el `bodyRadius` de cada
+    /// raza, que vive en `/data` y lo usa `/Sim` para separar cuerpos.
+    ///
+    /// <para>Bajado de 0,13 a 0,09 el 25 sep 2026, reportado por el revisor (*«la proporción del balón y
+    /// los humanos no es muy real»*) y **medido antes de tocarlo**: con 0,13 el balón tenía 0,26 casillas
+    /// de diámetro contra los 0,907 que mide un humano, o sea el <b>28,7 %</b> de su altura, cuando a un
+    /// balón real le corresponde el <b>12,2 %</b> (22 cm contra 1,80 m). A la escala que fija el propio
+    /// jugador —1 casilla ≈ 1,98 m— eran <b>52 cm de diámetro</b>: un balón de playa.</para>
+    ///
+    /// <para><b>Por qué 0,09 y no los 0,056 que serían exactos</b>: a la distancia de cámara de la
+    /// retransmisión el balón exacto queda en unos 7 píxeles y se pierde de vista. 0,09 son 36 cm y el
+    /// 19,8 % de la altura del jugador: corta dos tercios del exceso y se sigue leyendo. Legibilidad por
+    /// delante de realismo, que es el orden que fija el propio proyecto.</para>
+    ///
+    /// <para><b>Y agrandar al jugador no era alternativa</b>: `bodyRadius` no es visual. Cambiarlo mueve
+    /// quién alcanza a quién en `/Sim` y además descuadraría el modelo respecto a su aro lógico, que es
+    /// justo lo que BI-H acaba de alinear.</para>
+    ///
+    /// <para>La vista 2D (<see cref="MatchPitchView"/>) conserva su propio 0,13 a propósito: allí son
+    /// fichas sobre un tablero, no modelos, y la proporción responde a otra convención.</para>
+    /// </summary>
+    private const float BallRadius = 0.09f;
 
     /// <summary>
     /// Distancia de la cámara al centro del campo. Con proyección ortográfica <b>no cambia el encuadre</b>,

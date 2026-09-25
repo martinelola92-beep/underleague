@@ -287,3 +287,45 @@ no para juzgar el ancla. Lo que sostiene el resultado es la medición.
 el partido de referencia con el que se mide **no tiene ninguno**, así que sale 0 en el volcado. Queda como
 **sin evidencia de activación** —mecanismo real, nunca observado disparándose—, que no es lo mismo que
 «no funciona» ni que «funciona».
+
+---
+
+## La proporción balón/jugador, reportada por el revisor (25 sep 2026)
+
+> *«¿No ves que la proporción del balón y los humanos no es muy real? ¿Qué opciones hay? ¿Se puede agrandar
+> el modelo del humano y reducir un poco el balón?»*
+
+**Medido antes de opinar** (regla del proyecto para cualquier propiedad geométrica):
+
+| | hoy | real |
+|---|---|---|
+| altura del humano | 0,907 casillas (`bodyRadius` 32 → radio 0,32, proporción 12:17) | 1,80 m |
+| diámetro del balón | **0,26 casillas** (`BallRadius` 0,13) | 0,22 m |
+| **balón / altura** | **28,7 %** | **12,2 %** |
+
+A la escala que fija el propio jugador —1 casilla ≈ 1,98 m— el balón medía **52 cm de diámetro**. Un balón
+de playa, 2,35 veces lo que le toca.
+
+**Agrandar al humano no era alternativa, y el motivo importa**: `bodyRadius` **no es un dato visual**. Vive
+en `/data` y lo usa `/Sim` para separar cuerpos (`BodySeparation.cs`), así que tocarlo cambia quién alcanza
+a quién — es gameplay, no presentación. Y además descuadraría el modelo respecto a su aro lógico, que es
+justo lo que esta ficha acaba de alinear. `BallRadius`, en cambio, es puramente de dibujo: solo lo usan la
+malla, la sombra y el offset de respaldo.
+
+**Hecho: `BallRadius` 0,13 → 0,09** (36 cm, 19,8 % de la altura). No los 0,056 exactos porque a la
+distancia de cámara de la retransmisión el balón exacto queda en ~7 píxeles y se pierde de vista; 0,09 son
+~12 px. Corta dos tercios del exceso y se sigue leyendo: legibilidad por delante de realismo, que es el
+orden que fija el proyecto. Verificado con el mismo encuadre antes y después, y con la medición del ancla
+sin moverse (0,1 casillas al pie, `Header 2 · Receive 36 · Save 1`).
+
+La vista 2D (`MatchPitchView`) conserva su propio 0,13 **a propósito**: allí son fichas sobre un tablero,
+no modelos, y la proporción responde a otra convención.
+
+### Lo que esto destapa, y es más grande que el balón
+
+El campo son **16×7 casillas** para 105×68 m, o sea **1 columna ≈ 6,6 m y 1 fila ≈ 9,7 m**, mientras que
+los jugadores se escalan a ~1,98 m por casilla. **Conviven tres escalas distintas**: los jugadores están
+dibujados entre 3,3 y 4,9 veces más grandes de lo que les correspondería por el campo, y la casilla ni
+siquiera es cuadrada en metros. Es deliberado —a escala del campo serían motas invisibles— pero significa
+que **«realista» no es un objetivo alcanzable aquí, sólo una dirección**, y que cualquier futura discusión
+de proporciones (porterías, áreas, distancia de barrera) tiene que partir de esto y no de los metros.
