@@ -247,6 +247,21 @@ la decisión es del revisor.**
 
 ## 1.6 El lenguaje de intención: dos registros, no uno
 
+> **CORRECCIÓN DEL REVISOR, 25 sep 2026 — leer antes que el resto del epígrafe.** La primera versión de esta
+> sección ató el registro de excepción a la **cuota del 10 %** de `ruleBreaker`. **Eso está retirado**: es
+> «un simulador estadístico con una pequeña capa de caos», que es exactamente el producto que el revisor
+> descarta. Los dos ejes son **ortogonales** y hay que mantenerlos separados:
+>
+> - **qué escribe el verbo** (número · conducta · física · balón · flujo) — **es el lenguaje, y no tiene
+>   cuota**;
+> - **cuánto rompe una regla** (relleno · condicional · rompe-reglas) — es la **potencia**, y ésa sí la capa
+>   RF-069.
+>
+> **Cabeza de Hierro escribe física y no rompe ninguna regla: cabecear es legal.** Es un perk **común** y
+> espectacular. **Once de los trece ejemplos del revisor son perks comunes.** El vocabulario físico no vive
+> en un registro raro: vive en el mismo lenguaje que usará la mayoría del catálogo.
+> Auditoría: [`perks-auditoria-situaciones.md`](./perks-auditoria-situaciones.md) (13C) §0.
+
 Requisito del revisor: `ModifyUtility` no puede ser el lenguaje de diseño. Propuesta concreta, y es la pieza
 de arquitectura más importante de este documento.
 
@@ -281,8 +296,8 @@ lenguaje con un solo registro no habría corregido eso: lo habría formalizado.
 
 ### 1.6.A — Registro de conducta: *cómo juega la máquina*
 
-**Ámbito: el 90 % del catálogo** (`filler` + `conditional`, RF-069). **La propiedad que lo define: todo lo
-que este registro produce, el fútbol ya lo podía producir.** Un jugador dispara antes, marca a otro, no
+**Ámbito: cualquier perk, de cualquier rareza y de cualquier grado de RF-069.** No es una cuota.
+**La propiedad que lo define: todo lo que este registro produce, el fútbol ya lo podía producir.** Un jugador dispara antes, marca a otro, no
 repliega — son partidos legales con una distribución rara. Es exactamente lo que debe ser el grosor de una
 build, y es lo que hace que dos plantillas jueguen distinto.
 
@@ -323,7 +338,10 @@ estado que la situación implica:
 
 ### 1.6.B — Registro de excepción: *lo que el fútbol no puede hacer*
 
-**Ámbito: el 10 %** (`ruleBreaker`, RF-069). **La propiedad que lo define, y es el criterio de admisión: el
+**Ámbito: cualquier perk cuyo verbo escriba algo que la decisión no puede producir — también aquí sin
+cuota.** *(El grado `ruleBreaker` de RF-069 sí la tiene, pero mide otra cosa: ver la caja de corrección
+arriba. Un perk de este registro puede ser relleno.)* **La propiedad que lo define, y es el criterio de
+admisión: el
 suceso que produce no tiene ninguna secuencia de decisiones legales que lo genere.** Si el mismo resultado
 se alcanza subiendo una prioridad, **no es registro B**: es registro A mal escrito, y el cargador debe
 rechazarlo. Es la misma prueba que §5.1 aplica al catálogo —comportamiento observable, no resultado
@@ -343,7 +361,7 @@ fenómenos concretos existirán, y esta biblia no los fija.
 |---|---|---|---|
 | **niega** | el suceso no ocurre, o no cuenta | flujo de eventos | **existe**: `cancelEvent` (4 perks) |
 | **repite / desdobla** | la jugada vuelve a resolverse | flujo de resolución | **existe**, acotado: `extraAction` sólo sabe rehacer `SHOT` y `TACKLE` |
-| **impone física** | un cuerpo o el balón hacen algo que nadie decidió | `Position` · `Velocity` · `PlayerState` · `Ball` | **a medias**: el cuerpo **sí** (`setState`, y el búfer de empuje de `BodySeparation` ya resuelve el determinismo de N cuerpos); **el balón no: cero de los 19 tipos de efecto lo tocan**, teniendo `Ball` ya `Velocity`, `Z`, `VelocityZ` y `FlightArc`, y la traza ya grabándolos |
+| **impone física** *(la forma más usada por los ejemplos del revisor, y casi toda en perks **comunes**)* | un cuerpo o el balón hacen algo que nadie decidió | `Position` · `Velocity` · `PlayerState` · `Ball` | **a medias**: el cuerpo **sí** (`setState`, y el búfer de empuje de `BodySeparation` ya resuelve el determinismo de N cuerpos); **el balón no: cero de los 19 tipos de efecto lo tocan**, teniendo `Ball` ya `Velocity`, `Z`, `VelocityZ` y `FlightArc`, y la traza ya grabándolos |
 
 **La cuarta forma —alterar el espacio— no existe, y esta biblia no la abre**: exige estado de mundo en el
 partido, que es un sistema nuevo y no una extensión (13B §4.D). **Lo que sí se decide aquí es no cerrarle la
@@ -357,8 +375,11 @@ escritos lo admiten sin reescribirse.
 Sin ellas B no es un grado: es la puerta trasera por la que el catálogo entero se vuelve excepción y nada es
 excepcional. Las cinco son **verificables al cargar** (RT-032, error explícito), no criterio de nadie:
 
-1. **Cuota.** `ruleBreaker` ≤ 10 % del catálogo (RF-069). El cargador lo cuenta y falla. Hoy la etiqueta se
-   la pone el dato a sí mismo y no la comprueba nadie — de ahí los dos que son sólo un número.
+1. **Cuota — del grado, nunca del registro.** `ruleBreaker` ≤ 10 % del catálogo (RF-069): el cargador lo
+   cuenta y falla. Hoy la etiqueta se la pone el dato a sí mismo y no la comprueba nadie, de ahí los dos que
+   son sólo un número. **Lo que NO lleva cuota es el vocabulario**: cuántos perks escriben física o balón es
+   una decisión de producto, y hoy el requisito que la gobernaría no existe — ficha
+   [BK-A](../pendientes/BK-A.md).
 2. **Nunca en `MATCH_START` ni en `PLAY_START`.** Una excepción permanente no es una regla rota: es una
    regla nueva, y encima invisible. B se cuelga de un evento de fútbol, que es lo que le da situación,
    actor y **celda**, es decir un sitio donde verse. *(El cargador ya impone exactamente esta regla a
@@ -1081,8 +1102,8 @@ Capacidades agregadas, ordenadas por **cuántos perks del catálogo final desblo
 | **C11** | **Contadores de carne por jugador** (cicatrices propias, muertos del equipo, lesiones causadas) + su lectura en el retrato | 5 | `accumulatesAcrossMatches` ya vuelca contadores a `PlayerDefinition.Counters` (MEDIDO). Falta **qué** se cuenta y **enseñarlo** |
 | **C10** | **Techo por acción y por posición en el cargador**, error explícito (RT-032) | prerrequisito de C1 | Tabla de validación. Un `×3` a `Shoot` en un portero debe ser un **error de datos**, no una anécdota |
 | **C16** | **Plantillas de descripción desde la intención** (l10n) | prerrequisito de §2.4 | RT-035 se conserva entero: lo que cambia es que hay un efecto **conductual** del que generar una frase de conducta |
-| **C17** | **Canal de impulso: un efecto que escribe sobre el cuerpo y sobre el balón** — el cuerpo entra por el búfer de `BodySeparation`, que ya acumula empujes en esquema de Jacobi con tope por tick y orden por id (MEDIDO); el balón entra por `Ball`, que ya tiene `Velocity`, `Z`, `VelocityZ` y `FlightArc` | registro **B** (≤ 6) | **No hay física nueva ni canal de dibujo nuevo**: la traza ya graba posición, estado y balón (x, y, z) por fotograma y `/Game` ya los pinta. Es la forma «impone física» de §1.6.B, y hoy le falta la mitad del balón: **cero de 19 tipos de efecto lo tocan** |
-| **C18** | **Vocabulario cerrado de gesto declarado en el dato**, leído genéricamente por `/Game`, más un `MomentKind` de perk | prerrequisito de **todo** el registro B | Es el patrón que el repositorio ya usa dos veces (`MomentKind`, `ContactCue`) y la **única** forma de que un perk se vea sin que `/Game` nombre perks (regla 5) ni decida partido (RT-014). Sin ella, C17 produce sucesos anónimos: §1.6.C regla 3 |
+| **C17** | **Canal de impulso: un efecto que escribe sobre el cuerpo y sobre el balón** — el cuerpo entra por el búfer de `BodySeparation`, que ya acumula empujes en esquema de Jacobi con tope por tick y orden por id (MEDIDO); el balón entra por `Ball`, que ya tiene `Velocity`, `Z`, `VelocityZ` y `FlightArc` | **6 de los 13 ejemplos del revisor** (13C §2) | **No hay física nueva ni canal de dibujo nuevo**: la traza ya graba posición, estado y balón (x, y, z) por fotograma y `/Game` ya los pinta. Es la forma «impone física» de §1.6.B, y hoy le falta la mitad del balón: **cero de 19 tipos de efecto lo tocan** |
+| **C18** | **Vocabulario cerrado de gesto declarado en el dato**, leído genéricamente por `/Game`, más un `MomentKind` de perk | **13 de 13**, y los 15 perks de SITUACIÓN que ya existen (13C §2.1) | Es el patrón que el repositorio ya usa dos veces (`MomentKind`, `ContactCue`) y la **única** forma de que un perk se vea sin que `/Game` nombre perks (regla 5) ni decida partido (RT-014). Sin ella, C17 produce sucesos anónimos: §1.6.C regla 3 |
 | **C9** | **`PerkTriggered(perkId, ownerId, tick)` en el flujo de eventos** | **0 mecánicos, todos perceptivos** | **MEDIDO: las activaciones viven en `MatchReport.PerkActivations`, que solo lee la pantalla de post-partido; `MatchScreen` no dibuja ninguna.** Durante los 60-90 s el jugador no ve un solo perk dispararse. `/Sim` no decide presentación (RT-014): deja de esconder lo que ya calcula |
 
 ## 6.3 Sistema nuevo
@@ -1116,11 +1137,19 @@ no en idioma, y la que hace legibles las 40 ofertas por run.
 > escenario que la auditoría 13B nombra: 57 fichas escritas contra un vocabulario que no contiene la
 > excepción, y reabrirlo después cuesta las 57.
 
-**Tanda 2b — C18 y después C17.** En ese orden y no al revés: **C18 primero**, porque es lo que convierte un
-suceso en un momento atribuido, y porque es barata y no toca ninguna regla (es la quinta pregunta de §6.5,
-que ya estaba abierta). **C17 después**, empezando por el balón y no por el cuerpo: el balón no gasta del
-presupuesto de violencia (§1.6.C, regla 5) y su canal de dibujo está entero. Métrica de corte: un verbo de B
-no entra si mueve `injuriesPerMatch` o `shotsPerMatch` fuera de banda.
+**Tanda 2b — C18 y después C17.** **Revisado por 13C §6, que cambia el orden de todo lo anterior: C18 va
+la PRIMERA de la hoja de ruta, antes que C1 y antes que C2, y va sola.** Atribuir en pantalla los **15 perks
+de SITUACIÓN que ya existen** no toca reglas, no toca balance, y es una medición disfrazada de trabajo: si
+con los quince atribuidos el partido ya se cuenta solo, hay menos motor que escribir del que creemos.
+**C17 después**, empezando por el balón y no por el cuerpo —el balón no gasta del presupuesto de violencia
+(§1.6.C, regla 5) y su canal de dibujo está entero—, y con los rechaces sesgados como primer candidato:
+siete ganchos ya puestos. Métrica de corte: ninguna primitiva entra si mueve `injuriesPerMatch` o
+`shotsPerMatch` fuera de banda.
+
+> **Y el lenguaje se congela al FINAL, no en la tanda 2.** Es la corrección más importante de 13C sobre esta
+> hoja de ruta: congelar el vocabulario antes de saber que seis de trece fantasías piden un impulso dirigido
+> es exactamente cómo se cierra el espacio expresivo. La puerta de la tanda 2 de arriba se mantiene como
+> mínimo indispensable **si** hubiera que congelar antes por otra razón; el orden preferido es no congelar.
 
 **Tanda 3 — C8, C3, C4, C5, C6, C7.** Geometría, reloj, bonos de rasgo y objetivos. Aquí entra el grueso del
 catálogo.
