@@ -9,6 +9,45 @@ PC (Steam), premium, sin online. **Estado (8 sep 2026): fases 0 y 1 cerradas; fa
 **Campo de siete filas (14 sep 2026, decisión del revisor, BA-C):** 16×7 en vez de 16×6 —con seis filas el centro geométrico cae *entre* dos filas y no existe fila central—, con guardado v4. Añadir la fila cuesta ~1,0 tiro y ~0,45 goles por partido y **ninguna palanca local lo recupera**, así que la **ADR 0109** recalibra la banda de tiros a la geometría vigente (8-16 → 7-15) en vez de tocar el motor, y deja escrito que ensanchar la formación o las zonas de acción destruye la profundidad de colocación. Nueve auditorías de la IA de jugadores (`docs/auditoria-ia-jugadores-1..9.md`) dejan **un solo cambio aplicado**, la **ADR 0110**: `Shoot` del defensa 77 → 154 y del centrocampista 188 → 237, porque con 77 un defensa colocado arriba nunca remataba —perdía contra su propio `ShortPass` de 500— y jugar fuera de posición costaba dos tercios del ataque (100/48/38 → 100/68/55). Rechazados y documentados: `ChaseBall pen` en todas las dosis (degrada la diferenciación de builds), el desfase de fase entre equipos (no replica entre semillas) y la histéresis. Queda **abierto** el papel del centrocampista: dispara el 6,5 % de los tiros siendo el 43 % de los jugadores de campo.
 ---
 
+## El enfriamiento de perk, y la primera reducción de `MATCH_START` (25 sep 2026)
+
+Ejecuta la ADR 0149. **Encargo del revisor**: *«debes reducir los perks de match start»*, tras decidir que
+el catálogo de actos **sustituye** a los 102 actuales, que la economía se queda compitiendo por un slot,
+que el sub-100 se permite con las cinco condiciones de la biblia §1.5, y que el **segundo balón se olvida**.
+
+**Primitiva nueva: el enfriamiento (RF-069c).** `LimitDefinition` gana `CooldownTicks`; el dato lo declara
+en **segundos** (`limit: { "cooldownSeconds": N }`) y el cargador lo pasa a ticks una sola vez;
+`PerkSubscription` recuerda el tick de su última activación y la descripción generada lo dice sola
+(RT-035). Es lo que permite colgar un perk de un evento **frecuente** —el pase ocurre ~100 veces por
+partido— sin convertirlo en ruido.
+
+**Primera reducción: `MATCH_START` 48 → 42.** De los 48, **18 son legítimos** —12 de conducta, 5 de estado
+y 1 de economía: una disposición permanente no es un suceso y tiene que estar puesta antes— y **30 eran
+número invisible**. Se han movido los seis que tenían un evento de fútbol poco frecuente donde caer:
+`bulwark_stance`, `own_third_anchor` y `duelist` a **`TACKLE`**; `elf_touch` —la racial élfica— a
+**`TACKLE` con scope `opponent`**, que es el instante en que le entran; `forward_line` a **`SHOT`**;
+`flank_specialist` a **`DRIBBLE_ATTEMPTED`**. Todos pasan de `duration: match` a `duration: play`.
+
+**Quedan 24 números**, y ya no están bloqueados: **16** pueden moverse al pase o a la intercepción **ahora
+que el enfriamiento existe**, y **8 son constantes permanentes** (atributos y escalares de rasgo) que
+alimentan la decisión o la geometría — a esas RF-069b no les pide cambiar de disparador, les pide
+acompañarse de un acto.
+
+**Cinco tests actualizados**, todos los que afirmaban «este perk está puesto en el pitido inicial», y uno
+de ellos —`DescriptionTests`— falló **porque la descripción generada cambió sola** de «Al empezar el
+partido» a «Al entrar»: RT-035 funcionando. 1.226 tests en verde, 241 ficheros de `/data` válidos.
+
+**Lo que NO se ha hecho y hay que decirlo**: ninguna puerta (`Category=Gate`) ni un solo lote de
+`/Balance`. El revisor aplazó el balance expresamente —*«ya lo balancearemos después»*— pero eso no es lo
+mismo que no medirlo nunca. Seis perks han pasado de bono permanente a bono de jugada: es un recorte real
+de su valor y está sin medir.
+
+**Y el diagnóstico que lo ordena todo**, del mismo día: el cartelito de perk sobre la cabeza **ya existía**
+(`MatchFlashView` → `MomentMark` → `DrawMarks`) y lo que falta es **qué enseñar** — entre cero y dos
+activaciones por partido fuera de los primeros seis segundos, en tres de seis partidos ninguna.
+
+---
+
 ## ADR 0149 — El catálogo se mide por lo que se ve (25 sep 2026)
 
 **Decisión del revisor, y reescribe un requisito: `docs/requisitos.md` sube a v0.10.** Viene de tres

@@ -32,6 +32,9 @@ namespace Underleague.Sim.Perks;
 /// </summary>
 public static class PerkLoader
 {
+    /// <summary>Ticks lógicos por segundo (RT-020). Lo usa el enfriamiento de RF-069c, que el dato declara en segundos.</summary>
+    private const int TicksPerSecond = 15;
+
     private static readonly string[] KnownKeys =
     {
         "id", "name", "rarity", "kind", "axis", "race", "trigger", "scope", "links", "condition",
@@ -182,14 +185,45 @@ public static class PerkLoader
         LimitDefinition? limit = null;
         if (root.TryProp("limit") is { } limitNode)
         {
-            limitNode.EnsureKnownKeys("per", "times");
-            int times = limitNode.Prop("times").AsInt();
-            if (times < 1)
+            limitNode.EnsureKnownKeys("per", "times", "cooldownSeconds");
+
+            // RF-069c: el enfriamiento se declara en SEGUNDOS y el motor trabaja en ticks (15/s, RT-020).
+            // Es la unidad en la que razona quien escribe el perk; convertirla aquí, una sola vez al
+            // cargar, deja el motor en aritmética entera (RT-023) y la ficha legible.
+            int cooldownSeconds = limitNode.TryProp("cooldownSeconds") is { } cooldownNode ? cooldownNode.AsInt() : 0;
+            if (cooldownSeconds < 0)
             {
-                throw new DataException(file, limitNode.Path + ".times", "el límite debe ser al menos 1");
+                throw new DataException(file, limitNode.Path + ".cooldownSeconds", "el enfriamiento no puede ser negativo");
             }
 
-            limit = new LimitDefinition(ParseEnum<LimitScope>(limitNode.Prop("per"), "ámbito de límite"), times);
+            // Con enfriamiento, el cupo es opcional: un acto que sólo enfría no tiene tope de veces. Sin
+            // él, 'per' y 'times' siguen siendo obligatorios, que es el formato de siempre.
+            bool hasTimes = limitNode.TryProp("times") is not null;
+            if (!hasTimes && cooldownSeconds == 0)
+            {
+                throw new DataException(file, limitNode.Path, "un límite declara 'times' o 'cooldownSeconds', o los dos");
+            }
+
+            int times = int.MaxValue;
+            if (hasTimes)
+            {
+                times = limitNode.Prop("times").AsInt();
+                if (times < 1)
+                {
+                    throw new DataException(file, limitNode.Path + ".times", "el límite debe ser al menos 1");
+                }
+            }
+
+            var limitScope = limitNode.TryProp("per") is { } perNode
+                ? ParseEnum<LimitScope>(perNode, "ámbito de límite")
+                : LimitScope.Match;
+
+            if (hasTimes && limitNode.TryProp("per") is null)
+            {
+                throw new DataException(file, limitNode.Path + ".per", "un cupo de veces necesita su ámbito");
+            }
+
+            limit = new LimitDefinition(limitScope, times, cooldownSeconds * TicksPerSecond);
         }
 
         bool accumulates = root.TryProp("accumulatesAcrossMatches") is { } accNode && accNode.AsBool();

@@ -106,12 +106,17 @@ public sealed class PopulationFitnessTests
     [Fact]
     public void OwnThirdAnchorIsAlsoEffectDrivenButItsRoleIsTheDefenderItWasAlreadyMeasuredOn()
     {
-        // Mismo patrón que cannon (MATCH_START + modifyProbability(tackle) de duración partido), pero el
-        // rol que consume la acción es el Defensa — que es justo el portador con el que se midió en §18,
-        // donde salió un delta pequeño pero NO nulo. El analizador debe decir "adecuado", no "mal rol".
+        // El rol que consume la acción es el Defensa — que es justo el portador con el que se midió en
+        // §18, donde salió un delta pequeño pero NO nulo. El analizador debe decir "adecuado", no "mal
+        // rol".
+        //
+        // ADR 0149 / RF-069c: desde que el perk se cuelga de TACKLE en vez de MATCH_START, su disparador
+        // SÍ exige una acción del portador, así que el analizador lo clasifica como perk de acción. Es el
+        // cambio que se buscaba —el bono vive en la entrada, no en el pitido— y el diagnóstico de puesto,
+        // que es lo que este test protege, no se mueve.
         var result = Analyze("own_third_anchor", Race.Human, Position.Defender);
 
-        Assert.Equal(TriggerActorRole.NoCarrierAction, result.ActorRole);
+        Assert.Equal(TriggerActorRole.PerformsAction, result.ActorRole);
         Assert.Equal(PlayerAction.Tackle, result.EffectAction);
         Assert.Equal(Position.Defender, result.RequiredRole); // argmax de Tackle = Defensa (255)
         Assert.Equal(PositionVerdict.Adequate, result.PositionCheck);

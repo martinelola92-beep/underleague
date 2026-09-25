@@ -64,15 +64,21 @@ enumerado, error explícito si el dato inventa una, RT-032) y sus parámetros vi
 dato dice *«tu próximo disparo es Cañonazo»* y **el motor sabe qué es un cañonazo sin nombrar ningún perk**
 (regla 5, RT-034). Es el mismo patrón que ya usan `RelocationPoint`, `ImmunityKind` y `TraitScalarKind`.
 
-## A2 · Enfriamiento
+## A2 · Enfriamiento — **IMPLEMENTADO el 25 sep 2026**
 
 `LimitDefinition` es hoy `(LimitScope Per, int Times)` con ámbitos jugada / partido / turba / run
 *(MEDIDO)*. Falta **«cada N»**. Es un campo más en un concepto que ya existe, ya se reinicia en los sitios
 correctos y ya aparece en la descripción generada (RT-035).
 
-**Mientras A2 no exista hay un sustituto pobre pero real**: `limit: { per: play, times: 1 }` — una vez por
-jugada. No es un enfriamiento, pero ya impide que el acto sea permanente, y permite escribir la primera
-tanda sin tocar el motor (§5).
+**Ya existe.** `LimitDefinition` tiene `CooldownTicks`, el dato lo declara en **segundos**
+(`limit: { "cooldownSeconds": N }`), el cargador los pasa a ticks una sola vez (RT-020/RT-023), la
+suscripción recuerda el tick de su última activación y la descripción generada lo dice sin que nadie
+escriba texto (RT-035). `per`/`times` pasan a ser opcionales cuando hay enfriamiento, y un `limit` que no
+declare ni lo uno ni lo otro es un error de carga (RT-032).
+
+**Lo que desbloquea, y es el motivo de haberlo hecho antes que nada**: un perk puede colgarse de un evento
+**frecuente** —el pase, que ocurre ~100 veces por partido— sin convertirse en ruido. Sin enfriamiento, sólo
+se podían mover a un evento de fútbol los perks cuya resolución es rara (entrada, tiro, regate).
 
 ## Nota de diseño — `game-design-review`, las diez preguntas
 
@@ -316,3 +322,45 @@ construido y funciona—. Lo que falta es **que haya algo que atribuir, y en un 
 mirar**. Eso no se arregla en `/Game`: se arregla en el catálogo, colgando los actos de eventos de fútbol
 en vez de del pitido inicial, que es precisamente lo que hace
 [`perks-catalogo-de-actos.md`](./perks-catalogo-de-actos.md).
+
+---
+
+# 8. La reducción de `MATCH_START` — primera tanda hecha (25 sep 2026)
+
+Encargo del revisor: *«debes reducir los perks de match start»*.
+
+**Cómo se clasificaron los 48** *(MEDIDO)*. No todos son un problema, y decirlo importa:
+
+| clase | nº | ¿es legítimo en `MATCH_START`? |
+|---|---:|---|
+| **Conducta** (correa, hogar, forma de zona, sesgo de marca o de entrada) | 12 | **Sí.** Una conducta es una disposición permanente, no un suceso: tiene que estar puesta antes de que ruede el balón |
+| **Estado** (inmunidades, duración del derribo que provoca) | 5 | **Sí**, por el mismo motivo |
+| **Contador de economía** | 1 | **Sí**: no toca el partido (RF-069e) |
+| **Número** (probabilidad, atributo, escalar) | **30** | **No.** Es el bono invisible puesto en el pitido |
+
+**Se han movido seis**, los que tienen un evento de fútbol **poco frecuente** donde caer, sin necesitar el
+enfriamiento:
+
+| perk | de | a | por qué ahí |
+|---|---|---|---|
+| `bulwark_stance` · `own_third_anchor` · `duelist` | `MATCH_START` | **`TACKLE`**, scope actor | su bono se resuelve en la entrada |
+| `elf_touch` *(racial élfica)* | `MATCH_START` | **`TACKLE`**, scope **opponent** | el dueño es el rival implicado: es el instante en que le entran y se escurre |
+| `forward_line` | `MATCH_START` | **`SHOT`** | su bono se resuelve en el disparo |
+| `flank_specialist` | `MATCH_START` | **`DRIBBLE_ATTEMPTED`** | se activa al encarar |
+
+Los seis pasan además de `duration: match` a `duration: play`: el bono vive en la jugada en la que hace
+falta, no todo el partido. **`MATCH_START`: 48 → 42.**
+
+**Lo que queda, y ya no está bloqueado**: de los 24 números que siguen ahí, **16 son probabilidades de
+resolución** que pueden moverse al pase o a la intercepción **ahora que el enfriamiento existe** (sin él se
+dispararían ~100 veces por partido), y **8 son constantes permanentes** —atributos y escalares de rasgo—
+que alimentan la decisión o la geometría y que **tienen que estar puestas antes**: `brute_boots`,
+`iron_lungs`, `scar_veteran`, `cannon`, `kamikaze`, `shoulder_to_shoulder`, `slow_decay`, `slow_pulse`. A
+esas ocho RF-069b no les exige cambiar de disparador: les exige **acompañarse de un acto en el mismo perk**.
+
+**Por qué paré en seis y no seguí hasta 26**: los seis primeros ya cambiaron la conducta de **cinco tests**
+—todos afirmaban «este perk está puesto en el pitido inicial»— y eso es exactamente el tipo de cambio que
+la Regla E manda pasar por revisión independiente antes de seguir acumulando. **No se ha ejecutado ninguna
+puerta ni ningún lote de `/Balance`**: el revisor aplazó el balance expresamente, pero eso no es lo mismo
+que no medirlo nunca, y queda anotado como pendiente.
+

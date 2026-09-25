@@ -75,7 +75,11 @@ public sealed class RefereeAndAbilitiesTests
         int interceptBefore = engine.InterceptChance(opponent, elf, 0.89f);
         int multiplier = Catalog.Perks.Get("elf_touch").Effects[0].Value;
 
-        engine.Effects!.Publish(MatchStart(engine));
+        // ADR 0149 / RF-069c: la habilidad se activa cuando le entran, no en el pitido inicial. El elfo
+        // es el rival implicado del evento (scope `opponent`), que es quien recibe la entrada.
+        engine.Effects!.Publish(new MatchEvent(
+            EventType.Tackle, engine.Tick, opponent.Team, opponent.Id, -1, elf.Id,
+            opponent.HomeCell, Zone.Middle, MatchPhase.OpenPlay, engine.BiasFor(0), 0, "attempted"));
 
         // ADR 0050 P1: la evasión DIVIDE la cuota de que le roben, no resta puntos, así que lo que hay
         // que reproducir aquí es la misma operación del motor sobre la probabilidad de partida.

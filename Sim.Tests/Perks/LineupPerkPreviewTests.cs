@@ -163,18 +163,31 @@ public sealed class LineupPerkPreviewTests
         Assert.Equal(assignments.Length, preview.Count);
         foreach (var entry in preview)
         {
-            var kickoff = result.Report.PerkActivations
-                .Where(a => a.PerkId == entry.PerkId && a.OwnerId == entry.PlayerId && a.EventType == EventType.MatchStart)
+            // El disparador se lee del perk y no se da por supuesto (ADR 0149 / RF-069c): desde que un
+            // perk puede colgarse de un evento de fútbol en vez del pitido inicial, filtrar por
+            // MATCH_START dejaba la lista vacía y el test pasaba a comprobar nada. Lo que se protege aquí
+            // es que la PREVISUALIZACIÓN y el MOTOR coincidan sobre la misma condición, y eso no depende
+            // de cuándo se dispare.
+            var trigger = Catalog.Perks.Get(entry.PerkId).Trigger;
+            var activations = result.Report.PerkActivations
+                .Where(a => a.PerkId == entry.PerkId && a.OwnerId == entry.PlayerId && a.EventType == trigger)
                 .ToList();
 
             if (entry.Status == LineupPerkStatus.Active)
             {
-                Assert.All(kickoff, a => Assert.DoesNotContain(":else", a.Detail, StringComparison.Ordinal));
-                Assert.NotEmpty(kickoff);
+                Assert.All(activations, a => Assert.DoesNotContain(":else", a.Detail, StringComparison.Ordinal));
+
+                // Sólo un perk de MATCH_START tiene garantizada al menos una activación en cualquier
+                // partido; uno colgado de una entrada o de un regate depende de que la jugada ocurra, y
+                // exigirle presencia convertiría este test en uno estadístico disfrazado.
+                if (trigger == EventType.MatchStart)
+                {
+                    Assert.NotEmpty(activations);
+                }
             }
             else
             {
-                Assert.All(kickoff, a => Assert.EndsWith(":else", a.Detail, StringComparison.Ordinal));
+                Assert.All(activations, a => Assert.EndsWith(":else", a.Detail, StringComparison.Ordinal));
             }
         }
 

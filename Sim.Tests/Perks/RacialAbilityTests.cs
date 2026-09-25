@@ -72,7 +72,10 @@ public sealed class RacialAbilityTests
         var elf = engine.PlayerById(1)!;
         int multiplier = Catalog.Perks.Get("elf_touch").Effects[0].Value;
 
-        engine.Effects!.Publish(MatchStart(engine));
+        // ADR 0149 / RF-069c: el toque ya no está puesto desde el pitido inicial, se activa CUANDO LE
+        // ENTRAN. El dueño es el rival implicado del evento (scope `opponent`), no su actor: en una
+        // entrada el actor es quien entra y la víctima viaja en `Opponent`.
+        engine.Effects!.Publish(TackleOn(engine, elf.Id));
         Assert.Equal(multiplier, engine.Effects.Modifiers.Probability(elf, ProbabilityKind.TackleEvasion));
         Assert.Equal(
             ProbabilityScale.Neutral,
@@ -176,6 +179,11 @@ public sealed class RacialAbilityTests
         var rng = RngStreams.Generation(3, 0);
         return TeamGenerator.Generate(ref rng, Catalog, "t", race, 50, 0).Players[1];
     }
+
+    /// <summary>Una entrada contra ese jugador: el actor es el rival que entra y la víctima viaja en <c>Opponent</c>.</summary>
+    private static MatchEvent TackleOn(MatchEngine engine, int victimId) => new(
+        EventType.Tackle, engine.Tick, 1, 101, -1, victimId,
+        new Cell(0, 0), Zone.Middle, MatchPhase.OpenPlay, 0, 0, "attempted");
 
     private static MatchEvent MatchStart(MatchEngine engine) => new(
         EventType.MatchStart, engine.Tick, -1, -1, -1, -1,

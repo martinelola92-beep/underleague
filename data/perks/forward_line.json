@@ -1,4 +1,5 @@
 {
+  "_doc": "Se activa al disparar, que es donde su bono se resuelve. RF-069c/ADR 0149.",
   "id": "forward_line",
   "name": {
     "es": "Línea de ataque",
@@ -11,7 +12,7 @@
   "axis": "startZone",
   "race": null,
   "family": "aim",
-  "trigger": "MATCH_START",
+  "trigger": "SHOT",
   "scope": "actor",
   "links": [],
   "condition": "startsIn(owner,'AttackingThird')",
@@ -21,7 +22,7 @@
       "target": "owner",
       "probability": "shotOnTarget",
       "value": 200,
-      "duration": "match"
+      "duration": "play"
     }
   ],
   "elseEffects": [],

@@ -220,13 +220,28 @@
               "type": "integer",
               "minimum": 1,
               "maximum": 100
+            },
+            "cooldownSeconds": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 600,
+              "description": "RF-069c: segundos entre dos activaciones. Un acto sin enfriamiento no es un acto."
             }
           },
-          "required": [
-            "per",
-            "times"
-          ],
-          "additionalProperties": false
+          "additionalProperties": false,
+          "anyOf": [
+            {
+              "required": [
+                "per",
+                "times"
+              ]
+            },
+            {
+              "required": [
+                "cooldownSeconds"
+              ]
+            }
+          ]
         }
       ]
     },

@@ -1,4 +1,5 @@
 {
+  "_doc": "Se activa al encarar, no al empezar el partido. RF-069c/ADR 0149.",
   "id": "flank_specialist",
   "name": {
     "es": "Especialista de banda",
@@ -11,7 +12,7 @@
   "axis": "startZone",
   "race": null,
   "family": "craft",
-  "trigger": "MATCH_START",
+  "trigger": "DRIBBLE_ATTEMPTED",
   "scope": "actor",
   "links": [],
   "condition": "startsOn(owner,'LeftFlank') || startsOn(owner,'RightFlank')",
@@ -21,7 +22,7 @@
       "target": "owner",
       "probability": "dribble",
       "value": 100,
-      "duration": "match"
+      "duration": "play"
     }
   ],
   "elseEffects": [],

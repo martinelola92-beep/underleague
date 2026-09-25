@@ -380,8 +380,21 @@ public enum RelocationPoint
     BetweenBallAndOwnGoal,
 }
 
-/// <summary>Límite de activaciones de un perk (§2): <c>times</c> veces por <c>per</c>.</summary>
-public sealed record LimitDefinition(LimitScope Per, int Times);
+/// <summary>
+/// Límite de activaciones de un perk (§2): <c>times</c> veces por <c>per</c>, y/o un <b>enfriamiento</b>
+/// en ticks entre dos activaciones (RF-069c, ADR 0149).
+///
+/// <para>El enfriamiento es lo que convierte un modificador permanente en un <b>acto</b>: sin él, un perk
+/// colgado de un evento frecuente se dispara en cada uno y deja de ser un suceso para volver a ser un
+/// estado —que es exactamente lo que tenía el catálogo con 48 de 102 perks colgados de
+/// <c>MATCH_START</c>—. <i>Un acto sin enfriamiento no es un acto: es una regla nueva.</i></para>
+///
+/// <para>En <c>/data</c> se declara en <b>segundos</b> enteros y el cargador los pasa a ticks (15/s,
+/// RT-020): el diseñador razona en tiempo de partido y el motor en aritmética entera (RT-023).</para>
+/// </summary>
+/// <param name="Times">Activaciones dentro de <paramref name="Per"/>; <see cref="int.MaxValue"/> si el dato solo declara enfriamiento.</param>
+/// <param name="CooldownTicks">Ticks que deben pasar entre dos activaciones; 0 = sin enfriamiento.</param>
+public sealed record LimitDefinition(LimitScope Per, int Times, int CooldownTicks = 0);
 
 /// <summary>
 /// Un efecto de un perk (§2). Los campos que no aplican a un <see cref="Type"/> concreto quedan en su

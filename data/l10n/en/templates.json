@@ -225,7 +225,9 @@
     "play": "{times} per play",
     "match": "{times} per match",
     "mob": "{times} during the mob",
-    "run": "{times} per run"
+    "run": "{times} per run",
+    "cooldown": "once every {seconds}s",
+    "join": " and "
   },
   "attributes": {
     "strength": "strength",

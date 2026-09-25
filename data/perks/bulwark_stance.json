@@ -1,4 +1,5 @@
 {
+  "_doc": "Postura de muro deja de ser un bono invisible puesto en el pitido inicial: se activa CUANDO ENTRA, que es cuando su efecto se resuelve, y ahí el partido puede enseñarlo. RF-069c/ADR 0149.",
   "id": "bulwark_stance",
   "name": {
     "es": "Postura de muro",
@@ -11,7 +12,7 @@
   "axis": "identity",
   "race": null,
   "family": "wall",
-  "trigger": "MATCH_START",
+  "trigger": "TACKLE",
   "scope": "actor",
   "links": [],
   "condition": "hasTag(owner,'Bulwark')",
@@ -21,7 +22,7 @@
       "target": "owner",
       "probability": "tackle",
       "value": 100,
-      "duration": "match"
+      "duration": "play"
     }
   ],
   "elseEffects": [],

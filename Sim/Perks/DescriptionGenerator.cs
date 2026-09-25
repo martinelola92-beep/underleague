@@ -20,6 +20,9 @@ namespace Underleague.Sim.Perks;
 /// </summary>
 public static class DescriptionGenerator
 {
+    /// <summary>Ticks lógicos por segundo (RT-020): el enfriamiento se guarda en ticks y se cuenta en segundos.</summary>
+    private const int TicksPerSecond = 15;
+
     private const string Layout = "layout";
     private const string Effects = "effects";
     private const string Triggers = "triggers";
@@ -79,9 +82,26 @@ public static class DescriptionGenerator
             AppendEffects(effects, perk.ElseEffects, templates, separator, finalSeparator, triggerNoun, links);
         }
 
-        string limit = perk.Limit is { } l
-            ? Replace(templates.Get(Limits, LimitScopeKey(l.Per)), "{times}", l.Times.ToString(CultureInfo.InvariantCulture))
-            : string.Empty;
+        // RF-069c: un enfriamiento se le cuenta al jugador en segundos, que es la unidad en la que lo
+        // declaró el dato; el cupo de veces sigue describiéndose como siempre. Un perk puede llevar los
+        // dos, y entonces se dicen los dos.
+        string limit = string.Empty;
+        if (perk.Limit is { } l)
+        {
+            if (l.Times != int.MaxValue)
+            {
+                limit = Replace(templates.Get(Limits, LimitScopeKey(l.Per)), "{times}", l.Times.ToString(CultureInfo.InvariantCulture));
+            }
+
+            if (l.CooldownTicks > 0)
+            {
+                string cooldown = Replace(
+                    templates.Get(Limits, "cooldown"),
+                    "{seconds}",
+                    (l.CooldownTicks / TicksPerSecond).ToString(CultureInfo.InvariantCulture));
+                limit = limit.Length == 0 ? cooldown : limit + templates.Get(Limits, "join") + cooldown;
+            }
+        }
 
         string text = templates.Get(Layout, "plain");
         text = Replace(text, "{trigger}", trigger);

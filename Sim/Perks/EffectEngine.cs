@@ -24,8 +24,32 @@ internal sealed class PerkSubscription
     /// <summary>Activaciones consumidas dentro del ámbito del límite vigente.</summary>
     public int Uses { get; set; }
 
+    /// <summary>
+    /// Tick de la última activación, o -1 si todavía no se ha activado. Lo gobierna el enfriamiento
+    /// (RF-069c) y, a diferencia de <see cref="Uses"/>, <b>no se reinicia por ámbito</b>: un enfriamiento
+    /// mide tiempo de partido, no jugadas.
+    /// </summary>
+    public int LastUsedTick { get; set; } = -1;
+
     /// <summary>True si el perk ya agotó su límite en el ámbito actual.</summary>
     public bool LimitReached => Perk.Limit is { } limit && Uses >= limit.Times;
+
+    /// <summary>
+    /// True si el perk puede activarse en ese tick: ni ha agotado su cupo ni está enfriando. Se consulta
+    /// con el tick del EVENTO y no con el del motor para que una activación anidada (RT-042) use
+    /// exactamente el mismo instante que la que la provocó.
+    /// </summary>
+    public bool Available(int tick)
+    {
+        if (LimitReached)
+        {
+            return false;
+        }
+
+        return Perk.Limit is not { CooldownTicks: > 0 } limit
+            || LastUsedTick < 0
+            || tick - LastUsedTick >= limit.CooldownTicks;
+    }
 }
 
 /// <summary>
@@ -258,7 +282,7 @@ internal sealed class EffectEngine : IPerkLinks
                 continue;
             }
 
-            if (subscription.LimitReached)
+            if (!subscription.Available(evt.Tick))
             {
                 continue;
             }
@@ -293,6 +317,7 @@ internal sealed class EffectEngine : IPerkLinks
             // evento (extraAction -> SHOT), la llamada anidada ya ve el límite alcanzado; con el incremento
             // detrás, el perk se encadenaba hasta MaxDepth y un `limit` de 1 daba 5 activaciones.
             subscription.Uses++;
+            subscription.LastUsedTick = evt.Tick;
 
             _depth = depth + 1;
             try
