@@ -33,6 +33,7 @@ necesita medición está marcado como tal y tiene experimento asignado en la Par
 | Parte 2 — 70-80 candidatos | **Parte 4** (80) |
 | Parte 3 — filtrado a ~55-60 | **Parte 5** (57) |
 | Parte 4 — hoja de ruta de motor | **Parte 6** |
+| *corrección del revisor, 25 sep 2026 — los dos registros del lenguaje* | **§1.6 (reescrito)** · §1.3 · §3.1 · §5.3 · §6.2 (C17-C18) · §6.4 · §6.5 (decisión 6) |
 
 ---
 
@@ -173,6 +174,13 @@ rota, contador) no llevan nivel.
 lee), **Torre** (no busca hueco, espera el balón largo) y **Carnicero ciego** (persigue al hombre, no al
 balón). **Cinco de cincuenta y siete: el 9 %.** *(DERIVADO)*
 
+**La fila «sin nivel» no es un residuo: es el registro B.** Esos 13 perks —oficio, regla rota, contador— son
+los que **no modifican intención**, y por tanto los únicos que pueden pertenecer al registro de excepción
+(§1.6.B). Que sean 13 de 57 (23 %) y la cuota de `ruleBreaker` sea el 10 % **no es una contradicción**: la
+fila mezcla los tres, y sólo la parte «regla rota» cuenta para la cuota. **DERIVADO: hace falta separar la
+fila en tres al cerrar el catálogo**, o la cuota de RF-069 seguirá sin poder comprobarse — que es
+exactamente el fallo que §1.6 mide en el catálogo de hoy.
+
 ## 1.4 El argumento de la dilución
 
 **HIPÓTESIS DEL REVISOR**, enunciada aquí en su forma fuerte y luego corregida:
@@ -237,10 +245,46 @@ está siempre encendido y su renuncia es el precio anunciado de una ventaja anun
 haber colocado mal. Son dos cosas distintas y la ADR 0088 solo habla de la primera. **Pero es una lectura, y
 la decisión es del revisor.**
 
-## 1.6 El lenguaje de intención: `ModifyUtility` es el ensamblador, no el idioma
+## 1.6 El lenguaje de intención: dos registros, no uno
 
 Requisito del revisor: `ModifyUtility` no puede ser el lenguaje de diseño. Propuesta concreta, y es la pieza
 de arquitectura más importante de este documento.
+
+**Corrección del revisor (25 sep 2026), posterior al primer borrador de esta sección y motivo de su
+reescritura:**
+
+> Los perks comunes modifican **cómo juega la máquina**. Los perks excepcionales pueden hacer que la máquina
+> **haga cosas que el fútbol normal no puede hacer**.
+
+**No es una regla nueva: es RF-069 leída entera** *(MEDIDO, `docs/requisitos.md`)*. La distribución objetivo
+del catálogo tiene tres filas y la tercera dice *«Rompe-reglas · 10 % · anulan o invierten una regla del
+simulador»*. El borrador anterior de este epígrafe proponía **un** lenguaje —`prefers`, `refuses`, `commits`,
+`stretches`— y los cuatro verbos son de conducta: cubren la primera fila y la segunda y **no tienen forma de
+escribir la tercera**. El lenguaje no la prohibía; simplemente no sabía decirla, que en un vocabulario
+cerrado es lo mismo. Corregirlo ahora cuesta un epígrafe; corregirlo después de escribir las 57 fichas
+cuesta las 57 fichas.
+
+**El hueco, medido en el catálogo de hoy** *(MEDIDO, censo de `data/perks/`, 102 ficheros)*: 13 perks están
+etiquetados `ruleBreaker`, y detrás de la etiqueta hay
+
+- **4 que anulan un evento** —`hand_of_god`, `iron_gate`, `mob_instigator`, `no_dying`—: rompen una regla de
+  verdad;
+- **4 que matan** (los cuatro letales): rompen una regla, pero por una **bandera** del perk, no por su efecto;
+- **2 inmunidades** y **1 que encarece el marcaje rival** (`free_man`, el único efecto del sistema que
+  escribe sobre el emparejamiento del equipo **contrario**);
+- **y 2 que no rompen nada: `blood_tithe` y `loan` son `modifyProbability` y `addCounter`.**
+
+Además **6 de los 13 se disparan en `MATCH_START`**. **DERIVADO: el grado más alto de la taxonomía es hoy
+medio ficticio** —dos de sus trece miembros son un número con etiqueta de excepción— **y casi la mitad
+ocurre antes de que empiece el partido**, donde por definición no hay regla de fútbol que romper. Un
+lenguaje con un solo registro no habría corregido eso: lo habría formalizado.
+
+### 1.6.A — Registro de conducta: *cómo juega la máquina*
+
+**Ámbito: el 90 % del catálogo** (`filler` + `conditional`, RF-069). **La propiedad que lo define: todo lo
+que este registro produce, el fútbol ya lo podía producir.** Un jugador dispara antes, marca a otro, no
+repliega — son partidos legales con una distribución rara. Es exactamente lo que debe ser el grosor de una
+build, y es lo que hace que dos plantillas jueguen distinto.
 
 **En `/data` el diseñador no escribe porcentajes. Escribe verbos de intención con un vocabulario cerrado:**
 
@@ -276,6 +320,102 @@ estado que la situación implica:
    sin E/S, compilación una sola vez al cargar (el mismo sitio donde ya se compilan las condiciones NCalc).
 4. **El cargador puede rechazar lo imposible.** Un `prefers(Shoot over ShortPass)` en un portero da
    `Base(GK,Shoot)=0`: incompilable, error explícito. Hoy nada impide un `×3` a `Shoot` en un portero.
+
+### 1.6.B — Registro de excepción: *lo que el fútbol no puede hacer*
+
+**Ámbito: el 10 %** (`ruleBreaker`, RF-069). **La propiedad que lo define, y es el criterio de admisión: el
+suceso que produce no tiene ninguna secuencia de decisiones legales que lo genere.** Si el mismo resultado
+se alcanza subiendo una prioridad, **no es registro B**: es registro A mal escrito, y el cargador debe
+rechazarlo. Es la misma prueba que §5.1 aplica al catálogo —comportamiento observable, no resultado
+agregado— llevada al vocabulario.
+
+**Un verbo de B no toca la tabla de utilidad.** No compite en el `argmax`: actúa **después** de que el motor
+haya decidido y resuelto, sobre el resultado. Por eso son tipos de efecto y no multiplicadores, y por eso
+`Utility.cs` no se entera de que existen — que es exactamente la propiedad que ya tienen `cancelEvent` y
+`lethal` *(MEDIDO)*. **Consecuencia práctica: los dos registros no se estorban.** Recalibrar `weights.json`
+recalcula todo el registro A y no toca una línea del B.
+
+**Las tres formas que la arquitectura admite hoy.** Se enuncian como **formas del verbo**, no como catálogo
+de efectos: la auditoría `perks-auditoria-potencial-visual.md` (13B) pide expresamente no fijar todavía qué
+fenómenos concretos existirán, y esta biblia no los fija.
+
+| forma | qué hace el verbo | sobre qué escribe | soporte hoy *(MEDIDO, 13B §3)* |
+|---|---|---|---|
+| **niega** | el suceso no ocurre, o no cuenta | flujo de eventos | **existe**: `cancelEvent` (4 perks) |
+| **repite / desdobla** | la jugada vuelve a resolverse | flujo de resolución | **existe**, acotado: `extraAction` sólo sabe rehacer `SHOT` y `TACKLE` |
+| **impone física** | un cuerpo o el balón hacen algo que nadie decidió | `Position` · `Velocity` · `PlayerState` · `Ball` | **a medias**: el cuerpo **sí** (`setState`, y el búfer de empuje de `BodySeparation` ya resuelve el determinismo de N cuerpos); **el balón no: cero de los 19 tipos de efecto lo tocan**, teniendo `Ball` ya `Velocity`, `Z`, `VelocityZ` y `FlightArc`, y la traza ya grabándolos |
+
+**La cuarta forma —alterar el espacio— no existe, y esta biblia no la abre**: exige estado de mundo en el
+partido, que es un sistema nuevo y no una extensión (13B §4.D). **Lo que sí se decide aquí es no cerrarle la
+puerta**, y se decide de una forma concreta y comprobable: **ningún verbo de B lleva «por jugador» en su
+firma.** Un verbo de B declara un **objetivo**, que ya es vocabulario abierto y ya tiene un miembro que mira
+posición real y no alineación (`adjacentOpponents`). Si mañana existe un objetivo espacial, los verbos ya
+escritos lo admiten sin reescribirse.
+
+### 1.6.C — Las cinco reglas que mantienen honesto el registro B
+
+Sin ellas B no es un grado: es la puerta trasera por la que el catálogo entero se vuelve excepción y nada es
+excepcional. Las cinco son **verificables al cargar** (RT-032, error explícito), no criterio de nadie:
+
+1. **Cuota.** `ruleBreaker` ≤ 10 % del catálogo (RF-069). El cargador lo cuenta y falla. Hoy la etiqueta se
+   la pone el dato a sí mismo y no la comprueba nadie — de ahí los dos que son sólo un número.
+2. **Nunca en `MATCH_START` ni en `PLAY_START`.** Una excepción permanente no es una regla rota: es una
+   regla nueva, y encima invisible. B se cuelga de un evento de fútbol, que es lo que le da situación,
+   actor y **celda**, es decir un sitio donde verse. *(El cargador ya impone exactamente esta regla a
+   `lethal` desde el paquete AY: se generaliza, no se inventa.)*
+3. **Nombrable.** Un verbo de B sin plantilla de descripción (RT-035) y sin entrada en la gramática de
+   momentos de `/Game` **es ruido por construcción**. Es la condición que hoy incumplen los 102 perks del
+   catálogo, porque `PERK_TRIGGERED` se emite y se tira y `MomentKind` no tiene entrada de perk (13B §2.2).
+4. **Previsible.** Regla 11 y las cinco condiciones de la ADR 0048: si puede hacer daño al jugador, se sabe
+   antes, se ve en `LineupPerkPreview` y se puede reducir con la alineación.
+5. **Presupuestada.** Un verbo de B que se route por **contacto** compite por una banda agotada
+   —`injuriesPerMatch` 0,78 contra techo 0,90, con la brecha de faltas de la ADR 0147 aún sin explicación
+   cerrada— y **no entra sin medición previa**. Los que se routen por el balón o por el movimiento no gastan
+   de esa banda (13B §6). No es una preferencia estética: es RT-056.
+
+**Qué compra tener dos registros en vez de uno** *(DERIVADO)*:
+
+1. **La cuota de RF-069 pasa a ser verificable.** Con dos vocabularios disjuntos, el grado de un perk **es**
+   el verbo que usa, no la etiqueta que se pone.
+2. **El registro A puede ser menos ambicioso sin empobrecer el catálogo.** Buena parte del vértigo del
+   sub-100 (§1.5) viene de que era la única forma que tenía el lenguaje de producir algo memorable. Con B
+   existiendo, A no carga solo con la identidad del catálogo — y las cinco fichas del Nivel 3b dejan de ser
+   la única fuente de personalidad del juego.
+3. **Lo caro queda acotado a lo raro.** Cada verbo de B es una primitiva de motor; la cuota del 10 % es, al
+   mismo tiempo, un presupuesto de trabajo de ingeniería.
+
+### 1.6.D — Nota de diseño (skill `game-design-review`, Regla B de `CLAUDE.md`)
+
+Se responde aquí porque la decisión **programa primitivas de motor** (C17, C18) aunque no implemente
+ninguna. **No genera ADR todavía**: la generará C17 cuando se escriba, porque ahí sí hay tipo de efecto
+nuevo (RT-057). Las diez, en corto:
+
+1-3. **Qué experimenta y qué decide el jugador**: con A, un once que juega distinto; con B, un suceso
+atribuido a algo que él eligió. La decisión que B añade es **apostar un slot raro a que una situación
+ocurra**, y alinear para provocarla. Hoy esa decisión no existe: los 13 `ruleBreaker` del catálogo son 6 de
+`MATCH_START` y 2 que sólo son un número.
+4. **Qué regla representa**: **RF-069**, tercera fila. No se inventa ninguna. También RF-065/RT-031 (perks
+son datos), RT-035, regla 11 y ADR 0048.
+5. **Qué sistemas**: `/data` (los dos vocabularios y el cargador que los compila y cuenta la cuota), `/Sim`
+(`EffectEngine` y las primitivas de C17; `Utility.cs` **no se entera de B**), `/Game` (C18: gesto declarado
+y `MomentKind` de perk). Respeta RT-014 porque el puente es un vocabulario cerrado **declarado en el dato**,
+no una decisión repartida entre los dos lados.
+6. **Alternativas consideradas**: *(a)* un solo registro conductual —es lo que había, y es lo que cierra el
+espacio—; *(b)* dejar la excepción fuera del lenguaje y escribirla a mano perk a perk en C# —rompe la regla
+5—; *(c)* un registro único con los verbos mezclados —la cuota de RF-069 dejaría de ser verificable al
+cargar, que es la mitad del valor de la decisión—. Se elige **dos registros disjuntos**.
+7. **Trade-off**: B paga cuota, rareza, previsión obligatoria y una plantilla de descripción por verbo; el
+jugador paga un slot raro en algo que **sólo cobra en una situación**. No es poder gratis.
+8. **Estrategias**: A se combina **aditivamente** (dos perks al alza = dos picos, §1.4). B se combina
+**multiplicativamente con la situación**: una excepción sobre `TACKLE` vale lo que valga tu tasa de
+entradas, que otra parte de la build controla. **Eso es lo que produce builds en vez de estadísticas.**
+9. **Degeneración**: tres vías, y las tres se cierran con reglas de carga y no con criterio — sin cuota, el
+catálogo entero se vuelve excepción; en `MATCH_START`, la excepción es una regla nueva e invisible; por
+contacto, choca con una banda agotada. Son las reglas 1, 2 y 5 de §1.6.C.
+10. **Demostración**: cuota de `kind` comprobada al cargar (error explícito, RT-032) · tasa de activación
+por perk de B en una build coherente (criterio de la tanda 4) · ningún verbo de B fuera de banda en
+`injuriesPerMatch`/`shotsPerMatch` · y la prueba de legibilidad de 13B §5: **¿puede la pantalla decir, en el
+instante, quién lo hizo y por qué se cumplió?**
 
 ---
 
@@ -386,6 +526,10 @@ Tres correcciones, con motivo:
    una falta) no se parecen en nada salvo en que rompen una regla; uno es carnicería y el otro es árbitro.
    Como familia no predice ni el canal ni el puesto ni lo que se ve. → pasa a ser un **atributo transversal**
    (`ruleBreaker`, que ya existe en `kind`, MEDIDO) aplicable a cualquier familia, con cuota máxima.
+**Esa cuota es la del registro B y la impone el cargador, no el criterio de quien escribe la ficha: RF-069,
+≤ 10 % del catálogo (§1.6.C, regla 1).** El grado es transversal a las diez familias precisamente porque
+**cualquiera de ellas puede tener su excepción**: la portería y la creación también, no sólo la carnicería
+—que es donde hoy se concentran doce de los trece `ruleBreaker` (MEDIDO)—.
 3. **Falta la portería.** Es el único puesto con un **conjunto de acciones propio** (`Shoot=0`, `Mark=0`,
    `FindSpace=0`, `CoverSpace 700`; MEDIDO) y tiene el mejor perk del juego. Meterlo en «defensa» garantiza
    que se le sigan diseñando perks de defensa. → **Portería** como familia.
@@ -900,6 +1044,13 @@ Carnicería 7 · Desgaste 5 · Pacto 6.
 
 **Comprobación del techo de `modifyProbability`** *(la auditoría pedía ≤ 40 %)*: 13 de 57 = **23 %**. Dentro.
 
+**Comprobación de la cuota del registro B** *(RF-069, ≤ 10 %)*: **pendiente, y hoy no se puede hacer.** El
+catálogo final se reparte por familia y por nivel, pero **no declara cuáles de sus 57 fichas son
+`ruleBreaker`**, y la fila «sin nivel» de §1.3 mezcla oficio, regla rota y contador. **Requisito para cerrar
+la Parte 5: cada ficha declara su registro (A o B), y las de B no pasan de seis.** Sin eso el catálogo puede
+cuadrar en familias y puestos y estar fuera de RF-069 sin que nadie lo note — que es como llegó el catálogo
+actual a tener dos rompe-reglas que sólo son un número.
+
 ---
 
 # PARTE 6 — HOJA DE RUTA DE MOTOR
@@ -930,6 +1081,8 @@ Capacidades agregadas, ordenadas por **cuántos perks del catálogo final desblo
 | **C11** | **Contadores de carne por jugador** (cicatrices propias, muertos del equipo, lesiones causadas) + su lectura en el retrato | 5 | `accumulatesAcrossMatches` ya vuelca contadores a `PlayerDefinition.Counters` (MEDIDO). Falta **qué** se cuenta y **enseñarlo** |
 | **C10** | **Techo por acción y por posición en el cargador**, error explícito (RT-032) | prerrequisito de C1 | Tabla de validación. Un `×3` a `Shoot` en un portero debe ser un **error de datos**, no una anécdota |
 | **C16** | **Plantillas de descripción desde la intención** (l10n) | prerrequisito de §2.4 | RT-035 se conserva entero: lo que cambia es que hay un efecto **conductual** del que generar una frase de conducta |
+| **C17** | **Canal de impulso: un efecto que escribe sobre el cuerpo y sobre el balón** — el cuerpo entra por el búfer de `BodySeparation`, que ya acumula empujes en esquema de Jacobi con tope por tick y orden por id (MEDIDO); el balón entra por `Ball`, que ya tiene `Velocity`, `Z`, `VelocityZ` y `FlightArc` | registro **B** (≤ 6) | **No hay física nueva ni canal de dibujo nuevo**: la traza ya graba posición, estado y balón (x, y, z) por fotograma y `/Game` ya los pinta. Es la forma «impone física» de §1.6.B, y hoy le falta la mitad del balón: **cero de 19 tipos de efecto lo tocan** |
+| **C18** | **Vocabulario cerrado de gesto declarado en el dato**, leído genéricamente por `/Game`, más un `MomentKind` de perk | prerrequisito de **todo** el registro B | Es el patrón que el repositorio ya usa dos veces (`MomentKind`, `ContactCue`) y la **única** forma de que un perk se vea sin que `/Game` nombre perks (regla 5) ni decida partido (RT-014). Sin ella, C17 produce sucesos anónimos: §1.6.C regla 3 |
 | **C9** | **`PerkTriggered(perkId, ownerId, tick)` en el flujo de eventos** | **0 mecánicos, todos perceptivos** | **MEDIDO: las activaciones viven en `MatchReport.PerkActivations`, que solo lee la pantalla de post-partido; `MatchScreen` no dibuja ninguna.** Durante los 60-90 s el jugador no ve un solo perk dispararse. `/Sim` no decide presentación (RT-014): deja de esconder lo que ya calcula |
 
 ## 6.3 Sistema nuevo
@@ -955,6 +1108,20 @@ esas cinco, lo que falta es techo por posición, no menos ambición.**
 **Tanda 2 — C2 y la capa de intención (§1.6) con C16.** Es la que convierte a `modifyUtility` en mecanismo y
 no en idioma, y la que hace legibles las 40 ofertas por run.
 
+> **Puerta de la tanda 2, añadida por la corrección del 25 sep 2026.** Es la tanda que **congela el
+> vocabulario**, así que es la última oportunidad barata de que quepa el registro B. No se cierra sin las
+> dos comprobaciones: **(a)** ningún verbo lleva «por jugador» en su firma —los efectos se declaran sobre un
+> objetivo, §1.6.B—, y **(b)** el registro B tiene al menos su forma «niega» y su forma «repite» expresadas
+> como verbos, aunque su catálogo de fenómenos siga sin decidir. Congelar el lenguaje sin esto es el
+> escenario que la auditoría 13B nombra: 57 fichas escritas contra un vocabulario que no contiene la
+> excepción, y reabrirlo después cuesta las 57.
+
+**Tanda 2b — C18 y después C17.** En ese orden y no al revés: **C18 primero**, porque es lo que convierte un
+suceso en un momento atribuido, y porque es barata y no toca ninguna regla (es la quinta pregunta de §6.5,
+que ya estaba abierta). **C17 después**, empezando por el balón y no por el cuerpo: el balón no gasta del
+presupuesto de violencia (§1.6.C, regla 5) y su canal de dibujo está entero. Métrica de corte: un verbo de B
+no entra si mueve `injuriesPerMatch` o `shotsPerMatch` fuera de banda.
+
 **Tanda 3 — C8, C3, C4, C5, C6, C7.** Geometría, reloj, bonos de rasgo y objetivos. Aquí entra el grueso del
 catálogo.
 
@@ -974,3 +1141,10 @@ build coherente para **todos** los supervivientes.
    descripción generada promete lo que el motor no puede dar.
 5. **¿Se emite la activación como evento (C9)?** Es barato, no toca ninguna regla, y **sin ello ningún
    rediseño se nota**.
+6. **¿El lenguaje de intención debe poder expresar efectos que no sean «por jugador» ni «multiplicador de
+   prioridad»?** — **DECIDIDO por el revisor el 25 sep 2026: sí.** *«Los perks comunes modifican cómo juega
+   la máquina; los perks excepcionales pueden hacer que la máquina haga cosas que el fútbol normal no puede
+   hacer.»* Consecuencias, todas ya incorporadas: §1.6 se reescribe en dos registros, §6.2 gana C17 y C18,
+   §6.4 gana la puerta de la tanda 2 y la tanda 2b, y la Parte 5 no se puede cerrar sin declarar el registro
+   de cada ficha. **Lo que esta decisión NO abre**: el estado de mundo (13B §4.D) sigue sin decidir; lo
+   único que se decide sobre él es no cerrarle la puerta en la firma de los verbos.

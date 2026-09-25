@@ -467,3 +467,23 @@ respuesta es no, hay que saberlo **antes** de escribir las 57 fichas, no despué
 4. **Decisión que pido antes de la tanda 2 del rediseño**: si el lenguaje de intención debe poder expresar
    efectos que no sean «por jugador» y «multiplicador de prioridad». Es la única puerta que el rediseño
    puede cerrar sin querer, y se cierra ahí.
+
+---
+
+# 11. Cierre — la decisión del revisor y dónde ha quedado
+
+**Decidido el 25 sep 2026**, respondiendo a §7 y a §10.4 de esta auditoría:
+
+> Los perks comunes modifican **cómo juega la máquina**. Los perks excepcionales pueden hacer que la máquina
+> **haga cosas que el fútbol normal no puede hacer**.
+
+**Incorporado a `perks-design-bible.md`**, que es donde vive el lenguaje y por tanto donde el espacio se
+cerraba: §1.6 reescrito en **dos registros** (conducta y excepción) con sus cinco reglas de carga y la nota
+de diseño de `game-design-review`; §1.3, §3.1 y §5.3 atados a la cuota de RF-069; §6.2 con **C17** (canal de
+impulso: cuerpo y balón) y **C18** (gesto declarado y `MomentKind` de perk); §6.4 con una **puerta explícita
+en la tanda 2** —la que congela el vocabulario— y una tanda 2b que hace C18 antes que C17; y §6.5 con la
+sexta decisión, que esta auditoría había dejado abierta.
+
+**Lo que sigue sin decidir, a propósito**: el catálogo de fenómenos del registro B (§4 pedía no fijarlo) y
+el **estado de mundo** (§4.D). De lo segundo sólo se ha decidido **no cerrarle la puerta**, y se ha decidido
+de forma comprobable: ningún verbo del registro B lleva «por jugador» en su firma.
