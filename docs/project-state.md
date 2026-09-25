@@ -9,6 +9,52 @@ PC (Steam), premium, sin online. **Estado (8 sep 2026): fases 0 y 1 cerradas; fa
 **Campo de siete filas (14 sep 2026, decisión del revisor, BA-C):** 16×7 en vez de 16×6 —con seis filas el centro geométrico cae *entre* dos filas y no existe fila central—, con guardado v4. Añadir la fila cuesta ~1,0 tiro y ~0,45 goles por partido y **ninguna palanca local lo recupera**, así que la **ADR 0109** recalibra la banda de tiros a la geometría vigente (8-16 → 7-15) en vez de tocar el motor, y deja escrito que ensanchar la formación o las zonas de acción destruye la profundidad de colocación. Nueve auditorías de la IA de jugadores (`docs/auditoria-ia-jugadores-1..9.md`) dejan **un solo cambio aplicado**, la **ADR 0110**: `Shoot` del defensa 77 → 154 y del centrocampista 188 → 237, porque con 77 un defensa colocado arriba nunca remataba —perdía contra su propio `ShortPass` de 500— y jugar fuera de posición costaba dos tercios del ataque (100/48/38 → 100/68/55). Rechazados y documentados: `ChaseBall pen` en todas las dosis (degrada la diferenciación de builds), el desfase de fase entre equipos (no replica entre semillas) y la histéresis. Queda **abierto** el papel del centrocampista: dispara el 6,5 % de los tiros siendo el 43 % de los jugadores de campo.
 ---
 
+## ARRANQUE DE LA SESIÓN SIGUIENTE (escrito el 25 sep 2026)
+
+**Qué hacer: la violencia del partido que dejó la ADR 0147.** Es lo que el revisor priorizó —*«primero el
+balanceo total y luego los balanceos de winrate; el gameplay todavía debe evolucionar»*— y es el único
+número del partido pegado a su techo.
+
+**Qué leer, y basta con esto**: la sección de la ADR 0147 en este fichero (más abajo),
+`docs/plan-balon-parado-posicional.md` §6 y `docs/decisiones/0147-*.md`. **No hace falta leer BI-D ni BI-H**:
+están cerradas.
+
+**El problema, con sus números**: el balón parado posicional dejó el partido un **68 % más violento**
+—faltas 4,73 → **7,96**, entradas sin balón 2,45 → **4,62**— y `injuriesPerMatch` en **0,82 contra un techo
+de 0,90**. Se publicó roto y anotado a propósito.
+
+**Lo que ya está descartado, no lo repitas**: atribuirlo a la compresión del saque de centro es
+**REJECTED** — con `kickoffPushCells` en 1,5 la violencia **no baja, sube** (faltas 8,08, lesiones 0,90
+justo en el techo).
+
+**Por dónde empezar, y no es tocando un dial**: instrumentar **`Shielding`**. Es gemelo exacto de
+`Dribbling` desde la ADR 0137 —mismo `EnterState(estado, ticks)`, mismo corte por pérdida de balón— y **no
+está instrumentado en absoluto**: ni ticks, ni rachas, ni por qué terminan. Es la medición barata que puede
+explicar **dos** síntomas a la vez: la violencia y el hallazgo sin dueño que dejó BI-D —**hoy se decide
+conducir un 44 % menos** que en el árbol de la ADR 0137 (4,1 contra 7,3 conducciones por partido, las dos
+con el parámetro a 0)—. El instrumento a copiar está hecho: `DribbleMeasurementTests` ya clasifica por qué
+termina una conducción.
+
+**El mecanismo anticipado y nunca aislado** para la violencia es el **enfriamiento durante el balón
+parado** (§6 de la nota de diseño), con tres salidas planteadas y ninguna decidida.
+
+**Dos trampas medidas que te ahorrarán una conclusión falsa:**
+
+1. Los porcentajes **«de 1.200 ticks»** están inflados un 52 %: desde la ADR 0147 un partido dura **1.825,8
+   fotogramas** de motor. Un `grep` por `1200` antes de citar ningún porcentaje.
+2. **No etiquetes sin el error típico delante.** Con 480 partidos por celda y ocho semillas, el ET de una
+   media es ~0,8 puntos y el de un contraste pareado sale de la sd de las diferencias por semilla. El 25 sep
+   esto tumbó tres de cuatro conclusiones en la revisión independiente.
+
+**Lo que NO toca ahora**: las puertas de winrate (`elf_out_of_zone`, CAT-J, `orc_violence`) están
+**aparcadas por decisión del revisor** hasta que el gameplay deje de moverse.
+
+**Y dos restos baratos**, por si sobra hito: el barrido del denominador `1200`, y `BI-G`
+(`tacklesPerMatch` cuenta entradas **intentadas** y se usa como métrica primaria de los perks de entrada,
+que sólo deciden las **ganadas**).
+
+---
+
 ## GAMEPLAY AI FOUNDATIONS PASS — COMPLETO (24 sep 2026)
 
 **Encargo del revisor.** Plan: `docs/plan-gameplay-ai-foundations.md`. **Informe completo:
