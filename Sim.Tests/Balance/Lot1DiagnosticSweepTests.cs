@@ -39,7 +39,10 @@ public sealed class Lot1DiagnosticSweepTests
         // 24 en §34; 28 al cuadrar razas y rasgos (19 sep 2026); 27 tras borrar pack_mentality,
         // shadow_marker y fine_orchestra (revisor, 18 sep 2026) — solo shadow_marker era
         // ReadyForScreening, los otros dos eran MultiTarget.
-        Assert.Equal(27, perks.Count);
+        // 25 desde el experimento de legibilidad del 25 sep 2026: `duelist` y `own_third_anchor` cambian
+        // su cuota de entrada por un DERRIBO (setState sobre el rival) y salen del lote — el arnés de
+        // cribado mide multiplicadores sobre el portador y no sabe atribuir un acto sobre un rival.
+        Assert.Equal(25, perks.Count);
 
         var results = new List<(PerkDefinition Perk, ScreeningResult Result, PerkClassification Classification)>();
         foreach (var perk in perks)

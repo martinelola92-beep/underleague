@@ -66,9 +66,12 @@ public sealed class DirectionCheckTests
     [Fact]
     public void ARealSignContradictionInACompatibleCategoryStillEscalates()
     {
-        // own_third_anchor es ProbabilityBonus con Value=+100 sobre tacklesPerMatch. Si midiéramos un
+        // last_ditch es ProbabilityBonus con Value positivo sobre tacklesPerMatch. Si midiéramos un
         // delta negativo, eso SÍ es una contradicción con significado y debe seguir escalando.
-        var perk = Catalog.Perks.All.Single(p => p.Id == "own_third_anchor");
+        //
+        // El ejemplo cambia de perk, no de expectativa: `own_third_anchor` dejó de ser un bono de
+        // probabilidad el 25 sep 2026 (pasó a derribar), y `last_ditch` es la misma forma.
+        var perk = Catalog.Perks.All.Single(p => p.Id == "last_ditch");
         var effect = PerkBalanceClassifier.GetPrimaryEffect(perk);
         var category = PerkBalanceClassifier.ClassifyEffectTypeCategory(effect.Type);
 

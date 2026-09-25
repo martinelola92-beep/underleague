@@ -71,8 +71,12 @@ public sealed class PerkAuditTests
         // cambio. Si cambia sin que nadie haya tocado /data/perks, es una regresión de la auditoría, y
         // entonces se investiga antes de tocar el número.
         Assert.Equal(102, summary.Total);
-        Assert.Equal(27, summary.ByReadiness[AuditReadiness.ReadyForScreening]);
-        Assert.Equal(22, summary.ByReadiness[AuditReadiness.MultiTarget]);
+        // 25 desde el experimento de legibilidad del 25 sep 2026: `duelist` y `own_third_anchor` cambian
+        // su cuota de entrada por un DERRIBO (setState sobre el rival) y salen del lote — el arnés de
+        // cribado mide multiplicadores sobre el portador y no sabe atribuir un acto sobre un rival. No
+        // desaparecen: pasan a MultiTarget, que sube de 22 a 24. Los cinco cubos suman 102.
+        Assert.Equal(25, summary.ByReadiness[AuditReadiness.ReadyForScreening]);
+        Assert.Equal(24, summary.ByReadiness[AuditReadiness.MultiTarget]);
         Assert.Equal(20, summary.ByReadiness[AuditReadiness.DesignReview]);
         Assert.Equal(27, summary.ByReadiness[AuditReadiness.NotReady]);
         Assert.Equal(6, summary.ByReadiness[AuditReadiness.RunLevel]);

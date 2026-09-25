@@ -5,8 +5,10 @@ using System.Threading.Tasks;
 using Godot;
 using Underleague.Game.Autoload;
 using Underleague.Game.Ui;
+using Underleague.Sim.Data;
 using Underleague.Sim.Events;
 using Underleague.Sim.Model;
+using Underleague.Sim.Perks;
 using Underleague.Sim.Run;
 using Underleague.Sim.Run.View;
 
@@ -103,6 +105,12 @@ public partial class BroadcastCapture : Control
         // nombró.
         (ulong Seed, int Node, int Frame, int Count)? foundPerk = null;
 
+        // EXPERIMENTO DE LEGIBILIDAD DEL DERRIBO (25 sep 2026, encargo del revisor): un perk que derriba
+        // a un rival, capturado en secuencia —antes, el instante, y dos momentos después— para poder
+        // juzgar si el cuerpo en el suelo se LEE, se NOTA o se RECUERDA. No se juzga desde el código:
+        // se juzga mirando los cuatro fotogramas.
+        (ulong Seed, int Node, int Frame, string Perk)? foundKnockdown = null;
+
         foreach (var seed in Seeds)
         {
             run.NewRun("orc_ironworks", Race.Orc, seed);
@@ -135,6 +143,17 @@ public partial class BroadcastCapture : Control
                         break;
                     }
                 }
+            }
+
+            // El derribo se ESCENIFICA: se le pone el perk a los titulares y se vuelve a jugar el mismo
+            // nodo. Sin esto no hay captura — ninguna de las doce semillas regala un perk que derribe en
+            // el primer partido del acto 1, que es donde mira este arnés.
+            if (foundKnockdown is null)
+            {
+                run.ArmStartersForCapture(KnockdownPerkId);
+                var armed = MatchPlaybacks.Of(run.State!, node, run.Catalog!, run.Engine, trace: true, MatchDecisions.None);
+                foundKnockdown = FindKnockdown(armed, run.Catalog!, seed, node);
+                run.NewRun("orc_ironworks", Race.Orc, seed);
             }
 
             var perkBurst = FindPerkBurst(playback, seed, node);
@@ -365,6 +384,68 @@ public partial class BroadcastCapture : Control
             }
 
             Drop(instance);
+        }
+
+        if (foundKnockdown is { } kd)
+        {
+            GD.Print($"retransmisión: 'derribo' por '{kd.Perk}' en la semilla {kd.Seed}, fotograma {kd.Frame}");
+            run.NewRun("orc_ironworks", Race.Orc, kd.Seed);
+            run.ArmStartersForCapture(KnockdownPerkId);
+            run.SelectedNodeId = kd.Node;
+
+            var instance = await Show("res://Scenes/Retransmision.tscn", frames: 10);
+            if (instance is BroadcastScreen screen)
+            {
+                // Cuatro fotogramas del MISMO suceso: el anterior (todavía de pie), el instante de la
+                // activación, medio segundo después y uno y pico después, cuando el aviso ya se va.
+                foreach (var (offset, name) in new[]
+                         {
+                             (-2, "derribo-1-antes"), (0, "derribo-2-instante"),
+                             (8, "derribo-3-medio-segundo"), (20, "derribo-4-segundo-y-medio"),
+                         })
+                {
+                    int f = Math.Max(kd.Frame + offset, 0);
+                    screen.SeekTo(f);
+                    await Settle(10);
+
+                    // Se MIDE lo que debería verse, en vez de juzgarlo entrecerrando los ojos: cuántos
+                    // cuerpos están en el suelo en ese fotograma y cuántos carteles de perk siguen vivos.
+                    // Si el motor dice que hay uno tumbado y en la imagen no se distingue, el experimento
+                    // ya tiene su respuesta.
+                    var t = screen.Pitch3D.Trace;
+                    if (t is not null)
+                    {
+                        int down = 0;
+                        for (int i = 0; i < t.Players.Count; i++)
+                        {
+                            if (t.OnPitchAt(f, i) && Style.IsDown(t.StateAt(f, i)))
+                            {
+                                down++;
+                            }
+                        }
+
+                        int marks = 0;
+                        foreach (var m in screen.Pitch3D.Marks)
+                        {
+                            int age = f - m.Flash.Frame;
+                            if (age >= 0 && age < MatchFlashView.DurationFrames)
+                            {
+                                marks++;
+                            }
+                        }
+
+                        GD.Print($"{name}: fotograma {f} · cuerpos en el suelo {down} · carteles vivos {marks}");
+                    }
+
+                    await Save(name);
+                }
+            }
+
+            Drop(instance);
+        }
+        else
+        {
+            GD.PushWarning("ninguna semilla activa un perk que derribe fuera del arranque: no hay captura de derribo");
         }
 
         if (foundPerk is { } perk)
@@ -851,6 +932,46 @@ public partial class BroadcastCapture : Control
     /// estandarte/sello, que atenúan el campo). Null si este partido no tiene sangre que enseñar, o si no
     /// se encuentra ningún hueco así.
     /// </summary>
+    /// <summary>
+    /// La primera activación, fuera del arranque, de un perk que DERRIBA a un rival (<c>setState</c>).
+    /// Se pregunta al catálogo qué perks derriban en vez de traer una lista escrita a mano: si mañana
+    /// otro perk derriba, esta captura lo encuentra sola.
+    /// </summary>
+    /// <summary>El perk que se escenifica para el experimento del derribo. Universal y de acto 1.</summary>
+    private const string KnockdownPerkId = "own_third_anchor";
+
+    private static (ulong Seed, int Node, int Frame, string Perk)? FindKnockdown(
+        MatchPlayback playback, Catalog catalog, ulong seed, int node)
+    {
+        const int SkipOpeningTicks = 90;
+
+        var trace = playback.Trace;
+        if (trace is null)
+        {
+            return null;
+        }
+
+        var events = playback.Result.Events;
+        for (int i = 0; i < events.Count; i++)
+        {
+            var e = events[i];
+            if (e.Type != EventType.PerkTriggered || e.Tick <= SkipOpeningTicks || IsCancelledEvent(e))
+            {
+                continue;
+            }
+
+            var perk = catalog.Perks.Find(e.Detail);
+            if (perk is null || !perk.Effects.Any(x => x.Type == EffectType.SetState))
+            {
+                continue;
+            }
+
+            return (seed, node, trace.FrameOfTick(e.Tick), perk.Name.Es);
+        }
+
+        return null;
+    }
+
     /// <summary>
     /// El instante del partido con más activaciones de perk juntas (C9), para la captura que comprueba el
     /// cartelito. La ventana es la misma que dura un cartelito a x1 en <c>BroadcastScreen</c>: si dos

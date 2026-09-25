@@ -20,8 +20,11 @@ public sealed class PerkBalanceClassifierTests
     [Fact]
     public void ProbabilityBonusOnTackleIsReady()
     {
-        // own_third_anchor: modifyProbability tackle +100%, condicionado a startsIn(owner,'OwnThird').
-        var result = PerkBalanceClassifier.Classify(Find("own_third_anchor"));
+        // El ejemplo cambia de perk, no de expectativa: `own_third_anchor` dejó de ser un bono de
+        // probabilidad el 25 sep 2026 (pasó a derribar), y lo que este test protege —que una cuota de
+        // entrada sobre el portador se clasifica y se puede medir— lo sigue encarnando `last_ditch`, que
+        // es la misma forma: modifyProbability(tackle) condicionado a la zona propia.
+        var result = PerkBalanceClassifier.Classify(Find("last_ditch"));
 
         Assert.Equal(PerkBalanceCategory.ProbabilityBonus, result.Category);
         Assert.Equal(MetricReadiness.Ready, result.Readiness);

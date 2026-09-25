@@ -5,6 +5,7 @@ using FileAccess = Godot.FileAccess;
 using Underleague.Game.Data;
 using Underleague.Sim.Data;
 using Underleague.Sim.Model;
+using System.Linq;
 using Underleague.Sim.Run;
 using Underleague.Sim.Run.Save;
 using Underleague.Sim.Run.Bosses;
@@ -97,6 +98,32 @@ public partial class RunController : Node
     /// <param name="clubId">Id del club elegido en <see cref="Screens.StartScreen"/> (RF-004, <c>data/clubs/</c>).</param>
     /// <param name="clubRace">Raza de ese club: todos los jugadores iniciales son de ella (RF-004).</param>
     /// <param name="seed">Semilla de la run (RT-021).</param>
+    /// <summary>
+    /// <b>Solo para el arnés de capturas</b> (<c>BroadcastCapture</c>), como <c>SeekTo</c> o
+    /// <c>Pitch3D</c>: le pone un perk a todos los titulares de campo para poder <b>escenificar</b> un
+    /// suceso que la run todavía no regala. Un perk se gana jugando, así que el primer partido del acto 1
+    /// no tiene ninguno de los interesantes y una captura que dependa de la suerte no es un experimento.
+    /// No se usa jugando y no toca el guardado.
+    /// </summary>
+    public void ArmStartersForCapture(string perkId)
+    {
+        if (State is null || Catalog?.Perks.Find(perkId) is null)
+        {
+            return;
+        }
+
+        var roster = State.Roster.ToList();
+        for (int i = 0; i < roster.Count; i++)
+        {
+            if (roster[i].Position != Position.Goalkeeper)
+            {
+                roster[i] = PerkPool.WithPerk(roster[i], perkId);
+            }
+        }
+
+        State = State with { Roster = roster };
+    }
+
     public void NewRun(string clubId, Race clubRace, ulong seed)
     {
         var files = GameData.Snapshot;

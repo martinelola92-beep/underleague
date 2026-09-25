@@ -1,5 +1,5 @@
 {
-  "_doc": "Duelista: el elfo que SI entra. Toque elfico, su habilidad racial, va de que no le quiten el balon; esto va de quitarlo el. Misma tecnica, aplicada al robo. Lo que se ve: un elfo ganando duelos donde se le supone perdedor. Lo que cuesta: entrar es donde un elfo se rompe, y sigue teniendo el cuerpo que tiene. El duelo se ve cuando ocurre: el perk se activa en la entrada y no en el pitido inicial. RF-069c/ADR 0149.",
+  "_doc": "Duelista: el elfo que SI entra. Toque elfico, su habilidad racial, va de que no le quiten el balon; esto va de quitarlo el. Misma tecnica, aplicada al robo. Lo que se ve: un elfo ganando duelos donde se le supone perdedor. Lo que cuesta: entrar es donde un elfo se rompe, y sigue teniendo el cuerpo que tiene. El duelo se ve cuando ocurre: el perk se activa en la entrada y no en el pitido inicial. RF-069c/ADR 0149. EXPERIMENTO DE LEGIBILIDAD (25 sep 2026, encargo del revisor): el derribo se añade SOLO con el vocabulario que ya existe, sin motor ni arte, para comprobar si un cuerpo en el suelo basta para que se lea que ha pasado algo. Ojo a lo que de verdad cambia: una entrada GANADA ya derribaba al rival (MatchEngine.ResolveTackle), y el efecto se aplica antes de la tirada, así que lo que añade es que el rival caiga TAMBIÉN cuando el duelo se pierde o se pita falta. El duelo pasa a terminar siempre con alguien en el suelo. Los 18 ticks son tackle.knockdownTicks, el derribo que el propio motor ya provoca: no es una cifra nueva. El duelo del elfo que sí entra: acabe como acabe, alguien se va al suelo. El multiplicador de entrada queda APARCADO durante el experimento, y por dos motivos: el encargo dice «si el derribo POR SÍ SOLO es legible» —mezclarlo con una cuota confundiría la medida— y el catálogo tiene un invariante, comprobado por PerkAuditTests, de que un perk no mezcla categorías de efecto, del que depende el arnés de cribado. Es un cambio de valor real y está sin medir.",
   "id": "duelist",
   "name": {
     "es": "Duelista",
@@ -17,11 +17,10 @@
   "condition": "",
   "effects": [
     {
-      "type": "modifyProbability",
-      "target": "owner",
-      "probability": "tackle",
-      "value": 200,
-      "duration": "play"
+      "type": "setState",
+      "target": "opponent",
+      "state": "KnockedDown",
+      "ticks": 18
     }
   ],
   "elseEffects": [],

@@ -31,7 +31,10 @@ public sealed class RealScreeningLot1Tests
         // shadow_marker y fine_orchestra (revisor, 18 sep 2026) — shadow_marker era ReadyForScreening, los
         // otros dos eran MultiTarget, así que solo se pierde uno de este bucket. Si cambia sin tocar
         // /data, cambió la auditoría, no este test.
-        Assert.Equal(27, perks.Count);
+        // 25 desde el experimento de legibilidad del 25 sep 2026: `duelist` y `own_third_anchor` cambian
+        // su cuota de entrada por un DERRIBO (setState sobre el rival) y salen del lote — el arnés de
+        // cribado mide multiplicadores sobre el portador y no sabe atribuir un acto sobre un rival.
+        Assert.Equal(25, perks.Count);
 
         var totalStopwatch = System.Diagnostics.Stopwatch.StartNew();
         var results = ScreeningRunner.RunBatch(Catalog, perks, seed: 1, checkpointDirectory: null);

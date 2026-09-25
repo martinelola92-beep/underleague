@@ -17,7 +17,10 @@ public sealed class FivePathsDemoTests
     public FivePathsDemoTests(ITestOutputHelper output) => _output = output;
 
     [Theory]
-    [InlineData("own_third_anchor", AuditReadiness.ReadyForScreening, "modifyProbability(tackle), condición de zona propia — mecanismo y banda ya confirmados desde Tanda 0")]
+    // El ejemplo de la primera ruta cambia de perk, no de ruta: `own_third_anchor` pasó a derribar el
+    // 25 sep 2026 y ahora recorre la de MultiTarget. `last_ditch` es la misma forma.
+    [InlineData("last_ditch", AuditReadiness.ReadyForScreening, "modifyProbability(tackle), condición de zona propia — la ruta limpia: métrica con banda y un solo destinatario")]
+    [InlineData("own_third_anchor", AuditReadiness.MultiTarget, "setState(KnockedDown) sobre el rival — un ACTO sobre otro jugador: el arnés de portador único no sabe atribuirlo")]
     [InlineData("pit_veteran", AuditReadiness.NotReady, "addCounter+modifyProbability(tackle) escalado por contador, AccumulatesAcrossMatches — necesita el harness de campaña, no está bloqueado por falta de métrica")]
     // pack_mentality (modifyAttribute(strength), target=withTag:Brute) se borró del catálogo (revisor, 18
     // sep 2026); blood_tithe recorre el mismo camino con la misma forma de destinatario (Population, por
