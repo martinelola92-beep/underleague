@@ -1217,6 +1217,32 @@ enfriamientos/energía corriendo mientras uno se recoloca.
 Puertas: **6 rojas contra las 7** que traía `main`; se arreglan las dos de `tacklesPerMatch` y mejoran
 cuatro heredadas.
 
+## BI-H, segunda pasada: los saques y la parada atrapada (25 sep 2026)
+
+Cierra los tres bloqueos de la primera pasada, y **dos eran falsos**.
+
+- **`gk_catch` no necesitaba nada de `/Sim`**: el evento `Save` ya traía la respuesta en `Detail` —`held`
+  es atraparla, `parried`/`corner`/`penalty` es estirarse a despejarla—. La primera pasada lo dio por
+  bloqueado **sin haber mirado el `Detail`**.
+- **Los saques sí, y en dos piezas.** `RestartKind` se muda de dentro de `MatchEngine` a `MatchPhase.cs` y
+  se hace público (es un estado del partido, no un detalle del motor), y se graba en la traza como un byte
+  por fotograma. Y se expone el **sacador**: el primer intento disparaba el gesto sobre el dueño del balón,
+  y medido resultó que **durante la reanudación el balón no tiene dueño en ningún fotograma** (160f/0,
+  180f/0, 209f/0). El motor sí lo sabía (`_restartTaker`). Verificado después: **100 % de los fotogramas de
+  reanudación con sacador identificado**.
+- **Un fallo de precedencia, demostrado sin ambigüedad**: la recepción estaba antes que los eventos, y una
+  parada atrapada *es* el portero haciéndose dueño de un balón en vuelo. `Receive` 36 → **32**, `Catch` 0 →
+  **4**. **La suma se conserva**: los cuatro `held` estaban escondidos dentro de las recepciones.
+
+Estado del alcance: recepción, conducción, pase, tiro, cabezazo, despeje alto, parada rechazada y parada
+atrapada **se disparan y están medidos**. `throwin` y `penalty` quedan enganchados y **sin evidencia de
+activación** —el partido medido no tiene ni saque de banda ni penalti—, que no es lo mismo que «no
+funcionan».
+
+Lo que falta es **verlo en movimiento**: si el remate se lee como remate no lo dice ninguna métrica.
+
+---
+
 ## BI-H, primera pasada: el balón sale del hueso con el que se juega (25 sep 2026)
 
 Encargo del revisor, ampliado dos veces: la interacción visual con el balón debe cubrir **todo** contacto y
