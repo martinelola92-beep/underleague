@@ -111,6 +111,9 @@ public partial class BroadcastCapture : Control
         // se juzga mirando los cuatro fotogramas.
         (ulong Seed, int Node, int Frame, string Perk)? foundKnockdown = null;
 
+        // El balón más rápido del partido: es donde el rastro tiene que verse o no servir para nada.
+        (ulong Seed, int Node, int Frame, float Speed)? foundFast = null;
+
         foreach (var seed in Seeds)
         {
             run.NewRun("orc_ironworks", Race.Orc, seed);
@@ -143,6 +146,12 @@ public partial class BroadcastCapture : Control
                         break;
                     }
                 }
+            }
+
+            var fastest = FindFastestBall(playback, seed, node);
+            if (fastest is { } cand && (foundFast is null || cand.Speed > foundFast.Value.Speed))
+            {
+                foundFast = cand;
             }
 
             // El derribo se ESCENIFICA: se le pone el perk a los titulares y se vuelve a jugar el mismo
@@ -379,6 +388,30 @@ public partial class BroadcastCapture : Control
             {
                 await ShowFrame(screen, blood.Frame, "retrans-sangre");
                 await Save("retrans-sangre");
+            }
+
+            Drop(instance);
+        }
+
+        if (foundFast is { } fast)
+        {
+            GD.Print($"retransmisión: 'rastro' en la semilla {fast.Seed}, fotograma {fast.Frame}, {fast.Speed:0.00} c/t");
+            run.NewRun("orc_ironworks", Race.Orc, fast.Seed);
+            run.SelectedNodeId = fast.Node;
+
+            var instance = await Show("res://Scenes/Retransmision.tscn", frames: 10);
+            if (instance is BroadcastScreen screen)
+            {
+                // El mismo fotograma con y sin rastro: sin comparación no se sabe si el rastro aporta o
+                // si lo que se mira es el balón de siempre (skill visual-review, paso 7).
+                screen.Pitch3D.BallTrail = false;
+                await ShowFrame(screen, fast.Frame, "rastro-sin");
+                await Save("rastro-1-sin");
+
+                screen.Pitch3D.BallTrail = true;
+                screen.Pitch3D.RenderFrame(fast.Frame);
+                await Settle(2);
+                await Save("rastro-2-con");
             }
 
             Drop(instance);
@@ -840,9 +873,7 @@ public partial class BroadcastCapture : Control
         await Settle(10);
 
         GoManual(screen);
-        screen.Pitch3D.Frame = want;
-        screen.Pitch3D.Alpha = 0f;
-        screen.Pitch3D.QueueRedraw();
+        screen.Pitch3D.RenderFrame(want);
         await Settle(2);
 
         int got = screen.Pitch3D.Frame;
@@ -965,6 +996,45 @@ public partial class BroadcastCapture : Control
     /// Se pregunta al catálogo qué perks derriban en vez de traer una lista escrita a mano: si mañana
     /// otro perk derriba, esta captura lo encuentra sola.
     /// </summary>
+    /// <summary>
+    /// El fotograma con el balón más rápido del partido, saltándose los teletransportes de reanudación.
+    /// Es el instante en el que el rastro tiene que leerse: si ahí no aporta, no aporta en ninguno.
+    /// </summary>
+    private static (ulong Seed, int Node, int Frame, float Speed)? FindFastestBall(
+        MatchPlayback playback, ulong seed, int node)
+    {
+        var trace = playback.Trace;
+        if (trace is null || trace.FrameCount < 2)
+        {
+            return null;
+        }
+
+        int best = -1;
+        float bestSpeed = 0f;
+        for (int f = 1; f < trace.FrameCount; f++)
+        {
+            // Se le pregunta a la traza si el balón está EN VUELO en vez de perseguir el teletransporte
+            // con un umbral: con un corte a ojo (3f) el "balón más rápido" salía a 2,97 c/t y era un
+            // salto de reanudación, y al bajar el corte a 1,4 eligió justo 1,40. Un saque deja el balón
+            // parado, no en vuelo, así que la pregunta estructural no tiene filo que rozar.
+            if (!trace.BallInFlightAt(f) || !trace.BallInFlightAt(f - 1))
+            {
+                continue;
+            }
+
+            float step = (trace.BallAt(f) - trace.BallAt(f - 1)).Length;
+            if (step <= bestSpeed)
+            {
+                continue;
+            }
+
+            bestSpeed = step;
+            best = f;
+        }
+
+        return best < 0 ? null : (seed, node, best, bestSpeed);
+    }
+
     /// <summary>El perk que se escenifica para el experimento del derribo. Universal y de acto 1.</summary>
     private const string KnockdownPerkId = "own_third_anchor";
 

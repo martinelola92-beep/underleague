@@ -121,6 +121,13 @@ public partial class MatchPitchView3D : SubViewportContainer
     /// <summary>Disco en el césped bajo el balón en vuelo: sin él, subir el balón no se lee como altura.</summary>
     private MeshInstance3D? _ballShadow;
 
+    /// <summary>
+    /// El rastro del balón rápido: una hilera de esferas menguantes detrás de él. Infraestructura de
+    /// presentación, no el efecto de ningún perk — lo dispara la VELOCIDAD, así que sirve igual para un
+    /// cañonazo, un rechace de parada o un despeje sin saber nada de ninguno de los tres.
+    /// </summary>
+    private readonly List<MeshInstance3D> _ballTrail = new();
+
     private readonly List<MeshInstance3D> _bodies = new();
 
     /// <summary>
@@ -143,6 +150,39 @@ public partial class MatchPitchView3D : SubViewportContainer
     private ImageTexture? _whiteTexture;
     private StandardMaterial3D _groundMaterial = null!;
     private StandardMaterial3D _ballMaterial = null!;
+
+    /// <summary>
+    /// A partir de qué velocidad del balón, en casillas por tick, se dibuja su rastro.
+    ///
+    /// <para><b>MEDIDO</b> (<c>Sim.Tests/Analysis/BallSpeedCensusTests</c>, ocho partidos): la velocidad
+    /// del balón es <b>discreta</b>, no continua, porque cada tipo de vuelo tiene la suya en `tuning`:
+    /// pase <b>0,250</b>, parada 0,260, cabezazo 0,320 y <b>disparo 0,700</b>. Un umbral de 0,40 cae
+    /// justo en el hueco: por encima sólo está el disparo.</para>
+    ///
+    /// <para>Así que el rastro no dice «el balón va rapidillo»: dice <b>«esto es un disparo»</b>, y lo
+    /// dice sin que el motor tenga que contárselo a la pantalla (RT-014).</para>
+    ///
+    /// <para>No se pone a ojo a propósito: un umbral bajo llena el partido de estelas y uno alto no sale
+    /// nunca (regla H de <c>CLAUDE.md</c>: ningún número sin procedencia).</para>
+    /// </summary>
+    private const float BallTrailSpeedCellsPerTick = 0.40f;
+
+    /// <summary>Cuántas esferas tiene el rastro como mucho. La longitud real la decide la velocidad.</summary>
+    private const int BallTrailLength = 8;
+
+    /// <summary>
+    /// Por encima de esto no hay velocidad, hay un salto: una reanudación teletransporta el balón.
+    ///
+    /// <para>Sale del dato y no de un número a ojo (regla H): la velocidad más alta que el motor le da al
+    /// balón es la del disparo, <c>tuning.ball.shotSpeedCellsPerTickMilli</c> = 0,700 c/t. Pero el corte
+    /// se pone al <b>doble</b> y no en 0,700 exacto, porque un disparo viaja justo a esa cifra y un
+    /// <c>&gt;</c> contra ella es un filo de coma flotante: cortaba el rastro del disparo en la primera
+    /// mota. El salto más pequeño que se ha medido es de 2,97 c/t, así que 1,4 los separa de sobra.</para>
+    /// </summary>
+    private const float BallMaxSpeedCellsPerTick = 0.700f * 2f;
+
+    /// <summary>Apaga el rastro, para poder capturar el mismo fotograma con y sin él y compararlos.</summary>
+    public bool BallTrail { get; set; } = true;
 
     private bool _built;
     private bool _appliedSilhouette;
@@ -272,6 +312,29 @@ public partial class MatchPitchView3D : SubViewportContainer
         ApplyPalette();
         ApplyTrace();
         ApplyBloodMarks();
+        ApplyBallTrail();
+        QueueRedraw();
+    }
+
+    /// <summary>
+    /// <b>Solo para el arnés de capturas</b>: deja el campo entero —cuerpos, balón, rastro, sangre y
+    /// carteles— en ese fotograma exacto, sin depender de <c>_Process</c>.
+    ///
+    /// <para>Hace falta porque el arnés congela la pantalla con <c>SetProcess(false)</c> para que el
+    /// director no le mueva el fotograma debajo, y con el proceso apagado ya no corre nada de lo que
+    /// coloca las cápsulas: escribir <see cref="Frame"/> solo afectaba al dibujo 2D, así que el cartel de
+    /// perk decía un instante y los cuerpos enseñaban otro. Una captura que mezcla dos instantes es peor
+    /// que no tener captura, porque parece una medida.</para>
+    /// </summary>
+    public void RenderFrame(int frame)
+    {
+        Frame = frame;
+        Alpha = 0f;
+        ApplyCamera();
+        ApplyPalette();
+        ApplyTrace();
+        ApplyBloodMarks();
+        ApplyBallTrail();
         QueueRedraw();
     }
 
@@ -667,6 +730,33 @@ public partial class MatchPitchView3D : SubViewportContainer
             Visible = false,
         };
         _world.AddChild(_ballShadow);
+
+        // El rastro: esferas cada vez más pequeñas y transparentes. Se construyen una vez y se encienden
+        // o apagan por fotograma, como las manchas de sangre.
+        for (int i = 0; i < BallTrailLength; i++)
+        {
+            float fade = 1f - ((float)i / BallTrailLength);
+            var dot = new MeshInstance3D
+            {
+                Mesh = new SphereMesh
+                {
+                    Radius = BallRadius * fade,
+                    Height = BallRadius * 2f * fade,
+                    RadialSegments = 10,
+                    Rings = 5,
+                },
+                MaterialOverride = new StandardMaterial3D
+                {
+                    ShadingMode = BaseMaterial3D.ShadingModeEnum.Unshaded,
+                    AlbedoColor = new Color(1f, 1f, 1f, 0.6f * fade * fade),
+                    Transparency = BaseMaterial3D.TransparencyEnum.Alpha,
+                },
+                CastShadow = GeometryInstance3D.ShadowCastingSetting.Off,
+                Visible = false,
+            };
+            _world.AddChild(dot);
+            _ballTrail.Add(dot);
+        }
 
         _appliedSilhouette = !SilhouetteMode;
         ApplyCamera();
@@ -1493,6 +1583,60 @@ public partial class MatchPitchView3D : SubViewportContainer
     /// adelante, sin ningún estado propio de "qué se pintó ya" — retroceder o saltar con la barra
     /// simplemente vuelve a evaluar la misma condición contra el <see cref="Frame"/> que toque.
     /// </summary>
+    /// <summary>
+    /// El rastro de ESTE fotograma, deducido de la traza (RT-014): la diferencia de posición del balón
+    /// entre dos fotogramas es su velocidad, y con ella se decide si hay rastro y cuánto mide. Sin estado
+    /// acumulado —se apaga todo y se vuelve a encender— así que retroceder en la reproducción lo quita
+    /// solo, igual que las manchas de sangre.
+    /// </summary>
+    private void ApplyBallTrail()
+    {
+        for (int i = 0; i < _ballTrail.Count; i++)
+        {
+            _ballTrail[i].Visible = false;
+        }
+
+        if (!BallTrail || Trace is not { FrameCount: > 1 } trace || _ballTrail.Count == 0)
+        {
+            return;
+        }
+
+        int frame = Mathf.Clamp(Frame, 1, trace.FrameCount - 1);
+        var now = trace.BallAt(frame);
+        var before = trace.BallAt(frame - 1);
+        float step = (now - before).Length;
+
+        // Una reanudación teletransporta el balón, y eso no es velocidad: es otro sitio. Sin este corte,
+        // cada saque dejaría una estela de ocho esferas cruzando el campo.
+        if (step < BallTrailSpeedCellsPerTick || step > BallMaxSpeedCellsPerTick)
+        {
+            return;
+        }
+
+        // La longitud sale de cuánto se pasa del umbral: un rechace que lo roza deja tres esferas y un
+        // disparo a toda velocidad las ocho. Es lo que hace que el rastro DISTINGA en vez de marcar.
+        int length = Mathf.Clamp(
+            Mathf.RoundToInt(BallTrailLength * step / (BallTrailSpeedCellsPerTick * 3f)), 2, BallTrailLength);
+
+        for (int i = 0; i < length; i++)
+        {
+            int at = frame - 1 - i;
+            if (at < 0)
+            {
+                break;
+            }
+
+            var p = trace.BallAt(at);
+            if ((trace.BallAt(at + 1) - p).Length > BallMaxSpeedCellsPerTick)
+            {
+                break;
+            }
+
+            _ballTrail[i].Position = new Vector3(p.X, Mathf.Max(trace.BallHeightAt(at), 0f) + BallRadius, p.Y);
+            _ballTrail[i].Visible = true;
+        }
+    }
+
     private void ApplyBloodMarks()
     {
         for (int i = 0; i < _bloodDecals.Count; i++)
