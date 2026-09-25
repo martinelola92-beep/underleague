@@ -338,7 +338,7 @@ public partial class BroadcastScreen : Control
             Stadium = (variant ?? DefaultVariant).Stadium,
         };
         AddChild(_pitch3d);
-        _pitch3d.Bind(_trace, _playback.Setup, _catalog);
+        _pitch3d.Bind(_trace, _playback.Setup, _catalog, _playback.Result.Events);
         _pitch3d.Marks = _moments.Marks;
         BuildBloodMarks();
 
@@ -562,7 +562,7 @@ public partial class BroadcastScreen : Control
         int decisionFrame = _trace.FrameOfTick(point.Tick);
         _director.Seek(decisionFrame + 1);
         _director.Resolve();
-        _pitch3d.Bind(_trace, _playback.Setup, _catalog);
+        _pitch3d.Bind(_trace, _playback.Setup, _catalog, _playback.Result.Events);
         _pitch3d.Marks = _moments.Marks;
         BuildBloodMarks();
 

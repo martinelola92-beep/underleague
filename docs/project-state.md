@@ -1217,6 +1217,56 @@ enfriamientos/energía corriendo mientras uno se recoloca.
 Puertas: **6 rojas contra las 7** que traía `main`; se arreglan las dos de `tacklesPerMatch` y mejoran
 cuatro heredadas.
 
+## BI-H, primera pasada: el balón sale del hueso con el que se juega (25 sep 2026)
+
+Encargo del revisor, ampliado dos veces: la interacción visual con el balón debe cubrir **todo** contacto y
+**no sólo los pies** — pies, cuerpo, cabeza y manos. Presentación pura en `/Game`, sin tocar la posición
+que decide `/Sim` (RT-014).
+
+**Qué hay hecho**: el ancla deja de ser un offset inventado (`radio × 0,55` en la dirección de carrera) y
+pasa a ser **el hueso** con el que se está jugando, leído del `Skeleton3D` **ya animado** —así el punto es
+coherente con el clip en curso sin anotar nada en los clips—. Cada parte lleva hueso izquierdo y derecho y
+se elige **el más cercano al balón**: eso basta para que el golpeo salga del pie que toca, y cuesta una
+comparación de distancias en vez de un sistema de IK. Los gestos (`receive`, `header`, `gk_save`,
+`penalty`) salen de los **eventos**, porque `/Sim` no tiene estados de recibir, rematar ni parar.
+
+**Una frontera que estaba a medias**: la vista 3D no recibía los eventos, aunque RT-014 diga literalmente
+que *el render consume eventos*. `MatchScreen` ya los tenía y no se los pasaba, y resultó que hay **dos**
+pantallas que montan esa vista.
+
+**Lo que destapó la medición, y es la parte que importa**: el primer volcado de `DebugContacts()` dio
+**«gestos: NINGUNO»** en un partido entero. Los siete clips estaban enganchados y no se disparaba ninguno.
+Tres defectos —una guarda mal colocada, `MatchEvent.Actor` es el **id** y no el índice de la traza, y la
+segunda pantalla sin cablear— más un cuarto de diseño: **un gesto nacido de un evento dura un tick**, y el
+fotograma siguiente el estado lo cortaba. Una captura no enseña nada de eso: a esa distancia de cámara los
+modelos ocupan unos píxeles.
+
+Tras arreglarlo: **`Header` 2 · `Receive` 36 · `Save` 1** por partido, ancla `Feet` 433 · `Hands` 59
+fotogramas, y la separación del balón al pie **0,1 casillas** (el objetivo de la captura era ~0,175).
+
+**Bloqueado, y es de `/Sim`**: los **saques** no se pueden enganchar porque `MatchPhase` sólo tiene un
+`Restart` genérico y la traza no lleva el tipo de reanudación. El clip `throwin` sigue cargado sin usar, y
+`gk_catch` igual (ningún evento distingue atrapar de despejar). Exponer el tipo de reanudación es cambio de
+`/Sim` y va en su propio commit.
+
+---
+
+## Decisión del revisor: el balance de winrate espera (25 sep 2026)
+
+> *«Vamos primero a solucionar el balanceo total y luego ya iremos con los balanceos de winrate. El gameplay
+> todavía debe evolucionar.»*
+
+**No se retoman las puertas de `BuildGateTests` ni las bandas de winrate** —`elf_out_of_zone`, CAT-J con sus
+cuatro métricas, `orc_violence`— hasta que el gameplay deje de moverse. Quedan documentadas con su medición
+y su etiqueta, que es justo para lo que sirven: afinar un winrate contra un motor que va a cambiar es medir
+el árbol equivocado, y este proyecto ya ha pagado dos veces por eso (la línea base de la ADR 0137 y la foto
+de puertas de la ADR 0147).
+
+Lo que **sí** sigue valiendo de ese trabajo es lo que no es winrate: el denominador roto de «1.200 ticks»,
+que las conducciones se han encogido 3,6 veces, y que se decide conducir un 44 % menos.
+
+---
+
 ## Conducción cerrada: tres dosis, con su error típico delante (25 sep 2026)
 
 El revisor: *«ponte entonces primero a cerrar conducción»*. Se cerró **remidiendo**, no leyendo la ADR: el

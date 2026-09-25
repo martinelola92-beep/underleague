@@ -167,3 +167,123 @@ que va a haber contacto, puede anticiparlo; si se entera en el mismo fotograma, 
 `architecture-review` (frontera `/Sim`-`/Game`, abstracción nueva de presentación) y **`visual-review`**
 obligatoriamente antes de decir que se ve mejor — con capturas del antes y del después, porque el criterio
 de éxito de este encargo es **perceptual** y no hay métrica que lo mida.
+
+---
+
+## Implementación, primera pasada (25 sep 2026)
+
+### Los tres puntos que la ficha exigía antes de tocar código, resueltos
+
+1. **Cómo se ancla hoy** (`MatchPitchView3D:1489-1535`): el balón se dibuja en `BallAt(frame)` —el centro
+   del aro lógico— más un **offset 2D plano**, `radio × 0,55` en la dirección de carrera, con la altura de
+   `BallHeightAt`. **Un único ancla para todos los contactos**: eso es exactamente el síntoma.
+2. **Qué hay en los modelos**: 65 huesos `mixamorig_*` verificados en el FBX (el importador cambia `:` por
+   `_`), con `Head`, `LeftToeBase`/`RightToeBase`, `LeftHand`/`RightHand`, `Spine2`. Y **7 de los 15 clips
+   cargados no se pedían nunca**: `receive`, `header`, `throwin`, `penalty`, `gk_save`, `gk_catch`,
+   `standup`.
+3. **La antelación** —el punto que decidía si esto era posible— **sobra**: `PassingTicks: 5` y
+   `ShootingTicks: 5`, o sea **cinco ticks armando** el golpeo en estado `Passing`/`Shooting` y
+   conservando el balón (0,33 s ≈ 20 fotogramas a 60 fps). Y la traza **está entera en memoria** cuando se
+   reproduce: la vista puede mirar `BallOwnerAt(frame ± k)` sin predecir nada, porque lee un resultado ya
+   calculado.
+
+### Lo que dijo `architecture-review`
+
+- **No hace falta abstracción nueva.** El patrón hermano ya existe: `PlayerModel.Pose(velocity, state)` —la
+  vista pasa lo que dice la traza, el modelo decide sobre su esqueleto—. El ancla es **el método
+  simétrico**, `PlayerModel.TryContactPoint(part, towards, out world)`, y la tabla contacto→hueso vive
+  junto a la tabla clip→fichero, que es donde ya estaba el conocimiento del pack.
+- **Elimina complejidad, no la mueve**: `radio × 0,55` en dirección de carrera era un **sustituto
+  inventado** del pie. Con el hueso el dato es real. El offset se queda solo como respaldo.
+- **Faltaba una pieza de frontera a medias**: la vista 3D recibía `Bind(trace, setup, catalog)` pero **no
+  los eventos**, y RT-014 dice literalmente que *el render consume eventos*. `MatchScreen` ya los tenía
+  (`Playback.Result.Events`, los usa `MatchFlashView`) y no se los pasaba. Sin ellos no se distingue una
+  parada de un despeje: **`/Sim` no tiene estados de recibir, rematar ni parar** — el contacto vive en el
+  evento, no en `PlayerState`.
+- **Orden de implementación, y es diseño**: primero la animación, después el ancla. El ancla lee el hueso
+  *de la animación que se está reproduciendo*; anclar a la cabeza mientras el modelo corre se ve **peor**.
+
+### Qué se ha hecho
+
+- `ContactCue` (gesto) y `ContactPart` (parte del cuerpo) en `PlayerModel`, con la tabla de huesos
+  verificada. Cada parte lleva **dos huesos, izquierdo y derecho**, y se elige el **más cercano al balón**:
+  es lo único que hace falta para que el golpeo salga del pie que toca, y cuesta una comparación de
+  distancias en vez de un sistema de IK.
+- `TryContactPoint` lee el `Skeleton3D` **ya animado** (`GetBoneGlobalPose` compuesto con la transformada
+  del esqueleto), así que el punto es coherente con el clip en curso **sin anotar nada en los clips**.
+- La vista deduce el gesto de los **eventos del tramo del fotograma** (`Save` → `gk_save`, `AerialDuel` →
+  `header`, `Clearance` alto → `header`) y la recepción de la traza (el fotograma en que el balón pasa a
+  tener dueño viniendo en vuelo).
+- La parte del cuerpo sale de `BallHeightAt`: **portero → manos**, por encima de 0,75 casillas → cabeza,
+  entre 0,45 y 0,75 → pecho, el resto → pie.
+- **Válvula de seguridad**: si el hueso queda a más de **0,5 casillas** del centro del portador, se
+  descarta y se vuelve al offset. Una estirada o un brazo en alto no pueden llevarse la pelota media
+  casilla. Y el ancla **solo se aplica con dueño**, que es cuando la traza ya pone el balón encima del
+  jugador y la vista ya lo apartaba: la posición de `/Sim` sigue mandando (RT-014).
+
+### Cómo se verifica, y no es mirando
+
+Se extiende el instrumento que ya existía (`BroadcastCapture`, *«medir, no mirar»*, que compara la
+separación balón-jugador contra un objetivo de 0,175 casillas) con `DebugContacts()`: cuántos
+fotogramas-jugador de **todo el partido** piden cada gesto y cada parte del cuerpo. **Un gesto que sale
+cero veces es código muerto, y eso una captura no lo enseña.**
+
+### Lo que midió la verificación, y lo que destapó
+
+`DebugContacts()` volcó, sobre un partido entero del club humano (1.947 fotogramas, 303 eventos):
+
+| pasada | gestos | ancla con dueño |
+|---|---|---|
+| primera | **NINGUNO** | `Feet` 433 · `Hands` 59 |
+| tras arreglar la guarda | `Receive` 36 | igual |
+| tras cablear los eventos | **`Header` 2 · `Receive` 36 · `Save` 1** | igual |
+
+**El instrumento pagó su coste en la primera línea.** «Gestos: NINGUNO» en un partido entero: los siete
+clips estaban enganchados y no se disparaba ninguno. Una captura no lo habría enseñado —los modelos ocupan
+unos pocos píxeles a esa distancia de cámara— y el paquete se habría entregado como si funcionara. Tres
+defectos, los tres míos:
+
+1. **La guarda de `_events is null` cortaba también la recepción**, que no necesita eventos. Estaba
+   colocada al principio de la función y hacía `return` antes de llegar a esa rama.
+2. **`MatchEvent.Actor` es el `Id` del jugador** (`actor.Id`, verificado en `MatchEngine:5377`), **no su
+   índice en la traza**, y yo comparaba contra el índice. Los dos números no tienen nada que ver: en la
+   puerta de builds un equipo arranca en el id 100001.
+3. **Había DOS pantallas que montan la vista 3D** —`MatchScreen` y `BroadcastScreen`— y sólo cablé los
+   eventos en una. La captura usa la otra.
+
+Y un cuarto, de diseño, que salió al ver `Header 2`: **un gesto nacido de un evento dura un tick**, así que
+el fotograma siguiente el `switch` de estado llamaba a `Switch("jog")` y **cortaba la animación** — se
+lanzaba el remate y al instante volvía a correr. El disparo y el pase no lo sufren porque `Passing` y
+`Shooting` duran cinco ticks. Se arregla con `_holdingCue`, el mismo patrón que ya encadena `trip` con
+`fallen`: lo manda el reloj de la propia animación, no un temporizador aparte. Solo lo interrumpe irse al
+suelo.
+
+**La separación del balón al pie**: de `radio × 0,55` (un valor inventado) a **0,1 casillas** medidas
+contra el hueso, con el objetivo de la captura en ~0,175. Y el ancla se reparte `Feet` 433 · `Hands` 59
+fotogramas, que es exactamente lo esperable: con dueño el balón va al pie, salvo el portero.
+
+**Lo que la captura NO demuestra**: a la distancia de cámara de `retrans-modelos-conduccion.png` los
+modelos ocupan unos pocos píxeles y el balón no se distingue. La imagen sirve para ver que nada se rompió,
+no para juzgar el ancla. Lo que sostiene el resultado es la medición.
+
+### Lo que queda, y por qué
+
+1. **Los saques no se pueden enganchar todavía, y es una carencia de `/Sim`.** `MatchPhase` sólo tiene un
+   **`Restart` genérico**: la traza no lleva el tipo de reanudación, así que desde `/Game` no hay forma de
+   distinguir un saque de banda de uno de puerta. El clip `throwin` sigue cargado y sin usar. Para
+   cubrirlo hace falta que `/Sim` exponga el tipo de reanudación —un campo en la traza o un evento—, que
+   es cambio de `/Sim` y va en su propio commit (un commit no mezcla `/Sim` y `/Game`). **El penalti sí**
+   se enganchó: `MatchPhase.Penalty` es fase propia.
+2. **`gk_catch` sigue sin disparar**: no hay evento que distinga una parada atrapada de una despejada.
+   Mismo bloqueo que los saques.
+3. **El ancla solo actúa con dueño.** El cabezazo y la parada mejoran por la **animación**, no por la
+   posición del balón — moverlo cuando `/Sim` dice que no es de nadie es justo lo que el encargo prohíbe.
+   Si al verlo en movimiento se queda corto, el paso siguiente es atraerlo al hueso durante los pocos
+   fotogramas del contacto, con la misma válvula de 0,5 casillas.
+4. **Falta verlo en movimiento.** La medición dice que se dispara y dónde ancla; si el remate se lee como
+   remate es una pregunta que solo contesta el revisor mirando la build.
+
+**Nota de honestidad sobre el penalti**: `ContactCue.Penalty` está enganchado a `MatchPhase.Penalty`, pero
+el partido de referencia con el que se mide **no tiene ninguno**, así que sale 0 en el volcado. Queda como
+**sin evidencia de activación** —mecanismo real, nunca observado disparándose—, que no es lo mismo que
+«no funciona» ni que «funciona».

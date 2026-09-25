@@ -38,6 +38,36 @@ namespace Underleague.Game.Ui;
 /// <b>estirada del portero</b> no está enganchada porque depende de un evento —una parada— y no del estado
 /// del jugador, que es lo único que esta clase mira.</para>
 /// </summary>
+/// <summary>
+/// El gesto que toca este fotograma porque el jugador está tocando el balón, cuando el
+/// <see cref="PlayerState"/> no basta para saberlo (BI-H). <c>/Sim</c> no tiene estados de recibir, rematar
+/// ni parar —el contacto vive en los <b>eventos</b>, no en el estado—, así que lo deduce la vista de lo
+/// que ya lee de la traza y se lo pasa al modelo. <see cref="None"/> es «nada especial, decide por estado».
+/// </summary>
+public enum ContactCue
+{
+    None,
+    Receive,
+    Header,
+    ThrowIn,
+    Save,
+    Catch,
+    Penalty,
+}
+
+/// <summary>
+/// La parte del cuerpo con la que se está jugando el balón, para anclar el <b>dibujo</b> de la pelota
+/// (BI-H). No es física ni geometría exacta: es el punto del esqueleto animado del que debe parecer que
+/// sale el balón.
+/// </summary>
+public enum ContactPart
+{
+    Feet,
+    Head,
+    Hands,
+    Chest,
+}
+
 public sealed partial class PlayerModel : Node3D
 {
     /// <summary>La carpeta del material de fútbol: personaje y clips, todos del mismo esqueleto.</summary>
@@ -54,6 +84,22 @@ public sealed partial class PlayerModel : Node3D
     /// para dejar la animación <b>en el sitio</b> (ver <see cref="PinInPlace"/>). Con otro pack cambia.
     /// </summary>
     private const string RootBone = ":mixamorig_Hips";
+
+    /// <summary>
+    /// De qué hueso sale el balón según con qué se esté jugando (BI-H). Los nombres están <b>verificados
+    /// en el propio FBX</b> —el personaje trae los 65 huesos <c>mixamorig:*</c> y el importador de Godot
+    /// sustituye el <c>:</c> por <c>_</c>—, no supuestos. Cada parte lleva dos huesos, izquierdo y derecho,
+    /// y se elige el que esté <b>más cerca del balón</b>: es lo único que hace falta para que parezca que
+    /// golpea con la pierna que toca, y cuesta una comparación de distancias en vez de un sistema de IK.
+    /// Con otro pack de animación cambia esta tabla y nada más.
+    /// </summary>
+    private static readonly (ContactPart Part, string Left, string Right)[] ContactBones =
+    {
+        (ContactPart.Feet, "mixamorig_LeftToeBase", "mixamorig_RightToeBase"),
+        (ContactPart.Head, "mixamorig_Head", "mixamorig_Head"),
+        (ContactPart.Hands, "mixamorig_LeftHand", "mixamorig_RightHand"),
+        (ContactPart.Chest, "mixamorig_Spine2", "mixamorig_Spine2"),
+    };
 
     /// <summary>
     /// Los clips, con la clave por la que los pide el código, el fichero del que salen y si van en bucle.
@@ -110,7 +156,24 @@ public sealed partial class PlayerModel : Node3D
     private static bool _announced;
 
     private AnimationPlayer? _anim;
+    private Skeleton3D? _skeleton;
+
+    /// <summary>
+    /// Índices de hueso resueltos una vez por modelo. <see cref="Skeleton3D.FindBone"/> recorre los 65
+    /// huesos por nombre, y esto se consultaría catorce veces por fotograma.
+    /// </summary>
+    private readonly System.Collections.Generic.Dictionary<ContactPart, (int Left, int Right)> _contactBones = new();
     private string _playing = string.Empty;
+
+    /// <summary>
+    /// El gesto de contacto que se está reproduciendo y hay que <b>dejar terminar</b>, o vacío. Existe
+    /// porque un gesto nacido de un evento dura <b>un tick</b> —el cabezazo, la parada— y sin esto el
+    /// fotograma siguiente lo cortaba con la postura de estado: se lanzaba el remate y al instante volvía
+    /// a correr. El disparo y el pase no lo sufren porque <c>Passing</c>/<c>Shooting</c> duran cinco ticks.
+    /// Es el mismo patrón que ya encadena <c>trip</c> con <c>fallen</c>: lo manda el reloj de la propia
+    /// animación, no un temporizador aparte.
+    /// </summary>
+    private string _holdingCue = string.Empty;
     private bool _keeper;
 
     /// <summary>
@@ -153,6 +216,8 @@ public sealed partial class PlayerModel : Node3D
         model.Position = new Vector3(0f, -bodyHeight / 2f, 0f);
 
         model._anim = FindAnimationPlayer(instance);
+        model._skeleton = FindSkeleton(instance);
+        model.ResolveContactBones();
         if (model._anim is not null && _library is not null && !model._anim.HasAnimationLibrary(Library))
         {
             model._anim.AddAnimationLibrary(Library, _library);
@@ -186,7 +251,7 @@ public sealed partial class PlayerModel : Node3D
     /// simulación ya publica por jugador (<c>MatchTrace.StateAt</c>): <b>el modelo no decide nada</b>, solo
     /// mira lo que está escrito (RT-014).
     /// </summary>
-    public void Pose(Vector2 velocity, PlayerState state)
+    public void Pose(Vector2 velocity, PlayerState state, ContactCue cue = ContactCue.None)
     {
         if (_anim is null)
         {
@@ -200,6 +265,43 @@ public sealed partial class PlayerModel : Node3D
             // le haría girar sobre sí mismo. Antes de elegir postura, para que la entrada y el trompicón
             // también salgan orientados.
             Rotation = new Vector3(0f, Mathf.Atan2(velocity.X, velocity.Y) + FacingOffset, 0f);
+        }
+
+        // El gesto de contacto va ANTES que el estado, pero después del suelo: un rematador de cabeza
+        // sigue estando en Positioning para /Sim, y un portero que para sigue estando donde estaba. Lo que
+        // no puede es tapar un derribo —el que cae, cae— así que esos dos casos se miran primero.
+        bool floored = state is PlayerState.KnockedDown or PlayerState.Injured;
+
+        // Un gesto en curso se deja terminar. Solo lo interrumpe irse al suelo: el que cae, cae.
+        if (_holdingCue.Length > 0)
+        {
+            if (!floored && _playing == _holdingCue && _anim.IsPlaying())
+            {
+                return;
+            }
+
+            _holdingCue = string.Empty;
+        }
+
+        if (cue != ContactCue.None && !floored)
+        {
+            string? clip = cue switch
+            {
+                ContactCue.Receive => "receive",
+                ContactCue.Header => "header",
+                ContactCue.ThrowIn => "throwin",
+                ContactCue.Save => "gk_save",
+                ContactCue.Catch => "gk_catch",
+                ContactCue.Penalty => "penalty",
+                _ => null,
+            };
+
+            if (clip is not null)
+            {
+                Once(clip);
+                _holdingCue = clip;
+                return;
+            }
         }
 
         switch (state)
@@ -253,6 +355,79 @@ public sealed partial class PlayerModel : Node3D
         bool running = speed > RunThreshold;
         Switch(running ? "run" : "jog");
         _anim.SpeedScale = Mathf.Clamp(speed / (running ? RunReferenceSpeed : JogReferenceSpeed), 0.6f, 1.8f);
+    }
+
+    /// <summary>
+    /// Dónde está, en el mundo, la parte del cuerpo con la que se está jugando el balón (BI-H). Devuelve
+    /// <c>false</c> si este modelo no tiene esqueleto o el hueso no existe en el pack, y entonces la vista
+    /// se queda con lo que hacía antes — igual que se queda con la cápsula cuando no hay modelo.
+    ///
+    /// <para>Se lee del <see cref="Skeleton3D"/> <b>ya animado</b>: la postura de este fotograma la ha
+    /// calculado el <see cref="AnimationPlayer"/>, así que el punto es coherente con el clip que se está
+    /// reproduciendo sin anotar nada en los clips ni añadir marcadores. De los dos huesos de la parte se
+    /// devuelve el más cercano a <paramref name="towards"/>, que es lo que hace que un pase salga del pie
+    /// que está del lado del balón.</para>
+    /// </summary>
+    public bool TryContactPoint(ContactPart part, Vector3 towards, out Vector3 world)
+    {
+        world = Vector3.Zero;
+        if (_skeleton is null || !_contactBones.TryGetValue(part, out var bones))
+        {
+            return false;
+        }
+
+        var skeletonToWorld = _skeleton.GlobalTransform;
+        var left = bones.Left >= 0 ? skeletonToWorld * _skeleton.GetBoneGlobalPose(bones.Left).Origin : (Vector3?)null;
+        var right = bones.Right >= 0 ? skeletonToWorld * _skeleton.GetBoneGlobalPose(bones.Right).Origin : (Vector3?)null;
+
+        if (left is null && right is null)
+        {
+            return false;
+        }
+
+        if (left is null || right is null)
+        {
+            world = left ?? right!.Value;
+            return true;
+        }
+
+        world = left.Value.DistanceSquaredTo(towards) <= right.Value.DistanceSquaredTo(towards)
+            ? left.Value
+            : right.Value;
+        return true;
+    }
+
+    /// <summary>Los índices de la tabla, una vez por modelo. Un hueso que no exista queda en -1.</summary>
+    private void ResolveContactBones()
+    {
+        if (_skeleton is null)
+        {
+            return;
+        }
+
+        foreach (var (part, leftName, rightName) in ContactBones)
+        {
+            _contactBones[part] = (_skeleton.FindBone(leftName), _skeleton.FindBone(rightName));
+        }
+    }
+
+    /// <summary>El <see cref="Skeleton3D"/> esté donde esté, por el mismo motivo que el reproductor.</summary>
+    private static Skeleton3D? FindSkeleton(Node node)
+    {
+        if (node is Skeleton3D found)
+        {
+            return found;
+        }
+
+        foreach (var child in node.GetChildren())
+        {
+            if (FindSkeleton(child) is { } deeper)
+            {
+                return deeper;
+            }
+        }
+
+        return null;
     }
 
     /// <summary>Cambia de animación solo si no es la que ya suena (llamar cada fotograma es seguro).</summary>

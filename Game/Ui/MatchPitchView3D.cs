@@ -1,8 +1,10 @@
 using System.Collections.Generic;
+using System.Linq;
 using Godot;
 using Underleague.Game.Ui.Broadcast;
 using Underleague.Sim.Data;
 using Underleague.Sim.Engine;
+using Underleague.Sim.Events;
 using Underleague.Sim.Model;
 using Underleague.Sim.Run.View;
 
@@ -91,6 +93,7 @@ public partial class MatchPitchView3D : SubViewportContainer
     private WorldEnvironment _environment = null!;
     private MeshInstance3D _ground = null!;
     private MeshInstance3D _ball = null!;
+    private IReadOnlyList<MatchEvent>? _events;
 
     /// <summary>Disco en el césped bajo el balón en vuelo: sin él, subir el balón no se lee como altura.</summary>
     private MeshInstance3D? _ballShadow;
@@ -108,6 +111,8 @@ public partial class MatchPitchView3D : SubViewportContainer
     private readonly List<Label3D> _numbers = new();
     private readonly List<float> _heights = new();
     private readonly List<float> _radii = new();
+    /// <summary>Quién es portero, en el mismo orden que <see cref="_radii"/>: lo pregunta el ancla del balón (BI-H), que a las manos del portero va y a los pies no.</summary>
+    private readonly List<bool> _keepers = new();
 
     private ArrayMesh? _ringMesh;
 
@@ -258,8 +263,13 @@ public partial class MatchPitchView3D : SubViewportContainer
     /// recorrido que hace la ventana de sustitución. El radio sale de <c>/data</c> (<c>bodyRadius</c>) y la
     /// altura de la proporción de RA-002.
     /// </summary>
-    public void Bind(MatchTrace? trace, MatchSetup? setup, Catalog? catalog)
+    public void Bind(MatchTrace? trace, MatchSetup? setup, Catalog? catalog, IReadOnlyList<MatchEvent>? events = null)
     {
+        // Los EVENTOS, que hasta BI-H no llegaban a esta vista aunque RT-014 diga literalmente que el
+        // render los consume. Sin ellos no hay forma de distinguir una parada de un despeje ni un remate
+        // de cabeza de un pase: /Sim no tiene estados de recibir, rematar ni parar, el contacto vive en el
+        // evento. `MatchTrace.EventFromAt`/`EventCountAt` delimitan el tramo de cada fotograma.
+        _events = events;
         EnsureBuilt();
         Trace = trace;
 
@@ -284,6 +294,7 @@ public partial class MatchPitchView3D : SubViewportContainer
         _numbers.Clear();
         _heights.Clear();
         _radii.Clear();
+        _keepers.Clear();
 
         if (trace is null || setup is null || catalog is null)
         {
@@ -307,6 +318,7 @@ public partial class MatchPitchView3D : SubViewportContainer
             _bodies.Add(body);
             _heights.Add(height);
             _radii.Add(radius);
+            _keepers.Add(IsKeeper(setup, player));
 
             // MAQUETA (23 sep 2026, encargo del revisor): solo los humanos llevan modelo, para poder
             // comparar las dos cosas en la misma imagen. Si el modelo no está, TryCreate devuelve null y
@@ -946,6 +958,49 @@ public partial class MatchPitchView3D : SubViewportContainer
     /// captura: el revisor lo reportó de vista y de vista se puede confundir con un problema de cámara.
     /// <c>Carrier</c> es -1 si el balón no tiene dueño.
     /// </summary>
+    /// <summary>
+    /// BI-H, medir en vez de mirar: cuántos fotogramas-jugador de TODO el partido piden cada gesto de
+    /// contacto y cada parte del cuerpo. Es la comprobación de que la capa se dispara —un gesto que sale
+    /// cero veces es código muerto, y eso una captura no lo enseña— y de con qué se está jugando el balón.
+    /// </summary>
+    public string DebugContacts()
+    {
+        if (Trace is not { FrameCount: > 0 } trace)
+        {
+            return "sin traza";
+        }
+
+        var cues = new Dictionary<ContactCue, int>();
+        var parts = new Dictionary<ContactPart, int>();
+        for (int f = 0; f < trace.FrameCount; f++)
+        {
+            for (int p = 0; p < trace.Players.Count; p++)
+            {
+                var cue = CueFor(trace, f, p);
+                if (cue != ContactCue.None)
+                {
+                    cues[cue] = cues.GetValueOrDefault(cue) + 1;
+                }
+            }
+
+            int carrier = trace.BallOwnerAt(f);
+            if (carrier >= 0)
+            {
+                var part = ContactPartFor(trace, f, carrier);
+                parts[part] = parts.GetValueOrDefault(part) + 1;
+            }
+        }
+
+        string gestos = cues.Count == 0
+            ? "NINGUNO"
+            : string.Join(" · ", cues.OrderBy(e => e.Key.ToString(), System.StringComparer.Ordinal).Select(e => $"{e.Key} {e.Value}"));
+        string cuerpo = parts.Count == 0
+            ? "NINGUNA"
+            : string.Join(" · ", parts.OrderBy(e => e.Key.ToString(), System.StringComparer.Ordinal).Select(e => $"{e.Key} {e.Value}"));
+        string fuente = _events is null ? "SIN EVENTOS (Bind no los recibió)" : $"{_events.Count} eventos";
+        return $"gestos: {gestos} | ancla con dueño: {cuerpo} | {fuente}";
+    }
+
     public (Vector3 Ball, Vector3 Carrier, int Index) DebugBall()
     {
         if (Trace is not { FrameCount: > 0 } trace)
@@ -1483,7 +1538,7 @@ public partial class MatchPitchView3D : SubViewportContainer
             // La velocidad sale de los dos fotogramas que la interpolación ya usa, convertida a casillas
             // por segundo (ticks lógicos a 15/s, RT-020). El modelo solo MIRA lo que la traza escribió: no
             // decide nada del partido (RT-014).
-            model.Pose(StepOf(trace, frame, i) * TicksPerSecond, trace.StateAt(frame, i));
+            model.Pose(StepOf(trace, frame, i) * TicksPerSecond, trace.StateAt(frame, i), CueFor(trace, frame, i));
         }
 
         var ball = InterpolateBall(trace, frame);
@@ -1515,6 +1570,30 @@ public partial class MatchPitchView3D : SubViewportContainer
                 : _radii[carrier] + BallRadius + 0.06f;
 
             offset = unit * distance;
+
+            // BI-H: si hay modelo, el ancla deja de ser un offset inventado y pasa a ser EL HUESO con el
+            // que se está jugando —el pie que golpea, la cabeza que remata, las manos del portero—, leído
+            // del esqueleto ya animado. El offset de arriba se queda como respaldo: cápsulas, huesos que
+            // el pack no traiga, y el caso en que el hueso se vaya demasiado lejos.
+            //
+            // **La posición de /Sim sigue mandando** (RT-014): esto mueve el DIBUJO, y sólo con dueño,
+            // que es cuando la traza ya pone el balón exactamente encima del jugador y esta vista ya lo
+            // apartaba. Si el hueso queda a más de MaxBoneAnchorCells del centro del portador, se
+            // descarta y se vuelve al offset — una animación con el brazo estirado no puede llevarse la
+            // pelota media casilla.
+            if (_models[carrier] is { } model)
+            {
+                var part = ContactPartFor(trace, frame, carrier);
+                var here = new Vector3(ball.X, 0f, ball.Y);
+                if (model.TryContactPoint(part, here, out var bone))
+                {
+                    var pull = new Vector2(bone.X - ball.X, bone.Z - ball.Y);
+                    if (pull.Length() <= MaxBoneAnchorCells)
+                    {
+                        offset = pull;
+                    }
+                }
+            }
         }
 
         // La ALTURA del balón (ADR 0135 pasos 1-2). Hasta el 23 sep 2026 esta vista lo dibujaba a altura
@@ -1569,6 +1648,110 @@ public partial class MatchPitchView3D : SubViewportContainer
     /// raza a propósito: el balón va a los pies de quien lo lleva, y un enano y un orco no son iguales.
     /// </summary>
     private const float FeetOffsetFactor = 0.55f;
+
+    /// <summary>
+    /// Lo más lejos del centro del portador que se acepta anclar el balón a un hueso, en casillas (BI-H).
+    /// Un humano mide 0,907 casillas, así que media casilla es medio cuerpo: por encima de eso la postura
+    /// está haciendo algo —una estirada, un brazo en alto— que no debe arrastrar la pelota, y se vuelve al
+    /// respaldo. Es la válvula que impide que la presentación contradiga a <c>/Sim</c>.
+    /// </summary>
+    private const float MaxBoneAnchorCells = 0.5f;
+
+    /// <summary>
+    /// Por encima de esta altura del balón, en casillas, el contacto es de cabeza y no de pie (BI-H). Un
+    /// humano mide 0,907 casillas y la cabeza le queda alrededor de 0,8; se corta por debajo, a la altura
+    /// del pecho, porque el balón que llega a 0,55 ya no se juega con el pie y el pecho es el gesto
+    /// intermedio. Sale de <c>BallHeightAt</c>, que existe desde la ADR 0135.
+    /// </summary>
+    private const float HeadContactHeightCells = 0.75f;
+    private const float ChestContactHeightCells = 0.45f;
+
+    /// <summary>
+    /// Con qué parte del cuerpo se está jugando el balón este fotograma (BI-H). El portero que tiene el
+    /// balón lo tiene en las manos; por encima de la cabeza se cabecea; a media altura es el pecho; el
+    /// resto es el pie, que es el caso normal y por eso es el respaldo.
+    /// </summary>
+    private ContactPart ContactPartFor(MatchTrace trace, int frame, int player)
+    {
+        if (player >= 0 && player < _keepers.Count && _keepers[player])
+        {
+            return ContactPart.Hands;
+        }
+
+        float height = trace.BallHeightAt(frame);
+        if (height >= HeadContactHeightCells)
+        {
+            return ContactPart.Head;
+        }
+
+        return height >= ChestContactHeightCells ? ContactPart.Chest : ContactPart.Feet;
+    }
+
+    /// <summary>
+    /// El gesto de contacto de este fotograma, deducido de los EVENTOS del tramo (BI-H). Hace falta
+    /// porque <c>/Sim</c> no tiene estados de recibir, rematar ni parar: un rematador de cabeza sigue
+    /// estando en <c>Positioning</c>. Se recorre solo el tramo del fotograma
+    /// —<c>[EventFromAt, +EventCountAt)</c>—, que son cero o unos pocos eventos.
+    /// </summary>
+    private ContactCue CueFor(MatchTrace trace, int frame, int player)
+    {
+        // La RECEPCIÓN va primero y NO depende de los eventos: es el fotograma en que el balón pasa a
+        // tener dueño después de venir volando. Se mira la traza hacia atrás, que ya está entera en
+        // memoria —esto es reproducir un partido ya jugado, no predecirlo—.
+        //
+        // Estaba detrás de la guarda de `_events` y por eso no se disparaba NUNCA: el primer volcado de
+        // `DebugContacts()` dio «gestos: NINGUNO» en un partido entero. Una captura no lo habría enseñado.
+        if (trace.BallOwnerAt(frame) == player && frame > 0 && trace.BallOwnerAt(frame - 1) != player
+            && trace.BallInFlightAt(frame - 1))
+        {
+            return ContactCue.Receive;
+        }
+
+        // El PENALTI es una fase propia del partido, así que el que tiene el balón durante ella lo está
+        // colocando para tirarlo. Los demás saques —banda, puerta, córner, falta— NO se pueden distinguir
+        // desde aquí: `MatchPhase` sólo tiene un `Restart` genérico y la traza no lleva el tipo de
+        // reanudación, así que el gesto de saque de banda (`throwin`, cargado y sin usar) sigue sin poder
+        // engancharse hasta que `/Sim` lo exponga. Queda anotado en BI-H, no simulado a ojo desde la vista.
+        if (trace.PhaseAt(frame) == MatchPhase.Penalty && trace.BallOwnerAt(frame) == player)
+        {
+            return ContactCue.Penalty;
+        }
+
+        if (_events is null)
+        {
+            return ContactCue.None;
+        }
+
+        // `MatchEvent.Actor` es el **id** del jugador (`actor.Id`), no su índice en la traza, y los dos
+        // números no tienen nada que ver: en la puerta de builds un equipo arranca en el id 100001. Hay
+        // que traducir, y el mapa se construye una vez en `Bind`.
+        int actorId = player >= 0 && player < trace.Players.Count ? trace.Players[player].Id : -1;
+
+        int from = trace.EventFromAt(frame);
+        int count = trace.EventCountAt(frame);
+        for (int e = from; e < from + count && e < _events.Count; e++)
+        {
+            var ev = _events[e];
+            if (ev.Actor != actorId)
+            {
+                continue;
+            }
+
+            switch (ev.Type)
+            {
+                case EventType.Save:
+                    return ContactCue.Save;
+                case EventType.AerialDuel:
+                    return ContactCue.Header;
+                case EventType.Clearance:
+                    // Un despeje alto es un cabezazo y uno raso es una patada; lo decide la altura del
+                    // balón, no el evento, que es el mismo en los dos casos.
+                    return trace.BallHeightAt(frame) >= HeadContactHeightCells ? ContactCue.Header : ContactCue.None;
+            }
+        }
+
+        return ContactCue.None;
+    }
 
     /// <summary>
     /// Cuánto se mueve ese jugador entre este fotograma y el siguiente, en casillas por tick. Es la

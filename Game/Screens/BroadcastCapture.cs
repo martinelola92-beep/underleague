@@ -544,6 +544,10 @@ public partial class BroadcastCapture : Control
 
                     // Medir, no mirar: la separación entre el balón dibujado y el jugador que lo lleva, en
                     // casillas. Al pie le corresponden ~0,175 (unos 35 cm a la escala del campo).
+                    // BI-H: qué gestos de contacto se disparan en todo el partido y con qué parte del
+                    // cuerpo se ancla el balón. Un gesto que sale cero veces es código muerto.
+                    GD.Print($"retrans-modelos-contacto: {humanScreen.Pitch3D.DebugContacts()}");
+
                     var (ballAt, carrierAt, carrierIndex) = humanScreen.Pitch3D.DebugBall();
                     float apart = new Vector2(ballAt.X - carrierAt.X, ballAt.Z - carrierAt.Z).Length();
                     GD.Print($"retrans-modelos-conduccion: fotograma {carryFrame}, portador {carrierIndex}, "

@@ -236,7 +236,7 @@ public partial class MatchScreen : Control
             Visible = false,
         };
         AddChild(_pitch3d);
-        _pitch3d.Bind(_trace, _run.Playback?.Setup, _run.Catalog);
+        _pitch3d.Bind(_trace, _run.Playback?.Setup, _run.Catalog, _run.Playback?.Result.Events);
         BindFlashes();
 
         // Los dos interruptores de la vista viven en el canalón del panel del campo, que es el único hueco
@@ -533,7 +533,7 @@ public partial class MatchScreen : Control
     {
         _trace = _run.Playback!.Trace;
         _pitch.Trace = _trace;
-        _pitch3d.Bind(_trace, _run.Playback!.Setup, _run.Catalog);
+        _pitch3d.Bind(_trace, _run.Playback!.Setup, _run.Catalog, _run.Playback!.Result.Events);
         BindFlashes();
         _lines.Clear();
         _lines.AddRange(_run.MatchLog());
