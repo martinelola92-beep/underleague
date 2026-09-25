@@ -301,8 +301,7 @@ public partial class BroadcastCapture : Control
 
             foreach (var (label, frame) in labels)
             {
-                screen.SeekTo(frame);
-                await Settle(10);
+                await ShowFrame(screen, frame, label);
                 await Save("retrans-" + label);
 
                 if (label == "decision")
@@ -328,7 +327,7 @@ public partial class BroadcastCapture : Control
             if (instance is BroadcastScreen screen)
             {
                 GoManual(screen);
-                screen.SeekTo(shot.StartFrame);
+                await ShowFrame(screen, shot.StartFrame, "retrans-tiro");
 
                 // ~0,417 s reales: pasado el "inSeconds" (0,25 s) del acercamiento del tiro
                 // (BroadcastScreen.ShotPunchInSeconds) y dentro del mantenimiento mínimo (0,25-0,60 s,
@@ -378,8 +377,7 @@ public partial class BroadcastCapture : Control
             var instance = await Show("res://Scenes/Retransmision.tscn", frames: 10);
             if (instance is BroadcastScreen screen)
             {
-                screen.SeekTo(blood.Frame);
-                await Settle(10);
+                await ShowFrame(screen, blood.Frame, "retrans-sangre");
                 await Save("retrans-sangre");
             }
 
@@ -398,12 +396,6 @@ public partial class BroadcastCapture : Control
             {
                 // Cuatro fotogramas del MISMO suceso: el anterior (todavía de pie), el instante de la
                 // activación, medio segundo después y uno y pico después, cuando el aviso ya se va.
-                // El director CONGELA en el momento del saque y devuelve su propio DisplayFrame, así que
-                // un SeekTo a secas no mueve el campo: las cuatro capturas salían del fotograma ~11
-                // mientras la medición leía el 306. Se le quita el proceso a los dos —como en la captura
-                // de la muerte— y el arnés manda el fotograma al campo directamente.
-                GoManual(screen);
-
                 foreach (var (offset, name) in new[]
                          {
                              (-2, "derribo-1-antes"), (0, "derribo-2-instante"),
@@ -411,11 +403,7 @@ public partial class BroadcastCapture : Control
                          })
                 {
                     int f = Math.Max(kd.Frame + offset, 0);
-                    screen.SeekTo(f);
-                    screen.Pitch3D.Frame = f;
-                    screen.Pitch3D.Alpha = 0f;
-                    screen.Pitch3D.QueueRedraw();
-                    await Settle(4);
+                    await ShowFrame(screen, f, name);
 
                     // Se MIDE lo que debería verse, en vez de juzgarlo entrecerrando los ojos: cuántos
                     // cuerpos están en el suelo en ese fotograma y cuántos carteles de perk siguen vivos.
@@ -465,8 +453,7 @@ public partial class BroadcastCapture : Control
             var instance = await Show("res://Scenes/Retransmision.tscn", frames: 10);
             if (instance is BroadcastScreen screen)
             {
-                screen.SeekTo(perk.Frame);
-                await Settle(10);
+                await ShowFrame(screen, perk.Frame, "retrans-perk");
                 await Save("retrans-perk");
             }
 
@@ -833,6 +820,38 @@ public partial class BroadcastCapture : Control
     /// <see cref="Save"/> espera a que se dibuje el fotograma, y las capturas de gesto (tiro, muerte) no
     /// serían siempre las mismas.
     /// </summary>
+    /// <summary>
+    /// Deja el campo enseñando EXACTAMENTE el fotograma pedido, y lo comprueba.
+    ///
+    /// <para>Un <c>SeekTo</c> a secas no basta: el director sigue presentando lo suyo y devuelve su
+    /// propio <c>DisplayFrame</c>, así que el campo acababa ~19 fotogramas (1,3 s) por delante de lo que
+    /// la captura creía estar enseñando. Cinco de las ocho capturas fijas estaban desviadas, y la peor
+    /// era <c>retrans-perk</c>: como el cartel de perk vive 15 fotogramas, la fotografiaba **cuatro
+    /// fotogramas después de que hubiera desaparecido**. La captura que existe para demostrar que el
+    /// cartel se pinta no lo había enseñado nunca.</para>
+    ///
+    /// <para>Se le quita el proceso a la pantalla y al campo —como ya hacía la captura de la muerte— y se
+    /// manda el fotograma directamente. El residuo del director (sello, bando) se queda como estaba, que
+    /// es lo que se quiere fotografiar.</para>
+    /// </summary>
+    private async Task ShowFrame(BroadcastScreen screen, int want, string name)
+    {
+        screen.SeekTo(want);
+        await Settle(10);
+
+        GoManual(screen);
+        screen.Pitch3D.Frame = want;
+        screen.Pitch3D.Alpha = 0f;
+        screen.Pitch3D.QueueRedraw();
+        await Settle(2);
+
+        int got = screen.Pitch3D.Frame;
+        if (Math.Abs(got - want) > 1)
+        {
+            GD.PushWarning($"captura '{name}': se pidió el fotograma {want} y el campo enseña {got}");
+        }
+    }
+
     private static void GoManual(BroadcastScreen screen)
     {
         screen.SetProcess(false);
