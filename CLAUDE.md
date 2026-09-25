@@ -18,7 +18,9 @@ representado?". Antes de tocar código:
 4. ¿Qué sistema debería ser responsable de esa regla — `/Sim`, `/Game` o `/data`?
 5. ¿Es un problema aislado o hay un patrón hermano? (`docs/pendientes/README.md`)
 6. ¿Qué otros sistemas pueden sufrir la misma causa?
-7. ¿Existe ya una abstracción o convención del propio repositorio para esto? (mira antes de inventar una)
+7. ¿Existe ya una abstracción o convención del propio repositorio para esto? (mira antes de inventar
+   una — **y míralo por el concepto, no por el identificador: Regla G**. Es la pregunta que más caro
+   sale saltarse)
 8. ¿La solución arregla la causa o solo oculta el síntoma?
 9. ¿Qué consecuencias de segundo orden puede introducir?
 10. ¿Cómo se demuestra que funciona?
@@ -71,6 +73,71 @@ llega el problema completo (`docs/pendientes/<ID>.md` con sus hipótesis descart
 el diff, los tests — **nunca tu argumentación de por qué está bien**. Su plantilla incluye
 `DESIGN CLAIM NOT PROVEN`: tests verdes demuestran que el código hace X, nunca que X sea la mecánica
 correcta para Underleague — eso lo decide `game-design-review`.
+
+### Antes de afirmar que algo no existe — Regla G
+
+**Un `grep` sin resultados no prueba que algo no esté implementado.** Antes de escribir «esto no existe»,
+«nadie lo dibuja» o «falta esta capacidad», búscalo **por el concepto del dominio** (aviso, cartel,
+momento, marca, censo) y **no sólo por el identificador**, y mira la capa que lo tendría: `Sim/Run/View/`
+traduce eventos a cosas presentables (`MatchFlashView`, `MatchMomentView`, `MatchLogView`) y **no nombra
+los tipos de evento**, así que una búsqueda por `EventType.X` no la toca nunca.
+
+Mientras no hayas mirado esa capa y a los consumidores de la traza, la conclusión negativa es **LIKELY**,
+nunca CONFIRMED (Regla F).
+
+**Y hay una comprobación mecánica, porque esta regla ya existía como la pregunta 7 y me la salté igual**:
+
+```
+tools/existe-ya.sh <término> [término...]      # dos idiomas, por el CONCEPTO, no por el identificador
+```
+
+Busca cada término por separado en las cuatro zonas donde vive una capacidad —capa de vista, pantallas,
+motor y datos, decisiones— y enseña los huecos. Con `cartel` habría devuelto en dos segundos
+`MatchPitchView.DrawFlashes`, `MatchPitchView3D.DrawMarks` y la ADR 0112, que es exactamente lo que no vi.
+
+*Coste medido (25 sep 2026): afirmé en tres auditorías que `PERK_TRIGGERED` se emitía y se tiraba y que
+ningún perk se veía durante el partido. Llevaba implementado desde C9 —pergamino con el nombre del perk
+sobre la cabeza, en la pantalla 2D y en la 3D— y llegué a escribir un tercer duplicado con `Label3D` antes
+de verlo. Se revirtió entero.*
+
+### Ningún número entra sin procedencia — Regla H
+
+Un umbral, una cuota o una banda que se escriba en `docs/requisitos.md`, en una ADR o en un esquema **dice
+de dónde sale**: una medición, una línea base existente, o la etiqueta **provisional, sin medir**. Lo que
+no se puede es poner una cifra a ojo y darle rango de requisito. La misma vara que el proyecto aplica a
+`/Sim` y a `/data` vale para `/docs`.
+
+*Coste medido (25 sep 2026): el suelo de «Conducta ≥ 25 %» de la ADR 0149 salió de la intuición esa misma
+mañana, y el catálogo lo falsificó unas horas después (91/9). Hubo que enmendar la ADR el mismo día.*
+
+### Antes de cambiar un campo, lee a quien lo consume — Regla I
+
+Cambiar una **duración**, un **alcance**, un **disparador** o una **unidad** en `/data` no es editar un
+dato: es cambiar lo que hace el código que lo lee. Abre ese código antes, no después.
+
+*Coste medido (25 sep 2026): pasar seis perks de `duration: match` a `duration: play` parecía inocuo.
+`Modifiers.AddProbability` **compone** los modificadores de jugada —es un producto— y varios `TACKLE` por
+jugada son normales, así que un `×3` se convertía en `×27` dentro de la misma jugada. Lo encontró la
+revisión independiente, no yo.*
+
+### El instrumento se valida antes que la medida — Regla J
+
+Antes de creerte un censo, un lote o un histograma, **contrástalo contra un caso cuya respuesta ya sabes**
+—un portero no dispara, un perk sin condición cumplida no se activa— y comprueba a quién está midiendo de
+verdad. Un número que no encaja es una hipótesis sobre el instrumento antes que sobre el mundo.
+
+*Coste medido (25 sep 2026): el censo de situaciones armaba al titular de índice 0, que es el **portero**,
+y trataba como habilidad racial a cualquier perk con `race` puesta, que también significa «exclusivo de
+elfos». Las dos versiones daban la conclusión **contraria** a la verdadera, y costaron dos rondas enteras
+de medición.*
+
+### Higiene que ha costado tiempo, y no es criterio sino disciplina
+
+- **Nunca `git checkout <directorio>` con trabajo sin commitear dentro.** Restaurar `data/perks/` tras un
+  experimento A/B se llevó por delante un arreglo propio sin avisar, y hubo que rehacerlo. Restaura por
+  ruta explícita, o commitea antes del experimento.
+- **Un experimento A/B sobre `/data` se hace desde un commit**, no desde el árbol sucio: `git checkout
+  <ref> -- <rutas exactas>` para medir y `git checkout HEAD -- <las mismas rutas exactas>` para volver.
 
 ## Stack
 
