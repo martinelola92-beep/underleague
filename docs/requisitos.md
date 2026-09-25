@@ -1,9 +1,17 @@
 # Documento de requisitos funcionales y técnicos
 
 **Proyecto:** roguelite de fútbol autojugado con mecánicas de deporte brutal
-**Versión:** 0.9.1 (borrador de trabajo)
+**Versión:** 0.10 (borrador de trabajo)
 **Plataforma objetivo:** PC (Steam), premium
 **Estado:** preproducción, sin código escrito
+
+### Cambios respecto a 0.9.1
+
+- **RF-069**: se reescribe entera. El catálogo pasa a medirse en **dos ejes ortogonales** —visibilidad
+  (Acto / Conducta / Soporte) y potencia (relleno / condicional / rompe-reglas)— con la regla de que
+  **ningún perk tiene efectos exclusivamente de soporte**, y con enfriamiento obligatorio para el grado
+  Acto. La primera fila del eje de potencia deja de exigir «modificadores numéricos condicionados»
+  (ADR 0149).
 
 ### Cambios respecto a 0.9
 
@@ -237,13 +245,35 @@ SUSTITUCION         CONSUMIBLE_USADO
 
 - **RF-067** Cada evento transporta contexto: ejecutor, receptor, rival implicado, casilla, zona del campo, estado del partido (reglamentario o turba), criterio del árbitro y distancia a portería.
 - **RF-068** Los perks consultan **etiquetas**, nunca jugadores concretos. Esto permite escalar el catálogo sin casos especiales.
-- **RF-069** Distribución objetivo del catálogo de perks:
+- **RF-069** El catálogo de perks se mide en **dos ejes ortogonales**. Un perk declara su grado en cada uno
+  (ADR 0149). Los dos son comprobables al cargar (RT-032).
+
+  **RF-069a — Visibilidad: cuánto se ve.**
+
+| Grado | Descripción | Cuota |
+|---|---|---|
+| **Acto** | Produce un **suceso nombrado**, reconocible en el instante en que ocurre y atribuible a su portador: un cañonazo, un sombrerito, un derribo en cadena, un balón que vuelve. Lleva enfriamiento (RF-069c) | **≥ 50 %** |
+| **Conducta** | Cambia de forma observable **lo que el jugador hace** a lo largo del partido: dónde se coloca, hasta dónde se aleja, a quién marca, qué decide | ≥ 25 % |
+| **Soporte** | Ajusta magnitudes: probabilidad, atributo, escalar de rasgo, contador | ≤ 25 % |
+
+  **RF-069b — Las estadísticas son soporte, no contenido.** *Ningún perk tiene efectos exclusivamente de
+  soporte.* Un efecto de soporte modula el **acto o la conducta del mismo perk**: es lo que decide si esa
+  situación sale bien o mal. Un perk cuyos efectos son todos de soporte es un **error de datos**, no un perk
+  flojo.
+
+  **RF-069c — Enfriamiento.** Un perk de grado **Acto** declara cada cuánto puede repetirse. *Un acto sin
+  enfriamiento no es un acto: es una regla nueva.*
+
+  **RF-069d — Potencia: cuánto rompe.**
 
 | Tipo | Proporción | Descripción |
 |---|---|---|
-| Relleno con condición | 60% | Modificadores numéricos condicionados. Dan grosor a las builds |
+| Relleno con condición | 60% | **Actos y conductas acotados**: ocurren a menudo y cambian poco el partido. Dan grosor a las builds |
 | Condicionales interesantes | 30% | Cambian el comportamiento en situaciones concretas |
 | Rompe-reglas | 10% | Anulan o invierten una regla del simulador |
+
+  **RF-069e — Excepción declarada.** Los perks que **no tocan el partido** (economía, herencia,
+  experiencia) declaran grado `economy` y quedan fuera de las cuotas de RF-069a. Ver ADR 0149 §e.
 
 - **RF-070** Al menos 15 perks deben acumular efecto **entre partidos** dentro de la misma run, para crear curvas de escalado.
 - **RF-071** Tras cada partido **ganado**, el jugador elige 1 recompensa entre 3 opciones aleatorias. Cada opción puede ser un **perk**, un **jugador** o un **objeto de equipamiento**; las tres pueden ser de tipos distintos. Si es un perk, elige además a qué jugador se lo asigna.

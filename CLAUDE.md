@@ -4,7 +4,7 @@ Roguelite de gestión y autobatalla: el jugador dirige un equipo de fútbol 7 de
 
 PC (Steam), premium, sin online. **Estado del proyecto: `docs/project-state.md`** (editado a mano, no generado — actualízalo al cerrar un hito o una ADR, no aquí).
 
-La fuente de verdad del diseño es `docs/requisitos.md` (v0.9.1). Cada requisito tiene identificador (`RF-xxx` funcional, `RT-xxx` técnico, `RA-xxx` arte, `UI-xxx` interfaz): cítalos en commits, ADRs, tests y comentarios cuando implementes o discutas uno.
+La fuente de verdad del diseño es `docs/requisitos.md` (v0.10). Cada requisito tiene identificador (`RF-xxx` funcional, `RT-xxx` técnico, `RA-xxx` arte, `UI-xxx` interfaz): cítalos en commits, ADRs, tests y comentarios cuando implementes o discutas uno.
 
 ## Cómo razonar sobre un cambio, antes de mirar un archivo
 

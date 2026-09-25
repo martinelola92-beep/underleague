@@ -1,7 +1,7 @@
 # BK-A — RF-069 exige el 60 % de modificadores numéricos, y el producto pide lo contrario
 
-Estado: **ABIERTA** (25 sep 2026). **Decisión del revisor pendiente**: toca una regla de
-`docs/requisitos.md`, así que no se resuelve sin él (modo de trabajo de `CLAUDE.md`). Nace de la auditoría
+Estado: **CERRADA** (25 sep 2026) por la [ADR 0149](../decisiones/0149-el-catalogo-se-mide-por-lo-que-se-ve.md).
+El revisor autorizó expresamente sobreescribir RF-069. Nace de la auditoría
 [13C](../analisis/perks-auditoria-situaciones.md) §5.
 
 ## El conflicto, con las dos citas delante
@@ -57,3 +57,21 @@ Lo único que se ha hecho es dejar de escribir hoja de ruta contra el objetivo v
 Con la decisión del revisor. Si es «sí, se añade el suelo»: ADR + requisitos v0.10 + la fila de
 comprobación que hoy falta en `perks-design-bible.md` §5.3. Si es «no»: hay que retirar el encargo de 13C,
 y conviene que quede escrito por qué.
+
+---
+
+## Cómo se cerró (25 sep 2026)
+
+**Decisión del revisor: «te doy permiso para sobreescribir RF-069».** Se aplicó la forma propuesta arriba
+—**añadir, no sustituir**—: RF-069 conserva 60/30/10 como eje de **potencia** y gana un eje de
+**visibilidad** (Acto ≥ 50 % / Conducta ≥ 25 % / Soporte ≤ 25 %), más la regla que traduce el encargo:
+**ningún perk tiene efectos exclusivamente de soporte**. La primera fila del eje de potencia deja de exigir
+«modificadores numéricos condicionados». `docs/requisitos.md` sube a **v0.10**.
+
+**El suelo de visibilidad no se fijó a ojo**: la línea base medida era **29,4 %** de perks de grado Acto o
+Conducta, y el suelo queda en 75 % entre los dos. Convertir el catálogo es el trabajo que la ADR abre y va
+por tandas, con la conversión diseñada en
+[`perks-de-cuota-a-acto.md`](../analisis/perks-de-cuota-a-acto.md).
+
+**Lo que quedó fuera y sigue sin decidir**: si un perk de **economía** debe seguir ocupando un slot de perk
+(RF-069e lo exime de la cuota, no resuelve la pregunta).

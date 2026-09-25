@@ -22,7 +22,6 @@ viva anotada.
 
 | Id | Título | Estado |
 |---|---|---|
-| [BK-A](./BK-A.md) | RF-069 exige el 60 % de modificadores numéricos y el producto pide lo contrario | Abierta. **Decisión del revisor**: toca `docs/requisitos.md`. Lectura conservadora aplicada: no se toca `/data` |
 | [BA-E](./BA-E.md) | Goles sin ángulo | Abierta, medida (A RECHAZADA por la ADR 0111, C disponible). **Vía nueva 23 sep**: la acción «centrar» del §7 de `plan-altura-del-balon.md` le da al delantero la alternativa que a la vía B le faltaba |
 | [BA-F](./BA-F.md) | El 3D está mal | Abierta: decidir si se acepta perspectiva contra la ortográfica de la ADR 0102 |
 | [BA-G](./BA-G.md) | Los nombres de los jugadores se repiten | Abierta: el sorteo de `data/*/names` no tiene memoria dentro de la run |
@@ -71,6 +70,7 @@ viva anotada.
 
 | Id | Título | Estado |
 |---|---|---|
+| [BK-A](./BK-A.md) | RF-069 exigía el 60 % de modificadores numéricos y el producto pide lo contrario | **Cerrada** por la ADR 0149: RF-069 reescrita con el eje de visibilidad, requisitos a v0.10 |
 | [BA-A](./BA-A.md) | BLOQUEO: un nodo de evento sin opciones y sin salida | Cerrada |
 | [BA-B](./BA-B.md) | BLOQUEO: en un jefe no dejó sustituir al lesionarse el segundo jugador | Cerrada |
 | [BA-C](./BA-C.md) | Con seis filas no hay fila central y la alineación queda descentrada | Cerrada |

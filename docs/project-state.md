@@ -9,6 +9,49 @@ PC (Steam), premium, sin online. **Estado (8 sep 2026): fases 0 y 1 cerradas; fa
 **Campo de siete filas (14 sep 2026, decisión del revisor, BA-C):** 16×7 en vez de 16×6 —con seis filas el centro geométrico cae *entre* dos filas y no existe fila central—, con guardado v4. Añadir la fila cuesta ~1,0 tiro y ~0,45 goles por partido y **ninguna palanca local lo recupera**, así que la **ADR 0109** recalibra la banda de tiros a la geometría vigente (8-16 → 7-15) en vez de tocar el motor, y deja escrito que ensanchar la formación o las zonas de acción destruye la profundidad de colocación. Nueve auditorías de la IA de jugadores (`docs/auditoria-ia-jugadores-1..9.md`) dejan **un solo cambio aplicado**, la **ADR 0110**: `Shoot` del defensa 77 → 154 y del centrocampista 188 → 237, porque con 77 un defensa colocado arriba nunca remataba —perdía contra su propio `ShortPass` de 500— y jugar fuera de posición costaba dos tercios del ataque (100/48/38 → 100/68/55). Rechazados y documentados: `ChaseBall pen` en todas las dosis (degrada la diferenciación de builds), el desfase de fase entre equipos (no replica entre semillas) y la histéresis. Queda **abierto** el papel del centrocampista: dispara el 6,5 % de los tiros siendo el 43 % de los jugadores de campo.
 ---
 
+## ADR 0149 — El catálogo se mide por lo que se ve (25 sep 2026)
+
+**Decisión del revisor, y reescribe un requisito: `docs/requisitos.md` sube a v0.10.** Viene de tres
+auditorías encadenadas del sistema de perks —[13B](./analisis/perks-auditoria-potencial-visual.md),
+[13C](./analisis/perks-auditoria-situaciones.md)— y de una corrección suya que hay que dejar escrita porque
+tumbó dos marcos seguidos:
+
+> *No quiero un simulador estadístico con una pequeña capa de caos. Quiero lo contrario: un roguelike
+> deportivo caótico donde las estadísticas respaldan y diferencian ese caos.*
+
+**El hecho que lo ordena todo** *(MEDIDO, censo de los 102 ficheros de `data/perks/`)*: **70,6 % de los
+perks no producen ni un suceso ni un cambio observable de conducta**; 14,7 % cambian conducta, 14,7 %
+producen un suceso. Y **ninguno de los 102 es atribuible en pantalla**. El catálogo **no incumplía RF-069:
+lo cumplía** —exigía el 60 % de «modificadores numéricos condicionados»—, así que ninguna auditoría de
+catálogo podía arreglarlo.
+
+**Qué decide la ADR**: RF-069 gana un eje de **visibilidad** (Acto ≥ 50 % / Conducta ≥ 25 % / Soporte
+≤ 25 %) ortogonal al de potencia (60/30/10, que se conserva), con la regla que traduce el encargo —**ningún
+perk tiene efectos exclusivamente de soporte**: la estadística se pega al acto y decide si sale bien o
+mal— y **enfriamiento obligatorio** para el grado Acto. Cierra **BK-A**. **No se toca ni un número ni un
+fichero de `/data`**: *«no te ciñas a los números, ya lo balancearemos después»*.
+
+**Diseño derivado, listo para ejecutar**: [`perks-de-cuota-a-acto.md`](./analisis/perks-de-cuota-a-acto.md).
+Los 72 invisibles **no son 72 decisiones: son siete canales** —entrada 15, tiro 9, carnicería 8,
+intercepción 7, parada/evasión 6, pase 5, regate 4— más 6 de economía que quedan exentos. Y **siete actos se
+pueden escribir hoy sin una línea de C#** (caño, lectura, a bocajarro, plancha, pies de plomo, falso muerto,
+árbitro sobornado), ninguno escrito.
+
+**El hallazgo que abarata la atribución** *(MEDIDO)*: `Detail` ya es el canal de matiz del motor
+(`post`/`crossbar`, `severe`/`minor`, `held`/`parried`) y **las dos tablas de presentación ya conmutan por
+él** —`MatchEventSounds.PoolsFor` y `MatchMomentView.BaseClassification` con cláusulas `when detail == …`—.
+Nombrar un acto es **añadir casos, no sistemas**.
+
+**Lo que queda decidido por el revisor y lo que no**: autorizado sobreescribir RF-069 y no ceñirse a los
+números. **Sin decidir**: el **segundo balón** (255 líneas de motor suponen uno solo) y si un perk de
+economía debe ocupar un slot de perk.
+
+**Riesgo anotado y sin medir**: un catálogo con ≥ 50 % de actos es un partido con más sucesos por minuto, y
+la gramática de momentos tiene **cola de una plaza y caducidad de 1,5 s**. El techo de saturación es la
+**primera** medición de la conversión, antes de construir nada.
+
+---
+
 ## ADR 0148 — El enfriamiento de entrada es disputa, no física (25 sep 2026)
 
 Primer mecanismo **aislado** de la violencia que la ADR 0147 publicó rota. Los enfriamientos de entrada
@@ -50,6 +93,13 @@ diseño.
 ---
 
 ## ARRANQUE DE LA SESIÓN SIGUIENTE (escrito el 25 sep 2026)
+
+> **Prioridad cambiada el 25 sep por el revisor, después de escribir esta sección**: el trabajo siguiente es
+> la **conversión del catálogo de perks** de la ADR 0149 —tanda A de
+> [`perks-de-cuota-a-acto.md`](./analisis/perks-de-cuota-a-acto.md) §6: los siete actos escribibles hoy, y
+> medir la saturación de la gramática de momentos **antes** de construir nada—. La violencia de la ADR 0147
+> que describe el resto de esta sección **sigue abierta y sigue siendo válida**, pero va detrás.
+
 
 **Qué hacer: la violencia del partido que dejó la ADR 0147.** Es lo que el revisor priorizó —*«primero el
 balanceo total y luego los balanceos de winrate; el gameplay todavía debe evolucionar»*— y es el único
