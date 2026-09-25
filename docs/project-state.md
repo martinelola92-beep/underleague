@@ -1222,7 +1222,8 @@ cuatro heredadas.
 **Decidir las dos de arriba con el revisor**, y luego seguir la cola que él fijó:
 [BI-D](./pendientes/BI-D.md) (alargar la conducción, aprobada) → [BI-H](./pendientes/BI-H.md) (la
 interacción visual con el balón, que **debe cubrir también tiro, parada y saques** — todo lo que implique
-contacto con el balón).
+contacto con el balón — y, desde el 25 sep, **anclarse a la parte del cuerpo que toca**: pies, cuerpo,
+cabeza y manos, no sólo los pies).
 
 *(La descripción del paquete que sigue quedó cumplida; se deja por su contexto.)*
 
@@ -1244,9 +1245,10 @@ contacto con el balón).
    decidida.
 
 **Después, y en este orden**: [BI-D](./pendientes/BI-D.md) (alargar la conducción, **ya aprobado por el
-revisor**) y luego [BI-H](./pendientes/BI-H.md) (la interacción visual jugador-balón, encargo en cola). Ese
-orden no es casual: BI-H es pulir cómo se ve jugar con los pies, y hoy el balón tiene dueño el 32,3 % del
-partido en posesiones de 0,33 s — no hay casi nada que lucir hasta que BI-D esté.
+revisor**) y luego [BI-H](./pendientes/BI-H.md) (la interacción visual jugador-balón, encargo en cola, con
+el alcance ampliado el 25 sep a **pies, cuerpo, cabeza y manos según el tipo de contacto**). Ese orden no es
+casual: BI-H es pulir cómo se ve jugar el balón, y hoy lo tiene dueño el 32,3 % del partido en posesiones de
+0,33 s — no hay casi nada que lucir hasta que BI-D esté.
 
 **Y dos decisiones de balance siguen esperando**, las dos con número: si `regulationTicks` baja para
 devolver el partido a los 60-90 s de RF-050, y si se abre [BI-G](./pendientes/BI-G.md).
