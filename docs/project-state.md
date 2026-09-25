@@ -9,6 +9,46 @@ PC (Steam), premium, sin online. **Estado (8 sep 2026): fases 0 y 1 cerradas; fa
 **Campo de siete filas (14 sep 2026, decisión del revisor, BA-C):** 16×7 en vez de 16×6 —con seis filas el centro geométrico cae *entre* dos filas y no existe fila central—, con guardado v4. Añadir la fila cuesta ~1,0 tiro y ~0,45 goles por partido y **ninguna palanca local lo recupera**, así que la **ADR 0109** recalibra la banda de tiros a la geometría vigente (8-16 → 7-15) en vez de tocar el motor, y deja escrito que ensanchar la formación o las zonas de acción destruye la profundidad de colocación. Nueve auditorías de la IA de jugadores (`docs/auditoria-ia-jugadores-1..9.md`) dejan **un solo cambio aplicado**, la **ADR 0110**: `Shoot` del defensa 77 → 154 y del centrocampista 188 → 237, porque con 77 un defensa colocado arriba nunca remataba —perdía contra su propio `ShortPass` de 500— y jugar fuera de posición costaba dos tercios del ataque (100/48/38 → 100/68/55). Rechazados y documentados: `ChaseBall pen` en todas las dosis (degrada la diferenciación de builds), el desfase de fase entre equipos (no replica entre semillas) y la histéresis. Queda **abierto** el papel del centrocampista: dispara el 6,5 % de los tiros siendo el 43 % de los jugadores de campo.
 ---
 
+## ADR 0148 — El enfriamiento de entrada es disputa, no física (25 sep 2026)
+
+Primer mecanismo **aislado** de la violencia que la ADR 0147 publicó rota. Los enfriamientos de entrada
+corrían durante las reanudaciones —el **24,3 %** del partido— y `OffBallTackleCooldownTicks` son 400 ticks:
+se recargaban gratis. Ahora sólo corren con el balón en juego.
+
+| | semilla 1 | semilla 7 |
+|---|---|---|
+| `foulsPerMatch` | 7,96 → **7,09** | 6,05 → **5,56** |
+| `offBallTacklesPerMatch` | 4,62 → **3,80** | 3,57 → **3,12** |
+| `injuriesPerMatch` | 0,82 → **0,78** | 0,84 → **0,79** |
+
+**Recupera un tercio de la brecha de faltas.** El resto sigue sin explicación medida.
+
+**La primera versión estaba mal y la revisión independiente la tumbó**, y la lección vale más que el
+cambio: preguntaba `_phase == MatchPhase.OpenPlay`, que **excluye la turba** (`MobGoldenGoal`, juego real,
+9,25 % de los fotogramas). Cada jugador se habría quedado con **una entrada para toda la prórroga**,
+volviendo el tramo menos violento justo el que **RF-055d** convierte en la ventana de las builds de
+violencia. Y el «30 % del partido es pausa» que justificaba la ADR tenía **el mismo error dentro**: contaba
+la turba como pausa. El argumento y el bug eran la misma confusión. Además inventaba **una tercera forma de
+preguntar si el balón está en juego** teniendo el repositorio ya dos — la pregunta 7 de `CLAUDE.md`.
+
+**Descartado por el camino**: `Shielding` no es el canal dominante de la violencia (r = 0,008 con n=200),
+después de haber sido el candidato número uno. Instrumento nuevo: `CarrierCensusTests`.
+
+**Puertas: 4 rojas contra 6.** Salen `elf_out_of_zone` y `FullRunGateTests…NeverAllOfThem` — pero esta
+última **como LIKELY, no como mérito**: la run pasa de ganarse en 8 de 16 semillas a 12 de 16, así que
+puede estar volviendo a verde porque el juego es más fácil, que es el mismo mecanismo que la ADR 0147 anotó
+al romperla.
+
+**Abierta [BJ-A](./pendientes/BJ-A.md)** con lo que esta ADR no decide: los otros tres enfriamientos que el
+principio implica, congelar contra tasa reducida (nunca comparadas), que la regla es **invisible para el
+jugador**, y la asimetría nueva —vuelves de la pausa descansado pero incapaz de entrar—.
+
+**Decisión del revisor anotada**: *«no te vuelvas loco con builds concretas; los perks y objetos no están
+cerrados todavía»*. `orc_violence` cae 1,64 con este cambio y se registra sin convertirlo en argumento de
+diseño.
+
+---
+
 ## ARRANQUE DE LA SESIÓN SIGUIENTE (escrito el 25 sep 2026)
 
 **Qué hacer: la violencia del partido que dejó la ADR 0147.** Es lo que el revisor priorizó —*«primero el
