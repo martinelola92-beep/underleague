@@ -21,7 +21,11 @@ tumbó dos marcos seguidos:
 
 **El hecho que lo ordena todo** *(MEDIDO, censo de los 102 ficheros de `data/perks/`)*: **70,6 % de los
 perks no producen ni un suceso ni un cambio observable de conducta**; 14,7 % cambian conducta, 14,7 %
-producen un suceso. Y **ninguno de los 102 es atribuible en pantalla**. El catálogo **no incumplía RF-069:
+producen un suceso. **El canal de atribución, en cambio, SÍ existe** y afirmé lo contrario: `MatchFlashView` →
+`MomentMark` → `MatchPitchView3D.DrawMarks` pintan un pergamino con el nombre del perk sobre la cabeza del
+jugador, 1 s, apilado. Lo que no hay es **qué enseñar**: *(MEDIDO con `BroadcastCapture.FindPerkBurst`,
+seis partidos)* un partido produce **entre cero y dos** activaciones fuera de los primeros seis segundos —en
+tres de los seis, **cero**— porque **48 de los 102 perks se cuelgan de `MATCH_START`**. El catálogo **no incumplía RF-069:
 lo cumplía** —exigía el 60 % de «modificadores numéricos condicionados»—, así que ninguna auditoría de
 catálogo podía arreglarlo.
 

@@ -14,27 +14,34 @@ qué se ve y qué se paga**.
 
 # 0. Dos decisiones del revisor que cambian el plan anterior
 
-## 0.1 El cartelito, y la vuelta de una idea que ya estaba escrita
+## 0.1 El cartelito ya está hecho — y lo que falta es que haya algo que enseñar
 
 > *«cada perk activado muestra un cartelito encima de la cabeza del jugador que no molesta»*
 
-**Es, palabra por palabra, para lo que se creó `EventType.PerkTriggered`** *(MEDIDO, su propio comentario en
-`Sim/Events/EventType.cs`)*:
+**Ya existe, y está en la pantalla que el revisor mira** *(MEDIDO, comprobado leyendo el código y con una
+captura)*: `Sim/Run/View/MatchFlashView.cs` compone los avisos con el nombre del perk,
+`MatchMomentView` los entrega como `MomentMark` y `MatchPitchView3D.DrawMarks` los pinta como un **cartel
+de pergamino anclado sobre la cabeza**, de tamaño fijo en pantalla, 1 s de vida, apilados cuando coinciden
+dos. La vista 2D hace lo mismo en `DrawFlashes`. **Yo afirmé lo contrario en las tres auditorías anteriores
+y era falso**; la corrección, y por qué me equivoqué, están al final de cada una.
 
-> *«Existe para que la pantalla de partido pueda ATRIBUIR lo que ocurre —**un aviso sobre la cabeza del
-> jugador**— sin calcular ni decidir nada (RT-014).»*
+**El dato que sustituye al error es peor para el catálogo, no mejor** *(MEDIDO con `FindPerkBurst`, seis
+partidos de semillas distintas)*: un partido produce **entre cero y dos** activaciones de perk fuera de los
+**primeros seis segundos**. En tres de los seis partidos, **cero**. La causa es la de siempre: **48 de los
+102 perks se cuelgan de `MATCH_START`**, donde el pregón del saque tapa media pantalla y no hay fútbol que
+mirar.
 
-El evento se emite hoy con el id del perk, su portador y su celda, y **nadie lo dibuja**. La decisión del
-revisor no pide nada nuevo: pide que se use lo que ya está.
+**Lo que esto cambia del plan:**
 
-**Lo que esto retira del plan anterior:**
-
-- **El `MomentKind` de perk ya no hace falta.** Un perk no tiene que competir por la voz alta ni por el
-  sello ni congelar la imagen: tiene su propio canal, ligero y paralelo. *(Retira la mitad de C18 y la
-  regla 3 de §1.6.C de la biblia, que exigía entrada en la gramática de momentos.)*
-- **El riesgo de saturación queda retirado por decisión**, no por medición: *«me da igual si dos perks
-  saltan sucesivamente»*. La cola de una plaza y la caducidad de 1,5 s gobiernan los **momentos**, no los
-  cartelitos. **La tanda A deja de ser una medición de saturación y pasa a ser contenido.**
+- **La tanda A ya no es construir el cartelito**: es escribir actos que se cuelguen de **eventos de
+  fútbol**, que es lo único que hace que el cartelito tenga qué enseñar. Ninguna de las 65 fichas de este
+  catálogo se dispara en `MATCH_START` — no por una regla que me inventé, sino porque **RF-069c** lo exige
+  para el grado Acto.
+- **El `MomentKind` de perk sigue sin hacer falta**, pero por una razón mejor de la que di: un perk no
+  necesita competir por la voz alta porque **ya tiene su canal propio**, el pergamino, que además se dibuja
+  pequeño cuando el momento del director lo absorbe.
+- **El riesgo de saturación queda retirado por decisión** —*«me da igual si dos perks saltan
+  sucesivamente»*— y el apilado, que ya estaba implementado, lo soporta.
 
 ## 0.2 El balance se aplaza, la asimetría no
 
@@ -485,11 +492,13 @@ encargo del revisor, y este catálogo las cumple con 91 % y 0 %.
 
 # 14. El orden, revisado con el cartelito dentro
 
-1. **Tanda A — el cartelito, y sólo el cartelito.** Dibujar `PERK_TRIGGERED` sobre la cabeza del jugador.
-   Es `/Game` puro, no toca `/Sim`, no toca balance, **y hace visibles de golpe los 15 perks de situación que
-   ya existen**. Sin esto, todo lo demás ocurre sin nombre.
-2. **Tanda B — las 19 fichas `HOY`.** Catálogo nuevo sin una línea de C#. Es donde el juego empieza a
-   parecerse a lo que el revisor describe, y sirve de prueba de la receta antes de gastar motor.
+1. **Tanda A — las 19 fichas `HOY`, que es lo que de verdad falta.** El cartelito ya está construido y
+   medido (§0.1); lo que no hay es **qué enseñar en él**: entre cero y dos activaciones por partido fuera
+   del saque inicial. Escribir actos colgados de eventos de fútbol es, a la vez, el contenido y el arreglo
+   de la atribución. Cero líneas de C#.
+2. **Tanda B — el instrumento.** `BroadcastCapture.FindPerkBurst` ya cuenta activaciones dentro y fuera
+   del saque inicial: es la métrica de si la tanda A ha servido. Hoy vale 0-2 por partido; si tras la
+   tanda A no sube, el problema no era el catálogo.
 3. **Tanda C — el enfriamiento (`ENF`).** Convierte las 8 pendientes y arregla las 18 anteriores, que hasta
    entonces usan `limit: per play` como sustituto pobre.
 4. **Tanda D — la variante de acción (`VAR`), empezando por el tiro.** Cañonazo y vaselina primero: escriben
@@ -504,10 +513,11 @@ encargo del revisor, y este catálogo las cumple con 91 % y 0 %.
 # 15. Para el revisor
 
 1. **65 fichas, 91 % actos, cero perks que sean sólo un número.** Ninguna lleva una magnitud.
-2. **El cartelito retira el `MomentKind` de perk y el riesgo de saturación.** Y resulta que es exactamente
-   para lo que se escribió `PerkTriggered` hace tiempo: su propio comentario dice «un aviso sobre la cabeza
-   del jugador». Estaba pedido y nadie lo dibujó.
-3. **19 fichas son escribibles hoy sin tocar el motor.** Más el cartelito, que es `/Game` puro.
+2. **El cartelito que pediste ya existe y funciona** —pergamino sobre la cabeza, 1 s, apilado— en la
+   pantalla que miras. Lo dije mal tres veces y está corregido. **Lo que no existe es qué enseñar**: entre
+   cero y dos activaciones por partido fuera de los primeros seis segundos, y en tres de seis partidos
+   medidos, ninguna.
+3. **19 fichas son escribibles hoy sin tocar el motor**, y ninguna de las 65 se dispara en `MATCH_START`.
 4. **Me equivoqué en un número de la ADR 0149 y el catálogo lo ha demostrado.** Puse un suelo de 25 % para
    el grado Conducta por intuición; escribir el catálogo que tu encargo implica da **9 %**, y subirlo sería
    empeorarlo. **He retirado ese suelo del requisito** (§13) y he dejado intactos los dos que sí traducen tu

@@ -277,3 +277,48 @@ entra si saca de banda `injuriesPerMatch` o `shotsPerMatch`.
    **Hasta que la tomes, cualquier rediseño de catálogo va a chocar con el requisito.**
 6. **Pregunta que sigue abierta y es tuya**: el **segundo balón**. Es el único de tus trece que no es una
    extensión del motor sino una reforma, con 255 líneas de motor de precio. ¿Entra en la lista o se aparca?
+
+---
+
+# CORRECCIÓN MEDIDA (25 sep 2026) — el cartelito existe, y el dato que importa es otro
+
+**Lo que este documento afirmaba y es falso**: que `PERK_TRIGGERED` se emite y se tira, y que ningún perk
+se puede ver durante el partido. **Se puede.** *(MEDIDO, leyendo el código.)*
+
+- **`Sim/Run/View/MatchFlashView.cs`** compone los avisos del partido (`MatchFlash`: fotograma, índice de
+  jugador, equipo, id y **nombre del perk**), ordenados por RT-041, con `DurationFrames = 15` (1 s).
+- **`MatchMomentView`** los devuelve como `MomentMark`, anotando si el aviso quedó **absorbido** por un
+  momento del director.
+- **`MatchPitchView.DrawFlashes`** (2D) y **`MatchPitchView3D.DrawMarks`** (3D, la pantalla vigente) los
+  pintan: un **cartel de pergamino con el nombre del perk anclado sobre la cabeza del jugador**, tamaño
+  fijo en pantalla, con el último tercio desvaneciéndose y **apilado** cuando coinciden dos.
+
+Es exactamente el cartelito del encargo del revisor, y está desde C9.
+
+**Por qué me equivoqué, que es lo aprovechable**: busqué `PerkTriggered` en `/Game` y sólo apareció un
+comentario de `MatchEventSounds` diciendo que como **sonido** sería ruido. Generalicé de *no suena* a *no se
+ve*. La ruta de dibujo no nombra el tipo de evento —va por `MatchFlash`— así que el `grep` no la tocó. Es
+la pregunta 7 de `CLAUDE.md`, *«¿existe ya una abstracción del propio repositorio para esto?»*, saltada.
+
+**Y el dato que sustituye al error es peor para el catálogo, no mejor** *(MEDIDO con un instrumento nuevo,
+`BroadcastCapture.FindPerkBurst`, sobre seis partidos de semillas distintas)*:
+
+| partido | avisos de perk | de ellos en los **primeros 6 s** | en los 84 s restantes |
+|---|---:|---:|---:|
+| 1 | 16 | 15 | **1** |
+| 2 | 14 | 14 | **0** |
+| 3 | 14 | 14 | **0** |
+| 4 | 16 | 14 | 2 |
+| 5 | 9 | 8 | **1** |
+| 6 | 14 | 14 | **0** |
+
+**Un partido entero produce entre cero y dos activaciones de perk fuera del saque inicial.** La causa está
+medida y es la misma de siempre: **48 de los 102 perks se cuelgan de `MATCH_START`**, y ahí el pregón del
+saque tapa media pantalla y no hay fútbol que mirar. La única activación en juego abierto que capturé
+coincidía además con un momento de lesión grave, que la **absorbe** y la dibuja pequeña.
+
+**DERIVADO, y refuerza la tesis en vez de debilitarla**: el canal de atribución no hay que construirlo —está
+construido y funciona—. Lo que falta es **que haya algo que atribuir, y en un momento en el que se pueda
+mirar**. Eso no se arregla en `/Game`: se arregla en el catálogo, colgando los actos de eventos de fútbol
+en vez de del pitido inicial, que es precisamente lo que hace
+[`perks-catalogo-de-actos.md`](./perks-catalogo-de-actos.md).

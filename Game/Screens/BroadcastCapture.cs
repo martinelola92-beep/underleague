@@ -97,6 +97,12 @@ public partial class BroadcastCapture : Control
         (ulong Seed, int Node, int Frame)? foundBlood = null;
         (ulong Seed, int Node, int Frame)? foundDeath = null;
 
+        // Cartelitos de perk (C9): la única captura que comprueba que PERK_TRIGGERED se dibuja. Se busca
+        // el instante con MÁS activaciones juntas, porque lo que hay que ver no es que salga uno —eso se
+        // ve con cualquiera— sino que dos seguidos se apilen sin pisarse, que es el caso que el revisor
+        // nombró.
+        (ulong Seed, int Node, int Frame, int Count)? foundPerk = null;
+
         foreach (var seed in Seeds)
         {
             run.NewRun("orc_ironworks", Race.Orc, seed);
@@ -129,6 +135,12 @@ public partial class BroadcastCapture : Control
                         break;
                     }
                 }
+            }
+
+            var perkBurst = FindPerkBurst(playback, seed, node);
+            if (perkBurst is { } burst && (foundPerk is null || burst.Count > foundPerk.Value.Count))
+            {
+                foundPerk = burst;
             }
 
             foundShot ??= FindShotWithoutGoal(playback, seed, node);
@@ -350,6 +362,22 @@ public partial class BroadcastCapture : Control
                 screen.SeekTo(blood.Frame);
                 await Settle(10);
                 await Save("retrans-sangre");
+            }
+
+            Drop(instance);
+        }
+
+        if (foundPerk is { } perk)
+        {
+            run.NewRun("orc_ironworks", Race.Orc, perk.Seed);
+            run.SelectedNodeId = perk.Node;
+
+            var instance = await Show("res://Scenes/Retransmision.tscn", frames: 10);
+            if (instance is BroadcastScreen screen)
+            {
+                screen.SeekTo(perk.Frame);
+                await Settle(10);
+                await Save("retrans-perk");
             }
 
             Drop(instance);
@@ -823,6 +851,79 @@ public partial class BroadcastCapture : Control
     /// estandarte/sello, que atenúan el campo). Null si este partido no tiene sangre que enseñar, o si no
     /// se encuentra ningún hueco así.
     /// </summary>
+    /// <summary>
+    /// El instante del partido con más activaciones de perk juntas (C9), para la captura que comprueba el
+    /// cartelito. La ventana es la misma que dura un cartelito a x1 en <c>BroadcastScreen</c>: si dos
+    /// activaciones caben en ella, en pantalla se ven las dos apiladas.
+    /// </summary>
+    private static (ulong Seed, int Node, int Frame, int Count)? FindPerkBurst(MatchPlayback playback, ulong seed, int node)
+    {
+        const int WindowTicks = 24;
+
+        // Se descarta el arranque: 48 de los 102 perks de /data se cuelgan de MATCH_START, así que la
+        // ráfaga más densa del partido cae SIEMPRE en el tick 0, donde el pregón del saque inicial tapa
+        // media pantalla y no hay fútbol que mirar. Lo que hay que ver es un cartelito en juego abierto.
+        const int SkipOpeningTicks = 90;
+
+        var trace = playback.Trace;
+        if (trace is null)
+        {
+            return null;
+        }
+
+        var ticks = new List<int>();
+        int total = 0;
+        int opening = 0;
+        var events = playback.Result.Events;
+        for (int i = 0; i < events.Count; i++)
+        {
+            var e = events[i];
+            if (e.Type != EventType.PerkTriggered || IsCancelledEvent(e))
+            {
+                continue;
+            }
+
+            total++;
+            if (e.Tick <= SkipOpeningTicks)
+            {
+                opening++;
+                continue;
+            }
+
+            ticks.Add(e.Tick);
+        }
+
+        GD.Print($"retransmisión: avisos de perk {total}, de ellos {opening} en los primeros {SkipOpeningTicks} ticks");
+
+        if (ticks.Count == 0)
+        {
+            return null;
+        }
+
+        // Los eventos ya vienen en orden de tick (RF-066), así que basta una ventana deslizante.
+        int bestTick = ticks[0];
+        int best = 0;
+        for (int i = 0; i < ticks.Count; i++)
+        {
+            int count = 0;
+            for (int j = i; j < ticks.Count && ticks[j] - ticks[i] <= WindowTicks; j++)
+            {
+                count++;
+            }
+
+            if (count > best)
+            {
+                best = count;
+
+                // El fotograma que se captura es el del ÚLTIMO de la ráfaga: ahí siguen vivos todos los
+                // anteriores de la ventana y se ve el apilado entero.
+                bestTick = ticks[Math.Min(i + count - 1, ticks.Count - 1)];
+            }
+        }
+
+        return (seed, node, trace.FrameOfTick(bestTick), best);
+    }
+
     private static (ulong Seed, int Node, int Frame)? FindBlood(MatchPlayback playback, IReadOnlyList<MatchMoment> moments, ulong seed, int node)
     {
         var trace = playback.Trace;
