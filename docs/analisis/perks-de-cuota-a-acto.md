@@ -364,3 +364,59 @@ la Regla E manda pasar por revisión independiente antes de seguir acumulando. *
 puerta ni ningún lote de `/Balance`**: el revisor aplazó el balance expresamente, pero eso no es lo mismo
 que no medirlo nunca, y queda anotado como pendiente.
 
+---
+
+# 9. ¿Produce el cambio más situaciones durante el partido? (25 sep 2026)
+
+**Criterio del revisor, y sustituye al anterior**: *«no evaluar si los perks cumplen una taxonomía;
+evaluar si el cambio hace que el catálogo produzca más situaciones interesantes durante un partido»*.
+
+**Instrumento nuevo**: `Sim.Tests/Analysis/PerkSituationCensusTests.cs`. Lote de `/Sim` puro —24 partidos
+por perk, 12 plantillas × 2 direcciones, semillas fijas— que cuenta activaciones de perk por partido y las
+parte por el arranque (los primeros 90 ticks, 6 s, donde el pregón del saque tapa media pantalla). No
+afirma nada: vuelca una tabla, y la comparación la hace quien la ejecuta con los dos árboles.
+
+## La medida, antes y después *(MEDIDO, comparación pareada sobre las mismas semillas)*
+
+| perk | ANTES total | ANTES **en juego** | DESPUÉS total | DESPUÉS **en juego** | partidos con ≥1 en juego |
+|---|---:|---:|---:|---:|---:|
+| `bulwark_stance` | 0,33 | **0,00** | 0,25 | **0,21** | 8,3 % |
+| `own_third_anchor` | 2,00 | **0,00** | 4,54 | **4,46** | 83,3 % |
+| `duelist` | 6,00 | **0,00** | 5,75 | **5,46** | 100 % |
+| `elf_touch` *(racial)* | 14,00 | **0,00** | 12,29 | **11,50** | 100 % |
+| `forward_line` | 1,00 | **0,00** | 2,42 | **2,33** | 75 % |
+| `flank_specialist` | 4,00 | **0,00** | 0,29 | **0,29** | 25 % |
+| **los seis juntos** | 27,33 | **0,00** | 25,54 | **24,25** | |
+
+**La respuesta es sí, y no es marginal: de 0,00 a 24,25 activaciones por partido mientras hay fútbol que
+mirar.** Antes las 27 caían en el pitido inicial y ninguna era visible; ahora prácticamente todas ocurren
+durante el juego, y **cuatro de los seis se activan en el 75-100 % de los partidos**.
+
+## Lo que la misma medida dice en contra, y hay que decirlo
+
+1. **`flank_specialist` cae de 4,00 a 0,29**: catorce veces menos. Gana visibilidad y casi pierde
+   existencia, porque encarar es mucho más raro que estar colocado en banda. Es el único de los seis que
+   sale peor parado en presencia, y la decisión de si eso compensa es de diseño, no de la tabla.
+2. **`bulwark_stance` se queda en el 8,3 % de los partidos**, y **no es culpa del disparador**: su
+   condición es `hasTag(owner,'Bulwark')`, que casi nunca se cumple en una plantilla generada. **Para ese
+   perk el cuello de botella es la condición, no el momento**, y moverlo no lo arregla.
+3. **`elf_touch` pasa a 11,50 activaciones por partido** repartidas por toda la plantilla élfica. Es mucho:
+   once cartelitos por partido de un solo perk es ruido, no espectáculo. Y convierte una habilidad
+   *siempre puesta* en una *condicional por jugada*, que es una decisión de identidad racial que este
+   paquete no tenía encargo de tomar. **Queda señalado como lo primero que hay que revisar.**
+
+**DERIVADO — la lección que vale más que las seis fichas**: mover el disparador arregla los perks cuyo
+problema era *cuándo* se aplicaban, y **no hace nada** por los que nunca se activan porque su **condición**
+no se cumple. El catálogo tiene las dos poblaciones mezcladas y sólo la primera se cura re-datando.
+
+## Dos correcciones del instrumento por el camino, porque casi me hacen concluir lo contrario
+
+1. La primera versión armaba al titular de índice 0, que en la alineación por defecto es el **portero**. Un
+   portero no entra, no dispara y no regatea, así que cinco de los seis marcaban casi cero y la tabla decía
+   que moverlos los había matado. Ahora se arma a toda la línea de campo.
+2. Trataba como *racial* a cualquier perk con `race` puesta, y `race` también significa «exclusivo de
+   elfos», que sí ocupa slot. Con eso `duelist` no se asignaba a nadie y marcaba cero.
+
+**Ninguna de las dos era un problema del cambio medido: eran del medidor.** Las dos habrían producido una
+conclusión falsa, y las dos salieron de mirar un número que no encajaba en vez de darlo por bueno.
+

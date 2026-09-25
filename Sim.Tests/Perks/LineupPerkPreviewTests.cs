@@ -150,10 +150,17 @@ public sealed class LineupPerkPreviewTests
         var setup = TestMatches.Reference(Catalog, 11);
         var assignments = new (Cell Cell, string Perk)[]
         {
-            (new Cell(4, 2), "flank_specialist"),   // banda: activo, con efecto normal
-            (new Cell(3, 3), "flank_specialist"),   // carril central: inactivo, y tiene elseEffects
-            (new Cell(6, 3), "captains_voice"),     // tercio rival: inactivo, y NO tiene elseEffects
+            (new Cell(4, 2), "flank_specialist"),   // banda: activo
+            (new Cell(3, 3), "flank_specialist"),   // carril central: inactivo
+            (new Cell(6, 3), "captains_voice"),     // tercio rival: inactivo
             (new Cell(2, 2), "spearpoint"),         // tiene a alguien delante: activo
+
+            // El par que garantiza la comprobación: `center_conductor` sigue disparándose en MATCH_START,
+            // así que su activación es segura en cualquier partido y el `NotEmpty` de abajo muerde de
+            // verdad. La fila central es Pitch.Rows / 2 = 3 (LinkTable.FlankOfHome), así que la 3 es
+            // Centro y la 2 es banda.
+            (new Cell(0, 3), "center_conductor"),   // fila central (la del portero): activo
+            (new Cell(4, 4), "center_conductor"),   // banda: inactivo
         };
 
         var home = WithPerksByCell(setup.Home, assignments);
@@ -177,9 +184,11 @@ public sealed class LineupPerkPreviewTests
             {
                 Assert.All(activations, a => Assert.DoesNotContain(":else", a.Detail, StringComparison.Ordinal));
 
-                // Sólo un perk de MATCH_START tiene garantizada al menos una activación en cualquier
-                // partido; uno colgado de una entrada o de un regate depende de que la jugada ocurra, y
-                // exigirle presencia convertiría este test en uno estadístico disfrazado.
+                // La presencia solo se le puede exigir al que se dispara en MATCH_START: uno colgado de
+                // un regate depende de que su portador llegue a encarar, y con la semilla de este fixture
+                // `flank_specialist` no lo hace. Por eso el par de `center_conductor` de arriba: sin un
+                // perk de MATCH_START activo, los dos `Assert.All` serían ciertos sobre listas vacías y
+                // el test dejaría de comprobar nada.
                 if (trigger == EventType.MatchStart)
                 {
                     Assert.NotEmpty(activations);

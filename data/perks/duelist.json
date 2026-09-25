@@ -25,6 +25,10 @@
     }
   ],
   "elseEffects": [],
+  "limit": {
+    "per": "play",
+    "times": 1
+  },
   "accumulatesAcrossMatches": false,
   "lethal": false,
   "positionOnly": null,

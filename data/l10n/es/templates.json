@@ -472,5 +472,10 @@
     "injureMinor": "lo deja con una lesión leve",
     "injureSevere": "lo deja con una lesión grave",
     "nothing": "sin coste y sin ganancia"
+  },
+  "triggersReceived": {
+    "TACKLE": "cuando le entran",
+    "FOUL": "cuando le hacen falta",
+    "INJURY": "cuando le lesionan"
   }
 }

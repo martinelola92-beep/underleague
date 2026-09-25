@@ -37,6 +37,14 @@ acompañarse de un acto.
 de ellos —`DescriptionTests`— falló **porque la descripción generada cambió sola** de «Al empezar el
 partido» a «Al entrar»: RT-035 funcionando. 1.226 tests en verde, 241 ficheros de `/data` válidos.
 
+**¿Produce más situaciones? Sí, medido** *(instrumento nuevo `PerkSituationCensusTests`, 24 partidos por
+perk, comparación pareada contra el árbol de antes)*: de **0,00 a 24,25 activaciones de perk por partido
+en juego abierto**; antes las 27 caían en el pitido inicial. Cuatro de los seis se activan en el 75-100 %
+de los partidos. **Con tres reparos medidos**: `flank_specialist` cae de 4,00 a 0,29 (gana visibilidad y
+casi pierde existencia), `bulwark_stance` se queda en el 8,3 % porque su cuello de botella es la
+**condición** y no el disparador, y `elf_touch` se dispara **11,5 veces por partido**, que es ruido y
+además cambia lo que el elfo es — señalado como lo primero a revisar.
+
 **Lo que NO se ha hecho y hay que decirlo**: ninguna puerta (`Category=Gate`) ni un solo lote de
 `/Balance`. El revisor aplazó el balance expresamente —*«ya lo balancearemos después»*— pero eso no es lo
 mismo que no medirlo nunca. Seis perks han pasado de bono permanente a bono de jugada: es un recorte real

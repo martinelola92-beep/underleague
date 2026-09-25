@@ -26,6 +26,9 @@ public static class DescriptionGenerator
     private const string Layout = "layout";
     private const string Effects = "effects";
     private const string Triggers = "triggers";
+
+    /// <summary>El mismo disparador contado desde quien lo recibe, para los perks de alcance <c>opponent</c>.</summary>
+    private const string TriggersReceived = "triggersReceived";
     private const string Conditions = "conditions";
     private const string TargetsSection = "targets";
     private const string Durations = "durations";
@@ -67,7 +70,15 @@ public static class DescriptionGenerator
         ArgumentNullException.ThrowIfNull(perk);
         ArgumentNullException.ThrowIfNull(templates);
 
-        string trigger = templates.Get(Triggers, EventTypeNames.ToUpperSnake(perk.Trigger));
+        // El disparador se cuenta desde el punto de vista del PORTADOR, y con alcance `opponent` el
+        // portador es el rival implicado del evento, no su actor (RF-067). Sin esto, la racial élfica
+        // —que se activa cuando LE entran— se describía como «al entrar», que le dice al jugador justo
+        // lo contrario de cuándo funciona. RT-035 no protege de esto por sí solo: genera el texto del
+        // dato, y si el dato tiene dos puntos de vista hay que leer los dos.
+        string triggerKey = EventTypeNames.ToUpperSnake(perk.Trigger);
+        string trigger = perk.Scope == PerkScope.Opponent
+            ? templates.Get(TriggersReceived, triggerKey)
+            : templates.Get(Triggers, triggerKey);
         string condition = perk.CompiledCondition.Ast is { } ast ? DescribeCondition(ast, templates) : string.Empty;
         string separator = templates.Get(Layout, "effectSeparator");
         string finalSeparator = templates.Get(Layout, "effectFinalSeparator");

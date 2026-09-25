@@ -472,5 +472,10 @@
     "injureMinor": "leaves him with a minor injury",
     "injureSevere": "leaves him with a severe injury",
     "nothing": "no cost, no gain"
+  },
+  "triggersReceived": {
+    "TACKLE": "when tackled",
+    "FOUL": "when fouled",
+    "INJURY": "when injured"
   }
 }

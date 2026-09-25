@@ -163,7 +163,7 @@ public static class DataLoader
 
     private static readonly string[] TemplateSections =
     {
-        "layout", "effects", "triggers", "events", "conditions", "targets", "durations", "limits",
+        "layout", "effects", "triggers", "triggersReceived", "events", "conditions", "targets", "durations", "limits",
         "attributes", "probabilities", "tags", "positions", "zones", "details", "counters",
 
         // Secciones del rediseño espacial (paquete S): relaciones de vínculo (ADR 0021), inmunidades y

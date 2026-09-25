@@ -223,6 +223,15 @@ public static class PerkLoader
                 throw new DataException(file, limitNode.Path + ".per", "un cupo de veces necesita su ámbito");
             }
 
+            // Y la guarda simétrica (RT-032): un 'per' sin 'times' no significa nada —el ámbito solo
+            // reinicia el cupo, y sin cupo no hay nada que reiniciar— pero el fichero SE LEE como si
+            // significara algo. Un dato que no es lo que parece es un error explícito, no una anécdota.
+            if (!hasTimes && limitNode.TryProp("per") is not null)
+            {
+                throw new DataException(
+                    file, limitNode.Path + ".per", "un ámbito sin cupo de veces no hace nada: declara 'times' o quita 'per'");
+            }
+
             limit = new LimitDefinition(limitScope, times, cooldownSeconds * TicksPerSecond);
         }
 

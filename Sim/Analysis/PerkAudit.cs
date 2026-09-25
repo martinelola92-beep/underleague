@@ -118,6 +118,24 @@ public static class PerkAudit
         _ => TriggerFrequencyCategory.Frequent, // Tackle, Shot, PassCompleted, PassFailed, DribbleAttempted, DribbleWon, Recovery, Save, ...
     };
 
+    /// <summary>
+    /// El matiz de <c>Limit</c> frente a exposición (§5.4/§16), o null si el perk no tiene límite. Está
+    /// aparte porque la rama de habilidad racial también lo necesita: devolvía <c>HasLimit</c> sin nota, y
+    /// la pareja (con límite, sin nota) era imposible hasta que una racial llevó límite por primera vez.
+    /// </summary>
+    private static string? LimitNoteFor(PerkDefinition perk)
+    {
+        if (perk.Limit is null)
+        {
+            return null;
+        }
+
+        var frequency = ClassifyTriggerFrequency(perk.Trigger);
+        return frequency is TriggerFrequencyCategory.Rare or TriggerFrequencyCategory.Occasional
+            ? $"disparador {perk.Trigger} ya es {frequency} por diseño — una activación baja aquí NO debe leerse como INSUFFICIENT_EXPOSURE sin más"
+            : $"disparador {perk.Trigger} es {frequency} — una activación baja medida en Screening sí sería una señal real de exposición insuficiente, no del límite";
+    }
+
     public static PerkAuditEntry Audit(PerkDefinition perk, Catalog catalog)
     {
         ArgumentNullException.ThrowIfNull(perk);
@@ -134,7 +152,7 @@ public static class PerkAudit
                 perk.Id, perk.Effects.Select(e => e.Type).ToList(), Array.Empty<EffectTargetShape>(), false, false,
                 classification.Category, classification.Readiness, classification.PrimaryMetric,
                 AuditReadiness.NotReady, NotReadyReason.RacialAbility, DesignReviewReason.None,
-                perk.Limit is not null, ClassifyTriggerFrequency(perk.Trigger), null,
+                perk.Limit is not null, ClassifyTriggerFrequency(perk.Trigger), LimitNoteFor(perk),
                 $"habilidad racial automática de {perkRace}: se asigna a toda la plantilla, no ocupa slot, no es medible con el harness de portador único (§16.6)");
         }
 
@@ -154,11 +172,7 @@ public static class PerkAudit
 
         var triggerFrequency = ClassifyTriggerFrequency(perk.Trigger);
         bool hasLimit = perk.Limit is not null;
-        string? limitNote = !hasLimit
-            ? null
-            : triggerFrequency is TriggerFrequencyCategory.Rare or TriggerFrequencyCategory.Occasional
-                ? $"disparador {perk.Trigger} ya es {triggerFrequency} por diseño — una activación baja aquí NO debe leerse como INSUFFICIENT_EXPOSURE sin más"
-                : $"disparador {perk.Trigger} es {triggerFrequency} — una activación baja medida en Screening sí sería una señal real de exposición insuficiente, no del límite";
+        string? limitNote = LimitNoteFor(perk);
 
         AuditReadiness finalReadiness;
         var notReadyReason = NotReadyReason.None;

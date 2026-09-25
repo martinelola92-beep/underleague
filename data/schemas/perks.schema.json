@@ -223,9 +223,9 @@
             },
             "cooldownSeconds": {
               "type": "integer",
-              "minimum": 0,
-              "maximum": 600,
-              "description": "RF-069c: segundos entre dos activaciones. Un acto sin enfriamiento no es un acto."
+              "minimum": 1,
+              "maximum": 90,
+              "description": "RF-069c: segundos entre dos activaciones. El mínimo es 1 —un enfriamiento de 0 no es un enfriamiento, y el cargador lo rechaza— y el techo son 90, el partido entero: regulationTicks son 1.200 ticks, o sea 80 s de tiempo lógico."
             }
           },
           "additionalProperties": false,
