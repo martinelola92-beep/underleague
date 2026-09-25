@@ -72,18 +72,43 @@ public class RunEngineTests
     [Fact]
     public void ARunCanBePlayedFromStartToFinish()
     {
-        // Semilla 4, no 2 (BB-C, independent-reviewer): el arreglo de MatchEngine.ResetPositions (un
-        // goleador celebrando ya no salta a su casilla-hogar) no toca ninguna regla de RF-002, pero
-        // desplaza el consumo de RNG de cada partido de la run lo suficiente para que la 2 deje de dar
-        // victoria (BossMatchLost en algún acto) - la misma clase de efecto que ya movió esta prueba de
-        // la semilla 1 a la 2 quince líneas de historial atrás, por una razón de código completamente
-        // distinta (RF-005/RF-020). Es la firma de una prueba de una sola semilla operando sin margen
-        // frente a cualquier cambio real de /Sim (docs/pendientes/BB-P.md): no una garantía de que ESTA
-        // build gana, sino de que EXISTE una semilla que completa la run con esta plantilla y esta
-        // política, y esta prueba no puede evitar necesitar una nueva de vez en cuando. 4 da el mismo
-        // rango de nodos y partidos que antes.
-        var systems = new TestRunSystems { OpponentQuality = 30 };
-        var state = TestRuns.PlayToTheEnd(RunEngine.Start(TestRuns.Setup(quality: 70), 4, Catalog), Catalog, systems);
+        // NO una semilla, SINO LAS OCHO PRIMERAS, y la primera que gane es la que se examina. Lo que
+        // esta prueba afirma —y así lo decía ya su comentario— es que **existe** una semilla que completa
+        // la run con esta plantilla y esta política, no que la gane una concreta. Probando una sola, lo
+        // que medía era otra cosa: se rompió con la ADR 0148 (semilla 4 → derrota) igual que se había
+        // roto antes con BB-C (2 → 4) y antes con RF-005/RF-020 (1 → 2), tres cambios de /Sim sin
+        // relación entre sí. Medido al arreglarla: **12 de 16 semillas ganan**, o sea que la run estaba
+        // sanísima y lo frágil era el instrumento (docs/pendientes/BB-P.md, el patrón de siempre).
+        //
+        // Si ninguna de las ocho gana —o si ganan menos de tres— eso sí es una regresión de verdad.
+        RunState? state = null;
+        ulong winningSeed = 0;
+        int wins = 0;
+        for (ulong seed = 1; seed <= 8; seed++)
+        {
+            var systems = new TestRunSystems { OpponentQuality = 30 };
+            var candidate = TestRuns.PlayToTheEnd(RunEngine.Start(TestRuns.Setup(quality: 70), seed, Catalog), Catalog, systems);
+            if (RunEngine.Outcome(candidate).Kind != RunOutcomeKind.Victory)
+            {
+                continue;
+            }
+
+            wins++;
+            state ??= candidate;
+            if (winningSeed == 0)
+            {
+                winningSeed = seed;
+            }
+        }
+
+        // Se cuentan TODAS y se exige un suelo, no «que gane alguna»: con la primera que gane bastando,
+        // una caída de 8/8 a 1/8 pasaría en verde y eso es un test que no mide nada. El suelo es 3 de 8,
+        // con margen: medido el 25 sep, antes de la ADR 0148 ganaban 8 de 16 y después 12 de 16.
+        Assert.True(
+            wins >= 3,
+            $"solo {wins} de las 8 primeras semillas completan la run con victoria (suelo 3): la run se ha vuelto demasiado difícil");
+        Assert.True(state is not null, "ninguna de las ocho primeras semillas completa la run con victoria");
+        Assert.NotEqual(0ul, winningSeed);
 
         var outcome = RunEngine.Outcome(state);
         Assert.True(outcome.IsOver, "la run debería haber terminado");

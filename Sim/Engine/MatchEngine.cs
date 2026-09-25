@@ -643,10 +643,13 @@ internal sealed class MatchEngine : IPerkWorld
                 TickStateTimer(player);
                 if (player.OnPitch)
                 {
-                    // ADR 0147: el cuerpo corre igual que jugando —recolocarse cansa y los enfriamientos
-                    // bajan—. Lo que NO corre en una reanudación es decidir. Antes esto hacía `continue`
-                    // antes de UpdatePlayer y congelaba las dos cosas (revisión independiente).
-                    TickBody(player);
+                    // ADR 0147: el cuerpo corre igual que jugando —recolocarse **cansa**—. Lo que NO
+                    // corre en una reanudación es decidir. Antes esto hacía `continue` antes de
+                    // UpdatePlayer y congelaba también la energía (revisión independiente).
+                    //
+                    // ADR 0148: los enfriamientos de ENTRADA sí se congelan aquí, porque son disputa y no
+                    // física, y en una reanudación no hay disputa posible.
+                    TickBody(player, tackleCooldowns: false);
                 }
 
                 if (player.OnPitch && player.State is not PlayerState.Celebrating)
@@ -657,7 +660,7 @@ internal sealed class MatchEngine : IPerkWorld
                 continue;
             }
 
-            UpdatePlayer(player);
+            UpdatePlayer(player, tackleCooldowns: !wasRestarting);
         }
 
         // Separación de cuerpos al final del movimiento y antes de tocar el balón (§2.1): así el balón, que
@@ -1202,7 +1205,7 @@ internal sealed class MatchEngine : IPerkWorld
 
     // ---------------------------------------------------------------- 3.2/3.3/3.6 jugadores
 
-    private void UpdatePlayer(MatchPlayer player)
+    private void UpdatePlayer(MatchPlayer player, bool tackleCooldowns)
     {
         if (!player.OnPitch)
         {
@@ -1215,7 +1218,7 @@ internal sealed class MatchEngine : IPerkWorld
             return;
         }
 
-        TickBody(player);
+        TickBody(player, tackleCooldowns);
 
         // Un estado de decisión CON contador no vuelve a decidir hasta que se le acaba: es lo que hace de
         // la conducción un compromiso y no una intención que se reevalúa cada dos ticks. Comprobado antes
@@ -1238,9 +1241,11 @@ internal sealed class MatchEngine : IPerkWorld
     ///
     /// <para><b>El principio que decide qué corre aquí y qué no</b>: <i>lo físico sigue el reloj de pared,
     /// lo que es disputa sigue el reloj del partido</i>. Un jugador <b>sí</b> recupera el resuello durante
-    /// una parada —por eso los equipos pierden tiempo— y un enfriamiento de entrada es físico: los dos
-    /// corren con el tick del motor, no con <c>_clockTick</c>. Lo que no corre en una reanudación es
-    /// <b>decidir</b>.</para>
+    /// una parada —por eso los equipos pierden tiempo—, así que la <b>energía</b> corre con el tick del
+    /// motor. Los <b>enfriamientos de entrada</b>, en cambio, <b>no</b> (ADR 0148): son disputa, no física,
+    /// y en una reanudación no hay disputa posible — los gobierna el parámetro
+    /// <c>tackleCooldowns</c>, que el bucle de jugadores pasa desde la fotografía <c>wasRestarting</c>.
+    /// Lo que tampoco corre en una reanudación es <b>decidir</b>.</para>
     ///
     /// <para>Antes de existir este método, la rama del saque de centro hacía <c>continue</c> antes de
     /// <c>UpdatePlayer</c> y congelaba las dos cosas: cruzar el campo andando tras un gol no costaba
@@ -1250,21 +1255,42 @@ internal sealed class MatchEngine : IPerkWorld
     /// que alargar las reanudaciones abarata el cansancio (ADR 0142). Las salidas están planteadas en
     /// <c>docs/plan-balon-parado-posicional.md</c> y ninguna decidida.</para>
     /// </summary>
-    private void TickBody(MatchPlayer player)
+    private void TickBody(MatchPlayer player, bool tackleCooldowns)
     {
         if (player.DribbleDuelCooldown > 0)
         {
             player.DribbleDuelCooldown--;
         }
 
-        if (player.TackleCooldown > 0)
+        // ADR 0148: los enfriamientos de ENTRADA solo corren con el balón en juego. La ADR 0147 enunció el
+        // principio —*lo físico sigue el reloj de pared, lo que es disputa sigue el reloj del partido*— y
+        // lo aplicó bien a la energía, pero clasificó estos dos como físicos. No lo son: un enfriamiento
+        // de entrada mide cuánto tardas en poder **volver a disputar**, y durante una reanudación no hay
+        // disputa posible, así que recargarlo ahí es regalar entradas.
+        //
+        // <b>La condición es la que ya existía</b>, no una nueva: `_restartTicksLeft > 0`, la misma con la
+        // que el reloj del partido decide si corre (BC-A, `:581`), y <b>fotografiada antes del bucle</b>
+        // como `wasRestarting` — una falta pitada a mitad de tick llama a `BeginRestart` y cambiaría la
+        // respuesta para los jugadores que vienen detrás. La primera versión de esta ADR preguntaba
+        // `_phase == MatchPhase.OpenPlay` y la revisión independiente la tumbó por dos motivos: inventaba
+        // una tercera forma de preguntar lo mismo, y **excluía la turba** (`MobGoldenGoal`, el 9,25 % de
+        // los fotogramas), que es juego real — con `OffBallTackleCooldownTicks` en 400, cada jugador se
+        // habría quedado con una sola entrada para toda la prórroga, justo en el tramo que RF-055d
+        // convierte en la ventana de las builds de violencia.
+        //
+        // La ENERGÍA sigue corriendo en la pausa a propósito: eso sí es físico, y congelarla era el
+        // defecto que la revisión independiente encontró en la ADR 0147.
+        if (tackleCooldowns)
         {
-            player.TackleCooldown--;
-        }
+            if (player.TackleCooldown > 0)
+            {
+                player.TackleCooldown--;
+            }
 
-        if (player.OffBallTackleCooldown > 0)
-        {
-            player.OffBallTackleCooldown--;
+            if (player.OffBallTackleCooldown > 0)
+            {
+                player.OffBallTackleCooldown--;
+            }
         }
 
         if (player.BlockCooldown > 0)

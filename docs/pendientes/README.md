@@ -94,6 +94,7 @@ viva anotada.
 | [BC-F](./BC-F.md) | Al sustituir, el partido re-simulado reasigna los dorsales | Resuelta (19 sep 2026) |
 | [BE-D](./BE-D.md) | RF-125 será subcontable si se suma `Career` de la plantilla | **RESUELTA de diseño (23 sep 2026)**: lo dicta RF-125b — el contador es del club y vive en la run. A implementar con RF-125 |
 | [BE-A](./BE-A.md) | El centrocampista nunca entra a su marcado sin balón: el comentario dice «Defensa y centrocampista» y el código dice `Defender` | **CERRADA (23 sep 2026, ADR 0133)**: entra, con el defensa por delante en las cinco plantillas medidas. Lo que queda es el delantero, en [BF-C](./BF-C.md) |
+| [BJ-A](./BJ-A.md) | Lo que la ADR 0148 dejó sin decidir sobre los enfriamientos | **ABIERTA** (25 sep 2026): los otros tres enfriamientos que el principio implica y no se tocaron, congelar contra tasa reducida (nunca comparadas), la regla es invisible para el jugador, y la asimetría nueva «descansado pero incapaz de entrar» |
 | [CAT-A](./CAT-A.md) | `field_bandage` usaba el canal `injure`, que protegía al rival | Cerrada (13 sep 2026): `injure` → `injury`. Dejó abierto CAT-B |
 | [CAT-B](./CAT-B.md) | Un consumible se puede comprar pero no se puede equipar: nadie emite `SetConsumables` | Cerrada (ADR 0101). Dejó abierto CAT-C |
 | [CAT-D](./CAT-D.md) | ¿Una fila más de campo (16×5 → 16×6), con las DOS filas centrales como «centro»? | Cerrada (ADR 0103): entra la fila. Dejó abierto CAT-E |
