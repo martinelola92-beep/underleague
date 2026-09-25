@@ -398,6 +398,12 @@ public partial class BroadcastCapture : Control
             {
                 // Cuatro fotogramas del MISMO suceso: el anterior (todavía de pie), el instante de la
                 // activación, medio segundo después y uno y pico después, cuando el aviso ya se va.
+                // El director CONGELA en el momento del saque y devuelve su propio DisplayFrame, así que
+                // un SeekTo a secas no mueve el campo: las cuatro capturas salían del fotograma ~11
+                // mientras la medición leía el 306. Se le quita el proceso a los dos —como en la captura
+                // de la muerte— y el arnés manda el fotograma al campo directamente.
+                GoManual(screen);
+
                 foreach (var (offset, name) in new[]
                          {
                              (-2, "derribo-1-antes"), (0, "derribo-2-instante"),
@@ -406,7 +412,10 @@ public partial class BroadcastCapture : Control
                 {
                     int f = Math.Max(kd.Frame + offset, 0);
                     screen.SeekTo(f);
-                    await Settle(10);
+                    screen.Pitch3D.Frame = f;
+                    screen.Pitch3D.Alpha = 0f;
+                    screen.Pitch3D.QueueRedraw();
+                    await Settle(4);
 
                     // Se MIDE lo que debería verse, en vez de juzgarlo entrecerrando los ojos: cuántos
                     // cuerpos están en el suelo en ese fotograma y cuántos carteles de perk siguen vivos.
