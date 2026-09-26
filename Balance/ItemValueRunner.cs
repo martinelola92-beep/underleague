@@ -92,6 +92,9 @@ public static class ItemValueRunner
     /// </summary>
     public const int DefaultMatchesPerRoster = 2;
 
+    /// <summary>Plantillas máximas por semilla: el espacio de semillas de generación del espejo empieza en +500.</summary>
+    public const int MaxRosters = 500;
+
     private static readonly RefereeSetup Referee = new("Referee", RefereeTrait.Neutral, 0);
 
     /// <summary>Mide todo el catálogo de objetos, en orden de id ordinal ascendente (RT-041).</summary>
@@ -101,6 +104,11 @@ public static class ItemValueRunner
         ArgumentNullException.ThrowIfNull(catalog);
         ArgumentNullException.ThrowIfNull(items);
         ArgumentOutOfRangeException.ThrowIfLessThan(rosters, 1);
+
+        // El sujeto de la plantilla r usa la semilla índice*1000 + r y su espejo índice*1000 + 500 + r: por
+        // encima de 500 plantillas el sujeto r REUTILIZA el equipo del espejo r-500 y la muestra deja de ser
+        // independiente sin avisar (BL-A, revisión independiente del 26 sep 2026). Más potencia = más semillas.
+        ArgumentOutOfRangeException.ThrowIfGreaterThan(rosters, MaxRosters);
         ArgumentOutOfRangeException.ThrowIfLessThan(matchesPerRoster, 1);
 
         var rows = new List<ItemValueRow>();

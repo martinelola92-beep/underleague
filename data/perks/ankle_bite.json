@@ -1,0 +1,35 @@
+{
+  "_doc": "ACTO: no va a por el balón, va a por la pierna. La lesión sale por el camino normal del motor, con la misma fórmula y la misma escala por acto que cualquier otra. PAGA: el árbitro aprende, y esto es de lo que se ve. Sin medir, y toca el presupuesto de violencia (injuriesPerMatch está cerca de su techo), así que es el primero que habrá que mirar cuando se balancee.",
+  "id": "ankle_bite",
+  "name": {
+    "es": "Morder el tobillo",
+    "en": "Ankle Bite"
+  },
+  "rarity": "rare",
+  "minAct": 1,
+  "frequency": 100,
+  "kind": "conditional",
+  "axis": "identity",
+  "race": null,
+  "trigger": "TACKLE",
+  "scope": "actor",
+  "links": [],
+  "condition": "",
+  "effects": [
+    {
+      "type": "injure",
+      "target": "opponent"
+    }
+  ],
+  "elseEffects": [],
+  "limit": {
+    "per": "match",
+    "times": 2,
+    "cooldownSeconds": 45
+  },
+  "accumulatesAcrossMatches": false,
+  "lethal": false,
+  "positionOnly": null,
+  "tagsRequired": [],
+  "tagsForbidden": []
+}

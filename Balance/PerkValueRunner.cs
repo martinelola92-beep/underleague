@@ -156,6 +156,9 @@ public static class PerkValueRunner
     /// <summary>Calidad de la plantilla de prueba (el pivote del generador).</summary>
     public const int Quality = 50;
 
+    /// <summary>Plantillas máximas por semilla: el espacio de semillas de generación del espejo empieza en +500.</summary>
+    public const int MaxRosters = 500;
+
     private static readonly RefereeSetup Referee = new("Referee", RefereeTrait.Neutral, 0);
 
     public static IReadOnlyList<PerkValueRow> Run(Catalog catalog, ulong seed, int rosters, int matchesPerRoster) =>
@@ -176,6 +179,11 @@ public static class PerkValueRunner
     {
         ArgumentNullException.ThrowIfNull(catalog);
         ArgumentOutOfRangeException.ThrowIfLessThan(rosters, 1);
+
+        // El sujeto de la plantilla r usa la semilla índice*1000 + r y su espejo índice*1000 + 500 + r: por
+        // encima de 500 plantillas el sujeto r REUTILIZA el equipo del espejo r-500 y la muestra deja de ser
+        // independiente sin avisar (BL-A, revisión independiente del 26 sep 2026). Más potencia = más semillas.
+        ArgumentOutOfRangeException.ThrowIfGreaterThan(rosters, MaxRosters);
         ArgumentOutOfRangeException.ThrowIfLessThan(matchesPerRoster, 1);
 
         var rows = new List<PerkValueRow>();
