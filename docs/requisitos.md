@@ -207,7 +207,7 @@ Salir de la zona no está prohibido: penaliza de forma creciente con la distanci
 
 - **RF-057b** El portero **nunca abandona el área**. Su correa define cuánto del área cubre, y siempre queda contenida en ella.
 - **RF-057c** La parada se resuelve como un **porcentaje**: base del 50%, más la media ponderada de los atributos relevantes al tipo de tiro, menos la calidad del tiro. Fuerza gobierna tiros lejanos y potentes y el aguante ante cargas; velocidad, los reflejos en tiros cercanos y uno contra uno; técnica, la colocación y los penaltis; resistencia, que el porcentaje no decaiga tras tiros consecutivos ni en la turba. No hay atributos exclusivos de portero.
-- **RF-057d** El portero **puede recibir cargas** dentro del área. Es un objetivo legítimo de las builds de violencia y un motivo para que las builds defensivas protejan su área.
+- **RF-057d** El portero **puede recibir cargas** dentro del área. Es un objetivo legítimo de las builds de violencia y un motivo para que las builds defensivas protejan su área. *(Desde la **ADR 0152**: salvo mientras tiene el balón dentro de su área —atrapado, recogido o para sacar de puerta—; entonces el área se **cierra** y todos los jugadores de campo, de los dos equipos, salen de ella andando.)*
 - **RF-057e** Existen rasgos propios de portero ("Gato", "Muro", "Sale mucho") visibles en el ojeo, y perks y objetos que solo aplican a la posición.
 
 ### 3.6b El árbitro

@@ -68,6 +68,7 @@ viva anotada.
 | [BM-A](./BM-A.md) | Un perk no puede derribar al que le entra (Muro, Raíces, Toque) | **Implementada** 26 sep: el cargador decide la rivalidad por el alcance; un derribado por efecto no disputa; Muro convertido. Raíces y Toque necesitan otra primitiva (en la ficha) |
 | [BM-B](./BM-B.md) | Una resolución publicada antes de tirarse no mira a sus participantes (`charge`, `bull_rush`, `duelist`, `nutmeg`) | Abierta: el caso `extraAction` CONFIRMED por medida (44/450 runs); cualquier arreglo cambia perks medidos |
 | [BM-C](./BM-C.md) | Lo que `ankle_bite` paga no se ve: la lesión nunca se pita y el sesgo del árbitro son décimas de punto | Revisada en diseño (recomendación A: la mordida arrastra la falta, sólo datos); pendiente del censo por portador antes de tocar el dato |
+| [BN-A](./BN-A.md) | Los jugadores se amontonan sobre el portero cuando tiene el balón | Implementada ([ADR 0152](../decisiones/0152-el-area-del-portero-se-cierra-y-el-portero-saca-con-comba.md)): el área se cierra y el portero despeja con comba (despeje devuelto 551 → 4); abierto el grupo en el borde del área en el saque de puerta |
 
 ## Cerradas
 
