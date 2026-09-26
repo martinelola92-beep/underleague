@@ -217,7 +217,9 @@ guarda `OnPitch` está y la revisión la verificó leyendo, sin test); un test p
 `/Game`, que no tiene proyecto de tests, RT-084). Los enfriamientos de perk en segundos con ~250 ticks
 menos de balón muerto por partido siguen sin auditar.
 
-**DESIGN CLAIM NOT PROVEN**: que levantar a los derribados con el gol sea inocuo. Un derribo justo antes
-del gol —el de Muro (`bulwark_stance`, BM-A) o cualquier otro— ahora se pierde en el reinicio. Es la
-decisión del revisor; su interacción con los perks que derriban no ha pasado por `game-design-review`.
+**Cerrado por el revisor (26 sep 2026)**: que un derribo justo antes del gol —el de Muro o cualquier
+otro— se pierda en el reinicio es lo correcto: *«se supone que el partido para y los jugadores tienen más
+de 1 o 2 minutos en la vida real»*. Tras un gol pasa tiempo de verdad, y un estado de segundos como el
+derribo no lo sobrevive. No necesita `game-design-review`.
+
 

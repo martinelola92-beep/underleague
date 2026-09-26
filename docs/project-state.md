@@ -19,8 +19,9 @@ un fundido a negro breve (`Game/Match/ResetCut.cs`, duraciones provisionales). E
 este caso. Medido: ningún rango se mueve y los partidos sin gol salen idénticos, **pero las lesiones bajan ~10 %** y
 las faltas 7-10 % por el balón muerto más corto (explica 36-52 % de la caída de entradas; el resto sin
 atribuir); puertas, las mismas 4 rojas. La revisión independiente cazó que la cortinilla llegaba un
-fotograma tarde y la barrera saltaba al empezar la celebración: arreglados. Pendiente de
-`game-design-review`: el gol levanta a los derribados, y un derribo de Muro justo antes del gol se pierde. El modo
+fotograma tarde y la barrera saltaba al empezar la celebración: arreglados. Que el gol levante
+a los derribados (y un derribo de Muro justo antes se pierda) lo cerró el revisor: tras un gol pasan minutos
+de verdad. El modo
 depuración (F3) conserva el corte seco.
 
 **El paso 2 (anticipación corta del balón) quedó aparcado a medias por decisión del revisor**
