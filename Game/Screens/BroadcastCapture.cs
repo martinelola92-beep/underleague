@@ -519,6 +519,23 @@ public partial class BroadcastCapture : Control
             Drop(instance);
         }
 
+        // El área cerrada (decisión del revisor, 27 sep 2026): el saque de puerta, que es donde los
+        // compañeros se amontonaban sobre el portero (2,4 a menos de una casilla antes; ninguno ahora).
+        if (FindGoalKick(run, baseSeed.Value, baseNode) is { } goalKickFrame)
+        {
+            GD.Print($"retransmisión: 'saque de puerta' en la semilla {baseSeed.Value}, fotograma {goalKickFrame}");
+            run.NewRun("orc_ironworks", Race.Orc, baseSeed.Value);
+            run.SelectedNodeId = baseNode;
+            var instance = await Show("res://Scenes/Retransmision.tscn", frames: 10);
+            if (instance is BroadcastScreen screen)
+            {
+                await ShowFrame(screen, goalKickFrame, "area-saque-puerta");
+                await Save("area-saque-puerta");
+            }
+
+            Drop(instance);
+        }
+
         // ADR 0151: la cortinilla del reinicio tras gol, fotografiada EN MARCHA. SeekTo la anula a
         // propósito (un salto no es reproducción), así que se llega dos fotogramas antes del reinicio y se
         // deja correr la pantalla con StepManual, que es determinista, parando en cada tramo del fundido.
@@ -889,6 +906,27 @@ public partial class BroadcastCapture : Control
         {
             GD.PushWarning($"captura '{name}': se pidió el fotograma {want} y el campo enseña {got}");
         }
+    }
+
+    /// <summary>El primer saque de puerta fuera del arranque: el fotograma en que el portero ya tiene el balón.</summary>
+    private static int? FindGoalKick(RunController run, ulong seed, int node)
+    {
+        run.NewRun("orc_ironworks", Race.Orc, seed);
+        var playback = MatchPlaybacks.Of(run.State!, node, run.Catalog!, run.Engine, trace: true, MatchDecisions.None);
+        if (playback.Trace is not { } trace)
+        {
+            return null;
+        }
+
+        foreach (var e in playback.Result.Events)
+        {
+            if (e.Type == EventType.Recovery && e.Detail == "goalKick" && e.Tick > 90)
+            {
+                return trace.FrameOfTick(e.Tick);
+            }
+        }
+
+        return null;
     }
 
     private async Task CaptureResetCut(RunController run, ulong seed, int node, int goalFrame)
