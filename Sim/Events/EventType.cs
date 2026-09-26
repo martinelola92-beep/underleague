@@ -64,6 +64,16 @@ public enum EventType
     /// <para>Al FINAL del enum, por el mismo motivo que <see cref="Cross"/>.</para>
     /// </summary>
     Clearance,
+
+    /// <summary>
+    /// Reinicio tras un gol (ADR 0151): al terminar la celebración el motor coloca a todos en su sitio de
+    /// saque en un solo tick. <c>Detail</c> es <c>goal</c>. Es un evento <b>de presentación</b>, como
+    /// <see cref="PerkTriggered"/>: existe para que la pantalla tape el salto con una cortinilla sabiendo
+    /// que es un corte, en vez de adivinarlo con un umbral de distancia. No es disparador de perks ni narra
+    /// nada en el log (<see cref="EventTypeNames.IsPresentationOnly"/>).
+    /// <para>Al FINAL del enum, por el mismo motivo que <see cref="Cross"/>.</para>
+    /// </summary>
+    TeamsReset,
 }
 
 /// <summary>Conversión de EventType a la forma UPPER_SNAKE usada en datos y logs.</summary>
@@ -101,6 +111,14 @@ public static class EventTypeNames
         EventType.PerkTriggered => "PERK_TRIGGERED",
         EventType.Cross => "CROSS",
         EventType.Clearance => "CLEARANCE",
+        EventType.TeamsReset => "TEAMS_RESET",
         _ => throw new ArgumentOutOfRangeException(nameof(t)),
     };
+
+    /// <summary>
+    /// Eventos que el motor emite <b>para la pantalla</b> y no son jugadas: ningún perk puede colgarse de
+    /// ellos (el cargador los rechaza como disparador), no tienen plantilla de descripción y no narran en
+    /// el log. Antes eran casos sueltos de <see cref="EventType.PerkTriggered"/> en tres sitios.
+    /// </summary>
+    public static bool IsPresentationOnly(EventType t) => t is EventType.PerkTriggered or EventType.TeamsReset;
 }

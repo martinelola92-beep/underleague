@@ -181,6 +181,9 @@ public static class MatchLogView
         // C9: el aviso de perk activado es presentación —el cartel de 1 s sobre la cabeza— y no
         // una jugada. En el log sería una línea por activación sin nada que narrar.
         EventType.PerkTriggered => false,
+
+        // ADR 0151: el reinicio tras gol es el corte de la cortinilla, no una jugada.
+        EventType.TeamsReset => false,
         _ => true,
     };
 

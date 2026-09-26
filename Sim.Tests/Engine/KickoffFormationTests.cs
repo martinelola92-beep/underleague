@@ -147,6 +147,10 @@ public sealed class KickoffFormationTests
             var setup = TestMatches.Reference(Catalog, seed);
             var result = Simulator.Run(setup, seed, Catalog, SimConfig.Default with { Trace = true });
             var trace = result.Trace!;
+            var resetFrames = result.Events
+                .Where(x => x.Type == EventType.TeamsReset)
+                .Select(x => trace.FrameOfTick(x.Tick))
+                .ToHashSet();
 
             foreach (var e in result.Events)
             {
@@ -192,6 +196,10 @@ public sealed class KickoffFormationTests
     /// pero ninguno de los dos miraba al sacador — que seguía cruzando el campo en un fotograma porque su
     /// teletransporte estaba camuflado dentro del de todo el equipo.
     /// </summary>
+    /// <para><b>Con una excepción desde la ADR 0151</b>: el tick de <see cref="EventType.TeamsReset"/>, en
+    /// el que el motor coloca a todos de golpe tras la celebración de un gol y la pantalla lo tapa con una
+    /// cortinilla. Ese salto es la regla, y lo vigila <see cref="GoalResetTests"/>; aquí se salta ese
+    /// fotograma y sólo ése.</para>
     [Fact]
     public void NobodyJumpsDuringTheKickoff()
     {
@@ -205,6 +213,10 @@ public sealed class KickoffFormationTests
             var setup = TestMatches.Reference(Catalog, seed);
             var result = Simulator.Run(setup, seed, Catalog, SimConfig.Default with { Trace = true });
             var trace = result.Trace!;
+            var resetFrames = result.Events
+                .Where(x => x.Type == EventType.TeamsReset)
+                .Select(x => trace.FrameOfTick(x.Tick))
+                .ToHashSet();
 
             foreach (var e in result.Events)
             {
@@ -228,6 +240,11 @@ public sealed class KickoffFormationTests
 
                 for (int frame = startFrame + 1; frame <= endFrame; frame++)
                 {
+                    if (resetFrames.Contains(frame))
+                    {
+                        continue;
+                    }
+
                     for (int slot = 0; slot < trace.Players.Count; slot++)
                     {
                         if (!trace.OnPitchAt(frame, slot) || !trace.OnPitchAt(frame - 1, slot))

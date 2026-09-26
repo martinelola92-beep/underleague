@@ -1392,8 +1392,9 @@ public static class PerkLoader
         {
             // C9: PERK_TRIGGERED es un evento de PRESENTACIÓN, no del juego: lo emite el propio motor de
             // efectos para que el render pueda atribuir una activación. Suscribir un perk a él sería una
-            // recursión sin sentido, así que no es un disparador válido en /data.
-            if (candidate == EventType.PerkTriggered)
+            // recursión sin sentido, así que no es un disparador válido en /data. TEAMS_RESET (ADR 0151)
+            // es presentación por el mismo motivo.
+            if (EventTypeNames.IsPresentationOnly(candidate))
             {
                 continue;
             }

@@ -115,6 +115,14 @@ internal sealed class MatchEngine : IPerkWorld
     private int _restartWaitTicks;
 
     /// <summary>
+    /// Ticks que le quedan a la celebración de un gol antes del reinicio (ADR 0151). Mientras es mayor que
+    /// cero el balón está muerto, el reloj parado y <b>nadie camina</b>: el goleador celebra y los demás se
+    /// quedan donde están. Al llegar a cero, <see cref="ResetTeamsAfterGoal"/> coloca a todos de golpe y
+    /// empieza la cuenta atrás normal del saque de centro.
+    /// </summary>
+    private int _goalCelebrationTicks;
+
+    /// <summary>
     /// A dónde va cada jugador durante la reanudación en curso (ADR 0147), o <c>null</c> si esta
     /// reanudación no recoloca a nadie. Es la generalización de lo que BC-A hizo sólo para el saque de
     /// centro: en vez de «todos a su casilla-hogar», <b>cada reanudación dice dónde va cada uno</b>.
@@ -627,6 +635,10 @@ internal sealed class MatchEngine : IPerkWorld
         // UpdateBall/CheckOutOfBounds (revisión independiente, fase 0, ya resuelta antes de este cambio).
         bool wasRestarting = _restartTicksLeft > 0;
 
+        // ADR 0151: durante la celebración de un gol nadie camina —ni el sacador ni el equipo—; el reinicio
+        // los coloca a todos de golpe cuando termina.
+        bool celebratingGoal = wasRestarting && _goalCelebrationTicks > 0;
+
         for (int i = 0; i < _players.Length; i++)
         {
             var player = PlayerInTurnOrder(i);
@@ -638,7 +650,31 @@ internal sealed class MatchEngine : IPerkWorld
             // traza sí lo enseñaba y /Game la lee. Es la convención que fijaron BB-M y BA-L.
             if (wasRestarting && ReferenceEquals(player, _restartTaker) && player.OnPitch)
             {
-                WalkRestartTaker(player);
+                if (celebratingGoal)
+                {
+                    player.Velocity = default;
+                }
+                else
+                {
+                    WalkRestartTaker(player);
+                }
+
+                continue;
+            }
+
+            // ADR 0151: DURANTE LA CELEBRACIÓN DE UN GOL, NADIE SE MUEVE —ni el que se levanta del suelo—.
+            // Corren el estado y el cuerpo, como en cualquier reanudación; no se decide ni se anda. La
+            // primera versión dejaba a derribados y lesionados en UpdatePlayer, y el que se levantaba a
+            // mitad de celebración echaba a andar (medido: 0,06 casillas en un tick, GoalResetTests).
+            if (celebratingGoal && player.OnPitch)
+            {
+                TickStateTimer(player);
+                if (player.OnPitch)
+                {
+                    TickBody(player, tackleCooldowns: false);
+                    player.Velocity = default;
+                }
+
                 continue;
             }
 
@@ -686,7 +722,11 @@ internal sealed class MatchEngine : IPerkWorld
         // también es cierto durante la cuenta atrás del penalti, y la barrera actuaba 45 ticks sobre toda
         // la defensa sin que nadie lo hubiera medido ni decidido — RF-054, que ADR 0090 dejaba intocado)
         // y también en la ventana posterior a tomarla, mientras el sacador conserve el balón.
-        if ((wasRestarting && IsClearanceRestart(_pendingRestart)) || _restartClearanceOwner is not null)
+        // ADR 0151: durante la celebración de un gol la barrera NO actúa. Empujaba en el primer tick de la
+        // celebración a los del equipo que marcó hasta 2 casillas del centro —medido por la revisión
+        // independiente: 161 saltos de hasta 1,90 casillas en 450 goles, sin velo encima—, y esa gente
+        // se va a recolocar de todas formas: ResetTeamsAfterGoal aplica la barrera en el tick del reinicio.
+        if ((wasRestarting && IsClearanceRestart(_pendingRestart) && !celebratingGoal) || _restartClearanceOwner is not null)
         {
             EnforceRestartClearance();
         }
@@ -715,6 +755,15 @@ internal sealed class MatchEngine : IPerkWorld
 
         if (wasRestarting)
         {
+            if (_goalCelebrationTicks > 0)
+            {
+                _goalCelebrationTicks--;
+                if (_goalCelebrationTicks == 0)
+                {
+                    ResetTeamsAfterGoal();
+                }
+            }
+
             _restartTicksLeft--;
             if (_restartTicksLeft == 0)
             {
@@ -3625,7 +3674,7 @@ internal sealed class MatchEngine : IPerkWorld
             return;
         }
 
-        ScheduleKickoff(1 - team);
+        ScheduleKickoffAfterGoal(1 - team);
     }
 
     private void TryDribbleDuel(MatchPlayer carrier)
@@ -4618,6 +4667,74 @@ internal sealed class MatchEngine : IPerkWorld
         BeginRestart(RestartKind.Kickoff, team, new Vec2(Pitch.Columns / 2f, PitchConstants.CenterRow), _tuning.Restart.KickoffTicks, MatchPhase.Kickoff);
     }
 
+    /// <summary>
+    /// El saque de centro que sigue a un gol (ADR 0151, decisión del revisor): la celebración entera
+    /// (<c>states.CelebratingTicks</c>) sin que nadie vuelva andando, el reinicio en un tick y después la
+    /// cuenta atrás de siempre. Por eso la reanudación dura las dos cosas sumadas.
+    /// </summary>
+    private void ScheduleKickoffAfterGoal(int team)
+    {
+        int celebration = _tuning.States.CelebratingTicks;
+        BeginRestart(
+            RestartKind.Kickoff,
+            team,
+            new Vec2(Pitch.Columns / 2f, PitchConstants.CenterRow),
+            _tuning.Restart.KickoffTicks + celebration,
+            MatchPhase.Kickoff);
+        _goalCelebrationTicks = celebration;
+
+        // Con la celebración a cero (el esquema lo permite) el reinicio es inmediato, no desaparece: sin
+        // esto se volvía andando sin aviso, que es la regla que esta ADR sustituye (revisión independiente,
+        // regla I: el campo tiene ahora un segundo consumidor).
+        if (celebration <= 0)
+        {
+            ResetTeamsAfterGoal();
+        }
+    }
+
+    /// <summary>
+    /// El reinicio tras el gol (ADR 0151): todos los que están en el campo a su <see cref="KickoffSpot"/>
+    /// —la colocación del primer saque del partido— y el sacador sobre el balón, <b>en un solo tick</b>.
+    /// La presentación lo tapa con una cortinilla, y lo sabe por el evento <see cref="EventType.TeamsReset"/>,
+    /// no adivinando el salto con un umbral de distancia.
+    ///
+    /// <para>Los derribados se levantan (decisión del revisor: «derribados se curan y también vuelven a
+    /// su posición»). Los lesionados se recolocan y siguen lesionados: una lesión tiene consecuencias de
+    /// run y un gol no la cura (principio rector 11). El goleador ya no celebra: su contador acaba en este
+    /// mismo tick, así que la protección de BB-C (no mover a quien celebra) no aplica.</para>
+    ///
+    /// <para>Sólo <c>OnPitch</c>: el suplente de una sustitución programada (ADR 0094) está en el array en
+    /// (-1,-1), y colocarlo lo metería en el campo — la trampa que costó cuatro tests en BC-A.</para>
+    /// </summary>
+    private void ResetTeamsAfterGoal()
+    {
+        for (int i = 0; i < _players.Length; i++)
+        {
+            var player = _players[i];
+            if (!player.OnPitch)
+            {
+                continue;
+            }
+
+            if (player.State is PlayerState.KnockedDown or PlayerState.Celebrating)
+            {
+                player.EnterState(PlayerState.Positioning, 0);
+            }
+
+            player.Position = ReferenceEquals(player, _restartTaker) ? _restartPoint : _restartSpot[player.Index];
+            player.Velocity = default;
+            player.EffectiveHome = player.HomeCenter;
+        }
+
+        // La barrera de la reanudación (BB-B, 2 casillas) es más ancha que el círculo central del que
+        // KickoffSpot saca al que no saca (1,4). Sin aplicarla aquí, el tick siguiente al reinicio la
+        // barrera empujaba a esos jugadores 0,6 casillas de golpe: un segundo salto, fuera del fotograma
+        // que tapa la cortinilla (medido, NobodyJumpsDuringTheKickoff). Así el salto entero cae en éste.
+        EnforceRestartClearance();
+
+        Emit(EventType.TeamsReset, "goal", publish: false);
+    }
+
     private void SchedulePenalty(int team)
     {
         int direction = Pitch.AttackDirection(team);
@@ -4660,6 +4777,10 @@ internal sealed class MatchEngine : IPerkWorld
         // que se limpia aquí, no solo al cambiar de dueño.
         _restartClearanceOwner = null;
         _restartClearanceOwnerTicks = 0;
+
+        // ADR 0151: una reanudación nueva cierra la celebración de la anterior. Sólo el saque tras gol la
+        // vuelve a abrir, justo después de esta llamada.
+        _goalCelebrationTicks = 0;
 
         _pendingRestart = kind;
         _restartTeam = team;

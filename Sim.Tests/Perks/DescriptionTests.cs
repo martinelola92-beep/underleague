@@ -298,7 +298,7 @@ public sealed class DescriptionTests
                 // disparador, así que el generador NUNCA puede pedir su plantilla. Este test afirma «toda
                 // clave que el generador PUEDE pedir», no «toda clave del enum»: exigir plantilla aquí
                 // obligaría a escribir en l10n un disparador que ningún perk puede declarar.
-                if (trigger == EventType.PerkTriggered)
+                if (EventTypeNames.IsPresentationOnly(trigger))
                 {
                     continue;
                 }
