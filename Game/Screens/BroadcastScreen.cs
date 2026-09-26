@@ -97,6 +97,10 @@ public partial class BroadcastScreen : Control
     private DecisionTray _tray = null!;
     private MatchPitchView3D _pitch3d = null!;
 
+    /// <summary>La cortinilla del reinicio tras gol (ADR 0151) y el velo negro que pinta, encima del campo y debajo del tablero.</summary>
+    private readonly ResetCut _cut = new();
+    private ColorRect _veil = null!;
+
     private int _frame;
     private double _carry;
     private int _speedIndex;
@@ -234,7 +238,17 @@ public partial class BroadcastScreen : Control
                 _carry -= advance;
                 candidate = Mathf.Clamp(_frame + advance, 0, trace.FrameCount - 1);
             }
+
+            // ADR 0151: si el avance cruza el reinicio tras un gol, la cortinilla retiene la reproducción
+            // mientras funde; lo que el reloj acumule en ese rato se descarta, como en una congelación.
+            candidate = _cut.Filter(_frame, candidate, delta, Speeds[_speedIndex]);
+            if (_cut.Active)
+            {
+                _carry = 0d;
+            }
         }
+
+        ApplyVeil();
 
         var result = _director.Advance(candidate, delta, Speeds[_speedIndex]);
         _frozenLastFrame = result.Frozen;
@@ -258,6 +272,12 @@ public partial class BroadcastScreen : Control
         UpdateShotGesture(Speeds[_speedIndex] == 1);
         UpdateEventSounds(Speeds[_speedIndex] == 1);
         UpdateDeathEdict((float)delta);
+    }
+
+    private void ApplyVeil()
+    {
+        _veil.Visible = _cut.Veil > 0f;
+        _veil.Color = new Color(0f, 0f, 0f, _cut.Veil);
     }
 
     public override void _UnhandledInput(InputEvent @event)
@@ -341,6 +361,19 @@ public partial class BroadcastScreen : Control
         _pitch3d.Bind(_trace, _playback.Setup, _catalog, _playback.Result.Events);
         _pitch3d.Marks = _moments.Marks;
         BuildBloodMarks();
+
+        // ADR 0151: el velo va justo encima del campo, así que funde el partido y deja a la vista el
+        // tablero y las tiras, que se añaden después.
+        _veil = new ColorRect
+        {
+            Position = Vector2.Zero,
+            Size = new Vector2(CanvasWidth, _canvasHeight),
+            Color = new Color(0f, 0f, 0f, 0f),
+            MouseFilter = MouseFilterEnum.Ignore,
+            Visible = false,
+        };
+        AddChild(_veil);
+        _cut.Bind(_playback.Result.Events, _trace);
 
         _board = new BroadcastBoard();
         AddChild(_board);
@@ -563,6 +596,8 @@ public partial class BroadcastScreen : Control
         _director.Seek(decisionFrame + 1);
         _director.Resolve();
         _pitch3d.Bind(_trace, _playback.Setup, _catalog, _playback.Result.Events);
+        _cut.Bind(_playback.Result.Events, _trace);
+        ApplyVeil();
         _pitch3d.Marks = _moments.Marks;
         BuildBloodMarks();
 
@@ -1522,6 +1557,12 @@ public partial class BroadcastScreen : Control
     /// </summary>
     public MatchPitchView3D Pitch3D => _pitch3d;
 
+    /// <summary>Para el arnés de capturas: opacidad del velo de la cortinilla (ADR 0151) y si está reteniendo la reproducción.</summary>
+    public float CutVeil => _cut.Veil;
+
+    /// <inheritdoc cref="CutVeil"/>
+    public bool CutActive => _cut.Active;
+
     /// <summary>
     /// Lleva la pantalla a ese fotograma y deja que el director lo presente: usado por
     /// <see cref="BroadcastCapture"/> para llegar a un momento concreto sin depender de dejar correr el
@@ -1538,6 +1579,8 @@ public partial class BroadcastScreen : Control
         _frame = Mathf.Clamp(frame, 0, trace.FrameCount - 1);
         _carry = 0d;
         _matchEnded = false;
+        _cut.Reset();
+        ApplyVeil();
         _lastStampMoment = null;
         _lastVoiceMoment = null;
 

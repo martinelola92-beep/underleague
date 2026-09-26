@@ -519,6 +519,14 @@ public partial class BroadcastCapture : Control
             Drop(instance);
         }
 
+        // ADR 0151: la cortinilla del reinicio tras gol, fotografiada EN MARCHA. SeekTo la anula a
+        // propósito (un salto no es reproducción), así que se llega dos fotogramas antes del reinicio y se
+        // deja correr la pantalla con StepManual, que es determinista, parando en cada tramo del fundido.
+        if (found.TryGetValue("gol", out var goalHit))
+        {
+            await CaptureResetCut(run, goalHit.Seed, goalHit.Node, goalHit.Frame);
+        }
+
         // 3. Variantes de profundidad (revisión del orquestador: «el campo debe tener más 3D, más
         // profundidad»), solo si se pidieron por línea de comandos (`-- variantes`). Reutiliza el MISMO
         // fotograma que 'retrans-base' (estado inicial de la semilla base) y el MISMO que 'retrans-gol'
@@ -881,6 +889,68 @@ public partial class BroadcastCapture : Control
         {
             GD.PushWarning($"captura '{name}': se pidió el fotograma {want} y el campo enseña {got}");
         }
+    }
+
+    private async Task CaptureResetCut(RunController run, ulong seed, int node, int goalFrame)
+    {
+        run.NewRun("orc_ironworks", Race.Orc, seed);
+        run.SelectedNodeId = node;
+        var instance = await Show("res://Scenes/Retransmision.tscn", frames: 10);
+        if (instance is not BroadcastScreen screen || screen.Pitch3D.Trace is not { } trace)
+        {
+            Drop(instance);
+            return;
+        }
+
+        int reset = -1;
+        foreach (var e in run.Playback!.Result.Events)
+        {
+            if (e.Type == EventType.TeamsReset && trace.FrameOfTick(e.Tick) > goalFrame)
+            {
+                reset = trace.FrameOfTick(e.Tick);
+                break;
+            }
+        }
+
+        if (reset < 0)
+        {
+            GD.PushWarning("retransmisión: el gol capturado no tiene reinicio; se salta la cortinilla");
+            Drop(instance);
+            return;
+        }
+
+        GD.Print($"retransmisión: 'cortinilla' en la semilla {seed}, gol en {goalFrame}, reinicio en {reset}");
+        // Se llega de LEJOS y reproduciendo: tras un SeekTo el director devuelve su propio fotograma, que
+        // salió 8 por delante del pedido y ya había pasado el reinicio (medido: se pidió 1489 con el
+        // reinicio en 1491 y la pantalla arrancó en 1497; la cortinilla nunca se cruzaba).
+        await ShowFrame(screen, reset - 25, "cortinilla-0-antes");
+
+        const double Delta = 1d / 120d;
+        async Task StepUntil(Func<bool> done, string name)
+        {
+            for (int i = 0; i < 2000 && !done(); i++)
+            {
+                StepManual(screen, Delta, 1);
+            }
+
+            await Settle(2);
+            GD.Print($"{name}: fotograma {screen.Pitch3D.Frame} · velo {screen.CutVeil:0.00} · activa {screen.CutActive}");
+            await Save(name);
+        }
+
+        if (screen.Pitch3D.Frame >= reset)
+        {
+            GD.PushWarning($"retransmisión: la pantalla arrancó en {screen.Pitch3D.Frame}, pasado el reinicio {reset}; la cortinilla no se puede fotografiar");
+        }
+
+        await StepUntil(() => screen.CutActive, "cortinilla-1-celebracion");
+        await StepUntil(() => screen.CutActive && screen.CutVeil >= 0.5f, "cortinilla-2-funde");
+        await StepUntil(() => screen.CutVeil >= 1f, "cortinilla-3-negro");
+        await StepUntil(() => screen.CutActive && screen.CutVeil is > 0f and <= 0.5f, "cortinilla-4-vuelve");
+        await StepUntil(() => !screen.CutActive, "cortinilla-5-colocados");
+        int after = screen.Pitch3D.Frame + 10;
+        await StepUntil(() => screen.Pitch3D.Frame >= after, "cortinilla-6-saque");
+        Drop(instance);
     }
 
     private static void GoManual(BroadcastScreen screen)
