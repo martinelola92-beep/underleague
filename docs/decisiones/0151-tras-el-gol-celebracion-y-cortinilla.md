@@ -1,6 +1,6 @@
 # ADR 0151 — Tras el gol: dos segundos de celebración, cortinilla y todos en su sitio
 
-Fecha: 26 sep 2026 · Estado: **aceptada, sin implementar**. **Decisión del revisor.**
+Fecha: 26 sep 2026 · Estado: **aceptada**. **Decisión del revisor.**
 **Enmienda RF-053** («nadie se teletransporta») **sólo para el saque de centro tras gol**, y con ello una
 parte de [BC-A](../pendientes/BC-A.md) y de la [ADR 0147](0147-la-reanudacion-dura-lo-que-hace-falta-para-entenderla.md).
 El resto de reanudaciones no cambia.
@@ -54,10 +54,14 @@ en cruzar el campo (**sin medir en ticks**; lo único medido es que 6 s no basta
    - **Sólo jugadores en el campo** (`OnPitch`): la guarda que BC-A perdió al partir `ResetPositions` y
      que metía en el campo al suplente de una sustitución programada (ADR 0094) desde el tick 0. Es un
      requisito, no un detalle: sin ella diverge el partido entero y la resolución de sustituciones falla.
-   - **Los estados se conservan**: un derribado o un lesionado se recoloca y sigue derribado o lesionado
-     en su sitio (la cortinilla lo tapa). No se cura ni se levanta a nadie por ser gol: sería daño o
-     alivio no anunciado (principio rector 11). La celebración ha terminado, así que ya no aplica la
-     protección de BB-C (no teletransportar a quien celebra): nadie celebra en ese tick.
+   - **Los derribados se levantan y se recolocan como los demás** (*«derribados se curan y también
+     vuelven a su posición»*, decisión del revisor sobre la primera versión de esta ADR, que los dejaba
+     en el suelo). `KnockedDown` termina en ese tick. No es alivio escondido: el gol es un corte visible y
+     el partido vuelve a empezar desde la formación.
+   - **Los lesionados se recolocan y conservan su estado**: una lesión tiene consecuencias de run y no
+     se cura por un gol (principio rector 11). Nadie más cambia de estado. La celebración ya ha terminado,
+     así que no aplica la protección de BB-C (no teletransportar a quien celebra): nadie celebra en ese
+     tick.
 3. **Después, la cuenta atrás normal del saque** (`restart.kickoffTicks` = 15 ticks, 1 s) **sin espera
    adaptativa**: todos están en su sitio por construcción, así que `EveryoneInPlace` es cierto al
    instante y `kickoffMaxWaitTicks` deja de ser el caso peor del saque tras gol (sigue existiendo para el
@@ -77,10 +81,12 @@ en cruzar el campo (**sin medir en ticks**; lo único medido es que 6 s no basta
 7. **Velocidades** (ADR 0120): a x4 el fundido dura la cuarta parte; a x16 es un **corte seco**. Al
    **saltar con la barra** por encima del reinicio no hay fundido: un salto de la barra no es
    reproducción.
-8. **Un solo sitio para las dos pantallas**: el fundido es un velo a pantalla completa sobre el campo, así
-   que vale igual para la vista 2D y la 3D, en la pantalla de Partido y en la de Retransmisión. La
-   cortinilla por jugador de BA-K (atenuación en saltos > 0,6 casillas) seguirá disparándose en ese
-   fotograma, tapada por el negro; no hace falta excepción.
+8. **Sólo en la Retransmisión**, que es la pantalla del partido (ADR 0119/0120): un velo negro encima del
+   campo y debajo del tablero y las tiras, así que el marcador sigue a la vista. El **modo depuración**
+   (F3, `MatchScreen`) conserva el corte seco de BA-K: es un instrumento para mirar fotogramas y el negro
+   taparía justo el que se quiere inspeccionar. *(La primera redacción decía «las dos pantallas»; se
+   corrigió al implementar.)* La cortinilla por jugador de BA-K sigue disparándose en ese fotograma,
+   tapada por el negro.
 
 ## Por qué no contradice BC-A, y por qué sí la enmienda
 
@@ -132,3 +138,86 @@ debe seguir en verde sin tocarlo.
    fotograma de celebración, negro, vuelta con todos colocados).
 5. `independent-reviewer` antes de cerrar (Regla E: toca `/Sim`).
 6. `docs/requisitos.md`: excepción en RF-053 con referencia a esta ADR.
+
+## Implementación (26 sep 2026)
+
+- **`/Sim`**: `ScheduleKickoffAfterGoal` programa el saque con `kickoffTicks + CelebratingTicks` y abre
+  `_goalCelebrationTicks`; durante la celebración **todos** los que están en el campo corren estado y
+  cuerpo (energía, contadores) pero no deciden ni andan —la primera versión dejaba a derribados y
+  lesionados en `UpdatePlayer` y el que se levantaba echaba a andar—; `ResetTeamsAfterGoal` coloca, levanta
+  a los derribados, aplica la **barrera de reanudación en el mismo tick** y emite `TEAMS_RESET`.
+  - **La barrera dentro del reinicio no estaba en el plan**: `KickoffSpot` deja al que no saca a 1,4
+    casillas del balón y la barrera (`restartClearanceCells` = 2) lo empujaba 0,6 al tick siguiente, un
+    segundo salto fuera del fotograma tapado (lo cazó `NobodyJumpsDuringTheKickoff`). Aplicada en el
+    reinicio, el salto entero cae bajo la cortinilla. La discrepancia 1,4 / 2 es anterior (BC-A, BB-B).
+  - `EventTypeNames.IsPresentationOnly` junta los tres casos sueltos de `PERK_TRIGGERED` (cargador,
+    plantillas de descripción, log) y cubre el evento nuevo.
+- **`/Game`**: `Game/Match/ResetCut.cs`, sin Godot: recibe el fotograma que la reproducción quiere
+  enseñar y devuelve el que se pinta y la opacidad del velo. `BroadcastScreen` lo aplica antes del
+  director; `SeekTo` y la re-simulación de una sustitución lo reinician.
+- **Pruebas**: `GoalResetTests` (un reinicio por gol, 30 ticks después, saque sin espera; nadie se mueve
+  más de 0,10 casillas por tick durante la celebración —la separación de cuerpos mueve 0,06, medido—;
+  tras el reinicio nadie en campo contrario, nadie derribado ni celebrando, sacador sobre el balón y nadie
+  anda más de 0,6 hasta el saque). `NobodyJumpsDuringTheKickoff` exime **sólo** el fotograma del reinicio.
+- **Capturas**: `Game/screenshots/cortinilla-{1..6}-*.png`, tomadas **reproduciendo** (`StepManual`), no
+  con `SeekTo`, que la anula a propósito. Primera tanda sin cortinilla: el director devolvió un fotograma
+  8 por delante del pedido y ya había pasado el reinicio —el arnés, no la pieza (regla J)—.
+
+## Medición (4.000 partidos × 2 semillas, contra `fa2ad11`)
+
+| semilla | variante | ticks | goles | entradas | sin balón | faltas | lesiones |
+|---|---|---|---|---|---|---|---|
+| 1 | base | 1924 | 2,308 | 8,46 | 3,80 | 7,09 | 0,800 |
+| 1 | ADR 0151 | 1677 | 2,211 | 7,53 | 3,35 | 6,41 | 0,731 |
+| 1 | + 110 ticks de espera | 1909 | 2,277 | 8,01 | 3,70 | 6,92 | 0,767 |
+| 2 | base | 1851 | 2,073 | 8,60 | 2,33 | 4,42 | 0,423 |
+| 2 | ADR 0151 | 1647 | 2,053 | 7,96 | 2,09 | 4,09 | 0,373 |
+| 2 | + 110 ticks de espera | 1845 | 2,071 | 8,19 | 2,35 | 4,32 | 0,390 |
+
+- **Ninguna métrica sale de banda ni cambia de estado.** La única fuera de banda
+  (`betterTeamWinRate_human_60_vs_human_40`, 99,70) ya lo estaba con el mismo valor.
+- **Los partidos sin gol salen idénticos** (mismas entradas, mismo número): el efecto es sólo lo que pasa
+  tras un gol, y la caída de entradas crece con los goles del partido.
+- **Las lesiones bajan en torno al 10 %** (−8,6 % y −11,8 %, a ~3,4 errores típicos en las dos semillas,
+  estimación de Poisson de la revisión independiente), y las faltas un 7-10 %. Dentro de banda, pero es
+  el recurso central del juego (la carnicería administrada) y se dice con esas palabras.
+- **Causa, CONFIRMED sólo en parte**: la duración del balón muerto. Devolver ~110 ticks de espera por gol
+  (con todos ya colocados) recupera casi entero lo de sin balón y la mayor parte de faltas y lesiones, pero
+  de las entradas sólo el **52 %** (s1) y el **36 %** (s2): en s2 la mayor parte sigue sin atribuir.
+  **LIKELY, sin aislar**: que la parte explicada sea la energía recuperada parado (en ese rato también
+  corren los enfriamientos de perk en segundos). Candidatos para el resto, sin experimento: los
+  derribados que se levantan y la formación de partida.
+- **No se compensa**: devolver la espera anula lo que la decisión pide, y el balance fino está aplazado
+  por el revisor. Queda anotado aquí para cuando se haga.
+- **Tras la revisión independiente** se quitó la barrera durante la celebración (abajo); el lote repetido
+  sale **idéntico** en las dos semillas, como se esperaba: esas posiciones las sobrescribe el reinicio.
+- **Puertas**: las mismas 4 rojas de 43 que antes (curva de jefes con `grimhold_guns` 56,76; `orc_violence`
+  56,77, antes 55,60; `undead_none` 61,55 %, antes 60,33). Ninguna nueva.
+
+## Revisión independiente (26 sep 2026) y lo que cambió
+
+- **La cortinilla llegaba un fotograma tarde** (hallazgo principal): mientras se enseñaba el último
+  fotograma de la celebración, la vista 3D ya interpolaba hacia el del reinicio y, durante ~33 ms, se veía
+  a todos colocados antes de volver atrás y fundir. `ResetCut` arranca ahora al **llegar** a ese último
+  fotograma, con la interpolación a cero.
+- **La barrera saltaba al empezar la celebración**: empujaba a los del equipo que marcó a 2 casillas del
+  centro en el primer tick (161 saltos de hasta 1,90 en 450 goles; ya pasaba en `fa2ad11`). Contradecía el
+  punto 1 («los demás se quedan donde están»). No actúa durante la celebración; se aplica en el reinicio.
+  El test la dejaba pasar por empezar un paso tarde: corregido.
+- **Dos goles no llevan reinicio, y está bien**: el del último tick (el partido termina) y el que empata en
+  el último tick y abre la turba en ese mismo tick (ese saque es el de la turba, punto 4). El test ya los
+  distingue en vez de suponer «un reinicio por gol».
+- **`CelebratingTicks = 0`** (el esquema lo permite) apagaba la regla en silencio y se volvía andando:
+  ahora el reinicio es inmediato, con test.
+- **Tolerancia de «ya colocado»** de 0,6 a 0,10 casillas (medido: 0,06).
+- **Punto 8 corregido**: la cortinilla por jugador de BA-K ya no se ve antes del velo.
+
+**Sin cubrir, anotado**: el test de un suplente con sustitución programada (ADR 0094) en el reinicio (la
+guarda `OnPitch` está y la revisión la verificó leyendo, sin test); un test puro de `ResetCut` (vive en
+`/Game`, que no tiene proyecto de tests, RT-084). Los enfriamientos de perk en segundos con ~250 ticks
+menos de balón muerto por partido siguen sin auditar.
+
+**DESIGN CLAIM NOT PROVEN**: que levantar a los derribados con el gol sea inocuo. Un derribo justo antes
+del gol —el de Muro (`bulwark_stance`, BM-A) o cualquier otro— ahora se pierde en el reinicio. Es la
+decisión del revisor; su interacción con los perks que derriban no ha pasado por `game-design-review`.
+

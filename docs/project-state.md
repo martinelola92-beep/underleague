@@ -9,7 +9,38 @@ PC (Steam), premium, sin online. **Estado (8 sep 2026): fases 0 y 1 cerradas; fa
 **Campo de siete filas (14 sep 2026, decisión del revisor, BA-C):** 16×7 en vez de 16×6 —con seis filas el centro geométrico cae *entre* dos filas y no existe fila central—, con guardado v4. Añadir la fila cuesta ~1,0 tiro y ~0,45 goles por partido y **ninguna palanca local lo recupera**, así que la **ADR 0109** recalibra la banda de tiros a la geometría vigente (8-16 → 7-15) en vez de tocar el motor, y deja escrito que ensanchar la formación o las zonas de acción destruye la profundidad de colocación. Nueve auditorías de la IA de jugadores (`docs/auditoria-ia-jugadores-1..9.md`) dejan **un solo cambio aplicado**, la **ADR 0110**: `Shoot` del defensa 77 → 154 y del centrocampista 188 → 237, porque con 77 un defensa colocado arriba nunca remataba —perdía contra su propio `ShortPass` de 500— y jugar fuera de posición costaba dos tercios del ataque (100/48/38 → 100/68/55). Rechazados y documentados: `ChaseBall pen` en todas las dosis (degrada la diferenciación de builds), el desfase de fase entre equipos (no replica entre semillas) y la histéresis. Queda **abierto** el papel del centrocampista: dispara el 6,5 % de los tiros siendo el 43 % de los jugadores de campo.
 ---
 
-## ARRANQUE DE LA SESIÓN SIGUIENTE (escrito el 26 sep 2026, segunda sesión)
+## ARRANQUE DE LA SESIÓN SIGUIENTE (escrito el 26 sep 2026, tercera sesión)
+
+**Hecho en esta sesión, por encargo directo del revisor** (interrumpió el paso 2 para pedirlo):
+[ADR 0151](decisiones/0151-tras-el-gol-celebracion-y-cortinilla.md). Tras un gol, 2 s de celebración en
+los que nadie vuelve a casa; el motor coloca a todos en un tick (`KickoffSpot`, el sacador sobre el balón,
+los derribados de pie, la barrera aplicada ahí mismo) y emite `TEAMS_RESET`; la Retransmisión lo tapa con
+un fundido a negro breve (`Game/Match/ResetCut.cs`, duraciones provisionales). Enmienda RF-053 sólo para
+este caso. Medido: ningún rango se mueve y los partidos sin gol salen idénticos, **pero las lesiones bajan ~10 %** y
+las faltas 7-10 % por el balón muerto más corto (explica 36-52 % de la caída de entradas; el resto sin
+atribuir); puertas, las mismas 4 rojas. La revisión independiente cazó que la cortinilla llegaba un
+fotograma tarde y la barrera saltaba al empezar la celebración: arreglados. Pendiente de
+`game-design-review`: el gol levanta a los derribados, y un derribo de Muro justo antes del gol se pierde. El modo
+depuración (F3) conserva el corte seco.
+
+**El paso 2 (anticipación corta del balón) quedó aparcado a medias por decisión del revisor**
+(*«olvídate de eso, no es necesario ahora»*). Lo que se aprendió, por si se retoma:
+- La anticipación no necesita mirar el futuro: `Shoot` ya mete al jugador 5 ticks en `Shooting` y la
+  traza lo graba; el 98,3 % de los golpeos fuertes sale de ahí (7,4 por partido).
+- **Hermano sin arreglar del rastro**: el rastro pinta motas en los **saltos de un fotograma** del balón
+  al pie del receptor (pase completado, recuperación): 38,6 por partido, el 56 % de los fotogramas por
+  encima del umbral. El arreglo es exigir `BallInFlightAt(frame)` en `ApplyBallTrail`.
+- Primer diseño visual probado y descartado: una corona de trazos alrededor del balón se lee como destello
+  de cómic; un abanico detrás del balón hacia el sentido contrario al ataque se lee mejor, pero tinta
+  oscura sobre la cápsula no se distingue (vitela perfilada en tinta sí).
+
+**Qué hacer después, en este orden** (el de la sesión anterior, sin cambios): 1) paso 2 si el revisor lo
+reabre (y mirar el pergamino de Muro); 2) BM-C, el censo por portador; 3) BM-B, `game-design-review` de
+`extraAction` sobre `TACKLE`. Ajustar las duraciones de la cortinilla cuando el revisor la vea jugando.
+
+---
+
+## ARRANQUE DE LA SESIÓN SIGUIENTE (escrito el 26 sep 2026, segunda sesión — superado por el de arriba)
 
 **Hecho en esta sesión** (pasos 1 y 3 del orden del revisor):
 

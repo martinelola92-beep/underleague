@@ -190,7 +190,7 @@ Salir de la zona no está prohibido: penaliza de forma creciente con la distanci
   | saque de banda | **no** — ajuste local, como en el fútbol | **corta, pero no instantánea** |
   | falta lejana | no | corta |
 
-  Nadie se teletransporta: se llega **andando** (ADR 0143, enmienda de BC-A).
+  Nadie se teletransporta: se llega **andando** (ADR 0143, enmienda de BC-A). *(Salvo tras un gol, desde la **ADR 0151**: dos segundos de celebración, el motor coloca a todos en un tick —el sacador sobre el balón, los derribados de pie— y la pantalla lo tapa con un fundido a negro breve.)*
 - **RF-054** *(acotado por la **ADR 0147**)* El penalti y la tarjeta roja son los únicos puntos de **pausa dramática**: los únicos en los que el partido se detiene **para contar algo**. Ya no son los únicos que detienen el reloj —RF-053 lo para en todas las reanudaciones—, y la diferencia entre una pausa dramática y una reanudación es **qué se cuenta en ella**, no si el reloj corre.
 - **RF-055** El tiempo reglamentario es **una sola fase** con reglas normales durante el 100% del partido. La variación en el arbitraje procede exclusivamente del rasgo y el criterio del árbitro (3.6b), no del reloj.
 - **RF-055b** **Gol de oro de la turba.** Solo si el partido termina en empate, se juega una prórroga a gol de oro: el primer gol decide. Al empezar, **el árbitro abandona el campo**: no se señala ninguna falta ni se muestra ninguna tarjeta, y el criterio deja de aplicarse. El campo se estrecha 1 fila por lado, el público invade **casillas fijas y anunciadas** (siempre las mismas filas exteriores), y la velocidad global sube un 15%. Al ser las casillas conocidas, la prórroga es un problema de colocación anticipable, no un castigo aleatorio (RF-012d).
