@@ -81,7 +81,7 @@ Identificador desconocido, función desconocida o tipo incorrecto → `DataExcep
 | `modifyProbability` | `target`, `probability`, `value` (puntos base 10000), `duration` | suma `value` a la probabilidad indicada cuando el objetivo es el sujeto de la resolución: `probability` ∈ `foul`, `card`, `injury` (ser lesionado), `injure` (lesionar), `severeInjury`, `pass`, `intercept`, `dribble`, `tackle`, `shotOnTarget`, `save` |
 | `cancelEvent` | — | anula la consecuencia del evento disparador; solo válido con `trigger` ∈ `CARD`, `INJURY`, `FOUL` (validado al cargar). El evento se registra igual con `Detail` sufijado `":cancelled"` |
 | `addCounter` | `counter`, `value` | suma al contador del owner |
-| `setState` | `target`, `state` ∈ `KnockedDown`, `ticks` | derriba al objetivo (solo objetivos rivales; validado) |
+| `setState` | `target`, `state` ∈ `KnockedDown`, `ticks` | derriba al objetivo (solo rivales del portador, decidido por el alcance: BM-A; validado) |
 
 - `target` ∈ `actor`, `target`, `opponent`, `owner`, `adjacent` (compañeros adyacentes al owner), `team`, `opposingTeam`, `withTag:<Tag>` (compañeros del owner con esa etiqueta, incluido él), `adjacentWithTag:<Tag>`.
 - `duration` ∈ `instant` (solo válido para `addCounter`/`modifyBias`/`setState`/`cancelEvent`), `play`, `match`, `run`. En fase 1 `run` se comporta como `match` dentro del partido y además persiste vía contadores (ver §6).

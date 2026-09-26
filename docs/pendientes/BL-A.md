@@ -127,6 +127,6 @@ dentro de RT-056, sin separar lesiones propias y rivales.
 - **DESIGN CLAIM NOT PROVEN — la paga.** El diseño de `ankle_bite` promete que «el árbitro aprende» y que
   «la expulsión es cuestión de tiempo» (`docs/analisis/perks-catalogo-de-actos.md`). Apagar el sesgo no
   mueve el valor a esta potencia, y no hay censo de tarjetas ni de represalias. Hay que pasarlo por
-  `game-design-review` antes de darlo por diseñado.
+  `game-design-review` antes de darlo por diseñado. **Hecho el 26 sep: [BM-C](./BM-C.md).**
 - **Problema hermano**: [BL-B](./BL-B.md), el umbral de la ADR 0087 con un `rowDeviation` global sobre filas
   de varianza alta.

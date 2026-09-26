@@ -65,6 +65,9 @@ viva anotada.
 | [CAT-H](./CAT-H.md) | ¿Compraría alguien un objeto maldito? | Abierta: la tabla de valor de la ADR 0038 es global y no expresa el canje de RF-077 |
 | [CAT-I](./CAT-I.md) | La política automática casi nunca vende, así que las reglas de venta no se ejercitan | Abierta; no bloquea |
 | [CAT-J](./CAT-J.md) | Cuatro métricas de `BuildGateTests` fuera de rango: no es ruido de semilla | Abierta. Desde el 25 sep incluye `coherentBuildsBeatNone_orc_violence`, mal atribuida a la conducción (BI-D): plana en las tres dosis. Es la más frágil de las cuatro — 57,50 contra un mínimo de 58 son **0,5 ET** |
+| [BM-A](./BM-A.md) | Un perk no puede derribar al que le entra (Muro, Raíces, Toque) | **Implementada** 26 sep: el cargador decide la rivalidad por el alcance; un derribado por efecto no disputa; Muro convertido. Raíces y Toque necesitan otra primitiva (en la ficha) |
+| [BM-B](./BM-B.md) | Una resolución publicada antes de tirarse no mira a sus participantes (`charge`, `bull_rush`, `duelist`, `nutmeg`) | Abierta: el caso `extraAction` CONFIRMED por medida (44/450 runs); cualquier arreglo cambia perks medidos |
+| [BM-C](./BM-C.md) | Lo que `ankle_bite` paga no se ve: la lesión nunca se pita y el sesgo del árbitro son décimas de punto | Revisada en diseño (recomendación A: la mordida arrastra la falta, sólo datos); pendiente del censo por portador antes de tocar el dato |
 
 ## Cerradas
 
