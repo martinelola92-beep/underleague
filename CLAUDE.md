@@ -120,6 +120,13 @@ dato: es cambiar lo que hace el código que lo lee. Abre ese código antes, no d
 jugada son normales, así que un `×3` se convertía en `×27` dentro de la misma jugada. Lo encontró la
 revisión independiente, no yo.*
 
+*Y otra vez al día siguiente (26 sep 2026), con la regla ya escrita: los dos primeros perks con sub-100
+escribían `modifyUtility` con la cifra del multiplicador deseado (`Retreat: 45` para «×0,45»). `Utility.cs`
+**suma** ese valor como porcentaje —`(100 + LeaderBonus + PerkActionBonus) / 100`—, así que `45` subía la
+acción un 45 %: «No vuelve» era un delantero que **volvía más** y medía −5,8 puntos de victoria. Dos rondas
+de medición persiguiendo un perk que hacía lo contrario de su nombre, hasta que un dato que no encajaba
+—menos renuncia daba PEOR resultado— obligó a abrir el consumidor.*
+
 ### El instrumento se valida antes que la medida — Regla J
 
 Antes de creerte un censo, un lote o un histograma, **contrástalo contra un caso cuya respuesta ya sabes**

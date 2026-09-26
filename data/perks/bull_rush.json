@@ -1,5 +1,5 @@
 {
-  "_doc": "ACTO: entra en campo rival y no frena — si la primera no la gana, vuelve a por ella en el mismo instante. PAGA: dos entradas seguidas en campo contrario son dos oportunidades de falta, y arriba una falta es un saque peligroso. Hermano de `charge` con condición de zona y enfriamiento: lo que los distingue es DÓNDE. Sin medir.",
+  "_doc": "ACTO: entra en campo rival y no frena — si la primera no la gana, vuelve a por ella en el mismo instante. PAGA: dos entradas seguidas en campo contrario son dos oportunidades de falta, y arriba una falta es un saque peligroso. Hermano de `charge` con condición de zona y enfriamiento: lo que los distingue es DÓNDE. Sin medir. MEDIDO 26 sep: con una por jugada perjudicaba a quien lo llevaba (−0,55 ± 0,22 puntos de victoria, ADR 0087); con una por partido, +0,22 ± 0,17. MEDIDO 26 sep, dos semillas: en campo rival perjudicaba a quien lo llevaba (−0,43 ± 0,15, ADR 0087); sin condición +0,44 ± 0,27 y en medio campo +0,21 ± 0,23. Se queda en medio campo para no ser un duplicado de `charge`, que no tiene condición.",
   "id": "bull_rush",
   "name": {
     "es": "Embestida de toro",
@@ -14,7 +14,7 @@
   "trigger": "TACKLE",
   "scope": "actor",
   "links": [],
-  "condition": "zone(actor) == 'Opposing'",
+  "condition": "zone(actor) == 'Middle'",
   "effects": [
     {
       "type": "extraAction"
@@ -22,7 +22,7 @@
   ],
   "elseEffects": [],
   "limit": {
-    "per": "play",
+    "per": "match",
     "times": 1,
     "cooldownSeconds": 30
   },

@@ -1,5 +1,5 @@
 {
-  "_doc": "CONDUCTA: el delantero que no repliega jamás. Se queda arriba esperando, y cuando llega el balón ya está donde hay que estar. PAGA: su equipo defiende con uno menos todo el partido, y eso no se apaga. Sub-100 con las cinco condiciones de §1.5, igual que `eyed_coward`. Valores sin medir.",
+  "_doc": "CONDUCTA: el delantero que no repliega jamás. Se queda arriba esperando, y cuando llega el balón ya está donde hay que estar. PAGA: su equipo defiende con uno menos todo el partido, y eso no se apaga. Sub-100 con las cinco condiciones de §1.5. MEDIDO 26 sep: la primera versión emparejaba Retreat con Shoot, que es acción CON balón —violaba la condición 2, mismo conjunto de acciones— y el término de Shoot solo valía +29 puntos de victoria (Retreat solo, −7). La pareja fiel a «se queda arriba esperando» es FindSpace, del mismo conjunto sin balón. Valores sin medir. CORREGIDO 26 sep (regla I): el valor de modifyUtility SE SUMA como porcentaje al multiplicador de la acción —Utility.cs: (100 + LeaderBonus + PerkActionBonus) / 100—, así que reducir una acción es escribir un valor NEGATIVO. La primera versión escribía la cifra del multiplicador deseado (45, 55), que en realidad SUBÍA la acción un 45 % o un 55 %: justo lo contrario del perk.",
   "id": "never_tracks_back",
   "name": {
     "es": "No vuelve",
@@ -18,17 +18,17 @@
   "effects": [
     {
       "type": "modifyUtility",
+      "target": "owner",
       "utilityAction": "Retreat",
-      "value": 45,
-      "duration": "match",
-      "target": "owner"
+      "value": -55,
+      "duration": "match"
     },
     {
       "type": "modifyUtility",
-      "utilityAction": "Shoot",
-      "value": 135,
-      "duration": "match",
-      "target": "owner"
+      "target": "owner",
+      "utilityAction": "FindSpace",
+      "value": 40,
+      "duration": "match"
     }
   ],
   "elseEffects": [],

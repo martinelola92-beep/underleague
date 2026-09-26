@@ -1,5 +1,5 @@
 {
-  "_doc": "CONDUCTA: no entra. Se queda pegado a su hombre y espera el error, y se le ve porque su marca no se despega en todo el partido. PAGA: no entra TAMPOCO cuando hay que entrar, y eso se paga en el área. Primer perk del catálogo con sub-100 (ADR 0149 y §1.5 de la biblia de perks): nunca solo —baja la entrada y sube el marcaje—, las dos acciones son del mismo conjunto sin balón, el suelo es 40, declara puesto y se puede prever antes del partido. Valores sin medir.",
+  "_doc": "CONDUCTA: no entra. Se queda pegado a su hombre y espera el error, y se le ve porque su marca no se despega en todo el partido. PAGA: no entra TAMPOCO cuando hay que entrar, y eso se paga en el área. Primer perk del catálogo con sub-100 (ADR 0149 y §1.5 de la biblia de perks): nunca solo —baja la entrada y sube el marcaje—, las dos acciones son del mismo conjunto sin balón, el suelo es 40, declara puesto y se puede prever antes del partido. Valores sin medir. CORREGIDO 26 sep (regla I): el valor de modifyUtility SE SUMA como porcentaje al multiplicador de la acción —Utility.cs: (100 + LeaderBonus + PerkActionBonus) / 100—, así que reducir una acción es escribir un valor NEGATIVO. La primera versión escribía la cifra del multiplicador deseado (45, 55), que en realidad SUBÍA la acción un 45 % o un 55 %: justo lo contrario del perk. MEDIDO 26 sep con el protocolo de la tabla (192 plantillas, campaña de 16, semillas 5 y 11): Tackle −45 / MarkOpponent +40 valía −26 (perjudicaba); −25/+40, −10; −45/+80, +20. Se queda con la renuncia entera y más marcaje, que es además la fantasía: no entra, se pega.",
   "id": "eyed_coward",
   "name": {
     "es": "Cobarde con ojo",
@@ -19,14 +19,14 @@
     {
       "type": "modifyUtility",
       "utilityAction": "Tackle",
-      "value": 55,
+      "value": -45,
       "duration": "match",
       "target": "owner"
     },
     {
       "type": "modifyUtility",
       "utilityAction": "MarkOpponent",
-      "value": 140,
+      "value": 80,
       "duration": "match",
       "target": "owner"
     }
