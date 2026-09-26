@@ -677,11 +677,14 @@ public sealed record RestartTuning(
 /// <param name="StrengthDistanceMilliPerPoint">Milésimas de casilla más por punto de fuerza sobre 50.</param>
 /// <param name="PeakHeightCellsMilli">Altura del pico de la parábola, en milésimas de casilla.</param>
 /// <param name="SpreadRows">Dispersión lateral en filas: un despeje no elige destino, lo aproxima.</param>
+/// <param name="KeeperPeakHeightCellsMilli">Pico del despeje del PORTERO (BN-A): le da comba para que no lo
+/// alcance de cabeza quien está debajo de la trayectoria.</param>
 public sealed record ClearTuning(
     float BaseDistanceCells,
     int StrengthDistanceMilliPerPoint,
     int PeakHeightCellsMilli,
-    int SpreadRows);
+    int SpreadRows,
+    int KeeperPeakHeightCellsMilli);
 
 public sealed record Tuning(
     int RegulationTicks,

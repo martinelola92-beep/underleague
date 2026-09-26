@@ -574,13 +574,18 @@
           "type": "integer",
           "minimum": 0,
           "maximum": 7
+        },
+        "keeperPeakHeightCellsMilli": {
+          "description": "Pico del despeje del PORTERO (BN-A). Por encima de ball.aerialReachHeightCells mientras baja sobre quien esté debajo de la trayectoria: con 3500 el balón sólo queda al alcance de un salto en el último ~14 % del vuelo (4·3,5·t·(1−t) = 1,7 en t ≈ 0,86).",
+          "$ref": "#/$defs/milli"
         }
       },
       "required": [
         "baseDistanceCells",
         "strengthDistanceMilliPerPoint",
         "peakHeightCellsMilli",
-        "spreadRows"
+        "spreadRows",
+        "keeperPeakHeightCellsMilli"
       ],
       "additionalProperties": false
     },

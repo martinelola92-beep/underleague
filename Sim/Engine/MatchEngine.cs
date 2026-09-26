@@ -123,6 +123,14 @@ internal sealed class MatchEngine : IPerkWorld
     private int _goalCelebrationTicks;
 
     /// <summary>
+    /// Equipo cuya área está cerrada en este tick, o -1 (decisión del revisor, 27 sep 2026): cuando su
+    /// portero tiene el balón dentro de ella —o su equipo tiene un saque de puerta pendiente—, <b>nadie</b>
+    /// más puede estar dentro, de ninguno de los dos equipos. Lo lee <see cref="Move"/>. Se calcula una vez
+    /// por tick en <see cref="Step"/>, antes de mover a nadie (<see cref="ClosedKeeperArea"/>).
+    /// </summary>
+    private int _closedArea = -1;
+
+    /// <summary>
     /// A dónde va cada jugador durante la reanudación en curso (ADR 0147), o <c>null</c> si esta
     /// reanudación no recoloca a nadie. Es la generalización de lo que BC-A hizo sólo para el saque de
     /// centro: en vez de «todos a su casilla-hogar», <b>cada reanudación dice dónde va cada uno</b>.
@@ -634,6 +642,7 @@ internal sealed class MatchEngine : IPerkWorld
         // nueva no debe descontarse dos veces ni tratarse todavía como balón parado para
         // UpdateBall/CheckOutOfBounds (revisión independiente, fase 0, ya resuelta antes de este cambio).
         bool wasRestarting = _restartTicksLeft > 0;
+        _closedArea = ClosedKeeperArea();
 
         // ADR 0151: durante la celebración de un gol nadie camina —ni el sacador ni el equipo—; el reinicio
         // los coloca a todos de golpe cuando termina.
@@ -738,10 +747,11 @@ internal sealed class MatchEngine : IPerkWorld
         //
         // Reutiliza la misma salida por el borde más cercano que el penalti (ADR 0143): un rival al que
         // el árbitro manda salir del área sale por donde está, no por donde le venga bien al motor.
-        if (wasRestarting && _pendingRestart == RestartKind.GoalKick)
-        {
-            ClearAreaOfOpponents(_restartTeam);
-        }
+        //
+        // ADR 0152: YA NO SE LES TELETRANSPORTA. Con el saque de puerta pendiente el área está cerrada
+        // (ClosedKeeperArea) y Move saca a todo el mundo ANDANDO, rivales incluidos (RF-053). Antes aquí se
+        // les colocaba de golpe en el borde cada tick de la cuenta atrás, mientras los compañeros salían
+        // andando: dos reglas para lo mismo. KeeperAreaTests comprueba que al sacar no queda nadie dentro.
 
         // ADR 0143: el área del penalti se mantiene vacía TODA la cuenta atrás, no sólo al abrirla. Desde
         // AW-R el equipo no se congela durante el balón muerto, así que vaciarla una vez y confiar deja
@@ -1727,6 +1737,12 @@ internal sealed class MatchEngine : IPerkWorld
         {
             target = Utility.ClampToArea(target, player.Team, _context.KeeperExitCells[player.Team]);
         }
+        else if (_closedArea >= 0 && Pitch.IsInArea(target, _closedArea))
+        {
+            // Área cerrada: el que tuviera su destino dentro va al borde más cercano, ANDANDO (RF-053:
+            // nadie se teletransporta). Es la misma salida que la del penalti y el saque de puerta.
+            target = PushOutOfArea(target, _closedArea);
+        }
 
         Vec2 delta = target - player.Position;
         float distance = delta.Length;
@@ -1740,6 +1756,13 @@ internal sealed class MatchEngine : IPerkWorld
         if (!player.IsOutfield)
         {
             next = Utility.ClampToArea(next, player.Team, _context.KeeperExitCells[player.Team]);
+        }
+        else if (_closedArea >= 0 && Pitch.IsInArea(next, _closedArea) && !Pitch.IsInArea(player.Position, _closedArea))
+        {
+            // Un destino fuera del área no basta: la línea recta hasta él puede cortar una esquina
+            // (medido, KeeperAreaTests: un defensa a 0,05 del borde entraba camino del frente del área).
+            // El que está fuera bordea el área; el paso se proyecta al borde, como mucho un paso.
+            next = PushOutOfArea(next, _closedArea);
         }
 
         player.Velocity = next - player.Position;
@@ -2905,6 +2928,10 @@ internal sealed class MatchEngine : IPerkWorld
         var clear = _tuning.Clear;
         int direction = Pitch.AttackDirection(player.Team);
 
+        // BN-A: el portero saca con mucha más comba, para que quien esté debajo de la trayectoria no llegue
+        // de cabeza (decisión del revisor, 27 sep 2026). Con la comba de un jugador de campo el balón estaba
+        // al alcance de un salto en toda su bajada y un rival solo se lo devolvía al portero.
+        bool keeper = !player.IsOutfield;
         float distance = clear.BaseDistanceCells
             + (clear.StrengthDistanceMilliPerPoint * (player.Strength - 50) / 1000f);
         if (distance < 1f)
@@ -2930,7 +2957,7 @@ internal sealed class MatchEngine : IPerkWorld
         _ball.IsCross = false;
         _ball.IsClearance = true;
         _ball.FlightTargetZ = 0f;
-        _ball.FlightArc = clear.PeakHeightCellsMilli / 1000f;
+        _ball.FlightArc = (keeper ? clear.KeeperPeakHeightCellsMilli : clear.PeakHeightCellsMilli) / 1000f;
         _ball.Passer = player;
         _ball.PassReceiver = null;
         _ball.PassSucceeds = false;
@@ -4919,23 +4946,26 @@ internal sealed class MatchEngine : IPerkWorld
     }
 
     /// <summary>
-    /// Saca del área de <paramref name="team"/> a todos sus rivales (BI-F). Es la regla del saque de
-    /// puerta, y la mitad que le faltaba a la barrera genérica: apartarse dos casillas del balón no impide
-    /// estar dentro del área esperando el rechace.
+    /// ¿Qué área está cerrada? La del equipo cuyo portero tiene el balón dentro de su área —lo atrapó, lo
+    /// recogió suelto o acaba de sacar de puerta—, o la del equipo con un saque de puerta pendiente. -1 si
+    /// ninguna.
+    ///
+    /// <para><b>Por qué</b> (decisión del revisor, 27 sep 2026): <i>«cuando el portero atrapa un balón todos
+    /// los jugadores deben alejarse de él; en el fútbol real hay un área y cuando el portero tiene el balón
+    /// deben salir de ella»</i>. MEDIDO antes de escribirlo (60 partidos): el amontonamiento está sobre todo
+    /// en el saque de puerta —2,4 compañeros a menos de 1 casilla del portero de media, dos o más en el 89 %
+    /// de los saques—; tras una parada atrapada es mucho menor (0,12), porque el portero suelta el balón a
+    /// los 5 ticks. Una sola condición cubre los dos casos y el balón recogido suelto.</para>
     /// </summary>
-    private void ClearAreaOfOpponents(int team)
+    private int ClosedKeeperArea()
     {
-        for (int i = 0; i < _players.Length; i++)
+        if (_restartTicksLeft > 0 && _pendingRestart == RestartKind.GoalKick)
         {
-            var player = _players[i];
-            if (!player.OnPitch || player.Team == team || !Pitch.IsInArea(player.Position, team))
-            {
-                continue;
-            }
-
-            player.Position = PushOutOfArea(player.Position, team);
-            player.Velocity = default;
+            return _restartTeam;
         }
+
+        var owner = _ball.Owner;
+        return owner is { IsOutfield: false } && Pitch.IsInArea(_ball.Position, owner.Team) ? owner.Team : -1;
     }
 
     /// <summary>Saca un punto del área que defiende <paramref name="team"/> por su borde más cercano.</summary>
