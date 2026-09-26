@@ -28,7 +28,7 @@ public sealed class PerkInjuryCensusTests
     private static readonly Catalog Catalog = TestData.LoadCatalog();
 
     /// <summary>Los perks que se miden. Se cambian a mano según la tanda.</summary>
-    private static readonly string[] Measured = { "dirty_play", "skullsplitter" };
+    private static readonly string[] Measured = { "dirty_play", "ankle_bite", "skullsplitter" };
 
     private readonly ITestOutputHelper _output;
 

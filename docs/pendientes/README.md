@@ -71,6 +71,8 @@ viva anotada.
 | Id | Título | Estado |
 |---|---|---|
 | [BK-A](./BK-A.md) | RF-069 exigía el 60 % de modificadores numéricos y el producto pide lo contrario | **Cerrada** por la ADR 0149: RF-069 reescrita con el eje de visibilidad, requisitos a v0.10 |
+| [BL-A](./BL-A.md) | Lesionar al rival no ayuda a ganar (`dirty_play`, `ankle_bite`) | **Cerrada**: era ruido. `ankle_bite` LIKELY +10 ± 5, se restaura; la paga de diseño, sin demostrar |
+| [BL-B](./BL-B.md) | El umbral de retirada de la ADR 0087 usa un `rowDeviation` global y falla con filas de varianza alta | **Abierta** |
 | [BA-A](./BA-A.md) | BLOQUEO: un nodo de evento sin opciones y sin salida | Cerrada |
 | [BA-B](./BA-B.md) | BLOQUEO: en un jefe no dejó sustituir al lesionarse el segundo jugador | Cerrada |
 | [BA-C](./BA-C.md) | Con seis filas no hay fila central y la alineación queda descentrada | Cerrada |

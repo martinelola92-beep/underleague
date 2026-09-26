@@ -1,6 +1,6 @@
 # BL-A — Lesionar al rival no ayuda a ganar
 
-Estado: **ABIERTA** (26 sep 2026). Encargo del revisor tras el balance del paquete de actos.
+Estado: **CERRADA** (26 sep 2026): el síntoma era ruido de muestra. `ankle_bite` es LIKELY positivo y vuelve al catálogo; la paga de diseño queda sin demostrar (ver «Lo que queda abierto»). Encargo del revisor tras el balance del paquete de actos.
 
 ## Síntoma medido
 
@@ -70,3 +70,61 @@ diferencia (√2·7 ≈ 10): **ruido**. **Regla J**: el síntoma se tomó como m
 Ronda 2 lanzada: 768 plantillas × 4 semillas (5, 11, 17, 23), base contra ambos mecanismos apagados, con
 `dirty_play` y `ankle_bite` (restaurado solo en el worktree). El error típico se estima con la dispersión
 entre las cuatro semillas, no con `rowDeviation`.
+
+## Ronda 2 — con más potencia (26 sep 2026), corregida por la revisión independiente
+
+Worktree aislado a `0380220` con `ankle_bite` restaurado, campaña 16, horizonte 8. La primera versión de esta
+ronda usó 768 plantillas y dio `ankle_bite` +13,9 ± 2,1 («a 6,6 ET»). **La revisión la tumbó por dos motivos:**
+
+1. **El instrumento no admite más de 500 plantillas** (Regla J). El sujeto r usa la semilla `índice*1000 + r`
+   y el espejo `índice*1000 + 500 + r`: a partir de r = 500, el sujeto reutiliza el equipo del espejo r−500.
+   268 de las 768 parejas reciclaban equipos. Por bloques, el que colisiona (500-767) daba 22,2 y el limpio
+   (0-499) 9,5. Arreglado: `PerkValueRunner` e `ItemValueRunner` rechazan `rosters > MaxRosters` (500),
+   con `ValueRunnerSeedSpaceTests`.
+2. **Con 3 grados de libertad, el ET de cuatro semillas está en la cola baja.** Con ocho semillas a 192
+   plantillas, `ankle_bite` tiene una sd de ≈18 por lote. Eso implica un ET de ~5 para cuatro lotes de
+   500, no 2,1.
+
+Medida limpia (500 plantillas, semillas 5, 11, 17 y 23; lotes `rev-500-*` de la revisión, recalculados):
+
+| perk | s5 | s11 | s17 | s23 | media | ET honesto |
+|---|---:|---:|---:|---:|---:|---:|
+| `ankle_bite` | 5,0 | 8,5 | 15,5 | 9,0 | **+9,5** | ~5 |
+| `dirty_play` (8 semillas × 192) | | | | | **+0,2** | 3,2 |
+
+- **Síntoma «lesionar al rival resta»**: **REJECTED bajo la ADR 0087** (espejo con portador rotatorio) y
+  con el arnés tal como está: sin la decisión de seguir jugando (ADR 0134 E) y **sin arrastrar lesiones entre
+  partidos**. El −16 de la ronda 0 se reproduce al bit con el catálogo actual (semillas 5+11 a 192) y es un
+  subconjunto del mismo mundo que el +9,5: ruido de muestra.
+- **`ankle_bite` positivo**: **LIKELY** (≈ +10 ± 5). Lo decisivo es que ninguna estimación razonable cae
+  por debajo del umbral de retirada de la ADR 0087 (−7): **la retirada no tenía base**.
+- **«Lesionar al rival ayuda a ganar» como propiedad del sistema**: **no demostrado**. Descansa en una sola
+  perk, `dirty_play` vale ≈0 y no se ha identificado el mecanismo de la ganancia.
+- **H1 (sesgo del árbitro) y H2 (rencor)**: **sin evidencia de efecto a esta potencia**, no REJECTED. Los Δ
+  pareados de la tabla de 768 (−2,0 ± 1,3 y −0,8 ± 3,4, con 3 grados de libertad) no excluyen un coste del
+  tamaño del valor entero de la perk. Además, el medidor no ve el coste de H2 en la run: las lesiones de
+  represalia sobre la plantilla propia son desgaste que no se arrastra.
+- **H3 y H5**: sin medir.
+
+La tabla de 768 se queda como registro, pero **ya no es evidencia**:
+
+| perk | celda | s5 | s11 | s17 | s23 | media |
+|---|---|---:|---:|---:|---:|---:|
+| `dirty_play` | base | 6,5 | −2,6 | 9,8 | −2,0 | +2,9 |
+| `dirty_play` | sin sesgo ni rencor | 3,6 | −3,3 | 4,6 | −1,0 | +1,0 |
+| `ankle_bite` | base | 13,0 | 9,1 | 19,2 | 14,3 | +13,9 |
+| `ankle_bite` | sin sesgo ni rencor | 21,8 | 6,2 | 11,7 | 12,7 | +13,1 |
+
+**Consecuencia**: `ankle_bite` vuelve al catálogo con valor 10, y su fila de `perk-values.json` declara la
+procedencia porque no sale del procedimiento de la tabla. Censo de lesiones (`PerkInjuryCensusTests`, que
+vuelca pero no afirma): 0,59/partido con toda la línea armada contra 0,43 del espejo. Es una cota superior
+dentro de RT-056, sin separar lesiones propias y rivales.
+
+## Lo que queda abierto
+
+- **DESIGN CLAIM NOT PROVEN — la paga.** El diseño de `ankle_bite` promete que «el árbitro aprende» y que
+  «la expulsión es cuestión de tiempo» (`docs/analisis/perks-catalogo-de-actos.md`). Apagar el sesgo no
+  mueve el valor a esta potencia, y no hay censo de tarjetas ni de represalias. Hay que pasarlo por
+  `game-design-review` antes de darlo por diseñado.
+- **Problema hermano**: [BL-B](./BL-B.md), el umbral de la ADR 0087 con un `rowDeviation` global sobre filas
+  de varianza alta.

@@ -41,7 +41,7 @@ public sealed class PerkSituationCensusTests
     /// <summary>Los perks que se están midiendo. Se cambian a mano según qué tanda haya que comprobar.</summary>
     private static readonly string[] Moved =
     {
-        "point_blank", "nutmeg", "bull_rush", "silver_tongue",
+        "point_blank", "nutmeg", "ankle_bite", "bull_rush", "silver_tongue",
         "eyed_coward", "never_tracks_back", "shouting_wall",
     };
 
