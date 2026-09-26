@@ -76,7 +76,8 @@ ADR 0069 había subido esos techos para empujar la run: el paso 5 mide lo que cu
 ## Consecuencias
 
 - La regla «ningún perk negativo» pasa a ser **comprobable**: un valor por debajo de −`rowDeviation` es
-  un perjuicio real; entre −`rowDeviation` y +`rowDeviation` es un perk que no hace nada en el espejo. Lo
+  un perjuicio real *(enmendado por la [ADR 0150](0150-un-perk-negativo-se-confirma-antes-de-retirarlo.md): con
+  dos lotes es un **candidato**, y el perjuicio se confirma con ≥ 4 lotes y el ET de esa fila)*; entre −`rowDeviation` y +`rowDeviation` es un perk que no hace nada en el espejo. Lo
   segundo es una limitación conocida del espejo con portador rotatorio (AT-C: un bonus condicionado a una
   etiqueta o a una zona que el portador al azar rara vez cumple) y no un defecto del perk.
 - Las tablas históricas (ADR 0070, 0072, 0085) mezclaban efecto y sesgo de pareja con una amplitud del

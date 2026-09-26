@@ -9,7 +9,8 @@ plantillas y semillas de partido, sin el perk), en milesimas de punto de tasa de
 horizonte de referencia (8) y a cada horizonte 1..L; la desviacion por fila es la mitad de la RMS de la
 diferencia entre los dos lotes, horizonte a horizonte. Se ejecuta desde la raiz del repositorio (lee
 data/perks/*.json para saber que perks acumulan entre partidos). No escribe el fichero final: el bloque se
-pega a mano en perk-values.json, con su _doc actualizado (RT-057).
+pega a mano en perk-values.json, con su _doc actualizado (RT-057). Las filas de "toConfirm" no se retiran
+sin confirmarlas antes (ADR 0150, tools/perk-value-confirm.py).
 """
 import csv, json, math, sys, glob, collections
 
@@ -61,4 +62,7 @@ print(json.dumps({
     "mean": round(mean, 1), "dispersion": round(math.sqrt(sum((v - mean) ** 2 for v in values.values()) / len(values)), 1),
     "min": min(values.items(), key=lambda kv: kv[1]), "max": max(values.items(), key=lambda kv: kv[1]),
     "negatives": sorted([(v, p) for p, v in values.items() if v < 0]),
+    # ADR 0150: con dos lotes, una fila por debajo de -rowDeviation es un CANDIDATO a perjuicio, no un
+    # perjuicio. Antes de retirar o rediseñar: >=4 lotes más y tools/perk-value-confirm.py.
+    "toConfirm": sorted([(v, p) for p, v in values.items() if v < -out["rowDeviation"]]),
 }, ensure_ascii=False, indent=1))

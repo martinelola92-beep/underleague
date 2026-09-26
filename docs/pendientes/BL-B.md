@@ -28,3 +28,18 @@ candidatas: pocas activaciones con mucho efecto cada una.
 - Umbral por fila: retirar solo si el valor está por debajo de −k·ET de esa fila, con el ET sacado de la
   discrepancia entre semillas de esa misma fila.
 - Antes de retirar una perk, segunda medición obligatoria con cuatro semillas más.
+
+## Resuelto (26 sep 2026): el umbral
+
+[ADR 0150](../decisiones/0150-un-perk-negativo-se-confirma-antes-de-retirarlo.md): con dos lotes, una fila por
+debajo de −`rowDeviation` es un **candidato** (`toConfirm` en `tools/perk-values-table.py`). Se confirma con
+≥ 4 lotes y `tools/perk-value-confirm.py`, usando el ET de esa fila y la t de Student. Validado contra los
+lotes de BL-A, y endurecido tras la revisión independiente: rechaza lotes repetidos, de más de 500 plantillas
+o de tamaños mezclados, y admite `--sd-floor`. **Siguen abiertos los hermanos**:
+
+- la guarda de 500 plantillas en los arneses de `Sim.Tests`;
+- la procedencia por fila que pueda comprobar un validador;
+- el **techo positivo**: la ADR 0087 recortó por encima de +150 con la misma tabla de dos lotes;
+- `RunPolicy.MeasuredValueFor` (`Sim/Analysis/RunPolicy.cs`, ADR 0072) usa el `rowDeviation` global como
+  sigma de todas las filas, así que las filas ruidosas se encogen de menos;
+- `data/economy/item-values.json` (`rowDeviation` 29) tiene la misma estructura y no está cubierto.

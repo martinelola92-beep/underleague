@@ -9,6 +9,46 @@ PC (Steam), premium, sin online. **Estado (8 sep 2026): fases 0 y 1 cerradas; fa
 **Campo de siete filas (14 sep 2026, decisión del revisor, BA-C):** 16×7 en vez de 16×6 —con seis filas el centro geométrico cae *entre* dos filas y no existe fila central—, con guardado v4. Añadir la fila cuesta ~1,0 tiro y ~0,45 goles por partido y **ninguna palanca local lo recupera**, así que la **ADR 0109** recalibra la banda de tiros a la geometría vigente (8-16 → 7-15) en vez de tocar el motor, y deja escrito que ensanchar la formación o las zonas de acción destruye la profundidad de colocación. Nueve auditorías de la IA de jugadores (`docs/auditoria-ia-jugadores-1..9.md`) dejan **un solo cambio aplicado**, la **ADR 0110**: `Shoot` del defensa 77 → 154 y del centrocampista 188 → 237, porque con 77 un defensa colocado arriba nunca remataba —perdía contra su propio `ShortPass` de 500— y jugar fuera de posición costaba dos tercios del ataque (100/48/38 → 100/68/55). Rechazados y documentados: `ChaseBall pen` en todas las dosis (degrada la diferenciación de builds), el desfase de fase entre equipos (no replica entre semillas) y la histéresis. Queda **abierto** el papel del centrocampista: dispara el 6,5 % de los tiros siendo el 43 % de los jugadores de campo.
 ---
 
+## ARRANQUE DE LA SESIÓN SIGUIENTE (escrito el 26 sep 2026)
+
+**Hecho el 26 sep** (commits `e857846`..`d12f973`):
+
+- **Paquete de actos.** Ocho perks nuevas escritas solo con el vocabulario que ya había (`point_blank`,
+  `nutmeg`, `bull_rush`, `silver_tongue`, `eyed_coward`, `never_tracks_back`, `shouting_wall`,
+  `ankle_bite`), y seis perks sacadas de `MATCH_START` a disparadores de juego con límite por jugada.
+  `duelist` y `own_third_anchor` derriban al rival. Balance con el protocolo de la tabla: valores en
+  `perk-values.json` (ADR 0087, ADR 0038).
+- **Rastro del balón rápido** en la pantalla 3D (`MatchPitchView3D`, infraestructura genérica de
+  presentación) y el arnés de capturas arreglado (`ShowFrame`).
+- **BL-A cerrada**: «lesionar al rival resta» era ruido. `ankle_bite` se retiró y volvió (LIKELY no negativo, ≈ +10; positivo sin demostrar).
+- **ADR 0150**: un perk negativo se confirma antes de retirarlo (≥ 4 lotes, ET de su fila, t de Student);
+  herramientas `tools/perk-value-confirm.py` y `toConfirm` en `tools/perk-values-table.py`. Los medidores
+  de valor rechazan más de 500 plantillas porque el espacio de semillas colisiona.
+- **Puertas**: los mismos 4 rojos anteriores (curva del jefe, `orc_violence` ×2, `undead_none` 60,33 %).
+  Ninguno es de este paquete.
+
+**Qué hacer después, en el orden que fijó el revisor (cuerpo → balón → composición):**
+
+1. **Composición: la regla genérica del cargador** que permita a un `setState` afectar al actor que le
+   entra al portador (Muro, Raíces, Toque élfico). Es una regla de dominio, no una excepción por perk.
+   Pasa por `game-design-review` y `architecture-review` antes de escribir código.
+2. **Anticipación corta del balón**: una infraestructura de presentación genérica, como el rastro.
+3. **`game-design-review` de la paga de `ankle_bite`** (BL-A, «Lo que queda abierto»): el diseño promete
+   que el árbitro aprende, pero apagar el sesgo no mueve su valor, y no hay ningún censo de tarjetas ni de
+   represalias.
+
+**No tocar**: animaciones (las revisa el revisor; no buscar ni comprar recursos) ni el balance fino (*«ya
+haremos tweaks una vez tengamos el gameplay cerrado»*). Los cambios de `/Game` sin commitear del árbol
+(cabeceras uid de `.tscn`, `project.godot`, `MatchScreen.cs`, el reformateo de `MatchPitchView3D.cs`,
+`default_bus_layout.tres`) **no son de las sesiones de Claude**: no se commitean ni se revierten sin
+preguntar.
+
+**Restos baratos**: los hermanos de BL-B (guarda de 500 plantillas en los arneses de `Sim.Tests`), el
+arreglo del teletransporte de `last_man`, la pregunta de si `RaceBalanceTests` mide las raciales (sección
+de abajo), y `low_block` (−5,5, anterior).
+
+---
+
 ## Puertas tras el paquete de perks, y el arnés de capturas que mentía (25 sep 2026)
 
 **Puertas: 4 rojas de 43**, y ninguna es de este paquete:

@@ -1,6 +1,6 @@
 # BL-A — Lesionar al rival no ayuda a ganar
 
-Estado: **CERRADA** (26 sep 2026): el síntoma era ruido de muestra. `ankle_bite` es LIKELY positivo y vuelve al catálogo; la paga de diseño queda sin demostrar (ver «Lo que queda abierto»). Encargo del revisor tras el balance del paquete de actos.
+Estado: **CERRADA** (26 sep 2026): el síntoma era ruido de muestra. `ankle_bite` es LIKELY no negativo (≈ +10) y vuelve al catálogo; la paga de diseño queda sin demostrar (ver «Lo que queda abierto»). Encargo del revisor tras el balance del paquete de actos.
 
 ## Síntoma medido
 
@@ -96,8 +96,10 @@ Medida limpia (500 plantillas, semillas 5, 11, 17 y 23; lotes `rev-500-*` de la 
   con el arnés tal como está: sin la decisión de seguir jugando (ADR 0134 E) y **sin arrastrar lesiones entre
   partidos**. El −16 de la ronda 0 se reproduce al bit con el catálogo actual (semillas 5+11 a 192) y es un
   subconjunto del mismo mundo que el +9,5: ruido de muestra.
-- **`ankle_bite` positivo**: **LIKELY** (≈ +10 ± 5). Lo decisivo es que ninguna estimación razonable cae
-  por debajo del umbral de retirada de la ADR 0087 (−7): **la retirada no tenía base**.
+- **`ankle_bite` no es negativo**: **LIKELY** (≈ +10 ± 5,7 con el ET honesto). **Que sea positivo no
+  está demostrado**: con la t de Student de 3 grados de libertad, la ADR 0150 lo clasifica como «sin
+  efecto a esta potencia». Lo decisivo es que ninguna estimación razonable cae por debajo del umbral de
+  retirada (−7): **la retirada no tenía base**.
 - **«Lesionar al rival ayuda a ganar» como propiedad del sistema**: **no demostrado**. Descansa en una sola
   perk, `dirty_play` vale ≈0 y no se ha identificado el mecanismo de la ganancia.
 - **H1 (sesgo del árbitro) y H2 (rencor)**: **sin evidencia de efecto a esta potencia**, no REJECTED. Los Δ
