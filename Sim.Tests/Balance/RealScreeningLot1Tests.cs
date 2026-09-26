@@ -34,8 +34,10 @@ public sealed class RealScreeningLot1Tests
         // 25 desde el experimento de legibilidad del 25 sep 2026: `duelist` y `own_third_anchor` cambian
         // su cuota de entrada por un DERRIBO (setState sobre el rival) y salen del lote — el arnés de
         // cribado mide multiplicadores sobre el portador y no sabe atribuir un acto sobre un rival.
-        // 29 desde el 26 sep 2026: cuatro de los ocho perks nuevos entran en el lote de cribado.
-        Assert.Equal(29, perks.Count);
+        // 29 desde el 26 sep 2026: cuatro de los ocho perks nuevos entran en el lote de cribado. 26 desde
+        // BM-A: la forma del objetivo depende del alcance. bulwark_stance (que ahora derriba al que le
+        // regatea), grudge y killing_range (cuyo efecto ya caía sobre otro jugador) dejan el lote.
+        Assert.Equal(26, perks.Count);
 
         var totalStopwatch = System.Diagnostics.Stopwatch.StartNew();
         var results = ScreeningRunner.RunBatch(Catalog, perks, seed: 1, checkpointDirectory: null);

@@ -411,6 +411,8 @@ internal sealed class MatchEngine : IPerkWorld
             return;
         }
 
+        player.EffectKnockdownTick = _tick;
+
         if (ReferenceEquals(_ball.Owner, player))
         {
             ParkBall(player.Position);
@@ -418,6 +420,17 @@ internal sealed class MatchEngine : IPerkWorld
 
         player.EnterState(PlayerState.KnockedDown, ticks);
     }
+
+    /// <summary>
+    /// True si un efecto de perk sacó de la disputa al actor de una resolución que se publicó antes de
+    /// tirarse (BM-A): lo derribó en este mismo tick (<see cref="KnockDown"/>) o lo sacó del campo. Un
+    /// derribado no disputa. Se acota a los derribos <b>de efecto</b> a propósito: la entrada fallada que
+    /// una <c>extraAction</c> resuelve dentro de la publicación previa también tumba al que entra, y que
+    /// `charge` y `bull_rush` sigan disputando después es su comportamiento medido; si eso es correcto se
+    /// decide en BM-B, no aquí.
+    /// </summary>
+    private bool StoppedByEffect(MatchPlayer actor) =>
+        !actor.OnPitch || (actor.State == PlayerState.KnockedDown && actor.EffectKnockdownTick == _tick);
 
     /// <summary>
     /// Multiplicador de <b>cuota</b> de una probabilidad para el jugador (ADR 0050 P1);
@@ -3660,6 +3673,13 @@ internal sealed class MatchEngine : IPerkWorld
         carrier.DribbleDuelCooldown = _tuning.States.DribbleDuelCooldownTicks;
         defender.DribbleDuelCooldown = _tuning.States.DribbleDuelCooldownTicks;
 
+        // BM-A: un derribado no disputa. Si un perk del defensor tumbó al conductor al intentarlo (Muro),
+        // KnockDown ya dejó el balón suelto en sus pies: el regate no se tira y nadie lo gana.
+        if (StoppedByEffect(carrier))
+        {
+            return;
+        }
+
         // ADR 0041: la técnica del conductor contra la cobertura del defensor —velocidad y fuerza, con el
         // reparto de defenderSpeedSharePercent—, no las tres contra el 50.
         int guard = ((dribble.DefenderSpeedSharePercent * defender.Speed)
@@ -3708,6 +3728,14 @@ internal sealed class MatchEngine : IPerkWorld
         // TACKLE se publica antes de los rolls de falta, victoria y lesión (§3). El evento definitivo,
         // con su Detail real, se emite más abajo (y solo si hubo disputa del balón) con publish: false.
         PublishBeforeResolving(EventType.Tackle, "attempted", tackler, opponent: carrier);
+
+        // BM-A: un derribado no disputa. Un perk del que recibe la entrada puede haber tumbado al que entra
+        // en la publicación previa (scope opponent, target actor); entonces no hay entrada que resolver —ni
+        // victoria, ni falta, ni lesión—, igual que cuando el rival se va de su alcance.
+        if (StoppedByEffect(tackler))
+        {
+            return;
+        }
 
         var tackle = _tuning.Tackle;
         int win = TackleWinChance(tackler, carrier);
@@ -4009,6 +4037,13 @@ internal sealed class MatchEngine : IPerkWorld
 
         PublishBeforeResolving(EventType.Tackle, "block", blocker, opponent: target);
 
+        // BM-A: el mismo criterio que la entrada. Sin esto la rama sin derribo devolvería a Positioning a un
+        // jugador que un perk acaba de tumbar.
+        if (StoppedByEffect(blocker))
+        {
+            return;
+        }
+
         int foulChance = ProbabilityScale.Apply(
             block.FoulBase
                 + (blocker.FoulChanceBonus * 100)
@@ -4219,6 +4254,19 @@ internal sealed class MatchEngine : IPerkWorld
         SetOwner(_players[playerIndex]);
         _players[playerIndex].EnterState(PlayerState.Dribbling, 0);
     }
+
+    /// <summary>Tira el duelo de regate de este portador contra el defensor más cercano (BM-A).</summary>
+    internal void TryDribbleDuelForTest(int playerIndex) => TryDribbleDuel(_players[playerIndex]);
+
+    /// <summary>Resuelve la carga de <paramref name="blockerIndex"/> contra <paramref name="targetIndex"/> (BM-A).</summary>
+    internal void ResolveBlockForTest(int blockerIndex, int targetIndex)
+    {
+        _players[blockerIndex].BlockTarget = _players[targetIndex];
+        ResolveBlock(_players[blockerIndex]);
+    }
+
+    /// <summary>Los eventos registrados hasta ahora (BM-A: qué deja en la secuencia una resolución cortada).</summary>
+    internal IReadOnlyList<MatchEvent> EventsForTest => _events;
 
     /// <summary>Lanza un despeje de este jugador, igual que lo haría el motor al expirar el armado.</summary>
     internal void ForceClearForTest(int playerIndex)

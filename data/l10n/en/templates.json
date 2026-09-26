@@ -26,7 +26,7 @@
     "modifyProbabilityDown": "{target} divides {probability} by {value:odds}",
     "cancelEvent": "cancels {event}",
     "addCounter": "+{value} to the {counter} counter",
-    "setState": "{target} stays knocked down for longer",
+    "setState": "{target} is knocked down",
     "modifyProbabilityPaired": "multiplies {probability} towards {target} by {value:odds}",
     "modifyProbabilityPairedDown": "divides {probability} towards {target} by {value:odds}",
     "modifyKnockdownTicks": "{target} leaves the opponent knocked down for longer with their tackles",
@@ -476,6 +476,7 @@
   "triggersReceived": {
     "TACKLE": "when tackled",
     "FOUL": "when fouled",
-    "INJURY": "when injured"
+    "INJURY": "when injured",
+    "DRIBBLE_ATTEMPTED": "when taken on"
   }
 }

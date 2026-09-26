@@ -173,9 +173,9 @@ public static class PerkLoader
         string conditionSource = root.TryProp("condition") is { } conditionNode ? conditionNode.AsString() : string.Empty;
         var condition = ConditionCompiler.Compile(conditionSource, file, "$.condition");
 
-        var effects = ParseEffects(root.Prop("effects"), file, trigger, links, rarity, drawback: false);
+        var effects = ParseEffects(root.Prop("effects"), file, trigger, scope, links, rarity, drawback: false);
         var elseEffects = root.TryProp("elseEffects") is { } elseNode
-            ? ParseEffects(elseNode, file, trigger, links, rarity, drawback: true)
+            ? ParseEffects(elseNode, file, trigger, scope, links, rarity, drawback: true)
             : Array.Empty<EffectDefinition>();
         if (effects.Count == 0 && elseEffects.Count == 0)
         {
@@ -689,19 +689,31 @@ public static class PerkLoader
     // ---------------------------------------------------------------- efectos
 
     private static IReadOnlyList<EffectDefinition> ParseEffects(
-        Node node, string file, EventType trigger, IReadOnlyList<LinkRelation> links, Rarity rarity, bool drawback)
+        Node node,
+        string file,
+        EventType trigger,
+        PerkScope scope,
+        IReadOnlyList<LinkRelation> links,
+        Rarity rarity,
+        bool drawback)
     {
         var effects = new List<EffectDefinition>();
         foreach (var item in node.EnumerateArray())
         {
-            effects.Add(ParseEffect(item, file, trigger, links, rarity, drawback));
+            effects.Add(ParseEffect(item, file, trigger, scope, links, rarity, drawback));
         }
 
         return effects;
     }
 
     private static EffectDefinition ParseEffect(
-        Node node, string file, EventType trigger, IReadOnlyList<LinkRelation> links, Rarity rarity, bool drawback)
+        Node node,
+        string file,
+        EventType trigger,
+        PerkScope scope,
+        IReadOnlyList<LinkRelation> links,
+        Rarity rarity,
+        bool drawback)
     {
         node.EnsureKnownKeys(EffectKnownKeys);
         var type = ParseEnum<EffectType>(node.Prop("type"), "tipo de efecto");
@@ -886,7 +898,7 @@ public static class PerkLoader
         }
 
         ValidateEffect(
-            node, file, trigger, type, target, duration, usesCounter, counter, counterDivisor, state, links, value,
+            node, file, trigger, scope, type, target, duration, usesCounter, counter, counterDivisor, state, links, value,
             markBias, markTag, tackleBias);
 
         return new EffectDefinition(
@@ -1000,10 +1012,40 @@ public static class PerkLoader
         _ => "legendary",
     };
 
+    /// <summary>
+    /// True si el objetivo es <b>siempre</b> un rival del portador, sea cual sea el evento (BM-A). Se decide
+    /// por el alcance y no por el nombre del objetivo, porque el alcance dice quién es el portador dentro del
+    /// evento: en los eventos de contacto el <c>opponent</c> es siempre rival del <c>actor</c>, así que con
+    /// <c>scope: opponent</c> el rival es el <c>actor</c> —el que le entra al portador— y el <c>opponent</c> es
+    /// el propio portador. <b>Salvo en <c>INJURY</c> y <c>DEATH</c></b>, donde el causante puede ser un
+    /// compañero o la propia víctima (fuego amigo, BE-B: <c>FriendlyFireAttributionTests</c>): ahí sólo valen
+    /// los objetivos de población rival. <c>target</c> no vale nunca: en un <c>PASS</c> es un compañero.
+    /// </summary>
+    internal static bool IsRivalOfOwner(EventType trigger, PerkScope scope, EffectTarget target)
+    {
+        if (target is EffectTarget.OpposingTeam or EffectTarget.AdjacentOpponents)
+        {
+            return true;
+        }
+
+        if (trigger is EventType.Injury or EventType.Death)
+        {
+            return false;
+        }
+
+        return target switch
+        {
+            EffectTarget.Opponent => scope is PerkScope.Actor or PerkScope.Team,
+            EffectTarget.Actor => scope is PerkScope.Opponent or PerkScope.OpposingTeam,
+            _ => false,
+        };
+    }
+
     private static void ValidateEffect(
         Node node,
         string file,
         EventType trigger,
+        PerkScope scope,
         EffectType type,
         EffectTarget target,
         EffectDuration duration,
@@ -1048,12 +1090,15 @@ public static class PerkLoader
                 throw new DataException(file, node.Path, "setState solo admite el estado 'KnockedDown'");
             }
 
-            if (target is not (EffectTarget.Target or EffectTarget.Opponent or EffectTarget.OpposingTeam or EffectTarget.AdjacentOpponents))
+            if (!IsRivalOfOwner(trigger, scope, target))
             {
                 throw new DataException(
                     file,
                     node.Path,
-                    "setState solo puede derribar a objetivos rivales (target, opponent, opposingTeam, adjacentOpponents)");
+                    $"setState solo puede derribar a un rival del portador, y con scope '{scope}' el objetivo "
+                        + $"'{target}' no lo es siempre. Valen opposingTeam y adjacentOpponents con cualquier "
+                        + "scope; opponent con scope actor o team; actor con scope opponent u opposingTeam, salvo "
+                        + "con trigger INJURY o DEATH, donde el causante puede ser un compañero (BM-A)");
             }
         }
 

@@ -1,5 +1,5 @@
 {
-  "_doc": "Postura de muro deja de ser un bono invisible puesto en el pitido inicial: se activa CUANDO ENTRA, que es cuando su efecto se resuelve, y ahí el partido puede enseñarlo. RF-069c/ADR 0149.",
+  "_doc": "ACTO: el que le entra rebota y se queda en el suelo, y la entrada no llega a resolverse: ni roba, ni falta, ni lesión. PAGA: una vez cada 20 s; la segunda entrada del mismo ataque le llega sin muro, y no le da nada más que el golpe devuelto. Primer perk que castiga al que le entra al portador (BM-A): scope opponent hace del portador al que le entran y del actor al que entra, y el motor no tira la entrada de un jugador que un efecto acaba de tumbar. Se probó primero en DRIBBLE_ATTEMPTED («el que intenta regatearle rebota») y era casi inerte: en 32 partidos enano contra enano el defensor enano no afrontó ningún regate. MEDIDO 26 sep: en TACKLE se activa en el 42,5 % de los partidos con portador enano (2,5 % con humano) y vale 3 con el protocolo de la tabla (semillas 5 y 11, ADR 0087). Los 6 ticks son dribble.lostKnockdownTicks, el golpe que ya se lleva quien pierde un duelo cuerpo a cuerpo: no es una cifra nueva. Enfriamiento de 20 s, el de nutmeg, sin medir. Antes: TACKLE con scope actor, x2 a la cuota de entrada (valor 2).",
   "id": "bulwark_stance",
   "name": {
     "es": "Postura de muro",
@@ -13,22 +13,22 @@
   "race": null,
   "family": "wall",
   "trigger": "TACKLE",
-  "scope": "actor",
+  "scope": "opponent",
   "links": [],
   "condition": "hasTag(owner,'Bulwark')",
   "effects": [
     {
-      "type": "modifyProbability",
-      "target": "owner",
-      "probability": "tackle",
-      "value": 100,
-      "duration": "play"
+      "type": "setState",
+      "target": "actor",
+      "state": "KnockedDown",
+      "ticks": 6
     }
   ],
   "elseEffects": [],
   "limit": {
     "per": "play",
-    "times": 1
+    "times": 1,
+    "cooldownSeconds": 20
   },
   "accumulatesAcrossMatches": false,
   "lethal": false,

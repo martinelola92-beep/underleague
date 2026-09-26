@@ -158,7 +158,7 @@ public static class PerkAudit
 
         var effectTypes = perk.Effects.Select(e => e.Type).ToList();
         var targetShapes = perk.Effects
-            .Select(e => PerkBalanceClassifier.ClassifyTargetShape(e.Target))
+            .Select(e => PerkBalanceClassifier.ClassifyTargetShape(perk.Scope, e.Target))
             .Distinct()
             .ToList();
         bool multiTarget = targetShapes.Any(s => s != EffectTargetShape.SingleOwner);

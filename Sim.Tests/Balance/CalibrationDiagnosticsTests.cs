@@ -88,6 +88,8 @@ public sealed class CalibrationDiagnosticsTests
         _output.WriteLine($"bulwark_stance (Dwarf, styleTagWeights.Bulwark=75): {dwarfExposure:F1}% ({dwarf.Count} partidos)");
         _output.WriteLine("Conclusión esperada: la exposición debería escalar con el peso de estilo de la raza, no con N.");
 
+        // BM-A (26 sep 2026): Muro pasó a dispararse cuando LE entran (TACKLE, scope opponent). Medido: enano
+        // 42,5 %, humano 2,5 %. Con DRIBBLE_ATTEMPTED salían 0 % y 0 %: contra enanos casi no se regatea.
         Assert.True(dwarfExposure > humanExposure);
     }
 

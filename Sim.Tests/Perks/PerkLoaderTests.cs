@@ -179,7 +179,7 @@ public sealed class PerkLoaderTests
     {
         const string Friendly = """[{ "type": "setState", "target": "team", "state": "KnockedDown", "ticks": 10 }]""";
         var ex = Assert.Throws<DataException>(() => TestPerks.Load("bad", TestPerks.Json("bad", "TACKLE", Friendly)));
-        Assert.Contains("rivales", ex.Message, StringComparison.Ordinal);
+        Assert.Contains("rival", ex.Message, StringComparison.Ordinal);
 
         const string Enemy = """[{ "type": "setState", "target": "opponent", "state": "KnockedDown", "ticks": 10 }]""";
         Assert.NotNull(TestPerks.Load("ok", TestPerks.Json("ok", "TACKLE", Enemy)));

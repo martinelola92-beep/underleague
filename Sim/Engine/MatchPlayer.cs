@@ -561,6 +561,9 @@ internal sealed class MatchPlayer
     /// <summary>Tick en el que dejó el campo (lesión, muerte o expulsión); −1 si sigue en él (ADR 0094).</summary>
     public int LeftPitchTick { get; set; } = -1;
 
+    /// <summary>Tick del último derribo por efecto de perk (<c>MatchEngine.KnockDown</c>, BM-A); −1 si ninguno.</summary>
+    public int EffectKnockdownTick { get; set; } = -1;
+
     /// <summary>Paradas consecutivas sin encajar; alimenta el decaimiento de parada (§3.7).</summary>
     public int ConsecutiveSaves { get; set; }
 

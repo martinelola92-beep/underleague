@@ -26,7 +26,7 @@
     "modifyProbabilityDown": "{target} divide por {value:odds} {probability}",
     "cancelEvent": "anula {event}",
     "addCounter": "+{value} al contador {counter}",
-    "setState": "{target} queda derribado más tiempo",
+    "setState": "{target} cae derribado",
     "modifyProbabilityPaired": "multiplica por {value:odds} {probability} hacia {target}",
     "modifyProbabilityPairedDown": "divide por {value:odds} {probability} hacia {target}",
     "modifyKnockdownTicks": "{target} deja al rival derribado más tiempo con sus entradas",
@@ -476,6 +476,7 @@
   "triggersReceived": {
     "TACKLE": "cuando le entran",
     "FOUL": "cuando le hacen falta",
-    "INJURY": "cuando le lesionan"
+    "INJURY": "cuando le lesionan",
+    "DRIBBLE_ATTEMPTED": "cuando intentan regatearle"
   }
 }

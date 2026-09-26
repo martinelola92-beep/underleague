@@ -212,7 +212,7 @@ public static class PerkBalanceClassifier
                 "perk sin efectos: nada que balancear");
         }
 
-        bool multiTarget = perk.Effects.Any(e => ClassifyTargetShape(e.Target) != EffectTargetShape.SingleOwner);
+        bool multiTarget = perk.Effects.Any(e => ClassifyTargetShape(perk.Scope, e.Target) != EffectTargetShape.SingleOwner);
 
         // Solo addCounter, sin ningún efecto acompañante: pura economía/progresión, sin mecanismo de
         // partido que medir — RunLevelCounter (§3, RUN_LEVEL).
@@ -351,11 +351,17 @@ public static class PerkBalanceClassifier
         _ => PerkBalanceCategory.Singular,
     };
 
-    /// <summary>Forma del destinatario de un <see cref="EffectTarget"/> (§16): §16 en vez de un booleano.</summary>
-    public static EffectTargetShape ClassifyTargetShape(EffectTarget target) => target switch
+    /// <summary>
+    /// Forma del destinatario de un <see cref="EffectTarget"/> (§16): §16 en vez de un booleano. Los tres
+    /// objetivos de evento (actor, target, opponent) son el propio portador sólo cuando el alcance del perk
+    /// lo pone en ese papel (BM-A): con <c>scope: opponent</c>, <c>actor</c> es el rival que le entra, no él.
+    /// </summary>
+    public static EffectTargetShape ClassifyTargetShape(PerkScope scope, EffectTarget target) => target switch
     {
-        EffectTarget.Owner or EffectTarget.Actor => EffectTargetShape.SingleOwner,
-        EffectTarget.Target or EffectTarget.Opponent => EffectTargetShape.SingleOther,
+        EffectTarget.Owner => EffectTargetShape.SingleOwner,
+        EffectTarget.Actor => scope == PerkScope.Actor ? EffectTargetShape.SingleOwner : EffectTargetShape.SingleOther,
+        EffectTarget.Target => scope == PerkScope.Target ? EffectTargetShape.SingleOwner : EffectTargetShape.SingleOther,
+        EffectTarget.Opponent => scope == PerkScope.Opponent ? EffectTargetShape.SingleOwner : EffectTargetShape.SingleOther,
         _ => EffectTargetShape.Population, // Team/OpposingTeam/WithTag/AdjacentWithTag/Adjacent/AdjacentOpponents/Linked/LinkedWithTag
     };
 

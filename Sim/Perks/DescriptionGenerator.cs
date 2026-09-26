@@ -86,11 +86,11 @@ public static class DescriptionGenerator
         string triggerNoun = templates.Get(EventsSection, EventTypeNames.ToUpperSnake(perk.Trigger));
         string links = DescribeLinks(perk.Links, templates);
         var effects = new StringBuilder();
-        AppendEffects(effects, perk.Effects, templates, separator, finalSeparator, triggerNoun, links);
+        AppendEffects(effects, perk.Effects, perk.Scope, templates, separator, finalSeparator, triggerNoun, links);
         if (perk.ElseEffects.Count > 0)
         {
             effects.Append(templates.Get(Layout, "elsePrefix"));
-            AppendEffects(effects, perk.ElseEffects, templates, separator, finalSeparator, triggerNoun, links);
+            AppendEffects(effects, perk.ElseEffects, perk.Scope, templates, separator, finalSeparator, triggerNoun, links);
         }
 
         // RF-069c: un enfriamiento se le cuenta al jugador en segundos, que es la unidad en la que lo
@@ -290,6 +290,7 @@ public static class DescriptionGenerator
         AppendEffects(
             builder,
             teamWide,
+            PerkScope.Actor,
             templates,
             templates.Get(Layout, "effectSeparator"),
             templates.Get(Layout, "effectFinalSeparator"),
@@ -302,6 +303,7 @@ public static class DescriptionGenerator
     private static void AppendEffects(
         StringBuilder builder,
         IReadOnlyList<EffectDefinition> effects,
+        PerkScope scope,
         DescriptionTemplates templates,
         string separator,
         string finalSeparator,
@@ -325,7 +327,7 @@ public static class DescriptionGenerator
                 builder.Append(i == toRender.Count - 1 ? finalSeparator : separator);
             }
 
-            builder.Append(DescribeEffect(toRender[i], templates, triggerNoun, links));
+            builder.Append(DescribeEffect(toRender[i], scope, templates, triggerNoun, links));
         }
     }
 
@@ -356,7 +358,7 @@ public static class DescriptionGenerator
     }
 
     private static string DescribeEffect(
-        EffectDefinition effect, DescriptionTemplates templates, string triggerNoun, string links)
+        EffectDefinition effect, PerkScope scope, DescriptionTemplates templates, string triggerNoun, string links)
     {
         string key = effect.Type switch
         {
@@ -430,7 +432,7 @@ public static class DescriptionGenerator
         };
 
         string text = templates.Get(Effects, key);
-        text = Replace(text, "{target}", DescribeTarget(effect, templates, links));
+        text = Replace(text, "{target}", DescribeTarget(effect, scope, templates, links));
         text = Replace(text, "{immunity}", templates.Get(ImmunitiesSection, ImmunityKey(effect.Immunity)));
         text = Replace(text, "{point}", templates.Get(PointsSection, PointKey(effect.RelocationPoint)));
         text = Replace(text, "{attribute}", templates.Get(AttributesSection, ConditionCompiler.AttributeName(effect.Attribute)));
@@ -457,10 +459,18 @@ public static class DescriptionGenerator
         return Replace(text, "{event}", triggerNoun);
     }
 
-    private static string DescribeTarget(EffectDefinition effect, DescriptionTemplates templates, string links)
+    /// <summary>
+    /// Nombre del objetivo. Los objetivos de evento se nombran por el papel que tienen <b>respecto al
+    /// portador</b>, que decide el alcance (BM-A): con <c>scope: opponent</c> el <c>actor</c> es el rival que le
+    /// entra y el <c>opponent</c> es el propio portador. Sin esto, Muro se leía «el jugador queda derribado»
+    /// y el jugador parecía el suyo.
+    /// </summary>
+    private static string DescribeTarget(EffectDefinition effect, PerkScope scope, DescriptionTemplates templates, string links)
     {
         string key = effect.Target switch
         {
+            EffectTarget.Actor when scope is PerkScope.Opponent or PerkScope.OpposingTeam => "opponent",
+            EffectTarget.Opponent when scope == PerkScope.Opponent => "owner",
             EffectTarget.Actor => "actor",
             EffectTarget.Target => "target",
             EffectTarget.Opponent => "opponent",
