@@ -1,0 +1,33 @@
+{
+  "_doc": "CONDUCTA: el portero coloca a los suyos, y el bloque entero se hunde y se cierra. PAGA: la línea se hunde tanto que desde fuera del área se dispara gratis. Valores sin medir.",
+  "id": "shouting_wall",
+  "name": {
+    "es": "El muro que grita",
+    "en": "The Shouting Wall"
+  },
+  "rarity": "uncommon",
+  "minAct": 1,
+  "frequency": 100,
+  "kind": "filler",
+  "axis": "composition",
+  "race": null,
+  "trigger": "MATCH_START",
+  "scope": "actor",
+  "links": [],
+  "condition": "",
+  "effects": [
+    {
+      "type": "modifyLeash",
+      "target": "team",
+      "value": -1,
+      "duration": "match"
+    }
+  ],
+  "elseEffects": [],
+  "limit": null,
+  "accumulatesAcrossMatches": false,
+  "lethal": false,
+  "positionOnly": "Goalkeeper",
+  "tagsRequired": [],
+  "tagsForbidden": []
+}

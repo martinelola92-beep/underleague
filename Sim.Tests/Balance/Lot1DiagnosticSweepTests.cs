@@ -42,7 +42,8 @@ public sealed class Lot1DiagnosticSweepTests
         // 25 desde el experimento de legibilidad del 25 sep 2026: `duelist` y `own_third_anchor` cambian
         // su cuota de entrada por un DERRIBO (setState sobre el rival) y salen del lote — el arnés de
         // cribado mide multiplicadores sobre el portador y no sabe atribuir un acto sobre un rival.
-        Assert.Equal(25, perks.Count);
+        // 29 desde el 26 sep 2026: cuatro de los ocho perks nuevos entran en el lote de cribado.
+        Assert.Equal(29, perks.Count);
 
         var results = new List<(PerkDefinition Perk, ScreeningResult Result, PerkClassification Classification)>();
         foreach (var perk in perks)

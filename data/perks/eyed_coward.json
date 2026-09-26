@@ -1,0 +1,41 @@
+{
+  "_doc": "CONDUCTA: no entra. Se queda pegado a su hombre y espera el error, y se le ve porque su marca no se despega en todo el partido. PAGA: no entra TAMPOCO cuando hay que entrar, y eso se paga en el área. Primer perk del catálogo con sub-100 (ADR 0149 y §1.5 de la biblia de perks): nunca solo —baja la entrada y sube el marcaje—, las dos acciones son del mismo conjunto sin balón, el suelo es 40, declara puesto y se puede prever antes del partido. Valores sin medir.",
+  "id": "eyed_coward",
+  "name": {
+    "es": "Cobarde con ojo",
+    "en": "Eyed Coward"
+  },
+  "rarity": "uncommon",
+  "minAct": 1,
+  "frequency": 100,
+  "kind": "conditional",
+  "axis": "identity",
+  "race": null,
+  "trigger": "MATCH_START",
+  "scope": "actor",
+  "links": [],
+  "condition": "",
+  "effects": [
+    {
+      "type": "modifyUtility",
+      "utilityAction": "Tackle",
+      "value": 55,
+      "duration": "match",
+      "target": "owner"
+    },
+    {
+      "type": "modifyUtility",
+      "utilityAction": "MarkOpponent",
+      "value": 140,
+      "duration": "match",
+      "target": "owner"
+    }
+  ],
+  "elseEffects": [],
+  "limit": null,
+  "accumulatesAcrossMatches": false,
+  "lethal": false,
+  "positionOnly": "Defender",
+  "tagsRequired": [],
+  "tagsForbidden": []
+}

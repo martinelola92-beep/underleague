@@ -1,0 +1,37 @@
+{
+  "_doc": "ACTO: le pasa el balón entre las piernas y el defensa se queda clavado mirando cómo se va. PAGA: si no cuela, el balón se queda en el defensa y él ya ha pasado de largo. En DRIBBLE_ATTEMPTED el `opponent` del evento es el defensor que cierra, así que el derribo cae donde tiene que caer. Sin medir.",
+  "id": "nutmeg",
+  "name": {
+    "es": "Caño",
+    "en": "Nutmeg"
+  },
+  "rarity": "uncommon",
+  "minAct": 1,
+  "frequency": 100,
+  "kind": "conditional",
+  "axis": "identity",
+  "race": null,
+  "trigger": "DRIBBLE_ATTEMPTED",
+  "scope": "actor",
+  "links": [],
+  "condition": "",
+  "effects": [
+    {
+      "type": "setState",
+      "target": "opponent",
+      "state": "KnockedDown",
+      "ticks": 12
+    }
+  ],
+  "elseEffects": [],
+  "limit": {
+    "per": "play",
+    "times": 1,
+    "cooldownSeconds": 20
+  },
+  "accumulatesAcrossMatches": false,
+  "lethal": false,
+  "positionOnly": null,
+  "tagsRequired": [],
+  "tagsForbidden": []
+}

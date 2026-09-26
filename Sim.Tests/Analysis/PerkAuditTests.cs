@@ -70,14 +70,18 @@ public sealed class PerkAuditTests
         // 105 a 102, -1 en ReadyForScreening y -2 en MultiTarget, DesignReview/NotReady/RunLevel sin
         // cambio. Si cambia sin que nadie haya tocado /data/perks, es una regresión de la auditoría, y
         // entonces se investiga antes de tocar el número.
-        Assert.Equal(102, summary.Total);
+        // 110 desde el 26 sep 2026: ocho perks nuevos escritos con el vocabulario que ya existía
+        // (`point_blank`, `nutmeg`, `ankle_bite`, `bull_rush`, `silver_tongue`, `eyed_coward`,
+        // `never_tracks_back`, `shouting_wall`). Se reparten +4 ReadyForScreening, +3 MultiTarget y +1
+        // DesignReview; los cinco cubos siguen sumando el total.
+        Assert.Equal(110, summary.Total);
         // 25 desde el experimento de legibilidad del 25 sep 2026: `duelist` y `own_third_anchor` cambian
         // su cuota de entrada por un DERRIBO (setState sobre el rival) y salen del lote — el arnés de
         // cribado mide multiplicadores sobre el portador y no sabe atribuir un acto sobre un rival. No
         // desaparecen: pasan a MultiTarget, que sube de 22 a 24. Los cinco cubos suman 102.
-        Assert.Equal(25, summary.ByReadiness[AuditReadiness.ReadyForScreening]);
-        Assert.Equal(24, summary.ByReadiness[AuditReadiness.MultiTarget]);
-        Assert.Equal(20, summary.ByReadiness[AuditReadiness.DesignReview]);
+        Assert.Equal(29, summary.ByReadiness[AuditReadiness.ReadyForScreening]);
+        Assert.Equal(27, summary.ByReadiness[AuditReadiness.MultiTarget]);
+        Assert.Equal(21, summary.ByReadiness[AuditReadiness.DesignReview]);
         Assert.Equal(27, summary.ByReadiness[AuditReadiness.NotReady]);
         Assert.Equal(6, summary.ByReadiness[AuditReadiness.RunLevel]);
     }

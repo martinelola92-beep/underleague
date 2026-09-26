@@ -1,0 +1,34 @@
+{
+  "_doc": "ACTO: desde la boca del gol dispara dos veces en el mismo instante, y la segunda sale del rechace de la primera. PAGA: si el primer disparo da en un cuerpo, el segundo también — a esa distancia hay más piernas que portería. Escrito con vocabulario existente (extraAction ya sabe repetir un SHOT). Los valores son de colocación, no de balance: nadie los ha medido.",
+  "id": "point_blank",
+  "name": {
+    "es": "A bocajarro",
+    "en": "Point Blank"
+  },
+  "rarity": "uncommon",
+  "minAct": 1,
+  "frequency": 100,
+  "kind": "conditional",
+  "axis": "geometry",
+  "race": null,
+  "trigger": "SHOT",
+  "scope": "actor",
+  "links": [],
+  "condition": "distanceToGoal(actor) < 2",
+  "effects": [
+    {
+      "type": "extraAction"
+    }
+  ],
+  "elseEffects": [],
+  "limit": {
+    "per": "play",
+    "times": 1,
+    "cooldownSeconds": 25
+  },
+  "accumulatesAcrossMatches": false,
+  "lethal": false,
+  "positionOnly": null,
+  "tagsRequired": [],
+  "tagsForbidden": []
+}

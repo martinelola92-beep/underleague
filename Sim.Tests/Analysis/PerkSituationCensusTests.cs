@@ -38,10 +38,11 @@ public sealed class PerkSituationCensusTests
     private static readonly RefereeSetup Referee = new("Referee", RefereeTrait.Neutral, 0);
     private static readonly Catalog Catalog = TestData.LoadCatalog();
 
-    /// <summary>Los seis que la ADR 0149 saca del pitido inicial. Se miden uno a uno y en conjunto.</summary>
+    /// <summary>Los perks que se están midiendo. Se cambian a mano según qué tanda haya que comprobar.</summary>
     private static readonly string[] Moved =
     {
-        "bulwark_stance", "own_third_anchor", "duelist", "elf_touch", "forward_line", "flank_specialist",
+        "point_blank", "nutmeg", "ankle_bite", "bull_rush", "silver_tongue",
+        "eyed_coward", "never_tracks_back", "shouting_wall",
     };
 
     private readonly ITestOutputHelper _output;
@@ -60,6 +61,12 @@ public sealed class PerkSituationCensusTests
         for (int i = 0; i < Moved.Length; i++)
         {
             var row = Measure(Moved[i], i);
+            if (row.Matches == 0)
+            {
+                _output.WriteLine($"{Moved[i],-21} | SIN MEDIR: ningún titular puede llevarlo");
+                continue;
+            }
+
             totalOpen += row.OpenPlay;
             totalMatches = row.Matches;
             _output.WriteLine(
@@ -68,7 +75,9 @@ public sealed class PerkSituationCensusTests
         }
 
         _output.WriteLine("----------------------+-------------+-------------+----------+--------------------------");
-        _output.WriteLine($"Los seis juntos aportan {totalOpen / totalMatches:0.00} activaciones en juego por partido.");
+        _output.WriteLine(totalMatches == 0
+            ? "Ninguno se ha podido medir."
+            : $"Los medidos juntos aportan {totalOpen / totalMatches:0.00} activaciones en juego por partido.");
 
         // El censo no decide nada: sólo tiene que haber medido algo.
         Assert.True(totalMatches > 0);
@@ -110,9 +119,14 @@ public sealed class PerkSituationCensusTests
                 // de a «¿le pasa algo a este jugador concreto?».
                 var players = subject.Players.ToList();
                 bool any = false;
+                // Un perk de portero se le pone AL PORTERO: saltárselo siempre dejaba sin medir a los que
+                // sólo él puede llevar, y un cero por no haber armado a nadie se lee igual que un cero por
+                // no activarse nunca.
+                bool keeperOnly = perk.PositionOnly == Position.Goalkeeper;
                 for (int i = 0; i < players.Count; i++)
                 {
-                    if (players[i].Position == Position.Goalkeeper || !CanCarry(players[i], perk))
+                    bool isKeeper = players[i].Position == Position.Goalkeeper;
+                    if (isKeeper != keeperOnly || !CanCarry(players[i], perk))
                     {
                         continue;
                     }

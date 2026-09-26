@@ -1,0 +1,34 @@
+{
+  "_doc": "ACTO: entra en campo rival y no frena — si la primera no la gana, vuelve a por ella en el mismo instante. PAGA: dos entradas seguidas en campo contrario son dos oportunidades de falta, y arriba una falta es un saque peligroso. Hermano de `charge` con condición de zona y enfriamiento: lo que los distingue es DÓNDE. Sin medir.",
+  "id": "bull_rush",
+  "name": {
+    "es": "Embestida de toro",
+    "en": "Bull Rush"
+  },
+  "rarity": "rare",
+  "minAct": 1,
+  "frequency": 100,
+  "kind": "conditional",
+  "axis": "geometry",
+  "race": null,
+  "trigger": "TACKLE",
+  "scope": "actor",
+  "links": [],
+  "condition": "zone(actor) == 'Opposing'",
+  "effects": [
+    {
+      "type": "extraAction"
+    }
+  ],
+  "elseEffects": [],
+  "limit": {
+    "per": "play",
+    "times": 1,
+    "cooldownSeconds": 30
+  },
+  "accumulatesAcrossMatches": false,
+  "lethal": false,
+  "positionOnly": null,
+  "tagsRequired": [],
+  "tagsForbidden": []
+}

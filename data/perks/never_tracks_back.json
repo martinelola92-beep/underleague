@@ -1,0 +1,41 @@
+{
+  "_doc": "CONDUCTA: el delantero que no repliega jamás. Se queda arriba esperando, y cuando llega el balón ya está donde hay que estar. PAGA: su equipo defiende con uno menos todo el partido, y eso no se apaga. Sub-100 con las cinco condiciones de §1.5, igual que `eyed_coward`. Valores sin medir.",
+  "id": "never_tracks_back",
+  "name": {
+    "es": "No vuelve",
+    "en": "Never Tracks Back"
+  },
+  "rarity": "uncommon",
+  "minAct": 1,
+  "frequency": 100,
+  "kind": "conditional",
+  "axis": "identity",
+  "race": null,
+  "trigger": "MATCH_START",
+  "scope": "actor",
+  "links": [],
+  "condition": "",
+  "effects": [
+    {
+      "type": "modifyUtility",
+      "utilityAction": "Retreat",
+      "value": 45,
+      "duration": "match",
+      "target": "owner"
+    },
+    {
+      "type": "modifyUtility",
+      "utilityAction": "Shoot",
+      "value": 135,
+      "duration": "match",
+      "target": "owner"
+    }
+  ],
+  "elseEffects": [],
+  "limit": null,
+  "accumulatesAcrossMatches": false,
+  "lethal": false,
+  "positionOnly": "Forward",
+  "tagsRequired": [],
+  "tagsForbidden": []
+}

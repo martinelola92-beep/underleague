@@ -1,0 +1,33 @@
+{
+  "_doc": "ROMPE-REGLAS: la primera tarjeta del partido no existe. El árbitro saca la cartulina, se lo piensa y la guarda — en pantalla el sello sale tachado, que es como el partido cuenta ya lo que se anula. PAGA: una vez y se acabó; a partir de ahí el árbitro le tiene fichado. Es el único perk del catálogo que cancela una CARD, un disparador que el cargador permitía y nadie usaba. Sin medir.",
+  "id": "silver_tongue",
+  "name": {
+    "es": "Lengua de plata",
+    "en": "Silver Tongue"
+  },
+  "rarity": "rare",
+  "minAct": 1,
+  "frequency": 100,
+  "kind": "ruleBreaker",
+  "axis": "matchState",
+  "race": null,
+  "trigger": "CARD",
+  "scope": "actor",
+  "links": [],
+  "condition": "",
+  "effects": [
+    {
+      "type": "cancelEvent"
+    }
+  ],
+  "elseEffects": [],
+  "limit": {
+    "per": "match",
+    "times": 1
+  },
+  "accumulatesAcrossMatches": false,
+  "lethal": false,
+  "positionOnly": null,
+  "tagsRequired": [],
+  "tagsForbidden": []
+}
