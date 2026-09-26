@@ -99,6 +99,34 @@
     {
       "slot": 2,
       "perk": "bodyguard"
+    },
+    {
+      "slot": 0,
+      "perk": "shouting_wall"
+    },
+    {
+      "slot": 1,
+      "perk": "eyed_coward"
+    },
+    {
+      "slot": 3,
+      "perk": "bull_rush"
+    },
+    {
+      "slot": 4,
+      "perk": "silver_tongue"
+    },
+    {
+      "slot": 5,
+      "perk": "nutmeg"
+    },
+    {
+      "slot": 6,
+      "perk": "never_tracks_back"
+    },
+    {
+      "slot": 6,
+      "perk": "point_blank"
     }
   ],
   "rarities": {
@@ -111,5 +139,5 @@
     "5": "Fine"
   },
   "lineup": null,
-  "_doc": "TANDA 2: se anaden aqui los perks de la tanda 2 que necesitan portador (EveryCatalogPerkIsAssignedInSomeBuild). Esta build esta FUERA de data/balance/groups.json a proposito, asi que no alimenta ninguna puerta calibrada; por eso se elige para esto. Los perks nuevos van al FINAL de su slot: el orden dentro de un slot es diseno (BuildDensity recorta conservando el ultimo), asi que no se reordena nada de lo que ya habia."
+  "_doc": "TANDA 2: se anaden aqui los perks de la tanda 2 que necesitan portador (EveryCatalogPerkIsAssignedInSomeBuild). Esta build esta FUERA de data/balance/groups.json a proposito, asi que no alimenta ninguna puerta calibrada; por eso se elige para esto. Los perks nuevos van al FINAL de su slot: el orden dentro de un slot es diseno (BuildDensity recorta conservando el ultimo), asi que no se reordena nada de lo que ya habia. PAQUETE DE ACTOS (26 sep 2026): mismo motivo, se anaden al final shouting_wall (portero), eyed_coward (defensa), bull_rush, silver_tongue, nutmeg, never_tracks_back y point_blank (delantero)."
 }
