@@ -74,17 +74,31 @@
       "items": { "$ref": "#/$defs/actMap" }
     },
     "referees": {
-      "description": "Árbitros de la run, 6-8 (RF-061b, RF-064c).",
+      "description": "Árbitros de la run, 6-8 (RF-061b, RF-064c, ADR 0158).",
       "type": "array",
       "items": {
         "type": "object",
         "properties": {
           "id": { "type": "integer", "minimum": 0 },
+          "definitionId": {
+            "description": "Id en data/referees/referees.json; cadena vacía si el árbitro no viene de datos (ADR 0158).",
+            "type": "string"
+          },
           "name": { "type": "string" },
           "trait": { "enum": ["neutral", "strict", "lenient", "homer", "oneEyed", "cowardly", "corrupt", "incorruptible"] },
-          "bribesReceived": { "type": "integer", "minimum": 0 }
+          "bribesReceived": { "type": "integer", "minimum": 0 },
+          "grudge": {
+            "description": "Memoria del árbitro contra el jugador, -40..40 (ADR 0158 §4).",
+            "type": "integer",
+            "minimum": -40,
+            "maximum": 40
+          },
+          "blindSide": {
+            "description": "Media banda que no ve; 'none' salvo con trait=oneEyed (ADR 0158).",
+            "enum": ["none", "top", "bottom"]
+          }
         },
-        "required": ["id", "name", "trait", "bribesReceived"],
+        "required": ["id", "definitionId", "name", "trait", "bribesReceived", "grudge", "blindSide"],
         "additionalProperties": false
       }
     },

@@ -190,9 +190,12 @@ public static class RunSave
             var referee = state.Referees[i];
             w.WriteStartObject();
             w.WriteNumber("id", referee.Id);
+            w.WriteString("definitionId", referee.DefinitionId);
             w.WriteString("name", referee.Name);
             w.WriteString("trait", Camel(referee.Trait.ToString()));
             w.WriteNumber("bribesReceived", referee.BribesReceived);
+            w.WriteNumber("grudge", referee.Grudge);
+            w.WriteString("blindSide", Camel(referee.BlindSide.ToString()));
             w.WriteEndObject();
         }
 
@@ -520,7 +523,12 @@ public static class RunSave
                 Int(element, "id", path),
                 Str(element, "name", path),
                 Enum<RefereeTrait>(element, "trait", path),
-                Int(element, "bribesReceived", path)));
+                Int(element, "bribesReceived", path))
+            {
+                DefinitionId = Str(element, "definitionId", path),
+                Grudge = Int(element, "grudge", path),
+                BlindSide = Enum<RefereeSide>(element, "blindSide", path),
+            });
         }
 
         return referees;

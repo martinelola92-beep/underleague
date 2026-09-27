@@ -76,7 +76,7 @@ public sealed class DeathGoldTests
         var economy = EconomyWithDeathRates(("life_insurance", 8));
         var systems = new StandardRunSystems(
             economy, baseSystems.Items, baseSystems.Consumables, baseSystems.Rivals,
-            baseSystems.Map, baseSystems.Clubs, baseSystems.Events);
+            baseSystems.Map, baseSystems.Clubs, baseSystems.Events, baseSystems.Referees);
 
         var state = RunEngine.Start(SystemsTestSupport.Setup(), Seed, SystemsTestSupport.Catalog, systems);
         int ownPlayerId = state.Roster[0].Id;

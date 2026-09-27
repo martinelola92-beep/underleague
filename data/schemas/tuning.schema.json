@@ -971,7 +971,10 @@
           "type": "integer",
           "minimum": 0,
           "maximum": 100,
-          "description": "Probabilidad en tanto por ciento de señalar una falta ocurrida (AZ-E, ADR 0090)."
+          "description": "Probabilidad en tanto por ciento de señalar una falta ocurrida (AZ-E, ADR 0090), para el rasgo neutro."
+        },
+        "traits": {
+          "$ref": "#/$defs/refereeTraits"
         }
       },
       "required": [
@@ -986,8 +989,51 @@
         "biasShiftInjuryExtra",
         "biasShiftYellowExtra",
         "biasShiftRedExtra",
-        "whistlePercent"
+        "whistlePercent",
+        "traits"
       ],
+      "additionalProperties": false
+    },
+    "refereeTraits": {
+      "description": "ADR 0158: cómo modula cada rasgo de árbitro el criterio de partido. Una entrada por cada RefereeTrait, sin excepción.",
+      "type": "object",
+      "properties": {
+        "_doc": { "type": "string" },
+        "neutral": { "$ref": "#/$defs/refereeTrait" },
+        "strict": { "$ref": "#/$defs/refereeTrait" },
+        "lenient": { "$ref": "#/$defs/refereeTrait" },
+        "homer": { "$ref": "#/$defs/refereeTrait" },
+        "oneEyed": { "$ref": "#/$defs/refereeTrait" },
+        "cowardly": { "$ref": "#/$defs/refereeTrait" },
+        "corrupt": { "$ref": "#/$defs/refereeTrait" },
+        "incorruptible": { "$ref": "#/$defs/refereeTrait" }
+      },
+      "required": ["neutral", "strict", "lenient", "homer", "oneEyed", "cowardly", "corrupt", "incorruptible"],
+      "additionalProperties": false
+    },
+    "refereeTrait": {
+      "type": "object",
+      "properties": {
+        "whistlePercent": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 100,
+          "description": "Porcentaje ABSOLUTO: sustituye a referee.whistlePercent para este rasgo."
+        },
+        "cardOddsPercent": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 1000,
+          "description": "Multiplicador de la cuota de tarjeta, 100 = sin cambio (ProbabilityScale)."
+        },
+        "biasShiftPercent": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 1000,
+          "description": "Multiplicador de la magnitud de ShiftBiasAgainst, 100 = sin cambio."
+        }
+      },
+      "required": ["whistlePercent", "cardOddsPercent", "biasShiftPercent"],
       "additionalProperties": false
     },
     "biasPoints": {

@@ -277,7 +277,20 @@ public sealed class DefaultRunSystems : IRunSystems
         return races[node.Id % races.Count];
     }
 
+    /// <summary>
+    /// Desplazamiento inicial del casero (ADR 0158, enmienda de "casero"): en la run el jugador es
+    /// SIEMPRE el local, así que "favorece al local" se lee como "el árbitro de la casa del rival", que
+    /// arranca en contra del jugador.
+    /// </summary>
+    private const int HomerInitialBias = -20;
+
     /// <inheritdoc />
+    /// <remarks>
+    /// ADR 0158 §4: el criterio inicial ya no es siempre 0 — es la memoria del árbitro
+    /// (<see cref="RunReferee.Grudge"/>, -40..40) más el arranque hostil del casero, acotado a ±100. Es lo
+    /// que hace que portarse bien contra un árbitro concreto tenga sentido antes de volver a encontrárselo
+    /// (RF-061, RF-064).
+    /// </remarks>
     public RefereeSetup RefereeFor(RunState state, MapNode node, Catalog catalog)
     {
         ArgumentNullException.ThrowIfNull(state);
@@ -288,7 +301,11 @@ public sealed class DefaultRunSystems : IRunSystems
         }
 
         var referee = state.Referees[node.Id % state.Referees.Count];
-        return new RefereeSetup(referee.Name, referee.Trait, 0);
+        int bias = referee.Grudge + (referee.Trait == RefereeTrait.Homer ? HomerInitialBias : 0);
+        return new RefereeSetup(referee.Name, referee.Trait, Math.Clamp(bias, -100, 100))
+        {
+            BlindSide = referee.BlindSide,
+        };
     }
 
     /// <inheritdoc />

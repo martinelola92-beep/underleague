@@ -12,6 +12,8 @@ using Underleague.Sim.Run.Systems.Market;
 using Underleague.Sim.Run.Systems.Medical;
 using Underleague.Sim.Run.Systems.Mercenaries;
 using Underleague.Sim.Run.Systems.Nodes;
+using Underleague.Sim.Random;
+using Underleague.Sim.Run.Systems.Referees;
 using Underleague.Sim.Run.Systems.Rewards;
 using Underleague.Sim.Run.Systems.Rivals;
 
@@ -37,8 +39,9 @@ public sealed class StandardRunSystems : IRunSystems
     private readonly MapConfig _map;
     private readonly ClubCatalog _clubs;
     private readonly EventCatalog _events;
+    private readonly RefereeCatalog _referees;
 
-    public StandardRunSystems(EconomyConfig economy, ItemCatalog items, ConsumableCatalog consumables, RivalCatalog rivals, MapConfig map, ClubCatalog clubs, EventCatalog events)
+    public StandardRunSystems(EconomyConfig economy, ItemCatalog items, ConsumableCatalog consumables, RivalCatalog rivals, MapConfig map, ClubCatalog clubs, EventCatalog events, RefereeCatalog referees)
     {
         _economy = economy ?? throw new ArgumentNullException(nameof(economy));
         _items = items ?? throw new ArgumentNullException(nameof(items));
@@ -47,6 +50,7 @@ public sealed class StandardRunSystems : IRunSystems
         _map = map ?? throw new ArgumentNullException(nameof(map));
         _clubs = clubs ?? throw new ArgumentNullException(nameof(clubs));
         _events = events ?? throw new ArgumentNullException(nameof(events));
+        _referees = referees ?? throw new ArgumentNullException(nameof(referees));
     }
 
     /// <summary>Configuración de economía de esta instancia (para tests y <c>/Balance</c>).</summary>
@@ -70,10 +74,13 @@ public sealed class StandardRunSystems : IRunSystems
     /// <summary>Catálogo de cartas de evento de esta instancia (ADR 0100, <c>data/events/</c>).</summary>
     public EventCatalog Events => _events;
 
+    /// <summary>Catálogo de árbitros de esta instancia (ADR 0158, <c>data/referees/</c>).</summary>
+    public RefereeCatalog Referees => _referees;
+
     /// <summary>
-    /// Construye los cinco catálogos del paquete X de una instantánea de <c>/data</c> (el mismo
-    /// diccionario que consume <c>DataLoader.FromJson</c>). Ayudante de conveniencia para tests y
-    /// <c>/Balance</c>: evita llamar a los cinco cargadores por separado.
+    /// Construye los catálogos del paquete X de una instantánea de <c>/data</c> (el mismo diccionario que
+    /// consume <c>DataLoader.FromJson</c>). Ayudante de conveniencia para tests y <c>/Balance</c>: evita
+    /// llamar a los cargadores por separado.
     /// </summary>
     public static StandardRunSystems FromJson(IReadOnlyDictionary<string, string> files) => new(
         EconomyLoader.FromJson(files),
@@ -82,7 +89,8 @@ public sealed class StandardRunSystems : IRunSystems
         RivalLoader.FromJson(files),
         MapLoader.FromJson(files),
         ClubLoader.FromJson(files),
-        EventLoader.FromJson(files));
+        EventLoader.FromJson(files),
+        RefereeLoader.FromJson(files));
 
     /// <summary>
     /// <see cref="RunSetup"/> completo para empezar una run con <b>estos</b> datos: oro de partida
@@ -118,8 +126,46 @@ public sealed class StandardRunSystems : IRunSystems
         new[] { _rivals.OfAct(1), _rivals.OfAct(2), _rivals.OfAct(3) };
 
     /// <inheritdoc />
-    public IReadOnlyList<RunReferee> CreateReferees(ulong seed, int count, Catalog catalog) =>
-        DefaultRunSystems.Instance.CreateReferees(seed, count, catalog);
+    /// <remarks>
+    /// ADR 0158, cierra D-22 y RF-061b: el plantel de <c>count</c> árbitros de la run sale de
+    /// <c>data/referees/</c> (14-16 fichas, distintas entre sí), no de neutros con nombre <c>referee_i</c>
+    /// (eso se queda en <see cref="DefaultRunSystems"/>, que lo usan tests antiguos sin catálogo de
+    /// árbitros). El sorteo usa <see cref="RngStreams.Referees"/>: un flujo propio, ni el de partido ni el
+    /// de recompensas (RT-022), así que jugar o comprar en el mercado no cambia qué árbitros tiene la run.
+    /// </remarks>
+    public IReadOnlyList<RunReferee> CreateReferees(ulong seed, int count, Catalog catalog)
+    {
+        ArgumentNullException.ThrowIfNull(catalog);
+        if (count < 1)
+        {
+            throw new ArgumentOutOfRangeException(nameof(count), count, "la run necesita al menos un árbitro (RF-061b)");
+        }
+
+        var pool = new List<RefereeDefinition>(_referees.All);
+        if (count > pool.Count)
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(count),
+                count,
+                $"data/referees/ tiene {pool.Count} árbitros y la run pide {count} (RF-061b)");
+        }
+
+        var rng = RngStreams.Referees(seed);
+        rng.Shuffle(pool);
+
+        var referees = new List<RunReferee>(count);
+        for (int i = 0; i < count; i++)
+        {
+            var definition = pool[i];
+            referees.Add(new RunReferee(i, definition.Name.Es, definition.Trait, BribesReceived: 0)
+            {
+                DefinitionId = definition.Id,
+                BlindSide = definition.BlindSide,
+            });
+        }
+
+        return referees;
+    }
 
     /// <inheritdoc />
     public TeamSetup OpponentFor(RunState state, MapNode node, Catalog catalog)

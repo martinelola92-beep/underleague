@@ -65,7 +65,28 @@ public enum ConsumableMode
 public sealed record EquippedConsumable(string Id, ConsumableMode Mode, string Trigger);
 
 /// <summary>Árbitro de la run (RF-061, RF-064c). <c>BribesReceived</c> es progresión de fase 3.</summary>
-public sealed record RunReferee(int Id, string Name, RefereeTrait Trait, int BribesReceived);
+public sealed record RunReferee(int Id, string Name, RefereeTrait Trait, int BribesReceived)
+{
+    /// <summary>
+    /// Id de la ficha en <c>data/referees/referees.json</c> (ADR 0158): permite releer nombre y muletilla
+    /// en el idioma pedido (<c>Sim.Run.View.RefereeView</c>) sin volver a guardar texto bilingüe aquí.
+    /// Cadena vacía cuando el árbitro no viene de datos (<c>DefaultRunSystems</c>, paquete W).
+    /// </summary>
+    public string DefinitionId { get; init; } = string.Empty;
+
+    /// <summary>
+    /// Memoria del árbitro contra el jugador (ADR 0158, RF-061): -40..40, positivo a favor del jugador.
+    /// Al terminar un partido que pitó pasa a ser la mitad de <c>MatchReport.FinalBias</c>, acotada; el
+    /// siguiente partido con este árbitro empieza con este criterio (<see cref="RunSystems.RefereeFor"/>).
+    /// </summary>
+    public int Grudge { get; init; }
+
+    /// <summary>
+    /// Media banda que no ve si es <see cref="RefereeTrait.OneEyed"/> (ADR 0158); <see cref="RefereeSide.None"/>
+    /// en cualquier otro rasgo. Copiado de la ficha de datos al elegir el plantel de la run.
+    /// </summary>
+    public RefereeSide BlindSide { get; init; } = RefereeSide.None;
+}
 
 /// <summary>Resultado con el que se cerró un nodo del historial.</summary>
 public enum NodeResult
@@ -421,7 +442,8 @@ public sealed record RunState
     // 4 (sucesora de la ADR 0103): el campo pasa de 6 a 7 filas; las casillas de la alineación (0..5)
     // pasan a 0..6.
     // 5 (ADR 0124): cada jugador gana un objeto "career" con su historial de carrera acumulado.
-    public const int CurrentSchemaVersion = 5;
+    // 6 (ADR 0158): cada árbitro gana definitionId, grudge y blindSide.
+    public const int CurrentSchemaVersion = 6;
 
     /// <summary>Versión de esquema con la que se creó este estado.</summary>
     public int SchemaVersion { get; init; } = CurrentSchemaVersion;

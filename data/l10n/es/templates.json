@@ -473,6 +473,17 @@
     "injureSevere": "lo deja con una lesión grave",
     "nothing": "sin coste y sin ganancia"
   },
+  "refereeTraits": {
+    "_doc": "ADR 0158: línea que explica lo que hace el rasgo de un árbitro (ojeo, RF-012b). No hay texto de rasgo escrito a mano en C# (RT-035): la ficha del árbitro compone esta línea desde aquí.",
+    "neutral": "pita con el criterio de siempre: nada cambia",
+    "strict": "pita casi todo lo que ve, y las tarjetas le salen más fáciles",
+    "lenient": "deja pasar mucho, y las tarjetas le cuestan",
+    "homer": "empieza en contra tuya y se ceba el doble cuando entras fuerte",
+    "oneEyed": "no ve nada de lo que pasa en su lado ciego",
+    "cowardly": "nunca saca roja, ni siquiera con la segunda amarilla",
+    "corrupt": "en el campo pita como cualquier otro; el soborno es otra historia",
+    "incorruptible": "en el campo pita como cualquier otro, y no hay soborno que le mueva"
+  },
   "triggersReceived": {
     "TACKLE": "cuando le entran",
     "FOUL": "cuando le hacen falta",

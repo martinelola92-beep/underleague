@@ -1,0 +1,57 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://underleague.dev/schemas/referees.schema.json",
+  "title": "Underleague referees",
+  "description": "data/referees/referees.json: plantel de árbitros de la run (RF-061, RF-061b, ADR 0158), único fichero. Cargado por Sim.Run.Systems.Referees.RefereeLoader, fuera del Catalog compartido.",
+  "type": "object",
+  "properties": {
+    "_doc": { "type": "string" },
+    "referees": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/referee" },
+      "minItems": 12,
+      "maxItems": 16
+    }
+  },
+  "required": ["referees"],
+  "additionalProperties": false,
+  "$defs": {
+    "referee": {
+      "type": "object",
+      "properties": {
+        "_doc": { "type": "string" },
+        "id": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9_]*$"
+        },
+        "name": { "$ref": "#/$defs/localizedName" },
+        "trait": {
+          "enum": ["Neutral", "Strict", "Lenient", "Homer", "OneEyed", "Cowardly", "Corrupt", "Incorruptible"]
+        },
+        "catchphrase": { "$ref": "#/$defs/localizedName" },
+        "blindSide": {
+          "description": "Solo en trait=OneEyed (ADR 0158): media banda del campo que el árbitro nunca ve.",
+          "enum": ["top", "bottom"]
+        }
+      },
+      "required": ["id", "name", "trait", "catchphrase"],
+      "additionalProperties": false,
+      "allOf": [
+        {
+          "if": { "properties": { "trait": { "const": "OneEyed" } }, "required": ["trait"] },
+          "then": { "required": ["blindSide"] },
+          "else": { "not": { "required": ["blindSide"] } }
+        }
+      ]
+    },
+    "localizedName": {
+      "type": "object",
+      "properties": {
+        "es": { "type": "string", "minLength": 1 },
+        "en": { "type": "string", "minLength": 1 }
+      },
+      "required": ["es", "en"],
+      "additionalProperties": false
+    }
+  }
+}

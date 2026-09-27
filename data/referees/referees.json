@@ -1,0 +1,151 @@
+{
+  "_doc": "ADR 0158: plantel de árbitros de la run (RF-061, RF-061b). RunEngine.Start elige 6-8 de estos 16 con un flujo de RNG propio (RngStreams.Referees, RT-022), distinto del de partido y del de recompensas. Al menos dos de cada rasgo no neutro y dos neutros, para que el sorteo tenga variedad real de verdad jugable. blindSide solo existe en los dos tuertos (RefereeTrait.OneEyed); en cualquier otro es un error de datos. Tono: humor cínico de feria medieval, sin nombres reales (RA-x, ADR 0158 punto 1).",
+  "referees": [
+    {
+      "id": "bartolo_recto",
+      "name": { "es": "Bartolo Recto", "en": "Bartolo the Upright" },
+      "trait": "Neutral",
+      "catchphrase": {
+        "es": "Aquí se juega y se paga, a partes iguales.",
+        "en": "Here you play and you pay, in equal parts."
+      }
+    },
+    {
+      "id": "sor_paciencia",
+      "name": { "es": "Sor Paciencia", "en": "Sister Patience" },
+      "trait": "Neutral",
+      "catchphrase": {
+        "es": "No hay prisa: la sangre siempre llega.",
+        "en": "No rush: the blood always arrives."
+      }
+    },
+    {
+      "id": "martillo_ordonez",
+      "name": { "es": "Martillo Ordóñez", "en": "Hammer Ordóñez" },
+      "trait": "Strict",
+      "catchphrase": {
+        "es": "Un roce y lo escribo en el acta.",
+        "en": "One touch and it goes in the record."
+      }
+    },
+    {
+      "id": "lima_devereux",
+      "name": { "es": "La Lima Devereux", "en": "The File Devereux" },
+      "trait": "Strict",
+      "catchphrase": {
+        "es": "Afilo la tarjeta antes de sacar el silbato.",
+        "en": "I sharpen the card before I reach for the whistle."
+      }
+    },
+    {
+      "id": "manoslibres_petronio",
+      "name": { "es": "Manos Libres Petronio", "en": "Loose Hands Petronio" },
+      "trait": "Lenient",
+      "catchphrase": {
+        "es": "Total, por una pierna que se pierde...",
+        "en": "It's just the one leg, more or less."
+      }
+    },
+    {
+      "id": "siesta_ambrosio",
+      "name": { "es": "La Siesta Ambrosio", "en": "Napping Ambrosio" },
+      "trait": "Lenient",
+      "catchphrase": {
+        "es": "Despiértame si hay gol.",
+        "en": "Wake me if there's a goal."
+      }
+    },
+    {
+      "id": "forastero_cadwallon",
+      "name": { "es": "El Forastero Cadwallon", "en": "Outlander Cadwallon" },
+      "trait": "Homer",
+      "catchphrase": {
+        "es": "Aquí el visitante empieza perdiendo, faltas incluidas.",
+        "en": "Here the visitor starts down, fouls included."
+      }
+    },
+    {
+      "id": "viuda_agraz",
+      "name": { "es": "La Viuda Agraz", "en": "Widow Sourgrape" },
+      "trait": "Homer",
+      "catchphrase": {
+        "es": "A mí que no me vengan de fuera a ganar.",
+        "en": "Don't come from out of town expecting to win."
+      }
+    },
+    {
+      "id": "tuerto_balbuena",
+      "name": { "es": "El Tuerto Balbuena", "en": "One-Eyed Balbuena" },
+      "trait": "OneEyed",
+      "blindSide": "top",
+      "catchphrase": {
+        "es": "Lo que no veo, no ha pasado.",
+        "en": "What I don't see never happened."
+      }
+    },
+    {
+      "id": "parche_orueta",
+      "name": { "es": "Parche Orueta", "en": "Patch Orueta" },
+      "trait": "OneEyed",
+      "blindSide": "bottom",
+      "catchphrase": {
+        "es": "Media cancha me la sé de memoria; la otra, ni la huelo.",
+        "en": "I know half the pitch by heart; the other half, not a whiff."
+      }
+    },
+    {
+      "id": "montoya_escurridizo",
+      "name": { "es": "Montoya el Escurridizo", "en": "Slippery Montoya" },
+      "trait": "Cowardly",
+      "catchphrase": {
+        "es": "Yo pito, pero la roja que la saque otro.",
+        "en": "I'll whistle, but someone else can show the red."
+      }
+    },
+    {
+      "id": "ausente_ferraz",
+      "name": { "es": "El Ausente Ferraz", "en": "Absent Ferraz" },
+      "trait": "Cowardly",
+      "catchphrase": {
+        "es": "Con amarilla sobra, para qué complicarnos.",
+        "en": "A yellow's enough, why complicate things."
+      }
+    },
+    {
+      "id": "bolsillo_aznar",
+      "name": { "es": "Bolsillo de Oro Aznar", "en": "Golden Pocket Aznar" },
+      "trait": "Corrupt",
+      "catchphrase": {
+        "es": "Todo tiene un precio, hasta mi silbato.",
+        "en": "Everything has a price, even my whistle."
+      }
+    },
+    {
+      "id": "tasador_grisel",
+      "name": { "es": "El Tasador Grisel", "en": "Appraiser Grisel" },
+      "trait": "Corrupt",
+      "catchphrase": {
+        "es": "Hablemos de números antes del pitido inicial.",
+        "en": "Let's talk numbers before kickoff."
+      }
+    },
+    {
+      "id": "hierro_devante",
+      "name": { "es": "Hierro Puro Devante", "en": "Pure Iron Devante" },
+      "trait": "Incorruptible",
+      "catchphrase": {
+        "es": "Guárdate el oro: aquí no se compra nada.",
+        "en": "Keep your gold: nothing's for sale here."
+      }
+    },
+    {
+      "id": "muralla_santolaya",
+      "name": { "es": "La Muralla Santolaya", "en": "The Wall Santolaya" },
+      "trait": "Incorruptible",
+      "catchphrase": {
+        "es": "He visto sobornos mejores que tú.",
+        "en": "I've seen better bribes than that."
+      }
+    }
+  ]
+}

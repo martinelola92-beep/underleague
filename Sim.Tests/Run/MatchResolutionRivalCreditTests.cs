@@ -203,7 +203,9 @@ public sealed class MatchResolutionRivalCreditTests
         var loaded = RunSave.Load(json);
 
         Assert.Equal(1, loaded.Counter(key));
-        Assert.Equal(5, RunState.CurrentSchemaVersion);
-        Assert.Equal(5, loaded.SchemaVersion);
+        // ADR 0158 sube la versión a 6 (definitionId/grudge/blindSide del árbitro); BE-B sigue sin subirla
+        // por su cuenta, así que el número aquí solo tiene que seguir a CurrentSchemaVersion.
+        Assert.Equal(6, RunState.CurrentSchemaVersion);
+        Assert.Equal(6, loaded.SchemaVersion);
     }
 }

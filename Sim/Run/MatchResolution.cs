@@ -45,7 +45,8 @@ internal static class MatchResolution
         MapNode node,
         MatchLineup lineup,
         MatchResult result,
-        Catalog catalog)
+        Catalog catalog,
+        RefereeSetup? referee = null)
     {
         var players = new List<RunPlayer>(state.Roster);
         var playedIds = new List<int>(lineup.Starters.Count);
@@ -219,6 +220,11 @@ internal static class MatchResolution
         var next = state
             .WithRoster(players)
             .WithNodeCompleted(node.Id, node.Kind, won ? NodeResult.Won : NodeResult.Lost);
+
+        // 3c. Memoria del árbitro (ADR 0158 §4): el que pitó este partido —incluida la turba, que también
+        //     tiene FinalBias— se acuerda para el siguiente que pite (RunSystems.RefereeFor lo arranca con
+        //     esto). Solo cambia el árbitro de ESTE nodo; el resto del plantel se queda igual.
+        next = ApplyRefereeMemory(next, referee, result.Report.FinalBias);
 
         // 4b. Memoria de "quién knaveó a quién" contra un rival concreto (BE-B, enmienda de la ADR 0124,
         //     tabla "Dónde vive cada memoria"). Pasada APARTE de la del paso 2: esa mira solo Team 0 y para
@@ -492,6 +498,48 @@ internal static class MatchResolution
         }
 
         return -1;
+    }
+
+    /// <summary>
+    /// Cota de <see cref="RunReferee.Grudge"/> (ADR 0158 §4): -40..40, la mitad del rango de
+    /// <c>MatchReport.FinalBias</c> (-100..100).
+    /// </summary>
+    private const int GrudgeBound = 40;
+
+    /// <summary>
+    /// Memoria del árbitro (ADR 0158 §4): el que pitó este partido pasa a tener <c>Grudge</c> = mitad del
+    /// criterio con el que terminó, acotado a ±40. <paramref name="referee"/> es null cuando el llamador
+    /// no trae árbitro (tests que no lo necesitan): en ese caso no se toca nada. El árbitro se localiza en
+    /// <see cref="RunState.Referees"/> por su nombre, el único dato que <see cref="RefereeSetup"/> comparte
+    /// con <see cref="RunReferee"/> -mismo criterio que ya usa <c>PostMatchView.Referee</c>-. Si no hay
+    /// coincidencia (partido sin árbitro de la run, por ejemplo en pruebas), no cambia nada.
+    /// </summary>
+    private static RunState ApplyRefereeMemory(RunState state, RefereeSetup? referee, int finalBias)
+    {
+        if (referee is null)
+        {
+            return state;
+        }
+
+        var referees = state.Referees;
+        for (int i = 0; i < referees.Count; i++)
+        {
+            if (!string.Equals(referees[i].Name, referee.Name, StringComparison.Ordinal))
+            {
+                continue;
+            }
+
+            int grudge = Math.Clamp(finalBias / 2, -GrudgeBound, GrudgeBound);
+            if (referees[i].Grudge == grudge)
+            {
+                return state;
+            }
+
+            var updated = new List<RunReferee>(referees) { [i] = referees[i] with { Grudge = grudge } };
+            return state.WithReferees(updated);
+        }
+
+        return state;
     }
 
     /// <summary>

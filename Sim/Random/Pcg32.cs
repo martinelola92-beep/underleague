@@ -129,6 +129,7 @@ public static class RngStreams
     private const ulong RewardsKind = 3UL;
     private const ulong GenerationKind = 4UL;
     private const ulong ClinicKind = 5UL;
+    private const ulong RefereesKind = 6UL;
 
     /// <summary>Flujo de RNG para el partido del nodo nodeIndex de la run.</summary>
     public static Pcg32 Match(ulong runSeed, int nodeIndex) => Create(runSeed, MatchKind, nodeIndex);
@@ -154,6 +155,13 @@ public static class RngStreams
 
     /// <summary>Flujo de RNG para la generación de jugadores/equipos con el índice index.</summary>
     public static Pcg32 Generation(ulong runSeed, int index) => Create(runSeed, GenerationKind, index);
+
+    /// <summary>
+    /// Flujo de RNG para elegir el plantel de árbitros de la run (RF-061b, ADR 0158): propio, ni el de
+    /// partido ni el de recompensas (RT-022), así que jugar un partido o sortear un mercado no cambia qué
+    /// árbitros tiene la run. Se llama una sola vez, al empezar la run.
+    /// </summary>
+    public static Pcg32 Referees(ulong runSeed) => Create(runSeed, RefereesKind, 0);
 
     private static Pcg32 Create(ulong runSeed, ulong kind, int index)
     {

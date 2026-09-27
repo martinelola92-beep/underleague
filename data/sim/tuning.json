@@ -167,19 +167,30 @@
     }
   },
   "referee": {
-    "_doc": "Criterio del árbitro (RF-062..RF-064, ADR 0030 §3). Los tres ...ShiftPer10 son EFECTOS del criterio sobre una tirada: puntos base 10.000 por cada 10 puntos de criterio, siempre a favor del equipo que el criterio favorece. Los biasShift... son DESPLAZAMIENTOS del propio criterio, en puntos de la escala -100..+100, y se acumulan por gravedad (RF-063): toda acción sucia mueve el criterio en contra del que la comete, se señale o no. whistlePercent (AZ-E, ADR 0090): probabilidad, en tanto por ciento, de que el árbitro SEÑALE una falta que ha ocurrido. La no señalada derriba igual al que entra, no saca tarjeta, no reanuda y no da penalti, pero mueve el criterio como acción sucia no vista (biasShiftFoulUnseen, RF-063). Valor inicial 80 del revisor; los rasgos de árbitro (RF-061, fase 3) lo modularán.",
+    "_doc": "Criterio del árbitro (RF-062..RF-064, ADR 0030 §3, ADR 0158). Los tres ...ShiftPer10 son EFECTOS del criterio sobre una tirada: puntos base 10.000 por cada 10 puntos de criterio, siempre a favor del equipo que el criterio favorece. Los biasShift... son DESPLAZAMIENTOS del propio criterio, en puntos de la escala -100..+100, y se acumulan por gravedad (RF-063): toda acción sucia mueve el criterio en contra del que la comete, se señale o no. PROVISIONAL, SIN MEDIR (ADR 0158 §3): suben de 1-2 a 5/3/3/2/5/3/8 para que un partido sucio lleve el criterio más allá de ±30, que es el objetivo verificable de la ADR; se ajustan en el lote de balance de esa ADR, no aquí. whistlePercent (AZ-E, ADR 0090): probabilidad en tanto por ciento de que el árbitro NEUTRO señale una falta ocurrida; con rasgo, la sustituye tuning.referee.traits.<rasgo>.whistlePercent (ADR 0158 §2, salvo el lado ciego del tuerto, que es 0% siempre y lo resuelve MatchEngine sin mirar esta tabla). La no señalada derriba igual al que entra, no saca tarjeta, no reanuda y no da penalti, pero mueve el criterio como acción sucia no vista (biasShiftFoulUnseen, RF-063).",
     "biasFoulShiftPer10": 120,
     "penaltyOnFoulInArea": 8000,
     "biasCardShiftPer10": 100,
     "biasPenaltyShiftPer10": 100,
-    "biasShiftFoulSeen": 1,
-    "biasShiftFoulUnseen": 1,
-    "biasShiftHardExtra": 1,
-    "biasShiftBlockExtra": 1,
-    "biasShiftInjuryExtra": 2,
-    "biasShiftYellowExtra": 1,
-    "biasShiftRedExtra": 2,
-    "whistlePercent": 80
+    "biasShiftFoulSeen": 5,
+    "biasShiftFoulUnseen": 3,
+    "biasShiftHardExtra": 3,
+    "biasShiftBlockExtra": 2,
+    "biasShiftInjuryExtra": 5,
+    "biasShiftYellowExtra": 3,
+    "biasShiftRedExtra": 8,
+    "whistlePercent": 80,
+    "traits": {
+      "_doc": "ADR 0158 §2, tabla del diseño de fase 1b, PROVISIONAL SIN MEDIR: whistlePercent es un porcentaje ABSOLUTO (sustituye al whistlePercent de arriba para ese rasgo). cardOddsPercent y biasShiftPercent son multiplicadores en tanto por ciento, 100 = sin cambio. El casero (homer) solo amplifica los desplazamientos EN CONTRA del jugador (equipo 0); a su favor se queda en 100% y eso lo decide MatchEngine, no este dato. El lado ciego del tuerto (oneEyed) es 0% de pitido siempre, también decidido en MatchEngine, no aquí. corrupt e incorruptible son idénticos a neutral en el campo (RF-061, RF-064): su diferencia es de soborno, ADR aparte.",
+      "neutral": { "whistlePercent": 80, "cardOddsPercent": 100, "biasShiftPercent": 100 },
+      "strict": { "whistlePercent": 95, "cardOddsPercent": 150, "biasShiftPercent": 150 },
+      "lenient": { "whistlePercent": 55, "cardOddsPercent": 50, "biasShiftPercent": 50 },
+      "homer": { "whistlePercent": 80, "cardOddsPercent": 100, "biasShiftPercent": 150 },
+      "oneEyed": { "whistlePercent": 80, "cardOddsPercent": 100, "biasShiftPercent": 100 },
+      "cowardly": { "whistlePercent": 80, "cardOddsPercent": 100, "biasShiftPercent": 100 },
+      "corrupt": { "whistlePercent": 80, "cardOddsPercent": 100, "biasShiftPercent": 100 },
+      "incorruptible": { "whistlePercent": 80, "cardOddsPercent": 100, "biasShiftPercent": 100 }
+    }
   },
   "block": {
     "_doc": "Bloqueo sin balón (ADR 0030 §2): cargar contra un rival que NO lleva el balón para abrirle hueco a un compañero. La DECISIÓN de bloquear (incluido el criterio de jugada activa de RF-057) vive en data/ai/weights.json; aquí está solo la resolución. Un bloqueo es SIEMPRE falta; foulBase es la probabilidad de que el árbitro la vea y la señale, y el criterio la modula igual que la de una entrada. Cuando no la ve, el criterio se desplaza igualmente (RF-063).",

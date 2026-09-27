@@ -473,6 +473,17 @@
     "injureSevere": "leaves him with a severe injury",
     "nothing": "no cost, no gain"
   },
+  "refereeTraits": {
+    "_doc": "ADR 0158: the line that explains what a referee's trait does (scouting, RF-012b). No hand-written trait text in C# (RT-035): the referee card composes this line from here.",
+    "neutral": "calls it the same as ever: nothing changes",
+    "strict": "whistles almost everything he sees, and cards come easy",
+    "lenient": "lets a lot go, and cards are rare",
+    "homer": "starts against you and doubles down when you go in hard",
+    "oneEyed": "sees nothing that happens on his blind side",
+    "cowardly": "never shows red, not even on a second yellow",
+    "corrupt": "calls it like anyone else on the pitch; the bribe is another story",
+    "incorruptible": "calls it like anyone else on the pitch, and no bribe moves him"
+  },
   "triggersReceived": {
     "TACKLE": "when tackled",
     "FOUL": "when fouled",

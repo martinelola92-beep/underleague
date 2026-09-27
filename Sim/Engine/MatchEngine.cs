@@ -96,6 +96,15 @@ internal sealed class MatchEngine : IPerkWorld
 
     private Pcg32 _rng;
     private int _bias;
+
+    /// <summary>Rasgo del árbitro de este partido (ADR 0158, D-22): cacheado del setup para no indirect por él en cada falta.</summary>
+    private readonly RefereeTrait _refereeTrait;
+
+    /// <summary>Media banda que el árbitro tuerto no ve; <see cref="RefereeSide.None"/> con cualquier otro rasgo.</summary>
+    private readonly RefereeSide _refereeBlindSide;
+
+    /// <summary>Cómo modula <see cref="_refereeTrait"/> el criterio de este partido (ADR 0158 §2, tuning.referee.traits).</summary>
+    private readonly RefereeTraitTuning _refereeBehavior;
     private MatchPhase _phase = MatchPhase.Kickoff;
     private int _tick;
     private bool _goldenGoal;
@@ -188,6 +197,9 @@ internal sealed class MatchEngine : IPerkWorld
         _tuning = catalog.Tuning;
         _rng = new Pcg32(seed, seed ^ 0x5DEECE66DUL);
         _bias = setup.Referee.InitialBias;
+        _refereeTrait = setup.Referee.Trait;
+        _refereeBlindSide = setup.Referee.BlindSide;
+        _refereeBehavior = _tuning.Referee.Traits.Of(_refereeTrait);
         _regulationTicks = config.RegulationTicksOverride ?? _tuning.RegulationTicks;
 
         var players = new List<MatchPlayer>();
@@ -3999,7 +4011,8 @@ internal sealed class MatchEngine : IPerkWorld
     /// <summary>
     /// Desplaza el criterio <b>en contra</b> del equipo que cometió la acción sucia (RF-063). Se llama
     /// tanto si el árbitro señala como si no: "el árbitro toma nota aunque no pite". La magnitud la fija
-    /// la gravedad, sumando los <c>biasShift...</c> de <c>tuning.referee</c>.
+    /// la gravedad, sumando los <c>biasShift...</c> de <c>tuning.referee</c>, y el rasgo del árbitro la
+    /// escala (ADR 0158 §2, <see cref="ScaledBiasShift"/>).
     /// </summary>
     private void ShiftBiasAgainst(int team, int points)
     {
@@ -4008,8 +4021,42 @@ internal sealed class MatchEngine : IPerkWorld
             return;
         }
 
-        _bias = Math.Clamp(_bias + (team == 0 ? -points : points), -100, 100);
+        int scaled = ScaledBiasShift(team, points);
+        _bias = Math.Clamp(_bias + (team == 0 ? -scaled : scaled), -100, 100);
     }
+
+    /// <summary>
+    /// Magnitud de un desplazamiento de criterio ya escalada por el rasgo del árbitro (ADR 0158 §2, §6).
+    /// El casero (<see cref="RefereeTrait.Homer"/>) es la única excepción a "se aplica siempre": su
+    /// <c>biasShiftPercent</c> solo amplifica los desplazamientos <b>en contra del equipo 0</b> (el
+    /// jugador, W-15) — a su favor el casero se comporta como cualquier árbitro neutro (RF-061, enmienda
+    /// de "casero"; el -20 de arranque ya viene de <c>RefereeFor</c>, no de aquí).
+    /// <c>internal</c>, no <c>private</c>: expone la aritmética a Sim.Tests sin pasar por RNG (mismo
+    /// patrón que <see cref="TackleWinChance"/>).
+    /// </summary>
+    internal int ScaledBiasShift(int team, int points)
+    {
+        int percent = _refereeBehavior.BiasShiftPercent;
+        if (_refereeTrait == RefereeTrait.Homer && team != 0)
+        {
+            percent = 100;
+        }
+
+        if (percent == 100)
+        {
+            return points;
+        }
+
+        // points siempre > 0 aquí (guard clause de ShiftBiasAgainst): la división entera trunca hacia
+        // cero sin ambigüedad de signo, mismo criterio de truncamiento simétrico que BiasRollShift.
+        return points * percent / 100;
+    }
+
+    /// <summary>
+    /// Multiplicador de cuota (base 10.000, <see cref="ProbabilityScale.Neutral"/> = 100%) de la
+    /// probabilidad de tarjeta para el rasgo de este árbitro (ADR 0158 §2, <c>cardOddsPercent</c>).
+    /// </summary>
+    private int CardOddsMultiplier => _refereeBehavior.CardOddsPercent * 100;
 
     /// <summary>
     /// Falta señalada por el árbitro. <paramref name="offBall"/> distingue el bloqueo sin balón
@@ -4050,10 +4097,16 @@ internal sealed class MatchEngine : IPerkWorld
             referee.BiasShiftFoulSeen + offBallExtra + (hard ? referee.BiasShiftHardExtra : 0));
 
         // ADR 0050 P1: el criterio del árbitro sigue SUMANDO puntos —es un desplazamiento de la tirada,
-        // no un perk— y el canal de tarjeta multiplica la cuota del resultado de esa suma.
-        int cardOdds = Odds(tackler, ProbabilityKind.Card);
+        // no un perk— y el canal de tarjeta multiplica la cuota del resultado de esa suma. ADR 0158 §2: el
+        // rasgo del árbitro multiplica esa misma cuota (cardOddsPercent, 100 = sin cambio).
+        int cardOdds = ProbabilityScale.Combine(Odds(tackler, ProbabilityKind.Card), CardOddsMultiplier);
         int cardShift = BiasRollShift(referee.BiasCardShiftPer10, tackler.Team);
-        if (_rng.Chance(ProbabilityScale.Apply(
+
+        // ADR 0158 §2: un árbitro cobarde (Cowardly) nunca saca roja, ni directa ni por doble amarilla
+        // -la segunda amarilla se queda en amarilla-. No se tira siquiera el dado de la roja: la decisión
+        // es del rasgo, no de la suerte.
+        bool allowsRed = _refereeTrait != RefereeTrait.Cowardly;
+        if (allowsRed && _rng.Chance(ProbabilityScale.Apply(
             tackle.RedCardBase + (hard ? tackle.HardTackleRedBonus : 0) + cardShift, cardOdds)))
         {
             SendOff(tackler);
@@ -4068,7 +4121,7 @@ internal sealed class MatchEngine : IPerkWorld
                 tackler.Cards++;
                 _report.YellowCards++;
                 ShiftBiasAgainst(tackler.Team, referee.BiasShiftYellowExtra);
-                if (tackler.YellowCards >= 2 && tackle.SecondYellowIsRed)
+                if (allowsRed && tackler.YellowCards >= 2 && tackle.SecondYellowIsRed)
                 {
                     SendOff(tackler);
                     ShiftBiasAgainst(tackler.Team, referee.BiasShiftRedExtra);
@@ -4126,7 +4179,7 @@ internal sealed class MatchEngine : IPerkWorld
         //
         // Se resuelve aquí y no subiendo la tolerancia con un número: quitar al árbitro es una REGLA, y
         // hacerlo con una probabilidad al 99 % sería dejar un 1 % de partido en el que la regla no vale.
-        if (!IsMob && _rng.Chance(_tuning.Referee.WhistlePercent * 100))
+        if (!IsMob && WillWhistle(offender))
         {
             ResolveFoul(offender, victim, offBall);
             return;
@@ -4140,6 +4193,46 @@ internal sealed class MatchEngine : IPerkWorld
         offender.Fouls++;
         Emit(EventType.Foul, "unseen", offender, opponent: victim);
         ShiftBiasAgainst(offender.Team, _tuning.Referee.BiasShiftFoulUnseen + (offBall ? _tuning.Referee.BiasShiftBlockExtra : 0));
+    }
+
+    /// <summary>
+    /// Si el árbitro señala la falta que acaba de cometer <paramref name="offender"/> (ADR 0158 §2). El
+    /// lado ciego del tuerto es 0% sin excepción y ni siquiera tira el dado -es una regla del rasgo, no
+    /// una probabilidad muy baja (mismo criterio que la turba de <see cref="IsMob"/>)-; en cualquier otro
+    /// caso se tira con el <c>whistlePercent</c> de su rasgo.
+    /// </summary>
+    private bool WillWhistle(MatchPlayer offender)
+    {
+        if (_refereeTrait == RefereeTrait.OneEyed && IsInBlindSide(offender.Position))
+        {
+            return false;
+        }
+
+        return _rng.Chance(_refereeBehavior.WhistlePercent * 100);
+    }
+
+    /// <summary>
+    /// Lado ciego del árbitro tuerto (ADR 0158 §2), medido por la fila discreta del <b>infractor</b> —no
+    /// de la víctima: es su propio brazo el que no ve levantarse cuando entra—. <c>Top</c> son las filas
+    /// de índice menor que <c>Pitch.Rows / 2</c>, <c>Bottom</c> las de índice mayor; la fila central (la
+    /// única con <c>Pitch.Rows</c> impar, hoy la 3 de 0..6) <b>no ciega nunca</b>: es la raya que el
+    /// árbitro sigue mirando siempre.
+    /// </summary>
+    private bool IsInBlindSide(Vec2 position)
+    {
+        if (_refereeBlindSide == RefereeSide.None)
+        {
+            return false;
+        }
+
+        int row = Pitch.CellOf(position).Row;
+        int center = Pitch.Rows / 2;
+        if (row == center)
+        {
+            return false;
+        }
+
+        return _refereeBlindSide == RefereeSide.Top ? row < center : row > center;
     }
 
     /// <summary>

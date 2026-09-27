@@ -97,6 +97,21 @@ public enum RefereeTrait
     Incorruptible,
 }
 
+/// <summary>
+/// Media banda del campo que un árbitro <see cref="RefereeTrait.OneEyed"/> nunca ve (ADR 0158): se mide
+/// por la fila discreta (<c>Pitch.CellOf(...).Row</c>) del <b>infractor</b> -no de la víctima, es su
+/// propio brazo el que no ve levantarse cuando entra-. <see cref="Top"/> son las filas de índice menor
+/// que <c>Pitch.Rows / 2</c>, <see cref="Bottom"/> las de índice mayor; la fila central (la única con
+/// <c>Pitch.Rows</c> impar) no ciega nunca, es la raya que el árbitro sigue mirando siempre.
+/// <see cref="None"/> es el valor de cualquier árbitro que no sea tuerto.
+/// </summary>
+public enum RefereeSide
+{
+    None,
+    Top,
+    Bottom,
+}
+
 /// <summary>Tercio del campo relativo a un equipo.</summary>
 public enum Zone
 {

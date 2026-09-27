@@ -144,6 +144,10 @@ Raza, posición y rasgo comparten el sistema de etiquetas (RF-022d): el id del r
 | Árbitro | `Referee` |
 | Criterio del árbitro | `Bias` (-100..+100, positivo favorable al usuario) |
 | Rasgos de árbitro | `Strict`, `Lenient`, `Homer`, `OneEyed`, `Cowardly`, `Corrupt`, `Incorruptible` |
+| Rencor del árbitro | `Grudge` (-40..+40, ADR 0158): memoria entre partidos, mitad del `FinalBias` del último que pitó |
+| Lado ciego del árbitro tuerto | `BlindSide`: `None`, `Top`, `Bottom` (ADR 0158, dato `blindSide`: `top`/`bottom`) |
+| Muletilla del árbitro | `Catchphrase` (ADR 0158, `data/referees/referees.json`) |
+| Id de la ficha de árbitro | `DefinitionId` (ADR 0158): enlaza `RunReferee` con `RefereeCatalog` para releer nombre/muletilla en el idioma pedido |
 | Soborno / Denuncia | `Bribe` / `Report` |
 | Entrada | `Tackle` |
 | Regate | `Dribble` |

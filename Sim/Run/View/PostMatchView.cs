@@ -68,7 +68,18 @@ public sealed record RefereeReport(
     int FoulsFor,
     int FoulsAgainst,
     int CardsFor,
-    int CardsAgainst);
+    int CardsAgainst)
+{
+    /// <summary>
+    /// Faltas propias no señaladas (ADR 0158 §5, RF-119, la mitad de RF-119 que faltaba): cometidas por el
+    /// jugador y que el árbitro no vio (<c>EventType.Foul</c> con detalle <c>unseen</c>). El motor ya las
+    /// emitía y movía el criterio con ellas (RF-063); esto solo las cuenta para el informe.
+    /// </summary>
+    public int UnseenFoulsFor { get; init; }
+
+    /// <summary>Faltas del rival no señaladas: jugadas sucias en contra que el árbitro tampoco vio.</summary>
+    public int UnseenFoulsAgainst { get; init; }
+}
 
 /// <summary>
 /// Informe post-partido (RF-119): la pantalla obligatoria que explica <b>por qué</b> pasó lo que pasó.
@@ -374,6 +385,9 @@ public static class PostMatchView
         return rows;
     }
 
+    /// <summary>Detalle del evento FOUL para una falta que el árbitro no vio (ADR 0090, ADR 0158 §5).</summary>
+    private const string UnseenDetail = "unseen";
+
     private static RefereeReport Referee(
         MatchPlayback playback, MatchReport report, IReadOnlyList<MatchEvent> events, int ownTeam)
     {
@@ -381,6 +395,8 @@ public static class PostMatchView
         int foulsAgainst = 0;
         int cardsFor = 0;
         int cardsAgainst = 0;
+        int unseenFoulsFor = 0;
+        int unseenFoulsAgainst = 0;
         for (int i = 0; i < events.Count; i++)
         {
             var matchEvent = events[i];
@@ -399,6 +415,18 @@ public static class PostMatchView
                 else
                 {
                     foulsAgainst++;
+                }
+
+                if (string.Equals(matchEvent.Detail, UnseenDetail, StringComparison.Ordinal))
+                {
+                    if (mine)
+                    {
+                        unseenFoulsFor++;
+                    }
+                    else
+                    {
+                        unseenFoulsAgainst++;
+                    }
                 }
             }
             else if (matchEvent.Type == EventType.Card)
@@ -422,7 +450,11 @@ public static class PostMatchView
             foulsFor,
             foulsAgainst,
             cardsFor,
-            cardsAgainst);
+            cardsAgainst)
+        {
+            UnseenFoulsFor = unseenFoulsFor,
+            UnseenFoulsAgainst = unseenFoulsAgainst,
+        };
     }
 
     private static HashSet<int> ActivationTicks(IReadOnlyList<PerkActivation> activations, string perkId, int ownerId)

@@ -218,7 +218,8 @@ public sealed class RunPolicyItemSlotTests
             standard.Rivals,
             standard.Map,
             standard.Clubs,
-            standard.Events);
+            standard.Events,
+            standard.Referees);
     }
 
     private static World Load()

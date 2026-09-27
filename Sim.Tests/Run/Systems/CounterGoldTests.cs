@@ -133,7 +133,7 @@ public sealed class CounterGoldTests
         var economy = EconomyWithRates(("local_idol_goals", 5));
         var systems = new StandardRunSystems(
             economy, baseSystems.Items, baseSystems.Consumables, baseSystems.Rivals,
-            baseSystems.Map, baseSystems.Clubs, baseSystems.Events);
+            baseSystems.Map, baseSystems.Clubs, baseSystems.Events, baseSystems.Referees);
 
         var state = RunEngine.Start(SystemsTestSupport.Setup(), Seed, SystemsTestSupport.Catalog, systems);
         int ownPlayerId = state.Roster[0].Id;

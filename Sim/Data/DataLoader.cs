@@ -186,6 +186,10 @@ public static class DataLoader
         // Tanda 2 del catálogo (docs/analisis/perks-catalogo-unificado.md §3.2): los trece escalares de
         // rasgo de modifyTraitScalar (C4) y las tres direcciones de modifyZoneShape (C8).
         "scalars", "zoneDimensions",
+
+        // ADR 0158: la línea que explica el rasgo de un árbitro en el ojeo (RT-035: tampoco se escribe a
+        // mano en C#).
+        "refereeTraits",
     };
 
     private static DescriptionTemplates ParseTemplates(string file, string content)
@@ -1181,7 +1185,7 @@ public static class DataLoader
         node.EnsureKnownKeys(
             "biasFoulShiftPer10", "penaltyOnFoulInArea", "biasCardShiftPer10", "biasPenaltyShiftPer10",
             "biasShiftFoulSeen", "biasShiftFoulUnseen", "biasShiftHardExtra", "biasShiftBlockExtra",
-            "biasShiftInjuryExtra", "biasShiftYellowExtra", "biasShiftRedExtra", "whistlePercent");
+            "biasShiftInjuryExtra", "biasShiftYellowExtra", "biasShiftRedExtra", "whistlePercent", "traits");
         return new RefereeTuning(
             node.Prop("biasFoulShiftPer10").AsInt(),
             node.Prop("penaltyOnFoulInArea").AsInt(),
@@ -1194,7 +1198,33 @@ public static class DataLoader
             node.Prop("biasShiftInjuryExtra").AsInt(),
             node.Prop("biasShiftYellowExtra").AsInt(),
             node.Prop("biasShiftRedExtra").AsInt(),
-            node.Prop("whistlePercent").AsInt());
+            node.Prop("whistlePercent").AsInt(),
+            ParseRefereeTraits(node.Prop("traits")));
+    }
+
+    /// <summary>tuning.referee.traits (ADR 0158): una entrada por cada RefereeTrait, sin excepción.</summary>
+    private static RefereeTraitsTuning ParseRefereeTraits(Json node)
+    {
+        node.EnsureKnownKeys(
+            "neutral", "strict", "lenient", "homer", "oneEyed", "cowardly", "corrupt", "incorruptible");
+        return new RefereeTraitsTuning(
+            ParseRefereeTrait(node.Prop("neutral")),
+            ParseRefereeTrait(node.Prop("strict")),
+            ParseRefereeTrait(node.Prop("lenient")),
+            ParseRefereeTrait(node.Prop("homer")),
+            ParseRefereeTrait(node.Prop("oneEyed")),
+            ParseRefereeTrait(node.Prop("cowardly")),
+            ParseRefereeTrait(node.Prop("corrupt")),
+            ParseRefereeTrait(node.Prop("incorruptible")));
+    }
+
+    private static RefereeTraitTuning ParseRefereeTrait(Json node)
+    {
+        node.EnsureKnownKeys("whistlePercent", "cardOddsPercent", "biasShiftPercent");
+        return new RefereeTraitTuning(
+            node.Prop("whistlePercent").AsInt(),
+            node.Prop("cardOddsPercent").AsInt(),
+            node.Prop("biasShiftPercent").AsInt());
     }
 
     /// <summary>tuning.block: resolución del bloqueo sin balón (ADR 0030 §2).</summary>

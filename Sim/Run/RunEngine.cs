@@ -533,7 +533,7 @@ public static class RunEngine
         // se resuelven con la política por defecto volviendo a jugar el partido con ellas en el estado inicial.
         var (setup, result) = SubstitutionPoints.ResolveAutomatically(
             built, seed, catalog, systems.MatchConfig(state, node, catalog), usesPolicy: null, decisions.Declines);
-        var applied = MatchResolution.Apply(state, node, lineup, result, catalog);
+        var applied = MatchResolution.Apply(state, node, lineup, result, catalog, built.Referee);
 
         var next = applied.State.WithCurrentNode(node.Id);
 

@@ -606,10 +606,51 @@ public sealed record InjuryTuning(
 }
 
 /// <summary>
+/// tuning.referee.traits.&lt;rasgo&gt; (ADR 0158): cómo modula ese rasgo el criterio de un partido.
+/// <c>WhistlePercent</c> es un porcentaje <b>absoluto</b> (sustituye a <see cref="RefereeTuning.WhistlePercent"/>
+/// para ese rasgo; solo el lado ciego del tuerto es un caso aparte, resuelto en <c>MatchEngine</c> sin
+/// consultar esta tabla: ahí es 0% sin excepción). <c>CardOddsPercent</c> y <c>BiasShiftPercent</c> son
+/// multiplicadores en tanto por ciento, 100 = sin cambio (misma convención que <c>InjuryTuning.ActScalePercent</c>):
+/// <c>CardOddsPercent</c> multiplica la cuota de tarjeta (<c>ProbabilityScale</c>, aritmética entera);
+/// <c>BiasShiftPercent</c> multiplica la magnitud de cada desplazamiento de <c>MatchEngine.ShiftBiasAgainst</c>.
+/// El casero (<see cref="RefereeTrait.Homer"/>) es la única excepción: su <c>BiasShiftPercent</c> solo se
+/// aplica a los desplazamientos <b>en contra del equipo 0</b> (RF-061, enmienda de "casero"); a favor del
+/// jugador se queda en 100%. Eso también lo resuelve <c>MatchEngine</c>, no esta tabla.
+/// </summary>
+public sealed record RefereeTraitTuning(int WhistlePercent, int CardOddsPercent, int BiasShiftPercent);
+
+/// <summary>Una entrada de <see cref="RefereeTraitTuning"/> por cada <see cref="RefereeTrait"/> (RT-096: tabla por enum, nunca Dictionary iterado).</summary>
+public sealed record RefereeTraitsTuning(
+    RefereeTraitTuning Neutral,
+    RefereeTraitTuning Strict,
+    RefereeTraitTuning Lenient,
+    RefereeTraitTuning Homer,
+    RefereeTraitTuning OneEyed,
+    RefereeTraitTuning Cowardly,
+    RefereeTraitTuning Corrupt,
+    RefereeTraitTuning Incorruptible)
+{
+    /// <summary>Cómo modula ese rasgo el criterio del partido.</summary>
+    public RefereeTraitTuning Of(RefereeTrait trait) => trait switch
+    {
+        RefereeTrait.Neutral => Neutral,
+        RefereeTrait.Strict => Strict,
+        RefereeTrait.Lenient => Lenient,
+        RefereeTrait.Homer => Homer,
+        RefereeTrait.OneEyed => OneEyed,
+        RefereeTrait.Cowardly => Cowardly,
+        RefereeTrait.Corrupt => Corrupt,
+        RefereeTrait.Incorruptible => Incorruptible,
+        _ => throw new ArgumentOutOfRangeException(nameof(trait), trait, "rasgo de árbitro desconocido"),
+    };
+}
+
+/// <summary>
 /// tuning.referee: el criterio del árbitro (RF-062..RF-064, ADR 0030 §3). Los tres campos
 /// <c>...ShiftPer10</c> son <b>efectos</b> del criterio sobre una tirada (puntos base 10.000 por cada 10
 /// puntos de criterio); los campos <c>BiasShift...</c> son <b>desplazamientos</b> del propio criterio, en
-/// puntos de la escala -100..+100, y son acumulativos por gravedad (RF-063).
+/// puntos de la escala -100..+100, y son acumulativos por gravedad (RF-063). <see cref="Traits"/> es la
+/// tabla de la ADR 0158 que hace que el rasgo del árbitro pese de verdad en el motor (D-22).
 /// </summary>
 public sealed record RefereeTuning(
     int BiasFoulShiftPer10,
@@ -623,7 +664,8 @@ public sealed record RefereeTuning(
     int BiasShiftInjuryExtra,
     int BiasShiftYellowExtra,
     int BiasShiftRedExtra,
-    int WhistlePercent);
+    int WhistlePercent,
+    RefereeTraitsTuning Traits);
 
 /// <summary>
 /// tuning.block: resolución del bloqueo sin balón (ADR 0030 §2). La <b>decisión</b> de bloquear vive en
