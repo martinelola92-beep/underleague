@@ -1616,6 +1616,14 @@ public static class RunPolicy
         int bestValue = int.MinValue;
         for (int i = 0; i < starters.Count; i++)
         {
+            // ChooseStarters arriesga a un lesionado grave cuando compensa para el ONCE de un partido
+            // (ADR 0048 condición 3): un candidato legítimo para jugar, no para entrenar. El entrenamiento
+            // exige IsAvailable -mismo guardia que TrainingSystem.TargetPlayer-, o Choose lo rechaza.
+            if (!starters[i].IsAvailable)
+            {
+                continue;
+            }
+
             int value = Value(starters[i], options);
             if (value > bestValue || (value == bestValue && best is not null && starters[i].Id < best.Id))
             {
