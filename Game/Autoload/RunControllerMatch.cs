@@ -224,7 +224,7 @@ public partial class RunController
     public EventScreenView? Event() =>
         State is null || Catalog is null || Systems is null
             ? null
-            : EventView.Build(State, Catalog, Systems.Events, Data.GameData.Language);
+            : EventView.Build(State, Catalog, Systems.Events, Systems.Items, Systems.Consumables, Data.GameData.Language);
 
     public MarketScreenView? Market() =>
         State is null || Catalog is null || Systems is null
