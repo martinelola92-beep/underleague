@@ -194,6 +194,18 @@ public sealed class RestartClearanceTests
                             continue;
                         }
 
+                        // SEGUNDA EXCEPCIÓN DOCUMENTADA (27 sep 2026, revisión independiente de la ADR 0155): un
+                        // rival en una ESQUINA del campo cuando la esquina cae dentro de la barrera. La barrera
+                        // lo desliza por la línea hacia su lado y ahí se acaba el campo; cruzarlo por delante
+                        // del balón es el salto de 3,85 casillas que SlideAlongPitchToClear prohíbe a propósito
+                        // («la geometría no da más de sí», escrito en el motor desde la ADR 0142). Medido: una
+                        // falta a 0,62 de la línea de fondo y 0,78 de la banda, rival clavado en (16, 0)
+                        // durante 5 fotogramas. Sólo exime al que está en la esquina, no a nadie más.
+                        if (IsTrappedInACorner(position, ball, Catalog.Tuning.Restart.RestartClearanceCells))
+                        {
+                            continue;
+                        }
+
                         nearest = Math.Min(nearest, Vec2.Distance(position, ball));
                     }
 
@@ -290,5 +302,26 @@ public sealed class RestartClearanceTests
         }
 
         return -1;
+    }
+
+    /// <summary>
+    /// ¿Está el jugador pegado a una esquina del campo que cae dentro de la barrera del balón? Es el único
+    /// sitio desde el que la barrera no puede sacarlo sin cruzarlo por delante del balón.
+    /// </summary>
+    private static bool IsTrappedInACorner(Vec2 position, Vec2 ball, float clearance)
+    {
+        foreach (var corner in new[]
+                 {
+                     new Vec2(0f, 0f), new Vec2(0f, Underleague.Sim.Model.Pitch.Rows),
+                     new Vec2(Underleague.Sim.Model.Pitch.Columns, 0f), new Vec2(Underleague.Sim.Model.Pitch.Columns, Underleague.Sim.Model.Pitch.Rows),
+                 })
+        {
+            if (Vec2.Distance(corner, ball) < clearance && Vec2.Distance(position, corner) < 0.25f)
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 }

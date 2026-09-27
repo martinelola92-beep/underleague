@@ -776,7 +776,11 @@ internal sealed class MatchEngine : IPerkWorld
         // que la gente vuelva a entrar andando — medido: tres jugadores dentro en el fotograma del
         // lanzamiento. Es el mismo patrón que la barrera de BB-B, y va aparte porque RF-054 excluye el
         // penalti de aquélla a propósito: son dos reglas distintas para dos situaciones distintas.
-        if (wasRestarting && _pendingRestart == RestartKind.Penalty)
+        // Y también en el tick en que se pita (revisión independiente, 27 sep 2026): un penalti programado a
+        // mitad del bucle de jugadores —la falta se resuelve dentro de él— vaciaba el área en BeginRestart,
+        // pero los que se movían DESPUÉS en ese mismo tick volvían a entrar andando, y wasRestarting era falso
+        // todavía. Medido: semilla 12, fotograma 299, con el área ya limpia en el 300.
+        if (_restartTicksLeft > 0 && _pendingRestart == RestartKind.Penalty)
         {
             ClearPenaltyArea();
         }
