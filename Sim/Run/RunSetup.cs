@@ -113,6 +113,13 @@ public sealed record TreatSquad : RunDecision;
 /// </summary>
 public sealed record ChooseEventOption(int OptionIndex, int TargetPlayerId = -1, int SecondTargetPlayerId = -1) : RunDecision;
 
+/// <summary>
+/// Elige una sesión de la carta del nodo de entrenamiento abierto (ADR 0160). <paramref name="TargetPlayerId"/>
+/// hace falta para la especialización y el cambio de puesto; la pachanga lo ignora. <paramref name="Position"/>
+/// solo hace falta para el cambio de puesto: la posición de campo de destino.
+/// </summary>
+public sealed record ChooseTrainingSession(int SessionIndex, int TargetPlayerId = -1, Position? Position = null) : RunDecision;
+
 /// <summary>Elige una de las tres recompensas tras ganar un partido (RF-071). Paquete X.</summary>
 /// <param name="OptionIndex">Opción elegida, 0..2.</param>
 /// <param name="CarrierPlayerId">Si la recompensa es un perk, jugador que lo porta; -1 si no aplica.</param>

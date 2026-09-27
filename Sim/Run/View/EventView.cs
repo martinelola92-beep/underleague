@@ -75,8 +75,8 @@ public static class EventView
         for (int i = 0; i < card.Options.Count; i++)
         {
             var option = card.Options[i];
-            var primary = option.NeedsTarget ? Filter(state, allTargets, option, catalog, forSecondTarget: false) : Array.Empty<EventTargetRow>();
-            var second = option.NeedsSecondTarget ? Filter(state, allTargets, option, catalog, forSecondTarget: true) : Array.Empty<EventTargetRow>();
+            var primary = option.NeedsTarget ? Filter(state, allTargets, option, forSecondTarget: false) : Array.Empty<EventTargetRow>();
+            var second = option.NeedsSecondTarget ? Filter(state, allTargets, option, forSecondTarget: true) : Array.Empty<EventTargetRow>();
             bool viable = state.Gold + GoldDelta(option, state) >= 0
                 && (!option.NeedsTarget || primary.Count > 0)
                 && (!option.NeedsSecondTarget || second.Count > 0)
@@ -154,78 +154,19 @@ public static class EventView
     /// pulsar (RF-012d), no al intentarlo.
     /// </summary>
     private static IReadOnlyList<EventTargetRow> Filter(
-        RunState state, IReadOnlyList<EventTargetRow> all, EventOption option, Catalog catalog, bool forSecondTarget)
+        RunState state, IReadOnlyList<EventTargetRow> all, EventOption option, bool forSecondTarget)
     {
         var rows = new List<EventTargetRow>(all.Count);
         for (int i = 0; i < all.Count; i++)
         {
             var player = state.GetPlayer(all[i].PlayerId);
-            if (Eligible(player, option, catalog, forSecondTarget))
+            if (EventSystem.IsEligibleTarget(player, option, forSecondTarget))
             {
                 rows.Add(all[i]);
             }
         }
 
         return rows;
-    }
-
-    private static bool Eligible(RunPlayer player, EventOption option, Catalog catalog, bool forSecondTarget)
-    {
-        bool isSacrificeRecipient = forSecondTarget && HasKind(option.Effects, EventEffectKind.Sacrifice);
-        if (isSacrificeRecipient && player.Perks.Count >= Progression.Progression.PerkSlots(player.Rarity))
-        {
-            return false;
-        }
-
-        for (int i = 0; i < option.Effects.Count; i++)
-        {
-            var effect = option.Effects[i];
-            if (effect.UsesSecondTarget != forSecondTarget)
-            {
-                continue;
-            }
-
-            switch (effect.Kind)
-            {
-                case EventEffectKind.GrantTrait:
-                    if (player.Traits.Contains(effect.Trait) || player.Traits.Count >= RunRules.MaxTraits)
-                    {
-                        return false;
-                    }
-
-                    break;
-                case EventEffectKind.RemoveTrait:
-                    if (!player.Traits.Contains(effect.Trait))
-                    {
-                        return false;
-                    }
-
-                    break;
-                case EventEffectKind.Sacrifice:
-                    // El primer señalado es quien muere: solo tiene sentido sobre alguien con algo que dar.
-                    if (!forSecondTarget && player.Perks.Count == 0)
-                    {
-                        return false;
-                    }
-
-                    break;
-            }
-        }
-
-        return true;
-    }
-
-    private static bool HasKind(IReadOnlyList<EventEffect> effects, EventEffectKind kind)
-    {
-        for (int i = 0; i < effects.Count; i++)
-        {
-            if (effects[i].Kind == kind)
-            {
-                return true;
-            }
-        }
-
-        return false;
     }
 
     private static string Effect(EventOption option, DescriptionTemplates templates, RunReferee? referee, string language)

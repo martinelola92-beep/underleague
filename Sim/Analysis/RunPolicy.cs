@@ -295,6 +295,48 @@ public sealed record RunPolicyOptions
     /// </summary>
     public int EventInjuryPremium { get; init; } = 10;
 
+    /// <summary>
+    /// Oro que la política le pone a un punto de atributo permanente (ADR 0159, efecto <c>attribute</c>, y
+    /// ADR 0160, la especialización del entrenamiento): con 8, los +8 de una especialización valen 64 de
+    /// oro, del orden de un objeto poco común (<c>market.itemPrice.uncommon</c>) -así que una
+    /// especialización compite con comprar equipo, no lo domina de calle-.
+    /// </summary>
+    public int EventGoldPerAttributePoint { get; init; } = 8;
+
+    /// <summary>
+    /// Oro que la política le pone a <b>cada nivel</b> perdido (ADR 0159, efecto <c>level</c>; ADR 0160,
+    /// el cambio de puesto): un coste plano por nivel, más alto que <c>4 * EventGoldPerAttributePoint</c>
+    /// -lo que valen los puntos de atributo que ese nivel se lleva- porque perder un nivel también pesa en
+    /// el mercado (RF-114, el precio de reventa cae con el nivel) y en la moral de la plantilla, no solo
+    /// en los cuatro atributos.
+    /// </summary>
+    public int EventLevelLossPremium { get; init; } = 40;
+
+    /// <summary>
+    /// Oro que la política le pone a un punto de memoria de árbitro (ADR 0159, efecto
+    /// <c>refereeGrudge</c>; ADR 0158). Modesto a propósito: mueve el criterio inicial de un partido
+    /// futuro con ese árbitro, que ya está acotado a ±40, nunca decide un partido por sí solo.
+    /// </summary>
+    public int EventGoldPerGrudgePoint { get; init; } = 2;
+
+    /// <summary>Oro que la política le pone a ganar el rasgo pedido, o a perder uno que no quiere (ADR 0159).</summary>
+    public int EventTraitChangeGold { get; init; } = 35;
+
+    /// <summary>
+    /// Oro que la política le pone a un canterano gratis (ADR 0159, efecto <c>recruit</c>): el precio de
+    /// un fichaje común de pago (<c>market.playerPrice.common</c>), porque es exactamente lo que se ahorra.
+    /// </summary>
+    public int EventRecruitGold { get; init; } = 60;
+
+    /// <summary>
+    /// Coste, en oro, que la política le pone a <b>sacrificar a alguien</b> (ADR 0159, efecto
+    /// <c>sacrifice</c>). Deliberadamente prohibitivo: la muerte es rara por diseño (ADR 0048) y ninguna
+    /// política automática debería volunteer una si no está forzada a elegir esa opción -nunca lo está,
+    /// porque "seguir camino" siempre existe (BA-A)-. No es un valor medido de "cuánto vale un jugador":
+    /// es una prohibición con forma de número, para no reescribir <c>OptionWorth</c> con un caso especial.
+    /// </summary>
+    public int EventSacrificeGoldPenalty { get; init; } = 1_000_000;
+
     /// <summary>Compras máximas en un mismo nodo de mercado; corta el bucle, no la política.</summary>
     public int MaxMarketActions { get; init; } = 16;
 
@@ -1355,11 +1397,15 @@ public static class RunPolicy
     // ------------------------------------------------------------------ 4c. evento
 
     /// <summary>
-    /// La carta de evento (ADR 0100). La política tasa cada opción <b>en oro</b> —lo que da, lo que cuesta y
-    /// lo que se ahorra en la clínica— y se queda con la mejor; seguir camino vale cero, así que una carta
-    /// que no ofrece nada se deja pasar. Para las opciones que piden un cuerpo elige al <b>disponible más
-    /// barato que no sea titular</b>: es lo que haría un entrenador y lo que hace que la familia de carne
-    /// por ventaja se pague con el banquillo antes que con el once.
+    /// La carta de evento (ADR 0100, ampliada por la ADR 0159). La política tasa cada opción <b>en
+    /// oro</b> —lo que da, lo que cuesta y lo que se ahorra en la clínica— y se queda con la mejor; seguir
+    /// camino vale cero, así que una carta que no ofrece nada se deja pasar. Para las opciones que piden un
+    /// cuerpo elige, entre los <b>elegibles para esa opción</b> (<c>EventSystem.IsEligibleTarget</c>: quien
+    /// no tiene ya el rasgo, quien sí lo tiene si hay que quitárselo, quien tiene algo que sacrificar...),
+    /// al <b>disponible más barato que no sea titular</b>: es lo que haría un entrenador y lo que hace que
+    /// la familia de carne por ventaja se pague con el banquillo antes que con el once. El sacrificio
+    /// (ADR 0159) nunca gana: <see cref="RunPolicyOptions.EventSacrificeGoldPenalty"/> lo prohíbe a
+    /// propósito (ADR 0048, la muerte es rara), no porque no se pueda tasar.
     /// </summary>
     private static RunState VisitEvent(
         RunState state,
@@ -1371,22 +1417,46 @@ public static class RunPolicy
         Ledger ledger)
     {
         var card = EventSystem.Card(state, node, standard.Events);
-        var victim = CheapestBody(state, options);
         int best = 0;
         int chosen = -1;
+        RunPlayer? chosenTarget = null;
+        RunPlayer? chosenSecondTarget = null;
         for (int i = 0; i < card.Options.Count; i++)
         {
             var option = card.Options[i];
-            if (option.NeedsTarget && victim is null)
+
+            // ADR 0159: dos cartas nuevas cobran oro fijo (no un porcentaje, que se autolimita a lo que
+            // hay). "Vale la pena" (worth neto positivo) no es lo mismo que "se puede pagar": sin esto la
+            // política podía elegir una opción de -25 de oro con la run a 0 y EventSystem.Choose la
+            // rechazaba, tirando el nodo entero.
+            if (state.Gold + Underleague.Sim.Run.View.EventView.GoldDelta(option, state) < 0)
             {
                 continue;
             }
 
-            int worth = OptionWorth(state, option, standard.Economy, options);
+            RunPlayer? target = option.NeedsTarget ? EligibleBody(state, options, option, forSecondTarget: false, excludeId: -1) : null;
+            if (option.NeedsTarget && target is null)
+            {
+                continue;
+            }
+
+            RunPlayer? secondTarget = null;
+            if (option.NeedsSecondTarget)
+            {
+                secondTarget = EligibleBody(state, options, option, forSecondTarget: true, excludeId: target?.Id ?? -1);
+                if (secondTarget is null)
+                {
+                    continue;
+                }
+            }
+
+            int worth = OptionWorth(state, node, option, standard, options);
             if (worth > best)
             {
                 best = worth;
                 chosen = i;
+                chosenTarget = target;
+                chosenSecondTarget = secondTarget;
             }
         }
 
@@ -1396,10 +1466,9 @@ public static class RunPolicy
             return state;
         }
 
-        bool needsTarget = card.Options[chosen].NeedsTarget;
         state = RunEngine.Apply(
             state,
-            new ChooseEventOption(chosen, needsTarget ? victim!.Id : -1),
+            new ChooseEventOption(chosen, chosenTarget?.Id ?? -1, chosenSecondTarget?.Id ?? -1),
             catalog,
             systems);
         ledger.EventsTaken++;
@@ -1407,8 +1476,9 @@ public static class RunPolicy
     }
 
     /// <summary>Lo que vale una opción, en oro: lo que da menos lo que cuesta, contando la clínica que ahorra.</summary>
-    private static int OptionWorth(RunState state, EventOption option, EconomyConfig economy, RunPolicyOptions policy)
+    private static int OptionWorth(RunState state, MapNode node, EventOption option, StandardRunSystems standard, RunPolicyOptions policy)
     {
+        var economy = standard.Economy;
         int worth = 0;
         for (int i = 0; i < option.Effects.Count; i++)
         {
@@ -1421,11 +1491,61 @@ public static class RunPolicy
                 EventEffectKind.Experience => policy.EventGoldPerHundredExperience * effect.Value * CountStarters(state) / 100,
                 EventEffectKind.ExperienceTarget => policy.EventGoldPerHundredExperience * effect.Value / 100,
                 EventEffectKind.Injure => -(effect.Value >= 2 ? economy.ClinicCost : economy.ClinicMinorCost) - policy.EventInjuryPremium,
+                EventEffectKind.GrantItem => ItemWorth(state, node, effect.Rarity, standard.Items, economy),
+                EventEffectKind.GrantConsumable => ConsumableWorth(effect.Family, standard.Consumables, economy),
+                EventEffectKind.GrantTrait => policy.EventTraitChangeGold,
+                EventEffectKind.RemoveTrait => policy.EventTraitChangeGold,
+                EventEffectKind.Attribute => policy.EventGoldPerAttributePoint * effect.Value,
+                EventEffectKind.Level => -(effect.Value * policy.EventLevelLossPremium),
+                EventEffectKind.RefereeGrudge => policy.EventGoldPerGrudgePoint * effect.Value,
+                EventEffectKind.Recruit => state.HasRosterSpace ? policy.EventRecruitGold : -policy.EventSacrificeGoldPenalty,
+                EventEffectKind.Sacrifice => -policy.EventSacrificeGoldPenalty,
                 _ => 0,
             };
         }
 
         return worth;
+    }
+
+    /// <summary>Lo que vale un objeto de esa rareza: su precio de mercado, cero si esta run no puede ofrecer ninguno.</summary>
+    private static int ItemWorth(RunState state, MapNode node, Rarity rarity, ItemCatalog items, EconomyConfig economy) =>
+        EventSystem.BestItem(state, node, rarity, items) is null ? 0 : economy.Market.ItemPrice.Of(rarity);
+
+    /// <summary>Lo que vale un consumible de esa familia: su precio de mercado por rareza, cero si no hay ninguno.</summary>
+    private static int ConsumableWorth(ConsumableFamily family, ConsumableCatalog consumables, EconomyConfig economy)
+    {
+        var consumable = EventSystem.BestConsumable(family, consumables);
+        return consumable is null ? 0 : economy.Market.ConsumablePriceByRarity.Of(consumable.Rarity);
+    }
+
+    /// <summary>
+    /// El disponible más barato que no sea titular, entre los que esa opción puede señalar como primer o
+    /// segundo objetivo (ADR 0159, <c>EventSystem.IsEligibleTarget</c>); <c>excludeId</c> saca al ya
+    /// elegido como primero cuando se busca el segundo. Null si ninguno cumple -la opción se descarta, no
+    /// se elige a ciegas y se deja que <c>EventSystem.Choose</c> lo rechace-.
+    /// </summary>
+    private static RunPlayer? EligibleBody(RunState state, RunPolicyOptions options, EventOption option, bool forSecondTarget, int excludeId)
+    {
+        var starters = ChooseStarters(state, options);
+        RunPlayer? best = null;
+        int bestRank = int.MaxValue;
+        for (int i = 0; i < state.Roster.Count; i++)
+        {
+            var player = state.Roster[i];
+            if (!player.IsAvailable || player.Id == excludeId || !EventSystem.IsEligibleTarget(player, option, forSecondTarget))
+            {
+                continue;
+            }
+
+            int rank = Value(player, options) + (IsStarter(starters, player.Id) ? 1000 : 0);
+            if (rank < bestRank || (rank == bestRank && best is not null && player.Id < best.Id))
+            {
+                best = player;
+                bestRank = rank;
+            }
+        }
+
+        return best;
     }
 
     /// <summary>
@@ -1440,31 +1560,6 @@ public static class RunPolicy
     {
         int count = state.Lineup.Slots.Count;
         return count > 0 ? count : RunRules.MaxStarters;
-    }
-
-    /// <summary>El cuerpo más barato que se puede ofrecer: disponible, fuera del once si lo hay, y de menor valor.</summary>
-    private static RunPlayer? CheapestBody(RunState state, RunPolicyOptions options)
-    {
-        var starters = ChooseStarters(state, options);
-        RunPlayer? best = null;
-        int bestRank = int.MaxValue;
-        for (int i = 0; i < state.Roster.Count; i++)
-        {
-            var player = state.Roster[i];
-            if (!player.IsAvailable)
-            {
-                continue;
-            }
-
-            int rank = Value(player, options) + (IsStarter(starters, player.Id) ? 1000 : 0);
-            if (rank < bestRank || (rank == bestRank && best is not null && player.Id < best.Id))
-            {
-                best = player;
-                bestRank = rank;
-            }
-        }
-
-        return best;
     }
 
     // ------------------------------------------------------------------ 5. mercado

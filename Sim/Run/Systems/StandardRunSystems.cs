@@ -227,7 +227,9 @@ public sealed class StandardRunSystems : IRunSystems
         {
             NodeKind.Market => state.WithPendingNode(node.Id),
             NodeKind.Clinic => state.WithPendingNode(node.Id),
-            NodeKind.Training => ServiceNodeSystem.Training(state, _economy, catalog),
+            // ADR 0160: el entrenamiento deja de resolverse solo; abre su carta de tres sesiones y espera
+            // la elección (RF-026), igual que el evento desde la ADR 0100.
+            NodeKind.Training => state.WithPendingNode(node.Id),
             // ADR 0100: el evento deja de resolverse solo; abre su carta y espera la elección.
             NodeKind.Event => state.WithPendingNode(node.Id),
             _ => state,
@@ -314,6 +316,7 @@ public sealed class StandardRunSystems : IRunSystems
             TreatPlayer treat => MedicalSystem.Treat(state, treat, _economy, catalog),
             TreatSquad => MedicalSystem.TreatSquad(state, _economy),
             ChooseEventOption choice => EventSystem.Choose(state, choice, _events, _items, _consumables, _economy, catalog),
+            ChooseTrainingSession training => TrainingSystem.Choose(state, training, _economy, catalog),
             ExpandRoster => EnrollmentSystem.Expand(state, _economy),
             ReleasePlayer release => EnrollmentSystem.Release(state, release),
             ChooseReward choose => RewardSystem.Choose(state, choose, catalog, _economy, _items),

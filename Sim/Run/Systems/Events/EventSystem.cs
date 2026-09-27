@@ -475,6 +475,75 @@ public static class EventSystem
         return state.WithPlayer(victim with { PhysicalState = PhysicalState.Dead });
     }
 
+    /// <summary>
+    /// Si <paramref name="player"/> puede ser el primer objetivo (<paramref name="forSecondTarget"/>
+    /// falso) o el segundo (ADR 0159) de esa opción: quien ya tiene el rasgo que <c>grantTrait</c> daría,
+    /// quien no tiene el que <c>removeTrait</c> quitaría, quien no tiene perks que <c>sacrifice</c> pudiera
+    /// llevarse, o el heredero sin hueco de perk, quedan fuera. Compartido por <c>EventView</c> (filtra la
+    /// lista que ve el jugador) y <c>RunPolicy</c> (elige por él): las dos tienen que estar de acuerdo con
+    /// lo que <see cref="Choose"/> aceptaría, o una dejaría pasar algo que la otra rechaza.
+    /// </summary>
+    internal static bool IsEligibleTarget(RunPlayer player, EventOption option, bool forSecondTarget)
+    {
+        ArgumentNullException.ThrowIfNull(player);
+        ArgumentNullException.ThrowIfNull(option);
+        bool isSacrificeRecipient = forSecondTarget && HasKind(option.Effects, EventEffectKind.Sacrifice);
+        if (isSacrificeRecipient && player.Perks.Count >= ProgressionRules.PerkSlots(player.Rarity))
+        {
+            return false;
+        }
+
+        for (int i = 0; i < option.Effects.Count; i++)
+        {
+            var effect = option.Effects[i];
+            if (effect.UsesSecondTarget != forSecondTarget)
+            {
+                continue;
+            }
+
+            switch (effect.Kind)
+            {
+                case EventEffectKind.GrantTrait:
+                    if (player.Traits.Contains(effect.Trait) || player.Traits.Count >= RunRules.MaxTraits)
+                    {
+                        return false;
+                    }
+
+                    break;
+                case EventEffectKind.RemoveTrait:
+                    if (!player.Traits.Contains(effect.Trait))
+                    {
+                        return false;
+                    }
+
+                    break;
+                case EventEffectKind.Sacrifice:
+                    // El primer señalado es quien muere: solo tiene sentido sobre alguien con algo que dar.
+                    if (!forSecondTarget && player.Perks.Count == 0)
+                    {
+                        return false;
+                    }
+
+                    break;
+            }
+        }
+
+        return true;
+    }
+
+    private static bool HasKind(IReadOnlyList<EventEffect> effects, EventEffectKind kind)
+    {
+        for (int i = 0; i < effects.Count; i++)
+        {
+            if (effects[i].Kind == kind)
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     /// <summary>El mejor perk de esa lista de ids, o null si está vacía (RT-041: rareza desc., id asc.).</summary>
     internal static string? BestPerk(Data.Catalog catalog, IReadOnlyList<string> perkIds)
     {
