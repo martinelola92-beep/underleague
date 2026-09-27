@@ -24,6 +24,10 @@ public partial class BroadcastBoard : Control
     [Signal]
     public delegate void PauseToggledEventHandler();
 
+    /// <summary>ADR 0154: el jugador pulsa una de las tres órdenes (0 defensiva, 1 neutra, 2 ofensiva).</summary>
+    [Signal]
+    public delegate void OrderChosenEventHandler(int index);
+
     private string _own = string.Empty;
     private string _rival = string.Empty;
     private int _ownScore;
@@ -35,6 +39,9 @@ public partial class BroadcastBoard : Control
 
     private readonly Rect2[] _speedButtons = new Rect2[3];
     private Rect2 _pauseButton;
+    private readonly Rect2[] _orderButtons = new Rect2[3];
+    private int _orderIndex = 1;
+    private bool _orderEnabled = true;
 
     public override void _Ready()
     {
@@ -74,6 +81,14 @@ public partial class BroadcastBoard : Control
         QueueRedraw();
     }
 
+    /// <summary>La orden táctica vigente (0 defensiva, 1 neutra, 2 ofensiva) y si se puede cambiar ahora.</summary>
+    public void SetOrder(int index, bool enabled)
+    {
+        _orderIndex = Mathf.Clamp(index, 0, 2);
+        _orderEnabled = enabled;
+        QueueRedraw();
+    }
+
     public void SetPaused(bool paused)
     {
         _paused = paused;
@@ -101,6 +116,17 @@ public partial class BroadcastBoard : Control
         {
             EmitSignal(SignalName.PauseToggled);
             AcceptEvent();
+            return;
+        }
+
+        for (int i = 0; i < _orderButtons.Length; i++)
+        {
+            if (_orderEnabled && _orderButtons[i].HasPoint(button.Position))
+            {
+                EmitSignal(SignalName.OrderChosen, i);
+                AcceptEvent();
+                return;
+            }
         }
     }
 
@@ -157,6 +183,35 @@ public partial class BroadcastBoard : Control
         }
 
         DrawSpeedButtons(w);
+        DrawOrderButtons();
+    }
+
+    /// <summary>
+    /// ADR 0154: la botonera de la orden táctica, a la izquierda del tablero, simétrica a la de velocidad.
+    /// La vigente, en oro; apagada cuando no se puede cambiar (partido terminado).
+    /// </summary>
+    private void DrawOrderButtons()
+    {
+        string[] labels =
+        {
+            UiText.Get("ui.pregon.order.defensive"), UiText.Get("ui.pregon.order.neutral"), UiText.Get("ui.pregon.order.offensive"),
+        };
+        float bw = 96f, bh = 46f, gap = 8f;
+        float x = 24f;
+        for (int i = 0; i < 3; i++)
+        {
+            _orderButtons[i] = new Rect2(x, 14f, bw, bh);
+            bool active = i == _orderIndex;
+            var fill = active ? Pregon.Or : new Color("4a3321");
+            if (!_orderEnabled && !active)
+            {
+                fill = fill.Darkened(0.35f);
+            }
+
+            Pregon.DrawParchment(this, new Vector2(x, 14f), bw, bh, fill, Pregon.Sable, seed: 30 + i, amplitude: 1.2f, edgeWidth: 2f);
+            Style.DrawText(this, Pregon.DataBold, new Vector2(x + 10f, 14f + 12f), labels[i], Pregon.SizeDataSmall, active ? Pregon.Sable : Pregon.Vellum, maxWidth: bw - 20f);
+            x += bw + gap;
+        }
     }
 
     private void DrawTeamPanel(Vector2 at, bool ours, string name)

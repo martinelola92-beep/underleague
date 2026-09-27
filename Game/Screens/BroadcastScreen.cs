@@ -380,6 +380,7 @@ public partial class BroadcastScreen : Control
         _board.Position = new Vector2(0f, 8f);
         _board.Size = new Vector2(CanvasWidth, BroadcastBoard.DesignHeight);
         _board.SpeedChosen += OnSpeedChosen;
+        _board.OrderChosen += OnOrderChosen;
         _board.PauseToggled += OnPauseToggled;
 
         float x0 = (CanvasWidth - ((7 * 232f) + (6 * 12f) + 24f + 150f)) / 2f;
@@ -538,7 +539,7 @@ public partial class BroadcastScreen : Control
         var point = _pendingPoint;
         _pendingPoint = null;
         _run.Substitute(new Substitution(point.Tick, point.OutPlayerId, playerId));
-        AfterDecision(point);
+        AfterDecision(point.Tick, alreadyShown: true);
     }
 
     /// <summary>
@@ -565,11 +566,17 @@ public partial class BroadcastScreen : Control
             _run.Decline(point);
         }
 
-        AfterDecision(point);
+        AfterDecision(point.Tick, alreadyShown: true);
     }
 
     /// <summary>Lo que hay que rehacer en la pantalla después de cualquiera de las tres respuestas.</summary>
-    private void AfterDecision(SubstitutionPoint point)
+    /// <param name="alreadyShown">
+    /// True en las respuestas a un punto de decisión: el fotograma de la decisión ya se presentó (la
+    /// bandeja se abre EN él), así que se reanuda desde el siguiente. False en un cambio de orden (ADR 0154),
+    /// que se aplica desde un fotograma que todavía no se ha visto: saltarlo dejaba sin cartel ni voz lo
+    /// que ocurriera justo ahí (revisión independiente).
+    /// </param>
+    private void AfterDecision(int decisionTick, bool alreadyShown)
     {
         // Al resolver la decisión se suelta cualquier acercamiento en curso (docs/ui/README §4: el de
         // muerte, si lo había, se soltaba "al terminar la voz o al resolver la decisión" — esto es lo
@@ -592,8 +599,9 @@ public partial class BroadcastScreen : Control
             return;
         }
 
-        int decisionFrame = _trace.FrameOfTick(point.Tick);
-        _director.Seek(decisionFrame + 1);
+        int decisionFrame = _trace.FrameOfTick(decisionTick);
+        int resumeFrame = alreadyShown ? decisionFrame + 1 : decisionFrame;
+        _director.Seek(resumeFrame);
         _director.Resolve();
         _pitch3d.Bind(_trace, _playback.Setup, _catalog, _playback.Result.Events);
         _cut.Bind(_playback.Result.Events, _trace);
@@ -620,7 +628,7 @@ public partial class BroadcastScreen : Control
         // dejaba pendiente y **el hueso crujía dos veces por la misma lesión**. Lo encontró la revisión
         // independiente; el hermano de este desfase sigue en `ResyncShotGestures` y está anotado en
         // `docs/pendientes/BI-A.md` porque arreglarlo mueve la cámara y quiere su propia comprobación.
-        ResyncEventSounds(_frame + 1);
+        ResyncEventSounds(resumeFrame);
         _pitch3d.ResetGestures();
 
         Sync();
@@ -1041,6 +1049,7 @@ public partial class BroadcastScreen : Control
         _board.SetRivalResidue(UiText.Get("ui.pregon.board.residue", cards, casualties));
         _board.SetSpeedIndex(_speedIndex);
         _board.SetPaused(_manualPaused);
+        _board.SetOrder((int)_run.OrderAt(tick), enabled: CanChangeOrder());
     }
 
     private void UpdateStrips(int tick, int residueFrame)
@@ -1520,6 +1529,41 @@ public partial class BroadcastScreen : Control
         string id = detail[(separator + 1)..];
         return _catalog.Perks.Find(id)?.Name.Es ?? id;
     }
+
+    /// <summary>
+    /// ADR 0154: el jugador cambia la orden táctica. Se aplica desde el tick SIGUIENTE al que enseña la
+    /// pantalla, así que lo ya visto no cambia; se vuelve a reproducir el partido con la orden dentro y se
+    /// reanuda desde aquí, por el mismo camino que una sustitución.
+    /// </summary>
+    /// <summary>Para el arnés de capturas: lo mismo que pulsar el botón de orden.</summary>
+    public void ChooseOrder(int index) => OnOrderChosen(index);
+
+    private void OnOrderChosen(int index)
+    {
+        if (_trace is not { FrameCount: > 0 } trace || !CanChangeOrder())
+        {
+            return;
+        }
+
+        int tick = trace.TickAt(Mathf.Clamp(_frame, 0, trace.FrameCount - 1)) + 1;
+        var order = (Mentality)Mathf.Clamp(index, 0, 2);
+        if (_run.OrderAt(tick) == order)
+        {
+            return;
+        }
+
+        _run.ChangeOrder(tick, order);
+        AfterDecision(tick, alreadyShown: false);
+    }
+
+    /// <summary>
+    /// Cuándo se puede cambiar la orden (ADR 0154): con el partido en marcha y sin nada pendiente de
+    /// presentar o decidir. Durante la muerte en dos tiempos el bando y la bandeja esperan su retardo con
+    /// <c>_pendingPoint</c> todavía vacío; un cambio de orden ahí los borraba y el jugador perdía la decisión
+    /// de sustitución (revisión independiente).
+    /// </summary>
+    private bool CanChangeOrder() =>
+        !_matchEnded && _pendingPoint is null && _pendingDeathEvent is null && !_deathTrayPending && !_frozenLastFrame;
 
     private void OnSpeedChosen(int index)
     {

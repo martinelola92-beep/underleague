@@ -536,6 +536,10 @@ public partial class BroadcastCapture : Control
             Drop(instance);
         }
 
+        // ADR 0154: la orden táctica durante el partido. El MISMO instante con la orden neutra y con la
+        // ofensiva pulsada diez segundos antes: lo único que cambia entre las dos imágenes es la orden.
+        await CaptureOrder(run, baseSeed.Value, baseNode);
+
         // ADR 0151: la cortinilla del reinicio tras gol, fotografiada EN MARCHA. SeekTo la anula a
         // propósito (un salto no es reproducción), así que se llega dos fotogramas antes del reinicio y se
         // deja correr la pantalla con StepManual, que es determinista, parando en cada tramo del fundido.
@@ -927,6 +931,34 @@ public partial class BroadcastCapture : Control
         }
 
         return null;
+    }
+
+    private async Task CaptureOrder(RunController run, ulong seed, int node)
+    {
+        const int From = 600;
+        const int After = 150;
+        foreach (var (order, name) in new[] { (1, "tactica-1-neutro"), (2, "tactica-2-ataque"), (0, "tactica-3-defensa") })
+        {
+            run.NewRun("orc_ironworks", Race.Orc, seed);
+            run.SelectedNodeId = node;
+            var instance = await Show("res://Scenes/Retransmision.tscn", frames: 10);
+            if (instance is not BroadcastScreen screen)
+            {
+                Drop(instance);
+                continue;
+            }
+
+            await ShowFrame(screen, From, name);
+            if (order != 1)
+            {
+                screen.ChooseOrder(order);
+            }
+
+            await ShowFrame(screen, From + After, name);
+            GD.Print($"retransmisión: '{name}' orden {order}, fotograma {screen.Pitch3D.Frame}");
+            await Save(name);
+            Drop(instance);
+        }
     }
 
     private async Task CaptureResetCut(RunController run, ulong seed, int node, int goalFrame)

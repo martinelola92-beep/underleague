@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using Underleague.Sim.Engine;
 using Underleague.Sim.Model;
 using Underleague.Sim.Run;
 using Underleague.Sim.Run.View;
@@ -108,6 +109,42 @@ public partial class RunController
         var after = RunLineup.AttributesWithExtraMinorInjuries(_stateBeforeMatch, Catalog, point.OutPlayerId, extra);
         var playOns = new List<PlayOn>(Decisions.PlayOns) { new(point.Tick, point.OutPlayerId, after) };
         Answer(Decisions with { PlayOns = playOns });
+    }
+
+    /// <summary>
+    /// ADR 0154: el jugador cambia la orden táctica de su equipo durante el partido, desde
+    /// <paramref name="tick"/>. Como las demás decisiones, se vuelve a reproducir el partido con ella
+    /// dentro; lo anterior a ese tick no cambia. Las órdenes posteriores que ya hubiera se descartan: ese
+    /// futuro es justo el que se está reescribiendo.
+    /// </summary>
+    public void ChangeOrder(int tick, Mentality order)
+    {
+        var changes = new List<OrderChange>();
+        foreach (var change in Decisions.OrderChanges)
+        {
+            if (change.Tick < tick)
+            {
+                changes.Add(change);
+            }
+        }
+
+        changes.Add(new OrderChange(tick, order));
+        Answer(Decisions with { OrderChanges = changes });
+    }
+
+    /// <summary>La orden táctica del jugador en ese tick (ADR 0154): la última que eligió antes, o neutra.</summary>
+    public Mentality OrderAt(int tick)
+    {
+        var order = Mentality.Neutral;
+        foreach (var change in Decisions.OrderChanges)
+        {
+            if (change.Tick <= tick)
+            {
+                order = change.Order;
+            }
+        }
+
+        return order;
     }
 
     /// <summary>
