@@ -76,6 +76,9 @@ public sealed class MatchTrace
     private readonly float[] _x;
     private readonly float[] _y;
     private readonly byte[] _state;
+
+    /// <summary>Energía de cada jugador en ese fotograma, en porcentaje 0-100 (ADR 0142). Sólo presentación.</summary>
+    private readonly byte[] _energy;
     private readonly bool[] _onPitch;
     private readonly float[] _homeX;
     private readonly float[] _homeY;
@@ -113,13 +116,15 @@ public sealed class MatchTrace
         byte[] action,
         float[] targetX,
         float[] targetY,
-        int[] clockTick)
+        int[] clockTick,
+        byte[] energy)
     {
         Players = players;
         RegulationTicks = regulationTicks;
         FrameCount = tick.Length;
         _tick = tick;
         _clockTick = clockTick;
+        _energy = energy;
         _phase = phase;
         _restart = restart;
         _restartTaker = restartTaker;
@@ -217,6 +222,12 @@ public sealed class MatchTrace
     /// <summary>Estado de la máquina de estados del jugador en ese tick (RT-089c).</summary>
     public PlayerState StateAt(int frame, int player) => (PlayerState)_state[Slot(frame, player)];
 
+    /// <summary>
+    /// Energía que le queda al jugador, de 0 a 100 (ADR 0142: <c>MatchPlayer.Energy</c> sobre
+    /// <c>MaxEnergy</c>). La lee la barra de fatiga de la ficha; ninguna regla del partido la usa desde aquí.
+    /// </summary>
+    public int EnergyPercentAt(int frame, int player) => _energy[Slot(frame, player)];
+
     /// <summary>False si el jugador ya no está en el campo (expulsado, lesionado o muerto).</summary>
     public bool OnPitchAt(int frame, int player) => _onPitch[Slot(frame, player)];
 
@@ -308,6 +319,7 @@ internal sealed class MatchTraceRecorder
     private readonly List<float> _x;
     private readonly List<float> _y;
     private readonly List<byte> _state;
+    private readonly List<byte> _energy;
     private readonly List<bool> _onPitch;
     private readonly List<float> _homeX;
     private readonly List<float> _homeY;
@@ -337,6 +349,7 @@ internal sealed class MatchTraceRecorder
         _x = new List<float>(cells);
         _y = new List<float>(cells);
         _state = new List<byte>(cells);
+        _energy = new List<byte>(cells);
         _onPitch = new List<bool>(cells);
         _homeX = new List<float>(cells);
         _homeY = new List<float>(cells);
@@ -388,6 +401,7 @@ internal sealed class MatchTraceRecorder
             _x.Add(player.Position.X);
             _y.Add(player.Position.Y);
             _state.Add((byte)player.State);
+            _energy.Add((byte)Math.Clamp(player.Energy * 100 / MatchPlayer.MaxEnergy, 0, 100));
             _onPitch.Add(player.OnPitch);
             _homeX.Add(player.EffectiveHome.X);
             _homeY.Add(player.EffectiveHome.Y);
@@ -434,7 +448,8 @@ internal sealed class MatchTraceRecorder
         _action.ToArray(),
         _targetX.ToArray(),
         _targetY.ToArray(),
-        _clockTick.ToArray());
+        _clockTick.ToArray(),
+        _energy.ToArray());
 
     private static float Cells(int milli) => milli == ActionZone.Unlimited ? TraceZone.Unlimited : milli / 1000f;
 
