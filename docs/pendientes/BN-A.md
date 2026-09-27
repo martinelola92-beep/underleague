@@ -48,7 +48,7 @@ rival encima: 2,5 compañeros y 1,0 rivales por saque a menos de 0,6 casillas de
 - **LIKELY, sin experimento propio**: es la **posición de formación** de los defensas —en un campo de 16
   columnas su casilla está a 2-3 columnas de la portería— más el delantero rival que los cubre.
 
-### «La reanudación es del que la saca»: aprobada por el revisor, implementada, y PARADA por su coste
+### «La reanudación es del que la saca»: aplicada ([ADR 0155](../decisiones/0155-la-reanudacion-es-del-equipo-que-la-saca.md)) sabiendo su coste
 
 El revisor la aprobó («2 sí»). La versión completa —las dos posesiones leen de `RestartHolder`, penalti y
 saque de centro fuera— hace lo que promete: el equipo que saca se prepara para recibir en banda 91,6 %,
@@ -64,8 +64,8 @@ puerta 96,6 %, falta 97,2 % y córner 100 % (sin la regla, 0-6 %). Pero medida e
 
 - **REJECTED** como causa de la bajada: que la transición (12 ticks de empuje del que pierde el balón) se
   gastara durante el balón parado; congelarla deja las lesiones casi igual (−11 / −6 / −15 / −17 %).
-- La causa sigue sin aislar. Como las lesiones son el recurso central, **no se commitea** hasta que el
-  revisor decida con este dato. La implementación está guardada (parche de la sesión del 27 sep).
+- La causa sigue sin aislar. Se paró hasta que el revisor decidiera con este dato, y decidió: **«aplica»**.
+  La carnicería se compensa en la fase de balance.
 - La primera versión (sólo `HoldingTeam`) apenas movía el saque de puerta y el de banda; la segunda incluía
   sin decirlo el saque de centro, que explicaba más de la mitad de la subida de goles de una semilla.
   Las dos las cazó la revisión independiente.

@@ -65,3 +65,18 @@ Neutro: 0,87 / 0,78, gana el 46,9 %.
   modificadores invisibles»—; lo propuso el revisor y los botones no lo explican. Y ofensivo sigue siendo la
   opción dominante contra una IA siempre neutra (55,8 % frente a 46,9 %).
 
+## Reajuste con la ADR 0155 (27 sep 2026)
+
+Con la reanudación del que la saca, ofensivo dejaba de encajar más que neutro (1,20 / 0,88 frente a
+0,96 / 0,91). Castigar más su defensa (−30) sólo lo igualaba (0,911 / 0,912). **Se devuelve la subida
+ofensiva de líneas a +3 / +2 / +1**, que es la que da el precio natural de atacar; la razón para moderarla
+(que hundía las remontadas) resultó estar dentro del ruido. Resultado, 1.200 partidos:
+
+| orden | a favor | en contra |
+|---|---|---|
+| Neutro | 0,959 | 0,912 |
+| Defensivo | 0,677 (−29 %) | 0,733 (−20 %) |
+| Ofensivo | 1,120 (+17 %) | 0,938 (+3 %) |
+
+El precio de ofensivo es pequeño (+3 %): sigue siendo la opción fuerte contra una IA neutra.
+
