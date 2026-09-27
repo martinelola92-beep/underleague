@@ -45,6 +45,23 @@ public sealed class EventTests
         }
     }
 
+    /// <summary>
+    /// BQ-A: la carta sólo existe con el nodo de evento <b>abierto</b>. Antes de entrar, la vista es null, así
+    /// que la pantalla de nodo tiene que entrar en el evento antes de dibujarlo; enseñarlo «antes de entrar»,
+    /// como al entrenamiento, deja la pantalla sin opciones.
+    /// </summary>
+    [Fact]
+    public void TheCardIsOnlyVisibleOnceTheEventNodeIsOpen()
+    {
+        var start = RunEngine.Start(SystemsTestSupport.Setup(), 4001UL, SystemsTestSupport.Catalog, SystemsTestSupport.Systems);
+        Assert.Null(Underleague.Sim.Run.View.EventView.Build(start, SystemsTestSupport.Catalog, Events, "es"));
+
+        var (open, _) = AtAnEvent(4001UL);
+        var view = Underleague.Sim.Run.View.EventView.Build(open, SystemsTestSupport.Catalog, Events, "es");
+        Assert.NotNull(view);
+        Assert.NotEmpty(view!.Options);
+    }
+
     /// <summary>La carta se deriva del nodo y no se guarda: dos lecturas del mismo estado ven la misma (W-12).</summary>
     [Fact]
     public void TheCardIsDerivedAndStable()
