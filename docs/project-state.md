@@ -30,6 +30,15 @@ PC (Steam), premium, sin online. **Estado (8 sep 2026): fases 0 y 1 cerradas; fa
 revisor); por qué la IA vuelve a elegir proteger con la misma presión (BI-D, BJ-A, BO-A); el balón a 3,5
 casillas se pinta a la altura de las vallas.
 
+- **[ADR 0154](decisiones/0154-la-orden-tactica-se-cambia-en-el-partido-y-mueve-las-lineas.md)**:
+  botonera Defensa · Neutro · Ataque durante el partido; mueve las líneas por puesto. Defensivo −13 % en
+  contra, ofensivo +14 % a favor. **Pendiente del revisor**: pasar a defensivo con ventaja en el último
+  tercio no se nota (91,5 % → 90,7 % de ventajas mantenidas); para que proteja un resultado tiene que
+  recortar mucho más los goles en contra.
+- **Barra de fatiga** en cada ficha de la retransmisión: la traza graba la energía (ADR 0142) en
+  porcentaje (`MatchTrace.EnergyPercentAt`); verde > 50, oro > 25, sangre por debajo.
+- **[BP-A](pendientes/BP-A.md)**: fuera de juego como colocación, medido y rechazado (goles −31/−40 %).
+
 **El orden anterior sigue** (abajo): paso 2 si el revisor lo reabre, BM-C, BM-B.
 
 ---
