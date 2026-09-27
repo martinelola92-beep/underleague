@@ -27,13 +27,15 @@ public static class Tour
 
     private const string RivalryFlag = "--tour-rivalry";
 
+    private const string EventFlag = "--tour-event";
+
     private static readonly HashSet<string> Captured = new();
 
     /// <summary>Directorio de capturas, el mismo que documenta <c>docs/ui-equipo.md</c>.</summary>
     public const string Directory = "res://screenshots";
 
     /// <summary>True si el juego se ha arrancado para hacer alguno de los tres recorridos de capturas.</summary>
-    public static bool Active => HasArgument(Flag) || Maps || Rivalry;
+    public static bool Active => HasArgument(Flag) || Maps || Rivalry || Event;
 
     /// <summary>
     /// True con <c>--map-tour</c>: el recorrido corto que solo enseña el <b>mapa de los tres actos</b> y
@@ -50,6 +52,12 @@ public static class Tour
     /// <c>TeamScreen.EnsureTestCareer</c>, pero para el cartel del nodo en vez de la ficha.
     /// </summary>
     public static bool Rivalry => HasArgument(RivalryFlag);
+
+    /// <summary>
+    /// True con <c>--tour-event</c>: se planta delante de un nodo de evento, lo pulsa como el jugador y
+    /// captura "evento.png" (BQ-A: la carta salía sin opciones porque el mapa no abría el nodo).
+    /// </summary>
+    public static bool Event => HasArgument(EventFlag);
 
     /// <summary>True si se ha arrancado con <c>--screenshots</c> (el recorrido de la pantalla de Equipo).</summary>
     public static bool Screenshots => HasArgument("--screenshots");

@@ -60,6 +60,11 @@ public partial class NodeScreen : Control
         }
 
         Rebuild();
+
+        if (Tour.Event)
+        {
+            Tour.Step(this, "evento", null);
+        }
     }
 
     private void Rebuild()

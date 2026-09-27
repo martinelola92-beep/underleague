@@ -83,6 +83,12 @@ public partial class MapScreen : Control
             return;
         }
 
+        if (Tour.Event)
+        {
+            TourOpenEvent();
+            return;
+        }
+
         if (Tour.Active)
         {
             Tour.Step(this, "mapa", TourPickMatch);
@@ -393,9 +399,11 @@ public partial class MapScreen : Control
             return;
         }
 
-        // El entrenamiento y el evento se resuelven solos al entrar (no piden decisiones), así que se
-        // enseñan antes de entrar: si no, el jugador vería el nodo pasar sin enterarse de qué le ha dado.
-        if (node.Kind is NodeKind.Training or NodeKind.Event)
+        // El entrenamiento se resuelve solo al entrar (no pide decisiones), así que se enseña antes de
+        // entrar: si no, el jugador vería el nodo pasar sin enterarse de qué le ha dado. El evento NO: desde
+        // la ADR 0100 es una carta que se elige con el nodo abierto, y sin abrirlo no hay carta que enseñar
+        // (BQ-A). Abrirlo no resuelve nada; se entra como en la clínica.
+        if (node.Kind is NodeKind.Training)
         {
             Nav.Go(this, Nav.Node);
             return;
@@ -437,6 +445,36 @@ public partial class MapScreen : Control
 
         _run.JumpToNode(pick.Id);
         Nav.Go(this, Nav.Map);
+    }
+
+    /// <summary>
+    /// Recorrido <c>--tour-event</c> (BQ-A): la primera vez se planta en un nodo desde el que se alcanza un
+    /// evento; la segunda pulsa ese evento por el mismo camino que el jugador (<see cref="OnNodePressed"/>).
+    /// </summary>
+    private void TourOpenEvent()
+    {
+        foreach (var node in _run.Available())
+        {
+            if (node.Kind == NodeKind.Event)
+            {
+                OnNodePressed(node.Id);
+                return;
+            }
+        }
+
+        var map = _run.State!.CurrentMap;
+        foreach (var node in map.Nodes)
+        {
+            foreach (int next in node.Next)
+            {
+                if (map.Get(next).Kind == NodeKind.Event)
+                {
+                    _run.JumpToNode(node.Id);
+                    Nav.Go(this, Nav.Map);
+                    return;
+                }
+            }
+        }
     }
 
     /// <summary>Paso del recorrido de capturas: el primer nodo de partido accesible, que es lo que un jugador miraría.</summary>
