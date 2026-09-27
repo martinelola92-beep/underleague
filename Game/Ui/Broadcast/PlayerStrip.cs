@@ -9,7 +9,8 @@ namespace Underleague.Game.Ui.Broadcast;
 /// plantilla <c>ui.pregon.strip.subtitle</c> vive en <see cref="UiText"/>, no aquí — RT-035).
 /// </summary>
 /// <param name="Off">Muerto o expulsado: la tira se atenúa y la marca de estado lleva una cruz (UI-002).</param>
-public sealed record StripModel(int Number, string Name, string Subtitle, int PerkCount, PhysicalState State, bool Off);
+/// <param name="Energy">Energía que le queda, 0-100 (ADR 0142), para la barra de fatiga.</param>
+public sealed record StripModel(int Number, string Name, string Subtitle, int PerkCount, PhysicalState State, bool Off, int Energy = 100);
 
 /// <summary>
 /// Tira de jugador de 232×72 (docs/ui/README.md §7): papel con borde rasgado, escudo con dorsal, nombre en
@@ -73,6 +74,31 @@ public partial class PlayerStrip : Control
         Pregon.DrawTextEllipsized(this, Pregon.DataSemiBold, new Vector2(58f, 36f), UiText.Get("ui.pregon.strip.perks", _model.Subtitle, _model.PerkCount), Pregon.SizeDataSmall, inkSub, 142f);
 
         DrawStateMark(new Vector2(202f, 36f), attenuated);
+        DrawFatigueBar(attenuated);
+    }
+
+    /// <summary>
+    /// La barra de fatiga (ADR 0142): la energía que le queda, en la franja inferior de la ficha. Verde con
+    /// más de la mitad, oro hasta un cuarto y sangre por debajo, para que el jugador vea de un vistazo quién
+    /// está fundido y decida la orden o el cambio. Sale de la traza (RT-014): la pantalla no calcula nada.
+    /// </summary>
+    private void DrawFatigueBar(bool attenuated)
+    {
+        const float X = 58f;
+        const float Y = 61f;
+        const float Width = 164f;
+        const float Height = 6f;
+        float fraction = Mathf.Clamp(_model.Energy / 100f, 0f, 1f);
+        var fill = _model.Energy > 50 ? new Color("3f7a44") : _model.Energy > 25 ? Pregon.Or : Pregon.Blood;
+        float alpha = attenuated ? 0.45f : 1f;
+
+        DrawRect(new Rect2(X, Y, Width, Height), new Color(Pregon.InkBrown, 0.25f * alpha), filled: true);
+        if (fraction > 0f)
+        {
+            DrawRect(new Rect2(X, Y, Width * fraction, Height), new Color(fill, alpha), filled: true);
+        }
+
+        DrawRect(new Rect2(X, Y, Width, Height), new Color(Pregon.Sable, 0.8f * alpha), filled: false, width: 1.2f);
     }
 
     private void DrawStateMark(Vector2 center, bool attenuated)

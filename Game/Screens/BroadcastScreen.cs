@@ -1080,7 +1080,8 @@ public partial class BroadcastScreen : Control
                 : UiText.Get("ui.pregon.strip.subtitle", UiText.Get("ui.pos." + definition.Position), _catalog.Race(definition.Race).Name.Es);
             string name = definition?.Name.ToUpperInvariant() ?? "?";
             int perkCount = definition?.Perks.Count ?? 0;
-            _strips[i].SetModel(new StripModel(number, name, subtitle, perkCount, state, off));
+            int energy = traceIndex >= 0 ? _trace!.EnergyPercentAt(residueFrame, traceIndex) : 100;
+            _strips[i].SetModel(new StripModel(number, name, subtitle, perkCount, state, off, energy));
         }
 
         _bench.SetCount(Math.Max(0, home.Players.Count - slots.Count));
