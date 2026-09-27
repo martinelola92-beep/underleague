@@ -190,6 +190,9 @@ public static class DataLoader
         // ADR 0158: la línea que explica el rasgo de un árbitro en el ojeo (RT-035: tampoco se escribe a
         // mano en C#).
         "refereeTraits",
+
+        // ADR 0160: nombre y línea de efecto de cada sesión de la carta de entrenamiento.
+        "training",
     };
 
     private static DescriptionTemplates ParseTemplates(string file, string content)

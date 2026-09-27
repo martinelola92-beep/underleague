@@ -281,7 +281,8 @@ public static class EventView
         return text;
     }
 
-    private static IReadOnlyList<EventTargetRow> Targets(RunState state)
+    /// <summary>La plantilla disponible como candidatos a señalar. Compartido con <see cref="TrainingView"/>.</summary>
+    internal static IReadOnlyList<EventTargetRow> Targets(RunState state)
     {
         var rows = new List<EventTargetRow>();
         for (int i = 0; i < state.Roster.Count; i++)

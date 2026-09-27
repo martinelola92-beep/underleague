@@ -9,6 +9,7 @@ using Underleague.Sim.Run.Systems.Events;
 using Underleague.Sim.Run.Systems.Items;
 using Underleague.Sim.Run.Systems.Market;
 using Underleague.Sim.Run.Systems.Medical;
+using Underleague.Sim.Run.Systems.Nodes;
 using Underleague.Sim.Run.Systems.Rewards;
 
 namespace Underleague.Sim.Analysis;
@@ -1148,6 +1149,7 @@ public static class RunPolicy
             NodeKind.Market => VisitMarket(state, node, catalog, standard, systems, options, ledger),
             NodeKind.Clinic => VisitClinic(state, catalog, standard.Economy, systems, options, ledger),
             NodeKind.Event => VisitEvent(state, node, catalog, standard, systems, options, ledger),
+            NodeKind.Training => VisitTraining(state, node, catalog, standard, systems, options, ledger),
             _ => node.IsMatch
                 ? TakeRewards(state, node, catalog, standard, systems, options, ledger)
                 : state,
@@ -1560,6 +1562,69 @@ public static class RunPolicy
     {
         int count = state.Lineup.Slots.Count;
         return count > 0 ? count : RunRules.MaxStarters;
+    }
+
+    // ------------------------------------------------------------------ 4d. entrenamiento
+
+    /// <summary>
+    /// La carta de entrenamiento (ADR 0160). Pachanga salvo que una especialización en el <b>mejor
+    /// titular</b> valga claramente más: <c>SpecializationBonus</c> puntos de atributo permanentes a
+    /// <see cref="RunPolicyOptions.EventGoldPerAttributePoint"/> cada uno, contra la experiencia de hoy
+    /// para toda la plantilla disponible a <see cref="RunPolicyOptions.EventGoldPerHundredExperience"/>.
+    /// El cambio de puesto <b>nunca</b> lo elige la política: recolocar a un jugador que no rinde en su
+    /// puesto es un juicio sobre SU encaje, no algo que un gol de atributo o de experiencia pueda tasar de
+    /// forma genérica, y la pachanga es una salida segura que nunca deja la carta sin resolver.
+    /// </summary>
+    private static RunState VisitTraining(
+        RunState state,
+        MapNode node,
+        Catalog catalog,
+        StandardRunSystems standard,
+        IRunSystems systems,
+        RunPolicyOptions options,
+        Ledger ledger)
+    {
+        var card = TrainingSystem.Card(node);
+        int scrimmageWorth = options.EventGoldPerHundredExperience * standard.Economy.TrainingExperience * state.AvailablePlayerCount / 100;
+        int specializationWorth = options.EventGoldPerAttributePoint * TrainingSystem.SpecializationBonus;
+
+        int chosen = 0;
+        RunPlayer? target = null;
+        if (specializationWorth > scrimmageWorth)
+        {
+            var best = BestStarter(state, options);
+            for (int i = 0; i < card.Sessions.Count; i++)
+            {
+                if (card.Sessions[i].Kind == TrainingSessionKind.Specialization && best is not null)
+                {
+                    chosen = i;
+                    target = best;
+                    break;
+                }
+            }
+        }
+
+        var decision = new ChooseTrainingSession(chosen, target?.Id ?? -1);
+        return RunEngine.Apply(state, decision, catalog, systems);
+    }
+
+    /// <summary>El titular de más valor, por id ascendente en empate (RT-097): a quien la política especializaría.</summary>
+    private static RunPlayer? BestStarter(RunState state, RunPolicyOptions options)
+    {
+        var starters = ChooseStarters(state, options);
+        RunPlayer? best = null;
+        int bestValue = int.MinValue;
+        for (int i = 0; i < starters.Count; i++)
+        {
+            int value = Value(starters[i], options);
+            if (value > bestValue || (value == bestValue && best is not null && starters[i].Id < best.Id))
+            {
+                best = starters[i];
+                bestValue = value;
+            }
+        }
+
+        return best;
     }
 
     // ------------------------------------------------------------------ 5. mercado

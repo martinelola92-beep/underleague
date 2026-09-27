@@ -508,5 +508,14 @@
     "FOUL": "when fouled",
     "INJURY": "when injured",
     "DRIBBLE_ATTEMPTED": "when taken on"
+  },
+  "training": {
+    "_doc": "ADR 0160: name and effect line of each training card session. Text generated from the data (RT-035), not hand-written per session.",
+    "scrimmage": "Scrimmage",
+    "scrimmageEffect": "{0} experience for the whole available squad",
+    "specialization": "Specialization: {0}",
+    "specializationEffect": "+{0} {1}, permanent",
+    "reposition": "Reposition",
+    "repositionEffect": "moves to another outfield position; loses {0} level"
   }
 }

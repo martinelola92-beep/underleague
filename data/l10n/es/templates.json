@@ -508,5 +508,14 @@
     "FOUL": "cuando le hacen falta",
     "INJURY": "cuando le lesionan",
     "DRIBBLE_ATTEMPTED": "cuando intentan regatearle"
+  },
+  "training": {
+    "_doc": "ADR 0160: nombre y línea de efecto de cada sesión de la carta de entrenamiento. Texto generado desde el dato (RT-035), no escrito a mano por sesión.",
+    "scrimmage": "Pachanga",
+    "scrimmageEffect": "{0} de experiencia para toda la plantilla disponible",
+    "specialization": "Especialización: {0}",
+    "specializationEffect": "+{0} de {1}, permanente",
+    "reposition": "Cambio de puesto",
+    "repositionEffect": "pasa a otra posición de campo; pierde {0} nivel"
   }
 }
