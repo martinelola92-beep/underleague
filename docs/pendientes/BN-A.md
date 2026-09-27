@@ -41,16 +41,37 @@ ruido; entradas −0,22 / −0,54. Test permanente `KeeperAreaTests`. Captura `a
 La captura del saque de puerta enseña a la defensa **en el borde del área**, en fila, con el delantero
 rival encima: 2,5 compañeros y 1,0 rivales por saque a menos de 0,6 casillas del borde.
 
-- **REJECTED** (bajo el motor de 27 sep 2026): que sea porque, sin dueño del balón, el equipo que saca «no
-  tiene la posesión» (`HoldingTeam = -1`) y no puede buscar hueco. Darle la posesión durante el saque de
-  puerta deja el borde igual (2,52 frente a 2,57) y no mueve ninguna métrica.
+- **REJECTED bajo el motor sin la posesión táctica** (27 sep 2026): que sea porque, sin dueño del balón,
+  el equipo que saca «no tiene la posesión» (`HoldingTeam = -1`). Darle sólo esa posesión deja el borde
+  igual (2,52 frente a 2,57). Pero el motor tiene **dos** ideas de posesión y la táctica (`TacticalStates`:
+  pesos y bloque) seguía en «sin balón»; la hipótesis queda abierta para la versión que cambia las dos.
 - **LIKELY, sin experimento propio**: es la **posición de formación** de los defensas —en un campo de 16
-  columnas su casilla está a 2-3 columnas de la portería— más el delantero rival que los cubre. No es
-  gente persiguiendo al portero; si molesta, es una decisión de colocación en el saque de puerta.
-- **Medido y NO aplicado**: dar la posesión al equipo que saca en **todas** las reanudaciones cambia el
-  carácter de córners, bandas y faltas en las dos semillas: +0,3 centros, +0,5 pases en profundidad, +2
-  puntos de tiros desde la línea de fondo, algo menos de tiros. Es la regla correcta en concepto (una
-  reanudación es del que la saca), pero cambia el juego y lo decide el revisor.
+  columnas su casilla está a 2-3 columnas de la portería— más el delantero rival que los cubre.
+
+### «La reanudación es del que la saca»: aprobada por el revisor, implementada, y PARADA por su coste
+
+El revisor la aprobó («2 sí»). La versión completa —las dos posesiones leen de `RestartHolder`, penalti y
+saque de centro fuera— hace lo que promete: el equipo que saca se prepara para recibir en banda 91,6 %,
+puerta 96,6 %, falta 97,2 % y córner 100 % (sin la regla, 0-6 %). Pero medida en **cuatro semillas**
+(4.000 partidos cada una, contra `816619e`) **baja la carnicería**:
+
+| semilla | goles | lesiones por partido | entradas |
+|---|---|---|---|
+| 1 | +0,12 ± 0,03 | 0,80 → 0,69 (−14 %) | 9,0 → 7,9 |
+| 2 | −0,06 ± 0,02 | 0,41 → 0,40 (−4 %) | 9,8 → 9,3 |
+| 3 | +0,15 ± 0,02 | 0,55 → 0,45 (−18 %) | 10,6 → 9,0 |
+| 4 | +0,10 ± 0,02 | 0,90 → 0,76 (−16 %) | 10,6 → 8,6 |
+
+- **REJECTED** como causa de la bajada: que la transición (12 ticks de empuje del que pierde el balón) se
+  gastara durante el balón parado; congelarla deja las lesiones casi igual (−11 / −6 / −15 / −17 %).
+- La causa sigue sin aislar. Como las lesiones son el recurso central, **no se commitea** hasta que el
+  revisor decida con este dato. La implementación está guardada (parche de la sesión del 27 sep).
+- La primera versión (sólo `HoldingTeam`) apenas movía el saque de puerta y el de banda; la segunda incluía
+  sin decirlo el saque de centro, que explicaba más de la mitad de la subida de goles de una semilla.
+  Las dos las cazó la revisión independiente.
+- De paso salieron dos defectos anteriores, arreglados aparte: el penalti pitado a mitad de tick no vaciaba
+  el área ese tick, y un rival en una esquina del campo dentro de la barrera no puede salir sin cruzar por
+  delante del balón (límite geométrico documentado; el test lo exime sólo a él).
 
 ## El efecto de segundo orden, y lo que decidió el revisor
 

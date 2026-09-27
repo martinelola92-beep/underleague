@@ -35,6 +35,13 @@ casillas se pinta a la altura de las vallas.
   contra, ofensivo +14 % a favor. **Pendiente del revisor**: pasar a defensivo con ventaja en el último
   tercio no se nota (91,5 % → 90,7 % de ventajas mantenidas); para que proteja un resultado tiene que
   recortar mucho más los goles en contra.
+- **[ADR 0156](decisiones/0156-la-orden-tactica-tambien-mueve-el-exito.md)**: la orden también mueve el
+  éxito (ofensivo +30 tiro/regate −20 entrada/intercepción/parada; defensivo al revés). Defensivo −24 % en
+  contra, ofensivo +30 % a favor; ofensivo domina contra la IA neutra (55,8 % / 46,9 %), anotado.
+- **Pendiente del revisor — «la reanudación es del que la saca»** ([BN-A](pendientes/BN-A.md)): aprobada,
+  implementada completa y **no commiteada** porque baja las lesiones un 13 % (cuatro semillas); la causa
+  sigue sin aislar. Parche guardado fuera del repo en la sesión del 27 sep: si se aprueba, hay que rehacerlo
+  desde BN-A (`RestartHolder` para las dos posesiones, penalti y saque de centro fuera).
 - **Barra de fatiga** en cada ficha de la retransmisión: la traza graba la energía (ADR 0142) en
   porcentaje (`MatchTrace.EnergyPercentAt`); verde > 50, oro > 25, sangre por debajo.
 - **[BP-A](pendientes/BP-A.md)**: fuera de juego como colocación, medido y rechazado (goles −31/−40 %).

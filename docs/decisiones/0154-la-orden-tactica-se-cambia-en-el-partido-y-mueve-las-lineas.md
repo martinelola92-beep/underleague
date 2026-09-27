@@ -97,3 +97,27 @@ hacia ellas; el bloque táctico en cambio se interpola); el desplazamiento no se
 defensas el +3 lo recorta el techo del bloque (`CapToDefensiveLine`) salvo con el balón por delante; los
 textos de la botonera sólo en español, como el resto de la retransmisión.
 
+## Segunda ronda: que el defensivo proteja un resultado (27 sep 2026, encargo del revisor)
+
+Tres palancas probadas, medidas sobre el caso real —3.000 partidos, pasar a defensivo en el tick 1.100 si
+se va ganando (936 casos)— y sobre el partido entero en defensivo (1.200):
+
+| palanca | goles en contra, partido entero | ventaja mantenida (neutro 91,7 %) |
+|---|---|---|
+| bajar líneas (−1/−2/−3, la vigente) | −13 % | 91,0 % |
+| bajar más (−2/−3/−4) | −17 % | 91,4 % |
+| más entradas y bloqueos (multiplicadores) | 0 % | — |
+| el portero pierde tiempo: retiene el balón 5 s en su área | **+20 %** | **89,4 %** |
+| ídem, 10 s | ≈ 0 % | 90,8 % |
+
+**Ninguna protege un resultado de forma medible, y una lo empeora**: mientras el portero espera, el rival
+se planta en el borde del área (cerrada, ADR 0152) y la salida se pierde cerca de la portería (LIKELY, sin
+aislar). Revertida. **La primera versión de esa palanca no se activaba nunca** (los tres valores daban el
+mismo resultado al decimal): el portero decide el pase en el mismo tick en que coge el balón y el freno
+estaba después; se movió a `Decide` antes de medir de verdad (regla J).
+
+**Límite estructural**: una ventaja en el último tercio ya se conserva el 92 % de las veces porque en un
+tercio entra poco más de medio gol; hasta un defensivo que quitara un 30 % de los goles en contra subiría
+eso 2-3 puntos. Que la orden «se note» al defender un resultado pide un recorte mucho mayor, y ninguna
+palanca de colocación lo da. **Decisión del revisor.**
+
