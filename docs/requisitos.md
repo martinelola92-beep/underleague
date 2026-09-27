@@ -28,7 +28,7 @@
 
 ## 1. Resumen del producto
 
-Roguelite de gestión y autobatalla en el que el jugador dirige un equipo de fútbol 7 formado por criaturas fantásticas. Los partidos se resuelven solos en 60-90 segundos sobre un campo compacto en cuadrícula. Toda la decisión ocurre entre partidos: colocación, perks, equipamiento, fichajes, tratamiento de lesionados y preparación de consumibles.
+Roguelite de gestión y autobatalla en el que el jugador dirige un equipo de fútbol 7 formado por criaturas fantásticas. Los partidos se resuelven solos en 60-90 segundos sobre un campo compacto en cuadrícula. Casi toda la decisión ocurre entre partidos: colocación, perks, equipamiento, fichajes, tratamiento de lesionados y preparación de consumibles. *(Durante el partido: las sustituciones forzadas —ADR 0094—, el consumible manual —RF-082— y, desde la **ADR 0154**, la orden táctica Defensa / Neutro / Ataque.)*
 
 La identidad del juego no es el fútbol, es la **carnicería administrada**: los jugadores se lesionan, mueren, se sustituyen por prótesis y desarrollan vínculos entre ellos. El desgaste de la plantilla es el recurso central de la partida.
 
