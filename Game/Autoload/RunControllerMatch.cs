@@ -226,6 +226,12 @@ public partial class RunController
             ? null
             : EventView.Build(State, Catalog, Systems.Events, Systems.Items, Systems.Consumables, Data.GameData.Language);
 
+    /// <summary>La carta del nodo de entrenamiento abierto (ADR 0160), o null si no hay ninguno.</summary>
+    public TrainingScreenView? Training() =>
+        State is null || Catalog is null || Systems is null
+            ? null
+            : TrainingView.Build(State, Catalog, Systems.Economy, Data.GameData.Language);
+
     public MarketScreenView? Market() =>
         State is null || Catalog is null || Systems is null
             ? null

@@ -89,6 +89,12 @@ public partial class MapScreen : Control
             return;
         }
 
+        if (Tour.Training)
+        {
+            TourOpenTraining();
+            return;
+        }
+
         if (Tour.Active)
         {
             Tour.Step(this, "mapa", TourPickMatch);
@@ -406,16 +412,9 @@ public partial class MapScreen : Control
             return;
         }
 
-        // El entrenamiento se resuelve solo al entrar (no pide decisiones), así que se enseña antes de
-        // entrar: si no, el jugador vería el nodo pasar sin enterarse de qué le ha dado. El evento NO: desde
-        // la ADR 0100 es una carta que se elige con el nodo abierto, y sin abrirlo no hay carta que enseñar
-        // (BQ-A). Abrirlo no resuelve nada; se entra como en la clínica.
-        if (node.Kind is NodeKind.Training)
-        {
-            Nav.Go(this, Nav.Node);
-            return;
-        }
-
+        // Mercado, clínica, evento (ADR 0100) y entrenamiento (ADR 0160) se abren igual: entrar no
+        // resuelve nada, deja el nodo pendiente con su carta u opciones esperando la elección. Ninguno se
+        // enseña "antes" de entrar, porque sin abrirlo no hay nada que enseñar (BQ-A).
         _run.Enter(nodeId);
         Nav.Route(this);
     }
@@ -475,6 +474,37 @@ public partial class MapScreen : Control
             foreach (int next in node.Next)
             {
                 if (map.Get(next).Kind == NodeKind.Event)
+                {
+                    _run.JumpToNode(node.Id);
+                    Nav.Go(this, Nav.Map);
+                    return;
+                }
+            }
+        }
+    }
+
+    /// <summary>
+    /// Recorrido <c>--tour-training</c> (ADR 0160): mismo patrón que <see cref="TourOpenEvent"/> pero
+    /// para un nodo de entrenamiento — se planta desde donde se alcanza uno y lo pulsa por el mismo
+    /// camino que el jugador (<see cref="OnNodePressed"/>).
+    /// </summary>
+    private void TourOpenTraining()
+    {
+        foreach (var node in _run.Available())
+        {
+            if (node.Kind == NodeKind.Training)
+            {
+                OnNodePressed(node.Id);
+                return;
+            }
+        }
+
+        var map = _run.State!.CurrentMap;
+        foreach (var node in map.Nodes)
+        {
+            foreach (int next in node.Next)
+            {
+                if (map.Get(next).Kind == NodeKind.Training)
                 {
                     _run.JumpToNode(node.Id);
                     Nav.Go(this, Nav.Map);

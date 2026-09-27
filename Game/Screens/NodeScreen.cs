@@ -13,23 +13,38 @@ namespace Underleague.Game.Screens;
 /// Los cuatro se parecen tanto que compartir pantalla es lo honesto: cada uno dice <b>qué cuesta</b>,
 /// <b>qué hace</b> y pide confirmación, y ninguno esconde el efecto detrás de una pulsación.
 /// <para>
-/// Hay dos formas de nodo y las dos pasan por aquí. La clínica y la inscripción se <b>abren</b> y esperan
-/// decisiones (<c>TreatPlayer</c>, <c>ExpandRoster</c>) hasta que el jugador sale con <c>LeaveNode</c>. El
-/// entrenamiento y el evento se resuelven solos al entrar, así que esta pantalla los enseña <b>antes</b>
-/// de entrar —para que el jugador vea lo que va a pasar— y enseña después lo que ha pasado.
+/// Los cuatro se <b>abren</b> y esperan una decisión (<c>TreatPlayer</c>, <c>ExpandRoster</c>,
+/// <c>ChooseEventOption</c>, <c>ChooseTrainingSession</c>) hasta que el jugador sale con
+/// <c>LeaveNode</c>: entrar no resuelve nada por sí solo. El entrenamiento se resolvía solo hasta la
+/// ADR 0160; el evento, hasta la ADR 0100.
 /// </para>
 /// <para>Los costes y los efectos salen de <c>data/economy</c> a través de
 /// <c>RunController.Systems.Economy</c>; la pantalla no conoce ni un número del juego (RT-014).</para>
 /// </summary>
 public partial class NodeScreen : Control
 {
+    private static readonly Sim.Model.Position[] FieldPositions =
+        { Sim.Model.Position.Defender, Sim.Model.Position.Midfielder, Sim.Model.Position.Forward };
+
     private RunController _run = null!;
     private MapNode _node = null!;
-    private bool _entered;
     private string _message = string.Empty;
-    /// <summary>Opción de evento pendiente de señalar a quién (ADR 0100); −1 si no hay ninguna.</summary>
+
+    /// <summary>Opción de evento pendiente de señalar (ADR 0100); −1 si no hay ninguna.</summary>
     private int _eventOption = -1;
-    private RunState? _before;
+
+    /// <summary>Primer señalado de la opción de evento en curso (ADR 0159); −1 si aún no se ha elegido.</summary>
+    private int _eventTarget = -1;
+
+    private string _eventTargetName = string.Empty;
+
+    /// <summary>Sesión de entrenamiento pendiente de señalar (ADR 0160); −1 si no hay ninguna.</summary>
+    private int _trainSession = -1;
+
+    /// <summary>Señalado de la sesión de entrenamiento en curso; −1 si aún no se ha elegido.</summary>
+    private int _trainTarget = -1;
+
+    private string _trainTargetName = string.Empty;
 
     public override void _Ready()
     {
@@ -46,12 +61,10 @@ public partial class NodeScreen : Control
         if (state.Phase == RunPhase.NodeOpen && state.PendingNodeId >= 0)
         {
             _node = state.GetNode(state.PendingNodeId);
-            _entered = true;
         }
         else if (run.SelectedNodeId >= 0)
         {
             _node = state.GetNode(run.SelectedNodeId);
-            _entered = false;
         }
         else
         {
@@ -64,6 +77,11 @@ public partial class NodeScreen : Control
         if (Tour.Event)
         {
             Tour.Step(this, "evento", null);
+        }
+
+        if (Tour.Training)
+        {
+            Tour.Step(this, "entrenamiento", null);
         }
     }
 
@@ -84,13 +102,13 @@ public partial class NodeScreen : Control
         Widgets.Panel(this, new Rect2(12f, 52f, 1256f, 690f));
 
         float y = 72f;
-        Widgets.Body(this, Description(economy, state), new Vector2(28f, y), 1220f, Style.TextDim);
+        Widgets.Body(this, Description(economy), new Vector2(28f, y), 1220f, Style.TextDim);
         y += 40f;
 
         y = _node.Kind switch
         {
             NodeKind.Clinic => BuildClinic(state, economy, y),
-            NodeKind.Training => BuildSelfResolving(UiText.Get("ui.node.train"), y),
+            NodeKind.Training => BuildTraining(y),
             NodeKind.Event => BuildEvent(y),
             _ => y,
         };
@@ -114,10 +132,10 @@ public partial class NodeScreen : Control
         _ => _run.Event()?.Title ?? UiText.Get("ui.node.eventTitle"),
     };
 
-    private string Description(Sim.Run.Systems.Economy.EconomyConfig economy, RunState state) => _node.Kind switch
+    private string Description(Sim.Run.Systems.Economy.EconomyConfig economy) => _node.Kind switch
     {
         NodeKind.Clinic => UiText.Get("ui.node.clinicBody", economy.ClinicCost),
-        NodeKind.Training => UiText.Get("ui.node.trainBody", economy.TrainingExperience, RunRules.YouthExperienceBonusPercent),
+        NodeKind.Training => UiText.Get("ui.node.trainBody"),
         _ => UiText.Get("ui.node.eventBody"),
     };
 
@@ -197,9 +215,11 @@ public partial class NodeScreen : Control
     }
 
     /// <summary>
-    /// Evento (ADR 0100): la carta con sus opciones, cada una con su línea de efecto compuesta y su coste
-    /// delante. Las que piden un cuerpo abren la lista de disponibles: el jugador señala a quién, nunca el
-    /// juego por él (RF-012d).
+    /// Evento (ADR 0100, segundo objetivo desde la ADR 0159): la carta con sus opciones, cada una con su
+    /// línea de efecto compuesta y su coste delante. Las que piden un cuerpo abren la lista de
+    /// disponibles; las que piden dos (el sacrificio y cualquier opción que reparta premio y daño) piden
+    /// el segundo después del primero, excluyéndolo de la lista. El jugador señala siempre a quién, nunca
+    /// el juego por él (RF-012d).
     /// </summary>
     private float BuildEvent(float y)
     {
@@ -221,7 +241,7 @@ public partial class NodeScreen : Control
                 this,
                 UiText.Get("ui.node.eventOption", option.Name, option.Effect),
                 new Rect2(28f, y, 760f, 28f),
-                option.Affordable && (!option.NeedsTarget || option.Targets.Count > 0));
+                option.Affordable);
             int index = option.Index;
             bool needsTarget = option.NeedsTarget;
             string name = option.Name;
@@ -234,6 +254,7 @@ public partial class NodeScreen : Control
                 }
 
                 _eventOption = index;
+                _eventTarget = -1;
                 _message = UiText.Get("ui.node.eventPickTarget");
                 Rebuild();
             };
@@ -245,22 +266,64 @@ public partial class NodeScreen : Control
             return y;
         }
 
-        // El paso de señalar: la lista de disponibles, uno por botón.
+        var chosen = view.Options[_eventOption];
         y += 6f;
-        var targets = view.Options[_eventOption].Targets;
-        foreach (var target in targets)
+
+        if (_eventTarget < 0)
         {
+            // Paso del primer señalado.
+            foreach (var target in chosen.Targets)
+            {
+                var pick = Widgets.Button(
+                    this,
+                    UiText.Get("ui.node.eventTarget", target.Name, target.Detail),
+                    new Rect2(60f, y, 520f, 26f));
+                int index = _eventOption;
+                bool needsSecond = chosen.NeedsSecondTarget;
+                int playerId = target.PlayerId;
+                string who = target.Name;
+                pick.Pressed += () =>
+                {
+                    if (!needsSecond)
+                    {
+                        _eventOption = -1;
+                        Decide(new ChooseEventOption(index, playerId), UiText.Get("ui.node.eventChosenOn", who));
+                        return;
+                    }
+
+                    _eventTarget = playerId;
+                    _eventTargetName = who;
+                    _message = UiText.Get("ui.node.eventPickSecondTarget");
+                    Rebuild();
+                };
+                y += 30f;
+            }
+
+            return y;
+        }
+
+        // Paso del segundo señalado (ADR 0159): la misma lista, sin el ya elegido.
+        foreach (var target in chosen.SecondTargets)
+        {
+            if (target.PlayerId == _eventTarget)
+            {
+                continue;
+            }
+
             var pick = Widgets.Button(
                 this,
                 UiText.Get("ui.node.eventTarget", target.Name, target.Detail),
                 new Rect2(60f, y, 520f, 26f));
-            int option = _eventOption;
-            int playerId = target.PlayerId;
-            string who = target.Name;
+            int index = _eventOption;
+            int firstId = _eventTarget;
+            string firstName = _eventTargetName;
+            int secondId = target.PlayerId;
+            string secondName = target.Name;
             pick.Pressed += () =>
             {
                 _eventOption = -1;
-                Decide(new ChooseEventOption(option, playerId), UiText.Get("ui.node.eventChosenOn", who));
+                _eventTarget = -1;
+                Decide(new ChooseEventOption(index, firstId, secondId), UiText.Get("ui.node.eventChosenOnTwo", firstName, secondName));
             };
             y += 30f;
         }
@@ -268,50 +331,104 @@ public partial class NodeScreen : Control
         return y;
     }
 
-    /// <summary>Entrenamiento y evento: un botón que entra en el nodo, y después el resultado.</summary>
-    private float BuildSelfResolving(string text, float y)
+    /// <summary>
+    /// Entrenamiento (ADR 0160): tres sesiones con su línea de efecto compuesta. La pachanga se elige de
+    /// un botón; la especialización pide a quién; el cambio de puesto pide a quién y después el puesto de
+    /// destino, nunca portero en ninguna dirección (ADR 0080).
+    /// </summary>
+    private float BuildTraining(float y)
     {
-        if (_entered)
+        var view = _run.Training();
+        if (view is null)
+        {
+            Widgets.Body(this, UiText.Get("ui.node.trainNone"), new Vector2(28f, y), 1220f, Style.TextDim);
+            return y + 30f;
+        }
+
+        foreach (var session in view.Sessions)
+        {
+            var button = Widgets.Button(
+                this,
+                UiText.Get("ui.node.trainOption", session.Name, session.Effect),
+                new Rect2(28f, y, 760f, 28f),
+                !session.NeedsTarget || session.Targets.Count > 0);
+            int index = session.Index;
+            bool needsTarget = session.NeedsTarget;
+            string name = session.Name;
+            button.Pressed += () =>
+            {
+                if (!needsTarget)
+                {
+                    Decide(new ChooseTrainingSession(index), UiText.Get("ui.node.trainChosen", name));
+                    return;
+                }
+
+                _trainSession = index;
+                _trainTarget = -1;
+                _message = UiText.Get("ui.node.trainPickTarget");
+                Rebuild();
+            };
+            y += 34f;
+        }
+
+        if (_trainSession < 0)
         {
             return y;
         }
 
-        var button = Widgets.Button(this, text, new Rect2(28f, y, 240f, 28f));
-        button.Pressed += Resolve;
-        return y + 34f;
-    }
+        var chosen = view.Sessions[_trainSession];
+        y += 6f;
 
-    /// <summary>
-    /// Entra en el nodo y cuenta lo que ha pasado. El "antes" se guarda para poder decirlo: el estado es
-    /// inmutable, así que basta con quedarse con la referencia anterior.
-    /// </summary>
-    private void Resolve()
-    {
-        _before = _run.State;
-        _run.Enter(_node.Id);
-        _entered = true;
-
-        // Solo el entrenamiento se resuelve solo desde la ADR 0100; el evento pide elegir.
-        var after = _run.State!;
-        _message = UiText.Get("ui.node.trained", after.AvailablePlayerCount, LevelUps(_before!, after));
-
-        Rebuild();
-    }
-
-    private static int LevelUps(RunState before, RunState after)
-    {
-        int count = 0;
-        for (int i = 0; i < after.Roster.Count; i++)
+        if (_trainTarget < 0)
         {
-            var player = after.Roster[i];
-            var previous = before.FindPlayer(player.Id);
-            if (previous is not null && player.Level > previous.Level)
+            foreach (var target in chosen.Targets)
             {
-                count++;
+                var pick = Widgets.Button(
+                    this,
+                    UiText.Get("ui.node.trainTarget", target.Name, target.Detail),
+                    new Rect2(60f, y, 520f, 26f));
+                int index = _trainSession;
+                bool needsPosition = chosen.NeedsPosition;
+                int playerId = target.PlayerId;
+                string who = target.Name;
+                pick.Pressed += () =>
+                {
+                    if (!needsPosition)
+                    {
+                        _trainSession = -1;
+                        Decide(new ChooseTrainingSession(index, playerId), UiText.Get("ui.node.trainChosenOn", who));
+                        return;
+                    }
+
+                    _trainTarget = playerId;
+                    _trainTargetName = who;
+                    _message = UiText.Get("ui.node.trainPickPosition");
+                    Rebuild();
+                };
+                y += 30f;
             }
+
+            return y;
         }
 
-        return count;
+        // Paso del puesto de destino (solo cambio de puesto): nunca portero (ADR 0080).
+        foreach (var position in FieldPositions)
+        {
+            var pick = Widgets.Button(this, UiText.Get("ui.pos." + position), new Rect2(60f, y, 120f, 26f));
+            int index = _trainSession;
+            int playerId = _trainTarget;
+            string who = _trainTargetName;
+            var destination = position;
+            pick.Pressed += () =>
+            {
+                _trainSession = -1;
+                _trainTarget = -1;
+                Decide(new ChooseTrainingSession(index, playerId, destination), UiText.Get("ui.node.trainChosenOn", who));
+            };
+            y += 30f;
+        }
+
+        return y;
     }
 
     private void Decide(RunDecision decision, string message)
