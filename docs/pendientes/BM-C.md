@@ -22,6 +22,15 @@ Leído en el código y en `data/sim/tuning.json` (26 sep):
    doble con las dos activaciones del partido. *(Cálculo sobre los datos, no medida.)* Es **consistente**
    con que en BL-A apagar el sesgo no moviera el valor (celda «sin sesgo»): **LIKELY** que H1 no tenga
    efecto porque su magnitud es de décimas de punto, no por un fallo del instrumento.
+
+   **Nota (27 sep 2026, ADR 0158, revisión independiente)**: esta premisa cambia de cifras, no de
+   conclusión. `biasShiftInjuryExtra` subió de 2 a 4 (calibrado por saturación sobre `TestMatches.Brutal`,
+   no por este perk), así que el cálculo de arriba se duplica aproximadamente: **~+0,48 pp de falta y
+   ~+0,40 pp de tarjeta** por activación. Sigue siendo de décimas de punto — la conclusión LIKELY de este
+   documento no cambia—, pero cualquier remedición de `ankle_bite` tiene que partir de la cifra nueva, no
+   de la de 26 sep. `ProvokeInjury` sigue llamando a `ResolveInjury` con `isFoul: true` siempre (la nueva
+   condición "solo las acciones sucias mueven el criterio", ADR 0158 §5, no lo afecta: una lesión de perk
+   ya se trataba, y se sigue tratando, como falta a efectos del criterio).
 3. **El rencor dura 10 s** (`GrudgeTicks = 150`) y sólo lo toman los compañeros de la víctima que lo vieron
    de cerca (`RaiseGrudgeAgainst`, radio de testigo). Cuánto le cuesta al portador **no está medido**: no
    hay censo de entradas ni lesiones recibidas por el que lesiona.

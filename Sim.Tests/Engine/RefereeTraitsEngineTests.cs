@@ -100,8 +100,84 @@ public sealed class RefereeTraitsEngineTests
     }
 
     /// <summary>
-    /// Cobarde tampoco expulsa por doble amarilla: se queda en amarilla (ADR 0158 §2). Se comprueba que
-    /// nadie del equipo termina con <c>SentOff</c> pese a acumular dos o más amarillas.
+    /// Cuenta, por actor, cuántas amarillas ya llevaba en el momento de cada roja de la secuencia. Un
+    /// jugador con 2 o más amarillas previas en su primera roja es, por construcción del motor
+    /// (<c>MatchEngine.ResolveFoul</c>: <c>SendOff</c> por segunda amarilla se llama en el mismo tramo que
+    /// registra la amarilla), una roja por doble amarilla y no una directa.
+    /// </summary>
+    private static IEnumerable<(int Actor, int PriorYellows)> RedsWithPriorYellowCount(IReadOnlyList<MatchEvent> events)
+    {
+        var yellowsByActor = new Dictionary<int, int>();
+        foreach (var e in events)
+        {
+            if (e.Type != EventType.Card || e.Detail.EndsWith(":cancelled", StringComparison.Ordinal))
+            {
+                continue;
+            }
+
+            if (e.Detail == "yellow")
+            {
+                yellowsByActor[e.Actor] = yellowsByActor.GetValueOrDefault(e.Actor) + 1;
+            }
+            else if (e.Detail == "red")
+            {
+                yield return (e.Actor, yellowsByActor.GetValueOrDefault(e.Actor));
+            }
+        }
+    }
+
+    /// <summary>Mayor número de amarillas que acumuló un mismo actor en la secuencia (0 si no hubo ninguna).</summary>
+    private static int MaxYellowsForAnyActor(IReadOnlyList<MatchEvent> events)
+    {
+        var yellowsByActor = new Dictionary<int, int>();
+        int max = 0;
+        foreach (var e in events)
+        {
+            if (e.Type != EventType.Card || e.Detail != "yellow" || e.Detail.EndsWith(":cancelled", StringComparison.Ordinal))
+            {
+                continue;
+            }
+
+            int count = yellowsByActor.GetValueOrDefault(e.Actor) + 1;
+            yellowsByActor[e.Actor] = count;
+            max = Math.Max(max, count);
+        }
+
+        return max;
+    }
+
+    /// <summary>
+    /// Precondición (Regla J, punto 8 de la revisión independiente): antes de afirmar que el cobarde
+    /// suprime la roja por doble amarilla, hay que demostrar que el propio emparejamiento con árbitro
+    /// NEUTRO produce esa roja de verdad -si nunca ocurriera, "el cobarde nunca la saca" no demostraría
+    /// nada del rasgo-. La doble amarilla es un suceso raro incluso en el emparejamiento brutal (medido:
+    /// las primeras apariciones caen hacia la semilla 90-200, no en las 1-30 que usaba la versión anterior
+    /// de este test -el hueco de instrumento que señaló la revisión-).
+    /// </summary>
+    [Fact]
+    public void ANeutralRefereeDoesSendOffOnASecondYellow_Precondition()
+    {
+        var brutal = TestMatches.Brutal(Catalog);
+        var neutral = brutal with { Referee = brutal.Referee with { Trait = RefereeTrait.Neutral } };
+
+        bool found = false;
+        for (ulong seed = 1; seed <= 250 && !found; seed++)
+        {
+            var result = Simulator.Run(neutral, seed, Catalog, new SimConfig(CollectLog: false));
+            found = RedsWithPriorYellowCount(result.Events).Any(r => r.PriorYellows >= 2);
+        }
+
+        Assert.True(found, "ninguna de las primeras 250 semillas del emparejamiento brutal con árbitro neutro produjo una roja por doble amarilla: el escenario no sirve para medir el rasgo cobarde (Regla J)");
+    }
+
+    /// <summary>
+    /// Cobarde tampoco expulsa por doble amarilla: se queda en amarilla (ADR 0158 §2). No se compara la
+    /// MISMA semilla entre neutro y cobarde -el rasgo cobarde salta directamente el dado de la roja
+    /// (<c>ResolveFoul</c>, <c>allowsRed</c>), así que el consumo de RNG diverge desde la primera falta
+    /// dura y el resto del partido deja de parecerse; es la misma trampa que ya documentó
+    /// <c>AHomerRefereeShiftsMoreAgainstThePlayerThanANeutralOne</c>-. En su lugar se mide DENTRO de los
+    /// propios partidos de cobarde: en 250 semillas tiene que haber algún jugador que llegue a 2+
+    /// amarillas (la precondición es alcanzable también con este rasgo) y ninguna roja en absoluto.
     /// </summary>
     [Fact]
     public void ACowardlyRefereeNeverSendsOffOnASecondYellowEither()
@@ -109,13 +185,23 @@ public sealed class RefereeTraitsEngineTests
         var brutal = TestMatches.Brutal(Catalog);
         var cowardly = brutal with { Referee = brutal.Referee with { Trait = RefereeTrait.Cowardly } };
 
-        for (ulong seed = 1; seed <= 30; seed++)
+        int matchesReachingASecondYellow = 0;
+        for (ulong seed = 1; seed <= 250; seed++)
         {
             var result = Simulator.Run(cowardly, seed, Catalog, new SimConfig(CollectLog: false));
             Assert.DoesNotContain(
                 result.Events,
                 e => e.Type == EventType.Card && e.Detail.StartsWith("red", StringComparison.Ordinal));
+
+            if (MaxYellowsForAnyActor(result.Events) >= 2)
+            {
+                matchesReachingASecondYellow++;
+            }
         }
+
+        Assert.True(
+            matchesReachingASecondYellow > 0,
+            "con árbitro cobarde, ningún jugador llegó nunca a una segunda amarilla en 250 semillas: el test no demuestra que el freno actúe sobre ese caso (Regla J)");
     }
 
     /// <summary>

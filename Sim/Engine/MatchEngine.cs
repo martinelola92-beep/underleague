@@ -4016,12 +4016,17 @@ internal sealed class MatchEngine : IPerkWorld
     /// </summary>
     private void ShiftBiasAgainst(int team, int points)
     {
-        if (points <= 0 || team < 0)
+        // ADR 0158 §4, revisión independiente, RF-055d: LA TURBA ES EL ÚNICO TRAMO SIN ÁRBITRO. Sin
+        // árbitro no hay criterio que desplazar, así que ni el bias del partido ni la memoria entre
+        // partidos (MatchResolution.ApplyRefereeMemory, que lee BiasShiftedAgainst) se enteran de lo que
+        // pasa en el gol de oro.
+        if (IsMob || points <= 0 || team < 0)
         {
             return;
         }
 
         int scaled = ScaledBiasShift(team, points);
+        _report.BiasShiftedAgainst[team] += scaled;
         _bias = Math.Clamp(_bias + (team == 0 ? -scaled : scaled), -100, 100);
     }
 
@@ -4306,10 +4311,10 @@ internal sealed class MatchEngine : IPerkWorld
         }
         else
         {
-            // Falta que el árbitro no ve, que es la razón de ser de RF-063: el criterio se mueve igual.
-            ShiftBiasAgainst(
-                blocker.Team,
-                _tuning.Referee.BiasShiftFoulUnseen + _tuning.Referee.BiasShiftBlockExtra);
+            // ADR 0158 §5, revisión independiente: sin falta no hay acción sucia (RF-063), así que un
+            // bloqueo limpio -isFoul false, "isWin" aparte decide si tumba a alguien- no desplaza el
+            // criterio. Antes movía el criterio como si fuera una falta no vista, que es justo lo que NO
+            // es: aquí no hubo falta en absoluto, ni vista ni no vista.
             blocker.EnterState(PlayerState.Positioning, 0);
         }
 
@@ -4629,9 +4634,14 @@ internal sealed class MatchEngine : IPerkWorld
             tackler.InjuriesCaused++;
         }
 
-        // Lesionar a un rival mueve el criterio en contra aunque no haya habido falta (RF-063): es la
-        // acción sucia más visible que existe y el árbitro toma nota igual.
-        ShiftBiasAgainst(tackler.Team, _tuning.Referee.BiasShiftInjuryExtra);
+        // ADR 0158 §5, revisión independiente: RF-063 mueve el criterio por ACCIONES SUCIAS, no por
+        // cualquier lesión. Una entrada limpia que lesiona (mala suerte, no falta) no es una acción sucia
+        // y no puede mover el criterio; isFoul es exactamente la falta de esa misma disputa (señalada o
+        // no, ResolveTackle/ResolveBlock ya lo calcularon antes de tirar la lesión).
+        if (isFoul)
+        {
+            ShiftBiasAgainst(tackler.Team, _tuning.Referee.BiasShiftInjuryExtra);
+        }
 
         // El balón se suelta aunque el lesionado se quede (ADR 0134 E, deliberado): el golpe corta la
         // jugada y el balón queda donde estaba, y como el jugador sigue en esa casilla es el mejor

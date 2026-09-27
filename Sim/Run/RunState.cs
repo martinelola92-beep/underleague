@@ -75,11 +75,16 @@ public sealed record RunReferee(int Id, string Name, RefereeTrait Trait, int Bri
     public string DefinitionId { get; init; } = string.Empty;
 
     /// <summary>
-    /// Memoria del árbitro contra el jugador (ADR 0158, RF-061): -40..40, positivo a favor del jugador.
-    /// Al terminar un partido que pitó pasa a ser la mitad de <c>MatchReport.FinalBias</c>, acotada; el
-    /// siguiente partido con este árbitro empieza con este criterio (<see cref="RunSystems.RefereeFor"/>).
+    /// Memoria del árbitro contra el jugador (ADR 0158, RF-061, revisión independiente): acotada a
+    /// <c>tuning.referee.memory.memoryCap</c> (±40 hoy), positivo a favor del jugador. Refleja SOLO la
+    /// conducta propia: al terminar un partido que pitó decae en proporción a lo que el árbitro desplazó
+    /// EN CONTRA del jugador mientras hubo árbitro (<c>MatchReport.BiasShiftedAgainst[0]</c>, nunca lo que
+    /// hizo el rival, ni el −20 de arranque del casero, ni la turba, que no tiene árbitro), y sube un bono
+    /// fijo si el partido terminó limpio. El siguiente partido con este árbitro empieza con esta memoria
+    /// (<see cref="RunSystems.RefereeFor"/>). Se llamó <c>Grudge</c> hasta que ese nombre se reservó para
+    /// la represalia de la ADR 0145.
     /// </summary>
-    public int Grudge { get; init; }
+    public int Memory { get; init; }
 
     /// <summary>
     /// Media banda que no ve si es <see cref="RefereeTrait.OneEyed"/> (ADR 0158); <see cref="RefereeSide.None"/>

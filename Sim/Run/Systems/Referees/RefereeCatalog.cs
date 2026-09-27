@@ -83,12 +83,28 @@ public static class RefereeLoader
             var root = Json.Root(Path, document);
             var referees = new List<RefereeDefinition>();
             var seenIds = new HashSet<string>(StringComparer.Ordinal);
+            // Revisión independiente (ADR 0158): dos árbitros con el mismo nombre en el mismo idioma
+            // serían indistinguibles en el ojeo y el mapa (RF-012b, RF-061), aunque el emparejamiento de
+            // memoria (MatchResolution.ApplyRefereeMemory, RefereeView) ya no dependa del nombre sino del
+            // id -esto es higiene de datos, no una necesidad del código-.
+            var seenNamesEs = new HashSet<string>(StringComparer.Ordinal);
+            var seenNamesEn = new HashSet<string>(StringComparer.Ordinal);
             foreach (var node in root.Prop("referees").EnumerateArray())
             {
                 var referee = Parse(node);
                 if (!seenIds.Add(referee.Id))
                 {
                     throw new DataException(Path, node.Path + ".id", $"id de árbitro repetido: '{referee.Id}'");
+                }
+
+                if (!seenNamesEs.Add(referee.Name.Es))
+                {
+                    throw new DataException(Path, node.Path + ".name.es", $"nombre de árbitro repetido en español: '{referee.Name.Es}'");
+                }
+
+                if (!seenNamesEn.Add(referee.Name.En))
+                {
+                    throw new DataException(Path, node.Path + ".name.en", $"nombre de árbitro repetido en inglés: '{referee.Name.En}'");
                 }
 
                 referees.Add(referee);

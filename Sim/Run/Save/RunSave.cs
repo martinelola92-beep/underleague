@@ -194,7 +194,7 @@ public static class RunSave
             w.WriteString("name", referee.Name);
             w.WriteString("trait", Camel(referee.Trait.ToString()));
             w.WriteNumber("bribesReceived", referee.BribesReceived);
-            w.WriteNumber("grudge", referee.Grudge);
+            w.WriteNumber("memory", referee.Memory);
             w.WriteString("blindSide", Camel(referee.BlindSide.ToString()));
             w.WriteEndObject();
         }
@@ -526,7 +526,7 @@ public static class RunSave
                 Int(element, "bribesReceived", path))
             {
                 DefinitionId = Str(element, "definitionId", path),
-                Grudge = Int(element, "grudge", path),
+                Memory = Int(element, "memory", path),
                 BlindSide = Enum<RefereeSide>(element, "blindSide", path),
             });
         }

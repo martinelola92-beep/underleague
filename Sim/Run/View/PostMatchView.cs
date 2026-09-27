@@ -391,6 +391,19 @@ public static class PostMatchView
     private static RefereeReport Referee(
         MatchPlayback playback, MatchReport report, IReadOnlyList<MatchEvent> events, int ownTeam)
     {
+        // ADR 0158 §4, revisión independiente, RF-055d: la turba no tiene árbitro, así que ninguna falta
+        // posterior a que se vaya (EventType.RefereeLeaves) es "no señalada por él" -no hay "él" que la
+        // señale o no-. Se busca el índice una vez; -1 si el partido no llegó a gol de oro.
+        int refereeLeavesIndex = -1;
+        for (int i = 0; i < events.Count; i++)
+        {
+            if (events[i].Type == EventType.RefereeLeaves)
+            {
+                refereeLeavesIndex = i;
+                break;
+            }
+        }
+
         int foulsFor = 0;
         int foulsAgainst = 0;
         int cardsFor = 0;
@@ -417,7 +430,8 @@ public static class PostMatchView
                     foulsAgainst++;
                 }
 
-                if (string.Equals(matchEvent.Detail, UnseenDetail, StringComparison.Ordinal))
+                bool refereeWasPresent = refereeLeavesIndex < 0 || i < refereeLeavesIndex;
+                if (refereeWasPresent && string.Equals(matchEvent.Detail, UnseenDetail, StringComparison.Ordinal))
                 {
                     if (mine)
                     {

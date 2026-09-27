@@ -607,9 +607,11 @@ public sealed record InjuryTuning(
 
 /// <summary>
 /// tuning.referee.traits.&lt;rasgo&gt; (ADR 0158): cómo modula ese rasgo el criterio de un partido.
-/// <c>WhistlePercent</c> es un porcentaje <b>absoluto</b> (sustituye a <see cref="RefereeTuning.WhistlePercent"/>
-/// para ese rasgo; solo el lado ciego del tuerto es un caso aparte, resuelto en <c>MatchEngine</c> sin
-/// consultar esta tabla: ahí es 0% sin excepción). <c>CardOddsPercent</c> y <c>BiasShiftPercent</c> son
+/// <c>WhistlePercent</c> es un porcentaje <b>absoluto</b> y es la ÚNICA fuente de la probabilidad de
+/// pitido (revisión independiente: <c>tuning.referee.whistlePercent</c> se retiró por dato muerto; todo
+/// árbitro, incluido el neutro, lee su whistlePercent de aquí); solo el lado ciego del tuerto es un caso
+/// aparte, resuelto en <c>MatchEngine</c> sin consultar esta tabla: ahí es 0% sin excepción.
+/// <c>CardOddsPercent</c> y <c>BiasShiftPercent</c> son
 /// multiplicadores en tanto por ciento, 100 = sin cambio (misma convención que <c>InjuryTuning.ActScalePercent</c>):
 /// <c>CardOddsPercent</c> multiplica la cuota de tarjeta (<c>ProbabilityScale</c>, aritmética entera);
 /// <c>BiasShiftPercent</c> multiplica la magnitud de cada desplazamiento de <c>MatchEngine.ShiftBiasAgainst</c>.
@@ -646,11 +648,25 @@ public sealed record RefereeTraitsTuning(
 }
 
 /// <summary>
+/// tuning.referee.memory (ADR 0158 §4, revisión independiente): cómo decae y se recupera
+/// <see cref="Run.RunReferee.Memory"/> de un partido al siguiente. <c>MemoryPercent</c> es el porcentaje
+/// de <c>MatchReport.BiasShiftedAgainst[team]</c> —lo desplazado en contra del jugador mientras hubo
+/// árbitro, nunca lo que hizo el rival— que se resta de la memoria; <c>CleanMatchBonus</c> se suma cuando
+/// ese desplazamiento fue exactamente 0 (partido limpio); <c>MemoryCap</c> acota el resultado a
+/// ±ese valor. <c>HomerInitialBias</c> es el arranque hostil del casero (RF-061, enmienda de "casero"):
+/// vive aquí y no en código para que no sea una constante mágica de C# (<c>RunSystems.RefereeFor</c> lo
+/// lee de aquí, no de una constante local).
+/// </summary>
+public sealed record RefereeMemoryTuning(int MemoryPercent, int CleanMatchBonus, int MemoryCap, int HomerInitialBias);
+
+/// <summary>
 /// tuning.referee: el criterio del árbitro (RF-062..RF-064, ADR 0030 §3). Los tres campos
 /// <c>...ShiftPer10</c> son <b>efectos</b> del criterio sobre una tirada (puntos base 10.000 por cada 10
 /// puntos de criterio); los campos <c>BiasShift...</c> son <b>desplazamientos</b> del propio criterio, en
-/// puntos de la escala -100..+100, y son acumulativos por gravedad (RF-063). <see cref="Traits"/> es la
-/// tabla de la ADR 0158 que hace que el rasgo del árbitro pese de verdad en el motor (D-22).
+/// puntos de la escala -100..+100, y son acumulativos por gravedad (RF-063), y solo por ACCIONES SUCIAS:
+/// un bloqueo limpio o una lesión sin falta de por medio no desplazan nada (<c>MatchEngine.ResolveBlock</c>,
+/// <c>ResolveInjury</c>). <see cref="Traits"/> es la tabla de la ADR 0158 que hace que el rasgo del
+/// árbitro pese de verdad en el motor (D-22); <see cref="Memory"/> es la memoria entre partidos.
 /// </summary>
 public sealed record RefereeTuning(
     int BiasFoulShiftPer10,
@@ -664,8 +680,8 @@ public sealed record RefereeTuning(
     int BiasShiftInjuryExtra,
     int BiasShiftYellowExtra,
     int BiasShiftRedExtra,
-    int WhistlePercent,
-    RefereeTraitsTuning Traits);
+    RefereeTraitsTuning Traits,
+    RefereeMemoryTuning Memory);
 
 /// <summary>
 /// tuning.block: resolución del bloqueo sin balón (ADR 0030 §2). La <b>decisión</b> de bloquear vive en

@@ -35,7 +35,7 @@ public sealed class RefereeSelectionTests
 
         // Cada uno arranca sin memoria (RF-061b): la primera vez que se elige un plantel no hay partido
         // previo del que acordarse.
-        Assert.All(referees, r => Assert.Equal(0, r.Grudge));
+        Assert.All(referees, r => Assert.Equal(0, r.Memory));
     }
 
     /// <summary>El lado ciego de datos viaja con el árbitro elegido, no se pierde en la selección.</summary>

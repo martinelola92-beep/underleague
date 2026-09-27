@@ -1185,7 +1185,7 @@ public static class DataLoader
         node.EnsureKnownKeys(
             "biasFoulShiftPer10", "penaltyOnFoulInArea", "biasCardShiftPer10", "biasPenaltyShiftPer10",
             "biasShiftFoulSeen", "biasShiftFoulUnseen", "biasShiftHardExtra", "biasShiftBlockExtra",
-            "biasShiftInjuryExtra", "biasShiftYellowExtra", "biasShiftRedExtra", "whistlePercent", "traits");
+            "biasShiftInjuryExtra", "biasShiftYellowExtra", "biasShiftRedExtra", "traits", "memory");
         return new RefereeTuning(
             node.Prop("biasFoulShiftPer10").AsInt(),
             node.Prop("penaltyOnFoulInArea").AsInt(),
@@ -1198,8 +1198,19 @@ public static class DataLoader
             node.Prop("biasShiftInjuryExtra").AsInt(),
             node.Prop("biasShiftYellowExtra").AsInt(),
             node.Prop("biasShiftRedExtra").AsInt(),
-            node.Prop("whistlePercent").AsInt(),
-            ParseRefereeTraits(node.Prop("traits")));
+            ParseRefereeTraits(node.Prop("traits")),
+            ParseRefereeMemory(node.Prop("memory")));
+    }
+
+    /// <summary>tuning.referee.memory (ADR 0158 §4, revisión independiente).</summary>
+    private static RefereeMemoryTuning ParseRefereeMemory(Json node)
+    {
+        node.EnsureKnownKeys("memoryPercent", "cleanMatchBonus", "memoryCap", "homerInitialBias");
+        return new RefereeMemoryTuning(
+            node.Prop("memoryPercent").AsInt(),
+            node.Prop("cleanMatchBonus").AsInt(),
+            node.Prop("memoryCap").AsInt(),
+            node.Prop("homerInitialBias").AsInt());
     }
 
     /// <summary>tuning.referee.traits (ADR 0158): una entrada por cada RefereeTrait, sin excepción.</summary>

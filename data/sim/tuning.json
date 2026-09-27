@@ -167,21 +167,20 @@
     }
   },
   "referee": {
-    "_doc": "Criterio del árbitro (RF-062..RF-064, ADR 0030 §3, ADR 0158). Los tres ...ShiftPer10 son EFECTOS del criterio sobre una tirada: puntos base 10.000 por cada 10 puntos de criterio, siempre a favor del equipo que el criterio favorece. Los biasShift... son DESPLAZAMIENTOS del propio criterio, en puntos de la escala -100..+100, y se acumulan por gravedad (RF-063): toda acción sucia mueve el criterio en contra del que la comete, se señale o no. PROVISIONAL, SIN MEDIR (ADR 0158 §3): suben de 1-2 a 5/3/3/2/5/3/8 para que un partido sucio lleve el criterio más allá de ±30, que es el objetivo verificable de la ADR; se ajustan en el lote de balance de esa ADR, no aquí. whistlePercent (AZ-E, ADR 0090): probabilidad en tanto por ciento de que el árbitro NEUTRO señale una falta ocurrida; con rasgo, la sustituye tuning.referee.traits.<rasgo>.whistlePercent (ADR 0158 §2, salvo el lado ciego del tuerto, que es 0% siempre y lo resuelve MatchEngine sin mirar esta tabla). La no señalada derriba igual al que entra, no saca tarjeta, no reanuda y no da penalti, pero mueve el criterio como acción sucia no vista (biasShiftFoulUnseen, RF-063).",
+    "_doc": "Criterio del árbitro (RF-062..RF-064, ADR 0030 §3, ADR 0158, revisión independiente). Los tres ...ShiftPer10 son EFECTOS del criterio sobre una tirada: puntos base 10.000 por cada 10 puntos de criterio, siempre a favor del equipo que el criterio favorece. Los biasShift... son DESPLAZAMIENTOS del propio criterio, en puntos de la escala -100..+100, y se acumulan por gravedad (RF-063) SOLO por acciones sucias -un bloqueo limpio o una lesión sin falta no mueven nada, MatchEngine.ResolveBlock/ResolveInjury-, y solo mientras hay árbitro -la turba no desplaza nada, MatchEngine.ShiftBiasAgainst-. PROVISIONAL, medido por la revisión independiente (27 sep 2026) sobre TestMatches.Brutal con árbitro neutro, 150 semillas: con 5/3/3/2/5/3/8 el |criterio| final medio llegaba a 56 y saturaba en ±100 con frecuencia (objetivo RT-056 incumplido: <60 de media). Con 3/2/2/1/3/2/5 la mayoría de partidos NO superaba ±30 (43%, objetivo incumplido). Estas cifras, 4/3/3/2/4/3/7, dan media 45,2 y el 66% de los partidos por encima de ±30 (Sim.Tests.Engine.RefereeSaturationTests). Sigue siendo provisional: se recalibra en el lote de balance de la ADR, no aquí. El pitido no vive aquí: cada rasgo, incluido el neutro, lo lee de tuning.referee.traits.<rasgo>.whistlePercent (ADR 0158 §2); el lado ciego del tuerto es 0% siempre y lo resuelve MatchEngine sin mirar ninguna tabla.",
     "biasFoulShiftPer10": 120,
     "penaltyOnFoulInArea": 8000,
     "biasCardShiftPer10": 100,
     "biasPenaltyShiftPer10": 100,
-    "biasShiftFoulSeen": 5,
+    "biasShiftFoulSeen": 4,
     "biasShiftFoulUnseen": 3,
     "biasShiftHardExtra": 3,
     "biasShiftBlockExtra": 2,
-    "biasShiftInjuryExtra": 5,
+    "biasShiftInjuryExtra": 4,
     "biasShiftYellowExtra": 3,
-    "biasShiftRedExtra": 8,
-    "whistlePercent": 80,
+    "biasShiftRedExtra": 7,
     "traits": {
-      "_doc": "ADR 0158 §2, tabla del diseño de fase 1b, PROVISIONAL SIN MEDIR: whistlePercent es un porcentaje ABSOLUTO (sustituye al whistlePercent de arriba para ese rasgo). cardOddsPercent y biasShiftPercent son multiplicadores en tanto por ciento, 100 = sin cambio. El casero (homer) solo amplifica los desplazamientos EN CONTRA del jugador (equipo 0); a su favor se queda en 100% y eso lo decide MatchEngine, no este dato. El lado ciego del tuerto (oneEyed) es 0% de pitido siempre, también decidido en MatchEngine, no aquí. corrupt e incorruptible son idénticos a neutral en el campo (RF-061, RF-064): su diferencia es de soborno, ADR aparte.",
+      "_doc": "ADR 0158 §2, tabla del diseño de fase 1b, PROVISIONAL SIN MEDIR: whistlePercent es un porcentaje ABSOLUTO y es la ÚNICA fuente de la probabilidad de pitido (revisión independiente: se retiró el whistlePercent de fuera de esta tabla por dato muerto). cardOddsPercent y biasShiftPercent son multiplicadores en tanto por ciento, 100 = sin cambio. El casero (homer) solo amplifica los desplazamientos EN CONTRA del jugador (equipo 0); a su favor se queda en 100% y eso lo decide MatchEngine, no este dato. El lado ciego del tuerto (oneEyed) es 0% de pitido siempre, también decidido en MatchEngine, no aquí. corrupt e incorruptible son idénticos a neutral en el campo (RF-061, RF-064): su diferencia es de soborno, ADR aparte.",
       "neutral": { "whistlePercent": 80, "cardOddsPercent": 100, "biasShiftPercent": 100 },
       "strict": { "whistlePercent": 95, "cardOddsPercent": 150, "biasShiftPercent": 150 },
       "lenient": { "whistlePercent": 55, "cardOddsPercent": 50, "biasShiftPercent": 50 },
@@ -190,6 +189,13 @@
       "cowardly": { "whistlePercent": 80, "cardOddsPercent": 100, "biasShiftPercent": 100 },
       "corrupt": { "whistlePercent": 80, "cardOddsPercent": 100, "biasShiftPercent": 100 },
       "incorruptible": { "whistlePercent": 80, "cardOddsPercent": 100, "biasShiftPercent": 100 }
+    },
+    "memory": {
+      "_doc": "ADR 0158 §4, revisión independiente: memoria del árbitro entre partidos. memoryPercent es el porcentaje de BiasShiftedAgainst[equipo] (lo desplazado en contra del jugador mientras hubo árbitro) que se resta de la memoria; cleanMatchBonus se suma si ese desplazamiento fue 0; memoryCap acota el resultado a ±ese valor. homerInitialBias es el arranque hostil del casero (RF-061, enmienda de 'casero'), movido aquí desde una constante de RunSystems.cs para que no sea una cifra mágica en C#. PROVISIONAL, SIN MEDIR.",
+      "memoryPercent": 50,
+      "cleanMatchBonus": 10,
+      "memoryCap": 40,
+      "homerInitialBias": -20
     }
   },
   "block": {

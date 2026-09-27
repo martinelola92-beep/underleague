@@ -221,10 +221,11 @@ internal static class MatchResolution
             .WithRoster(players)
             .WithNodeCompleted(node.Id, node.Kind, won ? NodeResult.Won : NodeResult.Lost);
 
-        // 3c. Memoria del árbitro (ADR 0158 §4): el que pitó este partido —incluida la turba, que también
-        //     tiene FinalBias— se acuerda para el siguiente que pite (RunSystems.RefereeFor lo arranca con
-        //     esto). Solo cambia el árbitro de ESTE nodo; el resto del plantel se queda igual.
-        next = ApplyRefereeMemory(next, referee, result.Report.FinalBias);
+        // 3c. Memoria del árbitro (ADR 0158 §4, revisión independiente): el que pitó este partido se
+        //     acuerda de lo que el jugador desplazó en contra suya MIENTRAS HUBO ÁRBITRO —la turba no
+        //     cuenta, RF-055d— para el siguiente que pite (RunSystems.RefereeFor lo arranca con esto).
+        //     Solo cambia el árbitro de ESTE nodo; el resto del plantel se queda igual.
+        next = ApplyRefereeMemory(next, referee, result.Report, catalog);
 
         // 4b. Memoria de "quién knaveó a quién" contra un rival concreto (BE-B, enmienda de la ADR 0124,
         //     tabla "Dónde vive cada memoria"). Pasada APARTE de la del paso 2: esa mira solo Team 0 y para
@@ -501,22 +502,22 @@ internal static class MatchResolution
     }
 
     /// <summary>
-    /// Cota de <see cref="RunReferee.Grudge"/> (ADR 0158 §4): -40..40, la mitad del rango de
-    /// <c>MatchReport.FinalBias</c> (-100..100).
-    /// </summary>
-    private const int GrudgeBound = 40;
-
-    /// <summary>
-    /// Memoria del árbitro (ADR 0158 §4): el que pitó este partido pasa a tener <c>Grudge</c> = mitad del
-    /// criterio con el que terminó, acotado a ±40. <paramref name="referee"/> es null cuando el llamador
-    /// no trae árbitro (tests que no lo necesitan): en ese caso no se toca nada. El árbitro se localiza en
-    /// <see cref="RunState.Referees"/> por su nombre, el único dato que <see cref="RefereeSetup"/> comparte
-    /// con <see cref="RunReferee"/> -mismo criterio que ya usa <c>PostMatchView.Referee</c>-. Si no hay
+    /// Memoria del árbitro (ADR 0158 §4, revisión independiente): el que pitó este partido decae en
+    /// proporción a lo que desplazó EN CONTRA del jugador mientras hubo árbitro
+    /// (<c>report.BiasShiftedAgainst[0]</c>, que ya excluye la turba -<c>MatchEngine.ShiftBiasAgainst</c>
+    /// no acumula nada con <c>IsMob</c>- y lo que hizo el rival, que desplaza a favor, no en contra). Un
+    /// partido sin ningún desplazamiento en contra suma el bono de partido limpio. Nunca mezcla el arranque
+    /// del casero ni el <c>FinalBias</c> del rival: solo la conducta propia del jugador.
+    /// <c>memoria_nueva = clamp(memoria_vieja − desplazadoEnContra × memoryPercent/100 + (desplazadoEnContra == 0 ? cleanMatchBonus : 0), ±memoryCap)</c>,
+    /// con las tres constantes en <c>tuning.referee.memory</c> (sin cifras mágicas en C#).
+    /// <paramref name="referee"/> es null cuando el llamador no trae árbitro (tests que no lo necesitan):
+    /// en ese caso no se toca nada. El árbitro se localiza en <see cref="RunState.Referees"/> por
+    /// <see cref="RefereeSetup.RefereeId"/> (identidad, no el nombre de presentación); si no hay
     /// coincidencia (partido sin árbitro de la run, por ejemplo en pruebas), no cambia nada.
     /// </summary>
-    private static RunState ApplyRefereeMemory(RunState state, RefereeSetup? referee, int finalBias)
+    private static RunState ApplyRefereeMemory(RunState state, RefereeSetup? referee, MatchReport report, Catalog catalog)
     {
-        if (referee is null)
+        if (referee is null || referee.RefereeId < 0)
         {
             return state;
         }
@@ -524,18 +525,22 @@ internal static class MatchResolution
         var referees = state.Referees;
         for (int i = 0; i < referees.Count; i++)
         {
-            if (!string.Equals(referees[i].Name, referee.Name, StringComparison.Ordinal))
+            if (referees[i].Id != referee.RefereeId)
             {
                 continue;
             }
 
-            int grudge = Math.Clamp(finalBias / 2, -GrudgeBound, GrudgeBound);
-            if (referees[i].Grudge == grudge)
+            var memory = catalog.Tuning.Referee.Memory;
+            int shiftedAgainstPlayer = report.BiasShiftedAgainst[0];
+            int decay = shiftedAgainstPlayer * memory.MemoryPercent / 100;
+            int bonus = shiftedAgainstPlayer == 0 ? memory.CleanMatchBonus : 0;
+            int newMemory = Math.Clamp(referees[i].Memory - decay + bonus, -memory.MemoryCap, memory.MemoryCap);
+            if (referees[i].Memory == newMemory)
             {
                 return state;
             }
 
-            var updated = new List<RunReferee>(referees) { [i] = referees[i] with { Grudge = grudge } };
+            var updated = new List<RunReferee>(referees) { [i] = referees[i] with { Memory = newMemory } };
             return state.WithReferees(updated);
         }
 

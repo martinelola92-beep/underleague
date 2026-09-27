@@ -967,14 +967,11 @@
         "biasShiftRedExtra": {
           "$ref": "#/$defs/biasPoints"
         },
-        "whistlePercent": {
-          "type": "integer",
-          "minimum": 0,
-          "maximum": 100,
-          "description": "Probabilidad en tanto por ciento de señalar una falta ocurrida (AZ-E, ADR 0090), para el rasgo neutro."
-        },
         "traits": {
           "$ref": "#/$defs/refereeTraits"
+        },
+        "memory": {
+          "$ref": "#/$defs/refereeMemory"
         }
       },
       "required": [
@@ -989,9 +986,42 @@
         "biasShiftInjuryExtra",
         "biasShiftYellowExtra",
         "biasShiftRedExtra",
-        "whistlePercent",
-        "traits"
+        "traits",
+        "memory"
       ],
+      "additionalProperties": false
+    },
+    "refereeMemory": {
+      "description": "ADR 0158 §4, revisión independiente: memoria del árbitro entre partidos.",
+      "type": "object",
+      "properties": {
+        "_doc": { "type": "string" },
+        "memoryPercent": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 100,
+          "description": "Porcentaje de lo desplazado en contra del jugador que se resta de la memoria."
+        },
+        "cleanMatchBonus": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 100,
+          "description": "Se suma a la memoria si el partido no desplazó nada en contra del jugador."
+        },
+        "memoryCap": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 100,
+          "description": "La memoria queda acotada a ±este valor."
+        },
+        "homerInitialBias": {
+          "type": "integer",
+          "minimum": -100,
+          "maximum": 100,
+          "description": "Arranque hostil del casero (RF-061, enmienda de 'casero')."
+        }
+      },
+      "required": ["memoryPercent", "cleanMatchBonus", "memoryCap", "homerInitialBias"],
       "additionalProperties": false
     },
     "refereeTraits": {

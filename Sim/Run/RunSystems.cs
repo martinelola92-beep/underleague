@@ -277,34 +277,32 @@ public sealed class DefaultRunSystems : IRunSystems
         return races[node.Id % races.Count];
     }
 
-    /// <summary>
-    /// Desplazamiento inicial del casero (ADR 0158, enmienda de "casero"): en la run el jugador es
-    /// SIEMPRE el local, así que "favorece al local" se lee como "el árbitro de la casa del rival", que
-    /// arranca en contra del jugador.
-    /// </summary>
-    private const int HomerInitialBias = -20;
-
     /// <inheritdoc />
     /// <remarks>
-    /// ADR 0158 §4: el criterio inicial ya no es siempre 0 — es la memoria del árbitro
-    /// (<see cref="RunReferee.Grudge"/>, -40..40) más el arranque hostil del casero, acotado a ±100. Es lo
-    /// que hace que portarse bien contra un árbitro concreto tenga sentido antes de volver a encontrárselo
-    /// (RF-061, RF-064).
+    /// ADR 0158 §4, revisión independiente: el criterio inicial ya no es siempre 0 — es la memoria del
+    /// árbitro (<see cref="RunReferee.Memory"/>, acotada a <c>tuning.referee.memory.memoryCap</c>) más el
+    /// arranque hostil del casero (<c>tuning.referee.memory.homerInitialBias</c>: enmienda de "casero" —
+    /// en la run el jugador es SIEMPRE el local, así que "favorece al local" se lee como "el árbitro de la
+    /// casa del rival"—, dato y no constante mágica de C#), acotado a ±100. Es lo que hace que portarse
+    /// bien contra un árbitro concreto tenga sentido antes de volver a encontrárselo (RF-061, RF-064).
     /// </remarks>
     public RefereeSetup RefereeFor(RunState state, MapNode node, Catalog catalog)
     {
         ArgumentNullException.ThrowIfNull(state);
         ArgumentNullException.ThrowIfNull(node);
+        ArgumentNullException.ThrowIfNull(catalog);
         if (state.Referees.Count == 0)
         {
             return new RefereeSetup("referee_0", RefereeTrait.Neutral, 0);
         }
 
         var referee = state.Referees[node.Id % state.Referees.Count];
-        int bias = referee.Grudge + (referee.Trait == RefereeTrait.Homer ? HomerInitialBias : 0);
+        int homerInitialBias = catalog.Tuning.Referee.Memory.HomerInitialBias;
+        int bias = referee.Memory + (referee.Trait == RefereeTrait.Homer ? homerInitialBias : 0);
         return new RefereeSetup(referee.Name, referee.Trait, Math.Clamp(bias, -100, 100))
         {
             BlindSide = referee.BlindSide,
+            RefereeId = referee.Id,
         };
     }
 

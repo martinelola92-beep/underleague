@@ -116,30 +116,31 @@ public sealed class RefereeAndAbilitiesTests
     /// partido con bloqueos y sin una sola falta ni lesión señalada: si el criterio se ha movido, solo
     /// pueden haberlo movido las acciones sucias que el árbitro no pitó.
     /// </summary>
+    /// <summary>
+    /// Revisión independiente de la ADR 0158 (27 sep 2026): la versión anterior de este test apagaba
+    /// TODAS las bases de falta (bloqueo, entrada, entrada sin balón) para aislar el escenario, y con
+    /// ellas a cero <c>isFoul</c> daba siempre falso. El criterio se movía igual porque el bloqueo limpio
+    /// (<c>ResolveBlock</c>, rama <c>isFoul == false</c>) desplazaba el criterio como si fuera una falta no
+    /// vista, que no lo es -un bloqueo limpio no es una acción sucia (RF-063)-: ese era exactamente el bug
+    /// que la revisión pidió corregir. Ahora la falta ocurre de verdad (bases intactas) y lo único que se
+    /// apaga es el pitido del árbitro neutro (0%), así que toda falta real —de balón, sin balón o de
+    /// bloqueo— cae por la rama no señalada de <c>WhistleOrLetPlay</c>, que sí es RF-063 de verdad: se
+    /// cuenta como falta, nunca saca tarjeta, y mueve el criterio.
+    /// </summary>
     [Fact]
     public void AnUnwhistledDirtyActionStillMovesTheReferee()
     {
-        var tuning = Catalog.Tuning;
         var silentReferee = CatalogWith(
-            ("sim/tuning.json", $"\"biasFoulShiftPer10\": {tuning.Referee.BiasFoulShiftPer10}", "\"biasFoulShiftPer10\": 0"),
-            ("sim/tuning.json", $"\"foulBase\": {tuning.Block.FoulBase}", "\"foulBase\": 0"),
-            ("sim/tuning.json", $"\"foulBase\": {tuning.Tackle.FoulBase}", "\"foulBase\": 0"),
-            // ADR 0105: la entrada sin balón tiene su propia base de falta, y es la más alta del motor.
-            // Si no se apaga aquí, el escenario deja de estar aislado: el árbitro vuelve a tener faltas
-            // que señalar y el test ya no mide lo que dice medir (medido: 6 faltas señaladas con ella).
-            ("sim/tuning.json", $"\"offBallFoulBase\": {tuning.Tackle.OffBallFoulBase}", "\"offBallFoulBase\": 0"),
-            ("sim/tuning.json", $"\"foulStrengthFactor\": {tuning.Tackle.FoulStrengthFactor}", "\"foulStrengthFactor\": 0"),
-            ("sim/tuning.json", $"\"onTackleBase\": {tuning.Injury.OnTackleBase}", "\"onTackleBase\": 0"),
-            ("sim/tuning.json", $"\"onFoulBase\": {tuning.Injury.OnFoulBase}", "\"onFoulBase\": 0"),
-            ("sim/tuning.json", $"\"relativeFactor\": {tuning.Injury.RelativeFactor}", "\"relativeFactor\": 0"),
-            ("traits/traits.json", "\"hardTackleBonus\": 15", "\"hardTackleBonus\": 0"),
-            ("traits/traits.json", "\"foulChanceBonus\": 15", "\"foulChanceBonus\": 0"),
-            ("traits/traits.json", "\"injuryChanceBonus\": 10", "\"injuryChanceBonus\": 0"));
+            (
+                "sim/tuning.json",
+                "\"neutral\": { \"whistlePercent\": 80, \"cardOddsPercent\": 100, \"biasShiftPercent\": 100 }",
+                "\"neutral\": { \"whistlePercent\": 0, \"cardOddsPercent\": 100, \"biasShiftPercent\": 100 }"));
 
         var result = Simulator.Run(TestMatches.Brutal(silentReferee), 4, silentReferee, new SimConfig(CollectLog: false));
 
-        Assert.Equal(0, result.Report.Fouls);
-        Assert.Equal(0, result.Report.Injuries);
+        Assert.Equal(0, result.Report.YellowCards);
+        Assert.Equal(0, result.Report.RedCards);
+        Assert.True(result.Report.Fouls > 0, "el escenario tenía que producir faltas, todas no señaladas con el pitido a 0%");
         Assert.True(result.Report.Blocks > 0, "el escenario tenía que producir bloqueos sin balón");
         Assert.True(
             result.Report.FinalBias != 0,

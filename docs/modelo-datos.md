@@ -17,7 +17,7 @@ Run
   gold                  int
   nodeHistory[]         (nodeId, kind, result)
   map                   grafo del acto (nodos, aristas, rival asignado, modificador de jefe oculto/revelado)
-  referees[]            6-8 árbitros de la run: id, definitionId, name, trait, bribesReceived, grudge, blindSide (RF-061b, RF-064c, ADR 0158)
+  referees[]            6-8 árbitros de la run: id, definitionId, name, trait, bribesReceived, memory, blindSide (RF-061b, RF-064c, ADR 0158)
   rerollsUsed           int  (RF-071b, coste creciente)
   dataSnapshot          copia de /data congelada al empezar (RT-061b)
   Roster

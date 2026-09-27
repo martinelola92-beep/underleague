@@ -25,7 +25,7 @@ public sealed class RefereeViewTests
     {
         var (state, node) = AtAMatchNode(11);
         var setup = SystemsTestSupport.Systems.RefereeFor(state, node, Catalog);
-        var runReferee = state.Referees.First(r => string.Equals(r.Name, setup.Name, StringComparison.Ordinal));
+        var runReferee = state.Referees.First(r => r.Id == setup.RefereeId);
         var definition = SystemsTestSupport.Systems.Referees.Find(runReferee.DefinitionId);
 
         var card = RefereeView.For(state, node, SystemsTestSupport.Systems, Catalog, "es");
@@ -44,7 +44,7 @@ public sealed class RefereeViewTests
     {
         var (state, node) = AtAMatchNode(11);
         var setup = SystemsTestSupport.Systems.RefereeFor(state, node, Catalog);
-        var runReferee = state.Referees.First(r => string.Equals(r.Name, setup.Name, StringComparison.Ordinal));
+        var runReferee = state.Referees.First(r => r.Id == setup.RefereeId);
         var definition = SystemsTestSupport.Systems.Referees.Find(runReferee.DefinitionId);
 
         var card = RefereeView.For(state, node, SystemsTestSupport.Systems, Catalog, "en");
@@ -54,18 +54,36 @@ public sealed class RefereeViewTests
         Assert.Equal(definition.Catchphrase.En, card.Catchphrase);
     }
 
-    /// <summary>La ficha enseña la memoria que el árbitro tiene del jugador (ADR 0158 §4).</summary>
+    /// <summary>La ficha enseña la memoria que el árbitro tiene del jugador (ADR 0158 §4). El campo de la vista sigue llamándose Grudge por compatibilidad con /Game.</summary>
     [Fact]
     public void ShowsTheRefereesGrudge()
     {
         var (state, node) = AtAMatchNode(11);
         var setup = SystemsTestSupport.Systems.RefereeFor(state, node, Catalog);
-        var withGrudge = state.WithReferees(state.Referees.Select(r =>
-            string.Equals(r.Name, setup.Name, StringComparison.Ordinal) ? r with { Grudge = 9 } : r));
+        var withMemory = state.WithReferees(state.Referees.Select(r =>
+            r.Id == setup.RefereeId ? r with { Memory = 9 } : r));
 
-        var card = RefereeView.For(withGrudge, node, SystemsTestSupport.Systems, Catalog, "es");
+        var card = RefereeView.For(withMemory, node, SystemsTestSupport.Systems, Catalog, "es");
 
         Assert.Equal(9, card.Grudge);
+    }
+
+    /// <summary>El emparejamiento es por id, no por nombre: dos árbitros con nombres distintos pero cuyo id no coincide con el elegido no contaminan la ficha.</summary>
+    [Fact]
+    public void MatchesByIdEvenIfAnotherRefereeSharesNoName()
+    {
+        var (state, node) = AtAMatchNode(11);
+        var setup = SystemsTestSupport.Systems.RefereeFor(state, node, Catalog);
+        // Todos los DEMÁS árbitros pierden su memoria; solo el elegido la conserva. Si RefereeView
+        // emparejara por nombre en vez de por id, esto no cambiaría nada -pero si emparejara mal por id
+        // (por ejemplo, siempre el primero de la lista), este test lo pillaría en cuanto el elegido no sea
+        // el índice 0.
+        var onlyChosenKeepsMemory = state.WithReferees(state.Referees.Select(r =>
+            r.Id == setup.RefereeId ? r with { Memory = 5 } : r with { Memory = 99 }));
+
+        var card = RefereeView.For(onlyChosenKeepsMemory, node, SystemsTestSupport.Systems, Catalog, "es");
+
+        Assert.Equal(5, card.Grudge);
     }
 
     /// <summary>Cada rasgo tiene su propia línea, distinta de la de los demás (RT-035: sin texto a mano).</summary>

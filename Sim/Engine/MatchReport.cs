@@ -259,6 +259,16 @@ public sealed class MatchReport
     /// </summary>
     public int FinalBias { get; }
 
+    /// <summary>
+    /// Puntos de criterio desplazados EN CONTRA de cada equipo por sus PROPIAS acciones sucias mientras
+    /// hubo árbitro, [2] (ADR 0158 §4, revisión independiente). Nunca incluye la turba (sin árbitro no hay
+    /// desplazamiento, <c>MatchEngine.ShiftBiasAgainst</c>) ni lo que provocó el equipo contrario. Es la
+    /// magnitud —ya escalada por el rasgo del árbitro— que <c>MatchResolution.ApplyRefereeMemory</c> usa
+    /// para actualizar <c>RunReferee.Memory</c>: solo la conducta propia, nunca el arranque del casero ni
+    /// el desplazamiento que dejó el rival.
+    /// </summary>
+    public int[] BiasShiftedAgainst { get; }
+
     /// <summary>Estadísticas por jugador que participó en el partido.</summary>
     public IReadOnlyList<PlayerMatchStats> Players { get; }
 
@@ -331,6 +341,7 @@ public sealed class MatchReport
         BallTicksByThird = (int[])builder.BallTicksByThird.Clone();
         PossessionTicks = (int[])builder.PossessionTicks.Clone();
         FinalBias = builder.FinalBias;
+        BiasShiftedAgainst = (int[])builder.BiasShiftedAgainst.Clone();
         Players = builder.Players.ToArray();
         Log = builder.Log.ToArray();
         UtilityDump = builder.UtilityDump;
@@ -469,6 +480,9 @@ internal sealed class MatchReportBuilder
     /// se pierde: cada evento de la secuencia lleva el criterio vigente en su tick.
     /// </summary>
     public int FinalBias { get; set; }
+
+    /// <summary>Puntos de criterio desplazados en contra de cada equipo por sus propias acciones sucias mientras hubo árbitro; lo va sumando <c>MatchEngine.ShiftBiasAgainst</c> (ADR 0158 §4).</summary>
+    public int[] BiasShiftedAgainst { get; } = new int[2];
 
     /// <summary>Estadísticas por jugador; se acumulan durante el partido y se listan al terminar.</summary>
     public List<PlayerMatchStats> Players { get; } = new();

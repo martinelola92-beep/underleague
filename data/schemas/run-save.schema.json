@@ -87,18 +87,16 @@
           "name": { "type": "string" },
           "trait": { "enum": ["neutral", "strict", "lenient", "homer", "oneEyed", "cowardly", "corrupt", "incorruptible"] },
           "bribesReceived": { "type": "integer", "minimum": 0 },
-          "grudge": {
-            "description": "Memoria del árbitro contra el jugador, -40..40 (ADR 0158 §4).",
-            "type": "integer",
-            "minimum": -40,
-            "maximum": 40
+          "memory": {
+            "description": "Memoria del árbitro contra el jugador (ADR 0158 §4, revisión independiente). El límite es tuning.referee.memory.memoryCap, no un número fijo del esquema; solo se comprueba el tipo aquí.",
+            "type": "integer"
           },
           "blindSide": {
             "description": "Media banda que no ve; 'none' salvo con trait=oneEyed (ADR 0158).",
             "enum": ["none", "top", "bottom"]
           }
         },
-        "required": ["id", "definitionId", "name", "trait", "bribesReceived", "grudge", "blindSide"],
+        "required": ["id", "definitionId", "name", "trait", "bribesReceived", "memory", "blindSide"],
         "additionalProperties": false
       }
     },

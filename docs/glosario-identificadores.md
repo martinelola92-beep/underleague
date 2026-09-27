@@ -144,7 +144,7 @@ Raza, posición y rasgo comparten el sistema de etiquetas (RF-022d): el id del r
 | Árbitro | `Referee` |
 | Criterio del árbitro | `Bias` (-100..+100, positivo favorable al usuario) |
 | Rasgos de árbitro | `Strict`, `Lenient`, `Homer`, `OneEyed`, `Cowardly`, `Corrupt`, `Incorruptible` |
-| Rencor del árbitro | `Grudge` (-40..+40, ADR 0158): memoria entre partidos, mitad del `FinalBias` del último que pitó |
+| Memoria del árbitro | `RunReferee.Memory` (acotada a `tuning.referee.memory.memoryCap`, ADR 0158, revisión independiente): decae con lo que el árbitro desplazó en contra del jugador (`MatchReport.BiasShiftedAgainst[0]`) y sube con un bono si el partido salió limpio; nunca mezcla la falta del rival, el arranque del casero ni la turba. `Grudge` sigue siendo la represalia de la ADR 0145 (`Sim.Engine.Utility`, `GrudgeBonus`/`GrudgeTicks`), no esto |
 | Lado ciego del árbitro tuerto | `BlindSide`: `None`, `Top`, `Bottom` (ADR 0158, dato `blindSide`: `top`/`bottom`) |
 | Muletilla del árbitro | `Catchphrase` (ADR 0158, `data/referees/referees.json`) |
 | Id de la ficha de árbitro | `DefinitionId` (ADR 0158): enlaza `RunReferee` con `RefereeCatalog` para releer nombre/muletilla en el idioma pedido |
