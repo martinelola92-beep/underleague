@@ -137,7 +137,7 @@
     "_doc": "ADR 0154: cuanto SUBE (positivo, hacia la porteria rival) o BAJA la casilla-hogar de cada puesto con cada orden tactica del jugador, en casillas. Neutral es 0 por definicion. Es lo que hace que la orden se VEA en el campo: defensivo baja al delantero y a los medios, ofensivo sube a los defensas y a los medios. Se suma al desplazamiento del bloque y a los perks de colocacion (shiftHome). Valores calibrados contra el lote de mentalidad (ADR 0154).",
     "Defensive": { "Goalkeeper": 0.0, "Defender": -1.0, "Midfielder": -2.0, "Forward": -3.0 },
     "Neutral": { "Goalkeeper": 0.0, "Defender": 0.0, "Midfielder": 0.0, "Forward": 0.0 },
-    "Offensive": { "Goalkeeper": 0.0, "Defender": 1.5, "Midfielder": 1.0, "Forward": 0.5 }
+    "Offensive": { "Goalkeeper": 0.0, "Defender": 3.0, "Midfielder": 2.0, "Forward": 1.0 }
   },
   "mentalityOdds": {
     "_doc": "ADR 0156 (propuesta del revisor): la orden tactica tambien mueve el EXITO, no solo la colocacion. Porcentaje de CUOTA con signo por canal (el formato de los perks: +20 es x1,2 la cuota, -20 su inverso), compuesto con los perks en MatchEngine.Odds. Ofensivo sube tiro a puerta y regate y baja entrada, intercepcion y parada; defensivo, al reves. Ojo: Intercept tambien gobierna el bloqueo de tiros y Tackle la carga sin balon (Block). Neutral no mueve nada y ninguna orden puede tocar falta, tarjeta ni lesion (lo rechaza el cargador). Medido en la ADR 0156 contra el partido entero; el cambio tardio de orden no discrimina entre variantes (por debajo del ruido).",

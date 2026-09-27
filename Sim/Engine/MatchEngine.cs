@@ -859,7 +859,7 @@ internal sealed class MatchEngine : IPerkWorld
 
     private void UpdateTacticalState()
     {
-        int holding = -1;
+        int holding = RestartHolder();
         if (_ball.Owner is not null)
         {
             holding = _ball.Owner.Team;
@@ -977,6 +977,22 @@ internal sealed class MatchEngine : IPerkWorld
         }
     }
 
+    /// <summary>
+    /// ADR 0155 (decisión del revisor): una reanudación es del equipo que la saca. Con el balón parado y
+    /// sin dueño, las dos ideas de posesión del motor —la táctica (<see cref="UpdateTacticalState"/>: pesos
+    /// y bloque) y la del contexto de decisión (<c>HoldingTeam</c>: buscar hueco, ofrecerse)— decían que no
+    /// era de nadie, y el equipo que iba a sacar DEFENDÍA su propio saque. Las dos leen de aquí, para que no
+    /// vuelvan a discrepar (la primera versión sólo cambiaba una y el saque de puerta seguía igual).
+    /// <para>Quedan fuera el <b>penalti</b> —su colocación la gobierna la ADR 0143— y el <b>saque de centro</b>
+    /// —todos se recolocan andando y nadie decide, pero la posesión táctica movía igualmente el bloque y el
+    /// marcaje durante la celebración y la cuenta atrás; medido, explicaba más de la mitad de la subida de
+    /// goles de una semilla—.</para>
+    /// </summary>
+    private int RestartHolder() =>
+        _restartTicksLeft > 0 && _pendingRestart is not (RestartKind.None or RestartKind.Penalty or RestartKind.Kickoff)
+            ? _restartTeam
+            : -1;
+
     private void UpdateContextCaches()
     {
         _context.NearestToBall[0] = null;
@@ -1016,7 +1032,7 @@ internal sealed class MatchEngine : IPerkWorld
         }
         else
         {
-            _context.HoldingTeam = -1;
+            _context.HoldingTeam = RestartHolder();
         }
 
         UpdatePerception();

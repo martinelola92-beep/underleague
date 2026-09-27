@@ -178,7 +178,11 @@ public sealed class KeeperAreaTests
 
         _output.WriteLine($"{clearances} despejes del portero · {back} le vuelven (comba antigua: ~3,7 por partido)");
         Assert.True(clearances > 100);
-        Assert.True(back <= Seeds / 10, $"{back} despejes del portero le vuelven en {Seeds} partidos: el bucle ha vuelto");
+        // Cota con procedencia: el bucle original eran ~220 vueltas en 60 partidos (3,7 por partido); con la
+        // comba, 3 (0,05). Con la ADR 0155 (el equipo que saca de puerta sube a buscar hueco y deja al portero
+        // más solo) son 13 (0,22), por el mismo mecanismo pero raro. 30 (0,5 por partido) caza el bucle con
+        // mucho margen sin confundirlo con eso. La primera cota, 6, no tenía más procedencia que haber visto 0.
+        Assert.True(back <= Seeds / 2, $"{back} despejes del portero le vuelven en {Seeds} partidos: el bucle ha vuelto");
     }
 
     /// <summary>

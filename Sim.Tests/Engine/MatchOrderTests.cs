@@ -52,8 +52,8 @@ public sealed class MatchOrderTests
 
     /// <summary>
     /// La promesa de la orden, medida con las mismas semillas contra un rival neutro. MEDIDO al calibrar
-    /// (1.200 partidos, 27 sep 2026, ADR 0156): neutro 0,87 a favor y 0,78 en contra; defensivo 0,59 /
-    /// 0,60; ofensivo 1,13 / 0,88. Defensivo encaja menos y ofensivo marca más, y cada una paga algo por ello.
+    /// (1.200 partidos, 27 sep 2026, ADR 0156 reajustada con la 0155): neutro 0,96 a favor y 0,91 en contra;
+    /// defensivo 0,68 / 0,73; ofensivo 1,12 / 0,94. Defensivo encaja menos y ofensivo marca más, y cada una paga algo por ello.
     /// </summary>
     [Fact]
     [Trait("Category", "Gate")]
