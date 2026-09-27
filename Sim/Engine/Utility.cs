@@ -993,6 +993,16 @@ internal static class Utility
             return;
         }
 
+        // BO-A (27 sep 2026): PROTEGER NO ES PARA SIEMPRE. Es la respuesta del fuerte a que le aprieten, un
+        // compromiso de ShieldingTicks; encadenarlo sin fin con el rival pegado dejaba la jugada congelada
+        // —medido: hasta 632 ticks (42 s) de protección seguida, sin una entrada—. Agotado el tope, el
+        // portador tiene que jugar el balón: pasar, conducir o despejar.
+        if (context.ShieldMaxTicks > 0 && p.ShieldedTicks >= context.ShieldMaxTicks)
+        {
+            eval.Discarded = true;
+            return;
+        }
+
         // El cuerpo se interpone entre el balón y quien aprieta: el portador se aparta del rival más
         // cercano, que es exactamente lo que hace un delantero de espaldas.
         var presser = NearestOpponent(ctx, p);
@@ -1065,6 +1075,21 @@ internal static class Utility
         // cambio se apoya en eso tal cual.
         bool isIncomingPassReceiver = ball.InFlight && !ball.IsShot && ReferenceEquals(ball.PassReceiver, p);
         if (!ReferenceEquals(ctx.NearestToBall[p.Team], p) && !isIncomingPassReceiver)
+        {
+            eval.Discarded = true;
+            return;
+        }
+
+        // BO-A (ADR 0153): YA ESTÁS ENCIMA. Perseguir un balón que lleva un rival sirve para llegar a él; a
+        // distancia de entrada no queda nada que perseguir —el balón no se recoge, se quita—. Sin esta
+        // precondición el perseguidor pegado al portador puntuaba ChaseBall por encima de Tackle (530 contra
+        // 510, medido) en cada decisión sin que eso le moviera de sitio. Ahora compite lo que sí hace algo:
+        // entrar, cubrir, marcar o replegarse. No obliga a entrar —medido: entra en el 16 % de esas
+        // decisiones, un 30 % más que antes; lo que corta el atasco es el tope de protección—. Precondición
+        // que describe la situación, no un peso: la misma forma que proteger y despejar (ADR 0138).
+        var owner = ball.Owner;
+        if (owner is not null && owner.Team != p.Team
+            && Vec2.Distance(p.Position, owner.Position) <= context.TackleDistanceMaxCells)
         {
             eval.Discarded = true;
             return;

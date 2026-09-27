@@ -191,6 +191,12 @@ public sealed record AiContext(
     int ShieldPressureBonusPerCenti = 0,
     int ShieldStrengthSlope = 0,
 
+    // BO-A (ADR 0153): ticks de protección que un portador puede ACUMULAR en una misma posesión (se
+    // reinicia al recibir un balón nuevo; proteger, conducir y volver a proteger suma).
+    // Llegado el tope, proteger deja de ser opción y tiene que jugar el balón. Sin él, un portador apretado
+    // protegía indefinidamente —hasta 42 s en la misma jugada— con el rival pegado sin entrar.
+    int ShieldMaxTicks = 0,
+
     // Gameplay AI Foundations Pass, P4 — DESPEJAR. Simétrico al anterior: un despeje sin peligro es
     // regalar el balón, así que ClearMinDanger es la precondición dura. El peligro y la presión puntúan;
     // la fuerza NO entra en la decisión (entra en la distancia, que es donde se nota).

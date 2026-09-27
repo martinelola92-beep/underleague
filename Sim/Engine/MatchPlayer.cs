@@ -504,6 +504,12 @@ internal sealed class MatchPlayer
     public int DribbleDuelCooldown { get; set; }
 
     /// <summary>
+    /// Ticks que lleva protegiendo el balón en su posesión actual (BO-A). Vuelve a cero cada vez que
+    /// recibe un balón; al llegar a <c>shieldMaxTicks</c> proteger deja de ser opción.
+    /// </summary>
+    public int ShieldedTicks { get; set; }
+
+    /// <summary>
     /// Ticks que faltan para poder volver a disputar el balón con una entrada (§3.5); mientras sea
     /// &gt; 0, la entrada <b>al portador</b> se descarta. No gobierna la entrada sin balón, que tiene el
     /// suyo desde la ADR 0129 (<see cref="OffBallTackleCooldown"/>).

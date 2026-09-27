@@ -1722,6 +1722,7 @@ internal sealed class MatchEngine : IPerkWorld
                 // El que protege NO pasa por TryDribbleDuel: no está intentando irse de nadie, está
                 // aguantando. Quien decide si le quitan el balón es la entrada del rival, y allí
                 // (TackleWinChance) el que protege resiste con su fuerza.
+                player.ShieldedTicks++;
                 Move(player, dribbling: true);
                 break;
             default:
@@ -2686,6 +2687,13 @@ internal sealed class MatchEngine : IPerkWorld
         _ball.InFlight = false;
         _ball.IsShot = false;
         _ball.PassReceiver = null;
+
+        // BO-A: la cuenta de protección es de ESTA posesión.
+        if (!ReferenceEquals(previous, player))
+        {
+            player.ShieldedTicks = 0;
+        }
+
         _ball.Passer = null;
         _ball.Shooter = null;
 

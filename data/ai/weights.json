@@ -88,6 +88,7 @@
     "shieldMinPressure": 30,
     "shieldPressureBonusPerCenti": 4,
     "shieldStrengthSlope": 6,
+    "shieldMaxTicks": 36,
 
     "clearBase": 150,
     "clearMinDanger": 40,
