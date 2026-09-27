@@ -69,6 +69,7 @@ viva anotada.
 | [BM-B](./BM-B.md) | Una resolución publicada antes de tirarse no mira a sus participantes (`charge`, `bull_rush`, `duelist`, `nutmeg`) | Abierta: el caso `extraAction` CONFIRMED por medida (44/450 runs); cualquier arreglo cambia perks medidos |
 | [BM-C](./BM-C.md) | Lo que `ankle_bite` paga no se ve: la lesión nunca se pita y el sesgo del árbitro son décimas de punto | Revisada en diseño (recomendación A: la mordida arrastra la falta, sólo datos); pendiente del censo por portador antes de tocar el dato |
 | [BN-A](./BN-A.md) | Los jugadores se amontonan sobre el portero cuando tiene el balón | Implementada ([ADR 0152](../decisiones/0152-el-area-del-portero-se-cierra-y-el-portero-saca-con-comba.md)): el área se cierra y el portero despeja con comba (despeje devuelto 551 → 4); abierto el grupo en el borde del área en el saque de puerta |
+| [BO-A](./BO-A.md) | Portador y rival atascados en la misma jugada (hasta 42 s sin una entrada) | Implementada ([ADR 0153](../decisiones/0153-a-distancia-de-entrada-no-se-persigue-y-proteger-tiene-tope.md)): peor tramo 632 → 53 ticks |
 
 ## Cerradas
 

@@ -9,7 +9,32 @@ PC (Steam), premium, sin online. **Estado (8 sep 2026): fases 0 y 1 cerradas; fa
 **Campo de siete filas (14 sep 2026, decisión del revisor, BA-C):** 16×7 en vez de 16×6 —con seis filas el centro geométrico cae *entre* dos filas y no existe fila central—, con guardado v4. Añadir la fila cuesta ~1,0 tiro y ~0,45 goles por partido y **ninguna palanca local lo recupera**, así que la **ADR 0109** recalibra la banda de tiros a la geometría vigente (8-16 → 7-15) en vez de tocar el motor, y deja escrito que ensanchar la formación o las zonas de acción destruye la profundidad de colocación. Nueve auditorías de la IA de jugadores (`docs/auditoria-ia-jugadores-1..9.md`) dejan **un solo cambio aplicado**, la **ADR 0110**: `Shoot` del defensa 77 → 154 y del centrocampista 188 → 237, porque con 77 un defensa colocado arriba nunca remataba —perdía contra su propio `ShortPass` de 500— y jugar fuera de posición costaba dos tercios del ataque (100/48/38 → 100/68/55). Rechazados y documentados: `ChaseBall pen` en todas las dosis (degrada la diferenciación de builds), el desfase de fase entre equipos (no replica entre semillas) y la histéresis. Queda **abierto** el papel del centrocampista: dispara el 6,5 % de los tiros siendo el 43 % de los jugadores de campo.
 ---
 
-## ARRANQUE DE LA SESIÓN SIGUIENTE (escrito el 26 sep 2026, tercera sesión)
+## ARRANQUE DE LA SESIÓN SIGUIENTE (escrito el 27 sep 2026)
+
+**Hecho, por encargo directo del revisor** (tareas sueltas de gameplay):
+
+- **[ADR 0152](decisiones/0152-el-area-del-portero-se-cierra-y-el-portero-saca-con-comba.md) / [BN-A](pendientes/BN-A.md)**:
+  el área del portero se cierra cuando tiene el balón (nadie dentro, se sale andando, sin teletransporte
+  en el saque de puerta) y el portero despeja con comba (pico 3,5) para que el rival no se lo devuelva de
+  cabeza. Despeje devuelto 551 → 4; goles iguales, más entradas y lesiones. Puertas: nuevas rojas
+  `elf_none` 36 % (y `badBuildsLoseToNone`, que volvió a verde con la 0153).
+- **[ADR 0153](decisiones/0153-a-distancia-de-entrada-no-se-persigue-y-proteger-tiene-tope.md) / [BO-A](pendientes/BO-A.md)**:
+  portador y rival atascados en la misma jugada (hasta 42 s). A distancia de entrada ya no se persigue el
+  balón, y proteger tiene tope por posesión (36 ticks, provisional). Peor atasco 632 → 42-53 ticks.
+
+**Puertas: 5 rojas de 43** — curva de jefes, `orc_violence` ×2, razas (`elf_none` 36 %, `undead_none`
+61 %) y `TheThreeDoctrinesBuyDifferently` (−0,28 de oro). Nada compensado: el revisor aplazó el balance fino.
+
+**Abierto de estas tareas**: el grupo de defensas en fila en el borde del área en el saque de puerta
+(BN-A); dar la posesión de las reanudaciones al que saca (medido, cambia córners y bandas, decisión del
+revisor); por qué la IA vuelve a elegir proteger con la misma presión (BI-D, BJ-A, BO-A); el balón a 3,5
+casillas se pinta a la altura de las vallas.
+
+**El orden anterior sigue** (abajo): paso 2 si el revisor lo reabre, BM-C, BM-B.
+
+---
+
+## ARRANQUE DE LA SESIÓN SIGUIENTE (escrito el 26 sep 2026, tercera sesión — superado por el de arriba)
 
 **Hecho en esta sesión, por encargo directo del revisor** (interrumpió el paso 2 para pedirlo):
 [ADR 0151](decisiones/0151-tras-el-gol-celebracion-y-cortinilla.md). Tras un gol, 2 s de celebración en
