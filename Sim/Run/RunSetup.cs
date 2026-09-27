@@ -105,11 +105,13 @@ public sealed record TreatPlayer(int PlayerId, bool Risky = false) : RunDecision
 public sealed record TreatSquad : RunDecision;
 
 /// <summary>
-/// Elige una opción de la carta del nodo de evento abierto (ADR 0100). <paramref name="TargetPlayerId"/>
+/// Elige una opción de la carta del nodo de evento abierto (ADR 0100, ADR 0159). <paramref name="TargetPlayerId"/>
 /// solo hace falta cuando la opción señala a un jugador —la familia que cambia carne por ventaja—; en las
-/// demás se ignora.
+/// demás se ignora. <paramref name="SecondTargetPlayerId"/> (ADR 0159) es el segundo objetivo que admite
+/// una opción con dos cuerpos: el sacrificio (quien hereda el mejor perk del muerto) o una opción que
+/// hiere a un segundo jugador distinto del premiado.
 /// </summary>
-public sealed record ChooseEventOption(int OptionIndex, int TargetPlayerId = -1) : RunDecision;
+public sealed record ChooseEventOption(int OptionIndex, int TargetPlayerId = -1, int SecondTargetPlayerId = -1) : RunDecision;
 
 /// <summary>Elige una de las tres recompensas tras ganar un partido (RF-071). Paquete X.</summary>
 /// <param name="OptionIndex">Opción elegida, 0..2.</param>

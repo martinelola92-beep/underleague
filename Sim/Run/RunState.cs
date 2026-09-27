@@ -425,6 +425,13 @@ public static class RunRules
 
     /// <summary>Experiencia extra de un canterano, en porcentaje (RF-114c).</summary>
     public const int YouthExperienceBonusPercent = 33;
+
+    /// <summary>
+    /// Rasgos máximos por jugador (RF-022c). El efecto <c>grantTrait</c> de eventos (ADR 0159) es el
+    /// primer sitio fuera de la generación de jugadores que puede toparlo, así que sube aquí de constante
+    /// implícita de la generación a regla nombrada del bucle de run.
+    /// </summary>
+    public const int MaxTraits = 3;
 }
 
 /// <summary>

@@ -265,6 +265,56 @@ public static class Progression
     }
 
     /// <summary>
+    /// Baja al jugador <paramref name="levels"/> niveles (mínimo 1), revirtiendo la misma aritmética que
+    /// <see cref="LevelUp"/> (RF-027): resta <c>attributesPerLevel</c> por nivel perdido a todos los
+    /// atributos salvo la correa. Es lo que necesitan dos mecánicas nuevas con el mismo coste ("pierde un
+    /// nivel"): el efecto <c>level</c> de eventos (ADR 0159) y el cambio de puesto del entrenamiento (ADR
+    /// 0160). Si <paramref name="levels"/> no baja del nivel actual, devuelve el jugador sin tocar.
+    /// </summary>
+    public static PlayerDefinition LevelDown(PlayerDefinition player, int levels, ProgressionTuning tuning)
+    {
+        ArgumentNullException.ThrowIfNull(player);
+        ArgumentNullException.ThrowIfNull(tuning);
+
+        int target = Math.Clamp(player.Level - Math.Max(0, levels), 1, MaxLevel);
+        if (target >= player.Level)
+        {
+            return player;
+        }
+
+        int bonus = (player.Level - target) * tuning.AttributesPerLevel;
+        var attributes = Attributes.Clamp(new Attributes(
+            player.Attributes.Strength - bonus,
+            player.Attributes.Speed - bonus,
+            player.Attributes.Technique - bonus,
+            player.Attributes.Stamina - bonus,
+            player.Attributes.Leash));
+
+        return player with { Level = target, Attributes = attributes };
+    }
+
+    /// <summary>
+    /// Experiencia mínima para alcanzar <paramref name="level"/> (el mismo umbral que usa
+    /// <see cref="LevelFor"/> en sentido inverso); 0 para el nivel 1. <see cref="LevelDown"/> no toca la
+    /// experiencia del jugador -solo el nivel y los atributos-, así que quien lo llama tiene que acotar la
+    /// experiencia por debajo de <c>MinExperienceForLevel(nivelViejo)</c> o la próxima vez que
+    /// <see cref="LevelFor"/> la lea el jugador "sube" solo, deshaciendo la pérdida (Regla I).
+    /// </summary>
+    public static int MinExperienceForLevel(int level, ProgressionTuning tuning)
+    {
+        ArgumentNullException.ThrowIfNull(tuning);
+        int clamped = Math.Clamp(level, 1, MaxLevel);
+        if (clamped < 2)
+        {
+            return 0;
+        }
+
+        var table = tuning.ExperiencePerLevel;
+        int index = clamped - 2;
+        return index < table.Count ? table[index] : (table.Count > 0 ? table[^1] : 0);
+    }
+
+    /// <summary>
     /// Suma al jugador los contadores que los perks acumulativos ganaron en un partido (RF-070, §6).
     /// Solo se aplican las entradas cuyo <c>PlayerId</c> coincide; el resto se ignora.
     /// </summary>

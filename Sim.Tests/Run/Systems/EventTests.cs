@@ -40,7 +40,17 @@ public sealed class EventTests
             foreach (var option in card.Options)
             {
                 // Lo que pide un cuerpo lo señala: sin esto la interfaz no sabría a quién preguntar.
-                Assert.Equal(option.Effects.Any(e => e.Kind is EventEffectKind.Injure or EventEffectKind.ExperienceTarget), option.NeedsTarget);
+                // ADR 0159: grantTrait/removeTrait/attribute/level y el sacrificio (su víctima) se suman a
+                // la familia de "carne por ventaja" que ya obligaba a needsTarget.
+                bool hasTargetedEffect = option.Effects.Any(e => e.Kind
+                    is EventEffectKind.Injure
+                    or EventEffectKind.ExperienceTarget
+                    or EventEffectKind.GrantTrait
+                    or EventEffectKind.RemoveTrait
+                    or EventEffectKind.Attribute
+                    or EventEffectKind.Level
+                    or EventEffectKind.Sacrifice);
+                Assert.Equal(hasTargetedEffect, option.NeedsTarget);
             }
         }
     }
@@ -121,7 +131,10 @@ public sealed class EventTests
                 continue;
             }
 
-            Assert.Throws<ArgumentException>(() => EventSystem.Choose(state, new ChooseEventOption(index), Events, SystemsTestSupport.Catalog));
+            Assert.Throws<ArgumentException>(() => EventSystem.Choose(
+                state, new ChooseEventOption(index), Events,
+                SystemsTestSupport.Systems.Items, SystemsTestSupport.Systems.Consumables, SystemsTestSupport.Systems.Economy,
+                SystemsTestSupport.Catalog));
             return;
         }
 
@@ -134,7 +147,10 @@ public sealed class EventTests
         var (state, _) = AtAnEvent(4004UL);
 
         Assert.Throws<ArgumentOutOfRangeException>(
-            () => EventSystem.Choose(state, new ChooseEventOption(9), Events, SystemsTestSupport.Catalog));
+            () => EventSystem.Choose(
+                state, new ChooseEventOption(9), Events,
+                SystemsTestSupport.Systems.Items, SystemsTestSupport.Systems.Consumables, SystemsTestSupport.Systems.Economy,
+                SystemsTestSupport.Catalog));
     }
 
     /// <summary>Seguir camino no toca nada: es la opción que toda carta tiene que ofrecer.</summary>
@@ -145,7 +161,10 @@ public sealed class EventTests
         var card = EventSystem.Card(state, node, Events);
         int index = Array.FindIndex(card.Options.ToArray(), o => o.Effects.Count == 0);
 
-        var after = EventSystem.Choose(state, new ChooseEventOption(index), Events, SystemsTestSupport.Catalog);
+        var after = EventSystem.Choose(
+            state, new ChooseEventOption(index), Events,
+            SystemsTestSupport.Systems.Items, SystemsTestSupport.Systems.Consumables, SystemsTestSupport.Systems.Economy,
+            SystemsTestSupport.Catalog);
 
         Assert.Equal(state.Gold, after.Gold);
         Assert.Equal(state.Roster.Count, after.Roster.Count);

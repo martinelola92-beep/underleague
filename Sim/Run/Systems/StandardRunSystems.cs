@@ -313,7 +313,7 @@ public sealed class StandardRunSystems : IRunSystems
             HireMercenary hire => MarketSystem.Hire(state, hire, catalog, _economy, _items, _consumables),
             TreatPlayer treat => MedicalSystem.Treat(state, treat, _economy, catalog),
             TreatSquad => MedicalSystem.TreatSquad(state, _economy),
-            ChooseEventOption choice => EventSystem.Choose(state, choice, _events, catalog),
+            ChooseEventOption choice => EventSystem.Choose(state, choice, _events, _items, _consumables, _economy, catalog),
             ExpandRoster => EnrollmentSystem.Expand(state, _economy),
             ReleasePlayer release => EnrollmentSystem.Release(state, release),
             ChooseReward choose => RewardSystem.Choose(state, choose, catalog, _economy, _items),
