@@ -1,0 +1,43 @@
+{
+  "_doc": "ADR 0159. Cifras provisionales, sin medir (Regla H).",
+  "id": "fighting_pit",
+  "name": {
+    "es": "El foso",
+    "en": "The pit"
+  },
+  "description": {
+    "es": "Un círculo de barro y apuestas al fondo de la taberna. Nadie pregunta el nombre del que baja.",
+    "en": "A ring of mud and wagers at the back of the tavern. Nobody asks the name of whoever climbs down."
+  },
+  "minAct": 1,
+  "weight": 100,
+  "options": [
+    {
+      "id": "fight",
+      "name": {
+        "es": "Un señalado pelea",
+        "en": "Have someone named fight"
+      },
+      "effects": [
+        {
+          "type": "attribute",
+          "value": 6,
+          "attribute": "strength"
+        },
+        {
+          "type": "injure",
+          "value": 1
+        }
+      ],
+      "needsTarget": true
+    },
+    {
+      "id": "leave",
+      "name": {
+        "es": "Seguir camino",
+        "en": "Move on"
+      },
+      "effects": []
+    }
+  ]
+}

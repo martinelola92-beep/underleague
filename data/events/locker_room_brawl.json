@@ -1,0 +1,60 @@
+{
+  "_doc": "ADR 0159: usa needsSecondTarget explícito (no lo infiere el cargador, que solo lo hace para sacrifice) porque premiar hiere a un SEGUNDO jugador distinto del premiado (usesSecondTarget en el efecto injure). Cifras provisionales, sin medir (Regla H).",
+  "id": "locker_room_brawl",
+  "name": {
+    "es": "Pelea en el vestuario",
+    "en": "Locker room brawl"
+  },
+  "description": {
+    "es": "Dos titulares se han liado a manos limpias por una bota. El vestuario entero elige bando.",
+    "en": "Two starters went at it bare-knuckled over a boot. The whole locker room picks a side."
+  },
+  "minAct": 1,
+  "weight": 100,
+  "options": [
+    {
+      "id": "punish",
+      "name": {
+        "es": "Castigar al señalado",
+        "en": "Punish the one named"
+      },
+      "effects": [
+        {
+          "type": "removeTrait",
+          "value": 0,
+          "trait": "Aggressive"
+        }
+      ],
+      "needsTarget": true
+    },
+    {
+      "id": "reward",
+      "name": {
+        "es": "Premiarle",
+        "en": "Reward him"
+      },
+      "effects": [
+        {
+          "type": "grantTrait",
+          "value": 0,
+          "trait": "Leader"
+        },
+        {
+          "type": "injure",
+          "value": 1,
+          "usesSecondTarget": true
+        }
+      ],
+      "needsTarget": true,
+      "needsSecondTarget": true
+    },
+    {
+      "id": "leave",
+      "name": {
+        "es": "Seguir camino",
+        "en": "Move on"
+      },
+      "effects": []
+    }
+  ]
+}

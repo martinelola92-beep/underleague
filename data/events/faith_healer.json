@@ -1,0 +1,55 @@
+{
+  "_doc": "ADR 0159 pedía 'todos los leves se curan'; la ADR solo define ocho efectos nuevos y ese no es uno de ellos, así que 'rezar' reutiliza el heal existente (cura toda la plantilla, como la clínica de tarifa plana), sin coste. Decisión tomada sin consultar, señalada en el informe de cierre. Cifras provisionales, sin medir (Regla H).",
+  "id": "faith_healer",
+  "name": {
+    "es": "El santero",
+    "en": "The faith healer"
+  },
+  "description": {
+    "es": "Reza en una lengua que nadie del vestuario reconoce y vende frascos que huelen peor que curan.",
+    "en": "He prays in a tongue nobody in the locker room recognizes, and sells vials that smell worse than they heal."
+  },
+  "minAct": 1,
+  "weight": 100,
+  "options": [
+    {
+      "id": "pay",
+      "name": {
+        "es": "Pagar",
+        "en": "Pay"
+      },
+      "effects": [
+        {
+          "type": "gold",
+          "value": -35
+        },
+        {
+          "type": "grantConsumable",
+          "value": 0,
+          "family": "supernatural"
+        }
+      ]
+    },
+    {
+      "id": "pray",
+      "name": {
+        "es": "Rezar",
+        "en": "Pray"
+      },
+      "effects": [
+        {
+          "type": "heal",
+          "value": 0
+        }
+      ]
+    },
+    {
+      "id": "leave",
+      "name": {
+        "es": "Seguir camino",
+        "en": "Move on"
+      },
+      "effects": []
+    }
+  ]
+}

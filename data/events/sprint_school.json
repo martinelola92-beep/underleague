@@ -1,0 +1,44 @@
+{
+  "_doc": "ADR 0159. Cifras provisionales, sin medir (Regla H).",
+  "id": "sprint_school",
+  "name": {
+    "es": "La escuela de carreras",
+    "en": "The running school"
+  },
+  "description": {
+    "es": "Un viejo corredor enseña a robar metros a cambio de olvidar el balón un par de semanas.",
+    "en": "An old runner teaches how to steal yards, in exchange for forgetting the ball for a couple of weeks."
+  },
+  "minAct": 2,
+  "weight": 100,
+  "options": [
+    {
+      "id": "train",
+      "name": {
+        "es": "Un señalado entrena con él",
+        "en": "Have someone named train with him"
+      },
+      "effects": [
+        {
+          "type": "attribute",
+          "value": 6,
+          "attribute": "speed"
+        },
+        {
+          "type": "attribute",
+          "value": -3,
+          "attribute": "technique"
+        }
+      ],
+      "needsTarget": true
+    },
+    {
+      "id": "leave",
+      "name": {
+        "es": "Seguir camino",
+        "en": "Move on"
+      },
+      "effects": []
+    }
+  ]
+}

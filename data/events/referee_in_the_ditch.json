@@ -1,0 +1,42 @@
+{
+  "_doc": "ADR 0159: gestionar la memoria del árbitro (ADR 0158) desde fuera de partido. Cifras provisionales, sin medir (Regla H).",
+  "id": "referee_in_the_ditch",
+  "name": {
+    "es": "El árbitro en la cuneta",
+    "en": "The referee in the ditch"
+  },
+  "description": {
+    "es": "Su carro ha perdido una rueda a mitad de camino. Nadie más pasa por aquí hoy.",
+    "en": "His cart has lost a wheel halfway there. Nobody else is coming down this road today."
+  },
+  "minAct": 2,
+  "weight": 100,
+  "options": [
+    {
+      "id": "carry",
+      "name": {
+        "es": "Llevarlo en tu carro",
+        "en": "Carry him in your cart"
+      },
+      "effects": [
+        {
+          "type": "refereeGrudge",
+          "value": 25
+        },
+        {
+          "type": "injure",
+          "value": 1
+        }
+      ],
+      "needsTarget": true
+    },
+    {
+      "id": "leave",
+      "name": {
+        "es": "Seguir camino",
+        "en": "Move on"
+      },
+      "effects": []
+    }
+  ]
+}

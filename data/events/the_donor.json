@@ -1,0 +1,38 @@
+{
+  "_doc": "ADR 0159, enmienda de RF-072: sacrifice transfiere el mejor perk (rareza desc., id asc., RT-041) del muerto al segundo señalado con hueco de perk (RF-023). Peso bajo a propósito (ADR 0048: la muerte es rara), no una cifra medida.",
+  "id": "the_donor",
+  "name": {
+    "es": "El donante",
+    "en": "The donor"
+  },
+  "description": {
+    "es": "Ofrece un trato sin adornos: un cuerpo que ya no volverá, y lo que ese cuerpo sabía pasa a otro.",
+    "en": "He offers a deal with no dressing up: a body that won't come back, and what it knew passes to another."
+  },
+  "minAct": 2,
+  "weight": 40,
+  "options": [
+    {
+      "id": "sacrifice",
+      "name": {
+        "es": "Aceptar el trato",
+        "en": "Take the deal"
+      },
+      "effects": [
+        {
+          "type": "sacrifice",
+          "value": 0
+        }
+      ],
+      "needsTarget": true
+    },
+    {
+      "id": "leave",
+      "name": {
+        "es": "Seguir camino",
+        "en": "Move on"
+      },
+      "effects": []
+    }
+  ]
+}

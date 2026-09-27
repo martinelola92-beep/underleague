@@ -1,0 +1,60 @@
+{
+  "_doc": "ADR 0159: entrega determinista de objeto por rareza (el de menor id disponible para la raza y el acto, EventSystem.BestItem). Sin legendary: ningún objeto del catálogo lo es (data/schemas/items.schema.json). Cifras provisionales, sin medir (Regla H).",
+  "id": "junk_dealer",
+  "name": {
+    "es": "El chamarilero",
+    "en": "The junk dealer"
+  },
+  "description": {
+    "es": "Extiende una manta llena de hierro viejo y jura que cada pieza perteneció a un campeón. Miente sobre casi todas.",
+    "en": "He spreads a blanket full of old iron and swears every piece belonged to a champion. He's lying about most of them."
+  },
+  "minAct": 2,
+  "weight": 100,
+  "options": [
+    {
+      "id": "pay_little",
+      "name": {
+        "es": "Pagar poco",
+        "en": "Pay little"
+      },
+      "effects": [
+        {
+          "type": "gold",
+          "value": -20
+        },
+        {
+          "type": "grantItem",
+          "value": 0,
+          "rarity": "uncommon"
+        }
+      ]
+    },
+    {
+      "id": "pay_much",
+      "name": {
+        "es": "Pagar mucho",
+        "en": "Pay a lot"
+      },
+      "effects": [
+        {
+          "type": "gold",
+          "value": -55
+        },
+        {
+          "type": "grantItem",
+          "value": 0,
+          "rarity": "rare"
+        }
+      ]
+    },
+    {
+      "id": "leave",
+      "name": {
+        "es": "Seguir camino",
+        "en": "Move on"
+      },
+      "effects": []
+    }
+  ]
+}

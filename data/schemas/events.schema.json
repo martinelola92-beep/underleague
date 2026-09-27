@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "title": "Carta de evento (ADR 0100)",
+  "title": "Carta de evento (ADR 0100, ADR 0159)",
   "type": "object",
   "additionalProperties": false,
   "required": [
@@ -58,6 +58,10 @@
           "needsTarget": {
             "type": "boolean"
           },
+          "needsSecondTarget": {
+            "description": "ADR 0159: la opción pide un SEGUNDO jugador, distinto del primero (el heredero de sacrifice, o un segundo herido de una opción que reparte premio y daño). No hace falta declararlo si algún efecto ya es 'sacrifice': el cargador lo deduce.",
+            "type": "boolean"
+          },
           "effects": {
             "type": "array",
             "minItems": 0,
@@ -77,13 +81,71 @@
                     "heal",
                     "experience",
                     "experienceTarget",
-                    "injure"
+                    "injure",
+                    "grantItem",
+                    "grantConsumable",
+                    "grantTrait",
+                    "removeTrait",
+                    "attribute",
+                    "level",
+                    "refereeGrudge",
+                    "recruit",
+                    "sacrifice"
                   ]
                 },
                 "value": {
+                  "description": "Con signo salvo donde se diga lo contrario: gold/goldShare/attribute/refereeGrudge lo llevan; level es el número de niveles que se pierden (positivo); el resto lo ignora (0).",
                   "type": "integer",
                   "minimum": -100,
                   "maximum": 1000
+                },
+                "usesSecondTarget": {
+                  "description": "ADR 0159: este efecto concreto se aplica al SEGUNDO objetivo de la opción, no al primero (por ejemplo, el herido de una opción que premia a uno y hiere a otro).",
+                  "type": "boolean"
+                },
+                "rarity": {
+                  "description": "Solo con type=grantItem: rareza del objeto que se entrega. Sin legendary: ningún objeto del catálogo la tiene (data/schemas/items.schema.json).",
+                  "enum": [
+                    "common",
+                    "uncommon",
+                    "rare"
+                  ]
+                },
+                "family": {
+                  "description": "Solo con type=grantConsumable: familia del consumible que se entrega (RF-084).",
+                  "enum": [
+                    "medical",
+                    "tactical",
+                    "dirty",
+                    "supernatural"
+                  ]
+                },
+                "trait": {
+                  "description": "Solo con type=grantTrait o removeTrait: el rasgo (Sim.Model.Trait), no una etiqueta de estilo (StyleTag).",
+                  "enum": [
+                    "Aggressive",
+                    "Fast",
+                    "Scorer",
+                    "LongShot",
+                    "Cerebral",
+                    "Dirty",
+                    "Resilient",
+                    "Coward",
+                    "Leader",
+                    "Lazy",
+                    "Cat",
+                    "Wall",
+                    "Rusher"
+                  ]
+                },
+                "attribute": {
+                  "description": "Solo con type=attribute. Sin leash: la correa es disciplina posicional, no algo que un evento o el entrenamiento suban (docs/simulacion.md).",
+                  "enum": [
+                    "strength",
+                    "speed",
+                    "technique",
+                    "stamina"
+                  ]
                 }
               }
             }

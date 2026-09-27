@@ -64,10 +64,12 @@ public sealed class EventTests
     public void TheCardIsOnlyVisibleOnceTheEventNodeIsOpen()
     {
         var start = RunEngine.Start(SystemsTestSupport.Setup(), 4001UL, SystemsTestSupport.Catalog, SystemsTestSupport.Systems);
-        Assert.Null(Underleague.Sim.Run.View.EventView.Build(start, SystemsTestSupport.Catalog, Events, "es"));
+        Assert.Null(Underleague.Sim.Run.View.EventView.Build(
+            start, SystemsTestSupport.Catalog, Events, SystemsTestSupport.Systems.Items, SystemsTestSupport.Systems.Consumables, "es"));
 
         var (open, _) = AtAnEvent(4001UL);
-        var view = Underleague.Sim.Run.View.EventView.Build(open, SystemsTestSupport.Catalog, Events, "es");
+        var view = Underleague.Sim.Run.View.EventView.Build(
+            open, SystemsTestSupport.Catalog, Events, SystemsTestSupport.Systems.Items, SystemsTestSupport.Systems.Consumables, "es");
         Assert.NotNull(view);
         Assert.NotEmpty(view!.Options);
     }

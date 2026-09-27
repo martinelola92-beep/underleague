@@ -1,0 +1,78 @@
+{
+  "_doc": "ADR 0159: entrega determinista de consumible por familia (el de menor id de esa familia, EventSystem.BestConsumable). Cifras provisionales, sin medir (Regla H).",
+  "id": "traveling_apothecary",
+  "name": {
+    "es": "El boticario ambulante",
+    "en": "The traveling apothecary"
+  },
+  "description": {
+    "es": "Su carreta huele a azufre y a vendas viejas. Tiene remedio para todo, y remedio para lo contrario.",
+    "en": "His cart smells of sulfur and old bandages. He has a cure for everything, and a cure for the opposite too."
+  },
+  "minAct": 1,
+  "weight": 100,
+  "options": [
+    {
+      "id": "buy_dirty",
+      "name": {
+        "es": "Comprar un consumible sucio",
+        "en": "Buy a dirty consumable"
+      },
+      "effects": [
+        {
+          "type": "gold",
+          "value": -20
+        },
+        {
+          "type": "grantConsumable",
+          "value": 0,
+          "family": "dirty"
+        }
+      ]
+    },
+    {
+      "id": "buy_medical",
+      "name": {
+        "es": "Comprar uno médico",
+        "en": "Buy a medical one"
+      },
+      "effects": [
+        {
+          "type": "gold",
+          "value": -20
+        },
+        {
+          "type": "grantConsumable",
+          "value": 0,
+          "family": "medical"
+        }
+      ]
+    },
+    {
+      "id": "steal",
+      "name": {
+        "es": "Robarle uno",
+        "en": "Steal one from him"
+      },
+      "effects": [
+        {
+          "type": "grantConsumable",
+          "value": 0,
+          "family": "dirty"
+        },
+        {
+          "type": "refereeGrudge",
+          "value": -10
+        }
+      ]
+    },
+    {
+      "id": "leave",
+      "name": {
+        "es": "Seguir camino",
+        "en": "Move on"
+      },
+      "effects": []
+    }
+  ]
+}

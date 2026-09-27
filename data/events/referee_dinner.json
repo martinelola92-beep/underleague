@@ -1,0 +1,58 @@
+{
+  "_doc": "ADR 0159: gestionar la memoria del árbitro (ADR 0158) desde fuera de partido. Cifras provisionales, sin medir (Regla H).",
+  "id": "referee_dinner",
+  "name": {
+    "es": "La cena con el colegiado",
+    "en": "Dinner with the ref"
+  },
+  "description": {
+    "es": "Se ha invitado solo a tu mesa y ha pedido lo más caro de la carta. Dice que es tradición.",
+    "en": "He invited himself to your table and ordered the most expensive thing on the menu. Says it's tradition."
+  },
+  "minAct": 1,
+  "weight": 100,
+  "options": [
+    {
+      "id": "pay",
+      "name": {
+        "es": "Pagar la cena",
+        "en": "Pay for dinner"
+      },
+      "effects": [
+        {
+          "type": "gold",
+          "value": -25
+        },
+        {
+          "type": "refereeGrudge",
+          "value": 20
+        }
+      ]
+    },
+    {
+      "id": "skip",
+      "name": {
+        "es": "Invitar y no pagar",
+        "en": "Toast him and skip the bill"
+      },
+      "effects": [
+        {
+          "type": "refereeGrudge",
+          "value": -15
+        },
+        {
+          "type": "gold",
+          "value": 3
+        }
+      ]
+    },
+    {
+      "id": "leave",
+      "name": {
+        "es": "Seguir camino",
+        "en": "Move on"
+      },
+      "effects": []
+    }
+  ]
+}

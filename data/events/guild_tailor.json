@@ -1,0 +1,60 @@
+{
+  "_doc": "ADR 0159. Cifras provisionales, sin medir (Regla H).",
+  "id": "guild_tailor",
+  "name": {
+    "es": "El sastre del gremio",
+    "en": "The guild tailor"
+  },
+  "description": {
+    "es": "Cose petos por encargo y no da puntada sin hilo, ni un precio sin regateo.",
+    "en": "He stitches jerseys to order, and never gives a stitch for free, or a price without haggling."
+  },
+  "minAct": 1,
+  "weight": 100,
+  "options": [
+    {
+      "id": "pay",
+      "name": {
+        "es": "Pagar",
+        "en": "Pay"
+      },
+      "effects": [
+        {
+          "type": "gold",
+          "value": -15
+        },
+        {
+          "type": "grantItem",
+          "value": 0,
+          "rarity": "common"
+        }
+      ]
+    },
+    {
+      "id": "haggle",
+      "name": {
+        "es": "Regatear",
+        "en": "Haggle"
+      },
+      "effects": [
+        {
+          "type": "grantItem",
+          "value": 0,
+          "rarity": "common"
+        },
+        {
+          "type": "refereeGrudge",
+          "value": -5
+        }
+      ]
+    },
+    {
+      "id": "leave",
+      "name": {
+        "es": "Seguir camino",
+        "en": "Move on"
+      },
+      "effects": []
+    }
+  ]
+}

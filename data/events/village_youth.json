@@ -1,0 +1,50 @@
+{
+  "_doc": "ADR 0159: recruit reutiliza la misma generación procedural de canteranos que el mercado (GeneratedPlayers.Youth). Cifras provisionales, sin medir (Regla H).",
+  "id": "village_youth",
+  "name": {
+    "es": "La peña del pueblo",
+    "en": "The village fan club"
+  },
+  "description": {
+    "es": "Un padre orgulloso empuja a su chaval al frente. El chaval no parece tan convencido.",
+    "en": "A proud father pushes his kid to the front. The kid doesn't look nearly as convinced."
+  },
+  "minAct": 1,
+  "weight": 100,
+  "options": [
+    {
+      "id": "accept_kid",
+      "name": {
+        "es": "Aceptar a su chaval",
+        "en": "Take his kid"
+      },
+      "effects": [
+        {
+          "type": "recruit",
+          "value": 0
+        }
+      ]
+    },
+    {
+      "id": "accept_money",
+      "name": {
+        "es": "Aceptar su dinero",
+        "en": "Take his money instead"
+      },
+      "effects": [
+        {
+          "type": "gold",
+          "value": 25
+        }
+      ]
+    },
+    {
+      "id": "leave",
+      "name": {
+        "es": "Seguir camino",
+        "en": "Move on"
+      },
+      "effects": []
+    }
+  ]
+}
