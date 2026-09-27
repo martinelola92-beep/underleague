@@ -80,6 +80,7 @@ viva anotada.
 | [BL-A](./BL-A.md) | Lesionar al rival no ayuda a ganar (`dirty_play`, `ankle_bite`) | **Cerrada**: era ruido. `ankle_bite` LIKELY no negativo (≈ +10), se restaura; la paga de diseño, sin demostrar |
 | [BL-B](./BL-B.md) | El umbral de retirada de la ADR 0087 usa un `rowDeviation` global y falla con filas de varianza alta | **Abierta** solo por hermanos: el umbral lo resuelve la ADR 0150 |
 | [BA-A](./BA-A.md) | BLOQUEO: un nodo de evento sin opciones y sin salida | Cerrada |
+| [BQ-A](./BQ-A.md) | El nodo de evento se abre sin nada que escoger (la causa que BA-A no alcanzó) | Cerrada (27 sep): el mapa abre el evento; hermanos anotados: texto interno visible, huecos del árbitro |
 | [BA-B](./BA-B.md) | BLOQUEO: en un jefe no dejó sustituir al lesionarse el segundo jugador | Cerrada |
 | [BA-C](./BA-C.md) | Con seis filas no hay fila central y la alineación queda descentrada | Cerrada |
 | [BA-D](./BA-D.md) | Los jugadores se teletransportan al reanudar una falta | Cerrada |
