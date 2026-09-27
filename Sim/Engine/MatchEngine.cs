@@ -469,8 +469,15 @@ internal sealed class MatchEngine : IPerkWorld
     /// Multiplicador de <b>cuota</b> de una probabilidad para el jugador (ADR 0050 P1);
     /// <see cref="ProbabilityScale.Neutral"/> si no hay perks (§2).
     /// </summary>
-    private int Odds(MatchPlayer player, ProbabilityKind kind) =>
-        _effects is null ? ProbabilityScale.Neutral : _effects.Modifiers.Probability(player, kind);
+    private int Odds(MatchPlayer player, ProbabilityKind kind)
+    {
+        int perks = _effects is null ? ProbabilityScale.Neutral : _effects.Modifiers.Probability(player, kind);
+
+        // ADR 0156: la orden táctica del equipo sube lo que ataca y baja lo que defiende (u al revés). Entra
+        // por el mismo canal que los perks y se compone con ellos; con la orden neutra es exactamente neutro.
+        int order = _catalog.Ai.MentalityOdds(_context.Order[player.Team], kind);
+        return order == ProbabilityScale.Neutral ? perks : ProbabilityScale.Combine(perks, order);
+    }
 
     /// <summary>
     /// Multiplicador de cuota de un canal que otro <b>contrarresta</b>: el del sujeto por el inverso del

@@ -258,9 +258,11 @@ public sealed class AiWeights
     private readonly int[] _offBallTackle;
     private readonly BlockShift[] _shift;
     private readonly float[,] _mentalityShift;
+    private readonly int[,] _mentalityOdds;
 
-    internal AiWeights(int[,] baseTable, int[,] tacticalTable, int[,] mentalityTable, int[] offBallTackle, AiContext context, BlockShift[] shift, float[,]? mentalityShift = null)
+    internal AiWeights(int[,] baseTable, int[,] tacticalTable, int[,] mentalityTable, int[] offBallTackle, AiContext context, BlockShift[] shift, float[,]? mentalityShift = null, int[,]? mentalityOdds = null)
     {
+        _mentalityOdds = mentalityOdds ?? NeutralOdds();
         _base = baseTable;
         _tactical = tacticalTable;
         _mentality = mentalityTable;
@@ -278,13 +280,34 @@ public sealed class AiWeights
     public float MentalityShift(Mentality m, Position p) => _mentalityShift[(int)m, (int)p];
 
     /// <summary>
+    /// Multiplicador de cuota (base 10.000) que la orden táctica aplica a un canal de probabilidad de todo el
+    /// equipo (ADR 0156): ofensivo sube lo que ataca y baja lo que defiende; defensivo, al revés. Neutral es
+    /// neutro en todo. Sin la tabla (pesos construidos a mano) es neutro.
+    /// </summary>
+    public int MentalityOdds(Mentality m, Underleague.Sim.Perks.ProbabilityKind kind) => _mentalityOdds[(int)m, (int)kind];
+
+    private static int[,] NeutralOdds()
+    {
+        var table = new int[Enum.GetValues<Mentality>().Length, Enum.GetValues<Underleague.Sim.Perks.ProbabilityKind>().Length];
+        for (int i = 0; i < table.GetLength(0); i++)
+        {
+            for (int j = 0; j < table.GetLength(1); j++)
+            {
+                table[i, j] = Underleague.Sim.Perks.ProbabilityScale.Neutral;
+            }
+        }
+
+        return table;
+    }
+
+    /// <summary>
     /// Los mismos pesos con otro <see cref="Context"/>. Existe para que una prueba pueda mover <b>un</b>
     /// término de contexto sobre los pesos reales, en vez de reconstruir a mano las dos tablas enteras
     /// —que es lo que se venía haciendo y lo que hace que un test mida un juego que no es el publicado—.
     /// Comparte los arrays a propósito: nadie los muta después de cargar.
     /// </summary>
     internal AiWeights WithContext(AiContext context) =>
-        new(_base, _tactical, _mentality, _offBallTackle, context, _shift, _mentalityShift);
+        new(_base, _tactical, _mentality, _offBallTackle, context, _shift, _mentalityShift, _mentalityOdds);
 
     /// <summary>Peso base de la acción a para la posición p.</summary>
     public int Base(Position p, PlayerAction a) => _base[(int)p, (int)a];

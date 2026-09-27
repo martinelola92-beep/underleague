@@ -527,7 +527,7 @@ public static class DataLoader
     {
         var doc = JsonDocument.Parse(content);
         var root = new Json(doc.RootElement, file, "$");
-        root.EnsureKnownKeys("base", "tactical", "mentality", "context", "blockShift", "mentalityShift");
+        root.EnsureKnownKeys("base", "tactical", "mentality", "context", "blockShift", "mentalityShift", "mentalityOdds");
 
         int positionCount = Enum.GetValues<Position>().Length;
         int tacticalCount = Enum.GetValues<TacticalState>().Length;
@@ -812,7 +812,59 @@ public static class DataLoader
 
         EnsureComplete(file, mentalityShiftNode.Path, mentalityShiftSet, mentalityCount, positionCountForShift);
 
-        return new AiWeights(baseTable, tacticalTable, mentalityTable, offBallTackle, context, shiftArray, mentalityShift);
+        // ADR 0156: porcentaje de cuota con signo por orden y canal (ProbabilityScale.ToMultiplier). Los canales
+        // que no aparecen son neutros; Neutral tiene que ser 0 en todo lo que declare.
+        int kindCount = Enum.GetValues<Underleague.Sim.Perks.ProbabilityKind>().Length;
+        var mentalityOdds = new int[mentalityCount, kindCount];
+        for (int m = 0; m < mentalityCount; m++)
+        {
+            for (int k = 0; k < kindCount; k++)
+            {
+                mentalityOdds[m, k] = Underleague.Sim.Perks.ProbabilityScale.Neutral;
+            }
+        }
+
+        var mentalityOddsNode = root.Prop("mentalityOdds");
+        foreach (var (mentalityKey, mentalityNode) in mentalityOddsNode.EnumerateObjectEntries())
+        {
+            if (mentalityKey == "_doc")
+            {
+                continue;
+            }
+
+            if (!Enum.TryParse<Mentality>(mentalityKey, out var mentality))
+            {
+                throw new DataException(file, mentalityNode.Path, $"orden táctica desconocida '{mentalityKey}'");
+            }
+
+            foreach (var (kindKey, valueNode) in mentalityNode.EnumerateObjectEntries())
+            {
+                if (!Enum.TryParse<Underleague.Sim.Perks.ProbabilityKind>(kindKey, out var kind))
+                {
+                    throw new DataException(file, valueNode.Path, $"canal de probabilidad desconocido '{kindKey}'");
+                }
+
+                int percent = valueNode.AsInt();
+
+                // La orden es una preferencia de juego, no una fuente de daño: moverle al equipo la falta, la
+                // tarjeta o la lesión sería daño no anunciado (regla 11 de CLAUDE.md, ADR 0048).
+                if (kind is Underleague.Sim.Perks.ProbabilityKind.Foul or Underleague.Sim.Perks.ProbabilityKind.Card
+                    or Underleague.Sim.Perks.ProbabilityKind.Injury or Underleague.Sim.Perks.ProbabilityKind.Injure
+                    or Underleague.Sim.Perks.ProbabilityKind.SevereInjury)
+                {
+                    throw new DataException(file, valueNode.Path, $"la orden táctica no puede mover el canal '{kindKey}': sería daño no anunciado");
+                }
+
+                if (mentality == Mentality.Neutral && percent != 0)
+                {
+                    throw new DataException(file, valueNode.Path, "la orden Neutral no puede mover ningún canal: es la referencia");
+                }
+
+                mentalityOdds[(int)mentality, (int)kind] = Underleague.Sim.Perks.ProbabilityScale.ToMultiplier(percent);
+            }
+        }
+
+        return new AiWeights(baseTable, tacticalTable, mentalityTable, offBallTackle, context, shiftArray, mentalityShift, mentalityOdds);
     }
 
     private static void EnsureComplete(string file, string path, bool[,] set, int dim0, int dim1)

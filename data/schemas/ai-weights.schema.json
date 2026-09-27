@@ -550,6 +550,18 @@
       "required": ["Defensive", "Neutral", "Offensive"],
       "additionalProperties": false
     },
+    "mentalityOdds": {
+      "type": "object",
+      "description": "ADR 0156: porcentaje de cuota con signo por orden táctica y canal de probabilidad. Neutral vacío o a 0.",
+      "properties": {
+        "_doc": { "type": "string" },
+        "Defensive": { "$ref": "#/$defs/kindOdds" },
+        "Neutral": { "$ref": "#/$defs/kindOdds" },
+        "Offensive": { "$ref": "#/$defs/kindOdds" }
+      },
+      "required": ["Defensive", "Neutral", "Offensive"],
+      "additionalProperties": false
+    },
     "blockShift": {
       "type": "object",
       "description": "Desplazamiento de casillas-hogar por estado táctico (capa 2).",
@@ -585,10 +597,16 @@
     "mentality",
     "context",
     "blockShift",
-    "mentalityShift"
+    "mentalityShift",
+    "mentalityOdds"
   ],
   "additionalProperties": false,
   "$defs": {
+    "kindOdds": {
+      "type": "object",
+      "propertyNames": { "enum": ["Pass", "Intercept", "Dribble", "Tackle", "ShotOnTarget", "Save", "TackleEvasion", "InterceptEvasion"] },
+      "additionalProperties": { "type": "integer", "minimum": -90, "maximum": 300 }
+    },
     "positionShift": {
       "type": "object",
       "properties": {
