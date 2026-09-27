@@ -114,6 +114,13 @@ public partial class BroadcastCapture : Control
         // El balón más rápido del partido: es donde el rastro tiene que verse o no servir para nada.
         (ulong Seed, int Node, int Frame, float Speed)? foundFast = null;
 
+        // El árbitro gesticulando (ADR 0158 §6): una falta SEÑALADA (pergamino "¡Falta!") y una falta NO
+        // señalada (pergamino "¿?" y de espaldas a la jugada). No son MatchMoment de Kinds porque hace
+        // falta distinguir el Detail del evento -"foul" contra "unseen"-, así que se leen de
+        // Result.Events directamente, como foundShot/foundBlood.
+        (ulong Seed, int Node, int Frame)? foundFoul = null;
+        (ulong Seed, int Node, int Frame)? foundUnseenFoul = null;
+
         foreach (var seed in Seeds)
         {
             run.NewRun("orc_ironworks", Race.Orc, seed);
@@ -174,6 +181,8 @@ public partial class BroadcastCapture : Control
             foundShot ??= FindShotWithoutGoal(playback, seed, node);
             foundBlood ??= FindBlood(playback, moments, seed, node);
             foundDeath ??= FindDeath(moments, seed, node);
+            foundFoul ??= FindFoul(playback, "foul", seed, node);
+            foundUnseenFoul ??= FindFoul(playback, "unseen", seed, node);
         }
 
         if (baseSeed is null)
@@ -211,6 +220,24 @@ public partial class BroadcastCapture : Control
         else
         {
             GD.Print($"retransmisión: ninguna de las {Seeds.Length} semillas probadas tiene una lesión o muerte no anulada; se salta retrans-sangre");
+        }
+
+        if (foundFoul is { } foulHit)
+        {
+            GD.Print($"retransmisión: 'falta señalada' en la semilla {foulHit.Seed}, nodo {foulHit.Node}, fotograma {foulHit.Frame}");
+        }
+        else
+        {
+            GD.Print($"retransmisión: ninguna de las {Seeds.Length} semillas probadas tiene una falta señalada; se salta retrans-arbitro-falta");
+        }
+
+        if (foundUnseenFoul is { } unseenHit)
+        {
+            GD.Print($"retransmisión: 'falta no señalada' en la semilla {unseenHit.Seed}, nodo {unseenHit.Node}, fotograma {unseenHit.Frame}");
+        }
+        else
+        {
+            GD.Print($"retransmisión: ninguna de las {Seeds.Length} semillas probadas tiene una falta no señalada; se salta retrans-arbitro-no-senalada");
         }
 
         // Muerte: sondeo ancho (hasta ~ExtraDeathSeeds más, RA-020 la hace rara a propósito) solo si las
@@ -488,6 +515,39 @@ public partial class BroadcastCapture : Control
             {
                 await ShowFrame(screen, perk.Frame, "retrans-perk");
                 await Save("retrans-perk");
+            }
+
+            Drop(instance);
+        }
+
+        // El árbitro gesticulando (ADR 0158 §6): ShowFrame ya deja el campo 3D en ese fotograma exacto
+        // (RenderFrame, sin depender de _Process), así que el gesto -pergamino y, en la no señalada, de
+        // espaldas- está puesto en cuanto se guarda la captura.
+        if (foundFoul is { } foul)
+        {
+            run.NewRun("orc_ironworks", Race.Orc, foul.Seed);
+            run.SelectedNodeId = foul.Node;
+
+            var instance = await Show("res://Scenes/Retransmision.tscn", frames: 10);
+            if (instance is BroadcastScreen screen)
+            {
+                await ShowFrame(screen, foul.Frame, "retrans-arbitro-falta");
+                await Save("retrans-arbitro-falta");
+            }
+
+            Drop(instance);
+        }
+
+        if (foundUnseenFoul is { } unseen)
+        {
+            run.NewRun("orc_ironworks", Race.Orc, unseen.Seed);
+            run.SelectedNodeId = unseen.Node;
+
+            var instance = await Show("res://Scenes/Retransmision.tscn", frames: 10);
+            if (instance is BroadcastScreen screen)
+            {
+                await ShowFrame(screen, unseen.Frame, "retrans-arbitro-no-senalada");
+                await Save("retrans-arbitro-no-senalada");
             }
 
             Drop(instance);
@@ -1281,6 +1341,28 @@ public partial class BroadcastCapture : Control
         }
 
         return (seed, node, trace.FrameOfTick(bestTick), best);
+    }
+
+    /// <summary>El primer <see cref="EventType.Foul"/> de la traza con el <c>Detail</c> pedido -"foul" (señalada) o "unseen" (no señalada), ADR 0090/0158 §5- o null si esta semilla no tiene ninguno.</summary>
+    private static (ulong Seed, int Node, int Frame)? FindFoul(MatchPlayback playback, string detail, ulong seed, int node)
+    {
+        var trace = playback.Trace;
+        if (trace is null)
+        {
+            return null;
+        }
+
+        var events = playback.Result.Events;
+        for (int i = 0; i < events.Count; i++)
+        {
+            var e = events[i];
+            if (e.Type == EventType.Foul && e.Detail == detail)
+            {
+                return (seed, node, trace.FrameOfTick(e.Tick));
+            }
+        }
+
+        return null;
     }
 
     private static (ulong Seed, int Node, int Frame)? FindBlood(MatchPlayback playback, IReadOnlyList<MatchMoment> moments, ulong seed, int node)

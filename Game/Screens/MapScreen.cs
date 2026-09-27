@@ -365,6 +365,13 @@ public partial class MapScreen : Control
             lines.Add(rival.Name.Es);
         }
 
+        // Qué árbitro pita y su rasgo en corto (ADR 0158 §6, RF-061): la decisión de qué partido elegir
+        // según quién pita se toma aquí, antes de entrar al ojeo completo.
+        if (node.IsMatch && _run.Referee(node) is { } referee)
+        {
+            lines.Add(UiText.Get("ui.map.refereeLine", referee.Name, UiText.Get("ui.refereeTrait." + referee.Trait)));
+        }
+
         if (node.Kind == NodeKind.Boss)
         {
             lines.Add(UiText.Get("ui.map.boss", node.Act));

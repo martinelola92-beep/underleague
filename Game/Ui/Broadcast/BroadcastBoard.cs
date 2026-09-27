@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using Godot;
 
 namespace Underleague.Game.Ui.Broadcast;
@@ -37,6 +38,16 @@ public partial class BroadcastBoard : Control
     private int _speedIndex;
     private bool _paused;
 
+    // Criterio del árbitro (ADR 0158 §6, RF-062, RF-063): SIEMPRE visible, residuo periférico del
+    // tablero -no un anuncio del director, por eso vive aquí y no en HeraldBanner/ProclamationBand.
+    private int _bias;
+
+    /// <summary>Un "+5"/"−8" en el aire junto al medidor, con su tiempo de vida ya consumido.</summary>
+    private readonly record struct BiasFloat(int Value, float Elapsed);
+
+    private const float BiasFloatSeconds = 1.1f;
+    private readonly List<BiasFloat> _biasFloats = new();
+
     private readonly Rect2[] _speedButtons = new Rect2[3];
     private Rect2 _pauseButton;
     private readonly Rect2[] _orderButtons = new Rect2[3];
@@ -47,6 +58,34 @@ public partial class BroadcastBoard : Control
     {
         CustomMinimumSize = new Vector2(0f, DesignHeight);
         MouseFilter = MouseFilterEnum.Stop;
+
+        // _Process solo corre mientras haya un texto flotante vivo (ShowBiasDelta lo reactiva): el
+        // tablero no necesita reloj propio para nada más, todo lo demás llega por setter.
+        SetProcess(false);
+    }
+
+    /// <summary>Anima y expira los "+N"/"−N" del criterio (RF-063); a cualquier velocidad de reproducción, como el resto del residuo del tablero.</summary>
+    public override void _Process(double delta)
+    {
+        for (int i = _biasFloats.Count - 1; i >= 0; i--)
+        {
+            float elapsed = _biasFloats[i].Elapsed + (float)delta;
+            if (elapsed >= BiasFloatSeconds)
+            {
+                _biasFloats.RemoveAt(i);
+            }
+            else
+            {
+                _biasFloats[i] = _biasFloats[i] with { Elapsed = elapsed };
+            }
+        }
+
+        if (_biasFloats.Count == 0)
+        {
+            SetProcess(false);
+        }
+
+        QueueRedraw();
     }
 
     public void SetTeams(string own, string rival)
@@ -92,6 +131,26 @@ public partial class BroadcastBoard : Control
     public void SetPaused(bool paused)
     {
         _paused = paused;
+        QueueRedraw();
+    }
+
+    /// <summary>Criterio actual del árbitro, −100..100 (RF-062): el medidor siempre visible del tablero.</summary>
+    public void SetBias(int bias)
+    {
+        _bias = Mathf.Clamp(bias, -100, 100);
+        QueueRedraw();
+    }
+
+    /// <summary>Un desplazamiento del criterio (RF-063): un "+N"/"−N" breve junto al medidor. Sin efecto si <paramref name="delta"/> es 0.</summary>
+    public void ShowBiasDelta(int delta)
+    {
+        if (delta == 0)
+        {
+            return;
+        }
+
+        _biasFloats.Add(new BiasFloat(delta, 0f));
+        SetProcess(true);
         QueueRedraw();
     }
 
@@ -184,6 +243,86 @@ public partial class BroadcastBoard : Control
 
         DrawSpeedButtons(w);
         DrawOrderButtons();
+
+        // Criterio del árbitro (RF-062, RF-063, ADR 0158 §6): en el hueco entre la orden táctica y el
+        // bloque de equipos -328 a blockX-, siempre a la vista, nunca un anuncio del director.
+        DrawCriterionMeter(328f + 16f, blockX - 16f);
+        DrawBiasFloats(328f + 16f, blockX - 16f);
+    }
+
+    /// <summary>
+    /// El medidor de criterio (RF-062): −100..100, con color <b>y</b> forma (UI-002) — el marcador
+    /// apunta hacia arriba a favor y hacia abajo en contra, además de cambiar entre oro y sangre, así
+    /// que un jugador que no distinga los dos rojos y no vea el número igual lee la dirección.
+    /// </summary>
+    private void DrawCriterionMeter(float left, float right)
+    {
+        float plaqueW = System.MathF.Max(140f, right - left);
+        const float PlaqueY = 14f;
+        const float PlaqueH = 46f;
+        Pregon.DrawParchment(this, new Vector2(left, PlaqueY), plaqueW, PlaqueH, new Color("4a3321"), Pregon.Sable, seed: 40, amplitude: 1.2f, edgeWidth: 2f);
+
+        string label = UiText.Get("ui.pregon.board.bias", UiText.Signed(_bias));
+        Style.DrawText(this, Pregon.DataBold, new Vector2(left + 10f, PlaqueY + 4f), label, Pregon.SizeDataSmall, Pregon.Vellum, plaqueW - 20f);
+
+        float trackX = left + 10f;
+        float trackW = plaqueW - 20f;
+        float trackY = PlaqueY + 32f;
+        const float TrackH = 6f;
+        DrawRect(new Rect2(trackX, trackY, trackW, TrackH), Pregon.Sable);
+
+        float centerX = trackX + (trackW / 2f);
+        DrawLine(new Vector2(centerX, trackY - 3f), new Vector2(centerX, trackY + TrackH + 3f), Pregon.Vellum, 1.5f);
+
+        float markerX = centerX + ((_bias / 100f) * (trackW / 2f));
+        var fillColor = _bias > 0 ? Pregon.Or : _bias < 0 ? Pregon.Blood : Pregon.Vellum;
+
+        if (_bias != 0)
+        {
+            float fillX0 = System.MathF.Min(centerX, markerX);
+            float fillX1 = System.MathF.Max(centerX, markerX);
+            DrawRect(new Rect2(fillX0, trackY, fillX1 - fillX0, TrackH), fillColor);
+        }
+
+        const float TriSize = 6f;
+        var triangle = _bias >= 0
+            ? new[]
+            {
+                new Vector2(markerX, trackY - TriSize - 2f),
+                new Vector2(markerX - TriSize, trackY - 2f),
+                new Vector2(markerX + TriSize, trackY - 2f),
+            }
+            : new[]
+            {
+                new Vector2(markerX, trackY + TrackH + TriSize + 2f),
+                new Vector2(markerX - TriSize, trackY + TrackH + 2f),
+                new Vector2(markerX + TriSize, trackY + TrackH + 2f),
+            };
+        DrawColoredPolygon(triangle, fillColor);
+    }
+
+    /// <summary>
+    /// Los "+N"/"−N" del criterio (RF-063): oro a favor, sangre en contra, suben y se apagan solos en
+    /// <see cref="BiasFloatSeconds"/>. Residuo periférico del tablero, no una voz alta del director
+    /// (docs/ui/README §2.2): no pausa nada ni compite con un estandarte.
+    /// </summary>
+    private void DrawBiasFloats(float left, float right)
+    {
+        if (_biasFloats.Count == 0)
+        {
+            return;
+        }
+
+        float centerX = left + ((right - left) / 2f);
+        for (int i = 0; i < _biasFloats.Count; i++)
+        {
+            var entry = _biasFloats[i];
+            float t = Mathf.Clamp(entry.Elapsed / BiasFloatSeconds, 0f, 1f);
+            var color = entry.Value >= 0 ? Pregon.Or : Pregon.Blood;
+            color.A = 1f - t;
+            var at = new Vector2(centerX - 18f, 6f - (t * 16f));
+            Style.DrawText(this, Pregon.Score, at, UiText.Signed(entry.Value), Pregon.SizeDataSmall, color);
+        }
     }
 
     /// <summary>

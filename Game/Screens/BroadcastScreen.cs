@@ -151,6 +151,20 @@ public partial class BroadcastScreen : Control
     private readonly List<EventSound> _eventSounds = new();
     private int _nextEventSoundIndex;
 
+    // ------------------------------------------------------------------ criterio del árbitro (RF-062, RF-063)
+
+    /// <summary>
+    /// Un cambio de criterio ya visible en la secuencia de eventos: el fotograma en el que el <c>Bias</c>
+    /// que enseña el tablero (<see cref="BiasAt"/>) pasa a valer algo distinto de lo que valía, y cuánto
+    /// se movió. Se precalcula igual que <see cref="ShotGesture"/> y <see cref="EventSound"/> -recorrer
+    /// miles de eventos por fotograma es trabajo que se hace una vez- y no depende de qué evento concreto
+    /// causó el desplazamiento: es la misma diferencia que vería quien mirase el medidor tick a tick.
+    /// </summary>
+    private readonly record struct BiasChange(int StartFrame, int Delta);
+
+    private readonly List<BiasChange> _biasChanges = new();
+    private int _nextBiasChangeIndex;
+
     // Sacudida de gol/roja/lesión grave (docs/ui/README §4: gol es "suave", roja y lesión grave "más
     // cortas"): valores provisionales, marcador de posición procedural hasta que haya arte.
     private const float GoalShakeAmplitude = 0.05f;
@@ -271,6 +285,7 @@ public partial class BroadcastScreen : Control
         // muerte siguen su propio reloj igual — son información, no adorno de cámara.
         UpdateShotGesture(Speeds[_speedIndex] == 1);
         UpdateEventSounds(Speeds[_speedIndex] == 1);
+        UpdateBiasChanges();
         UpdateDeathEdict((float)delta);
     }
 
@@ -450,6 +465,7 @@ public partial class BroadcastScreen : Control
         _director = new PresentationDirector(_moments.Moments, DirectorTimings.Default);
         BuildShotGestures();
         BuildEventSounds();
+        BuildBiasChanges();
     }
 
     // ------------------------------------------------------------------ decisión (ADR 0094)
@@ -629,6 +645,7 @@ public partial class BroadcastScreen : Control
         // independiente; el hermano de este desfase sigue en `ResyncShotGestures` y está anotado en
         // `docs/pendientes/BI-A.md` porque arreglarlo mueve la cámara y quiere su propia comprobación.
         ResyncEventSounds(resumeFrame);
+        ResyncBiasChanges(resumeFrame);
         _pitch3d.ResetGestures();
 
         Sync();
@@ -1050,6 +1067,27 @@ public partial class BroadcastScreen : Control
         _board.SetSpeedIndex(_speedIndex);
         _board.SetPaused(_manualPaused);
         _board.SetOrder((int)_run.OrderAt(tick), enabled: CanChangeOrder());
+
+        // RF-062: el criterio SIEMPRE visible, leído del Bias del último evento <= este tick (ADR 0158 §6).
+        _board.SetBias(BiasAt(tick));
+    }
+
+    /// <summary>Criterio del árbitro en el tick indicado (RF-062): el <c>Bias</c> del último evento con <c>Tick &lt;= tick</c>, o el criterio de salida si todavía no ha pasado ninguno.</summary>
+    private int BiasAt(int tick)
+    {
+        int bias = _playback.Setup.Referee.InitialBias;
+        var events = _playback.Result.Events;
+        for (int i = 0; i < events.Count; i++)
+        {
+            if (events[i].Tick > tick)
+            {
+                continue;
+            }
+
+            bias = events[i].Bias;
+        }
+
+        return bias;
     }
 
     private void UpdateStrips(int tick, int residueFrame)
@@ -1284,6 +1322,62 @@ public partial class BroadcastScreen : Control
             {
                 AudioManager.Instance?.PlayRandomSfx(pool);
             }
+        }
+    }
+
+    /// <summary>
+    /// Reconstruye la cola de <see cref="BiasChange"/> desde <c>Result.Events</c>, igual que
+    /// <see cref="BuildShotGestures"/> y <see cref="BuildEventSounds"/>: se llama al construir y tras cada
+    /// sustitución, porque la reproducción cambia.
+    /// </summary>
+    private void BuildBiasChanges()
+    {
+        _biasChanges.Clear();
+        _nextBiasChangeIndex = 0;
+
+        if (_trace is null)
+        {
+            return;
+        }
+
+        int running = _playback.Setup.Referee.InitialBias;
+        var events = _playback.Result.Events;
+        for (int i = 0; i < events.Count; i++)
+        {
+            int bias = events[i].Bias;
+            if (bias == running)
+            {
+                continue;
+            }
+
+            _biasChanges.Add(new BiasChange(_trace.FrameOfTick(events[i].Tick), bias - running));
+            running = bias;
+        }
+    }
+
+    /// <summary>Recoloca el puntero de cambios de criterio pendientes, igual que <see cref="ResyncEventSounds"/>: el mismo desfase de "al fotograma siguiente" tras una decisión, para no repetir el texto flotante del evento que abrió la bandeja.</summary>
+    private void ResyncBiasChanges(int frame)
+    {
+        _nextBiasChangeIndex = 0;
+        while (_nextBiasChangeIndex < _biasChanges.Count && _biasChanges[_nextBiasChangeIndex].StartFrame < frame)
+        {
+            _nextBiasChangeIndex++;
+        }
+    }
+
+    /// <summary>
+    /// Suelta los textos flotantes del criterio cuyo fotograma se haya alcanzado. Sin puerta de
+    /// velocidad, a diferencia de los gestos de cámara y el audio de campo: es residuo del tablero, no un
+    /// anuncio (docs/ui/README §4 lo dice del audio de retransmisión, y aquí aplica el mismo motivo -es lo
+    /// que se está contando, no un adorno que dependa de ir a ×1).
+    /// </summary>
+    private void UpdateBiasChanges()
+    {
+        while (_nextBiasChangeIndex < _biasChanges.Count && _biasChanges[_nextBiasChangeIndex].StartFrame <= _frame)
+        {
+            var change = _biasChanges[_nextBiasChangeIndex];
+            _nextBiasChangeIndex++;
+            _board.ShowBiasDelta(change.Delta);
         }
     }
 
@@ -1653,6 +1747,7 @@ public partial class BroadcastScreen : Control
         _pitch3d.ResetGestures();
         ResyncShotGestures(_frame);
         ResyncEventSounds(_frame);
+        ResyncBiasChanges(_frame);
         _pendingDeathEvent = null;
         _deathTrayPending = false;
         _deathEdictDelay = 0f;

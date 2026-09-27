@@ -230,4 +230,16 @@ public partial class RunController
         State is null || Catalog is null || Systems is null
             ? null
             : MarketView.Build(State, Catalog, Systems.Economy, Systems.Items, Systems.Consumables, Data.GameData.Language);
+
+    /// <summary>
+    /// Ficha del árbitro que pitaría <paramref name="node"/> (ADR 0158 §6, RF-061, RF-012b): nombre,
+    /// rasgo, la línea que explica lo que hace y la memoria que tiene del jugador. Null sin run o catálogo
+    /// cargados. <see cref="RefereeView.For"/> pide el <see cref="StandardRunSystems"/> concreto, no
+    /// <see cref="IRunSystems"/> (<see cref="Engine"/>): <c>RefereeFor</c> solo está definido ahí, y
+    /// <c>BossRunSystems</c> lo delega sin cambiarlo.
+    /// </summary>
+    public RefereeCardView? Referee(MapNode node) =>
+        State is null || Catalog is null || Systems is null
+            ? null
+            : RefereeView.For(State, node, Systems, Catalog, Data.GameData.Language);
 }

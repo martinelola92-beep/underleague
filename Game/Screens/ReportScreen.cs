@@ -325,9 +325,23 @@ public partial class ReportScreen : Control
         var referee = _report.Referee;
         Widgets.Body(this, referee.Name, new Vector2(932f, 452f), 324f);
         Widgets.Body(this, UiText.Get("ui.report.refereeBias", referee.InitialBias, referee.FinalBias), new Vector2(932f, 470f), 324f, Style.TextDim);
-        Widgets.Body(this, UiText.Get("ui.report.refereeFouls", referee.FoulsFor, referee.FoulsAgainst), new Vector2(932f, 490f), 324f);
+
+        // ADR 0158 §5 (la mitad de RF-119 que faltaba): FoulsFor/FoulsAgainst ya CUENTAN las no
+        // señaladas (Unseen es un subconjunto, no una cifra aparte), así que "señaladas" se resta aquí
+        // en vez de sumarse -sumar habría doblado la falta no vista-. Retira el hueco declarado
+        // ui.report.refereeGap.
+        Widgets.Body(
+            this,
+            UiText.Get("ui.report.refereeFouls", referee.FoulsFor - referee.UnseenFoulsFor, referee.FoulsAgainst - referee.UnseenFoulsAgainst),
+            new Vector2(932f, 490f),
+            324f);
         Widgets.Body(this, UiText.Get("ui.report.refereeCards", referee.CardsFor, referee.CardsAgainst), new Vector2(932f, 508f), 324f);
-        Widgets.Body(this, UiText.Get("ui.report.refereeGap"), new Vector2(932f, 534f), 324f, Style.TextDim);
+        Widgets.Body(
+            this,
+            UiText.Get("ui.report.refereeUnseen", referee.UnseenFoulsFor, referee.UnseenFoulsAgainst),
+            new Vector2(932f, 526f),
+            324f,
+            Style.TextDim);
     }
 
     private float Row(float y, string text, string gold, Color? color = null)

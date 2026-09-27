@@ -258,11 +258,7 @@ public partial class ScoutScreen : Control
                 Top(catalog, profile)),
         }, y);
 
-        y = Block(UiText.Get("ui.scout.referee"), new List<string>
-        {
-            UiText.Get("ui.scout.refereeLine", setup.Referee.Name, setup.Referee.Trait),
-            UiText.Get("ui.scout.refereeGap"),
-        }, y);
+        y = Block(UiText.Get("ui.scout.referee"), RefereeLines(node), y);
 
         // RF-013: los perks letales, destacados. Si no hay ninguno, se dice: la ausencia de amenaza es
         // información igual de accionable que la amenaza.
@@ -378,6 +374,53 @@ public partial class ScoutScreen : Control
         start.Pressed += StartMatch;
 
         return y + 32f + 16f;
+    }
+
+    /// <summary>
+    /// La ficha del árbitro (ADR 0158 §6, RF-061, RF-012b): nombre, rasgo, la línea que explica lo que
+    /// hace su rasgo -compuesta desde plantilla, RT-035-, su muletilla y si se acuerda de ti. Retira el
+    /// hueco declarado <c>ui.scout.refereeGap</c>: los rasgos y la memoria ya existen.
+    /// </summary>
+    private List<string> RefereeLines(MapNode node)
+    {
+        var referee = _run.Referee(node);
+        var lines = new List<string>();
+        if (referee is null)
+        {
+            return lines;
+        }
+
+        lines.Add(UiText.Get("ui.scout.refereeLine", referee.Name, UiText.Get("ui.refereeTrait." + referee.Trait)));
+        if (referee.TraitLine.Length > 0)
+        {
+            lines.Add(referee.TraitLine);
+        }
+
+        if (referee.Catchphrase.Length > 0)
+        {
+            lines.Add(UiText.Get("ui.scout.refereeCatchphrase", referee.Catchphrase));
+        }
+
+        // Memoria (ADR 0158 §4): 0 y 0 a la vez significa que nunca ha pitado un partido de esta run -no
+        // hay diferencia entre "se acuerda con criterio 0" y "no te conoce", así que se enseña lo segundo.
+        // La memoria es sólo lo que el jugador ha hecho delante de él (ADR 0158 §4); el sesgo de casero
+        // es innato y se dice aparte, para no presentar como rencor lo que no se ha ganado.
+        lines.Add(referee.Grudge == 0
+            ? UiText.Get("ui.scout.refereeMemoryNone")
+            : UiText.Get("ui.scout.refereeMemoryKnown", UiText.Signed(referee.Grudge)));
+        if (referee.InitialBias != 0)
+        {
+            lines.Add(UiText.Get("ui.scout.refereeStart", UiText.Signed(referee.InitialBias)));
+        }
+
+        if (referee.BlindSide != RefereeSide.None)
+        {
+            lines.Add(UiText.Get(referee.BlindSide == RefereeSide.Top
+                ? "ui.scout.refereeBlindTop"
+                : "ui.scout.refereeBlindBottom"));
+        }
+
+        return lines;
     }
 
     /// <summary>Las etiquetas que más se repiten: es lo que hace reconocible a un rival (RF-015).</summary>

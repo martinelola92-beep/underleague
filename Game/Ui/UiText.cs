@@ -154,6 +154,7 @@ public static class UiText
         ["ui.map.marketHops"] = "mercado a {0} saltos desde aquí",
         ["ui.map.marketNone"] = "sin mercado alcanzable por este camino",
         ["ui.map.difficulty"] = "dificultad {0}/5 · {1}",
+        ["ui.map.refereeLine"] = "pita {0} · {1}",
         ["ui.map.boss"] = "jefe del acto {0}",
         ["ui.map.bossHidden"] = "su modificador de regla no se conoce hasta llegar",
         ["ui.map.legend"] = "dorado = accesible · relleno = recorrido · apagado = fuera de alcance",
@@ -214,14 +215,31 @@ public static class UiText
         ["ui.scout.build"] = "BUILD",
         ["ui.scout.buildLine"] = "{0} · nivel medio {1} · {2}",
         ["ui.scout.referee"] = "ÁRBITRO",
-        ["ui.scout.refereeLine"] = "{0} · criterio {1}",
-        ["ui.scout.refereeGap"] = "los rasgos de árbitro y los sobornos son de fase 3: hoy todos son neutros (RF-061)",
+        ["ui.scout.refereeLine"] = "{0} · {1}",
+        ["ui.scout.refereeCatchphrase"] = "«{0}»",
+        ["ui.scout.refereeMemoryKnown"] = "se acuerda de ti: {0}",
+        ["ui.scout.refereeMemoryNone"] = "no te conoce",
+        ["ui.scout.refereeStart"] = "el partido empieza con criterio {0}",
+        ["ui.scout.refereeBlindTop"] = "es tuerto: no ve la banda de arriba",
+        ["ui.scout.refereeBlindBottom"] = "es tuerto: no ve la banda de abajo",
         ["ui.scout.lethal"] = "PERKS LETALES",
         ["ui.scout.lethalNone"] = "ninguno: este rival no puede matar a nadie",
         ["ui.scout.lethalLine"] = "{0} lleva {1}: {2}",
         ["ui.scout.risk"] = "RIESGO DE MUERTE DE TUS TITULARES",
         ["ui.scout.riskLine"] = "{0}: {1}",
         ["ui.scout.riskNone"] = "sin riesgo de muerte con esta alineación",
+
+        // Nombre corto del rasgo del árbitro (ADR 0158 §2): distinto de la línea larga que compone
+        // Sim.Run.View.RefereeView desde data/l10n/<idioma>/templates.json (RT-035) -esta es solo la
+        // etiqueta de la ficha, "rasgo: Estricto", nunca el texto de lo que hace.
+        ["ui.refereeTrait.Neutral"] = "Neutro",
+        ["ui.refereeTrait.Strict"] = "Estricto",
+        ["ui.refereeTrait.Lenient"] = "Permisivo",
+        ["ui.refereeTrait.Homer"] = "Casero",
+        ["ui.refereeTrait.OneEyed"] = "Tuerto",
+        ["ui.refereeTrait.Cowardly"] = "Cobarde",
+        ["ui.refereeTrait.Corrupt"] = "Corrupto",
+        ["ui.refereeTrait.Incorruptible"] = "Incorruptible",
         ["ui.scout.warnings"] = "ANTES DE CONFIRMAR",
         // ADR 0134: hasta entonces este aviso saltaba con la alineación GUARDADA incompleta y mentía —el
         // once se rellenaba solo hasta siete—. Ahora solo sale cuando la inferioridad es real, y dice con
@@ -480,9 +498,9 @@ public static class UiText
         ["ui.report.goldNow"] = "oro de la run: {0}",
         ["ui.report.referee"] = "ÁRBITRO",
         ["ui.report.refereeBias"] = "criterio {0} al empezar, {1} al terminar",
-        ["ui.report.refereeFouls"] = "faltas: {0} tuyas, {1} del rival",
+        ["ui.report.refereeFouls"] = "faltas señaladas: {0} tuyas, {1} del rival",
         ["ui.report.refereeCards"] = "tarjetas: {0} tuyas, {1} del rival",
-        ["ui.report.refereeGap"] = "las faltas no señaladas todavía no se registran: hueco conocido de RF-119",
+        ["ui.report.refereeUnseen"] = "faltas no señaladas: {0} tuyas, {1} del rival",
         ["ui.report.continue"] = "Continuar",
         ["ui.report.none"] = "todavía no se ha jugado ningún partido",
         ["ui.report.deaths"] = "{0} MUERTOS",
@@ -640,6 +658,13 @@ public static class UiText
         ["ui.pregon.strip.perks"] = "{0}  ✦{1}",
         ["ui.pregon.bench"] = "Banquillo {0}",
         ["ui.pregon.board.residue"] = "▮{0} · ✚{1}",
+        // Criterio del árbitro, SIEMPRE visible en el tablero (RF-062, ADR 0158 §6): el medidor de
+        // BroadcastBoard.DrawCriterionMeter lee esta etiqueta con el signo ya puesto (UiText.Signed).
+        ["ui.pregon.board.bias"] = "CRITERIO {0}",
+        // El pergamino sobre la cabeza del árbitro en el campo 3D (ADR 0158 §6, RF-061, RF-119):
+        // MatchPitchView3D.DrawRefereeGesture, falta pitada / falta no señalada.
+        ["ui.pregon.referee.foul"] = "¡Falta!",
+        ["ui.pregon.referee.unseen"] = "¿?",
         ["ui.pregon.stamp.foul"] = "Falta",
         ["ui.pregon.stamp.unseen"] = "No lo ha visto",
         ["ui.pregon.banner.said"] = "Se hace saber",
@@ -703,4 +728,14 @@ public static class UiText
     /// <summary>Texto de la clave con los argumentos sustituidos en <c>{0}</c>, <c>{1}</c>...</summary>
     public static string Get(string key, params object[] args) =>
         string.Format(System.Globalization.CultureInfo.InvariantCulture, Get(key), args);
+
+    /// <summary>
+    /// Cifra con signo explícito ("+15" / "−8"), para el criterio del árbitro y sus desplazamientos
+    /// (RF-062, RF-063): en el ojeo, en el tablero del partido y en el texto flotante que acompaña cada
+    /// movimiento. El menos es el guion U+2212, no un guion normal (mismo signo que ya usa el resto de la
+    /// interfaz, p. ej. <c>ui.pregon.tray.playOnSub</c>).
+    /// </summary>
+    public static string Signed(int value) => value >= 0
+        ? "+" + value.ToString(System.Globalization.CultureInfo.InvariantCulture)
+        : "−" + (-value).ToString(System.Globalization.CultureInfo.InvariantCulture);
 }

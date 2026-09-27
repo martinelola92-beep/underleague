@@ -214,6 +214,59 @@ public partial class MatchPitchView3D : SubViewportContainer
     private readonly List<BloodMark> _bloodMarks = new();
     private readonly List<MeshInstance3D> _bloodDecals = new();
 
+    // ------------------------------------------------------------------ árbitro (ADR 0158 §6, RF-061..063)
+
+    /// <summary>
+    /// Avatar de presentación del árbitro: marcador de posición (regla 10 de <c>CLAUDE.md</c>), cápsula
+    /// negra con banda dorada, más pequeña que un jugador humano. Su posición <b>no existe en /Sim</b> y no
+    /// decide nada del partido (RT-014): sigue el balón a distancia y reacciona SOLO a
+    /// <see cref="EventType.Foul"/> y <see cref="EventType.RefereeLeaves"/>.
+    /// </summary>
+    private MeshInstance3D _referee = null!;
+
+    private MeshInstance3D _refereeBand = null!;
+
+    /// <summary>Radio del árbitro, en casillas: por debajo del radio típico de un humano (~0,45) para que nunca se confunda con un jugador.</summary>
+    private const float RefereeRadius = 0.30f;
+
+    /// <summary>Alto del árbitro, en casillas: por debajo de la altura humana (~0,907, ver <see cref="RaceProportions"/>).</summary>
+    private const float RefereeHeight = 0.82f;
+
+    /// <summary>A cuántas casillas del balón se coloca, por el lado de la banda más cercana (ADR 0158 §6).</summary>
+    private const float RefereeOffsetCells = 3f;
+
+    /// <summary>Suavizado exponencial del seguimiento, por segundo real: cuanto más alto, más pegado al balón.</summary>
+    private const float RefereeSmoothing = 5f;
+
+    private Vector2 _refereePosition;
+    private bool _refereePositionSet;
+
+    /// <summary>Fotograma del primer <see cref="EventType.RefereeLeaves"/> de la traza, o -1 si el árbitro no se va (se calcula una vez en <see cref="Bind"/>).</summary>
+    private int _refereeLeaveFrame = -1;
+
+    private bool _refereeExiting;
+    private float _refereeExitElapsed;
+    private Vector2 _refereeExitFrom;
+
+    /// <summary>Cuánto tarda en salir corriendo y desaparecer, en segundos reales, desde que se alcanza <see cref="_refereeLeaveFrame"/>.</summary>
+    private const float RefereeExitSeconds = 1.1f;
+
+    private enum RefereeCue
+    {
+        None,
+        Foul,
+        Unseen,
+    }
+
+    private RefereeCue _refereeCue = RefereeCue.None;
+    private float _refereeCueElapsed;
+
+    /// <summary>Último fotograma ya explorado en busca de un suceso del árbitro (evita relanzar el mismo gesto mientras la reproducción se queda congelada en el mismo tick).</summary>
+    private int _refereeCueFrame = -1;
+
+    /// <summary>Cuánto dura el pergamino "¡Falta!"/"¿?" sobre la cabeza del árbitro.</summary>
+    private const float RefereeCueSeconds = 0.9f;
+
     /// <summary>Elevación de la cámara en grados sobre el césped. Es <c>[Export]</c> para poder barrerla en las capturas.</summary>
     [Export]
     public float Elevation { get; set; } = 60f;
@@ -313,6 +366,7 @@ public partial class MatchPitchView3D : SubViewportContainer
         ApplyTrace();
         ApplyBloodMarks();
         ApplyBallTrail();
+        ApplyReferee((float)delta, snap: false);
         QueueRedraw();
     }
 
@@ -335,12 +389,14 @@ public partial class MatchPitchView3D : SubViewportContainer
         ApplyTrace();
         ApplyBloodMarks();
         ApplyBallTrail();
+        ApplyReferee(0f, snap: true);
         QueueRedraw();
     }
 
     public override void _Draw()
     {
         DrawMarks();
+        DrawRefereeGesture();
     }
 
     /// <summary>
@@ -381,6 +437,31 @@ public partial class MatchPitchView3D : SubViewportContainer
         _heights.Clear();
         _radii.Clear();
         _keepers.Clear();
+
+        // El árbitro arranca cada partido/reproducción de cero: sin esto, tras una sustitución (ADR 0094,
+        // BindPlayback se llama otra vez) seguiría interpolando desde donde se quedó el partido anterior.
+        _refereePositionSet = false;
+        _refereeExiting = false;
+        _refereeExitElapsed = 0f;
+        _refereeCue = RefereeCue.None;
+        _refereeCueElapsed = 0f;
+        _refereeCueFrame = -1;
+        _referee.Visible = false;
+
+        // Fotograma del "el árbitro se va" (ADR 0145, ADR 0158 §6), calculado una vez: de qué frontera en
+        // adelante ApplyReferee lo saca corriendo del campo. -1 si esta traza no lo tiene.
+        _refereeLeaveFrame = -1;
+        if (trace is not null && events is not null)
+        {
+            for (int i = 0; i < events.Count; i++)
+            {
+                if (events[i].Type == EventType.RefereeLeaves)
+                {
+                    _refereeLeaveFrame = trace.FrameOfTick(events[i].Tick);
+                    break;
+                }
+            }
+        }
 
         if (trace is null || setup is null || catalog is null)
         {
@@ -757,6 +838,41 @@ public partial class MatchPitchView3D : SubViewportContainer
             _world.AddChild(dot);
             _ballTrail.Add(dot);
         }
+
+        // El árbitro (ADR 0158 §6): cápsula negra con una banda dorada a la cintura, la única marca de
+        // color que lleva -ni equipo propio ni rival, para que nunca se confunda con un jugador ni en
+        // modo silueta. Empieza invisible: ApplyReferee la enciende en cuanto haya traza.
+        _referee = new MeshInstance3D
+        {
+            Mesh = new CapsuleMesh { Radius = RefereeRadius, Height = RefereeHeight, RadialSegments = 20, Rings = 8 },
+            MaterialOverride = new StandardMaterial3D
+            {
+                Roughness = 0.85f,
+                Metallic = 0f,
+                AlbedoColor = new Color("15130f"),
+            },
+            CastShadow = GeometryInstance3D.ShadowCastingSetting.On,
+            Visible = false,
+        };
+        _world.AddChild(_referee);
+
+        _refereeBand = new MeshInstance3D
+        {
+            Mesh = new CylinderMesh
+            {
+                TopRadius = RefereeRadius + 0.015f,
+                BottomRadius = RefereeRadius + 0.015f,
+                Height = RefereeHeight * 0.16f,
+                RadialSegments = 20,
+            },
+            MaterialOverride = new StandardMaterial3D
+            {
+                ShadingMode = BaseMaterial3D.ShadingModeEnum.Unshaded,
+                AlbedoColor = Pregon.Or,
+            },
+            CastShadow = GeometryInstance3D.ShadowCastingSetting.Off,
+        };
+        _referee.AddChild(_refereeBand);
 
         _appliedSilhouette = !SilhouetteMode;
         ApplyCamera();
@@ -1645,6 +1761,164 @@ public partial class MatchPitchView3D : SubViewportContainer
         }
     }
 
+    /// <summary>
+    /// Posición y gesto del árbitro (ADR 0158 §6): sigue el balón a <see cref="RefereeOffsetCells"/> por
+    /// el lado de la banda más cercana, con suavizado real (nunca decide nada de <c>/Sim</c>, RT-014), y
+    /// reacciona a <see cref="EventType.Foul"/>/<see cref="EventType.RefereeLeaves"/> leyendo el tramo de
+    /// eventos del fotograma, igual que <see cref="CueFor"/> hace para el contacto del balón.
+    /// <paramref name="snap"/> coloca sin suavizar -para <see cref="RenderFrame"/>, una captura congelada
+    /// no puede depender de cuántos fotogramas reales lleve corriendo-.
+    /// </summary>
+    private void ApplyReferee(float delta, bool snap)
+    {
+        if (Trace is not { FrameCount: > 0 } trace)
+        {
+            _referee.Visible = false;
+            return;
+        }
+
+        int frame = Mathf.Clamp(Frame, 0, trace.FrameCount - 1);
+
+        // Estrictamente MAYOR, no >= (principio de reproducción, docs/ui/README §3): en el propio
+        // fotograma del suceso el árbitro sigue en el campo -es el instante en que se anuncia, no en el
+        // que ya se ha ido-, y solo a partir del siguiente arranca la salida corriendo.
+        if (_refereeLeaveFrame >= 0 && frame > _refereeLeaveFrame)
+        {
+            ApplyRefereeExit(delta, snap);
+            return;
+        }
+
+        _refereeExiting = false;
+        _refereeExitElapsed = 0f;
+        _referee.Visible = true;
+        _referee.RotationDegrees = Vector3.Zero;
+
+        var ball = trace.BallAt(frame);
+        var target = RefereeTargetFor(ball);
+
+        if (!_refereePositionSet || snap)
+        {
+            _refereePosition = target;
+            _refereePositionSet = true;
+        }
+        else
+        {
+            float t = 1f - Mathf.Exp(-RefereeSmoothing * Mathf.Max(delta, 0f));
+            _refereePosition = _refereePosition.Lerp(target, t);
+        }
+
+        ApplyRefereeCue(trace, frame, delta);
+        _referee.Position = new Vector3(_refereePosition.X, RefereeHeight / 2f, _refereePosition.Y);
+    }
+
+    /// <summary>
+    /// A qué casilla se coloca el árbitro para un balón dado: a la altura del balón en la columna, y
+    /// <see cref="RefereeOffsetCells"/> filas hacia la banda más cercana -la mitad del campo en la que ya
+    /// está el balón, ADR 0158 §6-, acotado dentro del campo.
+    /// </summary>
+    private static Vector2 RefereeTargetFor(Vec2 ball)
+    {
+        const float CenterRow = (Pitch.Rows - 1) / 2f;
+        float side = ball.Y <= CenterRow ? -1f : 1f;
+        float row = Mathf.Clamp(ball.Y + (side * RefereeOffsetCells), 0f, Pitch.Rows - 1);
+        float column = Mathf.Clamp(ball.X, 0f, Pitch.Columns - 1);
+        return new Vector2(column, row);
+    }
+
+    /// <summary>
+    /// Falta pitada o no señalada, en la cabeza del árbitro (RF-061, RF-119): un pergamino breve
+    /// -"¡Falta!" o "¿?"-, y en la no señalada además se gira de espaldas a la jugada. Solo mira el tramo
+    /// de eventos del fotograma UNA vez por fotograma (<see cref="_refereeCueFrame"/>): sin esa guarda,
+    /// <c>_Process</c> volvería a disparar el mismo gesto en cada fotograma REAL mientras la presentación
+    /// se queda congelada en el mismo tick.
+    /// </summary>
+    private void ApplyRefereeCue(MatchTrace trace, int frame, float delta)
+    {
+        if (_events is not null && frame != _refereeCueFrame)
+        {
+            _refereeCueFrame = frame;
+            int from = trace.EventFromAt(frame);
+            int count = trace.EventCountAt(frame);
+            for (int e = from; e < from + count && e < _events.Count; e++)
+            {
+                var ev = _events[e];
+                if (ev.Type != EventType.Foul)
+                {
+                    continue;
+                }
+
+                // "foul" señalada, "unseen" no vista (ADR 0090, ADR 0158 §5). "foul:cancelled" -un perk
+                // anuló la consecuencia- se queda fuera a propósito: ese caso ya tiene su propio sello N1
+                // ("anulado", C13 de docs/ui/README) y no es ni una cosa ni la otra para el árbitro.
+                if (ev.Detail == "foul")
+                {
+                    _refereeCue = RefereeCue.Foul;
+                    _refereeCueElapsed = 0f;
+                }
+                else if (ev.Detail == "unseen")
+                {
+                    _refereeCue = RefereeCue.Unseen;
+                    _refereeCueElapsed = 0f;
+                }
+            }
+        }
+
+        if (_refereeCue == RefereeCue.None)
+        {
+            return;
+        }
+
+        _refereeCueElapsed += delta;
+        if (_refereeCueElapsed >= RefereeCueSeconds)
+        {
+            _refereeCue = RefereeCue.None;
+            _referee.RotationDegrees = Vector3.Zero;
+            return;
+        }
+
+        // Se gira de espaldas a la jugada en la no señalada: una cápsula lisa se ve igual desde cualquier
+        // ángulo -el giro en sí no se distingue-, así que la lectura real del gesto la lleva el pergamino
+        // "¿?"; el giro se deja puesto porque es lo que ADR 0158 §6 pide literalmente y no cuesta nada.
+        _referee.RotationDegrees = _refereeCue == RefereeCue.Unseen ? new Vector3(0f, 180f, 0f) : Vector3.Zero;
+    }
+
+    /// <summary>
+    /// El árbitro se va (ADR 0145, ADR 0158 §6): corre hacia la banda más cercana desde donde estuviera y
+    /// desaparece en <see cref="RefereeExitSeconds"/>. Retroceder antes de <see cref="_refereeLeaveFrame"/>
+    /// lo hace reaparecer -<see cref="ApplyReferee"/> vuelve a su rama normal-, como cualquier otro residuo
+    /// persistente (principio 5 de docs/ui/README): no es un estado que se pierda al pasar de largo.
+    /// </summary>
+    private void ApplyRefereeExit(float delta, bool snap)
+    {
+        if (!_refereeExiting)
+        {
+            _refereeExiting = true;
+            _refereeExitElapsed = 0f;
+            _refereeExitFrom = _refereePositionSet ? _refereePosition : new Vector2(Pitch.Columns / 2f, Pitch.Rows / 2f);
+        }
+
+        if (snap)
+        {
+            _referee.Visible = false;
+            return;
+        }
+
+        _refereeExitElapsed += delta;
+        float t = Mathf.Clamp(_refereeExitElapsed / RefereeExitSeconds, 0f, 1f);
+        if (t >= 1f)
+        {
+            _referee.Visible = false;
+            return;
+        }
+
+        float exitRow = _refereeExitFrom.Y <= (Pitch.Rows - 1) / 2f ? -2f : Pitch.Rows + 1f;
+        var exitTarget = new Vector2(_refereeExitFrom.X, exitRow);
+        _refereePosition = _refereeExitFrom.Lerp(exitTarget, t);
+        _referee.Visible = true;
+        _referee.RotationDegrees = Vector3.Zero;
+        _referee.Position = new Vector3(_refereePosition.X, RefereeHeight / 2f, _refereePosition.Y);
+    }
+
     private void ApplyTrace()
     {
         if (Trace is not { FrameCount: > 0 } trace || _bodies.Count == 0)
@@ -2087,6 +2361,27 @@ public partial class MatchPitchView3D : SubViewportContainer
 
             DrawPlacard(screen.Value, flash.Name, small: Marks[i].MomentIndex >= 0, seed: (flash.Player * 97) + flash.Frame);
         }
+    }
+
+    /// <summary>
+    /// El pergamino "¡Falta!"/"¿?" sobre la cabeza del árbitro (ADR 0158 §6, RF-061), mismo mecanismo que
+    /// <see cref="DrawMarks"/> usa para los perks: reproyecta la posición de mundo del árbitro a pantalla
+    /// cada fotograma, así que sigue sirviendo con la cámara moviéndose (gestos de cámara, docs/ui/README
+    /// §4) sin que este método sepa nada de ellos.
+    /// </summary>
+    private void DrawRefereeGesture()
+    {
+        if (_refereeCue == RefereeCue.None || !_referee.Visible)
+        {
+            return;
+        }
+
+        var world = new Vector3(_refereePosition.X, RefereeHeight + 0.3f, _refereePosition.Y);
+        var screen = _camera.UnprojectPosition(world);
+        string text = _refereeCue == RefereeCue.Foul
+            ? UiText.Get("ui.pregon.referee.foul")
+            : UiText.Get("ui.pregon.referee.unseen");
+        DrawPlacard(screen, text, small: true, seed: 909);
     }
 
     /// <summary>Un pergamino corto con el nombre del perk, centrado sobre el punto de anclaje.</summary>
