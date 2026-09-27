@@ -97,6 +97,13 @@ public sealed record TeamSetup(string Id, string Name, Race Race, IReadOnlyList<
     public Underleague.Sim.Engine.Mentality Order { get; init; } = Underleague.Sim.Engine.Mentality.Neutral;
 
     /// <summary>
+    /// Cambios de <see cref="Order"/> durante el partido (ADR 0154, que enmienda la ADR 0140 §4: la orden
+    /// ya no es sólo de antes del partido). Estado inicial como <see cref="Substitutions"/>: el motor los
+    /// aplica al llegar a su tick, en orden de tick y, a igualdad, de lista.
+    /// </summary>
+    public IReadOnlyList<OrderChange> OrderChanges { get; init; } = Array.Empty<OrderChange>();
+
+    /// <summary>
     /// Lesionados leves que este equipo ha decidido <b>no</b> retirar (ADR 0134 E), parte del estado inicial
     /// como <see cref="Substitutions"/>. Cada uno tiene que estar en <c>Lineup</c> y haberse lesionado
     /// levemente en su tick; lo demás es <c>ArgumentException</c>.

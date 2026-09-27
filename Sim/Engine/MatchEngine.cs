@@ -56,6 +56,10 @@ internal sealed class MatchEngine : IPerkWorld
 
     // ADR 0094: sustituciones anunciadas en el estado inicial, ordenadas por (tick, equipo, id del que entra).
     private readonly List<(int Tick, int Team, int InId, int OutId)> _pendingSubstitutions = new();
+
+    /// <summary>ADR 0154: cambios de orden táctica pendientes, ordenados por tick; <see cref="_nextOrderChange"/> apunta al siguiente.</summary>
+    private readonly List<(int Tick, int Team, int Index, Mentality Order)> _pendingOrderChanges = new();
+    private int _nextOrderChange;
     private int _nextSubstitution;
     private readonly MatchPlayer?[] _goalkeepers = new MatchPlayer?[2];
     private readonly Ball _ball = new();
@@ -247,6 +251,19 @@ internal sealed class MatchEngine : IPerkWorld
         // se lee una vez aquí y no cada tick.
         _context.Order[0] = setup.Home.Order;
         _context.Order[1] = setup.Away.Order;
+
+        // ADR 0154: los cambios de orden durante el partido, por tick y, a igualdad, por lista (estable).
+        for (int team = 0; team < 2; team++)
+        {
+            var changes = team == 0 ? setup.Home.OrderChanges : setup.Away.OrderChanges;
+            for (int i = 0; i < changes.Count; i++)
+            {
+                _pendingOrderChanges.Add((changes[i].Tick, team, i, changes[i].Order));
+            }
+        }
+
+        _pendingOrderChanges.Sort(static (a, b) =>
+            a.Tick != b.Tick ? a.Tick.CompareTo(b.Tick) : a.Team != b.Team ? a.Team.CompareTo(b.Team) : a.Index.CompareTo(b.Index));
         _context.UrgencyTarget[0] = setup.Home.Order;
         _context.UrgencyTarget[1] = setup.Away.Order;
         _trace = config.Trace ? new MatchTraceRecorder(_players, _regulationTicks, setup) : null;
@@ -614,6 +631,7 @@ internal sealed class MatchEngine : IPerkWorld
         }
 
         ApplySubstitutions();
+        ApplyOrderChanges();
 
         // Consumibles condicionales (RF-081..083): se comprueban antes que nada, así que el disparador ve
         // el estado consolidado del tick anterior y lo que conceden vale ya para este tick. Sin
@@ -921,6 +939,12 @@ internal sealed class MatchEngine : IPerkWorld
             // Desmarque profundo). Cero en el 99% del catálogo, así que sin el efecto esto es rawX de
             // siempre.
             float rawX = player.HomeCenter.X + offset + (player.HomeShiftCells * direction);
+
+            // ADR 0154: la orden táctica del jugador también MUEVE al equipo, no sólo cambia qué acción
+            // elige cada uno. Defensivo baja al delantero y a los medios; ofensivo sube a los defensas y a
+            // los medios. Es la orden, no la urgencia: la urgencia ya empuja las acciones (ADR 0140) y no
+            // cambia la altura a la que el entrenador ha puesto las líneas.
+            rawX += _catalog.Ai.MentalityShift(_context.Order[player.Team], player.Role) * direction;
 
             // AW-Q (docs/pendientes.md): techo del propio bloque. Hasta aquí el bloque subía las 4,0
             // casillas de blockShift.InPossession sin comprobar nunca dónde estaba el propio defensa más
@@ -4951,6 +4975,22 @@ internal sealed class MatchEngine : IPerkWorld
         }
 
         return new Vec2(column, home.Y);
+    }
+
+    /// <summary>
+    /// ADR 0154: aplica los cambios de orden táctica cuyo tick ha llegado. Afecta a la vez a qué acción
+    /// elige cada uno (ADR 0140) y a la altura de sus líneas (<c>ai.mentalityShift</c>, en
+    /// <see cref="UpdateBlockShift"/>): nadie se teletransporta, las casillas-hogar se mueven y el equipo
+    /// anda hacia ellas.
+    /// </summary>
+    private void ApplyOrderChanges()
+    {
+        while (_nextOrderChange < _pendingOrderChanges.Count && _pendingOrderChanges[_nextOrderChange].Tick <= _tick)
+        {
+            var change = _pendingOrderChanges[_nextOrderChange];
+            _context.Order[change.Team] = change.Order;
+            _nextOrderChange++;
+        }
     }
 
     /// <summary>

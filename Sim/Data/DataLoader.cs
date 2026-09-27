@@ -527,7 +527,7 @@ public static class DataLoader
     {
         var doc = JsonDocument.Parse(content);
         var root = new Json(doc.RootElement, file, "$");
-        root.EnsureKnownKeys("base", "tactical", "mentality", "context", "blockShift");
+        root.EnsureKnownKeys("base", "tactical", "mentality", "context", "blockShift", "mentalityShift");
 
         int positionCount = Enum.GetValues<Position>().Length;
         int tacticalCount = Enum.GetValues<TacticalState>().Length;
@@ -757,6 +757,7 @@ public static class DataLoader
             }
         }
 
+        int positionCountForShift = Enum.GetValues<Position>().Length;
         var shiftArray = new BlockShift[tacticalCount];
         var shiftSet = new bool[tacticalCount];
         var blockShiftNode = root.Prop("blockShift");
@@ -780,7 +781,38 @@ public static class DataLoader
             }
         }
 
-        return new AiWeights(baseTable, tacticalTable, mentalityTable, offBallTackle, context, shiftArray);
+        // ADR 0154: cuánto sube o baja cada puesto con cada orden táctica. Completa: las tres órdenes y los
+        // cuatro puestos, o error explícito (RT-083).
+        var mentalityShift = new float[mentalityCount, positionCountForShift];
+        var mentalityShiftSet = new bool[mentalityCount, positionCountForShift];
+        var mentalityShiftNode = root.Prop("mentalityShift");
+        foreach (var (mentalityKey, mentalityNode) in mentalityShiftNode.EnumerateObjectEntries())
+        {
+            if (mentalityKey == "_doc")
+            {
+                continue;
+            }
+
+            if (!Enum.TryParse<Mentality>(mentalityKey, out var mentality))
+            {
+                throw new DataException(file, mentalityNode.Path, $"orden táctica desconocida '{mentalityKey}'");
+            }
+
+            foreach (var (positionKey, valueNode) in mentalityNode.EnumerateObjectEntries())
+            {
+                if (!Enum.TryParse<Position>(positionKey, out var position))
+                {
+                    throw new DataException(file, valueNode.Path, $"puesto desconocido '{positionKey}'");
+                }
+
+                mentalityShift[(int)mentality, (int)position] = valueNode.AsFloat();
+                mentalityShiftSet[(int)mentality, (int)position] = true;
+            }
+        }
+
+        EnsureComplete(file, mentalityShiftNode.Path, mentalityShiftSet, mentalityCount, positionCountForShift);
+
+        return new AiWeights(baseTable, tacticalTable, mentalityTable, offBallTackle, context, shiftArray, mentalityShift);
     }
 
     private static void EnsureComplete(string file, string path, bool[,] set, int dim0, int dim1)

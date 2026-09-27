@@ -65,7 +65,8 @@ public static class MatchPlaybacks
         var node = stateBeforeMatch.GetNode(nodeId);
         decisions ??= MatchDecisions.None;
         var (built, seed, _) = RunEngine.BuildMatch(
-            stateBeforeMatch, nodeId, catalog, systems, decisions.ManualActivations, decisions.Substitutions, decisions.PlayOns);
+            stateBeforeMatch, nodeId, catalog, systems, decisions.ManualActivations, decisions.Substitutions, decisions.PlayOns,
+            decisions.OrderChanges);
         var config = systems.MatchConfig(stateBeforeMatch, node, catalog);
         // ADR 0094: el rival sustituye solo con la política por defecto; los puntos de decisión del jugador
         // (equipo 0) se quedan pendientes para que la pantalla abra la ventana (SubstitutionPoints.Pending).

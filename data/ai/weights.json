@@ -133,6 +133,12 @@
     "blockAggressiveBonus": 260,
     "blockBruteTagBonus": 200
   },
+  "mentalityShift": {
+    "_doc": "ADR 0154: cuanto SUBE (positivo, hacia la porteria rival) o BAJA la casilla-hogar de cada puesto con cada orden tactica del jugador, en casillas. Neutral es 0 por definicion. Es lo que hace que la orden se VEA en el campo: defensivo baja al delantero y a los medios, ofensivo sube a los defensas y a los medios. Se suma al desplazamiento del bloque y a los perks de colocacion (shiftHome). Valores calibrados contra el lote de mentalidad (ADR 0154).",
+    "Defensive": { "Goalkeeper": 0.0, "Defender": -1.0, "Midfielder": -2.0, "Forward": -3.0 },
+    "Neutral": { "Goalkeeper": 0.0, "Defender": 0.0, "Midfielder": 0.0, "Forward": 0.0 },
+    "Offensive": { "Goalkeeper": 0.0, "Defender": 3.0, "Midfielder": 2.0, "Forward": 1.0 }
+  },
   "blockShift": {
     "_doc": "Desplazamiento de casillas-hogar por estado táctico (capa 2). En casillas, positivo hacia la portería rival. speedTicks: ticks que tarda el bloque en completar el desplazamiento.",
     "InPossession": { "shift": 4.0, "speedTicks": 30 },

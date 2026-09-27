@@ -39,6 +39,12 @@ public sealed record MatchDecisions(
     /// que el motor necesita conocer, y llega a él por <c>TeamSetup.PlayOns</c>.
     /// </summary>
     public IReadOnlyList<PlayOn> PlayOns { get; init; } = Array.Empty<PlayOn>();
+
+    /// <summary>
+    /// Cambios de orden táctica que el jugador hizo durante el partido (ADR 0154). Llegan al motor por
+    /// <c>TeamSetup.OrderChanges</c> del equipo del jugador.
+    /// </summary>
+    public IReadOnlyList<OrderChange> OrderChanges { get; init; } = Array.Empty<OrderChange>();
 }
 
 /// <summary>

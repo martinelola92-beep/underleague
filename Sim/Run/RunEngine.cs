@@ -456,7 +456,8 @@ public static class RunEngine
         IRunSystems? systems = null,
         IReadOnlyList<ManualActivation>? manualActivations = null,
         IReadOnlyList<Substitution>? substitutions = null,
-        IReadOnlyList<PlayOn>? playOns = null)
+        IReadOnlyList<PlayOn>? playOns = null,
+        IReadOnlyList<OrderChange>? orderChanges = null)
     {
         ArgumentNullException.ThrowIfNull(state);
         ArgumentNullException.ThrowIfNull(catalog);
@@ -488,6 +489,9 @@ public static class RunEngine
             // respuestas al punto de decisión que el motor necesita conocer; el rechazo se queda en
             // MatchDecisions y la sustitución ya viaja arriba.
             PlayOns = playOns ?? Array.Empty<PlayOn>(),
+
+            // ADR 0154: la orden táctica que el jugador cambió durante el partido.
+            OrderChanges = orderChanges ?? Array.Empty<OrderChange>(),
         };
         var away = systems.OpponentFor(state, node, catalog);
         var referee = systems.RefereeFor(state, node, catalog);
@@ -523,7 +527,8 @@ public static class RunEngine
     private static MatchEntry ResolveMatch(RunState state, MapNode node, Catalog catalog, IRunSystems systems, MatchDecisions decisions)
     {
         var (built, seed, lineup) = BuildMatch(
-            state, node.Id, catalog, systems, decisions.ManualActivations, decisions.Substitutions, decisions.PlayOns);
+            state, node.Id, catalog, systems, decisions.ManualActivations, decisions.Substitutions, decisions.PlayOns,
+            decisions.OrderChanges);
         // ADR 0094: las sustituciones que el llamador no trajo (ninguna en /Balance; las del rival siempre)
         // se resuelven con la política por defecto volviendo a jugar el partido con ellas en el estado inicial.
         var (setup, result) = SubstitutionPoints.ResolveAutomatically(

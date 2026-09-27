@@ -257,8 +257,9 @@ public sealed class AiWeights
     private readonly int[,] _mentality;
     private readonly int[] _offBallTackle;
     private readonly BlockShift[] _shift;
+    private readonly float[,] _mentalityShift;
 
-    internal AiWeights(int[,] baseTable, int[,] tacticalTable, int[,] mentalityTable, int[] offBallTackle, AiContext context, BlockShift[] shift)
+    internal AiWeights(int[,] baseTable, int[,] tacticalTable, int[,] mentalityTable, int[] offBallTackle, AiContext context, BlockShift[] shift, float[,]? mentalityShift = null)
     {
         _base = baseTable;
         _tactical = tacticalTable;
@@ -266,7 +267,15 @@ public sealed class AiWeights
         _offBallTackle = offBallTackle;
         Context = context;
         _shift = shift;
+        _mentalityShift = mentalityShift ?? new float[Enum.GetValues<Mentality>().Length, Enum.GetValues<Position>().Length];
     }
+
+    /// <summary>
+    /// Desplazamiento de la casilla-hogar, en casillas hacia la portería rival, por orden táctica y puesto
+    /// (ADR 0154): lo que hace que «defensivo» baje líneas y «ofensivo» las suba. Neutral es 0 en todo.
+    /// Sin la tabla (pesos construidos a mano en una prueba) es 0, así que la capa es inerte.
+    /// </summary>
+    public float MentalityShift(Mentality m, Position p) => _mentalityShift[(int)m, (int)p];
 
     /// <summary>
     /// Los mismos pesos con otro <see cref="Context"/>. Existe para que una prueba pueda mover <b>un</b>
@@ -275,7 +284,7 @@ public sealed class AiWeights
     /// Comparte los arrays a propósito: nadie los muta después de cargar.
     /// </summary>
     internal AiWeights WithContext(AiContext context) =>
-        new(_base, _tactical, _mentality, _offBallTackle, context, _shift);
+        new(_base, _tactical, _mentality, _offBallTackle, context, _shift, _mentalityShift);
 
     /// <summary>Peso base de la acción a para la posición p.</summary>
     public int Base(Position p, PlayerAction a) => _base[(int)p, (int)a];

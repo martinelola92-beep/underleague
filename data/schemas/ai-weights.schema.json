@@ -538,6 +538,18 @@
       ],
       "additionalProperties": false
     },
+    "mentalityShift": {
+      "type": "object",
+      "description": "ADR 0154: desplazamiento de la casilla-hogar por orden táctica (Defensive/Neutral/Offensive) y puesto, en casillas hacia la portería rival.",
+      "properties": {
+        "_doc": { "type": "string" },
+        "Defensive": { "$ref": "#/$defs/positionShift" },
+        "Neutral": { "$ref": "#/$defs/positionShift" },
+        "Offensive": { "$ref": "#/$defs/positionShift" }
+      },
+      "required": ["Defensive", "Neutral", "Offensive"],
+      "additionalProperties": false
+    },
     "blockShift": {
       "type": "object",
       "description": "Desplazamiento de casillas-hogar por estado táctico (capa 2).",
@@ -572,10 +584,22 @@
     "tactical",
     "mentality",
     "context",
-    "blockShift"
+    "blockShift",
+    "mentalityShift"
   ],
   "additionalProperties": false,
   "$defs": {
+    "positionShift": {
+      "type": "object",
+      "properties": {
+        "Goalkeeper": { "type": "number", "minimum": -8, "maximum": 8 },
+        "Defender": { "type": "number", "minimum": -8, "maximum": 8 },
+        "Midfielder": { "type": "number", "minimum": -8, "maximum": 8 },
+        "Forward": { "type": "number", "minimum": -8, "maximum": 8 }
+      },
+      "required": ["Goalkeeper", "Defender", "Midfielder", "Forward"],
+      "additionalProperties": false
+    },
     "playerAction": {
       "type": "string",
       "enum": [
