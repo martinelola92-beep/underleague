@@ -28,11 +28,15 @@ aplaza).
   **en curso** al escribir esto.
 - [ADR 0157](decisiones/0157-la-apuesta-del-vestuario.md): la apuesta, **propuesta**, sin implementar.
 
-**En worktrees de agentes, sin integrar** (`.claude/worktrees/agent-*`):
-- `agent-a6d189449392d5251`: [ADR 0161](decisiones/0161-botin-y-cofre.md) botín de liga, reliquias y cofre.
-- `agent-ac748ec40a16a74fe`: consumibles en vivo (cierra BA-H) y catálogo de 20 consumibles.
-Cada uno: comprobar su rama (build, DataValidator, tests, captura), `git merge --ff-only` tras rebasar sobre
-`main`, revisión independiente, puertas.
+**Integrado en `main` el 29 sep, SIN PUBLICAR hasta cerrar puertas y revisión independiente:**
+- [ADR 0161](decisiones/0161-botin-y-cofre.md): botín de liga (un común al almacén), reliquias según la
+  carrera del muerto, `StoreItem` y el cofre en la pantalla de Equipo.
+- [BA-H](pendientes/BA-H.md): consumibles manuales usables desde el tablero del partido (re-simula como la
+  orden táctica) y catálogo de 20 consumibles con los gritos del entrenador. Falta la primitiva de
+  **provocar la turba**.
+- Pendiente para publicar: puertas del conjunto (`Category=Gate`) y las dos revisiones independientes
+  (eventos/entrenamiento `d4b53eb..8d8a34a`; botín/consumibles `e9295dd..7b21e30`). Si una sesión nueva
+  las encuentra sin hacer, relanzarlas; luego `git push`.
 
 **Siguiente, en este orden** (`docs/plan-diversion.md` §5): la apuesta (ADR 0157: primero el censo de
 frecuencias de las condiciones para las cuotas; `referee_blind` ya es resoluble), memoria visible
