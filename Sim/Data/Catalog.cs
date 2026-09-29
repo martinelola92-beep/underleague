@@ -771,6 +771,14 @@ public sealed record FatigueTuning(
     int RecoverPerTick,
     int MaxPenaltyPoints);
 
+/// <summary>
+/// tuning.mob (ADR 0169, RF-055b): lo que cambia en la prórroga de turba además de que se vaya el árbitro. El
+/// campo se estrecha <paramref name="NarrowRowsPerSide"/> filas por lado (las exteriores, siempre las mismas: el
+/// público invade casillas fijas y anunciadas) y la velocidad global —la de carrera y la de los tres golpes del
+/// balón— sube <paramref name="SpeedPercent"/> por ciento. Con los dos a 0 la turba es la de antes de la ADR.
+/// </summary>
+public sealed record MobTuning(int NarrowRowsPerSide, int SpeedPercent);
+
 public sealed record RestartTuning(
     int ThrowInTicks,
     int GoalKickTicks,
@@ -848,7 +856,8 @@ public sealed record Tuning(
     GenerationTuning Generation,
     BodiesTuning Bodies,
     ActionZoneTuning ActionZone,
-    ProgressionTuning Progression);
+    ProgressionTuning Progression,
+    MobTuning Mob);
 
 /// <summary>
 /// Plantillas de descripción de un idioma (data/l10n/&lt;lang&gt;/templates.json, RT-035). Se guardan

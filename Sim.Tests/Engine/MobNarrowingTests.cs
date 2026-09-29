@@ -1,0 +1,313 @@
+using System.Globalization;
+using System.Text;
+using Underleague.Sim.Data;
+using Underleague.Sim.Engine;
+using Underleague.Sim.Events;
+using Underleague.Sim.Model;
+
+namespace Underleague.Sim.Tests.Engine;
+
+/// <summary>
+/// ADR 0169 (RF-055b): la turba estrecha el campo una fila por lado (las exteriores, siempre las mismas) y sube un
+/// 15 % la velocidad. El tiempo reglamentario queda byte a byte igual (RT-024); quien está en una fila invadida al
+/// empezar la turba se aparta andando (RF-053, ADR 0143); el balón sale por el borde de la banda, no de la
+/// cuadrícula. Las cifras son las provisionales de <c>tuning.mob</c>.
+/// </summary>
+public sealed class MobNarrowingTests
+{
+    private const ulong FnvOffset = 14695981039346656037UL;
+    private const ulong FnvPrime = 1099511628211UL;
+
+    // Huellas medidas ANTES del cambio (semillas 1..60 de TestMatches.Reference, árbol de la ADR 0167 cerrada):
+    // el conjunto de los partidos que no llegan a la turba, y el de TODOS los partidos.
+    private const ulong RegulationOnlyBefore = 11986422554549851935UL;
+    private const int RegulationOnlyMatches = 39;
+    private const ulong EveryMatchBefore = 4394564194198819984UL;
+
+    private const float Eps = 0.001f;
+
+    private static readonly Catalog Current = TestData.LoadCatalog();
+    private static readonly Catalog NoMobChanges = WithKnobs(rows: 0, percent: 0);
+    private static readonly Catalog NoSpeedUp = WithKnobs(rows: 1, percent: 0);
+
+    private static Catalog WithKnobs(int rows, int percent)
+    {
+        var files = TestData.LoadAllFiles();
+        string text = files["sim/tuning.json"];
+        Assert.Contains("\"narrowRowsPerSide\": 1", text, StringComparison.Ordinal);
+        Assert.Contains("\"speedPercent\": 15", text, StringComparison.Ordinal);
+        files["sim/tuning.json"] = text
+            .Replace("\"narrowRowsPerSide\": 1", $"\"narrowRowsPerSide\": {rows}", StringComparison.Ordinal)
+            .Replace("\"speedPercent\": 15", $"\"speedPercent\": {percent}", StringComparison.Ordinal);
+        return DataLoader.FromJson(files);
+    }
+
+    private static ulong Fingerprint(MatchResult result)
+    {
+        ulong hash = FnvOffset;
+        foreach (var e in result.Events)
+        {
+            string text = string.Create(
+                CultureInfo.InvariantCulture,
+                $"{(int)e.Type}|{e.Tick}|{e.Team}|{e.Actor}|{e.Target}|{e.Opponent}|{e.Cell.Column}|{e.Cell.Row}|{(int)e.Zone}|{(int)e.Phase}|{e.Bias}|{e.DistanceToGoal}|{e.Detail}");
+            foreach (byte b in Encoding.UTF8.GetBytes(text))
+            {
+                hash ^= b;
+                hash *= FnvPrime;
+            }
+
+            hash ^= (byte)'\n';
+            hash *= FnvPrime;
+        }
+
+        return hash;
+    }
+
+    private static MatchResult Play(Catalog catalog, ulong seed, bool trace = false) =>
+        Simulator.Run(TestMatches.Reference(catalog, seed), seed, catalog, new SimConfig(CollectLog: false, Trace: trace));
+
+    /// <summary>Los partidos de las semillas 1..60 que llegan a la turba, con su traza.</summary>
+    private static List<(ulong Seed, MatchResult Result)> MobMatches(Catalog catalog)
+    {
+        var list = new List<(ulong, MatchResult)>();
+        for (ulong seed = 1; seed <= 60; seed++)
+        {
+            var result = Play(catalog, seed, trace: true);
+            if (result.Report.WentToGoldenGoal)
+            {
+                list.Add((seed, result));
+            }
+        }
+
+        return list;
+    }
+
+    private static int FirstMobFrame(MatchTrace trace)
+    {
+        for (int f = 0; f < trace.FrameCount; f++)
+        {
+            if (trace.PhaseAt(f) == MatchPhase.MobGoldenGoal)
+            {
+                return f;
+            }
+        }
+
+        return -1;
+    }
+
+    private static bool Invaded(float y) => y < 1f - Eps || y > 6f + Eps;
+
+    private static float BandDistance(float y) => y < 1f ? 1f - y : y > 6f ? y - 6f : 0f;
+
+    [Fact]
+    public void TheRegulationMatchIsByteForByteTheOneBeforeTheChange()
+    {
+        ulong hash = FnvOffset;
+        int played = 0;
+        for (ulong seed = 1; seed <= 60; seed++)
+        {
+            var result = Play(Current, seed);
+            if (result.Report.WentToGoldenGoal)
+            {
+                continue;
+            }
+
+            hash = (hash ^ Fingerprint(result)) * FnvPrime;
+            played++;
+        }
+
+        Assert.Equal(RegulationOnlyMatches, played);
+        Assert.Equal(RegulationOnlyBefore, hash);
+    }
+
+    [Fact]
+    public void WithBothMobKnobsAtZeroEveryTraceIsTheOldOneEvenWithMob()
+    {
+        ulong hash = FnvOffset;
+        for (ulong seed = 1; seed <= 60; seed++)
+        {
+            hash = (hash ^ Fingerprint(Play(NoMobChanges, seed))) * FnvPrime;
+        }
+
+        Assert.Equal(EveryMatchBefore, hash);
+    }
+
+    [Fact]
+    public void ThePlayedMobIsDeterministicAndDifferentFromTheOldOne()
+    {
+        bool anyMob = false;
+        for (ulong seed = 1; seed <= 60; seed++)
+        {
+            var a = Play(Current, seed);
+            if (!a.Report.WentToGoldenGoal)
+            {
+                continue;
+            }
+
+            anyMob = true;
+            Assert.Equal(Fingerprint(a), Fingerprint(Play(Current, seed)));
+            Assert.NotEqual(Fingerprint(Play(NoMobChanges, seed)), Fingerprint(a));
+        }
+
+        Assert.True(anyMob, "ninguna de las 60 semillas llega a la turba: el test no comprobó nada");
+    }
+
+    [Fact]
+    public void FromTheKickoffOfTheMobNobodyStandsOnAnInvadedRowAndTheBallStaysInTheBand()
+    {
+        int checks = 0;
+        foreach (var (seed, result) in MobMatches(Current))
+        {
+            var trace = result.Trace!;
+            int start = FirstMobFrame(trace);
+            Assert.True(start > 0, $"seed {seed}: no hay fase de turba");
+            for (int f = start; f < trace.FrameCount; f++)
+            {
+                var ball = trace.BallAt(f);
+                Assert.False(Invaded(ball.Y), $"seed {seed}, fotograma {f}: el balón está en una fila invadida (y {ball.Y:F2})");
+                for (int p = 0; p < trace.Players.Count; p++)
+                {
+                    // El derribado se levanta donde cayó (18 ticks) y luego anda: no es un salto, es un caído.
+                    if (!trace.OnPitchAt(f, p) || trace.StateAt(f, p) is PlayerState.KnockedDown)
+                    {
+                        continue;
+                    }
+
+                    float y = trace.PositionAt(f, p).Y;
+                    Assert.False(Invaded(y), $"seed {seed}, fotograma {f}: el jugador {trace.Players[p].Id} está en y {y:F2}, fila invadida");
+                    checks++;
+                }
+            }
+        }
+
+        Assert.True(checks > 1000, "muy pocas comprobaciones: el test no midió la turba");
+    }
+
+    [Fact]
+    public void WhoIsOnAnInvadedRowWhenTheMobStartsWalksOutAndNobodyJumps()
+    {
+        int walkers = 0;
+        foreach (var (seed, result) in MobMatches(Current))
+        {
+            var trace = result.Trace!;
+            int mobFrame = trace.FrameOfTick(result.Events.First(e => e.Type == EventType.MobStart).Tick);
+            int start = FirstMobFrame(trace);
+
+            for (int p = 0; p < trace.Players.Count; p++)
+            {
+                if (!trace.OnPitchAt(mobFrame, p) || !Invaded(trace.PositionAt(mobFrame, p).Y)
+                    || trace.StateAt(mobFrame, p) is PlayerState.KnockedDown)
+                {
+                    continue;
+                }
+
+                walkers++;
+                float previous = BandDistance(trace.PositionAt(mobFrame, p).Y);
+                for (int f = mobFrame + 1; f <= start && trace.OnPitchAt(f, p); f++)
+                {
+                    float distance = BandDistance(trace.PositionAt(f, p).Y);
+
+                    // Se acerca a la banda, nunca se aleja, y nadie salta: el paso es el de andar (RF-053).
+                    Assert.True(distance <= previous + Eps, $"seed {seed}, jugador {trace.Players[p].Id}: se aleja de la banda en el fotograma {f}");
+                    Assert.True(
+                        Vec2.Distance(trace.PositionAt(f, p), trace.PositionAt(f - 1, p)) <= 0.5f,
+                        $"seed {seed}, jugador {trace.Players[p].Id}: salta en el fotograma {f}");
+                    previous = distance;
+                }
+            }
+        }
+
+        Assert.True(walkers > 10, "nadie estaba en una fila invadida al empezar la turba: el test no comprobó nada");
+    }
+
+    [Fact]
+    public void EveryRestartOfTheMobIsTakenInsideTheBand()
+    {
+        int restarts = 0;
+        foreach (var (seed, result) in MobMatches(Current))
+        {
+            var trace = result.Trace!;
+            int start = FirstMobFrame(trace);
+            foreach (var e in result.Events)
+            {
+                if (e.Type != EventType.Recovery || trace.FrameOfTick(e.Tick) < start
+                    || e.Detail is not ("throwIn" or "corner" or "goalKick"))
+                {
+                    continue;
+                }
+
+                var ball = trace.BallAt(trace.FrameOfTick(e.Tick));
+                Assert.False(Invaded(ball.Y), $"seed {seed}, tick {e.Tick}: el saque {e.Detail} sale de y {ball.Y:F2}");
+                restarts++;
+            }
+        }
+
+        Assert.True(restarts > 20, "muy pocos saques en turba: el test no comprobó nada");
+    }
+
+    [Fact]
+    public void TheMobRunsFifteenPercentFasterOnTheFeetAndOnTheBall()
+    {
+        double stepFast = 0, stepBase = 0, ballFast = 0, ballBase = 0;
+        long stepsFast = 0, stepsBase = 0, ballsFast = 0, ballsBase = 0;
+        for (ulong seed = 1; seed <= 60; seed++)
+        {
+            Accumulate(Play(Current, seed, trace: true), ref stepFast, ref stepsFast, ref ballFast, ref ballsFast);
+            Accumulate(Play(NoSpeedUp, seed, trace: true), ref stepBase, ref stepsBase, ref ballBase, ref ballsBase);
+        }
+
+        Assert.True(stepsFast > 5000 && stepsBase > 5000, "muy pocos pasos medidos");
+        double onFeet = (stepFast / stepsFast) / (stepBase / stepsBase);
+        Assert.InRange(onFeet, 1.08, 1.20);
+        Assert.True(ballsFast > 50 && ballsBase > 50, "muy pocos vuelos medidos");
+        double onBall = (ballFast / ballsFast) / (ballBase / ballsBase);
+        Assert.InRange(onBall, 1.05, 1.25);
+    }
+
+    /// <summary>Paso medio de quien camina (0,02-0,5 casillas/tick, sin saltos) y del balón en vuelo, sólo en la turba.</summary>
+    private static void Accumulate(MatchResult result, ref double steps, ref long stepCount, ref double flights, ref long flightCount)
+    {
+        var trace = result.Trace!;
+        int start = FirstMobFrame(trace);
+        if (start < 0)
+        {
+            return;
+        }
+
+        for (int f = start + 1; f < trace.FrameCount; f++)
+        {
+            for (int p = 0; p < trace.Players.Count; p++)
+            {
+                if (!trace.OnPitchAt(f, p) || !trace.OnPitchAt(f - 1, p))
+                {
+                    continue;
+                }
+
+                float step = Vec2.Distance(trace.PositionAt(f, p), trace.PositionAt(f - 1, p));
+                if (step is > 0.02f and < 0.5f)
+                {
+                    steps += step;
+                    stepCount++;
+                }
+            }
+
+            if (trace.BallInFlightAt(f) && trace.BallInFlightAt(f - 1))
+            {
+                float flight = Vec2.Distance(trace.BallAt(f), trace.BallAt(f - 1));
+                if (flight > 0.05f)
+                {
+                    flights += flight;
+                    flightCount++;
+                }
+            }
+        }
+    }
+
+    [Fact]
+    public void TheMobTuningRejectsABandThatLeavesNoField()
+    {
+        var files = TestData.LoadAllFiles();
+        files["sim/tuning.json"] = files["sim/tuning.json"].Replace("\"narrowRowsPerSide\": 1", "\"narrowRowsPerSide\": 4", StringComparison.Ordinal);
+        Assert.Throws<DataException>(() => DataLoader.FromJson(files));
+    }
+}

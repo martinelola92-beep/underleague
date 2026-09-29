@@ -127,7 +127,7 @@ internal sealed class UtilityContext
     public float ShootBlockRadiusCells { get; }
 
     /// <summary>Velocidad del pase en milésimas de casilla por tick (tuning.ball), para la carrera del pase en profundidad.</summary>
-    public int PassSpeedCellsPerTickMilli { get; }
+    public int PassSpeedCellsPerTickMilli { get; set; }
 
     /// <summary>
     /// Tick actual del partido. Lo necesita la caducidad de las intenciones de pase (P3): una oferta vale

@@ -1884,7 +1884,7 @@ internal sealed class MatchEngine : IPerkWorld
 
     private void Move(MatchPlayer player, bool dribbling)
     {
-        Vec2 target = Utility.ClampToZone(player, player.TargetPoint);
+        Vec2 target = InBand(Utility.ClampToZone(player, player.TargetPoint));
         if (!player.IsOutfield)
         {
             target = Utility.ClampToArea(target, player.Team, _context.KeeperExitCells[player.Team]);
@@ -1904,7 +1904,7 @@ internal sealed class MatchEngine : IPerkWorld
             ? target
             : player.Position + (delta * (step / distance));
 
-        next = Utility.ClampToPitch(next);
+        next = InBandFrom(Utility.ClampToPitch(next), player.Position);
         if (!player.IsOutfield)
         {
             next = Utility.ClampToArea(next, player.Team, _context.KeeperExitCells[player.Team]);
@@ -1937,6 +1937,7 @@ internal sealed class MatchEngine : IPerkWorld
     /// </summary>
     private void WalkTo(MatchPlayer player, Vec2 destination)
     {
+        destination = InBand(destination);
         var to = destination - player.Position;
         float distance = to.Length;
         float step = SpeedPerTick(player, dribbling: false);
@@ -2015,6 +2016,57 @@ internal sealed class MatchEngine : IPerkWorld
         player.Position = next;
     }
 
+    // ---------------------------------------------------------------- ADR 0169: la turba estrecha el campo
+
+    /// <summary>Filas que el público invade por lado (0 en tiempo reglamentario, <c>mob.narrowRowsPerSide</c> en la turba).</summary>
+    private int _bandInset;
+
+    /// <summary>Aumento entero de la velocidad de carrera y de los golpes del balón (0 en tiempo reglamentario).</summary>
+    private int _speedBonusPercent;
+
+    /// <summary>Borde superior de la banda jugable: 0 en reglamentario, <c>_bandInset</c> en la turba.</summary>
+    private float BandMin => _bandInset;
+
+    /// <summary>Borde inferior de la banda jugable: <c>Pitch.Rows</c> en reglamentario.</summary>
+    private float BandMax => Pitch.Rows - _bandInset;
+
+    /// <summary>
+    /// Acota un punto a la banda jugable. Con la banda entera (todo el tiempo reglamentario) devuelve el punto sin
+    /// tocarlo, ni una operación más: el partido reglamentario es byte a byte el de antes (RT-024).
+    /// </summary>
+    private Vec2 InBand(Vec2 point) =>
+        _bandInset == 0 ? point : new Vec2(point.X, Math.Clamp(point.Y, BandMin, BandMax));
+
+    /// <summary>
+    /// Acota el paso de un jugador a la banda <b>sin teletransportarlo</b> (RF-053, ADR 0143): quien está dentro
+    /// no sale, y quien está en una fila invadida no puede alejarse más de ella, sólo andar hacia la banda.
+    /// </summary>
+    private Vec2 InBandFrom(Vec2 next, Vec2 current)
+    {
+        if (_bandInset == 0)
+        {
+            return next;
+        }
+
+        return new Vec2(next.X, Math.Clamp(next.Y, MathF.Min(BandMin, current.Y), MathF.Max(BandMax, current.Y)));
+    }
+
+    /// <summary>Velocidad de un golpe del balón (pase, tiro, cabeceo, rechace), con el bono de la turba si lo hay.</summary>
+    private int BallSpeedMilli(int milli) => _speedBonusPercent == 0 ? milli : milli * (100 + _speedBonusPercent) / 100;
+
+    /// <summary>
+    /// Al entrar la turba (<c>MOB_START</c>): el público invade las filas exteriores y el juego acelera. Se activa
+    /// antes del saque de centro que la abre, que recoloca a todos <b>andando</b> hacia una casilla ya acotada a la
+    /// banda (<see cref="SendEveryoneHome"/>): nadie salta.
+    /// </summary>
+    private void EnterMobPhase()
+    {
+        _bandInset = _tuning.Mob.NarrowRowsPerSide;
+        _speedBonusPercent = _tuning.Mob.SpeedPercent;
+        _bodies.BandInset = _bandInset;
+        _context.PassSpeedCellsPerTickMilli = BallSpeedMilli(_tuning.Ball.PassSpeedCellsPerTickMilli);
+    }
+
     private float SpeedPerTick(MatchPlayer player, bool dribbling)
     {
         var movement = _tuning.Movement;
@@ -2032,6 +2084,12 @@ internal sealed class MatchEngine : IPerkWorld
         }
 
         milli = milli * percent / 100;
+
+        // ADR 0169: la turba acelera el juego, en entero (RT-023). Con el bono a 0, ni una operación más.
+        if (_speedBonusPercent != 0)
+        {
+            milli = milli * (100 + _speedBonusPercent) / 100;
+        }
 
         // ADR 0142: aquí ya no hay ninguna rampa del reloj. La velocidad cae porque `player.Speed` es el
         // atributo YA cansado —el cansancio se aplica donde se lee el atributo, en un solo sitio— y eso es
@@ -2724,7 +2782,7 @@ internal sealed class MatchEngine : IPerkWorld
         // lo que su nombre dice. El duelo aéreo sigue existiendo y sigue decidiéndose con el cuerpo —lo
         // que cambia es que se resuelve UNA vez y el balón vuelve al suelo, que es donde se juega.
         _ball.Head(
-            new Vec2(direction * (ballTuning.HeaderSpeedCellsPerTickMilli / 1000f), 0f),
+            new Vec2(direction * (BallSpeedMilli(ballTuning.HeaderSpeedCellsPerTickMilli) / 1000f), 0f),
             -(ballTuning.HeaderDropCellsPerTickMilli / 1000f));
 
         _ball.LastTouchPlayer = header;
@@ -2988,7 +3046,7 @@ internal sealed class MatchEngine : IPerkWorld
         // secuencia de decisiones tomadas, nunca de sus resultados intermedios.
         bool chanceRoll = _rng.Chance(probability);
         bool succeeds = receiver is not null && chanceRoll;
-        int ticks = FlightTicks(distance, _tuning.Ball.PassSpeedCellsPerTickMilli);
+        int ticks = FlightTicks(distance, BallSpeedMilli(_tuning.Ball.PassSpeedCellsPerTickMilli));
         // AZ-B paso 5: el pase en profundidad va a la casilla que eligió la utilidad (TargetPoint del
         // pasador), no al pie del receptor; el vuelo es el mismo y la carrera la resuelve el tick a tick.
         bool through = passer.CurrentAction == PlayerAction.ThroughPass && receiver is not null;
@@ -3006,7 +3064,7 @@ internal sealed class MatchEngine : IPerkWorld
                 : receiverPoint;
         if (through)
         {
-            ticks = Utility.FlightTicks(Vec2.Distance(passer.Position, target), _tuning.Ball.PassSpeedCellsPerTickMilli);
+            ticks = Utility.FlightTicks(Vec2.Distance(passer.Position, target), BallSpeedMilli(_tuning.Ball.PassSpeedCellsPerTickMilli));
             _report.ThroughPasses[passer.Team]++;
         }
 
@@ -3107,7 +3165,7 @@ internal sealed class MatchEngine : IPerkWorld
             player.Position.Y + spread));
 
         int ticks = Utility.FlightTicks(
-            Vec2.Distance(player.Position, target), _tuning.Ball.PassSpeedCellsPerTickMilli);
+            Vec2.Distance(player.Position, target), BallSpeedMilli(_tuning.Ball.PassSpeedCellsPerTickMilli));
 
         _ball.Owner = null;
         _ball.InFlight = true;
@@ -3321,7 +3379,7 @@ internal sealed class MatchEngine : IPerkWorld
         _ball.ShotRawOffCentre = aim.RawOffCentre;
         _ball.ShotRawHeight = aim.RawHeight;
         _ball.FlightArc = distance * (_tuning.Shot.ArcCellsPerCellMilli / 1000f);
-        int ticks = FlightTicks(Vec2.Distance(shooter.Position, target), _tuning.Ball.ShotSpeedCellsPerTickMilli);
+        int ticks = FlightTicks(Vec2.Distance(shooter.Position, target), BallSpeedMilli(_tuning.Ball.ShotSpeedCellsPerTickMilli));
         _ball.FlightTicksTotal = ticks;
         _ball.FlightTicksLeft = ticks;
         _ball.LastTouchPlayer = shooter;
@@ -3672,7 +3730,7 @@ internal sealed class MatchEngine : IPerkWorld
 
         // Hacia el campo: el balón vuelve por donde vino, desviado, y con algo de bote.
         int direction = Pitch.AttackDirection(shooter.Team);
-        float speed = _tuning.Ball.ShotSpeedCellsPerTickMilli / 1000f * FramePostReboundPercent / 100f;
+        float speed = BallSpeedMilli(_tuning.Ball.ShotSpeedCellsPerTickMilli) / 1000f * FramePostReboundPercent / 100f;
         float sideways = _ball.FlightTarget.Y < PitchConstants.CenterRow ? -1f : 1f;
         _ball.SetLoose(
             new Vec2(-direction * speed, sideways * speed * 0.5f),
@@ -3781,7 +3839,7 @@ internal sealed class MatchEngine : IPerkWorld
             Emit(EventType.Save, "corner", goalkeeper, opponent: shooter);
             CancelInFlightPass();
             float cornerX = defendingTeam == 0 ? 0f : Pitch.Columns;
-            float cornerY = _ball.Position.Y < PitchConstants.CenterRow ? 0f : Pitch.Rows;
+            float cornerY = _ball.Position.Y < PitchConstants.CenterRow ? BandMin : BandMax;
             ScheduleCorner(shooter.Team, new Vec2(cornerX, cornerY));
             return;
         }
@@ -3790,8 +3848,8 @@ internal sealed class MatchEngine : IPerkWorld
         int direction = Pitch.AttackDirection(defendingTeam);
         float lateral = _ball.ShotRawOffCentre >= 0f ? 1f : -1f;
         var speed = new Vec2(
-            direction * (save.ParrySpeedCellsPerTickMilli / 1000f),
-            lateral * (save.ParrySpeedCellsPerTickMilli / 2000f));
+            direction * (BallSpeedMilli(save.ParrySpeedCellsPerTickMilli) / 1000f),
+            lateral * (BallSpeedMilli(save.ParrySpeedCellsPerTickMilli) / 2000f));
 
         _report.SavesParried[defendingTeam]++;
         Emit(EventType.Save, "parried", goalkeeper, opponent: shooter);
@@ -5018,10 +5076,10 @@ internal sealed class MatchEngine : IPerkWorld
         }
 
         Vec2 position = _ball.Position;
-        if (position.Y < 0f || position.Y > Pitch.Rows)
+        if (position.Y < BandMin || position.Y > BandMax)
         {
             int team = _ball.LastTouchTeam >= 0 ? 1 - _ball.LastTouchTeam : 0;
-            ScheduleThrowIn(team, Utility.ClampToPitch(position));
+            ScheduleThrowIn(team, InBand(Utility.ClampToPitch(position)));
             return;
         }
 
@@ -5039,7 +5097,7 @@ internal sealed class MatchEngine : IPerkWorld
         else
         {
             float cornerX = defendingTeam == 0 ? 0f : Pitch.Columns;
-            float cornerY = position.Y < PitchConstants.CenterRow ? 0f : Pitch.Rows;
+            float cornerY = position.Y < PitchConstants.CenterRow ? BandMin : BandMax;
             ScheduleCorner(attackingTeam, new Vec2(cornerX, cornerY));
         }
     }
@@ -5204,7 +5262,7 @@ internal sealed class MatchEngine : IPerkWorld
             SendEveryoneHome();
             for (int i = 0; i < _players.Length; i++)
             {
-                _restartSpot[i] = KickoffSpot(_players[i], team);
+                _restartSpot[i] = InBand(KickoffSpot(_players[i], team));
             }
         }
 
@@ -5627,7 +5685,7 @@ internal sealed class MatchEngine : IPerkWorld
             }
 
             var direction = distance > 0.001f ? offset * (1f / distance) : new Vec2(-Pitch.AttackDirection(_restartTeam), 0f);
-            Vec2 corrected = Utility.ClampToPitch(center + (direction * clearance));
+            Vec2 corrected = InBand(Utility.ClampToPitch(center + (direction * clearance)));
             if (!player.IsOutfield)
             {
                 // RF-057b: el portero nunca abandona el área, ni siquiera empujado fuera de ella por esta
@@ -5663,7 +5721,7 @@ internal sealed class MatchEngine : IPerkWorld
     /// cabe en el campo—, se devuelve lo mejor de los dos, que es lo único honesto: la geometría no da más
     /// de sí y la alternativa sería sacar a un jugador del campo.</para>
     /// </summary>
-    private static Vec2 SlideAlongPitchToClear(Vec2 center, Vec2 point, float clearance)
+    private Vec2 SlideAlongPitchToClear(Vec2 center, Vec2 point, float clearance)
     {
         float distance = Vec2.Distance(point, center);
         if (distance >= clearance)
@@ -5684,7 +5742,7 @@ internal sealed class MatchEngine : IPerkWorld
         // teletransportar a nadie; si por su lado no se cumple, se deja lo que había y se documenta.
         float dx = MathF.Sqrt(remaining);
         float sign = point.X >= center.X ? 1f : -1f;
-        var slid = Utility.ClampToPitch(new Vec2(center.X + (sign * dx), point.Y));
+        var slid = InBand(Utility.ClampToPitch(new Vec2(center.X + (sign * dx), point.Y)));
         return Vec2.Distance(slid, center) >= clearance ? slid : point;
     }
 
@@ -6104,6 +6162,7 @@ internal sealed class MatchEngine : IPerkWorld
             Emit(EventType.RefereeLeaves, "refereeLeaves");
             _goldenGoal = true;
             _report.WentToGoldenGoal = true;
+            EnterMobPhase();
 
             // ADR 0167: el tipo de turba anunciado antes del partido ocurre ahora, y lo que dura, dura hasta el final.
             ApplyMob(untilTheEnd: true, ticks: 0);

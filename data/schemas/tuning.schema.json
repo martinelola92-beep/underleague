@@ -95,6 +95,9 @@
     },
     "progression": {
       "$ref": "#/$defs/progression"
+    },
+    "mob": {
+      "$ref": "#/$defs/mob"
     }
   },
   "required": [
@@ -123,7 +126,8 @@
     "generation",
     "bodies",
     "actionZone",
-    "progression"
+    "progression",
+    "mob"
   ],
   "additionalProperties": false,
   "$defs": {
@@ -1632,6 +1636,30 @@
         "outsidePenaltyPerCell",
         "disciplineWeightPercent",
         "retreatBonusOutsidePerCell"
+      ],
+      "additionalProperties": false
+    },
+    "mob": {
+      "type": "object",
+      "description": "ADR 0169, RF-055b: el estrechamiento y la velocidad de la prórroga de turba.",
+      "properties": {
+        "_doc": {
+          "type": "string"
+        },
+        "narrowRowsPerSide": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 3
+        },
+        "speedPercent": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 100
+        }
+      },
+      "required": [
+        "narrowRowsPerSide",
+        "speedPercent"
       ],
       "additionalProperties": false
     },

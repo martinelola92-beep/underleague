@@ -927,7 +927,7 @@ public static class DataLoader
             "regulationTicks", "goldenGoalMaxTicks", "decisionIntervalTicks", "transitionTicks",
             "assistWindowTicks", "resolution",
             "movement", "fatigue", "ball", "states", "pass", "dribble", "shot", "cross", "clear", "save", "goalkeeper", "tackle", "injury", "referee",
-            "block", "restart", "generation", "bodies", "actionZone", "progression");
+            "block", "restart", "generation", "bodies", "actionZone", "progression", "mob");
 
         return new Tuning(
             root.Prop("regulationTicks").AsInt(),
@@ -955,7 +955,8 @@ public static class DataLoader
             ParseGeneration(root.Prop("generation")),
             ParseBodies(root.Prop("bodies")),
             ParseActionZone(root.Prop("actionZone")),
-            ParseProgression(root.Prop("progression")));
+            ParseProgression(root.Prop("progression")),
+            ParseMob(root.Prop("mob")));
     }
 
     private static MovementTuning ParseMovement(Json node)
@@ -1283,6 +1284,19 @@ public static class DataLoader
             node.Prop("speedFactor").AsInt(),
             node.Prop("knockdownTicks").AsInt(),
             node.Prop("foulBase").AsInt());
+    }
+
+    private static MobTuning ParseMob(Json node)
+    {
+        node.EnsureKnownKeys("narrowRowsPerSide", "speedPercent");
+        int rows = node.Prop("narrowRowsPerSide").AsInt();
+        int percent = node.Prop("speedPercent").AsInt();
+        if (rows < 0 || rows * 2 >= Pitch.Rows || percent < 0)
+        {
+            throw new DataException("sim/tuning.json", "$.mob", $"narrowRowsPerSide {rows} (0..{(Pitch.Rows - 1) / 2}) y speedPercent {percent} (>= 0)");
+        }
+
+        return new MobTuning(rows, percent);
     }
 
     private static RestartTuning ParseRestart(Json node)

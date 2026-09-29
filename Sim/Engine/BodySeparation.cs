@@ -1,4 +1,5 @@
 using Underleague.Sim.Data;
+using Underleague.Sim.Model;
 
 namespace Underleague.Sim.Engine;
 
@@ -163,6 +164,9 @@ internal sealed class BodySeparation
         _pushY[b.Index] += ny * push * shareB / 1000f;
     }
 
+    /// <summary>Filas invadidas por el público a cada lado (ADR 0169): 0 salvo en la turba.</summary>
+    public int BandInset { get; set; }
+
     /// <summary>
     /// Aplica de golpe el buffer del tick, acotado por jugador (§2.1.3). El empuje no toca
     /// <see cref="MatchPlayer.Velocity"/>: la velocidad es el desplazamiento <b>propio</b> del jugador y
@@ -197,6 +201,14 @@ internal sealed class BodySeparation
             }
 
             var next = Utility.ClampToPitch(new Vec2(player.Position.X + px, player.Position.Y + py));
+            if (BandInset > 0)
+            {
+                // ADR 0169: en la turba el empujón tampoco mete a nadie en una fila invadida ni lo saca de ella de golpe.
+                next = new Vec2(
+                    next.X,
+                    Math.Clamp(next.Y, MathF.Min(BandInset, player.Position.Y), MathF.Max(Pitch.Rows - BandInset, player.Position.Y)));
+            }
+
             if (!player.IsOutfield)
             {
                 next = Utility.ClampToArea(next, player.Team);
