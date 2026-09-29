@@ -131,13 +131,14 @@ public sealed class NodeRewardTests
     }
 
     /// <summary>
-    /// Superar el jefe cura la plantilla (ADR 0043): la lesión grave y las leves acumuladas desaparecen,
-    /// el muerto no vuelve (RF-093). Es lo que cierra el ciclo de desgaste de cada acto.
+    /// El desgaste es recurso de la RUN (ADR 0170; antes la ADR 0043 curaba al superar el jefe): superar el
+    /// jefe ya no cura nada, ni la lesión grave ni las leves acumuladas, y el muerto sigue muerto (RF-093).
+    /// Ningún tipo de nodo cura la plantilla; el alivio son la clínica, el herrero y el matasanos.
     /// </summary>
     [Fact]
-    public void WinningTheBossHealsTheRosterButNotTheDead()
+    public void WinningTheBossNoLongerHealsTheRoster()
     {
-        Assert.True(Economy.BossReward.HealsRoster);
+        Assert.False(Economy.BossReward.HealsRoster);
         Assert.False(Economy.LeagueReward.HealsRoster);
         Assert.False(Economy.EliteReward.HealsRoster);
 
@@ -151,15 +152,10 @@ public sealed class NodeRewardTests
         var bossNode = FindNode(state, NodeKind.Boss);
         var afterBoss = Systems.AfterMatch(state, bossNode, WonSummary(bossNode), Catalog);
 
-        Assert.Equal(PhysicalState.Healthy, afterBoss.GetPlayer(roster[0].Id).PhysicalState);
-        Assert.Equal(PhysicalState.Healthy, afterBoss.GetPlayer(roster[1].Id).PhysicalState);
-        Assert.Equal(0, afterBoss.GetPlayer(roster[1].Id).MinorInjuries);
+        Assert.Equal(PhysicalState.SevereInjury, afterBoss.GetPlayer(roster[0].Id).PhysicalState);
+        Assert.Equal(PhysicalState.MinorInjury, afterBoss.GetPlayer(roster[1].Id).PhysicalState);
+        Assert.Equal(2, afterBoss.GetPlayer(roster[1].Id).MinorInjuries);
         Assert.Equal(PhysicalState.Dead, afterBoss.GetPlayer(roster[2].Id).PhysicalState);
-
-        // Un partido de liga ganado no cura nada: el alivio es del jefe.
-        var leagueNode = FindNode(state, NodeKind.LeagueMatch);
-        var afterLeague = Systems.AfterMatch(state, leagueNode, WonSummary(leagueNode), Catalog);
-        Assert.Equal(PhysicalState.SevereInjury, afterLeague.GetPlayer(roster[0].Id).PhysicalState);
     }
 
     /// <summary>

@@ -353,10 +353,9 @@ public sealed class StandardRunSystems : IRunSystems
         int gold = GoldCalculator.GoldForWin(state, node, summary, _economy);
         state = state.AddGold(gold + counterGold + deathGold);
 
-        // ADR 0043: superar el jefe cura la plantilla. Es lo que cierra el ciclo de desgaste del acto —se
-        // puede exprimir la plantilla sabiendo que habrá alivio, en vez de administrar una ruina uniforme
-        // durante toda la run— y la otra mitad del trampolín, junto a los dos perks. El muerto no vuelve
-        // (RF-093).
+        // ADR 0043 dejaba que superar el jefe curase la plantilla; la ADR 0170 lo retira en los datos
+        // (`healsRoster: false` en los tres tipos): el desgaste es recurso de la run y las lesiones se
+        // arrastran. El campo sigue siendo un mando de datos, y el muerto no vuelve nunca (RF-093).
         var reward = _economy.RewardFor(node.Kind);
         if (reward.HealsRoster)
         {
