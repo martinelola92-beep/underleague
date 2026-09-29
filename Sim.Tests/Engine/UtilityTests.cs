@@ -28,6 +28,13 @@ public sealed class UtilityTests
         opponent.Position = new Vec2(3.5f, 2.5f);
 
         var context = Context(weights, player, opponent);
+
+        // El balón lo lleva el rival: con un balón suelto el designado (aquí, el único jugador del equipo)
+        // tiene el deber de ir a por él (BC-G, ADR 0176) y este test no compararía las dos colocaciones.
+        context.Ball.Owner = opponent;
+        context.Ball.Position = opponent.Position;
+        context.HoldingTeam = 1;
+
         var rows = new List<UtilityRow>();
         var chosen = Utility.Choose(context, player, rows);
 

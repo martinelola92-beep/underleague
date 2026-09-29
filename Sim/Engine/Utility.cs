@@ -386,6 +386,17 @@ internal static class Utility
         bool bestTackleOffBall = false;
         MatchPlayer? bestBlockTarget = null;
 
+        // BC-G (ADR 0176): el perseguidor designado de un balón suelto VA a por él. Se evalúa ChaseBall una
+        // vez, aquí, y se reutiliza abajo: la decisión de si el deber está vivo depende de que ChaseBall sea
+        // viable, y evaluarla dos veces sería duplicar una verdad.
+        bool chaseDuty = false;
+        Eval chaseEval = default;
+        if (HasLooseBallDuty(ctx, p, legal))
+        {
+            chaseEval = Evaluate(ctx, p, PlayerAction.ChaseBall);
+            chaseDuty = !chaseEval.Discarded && !chaseEval.OutsideOuterLimit;
+        }
+
         for (int i = 0; i < legal.Count; i++)
         {
             var action = legal[i];
@@ -399,7 +410,12 @@ internal static class Utility
                 continue;
             }
 
-            var eval = Evaluate(ctx, p, action);
+            var eval = chaseDuty && action == PlayerAction.ChaseBall ? chaseEval : Evaluate(ctx, p, action);
+            if (chaseDuty && YieldsToLooseBall(action))
+            {
+                eval.Discarded = true;
+            }
+
             int baseWeight = ctx.Weights.Base(p.Role, action);
             int tactical = ctx.Weights.Tactical(ctx.TacticalStates[p.Team], action);
             int mentality = EffectiveMentality(ctx, p.Team, action);
@@ -465,6 +481,49 @@ internal static class Utility
     }
 
 
+
+    /// <summary>
+    /// BC-G (ADR 0176, docs/pendientes/BC-G.md): ¿tiene este jugador <b>el deber</b> de ir a por el balón?
+    /// Sí si el balón está <b>suelto</b> —sin dueño, sin vuelo y sin reanudación pendiente— y él es el
+    /// perseguidor designado de su equipo (AW-S), o sea el más cercano.
+    ///
+    /// <para><b>Por qué existe.</b> AW-S dejó a un solo jugador por equipo con derecho a perseguir, y la
+    /// utilidad lo deja competir contra las acciones de colocación. Con el balón parado en un córner, el
+    /// designado —un defensa a 0,5 casillas— puntuaba <c>CoverSpace</c> en 790 y <c>ChaseBall</c> en 631, y
+    /// como los demás <i>no pueden</i> perseguir, <b>nadie iba</b>: hasta 656 ticks (44 s) con el balón
+    /// quieto. Los tres motores de referencia (docs/referencia-motores-futbol.md §6.3) resuelven la
+    /// designación con una compuerta dura —el más rápido en llegar <i>intercepta</i>, los demás mantienen la
+    /// formación—, no dejándole discutir con la colocación. Subir <c>chaseBallLooseBonus</c> lo intentó la
+    /// ADR 0117 (250 → 410) y quitó dos tercios de los casos, no éste: no había un número que lo cerrara sin
+    /// mover la palanca compartida con la diferenciación de builds.</para>
+    /// </summary>
+    private static bool HasLooseBallDuty(UtilityContext ctx, MatchPlayer p, IReadOnlyList<PlayerAction> legal)
+    {
+        var ball = ctx.Ball;
+        if (ball.Owner is not null || ball.InFlight || ctx.BallDead || !ReferenceEquals(ctx.NearestToBall[p.Team], p))
+        {
+            return false;
+        }
+
+        for (int i = 0; i < legal.Count; i++)
+        {
+            if (legal[i] == PlayerAction.ChaseBall)
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /// <summary>
+    /// Las acciones de colocación que <b>ceden</b> ante el deber de ir a por un balón suelto (BC-G,
+    /// ADR 0176): las que dicen «quédate donde la formación te quiere». La entrada y la carga no están: no
+    /// disputan un balón sin dueño, y si por alguna razón puntúan es porque tienen su propia precondición.
+    /// </summary>
+    private static bool YieldsToLooseBall(PlayerAction action) =>
+        action is PlayerAction.CoverSpace or PlayerAction.Retreat or PlayerAction.MarkOpponent
+            or PlayerAction.FindSpace or PlayerAction.OfferSupport;
 
     /// <summary>
     /// Qué puede hacer quien ejecuta cada reanudación (ADR 0143). No es una lista de balance sino las
