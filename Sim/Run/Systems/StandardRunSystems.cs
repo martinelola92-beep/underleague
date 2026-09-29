@@ -11,6 +11,7 @@ using Underleague.Sim.Run.Systems.Items;
 using Underleague.Sim.Run.Systems.Map;
 using Underleague.Sim.Run.Systems.Market;
 using Underleague.Sim.Run.Systems.Medical;
+using Underleague.Sim.Run.Systems.Gazette;
 using Underleague.Sim.Run.Systems.Mercenaries;
 using Underleague.Sim.Run.Systems.Nicknames;
 using Underleague.Sim.Run.Systems.Nodes;
@@ -45,8 +46,9 @@ public sealed class StandardRunSystems : IRunSystems
     private readonly BetCatalog _bets;
     private readonly ProsthesisCatalog _prostheses;
     private readonly NicknameCatalog _nicknames;
+    private readonly GazetteCatalog _gazette;
 
-    public StandardRunSystems(EconomyConfig economy, ItemCatalog items, ConsumableCatalog consumables, RivalCatalog rivals, MapConfig map, ClubCatalog clubs, EventCatalog events, RefereeCatalog referees, BetCatalog? bets = null, ProsthesisCatalog? prostheses = null, NicknameCatalog? nicknames = null)
+    public StandardRunSystems(EconomyConfig economy, ItemCatalog items, ConsumableCatalog consumables, RivalCatalog rivals, MapConfig map, ClubCatalog clubs, EventCatalog events, RefereeCatalog referees, BetCatalog? bets = null, ProsthesisCatalog? prostheses = null, NicknameCatalog? nicknames = null, GazetteCatalog? gazette = null)
     {
         _economy = economy ?? throw new ArgumentNullException(nameof(economy));
         _items = items ?? throw new ArgumentNullException(nameof(items));
@@ -59,6 +61,7 @@ public sealed class StandardRunSystems : IRunSystems
         _bets = bets ?? BetCatalog.Empty;
         _prostheses = prostheses ?? ProsthesisCatalog.Empty;
         _nicknames = nicknames ?? NicknameCatalog.Empty;
+        _gazette = gazette ?? GazetteCatalog.Empty;
     }
 
     /// <summary>Configuración de economía de esta instancia (para tests y <c>/Balance</c>).</summary>
@@ -94,6 +97,9 @@ public sealed class StandardRunSystems : IRunSystems
     /// <summary>Catálogo de apodos de carrera de esta instancia (ADR 0163, <c>data/nicknames/</c>).</summary>
     public NicknameCatalog Nicknames => _nicknames;
 
+    /// <summary>Plantillas de la Gaceta de fin de run de esta instancia (ADR 0163, <c>data/gazette/</c>).</summary>
+    public GazetteCatalog Gazette => _gazette;
+
     /// <summary>
     /// Construye los catálogos del paquete X de una instantánea de <c>/data</c> (el mismo diccionario que
     /// consume <c>DataLoader.FromJson</c>). Ayudante de conveniencia para tests y <c>/Balance</c>: evita
@@ -110,7 +116,8 @@ public sealed class StandardRunSystems : IRunSystems
         RefereeLoader.FromJson(files),
         BetLoader.FromJson(files),
         ProsthesisLoader.FromJson(files),
-        NicknameLoader.FromJson(files));
+        NicknameLoader.FromJson(files),
+        GazetteLoader.FromJson(files));
 
     /// <summary>
     /// <see cref="RunSetup"/> completo para empezar una run con <b>estos</b> datos: oro de partida

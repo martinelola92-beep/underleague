@@ -1,0 +1,351 @@
+{
+  "_doc": "ADR 0163: plantillas de la Gaceta de fin de run (RF-122). Cada entrada es una clave con una lista de variantes por idioma; la vista elige una de forma determinista por la semilla de la run (Sim.Run.View.GazetteView), nunca al azar. Los marcadores {nombre} se sustituyen con datos reales de la run; ningún texto se escribe a mano por caso (RT-035).",
+  "texts": [
+    {
+      "key": "masthead",
+      "es": [
+        "EL SILBATO NEGRO"
+      ],
+      "en": [
+        "THE BLACK WHISTLE"
+      ]
+    },
+    {
+      "key": "headline.victoryClean",
+      "es": [
+        "SIN UNA BAJA: EL CLUB SE LLEVA LA LIGA Y EL FORENSE SE QUEDA SIN CLIENTES",
+        "PLANTILLA ENTERA Y CAMPEONA: LA FEDERACIÓN ABRE UNA INVESTIGACIÓN POR SOSPECHOSA",
+        "CAMPEONES SIN FUNERALES: LAS FLORES DEL CLUB SE VAN A DEVOLVER"
+      ],
+      "en": [
+        "NOT A SINGLE CASUALTY: CLUB TAKES THE LEAGUE, UNDERTAKER LAID OFF",
+        "SQUAD INTACT AND CHAMPION: THE FEDERATION OPENS A SUSPICIOUS INQUIRY",
+        "CHAMPIONS WITHOUT FUNERALS: THE CLUB'S WREATHS ARE GOING BACK TO THE SHOP"
+      ]
+    },
+    {
+      "key": "headline.victory",
+      "es": [
+        "CAMPEONES, PERO A UN PRECIO: {deaths} BAJAS Y UN TROFEO CON MANCHAS",
+        "EL CLUB GANA LA LIGA Y LA GRADA APLAUDE, SOBRE TODO A LOS CAÍDOS",
+        "VICTORIA HISTÓRICA: {deaths} JUGADORES NO PUDIERON VERLA",
+        "LA COPA LLEGA AL CLUB; LA PLANTILLA, ALGO MÁS TARDE Y CON MENOS PIEZAS"
+      ],
+      "en": [
+        "CHAMPIONS, BUT AT A PRICE: {deaths} LOST AND A TROPHY WITH STAINS",
+        "CLUB WINS THE LEAGUE AND THE CROWD CHEERS, MOSTLY FOR THE FALLEN",
+        "HISTORIC VICTORY: {deaths} PLAYERS COULD NOT WATCH IT",
+        "THE CUP REACHES THE CLUB; THE SQUAD ARRIVES LATER AND IN FEWER PIECES"
+      ]
+    },
+    {
+      "key": "headline.defeatBoss",
+      "es": [
+        "EL JEFE DEL ACTO SE COME AL CLUB Y REPITE",
+        "CAÍDA EN LA FINAL DEL ACTO: EL CLUB PIERDE Y EL JEFE SE LLEVA EL SOUVENIR",
+        "EL SUEÑO ACABA EN EL ACTO {act}: «NOS HAN VENCIDO, PERO CON ESTILO»",
+        "EL JEFE NO SE DEJA: LA RUN SE DESPIDE ENTRE SILBIDOS Y PAÑUELOS"
+      ],
+      "en": [
+        "THE ACT BOSS EATS THE CLUB AND ASKS FOR SECONDS",
+        "FALL AT THE ACT FINAL: CLUB LOSES AND THE BOSS KEEPS A SOUVENIR",
+        "THE DREAM ENDS IN ACT {act}: \"WE WERE BEATEN, BUT WITH STYLE\"",
+        "THE BOSS WON'T BUDGE: THE RUN SAYS GOODBYE TO WHISTLES AND HANDKERCHIEFS"
+      ]
+    },
+    {
+      "key": "headline.defeatPlayers",
+      "es": [
+        "SE ACABARON LOS JUGADORES: EL CLUB NO LLEGA NI PARA UN CINCO CONTRA CINCO",
+        "PLANTILLA AGOTADA: EL UTILERO YA NO SABE A QUIÉN SACAR",
+        "EL CLUB CIERRA POR FALTA DE PERSONAL, Y DE PERSONA",
+        "SIN CINCO EN PIE NO HAY PARTIDO: LA LIGA CONTINUARÁ SIN NOSOTROS"
+      ],
+      "en": [
+        "OUT OF PLAYERS: THE CLUB CAN'T EVEN FIELD A FIVE-A-SIDE",
+        "SQUAD EXHAUSTED: THE KIT MAN NO LONGER KNOWS WHOM TO SEND ON",
+        "CLUB CLOSES FOR LACK OF STAFF, AND OF PEOPLE",
+        "NO FIVE STANDING, NO MATCH: THE LEAGUE WILL CARRY ON WITHOUT US"
+      ]
+    },
+    {
+      "key": "lede.victory",
+      "es": [
+        "{acts} actos superados, {wins} victorias en {matches} partidos y {deaths} lápidas que sumar al balance."
+      ],
+      "en": [
+        "{acts} acts cleared, {wins} wins in {matches} matches and {deaths} headstones added to the books."
+      ]
+    },
+    {
+      "key": "lede.defeatBoss",
+      "es": [
+        "{acts} actos superados, {wins} victorias en {matches} partidos y {deaths} bajas por el camino: el jefe fue demasiado."
+      ],
+      "en": [
+        "{acts} acts cleared, {wins} wins in {matches} matches and {deaths} lost along the way: the boss was too much."
+      ]
+    },
+    {
+      "key": "lede.defeatPlayers",
+      "es": [
+        "{acts} actos superados, {wins} victorias en {matches} partidos y {deaths} bajas: en pie ya no quedaba equipo."
+      ],
+      "en": [
+        "{acts} acts cleared, {wins} wins in {matches} matches and {deaths} lost: there was no team left standing."
+      ]
+    },
+    {
+      "key": "mvp.title",
+      "es": [
+        "EL MEJOR DE LA TEMPORADA"
+      ],
+      "en": [
+        "PLAYER OF THE SEASON"
+      ]
+    },
+    {
+      "key": "mvp.line",
+      "es": [
+        "{name}{nick} fue el mejor del club: {highlights}.",
+        "Si alguien se lleva el aplauso, es {name}{nick}: {highlights}.",
+        "{name}{nick} cargó con el equipo a la espalda: {highlights}."
+      ],
+      "en": [
+        "{name}{nick} was the club's best: {highlights}.",
+        "If anyone earns the applause, it's {name}{nick}: {highlights}.",
+        "{name}{nick} carried the team on their back: {highlights}."
+      ]
+    },
+    {
+      "key": "mvp.none",
+      "es": [
+        "Nadie jugó lo bastante para merecer un titular."
+      ],
+      "en": [
+        "Nobody played enough to earn a headline."
+      ]
+    },
+    {
+      "key": "highlight.matches.one",
+      "es": [
+        "1 partido"
+      ],
+      "en": [
+        "1 match"
+      ]
+    },
+    {
+      "key": "highlight.matches.many",
+      "es": [
+        "{n} partidos"
+      ],
+      "en": [
+        "{n} matches"
+      ]
+    },
+    {
+      "key": "highlight.goals.one",
+      "es": [
+        "1 gol"
+      ],
+      "en": [
+        "1 goal"
+      ]
+    },
+    {
+      "key": "highlight.goals.many",
+      "es": [
+        "{n} goles"
+      ],
+      "en": [
+        "{n} goals"
+      ]
+    },
+    {
+      "key": "highlight.assists.one",
+      "es": [
+        "1 asistencia"
+      ],
+      "en": [
+        "1 assist"
+      ]
+    },
+    {
+      "key": "highlight.assists.many",
+      "es": [
+        "{n} asistencias"
+      ],
+      "en": [
+        "{n} assists"
+      ]
+    },
+    {
+      "key": "highlight.tacklesWon.one",
+      "es": [
+        "1 entrada ganada"
+      ],
+      "en": [
+        "1 tackle won"
+      ]
+    },
+    {
+      "key": "highlight.tacklesWon.many",
+      "es": [
+        "{n} entradas ganadas"
+      ],
+      "en": [
+        "{n} tackles won"
+      ]
+    },
+    {
+      "key": "highlight.injuriesCaused.one",
+      "es": [
+        "1 lesión ajena"
+      ],
+      "en": [
+        "1 injury dealt"
+      ]
+    },
+    {
+      "key": "highlight.injuriesCaused.many",
+      "es": [
+        "{n} lesiones ajenas"
+      ],
+      "en": [
+        "{n} injuries dealt"
+      ]
+    },
+    {
+      "key": "highlight.deathsCaused.one",
+      "es": [
+        "1 muerte ajena"
+      ],
+      "en": [
+        "1 death dealt"
+      ]
+    },
+    {
+      "key": "highlight.deathsCaused.many",
+      "es": [
+        "{n} muertes ajenas"
+      ],
+      "en": [
+        "{n} deaths dealt"
+      ]
+    },
+    {
+      "key": "highlight.and",
+      "es": [
+        " y "
+      ],
+      "en": [
+        " and "
+      ]
+    },
+    {
+      "key": "villain.title",
+      "es": [
+        "EL VILLANO DE LA TEMPORADA"
+      ],
+      "en": [
+        "VILLAIN OF THE SEASON"
+      ]
+    },
+    {
+      "key": "villain.deaths",
+      "es": [
+        "{villain}, de {clan}, se llevó por delante a {deaths} de los tuyos y dejó {injuries} lesionados. Su agente habla de «malentendidos».",
+        "{villain} ({clan}) firma {deaths} muertes y {injuries} lesiones en tu plantilla. La grada rival lo llama «el Cirujano»."
+      ],
+      "en": [
+        "{villain}, of {clan}, took out {deaths} of yours and left {injuries} injured. Their agent speaks of \"misunderstandings\".",
+        "{villain} ({clan}) signs off with {deaths} deaths and {injuries} injuries in your squad. Their fans call them \"the Surgeon\"."
+      ]
+    },
+    {
+      "key": "villain.injuries",
+      "es": [
+        "{villain}, de {clan}, dejó {injuries} lesionados en tu plantilla. Dice que fue sin querer; nadie le cree.",
+        "{villain} ({clan}) mandó a {injuries} de los tuyos a la enfermería. La clínica le ha ofrecido un descuento por volumen."
+      ],
+      "en": [
+        "{villain}, of {clan}, left {injuries} of yours injured. Claims it was an accident; nobody buys it.",
+        "{villain} ({clan}) sent {injuries} of yours to the infirmary. The clinic offered a volume discount."
+      ]
+    },
+    {
+      "key": "obituaries.title",
+      "es": [
+        "ESQUELAS"
+      ],
+      "en": [
+        "OBITUARIES"
+      ]
+    },
+    {
+      "key": "obituaries.none",
+      "es": [
+        "Hoy no hay esquelas. El cura del club pide, sin éxito, que le devuelvan el depósito.",
+        "Ningún caído esta temporada: la funeraria estudia demandar al club por competencia desleal."
+      ],
+      "en": [
+        "No obituaries today. The club priest asks, in vain, for his deposit back.",
+        "No fallen this season: the undertaker is considering suing the club for unfair competition."
+      ]
+    },
+    {
+      "key": "obituaries.entry",
+      "es": [
+        "{name}{nick}, {race}, nivel {level}"
+      ],
+      "en": [
+        "{name}{nick}, {race}, level {level}"
+      ]
+    },
+    {
+      "key": "epitaph.byRival",
+      "es": [
+        "Cayó a manos de {killer}, de {clan}. Descanse en paz; su rival, no tanto.",
+        "Se lo llevó {killer}, de {clan}. Le sobreviven sus botas y una deuda con el utilero.",
+        "{killer}, de {clan}, le puso fin. Se pidió un minuto de silencio y se guardaron dos."
+      ],
+      "en": [
+        "Fell at the hands of {killer}, of {clan}. Rest in peace; their opponent, not so much.",
+        "Taken by {killer}, of {clan}. Survived by their boots and a debt to the kit man.",
+        "{killer}, of {clan}, ended it. A minute of silence was requested and two were observed."
+      ]
+    },
+    {
+      "key": "epitaph.unknown",
+      "es": [
+        "Cayó en el campo, sin que nadie viera de dónde vino el golpe. La grada dice que fue el césped.",
+        "Se fue como vivió: a mitad de una jugada. El árbitro no vio nada.",
+        "Murió de lo que mueren los que juegan aquí: de jugar."
+      ],
+      "en": [
+        "Fell on the pitch and nobody saw where the blow came from. The crowd blames the turf.",
+        "Left as they lived: in the middle of a play. The referee saw nothing.",
+        "Died of what people die of here: playing."
+      ]
+    },
+    {
+      "key": "epitaph.career",
+      "es": [
+        "Dejó {career}."
+      ],
+      "en": [
+        "Left behind {career}."
+      ]
+    },
+    {
+      "key": "epitaph.noCareer",
+      "es": [
+        "No llegó a debutar, lo cual, viendo cómo va la liga, quizá fue lo más sensato."
+      ],
+      "en": [
+        "Never made a debut, which, given how the league goes, may have been the wisest choice."
+      ]
+    }
+  ]
+}
