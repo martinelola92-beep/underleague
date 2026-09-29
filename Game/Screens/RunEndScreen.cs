@@ -5,6 +5,7 @@ using Underleague.Game.Data;
 using Underleague.Game.Ui;
 using Underleague.Sim.Model;
 using Underleague.Sim.Run;
+using Underleague.Sim.Run.View;
 
 namespace Underleague.Game.Screens;
 
@@ -47,12 +48,9 @@ public partial class RunEndScreen : Control
             UiText.Get(victory ? "ui.end.victory" : "ui.end.defeat"),
             UiText.Get("ui.end.seed", state.Seed, catalog.Race(state.ClubRace).Name.Es));
 
-        Widgets.Panel(this, new Rect2(396f, 52f, 872f, 690f));
-        float y = 66f;
-
-        Widgets.Body(this, Cause(outcome, victory), new Vector2(412f, y), 830f, victory ? Style.Accent : Style.Hole);
-        y += 32f;
-
+        // La portada: la run contada como un periódico de humor (ADR 0163, RF-122). La causa de la derrota
+        // (RF-002b) y las cifras siguen dichas con todas las letras bajo la cabecera de la pantalla.
+        Widgets.Body(this, Cause(outcome, victory), new Vector2(412f, 60f), 830f, victory ? Style.Accent : Style.Hole);
         Widgets.Body(
             this,
             UiText.Get(
@@ -63,29 +61,16 @@ public partial class RunEndScreen : Control
                 RunSummary.MatchesWon(state),
                 RunSummary.MatchesPlayed(state),
                 state.Gold),
-            new Vector2(412f, y),
-            830f);
-        y += 40f;
+            new Vector2(412f, 78f),
+            830f,
+            Style.TextDim);
 
-        var fallen = RunSummary.Fallen(state);
-        Widgets.Section(this, UiText.Get("ui.end.fallen"), new Vector2(412f, y), 830f);
-        y += 18f;
-        if (fallen.Count == 0)
+        var systems = run.Systems;
+        if (systems is not null && !systems.Gazette.IsEmpty)
         {
-            Widgets.Body(this, UiText.Get("ui.end.fallenNone"), new Vector2(412f, y), 830f, Style.TextDim);
-        }
-        else
-        {
-            foreach (var player in fallen)
-            {
-                Widgets.Body(
-                    this,
-                    UiText.Get("ui.end.fallenLine", player.Name, catalog.Race(player.Race).Name.Es, player.Level),
-                    new Vector2(412f, y),
-                    830f,
-                    Style.Of(PhysicalState.Dead));
-                y += 16f;
-            }
+            var page = new GazettePage { Position = new Vector2(400f, 102f), Size = new Vector2(860f, 592f) };
+            AddChild(page);
+            page.Bind(GazetteView.Build(state, catalog, systems.Nicknames, systems.Rivals, systems.Gazette, GameData.Language));
         }
 
         BuildRoster(run, state, catalog);

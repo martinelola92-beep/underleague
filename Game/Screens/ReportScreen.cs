@@ -294,7 +294,7 @@ public partial class ReportScreen : Control
     /// <summary>Columna derecha: el desglose del oro y el apartado del árbitro (RF-119, RF-114g..i).</summary>
     private void Gold()
     {
-        Widgets.Panel(this, new Rect2(920f, 52f, 348f, 360f));
+        Widgets.Panel(this, new Rect2(920f, 52f, 348f, 268f));
         Widgets.Section(this, UiText.Get("ui.report.gold"), new Vector2(932f, 58f), 320f);
 
         float y = 80f;
@@ -355,11 +355,11 @@ public partial class ReportScreen : Control
                 bet.Met ? Style.LinkCreated : Style.Hole);
         }
 
-        Widgets.Panel(this, new Rect2(920f, 424f, 348f, 316f));
-        Widgets.Section(this, UiText.Get("ui.report.referee"), new Vector2(932f, 430f), 320f);
+        Widgets.Panel(this, new Rect2(920f, 326f, 348f, 124f));
+        Widgets.Section(this, UiText.Get("ui.report.referee"), new Vector2(932f, 332f), 320f);
         var referee = _report.Referee;
-        Widgets.Body(this, referee.Name, new Vector2(932f, 452f), 324f);
-        Widgets.Body(this, UiText.Get("ui.report.refereeBias", referee.InitialBias, referee.FinalBias), new Vector2(932f, 470f), 324f, Style.TextDim);
+        Widgets.Body(this, referee.Name, new Vector2(932f, 354f), 324f);
+        Widgets.Body(this, UiText.Get("ui.report.refereeBias", referee.InitialBias, referee.FinalBias), new Vector2(932f, 372f), 324f, Style.TextDim);
 
         // ADR 0158 §5 (la mitad de RF-119 que faltaba): FoulsFor/FoulsAgainst ya CUENTAN las no
         // señaladas (Unseen es un subconjunto, no una cifra aparte), así que "señaladas" se resta aquí
@@ -368,15 +368,90 @@ public partial class ReportScreen : Control
         Widgets.Body(
             this,
             UiText.Get("ui.report.refereeFouls", referee.FoulsFor - referee.UnseenFoulsFor, referee.FoulsAgainst - referee.UnseenFoulsAgainst),
-            new Vector2(932f, 490f),
+            new Vector2(932f, 392f),
             324f);
-        Widgets.Body(this, UiText.Get("ui.report.refereeCards", referee.CardsFor, referee.CardsAgainst), new Vector2(932f, 508f), 324f);
+        Widgets.Body(this, UiText.Get("ui.report.refereeCards", referee.CardsFor, referee.CardsAgainst), new Vector2(932f, 410f), 324f);
         Widgets.Body(
             this,
             UiText.Get("ui.report.refereeUnseen", referee.UnseenFoulsFor, referee.UnseenFoulsAgainst),
-            new Vector2(932f, 526f),
+            new Vector2(932f, 428f),
             324f,
             Style.TextDim);
+
+        Stats();
+    }
+
+    /// <summary>
+    /// Estadísticas de cada jugador propio en el partido y los apodos que este partido ha dado (ADR 0163).
+    /// Las cifras son las de <c>MatchReport.Players</c>, tal cual las compone <c>PostMatchView</c>. Los
+    /// apodos ganados van arriba: son lo que el jugador no debe perderse.
+    /// </summary>
+    private void Stats()
+    {
+        const float panelTop = 458f;
+        Widgets.Panel(this, new Rect2(920f, panelTop, 348f, 240f));
+        Widgets.Section(this, UiText.Get("ui.report.stats"), new Vector2(932f, panelTop + 6f), 320f);
+
+        float y = panelTop + 26f;
+        int shown = 0;
+        foreach (var gain in _report.NicknamesEarned)
+        {
+            if (shown == 2)
+            {
+                break;
+            }
+
+            string text = gain.PreviousNickname.Length > 0
+                ? UiText.Get("ui.report.nicknameUpgraded", gain.PlayerName, gain.Nickname, gain.PreviousNickname)
+                : UiText.Get("ui.report.nicknameEarned", gain.PlayerName, gain.Nickname);
+            var line = Widgets.Body(this, text, new Vector2(932f, y), 324f, Style.Accent);
+            y += line.Size.Y + 2f;
+            shown++;
+        }
+
+        if (_report.PlayerStats.Count == 0)
+        {
+            Widgets.Body(this, UiText.Get("ui.report.statsNone"), new Vector2(932f, y), 324f, Style.TextDim);
+            return;
+        }
+
+        // Una etiqueta por columna, alineada a la derecha: la fuente no es de ancho fijo.
+        string[] heads = UiText.Get("ui.report.statsHead").Split(' ');
+        for (int c = 0; c < heads.Length; c++)
+        {
+            StatCell(heads[c], c, y, Style.TextDim);
+        }
+
+        y += 15f;
+
+        foreach (var row in _report.PlayerStats)
+        {
+            if (y > panelTop + 240f - 16f)
+            {
+                break;
+            }
+
+            var name = Widgets.Body(this, Sim.Run.Systems.Nicknames.NicknameSystem.Display(row.PlayerName, row.Nickname), new Vector2(932f, y), 160f);
+            name.AutowrapMode = TextServer.AutowrapMode.Off;
+            name.ClipText = true;
+            name.Size = new Vector2(160f, name.Size.Y);
+
+            int[] values = { row.Goals, row.Assists, row.TacklesWon, row.Fouls, row.InjuriesCaused };
+            for (int c = 0; c < values.Length; c++)
+            {
+                StatCell(Amount(values[c]), c, y, values[c] > 0 ? Style.Text : Style.TextDim);
+            }
+
+            y += 15f;
+        }
+    }
+
+    private void StatCell(string text, int column, float y, Color color)
+    {
+        var cell = Widgets.Body(this, text, new Vector2(1098f + (column * 32f), y), 30f, color);
+        cell.AutowrapMode = TextServer.AutowrapMode.Off;
+        cell.HorizontalAlignment = HorizontalAlignment.Right;
+        cell.Size = new Vector2(30f, cell.Size.Y);
     }
 
     private float Row(float y, string text, string gold, Color? color = null)

@@ -67,6 +67,18 @@ public static class TeamTips
             Sim.Progression.Progression.PerkSlots(player.Rarity)),
         Glyph.Perk);
 
+    /// <summary>Apodo (ADR 0163): de dónde sale, y que es fama, no poder (RF-127).</summary>
+    public static Tip Nickname(TeamState state, int playerId)
+    {
+        var nickname = state.NicknameDefinitionOf(playerId);
+        return nickname is null
+            ? new Tip(string.Empty, string.Empty)
+            : new Tip(
+                UiText.Name(nickname.Name),
+                UiText.Get("ui.kn.tip.nickname", nickname.Threshold, UiText.Get("ui.nick.stat." + nickname.Stat)),
+                Glyph.Crown);
+    }
+
     public static Tip State(PhysicalState state) =>
         new(UiText.Get("ui.state." + state), UiText.Get("ui.kn.tip.state." + state), InkIcons.Of(state));
 

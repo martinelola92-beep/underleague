@@ -236,6 +236,28 @@ public sealed class TeamState
         return null;
     }
 
+    private Sim.Run.Systems.Nicknames.NicknameCatalog? _nicknames;
+
+    /// <summary>
+    /// Apodo del jugador (ADR 0163) en el idioma de la interfaz, derivado de su carrera; vacío si no ha
+    /// ganado ninguno. Con una run detrás usa el catálogo de la run; sin ella (equipo de pruebas) lo lee de
+    /// <c>/data</c>, para que la ficha de capturas enseñe lo mismo que enseñaría en una partida.
+    /// </summary>
+    public string NicknameOf(int playerId) => NicknameDefinitionOf(playerId)?.NameIn(Language) ?? string.Empty;
+
+    /// <summary>El apodo (definición) que tiene ahora el jugador, o null. Ver <see cref="NicknameOf"/>.</summary>
+    public Sim.Run.Systems.Nicknames.NicknameDefinition? NicknameDefinitionOf(int playerId)
+    {
+        var career = CareerOf(playerId);
+        if (career is null)
+        {
+            return null;
+        }
+
+        _nicknames ??= _run?.Systems?.Nicknames ?? Sim.Run.Systems.Nicknames.NicknameLoader.FromJson(GameData.Snapshot);
+        return Sim.Run.Systems.Nicknames.NicknameSystem.For(career, _nicknames);
+    }
+
     /// <summary>
     /// <b>Solo para la secuencia de capturas</b>: fuerza la carrera de un jugador sin tocar la run ni el
     /// catálogo, igual que <see cref="ForceTestItem"/>. No hace nada si ya hay una run real detrás: ahí la
