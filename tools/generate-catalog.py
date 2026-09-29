@@ -237,6 +237,10 @@ for d in sorted(cons, key=lambda d: d['id']):
     for e in d['effects']:
         if e['type'] == 'modifyAttribute':
             eff.append(f"{'+' if e['value'] > 0 else ''}{e['value']} {ATTR[e['attribute']]}")
+        elif e['type'] == 'shout':
+            # ADR 0166: un grito cambia la conducta del equipo (orden o presión) durante unos segundos.
+            que = {'Defensive': 'juega a la defensiva', 'Offensive': 'se vuelca al ataque'}.get(e.get('order'), 'presiona al portador del balón')
+            eff.append(f"el equipo {que} durante {e['seconds']} s")
         else:
             v = e['value']
             k = 1 + abs(v) / 100
