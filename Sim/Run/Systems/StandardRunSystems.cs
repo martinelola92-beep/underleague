@@ -366,8 +366,9 @@ public sealed class StandardRunSystems : IRunSystems
         }
 
         // Botín de liga (ADR 0161 §1): un objeto común más al almacén, además del oro de arriba. Elite y
-        // jefe no cambian (LeagueLootSystem.AppliesTo exige NodeKind.LeagueMatch); van DESPUÉS de curar la
-        // plantilla del jefe, sin que el orden importe entre los dos —no comparten estado—.
+        // jefe no cambian (LeagueLootSystem.AppliesTo exige NodeKind.LeagueMatch); van DESPUÉS de curar las
+        // leves del jefe, sin que el orden importe entre los dos —no comparten estado—. Con menos partidos de
+        // liga por run (ADR 0170: 14 en el peor camino, no 20) hay menos botín: efecto de segundo orden medido.
         if (LeagueLootSystem.AppliesTo(node.Kind, summary.Won))
         {
             var loot = LeagueLootSystem.Pick(state.Seed, node.Id, node.Act, state.ClubRace, _items);

@@ -7,7 +7,7 @@ namespace Underleague.Sim.Run.Systems.Rewards;
 /// <summary>
 /// Botín de liga (ADR 0161 §1): ganar un partido de <b>LIGA</b> da, además del oro, un objeto
 /// <b>común</b> al almacén, sorteado con el flujo de recompensas del nodo (RT-022). Élite y jefe no
-/// cambian.
+/// cambian. Con los actos de 8/9/9 nodos (ADR 0170) hay menos partidos de liga por run y, por tanto, menos botín.
 ///
 /// <para><b>Función pura y determinista</b>, deliberadamente separada de
 /// <c>StandardRunSystems.AfterMatch</c> (que aplica el botín al almacén): con el mismo (semilla, nodo,

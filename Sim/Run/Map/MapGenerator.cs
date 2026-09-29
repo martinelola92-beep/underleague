@@ -18,7 +18,7 @@ namespace Underleague.Sim.Run;
 /// </param>
 public sealed record MapOptions(int PathLength = MapGenerator.DefaultPathLength, IReadOnlyList<string>? OpponentIds = null)
 {
-    /// <summary>Opciones por defecto: 11 nodos por camino y sin catálogo de rivales.</summary>
+    /// <summary>Opciones por defecto: 9 nodos por camino (ADR 0170; antes 11) y sin catálogo de rivales.</summary>
     public static MapOptions Default { get; } = new();
 }
 
@@ -29,10 +29,12 @@ public sealed record MapOptions(int PathLength = MapGenerator.DefaultPathLength,
 ///
 /// <para><b>Qué cuentan los "8-10 nodos por acto" de RF-001 (antes 10-12, ADR 0170).</b> Cuentan los nodos que el jugador
 /// <b>recorre</b>, no los dibujados (decisión W-1). Es la única lectura con la que cuadran los demás
-/// números del documento: <c>fase2-diseno.md</c> §4 fija "11 nodos, de los cuales 6 partidos como
-/// máximo", que por tres actos son 18 partidos, dentro de la métrica "duración de la run en partidos:
-/// 18-22" de §10; y RF-003b habla de la fatiga del jugador, que depende de lo que juega y no de lo que
-/// ve dibujado.</para>
+/// números del documento: <c>fase2-diseno.md</c> §4 fijaba "11 nodos, de los cuales 6 partidos como
+/// máximo", que por tres actos eran 18 partidos, dentro de la métrica "duración de la run en partidos:
+/// 18-22" de §10 (con 11/12/12 nodos, 20 en el peor camino); y RF-003b habla de la fatiga del jugador, que
+/// depende de lo que juega y no de lo que ve dibujado. Desde la ADR 0170 los datos llevan 8/9/9 nodos y el
+/// peor camino de la run juega 14 partidos (4 + 5 + 5, el tope del 60 % de RF-003b); las cifras de §4 y §10
+/// son las históricas.</para>
 ///
 /// <para><b>Cuatro carriles (ADR 0053).</b> El acto tiene <c>PathLength</c> capas y el jugador atraviesa
 /// exactamente una por capa, pero cada capa reparte sus nodos entre <see cref="Lanes"/> carriles fijos.
@@ -48,6 +50,9 @@ public sealed record MapOptions(int PathLength = MapGenerator.DefaultPathLength,
 /// <item><b>Divergencia y reconvergencia</b>: las capas se cruzan y se vuelven a juntar, así que elegir
 /// una rama no cierra el mapa.</item>
 /// </list>
+///
+/// <para>Un acto de 11 capas, como ejemplo (con 8 o 9 capas el esqueleto es el mismo y termina antes; los
+/// mercados van en las capas pares de la 2 a la <c>PathLength-2</c>):</para>
 ///
 /// <code>
 ///   capa:    0    1    2      3    4      5    6      7    8      9    10
@@ -157,8 +162,9 @@ public static class MapGenerator
     ///
     /// <para>Es el mando que fija el <b>suelo</b> de partidos de un acto, y hay que tocarlo sabiendo lo
     /// que se hace: cada capa porosa de más es un partido menos en el camino que los esquiva todos. Con
-    /// 1, el peor camino juega el máximo de RF-003b y el más evasivo uno menos (medido: 5-6 partidos por
-    /// acto, 17-20 por run, contra los 18-22 de <c>fase2-diseno.md</c> §10).</para>
+    /// 1, el peor camino juega el máximo de RF-003b y el más evasivo uno menos (medido con 11/12/12 nodos: 5-6
+    /// partidos por acto, 17-20 por run, contra los 18-22 de <c>fase2-diseno.md</c> §10; con los 8/9/9 de la
+    /// ADR 0170, 4 y 5 por acto en el peor camino y 3 y 4 en el mejor: 14 y 11 por run).</para>
     /// </summary>
     public const int PorousMatchLayers = 1;
 
@@ -367,7 +373,8 @@ public static class MapGenerator
         //     de medida: la política automática de /Balance puntúa el mercado con 90 y un partido con
         //     50 menos la dificultad (`RunPolicy.ChooseNode`), pesos calibrados cuando el mercado era un
         //     cuello de botella y no competía con nada; con mercado y partido en la misma capa la
-        //     política se va SIEMPRE a la tienda y la run medida baja de los 18 partidos de §10. Ver §24;
+        //     política se va SIEMPRE a la tienda y la run medida baja de los 18 partidos de §10 (los de entonces, con
+        //     11/12/12 nodos; la ADR 0170 los baja por diseño a 14). Ver §24;
         //   - la capa POROSA es una capa de partido con un carril de servicio: ahí la elección es
         //     "juego o me curo", que la política solo toma cuando de verdad necesita la clínica o el
         //     hueco de plantilla, que es justo cuando debe tomarse;
@@ -525,6 +532,12 @@ public static class MapGenerator
     /// Élites: 1 en el acto 1, 2 en los actos 2 y 3, en capas distintas y nunca en la apertura (capas 0 y
     /// 1), donde no habría forma de esquivarlos. Ascienden un partido de liga ya colocado, así que no
     /// cambian el número de capas con partido y no tocan RF-003b.
+    ///
+    /// <para><b>Límite con pocas capas (ADR 0170).</b> Las capas candidatas son las de partido con índice &gt;= 2. Con 8
+    /// nodos hay 3 capas de partido sin mercado (1, 3 y 5) y el presupuesto elige 2: si una es la 1 sólo queda una
+    /// candidata y sale <b>un</b> élite en vez de dos. Con 9 y 10 nodos siempre salen los dos. No se arregla aquí (moverlo
+    /// cambiaría el RNG de todos los mapas): el esquema de <c>map.json</c> y <c>MapLoader</c> exigen 9 o más nodos en los
+    /// actos 2 y 3 (<see cref="MinPathLengthForTwoElites"/>).</para>
     /// </summary>
     private static void AssignElites(
         ref Pcg32 rng,
