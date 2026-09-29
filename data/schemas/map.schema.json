@@ -7,9 +7,14 @@
   "properties": {
     "_doc": { "type": "string" },
     "nodesPerAct": {
-      "description": "Nodos recorridos por acto (RF-001: 8-10, ADR 0170). Tres entradas, una por acto.",
+      "description": "Nodos recorridos por acto (RF-001: 8-10, ADR 0170). Tres entradas, una por acto; los actos 2 y 3, al menos 9: con 8 nodos AssignElites puede colocar un solo élite. La instantánea de una run guardada antes de la ADR 0170 (10-12) la acepta el cargador, no este esquema.",
       "type": "array",
-      "items": { "type": "integer", "minimum": 8, "maximum": 10 },
+      "prefixItems": [
+        { "type": "integer", "minimum": 8, "maximum": 10 },
+        { "type": "integer", "minimum": 9, "maximum": 10 },
+        { "type": "integer", "minimum": 9, "maximum": 10 }
+      ],
+      "items": false,
       "minItems": 3,
       "maxItems": 3
     },

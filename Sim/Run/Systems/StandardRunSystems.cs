@@ -115,9 +115,11 @@ public sealed class StandardRunSystems : IRunSystems
     /// <summary>
     /// Construye los catálogos del paquete X de una instantánea de <c>/data</c> (el mismo diccionario que
     /// consume <c>DataLoader.FromJson</c>). Ayudante de conveniencia para tests y <c>/Balance</c>: evita
-    /// llamar a los cargadores por separado.
+    /// llamar a los cargadores por separado. Con <paramref name="fromRunSnapshot"/> (la instantánea de <c>/data</c>
+    /// de una run guardada, RT-061b) el mapa se carga con el rango histórico de nodos por acto
+    /// (<see cref="MapLoader.FromJson"/>, ADR 0170).
     /// </summary>
-    public static StandardRunSystems FromJson(IReadOnlyDictionary<string, string> files)
+    public static StandardRunSystems FromJson(IReadOnlyDictionary<string, string> files, bool fromRunSnapshot = false)
     {
         ArgumentNullException.ThrowIfNull(files);
         var rivals = RivalLoader.FromJson(files);
@@ -126,7 +128,7 @@ public sealed class StandardRunSystems : IRunSystems
             ItemLoader.FromJson(files),
             ConsumableLoader.FromJson(files),
             rivals,
-            MapLoader.FromJson(files),
+            MapLoader.FromJson(files, fromRunSnapshot),
             ClubLoader.FromJson(files),
             EventLoader.FromJson(files),
             RefereeLoader.FromJson(files),

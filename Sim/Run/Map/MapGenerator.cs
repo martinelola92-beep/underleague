@@ -92,8 +92,30 @@ public static class MapGenerator
     /// <summary>Nodos recorridos mínimos por acto (RF-001, enmendado por la ADR 0170: antes 10).</summary>
     public const int MinPathLength = 8;
 
-    /// <summary>Nodos recorridos máximos por acto (RF-001, enmendado por la ADR 0170: antes 12).</summary>
+    /// <summary>
+    /// Nodos recorridos máximos por acto **en los datos actuales** (RF-001, enmendado por la ADR 0170: antes 12). Es el
+    /// rango de diseño: lo exige el esquema de <c>data/map/map.json</c> y <see cref="Underleague.Sim.Run.Systems.Map.MapLoader"/>
+    /// al cargar el <c>/data</c> vigente.
+    /// </summary>
     public const int MaxPathLength = 10;
+
+    /// <summary>
+    /// Nodos recorridos máximos que **acepta el generador y el cargador de la instantánea de una run** (ADR 0170): el
+    /// rango histórico 8-12. Una run guardada antes de la ADR 0170 lleva su <c>map.json</c> de 11/12/12 en la
+    /// instantánea (RT-061b) y sus mapas ya generados en <c>Maps</c>; retomarla no puede fallar porque el diseño haya
+    /// bajado el rango (la run ironman se perdería). El generador conserva la garantía de RF-011b para 10-12 nodos (la
+    /// que tenía) y la extiende a 8-9.
+    /// </summary>
+    public const int SnapshotMaxPathLength = 12;
+
+    /// <summary>
+    /// Nodos mínimos de los actos 2 y 3 para que <c>AssignElites</c> coloque **siempre** los dos élites (ADR 0170).
+    /// Con 8 nodos hay 3 capas de partido candidatas y la de apertura (la 1) no admite élite: si el sorteo la elige
+    /// sólo queda una capa candidata y sale **un** élite. No se arregla en el generador (cambiaría el flujo de RNG de
+    /// todos los mapas); lo impiden el esquema y <see cref="Underleague.Sim.Run.Systems.Map.MapLoader"/> en los datos
+    /// actuales, y <c>ShortActs_KeepTheClinicTheElitesAndEveryInvariant</c> lo prueba.
+    /// </summary>
+    public const int MinPathLengthForTwoElites = 9;
 
     /// <summary>Nodos recorridos por acto por defecto (ADR 0170: antes 11).</summary>
     public const int DefaultPathLength = 9;
@@ -189,12 +211,12 @@ public static class MapGenerator
 
         options ??= MapOptions.Default;
         int pathLength = options.PathLength;
-        if (pathLength < MinPathLength || pathLength > MaxPathLength)
+        if (pathLength < MinPathLength || pathLength > SnapshotMaxPathLength)
         {
             throw new ArgumentOutOfRangeException(
                 nameof(options),
                 pathLength,
-                $"un acto tiene entre {MinPathLength} y {MaxPathLength} nodos por camino (RF-001)");
+                $"un acto tiene entre {MinPathLength} y {SnapshotMaxPathLength} nodos por camino (RF-001, ADR 0170)");
         }
 
         var rng = RngStreams.Map(runSeed, act);

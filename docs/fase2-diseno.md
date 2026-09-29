@@ -1098,7 +1098,7 @@ botella de un nodo y de ellas sale la garantía de RF-011b por construcción (§
 puesto en riesgo lo único que el mapa garantiza de verdad. El nodo de inscripción entra en el sorteo de
 las **capas de servicio**, junto a clínica, entrenamiento y evento: el reparto pasa de tres tipos a
 cuatro. La garantía de mercado sigue saliendo por construcción y el test de los 1.000 mapas
-(`MapTests.MarketGuarantee_HoldsOnAThousandMaps`) sigue en verde sin tocarlo.
+(`MapTests.MarketGuarantee_HoldsOnThreeThousandMapsOverAllFifteenActAndLengthCombinations`) sigue en verde sin tocarlo.
 
 **AC-7. Uno por acto, garantizado, como la clínica.** La primera capa de servicios lleva siempre una
 clínica y la última lleva siempre un nodo de inscripción. Si dependiera del sorteo, comprar un hueco

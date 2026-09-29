@@ -161,10 +161,10 @@ public static class MapInvariants
     private static void CheckShape(ActMap map, List<string> problems)
     {
         int pathLength = PathLength(map);
-        if (pathLength < MapGenerator.MinPathLength || pathLength > MapGenerator.MaxPathLength)
+        if (pathLength < MapGenerator.MinPathLength || pathLength > MapGenerator.SnapshotMaxPathLength)
         {
             problems.Add(
-                $"{pathLength} nodos por camino, fuera de {MapGenerator.MinPathLength}..{MapGenerator.MaxPathLength} (RF-001)");
+                $"{pathLength} nodos por camino, fuera de {MapGenerator.MinPathLength}..{MapGenerator.SnapshotMaxPathLength} (RF-001, ADR 0170)");
         }
 
         var ids = new HashSet<int>();

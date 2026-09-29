@@ -6,20 +6,22 @@ namespace Underleague.Sim.Tests.Run;
 
 /// <summary>
 /// Mapa por actos de cuatro carriles (RF-003b, RF-010, RF-011, RF-011b, ADR 0053). El test que manda
-/// sigue siendo <see cref="MarketGuarantee_HoldsOnAThousandMaps"/>: la garantía de RF-011b es dura y por
+/// sigue siendo <see cref="MarketGuarantee_HoldsOnThreeThousandMapsOverAllFifteenActAndLengthCombinations"/>: la garantía de RF-011b es dura y por
 /// construcción, así que si algún día se rompe, se rompe siempre y en el primer mapa.
 /// </summary>
 public class MapTests
 {
     [Fact]
-    public void MarketGuarantee_HoldsOnAThousandMaps()
+    public void MarketGuarantee_HoldsOnThreeThousandMapsOverAllFifteenActAndLengthCombinations()
     {
         var failures = new List<string>();
         for (int i = 0; i < 3000; i++)
         {
             ulong seed = (ulong)i * 2654435761UL;
+            // Las 15 combinaciones de acto (3) y longitud (8..12), no tres: con i % 3 en las dos cosas el acto y la
+            // longitud iban atados y sólo se probaban tres de las combinaciones (revisión de la ADR 0170).
             int act = (i % 3) + 1;
-            int nodes = MapGenerator.MinPathLength + (i % 3);
+            int nodes = MapGenerator.MinPathLength + ((i / 3) % (MapGenerator.SnapshotMaxPathLength - MapGenerator.MinPathLength + 1));
             var map = MapGenerator.Generate(seed, act, new MapOptions(nodes));
 
             var problems = MapInvariants.Violations(map);
@@ -37,9 +39,10 @@ public class MapTests
     {
         // La misma garantía, escrita nodo a nodo y sin pasar por MapInvariants, para que el test no
         // dependa de que el comprobador esté bien.
-        for (int i = 0; i < 200; i++)
+        for (int i = 0; i < 600; i++)
         {
-            var map = MapGenerator.Generate((ulong)(i + 1), (i % 3) + 1, new MapOptions(MapGenerator.MinPathLength + (i % 3)));
+            int nodes = MapGenerator.MinPathLength + ((i / 3) % (MapGenerator.SnapshotMaxPathLength - MapGenerator.MinPathLength + 1));
+            var map = MapGenerator.Generate((ulong)(i + 1), (i % 3) + 1, new MapOptions(nodes));
             foreach (var node in map.Nodes)
             {
                 int toMarket = MapInvariants.HopsTo(map, node.Id, NodeKind.Market);
@@ -109,6 +112,8 @@ public class MapTests
     [InlineData(8)]
     [InlineData(9)]
     [InlineData(10)]
+    [InlineData(11)]
+    [InlineData(12)]
     public void PathLength_AndMatchShare_RespectTheBudget(int pathLength)
     {
         for (int act = 1; act <= 3; act++)
