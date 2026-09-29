@@ -34,6 +34,12 @@ por pieza, plantilla entera y el matasanos (ADR 0099).
    verse. Una ranura ocupada no se repite.
 4. **Tres prótesis** → el jugador pierde su etiqueta de especie y gana `Automaton` (RF-095c). La familia de
    perks de autómata no existe todavía: se anota.
+   **Qué consume la etiqueta de especie (medido leyendo el código, Regla G):** solo los perks *exclusivos de
+   raza* (`race` puesta, que exigen `HasTag(raza)` en `EffectEngine` y `Scouting`) y la habilidad racial de
+   la ficha. Un perk universal tiene prohibido consultarla (`PerkLoader.RejectSpeciesTags`, ADR 0023). Por
+   tanto, perder la especie **apaga la habilidad racial** del jugador: ese es el coste de la tercera
+   prótesis, y el «premio» hasta que exista la familia de autómata es solo la etiqueta `Automaton`, que
+   ningún perk consume aún.
 5. **Aleatoriedad**: flujo propio derivado del nodo y del jugador (`OfferStream`, desplazamiento 9000),
    nunca el de partido (RT-022).
 6. El taller como nodo se retira de la leyenda del mapa; `NodeKind.Workshop` se conserva en el enum para no
@@ -58,3 +64,26 @@ por pieza, plantilla entera y el matasanos (ADR 0099).
 10. **Cómo se demuestra.** Tests: la tabla que se enseña es la que se tira, invertir desplaza con rendimiento
     decreciente, tres prótesis dan `Automaton`, una ranura no se repite, determinismo. Lote de campaña con la
     política usando el herrero. Captura de la clínica.
+
+## Medición de campaña (provisional, sin medir hasta el lote del revisor)
+
+`/Balance --full-runs 600 --seed 1`, 1.800 runs de tres doctrinas cada lote, rama `main` (antes) frente a esta rama (después):
+
+| métrica | antes | después |
+|---|---|---|
+| `runWinRate` | 21,50 | 21,50 |
+| `deathsPerRun` | 1,75 | 1,75 |
+| `squadTreatmentsPerRun` | 0,30 | 0,30 |
+| `riskyTreatmentsPerRun` (matasanos) | 0,01 | 0,01 |
+| `goldSpentClinicPerRun` | 20,04 | 20,04 |
+| `blacksmithTreatmentsPerRun` | n/a | 0,00 |
+| `prosthesesPerRun` | n/a | 0,00 |
+| `automatonsPerRun` | n/a | 0,00 |
+
+**Lectura (CONFIRMED para esta política):** los dos lotes salen idénticos porque `RunPolicy.TryTheBlacksmith`
+solo actúa en el hueco «hay un grave que merece la pena y no llega el oro para el médico pero sí para el
+herrero», y en la política ese hueco casi no ocurre (el matasanos, que ocupa el mismo hueco, ya medía 0,01
+por run). El herrero, por tanto, **no está medido**: ni su uso, ni su efecto sobre la victoria o las muertes.
+Medirlo exige una decisión de diseño de la política (por ejemplo, preferir al herrero sobre el médico cuando
+el jugador tiene un valor bajo) que se deja al revisor; hasta entonces, las probabilidades 30/35/35 y el
+precio siguen siendo **provisionales, sin medir** (Regla H). Ficheros: `out/base/`, `out/after/`.
