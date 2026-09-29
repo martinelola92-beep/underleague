@@ -111,6 +111,8 @@
     "supportPressedBonusPerCenti": 5,
 
     "grudgeBonus": 240,
+
+    "coverSpacingCells": 1.0,
     "pressCarrierBonus": 60,
     "pressDistancePenaltyPerCell": 60,
     "pressGoalkeeperExitBonus": 200,

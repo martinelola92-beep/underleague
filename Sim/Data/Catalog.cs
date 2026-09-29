@@ -244,7 +244,14 @@ public sealed record AiContext(
     // ADR 0145 — REPRESALIA. Lo que vale más entrarle o cargarle al que acaba de romperte a un compañero
     // delante de ti. Es un SUMANDO, no una orden: el jugador sigue comparando, y si entrar no era buena
     // idea sigue sin serlo. El encargo lo pide así de forma explícita.
-    int GrudgeBonus = 0);
+    int GrudgeBonus = 0,
+
+    // BB-K (ADR 0175) — DOS COMPAÑEROS NO CUBREN EL MISMO PUNTO. CoverSpace era la única acción de
+    // colocación que no miraba a los compañeros (OfferSupport y FindSpace tienen su penalización de
+    // apiñamiento), así que dos jugadores con zonas solapadas calculaban literalmente el mismo punto y se
+    // quedaban uno encima del otro, empujándose. Es la separación mínima, en casillas, entre el punto que
+    // cubre uno y el que ya cubre un compañero de id menor; 0 la apaga.
+    float CoverSpacingCells = 0f);
 
 /// <summary>
 /// Pesos de la IA de utilidad (RT-093..RT-098). Las tablas Base y Tactical se guardan como arrays

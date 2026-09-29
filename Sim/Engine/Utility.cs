@@ -1415,6 +1415,11 @@ internal static class Utility
             // punto más cercano al balón que la zona permite.
             target = p.Zone.SegmentEntry(from, ownGoal, p.EffectiveHome, direction)
                 ?? p.Zone.Clamp(from, p.EffectiveHome, direction);
+
+            // BB-K (ADR 0175): dos compañeros no cubren el mismo punto.
+            Vec2 toGoal = ownGoal - from;
+            Vec2 line = toGoal.Length > 0.01f ? toGoal.Normalized : new Vec2(-direction, 0f);
+            target = SpaceFromCoveringMates(ctx, p, target, line, context.CoverSpacingCells);
         }
 
         eval.Target = target;
@@ -1428,6 +1433,117 @@ internal static class Utility
             eval.Context = context.CoverBetweenBallAndGoalBonus;
         }
     }
+
+    /// <summary>
+    /// BB-K (ADR 0175, docs/pendientes/BB-K.md): <b>dos compañeros no cubren el mismo punto</b>. El punto de
+    /// cobertura es el que la recta balón → portería propia cruza en la zona del jugador, y no mira a nadie:
+    /// dos defensas con zonas solapadas obtenían de esa fórmula el mismo punto (medido: 0,03-0,08 casillas
+    /// de diferencia entre destinos) y convergían hasta quedar encima el uno del otro, empujándose cada dos
+    /// ticks por la separación de cuerpos. Era la única acción de colocación que no miraba a los compañeros
+    /// (<see cref="EvaluateSupport"/> y <see cref="EvaluateFindSpace"/> sí).
+    ///
+    /// <para><b>Reparto por id ascendente, calcado de <see cref="Marking"/></b> (RT-041, RT-097): el de id
+    /// menor se queda con su punto y sólo el de id mayor lo cede. Es lo que lo hace estable: si los dos
+    /// se apartaran del otro, cada uno reaccionaría a la reacción del otro y el baile cambiaría de forma sin
+    /// desaparecer. Sólo cuentan los compañeros que <i>ahora mismo</i> cubren —acción <c>CoverSpace</c> y
+    /// estado de colocación—: el que persigue o está en el suelo no ocupa ningún punto.</para>
+    ///
+    /// <para><b>Se aparta de lado, no a lo largo de la recta.</b> Los puntos de cobertura de dos compañeros
+    /// están los dos sobre la misma recta balón → portería, cada uno en el borde de su zona, y apartarse
+    /// a lo largo de ella choca con ese borde (medido: tres centrocampistas clavados en el borde delantero
+    /// de sus zonas, sin salida hacia delante). Así que el que cede conserva su posición a lo largo de la
+    /// recta y se desliza por la <b>perpendicular</b> hasta quedar a exactamente <paramref name="spacingCells"/>
+    /// del punto del compañero: dos jugadores repartiéndose el ancho de la misma línea de cobertura. Es
+    /// <b>continuo</b> en el punto bruto —a distancia igual a la separación el deslizamiento es cero— y se
+    /// mide sobre el punto <b>bruto</b> (el que la fórmula da, no el ya desplazado) para que apartarse no
+    /// haga desaparecer el conflicto y vuelva a aparecer en la decisión siguiente.</para>
+    ///
+    /// <para><b>Hacia qué lado.</b> Hacia el que ya está el punto bruto si se aparta lo bastante de la
+    /// recta; si no, hacia donde ya está el jugador respecto al compañero, y a igualdad, hacia el lado
+    /// «positivo» de la perpendicular. Si la zona o el campo no dejan deslizarse hacia ese lado, se
+    /// prueba el otro, y si ninguno alcanza la separación se queda con el que más se acerque. Con
+    /// <paramref name="spacingCells"/> a 0 no hace nada, bit a bit.</para>
+    /// </summary>
+    private static Vec2 SpaceFromCoveringMates(
+        UtilityContext ctx, MatchPlayer p, Vec2 target, Vec2 lineDirection, float spacingCells)
+    {
+        if (spacingCells <= 0f)
+        {
+            return target;
+        }
+
+        var perpendicular = new Vec2(-lineDirection.Y, lineDirection.X);
+        int attack = Pitch.AttackDirection(p.Team);
+        var players = ctx.Players;
+        Vec2 result = target;
+
+        for (int i = 0; i < players.Length; i++)
+        {
+            var mate = players[i];
+            if (mate.Team != p.Team || mate.Id >= p.Id || !mate.OnPitch || !mate.IsOutfield
+                || mate.CurrentAction != PlayerAction.CoverSpace || mate.State != PlayerState.Positioning)
+            {
+                continue;
+            }
+
+            Vec2 anchor = mate.TargetPoint;
+            Vec2 gap = target - anchor;
+            if (gap.Length >= spacingCells)
+            {
+                continue;
+            }
+
+            float along = (gap.X * lineDirection.X) + (gap.Y * lineDirection.Y);
+            float lateral = (gap.X * perpendicular.X) + (gap.Y * perpendicular.Y);
+            float slide = MathF.Sqrt(MathF.Max(0f, (spacingCells * spacingCells) - (along * along)));
+
+            float side;
+            if (MathF.Abs(lateral) > CoverSideMinLateralCells)
+            {
+                side = lateral > 0f ? 1f : -1f;
+            }
+            else
+            {
+                Vec2 offset = p.Position - mate.Position;
+                float where = (offset.X * perpendicular.X) + (offset.Y * perpendicular.Y);
+                side = where < 0f ? -1f : 1f;
+            }
+
+            Vec2 first = CoverSlide(p, anchor, lineDirection, perpendicular, along, side * slide, attack);
+            Vec2 chosen = first;
+            if (Vec2.Distance(first, anchor) < spacingCells - CoverSpacingTolerance)
+            {
+                Vec2 second = CoverSlide(p, anchor, lineDirection, perpendicular, along, -side * slide, attack);
+                if (Vec2.Distance(second, anchor) > Vec2.Distance(first, anchor))
+                {
+                    chosen = second;
+                }
+            }
+
+            result = chosen;
+        }
+
+        return result;
+    }
+
+    /// <summary>Punto a <paramref name="along"/> a lo largo de la recta y <paramref name="lateral"/> por la perpendicular, ya acotado al campo y a la zona de <paramref name="p"/>.</summary>
+    private static Vec2 CoverSlide(
+        MatchPlayer p, Vec2 anchor, Vec2 lineDirection, Vec2 perpendicular, float along, float lateral, int attack)
+    {
+        var point = ClampToPitch(anchor + (lineDirection * along) + (perpendicular * lateral));
+        return p.Zone.Clamp(point, p.EffectiveHome, attack);
+    }
+
+    /// <summary>
+    /// Desvío lateral mínimo, respecto a la recta de cobertura, para que el punto bruto de un jugador cuente
+    /// como «ya está de un lado». Por debajo es ruido de que los dos compañeros decidieran con el balón en
+    /// dos posiciones distintas (un tick de diferencia): elegir el lado por él haría cambiar de lado al
+    /// jugador cada decisión.
+    /// </summary>
+    private const float CoverSideMinLateralCells = 0.25f;
+
+    /// <summary>Lo que puede faltar a la separación tras acotar a zona y campo sin probar el otro lado.</summary>
+    private const float CoverSpacingTolerance = 0.05f;
 
     /// <summary>
     /// Pase, en sus dos bandas de distancia (ADR 0030 §1). Las bandas son <b>disjuntas y exhaustivas</b>:

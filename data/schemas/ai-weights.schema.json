@@ -441,6 +441,12 @@
         "supportMinCarrierPressure": { "type": "integer", "minimum": 0, "maximum": 100 },
         "supportPressedBonusPerCenti": { "type": "integer", "minimum": 0, "maximum": 50 },
         "grudgeBonus": { "type": "integer", "minimum": 0, "maximum": 2000 },
+        "coverSpacingCells": {
+          "type": "number",
+          "description": "BB-K (ADR 0175): separación mínima, en casillas, entre el punto que cubre un jugador y el que ya cubre un compañero de id menor. 0 la apaga.",
+          "minimum": 0,
+          "maximum": 4
+        },
         "throughPassFreeZoneCells": {
           "type": "number",
           "minimum": 0,
@@ -534,6 +540,7 @@
         "supportMinCarrierPressure",
         "supportPressedBonusPerCenti",
         "grudgeBonus",
+        "coverSpacingCells",
         "crossTechniqueSlope"
       ],
       "additionalProperties": false
