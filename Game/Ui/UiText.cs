@@ -626,7 +626,7 @@ public static class UiText
         ["ui.reward.pick"] = "elige un artículo para ver a quién puedes dárselo",
         ["ui.reward.optionsLeague"] = "un partido de liga ofrece una elección entre dos",
         ["ui.reward.optionsElite"] = "un partido de élite ofrece una entre tres, con mejor rareza",
-        ["ui.reward.optionsBoss"] = "el jefe ofrece dos elecciones entre tres, y cura la plantilla",
+        ["ui.reward.optionsBoss"] = "el jefe ofrece dos elecciones entre tres",
         ["ui.reward.error"] = "no se pudo: {0}",
 
         ["ui.market.title"] = "MERCADO",
