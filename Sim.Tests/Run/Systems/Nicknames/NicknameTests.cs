@@ -36,6 +36,30 @@ public sealed class NicknameTests
         }
     }
 
+    /// <summary>
+    /// ADR 0170: ningún apodo por partidos jugados puede pedir más partidos de los que tiene el peor camino de la run: un
+    /// jugador juega como mucho un partido por nodo de partido, así que un umbral por encima de esa cifra es un apodo que
+    /// nadie puede ganar (con 11/12/12 nodos el peor camino eran 20 partidos y `eternal` pedía 20; con 8/9/9 son 14).
+    /// </summary>
+    [Fact]
+    public void NoMatchesThresholdIsAboveTheMatchesOfTheWorstPathOfTheMap()
+    {
+        var files = TestData.LoadAllFiles();
+        var map = Underleague.Sim.Run.Systems.Map.MapLoader.FromJson(files);
+        int worstPath = 0;
+        for (int act = 1; act <= RunRules.Acts; act++)
+        {
+            worstPath += MapInvariants.WorstCaseMatches(MapGenerator.Generate(1, act, new MapOptions(map.Of(act))));
+        }
+
+        foreach (var nickname in NicknameLoader.FromJson(files).All.Where(n => n.Stat == NicknameStat.Matches))
+        {
+            Assert.True(
+                nickname.Threshold <= worstPath,
+                $"{nickname.Id} pide {nickname.Threshold} partidos y el peor camino de la run tiene {worstPath}: nadie puede ganarlo");
+        }
+    }
+
     [Fact]
     public void EveryCareerFieldOfTheBriefHasANickname()
     {
