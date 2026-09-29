@@ -144,7 +144,7 @@ public static class UiText
         ["ui.start.title"] = "UNDERLEAGUE",
         ["ui.start.subtitle"] = "carnicería administrada · esqueleto jugable de la fase 2",
         ["ui.start.club"] = "CLUB",
-        ["ui.start.clubHint"] = "todos los jugadores del club inicial son de una misma raza (RF-004)",
+        ["ui.start.clubHint"] = "todos los jugadores del club inicial son de una misma raza",
         ["ui.start.seed"] = "SEMILLA",
         ["ui.start.seedHint"] = "la misma semilla juega la misma run: mismos mapas, mismos rivales, mismos dados",
         ["ui.start.random"] = "Aleatoria",
@@ -159,7 +159,7 @@ public static class UiText
         ["ui.map.title"] = "MAPA",
         ["ui.map.subtitle"] = "acto {0} de {1} · {2} · {3} de oro",
         ["ui.map.available"] = "DISPONIBLES {0} / mínimo {1}",
-        ["ui.map.availableHint"] = "por debajo del mínimo la run termina (RF-002b)",
+        ["ui.map.availableHint"] = "por debajo del mínimo la run termina",
         ["ui.map.choose"] = "ADÓNDE IR",
         ["ui.map.graph"] = "ACTO {0}",
         ["ui.map.progress"] = "nodo {0} de la run · {1} nodos por acto",
@@ -167,6 +167,7 @@ public static class UiText
         ["ui.map.marketHops"] = "mercado a {0} saltos desde aquí",
         ["ui.map.marketNone"] = "sin mercado alcanzable por este camino",
         ["ui.map.difficulty"] = "dificultad {0}/5 · {1}",
+        ["ui.bet.refunded"] = "el corredor te devuelve {0} de oro",
         ["ui.map.betTaken"] = "apuesta hecha: {0} de oro",
         ["ui.map.refereeLine"] = "pita {0} · {1}",
         ["ui.map.boss"] = "jefe del acto {0}",
@@ -258,10 +259,10 @@ public static class UiText
         // ADR 0134: hasta entonces este aviso saltaba con la alineación GUARDADA incompleta y mentía —el
         // once se rellenaba solo hasta siete—. Ahora solo sale cuando la inferioridad es real, y dice con
         // cuántos se juega en vez de llevar el 5 escrito dentro.
-        ["ui.scout.warnShorthanded"] = "juegas en inferioridad: solo hay {0} para el campo, y con 5 una sola baja termina la run (RF-002d)",
+        ["ui.scout.warnShorthanded"] = "juegas en inferioridad: solo hay {0} para el campo, y con 5 una sola baja termina la run",
         ["ui.scout.warnFilled"] = "{0} sale de oficio: tú no lo alineaste, y el hueco lo ha tapado el equipo",
         ["ui.scout.startersFilled"] = "de oficio",
-        ["ui.scout.warnSevere"] = "{0} sale con una lesión grave sin tratar: si vuelve a lesionarse, muere (RF-093)",
+        ["ui.scout.warnSevere"] = "{0} sale con una lesión grave sin tratar: si vuelve a lesionarse, muere",
         ["ui.scout.warnLethal"] = "{0} puede morir en este partido: {1}",
         ["ui.scout.lineup"] = "Alinear",
         ["ui.scout.bet"] = "EL CORREDOR",
@@ -325,9 +326,9 @@ public static class UiText
 
         ["ui.end.victory"] = "VICTORIA",
         ["ui.end.defeat"] = "DERROTA",
-        ["ui.end.victoryBody"] = "el jefe del acto 3 ha caído. La run termina en victoria (RF-002).",
-        ["ui.end.causeBoss"] = "causa: se perdió un partido de jefe (RF-002b)",
-        ["ui.end.causePlayers"] = "causa: los jugadores disponibles bajaron de {0} (RF-002b)",
+        ["ui.end.victoryBody"] = "el jefe del acto 3 ha caído. La run termina en victoria.",
+        ["ui.end.causeBoss"] = "causa: se perdió un partido de jefe",
+        ["ui.end.causePlayers"] = "causa: los jugadores disponibles bajaron de {0}",
         ["ui.end.stats"] = "actos superados {0} de {1} · nodos {2} · partidos {3} ganados de {4} · oro {5}",
         ["ui.end.roster"] = "PLANTILLA FINAL",
         ["ui.end.fallen"] = "CAÍDOS",
@@ -351,7 +352,7 @@ public static class UiText
         ["ui.difficulty.5"] = "letal",
         ["ui.risk.percent"] = "{0},{1}%",
         ["ui.input.mouseOnly"] = "RATÓN  clic: elegir · clic en una ficha: expandirla",
-        ["ui.input.padPending"] = "MANDO  pendiente en esta pantalla: la navegación con mando está hecha en Equipo (UI-006)",
+        ["ui.input.padPending"] = "MANDO  pendiente en esta pantalla: la navegación con mando está hecha en Equipo",
 
         // --- partido, informe, recompensa y mercado (docs/ui-run-minima.md) ---
         ["ui.card.rarity.Uncommon"] = "poco común",
@@ -363,8 +364,8 @@ public static class UiText
         ["ui.match.hint"] = "el partido ya está resuelto: esto es lo que pasó. Pausa, retrocede y vuelve a ver la jugada que quieras.",
         ["ui.match.minute"] = "minuto {0}",
         ["ui.match.kickoff"] = "antes del saque",
-        ["ui.match.golden"] = "prórroga de turba: el siguiente gol gana (RF-055b)",
-        ["ui.match.forfeit"] = "incomparecencia: un equipo se quedó sin jugadores (RF-059)",
+        ["ui.match.golden"] = "prórroga de turba: el siguiente gol gana",
+        ["ui.match.forfeit"] = "incomparecencia: un equipo se quedó sin jugadores",
         ["ui.match.final"] = "FINAL · {0}",
         ["ui.match.won"] = "victoria",
         ["ui.match.lost"] = "derrota",
@@ -450,7 +451,7 @@ public static class UiText
         ["ui.match.subInjury"] = "{0} se ha lesionado y no puede seguir. Elige quién entra en su casilla:",
         ["ui.match.subDeath"] = "{0} ha muerto en el campo. Elige quién entra en su casilla:",
         ["ui.match.subCandidate"] = "{0} · {1} · {2}",
-        ["ui.match.subHint"] = "la sustitución es obligatoria mientras haya banquillo; un lesionado leve que salta al campo arriesga la vida (ADR 0048)",
+        ["ui.match.subHint"] = "la sustitución es obligatoria mientras haya banquillo; un lesionado leve que salta al campo arriesga la vida",
         ["ui.ev.Substitution"] = "{0} entra por {1}",
         ["ui.ev.MatchStart"] = "empieza el partido",
         ["ui.ev.MatchEnd"] = "final del partido",
@@ -521,7 +522,7 @@ public static class UiText
         ["ui.report.sideOwn"] = "tuya",
         ["ui.report.sideRival"] = "del rival",
         ["ui.report.gold"] = "ORO GANADO",
-        ["ui.report.goldNone"] = "perder no paga (RF-114g)",
+        ["ui.report.goldNone"] = "perder no paga",
         ["ui.report.goldBase"] = "base del acto {0}",
         ["ui.report.goldDifficulty"] = "dificultad {0}/5 (x{1}%)",
         ["ui.report.goldNode"] = "{0} (+{1}%)",
@@ -552,23 +553,23 @@ public static class UiText
         ["ui.reward.noCarrierNeeded"] = "entra en la plantilla: no hay a quién asignárselo",
         ["ui.reward.confirm"] = "Dárselo a {0}",
         ["ui.reward.decline"] = "Rechazar la recompensa",
-        ["ui.reward.declineHint"] = "con los perks irreversibles y los slots contados, quedarse con la menos mala puede ser peor que no quedarse con nada (ADR 0043)",
+        ["ui.reward.declineHint"] = "con los perks irreversibles y los slots contados, quedarse con la menos mala puede ser peor que no quedarse con nada",
         ["ui.reward.reroll"] = "Repetir la tirada ({0} de oro)",
-        ["ui.reward.rerollUsed"] = "el reroll de este nodo ya se ha usado: uno por nodo (RF-071b)",
+        ["ui.reward.rerollUsed"] = "el reroll de este nodo ya se ha usado: uno por nodo",
         ["ui.reward.rerollPoor"] = "repetir cuesta {0} de oro y tienes {1}",
         ["ui.reward.carrier"] = "A QUIÉN SE LO DAS",
-        ["ui.reward.carrierPerk"] = "un perk asignado NO SE PUEDE RETIRAR ni transferir (RF-072): la decisión dura toda la run.",
+        ["ui.reward.carrierPerk"] = "un perk asignado NO SE PUEDE RETIRAR ni transferir: la decisión dura toda la run.",
         ["ui.reward.carrierItem"] = "cada jugador lleva un objeto y solo uno: el que tuviera vuelve al almacén.",
         ["ui.reward.carrierRow"] = "{0} · {1} · nivel {2} · {3} · {4}",
         ["ui.reward.slots"] = "{0} slots libres",
         ["ui.reward.slot"] = "1 slot libre",
         ["ui.reward.carrierHasItem"] = "lleva {0}",
         ["ui.reward.carrierNoItem"] = "sin objeto",
-        ["ui.reward.blockRoster"] = "plantilla llena ({0} de {1}): hay que rechazar o hacer sitio (RF-020)",
+        ["ui.reward.blockRoster"] = "plantilla llena ({0} de {1}): hay que rechazar o hacer sitio",
         ["ui.reward.blockCarrier"] = "nadie de tu plantilla puede llevarlo",
         ["ui.reward.none"] = "no hay ninguna recompensa que elegir",
         ["ui.reward.pick"] = "elige un artículo para ver a quién puedes dárselo",
-        ["ui.reward.optionsLeague"] = "un partido de liga ofrece una elección entre dos (ADR 0049)",
+        ["ui.reward.optionsLeague"] = "un partido de liga ofrece una elección entre dos",
         ["ui.reward.optionsElite"] = "un partido de élite ofrece una entre tres, con mejor rareza",
         ["ui.reward.optionsBoss"] = "el jefe ofrece dos elecciones entre tres, y cura la plantilla",
         ["ui.reward.error"] = "no se pudo: {0}",
@@ -591,23 +592,23 @@ public static class UiText
         ["ui.market.badgePerk"] = "PERK",
         ["ui.market.badgeItem"] = "OBJ",
         ["ui.market.badgeConsumable"] = "CONS",
-        ["ui.market.youthHint"] = "CANTERANO GRATIS: malo hoy y con un 33% más de experiencia; el crack del acto 3 sale de aquí (RF-114b, RF-114c)",
-        ["ui.market.mercenaryHint"] = "MERCENARIO: sin coste de fichaje, {0} de salario por partido, y se marcha tras 3 partidos en el banquillo (RF-111)",
+        ["ui.market.youthHint"] = "CANTERANO GRATIS: malo hoy y con un 33% más de experiencia; el crack del acto 3 sale de aquí",
+        ["ui.market.mercenaryHint"] = "MERCENARIO: sin coste de fichaje, {0} de salario por partido, y se marcha tras 3 partidos en el banquillo",
         ["ui.market.free"] = "gratis",
         ["ui.market.price"] = "{0} oro",
         ["ui.market.wage"] = "salario {0}",
-        ["ui.market.cursedHint"] = "MALDITO: sube el doble y baja algo a cambio (ADR 0036)",
-        ["ui.market.fragileHint"] = "FRÁGIL: {0}% de romperse al terminar cada partido (RF-077)",
+        ["ui.market.cursedHint"] = "MALDITO: sube el doble y baja algo a cambio",
+        ["ui.market.fragileHint"] = "FRÁGIL: {0}% de romperse al terminar cada partido",
         ["ui.market.restrictedHint"] = "EXCLUSIVO DE RAZA: no aporta nada a un portador que no sea {0}",
         ["ui.market.carrier"] = "QUIÉN LO LLEVA",
         ["ui.market.nothing"] = "elige un artículo de cualquiera de las cuatro columnas",
         ["ui.market.poor"] = "no te llega el oro: cuesta {0} y tienes {1}",
-        ["ui.market.rosterFull"] = "plantilla llena ({0} de {1}): vende a alguien o compra un hueco en un nodo de inscripción (RF-020)",
+        ["ui.market.rosterFull"] = "plantilla llena ({0} de {1}): vende a alguien o compra un hueco en el mercado",
         ["ui.market.noCarrier"] = "nadie de tu plantilla puede llevarlo",
         ["ui.market.slot"] = "Ampliar plantilla · {0} de oro ({1}/{2})",
         ["ui.market.slotFull"] = "plantilla en su techo: no quedan huecos que inscribir",
         ["ui.market.leave"] = "Salir al mapa",
-        ["ui.market.sellWarn"] = "quedan {0} disponibles: vender a uno más termina la run (RF-002b)",
+        ["ui.market.sellWarn"] = "quedan {0} disponibles: vender a uno más termina la run",
         ["ui.market.sellRow"] = "{0} · nivel {1} · perks {2}",
         ["ui.market.empty"] = "sin artículos",
         ["ui.market.none"] = "no hay ningún mercado abierto",
@@ -646,7 +647,7 @@ public static class UiText
         // --- sección de consumibles de Equipo (CAT-B, RF-080..085) ---
         ["ui.team.consumableButton"] = "Consumibles",
         ["ui.team.consumableTitle"] = "CONSUMIBLES",
-        ["ui.team.consumableHint"] = "hasta 3 equipados y al menos uno manual (RF-080, RF-082); el resto son condicionales, máximo 2 (RF-081)",
+        ["ui.team.consumableHint"] = "hasta 3 equipados y al menos uno manual; el resto son condicionales, máximo 2",
         ["ui.team.consumableEmpty"] = "sin consumibles en el inventario: se compran en el mercado",
         ["ui.team.consumableCopies"] = "{0} en inventario",
         ["ui.team.consumableNothingSelected"] = "elige un consumible de la lista para equiparlo o quitarlo",
@@ -657,7 +658,7 @@ public static class UiText
         ["ui.team.consumableEquippedManual"] = "equipado · manual: lo activas tú durante el partido",
         ["ui.team.consumableEquippedConditional"] = "equipado · condicional: se activa cuando {0}",
         ["ui.team.consumableNotEquipped"] = "no equipado",
-        ["ui.team.consumableFull"] = "ya tienes 3 equipados (RF-080): quita uno antes de añadir otro",
+        ["ui.team.consumableFull"] = "ya tienes 3 equipados: quita uno antes de añadir otro",
         ["ui.team.consumableNoCopies"] = "no te quedan copias en el inventario",
         ["ui.team.consumableGone"] = "ya no tienes copias en el inventario, pero sigue equipado: puedes quitarlo",
         ["ui.team.consumableError"] = "no se pudo: {0}",
@@ -903,6 +904,16 @@ public static class UiText
     /// <summary>Texto de la clave con los argumentos sustituidos en <c>{0}</c>, <c>{1}</c>...</summary>
     public static string Get(string key, params object[] args) =>
         string.Format(System.Globalization.CultureInfo.InvariantCulture, Get(key), args);
+
+    /// <summary>
+    /// El subtítulo de un nodo con, si acaba de entrar devolviéndose una apuesta tomada para otro nodo
+    /// (ADR 0157), «el corredor te devuelve N de oro»: la devolución no puede pasar sin explicación.
+    /// </summary>
+    public static string WithBetRefund(string subtitle, Underleague.Sim.Run.RunState state)
+    {
+        int refunded = state.Counter(Underleague.Sim.Run.RunState.BetRefundedCounter);
+        return refunded > 0 ? subtitle + " · " + Get("ui.bet.refunded", refunded) : subtitle;
+    }
 
     /// <summary>
     /// Cifra con signo explícito ("+15" / "−8"), para el criterio del árbitro y sus desplazamientos
