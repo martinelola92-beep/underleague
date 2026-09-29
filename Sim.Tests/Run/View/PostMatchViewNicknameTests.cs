@@ -65,6 +65,38 @@ public sealed class PostMatchViewNicknameTests
         Assert.All(report.PlayerStats, row => Assert.Equal("el Novato", row.Nickname));
     }
 
+    /// <summary>
+    /// La pantalla sólo enseña los dos primeros apodos ganados y dice cuántos más hay, así que el orden decide
+    /// cuáles se ven: prioridad mayor primero, y a igualdad el id de jugador ascendente.
+    /// </summary>
+    [Fact]
+    public void NicknamesEarnedComeHighestPriorityFirst()
+    {
+        var catalog = new NicknameCatalog(new[]
+        {
+            new NicknameDefinition("rookie", new LocalizedName("el Novato", "the Rookie"), NicknameStat.Matches, 1, 10),
+            new NicknameDefinition("scorer", new LocalizedName("el Goleador", "the Scorer"), NicknameStat.Goals, 1, 90),
+        });
+
+        for (ulong seed = 18010; seed < 18060; seed++)
+        {
+            var (report, _, _) = Play(seed, catalog);
+            var gains = report.NicknamesEarned;
+            if (!gains.Any(g => g.NicknameId == "scorer") || !gains.Any(g => g.NicknameId == "rookie"))
+            {
+                continue;
+            }
+
+            int firstRookie = gains.ToList().FindIndex(g => g.NicknameId == "rookie");
+            Assert.All(gains.Take(firstRookie), g => Assert.Equal("scorer", g.NicknameId));
+            Assert.All(gains.Skip(firstRookie), g => Assert.Equal("rookie", g.NicknameId));
+            Assert.Equal(gains.Take(firstRookie).OrderBy(g => g.PlayerId).Select(g => g.PlayerId), gains.Take(firstRookie).Select(g => g.PlayerId));
+            return;
+        }
+
+        Assert.Fail("ninguna semilla de 18010..18059 dio goleadores y no goleadores a la vez: el test no mide nada");
+    }
+
     [Fact]
     public void NoCatalogMeansNoNicknamesButStillStats()
     {

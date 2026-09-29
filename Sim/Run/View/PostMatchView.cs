@@ -319,6 +319,8 @@ public static class PostMatchView
             return rows;
         }
 
+        var priorities = new Dictionary<int, int>();
+
         for (int i = 0; i < report.Players.Count; i++)
         {
             var stats = report.Players[i];
@@ -341,9 +343,16 @@ public static class PostMatchView
                 earned.Id,
                 earned.NameIn(language),
                 NicknameSystem.For(before, nicknames)?.NameIn(language) ?? string.Empty));
+            priorities[player.Id] = earned.Priority;
         }
 
-        rows.Sort(static (a, b) => a.PlayerId.CompareTo(b.PlayerId));
+        // Los de mayor prioridad primero (los más raros de ganar): la pantalla sólo enseña los primeros y
+        // dice cuántos más hay, así que el orden es lo que decide cuáles se ven (ADR 0163). Luego id (RT-041).
+        rows.Sort((a, b) =>
+        {
+            int byPriority = priorities[b.PlayerId].CompareTo(priorities[a.PlayerId]);
+            return byPriority != 0 ? byPriority : a.PlayerId.CompareTo(b.PlayerId);
+        });
         return rows;
     }
 
