@@ -415,6 +415,7 @@ public static class FullRunMetrics
         long goldEarned = 0, market = 0, clinic = 0, enrollment = 0, reroll = 0, wages = 0, left = 0;
         long squadTreatments = 0, riskyTreatments = 0, eventsTaken = 0, eventsDeclined = 0;
         long blacksmithTreatments = 0, prosthesesInstalled = 0, automatons = 0;
+        long nemeses = 0, revenges = 0, nemesesCapped = 0;
         long slots = 0;
         long roster = 0, level = 0, perks = 0, starterPerks = 0, items = 0, injuries = 0, severe = 0, counters = 0, ownInjuries = 0, matchInjuries = 0;
         long offers = 0, affordable = 0, purchases = 0, marketVisits = 0, goldAtMarket = 0;
@@ -488,6 +489,12 @@ public static class FullRunMetrics
             blacksmithTreatments += run.BlacksmithTreatments;
             prosthesesInstalled += run.ProsthesesInstalled;
             automatons += run.Automatons;
+            if (run.FinalState is { } final)
+            {
+                nemeses += final.RivalMemory.Nemeses.Count;
+                revenges += final.Counter(RunState.RevengesCounter);
+                nemesesCapped += final.Counter(RunState.NemesisCappedCounter);
+            }
             enrollment += run.GoldSpentEnrollment;
             slots += run.SlotsBought;
             reroll += run.GoldSpentReroll;
@@ -656,6 +663,11 @@ public static class FullRunMetrics
         rows.Add(Info("blacksmithTreatmentsPerRun", (double)blacksmithTreatments / runs.Count));
         rows.Add(Info("prosthesesPerRun", (double)prosthesesInstalled / runs.Count));
         rows.Add(Info("automatonsPerRun", (double)automatons / runs.Count));
+        // ADR 0165: la memoria de los clanes. nemesesPerRun a cero = ningún rival mata nunca a nadie de forma
+        // atribuible; revengesPerRun a cero = el jugador nunca se venga; nemesesCappedPerRun mide cuánto muerde el tope.
+        rows.Add(Info("nemesesPerRun", (double)nemeses / runs.Count));
+        rows.Add(Info("revengesPerRun", (double)revenges / runs.Count));
+        rows.Add(Info("nemesesCappedPerRun", (double)nemesesCapped / runs.Count));
         // ADR 0100: cartas de evento resueltas y cartas que la política dejó pasar. Si «tomadas» sale a
         // cero, el catálogo no ofrece nada que compita con el resto del mapa y el nodo sigue siendo relleno.
         rows.Add(Info("eventsTakenPerRun", (double)eventsTaken / runs.Count));
