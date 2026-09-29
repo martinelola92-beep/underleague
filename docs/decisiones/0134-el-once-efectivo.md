@@ -194,7 +194,9 @@ Cinco cosas que la revisión encontró y que **no** se arreglan aquí, cada una 
 
 ## Lo que esta ADR NO hace
 
-- **No implementa el hueco deliberado antes del partido.** RF-002d sigue sin poder elegirse mientras haya
+- ~~**No implementa el hueco deliberado antes del partido.**~~ **Implementado el 29 sep 2026** (BC-H): `SetLineup(PlayShort)`
+  y el contador `fieldShort`, con el mecanismo de aquí; ver [BC-H](../pendientes/BC-H.md). Lo que decía entonces:
+  RF-002d sigue sin poder elegirse mientras haya
   banquillo; lo que esta ADR da es la mitad de dentro del partido («que se quede el hueco») y la verdad sobre
   quién juega. Queda abierto en BC-H con el mecanismo ya decidido.
 - ~~**No deja al lesionado leve en el campo.**~~ **Revocado el 23 sep 2026 por decisión del revisor**: sí lo

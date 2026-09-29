@@ -46,7 +46,6 @@ viva anotada.
 | [BC-C](./BC-C.md) | «Doble disparo» no tiene sentido y no cambia el resultado | Abierta (rediseño) |
 | [BC-D](./BC-D.md) | «Último hombre» se activa pero no hace nada | Abierta (mecánica nueva + ADR) |
 | [BC-G](./BC-G.md) | El balón se queda suelto en el córner y nadie lo coge | Abierta (reabre BB-G en parte) |
-| [BC-H](./BC-H.md) | El aviso de alineación incompleta es falso: el once se rellena solo | Resuelta la mitad de dentro (ADR 0134); abierta RF-002d antes del partido y la captura que lo regresione |
 | [BD-A](./BD-A.md) | El reparto de los penaltis por fila: el sesgo arriba/abajo era ruido; queda la concentración en las filas centrales | Abierta (reducida) |
 | [BE-B](./BE-B.md) | Un perk `injure` con `target: "actor"` acreditaría lesiones al compañero o a la propia víctima | Resuelta la atribución (23 sep 2026: los dos contadores comparan equipo, con tests). **Viva**: `ResolveInjury` sigue haciendo `ShiftBiasAgainst` sin comparar equipos, así que lesionar a un compañero mueve el criterio del árbitro en tu contra — eso cambia el partido y pide medición propia |
 | [BE-C](./BE-C.md) | `MatchResolution` trata el partido completo en un sitio y solo hasta la derrota en otro | Resuelto el síntoma 2 (`PlayedTicks` compara equipo). **Viva y reabierta**: la ventana posterior a `defeatTick` **SÍ existe** —`CanStart` deja salir al lesionado grave marcado y `IsAvailable` no lo cuenta—, contra lo que se llegó a escribir. Rara y de gravedad baja, sin decidir si se arregla |
@@ -78,6 +77,7 @@ viva anotada.
 | Id | Título | Estado |
 |---|---|---|
 | [BH-B](./BH-B.md) | El nodo de jefe se presenta con el nombre de un clan de liga, en el mapa y en el ojeo | **Cerrada** (29 sep): `OpponentView` decide la ficha por el tipo de nodo; el jefe se presenta con `data/bosses/`, también en el marcador del partido (el equipo se llamaba `the_hunt`). El nodo sigue guardando el id fantasma (BE-F) |
+| [BC-H](./BC-H.md) | El aviso de alineación incompleta es falso: el once se rellena solo | **Cerrada** (29 sep): mitad de dentro por la ADR 0134; hueco deliberado antes del partido (`SetLineup(PlayShort)`, contador `fieldShort`, botón en el ojeo) y captura que regresiona el aviso (`ojeo-relleno.png`, `ojeo-hueco.png`) |
 | [BK-A](./BK-A.md) | RF-069 exigía el 60 % de modificadores numéricos y el producto pide lo contrario | **Cerrada** por la ADR 0149: RF-069 reescrita con el eje de visibilidad, requisitos a v0.10 |
 | [BL-A](./BL-A.md) | Lesionar al rival no ayuda a ganar (`dirty_play`, `ankle_bite`) | **Cerrada**: era ruido. `ankle_bite` LIKELY no negativo (≈ +10), se restaura; la paga de diseño, sin demostrar |
 | [BL-B](./BL-B.md) | El umbral de retirada de la ADR 0087 usa un `rowDeviation` global y falla con filas de varianza alta | **Abierta** solo por hermanos: el umbral lo resuelve la ADR 0150 |

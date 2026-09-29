@@ -1,6 +1,6 @@
 # BC-H — El aviso de alineación incompleta es falso: el once se rellena solo
 
-**Estado:** Abierta · CONFIRMED · decisión de diseño pendiente
+**Estado:** **CERRADA (29 sep 2026)** · CONFIRMED · las dos mitades resueltas (ADR 0134 y este cierre)
 
 ## Observación
 
@@ -64,6 +64,35 @@ implementa, porque hace falta tocar el editor de colocación de la pantalla de E
 2. **El hueco deliberado antes del partido**, con el mecanismo ya decidido arriba.
 
 Tres instancias más de la misma causa, fuera del paquete porque mueven balance: [BG-A](./BG-A.md).
+
+## Cierre (29 sep 2026): la captura y el hueco deliberado
+
+Los dos pasos que dejó la ADR 0134, en este orden, con `game-design-review` ya hecha en
+`docs/analisis/once-efectivo-diseno.md` (el pase mínimo de hoy: lo único nuevo es *dónde* se decide).
+
+1. **La captura que regresiona el aviso.** `CapturasOjeo.tscn` (`ScoutCaptureRunner`) deja a un centrocampista con lesión
+   grave fuera de la alineación guardada, como lo deja un partido, y saca `ojeo-relleno.png`: «Urk Rompehuesos sale de
+   oficio: tú no lo alineaste, y el hueco lo ha tapado el equipo», y en «TU ONCE» el séptimo marcado «de oficio».
+   Antes la secuencia arrancaba con la plantilla sana y esa rama sólo la cubrían los tests de `/Sim`.
+2. **El hueco deliberado (RF-002d), con el mecanismo que ya había decidido la ADR 0134**: un contador de la run, no un
+   campo del estado. `SetLineup(Lineup, PlayShort)` fija `RunLineup.ShortCounter` (`fieldShort`, W-11: **sin subir el
+   guardado**); `SelectStarters` no completa el once con el banquillo mientras esté puesto (sí hasta el mínimo de 5, para
+   que una baja posterior no rompa el partido); `MatchResolution` lo borra al terminar el partido, junto a la marca de
+   RF-093. **Se decide partido a partido y nunca se hereda.** El aviso distingue `ShortByChoice` (elegida, se deshace con
+   una pulsación) de `Shorthanded` (real: ni con el banquillo entero se llega a siete). `/Game`: junto a «Confirmar y
+   jugar», «Dejar el hueco vacío» / «Que el banquillo tape el hueco» (`ojeo-hueco.png`: seis en TU ONCE); mover una ficha en
+   Equipo conserva la decisión. La captura pulsa los botones de verdad (la señal del clic) y comprueba el estado.
+
+**Lo que no se ha tocado y sigue como estaba**: la política de `/Balance` no pide `PlayShort` nunca, así que un
+`SetLineup` corriente no escribe el contador (`ASetLineupWithoutTheDecisionNeverWritesTheCounterAndClearsIt`) y los
+estados salen byte a byte iguales. **Lo que no se puede medir hoy** es si jugar con seis es rentable: el instrumento
+(`RunPolicy`) no ejerce la decisión, mismo hueco que [CAT-C](./CAT-C.md). La nota de diseño lo anticipó («si la medición
+dijera que la política mejora rechazando…, se mide, no se supone»); queda por medir con una doctrina que la use, y por
+eso `PlayShort` no está en ninguna puerta.
+
+**Sigue abierto, ya fuera de este pendiente**: «TU ONCE» de Equipo lista la alineación guardada, no el once efectivo
+([BG-A](./BG-A.md)); y la pantalla de Equipo no tiene un control propio para la decisión (se toma en el ojeo, que es donde
+se advierte, como pide RF-002d).
 
 ## Hermanos
 
