@@ -250,6 +250,15 @@ internal static class MatchResolution
         //     RunState.Counters (RT-054)-.
         next = ApplyRivalCredits(next, node, players, result.Events, processedEvents);
 
+        // 4c. Cómo murió cada caído del partido (ADR 0163): con matador identificado o sin él. La Gaceta lo
+        //     lee para no contar «cayó en el campo» de quien murió de otra manera.
+        for (int d = 0; d < deathDetails.Count; d++)
+        {
+            next = next.WithDeathCause(
+                deathDetails[d].PlayerId,
+                deathDetails[d].KillerPlayerId >= 0 ? PlayerDeathCause.MatchByOpponent : PlayerDeathCause.MatchNoAuthor);
+        }
+
         // El almacén se rellena en orden de id de objeto (RT-041), no en orden de muerte.
         next = DeathConsequences.StoreRecovered(next, recovered);
 

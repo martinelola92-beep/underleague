@@ -754,6 +754,14 @@ public sealed record RunState
     public const string RivalCreditPrefix = "rivalCredit:";
 
     /// <summary>
+    /// Prefijo de los contadores que guardan <b>cómo murió</b> cada jugador propio (ADR 0163, RF-122):
+    /// <c>deathCause:&lt;playerId&gt;</c> = <see cref="PlayerDeathCause"/> como entero. Lo escriben las tres
+    /// vías de muerte (partido, sacrificio del evento y matasanos) y lo lee la Gaceta; sin él una esquela
+    /// sólo puede decir «cayó en el campo» de quien murió en la clínica.
+    /// </summary>
+    public const string DeathCausePrefix = "deathCause:";
+
+    /// <summary>
     /// Jugadores que <b>ocupan plantilla</b> (RF-020): todos menos los muertos. El muerto se queda en
     /// <see cref="Roster"/> para el memorial (RF-122) pero deja su sitio libre: morir cuesta un jugador,
     /// no un jugador y su hueco.
@@ -1070,6 +1078,14 @@ public sealed record RunState
         counters[name] = value;
         return this with { Counters = counters };
     }
+
+    /// <summary>Copia con la causa de muerte de ese jugador anotada (<see cref="DeathCausePrefix"/>).</summary>
+    public RunState WithDeathCause(int playerId, PlayerDeathCause cause) =>
+        WithCounter(DeathCausePrefix + playerId.ToString(System.Globalization.CultureInfo.InvariantCulture), (int)cause);
+
+    /// <summary>Cómo murió ese jugador; <see cref="PlayerDeathCause.Unknown"/> si no consta.</summary>
+    public PlayerDeathCause DeathCauseOf(int playerId) =>
+        (PlayerDeathCause)Counter(DeathCausePrefix + playerId.ToString(System.Globalization.CultureInfo.InvariantCulture));
 
     /// <summary>Valor de un contador de run, 0 si no está.</summary>
     public int Counter(string name) => Counters.TryGetValue(name, out int value) ? value : 0;

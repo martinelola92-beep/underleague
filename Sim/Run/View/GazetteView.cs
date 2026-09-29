@@ -29,6 +29,7 @@ public sealed record GazetteReport(
     string Lede,
     string MvpTitle,
     GazetteMvp? Mvp,
+    string MvpNone,
     string VillainTitle,
     GazetteVillain? Villain,
     string ObituariesTitle,
@@ -38,7 +39,11 @@ public sealed record GazetteReport(
 /// <summary>Compone la Gaceta desde el <see cref="RunState"/> final. Puro, sin E/S.</summary>
 public static class GazetteView
 {
-    /// <summary>Muertes que vale «una baja grave» en la cuenta del villano (RivalCredits no guarda cronología).</summary>
+    /// <summary>
+    /// Lo que pesa un muerto frente a un lesionado en la cuenta del villano (<c>3·muertos + 1·lesionados</c>).
+    /// <b>Provisional, sin medir</b> (Regla H): sólo dice que una muerte es peor que una lesión; ninguna
+    /// medición fija el 3. Cambiarlo sólo cambia a quién nombra la Gaceta, no el partido.
+    /// </summary>
     public const int VillainDeathWeight = 3;
 
     /// <summary>
@@ -54,9 +59,19 @@ public static class GazetteView
     private const int MatchWeight = 1;
 
     /// <summary>
+    /// Hechos mínimos (goles, asistencias, entradas ganadas, lesiones y muertes causadas; los partidos no
+    /// cuentan) que exige el MVP: la línea los enumera, y sin ninguno diría «fue el mejor del club: .».
+    /// Es un mínimo estructural de la frase, no una cifra de balance. Sin nadie que lo cumpla, la Gaceta
+    /// dice <c>mvp.none</c>.
+    /// </summary>
+    public const int MvpMinimumFacts = 1;
+
+    /// <summary>
     /// Métrica del MVP: <c>4·goles + 3·asistencias + 1·entradas ganadas + 2·lesiones causadas + 3·muertes
     /// causadas + 1·partidos</c>, sobre la carrera de la run de <b>todos</b> los jugadores, vivos o caídos
-    /// (un muerto puede ser el mejor: es la historia). Empata el id menor. Sin partidos no hay MVP.
+    /// (un muerto puede ser el mejor: es la historia). Desempate: más partidos, luego quien no es portero
+    /// (un portero con la misma cifra ha hecho menos de lo que se cuenta) y por último el id menor. Sin
+    /// <see cref="MvpMinimumFacts"/> hechos no hay MVP.
     /// </summary>
     public static int MvpScore(RunCareer career)
     {
@@ -67,6 +82,13 @@ public static class GazetteView
             + (career.InjuriesCaused * InjuryCausedWeight)
             + (career.DeathsCaused * DeathCausedWeight)
             + (career.Matches * MatchWeight);
+    }
+
+    /// <summary>Hechos que cuentan para <see cref="MvpMinimumFacts"/>: todo lo de la carrera menos los partidos.</summary>
+    public static int MvpFacts(RunCareer career)
+    {
+        ArgumentNullException.ThrowIfNull(career);
+        return career.Goals + career.Assists + career.TacklesWon + career.InjuriesCaused + career.DeathsCaused;
     }
 
     /// <summary>La Gaceta de una run terminada (también sirve a mitad de run: cuenta lo que hay).</summary>
@@ -110,6 +132,7 @@ public static class GazetteView
             Pick(templates, ledeKey, language, state.Seed, 3, facts),
             Pick(templates, "mvp.title", language, state.Seed, 4, facts),
             Mvp(state, nicknames, templates, language),
+            Pick(templates, "mvp.none", language, state.Seed, 8, facts),
             Pick(templates, "villain.title", language, state.Seed, 5, facts),
             Villain(state, credits, rivals, templates, language),
             Pick(templates, "obituaries.title", language, state.Seed, 6, facts),
@@ -126,13 +149,13 @@ public static class GazetteView
         for (int i = 0; i < state.Roster.Count; i++)
         {
             var player = state.Roster[i];
-            if (player.Career.Matches <= 0)
+            if (player.Career.Matches <= 0 || MvpFacts(player.Career) < MvpMinimumFacts)
             {
                 continue;
             }
 
             int score = MvpScore(player.Career);
-            if (best is null || score > bestScore || (score == bestScore && player.Id < best.Id))
+            if (best is null || BeatsMvp(player, score, best, bestScore))
             {
                 best = player;
                 bestScore = score;
@@ -155,10 +178,33 @@ public static class GazetteView
         return new GazetteMvp(best.Id, best.Name, nickname, Pick(templates, "mvp.line", language, state.Seed, 100 + best.Id, facts));
     }
 
+    /// <summary>Desempate del MVP: puntos, más partidos, no portero, id menor.</summary>
+    private static bool BeatsMvp(RunPlayer candidate, int score, RunPlayer best, int bestScore)
+    {
+        if (score != bestScore)
+        {
+            return score > bestScore;
+        }
+
+        if (candidate.Career.Matches != best.Career.Matches)
+        {
+            return candidate.Career.Matches > best.Career.Matches;
+        }
+
+        bool candidateKeeper = candidate.Position == Position.Goalkeeper;
+        if (candidateKeeper != (best.Position == Position.Goalkeeper))
+        {
+            return !candidateKeeper;
+        }
+
+        return candidate.Id < best.Id;
+    }
+
     /// <summary>
     /// Hechos de la carrera como lista legible («3 goles, 2 asistencias y 1 lesión ajena»), en el orden
-    /// fijo partidos, goles, asistencias, entradas ganadas, lesiones y muertes causadas, con los que valen
-    /// cero fuera. Si no queda ninguno, cadena vacía.
+    /// fijo <b>de lo más memorable a lo menos</b>: partidos (sólo en la esquela), muertes causadas, lesiones
+    /// causadas, goles, asistencias y entradas ganadas, con los que valen cero fuera. El límite recorta por
+    /// el final, así que lo que se pierde es lo menos memorable. Si no queda ninguno, cadena vacía.
     /// </summary>
     private static string Highlights(RunCareer career, GazetteCatalog templates, string language, int limit, bool includeMatches)
     {
@@ -180,11 +226,11 @@ public static class GazetteView
             Add("matches", career.Matches);
         }
 
+        Add("deathsCaused", career.DeathsCaused);
+        Add("injuriesCaused", career.InjuriesCaused);
         Add("goals", career.Goals);
         Add("assists", career.Assists);
         Add("tacklesWon", career.TacklesWon);
-        Add("injuriesCaused", career.InjuriesCaused);
-        Add("deathsCaused", career.DeathsCaused);
 
         if (parts.Count == 0)
         {
@@ -226,37 +272,64 @@ public static class GazetteView
     }
 
     /// <summary>
-    /// El villano: el jugador rival concreto (clan e índice) con más daño a los míos, contando
-    /// <c>3·muertes + 1·lesiones</c> (<see cref="VillainDeathWeight"/>: una muerte pesa más que una lesión;
-    /// <c>RivalCredits</c> no guarda cronología, así que no hay «el último»). Empata el clan de id menor y
+    /// El villano: el jugador rival concreto (clan e índice) con más <b>víctimas distintas</b> entre los
+    /// míos, contando <c>3·muertos + 1·lesionados</c> (<see cref="VillainDeathWeight"/>: una muerte pesa
+    /// más que una lesión). Una víctima cuenta <b>una vez</b>: quien lesionó y luego mató al mismo jugador
+    /// suma un muerto, no un muerto y un lesionado; y lesionar tres veces al mismo suma un lesionado.
+    /// <c>RivalCredits</c> no guarda cronología, así que no hay «el último». Empata el clan de id menor y
     /// luego el índice menor. Null si ningún rival hizo daño: la sección se omite.
     /// </summary>
     private static GazetteVillain? Villain(RunState state, IReadOnlyList<RivalCredit> credits, RivalCatalog rivals, GazetteCatalog templates, string language)
     {
-        var deaths = new SortedDictionary<(string, int), int>(Comparer<(string, int)>.Create(static (a, b) =>
+        var comparer = Comparer<(string, int)>.Create(static (a, b) =>
         {
             int byClan = string.CompareOrdinal(a.Item1, b.Item1);
             return byClan != 0 ? byClan : a.Item2.CompareTo(b.Item2);
-        }));
-        var injuries = new SortedDictionary<(string, int), int>(deaths.Comparer);
+        });
+        var killedBy = new SortedDictionary<(string, int), SortedSet<int>>(comparer);
+        var hurtBy = new SortedDictionary<(string, int), SortedSet<int>>(comparer);
         for (int i = 0; i < credits.Count; i++)
         {
-            var target = credits[i].Kind == RivalCreditKind.SufferedDeath ? deaths : injuries;
+            var target = credits[i].Kind == RivalCreditKind.SufferedDeath ? killedBy : hurtBy;
             var key = (credits[i].RivalId, credits[i].RivalIndex);
-            target[key] = target.GetValueOrDefault(key) + credits[i].Count;
+            if (!target.TryGetValue(key, out var victims))
+            {
+                victims = new SortedSet<int>();
+                target[key] = victims;
+            }
+
+            victims.Add(credits[i].OwnPlayerId);
         }
 
         (string Clan, int Index) best = (string.Empty, -1);
         int bestScore = 0;
-        var keys = new SortedSet<(string, int)>(deaths.Keys, deaths.Comparer);
-        keys.UnionWith(injuries.Keys);
+        int bestKilled = 0;
+        int bestHurt = 0;
+        var keys = new SortedSet<(string, int)>(killedBy.Keys, comparer);
+        keys.UnionWith(hurtBy.Keys);
         foreach (var key in keys)
         {
-            int score = (deaths.GetValueOrDefault(key) * VillainDeathWeight) + injuries.GetValueOrDefault(key);
+            var killedVictims = killedBy.GetValueOrDefault(key);
+            int killedCount = killedVictims?.Count ?? 0;
+            int hurtCount = 0;
+            if (hurtBy.TryGetValue(key, out var hurtVictims))
+            {
+                foreach (int victim in hurtVictims)
+                {
+                    if (killedVictims is null || !killedVictims.Contains(victim))
+                    {
+                        hurtCount++;
+                    }
+                }
+            }
+
+            int score = (killedCount * VillainDeathWeight) + hurtCount;
             if (score > bestScore)
             {
                 bestScore = score;
                 best = key;
+                bestKilled = killedCount;
+                bestHurt = hurtCount;
             }
         }
 
@@ -271,8 +344,8 @@ public static class GazetteView
             return null;
         }
 
-        int killed = deaths.GetValueOrDefault(best);
-        int hurt = injuries.GetValueOrDefault(best);
+        int killed = bestKilled;
+        int hurt = bestHurt;
         string clan = NameIn(team.Name, language);
         var facts = new Dictionary<string, string>(StringComparer.Ordinal)
         {
@@ -331,11 +404,35 @@ public static class GazetteView
     }
 
     /// <summary>
-    /// Cómo cayó: si <c>RivalCredits</c> tiene una muerte de ese jugador a manos de un rival concreto, «a manos
-    /// de X»; si no (perk letal, sin rival identificable), una variante genérica.
+    /// Cómo cayó, según lo que la run sabe de su muerte (<see cref="RunState.DeathCauseOf"/>) y, en un
+    /// partido, de <c>RivalCredits</c>:
+    /// <list type="bullet">
+    /// <item>sacrificado en un evento → <c>epitaph.sacrifice</c>; en la clínica → <c>epitaph.quack</c>;</item>
+    /// <item>en un partido con un rival del catálogo acreditado → <c>epitaph.byRival</c> («a manos de X, de
+    /// Y»);</item>
+    /// <item>en un partido a manos de un rival que no está en el catálogo (jefe o rival procedural: hubo
+    /// matador pero no crédito) → <c>epitaph.byOpponent</c>, que dice que lo mató un rival sin nombrarlo;</item>
+    /// <item>en un partido sin matador → <c>epitaph.noAuthor</c>, la única que habla de «el golpe que nadie
+    /// vio»;</item>
+    /// <item>causa no registrada (guardado anterior) → <c>epitaph.unknown</c>, neutra: no afirma dónde ni
+    /// cómo.</item>
+    /// </list>
     /// </summary>
     private static string Epitaph(RunState state, RunPlayer player, IReadOnlyList<RivalCredit> credits, RivalCatalog rivals, GazetteCatalog templates, string language)
     {
+        var none = new Dictionary<string, string>(StringComparer.Ordinal);
+        int salt = 500 + player.Id;
+        var cause = state.DeathCauseOf(player.Id);
+        if (cause == PlayerDeathCause.Sacrifice)
+        {
+            return Pick(templates, "epitaph.sacrifice", language, state.Seed, salt, none);
+        }
+
+        if (cause == PlayerDeathCause.Quack)
+        {
+            return Pick(templates, "epitaph.quack", language, state.Seed, salt, none);
+        }
+
         RivalCredit? killer = null;
         for (int i = 0; i < credits.Count; i++)
         {
@@ -346,23 +443,23 @@ public static class GazetteView
             }
         }
 
-        if (killer is null)
+        var team = killer is null ? null : rivals.Find(killer.RivalId);
+        if (killer is not null && team is not null && killer.RivalIndex >= 0 && killer.RivalIndex < team.Players.Count)
         {
-            return Pick(templates, "epitaph.unknown", language, state.Seed, 500 + player.Id, new Dictionary<string, string>(StringComparer.Ordinal));
+            var facts = new Dictionary<string, string>(StringComparer.Ordinal)
+            {
+                ["killer"] = team.Players[killer.RivalIndex].Name,
+                ["clan"] = NameIn(team.Name, language),
+            };
+            return Pick(templates, "epitaph.byRival", language, state.Seed, salt, facts);
         }
 
-        var team = rivals.Find(killer.RivalId);
-        if (team is null || killer.RivalIndex < 0 || killer.RivalIndex >= team.Players.Count)
+        return cause switch
         {
-            return Pick(templates, "epitaph.unknown", language, state.Seed, 500 + player.Id, new Dictionary<string, string>(StringComparer.Ordinal));
-        }
-
-        var facts = new Dictionary<string, string>(StringComparer.Ordinal)
-        {
-            ["killer"] = team.Players[killer.RivalIndex].Name,
-            ["clan"] = NameIn(team.Name, language),
+            PlayerDeathCause.MatchByOpponent => Pick(templates, "epitaph.byOpponent", language, state.Seed, salt, none),
+            PlayerDeathCause.MatchNoAuthor => Pick(templates, "epitaph.noAuthor", language, state.Seed, salt, none),
+            _ => Pick(templates, "epitaph.unknown", language, state.Seed, salt, none),
         };
-        return Pick(templates, "epitaph.byRival", language, state.Seed, 500 + player.Id, facts);
     }
 
     // ------------------------------------------------------------------ texto
@@ -388,7 +485,12 @@ public static class GazetteView
         return Fill(variants[(int)(Mix(seed, salt) % (ulong)variants.Count)], facts);
     }
 
-    /// <summary>Sustituye <c>{marcador}</c> por su valor; los marcadores que el contexto no da desaparecen, no se ven.</summary>
+    /// <summary>
+    /// Sustituye <c>{marcador}</c> por su valor. Un marcador que el contexto no da es un <b>error</b>
+    /// (<see cref="InvalidOperationException"/>), no un hueco silencioso: el cargador ya valida los
+    /// marcadores de cada clave (<see cref="GazetteCatalog.MarkersFor"/>), así que llegar aquí con uno
+    /// desconocido es un fallo de código o de un catálogo montado a mano, y debe verse en test.
+    /// </summary>
     private static string Fill(string template, IReadOnlyDictionary<string, string> facts)
     {
         var text = new System.Text.StringBuilder(template.Length + 16);
@@ -401,11 +503,13 @@ public static class GazetteView
                 if (close > i)
                 {
                     string name = template.Substring(i + 1, close - i - 1);
-                    if (facts.TryGetValue(name, out string? value))
+                    if (!facts.TryGetValue(name, out string? value))
                     {
-                        text.Append(value);
+                        throw new InvalidOperationException(
+                            $"la plantilla de la Gaceta «{template}» usa el marcador {{{name}}}, que este contexto no da (ADR 0163)");
                     }
 
+                    text.Append(value);
                     i = close + 1;
                     continue;
                 }

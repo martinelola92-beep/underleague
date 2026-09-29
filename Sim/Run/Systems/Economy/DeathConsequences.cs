@@ -30,10 +30,11 @@ public static class DeathConsequences
     /// muerto, devuelve su objeto al almacén, lo saca de la alineación guardada, y aplica reliquia,
     /// Herencia y oro de muerte. <paramref name="catalog"/> e <paramref name="items"/> pueden ser
     /// <c>null</c> (tests de sistemas sueltos): sin catálogo no hay vinculado que heredar, y sin
-    /// catálogo de objetos no hay reliquia.
+    /// catálogo de objetos no hay reliquia. <paramref name="cause"/> queda anotada para la esquela de la
+    /// Gaceta (ADR 0163): cada llamante decide cómo murió, sin valor por defecto.
     /// </summary>
     public static RunState Kill(
-        RunState state, int playerId, Catalog? catalog, EconomyConfig economy, ItemCatalog? items)
+        RunState state, int playerId, PlayerDeathCause cause, Catalog? catalog, EconomyConfig economy, ItemCatalog? items)
     {
         ArgumentNullException.ThrowIfNull(state);
         ArgumentNullException.ThrowIfNull(economy);
@@ -48,7 +49,7 @@ public static class DeathConsequences
             victim = victim with { Item = null };
         }
 
-        state = state.WithPlayer(victim with { PhysicalState = PhysicalState.Dead });
+        state = state.WithPlayer(victim with { PhysicalState = PhysicalState.Dead }).WithDeathCause(victim.Id, cause);
         state = StoreRecovered(state, recovered);
         state = MatchResolution.PruneLineup(state);
         var deaths = new[] { detail };

@@ -100,7 +100,7 @@ public static class MedicalSystem
             // de muerte: DeathConsequences), que es lo que la ADR 0048 (condición 4) exige de cualquier
             // muerte y que aquí se saltaba.
             return player.PhysicalState == PhysicalState.SevereInjury
-                ? DeathConsequences.Kill(state, player.Id, catalog, economy, items)
+                ? DeathConsequences.Kill(state, player.Id, PlayerDeathCause.Quack, catalog, economy, items)
                 : state.WithPlayer(Worse(player));
         }
 

@@ -317,7 +317,7 @@
       ]
     },
     {
-      "key": "epitaph.unknown",
+      "key": "epitaph.noAuthor",
       "es": [
         "Cayó en el campo, sin que nadie viera de dónde vino el golpe. La grada dice que fue el césped.",
         "Se fue como vivió: a mitad de una jugada. El árbitro no vio nada.",
@@ -327,6 +327,58 @@
         "Fell on the pitch and nobody saw where the blow came from. The crowd blames the turf.",
         "Left as they lived: in the middle of a play. The referee saw nothing.",
         "Died of what people die of here: playing."
+      ]
+    },
+    {
+      "key": "epitaph.byOpponent",
+      "es": [
+        "Cayó a manos de un rival que no dejó su nombre. Los jefes rara vez firman.",
+        "Lo mató un jugador rival; en el acta pone «causas deportivas».",
+        "Un rival se lo llevó por delante y ni siquiera pidió perdón."
+      ],
+      "en": [
+        "Fell at the hands of a rival who left no name. Bosses rarely sign.",
+        "Killed by an opposing player; the report says \"sporting causes\".",
+        "A rival took them out and did not even apologise."
+      ]
+    },
+    {
+      "key": "epitaph.sacrifice",
+      "es": [
+        "Se sacrificó por el vestuario: su mejor habilidad sigue en el campo; él, no.",
+        "Lo entregaron al club para que su talento le sobreviviera. Murió de generosidad, más o menos.",
+        "Dio la vida por un compañero, que prometió recordarlo por lo menos hasta el domingo."
+      ],
+      "en": [
+        "Sacrificed for the dressing room: their best trick is still on the pitch; they are not.",
+        "Handed over to the club so their talent would outlive them. Died of generosity, more or less.",
+        "Gave their life for a teammate, who promised to remember them at least until Sunday."
+      ]
+    },
+    {
+      "key": "epitaph.quack",
+      "es": [
+        "Murió en la mesa del matasanos, con la tarifa pagada por adelantado.",
+        "El tratamiento arriesgado salió como salen los tratamientos arriesgados.",
+        "La clínica lo intentó con todo, salvo con cuidado. Descanse en paz."
+      ],
+      "en": [
+        "Died on the quack's table, fee paid in advance.",
+        "The risky treatment went the way risky treatments go.",
+        "The clinic tried everything except caution. Rest in peace."
+      ]
+    },
+    {
+      "key": "epitaph.unknown",
+      "es": [
+        "No consta cómo se fue: el club perdió el papel donde lo apuntaban.",
+        "Se fue sin que nadie apuntara cómo. El acta dice «causas varias».",
+        "Las causas de su muerte se han perdido, como casi todo lo que se guarda en este club."
+      ],
+      "en": [
+        "How they went is not on record: the club lost the paper it was written on.",
+        "Left without anyone noting how. The report says \"various causes\".",
+        "The cause of death has been lost, like most things this club keeps."
       ]
     },
     {
