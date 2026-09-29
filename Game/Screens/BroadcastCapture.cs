@@ -102,6 +102,14 @@ public partial class BroadcastCapture : Control
             return;
         }
 
+        // ADR 0171: `-- destino` captura sólo la tirada del destino (salta el recorrido entero).
+        if (System.Array.IndexOf(OS.GetCmdlineUserArgs(), "destino") >= 0)
+        {
+            await CaptureFate(run);
+            GetTree().Quit();
+            return;
+        }
+
         // 1. Sondeo puro, sin Godot: para cada semilla, el primer nodo de partido del acto 1 y sus
         // momentos ya clasificados. Cuando un tipo ya tiene semilla asignada no se vuelve a buscar: gana
         // siempre la primera semilla de la lista que lo tenga.
@@ -1105,6 +1113,101 @@ public partial class BroadcastCapture : Control
             await ShowFrame(screen, From + After, "grito-" + id);
             GD.Print($"retransmisión: 'grito-{id}' fotograma {screen.Pitch3D.Frame}");
             await Save("grito-" + id);
+            Drop(instance);
+        }
+    }
+
+    /// <summary>
+    /// ADR 0171, la tirada del destino: en el acto 3 (desgaste ×4,2) hay tiradas de sobra, así que se sondean las
+    /// semillas fijas hasta dar con una que se salva y otra que cae, y de la primera se fotografía la secuencia
+    /// jugando de verdad, con el reloj a mano: antes de la tirada, con la cámara lenta y el sello girando, y el
+    /// resultado. La segunda se fotografía en plena rueda (el resultado de una que cae lo cuenta el estandarte
+    /// de «Herido»/la muerte, que ya tienen su captura).
+    /// </summary>
+    private async Task CaptureFate(RunController run)
+    {
+        (ulong Seed, int Node, MatchMoment Moment, string Detail)? saved = null;
+        (ulong Seed, int Node, MatchMoment Moment, string Detail)? hit = null;
+        for (ulong seed = 20260905UL; (saved is null || hit is null) && seed < 20260905UL + 40; seed++)
+        {
+            run.NewRun("orc_ironworks", Race.Orc, seed);
+            run.JumpToAct(3);
+            int node = FirstOfKind(run, n => n.IsMatch);
+            if (node < 0)
+            {
+                continue;
+            }
+
+            var playback = MatchPlaybacks.Of(run.State!, node, run.Catalog!, run.Engine, trace: true, MatchDecisions.None);
+            var moments = MatchMomentView.Build(playback.Setup, playback.Result, run.Catalog!).Moments;
+            foreach (var moment in moments)
+            {
+                // Pasado el pregón del saque (que ocupa la voz alta los primeros segundos): una tirada que cae
+                // debajo de él ni siquiera se ve, y no es lo que se quiere fotografiar.
+                if (moment.Kind != MomentKind.Fate || moment.Frame < 240)
+                {
+                    continue;
+                }
+
+                string detail = playback.Result.Events[moment.EventIndices[0]].Detail;
+                if (detail.EndsWith(":saved", StringComparison.Ordinal))
+                {
+                    saved ??= (seed, node, moment, detail);
+                }
+                else
+                {
+                    hit ??= (seed, node, moment, detail);
+                }
+            }
+        }
+
+        foreach (var (label, found) in new[] { ("salvada", saved), ("caída", hit) })
+        {
+            GD.Print(found is { } f
+                ? $"retransmisión: tirada del destino {label} en la semilla {f.Seed}, nodo {f.Node}, fotogramas {f.Moment.Frame}-{f.Moment.LastFrame}, {f.Detail}"
+                : $"retransmisión: ninguna semilla tiene una tirada del destino {label}");
+        }
+
+        foreach (var (label, found) in new[] { ("salva", saved), ("cae", hit) })
+        {
+            if (found is not { } f)
+            {
+                continue;
+            }
+
+            run.NewRun("orc_ironworks", Race.Orc, f.Seed);
+            run.JumpToAct(3);
+            run.SelectedNodeId = f.Node;
+            var instance = await Show("res://Scenes/Retransmision.tscn", frames: 10);
+            if (instance is not BroadcastScreen screen)
+            {
+                Drop(instance);
+                continue;
+            }
+
+            // Se llega de LEJOS y reproduciendo, como la cortinilla: tras un SeekTo el director devuelve su
+            // propio fotograma y la cámara lenta no se vería.
+            await ShowFrame(screen, Math.Max(f.Moment.Frame - 30, 0), "destino-" + label);
+            const double Delta = 1d / 120d;
+            async Task StepUntil(Func<bool> done, string name)
+            {
+                for (int i = 0; i < 4000 && !done(); i++)
+                {
+                    StepManual(screen, Delta, 1);
+                }
+
+                await Settle(2);
+                GD.Print($"{name}: fotograma {screen.Pitch3D.Frame}");
+                await Save(name);
+            }
+
+            await StepUntil(() => screen.Pitch3D.Frame >= f.Moment.Frame - 4, "destino-" + label + "-0-antes");
+            await StepUntil(() => screen.Pitch3D.Frame >= f.Moment.Frame + 3, "destino-" + label + "-1-rueda");
+            if (label == "salva")
+            {
+                await StepUntil(() => screen.Pitch3D.Frame >= f.Moment.LastFrame + 2, "destino-" + label + "-2-resultado");
+            }
+
             Drop(instance);
         }
     }
