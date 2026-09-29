@@ -173,7 +173,7 @@ public partial class CaptureRunner : Control
         }
 
         // 2c. ADR 0102: la prueba de geometría en 3D. Cápsulas grises a las proporciones de RA-002, cámara
-        //     ortográfica fija en tres cuartos y sombra direccional desde arriba a la izquierda (RA-005,
+        //     en tres cuartos (perspectiva desde la ADR 0174) y sombra direccional desde arriba a la izquierda (RA-005,
         //     RA-008). Las cuatro imágenes salen del MISMO fotograma —la reproducción está parada desde el
         //     arrastre de la barra— para que lo único que cambie entre ellas sea lo que se está juzgando.
         var pitch3d = FindPitch3D(match);
@@ -193,7 +193,9 @@ public partial class CaptureRunner : Control
             await Settle(6);
             await Save("partido-3d");
 
-            // El barrido de elevación: es la palanca barata del ADR 0102 si en tres cuartos no se lee.
+            // El barrido de elevación: es la palanca barata del ADR 0102 si en tres cuartos no se lee. Se
+            // deja el ángulo por defecto (ADR 0174) para que las capturas de silueta y razas de más abajo
+            // salgan con la cámara real y no con la del último barrido.
             foreach (int degrees in new[] { 30, 60 })
             {
                 pitch3d.Elevation = degrees;
@@ -201,7 +203,7 @@ public partial class CaptureRunner : Control
                 await Save("partido-3d-angulo-" + degrees.ToString(System.Globalization.CultureInfo.InvariantCulture));
             }
 
-            pitch3d.Elevation = 60f;
+            pitch3d.Elevation = MatchPitchView3D.DefaultElevation;
 
             // Modo silueta: RA-002 al pie de la letra, «toda raza debe ser reconocible en blanco y negro».
             await Click(new Vector2(1233f, 198f));

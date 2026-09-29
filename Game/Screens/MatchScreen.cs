@@ -228,12 +228,16 @@ public partial class MatchScreen : Control
         _pitch.PlayerPicked += OnPlayerPicked;
         AddChild(_pitch);
 
-        // ADR 0102: el mismo rectángulo, en 3D con cámara ortográfica fija en tres cuartos. Arranca
+        // ADR 0102 y ADR 0174: el mismo rectángulo, en 3D con la cámara en perspectiva de la retransmisión
+        // (los valores por defecto de MatchPitchView3D), encajada para que el campo ENTERO y las dos
+        // porterías quepan en este rectángulo (PitchFit.Framed: BA-F, con la ortográfica de la ADR 0102 y
+        // el encuadre pensado para 16x5 esta vista cortaba el campo y no enseñaba a los porteros). Arranca
         // apagado y la vista 2D se conserva: el 3D no la sustituye hasta que la iguale en legibilidad.
         _pitch3d = new MatchPitchView3D
         {
             Position = _pitch.Position,
             Size = _pitch.Size,
+            Fit = MatchPitchView3D.PitchFit.Framed,
             Visible = false,
         };
         AddChild(_pitch3d);

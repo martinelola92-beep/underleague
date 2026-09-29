@@ -22,8 +22,8 @@ namespace Underleague.Game.Ui;
 public readonly record struct BloodMark(int Frame, float Column, float Row, float Size);
 
 /// <summary>
-/// El mismo partido que <see cref="MatchPitchView"/>, pero en <b>3D visto por una cámara ortográfica fija
-/// en tres cuartos</b> (ADR 0102). Todavía sin toon ni modelos: <b>cápsulas grises</b> a las proporciones
+/// El mismo partido que <see cref="MatchPitchView"/>, pero en <b>3D visto por una cámara fija en tres
+/// cuartos</b> (ADR 0102; en perspectiva desde la ADR 0174, ortográfica antes). Todavía sin toon ni modelos: <b>cápsulas grises</b> a las proporciones
 /// de RA-002 y con el radio de <c>bodyRadius</c>, que es el volumen que de verdad simula
 /// <c>Sim.Engine.BodySeparation</c> (ADR 0020). Es el paso 1 de «cómo se acepta» del ADR 0102: probar la
 /// geometría antes de encargar nada de arte.
@@ -87,6 +87,28 @@ public partial class MatchPitchView3D : SubViewportContainer
     /// delante del plano cercano.
     /// </summary>
     private const float CameraDistance = 11f;
+
+    /// <summary>
+    /// Cuánto más allá del punto de mira, medido sobre el eje de la cámara, llega lo más lejano que tiene que
+    /// recibir sombra: con la cámara a 45° el borde inferior de las banderolas de la grada, a 4,30 (el techo
+    /// de la grada está a 3,96 y el borde lejano del césped a 2,47, medido con <c>tools/camara-encaje.py</c>).
+    /// Depende de la elevación —a 35°-40° serían 4,5-5,4—, y solo vale para la elegida.
+    /// </summary>
+    private const float ShadowDepthBeyondCenter = 4.3f;
+
+    /// <summary>
+    /// Dónde empieza el desvanecimiento del mapa de sombras direccional, como fracción de su alcance
+    /// (<c>DirectionalShadowFadeStart</c>; el 0,8 por defecto de Godot). Lo que caiga más allá de esta
+    /// fracción se difumina, así que el alcance se pide para que la grada quede DENTRO de ella.
+    /// </summary>
+    private const float ShadowFadeStart = 0.8f;
+
+    /// <summary>
+    /// Ancho de la grada, centrada en el campo (BA-F). Con la cámara ortográfica bastaban 19,5; en
+    /// perspectiva el objetivo abre más a los lados de la valla y los extremos de la grada entraban en
+    /// pantalla como un muro cortado.
+    /// </summary>
+    private const float StandWidth = 30f;
 
     /// <summary>
     /// Proporción ancho x alto de cada raza según <b>RA-002</b> (§5.1 de <c>docs/requisitos.md</c>). Esto
@@ -267,9 +289,26 @@ public partial class MatchPitchView3D : SubViewportContainer
     /// <summary>Cuánto dura el pergamino "¡Falta!"/"¿?" sobre la cabeza del árbitro.</summary>
     private const float RefereeCueSeconds = 0.9f;
 
+    /// <summary>
+    /// Elevación de la cámara del partido, en grados sobre el césped (ADR 0174, BA-F): 45°, la misma que ya
+    /// tenía la retransmisión. Se comparó con capturas sobre los mismos fotogramas contra 35°-60° y la
+    /// razón para no subirla es la altura de las fichas: a 55° una ficha de la fila cercana se ve casi desde
+    /// arriba (orco: alto/ancho 0,40 contra los 0,56 que daba la ortográfica de 60°) y la diferencia de
+    /// altura entre un elfo y un enano —lo único que los separa en cápsula— cae un 40 %. Ver la ADR.
+    /// </summary>
+    public const float DefaultElevation = 45f;
+
+    /// <summary>
+    /// Campo de visión <b>vertical</b> de la cámara del partido, en grados, para un rectángulo 16:10 (ADR
+    /// 0174, BA-F): 45°, que son 67° horizontales. Es lo que hace <b>perceptible</b> la perspectiva: el borde
+    /// lejano del césped mide el 72 % del cercano, contra el 80 % de los 30° que había. Una esfera en el
+    /// borde del encuadre se estira 1/cos(FOV horizontal / 2) = 1,20 (con 92° serían 1,44).
+    /// </summary>
+    public const float DefaultFov = 45f;
+
     /// <summary>Elevación de la cámara en grados sobre el césped. Es <c>[Export]</c> para poder barrerla en las capturas.</summary>
     [Export]
-    public float Elevation { get; set; } = 60f;
+    public float Elevation { get; set; } = DefaultElevation;
 
     /// <summary>
     /// Alto del encuadre ortográfico en unidades de mundo (Godot mide el <c>Size</c> ortográfico en
@@ -304,21 +343,53 @@ public partial class MatchPitchView3D : SubViewportContainer
     public bool SilhouetteMode { get; set; }
 
     /// <summary>
-    /// Proyección en perspectiva en vez de ortográfica (revisión del orquestador, 19 sep 2026: «el campo
-    /// debe tener más 3D, más profundidad»). Por defecto <c>false</c>: el modo depuración
-    /// (<see cref="Screens.MatchScreen"/>) no toca esta propiedad y se queda exactamente como en el ADR
-    /// 0102 (ortográfico fijo en tres cuartos). Solo <see cref="Screens.BroadcastScreen"/> la activa.
+    /// Proyección en perspectiva (ADR 0174, BA-F; antes la ADR 0102 fijaba la ortográfica y la retransmisión
+    /// la sustituyó por perspectiva el 19 sep 2026, «el campo debe tener más 3D, más profundidad»). Por
+    /// defecto <c>true</c> en toda vista 3D del partido, la retransmisión y el modo depuración por igual.
+    /// <c>false</c> deja la ortográfica fija en tres cuartos de la ADR 0102, que ya no es una vista del
+    /// jugador: queda para comparar siluetas y medir casillas a igual escala en las capturas. Con ella
+    /// apagada <see cref="Elevation"/> ya no vale 60° por defecto (es <see cref="DefaultElevation"/>): quien
+    /// quiera la ortográfica de la ADR 0102 tal cual la fija, junto con <see cref="OrthoSize"/>.
     /// </summary>
     [Export]
-    public bool Perspective { get; set; }
+    public bool Perspective { get; set; } = true;
 
     /// <summary>
     /// Campo de visión <b>vertical</b> en grados (la cámara mantiene <c>KeepAspectEnum.Height</c>), solo
     /// leído cuando <see cref="Perspective"/> está activo. Con <see cref="Perspective"/> apagado no hace
-    /// nada: el ortográfico no tiene FOV.
+    /// nada: el ortográfico no tiene FOV. Por defecto <see cref="DefaultFov"/>.
     /// </summary>
     [Export]
-    public float Fov { get; set; } = 35f;
+    public float Fov { get; set; } = DefaultFov;
+
+    /// <summary>
+    /// Dónde encaja el campo dentro de esta vista (ADR 0174): fracciones del viewport, no píxeles, para que
+    /// valga igual a 1280x800 que a 1920x1200. <c>XMin</c>/<c>XMax</c> son los bordes
+    /// laterales del césped y mandan en la distancia de la cámara; <c>YMin</c> acota cuánto puede
+    /// crecer el hueco por arriba; <c>YNear</c> es donde se ancla el borde cercano (el más bajo en
+    /// pantalla, el que puede comerse las tiras) y <c>YHardMax</c> el suelo que ninguna variante
+    /// puede pasar. Con <c>CenterVertically</c> no hay ancla: el campo se centra en el hueco entre
+    /// <c>YMin</c> y <c>YHardMax</c>.
+    /// </summary>
+    public readonly record struct PitchFit(float XMin, float XMax, float YMin, float YNear, float YHardMax, bool CenterVertically)
+    {
+        /// <summary>
+        /// La retransmisión: el 3D cubre el lienzo entero, detrás del tablero (arriba) y de las tiras
+        /// (abajo, desde 735 de 800). Ancho 45-1235 de 1280; borde cercano anclado en 690, que deja 45 px
+        /// de margen contra las tiras y sube la grada (revisión del orquestador, 19 sep 2026, variante D).
+        /// </summary>
+        public static PitchFit Broadcast { get; } = new(45f / 1280f, 1235f / 1280f, 200f / 800f, 690f / 800f, 735f / 800f, false);
+
+        /// <summary>
+        /// El modo depuración: la vista es un rectángulo propio sin nada encima. Campo entero con un
+        /// margen del 2 % a los lados y centrado en el hueco (BA-F: con la ortográfica de la ADR 0102 y un
+        /// <see cref="OrthoSize"/> pensado para 16x5 esta vista cortaba el campo y las porterías).
+        /// </summary>
+        public static PitchFit Framed { get; } = new(0.02f, 0.98f, 0.03f, 0.97f, 0.97f, true);
+    }
+
+    /// <summary>Dónde encaja el campo en la vista, solo leído en perspectiva. Por defecto el de la retransmisión.</summary>
+    public PitchFit Fit { get; set; } = PitchFit.Broadcast;
 
     /// <summary>
     /// Pistas de profundidad alrededor del campo — césped gastado, vallas con patrocinadores de parodia y
@@ -1091,10 +1162,9 @@ public partial class MatchPitchView3D : SubViewportContainer
 
     private void ApplyCamera()
     {
-        // El modo depuración (Perspective apagado por defecto) no pasa por aquí en absoluto más que para
-        // fijar el tipo de proyección: con Perspective=false esta línea deja la cámara exactamente como
-        // antes de este cambio (ADR 0102), y ApplyOrthographicCamera es el cuerpo íntegro de la vieja
-        // ApplyCamera, sin tocar.
+        // Perspective (por defecto, ADR 0174) usa el encaje automático; Perspective=false deja la cámara
+        // ortográfica de la ADR 0102, cuyo cuerpo íntegro es ApplyOrthographicCamera, la vieja ApplyCamera
+        // sin tocar (no se ha vuelto a ejecutar con la ADR 0174).
         _camera.Projection = Perspective ? Camera3D.ProjectionType.Perspective : Camera3D.ProjectionType.Orthogonal;
 
         if (Perspective)
@@ -1172,8 +1242,16 @@ public partial class MatchPitchView3D : SubViewportContainer
         from += shake;
         gestureCenter += shake;
 
-        _camera.Fov = Mathf.Clamp(Fov, 1f, 179f);
+        _camera.Fov = EffectiveFov(Mathf.Clamp(Fov, 1f, 179f), _world.Size);
         _camera.LookAtFromPosition(from, gestureCenter, Vector3.Up);
+
+        // BA-F: el mapa de sombras direccional se reparte desde la CÁMARA (ver CameraDistance), y los 18 de
+        // la cámara ortográfica a 11 unidades dejaban el campo entero más allá del alcance en cuanto la
+        // perspectiva la alejó a 22: sin sombra, el jugador no toca el suelo (RA-008). El alcance sale de la
+        // distancia ENCAJADA —no de la del gesto, para que la resolución de la sombra no cambie mientras la
+        // cámara se acerca— más lo que hay hasta el techo de la grada, dividido por donde empieza el fundido.
+        _sun.DirectionalShadowFadeStart = ShadowFadeStart;
+        _sun.DirectionalShadowMaxDistance = (_fitDistance + ShadowDepthBeyondCenter) / ShadowFadeStart;
     }
 
     // ------------------------------------------------------------------ diagnóstico (BroadcastCapture)
@@ -1456,6 +1534,7 @@ public partial class MatchPitchView3D : SubViewportContainer
     private float _fitElevation = float.NaN;
     private float _fitFov = float.NaN;
     private Vector2I _fitViewportSize;
+    private PitchFit _fitLayout;
     private float _fitDistance = CameraDistance;
     private float _fitPan;
 
@@ -1472,7 +1551,7 @@ public partial class MatchPitchView3D : SubViewportContainer
 
         float elevation = Mathf.Clamp(Elevation, 5f, 89f);
         float fov = Mathf.Clamp(Fov, 1f, 179f);
-        if (Mathf.IsEqualApprox(_fitElevation, elevation) && Mathf.IsEqualApprox(_fitFov, fov) && _fitViewportSize == size)
+        if (Mathf.IsEqualApprox(_fitElevation, elevation) && Mathf.IsEqualApprox(_fitFov, fov) && _fitViewportSize == size && _fitLayout == Fit)
         {
             return;
         }
@@ -1481,22 +1560,41 @@ public partial class MatchPitchView3D : SubViewportContainer
         _fitElevation = elevation;
         _fitFov = fov;
         _fitViewportSize = size;
+        _fitLayout = Fit;
+    }
+
+    /// <summary>Relación de aspecto de referencia de <see cref="Fov"/>: 1920x1200, el lienzo de la retransmisión a 16:10.</summary>
+    private const float FovReferenceAspect = 1.6f;
+
+    /// <summary>
+    /// El FOV vertical que hay que poner a la cámara para que <paramref name="nominalFov"/> signifique lo
+    /// mismo en cualquier rectángulo (ADR 0174): se define para la relación de aspecto de referencia
+    /// (<see cref="FovReferenceAspect"/>) y de ahí se conserva el FOV <b>horizontal</b>, que es el que decide
+    /// cuánto converge el campo —el ancho del césped es lo que se encaja—. Sin esto, el mismo 45° vertical
+    /// en el rectángulo 2,24:1 del modo depuración eran 86° de campo horizontal, en vez de 67°, y las
+    /// fichas de los extremos se estiraban 1,37 en vez de 1,20. Con 16:10 devuelve el nominal tal cual.
+    /// </summary>
+    private static float EffectiveFov(float nominalFov, Vector2I viewportSize)
+    {
+        if (viewportSize.X <= 0 || viewportSize.Y <= 0)
+        {
+            return nominalFov;
+        }
+
+        float aspect = viewportSize.X / (float)viewportSize.Y;
+        float halfTan = Mathf.Tan(Mathf.DegToRad(nominalFov) / 2f) * FovReferenceAspect / aspect;
+        return Mathf.Clamp(Mathf.RadToDeg(2f * Mathf.Atan(halfTan)), 1f, 179f);
     }
 
     /// <summary>
-    /// Rectángulo de pantalla destinado al campo, escalado al tamaño real del viewport de esta vista:
-    /// ancho 45-1235 (sigue mandando en la bisección de distancia), <see cref="FieldRect"/> alto de
-    /// referencia 200 (solo para acotar cuánto puede crecer el hueco vertical, ver
-    /// <see cref="SolvePerspectiveFit"/>) y el <b>ancla</b> del borde cercano en 690 — no 665 — con el
-    /// límite duro de las tiras en 735 (revisión del orquestador, 19 sep 2026, variante D elegida: a 602
-    /// sobraba hueco antes de las tiras; 690 deja 45px de margen contra las tiras y sube la grada, que
-    /// gana alto por arriba). Es el objetivo que persigue <see cref="SolvePerspectiveFit"/>.
+    /// Rectángulo de pantalla destinado al campo (<see cref="Fit"/>) por el tamaño real del viewport de
+    /// esta vista. Es el objetivo que persigue <see cref="SolvePerspectiveFit"/>.
     /// </summary>
-    private static (float XMin, float XMax, float YMin, float YNearTarget, float YHardMax) FieldRect(Vector2I viewportSize)
+    private (float XMin, float XMax, float YMin, float YNearTarget, float YHardMax) FieldRect(Vector2I viewportSize)
     {
-        float scaleX = viewportSize.X / 1280f;
-        float scaleY = viewportSize.Y / 800f;
-        return (45f * scaleX, 1235f * scaleX, 200f * scaleY, 690f * scaleY, 735f * scaleY);
+        float width = viewportSize.X;
+        float height = viewportSize.Y;
+        return (Fit.XMin * width, Fit.XMax * width, Fit.YMin * height, Fit.YNear * height, Fit.YHardMax * height);
     }
 
     /// <summary>
@@ -1525,7 +1623,7 @@ public partial class MatchPitchView3D : SubViewportContainer
             new Vector3(Pitch.Columns, 0f, Pitch.Rows),
         };
 
-        _camera.Fov = fovDeg;
+        _camera.Fov = EffectiveFov(fovDeg, viewportSize);
 
         (float MinX, float MaxX, float MinY, float MaxY) Extent(float distance, float pan)
         {
@@ -1584,14 +1682,19 @@ public partial class MatchPitchView3D : SubViewportContainer
         // El desplazamiento baja el borde CERCANO de la imagen (MaxY) cuanto más pan positivo se aplique
         // (misma convención que PanUp: positivo baja el campo en pantalla), así que se busca por bisección
         // en vez de despejar — no es lineal por la perspectiva. Se ancla el borde cercano, no se centra el
-        // hueco: da igual cuánto sobre por arriba, ahí es donde tiene que crecer la grada.
+        // hueco: da igual cuánto sobre por arriba, ahí es donde tiene que crecer la grada. Con
+        // PitchFit.CenterVertically (el modo depuración, sin tablero ni tiras que respetar) sí se centra:
+        // el centro de la imagen del campo cae en el centro del hueco. Las dos medidas crecen con el pan.
         float panLo = -20f;
         float panHi = 20f;
+        bool centered = Fit.CenterVertically;
+        float target = centered ? (yMin + yHardMax) / 2f : yNearTarget;
         for (int i = 0; i < 40; i++)
         {
             float mid = (panLo + panHi) / 2f;
-            float bottom = Extent(distance, mid).MaxY;
-            if (bottom < yNearTarget)
+            var extent = Extent(distance, mid);
+            float measure = centered ? (extent.MinY + extent.MaxY) / 2f : extent.MaxY;
+            if (measure < target)
             {
                 panLo = mid;
             }
@@ -2418,7 +2521,10 @@ public partial class MatchPitchView3D : SubViewportContainer
     {
         // Explanada: tierra apisonada con hierba rala alrededor del rectángulo de juego, y una franja algo
         // más clara justo delante de la cámara (la "boca" del estadio en la tele).
-        AddBox(new Vector3(8f, -0.03f, 3.5f), new Vector3(24f, 0.04f, 13f), new Color("4b5a36"), shadow: false);
+        // BA-F: con la perspectiva la cámara se acerca y el objetivo abre más, así que el borde de la
+        // explanada (antes 24x13) entraba en pantalla como una diagonal en las esquinas de arriba. Se
+        // alarga hasta pasar de largo por los lados y por detrás de la grada.
+        AddBox(new Vector3(8f, -0.03f, 2f), new Vector3(56f, 0.04f, 26f), new Color("4b5a36"), shadow: false);
         AddBox(new Vector3(8f, -0.02f, -0.45f), new Vector3(18.4f, 0.03f, 0.8f), new Color("6b5a3e"), shadow: false);
 
         // Vallas de publicidad en la banda del fondo (lado lejano de la cámara): la banda cercana queda
@@ -2466,12 +2572,12 @@ public partial class MatchPitchView3D : SubViewportContainer
         {
             float z = -1.05f - (tier * 0.62f);
             float y = 0.18f + (tier * 0.36f);
-            AddBox(new Vector3(8f, y / 2f, z), new Vector3(19.5f, y, 0.62f), tier % 2 == 0 ? new Color("5c4632") : new Color("6e5640"));
+            AddBox(new Vector3(8f, y / 2f, z), new Vector3(StandWidth, y, 0.62f), tier % 2 == 0 ? new Color("5c4632") : new Color("6e5640"));
 
-            var multiMesh = new MultiMesh { TransformFormat = MultiMesh.TransformFormatEnum.Transform3D, UseColors = true, Mesh = body, InstanceCount = 62 };
+            var multiMesh = new MultiMesh { TransformFormat = MultiMesh.TransformFormatEnum.Transform3D, UseColors = true, Mesh = body, InstanceCount = (int)(StandWidth / 0.305f) };
             for (int k = 0; k < multiMesh.InstanceCount; k++)
             {
-                float x = -1.4f + (k * 0.305f) + rng.RandfRange(-0.06f, 0.06f);
+                float x = (8f - (StandWidth / 2f)) + 0.35f + (k * 0.305f) + rng.RandfRange(-0.06f, 0.06f);
                 float h = rng.RandfRange(0.9f, 1.15f);
                 var transform = new Transform3D(
                     Basis.Identity.Scaled(new Vector3(1f, h, 1f)),
@@ -2484,11 +2590,13 @@ public partial class MatchPitchView3D : SubViewportContainer
         }
 
         // Remate de la grada: una viga con banderolas alternando los dos equipos.
-        AddBox(new Vector3(8f, 2.05f, -4.2f), new Vector3(19.5f, 0.12f, 0.12f), new Color("3a2a1a"));
-        for (int f = 0; f < 12; f++)
+        AddBox(new Vector3(8f, 2.05f, -4.2f), new Vector3(StandWidth, 0.12f, 0.12f), new Color("3a2a1a"));
+        int flags = (int)(StandWidth / 1.6f);
+        float firstFlag = 8f - ((flags - 1) * 1.6f / 2f);
+        for (int f = 0; f < flags; f++)
         {
             var flagColor = f % 2 == 0 ? new Color("2f6fd6") : new Color("d63a2f");
-            AddBox(new Vector3(-0.8f + (f * 1.6f), 1.8f, -4.15f), new Vector3(0.5f, 0.45f, 0.03f), flagColor);
+            AddBox(new Vector3(firstFlag + (f * 1.6f), 1.8f, -4.15f), new Vector3(0.5f, 0.45f, 0.03f), flagColor);
         }
     }
 

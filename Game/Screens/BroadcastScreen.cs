@@ -51,13 +51,14 @@ public partial class BroadcastScreen : Control
     public static PitchVariant? CaptureVariant { get; set; }
 
     /// <summary>
-    /// La variante elegida tras comparar A-E con capturas (revisión del orquestador, 19 sep 2026):
-    /// perspectiva FOV 30°/elevación 45°, con estadio — más profundidad que el ortográfico sin el
-    /// ensanchamiento de esquinas de un FOV más abierto. Es lo que ve cualquier partido de verdad; el modo
-    /// depuración (<see cref="MatchScreen"/>) no la usa, sigue con los valores por defecto de
-    /// <see cref="Ui.MatchPitchView3D"/> (ortográfico, sin estadio).
+    /// La cámara de un partido de verdad (ADR 0174, BA-F): la perspectiva por defecto de
+    /// <see cref="Ui.MatchPitchView3D"/> —elevación <see cref="Ui.MatchPitchView3D.DefaultElevation"/>, FOV
+    /// <see cref="Ui.MatchPitchView3D.DefaultFov"/>— con estadio. Sustituye a la variante D de la revisión
+    /// del 19 sep 2026 (45°/30°): la perspectiva de entonces era demasiado leve para percibirse. El modo
+    /// depuración (<see cref="MatchScreen"/>) usa la misma cámara, sin estadio y encajada a su rectángulo.
     /// </summary>
-    private static readonly PitchVariant DefaultVariant = new("D", Perspective: true, Elevation: 45f, Fov: 30f, Stadium: true);
+    private static readonly PitchVariant DefaultVariant = new(
+        "F", Perspective: true, Elevation: Ui.MatchPitchView3D.DefaultElevation, Fov: Ui.MatchPitchView3D.DefaultFov, Stadium: true);
 
     private const float CanvasWidth = 1920f;
 
@@ -358,8 +359,9 @@ public partial class BroadcastScreen : Control
 
             // docs/ui/README.md §7: Size 10,75 a 16:10 (9,68 a 16:9) — ancho del campo (16) + 0,6 casillas
             // por lado, para el lienzo entero: OrthoSize (alto) = (Columnas + 1,2) / aspecto. Solo se lee
-            // en ortográfico (variantes A/B o el campo de siempre); en perspectiva el encaje automático de
-            // MatchPitchView3D decide la distancia y el desplazamiento por su cuenta.
+            // en ortográfico (las variantes A/B del arnés de capturas); en perspectiva, que es lo normal
+            // desde la ADR 0174, el encaje automático de MatchPitchView3D decide la distancia y el
+            // desplazamiento por su cuenta.
             OrthoSize = (Pitch.Columns + 1.2f) / (CanvasWidth / _canvasHeight),
 
             // Bajado, no centrado (composición validada: el tablero se lleva más margen arriba que las

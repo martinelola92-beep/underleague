@@ -110,6 +110,17 @@ public partial class BroadcastCapture : Control
             return;
         }
 
+        // BA-F, ADR 0174: `-- camara 45/30 55/50 ...` compara cámaras (elevación/FOV) sobre los MISMOS
+        // fotogramas (salta el recorrido entero, que tarda minutos).
+        var commandLine = OS.GetCmdlineUserArgs();
+        int cameraArg = System.Array.IndexOf(commandLine, "camara");
+        if (cameraArg >= 0)
+        {
+            await CaptureCameraSweep(run, commandLine[(cameraArg + 1)..]);
+            GetTree().Quit();
+            return;
+        }
+
         // 1. Sondeo puro, sin Godot: para cada semilla, el primer nodo de partido del acto 1 y sus
         // momentos ya clasificados. Cuando un tipo ya tiene semilla asignada no se vuelve a buscar: gana
         // siempre la primera semilla de la lista que lo tenga.
@@ -855,6 +866,10 @@ public partial class BroadcastCapture : Control
         new("C", Perspective: true, Elevation: 55f, Fov: 35f, Stadium: true),
         new("D", Perspective: true, Elevation: 45f, Fov: 30f, Stadium: true),
         new("E", Perspective: true, Elevation: 40f, Fov: 40f, Stadium: true),
+
+        // F: la elegida por la ADR 0174 (BA-F): la misma elevación que D (la de la enmienda del 19 sep de la ADR
+        // 0120) con el FOV abierto de 30° a 45°.
+        new("F", Perspective: true, Elevation: Ui.MatchPitchView3D.DefaultElevation, Fov: Ui.MatchPitchView3D.DefaultFov, Stadium: true),
     };
 
     /// <summary>
@@ -925,6 +940,199 @@ public partial class BroadcastCapture : Control
         }
 
         BroadcastScreen.CaptureVariant = null;
+    }
+
+    /// <summary>
+    /// Barrido de cámara de BA-F (ADR 0174). Cada argumento es <c>elevación/FOV</c> en grados
+    /// (<c>45/30</c>); todas las variantes son en perspectiva y con estadio. Se fotografían los MISMOS
+    /// fotogramas con cada una —el plano general, el gol, la lesión, la turba, el cartel de perk, la sangre
+    /// y el árbitro—, así que lo único que cambia entre dos imágenes es la cámara. Salen como
+    /// <c>cam-&lt;variante&gt;-&lt;toma&gt;.png</c>. Sondeo sin Godot sobre dos semillas fijas (la de siempre
+    /// y la de la turba): no busca en las doce, para que un barrido tarde segundos y no minutos.
+    /// </summary>
+    private async Task CaptureCameraSweep(RunController run, string[] specs)
+    {
+        var variants = new List<BroadcastScreen.PitchVariant>();
+        foreach (var spec in specs)
+        {
+            var parts = spec.Split('/');
+            if (parts.Length == 2
+                && float.TryParse(parts[0], System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out float elevation)
+                && float.TryParse(parts[1], System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out float fov))
+            {
+                variants.Add(new BroadcastScreen.PitchVariant($"e{elevation:0}f{fov:0}", Perspective: true, elevation, fov, Stadium: true));
+            }
+            else
+            {
+                GD.PushWarning($"camara: '{spec}' no es elevación/FOV (por ejemplo 45/30); se ignora");
+            }
+        }
+
+        // Tomas por semilla: (etiqueta, fotograma). El plano general es el fotograma 20, ya pasado el saque.
+        var shotsBySeed = new Dictionary<ulong, (int Node, List<(string Label, int Frame)> Shots)>();
+        foreach (var seed in new[] { 20260905UL, 3UL })
+        {
+            run.NewRun("orc_ironworks", Race.Orc, seed);
+            int node = FirstOfKind(run, n => n.IsMatch);
+            if (node < 0)
+            {
+                continue;
+            }
+
+            var playback = MatchPlaybacks.Of(run.State!, node, run.Catalog!, run.Engine, trace: true, MatchDecisions.None);
+            var moments = MatchMomentView.Build(playback.Setup, playback.Result, run.Catalog!).Moments;
+            var shots = new List<(string Label, int Frame)>();
+            if (seed == 20260905UL)
+            {
+                shots.Add(("base", 20));
+                foreach (var (label, matches) in Kinds)
+                {
+                    if (label is "gol" or "lesion")
+                    {
+                        for (int i = 0; i < moments.Count; i++)
+                        {
+                            if (matches(moments[i]))
+                            {
+                                shots.Add((label, moments[i].Frame));
+                                break;
+                            }
+                        }
+                    }
+                }
+
+                if (FindPerkBurst(playback, seed, node) is { } burst)
+                {
+                    shots.Add(("perk", burst.Frame));
+                }
+
+                if (FindBlood(playback, moments, seed, node) is { } blood)
+                {
+                    shots.Add(("sangre", blood.Frame));
+                }
+
+                if (FindFoul(playback, "foul", seed, node) is { } foul)
+                {
+                    shots.Add(("arbitro", foul.Frame));
+                }
+            }
+            else
+            {
+                foreach (var (label, matches) in Kinds)
+                {
+                    if (label != "turba")
+                    {
+                        continue;
+                    }
+
+                    for (int i = 0; i < moments.Count; i++)
+                    {
+                        if (matches(moments[i]))
+                        {
+                            shots.Add((label, moments[i].Frame));
+                            break;
+                        }
+                    }
+                }
+            }
+
+            shotsBySeed[seed] = (node, shots);
+        }
+
+        foreach (var variant in variants)
+        {
+            foreach (var (seed, (node, shots)) in shotsBySeed)
+            {
+                BroadcastScreen.CaptureVariant = variant;
+                run.NewRun("orc_ironworks", Race.Orc, seed);
+                run.SelectedNodeId = node;
+                var instance = await Show("res://Scenes/Retransmision.tscn", frames: 10);
+                if (instance is not BroadcastScreen screen)
+                {
+                    GD.PushError("res://Scenes/Retransmision.tscn no instancia BroadcastScreen: no hay barrido de cámara");
+                    GetTree().Quit(1);
+                    return;
+                }
+
+                foreach (var (label, frame) in shots)
+                {
+                    await ShowFrame(screen, frame, $"cam-{variant.Label}-{label}");
+                    await Save($"cam-{variant.Label}-{label}");
+                }
+
+                ReportFraming(screen, variant.Label);
+                Drop(instance);
+            }
+        }
+
+        BroadcastScreen.CaptureVariant = null;
+    }
+
+    /// <summary>
+    /// Mide el encuadre en píxeles físicos (el viewport de la captura, no el lienzo lógico de 1920): dónde
+    /// caen las cuatro esquinas del césped y los extremos de las dos porterías —postes, larguero y fondo
+    /// de la red—, y cuánto miden a lo ancho un jugador de radio 0,38 en la fila lejana y en la cercana.
+    /// «El campo entero sin recortar bandas ni porterías» (ADR 0174) se comprueba con esto, no a ojo.
+    /// </summary>
+    private void ReportFraming(BroadcastScreen screen, string label)
+    {
+        var pitch3d = screen.Pitch3D;
+        var view = GetViewport().GetVisibleRect().Size;
+        float ratio = view.X / pitch3d.Size.X;
+        Vector2 Px(Vector3 world) => pitch3d.DebugProject(world) * ratio;
+
+        float mid = Pitch.Rows / 2f;
+        float right = Pitch.Columns;
+        var corners = new[]
+        {
+            Px(new Vector3(0f, 0f, 0f)), Px(new Vector3(right, 0f, 0f)),
+            Px(new Vector3(0f, 0f, Pitch.Rows)), Px(new Vector3(right, 0f, Pitch.Rows)),
+        };
+
+        // Los extremos de cada portería: la red mide 0,9 de alto y 0,55 de fondo, y sobresale de la línea.
+        var goalPoints = new List<Vector2>();
+        foreach (float lineX in new[] { 0f, right })
+        {
+            float back = lineX == 0f ? -0.55f : right + 0.55f;
+            foreach (float z in new[] { mid - 1.0f, mid + 1.0f })
+            {
+                goalPoints.Add(Px(new Vector3(lineX, 0.9f, z)));
+                goalPoints.Add(Px(new Vector3(back, 0f, z)));
+                goalPoints.Add(Px(new Vector3(back, 0.9f, z)));
+            }
+        }
+
+        float minX = float.MaxValue;
+        float maxX = float.MinValue;
+        foreach (var point in goalPoints)
+        {
+            minX = Mathf.Min(minX, point.X);
+            maxX = Mathf.Max(maxX, point.X);
+        }
+
+        float Width(float z)
+        {
+            var a = Px(new Vector3(8f - 0.38f, 0f, z));
+            var b = Px(new Vector3(8f + 0.38f, 0f, z));
+            return Mathf.Abs(b.X - a.X);
+        }
+
+        // Lo que la ADR 0174 pide del plano general, comprobado y no solo impreso: el césped y las
+        // porterías dentro de la vista, y el borde cercano sobre las tiras (anclado en 690 de 800).
+        float nearY = Mathf.Max(corners[2].Y, corners[3].Y);
+        if (corners[2].X < 0f || corners[3].X > view.X || minX < 0f || maxX > view.X)
+        {
+            GD.PushWarning($"cam-{label}: el césped o las porterías se salen de la vista (x 0..{view.X:0})");
+        }
+
+        if (nearY > 735f / 800f * view.Y)
+        {
+            GD.PushWarning($"cam-{label}: el borde cercano ({nearY:0}) pisa las tiras (desde {735f / 800f * view.Y:0})");
+        }
+
+        GD.Print(
+            $"cam-{label}: distancia {pitch3d.DebugDistance:0.##} · césped x {corners[2].X:0}..{corners[3].X:0} (cercano) "
+            + $"{corners[0].X:0}..{corners[1].X:0} (lejano), y {corners[0].Y:0}..{corners[2].Y:0} · porterías x {minX:0}..{maxX:0} de {view.X:0} · "
+            + $"ficha de radio 0,38: {Width(0.5f):0.#} px en la fila lejana, {Width(Pitch.Rows - 0.5f):0.#} en la cercana");
     }
 
     /// <summary>
