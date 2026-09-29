@@ -1,5 +1,5 @@
 {
-  "_doc": "ADR 0157: catalogo de apuestas del vestuario (RF-114h, RF-114i). Una por nodo de partido, derivada de (semilla, nodo) por BetSystem.OfferFor. 'kind' fija que condicion evalua BetConditions.Evaluate (definiciones exactas en el codigo y en la ADR). 'stakeByAct' es la apuesta fija en oro de los actos 1..3: PROVISIONAL, SIN MEDIR (Regla H). 'payoutPercentByDifficulty' es el cobro BRUTO como porcentaje de la apuesta, un valor por distintivo de dificultad 1..5 (RF-012): cuota = 85 / p (margen de la casa del 15 %, ADR 0157 punto 4) con p la frecuencia medida en el censo `Balance --bet-census`; el 'censo' de la ADR 0157 dice de donde sale cada cifra y cuales son un tope. En el texto de la condicion, {player} se sustituye por el nombre del jugador rival nombrado en la oferta (solo hunt_the_star). Tono: corredor de apuestas de taberna.",
+  "_doc": "ADR 0157: catalogo de apuestas del vestuario (RF-114h, RF-114i). Una por nodo de partido, derivada de (semilla, nodo) por BetSystem.OfferFor. 'kind' fija que condicion evalua BetConditions.Evaluate (definiciones exactas en el codigo y en la ADR). 'stakeByAct' es la apuesta fija en oro de los actos 1..3: PROVISIONAL, SIN MEDIR (Regla H). 'payoutPercentByDifficulty' es el cobro BRUTO como porcentaje de la apuesta, un valor por distintivo de dificultad 1..5 (RF-012): MEDIDO, cuota = 85 / p (margen de la casa del 15 %, ADR 0157 punto 4) con p la frecuencia de la condicion en el censo de Balance --bet-census (2.400 runs, 33.325 partidos, semillas 1 y 7). Los 2000 son el TOPE del esquema (85 / p lo superaba, o p < 1 %): no son una cuota medida, y la seccion 'Censo' de la ADR 0157 dice cuales y por que. En el texto de la condicion, {player} se sustituye por el nombre del jugador rival nombrado en la oferta (solo hunt_the_star). Tono: corredor de apuestas de taberna.",
   "bets": [
     {
       "id": "blood_before_goals",
@@ -10,7 +10,7 @@
         "en": "The first injury lands before the first goal. If nobody scores, I'll settle for anyone bleeding."
       },
       "stakeByAct": [3, 4, 5],
-      "payoutPercentByDifficulty": [200, 200, 200, 200, 200]
+      "payoutPercentByDifficulty": [595, 230, 180, 141, 161]
     },
     {
       "id": "hunt_the_star",
@@ -21,7 +21,7 @@
         "en": "{player} doesn't finish the match: hurt, dead or sent off. I never said a word."
       },
       "stakeByAct": [3, 4, 5],
-      "payoutPercentByDifficulty": [200, 200, 200, 200, 200]
+      "payoutPercentByDifficulty": [1735, 973, 686, 641, 2000]
     },
     {
       "id": "eye_for_eye",
@@ -32,7 +32,7 @@
         "en": "If they hurt one of yours, you hurt one of theirs, and you win on top. Revenge without victory doesn't pay."
       },
       "stakeByAct": [3, 4, 5],
-      "payoutPercentByDifficulty": [200, 200, 200, 200, 200]
+      "payoutPercentByDifficulty": [2000, 1078, 702, 441, 716]
     },
     {
       "id": "comeback",
@@ -43,7 +43,7 @@
         "en": "You're losing at some point and still win. The house pays those who can stomach the scare."
       },
       "stakeByAct": [3, 4, 5],
-      "payoutPercentByDifficulty": [200, 200, 200, 200, 200]
+      "payoutPercentByDifficulty": [1392, 1336, 1196, 1403, 1676]
     },
     {
       "id": "into_the_mob",
@@ -54,7 +54,7 @@
         "en": "The match goes to golden goal and you win it, the referee already halfway out the door."
       },
       "stakeByAct": [3, 4, 5],
-      "payoutPercentByDifficulty": [200, 200, 200, 200, 200]
+      "payoutPercentByDifficulty": [502, 438, 469, 528, 621]
     },
     {
       "id": "clean_hands",
@@ -65,7 +65,7 @@
         "en": "You win, leave at least one rival casualty and see not a single card of your own. Blood, sure, but with manners."
       },
       "stakeByAct": [3, 4, 5],
-      "payoutPercentByDifficulty": [200, 200, 200, 200, 200]
+      "payoutPercentByDifficulty": [652, 372, 381, 362, 480]
     },
     {
       "id": "thrashing",
@@ -76,7 +76,7 @@
         "en": "You win by three goals or more and the rival ends with six or fewer on the pitch. Leave nobody to tell the tale."
       },
       "stakeByAct": [3, 4, 5],
-      "payoutPercentByDifficulty": [200, 200, 200, 200, 200]
+      "payoutPercentByDifficulty": [2000, 2000, 2000, 2000, 2000]
     },
     {
       "id": "three_names",
@@ -87,7 +87,7 @@
         "en": "You win and the sheet carries goals from three different players. Here the bread gets shared."
       },
       "stakeByAct": [3, 4, 5],
-      "payoutPercentByDifficulty": [200, 200, 200, 200, 200]
+      "payoutPercentByDifficulty": [2000, 2000, 2000, 2000, 2000]
     },
     {
       "id": "youth_decides",
@@ -98,7 +98,7 @@
         "en": "The goal that wins it is scored by a youth-squad kid. Experience is one asset; cheek is another."
       },
       "stakeByAct": [3, 4, 5],
-      "payoutPercentByDifficulty": [200, 200, 200, 200, 200]
+      "payoutPercentByDifficulty": [2000, 2000, 2000, 2000, 1169]
     },
     {
       "id": "short_and_clean",
@@ -109,7 +109,7 @@
         "en": "You start with fewer than seven and win without conceding. Madness, but paid as such."
       },
       "stakeByAct": [3, 4, 5],
-      "payoutPercentByDifficulty": [200, 200, 200, 200, 200]
+      "payoutPercentByDifficulty": [2000, 2000, 2000, 2000, 2000]
     },
     {
       "id": "referee_blind",
@@ -120,7 +120,7 @@
         "en": "You win with three or more of your fouls the referee doesn't call. With the referee on the pitch: the mob doesn't count."
       },
       "stakeByAct": [3, 4, 5],
-      "payoutPercentByDifficulty": [200, 200, 200, 200, 200]
+      "payoutPercentByDifficulty": [1773, 2000, 1999, 2000, 2000]
     }
   ]
 }
