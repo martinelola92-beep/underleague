@@ -241,6 +241,9 @@ for d in sorted(cons, key=lambda d: d['id']):
             # ADR 0166: un grito cambia la conducta del equipo (orden o presión) durante unos segundos.
             que = {'Defensive': 'juega a la defensiva', 'Offensive': 'se vuelca al ataque'}.get(e.get('order'), 'presiona al portador del balón')
             eff.append(f"el equipo {que} durante {e['seconds']} s")
+        elif e['type'] == 'provokeMob':
+            # ADR 0167: aplica ya el efecto del tipo de turba del partido; la conducta que imponga dura N s.
+            eff.append(f"provoca a la grada: ocurre ya lo que la turba de este partido trae, y lo que dure, dura {e['seconds']} s")
         else:
             v = e['value']
             k = 1 + abs(v) / 100

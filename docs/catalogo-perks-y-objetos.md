@@ -24,7 +24,7 @@ perks de su línea y cierra otra para el resto de la run).
 | — perks obtenibles | 105 |
 | — letales | 4 |
 | Objetos de equipamiento | 38 |
-| Consumibles | 20 |
+| Consumibles | 21 |
 
 Distribución RF-069 (objetivo 60/30/10 ± 8): relleno 58 (52,7 %) · condicional 38 (34,5 %) · rompe-reglas 14 (12,7 %)
 
@@ -311,6 +311,7 @@ Un solo partido, se gastan al usarlos. El efecto **no tiene portador**: lo usa e
 | **Sangre de fénix** | `phoenix_blood` | Raro | médica | divide por 4 sus opciones de sufrir una lesión grave; +20 resistencia |
 | **Falta profesional** | `professional_foul` | Raro | sucia | multiplica por 4 sus opciones de robar el balón; multiplica por 4 sus opciones de hacer falta |
 | **¡Arriba!** | `push_forward` | Raro | táctica | el equipo se vuelca al ataque durante 10 s |
+| **Provocar a la grada** | `rile_the_crowd` | Poco común | sucia | provoca a la grada: ocurre ya lo que la turba de este partido trae, y lo que dure, dura 10 s |
 | **Bengala de humo** | `smoke_flare` | Común | táctica | multiplica por 2 sus opciones de resistir entradas |
 | **Codazo disimulado** | `sneaky_elbow` | Poco común | sucia | multiplica por 3 sus opciones de lesionar; multiplica por 2 sus opciones de ver tarjeta |
 | **La encerrona** | `the_ambush` | Legendario | sucia | multiplica por 4 sus opciones de lesionar; multiplica por 3 las opciones de los rivales de sufrir una lesión grave; multiplica por 3 sus opciones de ver tarjeta |
