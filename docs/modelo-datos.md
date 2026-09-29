@@ -50,7 +50,7 @@ Run
     assignments[]       (playerId, column, row)  con portero en casilla fija  (RF-041)
     doubleSize[]        jugadores que ocupan 2 casillas  (RF-033)
   Consumables
-    equipped[]          (id, mode: manual | conditional, trigger)  máximo 3, mínimo 1 manual  (RF-080..082)
+    equipped[]          (id, mode: manual | conditional, trigger)  máximo 2, sin repetir; el hueco es la posesión, sin inventario suelto (RF-080..082, ADR 0172)
   Achievements
     progress{}          contadores de logros de desbloqueo (RF-125b)
 ```

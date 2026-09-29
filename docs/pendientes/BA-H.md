@@ -1,6 +1,6 @@
 # BA-H — Los consumibles no se pueden usar.
 
-**Estado:** CERRADA en su parte principal (29 sep 2026); queda abierta la propuesta de dos slots
+**Estado:** **CERRADA (30 sep 2026, ADR 0172).** El uso en vivo (29 sep) y la propuesta del revisor de los dos huecos —comprar sólo con hueco libre y que salga ya equipado—. Quedan anotados abajo los hermanos.
 
 ## Observación
 
@@ -8,7 +8,7 @@
 
 ## Análisis / estado actual
 
-**Abierta.** CAT-B dio el equipado en la pantalla de Equipo, pero el uso en vivo (RF-082, `ManualActivation`) no tiene interfaz
+**Cerrada.** CAT-B dio el equipado en la pantalla de Equipo, pero el uso en vivo (RF-082, `ManualActivation`) no tenía interfaz (hecho el 29 sep) y la cadena comprar → zurrón → equipar → desequipar tras cada partido era impracticable (hecho el 30 sep con los dos huecos).
 
 ## Cierre (29 sep 2026)
 
@@ -20,8 +20,14 @@
   `consumible-1-boton.png` y `consumible-2-usado.png` (`CapturasRetransmision.tscn`).
 - **Catálogo:** de 4 a 20 consumibles, con los gritos del entrenador como tácticos manuales, todos con
   primitivas que ya existían.
-- **Sin hacer:** la propuesta del revisor de **dos slots** y comprar sólo con hueco libre (hoy RF-080 dice
-  tres y la pantalla de Equipo deja uno manual). Es un cambio de regla que no se ha tocado.
+- **[HECHO 30 sep 2026, ADR 0172]** ~~la propuesta del revisor de **dos slots** y comprar sólo con hueco libre~~:
+  RF-080 pasa de tres a **dos huecos** y el hueco es la posesión (sin zurrón); comprar o recibir un consumible exige
+  hueco libre y lo deja **ya equipado y manual**, con su botón en el tablero; lo que no se usa se queda en su hueco
+  (RF-085) y se puede descartar en Equipo; RF-081/082 se reescriben (modo por hueco, defecto manual, ya no se exige un
+  manual). Guardados anteriores: se pliegan a los dos huecos al cargar. Medido en `/Balance` (600 runs, semilla 1):
+  consumibles usados por run 1,12 → 2,15 (por la doctrina de la política, LIKELY), `runWinRate` 15,50 → 16,00 y
+  `brokeMarketRunShare` 7,83 → 8,50 (dentro del ruido). Capturas: `equipo-consumibles`, `mercado-consumible-*`,
+  `consumible-1-boton` y `consumible-2-usado`.
 - Primitiva que falta para el plan de diversión: **provocar la turba** (necesita que la prórroga pueda
   empezar por un consumible; hoy sólo la abre el empate al final).
 
@@ -35,13 +41,15 @@
   **orden táctica** (ADR 0154, `OrderChange`). **Propuesta, sin decidir:** que un grito sea un cambio
   temporal de orden o de utilidad (p. ej. `hold_the_line` = orden defensiva durante N segundos), con el
   mismo camino determinista que `OrderChange`. Requiere `game-design-review` y `architecture-review`.
+- **Los condicionales no se ven «armados» en el tablero** hasta que saltan (anotado en la ADR 0172): un jugador que
+  pasa un consumible a condicional no ve en la retransmisión que sigue en su hueco. Sin medir que haga falta.
 - **Vender la reliquia de un compañero es posible y no se ha discutido.** Una reliquia es un objeto más
   (`TransferItem` con `ToPlayerId < 0` en un mercado abierto, o desde el cofre tras equiparla): su valor de
   venta convierte la muerte de un jugador con historia en oro. La ADR 0161 la deja «fuera de mercado y
   recompensas» pero no dice si es vendible. Vigilar `leftoverGoldShare` y decidir si se marca como no
   vendible.
 
-## Hermanos
+## Hermanos (siguen abiertos; no los cierra la ADR 0172)
 
 - **Otros multiplicadores invisibles con nombre de conducta** (revisión independiente de la ADR 0166, 29 sep
   2026, sin evidencia de impacto medida): `master_plan` (táctico, legendario), `smoke_flare` y

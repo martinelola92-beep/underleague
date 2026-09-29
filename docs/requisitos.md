@@ -294,12 +294,12 @@ SUSTITUCION         CONSUMIBLE_USADO
 
 ### 3.9 Consumibles
 
-- **RF-080** Antes de cada partido el jugador equipa hasta 3 consumibles.
-- **RF-081** Hasta 2 de ellos se configuran como **condicionales**: se asocian a un disparador y se ejecutan solos durante el partido.
-- **RF-082** Al menos 1 slot es **manual**: el jugador lo activa cuando quiere durante el partido.
+- **RF-080** *(reescrito por la **ADR 0172**; antes «hasta 3 consumibles»)* La run lleva **dos huecos de consumible**, y **el hueco es la posesión**: no hay inventario de consumibles sueltos. Un consumible se **compra en el mercado o lo da un evento sólo con un hueco libre** —y sin llevar ya el mismo— y **entra ya equipado**; sin hueco libre el mercado lo enseña bloqueado, con el motivo, y la opción de evento no es viable. Lo que se lleva es lo que llega al partido.
+- **RF-081** *(reescrito por la **ADR 0172**; antes «hasta 2 de ellos condicionales»)* Cada hueco se puede configurar en Equipo como **condicional**: se asocia a un disparador y el consumible se ejecuta solo durante el partido.
+- **RF-082** *(reescrito por la **ADR 0172**; antes «al menos 1 slot es manual»)* Todo consumible entra **manual**: el jugador lo activa cuando quiere durante el partido, con un clic en su botón del tablero de la retransmisión. Ya no se exige que haya uno manual: el defecto es manual, y pasarlo a condicional es decisión del jugador.
 - **RF-083** Disparadores condicionales disponibles como mínimo: marcador por debajo, marcador empatado, últimos 20 segundos, entrada en la turba, lesión propia, tarjeta roja propia, N goles encajados, criterio del árbitro por debajo de un umbral.
 - **RF-084** Familias de consumibles: médicos, tácticos, sucios y sobrenaturales.
-- **RF-085** Los consumibles se consumen al usarse y no persisten entre partidos.
+- **RF-085** *(reescrito por la **ADR 0172**; antes «no persisten entre partidos»)* Los consumibles se consumen al usarse; el que no se usa **se queda en su hueco** para el partido siguiente, con su modo y su disparador. El jugador puede **descartarlo** en Equipo para liberar el hueco.
 
 ### 3.10 Lesiones, muerte y taller
 

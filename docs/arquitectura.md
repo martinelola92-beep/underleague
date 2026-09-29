@@ -80,6 +80,8 @@ Un consumible manual es una entrada del usuario en mitad de un partido determini
 1. El render ejecuta el partido por tramos. Al pulsar el consumible en el tick T, `/Game` vuelve a llamar a `Run` con `initialState + manualActivation(consumableId, tick T)` y descarta los eventos posteriores a T de la ejecución anterior.
 2. La activación queda en el estado, por lo que la repetición y el guardado ironman (RT-061) reproducen exactamente lo mismo.
 
+(Desde la **ADR 0172** la run lleva **dos huecos** y todo consumible sale **manual** al comprarlo: cada uno tiene su botón en el tablero de la retransmisión. El que se usa sale de su hueco y el que no se usa se queda para el partido siguiente.)
+
 Esta decisión mantiene RT-013 (una sola entrada pura) sin excepciones. Coste: recalcular desde el inicio, que con partidos de 60-90 s a 15 ticks/s es despreciable (RT-051).
 
 ## Sustitución forzada durante el partido (AZ-F, ADR 0094)

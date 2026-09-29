@@ -55,6 +55,8 @@ ese nivel, así que si la run entrega menos, la puerta está midiendo un jugador
 que ninguna celda de la tabla esté mal. Se mira junto a `perksAtBossActN` e `itemsAtBossActN`, que dicen lo mismo de los
 otros dos ejes de una build.
 
+**`consumablesBoughtPerRun`** y **`consumablesUsedPerRun`** (INFO, ADR 0172) son los consumibles comprados y los que llegaron a **activarse** por run (los del equipo propio; en `/Balance` todos salen de condicionales, porque nadie pulsa un manual). Sin banda: sirven para comparar antes y después de tocar los dos huecos o el catálogo de `data/consumables/`. Los dos contadores salen también en `runs.csv`.
+
 Escribe además **`runs-nomarket.csv`**, con las mismas columnas, para la cuarta política del modo: la
 medida de control de la ADR 0055, que es contextual pero **esquiva los mercados** y por eso no se
 distingue de la build buena en la columna `doctrine` de `runs.csv`. Es el perfil **sin build** de la ADR
