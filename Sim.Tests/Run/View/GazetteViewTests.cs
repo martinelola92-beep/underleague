@@ -444,4 +444,116 @@ public sealed class GazetteViewTests
 
         Assert.Throws<InvalidOperationException>(() => GazetteView.Build(state, Catalog, Systems.Nicknames, Systems.Rivals, broken));
     }
+
+    // ------------------------------------------------------------------ plurales
+
+    private static RunState WithDead(RunState state, int count)
+    {
+        for (int i = 1; i <= count; i++)
+        {
+            state = WithCareer(state, i, RunCareer.None with { Matches = 2 }, PhysicalState.Dead);
+        }
+
+        return state;
+    }
+
+    private static RunState WithVillain(RunState state, int killed, int hurt)
+    {
+        var counters = new SortedDictionary<string, int>(StringComparer.Ordinal);
+        foreach (var (key, value) in state.Counters)
+        {
+            counters[key] = value;
+        }
+
+        string clan = Systems.Rivals.All[0].Id;
+        for (int i = 0; i < killed; i++)
+        {
+            counters[$"{RunState.RivalCreditPrefix}{clan}:1:{state.Roster[1 + i].Id}:sufferedDeath"] = 1;
+        }
+
+        for (int i = 0; i < hurt; i++)
+        {
+            counters[$"{RunState.RivalCreditPrefix}{clan}:1:{state.Roster[6 + i].Id}:sufferedInjury"] = 1;
+        }
+
+        return state with { Counters = counters };
+    }
+
+    /// <summary>
+    /// Ninguna frase sale con «1 bajas», «1 lápidas» o «0 lesionados»: los plurales se eligen por la cifra
+    /// dentro de la propia plantilla (<c>{deaths|# baja|# bajas}</c>), con forma para el cero donde hace falta.
+    /// </summary>
+    [Fact]
+    public void NoSentenceSaysOneBajasOrZeroLesionados()
+    {
+        var wrong = new System.Text.RegularExpressions.Regex(@"(?<![\d])1 \w*s\b|(?<![\d])0 ", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+        var outcomes = new[]
+        {
+            new RunOutcome(RunOutcomeKind.Victory),
+            new RunOutcome(RunOutcomeKind.Defeat, DefeatCause.BossMatchLost, 5),
+            new RunOutcome(RunOutcomeKind.Defeat, DefeatCause.NotEnoughPlayers, 5),
+        };
+
+        foreach (var outcome in outcomes)
+        {
+            for (int dead = 0; dead <= 3; dead++)
+            {
+                for (int killed = 0; killed <= 3; killed++)
+                {
+                    for (int hurt = 0; hurt <= 2; hurt++)
+                    {
+                        if (killed > dead || (killed == 0 && hurt == 0))
+                        {
+                            continue;
+                        }
+
+                        for (ulong seed = 31700; seed < 31708; seed++)
+                        {
+                            var state = WithVillain(WithDead(Base(seed), dead), killed, hurt) with { Result = outcome };
+                            foreach (string language in Languages)
+                            {
+                                var report = Build(state, language);
+                                var texts = new List<string> { report.Headline, report.Lede };
+                                texts.Add(report.Villain!.Line);
+                                Assert.All(texts, text => Assert.False(wrong.IsMatch(text), text));
+                                Assert.Equal(killed, report.Villain.Deaths);
+                                Assert.Equal(hurt, report.Villain.Injuries);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    [Fact]
+    public void ThePluralMarkerPicksTheZeroOneAndManyForms()
+    {
+        var es = new Dictionary<string, IReadOnlyList<string>>(StringComparer.Ordinal);
+        foreach (string key in GazetteCatalog.RequiredKeys)
+        {
+            es[key] = Systems.Gazette.Variants(key, "es");
+        }
+
+        es["masthead"] = new[] { "{deaths|ninguna baja|# baja|# bajas}/{deaths|# baja|# bajas}" };
+        var catalog = new GazetteCatalog(es, es);
+        var expected = new[] { "ninguna baja/0 bajas", "1 baja/1 baja", "2 bajas/2 bajas" };
+        for (int dead = 0; dead <= 2; dead++)
+        {
+            var state = WithDead(Base(31800UL), dead) with { Result = new RunOutcome(RunOutcomeKind.Victory) };
+            Assert.Equal(expected[dead], GazetteView.Build(state, Catalog, Systems.Nicknames, Systems.Rivals, catalog).Masthead);
+        }
+    }
+
+    [Theory]
+    [InlineData("{deaths|solo una}")]
+    [InlineData("{deaths|a|b|c|d}")]
+    [InlineData("{zzz|a|b}")]
+    public void MalformedPluralMarkersAreRejectedAtLoad(string template)
+    {
+        var files = TestData.LoadAllFiles();
+        files["gazette/gazette.json"] = files["gazette/gazette.json"].Replace("EL SILBATO NEGRO", template, StringComparison.Ordinal);
+
+        Assert.Throws<DataException>(() => GazetteLoader.FromJson(files));
+    }
 }

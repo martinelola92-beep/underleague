@@ -490,6 +490,11 @@ public static class GazetteView
     /// (<see cref="InvalidOperationException"/>), no un hueco silencioso: el cargador ya valida los
     /// marcadores de cada clave (<see cref="GazetteCatalog.MarkersFor"/>), así que llegar aquí con uno
     /// desconocido es un fallo de código o de un catálogo montado a mano, y debe verse en test.
+    ///
+    /// <para><b>Plurales.</b> <c>{deaths|# baja|# bajas}</c> elige según la cifra de <c>deaths</c>: la
+    /// primera opción si vale 1, la segunda en cualquier otro caso; con tres opciones
+    /// <c>{deaths|ninguna baja|# baja|# bajas}</c> la primera es el 0. <c>#</c> es la propia cifra y una
+    /// opción puede ir vacía. Así ninguna plantilla dice «1 bajas» (ADR 0163).</para>
     /// </summary>
     private static string Fill(string template, IReadOnlyDictionary<string, string> facts)
     {
@@ -502,14 +507,8 @@ public static class GazetteView
                 int close = template.IndexOf('}', i + 1);
                 if (close > i)
                 {
-                    string name = template.Substring(i + 1, close - i - 1);
-                    if (!facts.TryGetValue(name, out string? value))
-                    {
-                        throw new InvalidOperationException(
-                            $"la plantilla de la Gaceta «{template}» usa el marcador {{{name}}}, que este contexto no da (ADR 0163)");
-                    }
-
-                    text.Append(value);
+                    string marker = template.Substring(i + 1, close - i - 1);
+                    text.Append(Substitute(template, marker, facts));
                     i = close + 1;
                     continue;
                 }
@@ -520,6 +519,33 @@ public static class GazetteView
         }
 
         return text.ToString();
+    }
+
+    private static string Substitute(string template, string marker, IReadOnlyDictionary<string, string> facts)
+    {
+        string[] parts = marker.Split('|');
+        if (!facts.TryGetValue(parts[0], out string? value))
+        {
+            throw new InvalidOperationException(
+                $"la plantilla de la Gaceta «{template}» usa el marcador {{{parts[0]}}}, que este contexto no da (ADR 0163)");
+        }
+
+        if (parts.Length == 1)
+        {
+            return value;
+        }
+
+        // parts[0] es el hecho; le siguen dos opciones (uno | otros) o tres (cero | uno | otros).
+        if (parts.Length is < 3 or > 4 || !int.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out int count))
+        {
+            throw new InvalidOperationException(
+                $"el marcador de plural {{{marker}}} de «{template}» necesita una cifra y dos o tres opciones (ADR 0163)");
+        }
+
+        string chosen = parts.Length == 4
+            ? (count == 0 ? parts[1] : count == 1 ? parts[2] : parts[3])
+            : (count == 1 ? parts[1] : parts[2]);
+        return chosen.Replace("#", value, StringComparison.Ordinal);
     }
 
     /// <summary>Mezcla entera de (semilla, sal) tipo SplitMix64: determinista, sin estado, sin RNG.</summary>

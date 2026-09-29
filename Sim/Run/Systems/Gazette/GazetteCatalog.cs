@@ -168,6 +168,16 @@ public static class GazetteLoader
                 }
 
                 string marker = text.Substring(open + 1, close - open - 1);
+                string[] parts = marker.Split('|');
+                if (parts.Length == 2 || parts.Length > 4)
+                {
+                    throw new DataException(
+                        node.File,
+                        node.Path + "[" + v + "]",
+                        $"el marcador de plural {{{marker}}} de '{key}' necesita dos opciones (uno|otros) o tres (cero|uno|otros)");
+                }
+
+                marker = parts[0];
                 if (!allowed.Contains(marker))
                 {
                     throw new DataException(

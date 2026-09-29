@@ -26,15 +26,15 @@
     {
       "key": "headline.victory",
       "es": [
-        "CAMPEONES, PERO A UN PRECIO: {deaths} BAJAS Y UN TROFEO CON MANCHAS",
+        "CAMPEONES, PERO A UN PRECIO: {deaths|# BAJA|# BAJAS} Y UN TROFEO CON MANCHAS",
         "EL CLUB GANA LA LIGA Y LA GRADA APLAUDE, SOBRE TODO A LOS CAÍDOS",
-        "VICTORIA HISTÓRICA: {deaths} JUGADORES NO PUDIERON VERLA",
+        "VICTORIA HISTÓRICA: {deaths|# JUGADOR NO PUDO|# JUGADORES NO PUDIERON} VERLA",
         "LA COPA LLEGA AL CLUB; LA PLANTILLA, ALGO MÁS TARDE Y CON MENOS PIEZAS"
       ],
       "en": [
-        "CHAMPIONS, BUT AT A PRICE: {deaths} LOST AND A TROPHY WITH STAINS",
+        "CHAMPIONS, BUT AT A PRICE: {deaths|# CASUALTY|# CASUALTIES} AND A TROPHY WITH STAINS",
         "CLUB WINS THE LEAGUE AND THE CROWD CHEERS, MOSTLY FOR THE FALLEN",
-        "HISTORIC VICTORY: {deaths} PLAYERS COULD NOT WATCH IT",
+        "HISTORIC VICTORY: {deaths|# PLAYER COULD|# PLAYERS COULD} NOT WATCH IT",
         "THE CUP REACHES THE CLUB; THE SQUAD ARRIVES LATER AND IN FEWER PIECES"
       ]
     },
@@ -71,28 +71,28 @@
     {
       "key": "lede.victory",
       "es": [
-        "{acts} actos superados, {wins} victorias en {matches} partidos y {deaths} lápidas que sumar al balance."
+        "{acts|ningún acto superado|# acto superado|# actos superados}, {wins|ninguna victoria|# victoria|# victorias} en {matches|ningún partido|# partido|# partidos} y {deaths|ninguna lápida|# lápida|# lápidas} que sumar al balance."
       ],
       "en": [
-        "{acts} acts cleared, {wins} wins in {matches} matches and {deaths} headstones added to the books."
+        "{acts|no acts cleared|# act cleared|# acts cleared}, {wins|no wins|# win|# wins} in {matches|no matches|# match|# matches} and {deaths|no headstones|# headstone|# headstones} added to the books."
       ]
     },
     {
       "key": "lede.defeatBoss",
       "es": [
-        "{acts} actos superados, {wins} victorias en {matches} partidos y {deaths} bajas por el camino: el jefe fue demasiado."
+        "{acts|ningún acto superado|# acto superado|# actos superados}, {wins|ninguna victoria|# victoria|# victorias} en {matches|ningún partido|# partido|# partidos} y {deaths|ninguna baja|# baja|# bajas} por el camino: el jefe fue demasiado."
       ],
       "en": [
-        "{acts} acts cleared, {wins} wins in {matches} matches and {deaths} lost along the way: the boss was too much."
+        "{acts|no acts cleared|# act cleared|# acts cleared}, {wins|no wins|# win|# wins} in {matches|no matches|# match|# matches} and {deaths|nobody|# player|# players} lost along the way: the boss was too much."
       ]
     },
     {
       "key": "lede.defeatPlayers",
       "es": [
-        "{acts} actos superados, {wins} victorias en {matches} partidos y {deaths} bajas: en pie ya no quedaba equipo."
+        "{acts|ningún acto superado|# acto superado|# actos superados}, {wins|ninguna victoria|# victoria|# victorias} en {matches|ningún partido|# partido|# partidos} y {deaths|ninguna baja|# baja|# bajas}: en pie ya no quedaba equipo."
       ],
       "en": [
-        "{acts} acts cleared, {wins} wins in {matches} matches and {deaths} lost: there was no team left standing."
+        "{acts|no acts cleared|# act cleared|# acts cleared}, {wins|no wins|# win|# wins} in {matches|no matches|# match|# matches} and {deaths|nobody|# player|# players} lost: there was no team left standing."
       ]
     },
     {
@@ -255,18 +255,18 @@
     {
       "key": "villain.deaths",
       "es": [
-        "{villain}, de {clan}, se llevó por delante a {deaths} de los tuyos y dejó {injuries} lesionados. Su agente habla de «malentendidos».",
-        "{villain} ({clan}) firma {deaths} muertes y {injuries} lesiones en tu plantilla. La grada rival lo llama «el Cirujano»."
+        "{villain}, de {clan}, se llevó por delante a {deaths} de los tuyos{injuries||, y dejó # lesionado|, y dejó # lesionados}. Su agente habla de «malentendidos».",
+        "{villain} ({clan}) firma {deaths|# muerte|# muertes}{injuries|| y # lesión| y # lesiones} en tu plantilla. La grada rival lo llama «el Cirujano»."
       ],
       "en": [
-        "{villain}, of {clan}, took out {deaths} of yours and left {injuries} injured. Their agent speaks of \"misunderstandings\".",
-        "{villain} ({clan}) signs off with {deaths} deaths and {injuries} injuries in your squad. Their fans call them \"the Surgeon\"."
+        "{villain}, of {clan}, took out {deaths} of yours{injuries||, and left # injured|, and left # injured}. Their agent speaks of \"misunderstandings\".",
+        "{villain} ({clan}) signs off with {deaths|# death|# deaths}{injuries|| and # injury| and # injuries} in your squad. Their fans call them \"the Surgeon\"."
       ]
     },
     {
       "key": "villain.injuries",
       "es": [
-        "{villain}, de {clan}, dejó {injuries} lesionados en tu plantilla. Dice que fue sin querer; nadie le cree.",
+        "{villain}, de {clan}, dejó {injuries|# lesionado|# lesionados} en tu plantilla. Dice que fue sin querer; nadie le cree.",
         "{villain} ({clan}) mandó a {injuries} de los tuyos a la enfermería. La clínica le ha ofrecido un descuento por volumen."
       ],
       "en": [
