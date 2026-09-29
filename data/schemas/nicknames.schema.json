@@ -1,0 +1,45 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://underleague.dev/schemas/nicknames.schema.json",
+  "title": "Underleague nicknames",
+  "description": "data/nicknames/nicknames.json: apodos derivados de la carrera de un jugador (RF-122, ADR 0163), único fichero. Cargado por Sim.Run.Systems.Nicknames.NicknameLoader, fuera del Catalog compartido.",
+  "type": "object",
+  "properties": {
+    "_doc": { "type": "string" },
+    "nicknames": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/nickname" },
+      "minItems": 8,
+      "maxItems": 40
+    }
+  },
+  "required": ["nicknames"],
+  "additionalProperties": false,
+  "$defs": {
+    "nickname": {
+      "type": "object",
+      "properties": {
+        "_doc": { "type": "string" },
+        "id": { "type": "string", "pattern": "^[a-z][a-z0-9_]*$" },
+        "name": { "$ref": "#/$defs/localizedName" },
+        "stat": {
+          "description": "Campo de RunCareer sobre el que se compara.",
+          "enum": ["matches", "goals", "assists", "tackles", "tacklesWon", "fouls", "cards", "injuriesCaused", "deathsCaused", "injuriesSuffered"]
+        },
+        "threshold": { "type": "integer", "minimum": 1 },
+        "priority": { "type": "integer", "minimum": 1 }
+      },
+      "required": ["id", "name", "stat", "threshold", "priority"],
+      "additionalProperties": false
+    },
+    "localizedName": {
+      "type": "object",
+      "properties": {
+        "es": { "type": "string", "minLength": 1 },
+        "en": { "type": "string", "minLength": 1 }
+      },
+      "required": ["es", "en"],
+      "additionalProperties": false
+    }
+  }
+}

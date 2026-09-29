@@ -12,6 +12,7 @@ using Underleague.Sim.Run.Systems.Map;
 using Underleague.Sim.Run.Systems.Market;
 using Underleague.Sim.Run.Systems.Medical;
 using Underleague.Sim.Run.Systems.Mercenaries;
+using Underleague.Sim.Run.Systems.Nicknames;
 using Underleague.Sim.Run.Systems.Nodes;
 using Underleague.Sim.Random;
 using Underleague.Sim.Run.Systems.Referees;
@@ -43,8 +44,9 @@ public sealed class StandardRunSystems : IRunSystems
     private readonly RefereeCatalog _referees;
     private readonly BetCatalog _bets;
     private readonly ProsthesisCatalog _prostheses;
+    private readonly NicknameCatalog _nicknames;
 
-    public StandardRunSystems(EconomyConfig economy, ItemCatalog items, ConsumableCatalog consumables, RivalCatalog rivals, MapConfig map, ClubCatalog clubs, EventCatalog events, RefereeCatalog referees, BetCatalog? bets = null, ProsthesisCatalog? prostheses = null)
+    public StandardRunSystems(EconomyConfig economy, ItemCatalog items, ConsumableCatalog consumables, RivalCatalog rivals, MapConfig map, ClubCatalog clubs, EventCatalog events, RefereeCatalog referees, BetCatalog? bets = null, ProsthesisCatalog? prostheses = null, NicknameCatalog? nicknames = null)
     {
         _economy = economy ?? throw new ArgumentNullException(nameof(economy));
         _items = items ?? throw new ArgumentNullException(nameof(items));
@@ -56,6 +58,7 @@ public sealed class StandardRunSystems : IRunSystems
         _referees = referees ?? throw new ArgumentNullException(nameof(referees));
         _bets = bets ?? BetCatalog.Empty;
         _prostheses = prostheses ?? ProsthesisCatalog.Empty;
+        _nicknames = nicknames ?? NicknameCatalog.Empty;
     }
 
     /// <summary>Configuración de economía de esta instancia (para tests y <c>/Balance</c>).</summary>
@@ -88,6 +91,9 @@ public sealed class StandardRunSystems : IRunSystems
     /// <summary>Catálogo de prótesis del herrero de la clínica (ADR 0164, <c>data/prostheses/</c>).</summary>
     public ProsthesisCatalog Prostheses => _prostheses;
 
+    /// <summary>Catálogo de apodos de carrera de esta instancia (ADR 0163, <c>data/nicknames/</c>).</summary>
+    public NicknameCatalog Nicknames => _nicknames;
+
     /// <summary>
     /// Construye los catálogos del paquete X de una instantánea de <c>/data</c> (el mismo diccionario que
     /// consume <c>DataLoader.FromJson</c>). Ayudante de conveniencia para tests y <c>/Balance</c>: evita
@@ -103,7 +109,8 @@ public sealed class StandardRunSystems : IRunSystems
         EventLoader.FromJson(files),
         RefereeLoader.FromJson(files),
         BetLoader.FromJson(files),
-        ProsthesisLoader.FromJson(files));
+        ProsthesisLoader.FromJson(files),
+        NicknameLoader.FromJson(files));
 
     /// <summary>
     /// <see cref="RunSetup"/> completo para empezar una run con <b>estos</b> datos: oro de partida
