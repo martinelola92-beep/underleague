@@ -534,7 +534,7 @@ public static class DataLoader
     {
         var doc = JsonDocument.Parse(content);
         var root = new Json(doc.RootElement, file, "$");
-        root.EnsureKnownKeys("base", "tactical", "mentality", "context", "blockShift", "mentalityShift", "mentalityOdds");
+        root.EnsureKnownKeys("base", "tactical", "mentality", "context", "blockShift", "mentalityShift", "mentalityOdds", "press");
 
         int positionCount = Enum.GetValues<Position>().Length;
         int tacticalCount = Enum.GetValues<TacticalState>().Length;
@@ -871,7 +871,32 @@ public static class DataLoader
             }
         }
 
-        return new AiWeights(baseTable, tacticalTable, mentalityTable, offBallTackle, context, shiftArray, mentalityShift, mentalityOdds);
+        // ADR 0166: multiplicador porcentual por acción de la consigna de presión de un grito. Las acciones que
+        // no aparecen quedan en 100 (neutro); un 0 anularía la acción entera, así que se exige positivo.
+        var press = new int[actionCount];
+        Array.Fill(press, 100);
+        foreach (var (actionKey, valueNode) in root.Prop("press").EnumerateObjectEntries())
+        {
+            if (actionKey == "_doc")
+            {
+                continue;
+            }
+
+            if (!Enum.TryParse<PlayerAction>(actionKey, out var action))
+            {
+                throw new DataException(file, valueNode.Path, $"acción desconocida '{actionKey}'");
+            }
+
+            int percent = valueNode.AsInt();
+            if (percent < 1)
+            {
+                throw new DataException(file, valueNode.Path, "un multiplicador de la consigna de presión tiene que ser positivo (100 = neutro)");
+            }
+
+            press[(int)action] = percent;
+        }
+
+        return new AiWeights(baseTable, tacticalTable, mentalityTable, offBallTackle, context, shiftArray, mentalityShift, mentalityOdds, press);
     }
 
     private static void EnsureComplete(string file, string path, bool[,] set, int dim0, int dim1)

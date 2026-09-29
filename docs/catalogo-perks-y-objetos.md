@@ -295,7 +295,7 @@ Un solo partido, se gastan al usarlos. El efecto **no tiene portador**: lo usa e
 
 | Nombre | id | Rareza | Familia | Efecto |
 |---|---|---|---|---|
-| **¡A por él!** | `after_him` | Común | táctica | multiplica por 2 sus opciones de robar el balón; multiplica por 1,5 sus opciones de hacer falta |
+| **¡A por él!** | `after_him` | Común | táctica | el equipo presiona al portador del balón durante 6 s |
 | **Amuleto de hueso** | `bone_charm` | Común | sobrenatural | multiplica por 2 sus opciones de regatear |
 | **Polvo de hada** | `fairy_dust` | Poco común | sobrenatural | +15 velocidad |
 | **Vendaje de campaña** | `field_bandage` | Común | médica | divide por 2 sus opciones de lesionarse |
@@ -303,14 +303,14 @@ Un solo partido, se gastan al usarlos. El efecto **no tiene portador**: lo usa e
 | **Pase fantasma** | `ghost_pass` | Raro | sobrenatural | multiplica por 4 sus opciones de resistir intercepciones |
 | **Milagro del sanador** | `healers_miracle` | Legendario | médica | divide por 6 sus opciones de lesionarse; divide por 6 sus opciones de sufrir una lesión grave |
 | **Tónico del curandero** | `healers_tonic` | Poco común | médica | +15 resistencia; divide por 2 sus opciones de lesionarse |
-| **¡Aguantad!** | `hold_the_line` | Poco común | táctica | divide por 2 sus opciones de hacer falta; divide por 2 sus opciones de lesionarse |
+| **¡Aguantad!** | `hold_the_line` | Poco común | táctica | el equipo juega a la defensiva durante 10 s |
 | **Kit de golpe bajo** | `low_blow_kit` | Poco común | sucia | +12 fuerza; multiplica por 3 sus opciones de hacer falta |
 | **Amuleto de la suerte** | `lucky_charm` | Poco común | sobrenatural | multiplica por 2 sus opciones de tirar a puerta |
 | **Plan maestro** | `master_plan` | Legendario | táctica | +20 velocidad; multiplica por 4 sus opciones de pasar |
 | **Emplasto de barro** | `mud_poultice` | Común | médica | divide por 2 sus opciones de sufrir una lesión grave |
 | **Sangre de fénix** | `phoenix_blood` | Raro | médica | divide por 4 sus opciones de sufrir una lesión grave; +20 resistencia |
 | **Falta profesional** | `professional_foul` | Raro | sucia | multiplica por 4 sus opciones de robar el balón; multiplica por 4 sus opciones de hacer falta |
-| **¡Arriba!** | `push_forward` | Raro | táctica | multiplica por 3 sus opciones de pasar; multiplica por 2 sus opciones de regatear |
+| **¡Arriba!** | `push_forward` | Raro | táctica | el equipo se vuelca al ataque durante 10 s |
 | **Bengala de humo** | `smoke_flare` | Común | táctica | multiplica por 2 sus opciones de resistir entradas |
 | **Codazo disimulado** | `sneaky_elbow` | Poco común | sucia | multiplica por 3 sus opciones de lesionar; multiplica por 2 sus opciones de ver tarjeta |
 | **La encerrona** | `the_ambush` | Legendario | sucia | multiplica por 4 sus opciones de lesionar; multiplica por 3 las opciones de los rivales de sufrir una lesión grave; multiplica por 3 sus opciones de ver tarjeta |

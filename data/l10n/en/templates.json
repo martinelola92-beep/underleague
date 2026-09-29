@@ -54,7 +54,10 @@
     "modifyTackleBiasFouled": "goes after whoever fouled them last",
     "extraAction": "{target} repeats the play in the same instant",
     "modifyUtility": "{target} wants {action} more",
-    "modifyUtilityInZone": "{target} wants {action} more in the {utilityZone} third"
+    "modifyUtilityInZone": "{target} wants {action} more in the {utilityZone} third",
+    "shoutDefensive": "{target} drops back and defends for {value} s",
+    "shoutOffensive": "{target} pushes forward and attacks for {value} s",
+    "shoutPress": "{target} presses the ball carrier for {value} s"
   },
   "triggers": {
     "MATCH_START": "when the match starts",

@@ -84,6 +84,24 @@ public partial class BroadcastCapture : Control
             return;
         }
 
+        // ADR 0166: `-- gritos` captura sólo el grito activo (salta el recorrido entero, que tarda minutos).
+        if (System.Array.IndexOf(OS.GetCmdlineUserArgs(), "gritos") >= 0)
+        {
+            foreach (var probe in Seeds)
+            {
+                run.NewRun("orc_ironworks", Race.Orc, probe);
+                int probeNode = FirstOfKind(run, n => n.IsMatch);
+                if (probeNode >= 0)
+                {
+                    await CaptureShouts(run, probe, probeNode);
+                    break;
+                }
+            }
+
+            GetTree().Quit();
+            return;
+        }
+
         // 1. Sondeo puro, sin Godot: para cada semilla, el primer nodo de partido del acto 1 y sus
         // momentos ya clasificados. Cuando un tipo ya tiene semilla asignada no se vuelve a buscar: gana
         // siempre la primera semilla de la lista que lo tenga.
@@ -603,6 +621,9 @@ public partial class BroadcastCapture : Control
         // BA-H, RF-082: el botón del consumible manual, antes y después de pulsarlo.
         await CaptureConsumable(run, baseSeed.Value, baseNode);
 
+        // ADR 0166: el grito del entrenador activo, con su cuenta atrás junto a la orden.
+        await CaptureShouts(run, baseSeed.Value, baseNode);
+
         // ADR 0151: la cortinilla del reinicio tras gol, fotografiada EN MARCHA. SeekTo la anula a
         // propósito (un salto no es reproducción), así que se llega dos fotogramas antes del reinicio y se
         // deja correr la pantalla con StepManual, que es determinista, parando en cada tramo del fundido.
@@ -1055,6 +1076,37 @@ public partial class BroadcastCapture : Control
         GD.Print($"retransmisión: 'consumible-2-usado' fotograma {screen.Pitch3D.Frame}");
         await Save("consumible-2-usado");
         Drop(instance);
+    }
+
+    /// <summary>
+    /// ADR 0166: los tres gritos del entrenador ya pulsados, cuatro segundos dentro de su ventana. Lo que
+    /// hay que ver: la orden EFECTIVA en oro (con aro la del jugador), la cuenta atrás junto al consumible
+    /// usado, y la pizarra de líneas con la conducta del grito (el bloque bajo con «¡Aguantad!», alto con
+    /// «¡Arriba!»).
+    /// </summary>
+    private async Task CaptureShouts(RunController run, ulong seed, int node)
+    {
+        const int From = 600;
+        const int After = 60;
+        foreach (var id in new[] { "hold_the_line", "push_forward", "after_him" })
+        {
+            run.NewRun("orc_ironworks", Race.Orc, seed);
+            run.Apply(new SetConsumables(new[] { new EquippedConsumable(id, ConsumableMode.Manual, string.Empty) }));
+            run.SelectedNodeId = node;
+            var instance = await Show("res://Scenes/Retransmision.tscn", frames: 10);
+            if (instance is not BroadcastScreen screen)
+            {
+                Drop(instance);
+                continue;
+            }
+
+            await ShowFrame(screen, From, "grito-" + id);
+            screen.ChooseConsumable(id);
+            await ShowFrame(screen, From + After, "grito-" + id);
+            GD.Print($"retransmisión: 'grito-{id}' fotograma {screen.Pitch3D.Frame}");
+            await Save("grito-" + id);
+            Drop(instance);
+        }
     }
 
     private async Task CaptureResetCut(RunController run, ulong seed, int node, int goalFrame)

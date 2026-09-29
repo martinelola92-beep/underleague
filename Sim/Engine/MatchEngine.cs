@@ -60,6 +60,13 @@ internal sealed class MatchEngine : IPerkWorld
     /// <summary>ADR 0154: cambios de orden táctica pendientes, ordenados por tick; <see cref="_nextOrderChange"/> apunta al siguiente.</summary>
     private readonly List<(int Tick, int Team, int Index, Mentality Order)> _pendingOrderChanges = new();
     private int _nextOrderChange;
+
+    // ADR 0166: los gritos del entrenador. `_context.Order` es siempre la orden EFECTIVA (la que leen las
+    // líneas, las cuotas y la utilidad); `_baseOrder` es la del jugador (inicial + OrderChange), a la que se
+    // vuelve cuando el grito acaba. -1 = sin grito de orden / sin consigna de presión activa.
+    private readonly Mentality[] _baseOrder = new Mentality[2];
+    private readonly int[] _shoutOrderEnd = { -1, -1 };
+    private readonly int[] _pressEnd = { -1, -1 };
     private int _nextSubstitution;
     private readonly MatchPlayer?[] _goalkeepers = new MatchPlayer?[2];
     private readonly Ball _ball = new();
@@ -263,6 +270,8 @@ internal sealed class MatchEngine : IPerkWorld
         // se lee una vez aquí y no cada tick.
         _context.Order[0] = setup.Home.Order;
         _context.Order[1] = setup.Away.Order;
+        _baseOrder[0] = setup.Home.Order;
+        _baseOrder[1] = setup.Away.Order;
 
         // ADR 0154: los cambios de orden durante el partido, por tick y, a igualdad, por lista (estable).
         for (int team = 0; team < 2; team++)
@@ -307,6 +316,9 @@ internal sealed class MatchEngine : IPerkWorld
 
     private int RegulationTicks => _regulationTicks;
 
+    /// <summary>Sólo para pruebas: se invoca tras cada tick, para observar el estado (p. ej. la orden efectiva, ADR 0166). Nunca se asigna en producción.</summary>
+    internal Action<MatchEngine>? AfterStepForTest { get; set; }
+
     /// <summary>Ejecuta el partido completo y devuelve eventos e informe (§3.2).</summary>
     public MatchResult Run()
     {
@@ -319,6 +331,7 @@ internal sealed class MatchEngine : IPerkWorld
         while (_phase != MatchPhase.Finished)
         {
             Step();
+            AfterStepForTest?.Invoke(this);
             _trace?.Capture(_tick, _clockTick, _phase, _pendingRestart, _restartTaker, _ball, _events.Count);
         }
 
@@ -650,6 +663,7 @@ internal sealed class MatchEngine : IPerkWorld
         }
 
         ApplySubstitutions();
+        ExpireShouts();
         ApplyOrderChanges();
 
         // Consumibles condicionales (RF-081..083): se comprueban antes que nada, así que el disparador ve
@@ -5128,10 +5142,69 @@ internal sealed class MatchEngine : IPerkWorld
         while (_nextOrderChange < _pendingOrderChanges.Count && _pendingOrderChanges[_nextOrderChange].Tick <= _tick)
         {
             var change = _pendingOrderChanges[_nextOrderChange];
-            _context.Order[change.Team] = change.Order;
+
+            // ADR 0166: la orden del jugador cambia la de BASE siempre; la efectiva sólo si no hay un grito de
+            // orden en curso. Si lo hay, el grito manda hasta que acabe y entonces vuelve a esta orden (la que
+            // el jugador puso entretanto), no a la que había al gritar.
+            _baseOrder[change.Team] = change.Order;
+            if (_shoutOrderEnd[change.Team] < 0)
+            {
+                _context.Order[change.Team] = change.Order;
+            }
+
             _nextOrderChange++;
         }
     }
+
+    /// <summary>
+    /// ADR 0166: empieza un grito del entrenador para <paramref name="team"/> durante
+    /// <paramref name="ticks"/> ticks (contando este). Una orden (<see cref="ShoutKind.Defensive"/>,
+    /// <see cref="ShoutKind.Offensive"/>) pone la orden efectiva del equipo por el mismo campo que la orden
+    /// táctica en vivo (ADR 0154/0156: líneas, cuotas y utilidad); un segundo grito de orden sustituye al
+    /// primero. La consigna <see cref="ShoutKind.Press"/> es independiente de la orden y puede convivir con
+    /// ella. Lo llama <c>EffectEngine.ResolveConsumables</c> al activarse el consumible.
+    /// </summary>
+    internal void StartShout(int team, Underleague.Sim.Perks.ShoutKind kind, int ticks)
+    {
+        int end = _tick + ticks;
+        if (kind == Underleague.Sim.Perks.ShoutKind.Press)
+        {
+            _pressEnd[team] = end;
+            _context.PressActive[team] = true;
+            return;
+        }
+
+        _shoutOrderEnd[team] = end;
+        _context.Order[team] = kind == Underleague.Sim.Perks.ShoutKind.Defensive ? Mentality.Defensive : Mentality.Offensive;
+    }
+
+    /// <summary>ADR 0166: retira los gritos cuyo tiempo se ha cumplido; la orden efectiva vuelve a la de base.</summary>
+    private void ExpireShouts()
+    {
+        for (int team = 0; team < 2; team++)
+        {
+            if (_shoutOrderEnd[team] >= 0 && _tick >= _shoutOrderEnd[team])
+            {
+                _shoutOrderEnd[team] = -1;
+                _context.Order[team] = _baseOrder[team];
+            }
+
+            if (_pressEnd[team] >= 0 && _tick >= _pressEnd[team])
+            {
+                _pressEnd[team] = -1;
+                _context.PressActive[team] = false;
+            }
+        }
+    }
+
+    /// <summary>ADR 0166: la orden con la que juega el equipo ahora mismo (la del grito si lo hay).</summary>
+    public Mentality EffectiveOrder(int team) => _context.Order[team];
+
+    /// <summary>ADR 0166: la orden del jugador, sin grito; a la que se vuelve al acabar.</summary>
+    public Mentality BaseOrder(int team) => _baseOrder[team];
+
+    /// <summary>ADR 0166: ¿tiene el equipo la consigna de presión activa ahora mismo?</summary>
+    public bool PressActive(int team) => _context.PressActive[team];
 
     /// <summary>
     /// ¿Qué área está cerrada? La del equipo cuyo portero tiene el balón dentro de su área —lo atrapó, lo

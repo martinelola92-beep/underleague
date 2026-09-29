@@ -56,6 +56,14 @@ public partial class BroadcastBoard : Control
     private Rect2 _pauseButton;
     private readonly Rect2[] _orderButtons = new Rect2[3];
     private int _orderIndex = 1;
+
+    // ADR 0166: la orden que puso el jugador, distinta de la efectiva mientras dura un grito de orden.
+    private int _playerOrderIndex = 1;
+
+    /// <summary>ADR 0166: un grito del entrenador en curso: su nombre, los segundos que le quedan y qué fracción de su duración.</summary>
+    public readonly record struct ShoutInfo(string Name, int SecondsLeft, float Fraction);
+
+    private IReadOnlyList<ShoutInfo> _shouts = System.Array.Empty<ShoutInfo>();
     private bool _orderEnabled = true;
 
     /// <summary>
@@ -135,11 +143,23 @@ public partial class BroadcastBoard : Control
         QueueRedraw();
     }
 
-    /// <summary>La orden táctica vigente (0 defensiva, 1 neutra, 2 ofensiva) y si se puede cambiar ahora.</summary>
-    public void SetOrder(int index, bool enabled)
+    /// <summary>
+    /// La orden táctica con la que juega el equipo (0 defensiva, 1 neutra, 2 ofensiva) y si se puede cambiar
+    /// ahora. <paramref name="playerIndex"/> es la que puso el jugador: distinta de <paramref name="index"/>
+    /// sólo mientras un grito de orden manda (ADR 0166), y es a la que se vuelve al acabar.
+    /// </summary>
+    public void SetOrder(int index, bool enabled, int? playerIndex = null)
     {
         _orderIndex = Mathf.Clamp(index, 0, 2);
+        _playerOrderIndex = Mathf.Clamp(playerIndex ?? index, 0, 2);
         _orderEnabled = enabled;
+        QueueRedraw();
+    }
+
+    /// <summary>ADR 0166: los gritos del entrenador en curso, con su cuenta atrás; vacío si no hay ninguno.</summary>
+    public void SetShouts(IReadOnlyList<ShoutInfo> shouts)
+    {
+        _shouts = shouts;
         QueueRedraw();
     }
 
@@ -298,6 +318,7 @@ public partial class BroadcastBoard : Control
         DrawSpeedButtons(w);
         DrawOrderButtons();
         DrawConsumableButtons();
+        DrawShouts();
 
         // Criterio del árbitro (RF-062, RF-063, ADR 0158 §6): en el hueco entre la orden táctica y el
         // bloque de equipos -328 a blockX-, siempre a la vista, nunca un anuncio del director.
@@ -403,6 +424,13 @@ public partial class BroadcastBoard : Control
             }
 
             Pregon.DrawParchment(this, new Vector2(x, 14f), bw, bh, fill, Pregon.Sable, seed: 30 + i, amplitude: 1.2f, edgeWidth: 2f);
+
+            // ADR 0166: mientras un grito manda, la orden a la que se vuelve al acabar lleva un aro de oro.
+            if (i == _playerOrderIndex && _playerOrderIndex != _orderIndex)
+            {
+                DrawRect(new Rect2(x + 2f, 16f, bw - 4f, bh - 4f), Pregon.Or, filled: false, width: 2f);
+            }
+
             Style.DrawText(this, Pregon.DataBold, new Vector2(x + 10f, 14f + 12f), labels[i], Pregon.SizeDataSmall, active ? Pregon.Sable : Pregon.Vellum, maxWidth: bw - 20f);
             x += bw + gap;
         }
@@ -441,6 +469,28 @@ public partial class BroadcastBoard : Control
             var textColor = info.Used ? Pregon.Vellum.Darkened(0.3f) : info.Enabled ? Pregon.Sable : Pregon.Vellum;
             Pregon.DrawTextEllipsized(this, Pregon.DataBold, new Vector2(x + 10f, Y + 5f), label, Pregon.SizeDataSmall, textColor, bw - 16f);
             x += bw + gap;
+        }
+    }
+
+    /// <summary>
+    /// ADR 0166: el grito del entrenador en curso, en la fila de los consumibles y justo tras ellos (el
+    /// consumible que lo gritó se ve «· usado» a su izquierda), con el nombre, los segundos que le quedan y
+    /// una barra que se vacía. Es la cuenta atrás que dice hasta cuándo el equipo juega distinto.
+    /// </summary>
+    private void DrawShouts()
+    {
+        const float Bw = 250f, Bh = 34f, Gap = 8f, Y = 64f;
+        float x = 24f + (_consumables.Count * (270f + Gap));
+        for (int i = 0; i < _shouts.Count; i++)
+        {
+            var shout = _shouts[i];
+            Pregon.DrawParchment(this, new Vector2(x, Y), Bw, Bh, Pregon.Azur, Pregon.Sable, seed: 60 + i, amplitude: 1.2f, edgeWidth: 2f);
+            string label = UiText.Get("ui.pregon.shout.active", shout.Name, shout.SecondsLeft);
+            Pregon.DrawTextEllipsized(this, Pregon.DataBold, new Vector2(x + 10f, Y + 4f), label, Pregon.SizeDataSmall, Pregon.Vellum, Bw - 20f);
+            float trackW = Bw - 20f;
+            DrawRect(new Rect2(x + 10f, Y + Bh - 8f, trackW, 4f), Pregon.Sable);
+            DrawRect(new Rect2(x + 10f, Y + Bh - 8f, trackW * Mathf.Clamp(shout.Fraction, 0f, 1f), 4f), Pregon.Or);
+            x += Bw + Gap;
         }
     }
 

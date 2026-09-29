@@ -717,6 +717,10 @@ public static class PerkLoader
     {
         node.EnsureKnownKeys(EffectKnownKeys);
         var type = ParseEnum<EffectType>(node.Prop("type"), "tipo de efecto");
+        if (type == EffectType.Shout)
+        {
+            throw new DataException(node.File, node.Path + ".type", "'shout' (ADR 0166) sólo existe en los consumibles: un perk no grita");
+        }
 
         var (target, targetTag) = node.TryProp("target") is { } targetNode
             ? ParseTarget(targetNode)

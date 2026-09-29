@@ -1104,7 +1104,13 @@ public partial class BroadcastScreen : Control
         _board.SetRivalResidue(UiText.Get("ui.pregon.board.residue", cards, casualties));
         _board.SetSpeedIndex(_speedIndex);
         _board.SetPaused(_manualPaused);
-        _board.SetOrder((int)_run.OrderAt(tick), enabled: CanChangeOrder());
+
+        // ADR 0166: un grito de orden manda mientras dura; el tablero enseña la orden efectiva (la que
+        // mueve las líneas) y, con aro, la que puso el jugador, a la que se vuelve.
+        var playerOrder = _run.OrderAt(tick);
+        var shouts = MatchShoutView.ActiveAt(_playback.Result.Events, _playback.Setup.Home.Consumables, 0, tick);
+        _board.SetOrder((int)MatchShoutView.EffectiveOrder(shouts, playerOrder), enabled: CanChangeOrder(), playerIndex: (int)playerOrder);
+        _board.SetShouts(BuildShoutInfos(shouts));
         _board.SetConsumables(BuildConsumableButtons());
 
         // RF-062: el criterio SIEMPRE visible, leído del Bias del último evento <= este tick (ADR 0158 §6).
@@ -1779,6 +1785,24 @@ public partial class BroadcastScreen : Control
         }
 
         return (IReadOnlyList<BroadcastBoard.ConsumableButtonInfo>?)result ?? Array.Empty<BroadcastBoard.ConsumableButtonInfo>();
+    }
+
+    private IReadOnlyList<BroadcastBoard.ShoutInfo> BuildShoutInfos(IReadOnlyList<ActiveShout> shouts)
+    {
+        if (shouts.Count == 0)
+        {
+            return Array.Empty<BroadcastBoard.ShoutInfo>();
+        }
+
+        var result = new List<BroadcastBoard.ShoutInfo>(shouts.Count);
+        for (int i = 0; i < shouts.Count; i++)
+        {
+            var shout = shouts[i];
+            result.Add(new BroadcastBoard.ShoutInfo(
+                _run.ConsumableName(shout.ConsumableId), shout.SecondsLeft, shout.TicksLeft / (float)Math.Max(1, shout.TicksTotal)));
+        }
+
+        return result;
     }
 
     private void OnSpeedChosen(int index)

@@ -1,5 +1,5 @@
 {
-  "_doc": "BA-H (catálogo, RF-084 tácticos): grito del entrenador, pensado para el slot manual (RF-082) — 'arriba' es volcar el equipo al ataque: más circulación de balón. Raro, techo 300.",
+  "_doc": "BA-H (catálogo, RF-084 tácticos), ADR 0166: grito del entrenador para el slot manual (RF-082). '¡Arriba!' pone al equipo en ORDEN OFENSIVA (ADR 0154/0156: líneas adelantadas, más tiro y regate, menos entrada y parada: destapa la defensa) durante 10 s y después vuelve a la orden que tenía. Sin multiplicadores de éxito propios. Duración provisional, sin medir. Raro.",
   "id": "push_forward",
   "name": {
     "es": "¡Arriba!",
@@ -9,14 +9,9 @@
   "family": "tactical",
   "effects": [
     {
-      "type": "modifyProbability",
-      "probability": "pass",
-      "value": 200
-    },
-    {
-      "type": "modifyProbability",
-      "probability": "dribble",
-      "value": 100
+      "type": "shout",
+      "order": "Offensive",
+      "seconds": 10
     }
   ]
 }

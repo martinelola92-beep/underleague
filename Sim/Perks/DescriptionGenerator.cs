@@ -428,6 +428,14 @@ public static class DescriptionGenerator
             // C1 (ADR 0146): dos frases, porque la cláusula de tercio cambia lo que el jugador tiene que
             // entender. «Quiere tirar más» y «quiere tirar más cuando está arriba» no son la misma promesa.
             EffectType.ModifyUtility => effect.UtilityZone is null ? "modifyUtility" : "modifyUtilityInZone",
+
+            // ADR 0166: tres frases propias (lo que el jugador ve es la orden o la consigna), con la duración en segundos.
+            EffectType.Shout => effect.Shout switch
+            {
+                ShoutKind.Defensive => "shoutDefensive",
+                ShoutKind.Offensive => "shoutOffensive",
+                _ => "shoutPress",
+            },
             _ => throw new InvalidOperationException($"tipo de efecto sin plantilla: {effect.Type}"),
         };
 
