@@ -295,4 +295,15 @@ public partial class RunController
         State is null || Catalog is null || Systems is null
             ? null
             : RefereeView.For(State, node, Systems, Catalog, Data.GameData.Language);
+
+    /// <summary>
+    /// Cómo se presenta el rival de <paramref name="node"/> (BH-B): el jefe con el nombre de <c>data/bosses/</c>, el
+    /// partido de liga o élite con el de su clan, y null en lo que no se juega. Las pantallas no leen
+    /// <c>MapNode.OpponentId</c> para presentar a nadie: el del nodo de jefe es un fantasma que resuelve a un clan
+    /// de la liga (BE-F). Null sin run cargada.
+    /// </summary>
+    public OpponentCard? Opponent(MapNode node) =>
+        Bosses is null || Systems is null
+            ? null
+            : OpponentView.For(node, Bosses, Systems.Rivals, Data.GameData.Language);
 }

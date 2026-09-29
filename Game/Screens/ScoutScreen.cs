@@ -11,6 +11,7 @@ using Underleague.Sim.Perks;
 using Underleague.Sim.Run;
 using Underleague.Sim.Run.Systems.Bets;
 using Underleague.Sim.Run.Systems.Rivals;
+using Underleague.Sim.Run.View;
 
 namespace Underleague.Game.Screens;
 
@@ -80,8 +81,7 @@ public partial class ScoutScreen : Control
             node.Difficulty,
             UiText.Get("ui.difficulty." + (node.Difficulty <= 0 ? 5 : node.Difficulty))));
 
-        var rivalTeam = _run.Systems?.Rivals.Find(node.OpponentId);
-        BuildRivalList(state, node, catalog, setup.Away, rivalTeam);
+        BuildRivalList(state, node, catalog, setup.Away, _run.Opponent(node));
         BuildReport(state, catalog, node, setup);
         BuildButtons();
 
@@ -113,20 +113,26 @@ public partial class ScoutScreen : Control
     /// que no representa un enfrentamiento real contra ese clan -mismo motivo por el que
     /// <see cref="RivalHistory.Encounters"/> lo excluye por dentro.
     /// </para>
+    /// <para>
+    /// BH-B: el encabezado sale de <see cref="RunController.Opponent"/>, no del clan que resuelve el
+    /// <c>opponentId</c> guardado. El jefe se presenta con su nombre y con «jefe del acto N» —<c>data/bosses/</c> no
+    /// trae descripción de ojeo—, y nunca con el nombre ni la descripción de un equipo de liga.
+    /// </para>
     /// </summary>
-    private void BuildRivalList(RunState state, MapNode node, Sim.Data.Catalog catalog, TeamSetup away, RivalTeam? rivalTeam)
+    private void BuildRivalList(RunState state, MapNode node, Sim.Data.Catalog catalog, TeamSetup away, OpponentCard? opponent)
     {
         Widgets.Panel(this, new Rect2(12f, 52f, Widgets.CardColumnWidth, 690f));
         Widgets.Section(this, UiText.Get("ui.scout.rival"), new Vector2(24f, 60f), 340f);
 
         float listTop = 82f;
-        if (rivalTeam is not null)
+        if (opponent is not null)
         {
-            Widgets.Body(this, rivalTeam.Name.Es, new Vector2(24f, 80f), 340f, Style.Accent);
-            var descriptionLabel = Widgets.Body(this, rivalTeam.Description.Es, new Vector2(24f, 98f), 340f, Style.TextDim);
+            Widgets.Body(this, opponent.Name, new Vector2(24f, 80f), 340f, Style.Accent);
+            string description = opponent.IsBoss ? UiText.Get("ui.map.boss", node.Act) : opponent.Description;
+            var descriptionLabel = Widgets.Body(this, description, new Vector2(24f, 98f), 340f, Style.TextDim);
             listTop = 98f + descriptionLabel.Size.Y + 10f;
 
-            if (node.Kind != NodeKind.Boss)
+            if (!opponent.IsBoss && _run.Systems?.Rivals.Find(node.OpponentId) is { } rivalTeam)
             {
                 listTop = BuildNemesisLines(state, node, listTop);
                 listTop = BuildRivalryLines(state, node.OpponentId, rivalTeam, listTop);

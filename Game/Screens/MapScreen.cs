@@ -392,10 +392,11 @@ public partial class MapScreen : Control
             lines.Add(UiText.Get("ui.map.difficulty", node.Difficulty, UiText.Get("ui.difficulty." + node.Difficulty)));
         }
 
-        // El rival tiene nombre (RF-015: son personajes que el jugador aprende, no bloques de estadísticas).
-        if (node.OpponentId.Length > 0 && _run.Systems!.Rivals.Find(node.OpponentId) is { } rival)
+        // El rival tiene nombre (RF-015: son personajes que el jugador aprende, no bloques de estadísticas). En el
+        // nodo de jefe es el del jefe, no el del clan que guarda su opponentId fantasma (BH-B, BE-F).
+        if (_run.Opponent(node) is { } opponent)
         {
-            lines.Add(rival.Name.Es);
+            lines.Add(opponent.Name);
         }
 
         // ADR 0165: el némesis que juega en este partido, con su título, para elegir el camino sabiéndolo.
