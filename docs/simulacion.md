@@ -19,7 +19,7 @@ Fases del partido (`MatchPhase`):
 - Saque inicial (`Kickoff`): primer contacto en los 2 primeros segundos (30 ticks) (RF-052).
 - Reanudaciones (`Restart`) instantáneas con animación de 1 s superpuesta que no detiene el reloj (RF-053). Solo penalti (`Penalty`) y tarjeta roja detienen el reloj (RF-054).
 - Reglamentario: una sola fase, 100% con reglas normales (RF-055).
-- Turba (`MobGoldenGoal`, RF-055b): solo si hay empate. Transición `REFEREE_LEAVES`: sin faltas, sin tarjetas, criterio deja de aplicarse; campo 16x3 (filas 0 y 4 invadidas, siempre las mismas); velocidad global +15% (se aplica como multiplicador entero a los costes en ticks, no cambiando el tick); primer gol termina.
+- Turba (`MobGoldenGoal`, RF-055b): solo si hay empate. Transición `REFEREE_LEAVES`: sin faltas, sin tarjetas, criterio deja de aplicarse; banda jugable de 5 filas de las 7 (la cuadrícula sigue siendo 16x7; las filas 0 y 6 las invade el público, siempre las mismas: `tuning.mob.narrowRowsPerSide`, ADR 0169); velocidad global +15% (`tuning.mob.speedPercent`: multiplicador entero sobre la velocidad de carrera y las de golpe del balón, sin cambiar el tick ni los cooldowns, ADR 0169); quien está en una fila invadida al empezar se aparta andando; primer gol termina.
 - Incomparecencia (`Forfeit`): menos de 5 jugadores en campo = derrota inmediata (RF-059). Si el equipo del usuario baja de 5 disponibles, la run termina (RF-002b).
 
 ### 2. Estado táctico del equipo
