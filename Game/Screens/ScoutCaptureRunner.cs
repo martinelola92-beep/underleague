@@ -64,10 +64,60 @@ public partial class ScoutCaptureRunner : Control
         run.SelectedNodeId = first.Id;
         var filled = await Show("res://Scenes/Ojeo.tscn");
         await Save("ojeo-relleno");
+
+        // RF-002d: el jugador decide dejar el hueco. Se pulsa el botón de verdad (la señal que lanza el clic), no se
+        // llama al manejador; con la navegación silenciada la pantalla se queda, así que se monta otra para enseñar
+        // el once que sale de la decisión.
+        var leave = FindButton(filled, UiText.Get("ui.scout.leaveGap"));
+        if (leave is null)
+        {
+            GD.PushError("el ojeo con un hueco de oficio no ofrece «Dejar el hueco vacío»");
+        }
+        else
+        {
+            leave.EmitSignal(BaseButton.SignalName.Pressed);
+            GD.Print($"tras pulsar: juega sin relleno = {RunLineup.PlaysShort(run.State!)}");
+        }
+
         Drop(filled);
+        var gap = await Show("res://Scenes/Ojeo.tscn");
+        await Save("ojeo-hueco");
+
+        // Y se deshace con el botón contrario.
+        var refill = FindButton(gap, UiText.Get("ui.scout.fillGap"));
+        if (refill is null)
+        {
+            GD.PushError("el ojeo con la decisión tomada no ofrece «Que el banquillo tape el hueco»");
+        }
+        else
+        {
+            refill.EmitSignal(BaseButton.SignalName.Pressed);
+            GD.Print($"tras deshacer: juega sin relleno = {RunLineup.PlaysShort(run.State!)}");
+        }
+
+        Drop(gap);
 
         Nav.Suppressed = false;
         GetTree().Quit(0);
+    }
+
+    /// <summary>El botón con ese texto, buscado en todo el árbol de la pantalla; null si no hay ninguno.</summary>
+    private static Button? FindButton(Node root, string text)
+    {
+        foreach (var child in root.GetChildren())
+        {
+            if (child is Button button && button.Text == text)
+            {
+                return button;
+            }
+
+            if (FindButton(child, text) is { } found)
+            {
+                return found;
+            }
+        }
+
+        return null;
     }
 
     private static MapNode FirstMatch(RunController run)

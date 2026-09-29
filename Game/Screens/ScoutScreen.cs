@@ -380,6 +380,9 @@ public partial class ScoutScreen : Control
                 LineupWarningKind.Shorthanded => UiText.Get(
                     "ui.scout.warnShorthanded",
                     effective.Lineup.Slots.Count.ToString(CultureInfo.InvariantCulture)),
+                LineupWarningKind.ShortByChoice => UiText.Get(
+                    "ui.scout.warnShortByChoice",
+                    effective.Lineup.Slots.Count.ToString(CultureInfo.InvariantCulture)),
                 LineupWarningKind.FilledFromBench => UiText.Get("ui.scout.warnFilled", player?.Name ?? "?"),
                 LineupWarningKind.SevereInjuryDeathRisk => UiText.Get("ui.scout.warnSevere", player?.Name ?? "?"),
                 _ => UiText.Get("ui.scout.warnLethal", player?.Name ?? "?", Percent(warning.Risk)),
@@ -398,7 +401,7 @@ public partial class ScoutScreen : Control
         // AW-O: el botón de empezar va pegado a lo que se acaba de leer, no arriba del todo con "Volver"
         // y "Alinear" (BuildButtons) — para que confirmar se sienta como confirmar el riesgo y los
         // avisos, no como un paso de trámite anterior a ellos.
-        y = BuildConfirmBar(y);
+        y = BuildConfirmBar(y, GapChoice(state, warnings));
 
         // El once con el que se juega, que es lo que el jugador cambia si el número no le gusta. Hasta la
         // ADR 0134 esta lista enseñaba la alineación GUARDADA, así que decía una cosa y saltaba al campo
@@ -417,6 +420,32 @@ public partial class ScoutScreen : Control
         }
 
         Block(UiText.Get("ui.scout.starters"), starters, y);
+    }
+
+    /// <summary>
+    /// RF-002d, BC-H: la decisión que faltaba antes del partido —«esta casilla la dejo vacía»—, junto al botón que
+    /// confirma el once. Con un hueco que el banquillo va a tapar de oficio, «Dejar el hueco vacío» juega con los que el
+    /// jugador puso (<c>SetLineup(PlayShort)</c>); con la decisión ya tomada, «Que el banquillo tape el hueco» la
+    /// deshace. Sólo se ofrece si lo guardado llega al mínimo con el que se puede jugar. La regla es de <c>/Sim</c>: aquí
+    /// sólo se pide, y se vuelve a montar la pantalla para enseñar el once que sale de ello. Devuelve null si no toca.
+    /// </summary>
+    private static (string Label, bool PlayShort)? GapChoice(RunState state, IReadOnlyList<LineupWarning> warnings)
+    {
+        bool filled = false;
+        bool byChoice = false;
+        foreach (var warning in warnings)
+        {
+            filled |= warning.Kind == LineupWarningKind.FilledFromBench;
+            byChoice |= warning.Kind == LineupWarningKind.ShortByChoice;
+        }
+
+        if (state.Lineup.Slots.Count < RunRules.MinimumAvailablePlayers || (!filled && !byChoice))
+        {
+            return null;
+        }
+
+        bool leave = filled && !byChoice;
+        return (UiText.Get(leave ? "ui.scout.leaveGap" : "ui.scout.fillGap"), leave);
     }
 
     /// <summary>
@@ -504,7 +533,7 @@ public partial class ScoutScreen : Control
     /// junto a "Volver" y "Alinear", con el mismo peso visual que ellos y antes de leer una sola línea del
     /// informe: eso lo hacía sentir un paso de trámite, no la confirmación explícita que pide el revisor.
     /// </summary>
-    private float BuildConfirmBar(float y)
+    private float BuildConfirmBar(float y, (string Label, bool PlayShort)? gap)
     {
         // Una raya, no una tarjeta: parchment:false, si no ParchmentPanel intentaría rasgar un borde
         // sobre un rectángulo de 1 px de alto.
@@ -517,6 +546,17 @@ public partial class ScoutScreen : Control
         // suelta, no como texto de botón sobre la placa de pergamino (BuildLegacyTheme ya le da tinta
         // oscura legible); el borde de foco en dorado del Theme ya distingue este botón cuando toca.
         start.Pressed += StartMatch;
+
+        // RF-002d, BC-H: la otra decisión de antes del partido, a su lado y sin gastar una fila del informe.
+        if (gap is { } choice)
+        {
+            var toggle = Widgets.Button(this, choice.Label, new Rect2(644f, y, 300f, 32f));
+            toggle.Pressed += () =>
+            {
+                _run.Apply(new SetLineup(_run.State!.Lineup, PlayShort: choice.PlayShort));
+                Nav.Go(this, Nav.Scout);
+            };
+        }
 
         return y + 32f + 16f;
     }

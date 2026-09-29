@@ -525,7 +525,8 @@ public sealed class TeamState
 
         if (_run is { HasRun: true })
         {
-            _run.Apply(new SetLineup(next));
+            // Mover una ficha no quita la decisión de jugar sin relleno (RF-002d, BC-H): se conserva tal cual está.
+            _run.Apply(new SetLineup(next, RunLineup.PlaysShort(_run.State!)));
             Team = TeamOf(_run.State!, Catalog, _run.Systems);
             return true;
         }

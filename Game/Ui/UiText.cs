@@ -270,6 +270,9 @@ public static class UiText
         // cuántos se juega en vez de llevar el 5 escrito dentro.
         ["ui.scout.warnShorthanded"] = "juegas en inferioridad: solo hay {0} para el campo, y con 5 una sola baja termina la run",
         ["ui.scout.warnFilled"] = "{0} sale de oficio: tú no lo alineaste, y el hueco lo ha tapado el equipo",
+        ["ui.scout.warnShortByChoice"] = "juegas con {0} porque lo has decidido: con 5 en campo una sola baja termina la run",
+        ["ui.scout.leaveGap"] = "Dejar el hueco vacío",
+        ["ui.scout.fillGap"] = "Que el banquillo tape el hueco",
         ["ui.scout.startersFilled"] = "de oficio",
         ["ui.scout.warnSevere"] = "{0} sale con una lesión grave sin tratar: si vuelve a lesionarse, muere",
         ["ui.scout.warnLethal"] = "{0} puede morir en este partido: {1}",
