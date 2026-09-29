@@ -23,12 +23,12 @@ viva anotada.
 | Id | Título | Estado |
 |---|---|---|
 | [BA-E](./BA-E.md) | Goles sin ángulo | Abierta, medida (A RECHAZADA por la ADR 0111, C disponible). **Vía nueva 23 sep**: la acción «centrar» del §7 de `plan-altura-del-balon.md` le da al delantero la alternativa que a la vía B le faltaba |
-| [BA-G](./BA-G.md) | Los nombres de los jugadores se repiten | Abierta: el sorteo de `data/*/names` no tiene memoria dentro de la run |
 | [BA-H](./BA-H.md) | Los consumibles no se pueden usar | Uso en vivo y catálogo de 20 hechos (29 sep); abierta sólo la propuesta de dos slots |
 | [BA-J](./BA-J.md) | Tras una parada, el equipo defensor debería replegarse | Abierta: hoy no hay fase de repliegue tras `SAVE` |
 | [BR-A](./BR-A.md) | Guardar o salir a mitad de partido no reproduce el partido al volver (RT-061) | Abierta: el estado en memoria ya es el de después del partido; arreglarlo pide esquema de guardado con las decisiones del partido |
 | [BR-B](./BR-B.md) | Jugadores muertos que vuelven a la vida: `INJURY` tras `DEATH` en el mismo tick | Cerrada (29 sep): causa CONFIRMED, el motor lesionaba al objetivo de un perk letal ya muerto; guarda en el motor y en la resolución |
 | [BS-A](./BS-A.md) | Créditos de rival y epitafio de la Gaceta nombran al jugador de datos, no al fichaje o némesis que ocupaba el puesto | Cerrada para la esquela (29 sep): se anota quién ocupaba el puesto al matar (`deathKiller:`); abierto el villano por créditos |
+| [BT-A](./BT-A.md) | La política de `RunPolicy` intenta vender a un fichaje sin experiencia y lanza (ADR 0108): 9 de 60 runs con el `Setup` de los tests | Abierta, **CONFIRMED**; es el instrumento, no el juego; mueve el balance, pide `balance-measure` |
 | [BB-D](./BB-D.md) | Parar unos segundos en los eventos que detienen el juego | Analizada (`game-design-review`, 16 sep); pendiente de decidir si se implementa — se resuelve entera en `/Game`, sin tocar RT-020 |
 | [BB-G2](./BB-G2.md) | El portero puede ser perseguidor designado fuera de su área y bloquear a los diez | Abierta, sin evidencia de activación |
 | [BB-H](./BB-H.md) | «Todavía no hay eventos, habrá que diseñarlos» | Abierta: existen seis cartas, pero 0,38 resueltas por run — es densidad y catálogo, no ausencia |
@@ -78,6 +78,7 @@ viva anotada.
 | [BH-B](./BH-B.md) | El nodo de jefe se presenta con el nombre de un clan de liga, en el mapa y en el ojeo | **Cerrada** (29 sep): `OpponentView` decide la ficha por el tipo de nodo; el jefe se presenta con `data/bosses/`, también en el marcador del partido (el equipo se llamaba `the_hunt`). El nodo sigue guardando el id fantasma (BE-F) |
 | [BC-H](./BC-H.md) | El aviso de alineación incompleta es falso: el once se rellena solo | **Cerrada** (29 sep): mitad de dentro por la ADR 0134; hueco deliberado antes del partido (`SetLineup(PlayShort)`, contador `fieldShort`, botón en el ojeo) y captura que regresiona el aviso (`ojeo-relleno.png`, `ojeo-hueco.png`) |
 | [BA-L2](./BA-L2.md) | `CaptureRunner` pierde el árbol de escena entre `informe` y `recompensa` | **Cerrada** (29 sep): la secuencia llega al final (19 sep) y `recompensa.png` ya se ve: era el arnés enseñando una recompensa que la liga no da (ADR 0096); deja abierto un partido de élite |
+| [BA-G](./BA-G.md) | Los nombres de los jugadores se repiten | **Cerrada** (29 sep, [ADR 0169](../decisiones/0169-un-nombre-no-se-repite-en-la-run.md)): 5 de 36 runs acababan con un nombre repetido; ahora 0, y el flujo de mercado/recompensa/partido no se mueve. La revisión independiente destapó dos hermanos, ya arreglados: el equipo del jefe y los jugadores de datos de los clanes |
 | [BK-A](./BK-A.md) | RF-069 exigía el 60 % de modificadores numéricos y el producto pide lo contrario | **Cerrada** por la ADR 0149: RF-069 reescrita con el eje de visibilidad, requisitos a v0.10 |
 | [BL-A](./BL-A.md) | Lesionar al rival no ayuda a ganar (`dirty_play`, `ankle_bite`) | **Cerrada**: era ruido. `ankle_bite` LIKELY no negativo (≈ +10), se restaura; la paga de diseño, sin demostrar |
 | [BL-B](./BL-B.md) | El umbral de retirada de la ADR 0087 usa un `rowDeviation` global y falla con filas de varianza alta | **Abierta** solo por hermanos: el umbral lo resuelve la ADR 0150 |
