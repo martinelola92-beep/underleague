@@ -115,6 +115,14 @@ internal static class EffectJson
     /// </summary>
     private static EffectDefinition ReadShout(Json node)
     {
+        // El cargador rechaza lo mismo que el esquema (RT-032): nada de value/target/probability colados, y
+        // `press` sólo existe como `true` (revisión de la ADR 0166).
+        node.EnsureKnownKeys("type", "order", "press", "seconds");
+        if (node.TryProp("press") is not null && !node.OptionalBool("press", false))
+        {
+            throw new DataException(node.File, node.Path + ".press", "'press' de un grito sólo puede ser true; para un grito de orden, quítalo");
+        }
+
         bool press = node.OptionalBool("press", false);
         bool hasOrder = node.TryProp("order") is not null;
         if (press == hasOrder)

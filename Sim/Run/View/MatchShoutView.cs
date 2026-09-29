@@ -39,7 +39,12 @@ public static class MatchShoutView
         ArgumentNullException.ThrowIfNull(events);
         ArgumentNullException.ThrowIfNull(consumables);
 
-        List<ActiveShout>? active = null;
+        // Como en el motor (MatchEngine.StartShout), un grito de orden sustituye al de orden anterior y una
+        // consigna de presión a la anterior: por categoría sólo cuenta el último activado hasta este tick, y
+        // cuando ése acaba el equipo vuelve a su orden, aunque al anterior le quedara tiempo (revisión de la
+        // ADR 0166). La orden y la presión son independientes y pueden convivir.
+        ActiveShout? order = null;
+        ActiveShout? press = null;
         for (int i = 0; i < events.Count; i++)
         {
             var used = events[i];
@@ -65,14 +70,34 @@ public static class MatchShoutView
 
                     int total = effects[e].Value * TicksPerSecond;
                     int left = used.Tick + total - tick;
-                    if (left > 0)
+                    ActiveShout? shout = left > 0 ? new ActiveShout(used.Detail, effects[e].Shout, left, total) : null;
+                    if (effects[e].Shout == ShoutKind.Press)
                     {
-                        active ??= new List<ActiveShout>();
-                        active.Add(new ActiveShout(used.Detail, effects[e].Shout, left, total));
+                        press = shout;
+                    }
+                    else
+                    {
+                        order = shout;
                     }
                 }
+
+                // Un mismo id equipado dos veces es un solo CONSUMABLE_USED por activación: se lee una vez.
+                break;
             }
         }
+
+        List<ActiveShout>? active = null;
+        foreach (var shout in new[] { order, press })
+        {
+            if (shout is { } s)
+            {
+                active ??= new List<ActiveShout>();
+                active.Add(s);
+            }
+        }
+
+        // Por orden de activación, como promete el resumen.
+        active?.Sort((a, b) => (b.TicksTotal - b.TicksLeft).CompareTo(a.TicksTotal - a.TicksLeft));
 
         return (IReadOnlyList<ActiveShout>?)active ?? Array.Empty<ActiveShout>();
     }

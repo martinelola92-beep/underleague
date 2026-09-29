@@ -136,6 +136,18 @@ internal readonly struct Json
 
     public bool OptionalBool(string property, bool fallback) =>
         TryProp(property) is { } value ? value.AsBool() : fallback;
+
+    /// <summary>Error explícito ante una clave que no está en <paramref name="known"/> (<c>_doc</c> siempre vale), RT-032.</summary>
+    public void EnsureKnownKeys(params IReadOnlyList<string> known)
+    {
+        foreach (var (name, _) in EnumerateObject())
+        {
+            if (name != "_doc" && !known.Contains(name, StringComparer.Ordinal))
+            {
+                throw new DataException(File, Path, $"clave desconocida '{name}'");
+            }
+        }
+    }
 }
 
 /// <summary>Nombre localizado es/en, con el mismo formato que <c>data/perks/*.json</c> y <c>data/races/*.json</c>.</summary>

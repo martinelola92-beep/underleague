@@ -84,6 +84,23 @@ public sealed class ShoutTests
         Assert.Equal(6, afterHim.Value);
     }
 
+    /// <summary>
+    /// Revisión de la ADR 0166: el cargador rechaza lo mismo que el esquema (RT-032) —una clave colada en un grito,
+    /// o <c>press: false</c> junto a una orden—, en vez de dejarlo pasar en silencio si el esquema no corre.
+    /// </summary>
+    [Theory]
+    [InlineData("\"value\": 200,")]
+    [InlineData("\"press\": false,")]
+    public void TheLoaderRejectsWhatTheSchemaRejectsInAShout(string extra)
+    {
+        var files = TestData.LoadAllFiles();
+        string key = files.Keys.Single(k => k.Replace('\\', '/').EndsWith("consumables/hold_the_line.json", StringComparison.Ordinal));
+        const string Order = "\"order\": \"Defensive\",";
+        files[key] = files[key].Replace(Order, Order + " " + extra, StringComparison.Ordinal);
+        Assert.Contains(extra, files[key], StringComparison.Ordinal);
+        Assert.Throws<DataException>(() => ConsumableLoader.FromJson(files));
+    }
+
     [Fact]
     public void TheDescriptionComesFromTheEffectInBothLanguages()
     {
@@ -210,6 +227,40 @@ public sealed class ShoutTests
         Assert.Empty(Underleague.Sim.Run.View.MatchShoutView.ActiveAt(events, equipped, 0, T - 1));
         Assert.Empty(Underleague.Sim.Run.View.MatchShoutView.ActiveAt(events, equipped, 0, T + (seconds * Tps)));
         Assert.Empty(Underleague.Sim.Run.View.MatchShoutView.ActiveAt(events, equipped, 1, T));
+    }
+
+    /// <summary>
+    /// Revisión independiente de la ADR 0166: con dos gritos de orden, el segundo sustituye al primero en el motor
+    /// y, cuando acaba, el equipo vuelve a su orden aunque al primero le quedara tiempo. La pantalla tiene que
+    /// enseñar lo mismo (antes seguía pintando el primero). Un «¡Arriba!» recortado a 3 s cae dentro de un
+    /// «¡Aguantad!» de 10 s, con la presión conviviendo en medio.
+    /// </summary>
+    [Fact]
+    public void WithTwoOrderShoutsTheViewFollowsTheEngineAndTheSecondReplacesTheFirst()
+    {
+        var hold = Shout("hold_the_line", T);
+        var push = Shout("push_forward", T + 30);
+        push = push with { Effects = new[] { push.Effects[0] with { Value = 3 } } };
+        var press = Shout("after_him", T + 10);
+        var setup = With(4, null, T);
+        setup = setup with { Home = setup.Home with { Consumables = new[] { hold, press, push } } };
+
+        var (order, _, pressed) = Trace(setup, 4);
+        var events = Simulator.Run(setup, 4, Catalog, SimConfig.Default).Events;
+        var equipped = setup.Home.Consumables;
+        for (int tick = 1; tick <= order.Count; tick++)
+        {
+            var shouts = Underleague.Sim.Run.View.MatchShoutView.ActiveAt(events, equipped, 0, tick);
+            Assert.Equal(At(order, tick), Underleague.Sim.Run.View.MatchShoutView.EffectiveOrder(shouts, Mentality.Neutral));
+            Assert.Equal(pressed[tick - 1], shouts.Any(s => s.Kind == ShoutKind.Press));
+        }
+
+        // Tras el recortado (T+30..T+74) el motor vuelve a Neutral aunque «¡Aguantad!» durara hasta T+149.
+        Assert.Equal(Mentality.Offensive, At(order, T + 74));
+        Assert.Equal(Mentality.Neutral, At(order, T + 75));
+        Assert.DoesNotContain(
+            Underleague.Sim.Run.View.MatchShoutView.ActiveAt(events, equipped, 0, T + 75),
+            s => s.Kind == ShoutKind.Defensive);
     }
 
     [Theory]
