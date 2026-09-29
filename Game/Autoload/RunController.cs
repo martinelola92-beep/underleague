@@ -169,7 +169,7 @@ public partial class RunController : Node
             // (SnapshotCompletion, RT-061b). Las reglas de la run siguen siendo las de su instantánea.
             var state = SnapshotCompletion.Complete(RunSave.Load(file.GetAsText()), GameData.Snapshot);
             Catalog = RunSave.CatalogFromSnapshot(state);
-            Systems = StandardRunSystems.FromJson(state.DataSnapshot);
+            Systems = StandardRunSystems.FromJson(state.DataSnapshot, fromRunSnapshot: true);
             Bosses = BossCatalog.FromJson(state.DataSnapshot);
             _systems = new BossRunSystems(Bosses, Systems);
             State = state;
