@@ -6,6 +6,7 @@ using Underleague.Game.Autoload;
 using Underleague.Game.Data;
 using Underleague.Game.Ui;
 using Underleague.Game.Ui.Broadcast;
+using Underleague.Game.Ui.Knavall;
 using Underleague.Sim.Data;
 using Underleague.Sim.Perks;
 using Underleague.Sim.Run;
@@ -27,17 +28,21 @@ namespace Underleague.Game.Screens;
 /// de una semilla, y puede serlo: es la <i>entrada</i> del determinismo, no parte de él. En cuanto entra
 /// en <see cref="RunController.NewRun"/>, mapas, rivales y dados salen de ella (RT-021).
 /// </para>
+/// <para>
+/// <b>Lenguaje de Knavall (ADR 0162):</b> el nombre del juego en un cartel (ADR 0123 D1, solo en este
+/// texto: el renombrado del código sigue pendiente), los clanes como carteles con el retrato de su raza,
+/// la ficha del elegido con su habilidad racial en un cartel de ayuda, y empezar, semilla y continuar como
+/// placas. La lógica de elegir, sortear, empezar y continuar no cambia.
+/// </para>
 /// </summary>
 public partial class StartScreen : Control
 {
-    private readonly List<(ClubDefinition Club, Button Button)> _clubButtons = new();
 
     private Catalog _catalog = null!;
     private ClubCatalog _clubs = null!;
     private ClubDefinition? _club;
     private LineEdit _seed = null!;
-    private Label _chosen = null!;
-    private Label _description = null!;
+    private ClubBoard _board = null!;
 
     public override void _Ready()
     {
@@ -58,14 +63,30 @@ public partial class StartScreen : Control
         _catalog = DataLoader.FromJson(GameData.Snapshot);
         _clubs = ClubLoader.FromJson(GameData.Snapshot);
 
-        Widgets.Background(this);
-        Widgets.Header(this, UiText.Get("ui.start.title"), UiText.Get("ui.start.subtitle"));
+        // Mesa de madera detrás de todo, y los carteles de ayuda dibujados enteros por InkTooltip: el panel
+        // nativo que los envuelve se vacía solo en esta pantalla (copia del Theme de pantallas viejas).
+        var table = new WoodTable { Position = Vector2.Zero, Size = Layout.LegacySize };
+        AddChild(table);
+        var theme = (Theme)Widgets.BuildLegacyTheme().Duplicate();
+        theme.SetStylebox("panel", "TooltipPanel", new StyleBoxEmpty());
+        Theme = theme;
 
-        BuildClubPanel();
-        BuildSeedPanel();
-        BuildSavePanel();
+        _board = new ClubBoard { Position = Vector2.Zero, Size = new Vector2(Layout.LegacySize.X, 756f) };
+        AddChild(_board);
+        _board.Picked += id =>
+        {
+            foreach (var club in LaunchClubs())
+            {
+                if (club.Id == id)
+                {
+                    Choose(club);
+                }
+            }
+        };
 
-        Widgets.InputHelp(this, UiText.Get("ui.input.mouseOnly"), UiText.Get("ui.input.padPending"));
+        BuildActions();
+
+        Widgets.InputHelp(this, UiText.Get("ui.start.kn.inputMouse"), UiText.Get("ui.input.padPending"));
 
         var clubs = LaunchClubs();
         if (clubs.Count > 0)
@@ -79,68 +100,78 @@ public partial class StartScreen : Control
         }
     }
 
-    private void BuildClubPanel()
+    /// <summary>
+    /// Las acciones, en el panel de la derecha: EMPEZAR es la placa grande; la semilla, secundaria, con su
+    /// explicación en el cartel de ayuda; CONTINUAR solo si hay una run guardada.
+    /// </summary>
+    private void BuildActions()
     {
-        Widgets.Panel(this, new Rect2(12f, 52f, Widgets.CardColumnWidth, 620f));
-        Widgets.Section(this, UiText.Get("ui.start.club"), new Vector2(24f, 60f), 340f);
-        Widgets.Body(this, UiText.Get("ui.start.clubHint"), new Vector2(24f, 78f), 340f, Style.TextDim);
+        var area = ClubBoard.ActionArea;
+        float left = area.Position.X + 22f;
+        float width = area.Size.X - 52f;
 
-        float y = 112f;
-        foreach (var club in LaunchClubs())
-        {
-            var button = Widgets.Button(this, club.Name.Es, new Rect2(24f, y, 340f, 26f));
-            var chosen = club;
-            button.Pressed += () => Choose(chosen);
-            _clubButtons.Add((club, button));
-            y += 32f;
-        }
+        var begin = PlaqueButton.Create(this, UiText.Get("ui.start.begin"), Glyph.Ball, PlaqueKind.Primary, new Rect2(left, area.Position.Y + 18f, width, 72f), 501);
+        begin.FontSize = 28;
+        begin.Tip = new Tip(UiText.Get("ui.start.begin"), UiText.Get("ui.start.kn.beginTip"), Glyph.Ball);
+        begin.Pressed += Begin;
 
-        _chosen = Widgets.Body(this, string.Empty, new Vector2(24f, y + 8f), 340f, Pregon.Wax);
-        _description = Widgets.Body(this, string.Empty, new Vector2(24f, y + 30f), 340f);
-    }
-
-    private void BuildSeedPanel()
-    {
-        Widgets.Panel(this, new Rect2(396f, 52f, 872f, 200f));
-        Widgets.Section(this, UiText.Get("ui.start.seed"), new Vector2(412f, 60f), 500f);
-        Widgets.Body(this, UiText.Get("ui.start.seedHint"), new Vector2(412f, 78f), 830f, Style.TextDim);
+        var label = new Label { Text = UiText.Get("ui.start.seed").ToUpperInvariant(), Position = new Vector2(left + 4f, area.Position.Y + 110f) };
+        label.AddThemeFontOverride("font", Ink.Display);
+        label.AddThemeFontSizeOverride("font_size", 18);
+        label.AddThemeColorOverride("font_color", Ink.RedDark);
+        label.MouseFilter = MouseFilterEnum.Ignore;
+        AddChild(label);
 
         _seed = new LineEdit
         {
-            Position = new Vector2(412f, 106f),
-            Size = new Vector2(240f, 28f),
+            Position = new Vector2(left + 100f, area.Position.Y + 104f),
+            Size = new Vector2(180f, 40f),
             Text = "20260905",
+            TooltipText = UiText.Get("ui.start.seedHint"),
         };
-        _seed.AddThemeFontSizeOverride("font_size", Style.TextSmall);
+        var box = new StyleBoxFlat
+        {
+            BgColor = Ink.Paper,
+            BorderColor = Ink.Black,
+            BorderWidthTop = 3,
+            BorderWidthBottom = 3,
+            BorderWidthLeft = 3,
+            BorderWidthRight = 3,
+            ShadowColor = Ink.Shadow,
+            ShadowSize = 1,
+            ShadowOffset = new Vector2(3f, 4f),
+            ContentMarginLeft = 10f,
+        };
+        var focus = (StyleBoxFlat)box.Duplicate();
+        focus.BorderColor = Ink.OchreDark;
+        _seed.AddThemeStyleboxOverride("normal", box);
+        _seed.AddThemeStyleboxOverride("focus", focus);
+        _seed.AddThemeFontOverride("font", Ink.Heavy);
+        _seed.AddThemeFontSizeOverride("font_size", 20);
+        _seed.AddThemeColorOverride("font_color", Ink.Black);
         AddChild(_seed);
 
-        var random = Widgets.Button(this, UiText.Get("ui.start.random"), new Rect2(664f, 106f, 120f, 28f));
+        var random = PlaqueButton.Create(this, UiText.Get("ui.start.kn.random"), Glyph.None, PlaqueKind.Paper, new Rect2(left + 292f, area.Position.Y + 100f, width - 292f, 50f), 502);
+        random.FontSize = 18;
+        random.Tip = new Tip(UiText.Get("ui.start.seed"), UiText.Get("ui.start.seedHint"), Glyph.Info);
         random.Pressed += RandomSeed;
 
-        var begin = Widgets.Button(this, UiText.Get("ui.start.begin"), new Rect2(412f, 152f, 240f, 32f));
-        begin.Pressed += Begin;
-    }
-
-    private void BuildSavePanel()
-    {
-        Widgets.Panel(this, new Rect2(396f, 268f, 872f, 120f));
-        bool exists = RunController.SaveExists;
-        Widgets.Body(
-            this,
-            exists ? UiText.Get("ui.nav.continue") : UiText.Get("ui.start.noSave"),
-            new Vector2(412f, 278f),
-            830f,
-            // Rubrica, no dorado: Style.Accent es un dorado pensado para leerse sobre madera, no sobre
-            // el pergamino de este panel.
-            exists ? Pregon.Wax : Style.TextDim);
-
-        if (!exists)
+        if (RunController.SaveExists)
         {
-            return;
+            var resume = PlaqueButton.Create(this, UiText.Get("ui.start.continue"), Glyph.Back, PlaqueKind.Wood, new Rect2(left, area.Position.Y + 172f, width, 60f), 503);
+            resume.FontSize = 20;
+            resume.Tip = new Tip(UiText.Get("ui.start.continue"), UiText.Get("ui.start.kn.continueTip"), Glyph.Back);
+            resume.Pressed += ContinueRun;
         }
-
-        var button = Widgets.Button(this, UiText.Get("ui.start.continue"), new Rect2(412f, 306f, 300f, 32f));
-        button.Pressed += ContinueRun;
+        else
+        {
+            var none = new Label { Text = UiText.Get("ui.start.noSave"), Position = new Vector2(left + 4f, area.Position.Y + 190f) };
+            none.AddThemeFontOverride("font", Ink.Plain);
+            none.AddThemeFontSizeOverride("font_size", 16);
+            none.AddThemeColorOverride("font_color", Ink.Muted);
+            none.MouseFilter = MouseFilterEnum.Ignore;
+            AddChild(none);
+        }
     }
 
     /// <summary>Clubes jugables al lanzamiento (uno por raza con <c>launch: true</c>), en orden estable de id.</summary>
@@ -150,21 +181,25 @@ public partial class StartScreen : Control
     private void Choose(ClubDefinition club)
     {
         _club = club;
-        _chosen.Text = UiText.Get("ui.start.chosen", club.Name.Es);
-
         var templates = _catalog.Localization.Get(GameData.Language);
-        var ability = string.IsNullOrEmpty(club.SpecialRule) ? null : _catalog.Perks.Find(club.SpecialRule);
-        string abilityLine = ability is null
-            ? string.Empty
-            : "\n\n" + UiText.Get("ui.start.ability").ToUpperInvariant() + "\n"
-                + ability.Name.Es + ": " + DescriptionGenerator.Describe(ability, templates);
-
-        _description.Text = club.Description.Es + abilityLine;
-
-        foreach (var (candidate, button) in _clubButtons)
+        var cards = new List<ClubCard>();
+        foreach (var candidate in LaunchClubs())
         {
-            button.AddThemeColorOverride("font_color", candidate.Id == club.Id ? Pregon.Wax : Style.Text);
+            var ability = string.IsNullOrEmpty(candidate.SpecialRule) ? null : _catalog.Perks.Find(candidate.SpecialRule);
+            var tip = ability is null
+                ? null
+                : new Tip(ability.Name.Es, DescriptionGenerator.Describe(ability, templates) + "\n" + UiText.Get("ui.kn.tip.racial"), Glyph.Racial);
+            cards.Add(new ClubCard(
+                candidate.Id,
+                candidate.Race,
+                candidate.Name.Es,
+                _catalog.Race(candidate.Race).Name.Es,
+                candidate.Description.Es,
+                candidate.StartingGold,
+                tip));
         }
+
+        _board.Bind(cards, club.Id, UiText.Get("ui.start.title"), UiText.Get("ui.start.kn.tagline"));
     }
 
     /// <summary>
