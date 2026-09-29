@@ -62,3 +62,79 @@ con ello un villano.
 10. **Cómo se demuestra.** Tests: clan y nombres coherentes en los tres actos; un rival muerto no vuelve;
     némesis al matar, traspaso determinista entre actos, venganza, tope; guardado v8 ida y vuelta. Lote de
     campaña antes y después; capturas del ojeo con némesis y del informe con venganza.
+
+## Implementación (29 sep 2026)
+
+- **Datos**: `clanId` en los quince `data/rivals/*.json`; los tres de un clan comparten nombre de clan y nombre
+  y demarcación por puesto (el cargador lo exige: `RivalCatalog.CheckClans`, con número de jugadores y
+  demarcación). Las cifras no cambian (`NoRivalChangedASingleNumberWithTheClans` lo fija por SHA).
+  `data/nemesis/titles.json`: diez títulos es/en, `maxAlive` 2 y `levelBonus` 1 (provisionales, Regla H).
+  `economy.json`: `revengeGold` 3 (provisional, sin medir).
+- **Estado** (`RunState.RivalMemory`, guardado **v8**; un v7 se rechaza explícitamente, como con cada subida):
+  vacantes por clan y puesto (`generation` = qué fichaje la cubre) y némesis (título, clan y puesto de origen y
+  actual, víctima, muertes, estado, `avenged`).
+- **Regla** (`NemesisSystem`, pura): al resolver un partido de catálogo, una muerte propia causada por un rival de
+  clan crea un némesis (título por `OfferStream`, desplazamiento 9500 + id) o suma muerte al que ya lo era; con el
+  tope, se anota en `nemesisCapped`. Una baja de un némesis causada por un jugador propio es una venganza. Al
+  entrar en el acto siguiente, cada némesis vivo pasa a otro clan (nodo ficticio 9500 + acto), al titular de menos
+  nivel de su demarcación.
+- **Alineación** (`RivalTeamBuilder`): un puesto vacante lo cubre un fichaje con nombre generado
+  (`RngStreams.Rewards`, sal 950.000.000 + clan + puesto + generación) y las mismas cifras; el némesis juega con su
+  nombre y `levelBonus` niveles más; **un némesis de banquillo juega de titular** en lugar del último titular de
+  su demarcación (regla nueva, no estaba en la decisión: «el mapa marca el nodo donde juega» tiene que ser verdad).
+- **Vista y `/Game`**: `NemesisView` (ojeo en lacre con título y víctima, rombo en el mapa, pregón de la
+  retransmisión, villano de la Gaceta), `PostMatchView` (némesis nacido y venganza en el informe, con el oro).
+  Capturas: `Game/screenshots/{ojeo,mapa}-nemesis.png` e `informe-venganza.png` (`CapturasNemesis.tscn`). La de
+  `informe-nemesis.png` **no sale**: en 250 primeros partidos no nace ningún némesis, porque los rivales del
+  acto 1 no llevan perks letales (el ojeo lo dice: «este rival no puede matar a nadie») y la muerte por
+  reincidencia es rara. No es un fallo de la regla: en runs completas nacen 0,94 por run (abajo).
+
+## Revisión independiente (29 sep 2026)
+
+Arreglado, con test que falla antes y pasa después cuando aplica:
+
+- **Grave — el némesis que era un fichaje resucitaba al morir y quedaba duplicado en el traspaso**: al dejar el
+  puesto se conservaba la generación de la vacante, que era él mismo. Ahora quien deja un puesto (muerto o
+  traspasado) lo pasa siempre al siguiente fichaje (`ASigningWhoBecameANemesisDoesNotComeBackAfterDying`,
+  `ASigningNemesisHandedOverIsNotAlsoLeftInItsHomeClan`; los dos fallan con la regla anterior).
+- **El informe decía «lesionó» cuando la venganza mataba**: un rival llega sano, así que muere por un perk letal
+  sobre una lesión del mismo partido; la lesión abría la venganza y la muerte ya no la actualizaba. Ahora sí
+  (`AnInjuryThenADeathInTheSameMatchIsProclaimedAsSlain`).
+- **Venganza repetible** (decisión tomada sin consultar, la pregunta 9 no la contemplaba): lesionar al mismo
+  némesis en cada partido pagaba oro y sumaba venganzas cada vez. **Una deuda de sangre se cobra una vez**
+  (`avenged`); si el némesis vuelve a matar, vuelve a deber; matarlo ya vengado se proclama sin segundo cobro
+  (`ABloodDebtIsPaidOnceAndComesBackIfTheNemesisKillsAgain`).
+- **El ojeo contaba los reencuentros por fichero de acto**: el clan del acto 2 no era «2.ª vez». Ahora por clan
+  (`RivalHistory.AgainstClan`). Y marca al némesis por puesto, no por nombre (un fichaje puede llamarse igual).
+- Dos némesis de banquillo de la misma demarcación se pisaban en la alineación (latente con los datos de hoy);
+  `CheckClans` indexaba sin comprobar tamaños; la tabla de flujos de `OfferStream` no listaba los nuevos.
+
+Anotado sin arreglar: los créditos de rival y el epitafio de la Gaceta nombran al jugador de datos aunque
+ocupara el puesto un fichaje o un némesis traspasado → [BS-A](../pendientes/BS-A.md). Los textos nuevos de
+`UiText` están sólo en español, como el resto de esa tabla (los títulos sí son es/en). «Con un nivel más» está
+escrito en el texto del ojeo aunque `levelBonus` es un dato.
+
+## Medición de campaña (29 sep 2026)
+
+`/Balance --full-runs 600 --seed {1,2}` (tres doctrinas; resumen sobre el lote principal de 600), desde copias
+congeladas de cada commit: `main` (base), `main` + ADR 0166 (gritos) y la integración con esta ADR ya revisada.
+
+| métrica | base s1 / s2 | + gritos s1 / s2 | + clanes s1 / s2 |
+|---|---|---|---|
+| `runWinRate` | 16,33 / 18,50 | 16,00 / 18,33 | 18,00 / 18,67 |
+| `deathsPerRun` | 2,22 / 2,23 | 2,21 / 2,22 | 2,17 / 2,26 |
+| `bossWinRateAct3` | 38,6 / 47,0 | 38,1 / 46,4 | 42,7 / 45,9 |
+| `nemesesPerRun` | — | — | 0,94 / 0,94 |
+| `revengesPerRun` | — | — | 0,23 / 0,22 |
+| `nemesesCappedPerRun` | — | — | 0,36 / 0,38 |
+
+**Lectura** (Regla F):
+- **LIKELY: los clanes no mueven las muertes ni la victoria.** Las diferencias (−0,04 / +0,04 muertes; +2,0 /
+  +0,3 puntos de victoria) caen dentro del error típico de 600 runs (≈ 1,6 puntos con p ≈ 0,18) y cambian de
+  signo o de tamaño entre semillas. Nada cambia de estado salvo `brokeMarketRunShare` en la semilla 2, que roza el
+  suelo (10,17 frente a 10): ruido. `runWinRate` ya estaba bajo banda en `main` (balance aplazado por el revisor).
+- **El sistema se activa**: casi un némesis por run, estable entre semillas. **El tope muerde**: por cada 0,94
+  némesis hay 0,37 asesinos que no se convierten (~28 % de los candidatos). **La venganza es rara**: una de cada
+  cuatro deudas se cobra; la política automática no busca al némesis, así que esto mide el azar, no la decisión.
+- Sin medir: el efecto del +1 nivel aislado, la frecuencia de BS-A, y si un jugador real busca o esquiva el nodo
+  del némesis (la política no lee la memoria de rivales).

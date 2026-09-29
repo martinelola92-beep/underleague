@@ -120,3 +120,7 @@ Anotado sin cambiar, con decisión:
   si 6 y 10 s se perciben en un partido de 60-90 s. `/Balance` no pulsa manuales: la única medida es la
   puerta de `Sim.Tests`.
 - Hermanos (`master_plan`, `smoke_flare`, `professional_foul`): anotados en BA-H.
+
+Campaña (`/Balance --full-runs 600`, semillas 1 y 2, contra `main`): `runWinRate` 16,33 → 16,00 y 18,50 → 18,33,
+`deathsPerRun` 2,22 → 2,21 y 2,23 → 2,22, nada cambia de estado. Esperado: la política automática casi no usa
+consumibles manuales, así que la campaña no ve los gritos (tabla completa en la ADR 0165).
