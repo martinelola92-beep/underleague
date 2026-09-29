@@ -67,25 +67,62 @@ por pieza, plantilla entera y el matasanos (ADR 0099).
     decreciente, tres prótesis dan `Automaton`, una ranura no se repite, determinismo. Lote de campaña con la
     política usando el herrero. Captura de la clínica.
 
-## Medición de campaña (provisional, sin medir hasta el lote del revisor)
+## Enmienda del 29 sep 2026 (revisión independiente): qué cambió tras el primer commit
 
-`/Balance --full-runs 600 --seed 1`, 1.800 runs de tres doctrinas cada lote, rama `main` (antes) frente a esta rama (después):
+1. **La tercera prótesis conserva la especie** (decisión 4, arriba): el crash del partido siguiente y los costes
+   invisibles se retiran; test de partido completo con cada perk racial con `tagsRequired` y cada objeto
+   restringido (`AutomatonTests`).
+2. **El herrero es una apuesta de verdad.** La primera versión curaba siempre, costaba menos que el médico y
+   tenía esperanza de atributos ~0 (mejoras 8..11, empeoramientos 8..11): dominaba al médico. Ahora las
+   mejoras valen **+6..+8** y los empeoramientos **−9..−12** (provisional, sin medir: la asimetría es una
+   decisión del coordinador, no una medición), de modo que con oro extra 0 la esperanza de atributos de la tirada
+   es de unos −1,2 puntos (0,35 × 7 − 0,35 × 10,4) y se vuelve positiva con oro extra; precio base del 60 al
+   **75 %** del médico (10 de oro frente a 14). Cada prótesis es permanente y ocupa una ranura, y siempre deja al
+   jugador sano: **sigue siendo un servicio que cura**, así que su coste real es la identidad, no el oro.
+3. **La mesa enseña el rango** de magnitudes de mejora y de empeoramiento y los atributos que pueden salir según
+   las ranuras libres (`BlacksmithQuote.ImproveRange/WorsenRange`, `NodeScreen`).
+4. **La política usa el herrero antes que el médico** cuando el grave es un suplente (hay siete jugadores
+   disponibles de más valor) o de rareza común, y siempre que el oro no llega al médico. Orden de la clínica:
+   tarifa plana; herrero para suplente/común con oro para él; médico para el resto; leves de titulares; herrero
+   por falta de oro para el médico; matasanos con lo que quede (no pierde su hueco: sigue viendo los graves y el
+   oro que el herrero no tomó).
+5. **Instrumento (Regla J).** `IRunSystems.Prostheses` y `Bets` tenían una implementación por defecto que devolvía
+   el catálogo vacío y `RunPolicy.RecordingSystems` no los reenviaba: **la medición anterior de esta ADR jugó
+   con un catálogo de prótesis vacío** y por eso salió idéntica al lote base. Ahora los dos miembros son
+   obligatorios y el compilador exige que cada envoltorio los reenvíe. Único miembro por defecto que queda en
+   `IRunSystems`: `OnMatchPlayed` (un gancho de observación sin retorno; ya lo reenvían `BossRunSystems` y
+   `RecordingSystems`). Un test valida el instrumento contra un caso conocido (una política jugando runs enteras
+   pasa por el herrero).
+6. **Guarda del flujo**: `OfferStream` numera `nodo × 10 000 + desplazamiento`, y `9000 + id` con `id ≥ 1000`
+   cae en el flujo del nodo siguiente; `Forge` rechaza ids ≥ 1000 (`BlacksmithStreamSpan`). Test de independencia de
+   flujo real (la tirada se reproduce a mano con `OfferStream`) en vez del que comparaba `Forge` consigo mismo.
 
-| métrica | antes | después |
+## Medición de campaña (provisional, sin medir hasta el lote del revisor → medida el 29 sep 2026)
+
+> **La medición anterior de esta sección (0,00 herrero, 21,50 idéntico al lote base) medía un catálogo de
+> prótesis vacío** (véase el punto 5 de la enmienda, Regla J) y **se descarta**. No decía nada sobre el herrero.
+
+`/Balance --full-runs 600 --seed 1` (1.800 runs de tres doctrinas; una sola semilla, resumen sobre las 600 del
+lote principal), rama `main` con esta enmienda; salida en `out/herrero-s1/` (ignorado). Línea base: `out/base/`
+(21,50 y 1,75, antes de que existiera el herrero).
+
+| métrica | antes (sin herrero) | después (herrero, política nueva) |
 |---|---|---|
-| `runWinRate` | 21,50 | 21,50 |
-| `deathsPerRun` | 1,75 | 1,75 |
-| `squadTreatmentsPerRun` | 0,30 | 0,30 |
+| `runWinRate` | 21,50 | 22,83 |
+| `deathsPerRun` | 1,75 | 1,77 |
+| `squadTreatmentsPerRun` | 0,30 | 0,29 |
 | `riskyTreatmentsPerRun` (matasanos) | 0,01 | 0,01 |
-| `goldSpentClinicPerRun` | 20,04 | 20,04 |
-| `blacksmithTreatmentsPerRun` | n/a | 0,00 |
-| `prosthesesPerRun` | n/a | 0,00 |
+| `goldSpentClinicPerRun` | 20,04 | 19,32 |
+| `blacksmithTreatmentsPerRun` | n/a | 0,73 |
+| `prosthesesPerRun` | n/a | 0,43 |
 | `automatonsPerRun` | n/a | 0,00 |
 
-**Lectura (CONFIRMED para esta política):** los dos lotes salen idénticos porque `RunPolicy.TryTheBlacksmith`
-solo actúa en el hueco «hay un grave que merece la pena y no llega el oro para el médico pero sí para el
-herrero», y en la política ese hueco casi no ocurre (el matasanos, que ocupa el mismo hueco, ya medía 0,01
-por run). El herrero, por tanto, **no está medido**: ni su uso, ni su efecto sobre la victoria o las muertes.
-Medirlo exige una decisión de diseño de la política (por ejemplo, preferir al herrero sobre el médico cuando
-el jugador tiene un valor bajo) que se deja al revisor; hasta entonces, las probabilidades 30/35/35 y el
-precio siguen siendo **provisionales, sin medir** (Regla H). Ficheros: `out/base/`, `out/after/`.
+**Lectura (LIKELY, una semilla; Regla F y `feedback_medir_con_varias_semillas`):** el herrero se usa (0,73
+tratamientos por run, 0,43 prótesis: el resto son curaciones limpias) y **no mueve las muertes** (1,75 → 1,77).
+La diferencia de victoria (+1,3 puntos) cae dentro del error típico de 600 runs (≈ 1,7 puntos con p ≈ 0,22): **no
+se puede afirmar que el herrero ayude ni que perjudique**. Nadie llega a autómata en el lote (0,00): la tercera
+prótesis es un caso de cola con esta política y el uso actual, así que la etiqueta `Automaton` y la decisión de
+conservar la especie no pesan en balance hoy. **No se midió el atributo máximo por run** (el registro por run no lo
+lleva; añadirlo exige tocar `RunPlayResult` y el CSV). Las magnitudes, las probabilidades 30/35/35 y el precio siguen
+siendo **provisionales, sin medir** (Regla H): falta repetir con más semillas y con un lote donde la política elija
+al herrero sobre el médico en distinta medida.
