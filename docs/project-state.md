@@ -30,12 +30,27 @@ PC (Steam), premium, sin online. **Estado (8 sep 2026): fases 0 y 1 cerradas; fa
   de actos pagan los cuatro sumideros; el oro de venganza descartado como causa; detalle en la ADR 0165).
   `TheThreeDoctrinesBuyDifferently` pasa a verde.
 
-**Siguiente** (`docs/plan-diversion.md` §5, punto 8): **catálogo de turbas** (F7 de Knavall: tipos distintos; se
-anuncia el tipo, no la víctima) y el consumible **provocar la turba** (primitiva de motor → `game-design-review`
-y `architecture-review` antes de nada); después la **métrica guardiana de la sangre**. Pendientes menores: BS-A;
-Blind contra Never de la apuesta; atributo máximo por run y más semillas del herrero; el panel de estadísticas del
-informe enseña ~4 de 7 filas con varios apodos; la duración de los gritos corre también con el balón muerto (ADR
-0166, decidido dejarlo así).
+**Cerrado después, en la rama `turba-0167` (encima de la anterior):**
+- [ADR 0167](decisiones/0167-la-turba-tiene-tipo.md), la turba tiene tipo y se puede provocar: cada partido sortea
+  antes un tipo (La grada ruge, Salta uno, Frenesí, Su grada empuja; `data/mobs/mobs.json`), derivado del nodo como el
+  árbitro (sin guardado nuevo); el ojeo, el mapa, el pregón y el tablero lo anuncian (el tipo, nunca la víctima).
+  Consumible «Provocar a la grada» (`rile_the_crowd`). La turba lesiona, no mata. Revisión independiente: la turba
+  curaba lesiones graves (arreglado en `MatchResolution`: una lesión nunca mejora el estado), provocar con la turba
+  dentro duplicaba la lesión, y «hasta el final» no lo era con un grito encima (arreglado, con tests).
+- Medido: lesiones por partido +5-8 % (LIKELY), muertes sin cambio, `runWinRate` −2,5 / −0,3 (ruido). Tabla en la ADR.
+- Suite 1.647 en verde. Puertas completas: **3 rojas de 45, las de `main`**; la roja de cola de los sumideros vuelve
+  a verde.
+- [ADR 0168](decisiones/0168-la-metrica-guardiana-de-la-sangre.md), **la métrica guardiana de la sangre**: puerta
+  `TheBloodIsNeverWashedOut` con `bloodPerMatch` ≥ 0,25 (base 0,31) y `bloodlessRunShare` ≤ 35 % (base 24-26 %). Dato de
+  identidad para el balance: **una de cada cuatro runs termina sin una sola muerte ni lesión grave propia**.
+- **Sin gh en la máquina**: los PR se abren a mano con el enlace de GitHub. La rama de clanes tiene un commit heredado
+  (`1337343`) cuyos tests no compilan solos: fusionar con *squash*.
+
+**Siguiente**: el plan de diversión (§5) queda recorrido entero. Lo que sigue: estrechamiento del campo en la turba (RF-055b, F7, bloqueado por el
+gate 5 de Knavall: ¿el desgaste es de run o de acto? — **pregunta al revisor**), el gesto visual del invasor, y los
+pendientes menores: BS-A; Blind contra Never de la apuesta; atributo máximo por run y más semillas del herrero; el panel
+de estadísticas del informe; la roja de cola `TheGoldOfAnActPaysTwoOrThreeSinksAndNeverAllOfThem` (una puerta de cero
+exacto sobre una cola: decidir tolerancia con ADR).
 
 ---
 

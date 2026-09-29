@@ -91,6 +91,18 @@ public sealed class FullRunGateTests
     [Fact]
     public void AFullRunLastsBetween18And22Matches() => AssertIn(FullRunMetrics.MatchesPerFullRun);
 
+    /// <summary>
+    /// ADR 0168, métrica guardiana de la sangre (decisión del revisor, plan de diversión §0): la carnicería
+    /// administrada es la identidad del juego, así que ningún cambio puede lavarla sin que salte una puerta —ni
+    /// bajar la sangre propia por partido, ni dejar demasiadas runs sin una sola muerte o lesión grave—.
+    /// </summary>
+    [Fact]
+    public void TheBloodIsNeverWashedOut()
+    {
+        AssertIn(FullRunMetrics.BloodPerMatch);
+        AssertIn(FullRunMetrics.BloodlessRunShare);
+    }
+
     /// <summary>§10: bajar de 5 jugadores no puede ser la causa de más de un tercio de las derrotas.</summary>
     [Fact]
     public void RunningOutOfPlayersIsNotTheUsualWayToLose() => AssertIn(FullRunMetrics.RosterDefeatShare);
