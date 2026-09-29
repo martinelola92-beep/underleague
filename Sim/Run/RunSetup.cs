@@ -35,7 +35,7 @@ public sealed record RunSetup(
     public int GeneratedQuality { get; init; } = 50;
 
     /// <summary>
-    /// Nodos que el jugador <b>recorre</b> en cada acto, 10..12 (RF-001, D-2/D-10). Es la longitud del
+    /// Nodos que el jugador <b>recorre</b> en cada acto, 8..10 (RF-001, ADR 0170; antes 10..12). Es la longitud del
     /// camino, no el número de nodos dibujados: ver la nota sobre RF-001 en <see cref="MapGenerator"/>.
     /// </summary>
     public int NodesPerAct { get; init; } = MapGenerator.DefaultPathLength;

@@ -102,16 +102,39 @@ public sealed class LethalRiskTests
     [Fact]
     public void BeingHurtMultipliesTheNumberOfTheSamePlayerInTheSameCell()
     {
-        var (state, node) = StateAtLethalMatch();
-        var risks = RunEngine.LethalRisks(state, node.Id, SystemsTestSupport.Catalog, SystemsTestSupport.Systems);
-        int target = risks.OrderByDescending(r => r.Risk).ThenBy(r => r.PlayerId).First().PlayerId;
+        // Se recorre la búsqueda de partidos con rival letal hasta uno donde el estado tocado SUBE el número de alguien:
+        // con los actos de 8/9/9 nodos (ADR 0170) el primer partido que encuentra la búsqueda puede dejar a todos
+        // los amenazados en el techo del indicador (8000), y ahí el multiplicador no se ve aunque exista. En
+        // ningún escenario el estado tocado puede BAJAR el número.
+        int raised = 0;
+        foreach (ulong seed in LethalSearchSeeds)
+        {
+            if (SearchLethalMatch(seed) is not { } found)
+            {
+                continue;
+            }
 
-        var hurt = state.WithPlayer(state.GetPlayer(target).WithPhysicalState(PhysicalState.MinorInjury));
-        var after = RunEngine.LethalRisks(hurt, node.Id, SystemsTestSupport.Catalog, SystemsTestSupport.Systems);
+            var (state, node) = found;
+            var risks = RunEngine.LethalRisks(state, node.Id, SystemsTestSupport.Catalog, SystemsTestSupport.Systems);
+            foreach (var risk in risks.Where(r => r.Risk > 0).OrderBy(r => r.PlayerId))
+            {
+                var hurt = state.WithPlayer(state.GetPlayer(risk.PlayerId).WithPhysicalState(PhysicalState.MinorInjury));
+                var after = RunEngine.LethalRisks(hurt, node.Id, SystemsTestSupport.Catalog, SystemsTestSupport.Systems);
+                int now = after.Single(r => r.PlayerId == risk.PlayerId).Risk;
+                Assert.True(now >= risk.Risk, $"semilla {seed}, jugador {risk.PlayerId}: tocado {now} y sano {risk.Risk}: el estado no puede bajar el indicador");
+                if (now > risk.Risk)
+                {
+                    raised++;
+                }
+            }
 
-        int before = risks.Single(r => r.PlayerId == target).Risk;
-        int now = after.Single(r => r.PlayerId == target).Risk;
-        Assert.True(now > before, $"tocado {now} y sano {before}: el estado tiene que pesar en el indicador");
+            if (raised > 0)
+            {
+                break;
+            }
+        }
+
+        Assert.True(raised > 0, "ningún jugador con riesgo lo ve subir estando tocado: el estado tiene que pesar en el indicador");
     }
 
     /// <summary>

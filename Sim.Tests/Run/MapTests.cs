@@ -15,7 +15,7 @@ public class MapTests
     public void MarketGuarantee_HoldsOnAThousandMaps()
     {
         var failures = new List<string>();
-        for (int i = 0; i < 1000; i++)
+        for (int i = 0; i < 3000; i++)
         {
             ulong seed = (ulong)i * 2654435761UL;
             int act = (i % 3) + 1;
@@ -106,9 +106,9 @@ public class MapTests
     }
 
     [Theory]
+    [InlineData(8)]
+    [InlineData(9)]
     [InlineData(10)]
-    [InlineData(11)]
-    [InlineData(12)]
     public void PathLength_AndMatchShare_RespectTheBudget(int pathLength)
     {
         for (int act = 1; act <= 3; act++)
@@ -233,8 +233,8 @@ public class MapTests
     [Fact]
     public void EveryPath_PlaysBetweenTheFloorAndTheCap()
     {
-        // Los nodos por acto de data/map/map.json: 11, 12 y 12.
-        int[] perAct = [11, 12, 12];
+        // Los nodos por acto de data/map/map.json (ADR 0170): 8, 9 y 9.
+        int[] perAct = [8, 9, 9];
         for (ulong seed = 1; seed <= 200; seed++)
         {
             int worst = 0;
@@ -253,16 +253,17 @@ public class MapTests
                 best += actBest;
             }
 
-            Assert.Equal(20, worst);
-            Assert.Equal(17, best);
+            Assert.Equal(14, worst);
+            Assert.Equal(11, best);
         }
     }
 
     [Fact]
-    public void ARunOfThreeActs_PlaysBetweenEighteenAndTwentyTwoMatches()
+    public void ARunOfThreeActs_PlaysBetweenTwelveAndSixteenMatches()
     {
-        // fase2-diseno.md §10: la duración objetivo de una run son 18-22 partidos. Con el tope de
-        // RF-003b, el peor camino de los tres actos tiene que caer dentro de ese rango.
+        // ADR 0170: con 8/9/9 nodos por acto el tope de RF-003b deja el peor camino de la run en 14
+        // partidos (antes 18-22, fase2-diseno.md §10, con 11/12/12 nodos). Con el acto por defecto (9
+        // nodos) son 15. Rango provisional, sin medir: es el de la duración objetivo de 45-60 minutos.
         for (ulong seed = 1; seed <= 20; seed++)
         {
             int matches = 0;
@@ -271,8 +272,51 @@ public class MapTests
                 matches += MapInvariants.WorstCaseMatches(MapGenerator.Generate(seed, act, MapOptions.Default));
             }
 
-            Assert.InRange(matches, 18, 22);
+            Assert.InRange(matches, 12, 16);
         }
+    }
+
+    /// <summary>
+    /// ADR 0170: con el acto más corto siguen saliendo, en cada semilla y longitud, la clínica garantizada
+    /// (RF-094), los élites de <c>AssignElites</c> (1 en el acto 1, 2 en los demás) y los invariantes
+    /// duros. Sobre 500 semillas por longitud y acto.
+    /// </summary>
+    [Fact]
+    public void ShortActs_KeepTheClinicTheElitesAndEveryInvariant()
+    {
+        var failures = new List<string>();
+        for (int pathLength = MapGenerator.MinPathLength; pathLength <= MapGenerator.MaxPathLength; pathLength++)
+        {
+            for (int act = 1; act <= 3; act++)
+            {
+                for (ulong seed = 1; seed <= 500; seed++)
+                {
+                    var map = MapGenerator.Generate(seed * 7919UL, act, new MapOptions(pathLength));
+                    var problems = MapInvariants.Violations(map);
+                    if (problems.Count > 0)
+                    {
+                        failures.Add($"semilla {seed}, acto {act}, {pathLength} nodos: {string.Join("; ", problems)}");
+                    }
+
+                    if (!map.Nodes.Any(n => n.Kind == NodeKind.Clinic))
+                    {
+                        failures.Add($"semilla {seed}, acto {act}, {pathLength} nodos: sin clínica");
+                    }
+
+                    // Con 8 nodos el acto 2 o 3 no siempre tiene dos capas de partido candidatas (la capa 1 es
+                    // apertura y no admite élite): no es una forma que envíe data/map/map.json (8/9/9), y se
+                    // pide al menos uno. Desde 9 nodos salen los dos.
+                    int elites = map.Nodes.Count(n => n.Kind == NodeKind.EliteMatch);
+                    int expected = act == 1 || pathLength == MapGenerator.MinPathLength ? 1 : 2;
+                    if (act == 1 ? elites != 1 : pathLength == MapGenerator.MinPathLength ? elites < 1 : elites != expected)
+                    {
+                        failures.Add($"semilla {seed}, acto {act}, {pathLength} nodos: {elites} élites");
+                    }
+                }
+            }
+        }
+
+        Assert.Empty(failures);
     }
 
     /// <summary>Extremo de partidos (o de lo que cuente <paramref name="score"/>) sobre todos los caminos del acto.</summary>
@@ -335,7 +379,7 @@ public class MapTests
     {
         // RF-015: los rivales son fijos por acto; lo aleatorio es en qué nodo cae cada uno.
         var opponents = new[] { "gnash", "ironjaw", "rotfoot", "pale_choir", "sixteen_teeth", "the_hollow" };
-        var map = MapGenerator.Generate(31337, 1, new MapOptions(11, opponents));
+        var map = MapGenerator.Generate(31337, 1, new MapOptions(MapGenerator.MaxPathLength, opponents));
 
         var assigned = map.Nodes.Where(n => n.IsMatch).Select(n => n.OpponentId).ToList();
         Assert.All(assigned, id => Assert.Contains(id, opponents));

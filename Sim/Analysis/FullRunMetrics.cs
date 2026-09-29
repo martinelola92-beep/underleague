@@ -201,11 +201,15 @@ public static class FullRunMetrics
     /// <summary>Techo del porcentaje de derrotas por quedarse sin plantilla.</summary>
     public const double RosterDefeatShareMax = 35.0;
 
-    /// <summary>Partidos mínimos de una run completa.</summary>
-    public const double MatchesPerFullRunMin = 18.0;
+    /// <summary>
+    /// Partidos mínimos de una run completa. ADR 0170: 12-15 (antes 18-22, banda ±10 % alrededor del peor camino de 20
+    /// partidos con 11/12/12 nodos). Con 8/9/9 el peor camino es 14 y se midieron 13,36 (semilla 1); la banda es
+    /// **provisional**, sin medir con más de una configuración de mapa.
+    /// </summary>
+    public const double MatchesPerFullRunMin = 12.0;
 
     /// <summary>Partidos máximos de una run completa.</summary>
-    public const double MatchesPerFullRunMax = 22.0;
+    public const double MatchesPerFullRunMax = 15.0;
 
     /// <summary>
     /// Muertes por run mínimas. Sube de 0,5 a <b>1,5</b> con la ADR 0048: desde que un jugador sano puede
@@ -226,11 +230,14 @@ public static class FullRunMetrics
     public const double BloodPerMatchBaseline = 0.34;
 
     /// <summary>
-    /// ADR 0168: techo de <see cref="BloodlessPastAct1Share"/>. Procedencia (Regla H): línea base 2,7-4,0 % (tabla de la
-    /// ADR); la puerta ve ~500 runs que pasan el acto 1 (error típico ≈ 0,8 puntos) y las rápidas ~125 (≈ 1,5): el techo
-    /// queda a ~2,7 errores típicos incluso en éstas, **provisional**.
+    /// ADR 0168: techo de <see cref="BloodlessPastAct1Share"/>, **enmendado por la ADR 0170** (7 → 10). Procedencia
+    /// (Regla H): con actos de 8/9/9 nodos hay menos partidos entre el inicio y el jefe del acto 1, y más runs lo pasan
+    /// sin una baja de sangre. Línea base re-medida bajo la ADR 0170: 7,1 % (342 de 4.821 runs que pasan el acto 1,
+    /// `--full-runs 1200` semillas 1 y 7; 3,1-4,0 % antes) con `bloodPerMatch` intacto en 0,35. La puerta ve ~500 runs
+    /// que pasan el acto 1 (error típico ≈ 1,15 puntos a ese nivel): el techo queda a ~2,5 errores típicos de la base,
+    /// la misma vara de la ADR 0168. **Provisional.**
     /// </summary>
-    public const double BloodlessPastAct1ShareMax = 7.0;
+    public const double BloodlessPastAct1ShareMax = 10.0;
 
     /// <summary>Sumideros pagables por acto: mínimo.</summary>
     public const double SinksMin = 2.0;

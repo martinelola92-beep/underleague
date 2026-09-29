@@ -118,15 +118,13 @@ public class RunEngineTests
         // Tres jefes ganados, uno por acto.
         Assert.Equal(3, state.NodeHistory.Count(e => e.Kind == NodeKind.Boss && e.Result == NodeResult.Won));
 
-        // Y la run tiene la longitud que pide el diseño: 30-36 nodos (RF-003b) y 18-22 partidos
-        // (fase2-diseno.md §10). Es la comprobación que ata la lectura de RF-001 al resto de números.
-        // El tope sigue siendo 22 y el peor camino, 20 (RF-003b). El SUELO baja a 17 con la ADR 0053
-        // (fase2-diseno.md §24, AH-8): hay una capa de partido por acto que se puede esquivar, y este
-        // recorrido -que siempre coge el primer nodo disponible, o sea el carril de arriba- la esquiva
-        // cuando el servicio cae ahí. Los 18-22 de §10 los mide la política automática sobre runs
-        // completas (FullRunGateTests), no un camino ciego.
-        Assert.InRange(state.NodeHistory.Count, 30, 36);
-        Assert.InRange(state.NodeHistory.Count(e => NodeKinds.IsMatch(e.Kind)), 17, 22);
+        // Y la run tiene la longitud que pide el diseño: 24-30 nodos (RF-003b, ADR 0170: actos de 8/9/9)
+        // y 11-16 partidos (peor camino 14). Este recorrido siempre coge el primer nodo disponible, o sea
+        // el carril de arriba, y esquiva la capa porosa de partido cuando el servicio cae ahí (ADR 0053).
+        // Los partidos por run de verdad los mide la política automática sobre runs completas
+        // (FullRunGateTests), no un camino ciego.
+        Assert.InRange(state.NodeHistory.Count, 24, 30);
+        Assert.InRange(state.NodeHistory.Count(e => NodeKinds.IsMatch(e.Kind)), 11, 16);
 
         // Y la experiencia se ha repartido: alguien ha subido de nivel por el camino (RF-025, RF-027).
         Assert.Contains(state.Roster, p => p.Experience > 0);

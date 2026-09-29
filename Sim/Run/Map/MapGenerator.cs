@@ -6,8 +6,8 @@ namespace Underleague.Sim.Run;
 /// Opciones de generación de un mapa de acto.
 /// </summary>
 /// <param name="PathLength">
-/// Nodos que el jugador <b>recorre</b> en el acto, 10..12 (RF-001), es decir, el número de capas del
-/// grafo. Valor de partida 11 (D-2/D-10, <c>fase2-diseno.md</c> §4). Ver la nota sobre la lectura de
+/// Nodos que el jugador <b>recorre</b> en el acto, 8..10 (RF-001, ADR 0170), es decir, el número de capas del
+/// grafo. Valor por defecto 9 (antes 11: D-2/D-10, <c>fase2-diseno.md</c> §4). Ver la nota sobre la lectura de
 /// RF-001 en la documentación de <see cref="MapGenerator"/>.
 /// </param>
 /// <param name="OpponentIds">
@@ -27,7 +27,7 @@ public sealed record MapOptions(int PathLength = MapGenerator.DefaultPathLength,
 /// <c>RngStreams.Map(runSeed, act)</c> (RT-022), así que cambiar la semilla de recompensas o de partido
 /// no altera el mapa.
 ///
-/// <para><b>Qué cuentan los "10-12 nodos por acto" de RF-001.</b> Cuentan los nodos que el jugador
+/// <para><b>Qué cuentan los "8-10 nodos por acto" de RF-001 (antes 10-12, ADR 0170).</b> Cuentan los nodos que el jugador
 /// <b>recorre</b>, no los dibujados (decisión W-1). Es la única lectura con la que cuadran los demás
 /// números del documento: <c>fase2-diseno.md</c> §4 fija "11 nodos, de los cuales 6 partidos como
 /// máximo", que por tres actos son 18 partidos, dentro de la métrica "duración de la run en partidos:
@@ -89,14 +89,14 @@ public sealed record MapOptions(int PathLength = MapGenerator.DefaultPathLength,
 /// </summary>
 public static class MapGenerator
 {
-    /// <summary>Nodos recorridos mínimos por acto (RF-001).</summary>
-    public const int MinPathLength = 10;
+    /// <summary>Nodos recorridos mínimos por acto (RF-001, enmendado por la ADR 0170: antes 10).</summary>
+    public const int MinPathLength = 8;
 
-    /// <summary>Nodos recorridos máximos por acto (RF-001).</summary>
-    public const int MaxPathLength = 12;
+    /// <summary>Nodos recorridos máximos por acto (RF-001, enmendado por la ADR 0170: antes 12).</summary>
+    public const int MaxPathLength = 10;
 
-    /// <summary>Nodos recorridos por acto por defecto (D-2/D-10).</summary>
-    public const int DefaultPathLength = 11;
+    /// <summary>Nodos recorridos por acto por defecto (ADR 0170: antes 11).</summary>
+    public const int DefaultPathLength = 9;
 
     /// <summary>Porcentaje máximo de nodos de partido de un camino (RF-003b).</summary>
     public const int MaxMatchPercent = 60;

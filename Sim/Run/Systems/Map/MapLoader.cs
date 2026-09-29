@@ -9,7 +9,7 @@ namespace Underleague.Sim.Run.Systems.Map;
 /// caen los mercados, cuántas capas son de partido, dónde está el jefe— se deriva de ahí por
 /// construcción en <see cref="MapGenerator"/>, y moverlo exigiría un ADR (RT-057).
 /// </summary>
-/// <param name="NodesPerAct">Nodos recorridos en cada acto (índice 0 = acto 1), 10..12 (RF-001, lectura W-1).</param>
+/// <param name="NodesPerAct">Nodos recorridos en cada acto (índice 0 = acto 1), 8..10 (RF-001, lectura W-1, enmendado por la ADR 0170).</param>
 /// <param name="EliteRivalLevelBonus">
 /// ADR 0043: niveles que el rival de un nodo de élite juega por encima del de liga del mismo acto. Es el
 /// <b>más riesgo</b> del élite —su más premio está en <c>economy.nodeRewards</c>—, y no inventa una

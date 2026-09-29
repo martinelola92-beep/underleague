@@ -84,12 +84,12 @@ public sealed class FullRunGateTests
     }
 
     /// <summary>
-    /// §10: una run que llega hasta el jefe final dura 18-22 partidos. Con los nodos por acto de
-    /// <c>data/map/map.json</c> (11, 12 y 12, D-2/D-10) son exactamente 20, y no depende del azar: el
+    /// ADR 0170: una run que llega hasta el jefe final dura 12-15 partidos (antes 18-22, §10). Con los nodos por
+    /// acto de <c>data/map/map.json</c> (8, 9 y 9) el peor camino son exactamente 14, y no depende del azar: el
     /// tope del 60% de RF-003b se cumple sobre el peor camino (W-3).
     /// </summary>
     [Fact]
-    public void AFullRunLastsBetween18And22Matches() => AssertIn(FullRunMetrics.MatchesPerFullRun);
+    public void AFullRunLastsBetween12And15Matches() => AssertIn(FullRunMetrics.MatchesPerFullRun);
 
     /// <summary>
     /// ADR 0168, métrica guardiana de la sangre (decisión del revisor, plan de diversión §0): la carnicería
@@ -336,7 +336,7 @@ public sealed class FullRunGateTests
     public void TheMapMatchesTheNodeBudgetOfRf003b()
     {
         var map = MapLoader.FromJson(TestData.LoadAllFiles());
-        Assert.InRange(map.TotalNodes, 30, 36);
+        Assert.InRange(map.TotalNodes, 24, 30);
 
         int worstCaseMatches = 0;
         for (int act = 1; act <= RunRules.Acts; act++)
@@ -345,7 +345,7 @@ public sealed class FullRunGateTests
             worstCaseMatches += MapInvariants.WorstCaseMatches(generated);
         }
 
-        Assert.InRange(worstCaseMatches, 18, 22);
+        Assert.InRange(worstCaseMatches, 12, 15);
         Assert.True(
             worstCaseMatches * 100 / map.TotalNodes <= MapGenerator.MaxMatchPercent,
             $"{worstCaseMatches} partidos de {map.TotalNodes} nodos superan el {MapGenerator.MaxMatchPercent}% de RF-003b");
