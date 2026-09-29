@@ -48,6 +48,11 @@ PC (Steam), premium, sin online. **Estado (8 sep 2026): fases 0 y 1 cerradas; fa
 - **Sin gh en la máquina**: los PR se abren a mano con el enlace de GitHub. La rama de clanes tiene un commit heredado
   (`1337343`) cuyos tests no compilan solos: fusionar con *squash*.
 
+**BS-A cerrada para la esquela y el Ojeo (29 sep 2026, noche):** al resolver el partido se anota quién ocupaba el puesto
+del matador (`deathKiller:<id>`, `RivalKiller`), y la esquela de la Gaceta y el reencuentro del Ojeo nombran al fichaje o
+némesis que mató, no al jugador de datos. Queda abierta la representación de fondo (créditos por ocupante) para el
+villano por créditos y las lesiones: `docs/pendientes/BS-A.md`.
+
 **Siguiente**: el plan de diversión (§5) queda recorrido entero. Lo que sigue: estrechamiento del campo en la turba (RF-055b, F7, bloqueado por el
 gate 5 de Knavall: ¿el desgaste es de run o de acto? — **pregunta al revisor**), el gesto visual del invasor, y los
 pendientes menores: BS-A; Blind contra Never de la apuesta; atributo máximo por run y más semillas del herrero; el panel

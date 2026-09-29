@@ -30,7 +30,7 @@ viva anotada.
 | [BA-L2](./BA-L2.md) | `CaptureRunner` pierde el árbol de escena entre `informe` y `recompensa` | Resuelta la secuencia; queda abierto `recompensa.png` en blanco |
 | [BR-A](./BR-A.md) | Guardar o salir a mitad de partido no reproduce el partido al volver (RT-061) | Abierta: el estado en memoria ya es el de después del partido; arreglarlo pide esquema de guardado con las decisiones del partido |
 | [BR-B](./BR-B.md) | Jugadores muertos que vuelven a la vida: `INJURY` tras `DEATH` en el mismo tick | Cerrada (29 sep): causa CONFIRMED, el motor lesionaba al objetivo de un perk letal ya muerto; guarda en el motor y en la resolución |
-| [BS-A](./BS-A.md) | Créditos de rival y epitafio de la Gaceta nombran al jugador de datos, no al fichaje o némesis que ocupaba el puesto | Abierta (29 sep): de lectura de código tras la ADR 0165; tres opciones de arreglo, sin medir frecuencia |
+| [BS-A](./BS-A.md) | Créditos de rival y epitafio de la Gaceta nombran al jugador de datos, no al fichaje o némesis que ocupaba el puesto | Cerrada para la esquela (29 sep): se anota quién ocupaba el puesto al matar (`deathKiller:`); abierto el villano por créditos |
 | [BB-D](./BB-D.md) | Parar unos segundos en los eventos que detienen el juego | Analizada (`game-design-review`, 16 sep); pendiente de decidir si se implementa — se resuelve entera en `/Game`, sin tocar RT-020 |
 | [BB-G2](./BB-G2.md) | El portero puede ser perseguidor designado fuera de su área y bloquear a los diez | Abierta, sin evidencia de activación |
 | [BB-H](./BB-H.md) | «Todavía no hay eventos, habrá que diseñarlos» | Abierta: existen seis cartas, pero 0,38 resueltas por run — es densidad y catálogo, no ausencia |
