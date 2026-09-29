@@ -232,6 +232,11 @@ public static class MatchMomentView
         ArgumentNullException.ThrowIfNull(frameOfTick);
 
         var builders = new List<MomentBuilder>();
+
+        // ADR 0171: el momento Fate es TRANSPARENTE para la fusión. Se anota aparte y no cuenta como «el último
+        // momento abierto»: la lesión que sigue a una falta o a una tarjeta se funde con ella igual que sin la
+        // tirada (revisión independiente: con ella en medio, la lesión dejaba de fundirse y la roja se perdía).
+        MomentBuilder? last = null;
         for (int i = 0; i < events.Count; i++)
         {
             var matchEvent = events[i];
@@ -242,8 +247,15 @@ public static class MatchMomentView
             }
 
             var (kind, level, pauses, cancelled) = classification.Value;
-            var last = builders.Count > 0 ? builders[^1] : null;
-            bool fuses = kind != MomentKind.Kickoff && kind != MomentKind.Fate && last is not null && CanFuse(last, matchEvent, kind, playerTeam);
+            if (kind == MomentKind.Fate)
+            {
+                var fate = new MomentBuilder();
+                builders.Add(fate);
+                fate.Add(i, matchEvent, kind, level, pauses, cancelled);
+                continue;
+            }
+
+            bool fuses = kind != MomentKind.Kickoff && last is not null && CanFuse(last, matchEvent, kind, playerTeam);
 
             MomentBuilder target;
             if (fuses)
@@ -254,6 +266,7 @@ public static class MatchMomentView
             {
                 target = new MomentBuilder();
                 builders.Add(target);
+                last = target;
             }
 
             target.Add(i, matchEvent, kind, level, pauses, cancelled);
@@ -395,7 +408,7 @@ public static class MatchMomentView
     /// </summary>
     private static bool CanFuse(MomentBuilder moment, MatchEvent matchEvent, MomentKind kind, int playerTeam)
     {
-        if (moment.Kind is MomentKind.Kickoff or MomentKind.Fate)
+        if (moment.Kind == MomentKind.Kickoff)
         {
             return false;
         }

@@ -951,12 +951,13 @@ internal sealed class EffectEngine : IPerkLinks
                 // marca el perk y no de cuánto valga la tirada de cada uno (RT-021).
                 var marked = victims[pick];
                 victims.RemoveAt(pick);
-                bool dies = _engine.LethalRoll(best);
-                _engine.AnnounceLethalRoll(marked, subscription.Owner, best, dies);
-                if (dies)
+                if (_engine.LethalRoll(best))
                 {
                     _engine.Kill(marked, "perk:" + subscription.Perk.Id, subscription.Owner);
                 }
+
+                // ADR 0171: el desenlace se anota tras la cancelación posible de la muerte.
+                _engine.AnnounceLethalRoll(marked, subscription.Owner, best);
             }
         }
 
