@@ -305,6 +305,8 @@ public static class UiText
         ["ui.node.forgeCure"] = "{0}% curación: vuelve sano y sin prótesis",
         ["ui.node.forgeImprove"] = "{0}% mejora: sale con una prótesis con ventaja y la etiqueta Chatarra",
         ["ui.node.forgeWorsen"] = "{0}% empeoramiento: sale con una prótesis con desventaja y la etiqueta Chatarra (el herrero nunca mata)",
+        ["ui.node.forgeImproveRange"] = "de {0} a {1} en: {2} (según las ranuras libres)",
+        ["ui.node.forgeWorsenRange"] = "de {0} a {1} en: {2} (según las ranuras libres)",
         ["ui.node.forgeSlots"] = "ranuras libres: {0}. Una ranura ocupada no admite otra prótesis",
         ["ui.node.forgeAutomaton"] = "una prótesis más y {0} pasa a ser también Autómata (conserva su especie)",
         ["ui.node.forgeInvest"] = "Oro extra, hasta {0} (cada uno rinde menos). El botón muestra curación / mejora / empeoramiento:",

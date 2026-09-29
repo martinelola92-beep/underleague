@@ -372,7 +372,7 @@ public partial class PlayerDossier : InkCanvas
 
     /// <summary>
     /// Una línea discreta con las prótesis del jugador y lo que cambian (ADR 0164): «Prótesis · pata de palo
-    /// (−6 velocidad), brazo de hierro (+4 fuerza)». Sin prótesis no se dibuja nada.
+    /// (−12 velocidad), brazo de hierro (+8 fuerza)». Sin prótesis no se dibuja nada.
     /// </summary>
     private void DrawProstheses(PlayerDefinition player, float top)
     {

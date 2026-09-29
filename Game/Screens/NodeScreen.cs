@@ -302,7 +302,11 @@ public partial class NodeScreen : Control
         y += 22f;
         Widgets.Body(this, UiText.Get("ui.node.forgeImprove", quote.Odds.ImprovePercent), new Vector2(40f, y), 1200f);
         y += 22f;
+        Widgets.Body(this, ForgeRange("ui.node.forgeImproveRange", quote.ImproveRange), new Vector2(60f, y), 1180f, Style.TextDim);
+        y += 22f;
         Widgets.Body(this, UiText.Get("ui.node.forgeWorsen", quote.Odds.WorsenPercent), new Vector2(40f, y), 1200f, Style.Hole);
+        y += 22f;
+        Widgets.Body(this, ForgeRange("ui.node.forgeWorsenRange", quote.WorsenRange), new Vector2(60f, y), 1180f, Style.TextDim);
         y += 22f;
 
         var slots = new List<string>();
@@ -351,6 +355,24 @@ public partial class NodeScreen : Control
             Rebuild();
         };
         return y + 34f;
+    }
+
+    /// <summary>Rango de magnitudes y atributos posibles de una clase de prótesis con las ranuras libres (RF-012d: la apuesta se conoce entera).</summary>
+    private string ForgeRange(string key, Sim.Run.View.ProsthesisRange? range)
+    {
+        if (range is null)
+        {
+            return string.Empty;
+        }
+
+        var templates = _run.Catalog!.Localization.Get(Data.GameData.Language);
+        var names = new List<string>();
+        foreach (var attribute in range.Attributes)
+        {
+            names.Add(templates.Find("attributes", attribute.ToString().ToLowerInvariant()) ?? attribute.ToString());
+        }
+
+        return UiText.Get(key, UiText.Signed(range.MinDelta), UiText.Signed(range.MaxDelta), string.Join(", ", names));
     }
 
     /// <summary>Confirma la mesa del herrero y anuncia lo que ha salido: la curación, o la prótesis con su efecto (ADR 0164).</summary>
