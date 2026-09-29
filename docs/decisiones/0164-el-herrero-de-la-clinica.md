@@ -32,14 +32,16 @@ por pieza, plantilla entera y el matasanos (ADR 0099).
    ranura (brazo, pierna, ojo, mandíbula…), efecto sobre atributos o correa y si es de mejora o de
    empeoramiento. Se aplican al instalarse sobre los atributos del jugador y quedan en `Prostheses` para
    verse. Una ranura ocupada no se repite.
-4. **Tres prótesis** → el jugador pierde su etiqueta de especie y gana `Automaton` (RF-095c). La familia de
-   perks de autómata no existe todavía: se anota.
-   **Qué consume la etiqueta de especie (medido leyendo el código, Regla G):** solo los perks *exclusivos de
-   raza* (`race` puesta, que exigen `HasTag(raza)` en `EffectEngine` y `Scouting`) y la habilidad racial de
-   la ficha. Un perk universal tiene prohibido consultarla (`PerkLoader.RejectSpeciesTags`, ADR 0023). Por
-   tanto, perder la especie **apaga la habilidad racial** del jugador: ese es el coste de la tercera
-   prótesis, y el «premio» hasta que exista la familia de autómata es solo la etiqueta `Automaton`, que
-   ningún perk consume aún.
+4. **Tres prótesis** → el jugador **gana** `Automaton` y **conserva** su etiqueta de especie (RF-095c,
+   **enmendada** por esta ADR tras la revisión independiente). El primer texto decía que perdía la especie;
+   se retiró porque (a) `Simulator.ValidatePerks` lanza si un perk exige una etiqueta que el jugador no lleva y
+   `gentle_giant`, `iron_gate` y `deathless_march` tienen `tagsRequired` con su especie: el partido siguiente
+   reventaba (CONFIRMED); (b) 15 objetos restringidos dejaban de aportar y (c) el «premio» era una etiqueta que
+   ningún perk consume. **La pérdida de especie se aplaza hasta que exista la familia de perks de autómata**
+   que la compense. Lo que consume la etiqueta de especie (Regla G): los perks con `tagsRequired` de su
+   especie y los objetos restringidos (`MatchItem.RequiredTag`). La habilidad racial de la ficha **no** la
+   consume: `EffectEngine.RacialAbility` y `Progression.ActivePerks` van por `definition.Race`, no por la
+   etiqueta (una versión anterior de esta ADR afirmaba lo contrario, y era falso).
 5. **Aleatoriedad**: flujo propio derivado del nodo y del jugador (`OfferStream`, desplazamiento 9000),
    nunca el de partido (RT-022).
 6. El taller como nodo se retira de la leyenda del mapa; `NodeKind.Workshop` se conserva en el enum para no
