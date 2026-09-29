@@ -381,6 +381,10 @@ public sealed class BossGateTests
     /// </summary>
     private sealed class BossOpponentOnly(IRunSystems inner) : IRunSystems
     {
+        public Underleague.Sim.Run.Systems.Bets.BetCatalog Bets => inner.Bets;
+
+        public Underleague.Sim.Run.Systems.Medical.ProsthesisCatalog Prostheses => inner.Prostheses;
+
         public IReadOnlyList<RunReferee> CreateReferees(ulong seed, int count, Catalog catalog) =>
             inner.CreateReferees(seed, count, catalog);
 

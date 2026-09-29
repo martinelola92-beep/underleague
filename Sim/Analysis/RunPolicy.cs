@@ -3841,6 +3841,8 @@ public static class RunPolicy
 
         public Underleague.Sim.Run.Systems.Bets.BetCatalog Bets => _inner.Bets;
 
+        public Underleague.Sim.Run.Systems.Medical.ProsthesisCatalog Prostheses => _inner.Prostheses;
+
         public void OnMatchPlayed(RunState stateBefore, MapNode node, MatchSetup setup, MatchResult result, RunMatchSummary summary)
         {
             if (summary.Bet is { } bet)

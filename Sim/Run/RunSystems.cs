@@ -191,7 +191,9 @@ public interface IRunSystems
     ///
     /// <para>Es un gancho de <b>observación</b>: no devuelve nada ni puede cambiar el estado, así que no
     /// altera ninguna run (ADR 0157: el censo de <c>/Balance</c> evalúa las condiciones de apuesta con esto).
-    /// Por defecto no hace nada; implementarlo no es obligatorio.</para>
+    /// Por defecto no hace nada; implementarlo no es obligatorio. **Ojo**: es el único miembro por defecto que
+    /// queda y un envoltorio que no lo reenvía se traga la observación; los que envuelven a otro (<c>BossRunSystems</c>,
+    /// <c>RecordingSystems</c>) lo reenvían.</para>
     /// </summary>
     /// <param name="stateBefore">Estado de la run justo ANTES del partido (plantilla, canteranos incluidos).</param>
     void OnMatchPlayed(RunState stateBefore, MapNode node, MatchSetup setup, MatchResult result, RunMatchSummary summary)
@@ -199,16 +201,22 @@ public interface IRunSystems
     }
 
     /// <summary>
-    /// Catálogo de apuestas del vestuario de estos sistemas (ADR 0157, <c>data/bets/</c>). Vacío por defecto:
-    /// sin catálogo ningún nodo ofrece apuesta. Lo lee <see cref="RunEngine"/> para tomarlas y resolverlas.
+    /// Catálogo de apuestas del vestuario de estos sistemas (ADR 0157, <c>data/bets/</c>). Sin catálogo ningún
+    /// nodo ofrece apuesta. Lo lee <see cref="RunEngine"/> para tomarlas y resolverlas.
+    ///
+    /// <para><b>Sin implementación por defecto a propósito</b> (ADR 0164, Regla J): el miembro por defecto
+    /// devolvía el catálogo vacío y <c>RunPolicy.RecordingSystems</c> lo heredaba sin reenviarlo, de modo que
+    /// una medición entera corrió contra un catálogo vacío sin que nada avisara. Que el compilador obligue a
+    /// cada envoltorio a decidir.</para>
     /// </summary>
-    Systems.Bets.BetCatalog Bets => Systems.Bets.BetCatalog.Empty;
+    Systems.Bets.BetCatalog Bets { get; }
 
     /// <summary>
-    /// Catálogo de prótesis del herrero de la clínica (ADR 0164, <c>data/prostheses/</c>). Vacío por defecto:
-    /// sin catálogo el herrero no puede instalar nada.
+    /// Catálogo de prótesis del herrero de la clínica (ADR 0164, <c>data/prostheses/</c>). Sin catálogo el
+    /// herrero no puede instalar nada. Sin implementación por defecto por la misma razón que
+    /// <see cref="Bets"/>: un envoltorio que no lo reenvía mide un mundo sin herrero sin decirlo.
     /// </summary>
-    Systems.Medical.ProsthesisCatalog Prostheses => Systems.Medical.ProsthesisCatalog.Empty;
+    Systems.Medical.ProsthesisCatalog Prostheses { get; }
 }
 
 /// <summary>
@@ -249,6 +257,12 @@ public sealed class DefaultRunSystems : IRunSystems
 
     /// <summary>Instancia compartida: la clase no tiene estado.</summary>
     public static DefaultRunSystems Instance { get; } = new();
+
+    /// <inheritdoc />
+    public Systems.Bets.BetCatalog Bets => Systems.Bets.BetCatalog.Empty;
+
+    /// <inheritdoc />
+    public Systems.Medical.ProsthesisCatalog Prostheses => Systems.Medical.ProsthesisCatalog.Empty;
 
     /// <inheritdoc />
     public IReadOnlyList<RunReferee> CreateReferees(ulong seed, int count, Catalog catalog)
