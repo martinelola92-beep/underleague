@@ -228,7 +228,11 @@ public partial class ScoutScreen : Control
             && credit.RivalIndex >= 0 && credit.RivalIndex < rivalTeam.Players.Count
             && state.FindPlayer(credit.OwnPlayerId) is { } ownPlayer)
         {
-            string rivalPlayerName = rivalTeam.Players[credit.RivalIndex].Name;
+            // BS-A: de una muerte se sabe quién ocupaba el puesto al matar (fichaje, némesis); del resto, el de datos.
+            string rivalPlayerName = credit.Kind == RivalCreditKind.SufferedDeath && _run.Catalog is { } scoutCatalog
+                ? Underleague.Sim.Run.Systems.Rivals.RivalKiller.Name(
+                    state.DeathKillerOf(credit.OwnPlayerId), rivalTeam, credit.RivalIndex, state.RivalMemory, state.Seed, scoutCatalog)
+                : rivalTeam.Players[credit.RivalIndex].Name;
             string creditKey = credit.Kind switch
             {
                 RivalCreditKind.CausedInjury => "ui.scout.rivalCreditCausedInjury",
