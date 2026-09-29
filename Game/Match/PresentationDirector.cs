@@ -22,6 +22,12 @@ namespace Underleague.Game.Match;
 /// <param name="FateSlowScale">Escala de tiempo de la reproducción durante la cámara lenta de la tirada del destino (ADR 0171): 0,5 = a mitad de velocidad.</param>
 /// <param name="Fate">Duración de la voz de la tirada del destino a 1×: la cámara lenta y, tras ella, lo que dura el resultado en pantalla.</param>
 /// <param name="FateCompressed">Duración de la voz de la tirada del destino a x4 (sin cámara lenta).</param>
+/// <param name="Hold">
+/// Pausa breve a 1× ante un suceso que detiene el juego y no tiene congelado propio (BB-D, ADR 0173): falta pitada,
+/// tarjeta, lesión que para el partido. <b>Provisional, sin medir</b> (Regla H): menos de la mitad del sello más
+/// corto (<see cref="N1"/>), para que el sello siga en pantalla cuando el juego se reanuda; cuesta ~3 pausas por
+/// partido, 1,8 s de reloj de pared (1,6 %).
+/// </param>
 public sealed record DirectorTimings(
     double N1,
     double N2,
@@ -34,7 +40,8 @@ public sealed record DirectorTimings(
     double VoiceExpiry,
     double FateSlowScale,
     double Fate,
-    double FateCompressed)
+    double FateCompressed,
+    double Hold)
 {
     /// <summary>Los valores provisionales del encargo (docs/ui/README.md §4/§6).</summary>
     public static DirectorTimings Default { get; } = new(
@@ -52,7 +59,8 @@ public sealed record DirectorTimings(
         // Cámara lenta (los fotogramas de adelanto de la tirada, a 15/s, a la escala de arriba: ~1,07 s reales)
         // más 1,5 s de resultado en pantalla. Provisional, como el resto: es ritmo, no balance (ADR 0171).
         Fate: (MatchMomentView.FateLeadFrames / 15d / 0.5) + 1.5,
-        FateCompressed: 1.2);
+        FateCompressed: 1.2,
+        Hold: 0.6);
 }
 
 /// <summary>
@@ -74,6 +82,11 @@ public sealed record DirectorTimings(
 /// Qué fracción de la velocidad normal debe avanzar el reloj de reproducción de la pantalla (1 = normal).
 /// Es la cámara lenta de la tirada del destino (ADR 0171); el director sólo la pide, la pantalla la aplica.
 /// </param>
+/// <param name="Held">
+/// El suceso cuya pausa breve tiene la reproducción congelada (BB-D, ADR 0173), o null. Es lo que la pantalla lee
+/// para que el residuo —tablero, tiras, residuo del rival— ya refleje el suceso mientras el campo sigue un
+/// fotograma por detrás (principio 5), igual que con la voz alta que pausa.
+/// </param>
 public sealed record DirectorFrame(
     bool Frozen,
     int DisplayFrame,
@@ -82,7 +95,8 @@ public sealed record DirectorFrame(
     MatchMoment? Stamp,
     float StampProgress,
     bool AwaitingDecision,
-    double TimeScale = 1d);
+    double TimeScale = 1d,
+    MatchMoment? Held = null);
 
 /// <summary>
 /// Director de presentación de la retransmisión (ADR 0119 «En <c>/Game</c>»): recibe los momentos ya
@@ -101,6 +115,7 @@ public sealed class PresentationDirector
 {
     private readonly IReadOnlyList<MatchMoment> _moments;
     private readonly DirectorTimings _timings;
+    private readonly Func<MatchMoment, bool>? _stopsPlay;
 
     private int _nextMomentIndex;
 
@@ -133,16 +148,33 @@ public sealed class PresentationDirector
     private bool _awaitingDecision;
 
     /// <summary>
+    /// La pausa breve en curso (BB-D, ADR 0173): el suceso que la provocó, lo que le queda y los dos fotogramas
+    /// entre los que salta al terminar (el anterior al suceso, donde se congela, y el del suceso). Es un
+    /// congelado <b>aparte</b> del de la voz que pausa (<see cref="_frozen"/>): no es una voz, no ocupa el
+    /// escenario, y por eso no compite con ninguna.
+    /// </summary>
+    private MatchMoment? _held;
+
+    private double _holdLeft;
+    private int _holdAtFrame;
+    private int _holdToFrame;
+
+    /// <summary>
     /// La velocidad del último <see cref="Advance"/> que llegó a procesar momentos (revisión del
     /// orquestador, 19 sep 2026): <see cref="FinishVoice"/> la necesita para volver a evaluar la cola con
     /// la velocidad de <b>ahora</b>, no con la que había cuando cada una se encoló.
     /// </summary>
     private int _lastSpeed = 1;
 
-    public PresentationDirector(IReadOnlyList<MatchMoment> moments, DirectorTimings timings)
+    /// <param name="stopsPlay">
+    /// Si un suceso detiene el juego de verdad (<see cref="PlayStops.Holds"/>): lo decide la pantalla, que tiene la
+    /// traza, y el director sólo la pregunta. Null = ninguna pausa breve (el director de antes).
+    /// </param>
+    public PresentationDirector(IReadOnlyList<MatchMoment> moments, DirectorTimings timings, Func<MatchMoment, bool>? stopsPlay = null)
     {
         _moments = moments ?? throw new ArgumentNullException(nameof(moments));
         _timings = timings ?? throw new ArgumentNullException(nameof(timings));
+        _stopsPlay = stopsPlay;
     }
 
     /// <summary>
@@ -159,6 +191,8 @@ public sealed class PresentationDirector
         _voiceQueue.Clear();
         _frozen = false;
         _awaitingDecision = false;
+        _held = null;
+        _holdLeft = 0d;
 
         // ADR 0171: una tirada del destino que ya ha empezado (su Frame es 8 fotogramas anterior al de la tirada)
         // sigue viva si la búsqueda cae dentro de ella —típicamente, la decisión de sustitución de una lesión
@@ -183,6 +217,8 @@ public sealed class PresentationDirector
     {
         _awaitingDecision = false;
         _frozen = false;
+        _held = null;
+        _holdLeft = 0d;
     }
 
     /// <summary>
@@ -217,10 +253,28 @@ public sealed class PresentationDirector
             return BuildFrame(_frozenAtFrame, frozen: true);
         }
 
-        // La voz que tenía la reproducción congelada acaba de terminar en esta misma llamada: el reloj
-        // salta al fotograma del suceso (no al que pasó la pantalla, que se quedó atrás congelado en el
-        // anterior) antes de seguir mirando si algún otro momento cae dentro de ese salto.
-        int displayFrame = wasFrozen ? Math.Max(frame, _unfreezeToFrame) : frame;
+        // La pausa breve (BB-D, ADR 0173): mientras dure, el campo se queda en el fotograma anterior al suceso.
+        // Cambiar de velocidad la corta en el acto: a x4 y x16 la presentación se degrada (docs/ui/README §6) y
+        // no se queda nadie mirando un fotograma fijo.
+        bool holdEnded = false;
+        if (_held is not null)
+        {
+            _holdLeft -= realDelta;
+            if (speed == 1 && _holdLeft > 0d)
+            {
+                return BuildFrame(_holdAtFrame, frozen: true);
+            }
+
+            holdEnded = true;
+            _held = null;
+        }
+
+        // La voz que tenía la reproducción congelada (o la pausa breve) acaba de terminar en esta misma
+        // llamada: el reloj salta al fotograma del suceso (no al que pasó la pantalla, que se quedó atrás
+        // congelado en el anterior) antes de seguir mirando si algún otro momento cae dentro de ese salto.
+        int displayFrame = wasFrozen
+            ? Math.Max(frame, _unfreezeToFrame)
+            : holdEnded ? Math.Max(frame, _holdToFrame) : frame;
         while (_nextMomentIndex < _moments.Count && _moments[_nextMomentIndex].Frame <= displayFrame)
         {
             var moment = _moments[_nextMomentIndex];
@@ -282,6 +336,12 @@ public sealed class PresentationDirector
                     _stampDuration = _timings.N1;
                 }
 
+                if (StartHold(moment, speed))
+                {
+                    displayFrame = moment.FreezeFrame;
+                    break;
+                }
+
                 continue;
             }
 
@@ -298,6 +358,7 @@ public sealed class PresentationDirector
                 break;
             }
 
+            bool stageFree = _voice is null && _voiceQueue.Count == 0;
             if (_voice is null)
             {
                 StartVoice(moment, presentation, speed);
@@ -306,9 +367,39 @@ public sealed class PresentationDirector
             {
                 _voiceQueue.Add(new QueuedVoice(moment, 0d));
             }
+
+            // Una tarjeta roja (N3) es una voz alta que no congela sola: su pausa breve la da el escenario
+            // libre. Con otra voz en pantalla o en cola no hay pausa: una sola voz alta a la vez.
+            if (stageFree && StartHold(moment, speed, ownVoice: true))
+            {
+                displayFrame = moment.FreezeFrame;
+                break;
+            }
         }
 
-        return BuildFrame(displayFrame, _frozen);
+        return BuildFrame(displayFrame, _frozen || _held is not null);
+    }
+
+    /// <summary>
+    /// Abre la pausa breve de este suceso si toca (BB-D, ADR 0173): a 1x, con la duracion configurada, si la
+    /// pantalla dice que el juego se ha detenido de verdad, y sin ninguna voz alta en el escenario (una sola voz
+    /// alta a la vez, docs/ui/README §2). No la abre ninguna presentacion que ya congele por si sola (gol,
+    /// muerte, final, decision): esas no pasan por aqui. <paramref name="ownVoice"/>: la voz que hay en el
+    /// escenario es la del propio suceso, que acaba de arrancar.
+    /// </summary>
+    private bool StartHold(MatchMoment moment, int speed, bool ownVoice = false)
+    {
+        bool stageBusy = _voice is not null && !ownVoice;
+        if (_stopsPlay is null || speed != 1 || _timings.Hold <= 0d || stageBusy || !_stopsPlay(moment))
+        {
+            return false;
+        }
+
+        _held = moment;
+        _holdLeft = _timings.Hold;
+        _holdAtFrame = moment.FreezeFrame;
+        _holdToFrame = moment.Frame;
+        return true;
     }
 
     private void StartVoice(MatchMoment moment, MomentPresentation presentation, int speed)
@@ -431,7 +522,7 @@ public sealed class PresentationDirector
         double timeScale = !frozen && _lastSpeed == 1 && _voice is { Kind: MomentKind.Fate } fate && !_voiceCompressed && displayFrame < fate.LastFrame
             ? _timings.FateSlowScale
             : 1d;
-        return new DirectorFrame(frozen, displayFrame, _voice, voiceProgress, _stamp, stampProgress, _awaitingDecision, timeScale);
+        return new DirectorFrame(frozen, displayFrame, _voice, voiceProgress, _stamp, stampProgress, _awaitingDecision, timeScale, _held);
     }
 
     private sealed record QueuedVoice(MatchMoment Moment, double Waited);

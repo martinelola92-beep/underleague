@@ -121,6 +121,23 @@ public partial class BroadcastCapture : Control
             return;
         }
 
+        // ADR 0173: `-- pausa` captura sólo la pausa breve de una falta pitada (sigue jugando la pantalla de verdad).
+        if (System.Array.IndexOf(OS.GetCmdlineUserArgs(), "pausa") >= 0)
+        {
+            foreach (var probe in Seeds)
+            {
+                run.NewRun("orc_ironworks", Race.Orc, probe);
+                int probeNode = FirstOfKind(run, n => n.IsMatch);
+                if (probeNode >= 0 && await CaptureHold(run, probe, probeNode))
+                {
+                    break;
+                }
+            }
+
+            GetTree().Quit();
+            return;
+        }
+
         // ADR 0172: `-- consumible` captura sólo el botón del consumible manual, antes y después de pulsarlo.
         if (System.Array.IndexOf(OS.GetCmdlineUserArgs(), "consumible") >= 0)
         {
@@ -1249,6 +1266,79 @@ public partial class BroadcastCapture : Control
         }
 
         return null;
+    }
+
+    /// <summary>
+    /// ADR 0173 (BB-D): la pausa breve de una falta pitada, fotografiada EN MARCHA. Se busca la primera falta que
+    /// pare el juego (<c>PlayStops.Holds</c>, la misma pregunta que hace el director) y que no tenga otro suceso
+    /// pegado, se llega a ella reproduciendo a 1x y se pasa el tiempo con <c>StepManual</c>, que es
+    /// determinista: (1) el instante en que la imagen se congela, con el sello «Falta»; (2) 0,3 s reales después,
+    /// el MISMO fotograma; (3) ya reanudada, con el juego andando hacia el saque. Devuelve false si esta semilla
+    /// no tiene una falta limpia, para probar la siguiente.
+    /// </summary>
+    private async Task<bool> CaptureHold(RunController run, ulong seed, int node)
+    {
+        run.SelectedNodeId = node;
+        var playback = MatchPlaybacks.Of(run.State!, node, run.Catalog!, run.Engine, trace: true, MatchDecisions.None);
+        if (playback.Trace is not { } trace)
+        {
+            return false;
+        }
+
+        var moments = MatchMomentView.Build(playback.Setup, playback.Result, run.Catalog!).Moments;
+        MatchMoment? foul = null;
+        for (int i = 0; i < moments.Count && foul is null; i++)
+        {
+            var m = moments[i];
+            bool clean = (i == 0 || moments[i - 1].LastFrame < m.Frame - 60) && (i == moments.Count - 1 || moments[i + 1].Frame > m.LastFrame + 60);
+            if (m.Kind == MomentKind.Foul && m.Frame > 300 && clean && Game.Match.PlayStops.Holds(m, trace))
+            {
+                foul = m;
+            }
+        }
+
+        if (foul is null)
+        {
+            return false;
+        }
+
+        GD.Print($"retransmisión: 'pausa' en la semilla {seed}, falta en el fotograma {foul.Frame} (congela en {foul.FreezeFrame})");
+        var instance = await Show("res://Scenes/Retransmision.tscn", frames: 10);
+        if (instance is not BroadcastScreen screen)
+        {
+            Drop(instance);
+            return false;
+        }
+
+        // Se llega de LEJOS y reproduciendo, como en la cortinilla: tras un SeekTo el director arranca limpio.
+        await ShowFrame(screen, foul.FreezeFrame - 30, "pausa-0-antes");
+        const double Delta = 1d / 60d;
+        for (int i = 0; i < 4000 && !screen.Frozen; i++)
+        {
+            StepManual(screen, Delta, 1);
+        }
+
+        await Settle(2);
+        int held = screen.Pitch3D.Frame;
+        GD.Print($"pausa-1-congelada: fotograma {held} · congelada {screen.Frozen}");
+        await Save("pausa-1-congelada");
+
+        StepManual(screen, Delta, 18);
+        await Settle(2);
+        GD.Print($"pausa-2-sigue: fotograma {screen.Pitch3D.Frame} (era {held}) · congelada {screen.Frozen}");
+        await Save("pausa-2-sigue");
+
+        for (int i = 0; i < 4000 && screen.Frozen; i++)
+        {
+            StepManual(screen, Delta, 1);
+        }
+
+        StepManual(screen, Delta, 30);
+        await Settle(2);
+        GD.Print($"pausa-3-reanuda: fotograma {screen.Pitch3D.Frame} (congelada era {held}) · congelada {screen.Frozen}");
+        await Save("pausa-3-reanuda");
+        Drop(instance);
+        return true;
     }
 
     private async Task CaptureOrder(RunController run, ulong seed, int node)

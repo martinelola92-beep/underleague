@@ -274,7 +274,7 @@ public partial class BroadcastScreen : Control
         _frozenLastFrame = result.Frozen;
         _timeScale = result.TimeScale;
         _frame = Mathf.Clamp(result.DisplayFrame, 0, trace.FrameCount - 1);
-        _residueMoment = result.Frozen ? result.Voice : null;
+        _residueMoment = result.Frozen ? result.Voice ?? result.Held : null;
 
         ApplyPresentation(result);
         UpdateFateBand(result);
@@ -474,7 +474,7 @@ public partial class BroadcastScreen : Control
         }
 
         _moments = MatchMomentView.Build(_playback.Setup, _playback.Result, _catalog, 0, _run.Decisions.Declines);
-        _director = new PresentationDirector(_moments.Moments, DirectorTimings.Default);
+        _director = new PresentationDirector(_moments.Moments, DirectorTimings.Default, moment => PlayStops.Holds(moment, _trace));
         BuildShotGestures();
         BuildEventSounds();
         BuildBiasChanges();
@@ -1973,6 +1973,9 @@ public partial class BroadcastScreen : Control
     /// <inheritdoc cref="CutVeil"/>
     public bool CutActive => _cut.Active;
 
+    /// <summary>Para el arnés de capturas: si la reproducción está congelada ahora mismo (voz que pausa, decisión o pausa breve, ADR 0173).</summary>
+    public bool Frozen => _frozenLastFrame;
+
     /// <summary>
     /// Lleva la pantalla a ese fotograma y deja que el director lo presente: usado por
     /// <see cref="BroadcastCapture"/> para llegar a un momento concreto sin depender de dejar correr el
@@ -2028,7 +2031,7 @@ public partial class BroadcastScreen : Control
         var result = _director.Advance(_frame, 0d, Speeds[_speedIndex]);
         _frozenLastFrame = result.Frozen;
         _frame = Mathf.Clamp(result.DisplayFrame, 0, trace.FrameCount - 1);
-        _residueMoment = result.Frozen ? result.Voice : null;
+        _residueMoment = result.Frozen ? result.Voice ?? result.Held : null;
         ApplyPresentation(result);
         if (result.AwaitingDecision && !_deathTrayPending)
         {
