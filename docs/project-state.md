@@ -9,6 +9,35 @@ PC (Steam), premium, sin online. **Estado (8 sep 2026): fases 0 y 1 cerradas; fa
 **Campo de siete filas (14 sep 2026, decisión del revisor, BA-C):** 16×7 en vez de 16×6 —con seis filas el centro geométrico cae *entre* dos filas y no existe fila central—, con guardado v4. Añadir la fila cuesta ~1,0 tiro y ~0,45 goles por partido y **ninguna palanca local lo recupera**, así que la **ADR 0109** recalibra la banda de tiros a la geometría vigente (8-16 → 7-15) en vez de tocar el motor, y deja escrito que ensanchar la formación o las zonas de acción destruye la profundidad de colocación. Nueve auditorías de la IA de jugadores (`docs/auditoria-ia-jugadores-1..9.md`) dejan **un solo cambio aplicado**, la **ADR 0110**: `Shoot` del defensa 77 → 154 y del centrocampista 188 → 237, porque con 77 un defensa colocado arriba nunca remataba —perdía contra su propio `ShortPass` de 500— y jugar fuera de posición costaba dos tercios del ataque (100/48/38 → 100/68/55). Rechazados y documentados: `ChaseBall pen` en todas las dosis (degrada la diferenciación de builds), el desfase de fase entre equipos (no replica entre semillas) y la histéresis. Queda **abierto** el papel del centrocampista: dispara el 6,5 % de los tiros siendo el 43 % de los jugadores de campo.
 ---
 
+## COLA DE LA NOCHE (29-30 sep 2026) — lee esto primero si la sesión se corta
+
+**Decisiones del revisor (29 sep, noche):** las lesiones se arrastran (gate 5: el desgaste es de la run);
+**dos huecos de consumible** (enmienda RF-080; propuesta de BA-H); **cámara en perspectiva** (BA-F, contra
+la ortográfica de la ADR 0102); **pausar un poco** en los eventos que detienen el juego (BB-D); los
+aparcados (tutorial, clip, semilla compartible) siguen aparcados. *«Encola el resto y adelante sin mi
+permiso. El orden decídelo tú.»*
+
+**Regla de la noche:** todo proceso pesado (lote de /Balance, suite completa, puertas, censo) va con
+`tools/pesado.sh <segundos> <comando>`: hace cola con `flock` y sólo corre uno a la vez (4 núcleos).
+
+**Cola, en orden** (cada paquete: worktree `.claude/worktrees/agent-*`, commit tras cada paso, revisión
+independiente, rebase y merge a `main`, push):
+1. En curso: ADR 0170 desgaste de run + run más corta (8/9/9); ADR 0169 la turba estrecha el campo; ADR 0171
+   la tirada del destino (código y revisión hechos; falta suite completa y hash de determinismo).
+2. Pulido visible: BH-B (el jefe con nombre de clan de liga), BA-G (nombres repetidos), BC-H (aviso de
+   alineación falso), panel de estadísticas del informe, BA-L2 (captura de recompensa en blanco).
+3. Dos huecos de consumible (BA-H, RF-080) + pausa breve en eventos que detienen el juego (BB-D).
+4. Cámara en perspectiva (BA-F).
+5. Conducta en el campo, con `gameplay-debug`: BB-K (compañeros que bailan por la misma casilla), BC-G
+   (balón suelto en el córner), BA-J (repliegue tras una parada), BF-C (el delantero que pega sin balón).
+6. Perks que no cumplen: BC-C (Doble disparo), BC-D (Último hombre), BM-B (resoluciones que no miran a sus
+   participantes), BM-C (Mordisco), BB-R (maestros que no lo son).
+7. Menores del plan de diversión: resto de BS-A; apuesta Blind contra Never; herrero con más semillas y
+   atributo máximo por run; puerta de cola de los sumideros (ADR de tolerancia); BR-A (salir a mitad de
+   partido, esquema de guardado).
+
+---
+
 ## ARRANQUE (escrito el 29 sep 2026, noche) — lee esto primero
 
 **Cerrado en la rama `worktree-integra-0165-0166` (PR a `main`):**
