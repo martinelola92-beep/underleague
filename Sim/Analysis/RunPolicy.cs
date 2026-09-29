@@ -1325,6 +1325,19 @@ public static class RunPolicy
 
     // ------------------------------------------------------------------ 4. clínica
 
+    /// <summary>Puerta de los tests a la clínica de la política (ADR 0164): el estado tras la visita y cuántos tratamientos fueron del herrero y del médico.</summary>
+    internal static (RunState State, int BlacksmithTreatments, int Treatments) VisitClinicForTest(
+        RunState state,
+        Catalog catalog,
+        EconomyConfig economy,
+        IRunSystems systems,
+        RunPolicyOptions options)
+    {
+        var ledger = new Ledger();
+        state = VisitClinic(state, catalog, economy, systems, options, ledger);
+        return (state, ledger.BlacksmithTreatments, ledger.Treatments);
+    }
+
     private static RunState VisitClinic(
         RunState state,
         Catalog catalog,
@@ -1371,6 +1384,16 @@ public static class RunPolicy
                 break;
             }
 
+            // ADR 0164 (decisión del coordinador): el herrero antes que el médico cuando el grave es un
+            // suplente o de rareza común, con el oro alcanzando para el herrero: se arriesga la identidad de
+            // quien menos pesa en el once en vez de pagar la tarifa segura. Los titulares y las piezas
+            // raras siguen yendo al médico.
+            if (PrefersTheBlacksmith(state, patient, options, systems, MedicalSystem.BlacksmithBasePrice(economy)))
+            {
+                state = ForgeOne(state, patient, catalog, economy, systems, ledger, economy.ClinicCost - 1);
+                continue;
+            }
+
             state = RunEngine.Apply(state, new TreatPlayer(patient.Id), catalog, systems);
             ledger.GoldSpentClinic += economy.ClinicCost;
             ledger.Treatments++;
@@ -1402,11 +1425,13 @@ public static class RunPolicy
     }
 
     /// <summary>
-    /// El herrero (ADR 0164) en el mismo hueco que antes era solo del matasanos: queda un grave que merece la
-    /// pena y <b>no llega el oro</b> para el médico. <b>Regla</b>: entre las dos opciones baratas que sí llegan,
-    /// la política prefiere la que no mata, y solo si al jugador le queda una ranura libre; con el oro que
-    /// sobra invierte en la tabla hasta un oro <b>por debajo</b> del precio del médico (nunca paga tanto como
-    /// el garantizado: si pudiera, iría al médico). El matasanos queda para lo que ni el herrero alcanza.
+    /// El herrero (ADR 0164) como segundo recurso: queda un grave que merece la pena y <b>no llega el oro</b>
+    /// para el médico. Entre las dos opciones baratas que sí llegan, la política prefiere la que no mata, y
+    /// solo si al jugador le queda una ranura libre; con el oro que sobra invierte en la tabla hasta un oro
+    /// <b>por debajo</b> del precio del médico. <b>Orden de la clínica</b> (documentado, ADR 0164): tarifa
+    /// plana; herrero para el suplente o el común con oro para él; médico para el resto; leves de titulares;
+    /// este segundo recurso del herrero; y por último el matasanos, que solo ve el oro y los graves que el
+    /// herrero no pudo o no quiso tomar, así que no pierde su hueco.
     /// </summary>
     private static RunState TryTheBlacksmith(
         RunState state,
@@ -1427,23 +1452,70 @@ public static class RunPolicy
                 break;
             }
 
-            int extra = Math.Clamp(economy.ClinicCost - 1 - price, 0, economy.Blacksmith.MaxExtraGold);
-            extra = Math.Min(extra, state.Gold - price);
-            var before = patient;
-            state = RunEngine.Apply(state, new ForgePlayer(patient.Id, extra), catalog, systems);
-            ledger.GoldSpentClinic += price + extra;
-            ledger.BlacksmithTreatments++;
-            ledger.Treatments++;
-            var result = BlacksmithView.Outcome(before, state.GetPlayer(patient.Id), systems.Prostheses);
-            if (result.Prosthesis is not null)
-            {
-                ledger.ProsthesesInstalled++;
-            }
+            state = ForgeOne(state, patient, catalog, economy, systems, ledger, economy.ClinicCost - 1);
+        }
 
-            if (result.BecameAutomaton)
+        return state;
+    }
+
+    /// <summary>
+    /// True si el grave debe ir al herrero aunque el oro llegue al médico: es de rareza común o, una vez sano,
+    /// no entraría en el once (hay siete jugadores disponibles de más valor), le queda ranura libre y el oro
+    /// alcanza para el herrero (<paramref name="basePrice"/>).
+    /// </summary>
+    private static bool PrefersTheBlacksmith(RunState state, RunPlayer patient, RunPolicyOptions options, IRunSystems systems, int basePrice)
+    {
+        if (systems.Prostheses.All.Count == 0
+            || !MedicalSystem.HasFreeProsthesisSlot(patient, systems.Prostheses)
+            || state.Gold < basePrice)
+        {
+            return false;
+        }
+
+        if (patient.Rarity == Rarity.Common)
+        {
+            return true;
+        }
+
+        int worth = Value(patient, options);
+        int better = 0;
+        foreach (var other in state.AvailablePlayers)
+        {
+            if (other.Id != patient.Id && Value(other, options) > worth)
             {
-                ledger.Automatons++;
+                better++;
             }
+        }
+
+        return better >= RunRules.MaxStarters;
+    }
+
+    /// <summary>Un tratamiento del herrero con el oro extra que quepa por debajo de <paramref name="extraCeilingPrice"/> y lo anota en el registro.</summary>
+    private static RunState ForgeOne(
+        RunState state,
+        RunPlayer patient,
+        Catalog catalog,
+        EconomyConfig economy,
+        IRunSystems systems,
+        Ledger ledger,
+        int extraCeilingPrice)
+    {
+        int price = MedicalSystem.BlacksmithBasePrice(economy);
+        int extra = Math.Clamp(extraCeilingPrice - price, 0, economy.Blacksmith.MaxExtraGold);
+        extra = Math.Min(extra, state.Gold - price);
+        state = RunEngine.Apply(state, new ForgePlayer(patient.Id, extra), catalog, systems);
+        ledger.GoldSpentClinic += price + extra;
+        ledger.BlacksmithTreatments++;
+        ledger.Treatments++;
+        var result = BlacksmithView.Outcome(patient, state.GetPlayer(patient.Id), systems.Prostheses);
+        if (result.Prosthesis is not null)
+        {
+            ledger.ProsthesesInstalled++;
+        }
+
+        if (result.BecameAutomaton)
+        {
+            ledger.Automatons++;
         }
 
         return state;
