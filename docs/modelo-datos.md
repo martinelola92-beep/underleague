@@ -1,6 +1,6 @@
 # Modelo de datos
 
-Concreta RT-030 a RT-035, RT-060, RT-061b. El esquema del estado de la run se define **antes** de implementar sistemas (RT-030) y está versionado. Versión actual: **0** (borrador, sin código).
+Concreta RT-030 a RT-035, RT-060, RT-061b. El esquema del estado de la run se define **antes** de implementar sistemas (RT-030) y está versionado. Versión actual del código: **7** (la apuesta tomada, ADR 0157; `RunState.CurrentSchemaVersion`).
 
 ## Estado de la run (`Run`)
 
@@ -17,6 +17,7 @@ Run
   gold                  int
   nodeHistory[]         (nodeId, kind, result)
   map                   grafo del acto (nodos, aristas, rival asignado, modificador de jefe oculto/revelado)
+  bet                   apuesta del vestuario tomada y pagada para un nodo de partido sin jugar, o null: id, node, stake, payoutPercent, targetPlayer, targetName (RF-114h, ADR 0157; versión 7)
   referees[]            6-8 árbitros de la run: id, definitionId, name, trait, bribesReceived, memory, blindSide (RF-061b, RF-064c, ADR 0158)
   rerollsUsed           int  (RF-071b, coste creciente)
   dataSnapshot          copia de /data congelada al empezar (RT-061b)
@@ -82,11 +83,12 @@ Todos con esquema JSON en `/data/schemas/` y validados por `tools/DataValidator`
 | `data/tags/styles.json` | Etiquetas de estilo con su descripción y su sesgo de atributos | RF-022d (v0.9.1, ADR 0024) |
 | `data/clubs/` | Raza, plantilla inicial, oro, regla especial | RF-004 |
 | `data/traits/` | Rasgos de jugador y de portero, con modificadores de pesos de IA | RF-022c, RF-057e, RT-094 |
+| `data/bets/` | Apuestas del vestuario: condición, apuesta por acto, frecuencia medida y cuota por dificultad | RF-114h, ADR 0157 |
 | `data/referees/` | Rasgos de árbitro y sus efectos sobre criterio y sobornos | RF-061, RF-064 |
 | `data/ai/` | Pesos base por posición y por estado táctico | RT-093, RT-096 |
 | `data/rivals/` | Equipos rivales diseñados a mano por acto y división | RF-015 |
 | `data/bosses/` | Modificadores de regla | RF-001b, RF-014 |
-| `data/economy/` | Oro por acto, multiplicadores, precios, objetivos de partido excelente | RF-114g..k |
+| `data/economy/` | Oro por acto, multiplicadores, precios (el partido excelente se retiró: ADR 0157) | RF-114g..k |
 | `data/balance/` | Configuraciones de equipos de referencia para `/Balance` | RT-052 |
 | `data/l10n/` | Plantillas de descripción y textos, es/en | RT-035, RT-073 |
 | `data/build/arcs.json` | Líneas del catálogo de perks y curva de profundidad nativa del pool | ADR 0051 |
