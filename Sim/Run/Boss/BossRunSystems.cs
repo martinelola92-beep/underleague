@@ -104,7 +104,11 @@ public sealed class BossRunSystems : IRunSystems
 
         var boss = Bosses.ForAct(node.Act);
         var rng = RngStreams.Generation(state.Seed, node.Id);
-        return boss.Template.ToTeamSetup(ref rng, catalog, boss.Id, DefaultRunSystems.OpponentFirstPlayerId);
+
+        // BH-B: el equipo se llama como el jefe («La Cacería»), no como su id de datos. Idioma fijo a «es», igual que
+        // RivalTeamBuilder, mientras la fase 4 no elija idioma en tiempo de ejecución (RT-073).
+        return boss.Template.ToTeamSetup(
+            ref rng, catalog, boss.Id, DefaultRunSystems.OpponentFirstPlayerId, boss.NameIn("es"));
     }
 
     /// <inheritdoc />

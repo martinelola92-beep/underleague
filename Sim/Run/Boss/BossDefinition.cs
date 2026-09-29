@@ -104,8 +104,13 @@ public sealed record BossTemplate(
     /// <summary>
     /// Genera el equipo del jefe. Puro: toda la aleatoriedad sale de <paramref name="rng"/>, que el
     /// llamador saca de <c>RngStreams.Generation</c> (RT-021, RT-022).
+    /// <para>
+    /// <paramref name="teamName"/> es el nombre <b>visible</b> del equipo (BH-B): sin él, el marcador, el pregón
+    /// y el informe enseñaban el id de datos del jefe («the_hunt»), el mismo defecto que RF-015 ya arregló para
+    /// los rivales de catálogo. Es texto: no entra en ningún cálculo ni en el RNG.
+    /// </para>
     /// </summary>
-    public TeamSetup ToTeamSetup(ref Pcg32 rng, Catalog catalog, string teamId, int firstPlayerId)
+    public TeamSetup ToTeamSetup(ref Pcg32 rng, Catalog catalog, string teamId, int firstPlayerId, string? teamName = null)
     {
         ArgumentNullException.ThrowIfNull(catalog);
         var generated = TeamGenerator.Generate(
@@ -150,7 +155,7 @@ public sealed record BossTemplate(
             lineup = Model.Lineup.Default(players.Take(StarterCount).ToList());
         }
 
-        return new TeamSetup(teamId, teamId, Race, players, lineup);
+        return new TeamSetup(teamId, teamName ?? teamId, Race, players, lineup);
     }
 }
 
@@ -184,6 +189,15 @@ public sealed record BossDefinition(
     int GatePlayerLevel,
     IReadOnlyList<BossGateTarget> GateTargets)
 {
+    /// <summary>
+    /// Nombre del jefe en ese idioma (BH-B): el de <c>data/bosses/</c>, que es la identidad que el jugador tiene
+    /// que leer. Si falta el idioma pedido, el español; y si faltara también, el id, nunca una cadena vacía.
+    /// </summary>
+    public string NameIn(string language) =>
+        Name.TryGetValue(language, out var name) ? name
+        : Name.TryGetValue("es", out var es) ? es
+        : Id;
+
     /// <summary>Ids de los modificadores, en el orden del dato. Es lo que devuelve <see cref="IRunSystems.BossRuleModifiers"/>.</summary>
     public IReadOnlyList<string> ModifierIds => Modifiers.Select(m => m.Id).ToList();
 
