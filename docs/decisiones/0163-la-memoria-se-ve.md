@@ -62,8 +62,17 @@ cada jugador que pisó el campo, vivos y caídos. Columnas: % de runs con al men
 tape) y el máximo de la estadística. Se validó (Regla J) contra el caso sabido: el censo de una sola run
 coincide con el recuento a mano sobre su plantilla final (`NicknameCensusTests`).
 
-**Criterio.** Ningún apodo en más del 40 % de las runs (deja de distinguir) ni en el 0 % (umbral
-inalcanzable). Umbrales de partida (ADR, «provisional, sin medir»), 300 runs, semilla 1: `keepers_bane`
+**Qué cuenta el censo** (enmienda 29 sep, revisión independiente): a los jugadores **de la plantilla final**
+que pisaron el campo, vivos y caídos (los muertos siguen en el estado). **No** cuenta a quien se vendió o se
+marchó durante la run —ya no está en el estado final—, así que el reparto por jugador infravalora a los
+que pasaron por el club sin quedarse; el reparto por runs (lo que decide el criterio) casi no se ve
+afectado, pero no está medido cuánto. La función que cuenta (`NicknameCensusRunner.Tally`) es pura y se
+contrasta con casos de respuesta sabida (un apodo de «1 partido» sale al 100 % de las runs; un umbral
+inalcanzable, al 0 %) en `NicknameCensusTests`.
+
+**Criterio** (**provisional, sin medir**, Regla H: ninguna medición fija el 40 %; es la cifra a partir de la
+cual «casi todas las runs lo tienen» deja de distinguir, puesta a ojo; el 0 % sí es una definición, un umbral
+que nadie alcanza no es un apodo). Ningún apodo en más del 40 % de las runs ni en el 0 %. Umbrales de partida (ADR, «provisional, sin medir»), 300 runs, semilla 1: `keepers_bane`
 (6 goles) **78,7 %**, `butcher` (2 lesiones causadas) 51,0 %, `veteran` (12 partidos) 51,0 %, `patchwork`
 (2 lesiones sufridas) 44,0 %, `customs` (30 entradas ganadas) **0,0 %** (máximo alcanzado: 26); `golden_boots`
 llegaba al 98 % de elegibles.
@@ -116,3 +125,37 @@ cargarse hasta que alguien decida, escribiéndolo en la lista con su motivo, que
 **Demostración.** `SnapshotCompletionTests`: un guardado sin los tres ficheros falla sin compleción
 (el fallo observado) y con ella se retoma, con el resto de la instantánea idéntico y el estado igual; un
 fichero presente no se sustituye; uno de reglas ausente no se completa.
+
+## Enmienda: la revisión independiente (29 sep 2026)
+
+Lo que la revisión encontró y cómo queda. Todo es sobre la **vista** de la memoria; salvo el primer punto,
+que es un bug anterior que la Gaceta destapó.
+
+- **Muertos que volvían a la vida** (`docs/pendientes/BR-B.md`, causa CONFIRMED): el motor lesionaba al
+  objetivo que un perk letal de contacto acababa de matar al publicar la disputa, y la resolución dejaba al
+  muerto «lesionado». La muerte es terminal: guarda en `ResolveInjury`, en `MatchResolution` y en
+  `ApplyRivalCredits`. Los créditos y `DeathDetails` coinciden con el estado final.
+- **Epitafios falsos.** La esquela dice **cómo** cayó: sacrificio del evento, matasanos, matador de un clan del
+  catálogo (`epitaph.byRival`, con su nombre), matador sin crédito de catálogo —jefe o rival procedural—
+  (`epitaph.byOpponent`), partido sin matador (`epitaph.noAuthor`, la única que habla del «golpe que nadie vio»)
+  y causa no registrada (`epitaph.unknown`, neutra). La causa vive en `RunState.Counters` con la clave
+  `deathCause:<id>` (`PlayerDeathCause`), en el mismo sitio y con la misma lógica que los `rivalCredit:` (ADR 0124):
+  contabilidad de run de clave libre, **sin subir la versión del esquema**; los guardados anteriores leen
+  `Unknown`. `DeathConsequences.Kill` recibe la causa sin valor por defecto.
+- **El villano cuenta víctimas distintas**: quien lesionó y mató a la misma víctima suma un muerto, no dos
+  hechos; lesionar tres veces al mismo suma un lesionado. Peso `3·muertos + 1·lesionados`,
+  **provisional, sin medir** (Regla H): sólo dice que una muerte es peor.
+- **MVP**: exige al menos un hecho (`MvpMinimumFacts = 1`: goles, asistencias, entradas ganadas, lesiones o muertes
+  causadas; sólo partidos no vale, la línea enumera hechos) o la Gaceta dice `mvp.none`. Empate a puntos: más
+  partidos, luego quien no es portero, luego id menor. Los destacados van **de lo más memorable a lo menos**
+  (partidos en la esquela, muertes causadas, lesiones causadas, goles, asistencias, entradas ganadas) y el límite
+  recorta por el final.
+- **Plurales** dentro de la propia plantilla: `{deaths|# baja|# bajas}` y `{deaths|ninguna baja|# baja|# bajas}`
+  (`#` es la cifra). El cargador rechaza marcadores que la vista no da y de plural mal formados; `Fill` falla en
+  vez de borrar en silencio un marcador desconocido.
+- **Nada desaparece sin explicación** (`/Game`): esquelas que no caben, «… y N esquelas más, en la plantilla final»;
+  apodos ganados en el informe, los dos de mayor prioridad y «y N apodos más» (la vista los ordena);
+  estadísticas, «y N jugadores más»; el apodo en su propia línea, sin recortar a 160 px. Límite conocido: con
+  varios apodos ganados a la vez el panel de estadísticas del informe (240 px) sólo enseña unas cuatro filas de
+  siete y dice cuántas faltan; agrandarlo pide reordenar la columna derecha del informe.
+- **Censo**: ver «Qué cuenta el censo» arriba (sólo la plantilla final; la cifra del 40 % es provisional).

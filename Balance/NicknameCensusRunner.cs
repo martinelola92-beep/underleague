@@ -28,8 +28,9 @@ public sealed record NicknameCensusResult(
 
 /// <summary>
 /// Modo <c>--nickname-census N</c> de <c>/Balance</c> (ADR 0163, sección «Censo»): juega N runs completas con
-/// la política contextual y, al terminar cada una, cuenta qué apodo lleva cada jugador que pisó el campo
-/// (vivos y caídos: un muerto también se llevó su apodo a la tumba). Un apodo que casi todas las runs tienen
+/// la política contextual y, al terminar cada una, cuenta qué apodo lleva cada jugador de la plantilla final
+/// que pisó el campo (vivos y caídos: un muerto también se llevó su apodo a la tumba; quien se vendió o se
+/// marchó antes del final no está en el estado final y no cuenta). Un apodo que casi todas las runs tienen
 /// no significa nada, y uno que nunca sale es un umbral inalcanzable: el censo da la razón de runs con al
 /// menos un portador y el reparto de jugadores.
 ///
@@ -53,7 +54,6 @@ public static class NicknameCensusRunner
         var bosses = BossCatalog.FromJson(dataFiles);
         var races = FullRunRunner.LaunchRaces(catalog);
         var options = RunPolicyOptions.For(PurchaseDoctrine.Contextual);
-        var all = standard.Nicknames.All;
 
         var stopwatch = Stopwatch.StartNew();
         var finals = new RunState?[runs];
@@ -64,6 +64,23 @@ public static class NicknameCensusRunner
             finals[i] = RunPolicy.Play(setup, BetCensusRunner.RunSeed(seed, i), threadCatalog, standard, bosses, options).FinalState;
         });
 
+        var tally = Tally(finals!, standard.Nicknames);
+        stopwatch.Stop();
+        return tally with { Elapsed = stopwatch.Elapsed };
+    }
+
+    /// <summary>
+    /// El censo de unos estados finales ya jugados: función pura, sin partidos ni paralelismo, para poder
+    /// contrastarla contra un caso cuya respuesta se sabe (Regla J). Cuenta a los jugadores <b>de la
+    /// plantilla final</b> que pisaron el campo —vivos y caídos, que siguen en ella—; <b>no</b> a quien se
+    /// vendió o se marchó durante la run, que ya no está en el estado final (ADR 0163, «Censo»).
+    /// </summary>
+    public static NicknameCensusResult Tally(IReadOnlyList<RunState> finals, NicknameCatalog nicknames)
+    {
+        ArgumentNullException.ThrowIfNull(finals);
+        ArgumentNullException.ThrowIfNull(nicknames);
+        var all = nicknames.All;
+        int runs = finals.Count;
         var players = new long[all.Count];
         var runsWith = new int[all.Count];
         var eligible = new long[all.Count];
@@ -73,7 +90,7 @@ public static class NicknameCensusRunner
         long named = 0;
         for (int i = 0; i < runs; i++)
         {
-            var state = finals[i]!;
+            var state = finals[i];
             var seen = new bool[all.Count];
             var seenEligible = new bool[all.Count];
             for (int p = 0; p < state.Roster.Count; p++)
@@ -95,7 +112,7 @@ public static class NicknameCensusRunner
                     }
                 }
 
-                var nickname = NicknameSystem.For(state.Roster[p], standard.Nicknames);
+                var nickname = NicknameSystem.For(state.Roster[p], nicknames);
                 if (nickname is null)
                 {
                     continue;
@@ -126,13 +143,12 @@ public static class NicknameCensusRunner
             }
         }
 
-        stopwatch.Stop();
         var cells = new List<NicknameCensusCell>();
         for (int n = 0; n < all.Count; n++)
         {
             cells.Add(new NicknameCensusCell(all[n].Id, runsWith[n], players[n], runsEligible[n], eligible[n], maxValue[n]));
         }
 
-        return new NicknameCensusResult(runs, played, named, cells, stopwatch.Elapsed);
+        return new NicknameCensusResult(runs, played, named, cells, TimeSpan.Zero);
     }
 }

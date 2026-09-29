@@ -608,7 +608,10 @@ public sealed record RunPlayResult(
 {
     /// <summary>
     /// El estado con el que terminó la run, para quien mida algo que sólo existe al final (el censo de
-    /// apodos, ADR 0163). No entra en <c>runs.csv</c> ni en la igualdad de la política: es un dato de paso.
+    /// apodos, ADR 0163). No entra en <c>runs.csv</c>. <b>Sí entra en la igualdad</b> que genera el record, y
+    /// como <see cref="RunState"/> lleva colecciones que se comparan por referencia, dos resultados de la misma
+    /// run nunca son <c>Equals</c>: quien compare resultados lo hace por <c>runs.csv</c> (byte a byte), no
+    /// con <c>==</c>.
     /// </summary>
     public RunState? FinalState { get; init; }
 

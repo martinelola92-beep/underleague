@@ -35,30 +35,86 @@ public sealed class NicknameCensusTests
         Assert.All(first.Cells, c => Assert.True(c.RunsWith <= c.Players));
     }
 
-    /// <summary>El caso cuya respuesta se sabe: contando a mano sobre la run jugada sale lo mismo que el censo de una sola run.</summary>
-    [Fact]
-    public void ACensusOfOneRunMatchesTheHandCountOfItsFinalRoster()
+    private static RunState WithCareers(ulong seed, params int[] matchesByPlayer)
     {
-        var catalog = TestData.LoadCatalog();
-        var standard = StandardRunSystems.FromJson(Files);
-        var bosses = BossCatalog.FromJson(Files);
-        var races = FullRunRunner.LaunchRaces(catalog);
-        var played = RunPolicy.Play(
-            FullRunRunner.SetupFor(races[0], standard, Files),
-            BetCensusRunner.RunSeed(3UL, 0),
-            catalog,
-            standard,
-            bosses,
-            RunPolicyOptions.For(PurchaseDoctrine.Contextual));
+        var state = RunEngine.Start(Underleague.Sim.Tests.Run.TestRuns.Setup(), seed, TestData.LoadCatalog());
+        for (int i = 0; i < state.Roster.Count; i++)
+        {
+            int matches = i < matchesByPlayer.Length ? matchesByPlayer[i] : 0;
+            state = state.WithPlayer(state.Roster[i] with { Career = RunCareer.None with { Matches = matches } });
+        }
 
-        var state = played.FinalState;
-        Assert.NotNull(state);
-        Assert.True(RunEngine.Outcome(state).IsOver);
-        int withMatches = state.Roster.Count(p => p.Career.Matches > 0);
-        int named = state.Roster.Count(p => p.Career.Matches > 0 && NicknameSystem.For(p, standard.Nicknames) is not null);
+        return state;
+    }
 
-        var census = NicknameCensusRunner.Run(catalog, Files, 3UL, 1, () => ThreadCatalogs.Current);
-        Assert.Equal(withMatches, census.PlayersWhoPlayed);
-        Assert.Equal(named, census.PlayersWithNickname);
+    /// <summary>
+    /// Regla J, caso con respuesta sabida: un apodo que se gana con «un partido jugado» lo llevan <b>todos</b>
+    /// los que jugaron y ninguno de los que no, en el 100 % de las runs. Tres runs, dos jugadores con partidos
+    /// en cada una: 6 jugadores medidos, 6 con apodo, 3 de 3 runs.
+    /// </summary>
+    [Fact]
+    public void ANicknameEveryoneWhoPlayedEarnsIsFoundInAllRunsAndOnlyOnThoseWhoPlayed()
+    {
+        var everyone = new NicknameCatalog(new[]
+        {
+            new NicknameDefinition("rookie", new Underleague.Sim.Data.LocalizedName("el Novato", "the Rookie"), NicknameStat.Matches, 1, 10),
+        });
+        var finals = new[] { WithCareers(1UL, 1, 4), WithCareers(2UL, 0, 2, 0, 7), WithCareers(3UL, 9, 0, 0, 0, 1) };
+        // Dos jugadores con partidos por run; los que tienen 0 no cuentan.
+
+        var census = NicknameCensusRunner.Tally(finals, everyone);
+
+        Assert.Equal(3, census.Runs);
+        Assert.Equal(6, census.PlayersWhoPlayed);
+        Assert.Equal(6, census.PlayersWithNickname);
+        var cell = Assert.Single(census.Cells);
+        Assert.Equal(3, cell.RunsWith);
+        Assert.Equal(6, cell.Players);
+        Assert.Equal(3, cell.RunsEligible);
+        Assert.Equal(9, cell.MaxValue);
+        Assert.Equal(1.0, cell.RunShare(census.Runs));
+    }
+
+    /// <summary>El otro extremo con respuesta sabida: un umbral inalcanzable no lo lleva nadie y sale al 0 %.</summary>
+    [Fact]
+    public void AnUnreachableThresholdIsFoundInNoRunAndOnNoPlayer()
+    {
+        var never = new NicknameCatalog(new[]
+        {
+            new NicknameDefinition("legend", new Underleague.Sim.Data.LocalizedName("la Leyenda", "the Legend"), NicknameStat.Matches, 1_000_000, 50),
+        });
+        var census = NicknameCensusRunner.Tally(new[] { WithCareers(1UL, 5, 6), WithCareers(2UL, 3) }, never);
+
+        Assert.Equal(3, census.PlayersWhoPlayed);
+        Assert.Equal(0, census.PlayersWithNickname);
+        var cell = Assert.Single(census.Cells);
+        Assert.Equal(0, cell.RunsWith);
+        Assert.Equal(0, cell.Players);
+        Assert.Equal(0, cell.RunsEligible);
+        Assert.Equal(6, cell.MaxValue);
+        Assert.Equal(0.0, cell.RunShare(census.Runs));
+    }
+
+    /// <summary>
+    /// Con dos apodos cumplidos lo lleva el de mayor prioridad, y el otro sigue contando como «elegible» (lo
+    /// cumple aunque no lo lleve): es la diferencia que el censo enseña entre «nadie lo tiene» y «nadie lo
+    /// ve porque otro lo tapa».
+    /// </summary>
+    [Fact]
+    public void TheHigherPriorityNicknameCoversTheOtherButStaysEligible()
+    {
+        var both = new NicknameCatalog(new[]
+        {
+            new NicknameDefinition("rookie", new Underleague.Sim.Data.LocalizedName("el Novato", "the Rookie"), NicknameStat.Matches, 1, 10),
+            new NicknameDefinition("veteran", new Underleague.Sim.Data.LocalizedName("el Veterano", "the Veteran"), NicknameStat.Matches, 5, 40),
+        });
+        var census = NicknameCensusRunner.Tally(new[] { WithCareers(1UL, 5, 2) }, both);
+
+        var rookie = census.Cells.Single(c => c.NicknameId == "rookie");
+        var veteran = census.Cells.Single(c => c.NicknameId == "veteran");
+        Assert.Equal(1, rookie.Players);
+        Assert.Equal(1, veteran.Players);
+        Assert.Equal(2, rookie.PlayersEligible);
+        Assert.Equal(1, veteran.PlayersEligible);
     }
 }
