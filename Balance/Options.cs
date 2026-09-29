@@ -89,6 +89,12 @@ public sealed class Options
     public int? FullRuns { get; private set; }
 
     /// <summary>
+    /// Null salvo que se pase <c>--bet-census N</c>: juega N runs completas con la política contextual y
+    /// mide la frecuencia de cada condición de apuesta del vestuario en cada partido (ADR 0157, paso 2).
+    /// </summary>
+    public int? BetCensus { get; private set; }
+
+    /// <summary>
     /// --ignore-scouting: en --full-runs, la política automática <b>no lee</b> el informe de ojeo
     /// (RF-013) y alinea a los tocados aunque el rival lleve perks letales (ADR 0046). Es la medida de
     /// control: la diferencia entre las dos cifras de muertes es lo que vale leer el informe.
@@ -280,6 +286,15 @@ public sealed class Options
                     if (options.FullRuns <= 0)
                     {
                         throw new ArgumentException("--full-runs debe ser mayor que cero");
+                    }
+
+                    break;
+
+                case "--bet-census":
+                    options.BetCensus = ParseInt(arg, NextValue(args, ref i, arg));
+                    if (options.BetCensus <= 0)
+                    {
+                        throw new ArgumentException("--bet-census debe ser mayor que cero");
                     }
 
                     break;

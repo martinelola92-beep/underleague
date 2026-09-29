@@ -1,3 +1,4 @@
+using Underleague.Sim.Engine;
 using Underleague.Sim.Data;
 using Underleague.Sim.Model;
 using Underleague.Sim.Run;
@@ -389,6 +390,14 @@ public sealed record RunPolicyOptions
 }
 
 /// <summary>
+/// Observador de los partidos de una run jugada por <see cref="RunPolicy.Play"/> (ver
+/// <see cref="IRunSystems.OnMatchPlayed"/>): solo mira, no decide. Lo usa el censo de apuestas de
+/// <c>/Balance</c> (ADR 0157).
+/// </summary>
+public delegate void MatchObserver(
+    RunState stateBefore, MapNode node, MatchSetup setup, MatchResult result, RunMatchSummary summary);
+
+/// <summary>
 /// Lo que una run jugada con una política automática deja para <c>runs.csv</c> (fase2-diseno.md §10,
 /// ADR 0037). Enteros: los promedios los calcula <see cref="FullRunMetrics"/>.
 /// </summary>
@@ -632,7 +641,8 @@ public static class RunPolicy
         Catalog catalog,
         StandardRunSystems standard,
         BossCatalog bosses,
-        RunPolicyOptions? options = null)
+        RunPolicyOptions? options = null,
+        MatchObserver? matchObserver = null)
     {
         ArgumentNullException.ThrowIfNull(setup);
         ArgumentNullException.ThrowIfNull(catalog);
@@ -642,7 +652,7 @@ public static class RunPolicy
 
         var bossSystems = new BossRunSystems(bosses, standard);
         var ledger = new Ledger();
-        var systems = new RecordingSystems(bossSystems, ledger);
+        var systems = new RecordingSystems(bossSystems, ledger, matchObserver);
         var state = bossSystems.AssignBosses(RunEngine.Start(setup, seed, catalog, systems));
 
         for (int step = 0; step < options.MaxSteps && !RunEngine.Outcome(state).IsOver; step++)
@@ -3656,11 +3666,19 @@ public static class RunPolicy
     {
         private readonly IRunSystems _inner;
         private readonly Ledger _ledger;
+        private readonly MatchObserver? _observer;
 
-        public RecordingSystems(IRunSystems inner, Ledger ledger)
+        public RecordingSystems(IRunSystems inner, Ledger ledger, MatchObserver? observer = null)
         {
             _inner = inner;
             _ledger = ledger;
+            _observer = observer;
+        }
+
+        public void OnMatchPlayed(RunState stateBefore, MapNode node, MatchSetup setup, MatchResult result, RunMatchSummary summary)
+        {
+            _observer?.Invoke(stateBefore, node, setup, result, summary);
+            _inner.OnMatchPlayed(stateBefore, node, setup, result, summary);
         }
 
         public RunState AfterMatch(RunState state, MapNode node, RunMatchSummary summary, Catalog catalog)

@@ -534,6 +534,7 @@ public static class RunEngine
         var (setup, result) = SubstitutionPoints.ResolveAutomatically(
             built, seed, catalog, systems.MatchConfig(state, node, catalog), usesPolicy: null, decisions.Declines);
         var applied = MatchResolution.Apply(state, node, lineup, result, catalog, built.Referee);
+        systems.OnMatchPlayed(state, node, setup, result, applied.Summary);
 
         var next = applied.State.WithCurrentNode(node.Id);
 

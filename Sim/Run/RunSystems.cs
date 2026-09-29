@@ -167,6 +167,22 @@ public interface IRunSystems
     /// </summary>
     /// <param name="playerTeamIndex">Equipo del jugador en el <see cref="MatchSetup"/>: 0 local, 1 visitante (W-15: siempre 0 hoy).</param>
     MatchSetup TransformMatch(RunState state, MapNode node, MatchSetup setup, int playerTeamIndex, Catalog catalog);
+
+    /// <summary>
+    /// Aviso de que se ha jugado un partido, con lo que se jugó: el <see cref="MatchSetup"/> real (tras
+    /// <see cref="TransformMatch"/> y las sustituciones automáticas) y el <see cref="MatchResult"/> completo
+    /// (eventos incluidos, que <see cref="RunMatchSummary"/> no lleva). Lo llama <see cref="RunEngine"/> tras
+    /// aplicar el partido, <b>también cuando el partido termina la run</b> (una derrota no pasa por
+    /// <see cref="AfterMatch"/>).
+    ///
+    /// <para>Es un gancho de <b>observación</b>: no devuelve nada ni puede cambiar el estado, así que no
+    /// altera ninguna run (ADR 0157: el censo de <c>/Balance</c> evalúa las condiciones de apuesta con esto).
+    /// Por defecto no hace nada; implementarlo no es obligatorio.</para>
+    /// </summary>
+    /// <param name="stateBefore">Estado de la run justo ANTES del partido (plantilla, canteranos incluidos).</param>
+    void OnMatchPlayed(RunState stateBefore, MapNode node, MatchSetup setup, MatchResult result, RunMatchSummary summary)
+    {
+    }
 }
 
 /// <summary>

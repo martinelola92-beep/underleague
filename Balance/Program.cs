@@ -71,6 +71,20 @@ try
         return full.Metrics.Any(m => m.Status == "OUT") ? 1 : 0;
     }
 
+    if (options.BetCensus is { } betCensusRuns)
+    {
+        // --bet-census N: frecuencia de cada condición de apuesta (ADR 0157) por dificultad, sobre los
+        // partidos de N runs completas. De aquí salen las cuotas de data/bets/bets.json.
+        var census = BetCensusRunner.Run(catalog, dataFiles, options.Seed, betCensusRuns);
+        WriteBetCensusCsv(options.OutDir!, census);
+        if (!options.Quiet)
+        {
+            PrintBetCensus(census, options.OutDir!);
+        }
+
+        return 0;
+    }
+
     if (options.PerkValues)
     {
         // --perk-values: cuánto vale cada perk (ADR 0038). Alimenta data/economy/perk-values.json, de
@@ -381,6 +395,10 @@ static void PrintUsage()
           --full-runs N       N runs completas por cada una de las tres doctrinas de compra de la ADR
                                0037 (contextual, gastadora, ahorradora) sobre las mismas semillas;
                                escribe runs.csv y summary.csv con las métricas de fase2-diseno.md §10
+          --bet-census N      N runs completas con la política contextual; en cada partido de liga, élite
+                               o jefe evalúa las once condiciones de apuesta del vestuario (ADR 0157) y
+                               escribe bet-census.csv: frecuencia por apuesta y dificultad (de ahí salen las
+                               cuotas). La semilla de la run i es seed*100000+i, no seed+i
           --perk-values       mide el valor de cada perk contra su espejo sin él (ADR 0038, 0070); espejo
                                en campaña, --rosters = parejas de plantillas, --runs = partidos de la
                                campaña (8); escribe perk-values.csv y perk-values-by-match.csv
@@ -584,6 +602,41 @@ static void WriteItemValuesCsv(string outDir, IReadOnlyList<ItemValueRow> rows)
     });
 
     CsvWriter.Write(Path.Combine(outDir, "item-values.csv"), header, data);
+}
+
+/// <summary>bet-census.csv del modo --bet-census (ADR 0157): una fila por (apuesta, grupo, clave).</summary>
+static void WriteBetCensusCsv(string outDir, BetCensusResult census)
+{
+    string[] header = { "bet", "group", "key", "matches", "hits", "frequencyPercent", "stdErrPercent", "payoutPercentAt85" };
+    var rows = census.Cells.Select(c => (IReadOnlyList<string>)new[]
+    {
+        c.BetId, c.Group, c.Key,
+        c.Matches.ToString(CultureInfo.InvariantCulture),
+        c.Hits.ToString(CultureInfo.InvariantCulture),
+        (c.Frequency * 100).ToString("F3", CultureInfo.InvariantCulture),
+        (c.StdErr * 100).ToString("F3", CultureInfo.InvariantCulture),
+        c.Hits == 0 ? "inf" : Math.Round(85.0 / c.Frequency, MidpointRounding.AwayFromZero).ToString("F0", CultureInfo.InvariantCulture),
+    });
+    CsvWriter.Write(Path.Combine(outDir, "bet-census.csv"), header, rows);
+}
+
+static void PrintBetCensus(BetCensusResult census, string outDir)
+{
+    Console.WriteLine();
+    Console.WriteLine($"censo de apuestas: {census.Runs} runs, {census.Matches} partidos en {census.Elapsed.TotalSeconds:F1} s");
+    Console.WriteLine("partidos por dificultad 1..5: " + string.Join(" / ", census.MatchesByDifficulty));
+    Console.WriteLine();
+    var byBet = census.Cells.Where(c => c.Group == "difficulty").GroupBy(c => c.BetId);
+    Console.WriteLine($"{"apuesta",-20} {"d1",8} {"d2",8} {"d3",8} {"d4",8} {"d5",8} {"todas",8}  (frecuencia %, ± error típico de 'todas')");
+    foreach (var bet in byBet)
+    {
+        var cells = bet.ToDictionary(c => c.Key);
+        string F(string key) => (cells[key].Frequency * 100).ToString("F2", CultureInfo.InvariantCulture);
+        Console.WriteLine(
+            $"{bet.Key,-20} {F("1"),8} {F("2"),8} {F("3"),8} {F("4"),8} {F("5"),8} {F("all"),8}  ± {(cells["all"].StdErr * 100).ToString("F2", CultureInfo.InvariantCulture)}");
+    }
+
+    Console.WriteLine($"CSV escrito en {outDir}");
 }
 
 /// <summary>runs.csv del modo --full-runs (fase2-diseno.md §10): una fila por run jugada.</summary>
