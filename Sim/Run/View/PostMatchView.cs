@@ -68,7 +68,7 @@ public sealed record NemesisMadeRow(int NemesisId, string Name, string Title, st
 /// <summary>
 /// Una venganza cobrada en este partido (ADR 0165): quién se vengó, de qué némesis y si éste murió.
 /// </summary>
-public sealed record RevengeRow(int NemesisId, string NemesisName, string Title, string AvengerName, bool Slain);
+public sealed record RevengeRow(int NemesisId, string NemesisName, string Title, string VictimName, string AvengerName, bool Slain);
 
 /// <summary>Una tarjeta mostrada en el partido (RF-062, RF-063), de cualquiera de los dos equipos.</summary>
 public sealed record CardRow(int PlayerId, string PlayerName, MatchSide Side, bool Red, int Minute);
@@ -366,6 +366,7 @@ public static class PostMatchView
                 revenge.NemesisId,
                 revenge.NemesisName,
                 nemesis?.Find(revenge.TitleId)?.NameIn(language) ?? string.Empty,
+                revenge.VictimName,
                 revenge.AvengerName,
                 revenge.Slain));
         }

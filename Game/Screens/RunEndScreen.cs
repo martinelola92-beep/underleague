@@ -70,7 +70,7 @@ public partial class RunEndScreen : Control
         {
             var page = new GazettePage { Position = new Vector2(400f, 102f), Size = new Vector2(860f, 592f) };
             AddChild(page);
-            page.Bind(GazetteView.Build(state, catalog, systems.Nicknames, systems.Rivals, systems.Gazette, GameData.Language));
+            page.Bind(GazetteView.Build(state, catalog, systems.Nicknames, systems.Rivals, systems.Gazette, GameData.Language, systems.Nemesis));
         }
 
         BuildRoster(run, state, catalog);

@@ -49,6 +49,42 @@ public static class NemesisView
     }
 
     /// <summary>
+    /// El primer némesis (por id) que <b>ya lo era</b> al empezar un partido y estaba en el campo rival: su nombre
+    /// está entre <paramref name="rivalPlayerNames"/> y no figura en <paramref name="madeThisMatch"/> (los que
+    /// nacieron en ese mismo partido no eran némesis al pitar el inicio). Vivo o muerto después: el pregón del
+    /// saque anuncia lo que había antes del pitido. Null si ninguno.
+    /// </summary>
+    public static NemesisLine? OnPitch(
+        RunState state,
+        NemesisCatalog nemesis,
+        IEnumerable<string> rivalPlayerNames,
+        IReadOnlyList<NemesisMade> madeThisMatch,
+        string language = "es")
+    {
+        ArgumentNullException.ThrowIfNull(state);
+        ArgumentNullException.ThrowIfNull(nemesis);
+        ArgumentNullException.ThrowIfNull(rivalPlayerNames);
+        ArgumentNullException.ThrowIfNull(madeThisMatch);
+        var names = new HashSet<string>(rivalPlayerNames, StringComparer.Ordinal);
+        for (int i = 0; i < state.RivalMemory.Nemeses.Count; i++)
+        {
+            var n = state.RivalMemory.Nemeses[i];
+            bool fresh = false;
+            for (int m = 0; m < madeThisMatch.Count; m++)
+            {
+                fresh |= madeThisMatch[m].NemesisId == n.Id;
+            }
+
+            if (!fresh && names.Contains(n.Name))
+            {
+                return Describe(n, nemesis, language);
+            }
+        }
+
+        return null;
+    }
+
+    /// <summary>
     /// El némesis que la Gaceta prefiere como villano (ADR 0165 punto 4): entre los vivos y los muertos a manos
     /// del jugador (vengados), el que más muertes propias suma; a igual cuenta, el de id menor. Null si no hubo ninguno.
     /// </summary>

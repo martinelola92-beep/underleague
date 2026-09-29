@@ -272,6 +272,7 @@ public partial class MapScreen : Control
         _view.CurrentNodeId = state.CurrentNodeId;
         _view.AvailableIds = ids;
         _view.VisitedIds = VisitedIds(state);
+        _view.NemesisNodeIds = NemesisNodes(state, map);
         _view.QueueRedraw();
 
         _state.Text = string.Join("\n", new[]
@@ -302,6 +303,26 @@ public partial class MapScreen : Control
         return margin >= 2 ? Style.Of(Underleague.Sim.Model.PhysicalState.Healthy)
             : margin == 1 ? Style.Of(Underleague.Sim.Model.PhysicalState.MinorInjury)
             : Style.Of(Underleague.Sim.Model.PhysicalState.SevereInjury);
+    }
+
+    /// <summary>Nodos del acto donde juega hoy un némesis vivo (ADR 0165): su clan es el del rival del nodo.</summary>
+    private List<int> NemesisNodes(RunState state, Underleague.Sim.Run.ActMap map)
+    {
+        var ids = new List<int>();
+        if (_run.Systems is null)
+        {
+            return ids;
+        }
+
+        foreach (var node in map.Nodes)
+        {
+            if (Underleague.Sim.Run.View.NemesisView.ForNode(state, _run.Systems.Nemesis, node, Data.GameData.Language).Count > 0)
+            {
+                ids.Add(node.Id);
+            }
+        }
+
+        return ids;
     }
 
     private static List<int> VisitedIds(RunState state)
@@ -375,6 +396,15 @@ public partial class MapScreen : Control
         if (node.OpponentId.Length > 0 && _run.Systems!.Rivals.Find(node.OpponentId) is { } rival)
         {
             lines.Add(rival.Name.Es);
+        }
+
+        // ADR 0165: el némesis que juega en este partido, con su título, para elegir el camino sabiéndolo.
+        if (_run.Systems is not null)
+        {
+            foreach (var line in Underleague.Sim.Run.View.NemesisView.ForNode(_run.State!, _run.Systems.Nemesis, node, Data.GameData.Language))
+            {
+                lines.Add(UiText.Get("ui.map.nemesis", line.Name, line.Title));
+            }
         }
 
         // Qué árbitro pita y su rasgo en corto (ADR 0158 §6, RF-061): la decisión de qué partido elegir

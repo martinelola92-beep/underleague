@@ -11,7 +11,7 @@ public sealed record NemesisMade(
 
 /// <summary>Una venganza cobrada en este partido (ADR 0165): <paramref name="Slain"/> si el némesis murió.</summary>
 public sealed record NemesisRevenge(
-    int NemesisId, string TitleId, string NemesisName, int AvengerPlayerId, string AvengerName, bool Slain);
+    int NemesisId, string TitleId, string NemesisName, string VictimName, int AvengerPlayerId, string AvengerName, bool Slain);
 
 /// <summary>Resultado de aplicar un partido a la memoria de rivales.</summary>
 public sealed record NemesisOutcome(
@@ -153,7 +153,7 @@ public static class NemesisSystem
                 bool slain = e.Type == EventType.Death;
                 state = state.WithPlayer(avenger with { Career = avenger.Career with { Revenges = avenger.Career.Revenges + 1 } });
                 state = state.WithCounter(RunState.RevengesCounter, state.Counter(RunState.RevengesCounter) + 1);
-                revenges.Add(new NemesisRevenge(current.Id, current.TitleId, current.Name, avenger.Id, avenger.Name, slain));
+                revenges.Add(new NemesisRevenge(current.Id, current.TitleId, current.Name, current.VictimName, avenger.Id, avenger.Name, slain));
             }
 
             if (e.Type == EventType.Death)
