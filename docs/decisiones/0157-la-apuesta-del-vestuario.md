@@ -1,7 +1,7 @@
 # ADR 0157 — La apuesta del vestuario sustituye al partido excelente
 
-Fecha: 27 sep 2026 · Estado: **propuesta** (aceptada en su forma por el revisor; pendiente de medir las
-cuotas antes de implementar). **Decisión del revisor**: *«pondría uno aleatorio antes de cada encuentro, si
+Fecha: 27 sep 2026 · Estado: **en implementación** (pasos 1-3 hechos el 29 sep 2026: catálogo, censo, estado de run,
+decisión, cobro y política; falta la interfaz, paso 4). **Decisión del revisor**: *«pondría uno aleatorio antes de cada encuentro, si
 quieres lo tomas y si quieres lo dejas […] me parece bien que se gane más o no se gane nada si pierdes la
 apuesta. Tiene que ser cosas más complejas que "el delantero marca gol"».*
 **Enmienda** RF-114h (partido excelente) y **RF-114i** (el oro no escala con el rendimiento).
@@ -64,14 +64,23 @@ Condiciones **compuestas**, no «el delantero marca». Cada una declara qué la 
 | `comeback` | La remontada | ir perdiendo en algún momento y ganar | orden ofensiva a tiempo, consumible de marcador por debajo |
 | `into_the_mob` | Hasta la turba | se llega al gol de oro y lo ganas | builds de violencia, el consumible que provoca la turba |
 | `clean_hands` | Manos limpias | ganar causando al menos una lesión y sin ninguna tarjeta propia | perks que mitigan al árbitro (RF-064f), soborno |
-| `thrashing` | Paliza | ganar por 3 o más **y** que el rival acabe con 6 o menos en el campo | violencia más ataque |
-| `three_names` | Tres firmas | ganar con goles de tres jugadores distintos | reparto de tiro, no concentrar la build |
-| `youth_decides` | El chaval decide | el gol de la victoria es de un canterano | alinear canteranos arriba |
-| `short_and_clean` | Pocos y limpios | ganar en inferioridad y a portería a cero | la apuesta más cara: alinear a 5 o 6 a propósito |
+| `thrashing` | Paliza | ganar por 3 o más *(redefinida el 29 sep: la versión «y el rival con 6 o menos» daba 0,43 %)* | violencia más ataque |
+| `split_the_goals` | Reparto | ganar con goles de al menos **dos** jugadores propios distintos *(antes `three_names`, tres jugadores: 0,40 %)* | reparto de tiro, no concentrar la build |
+| `youth_decides` | gana y algún gol no anulado es de un jugador propio canterano |
 | `referee_blind` | El árbitro no se entera | ganar con 3 o más faltas propias **no señaladas** | árbitro tuerto o permisivo, perks sucios |
 
-Las cuatro del partido excelente quedan absorbidas (`thrashing`, `short_and_clean`, `youth_decides`) o
-desaparecen (portería a cero sola, demasiado simple).
+Las cuatro del partido excelente quedan absorbidas (`thrashing`, `youth_decides`) o desaparecen (portería a
+cero sola, demasiado simple; y `short_and_clean`, ver abajo).
+
+**`short_and_clean` («Pocos y limpios») queda descartada** (29 sep 2026, decisión del coordinador): solo se da si el
+jugador alinea en inferioridad a propósito, y como apuesta que se le ofrece al azar es una lotería (**frecuencia
+medida 0,01 %**: 3 aciertos en 33.325 partidos, porque la política nunca sale con menos de siete). Una
+apuesta casi imposible viola el punto 5. Se recupera si algún día hay una forma legible de ofrecerla solo a quien
+alinea a 5-6.
+
+**Regla de oferta (29 sep 2026, decisión del coordinador):** una apuesta **no se ofrece** en una dificultad donde su
+frecuencia medida sea menor del **2 %** (`BetSystem.MinOfferedBasisPoints`; el 2 % es del revisor, provisional).
+La frecuencia se guarda en datos junto a la cuota (`frequencyPercentByDifficulty`).
 
 **Pregunta abierta para medir:** si `referee_blind` y `clean_hands` son legibles para el jugador sin la
 traza. Si el informe post-partido no enseña «faltas no señaladas», `referee_blind` no entra.
@@ -92,10 +101,9 @@ un `INJURY` no anulado (leve o grave) con la víctima en `Actor` y el causante e
 | `comeback` | gana y, tras algún gol no anulado, el marcador iba en contra (rival > propio) |
 | `into_the_mob` | gana y hubo `MOB_START`. **Incluye** ganar por desempate al agotarse la prórroga sin gol de oro (medido en el test: la semilla 1 de 50 contra 50 termina así) |
 | `clean_hands` | gana, ≥1 lesión de un rival atribuida a un jugador propio y 0 tarjetas propias (amarillas o rojas) |
-| `thrashing` | gana por ≥3 y el rival termina con ≤6 en el campo (jugadores rivales con tiempo de campo y sin `LeftPitchTick`: cuenta suplentes que entraron y descuenta bajas sin reemplazo) |
-| `three_names` | gana con goles no anulados de ≥3 jugadores propios distintos |
+| `thrashing` | gana por ≥3 goles de diferencia |
+| `split_the_goals` | gana con goles no anulados de ≥2 jugadores propios distintos |
 | `youth_decides` | gana y el gol de la victoria es de un canterano. «Gol de la victoria» = el gol propio número (goles del rival + 1): con 3-1, el segundo. Es el primer gol tras el cual el equipo ya no deja de ir por delante |
-| `short_and_clean` | gana, sale con <7 titulares (casillas de la alineación con la que se jugó, no los suplentes que entran) y no encaja |
 | `referee_blind` | gana con ≥3 `FOUL` propios de detalle `unseen` **antes** de `MOB_START` (en la turba el motor emite todas las faltas como no vistas, y ahí no hay árbitro) |
 
 La oferta se deriva con `OfferStream.For(semilla, nodo, 8000)` (desplazamiento nuevo en la tabla de
@@ -145,84 +153,135 @@ La oferta se deriva con `OfferStream.For(semilla, nodo, 8000)` (desplazamiento n
 - Apuestas ligadas al némesis («Venganza: X no acaba el partido»). Encaja, pero depende de que el némesis
   exista.
 
-## Censo (29 sep 2026)
+## Censo (29 sep 2026, segunda medición)
 
 **Qué se midió.** `Balance --bet-census 1200 --seed 1` y `--seed 7` (semilla de la run `i` = `seed*100000+i`,
-para que los dos lotes no compartan runs): 2.400 runs completas con la política **contextual** de
-`RunPolicy`, repartidas entre las razas de lanzamiento. En **cada** partido de liga, élite y jefe se
-evaluaron las once condiciones (todas, no solo la que se habría ofrecido), incluido el partido que termina la
-run (`IRunSystems.OnMatchPlayed`). Instrumento validado antes de la medida (Regla J): el observador ve
-exactamente los `Matches` de cada run y no la altera (`BetCensusTests`), la salida con `DOTNET_PROCESSOR_COUNT=1`
-es byte a byte la del paralelo, y las condiciones concuerdan con un oráculo independiente en 700 partidos
-reales (`BetConditionsRealMatchTests`). Caso conocido: `short_and_clean` da 0 porque la política siempre
-alinea a siete, que es lo que hace.
+para que los dos lotes no compartan runs): 2.400 runs completas con la política **contextual** de `RunPolicy`
+(doctrina de apuesta `Never`), repartidas entre las razas de lanzamiento. En **cada** partido de liga, élite y
+jefe se evaluaron las diez condiciones (todas, no solo la que se habría ofrecido), incluido el partido que
+termina la run (`IRunSystems.OnMatchPlayed`). Instrumento validado antes de la medida (Regla J): el
+observador ve exactamente los `Matches` de cada run y no la altera (`BetCensusTests`), la salida con
+`DOTNET_PROCESSOR_COUNT=1` es byte a byte la del paralelo, y las condiciones concuerdan con un oráculo
+independiente en 600 partidos reales (`BetConditionsRealMatchTests`).
 
-**Muestra.** 33.325 partidos (16.819 la semilla 1, 16.506 la 7): 10.432 / 9.586 / 9.456 / 2.806 / 1.045 por
-distintivo de dificultad 1..5 (por encima de los 200 exigidos en todas las celdas). Las dos semillas
-coinciden: |z| entre ellas ≤ 1,7 en las 55 celdas apuesta×dificultad (ruido). Error típico calculado
-**por conglomerados de run** (los partidos de una misma run no son independientes), no binomial.
+**Cambios respecto a la primera medición** (misma tanda de 2.400 runs, semillas 1 y 7): las tres apuestas casi
+imposibles se redefinieron (`thrashing`, `split_the_goals`, `youth_decides`), `short_and_clean` se retiró, y
+`excellentMatchBonusGold` (1 de oro) desapareció, lo que mueve levemente las trayectorias de run: las
+frecuencias de las apuestas que no cambiaron difieren de la primera medición dentro de ~1-2 errores típicos.
 
-**Frecuencia medida `p` en % (± error típico):**
+**Muestra.** 33.211 partidos: 10.434 / 9.550 / 9.392 / 2.806 / 1.029 por distintivo de dificultad 1..5 (por
+encima de los 200 exigidos en todas las celdas). Las dos semillas coinciden: |z| entre ellas ≤ 2,2 en las 50
+celdas apuesta×dificultad (el máximo se da en una celda de `p` pequeña). Error típico **por conglomerados de
+run** (los partidos de una misma run no son independientes), no binomial.
+
+**Frecuencia medida `p` en % (± error típico).** Está también en `data/bets/bets.json`
+(`frequencyPercentByDifficulty`, sin el error). **En negrita, las celdas por debajo del 2 %: no se ofrece.**
 
 | apuesta | d1 | d2 | d3 | d4 | d5 | todas |
 |---|---|---|---|---|---|---|
-| `blood_before_goals` | 14,29 ± 0,40 | 36,95 ± 0,58 | 47,18 ± 0,59 | 60,12 ± 0,95 | 52,82 ± 1,55 | 35,21 ± 0,38 |
-| `hunt_the_star` | 4,90 ± 0,23 | 8,73 ± 0,32 | 12,38 ± 0,39 | 13,26 ± 0,66 | **0,19 ± 0,14** | 8,68 ± 0,20 |
-| `eye_for_eye` | 1,08 ± 0,10 | 7,89 ± 0,29 | 12,11 ± 0,36 | 19,28 ± 0,79 | 11,87 ± 1,00 | 8,04 ± 0,19 |
-| `comeback` | 6,11 ± 0,24 | 6,36 ± 0,26 | 7,11 ± 0,27 | 6,06 ± 0,46 | 5,07 ± 0,68 | 6,43 ± 0,14 |
-| `into_the_mob` | 16,95 ± 0,37 | 19,42 ± 0,41 | 18,12 ± 0,41 | 16,11 ± 0,69 | 13,68 ± 1,06 | 17,82 ± 0,21 |
-| `clean_hands` | 13,05 ± 0,37 | 22,88 ± 0,49 | 22,32 ± 0,50 | 23,45 ± 0,84 | 17,70 ± 1,18 | 19,53 ± 0,31 |
-| `thrashing` | 0,22 ± 0,05 | 0,34 ± 0,06 | 0,57 ± 0,08 | 0,96 ± 0,18 | 0,48 ± 0,21 | 0,43 ± 0,04 |
-| `three_names` | 0,47 ± 0,07 | 0,39 ± 0,06 | 0,32 ± 0,06 | 0,50 ± 0,13 | 0,29 ± 0,17 | 0,40 ± 0,04 |
-| `youth_decides` | 0,00 | 0,59 ± 0,09 | 1,70 ± 0,15 | 2,07 ± 0,26 | 7,27 ± 0,80 | 1,06 ± 0,07 |
-| `short_and_clean` | 0,00 | 0,00 | 0,03 ± 0,02 | 0,00 | 0,00 | 0,01 ± 0,01 |
-| `referee_blind` | 4,79 ± 0,26 | 4,04 ± 0,23 | 4,25 ± 0,27 | 4,06 ± 0,39 | 3,92 ± 0,60 | 4,33 ± 0,19 |
+| `blood_before_goals` | 14,32 ± 0,40 | 36,74 ± 0,58 | 47,46 ± 0,59 | 60,73 ± 0,94 | 50,92 ± 1,56 | 35,19 ± 0,37 |
+| `hunt_the_star` | 4,90 ± 0,23 | 8,92 ± 0,33 | 12,11 ± 0,39 | 12,97 ± 0,65 | **0,49 ± 0,22** | 8,64 ± 0,20 |
+| `eye_for_eye` | **1,03 ± 0,10** | 7,87 ± 0,29 | 12,11 ± 0,37 | 18,60 ± 0,76 | 9,62 ± 0,92 | 7,88 ± 0,18 |
+| `comeback` | 6,25 ± 0,24 | 6,70 ± 0,26 | 7,20 ± 0,27 | 6,81 ± 0,47 | 4,66 ± 0,66 | 6,65 ± 0,14 |
+| `into_the_mob` | 17,09 ± 0,37 | 19,98 ± 0,41 | 18,38 ± 0,41 | 15,07 ± 0,67 | 13,31 ± 1,06 | 18,00 ± 0,21 |
+| `clean_hands` | 13,02 ± 0,36 | 23,26 ± 0,50 | 21,92 ± 0,50 | 22,77 ± 0,83 | 16,62 ± 1,16 | 19,42 ± 0,31 |
+| `thrashing` | 11,11 ± 0,34 | 7,31 ± 0,29 | 4,58 ± 0,24 | 4,81 ± 0,41 | 2,92 ± 0,52 | 7,38 ± 0,18 |
+| `split_the_goals` | 10,74 ± 0,31 | 8,35 ± 0,30 | 6,94 ± 0,27 | 8,87 ± 0,54 | 5,64 ± 0,72 | 8,66 ± 0,17 |
+| `youth_decides` | **0,00** | **0,77 ± 0,10** | **1,80 ± 0,16** | 2,71 ± 0,30 | 6,03 ± 0,74 | 1,15 ± 0,07 |
+| `referee_blind` | 4,77 ± 0,26 | 4,10 ± 0,23 | 4,07 ± 0,26 | 3,96 ± 0,37 | 3,11 ± 0,54 | 4,26 ± 0,18 |
 
-**Cuotas resultantes** (`payoutPercentByDifficulty` de `data/bets/bets.json`: cobro **bruto** en % de la
-apuesta, `round(85 / p)`, margen de la casa 15 %). `*` = **tope de 2.000 %**, no una cuota medida.
-Lectura de la regla del encargo: `p < 1 %` → tope; celda con menos de 200 partidos → cuota de la dificultad
-vecina (no ha hecho falta: todas superan 200). También se topa donde `85 / p` supera 2.000 aunque `p ≥ 1 %`.
+**Cuotas resultantes** (`payoutPercentByDifficulty`: cobro **bruto** en % de la apuesta, `round(85 / p)`,
+margen de la casa 15 %). `*` = **tope de 2.000 %** porque `85 / p` lo supera (no es una cuota medida); `—` = no
+se ofrece en esa dificultad (`p < 2 %`; en datos queda el tope 2.000 sin efecto).
 
 | apuesta | d1 | d2 | d3 | d4 | d5 |
 |---|---|---|---|---|---|
-| `blood_before_goals` | 595 | 230 | 180 | 141 | 161 |
-| `hunt_the_star` | 1.735 | 973 | 686 | 641 | 2.000 * |
-| `eye_for_eye` | 2.000 * | 1.078 | 702 | 441 | 716 |
-| `comeback` | 1.392 | 1.336 | 1.196 | 1.403 | 1.676 |
-| `into_the_mob` | 502 | 438 | 469 | 528 | 621 |
-| `clean_hands` | 652 | 372 | 381 | 362 | 480 |
-| `thrashing` | 2.000 * | 2.000 * | 2.000 * | 2.000 * | 2.000 * |
-| `three_names` | 2.000 * | 2.000 * | 2.000 * | 2.000 * | 2.000 * |
-| `youth_decides` | 2.000 * | 2.000 * | 2.000 * | 2.000 * | 1.169 |
-| `short_and_clean` | 2.000 * | 2.000 * | 2.000 * | 2.000 * | 2.000 * |
-| `referee_blind` | 1.773 | 2.000 * | 1.999 | 2.000 * | 2.000 * |
+| `blood_before_goals` | 594 | 231 | 179 | 140 | 167 |
+| `hunt_the_star` | 1.736 | 953 | 702 | 655 | — |
+| `eye_for_eye` | — | 1.079 | 702 | 457 | 883 |
+| `comeback` | 1.360 | 1.268 | 1.181 | 1.249 | 1.822 |
+| `into_the_mob` | 497 | 425 | 463 | 564 | 638 |
+| `clean_hands` | 653 | 365 | 388 | 373 | 511 |
+| `thrashing` | 765 | 1.163 | 1.857 | 1.767 | 2.000 * |
+| `split_the_goals` | 791 | 1.019 | 1.224 | 958 | 1.508 |
+| `youth_decides` | — | — | — | 2.000 * | 1.411 |
+| `referee_blind` | 1.781 | 2.000 * | 2.000 * | 2.000 * | 2.000 * |
 
 La cifra entera es más precisa que la medida: el error relativo de cada cuota es el de su `p` (de ~3 % en las
-celdas grandes a ~11 % en `youth_decides` d5 y ~15-20 % en las de `p` pequeña).
+celdas grandes a ~12 % en `youth_decides` d5 y ~18 % en las de `p` pequeña). En las celdas con tope, el margen
+de la casa es **mayor** del 15 % (`youth_decides` d4 devuelve 54 % de lo apostado, `referee_blind` ~80 %):
+cotización por debajo de la justa, a revisar si se quiere subir el tope.
 
 **Qué NO mide.** La frecuencia de fondo de la política automática, que **no prepara** la apuesta. Es la
-línea de base de quien apuesta a ciegas (su retorno esperado es 0,85 por construcción); lo que la decisión del
-jugador (alineación, orden, consumible, perk) suma sobre esa `p` es justo el margen que el punto 5 exige y
-**no está medido**: hace falta el paso de `betNetGoldPerRun` por política. Población: solo los partidos que la
-política contextual alcanza (sesgo de supervivencia: d4 y d5 son élites y jefes de los actos 2-3).
+línea de base de quien apuesta a ciegas (su retorno esperado es 0,85 por construcción en las celdas sin
+tope); lo que la decisión del jugador (alineación, orden, consumible, perk) suma sobre esa `p` es justo el
+margen que el punto 5 exige y **no está medido**. Población: solo los partidos que la política contextual
+alcanza (sesgo de supervivencia: d4 y d5 son élites y jefes de los actos 2-3).
 
 **Candidatas a revisar** (decisión del revisor; ninguna se ha tocado):
 
-- **Casi imposibles** (`p < 1 %` en todas las dificultades, cuota en el tope): `short_and_clean` (3 aciertos
-  en 33.325 partidos; la política nunca sale con menos de siete, así que solo existe si el jugador alinea a 5-6
-  a propósito y esta medida no lo ve), `thrashing` (0,43 %) y `three_names` (0,40 %). A 2.000 % su retorno
-  esperado a ciegas es ~8 %: si el jugador no las puede inclinar con una decisión, incumplen el punto 5 y no
-  entran en el catálogo. `youth_decides` es casi imposible en d1-d2 (0 % y 0,6 %) y razonable en d5 (7,3 %):
-  depende de que haya canteranos en el once.
-- **`hunt_the_star` en dificultad 5 (jefe del acto 3): 0,19 %** frente a 5-13 % en d1-d4. Causa **no
-  investigada** (LIKELY: el rival de mayor rareza de un jefe es un jugador que casi no cae o no es el que se
-  expone; sin experimento propio). Mientras tanto la cuota d5 es el tope.
-- **Casi seguras:** ninguna supera el 60 %, pero `blood_before_goals` es una moneda al aire en d3-d5
-  (47-60 %, cuota 141-180 %) y `into_the_mob` sube de 17 %: son las más «gratuitas», y `blood_before_goals` en
-  d1 (14 %) y d4 (60 %) depende sobre todo del desgaste por acto (ADR 0043), no de nada que el jugador decida.
-- **`referee_blind` y `comeback`** (4 % y 6 %, casi planas en dificultad): la cuota es alta y no sube con el
-  rival; queda la pregunta abierta de la sección anterior (si el informe enseña las faltas no señaladas).
+- **`hunt_the_star` en dificultad 5 (jefe del acto 3): 0,49 %** frente a 5-13 % en d1-d4. Causa **no
+  investigada** (LIKELY: el rival de mayor rareza de un jefe es un jugador que casi no cae; sin experimento
+  propio). Por la regla del 2 % no se ofrece contra ese jefe, que es lo que se quería evitar.
+- **`youth_decides`** solo se ofrece en d4-d5 y con cuota tope en d4: depende de que haya canteranos en el once
+  (la política los ficha poco). Es la más condicionada a una decisión de plantilla.
+- **`blood_before_goals`** es una moneda al aire en d3-d5 (47-61 %, cuota 140-179 %) y su frecuencia depende
+  sobre todo del desgaste por acto (ADR 0043), no de nada que el jugador decida: la candidata más «gratuita».
+- **`referee_blind` y `comeback`** (3-7 %, casi planas en dificultad): cuota alta que no sube con el rival; queda
+  la pregunta abierta de la sección anterior (si el informe enseña las faltas no señaladas).
 
-**Lo que sigue sin hacer** (pasos 3 en adelante): estado de run, decisión de tomar o dejar, cobro, política,
-filas `betsTakenPerRun` y `betNetGoldPerRun`, e interfaz. La apuesta fija (3/4/5) sigue **provisional, sin
-medir** (Regla H).
+**Primera medición (descartada, para el registro).** Con las definiciones anteriores: `thrashing` 0,43 %,
+`three_names` 0,40 %, `youth_decides` 1,06 % y `short_and_clean` 0,01 % (3 aciertos en 33.325 partidos), todas
+con cuota en el tope 2.000 % y retorno esperado a ciegas de ~8 %.
+
+## Implementación del paso 3 (29 sep 2026)
+
+- **Estado.** `RunState.Bet` (`AcceptedBet`: id de apuesta, nodo, cantidad, cobro %, jugador nombrado y su
+  nombre), null si no hay; solo se guarda la **tomada**, la ofrecida se deriva (W-12). `CurrentSchemaVersion` 6 → 7
+  (`data/schemas/run-save.schema.json` gana `bet`, obligatorio, objeto o null; un guardado de la 6 se rechaza con
+  error explícito, no se migra).
+- **Decisión.** `TakeBet(NodeId)`: solo en el mapa, en un nodo de partido accesible que ofrezca apuesta, con oro
+  suficiente, una por nodo; **se paga al tomarla**. `DeclineBet` la retira y devuelve lo apostado. Tomar otra para
+  otro nodo devuelve la anterior, y **entrar en otro nodo de partido con una apuesta tomada para uno distinto la
+  devuelve también** (solo se pierde jugando y fallando: el punto 3). No tomarla es no hacer nada.
+- **Oferta.** `BetSystem.OfferFor(state, node, systems, catalog)` (mismo nombre a `hunt_the_star`: el rival que
+  devuelve `systems.OpponentFor`, incluido el del jefe). Solo con la regla del 2 %.
+- **Resolución.** En `RunEngine.ResolveMatch`, justo tras `MatchResolution.Apply` y con el mismo `MatchSetup` y
+  `MatchResult` que ya recibe `OnMatchPlayed`: cumplida, se ingresa `Payout = apuesta × cuota / 100` (bruto: la
+  apuesta ya se pagó); fallida, nada. Se resuelve **también si el partido termina la run**, y antes de
+  `AfterMatch`, así que el oro del partido y el de la apuesta son canales distintos. `RunMatchSummary.Bet`
+  (`BetResult`: condición, apuesta, cobro, `Met`, `GoldPaid`, `Net`) y `PostMatchReport.Bet` lo exponen al informe.
+- **Partido excelente retirado** (RF-114h enmendada, RF-114i enmendada en `docs/requisitos.md`): fuera
+  `ExcellentMatchObjectives`, `excellentMatchBonusGold` (código, datos y esquema) y los campos `Objective*` de
+  `GoldForWinBreakdown`. `Game/Screens/ReportScreen.cs` perdió solo la fila del objetivo para seguir compilando;
+  quedan claves de texto huérfanas (`ui.report.goldObjective*`, `ui.objective.*`) para el paso 4.
+- **Política.** `RunPolicyOptions.BetDoctrine`: `Never` (por defecto, no mueve las puertas), `Blind` (toma siempre
+  que pueda pagar) y `Prepared` (toma solo si la build la favorece: **aproximación**, ≥3 titulares con rasgo
+  Aggressive o Dirty → `hunt_the_star`, `eye_for_eye`, `blood_before_goals`; no coloca ni alinea; **sin medir**).
+  `Balance --full-runs --bet-doctrine never|blind|prepared` añade `betsTakenPerRun`, `betNetGoldPerRun` y
+  `betNetReturnPercent` por doctrina de compra, y `betsTaken`/`betNetGold`/`betStaked` a `runs.csv`.
+
+### Medición: apostar a ciegas contra no apostar
+
+`--full-runs 1200` con `--seed 1` y `--seed 7` (2 × 1.200 runs por doctrina de compra), `never` contra `blind`:
+
+| | `never` (s1 / s7) | `blind` (s1 / s7) |
+|---|---|---|
+| apuestas tomadas por run (contextual) | 0 / 0 | 12,67 / 12,60 |
+| **`betNetGoldPerRun`** (contextual) | 0 / 0 | **−8,46 / −9,13** |
+| **retorno neto sobre lo apostado** (contextual) | — | **−17,6 % / −19,2 %** |
+| ídem doctrina gastadora / ahorradora | — | −26,0 / −22,4 % y −25,8 / −18,6 % |
+| `runWinRate` | 21,08 / 20,67 | 17,67 / 18,92 |
+| `brokeMarketRunShare` | 10,83 / 11,08 | **45,42 / 42,50** (fuera de banda 10-25) |
+| `leftoverGoldShare` | 8,73 / 8,75 | 7,24 / 7,33 |
+| `sinksAffordablePerAct` | 2,72 / 2,72 | 2,71 / 2,72 |
+
+Lectura: (1) **el oro neto a ciegas sale negativo**, como pedía la condición: −17,6 % y −19,2 % de lo apostado
+(≈ −15 % por el margen de la casa, más allá por las celdas con tope, que pagan por debajo de lo justo; la de la
+gastadora, −26 %, se aleja más y **no se ha investigado**). Las cuotas no están mal. (2) La consecuencia
+económica es fuerte: quien apuesta en todos los nodos gasta ~48 de oro por run y llega **sin oro al mercado en
+el ~44 % de las runs** (contra el 11 %), y pierde 2-3 puntos de tasa de victoria: la apuesta **compite** con el
+mercado y la clínica, que es lo que se quería (ADR 0157 punto 7), pero el punto 9a (bola de nieve) se cumple y el
+efecto contrario —que arruine— queda para el revisor: la apuesta fija 3/4/5 sigue **provisional, sin medir**
+(Regla H). (3) Con `never` las puertas de economía no se mueven salvo por quitar el bonus excelente de 1 de
+oro. `Prepared`, sin medir todavía.
