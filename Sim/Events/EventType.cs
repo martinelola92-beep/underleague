@@ -74,6 +74,17 @@ public enum EventType
     /// <para>Al FINAL del enum, por el mismo motivo que <see cref="Cross"/>.</para>
     /// </summary>
     TeamsReset,
+
+    /// <summary>
+    /// La tirada del destino (ADR 0171): una tirada de lesión <b>grave</b> o de <b>muerte</b> con
+    /// probabilidad apreciable. <c>Actor</c> es quien se la juega, <c>Opponent</c> quien tira y
+    /// <c>Detail</c> es <c>severe|death:puntosBase:hit|saved</c> —la probabilidad real de esa tirada, en
+    /// base 10.000, ya con todos sus modificadores—. Presentación pura, como <see cref="PerkTriggered"/>:
+    /// la pantalla enseña el porcentaje que le da el motor y no calcula nada (RT-014). Se emite en el tick
+    /// de la tirada, antes del INJURY/DEATH que la sigue, y también cuando <b>no</b> pasa nada (el «se salva»).
+    /// <para>Al FINAL del enum, por el mismo motivo que <see cref="Cross"/>.</para>
+    /// </summary>
+    FateRoll,
 }
 
 /// <summary>Conversión de EventType a la forma UPPER_SNAKE usada en datos y logs.</summary>
@@ -112,6 +123,7 @@ public static class EventTypeNames
         EventType.Cross => "CROSS",
         EventType.Clearance => "CLEARANCE",
         EventType.TeamsReset => "TEAMS_RESET",
+        EventType.FateRoll => "FATE_ROLL",
         _ => throw new ArgumentOutOfRangeException(nameof(t)),
     };
 
@@ -120,5 +132,5 @@ public static class EventTypeNames
     /// ellos (el cargador los rechaza como disparador), no tienen plantilla de descripción y no narran en
     /// el log. Antes eran casos sueltos de <see cref="EventType.PerkTriggered"/> en tres sitios.
     /// </summary>
-    public static bool IsPresentationOnly(EventType t) => t is EventType.PerkTriggered or EventType.TeamsReset;
+    public static bool IsPresentationOnly(EventType t) => t is EventType.PerkTriggered or EventType.TeamsReset or EventType.FateRoll;
 }

@@ -4621,13 +4621,19 @@ internal sealed class MatchEngine : IPerkWorld
         // cambia nada (SimConfig.InjuryScalePercent).
         chance = Math.Clamp(chance, 0, 5000) * _config.InjuryScalePercent / 100;
 
-        if (!_rng.Chance(Math.Clamp(chance, 0, 5000)))
+        int injuryChance = Math.Clamp(chance, 0, 5000);
+        if (!_rng.Chance(injuryChance))
         {
+            // ADR 0171: la tirada que NO acabó en desgracia también se cuenta, para el «se salva». No toca
+            // el RNG: la probabilidad ya está calculada y sólo se anota.
+            AnnounceFateRoll(victim, tackler, injuryChance, severeChance: 0, hit: false);
             return;
         }
 
-        bool severe = _rng.Chance(ProbabilityScale.Apply(
-            injury.SevereShare, Odds(victim, ProbabilityKind.SevereInjury)));
+        int severeChance = ProbabilityScale.Apply(
+            injury.SevereShare, Odds(victim, ProbabilityKind.SevereInjury));
+        bool severe = _rng.Chance(severeChance);
+        AnnounceFateRoll(victim, tackler, injuryChance, severeChance, hit: severe || IsLethalStake(victim));
 
         // La lesión se publica antes de aplicarla (§3): un perk puede anularla y el jugador sigue en el
         // campo, con el evento INJURY registrado y Detail sufijado ":cancelled".
@@ -4697,6 +4703,46 @@ internal sealed class MatchEngine : IPerkWorld
         {
             Kill(victim, "severeInjury", tackler);
         }
+    }
+
+    /// <summary>
+    /// ADR 0171: por debajo de este umbral (en base 10.000) una tirada de lesión no es «del destino»: es una
+    /// entrada corriente y no se anuncia. Es una constante de presentación, no de balance: no cambia ninguna
+    /// probabilidad ni consume dados, sólo decide qué tiradas dejan un evento <c>FATE_ROLL</c>.
+    /// </summary>
+    internal const int FateRollMinBasisPoints = 400;
+
+    /// <summary>
+    /// Lo que está en juego si la lesión cae: el jugador alineado con una lesión grave sin tratar muere
+    /// (RF-093 vía 1); cualquier otro pierde el partido y queda grave sólo si la lesión es grave.
+    /// </summary>
+    private static bool IsLethalStake(MatchPlayer victim) =>
+        victim.Definition.PhysicalState == PhysicalState.SevereInjury;
+
+    /// <summary>
+    /// ADR 0171, la tirada del destino (RT-014: el porcentaje sale del motor, la pantalla no calcula
+    /// nada). Emite <c>FATE_ROLL</c> con <c>Actor</c> = quien se la juega, <c>Opponent</c> = quien tira y
+    /// <c>Detail</c> = <c>kind:puntosBase:hit|saved</c>. La probabilidad es la de <b>esta</b> tirada con
+    /// todos sus modificadores, y se compone así: con la muerte en juego es la de lesionar (la reincidencia
+    /// mata siempre); con la lesión grave, la de lesionar por la de que sea grave.
+    /// </summary>
+    private void AnnounceFateRoll(MatchPlayer victim, MatchPlayer tackler, int injuryChance, int severeChance, bool hit)
+    {
+        bool lethal = IsLethalStake(victim);
+        long basisPoints = lethal
+            ? injuryChance
+            : (long)injuryChance * severeChance / 10000;
+        if (basisPoints < FateRollMinBasisPoints)
+        {
+            return;
+        }
+
+        Emit(
+            EventType.FateRoll,
+            (lethal ? "death:" : "severe:") + basisPoints + (hit ? ":hit" : ":saved"),
+            actor: victim,
+            opponent: tackler,
+            publish: false);
     }
 
     /// <summary>
@@ -6012,6 +6058,22 @@ internal sealed class MatchEngine : IPerkWorld
 
     /// <summary>La tirada en sí, con el flujo de dados del partido (RT-021, RT-022).</summary>
     internal bool LethalRoll(int chance) => _rng.Chance(chance);
+
+    /// <summary>ADR 0171: la tirada de un perk letal también es «del destino» (<c>FATE_ROLL</c>, <c>death:</c>).</summary>
+    internal void AnnounceLethalRoll(MatchPlayer victim, MatchPlayer owner, int chance, bool hit)
+    {
+        if (chance < FateRollMinBasisPoints)
+        {
+            return;
+        }
+
+        Emit(
+            EventType.FateRoll,
+            "death:" + chance + (hit ? ":hit" : ":saved"),
+            actor: victim,
+            opponent: owner,
+            publish: false);
+    }
 
     /// <summary>
     /// Muerte de un jugador (RF-093). <b>Solo</b> se llama desde las dos vías del requisito: un titular

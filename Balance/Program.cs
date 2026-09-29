@@ -727,6 +727,9 @@ static void WriteRunsCsv(string outDir, IReadOnlyList<RunPlayResult> runs, strin
 
         // ADR 0168: bajas de sangre propias (grave o muerte) contadas partido a partido desde los eventos.
         "bloodCasualties",
+
+        // ADR 0171: momentos de la tirada del destino sobre jugadores propios (FATE_ROLL).
+        "fateMoments",
     };
 
     var rows = runs.Select(r => (IReadOnlyList<string>)new[]
@@ -759,6 +762,7 @@ static void WriteRunsCsv(string outDir, IReadOnlyList<RunPlayResult> runs, strin
         string.Join(" ", r.PerkHorizon ?? Array.Empty<string>()),
         Int(r.BetsTaken), Int(r.BetNetGold), Int(r.BetGoldStaked),
         Int(r.BloodCasualties),
+        Int(r.FateMoments),
     });
 
     CsvWriter.Write(Path.Combine(outDir, fileName), header, rows);

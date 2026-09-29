@@ -612,7 +612,13 @@ public sealed record RunPlayResult(
     /// partido y no desde la diferencia de estado (revisión independiente: la subida de graves por nodo no ve el
     /// partido final ni una grave tapada por otra que muere).
     /// </summary>
-    int BloodCasualties = 0)
+    int BloodCasualties = 0,
+
+    /// <summary>
+    /// ADR 0171: momentos de la tirada del destino sobre jugadores propios en toda la run (los que la
+    /// retransmisión convierte en cámara lenta y sello), contados desde los eventos <c>FATE_ROLL</c>.
+    /// </summary>
+    int FateMoments = 0)
 {
     /// <summary>
     /// El estado con el que terminó la run, para quien mida algo que sólo existe al final (el censo de
@@ -3906,7 +3912,8 @@ public static class RunPolicy
             ledger.BlacksmithTreatments,
             ledger.ProsthesesInstalled,
             ledger.Automatons,
-            ledger.BloodCasualties);
+            ledger.BloodCasualties,
+            ledger.FateMoments);
     }
 
     /// <summary>
@@ -3938,6 +3945,7 @@ public static class RunPolicy
         public void OnMatchPlayed(RunState stateBefore, MapNode node, MatchSetup setup, MatchResult result, RunMatchSummary summary)
         {
             _ledger.BloodCasualties += BloodCasualtyCounter.Count(setup, result);
+            _ledger.FateMoments += FateMomentCounter.Count(setup, result);
             if (summary.Bet is { } bet)
             {
                 _ledger.BetPaid += bet.GoldPaid;
@@ -4010,6 +4018,7 @@ public static class RunPolicy
 
         /// <summary>ADR 0168: bajas de sangre propias (grave o muerte), por jugador y partido.</summary>
         public int BloodCasualties;
+        public int FateMoments;
 
         /// <summary>Lesiones de los DOS equipos en los partidos de la run: la misma cifra que mide RT-056.</summary>
         public int MatchInjuries;

@@ -951,7 +951,9 @@ internal sealed class EffectEngine : IPerkLinks
                 // marca el perk y no de cuánto valga la tirada de cada uno (RT-021).
                 var marked = victims[pick];
                 victims.RemoveAt(pick);
-                if (_engine.LethalRoll(best))
+                bool dies = _engine.LethalRoll(best);
+                _engine.AnnounceLethalRoll(marked, subscription.Owner, best, dies);
+                if (dies)
                 {
                     _engine.Kill(marked, "perk:" + subscription.Perk.Id, subscription.Owner);
                 }

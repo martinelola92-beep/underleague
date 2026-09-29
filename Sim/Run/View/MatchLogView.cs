@@ -184,6 +184,9 @@ public static class MatchLogView
 
         // ADR 0151: el reinicio tras gol es el corte de la cortinilla, no una jugada.
         EventType.TeamsReset => false,
+
+        // ADR 0171: la tirada del destino es presentación; lo que narra el log es el resultado.
+        EventType.FateRoll => false,
         _ => true,
     };
 
