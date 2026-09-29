@@ -77,6 +77,37 @@ public static class RunLineup
     /// </summary>
     public const string RiskCounterPrefix = "fieldSevereInjured:";
 
+    /// <summary>
+    /// Contador de run de «juego con los que he puesto» (RF-002d, BC-H): 1 mientras el jugador haya decidido, para
+    /// <b>este</b> partido, que el once no se complete con el banquillo. Lo fija <c>RunEngine.Apply(SetLineup)</c> y lo
+    /// borra <c>MatchResolution</c> al terminar el partido, exactamente igual que <see cref="RiskCounterPrefix"/>: una
+    /// decisión arriesgada se toma partido a partido y nunca se hereda. Es el mecanismo de contadores del paquete W
+    /// (W-11), así que no sube la versión del esquema del guardado.
+    /// </summary>
+    public const string ShortCounter = "fieldShort";
+
+    /// <summary>True si el jugador ha decidido jugar este partido con los titulares que puso, sin relleno (RF-002d).</summary>
+    public static bool PlaysShort(RunState state)
+    {
+        ArgumentNullException.ThrowIfNull(state);
+        return state.Counter(ShortCounter) > 0;
+    }
+
+    /// <summary>
+    /// Copia del estado con la decisión de jugar sin relleno puesta o quitada. No escribe un 0 donde no había nada:
+    /// un estado que nunca la usó sigue siendo byte a byte el de antes.
+    /// </summary>
+    public static RunState WithPlayShort(RunState state, bool playShort)
+    {
+        ArgumentNullException.ThrowIfNull(state);
+        if (PlaysShort(state) == playShort)
+        {
+            return state;
+        }
+
+        return state.WithCounter(ShortCounter, playShort ? 1 : 0);
+    }
+
     /// <summary>Casilla del portero (RF-041: casilla fija dentro del área).</summary>
     public static Cell GoalkeeperCell { get; } = new(0, 3);
 
@@ -406,14 +437,19 @@ public static class RunLineup
             }
         }
 
+        // RF-002d (BC-H): el jugador ha decidido jugar con los que puso. El banquillo no tapa el hueco: sólo se
+        // completa hasta el mínimo con el que el simulador admite un equipo, para que una alineación guardada que se
+        // quedó corta (bajas después de decidir) no rompa el partido.
+        int limit = PlaysShort(state) ? RunRules.MinimumAvailablePlayers : RunRules.MaxStarters;
+
         // Relleno por rol, para que una plantilla sin alineación guardada salga con forma de equipo y
         // no con siete centrocampistas: portero, defensas, centrocampistas, delantero, y el resto.
-        AddByPosition(starters, available, Position.Goalkeeper, 1);
-        AddByPosition(starters, available, Position.Defender, DefenderCells.Length);
-        AddByPosition(starters, available, Position.Midfielder, MidfielderCells.Length);
-        AddByPosition(starters, available, Position.Forward, ForwardCells.Length);
+        AddByPosition(starters, available, Position.Goalkeeper, 1, limit);
+        AddByPosition(starters, available, Position.Defender, DefenderCells.Length, limit);
+        AddByPosition(starters, available, Position.Midfielder, MidfielderCells.Length, limit);
+        AddByPosition(starters, available, Position.Forward, ForwardCells.Length, limit);
 
-        for (int i = 0; i < available.Count && starters.Count < RunRules.MaxStarters; i++)
+        for (int i = 0; i < available.Count && starters.Count < limit; i++)
         {
             if (!Contains(starters, available[i].Id))
             {
@@ -424,7 +460,7 @@ public static class RunLineup
         return starters;
     }
 
-    private static void AddByPosition(List<RunPlayer> starters, IReadOnlyList<RunPlayer> available, Position position, int max)
+    private static void AddByPosition(List<RunPlayer> starters, IReadOnlyList<RunPlayer> available, Position position, int max, int limit)
     {
         int already = 0;
         for (int i = 0; i < starters.Count; i++)
@@ -435,7 +471,7 @@ public static class RunLineup
             }
         }
 
-        for (int i = 0; i < available.Count && starters.Count < RunRules.MaxStarters && already < max; i++)
+        for (int i = 0; i < available.Count && starters.Count < limit && already < max; i++)
         {
             if (available[i].Position == position && !Contains(starters, available[i].Id))
             {

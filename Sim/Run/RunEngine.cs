@@ -41,6 +41,15 @@ public enum LineupWarningKind
     /// puede reducir.
     /// </summary>
     LethalOpponentRisk,
+
+    /// <summary>
+    /// Se juega con menos de siete <b>porque el jugador lo ha decidido</b>, no porque falte gente (RF-002d,
+    /// BC-H): le queda banquillo y no ha querido que tape el hueco. Es la advertencia explícita que RF-002d exige
+    /// antes de confirmar —«con 5 en campo una sola baja termina la run»— y va aparte de
+    /// <see cref="Shorthanded"/>, que sigue siendo la inferioridad <b>real</b> (ni con el banquillo entero se
+    /// llega a siete): la primera se deshace con una pulsación, la segunda no.
+    /// </summary>
+    ShortByChoice,
 }
 
 /// <summary>
@@ -302,7 +311,10 @@ public static class RunEngine
         var warnings = new List<LineupWarning>();
         if (slots.Count < RunRules.MaxStarters)
         {
-            warnings.Add(new LineupWarning(LineupWarningKind.Shorthanded, -1));
+            // Inferioridad real, o elegida: si queda banquillo con el que tapar el hueco, es que el jugador lo ha
+            // dejado a propósito (RF-002d, BC-H), y esa es otra advertencia con otra salida.
+            bool byChoice = state.AvailablePlayerCount > slots.Count;
+            warnings.Add(new LineupWarning(byChoice ? LineupWarningKind.ShortByChoice : LineupWarningKind.Shorthanded, -1));
         }
 
         // Los de relleno van por id ascendente porque Effective ya los devuelve así (RT-041).
@@ -678,7 +690,10 @@ public static class RunEngine
 
         // La marca de «alineado a sabiendas con lesión grave» (RF-093 vía 1) la pone RunLineup, que es
         // quien la lee en CanStart y quien tiene que poner la misma al PREVER una alineación (ADR 0134).
-        return RunLineup.MarkSevereInjuryRisks(state, slots).WithLineup(decision.Lineup);
+        //
+        // Y la de «juego con los que he puesto» (RF-002d, BC-H) se fija igual, en la misma puerta: cada
+        // SetLineup dice si la quiere, así que ningún camino la hereda sin que el jugador la vuelva a pedir.
+        return RunLineup.WithPlayShort(RunLineup.MarkSevereInjuryRisks(state, slots).WithLineup(decision.Lineup), decision.PlayShort);
     }
 
     private static RunState ApplyConsumables(RunState state, SetConsumables decision)

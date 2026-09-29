@@ -74,8 +74,18 @@ public sealed record RunSetup(
 /// </summary>
 public abstract record RunDecision;
 
-/// <summary>Fija la alineación titular (RF-041). Se valida al entrar en el nodo de partido.</summary>
-public sealed record SetLineup(Lineup Lineup) : RunDecision;
+/// <summary>
+/// Fija la alineación titular (RF-041). Se valida al entrar en el nodo de partido.
+/// </summary>
+/// <param name="Lineup">La colocación elegida, de 5 a 7 titulares.</param>
+/// <param name="PlayShort">
+/// True si el jugador <b>decide jugar con los que ha puesto</b> aunque le quede banquillo (RF-002d, BC-H): el
+/// motor no completa el once de oficio. Es una decisión para <b>este</b> partido —se borra al terminarlo, igual que
+/// la de alinear a un lesionado grave (RF-093 vía 1)— y por eso vive en un contador de la run
+/// (<see cref="RunLineup.ShortCounter"/>) y no en la alineación guardada, que es lo que se hereda. Con false, el
+/// comportamiento de siempre: los huecos los tapa el banquillo.
+/// </param>
+public sealed record SetLineup(Lineup Lineup, bool PlayShort = false) : RunDecision;
 
 /// <summary>Fija los consumibles equipados de la run (RF-080..082).</summary>
 public sealed record SetConsumables(IReadOnlyList<EquippedConsumable> Consumables) : RunDecision;

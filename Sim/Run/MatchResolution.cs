@@ -417,12 +417,13 @@ internal static class MatchResolution
     }
 
     /// <summary>
-    /// Borra las marcas de "alineado a sabiendas con lesión grave" (RF-093 vía 1). El riesgo se asume
-    /// para un partido concreto; el siguiente exige volver a tomarlo.
+    /// Borra las marcas de "alineado a sabiendas con lesión grave" (RF-093 vía 1) y la de "juego con los que
+    /// he puesto" (RF-002d). El riesgo se asume para un partido concreto; el siguiente exige volver a tomarlo.
     /// </summary>
     private static RunState ClearSevereInjuryRisks(RunState state)
     {
-        var next = state;
+        // Y la de «juego con los que he puesto» (RF-002d, BC-H): tampoco se hereda de un partido al siguiente.
+        var next = RunLineup.WithPlayShort(state, false);
         foreach (var (name, value) in state.Counters)
         {
             if (value != 0 && name.StartsWith(RunLineup.RiskCounterPrefix, StringComparison.Ordinal))
