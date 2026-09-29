@@ -164,7 +164,10 @@ public partial class RunController : Node
                 return false;
             }
 
-            var state = RunSave.Load(file.GetAsText());
+            // Un guardado de una versión anterior puede no traer los catálogos añadibles que el juego
+            // actual exige (apodos, Gaceta, prótesis): se completan con los de /data actual y sólo esos
+            // (SnapshotCompletion, RT-061b). Las reglas de la run siguen siendo las de su instantánea.
+            var state = SnapshotCompletion.Complete(RunSave.Load(file.GetAsText()), GameData.Snapshot);
             Catalog = RunSave.CatalogFromSnapshot(state);
             Systems = StandardRunSystems.FromJson(state.DataSnapshot);
             Bosses = BossCatalog.FromJson(state.DataSnapshot);
