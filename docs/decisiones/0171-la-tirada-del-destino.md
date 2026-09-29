@@ -25,7 +25,7 @@ ningún evento y la retransmisión no puede calcularla (RT-014).
 ## Las diez preguntas
 
 1. **Qué experimenta el jugador.** Cuando alguien **propio** se juega una lesión grave o la vida, el campo se ralentiza
-   ~1 s, un rótulo de pregón dice el porcentaje real («Se hace saber que X tiene un 12 % de partirle la crisma a Y»),
+   ~1 s, un rótulo de pregón dice el porcentaje real («Se hace saber: X ha dejado tocado a Y, y hay un 40 % de que sea grave»),
    y al resolverse: si cae, el estandarte de siempre; si se salva, un rótulo burlón («¡Se salva! Por los pelos»).
 2. **Qué decide.** Nada durante el partido (principio 9): es información y drama. Sí **cierra el círculo de RF-012d**: el
    número que vio en el ojeo y en la alineación es el que ve caer.
@@ -34,7 +34,7 @@ ningún evento y la retransmisión no puede calcularla (RT-014).
    visible una tirada existente.
 5. **Sistemas.** `/Sim`: el motor emite el evento con la probabilidad ya calculada (RT-014); `Sim.Run.View` lo agrupa en un
    momento presentable; `/Game`: director y pantalla lo pintan con los materiales del pregón. `/data`: nada (textos en
-   `data/l10n/`).
+   `UiText`).
 6. **Alternativas.** (a) Recalcular el porcentaje en `/Game`: **descartada**, duplica la fórmula del motor y la separa de
    la tirada real (justo lo que RT-014 y la ADR 0048 evitan). (b) Anunciar **todas** las lesiones: descartada, ruido; la
    pausa perdería su valor. (c) Un evento por tirada **previo** a la tirada: descartada, obligaría a emitir tirando
@@ -48,59 +48,74 @@ ningún evento y la retransmisión no puede calcularla (RT-014).
    el jugador ve cuánto le costó no hacerlo.
 9. **Degeneración.** (i) Spam: se evita con el umbral y midiéndolo (abajo). (ii) Un perk letal que dispara muchas tiradas
    seguidas: el umbral por probabilidad las filtra y la cola de voces caduca. (iii) A x16 no debe pararse: no se muestra
-   (x4: comprimida y sin ralentizar). (iv) `Prohibido morir` anula la muerte: el evento lleva la tirada, el `INJURY`/`DEATH`
-   posterior lleva `:cancelled`, y la pantalla ya sabe leerlo.
+   (x4: comprimida y sin ralentizar). (iv) `Prohibido morir` o una puerta que anule la lesión: el desenlace se decide **tras la
+   cancelación** y cuenta como salvada (corregido tras la revisión independiente: antes se anunciaba como golpe).
 10. **Cómo se demuestra.** (a) Determinismo: hash FNV de 150 semillas × 2 configuraciones de los eventos **sin**
-   `FATE_ROLL`, idéntico antes y después (`4852152750119329266`, 75.685 eventos); (b) `Sim.Tests/Engine/FateRollTests`;
+   `FATE_ROLL`, idéntico antes y después (`4852152750119329266`, 75.685 eventos; se repite tras la enmienda); (b) `Sim.Tests/Engine/FateRollTests`;
    (c) frecuencia en runs completas (`fateMoments`, `runs.csv`); (d) capturas de la retransmisión.
 
 ## Decisión
+
+*(Enmendada el mismo día tras la revisión independiente: tres fallos graves de la primera versión, corregidos abajo.)*
 
 **Motor** (`/Sim`, sin tocar el RNG):
 
 - Evento `FATE_ROLL` (`EventType.FateRoll`, **presentación pura** como `PERK_TRIGGERED` y `TEAMS_RESET`: ningún perk se
   cuelga de él, no narra en el log). `Actor` = quien se la juega, `Opponent` = quien tira, `Detail` =
-  `severe|death:puntosBase:hit|saved`, con la probabilidad en **base 10.000** ya con todos los modificadores.
-- Probabilidad: para la **reincidencia** (RF-093 vía 1, jugador alineado con lesión grave sin tratar) es la de lesionar
-  —la lesión ya lo mata—; para el resto es la de que la lesión sea **grave**, `lesión × grave` (`chance × severeChance /
-  10.000`); para un perk letal, la de `LethalChanceAgainst` (la misma que el indicador de riesgo). Todas las cifras ya
-  estaban calculadas: el evento las anota, **no cambia el consumo de RNG**.
-- Se emite también cuando **no pasa nada** (el «se salva»), por el mismo motivo.
-- Umbrales (**constantes de presentación, no de balance**): `FateRollMinSevereBasisPoints = 800` (8 %) y
-  `FateRollMinDeathBasisPoints = 1500` (15 %). Procedencia, Regla H: **medidos** (abajo).
+  `severe|death:puntosBase:hit|saved`, con la probabilidad **de ese dado**, en base 10.000 y con todos sus modificadores.
+- **Qué dado se anuncia.** `severe` es el **segundo** dado de la lesión, «¿leve o grave?» (`severeChance`, ya con los
+  canales de perks y órdenes), y sólo existe si hubo lesión; salvarse de él es **salir con una leve** (o con la lesión
+  anulada por un perk). `death` es la tirada que mata: la de lesionar a quien ya venía herido (reincidencia, RF-093 vía 1,
+  que mata siempre si cae) o la del perk letal (`LethalChanceAgainst`, la misma que el indicador de riesgo). La primera
+  versión anunciaba `lesionar × grave` y sólo emitía el «se salva» cuando no hubo lesión: el rótulo decía 20 % y al jugador
+  le caía el 37 %. Ahora el número es el del dado que se tira (test de honestidad: la fracción de golpes ≈ la media de los
+  porcentajes anunciados).
+- **El desenlace se decide tras la cancelación**: el evento se emite **después** del `INJURY`/`DEATH` del mismo tick, y un
+  evento anulado (`iron_gate`, `no_dying`) cuenta como **salvada**. Un `hit` es siempre una lesión grave o una muerte que
+  ocurrieron de verdad.
+- **La muerte se anuncia una sola vez por jugador y partido** (la primera): un herido alineado se juega la vida en cada
+  entrada (medido: 444 tiradas por 200 muertes) y repetir el rótulo era ruido.
+- Umbrales (**constantes de presentación, no de balance**, procedencia en «Frecuencia»):
+  `FateRollMinSevereBasisPoints = 4000` (el 40 % de `severeShare`: hoy anuncia toda lesión propia, porque el porcentaje
+  base ya es alto) y `FateRollMinDeathBasisPoints = 1500` (15 %). **Provisionales.**
 
 **Vista** (`Sim.Run.View.MatchMomentView`): `MomentKind.Fate`, nivel N3, **sin pausa**, sólo sobre jugadores del equipo del
-jugador (el némesis rival queda fuera: sería un rótulo sobre el rival, y la ADR 0165 ya le da su propio momento en el
-saque y en la esquela). No se funde con el `INJURY`/`DEATH` que le sigue. Su `Frame` arranca `FateLeadFrames` (8, ~0,5 s de
-partido) **antes** del tick, para que la cámara lenta preceda al resultado.
+jugador (el némesis rival queda fuera). Es **transparente para la fusión**: se anota aparte y el siguiente evento se
+funde con el momento anterior al Fate como si no estuviera (con el Fate en medio, la lesión dejaba de fundirse con su
+falta y su tarjeta, y la roja se perdía). Su `Frame` arranca `FateLeadFrames` (8, ~0,5 s de partido) **antes** del tick.
 
-**Presentación** (`/Game`): a x1, el director enseña la voz `Fate` con una **escala de tiempo** de 0,5 mientras el
-fotograma no llega al de la tirada (~1 s real), con el rótulo y un sello que gira; al llegar, el sello se detiene y dice
-«¡Se salva!» o cede a la presentación normal de la lesión/muerte. A x4: comprimida, sin ralentizar. A x16: no se muestra
-(residuo: el `INJURY`/`DEATH` de siempre).
+**Presentación** (`/Game`; textos en `UiText`, no en `data/l10n/`):
+
+- A x1, el director da la voz `Fate` con escala de tiempo 0,5 (~1 s real) mientras el fotograma no llega al de la tirada;
+  la banda de pregón enseña el porcentaje que trae el motor y un sello que gira. A x4: comprimida, **sin ralentizar y sin
+  adelantar el resultado** (rueda hasta su fotograma). A x16: no se muestra. Cambiar de velocidad en plena cámara lenta
+  restaura la escala. Una búsqueda del director (`Seek`, p. ej. tras una decisión de sustitución) no descarta una tirada
+  cuyo fotograma de tirada aún no ha pasado.
+- **El desenlace de un golpe real lo cuenta la propia presentación de la lesión o la muerte**, con «los dados lo han
+  querido» en su estandarte o en su bando; **la banda del destino sólo enseña un resultado cuando se salva**
+  («Sólo un rasguño: se libra de la grave por los pelos», «¡SE SALVA! Por los pelos»). La primera versión intentaba
+  contar el golpe en la banda, que la pausa de la lesión tapaba siempre, y sólo lo escribía cuando era falso (evento anulado).
 
 ## Frecuencia (medida)
 
-`Balance --full-runs 30 --seed 11` (90 runs con las tres doctrinas, ~1.160 partidos), columna `fateMoments` de `runs.csv`
-(FATE_ROLL sobre jugadores propios; instrumento nuevo `Sim.Analysis.FateMomentCounter`, comprobado contra el caso
-sabido: en el partido de referencia sin desgaste de acto no hay ninguna al 8 %/15 %):
+`Balance --full-runs 30` con las semillas 11, 12 y 13 (90 runs por semilla con las tres doctrinas), columna `fateMoments`
+de `runs.csv` (`FATE_ROLL` sobre jugadores propios; instrumento `Sim.Analysis.FateMomentCounter`, comprobado contra un caso
+de respuesta sabida y no nula en `FateRollTests`):
 
-| Umbral | Momentos propios por partido |
-|---|---|
-| 4 % (todo) | 1,17 |
-| 8 % (todo) | 0,82 (de ellos 0,64 de muerte) |
-| sólo muerte al 15 % | 0,34 |
-| **8 % grave + 15 % muerte (elegido)** | **0,53** |
+| Umbrales (grave / muerte) | Momentos propios por partido, por semilla | Media ± error típico |
+|---|---|---|
+| **4000 / 1500 (elegido, provisional)** | 0,677 · 0,713 · 0,618 | **0,67 ± 0,03** |
 
-El encargo fijó ~1 por partido como techo: con 4 % se pasaba. **Ojo:** la política automática alinea heridos sin tratar y
-lo hace mucho más que una persona (que ve el aviso de RF-012c), así que la cifra es un **techo**, no la experiencia
-típica; y las tiradas de muerte de un mismo herido se repiten (cada entrada sobre él es una). Las tres cifras de arriba
-son **LIKELY** hasta medirlas con jugadores humanos.
+Con la emisión corregida el techo de ~1 por partido se cumple sin subir el umbral. Las cifras de la primera versión
+(1,17 / 0,82 / 0,53 por partido con la tirada compuesta) **ya no valen**: medían otro dado. **Provisional, sin medir con
+jugadores humanos:** la política automática alinea heridos sin tratar más que una persona, y en actos tardíos toda lesión
+propia es una tirada anunciada; si se siente como demasiado, subir el umbral de `severe` por encima de 4000 la limita a
+las lesiones con el riesgo de gravedad elevado por perks u órdenes.
 
 ## Consecuencias
 
 - Los eventos de un partido pueden llevar `FATE_ROLL`; los consumidores exhaustivos (`MatchLogView`,
   `EventTypeNames`) lo conocen. Los partidos son **idénticos** (hash de eventos sin ellos).
 - `runs.csv` gana la columna `fateMoments`.
-- Pendiente: perfil del némesis (¿también el rótulo cuando el que se la juega es el rival?) — decisión de diseño para
-  otra sesión.
+- `Sim.Tests` enlaza `Game/Match/PresentationDirector.cs` (no toca Godot) para probar el ritmo del director.
+- Pendiente: rótulo cuando el que se la juega es el némesis rival — decisión de diseño para otra sesión.
