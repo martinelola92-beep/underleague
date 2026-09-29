@@ -43,4 +43,8 @@
 
 ## Hermanos
 
-_(por enlazar donde se detecten; ver `README.md` del directorio)_
+- **Otros multiplicadores invisibles con nombre de conducta** (revisión independiente de la ADR 0166, 29 sep
+  2026, sin evidencia de impacto medida): `master_plan` (táctico, legendario), `smoke_flare` y
+  `professional_foul` siguen subiendo o bajando cuotas que el jugador no ve, con nombres que prometen una
+  conducta. Mismo diagnóstico que los gritos; candidatos al mismo tratamiento (orden, consigna o acción
+  visible) cuando se revise el catálogo de consumibles. Requiere `game-design-review`.

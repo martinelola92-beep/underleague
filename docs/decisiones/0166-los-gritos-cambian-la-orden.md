@@ -87,3 +87,36 @@ duración la orden efectiva es la del grito y después vuelve; lote de partidos 
 - La puerta sólo afirma la conducta (entradas con la presión, tiros de «¡Arriba!» frente a «¡Aguantad!»); las
   cifras de goles se imprimen y no se afirman. **Pendiente para el balance**: duraciones y multiplicadores de
   presión, y si las faltas de la presión (más entradas) son un coste legible (RF-012d).
+
+## Revisión independiente (29 sep 2026)
+
+Confirmó la ventana exacta, la vuelta a la orden (también con `OrderChange` antes o durante el grito), el
+determinismo, la carga y las plantillas. Arreglado:
+
+- **La pantalla y el motor divergían con dos gritos de orden**: el motor hace que el segundo sustituya al
+  primero y, al acabar, vuelve a la base; `MatchShoutView` seguía enseñando el primero con su cuenta atrás.
+  Ahora, por categoría (orden / presión), sólo cuenta el último activado. Test
+  `WithTwoOrderShoutsTheViewFollowsTheEngineAndTheSecondReplacesTheFirst` (falla con la vista anterior, pasa
+  con la nueva). Latente hoy: los tres gritos de orden duran lo mismo.
+- **El cargador aceptaba lo que el esquema rechaza** (`value` colado en un grito, `press: false` con una
+  orden). `EnsureKnownKeys` en el lector del grito; test `TheLoaderRejectsWhatTheSchemaRejectsInAShout`.
+
+Anotado sin cambiar, con decisión:
+
+- **La duración son ticks de partido, también con el balón muerto** (celebración de gol, saque), no
+  «segundos de juego» como decía el punto 1. Se deja así: la cuenta atrás del tablero corre con la misma
+  cuenta, así que lo que el jugador ve y lo que pasa coinciden; un gol justo después de gritar gasta parte del
+  grito, y eso es legible. Si se quiere que el grito se congele con el reloj, hay que cambiar a la vez el motor
+  y `MatchShoutView` (que tendría que leer las paradas del reloj de los eventos).
+- **La urgencia de marcador (ADR 0140) mezcla sobre la orden del grito en la utilidad, no en las líneas ni en
+  las cuotas.** Es lo que ya pasaba con la orden táctica; un «¡Aguantad!» perdiendo a final de partido queda a
+  medias en la utilidad. Preexistente, sin medir.
+- **El instrumento de «entradas» de la tabla de medición** cuenta todo `TACKLE` del equipo, incluidos
+  bloqueos: el +71 % de `push_forward` puede ser en parte bloqueos (la mentalidad ofensiva sube `Block`). No
+  validado (Regla J); la puerta no afirma nada sobre ello.
+- **Las rarezas** (poco común / raro) venían del techo de los multiplicadores que ya no existen; ahora los dos
+  gritos de orden son simétricos. Queda para la revisión del catálogo, con el resto del balance aplazado.
+- **Sin medir**: si las entradas de más de «¡A por él!» traen más faltas, lesiones o muertes (regla 11, RF-012d);
+  si 6 y 10 s se perciben en un partido de 60-90 s. `/Balance` no pulsa manuales: la única medida es la
+  puerta de `Sim.Tests`.
+- Hermanos (`master_plan`, `smoke_flare`, `professional_foul`): anotados en BA-H.
