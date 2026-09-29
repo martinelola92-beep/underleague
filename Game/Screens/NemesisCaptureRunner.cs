@@ -55,34 +55,16 @@ public partial class NemesisCaptureRunner : Control
         await Save("mapa-nemesis");
         Drop(map);
 
-        // 2. Informe con un némesis recién nacido: el primer partido de una semilla cuyo rival mata a alguien.
+        // 2. Informe con un némesis recién nacido: el primer partido de una semilla cuyo rival mata a alguien. Sin
+        //    memoria sembrada: el némesis tiene que nacer del propio partido.
         bool made = false;
-        bool revenge = false;
-        for (ulong seed = 1; seed <= MaxSeeds && !(made && revenge); seed++)
+        for (ulong seed = 1; seed <= MaxSeeds && !made; seed++)
         {
             run.NewRun("orc_ironworks", Race.Orc, seed);
             var match = FirstMatch(run);
-            bool seeded = !made;
-            if (!made)
-            {
-                // Sin memoria: el némesis tiene que nacer del propio partido.
-            }
-            else
-            {
-                // Con dos némesis sembrados en puestos titulares, la probabilidad de vengarse es alta.
-                SeedNemesis(run, match, slot: 3, title: "quiet_one");
-                SeedNemesis(run, match, slot: 4, title: "bill_collector", id: 2);
-            }
-
             run.SelectedNodeId = match.Id;
             run.PlayMatch(match.Id);
-            var summary = run.LastMatch?.Summary;
-            if (summary is null)
-            {
-                continue;
-            }
-
-            if (seeded && summary.NemesesMade.Count > 0)
+            if (run.LastMatch?.Summary is { } summary && summary.NemesesMade.Count > 0)
             {
                 var report = await Show("res://Scenes/Informe.tscn");
                 await Save("informe-nemesis");
@@ -90,7 +72,19 @@ public partial class NemesisCaptureRunner : Control
                 Drop(report);
                 made = true;
             }
-            else if (!seeded && summary.Revenges.Count > 0)
+        }
+
+        // 3. Informe con una venganza: dos némesis sembrados en puestos titulares, para que alguno caiga.
+        bool revenge = false;
+        for (ulong seed = 1; seed <= MaxSeeds && !revenge; seed++)
+        {
+            run.NewRun("orc_ironworks", Race.Orc, seed);
+            var match = FirstMatch(run);
+            SeedNemesis(run, match, slot: 3, title: "quiet_one");
+            SeedNemesis(run, match, slot: 4, title: "bill_collector", id: 2);
+            run.SelectedNodeId = match.Id;
+            run.PlayMatch(match.Id);
+            if (run.LastMatch?.Summary is { } summary && summary.Revenges.Count > 0)
             {
                 var report = await Show("res://Scenes/Informe.tscn");
                 await Save("informe-venganza");
@@ -98,6 +92,11 @@ public partial class NemesisCaptureRunner : Control
                 Drop(report);
                 revenge = true;
             }
+        }
+
+        if (!made || !revenge)
+        {
+            GD.PushError($"capturas incompletas en {MaxSeeds} semillas: némesis={made}, venganza={revenge}");
         }
 
         Nav.Suppressed = false;

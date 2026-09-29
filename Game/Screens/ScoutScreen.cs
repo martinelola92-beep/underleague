@@ -152,7 +152,8 @@ public partial class ScoutScreen : Control
             var card = scene.Instantiate<PlayerCard>();
             foreach (var nemesis in nemeses)
             {
-                if (string.Equals(nemesis.Name, player.Name, System.StringComparison.Ordinal))
+                // Por puesto, no por nombre (revisión de la ADR 0165): un fichaje puede llamarse como un némesis.
+                if (player.Id == Underleague.Sim.Run.Systems.Rivals.RivalTeamBuilder.OpponentFirstPlayerId + nemesis.Slot)
                 {
                     card.NemesisTitle = nemesis.Title;
                 }
@@ -200,7 +201,10 @@ public partial class ScoutScreen : Control
     /// </summary>
     private float BuildRivalryLines(RunState state, string opponentId, RivalTeam rivalTeam, float y)
     {
-        var encounters = RivalHistory.Against(state, opponentId);
+        // ADR 0165: el reencuentro es con el clan, en cualquier acto, no con el fichero del acto.
+        var encounters = _run.Systems is { } systems
+            ? RivalHistory.AgainstClan(state, systems.Rivals, rivalTeam.ClanId)
+            : RivalHistory.Against(state, opponentId);
         if (encounters.Count == 0)
         {
             return y;
