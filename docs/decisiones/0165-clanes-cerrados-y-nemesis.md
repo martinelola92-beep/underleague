@@ -79,7 +79,8 @@ con ello un villano.
   entrar en el acto siguiente, cada némesis vivo pasa a otro clan (nodo ficticio 9500 + acto), al titular de menos
   nivel de su demarcación.
 - **Alineación** (`RivalTeamBuilder`): un puesto vacante lo cubre un fichaje con nombre generado
-  (`RngStreams.Rewards`, sal 950.000.000 + clan + puesto + generación) y las mismas cifras; el némesis juega con su
+  (`RngStreams.Rewards`, sal 950.000.000 + clan + puesto + generación —*enmendado por la [ADR 0169](0169-un-nombre-no-se-repite-en-la-run.md):
+  ahora sale del billete `generación·10 + puesto` del retículo de nombres de la raza, sin repetirse dentro del clan*—) y las mismas cifras; el némesis juega con su
   nombre y `levelBonus` niveles más; **un némesis de banquillo juega de titular** en lugar del último titular de
   su demarcación (regla nueva, no estaba en la decisión: «el mapa marca el nodo donde juega» tiene que ser verdad).
 - **Vista y `/Game`**: `NemesisView` (ojeo en lacre con título y víctima, rombo en el mapa, pregón de la
