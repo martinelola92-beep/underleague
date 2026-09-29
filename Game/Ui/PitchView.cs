@@ -606,7 +606,7 @@ public partial class PitchView : Control
             return;
         }
 
-        float radius = cell * 0.33f;
+        float radius = cell * 0.38f;
         foreach (var slot in lineup.Slots)
         {
             var player = State.Find(slot.PlayerId);
@@ -624,7 +624,7 @@ public partial class PitchView : Control
                 DrawArc(CenterOf(slot.HomeCell), radius, 0f, Mathf.Tau, 24, new Color(positionColor, 0.35f), 2f);
             }
 
-            Medallion.Draw(this, center, radius, player.Race, player.Position, player.Id, positionColor);
+            Knavall.Portrait.Token(this, center, radius, player.Race, player.Position, player.Id, positionColor);
 
             if (slot.PlayerId == SelectedId)
             {
