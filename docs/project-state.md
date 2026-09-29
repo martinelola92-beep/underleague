@@ -74,6 +74,11 @@ independiente, rebase y merge a `main`, push):
   eventos) y `bloodlessPastAct1Share` ≤ 7 % (base 3 %). La revisión independiente desmontó la primera versión
   (instrumento que no veía el partido final; «runs sin sangre» que medía la dificultad del jefe 1). Hermano anotado:
   las muertes del matasanos y de cartas no las ve ninguna métrica de campaña.
+- [ADR 0171](decisiones/0171-la-tirada-del-destino.md), **la tirada del destino**: `FATE_ROLL` (presentación pura) lleva
+  la probabilidad real de las tiradas de lesión grave (≥ 8 %) o muerte (≥ 15 %), salvadas incluidas, sin tocar el RNG
+  (hash de eventos idéntico); la Retransmisión la enseña sobre jugadores propios con cámara lenta (x1), rótulo de pregón
+  con el porcentaje y sello que gira. Medido: 0,53 momentos propios por partido en runs completas (techo: la política
+  automática alinea heridos más que una persona). Pendiente: el rótulo cuando el que se la juega es el némesis rival.
 - **Sin gh en la máquina**: los PR se abren a mano con el enlace de GitHub. La rama de clanes tiene un commit heredado
   (`1337343`) cuyos tests no compilan solos: fusionar con *squash*.
 
