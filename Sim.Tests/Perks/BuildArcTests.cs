@@ -197,6 +197,36 @@ public sealed class BuildArcTests
     }
 
     /// <summary>
+    /// BB-R: `blood_tithe` y `first_touch_school` SON maestros en el dato. La ficha BB-R llegó a afirmar
+    /// lo contrario («0 de 94 perks declaran requires/blocks») y dejó un aviso falso en el `_doc` de los
+    /// dos: se midió buscando las claves `requires`/`blocks`, y las del dato se llaman `requiresPerks` y
+    /// `blocksPerks` (Regla J: el instrumento no se contrastó con un caso cuya respuesta se conocía). Este
+    /// test es ese caso, contra el cargador real, y además impide que un `_doc` vuelva a decir lo que el
+    /// dato no dice.
+    /// </summary>
+    [Theory]
+    [InlineData("blood_tithe", "butchery", "craft")]
+    [InlineData("first_touch_school", "craft", "butchery")]
+    public void TheTwoPerksThatSayTheyAreMastersAreMastersAndTheirDocDoesNotSayOtherwise(
+        string id, string line, string closes)
+    {
+        var catalog = TestData.LoadCatalog();
+        var perk = catalog.Perks.Get(id);
+
+        Assert.True(perk.IsMaster);
+        Assert.Equal(line, perk.Family);
+        Assert.Equal(line, perk.Requires!.Family);
+        Assert.Equal(2, perk.Requires.Count);
+        Assert.Equal(new[] { closes }, perk.Blocks.Families);
+        Assert.Contains(perk, catalog.Perks.Masters);
+
+        using var doc = System.Text.Json.JsonDocument.Parse(TestData.LoadAllFiles()["perks/" + id + ".json"]);
+        string note = doc.RootElement.GetProperty("_doc").GetString()!;
+        Assert.DoesNotContain("NO declara", note, StringComparison.Ordinal);
+        Assert.DoesNotContain("no tiene ni un consumidor", note, StringComparison.Ordinal);
+    }
+
+    /// <summary>
     /// La descripción generada de un maestro dice qué exige y qué cierra, en todos los idiomas y sin una
     /// sola frase escrita a mano (RT-035, RF-012d): es la única forma de que el bloqueo se lea antes de
     /// aceptar, y un perk no se puede retirar (RF-072).

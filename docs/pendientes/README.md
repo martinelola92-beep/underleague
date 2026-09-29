@@ -36,7 +36,7 @@ viva anotada.
 | [BB-K](./BB-K.md) | Dos jugadores del mismo equipo que quieren la misma casilla «bailan y parpadean» | **Implementada** 30 sep ([ADR 0176](../decisiones/0176-dos-companeros-no-cubren-el-mismo-punto.md)): baile 17,3 → 0,9 por partido; queda el hermano `FindSpace` |
 | [BB-N](./BB-N.md) | El saque de córner no ocurre nunca (1 en 2000 partidos) | Causa CONFIRMED y **decidido: se modela** ([ADR 0135](../decisiones/0135-el-balon-tiene-altura.md), el balón gana altura y el toque defensivo puede desviarlo). Se cierra con el paso 4 del plan |
 | [BB-P](./BB-P.md) | Las puertas de un solo partido/semilla se leen como causa cuando son ruido | Abierta |
-| [BB-R](./BB-R.md) | Dos perks dicen ser MAESTROS y no exigen ni cierran nada (ADR 0051 al 0 %) | Abierta |
+| [BB-R](./BB-R.md) | Dos perks dicen ser MAESTROS y no exigen ni cierran nada (ADR 0051 al 0 %) | **Cerrada (30 sep)**: premisa REJECTED — sí son maestros (`requiresPerks`/`blocksPerks`, 4 de 111); el instrumento buscaba las claves equivocadas (Regla J). Aviso falso retirado de los `_doc` y test que lo impide. Queda anotado que los maestros son 3,6 % frente al 5-10 % de la ADR 0051 |
 | [BB-S](./BB-S.md) | `build-neutral-reference.py` dice que escribe las referencias y solo imprime | Abierta |
 | [BB-T](./BB-T.md) | La puerta de equipamiento cae a 0,5: era RUIDO de una semilla, no el catálogo | Abierta (arreglo de instrumento) |
 | [BB-U](./BB-U.md) | Un solo perk común rompe el invariante de cero de la puerta de economía | Abierta, sin causa |

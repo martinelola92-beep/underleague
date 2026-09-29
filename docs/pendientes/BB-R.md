@@ -1,8 +1,10 @@
 # BB-R — Dos perks dicen ser MAESTROS y no exigen ni cierran nada
 
-**Estado:** Abierta en lo de fondo; el texto ya no engaña. Los dos `_doc` llevan desde el 19 sep 2026 un
-aviso de que describen la INTENCIÓN y no lo implementado. Queda por decidir si se implementa la ADR 0051
-o si se aparca.
+**Estado:** **CERRADA (30 sep 2026): la premisa era falsa, REJECTED.** `blood_tithe` y `first_touch_school`
+SON maestros en el dato desde `d216e1a` (ADR 0051): declaran `requiresPerks` y `blocksPerks`, el cargador
+los lee, el pool los exige y los cierra, y la descripción generada lo dice. El aviso que la ficha dejó en
+sus dos `_doc` era el falso, y se ha retirado. Ver «Resolución» al final; lo de abajo es el texto original,
+que se conserva porque el error es de método (Regla J) y merece quedar.
 
 ## Observación
 
@@ -60,3 +62,35 @@ se leía como si estuviera implementada. Un lector del catálogo generado ya no 
 **Lo de fondo sigue abierto y es tuyo**: rellenar `requires`/`blocks` es un cambio de balance real —un
 cierre de línea es irreversible dentro de la run (RF-072)— y necesita su ADR. La alternativa es aparcar la
 ADR 0051 explícitamente y quitar la promesa de los dos textos.
+
+
+## Resolución (30 sep 2026) — REJECTED, y por qué el instrumento mentía
+
+**Experimento que la tumba (CONFIRMED).** `BuildArcTests.TheTwoPerksThatSayTheyAreMastersAreMastersAndTheirDocDoesNotSayOtherwise`
+carga el catálogo real por el cargador de producción y comprueba, para los dos perks: `IsMaster`, `Family`,
+`Requires = (línea propia, 2)`, `Blocks.Families = [la opuesta]` y que están en `Catalog.Perks.Masters`. Pasa.
+`git show 4462369^:data/perks/blood_tithe.json` (el árbol **anterior** al commit que abrió esta ficha) ya
+traía `"requiresPerks": { "family": "butchery", "count": 2 }` y `"blocksPerks": { "families": ["craft"] }`;
+llevaban ahí desde el primer commit de los arcos.
+
+**Causa del error (Regla J, instrumento sin validar).** La ficha midió «0 de 94 perks declaran `requires`
+ni `blocks`» buscando esas claves. Las del dato se llaman **`requiresPerks`** y **`blocksPerks`**. Nadie
+contrastó el instrumento con un caso cuya respuesta se conociera (un perk que se sabe maestro), que es
+exactamente lo que la regla pide. La consecuencia fue un aviso falso escrito en dos ficheros de `/data`,
+propagado a `docs/catalogo-perks-y-objetos.md`.
+
+**Estado real de la maquinaria (no «sin un solo consumidor»)**: cuatro maestros (`blood_tithe`,
+`first_touch_school`, `granite_line`, `killing_range`), uno por línea (`butchery`, `craft`, `wall`, `aim`),
+con pool (`PerkPool.Availability`/`ClosedBy`), política de run (`RunPolicy`), pantalla de recompensa
+(`RewardView`), descripción generada y `PerkArcTests` sobre el catálogo real.
+
+**Qué se hizo**: se retiró el aviso falso de los dos `_doc` (dato sin efecto en partido: sólo un campo de
+documentación) y se añadió el test de arriba, que falla si un `_doc` de maestro vuelve a decir lo que el
+dato no dice.
+
+**Lo que SÍ queda de la ficha, y es otra cosa** *(LIKELY, sin medir su importancia)*: la ADR 0051 acota los
+maestros al **5-10 %** del catálogo y hoy son 4 de 111 = **3,6 %**; `MastersAreASmallShareOfTheCatalog`
+acepta desde el 3 %, cifra sin procedencia escrita (Regla H). No es un perk que incumple su texto; es una
+banda de la ADR que el catálogo no cumple, y subir maestros es una decisión de diseño de línea (cada uno
+cierra otra línea para siempre, RF-072), no un arreglo de esta ficha. Anotado aquí para quien abra ese
+frente.
