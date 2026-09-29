@@ -191,9 +191,10 @@
               "victimPlayer": { "type": "integer" },
               "act": { "type": "integer", "minimum": 1, "maximum": 3 },
               "kills": { "type": "integer", "minimum": 1 },
-              "status": { "enum": ["active", "slain"] }
+              "status": { "enum": ["active", "slain"] },
+              "avenged": { "type": "boolean", "description": "ADR 0165 (revisión): la deuda de sangre ya se cobró; vuelve a false si mata otra vez." }
             },
-            "required": ["id", "title", "name", "position", "homeClan", "homeSlot", "clan", "slot", "victimName", "victimPlayer", "act", "kills", "status"],
+            "required": ["id", "title", "name", "position", "homeClan", "homeSlot", "clan", "slot", "victimName", "victimPlayer", "act", "kills", "status", "avenged"],
             "additionalProperties": false
           }
         }

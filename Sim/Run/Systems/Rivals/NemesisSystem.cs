@@ -9,9 +9,14 @@ namespace Underleague.Sim.Run.Systems.Rivals;
 public sealed record NemesisMade(
     int NemesisId, string TitleId, string Name, string ClanId, int VictimPlayerId, string VictimName, int Act);
 
-/// <summary>Una venganza cobrada en este partido (ADR 0165): <paramref name="Slain"/> si el némesis murió.</summary>
+/// <summary>
+/// Una venganza en este partido (ADR 0165): <paramref name="Slain"/> si el némesis murió. <paramref name="Paid"/>
+/// si cobró la deuda de sangre (oro, contador y carrera del vengador): una deuda se cobra una vez, y vuelve a
+/// existir si el némesis mata otra vez; matar a un némesis ya vengado se proclama sin volver a cobrar.
+/// </summary>
 public sealed record NemesisRevenge(
-    int NemesisId, string TitleId, string NemesisName, string VictimName, int AvengerPlayerId, string AvengerName, bool Slain);
+    int NemesisId, string TitleId, string NemesisName, string VictimName, int AvengerPlayerId, string AvengerName, bool Slain,
+    bool Paid = true);
 
 /// <summary>Resultado de aplicar un partido a la memoria de rivales.</summary>
 public sealed record NemesisOutcome(
@@ -95,7 +100,7 @@ public static class NemesisSystem
         var state = after;
         var made = new List<NemesisMade>();
         var revenges = new List<NemesisRevenge>();
-        var revenged = new HashSet<int>();
+        var revenged = new Dictionary<int, int>(); // id de némesis -> índice en revenges (sólo búsqueda, no se itera)
         var fallenOwn = new HashSet<int>();
         var fallenRival = new HashSet<int>();
         int capped = 0;
@@ -147,13 +152,33 @@ public static class NemesisSystem
             }
 
             var current = memory.ActiveAt(team.ClanId, rivalSlot);
-            if (current is not null && causerIsOwn && revenged.Add(current.Id))
+            if (current is not null && causerIsOwn)
             {
-                var avenger = state.FindPlayer(e.Opponent)!;
                 bool slain = e.Type == EventType.Death;
-                state = state.WithPlayer(avenger with { Career = avenger.Career with { Revenges = avenger.Career.Revenges + 1 } });
-                state = state.WithCounter(RunState.RevengesCounter, state.Counter(RunState.RevengesCounter) + 1);
-                revenges.Add(new NemesisRevenge(current.Id, current.TitleId, current.Name, current.VictimName, avenger.Id, avenger.Name, slain));
+                if (revenged.TryGetValue(current.Id, out int index))
+                {
+                    // Una venganza por némesis y partido; si la lesión que la abrió acaba en muerte en el mismo
+                    // partido (perk letal sobre el lesionado), el informe tiene que decir que murió.
+                    if (slain && !revenges[index].Slain)
+                    {
+                        revenges[index] = revenges[index] with { Slain = true };
+                    }
+                }
+                else
+                {
+                    var avenger = state.FindPlayer(e.Opponent)!;
+                    bool paid = !current.Avenged;
+                    if (paid)
+                    {
+                        state = state.WithPlayer(avenger with { Career = avenger.Career with { Revenges = avenger.Career.Revenges + 1 } });
+                        state = state.WithCounter(RunState.RevengesCounter, state.Counter(RunState.RevengesCounter) + 1);
+                        current = current with { Avenged = true };
+                        memory = memory.WithNemesis(current);
+                    }
+
+                    revenged[current.Id] = revenges.Count;
+                    revenges.Add(new NemesisRevenge(current.Id, current.TitleId, current.Name, current.VictimName, avenger.Id, avenger.Name, slain, paid));
+                }
             }
 
             if (e.Type == EventType.Death)
@@ -161,7 +186,7 @@ public static class NemesisSystem
                 if (current is not null)
                 {
                     memory = memory.WithNemesis(current with { Status = NemesisStatus.Slain });
-                    memory = EnsureVacancy(memory, team.ClanId, rivalSlot);
+                    memory = VacateOccupant(memory, team.ClanId, rivalSlot);
                 }
                 else
                 {
@@ -193,8 +218,9 @@ public static class NemesisSystem
         var existing = memory.ActiveAt(team.ClanId, slot);
         if (existing is not null)
         {
-            // Ya es némesis: la cuenta sube, el título y la primera víctima se quedan.
-            return (memory.WithNemesis(existing with { Kills = existing.Kills + 1 }), capped);
+            // Ya es némesis: la cuenta sube, el título y la primera víctima se quedan, y si ya se había vengado
+            // vuelve a deber (una deuda nueva se cobra otra vez).
+            return (memory.WithNemesis(existing with { Kills = existing.Kills + 1, Avenged = false }), capped);
         }
 
         if (memory.Alive.Count >= nemesis.MaxAlive)
@@ -258,21 +284,16 @@ public static class NemesisSystem
     }
 
     /// <summary>
-    /// El jugador rival del puesto sale de su clan (murió): si lo cubría el jugador de datos la vacante nace con
-    /// el primer fichaje (generación 0); si lo cubría un fichaje, el siguiente.
+    /// Quien ocupa el puesto sale de él (murió, o un némesis murió o se marchó): si lo cubría el jugador de datos
+    /// la vacante nace con el primer fichaje (generación 0); si lo cubría un fichaje, el siguiente. Es la única
+    /// regla también para un némesis: si era el fichaje de esa generación, conservarla lo resucitaría (revisión
+    /// de la ADR 0165); si llegó traspasado, avanzar sólo salta un fichaje que nunca llegó a jugar.
     /// </summary>
     private static RivalMemory VacateOccupant(RivalMemory memory, string clanId, int slot)
     {
         var vacancy = memory.VacancyAt(clanId, slot);
         return memory.WithVacancy(new RivalVacancy(clanId, slot, vacancy is null ? 0 : vacancy.Generation + 1));
     }
-
-    /// <summary>
-    /// Un némesis deja el puesto (muere o se marcha): si ese puesto ya era una vacante, el siguiente fichaje ya
-    /// estaba fijado; si era el suyo de nacimiento, nace la vacante con el primer fichaje.
-    /// </summary>
-    private static RivalMemory EnsureVacancy(RivalMemory memory, string clanId, int slot) =>
-        memory.VacancyAt(clanId, slot) is null ? memory.WithVacancy(new RivalVacancy(clanId, slot, 0)) : memory;
 
     private static int RivalSlot(int playerId, RivalTeam team)
     {
@@ -325,8 +346,9 @@ public static class NemesisSystem
                     continue;
                 }
 
-                // El puesto de origen lo cubre un fichaje; el de destino deja de tener a quien lo ocupaba.
-                memory = EnsureVacancy(memory, current.ClanId, current.Slot);
+                // El puesto de origen lo cubre el SIGUIENTE fichaje (si el némesis era un fichaje, conservar la
+                // generación lo dejaría también en su clan de origen); el de destino deja de tener a quien lo ocupaba.
+                memory = VacateOccupant(memory, current.ClanId, current.Slot);
                 memory = VacateOccupant(memory, target.ClanId, slot);
                 memory = memory.WithNemesis(current with { ClanId = target.ClanId, Slot = slot });
                 break;

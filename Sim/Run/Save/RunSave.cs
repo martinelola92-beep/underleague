@@ -452,6 +452,7 @@ public static class RunSave
             w.WriteNumber("act", n.Act);
             w.WriteNumber("kills", n.Kills);
             w.WriteString("status", Camel(n.Status.ToString()));
+            w.WriteBoolean("avenged", n.Avenged);
             w.WriteEndObject();
         }
 
@@ -603,7 +604,8 @@ public static class RunSave
                 Int(element, "victimPlayer", path),
                 Int(element, "act", path),
                 Int(element, "kills", path),
-                Enum<Systems.Rivals.NemesisStatus>(element, "status", path)));
+                Enum<Systems.Rivals.NemesisStatus>(element, "status", path),
+                Bool(element, "avenged", path)));
         }
 
         return new Systems.Rivals.RivalMemory { Vacancies = vacancies, Nemeses = nemeses };

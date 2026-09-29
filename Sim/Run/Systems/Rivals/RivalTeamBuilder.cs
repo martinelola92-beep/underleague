@@ -76,6 +76,14 @@ public static class RivalTeamBuilder
         }
 
         var starters = players.Take(7).ToList();
+        // Quién es némesis en cada puesto de la alineación, actualizado al sustituir: dos némesis de banquillo del
+        // mismo puesto no se pisan (el segundo no echa al primero; revisión de la ADR 0165).
+        var starterIsNemesis = new bool[starters.Count];
+        for (int j = 0; j < starters.Count; j++)
+        {
+            starterIsNemesis[j] = occupants[j].Nemesis is not null;
+        }
+
         for (int slot = 7; slot < players.Count; slot++)
         {
             if (occupants[slot].Nemesis is null)
@@ -85,9 +93,10 @@ public static class RivalTeamBuilder
 
             for (int j = starters.Count - 1; j >= 0; j--)
             {
-                if (starters[j].Position == players[slot].Position && occupants[j].Nemesis is null)
+                if (starters[j].Position == players[slot].Position && !starterIsNemesis[j])
                 {
                     starters[j] = players[slot];
+                    starterIsNemesis[j] = true;
                     break;
                 }
             }

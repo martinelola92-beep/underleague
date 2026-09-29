@@ -148,8 +148,18 @@ public static class RivalLoader
                 throw new DataException(path, "$.name", $"el clan '{team.ClanId}' cambia de nombre entre actos");
             }
 
+            if (first.Players.Count != team.Players.Count)
+            {
+                throw new DataException(path, "$.players", $"el clan '{team.ClanId}' cambia de número de jugadores entre actos ({first.Players.Count} y {team.Players.Count})");
+            }
+
             for (int i = 0; i < team.Players.Count; i++)
             {
+                if (first.Players[i].Position != team.Players[i].Position)
+                {
+                    throw new DataException(path, $"$.players[{i}].position", $"el puesto {i} del clan '{team.ClanId}' cambia de demarcación entre actos");
+                }
+
                 if (!string.Equals(first.Players[i].Name, team.Players[i].Name, StringComparison.Ordinal))
                 {
                     throw new DataException(path, $"$.players[{i}].name", $"el puesto {i} del clan '{team.ClanId}' cambia de jugador entre actos");

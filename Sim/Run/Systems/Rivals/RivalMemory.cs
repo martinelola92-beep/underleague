@@ -49,7 +49,8 @@ public sealed record RivalNemesis(
     int VictimPlayerId,
     int Act,
     int Kills,
-    NemesisStatus Status)
+    NemesisStatus Status,
+    bool Avenged = false)
 {
     /// <summary>True mientras siga vivo.</summary>
     public bool IsActive => Status == NemesisStatus.Active;

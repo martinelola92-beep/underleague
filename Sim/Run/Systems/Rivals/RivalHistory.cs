@@ -75,6 +75,28 @@ public static class RivalHistory
         return matches;
     }
 
+    /// <summary>
+    /// Encuentros contra el CLAN de ese rival en cualquier acto (ADR 0165: los mismos clanes suben de categoría), en
+    /// orden cronológico. Es lo que tiene que contar el ojeo: el Yunque Verde del acto 2 es el del acto 1.
+    /// </summary>
+    public static IReadOnlyList<RivalEncounter> AgainstClan(RunState state, RivalCatalog rivals, string clanId)
+    {
+        ArgumentNullException.ThrowIfNull(rivals);
+        ArgumentException.ThrowIfNullOrEmpty(clanId);
+
+        var all = Encounters(state);
+        var matches = new List<RivalEncounter>();
+        for (int i = 0; i < all.Count; i++)
+        {
+            if (rivals.Find(all[i].RivalId) is { } team && string.Equals(team.ClanId, clanId, StringComparison.Ordinal))
+            {
+                matches.Add(all[i]);
+            }
+        }
+
+        return matches;
+    }
+
     /// <summary>True si la run se ha enfrentado a ese rival al menos una vez.</summary>
     public static bool HasFaced(RunState state, string rivalId) => Against(state, rivalId).Count > 0;
 }

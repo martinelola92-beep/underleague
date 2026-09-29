@@ -289,6 +289,90 @@ public sealed class NemesisTests
         Assert.Equal(1, applied.State.Counter(RunState.RevengesCounter));
     }
 
+    /// <summary>Un fichaje que se hace némesis: matas al titular del puesto 4, el fichaje mata a uno de los tuyos.</summary>
+    private static (RunState State, RivalNemesis Nemesis) SigningNemesis()
+    {
+        var state = BaseState();
+        state = Play(state, new[] { Death(1, RivalId(4), state.Roster[0].Id) }).State;
+        state = Play(state, new[] { Death(0, state.Roster[2].Id, RivalId(4)) }).State;
+        var nemesis = Assert.Single(state.RivalMemory.Nemeses);
+        Assert.Equal(4, nemesis.Slot);
+        return (state, nemesis);
+    }
+
+    /// <summary>Revisión de la ADR 0165: el némesis que era un fichaje no resucita en su puesto al morir.</summary>
+    [Fact]
+    public void ASigningWhoBecameANemesisDoesNotComeBackAfterDying()
+    {
+        var (state, nemesis) = SigningNemesis();
+        var team = Rivals.Find(OpponentId)!;
+        Assert.Equal(nemesis.Name, RivalTeamBuilder.Build(team, Catalog, state.RivalMemory, state.Seed, 1).Players[4].Name);
+
+        var after = Play(state, new[] { Death(1, RivalId(4), state.Roster[1].Id) }).State;
+
+        Assert.Equal(NemesisStatus.Slain, after.RivalMemory.Find(nemesis.Id)!.Status);
+        var built = RivalTeamBuilder.Build(team, Catalog, after.RivalMemory, state.Seed, Nemesis.LevelBonus);
+        Assert.NotEqual(nemesis.Name, built.Players[4].Name);
+    }
+
+    /// <summary>Revisión de la ADR 0165: el fichaje-némesis traspasado no se queda también en su clan de origen.</summary>
+    [Fact]
+    public void ASigningNemesisHandedOverIsNotAlsoLeftInItsHomeClan()
+    {
+        var (state, nemesis) = SigningNemesis();
+
+        var next = NemesisSystem.TransferOnActEntry(state, Nemesis, act: 2);
+
+        var moved = next.RivalMemory.Find(nemesis.Id)!;
+        Assert.NotEqual(Clan, moved.ClanId);
+        var home = RivalTeamBuilder.Build(Rivals.OfClan(Clan, 2)!, Catalog, next.RivalMemory, state.Seed, Nemesis.LevelBonus);
+        Assert.DoesNotContain(home.Players, p => p.Name == nemesis.Name);
+    }
+
+    /// <summary>
+    /// Revisión de la ADR 0165: un rival llega sano, así que muere por un perk letal sobre una lesión previa en el mismo
+    /// partido; la venganza la abre la lesión y el informe tiene que decir que murió.
+    /// </summary>
+    [Fact]
+    public void AnInjuryThenADeathInTheSameMatchIsProclaimedAsSlain()
+    {
+        var state = WithNemesis(BaseState(), Clan, slot: 3);
+        var avenger = state.Roster[1];
+
+        var applied = Play(state, new[] { Injury(1, RivalId(3), avenger.Id, "severe", tick: 40), Death(1, RivalId(3), avenger.Id, tick: 41) });
+
+        var revenge = Assert.Single(applied.Summary.Revenges);
+        Assert.True(revenge.Slain);
+        Assert.True(revenge.Paid);
+        Assert.Equal(1, applied.State.Counter(RunState.RevengesCounter));
+        Assert.Equal(NemesisStatus.Slain, applied.State.RivalMemory.Find(1)!.Status);
+    }
+
+    /// <summary>
+    /// Revisión de la ADR 0165: la deuda de sangre se cobra una vez. Lesionar al mismo némesis en cada partido no
+    /// paga ni suma; matarlo después se proclama sin segundo cobro; si vuelve a matar, vuelve a deber.
+    /// </summary>
+    [Fact]
+    public void ABloodDebtIsPaidOnceAndComesBackIfTheNemesisKillsAgain()
+    {
+        var state = WithNemesis(BaseState(), Clan, slot: 3);
+        var first = Play(state, new[] { Injury(1, RivalId(3), state.Roster[1].Id) });
+        Assert.True(Assert.Single(first.Summary.Revenges).Paid);
+        Assert.True(first.State.RivalMemory.Find(1)!.Avenged);
+
+        var second = Play(first.State, new[] { Injury(1, RivalId(3), state.Roster[1].Id) }, winner: 1);
+        Assert.False(Assert.Single(second.Summary.Revenges).Paid);
+        Assert.Equal(1, second.State.Counter(RunState.RevengesCounter));
+        Assert.Equal(1, second.State.FindPlayer(state.Roster[1].Id)!.Career.Revenges);
+        Assert.Equal(second.State.Gold, Systems.AfterMatch(second.State, Node(), second.Summary, Catalog).Gold);
+
+        var killsAgain = Play(second.State, new[] { Death(0, state.Roster[3].Id, RivalId(3)) });
+        Assert.False(killsAgain.State.RivalMemory.Find(1)!.Avenged);
+        var third = Play(killsAgain.State, new[] { Injury(1, RivalId(3), state.Roster[1].Id) });
+        Assert.True(Assert.Single(third.Summary.Revenges).Paid);
+        Assert.Equal(2, third.State.Counter(RunState.RevengesCounter));
+    }
+
     [Fact]
     public void InjuringAPlainRivalIsNotARevenge()
     {

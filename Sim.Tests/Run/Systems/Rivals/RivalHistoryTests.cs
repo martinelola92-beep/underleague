@@ -84,6 +84,40 @@ public sealed class RivalHistoryTests
         Assert.Equal(2, againstB[0].NodeId);
     }
 
+    /// <summary>
+    /// ADR 0165 (revisión independiente): el ojeo cuenta los reencuentros con el CLAN en cualquier acto. Con los
+    /// datos reales, el orco del acto 1 y el del acto 2 son el mismo clan; el elfo, otro.
+    /// </summary>
+    [Fact]
+    public void AgainstClanCountsTheSameClanAcrossActs()
+    {
+        var rivals = SystemsTestSupport.Systems.Rivals;
+        var map = new ActMap(
+            1,
+            new[]
+            {
+                new MapNode(1, 1, 0, 0, NodeKind.LeagueMatch, Array.Empty<int>(), "act1_orc_ironclad", 1),
+                new MapNode(2, 1, 1, 0, NodeKind.LeagueMatch, Array.Empty<int>(), "act1_elf_swiftwing", 1),
+                new MapNode(3, 1, 2, 0, NodeKind.LeagueMatch, Array.Empty<int>(), "act2_orc_warband", 1),
+            },
+            new[] { 1 },
+            BossNodeId: -1,
+            BossModifierId: string.Empty,
+            BossModifierRevealed: false);
+        var state = new RunState()
+            .WithMap(map)
+            .WithNodeCompleted(1, NodeKind.LeagueMatch, NodeResult.Won)
+            .WithNodeCompleted(2, NodeKind.LeagueMatch, NodeResult.Won)
+            .WithNodeCompleted(3, NodeKind.LeagueMatch, NodeResult.Lost);
+        string orcClan = rivals.Find("act2_orc_warband")!.ClanId;
+        Assert.Equal(orcClan, rivals.Find("act1_orc_ironclad")!.ClanId);
+
+        var orcs = RivalHistory.AgainstClan(state, rivals, orcClan);
+
+        Assert.Equal(new[] { 1, 3 }, orcs.Select(e => e.NodeId).ToArray());
+        Assert.Single(RivalHistory.Against(state, "act2_orc_warband"));
+    }
+
     [Fact]
     public void HasFacedIsFalseForARivalNeverPlayed()
     {

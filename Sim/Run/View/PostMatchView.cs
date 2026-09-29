@@ -290,7 +290,7 @@ public static class PostMatchView
             NicknamesEarned = NicknameGains(report, own, stateAfterMatch, nicknames, language, summary),
             NemesesMade = MadeRows(summary, nemesis, language),
             Revenges = RevengeRows(summary, nemesis, language),
-            RevengeGold = economy is null || stateAfterMatch.Result.IsOver ? 0 : summary.Revenges.Count * economy.RevengeGold,
+            RevengeGold = economy is null || stateAfterMatch.Result.IsOver ? 0 : summary.Revenges.Count(r => r.Paid) * economy.RevengeGold,
         };
     }
 
@@ -402,7 +402,8 @@ public static class PostMatchView
             int revenges = 0;
             for (int r = 0; r < summary.Revenges.Count; r++)
             {
-                if (summary.Revenges[r].AvengerPlayerId == player.Id)
+                // Sólo la que cobró la deuda suma a la carrera (NemesisSystem), así que sólo ésa se deshace.
+                if (summary.Revenges[r].AvengerPlayerId == player.Id && summary.Revenges[r].Paid)
                 {
                     revenges++;
                 }

@@ -309,8 +309,15 @@ public sealed class StandardRunSystems : IRunSystems
         int deathGold = DeathConsequences.GoldFor(state, summary.DeathDetails, _economy);
 
         // La venganza (ADR 0165) paga por el mismo canal: el jugador ya se expuso a la carne del némesis,
-        // haya ganado o no. Una venganza por némesis y partido; la cifra es provisional, sin medir.
-        deathGold += summary.Revenges.Count * _economy.RevengeGold;
+        // haya ganado o no. Una venganza por némesis y partido, y una deuda se cobra una vez (Paid); la cifra es
+        // provisional, sin medir.
+        for (int i = 0; i < summary.Revenges.Count; i++)
+        {
+            if (summary.Revenges[i].Paid)
+            {
+                deathGold += _economy.RevengeGold;
+            }
+        }
 
         if (!summary.Won)
         {
