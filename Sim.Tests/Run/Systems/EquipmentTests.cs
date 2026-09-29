@@ -24,7 +24,7 @@ public sealed class EquipmentTests
     }
 
     [Fact]
-    public void TransferToAPlayerWhoAlreadyHasAnItemSellsTheDisplacedOne()
+    public void TransferToAPlayerWhoAlreadyHasAnItemSendsTheDisplacedOneToTheWarehouseWithoutSellingIt()
     {
         var economy = SystemsTestSupport.Systems.Economy;
         var items = SystemsTestSupport.Systems.Items;
@@ -36,9 +36,9 @@ public sealed class EquipmentTests
         var next = EquipmentSystem.Apply(state, new TransferItem(from.Id, to.Id), economy, items);
 
         Assert.Equal("worn_boots", next.GetPlayer(to.Id).Item);
-        var displaced = items.Get("iron_gauntlets");
-        int expectedPrice = ItemPricing.SalePrice(displaced, items.Scale, economy.Market);
-        Assert.Equal(expectedPrice, next.Gold);
+        Assert.Null(next.GetPlayer(from.Id).Item);
+        Assert.Equal(0, next.Gold);
+        Assert.Equal(new[] { "iron_gauntlets" }, next.StoredItems);
     }
 
     [Fact]

@@ -25,6 +25,22 @@
 - Primitiva que falta para el plan de diversión: **provocar la turba** (necesita que la prórroga pueda
   empezar por un consumible; hoy sólo la abre el empate al final).
 
+## Anotado tras la revisión independiente (29 sep 2026), sin arreglar
+
+- **Los «gritos» del entrenador son multiplicadores de éxito invisibles.** `after_him`, `push_forward` y
+  `hold_the_line` usan sólo `modifyProbability`/`modifyAttribute` (catálogo BA-H): suben o bajan una cuota
+  que el jugador no ve, y **no cambian la conducta que su nombre promete** (nadie «se le echa encima» ni
+  «se queda atrás»; el equipo hace lo mismo con otra cuota). Es lo contrario de «comportamiento observable
+  > modificadores numéricos invisibles» (CLAUDE.md, Principios). La primitiva que sí cambia conducta es la
+  **orden táctica** (ADR 0154, `OrderChange`). **Propuesta, sin decidir:** que un grito sea un cambio
+  temporal de orden o de utilidad (p. ej. `hold_the_line` = orden defensiva durante N segundos), con el
+  mismo camino determinista que `OrderChange`. Requiere `game-design-review` y `architecture-review`.
+- **Vender la reliquia de un compañero es posible y no se ha discutido.** Una reliquia es un objeto más
+  (`TransferItem` con `ToPlayerId < 0` en un mercado abierto, o desde el cofre tras equiparla): su valor de
+  venta convierte la muerte de un jugador con historia en oro. La ADR 0161 la deja «fuera de mercado y
+  recompensas» pero no dice si es vendible. Vigilar `leftoverGoldShare` y decidir si se marca como no
+  vendible.
+
 ## Hermanos
 
 _(por enlazar donde se detecten; ver `README.md` del directorio)_

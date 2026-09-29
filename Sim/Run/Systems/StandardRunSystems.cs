@@ -248,15 +248,12 @@ public sealed class StandardRunSystems : IRunSystems
         state = EquipmentSystem.ProcessFragileItems(state, summary, _items);
         state = MercenarySystem.Process(state, summary, _economy);
 
-        // Reliquia por cada muerte propia (ADR 0161 §2): tampoco distingue victoria de derrota, por el
-        // mismo motivo que lo de arriba —un muerto lo es se haya ganado o no el partido en el que murió—.
-        state = ApplyRelics(state, summary);
-
-        // Herencia (paquete BB): traspasa atributos de un muerto a su vinculado ANTES de tocar el oro,
-        // porque cambia el estado de otro jugador de la plantilla, no una cifra. MatchResolution ya
-        // resolvió quién es el vinculado (geometría de la alineación inicial, RF-044); esto solo aplica el
-        // traspaso sobre el estado ya actualizado por el partido, con economy disponible.
-        state = InheritanceSystem.Apply(state, summary, _economy);
+        // Consecuencias de run de cada muerte propia (ADR 0161 §2 reliquia, paquete BB Herencia): las
+        // comparte con las muertes de fuera del partido (DeathConsequences). Tampoco distinguen victoria de
+        // derrota: un muerto lo es se haya ganado o no el partido en el que murió. La Herencia traspasa
+        // atributos de un muerto a su vinculado ANTES de tocar el oro, porque cambia el estado de otro
+        // jugador de la plantilla, no una cifra (MatchResolution ya resolvió quién es el vinculado).
+        state = DeathConsequences.ApplyRunConsequences(state, summary.DeathDetails, _economy, _items);
 
         // El oro de contador NO es premio de partido (ADR 0113): se cobra igual al perder, porque el
         // jugador ya lo pagó por adelantado gastando un slot en el perk. Es lo que separa una inversión de
@@ -267,7 +264,7 @@ public sealed class StandardRunSystems : IRunSystems
 
         // El oro de muerte (paquete BB, Seguro de vida) es el mismo canal que el de contador: se cobra se
         // gane o se pierda, porque el jugador ya pagó por adelantado el slot del perk.
-        int deathGold = GoldCalculator.DeathGold(state, summary, _economy).Total;
+        int deathGold = DeathConsequences.GoldFor(state, summary.DeathDetails, _economy);
 
         if (!summary.Won)
         {
@@ -314,40 +311,6 @@ public sealed class StandardRunSystems : IRunSystems
         return reward.Picks > 0 ? state.WithPendingNode(node.Id) : state;
     }
 
-    /// <summary>
-    /// Reliquia por cada muerte propia de este partido (ADR 0161 §2). Recorre
-    /// <see cref="RunMatchSummary.DeathDetails"/> en el orden del propio evento (ya determinista, RT-041)
-    /// y lee la carrera del muerto YA ACTUALIZADA con este partido: <c>MatchResolution.Apply</c> suma las
-    /// estadísticas del partido a <c>RunPlayer.Career</c> (su paso 3b) antes de devolver el estado con el
-    /// que <c>RunEngine</c> llama a <see cref="AfterMatch"/>, así que el último partido de un muerto cuenta
-    /// para elegir su reliquia. Sin tirada (<see cref="RelicSystem.Classify"/> es puro); si el catálogo no
-    /// tiene ninguna reliquia de esa clase (contenido incompleto, no debería pasar con <c>data/</c> en su
-    /// estado actual), esa muerte se queda sin reliquia en vez de lanzar: una reliquia que falta no puede
-    /// tirar la run entera.
-    /// </summary>
-    private RunState ApplyRelics(RunState state, RunMatchSummary summary)
-    {
-        var deaths = summary.DeathDetails;
-        if (deaths.Count == 0)
-        {
-            return state;
-        }
-
-        var next = state;
-        for (int i = 0; i < deaths.Count; i++)
-        {
-            var player = next.GetPlayer(deaths[i].PlayerId);
-            var kind = RelicSystem.Classify(player.Career);
-            var relic = _items.FindRelic(kind);
-            if (relic is not null)
-            {
-                next = next.WithStockedItem(relic.Id, 1);
-            }
-        }
-
-        return next;
-    }
-
     /// <inheritdoc />
     public RunState ApplyDecision(RunState state, RunDecision decision, Catalog catalog)
     {
@@ -360,7 +323,7 @@ public sealed class StandardRunSystems : IRunSystems
             BuyOffer buy => MarketSystem.Buy(state, buy, catalog, _economy, _items, _consumables),
             SellPlayer sell => MarketSystem.Sell(state, sell, _economy),
             HireMercenary hire => MarketSystem.Hire(state, hire, catalog, _economy, _items, _consumables),
-            TreatPlayer treat => MedicalSystem.Treat(state, treat, _economy, catalog),
+            TreatPlayer treat => MedicalSystem.Treat(state, treat, _economy, catalog, _items),
             TreatSquad => MedicalSystem.TreatSquad(state, _economy),
             ChooseEventOption choice => EventSystem.Choose(state, choice, _events, _items, _consumables, _economy, catalog),
             ChooseTrainingSession training => TrainingSystem.Choose(state, training, _economy, catalog),

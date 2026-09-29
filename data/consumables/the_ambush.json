@@ -16,6 +16,7 @@
     {
       "type": "modifyProbability",
       "probability": "severeInjury",
+      "target": "opposingTeam",
       "value": 200
     },
     {

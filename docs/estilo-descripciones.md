@@ -11,7 +11,7 @@ El jugador tiene que poder decidir, no auditar el código. Debe entender qué va
 | Bien | Mal | Por qué |
 |---|---|---|
 | "Mejora el pase hacia el compañero de su columna" | "+800 a `pass` sobre el objetivo `linked:ahead` durante `match`" | La segunda expone el modelo de datos |
-| "Multiplica por 1,5 sus opciones de causar una lesión grave" | "+2000 puntos base a `severeInjury`" | Puntos base sobre 10.000 no significan nada para nadie |
+| "Multiplica por 1,5 sus opciones de sufrir una lesión grave" | "+2000 puntos base a `severeInjury`" | Puntos base sobre 10.000 no significan nada para nadie |
 | "Sus entradas dejan al rival derribado más tiempo" | "+12 ticks al estado `KnockedDown` del objetivo" | Los ticks son una unidad interna |
 | "El primer pase de cada jugada no puede interceptarse" | "Anula el chequeo de intercepción si `passIndexInPlay == 0`" | La primera se puede ver ocurrir; la segunda hay que creérsela |
 

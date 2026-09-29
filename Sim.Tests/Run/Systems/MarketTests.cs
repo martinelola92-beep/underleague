@@ -31,6 +31,38 @@ public sealed class MarketTests
         Assert.Equal(first.Mercenaries.Select(m => m.Player.Rarity), second.Mercenaries.Select(m => m.Player.Rarity));
     }
 
+    /// <summary>
+    /// Revisión independiente de la ADR 0161: el sorteo uniforme sobre el catálogo ofrecía un legendario de
+    /// cada cinco consumibles (4 de 20). Con el peso por rareza (provisional, 60/30/12/3 por consumible) el
+    /// legendario es raro y el común es lo habitual.
+    /// </summary>
+    [Fact]
+    public void ConsumableOffersAreWeightedByRarityAndLegendariesAreRare()
+    {
+        var systems = SystemsTestSupport.Systems;
+        var state = RunEngine.Start(SystemsTestSupport.Setup(), 777UL, SystemsTestSupport.Catalog, systems);
+        int total = 0;
+        int legendary = 0;
+        int common = 0;
+        for (int id = 1000; id < 1400; id++)
+        {
+            var node = new MapNode(id, 2, 0, 0, NodeKind.Market, Array.Empty<int>(), string.Empty, 0);
+            var offers = MarketOfferGenerator.Generate(state, node, SystemsTestSupport.Catalog, systems.Economy, systems.Items, systems.Consumables);
+            foreach (var offer in offers.Consumables)
+            {
+                var rarity = systems.Consumables.Find(offer.ConsumableId)!.Rarity;
+                total++;
+                legendary += rarity == Rarity.Legendary ? 1 : 0;
+                common += rarity == Rarity.Common ? 1 : 0;
+            }
+        }
+
+        Assert.True(total >= 400);
+        Assert.True(legendary * 100 < total * 8, $"legendarios: {legendary} de {total} (uniforme daría ~20 %)");
+        Assert.True(legendary > 0, "el legendario tiene que poder salir");
+        Assert.True(common * 100 > total * 45, $"comunes: {common} de {total}");
+    }
+
     [Fact]
     public void OffersDifferForDifferentNodesOrSeeds()
     {

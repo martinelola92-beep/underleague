@@ -23,7 +23,7 @@ perks de su línea y cierra otra para el resto de la run).
 | — habilidades raciales (automáticas, no ocupan slot) | 5 |
 | — perks obtenibles | 105 |
 | — letales | 4 |
-| Objetos de equipamiento | 34 |
+| Objetos de equipamiento | 38 |
 | Consumibles | 20 |
 
 Distribución RF-069 (objetivo 60/30/10 ± 8): relleno 58 (52,7 %) · condicional 38 (34,5 %) · rompe-reglas 14 (12,7 %)
@@ -48,12 +48,12 @@ Cuatro líneas con un maestro cada una. El maestro exige llevar ya dos perks de 
 
 | Nombre | id | Rareza | Acto | Tipo | Requisitos | Qué hace |
 |---|---|---|---|---|---|---|
-| **Diezmo de sangre** ★ | `blood_tithe` | Raro | 2 | rompe-reglas | — | Al empezar el partido, el equipo multiplica por 2 sus opciones de lesionar y el equipo rival multiplica por 1,15 sus opciones de causar una lesión grave. Exige llevar ya 2 perks de La Carnicería. Cierra El Toque para el resto de la run. |
+| **Diezmo de sangre** ★ | `blood_tithe` | Raro | 2 | rompe-reglas | — | Al empezar el partido, el equipo multiplica por 2 sus opciones de lesionar y el equipo rival multiplica por 1,15 sus opciones de sufrir una lesión grave. Exige llevar ya 2 perks de La Carnicería. Cierra El Toque para el resto de la run. |
 | **Botas de bruto** | `brute_boots` | Común | 1 | relleno | — | Al empezar el partido, el portador +10 de fuerza durante el partido. |
 | **Nudillos marcados** | `bruised_knuckles` | Poco común | 1 | condicional | — | Al hacer falta, el jugador multiplica por 1,3 sus opciones de lesionar por cada falta (hasta 3 veces). |
 | **Tejido cicatricial** | `scar_tissue` | Poco común | 1 | relleno | — | En una lesión, el jugador multiplica por 1,3 sus opciones de lesionar por cada lesión (hasta 3 veces). |
 | **Tacos de hierro** ☠ | `iron_studs` | Raro | 3 | rompe-reglas | — | Al entrar, el rival divide por 2 su resistencia a las entradas. |
-| **Sed de médula** ☠ | `marrow_thirst` | Raro | 3 | rompe-reglas | etiqueta `Aggressive` | Al entrar, el portador multiplica por 3 sus opciones de lesionar y el equipo rival multiplica por 1,5 sus opciones de causar una lesión grave. |
+| **Sed de médula** ☠ | `marrow_thirst` | Raro | 3 | rompe-reglas | etiqueta `Aggressive` | Al entrar, el portador multiplica por 3 sus opciones de lesionar y el equipo rival multiplica por 1,5 sus opciones de sufrir una lesión grave. |
 
 ### El Toque (`craft`) — 7 perks
 
@@ -166,7 +166,7 @@ No cuentan para ningún maestro ni cierran nada.
 | **Instigador de la turba** | `mob_instigator` | Raro | 2 | rompe-reglas | — | Al hacer falta, anula la falta. |
 | **Aprender sobre la marcha** | `quick_study` | Raro | 2 | relleno | solo Humanos | Al completar un pase, el jugador multiplica por 1,5 sus opciones de pasar por cada pase (hasta 5 veces). |
 | **Veterano de cicatrices** | `scar_veteran` | Raro | 2 | relleno | — | Al empezar el partido, el portador +3 de fuerza por cada partido (máximo 10) durante el partido. |
-| **La segunda herida** ☠ | `second_wound` | Raro | 3 | rompe-reglas | — | En una lesión, el rival multiplica por 1,15 sus opciones de causar una lesión grave. |
+| **La segunda herida** ☠ | `second_wound` | Raro | 3 | rompe-reglas | — | En una lesión, el rival multiplica por 1,15 sus opciones de sufrir una lesión grave. |
 | **Sombra** | `shadow` | Raro | 2 | relleno | solo Midfielder | Al empezar el partido, el portador retrasa 1 casillas su casilla-hogar en el sentido de ataque de su equipo. |
 | **Lengua de plata** | `silver_tongue` | Raro | 1 | rompe-reglas | — | Al ver una tarjeta, anula la tarjeta. |
 | **Arrollador** | `steamroller` | Raro | 2 | condicional | — | Al recuperar el balón, el portador repite la jugada en el mismo instante. |
@@ -196,9 +196,9 @@ porque exige una segunda lesión sobre el mismo jugador y el marcador tiene que 
 
 | Nombre | id | Rareza | Acto | Canal / disparador | `lethalChance` base | Qué hace |
 |---|---|---|---|---|---|---|
-| **La segunda herida** | `second_wound` | Raro | 3 | INJURY | 9000 (90,0 %) | En una lesión, el rival multiplica por 1,15 sus opciones de causar una lesión grave. |
+| **La segunda herida** | `second_wound` | Raro | 3 | INJURY | 9000 (90,0 %) | En una lesión, el rival multiplica por 1,15 sus opciones de sufrir una lesión grave. |
 | **Partecráneos** | `skullsplitter` | Legendario | 3 | TACKLE | 1200 (12,0 %) | Al entrar, el equipo rival multiplica por 3 sus opciones de lesionarse. |
-| **Sed de médula** | `marrow_thirst` | Raro | 3 | TACKLE | 900 (9,0 %) | Al entrar, el portador multiplica por 3 sus opciones de lesionar y el equipo rival multiplica por 1,5 sus opciones de causar una lesión grave. |
+| **Sed de médula** | `marrow_thirst` | Raro | 3 | TACKLE | 900 (9,0 %) | Al entrar, el portador multiplica por 3 sus opciones de lesionar y el equipo rival multiplica por 1,5 sus opciones de sufrir una lesión grave. |
 | **Tacos de hierro** | `iron_studs` | Raro | 3 | TACKLE | 760 (7,6 %) | Al entrar, el rival divide por 2 su resistencia a las entradas. |
 
 ## Objetos de equipamiento
@@ -276,6 +276,17 @@ Sin rareza y sin contrapartida: la restricción **es** el coste. Cada uno abre l
 | **Amuleto del osario** | `ossuary_charm` | No-muertos | 2 | +10 fuerza, +10 resistencia, +10 correa | — |
 | **Tendones de podredumbre rápida** | `swiftrot_tendons` | No-muertos | 2 | +10 velocidad, +10 técnica, +10 correa | ABRE una build que los no-muertos no pueden permitirse: con velocidad -10 el contraataque les esta vedado y solo saben ganar por desgaste. Con los tendones pueden correr, que es la build contraria a la que su sesgo empuja. |
 
+### Reliquias — 4 objetos
+
+Las deja en el cofre un jugador propio al morir (ADR 0161 §2), según su carrera en la run. No se compran ni salen de recompensa.
+
+| Nombre | id | Clase | Rareza | Atributos | Nota |
+|---|---|---|---|---|---|
+| **Delantal del carnicero** | `relic_butcher` | butcher | Poco común | +10 fuerza, +10 correa | Reliquia del carnicero (ADR 0161 S2): la deja en el almacen quien muere habiendo causado lesiones de sobra en la run (RelicSystem.ButcherInjuriesThreshold, RunCareer.InjuriesCaused). Fuera de mercado y recompensas, igual que las otras tres (relic marca el objeto fuera de items.OfferableTo). Fuerza y… |
+| **Recuerdo del caído** | `relic_generic` | generic | Poco común | +10 resistencia, +10 técnica | Reliquia generica (ADR 0161 S2): la deja en el almacen quien muere sin destacar en ninguna de las tres carreras medidas (RelicSystem.Classify, caso por defecto). Fuera de mercado y recompensas, igual que las otras tres (relic marca el objeto fuera de items.OfferableTo). Resistencia y tecnica: lo uni… |
+| **Bota del rematador difunto** | `relic_scorer` | scorer | Poco común | +10 técnica, +10 velocidad | Reliquia del goleador (ADR 0161 S2): se la deja en el almacen quien muere habiendo metido goles de sobra en la run (RelicSystem.ScorerGoalsThreshold). No se compra ni se sortea (relic marca el objeto fuera de items.OfferableTo, ADR 0036/0161): el unico camino es una muerte propia. Tecnica y velocida… |
+| **Ladrillo del muro caído** | `relic_wall` | wall | Poco común | +10 resistencia, +10 fuerza | Reliquia del muro (ADR 0161 S2): la deja en el almacen quien muere habiendo ganado entradas de sobra en la run (RelicSystem.WallTacklesThreshold, RunCareer.TacklesWon). Fuera de mercado y recompensas, igual que las otras tres (relic marca el objeto fuera de items.OfferableTo). Resistencia y fuerza:… |
+
 ## Consumibles
 
 Un solo partido, se gastan al usarlos. El efecto **no tiene portador**: lo usa el entrenador y alcanza a
@@ -290,19 +301,19 @@ Un solo partido, se gastan al usarlos. El efecto **no tiene portador**: lo usa e
 | **Vendaje de campaña** | `field_bandage` | Común | médica | divide por 2 sus opciones de lesionarse |
 | **Bendición del dios olvidado** | `forgotten_gods_blessing` | Legendario | sobrenatural | multiplica por 4 sus opciones de tirar a puerta; multiplica por 4 sus opciones de parar |
 | **Pase fantasma** | `ghost_pass` | Raro | sobrenatural | multiplica por 4 sus opciones de resistir intercepciones |
-| **Milagro del sanador** | `healers_miracle` | Legendario | médica | divide por 6 sus opciones de lesionarse; divide por 6 sus opciones de causar una lesión grave |
+| **Milagro del sanador** | `healers_miracle` | Legendario | médica | divide por 6 sus opciones de lesionarse; divide por 6 sus opciones de sufrir una lesión grave |
 | **Tónico del curandero** | `healers_tonic` | Poco común | médica | +15 resistencia; divide por 2 sus opciones de lesionarse |
 | **¡Aguantad!** | `hold_the_line` | Poco común | táctica | divide por 2 sus opciones de hacer falta; divide por 2 sus opciones de lesionarse |
 | **Kit de golpe bajo** | `low_blow_kit` | Poco común | sucia | +12 fuerza; multiplica por 3 sus opciones de hacer falta |
 | **Amuleto de la suerte** | `lucky_charm` | Poco común | sobrenatural | multiplica por 2 sus opciones de tirar a puerta |
 | **Plan maestro** | `master_plan` | Legendario | táctica | +20 velocidad; multiplica por 4 sus opciones de pasar |
-| **Emplasto de barro** | `mud_poultice` | Común | médica | divide por 2 sus opciones de causar una lesión grave |
-| **Sangre de fénix** | `phoenix_blood` | Raro | médica | divide por 4 sus opciones de causar una lesión grave; +20 resistencia |
+| **Emplasto de barro** | `mud_poultice` | Común | médica | divide por 2 sus opciones de sufrir una lesión grave |
+| **Sangre de fénix** | `phoenix_blood` | Raro | médica | divide por 4 sus opciones de sufrir una lesión grave; +20 resistencia |
 | **Falta profesional** | `professional_foul` | Raro | sucia | multiplica por 4 sus opciones de robar el balón; multiplica por 4 sus opciones de hacer falta |
 | **¡Arriba!** | `push_forward` | Raro | táctica | multiplica por 3 sus opciones de pasar; multiplica por 2 sus opciones de regatear |
 | **Bengala de humo** | `smoke_flare` | Común | táctica | multiplica por 2 sus opciones de resistir entradas |
 | **Codazo disimulado** | `sneaky_elbow` | Poco común | sucia | multiplica por 3 sus opciones de lesionar; multiplica por 2 sus opciones de ver tarjeta |
-| **La encerrona** | `the_ambush` | Legendario | sucia | multiplica por 4 sus opciones de lesionar; multiplica por 3 sus opciones de causar una lesión grave; multiplica por 3 sus opciones de ver tarjeta |
+| **La encerrona** | `the_ambush` | Legendario | sucia | multiplica por 4 sus opciones de lesionar; multiplica por 3 las opciones de los rivales de sufrir una lesión grave; multiplica por 3 sus opciones de ver tarjeta |
 | **Escupitajo certero** | `well_aimed_spit` | Común | sucia | multiplica por 2 sus opciones de hacer falta; divide por 1,5 sus opciones de ver tarjeta |
 
 ## Cómo regenerar este documento

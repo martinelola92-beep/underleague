@@ -649,13 +649,7 @@ public static class RunLineup
             return definition;
         }
 
-        var tags = new List<string>(definition.Tags.Count);
-        for (int i = 0; i < definition.Tags.Count; i++)
-        {
-            tags.Add(string.Equals(definition.Tags[i], original.ToString(), StringComparison.Ordinal)
-                ? position.ToString()
-                : definition.Tags[i]);
-        }
+        var tags = WithPositionTag(definition.Tags, original, position);
 
         var perks = definition.Perks;
         for (int i = 0; i < definition.Perks.Count; i++)
@@ -680,6 +674,36 @@ public static class RunLineup
 
         return definition with { Position = position, Tags = tags, Perks = perks };
     }
+
+    /// <summary>
+    /// Las mismas etiquetas con la de la posición <paramref name="from"/> cambiada por la de
+    /// <paramref name="to"/> (la posición va en <c>Tags</c>, ADR 0024, <c>PlayerGenerator</c>). Lo comparten el
+    /// cambio de posición de un partido (<c>Repositioned</c>) y el cambio de puesto permanente del
+    /// entrenamiento (ADR 0160), para que las dos mantengan las etiquetas coherentes con la misma regla.
+    /// </summary>
+    internal static List<string> WithPositionTag(IReadOnlyList<string> tags, Position from, Position to)
+    {
+        var result = new List<string>(tags.Count);
+        for (int i = 0; i < tags.Count; i++)
+        {
+            result.Add(string.Equals(tags[i], from.ToString(), StringComparison.Ordinal) ? to.ToString() : tags[i]);
+        }
+
+        return result;
+    }
+
+    /// <summary>
+    /// Casillas naturales de una posición en el 2-3-1: 2 defensas, 3 centrocampistas, 1 delantero (el portero
+    /// tiene la suya, fija). Es lo que una política necesita para saber si un titular juega <b>fuera de su
+    /// posición natural</b> (más jugadores de una posición que casillas suyas).
+    /// </summary>
+    public static int NaturalSlots(Position position) => position switch
+    {
+        Position.Defender => DefenderCells.Length,
+        Position.Midfielder => MidfielderCells.Length,
+        Position.Forward => ForwardCells.Length,
+        _ => 1,
+    };
 
     private static bool Contains(IReadOnlyList<RunPlayer> players, int id)
     {

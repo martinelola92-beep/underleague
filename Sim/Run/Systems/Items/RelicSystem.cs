@@ -49,4 +49,17 @@ public static class RelicSystem
 
         return RelicKind.Generic;
     }
+
+    /// <summary>
+    /// La reliquia que ese jugador deja al morir, o null si no deja ninguna: un mercenario no es del club
+    /// (RF-111) y un catálogo sin reliquia de esa clase no lanza. Es la misma regla con la que
+    /// <c>DeathConsequences.ApplyRunConsequences</c> llena el almacén, y la usa el informe post-partido
+    /// para anunciarla.
+    /// </summary>
+    public static ItemDefinition? RelicFor(RunPlayer player, ItemCatalog items)
+    {
+        ArgumentNullException.ThrowIfNull(player);
+        ArgumentNullException.ThrowIfNull(items);
+        return player.IsMercenary ? null : items.FindRelic(Classify(player.Career));
+    }
 }

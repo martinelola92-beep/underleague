@@ -17,8 +17,9 @@ namespace Underleague.Sim.Run.Systems.Equipment;
 ///
 /// <para><b>Sin hueco de jugador vacío.</b> RF-076 exige que cada jugador lleve como mucho un objeto y
 /// <c>RunState</c> no tiene un "almacén" de objetos sin asignar (no hay forma de añadir uno sin tocar el
-/// esquema del paquete W). Así que asignar un objeto a alguien que ya lleva otro vende automáticamente el
-/// objeto desplazado a la fracción de mercado, en vez de destruirlo gratis o rechazar la operación.</para>
+/// esquema del paquete W). Desde la ADR 0161 sí lo hay (<c>StoredItems</c>): pasar o equipar un objeto a
+/// alguien que ya lleva otro manda el desplazado al almacén; sólo comprar (<c>AssignPurchasedItem</c>)
+/// vende el desplazado, y vender explícito sigue siendo <c>ToPlayerId &lt; 0</c>.</para>
 /// </summary>
 public static class EquipmentSystem
 {
@@ -63,7 +64,11 @@ public static class EquipmentSystem
         state = state.WithPlayer(ClearItem(from));
         state = state.WithPlayer(AssignItem(state.GetPlayer(to.Id), itemId));
 
-        return displaced is null ? state : SellItemGold(state, displaced, economy, items);
+
+        // ADR 0161 §3 (revisión independiente): pasar un objeto a quien ya lleva otro NO vende el suyo en
+        // silencio —el jugador sólo pidió mover, y el oro sólo debe entrar por un gesto de vender
+        // (ToPlayerId < 0)—: el desplazado vuelve al almacén, como al equipar desde el cofre.
+        return displaced is null ? state : state.WithStockedItem(displaced, 1);
     }
 
     /// <summary>
@@ -122,8 +127,8 @@ public static class EquipmentSystem
 
     /// <summary>
     /// Asigna un objeto recién adquirido (comprado en el mercado o elegido como recompensa) a un
-    /// jugador. Si ya lleva otro, el desplazado se vende automáticamente a la fracción de mercado, igual
-    /// que una transferencia (RF-114e extendido a objetos, mismo criterio que <see cref="Apply"/>).
+    /// jugador. Si ya lleva otro, el desplazado se vende automáticamente a la fracción de mercado (RF-114e
+    /// extendido a objetos): aquí el que entra se ha comprado o elegido, no es un simple movimiento.
     /// </summary>
     public static RunState AssignPurchasedItem(RunState state, int playerId, string itemId, EconomyConfig economy, ItemCatalog items)
     {
@@ -149,7 +154,7 @@ public static class EquipmentSystem
     /// almacén</b> (ADR 0161 §3: "un objeto equipado que se sustituye vuelve al cofre, nunca desaparece"),
     /// a diferencia de <see cref="AssignPurchasedItem"/> —esa sí vende el desplazado, porque ahí el que
     /// entra se ha COMPRADO— y de <see cref="Apply(RunState, TransferItem, EconomyConfig, ItemCatalog)"/>,
-    /// que no puede desplazar nada porque exige receptor sin objeto. Se puede hacer en cualquier nodo,
+    /// que si el receptor ya lleva otro también lo manda al almacén, y no lo vende. Se puede hacer en cualquier nodo,
     /// igual que transferir: hacer sitio o rehacer una build no puede depender de estar en un mercado.
     /// </summary>
     public static RunState Apply(RunState state, EquipStoredItem decision, ItemCatalog items)

@@ -516,7 +516,7 @@ internal sealed class EffectEngine : IPerkLinks
     ///
     /// <para>El efecto de un consumible <b>no tiene portador</b>: lo usa el entrenador y alcanza a todos
     /// los jugadores de su equipo que estén en el campo en ese instante, hasta el final del partido. El
-    /// campo <c>target</c> del efecto se ignora por eso.</para>
+    /// campo <c>target</c> sólo distingue el equipo propio (por defecto) del rival (<c>opposingTeam</c>).</para>
     /// </summary>
     public void ResolveConsumables()
     {
@@ -529,11 +529,22 @@ internal sealed class EffectEngine : IPerkLinks
             }
 
             slot.Used = true;
+            var effects = slot.Consumable.Effects;
             for (int p = 0; p < _players.Length; p++)
             {
-                if (_players[p].Team == slot.Team && _players[p].OnPitch)
+                if (!_players[p].OnPitch)
                 {
-                    ApplyPassiveEffects(_players[p], slot.Consumable.Effects);
+                    continue;
+                }
+
+                bool own = _players[p].Team == slot.Team;
+                for (int e = 0; e < effects.Count; e++)
+                {
+                    // Sin target el efecto es del equipo propio; con opposingTeam, de los rivales en el campo.
+                    if (own != (effects[e].Target == EffectTarget.OpposingTeam))
+                    {
+                        ApplyPassiveEffect(_players[p], effects[e]);
+                    }
                 }
             }
 

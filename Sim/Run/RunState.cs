@@ -599,6 +599,17 @@ public sealed record RunState
     /// <summary>Objetos recuperados de un muerto en toda la run, para el informe y para /Balance.</summary>
     public const string ItemsRecoveredCounter = "itemsRecovered";
 
+    /// <summary>
+    /// Marca de "el nodo abierto ya se resolvió" (ADR 0159, ADR 0160, revisión independiente): vale el id
+    /// del nodo <b>más uno</b> (0 = ninguno) mientras el nodo de evento o de entrenamiento abierto ya tuvo
+    /// su elección. Esos dos nodos se resuelven <b>una sola vez</b>: sin la marca, <c>ChooseEventOption</c>
+    /// y <c>ChooseTrainingSession</c> se podían repetir hasta salir con <c>LeaveNode</c> (tres pachangas
+    /// seguidas = 3x40 de experiencia). Vive en <see cref="Counters"/> por el mismo motivo que los demás
+    /// (sin subir la versión del guardado) y <c>RunEngine.Apply(LeaveNode)</c> la borra al cerrar. La clínica,
+    /// el mercado y la inscripción no la usan: cobran cada servicio, así que repetir es legítimo.
+    /// </summary>
+    public const string NodeResolvedCounter = "nodeResolved";
+
     /// <summary>Copias sueltas de ese objeto en el almacén.</summary>
     public int StockOf(string itemId)
     {

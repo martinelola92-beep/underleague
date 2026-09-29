@@ -188,7 +188,7 @@ for arch, title, extra in (
     ('fragile', 'Frágiles', 'Baratos y frecuentes, pero se rompen.'),
     ('restricted', 'Restringidos por raza', 'Sin rareza y sin contrapartida: la restricción **es** el coste. Cada uno abre la build que el sesgo racial le niega a esa raza.'),
 ):
-    grp = [d for d in items if d['archetype'] == arch]
+    grp = [d for d in items if d['archetype'] == arch and not d.get('relic')]
     grp.sort(key=lambda d: (d.get('race') or '', ['common','uncommon','rare','legendary'].index(d['rarity']) if d.get('rarity') else 0, d['id']))
     w(f'### {title} — {len(grp)} objetos\n\n')
     if extra:
@@ -207,6 +207,15 @@ for arch, title, extra in (
             w(f"| **{d['name']['es']}** | `{d['id']}` | {RAR[d['rarity']]} | {d['minAct']} | {bonus_str(d)} | {note(d)} |\n")
     w('\n')
 
+# --- Reliquias (ADR 0161 §2): fuera de mercado y de recompensas, las deja un muerto propio ---
+relics = [d for d in items if d.get('relic')]
+w(f'### Reliquias — {len(relics)} objetos\n\n')
+w('Las deja en el cofre un jugador propio al morir (ADR 0161 §2), según su carrera en la run. No se compran ni salen de recompensa.\n\n')
+w('| Nombre | id | Clase | Rareza | Atributos | Nota |\n|---|---|---|---|---|---|\n')
+for d in sorted(relics, key=lambda d: d['id']):
+    w(f"| **{d['name']['es']}** | `{d['id']}` | {d['relic']} | {RAR[d['rarity']]} | {bonus_str(d)} | {note(d)} |\n")
+w('\n')
+
 # --- Consumibles ---
 w("""## Consumibles
 
@@ -217,7 +226,7 @@ Un solo partido, se gastan al usarlos. El efecto **no tiene portador**: lo usa e
 """)
 w('| Nombre | id | Rareza | Familia | Efecto |\n|---|---|---|---|---|\n')
 PROB = {
-    'injure': 'lesionar', 'injury': 'lesionarse', 'severeInjury': 'causar una lesión grave',
+    'injure': 'lesionar', 'injury': 'lesionarse', 'severeInjury': 'sufrir una lesión grave',
     'foul': 'hacer falta', 'card': 'ver tarjeta', 'pass': 'pasar', 'intercept': 'interceptar',
     'dribble': 'regatear', 'tackle': 'robar el balón', 'shotOnTarget': 'tirar a puerta',
     'save': 'parar', 'tackleEvasion': 'resistir entradas', 'interceptEvasion': 'resistir intercepciones',
@@ -232,7 +241,8 @@ for d in sorted(cons, key=lambda d: d['id']):
             v = e['value']
             k = 1 + abs(v) / 100
             verbo = 'multiplica' if v > 0 else 'divide'
-            eff.append(f"{verbo} por {str(k).replace('.', ',').rstrip(',0') if k % 1 else int(k)} sus opciones de {PROB.get(e['probability'], e['probability'])}")
+            quien = 'las opciones de los rivales de' if e.get('target') == 'opposingTeam' else 'sus opciones de'
+            eff.append(f"{verbo} por {str(k).replace('.', ',').rstrip(',0') if k % 1 else int(k)} {quien} {PROB.get(e['probability'], e['probability'])}")
     w(f"| **{d['name']['es']}** | `{d['id']}` | {RAR[d['rarity']]} | {FAMC.get(d['family'], d['family'])} | {'; '.join(eff)} |\n")
 w('\n')
 

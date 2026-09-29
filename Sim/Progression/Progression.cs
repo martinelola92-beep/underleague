@@ -295,24 +295,32 @@ public static class Progression
 
     /// <summary>
     /// Experiencia mínima para alcanzar <paramref name="level"/> (el mismo umbral que usa
-    /// <see cref="LevelFor"/> en sentido inverso); 0 para el nivel 1. <see cref="LevelDown"/> no toca la
-    /// experiencia del jugador -solo el nivel y los atributos-, así que quien lo llama tiene que acotar la
-    /// experiencia por debajo de <c>MinExperienceForLevel(nivelViejo)</c> o la próxima vez que
-    /// <see cref="LevelFor"/> la lea el jugador "sube" solo, deshaciendo la pérdida (Regla I).
+    /// <see cref="LevelFor"/> en sentido inverso: la entrada <c>level-1</c> de la tabla acumulada, que es la
+    /// experiencia mínima del nivel <c>level</c>); 0 para el nivel 1. Arreglo de la revisión independiente
+    /// (29 sep 2026): antes leía la entrada <c>level-2</c>, un nivel por debajo de lo que dice
+    /// <see cref="LevelFor"/>. <see cref="LevelDown"/> no toca la experiencia del jugador -solo el nivel y los
+    /// atributos-, así que quien pierde niveles tiene que acotarla con <see cref="ExperienceAfterLevelLoss"/>
+    /// o la próxima vez que <see cref="LevelFor"/> la lea el jugador "sube" solo, deshaciendo la pérdida
+    /// (Regla I).
     /// </summary>
     public static int MinExperienceForLevel(int level, ProgressionTuning tuning)
     {
         ArgumentNullException.ThrowIfNull(tuning);
         int clamped = Math.Clamp(level, 1, MaxLevel);
-        if (clamped < 2)
-        {
-            return 0;
-        }
-
         var table = tuning.ExperiencePerLevel;
-        int index = clamped - 2;
+        int index = clamped - 1;
         return index < table.Count ? table[index] : (table.Count > 0 ? table[^1] : 0);
     }
+
+    /// <summary>
+    /// Experiencia con la que queda un jugador que acaba de <b>perder niveles</b> y está ahora en
+    /// <paramref name="newLevel"/>: como mucho la mínima de ese nivel (se pierde el progreso que llevara
+    /// hacia el siguiente). Con eso <see cref="LevelFor"/> devuelve <paramref name="newLevel"/> y la
+    /// próxima experiencia ganada no deshace la pérdida (Regla I); no sube nunca la que ya tuviera por
+    /// debajo.
+    /// </summary>
+    public static int ExperienceAfterLevelLoss(int experience, int newLevel, ProgressionTuning tuning) =>
+        Math.Min(experience, MinExperienceForLevel(newLevel, tuning));
 
     /// <summary>
     /// Suma al jugador los contadores que los perks acumulativos ganaron en un partido (RF-070, §6).

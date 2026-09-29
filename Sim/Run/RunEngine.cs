@@ -588,6 +588,13 @@ public static class RunEngine
         var node = state.GetNode(state.PendingNodeId);
         var next = state.WithPendingNode(-1);
 
+        // La marca de "ya elegido" (evento, entrenamiento) es del nodo abierto: se va con él, para que un
+        // nodo del mismo id en otro acto no herede una elección que no ha hecho (RunState.NodeResolvedCounter).
+        if (next.Counter(RunState.NodeResolvedCounter) != 0)
+        {
+            next = next.WithCounter(RunState.NodeResolvedCounter, 0);
+        }
+
         // Un nodo de partido con recompensas pendientes ya se anotó al resolverse: no se anota dos veces.
         if (!node.IsMatch)
         {

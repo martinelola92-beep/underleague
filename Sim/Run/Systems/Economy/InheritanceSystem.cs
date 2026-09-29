@@ -20,20 +20,30 @@ public static class InheritanceSystem
     /// <summary>Aplica los traspasos de todas las muertes de este partido; no hace nada si no hay ninguno.</summary>
     public static RunState Apply(RunState state, RunMatchSummary summary, EconomyConfig economy)
     {
-        ArgumentNullException.ThrowIfNull(state);
         ArgumentNullException.ThrowIfNull(summary);
+        return Apply(state, summary.DeathDetails, economy);
+    }
+
+    /// <summary>
+    /// Igual, sobre una lista de muertes suelta: la comparten la muerte de partido y las de fuera de él
+    /// (sacrificio, matasanos; <see cref="DeathConsequences"/>).
+    /// </summary>
+    public static RunState Apply(RunState state, IReadOnlyList<PlayerDeathDetail> deaths, EconomyConfig economy)
+    {
+        ArgumentNullException.ThrowIfNull(state);
+        ArgumentNullException.ThrowIfNull(deaths);
         ArgumentNullException.ThrowIfNull(economy);
 
-        if (summary.DeathDetails.Count == 0 || economy.Inheritance.Count == 0)
+        if (deaths.Count == 0 || economy.Inheritance.Count == 0)
         {
             return state;
         }
 
         var roster = new List<RunPlayer>(state.Roster);
         bool changed = false;
-        for (int i = 0; i < summary.DeathDetails.Count; i++)
+        for (int i = 0; i < deaths.Count; i++)
         {
-            var detail = summary.DeathDetails[i];
+            var detail = deaths[i];
             if (detail.LinkedPlayerId < 0)
             {
                 continue;

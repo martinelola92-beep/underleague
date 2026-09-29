@@ -204,7 +204,19 @@ public static class GoldCalculator
         ArgumentNullException.ThrowIfNull(state);
         ArgumentNullException.ThrowIfNull(summary);
         ArgumentNullException.ThrowIfNull(economy);
-        var rows = DeathGoldRows(state, summary, economy.DeathGold);
+        return DeathGold(state, summary.DeathDetails, economy);
+    }
+
+    /// <summary>
+    /// Igual que la sobrecarga de partido, pero sobre una lista de muertes suelta: es lo que comparten la
+    /// muerte de partido y las muertes de fuera del partido (sacrificio, matasanos: <c>DeathConsequences</c>).
+    /// </summary>
+    public static DeathGold DeathGold(RunState state, IReadOnlyList<PlayerDeathDetail> deaths, EconomyConfig economy)
+    {
+        ArgumentNullException.ThrowIfNull(state);
+        ArgumentNullException.ThrowIfNull(deaths);
+        ArgumentNullException.ThrowIfNull(economy);
+        var rows = DeathGoldRows(state, deaths, economy.DeathGold);
         return new DeathGold(rows, SumDeathGold(rows));
     }
 
@@ -218,9 +230,8 @@ public static class GoldCalculator
     /// orden ya ordinal de <see cref="Model.RunPlayer.Perks"/>).
     /// </summary>
     private static IReadOnlyList<DeathGoldRow> DeathGoldRows(
-        RunState state, RunMatchSummary summary, DeathGoldTable rates)
+        RunState state, IReadOnlyList<PlayerDeathDetail> details, DeathGoldTable rates)
     {
-        var details = summary.DeathDetails;
         if (details.Count == 0 || rates.Count == 0)
         {
             return Array.Empty<DeathGoldRow>();

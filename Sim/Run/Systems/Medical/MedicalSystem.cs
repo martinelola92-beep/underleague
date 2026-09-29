@@ -3,6 +3,7 @@ using Underleague.Sim.Model;
 using Underleague.Sim.Perks;
 using Underleague.Sim.Random;
 using Underleague.Sim.Run.Systems.Economy;
+using Underleague.Sim.Run.Systems.Items;
 using ProgressionRules = Underleague.Sim.Progression.Progression;
 
 namespace Underleague.Sim.Run.Systems.Medical;
@@ -38,7 +39,7 @@ public static class MedicalSystem
     /// factura. La grave nunca se exime: el perk dice que se cura solo lo que a los demás les cuesta
     /// dinero, no que sea invulnerable.
     /// </summary>
-    public static RunState Treat(RunState state, TreatPlayer decision, EconomyConfig economy, Catalog? catalog)
+    public static RunState Treat(RunState state, TreatPlayer decision, EconomyConfig economy, Catalog? catalog, ItemCatalog? items = null)
     {
         ArgumentNullException.ThrowIfNull(state);
         ArgumentNullException.ThrowIfNull(decision);
@@ -89,7 +90,13 @@ public static class MedicalSystem
         state = state.WithCounter(rolls, done + 1);
         if (roll < economy.ClinicRiskyWorsePercent)
         {
-            return state.WithPlayer(Worse(player));
+            // Grave -> muerto: no es un `PhysicalState = Dead` a secas. La muerte del matasanos tiene las
+            // mismas consecuencias de run que la de partido (objeto al almacén, reliquia, Herencia, oro
+            // de muerte: DeathConsequences), que es lo que la ADR 0048 (condición 4) exige de cualquier
+            // muerte y que aquí se saltaba.
+            return player.PhysicalState == PhysicalState.SevereInjury
+                ? DeathConsequences.Kill(state, player.Id, catalog, economy, items)
+                : state.WithPlayer(Worse(player));
         }
 
         return roll < economy.ClinicRiskyWorsePercent + economy.ClinicRiskyFailPercent

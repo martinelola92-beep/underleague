@@ -54,3 +54,21 @@ derivadas del nodo (flujo de recompensas, no se guardan):
 10. **Cómo se demuestra.** Tests: la carta es estable (W-12), la pachanga equivale al entrenamiento de antes,
     la especialización persiste tras una subida de nivel, el cambio de puesto quita un nivel y no toca
     porteros. Lote de campaña con la política eligiendo.
+
+## Revisión independiente (29 sep 2026)
+
+**Corregido:**
+- **Una sesión se elige una vez**: antes tres pachangas seguidas daban 3×40 de experiencia y diez
+  especializaciones llevaban un atributo a 99. Elegir marca el nodo resuelto y una segunda elección lanza.
+- **Cambio de puesto**: mantiene las etiquetas coherentes con la posición (como `RunLineup.Repositioned`),
+  no ofrece la posición actual, no deja cambiar a una posición donde un perk del jugador no vale, no
+  admite jugadores de nivel 1 y cuesta un nivel de verdad (`LevelLoss`, arreglado el desplazamiento de
+  `Progression.MinExperienceForLevel`).
+- **Especialización**: fuerza, velocidad, técnica y resistencia, sin la correa (disciplina, no nivel,
+  RF-027); nadie ya en 99 es candidato; reparto de atributos por nodo sin el sesgo anterior.
+- **Política**: pachanga y especialización se comparan en puntos de atributo equivalentes, con un factor de
+  concentración provisional; el cambio de puesto se usa en uno de cada N nodos si alguien juega fuera de su
+  posición. Antes siempre especializaba.
+
+**Anotado sin corregir:** la cifra +8 y el factor de concentración siguen provisionales, sin lote de
+campaña.

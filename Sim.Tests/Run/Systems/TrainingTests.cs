@@ -1,6 +1,7 @@
 using Underleague.Sim.Data;
 using Underleague.Sim.Model;
 using Underleague.Sim.Run;
+using Underleague.Sim.Run.View;
 using Underleague.Sim.Run.Systems.Nodes;
 using ProgressionRules = Underleague.Sim.Progression.Progression;
 
@@ -63,22 +64,40 @@ public sealed class TrainingTests
         }
     }
 
-    /// <summary>La pachanga (sesión 0) es byte a byte el mismo cambio que el entrenamiento de antes de la ADR.</summary>
+    /// <summary>
+    /// La pachanga (sesión 0) es el entrenamiento de antes de la ADR, contado a mano (Regla J: comparar la
+    /// función consigo misma no prueba nada): +40 de experiencia a cada disponible, +33 % a los canteranos
+    /// (40 * 133 / 100 = 53), y nada a quien está lesionado de gravedad o muerto.
+    /// </summary>
     [Fact]
-    public void ScrimmageEqualsThePreviousTraining()
+    public void ScrimmageGivesFortyExperienceToEachAvailablePlayerAndAThirdMoreToYouths()
     {
-        var (state, node) = AtATrainingNode(9001UL);
+        var (state, _) = AtATrainingNode(9001UL);
         var economy = SystemsTestSupport.Systems.Economy;
+        Assert.Equal(40, economy.TrainingExperience);
+        Assert.Equal(33, RunRules.YouthExperienceBonusPercent);
 
-        var viaTraining = TrainingSystem.Choose(state, new ChooseTrainingSession(0), economy, Catalog);
-        var viaOldPath = ServiceNodeSystem.Training(state, economy, Catalog);
+        var roster = state.Roster.ToList();
+        roster[0] = roster[0] with { IsYouth = true, Experience = 7 };
+        roster[1] = roster[1] with { PhysicalState = PhysicalState.SevereInjury, Experience = 11 };
+        roster[2] = roster[2] with { PhysicalState = PhysicalState.MinorInjury, Experience = 13 };
+        roster[3] = roster[3] with { PhysicalState = PhysicalState.Dead, Experience = 17 };
+        state = state.WithRoster(roster);
 
-        Assert.Equal(viaOldPath.Roster.Count, viaTraining.Roster.Count);
-        for (int i = 0; i < viaOldPath.Roster.Count; i++)
+        var after = TrainingSystem.Choose(state, new ChooseTrainingSession(0), economy, Catalog);
+
+        Assert.Equal(state.Roster.Count, after.Roster.Count);
+        for (int i = 0; i < state.Roster.Count; i++)
         {
-            Assert.Equal(viaOldPath.Roster[i].Experience, viaTraining.Roster[i].Experience);
-            Assert.Equal(viaOldPath.Roster[i].Level, viaTraining.Roster[i].Level);
-            Assert.Equal(viaOldPath.Roster[i].Attributes, viaTraining.Roster[i].Attributes);
+            var before = state.Roster[i];
+            int expected = before.Experience;
+            if (before.IsAvailable)
+            {
+                expected += before.IsYouth ? 53 : 40;
+            }
+
+            Assert.Equal(expected, after.Roster[i].Experience);
+            Assert.Equal(ProgressionRules.LevelFor(expected, Catalog.Progression), before.IsAvailable ? after.Roster[i].Level : before.Level);
         }
     }
 
@@ -132,20 +151,176 @@ public sealed class TrainingTests
             leveled.Attributes.Get(attribute));
     }
 
-    /// <summary>El cambio de puesto cuesta exactamente un nivel, con su pérdida de atributos, y cambia la posición.</summary>
+    /// <summary>
+    /// El cambio de puesto cuesta exactamente un nivel, con su pérdida de atributos, deja la experiencia en
+    /// el mínimo del nivel nuevo (o el jugador «sube» solo la próxima vez, Regla I), cambia la posición y
+    /// mantiene las etiquetas coherentes con ella. Se parte de un nivel 4: con un jugador de nivel 1 (los de
+    /// una run recién empezada) la comparación de niveles sería 1 == 1 y no probaría nada.
+    /// </summary>
     [Fact]
     public void RepositionCostsALevelAndChangesPosition()
     {
         var (state, index) = AtATrainingNodeWithReposition(9100UL);
-        var target = state.Roster.First(p => p.IsAvailable && p.Position != Position.Goalkeeper);
+        var tuning = Catalog.Progression;
+        var target = state.Roster.First(p => p.IsAvailable && p.Position != Position.Goalkeeper) with
+        {
+            Level = 4,
+            Experience = ProgressionRules.MinExperienceForLevel(4, tuning) + 25,
+            Attributes = new Attributes(60, 61, 62, 63, 40),
+            Perks = Array.Empty<string>(),
+        };
+        state = state.WithPlayer(target);
         var destination = target.Position == Position.Defender ? Position.Midfielder : Position.Defender;
+        Assert.Contains(target.Position.ToString(), target.Tags);
 
         var after = TrainingSystem.Choose(
             state, new ChooseTrainingSession(index, target.Id, destination), SystemsTestSupport.Systems.Economy, Catalog);
         var updated = after.GetPlayer(target.Id);
 
+        int perLevel = tuning.AttributesPerLevel;
         Assert.Equal(destination, updated.Position);
-        Assert.Equal(Math.Max(1, target.Level - 1), updated.Level);
+        Assert.Equal(3, updated.Level);
+        Assert.Equal(ProgressionRules.MinExperienceForLevel(3, tuning), updated.Experience);
+        Assert.Equal(3, ProgressionRules.LevelFor(updated.Experience, tuning));
+        Assert.Equal(new Attributes(60 - perLevel, 61 - perLevel, 62 - perLevel, 63 - perLevel, 40), updated.Attributes);
+
+        // Etiquetas coherentes con la posición nueva (ADR 0024): la vieja sale, la nueva entra, y el resto se queda.
+        Assert.Contains(destination.ToString(), updated.Tags);
+        Assert.DoesNotContain(target.Position.ToString(), updated.Tags);
+        Assert.Equal(target.Tags.Count, updated.Tags.Count);
+        Assert.Equal(
+            target.Tags.Where(t => t != target.Position.ToString()).OrderBy(t => t, StringComparer.Ordinal),
+            updated.Tags.Where(t => t != destination.ToString()).OrderBy(t => t, StringComparer.Ordinal));
+
+        // Nadie más se toca.
+        foreach (var other in state.Roster.Where(p => p.Id != target.Id))
+        {
+            Assert.Equal(other, after.GetPlayer(other.Id));
+        }
+    }
+
+    /// <summary>Tras un cambio de puesto la run sigue jugando: el partido siguiente se resuelve sin excepción.</summary>
+    [Fact]
+    public void AMatchCanBePlayedAfterARepositionOfAStarter()
+    {
+        var (state, index) = AtATrainingNodeWithReposition(9101UL);
+        var starters = state.Lineup.Slots.Select(s => s.PlayerId).ToHashSet();
+        var target = state.Roster.First(p => p.IsAvailable && p.Position != Position.Goalkeeper && starters.Contains(p.Id));
+        state = state.WithPlayer(target with { Level = 3, Experience = ProgressionRules.MinExperienceForLevel(3, Catalog.Progression) });
+
+        // Un destino que ningún perk suyo bloquee.
+        var destination = TrainingSystem.FieldPositions.First(
+            p => p != target.Position && TrainingSystem.BlockingPerk(state.GetPlayer(target.Id), p, Catalog) is null);
+        var moved = TrainingSystem.Choose(
+            state, new ChooseTrainingSession(index, target.Id, destination), SystemsTestSupport.Systems.Economy, Catalog);
+        Assert.Equal(destination, moved.GetPlayer(target.Id).Position);
+
+        var left = RunEngine.Apply(moved, new LeaveNode(), Catalog, SystemsTestSupport.Systems);
+        var played = SystemsTestSupport.PlayNextMatch(left);
+
+        Assert.True(played.NodeHistory.Count > left.NodeHistory.Count, "el partido se jugó y quedó en el historial");
+        Assert.Equal(destination, played.GetPlayer(target.Id).Position);
+    }
+
+    /// <summary>Nadie en 99 de ese atributo es candidato a la especialización: ni en la regla, ni en la elección, ni en la vista.</summary>
+    [Fact]
+    public void NobodyAtNinetyNineIsACandidateForSpecialization()
+    {
+        var (state, node) = AtATrainingNode(9004UL);
+        var card = TrainingSystem.Card(node);
+        int index = Array.FindIndex(card.Sessions.ToArray(), s => s.Kind == TrainingSessionKind.Specialization);
+        var attribute = card.Sessions[index].Attribute;
+        var economy = SystemsTestSupport.Systems.Economy;
+        var capped = state.Roster.First(p => p.IsAvailable);
+        var almost = state.Roster.First(p => p.IsAvailable && p.Id != capped.Id);
+        state = state
+            .WithPlayer(capped with { Attributes = capped.Attributes.With(attribute, 99) })
+            .WithPlayer(almost with { Attributes = almost.Attributes.With(attribute, 97) });
+
+        Assert.False(TrainingSystem.CanSpecialize(state.GetPlayer(capped.Id), attribute));
+        Assert.True(TrainingSystem.CanSpecialize(state.GetPlayer(almost.Id), attribute));
+        Assert.Throws<ArgumentException>(() => TrainingSystem.Choose(state, new ChooseTrainingSession(index, capped.Id), economy, Catalog));
+
+        var row = TrainingView.Build(state, Catalog, economy, "es")!.Sessions[index];
+        Assert.DoesNotContain(row.Targets, t => t.PlayerId == capped.Id);
+        Assert.Contains(row.Targets, t => t.PlayerId == almost.Id);
+
+        // Con +8 a 97 se topa en 99, no se pasa.
+        var after = TrainingSystem.Choose(state, new ChooseTrainingSession(index, almost.Id), economy, Catalog);
+        Assert.Equal(99, after.GetPlayer(almost.Id).Attributes.Get(attribute));
+
+        // Y si todos los disponibles están en 99, la sesión deja de estar disponible.
+        var everyone = state.WithRoster(state.Roster.Select(p => p with { Attributes = p.Attributes.With(attribute, 99) }));
+        Assert.False(TrainingView.Build(everyone, Catalog, economy, "es")!.Sessions[index].Available);
+    }
+
+    /// <summary>
+    /// Regla I: perder un nivel por el cambio de puesto y ganar después menos experiencia de la que falta para
+    /// el umbral no devuelve el nivel; con lo justo, sí. La pachanga da 40 y de 3 a 4 faltan 200, así que se
+    /// comprueba con cinco pachangas (200 - 40 = 160 < 200) y con la sexta cruza.
+    /// </summary>
+    [Fact]
+    public void ALostLevelIsNotRecoveredByGainingLessExperienceThanTheThresholdNeeds()
+    {
+        var (state, index) = AtATrainingNodeWithReposition(9102UL);
+        var tuning = Catalog.Progression;
+        var economy = SystemsTestSupport.Systems.Economy;
+        var target = state.Roster.First(p => p.IsAvailable && p.Position != Position.Goalkeeper) with
+        {
+            Level = 4,
+            Experience = ProgressionRules.MinExperienceForLevel(4, tuning) + 30,
+            Perks = Array.Empty<string>(),
+        };
+        state = state.WithPlayer(target);
+        var destination = target.Position == Position.Defender ? Position.Midfielder : Position.Defender;
+        var lost = TrainingSystem.Choose(state, new ChooseTrainingSession(index, target.Id, destination), economy, Catalog)
+            .GetPlayer(target.Id);
+        Assert.Equal(3, lost.Level);
+
+        int threshold = ProgressionRules.MinExperienceForLevel(4, tuning);
+        int missing = threshold - lost.Experience;
+        int scrimmage = economy.TrainingExperience;
+        Assert.True(missing > scrimmage, "instrumento: una pachanga sola no cubre lo que falta");
+
+        // Se aplica el entrenamiento de pachanga directamente (un nodo sólo se elige una vez).
+        var current = lost;
+        var running = state.WithPlayer(lost);
+        while (current.Experience + scrimmage < threshold)
+        {
+            running = ServiceNodeSystem.Training(running, economy, Catalog);
+            current = running.GetPlayer(target.Id);
+            Assert.Equal(3, current.Level);
+            Assert.Equal(3, ProgressionRules.LevelFor(current.Experience, tuning));
+        }
+
+        running = ServiceNodeSystem.Training(running, economy, Catalog);
+        Assert.Equal(4, running.GetPlayer(target.Id).Level);
+    }
+
+    /// <summary>Elegir dos veces lanza (antes tres pachangas seguidas daban 3 x 40), y la vista queda resuelta con nada pulsable.</summary>
+    [Fact]
+    public void ChoosingTwiceThrowsAndTheViewShowsItResolvedWithNothingAvailable()
+    {
+        var (state, node) = AtATrainingNode(9005UL);
+        var economy = SystemsTestSupport.Systems.Economy;
+        var card = TrainingSystem.Card(node);
+        int specialization = Array.FindIndex(card.Sessions.ToArray(), s => s.Kind == TrainingSessionKind.Specialization);
+        var target = state.Roster.First(p => p.IsAvailable);
+
+        var before = TrainingView.Build(state, Catalog, economy, "es")!;
+        Assert.False(before.Resolved);
+        Assert.Contains(before.Sessions, s => s.Available);
+
+        var once = TrainingSystem.Choose(state, new ChooseTrainingSession(0), economy, Catalog);
+
+        Assert.Throws<InvalidOperationException>(() => TrainingSystem.Choose(once, new ChooseTrainingSession(0), economy, Catalog));
+        Assert.Throws<InvalidOperationException>(
+            () => TrainingSystem.Choose(once, new ChooseTrainingSession(specialization, target.Id), economy, Catalog));
+
+        var view = TrainingView.Build(once, Catalog, economy, "es")!;
+        Assert.True(view.Resolved);
+        Assert.All(view.Sessions, s => Assert.False(s.Available));
+        Assert.Equal(state.Roster[0].Experience + economy.TrainingExperience, once.Roster[0].Experience);
     }
 
     /// <summary>El portero nunca cambia de puesto, y nadie pasa a portero (ADR 0080, ADR 0160).</summary>

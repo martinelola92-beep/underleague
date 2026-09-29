@@ -1,11 +1,14 @@
 using Underleague.Sim.Data;
 using Underleague.Sim.Engine;
+using Underleague.Sim.Events;
 using Underleague.Sim.Model;
 using Underleague.Sim.Run;
 using Underleague.Sim.Run.Systems;
+using Underleague.Sim.Run.Systems.Consumables;
 using Underleague.Sim.Run.Systems.Equipment;
 using Underleague.Sim.Run.Systems.Items;
 using Underleague.Sim.Run.Systems.Rewards;
+using Underleague.Sim.Run.View;
 
 namespace Underleague.Sim.Tests.Run.Systems;
 
@@ -223,6 +226,121 @@ public sealed class LootAndRelicTests
         Assert.Equal("worn_boots", state.GetPlayer(c.Id).Item);
         Assert.Equal("iron_gauntlets", state.GetPlayer(b.Id).Item);
         Assert.Null(state.GetPlayer(a.Id).Item);
+    }
+
+    // ------------------------------------------------------------------ 4. el informe cuenta lo que la run hizo
+
+    /// <summary>
+    /// Revisión independiente de la ADR 0161: el informe recalcula el botín (<c>LeagueLootSystem.Pick</c>)
+    /// en vez de recibirlo, así que si los argumentos con los que lo recalcula se desviaran de los de
+    /// <c>AfterMatch</c> el informe enseñaría un objeto y el cofre guardaría otro. Con una liga real,
+    /// ganada y sin muertes, lo único que entra en el almacén es el botín: tiene que ser el que el informe
+    /// dice.
+    /// </summary>
+    [Fact]
+    public void TheReportedLootIsExactlyWhatTheRunAddedToTheWarehouse()
+    {
+        int checkedRuns = 0;
+        for (ulong seed = 17000; seed < 17060 && checkedRuns < 3; seed++)
+        {
+            var start = RunEngine.Start(SystemsTestSupport.Setup(), seed, Catalog, Systems);
+            var (walked, node) = TestRuns.WalkToMatch(start, Catalog, Systems);
+            if (node.Kind != NodeKind.LeagueMatch)
+            {
+                continue;
+            }
+
+            var entry = RunEngine.EnterMatch(walked, node.Id, Catalog, Systems);
+            if (!entry.Summary.Won || entry.Summary.OwnDeaths > 0 || entry.State.Result.IsOver)
+            {
+                continue;
+            }
+
+            var playback = MatchPlaybacks.Of(walked, node.Id, Catalog, Systems);
+            var report = PostMatchView.Build(playback, entry.State, entry.Summary, Catalog, Systems.Economy, Systems.Items);
+
+            Assert.NotNull(report.Loot);
+            Assert.Equal(new[] { report.Loot!.ItemId }, entry.State.StoredItems);
+            checkedRuns++;
+        }
+
+        Assert.True(checkedRuns > 0, "ninguna de las 60 runs ganó una liga limpia: el test no ha comprobado nada");
+    }
+
+    /// <summary>
+    /// El informe dice qué reliquia deja un muerto propio y es la que <c>AfterMatch</c> guarda (ADR 0161 §2).
+    /// La muerte se inyecta en la secuencia de eventos porque una muerte natural es rara a propósito (ADR
+    /// 0048); el resto —el estado tras el partido, el resumen y el catálogo— es el de la run.
+    /// </summary>
+    [Fact]
+    public void TheReportAnnouncesTheRelicAnOwnDeadPlayerLeaves()
+    {
+        var state = RunEngine.Start(SystemsTestSupport.Setup(), 17100UL, Catalog, Systems);
+        var (walked, node) = TestRuns.WalkToMatch(state, Catalog, Systems);
+        var playback = MatchPlaybacks.Of(walked, node.Id, Catalog, Systems);
+        int victim = playback.Setup.Home.Lineup.Slots[1].PlayerId;
+
+        var dead = walked.GetPlayer(victim) with
+        {
+            PhysicalState = PhysicalState.Dead,
+            Item = null,
+            Career = new RunCareer(1, 0, 0, 0, 0, 0, 0, 3, 0, 0, 500),
+        };
+        var after = walked.WithPlayer(dead);
+        var death = new MatchEvent(
+            EventType.Death, 200, 0, victim, -1, -1, default, default, default, 0, 0, "perk:skullsplitter", 200);
+        var withDeath = playback with { Result = playback.Result with { Events = playback.Result.Events.Append(death).ToList() } };
+        var summary = LostSummary(node) with
+        {
+            OwnDeaths = 1,
+            DeathDetails = new[] { new PlayerDeathDetail(victim, Array.Empty<string>(), -1, -1) },
+        };
+
+        var report = PostMatchView.Build(withDeath, after, summary, Catalog, Systems.Economy, Systems.Items);
+        var row = Assert.Single(report.Casualties, c => c.Kind == CasualtyKind.Death);
+        var stored = Systems.AfterMatch(after, node, summary, Catalog).StoredItems;
+
+        Assert.Equal("relic_butcher", row.RelicId);
+        Assert.Contains(row.RelicId, stored);
+        Assert.False(string.IsNullOrEmpty(row.RelicName));
+    }
+
+    // ------------------------------------------------------------------ 5. el consumible en vivo llega por la run
+
+    /// <summary>
+    /// RF-082: la activación que pulsa el jugador (<c>MatchDecisions.ManualActivations</c>) viaja por
+    /// <c>RunEquipment.ForMatch</c> hasta el <c>MatchSetup</c>, y la reproducción de la pantalla
+    /// (<c>MatchPlaybacks.Of</c>) juega el mismo partido que la run (<c>EnterMatch</c>): la pantalla enseña
+    /// lo que la run va a aplicar.
+    /// </summary>
+    [Fact]
+    public void AManualActivationReachesTheMatchThroughTheRunAndReplayMatchesEnterMatch()
+    {
+        const int T = 300;
+        var state = RunEngine.Start(SystemsTestSupport.Setup(), 17200UL, Catalog, Systems);
+        state = RunEngine.Apply(
+            state,
+            new SetConsumables(new[] { new EquippedConsumable("field_bandage", ConsumableMode.Manual, string.Empty) }),
+            Catalog,
+            Systems);
+        var (walked, node) = TestRuns.WalkToMatch(state, Catalog, Systems);
+        var decisions = MatchDecisions.None with { ManualActivations = new[] { new ManualActivation("field_bandage", T) } };
+
+        var (setup, _, _) = RunEngine.BuildMatch(walked, node.Id, Catalog, Systems, decisions.ManualActivations);
+        var consumable = Assert.Single(setup.Home.Consumables);
+        Assert.Equal(T, consumable.ManualTick);
+
+        var playback = MatchPlaybacks.Of(walked, node.Id, Catalog, Systems, decisions: decisions);
+        var used = Assert.Single(playback.Result.Events, e => e.Type == EventType.ConsumableUsed);
+        Assert.Equal(T, used.Tick);
+
+        var entry = RunEngine.EnterMatch(walked, node.Id, Catalog, Systems, decisions);
+        var activation = Assert.Single(entry.Summary.Report.ConsumableActivations);
+        Assert.Equal(("field_bandage", 0, T), (activation.ConsumableId, activation.Team, activation.Tick));
+
+        // Sin pulsar, el mismo estado no activa nada: la diferencia la hace la decisión, no el equipo.
+        var untouched = RunEngine.EnterMatch(walked, node.Id, Catalog, Systems);
+        Assert.Empty(untouched.Summary.Report.ConsumableActivations);
     }
 
     // ------------------------------------------------------------------ ayudantes

@@ -8,8 +8,13 @@ using Underleague.Sim.Run.Systems.Items;
 
 namespace Underleague.Sim.Run.View;
 
-/// <summary>Un candidato al que señalar cuando la opción pide un cuerpo (ADR 0100).</summary>
-public sealed record EventTargetRow(int PlayerId, string Name, string Detail);
+/// <summary>
+/// Un candidato al que señalar cuando la opción pide un cuerpo (ADR 0100). <paramref name="Detail"/> lleva la
+/// posición y el nivel <b>ya localizados</b> (y, en el sacrificio, el perk que pasa). Un segundo señalado del
+/// sacrificio depende de quién muera (cada perk tiene sus herederos posibles), así que su fila lleva
+/// <paramref name="ForFirstPlayerId"/>: la pantalla solo la enseña con ese primer señalado; -1 = vale con cualquiera.
+/// </summary>
+public sealed record EventTargetRow(int PlayerId, string Name, string Detail, int ForFirstPlayerId = -1);
 
 /// <summary>
 /// Una opción de la carta tal y como la ve el jugador: su nombre, <b>la línea de efecto compuesta</b>
@@ -30,14 +35,18 @@ public sealed record EventOptionRow(
     IReadOnlyList<EventTargetRow> Targets,
     IReadOnlyList<EventTargetRow> SecondTargets);
 
-/// <summary>La carta del nodo de evento abierto.</summary>
+/// <summary>
+/// La carta del nodo de evento abierto. <paramref name="Resolved"/>: la carta ya se eligió (se elige una vez,
+/// <c>RunState.NodeResolvedCounter</c>) y solo queda salir; la pantalla no debe ofrecer las opciones.
+/// </summary>
 public sealed record EventScreenView(
     int NodeId,
     int Act,
     int Gold,
     string Title,
     string Description,
-    IReadOnlyList<EventOptionRow> Options);
+    IReadOnlyList<EventOptionRow> Options,
+    bool Resolved = false);
 
 /// <summary>
 /// Compone la carta para <c>/Game</c> (ADR 0100, ADR 0159). Todo el coste se ve aquí, antes de elegir, que
@@ -70,22 +79,24 @@ public static class EventView
         var card = EventSystem.Card(state, node, events);
         var templates = catalog.Localization.Get(language);
         var referee = EventSystem.ReferenceReferee(state, node);
-        var allTargets = Targets(state);
         var options = new List<EventOptionRow>(card.Options.Count);
         for (int i = 0; i < card.Options.Count; i++)
         {
             var option = card.Options[i];
-            var primary = option.NeedsTarget ? Filter(state, allTargets, option, forSecondTarget: false) : Array.Empty<EventTargetRow>();
-            var second = option.NeedsSecondTarget ? Filter(state, allTargets, option, forSecondTarget: true) : Array.Empty<EventTargetRow>();
-            bool viable = state.Gold + GoldDelta(option, state) >= 0
-                && (!option.NeedsTarget || primary.Count > 0)
-                && (!option.NeedsSecondTarget || second.Count > 0)
-                && EffectsResolvable(state, node, option, items, consumables);
+            bool sacrifice = option.Effects.Any(e => e.Kind == EventEffectKind.Sacrifice);
+            var primary = option.NeedsTarget
+                ? Rows(state, catalog, templates, language, EventSystem.EligibleTargets(state, catalog, option, forSecondTarget: false), sacrificeVictim: sacrifice)
+                : Array.Empty<EventTargetRow>();
+            var second = option.NeedsSecondTarget
+                ? SecondRows(state, catalog, templates, language, option, primary, sacrifice)
+                : Array.Empty<EventTargetRow>();
+            bool viable = !NodeGuards.IsResolved(state, node)
+                && EventSystem.IsViable(state, catalog, node, option, items, consumables);
 
             options.Add(new EventOptionRow(
                 i,
                 Text(option.Name, language),
-                Effect(option, templates, referee, language),
+                Effect(state, node, option, templates, referee, items, consumables, language),
                 option.NeedsTarget,
                 option.NeedsSecondTarget,
                 viable,
@@ -99,77 +110,75 @@ public static class EventView
             state.Gold,
             Text(card.Name, language),
             Text(card.Description, language),
-            options);
+            options,
+            NodeGuards.IsResolved(state, node));
     }
 
-    /// <summary>Lo que esa opción suma o resta al oro, para poder decir si se puede pagar antes de elegir.</summary>
-    public static int GoldDelta(EventOption option, RunState state)
-    {
-        ArgumentNullException.ThrowIfNull(option);
-        ArgumentNullException.ThrowIfNull(state);
-        int delta = 0;
-        for (int i = 0; i < option.Effects.Count; i++)
-        {
-            delta += option.Effects[i].Kind switch
-            {
-                EventEffectKind.Gold => option.Effects[i].Value,
-                EventEffectKind.GoldShare => state.Gold * option.Effects[i].Value / 100,
-                _ => 0,
-            };
-        }
-
-        return delta;
-    }
+    /// <summary>Lo que esa opción suma o resta al oro (<see cref="EventSystem.GoldDelta"/>).</summary>
+    public static int GoldDelta(EventOption option, RunState state) => EventSystem.GoldDelta(option, state);
 
     /// <summary>
-    /// Los efectos de la ADR 0159 que no dependen de un jugador señalado pero sí de que exista algo que
-    /// entregar: un objeto de esa rareza, un consumible de esa familia, o hueco de plantilla para el
-    /// canterano. Es la mitad de la viabilidad que <see cref="Filter"/> no cubre.
+    /// Filas del segundo objetivo. Para el sacrificio hay una fila <b>por cada primer señalado posible</b>
+    /// (los herederos dependen del perk que pasa, que depende de quién muera) y dice qué perk hereda; para el
+    /// resto, una lista única sin ese primero (la pantalla también lo excluye).
     /// </summary>
-    private static bool EffectsResolvable(
-        RunState state, MapNode node, EventOption option, ItemCatalog items, ConsumableCatalog consumables)
+    private static IReadOnlyList<EventTargetRow> SecondRows(
+        RunState state, Data.Catalog catalog, DescriptionTemplates templates, string language,
+        EventOption option, IReadOnlyList<EventTargetRow> firsts, bool sacrifice)
     {
-        for (int i = 0; i < option.Effects.Count; i++)
+        if (!sacrifice)
         {
-            var effect = option.Effects[i];
-            switch (effect.Kind)
-            {
-                case EventEffectKind.GrantItem when EventSystem.BestItem(state, node, effect.Rarity, items) is null:
-                    return false;
-                case EventEffectKind.GrantConsumable when EventSystem.BestConsumable(effect.Family, consumables) is null:
-                    return false;
-                case EventEffectKind.Recruit when !state.HasRosterSpace:
-                    return false;
-            }
+            return Rows(state, catalog, templates, language, EventSystem.EligibleTargets(state, catalog, option, forSecondTarget: true), sacrificeVictim: false);
         }
 
-        return true;
-    }
-
-    /// <summary>
-    /// Candidatos de la plantilla disponible que esa opción puede señalar como primer (o segundo, ADR
-    /// 0159) objetivo: quien ya tiene el rasgo que <c>grantTrait</c> daría, o quien no tiene el rasgo que
-    /// <c>removeTrait</c> quitaría, o quien no tiene perks que <c>sacrifice</c> pudiera llevarse, queda
-    /// fuera de la lista -exactamente lo que <c>EventSystem.Choose</c> rechazaría, pero visto ANTES de
-    /// pulsar (RF-012d), no al intentarlo.
-    /// </summary>
-    private static IReadOnlyList<EventTargetRow> Filter(
-        RunState state, IReadOnlyList<EventTargetRow> all, EventOption option, bool forSecondTarget)
-    {
-        var rows = new List<EventTargetRow>(all.Count);
-        for (int i = 0; i < all.Count; i++)
+        var rows = new List<EventTargetRow>();
+        for (int i = 0; i < firsts.Count; i++)
         {
-            var player = state.GetPlayer(all[i].PlayerId);
-            if (EventSystem.IsEligibleTarget(player, option, forSecondTarget))
+            var victim = state.GetPlayer(firsts[i].PlayerId);
+            string? perkId = EventSystem.SacrificePerk(state, catalog, victim);
+            string perkName = perkId is null ? string.Empty : PerkName(catalog, perkId, language);
+            var heirs = EventSystem.EligibleTargets(state, catalog, option, forSecondTarget: true, firstTargetId: victim.Id);
+            for (int h = 0; h < heirs.Count; h++)
             {
-                rows.Add(all[i]);
+                string inherits = Format(templates.Find(Section, "sacrificeInherits") ?? " {0}", perkName);
+                rows.Add(new EventTargetRow(heirs[h].Id, heirs[h].Name, Detail(heirs[h], templates) + inherits, victim.Id));
             }
         }
 
         return rows;
     }
 
-    private static string Effect(EventOption option, DescriptionTemplates templates, RunReferee? referee, string language)
+    private static IReadOnlyList<EventTargetRow> Rows(
+        RunState state, Data.Catalog catalog, DescriptionTemplates templates, string language,
+        IReadOnlyList<RunPlayer> players, bool sacrificeVictim)
+    {
+        var rows = new List<EventTargetRow>(players.Count);
+        for (int i = 0; i < players.Count; i++)
+        {
+            string detail = Detail(players[i], templates);
+            if (sacrificeVictim && EventSystem.SacrificePerk(state, catalog, players[i]) is { } perkId)
+            {
+                detail += Format(templates.Find(Section, "sacrificePasses") ?? " {0}", PerkName(catalog, perkId, language));
+            }
+
+            rows.Add(new EventTargetRow(players[i].Id, players[i].Name, detail));
+        }
+
+        return rows;
+    }
+
+    private static string PerkName(Data.Catalog catalog, string perkId, string language) =>
+        catalog.Perks.Find(perkId) is { } perk ? Text(perk.Name, language) : perkId;
+
+    /// <summary>«Defensa · nivel 2», localizado (posición y nivel desde <c>data/l10n</c>, RT-035).</summary>
+    internal static string Detail(RunPlayer player, DescriptionTemplates templates) => Format(
+        templates.Find(Section, "targetDetail") ?? "{0} · {1}",
+        templates.Find("positions", player.Position.ToString()) ?? player.Position.ToString(),
+        player.Level.ToString(System.Globalization.CultureInfo.InvariantCulture));
+
+    private static string Effect(
+        RunState state, MapNode node, EventOption option, DescriptionTemplates templates, RunReferee? referee,
+        ItemCatalog items, ConsumableCatalog consumables, string language)
     {
         if (option.Effects.Count == 0)
         {
@@ -179,13 +188,15 @@ public static class EventView
         var parts = new List<string>(option.Effects.Count);
         for (int i = 0; i < option.Effects.Count; i++)
         {
-            parts.Add(EffectPart(option.Effects[i], templates, referee, language));
+            parts.Add(EffectPart(state, node, i, option.Effects[i], templates, referee, items, consumables, language));
         }
 
         return string.Join(" · ", parts);
     }
 
-    private static string EffectPart(EventEffect effect, DescriptionTemplates templates, RunReferee? referee, string language)
+    private static string EffectPart(
+        RunState state, MapNode node, int index, EventEffect effect, DescriptionTemplates templates, RunReferee? referee,
+        ItemCatalog items, ConsumableCatalog consumables, string language)
     {
         string key = effect.Kind switch
         {
@@ -220,6 +231,10 @@ public static class EventView
             EventEffectKind.Experience or EventEffectKind.ExperienceTarget => Format(template, "+" + effect.Value.ToString(System.Globalization.CultureInfo.InvariantCulture)),
             EventEffectKind.Attribute => Format(template, Signed(effect.Value)),
             EventEffectKind.Level => Format(template, effect.Value.ToString(System.Globalization.CultureInfo.InvariantCulture)),
+            // El objeto o consumible CONCRETO que daría (sorteado con el flujo de la carta, ADR 0159): se
+            // nombra antes de elegir (RF-012d). Sin candidato, la opción sale deshabilitada y el nombre queda vacío.
+            EventEffectKind.GrantItem => Format(template, EventSystem.ItemFor(state, node, index, effect.Rarity, items) is { } item ? Text(item.Name, language) : string.Empty),
+            EventEffectKind.GrantConsumable => Format(template, EventSystem.ConsumableFor(state, node, index, effect.Family, consumables) is { } consumable ? Text(consumable.Name, language) : string.Empty),
             EventEffectKind.RefereeGrudge => Format(template, Signed(effect.Value), RefereeName(referee, language)),
             EventEffectKind.GrantTrait or EventEffectKind.RemoveTrait => Format(template, TraitName(templates, effect.Trait)),
             _ => template,
@@ -279,21 +294,5 @@ public static class EventView
         }
 
         return text;
-    }
-
-    /// <summary>La plantilla disponible como candidatos a señalar. Compartido con <see cref="TrainingView"/>.</summary>
-    internal static IReadOnlyList<EventTargetRow> Targets(RunState state)
-    {
-        var rows = new List<EventTargetRow>();
-        for (int i = 0; i < state.Roster.Count; i++)
-        {
-            var player = state.Roster[i];
-            if (player.IsAvailable)
-            {
-                rows.Add(new EventTargetRow(player.Id, player.Name, player.Position + " · " + player.Level));
-            }
-        }
-
-        return rows;
     }
 }

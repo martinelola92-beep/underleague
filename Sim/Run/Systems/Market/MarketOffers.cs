@@ -168,10 +168,23 @@ public static class MarketOfferGenerator
                 item.Rarity));
         }
 
+        // Revisión independiente de la ADR 0161: el sorteo era uniforme sobre el catálogo, y con 4 legendarios
+        // de 20 una de cada cinco ofertas era legendaria (500 % de techo, ADR 0058). Los perks y los objetos
+        // no salen uniformes por rareza sino por catálogo (la cuota 60/30/10 de RF-069 está en cuántos hay de
+        // cada una) y por frecuencia/profundidad; un consumible no tiene ni frecuencia ni acto, así que el
+        // peso sale de la rareza: 60/30/12/3 por consumible, que con el catálogo de hoy (6/6/4/4) da
+        // ~60/30/8/2 % de las ofertas. PROVISIONAL, sin medir (Regla H): los pesos son una lectura de la
+        // cuota 60/30/10 con un legendario raro a propósito, no un resultado de /Balance.
+        var consumableWeights = new List<int>(consumables.All.Count);
+        for (int i = 0; i < consumables.All.Count; i++)
+        {
+            consumableWeights.Add(ConsumableOfferWeight(consumables.All[i].Rarity));
+        }
+
         var consumableOffers = new List<ConsumableOffer>(market.ConsumableOffers);
         for (int i = 0; i < market.ConsumableOffers && consumables.All.Count > 0; i++)
         {
-            var consumable = consumables.All[rng.Range(0, consumables.All.Count)];
+            var consumable = consumables.All[WeightedPick.Index(ref rng, consumableWeights)];
             // CAT-B / ADR 0101: el precio sale de la rareza como el de un perk o un objeto. Era plano y
             // alto (45, más que un perk raro) porque el _doc de la economía daba por hecho que "no lo
             // compra nadie": solo servía para inflar affordableShareAtMarket. Desde que se puede equipar,
@@ -182,6 +195,15 @@ public static class MarketOfferGenerator
 
         return new MarketOffers(recruits, youths, mercenaries, perks, itemOffers, consumableOffers);
     }
+
+    /// <summary>Peso de un consumible en el sorteo del mostrador, según su rareza (provisional, sin medir).</summary>
+    private static int ConsumableOfferWeight(Model.Rarity rarity) => rarity switch
+    {
+        Model.Rarity.Common => 60,
+        Model.Rarity.Uncommon => 30,
+        Model.Rarity.Rare => 12,
+        _ => 3,
+    };
 
     /// <summary>Razas jugables de lanzamiento distintas de la del club (RF-004c, RF-110): única vía para fichar otra raza.</summary>
     private static List<Model.Race> ForeignRaces(Catalog catalog, Model.Race clubRace)

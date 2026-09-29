@@ -80,3 +80,27 @@ Tono de humor; cifras **provisionales, sin medir** (Regla H). Toda carta conserv
    anunciado (ADR 0048).
 10. **Cómo se demuestra.** Un test por efecto nuevo; validación del esquema; que toda carta tenga salida
     (el test de BA-A); `eventsTakenPerRun` y `eventsDeclinedPerRun` en el lote de campaña.
+
+## Revisión independiente (29 sep 2026)
+
+**Corregido:**
+- **Una carta se elige una vez.** `EventSystem.Choose` resolvía el efecto sin cerrar el nodo y se podía
+  repetir; ahora marca el nodo resuelto (`RunState.NodeResolvedCounter`, `NodeGuards`), una segunda
+  elección lanza y la vista deshabilita las opciones. Hermano de la ADR 0100, que ya lo tenía.
+- **El sacrificio** elige el perk que pasa y los herederos con la misma regla de elegibilidad que las
+  recompensas (sin duplicados, posición, etiquetas), dice qué perk pasa, saca al muerto de la alineación y
+  no se puede usar sin margen sobre el mínimo de cinco (RF-002b). La muerte pasa por
+  `DeathConsequences.Kill`, la misma función que la muerte en partido y la del matasanos: objeto al
+  almacén, reliquia, Herencia y oro de muerte. Los mercenarios no dejan reliquia (RF-111).
+- **Perder un nivel** (`LevelLoss`) deja al jugador en la experiencia mínima del nivel nuevo:
+  `Progression.MinExperienceForLevel` estaba desplazado un nivel y la pérdida se deshacía sola o cobraba de
+  más. Nadie de nivel 1 es candidato (sería gratis).
+- **La bruja** daba `Coward`, un rasgo que el motor no lee: ahora da `Dirty`.
+- `grantItem`/`grantConsumable` **sortean** entre los elegibles con un flujo propio de la carta
+  (`OfferStream`, desplazamientos 7000/7100) en vez de dar siempre el de menor id; la vista dice cuál.
+  `recruit` deja de compartir flujo con el reroll 1 de las recompensas.
+- Los candidatos se describen con texto localizado (antes «Defender · 1»).
+
+**Anotado sin corregir:** las constantes de tasación de la política (`EventGoldPerAttributePoint`,
+`EventLevelLossPremium`, `EventTraitChangeGold`, `EventGoldPerGrudgePoint`, `EventRecruitGold`) son
+provisionales, sin medir; no hay lote de campaña de esta ADR.

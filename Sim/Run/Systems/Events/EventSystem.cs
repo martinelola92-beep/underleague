@@ -1,3 +1,5 @@
+using Underleague.Sim.Data;
+using Underleague.Sim.Generation;
 using Underleague.Sim.Model;
 using Underleague.Sim.Random;
 using Underleague.Sim.Run.Systems.Consumables;
@@ -15,8 +17,12 @@ namespace Underleague.Sim.Run.Systems.Events;
 /// ofrece. No hay tiradas dentro de una opción —la apuesta es la elección, no el dado—, así que lo único
 /// aleatorio es <b>qué carta sale</b>, y eso se deriva del nodo (<c>RngStreams.Rewards</c>), no se guarda:
 /// dos llamadas con el mismo estado ven la misma carta. La ADR 0159 mantiene el mismo principio para sus
-/// ocho efectos nuevos: "cuál objeto" o "cuál consumible" se elige de forma <b>determinista</b> (el de
-/// menor id que cumple lo pedido), nunca con una tirada dentro de la opción.
+/// ocho efectos nuevos: "cuál objeto" o "cuál consumible" se sortea entre los elegibles con un flujo
+/// <b>derivado de la carta</b> (<see cref="OfferStream"/>, desplazamiento 7100 + índice del efecto), no con
+/// una tirada del jugador ni con un flujo compartido, y la vista enseña el objeto concreto antes de elegir.
+///
+/// <para><b>Una carta se elige una vez</b> (revisión independiente, 29 sep 2026): elegir una opción resuelve
+/// el nodo (<see cref="RunState.NodeResolvedCounter"/>) y una segunda elección lanza; solo queda salir.</para>
 ///
 /// <para>Las dos familias del primer catálogo salen de dos problemas medidos. La del <b>oro parado</b>
 /// cobra un <i>porcentaje de lo que llevas encima</i>, así que quien atesora paga caro: es la palanca que
@@ -72,13 +78,21 @@ public static class EventSystem
         return state.Referees.Count == 0 ? null : state.Referees[node.Id % state.Referees.Count];
     }
 
+    /// <summary>Desplazamiento de <see cref="OfferStream"/> del canterano de <c>recruit</c> (tabla en <see cref="OfferStream"/>).</summary>
+    private const int RecruitStream = 7000;
+
+    /// <summary>Base de los desplazamientos de <c>grantItem</c>/<c>grantConsumable</c>: 7100 + índice del efecto.</summary>
+    private const int GrantStreamBase = 7100;
+
     /// <summary>
-    /// Resuelve la opción elegida. Lanza si la opción no existe, si pide un objetivo que no se ha dado (o
-    /// que no está disponible), si el coste en oro no se puede pagar (un evento no deja deudas), o si un
-    /// efecto de la ADR 0159 no tiene dónde aterrizar (sin hueco de plantilla para <c>recruit</c>, sin
-    /// hueco de perk para el heredero de <c>sacrifice</c>, un rasgo que ya tiene o que nunca tuvo). La
-    /// vista (<c>EventView</c>) filtra los objetivos inviables antes de que el jugador pueda elegirlos;
-    /// esto es la última red, no la primera.
+    /// Resuelve la opción elegida <b>y con ella el nodo</b>: una carta se elige una vez, y una segunda
+    /// elección lanza (<see cref="RunState.NodeResolvedCounter"/>). Lanza si la opción no existe, si pide un
+    /// objetivo que no se ha dado, que no está disponible o que la opción no puede señalar
+    /// (<see cref="IsEligibleTarget"/>: es <b>la misma</b> regla con la que <c>EventView</c> deshabilita), si
+    /// el coste en oro no se puede pagar (un evento no deja deudas), o si un efecto no tiene dónde aterrizar
+    /// (<see cref="IsViable"/>: sin hueco de plantilla para <c>recruit</c>, sin objeto de esa rareza, sin
+    /// heredero de perk para <c>sacrifice</c>, sin margen sobre el mínimo de cinco de RF-002b). La vista
+    /// filtra antes de que el jugador pueda elegir; esto es la última red, no la primera.
     /// </summary>
     public static RunState Choose(
         RunState state,
@@ -97,6 +111,7 @@ public static class EventSystem
         ArgumentNullException.ThrowIfNull(economy);
         ArgumentNullException.ThrowIfNull(catalog);
         var node = NodeGuards.RequireOpen(state, NodeKind.Event, "resolver un evento");
+        NodeGuards.RequireUnresolved(state, node, "elegir una opción");
         var card = Card(state, node, events);
         if (decision.OptionIndex < 0 || decision.OptionIndex >= card.Options.Count)
         {
@@ -124,6 +139,13 @@ public static class EventSystem
                     $"el jugador {target.Id} no está disponible: un evento no se cobra en alguien que ya está fuera",
                     nameof(decision));
             }
+
+            if (!IsEligibleTarget(state, catalog, target, option, forSecondTarget: false))
+            {
+                throw new ArgumentException(
+                    $"el jugador {target.Id} no puede ser el señalado de '{option.Id}' de '{card.Id}' (ya tiene el rasgo, no puede perder nivel, atributo al límite, sin perk que pasar...)",
+                    nameof(decision));
+            }
         }
 
         RunPlayer? secondTarget = null;
@@ -149,6 +171,19 @@ public static class EventSystem
                     $"el jugador {secondTarget.Id} no está disponible: un evento no se cobra en alguien que ya está fuera",
                     nameof(decision));
             }
+
+            if (!IsEligibleTarget(state, catalog, secondTarget, option, forSecondTarget: true, target?.Id ?? -1))
+            {
+                throw new ArgumentException(
+                    $"el jugador {secondTarget.Id} no puede ser el segundo señalado de '{option.Id}' de '{card.Id}' (para el sacrificio: no puede heredar el perk que pasa)",
+                    nameof(decision));
+            }
+        }
+
+        if (!EffectsResolvable(state, node, option, items, consumables))
+        {
+            throw new InvalidOperationException(
+                $"la opción '{option.Id}' de '{card.Id}' no tiene dónde aterrizar (sin hueco de plantilla, sin objeto o consumible de lo que pide, o sin margen sobre el mínimo de la plantilla)");
         }
 
         int cost = 0;
@@ -175,15 +210,16 @@ public static class EventSystem
         {
             var effect = option.Effects[i];
             int effectTargetId = effect.UsesSecondTarget ? secondTarget?.Id ?? -1 : target?.Id ?? -1;
-            state = Apply(state, node, effect, effectTargetId, target?.Id ?? -1, secondTarget?.Id ?? -1, items, consumables, economy, catalog);
+            state = Apply(state, node, i, effect, effectTargetId, target?.Id ?? -1, secondTarget?.Id ?? -1, items, consumables, economy, catalog);
         }
 
-        return state;
+        return NodeGuards.MarkResolved(state, node);
     }
 
     private static RunState Apply(
         RunState state,
         MapNode node,
+        int effectIndex,
         EventEffect effect,
         int effectTargetId,
         int primaryTargetId,
@@ -199,15 +235,15 @@ public static class EventSystem
         EventEffectKind.Experience => Experience(state, effect.Value, catalog, onlyStarters: true, targetId: -1),
         EventEffectKind.ExperienceTarget => Experience(state, effect.Value, catalog, onlyStarters: false, targetId: effectTargetId),
         EventEffectKind.Injure => Injure(state, effectTargetId, effect.Value),
-        EventEffectKind.GrantItem => GrantItem(state, node, effect.Rarity, items),
-        EventEffectKind.GrantConsumable => GrantConsumable(state, effect.Family, consumables),
+        EventEffectKind.GrantItem => GrantItem(state, node, effectIndex, effect.Rarity, items),
+        EventEffectKind.GrantConsumable => GrantConsumable(state, node, effectIndex, effect.Family, consumables),
         EventEffectKind.GrantTrait => GrantTrait(state, effectTargetId, effect.Trait),
         EventEffectKind.RemoveTrait => RemoveTrait(state, effectTargetId, effect.Trait),
         EventEffectKind.Attribute => Attribute(state, effectTargetId, effect.Attribute, effect.Value),
         EventEffectKind.Level => LevelDown(state, effectTargetId, effect.Value, catalog),
         EventEffectKind.RefereeGrudge => RefereeGrudge(state, node, effect.Value, catalog),
         EventEffectKind.Recruit => Recruit(state, node, economy, catalog),
-        EventEffectKind.Sacrifice => Sacrifice(state, primaryTargetId, secondTargetId, catalog),
+        EventEffectKind.Sacrifice => Sacrifice(state, primaryTargetId, secondTargetId, catalog, economy, items),
         _ => state,
     };
 
@@ -287,59 +323,80 @@ public static class EventSystem
     }
 
     /// <summary>
-    /// Un objeto de esa rareza, al almacén (ADR 0159): el de menor id que puede salir en esta run
-    /// (<c>ItemCatalog.OfferableTo</c>, misma raza y acto que usaría el mercado). Determinista -sin
-    /// tirada dentro de la opción (ADR 0100)-: la variedad la pone qué carta sale, no qué objeto exacto
-    /// entrega una carta ya elegida. <see cref="EventView"/> deshabilita la opción si no hay ningún
-    /// candidato; llegar aquí sin ninguno es un error de datos (una carta pide una rareza que la run no
-    /// puede ofrecer nunca a esta raza).
+    /// Un objeto de esa rareza, al almacén (ADR 0159): <b>sorteado</b> entre los que esta run puede
+    /// ofrecer (<see cref="ItemCatalog.OfferableTo(Race, int)"/>, misma raza y acto que usaría el mercado),
+    /// con el flujo derivado de la carta y el índice del efecto (<see cref="GrantStreamBase"/>). No hay tirada
+    /// del jugador dentro de la opción (ADR 0100): mismo estado, mismo objeto, y <see cref="ItemFor"/> es lo
+    /// que la vista usa para decir cuál es antes de elegir. Llegar aquí sin ninguno es un error de datos.
     /// </summary>
-    private static RunState GrantItem(RunState state, MapNode node, Rarity rarity, ItemCatalog items)
+    private static RunState GrantItem(RunState state, MapNode node, int effectIndex, Rarity rarity, ItemCatalog items)
     {
-        var item = BestItem(state, node, rarity, items)
+        var item = ItemFor(state, node, effectIndex, rarity, items)
             ?? throw new InvalidOperationException(
                 $"no hay ningún objeto de rareza {rarity} disponible para {state.ClubRace} en el acto {node.Act}");
         return state.WithStockedItem(item.Id, 1);
     }
 
-    /// <summary>El objeto de esa rareza con menor id que esta run puede ofrecer, o null si no hay ninguno.</summary>
-    internal static ItemDefinition? BestItem(RunState state, MapNode node, Rarity rarity, ItemCatalog items)
+    /// <summary>
+    /// El objeto concreto que daría el efecto número <paramref name="effectIndex"/> de la carta de este
+    /// nodo, o null si la run no puede ofrecer ninguno de esa rareza. Determinista: el flujo sale de
+    /// (semilla, nodo, índice de efecto).
+    /// </summary>
+    internal static ItemDefinition? ItemFor(RunState state, MapNode node, int effectIndex, Rarity rarity, ItemCatalog items)
     {
         var pool = items.OfferableTo(state.ClubRace, node.Act);
+        var candidates = new List<ItemDefinition>(pool.Count);
         for (int i = 0; i < pool.Count; i++)
         {
             if (pool[i].Rarity == rarity)
             {
-                return pool[i];
+                candidates.Add(pool[i]);
             }
         }
 
-        return null;
+        if (candidates.Count == 0)
+        {
+            return null;
+        }
+
+        var rng = OfferStream.For(state.Seed, node.Id, GrantStreamBase + effectIndex);
+        return candidates[rng.Range(0, candidates.Count)];
     }
 
-    /// <summary>Un consumible de esa familia, al inventario (ADR 0159): el de menor id, determinista.</summary>
-    private static RunState GrantConsumable(RunState state, ConsumableFamily family, ConsumableCatalog consumables)
+    /// <summary>Un consumible de esa familia, al inventario (ADR 0159): sorteado con el flujo de la carta.</summary>
+    private static RunState GrantConsumable(RunState state, MapNode node, int effectIndex, ConsumableFamily family, ConsumableCatalog consumables)
     {
-        var consumable = BestConsumable(family, consumables)
+        var consumable = ConsumableFor(state, node, effectIndex, family, consumables)
             ?? throw new InvalidOperationException($"no hay ningún consumible de la familia {family} en el catálogo");
         return state.WithCounter(
             RunState.ConsumableOwnedPrefix + consumable.Id,
             state.ConsumablesOwned(consumable.Id) + 1);
     }
 
-    /// <summary>El consumible de esa familia con menor id, o null si el catálogo no tiene ninguno.</summary>
-    internal static ConsumableDefinition? BestConsumable(ConsumableFamily family, ConsumableCatalog consumables)
+    /// <summary>
+    /// El consumible concreto que daría ese efecto (mismo criterio que <see cref="ItemFor"/>), o null si el
+    /// catálogo no tiene ninguno de esa familia.
+    /// </summary>
+    internal static ConsumableDefinition? ConsumableFor(
+        RunState state, MapNode node, int effectIndex, ConsumableFamily family, ConsumableCatalog consumables)
     {
         var all = consumables.All;
+        var candidates = new List<ConsumableDefinition>(all.Count);
         for (int i = 0; i < all.Count; i++)
         {
             if (all[i].Family == family)
             {
-                return all[i];
+                candidates.Add(all[i]);
             }
         }
 
-        return null;
+        if (candidates.Count == 0)
+        {
+            return null;
+        }
+
+        var rng = OfferStream.For(state.Seed, node.Id, GrantStreamBase + effectIndex);
+        return candidates[rng.Range(0, candidates.Count)];
     }
 
     private static RunState GrantTrait(RunState state, int targetId, Trait trait)
@@ -385,20 +442,16 @@ public static class EventSystem
     private static RunState LevelDown(RunState state, int targetId, int levels, Data.Catalog catalog)
     {
         var player = state.GetPlayer(targetId);
-        var definition = player.ToDefinition(catalog, applyMinorInjuryPenalty: false);
-        var down = ProgressionRules.LevelDown(definition, levels, catalog.Progression);
-        if (down.Level == player.Level)
+        if (!LevelLoss.CanLose(player))
         {
-            return state;
+            throw new ArgumentException(
+                $"el jugador {targetId} está en el nivel 1: perder un nivel no le cuesta nada y la opción no se ofrece",
+                nameof(targetId));
         }
 
         // Regla I: bajar el nivel sin bajar también la experiencia se deshace solo la próxima vez que el
-        // jugador gane cualquier cosa (Progression.LevelFor recalcularía el nivel viejo desde la
-        // experiencia acumulada). Se acota justo por debajo del umbral del nivel nuevo, conservando el
-        // progreso intermedio que ya tuviera dentro de ese nivel.
-        int cap = ProgressionRules.MinExperienceForLevel(down.Level + 1, catalog.Progression) - 1;
-        int experience = cap >= 0 ? Math.Min(player.Experience, cap) : player.Experience;
-        return state.WithPlayer(player with { Level = down.Level, Attributes = down.Attributes, Experience = experience });
+        // jugador gane cualquier cosa; LevelLoss la deja en el mínimo del nivel nuevo.
+        return state.WithPlayer(LevelLoss.Apply(player, levels, catalog));
     }
 
     /// <summary>
@@ -431,64 +484,111 @@ public static class EventSystem
                 $"la plantilla está llena: no hay hueco para el canterano (RF-020, ADR 0046)");
         }
 
-        // Índice distinto del que usa Card() (node.Id a secas) para no correlar "qué carta sale" con
-        // "qué canterano exacto sale" (mismo convenio que RewardSystem.OfferStream / GeneratedPlayers).
-        var rng = RngStreams.Rewards(state.Seed, checked((node.Id * 10_000) + RecruitOffset));
+        // Desplazamiento propio (7000, tabla en OfferStream): el 1 que usaba antes era el reroll de la
+        // recompensa, un dado compartido.
+        var rng = OfferStream.For(state.Seed, node.Id, RecruitStream);
         var position = GeneratedPlayers.PickOutfield(ref rng);
         var youth = GeneratedPlayers.Youth(ref rng, catalog, state.ClubRace, economy.Market.YouthQuality, position);
         return state.WithNewPlayer(youth);
     }
 
-    private const int RecruitOffset = 1;
+    /// <summary>
+    /// El señalado muere; su perk pasa al segundo señalado (ADR 0159, enmienda de RF-072). Qué perk pasa lo
+    /// decide <see cref="SacrificePerk"/> y quién puede heredarlo <see cref="Heirs"/>, con la elegibilidad de
+    /// perks que ya usan las recompensas (<see cref="PerkPool.EligibleCarriers"/>: posición, etiquetas, hueco
+    /// y duplicados). La muerte tiene <b>las mismas consecuencias de run que una muerte de partido</b>
+    /// (<see cref="DeathConsequences.Kill"/>: objeto al almacén, reliquia, Herencia, oro de muerte) y saca al
+    /// muerto de la alineación guardada. Necesita margen sobre el mínimo de la plantilla (RF-002b).
+    /// </summary>
+    private static RunState Sacrifice(
+        RunState state, int victimId, int heirId, Data.Catalog catalog, EconomyConfig economy, ItemCatalog items)
+    {
+        if (state.AvailablePlayerCount <= RunRules.MinimumAvailablePlayers)
+        {
+            throw new InvalidOperationException(
+                $"con {state.AvailablePlayerCount} disponibles no se puede sacrificar a nadie: el mínimo es {RunRules.MinimumAvailablePlayers} (RF-002b)");
+        }
+
+        var victim = state.GetPlayer(victimId);
+        string perkId = SacrificePerk(state, catalog, victim)
+            ?? throw new ArgumentException(
+                $"el jugador {victimId} no tiene ningún perk que un compañero pueda heredar", nameof(victimId));
+        if (!Heirs(state, catalog, victim, perkId).Contains(heirId))
+        {
+            throw new ArgumentException(
+                $"el jugador {heirId} no puede heredar el perk '{perkId}' (ya lo lleva, sin hueco o no lo admite su posición o sus etiquetas)",
+                nameof(heirId));
+        }
+
+        var heir = state.GetPlayer(heirId);
+        state = state.WithPlayer(PerkPool.WithPerk(heir, perkId));
+        return DeathConsequences.Kill(state, victimId, catalog, economy, items);
+    }
 
     /// <summary>
-    /// El señalado muere; su mejor perk pasa al segundo señalado (ADR 0159, enmienda de RF-072). "Mejor"
-    /// es determinista, RT-041: rareza descendente y, a igualdad, id de perk ascendente -el mismo criterio
-    /// que ordena los perks simultáneos de un partido-. Sin perks que transferir, solo muere. El objeto
-    /// del muerto vuelve al almacén, igual que una muerte de partido (ADR 0048, condición 4).
+    /// El perk que pasaría si <paramref name="victim"/> fuera el sacrificado: el de mayor rareza y, a
+    /// igualdad, id ascendente (RT-041) <b>entre los que algún compañero puede heredar</b>
+    /// (<see cref="Heirs"/>); null si ninguno. La vista lo nombra antes de elegir (RF-012d).
     /// </summary>
-    private static RunState Sacrifice(RunState state, int victimId, int recipientId, Data.Catalog catalog)
+    internal static string? SacrificePerk(RunState state, Data.Catalog catalog, RunPlayer victim)
     {
-        var victim = state.GetPlayer(victimId);
-        var recipient = state.GetPlayer(recipientId);
-        string? bestPerk = BestPerk(catalog, victim.Perks);
-        if (bestPerk is not null)
+        var transferable = new List<string>(victim.Perks.Count);
+        for (int i = 0; i < victim.Perks.Count; i++)
         {
-            int slots = ProgressionRules.PerkSlots(recipient.Rarity);
-            if (recipient.Perks.Count >= slots)
+            if (Heirs(state, catalog, victim, victim.Perks[i]).Count > 0)
             {
-                throw new ArgumentException(
-                    $"el jugador {recipientId} no tiene hueco de perk ({recipient.Perks.Count}/{slots}, RF-023): no puede heredar",
-                    nameof(recipientId));
+                transferable.Add(victim.Perks[i]);
             }
-
-            var perks = new List<string>(recipient.Perks) { bestPerk };
-            state = state.WithPlayer(recipient with { Perks = perks });
         }
 
-        if (victim.Item is { } itemId)
+        return BestPerk(catalog, transferable);
+    }
+
+    /// <summary>
+    /// Ids de los disponibles que pueden heredar ese perk de <paramref name="victim"/>: los mismos que
+    /// <see cref="PerkPool.EligibleCarriers"/> daría a una recompensa (sin ese perk, con hueco de rareza,
+    /// posición y etiquetas válidas), sin el propio sacrificado. Orden de id ascendente.
+    /// </summary>
+    internal static IReadOnlyList<int> Heirs(RunState state, Data.Catalog catalog, RunPlayer victim, string perkId)
+    {
+        var perk = catalog.Perks.Find(perkId);
+        if (perk is null)
         {
-            state = state.WithStockedItem(itemId, 1);
-            victim = victim with { Item = null };
+            return Array.Empty<int>();
         }
 
-        return state.WithPlayer(victim with { PhysicalState = PhysicalState.Dead });
+        var carriers = PerkPool.EligibleCarriers(state, perk, catalog);
+        var heirs = new List<int>(carriers.Count);
+        for (int i = 0; i < carriers.Count; i++)
+        {
+            if (carriers[i] != victim.Id && state.GetPlayer(carriers[i]).IsAvailable)
+            {
+                heirs.Add(carriers[i]);
+            }
+        }
+
+        return heirs;
     }
 
     /// <summary>
     /// Si <paramref name="player"/> puede ser el primer objetivo (<paramref name="forSecondTarget"/>
-    /// falso) o el segundo (ADR 0159) de esa opción: quien ya tiene el rasgo que <c>grantTrait</c> daría,
-    /// quien no tiene el que <c>removeTrait</c> quitaría, quien no tiene perks que <c>sacrifice</c> pudiera
-    /// llevarse, o el heredero sin hueco de perk, quedan fuera. Compartido por <c>EventView</c> (filtra la
-    /// lista que ve el jugador) y <c>RunPolicy</c> (elige por él): las dos tienen que estar de acuerdo con
-    /// lo que <see cref="Choose"/> aceptaría, o una dejaría pasar algo que la otra rechaza.
+    /// falso) o el segundo (ADR 0159) de esa opción. Fuera quedan: el que ya tiene el rasgo que
+    /// <c>grantTrait</c> daría (o no le cabe otro), el que no tiene el que <c>removeTrait</c> quitaría, el de
+    /// nivel 1 ante una pérdida de nivel (saldría gratis), el que ya está en 99 (o en 1) en el atributo que
+    /// se mueve, y en el sacrificio: la plantilla sin margen sobre el mínimo, el que no tiene un perk que
+    /// alguien pueda heredar y el heredero que no puede llevar <b>el perk que pasa</b> del primero
+    /// (<paramref name="firstTargetId"/>). Compartido por <c>EventView</c> (filtra la lista que ve el
+    /// jugador), <c>RunPolicy</c> (elige por él) y <see cref="Choose"/> (la última red): las tres tienen
+    /// que estar de acuerdo, o una dejaría pasar lo que otra rechaza.
     /// </summary>
-    internal static bool IsEligibleTarget(RunPlayer player, EventOption option, bool forSecondTarget)
+    internal static bool IsEligibleTarget(
+        RunState state, Data.Catalog catalog, RunPlayer player, EventOption option, bool forSecondTarget, int firstTargetId = -1)
     {
+        ArgumentNullException.ThrowIfNull(state);
+        ArgumentNullException.ThrowIfNull(catalog);
         ArgumentNullException.ThrowIfNull(player);
         ArgumentNullException.ThrowIfNull(option);
-        bool isSacrificeRecipient = forSecondTarget && HasKind(option.Effects, EventEffectKind.Sacrifice);
-        if (isSacrificeRecipient && player.Perks.Count >= ProgressionRules.PerkSlots(player.Rarity))
+        if (!player.IsAvailable || (forSecondTarget && player.Id == firstTargetId))
         {
             return false;
         }
@@ -496,6 +596,38 @@ public static class EventSystem
         for (int i = 0; i < option.Effects.Count; i++)
         {
             var effect = option.Effects[i];
+            if (effect.Kind == EventEffectKind.Sacrifice)
+            {
+                if (state.AvailablePlayerCount <= RunRules.MinimumAvailablePlayers)
+                {
+                    return false;
+                }
+
+                if (!forSecondTarget)
+                {
+                    if (SacrificePerk(state, catalog, player) is null)
+                    {
+                        return false;
+                    }
+                }
+                else
+                {
+                    if (firstTargetId < 0 || !state.Roster.Any(p => p.Id == firstTargetId))
+                    {
+                        return false;
+                    }
+
+                    var victim = state.GetPlayer(firstTargetId);
+                    string? perkId = SacrificePerk(state, catalog, victim);
+                    if (perkId is null || !Heirs(state, catalog, victim, perkId).Contains(player.Id))
+                    {
+                        return false;
+                    }
+                }
+
+                continue;
+            }
+
             if (effect.UsesSecondTarget != forSecondTarget)
             {
                 continue;
@@ -517,9 +649,16 @@ public static class EventSystem
                     }
 
                     break;
-                case EventEffectKind.Sacrifice:
-                    // El primer señalado es quien muere: solo tiene sentido sobre alguien con algo que dar.
-                    if (!forSecondTarget && player.Perks.Count == 0)
+                case EventEffectKind.Level:
+                    if (!LevelLoss.CanLose(player))
+                    {
+                        return false;
+                    }
+
+                    break;
+                case EventEffectKind.Attribute:
+                    int current = player.Attributes.Get(effect.Attribute);
+                    if ((effect.Value > 0 && current >= AttributeCap) || (effect.Value < 0 && current <= AttributeFloor))
                     {
                         return false;
                     }
@@ -531,17 +670,111 @@ public static class EventSystem
         return true;
     }
 
-    private static bool HasKind(IReadOnlyList<EventEffect> effects, EventEffectKind kind)
+    /// <summary>Tope y suelo de un atributo (<c>Attributes.Clamp</c>): mover más allá no cambia nada.</summary>
+    internal const int AttributeCap = 99;
+
+    internal const int AttributeFloor = 1;
+
+    /// <summary>
+    /// Los efectos que no dependen de un jugador señalado pero sí de que exista dónde aterrizar: un objeto de
+    /// esa rareza, un consumible de esa familia, hueco de plantilla para el canterano, margen sobre el mínimo
+    /// de RF-002b para el sacrificio. Es la mitad de la viabilidad que <see cref="IsEligibleTarget"/> no
+    /// cubre; <see cref="Choose"/> y <c>EventView</c> la comparten.
+    /// </summary>
+    internal static bool EffectsResolvable(
+        RunState state, MapNode node, EventOption option, ItemCatalog items, ConsumableCatalog consumables)
     {
-        for (int i = 0; i < effects.Count; i++)
+        for (int i = 0; i < option.Effects.Count; i++)
         {
-            if (effects[i].Kind == kind)
+            var effect = option.Effects[i];
+            switch (effect.Kind)
+            {
+                case EventEffectKind.GrantItem when ItemFor(state, node, i, effect.Rarity, items) is null:
+                    return false;
+                case EventEffectKind.GrantConsumable when ConsumableFor(state, node, i, effect.Family, consumables) is null:
+                    return false;
+                case EventEffectKind.Recruit when !state.HasRosterSpace:
+                    return false;
+                case EventEffectKind.Sacrifice when state.AvailablePlayerCount <= RunRules.MinimumAvailablePlayers:
+                    return false;
+            }
+        }
+
+        return true;
+    }
+
+    /// <summary>
+    /// Los disponibles que esa opción puede señalar como primer objetivo (<paramref name="forSecondTarget"/>
+    /// falso) o como segundo (dado el primero en <paramref name="firstTargetId"/>). Id ascendente.
+    /// </summary>
+    internal static IReadOnlyList<RunPlayer> EligibleTargets(
+        RunState state, Data.Catalog catalog, EventOption option, bool forSecondTarget, int firstTargetId = -1)
+    {
+        var rows = new List<RunPlayer>(state.Roster.Count);
+        for (int i = 0; i < state.Roster.Count; i++)
+        {
+            if (IsEligibleTarget(state, catalog, state.Roster[i], option, forSecondTarget, firstTargetId))
+            {
+                rows.Add(state.Roster[i]);
+            }
+        }
+
+        return rows;
+    }
+
+    /// <summary>
+    /// Si la opción se puede resolver ahora: hay oro para su coste, dónde aterrizan sus efectos y una
+    /// combinación de señalados válida (un primero con al menos un segundo distinto que también valga). Es
+    /// <b>exactamente</b> lo que <see cref="Choose"/> aceptaría, y es lo que <c>EventView</c> pone en
+    /// <c>Affordable</c> y <c>RunPolicy</c> consulta antes de elegir.
+    /// </summary>
+    internal static bool IsViable(
+        RunState state, Data.Catalog catalog, MapNode node, EventOption option, ItemCatalog items, ConsumableCatalog consumables)
+    {
+        if (state.Gold + GoldDelta(option, state) < 0 || !EffectsResolvable(state, node, option, items, consumables))
+        {
+            return false;
+        }
+
+        if (!option.NeedsTarget)
+        {
+            return true;
+        }
+
+        var firsts = EligibleTargets(state, catalog, option, forSecondTarget: false);
+        if (!option.NeedsSecondTarget)
+        {
+            return firsts.Count > 0;
+        }
+
+        for (int i = 0; i < firsts.Count; i++)
+        {
+            if (EligibleTargets(state, catalog, option, forSecondTarget: true, firstTargetId: firsts[i].Id).Count > 0)
             {
                 return true;
             }
         }
 
         return false;
+    }
+
+    /// <summary>Lo que esa opción suma o resta al oro, para poder decir si se puede pagar antes de elegir.</summary>
+    public static int GoldDelta(EventOption option, RunState state)
+    {
+        ArgumentNullException.ThrowIfNull(option);
+        ArgumentNullException.ThrowIfNull(state);
+        int delta = 0;
+        for (int i = 0; i < option.Effects.Count; i++)
+        {
+            delta += option.Effects[i].Kind switch
+            {
+                EventEffectKind.Gold => option.Effects[i].Value,
+                EventEffectKind.GoldShare => state.Gold * option.Effects[i].Value / 100,
+                _ => 0,
+            };
+        }
+
+        return delta;
     }
 
     /// <summary>El mejor perk de esa lista de ids, o null si está vacía (RT-041: rareza desc., id asc.).</summary>

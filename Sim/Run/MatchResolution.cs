@@ -4,6 +4,7 @@ using Underleague.Sim.Engine;
 using Underleague.Sim.Events;
 using Underleague.Sim.Model;
 using Underleague.Sim.Perks;
+using Underleague.Sim.Run.Systems.Economy;
 using Underleague.Sim.Run.Systems.Rivals;
 using ProgressionRules = Underleague.Sim.Progression.Progression;
 
@@ -138,7 +139,7 @@ internal static class MatchResolution
                     deathDetails.Add(new PlayerDeathDetail(
                         players[index].Id,
                         players[index].Perks,
-                        ResolveLinkedTeammate(lineup, players[index], catalog),
+                        DeathConsequences.LinkedTeammate(lineup.Lineup, players[index], catalog),
                         matchEvent.Opponent));
 
                     // ADR 0048, condición 4 ("se puede rehacer"): el objeto del muerto VUELVE AL
@@ -235,17 +236,7 @@ internal static class MatchResolution
         next = ApplyRivalCredits(next, node, players, result.Events);
 
         // El almacén se rellena en orden de id de objeto (RT-041), no en orden de muerte.
-        recovered.Sort(StringComparer.Ordinal);
-        for (int i = 0; i < recovered.Count; i++)
-        {
-            next = next.WithStockedItem(recovered[i], 1);
-        }
-
-        if (recovered.Count > 0)
-        {
-            next = next.WithCounter(
-                RunState.ItemsRecoveredCounter, next.Counter(RunState.ItemsRecoveredCounter) + recovered.Count);
-        }
+        next = DeathConsequences.StoreRecovered(next, recovered);
 
         // 5. Consumibles gastados y alineación depurada. Los dos son consecuencia directa del partido y
         //    los dos tienen que ocurrir aquí, antes de que el jugador vuelva al mapa.
@@ -395,7 +386,7 @@ internal static class MatchResolution
     /// partido siguiente <b>sin que nadie lo decidiera</b>, que es exactamente lo que RF-093 no puede
     /// permitir: alinear a un lesionado grave es una decisión explícita, y hay que volver a tomarla.
     /// </summary>
-    private static RunState PruneLineup(RunState state)
+    internal static RunState PruneLineup(RunState state)
     {
         var slots = state.Lineup.Slots;
         var kept = new List<LineupSlot>(slots.Count);
@@ -433,69 +424,6 @@ internal static class MatchResolution
             {
                 return i;
             }
-        }
-
-        return -1;
-    }
-
-    /// <summary>
-    /// Compañero vinculado de <paramref name="player"/> en la alineación INICIAL de este partido (paquete
-    /// BB, §3.2): el primero de sus perks, en el orden ascendente en que ya vienen en
-    /// <see cref="RunPlayer.Perks"/> (RT-041), que declare relaciones de vínculo
-    /// (<see cref="PerkDefinition.Links"/>), resuelto con la MISMA geometría que usa el motor durante el
-    /// partido (<see cref="LinkGeometry"/>): mismas casillas-hogar, mismo desempate por distancia y por
-    /// id ascendente. Solo ese primer perk decide -si tiene vínculos declarados pero ninguna relación
-    /// resuelve candidato, no se prueba con el siguiente perk-: es una decisión del paquete BB para que
-    /// "el vinculado" sea una respuesta única y determinista, no una lista.
-    ///
-    /// <para>Solo mira <see cref="MatchLineup.Lineup"/> (la colocación con la que se empezó el partido):
-    /// un suplente que entra por una sustitución forzada (ADR 0094) no tiene casilla-hogar propia aquí, así
-    /// que no puede ser origen ni destino de un traspaso si muere o hereda tras entrar. Es una limitación
-    /// conocida, documentada en el informe del paquete BB.</para>
-    ///
-    /// <para>Devuelve -1 sin comprobar si el candidato sigue vivo: esa comprobación la hace
-    /// <c>Economy.InheritanceSystem</c> contra el estado final de la plantilla, no aquí.</para>
-    /// </summary>
-    private static int ResolveLinkedTeammate(MatchLineup lineup, RunPlayer player, Catalog catalog)
-    {
-        var slots = lineup.Lineup.Slots;
-        int selfIndex = -1;
-        var homes = new Cell[slots.Count];
-        var teams = new int[slots.Count];
-        for (int i = 0; i < slots.Count; i++)
-        {
-            homes[i] = slots[i].HomeCell;
-            teams[i] = 0;
-            if (slots[i].PlayerId == player.Id)
-            {
-                selfIndex = i;
-            }
-        }
-
-        if (selfIndex < 0)
-        {
-            return -1;
-        }
-
-        var perks = player.Perks;
-        for (int p = 0; p < perks.Count; p++)
-        {
-            var perk = catalog.Perks.Find(perks[p]);
-            if (perk is null || perk.Links.Count == 0)
-            {
-                continue;
-            }
-
-            for (int r = 0; r < perk.Links.Count; r++)
-            {
-                int candidate = LinkGeometry.ResolveLink(homes, teams, selfIndex, perk.Links[r]);
-                if (candidate >= 0)
-                {
-                    return slots[candidate].PlayerId;
-                }
-            }
-
-            return -1;
         }
 
         return -1;

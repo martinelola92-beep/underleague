@@ -55,3 +55,20 @@ carrera del jugador, de la que sale la reliquia)
 10. **Cómo se demuestra.** Tests: la liga ganada añade un común determinista y la perdida no; la reliquia
     depende de la carrera; `StoreItem` y el reemplazo no pierden objetos. Lote de campaña con las puertas de
     economía; captura del cofre.
+
+## Enmienda tras la revisión independiente (29 sep 2026)
+
+- **Pasar un objeto a quien ya lleva otro no lo vende.** `TransferItem` mandaba el desplazado a
+  `SellItemGold`: el cofre ofrecía como destino a cualquiera y el receptor perdía su objeto por oro sin
+  avisar. Ahora el desplazado vuelve al **almacén** (mismo criterio que equipar desde el cofre, §3);
+  vender sigue siendo sólo `ToPlayerId < 0`.
+- **La reliquia se anuncia.** El informe post-partido dice «X deja <reliquia> en el cofre» en la fila de la
+  muerte (`CasualtyRow.RelicName`, `RelicSystem.RelicFor`, la misma regla con la que se llena el almacén).
+- **El mercado no sortea los consumibles uniformes.** Con 4 legendarios de 20 una de cada cinco ofertas lo
+  era. Peso por rareza 60/30/12/3 por consumible (≈ 60/30/8/2 % de las ofertas con el catálogo de hoy).
+  **Provisional, sin medir** (Regla H): no sale de un lote de `/Balance`; los perks y objetos no pesan por
+  rareza sino por catálogo y `frequency`, y un consumible no tiene ninguna de las dos.
+- **Un consumible puede apuntar al rival** (`target: opposingTeam`, sólo `team` u `opposingTeam`; por
+  defecto el equipo propio). `severeInjury` es el canal de quien SUFRE la lesión: `the_ambush` lo subía a
+  los propios y ahora lo sube a los rivales. La plantilla del canal dice «sufrir una lesión grave».
+

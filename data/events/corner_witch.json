@@ -1,5 +1,5 @@
 {
-  "_doc": "ADR 0159 pedía el rasgo 'Cold' para esta carta; no existe en Sim.Model.Trait (esa palabra es una StyleTag, un campo distinto que grantTrait no toca). Sustituido por Coward, mismo espíritu de maldición (decisión tomada sin consultar, señalada en el informe de cierre). Cifras provisionales, sin medir (Regla H).",
+  "_doc": "ADR 0159 pedía el rasgo 'Cold' para esta carta; no existe en Sim.Model.Trait (esa palabra es una StyleTag, un campo distinto que grantTrait no toca). Se sustituyó por Coward, que sí tiene consumidor (data/traits/traits.json: multiplicadores de Tackle 45, Dribble 70, ChaseBall 85 y Block 35) pero es pura pérdida: la carta cobraba un nivel Y un rasgo malo sin dar nada. Revisión independiente (29 sep 2026): la bruja da Dirty (sucio: Tackle x1,25, Block x1,40, +15 de falta y +10 de lesión causada), un rasgo con ventaja y con precio, que es lo que 'cobra en carne' pide. Cifras provisionales, sin medir (Regla H).",
   "id": "corner_witch",
   "name": {
     "es": "La bruja del córner",
@@ -22,7 +22,7 @@
         {
           "type": "grantTrait",
           "value": 0,
-          "trait": "Coward"
+          "trait": "Dirty"
         },
         {
           "type": "level",

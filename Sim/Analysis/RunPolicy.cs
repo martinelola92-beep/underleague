@@ -287,12 +287,14 @@ public sealed record RunPolicyOptions
     /// Oro que la política le pone a cien puntos de experiencia por jugador al tasar una carta de evento
     /// (ADR 0100). Con 6, los 90 puntos de «la escuela de campo» sobre siete titulares valen 37 de oro, que
     /// es del orden de lo que cuesta un perk raro: la carta compite con el mercado, que es el punto.
+    /// <b>Provisional, sin medir</b> (Regla H): sale de una comparación de órdenes de magnitud, no de un lote.
     /// </summary>
     public int EventGoldPerHundredExperience { get; init; } = 6;
 
     /// <summary>
     /// Lo que la política suma al precio de la clínica cuando una carta pide lesionar a alguien (ADR 0100):
     /// un cuerpo fuera no es solo el tratamiento, es el partido que se juega sin él.
+    /// <b>Provisional, sin medir</b> (Regla H): ningún lote ha medido cuánto cuesta jugar sin un titular.
     /// </summary>
     public int EventInjuryPremium { get; init; } = 10;
 
@@ -301,6 +303,7 @@ public sealed record RunPolicyOptions
     /// ADR 0160, la especialización del entrenamiento): con 8, los +8 de una especialización valen 64 de
     /// oro, del orden de un objeto poco común (<c>market.itemPrice.uncommon</c>) -así que una
     /// especialización compite con comprar equipo, no lo domina de calle-.
+    /// <b>Provisional, sin medir</b> (Regla H): ningún lote ha medido cuánto gana una run por punto de atributo permanente.
     /// </summary>
     public int EventGoldPerAttributePoint { get; init; } = 8;
 
@@ -310,6 +313,7 @@ public sealed record RunPolicyOptions
     /// -lo que valen los puntos de atributo que ese nivel se lleva- porque perder un nivel también pesa en
     /// el mercado (RF-114, el precio de reventa cae con el nivel) y en la moral de la plantilla, no solo
     /// en los cuatro atributos.
+    /// <b>Provisional, sin medir</b> (Regla H): ningún lote ha medido lo que pesa perder un nivel.
     /// </summary>
     public int EventLevelLossPremium { get; init; } = 40;
 
@@ -317,15 +321,20 @@ public sealed record RunPolicyOptions
     /// Oro que la política le pone a un punto de memoria de árbitro (ADR 0159, efecto
     /// <c>refereeGrudge</c>; ADR 0158). Modesto a propósito: mueve el criterio inicial de un partido
     /// futuro con ese árbitro, que ya está acotado a ±40, nunca decide un partido por sí solo.
+    /// <b>Provisional, sin medir</b> (Regla H): ningún lote ha medido lo que vale un punto de memoria de árbitro.
     /// </summary>
     public int EventGoldPerGrudgePoint { get; init; } = 2;
 
-    /// <summary>Oro que la política le pone a ganar el rasgo pedido, o a perder uno que no quiere (ADR 0159).</summary>
+    /// <summary>
+    /// Oro que la política le pone a ganar el rasgo pedido, o a perder uno que no quiere (ADR 0159).
+    /// <b>Provisional, sin medir</b> (Regla H): un rasgo se valora igual sea cual sea, sin mirar qué hace.
+    /// </summary>
     public int EventTraitChangeGold { get; init; } = 35;
 
     /// <summary>
     /// Oro que la política le pone a un canterano gratis (ADR 0159, efecto <c>recruit</c>): el precio de
     /// un fichaje común de pago (<c>market.playerPrice.common</c>), porque es exactamente lo que se ahorra.
+    /// <b>Provisional, sin medir</b> (Regla H): el precio de mercado es una línea base existente, la equivalencia no está medida.
     /// </summary>
     public int EventRecruitGold { get; init; } = 60;
 
@@ -337,6 +346,23 @@ public sealed record RunPolicyOptions
     /// es una prohibición con forma de número, para no reescribir <c>OptionWorth</c> con un caso especial.
     /// </summary>
     public int EventSacrificeGoldPenalty { get; init; } = 1_000_000;
+
+    /// <summary>
+    /// Factor de concentración de la especialización frente a la pachanga (ADR 0160), en tanto por ciento: 8
+    /// puntos de atributo sobre <b>un solo</b> titular valen más que 8 repartidos entre toda la plantilla,
+    /// porque el once solo juega con siete y un especialista se nota en el campo (la petición del revisor:
+    /// «subir mucho una sola estadística de un solo jugador»). 150 = 1,5 veces. <b>Provisional, sin medir</b>
+    /// (Regla H): es el número que decide con qué frecuencia la política elige cada sesión.
+    /// </summary>
+    public int TrainingConcentrationPercent { get; init; } = 150;
+
+    /// <summary>
+    /// Uno de cada tantos nodos de entrenamiento <b>con cambio de puesto</b> la política lo usa si un
+    /// titular juega fuera de su posición natural (ADR 0160); en los demás, no. <b>Provisional, sin
+    /// medir</b> (Regla H): no hay dato de cuánto rinde recolocar a alguien, así que es un dial de
+    /// frecuencia, no un juicio de valor.
+    /// </summary>
+    public int TrainingRepositionEveryNth { get; init; } = 2;
 
     /// <summary>Compras máximas en un mismo nodo de mercado; corta el bucle, no la política.</summary>
     public int MaxMarketActions { get; init; } = 16;
@@ -676,6 +702,12 @@ public static class RunPolicy
                 // alternativa, que es exactamente lo que el 98,9% de la ADR 0053 deja fuera).
                 NodeKind.Market => options.AvoidsMarkets ? int.MinValue + 1 : 90,
                 NodeKind.Event => poor ? 40 : 25,
+                // ADR 0160 (revisado): la carta de entrenamiento ofrece como mínimo lo que era el nodo entero
+                // (la pachanga, 40 de experiencia para todos) y, si compensa, una especialización o un cambio
+                // de puesto, así que su valor de ruta no baja del de antes. Se deja en 30, entre el evento
+                // (25, o 40 yendo pobre) y el partido de liga (50 - dificultad): **provisional, sin medir**
+                // (Regla H), como el resto de esta tabla; nada del ADR 0160 lo ha movido porque la
+                // elección dentro del nodo ya la hace VisitTraining y no cambia cuánto se quiere pasar por él.
                 NodeKind.Training => 30,
                 NodeKind.EliteMatch => strong ? 60 : 40 - node.Difficulty,
                 NodeKind.LeagueMatch => 50 - node.Difficulty,
@@ -1112,7 +1144,7 @@ public static class RunPolicy
             ledger.SevereInjuries += severeNow - severeBefore;
         }
 
-        // ADR 0161 §4: reparte lo que haya en el almacén (botín de liga, reliquia, herencia de un muerto)
+        // Regla de la política (la ADR 0161 solo crea el cofre, §3): reparte lo que haya en el almacén (botín de liga, reliquia, herencia de un muerto)
         // sin esperar a un nodo de recompensa. Un partido de liga (picks=0) nunca abre uno, así que sin
         // esto su botín se quedaría criando polvo hasta el siguiente élite o jefe. Cuando SÍ hay recompensa
         // pendiente (élite, jefe) el reparto se deja para TakeRewards, que lo hace DESPUÉS de cobrarla
@@ -1439,16 +1471,16 @@ public static class RunPolicy
         {
             var option = card.Options[i];
 
-            // ADR 0159: dos cartas nuevas cobran oro fijo (no un porcentaje, que se autolimita a lo que
-            // hay). "Vale la pena" (worth neto positivo) no es lo mismo que "se puede pagar": sin esto la
-            // política podía elegir una opción de -25 de oro con la run a 0 y EventSystem.Choose la
-            // rechazaba, tirando el nodo entero.
-            if (state.Gold + Underleague.Sim.Run.View.EventView.GoldDelta(option, state) < 0)
+            // "Vale la pena" (worth neto positivo) no es lo mismo que "se puede": la viabilidad es exactamente
+            // la que EventSystem.Choose aceptaría (oro, dónde aterrizan los efectos y una combinación de
+            // señalados válida: EventSystem.IsViable), la misma que EventView pone en Affordable. Sin esto la
+            // política podía elegir una opción que Choose rechazaba, tirando el nodo entero.
+            if (!EventSystem.IsViable(state, catalog, node, option, standard.Items, standard.Consumables))
             {
                 continue;
             }
 
-            RunPlayer? target = option.NeedsTarget ? EligibleBody(state, options, option, forSecondTarget: false, excludeId: -1) : null;
+            RunPlayer? target = option.NeedsTarget ? EligibleBody(state, catalog, options, option, forSecondTarget: false, firstTargetId: -1) : null;
             if (option.NeedsTarget && target is null)
             {
                 continue;
@@ -1457,7 +1489,7 @@ public static class RunPolicy
             RunPlayer? secondTarget = null;
             if (option.NeedsSecondTarget)
             {
-                secondTarget = EligibleBody(state, options, option, forSecondTarget: true, excludeId: target?.Id ?? -1);
+                secondTarget = EligibleBody(state, catalog, options, option, forSecondTarget: true, firstTargetId: target?.Id ?? -1);
                 if (secondTarget is null)
                 {
                     continue;
@@ -1505,8 +1537,8 @@ public static class RunPolicy
                 EventEffectKind.Experience => policy.EventGoldPerHundredExperience * effect.Value * CountStarters(state) / 100,
                 EventEffectKind.ExperienceTarget => policy.EventGoldPerHundredExperience * effect.Value / 100,
                 EventEffectKind.Injure => -(effect.Value >= 2 ? economy.ClinicCost : economy.ClinicMinorCost) - policy.EventInjuryPremium,
-                EventEffectKind.GrantItem => ItemWorth(state, node, effect.Rarity, standard.Items, economy),
-                EventEffectKind.GrantConsumable => ConsumableWorth(effect.Family, standard.Consumables, economy),
+                EventEffectKind.GrantItem => ItemWorth(state, node, i, effect.Rarity, standard.Items, economy),
+                EventEffectKind.GrantConsumable => ConsumableWorth(state, node, i, effect.Family, standard.Consumables, economy),
                 EventEffectKind.GrantTrait => policy.EventTraitChangeGold,
                 EventEffectKind.RemoveTrait => policy.EventTraitChangeGold,
                 EventEffectKind.Attribute => policy.EventGoldPerAttributePoint * effect.Value,
@@ -1522,23 +1554,23 @@ public static class RunPolicy
     }
 
     /// <summary>Lo que vale un objeto de esa rareza: su precio de mercado, cero si esta run no puede ofrecer ninguno.</summary>
-    private static int ItemWorth(RunState state, MapNode node, Rarity rarity, ItemCatalog items, EconomyConfig economy) =>
-        EventSystem.BestItem(state, node, rarity, items) is null ? 0 : economy.Market.ItemPrice.Of(rarity);
+    private static int ItemWorth(RunState state, MapNode node, int effectIndex, Rarity rarity, ItemCatalog items, EconomyConfig economy) =>
+        EventSystem.ItemFor(state, node, effectIndex, rarity, items) is null ? 0 : economy.Market.ItemPrice.Of(rarity);
 
     /// <summary>Lo que vale un consumible de esa familia: su precio de mercado por rareza, cero si no hay ninguno.</summary>
-    private static int ConsumableWorth(ConsumableFamily family, ConsumableCatalog consumables, EconomyConfig economy)
+    private static int ConsumableWorth(RunState state, MapNode node, int effectIndex, ConsumableFamily family, ConsumableCatalog consumables, EconomyConfig economy)
     {
-        var consumable = EventSystem.BestConsumable(family, consumables);
+        var consumable = EventSystem.ConsumableFor(state, node, effectIndex, family, consumables);
         return consumable is null ? 0 : economy.Market.ConsumablePriceByRarity.Of(consumable.Rarity);
     }
 
     /// <summary>
     /// El disponible más barato que no sea titular, entre los que esa opción puede señalar como primer o
-    /// segundo objetivo (ADR 0159, <c>EventSystem.IsEligibleTarget</c>); <c>excludeId</c> saca al ya
-    /// elegido como primero cuando se busca el segundo. Null si ninguno cumple -la opción se descarta, no
+    /// segundo objetivo (ADR 0159, <c>EventSystem.IsEligibleTarget</c>); <c>firstTargetId</c> es el ya
+    /// elegido como primero cuando se busca el segundo (el heredero del sacrificio depende de él). Null si ninguno cumple -la opción se descarta, no
     /// se elige a ciegas y se deja que <c>EventSystem.Choose</c> lo rechace-.
     /// </summary>
-    private static RunPlayer? EligibleBody(RunState state, RunPolicyOptions options, EventOption option, bool forSecondTarget, int excludeId)
+    private static RunPlayer? EligibleBody(RunState state, Catalog catalog, RunPolicyOptions options, EventOption option, bool forSecondTarget, int firstTargetId)
     {
         var starters = ChooseStarters(state, options);
         RunPlayer? best = null;
@@ -1546,7 +1578,7 @@ public static class RunPolicy
         for (int i = 0; i < state.Roster.Count; i++)
         {
             var player = state.Roster[i];
-            if (!player.IsAvailable || player.Id == excludeId || !EventSystem.IsEligibleTarget(player, option, forSecondTarget))
+            if (!EventSystem.IsEligibleTarget(state, catalog, player, option, forSecondTarget, firstTargetId))
             {
                 continue;
             }
@@ -1579,13 +1611,21 @@ public static class RunPolicy
     // ------------------------------------------------------------------ 4d. entrenamiento
 
     /// <summary>
-    /// La carta de entrenamiento (ADR 0160). Pachanga salvo que una especialización en el <b>mejor
-    /// titular</b> valga claramente más: <c>SpecializationBonus</c> puntos de atributo permanentes a
-    /// <see cref="RunPolicyOptions.EventGoldPerAttributePoint"/> cada uno, contra la experiencia de hoy
-    /// para toda la plantilla disponible a <see cref="RunPolicyOptions.EventGoldPerHundredExperience"/>.
-    /// El cambio de puesto <b>nunca</b> lo elige la política: recolocar a un jugador que no rinde en su
-    /// puesto es un juicio sobre SU encaje, no algo que un gol de atributo o de experiencia pueda tasar de
-    /// forma genérica, y la pachanga es una salida segura que nunca deja la carta sin resolver.
+    /// La carta de entrenamiento (ADR 0160). Valora las dos sesiones que compiten <b>en la misma unidad</b>,
+    /// puntos de atributo equivalentes (en centésimas, entero):
+    /// <list type="bullet">
+    /// <item><b>Pachanga</b> = Σ sobre los disponibles de (experiencia de hoy / experiencia que les falta para
+    /// el nivel siguiente) × los puntos de atributo que da un nivel (cuatro atributos ×
+    /// <c>progression.attributesPerLevel</c>): cuanto más cerca de subir, más vale, y a nivel máximo no vale
+    /// nada. Comparaba antes contra oro (≈2,4·N frente a 64) y por eso la especialización ganaba siempre.</item>
+    /// <item><b>Especialización</b> = <c>SpecializationBonus</c> puntos sobre el <b>mejor titular</b> disponible
+    /// (y que no esté ya en 99) × <see cref="RunPolicyOptions.TrainingConcentrationPercent"/>.</item>
+    /// </list>
+    /// El <b>cambio de puesto</b> lo usa en uno de cada <see cref="RunPolicyOptions.TrainingRepositionEveryNth"/>
+    /// nodos que lo ofrecen, y solo si un titular juega fuera de su posición natural (más de su posición que
+    /// casillas suyas en el 2-3-1): recoloca al de menor valor de la posición que sobra hacia una que falta,
+    /// siempre que ningún perk suyo se lo impida y no pierda un nivel gratis (ya está en 1). Si no, la
+    /// pachanga o la especialización de siempre: la carta nunca queda sin resolver.
     /// </summary>
     private static RunState VisitTraining(
         RunState state,
@@ -1597,27 +1637,142 @@ public static class RunPolicy
         Ledger ledger)
     {
         var card = TrainingSystem.Card(node);
-        int scrimmageWorth = options.EventGoldPerHundredExperience * standard.Economy.TrainingExperience * state.AvailablePlayerCount / 100;
-        int specializationWorth = options.EventGoldPerAttributePoint * TrainingSystem.SpecializationBonus;
 
+        for (int i = 0; i < card.Sessions.Count; i++)
+        {
+            if (card.Sessions[i].Kind != TrainingSessionKind.Reposition || (node.Id / 3) % Math.Max(1, options.TrainingRepositionEveryNth) != 0)
+            {
+                continue;
+            }
+
+            var move = OutOfPositionMove(state, catalog, options);
+            if (move is { } found)
+            {
+                return RunEngine.Apply(state, new ChooseTrainingSession(i, found.Player.Id, found.Destination), catalog, systems);
+            }
+        }
+
+        int scrimmage = ScrimmagePoints(state, catalog, standard.Economy);
+        var best = BestStarter(state, options);
         int chosen = 0;
         RunPlayer? target = null;
-        if (specializationWorth > scrimmageWorth)
+        if (best is not null)
         {
-            var best = BestStarter(state, options);
-            for (int i = 0; i < card.Sessions.Count; i++)
+            int specialization = TrainingSystem.SpecializationBonus * options.TrainingConcentrationPercent;
+            if (specialization > scrimmage)
             {
-                if (card.Sessions[i].Kind == TrainingSessionKind.Specialization && best is not null)
+                // El atributo donde el titular ya es más fuerte (el «orco más rápido»); a igualdad, la primera sesión.
+                int bestValue = -1;
+                for (int i = 0; i < card.Sessions.Count; i++)
                 {
-                    chosen = i;
-                    target = best;
-                    break;
+                    var session = card.Sessions[i];
+                    if (session.Kind != TrainingSessionKind.Specialization || !TrainingSystem.CanSpecialize(best, session.Attribute))
+                    {
+                        continue;
+                    }
+
+                    int value = best.Attributes.Get(session.Attribute);
+                    if (value > bestValue)
+                    {
+                        bestValue = value;
+                        chosen = i;
+                        target = best;
+                    }
                 }
             }
         }
 
-        var decision = new ChooseTrainingSession(chosen, target?.Id ?? -1);
-        return RunEngine.Apply(state, decision, catalog, systems);
+        return RunEngine.Apply(state, new ChooseTrainingSession(chosen, target?.Id ?? -1), catalog, systems);
+    }
+
+    /// <summary>
+    /// Lo que vale la pachanga, en centésimas de punto de atributo: por jugador disponible,
+    /// <c>experiencia de hoy / experiencia hasta su siguiente nivel</c> × puntos de un nivel. A nivel
+    /// máximo, cero. Entero (RT-023): se multiplica por 100 antes de dividir.
+    /// </summary>
+    private static int ScrimmagePoints(RunState state, Catalog catalog, EconomyConfig economy)
+    {
+        int pointsPerLevel = 4 * catalog.Progression.AttributesPerLevel;
+        int total = 0;
+        for (int i = 0; i < state.Roster.Count; i++)
+        {
+            var player = state.Roster[i];
+            if (!player.IsAvailable || player.Level >= Underleague.Sim.Progression.Progression.MaxLevel)
+            {
+                continue;
+            }
+
+            int experience = economy.TrainingExperience;
+            if (player.IsYouth)
+            {
+                experience = experience * (100 + RunRules.YouthExperienceBonusPercent) / 100;
+            }
+
+            int toNext = Math.Max(
+                1,
+                Underleague.Sim.Progression.Progression.MinExperienceForLevel(player.Level + 1, catalog.Progression) - player.Experience);
+            total += Math.Min(100, experience * 100 / toNext) * pointsPerLevel;
+        }
+
+        return total;
+    }
+
+    /// <summary>
+    /// Un titular fuera de su posición natural y a dónde recolocarlo: entre los titulares de campo
+    /// disponibles, la posición que tiene más jugadores que casillas (<see cref="RunLineup.NaturalSlots"/>) y
+    /// otra que tiene menos; se mueve al de menor valor de la que sobra (id ascendente en empate, RT-097) si
+    /// puede perder un nivel (nivel 2 o más) y ningún perk suyo se lo impide en la posición de destino
+    /// (<see cref="TrainingSystem.BlockingPerk"/>). Null si no hay ninguno.
+    /// </summary>
+    private static (RunPlayer Player, Position Destination)? OutOfPositionMove(RunState state, Catalog catalog, RunPolicyOptions options)
+    {
+        var starters = new List<RunPlayer>();
+        foreach (var player in ChooseStarters(state, options))
+        {
+            if (player.IsAvailable && player.Position != Position.Goalkeeper)
+            {
+                starters.Add(player);
+            }
+        }
+
+        foreach (var from in TrainingSystem.FieldPositions)
+        {
+            int surplus = starters.Count(p => p.Position == from) - RunLineup.NaturalSlots(from);
+            if (surplus <= 0)
+            {
+                continue;
+            }
+
+            foreach (var to in TrainingSystem.FieldPositions)
+            {
+                if (to == from || starters.Count(p => p.Position == to) >= RunLineup.NaturalSlots(to))
+                {
+                    continue;
+                }
+
+                RunPlayer? pick = null;
+                foreach (var player in starters)
+                {
+                    if (player.Position != from || player.Level < 2 || TrainingSystem.BlockingPerk(player, to, catalog) is not null)
+                    {
+                        continue;
+                    }
+
+                    if (pick is null || Value(player, options) < Value(pick, options)
+                        || (Value(player, options) == Value(pick, options) && player.Id < pick.Id))
+                    {
+                        pick = player;
+                    }
+                }
+
+                if (pick is not null)
+                {
+                    return (pick, to);
+                }
+            }
+        }
+
+        return null;
     }
 
     /// <summary>El titular de más valor, por id ascendente en empate (RT-097): a quien la política especializaría.</summary>
@@ -2570,7 +2725,7 @@ public static class RunPolicy
     }
 
     /// <summary>
-    /// Reparte lo que haya en el almacén (ADR 0161 §4): el equipo heredado de un muerto (ADR 0048,
+    /// Reparte lo que haya en el almacén (regla de la política; el cofre y equipar desde él son ADR 0161 §3): el equipo heredado de un muerto (ADR 0048,
     /// condición 4), el botín de liga o la reliquia (ADR 0161 §1, §2). No cuesta oro —ya estaba pagado—,
     /// así que el criterio es simple: cada objeto va a quien <b>no lleve ninguno</b> (primero, id
     /// ascendente, RT-041) y, si todos llevan algo, a quien lleve el <b>peor</b> —el de menor
@@ -2606,41 +2761,67 @@ public static class RunPolicy
     }
 
     /// <summary>
-    /// A quién dar ese objeto del almacén (ADR 0161 §4): primero cualquier titular vivo sin objeto (el id
+    /// A quién dar ese objeto del almacén (regla de la política, ADR 0161 §3): primero cualquier titular disponible sin objeto (el id
     /// más bajo, RT-041); si todos llevan algo, el que lleve el objeto de menor valor, y solo si el nuevo
     /// vale estrictamente más. -1 si nadie lo quiere -todos van mejor servidos que él-.
     /// </summary>
     private static int BestCarrierFor(RunState state, ItemDefinition candidate, ItemCatalog items)
     {
+        // Solo disponibles (un lesionado grave o un muerto no juega con el objeto: repartírselo lo esconde
+        // en el banquillo de la enfermería) y, entre ellos, los titulares primero -los del once guardado,
+        // que la política ya ha compuesto antes de llegar aquí- y después el resto, por id ascendente.
         var roster = state.Roster;
-        for (int p = 0; p < roster.Count; p++)
+        var slots = state.Lineup.Slots;
+        for (int pass = 0; pass < 2; pass++)
         {
-            if (roster[p].PhysicalState != PhysicalState.Dead && roster[p].Item is null)
+            bool starters = pass == 0;
+            for (int p = 0; p < roster.Count; p++)
             {
-                return roster[p].Id;
+                if (roster[p].IsAvailable && roster[p].Item is null && IsSlotted(slots, roster[p].Id) == starters)
+                {
+                    return roster[p].Id;
+                }
             }
         }
 
         int candidateValue = items.Scale.ValueOf(candidate);
         int worstId = -1;
         int worstValue = int.MaxValue;
+        bool worstStarter = false;
         for (int p = 0; p < roster.Count; p++)
         {
-            if (roster[p].PhysicalState == PhysicalState.Dead || roster[p].Item is not { } currentId)
+            if (!roster[p].IsAvailable || roster[p].Item is not { } currentId)
             {
                 continue;
             }
 
             var current = items.Find(currentId);
             int currentValue = current is null ? int.MinValue : items.Scale.ValueOf(current);
-            if (currentValue < worstValue)
+            bool starter = IsSlotted(slots, roster[p].Id);
+
+            // A igualdad de valor, el titular (el objeto pesa más donde se juega).
+            if (currentValue < worstValue || (currentValue == worstValue && starter && !worstStarter))
             {
                 worstValue = currentValue;
                 worstId = roster[p].Id;
+                worstStarter = starter;
             }
         }
 
         return worstId >= 0 && worstValue < candidateValue ? worstId : -1;
+    }
+
+    private static bool IsSlotted(IReadOnlyList<LineupSlot> slots, int playerId)
+    {
+        for (int i = 0; i < slots.Count; i++)
+        {
+            if (slots[i].PlayerId == playerId)
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /// <summary>

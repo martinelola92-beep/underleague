@@ -10,6 +10,18 @@ namespace Underleague.Sim.Run.Systems;
 /// (W-12, <c>fase2-diseno.md</c> §13): mismo nodo y mismo número de rerolls producen siempre el mismo
 /// surtido, sin necesidad de serializarlo. El mercado nunca se renueva (RF-114), así que siempre deriva
 /// con <c>rerollCount = 0</c>; las recompensas usan <c>state.NodeRerolls</c> (RF-071b).
+///
+/// <para><b>Tabla de desplazamientos</b> (el tercer argumento; cada uno abre un flujo propio dentro del
+/// mismo nodo, y que dos usos compartan desplazamiento es una colisión de dados —revisión independiente,
+/// 29 sep 2026: el canterano del evento usaba 1, el reroll de la recompensa—). Mantener al añadir uno:</para>
+/// <list type="table">
+/// <item><term>0..99</term><description>mercado (0) y recompensa: <c>state.NodeRerolls</c> (RF-071b, 0..1)</description></item>
+/// <item><term>100, 101, 200, 201...</term><description>recompensa: segunda elección (jefe, ADR 0043), <c>taken * 100 + rerolls</c></description></item>
+/// <item><term>5000</term><description><c>EquipmentSystem</c>: roturas de objetos frágiles</description></item>
+/// <item><term>6000</term><description><c>LeagueLootSystem</c>: botín de liga (ADR 0161)</description></item>
+/// <item><term>7000</term><description><c>EventSystem</c>: el canterano de <c>recruit</c> (ADR 0159)</description></item>
+/// <item><term>7100 + índice de efecto</term><description><c>EventSystem</c>: qué objeto o consumible da <c>grantItem</c>/<c>grantConsumable</c> (ADR 0159)</description></item>
+/// </list>
 /// </summary>
 public static class OfferStream
 {

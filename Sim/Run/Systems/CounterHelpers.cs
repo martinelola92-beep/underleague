@@ -35,6 +35,27 @@ internal static class NodeGuards
         return node;
     }
 
+    /// <summary>Si el nodo abierto ya tuvo su única elección (<see cref="RunState.NodeResolvedCounter"/>).</summary>
+    public static bool IsResolved(RunState state, MapNode node) =>
+        state.Counter(RunState.NodeResolvedCounter) == node.Id + 1;
+
+    /// <summary>
+    /// Lanza si el nodo (evento o entrenamiento) ya se resolvió: una carta se elige <b>una vez</b>
+    /// (ADR 0159, ADR 0160). Elegir una opción es resolver el nodo; solo queda salir con <c>LeaveNode</c>.
+    /// </summary>
+    public static void RequireUnresolved(RunState state, MapNode node, string action)
+    {
+        if (IsResolved(state, node))
+        {
+            throw new InvalidOperationException(
+                $"el nodo {node.Id} ({node.Kind}) ya se resolvió: no se puede {action} otra vez, solo salir al mapa");
+        }
+    }
+
+    /// <summary>Marca el nodo abierto como resuelto; <c>LeaveNode</c> la borra.</summary>
+    public static RunState MarkResolved(RunState state, MapNode node) =>
+        state.WithCounter(RunState.NodeResolvedCounter, node.Id + 1);
+
     public static MapNode RequireOpenMatch(RunState state, string action)
     {
         if (state.PendingNodeId < 0)

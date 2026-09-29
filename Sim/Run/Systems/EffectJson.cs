@@ -8,7 +8,7 @@ namespace Underleague.Sim.Run.Systems;
 /// Lee una lista de efectos con el mismo formato de <c>data/perks/*.json</c> (<see cref="EffectDefinition"/>
 /// de <c>Sim.Perks</c>), recortado a lo que un objeto o un consumible pasivo necesita: <c>type</c>,
 /// <c>attribute</c>, <c>probability</c> y <c>value</c>. Sin disparador, sin condición, sin alcance: el
-/// objetivo es siempre el portador (<see cref="EffectTarget.Owner"/>).
+/// objetivo es el equipo propio (<see cref="EffectTarget.Team"/>) o, con <c>target: opposingTeam</c>, el rival.
 ///
 /// <para><b>Duración</b>: <see cref="EffectDuration.Match"/>, no <see cref="EffectDuration.Run"/> (BA-H,
 /// corrección de texto: <c>ApplyPassiveEffect</c> ignora este campo del todo —solo lo lee la plantilla de
@@ -46,13 +46,23 @@ internal static class EffectJson
 
         int value = node.Int("value");
 
+        // Un consumible no tiene portador: por defecto alcanza a su equipo entero, y `opposingTeam` lo dirige
+        // al rival (el mismo nombre que un perk como marrow_thirst). Sin esto, `severeInjury` —canal de quien
+        // SUFRE la lesión— sólo podía subirse a los propios.
+        var target = node.OptionalStr("target", "team") switch
+        {
+            "team" => EffectTarget.Team,
+            "opposingTeam" => EffectTarget.OpposingTeam,
+            var other => throw new DataException(node.File, node.Path + ".target", $"objetivo no admitido en un consumible: '{other}' (solo team y opposingTeam)"),
+        };
+
         if (effectType == EffectType.ModifyAttribute)
         {
             string attribute = node.Str("attribute");
             var kind = ParseAttribute(node, attribute);
             return new EffectDefinition(
                 EffectType.ModifyAttribute,
-                Target: EffectTarget.Owner,
+                Target: target,
                 Attribute: kind,
                 Value: value,
                 Duration: EffectDuration.Match);
@@ -83,7 +93,7 @@ internal static class EffectJson
 
         return new EffectDefinition(
             EffectType.ModifyProbability,
-            Target: EffectTarget.Owner,
+            Target: target,
             Probability: probabilityKind,
             Value: Perks.ProbabilityScale.ToMultiplier(value),
             Duration: EffectDuration.Match);

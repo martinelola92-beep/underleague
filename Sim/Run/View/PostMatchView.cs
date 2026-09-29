@@ -23,7 +23,18 @@ public enum CasualtyKind
 }
 
 /// <summary>Una baja propia del partido (RF-119). Ordenadas por tick y, dentro del tick, por id.</summary>
-public sealed record CasualtyRow(int PlayerId, string PlayerName, Position Position, CasualtyKind Kind, int Minute, string Cause);
+public sealed record CasualtyRow(int PlayerId, string PlayerName, Position Position, CasualtyKind Kind, int Minute, string Cause)
+{
+    /// <summary>
+    /// Reliquia que deja un muerto propio (ADR 0161 §2), en el idioma del informe; vacía si no deja ninguna
+    /// (lesión, mercenario, run terminada o catálogo sin reliquias). El informe tiene que decirlo: llega al
+    /// cofre sin que nadie la haya visto llegar.
+    /// </summary>
+    public string RelicName { get; init; } = string.Empty;
+
+    /// <summary>Id de la reliquia de <see cref="RelicName"/>, vacío si no hay.</summary>
+    public string RelicId { get; init; } = string.Empty;
+}
 
 /// <summary>Una tarjeta mostrada en el partido (RF-062, RF-063), de cualquiera de los dos equipos.</summary>
 public sealed record CardRow(int PlayerId, string PlayerName, MatchSide Side, bool Red, int Minute);
@@ -188,7 +199,7 @@ public static class PostMatchView
             MatchLogView.Minute(report.ClockTicks, regulationTicks),
             PerkRows(report, events, catalog, templates, names, own, playback.Setup),
             ItemRows(report, items, templates, names, own),
-            Casualties(events, names, playback.Setup, own, regulationTicks, catalog),
+            Casualties(events, names, playback.Setup, own, regulationTicks, catalog, stateAfterMatch, items, language),
             Cards(events, names, own, regulationTicks),
             Referee(playback, report, events, own),
             // El oro solo se cobra si se ganó **y** la run sigue en pie: una baja que baja del mínimo
@@ -234,7 +245,7 @@ public static class PostMatchView
         }
 
         var loot = LeagueLootSystem.Pick(stateAfterMatch.Seed, playback.Node.Id, playback.Node.Act, stateAfterMatch.ClubRace, items);
-        return new LootRow(loot.Id, loot.Name.Es, ItemDescriptions.Describe(loot, templates.Language));
+        return new LootRow(loot.Id, NameIn(loot.Name, templates.Language), ItemDescriptions.Describe(loot, templates.Language));
     }
 
     /// <summary>
@@ -268,7 +279,7 @@ public static class PostMatchView
 
             rows.Add(new PerkReportRow(
                 entry.PerkId,
-                perk?.Name.Es ?? entry.PerkId,
+                perk is null ? entry.PerkId : NameIn(perk.Name, templates.Language),
                 perk is null ? string.Empty : DescriptionGenerator.Describe(perk, templates, catalog.Perks),
                 entry.OwnerId,
                 names.GetValueOrDefault(entry.OwnerId) ?? string.Empty,
@@ -319,7 +330,7 @@ public static class PostMatchView
             var item = items.Find(entry.ItemId);
             rows.Add(new ItemReportRow(
                 entry.ItemId,
-                item?.Name.Es ?? entry.ItemId,
+                item is null ? entry.ItemId : NameIn(item.Name, templates.Language),
                 item is null ? string.Empty : ItemDescriptions.Describe(item, templates.Language),
                 entry.OwnerId,
                 names.GetValueOrDefault(entry.OwnerId) ?? string.Empty,
@@ -340,7 +351,10 @@ public static class PostMatchView
         MatchSetup setup,
         int ownTeam,
         int regulationTicks,
-        Catalog catalog)
+        Catalog catalog,
+        RunState stateAfterMatch,
+        ItemCatalog? items,
+        string language)
     {
         var positions = Positions(setup);
         var rows = new List<CasualtyRow>();
@@ -360,17 +374,30 @@ public static class PostMatchView
                     ? CasualtyKind.SevereInjury
                     : CasualtyKind.MinorInjury;
 
+            // ADR 0161 §2: la reliquia depende de la carrera del muerto DESPUÉS de este partido, que es el
+            // estado con el que la run la decidió. Igual que el botín, no se enseña si la run terminó.
+            var relic = kind == CasualtyKind.Death && items is not null && !stateAfterMatch.Result.IsOver
+                ? RelicSystem.RelicFor(stateAfterMatch.GetPlayer(matchEvent.Actor), items)
+                : null;
+
             rows.Add(new CasualtyRow(
                 matchEvent.Actor,
                 names.GetValueOrDefault(matchEvent.Actor) ?? string.Empty,
                 positions.GetValueOrDefault(matchEvent.Actor, Position.Midfielder),
                 kind,
                 MatchLogView.Minute(matchEvent.ClockTick, regulationTicks),
-                Cause(matchEvent, names, catalog)));
+                Cause(matchEvent, names, catalog))
+            {
+                RelicId = relic?.Id ?? string.Empty,
+                RelicName = relic is null ? string.Empty : NameIn(relic.Name, language),
+            });
         }
 
         return rows;
     }
+
+    private static string NameIn(LocalizedName name, string language) =>
+        string.Equals(language, "en", StringComparison.Ordinal) ? name.En : name.Es;
 
     /// <summary>
     /// Quién causó la baja. En una lesión es el rival que entró; en una muerte, el <b>perk letal</b> que

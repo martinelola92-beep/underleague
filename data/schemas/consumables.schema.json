@@ -35,6 +35,7 @@
       "type": "object",
       "properties": {
         "type": { "enum": ["modifyAttribute", "modifyProbability"] },
+        "target": { "enum": ["team", "opposingTeam"], "description": "A quién alcanza: al equipo propio (por defecto) o a los rivales en el campo. Un consumible no tiene portador. Necesario para los canales de quien SUFRE la consecuencia (severeInjury, injury)." },
         "attribute": { "enum": ["strength", "speed", "technique", "stamina", "leash"] },
         "probability": {
           "enum": [

@@ -274,8 +274,8 @@ public static class DescriptionGenerator
         ArgumentNullException.ThrowIfNull(templates);
 
         // Un consumible NO TIENE PORTADOR: lo usa el entrenador y alcanza a todos los jugadores de su
-        // equipo que estén en el campo, y por eso EffectEngine.ResolveConsumables **ignora** el campo
-        // target del efecto. El texto tiene que decir lo mismo que hace el motor: sin esto, el efecto sin
+        // equipo que estén en el campo (o, con opposingTeam, a los del rival), y por eso
+        // EffectEngine.ResolveConsumables sólo distingue esos dos objetivos. El texto tiene que decir lo mismo que hace el motor: sin esto, el efecto sin
         // target caía en el Owner por defecto y el mercado leía "el portador multiplica por 2..." en algo
         // que le pasa al equipo entero (CAT-B). Reescribir el objetivo aquí, y no en /data, es lo correcto:
         // el dato no miente, es que la pregunta "¿a quién?" solo tiene respuesta al saber que es un
@@ -283,7 +283,7 @@ public static class DescriptionGenerator
         var teamWide = new List<EffectDefinition>(effects.Count);
         for (int i = 0; i < effects.Count; i++)
         {
-            teamWide.Add(effects[i] with { Target = EffectTarget.Team });
+            teamWide.Add(effects[i].Target == EffectTarget.OpposingTeam ? effects[i] : effects[i] with { Target = EffectTarget.Team });
         }
 
         var builder = new StringBuilder();
