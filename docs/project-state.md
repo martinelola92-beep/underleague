@@ -9,6 +9,36 @@ PC (Steam), premium, sin online. **Estado (8 sep 2026): fases 0 y 1 cerradas; fa
 **Campo de siete filas (14 sep 2026, decisión del revisor, BA-C):** 16×7 en vez de 16×6 —con seis filas el centro geométrico cae *entre* dos filas y no existe fila central—, con guardado v4. Añadir la fila cuesta ~1,0 tiro y ~0,45 goles por partido y **ninguna palanca local lo recupera**, así que la **ADR 0109** recalibra la banda de tiros a la geometría vigente (8-16 → 7-15) en vez de tocar el motor, y deja escrito que ensanchar la formación o las zonas de acción destruye la profundidad de colocación. Nueve auditorías de la IA de jugadores (`docs/auditoria-ia-jugadores-1..9.md`) dejan **un solo cambio aplicado**, la **ADR 0110**: `Shoot` del defensa 77 → 154 y del centrocampista 188 → 237, porque con 77 un defensa colocado arriba nunca remataba —perdía contra su propio `ShortPass` de 500— y jugar fuera de posición costaba dos tercios del ataque (100/48/38 → 100/68/55). Rechazados y documentados: `ChaseBall pen` en todas las dosis (degrada la diferenciación de builds), el desfase de fase entre equipos (no replica entre semillas) y la histéresis. Queda **abierto** el papel del centrocampista: dispara el 6,5 % de los tiros siendo el 43 % de los jugadores de campo.
 ---
 
+## ARRANQUE (escrito el 29 sep 2026, noche) — lee esto primero
+
+**Cerrado en la rama `worktree-integra-0165-0166` (PR a `main`):**
+- [ADR 0166](decisiones/0166-los-gritos-cambian-la-orden.md), los gritos cambian la orden: «¡Aguantad!»,
+  «¡Arriba!» y «¡A por él!» ponen la orden defensiva/ofensiva o la presión al portador durante 10/10/6 s, con
+  cuenta atrás en el tablero. Revisión independiente: la vista divergía del motor con dos gritos y el cargador
+  aceptaba claves coladas (arreglado, con tests). Hermanos invisibles (`master_plan`, `smoke_flare`,
+  `professional_foul`) anotados en BA-H.
+- [ADR 0165](decisiones/0165-clanes-cerrados-y-nemesis.md), clanes cerrados y némesis: cinco clanes toda la run,
+  memoria de rivales (muertos que no vuelven, fichajes), némesis con título y +1 nivel, traspaso entre actos,
+  venganza. Guardado **v8**. Revisión independiente: el némesis fichaje resucitaba, «lesionó» cuando mataba,
+  venganza cobrable en bucle (ahora una deuda se cobra una vez) y reencuentros por fichero de acto (arreglados,
+  con tests que fallan antes). Abierta [BS-A](pendientes/BS-A.md): créditos y epitafio nombran al jugador de
+  datos aunque ocupara el puesto un fichaje.
+- Medido (600 runs × 2 semillas, base/gritos/clanes): 0,94 némesis y 0,22 venganzas por run, el tope frena al
+  ~28 % de los asesinos; `deathsPerRun` y `runWinRate` sin cambio fuera del ruido (LIKELY). Tabla en la ADR 0165.
+- Suite `Category!=Gate`: 1.630 en verde. Puertas completas: **4 rojas de 45** — las 3 de `main` (curva de
+  jefes, `orc_violence` ×2) y una nueva de cola, `TheGoldOfAnActPaysTwoOrThreeSinksAndNeverAllOfThem` (0,19 %
+  de actos pagan los cuatro sumideros; el oro de venganza descartado como causa; detalle en la ADR 0165).
+  `TheThreeDoctrinesBuyDifferently` pasa a verde.
+
+**Siguiente** (`docs/plan-diversion.md` §5, punto 8): **catálogo de turbas** (F7 de Knavall: tipos distintos; se
+anuncia el tipo, no la víctima) y el consumible **provocar la turba** (primitiva de motor → `game-design-review`
+y `architecture-review` antes de nada); después la **métrica guardiana de la sangre**. Pendientes menores: BS-A;
+Blind contra Never de la apuesta; atributo máximo por run y más semillas del herrero; el panel de estadísticas del
+informe enseña ~4 de 7 filas con varios apodos; la duración de los gritos corre también con el balón muerto (ADR
+0166, decidido dejarlo así).
+
+---
+
 ## ARRANQUE TRAS REINICIAR (escrito el 29 sep 2026, tarde) — lee esto primero
 
 Las sesiones se cortaban (el revisor reinicia el PC). **Todo está commiteado**; nada vive sólo en /tmp.
