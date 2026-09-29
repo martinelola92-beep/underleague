@@ -38,6 +38,11 @@ aplaza).
   «La encerrona» que lesionaba a los propios, pasar un objeto que vendía el del receptor. Todas las
   muertes (partido, sacrificio, matasanos) pasan por `DeathConsequences`. Suite 1396 en verde.
 
+**Puertas al cierre (29 sep): 4 rojas de 44** — curva de jefes y `orc_violence` ×2 (anteriores) y
+`TheThreeDoctrinesBuyDifferently` (contextual 1,22 compras por mercado frente a 1,23 de la ahorradora), que
+ya estaba roja el 27 sep, pasó a verde con el árbitro y vuelve a oscilar con el botín y la política que
+equipa desde el almacén. Es balance fino de la política automática: aplazado con el resto.
+
 **Anotado sin hacer:** los «gritos» son multiplicadores de éxito invisibles, no cambian la conducta
 (propuesta en BA-H: que un grito sea un cambio temporal de orden); falta la primitiva **provocar la
 turba**; dos slots de consumible (propuesta del revisor, cambia RF-080); las cifras nuevas (+8 de
