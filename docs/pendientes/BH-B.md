@@ -1,8 +1,9 @@
 # BH-B — El nodo de jefe se presenta con el nombre de un clan de liga, en el mapa y en el ojeo
 
-**Estado:** Abierta, **CONFIRMED con experimento**. Encontrada por la revisión independiente del paquete
-BE (23 sep 2026), buscando por `OpponentId` donde la auditoría de [BE-F](./BE-F.md) había buscado por
-`IsMatch` — y ese fue justo el error de método.
+**Estado:** **RESUELTA (29 sep 2026)** en el mapa y el ojeo, y en un tercer sitio que la ficha no nombraba (el
+nombre del equipo del jefe en el partido). **CONFIRMED con experimento** antes y después. Encontrada por la
+revisión independiente del paquete BE (23 sep 2026), buscando por `OpponentId` donde la auditoría de
+[BE-F](./BE-F.md) había buscado por `IsMatch` — y ese fue justo el error de método.
 
 ## Síntoma
 
@@ -37,7 +38,38 @@ Choca además con dos principios del proyecto a la vez: *consecuencias legibles 
 *identidad memorable > bonus genéricos*. Un jefe que se presenta con el nombre de un equipo de liga no es
 memorable: es confuso.
 
-## Antes de tocar nada
+## Resolución (29 sep 2026)
+
+**Causa CONFIRMED con captura** (`CapturasOjeo.tscn`, semilla 7, acto 1): el mapa decía «Academia Meridiana ·
+jefe del acto 1» y el ojeo encabezaba la plantilla con «Academia Meridiana — Un equipo de manual: sin
+estrellas…», encima de diez enanos que son **Los Cañones de Grimhold**. Las dos pantallas resolvían
+`node.OpponentId` contra el catálogo de clanes sin mirar el tipo de nodo.
+
+**Arreglo, en dos commits porque cruza la frontera:**
+
+- `/Sim`: `OpponentView.For(node, bosses, rivals, language)` decide la ficha del rival **por el tipo de nodo** —
+  el jefe con `BossDefinition.NameIn(language)`, el partido de liga o élite con su clan, nada en lo que no se
+  juega— y `RunController.Opponent` la sirve a las pantallas. Tests: `OpponentViewTests` (tres semillas × tres
+  actos: el nombre es el del jefe y no es el de ningún clan).
+- `/Game`: `MapScreen` y `ScoutScreen` piden la ficha en vez de leer el id. El ojeo pone bajo el nombre
+  «jefe del acto N», porque `data/bosses/` no trae descripción de ojeo (no se inventa texto de jefe).
+
+**El tercer sitio, hallado buscando por el concepto (Regla G) y no por el identificador**:
+`BossTemplate.ToTeamSetup` construía el equipo con `new TeamSetup(teamId, teamId, …)`, así que el nombre visible
+del equipo del jefe era **su id de datos** («the_hunt»): lo que leen el marcador, el pregón, el log y el informe
+(`MatchPlayback.RivalName`). Es el mismo defecto que RF-015 ya arregló para los rivales de catálogo
+(`RivalTeamBuilder`). Ahora recibe el nombre del jefe (`TheBossTeamCarriesTheBossNameNotItsDataId`); el `Id` del
+equipo no cambia.
+
+**Lo que no se toca**: el nodo sigue **guardando** el `opponentId` fantasma (BE-F, opción 1, mueve el cursor de
+`MapGenerator`). Ahora ninguna pantalla lo lee para presentar a nadie; `NemesisCaptureRunner` lo usa sólo en un
+partido de liga.
+
+**Sin resolver, fuera del encargo**: el ojeo del jefe no enseña su modificador de regla, y es a propósito
+(RF-014: oculto hasta llegar; el compendio de RF-014b no está implementado). Las claves `ui.scout.boss` y
+`ui.map.bossHidden` están huérfanas desde el primer commit de la UI.
+
+## Antes de tocar nada (histórico)
 
 Es `/Game`, así que **no puede ir en el mismo commit que un arreglo de `/Sim`** (hay hook). Y antes de
 declarar nada resuelto, `visual-review`: el dato está CONFIRMED, pero lo que se ve en pantalla no se ha
