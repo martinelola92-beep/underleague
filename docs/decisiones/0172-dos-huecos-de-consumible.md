@@ -126,5 +126,7 @@ antes (por debajo de su banda) y siguen igual de fuera. **Lectura, con la vara d
 - **Los condicionales no se ven en el tablero hasta que saltan** (el aviso «usa un consumible» ya existe): un jugador
   que pasa uno a condicional no ve en la retransmisión que está «armado». Candidato a una etiqueta pequeña junto a los
   botones; sin medir que haga falta.
+- **La opción de evento que da un consumible, con los dos huecos llenos, aparece deshabilitada sin decir por qué**
+  (como las demás opciones no viables de la ADR 0159: sin plantilla, sin a quién señalar). El mercado sí lo dice.
 - La doctrina de la política sigue sin pulsar nunca un manual (CAT-C de la ADR 0101): la cifra es de un jugador que
   sólo configura disparadores.
