@@ -10,7 +10,8 @@ namespace Underleague.Game.Screens;
 /// <summary>
 /// Capturas del mapa y del ojeo en los puntos que una run recién generada no alcanza sola. Juega con semillas
 /// fijas y coloca el estado como lo dejaría el jugador: delante del nodo de jefe (BH-B: el jefe se presentaba con
-/// el nombre de un clan de liga, en el mapa y en el ojeo).
+/// el nombre de un clan de liga, en el mapa y en el ojeo) y con un titular que no puede jugar (BC-H: el aviso de
+/// «entra X de oficio» sólo sale con alguien de baja y la secuencia normal empieza con la plantilla sana).
 /// <code>
 /// xvfb-run -a --server-args="-screen 0 1280x800x24" godot --path Game \
 ///   --rendering-driver opengl3 --audio-driver Dummy res://Scenes/CapturasOjeo.tscn
@@ -55,8 +56,72 @@ public partial class ScoutCaptureRunner : Control
             Drop(scout);
         }
 
+        // BC-H: el ojeo con un titular de baja. Sin este escenario el aviso de relleno no se regresiona solo.
+        run.NewRun("orc_ironworks", Race.Orc, 7UL);
+        var first = FirstMatch(run);
+        string absent = MakeAStarterUnavailable(run);
+        GD.Print($"titular de baja: {absent}");
+        run.SelectedNodeId = first.Id;
+        var filled = await Show("res://Scenes/Ojeo.tscn");
+        await Save("ojeo-relleno");
+        Drop(filled);
+
         Nav.Suppressed = false;
         GetTree().Quit(0);
+    }
+
+    private static MapNode FirstMatch(RunController run)
+    {
+        foreach (var node in run.Available())
+        {
+            if (node.IsMatch)
+            {
+                return node;
+            }
+        }
+
+        throw new System.InvalidOperationException("la run no ofrece ningún nodo de partido al empezar");
+    }
+
+    /// <summary>
+    /// Lesión grave para un centrocampista titular, y fuera de la alineación guardada: es como lo deja un partido
+    /// (<c>MatchResolution.PruneLineup</c>). Devuelve su nombre.
+    /// </summary>
+    private static string MakeAStarterUnavailable(RunController run)
+    {
+        string name = string.Empty;
+        run.SeedForCapture(state =>
+        {
+            RunPlayer? victim = null;
+            foreach (var slot in state.Lineup.Slots)
+            {
+                var player = state.FindPlayer(slot.PlayerId);
+                if (player is { Position: Underleague.Sim.Model.Position.Midfielder })
+                {
+                    victim = player;
+                    break;
+                }
+            }
+
+            if (victim is null)
+            {
+                throw new System.InvalidOperationException("la alineación inicial no tiene ningún centrocampista");
+            }
+
+            name = victim.Name;
+            var remaining = new System.Collections.Generic.List<LineupSlot>();
+            foreach (var slot in state.Lineup.Slots)
+            {
+                if (slot.PlayerId != victim.Id)
+                {
+                    remaining.Add(slot);
+                }
+            }
+
+            return state.WithPlayer(victim with { PhysicalState = PhysicalState.SevereInjury }).WithLineup(new Lineup(remaining));
+        });
+
+        return name;
     }
 
     /// <summary>
