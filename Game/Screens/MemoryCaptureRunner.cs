@@ -50,7 +50,7 @@ public partial class MemoryCaptureRunner : Control
         for (ulong seed = 1; seed <= 40 && !reported; seed++)
         {
             run.NewRun("orc_ironworks", Race.Orc, seed);
-            Forge(run, state => PrimeCareers(state));
+            Forge(run, state => PrimeCareers(state, run));
             var match = FirstMatch(run);
             run.SelectedNodeId = match.Id;
             run.PlayMatch(match.Id);
@@ -103,13 +103,15 @@ public partial class MemoryCaptureRunner : Control
     }
 
     /// <summary>Carreras a un paso de un apodo: el primer gol, entrada ganada o falta cruza un umbral.</summary>
-    private static RunState PrimeCareers(RunState state)
+    private static RunState PrimeCareers(RunState state, RunController run)
     {
+        // Los umbrales salen del catálogo (el censo de la ADR 0163 los mueve): un paso por debajo de cada uno.
+        int Below(string id) => System.Math.Max(0, run.Systems!.Nicknames.Find(id)!.Threshold - 1);
         for (int i = 0; i < state.Roster.Count; i++)
         {
             var player = state.Roster[i] with
             {
-                Career = RunCareer.None with { Matches = 3, Goals = 2, Assists = 2, Cards = 2, Fouls = 5, InjuriesCaused = 1, TacklesWon = 14 },
+                Career = RunCareer.None with { Matches = 3, Goals = Below("golden_boots"), Assists = Below("delivery_boy"), Cards = Below("collector"), Fouls = Below("grubby"), InjuriesCaused = Below("butcher"), TacklesWon = Below("wall") },
             };
             state = state.WithPlayer(player);
         }
