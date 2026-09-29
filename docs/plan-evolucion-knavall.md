@@ -256,7 +256,7 @@ de persistencia para averiguarlo.
 | 2 | A5 contra la **ADR 0092**: ¿identidad jugable por raza, o visual? | **el alcance de F3.1** (si los rasgos nuevos se reparten por raza) y cualquier trabajo de identidad racial |
 | 3 | ¿vampiros raza o clan? | nada hoy. Bloquearía cualquier fase de contenido nuevo de raza |
 | 4 | ¿cuándo se construye el perfil entre runs? | **F8 entera** |
-| 5 | ¿el desgaste es recurso de **run** o de **acto**? (`healsRoster`) | **F7** y cualquier trabajo sobre la carne como moneda |
+| 5 | ¿el desgaste es recurso de **run** o de **acto**? (`healsRoster`) — **CERRADA el 29 sep 2026 (ADR 0170): de la RUN**, el jefe ya no cura | ~~**F7** y cualquier trabajo sobre la carne como moneda~~ (desbloqueado) |
 | 6 | `kamikaze`/`iron_price`: ¿deben penalizar de verdad? | **una parte de F4**. Si sí, hace falta una capacidad de motor que no existe (que el que entra se lesione) y eso es C4 real |
 
 **Ninguna bloquea F1 ni F2**, que son las dos de mayor impacto. Ese es el argumento para empezar por ahí.

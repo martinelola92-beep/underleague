@@ -73,7 +73,7 @@ La identidad del juego no es el fútbol, es la **carnicería administrada**: los
 
 ### 3.1 Estructura de la partida
 
-- **RF-001** Una run se compone de 3 actos. Cada acto contiene entre 10 y 12 nodos y termina en un nodo de jefe obligatorio.
+- **RF-001** Una run se compone de 3 actos. Cada acto contiene entre 8 y 10 nodos (**8/9/9** en `data/map/map.json`; antes 10-12, **enmendado por la ADR 0170**) y termina en un nodo de jefe obligatorio.
 - **RF-001b** Los jefes de los actos 1 y 2 aplican **un** modificador de regla cada uno.
 - **RF-001c** El jefe del acto 3 es el **jefe final**: dificultad marcadamente superior. Plantilla íntegramente legendaria, **dos** modificadores de regla activos a la vez y una condición de derrota adicional propia.
 - **RF-002** La run termina en victoria al derrotar al jefe del acto 3.
@@ -81,8 +81,8 @@ La identidad del juego no es el fútbol, es la **carnicería administrada**: los
 - **RF-002c** Perder un partido ordinario no termina la run. No otorga recompensa de perk ni oro, pero aplica lesiones y experiencia con normalidad.
 - **RF-002d** Se puede jugar en **inferioridad numérica**, con 5 o 6 jugadores, dejando casillas vacías en la cuadrícula. Es una decisión legítima frente a desviarse hacia un mercado, y el jugador la toma sabiendo que con 5 en campo una sola baja termina la run. La interfaz lo advierte de forma explícita antes de confirmar la alineación.
 - **RF-002e** El contador de jugadores disponibles frente al mínimo es visible permanentemente en el mapa. Los nodos de mercado se distinguen a golpe de vista, porque son los nodos que salvan runs.
-- **RF-003** Duración objetivo de una run completa: 75-100 minutos.
-- **RF-003b** Con 30-36 nodos por run, no más del 60% pueden ser partidos. El resto son tienda, mercado, clínica, taller, entrenamiento y eventos. Un mapa mayoritariamente de partidos agota al jugador y diluye las decisiones.
+- **RF-003** Duración objetivo de una run completa: **45-60 minutos** *(antes 75-100; enmendado por la ADR 0170, decisión del revisor del 29 sep 2026: «de acuerdo con bajar nodos»; la estimación de la duración es provisional, sin medir en reloj: ver la ADR)*.
+- **RF-003b** Con 24-30 nodos por run *(antes 30-36, ADR 0170)*, no más del 60% pueden ser partidos. El resto son tienda, mercado, clínica, taller, entrenamiento y eventos. Un mapa mayoritariamente de partidos agota al jugador y diluye las decisiones.
 - **RF-004** El jugador elige el club inicial antes de empezar. **Todos los jugadores del club inicial pertenecen a una única raza.** Cada club define esa raza, la plantilla inicial, el oro de partida y una regla especial.
 - **RF-004b** La sinergia no procede de mezclar razas, sino de las **etiquetas** que portan individuos de una misma raza, que varían entre ellos (RF-024b). Dos orcos del mismo club pueden tener perfiles opuestos y habilitar builds distintas.
 - **RF-004c** La única vía para incorporar jugadores de otra raza durante la run es el fichaje de mercenarios (RF-110).
@@ -688,7 +688,7 @@ Run
 | Percepción de arte no propio | Medio. Penaliza en Steam | Assets libres solo como placeholder, arte encargado para el lanzamiento |
 | 9 razas, cada una como club completo | Alto. Multiplica diseño, arte y balanceo | 5 en lanzamiento y 4 en DLC. Ninguna raza entra sin 3 builds viables demostradas en `/Balance` |
 | Modificador de jefe oculto percibido como injusto | Medio | RF-014b: se revela para siempre tras el primer encuentro |
-| 30-36 nodos alargan la run más de lo previsto | Medio. Fatiga y abandono | RF-003b: tope del 60% de nodos de partido |
+| 24-30 nodos alargan la run más de lo previsto (30-36 antes de la ADR 0170) | Medio. Fatiga y abandono | RF-003b: tope del 60% de nodos de partido |
 | Mercado saturado y descubrimiento nulo | Alto | Demo y acumulación de wishlists como objetivo explícito de la fase 4 |
 
 ---

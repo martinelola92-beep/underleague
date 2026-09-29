@@ -40,6 +40,16 @@ independiente, rebase y merge a `main`, push):
 
 ## ARRANQUE (escrito el 29 sep 2026, noche) — lee esto primero
 
+**[ADR 0170](decisiones/0170-el-desgaste-es-de-la-run-y-la-run-es-mas-corta.md) (29 sep 2026, dos decisiones del
+revisor):** el desgaste es de la **run** (el jefe ya no cura: `healsRoster` false; cierra la gate 5 de
+`plan-evolucion-knavall.md` y desbloquea F7) y la run es **más corta** (8/9/9 nodos por acto en vez de 11/12/12; RF-001,
+RF-003 y RF-003b enmendados; peor camino de 14 partidos). Única compensación: `matchExperience` 140 → 200 (el nivel en
+el jefe baja a 3,6/5,9/6,9 sin ella). Medido con 1.200 runs × 2 semillas: `runWinRate` 16,8 → 14,8 (la base ya estaba
+fuera de la banda 20-30), `deathsPerRun` 2,22 → 1,39, `bloodPerMatch` intacto (0,36). Movidas: banda de
+`matchesPerFullRun` (12-15) y techo de `bloodlessPastAct1Share` (7 → 10 %), ambos provisionales; la curva de jefes y
+`orc_violence` siguen rojas como en `main` (no dependen de esta ADR). Duración estimada de la run completa 55-76 min
+(**provisional, sin medir en reloj**): queda por encima del 45-60 min del plan.
+
 **Cerrado en la rama `worktree-integra-0165-0166` (PR a `main`):**
 - [ADR 0166](decisiones/0166-los-gritos-cambian-la-orden.md), los gritos cambian la orden: «¡Aguantad!»,
   «¡Arriba!» y «¡A por él!» ponen la orden defensiva/ofensiva o la presión al portador durante 10/10/6 s, con
