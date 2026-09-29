@@ -25,6 +25,7 @@ public static class NicknameSystem
             NicknameStat.InjuriesCaused => career.InjuriesCaused,
             NicknameStat.DeathsCaused => career.DeathsCaused,
             NicknameStat.InjuriesSuffered => career.InjuriesSuffered,
+            NicknameStat.Revenges => career.Revenges,
             _ => throw new ArgumentOutOfRangeException(nameof(stat), stat, "campo de carrera desconocido"),
         };
     }
@@ -75,7 +76,7 @@ public static class NicknameSystem
     /// mismas sumas, mismas condiciones). Existe para que el informe post-partido compare «antes» y
     /// «después» sin que el estado tenga que guardar una copia.
     /// </summary>
-    public static RunCareer BeforeMatch(RunCareer after, PlayerMatchStats stats)
+    public static RunCareer BeforeMatch(RunCareer after, PlayerMatchStats stats, int revengesInMatch = 0)
     {
         ArgumentNullException.ThrowIfNull(after);
         ArgumentNullException.ThrowIfNull(stats);
@@ -92,6 +93,7 @@ public static class NicknameSystem
             DeathsCaused = after.DeathsCaused - stats.DeathsCaused,
             InjuriesSuffered = after.InjuriesSuffered - (stats.Injured ? 1 : 0),
             TicksOnPitch = after.TicksOnPitch - stats.TicksOnPitch,
+            Revenges = after.Revenges - revengesInMatch,
         };
     }
 

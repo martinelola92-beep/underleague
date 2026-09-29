@@ -7,6 +7,7 @@ using Underleague.Sim.Run.Systems.Economy;
 using Underleague.Sim.Run.Systems.Items;
 using Underleague.Sim.Run.Systems.Nicknames;
 using Underleague.Sim.Run.Systems.Rewards;
+using Underleague.Sim.Run.Systems.Rivals;
 
 namespace Underleague.Sim.Run.View;
 
@@ -57,6 +58,17 @@ public sealed record PlayerStatRow(
 /// prioridad) y la de después sí. <see cref="PreviousNickname"/> vacío si no tenía ninguno.
 /// </summary>
 public sealed record NicknameGainRow(int PlayerId, string PlayerName, string NicknameId, string Nickname, string PreviousNickname);
+
+/// <summary>
+/// Un rival que se ha convertido en némesis en este partido (ADR 0165): quién es, su título, de qué clan y a
+/// quién mató. El informe lo cuenta: «X, el Matahermanos, se convierte en tu némesis».
+/// </summary>
+public sealed record NemesisMadeRow(int NemesisId, string Name, string Title, string Clan, string VictimName);
+
+/// <summary>
+/// Una venganza cobrada en este partido (ADR 0165): quién se vengó, de qué némesis y si éste murió.
+/// </summary>
+public sealed record RevengeRow(int NemesisId, string NemesisName, string Title, string AvengerName, bool Slain);
 
 /// <summary>Una tarjeta mostrada en el partido (RF-062, RF-063), de cualquiera de los dos equipos.</summary>
 public sealed record CardRow(int PlayerId, string PlayerName, MatchSide Side, bool Red, int Minute);
@@ -162,6 +174,15 @@ public sealed record PostMatchReport(
     /// <summary>Oro que el corredor devolvió al entrar en este partido por una apuesta tomada para otro nodo (ADR 0157); 0 si ninguno.</summary>
     public int BetRefunded { get; init; }
 
+    /// <summary>Rivales que se han convertido en némesis en este partido (ADR 0165), por id de némesis.</summary>
+    public IReadOnlyList<NemesisMadeRow> NemesesMade { get; init; } = Array.Empty<NemesisMadeRow>();
+
+    /// <summary>Venganzas de este partido (ADR 0165), por id de némesis.</summary>
+    public IReadOnlyList<RevengeRow> Revenges { get; init; } = Array.Empty<RevengeRow>();
+
+    /// <summary>Oro cobrado por las venganzas de este partido (ADR 0165); 0 si ninguna o si la run terminó en él.</summary>
+    public int RevengeGold { get; init; }
+
     /// <summary>Muertes propias (RF-093): lo primero que el informe tiene que decir cuando las hay.</summary>
     public int Deaths
     {
@@ -202,6 +223,7 @@ public static class PostMatchView
     /// <param name="items">Catálogo de equipamiento; sin él el informe no lista objetos.</param>
     /// <param name="language">Idioma de las descripciones generadas (RT-073).</param>
     /// <param name="nicknames">Catálogo de apodos (ADR 0163); sin él el informe no enseña apodos.</param>
+    /// <param name="nemesis">Clanes y títulos de némesis (ADR 0165); sin él el informe no cuenta némesis ni venganzas.</param>
     public static PostMatchReport Build(
         MatchPlayback playback,
         RunState stateAfterMatch,
@@ -210,7 +232,8 @@ public static class PostMatchView
         EconomyConfig? economy = null,
         ItemCatalog? items = null,
         string language = "es",
-        NicknameCatalog? nicknames = null)
+        NicknameCatalog? nicknames = null,
+        NemesisCatalog? nemesis = null)
     {
         ArgumentNullException.ThrowIfNull(playback);
         ArgumentNullException.ThrowIfNull(stateAfterMatch);
@@ -264,7 +287,10 @@ public static class PostMatchView
             Bet = summary.Bet,
             BetRefunded = summary.BetRefunded,
             PlayerStats = PlayerStatRows(report, own, stateAfterMatch, nicknames, language),
-            NicknamesEarned = NicknameGains(report, own, stateAfterMatch, nicknames, language),
+            NicknamesEarned = NicknameGains(report, own, stateAfterMatch, nicknames, language, summary),
+            NemesesMade = MadeRows(summary, nemesis, language),
+            Revenges = RevengeRows(summary, nemesis, language),
+            RevengeGold = economy is null || stateAfterMatch.Result.IsOver ? 0 : summary.Revenges.Count * economy.RevengeGold,
         };
     }
 
@@ -306,12 +332,54 @@ public static class PostMatchView
         return rows;
     }
 
+    private static IReadOnlyList<NemesisMadeRow> MadeRows(RunMatchSummary summary, NemesisCatalog? nemesis, string language)
+    {
+        var rows = new List<NemesisMadeRow>(summary.NemesesMade.Count);
+        for (int i = 0; i < summary.NemesesMade.Count; i++)
+        {
+            var made = summary.NemesesMade[i];
+            rows.Add(new NemesisMadeRow(
+                made.NemesisId,
+                made.Name,
+                nemesis?.Find(made.TitleId)?.NameIn(language) ?? string.Empty,
+                ClanName(nemesis, made.ClanId, language),
+                made.VictimName));
+        }
+
+        rows.Sort(static (a, b) => a.NemesisId.CompareTo(b.NemesisId));
+        return rows;
+    }
+
+    private static string ClanName(NemesisCatalog? nemesis, string clanId, string language)
+    {
+        var name = nemesis?.Rivals.ClanName(clanId);
+        return name is null ? string.Empty : string.Equals(language, "en", StringComparison.Ordinal) ? name.En : name.Es;
+    }
+
+    private static IReadOnlyList<RevengeRow> RevengeRows(RunMatchSummary summary, NemesisCatalog? nemesis, string language)
+    {
+        var rows = new List<RevengeRow>(summary.Revenges.Count);
+        for (int i = 0; i < summary.Revenges.Count; i++)
+        {
+            var revenge = summary.Revenges[i];
+            rows.Add(new RevengeRow(
+                revenge.NemesisId,
+                revenge.NemesisName,
+                nemesis?.Find(revenge.TitleId)?.NameIn(language) ?? string.Empty,
+                revenge.AvengerName,
+                revenge.Slain));
+        }
+
+        rows.Sort(static (a, b) => a.NemesisId.CompareTo(b.NemesisId));
+        return rows;
+    }
+
     /// <summary>
     /// Apodos que el partido ha dado (ADR 0163): compara la carrera de antes, que es la de después menos
     /// las estadísticas del partido (<see cref="NicknameSystem.BeforeMatch"/>), con la de después.
     /// </summary>
     private static IReadOnlyList<NicknameGainRow> NicknameGains(
-        MatchReport report, int ownTeam, RunState stateAfterMatch, NicknameCatalog? nicknames, string language)
+        MatchReport report, int ownTeam, RunState stateAfterMatch, NicknameCatalog? nicknames, string language, RunMatchSummary summary)
     {
         var rows = new List<NicknameGainRow>();
         if (nicknames is null)
@@ -330,7 +398,16 @@ public static class PostMatchView
                 continue;
             }
 
-            var before = NicknameSystem.BeforeMatch(player.Career, stats);
+            int revenges = 0;
+            for (int r = 0; r < summary.Revenges.Count; r++)
+            {
+                if (summary.Revenges[r].AvengerPlayerId == player.Id)
+                {
+                    revenges++;
+                }
+            }
+
+            var before = NicknameSystem.BeforeMatch(player.Career, stats, revenges);
             var earned = NicknameSystem.Earned(before, player.Career, nicknames);
             if (earned is null)
             {

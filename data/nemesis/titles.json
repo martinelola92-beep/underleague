@@ -1,0 +1,17 @@
+{
+  "_doc": "ADR 0165: némesis. Un jugador rival de clan que MATA a uno de los tuyos gana un título de esta lista (se sortea con un flujo propio de la run, sin repetir mientras queden sin usar) y un nivel más mientras siga vivo. maxAlive es el tope de némesis vivos a la vez (con el tope, el siguiente asesino no se convierte). levelBonus es lo que suma al nivel del jugador rival. Ambas cifras son PROVISIONALES, SIN MEDIR (Regla H): el tope de dos sale de la decisión del revisor en docs/plan-diversion.md §3 y el +1 de la ADR 0165; se miden con nemesesPerRun, revengesPerRun y deathsPerRun de /Balance. Los títulos se muestran detrás del nombre del jugador rival («Grok Comecráneos, el Matahermanos»).",
+  "maxAlive": 2,
+  "levelBonus": 1,
+  "titles": [
+    { "id": "brother_slayer", "name": { "es": "el Matahermanos", "en": "the Brother-Slayer" } },
+    { "id": "undertakers_pal", "name": { "es": "el Amigo del Enterrador", "en": "the Undertaker's Pal" } },
+    { "id": "quiet_one", "name": { "es": "el Callado", "en": "the Quiet One" } },
+    { "id": "bill_collector", "name": { "es": "el Cobrador", "en": "the Bill Collector" } },
+    { "id": "turf_stainer", "name": { "es": "el Manchacésped", "en": "the Turf-Stainer" } },
+    { "id": "early_showers", "name": { "es": "el Duchas Tempranas", "en": "Early Showers" } },
+    { "id": "last_whistle", "name": { "es": "el Último Pitido", "en": "the Last Whistle" } },
+    { "id": "widow_maker", "name": { "es": "el Hacedor de Viudas", "en": "the Widow-Maker" } },
+    { "id": "no_encore", "name": { "es": "el Sin Bis", "en": "No Encore" } },
+    { "id": "shroud_tailor", "name": { "es": "el Sastre de Mortajas", "en": "the Shroud Tailor" } }
+  ]
+}

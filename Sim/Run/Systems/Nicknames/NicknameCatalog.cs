@@ -16,6 +16,7 @@ public enum NicknameStat
     InjuriesCaused,
     DeathsCaused,
     InjuriesSuffered,
+    Revenges,
 }
 
 /// <summary>
@@ -172,6 +173,7 @@ public static class NicknameLoader
             "injuriesCaused" => NicknameStat.InjuriesCaused,
             "deathsCaused" => NicknameStat.DeathsCaused,
             "injuriesSuffered" => NicknameStat.InjuriesSuffered,
+            "revenges" => NicknameStat.Revenges,
             var other => throw new DataException(element.File, element.Path, $"campo de carrera desconocido: '{other}'"),
         };
     }

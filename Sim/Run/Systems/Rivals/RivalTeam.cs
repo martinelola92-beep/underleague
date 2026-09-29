@@ -28,6 +28,11 @@ public sealed record RivalPlayer(
 /// <c>TeamSetup</c>. La build "reconocible" de RF-015 es la combinación de raza, sesgo de atributos y
 /// perks: no hay un campo de etiqueta de build separado, el propio roster la cuenta.
 /// </summary>
+/// <param name="ClanId">
+/// Clan al que pertenece (ADR 0165, RF-015 enmendada): los tres rivales de una raza —uno por acto— son el
+/// mismo clan que sube de categoría, con el mismo nombre y los mismos nombres de jugador por puesto. Es la
+/// identidad sobre la que <see cref="RivalMemory"/> recuerda muertos y némesis.
+/// </param>
 /// <param name="Description">
 /// Línea de una frase para el informe de ojeo (RF-012b, RF-015): "un rival real, no un bloque de
 /// estadísticas". Se escribe a mano, con las mismas reglas que la descripción de una raza o un club
@@ -35,6 +40,7 @@ public sealed record RivalPlayer(
 /// </param>
 public sealed record RivalTeam(
     string Id,
+    string ClanId,
     LocalizedName Name,
     LocalizedName Description,
     Race Race,

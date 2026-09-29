@@ -239,6 +239,12 @@ public sealed record EconomyConfig(
     public int DefeatGoldPenaltyPercent { get; init; }
 
     /// <summary>
+    /// Oro por venganza (ADR 0165): lo que cobra la run cuando un jugador propio lesiona o mata a un némesis
+    /// rival, una vez por némesis y partido, se gane o no. <b>Provisional, sin medir</b> (Regla H). 0 si falta.
+    /// </summary>
+    public int RevengeGold { get; init; }
+
+    /// <summary>
     /// Oro de partida de la división indicada (RF-128, ADR 0044 §"el oro inicial es la primera palanca de
     /// dificultad por división"). El criterio es que el club empiece con <b>lo justo para un artículo
     /// común</b> en la primera tienda, y que en Mundial esa primera tienda sea solo un escaparate. Es una
@@ -436,6 +442,7 @@ public static class EconomyLoader
             Blacksmith = ReadBlacksmith(root.Prop("blacksmith")),
             DefeatGoldPenalty = root.OptionalInt("defeatGoldPenalty", 0),
             DefeatGoldPenaltyPercent = root.OptionalInt("defeatGoldPenaltyPercent", 0),
+            RevengeGold = root.OptionalInt("revengeGold", 0),
         };
     }
 

@@ -24,7 +24,7 @@
         "name": { "$ref": "#/$defs/localizedName" },
         "stat": {
           "description": "Campo de RunCareer sobre el que se compara.",
-          "enum": ["matches", "goals", "assists", "tackles", "tacklesWon", "fouls", "cards", "injuriesCaused", "deathsCaused", "injuriesSuffered"]
+          "enum": ["matches", "goals", "assists", "tackles", "tacklesWon", "fouls", "cards", "injuriesCaused", "deathsCaused", "injuriesSuffered", "revenges"]
         },
         "threshold": { "type": "integer", "minimum": 1 },
         "priority": { "type": "integer", "minimum": 1 }

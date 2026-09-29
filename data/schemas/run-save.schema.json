@@ -157,6 +157,50 @@
       "description": "Contadores enteros de los sistemas de run (coste de reroll, oro por sumidero...). Clave libre para no subir de versión cada vez que entra un sistema.",
       "$ref": "#/$defs/intMap"
     },
+    "rivalMemory": {
+      "description": "Memoria de los clanes rivales (ADR 0165, versión 8): puestos cuyo jugador de datos ya no juega (lo ocupa un fichaje) y jugadores rivales que son o fueron némesis.",
+      "type": "object",
+      "properties": {
+        "vacancies": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "clan": { "type": "string" },
+              "slot": { "type": "integer", "minimum": 0, "maximum": 9 },
+              "generation": { "type": "integer", "minimum": 0 }
+            },
+            "required": ["clan", "slot", "generation"],
+            "additionalProperties": false
+          }
+        },
+        "nemeses": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": { "type": "integer", "minimum": 1 },
+              "title": { "type": "string" },
+              "name": { "type": "string" },
+              "position": { "enum": ["goalkeeper", "defender", "midfielder", "forward"] },
+              "homeClan": { "type": "string" },
+              "homeSlot": { "type": "integer", "minimum": 0, "maximum": 9 },
+              "clan": { "type": "string" },
+              "slot": { "type": "integer", "minimum": 0, "maximum": 9 },
+              "victimName": { "type": "string" },
+              "victimPlayer": { "type": "integer" },
+              "act": { "type": "integer", "minimum": 1, "maximum": 3 },
+              "kills": { "type": "integer", "minimum": 1 },
+              "status": { "enum": ["active", "slain"] }
+            },
+            "required": ["id", "title", "name", "position", "homeClan", "homeSlot", "clan", "slot", "victimName", "victimPlayer", "act", "kills", "status"],
+            "additionalProperties": false
+          }
+        }
+      },
+      "required": ["vacancies", "nemeses"],
+      "additionalProperties": false
+    },
     "achievements": {
       "description": "Progreso de logros de desbloqueo (RF-125b).",
       "$ref": "#/$defs/intMap"
@@ -170,7 +214,7 @@
   "required": [
     "schemaVersion", "seed", "division", "club", "clubRace", "act", "currentNode", "pendingNode",
     "phase", "gold", "bet", "rerollsUsed", "nodeRerolls", "nextPlayerId", "result", "nodeHistory", "maps",
-    "referees", "roster", "lineup", "consumables"
+    "referees", "roster", "lineup", "consumables", "rivalMemory"
   ],
   "additionalProperties": false,
   "$defs": {
@@ -332,11 +376,12 @@
             "injuriesCaused": { "type": "integer", "minimum": 0 },
             "deathsCaused": { "type": "integer", "minimum": 0 },
             "injuriesSuffered": { "type": "integer", "minimum": 0 },
-            "ticksOnPitch": { "type": "integer", "minimum": 0 }
+            "ticksOnPitch": { "type": "integer", "minimum": 0 },
+            "revenges": { "description": "Veces que ha lesionado o matado a un némesis del rival (ADR 0165, versión 8).", "type": "integer", "minimum": 0 }
           },
           "required": [
             "matches", "goals", "assists", "tackles", "tacklesWon", "fouls", "cards",
-            "injuriesCaused", "deathsCaused", "injuriesSuffered", "ticksOnPitch"
+            "injuriesCaused", "deathsCaused", "injuriesSuffered", "ticksOnPitch", "revenges"
           ],
           "additionalProperties": false
         }
