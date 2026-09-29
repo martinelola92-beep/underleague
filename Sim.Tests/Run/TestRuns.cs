@@ -117,6 +117,8 @@ internal sealed class TestRunSystems : IRunSystems
 
     public Underleague.Sim.Run.Systems.Medical.ProsthesisCatalog Prostheses => _inner.Prostheses;
 
+    public Underleague.Sim.Run.Systems.Rivals.NemesisCatalog Nemesis => _inner.Nemesis;
+
     public IReadOnlyList<RunReferee> CreateReferees(ulong seed, int count, Catalog catalog) =>
         _inner.CreateReferees(seed, count, catalog);
 

@@ -385,6 +385,8 @@ public sealed class BossGateTests
 
         public Underleague.Sim.Run.Systems.Medical.ProsthesisCatalog Prostheses => inner.Prostheses;
 
+        public Underleague.Sim.Run.Systems.Rivals.NemesisCatalog Nemesis => inner.Nemesis;
+
         public IReadOnlyList<RunReferee> CreateReferees(ulong seed, int count, Catalog catalog) =>
             inner.CreateReferees(seed, count, catalog);
 

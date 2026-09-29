@@ -205,7 +205,7 @@ public sealed class MatchResolutionRivalCreditTests
         Assert.Equal(1, loaded.Counter(key));
         // ADR 0158 sube la versión a 6 y la ADR 0157 a 7 (la apuesta tomada); BE-B sigue sin subirla por su
         // cuenta, así que el número aquí solo tiene que seguir a CurrentSchemaVersion.
-        Assert.Equal(7, RunState.CurrentSchemaVersion);
-        Assert.Equal(7, loaded.SchemaVersion);
+        Assert.Equal(8, RunState.CurrentSchemaVersion);
+        Assert.Equal(8, loaded.SchemaVersion);
     }
 }
