@@ -1128,7 +1128,8 @@ public partial class BroadcastCapture : Control
     {
         (ulong Seed, int Node, MatchMoment Moment, string Detail)? saved = null;
         (ulong Seed, int Node, MatchMoment Moment, string Detail)? hit = null;
-        for (ulong seed = 20260905UL; (saved is null || hit is null) && seed < 20260905UL + 40; seed++)
+        (ulong Seed, int Node, MatchMoment Moment, string Detail)? death = null;
+        for (ulong seed = 20260905UL; (saved is null || hit is null || death is null) && seed < 20260905UL + 80; seed++)
         {
             run.NewRun("orc_ironworks", Race.Orc, seed);
             run.JumpToAct(3);
@@ -1150,25 +1151,33 @@ public partial class BroadcastCapture : Control
                 }
 
                 string detail = playback.Result.Events[moment.EventIndices[0]].Detail;
-                if (detail.EndsWith(":saved", StringComparison.Ordinal))
+                var found = (seed, node, moment, detail);
+                if (detail.StartsWith("death", StringComparison.Ordinal))
                 {
-                    saved ??= (seed, node, moment, detail);
+                    if (detail.EndsWith(":hit", StringComparison.Ordinal))
+                    {
+                        death ??= found;
+                    }
+                }
+                else if (detail.EndsWith(":saved", StringComparison.Ordinal))
+                {
+                    saved ??= found;
                 }
                 else
                 {
-                    hit ??= (seed, node, moment, detail);
+                    hit ??= found;
                 }
             }
         }
 
-        foreach (var (label, found) in new[] { ("salvada", saved), ("caída", hit) })
+        foreach (var (label, found) in new[] { ("grave salvada", saved), ("grave caída", hit), ("muerte", death) })
         {
             GD.Print(found is { } f
                 ? $"retransmisión: tirada del destino {label} en la semilla {f.Seed}, nodo {f.Node}, fotogramas {f.Moment.Frame}-{f.Moment.LastFrame}, {f.Detail}"
                 : $"retransmisión: ninguna semilla tiene una tirada del destino {label}");
         }
 
-        foreach (var (label, found) in new[] { ("salva", saved), ("cae", hit) })
+        foreach (var (label, found) in new[] { ("salva", saved), ("cae", hit), ("muerte", death) })
         {
             if (found is not { } f)
             {
@@ -1189,13 +1198,14 @@ public partial class BroadcastCapture : Control
             // propio fotograma y la cámara lenta no se vería.
             await ShowFrame(screen, Math.Max(f.Moment.Frame - 30, 0), "destino-" + label);
             const double Delta = 1d / 120d;
-            async Task StepUntil(Func<bool> done, string name)
+            async Task StepUntil(Func<bool> done, string name, int extraSteps = 0)
             {
                 for (int i = 0; i < 4000 && !done(); i++)
                 {
                     StepManual(screen, Delta, 1);
                 }
 
+                StepManual(screen, Delta, extraSteps);
                 await Settle(2);
                 GD.Print($"{name}: fotograma {screen.Pitch3D.Frame}");
                 await Save(name);
@@ -1203,11 +1213,13 @@ public partial class BroadcastCapture : Control
 
             await StepUntil(() => screen.Pitch3D.Frame >= f.Moment.Frame - 4, "destino-" + label + "-0-antes");
             await StepUntil(() => screen.Pitch3D.Frame >= f.Moment.Frame + 3, "destino-" + label + "-1-rueda");
-            if (label == "salva")
-            {
-                await StepUntil(() => screen.Pitch3D.Frame >= f.Moment.LastFrame + 2, "destino-" + label + "-2-resultado");
-            }
 
+            // El resultado: si se salva, lo cuenta la banda; si cae, la presentación de la lesión o de la
+            // muerte («los dados lo han querido»; el bando de la muerte llega tras su retardo real).
+            await StepUntil(
+                () => screen.Pitch3D.Frame >= (label == "salva" ? f.Moment.LastFrame + 2 : f.Moment.LastFrame - 1),
+                "destino-" + label + "-2-resultado",
+                extraSteps: label == "muerte" ? 200 : 6);
             Drop(instance);
         }
     }

@@ -986,7 +986,9 @@ public partial class BroadcastScreen : Control
             UiText.Get("ui.pregon.banner.said"),
             UiText.Get("ui.pregon.banner.injuryTitle"),
             UiText.Get("ui.pregon.banner.injuryBody", name, position),
-            UiText.Get("ui.pregon.banner.injuryFooter"));
+            DiceWanted(injury)
+                ? UiText.Get("ui.pregon.banner.injuryFooter") + " · " + UiText.Get("ui.pregon.fate.diceWanted")
+                : UiText.Get("ui.pregon.banner.injuryFooter"));
 
         // Sacudida más corta que la del gol (docs/ui/README §4), SOLO a x1.
         if (Speeds[_speedIndex] == 1)
@@ -1027,24 +1029,26 @@ public partial class BroadcastScreen : Control
             victim,
             percent);
 
-        bool rolling = Speeds[_speedIndex] == 1 && result.DisplayFrame < moment.LastFrame;
-        if (rolling)
+        // Rueda hasta el fotograma de la tirada, a la velocidad que sea: el desenlace no se cuenta antes de
+        // tiempo (a x4 no hay cámara lenta, pero el resultado sigue esperando a su fotograma).
+        bool rolling = result.DisplayFrame < moment.LastFrame;
+        float span = Math.Max(moment.LastFrame - moment.Frame, 1);
+        float spin = Mathf.Clamp((result.DisplayFrame - moment.Frame) / span, 0f, 1f);
+        if (rolling || hit)
         {
-            float span = Math.Max(moment.LastFrame - moment.Frame, 1);
-            float spin = (result.DisplayFrame - moment.Frame) / span;
+            // Un golpe real lo cuenta la presentación de la lesión o la muerte («los dados lo han querido»):
+            // la banda no lo repite. Si aquella no llega a presentarse (x4/x16), el sello se queda parado.
             _band.ShowFate(UiText.Get("ui.pregon.fate.header"), announce, percent + " %", spin, ProclamationBand.FateOutcome.Rolling);
             return;
         }
 
-        string headline = !hit
-            ? UiText.Get("ui.pregon.fate.saved")
-            : UiText.Get(lethal ? "ui.pregon.fate.hitDeath" : "ui.pregon.fate.hitSevere");
+        // Salvada: la única vez que la banda cuenta el resultado. Salir de la grave es salir con una leve.
         _band.ShowFate(
-            headline,
+            UiText.Get(lethal ? "ui.pregon.fate.savedDeath" : "ui.pregon.fate.savedSevere"),
             announce,
             percent + " %",
             1f,
-            hit ? ProclamationBand.FateOutcome.Hit : ProclamationBand.FateOutcome.Saved);
+            ProclamationBand.FateOutcome.Saved);
     }
 
     private void ShowMobBand()
@@ -1130,7 +1134,28 @@ public partial class BroadcastScreen : Control
         string body = perk.Length > 0
             ? UiText.Get("ui.pregon.edict.bodyWithCause", position, minute, perk)
             : UiText.Get("ui.pregon.edict.body", position, minute);
-        _edict.Show(name, body);
+        _edict.Show(name, DiceWanted(death) ? body + " · " + UiText.Get("ui.pregon.fate.diceWanted") : body);
+    }
+
+    /// <summary>
+    /// ADR 0171: si esta lesión grave o esta muerte es el desenlace real de una tirada del destino anunciada (el
+    /// <c>FATE_ROLL</c> del mismo tick y jugador acabó en golpe). El desenlace de un golpe lo cuenta la propia
+    /// presentación de la lesión o la muerte, no una banda aparte; la pantalla sólo lee el evento (RT-014).
+    /// </summary>
+    private bool DiceWanted(MatchEvent outcome)
+    {
+        var events = _playback.Result.Events;
+        for (int i = 0; i < events.Count; i++)
+        {
+            var e = events[i];
+            if (e.Tick == outcome.Tick && e.Actor == outcome.Actor && e.Type == EventType.FateRoll
+                && e.Detail.EndsWith(":hit", StringComparison.Ordinal))
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private void ShowRecord(MatchMoment moment)

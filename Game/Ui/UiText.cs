@@ -792,13 +792,13 @@ public static class UiText
         // ADR 0171, la tirada del destino. {0} = quien tira, {1} = quien se la juega, {2} = el porcentaje real
         // (viene del motor, la pantalla no lo calcula). Humor de pregonero, sin nombres internos.
         ["ui.pregon.fate.header"] = "Se hace saber: los dados del destino",
-        ["ui.pregon.fate.severe"] = "{0} tiene un {2} % de partirle la crisma a {1}",
-        ["ui.pregon.fate.severeNobody"] = "{1} tiene un {2} % de que le partan la crisma",
+        ["ui.pregon.fate.severe"] = "{0} ha dejado tocado a {1}, y hay un {2} % de que sea grave",
+        ["ui.pregon.fate.severeNobody"] = "{1} está tocado, y hay un {2} % de que sea grave",
         ["ui.pregon.fate.death"] = "{0} tiene un {2} % de mandar a {1} al otro barrio",
         ["ui.pregon.fate.deathNobody"] = "{1} tiene un {2} % de irse al otro barrio",
-        ["ui.pregon.fate.saved"] = "¡SE SALVA!, por los pelos",
-        ["ui.pregon.fate.hitSevere"] = "Los dados lo han querido: a la enfermería",
-        ["ui.pregon.fate.hitDeath"] = "Los dados lo han querido: no lo cuenta",
+        ["ui.pregon.fate.savedSevere"] = "Sólo un rasguño: se libra de la grave por los pelos",
+        ["ui.pregon.fate.savedDeath"] = "¡SE SALVA! Por los pelos",
+        ["ui.pregon.fate.diceWanted"] = "los dados lo han querido",
         ["ui.pregon.turba.header"] = "Se hace saber: el árbitro abandona el campo",
         ["ui.pregon.turba.body"] = "¡A la turba! · el próximo gol gana",
         ["ui.pregon.turba.bodyTyped"] = "¡A la turba! · {0} · el próximo gol gana",

@@ -104,6 +104,12 @@ public sealed class PresentationDirector
 
     private int _nextMomentIndex;
 
+    /// <summary>El fotograma de la última búsqueda (<see cref="Seek"/>): lo anterior a él está pasado, salvo una tirada del destino a medias.</summary>
+    private int _seekFrame;
+
+    private bool IsPending(MatchMoment moment) =>
+        moment.Frame >= _seekFrame || (moment.Kind == MomentKind.Fate && moment.LastFrame >= _seekFrame);
+
     private MatchMoment? _stamp;
     private double _stampElapsed;
     private double _stampDuration;
@@ -154,8 +160,12 @@ public sealed class PresentationDirector
         _frozen = false;
         _awaitingDecision = false;
 
+        // ADR 0171: una tirada del destino que ya ha empezado (su Frame es 8 fotogramas anterior al de la tirada)
+        // sigue viva si la búsqueda cae dentro de ella —típicamente, la decisión de sustitución de una lesión
+        // reanuda en el fotograma siguiente al suyo—; se cuenta desde su fotograma de la tirada, no desde el de arranque.
+        _seekFrame = frame;
         int index = 0;
-        while (index < _moments.Count && _moments[index].Frame < frame)
+        while (index < _moments.Count && !IsPending(_moments[index]))
         {
             index++;
         }
@@ -215,6 +225,10 @@ public sealed class PresentationDirector
         {
             var moment = _moments[_nextMomentIndex];
             _nextMomentIndex++;
+            if (!IsPending(moment))
+            {
+                continue;
+            }
 
             if (moment.Decision)
             {
@@ -414,7 +428,7 @@ public sealed class PresentationDirector
 
         // ADR 0171: la cámara lenta dura hasta el fotograma de la tirada, y sólo si la voz de la tirada se
         // presenta completa (a x4 va comprimida y no frena nada). Congelado no hay reloj que escalar.
-        double timeScale = !frozen && _voice is { Kind: MomentKind.Fate } fate && !_voiceCompressed && displayFrame < fate.LastFrame
+        double timeScale = !frozen && _lastSpeed == 1 && _voice is { Kind: MomentKind.Fate } fate && !_voiceCompressed && displayFrame < fate.LastFrame
             ? _timings.FateSlowScale
             : 1d;
         return new DirectorFrame(frozen, displayFrame, _voice, voiceProgress, _stamp, stampProgress, _awaitingDecision, timeScale);
