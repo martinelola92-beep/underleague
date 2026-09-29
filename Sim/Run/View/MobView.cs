@@ -11,7 +11,9 @@ namespace Underleague.Sim.Run.View;
 /// <param name="Id">Id de datos del tipo.</param>
 /// <param name="Name">Nombre en el idioma pedido («Salta uno»).</param>
 /// <param name="Text">Lo que hace, en el idioma pedido.</param>
-public sealed record MobLine(string Id, string Name, string Text);
+/// <param name="Rule">Lo que toda turba hace al campo (ADR 0169: se estrecha y el juego acelera), generado desde
+/// <c>tuning.mob</c>; cadena vacía si los dos parámetros valen 0.</param>
+public sealed record MobLine(string Id, string Name, string Text, string Rule = "");
 
 /// <summary>Traduce el tipo de turba de un nodo a lo que enseñan el ojeo, el mapa y el pregón (ADR 0167).</summary>
 public static class MobView
@@ -44,6 +46,12 @@ public static class MobView
         }
 
         string text = parts.Count == 0 ? templates.Get(Effects, "mobPlain") : string.Join("; ", parts);
-        return new MobLine(type.Id, string.Equals(language, "en", StringComparison.Ordinal) ? type.Name.En : type.Name.Es, text);
+        var mob = catalog.Tuning.Mob;
+        string rule = mob.NarrowRowsPerSide == 0 && mob.SpeedPercent == 0
+            ? string.Empty
+            : templates.Get(Effects, "mobNarrow")
+                .Replace("{rows}", mob.NarrowRowsPerSide.ToString(System.Globalization.CultureInfo.InvariantCulture), StringComparison.Ordinal)
+                .Replace("{percent}", mob.SpeedPercent.ToString(System.Globalization.CultureInfo.InvariantCulture), StringComparison.Ordinal);
+        return new MobLine(type.Id, string.Equals(language, "en", StringComparison.Ordinal) ? type.Name.En : type.Name.Es, text, rule);
     }
 }
