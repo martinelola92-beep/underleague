@@ -300,6 +300,64 @@ public sealed class NemesisTests
         return (state, nemesis);
     }
 
+    /// <summary>
+    /// BS-A: la esquela de la Gaceta nombra a quien ocupaba el puesto cuando mató —aquí el fichaje que entró tras la
+    /// muerte del titular—, no al jugador de datos del fichero del clan.
+    /// </summary>
+    [Fact]
+    public void TheEpitaphNamesTheSigningWhoKilledNotTheDataPlayer()
+    {
+        var (state, nemesis) = SigningNemesis();
+        var victim = state.Roster.Single(p => p.PhysicalState == PhysicalState.Dead);
+        string dataName = Rivals.Find(OpponentId)!.Players[4].Name;
+        Assert.NotEqual(dataName, nemesis.Name);
+        Assert.Equal(1, state.DeathKillerOf(victim.Id));
+
+        var gazette = Underleague.Sim.Run.View.GazetteView.Build(
+            state, Catalog, Systems.Nicknames, Rivals, Systems.Gazette, "es", Nemesis);
+        var obituary = gazette.Obituaries.Single(o => o.PlayerId == victim.Id);
+
+        Assert.Contains(nemesis.Name, obituary.Epitaph, StringComparison.Ordinal);
+        Assert.DoesNotContain(dataName, obituary.Epitaph, StringComparison.Ordinal);
+    }
+
+    /// <summary>
+    /// BS-A (revisión): un némesis traspasado a otro clan que mata en el acto 2 queda anotado con su código de némesis,
+    /// y la esquela lo nombra a él, no al jugador de datos del puesto que ocupa en su clan nuevo.
+    /// </summary>
+    [Fact]
+    public void TheEpitaphNamesAHandedOverNemesisWhoKillsInItsNewClan()
+    {
+        var (state, nemesis) = SigningNemesis();
+        state = NemesisSystem.TransferOnActEntry(state, Nemesis, act: 2);
+        var moved = state.RivalMemory.Find(nemesis.Id)!;
+        var target = Rivals.OfClan(moved.ClanId, 2)!;
+        var victim = state.Roster.First(p => p.PhysicalState != PhysicalState.Dead && p.Id != state.Roster[0].Id);
+
+        var after = Play(state, new[] { Death(0, victim.Id, RivalId(moved.Slot)) }, Node(target.Id, act: 2, id: 202)).State;
+
+        Assert.Equal(RivalKiller.NemesisBase + nemesis.Id, after.DeathKillerOf(victim.Id));
+        var gazette = Underleague.Sim.Run.View.GazetteView.Build(
+            after, Catalog, Systems.Nicknames, Rivals, Systems.Gazette, "es", Nemesis);
+        string epitaph = gazette.Obituaries.Single(o => o.PlayerId == victim.Id).Epitaph;
+        Assert.Contains(nemesis.Name, epitaph, StringComparison.Ordinal);
+        Assert.DoesNotContain(target.Players[moved.Slot].Name, epitaph, StringComparison.Ordinal);
+    }
+
+    /// <summary>BS-A: sin cambio de ocupante no se anota nada y la esquela nombra al jugador de datos, como antes.</summary>
+    [Fact]
+    public void ADataPlayerKillerLeavesNoCodeAndKeepsItsName()
+    {
+        var state = BaseState();
+        var victim = state.Roster[2];
+        var after = Play(state, new[] { Death(0, victim.Id, RivalId(3)) }).State;
+
+        Assert.Equal(0, after.DeathKillerOf(victim.Id));
+        var gazette = Underleague.Sim.Run.View.GazetteView.Build(
+            after, Catalog, Systems.Nicknames, Rivals, Systems.Gazette, "es", Nemesis);
+        Assert.Contains(Rivals.Find(OpponentId)!.Players[3].Name, gazette.Obituaries.Single(o => o.PlayerId == victim.Id).Epitaph, StringComparison.Ordinal);
+    }
+
     /// <summary>Revisión de la ADR 0165: el némesis que era un fichaje no resucita en su puesto al morir.</summary>
     [Fact]
     public void ASigningWhoBecameANemesisDoesNotComeBackAfterDying()

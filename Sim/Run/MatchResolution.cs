@@ -267,11 +267,26 @@ internal static class MatchResolution
 
         // 4c. Cómo murió cada caído del partido (ADR 0163): con matador identificado o sin él. La Gaceta lo
         //     lee para no contar «cayó en el campo» de quien murió de otra manera.
+        //     BS-A: y quién ocupaba el puesto del matador rival en ESTE partido (memoria de antes), para que la
+        //     esquela no nombre al jugador de datos cuando jugaba un fichaje o un némesis traspasado.
+        var killerTeam = nemesis is not null && node.OpponentId.Length > 0 && NodeKinds.IsCatalogRivalMatch(node.Kind)
+            ? nemesis.Rivals.Find(node.OpponentId)
+            : null;
         for (int d = 0; d < deathDetails.Count; d++)
         {
             next = next.WithDeathCause(
                 deathDetails[d].PlayerId,
                 deathDetails[d].KillerPlayerId >= 0 ? PlayerDeathCause.MatchByOpponent : PlayerDeathCause.MatchNoAuthor);
+            int killerSlot = deathDetails[d].KillerPlayerId - RivalTeamBuilder.OpponentFirstPlayerId;
+            if (killerTeam is not null && killerSlot >= 0 && killerSlot < killerTeam.Players.Count)
+            {
+                int code = RivalKiller.Encode(killerTeam, state.RivalMemory, killerSlot);
+                if (code != 0)
+                {
+                    next = next.WithCounter(
+                        RunState.DeathKillerPrefix + deathDetails[d].PlayerId.ToString(CultureInfo.InvariantCulture), code);
+                }
+            }
         }
 
         // El almacén se rellena en orden de id de objeto (RT-041), no en orden de muerte.

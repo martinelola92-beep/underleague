@@ -785,6 +785,13 @@ public sealed record RunState
     public const string DeathCausePrefix = "deathCause:";
 
     /// <summary>
+    /// BS-A: prefijo de los contadores que guardan <b>quién ocupaba</b> el puesto del rival que mató a un jugador
+    /// propio, en el momento del partido: <c>deathKiller:&lt;playerId&gt;</c> = código de
+    /// <c>Systems.Rivals.RivalKiller</c>. Clave libre, como <see cref="DeathCausePrefix"/>: no sube la versión.
+    /// </summary>
+    public const string DeathKillerPrefix = "deathKiller:";
+
+    /// <summary>
     /// Jugadores que <b>ocupan plantilla</b> (RF-020): todos menos los muertos. El muerto se queda en
     /// <see cref="Roster"/> para el memorial (RF-122) pero deja su sitio libre: morir cuesta un jugador,
     /// no un jugador y su hueco.
@@ -1109,6 +1116,10 @@ public sealed record RunState
     /// <summary>Copia con la causa de muerte de ese jugador anotada (<see cref="DeathCausePrefix"/>).</summary>
     public RunState WithDeathCause(int playerId, PlayerDeathCause cause) =>
         WithCounter(DeathCausePrefix + playerId.ToString(System.Globalization.CultureInfo.InvariantCulture), (int)cause);
+
+    /// <summary>Código del ocupante que mató a ese jugador (<see cref="DeathKillerPrefix"/>); 0 si no consta.</summary>
+    public int DeathKillerOf(int playerId) =>
+        Counter(DeathKillerPrefix + playerId.ToString(System.Globalization.CultureInfo.InvariantCulture));
 
     /// <summary>Cómo murió ese jugador; <see cref="PlayerDeathCause.Unknown"/> si no consta.</summary>
     public PlayerDeathCause DeathCauseOf(int playerId) =>

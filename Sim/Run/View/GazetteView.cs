@@ -430,7 +430,7 @@ public static class GazetteView
                 nickname,
                 Pick(templates, "obituaries.entry", language, state.Seed, 300 + player.Id, entryFacts),
                 career,
-                Epitaph(state, player, credits, rivals, templates, language)));
+                Epitaph(state, player, credits, rivals, templates, language, catalog)));
         }
 
         return rows;
@@ -451,7 +451,7 @@ public static class GazetteView
     /// cómo.</item>
     /// </list>
     /// </summary>
-    private static string Epitaph(RunState state, RunPlayer player, IReadOnlyList<RivalCredit> credits, RivalCatalog rivals, GazetteCatalog templates, string language)
+    private static string Epitaph(RunState state, RunPlayer player, IReadOnlyList<RivalCredit> credits, RivalCatalog rivals, GazetteCatalog templates, string language, Catalog catalog)
     {
         var none = new Dictionary<string, string>(StringComparer.Ordinal);
         int salt = 500 + player.Id;
@@ -481,7 +481,8 @@ public static class GazetteView
         {
             var facts = new Dictionary<string, string>(StringComparer.Ordinal)
             {
-                ["killer"] = team.Players[killer.RivalIndex].Name,
+                // BS-A: quien ocupaba el puesto en aquel partido (fichaje, némesis), no el jugador de datos.
+                ["killer"] = RivalKiller.Name(state.DeathKillerOf(player.Id), team, killer.RivalIndex, state.RivalMemory, state.Seed, catalog),
                 ["clan"] = NameIn(team.Name, language),
             };
             return Pick(templates, "epitaph.byRival", language, state.Seed, salt, facts);
