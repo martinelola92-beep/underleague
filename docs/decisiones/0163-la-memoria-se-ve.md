@@ -159,3 +159,19 @@ que es un bug anterior que la Gaceta destapó.
   varios apodos ganados a la vez el panel de estadísticas del informe (240 px) sólo enseña unas cuatro filas de
   siete y dice cuántas faltan; agrandarlo pide reordenar la columna derecha del informe.
 - **Censo**: ver «Qué cuenta el censo» arriba (sólo la plantilla final; la cifra del 40 % es provisional).
+
+## Enmienda (29 sep 2026): el panel de estadísticas del informe
+
+**Síntoma** (Regla A, medido con `CapturasMemoria.tscn`, semilla 1): con seis apodos ganados, el panel enseñaba **cinco de
+siete filas** («y 2 jugadores más»); con dos, cuatro. **Causa CONFIRMED por la captura y la aritmética**: un bloque de
+apodos arriba (dos líneas y «y N apodos más») y una segunda línea de 13 px por jugador con apodo se comían el alto del
+panel (208 px útiles frente a los 211 que piden siete filas con apodo, sin contar el bloque). Lo que la ADR pedía que no se
+perdiera («los apodos ganados van arriba») se cumplía a costa de lo que sí se perdía en silencio: jugadores.
+
+**Arreglo**: el apodo ganado va **en la fila del jugador**, con su verbo («gana «el Muro»», «pasa de «A» a «B»») y en
+acento; el que ya tenía se apaga. Ya no hay bloque ni «y N apodos más»; con menos filas que huecos, todos los jugadores
+y todos los apodos caben (siete de siete con apodo, ocho como máximo; más de ocho sigue diciendo «y N jugadores más»). Para
+dar el sitio, el panel del oro se acorta a lo que su peor contenido pide (desglose, botín y apuesta acaban en y = 264 de
+276; nueva captura `memoria-informe-oro-completo.png`) y las estadísticas ocupan el resto de la columna (284 px, antes 240).
+Capturas: `memoria-informe-apodo.png` (seis apodos, siete filas) y `memoria-informe-apodos-muchos.png` (el apodo más largo en
+la mitad de la plantilla, sin recortar).

@@ -1,7 +1,7 @@
 # BA-L2 — `CaptureRunner` pierde el árbol de escena entre `informe` y `recompensa`
 
-**Estado:** RESUELTA (19 sep 2026). La secuencia llega hasta el final y produce `mercado.png`. Queda un
-defecto SEPARADO destapado por el arreglo: `recompensa.png` sale en blanco (ver abajo).
+**Estado:** **CERRADA (29 sep 2026).** La secuencia llega hasta el final y produce `mercado.png` (19 sep), y
+`recompensa.png` ya no sale en blanco: la causa era del **arnés**, no de la run ni de `/Game` (ver el cierre, al final).
 
 ## Observación
 
@@ -69,3 +69,29 @@ pantalla se dibuja vacía.
 O sea: el cuelgue era el síntoma, y **el estado de la run en ese punto del recorrido también está mal**.
 No se arregla aquí porque es otra cosa: hay que revisar en qué momento la secuencia cobra o resuelve la
 recompensa (`ResolveRewards`, `run.Apply(new ChooseReward(...))`) frente a cuándo la captura.
+
+## Cierre (29 sep 2026): por qué `recompensa.png` salía en blanco
+
+La pista de arriba («el estado ya no tiene nodo abierto») era **LIKELY y estaba mal encaminada**: el nodo sí estaba
+abierto. Lo que no había era **nada que elegir**.
+
+**Causa CONFIRMED** con el propio arnés (una línea de diagnóstico que ahora imprime siempre): el primer partido del
+acto 1 que elige `CaptureRunner` es de **liga** (`LeagueMatch`), y desde la ADR 0096 la liga **paga oro en lugar de una
+elección** (`economy.nodeRewards`: liga 0 elecciones, élite 1, jefe 2; `NodeRewardTests`). Con 0 elecciones,
+`RewardView.Build` devuelve `null` (`AlreadyClaimed`: `PicksTaken 0 >= PicksFor 0`), `RewardScreen.Rebuild` cae en
+`Leave()` —navegar—, y como el arnés tiene la navegación **silenciada** (`Nav.Suppressed`, el arreglo del 19 sep) la
+pantalla se queda donde está: un lienzo sin un solo control. Salida del arnés antes: `elecciones 0`.
+
+Es el hermano exacto de lo que se arregló el 19 sep: allí una pantalla **navegaba** y se llevaba al arnés por delante;
+aquí una pantalla **decide irse** porque no tiene nada que enseñar, y el arnés la silencia. El arnés le enseñaba a la
+pantalla un estado que el juego no produce nunca (una recompensa que no existe).
+
+**Arreglo** (`Game/Screens/CaptureRunner.cs`, `OpenAnEliteReward`): tras el informe, deja abierto como pendiente el primer
+partido de **élite** del mapa del acto, que es lo que tendría delante quien ganara uno; cerrarlo sólo quita el pendiente,
+así que el resto de la secuencia (el paseo al mercado) no se mueve. Sale `partido de élite · elección 1 de 1`, con las
+tres opciones, «A quién se lo das» y los botones (`recompensa.png`, mirada). Y el arnés dice qué nodo es y cuántas
+elecciones da (`recompensa: el nodo del partido es LeagueMatch, elecciones 0` / `nodo de élite 117 abierto, elecciones 1`),
+para que si el mapa cambia y ya no hay élite, el fallo sea un error y no otra imagen en blanco.
+
+**Visto de pasada, sin tocar**: en `recompensa.png` la tercera columna de la lista de portadores se sale ~8 px del panel por
+la derecha (tres botones de 412 px en una fila de 1244).
