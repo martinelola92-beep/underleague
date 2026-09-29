@@ -5,7 +5,13 @@
 Este documento fija el **tono** y sirve de base a los encargos de arte. Lo de abajo es el punto de
 partida que dio el revisor, no una decisión cerrada: se espera cambiarlo.
 
-Documentos de los que depende: **ADR 0102** (3D con toon y cámara ortográfica en tres cuartos),
+> **Nota del 29 sep 2026 (ADR 0174, BA-F): la cámara del partido es perspectiva** (elevación 45°, FOV 45°), no
+> ortográfica. Los cálculos de §5bis en «px por casilla» y «coseno del ángulo» se hicieron con la ortográfica de 60°:
+> con la perspectiva valen **por fila** (la ficha lejana mide el 0,76 de la cercana en ancho) y el criterio de silueta
+> debe cumplirse contra la fila más lejana para el ancho y contra la más cercana para el alto.
+
+Documentos de los que depende: **ADR 0102** (3D con toon y cámara ortográfica en tres cuartos, enmendada por la
+**ADR 0174**: perspectiva),
 **ADR 0103** (campo de seis filas), `docs/ui-partido.md` (briefing de la pantalla de Partido) y §5 de
 `docs/requisitos.md` (RA-001..027), que este documento **contradice en un punto** y hay que resolverlo.
 
@@ -493,6 +499,7 @@ convencional.
 | versión | fecha | qué cambió |
 |---|---|---|
 | v0 | 13 sep 2026 | Punto de partida del revisor: tono Lucky Tower y los dos prompts de §2 |
+| **v4** | 29 sep 2026 | Nota de cabecera: la cámara del partido es **perspectiva** (ADR 0174, BA-F): 45° de elevación y FOV 45°, elegidos sobre ocho candidatas con capturas comparadas. Los números de §5bis en «px por casilla» valen ahora por fila |
 | **v3** | 15 sep 2026 | §5ter: **decisión de cámara dinámica y niveles de detalle** (táctica 1× / acción 1,5-2× / cinematográfica 2-3× / presentación 3×+), con el presupuesto de frecuencia medido —23 eventos notables en 80 s, uno cada 3,5 s— y el corte por velocidad de reproducción. Cierra la decisión abierta de anatomía contra deformación, y matiza la regla del contorno de §5bis: el detalle interior pasa a ser de segundo nivel en vez de descartarse |
 | **v2** | 15 sep 2026 | §5bis: 3D + Mixamo (locomoción sí, los ~10 momentos del tono no), el presupuesto real de 37 px por ficha y la regla de que solo cuenta el contorno, la trampa del rasgo interior del no-muerto, construir firmas en horizontal por el coseno, y qué robarle a Hades. Boceto del revisor en `docs/referencias/` |
 | **v1** | 13 sep 2026 | Prompts adaptados a lo ya decidido (§2bis): se mantienen RA-025 y RA-026 —ni calaveras ni gótico—, las cinco razas de lanzamiento con su rasgo firma, y el HUD real sin barras de vida ni botones de acción |

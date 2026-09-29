@@ -16,6 +16,13 @@ cuartos) y **ADR 0103** (el campo tiene seis filas).
 > **cinematográfica**— y uno de presentación fuera del partido. Eso cambia el briefing de arte: el modelo
 > ya **no** tiene que resolverlo todo en 37 px. Ver `estilo-visual.md` §5ter.
 
+> **La proyección ya no es ortográfica (ADR 0174, 29 sep 2026, BA-F).** El revisor cambió la cámara del partido a
+> **perspectiva, elevación 45° y FOV vertical 45°**, en la retransmisión y en el modo depuración. Donde este
+> documento dice «ortográfica» y «70 px por casilla», léase **una casilla de 54 px de ancho y 37 de alto en la fila
+> lejana, 74 y 65 en la cercana** (1280×800) y una ficha lejana del 0,76 de la cercana; lo que sigue se conserva como razonamiento
+> histórico de la 0102, y la objeción de las distancias está contestada en la ADR 0174. **Las reglas sobre el
+> campo entero, la sombra y el dorsal (§1, §3, §4) siguen valiendo tal cual.**
+
 ---
 
 ## 1. Geometría, y por qué no se negocia
@@ -25,10 +32,10 @@ cuartos) y **ADR 0103** (el campo tiene seis filas).
 | Rejilla | **16 × 6** casillas (`Pitch.Columns`, `Pitch.Rows`) |
 | Área | **2 × 4** casillas (`Pitch.AreaColumns`, `Pitch.AreaRows`) |
 | Escala del mundo | **1 casilla = 1 unidad** |
-| Cámara | `Camera3D` **ortográfica**, elevación **60°**, fija: ni sigue ni suaviza |
-| Rectángulo en pantalla | 1120 × 420 px, es decir **70 px por casilla en los dos ejes** |
+| Cámara | `Camera3D` ~~**ortográfica**, elevación **60°**~~ **perspectiva, elevación 45°, FOV 45° (ADR 0174)**, fija: ni sigue ni suaviza |
+| Rectángulo en pantalla | ~~1120 × 420 px, es decir **70 px por casilla en los dos ejes**~~ en la retransmisión, el campo entero encajado por bisección a 45-1235 px de 1280 (`PitchFit.Broadcast`); una casilla mide 54-74 px de ancho y 37-65 de alto según la fila. En el modo depuración, `PitchFit.Framed` a 1120 × 500 |
 
-**Ortográfica, no perspectiva.** Con perspectiva la misma casilla mide distinto según dónde esté, y este
+**~~Ortográfica, no perspectiva.~~ *(Decisión revocada por la ADR 0174; el texto de abajo es la objeción original.)*** Con perspectiva la misma casilla mide distinto según dónde esté, y este
 juego se decide en distancias de casilla que el jugador tiene que poder estimar a ojo: alcance de entrada,
 radio de intercepción, correa. Una cámara que miente sobre la distancia rompe la previsibilidad de RF-012d.
 

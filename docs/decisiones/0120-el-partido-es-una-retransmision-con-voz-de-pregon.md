@@ -42,7 +42,9 @@ posición (franjas de siega, vallas con patrocinadores de parodia, grada escalon
 Elegida entre cinco variantes capturadas sobre los mismos fotogramas (`Game/screenshots/depth-{A..E}-*.png`):
 la perspectiva da la profundidad; el estadio solo, con cámara ortográfica (B), no. 40°/FOV 40 (E) encogía
 demasiado el fondo. El modo depuración conserva la cámara ortográfica. Sigue siendo una cámara **fija**: los
-gestos son aparte.
+gestos son aparte. *(**Superada en los valores y en el modo depuración por la ADR 0174** —29 sep 2026, BA-F—: la
+perspectiva pasa a ser la de toda la vista 3D del partido, con la misma elevación y el FOV abierto de 30° a 45°,
+medido contra esta variante D.)*
 
 ## Enmienda (20 sep 2026, revisor: «letra gótica en algún sitio, o cambiar la serif por una de aspecto un
 poco más gótico, intermedio entre las dos»)

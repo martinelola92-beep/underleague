@@ -23,7 +23,6 @@ viva anotada.
 | Id | Título | Estado |
 |---|---|---|
 | [BA-E](./BA-E.md) | Goles sin ángulo | Abierta, medida (A RECHAZADA por la ADR 0111, C disponible). **Vía nueva 23 sep**: la acción «centrar» del §7 de `plan-altura-del-balon.md` le da al delantero la alternativa que a la vía B le faltaba |
-| [BA-F](./BA-F.md) | El 3D está mal | Abierta: decidir si se acepta perspectiva contra la ortográfica de la ADR 0102 |
 | [BA-G](./BA-G.md) | Los nombres de los jugadores se repiten | Abierta: el sorteo de `data/*/names` no tiene memoria dentro de la run |
 | [BA-H](./BA-H.md) | Los consumibles no se pueden usar | Uso en vivo y catálogo de 20 hechos (29 sep); abierta sólo la propuesta de dos slots |
 | [BA-J](./BA-J.md) | Tras una parada, el equipo defensor debería replegarse | Abierta: hoy no hay fase de repliegue tras `SAVE` |
@@ -83,6 +82,7 @@ viva anotada.
 | [BL-A](./BL-A.md) | Lesionar al rival no ayuda a ganar (`dirty_play`, `ankle_bite`) | **Cerrada**: era ruido. `ankle_bite` LIKELY no negativo (≈ +10), se restaura; la paga de diseño, sin demostrar |
 | [BL-B](./BL-B.md) | El umbral de retirada de la ADR 0087 usa un `rowDeviation` global y falla con filas de varianza alta | **Abierta** solo por hermanos: el umbral lo resuelve la ADR 0150 |
 | [BA-A](./BA-A.md) | BLOQUEO: un nodo de evento sin opciones y sin salida | Cerrada |
+| [BA-F](./BA-F.md) | El 3D está mal: no se veían los porteros y el campo se leía como 2D | **Cerrada** (29 sep) por la [ADR 0174](../decisiones/0174-la-camara-del-partido-es-perspectiva.md): perspectiva 45°/FOV 45° en retransmisión y depuración (el modo depuración cortaba el campo: CONFIRMED), sombras arregladas; lectura en partida real sin validar (LIKELY); hermanos abiertos: dorsal tapado y la escena N3 sobre la portería (C5) |
 | [BQ-A](./BQ-A.md) | El nodo de evento se abre sin nada que escoger (la causa que BA-A no alcanzó) | Cerrada (27 sep): el mapa abre el evento; hermanos anotados: texto interno visible, huecos del árbitro |
 | [BA-B](./BA-B.md) | BLOQUEO: en un jefe no dejó sustituir al lesionarse el segundo jugador | Cerrada |
 | [BA-C](./BA-C.md) | Con seis filas no hay fila central y la alineación queda descentrada | Cerrada |

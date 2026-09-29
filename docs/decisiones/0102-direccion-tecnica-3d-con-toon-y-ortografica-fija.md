@@ -1,6 +1,9 @@
 # ADR 0102 · Dirección técnica: 3D con toon, cámara ortográfica fija en tres cuartos
 
 **Fecha:** 13 de septiembre de 2026 · **Estado:** aceptada · **Decisión del revisor**
+**Enmendada por la ADR 0174 (29 sep 2026, decisión del revisor, BA-F): la proyección pasa de ortográfica a
+perspectiva.** Lo demás —3D, toon, encuadre en tres cuartos, rejilla plana, frontera de `/Sim`— sigue vigente;
+donde este texto dice «ortográfica», léase «perspectiva» y véanse los valores y las razones en la ADR 0174.
 **Toca:** §5 de `docs/requisitos.md` (RA-001..027), fase 3 de `docs/plan-fases.md`
 **No toca:** `/Sim`. Ni una línea.
 
@@ -104,4 +107,6 @@ motivo de hacerlo con cápsulas.
   legítima aparte: **CAT-D**, aplazada a después de ver la cámara.
 - **3D con perspectiva.** Una cámara en perspectiva hace que la misma casilla mida distinto según dónde
   esté, y este juego se decide en distancias de casilla que el jugador tiene que poder estimar a ojo
-  (alcance de entrada, radio de intercepción, correa). Ortográfica.
+  (alcance de entrada, radio de intercepción, correa). Ortográfica. *(Revertida por la ADR 0174: la
+  objeción es real y se contesta allí —la huella de la ficha y la franja de siega miden lo mismo en cada
+  fila, así que la distancia local se sigue leyendo—, pero el revisor prefirió la profundidad.)*
