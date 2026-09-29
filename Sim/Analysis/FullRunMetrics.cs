@@ -465,6 +465,7 @@ public static class FullRunMetrics
         int victories = 0, defeats = 0, rosterDefeats = 0, bossDefeats = 0;
         int deaths = 0, fullRuns = 0, fullRunMatches = 0, matches = 0, marketRuns = 0, brokeRuns = 0;
         int blood = 0, pastAct1 = 0, bloodlessPastAct1 = 0;
+        int consumablesBought = 0, consumablesUsed = 0;
         int wonMatches = 0, wonNodes = 0, lostMatches = 0, lostNodes = 0, rewardsTaken = 0, rewardsDeclined = 0;
         var defeatsByAct = new int[RunRules.Acts];
         long goldEarned = 0, market = 0, clinic = 0, enrollment = 0, reroll = 0, wages = 0, left = 0;
@@ -547,6 +548,8 @@ public static class FullRunMetrics
                     bloodlessPastAct1++;
                 }
             }
+            consumablesBought += run.ConsumablesBought;
+            consumablesUsed += run.ConsumablesUsed;
             goldEarned += run.GoldEarned;
             market += run.GoldSpentMarket;
             clinic += run.GoldSpentClinic;
@@ -729,6 +732,10 @@ public static class FullRunMetrics
             : 0.0));
         rows.Add(Info("matchesPerRun", (double)matches / runs.Count));
         rows.Add(Info("actsWithAllSinksAffordable", sinkSamples > 0 ? 100.0 * allFourAffordable / sinkSamples : 0.0));
+        // BA-H (ADR 0172): consumibles comprados y consumibles que llegaron a ACTIVARSE por run. Informativas, sin
+        // banda (Regla H): sirven para comparar antes y después de tocar los huecos, no son un requisito.
+        rows.Add(Info("consumablesBoughtPerRun", (double)consumablesBought / runs.Count));
+        rows.Add(Info("consumablesUsedPerRun", (double)consumablesUsed / runs.Count));
         rows.Add(Info("goldEarnedPerRun", (double)goldEarned / runs.Count));
         rows.Add(Info("goldSpentMarketPerRun", (double)market / runs.Count));
         rows.Add(Info("goldSpentClinicPerRun", (double)clinic / runs.Count));
