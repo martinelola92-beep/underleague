@@ -23,8 +23,9 @@ public sealed class ProgressionTests
     [Fact]
     public void TuningComesFromData()
     {
-        // ADR 0095: 100 -> 140 para que la run entregue el nivel que la puerta de jefes mide (ADR 0033).
-        Assert.Equal(140, Tuning.MatchExperience);
+        // ADR 0095: 100 -> 140 para que la run entregue el nivel que la puerta de jefes mide (ADR 0033);
+        // ADR 0170: 140 -> 200 al acortar la run (8/9/9 nodos), por la misma razón.
+        Assert.Equal(200, Tuning.MatchExperience);
         Assert.Equal(45, Tuning.BenchSharePercent);
         Assert.Equal(2, Tuning.AttributesPerLevel);
         Assert.Equal(new[] { 0, 100, 250, 450, 700, 1000, 1400, 1900 }, Tuning.ExperiencePerLevel);
@@ -45,21 +46,21 @@ public sealed class ProgressionTests
     [Fact]
     public void ExperienceIsFullForPlayersAndPartialForTheBench()
     {
-        // RF-025: 100% a los que jugaron, 45% a los suplentes (de matchExperience, 140 desde la ADR 0095).
+        // RF-025: 100% a los que jugaron, 45% a los suplentes (de matchExperience, 200 desde la ADR 0170).
         var awards = ProgressionRules.AwardExperience(new[] { 3, 1 }, new[] { 5, 2 }, Tuning);
 
         Assert.Equal(new[] { 1, 2, 3, 5 }, awards.Select(a => a.PlayerId).ToArray());
-        Assert.Equal(140, awards.Single(a => a.PlayerId == 1).Experience);
-        Assert.Equal(140, awards.Single(a => a.PlayerId == 3).Experience);
-        Assert.Equal(63, awards.Single(a => a.PlayerId == 2).Experience);
-        Assert.Equal(63, awards.Single(a => a.PlayerId == 5).Experience);
+        Assert.Equal(200, awards.Single(a => a.PlayerId == 1).Experience);
+        Assert.Equal(200, awards.Single(a => a.PlayerId == 3).Experience);
+        Assert.Equal(90, awards.Single(a => a.PlayerId == 2).Experience);
+        Assert.Equal(90, awards.Single(a => a.PlayerId == 5).Experience);
     }
 
     [Fact]
     public void APlayerNeverCollectsTwice()
     {
         var awards = ProgressionRules.AwardExperience(new[] { 1 }, new[] { 1 }, Tuning);
-        Assert.Equal(140, Assert.Single(awards).Experience);
+        Assert.Equal(200, Assert.Single(awards).Experience);
     }
 
     [Theory]

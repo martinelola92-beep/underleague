@@ -268,8 +268,8 @@
     "goalkeeperTraitChance": 5000
   },
   "progression": {
-    "_doc": "Progresión entre partidos (fase 1 §6, RF-025/RF-027). experiencePerLevel es acumulada: la entrada i es la experiencia mínima del nivel i+1; ocho entradas, nivel máximo 8 (RF-023). attributesPerLevel se suma a cada atributo salvo la correa.",
-    "matchExperience": 140,
+    "_doc": "Progresión entre partidos (fase 1 §6, RF-025/RF-027). experiencePerLevel es acumulada: la entrada i es la experiencia mínima del nivel i+1; ocho entradas, nivel máximo 8 (RF-023). attributesPerLevel se suma a cada atributo salvo la correa. matchExperience: 100 -> 140 (ADR 0095, la run entrega el nivel que mide la puerta de jefes) -> 200 (ADR 0170: con actos de 8/9/9 nodos hay ~30 % menos partidos por run y el nivel en el jefe bajaba de 4,9/7,0/7,1 a 3,6/5,9/6,8; medido: 200 lo devuelve a 4,1/7,0/7,5).",
+    "matchExperience": 200,
     "benchSharePercent": 45,
     "experiencePerLevel": [0, 100, 250, 450, 700, 1000, 1400, 1900],
     "attributesPerLevel": 2
