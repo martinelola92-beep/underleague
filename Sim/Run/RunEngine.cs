@@ -256,6 +256,8 @@ public static class RunEngine
             SetLineup setLineup => ApplyLineup(state, setLineup),
             SetConsumables setConsumables => ApplyConsumables(state, setConsumables),
             LeaveNode => CloseOpenNode(state),
+            TakeBet take => Systems.Bets.BetSystem.Take(state, take, systems, catalog),
+            DeclineBet => Systems.Bets.BetSystem.Withdraw(state),
             _ => systems.ApplyDecision(state, decision, catalog),
         };
 
@@ -526,6 +528,13 @@ public static class RunEngine
 
     private static MatchEntry ResolveMatch(RunState state, MapNode node, Catalog catalog, IRunSystems systems, MatchDecisions decisions)
     {
+        // ADR 0157: una apuesta tomada para OTRO nodo no se juega aquí: se devuelve (solo se pierde jugando y
+        // fallando la que se tomó para este partido).
+        if (state.Bet is { } stale && stale.NodeId != node.Id)
+        {
+            state = Systems.Bets.BetSystem.Withdraw(state);
+        }
+
         var (built, seed, lineup) = BuildMatch(
             state, node.Id, catalog, systems, decisions.ManualActivations, decisions.Substitutions, decisions.PlayOns,
             decisions.OrderChanges);
@@ -534,6 +543,11 @@ public static class RunEngine
         var (setup, result) = SubstitutionPoints.ResolveAutomatically(
             built, seed, catalog, systems.MatchConfig(state, node, catalog), usesPolicy: null, decisions.Declines);
         var applied = MatchResolution.Apply(state, node, lineup, result, catalog, built.Referee);
+
+        // ADR 0157: la apuesta tomada para este nodo se resuelve con los hechos del partido, aquí y no en
+        // AfterMatch, porque también hay que resolverla si el partido termina la run (el informe la enseña).
+        var (afterBet, betResult) = Systems.Bets.BetSystem.Resolve(state, applied.State, node, setup, result, systems.Bets);
+        applied = applied with { State = afterBet, Summary = applied.Summary with { Bet = betResult } };
         systems.OnMatchPlayed(state, node, setup, result, applied.Summary);
 
         var next = applied.State.WithCurrentNode(node.Id);

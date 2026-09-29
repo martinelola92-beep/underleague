@@ -57,6 +57,14 @@ public sealed record RunMatchSummary(
     /// existentes. Vacía si nadie ha muerto.
     /// </summary>
     public IReadOnlyList<PlayerDeathDetail> DeathDetails { get; init; } = Array.Empty<PlayerDeathDetail>();
+
+    /// <summary>
+    /// Cómo terminó la apuesta del vestuario que el jugador tomó para este nodo (ADR 0157), o null si no tomó
+    /// ninguna. La rellena <see cref="RunEngine"/> tras resolverla con los hechos del partido; es lo que el
+    /// informe post-partido enseña. Propiedad añadida fuera del constructor primario por el mismo motivo que
+    /// <see cref="CounterDeltas"/>.
+    /// </summary>
+    public Systems.Bets.BetResult? Bet { get; init; }
 }
 
 /// <summary>
@@ -183,6 +191,12 @@ public interface IRunSystems
     void OnMatchPlayed(RunState stateBefore, MapNode node, MatchSetup setup, MatchResult result, RunMatchSummary summary)
     {
     }
+
+    /// <summary>
+    /// Catálogo de apuestas del vestuario de estos sistemas (ADR 0157, <c>data/bets/</c>). Vacío por defecto:
+    /// sin catálogo ningún nodo ofrece apuesta. Lo lee <see cref="RunEngine"/> para tomarlas y resolverlas.
+    /// </summary>
+    Systems.Bets.BetCatalog Bets => Systems.Bets.BetCatalog.Empty;
 }
 
 /// <summary>

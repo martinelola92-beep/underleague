@@ -1,3 +1,4 @@
+using Underleague.Sim.Data;
 using Underleague.Sim.Model;
 using Underleague.Sim.Run;
 using Underleague.Sim.Run.Systems;
@@ -52,20 +53,65 @@ public sealed class BetSystemTests
         Assert.NotNull(Offer(state, state.MapOf(1).Nodes.First(n => n.Kind == NodeKind.Boss)));
     }
 
-    /// <summary>Repartido sobre muchas semillas y nodos, salen las once condiciones (el sorteo no se atasca).</summary>
+    /// <summary>
+    /// Repartido sobre muchas semillas y nodos salen todas las condiciones que alguna dificultad deja ofrecer
+    /// (frecuencia medida >= 2 %), y ninguna que no: el sorteo no se atasca ni se salta la regla.
+    /// </summary>
     [Fact]
-    public void EveryConditionIsOfferedAcrossSeedsAndNodes()
+    public void EveryOfferableConditionIsOfferedAndNoOtherIs()
     {
+        var expected = Systems.Bets.All
+            .Where(b => Enumerable.Range(1, 5).Any(d => b.FrequencyBasisPointsFor(d) >= BetSystem.MinOfferedBasisPoints))
+            .Select(b => b.Kind)
+            .ToHashSet();
         var seen = new HashSet<BetKind>();
-        for (ulong seed = 1; seed <= 25 && seen.Count < Enum.GetValues<BetKind>().Length; seed++)
+        for (ulong seed = 1; seed <= 40; seed++)
         {
             foreach (var (state, node) in MatchNodes(seed))
             {
-                seen.Add(Offer(state, node)!.Kind);
+                var offer = Offer(state, node);
+                if (offer is not null)
+                {
+                    seen.Add(offer.Kind);
+                }
             }
         }
 
-        Assert.Equal(Enum.GetValues<BetKind>().Length, seen.Count);
+        Assert.Equal(expected.OrderBy(k => k), seen.OrderBy(k => k));
+    }
+
+    private static BetDefinition Bet(BetKind kind, int[] basisPoints) => new(
+        "bet_" + kind, kind, new LocalizedName("n", "n"), new LocalizedName("c", "c"),
+        new[] { 3, 4, 5 }, new[] { 200, 200, 200, 200, 200 }, basisPoints);
+
+    /// <summary>
+    /// La regla del 2 %: una apuesta cuya frecuencia medida en la dificultad del nodo es menor que el mínimo
+    /// no se ofrece ahí (197 no, 200 sí); si ninguna llega, el nodo no ofrece nada.
+    /// </summary>
+    [Fact]
+    public void ABetBelowTwoPercentInThatDifficultyIsNotOffered()
+    {
+        var state = RunEngine.Start(SystemsTestSupport.Setup(), 9UL, SystemsTestSupport.Catalog, Systems);
+        var node = state.MapOf(1).Nodes.First(n => n.Kind == NodeKind.LeagueMatch);
+        int index = Math.Clamp(node.Difficulty, 1, 5) - 1;
+
+        int[] Only(int atNode, int elsewhere) => Enumerable.Range(0, 5).Select(i => i == index ? atNode : elsewhere).ToArray();
+        BetOffer? With(params BetDefinition[] bets) =>
+            BetSystem.OfferFor(state, node, new BetCatalog(bets), Systems, SystemsTestSupport.Catalog);
+
+        Assert.Null(With(Bet(BetKind.Comeback, Only(199, 5000))));
+        Assert.Equal(BetKind.Comeback, With(Bet(BetKind.Comeback, Only(200, 0)))!.Kind);
+
+        // Con dos, solo entra la elegible aquí, sea cual sea el sorteo.
+        var eligible = Bet(BetKind.IntoTheMob, Only(200, 0));
+        var blocked = Bet(BetKind.Comeback, Only(0, 5000));
+        for (ulong seed = 1; seed <= 20; seed++)
+        {
+            var other = RunEngine.Start(SystemsTestSupport.Setup(), seed, SystemsTestSupport.Catalog, Systems);
+            var n = other.MapOf(1).Nodes.First(x => x.Id == node.Id);
+            var offer = BetSystem.OfferFor(other, n, new BetCatalog(new[] { eligible, blocked }), Systems, SystemsTestSupport.Catalog);
+            Assert.Equal(BetKind.IntoTheMob, offer!.Kind);
+        }
     }
 
     [Fact]

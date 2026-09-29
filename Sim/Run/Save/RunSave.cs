@@ -92,6 +92,7 @@ public static class RunSave
             PendingNodeId = Int(root, "pendingNode", "$"),
             Phase = Enum<RunPhase>(root, "phase", "$"),
             Gold = Int(root, "gold", "$"),
+            Bet = ReadBet(root),
             RerollsUsed = Int(root, "rerollsUsed", "$"),
             NodeRerolls = Int(root, "nodeRerolls", "$"),
             Result = ReadOutcome(Prop(root, "result", "$"), "$.result"),
@@ -152,6 +153,22 @@ public static class RunSave
         w.WriteNumber("pendingNode", state.PendingNodeId);
         w.WriteString("phase", Camel(state.Phase.ToString()));
         w.WriteNumber("gold", state.Gold);
+        if (state.Bet is { } bet)
+        {
+            w.WriteStartObject("bet");
+            w.WriteString("id", bet.BetId);
+            w.WriteNumber("node", bet.NodeId);
+            w.WriteNumber("stake", bet.Stake);
+            w.WriteNumber("payoutPercent", bet.PayoutPercent);
+            w.WriteNumber("targetPlayer", bet.TargetPlayerId);
+            w.WriteString("targetName", bet.TargetPlayerName);
+            w.WriteEndObject();
+        }
+        else
+        {
+            w.WriteNull("bet");
+        }
+
         w.WriteNumber("rerollsUsed", state.RerollsUsed);
         w.WriteNumber("nodeRerolls", state.NodeRerolls);
         w.WriteNumber("nextPlayerId", state.NextPlayerId);
@@ -510,6 +527,23 @@ public static class RunSave
         }
 
         return maps;
+    }
+
+    private static Systems.Bets.AcceptedBet? ReadBet(JsonElement root)
+    {
+        var element = Prop(root, "bet", "$");
+        if (element.ValueKind == JsonValueKind.Null)
+        {
+            return null;
+        }
+
+        return new Systems.Bets.AcceptedBet(
+            Str(element, "id", "$.bet"),
+            Int(element, "node", "$.bet"),
+            Int(element, "stake", "$.bet"),
+            Int(element, "payoutPercent", "$.bet"),
+            Int(element, "targetPlayer", "$.bet"),
+            Str(element, "targetName", "$.bet"));
     }
 
     private static List<RunReferee> ReadReferees(JsonElement root)

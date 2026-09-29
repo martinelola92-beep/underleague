@@ -455,7 +455,8 @@ public sealed record RunState
     // pasan a 0..6.
     // 5 (ADR 0124): cada jugador gana un objeto "career" con su historial de carrera acumulado.
     // 6 (ADR 0158): cada árbitro gana definitionId, grudge y blindSide.
-    public const int CurrentSchemaVersion = 6;
+    // 7 (ADR 0157): el estado gana la apuesta tomada del nodo pendiente (bet, null si no hay).
+    public const int CurrentSchemaVersion = 7;
 
     /// <summary>Versión de esquema con la que se creó este estado.</summary>
     public int SchemaVersion { get; init; } = CurrentSchemaVersion;
@@ -491,6 +492,12 @@ public sealed record RunState
 
     /// <summary>Oro disponible (RF-114g..k).</summary>
     public int Gold { get; init; }
+
+    /// <summary>
+    /// Apuesta del vestuario tomada y pagada para un nodo de partido aún sin jugar, o null (ADR 0157). Es lo
+    /// único de la apuesta que se guarda: la ofrecida se deriva de (semilla, nodo) y no ocupa estado.
+    /// </summary>
+    public Systems.Bets.AcceptedBet? Bet { get; init; }
 
     /// <summary>Rerolls usados en toda la run: su coste es creciente (RF-071b).</summary>
     public int RerollsUsed { get; init; }
@@ -857,6 +864,9 @@ public sealed record RunState
 
     /// <summary>Copia con el oro indicado. Nunca baja de 0.</summary>
     public RunState WithGold(int gold) => this with { Gold = gold < 0 ? 0 : gold };
+
+    /// <summary>Copia con la apuesta tomada indicada (null la cierra), ADR 0157.</summary>
+    public RunState WithBet(Systems.Bets.AcceptedBet? bet) => this with { Bet = bet };
 
     /// <summary>Copia sumando (o restando, con valor negativo) oro. Nunca baja de 0.</summary>
     public RunState AddGold(int delta) => WithGold(Gold + delta);

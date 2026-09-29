@@ -42,17 +42,11 @@ public static class BetConditions
 {
     private const string CancelledSuffix = ":cancelled";
 
-    /// <summary>Titulares a partir de los cuales ya no se sale «con menos de siete» (RF-002d).</summary>
-    private const int FullSide = 7;
-
     /// <summary>Goles de diferencia de <see cref="BetKind.Thrashing"/>.</summary>
     private const int ThrashingMargin = 3;
 
-    /// <summary>Máximo de rivales en el campo al terminar de <see cref="BetKind.Thrashing"/>.</summary>
-    private const int ThrashingMaxRivals = 6;
-
-    /// <summary>Jugadores propios distintos que han de marcar en <see cref="BetKind.ThreeNames"/>.</summary>
-    private const int ThreeNamesScorers = 3;
+    /// <summary>Jugadores propios distintos que han de marcar en <see cref="BetKind.SplitTheGoals"/>.</summary>
+    private const int SplitScorers = 2;
 
     /// <summary>Faltas propias no señaladas que pide <see cref="BetKind.RefereeBlind"/>.</summary>
     private const int UnseenFoulsNeeded = 3;
@@ -70,9 +64,8 @@ public static class BetConditions
             BetKind.IntoTheMob => IntoTheMob(context),
             BetKind.CleanHands => CleanHands(context),
             BetKind.Thrashing => Thrashing(context),
-            BetKind.ThreeNames => ThreeNames(context),
+            BetKind.SplitTheGoals => SplitTheGoals(context),
             BetKind.YouthDecides => YouthDecides(context),
-            BetKind.ShortAndClean => ShortAndClean(context),
             BetKind.RefereeBlind => RefereeBlind(context),
             _ => throw new ArgumentOutOfRangeException(nameof(kind), kind, "condición de apuesta desconocida"),
         };
@@ -201,38 +194,20 @@ public static class BetConditions
         Won(c) && InjuriesCausedByUs(c) >= 1 && OwnCards(c) == 0;
 
     /// <summary>
-    /// <see cref="BetKind.Thrashing"/>: gana por 3 goles o más y el rival termina con 6 o menos en el campo.
-    /// «En el campo al terminar» = jugadores del rival con tiempo en el campo que no lo abandonaron
-    /// (<c>LeftPitchTick &lt; 0</c>): cuenta a los suplentes que entraron y descuenta lesionados, muertos y
-    /// expulsados sin reemplazo.
+    /// <see cref="BetKind.Thrashing"/>: gana por 3 goles o más. (La primera versión pedía además que el rival
+    /// acabara con 6 o menos en el campo: medido, 0,43 % de los partidos, una lotería; ADR 0157, «Censo».)
     /// </summary>
     private static bool Thrashing(BetContext c)
     {
-        var report = c.Result.Report;
-        if (!Won(c) || report.Goals[0] - report.Goals[1] < ThrashingMargin)
-        {
-            return false;
-        }
-
-        int rivalsOnPitch = 0;
-        var players = report.Players;
-        for (int i = 0; i < players.Count; i++)
-        {
-            var p = players[i];
-            if (p.Team == 1 && p.TicksOnPitch > 0 && p.LeftPitchTick < 0)
-            {
-                rivalsOnPitch++;
-            }
-        }
-
-        return rivalsOnPitch <= ThrashingMaxRivals;
+        var goals = c.Result.Report.Goals;
+        return Won(c) && goals[0] - goals[1] >= ThrashingMargin;
     }
 
     /// <summary>
-    /// <see cref="BetKind.ThreeNames"/>: gana con goles no anulados de al menos tres jugadores propios
+    /// <see cref="BetKind.SplitTheGoals"/>: gana con goles no anulados de al menos dos jugadores propios
     /// distintos (el goleador es el <c>Actor</c> del evento; no hay goles en propia puerta en el motor).
     /// </summary>
-    private static bool ThreeNames(BetContext c)
+    private static bool SplitTheGoals(BetContext c)
     {
         if (!Won(c))
         {
@@ -250,14 +225,13 @@ public static class BetConditions
             }
         }
 
-        return scorers.Count >= ThreeNamesScorers;
+        return scorers.Count >= SplitScorers;
     }
 
     /// <summary>
-    /// <see cref="BetKind.YouthDecides"/>: gana y el gol que da la victoria es de un canterano. «El gol de la
-    /// victoria» es el gol propio a partir del cual el equipo ya nunca deja de ir por delante en el marcador
-    /// final: el (goles del rival + 1)-ésimo gol propio, contando solo goles no anulados. Con 3-1 es el
-    /// segundo gol propio (el 2-1 ya no se remonta), no el tercero.
+    /// <see cref="BetKind.YouthDecides"/>: un canterano marca (al menos un gol no anulado de un jugador propio
+    /// para el que <see cref="BetContext.IsYouth"/> es verdad) y el equipo gana. (La primera versión pedía que
+    /// fuera «el gol de la victoria»: medido, 1,06 % de los partidos, una lotería; ADR 0157, «Censo».)
     /// </summary>
     private static bool YouthDecides(BetContext c)
     {
@@ -266,33 +240,18 @@ public static class BetConditions
             return false;
         }
 
-        int rivalFinal = c.Result.Report.Goals[1];
-        int own = 0;
         var events = c.Result.Events;
         for (int i = 0; i < events.Count; i++)
         {
             var e = events[i];
-            if (!Live(e) || e.Type != EventType.Goal || e.Team != 0)
+            if (Live(e) && e.Type == EventType.Goal && e.Team == 0 && c.IsYouth(e.Actor))
             {
-                continue;
-            }
-
-            own++;
-            if (own == rivalFinal + 1)
-            {
-                return c.IsYouth(e.Actor);
+                return true;
             }
         }
 
         return false;
     }
-
-    /// <summary>
-    /// <see cref="BetKind.ShortAndClean"/>: el equipo sale con menos de 7 titulares (casillas de la
-    /// alineación con la que se jugó, RF-002d), gana y no encaja ningún gol.
-    /// </summary>
-    private static bool ShortAndClean(BetContext c) =>
-        Won(c) && c.Setup.Home.Lineup.Slots.Count < FullSide && c.Result.Report.Goals[1] == 0;
 
     /// <summary>
     /// <see cref="BetKind.RefereeBlind"/>: gana con al menos 3 faltas propias no señaladas (<c>FOUL</c> de

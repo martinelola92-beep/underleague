@@ -195,95 +195,60 @@ public sealed class BetConditionsTests
     // ---------------------------------------------------------------- thrashing
 
     [Fact]
-    public void Thrashing_WinByThreeAndRivalAtSixOrFewerOnThePitchIsMet()
+    public void Thrashing_WinByThreeOrMoreIsMet()
     {
-        // Un rival expulsado y sin sustituto: acaba con 6 (los otros seis siguen en el campo).
-        var rivals = Enumerable.Range(101, 7).Select(id => Stats(id, 1, leftTick: id == 103 ? 400 : -1));
-        Assert.True(Eval(BetKind.Thrashing, Result(Array.Empty<MatchEvent>(), 3, 0, players: rivals)));
+        Assert.True(Eval(BetKind.Thrashing, Result(Array.Empty<MatchEvent>(), 3, 0)));
+        Assert.True(Eval(BetKind.Thrashing, Result(Array.Empty<MatchEvent>(), 5, 2)));
     }
 
     [Fact]
-    public void Thrashing_ControlsSevenRivalsOrASmallMarginOrALossFail()
+    public void Thrashing_ControlsASmallMarginOrALossFail()
     {
-        var sevenRivals = Enumerable.Range(101, 7).Select(id => Stats(id, 1));
-        Assert.False(Eval(BetKind.Thrashing, Result(Array.Empty<MatchEvent>(), 3, 0, players: sevenRivals)));
-
-        var sixRivals = Enumerable.Range(101, 7).Select(id => Stats(id, 1, leftTick: id == 103 ? 400 : -1));
-        Assert.False(Eval(BetKind.Thrashing, Result(Array.Empty<MatchEvent>(), 3, 1, players: sixRivals)));   // solo +2
-        Assert.False(Eval(BetKind.Thrashing, Result(Array.Empty<MatchEvent>(), 0, 3, players: sixRivals)));   // pierde
-
-        // Un suplente rival que entró cuenta: 7 que empezaron - 1 que salió + 1 que entró = 7.
-        var replaced = sixRivals.Append(Stats(108, 1));
-        Assert.False(Eval(BetKind.Thrashing, Result(Array.Empty<MatchEvent>(), 3, 0, players: replaced)));
-
-        // Un suplente que NO llegó a pisar el campo (0 ticks) no cuenta.
-        var benchwarmer = new PlayerMatchStats(108, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, false, 0, 0, 0);
-        Assert.True(Eval(BetKind.Thrashing, Result(Array.Empty<MatchEvent>(), 3, 0, players: sixRivals.Append(benchwarmer))));
+        Assert.False(Eval(BetKind.Thrashing, Result(Array.Empty<MatchEvent>(), 3, 1)));   // solo +2
+        Assert.False(Eval(BetKind.Thrashing, Result(Array.Empty<MatchEvent>(), 1, 0)));
+        Assert.False(Eval(BetKind.Thrashing, Result(Array.Empty<MatchEvent>(), 0, 3)));   // pierde por 3
     }
 
-    // ---------------------------------------------------------------- three_names
+    // ---------------------------------------------------------------- split_the_goals
 
     [Fact]
-    public void ThreeNames_ThreeDistinctScorersAndWinIsMet()
+    public void SplitTheGoals_TwoDistinctScorersAndWinIsMet()
     {
-        Assert.True(Eval(BetKind.ThreeNames, Result(new[] { Goal(0, 7), Goal(0, 6), Goal(0, 5), Goal(0, 7) }, 4, 0)));
+        Assert.True(Eval(BetKind.SplitTheGoals, Result(new[] { Goal(0, 7), Goal(0, 6) }, 2, 0)));
+        Assert.True(Eval(BetKind.SplitTheGoals, Result(new[] { Goal(0, 7), Goal(1, 105), Goal(0, 6), Goal(0, 7) }, 3, 1)));
     }
 
     [Fact]
-    public void ThreeNames_ControlsTwoNamesRepeatedScorerCancelledGoalOrLossFail()
+    public void SplitTheGoals_ControlsOneNameCancelledGoalRivalNamesOrLossFail()
     {
-        Assert.False(Eval(BetKind.ThreeNames, Result(new[] { Goal(0, 7), Goal(0, 7), Goal(0, 7), Goal(0, 6) }, 4, 0)));
-        Assert.False(Eval(BetKind.ThreeNames, Result(new[] { Goal(0, 7), Goal(0, 6), Goal(0, 5, "goal" + Cancelled) }, 2, 0)));
-        Assert.False(Eval(BetKind.ThreeNames, Result(new[] { Goal(0, 7), Goal(0, 6), Goal(0, 5), Goal(1, 105), Goal(1, 105), Goal(1, 106), Goal(1, 106) }, 3, 4)));
-
-        // Tres nombres del RIVAL no valen.
-        Assert.False(Eval(BetKind.ThreeNames, Result(new[] { Goal(1, 105), Goal(1, 106), Goal(1, 107), Goal(0, 7), Goal(0, 7), Goal(0, 7), Goal(0, 7) }, 4, 3)));
+        Assert.False(Eval(BetKind.SplitTheGoals, Result(new[] { Goal(0, 7), Goal(0, 7), Goal(0, 7) }, 3, 0)));
+        Assert.False(Eval(BetKind.SplitTheGoals, Result(new[] { Goal(0, 7), Goal(0, 6, "goal" + Cancelled) }, 1, 0)));
+        Assert.False(Eval(BetKind.SplitTheGoals, Result(new[] { Goal(1, 105), Goal(1, 106), Goal(0, 7), Goal(0, 7), Goal(0, 7) }, 3, 2)));
+        Assert.False(Eval(BetKind.SplitTheGoals, Result(new[] { Goal(0, 7), Goal(0, 6), Goal(1, 105), Goal(1, 105), Goal(1, 106) }, 2, 3)));
     }
 
     // ---------------------------------------------------------------- youth_decides
 
     [Fact]
-    public void YouthDecides_TheWinningGoalIsTheOneThatNeverGetsOvertaken()
+    public void YouthDecides_AYouthScoresAndTheTeamWinsIsMet()
     {
         bool Youth(int id) => id == 6;
 
-        // 1-0 (7), 1-1 (rival), 2-1 (6): el gol de la victoria es el 2-1, de un canterano.
-        Assert.True(Eval(BetKind.YouthDecides, Result(new[] { Goal(0, 7), Goal(1, 105), Goal(0, 6) }, 2, 1), youth: Youth));
-
-        // 3-1 con los goles de 7, 6 y 7: el gol de la victoria es el SEGUNDO propio (2-1 ya no se remonta), el de 6.
-        Assert.True(Eval(BetKind.YouthDecides, Result(new[] { Goal(0, 7), Goal(1, 105), Goal(0, 6), Goal(0, 7) }, 3, 1), youth: Youth));
+        // El canterano marca el primero y un veterano remata: basta que marque, ya no tiene que ser el decisivo.
+        Assert.True(Eval(BetKind.YouthDecides, Result(new[] { Goal(0, 6), Goal(1, 105), Goal(0, 7) }, 2, 1), youth: Youth));
+        Assert.True(Eval(BetKind.YouthDecides, Result(new[] { Goal(0, 7), Goal(0, 7), Goal(0, 6) }, 3, 0), youth: Youth));
     }
 
     [Fact]
-    public void YouthDecides_ControlsAVeteranScoringTheDecisiveGoalNoYouthsOrALossFail()
+    public void YouthDecides_ControlsNoYouthScoringACancelledGoalARivalScorerOrALossFail()
     {
         bool Youth(int id) => id == 6;
 
-        // El canterano marca el 1-0 y luego un veterano el 2-1 decisivo: no es «el chaval decide».
-        Assert.False(Eval(BetKind.YouthDecides, Result(new[] { Goal(0, 6), Goal(1, 105), Goal(0, 7) }, 2, 1), youth: Youth));
-
-        // Un canterano marca el gol INÚTIL (el tercero del 3-1) y no el decisivo.
-        Assert.False(Eval(BetKind.YouthDecides, Result(new[] { Goal(0, 7), Goal(1, 105), Goal(0, 7), Goal(0, 6) }, 3, 1), youth: Youth));
-
-        Assert.False(Eval(BetKind.YouthDecides, Result(new[] { Goal(0, 7), Goal(0, 6), Goal(1, 105), Goal(1, 105), Goal(1, 105) }, 2, 3), youth: Youth));
+        Assert.False(Eval(BetKind.YouthDecides, Result(new[] { Goal(0, 7), Goal(0, 5) }, 2, 0), youth: Youth));
+        Assert.False(Eval(BetKind.YouthDecides, Result(new[] { Goal(0, 6, "goal" + Cancelled), Goal(0, 7) }, 1, 0), youth: Youth));
+        Assert.False(Eval(BetKind.YouthDecides, Result(new[] { Goal(1, 6), Goal(0, 7) }, 1, 0), youth: Youth));   // id 6 marcando por el rival no es propio
+        Assert.False(Eval(BetKind.YouthDecides, Result(new[] { Goal(0, 6), Goal(1, 105), Goal(1, 105) }, 1, 2), youth: Youth));
         Assert.False(Eval(BetKind.YouthDecides, Result(new[] { Goal(0, 6) }, 1, 0), youth: null));
-    }
-
-    // ---------------------------------------------------------------- short_and_clean
-
-    [Fact]
-    public void ShortAndClean_LessThanSevenStartersWinWithoutConcedingIsMet()
-    {
-        Assert.True(Eval(BetKind.ShortAndClean, Result(new[] { Goal(0, 7) }, 1, 0), ownStarters: 6));
-        Assert.True(Eval(BetKind.ShortAndClean, Result(new[] { Goal(0, 7) }, 1, 0), ownStarters: 5));
-    }
-
-    [Fact]
-    public void ShortAndClean_ControlsSevenStartersAConcededGoalOrALossFail()
-    {
-        Assert.False(Eval(BetKind.ShortAndClean, Result(new[] { Goal(0, 7) }, 1, 0), ownStarters: 7));
-        Assert.False(Eval(BetKind.ShortAndClean, Result(new[] { Goal(0, 7), Goal(1, 105), Goal(0, 6) }, 2, 1), ownStarters: 6));
-        Assert.False(Eval(BetKind.ShortAndClean, Result(Array.Empty<MatchEvent>(), 0, 1), ownStarters: 6));
     }
 
     // ---------------------------------------------------------------- referee_blind

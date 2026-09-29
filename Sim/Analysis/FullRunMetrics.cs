@@ -278,7 +278,32 @@ public static class FullRunMetrics
         rows.Add(Info("leftoverGoldShare_saver", LeftoverShare(saver)));
         rows.Add(Info("purchasesPerMarket_spender", PurchaseRate(spender)));
         rows.Add(Info("purchasesPerMarket_saver", PurchaseRate(saver)));
+
+        // ADR 0157: la apuesta del vestuario, por doctrina de compra. Con la política de apuesta por defecto
+        // (Never) todas valen 0; con Blind, betNetGoldPerRun tiene que salir NEGATIVO (~ -15 % del oro
+        // apostado): si sale positivo, las cuotas están mal.
+        AddBetRows(rows, "contextual", contextual);
+        AddBetRows(rows, "spender", spender);
+        AddBetRows(rows, "saver", saver);
         return rows;
+    }
+
+    private static void AddBetRows(List<MetricResult> rows, string doctrine, IReadOnlyList<RunPlayResult> runs)
+    {
+        double n = Math.Max(1, runs.Count);
+        long taken = 0, net = 0, staked = 0;
+        for (int i = 0; i < runs.Count; i++)
+        {
+            taken += runs[i].BetsTaken;
+            net += runs[i].BetNetGold;
+            staked += runs[i].BetGoldStaked;
+        }
+
+        rows.Add(Info("betsTakenPerRun_" + doctrine, taken / n));
+        rows.Add(Info("betNetGoldPerRun_" + doctrine, net / n));
+
+        // Retorno sobre lo apostado en %: (cobrado - apostado) / apostado. -15 = el margen de la casa.
+        rows.Add(Info("betNetReturnPercent_" + doctrine, staked == 0 ? 0 : 100.0 * net / staked));
     }
 
     /// <summary>

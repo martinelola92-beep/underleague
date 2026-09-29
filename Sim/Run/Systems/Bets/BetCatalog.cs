@@ -16,9 +16,8 @@ public enum BetKind
     IntoTheMob,
     CleanHands,
     Thrashing,
-    ThreeNames,
+    SplitTheGoals,
     YouthDecides,
-    ShortAndClean,
     RefereeBlind,
 }
 
@@ -31,16 +30,26 @@ public enum BetKind
 /// Cobro BRUTO (incluye la apuesta) como porcentaje de la apuesta, índices 0..4 = dificultad 1..5 (RF-012).
 /// Sale de <c>85 / p</c> del censo (<c>Balance --bet-census</c>, ADR 0157, sección «Censo»).
 /// </param>
+/// <param name="FrequencyBasisPointsByDifficulty">
+/// Frecuencia <b>medida</b> de la condición por dificultad 1..5, en centésimas de punto porcentual (1.429 =
+/// 14,29 %; aritmética entera, RT-023). Es la <c>p</c> de la cuota y lo que decide si la apuesta se
+/// ofrece: por debajo de <see cref="BetSystem.MinOfferedBasisPoints"/> es una lotería y no se ofrece.
+/// </param>
 public sealed record BetDefinition(
     string Id,
     BetKind Kind,
     LocalizedName Name,
     LocalizedName Condition,
     IReadOnlyList<int> StakeByAct,
-    IReadOnlyList<int> PayoutPercentByDifficulty)
+    IReadOnlyList<int> PayoutPercentByDifficulty,
+    IReadOnlyList<int> FrequencyBasisPointsByDifficulty)
 {
     /// <summary>Oro que se apuesta en ese acto (1..3; fuera de rango se ajusta al extremo más cercano).</summary>
     public int StakeFor(int act) => StakeByAct[Math.Clamp(act, 1, StakeByAct.Count) - 1];
+
+    /// <summary>Frecuencia medida, en centésimas de punto porcentual, contra una dificultad 1..5 (fuera de rango se ajusta).</summary>
+    public int FrequencyBasisPointsFor(int difficulty) =>
+        FrequencyBasisPointsByDifficulty[Math.Clamp(difficulty, 1, FrequencyBasisPointsByDifficulty.Count) - 1];
 
     /// <summary>Porcentaje bruto que cobra la apuesta contra una dificultad 1..5 (fuera de rango se ajusta).</summary>
     public int PayoutPercentFor(int difficulty) =>
@@ -171,7 +180,31 @@ public static class BetLoader
             LocalizedNameJson.Read(node.Prop("name")),
             LocalizedNameJson.Read(node.Prop("condition")),
             ReadInts(node.Prop("stakeByAct"), 3, 1, int.MaxValue),
-            ReadInts(node.Prop("payoutPercentByDifficulty"), 5, 100, 2000));
+            ReadInts(node.Prop("payoutPercentByDifficulty"), 5, 100, 2000),
+            ReadBasisPoints(node.Prop("frequencyPercentByDifficulty")));
+    }
+
+    /// <summary>Lee porcentajes con decimales (0..100) y los guarda como centésimas de punto: 14,29 -> 1429.</summary>
+    private static IReadOnlyList<int> ReadBasisPoints(Json array)
+    {
+        var values = new List<int>(5);
+        foreach (var item in array.EnumerateArray())
+        {
+            decimal percent = item.AsDecimal();
+            if (percent < 0m || percent > 100m)
+            {
+                throw new DataException(item.File, item.Path, $"frecuencia {percent} fuera de rango [0, 100]");
+            }
+
+            values.Add((int)decimal.Round(percent * 100m, MidpointRounding.AwayFromZero));
+        }
+
+        if (values.Count != 5)
+        {
+            throw new DataException(array.File, array.Path, $"se esperaban 5 valores y hay {values.Count}");
+        }
+
+        return values;
     }
 
     private static IReadOnlyList<int> ReadInts(Json array, int count, int min, int max)

@@ -23,7 +23,7 @@
         "kind": {
           "enum": [
             "BloodBeforeGoals", "HuntTheStar", "EyeForEye", "Comeback", "IntoTheMob", "CleanHands",
-            "Thrashing", "ThreeNames", "YouthDecides", "ShortAndClean", "RefereeBlind"
+            "Thrashing", "SplitTheGoals", "YouthDecides", "RefereeBlind"
           ]
         },
         "name": { "$ref": "#/$defs/localizedText" },
@@ -35,6 +35,13 @@
           "minItems": 3,
           "maxItems": 3
         },
+        "frequencyPercentByDifficulty": {
+          "description": "Frecuencia MEDIDA de la condición (%) por distintivo de dificultad 1..5, del censo `Balance --bet-census` (ADR 0157). Es la p de la cuota y decide si se ofrece: por debajo del 2 % (BetSystem.MinOfferedBasisPoints) no se ofrece en esa dificultad.",
+          "type": "array",
+          "items": { "type": "number", "minimum": 0, "maximum": 100 },
+          "minItems": 5,
+          "maxItems": 5
+        },
         "payoutPercentByDifficulty": {
           "description": "Cobro BRUTO (incluye la apuesta) como porcentaje de la apuesta, un valor por distintivo de dificultad 1..5 (RF-012). Sale de 85 / p del censo; mínimo 100 (nunca menos de lo apostado), tope 2000.",
           "type": "array",
@@ -43,7 +50,7 @@
           "maxItems": 5
         }
       },
-      "required": ["id", "kind", "name", "condition", "stakeByAct", "payoutPercentByDifficulty"],
+      "required": ["id", "kind", "name", "condition", "stakeByAct", "payoutPercentByDifficulty", "frequencyPercentByDifficulty"],
       "additionalProperties": false
     },
     "localizedText": {

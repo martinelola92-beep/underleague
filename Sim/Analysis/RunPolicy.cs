@@ -42,6 +42,13 @@ public enum PurchaseDoctrine
 /// </summary>
 public sealed record RunPolicyOptions
 {
+    /// <summary>
+    /// Doctrina de apuesta del vestuario (ADR 0157). <see cref="BetDoctrine.Never"/> por defecto: ninguna
+    /// puerta se mueve por ella. Es una palanca de medición del <c>betNetGoldPerRun</c>, no una decisión de
+    /// diseño.
+    /// </summary>
+    public BetDoctrine BetDoctrine { get; init; } = BetDoctrine.Never;
+
     /// <summary>Doctrina de compra (ADR 0037). Lo demás es igual en las tres políticas.</summary>
     public PurchaseDoctrine Doctrine { get; init; } = PurchaseDoctrine.Contextual;
 
@@ -390,6 +397,26 @@ public sealed record RunPolicyOptions
 }
 
 /// <summary>
+/// Qué hace la política con la apuesta del vestuario que se ofrece en cada nodo de partido (ADR 0157).
+/// </summary>
+public enum BetDoctrine
+{
+    /// <summary>Nunca la toma. Por defecto: es el comportamiento anterior a la apuesta.</summary>
+    Never,
+
+    /// <summary>La toma siempre que pueda pagarla: apostar a ciegas. Su oro neto tiene que salir negativo.</summary>
+    Blind,
+
+    /// <summary>
+    /// La toma solo si la build la favorece. <b>Aproximación</b>, no un análisis del partido: una build de
+    /// violencia (al menos <see cref="RunPolicy.PreparedViolentStarters"/> titulares con rasgo Aggressive o
+    /// Dirty) toma <c>hunt_the_star</c>, <c>eye_for_eye</c> y <c>blood_before_goals</c>; con cualquier otra
+    /// build no toma ninguna. No coloca ni alinea para ganarla: eso sería otra política.
+    /// </summary>
+    Prepared,
+}
+
+/// <summary>
 /// Observador de los partidos de una run jugada por <see cref="RunPolicy.Play"/> (ver
 /// <see cref="IRunSystems.OnMatchPlayed"/>): solo mira, no decide. Lo usa el censo de apuestas de
 /// <c>/Balance</c> (ADR 0157).
@@ -558,7 +585,16 @@ public sealed record RunPlayResult(
     /// la usa igual en la capa 0 del acto 1 que en el último nodo del acto 3. No entra en ninguna métrica
     /// ni en ninguna puerta, igual que <see cref="FinalCounters"/> y <see cref="SlotCensus"/>.
     /// </summary>
-    IReadOnlyList<string>? PerkHorizon = null)
+    IReadOnlyList<string>? PerkHorizon = null,
+
+    /// <summary>Apuestas del vestuario tomadas en la run (ADR 0157).</summary>
+    int BetsTaken = 0,
+
+    /// <summary>Oro neto de las apuestas de la run: cobrado menos apostado (negativo si se pierde más de lo que se gana).</summary>
+    int BetNetGold = 0,
+
+    /// <summary>Oro apostado en la run (denominador del retorno de las apuestas).</summary>
+    int BetGoldStaked = 0)
 {
     /// <summary>True si la run terminó ganando al jefe final (RF-002).</summary>
     public bool Won => Outcome == RunOutcomeKind.Victory;
@@ -1054,6 +1090,65 @@ public static class RunPolicy
 
     // ------------------------------------------------------------------ interno
 
+    /// <summary>Titulares con rasgo Aggressive o Dirty a partir de los cuales <see cref="BetDoctrine.Prepared"/> ve una build de violencia.</summary>
+    public const int PreparedViolentStarters = 3;
+
+    /// <summary>
+    /// ADR 0157: toma o deja la apuesta ofrecida en el nodo según <see cref="RunPolicyOptions.BetDoctrine"/>.
+    /// Solo si puede pagarla (no se endeuda). Lo que se toma y lo que se apuesta queda en el libro de la run.
+    /// </summary>
+    private static RunState TakeBetIfWanted(
+        RunState state,
+        MapNode node,
+        Catalog catalog,
+        IRunSystems systems,
+        RunPolicyOptions options,
+        IReadOnlyList<RunPlayer> starters,
+        Ledger ledger)
+    {
+        if (options.BetDoctrine == BetDoctrine.Never)
+        {
+            return state;
+        }
+
+        var offer = Underleague.Sim.Run.Systems.Bets.BetSystem.OfferFor(state, node, systems, catalog);
+        if (offer is null || offer.Stake > state.Gold)
+        {
+            return state;
+        }
+
+        if (options.BetDoctrine == BetDoctrine.Prepared && !FavoursBet(offer.Kind, starters))
+        {
+            return state;
+        }
+
+        state = RunEngine.Apply(state, new TakeBet(node.Id), catalog, systems);
+        ledger.BetsTaken++;
+        ledger.BetStaked += offer.Stake;
+        return state;
+    }
+
+    private static bool FavoursBet(Underleague.Sim.Run.Systems.Bets.BetKind kind, IReadOnlyList<RunPlayer> starters)
+    {
+        if (kind is not (Underleague.Sim.Run.Systems.Bets.BetKind.HuntTheStar
+            or Underleague.Sim.Run.Systems.Bets.BetKind.EyeForEye
+            or Underleague.Sim.Run.Systems.Bets.BetKind.BloodBeforeGoals))
+        {
+            return false;
+        }
+
+        int violent = 0;
+        for (int i = 0; i < starters.Count; i++)
+        {
+            if (starters[i].Traits.Contains(Trait.Aggressive) || starters[i].Traits.Contains(Trait.Dirty))
+            {
+                violent++;
+            }
+        }
+
+        return violent >= PreparedViolentStarters;
+    }
+
     private static RunState PlayMatch(
         RunState state,
         MapNode node,
@@ -1083,6 +1178,8 @@ public static class RunPolicy
         // jugaban jamás. Sin esto, cualquier cambio en /data/consumables es invisible para las puertas.
         state = EquipConsumables(state, catalog, systems, consumables);
 
+        state = TakeBetIfWanted(state, node, catalog, systems, options, starters, ledger);
+
         int wagesDue = WagesDue(state);
         int goldBefore = state.Gold;
         int deadBefore = CountState(state, PhysicalState.Dead);
@@ -1097,7 +1194,9 @@ public static class RunPolicy
             && !(node.Kind == NodeKind.Boss && !won);
 
         int wagesPaid = ranAfterMatch ? Math.Min(wagesDue, goldBefore) : 0;
-        int earned = (state.Gold - goldBefore) + wagesPaid;
+        // El cobro de la apuesta (ADR 0157) no es premio de partido: se cuenta aparte, en el libro de apuestas.
+        int earned = (state.Gold - goldBefore) + wagesPaid - ledger.LastBetPaid;
+        ledger.LastBetPaid = 0;
 
         ledger.Nodes++;
         ledger.Matches++;
@@ -3652,7 +3751,10 @@ public static class RunPolicy
             ledger.MastersAffordable,
             counterCensus,
             slotCensus,
-            perkHorizon);
+            perkHorizon,
+            ledger.BetsTaken,
+            ledger.BetPaid - ledger.BetStaked,
+            ledger.BetStaked);
     }
 
     /// <summary>
@@ -3675,8 +3777,16 @@ public static class RunPolicy
             _observer = observer;
         }
 
+        public Underleague.Sim.Run.Systems.Bets.BetCatalog Bets => _inner.Bets;
+
         public void OnMatchPlayed(RunState stateBefore, MapNode node, MatchSetup setup, MatchResult result, RunMatchSummary summary)
         {
+            if (summary.Bet is { } bet)
+            {
+                _ledger.BetPaid += bet.GoldPaid;
+                _ledger.LastBetPaid = bet.GoldPaid;
+            }
+
             _observer?.Invoke(stateBefore, node, setup, result, summary);
             _inner.OnMatchPlayed(stateBefore, node, setup, result, summary);
         }
@@ -3729,6 +3839,13 @@ public static class RunPolicy
     /// <summary>Contabilidad de una run mientras se juega. Mutable a propósito y estrictamente local.</summary>
     private sealed class Ledger
     {
+        public int BetsTaken;
+        public int BetStaked;
+        public int BetPaid;
+
+        /// <summary>Cobro de la apuesta del último partido: se resta del oro «ganado» del partido (no es premio de partido).</summary>
+        public int LastBetPaid;
+
         public int OwnInjuries;
 
         /// <summary>Lesiones de los DOS equipos en los partidos de la run: la misma cifra que mide RT-056.</summary>

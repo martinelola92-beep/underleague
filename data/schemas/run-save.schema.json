@@ -31,6 +31,25 @@
     },
     "phase": { "enum": ["onMap", "nodeOpen", "finished"] },
     "gold": { "type": "integer", "minimum": 0 },
+    "bet": {
+      "description": "Apuesta del vestuario tomada y pagada para un nodo de partido aún sin jugar (ADR 0157, versión 7), o null. La apuesta ofrecida no se guarda: se deriva de la semilla y el nodo.",
+      "oneOf": [
+        { "type": "null" },
+        {
+          "type": "object",
+          "properties": {
+            "id": { "type": "string" },
+            "node": { "type": "integer", "minimum": 0 },
+            "stake": { "type": "integer", "minimum": 1 },
+            "payoutPercent": { "type": "integer", "minimum": 100 },
+            "targetPlayer": { "type": "integer", "minimum": -1 },
+            "targetName": { "type": "string" }
+          },
+          "required": ["id", "node", "stake", "payoutPercent", "targetPlayer", "targetName"],
+          "additionalProperties": false
+        }
+      ]
+    },
     "rerollsUsed": { "type": "integer", "minimum": 0 },
     "nodeRerolls": { "type": "integer", "minimum": 0 },
     "nextPlayerId": {
@@ -150,7 +169,7 @@
   },
   "required": [
     "schemaVersion", "seed", "division", "club", "clubRace", "act", "currentNode", "pendingNode",
-    "phase", "gold", "rerollsUsed", "nodeRerolls", "nextPlayerId", "result", "nodeHistory", "maps",
+    "phase", "gold", "bet", "rerollsUsed", "nodeRerolls", "nextPlayerId", "result", "nodeHistory", "maps",
     "referees", "roster", "lineup", "consumables"
   ],
   "additionalProperties": false,

@@ -124,6 +124,13 @@ public sealed record PostMatchReport(
     DeathGold DeathGold,
     LootRow? Loot)
 {
+    /// <summary>
+    /// Cómo terminó la apuesta del vestuario que el jugador tomó para este partido (ADR 0157): qué condición,
+    /// cuánto apostó, si se cumplió y cuánto cobró. Null si no tomó ninguna. La condición ya viene resuelta
+    /// por el motor (RT-014): la interfaz solo la enseña.
+    /// </summary>
+    public Underleague.Sim.Run.Systems.Bets.BetResult? Bet { get; init; }
+
     /// <summary>Muertes propias (RF-093): lo primero que el informe tiene que decir cuando las hay.</summary>
     public int Deaths
     {
@@ -219,7 +226,10 @@ public static class PostMatchView
             economy is null || stateAfterMatch.Result.IsOver
                 ? DeathGold.None
                 : GoldCalculator.DeathGold(stateAfterMatch, summary, economy),
-            Loot(playback, report, items, templates, stateAfterMatch));
+            Loot(playback, report, items, templates, stateAfterMatch))
+        {
+            Bet = summary.Bet,
+        };
     }
 
     /// <summary>

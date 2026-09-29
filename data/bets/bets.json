@@ -1,5 +1,5 @@
 {
-  "_doc": "ADR 0157: catalogo de apuestas del vestuario (RF-114h, RF-114i). Una por nodo de partido, derivada de (semilla, nodo) por BetSystem.OfferFor. 'kind' fija que condicion evalua BetConditions.Evaluate (definiciones exactas en el codigo y en la ADR). 'stakeByAct' es la apuesta fija en oro de los actos 1..3: PROVISIONAL, SIN MEDIR (Regla H). 'payoutPercentByDifficulty' es el cobro BRUTO como porcentaje de la apuesta, un valor por distintivo de dificultad 1..5 (RF-012): MEDIDO, cuota = 85 / p (margen de la casa del 15 %, ADR 0157 punto 4) con p la frecuencia de la condicion en el censo de Balance --bet-census (2.400 runs, 33.325 partidos, semillas 1 y 7). Los 2000 son el TOPE del esquema (85 / p lo superaba, o p < 1 %): no son una cuota medida, y la seccion 'Censo' de la ADR 0157 dice cuales y por que. En el texto de la condicion, {player} se sustituye por el nombre del jugador rival nombrado en la oferta (solo hunt_the_star). Tono: corredor de apuestas de taberna.",
+  "_doc": "ADR 0157: catalogo de apuestas del vestuario (RF-114h, RF-114i). Una por nodo de partido, derivada de (semilla, nodo) por BetSystem.OfferFor entre las apuestas cuya frecuencia medida en la dificultad del nodo es >= 2 % (BetSystem.MinOfferedBasisPoints, fijado por el revisor, provisional). 'kind' fija que condicion evalua BetConditions.Evaluate (definiciones exactas en el codigo y en la ADR). 'stakeByAct' es la apuesta fija en oro de los actos 1..3: PROVISIONAL, SIN MEDIR (Regla H). 'frequencyPercentByDifficulty' es la frecuencia MEDIDA (%) de la condicion por distintivo de dificultad 1..5 (RF-012) con `Balance --bet-census` (2.400 runs de la politica contextual, semillas 1 y 7, 33.211 partidos; seccion 'Censo' de la ADR 0157). 'payoutPercentByDifficulty' es el cobro BRUTO como porcentaje de la apuesta: MEDIDO, cuota = round(85 / p) (margen de la casa del 15 %, ADR 0157 punto 4). Los 2000 son el TOPE del esquema (85 / p lo superaba) o una celda que no se ofrece (p < 2 %): no son una cuota medida. En el texto de la condicion, {player} se sustituye por el nombre del jugador rival nombrado en la oferta (solo hunt_the_star). Tono: corredor de apuestas de taberna.",
   "bets": [
     {
       "id": "blood_before_goals",
@@ -10,7 +10,8 @@
         "en": "The first injury lands before the first goal. If nobody scores, I'll settle for anyone bleeding."
       },
       "stakeByAct": [3, 4, 5],
-      "payoutPercentByDifficulty": [595, 230, 180, 141, 161]
+      "payoutPercentByDifficulty": [594, 231, 179, 140, 167],
+      "frequencyPercentByDifficulty": [14.32, 36.74, 47.46, 60.73, 50.92]
     },
     {
       "id": "hunt_the_star",
@@ -21,7 +22,8 @@
         "en": "{player} doesn't finish the match: hurt, dead or sent off. I never said a word."
       },
       "stakeByAct": [3, 4, 5],
-      "payoutPercentByDifficulty": [1735, 973, 686, 641, 2000]
+      "payoutPercentByDifficulty": [1736, 953, 702, 655, 2000],
+      "frequencyPercentByDifficulty": [4.90, 8.92, 12.11, 12.97, 0.49]
     },
     {
       "id": "eye_for_eye",
@@ -32,7 +34,8 @@
         "en": "If they hurt one of yours, you hurt one of theirs, and you win on top. Revenge without victory doesn't pay."
       },
       "stakeByAct": [3, 4, 5],
-      "payoutPercentByDifficulty": [2000, 1078, 702, 441, 716]
+      "payoutPercentByDifficulty": [2000, 1079, 702, 457, 883],
+      "frequencyPercentByDifficulty": [1.03, 7.87, 12.11, 18.60, 9.62]
     },
     {
       "id": "comeback",
@@ -43,7 +46,8 @@
         "en": "You're losing at some point and still win. The house pays those who can stomach the scare."
       },
       "stakeByAct": [3, 4, 5],
-      "payoutPercentByDifficulty": [1392, 1336, 1196, 1403, 1676]
+      "payoutPercentByDifficulty": [1360, 1268, 1181, 1249, 1822],
+      "frequencyPercentByDifficulty": [6.25, 6.70, 7.20, 6.81, 4.66]
     },
     {
       "id": "into_the_mob",
@@ -54,7 +58,8 @@
         "en": "The match goes to golden goal and you win it, the referee already halfway out the door."
       },
       "stakeByAct": [3, 4, 5],
-      "payoutPercentByDifficulty": [502, 438, 469, 528, 621]
+      "payoutPercentByDifficulty": [497, 425, 463, 564, 638],
+      "frequencyPercentByDifficulty": [17.09, 19.98, 18.38, 15.07, 13.31]
     },
     {
       "id": "clean_hands",
@@ -65,51 +70,44 @@
         "en": "You win, leave at least one rival casualty and see not a single card of your own. Blood, sure, but with manners."
       },
       "stakeByAct": [3, 4, 5],
-      "payoutPercentByDifficulty": [652, 372, 381, 362, 480]
+      "payoutPercentByDifficulty": [653, 365, 388, 373, 511],
+      "frequencyPercentByDifficulty": [13.02, 23.26, 21.92, 22.77, 16.62]
     },
     {
       "id": "thrashing",
       "kind": "Thrashing",
       "name": { "es": "Paliza", "en": "Thrashing" },
       "condition": {
-        "es": "Ganas por tres goles o más y el rival acaba con seis o menos en el campo. Que no quede nadie para contarlo.",
-        "en": "You win by three goals or more and the rival ends with six or fewer on the pitch. Leave nobody to tell the tale."
+        "es": "Ganas por tres goles o más. Que se sepa en toda la taberna quién manda.",
+        "en": "You win by three goals or more. Let the whole tavern know who runs the place."
       },
       "stakeByAct": [3, 4, 5],
-      "payoutPercentByDifficulty": [2000, 2000, 2000, 2000, 2000]
+      "payoutPercentByDifficulty": [765, 1163, 1857, 1767, 2000],
+      "frequencyPercentByDifficulty": [11.11, 7.31, 4.58, 4.81, 2.92]
     },
     {
-      "id": "three_names",
-      "kind": "ThreeNames",
-      "name": { "es": "Tres firmas", "en": "Three Names" },
+      "id": "split_the_goals",
+      "kind": "SplitTheGoals",
+      "name": { "es": "Reparto", "en": "Share the Spoils" },
       "condition": {
-        "es": "Ganas y el acta lleva goles de tres jugadores distintos. Aquí el pan se reparte.",
-        "en": "You win and the sheet carries goals from three different players. Here the bread gets shared."
+        "es": "Ganas y marcan al menos dos jugadores tuyos distintos. El botín se reparte, y la gloria también.",
+        "en": "You win and at least two different players of yours score. The spoils are shared, and so is the glory."
       },
       "stakeByAct": [3, 4, 5],
-      "payoutPercentByDifficulty": [2000, 2000, 2000, 2000, 2000]
+      "payoutPercentByDifficulty": [791, 1019, 1224, 958, 1508],
+      "frequencyPercentByDifficulty": [10.74, 8.35, 6.94, 8.87, 5.64]
     },
     {
       "id": "youth_decides",
       "kind": "YouthDecides",
-      "name": { "es": "El chaval decide", "en": "The Kid Decides" },
+      "name": { "es": "El chaval marca", "en": "The Kid Scores" },
       "condition": {
-        "es": "El gol que te da la victoria lo mete un canterano. La veteranía es un grado; la insolencia, otro.",
-        "en": "The goal that wins it is scored by a youth-squad kid. Experience is one asset; cheek is another."
+        "es": "Un canterano marca y tú ganas. La veteranía es un grado; la insolencia, otro.",
+        "en": "A youth-squad kid scores and you win. Experience is one asset; cheek is another."
       },
       "stakeByAct": [3, 4, 5],
-      "payoutPercentByDifficulty": [2000, 2000, 2000, 2000, 1169]
-    },
-    {
-      "id": "short_and_clean",
-      "kind": "ShortAndClean",
-      "name": { "es": "Pocos y limpios", "en": "Few and Clean" },
-      "condition": {
-        "es": "Sales con menos de siete y ganas sin encajar. Es una locura, pero se paga como tal.",
-        "en": "You start with fewer than seven and win without conceding. Madness, but paid as such."
-      },
-      "stakeByAct": [3, 4, 5],
-      "payoutPercentByDifficulty": [2000, 2000, 2000, 2000, 2000]
+      "payoutPercentByDifficulty": [2000, 2000, 2000, 2000, 1411],
+      "frequencyPercentByDifficulty": [0.00, 0.77, 1.80, 2.71, 6.03]
     },
     {
       "id": "referee_blind",
@@ -120,7 +118,8 @@
         "en": "You win with three or more of your fouls the referee doesn't call. With the referee on the pitch: the mob doesn't count."
       },
       "stakeByAct": [3, 4, 5],
-      "payoutPercentByDifficulty": [1773, 2000, 1999, 2000, 2000]
+      "payoutPercentByDifficulty": [1781, 2000, 2000, 2000, 2000],
+      "frequencyPercentByDifficulty": [4.77, 4.10, 4.07, 3.96, 3.11]
     }
   ]
 }

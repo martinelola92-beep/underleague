@@ -76,42 +76,34 @@ public sealed class EconomyTests
         Assert.True(goldHard > goldEasy);
     }
 
+    /// <summary>
+    /// RF-114i (ADR 0157): el oro del partido no escala con el rendimiento. Con el partido excelente ya no
+    /// hay bonus por objetivo: ganar 1-0, por 3 o por 9 paga exactamente lo mismo, que es el desglose base.
+    /// </summary>
     [Fact]
-    public void ExcellentMatchBonusIsFixedNotProportionalToMargin()
+    public void WinGoldIsTheSameWhateverTheMargin()
     {
         var state = RunTestState();
         var economy = SystemsTestSupport.Systems.Economy;
-        var node = FindNodeWithObjective(state.Seed, ExcellentMatchObjective.WinByThreeOrMore);
+        var node = new MapNode(101, 1, 0, 0, NodeKind.LeagueMatch, Array.Empty<int>(), string.Empty, 3);
 
-        var narrow = Summary(node.Id, won: true, goalsFor: 3, goalsAgainst: 0, ticks: 500, injuries: 0);
-        var crushing = Summary(node.Id, won: true, goalsFor: 9, goalsAgainst: 0, ticks: 500, injuries: 0);
-        var miss = Summary(node.Id, won: true, goalsFor: 1, goalsAgainst: 0, ticks: 500, injuries: 0);
+        var golds = new[] { (1, 0), (3, 0), (9, 0), (4, 1) }
+            .Select(g => GoldCalculator.GoldForWin(state, node, Summary(node.Id, true, g.Item1, g.Item2, 500, 0), economy))
+            .ToList();
+        var breakdown = GoldCalculator.Breakdown(state, node, Summary(node.Id, true, 1, 0, 500, 0), economy);
 
-        int goldNarrow = GoldCalculator.GoldForWin(state, node, narrow, economy);
-        int goldCrushing = GoldCalculator.GoldForWin(state, node, crushing, economy);
-        int goldMiss = GoldCalculator.GoldForWin(state, node, miss, economy);
-
-        Assert.Equal(goldNarrow, goldCrushing);
-        Assert.Equal(economy.ExcellentMatchBonusGold, goldNarrow - goldMiss);
+        Assert.All(golds, g => Assert.Equal(breakdown.AfterDifficulty + breakdown.NodeBonus, g));
     }
 
+    /// <summary>ADR 0157: el partido excelente (RF-114h) ya no existe ni en el código ni en los datos.</summary>
     [Fact]
-    public void ExcellentMatchBonusForCleanSheetIgnoresGoalsScored()
+    public void TheExcellentMatchNoLongerExists()
     {
-        var state = RunTestState();
-        var economy = SystemsTestSupport.Systems.Economy;
-        var node = FindNodeWithObjective(state.Seed, ExcellentMatchObjective.CleanSheet);
-
-        var oneNil = Summary(node.Id, won: true, goalsFor: 1, goalsAgainst: 0, ticks: 500, injuries: 0);
-        var sevenNil = Summary(node.Id, won: true, goalsFor: 7, goalsAgainst: 0, ticks: 500, injuries: 0);
-        var conceded = Summary(node.Id, won: true, goalsFor: 4, goalsAgainst: 1, ticks: 500, injuries: 0);
-
-        int goldOneNil = GoldCalculator.GoldForWin(state, node, oneNil, economy);
-        int goldSevenNil = GoldCalculator.GoldForWin(state, node, sevenNil, economy);
-        int goldConceded = GoldCalculator.GoldForWin(state, node, conceded, economy);
-
-        Assert.Equal(goldOneNil, goldSevenNil);
-        Assert.Equal(economy.ExcellentMatchBonusGold, goldOneNil - goldConceded);
+        Assert.Null(typeof(GoldForWinBreakdown).GetProperty("Objective"));
+        Assert.Null(typeof(GoldForWinBreakdown).GetProperty("ObjectiveBonus"));
+        Assert.Null(typeof(EconomyConfig).GetProperty("ExcellentMatchBonusGold"));
+        Assert.DoesNotContain("excellentMatchBonusGold", TestData.LoadAllFiles()["economy/economy.json"]);
+        Assert.Null(typeof(GoldCalculator).Assembly.GetType("Underleague.Sim.Run.Systems.Economy.ExcellentMatchObjectives"));
     }
 
     private static RunMatchSummary Summary(
@@ -149,21 +141,6 @@ public sealed class EconomyTests
             OwnInjuries: injuries,
             OwnDeaths: 0,
             Report: report);
-    }
-
-    /// <summary>Busca, para esa semilla, un id de nodo cuyo objetivo anunciado sea el pedido (búsqueda determinista, sin azar de test).</summary>
-    private static MapNode FindNodeWithObjective(ulong seed, ExcellentMatchObjective objective)
-    {
-        for (int id = 101; id < 101 + 500; id++)
-        {
-            var candidate = new MapNode(id, 1, 0, 0, NodeKind.LeagueMatch, Array.Empty<int>(), string.Empty, 3);
-            if (ExcellentMatchObjectives.For(seed, candidate) == objective)
-            {
-                return candidate;
-            }
-        }
-
-        throw new InvalidOperationException($"no se ha encontrado ningún nodo con el objetivo {objective} en 500 intentos");
     }
 
     private static RunState RunTestState() =>

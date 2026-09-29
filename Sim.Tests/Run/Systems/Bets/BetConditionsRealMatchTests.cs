@@ -49,13 +49,6 @@ public sealed class BetConditionsRealMatchTests
 
         for (ulong seed = 1; seed <= 150; seed++)
         {
-            var setup = TestMatches.Build(Catalog, seed, 70, 50);
-            var slots = setup.Home.Lineup.Slots.Take(6).ToList();
-            Play("short-handed", seed, setup with { Home = setup.Home with { Lineup = new Lineup(slots) } });
-        }
-
-        for (ulong seed = 1; seed <= 150; seed++)
-        {
             var setup = TestMatches.Build(Catalog, seed, 50, 50);
             Play("lenient-referee", seed, setup with { Referee = new RefereeSetup("Lenient", RefereeTrait.Lenient, 0) });
         }
@@ -111,38 +104,13 @@ public sealed class BetConditionsRealMatchTests
                 return Won(p) && Stats(p, 0).Sum(s => s.Cards) == 0 && Stats(p, 0).Sum(s => s.InjuriesCaused) >= 1;
 
             case BetKind.Thrashing:
-                {
-                    // Recontado desde el registro: titulares - salidas + entradas, sin mirar LeftPitchTick.
-                    var onPitch = p.Setup.Away.Lineup.Slots.Select(s => s.PlayerId).ToHashSet();
-                    foreach (var e in live)
-                    {
-                        if (e.Team == 1 && e.Type is EventType.Injury or EventType.Death
-                            || (e.Type == EventType.Card && e.Team == 1 && e.Detail == "red"))
-                        {
-                            onPitch.Remove(e.Actor);
-                        }
-                        else if (e.Type == EventType.Substitution && onPitch.Contains(e.Target))
-                        {
-                            onPitch.Remove(e.Target);
-                            onPitch.Add(e.Actor);
-                        }
-                    }
+                return Won(p) && report.Goals[0] - report.Goals[1] >= 3;
 
-                    return Won(p) && report.Goals[0] - report.Goals[1] >= 3 && onPitch.Count <= 6;
-                }
-
-            case BetKind.ThreeNames:
-                return Won(p) && Stats(p, 0).Count(s => s.Goals > 0) >= 3;
+            case BetKind.SplitTheGoals:
+                return Won(p) && Stats(p, 0).Count(s => s.Goals > 0) >= 2;
 
             case BetKind.YouthDecides:
-                {
-                    var own = goals.Where(g => g.Team == 0).ToList();
-                    int winning = report.Goals[1];
-                    return Won(p) && own.Count > winning && p.IsYouth(own[winning].Actor);
-                }
-
-            case BetKind.ShortAndClean:
-                return Won(p) && p.Setup.Home.Lineup.Slots.Count < 7 && report.Goals[1] == 0;
+                return Won(p) && Stats(p, 0).Any(s => s.Goals > 0 && p.IsYouth(s.PlayerId));
 
             case BetKind.RefereeBlind:
                 return Won(p) && p.Result.Events
@@ -159,7 +127,7 @@ public sealed class BetConditionsRealMatchTests
     [Fact]
     public void TheBatchIsBigEnoughAndFinishedEveryMatch()
     {
-        Assert.True(Batch.Value.Count >= 700);
+        Assert.True(Batch.Value.Count >= 600);
         Assert.All(Batch.Value, p => Assert.InRange(p.Result.Report.Winner, 0, 1));
     }
 
@@ -210,16 +178,6 @@ public sealed class BetConditionsRealMatchTests
         }
     }
 
-    /// <summary>Control negativo conocido: los equipos a siete titulares nunca cumplen «pocos y limpios».</summary>
-    [Fact]
-    public void ShortAndCleanNeverHoldsWithSevenStarters()
-    {
-        foreach (var p in Batch.Value.Where(p => p.Setup.Home.Lineup.Slots.Count == 7))
-        {
-            Assert.False(BetConditions.Evaluate(BetKind.ShortAndClean, p.Context));
-        }
-    }
-
     /// <summary>Control negativo conocido: un partido que gana el rival no cumple ninguna condición de victoria.</summary>
     [Fact]
     public void LostMatchesNeverMeetAWinCondition()
@@ -227,7 +185,7 @@ public sealed class BetConditionsRealMatchTests
         var winKinds = new[]
         {
             BetKind.EyeForEye, BetKind.Comeback, BetKind.IntoTheMob, BetKind.CleanHands, BetKind.Thrashing,
-            BetKind.ThreeNames, BetKind.YouthDecides, BetKind.ShortAndClean, BetKind.RefereeBlind,
+            BetKind.SplitTheGoals, BetKind.YouthDecides, BetKind.RefereeBlind,
         };
         var lost = Batch.Value.Where(p => !Won(p)).ToList();
         Assert.NotEmpty(lost);

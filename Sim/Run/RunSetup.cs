@@ -83,6 +83,16 @@ public sealed record SetConsumables(IReadOnlyList<EquippedConsumable> Consumable
 /// <summary>Cierra el nodo interactivo abierto y vuelve al mapa.</summary>
 public sealed record LeaveNode : RunDecision;
 
+/// <summary>
+/// Toma la apuesta del vestuario que se ofrece en un nodo de partido accesible (ADR 0157): se paga al
+/// tomarla, una por nodo, antes de jugarlo. Sin oro suficiente, o en un nodo que no sea de partido, es un
+/// error. Tomar otra apuesta para otro nodo devuelve la anterior.
+/// </summary>
+public sealed record TakeBet(int NodeId) : RunDecision;
+
+/// <summary>Retira la apuesta tomada y no jugada, y devuelve lo apostado (ADR 0157: solo se pierde jugando y fallando).</summary>
+public sealed record DeclineBet : RunDecision;
+
 /// <summary>Compra el artículo indicado del surtido del mercado abierto (RF-114). Paquete X.</summary>
 /// <param name="Category">Categoría del surtido: jugadores, perks, equipamiento o consumibles (RF-114).</param>
 /// <param name="OfferIndex">Índice dentro de la categoría, 0..3.</param>
