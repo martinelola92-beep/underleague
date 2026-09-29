@@ -485,7 +485,10 @@ public partial class BroadcastBoard : Control
         {
             var shout = _shouts[i];
             Pregon.DrawParchment(this, new Vector2(x, Y), Bw, Bh, Pregon.Azur, Pregon.Sable, seed: 60 + i, amplitude: 1.2f, edgeWidth: 2f);
-            string label = UiText.Get("ui.pregon.shout.active", shout.Name, shout.SecondsLeft);
+            // ADR 0167: -1 = hasta el final (lo que impone la turba al entrar).
+            string label = shout.SecondsLeft < 0
+                ? UiText.Get("ui.pregon.shout.untilEnd", shout.Name)
+                : UiText.Get("ui.pregon.shout.active", shout.Name, shout.SecondsLeft);
             Pregon.DrawTextEllipsized(this, Pregon.DataBold, new Vector2(x + 10f, Y + 4f), label, Pregon.SizeDataSmall, Pregon.Vellum, Bw - 20f);
             float trackW = Bw - 20f;
             DrawRect(new Rect2(x + 10f, Y + Bh - 8f, trackW, 4f), Pregon.Sable);

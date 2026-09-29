@@ -304,6 +304,14 @@ public partial class ScoutScreen : Control
 
         y = Block(UiText.Get("ui.scout.referee"), RefereeLines(node), y);
 
+        // ADR 0167: la turba que entra si hay empate, anunciada por su tipo (nunca la víctima), para decidir si
+        // conviene empatar y si merece la pena equipar «Provocar a la grada».
+        if (_run.Systems is { } mobSystems
+            && Underleague.Sim.Run.View.MobView.For(state, node, mobSystems.Mobs, catalog, GameData.Language) is { } mob)
+        {
+            y = Block(UiText.Get("ui.scout.mob"), new[] { UiText.Get("ui.scout.mobLine", mob.Name, mob.Text) }, y);
+        }
+
         // RF-013: los perks letales, destacados. Si no hay ninguno, se dice: la ausencia de amenaza es
         // información igual de accionable que la amenaza.
         var threats = Scouting.LethalPerks(setup.Away, catalog);

@@ -405,6 +405,13 @@ public partial class MapScreen : Control
             {
                 lines.Add(UiText.Get("ui.map.nemesis", line.Name, line.Title));
             }
+
+            // ADR 0167: qué turba entra si hay empate, para elegir el camino sabiéndolo.
+            if (_run.Catalog is { } mobCatalog
+                && Underleague.Sim.Run.View.MobView.For(_run.State!, node, _run.Systems.Mobs, mobCatalog, Data.GameData.Language) is { } mob)
+            {
+                lines.Add(UiText.Get("ui.map.mob", mob.Name));
+            }
         }
 
         // Qué árbitro pita y su rasgo en corto (ADR 0158 §6, RF-061): la decisión de qué partido elegir

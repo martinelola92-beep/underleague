@@ -237,6 +237,8 @@ public static class UiText
         ["ui.scout.build"] = "BUILD",
         ["ui.scout.buildLine"] = "{0} · nivel medio {1} · {2}",
         ["ui.scout.referee"] = "ÁRBITRO",
+        ["ui.scout.mob"] = "SI HAY EMPATE, LA TURBA",
+        ["ui.scout.mobLine"] = "{0}: {1}",
         ["ui.scout.refereeLine"] = "{0} · {1}",
         ["ui.scout.refereeCatchphrase"] = "«{0}»",
         ["ui.scout.refereeMemoryKnown"] = "se acuerda de ti: {0}",
@@ -295,6 +297,7 @@ public static class UiText
         ["ui.report.revengeSlain"] = "¡VENGANZA! {0} vengó a {1}: mató a {2}, {3}.",
         ["ui.report.revengeGold"] = "+{0} de oro",
         ["ui.map.nemesis"] = "némesis: {0}, {1}",
+        ["ui.map.mob"] = "turba: {0}",
         ["ui.scout.nemesis"] = "NÉMESIS · {0}, {1}: mató a {2} en el acto {3}. Hoy juega, y con un nivel más.",
         ["ui.scout.nemesisMany"] = "NÉMESIS · {0}, {1}: mató a {2} en el acto {3} y a {4} más. Hoy juega, y con un nivel más.",
         ["ui.scout.rivalRepeat"] = "{0} · {1}.ª vez · {2}",
@@ -787,6 +790,8 @@ public static class UiText
         ["ui.pregon.tray.recommended"] = "recomendado",
         ["ui.pregon.turba.header"] = "Se hace saber: el árbitro abandona el campo",
         ["ui.pregon.turba.body"] = "¡A la turba! · el próximo gol gana",
+        ["ui.pregon.turba.bodyTyped"] = "¡A la turba! · {0} · el próximo gol gana",
+        ["ui.pregon.shout.untilEnd"] = "{0} · hasta el final",
 
         // BA-H, RF-082/085: anuncio del consumible usado (banda sin congelar, igual que la turba) y el
         // rótulo del botón del tablero una vez gastado.
