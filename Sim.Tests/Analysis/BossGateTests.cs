@@ -396,6 +396,9 @@ public sealed class BossGateTests
         public RefereeSetup RefereeFor(RunState state, MapNode node, Catalog catalog) =>
             inner.RefereeFor(state, node, catalog);
 
+        public MobSetup? MobFor(RunState state, MapNode node, Catalog catalog) =>
+            inner.MobFor(state, node, catalog);
+
         public SimConfig MatchConfig(RunState state, MapNode node, Catalog catalog) => inner.MatchConfig(state, node, catalog);
 
         public RunState OpenNode(RunState state, MapNode node, Catalog catalog) =>

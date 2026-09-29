@@ -34,10 +34,10 @@
     "effect": {
       "type": "object",
       "properties": {
-        "type": { "enum": ["modifyAttribute", "modifyProbability", "shout"] },
+        "type": { "enum": ["modifyAttribute", "modifyProbability", "shout", "provokeMob"] },
         "order": { "enum": ["Defensive", "Offensive"], "description": "ADR 0166, sólo con shout: la orden táctica con la que juega el equipo mientras dura el grito." },
         "press": { "const": true, "description": "ADR 0166, sólo con shout: la consigna de presión (más peso a perseguir y entrar al portador) en lugar de una orden. Exactamente uno de order y press." },
-        "seconds": { "type": "integer", "minimum": 1, "maximum": 30, "description": "ADR 0166, sólo con shout: duración del grito en segundos de juego; después el equipo vuelve a su orden." },
+        "seconds": { "type": "integer", "minimum": 1, "maximum": 30, "description": "ADR 0166, con shout: duración del grito en segundos de juego; después el equipo vuelve a su orden. ADR 0167, con provokeMob: lo que dura la conducta que imponga la turba provocada." },
         "target": { "enum": ["team", "opposingTeam"], "description": "A quién alcanza: al equipo propio (por defecto) o a los rivales en el campo. Un consumible no tiene portador. Necesario para los canales de quien SUFRE la consecuencia (severeInjury, injury)." },
         "attribute": { "enum": ["strength", "speed", "technique", "stamina", "leash"] },
         "probability": {
@@ -57,8 +57,18 @@
             "required": ["seconds"],
             "oneOf": [{ "required": ["order"] }, { "required": ["press"] }],
             "not": { "anyOf": [{ "required": ["value"] }, { "required": ["target"] }, { "required": ["attribute"] }, { "required": ["probability"] }] }
-          },
-          "else": {
+          }
+        },
+        {
+          "if": { "properties": { "type": { "const": "provokeMob" } }, "required": ["type"] },
+          "then": {
+            "required": ["seconds"],
+            "not": { "anyOf": [{ "required": ["order"] }, { "required": ["press"] }, { "required": ["value"] }, { "required": ["target"] }, { "required": ["attribute"] }, { "required": ["probability"] }] }
+          }
+        },
+        {
+          "if": { "properties": { "type": { "enum": ["modifyAttribute", "modifyProbability"] } }, "required": ["type"] },
+          "then": {
             "required": ["value"],
             "not": { "anyOf": [{ "required": ["order"] }, { "required": ["press"] }, { "required": ["seconds"] }] }
           }

@@ -1,0 +1,16 @@
+{
+  "_doc": "ADR 0167 (RF-082, RF-084 sucios): provocar a la grada. Aplica AHORA el efecto del tipo de turba de este partido (el ojeo lo anuncia: salta uno y lesiona a uno, frenesí, su grada empuja o nada), con el árbitro todavía en el campo; lo que imponga como conducta dura 10 s. No inicia la prórroga ni cambia el marcador. Con la turba 'plain' no hace nada, y el jugador lo sabe antes de equiparlo. Duración provisional, sin medir. Poco común.",
+  "id": "rile_the_crowd",
+  "name": {
+    "es": "Provocar a la grada",
+    "en": "Rile The Crowd"
+  },
+  "rarity": "uncommon",
+  "family": "dirty",
+  "effects": [
+    {
+      "type": "provokeMob",
+      "seconds": 10
+    }
+  ]
+}

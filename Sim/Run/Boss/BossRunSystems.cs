@@ -153,6 +153,10 @@ public sealed class BossRunSystems : IRunSystems
         _inner.RefereeFor(state, node, catalog);
 
     /// <inheritdoc />
+    public MobSetup? MobFor(RunState state, MapNode node, Catalog catalog) =>
+        _inner.MobFor(state, node, catalog);
+
+    /// <inheritdoc />
     public SimConfig MatchConfig(RunState state, MapNode node, Catalog catalog) => _inner.MatchConfig(state, node, catalog);
 
     /// <inheritdoc />

@@ -19,6 +19,7 @@ using Underleague.Sim.Random;
 using Underleague.Sim.Run.Systems.Referees;
 using Underleague.Sim.Run.Systems.Rewards;
 using Underleague.Sim.Run.Systems.Rivals;
+using Underleague.Sim.Run.Systems.Mobs;
 
 namespace Underleague.Sim.Run.Systems;
 
@@ -49,7 +50,9 @@ public sealed class StandardRunSystems : IRunSystems
     private readonly GazetteCatalog _gazette;
     private readonly NemesisCatalog _nemesis;
 
-    public StandardRunSystems(EconomyConfig economy, ItemCatalog items, ConsumableCatalog consumables, RivalCatalog rivals, MapConfig map, ClubCatalog clubs, EventCatalog events, RefereeCatalog referees, BetCatalog? bets = null, ProsthesisCatalog? prostheses = null, NicknameCatalog? nicknames = null, GazetteCatalog? gazette = null, NemesisCatalog? nemesis = null)
+    private readonly MobCatalog _mobs;
+
+    public StandardRunSystems(EconomyConfig economy, ItemCatalog items, ConsumableCatalog consumables, RivalCatalog rivals, MapConfig map, ClubCatalog clubs, EventCatalog events, RefereeCatalog referees, BetCatalog? bets = null, ProsthesisCatalog? prostheses = null, NicknameCatalog? nicknames = null, GazetteCatalog? gazette = null, NemesisCatalog? nemesis = null, MobCatalog? mobs = null)
     {
         _economy = economy ?? throw new ArgumentNullException(nameof(economy));
         _items = items ?? throw new ArgumentNullException(nameof(items));
@@ -64,6 +67,7 @@ public sealed class StandardRunSystems : IRunSystems
         _nicknames = nicknames ?? NicknameCatalog.Empty;
         _gazette = gazette ?? GazetteCatalog.Empty;
         _nemesis = nemesis ?? NemesisCatalog.Empty;
+        _mobs = mobs ?? MobCatalog.Empty;
     }
 
     /// <summary>Configuración de economía de esta instancia (para tests y <c>/Balance</c>).</summary>
@@ -130,7 +134,8 @@ public sealed class StandardRunSystems : IRunSystems
             ProsthesisLoader.FromJson(files),
             NicknameLoader.FromJson(files),
             GazetteLoader.FromJson(files),
-            NemesisLoader.FromJson(files, rivals));
+            NemesisLoader.FromJson(files, rivals),
+            MobLoader.FromJson(files));
     }
 
     /// <summary>
@@ -235,6 +240,16 @@ public sealed class StandardRunSystems : IRunSystems
     /// <inheritdoc />
     public RefereeSetup RefereeFor(RunState state, MapNode node, Catalog catalog) =>
         DefaultRunSystems.Instance.RefereeFor(state, node, catalog);
+
+    /// <summary>Tipos de turba de esta instancia (ADR 0167, <c>data/mobs/</c>).</summary>
+    public MobCatalog Mobs => _mobs;
+
+    /// <inheritdoc />
+    public MobSetup? MobFor(RunState state, MapNode node, Catalog catalog)
+    {
+        ArgumentNullException.ThrowIfNull(state);
+        return _mobs.For(state.Seed, node)?.ToSetup();
+    }
 
     /// <inheritdoc />
     /// <remarks>

@@ -539,6 +539,11 @@ internal sealed class EffectEngine : IPerkLinks
                 {
                     _engine.StartShout(slot.Team, effects[e].Shout, effects[e].Value * TicksPerSecond);
                 }
+                else if (effects[e].Type == EffectType.ProvokeMob)
+                {
+                    // ADR 0167: la grada responde igual la provoque quien la provoque; el tipo es del partido.
+                    _engine.ProvokeMob(effects[e].Value * TicksPerSecond);
+                }
             }
 
             for (int p = 0; p < _players.Length; p++)

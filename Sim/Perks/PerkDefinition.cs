@@ -127,6 +127,13 @@ public enum EffectType
     /// consigna de presión (<see cref="ShoutKind.Press"/>) y después vuelve a la que tenía.
     /// </summary>
     Shout,
+
+    /// <summary>
+    /// ADR 0167: provocar a la grada. Sólo en <b>consumibles</b>: aplica ahora el efecto del tipo de turba del
+    /// partido (<c>MatchSetup.Mob</c>), con el árbitro todavía en el campo; la conducta que imponga dura
+    /// <see cref="EffectDefinition.Value"/> segundos. Sin tipo o con <c>plain</c>, no hace nada.
+    /// </summary>
+    ProvokeMob,
 }
 
 /// <summary>Qué grita el entrenador (ADR 0166): una orden táctica de la ADR 0154 o la consigna de presión.</summary>

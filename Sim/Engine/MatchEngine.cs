@@ -5197,6 +5197,90 @@ internal sealed class MatchEngine : IPerkWorld
         }
     }
 
+    /// <summary>ADR 0167: duración, en ticks, de la conducta que la turba impone al entrar: hasta el final del partido.</summary>
+    private const int MobUntilTheEnd = 1_000_000;
+
+    /// <summary>
+    /// ADR 0167: el consumible «Provocar a la grada» aplica ahora el efecto del tipo de turba de este partido,
+    /// con el árbitro todavía en el campo; la conducta dura <paramref name="ticks"/>. Sin tipo, o con un tipo sin
+    /// efectos (<c>plain</c>), no hace nada. Lo llama <c>EffectEngine.ResolveConsumables</c>.
+    /// </summary>
+    internal void ProvokeMob(int ticks) => ApplyMob(ticks);
+
+    private void ApplyMob(int ticks)
+    {
+        var mob = _setup.Mob;
+        if (mob is null)
+        {
+            return;
+        }
+
+        for (int i = 0; i < mob.Effects.Count; i++)
+        {
+            switch (mob.Effects[i])
+            {
+                case MobEffectKind.Injure:
+                    MobInjure();
+                    break;
+                case MobEffectKind.PressBoth:
+                    StartShout(0, Underleague.Sim.Perks.ShoutKind.Press, ticks);
+                    StartShout(1, Underleague.Sim.Perks.ShoutKind.Press, ticks);
+                    break;
+                case MobEffectKind.TheirOffensive:
+                    StartShout(1, Underleague.Sim.Perks.ShoutKind.Offensive, ticks);
+                    break;
+            }
+        }
+    }
+
+    /// <summary>
+    /// ADR 0167: salta uno de la grada y lesiona a uno. Un jugador de campo en el campo, de cualquiera de los dos
+    /// equipos, al azar con el RNG del partido entre los candidatos ordenados por id (RT-041); lesión
+    /// <b>leve</b> y <b>sin autor</b> (<c>Opponent</c> −1: nadie la causó, no hay crédito ni némesis). La turba
+    /// lesiona, no mata: a diferencia de <see cref="ResolveInjury"/>, un lesionado grave que la recibe no muere
+    /// (RF-012d, ADR 0048). Cancelable por perks como cualquier <c>INJURY</c>, y respeta la decisión de seguir
+    /// jugando (ADR 0134 E).
+    /// </summary>
+    private void MobInjure()
+    {
+        var candidates = new List<MatchPlayer>();
+        for (int i = 0; i < _players.Length; i++)
+        {
+            var player = _players[i];
+            if (player.OnPitch && !player.Dead && !ReferenceEquals(player, _goalkeepers[player.Team]))
+            {
+                candidates.Add(player);
+            }
+        }
+
+        if (candidates.Count == 0)
+        {
+            return;
+        }
+
+        candidates.Sort(static (a, b) => a.Id.CompareTo(b.Id));
+        var victim = _rng.Pick(candidates);
+        if (EmitCancellable(EventType.Injury, "minor", victim))
+        {
+            return;
+        }
+
+        _report.Injuries++;
+        victim.Injured = true;
+        if (ReferenceEquals(_ball.Owner, victim))
+        {
+            ParkBall(victim.Position);
+        }
+
+        if (FindPlayOn(victim) is { } playOn)
+        {
+            ApplyPlayOnAttributes(victim, playOn.After);
+            return;
+        }
+
+        RemoveFromPitch(victim, PlayerState.Injured);
+    }
+
     /// <summary>ADR 0166: la orden con la que juega el equipo ahora mismo (la del grito si lo hay).</summary>
     public Mentality EffectiveOrder(int team) => _context.Order[team];
 
@@ -5779,6 +5863,9 @@ internal sealed class MatchEngine : IPerkWorld
             Emit(EventType.RefereeLeaves, "refereeLeaves");
             _goldenGoal = true;
             _report.WentToGoldenGoal = true;
+
+            // ADR 0167: el tipo de turba anunciado antes del partido ocurre ahora, y lo que dura, dura hasta el final.
+            ApplyMob(MobUntilTheEnd);
             ScheduleKickoff(1);
             return;
         }

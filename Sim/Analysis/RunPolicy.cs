@@ -3966,6 +3966,9 @@ public static class RunPolicy
         public RefereeSetup RefereeFor(RunState state, MapNode node, Catalog catalog) =>
             _inner.RefereeFor(state, node, catalog);
 
+        public MobSetup? MobFor(RunState state, MapNode node, Catalog catalog) =>
+            _inner.MobFor(state, node, catalog);
+
         public Underleague.Sim.Engine.SimConfig MatchConfig(RunState state, MapNode node, Catalog catalog) =>
             _inner.MatchConfig(state, node, catalog);
 

@@ -146,6 +146,12 @@ public interface IRunSystems
     RefereeSetup RefereeFor(RunState state, MapNode node, Catalog catalog);
 
     /// <summary>
+    /// Tipo de turba del partido de ese nodo (ADR 0167), derivado del nodo como el árbitro: mismo nodo y misma
+    /// semilla, mismo tipo. Null = sin tipo, la turba de siempre.
+    /// </summary>
+    MobSetup? MobFor(RunState state, MapNode node, Catalog catalog);
+
+    /// <summary>
     /// Configuración del simulador para ese partido (log, profundidad de recursión y el desgaste del
     /// nodo, ADR 0043). Recibe el catálogo porque el desgaste por acto es un dato de
     /// <c>tuning.injury</c> y el motor no puede saber en qué acto se juega.
@@ -389,6 +395,10 @@ public sealed class DefaultRunSystems : IRunSystems
             RefereeId = referee.Id,
         };
     }
+
+    /// <inheritdoc />
+    /// <remarks>Sin catálogo de turbas: la turba de siempre.</remarks>
+    public MobSetup? MobFor(RunState state, MapNode node, Catalog catalog) => null;
 
     /// <inheritdoc />
     public SimConfig MatchConfig(RunState state, MapNode node, Catalog catalog) => SimConfig.Default;

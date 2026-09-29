@@ -505,7 +505,9 @@ public static class RunEngine
         // El último paso es el gancho de los sistemas (RF-001b/c): un modificador de regla de jefe es una
         // transformación del MatchSetup, y tiene que pasar por aquí para que el partido que se juega y el
         // que enseña el informe de ojeo sean el mismo (RF-012b, RF-012d). W-15: el jugador es local.
-        var setup = systems.TransformMatch(state, node, new MatchSetup(home, away, referee), 0, catalog);
+        // ADR 0167: el tipo de turba viaja como el árbitro, derivado del nodo.
+        var mob = systems.MobFor(state, node, catalog);
+        var setup = systems.TransformMatch(state, node, new MatchSetup(home, away, referee) { Mob = mob }, 0, catalog);
         return (setup, RngStreams.MatchSeed(state.Seed, node.Id), lineup);
     }
 

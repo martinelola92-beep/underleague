@@ -57,7 +57,12 @@
     "modifyUtilityInZone": "{target} quiere {action} más en la zona {utilityZone}",
     "shoutDefensive": "{target} se repliega y juega a la defensiva durante {value} s",
     "shoutOffensive": "{target} se vuelca al ataque durante {value} s",
-    "shoutPress": "{target} presiona al portador del balón durante {value} s"
+    "shoutPress": "{target} presiona al portador del balón durante {value} s",
+    "provokeMob": "provoca a la grada: ocurre ya lo que la turba de este partido trae, y lo que dure, dura {value} s",
+    "mobPlain": "la grada ruge y el árbitro se va: el primer gol gana",
+    "mobInjure": "salta uno de la grada y lesiona a un jugador de campo al azar, de cualquiera de los dos equipos",
+    "mobPressBoth": "los dos equipos se lanzan a por el balón hasta el final",
+    "mobTheirOffensive": "el rival se vuelca al ataque empujado por su grada"
   },
   "triggers": {
     "MATCH_START": "al empezar el partido",

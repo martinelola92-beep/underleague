@@ -1,0 +1,9 @@
+{
+  "_doc": "ADR 0167: tipos de turba. Cada partido de la run sortea uno ANTES de jugarse (flujo propio de la run, nunca el de partido: RT-022), con estos pesos, y el ojeo lo anuncia: si hay empate y entra la turba, pasa lo que dicen sus efectos (se anuncia el tipo, nunca la víctima). El consumible 'rile_the_crowd' aplica los mismos efectos durante el partido. Efectos: 'injure' (un jugador de campo al azar de los dos equipos sale con lesión leve; la turba lesiona, no mata), 'pressBoth' (los dos equipos presionan al portador), 'theirOffensive' (el rival juega en orden ofensiva). Sin efectos: la turba de siempre. Las descripciones salen de las plantillas 'mob*' de data/l10n (RT-035). Pesos PROVISIONALES, SIN MEDIR (Regla H).",
+  "types": [
+    { "id": "plain", "name": { "es": "La grada ruge", "en": "The Stands Roar" }, "weight": 40, "effects": [] },
+    { "id": "invader", "name": { "es": "Salta uno", "en": "One Jumps In" }, "weight": 20, "effects": ["injure"] },
+    { "id": "frenzy", "name": { "es": "Frenesí", "en": "Frenzy" }, "weight": 20, "effects": ["pressBoth"] },
+    { "id": "their_roar", "name": { "es": "Su grada empuja", "en": "Their Stands Push" }, "weight": 20, "effects": ["theirOffensive"] }
+  ]
+}

@@ -42,6 +42,11 @@ internal static class EffectJson
             return ReadShout(node);
         }
 
+        if (type == "provokeMob")
+        {
+            return ReadProvokeMob(node);
+        }
+
         var effectType = type switch
         {
             "modifyAttribute" => EffectType.ModifyAttribute,
@@ -154,6 +159,26 @@ internal static class EffectJson
             Value: seconds,
             Duration: EffectDuration.Match,
             Shout: kind);
+    }
+
+    /// <summary>
+    /// ADR 0167: <c>{ "type": "provokeMob", "seconds": N }</c>. Aplica ahora el tipo de turba del partido; la
+    /// conducta que imponga (presión, orden del rival) dura N segundos, con el mismo techo que un grito.
+    /// </summary>
+    private static EffectDefinition ReadProvokeMob(Json node)
+    {
+        node.EnsureKnownKeys("type", "seconds");
+        int seconds = node.Int("seconds");
+        if (seconds < 1 || seconds > MaxShoutSeconds)
+        {
+            throw new DataException(node.File, node.Path + ".seconds", $"la duración de provocar a la grada son 1..{MaxShoutSeconds} segundos, no {seconds}");
+        }
+
+        return new EffectDefinition(
+            EffectType.ProvokeMob,
+            Target: EffectTarget.Team,
+            Value: seconds,
+            Duration: EffectDuration.Match);
     }
 
     private static AttributeKind ParseAttribute(Json node, string attribute) => attribute switch

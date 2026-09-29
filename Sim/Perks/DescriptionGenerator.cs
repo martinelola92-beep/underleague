@@ -436,6 +436,9 @@ public static class DescriptionGenerator
                 ShoutKind.Offensive => "shoutOffensive",
                 _ => "shoutPress",
             },
+
+            // ADR 0167: lo que ocurra depende del tipo de turba del partido, que el ojeo anuncia aparte.
+            EffectType.ProvokeMob => "provokeMob",
             _ => throw new InvalidOperationException($"tipo de efecto sin plantilla: {effect.Type}"),
         };
 

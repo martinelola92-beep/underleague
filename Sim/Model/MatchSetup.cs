@@ -21,4 +21,11 @@ public sealed record RefereeSetup(string Name, RefereeTrait Trait, int InitialBi
 }
 
 /// <summary>Entrada completa para simular un partido: equipos y árbitro.</summary>
-public sealed record MatchSetup(TeamSetup Home, TeamSetup Away, RefereeSetup Referee);
+public sealed record MatchSetup(TeamSetup Home, TeamSetup Away, RefereeSetup Referee)
+{
+    /// <summary>
+    /// Tipo de turba del partido (ADR 0167): qué pasa si hay empate y la turba entra, y qué hace el consumible
+    /// que la provoca. Null = sin tipo, la turba de siempre (partidos sueltos, pruebas, <c>/Balance</c> sin run).
+    /// </summary>
+    public MobSetup? Mob { get; init; }
+}

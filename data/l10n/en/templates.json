@@ -57,7 +57,12 @@
     "modifyUtilityInZone": "{target} wants {action} more in the {utilityZone} third",
     "shoutDefensive": "{target} drops back and defends for {value} s",
     "shoutOffensive": "{target} pushes forward and attacks for {value} s",
-    "shoutPress": "{target} presses the ball carrier for {value} s"
+    "shoutPress": "{target} presses the ball carrier for {value} s",
+    "provokeMob": "riles the crowd: whatever this match's mob brings happens now, and whatever lasts, lasts {value} s",
+    "mobPlain": "the stands roar and the referee walks off: next goal wins",
+    "mobInjure": "someone jumps from the stands and injures a random outfield player, from either side",
+    "mobPressBoth": "both sides hunt the ball down until the end",
+    "mobTheirOffensive": "the rival throws itself forward, pushed by its stands"
   },
   "triggers": {
     "MATCH_START": "when the match starts",
