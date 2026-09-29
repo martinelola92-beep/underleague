@@ -1,17 +1,17 @@
 {
-  "_doc": "ADR 0157: catalogo de apuestas del vestuario (RF-114h, RF-114i). Una por nodo de partido, derivada de (semilla, nodo) por BetSystem.OfferFor entre las apuestas cuya frecuencia medida en la dificultad del nodo es >= 2 % (BetSystem.MinOfferedBasisPoints, fijado por el revisor, provisional). 'kind' fija que condicion evalua BetConditions.Evaluate (definiciones exactas en el codigo y en la ADR). 'stakeByAct' es la apuesta fija en oro de los actos 1..3: PROVISIONAL, SIN MEDIR (Regla H). 'frequencyPercentByDifficulty' es la frecuencia MEDIDA (%) de la condicion por distintivo de dificultad 1..5 (RF-012) con `Balance --bet-census` (2.400 runs de la politica contextual, semillas 1 y 7, 33.211 partidos; seccion 'Censo' de la ADR 0157). 'payoutPercentByDifficulty' es el cobro BRUTO como porcentaje de la apuesta: MEDIDO, cuota = round(85 / p) (margen de la casa del 15 %, ADR 0157 punto 4). Los 2000 son el TOPE del esquema (85 / p lo superaba) o una celda que no se ofrece (p < 2 %): no son una cuota medida. En el texto de la condicion, {player} se sustituye por el nombre del jugador rival nombrado en la oferta (solo hunt_the_star). Tono: corredor de apuestas de taberna.",
+  "_doc": "ADR 0157: catalogo de apuestas del vestuario (RF-114h, RF-114i). Una por nodo de partido, derivada de (semilla, nodo) por BetSystem.OfferFor entre las apuestas cuya frecuencia medida en la dificultad del nodo es >= 2 % (BetSystem.MinOfferedBasisPoints, fijado por el revisor, provisional). hunt_the_star nombra a un jugador de CAMPO (nunca al portero: revision independiente del 29 sep 2026, ADR 0157) y una baja es una lesion o una muerte. 'kind' fija que condicion evalua BetConditions.Evaluate (definiciones exactas en el codigo y en la ADR). 'stakeByAct' es la apuesta fija en oro de los actos 1..3: PROVISIONAL, SIN MEDIR (Regla H). 'frequencyPercentByDifficulty' es la frecuencia MEDIDA (%) de la condicion por distintivo de dificultad 1..5 (RF-012) con `Balance --bet-census` (2.400 runs de la politica contextual, semillas 1 y 7, 33.211 partidos, repetido tras la revision independiente; seccion 'Censo' de la ADR 0157). 'payoutPercentByDifficulty' es el cobro BRUTO como porcentaje de la apuesta (el oro cobrado se redondea al entero mas cercano, BetSystem.PayoutFor): MEDIDO, cuota = round(85 / p) (margen de la casa del 15 %, ADR 0157 punto 4). Los 2000 son el TOPE del esquema (85 / p lo superaba) o una celda que no se ofrece (p < 2 %): no son una cuota medida. En el texto de la condicion, {player} se sustituye por el nombre del jugador rival nombrado en la oferta (solo hunt_the_star). Tono: corredor de apuestas de taberna.",
   "bets": [
     {
       "id": "blood_before_goals",
       "kind": "BloodBeforeGoals",
       "name": { "es": "Sangre antes que goles", "en": "Blood Before Goals" },
       "condition": {
-        "es": "La primera lesión del partido cae antes que el primer gol. Si no marca nadie, me vale con que alguien sangre.",
-        "en": "The first injury lands before the first goal. If nobody scores, I'll settle for anyone bleeding."
+        "es": "La primera baja del partido (lesión o muerte) cae antes que el primer gol. Si no marca nadie, me vale con que alguien sangre.",
+        "en": "The first casualty of the match (injury or death) lands before the first goal. If nobody scores, I'll settle for anyone bleeding."
       },
       "stakeByAct": [3, 4, 5],
-      "payoutPercentByDifficulty": [594, 231, 179, 140, 167],
-      "frequencyPercentByDifficulty": [14.32, 36.74, 47.46, 60.73, 50.92]
+      "payoutPercentByDifficulty": [591, 223, 172, 138, 167],
+      "frequencyPercentByDifficulty": [14.38, 38.03, 49.49, 61.48, 50.92]
     },
     {
       "id": "hunt_the_star",
@@ -22,8 +22,8 @@
         "en": "{player} doesn't finish the match: hurt, dead or sent off. I never said a word."
       },
       "stakeByAct": [3, 4, 5],
-      "payoutPercentByDifficulty": [1736, 953, 702, 655, 2000],
-      "frequencyPercentByDifficulty": [4.90, 8.92, 12.11, 12.97, 0.49]
+      "payoutPercentByDifficulty": [1287, 651, 532, 478, 983],
+      "frequencyPercentByDifficulty": [6.60, 13.06, 15.98, 17.78, 8.65]
     },
     {
       "id": "eye_for_eye",
@@ -34,8 +34,8 @@
         "en": "If they hurt one of yours, you hurt one of theirs, and you win on top. Revenge without victory doesn't pay."
       },
       "stakeByAct": [3, 4, 5],
-      "payoutPercentByDifficulty": [2000, 1079, 702, 457, 883],
-      "frequencyPercentByDifficulty": [1.03, 7.87, 12.11, 18.60, 9.62]
+      "payoutPercentByDifficulty": [2000, 969, 652, 447, 883],
+      "frequencyPercentByDifficulty": [1.03, 8.77, 13.04, 19.00, 9.62]
     },
     {
       "id": "comeback",
@@ -54,8 +54,8 @@
       "kind": "IntoTheMob",
       "name": { "es": "Hasta la turba", "en": "Into the Mob" },
       "condition": {
-        "es": "El partido llega al gol de oro y lo ganas tú, con el árbitro ya camino de la puerta.",
-        "en": "The match goes to golden goal and you win it, the referee already halfway out the door."
+        "es": "Hay prórroga de turba, con el árbitro ya camino de la puerta, y la ganas tú.",
+        "en": "There is a mob overtime, the referee already halfway out the door, and you win it."
       },
       "stakeByAct": [3, 4, 5],
       "payoutPercentByDifficulty": [497, 425, 463, 564, 638],
@@ -66,12 +66,12 @@
       "kind": "CleanHands",
       "name": { "es": "Manos limpias", "en": "Clean Hands" },
       "condition": {
-        "es": "Ganas, dejas al menos una baja rival y no ves ni una tarjeta propia. Sangre, sí, pero con modales.",
+        "es": "Ganas, dejas al menos una baja rival (lesión o muerte) y no ves ni una tarjeta propia. Sangre, sí, pero con modales.",
         "en": "You win, leave at least one rival casualty and see not a single card of your own. Blood, sure, but with manners."
       },
       "stakeByAct": [3, 4, 5],
-      "payoutPercentByDifficulty": [653, 365, 388, 373, 511],
-      "frequencyPercentByDifficulty": [13.02, 23.26, 21.92, 22.77, 16.62]
+      "payoutPercentByDifficulty": [651, 365, 387, 373, 511],
+      "frequencyPercentByDifficulty": [13.05, 23.28, 21.94, 22.77, 16.62]
     },
     {
       "id": "thrashing",

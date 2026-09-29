@@ -65,6 +65,12 @@ public sealed record RunMatchSummary(
     /// <see cref="CounterDeltas"/>.
     /// </summary>
     public Systems.Bets.BetResult? Bet { get; init; }
+
+    /// <summary>
+    /// Oro que el corredor devolvió al entrar en este nodo por una apuesta tomada para otro (ADR 0157); 0 si
+    /// no hubo devolución. El informe lo enseña.
+    /// </summary>
+    public int BetRefunded { get; init; }
 }
 
 /// <summary>

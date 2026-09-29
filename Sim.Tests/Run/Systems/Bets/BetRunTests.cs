@@ -320,4 +320,185 @@ public sealed class BetRunTests
         Assert.Equal(blind.BetNetGold, again.BetNetGold);
         Assert.Equal(blind.Matches, again.Matches);
     }
+
+    // ---------------------------------------------------------------- revisión independiente
+
+    /// <summary>Estado tras el primer partido en el que hay un nodo de partido con oferta y otro que no es de partido.</summary>
+    private static (RunState State, MapNode Offered, MapNode Service, BetOffer Offer) MatchAndService()
+    {
+        for (ulong seed = 1; seed <= 60; seed++)
+        {
+            var start = RunEngine.Start(SystemsTestSupport.Setup(), seed, Catalog, Systems);
+            foreach (var from in start.CurrentMap.Nodes.OrderBy(n => n.Id))
+            {
+                var state = RunStateBuilder.From(start).AtNode(from.Id).Build();
+                var nodes = RunEngine.AvailableNodes(state);
+                var service = nodes.FirstOrDefault(n => !n.IsMatch && n.Kind != NodeKind.Boss);
+                foreach (var match in nodes.Where(n => n.IsMatch))
+                {
+                    if (service is not null && BetSystem.OfferFor(state, match, Systems, Catalog) is { } offer && offer.Stake <= state.Gold)
+                    {
+                        return (state, match, service, offer);
+                    }
+                }
+            }
+        }
+
+        throw new InvalidOperationException("ninguna semilla de 1..60 tiene un partido con oferta y un nodo de servicio juntos");
+    }
+
+    /// <summary>
+    /// Entrar en un nodo de servicio con una apuesta tomada la devuelve <b>antes</b> de abrirlo (sin oro
+    /// escondido para un evento que grava el oro que llevas) y lo deja registrado.
+    /// </summary>
+    [Fact]
+    public void EnteringAServiceNodeRefundsTheBetBeforeItOpensAndRecordsIt()
+    {
+        var (state, match, service, offer) = MatchAndService();
+        var taken = RunEngine.Apply(state, new TakeBet(match.Id), Catalog, Systems);
+        Assert.Equal(state.Gold - offer.Stake, taken.Gold);
+
+        var inside = RunEngine.Enter(taken, service.Id, Catalog, Systems);
+
+        Assert.Null(inside.Bet);
+        Assert.Equal(offer.Stake, inside.Counter(RunState.BetRefundedCounter));
+        Assert.Equal(state.Gold, inside.Gold);
+    }
+
+    /// <summary>La devolución no es un canal de oro: entrar en el nodo de la apuesta no devuelve nada y borra el aviso anterior.</summary>
+    [Fact]
+    public void TheRefundNoteIsClearedByTheNextEntryAndByTakingOrDecliningABet()
+    {
+        var (state, match, service, _) = MatchAndService();
+        var refunded = RunEngine.Enter(RunEngine.Apply(state, new TakeBet(match.Id), Catalog, Systems), service.Id, Catalog, Systems);
+        Assert.NotEqual(0, refunded.Counter(RunState.BetRefundedCounter));
+
+        var left = RunEngine.Apply(refunded, new LeaveNode(), Catalog, Systems);
+        var next = RunEngine.AvailableNodes(left).FirstOrDefault(n => n.IsMatch);
+        if (next is not null && BetSystem.OfferFor(left, next, Systems, Catalog) is not null)
+        {
+            var taken = RunEngine.Apply(left, new TakeBet(next.Id), Catalog, Systems);
+            Assert.Equal(0, taken.Counter(RunState.BetRefundedCounter));
+        }
+    }
+
+    /// <summary>Entrar en otro partido devuelve la apuesta antes de jugarlo, y el resumen y el informe lo dicen.</summary>
+    [Fact]
+    public void EnteringAnotherMatchRefundsAndTheSummaryAndTheReportSayIt()
+    {
+        for (ulong seed = 1; seed <= 200; seed++)
+        {
+            var state = AfterFirstMatch(seed);
+            if (state.Result.IsOver)
+            {
+                continue;
+            }
+
+            var matches = RunEngine.AvailableNodes(state).Where(n => n.IsMatch).OrderBy(n => n.Id).ToList();
+            var offered = matches.FirstOrDefault(n => BetSystem.OfferFor(state, n, Systems, Catalog) is { } o && o.Stake <= state.Gold);
+            if (matches.Count < 2 || offered is null)
+            {
+                continue;
+            }
+
+            int stake = BetSystem.OfferFor(state, offered, Systems, Catalog)!.Stake;
+            var other = matches.First(n => n.Id != offered.Id);
+            var taken = RunEngine.Apply(state, new TakeBet(offered.Id), Catalog, Systems);
+            var playback = Underleague.Sim.Run.View.MatchPlaybacks.Of(taken, other.Id, Catalog, Systems);
+            var entry = RunEngine.EnterMatch(taken, other.Id, Catalog, Systems);
+
+            Assert.Equal(stake, entry.Summary.BetRefunded);
+            Assert.Null(entry.Summary.Bet);
+            var report = Underleague.Sim.Run.View.PostMatchView.Build(playback, entry.State, entry.Summary, Catalog, Systems.Economy, Systems.Items);
+            Assert.Equal(stake, report.BetRefunded);
+            Assert.Null(report.Bet);
+            return;
+        }
+
+        throw new InvalidOperationException("ninguna semilla de 1..200 tiene dos partidos tras el primer, uno con oferta");
+    }
+
+    [Fact]
+    public void DecliningTheBetIsOnlyAllowedOnTheMap()
+    {
+        var (state, match, service, _) = MatchAndService();
+        var taken = RunEngine.Apply(state, new TakeBet(match.Id), Catalog, Systems);
+        var inside = RunEngine.Enter(taken, service.Id, Catalog, Systems);
+
+        Assert.Equal(RunPhase.NodeOpen, inside.Phase);
+        Assert.Throws<InvalidOperationException>(() => RunEngine.Apply(inside, new DeclineBet(), Catalog, Systems));
+    }
+
+    /// <summary>Guardar con una apuesta pendiente, cargar y jugar da exactamente lo mismo que jugar sin guardar.</summary>
+    [Fact]
+    public void SavingWithAPendingBetLoadingAndPlayingGivesTheSameResult()
+    {
+        var (state, node, _) = Offered();
+        var taken = RunEngine.Apply(state, new TakeBet(node.Id), Catalog, Systems);
+        var loaded = RunSave.Load(RunSave.Save(taken));
+
+        var direct = RunEngine.EnterMatch(taken, node.Id, Catalog, Systems);
+        var afterLoad = RunEngine.EnterMatch(loaded, node.Id, Catalog, Systems);
+
+        Assert.Equal(direct.Summary.Bet, afterLoad.Summary.Bet);
+        Assert.Equal(direct.Summary.GoalsFor, afterLoad.Summary.GoalsFor);
+        Assert.Equal(direct.Summary.GoalsAgainst, afterLoad.Summary.GoalsAgainst);
+        Assert.Equal(direct.State.Gold, afterLoad.State.Gold);
+        Assert.Equal(RunSave.Save(direct.State), RunSave.Save(afterLoad.State));
+    }
+
+    /// <summary>El informe propaga el resultado de la apuesta que resolvió el motor.</summary>
+    [Fact]
+    public void ThePostMatchReportCarriesTheBetResult()
+    {
+        var (state, node, _) = Offered();
+        var taken = RunEngine.Apply(state, new TakeBet(node.Id), Catalog, Systems);
+        var playback = Underleague.Sim.Run.View.MatchPlaybacks.Of(taken, node.Id, Catalog, Systems);
+        var entry = RunEngine.EnterMatch(taken, node.Id, Catalog, Systems);
+
+        var report = Underleague.Sim.Run.View.PostMatchView.Build(playback, entry.State, entry.Summary, Catalog, Systems.Economy, Systems.Items);
+
+        Assert.NotNull(entry.Summary.Bet);
+        Assert.Equal(entry.Summary.Bet, report.Bet);
+        Assert.Equal(0, report.BetRefunded);
+    }
+
+    /// <summary>
+    /// Un partido que TERMINA la run resuelve igualmente la apuesta y cobra si se cumple (jefe perdido: la
+    /// apuesta de sangre no exige ganar). Se busca en partidos reales; el oro es el de antes menos lo apostado
+    /// más lo cobrado, sin el oro de partido (AfterMatch no se llama al terminar la run).
+    /// </summary>
+    [Fact]
+    public void AMatchThatEndsTheRunStillResolvesAndPaysAMetBet()
+    {
+        var bosses = BossCatalog.FromJson(TestData.LoadAllFiles());
+        var systems = new BossRunSystems(bosses, Systems);
+        for (ulong seed = 1; seed <= 300; seed++)
+        {
+            var start = systems.AssignBosses(RunEngine.Start(SystemsTestSupport.Setup(), seed, Catalog, systems));
+            var map = start.CurrentMap;
+            var boss = map.Get(map.BossNodeId);
+            int before = map.Nodes.First(n => n.Next.Contains(boss.Id)).Id;
+            var state = Underleague.Sim.Run.RunStateBuilder.From(start).AtNode(before).Build();
+            if (!RunEngine.AvailableNodes(state).Any(n => n.Id == boss.Id)
+                || BetSystem.OfferFor(state, boss, systems, Catalog) is not { } offer
+                || offer.Stake > state.Gold)
+            {
+                continue;
+            }
+
+            var entry = RunEngine.EnterMatch(RunEngine.Apply(state, new TakeBet(boss.Id), Catalog, systems), boss.Id, Catalog, systems);
+            if (!entry.State.Result.IsOver || entry.Summary.Bet is not { Met: true } bet)
+            {
+                continue;
+            }
+
+            Assert.Equal(state.Gold - offer.Stake + offer.Payout, entry.State.Gold);
+            Assert.Equal(offer.Payout, bet.GoldPaid);
+            Assert.Null(entry.State.Bet);
+            return;
+        }
+
+        throw new InvalidOperationException("ninguna semilla de 1..300 termina la run en el jefe con una apuesta cumplida");
+    }
 }

@@ -188,6 +188,9 @@ public static class RunEngine
         }
 
         var node = Accessible(state, nodeId);
+
+        // ADR 0157: una apuesta tomada para OTRO nodo se devuelve al entrar, antes de resolver nada de este.
+        state = Systems.Bets.BetSystem.RefundOnEntering(state, nodeId);
         return node.IsMatch
             ? ResolveMatch(state, node, catalog, systems, MatchDecisions.None).State
             : EnterInteractive(state, node, catalog, systems);
@@ -230,6 +233,7 @@ public static class RunEngine
             throw new ArgumentException($"el nodo {nodeId} es de tipo {node.Kind} y no se juega", nameof(nodeId));
         }
 
+        state = Systems.Bets.BetSystem.RefundOnEntering(state, nodeId);
         return ResolveMatch(state, node, catalog, systems, decisions ?? MatchDecisions.None);
     }
 
@@ -528,13 +532,6 @@ public static class RunEngine
 
     private static MatchEntry ResolveMatch(RunState state, MapNode node, Catalog catalog, IRunSystems systems, MatchDecisions decisions)
     {
-        // ADR 0157: una apuesta tomada para OTRO nodo no se juega aquí: se devuelve (solo se pierde jugando y
-        // fallando la que se tomó para este partido).
-        if (state.Bet is { } stale && stale.NodeId != node.Id)
-        {
-            state = Systems.Bets.BetSystem.Withdraw(state);
-        }
-
         var (built, seed, lineup) = BuildMatch(
             state, node.Id, catalog, systems, decisions.ManualActivations, decisions.Substitutions, decisions.PlayOns,
             decisions.OrderChanges);
@@ -547,7 +544,11 @@ public static class RunEngine
         // ADR 0157: la apuesta tomada para este nodo se resuelve con los hechos del partido, aquí y no en
         // AfterMatch, porque también hay que resolverla si el partido termina la run (el informe la enseña).
         var (afterBet, betResult) = Systems.Bets.BetSystem.Resolve(state, applied.State, node, setup, result, systems.Bets);
-        applied = applied with { State = afterBet, Summary = applied.Summary with { Bet = betResult } };
+        applied = applied with
+        {
+            State = afterBet,
+            Summary = applied.Summary with { Bet = betResult, BetRefunded = state.Counter(RunState.BetRefundedCounter) },
+        };
         systems.OnMatchPlayed(state, node, setup, result, applied.Summary);
 
         var next = applied.State.WithCurrentNode(node.Id);

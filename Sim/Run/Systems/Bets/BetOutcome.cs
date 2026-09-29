@@ -20,7 +20,7 @@ public sealed record AcceptedBet(
     string TargetPlayerName)
 {
     /// <summary>Oro bruto que se cobra si se cumple.</summary>
-    public int Payout => Stake * PayoutPercent / 100;
+    public int Payout => BetSystem.PayoutFor(Stake, PayoutPercent);
 }
 
 /// <summary>

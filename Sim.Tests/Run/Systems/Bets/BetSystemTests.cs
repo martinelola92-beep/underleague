@@ -1,6 +1,7 @@
 using Underleague.Sim.Data;
 using Underleague.Sim.Model;
 using Underleague.Sim.Run;
+using Underleague.Sim.Run.Bosses;
 using Underleague.Sim.Run.Systems;
 using Underleague.Sim.Run.Systems.Bets;
 
@@ -123,7 +124,7 @@ public sealed class BetSystemTests
             var bet = Systems.Bets.Find(offer.BetId)!;
             Assert.Equal(bet.StakeFor(node.Act), offer.Stake);
             Assert.Equal(bet.PayoutPercentFor(node.Difficulty), offer.PayoutPercent);
-            Assert.Equal(offer.Stake * offer.PayoutPercent / 100, offer.Payout);
+            Assert.Equal(BetSystem.PayoutFor(offer.Stake, offer.PayoutPercent), offer.Payout);
         }
     }
 
@@ -154,25 +155,86 @@ public sealed class BetSystemTests
         Assert.True(hunts > 0, "ninguna oferta de hunt_the_star en 25 semillas: el sorteo no la alcanza");
     }
 
-    [Fact]
-    public void TargetIsTheHighestRarityStarterWithTheLowestIdOnATie()
-    {
-        PlayerDefinition P(int id, Rarity rarity) => new(
-            id, "p" + id, Race.Human, Position.Midfielder, rarity, 1, new Attributes(50, 50, 50, 50, 50),
-            Array.Empty<Trait>(), Array.Empty<string>(), PhysicalState.Healthy);
+    private static PlayerDefinition Star(int id, Rarity rarity, Position position = Position.Midfielder, int level = 1, int attribute = 50) => new(
+        id, "p" + id, Race.Human, position, rarity, level, new Attributes(attribute, attribute, attribute, attribute, attribute),
+        Array.Empty<Trait>(), Array.Empty<string>(), PhysicalState.Healthy);
 
+    private static TeamSetup Team(IReadOnlyList<PlayerDefinition> players, params int[] starters) => new(
+        "r", "r", Race.Human, players,
+        new Lineup(starters.Select((id, i) => new LineupSlot(id, new Cell(i % 7, i % 7))).ToList()));
+
+    /// <summary>Desempate: rareza, luego nivel, luego suma de atributos, luego id menor; y el que no juega no cuenta.</summary>
+    [Fact]
+    public void TargetIsTheHighestRarityThenLevelThenAttributesThenLowestId()
+    {
         var players = new List<PlayerDefinition>
         {
-            P(30, Rarity.Rare), P(10, Rarity.Rare), P(20, Rarity.Uncommon), P(5, Rarity.Legendary),
+            Star(30, Rarity.Rare), Star(10, Rarity.Rare), Star(20, Rarity.Uncommon), Star(5, Rarity.Legendary),
         };
 
         // El legendario (id 5) NO está en la alineación: no juega, no puede ser el objetivo.
-        var lineup = new Lineup(new[]
-        {
-            new LineupSlot(30, new Cell(3, 3)), new LineupSlot(10, new Cell(4, 2)), new LineupSlot(20, new Cell(4, 4)),
-        });
-        var team = new TeamSetup("r", "r", Race.Human, players, lineup);
+        Assert.Equal(10, BetSystem.TargetFor(Team(players, 30, 10, 20))!.Id);
 
-        Assert.Equal(10, BetSystem.TargetFor(team)!.Id);
+        // Igual rareza: gana el nivel, aunque su id sea mayor.
+        Assert.Equal(30, BetSystem.TargetFor(Team(new[] { Star(10, Rarity.Rare), Star(30, Rarity.Rare, level: 4) }, 10, 30))!.Id);
+
+        // Igual rareza y nivel: gana la suma de atributos.
+        Assert.Equal(30, BetSystem.TargetFor(Team(new[] { Star(10, Rarity.Rare), Star(30, Rarity.Rare, attribute: 60) }, 10, 30))!.Id);
+
+        // Todo igual: id menor.
+        Assert.Equal(10, BetSystem.TargetFor(Team(new[] { Star(30, Rarity.Rare), Star(10, Rarity.Rare) }, 30, 10))!.Id);
+    }
+
+    /// <summary>
+    /// Regla J (revisión independiente): el portero, que es el slot 0 y gana el desempate por id, no puede ser
+    /// la estrella ni aunque sea el de mayor rareza; sin jugadores de campo no hay estrella.
+    /// </summary>
+    [Fact]
+    public void TheGoalkeeperIsNeverTheStar()
+    {
+        var goalkeeper = Star(0, Rarity.Legendary, Position.Goalkeeper, level: 9, attribute: 99);
+        var outfield = Star(7, Rarity.Common);
+        Assert.Equal(7, BetSystem.TargetFor(Team(new[] { goalkeeper, outfield }, 0, 7))!.Id);
+        Assert.Null(BetSystem.TargetFor(Team(new[] { goalkeeper }, 0)));
+    }
+
+    /// <summary>
+    /// Sobre los rivales reales de los tres actos, incluido el jefe final (todo <c>rare</c>, donde el desempate
+    /// por id daba el portero el 100 % de las veces): la estrella nombrada jamás es un portero.
+    /// </summary>
+    [Fact]
+    public void TheNamedStarIsNeverAGoalkeeperAgainstRealRivalsAndBosses()
+    {
+        int checkedNodes = 0;
+        var bosses = BossCatalog.FromJson(TestData.LoadAllFiles());
+        var systems = new BossRunSystems(bosses, Systems);
+        for (ulong seed = 1; seed <= 12; seed++)
+        {
+            var state = systems.AssignBosses(RunEngine.Start(SystemsTestSupport.Setup(), seed, SystemsTestSupport.Catalog, systems));
+            for (int act = 1; act <= RunRules.Acts; act++)
+            {
+                foreach (var node in state.MapOf(act).Nodes.Where(n => n.IsMatch))
+                {
+                    var rival = systems.OpponentFor(state, node, SystemsTestSupport.Catalog);
+                    var star = BetSystem.TargetFor(rival);
+                    Assert.NotNull(star);
+                    Assert.NotEqual(Position.Goalkeeper, star!.Position);
+                    checkedNodes++;
+                }
+            }
+        }
+
+        Assert.True(checkedNodes > 100);
+    }
+
+    /// <summary>El cobro se redondea al entero más cercano: truncar bajaba la esperanza de 0,85 a 0,73-0,83.</summary>
+    [Fact]
+    public void ThePayoutRoundsToTheNearestGold()
+    {
+        Assert.Equal(15, BetSystem.PayoutFor(3, 495));   // 14,85 -> 15 (truncaba a 14)
+        Assert.Equal(14, BetSystem.PayoutFor(3, 466));   // 13,98 -> 14
+        Assert.Equal(5, BetSystem.PayoutFor(3, 150));    // 4,5 -> 5 (medios hacia arriba)
+        Assert.Equal(4, BetSystem.PayoutFor(3, 149));    // 4,47 -> 4
+        Assert.Equal(60, BetSystem.PayoutFor(3, 2000));
     }
 }

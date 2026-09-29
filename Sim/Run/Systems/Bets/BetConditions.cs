@@ -30,9 +30,11 @@ public sealed record BetContext(
 /// <item>Un evento con <c>Detail</c> acabado en <c>:cancelled</c> (lo anuló un perk, §3 del motor) no ocurrió:
 /// no cuenta para ninguna condición.</item>
 /// <item>«Ganar» es <c>Report.Winner == 0</c>. Equipo propio = 0; rival = 1.</item>
-/// <item>«Lesión» es un evento <c>INJURY</c> (leve o grave) de la víctima en <c>Actor</c>; el causante, si lo
-/// hay, viaja en <c>Opponent</c>. Una lesión causada «por el jugador» es la de un rival cuyo <c>Opponent</c>
-/// es un jugador propio.</item>
+/// <item>«Baja» (lo que las condiciones llaman lesión) es un evento <c>INJURY</c> (leve o grave) <b>o
+/// <c>DEATH</c></b> de la víctima en <c>Actor</c>: una muerte no siempre viene precedida de un <c>INJURY</c>
+/// (<c>MatchEngine.Kill</c>), y una apuesta de sangre que no cuenta a un muerto es un fallo (revisión
+/// independiente). El causante, si lo hay, viaja en <c>Opponent</c>. Una baja causada «por el jugador» es la de
+/// un rival cuyo <c>Opponent</c> es un jugador propio.</item>
 /// <item>«Tarjeta» es un evento <c>CARD</c>, amarilla o roja.</item>
 /// <item>«Falta no señalada» es un <c>FOUL</c> de detalle <c>unseen</c> ANTES de <c>MOB_START</c>: en la
 /// turba no hay árbitro y el motor las emite todas como no vistas, así que no cuentan.</item>
@@ -72,7 +74,7 @@ public static class BetConditions
     }
 
     /// <summary>
-    /// <see cref="BetKind.BloodBeforeGoals"/>: la primera lesión del partido, de cualquiera, llega antes que
+    /// <see cref="BetKind.BloodBeforeGoals"/>: la primera baja del partido, de cualquiera, llega antes que
     /// el primer gol. Si no hubo goles, basta con que hubo alguna lesión. No exige ganar.
     /// </summary>
     private static bool BloodBeforeGoals(BetContext c)
@@ -86,7 +88,7 @@ public static class BetConditions
                 continue;
             }
 
-            if (e.Type == EventType.Injury)
+            if (IsCasualty(e))
             {
                 return true;
             }
@@ -285,6 +287,9 @@ public static class BetConditions
 
     private static bool Won(BetContext c) => c.Result.Report.Winner == 0;
 
+    /// <summary>Baja: lesión o muerte (ver la nota de la clase).</summary>
+    private static bool IsCasualty(MatchEvent e) => e.Type is EventType.Injury or EventType.Death;
+
     private static bool Live(MatchEvent e) => !e.Detail.EndsWith(CancelledSuffix, StringComparison.Ordinal);
 
     private static int OwnInjuries(BetContext c)
@@ -293,7 +298,7 @@ public static class BetConditions
         var events = c.Result.Events;
         for (int i = 0; i < events.Count; i++)
         {
-            if (Live(events[i]) && events[i].Type == EventType.Injury && events[i].Team == 0)
+            if (Live(events[i]) && IsCasualty(events[i]) && events[i].Team == 0)
             {
                 count++;
             }
@@ -309,7 +314,7 @@ public static class BetConditions
         for (int i = 0; i < events.Count; i++)
         {
             var e = events[i];
-            if (Live(e) && e.Type == EventType.Injury && e.Team == 1 && IsOwn(c, e.Opponent))
+            if (Live(e) && IsCasualty(e) && e.Team == 1 && IsOwn(c, e.Opponent))
             {
                 count++;
             }

@@ -617,6 +617,13 @@ public sealed record RunState
     /// </summary>
     public const string NodeResolvedCounter = "nodeResolved";
 
+    /// <summary>
+    /// Oro que el corredor devolvió al entrar en el último nodo por una apuesta tomada para otro (ADR 0157):
+    /// 0 si no hubo devolución. Se reescribe en cada entrada y se borra al tomar o retirar una apuesta; es lo
+    /// que las pantallas del nodo y el informe enseñan («el corredor te devuelve N»).
+    /// </summary>
+    public const string BetRefundedCounter = "betRefunded";
+
     /// <summary>Copias sueltas de ese objeto en el almacén.</summary>
     public int StockOf(string itemId)
     {

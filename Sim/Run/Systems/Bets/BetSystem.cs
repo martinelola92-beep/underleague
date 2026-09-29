@@ -21,7 +21,7 @@ public sealed record BetOffer(
     string TargetPlayerName)
 {
     /// <summary>Oro bruto que se cobra si se cumple (incluye la apuesta, que ya se pagó al tomarla).</summary>
-    public int Payout => Stake * PayoutPercent / 100;
+    public int Payout => BetSystem.PayoutFor(Stake, PayoutPercent);
 }
 
 /// <summary>
@@ -151,16 +151,55 @@ public static class BetSystem
             throw new InvalidOperationException($"la apuesta cuesta {offer.Stake} de oro y solo hay {refunded.Gold}");
         }
 
+        if (refunded.Counter(RunState.BetRefundedCounter) != 0)
+        {
+            refunded = refunded.WithCounter(RunState.BetRefundedCounter, 0);
+        }
+
         return refunded
             .AddGold(-offer.Stake)
             .WithBet(new AcceptedBet(offer.BetId, node.Id, offer.Stake, offer.PayoutPercent, offer.TargetPlayerId, offer.TargetPlayerName));
     }
 
-    /// <summary>Retira la apuesta tomada y no jugada y devuelve lo apostado. Sin apuesta tomada no hace nada.</summary>
+    /// <summary>
+    /// Retira la apuesta tomada y no jugada y devuelve lo apostado. Solo en el mapa (la misma fase que
+    /// <see cref="Take"/>): con un nodo abierto la apuesta ya se devolvió al entrar. Sin apuesta tomada no hace nada.
+    /// </summary>
     public static RunState Withdraw(RunState state)
     {
         ArgumentNullException.ThrowIfNull(state);
-        return state.Bet is { } bet ? state.AddGold(bet.Stake).WithBet(null) : state;
+        if (state.Phase != RunPhase.OnMap)
+        {
+            throw new InvalidOperationException("la apuesta se retira en el mapa, antes de entrar en ningún nodo");
+        }
+
+        if (state.Bet is not { } bet)
+        {
+            return state;
+        }
+
+        var refunded = state.AddGold(bet.Stake).WithBet(null);
+        return refunded.Counter(RunState.BetRefundedCounter) != 0 ? refunded.WithCounter(RunState.BetRefundedCounter, 0) : refunded;
+    }
+
+    /// <summary>
+    /// Devuelve la apuesta tomada si se entra en un nodo que NO es el suyo, <b>antes</b> de resolver nada del
+    /// nodo (revisión independiente: un evento que grava un porcentaje del oro que llevas encima, ADR 0100, no
+    /// puede ver oro escondido en una apuesta). La devolución queda registrada en el contador
+    /// <see cref="RunState.BetRefundedCounter"/> hasta la siguiente entrada, para que la pantalla del nodo y el
+    /// informe la enseñen («el corredor te devuelve N»). Una run no puede terminar con la apuesta pendiente:
+    /// solo termina dentro de un nodo, y al entrar en él ya se devolvió o se resolvió.
+    /// </summary>
+    public static RunState RefundOnEntering(RunState state, int nodeId)
+    {
+        ArgumentNullException.ThrowIfNull(state);
+        state = state.Counter(RunState.BetRefundedCounter) != 0 ? state.WithCounter(RunState.BetRefundedCounter, 0) : state;
+        if (state.Bet is not { } bet || bet.NodeId == nodeId)
+        {
+            return state;
+        }
+
+        return state.AddGold(bet.Stake).WithBet(null).WithCounter(RunState.BetRefundedCounter, bet.Stake);
     }
 
     /// <summary>
@@ -202,8 +241,12 @@ public static class BetSystem
     }
 
     /// <summary>
-    /// El jugador rival de mayor rareza entre los que empiezan el partido (los de la alineación); a igual
-    /// rareza, el de id menor (RT-041). Null si el equipo no tiene alineación.
+    /// La «estrella» rival de <see cref="BetKind.HuntTheStar"/>: el jugador <b>de campo</b> de la alineación con
+    /// mayor rareza; a igual rareza, mayor nivel; luego, mayor suma de atributos; y por último, id menor
+    /// (RT-041). <b>Nunca el portero</b>: la revisión independiente (29 sep 2026) midió que se nombraba al
+    /// portero entre el 20 y el 40 % de las veces (100 % contra el jefe final, todo <c>rare</c>) porque el
+    /// desempate por id menor cae en el slot 0, que es el portero (Regla J), y un portero no cae nunca (0 de
+    /// 300): un resquicio sin decisión. Null si la alineación no tiene ningún jugador de campo.
     /// </summary>
     public static PlayerDefinition? TargetFor(TeamSetup rival)
     {
@@ -222,14 +265,12 @@ public static class BetSystem
                 }
             }
 
-            if (candidate is null)
+            if (candidate is null || candidate.Position == Position.Goalkeeper)
             {
                 continue;
             }
 
-            if (best is null
-                || candidate.Rarity > best.Rarity
-                || (candidate.Rarity == best.Rarity && candidate.Id < best.Id))
+            if (best is null || IsMoreStarLike(candidate, best))
             {
                 best = candidate;
             }
@@ -237,4 +278,32 @@ public static class BetSystem
 
         return best;
     }
+
+    private static bool IsMoreStarLike(PlayerDefinition a, PlayerDefinition b)
+    {
+        if (a.Rarity != b.Rarity)
+        {
+            return a.Rarity > b.Rarity;
+        }
+
+        if (a.Level != b.Level)
+        {
+            return a.Level > b.Level;
+        }
+
+        int sumA = AttributeSum(a);
+        int sumB = AttributeSum(b);
+        return sumA != sumB ? sumA > sumB : a.Id < b.Id;
+    }
+
+    private static int AttributeSum(PlayerDefinition p) =>
+        p.Attributes.Strength + p.Attributes.Speed + p.Attributes.Technique + p.Attributes.Stamina + p.Attributes.Leash;
+
+    /// <summary>
+    /// Oro bruto que cobra una apuesta cumplida: <c>apuesta × cuota / 100</c> <b>redondeado al entero más
+    /// cercano</b> (medios hacia arriba). Truncar bajaba la esperanza de 0,85 a 0,73-0,83 (revisión
+    /// independiente): con apuestas de 3-5 de oro el resto es un porcentaje enorme. Es el único sitio donde se
+    /// calcula (<see cref="BetOffer.Payout"/> y <see cref="AcceptedBet.Payout"/> lo usan).
+    /// </summary>
+    public static int PayoutFor(int stake, int payoutPercent) => ((stake * payoutPercent) + 50) / 100;
 }

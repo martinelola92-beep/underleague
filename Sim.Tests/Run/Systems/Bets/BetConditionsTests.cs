@@ -90,6 +90,41 @@ public sealed class BetConditionsTests
         Assert.True(Eval(BetKind.BloodBeforeGoals, Result(new[] { Goal(0, 7, "goal" + Cancelled), Injury(1, 101, 3) }, 0, 0)));
     }
 
+    // ---------------------------------------------------------------- muertes sin INJURY (revisión independiente)
+
+    private static MatchEvent Death(int victimTeam, int victim, int killer = -1) =>
+        E(EventType.Death, victimTeam, victim, killer, "lethal");
+
+    /// <summary>
+    /// Una muerte, sin un INJURY delante, cuenta como baja: como sangre antes de los goles, como baja propia
+    /// de «ojo por ojo» y como baja causada por el jugador (en «ojo por ojo» y «manos limpias»).
+    /// </summary>
+    [Fact]
+    public void ADeathWithoutAnInjuryCountsAsBloodAndAsACasualty()
+    {
+        Assert.True(Eval(BetKind.BloodBeforeGoals, Result(new[] { Death(1, 104, 5), Goal(0, 7) }, 1, 0)));
+        Assert.True(Eval(BetKind.BloodBeforeGoals, Result(new[] { Death(0, 2, 103), Goal(1, 105) }, 0, 1)));
+        Assert.True(Eval(BetKind.BloodBeforeGoals, Result(new[] { Death(1, 104, 5) }, 0, 0)));
+
+        // Ojo por ojo: baja propia por muerte + baja rival causada por muerte.
+        Assert.True(Eval(BetKind.EyeForEye, Result(new[] { Death(0, 2, 103), Injury(1, 104, 5), Goal(0, 7) }, 1, 0)));
+        Assert.True(Eval(BetKind.EyeForEye, Result(new[] { Injury(0, 2, 103), Death(1, 104, 5), Goal(0, 7) }, 1, 0)));
+        Assert.True(Eval(BetKind.EyeForEye, Result(new[] { Death(0, 2, 103), Death(1, 104, 5), Goal(0, 7) }, 1, 0)));
+
+        // Manos limpias: la baja causada es una muerte.
+        Assert.True(Eval(BetKind.CleanHands, Result(new[] { Death(1, 104, 5), Goal(0, 7) }, 1, 0)));
+    }
+
+    [Fact]
+    public void ControlsADeathThatIsCancelledOrNotCausedByUsOrAfterTheFirstGoalDoesNotCount()
+    {
+        Assert.False(Eval(BetKind.BloodBeforeGoals, Result(new[] { Goal(0, 7), Death(1, 104, 5) }, 1, 0)));
+        Assert.False(Eval(BetKind.BloodBeforeGoals, Result(new[] { E(EventType.Death, 1, 104, 5, "lethal" + Cancelled), Goal(0, 7) }, 1, 0)));
+        Assert.False(Eval(BetKind.CleanHands, Result(new[] { Death(1, 104, -1), Goal(0, 7) }, 1, 0)));     // sin causante propio
+        Assert.False(Eval(BetKind.CleanHands, Result(new[] { Death(1, 104, 102), Goal(0, 7) }, 1, 0)));    // lo mató un rival
+        Assert.False(Eval(BetKind.EyeForEye, Result(new[] { Death(1, 104, 5), Goal(0, 7) }, 1, 0)));      // no nos han lesionado
+    }
+
     // ---------------------------------------------------------------- hunt_the_star
 
     [Fact]

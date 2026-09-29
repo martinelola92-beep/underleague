@@ -131,6 +131,9 @@ public sealed record PostMatchReport(
     /// </summary>
     public Underleague.Sim.Run.Systems.Bets.BetResult? Bet { get; init; }
 
+    /// <summary>Oro que el corredor devolvió al entrar en este partido por una apuesta tomada para otro nodo (ADR 0157); 0 si ninguno.</summary>
+    public int BetRefunded { get; init; }
+
     /// <summary>Muertes propias (RF-093): lo primero que el informe tiene que decir cuando las hay.</summary>
     public int Deaths
     {
@@ -229,6 +232,7 @@ public static class PostMatchView
             Loot(playback, report, items, templates, stateAfterMatch))
         {
             Bet = summary.Bet,
+            BetRefunded = summary.BetRefunded,
         };
     }
 

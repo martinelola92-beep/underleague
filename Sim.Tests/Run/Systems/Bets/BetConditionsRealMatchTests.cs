@@ -68,7 +68,8 @@ public sealed class BetConditionsRealMatchTests
     {
         var live = p.Result.Events.Where(Live).ToList();
         var goals = live.Where(e => e.Type == EventType.Goal).ToList();
-        var injuries = live.Where(e => e.Type == EventType.Injury).ToList();
+        // «Baja» = lesión o muerte: una muerte no siempre viene con un INJURY delante (MatchEngine.Kill).
+        var injuries = live.Where(e => e.Type is EventType.Injury or EventType.Death).ToList();
         var report = p.Result.Report;
         switch (kind)
         {
@@ -80,7 +81,7 @@ public sealed class BetConditionsRealMatchTests
                 return Stats(p, 1).Any(s => s.PlayerId == p.TargetId && s.LeftPitchTick >= 0);
 
             case BetKind.EyeForEye:
-                return Won(p) && Stats(p, 0).Any(s => s.Injured) && Stats(p, 0).Sum(s => s.InjuriesCaused) >= 1;
+                return Won(p) && Stats(p, 0).Any(s => s.Injured) && Stats(p, 0).Sum(s => s.InjuriesCaused + s.DeathsCaused) >= 1;
 
             case BetKind.Comeback:
                 {
@@ -101,7 +102,7 @@ public sealed class BetConditionsRealMatchTests
                 return Won(p) && p.Result.Events.Any(e => e.Type == EventType.MobStart);
 
             case BetKind.CleanHands:
-                return Won(p) && Stats(p, 0).Sum(s => s.Cards) == 0 && Stats(p, 0).Sum(s => s.InjuriesCaused) >= 1;
+                return Won(p) && Stats(p, 0).Sum(s => s.Cards) == 0 && Stats(p, 0).Sum(s => s.InjuriesCaused + s.DeathsCaused) >= 1;
 
             case BetKind.Thrashing:
                 return Won(p) && report.Goals[0] - report.Goals[1] >= 3;
