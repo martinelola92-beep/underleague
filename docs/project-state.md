@@ -26,7 +26,9 @@ independiente, rebase y merge a `main`, push):
    la tirada del destino (código y revisión hechos; falta suite completa y hash de determinismo).
 2. Pulido visible: BH-B (el jefe con nombre de clan de liga), BA-G (nombres repetidos), BC-H (aviso de
    alineación falso), panel de estadísticas del informe, BA-L2 (captura de recompensa en blanco).
-3. Dos huecos de consumible (BA-H, RF-080) + pausa breve en eventos que detienen el juego (BB-D).
+3. ~~Dos huecos de consumible (BA-H, RF-080) + pausa breve en eventos que detienen el juego (BB-D).~~ **HECHO (30 sep):**
+   ADR 0172 (dos huecos; enmienda RF-080..082 y RF-085; guardados anteriores se pliegan al cargar) y ADR 0173 (pausa
+   breve de 0,6 s a 1× en falta pitada, tarjeta y lesión; sólo `/Game`). BA-H y BB-D cerradas.
 4. ~~Cámara en perspectiva (BA-F).~~ **Hecho** (ADR 0174: 45°/FOV 45°, en retransmisión y depuración, sombras arregladas; BA-F cerrada).
 5. Conducta en el campo, con `gameplay-debug`: BB-K (compañeros que bailan por la misma casilla), BC-G
    (balón suelto en el córner), BA-J (repliegue tras una parada), BF-C (el delantero que pega sin balón).

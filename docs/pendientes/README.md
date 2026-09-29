@@ -23,13 +23,11 @@ viva anotada.
 | Id | Título | Estado |
 |---|---|---|
 | [BA-E](./BA-E.md) | Goles sin ángulo | Abierta, medida (A RECHAZADA por la ADR 0111, C disponible). **Vía nueva 23 sep**: la acción «centrar» del §7 de `plan-altura-del-balon.md` le da al delantero la alternativa que a la vía B le faltaba |
-| [BA-H](./BA-H.md) | Los consumibles no se pueden usar | Uso en vivo y catálogo de 20 hechos (29 sep); abierta sólo la propuesta de dos slots |
 | [BA-J](./BA-J.md) | Tras una parada, el equipo defensor debería replegarse | Abierta: hoy no hay fase de repliegue tras `SAVE` |
 | [BR-A](./BR-A.md) | Guardar o salir a mitad de partido no reproduce el partido al volver (RT-061) | Abierta: el estado en memoria ya es el de después del partido; arreglarlo pide esquema de guardado con las decisiones del partido |
 | [BR-B](./BR-B.md) | Jugadores muertos que vuelven a la vida: `INJURY` tras `DEATH` en el mismo tick | Cerrada (29 sep): causa CONFIRMED, el motor lesionaba al objetivo de un perk letal ya muerto; guarda en el motor y en la resolución |
 | [BS-A](./BS-A.md) | Créditos de rival y epitafio de la Gaceta nombran al jugador de datos, no al fichaje o némesis que ocupaba el puesto | Cerrada para la esquela (29 sep): se anota quién ocupaba el puesto al matar (`deathKiller:`); abierto el villano por créditos |
 | [BT-A](./BT-A.md) | La política de `RunPolicy` intenta vender a un fichaje sin experiencia y lanza (ADR 0108): 9 de 60 runs con el `Setup` de los tests | Abierta, **CONFIRMED**; es el instrumento, no el juego; mueve el balance, pide `balance-measure` |
-| [BB-D](./BB-D.md) | Parar unos segundos en los eventos que detienen el juego | Analizada (`game-design-review`, 16 sep); pendiente de decidir si se implementa — se resuelve entera en `/Game`, sin tocar RT-020 |
 | [BB-G2](./BB-G2.md) | El portero puede ser perseguidor designado fuera de su área y bloquear a los diez | Abierta, sin evidencia de activación |
 | [BB-H](./BB-H.md) | «Todavía no hay eventos, habrá que diseñarlos» | Abierta: existen seis cartas, pero 0,38 resueltas por run — es densidad y catálogo, no ausencia |
 | [BB-I](./BB-I.md) | «Depredador de área» pareció activarse en un momento que no era un tiro | BLOCKED / NEEDS-REPRODUCTION: falta la semilla |
@@ -90,6 +88,8 @@ viva anotada.
 | [BA-D](./BA-D.md) | Los jugadores se teletransportan al reanudar una falta | Cerrada |
 | [BA-I](./BA-I.md) | La sustitución por lesión no debería ser obligatoria | **CERRADA (ADR 0134 E)**: la lesión leve ya no saca del campo, y que quedarse suba el riesgo de morir es la decisión — se ve antes de elegir |
 | [BA-K](./BA-K.md) | Cortinilla o transición | Resuelta (16 sep 2026), verificada con captura |
+| [BA-H](./BA-H.md) | Los consumibles no se pueden usar | **Cerrada (30 sep 2026, ADR 0172):** uso en vivo y catálogo de 20 (29 sep), y dos huecos con comprar sólo con hueco libre y salir ya equipado (30 sep) |
+| [BB-D](./BB-D.md) | Parar unos segundos en los eventos que detienen el juego | **Cerrada (30 sep 2026, ADR 0173):** pausa breve de 0,6 s a 1× en falta pitada, tarjeta y lesión que para el partido; sólo `/Game`, sin tocar RT-020 |
 | [BA-L](./BA-L.md) | La escena de capturas (`Scenes/Capturas.tscn`) no produce nada en esta máquina | Cerrada |
 | [BA-M](./BA-M.md) | Origen de BA-N: la puerta de equipar pasó de roja a verde por cero centésimas | Cerrada |
 | [BA-N](./BA-N.md) | Equipar ya no vale el escalón que la ADR 0033 exige | Cerrada (ADR 0116; deuda documentada) |

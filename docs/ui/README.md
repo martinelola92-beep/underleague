@@ -103,6 +103,11 @@ Catálogo:
 | final / gol de oro | N4 | **acta del encuentro** con los dos escudos y el resultado; transición al informe |
 | saque inicial | N3 | presentación breve de los equipos; los 14,5 perks del saque **no** generan carteles (P1) |
 
+**Pausa breve (ADR 0173, 30 sep 2026, BB-D):** a **1×**, un suceso N1-N3 que **detiene el juego de verdad** (una falta
+pitada, una tarjeta, una lesión que para el partido; se lee de la traza, no del tipo) congela **0,6 s** *(provisional,
+sin medir)* el fotograma anterior al suceso, con su sello y el residuo ya reflejado. No la hay con otra voz alta en el
+escenario, ni a ×4 ni a ×16, y no se acumula con lo que ya congela (gol, muerte, final, decisión).
+
 Reglas: fusión de sucesos del mismo momento (ventana de 1 s) y fusiones fijas (turba + árbitro se va; gol de
 oro + final); una voz alta a la vez; un N3/N4 no presentado a tiempo queda en residuo; saltar una
 presentación nunca salta su residuo; **las decisiones tienen prioridad narrativa y pausan a cualquier
