@@ -618,7 +618,17 @@ public sealed record RunPlayResult(
     /// ADR 0171: momentos de la tirada del destino sobre jugadores propios en toda la run (los que la
     /// retransmisión convierte en cámara lenta y sello), contados desde los eventos <c>FATE_ROLL</c>.
     /// </summary>
-    int FateMoments = 0)
+    int FateMoments = 0,
+
+    /// <summary>
+    /// ADR 0170: lesionados graves de la plantilla (los muertos no cuentan) al empezar cada acto, es decir, antes de
+    /// su primer partido (la capa 0 del acto es siempre un partido de liga). Con <see cref="ActsStartedByAct"/> de
+    /// denominador. Es el dato que dice cuánto desgaste se arrastra de un acto al siguiente ahora que el jefe no cura.
+    /// </summary>
+    IReadOnlyList<int>? SevereAtActStartByAct = null,
+
+    /// <summary>Runs que llegaron a jugar el primer nodo de cada acto (denominador del anterior).</summary>
+    IReadOnlyList<int>? ActsStartedByAct = null)
 {
     /// <summary>
     /// El estado con el que terminó la run, para quien mida algo que sólo existe al final (el censo de
@@ -1218,6 +1228,11 @@ public static class RunPolicy
         int deadBefore = CountState(state, PhysicalState.Dead);
         int stockBefore = state.Counter(RunState.ItemsRecoveredCounter);
         int severeBefore = CountState(state, PhysicalState.SevereInjury);
+        if (node.Layer == 0)
+        {
+            ledger.ActsStartedByAct[node.Act - 1]++;
+            ledger.SevereAtActStartByAct[node.Act - 1] += severeBefore;
+        }
 
         state = RunEngine.Enter(state, node.Id, catalog, systems);
 
@@ -3913,7 +3928,9 @@ public static class RunPolicy
             ledger.ProsthesesInstalled,
             ledger.Automatons,
             ledger.BloodCasualties,
-            ledger.FateMoments);
+            ledger.FateMoments,
+            ledger.SevereAtActStartByAct,
+            ledger.ActsStartedByAct);
     }
 
     /// <summary>
@@ -4019,6 +4036,12 @@ public static class RunPolicy
         /// <summary>ADR 0168: bajas de sangre propias (grave o muerte), por jugador y partido.</summary>
         public int BloodCasualties;
         public int FateMoments;
+
+        /// <summary>ADR 0170: graves de la plantilla al empezar cada acto.</summary>
+        public int[] SevereAtActStartByAct { get; } = new int[RunRules.Acts];
+
+        /// <summary>ADR 0170: actos empezados (denominador del anterior).</summary>
+        public int[] ActsStartedByAct { get; } = new int[RunRules.Acts];
 
         /// <summary>Lesiones de los DOS equipos en los partidos de la run: la misma cifra que mide RT-056.</summary>
         public int MatchInjuries;

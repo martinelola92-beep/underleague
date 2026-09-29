@@ -456,6 +456,8 @@ public static class FullRunMetrics
         var itemsAtBoss = new long[RunRules.Acts];
         var levelAtBoss = new long[RunRules.Acts];
         var startersAtBoss = new long[RunRules.Acts];
+        var severeAtActStart = new long[RunRules.Acts];
+        var actsStarted = new long[RunRules.Acts];
         var bossSamples = new long[RunRules.Acts];
         var bossWins = new long[RunRules.Acts];
         long itemsRecovered = 0;
@@ -585,6 +587,11 @@ public static class FullRunMetrics
                 itemsAtBoss[act] += run.ItemsAtBossByAct[act];
                 levelAtBoss[act] += run.LevelAtBossByAct[act];
                 startersAtBoss[act] += run.StartersAtBossByAct[act];
+                if (run.SevereAtActStartByAct is not null && run.ActsStartedByAct is not null)
+                {
+                    severeAtActStart[act] += run.SevereAtActStartByAct[act];
+                    actsStarted[act] += run.ActsStartedByAct[act];
+                }
                 bossSamples[act] += run.BossSamplesByAct[act];
                 bossWins[act] += run.BossWinsByAct[act];
                 if (run.MatchesByAct[act] == 0)
@@ -760,6 +767,8 @@ public static class FullRunMetrics
             rows.Add(Info($"perksAtBossAct{act + 1}", bossSamples[act] > 0 ? (double)perksAtBoss[act] / bossSamples[act] : 0.0));
             // La puerta de la ADR 0033 mide al jugador en nivel 5, 6 y 7; esta fila dice con cuál llega.
             rows.Add(Info($"levelAtBossAct{act + 1}", startersAtBoss[act] > 0 ? (double)levelAtBoss[act] / startersAtBoss[act] : 0.0));
+            // ADR 0170: el desgaste que pasa de un acto al siguiente. Graves vivos por plantilla al empezar el acto.
+            rows.Add(Info($"severeAtActStartAct{act + 1}", actsStarted[act] > 0 ? (double)severeAtActStart[act] / actsStarted[act] : 0.0));
             rows.Add(Info($"itemsAtBossAct{act + 1}", bossSamples[act] > 0 ? (double)itemsAtBoss[act] / bossSamples[act] : 0.0));
         }
 
