@@ -635,7 +635,7 @@ public static class RunPolicy
 
             var node = ChooseNode(state, nodes, standard.Economy, options);
             state = node.IsMatch
-                ? PlayMatch(state, node, catalog, systems, options, standard.Economy.ClinicCost, standard.Consumables, ledger)
+                ? PlayMatch(state, node, catalog, systems, options, standard.Economy.ClinicCost, standard.Consumables, standard.Items, ledger)
                 : EnterService(state, node, catalog, systems, ledger);
         }
 
@@ -1020,6 +1020,7 @@ public static class RunPolicy
         RunPolicyOptions options,
         int clinicCost,
         ConsumableCatalog? consumables,
+        ItemCatalog items,
         Ledger ledger)
     {
         // RF-013 y RF-012c: el informe de ojeo y el indicador de riesgo se leen ANTES de alinear. Si el
@@ -1109,6 +1110,17 @@ public static class RunPolicy
         if (severeNow > severeBefore)
         {
             ledger.SevereInjuries += severeNow - severeBefore;
+        }
+
+        // ADR 0161 §4: reparte lo que haya en el almacén (botín de liga, reliquia, herencia de un muerto)
+        // sin esperar a un nodo de recompensa. Un partido de liga (picks=0) nunca abre uno, así que sin
+        // esto su botín se quedaría criando polvo hasta el siguiente élite o jefe. Cuando SÍ hay recompensa
+        // pendiente (élite, jefe) el reparto se deja para TakeRewards, que lo hace DESPUÉS de cobrarla
+        // (ver su comentario): duplicar la llamada aquí no rompería nada -el segundo paso no encontraría
+        // nada que repartir de más-, pero es ruido, así que se salta mientras el nodo siga abierto.
+        if (!RunEngine.Outcome(state).IsOver && state.Phase != RunPhase.NodeOpen)
+        {
+            state = ClaimStoredItems(state, catalog, systems, items);
         }
 
         return state;
@@ -2554,40 +2566,81 @@ public static class RunPolicy
             state = TakeReward(state, node, catalog, standard, systems, options, ledger);
         }
 
-        return ClaimStoredItems(state, catalog, systems);
+        return ClaimStoredItems(state, catalog, systems, standard.Items);
     }
 
     /// <summary>
-    /// Reparte el equipamiento heredado de los muertos (ADR 0048, condición 4). El objeto del caído está
-    /// en el almacén y no cuesta oro: dárselo a un titular sin objeto es la parte de "se puede rehacer"
-    /// que el jugador no tiene por qué pagar dos veces. Se hace después de cobrar la recompensa para que
-    /// el objeto recién elegido cuente y no se duplique el hueco.
+    /// Reparte lo que haya en el almacén (ADR 0161 §4): el equipo heredado de un muerto (ADR 0048,
+    /// condición 4), el botín de liga o la reliquia (ADR 0161 §1, §2). No cuesta oro —ya estaba pagado—,
+    /// así que el criterio es simple: cada objeto va a quien <b>no lleve ninguno</b> (primero, id
+    /// ascendente, RT-041) y, si todos llevan algo, a quien lleve el <b>peor</b> —el de menor
+    /// <see cref="ItemScale.ValueOf"/>, la misma vara con la que se calcula precio y venta (ADR 0038)—,
+    /// pero solo si de verdad mejora (estrictamente más valioso): nunca cambia un objeto por otro
+    /// equivalente. El desplazado vuelve al almacén (<c>EquipmentSystem.Apply(EquipStoredItem)</c>, ADR
+    /// 0161 §3), así que nunca se pierde, solo cambia de dueño. Un objeto sin carrier que mejore se queda
+    /// en el almacén para la próxima vez. Se hace después de cobrar la recompensa para que el objeto
+    /// recién elegido cuente y no se duplique el hueco.
     /// </summary>
-    private static RunState ClaimStoredItems(RunState state, Catalog catalog, IRunSystems systems)
+    private static RunState ClaimStoredItems(RunState state, Catalog catalog, IRunSystems systems, ItemCatalog items)
     {
         var stored = state.StoredItems;
         for (int i = 0; i < stored.Count; i++)
         {
-            int carrier = -1;
-            var roster = state.Roster;
-            for (int p = 0; p < roster.Count; p++)
+            string itemId = stored[i];
+            var candidate = items.Find(itemId);
+            if (candidate is null)
             {
-                if (roster[p].PhysicalState != PhysicalState.Dead && roster[p].Item is null)
-                {
-                    carrier = roster[p].Id;
-                    break;
-                }
+                continue;
             }
 
+            int carrier = BestCarrierFor(state, candidate, items);
             if (carrier < 0)
             {
-                break;
+                continue;
             }
 
-            state = RunEngine.Apply(state, new EquipStoredItem(carrier, stored[i]), catalog, systems);
+            state = RunEngine.Apply(state, new EquipStoredItem(carrier, itemId), catalog, systems);
         }
 
         return state;
+    }
+
+    /// <summary>
+    /// A quién dar ese objeto del almacén (ADR 0161 §4): primero cualquier titular vivo sin objeto (el id
+    /// más bajo, RT-041); si todos llevan algo, el que lleve el objeto de menor valor, y solo si el nuevo
+    /// vale estrictamente más. -1 si nadie lo quiere -todos van mejor servidos que él-.
+    /// </summary>
+    private static int BestCarrierFor(RunState state, ItemDefinition candidate, ItemCatalog items)
+    {
+        var roster = state.Roster;
+        for (int p = 0; p < roster.Count; p++)
+        {
+            if (roster[p].PhysicalState != PhysicalState.Dead && roster[p].Item is null)
+            {
+                return roster[p].Id;
+            }
+        }
+
+        int candidateValue = items.Scale.ValueOf(candidate);
+        int worstId = -1;
+        int worstValue = int.MaxValue;
+        for (int p = 0; p < roster.Count; p++)
+        {
+            if (roster[p].PhysicalState == PhysicalState.Dead || roster[p].Item is not { } currentId)
+            {
+                continue;
+            }
+
+            var current = items.Find(currentId);
+            int currentValue = current is null ? int.MinValue : items.Scale.ValueOf(current);
+            if (currentValue < worstValue)
+            {
+                worstValue = currentValue;
+                worstId = roster[p].Id;
+            }
+        }
+
+        return worstId >= 0 && worstValue < candidateValue ? worstId : -1;
     }
 
     /// <summary>

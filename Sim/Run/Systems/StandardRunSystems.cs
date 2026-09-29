@@ -248,6 +248,10 @@ public sealed class StandardRunSystems : IRunSystems
         state = EquipmentSystem.ProcessFragileItems(state, summary, _items);
         state = MercenarySystem.Process(state, summary, _economy);
 
+        // Reliquia por cada muerte propia (ADR 0161 §2): tampoco distingue victoria de derrota, por el
+        // mismo motivo que lo de arriba —un muerto lo es se haya ganado o no el partido en el que murió—.
+        state = ApplyRelics(state, summary);
+
         // Herencia (paquete BB): traspasa atributos de un muerto a su vinculado ANTES de tocar el oro,
         // porque cambia el estado de otro jugador de la plantilla, no una cifra. MatchResolution ya
         // resolvió quién es el vinculado (geometría de la alineación inicial, RF-044); esto solo aplica el
@@ -294,11 +298,54 @@ public sealed class StandardRunSystems : IRunSystems
             state = HealRoster(state);
         }
 
+        // Botín de liga (ADR 0161 §1): un objeto común más al almacén, además del oro de arriba. Elite y
+        // jefe no cambian (LeagueLootSystem.AppliesTo exige NodeKind.LeagueMatch); van DESPUÉS de curar la
+        // plantilla del jefe, sin que el orden importe entre los dos —no comparten estado—.
+        if (LeagueLootSystem.AppliesTo(node.Kind, summary.Won))
+        {
+            var loot = LeagueLootSystem.Pick(state.Seed, node.Id, node.Act, state.ClubRace, _items);
+            state = state.WithStockedItem(loot.Id, 1);
+        }
+
         // Deja el nodo abierto para RF-071: el jugador elige recompensa (y puede repetir tirada una vez,
         // RF-071b) antes de volver al mapa con LeaveNode. ADR 0096: un nodo que no da ninguna elección
         // —la liga, que paga solo oro— no se queda abierto, para que la run no pase por una pantalla de
         // recompensa vacía que se cierra sola.
         return reward.Picks > 0 ? state.WithPendingNode(node.Id) : state;
+    }
+
+    /// <summary>
+    /// Reliquia por cada muerte propia de este partido (ADR 0161 §2). Recorre
+    /// <see cref="RunMatchSummary.DeathDetails"/> en el orden del propio evento (ya determinista, RT-041)
+    /// y lee la carrera del muerto YA ACTUALIZADA con este partido: <c>MatchResolution.Apply</c> suma las
+    /// estadísticas del partido a <c>RunPlayer.Career</c> (su paso 3b) antes de devolver el estado con el
+    /// que <c>RunEngine</c> llama a <see cref="AfterMatch"/>, así que el último partido de un muerto cuenta
+    /// para elegir su reliquia. Sin tirada (<see cref="RelicSystem.Classify"/> es puro); si el catálogo no
+    /// tiene ninguna reliquia de esa clase (contenido incompleto, no debería pasar con <c>data/</c> en su
+    /// estado actual), esa muerte se queda sin reliquia en vez de lanzar: una reliquia que falta no puede
+    /// tirar la run entera.
+    /// </summary>
+    private RunState ApplyRelics(RunState state, RunMatchSummary summary)
+    {
+        var deaths = summary.DeathDetails;
+        if (deaths.Count == 0)
+        {
+            return state;
+        }
+
+        var next = state;
+        for (int i = 0; i < deaths.Count; i++)
+        {
+            var player = next.GetPlayer(deaths[i].PlayerId);
+            var kind = RelicSystem.Classify(player.Career);
+            var relic = _items.FindRelic(kind);
+            if (relic is not null)
+            {
+                next = next.WithStockedItem(relic.Id, 1);
+            }
+        }
+
+        return next;
     }
 
     /// <inheritdoc />
@@ -323,7 +370,8 @@ public sealed class StandardRunSystems : IRunSystems
             DeclineReward => RewardSystem.Decline(state, _economy),
             RerollRewards => RewardSystem.Reroll(state, _economy),
             TransferItem transfer => EquipmentSystem.Apply(state, transfer, _economy, _items),
-            EquipStoredItem stored => EquipmentSystem.Apply(state, stored, _economy, _items),
+            EquipStoredItem stored => EquipmentSystem.Apply(state, stored, _items),
+            StoreItem store => EquipmentSystem.Apply(state, store),
             _ => throw new NotSupportedException(
                 $"la decisión {decision.GetType().Name} no la resuelve el paquete X: la resuelve el paquete Y (jefe) "
                     + "sustituyendo StandardRunSystems por su propia implementación de IRunSystems, o componiendo las dos."),

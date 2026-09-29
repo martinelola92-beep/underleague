@@ -1,0 +1,15 @@
+{
+  "_doc": "Reliquia del goleador (ADR 0161 S2): se la deja en el almacen quien muere habiendo metido goles de sobra en la run (RelicSystem.ScorerGoalsThreshold). No se compra ni se sortea (relic marca el objeto fuera de items.OfferableTo, ADR 0036/0161): el unico camino es una muerte propia. Tecnica y velocidad, el mismo par que definia su remate.",
+  "id": "relic_scorer",
+  "name": {
+    "es": "Bota del rematador difunto",
+    "en": "Late Finisher's Boot"
+  },
+  "rarity": "uncommon",
+  "archetype": "normal",
+  "relic": "scorer",
+  "attributeBonus": {
+    "technique": 10,
+    "speed": 10
+  }
+}

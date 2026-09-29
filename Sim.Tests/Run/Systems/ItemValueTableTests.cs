@@ -24,9 +24,12 @@ public sealed class ItemValueTableTests
         // especie de su raza y la plantilla de prueba se genera de esa raza, así que los siete titulares
         // pueden llevarlo. Una entrada de más o de menos significa que la tabla y /data/items se han
         // separado: hay que remedirla con /Balance --item-values.
-        Assert.Equal(RealItems.All.Count, RealTable.Count);
+        // ADR 0161: las reliquias no salen en el mercado ni en las recompensas (sólo las deja un muerto), así
+        // que no tienen precio que medir y quedan fuera de la tabla.
+        var measurable = RealItems.All.Where(item => !item.IsRelic).ToList();
+        Assert.Equal(measurable.Count, RealTable.Count);
 
-        foreach (var item in RealItems.All)
+        foreach (var item in measurable)
         {
             Assert.NotNull(RealTable.ValueOf(item.Id));
         }

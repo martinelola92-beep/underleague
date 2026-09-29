@@ -56,13 +56,34 @@ public sealed class ItemCatalog
         var result = new List<ItemDefinition>(_items.Length);
         foreach (var item in _items)
         {
-            if ((item.Race is null || item.Race == clubRace) && Depth.WeightPercent(item.MinAct, act) > 0)
+            // ADR 0161 §2: una reliquia no se compra ni se sortea. Solo llega al almacén cuando muere un
+            // jugador propio (RelicSystem), así que se excluye del pool aquí mismo, en el único punto del
+            // que salen tanto el mercado (MarketOffers) como las recompensas (RewardSystem).
+            if (!item.IsRelic && (item.Race is null || item.Race == clubRace) && Depth.WeightPercent(item.MinAct, act) > 0)
             {
                 result.Add(item);
             }
         }
 
         return result;
+    }
+
+    /// <summary>
+    /// El objeto marcado con esa clase de reliquia (ADR 0161 §2), o null si el catálogo no tiene ninguno.
+    /// Si varios objetos comparten la misma clase —error de contenido, no de motor—, se queda con el
+    /// primero por id ordinal ascendente (RT-041, mismo orden en el que <see cref="_items"/> ya está).
+    /// </summary>
+    public ItemDefinition? FindRelic(RelicKind kind)
+    {
+        foreach (var item in _items)
+        {
+            if (item.Relic == kind)
+            {
+                return item;
+            }
+        }
+
+        return null;
     }
 
     /// <summary>
@@ -200,8 +221,15 @@ public static class ItemLoader
                 path, "$.frequency", "la frecuencia va de 10 a 500, con 100 como lo normal (ADR 0051)");
         }
 
+        RelicKind? relic = null;
+        var relicNode = root.TryProp("relic");
+        if (relicNode is not null)
+        {
+            relic = ParseRelic(root, root.Str("relic"));
+        }
+
         var item = new ItemDefinition(
-            id, name, rarity, archetype, modifier, breakChance, race, requiredTag, minAct, frequency);
+            id, name, rarity, archetype, modifier, breakChance, race, requiredTag, minAct, frequency, relic);
         Validate(path, item, scale);
         return item;
     }
@@ -325,6 +353,15 @@ public static class ItemLoader
         Enum.TryParse<Race>(race, ignoreCase: false, out var parsed)
             ? parsed
             : throw new DataException(node.File, node.Path + ".race", $"raza desconocida: '{race}'");
+
+    private static RelicKind ParseRelic(Json node, string relic) => relic switch
+    {
+        "scorer" => RelicKind.Scorer,
+        "butcher" => RelicKind.Butcher,
+        "wall" => RelicKind.Wall,
+        "generic" => RelicKind.Generic,
+        _ => throw new DataException(node.File, node.Path + ".relic", $"clase de reliquia desconocida: '{relic}' (ADR 0161)"),
+    };
 
     private static ItemArchetype ParseArchetype(Json node, string archetype) => archetype switch
     {

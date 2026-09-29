@@ -1,0 +1,15 @@
+{
+  "_doc": "Reliquia del carnicero (ADR 0161 S2): la deja en el almacen quien muere habiendo causado lesiones de sobra en la run (RelicSystem.ButcherInjuriesThreshold, RunCareer.InjuriesCaused). Fuera de mercado y recompensas, igual que las otras tres (relic marca el objeto fuera de items.OfferableTo). Fuerza y correa: lo que le hacia falta para acercarse y no soltar.",
+  "id": "relic_butcher",
+  "name": {
+    "es": "Delantal del carnicero",
+    "en": "Butcher's Apron"
+  },
+  "rarity": "uncommon",
+  "archetype": "normal",
+  "relic": "butcher",
+  "attributeBonus": {
+    "strength": 10,
+    "leash": 10
+  }
+}

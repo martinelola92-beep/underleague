@@ -54,6 +54,10 @@
     "race": {
       "description": "Solo en archetype=restricted: raza de la que el objeto es exclusivo (ADR 0036). Solo aparece en runs de esa raza y solo funciona sobre un portador de esa raza.",
       "enum": ["Human", "Orc", "Elf", "Dwarf", "Undead", "DarkElf", "Demon", "Vampire", "Lizard"]
+    },
+    "relic": {
+      "description": "Marca el objeto como reliquia (ADR 0161 S2): no aparece en el mercado ni en las recompensas, solo llega al almacen cuando muere un jugador propio, segun lo que destaco en su RunCareer.",
+      "enum": ["scorer", "butcher", "wall", "generic"]
     }
   },
   "required": ["id", "name", "archetype", "attributeBonus"],

@@ -139,6 +139,15 @@ public sealed record RerollRewards : RunDecision;
 public sealed record TransferItem(int FromPlayerId, int ToPlayerId) : RunDecision;
 
 /// <summary>
+/// Guarda en el <b>almacén</b> del club el objeto que lleva puesto el jugador (ADR 0161 §3, cofre de la
+/// pantalla de Equipo). El objeto no se pierde ni se vende: sale del jugador exactamente igual que en una
+/// <see cref="TransferItem"/>, pero en vez de aterrizar en otro jugador, aterriza en <c>RunState.StoredItems</c>
+/// —el mismo sitio donde ya caía el equipo de un muerto (ADR 0048, condición 4)—. Sin coste: el objeto ya
+/// estaba pagado.
+/// </summary>
+public sealed record StoreItem(int PlayerId) : RunDecision;
+
+/// <summary>
 /// Equipa a un jugador un objeto que está en el <b>almacén</b> del club (ADR 0048, condición 4). Al
 /// almacén solo se llega de una forma: heredando el equipamiento de un jugador muerto. Es "se puede
 /// rehacer" escrito como decisión —la muerte cuesta el jugador, no el jugador y su equipo— y no cuesta

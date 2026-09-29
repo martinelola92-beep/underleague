@@ -5,6 +5,7 @@ using Underleague.Sim.Model;
 using Underleague.Sim.Perks;
 using Underleague.Sim.Run.Systems.Economy;
 using Underleague.Sim.Run.Systems.Items;
+using Underleague.Sim.Run.Systems.Rewards;
 
 namespace Underleague.Sim.Run.View;
 
@@ -53,6 +54,9 @@ public sealed record PerkReportRow(
 /// <summary>Un objeto equipado que entró en el partido (RF-075..078, RT-043).</summary>
 /// <param name="Effects">Efectos aplicados de verdad; 0 si el portador no cumple la restricción de raza.</param>
 public sealed record ItemReportRow(string ItemId, string ItemName, string Description, int OwnerId, string OwnerName, int Effects, bool Restricted);
+
+/// <summary>Botín de liga (ADR 0161 §1): el objeto común que fue al almacén, además del oro.</summary>
+public sealed record LootRow(string ItemId, string ItemName, string Description);
 
 /// <summary>
 /// Apartado del árbitro (RF-119, RF-062, RF-063): con qué criterio empezó, con cuál terminó y qué señaló
@@ -106,7 +110,8 @@ public sealed record PostMatchReport(
     RefereeReport Referee,
     GoldForWinBreakdown? Gold,
     CounterGold CounterGold,
-    DeathGold DeathGold)
+    DeathGold DeathGold,
+    LootRow? Loot)
 {
     /// <summary>Muertes propias (RF-093): lo primero que el informe tiene que decir cuando las hay.</summary>
     public int Deaths
@@ -202,7 +207,34 @@ public static class PostMatchView
             // se enseña se haya ganado o no, y se calla si la run ha terminado, por el mismo motivo.
             economy is null || stateAfterMatch.Result.IsOver
                 ? DeathGold.None
-                : GoldCalculator.DeathGold(stateAfterMatch, summary, economy));
+                : GoldCalculator.DeathGold(stateAfterMatch, summary, economy),
+            Loot(playback, report, items, templates, stateAfterMatch));
+    }
+
+    /// <summary>
+    /// El botín de liga de este partido, si lo hay (ADR 0161 §1). <see cref="LeagueLootSystem.Pick"/> es
+    /// pura y determinista: con la misma semilla, nodo, acto y raza siempre elige el mismo objeto que ya
+    /// eligió <c>StandardRunSystems.AfterMatch</c> al aplicarlo al almacén, así que este informe puede
+    /// recalcularlo sin que nadie se lo pase —RT-014, la pantalla no decide nada, solo enseña lo que ya
+    /// pasó—. Null si la run terminó (el botín no se aplicó, igual que el oro de arriba) o si el nodo no es
+    /// de liga o no se ganó.
+    /// </summary>
+    private static LootRow? Loot(
+        MatchPlayback playback, MatchReport report, ItemCatalog? items, DescriptionTemplates templates, RunState stateAfterMatch)
+    {
+        if (items is null || stateAfterMatch.Result.IsOver)
+        {
+            return null;
+        }
+
+        bool won = report.Winner == playback.PlayerTeam;
+        if (!LeagueLootSystem.AppliesTo(playback.Node.Kind, won))
+        {
+            return null;
+        }
+
+        var loot = LeagueLootSystem.Pick(stateAfterMatch.Seed, playback.Node.Id, playback.Node.Act, stateAfterMatch.ClubRace, items);
+        return new LootRow(loot.Id, loot.Name.Es, ItemDescriptions.Describe(loot, templates.Language));
     }
 
     /// <summary>

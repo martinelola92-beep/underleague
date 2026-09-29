@@ -143,17 +143,19 @@ public static class EquipmentSystem
     }
 
     /// <summary>
-    /// Saca del almacén el objeto heredado de un muerto y se lo pone a un jugador vivo (ADR 0048,
-    /// condición 4). No cuesta oro —ya estaba pagado— y sigue las mismas reglas que cualquier otra
-    /// asignación: un objeto por jugador (RF-076), y el desplazado se vende como en
-    /// <see cref="AssignPurchasedItem"/>. Se puede hacer en cualquier nodo, igual que transferir: hacer
-    /// sitio o rehacer una build no puede depender de estar en un mercado.
+    /// Saca del almacén un objeto (heredado de un muerto, ADR 0048 condición 4, o botín de liga o
+    /// reliquia, ADR 0161 §1 y §2) y se lo pone a un jugador vivo. No cuesta oro —ya estaba pagado— y sigue
+    /// la misma regla de un objeto por jugador (RF-076): si el jugador ya llevaba otro, <b>vuelve al
+    /// almacén</b> (ADR 0161 §3: "un objeto equipado que se sustituye vuelve al cofre, nunca desaparece"),
+    /// a diferencia de <see cref="AssignPurchasedItem"/> —esa sí vende el desplazado, porque ahí el que
+    /// entra se ha COMPRADO— y de <see cref="Apply(RunState, TransferItem, EconomyConfig, ItemCatalog)"/>,
+    /// que no puede desplazar nada porque exige receptor sin objeto. Se puede hacer en cualquier nodo,
+    /// igual que transferir: hacer sitio o rehacer una build no puede depender de estar en un mercado.
     /// </summary>
-    public static RunState Apply(RunState state, EquipStoredItem decision, EconomyConfig economy, ItemCatalog items)
+    public static RunState Apply(RunState state, EquipStoredItem decision, ItemCatalog items)
     {
         ArgumentNullException.ThrowIfNull(state);
         ArgumentNullException.ThrowIfNull(decision);
-        ArgumentNullException.ThrowIfNull(economy);
         ArgumentNullException.ThrowIfNull(items);
 
         if (state.StockOf(decision.ItemId) <= 0)
@@ -163,8 +165,41 @@ public static class EquipmentSystem
                 nameof(decision));
         }
 
+        // Valida que el id exista en el catálogo antes de mover nada: un almacén con un id corrupto es un
+        // dato inválido, y RT-032 exige que sea un error explícito, no un jugador con un objeto fantasma.
+        _ = items.Get(decision.ItemId);
+
+        var player = state.GetPlayer(decision.PlayerId);
+        if (player.PhysicalState == PhysicalState.Dead)
+        {
+            throw new ArgumentException($"el jugador {player.Id} está muerto y no puede recibir un objeto", nameof(decision));
+        }
+
+        string? displaced = player.Item;
         state = state.WithStockedItem(decision.ItemId, -1);
-        return AssignPurchasedItem(state, decision.PlayerId, decision.ItemId, economy, items);
+        state = state.WithPlayer(AssignItem(player, decision.ItemId));
+        return displaced is null ? state : state.WithStockedItem(displaced, 1);
+    }
+
+    /// <summary>
+    /// Guarda en el almacén el objeto que lleva puesto el jugador (ADR 0161 §3, decisión <see cref="StoreItem"/>
+    /// del cofre de Equipo). Mismo gesto que <see cref="Apply(RunState, TransferItem, EconomyConfig, ItemCatalog)"/>
+    /// con <c>ToPlayerId &lt; 0</c> salvo que aquí el objeto no se vende: aterriza en <c>RunState.StoredItems</c>,
+    /// listo para volver a equiparse sin pasar por el mercado.
+    /// </summary>
+    public static RunState Apply(RunState state, StoreItem decision)
+    {
+        ArgumentNullException.ThrowIfNull(state);
+        ArgumentNullException.ThrowIfNull(decision);
+
+        var player = state.GetPlayer(decision.PlayerId);
+        if (player.Item is not { } itemId)
+        {
+            throw new ArgumentException(
+                $"el jugador {player.Id} no lleva ningún objeto que guardar en el cofre", nameof(decision));
+        }
+
+        return state.WithPlayer(ClearItem(player)).WithStockedItem(itemId, 1);
     }
 
     private static RunPlayer ClearItem(RunPlayer player) => player with { Item = null };

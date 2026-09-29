@@ -1,0 +1,15 @@
+{
+  "_doc": "Reliquia generica (ADR 0161 S2): la deja en el almacen quien muere sin destacar en ninguna de las tres carreras medidas (RelicSystem.Classify, caso por defecto). Fuera de mercado y recompensas, igual que las otras tres (relic marca el objeto fuera de items.OfferableTo). Resistencia y tecnica: lo unico que le quedaba a quien no metio goles, no gano entradas y no lesiono a nadie, y aun asi jugo la run entera.",
+  "id": "relic_generic",
+  "name": {
+    "es": "Recuerdo del caído",
+    "en": "Fallen One's Keepsake"
+  },
+  "rarity": "uncommon",
+  "archetype": "normal",
+  "relic": "generic",
+  "attributeBonus": {
+    "stamina": 10,
+    "technique": 10
+  }
+}

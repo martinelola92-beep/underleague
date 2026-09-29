@@ -35,6 +35,29 @@ public enum ItemArchetype
 }
 
 /// <summary>
+/// Clase de reliquia (ADR 0161 §2): el objeto que un jugador propio deja en el almacén al morir, elegido
+/// según lo que destacó en su <see cref="RunCareer"/> —goleador, carnicero, muro— o genérico si no
+/// destacó en nada. Marca de datos (<c>relic</c> en <c>data/items/&lt;id&gt;.json</c>), no un arquetipo:
+/// una reliquia sigue siendo <see cref="ItemArchetype.Normal"/> en todo lo demás, y lo único que cambia es
+/// que no entra en el pool de mercado ni de recompensas (<see cref="ItemCatalog.OfferableTo(Race, int)"/>)
+/// y que <see cref="RelicSystem"/> la busca por esta clase.
+/// </summary>
+public enum RelicKind
+{
+    /// <summary>Reliquia del goleador (RunCareer.Goals).</summary>
+    Scorer,
+
+    /// <summary>Reliquia del carnicero (RunCareer.InjuriesCaused).</summary>
+    Butcher,
+
+    /// <summary>Reliquia del muro (RunCareer.TacklesWon).</summary>
+    Wall,
+
+    /// <summary>Reliquia genérica: el muerto no destacó en ninguna de las tres anteriores.</summary>
+    Generic,
+}
+
+/// <summary>
 /// Un objeto de equipamiento (RF-075..078), cargado de <c>data/items/&lt;id&gt;.json</c>.
 ///
 /// <para><b>Un objeto sube atributos y nada más</b> (ADR 0036). No tiene disparador, ni condición, ni
@@ -64,6 +87,11 @@ public enum ItemArchetype
 /// El "commonness" de Angband (ADR 0051): cuánto sale este objeto comparado con uno normal, en
 /// porcentaje. Multiplica al peso por valor de la ADR 0038 y a la curva de profundidad.
 /// </param>
+/// <param name="Relic">
+/// Marca de reliquia (ADR 0161 §2); null en un objeto normal. Un objeto marcado no entra en el pool de
+/// mercado ni de recompensas (<see cref="ItemCatalog.OfferableTo(Race, int)"/>): solo llega al almacén
+/// cuando muere un jugador propio, elegido por <c>RelicSystem.Classify</c>.
+/// </param>
 public sealed record ItemDefinition(
     string Id,
     LocalizedName Name,
@@ -74,7 +102,8 @@ public sealed record ItemDefinition(
     Race? Race,
     string RequiredTag,
     int MinAct = 1,
-    int Frequency = 100)
+    int Frequency = 100,
+    RelicKind? Relic = null)
 {
     /// <summary>Atributos que el objeto sube (entradas positivas de <see cref="Modifier"/>), en orden fijo.</summary>
     public IReadOnlyList<AttributeKind> Raised => Kinds(positive: true);
@@ -84,6 +113,9 @@ public sealed record ItemDefinition(
 
     /// <summary>True si el objeto solo aparece y solo funciona en runs de una raza (ADR 0036).</summary>
     public bool IsRaceExclusive => Archetype == ItemArchetype.Restricted;
+
+    /// <summary>True si el objeto es una reliquia (ADR 0161 §2): fuera del mercado y de las recompensas.</summary>
+    public bool IsRelic => Relic is not null;
 
     private IReadOnlyList<AttributeKind> Kinds(bool positive)
     {

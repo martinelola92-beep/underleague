@@ -1,0 +1,15 @@
+{
+  "_doc": "Reliquia del muro (ADR 0161 S2): la deja en el almacen quien muere habiendo ganado entradas de sobra en la run (RelicSystem.WallTacklesThreshold, RunCareer.TacklesWon). Fuera de mercado y recompensas, igual que las otras tres (relic marca el objeto fuera de items.OfferableTo). Resistencia y fuerza: lo que aguantaba la linea hasta que dejo de hacerlo.",
+  "id": "relic_wall",
+  "name": {
+    "es": "Ladrillo del muro caído",
+    "en": "Fallen Wall's Brick"
+  },
+  "rarity": "uncommon",
+  "archetype": "normal",
+  "relic": "wall",
+  "attributeBonus": {
+    "stamina": 10,
+    "strength": 10
+  }
+}
