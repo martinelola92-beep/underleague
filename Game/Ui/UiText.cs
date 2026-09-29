@@ -713,6 +713,12 @@ public static class UiText
         ["ui.pregon.turba.header"] = "Se hace saber: el árbitro abandona el campo",
         ["ui.pregon.turba.body"] = "¡A la turba! · el próximo gol gana",
 
+        // BA-H, RF-082/085: anuncio del consumible usado (banda sin congelar, igual que la turba) y el
+        // rótulo del botón del tablero una vez gastado.
+        ["ui.pregon.consumable.header"] = "Se hace saber: {0} usa {1}",
+        ["ui.pregon.consumable.body"] = "el efecto se nota en el campo",
+        ["ui.pregon.consumable.usedLabel"] = "{0} · usado",
+
         // --- retransmisión: sellos N1/N2 y voces altas N3/N4 del director (ADR 0119/0120) ---
         ["ui.pregon.stamp.yellow"] = "Amarilla",
         ["ui.pregon.stamp.minorInjury"] = "Tocado",

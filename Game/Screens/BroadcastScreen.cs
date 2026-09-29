@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using Godot;
 using Underleague.Game.Autoload;
+using Underleague.Game.Data;
 using Underleague.Game.Match;
 using Underleague.Game.Ui;
 using Underleague.Game.Ui.Broadcast;
@@ -10,6 +11,7 @@ using Underleague.Sim.Data;
 using Underleague.Sim.Engine;
 using Underleague.Sim.Events;
 using Underleague.Sim.Model;
+using Underleague.Sim.Perks;
 using Underleague.Sim.Run;
 using Underleague.Sim.Run.View;
 
@@ -396,6 +398,7 @@ public partial class BroadcastScreen : Control
         _board.Size = new Vector2(CanvasWidth, BroadcastBoard.DesignHeight);
         _board.SpeedChosen += OnSpeedChosen;
         _board.OrderChosen += OnOrderChosen;
+        _board.ConsumableChosen += OnConsumableChosen;
         _board.PauseToggled += OnPauseToggled;
 
         float x0 = (CanvasWidth - ((7 * 232f) + (6 * 12f) + 24f + 150f)) / 2f;
@@ -856,6 +859,17 @@ public partial class BroadcastScreen : Control
                 ShowMobBand();
                 break;
 
+            case MomentKind.Consumable:
+            {
+                var head = FindHeadEvent(moment);
+                if (head is not null)
+                {
+                    ShowConsumableBand(head);
+                }
+
+                break;
+            }
+
             default:
                 break;
         }
@@ -954,6 +968,25 @@ public partial class BroadcastScreen : Control
 
     private void ShowMobBand() =>
         _band.Show(UiText.Get("ui.pregon.turba.header"), UiText.Get("ui.pregon.turba.body"));
+
+    /// <summary>
+    /// BA-H, RF-082/085: anuncio del consumible usado —manual o condicional, el pregón no distingue
+    /// cómo se activó— con la misma banda sin congelar que la turba (docs/ui/README §4, N3): un
+    /// consumible no detiene el partido, solo se nota en él.
+    /// </summary>
+    private void ShowConsumableBand(MatchEvent used)
+    {
+        bool ours = used.Team == 0;
+        string team = ours ? _playback.OwnName : _playback.RivalName;
+        string name = ConsumableNameOf(used.Detail);
+        _band.Show(
+            UiText.Get("ui.pregon.consumable.header", team, name),
+            UiText.Get("ui.pregon.consumable.body"));
+    }
+
+    /// <summary>Nombre localizado de un consumible por id, o el propio id si la run no trae su catálogo.</summary>
+    private string ConsumableNameOf(string id) =>
+        _run.State?.Equipment.Consumables?.Find(id)?.Name.Es ?? id;
 
     /// <summary>
     /// Primer tiempo de la muerte (docs/ui/README §4): el campo la cuenta con un acercamiento hacia su
@@ -1067,6 +1100,7 @@ public partial class BroadcastScreen : Control
         _board.SetSpeedIndex(_speedIndex);
         _board.SetPaused(_manualPaused);
         _board.SetOrder((int)_run.OrderAt(tick), enabled: CanChangeOrder());
+        _board.SetConsumables(BuildConsumableButtons());
 
         // RF-062: el criterio SIEMPRE visible, leído del Bias del último evento <= este tick (ADR 0158 §6).
         _board.SetBias(BiasAt(tick));
@@ -1652,13 +1686,88 @@ public partial class BroadcastScreen : Control
     }
 
     /// <summary>
-    /// Cuándo se puede cambiar la orden (ADR 0154): con el partido en marcha y sin nada pendiente de
-    /// presentar o decidir. Durante la muerte en dos tiempos el bando y la bandeja esperan su retardo con
-    /// <c>_pendingPoint</c> todavía vacío; un cambio de orden ahí los borraba y el jugador perdía la decisión
-    /// de sustitución (revisión independiente).
+    /// BA-H, RF-082: el jugador pulsa un consumible manual. Mismo camino que la orden táctica —desde el
+    /// tick siguiente al que enseña la pantalla, se vuelve a reproducir el partido con la activación
+    /// dentro y se reanuda desde aquí.
     /// </summary>
-    private bool CanChangeOrder() =>
+    /// <summary>Para el arnés de capturas: lo mismo que pulsar el botón del consumible.</summary>
+    public void ChooseConsumable(string id) => OnConsumableChosen(id);
+
+    private void OnConsumableChosen(string id)
+    {
+        if (_trace is not { FrameCount: > 0 } trace || !CanUseConsumable(id))
+        {
+            return;
+        }
+
+        int tick = trace.TickAt(Mathf.Clamp(_frame, 0, trace.FrameCount - 1)) + 1;
+        _run.UseConsumable(id, tick);
+        AfterDecision(tick, alreadyShown: false);
+    }
+
+    /// <summary>
+    /// Cuándo se puede decidir algo en vivo (ADR 0154, BA-H): con el partido en marcha y sin nada
+    /// pendiente de presentar o decidir. Durante la muerte en dos tiempos el bando y la bandeja esperan su
+    /// retardo con <c>_pendingPoint</c> todavía vacío; decidir algo ahí los borraba y el jugador perdía la
+    /// decisión de sustitución (revisión independiente). Comparten esta condición la orden táctica y el
+    /// consumible manual: las dos son "el jugador interviene ahora mismo en el partido en marcha".
+    /// </summary>
+    private bool CanActNow() =>
         !_matchEnded && _pendingPoint is null && _pendingDeathEvent is null && !_deathTrayPending && !_frozenLastFrame;
+
+    private bool CanChangeOrder() => CanActNow();
+
+    /// <summary>BA-H, RF-082: además de <see cref="CanActNow"/>, que no se haya pulsado ya —se consume al usarse (RF-085).</summary>
+    private bool CanUseConsumable(string id) => CanActNow() && !ConsumableAlreadyUsed(id);
+
+    private bool ConsumableAlreadyUsed(string id)
+    {
+        var activations = _run.Decisions.ManualActivations;
+        for (int i = 0; i < activations.Count; i++)
+        {
+            if (string.Equals(activations[i].ConsumableId, id, StringComparison.Ordinal))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /// <summary>
+    /// BA-H, RF-082: los botones del tablero, uno por consumible MANUAL equipado por el jugador
+    /// (<see cref="TeamSetup.Consumables"/> del equipo local, W-15 "el jugador es local"). Los
+    /// condicionales (RF-081) no llevan botón: se disparan solos.
+    /// </summary>
+    private IReadOnlyList<BroadcastBoard.ConsumableButtonInfo> BuildConsumableButtons()
+    {
+        var equipped = _playback.Setup.Home.Consumables;
+        if (equipped.Count == 0)
+        {
+            return Array.Empty<BroadcastBoard.ConsumableButtonInfo>();
+        }
+
+        List<BroadcastBoard.ConsumableButtonInfo>? result = null;
+        for (int i = 0; i < equipped.Count; i++)
+        {
+            var consumable = equipped[i];
+            if (consumable.Trigger != ConsumableTrigger.Manual)
+            {
+                continue;
+            }
+
+            result ??= new List<BroadcastBoard.ConsumableButtonInfo>();
+            var definition = _run.State?.Equipment.Consumables?.Find(consumable.Id);
+            string shortName = definition?.Name.Es ?? consumable.Id;
+            string tooltip = definition is null
+                ? string.Empty
+                : DescriptionGenerator.DescribeEffects(definition.Effects, _catalog.Localization.Get(GameData.Language));
+            bool used = ConsumableAlreadyUsed(consumable.Id);
+            result.Add(new BroadcastBoard.ConsumableButtonInfo(consumable.Id, shortName, tooltip, used, !used && CanActNow()));
+        }
+
+        return (IReadOnlyList<BroadcastBoard.ConsumableButtonInfo>?)result ?? Array.Empty<BroadcastBoard.ConsumableButtonInfo>();
+    }
 
     private void OnSpeedChosen(int index)
     {

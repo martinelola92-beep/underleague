@@ -600,6 +600,9 @@ public partial class BroadcastCapture : Control
         // ofensiva pulsada diez segundos antes: lo único que cambia entre las dos imágenes es la orden.
         await CaptureOrder(run, baseSeed.Value, baseNode);
 
+        // BA-H, RF-082: el botón del consumible manual, antes y después de pulsarlo.
+        await CaptureConsumable(run, baseSeed.Value, baseNode);
+
         // ADR 0151: la cortinilla del reinicio tras gol, fotografiada EN MARCHA. SeekTo la anula a
         // propósito (un salto no es reproducción), así que se llega dos fotogramas antes del reinicio y se
         // deja correr la pantalla con StepManual, que es determinista, parando en cada tramo del fundido.
@@ -1019,6 +1022,39 @@ public partial class BroadcastCapture : Control
             await Save(name);
             Drop(instance);
         }
+    }
+
+    /// <summary>
+    /// BA-H, RF-082: el botón del consumible manual en el tablero, antes y después de pulsarlo —lo único
+    /// que cambia entre las dos imágenes es el uso, igual que <see cref="CaptureOrder"/> con la orden.
+    /// El vendaje de campaña ya existía en el catálogo antes de este paquete, así que sirve para
+    /// cualquier semilla sin depender de los 16 consumibles nuevos.
+    /// </summary>
+    private async Task CaptureConsumable(RunController run, ulong seed, int node)
+    {
+        const int From = 600;
+        const int After = 90;
+        const string ConsumableId = "field_bandage";
+
+        run.NewRun("orc_ironworks", Race.Orc, seed);
+        run.Apply(new SetConsumables(new[] { new EquippedConsumable(ConsumableId, ConsumableMode.Manual, string.Empty) }));
+        run.SelectedNodeId = node;
+        var instance = await Show("res://Scenes/Retransmision.tscn", frames: 10);
+        if (instance is not BroadcastScreen screen)
+        {
+            Drop(instance);
+            return;
+        }
+
+        await ShowFrame(screen, From, "consumible-1-boton");
+        GD.Print($"retransmisión: 'consumible-1-boton' fotograma {screen.Pitch3D.Frame}");
+        await Save("consumible-1-boton");
+
+        screen.ChooseConsumable(ConsumableId);
+        await ShowFrame(screen, From + After, "consumible-2-usado");
+        GD.Print($"retransmisión: 'consumible-2-usado' fotograma {screen.Pitch3D.Frame}");
+        await Save("consumible-2-usado");
+        Drop(instance);
     }
 
     private async Task CaptureResetCut(RunController run, ulong seed, int node, int goalFrame)

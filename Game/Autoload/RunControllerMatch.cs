@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using Underleague.Sim.Engine;
 using Underleague.Sim.Model;
 using Underleague.Sim.Run;
+using Underleague.Sim.Run.Systems.Consumables;
 using Underleague.Sim.Run.View;
 
 namespace Underleague.Game.Autoload;
@@ -145,6 +146,33 @@ public partial class RunController
         }
 
         return order;
+    }
+
+    /// <summary>
+    /// BA-H, RF-082: el jugador pulsa un consumible manual en el tick <paramref name="tick"/>. Mismo
+    /// patrón que <see cref="ChangeOrder"/> (ADR 0154): se vuelve a reproducir el partido con la
+    /// activación dentro del estado inicial (<c>docs/arquitectura.md</c>, "Consumibles manuales durante
+    /// el partido"), así que lo anterior al tick no cambia y la reproducción y lo que se aplica de verdad
+    /// son el mismo partido (RT-013, RT-024, RT-061).
+    ///
+    /// <para>Si <paramref name="id"/> ya tenía una activación previa, la reemplaza en vez de añadir una
+    /// segunda: un consumible se resuelve una sola vez por partido (RF-085) y "pulsarlo otra vez" solo
+    /// tiene sentido como "quise decir ahora, no antes" — nunca como dos usos.</para>
+    /// </summary>
+    public void UseConsumable(string id, int tick)
+    {
+        ArgumentException.ThrowIfNullOrEmpty(id);
+        var activations = new List<ManualActivation>();
+        foreach (var activation in Decisions.ManualActivations)
+        {
+            if (!string.Equals(activation.ConsumableId, id, StringComparison.Ordinal))
+            {
+                activations.Add(activation);
+            }
+        }
+
+        activations.Add(new ManualActivation(id, tick));
+        Answer(Decisions with { ManualActivations = activations });
     }
 
     /// <summary>

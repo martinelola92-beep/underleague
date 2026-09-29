@@ -29,6 +29,10 @@ public partial class BroadcastBoard : Control
     [Signal]
     public delegate void OrderChosenEventHandler(int index);
 
+    /// <summary>BA-H, RF-082: el jugador pulsa el consumible manual <c>id</c>.</summary>
+    [Signal]
+    public delegate void ConsumableChosenEventHandler(string id);
+
     private string _own = string.Empty;
     private string _rival = string.Empty;
     private int _ownScore;
@@ -53,6 +57,17 @@ public partial class BroadcastBoard : Control
     private readonly Rect2[] _orderButtons = new Rect2[3];
     private int _orderIndex = 1;
     private bool _orderEnabled = true;
+
+    /// <summary>
+    /// BA-H, RF-082: un consumible manual equipado, listo para pulsar. <see cref="Used"/> y
+    /// <see cref="Enabled"/> son independientes a propósito —el botón se apaga por las dos razones
+    /// (RF-085 "se consumen al usarse" y las mismas condiciones que la orden táctica: partido en marcha,
+    /// nada pendiente de decidir)— para que el tablero pueda distinguirlas en el rótulo.
+    /// </summary>
+    public readonly record struct ConsumableButtonInfo(string Id, string ShortName, string Tooltip, bool Used, bool Enabled);
+
+    private IReadOnlyList<ConsumableButtonInfo> _consumables = System.Array.Empty<ConsumableButtonInfo>();
+    private Rect2[] _consumableButtons = System.Array.Empty<Rect2>();
 
     public override void _Ready()
     {
@@ -134,6 +149,17 @@ public partial class BroadcastBoard : Control
         QueueRedraw();
     }
 
+    /// <summary>
+    /// BA-H, RF-082: los consumibles manuales equipados, en el orden en que se resolverían si dos se
+    /// dispararan a la vez (mismo orden que <c>RunEquipment.ForMatch</c>). Vacío si no hay ninguno —el
+    /// tablero no reserva sitio si no hay nada que pulsar.
+    /// </summary>
+    public void SetConsumables(IReadOnlyList<ConsumableButtonInfo> consumables)
+    {
+        _consumables = consumables;
+        QueueRedraw();
+    }
+
     /// <summary>Criterio actual del árbitro, −100..100 (RF-062): el medidor siempre visible del tablero.</summary>
     public void SetBias(int bias)
     {
@@ -187,6 +213,34 @@ public partial class BroadcastBoard : Control
                 return;
             }
         }
+
+        for (int i = 0; i < _consumableButtons.Length; i++)
+        {
+            if (_consumables[i].Enabled && _consumableButtons[i].HasPoint(button.Position))
+            {
+                EmitSignal(SignalName.ConsumableChosen, _consumables[i].Id);
+                AcceptEvent();
+                return;
+            }
+        }
+    }
+
+    /// <summary>
+    /// Tooltip por posición (BA-H): el nombre corto del consumible ya lo dice el rótulo del botón, así
+    /// que aquí va su descripción generada (RT-035) — la única forma de leerla entera sin abrir la
+    /// pantalla de Equipo. Vacío fuera de un botón, para no tapar nada del resto del tablero.
+    /// </summary>
+    public override string _GetTooltip(Vector2 atPosition)
+    {
+        for (int i = 0; i < _consumableButtons.Length; i++)
+        {
+            if (_consumableButtons[i].HasPoint(atPosition))
+            {
+                return _consumables[i].Tooltip;
+            }
+        }
+
+        return string.Empty;
     }
 
     public override void _Draw()
@@ -243,6 +297,7 @@ public partial class BroadcastBoard : Control
 
         DrawSpeedButtons(w);
         DrawOrderButtons();
+        DrawConsumableButtons();
 
         // Criterio del árbitro (RF-062, RF-063, ADR 0158 §6): en el hueco entre la orden táctica y el
         // bloque de equipos -328 a blockX-, siempre a la vista, nunca un anuncio del director.
@@ -349,6 +404,42 @@ public partial class BroadcastBoard : Control
 
             Pregon.DrawParchment(this, new Vector2(x, 14f), bw, bh, fill, Pregon.Sable, seed: 30 + i, amplitude: 1.2f, edgeWidth: 2f);
             Style.DrawText(this, Pregon.DataBold, new Vector2(x + 10f, 14f + 12f), labels[i], Pregon.SizeDataSmall, active ? Pregon.Sable : Pregon.Vellum, maxWidth: bw - 20f);
+            x += bw + gap;
+        }
+    }
+
+    /// <summary>
+    /// BA-H, RF-082: los consumibles manuales equipados, debajo de la botonera de orden (mismo bloque
+    /// izquierdo, misma anchura). Como mucho tres —RF-080, el máximo de slots equipados— aunque la
+    /// pantalla de Equipo hoy limita a uno solo a la vez (invariante de <c>ConsumablesPanel</c>, no de
+    /// <c>/Sim</c>). El botón dorado hasta que se pulsa; ya usado o sin poder pulsarlo ahora, apagado.
+    /// </summary>
+    private void DrawConsumableButtons()
+    {
+        if (_consumableButtons.Length != _consumables.Count)
+        {
+            _consumableButtons = new Rect2[_consumables.Count];
+        }
+
+        if (_consumables.Count == 0)
+        {
+            return;
+        }
+
+        // El nombre tiene que caber entero: un consumible cortado a «Venda…» no se reconoce (revisión de
+        // capturas). Usado, sigue diciendo cuál era.
+        float bw = 270f, bh = 34f, gap = 8f;
+        float x = 24f;
+        const float Y = 64f;
+        for (int i = 0; i < _consumables.Count; i++)
+        {
+            var info = _consumables[i];
+            _consumableButtons[i] = new Rect2(x, Y, bw, bh);
+            var fill = info.Used ? new Color("4a3321").Darkened(0.5f) : info.Enabled ? Pregon.Or : new Color("4a3321").Darkened(0.35f);
+            Pregon.DrawParchment(this, new Vector2(x, Y), bw, bh, fill, Pregon.Sable, seed: 50 + i, amplitude: 1.2f, edgeWidth: 2f);
+            string label = info.Used ? UiText.Get("ui.pregon.consumable.usedLabel", info.ShortName) : info.ShortName;
+            var textColor = info.Used ? Pregon.Vellum.Darkened(0.3f) : info.Enabled ? Pregon.Sable : Pregon.Vellum;
+            Pregon.DrawTextEllipsized(this, Pregon.DataBold, new Vector2(x + 10f, Y + 5f), label, Pregon.SizeDataSmall, textColor, bw - 16f);
             x += bw + gap;
         }
     }
