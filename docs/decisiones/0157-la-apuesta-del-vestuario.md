@@ -234,6 +234,51 @@ alcanza (sesgo de supervivencia: d4 y d5 son élites y jefes de los actos 2-3).
 `three_names` 0,40 %, `youth_decides` 1,06 % y `short_and_clean` 0,01 % (3 aciertos en 33.325 partidos), todas
 con cuota en el tope 2.000 % y retorno esperado a ciegas de ~8 %.
 
+## Censo tras la revisión independiente (29 sep 2026. tercera medición)
+
+Repetido con las correcciones de la revisión (la estrella de `hunt_the_star` es un jugador de campo. las
+muertes cuentan como lesión en las condiciones. cobro redondeado). `Balance --bet-census 1200` con las
+semillas 1 y 7. sumadas: 33.211 partidos (10.434 / 9.550 / 9.392 / 2.806 / 1.029 por dificultad 1-5).
+Frecuencia en % y. entre paréntesis. la cuota resultante `85/p` con tope 2.000 %. Son las cifras que lleva
+`data/bets/bets.json`. **La sección «Censo (segunda medición)» de arriba queda superada**: su
+`hunt_the_star` medía una mezcla con porteros (0.49 % contra el jefe final; ahora 8.65 %).
+
+| apuesta | d1 | d2 | d3 | d4 | d5 |
+|---|---|---|---|---|---|
+| `blood_before_goals` | 14,38 (591 %) | 38,03 (223 %) | 49,49 (172 %) | 61,48 (138 %) | 50,92 (167 %) |
+| `clean_hands` | 13,05 (651 %) | 23,28 (365 %) | 21,94 (387 %) | 22,77 (373 %) | 16,62 (511 %) |
+| `comeback` | 6,25 (1360 %) | 6,70 (1268 %) | 7,20 (1181 %) | 6,81 (1249 %) | 4,66 (1822 %) |
+| `eye_for_eye` | 1,03 (2000 %) | 8,77 (969 %) | 13,04 (652 %) | 19,00 (447 %) | 9,62 (883 %) |
+| `hunt_the_star` | 6,60 (1287 %) | 13,06 (651 %) | 15,98 (532 %) | 17,78 (478 %) | 8,65 (983 %) |
+| `into_the_mob` | 17,09 (497 %) | 19,98 (425 %) | 18,38 (463 %) | 15,07 (564 %) | 13,31 (638 %) |
+| `referee_blind` | 4,77 (1781 %) | 4,10 (2000 %) | 4,07 (2000 %) | 3,96 (2000 %) | 3,11 (2000 %) |
+| `split_the_goals` | 10,74 (791 %) | 8,35 (1019 %) | 6,94 (1224 %) | 8,87 (958 %) | 5,64 (1508 %) |
+| `thrashing` | 11,11 (765 %) | 7,31 (1163 %) | 4,58 (1857 %) | 4,81 (1767 %) | 2,92 (2000 %) |
+| `youth_decides` | 0,00 (2000 %) | 0,77 (2000 %) | 1,80 (2000 %) | 2,71 (2000 %) | 6,03 (1411 %) |
+
+Con la regla de no ofrecer si p < 2 %: `eye_for_eye` y `youth_decides` en d1, y `youth_decides` en d2-d3,
+no se ofrecen. `referee_blind` y `youth_decides` quedan topadas en 2.000 % en casi todas las dificultades:
+su esperanza a ciegas es menor que el 85 % del resto.
+
+## Revisión independiente (29 sep 2026)
+
+**Corregido:** la estrella de `hunt_the_star` era el portero entre el 20 y el 40 % de las veces (100 %
+contra el jefe final) por desempatar por id menor (Regla J); las condiciones ignoraban las muertes sin
+`INJURY`; el cobro truncaba (esperanza 0,73-0,83 en vez de 0,85); una apuesta tomada podía resguardar oro
+de los eventos que gravan un porcentaje (ahora se devuelve, registrada, al entrar en cualquier otro nodo, y
+sólo se retira en el mapa); `into_the_mob` decía «gol de oro» y contaba también el desempate; la
+estrella nunca es el portero; `IRunSystems.Bets` ya no tiene implementación por defecto (un envoltorio que
+no la reenvíe no compila).
+
+**Nota de diseño:** elegir **qué** apuesta tomar con la información visible (el árbitro, los canteranos, lo
+igualado del partido) es una decisión legítima del jugador y puede darle esperanza positiva. Lo que no se
+admite es un resquicio sin decisión, como el del portero.
+
+**Anotado sin corregir:** la doctrina `Prepared` no está medida; el censo usa la población de la política
+automática, que casi no ficha canteranos, así que la regla del 2 % oculta `youth_decides` en d1-d3 por la
+política y no por el diseño; Blind contra Never no se ha repetido tras las correcciones; la apuesta fija
+3/4/5 sigue provisional.
+
 ## Implementación del paso 3 (29 sep 2026)
 
 - **Estado.** `RunState.Bet` (`AcceptedBet`: id de apuesta, nodo, cantidad, cobro %, jugador nombrado y su
