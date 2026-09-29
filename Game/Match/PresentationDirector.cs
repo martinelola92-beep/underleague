@@ -19,6 +19,9 @@ namespace Underleague.Game.Match;
 /// <param name="N4CompressedX4">Duración de la N4 comprimida a x4.</param>
 /// <param name="N4CompressedX16">Duración de la N4 comprimida a x16.</param>
 /// <param name="VoiceExpiry">Cuánto puede esperar en la cola una voz alta que no pausa antes de descartarse.</param>
+/// <param name="FateSlowScale">Escala de tiempo de la reproducción durante la cámara lenta de la tirada del destino (ADR 0171): 0,5 = a mitad de velocidad.</param>
+/// <param name="Fate">Duración de la voz de la tirada del destino a 1×: la cámara lenta y, tras ella, lo que dura el resultado en pantalla.</param>
+/// <param name="FateCompressed">Duración de la voz de la tirada del destino a x4 (sin cámara lenta).</param>
 public sealed record DirectorTimings(
     double N1,
     double N2,
@@ -28,7 +31,10 @@ public sealed record DirectorTimings(
     double GoalCompressed,
     double N4CompressedX4,
     double N4CompressedX16,
-    double VoiceExpiry)
+    double VoiceExpiry,
+    double FateSlowScale,
+    double Fate,
+    double FateCompressed)
 {
     /// <summary>Los valores provisionales del encargo (docs/ui/README.md §4/§6).</summary>
     public static DirectorTimings Default { get; } = new(
@@ -40,7 +46,13 @@ public sealed record DirectorTimings(
         GoalCompressed: 1.0,
         N4CompressedX4: 1.5,
         N4CompressedX16: 1.0,
-        VoiceExpiry: 1.5);
+        VoiceExpiry: 1.5,
+        FateSlowScale: 0.5,
+
+        // Cámara lenta (los fotogramas de adelanto de la tirada, a 15/s, a la escala de arriba: ~1,07 s reales)
+        // más 1,5 s de resultado en pantalla. Provisional, como el resto: es ritmo, no balance (ADR 0171).
+        Fate: (MatchMomentView.FateLeadFrames / 15d / 0.5) + 1.5,
+        FateCompressed: 1.2);
 }
 
 /// <summary>
@@ -58,6 +70,10 @@ public sealed record DirectorTimings(
 /// Hay una decisión de sustitución (ADR 0094) congelando la reproducción hasta que la pantalla llame a
 /// <see cref="PresentationDirector.Resolve"/> tras jugar la elección del jugador.
 /// </param>
+/// <param name="TimeScale">
+/// Qué fracción de la velocidad normal debe avanzar el reloj de reproducción de la pantalla (1 = normal).
+/// Es la cámara lenta de la tirada del destino (ADR 0171); el director sólo la pide, la pantalla la aplica.
+/// </param>
 public sealed record DirectorFrame(
     bool Frozen,
     int DisplayFrame,
@@ -65,7 +81,8 @@ public sealed record DirectorFrame(
     float VoiceProgress,
     MatchMoment? Stamp,
     float StampProgress,
-    bool AwaitingDecision);
+    bool AwaitingDecision,
+    double TimeScale = 1d);
 
 /// <summary>
 /// Director de presentación de la retransmisión (ADR 0119 «En <c>/Game</c>»): recibe los momentos ya
@@ -94,6 +111,7 @@ public sealed class PresentationDirector
     private MatchMoment? _voice;
     private double _voiceElapsed;
     private double _voiceDuration;
+    private bool _voiceCompressed;
     private readonly List<QueuedVoice> _voiceQueue = new();
 
     private bool _frozen;
@@ -283,6 +301,7 @@ public sealed class PresentationDirector
     {
         _voice = moment;
         _voiceElapsed = 0d;
+        _voiceCompressed = presentation.Compressed;
         _voiceDuration = VoiceDuration(moment, presentation, speed);
     }
 
@@ -317,6 +336,7 @@ public sealed class PresentationDirector
 
             _voice = next.Moment;
             _voiceElapsed = 0d;
+            _voiceCompressed = presentation.Compressed;
             _voiceDuration = VoiceDuration(next.Moment, presentation, _lastSpeed);
         }
     }
@@ -362,6 +382,12 @@ public sealed class PresentationDirector
     /// </summary>
     private double VoiceDuration(MatchMoment moment, MomentPresentation presentation, int speed)
     {
+        // ADR 0171: la tirada del destino tiene su propio ritmo (cámara lenta + resultado); nunca es N4 ni gol.
+        if (moment.Kind == MomentKind.Fate)
+        {
+            return presentation.Compressed ? _timings.FateCompressed : _timings.Fate;
+        }
+
         if (moment.Level >= 4)
         {
             return presentation.Compressed
@@ -385,7 +411,13 @@ public sealed class PresentationDirector
         float stampProgress = _stamp is null || _stampDuration <= 0d
             ? 0f
             : (float)Math.Clamp(_stampElapsed / _stampDuration, 0d, 1d);
-        return new DirectorFrame(frozen, displayFrame, _voice, voiceProgress, _stamp, stampProgress, _awaitingDecision);
+
+        // ADR 0171: la cámara lenta dura hasta el fotograma de la tirada, y sólo si la voz de la tirada se
+        // presenta completa (a x4 va comprimida y no frena nada). Congelado no hay reloj que escalar.
+        double timeScale = !frozen && _voice is { Kind: MomentKind.Fate } fate && !_voiceCompressed && displayFrame < fate.LastFrame
+            ? _timings.FateSlowScale
+            : 1d;
+        return new DirectorFrame(frozen, displayFrame, _voice, voiceProgress, _stamp, stampProgress, _awaitingDecision, timeScale);
     }
 
     private sealed record QueuedVoice(MatchMoment Moment, double Waited);

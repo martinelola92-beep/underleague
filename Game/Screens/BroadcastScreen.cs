@@ -108,6 +108,9 @@ public partial class BroadcastScreen : Control
     private int _speedIndex;
     private bool _manualPaused;
     private bool _frozenLastFrame;
+
+    /// <summary>La escala de tiempo que el director pidió en el último fotograma (ADR 0171, cámara lenta); 1 = normal.</summary>
+    private double _timeScale = 1d;
     private bool _matchEnded;
     private int _synced = -1;
 
@@ -247,7 +250,7 @@ public partial class BroadcastScreen : Control
         int candidate = _frame;
         if (!_frozenLastFrame)
         {
-            _carry += delta * TicksPerSecond * Speeds[_speedIndex];
+            _carry += delta * TicksPerSecond * Speeds[_speedIndex] * _timeScale;
             int advance = (int)_carry;
             if (advance > 0)
             {
@@ -268,10 +271,12 @@ public partial class BroadcastScreen : Control
 
         var result = _director.Advance(candidate, delta, Speeds[_speedIndex]);
         _frozenLastFrame = result.Frozen;
+        _timeScale = result.TimeScale;
         _frame = Mathf.Clamp(result.DisplayFrame, 0, trace.FrameCount - 1);
         _residueMoment = result.Frozen ? result.Voice : null;
 
         ApplyPresentation(result);
+        UpdateFateBand(result);
 
         // Muerte, dos tiempos (docs/ui/README §4): si el bando quedó pendiente de su retardo, la bandeja
         // se abre cuando toque (UpdateDeathEdict más abajo), no aquí — el campo cuenta la muerte primero.
@@ -990,6 +995,58 @@ public partial class BroadcastScreen : Control
         }
     }
 
+    /// <summary>
+    /// ADR 0171, la tirada del destino: la banda de pregón con el porcentaje que trae el motor (RT-014: aquí no
+    /// se calcula nada, sólo se lee el <c>Detail</c> de <c>FATE_ROLL</c>) y el sello que gira. Se repinta cada
+    /// fotograma mientras la voz es la de la tirada: rueda hasta el fotograma de la tirada y entonces enseña el
+    /// resultado. A x4 (comprimida, sin cámara lenta) enseña el resultado de golpe: la información no se quita.
+    /// </summary>
+    private void UpdateFateBand(DirectorFrame result)
+    {
+        if (_matchEnded || result.Voice is not { Kind: MomentKind.Fate } moment)
+        {
+            return;
+        }
+
+        var roll = FindHeadEvent(moment);
+        var parts = roll?.Detail.Split(':');
+        if (roll is null || parts is not { Length: 3 } || !int.TryParse(parts[1], NumberStyles.Integer, CultureInfo.InvariantCulture, out int basisPoints))
+        {
+            return;
+        }
+
+        bool lethal = parts[0] == "death";
+        bool hit = parts[2] == "hit";
+        string percent = ((basisPoints + 50) / 100).ToString(CultureInfo.InvariantCulture);
+        string victim = NameOf(roll.Actor);
+        bool hasRoller = roll.Opponent >= 0;
+        string roller = hasRoller ? NameOf(roll.Opponent) : string.Empty;
+        string announce = UiText.Get(
+            "ui.pregon.fate." + (lethal ? "death" : "severe") + (hasRoller ? string.Empty : "Nobody"),
+            roller,
+            victim,
+            percent);
+
+        bool rolling = Speeds[_speedIndex] == 1 && result.DisplayFrame < moment.LastFrame;
+        if (rolling)
+        {
+            float span = Math.Max(moment.LastFrame - moment.Frame, 1);
+            float spin = (result.DisplayFrame - moment.Frame) / span;
+            _band.ShowFate(UiText.Get("ui.pregon.fate.header"), announce, percent + " %", spin, ProclamationBand.FateOutcome.Rolling);
+            return;
+        }
+
+        string headline = !hit
+            ? UiText.Get("ui.pregon.fate.saved")
+            : UiText.Get(lethal ? "ui.pregon.fate.hitDeath" : "ui.pregon.fate.hitSevere");
+        _band.ShowFate(
+            headline,
+            announce,
+            percent + " %",
+            1f,
+            hit ? ProclamationBand.FateOutcome.Hit : ProclamationBand.FateOutcome.Saved);
+    }
+
     private void ShowMobBand()
     {
         // ADR 0167: el pregón dice qué turba es, la misma que anunció el ojeo.
@@ -1684,6 +1741,7 @@ public partial class BroadcastScreen : Control
         MomentKind.RefereeLeaves => type == EventType.RefereeLeaves,
         MomentKind.Death => type == EventType.Death,
         MomentKind.FullTime => type == EventType.MatchEnd,
+        MomentKind.Fate => type == EventType.FateRoll,
         _ => false,
     };
 
