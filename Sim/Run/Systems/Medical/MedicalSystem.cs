@@ -244,6 +244,14 @@ public static class MedicalSystem
                 nameof(decision));
         }
 
+        if (player.Id >= BlacksmithStreamSpan)
+        {
+            // OfferStream numera nodeId * 10_000 + desplazamiento: con 9000 + id, un id >= 1000 caería en el
+            // flujo del nodo siguiente y dejaría de ser independiente (RT-022).
+            throw new InvalidOperationException(
+                $"el jugador {player.Id} tiene un id demasiado alto para el flujo del herrero (< {BlacksmithStreamSpan}, ADR 0164)");
+        }
+
         var odds = BlacksmithOddsFor(economy, decision.ExtraGold);
         int cost = BlacksmithBasePrice(economy) + decision.ExtraGold;
         if (state.Gold < cost)
@@ -270,6 +278,9 @@ public static class MedicalSystem
 
     /// <summary>Desplazamiento de <see cref="OfferStream"/> del herrero; se le suma el id del jugador (tabla en <see cref="OfferStream"/>).</summary>
     public const int BlacksmithStreamBase = 9000;
+
+    /// <summary>Ids de jugador que caben en el flujo del herrero: <c>OfferStream</c> suma <c>nodeId * 10_000</c>, así que <c>9000 + id</c> debe quedarse por debajo de 10_000.</summary>
+    public const int BlacksmithStreamSpan = 10_000 - BlacksmithStreamBase;
 
     /// <summary>Prótesis que hacen falta para que el jugador gane la etiqueta <c>Automaton</c> (RF-095c).</summary>
     public const int ProsthesesForAutomaton = 3;

@@ -200,6 +200,35 @@ public sealed class TrainingTests
     }
 
     /// <summary>Tras un cambio de puesto la run sigue jugando: el partido siguiente se resuelve sin excepción.</summary>
+    /// <summary>ADR 0164: el cambio de puesto no toca las prótesis ni sus etiquetas (Chatarra, Autómata).</summary>
+    [Fact]
+    public void RepositionKeepsProsthesesAndTheirTags()
+    {
+        var (state, index) = AtATrainingNodeWithReposition(9103UL);
+        var prostheses = SystemsTestSupport.Systems.Prostheses;
+        var target = state.Roster.First(p => p.IsAvailable && p.Position != Position.Goalkeeper) with
+        {
+            Level = 4,
+            Experience = ProgressionRules.MinExperienceForLevel(4, Catalog.Progression),
+            Perks = Array.Empty<string>(),
+        };
+        foreach (string id in new[] { "iron_arm", "peg_leg", "glass_eye" })
+        {
+            target = Underleague.Sim.Run.Systems.Medical.MedicalSystem.Install(target, prostheses.Find(id)!);
+        }
+
+        state = state.WithPlayer(target);
+        var destination = target.Position == Position.Defender ? Position.Midfielder : Position.Defender;
+        var after = TrainingSystem.Choose(
+            state, new ChooseTrainingSession(index, target.Id, destination), SystemsTestSupport.Systems.Economy, Catalog);
+        var updated = after.GetPlayer(target.Id);
+        Assert.Equal(destination, updated.Position);
+        Assert.Equal(target.Prostheses, updated.Prostheses);
+        Assert.Contains(Underleague.Sim.Run.Systems.Medical.MedicalSystem.ScrapTag, updated.Tags);
+        Assert.Contains(Underleague.Sim.Run.Systems.Medical.MedicalSystem.AutomatonTag, updated.Tags);
+        Assert.Contains(target.SpeciesTag, updated.Tags);
+    }
+
     [Fact]
     public void AMatchCanBePlayedAfterARepositionOfAStarter()
     {

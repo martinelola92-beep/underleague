@@ -77,10 +77,35 @@ public sealed class RunPolicyBlacksmithTests
         var bosses = Underleague.Sim.Run.Bosses.BossCatalog.FromJson(files);
         int forged = 0;
         int installed = 0;
+        var seen = new Dictionary<int, IReadOnlyList<RunProsthesis>>();
+        void Watch(RunState before, MapNode node, MatchSetup setup, Underleague.Sim.Engine.MatchResult result, RunMatchSummary summary)
+        {
+            // Las prótesis nunca se pierden por jugar (subidas de nivel, lesiones, sustituciones): solo crecen.
+            foreach (var player in before.Roster)
+            {
+                if (seen.TryGetValue(player.Id, out var earlier))
+                {
+                    Assert.True(
+                        player.Prostheses.Take(earlier.Count).SequenceEqual(earlier) && player.Prostheses.Count >= earlier.Count,
+                        $"el jugador {player.Id} ha perdido prótesis");
+                }
+
+                if (player.Prostheses.Count > 0)
+                {
+                    Assert.Contains(MedicalSystem.ScrapTag, player.Tags);
+                    Assert.Contains(player.SpeciesTag, player.Tags);
+                    Assert.Equal(player.Prostheses.Count >= MedicalSystem.ProsthesesForAutomaton, player.Tags.Contains(MedicalSystem.AutomatonTag));
+                }
+
+                seen[player.Id] = player.Prostheses;
+            }
+        }
+
         for (ulong seed = 1; seed <= 40; seed++)
         {
+            seen.Clear();
             var setup = Systems.NewRunSetup("blacksmith_club", Race.Human, files) with { GeneratedQuality = 50 };
-            var result = RunPolicy.Play(setup, seed, SystemsTestSupport.Catalog, Systems, bosses);
+            var result = RunPolicy.Play(setup, seed, SystemsTestSupport.Catalog, Systems, bosses, null, Watch);
             forged += result.BlacksmithTreatments;
             installed += result.ProsthesesInstalled;
         }

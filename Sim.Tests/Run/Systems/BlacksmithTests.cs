@@ -380,14 +380,62 @@ public sealed class BlacksmithTests
     }
 
     [Fact]
-    public void ForgeIsDeterministic()
+    public void ForgeDrawsFromItsOwnOfferStreamAndNothingElse()
     {
-        var (state, patient) = ClinicWithSevere(99);
-        var a = Forge(state, patient.Id, 2).GetPlayer(patient.Id);
-        var b = Forge(state, patient.Id, 2).GetPlayer(patient.Id);
-        Assert.Equal(a.Prostheses, b.Prostheses);
-        Assert.Equal(a.Attributes, b.Attributes);
-        Assert.Equal(a.Tags, b.Tags);
+        // La tirada se reproduce a mano con el flujo documentado (OfferStream, nodo + 9000 + jugador, RT-022) y
+        // tiene que coincidir con lo que sale de Forge: si alguien la cambiase al flujo del partido, o le metiese
+        // otro estado, este test lo vería. Antes había un test que comparaba Forge consigo mismo.
+        int cures = 0;
+        int improves = 0;
+        int worsens = 0;
+        for (ulong seed = 1; seed <= 60; seed++)
+        {
+            var (state, patient) = ClinicWithSevere(seed);
+            var node = state.GetNode(state.PendingNodeId);
+            var rng = Underleague.Sim.Run.Systems.OfferStream.For(state.Seed, node.Id, MedicalSystem.BlacksmithStreamBase + patient.Id);
+            int roll = rng.Range(0, 100);
+            var odds = MedicalSystem.BlacksmithOddsFor(Economy, 2);
+            var after = Forge(state, patient.Id, 2).GetPlayer(patient.Id);
+            if (roll < odds.CurePercent)
+            {
+                cures++;
+                Assert.Empty(after.Prostheses);
+                continue;
+            }
+
+            var kind = roll < odds.CurePercent + odds.ImprovePercent ? ProsthesisKind.Improve : ProsthesisKind.Worsen;
+            var candidates = Prostheses.Candidates(kind, MedicalSystem.OccupiedSlots(patient));
+            string expected = candidates[rng.Range(0, candidates.Count)].Id;
+            Assert.Equal(expected, Assert.Single(after.Prostheses).Effect);
+            _ = kind == ProsthesisKind.Improve ? improves++ : worsens++;
+        }
+
+        Assert.True(cures > 0 && improves > 0 && worsens > 0, $"la muestra debe ver los tres desenlaces ({cures}/{improves}/{worsens})");
+    }
+
+    [Fact]
+    public void ForgeOfOnePlayerDoesNotDependOnForgingAnotherFirst()
+    {
+        var (state, first) = ClinicWithSevere(21);
+        var second = state.Roster[3] with { PhysicalState = PhysicalState.SevereInjury };
+        state = state.WithPlayer(second);
+        var alone = Forge(state, second.Id, 1).GetPlayer(second.Id);
+        var afterFirst = Forge(state, first.Id, 1);
+        var second2 = afterFirst.GetPlayer(second.Id);
+        Assert.Equal(PhysicalState.SevereInjury, second2.PhysicalState);
+        var both = Forge(afterFirst, second.Id, 1).GetPlayer(second.Id);
+        Assert.Equal(alone.Prostheses, both.Prostheses);
+        Assert.Equal(alone.Attributes, both.Attributes);
+    }
+
+    [Fact]
+    public void AnIdTooHighForTheStreamIsRefused()
+    {
+        // 9000 + id llegaría al flujo del nodo siguiente con id >= 1000.
+        var (state, patient) = ClinicWithSevere(5);
+        var far = patient with { Id = MedicalSystem.BlacksmithStreamSpan };
+        state = state.WithNewPlayer(far);
+        Assert.Throws<InvalidOperationException>(() => Forge(state, far.Id));
     }
 
     [Fact]
@@ -397,5 +445,54 @@ public sealed class BlacksmithTests
         var after = RunEngine.Apply(state, new ForgePlayer(patient.Id, 1), SystemsTestSupport.Catalog, SystemsTestSupport.Systems);
         Assert.Equal(PhysicalState.Healthy, after.GetPlayer(patient.Id).PhysicalState);
         Assert.Equal(state.Gold - MedicalSystem.BlacksmithBasePrice(Economy) - 1, after.Gold);
+    }
+
+    [Fact]
+    public void ProsthesesSurviveLosingALevelAndKeepTheirEffectOnTheAttributes()
+    {
+        var (_, patient) = ClinicWithSevere(14);
+        var catalog = SystemsTestSupport.Catalog;
+        var equipped = MedicalSystem.Install(
+            patient with { Level = 4, Experience = Underleague.Sim.Progression.Progression.MinExperienceForLevel(4, catalog.Progression) },
+            Prostheses.Find("iron_arm")!);
+        var lower = LevelLoss.Apply(equipped, 1, catalog);
+        int perLevel = catalog.Progression.AttributesPerLevel;
+        Assert.Equal(3, lower.Level);
+        Assert.Equal(equipped.Prostheses, lower.Prostheses);
+        Assert.Equal(equipped.Tags, lower.Tags);
+        Assert.Equal(equipped.Attributes.Strength - perLevel, lower.Attributes.Strength);
+    }
+
+    [Fact]
+    public void ProsthesesSurviveALevelUpOfTheDefinition()
+    {
+        // MatchResolution sube de nivel sobre ToDefinition() y copia Level/Attributes al RunPlayer con `with`:
+        // las prótesis y las etiquetas no se tocan y la subida es relativa a los atributos ya protetizados.
+        var (_, patient) = ClinicWithSevere(15);
+        var catalog = SystemsTestSupport.Catalog;
+        var equipped = MedicalSystem.Install(patient, Prostheses.Find("peg_leg")!);
+        var definition = equipped.ToDefinition(catalog, applyMinorInjuryPenalty: false);
+        var up = Underleague.Sim.Progression.Progression.LevelUp(definition, equipped.Level + 2, catalog.Progression);
+        var after = equipped with { Level = up.Level, Attributes = up.Attributes };
+        Assert.Equal(equipped.Prostheses, after.Prostheses);
+        Assert.Equal(equipped.Tags, after.Tags);
+        Assert.Equal(equipped.Attributes.Speed + (2 * catalog.Progression.AttributesPerLevel), after.Attributes.Speed);
+    }
+
+    [Fact]
+    public void ProsthesesSurviveASaveWithRealIds()
+    {
+        var (state, patient) = ClinicWithSevere(22);
+        var one = MedicalSystem.Install(patient, Prostheses.Find("iron_arm")!);
+        var three = MedicalSystem.Install(MedicalSystem.Install(one, Prostheses.Find("peg_leg")!), Prostheses.Find("glass_eye")!);
+        state = state.WithPlayer(three);
+        var loaded = Underleague.Sim.Run.Save.RunSave.Load(Underleague.Sim.Run.Save.RunSave.Save(state));
+        var back = loaded.GetPlayer(patient.Id);
+        Assert.Equal(new[] { "iron_arm", "peg_leg", "glass_eye" }, back.Prostheses.Select(p => p.Effect));
+        Assert.Equal(new[] { "arm", "leg", "eye" }, back.Prostheses.Select(p => p.Slot));
+        Assert.Equal(three.Tags, back.Tags);
+        Assert.Contains(MedicalSystem.AutomatonTag, back.Tags);
+        Assert.Equal(three.Attributes, back.Attributes);
+        Assert.All(back.Prostheses, p => Assert.NotNull(Prostheses.Find(p.Effect)));
     }
 }
