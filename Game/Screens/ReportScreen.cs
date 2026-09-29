@@ -335,6 +335,12 @@ public partial class ReportScreen : Control
 
         // ADR 0157: cómo terminó la apuesta que tomaste para este partido, si tomaste una. Va bajo el oro
         // porque es oro, y con el nombre de la apuesta para que el jugador sepa qué cobró o qué perdió.
+        if (_report.BetRefunded > 0)
+        {
+            float refundY = y + 6f + now.Size.Y + (_report.Loot is null ? 0f : 22f) + 8f;
+            Widgets.Body(this, UiText.Get("ui.bet.refunded", _report.BetRefunded), new Vector2(932f, refundY), 324f, Style.TextDim);
+        }
+
         if (_report.Bet is { } bet)
         {
             float betY = y + 6f + now.Size.Y + (_report.Loot is null ? 0f : 22f) + 8f;

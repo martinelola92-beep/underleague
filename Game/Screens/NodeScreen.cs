@@ -98,7 +98,7 @@ public partial class NodeScreen : Control
 
         Layout.CenterLegacy(this);
         Widgets.Background(this);
-        Widgets.Header(this, Title(), UiText.Get("ui.node.gold", state.Gold));
+        Widgets.Header(this, Title(), UiText.WithBetRefund(UiText.Get("ui.node.gold", state.Gold), state));
         Widgets.Panel(this, new Rect2(12f, 52f, 1256f, 690f));
 
         float y = 72f;

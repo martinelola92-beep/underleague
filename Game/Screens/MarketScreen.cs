@@ -124,7 +124,9 @@ public partial class MarketScreen : Control
         Widgets.Header(
             this,
             UiText.Get("ui.market.title"),
-            UiText.Get("ui.market.subtitle", _view.Act, _view.Gold, _view.RosterSize, _view.RosterCapacity));
+            UiText.WithBetRefund(
+                UiText.Get("ui.market.subtitle", _view.Act, _view.Gold, _view.RosterSize, _view.RosterCapacity),
+                _run.State!));
 
         const float top = 64f;
         const float rowHeight = 340f;
