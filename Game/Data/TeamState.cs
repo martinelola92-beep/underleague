@@ -114,6 +114,37 @@ public sealed class TeamState
         return new TeamState(catalog, team with { Players = withPerks });
     }
 
+    /// <summary>
+    /// Las prótesis que lleva el jugador en la run (ADR 0164), en el orden en que se instalaron; vacío sin run
+    /// detrás (equipo de pruebas, rival de ojeo) o si su definición ya no está en el catálogo.
+    /// </summary>
+    public IReadOnlyList<Sim.Run.Systems.Medical.ProsthesisDefinition> ProsthesesOf(int playerId)
+    {
+        var result = new List<Sim.Run.Systems.Medical.ProsthesisDefinition>();
+        if (_run?.State is not { } state || _run.Systems is null)
+        {
+            return result;
+        }
+
+        foreach (var slot in state.Roster)
+        {
+            if (slot.Id != playerId)
+            {
+                continue;
+            }
+
+            foreach (var installed in slot.Prostheses)
+            {
+                if (_run.Systems.Prostheses.Find(installed.Effect) is { } definition)
+                {
+                    result.Add(definition);
+                }
+            }
+        }
+
+        return result;
+    }
+
     /// <summary>Jugador por id, o null si no está en la plantilla.</summary>
     public PlayerDefinition? Find(int id)
     {

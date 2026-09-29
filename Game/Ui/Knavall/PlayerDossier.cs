@@ -367,6 +367,36 @@ public partial class PlayerDossier : InkCanvas
         }
 
         BadgeRow(perks, left, right, perksTop);
+        DrawProstheses(player, perksTop + 36f);
+    }
+
+    /// <summary>
+    /// Una línea discreta con las prótesis del jugador y lo que cambian (ADR 0164): «Prótesis · pata de palo
+    /// (−6 velocidad), brazo de hierro (+4 fuerza)». Sin prótesis no se dibuja nada.
+    /// </summary>
+    private void DrawProstheses(PlayerDefinition player, float top)
+    {
+        var installed = _state!.ProsthesesOf(player.Id);
+        if (installed.Count == 0)
+        {
+            return;
+        }
+
+        var parts = new List<string>();
+        foreach (var prosthesis in installed)
+        {
+            // El nombre con humor lleva su coletilla entre paréntesis; en una línea discreta basta lo de antes.
+            string name = UiText.Name(prosthesis.Name);
+            int cut = name.IndexOf(" (", StringComparison.Ordinal);
+            parts.Add((cut > 0 ? name[..cut] : name) + " (" + UiText.Signed(prosthesis.Delta) + " "
+                + TeamTips.AttributeName(_state, prosthesis.Attribute).ToLowerInvariant() + ")");
+        }
+
+        Label(UiText.Get("ui.kn.prostheses"), new Vector2(Margin + 2f, top + 7f));
+        float left = Margin + 116f;
+        string line = string.Join(", ", parts);
+        int size = Ink.FitSize(Ink.Heavy, line, 15, Size.X - Margin - 8f - left, 11);
+        Ink.Text(this, Ink.Heavy, new Vector2(left, top + 10f), line, size, Ink.Muted);
     }
 
     private void Label(string text, Vector2 at) =>

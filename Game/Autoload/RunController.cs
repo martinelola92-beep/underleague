@@ -236,6 +236,17 @@ public partial class RunController : Node
         Changed();
     }
 
+    /// <summary>
+    /// Edita el estado de la run sin pasar por una decisión. <b>Solo para el recorrido de capturas</b>
+    /// (<c>--tour-clinic</c>, ADR 0164): un mapa recién generado no tiene lesionados que enseñar en la clínica.
+    /// </summary>
+    public void SeedForCapture(Func<RunState, RunState> edit)
+    {
+        var (state, _) = Require();
+        State = edit(state);
+        Changed();
+    }
+
     /// <summary>Aplica una decisión del jugador (alineación, compra, tratamiento, recompensa, salir del nodo).</summary>
     public void Apply(RunDecision decision)
     {

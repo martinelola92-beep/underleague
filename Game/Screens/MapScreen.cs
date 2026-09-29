@@ -95,6 +95,12 @@ public partial class MapScreen : Control
             return;
         }
 
+        if (Tour.Clinic)
+        {
+            TourOpenClinic();
+            return;
+        }
+
         if (Tour.Active)
         {
             Tour.Step(this, "mapa", TourPickMatch);
@@ -511,6 +517,36 @@ public partial class MapScreen : Control
             foreach (int next in node.Next)
             {
                 if (map.Get(next).Kind == NodeKind.Training)
+                {
+                    _run.JumpToNode(node.Id);
+                    Nav.Go(this, Nav.Map);
+                    return;
+                }
+            }
+        }
+    }
+
+    /// <summary>
+    /// Recorrido <c>--tour-clinic</c> (ADR 0164): mismo patrón que <see cref="TourOpenEvent"/> pero para una
+    /// clínica; <c>NodeScreen</c> siembra ahí los lesionados y abre la mesa del herrero.
+    /// </summary>
+    private void TourOpenClinic()
+    {
+        foreach (var node in _run.Available())
+        {
+            if (node.Kind == NodeKind.Clinic)
+            {
+                OnNodePressed(node.Id);
+                return;
+            }
+        }
+
+        var map = _run.State!.CurrentMap;
+        foreach (var node in map.Nodes)
+        {
+            foreach (int next in node.Next)
+            {
+                if (map.Get(next).Kind == NodeKind.Clinic)
                 {
                     _run.JumpToNode(node.Id);
                     Nav.Go(this, Nav.Map);

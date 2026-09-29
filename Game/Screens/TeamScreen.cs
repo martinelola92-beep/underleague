@@ -172,7 +172,7 @@ public partial class TeamScreen : Control
         {
             // El recorrido pasa por aquí para comprobar lo que más se puede romper al enchufar la run:
             // que esta pantalla, escrita antes que el bucle, enseña la plantilla de la run de verdad.
-            Tour.Step(this, "equipo-run", () => Nav.Go(this, Nav.Scout));
+            Tour.Step(this, "equipo-run", Tour.Clinic ? null : () => Nav.Go(this, Nav.Scout));
         }
     }
 
