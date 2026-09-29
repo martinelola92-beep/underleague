@@ -95,6 +95,7 @@ internal static class MatchResolution
         var recovered = new List<string>();
         var deathDetails = new List<PlayerDeathDetail>();
         var events = result.Events;
+        int processedEvents = events.Count;
         for (int i = 0; i < events.Count && defeatTick < 0; i++)
         {
             var matchEvent = events[i];
@@ -112,6 +113,13 @@ internal static class MatchResolution
             switch (matchEvent.Type)
             {
                 case EventType.Injury:
+                    if (players[index].PhysicalState == PhysicalState.Dead)
+                    {
+                        // BR-B: la muerte es terminal. Ninguna baja posterior cambia el estado de un
+                        // muerto ni cuenta como lesión suya (el motor ya no las emite, esta es la red).
+                        continue;
+                    }
+
                     injuries++;
                     players[index] = matchEvent.Detail.StartsWith(SevereDetail, StringComparison.Ordinal)
                         ? players[index] with { PhysicalState = PhysicalState.SevereInjury }
@@ -123,6 +131,11 @@ internal static class MatchResolution
                     break;
 
                 case EventType.Death:
+                    if (players[index].PhysicalState == PhysicalState.Dead)
+                    {
+                        continue;
+                    }
+
                     deaths++;
 
                     // Paquete BB: primitiva "run-level: oro y atributos al salir de la plantilla"
@@ -162,6 +175,7 @@ internal static class MatchResolution
             if (AvailableCount(players) < RunRules.MinimumAvailablePlayers)
             {
                 defeatTick = matchEvent.Tick;
+                processedEvents = i + 1;
             }
         }
 
@@ -231,9 +245,10 @@ internal static class MatchResolution
         // 4b. Memoria de "quién knaveó a quién" contra un rival concreto (BE-B, enmienda de la ADR 0124,
         //     tabla "Dónde vive cada memoria"). Pasada APARTE de la del paso 2: esa mira solo Team 0 y para
         //     en defeatTick (BE-C, semántica que no se toca aquí); esta mira los eventos de los dos
-        //     bandos y no se detiene, porque no cambia el estado de la plantilla ni el resultado del
-        //     partido -es contabilidad pura sobre RunState.Counters (RT-054)-.
-        next = ApplyRivalCredits(next, node, players, result.Events);
+        //     bandos, pero hasta el mismo punto que el bucle de bajas (BR-B: un crédito de muerte que el
+        //     estado no refleja es una contradicción visible en la Gaceta) -es contabilidad pura sobre
+        //     RunState.Counters (RT-054)-.
+        next = ApplyRivalCredits(next, node, players, result.Events, processedEvents);
 
         // El almacén se rellena en orden de id de objeto (RT-041), no en orden de muerte.
         next = DeathConsequences.StoreRecovered(next, recovered);
@@ -483,7 +498,7 @@ internal static class MatchResolution
     /// una unidad al contador de su par exacto.
     /// </summary>
     private static RunState ApplyRivalCredits(
-        RunState state, MapNode node, IReadOnlyList<RunPlayer> players, IReadOnlyList<MatchEvent> events)
+        RunState state, MapNode node, IReadOnlyList<RunPlayer> players, IReadOnlyList<MatchEvent> events, int processedEvents)
     {
         if (node.OpponentId.Length == 0)
         {
@@ -501,14 +516,28 @@ internal static class MatchResolution
             return state;
         }
 
+        // BR-B: los créditos cuentan la MISMA parte del partido que el bucle de bajas (hasta el evento que
+        // acaba la run, si lo hubo) y la muerte es terminal: una baja posterior sobre quien ya murió no se
+        // acredita. Así "sufrió una muerte" nunca dice más que el estado final del jugador.
         var deltas = new Dictionary<string, int>();
-        for (int i = 0; i < events.Count; i++)
+        var dead = new HashSet<int>();
+        for (int i = 0; i < processedEvents; i++)
         {
             var matchEvent = events[i];
             if (matchEvent.Detail.EndsWith(CancelledSuffix, StringComparison.Ordinal))
             {
                 // Un perk que anula una lesión o una muerte no acredita nada (mismo criterio que la
                 // atribución de RunCareer, ADR 0124).
+                continue;
+            }
+
+            if (matchEvent.Type == EventType.Death && !dead.Add(matchEvent.Actor))
+            {
+                continue;
+            }
+
+            if (matchEvent.Type == EventType.Injury && dead.Contains(matchEvent.Actor))
+            {
                 continue;
             }
 
