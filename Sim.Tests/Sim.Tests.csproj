@@ -19,6 +19,12 @@
   </ItemGroup>
 
   <ItemGroup>
+    <!-- ADR 0171: el director de presentación no toca Godot (sólo Sim.Run.View); se enlaza el fichero, no el
+         proyecto, para probar su cola, sus pausas y la cámara lenta sin levantar el motor gráfico. -->
+    <Compile Include="..\Game\Match\PresentationDirector.cs" Link="Linked\PresentationDirector.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\Sim\Sim.csproj" />
     <!-- Reutiliza Balance/PerkValueRunner.cs (campaña con arrastre de contador, ADR 0070/0087) para
          los perks NeedsCampaignHarness — no se duplica su lógica (§16, encargo del 18 sep 2026). -->

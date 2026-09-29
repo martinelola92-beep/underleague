@@ -4734,7 +4734,7 @@ internal sealed class MatchEngine : IPerkWorld
     /// automáticas, ver ADR 0171 «Frecuencia»: con 4 % y 8 % para todo salían 1,17 y 0,82 momentos propios por
     /// partido, por encima del tope de ~1 por partido del encargo, y la mayoría eran de muerte.</para>
     /// </summary>
-    internal const int FateRollMinSevereBasisPoints = 800;
+    internal const int FateRollMinSevereBasisPoints = 4000;
 
     /// <summary>Umbral de las tiradas de muerte (ver <see cref="FateRollMinSevereBasisPoints"/>).</summary>
     internal const int FateRollMinDeathBasisPoints = 1500;

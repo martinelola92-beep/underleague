@@ -384,8 +384,8 @@ public sealed class MatchMomentViewTests
         var moments = MatchMomentView.Group(
             new[]
             {
-                Ev(EventType.FateRoll, tick: 100, team: 0, actor: 3, opponent: 104, detail: "severe:1200:hit"),
                 Ev(EventType.Injury, tick: 100, team: 0, actor: 3, opponent: 104, detail: "severe"),
+                Ev(EventType.FateRoll, tick: 100, team: 0, actor: 3, opponent: 104, detail: "severe:4000:hit"),
             },
             Identity, playerTeam: 0, pending: null);
 
@@ -397,6 +397,32 @@ public sealed class MatchMomentViewTests
         Assert.Equal(100 - MatchMomentView.FateLeadFrames, fate.Frame);
         Assert.Equal(100, fate.LastFrame);
         Assert.Equal(MomentKind.SevereInjury, moments[1].Kind);
+    }
+
+    [Fact]
+    public void TheFateMomentIsTransparentForFusionSoAFoulACardAndTheInjuryStayTogether()
+    {
+        // Revisión independiente: con el Fate en medio la lesión dejaba de fundirse con su falta y su tarjeta
+        // (y la roja se perdía). El Fate va aparte, en cualquier posición dentro del tick.
+        foreach (bool fateFirst in new[] { true, false })
+        {
+            var events = new List<MatchEvent>
+            {
+                Ev(EventType.Foul, tick: 95, team: 1, actor: 104, target: 3),
+                Ev(EventType.Card, tick: 96, team: 1, actor: 104, detail: "red"),
+                Ev(EventType.Injury, tick: 100, team: 0, actor: 3, opponent: 104, detail: "severe"),
+            };
+            var fate = Ev(EventType.FateRoll, tick: 100, team: 0, actor: 3, opponent: 104, detail: "severe:4000:hit");
+            events.Insert(fateFirst ? 2 : 3, fate);
+
+            var moments = MatchMomentView.Group(events, Identity, playerTeam: 0, pending: null);
+
+            Assert.Equal(2, moments.Count);
+            Assert.Single(moments, m => m.Kind == MomentKind.Fate);
+            var main = moments.Single(m => m.Kind != MomentKind.Fate);
+            Assert.Equal(3, main.EventIndices.Count);
+            Assert.Equal(3, main.Level);
+        }
     }
 
     [Fact]
@@ -631,6 +657,9 @@ public sealed class MatchMomentViewTests
             EventType.RefereeLeaves => true,
             EventType.Death => true,
             EventType.MatchEnd => true,
+
+            // ADR 0171: la tirada del destino es un momento sólo si es de un jugador propio (equipo 0).
+            EventType.FateRoll => matchEvent.Team == 0,
             _ => false,
         };
     }
