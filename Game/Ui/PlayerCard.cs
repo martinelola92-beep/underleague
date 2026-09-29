@@ -709,7 +709,7 @@ public partial class PlayerCard : Control
     }
 
     private static string Plural(int value, string singularKey, string pluralKey) =>
-        value == 1 ? UiText.Get(singularKey) : UiText.Get(pluralKey, value);
+        UiText.Plural(value, singularKey, pluralKey);
 
     /// <summary>
     /// Bloque de la ficha expandida. <paramref name="Compact"/> pone título y valor en la misma línea;

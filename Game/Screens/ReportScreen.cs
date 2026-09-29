@@ -392,21 +392,34 @@ public partial class ReportScreen : Control
         Widgets.Panel(this, new Rect2(920f, panelTop, 348f, 240f));
         Widgets.Section(this, UiText.Get("ui.report.stats"), new Vector2(932f, panelTop + 6f), 320f);
 
+        const float panelHeight = 240f;
+        const float lineHeight = 15f;
+        float bottomLimit = panelTop + panelHeight - 6f;
         float y = panelTop + 26f;
-        int shown = 0;
-        foreach (var gain in _report.NicknamesEarned)
-        {
-            if (shown == 2)
-            {
-                break;
-            }
 
+        // Los apodos ganados van arriba y no se pierden en silencio: caben dos, los de MAYOR prioridad
+        // (la vista los ordena así, ADR 0163), y una línea dice cuántos más hay.
+        var earned = _report.NicknamesEarned;
+        const int nicknamesShown = 2;
+        for (int i = 0; i < earned.Count && i < nicknamesShown; i++)
+        {
+            var gain = earned[i];
             string text = gain.PreviousNickname.Length > 0
                 ? UiText.Get("ui.report.nicknameUpgraded", gain.PlayerName, gain.Nickname, gain.PreviousNickname)
                 : UiText.Get("ui.report.nicknameEarned", gain.PlayerName, gain.Nickname);
             var line = Widgets.Body(this, text, new Vector2(932f, y), 324f, Style.Accent);
             y += line.Size.Y + 2f;
-            shown++;
+        }
+
+        if (earned.Count > nicknamesShown)
+        {
+            var more = Widgets.Body(
+                this,
+                UiText.Plural(earned.Count - nicknamesShown, "ui.report.nicknamesMoreOne", "ui.report.nicknamesMore"),
+                new Vector2(932f, y),
+                324f,
+                Style.TextDim);
+            y += more.Size.Y + 2f;
         }
 
         if (_report.PlayerStats.Count == 0)
@@ -422,16 +435,29 @@ public partial class ReportScreen : Control
             StatCell(heads[c], c, y, Style.TextDim);
         }
 
-        y += 15f;
+        y += lineHeight;
 
-        foreach (var row in _report.PlayerStats)
+        // Nada desaparece sin explicación: cada fila con su apodo en una segunda línea (el nombre solo ya
+        // ocupa el ancho de su columna, y «Nombre «Apodo»» a 160 px se cortaba), y si las filas no caben,
+        // «y N jugadores más» con el sitio reservado antes de pintar la siguiente.
+        var rows = _report.PlayerStats;
+        for (int r = 0; r < rows.Count; r++)
         {
-            if (y > panelTop + 240f - 16f)
+            var row = rows[r];
+            float rowHeight = lineHeight + (row.Nickname.Length > 0 ? lineHeight - 2f : 0f);
+            bool last = r == rows.Count - 1;
+            if (y + rowHeight + (last ? 0f : lineHeight) > bottomLimit)
             {
+                Widgets.Body(
+                    this,
+                    UiText.Plural(rows.Count - r, "ui.report.statsMoreOne", "ui.report.statsMore"),
+                    new Vector2(932f, y),
+                    324f,
+                    Style.TextDim);
                 break;
             }
 
-            var name = Widgets.Body(this, Sim.Run.Systems.Nicknames.NicknameSystem.Display(row.PlayerName, row.Nickname), new Vector2(932f, y), 160f);
+            var name = Widgets.Body(this, row.PlayerName, new Vector2(932f, y), 160f);
             name.AutowrapMode = TextServer.AutowrapMode.Off;
             name.ClipText = true;
             name.Size = new Vector2(160f, name.Size.Y);
@@ -442,7 +468,16 @@ public partial class ReportScreen : Control
                 StatCell(Amount(values[c]), c, y, values[c] > 0 ? Style.Text : Style.TextDim);
             }
 
-            y += 15f;
+            if (row.Nickname.Length > 0)
+            {
+                // Su propia línea, con el ancho de la cuadrícula entera: ya no se recorta a 160 px.
+                var nick = Widgets.Body(this, "«" + row.Nickname + "»", new Vector2(944f, y + lineHeight - 3f), 312f, Style.Accent);
+                nick.AutowrapMode = TextServer.AutowrapMode.Off;
+                nick.ClipText = true;
+                nick.Size = new Vector2(312f, nick.Size.Y);
+            }
+
+            y += rowHeight;
         }
     }
 

@@ -136,7 +136,7 @@ public partial class Newspaper : Control
         return new List<string>
         {
             deaths > 0
-                ? UiText.Get("ui.newspaper.brief.deaths", deaths)
+                ? UiText.Plural(deaths, "ui.newspaper.brief.death", "ui.newspaper.brief.deaths")
                 : UiText.Get("ui.newspaper.brief.deathsAlt." + Pick(baseSeed, salt: 20, count: 2)),
             UiText.Get("ui.newspaper.filler." + fillerA),
             gold > 0

@@ -84,6 +84,29 @@ public partial class MemoryCaptureRunner : Control
             failures++;
         }
 
+        // 2b. Casos límite de la revisión independiente: el informe con muchos apodos ganados y el apodo más
+        //     largo del catálogo ya puesto a la mitad de la plantilla (no debe recortarse ni perderse en
+        //     silencio: «y N apodos más», el apodo en su propia línea).
+        for (ulong seed = 1; seed <= 40; seed++)
+        {
+            run.NewRun("orc_ironworks", Race.Orc, seed);
+            Forge(run, state => PrimeLongNicknames(state, run));
+            var match = FirstMatch(run);
+            run.SelectedNodeId = match.Id;
+            run.PlayMatch(match.Id);
+            var post = run.PostMatch();
+            if (post is null || post.NicknamesEarned.Count < 3)
+            {
+                continue;
+            }
+
+            var report = await Show("res://Scenes/Informe.tscn");
+            await Save("memoria-informe-apodos-muchos");
+            GD.Print($"informe límite: semilla {seed}, apodos ganados {post.NicknamesEarned.Count}");
+            Drop(report);
+            break;
+        }
+
         // 3. La Gaceta de una victoria y de una derrota con caídos.
         foreach (var (name, outcome) in new[]
         {
@@ -97,6 +120,13 @@ public partial class MemoryCaptureRunner : Control
             await Save(name);
             Drop(end);
         }
+
+        // 3b. La Gaceta con más caídos de los que caben, de causas distintas: nada se pierde sin un «y N más».
+        run.NewRun("orc_ironworks", Race.Orc, 7UL);
+        Forge(run, state => ManyFallen(state, run));
+        var many = await Show("res://Scenes/FinDeRun.tscn");
+        await Save("memoria-gaceta-muchas-esquelas");
+        Drop(many);
 
         Nav.Suppressed = false;
         GetTree().Quit(failures);
@@ -117,6 +147,50 @@ public partial class MemoryCaptureRunner : Control
         }
 
         return state;
+    }
+
+    /// <summary>La mitad de la plantilla ya lleva el apodo más largo del catálogo; el resto está a un paso de otros.</summary>
+    private static RunState PrimeLongNicknames(RunState state, RunController run)
+    {
+        int Threshold(string id) => run.Systems!.Nicknames.Find(id)!.Threshold;
+        for (int i = 0; i < state.Roster.Count; i++)
+        {
+            var career = i % 2 == 0
+                ? RunCareer.None with { Matches = 3, Goals = Threshold("keepers_bane") }
+                : RunCareer.None with { Matches = 3, Goals = Threshold("golden_boots") - 1, Assists = Threshold("delivery_boy") - 1, Fouls = Threshold("grubby") - 1, Cards = Threshold("collector") - 1 };
+            state = state.WithPlayer(state.Roster[i] with { Career = career });
+        }
+
+        return state;
+    }
+
+    /// <summary>Una run perdida con ocho caídos: sacrificio, matasanos, partido con rival y sin él.</summary>
+    private static RunState ManyFallen(RunState state, RunController run)
+    {
+        state = state.WithPlayer(state.Roster[0] with { Career = RunCareer.None with { Matches = 9, Goals = 6, Assists = 2, TacklesWon = 16, InjuriesCaused = 3 } });
+        var causes = new[] { PlayerDeathCause.Sacrifice, PlayerDeathCause.Quack, PlayerDeathCause.MatchByOpponent, PlayerDeathCause.MatchNoAuthor, PlayerDeathCause.Unknown };
+        for (int i = 1; i < state.Roster.Count; i++)
+        {
+            state = state.WithPlayer(state.Roster[i] with { PhysicalState = PhysicalState.Dead, Career = RunCareer.None with { Matches = i, Goals = i % 3, Fouls = i } });
+            state = state.WithDeathCause(state.Roster[i].Id, causes[i % causes.Length]);
+        }
+
+        // Y otros ocho más (copias con id nuevo): más esquelas de las que caben en la portada.
+        var extra = new List<RunPlayer>();
+        for (int i = 1; i < state.Roster.Count; i++)
+        {
+            extra.Add(state.Roster[i] with { Id = 900 + i, Name = state.Roster[i].Name + " el Joven" });
+        }
+
+        var roster = new List<RunPlayer>(state.Roster);
+        roster.AddRange(extra);
+        state = state with { Roster = roster };
+        for (int i = 0; i < extra.Count; i++)
+        {
+            state = state.WithDeathCause(extra[i].Id, causes[(i + 2) % causes.Length]);
+        }
+
+        return state with { Result = new RunOutcome(RunOutcomeKind.Defeat, DefeatCause.NotEnoughPlayers, 5) };
     }
 
     /// <summary>Una run terminada con un MVP claro, dos caídos y un rival que les hizo daño.</summary>

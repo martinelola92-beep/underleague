@@ -213,10 +213,12 @@ public partial class NodeScreen : Control
 
         var squad = Widgets.Button(
             this,
-            UiText.Get("ui.node.treatSquad", economy.ClinicSquadCost, patients.Count, piecemeal),
+            patients.Count == 1
+                ? UiText.Get("ui.node.treatSquadOne", economy.ClinicSquadCost, patients.Count, piecemeal)
+                : UiText.Get("ui.node.treatSquad", economy.ClinicSquadCost, patients.Count, piecemeal),
             new Rect2(28f, y, 520f, 28f),
             state.Gold >= economy.ClinicSquadCost);
-        squad.Pressed += () => Decide(new TreatSquad(), UiText.Get("ui.node.treatedSquad", patients.Count));
+        squad.Pressed += () => Decide(new TreatSquad(), UiText.Plural(patients.Count, "ui.node.treatedSquadOne", "ui.node.treatedSquad"));
         y += 38f;
 
         foreach (var patient in patients)

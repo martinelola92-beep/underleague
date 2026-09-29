@@ -84,17 +84,33 @@ public partial class GazettePage : Control
         }
         else
         {
+            // Nada desaparece sin explicación: cada esquela entera o ninguna, y si no caben todas, una línea
+            // final dice cuántas faltan («… y N esquelas más»), reservándole sitio antes de pintar la siguiente.
+            const float moreLine = 20f;
+            float limit = Size.Y - 12f;
             for (int i = 0; i < report.Obituaries.Count; i++)
             {
                 var o = report.Obituaries[i];
                 var line = EssentialLabel.Title(this, o.Title, new Vector2(18f, y), width, Style.Text);
-                y += line.Size.Y;
-                var body = EssentialLabel.Body(this, o.Career + " " + o.Epitaph, new Vector2(18f, y), width, Style.TextDim);
-                y += body.Size.Y + 5f;
-                if (y > Size.Y - 20f)
+                var body = EssentialLabel.Body(this, o.Career + " " + o.Epitaph, new Vector2(18f, y + line.Size.Y), width, Style.TextDim);
+                float bottom = y + line.Size.Y + body.Size.Y + 5f;
+                bool last = i == report.Obituaries.Count - 1;
+                if (bottom + (last ? 0f : moreLine) > limit)
                 {
+                    RemoveChild(line);
+                    line.QueueFree();
+                    RemoveChild(body);
+                    body.QueueFree();
+                    EssentialLabel.Body(
+                        this,
+                        UiText.Plural(report.Obituaries.Count - i, "ui.gazette.obituariesMoreOne", "ui.gazette.obituariesMore"),
+                        new Vector2(18f, y),
+                        width,
+                        Style.TextDim);
                     break;
                 }
+
+                y = bottom;
             }
         }
 

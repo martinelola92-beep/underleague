@@ -210,7 +210,8 @@ public static class UiText
         ["ui.newspaper.filler.5"] = "El árbitro pita penalti antes de empezar, «por si las moscas».",
         ["ui.newspaper.filler.6"] = "La grada aplaude más fuerte cuando cae alguien que un gol.",
         ["ui.newspaper.filler.7"] = "El taller de implantes abre franquicia junto al campo.",
-        ["ui.newspaper.brief.deaths"] = "{0} baja(s) esta run; el utilero ya recicló las taquillas vacías.",
+        ["ui.newspaper.brief.death"] = "1 baja esta run; el utilero ya recicló la taquilla vacía.",
+        ["ui.newspaper.brief.deaths"] = "{0} bajas esta run; el utilero ya recicló las taquillas vacías.",
         ["ui.newspaper.brief.deathsAlt.0"] = "Cero bajas por ahora; el forense se queja de que no le sale ni el alquiler.",
         ["ui.newspaper.brief.deathsAlt.1"] = "Ni una baja esta run; el forense ya mira otro club.",
         ["ui.newspaper.brief.gold"] = "La tesorería declara {0} de oro; media va prometida al forense.",
@@ -296,7 +297,9 @@ public static class UiText
         ["ui.node.clinicPoor"] = "no te llega el oro: tienes {0} y cuesta {1}",
         ["ui.node.treat"] = "Tratar a {0} ({1} de oro)",
         ["ui.node.treatSquad"] = "Curar a la plantilla · {0} de oro ({1} lesionados, uno a uno serían {2})",
+        ["ui.node.treatSquadOne"] = "Curar a la plantilla · {0} de oro (1 lesionado, uno a uno serían {2})",
         ["ui.node.treatedSquad"] = "la clínica cura a los {0} lesionados",
+        ["ui.node.treatedSquadOne"] = "la clínica cura al único lesionado",
         ["ui.node.treatRisky"] = "Matasanos · {0} de oro ({1}% de que no cure, {2}% de que empeore)",
         ["ui.node.treatedRisky"] = "el matasanos opera a {0}",
         ["ui.node.treated"] = "{0} vuelve a estar sano",
@@ -565,6 +568,12 @@ public static class UiText
         ["ui.report.statsNone"] = "nadie pisó el campo",
         ["ui.report.nicknameEarned"] = "{0} gana el apodo «{1}»",
         ["ui.report.nicknameUpgraded"] = "{0} pasa de «{2}» a «{1}»",
+        ["ui.report.nicknamesMoreOne"] = "y 1 apodo más",
+        ["ui.report.nicknamesMore"] = "y {0} apodos más",
+        ["ui.report.statsMoreOne"] = "y 1 jugador más",
+        ["ui.report.statsMore"] = "y {0} jugadores más",
+        ["ui.gazette.obituariesMoreOne"] = "… y 1 esquela más, en la plantilla final",
+        ["ui.gazette.obituariesMore"] = "… y {0} esquelas más, en la plantilla final",
         ["ui.report.continue"] = "Continuar",
         ["ui.report.none"] = "todavía no se ha jugado ningún partido",
         ["ui.report.deaths"] = "{0} MUERTOS",
@@ -955,6 +964,14 @@ public static class UiText
     /// <summary>Texto de la clave con los argumentos sustituidos en <c>{0}</c>, <c>{1}</c>...</summary>
     public static string Get(string key, params object[] args) =>
         string.Format(System.Globalization.CultureInfo.InvariantCulture, Get(key), args);
+
+    /// <summary>
+    /// Frase con la cifra en singular o plural: la clave singular si <paramref name="value"/> es 1 (sin
+    /// marcador: lleva el «1» escrito) y la plural con la cifra en <c>{0}</c> en cualquier otro caso. Ninguna
+    /// pantalla dice «1 bajas» ni deja un «baja(s)» (ADR 0163).
+    /// </summary>
+    public static string Plural(int value, string singularKey, string pluralKey) =>
+        value == 1 ? Get(singularKey) : Get(pluralKey, value);
 
     /// <summary>
     /// El subtítulo de un nodo con, si acaba de entrar devolviéndose una apuesta tomada para otro nodo
