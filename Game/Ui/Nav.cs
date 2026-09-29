@@ -35,6 +35,13 @@ public static class Nav
     /// <summary>Modo depuración de la pantalla de Partido: la vista 2D de siempre, tick a tick, con log y leyenda.</summary>
     public const string MatchDebug = "res://Scenes/Partido.tscn";
 
+    /// <summary>
+    /// La pantalla de partido que se abre al jugar uno: la retransmisión, salvo que en modo desarrollo se
+    /// haya elegido la vista 2D en Ajustes (<see cref="Data.GameSettings.DebugMatchView"/>). F3 sigue
+    /// alternando entre las dos dentro del partido.
+    /// </summary>
+    public static string MatchView => Data.GameSettings.DebugMatchView ? MatchDebug : Match;
+
     /// <summary>Informe post-partido (RF-119). La escribe el paquete de partido.</summary>
     public const string Report = "res://Scenes/Informe.tscn";
 

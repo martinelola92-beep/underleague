@@ -293,6 +293,21 @@ public partial class RunController : Node
         Changed();
     }
 
+    /// <summary>
+    /// Sale al menú principal <b>sin</b> perder la run: la guarda como al cerrar la ventana y la descarga
+    /// de memoria, así que en el inicio aparece «Continuar la run guardada» y retomarla pasa por
+    /// <see cref="Continue"/>, que vuelve a borrar el slot (RT-061). Distinto de <see cref="Abandon"/>,
+    /// que sí la pierde (RF-007).
+    /// </summary>
+    public void LeaveToMenu()
+    {
+        Save();
+        State = null;
+        LastMatch = null;
+        SelectedNodeId = -1;
+        Changed();
+    }
+
     /// <summary>Cerrar la ventana a mitad de run no pierde la run (RT-061).</summary>
     public override void _Notification(int what)
     {

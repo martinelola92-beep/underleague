@@ -10,6 +10,7 @@ config/features=PackedStringArray("4.6", "C#", "Forward Plus")
 
 RunController="*res://Autoload/RunController.tscn"
 AudioManager="*res://Autoload/AudioManager.tscn"
+PauseMenu="*res://Autoload/PauseMenu.tscn"
 
 [display]
 

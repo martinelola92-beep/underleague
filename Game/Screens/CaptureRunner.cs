@@ -239,6 +239,24 @@ public partial class CaptureRunner : Control
         // 3. Informe post-partido.
         var report = await Show("res://Scenes/Informe.tscn");
         await Save("informe");
+
+        // 3b. Menú de pausa y Ajustes, encima del informe. Esc entra por el mismo camino que un teclado
+        //     real, así que la captura prueba también que la pantalla de debajo no se lo come.
+        GetViewport().PushInput(new InputEventKey { Keycode = Key.Escape, Pressed = true });
+        await Settle(4);
+        await Save("pausa");
+        if (PauseMenu.Instance is { IsOpen: true } pause)
+        {
+            pause.ShowSettings();
+            await Settle(4);
+            await Save("ajustes");
+            pause.Close();
+        }
+        else
+        {
+            GD.PushWarning("Esc no abrió el menú de pausa sobre el informe: no hay captura de ajustes");
+        }
+
         Drop(report);
 
         // 4. Recompensa, con la primera opción elegida para que se vea la asignación a un jugador.

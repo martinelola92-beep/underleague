@@ -28,6 +28,7 @@ viva anotada.
 | [BA-H](./BA-H.md) | Los consumibles no se pueden usar | Uso en vivo y catálogo de 20 hechos (29 sep); abierta sólo la propuesta de dos slots |
 | [BA-J](./BA-J.md) | Tras una parada, el equipo defensor debería replegarse | Abierta: hoy no hay fase de repliegue tras `SAVE` |
 | [BA-L2](./BA-L2.md) | `CaptureRunner` pierde el árbol de escena entre `informe` y `recompensa` | Resuelta la secuencia; queda abierto `recompensa.png` en blanco |
+| [BR-A](./BR-A.md) | Guardar o salir a mitad de partido no reproduce el partido al volver (RT-061) | Abierta: el estado en memoria ya es el de después del partido; arreglarlo pide esquema de guardado con las decisiones del partido |
 | [BB-D](./BB-D.md) | Parar unos segundos en los eventos que detienen el juego | Analizada (`game-design-review`, 16 sep); pendiente de decidir si se implementa — se resuelve entera en `/Game`, sin tocar RT-020 |
 | [BB-G2](./BB-G2.md) | El portero puede ser perseguidor designado fuera de su área y bloquear a los diez | Abierta, sin evidencia de activación |
 | [BB-H](./BB-H.md) | «Todavía no hay eventos, habrá que diseñarlos» | Abierta: existen seis cartas, pero 0,38 resueltas por run — es densidad y catálogo, no ausencia |

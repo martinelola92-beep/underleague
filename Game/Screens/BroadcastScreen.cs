@@ -305,7 +305,9 @@ public partial class BroadcastScreen : Control
             return;
         }
 
-        if (_matchEnded && (@event.IsActionPressed("ui_accept") || @event.IsActionPressed("ui_cancel")))
+        // Esc es del menú de pausa (PauseMenu), también con el partido acabado; B y aceptar van al informe.
+        if (_matchEnded && !PauseMenu.IsPauseKey(@event)
+            && (@event.IsActionPressed("ui_accept") || @event.IsActionPressed("ui_cancel")))
         {
             GoToReport();
         }
