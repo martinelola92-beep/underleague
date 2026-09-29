@@ -93,7 +93,7 @@ La identidad del juego no es el fútbol, es la **carnicería administrada**: los
 ### 3.2 Mapa
 
 - **RF-010** El mapa de cada acto es un grafo dirigido con múltiples caminos, avance en una sola dirección y sin retroceso.
-- **RF-011** Tipos de nodo: partido de liga, partido de élite (mayor riesgo y recompensa), mercado, clínica, taller de implantes, entrenamiento, evento aleatorio (**carta con opciones** desde la ADR 0100), jefe. *(La inscripción fue un nodo hasta la **ADR 0097**: el hueco de plantilla se compra ahora en el mercado, RF-020.)*
+- **RF-011** Tipos de nodo: partido de liga, partido de élite (mayor riesgo y recompensa), mercado, clínica, entrenamiento, evento aleatorio (**carta con opciones** desde la ADR 0100), jefe. *(El **taller de implantes deja de ser un nodo** con la **ADR 0164**: es el herrero de la clínica, RF-095; `NodeKind.Workshop` sigue en el enum solo para no invalidar guardados, y el generador nunca lo produjo.)* *(La inscripción fue un nodo hasta la **ADR 0097**: el hueco de plantilla se compra ahora en el mercado, RF-020.)*
 - **RF-011b** Hay un nodo de mercado cada **3-4 nodos**, y desde cualquier punto del mapa debe existir un mercado alcanzable en dos saltos como máximo. Es lo que convierte jugar en inferioridad en una decisión y no en una trampa.
 - **RF-015** Los **rivales son estáticos por acto y división**: cada acto tiene un conjunto fijo de equipos rivales, diseñados a mano con una build reconocible cada uno. Lo aleatorio es el mapa, la posición de los nodos y qué rivales aparecen en qué nodo. Los rivales son personajes que el jugador aprende, y el informe de ojeo describe una build real, no un bloque de estadísticas.
 - **RF-015b** Los rivales usan consumibles y sobornos. Ambos aparecen en el informe de ojeo.
@@ -305,17 +305,18 @@ SUSTITUCION         CONSUMIBLE_USADO
 
 - **RF-090** Estados físicos posibles: sano, lesión leve, lesión grave, muerto.
 - **RF-091** **Lesión leve**: -15% a todos los atributos durante el siguiente partido. Acumulable. No impide jugar.
-- **RF-092** **Lesión grave**: el jugador no puede alinearse hasta recibir tratamiento en un nodo de clínica o taller.
+- **RF-092** **Lesión grave**: el jugador no puede alinearse hasta recibir tratamiento en un nodo de clínica (médico, matasanos o herrero, ADR 0099 y 0164).
 - **RF-093** **Muerte**: pérdida permanente del jugador. Solo puede producirse en dos casos:
   1. El jugador se alineó arrastrando una lesión grave sin tratar.
   2. Un perk rival explícitamente marcado como letal y visible en el ojeo (RF-013).
   Un jugador en estado sano **nunca** puede morir.
 - **RF-094** *(ampliado por la ADR 0099: la clínica ofrece tres servicios —por pieza, la plantilla entera a tarifa plana, y el matasanos barato y sin garantía, que puede empeorar un escalón—; los porcentajes se ven antes de elegir.)*
 - **RF-094** **Clínica**: coste alto en oro, resultado garantizado, restaura al jugador a sano sin efectos secundarios.
-- **RF-095** **Taller de implantes**: alternativa barata y arriesgada a la clínica. Antes de confirmar, el jugador ve los **tres resultados posibles con su probabilidad**:
-  - **Curación completa**: el jugador vuelve a sano.
-  - **Mejora**: se instala una prótesis con ventaja (atributo o correa) y la etiqueta `Chatarra`.
-  - **Empeoramiento**: se instala una prótesis con desventaja y la etiqueta `Chatarra`.
+- **RF-095** **El herrero de la clínica** *(antes «taller de implantes»; ADR 0164)*: cuarto servicio de la clínica, para un jugador con lesión grave y una ranura del cuerpo libre; más barato que el médico y **siempre lo deja sano**, pero a cambio de una apuesta sobre su identidad. Antes de confirmar, el jugador ve los **tres resultados posibles con su probabilidad**, el **rango de magnitudes** de cada prótesis posible y **qué atributos** pueden salir según las ranuras libres:
+  - **Curación completa**: el jugador vuelve a sano, sin prótesis.
+  - **Mejora**: se instala una prótesis con ventaja (un atributo o la correa) y la etiqueta `Chatarra`.
+  - **Empeoramiento**: se instala una prótesis con desventaja y la etiqueta `Chatarra`. Nunca mata: el riesgo de muerte es del matasanos; el del herrero es la identidad.
+  Las mejoras valen algo **menos** que los empeoramientos (provisional, sin medir: +6..+8 contra −9..−12) para que sin oro extra la esperanza de atributos sea ligeramente negativa y solo con oro extra sea positiva: el herrero es una apuesta y no una mejora gratuita.
 - **RF-095b** El jugador puede **invertir oro adicional** para desplazar las probabilidades hacia los resultados favorables, con rendimiento decreciente. La apuesta sigue siendo apuesta, pero el jugador la asume conociendo las cifras exactas (RF-012d).
 - **RF-095c** Con 3 prótesis el jugador **gana** la etiqueta `Autómata` y **conserva** su etiqueta de especie (enmienda ADR 0164, 29 sep 2026): perderla apagaba en silencio los objetos restringidos y los perks exclusivos de raza con `tagsRequired`, y hacía fallar la validación del partido. La pérdida de especie se aplaza hasta que exista la familia de perks de autómata que la compense; `Autómata` habilitará esa familia.
 - **RF-096** **Resurrección**: disponible mediante perk, objeto o consumible de la familia sobrenatural. El jugador resucitado vuelve con el nivel máximo reducido en 2 y la etiqueta `Descompuesto`, que aplica una penalización creciente por cada partido posterior.
