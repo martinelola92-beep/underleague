@@ -1,0 +1,187 @@
+{
+  "_doc": "ADR 0164: catalogo de protesis del herrero de la clinica (RF-095, RF-095c). Una protesis por fila: 'slot' es la ranura del cuerpo (una ranura ocupada no se repite), 'kind' es 'improve' (ventaja, delta > 0) o 'worsen' (desventaja, delta < 0) y 'effect' suma 'delta' a un atributo del jugador al instalarse (permanente, acotado a 1..99; Regla I: se aplica sobre RunPlayer.Attributes, que es lo que ToDefinition entrega al partido). Cada ranura tiene al menos una protesis de cada clase, asi que un jugador con una ranura libre siempre puede recibir la mejora y el empeoramiento (MedicalSystem.Forge). Las magnitudes (8..11) son PROVISIONALES, SIN MEDIR (Regla H): del orden de un nivel de progresion y medio (AttributesPerLevel). Los nombres llevan humor en es/en; la descripcion visible se genera del efecto (RT-035).",
+  "prostheses": [
+    {
+      "id": "iron_arm",
+      "slot": "arm",
+      "kind": "improve",
+      "name": {
+        "es": "Brazo de hierro (garantía caducada)",
+        "en": "Iron Arm (Warranty Expired)"
+      },
+      "effect": {
+        "attribute": "Strength",
+        "delta": 11
+      }
+    },
+    {
+      "id": "spring_leg",
+      "slot": "leg",
+      "kind": "improve",
+      "name": {
+        "es": "Pierna de muelle de somier",
+        "en": "Bedspring Leg"
+      },
+      "effect": {
+        "attribute": "Speed",
+        "delta": 11
+      }
+    },
+    {
+      "id": "clockwork_eye",
+      "slot": "eye",
+      "kind": "improve",
+      "name": {
+        "es": "Ojo de relojería (da la hora, además)",
+        "en": "Clockwork Eye (Also Tells the Time)"
+      },
+      "effect": {
+        "attribute": "Technique",
+        "delta": 10
+      }
+    },
+    {
+      "id": "steel_jaw",
+      "slot": "jaw",
+      "kind": "improve",
+      "name": {
+        "es": "Mandíbula de acero de cubertería",
+        "en": "Cutlery-Steel Jaw"
+      },
+      "effect": {
+        "attribute": "Strength",
+        "delta": 9
+      }
+    },
+    {
+      "id": "brass_spine",
+      "slot": "spine",
+      "kind": "improve",
+      "name": {
+        "es": "Columna de latón pulido",
+        "en": "Polished Brass Spine"
+      },
+      "effect": {
+        "attribute": "Stamina",
+        "delta": 10
+      }
+    },
+    {
+      "id": "furnace_gut",
+      "slot": "gut",
+      "kind": "improve",
+      "name": {
+        "es": "Estómago de horno de leña",
+        "en": "Wood-Fired Gut"
+      },
+      "effect": {
+        "attribute": "Stamina",
+        "delta": 9
+      }
+    },
+    {
+      "id": "compass_skull",
+      "slot": "skull",
+      "kind": "improve",
+      "name": {
+        "es": "Brújula en el cráneo",
+        "en": "Compass in the Skull"
+      },
+      "effect": {
+        "attribute": "Leash",
+        "delta": 8
+      }
+    },
+    {
+      "id": "wooden_arm",
+      "slot": "arm",
+      "kind": "worsen",
+      "name": {
+        "es": "Brazo de pata de mesa",
+        "en": "Table-Leg Arm"
+      },
+      "effect": {
+        "attribute": "Strength",
+        "delta": -10
+      }
+    },
+    {
+      "id": "peg_leg",
+      "slot": "leg",
+      "kind": "worsen",
+      "name": {
+        "es": "Pata de palo (de la escoba)",
+        "en": "Peg Leg (Off the Broom)"
+      },
+      "effect": {
+        "attribute": "Speed",
+        "delta": -11
+      }
+    },
+    {
+      "id": "glass_eye",
+      "slot": "eye",
+      "kind": "worsen",
+      "name": {
+        "es": "Ojo de cristal, de un vaso",
+        "en": "Glass Eye, From a Pint Glass"
+      },
+      "effect": {
+        "attribute": "Technique",
+        "delta": -10
+      }
+    },
+    {
+      "id": "tin_jaw",
+      "slot": "jaw",
+      "kind": "worsen",
+      "name": {
+        "es": "Mandíbula de lata de sardinas",
+        "en": "Sardine-Tin Jaw"
+      },
+      "effect": {
+        "attribute": "Technique",
+        "delta": -8
+      }
+    },
+    {
+      "id": "rusty_spine",
+      "slot": "spine",
+      "kind": "worsen",
+      "name": {
+        "es": "Columna de sacacorchos oxidado",
+        "en": "Rusty Corkscrew Spine"
+      },
+      "effect": {
+        "attribute": "Stamina",
+        "delta": -11
+      }
+    },
+    {
+      "id": "kettle_gut",
+      "slot": "gut",
+      "kind": "worsen",
+      "name": {
+        "es": "Tripa de tetera con silbido",
+        "en": "Whistling Kettle Gut"
+      },
+      "effect": {
+        "attribute": "Stamina",
+        "delta": -9
+      }
+    },
+    {
+      "id": "bucket_skull",
+      "slot": "skull",
+      "kind": "worsen",
+      "name": {
+        "es": "Cubo por casco",
+        "en": "Bucket for a Helmet"
+      },
+      "effect": {
+        "attribute": "Leash",
+        "delta": -9
+      }
+    }
+  ]
+}

@@ -9,6 +9,11 @@ using ProgressionRules = Underleague.Sim.Progression.Progression;
 namespace Underleague.Sim.Run.Systems.Medical;
 
 /// <summary>
+/// Tabla de tres resultados del herrero (ADR 0164): porcentajes enteros que suman 100 (RT-023).
+/// </summary>
+public readonly record struct BlacksmithOdds(int CurePercent, int ImprovePercent, int WorsenPercent);
+
+/// <summary>
 /// Clínica (RF-094). Hasta la <b>ADR 0099</b> tenía un solo servicio —un jugador, precio fijo, resultado
 /// garantizado— y por eso no había nada que decidir salvo a quién. Ahora ofrece tres, y la decisión es cuál:
 /// <list type="number">
@@ -140,6 +145,182 @@ public static class MedicalSystem
         }
 
         return state.AddGold(-cost).WithRoster(roster);
+    }
+
+    /// <summary>Precio base del herrero (ADR 0164): un porcentaje del precio del médico, nunca menos de uno.</summary>
+    public static int BlacksmithBasePrice(EconomyConfig economy)
+    {
+        ArgumentNullException.ThrowIfNull(economy);
+        return Math.Max(1, economy.ClinicCost * economy.Blacksmith.PricePercent / 100);
+    }
+
+    /// <summary>
+    /// La tabla de tres resultados del herrero para <paramref name="extraGold"/> de oro invertido (ADR 0164,
+    /// RF-095, RF-095b). <b>Es la única fuente</b>: la vista (<c>BlacksmithView</c>) la enseña y
+    /// <see cref="Forge"/> la tira, así que lo que se ve es lo que se juega. Suma siempre 100.
+    /// </summary>
+    public static BlacksmithOdds BlacksmithOddsFor(EconomyConfig economy, int extraGold)
+    {
+        ArgumentNullException.ThrowIfNull(economy);
+        var config = economy.Blacksmith;
+        if (extraGold < 0 || extraGold > config.MaxExtraGold)
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(extraGold),
+                extraGold,
+                $"el oro extra del herrero va de 0 a {config.MaxExtraGold} (rendimiento decreciente con tope, RF-095b)");
+        }
+
+        int shift = 0;
+        for (int i = 0; i < extraGold; i++)
+        {
+            shift += config.ShiftByExtraGold[i];
+        }
+
+        int toCure = shift * config.CureSharePercent / 100;
+        return new BlacksmithOdds(
+            config.BaseCurePercent + toCure,
+            config.BaseImprovePercent + (shift - toCure),
+            config.BaseWorsenPercent - shift);
+    }
+
+    /// <summary>Ranuras que el jugador ya tiene ocupadas por una prótesis.</summary>
+    public static IReadOnlyList<string> OccupiedSlots(RunPlayer player)
+    {
+        ArgumentNullException.ThrowIfNull(player);
+        var slots = new List<string>(player.Prostheses.Count);
+        for (int i = 0; i < player.Prostheses.Count; i++)
+        {
+            slots.Add(player.Prostheses[i].Slot);
+        }
+
+        return slots;
+    }
+
+    /// <summary>True si al jugador le queda alguna ranura libre en la que el catálogo pueda instalar algo.</summary>
+    public static bool HasFreeProsthesisSlot(RunPlayer player, ProsthesisCatalog prostheses)
+    {
+        ArgumentNullException.ThrowIfNull(player);
+        ArgumentNullException.ThrowIfNull(prostheses);
+        var occupied = OccupiedSlots(player);
+        for (int i = 0; i < prostheses.All.Count; i++)
+        {
+            if (!occupied.Contains(prostheses.All[i].Slot))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /// <summary>
+    /// El herrero (ADR 0164, RF-095, RF-095b, RF-095c). Paga el precio base más el oro extra y tira una vez la
+    /// tabla de <see cref="BlacksmithOddsFor"/> con un flujo propio derivado de (semilla, nodo, jugador)
+    /// (<see cref="OfferStream"/>, desplazamiento 9000 + id de jugador; nunca el de partido, RT-022). El jugador
+    /// sale <b>sano</b> en los tres casos; la curación lo deja como estaba, y la mejora y el empeoramiento le
+    /// instalan una prótesis en una ranura libre —con su efecto aplicado a los atributos y la etiqueta
+    /// <c>Scrap</c>—. A la tercera prótesis pierde la etiqueta de especie y gana <c>Automaton</c>. Nunca mata.
+    /// </summary>
+    public static RunState Forge(RunState state, ForgePlayer decision, EconomyConfig economy, ProsthesisCatalog prostheses)
+    {
+        ArgumentNullException.ThrowIfNull(state);
+        ArgumentNullException.ThrowIfNull(decision);
+        ArgumentNullException.ThrowIfNull(economy);
+        ArgumentNullException.ThrowIfNull(prostheses);
+        var node = NodeGuards.RequireOpen(state, NodeKind.Clinic, "acudir al herrero");
+        var player = state.GetPlayer(decision.PlayerId);
+        if (player.PhysicalState != PhysicalState.SevereInjury)
+        {
+            throw new ArgumentException(
+                $"el jugador {player.Id} está {player.PhysicalState}: el herrero trata lesiones graves (ADR 0164, RF-095)",
+                nameof(decision));
+        }
+
+        if (!HasFreeProsthesisSlot(player, prostheses))
+        {
+            throw new ArgumentException(
+                $"el jugador {player.Id} no tiene ninguna ranura libre para una prótesis (una ranura ocupada no se repite, ADR 0164)",
+                nameof(decision));
+        }
+
+        var odds = BlacksmithOddsFor(economy, decision.ExtraGold);
+        int cost = BlacksmithBasePrice(economy) + decision.ExtraGold;
+        if (state.Gold < cost)
+        {
+            throw new ArgumentException(
+                $"el herrero cuesta {cost} de oro para {player.Id} y la run solo tiene {state.Gold}",
+                nameof(decision));
+        }
+
+        state = state.AddGold(-cost);
+        var rng = OfferStream.For(state.Seed, node.Id, BlacksmithStreamBase + player.Id);
+        int roll = rng.Range(0, 100);
+        var healthy = player with { PhysicalState = PhysicalState.Healthy, MinorInjuries = 0 };
+        if (roll < odds.CurePercent)
+        {
+            return state.WithPlayer(healthy);
+        }
+
+        var kind = roll < odds.CurePercent + odds.ImprovePercent ? ProsthesisKind.Improve : ProsthesisKind.Worsen;
+        var candidates = prostheses.Candidates(kind, OccupiedSlots(player));
+        var chosen = candidates[rng.Range(0, candidates.Count)];
+        return state.WithPlayer(Install(healthy, chosen));
+    }
+
+    /// <summary>Desplazamiento de <see cref="OfferStream"/> del herrero; se le suma el id del jugador (tabla en <see cref="OfferStream"/>).</summary>
+    public const int BlacksmithStreamBase = 9000;
+
+    /// <summary>Prótesis que hacen falta para que el jugador deje de ser de su especie y pase a ser <c>Automaton</c> (RF-095c).</summary>
+    public const int ProsthesesForAutomaton = 3;
+
+    /// <summary>Etiqueta de un jugador con alguna prótesis (ADR 0164).</summary>
+    public const string ScrapTag = "Scrap";
+
+    /// <summary>Etiqueta que sustituye a la de especie con tres prótesis (RF-095c).</summary>
+    public const string AutomatonTag = "Automaton";
+
+    /// <summary>
+    /// Instala <paramref name="prosthesis"/>: efecto sobre los atributos (permanente, 1..99), ranura registrada
+    /// en <see cref="RunPlayer.Prostheses"/>, etiqueta <see cref="ScrapTag"/> y, a la tercera, especie
+    /// sustituida por <see cref="AutomatonTag"/>.
+    /// </summary>
+    public static RunPlayer Install(RunPlayer player, ProsthesisDefinition prosthesis)
+    {
+        ArgumentNullException.ThrowIfNull(player);
+        ArgumentNullException.ThrowIfNull(prosthesis);
+        var installed = new List<RunProsthesis>(player.Prostheses) { new(prosthesis.Slot, prosthesis.Id) };
+        var tags = new List<string>(player.Tags);
+        if (!tags.Contains(ScrapTag))
+        {
+            tags.Add(ScrapTag);
+        }
+
+        string species = player.SpeciesTag;
+        if (installed.Count >= ProsthesesForAutomaton && species != AutomatonTag)
+        {
+            // RF-095c. La etiqueta de especie la consumen los perks raciales (`perk.race`, EffectEngine y
+            // Scouting exigen HasTag(raza)): sin ella, la habilidad racial deja de surtir efecto. Es el coste.
+            int at = species.Length > 0 ? tags.IndexOf(species) : -1;
+            if (at >= 0)
+            {
+                tags[at] = AutomatonTag;
+            }
+            else if (!tags.Contains(AutomatonTag))
+            {
+                tags.Add(AutomatonTag);
+            }
+
+            species = AutomatonTag;
+        }
+
+        return player with
+        {
+            Attributes = prosthesis.ApplyTo(player.Attributes),
+            Prostheses = installed,
+            Tags = tags,
+            SpeciesTag = species,
+        };
     }
 
     /// <summary>Lesionado que la clínica puede tratar: grave, o leve con lesiones acumuladas (RF-091).</summary>

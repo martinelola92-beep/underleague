@@ -42,8 +42,9 @@ public sealed class StandardRunSystems : IRunSystems
     private readonly EventCatalog _events;
     private readonly RefereeCatalog _referees;
     private readonly BetCatalog _bets;
+    private readonly ProsthesisCatalog _prostheses;
 
-    public StandardRunSystems(EconomyConfig economy, ItemCatalog items, ConsumableCatalog consumables, RivalCatalog rivals, MapConfig map, ClubCatalog clubs, EventCatalog events, RefereeCatalog referees, BetCatalog? bets = null)
+    public StandardRunSystems(EconomyConfig economy, ItemCatalog items, ConsumableCatalog consumables, RivalCatalog rivals, MapConfig map, ClubCatalog clubs, EventCatalog events, RefereeCatalog referees, BetCatalog? bets = null, ProsthesisCatalog? prostheses = null)
     {
         _economy = economy ?? throw new ArgumentNullException(nameof(economy));
         _items = items ?? throw new ArgumentNullException(nameof(items));
@@ -54,6 +55,7 @@ public sealed class StandardRunSystems : IRunSystems
         _events = events ?? throw new ArgumentNullException(nameof(events));
         _referees = referees ?? throw new ArgumentNullException(nameof(referees));
         _bets = bets ?? BetCatalog.Empty;
+        _prostheses = prostheses ?? ProsthesisCatalog.Empty;
     }
 
     /// <summary>Configuración de economía de esta instancia (para tests y <c>/Balance</c>).</summary>
@@ -83,6 +85,9 @@ public sealed class StandardRunSystems : IRunSystems
     /// <summary>Catálogo de apuestas del vestuario de esta instancia (ADR 0157, <c>data/bets/</c>).</summary>
     public BetCatalog Bets => _bets;
 
+    /// <summary>Catálogo de prótesis del herrero de la clínica (ADR 0164, <c>data/prostheses/</c>).</summary>
+    public ProsthesisCatalog Prostheses => _prostheses;
+
     /// <summary>
     /// Construye los catálogos del paquete X de una instantánea de <c>/data</c> (el mismo diccionario que
     /// consume <c>DataLoader.FromJson</c>). Ayudante de conveniencia para tests y <c>/Balance</c>: evita
@@ -97,7 +102,8 @@ public sealed class StandardRunSystems : IRunSystems
         ClubLoader.FromJson(files),
         EventLoader.FromJson(files),
         RefereeLoader.FromJson(files),
-        BetLoader.FromJson(files));
+        BetLoader.FromJson(files),
+        ProsthesisLoader.FromJson(files));
 
     /// <summary>
     /// <see cref="RunSetup"/> completo para empezar una run con <b>estos</b> datos: oro de partida
@@ -332,6 +338,7 @@ public sealed class StandardRunSystems : IRunSystems
             HireMercenary hire => MarketSystem.Hire(state, hire, catalog, _economy, _items, _consumables),
             TreatPlayer treat => MedicalSystem.Treat(state, treat, _economy, catalog, _items),
             TreatSquad => MedicalSystem.TreatSquad(state, _economy),
+            ForgePlayer forge => MedicalSystem.Forge(state, forge, _economy, _prostheses),
             ChooseEventOption choice => EventSystem.Choose(state, choice, _events, _items, _consumables, _economy, catalog),
             ChooseTrainingSession training => TrainingSystem.Choose(state, training, _economy, catalog),
             ExpandRoster => EnrollmentSystem.Expand(state, _economy),

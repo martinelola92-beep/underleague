@@ -1,0 +1,57 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://underleague.dev/schemas/prostheses.schema.json",
+  "title": "Underleague prostheses",
+  "description": "data/prostheses/prostheses.json: catálogo de prótesis del herrero de la clínica (ADR 0164, RF-095, RF-095c), único fichero. Cargado por Sim.Run.Systems.Medical.ProsthesisLoader, fuera del Catalog compartido.",
+  "type": "object",
+  "properties": {
+    "_doc": { "type": "string" },
+    "prostheses": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/prosthesis" },
+      "minItems": 12,
+      "maxItems": 16
+    }
+  },
+  "required": ["prostheses"],
+  "additionalProperties": false,
+  "$defs": {
+    "prosthesis": {
+      "type": "object",
+      "properties": {
+        "_doc": { "type": "string" },
+        "id": { "type": "string", "pattern": "^[a-z][a-z0-9_]*$" },
+        "slot": {
+          "description": "Ranura del cuerpo. Una ranura ocupada no admite otra prótesis (ADR 0164, punto 3).",
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9_]*$"
+        },
+        "kind": {
+          "description": "improve: ventaja (delta > 0). worsen: desventaja (delta < 0). Las dos llevan la etiqueta Scrap.",
+          "enum": ["improve", "worsen"]
+        },
+        "name": { "$ref": "#/$defs/localizedText" },
+        "effect": {
+          "type": "object",
+          "properties": {
+            "attribute": { "enum": ["Strength", "Speed", "Technique", "Stamina", "Leash"] },
+            "delta": { "type": "integer", "minimum": -30, "maximum": 30 }
+          },
+          "required": ["attribute", "delta"],
+          "additionalProperties": false
+        }
+      },
+      "required": ["id", "slot", "kind", "name", "effect"],
+      "additionalProperties": false
+    },
+    "localizedText": {
+      "type": "object",
+      "properties": {
+        "es": { "type": "string", "minLength": 1 },
+        "en": { "type": "string", "minLength": 1 }
+      },
+      "required": ["es", "en"],
+      "additionalProperties": false
+    }
+  }
+}

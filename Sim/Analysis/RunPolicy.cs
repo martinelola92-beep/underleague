@@ -12,6 +12,7 @@ using Underleague.Sim.Run.Systems.Market;
 using Underleague.Sim.Run.Systems.Medical;
 using Underleague.Sim.Run.Systems.Nodes;
 using Underleague.Sim.Run.Systems.Rewards;
+using Underleague.Sim.Run.View;
 
 namespace Underleague.Sim.Analysis;
 
@@ -594,7 +595,16 @@ public sealed record RunPlayResult(
     int BetNetGold = 0,
 
     /// <summary>Oro apostado en la run (denominador del retorno de las apuestas).</summary>
-    int BetGoldStaked = 0)
+    int BetGoldStaked = 0,
+
+    /// <summary>Veces que se pagó al herrero de la clínica (ADR 0164), salga lo que salga.</summary>
+    int BlacksmithTreatments = 0,
+
+    /// <summary>Prótesis instaladas en la run (ADR 0164): mejoras y empeoramientos, no las curaciones.</summary>
+    int ProsthesesInstalled = 0,
+
+    /// <summary>Jugadores que se volvieron <c>Automaton</c> con la tercera prótesis (RF-095c).</summary>
+    int Automatons = 0)
 {
     /// <summary>True si la run terminó ganando al jefe final (RF-002).</summary>
     public bool Won => Outcome == RunOutcomeKind.Victory;
@@ -1387,7 +1397,56 @@ public static class RunPolicy
             ledger.Treatments++;
         }
 
+        state = TryTheBlacksmith(state, catalog, economy, systems, options, ledger);
         return TryTheQuack(state, catalog, economy, systems, options, ledger);
+    }
+
+    /// <summary>
+    /// El herrero (ADR 0164) en el mismo hueco que antes era solo del matasanos: queda un grave que merece la
+    /// pena y <b>no llega el oro</b> para el médico. <b>Regla</b>: entre las dos opciones baratas que sí llegan,
+    /// la política prefiere la que no mata, y solo si al jugador le queda una ranura libre; con el oro que
+    /// sobra invierte en la tabla hasta un oro <b>por debajo</b> del precio del médico (nunca paga tanto como
+    /// el garantizado: si pudiera, iría al médico). El matasanos queda para lo que ni el herrero alcanza.
+    /// </summary>
+    private static RunState TryTheBlacksmith(
+        RunState state,
+        Catalog catalog,
+        EconomyConfig economy,
+        IRunSystems systems,
+        RunPolicyOptions options,
+        Ledger ledger)
+    {
+        int price = MedicalSystem.BlacksmithBasePrice(economy);
+        while (state.Gold >= price && state.Gold < economy.ClinicCost)
+        {
+            var patient = BestSevereInjured(state, options);
+            if (patient is null
+                || (state.AvailablePlayerCount >= options.TreatWhileAvailableBelow && Value(patient, options) < options.TreatFromValue)
+                || !MedicalSystem.HasFreeProsthesisSlot(patient, systems.Prostheses))
+            {
+                break;
+            }
+
+            int extra = Math.Clamp(economy.ClinicCost - 1 - price, 0, economy.Blacksmith.MaxExtraGold);
+            extra = Math.Min(extra, state.Gold - price);
+            var before = patient;
+            state = RunEngine.Apply(state, new ForgePlayer(patient.Id, extra), catalog, systems);
+            ledger.GoldSpentClinic += price + extra;
+            ledger.BlacksmithTreatments++;
+            ledger.Treatments++;
+            var result = BlacksmithView.Outcome(before, state.GetPlayer(patient.Id), systems.Prostheses);
+            if (result.Prosthesis is not null)
+            {
+                ledger.ProsthesesInstalled++;
+            }
+
+            if (result.BecameAutomaton)
+            {
+                ledger.Automatons++;
+            }
+        }
+
+        return state;
     }
 
     /// <summary>
@@ -3754,7 +3813,10 @@ public static class RunPolicy
             perkHorizon,
             ledger.BetsTaken,
             ledger.BetPaid - ledger.BetStaked,
-            ledger.BetStaked);
+            ledger.BetStaked,
+            ledger.BlacksmithTreatments,
+            ledger.ProsthesesInstalled,
+            ledger.Automatons);
     }
 
     /// <summary>
@@ -3866,6 +3928,12 @@ public static class RunPolicy
         public int EventsDeclined;
 
         public int RiskyTreatments;
+
+        public int BlacksmithTreatments;
+
+        public int ProsthesesInstalled;
+
+        public int Automatons;
 
         /// <summary>Oro gastado en huecos de plantilla (ADR 0046): el sumidero nuevo.</summary>
         public int GoldSpentEnrollment;

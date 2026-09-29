@@ -115,6 +115,15 @@ public sealed record TreatPlayer(int PlayerId, bool Risky = false) : RunDecision
 public sealed record TreatSquad : RunDecision;
 
 /// <summary>
+/// El herrero de la clínica (ADR 0164, RF-095, RF-095b): para un jugador con lesión <b>grave</b>. Cuesta el precio
+/// base del herrero más <paramref name="ExtraGold"/> de oro invertido (0..tope de <c>economy.blacksmith</c>), que
+/// desplaza la tabla de tres resultados —curación, mejora con prótesis, empeoramiento con prótesis— con
+/// rendimiento decreciente. La tabla que se tira es <b>exactamente</b> la que enseña <c>BlacksmithView</c>.
+/// Nunca mata.
+/// </summary>
+public sealed record ForgePlayer(int PlayerId, int ExtraGold = 0) : RunDecision;
+
+/// <summary>
 /// Elige una opción de la carta del nodo de evento abierto (ADR 0100, ADR 0159). <paramref name="TargetPlayerId"/>
 /// solo hace falta cuando la opción señala a un jugador —la familia que cambia carne por ventaja—; en las
 /// demás se ignora. <paramref name="SecondTargetPlayerId"/> (ADR 0159) es el segundo objetivo que admite

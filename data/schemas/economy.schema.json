@@ -30,6 +30,28 @@
     "clinicRiskyPercent": { "type": "integer", "minimum": 1, "maximum": 100 },
     "clinicRiskyFailPercent": { "type": "integer", "minimum": 0, "maximum": 100 },
     "clinicRiskyWorsePercent": { "type": "integer", "minimum": 0, "maximum": 100 },
+    "blacksmith": {
+      "description": "ADR 0164: el herrero de la clínica. Provisional, sin medir (Regla H).",
+      "type": "object",
+      "properties": {
+        "_doc": { "type": "string" },
+        "pricePercent": { "type": "integer", "minimum": 1, "maximum": 100 },
+        "baseCurePercent": { "type": "integer", "minimum": 0, "maximum": 100 },
+        "baseImprovePercent": { "type": "integer", "minimum": 0, "maximum": 100 },
+        "baseWorsenPercent": { "type": "integer", "minimum": 0, "maximum": 100 },
+        "shiftByExtraGold": {
+          "description": "Puntos que el oro extra n-ésimo quita al empeoramiento; su longitud es el tope de oro extra. No creciente (rendimiento decreciente, RF-095b).",
+          "type": "array",
+          "items": { "type": "integer", "minimum": 1, "maximum": 100 },
+          "minItems": 1,
+          "maxItems": 10
+        },
+        "cureSharePercent": { "type": "integer", "minimum": 0, "maximum": 100 },
+        "minWorsenPercent": { "type": "integer", "minimum": 0, "maximum": 100 }
+      },
+      "required": ["pricePercent", "baseCurePercent", "baseImprovePercent", "baseWorsenPercent", "shiftByExtraGold", "cureSharePercent", "minWorsenPercent"],
+      "additionalProperties": false
+    },
     "enrollmentCosts": {
       "description": "ADR 0046: coste creciente de cada hueco de plantilla que vende el nodo de inscripcion. Dos entradas, una por hueco entre la base de 10 y el techo de 12 de RF-020.",
       "type": "array",
@@ -68,7 +90,7 @@
   "required": [
     "startingGoldByDivision", "goldAct1", "goldAct2", "goldAct3", "difficultyMultiplierPercent",
     "nodeRewards",
-    "clinicCost", "clinicMinorCost", "clinicSquadCost", "clinicRiskyPercent", "clinicRiskyFailPercent", "clinicRiskyWorsePercent", "enrollmentCosts", "rerollBaseCost", "rerollStepCost", "trainingExperience",
+    "clinicCost", "clinicMinorCost", "clinicSquadCost", "clinicRiskyPercent", "clinicRiskyFailPercent", "clinicRiskyWorsePercent", "blacksmith", "enrollmentCosts", "rerollBaseCost", "rerollStepCost", "trainingExperience",
     "mercenaryBaseWage", "mercenaryWagePerRarityStep",
     "mercenaryBenchAbandonMatches", "mercenaryLossStreakAbandon",
     "recruitLevelByAct", "rewardPlayerQuality", "rewardPerkWeight", "rewardPlayerWeight", "rewardItemWeight",

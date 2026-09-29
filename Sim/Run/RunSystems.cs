@@ -203,6 +203,12 @@ public interface IRunSystems
     /// sin catálogo ningún nodo ofrece apuesta. Lo lee <see cref="RunEngine"/> para tomarlas y resolverlas.
     /// </summary>
     Systems.Bets.BetCatalog Bets => Systems.Bets.BetCatalog.Empty;
+
+    /// <summary>
+    /// Catálogo de prótesis del herrero de la clínica (ADR 0164, <c>data/prostheses/</c>). Vacío por defecto:
+    /// sin catálogo el herrero no puede instalar nada.
+    /// </summary>
+    Systems.Medical.ProsthesisCatalog Prostheses => Systems.Medical.ProsthesisCatalog.Empty;
 }
 
 /// <summary>
