@@ -15,10 +15,10 @@ Máquina: Windows con WSL2 (Ubuntu 24.04). Claude Code corre en WSL. Godot corre
 ```bash
 godot --headless --path Game --import          # importar recursos
 godot --headless --path Game --quit-after 30   # ejecutar sin ventana
-godot --path Game                              # editor gráfico, vía WSLg
+godot --path Game --rendering-driver opengl3   # editor gráfico, vía WSLg
 ```
 
-**No hay editor gráfico**: WSLg está instalado (1.0.71) pero deshabilitado en `C:\Users\urban\.wslconfig` con `guiApplications=false`, decisión del revisor para ahorrar VRAM. Las escenas (`.tscn`) son ficheros de texto y se editan sin editor.
+**Editor gráfico vía WSLg**: habilitado el 29 sep 2026 (`guiApplications=true` en `C:\Users\urban\.wslconfig`; antes estaba en `false` para ahorrar VRAM). El cambio exige `wsl --shutdown` desde PowerShell. El Godot de Windows no sirve para editar: al compilar pasa la ruta `//wsl.localhost/...` a MSBuild, que la toma por un modificador (`MSB1001`); sin C# compilado no se ve casi nada en pantalla, porque la interfaz se monta desde código. `opengl3` es obligatorio también en el editor (ver Vulkan, abajo). Las escenas (`.tscn`) siguen siendo texto y pueden editarse sin editor.
 
 **Capturas de pantalla sin GUI**, para verificar el resultado visual (Xvfb instalado):
 
