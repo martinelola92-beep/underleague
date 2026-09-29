@@ -198,9 +198,8 @@ public sealed class FullRunGateTests
     /// <summary>
     /// ADR 0046, ADR 0048 y RF-093: las muertes tienen que existir, y desde que un jugador sano puede
     /// morir tienen que ser el riesgo permanente que la ADR 0048 describe, no una anécdota. La banda de
-    /// diseño (1,5-3) es ahora dura y la comprueba
-    /// <see cref="TheMetricsThatDoNotMeetTheirDesignBandStayWhereTheyWereMeasured"/> como cota ancha con
-    /// esta muestra de 60 runs; aquí se afirma lo estructural.
+    /// diseño (ADR 0048: 1,5-3 por run; por partido desde la ADR 0170) la comprueba
+    /// <see cref="TheDeathsPerMatchStayInTheBandOfAdr0048"/>; aquí se afirma lo estructural.
     /// </summary>
     [Fact]
     public void DeathsHappenAndTheyAreNotAllFromTheSameSource()
@@ -214,6 +213,14 @@ public sealed class FullRunGateTests
         double recovered = Result.Value.ByDoctrine[PurchaseDoctrine.Contextual].Average(r => (double)r.ItemsRecovered);
         Assert.True(recovered > 0.0, "ningún objeto ha vuelto al inventario tras una muerte (ADR 0048)");
     }
+
+    /// <summary>
+    /// ADR 0170, enmienda de la banda de la ADR 0048: la letalidad se vigila <b>por partido</b> (0,075-0,15 muertes por
+    /// partido, el 1,5-3 por run de la ADR 0048 sobre 20 partidos), porque con el acto más corto la banda por run mide
+    /// la duración de la run y no la letalidad.
+    /// </summary>
+    [Fact]
+    public void TheDeathsPerMatchStayInTheBandOfAdr0048() => AssertIn(FullRunMetrics.DeathsPerMatch);
 
     /// <summary>
     /// ADR 0048, condición 3: la política que <b>no</b> lee el informe de ojeo tiene que alinear distinto
@@ -298,7 +305,8 @@ public sealed class FullRunGateTests
         // se redibuja alrededor de lo nuevo. La banda de diseño (10-25) queda justo encima: la métrica está
         // en su puerta, no dentro, y lo dice el lote.
         AssertBetween(FullRunMetrics.BrokeMarketRunShare, 5.0, 25.0);
-        AssertBetween(FullRunMetrics.DeathsPerRun, 1.0, 3.0);
+        // deathsPerRun ya no tiene banda desde la ADR 0170 (la letalidad se vigila por partido); cota de no regresión.
+        AssertBetween(FullRunMetrics.DeathsPerRun, 0.8, 3.0);
         AssertBetween(FullRunMetrics.PurchasesPerMarket, 0.5, 2.0);
     }
 

@@ -28,6 +28,9 @@ public static class FullRunMetrics
     /// <summary>Muertes por run (1,5-3 desde la ADR 0048; antes 0,5-2).</summary>
     public const string DeathsPerRun = "deathsPerRun";
 
+    /// <summary>ADR 0170: muertes por partido jugado, la banda de la ADR 0048 expresada por partido.</summary>
+    public const string DeathsPerMatch = "deathsPerMatch";
+
     /// <summary>
     /// ADR 0168, métrica guardiana de la sangre: bajas de sangre propias (jugadores que sufren una lesión grave o
     /// mueren) por partido jugado. Vigila que ningún cambio lave la carnicería administrada, que es la identidad del
@@ -212,12 +215,26 @@ public static class FullRunMetrics
     public const double MatchesPerFullRunMax = 15.0;
 
     /// <summary>
-    /// Muertes por run mínimas. Sube de 0,5 a <b>1,5</b> con la ADR 0048: desde que un jugador sano puede
-    /// morir, el desgaste es un riesgo permanente y no el castigo de una mala decisión puntual.
+    /// Muertes por partido mínimas (ADR 0170, enmienda de la banda de la ADR 0048). La ADR 0048 fijó <b>1,5-3 muertes por
+    /// run</b> (subió de 0,5 a 1,5: desde que un sano puede morir, el desgaste es un riesgo permanente) sobre una run de
+    /// 20 partidos en el peor camino (11/12/12 nodos), es decir 0,075-0,15 por partido; con el acto más corto (8/9/9 nodos,
+    /// 14 partidos) la misma letalidad por partido da menos muertes por run y la banda por run deja de medir la letalidad y
+    /// pasa a medir la duración. Procedencia (Regla H): las dos cotas son las de la ADR 0048 divididas por 20; la base
+    /// medida (`--full-runs 1200`, semillas 1 y 7) fue 0,115 antes de la ADR 0170 y 0,104 después. La letalidad por partido
+    /// es la misma banda; sólo cambia la unidad.
+    /// </summary>
+    public const double DeathsPerMatchMin = 0.075;
+
+    /// <summary>Muertes por partido máximas (ADR 0170): el 3,0 de la ADR 0048 sobre 20 partidos.</summary>
+    public const double DeathsPerMatchMax = 0.15;
+
+    /// <summary>
+    /// Muertes por run: ya sin banda desde la ADR 0170 (ver <see cref="DeathsPerMatchMin"/>). Se conserva como dato
+    /// (`deathsPerRun`) y como cota de no regresión de la puerta (1,0-3,0).
     /// </summary>
     public const double DeathsPerRunMin = 1.5;
 
-    /// <summary>Muertes por run máximas (ADR 0048: de 2 a 3).</summary>
+    /// <summary>Muertes por run máximas de la ADR 0048 (de 2 a 3), ya sin banda propia: ver <see cref="DeathsPerMatchMax"/>.</summary>
     public const double DeathsPerRunMax = 3.0;
 
     /// <summary>
@@ -635,7 +652,8 @@ public static class FullRunMetrics
             fullRuns > 0 ? (double)fullRunMatches / fullRuns : 0.0,
             MatchesPerFullRunMin,
             MatchesPerFullRunMax));
-        rows.Add(Banded(DeathsPerRun, (double)deaths / runs.Count, DeathsPerRunMin, DeathsPerRunMax));
+        rows.Add(Info(DeathsPerRun, (double)deaths / runs.Count));
+        rows.Add(Banded(DeathsPerMatch, matches > 0 ? (double)deaths / matches : 0.0, DeathsPerMatchMin, DeathsPerMatchMax));
         rows.Add(Banded(BloodPerMatch, matches > 0 ? (double)blood / matches : 0.0, BloodPerMatchMin, null));
         rows.Add(Banded(
             BloodlessPastAct1Share, pastAct1 > 0 ? 100.0 * bloodlessPastAct1 / pastAct1 : 0.0, null, BloodlessPastAct1ShareMax));
