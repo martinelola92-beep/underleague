@@ -696,6 +696,14 @@
         "parryLiftCellsPerTickMilli": {
           "description": "ADR 0141: cuánto se eleva el rechace, para que pueda caer en la banda del cabezazo.",
           "$ref": "#/$defs/milli"
+        },
+        "holdTicks": {
+          "description": "BA-J (ADR 0177): ticks que el portero sostiene el balón tras atraparlo, antes de volver a decidir. Es la pausa en la que el equipo que tiró sale del área cerrada y se repliega. 0 = suelta a los 5 ticks del armado del pase (el motor de antes).",
+          "$ref": "#/$defs/ticks"
+        },
+        "retreatTicks": {
+          "description": "BA-J (ADR 0177): ticks que el equipo que acaba de tirar juega con la orden defensiva (repliegue de líneas) desde que el portero atrapa el balón. 0 = no se repliega.",
+          "$ref": "#/$defs/ticks"
         }
       },
       "required": [
@@ -714,7 +722,9 @@
         "catchDivePenaltyPercent",
         "cornerOffCentreCells",
         "parrySpeedCellsPerTickMilli",
-        "parryLiftCellsPerTickMilli"
+        "parryLiftCellsPerTickMilli",
+        "holdTicks",
+        "retreatTicks"
       ],
       "additionalProperties": false
     },

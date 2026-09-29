@@ -121,7 +121,9 @@
     "catchDivePenaltyPercent": 45,
     "cornerOffCentreCells": 0.8,
     "parrySpeedCellsPerTickMilli": 260,
-    "parryLiftCellsPerTickMilli": 40
+    "parryLiftCellsPerTickMilli": 40,
+    "holdTicks": 15,
+    "retreatTicks": 20
   },
   "goalkeeper": {
     "_doc": "ADR 0141: cuando y cuanto puede salirse del area el portero. Hasta aqui GoalkeeperLeftArea era INALCANZABLE -Move acotaba al area dos veces- y el rasgo Rusher (Sale mucho) no podia cumplir su nombre: solo multiplicaba su ChaseBall, que el propio clamp anulaba. exitUrgencyPercent es alto A PROPOSITO, y vale EXACTAMENTE lo que vale ir un gol por detras con el tiempo cumplido (urgencyPerGoalPercent = 60): ni mas, porque entonces la cadena que el encargo nombra -0-1 y quedan segundos, el portero sale- seria IMPOSIBLE y lo encontro el test de integracion de la cadena; ni menos, porque el encargo prohibe expresamente el portero adelantado como comportamiento permanente, asi que subir tiene que ser cosa de ir perdiendo con el partido acabandose. La otra puerta es el balon suelto cerca del area, y esa solo la abre quien lleva el rasgo: eso es lo que significa ser un portero que sale. VALORES DE PARTIDA SIN CALIBRAR.",

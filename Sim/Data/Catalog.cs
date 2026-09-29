@@ -603,7 +603,15 @@ public sealed record SaveTuning(
     int CatchDivePenaltyPercent = 0,
     float CornerOffCentreCells = 0f,
     int ParrySpeedCellsPerTickMilli = 0,
-    int ParryLiftCellsPerTickMilli = 0);
+    int ParryLiftCellsPerTickMilli = 0,
+
+    // BA-J (ADR 0177) — LA PARADA SE ASIENTA. Ticks que el portero sostiene el balón tras atraparlo, antes de
+    // volver a decidir. Con 0 suelta a los 5 ticks del armado del pase, como hasta ahora.
+    int HoldTicks = 0,
+
+    // BA-J (ADR 0177): ticks que el equipo que acaba de tirar, y cuyo tiro se ha parado, juega con la orden
+    // defensiva —repliegue de líneas— desde que el portero atrapa. 0 = no se repliega.
+    int RetreatTicks = 0);
 
 /// <summary>tuning.tackle.</summary>
 public sealed record TackleTuning(int BaseWin, int PressureFactor, int StrengthSharePercent, int FoulBase, int OffBallFoulBase, int FoulStrengthFactor, int HardTackleThreshold, int YellowCardBase, int RedCardBase, int HardTackleYellowBonus, int HardTackleRedBonus, bool SecondYellowIsRed, int ShieldResistance = 0);

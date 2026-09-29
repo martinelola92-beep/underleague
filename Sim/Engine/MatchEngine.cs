@@ -66,6 +66,12 @@ internal sealed class MatchEngine : IPerkWorld
     // vuelve cuando el grito acaba. -1 = sin grito de orden / sin consigna de presión activa.
     private readonly Mentality[] _baseOrder = new Mentality[2];
     private readonly int[] _shoutOrderEnd = { -1, -1 };
+
+    // BA-J (ADR 0177): hasta qué tick (exclusivo) el equipo está en REPLIEGUE tras una parada, o -1. Es una
+    // ventana propia y NO toca la orden efectiva (`_context.Order`): la orden es del jugador y de sus gritos
+    // (ADR 0166), y la vista de gritos la reconstruye de los eventos; un repliegue que la cambiara sería una
+    // transición invisible que además la desmentiría.
+    private readonly int[] _fallBackEnd = { -1, -1 };
     private readonly int[] _pressEnd = { -1, -1 };
 
     // ADR 0167 (revisión independiente): la consigna de presión DE BASE, a la que vuelve un grito de presión al
@@ -986,6 +992,9 @@ internal sealed class MatchEngine : IPerkWorld
             // los medios. Es la orden, no la urgencia: la urgencia ya empuja las acciones (ADR 0140) y no
             // cambia la altura a la que el entrenador ha puesto las líneas.
             rawX += _catalog.Ai.MentalityShift(_context.Order[player.Team], player.Role) * direction;
+
+            // BA-J (ADR 0177): el repliegue tras una parada, encima de la orden y sin cambiarla.
+            rawX += FallBackShift(player.Team, player.Role) * direction;
 
             // AW-Q (docs/pendientes.md): techo del propio bloque. Hasta aquí el bloque subía las 4,0
             // casillas de blockShift.InPossession sin comprobar nunca dónde estaba el propio defensa más
@@ -3698,6 +3707,27 @@ internal sealed class MatchEngine : IPerkWorld
         if (_rng.Chance(catchPercent * 100))
         {
             SetOwner(goalkeeper);
+
+            // BA-J (ADR 0177): LA PARADA SE ASIENTA. SetOwner deja decidir al portero en el acto y suelta el
+            // balón a los 5 ticks del armado del pase, con los que acaban de tirar todavía en el área
+            // (medido: 1,9 de los seis a menos de 4 casillas del portero, y el balón vuelve a manos rivales
+            // en 45 ticks el 77 % de las veces). Sostenerlo unos ticks es lo que pedía la nota del revisor
+            // —«el portero debería esperar unos ticks antes de sacar»—: es la pausa en la que el equipo que
+            // tiró sale del área cerrada (ADR 0152) y se repliega, y el suyo se abre para recibir. Es el
+            // mismo compromiso con duración que ya usa la conducción (`Dribbling` con contador: no se decide
+            // hasta que se acaba), sin estado nuevo.
+            if (save.HoldTicks > 0)
+            {
+                goalkeeper.EnterState(PlayerState.Dribbling, save.HoldTicks);
+                goalkeeper.TargetPoint = goalkeeper.Position;
+            }
+
+            // Y el equipo que tiró se repliega durante la pausa (ver StartFallBack).
+            if (save.RetreatTicks > 0)
+            {
+                StartFallBack(shooter.Team, save.RetreatTicks);
+            }
+
             Emit(EventType.Save, _ball.ShotIsPenalty ? "penalty" : "held", goalkeeper, opponent: shooter);
             return;
         }
@@ -5263,6 +5293,32 @@ internal sealed class MatchEngine : IPerkWorld
         _shoutOrderEnd[team] = end;
         _context.Order[team] = kind == Underleague.Sim.Perks.ShoutKind.Defensive ? Mentality.Defensive : Mentality.Offensive;
     }
+
+    /// <summary>
+    /// BA-J (ADR 0177): el equipo <paramref name="team"/> —el que acaba de tirar y ha visto pararlo— se repliega
+    /// durante <paramref name="ticks"/> ticks: sus líneas bajan a donde las pondría la orden defensiva
+    /// (<c>mentalityShift.Defensive</c>, ADR 0154: el delantero tres casillas, los medios dos, los defensas
+    /// una), <b>sea cual sea su orden</b>. Es el <i>repliegue tras pérdida</i> que la transición defensiva
+    /// (<see cref="TacticalState.DefensiveTransition"/>, apenas medio paso) no llega a hacer.
+    /// </summary>
+    private void StartFallBack(int team, int ticks) => _fallBackEnd[team] = _tick + ticks;
+
+    /// <summary>
+    /// Cuánto se suma, en casillas hacia la portería rival, a la casilla-hogar de un jugador de
+    /// <paramref name="team"/> mientras dura su repliegue: lo que le falta a su orden actual para estar en la
+    /// defensiva. Una orden ya defensiva no baja dos veces, y una ofensiva baja más: el repliegue lleva a todos
+    /// al mismo sitio.
+    /// </summary>
+    private float FallBackShift(int team, Position role) =>
+        _fallBackEnd[team] > _tick
+            ? _catalog.Ai.MentalityShift(Mentality.Defensive, role) - _catalog.Ai.MentalityShift(_context.Order[team], role)
+            : 0f;
+
+    /// <summary>Enganche de prueba: abre la ventana de repliegue sin necesitar una parada (BA-J, ADR 0177).</summary>
+    internal void StartFallBackForTest(int team, int ticks) => StartFallBack(team, ticks);
+
+    /// <summary>Enganche de prueba: la casilla-hogar efectiva de un jugador.</summary>
+    internal Vec2 EffectiveHomeForTest(int playerIndex) => _players[playerIndex].EffectiveHome;
 
     /// <summary>ADR 0166: retira los gritos cuyo tiempo se ha cumplido; la orden efectiva vuelve a la de base.</summary>
     private void ExpireShouts()

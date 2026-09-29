@@ -1075,7 +1075,7 @@ public static class DataLoader
 
     private static SaveTuning ParseSave(Json node)
     {
-        node.EnsureKnownKeys("basePercent", "closeRangeCells", "attributeWeightPercent", "consecutiveShotDecayPercent", "qualityWeight", "qualityPivot", "reachCells", "diveReachCells", "divePenaltyPercent", "catchBasePercent", "catchAttributeWeightPercent", "catchQualityWeight", "catchDivePenaltyPercent", "cornerOffCentreCells", "parrySpeedCellsPerTickMilli", "parryLiftCellsPerTickMilli");
+        node.EnsureKnownKeys("basePercent", "closeRangeCells", "attributeWeightPercent", "consecutiveShotDecayPercent", "qualityWeight", "qualityPivot", "reachCells", "diveReachCells", "divePenaltyPercent", "catchBasePercent", "catchAttributeWeightPercent", "catchQualityWeight", "catchDivePenaltyPercent", "cornerOffCentreCells", "parrySpeedCellsPerTickMilli", "parryLiftCellsPerTickMilli", "holdTicks", "retreatTicks");
         return new SaveTuning(
             node.Prop("basePercent").AsInt(),
             node.Prop("closeRangeCells").AsInt(),
@@ -1092,7 +1092,9 @@ public static class DataLoader
             node.Prop("catchDivePenaltyPercent").AsInt(),
             node.Prop("cornerOffCentreCells").AsFloat(),
             node.Prop("parrySpeedCellsPerTickMilli").AsInt(),
-            node.Prop("parryLiftCellsPerTickMilli").AsInt());
+            node.Prop("parryLiftCellsPerTickMilli").AsInt(),
+            node.Prop("holdTicks").AsInt(),
+            node.Prop("retreatTicks").AsInt());
     }
 
     /// <summary>tuning.clear — el despeje (Gameplay AI Foundations Pass, P4).</summary>
