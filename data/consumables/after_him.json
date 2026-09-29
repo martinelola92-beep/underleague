@@ -1,5 +1,5 @@
 {
-  "_doc": "BA-H (catálogo, RF-084 tácticos): grito del entrenador, pensado para el slot manual (RF-082) — 'a por él' es el momento de apretar la presión, con el coste de faltas que trae ir a por todas. Común, techo 100.",
+  "_doc": "BA-H (catálogo, RF-084 tácticos), ADR 0166: grito del entrenador para el slot manual (RF-082). '¡A por él!' es la consigna de presión: 6 s en los que todo el equipo va a por el portador (ai.press en weights.json: más peso a perseguir, presionar y entrar), con el coste natural de faltas que trae ir a por todas. Sin multiplicadores de éxito invisibles. Duración provisional, sin medir. Común.",
   "id": "after_him",
   "name": {
     "es": "¡A por él!",
@@ -9,14 +9,9 @@
   "family": "tactical",
   "effects": [
     {
-      "type": "modifyProbability",
-      "probability": "tackle",
-      "value": 100
-    },
-    {
-      "type": "modifyProbability",
-      "probability": "foul",
-      "value": 50
+      "type": "shout",
+      "press": true,
+      "seconds": 6
     }
   ]
 }

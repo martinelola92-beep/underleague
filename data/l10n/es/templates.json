@@ -54,7 +54,10 @@
     "modifyTackleBiasFouled": "va a por quien le hizo la última falta",
     "extraAction": "{target} repite la jugada en el mismo instante",
     "modifyUtility": "{target} quiere {action} más",
-    "modifyUtilityInZone": "{target} quiere {action} más en la zona {utilityZone}"
+    "modifyUtilityInZone": "{target} quiere {action} más en la zona {utilityZone}",
+    "shoutDefensive": "{target} se repliega y juega a la defensiva durante {value} s",
+    "shoutOffensive": "{target} se vuelca al ataque durante {value} s",
+    "shoutPress": "{target} presiona al portador del balón durante {value} s"
   },
   "triggers": {
     "MATCH_START": "al empezar el partido",

@@ -37,11 +37,16 @@ internal static class EffectJson
     public static EffectDefinition Read(Json node, Rarity rarity)
     {
         string type = node.Str("type");
+        if (type == "shout")
+        {
+            return ReadShout(node);
+        }
+
         var effectType = type switch
         {
             "modifyAttribute" => EffectType.ModifyAttribute,
             "modifyProbability" => EffectType.ModifyProbability,
-            _ => throw new DataException(node.File, node.Path + ".type", $"tipo de efecto no admitido en objetos/consumibles: '{type}' (solo modifyAttribute y modifyProbability)"),
+            _ => throw new DataException(node.File, node.Path + ".type", $"tipo de efecto no admitido en objetos/consumibles: '{type}' (solo modifyAttribute, modifyProbability y, en consumibles, shout)"),
         };
 
         int value = node.Int("value");
@@ -97,6 +102,50 @@ internal static class EffectJson
             Probability: probabilityKind,
             Value: Perks.ProbabilityScale.ToMultiplier(value),
             Duration: EffectDuration.Match);
+    }
+
+    /// <summary>Techo de un grito, en segundos de juego: un partido dura 60-90 s, así que más de 30 sería jugar con la orden gritada casi todo el partido (ADR 0166, provisional).</summary>
+    public const int MaxShoutSeconds = 30;
+
+    /// <summary>
+    /// ADR 0166: <c>{ "type": "shout", "order": "Defensive"|"Offensive", "seconds": N }</c> o
+    /// <c>{ "type": "shout", "press": true, "seconds": N }</c>. Exactamente uno de <c>order</c> y <c>press</c>;
+    /// la duración va en <see cref="EffectDefinition.Value"/>. Un grito no tiene objetivo: es del equipo que
+    /// lo usa.
+    /// </summary>
+    private static EffectDefinition ReadShout(Json node)
+    {
+        bool press = node.OptionalBool("press", false);
+        bool hasOrder = node.TryProp("order") is not null;
+        if (press == hasOrder)
+        {
+            throw new DataException(node.File, node.Path, "un grito lleva exactamente uno de 'order' (Defensive u Offensive) y 'press': true");
+        }
+
+        var kind = ShoutKind.Press;
+        if (hasOrder)
+        {
+            string order = node.Str("order");
+            kind = order switch
+            {
+                "Defensive" => ShoutKind.Defensive,
+                "Offensive" => ShoutKind.Offensive,
+                _ => throw new DataException(node.File, node.Path + ".order", $"orden de un grito no admitida: '{order}' (solo Defensive y Offensive; Neutral no es un grito)"),
+            };
+        }
+
+        int seconds = node.Int("seconds");
+        if (seconds < 1 || seconds > MaxShoutSeconds)
+        {
+            throw new DataException(node.File, node.Path + ".seconds", $"la duración de un grito son 1..{MaxShoutSeconds} segundos, no {seconds}");
+        }
+
+        return new EffectDefinition(
+            EffectType.Shout,
+            Target: EffectTarget.Team,
+            Value: seconds,
+            Duration: EffectDuration.Match,
+            Shout: kind);
     }
 
     private static AttributeKind ParseAttribute(Json node, string attribute) => attribute switch

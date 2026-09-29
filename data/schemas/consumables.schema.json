@@ -34,7 +34,10 @@
     "effect": {
       "type": "object",
       "properties": {
-        "type": { "enum": ["modifyAttribute", "modifyProbability"] },
+        "type": { "enum": ["modifyAttribute", "modifyProbability", "shout"] },
+        "order": { "enum": ["Defensive", "Offensive"], "description": "ADR 0166, sólo con shout: la orden táctica con la que juega el equipo mientras dura el grito." },
+        "press": { "const": true, "description": "ADR 0166, sólo con shout: la consigna de presión (más peso a perseguir y entrar al portador) en lugar de una orden. Exactamente uno de order y press." },
+        "seconds": { "type": "integer", "minimum": 1, "maximum": 30, "description": "ADR 0166, sólo con shout: duración del grito en segundos de juego; después el equipo vuelve a su orden." },
         "target": { "enum": ["team", "opposingTeam"], "description": "A quién alcanza: al equipo propio (por defecto) o a los rivales en el campo. Un consumible no tiene portador. Necesario para los canales de quien SUFRE la consecuencia (severeInjury, injury)." },
         "attribute": { "enum": ["strength", "speed", "technique", "stamina", "leash"] },
         "probability": {
@@ -45,9 +48,21 @@
         },
         "value": { "type": "integer", "minimum": -5000, "maximum": 5000, "description": "Puntos de atributo en modifyAttribute; en modifyProbability, el PORCENTAJE DE CUOTA con signo de la ADR 0050 P1 (+-15, +-30, +-50, +-100, +-200, +-300, +-500), acotado por el TECHO DE SU RAREZA de la ADR 0058 (comun 100, poco comun 200, raro 300, legendario 500), que comprueba el cargador." }
       },
-      "required": ["type", "value"],
+      "required": ["type"],
       "additionalProperties": false,
       "allOf": [
+        {
+          "if": { "properties": { "type": { "const": "shout" } }, "required": ["type"] },
+          "then": {
+            "required": ["seconds"],
+            "oneOf": [{ "required": ["order"] }, { "required": ["press"] }],
+            "not": { "anyOf": [{ "required": ["value"] }, { "required": ["target"] }, { "required": ["attribute"] }, { "required": ["probability"] }] }
+          },
+          "else": {
+            "required": ["value"],
+            "not": { "anyOf": [{ "required": ["order"] }, { "required": ["press"] }, { "required": ["seconds"] }] }
+          }
+        },
         {
           "if": { "properties": { "type": { "const": "modifyAttribute" } }, "required": ["type"] },
           "then": { "required": ["attribute"] }

@@ -259,9 +259,11 @@ public sealed class AiWeights
     private readonly BlockShift[] _shift;
     private readonly float[,] _mentalityShift;
     private readonly int[,] _mentalityOdds;
+    private readonly int[] _press;
 
-    internal AiWeights(int[,] baseTable, int[,] tacticalTable, int[,] mentalityTable, int[] offBallTackle, AiContext context, BlockShift[] shift, float[,]? mentalityShift = null, int[,]? mentalityOdds = null)
+    internal AiWeights(int[,] baseTable, int[,] tacticalTable, int[,] mentalityTable, int[] offBallTackle, AiContext context, BlockShift[] shift, float[,]? mentalityShift = null, int[,]? mentalityOdds = null, int[]? press = null)
     {
+        _press = press ?? NeutralPress();
         _mentalityOdds = mentalityOdds ?? NeutralOdds();
         _base = baseTable;
         _tactical = tacticalTable;
@@ -270,6 +272,21 @@ public sealed class AiWeights
         Context = context;
         _shift = shift;
         _mentalityShift = mentalityShift ?? new float[Enum.GetValues<Mentality>().Length, Enum.GetValues<Position>().Length];
+    }
+
+    /// <summary>
+    /// Multiplicador de utilidad (porcentaje, 100 = neutro) de la acción a mientras el equipo tiene activa la
+    /// consigna de presión de un grito (ADR 0166). Es un factor <b>multiplicativo</b> como
+    /// <see cref="Mentality"/>: entra en el mismo producto de <c>Utility.Choose</c>, así que 250 es «×2,5» y
+    /// no «+250 %» (Regla I: <c>Utility.cs</c> multiplica este eje, no lo suma). Sin la tabla es 100.
+    /// </summary>
+    public int Press(PlayerAction a) => _press[(int)a];
+
+    private static int[] NeutralPress()
+    {
+        var table = new int[Enum.GetValues<PlayerAction>().Length];
+        Array.Fill(table, 100);
+        return table;
     }
 
     /// <summary>

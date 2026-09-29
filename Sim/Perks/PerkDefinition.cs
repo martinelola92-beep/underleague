@@ -119,6 +119,27 @@ public enum EffectType
     /// <c>Utility.cs</c> (RT-034: nada de perks nombrados en el motor).
     /// </summary>
     ModifyUtility,
+
+    /// <summary>
+    /// ADR 0166: grito del entrenador. Sólo lo admiten los <b>consumibles</b> (<c>data/consumables</c>), no los
+    /// perks: durante <see cref="EffectDefinition.Value"/> segundos de juego el equipo del consumible juega
+    /// con una orden táctica (<see cref="ShoutKind.Defensive"/>, <see cref="ShoutKind.Offensive"/>) o con la
+    /// consigna de presión (<see cref="ShoutKind.Press"/>) y después vuelve a la que tenía.
+    /// </summary>
+    Shout,
+}
+
+/// <summary>Qué grita el entrenador (ADR 0166): una orden táctica de la ADR 0154 o la consigna de presión.</summary>
+public enum ShoutKind
+{
+    /// <summary>Orden defensiva mientras dura (líneas y cuotas de <c>Mentality.Defensive</c>, ADR 0154/0156).</summary>
+    Defensive,
+
+    /// <summary>Orden ofensiva mientras dura (líneas y cuotas de <c>Mentality.Offensive</c>, ADR 0154/0156).</summary>
+    Offensive,
+
+    /// <summary>Consigna de presión: más peso a perseguir y entrar al portador (<c>press</c> en <c>ai/weights.json</c>, ADR 0166).</summary>
+    Press,
 }
 
 /// <summary>
@@ -446,7 +467,10 @@ public sealed record EffectDefinition(
     /// el bono de <see cref="EffectType.ModifyUtility"/> cuente; <c>null</c> = siempre activo (C1 puro,
     /// sin la cláusula de C2 del tercio).
     /// </summary>
-    Zone? UtilityZone = null);
+    Zone? UtilityZone = null,
+
+    /// <summary>Qué grita un efecto <see cref="EffectType.Shout"/>; la duración en segundos va en <see cref="Value"/> (ADR 0166).</summary>
+    ShoutKind Shout = ShoutKind.Defensive);
 
 /// <summary>
 /// Un perk cargado de <c>data/perks/&lt;id&gt;.json</c> (RT-033). Es un dato puro: no contiene código,
