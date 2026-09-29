@@ -23,7 +23,10 @@ public partial class Toast : Control
     private const float Fade = 0.9f;
 
     private const float Padding = 10f;
-    private const float LineHeight = 17f;
+    private const float LineHeight = 20f;
+
+    /// <summary>Cuerpo del texto del aviso: el mínimo de lectura del lenguaje de Knavall, un poco por encima.</summary>
+    private const int TextSize = 15;
 
     private readonly List<ToastLine> _lines = new();
 
@@ -61,16 +64,16 @@ public partial class Toast : Control
             return;
         }
 
-        var font = GetThemeDefaultFont();
+        var font = Knavall.Ink.Heavy;
         float width = 0f;
         foreach (var line in _lines)
         {
-            width = Mathf.Max(width, font.GetStringSize(line.Text, HorizontalAlignment.Left, -1f, Style.TextSmall).X);
+            width = Mathf.Max(width, font.GetStringSize(line.Text, HorizontalAlignment.Left, -1f, TextSize).X);
         }
 
         Size = new Vector2(
-            Mathf.Min(width + (2f * Padding), MaximumWidth),
-            (_lines.Count * LineHeight) + (2f * Padding));
+            Mathf.Min(width + (2f * Padding) + 6f, MaximumWidth),
+            (_lines.Count * LineHeight) + (2f * Padding) + 6f);
         Position = new Vector2(BottomLeft.X, BottomLeft.Y - Size.Y);
         QueueRedraw();
     }
@@ -100,19 +103,20 @@ public partial class Toast : Control
             return;
         }
 
-        var rect = new Rect2(Vector2.Zero, Size);
-        DrawRect(rect, new Color(Style.Background, 0.94f));
-        DrawRect(rect, Style.Line, false, 1f);
+        // Lenguaje de Knavall (ADR 0162): la misma pizarra con borde de papel que los carteles de ayuda.
+        var rect = new Rect2(Vector2.Zero, Size - new Vector2(6f, 6f));
+        Knavall.Ink.Slab(this, rect, Knavall.Ink.Night, 55, 1.2f, 0f, new Vector2(4f, 5f));
+        DrawPolyline(Knavall.Ink.Closed(Knavall.Ink.Rough(rect, 1.2f, 55)), Knavall.Ink.Paper, 2.2f, true);
 
-        var font = GetThemeDefaultFont();
+        var font = Knavall.Ink.Heavy;
         for (int i = 0; i < _lines.Count; i++)
         {
-            Style.DrawText(
+            Knavall.Ink.Text(
                 this,
                 font,
                 new Vector2(Padding, Padding + (i * LineHeight)),
                 _lines[i].Text,
-                Style.TextSmall,
+                TextSize,
                 _lines[i].Color,
                 Size.X - (2f * Padding));
         }

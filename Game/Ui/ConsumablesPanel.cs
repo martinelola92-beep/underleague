@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using Godot;
 using Underleague.Game.Data;
+using Underleague.Game.Ui.Knavall;
 using Underleague.Sim.Perks;
 using Underleague.Sim.Run;
 using Underleague.Sim.Run.Systems.Consumables;
@@ -35,14 +36,18 @@ namespace Underleague.Game.Ui;
 /// <c>TeamScreen</c> lo dice en vez de fingir un segundo flujo que no existe — mismo criterio que
 /// <c>ui.input.padPending</c> en Mercado.
 /// </para>
+///
+/// <para>
+/// <b>Lenguaje de Knavall (ADR 0162):</b> las reglas de RF-080..082 ya no se leen en una línea de texto sino
+/// en la forma: tres huecos «al partido» —el manual con su mano, los condicionales con su reloj de arena— y
+/// el zurrón debajo. A la derecha, el consumible elegido en grande con sus tres placas. La lógica de equipar,
+/// hacer manual y cambiar el disparador es la de siempre.
+/// </para>
 /// </summary>
-public partial class ConsumablesPanel : Control
+public partial class ConsumablesPanel : InkCanvas
 {
-    /// <summary>Ancho fijo del panel: el que le deja <c>TeamScreen</c> dentro del panel de campo.</summary>
-    public const float Width = 846f;
-
-    /// <summary>Alto fijo del panel.</summary>
-    public const float Height = 676f;
+    /// <summary>Ancho de la columna de detalle, a la derecha.</summary>
+    private const float DetailWidth = 330f;
 
     /// <summary>
     /// Disparadores condicionales que ofrece esta pantalla para ciclar (RF-083): los seis que no piden
@@ -57,6 +62,24 @@ public partial class ConsumablesPanel : Control
     private TeamState? _state;
     private string _selectedId = string.Empty;
     private string _error = string.Empty;
+    private PlaqueButton _equip = null!;
+    private PlaqueButton _manual = null!;
+    private PlaqueButton _trigger = null!;
+
+    public override void _Ready()
+    {
+        base._Ready();
+        _equip = PlaqueButton.Create(this, UiText.Get("ui.kn.takeIt"), Glyph.Potion, PlaqueKind.Primary, new Rect2(), 21);
+        _equip.Pressed += () => OnEquipToggle(_selectedId);
+        _manual = PlaqueButton.Create(this, UiText.Get("ui.kn.makeManual"), Glyph.Manual, PlaqueKind.Paper, new Rect2(), 22);
+        _manual.Tip = new Tip(UiText.Get("ui.kn.makeManual"), UiText.Get("ui.kn.tip.makeManual"), Glyph.Manual);
+        _manual.Pressed += () => OnMakeManual(_selectedId);
+        _trigger = PlaqueButton.Create(this, UiText.Get("ui.kn.trigger"), Glyph.Conditional, PlaqueKind.Paper, new Rect2(), 23);
+        _trigger.Tip = new Tip(UiText.Get("ui.kn.trigger"), UiText.Get("ui.kn.tip.cycleTrigger"), Glyph.Conditional);
+        _trigger.FontSize = 16;
+        _trigger.Pressed += () => OnCycleTrigger(_selectedId);
+        Render();
+    }
 
     /// <summary>Reconstruye la sección entera con el estado actual: inventario, equipados y selección.</summary>
     public void Rebuild(TeamState state)
@@ -66,205 +89,243 @@ public partial class ConsumablesPanel : Control
         Render();
     }
 
-    /// <summary>Solo para la secuencia de capturas: preselecciona una fila para enseñar el panel de acción.</summary>
-    public void SelectForTest(string id)
+    /// <summary>Elige un consumible (desde la vista compacta de Plantilla o desde las capturas).</summary>
+    public void Select(string id)
     {
         _selectedId = id;
         Render();
     }
 
+    /// <summary>Solo para la secuencia de capturas: preselecciona una fila para enseñar el panel de acción.</summary>
+    public void SelectForTest(string id) => Select(id);
+
+    /// <summary>Coloca y habilita las tres placas según lo elegido; el resto lo pinta <see cref="_Draw"/>.</summary>
     private void Render()
     {
-        foreach (var child in GetChildren())
+        QueueRedraw();
+        if (_equip is null)
         {
-            RemoveChild(child);
-            child.QueueFree();
+            return;
         }
 
+        var definition = _state is not null && _selectedId.Length > 0 ? _state.Consumable(_selectedId) : null;
+        bool show = definition is not null;
+        _equip.Visible = show;
+        _manual.Visible = show;
+        _trigger.Visible = show;
+        if (!show)
+        {
+            return;
+        }
+
+        int owned = _state!.ConsumablesOwned(_selectedId);
+        var equipped = FindEquipped(_selectedId);
+        int equippedTotal = _state.EquippedConsumables.Count;
+        bool canEquip = equipped is null && owned > 0 && equippedTotal < 3;
+        bool conditional = equipped is { Mode: ConsumableMode.Conditional };
+
+        float left = Size.X - DetailWidth + 10f;
+        float width = DetailWidth - 36f;
+        float y = Size.Y - 196f;
+        _equip.Position = new Vector2(left, y);
+        _equip.Size = new Vector2(width, 56f);
+        _equip.Caption = equipped is null ? UiText.Get("ui.kn.takeIt") : UiText.Get("ui.kn.leaveIt");
+        _equip.Kind = equipped is null ? PlaqueKind.Primary : PlaqueKind.Paper;
+        _equip.Tip = new Tip(_equip.Caption, UiText.Get(equipped is null ? "ui.kn.tip.equipConsumable" : "ui.kn.tip.unequipConsumable"), Glyph.Potion);
+        _equip.Disabled = equipped is null ? !canEquip : false;
+
+        _manual.Position = new Vector2(left, y + 62f);
+        _manual.Size = new Vector2(width, 52f);
+        _manual.Disabled = !conditional;
+
+        _trigger.Position = new Vector2(left, y + 120f);
+        _trigger.Size = new Vector2(width, 52f);
+        _trigger.Caption = conditional ? UiText.Get("ui.kn.trigger") + " " + TriggerName(equipped!.Trigger) : UiText.Get("ui.kn.trigger");
+        _trigger.Disabled = !conditional;
+    }
+
+    public override void _Draw()
+    {
+        ClearZones();
+        var main = new Rect2(0f, 0f, Size.X - DetailWidth - 8f, Size.Y - 8f);
+        var side = new Rect2(Size.X - DetailWidth, 0f, DetailWidth - 8f, Size.Y - 8f);
+        Ink.Sheet(this, main, 8181);
+        Ink.Sheet(this, side, 8282, Ink.PaperWarm);
         if (_state is null)
         {
             return;
         }
 
-        Widgets.Section(this, UiText.Get("ui.team.consumableTitle"), new Vector2(0f, 0f), Width);
-        var hint = Widgets.Body(this, UiText.Get("ui.team.consumableHint"), new Vector2(0f, 16f), Width, Style.TextDim);
+        int equippedTotal = _state.EquippedConsumables.Count;
+        Tiles.Header(this, new Vector2(18f, 12f), main.Size.X - 30f, Glyph.Potion, UiText.Get("ui.kn.consumables"), UiText.Get("ui.kn.consumablesCount", equippedTotal), 60f, 34);
+        Zone(new Rect2(12f, 8f, main.Size.X - 24f, 68f), TeamTips.Consumables());
 
-        float listTop = 16f + hint.Size.Y + 8f;
-        var ids = RowIds();
-
-        if (ids.Count == 0)
+        // Al partido: tres huecos. El primero es el manual (RF-082), los otros dos condicionales (RF-081).
+        float y = 92f;
+        Ink.Text(this, Ink.Display, new Vector2(22f, y), UiText.Get("ui.kn.equipped").ToUpperInvariant(), 20, Ink.RedDark);
+        y += 30f;
+        float slotGap = 14f;
+        float slot = Mathf.Min(150f, (main.Size.X - 44f - (slotGap * 2f)) / 3f);
+        var equippedList = new List<EquippedConsumable>(_state.EquippedConsumables);
+        equippedList.Sort((a, b) => a.Mode == b.Mode ? 0 : a.Mode == ConsumableMode.Manual ? -1 : 1);
+        for (int i = 0; i < 3; i++)
         {
-            Widgets.Body(this, UiText.Get("ui.team.consumableEmpty"), new Vector2(0f, listTop), Width, Style.TextDim);
-            return;
+            var rect = new Rect2(22f + (i * (slot + slotGap)), y, slot, slot + 34f);
+            if (i < equippedList.Count && _state.Consumable(equippedList[i].Id) is { } definition)
+            {
+                var equipped = equippedList[i];
+                string key = "slot:" + equipped.Id;
+                string caption = equipped.Mode == ConsumableMode.Manual
+                    ? UiText.Get("ui.kn.manual")
+                    : UiText.Get("ui.kn.conditional", TriggerName(equipped.Trigger));
+                Tiles.Draw(this, rect, new TileLook(InkIcons.Of(definition.Family), 1, equipped.Id == _selectedId, HoverKey == key, false, Inventory.Marker(equipped), Caption: caption), 300 + i);
+                string captured = equipped.Id;
+                Zone(rect, TeamTips.Consumable(_state, definition, equipped, _state.ConsumablesOwned(equipped.Id), TriggerName(equipped.Trigger)), () => Select(captured), key);
+            }
+            else
+            {
+                Tiles.Empty(this, rect, UiText.Get("ui.kn.freeSlot"), 310 + i);
+                Zone(rect, TeamTips.Consumables());
+            }
         }
 
-        const float listHeight = 300f;
-        var scroll = new ScrollContainer
+        // En el zurrón: lo comprado que no va al partido.
+        y += slot + 50f;
+        Ink.Text(this, Ink.Display, new Vector2(22f, y), UiText.Get("ui.kn.pouch").ToUpperInvariant(), 20, Ink.RedDark);
+        y += 30f;
+        var pouch = new List<string>();
+        foreach (string id in Inventory.ConsumableIds(_state))
         {
-            Position = new Vector2(0f, listTop),
-            Size = new Vector2(Width, listHeight),
-            HorizontalScrollMode = ScrollContainer.ScrollMode.Disabled,
-        };
-        AddChild(scroll);
+            if (FindEquipped(id) is null)
+            {
+                pouch.Add(id);
+            }
+        }
 
-        var column = new VBoxContainer { CustomMinimumSize = new Vector2(Width - 16f, 0f) };
-        column.AddThemeConstantOverride("separation", 3);
-        scroll.AddChild(column);
-
-        foreach (string id in ids)
+        const int Columns = 5;
+        float gap = 10f;
+        float tile = (main.Size.X - 44f - (gap * (Columns - 1))) / Columns;
+        if (pouch.Count == 0)
         {
-            var definition = _state.Consumable(id);
-            if (definition is null)
+            Ink.Text(this, Ink.Plain, new Vector2(24f, y + 4f), UiText.Get("ui.kn.consumablesEmpty"), 15, Ink.Muted);
+        }
+
+        for (int i = 0; i < pouch.Count; i++)
+        {
+            string id = pouch[i];
+            if (_state.Consumable(id) is not { } definition)
             {
                 continue;
             }
 
             int owned = _state.ConsumablesOwned(id);
-            var equipped = FindEquipped(id);
+            var rect = new Rect2(22f + ((i % Columns) * (tile + gap)), y + ((i / Columns) * (tile + 44f)), tile, tile + 34f);
+            if (rect.End.Y > main.End.Y - 4f)
+            {
+                break;
+            }
 
-            var card = new OptionCard();
-            column.AddChild(card);
-            card.Bind(
-                0,
-                Badge(definition.Family),
-                BadgeColor(definition.Family),
-                definition.Name.Es + " · " + UiText.Get("ui.card.rarity." + definition.Rarity) + " · " + FamilyName(definition.Family),
-                owned > 0 ? UiText.Get("ui.team.consumableCopies", owned) : string.Empty,
-                string.Empty,
-                DescriptionGenerator.DescribeEffects(definition.Effects, _state.Templates),
-                new[] { EquipStatus(equipped) });
-            bool selected = id == _selectedId;
-            card.Expanded = selected;
-            card.Selected = selected;
-            card.Dimmed = owned <= 0 && equipped is null;
-            string capturedId = id;
-            card.Activated += _ => Select(capturedId);
+            string key = "pouch:" + id;
+            Tiles.Draw(this, rect, new TileLook(InkIcons.Of(definition.Family), owned, id == _selectedId, HoverKey == key, owned <= 0, Caption: UiText.Name(definition.Name)), 400 + i);
+            string captured = id;
+            Zone(rect, TeamTips.Consumable(_state, definition, null, owned, string.Empty), () => Select(captured), key);
         }
 
-        Action(listTop + listHeight + 12f);
-
-        if (_error.Length > 0)
-        {
-            Widgets.Body(this, _error, new Vector2(0f, Height - 20f), Width, Style.Hole);
-        }
+        DrawDetail(side);
     }
 
-    /// <summary>Panel de acción del consumible elegido: descripción, estado y los botones que la cambian.</summary>
-    private void Action(float top)
-    {
-        Widgets.Panel(this, new Rect2(0f, top, Width, Height - top));
-        Widgets.Section(this, UiText.Get("ui.market.action"), new Vector2(12f, top + 6f), Width - 24f);
+    private EquippedConsumable? FindEquipped(string id) => Inventory.Equipped(_state!, id);
 
+    /// <summary>Columna de la derecha: el consumible elegido en grande, qué hace y cómo va al partido.</summary>
+    private void DrawDetail(Rect2 side)
+    {
+        float left = side.Position.X + 18f;
+        float width = side.Size.X - 36f;
         if (_selectedId.Length == 0 || _state!.Consumable(_selectedId) is not { } definition)
         {
-            Widgets.Body(this, UiText.Get("ui.team.consumableNothingSelected"), new Vector2(12f, top + 26f), Width - 24f, Style.TextDim);
+            var lines = Style.Wrap(Ink.Display, UiText.Get("ui.kn.pickConsumable").ToUpperInvariant(), 22, width);
+            float y0 = side.Position.Y + 60f;
+            foreach (string line in lines)
+            {
+                Ink.Text(this, Ink.Display, new Vector2(left, y0), line, 22, Ink.Muted);
+                y0 += 28f;
+            }
+
             return;
         }
 
-        int owned = _state.ConsumablesOwned(_selectedId);
         var equipped = FindEquipped(_selectedId);
+        int owned = _state.ConsumablesOwned(_selectedId);
+        var art = new Vector2(side.GetCenter().X, side.Position.Y + 84f);
+        var splash = Broadcast.Pregon.Burst(62f, 48f, 11, art);
+        DrawColoredPolygon(Ink.Shift(splash, new Vector2(3f, 4f)), new Color(0f, 0f, 0f, 0.25f));
+        DrawColoredPolygon(splash, Ink.Ochre);
+        InkIcons.Draw(this, InkIcons.Of(definition.Family), art, 96f);
 
-        Widgets.Body(
-            this,
-            definition.Name.Es + " · " + UiText.Get("ui.card.rarity." + definition.Rarity) + " · " + FamilyName(definition.Family),
-            new Vector2(12f, top + 26f),
-            Width - 24f,
-            Style.Accent);
-        var description = Widgets.Body(
-            this,
-            DescriptionGenerator.DescribeEffects(definition.Effects, _state.Templates),
-            new Vector2(12f, top + 44f),
-            Width - 24f);
-        float y = top + 44f + description.Size.Y + 6f;
-        var status = Widgets.Body(this, EquipStatus(equipped), new Vector2(12f, y), Width - 24f, Style.TextDim);
-        y += status.Size.Y + 10f;
+        float y = side.Position.Y + 160f;
+        string name = UiText.Name(definition.Name).ToUpperInvariant();
+        int size = Ink.FitSize(Ink.Display, name, 26, width, 17);
+        Ink.Text(this, Ink.Display, new Vector2(left, y), name, size, Ink.Black);
+        y += Ink.Display.GetHeight(size);
+        string sub = (UiText.Get("ui.card.rarity." + definition.Rarity) + " · " + FamilyName(definition.Family)).ToUpperInvariant();
+        Ink.Text(this, Ink.Heavy, new Vector2(left, y), sub, 15, Ink.Muted);
+        y += 26f;
 
+        foreach (string line in Style.Wrap(Ink.Plain, DescriptionGenerator.DescribeEffects(definition.Effects, _state.Templates), 16, width))
+        {
+            Ink.Text(this, Ink.Plain, new Vector2(left, y), line, 16, Ink.Brown);
+            y += 19f;
+        }
+
+        y += 8f;
+        var marker = Inventory.Marker(equipped);
+        string status = equipped is null
+            ? UiText.Get("ui.kn.tip.pouch", owned)
+            : equipped.Mode == ConsumableMode.Manual
+                ? UiText.Get("ui.kn.tip.manual")
+                : UiText.Get("ui.kn.tip.conditional", TriggerName(equipped.Trigger));
+        if (marker != Glyph.None)
+        {
+            InkIcons.Draw(this, marker, new Vector2(left + 11f, y + 11f), 22f);
+        }
+
+        float statusLeft = left + (marker != Glyph.None ? 28f : 0f);
+        foreach (string line in Style.Wrap(Ink.Heavy, status, 15, width - (statusLeft - left)))
+        {
+            Ink.Text(this, Ink.Heavy, new Vector2(statusLeft, y), line, 15, equipped is null ? Ink.Muted : Ink.OchreDark);
+            y += 18f;
+        }
+
+        string? warning = null;
         int equippedTotal = _state.EquippedConsumables.Count;
-        bool canEquip = equipped is null && owned > 0 && equippedTotal < 3;
-        bool canUnequip = equipped is not null;
-        bool conditional = equipped is { Mode: ConsumableMode.Conditional };
-
-        string selectedId = _selectedId;
-        var equipButton = Widgets.Button(
-            this,
-            equipped is null ? UiText.Get("ui.team.consumableEquip") : UiText.Get("ui.team.consumableUnequip"),
-            new Rect2(12f, y, 180f, 26f),
-            equipped is null ? canEquip : canUnequip);
-        equipButton.FocusMode = FocusModeEnum.None;
-        equipButton.Pressed += () => OnEquipToggle(selectedId);
-
-        var manualButton = Widgets.Button(this, UiText.Get("ui.team.consumableMakeManual"), new Rect2(200f, y, 180f, 26f), conditional);
-        manualButton.FocusMode = FocusModeEnum.None;
-        manualButton.Pressed += () => OnMakeManual(selectedId);
-
-        var triggerButton = Widgets.Button(
-            this,
-            conditional
-                ? UiText.Get("ui.team.consumableCycleTrigger") + ": " + TriggerName(equipped!.Trigger)
-                : UiText.Get("ui.team.consumableCycleTrigger"),
-            new Rect2(388f, y, 340f, 26f),
-            conditional);
-        triggerButton.FocusMode = FocusModeEnum.None;
-        triggerButton.Pressed += () => OnCycleTrigger(selectedId);
-
-        y += 34f;
         if (equipped is null && owned <= 0)
         {
-            Widgets.Body(this, UiText.Get("ui.team.consumableNoCopies"), new Vector2(12f, y), Width - 24f, Style.TextDim);
+            warning = UiText.Get("ui.team.consumableNoCopies");
         }
         else if (equipped is null && equippedTotal >= 3)
         {
-            Widgets.Body(this, UiText.Get("ui.team.consumableFull"), new Vector2(12f, y), Width - 24f, Style.TextDim);
+            warning = UiText.Get("ui.team.consumableFull");
         }
         else if (equipped is not null && owned <= 0)
         {
-            Widgets.Body(this, UiText.Get("ui.team.consumableGone"), new Vector2(12f, y), Width - 24f, Style.TextDim);
+            warning = UiText.Get("ui.team.consumableGone");
         }
-    }
 
-    /// <summary>
-    /// Ids a listar: el inventario (una entrada por id, aunque tenga varias copias) más los que estén
-    /// equipados aunque ya no queden copias sueltas —para poder quitarlos igualmente—, todo por orden
-    /// ordinal (RT-041).
-    /// </summary>
-    private List<string> RowIds()
-    {
-        var set = new SortedSet<string>(StringComparer.Ordinal);
-        string last = string.Empty;
-        foreach (string id in _state!.OwnedConsumables)
+        if (_error.Length > 0)
         {
-            if (id != last)
+            warning = _error;
+        }
+
+        if (warning is not null)
+        {
+            var warningLines = Style.Wrap(Ink.Heavy, warning, 14, width);
+            float wy = side.End.Y - 226f - (warningLines.Count * 17f);
+            foreach (string line in warningLines)
             {
-                set.Add(id);
-                last = id;
+                Ink.Text(this, Ink.Heavy, new Vector2(left, wy), line, 14, Ink.Red);
+                wy += 17f;
             }
         }
-
-        foreach (var equipped in _state.EquippedConsumables)
-        {
-            set.Add(equipped.Id);
-        }
-
-        return new List<string>(set);
-    }
-
-    private EquippedConsumable? FindEquipped(string id)
-    {
-        foreach (var item in _state!.EquippedConsumables)
-        {
-            if (item.Id == id)
-            {
-                return item;
-            }
-        }
-
-        return null;
-    }
-
-    private void Select(string id)
-    {
-        _selectedId = _selectedId == id ? string.Empty : id;
-        Render();
     }
 
     /// <summary>
@@ -404,7 +465,8 @@ public partial class ConsumablesPanel : Control
         _ => UiText.Get("ui.team.consumableEquippedConditional", TriggerName(equipped.Trigger)),
     };
 
-    private static string TriggerName(string trigger) => trigger switch
+    /// <summary>Frase del disparador («vas por debajo en el marcador»), también para la vista compacta.</summary>
+    public static string TriggerName(string trigger) => trigger switch
     {
         "scoreBehind" => UiText.Get("ui.team.consumableTriggerScoreBehind"),
         "scoreTied" => UiText.Get("ui.team.consumableTriggerScoreTied"),
@@ -421,21 +483,5 @@ public partial class ConsumablesPanel : Control
         ConsumableFamily.Tactical => UiText.Get("ui.team.consumableFamilyTactical"),
         ConsumableFamily.Dirty => UiText.Get("ui.team.consumableFamilyDirty"),
         _ => UiText.Get("ui.team.consumableFamilySupernatural"),
-    };
-
-    private static string Badge(ConsumableFamily family) => family switch
-    {
-        ConsumableFamily.Medical => UiText.Get("ui.team.consumableBadgeMedical"),
-        ConsumableFamily.Tactical => UiText.Get("ui.team.consumableBadgeTactical"),
-        ConsumableFamily.Dirty => UiText.Get("ui.team.consumableBadgeDirty"),
-        _ => UiText.Get("ui.team.consumableBadgeSupernatural"),
-    };
-
-    private static Color BadgeColor(ConsumableFamily family) => family switch
-    {
-        ConsumableFamily.Medical => Style.LinkCreated,
-        ConsumableFamily.Tactical => Style.Of(Underleague.Sim.Model.Position.Defender),
-        ConsumableFamily.Dirty => Style.Hole,
-        _ => Style.Accent,
     };
 }

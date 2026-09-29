@@ -2,6 +2,8 @@ using System;
 using System.Collections.Generic;
 using Godot;
 using Underleague.Game.Data;
+using Underleague.Game.Ui.Knavall;
+using Underleague.Sim.Model;
 using Underleague.Sim.Run.Systems.Items;
 
 namespace Underleague.Game.Ui;
@@ -13,290 +15,285 @@ namespace Underleague.Game.Ui;
 /// <b>pasarlo</b> a otro jugador. Ninguno cuesta oro: todo lo que hay aquí ya estaba pagado.
 ///
 /// <para>
-/// Mismo patrón que <see cref="ConsumablesPanel"/>: un panel de campo completo que sustituye a la
-/// cuadrícula mientras está encendido (<c>TeamScreen.ApplyFieldMode</c>), solo de ratón por ahora. La
-/// diferencia es que el "sobre quién actúa" no vive en este panel —lo decide la ficha señalada en la
-/// plantilla de <c>TeamScreen</c>, el mismo <c>_selected</c> que ya usa la ficha expandida—, así que
-/// <see cref="Rebuild"/> recibe el id del jugador en cada llamada, incluida cada vez que cambia la
-/// selección mientras el cofre está abierto.
+/// <b>Lenguaje de Knavall (ADR 0162):</b> es la pestaña Cofre, el mismo cofre que la columna derecha de
+/// Plantilla enseña en compacto, pero en grande y con el nombre de cada objeto. El "sobre quién actúa" sigue
+/// sin vivir aquí —es el jugador señalado en la plantilla— y lo elegido del cofre tampoco: los dos los guarda
+/// <c>TeamScreen</c>, que es quien aplica las tres decisiones, para que la ficha de Plantilla y esta pestaña
+/// no puedan discrepar sobre qué está elegido.
 /// </para>
 /// </summary>
-public partial class ChestPanel : Control
+public partial class ChestPanel : InkCanvas
 {
-    /// <summary>Ancho fijo del panel: el que le deja <c>TeamScreen</c> dentro del panel de campo.</summary>
-    public const float Width = 846f;
+    private const float DetailWidth = 330f;
 
-    /// <summary>Alto fijo del panel.</summary>
-    public const float Height = 676f;
-
+    private readonly List<PlaqueButton> _targets = new();
     private TeamState? _state;
     private int _playerId = -1;
-    private string _selectedItemId = string.Empty;
-    private bool _pickingTarget;
-    private string _error = string.Empty;
+    private string _pick = string.Empty;
+    private bool _picking;
+    private PlaqueButton _equip = null!;
+    private PlaqueButton _store = null!;
+    private PlaqueButton _pass = null!;
 
-    /// <summary>Reconstruye el panel entero con el estado actual y el jugador señalado (-1 si ninguno).</summary>
-    public void Rebuild(TeamState state, int playerId)
+    /// <summary>Se ha pulsado un objeto del cofre.</summary>
+    public event Action<string>? Picked;
+
+    public event Action? EquipPressed;
+
+    public event Action? StorePressed;
+
+    public event Action? PassToggled;
+
+    public event Action<int>? TransferTo;
+
+    public override void _Ready()
+    {
+        base._Ready();
+        _equip = PlaqueButton.Create(this, UiText.Get("ui.kn.equip"), Glyph.Shirt, PlaqueKind.Primary, new Rect2(), 31);
+        _equip.Tip = new Tip(UiText.Get("ui.kn.equip"), UiText.Get("ui.kn.tip.equip"), Glyph.Shirt);
+        _equip.Pressed += () => EquipPressed?.Invoke();
+        _store = PlaqueButton.Create(this, UiText.Get("ui.kn.store").Replace("\n", " "), Glyph.Chest, PlaqueKind.Paper, new Rect2(), 32);
+        _store.Tip = new Tip(UiText.Get("ui.kn.store").Replace("\n", " "), UiText.Get("ui.kn.tip.store"), Glyph.Chest);
+        _store.FontSize = 17;
+        _store.Pressed += () => StorePressed?.Invoke();
+        _pass = PlaqueButton.Create(this, UiText.Get("ui.kn.pass"), Glyph.Swap, PlaqueKind.Paper, new Rect2(), 33);
+        _pass.Tip = new Tip(UiText.Get("ui.kn.pass"), UiText.Get("ui.kn.tip.pass"), Glyph.Swap);
+        _pass.Pressed += () => PassToggled?.Invoke();
+        Arrange();
+    }
+
+    /// <summary>
+    /// Reconstruye el panel con el jugador señalado (-1 si ninguno), el objeto elegido en el cofre (vacío si
+    /// ninguno) y si está abierta la lista de destinatarios de PASAR A OTRO.
+    /// </summary>
+    public void Rebuild(TeamState state, int playerId, string pick, bool picking)
     {
         _state = state;
         _playerId = playerId;
-        _error = string.Empty;
-        Render();
+        _pick = pick;
+        _picking = picking && playerId >= 0 && state.EquippedItemOf(playerId) is not null;
+        Arrange();
+        RebuildTargets();
+        QueueRedraw();
     }
 
-    /// <summary>Solo para la secuencia de capturas: preselecciona una fila del almacén.</summary>
-    public void SelectForTest(string id)
+    private void Arrange()
     {
-        _selectedItemId = id;
-        Render();
-    }
-
-    private void Render()
-    {
-        foreach (var child in GetChildren())
+        if (_equip is null)
         {
-            RemoveChild(child);
-            child.QueueFree();
+            return;
         }
 
+        float left = Size.X - DetailWidth + 10f;
+        float width = DetailWidth - 36f;
+        float y = Size.Y - 196f;
+        bool has = _state is not null && _playerId >= 0;
+        var equipped = has ? _state!.EquippedItemOf(_playerId) : null;
+        _equip.Position = new Vector2(left, y);
+        _equip.Size = new Vector2(width, 56f);
+        var pick = _pick.Length > 0 && _state is not null ? _state.Item(_pick) : null;
+        _equip.Disabled = !has || pick is null;
+        _equip.Glyph = pick is not null ? InkIcons.OfItem(pick.Id) : Glyph.Shirt;
+        _store.Position = new Vector2(left, y + 62f);
+        _store.Size = new Vector2(width, 52f);
+        _store.Disabled = !has || equipped is null;
+        _pass.Position = new Vector2(left, y + 120f);
+        _pass.Size = new Vector2(width, 52f);
+        _pass.Disabled = !has || equipped is null;
+        _pass.Kind = _picking ? PlaqueKind.Tab : PlaqueKind.Paper;
+        _pass.Active = _picking;
+    }
+
+    private Rect2 Main() => new(0f, 0f, Size.X - DetailWidth - 8f, Size.Y - 8f);
+
+    private void RebuildTargets()
+    {
+        foreach (var button in _targets)
+        {
+            RemoveChild(button);
+            button.QueueFree();
+        }
+
+        _targets.Clear();
+        if (!_picking || _state is null)
+        {
+            return;
+        }
+
+        var area = Main().Grow(-24f);
+        float width = (area.Size.X - 24f) / 3f;
+        int index = 0;
+        foreach (var candidate in _state.Players)
+        {
+            if (candidate.Id == _playerId || candidate.PhysicalState == PhysicalState.Dead)
+            {
+                continue;
+            }
+
+            var rect = new Rect2(area.Position.X + 12f + ((index % 3) * (width + 4f)), area.Position.Y + 110f + ((index / 3) * 52f), width, 48f);
+            var button = PlaqueButton.Create(this, candidate.Name, Glyph.None, PlaqueKind.Paper, rect, 60 + index);
+            button.FontSize = 17;
+            int targetId = candidate.Id;
+            button.Pressed += () => TransferTo?.Invoke(targetId);
+            _targets.Add(button);
+            index++;
+        }
+    }
+
+    /// <summary>Solo para la secuencia de capturas: que el panel enseñe algo elegido.</summary>
+    public void SelectForTest(string id) => Picked?.Invoke(id);
+
+    public override void _Draw()
+    {
+        ClearZones();
+        var main = Main();
+        var side = new Rect2(Size.X - DetailWidth, 0f, DetailWidth - 8f, Size.Y - 8f);
+        Ink.Sheet(this, main, 9191);
+        Ink.Sheet(this, side, 9292, Ink.PaperWarm);
         if (_state is null)
         {
             return;
         }
 
-        Widgets.Section(this, UiText.Get("ui.team.chestTitle"), new Vector2(0f, 0f), Width);
-        var hint = Widgets.Body(this, UiText.Get("ui.team.chestHint"), new Vector2(0f, 16f), Width, Style.TextDim);
+        int total = _state.StoredItems.Count;
+        Tiles.Header(this, new Vector2(18f, 12f), main.Size.X - 30f, Glyph.Chest, UiText.Get("ui.kn.chest"), total > 0 ? UiText.Get("ui.kn.chestCount", total) : string.Empty, 72f, 38);
+        Zone(new Rect2(12f, 8f, main.Size.X - 24f, 80f), TeamTips.Chest());
 
-        float listTop = 16f + hint.Size.Y + 8f;
-        var rows = Grouped(_state.StoredItems);
-
-        const float listHeight = 300f;
-        if (rows.Count == 0)
+        var groups = Inventory.Grouped(_state.StoredItems);
+        float top = 104f;
+        if (groups.Count == 0)
         {
-            Widgets.Body(this, UiText.Get("ui.team.chestEmpty"), new Vector2(0f, listTop), Width, Style.TextDim);
+            Tiles.Empty(this, new Rect2(22f, top, main.Size.X - 44f, 160f), string.Empty, 5);
+            Ink.Text(this, Ink.Plain, new Vector2(30f, top + 176f), UiText.Get("ui.kn.chestEmpty"), 17, Ink.Muted);
         }
-        else
+
+        int columns = groups.Count <= 10 ? 5 : groups.Count <= 18 ? 6 : 7;
+        float gap = 12f;
+        float tile = (main.Size.X - 44f - (gap * (columns - 1))) / columns;
+        int rows = Mathf.Max(1, (groups.Count + columns - 1) / columns);
+        float available = main.End.Y - top - 12f;
+        if (rows * (tile + 34f + gap) > available)
         {
-            var scroll = new ScrollContainer
+            tile = (available / rows) - 34f - gap;
+        }
+
+        // Con pocos objetos, el resto de las dos primeras filas se dibuja vacío: se lee como un cofre.
+        if (groups.Count > 0)
+        {
+            for (int i = groups.Count; i < columns * 2; i++)
             {
-                Position = new Vector2(0f, listTop),
-                Size = new Vector2(Width, listHeight),
-                HorizontalScrollMode = ScrollContainer.ScrollMode.Disabled,
-            };
-            AddChild(scroll);
-
-            var column = new VBoxContainer { CustomMinimumSize = new Vector2(Width - 16f, 0f) };
-            column.AddThemeConstantOverride("separation", 3);
-            scroll.AddChild(column);
-
-            foreach (var (id, count) in rows)
-            {
-                var item = _state.Item(id);
-                if (item is null)
-                {
-                    continue;
-                }
-
-                var card = new OptionCard();
-                column.AddChild(card);
-                card.Bind(
-                    0,
-                    UiText.Get("ui.team.chestBadge"),
-                    Style.NeutralBadge,
-                    UiText.Name(item.Name) + " · " + UiText.Get("ui.card.rarity." + item.Rarity),
-                    count > 1 ? UiText.Get("ui.team.chestCopies", count) : string.Empty,
-                    string.Empty,
-                    ItemDescriptions.Describe(item, _state.Templates.Language));
-                bool selected = id == _selectedItemId;
-                card.Expanded = selected;
-                card.Selected = selected;
-                string capturedId = id;
-                card.Activated += _ => SelectItem(capturedId);
+                var slot = new Rect2(22f + ((i % columns) * (tile + gap)), top + ((i / columns) * (tile + 34f + gap)), tile, tile + 34f);
+                Tiles.Empty(this, slot, string.Empty, 520 + i);
             }
         }
 
-        Action(listTop + listHeight + 12f);
-    }
-
-    /// <summary>Panel de acción: el jugador señalado, lo que lleva puesto, y los tres gestos.</summary>
-    private void Action(float top)
-    {
-        Widgets.Panel(this, new Rect2(0f, top, Width, Height - top));
-        Widgets.Section(this, UiText.Get("ui.team.chestAction"), new Vector2(12f, top + 6f), Width - 24f);
-
-        var player = _playerId >= 0 ? _state!.Find(_playerId) : null;
-        if (player is null)
+        for (int i = 0; i < groups.Count; i++)
         {
-            Widgets.Body(this, UiText.Get("ui.team.chestNoPlayer"), new Vector2(12f, top + 26f), Width - 24f, Style.TextDim);
-            return;
-        }
-
-        var equipped = _state!.EquippedItemOf(_playerId);
-        Widgets.Body(this, UiText.Get("ui.team.chestPlayer", player.Name), new Vector2(12f, top + 26f), Width - 24f, Style.Accent);
-        Widgets.Body(
-            this,
-            equipped is null
-                ? UiText.Get("ui.team.chestPlayerEmpty")
-                : UiText.Get("ui.team.chestPlayerHas", UiText.Name(equipped.Name)),
-            new Vector2(12f, top + 44f),
-            Width - 24f,
-            Style.TextDim);
-
-        float y = top + 66f;
-
-        var equipButton = Widgets.Button(
-            this, UiText.Get("ui.team.chestEquip"), new Rect2(12f, y, 200f, 26f), _selectedItemId.Length > 0);
-        equipButton.FocusMode = FocusModeEnum.None;
-        equipButton.Pressed += OnEquip;
-
-        var storeButton = Widgets.Button(
-            this, UiText.Get("ui.team.chestStore"), new Rect2(220f, y, 200f, 26f), equipped is not null);
-        storeButton.FocusMode = FocusModeEnum.None;
-        storeButton.Pressed += OnStore;
-
-        var passButton = Widgets.Button(
-            this, UiText.Get("ui.team.chestPass"), new Rect2(428f, y, 200f, 26f), equipped is not null);
-        passButton.FocusMode = FocusModeEnum.None;
-        passButton.Pressed += OnTogglePass;
-
-        y += 34f;
-
-        if (_pickingTarget && equipped is not null)
-        {
-            y = RenderTargets(y);
-        }
-
-        if (_error.Length > 0)
-        {
-            Widgets.Body(this, _error, new Vector2(12f, y + 4f), Width - 24f, Style.Hole);
-        }
-    }
-
-    /// <summary>Fila de botones, uno por cada otro jugador vivo, para elegir el destino del traspaso.</summary>
-    private float RenderTargets(float y)
-    {
-        Widgets.Body(this, UiText.Get("ui.team.chestPassHint"), new Vector2(12f, y), Width - 24f, Style.TextDim);
-        y += 20f;
-
-        float x = 12f;
-        const float buttonWidth = 156f;
-        foreach (var candidate in _state!.Players)
-        {
-            if (candidate.Id == _playerId || candidate.PhysicalState == Sim.Model.PhysicalState.Dead)
+            var (id, count) = groups[i];
+            if (_state.Item(id) is not { } item)
             {
                 continue;
             }
 
-            var button = Widgets.Button(this, candidate.Name, new Rect2(x, y, buttonWidth, 24f));
-            button.FocusMode = FocusModeEnum.None;
-            int targetId = candidate.Id;
-            button.Pressed += () => OnTransfer(targetId);
-
-            x += buttonWidth + 8f;
-            if (x + buttonWidth > Width - 12f)
-            {
-                x = 12f;
-                y += 30f;
-            }
+            var rect = new Rect2(22f + ((i % columns) * (tile + gap)), top + ((i / columns) * (tile + 34f + gap)), tile, tile + 34f);
+            string key = "item:" + id;
+            Tiles.Draw(this, rect, new TileLook(InkIcons.OfItem(id), count, id == _pick, HoverKey == key, Relic: item.IsRelic, Caption: UiText.Name(item.Name)), 500 + i);
+            string captured = id;
+            Zone(rect, TeamTips.Item(_state, item), () => Picked?.Invoke(captured), key);
         }
 
-        return y + 30f;
-    }
-
-    private void SelectItem(string id)
-    {
-        _selectedItemId = _selectedItemId == id ? string.Empty : id;
-        _pickingTarget = false;
-        Render();
-    }
-
-    private void OnEquip()
-    {
-        if (_playerId < 0 || _selectedItemId.Length == 0)
+        if (_picking)
         {
+            var area = main.Grow(-24f);
+            Ink.Plank(this, area, 123, Ink.WoodDark, nails: true);
+            Ink.Outlined(this, Ink.Display, area.Position + new Vector2(24f, 30f), UiText.Get("ui.kn.passTo").ToUpperInvariant(), 30, Ink.Paper);
+        }
+
+        DrawDetail(side);
+    }
+
+    /// <summary>Columna derecha: para quién, qué lleva puesto y qué está elegido del cofre.</summary>
+    private void DrawDetail(Rect2 side)
+    {
+        float left = side.Position.X + 18f;
+        float width = side.Size.X - 36f;
+        var player = _playerId >= 0 ? _state!.Find(_playerId) : null;
+        if (player is null)
+        {
+            float y0 = side.Position.Y + 60f;
+            foreach (string line in Style.Wrap(Ink.Display, UiText.Get("ui.kn.nobody").ToUpperInvariant(), 22, width))
+            {
+                Ink.Text(this, Ink.Display, new Vector2(left, y0), line, 22, Ink.Muted);
+                y0 += 28f;
+            }
+
             return;
         }
 
-        Try(() => _state!.EquipStored(_playerId, _selectedItemId));
-        _selectedItemId = string.Empty;
-        Render();
-    }
-
-    private void OnStore()
-    {
-        if (_playerId < 0)
+        // Para quién: retrato, nombre y lo que lleva.
+        Ink.Text(this, Ink.Display, new Vector2(left, side.Position.Y + 14f), UiText.Get("ui.kn.for").ToUpperInvariant(), 18, Ink.RedDark);
+        var portrait = new Rect2(left, side.Position.Y + 42f, 86f, 86f);
+        Portrait.Draw(this, portrait, player.Race, player.Position, player.Id);
+        Ink.LevelBadge(this, portrait.End - new Vector2(2f, 10f), 11f, player.Level);
+        float textLeft = portrait.End.X + 16f;
+        var words = player.Name.ToUpperInvariant().Split(' ', 2);
+        float y = portrait.Position.Y;
+        foreach (string word in words)
         {
-            return;
+            int size = Ink.FitSize(Ink.Display, word, 22, side.End.X - textLeft - 14f, 15);
+            Ink.Text(this, Ink.Display, new Vector2(textLeft, y), word, size, Ink.Black);
+            y += Ink.Display.GetHeight(size) - 6f;
         }
 
-        Try(() => _state!.StoreEquipped(_playerId));
-        Render();
-    }
-
-    private void OnTogglePass()
-    {
-        _pickingTarget = !_pickingTarget;
-        Render();
-    }
-
-    private void OnTransfer(int targetId)
-    {
-        if (_playerId < 0)
+        var wears = _state!.EquippedItemOf(player.Id);
+        var wearsRect = new Rect2(left, portrait.End.Y + 10f, 40f, 40f);
+        Ink.Text(this, Ink.Heavy, new Vector2(left, wearsRect.Position.Y - 2f), string.Empty, 14, Ink.Muted);
+        if (wears is not null)
         {
-            return;
+            Tiles.Draw(this, wearsRect, new TileLook(InkIcons.OfItem(wears.Id)), 77);
+            Ink.Text(this, Ink.Data, new Vector2(wearsRect.End.X + 10f, wearsRect.Position.Y + 1f), UiText.Get("ui.kn.wears").ToUpperInvariant(), 13, Ink.Muted);
+            Ink.Text(this, Ink.Heavy, new Vector2(wearsRect.End.X + 10f, wearsRect.Position.Y + 17f), Ink.Fit(Ink.Heavy, UiText.Name(wears.Name), 16, side.End.X - wearsRect.End.X - 24f), 16, Ink.Brown);
+            Zone(wearsRect, TeamTips.Item(_state, wears));
+        }
+        else
+        {
+            Tiles.Empty(this, wearsRect, string.Empty, 78);
+            Ink.Text(this, Ink.Heavy, new Vector2(wearsRect.End.X + 10f, wearsRect.Position.Y + 10f), UiText.Get("ui.kn.noItem").ToUpperInvariant(), 16, Ink.Muted);
+            Zone(wearsRect, TeamTips.NoItem());
         }
 
-        Try(() => _state!.TransferEquipped(_playerId, targetId));
-        _pickingTarget = false;
-        Render();
-    }
-
-    private void Try(Action action)
-    {
-        try
+        // Lo elegido del cofre, en grande.
+        float top = portrait.End.Y + 70f;
+        Ink.Text(this, Ink.Display, new Vector2(left, top), UiText.Get("ui.kn.selectedItem").ToUpperInvariant(), 18, Ink.RedDark);
+        top += 30f;
+        if (_pick.Length > 0 && _state.Item(_pick) is { } item)
         {
-            action();
-            _error = string.Empty;
-        }
-        catch (Exception)
-        {
-            // /Sim rechaza con mensajes de desarrollo (RT-032); el jugador lee uno localizado y genérico.
-            _error = UiText.Get("ui.team.chestError");
-        }
-    }
-
-    /// <summary>
-    /// Agrupa el almacén (una entrada por copia, ya ordenado por id, RT-041) en pares (id, copias): la
-    /// misma lectura que un jugador haría, "tres capas de tres", en vez de tres filas idénticas.
-    /// </summary>
-    private static List<(string Id, int Count)> Grouped(IReadOnlyList<string> stored)
-    {
-        var result = new List<(string, int)>();
-        string last = string.Empty;
-        int count = 0;
-        foreach (string id in stored)
-        {
-            if (id == last)
+            var art = new Vector2(left + 50f, top + 48f);
+            var splash = Broadcast.Pregon.Burst(46f, 36f, 11, art);
+            DrawColoredPolygon(Ink.Shift(splash, new Vector2(3f, 3f)), new Color(0f, 0f, 0f, 0.25f));
+            DrawColoredPolygon(splash, Ink.Ochre);
+            InkIcons.Draw(this, InkIcons.OfItem(item.Id), art, 72f);
+            float x = left + 110f;
+            float ty = top;
+            foreach (string line in Style.Wrap(Ink.Display, UiText.Name(item.Name).ToUpperInvariant(), 19, side.End.X - x - 14f))
             {
-                count++;
+                Ink.Text(this, Ink.Display, new Vector2(x, ty), line, 19, Ink.Black);
+                ty += 22f;
             }
-            else
+
+            ty += 4f;
+            foreach (var line in TeamTips.Modifiers(_state, item))
             {
-                if (count > 0)
-                {
-                    result.Add((last, count));
-                }
-
-                last = id;
-                count = 1;
+                InkIcons.Draw(this, line.Glyph, new Vector2(x + 8f, ty + 9f), 16f);
+                Ink.Text(this, Ink.Heavy, new Vector2(x + 22f, ty), line.Text, 15, line.Color == Ink.GreenLight ? Ink.Green : Ink.Red);
+                ty += 19f;
             }
-        }
 
-        if (count > 0)
+            Zone(new Rect2(left, top, width, 110f), TeamTips.Item(_state, item));
+        }
+        else
         {
-            result.Add((last, count));
+            Tiles.Empty(this, new Rect2(left, top, width, 96f), UiText.Get("ui.kn.pickItem"), 13);
         }
-
-        return result;
     }
 }
