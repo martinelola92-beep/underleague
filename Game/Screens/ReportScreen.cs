@@ -343,7 +343,10 @@ public partial class ReportScreen : Control
     /// <summary>Columna derecha: el desglose del oro y el apartado del árbitro (RF-119, RF-114g..i).</summary>
     private void Gold()
     {
-        Widgets.Panel(this, new Rect2(920f, 52f, 348f, 268f));
+        // El panel del oro mide lo que su contenido peor (desglose, botín y apuesta: acaba en y = 264) más un
+        // respiro. Con 268 sobraban ~50 px casi siempre, y ese sitio es el que le faltaba a las estadísticas: con
+        // varios apodos ganados enseñaban ~4 de 7 filas (ADR 0163).
+        Widgets.Panel(this, new Rect2(920f, 52f, 348f, GoldPanelHeight));
         Widgets.Section(this, UiText.Get("ui.report.gold"), new Vector2(932f, 58f), 320f);
 
         float y = 80f;
@@ -404,11 +407,12 @@ public partial class ReportScreen : Control
                 bet.Met ? Style.LinkCreated : Style.Hole);
         }
 
-        Widgets.Panel(this, new Rect2(920f, 326f, 348f, 124f));
-        Widgets.Section(this, UiText.Get("ui.report.referee"), new Vector2(932f, 332f), 320f);
+        float refereeTop = 52f + GoldPanelHeight + PanelGap;
+        Widgets.Panel(this, new Rect2(920f, refereeTop, 348f, RefereePanelHeight));
+        Widgets.Section(this, UiText.Get("ui.report.referee"), new Vector2(932f, refereeTop + 6f), 320f);
         var referee = _report.Referee;
-        Widgets.Body(this, referee.Name, new Vector2(932f, 354f), 324f);
-        Widgets.Body(this, UiText.Get("ui.report.refereeBias", referee.InitialBias, referee.FinalBias), new Vector2(932f, 372f), 324f, Style.TextDim);
+        Widgets.Body(this, referee.Name, new Vector2(932f, refereeTop + 28f), 324f);
+        Widgets.Body(this, UiText.Get("ui.report.refereeBias", referee.InitialBias, referee.FinalBias), new Vector2(932f, refereeTop + 46f), 324f, Style.TextDim);
 
         // ADR 0158 §5 (la mitad de RF-119 que faltaba): FoulsFor/FoulsAgainst ya CUENTAN las no
         // señaladas (Unseen es un subconjunto, no una cifra aparte), así que "señaladas" se resta aquí
@@ -417,59 +421,52 @@ public partial class ReportScreen : Control
         Widgets.Body(
             this,
             UiText.Get("ui.report.refereeFouls", referee.FoulsFor - referee.UnseenFoulsFor, referee.FoulsAgainst - referee.UnseenFoulsAgainst),
-            new Vector2(932f, 392f),
+            new Vector2(932f, refereeTop + 66f),
             324f);
-        Widgets.Body(this, UiText.Get("ui.report.refereeCards", referee.CardsFor, referee.CardsAgainst), new Vector2(932f, 410f), 324f);
+        Widgets.Body(this, UiText.Get("ui.report.refereeCards", referee.CardsFor, referee.CardsAgainst), new Vector2(932f, refereeTop + 84f), 324f);
         Widgets.Body(
             this,
             UiText.Get("ui.report.refereeUnseen", referee.UnseenFoulsFor, referee.UnseenFoulsAgainst),
-            new Vector2(932f, 428f),
+            new Vector2(932f, refereeTop + 102f),
             324f,
             Style.TextDim);
 
-        Stats();
+        Stats(refereeTop + RefereePanelHeight + PanelGap);
     }
+
+    /// <summary>Alto del panel del oro: el desglose, el botín y la apuesta más un respiro (ver <see cref="Gold"/>).</summary>
+    private const float GoldPanelHeight = 224f;
+
+    /// <summary>Alto del panel del árbitro: cabecera, nombre, criterio, faltas, tarjetas y no señaladas.</summary>
+    private const float RefereePanelHeight = 124f;
+
+    /// <summary>Separación entre los paneles de la columna derecha.</summary>
+    private const float PanelGap = 6f;
+
+    /// <summary>Borde inferior de la columna derecha: el mismo que llevaba el panel de estadísticas, encima de los botones.</summary>
+    private const float ColumnBottom = 698f;
 
     /// <summary>
     /// Estadísticas de cada jugador propio en el partido y los apodos que este partido ha dado (ADR 0163).
-    /// Las cifras son las de <c>MatchReport.Players</c>, tal cual las compone <c>PostMatchView</c>. Los
-    /// apodos ganados van arriba: son lo que el jugador no debe perderse.
+    /// Las cifras son las de <c>MatchReport.Players</c>, tal cual las compone <c>PostMatchView</c>.
+    /// <para>
+    /// <b>Los apodos ganados van en su fila, no en un bloque aparte.</b> Con un bloque arriba («X gana el apodo…»,
+    /// dos líneas y «y N apodos más») y una segunda línea por jugador, seis apodos comían medio panel y sólo cabían
+    /// cinco de siete filas —con dos apodos, cuatro—, y lo que se perdía en silencio eran jugadores. En la fila, el
+    /// apodo ganado se lee con su verbo («gana», «pasa de… a…») y en color de acento, el que ya se tenía se apaga, y
+    /// caben todas las filas: siete de siete con un apodo cada una, ocho como máximo.
+    /// </para>
     /// </summary>
-    private void Stats()
+    /// <param name="panelTop">Borde superior del panel: pegado al del árbitro y hasta el fondo de la columna.</param>
+    private void Stats(float panelTop)
     {
-        const float panelTop = 458f;
-        Widgets.Panel(this, new Rect2(920f, panelTop, 348f, 240f));
+        float panelHeight = ColumnBottom - panelTop;
+        Widgets.Panel(this, new Rect2(920f, panelTop, 348f, panelHeight));
         Widgets.Section(this, UiText.Get("ui.report.stats"), new Vector2(932f, panelTop + 6f), 320f);
 
-        const float panelHeight = 240f;
         const float lineHeight = 15f;
         float bottomLimit = panelTop + panelHeight - 6f;
         float y = panelTop + 26f;
-
-        // Los apodos ganados van arriba y no se pierden en silencio: caben dos, los de MAYOR prioridad
-        // (la vista los ordena así, ADR 0163), y una línea dice cuántos más hay.
-        var earned = _report.NicknamesEarned;
-        const int nicknamesShown = 2;
-        for (int i = 0; i < earned.Count && i < nicknamesShown; i++)
-        {
-            var gain = earned[i];
-            string text = gain.PreviousNickname.Length > 0
-                ? UiText.Get("ui.report.nicknameUpgraded", gain.PlayerName, gain.Nickname, gain.PreviousNickname)
-                : UiText.Get("ui.report.nicknameEarned", gain.PlayerName, gain.Nickname);
-            var line = Widgets.Body(this, text, new Vector2(932f, y), 324f, Style.Accent);
-            y += line.Size.Y + 2f;
-        }
-
-        if (earned.Count > nicknamesShown)
-        {
-            var more = Widgets.Body(
-                this,
-                UiText.Plural(earned.Count - nicknamesShown, "ui.report.nicknamesMoreOne", "ui.report.nicknamesMore"),
-                new Vector2(932f, y),
-                324f,
-                Style.TextDim);
-            y += more.Size.Y + 2f;
-        }
 
         if (_report.PlayerStats.Count == 0)
         {
@@ -489,6 +486,12 @@ public partial class ReportScreen : Control
         // Nada desaparece sin explicación: cada fila con su apodo en una segunda línea (el nombre solo ya
         // ocupa el ancho de su columna, y «Nombre «Apodo»» a 160 px se cortaba), y si las filas no caben,
         // «y N jugadores más» con el sitio reservado antes de pintar la siguiente.
+        var earned = new Dictionary<int, NicknameGainRow>();
+        foreach (var gain in _report.NicknamesEarned)
+        {
+            earned[gain.PlayerId] = gain;
+        }
+
         var rows = _report.PlayerStats;
         for (int r = 0; r < rows.Count; r++)
         {
@@ -519,8 +522,15 @@ public partial class ReportScreen : Control
 
             if (row.Nickname.Length > 0)
             {
-                // Su propia línea, con el ancho de la cuadrícula entera: ya no se recorta a 160 px.
-                var nick = Widgets.Body(this, "«" + row.Nickname + "»", new Vector2(944f, y + lineHeight - 3f), 312f, Style.Accent);
+                // Su propia línea, con el ancho de la cuadrícula entera: ya no se recorta a 160 px. El apodo ganado
+                // en este partido lleva su verbo y el acento; el que ya tenía, apagado.
+                bool gained = earned.TryGetValue(row.PlayerId, out var gain);
+                string text = !gained
+                    ? "«" + row.Nickname + "»"
+                    : gain!.PreviousNickname.Length > 0
+                        ? UiText.Get("ui.report.nicknameUpgradedRow", gain.Nickname, gain.PreviousNickname)
+                        : UiText.Get("ui.report.nicknameEarnedRow", gain.Nickname);
+                var nick = Widgets.Body(this, text, new Vector2(944f, y + lineHeight - 3f), 312f, gained ? Style.Accent : Style.TextDim);
                 nick.AutowrapMode = TextServer.AutowrapMode.Off;
                 nick.ClipText = true;
                 nick.Size = new Vector2(312f, nick.Size.Y);

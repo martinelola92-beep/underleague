@@ -107,6 +107,36 @@ public partial class MemoryCaptureRunner : Control
             break;
         }
 
+        // 2c. El panel del oro en su peor caso —desglose, botín de liga y apuesta a la vez—: es lo que fija el alto que le
+        //     queda a las estadísticas (el panel del oro se acortó para que quepan las siete filas, ADR 0163).
+        bool fullGold = false;
+        for (ulong seed = 1; seed <= 60 && !fullGold; seed++)
+        {
+            run.NewRun("orc_ironworks", Race.Orc, seed);
+            Forge(run, state => PrimeCareers(state, run));
+            var match = FirstMatch(run);
+            run.SelectedNodeId = match.Id;
+            run.Apply(new TakeBet(match.Id));
+            run.PlayMatch(match.Id);
+            var post = run.PostMatch();
+            if (post is null || post.Bet is null || post.Loot is null)
+            {
+                continue;
+            }
+
+            var report = await Show("res://Scenes/Informe.tscn");
+            await Save("memoria-informe-oro-completo");
+            GD.Print($"informe oro completo: semilla {seed}, apuesta cumplida {post.Bet.Met}");
+            Drop(report);
+            fullGold = true;
+        }
+
+        if (!fullGold)
+        {
+            GD.PushError("ninguna semilla de 1..60 dio un informe con apuesta y botín a la vez");
+            failures++;
+        }
+
         // 3. La Gaceta de una victoria y de una derrota con caídos.
         foreach (var (name, outcome) in new[]
         {
