@@ -193,7 +193,63 @@ public static class MarketOfferGenerator
             consumableOffers.Add(new ConsumableOffer(consumable.Id, Priced(ref rng, basePrice, basePrice)));
         }
 
+        FilterNames(state, node, catalog, recruits, youths, mercenaries);
         return new MarketOffers(recruits, youths, mercenaries, perks, itemOffers, consumableOffers);
+    }
+
+    /// <summary>Posición de cada tipo de oferta dentro de la sal de los nombres del nodo (<c>RunNames.Distinct</c>): 20 por tipo, de sobra.</summary>
+    private const int NamePositionStep = 20;
+
+    /// <summary>
+    /// BA-G, ADR 0169: ningún jugador del surtido se llama como alguien de la plantilla, como otro jugador del mismo
+    /// surtido ni como un fichaje de clan rival. Se hace <b>después</b> de generarlos todos, así que el flujo de
+    /// recompensas del mercado gasta exactamente lo mismo que antes; sólo cambia el nombre de quien repetía, y sale de
+    /// un flujo propio. Orden fijo (fichajes, canteranos, mercenarios): quien va antes nunca cede ante quien va después.
+    /// </summary>
+    private static void FilterNames(
+        RunState state,
+        MapNode node,
+        Catalog catalog,
+        List<PlayerOffer> recruits,
+        List<PlayerOffer> youths,
+        List<MercenaryOffer> mercenaries)
+    {
+        var players = new List<RunPlayer>(recruits.Count + youths.Count + mercenaries.Count);
+        var positions = new List<int>(players.Capacity);
+        for (int i = 0; i < recruits.Count; i++)
+        {
+            players.Add(recruits[i].Player);
+            positions.Add(i);
+        }
+
+        for (int i = 0; i < youths.Count; i++)
+        {
+            players.Add(youths[i].Player);
+            positions.Add(NamePositionStep + i);
+        }
+
+        for (int i = 0; i < mercenaries.Count; i++)
+        {
+            players.Add(mercenaries[i].Player);
+            positions.Add((2 * NamePositionStep) + i);
+        }
+
+        var distinct = RunNames.Distinct(state, node, players, positions, catalog);
+        int next = 0;
+        for (int i = 0; i < recruits.Count; i++)
+        {
+            recruits[i] = recruits[i] with { Player = distinct[next++] };
+        }
+
+        for (int i = 0; i < youths.Count; i++)
+        {
+            youths[i] = youths[i] with { Player = distinct[next++] };
+        }
+
+        for (int i = 0; i < mercenaries.Count; i++)
+        {
+            mercenaries[i] = mercenaries[i] with { Player = distinct[next++] };
+        }
     }
 
     /// <summary>Peso de un consumible en el sorteo del mostrador, según su rareza (provisional, sin medir).</summary>

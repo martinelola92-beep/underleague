@@ -107,8 +107,11 @@ public sealed class BossRunSystems : IRunSystems
 
         // BH-B: el equipo se llama como el jefe («La Cacería»), no como su id de datos. Idioma fijo a «es», igual que
         // RivalTeamBuilder, mientras la fase 4 no elija idioma en tiempo de ejecución (RT-073).
-        return boss.Template.ToTeamSetup(
+        var team = boss.Template.ToTeamSetup(
             ref rng, catalog, boss.Id, DefaultRunSystems.OpponentFirstPlayerId, boss.NameIn("es"));
+
+        // BA-G, ADR 0169: quien de su plantilla se llame como alguien del club pasa a llevar otro nombre.
+        return Systems.RunNames.YieldToClub(state, team, node.Id, catalog);
     }
 
     /// <inheritdoc />

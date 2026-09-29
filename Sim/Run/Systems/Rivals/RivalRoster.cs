@@ -22,13 +22,31 @@ public sealed record RivalOccupant(int Slot, string Name, RivalNemesis? Nemesis,
 public static class RivalRoster
 {
     /// <summary>
-    /// Desplazamiento de la semilla de los nombres de fichaje (flujo propio de la run, RT-022): 950 M queda
-    /// muy por encima de <c>nodo * 10000 + reroll</c> de cualquier flujo de recompensas.
+    /// Generaciones de fichaje por puesto que caben en la reserva de nombres del clan. Un puesto que se vacía más
+    /// veces que esto sigue teniendo nombre propio, pero ya no fuera del alcance del club (BA-G, ADR 0169).
     /// </summary>
-    private const int SigningStreamBase = 950_000_000;
+    public const int SigningReservedGenerations = 4;
 
-    /// <summary>Intentos de sortear un nombre que no repita a nadie del equipo antes de aceptar el último.</summary>
-    private const int SigningNameAttempts = 32;
+    /// <summary>Puestos de un clan (data/rivals: diez jugadores).</summary>
+    private const int Slots = 10;
+
+    /// <summary>
+    /// Billetes reservados a los fichajes de un clan: <c>puestos x generaciones</c> (BA-G, ADR 0169). El club no puede
+    /// llevar ninguno de los nombres de esos billetes (<see cref="Underleague.Sim.Run.Systems.RunNames"/>), así que un
+    /// fichaje rival nunca repite a un jugador del club aunque se derive sin mirar la plantilla.
+    /// </summary>
+    public const int SigningPoolTickets = Slots * SigningReservedGenerations;
+
+    /// <summary>
+    /// Separación entre el billete de un fichaje y el siguiente intento si el nombre coincide con un jugador de
+    /// datos del clan. Mayor que cualquier billete de un puesto hasta la generación 9 (<c>generación x 10 + puesto</c>
+    /// &lt; 100), así que hasta ahí los intentos de dos fichajes distintos nunca se pisan; más allá, un puesto vaciado diez
+    /// veces en una run, deja de estar garantizado. Con los datos de hoy la generación máxima medida en 120 runs es 1.
+    /// </summary>
+    private const int ProbeStep = 100;
+
+    /// <summary>Intentos de dar con un nombre que no repita a nadie de los datos del equipo antes de aceptar el último.</summary>
+    private const int SigningNameAttempts = 3;
 
     /// <summary>Quién juega en cada uno de los diez puestos de este rival, por índice de puesto.</summary>
     public static IReadOnlyList<RivalOccupant> Resolve(RivalTeam team, RivalMemory memory, ulong seed, Catalog? catalog)
@@ -65,18 +83,22 @@ public static class RivalRoster
     }
 
     /// <summary>
-    /// Nombre del fichaje de una vacante: sale de las listas de la raza con un flujo de la semilla de la run
-    /// para (clan, puesto, generación), sin repetir el nombre de nadie de los datos del equipo.
+    /// Nombre del fichaje de una vacante: el del <b>billete</b> <c>generación x 10 + puesto</c> del retículo de la raza
+    /// (<see cref="NameLattice.NameOfTicket"/>), sin repetir el nombre de nadie de los datos del equipo. Billetes
+    /// distintos dan nombres distintos, así que dos fichajes del mismo clan nunca se llaman igual sin necesidad de
+    /// mirar a los demás: se sigue derivando de (semilla, raza, puesto, generación) y nada más (BA-G, ADR 0169). La clave
+    /// es la <b>raza</b> y no el clan porque hoy hay un solo clan por raza (los tres rivales de una raza son el mismo
+    /// clan, ADR 0165); si algún día hubiera dos de la misma raza, compartirían billetes y sus fichajes se llamarían igual
+    /// de un clan a otro —no dentro de uno—.
     /// </summary>
     public static string SigningName(RivalTeam team, RivalVacancy vacancy, ulong seed, Catalog catalog)
     {
-        var generator = new NameGenerator(catalog.Race(team.Race));
-        var rng = RngStreams.Rewards(seed, checked(
-            SigningStreamBase + (ClanKey(vacancy.ClanId) * 1000) + (vacancy.Slot * 100) + vacancy.Generation));
+        var lattice = new NameLattice(catalog.Race(team.Race));
+        int ticket = (vacancy.Generation * Slots) + vacancy.Slot;
         string name = string.Empty;
         for (int attempt = 0; attempt < SigningNameAttempts; attempt++)
         {
-            name = generator.Next(ref rng).Es;
+            name = lattice.NameOfTicket(seed, ticket + (attempt * ProbeStep));
             if (!TeamHasName(team, name))
             {
                 break;
@@ -97,17 +119,5 @@ public static class RivalRoster
         }
 
         return false;
-    }
-
-    /// <summary>Clave numérica estable (0..9999) de un id de clan: FNV-1a sobre sus caracteres, no <c>GetHashCode</c> (RT-021).</summary>
-    private static int ClanKey(string clanId)
-    {
-        uint hash = 2166136261;
-        for (int i = 0; i < clanId.Length; i++)
-        {
-            hash = (hash ^ clanId[i]) * 16777619;
-        }
-
-        return (int)(hash % 9_000);
     }
 }

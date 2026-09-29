@@ -26,7 +26,7 @@ namespace Underleague.Sim.Run.Systems;
 /// <item><term>9500 + id de némesis</term><description><c>NemesisSystem</c>: el título de un némesis, en el nodo de partido donde nace (ADR 0165). No choca con el herrero: ése sólo tira en nodos de clínica</description></item>
 /// <item><term>nodo ficticio 9500 + acto, desplazamiento = id de némesis</term><description><c>NemesisSystem.TransferOnActEntry</c>: a qué clan se traspasa (ADR 0165); 9500+ está por encima de cualquier id de nodo real</description></item>
 /// <item><term>9600</term><description><c>MobCatalog</c>: el tipo de turba del partido de ese nodo (ADR 0167). Coincidiría con el título de némesis sólo si un id de némesis llegara a 100 en la misma run</description></item>
-/// <item><term>(fuera de esta clase) 950.000.000 + clan·1000 + puesto·100 + generación</term><description><c>RivalRoster.SigningName</c> abre <c>RngStreams.Rewards</c> con esa sal directamente: el nombre del fichaje que cubre una vacante de clan (ADR 0165)</description></item>
+/// <item><term>(fuera de esta clase y de este flujo)</term><description>Los nombres repetidos y los fichajes de clan (ADR 0165) ya no usan <c>RngStreams.Rewards</c>: los nombres salen de <c>RngStreams.Names</c> (BA-G, ADR 0169), así que no hay desplazamiento que reservar aquí</description></item>
 /// </list>
 /// </summary>
 public static class OfferStream

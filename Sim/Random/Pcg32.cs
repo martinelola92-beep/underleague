@@ -130,6 +130,7 @@ public static class RngStreams
     private const ulong GenerationKind = 4UL;
     private const ulong ClinicKind = 5UL;
     private const ulong RefereesKind = 6UL;
+    private const ulong NamesKind = 7UL;
 
     /// <summary>Flujo de RNG para el partido del nodo nodeIndex de la run.</summary>
     public static Pcg32 Match(ulong runSeed, int nodeIndex) => Create(runSeed, MatchKind, nodeIndex);
@@ -162,6 +163,14 @@ public static class RngStreams
     /// árbitros tiene la run. Se llama una sola vez, al empezar la run.
     /// </summary>
     public static Pcg32 Referees(ulong runSeed) => Create(runSeed, RefereesKind, 0);
+
+    /// <summary>
+    /// Flujo de RNG de los nombres de jugador que hay que volver a sortear porque el primero ya lo llevaba alguien
+    /// (BA-G, ADR 0169), y de la biyección por billete de los nombres de los clanes rivales. Es propio y no el de
+    /// recompensas ni el de generación para que <b>volver a sortear un nombre no gaste ni un dado del mercado, de una
+    /// recompensa o de un partido</b> (RT-022): con o sin repetición, todo lo demás de la run sale igual.
+    /// </summary>
+    public static Pcg32 Names(ulong runSeed, int index) => Create(runSeed, NamesKind, index);
 
     private static Pcg32 Create(ulong runSeed, ulong kind, int index)
     {

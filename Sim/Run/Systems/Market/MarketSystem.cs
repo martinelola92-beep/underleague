@@ -44,8 +44,8 @@ public static class MarketSystem
 
         return decision.Category switch
         {
-            MarketCategories.Player => BuyPlayer(state, offers.Recruits, decision, requirePayment: true),
-            MarketCategories.Youth => BuyPlayer(state, offers.Youths, decision, requirePayment: false),
+            MarketCategories.Player => BuyPlayer(state, offers.Recruits, decision, catalog, requirePayment: true),
+            MarketCategories.Youth => BuyPlayer(state, offers.Youths, decision, catalog, requirePayment: false),
             MarketCategories.Perk => BuyPerk(state, offers.Perks, decision, catalog, economy),
             MarketCategories.Item => BuyItem(state, offers.Items, decision, economy, items),
             MarketCategories.Consumable => BuyConsumable(state, offers.Consumables, decision),
@@ -62,7 +62,7 @@ public static class MarketSystem
         var offers = MarketOfferGenerator.Generate(state, node, catalog, economy, items, consumables);
         var offer = AtIndex(offers.Mercenaries, decision.OfferIndex, "mercenario");
         RequireRosterSpace(state, "fichar a un mercenario");
-        return state.WithNewPlayer(offer.Player);
+        return RunNames.Admit(state, offer.Player, catalog);
     }
 
     public static RunState Sell(RunState state, SellPlayer decision, EconomyConfig economy)
@@ -136,7 +136,7 @@ public static class MarketSystem
         return percent;
     }
 
-    private static RunState BuyPlayer(RunState state, IReadOnlyList<PlayerOffer> offers, BuyOffer decision, bool requirePayment)
+    private static RunState BuyPlayer(RunState state, IReadOnlyList<PlayerOffer> offers, BuyOffer decision, Catalog catalog, bool requirePayment)
     {
         var offer = AtIndex(offers, decision.OfferIndex, "jugador");
 
@@ -149,7 +149,7 @@ public static class MarketSystem
             state = state.AddGold(-offer.Price);
         }
 
-        return state.WithNewPlayer(offer.Player);
+        return RunNames.Admit(state, offer.Player, catalog);
     }
 
     private static RunState BuyPerk(RunState state, IReadOnlyList<PerkOffer> offers, BuyOffer decision, Catalog catalog, EconomyConfig economy)

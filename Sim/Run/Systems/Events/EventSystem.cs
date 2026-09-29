@@ -489,7 +489,11 @@ public static class EventSystem
         var rng = OfferStream.For(state.Seed, node.Id, RecruitStream);
         var position = GeneratedPlayers.PickOutfield(ref rng);
         var youth = GeneratedPlayers.Youth(ref rng, catalog, state.ClubRace, economy.Market.YouthQuality, position);
-        return state.WithNewPlayer(youth);
+
+        // BA-G, ADR 0169: el canterano del evento tampoco se llama como nadie de la plantilla (después del sorteo, así
+        // que el flujo del evento gasta lo mismo que antes).
+        youth = RunNames.Distinct(state, node, new[] { youth }, new[] { 0 }, catalog)[0];
+        return RunNames.Admit(state, youth, catalog);
     }
 
     /// <summary>

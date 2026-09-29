@@ -84,7 +84,45 @@ public static class RewardSystem
             }
         }
 
+        FilterNames(state, node, catalog, options);
         return options;
+    }
+
+    /// <summary>Posición de las opciones de jugador dentro de la sal de los nombres del nodo (<c>RunNames.Distinct</c>).</summary>
+    private const int NamePositionBase = 60;
+
+    /// <summary>
+    /// BA-G, ADR 0169: un jugador de recompensa no se llama como nadie de la plantilla ni como otro de las opciones.
+    /// Después de sortear todas, con lo que el flujo del nodo gasta lo mismo que antes; sólo cambia el nombre de quien
+    /// repetía.
+    /// </summary>
+    private static void FilterNames(RunState state, MapNode node, Catalog catalog, List<RewardOption> options)
+    {
+        var players = new List<RunPlayer>();
+        var positions = new List<int>();
+        for (int i = 0; i < options.Count; i++)
+        {
+            if (options[i] is PlayerRewardOption player)
+            {
+                players.Add(player.Player);
+                positions.Add(NamePositionBase + i);
+            }
+        }
+
+        if (players.Count == 0)
+        {
+            return;
+        }
+
+        var distinct = RunNames.Distinct(state, node, players, positions, catalog);
+        int next = 0;
+        for (int i = 0; i < options.Count; i++)
+        {
+            if (options[i] is PlayerRewardOption)
+            {
+                options[i] = new PlayerRewardOption(distinct[next++]);
+            }
+        }
     }
 
     /// <summary>Elecciones ya cobradas (o rechazadas) en ese nodo (ADR 0043: el jefe da dos).</summary>
@@ -133,7 +171,7 @@ public static class RewardSystem
         var next = options[decision.OptionIndex] switch
         {
             PerkRewardOption perk => ApplyPerk(state, perk, decision, catalog),
-            PlayerRewardOption player => TakePlayer(state, player),
+            PlayerRewardOption player => TakePlayer(state, player, catalog),
             ItemRewardOption item => ApplyItem(state, item, decision, economy, items),
             var other => throw new InvalidOperationException($"tipo de recompensa no reconocido: {other.GetType().Name}"),
         };
@@ -198,7 +236,7 @@ public static class RewardSystem
     /// 0046). Con la plantilla llena la opción no se puede cobrar y la salida es <see cref="Decline"/>:
     /// aquí no hay mercado en el que vender, así que un cuerpo de más no entra por la puerta de atrás.
     /// </summary>
-    private static RunState TakePlayer(RunState state, PlayerRewardOption option)
+    private static RunState TakePlayer(RunState state, PlayerRewardOption option, Catalog catalog)
     {
         if (!state.HasRosterSpace)
         {
@@ -207,7 +245,7 @@ public static class RewardSystem
                     + "hay que rechazar la recompensa o hacer sitio antes");
         }
 
-        return state.WithNewPlayer(option.Player);
+        return RunNames.Admit(state, option.Player, catalog);
     }
 
     private static RunState ApplyPerk(RunState state, PerkRewardOption option, ChooseReward decision, Catalog catalog)

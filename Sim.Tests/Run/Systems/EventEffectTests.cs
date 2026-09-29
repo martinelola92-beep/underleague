@@ -325,6 +325,24 @@ public sealed class EventEffectTests
 
     // ------------------------------------------------------------------ recruit
 
+    /// <summary>
+    /// BA-G, ADR 0169: el canterano que da un evento tampoco se llama como nadie de la plantilla. Se fuerza el choque: alguien
+    /// de la plantilla pasa a llevar el nombre que el canterano habría llevado, y el canterano cambia de nombre y de nada más.
+    /// </summary>
+    [Fact]
+    public void RecruitedYouthNeverRepeatsARosterNameAndOnlyItsNameChanges()
+    {
+        var (state, _) = AtAnEvent();
+        var events = CardOf(Option("welcome", false, false, new EventEffect(EventEffectKind.Recruit, 0)));
+        var free = Choose(state, events, new ChooseEventOption(0)).Roster.Single(p => state.Roster.All(o => o.Id != p.Id));
+
+        var clash = state.WithPlayer(state.Roster[2] with { Name = free.Name });
+        var moved = Choose(clash, events, new ChooseEventOption(0)).Roster.Single(p => clash.Roster.All(o => o.Id != p.Id));
+
+        Assert.NotEqual(free.Name, moved.Name);
+        TestRuns.AssertSamePlayer(free, moved with { Name = free.Name });
+    }
+
     [Fact]
     public void RecruitAddsAYouthWhenThereIsRoomAndIsNotViableWithAFullRoster()
     {

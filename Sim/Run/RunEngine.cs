@@ -138,6 +138,11 @@ public static class RunEngine
             .WithReferees(systems.CreateReferees(seed, setup.RefereeCount, catalog))
             .WithDataSnapshot(setup.DataSnapshot);
 
+        // BA-G, ADR 0169: los nombres de los jugadores de datos de los clanes quedan reservados al club, la plantilla
+        // inicial cede ante ellos y ante los fichajes rivales, y sus nombres quedan anotados para que nada de lo que se
+        // ofrezca después los repita.
+        state = Systems.RunNames.ReserveWorld(state, systems);
+        state = Systems.RunNames.AdmitInitialRoster(state, catalog, rename: setup.Roster is not { Count: > 0 });
         return state.WithLineup(RunLineup.Default(state));
     }
 
