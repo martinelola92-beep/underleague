@@ -80,6 +80,14 @@ public partial class ConsumablesPanel : InkCanvas
     {
         _state = state;
         _error = string.Empty;
+
+        // Un consumible que ya no se lleva (se gastó en el partido o se descartó) no puede seguir elegido: la
+        // columna de la derecha enseñaría algo que ya no está en ningún hueco.
+        if (_selectedId.Length > 0 && Inventory.Equipped(state, _selectedId) is null)
+        {
+            _selectedId = string.Empty;
+        }
+
         Render();
     }
 
