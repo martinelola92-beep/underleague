@@ -111,7 +111,8 @@
         "picks": { "type": "integer", "minimum": 0, "maximum": 4 },
         "rarityFloorPercent": { "type": "integer", "minimum": 0, "maximum": 100 },
         "commonCeilingPercent": { "type": "integer", "minimum": 0, "maximum": 100 },
-        "healsRoster": { "type": "boolean" }
+        "healsRoster": { "type": "boolean", "description": "Cura la plantilla entera (leves y graves) al superar el nodo. Desde la ADR 0170 ningún nodo lo hace." },
+        "healsMinorInjuries": { "type": "boolean", "description": "ADR 0170: cura sólo las lesiones LEVES al superar el nodo (las graves se arrastran). Opcional, false por defecto; no puede ir con healsRoster true." }
       },
       "required": ["goldBonusPercent", "options", "picks", "rarityFloorPercent", "commonCeilingPercent", "healsRoster"],
       "additionalProperties": false

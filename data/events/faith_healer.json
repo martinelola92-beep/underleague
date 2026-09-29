@@ -1,5 +1,5 @@
 {
-  "_doc": "ADR 0159 pedía 'todos los leves se curan'; la ADR solo define ocho efectos nuevos y ese no es uno de ellos, así que 'rezar' reutiliza el heal existente (cura toda la plantilla, como la clínica de tarifa plana), sin coste. Decisión tomada sin consultar, señalada en el informe de cierre. Cifras provisionales, sin medir (Regla H).",
+  "_doc": "ADR 0159 pedía 'todos los leves se curan'; la ADR solo define ocho efectos nuevos y ese no es uno de ellos, así que 'rezar' reutiliza el heal existente, que desde la ADR 0170 cura sólo las lesiones LEVES (antes también las graves: la ADR pedía justo «todos los leves se curan»), sin coste. Decisión tomada sin consultar, señalada en el informe de cierre. Cifras provisionales, sin medir (Regla H).",
   "id": "faith_healer",
   "name": {
     "es": "El santero",

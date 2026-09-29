@@ -324,6 +324,27 @@ public static class MedicalSystem
         };
     }
 
+    /// <summary>
+    /// Cura las lesiones <b>leves</b> de toda la plantilla (ADR 0170): el jugador en estado leve vuelve sano y con el
+    /// contador acumulado a cero. La lesión grave, el sano y el muerto no se tocan. Es lo que hace el jefe al superarlo
+    /// (<c>healsMinorInjuries</c>) y el efecto <c>heal</c> de las cartas de evento.
+    /// </summary>
+    public static RunState HealMinorInjuries(RunState state)
+    {
+        ArgumentNullException.ThrowIfNull(state);
+        var next = state;
+        for (int i = 0; i < state.Roster.Count; i++)
+        {
+            var player = state.Roster[i];
+            if (player.PhysicalState == PhysicalState.MinorInjury)
+            {
+                next = next.WithPlayer(player with { PhysicalState = PhysicalState.Healthy, MinorInjuries = 0 });
+            }
+        }
+
+        return next;
+    }
+
     /// <summary>Lesionado que la clínica puede tratar: grave, o leve con lesiones acumuladas (RF-091).</summary>
     public static bool NeedsTreatment(RunPlayer player)
     {

@@ -474,7 +474,7 @@
     "_doc": "ADR 0100 (extended by ADR 0159): pieces the effect line of an event option is composed from. Option text is never hand-written (RT-035).",
     "gold": "{0} gold",
     "goldShare": "{0}% of the gold you carry",
-    "heal": "heals the whole squad",
+    "heal": "heals the squad's minor injuries",
     "experience": "{0} experience for the starters",
     "experienceTarget": "{0} experience for him",
     "injureMinor": "leaves him with a minor injury",

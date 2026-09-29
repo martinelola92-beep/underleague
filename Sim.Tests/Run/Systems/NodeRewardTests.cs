@@ -12,7 +12,7 @@ namespace Underleague.Sim.Tests.Run.Systems;
 /// <summary>
 /// ADR 0043: el trampolín y el desgaste por acto. La recompensa deja de ser la misma tras cualquier
 /// victoria —el élite paga más y con rareza mejorada, el jefe paga mucho más, da <b>dos</b> perks y cura
-/// la plantilla—, se puede <b>rechazar</b> (RF-071 obligaba a elegir una de las tres) y la probabilidad de
+/// las lesiones leves (ADR 0170)—, se puede <b>rechazar</b> (RF-071 obligaba a elegir una de las tres) y la probabilidad de
 /// lesión escala por acto y en el nodo de élite.
 /// </summary>
 public sealed class NodeRewardTests
@@ -130,32 +130,104 @@ public sealed class NodeRewardTests
             $"el élite ofrece {eliteBetter} opciones por encima de común y la liga {leagueBetter} de {total}");
     }
 
+    /// <summary>Sistemas con la economía real, salvo la recompensa del jefe, que se escribe a mano.</summary>
+    private static StandardRunSystems SystemsWithBossHealing(string healingFields)
+    {
+        var files = TestData.LoadAllFiles();
+        string economy = files["economy/economy.json"];
+        int boss = economy.IndexOf("\"boss\":", StringComparison.Ordinal);
+        int end = economy.IndexOf('\n', boss);
+        string line = economy[boss..end];
+        int cut = line.IndexOf("\"healsRoster\"", StringComparison.Ordinal);
+        files["economy/economy.json"] = economy[..boss] + line[..cut] + healingFields + " }" + economy[end..];
+        return StandardRunSystems.FromJson(files);
+    }
+
+    private static RunState HurtRoster(RunState state)
+    {
+        var roster = state.Roster;
+        return state
+            .WithPlayer(roster[0] with { PhysicalState = PhysicalState.SevereInjury, MinorInjuries = 1 })
+            .WithPlayer(roster[1] with { PhysicalState = PhysicalState.MinorInjury, MinorInjuries = 2 })
+            .WithPlayer(roster[2] with { PhysicalState = PhysicalState.Dead })
+            .WithPlayer(roster[3] with { PhysicalState = PhysicalState.Healthy });
+    }
+
     /// <summary>
-    /// El desgaste es recurso de la RUN (ADR 0170; antes la ADR 0043 curaba al superar el jefe): superar el
-    /// jefe ya no cura nada, ni la lesión grave ni las leves acumuladas, y el muerto sigue muerto (RF-093).
-    /// Ningún tipo de nodo cura la plantilla; el alivio son la clínica, el herrero y el matasanos.
+    /// El desgaste es recurso de la RUN (ADR 0170; antes la ADR 0043 curaba al superar el jefe): con los datos reales
+    /// el jefe cura sólo las lesiones LEVES. La grave sigue grave, con su contador; la leve vuelve sana y sin contador;
+    /// el muerto sigue muerto (RF-093). Liga y élite no curan nada.
     /// </summary>
     [Fact]
-    public void WinningTheBossNoLongerHealsTheRoster()
+    public void WinningTheBossHealsTheMinorInjuriesButCarriesTheSevereOnes()
     {
-        Assert.False(Economy.BossReward.HealsRoster);
-        Assert.False(Economy.LeagueReward.HealsRoster);
-        Assert.False(Economy.EliteReward.HealsRoster);
+        Assert.Equal(RosterHealing.Minor, Economy.BossReward.Healing);
+        Assert.Equal(RosterHealing.None, Economy.LeagueReward.Healing);
+        Assert.Equal(RosterHealing.None, Economy.EliteReward.Healing);
 
         var state = RunEngine.Start(SystemsTestSupport.Setup(), 8383UL, Catalog, Systems);
         var roster = state.Roster;
-        state = state
-            .WithPlayer(roster[0] with { PhysicalState = PhysicalState.SevereInjury })
-            .WithPlayer(roster[1] with { PhysicalState = PhysicalState.MinorInjury, MinorInjuries = 2 })
-            .WithPlayer(roster[2] with { PhysicalState = PhysicalState.Dead });
+        var hurt = HurtRoster(state);
 
         var bossNode = FindNode(state, NodeKind.Boss);
-        var afterBoss = Systems.AfterMatch(state, bossNode, WonSummary(bossNode), Catalog);
+        var afterBoss = Systems.AfterMatch(hurt, bossNode, WonSummary(bossNode), Catalog);
 
         Assert.Equal(PhysicalState.SevereInjury, afterBoss.GetPlayer(roster[0].Id).PhysicalState);
-        Assert.Equal(PhysicalState.MinorInjury, afterBoss.GetPlayer(roster[1].Id).PhysicalState);
-        Assert.Equal(2, afterBoss.GetPlayer(roster[1].Id).MinorInjuries);
+        Assert.Equal(1, afterBoss.GetPlayer(roster[0].Id).MinorInjuries);
+        Assert.Equal(PhysicalState.Healthy, afterBoss.GetPlayer(roster[1].Id).PhysicalState);
+        Assert.Equal(0, afterBoss.GetPlayer(roster[1].Id).MinorInjuries);
         Assert.Equal(PhysicalState.Dead, afterBoss.GetPlayer(roster[2].Id).PhysicalState);
+        Assert.Equal(PhysicalState.Healthy, afterBoss.GetPlayer(roster[3].Id).PhysicalState);
+
+        // Un partido de liga o de élite ganado no cura nada.
+        foreach (var kind in new[] { NodeKind.LeagueMatch, NodeKind.EliteMatch })
+        {
+            var node = FindNode(state, kind);
+            var after = Systems.AfterMatch(hurt, node, WonSummary(node), Catalog);
+            Assert.Equal(PhysicalState.SevereInjury, after.GetPlayer(roster[0].Id).PhysicalState);
+            Assert.Equal(PhysicalState.MinorInjury, after.GetPlayer(roster[1].Id).PhysicalState);
+            Assert.Equal(2, after.GetPlayer(roster[1].Id).MinorInjuries);
+        }
+    }
+
+    /// <summary>
+    /// Los tres modos de <c>StandardRunSystems.HealRoster</c> (ADR 0170), con la recompensa del jefe escrita a mano en
+    /// los datos: <c>none</c> no cura, <c>minor</c> sólo las leves, <c>all</c> la plantilla entera salvo el muerto.
+    /// </summary>
+    [Theory]
+    [InlineData("\"healsRoster\": false", RosterHealing.None)]
+    [InlineData("\"healsRoster\": false, \"healsMinorInjuries\": false", RosterHealing.None)]
+    [InlineData("\"healsRoster\": false, \"healsMinorInjuries\": true", RosterHealing.Minor)]
+    [InlineData("\"healsRoster\": true", RosterHealing.All)]
+    public void TheBossHealingModeComesFromTheDataAndEachModeHealsWhatItSays(string fields, RosterHealing expected)
+    {
+        var systems = SystemsWithBossHealing(fields);
+        Assert.Equal(expected, systems.Economy.BossReward.Healing);
+
+        var state = RunEngine.Start(SystemsTestSupport.Setup(), 8383UL, Catalog, systems);
+        var roster = state.Roster;
+        var bossNode = FindNode(state, NodeKind.Boss);
+        var after = systems.AfterMatch(HurtRoster(state), bossNode, WonSummary(bossNode), Catalog);
+
+        var severe = after.GetPlayer(roster[0].Id);
+        var minor = after.GetPlayer(roster[1].Id);
+        Assert.Equal(PhysicalState.Dead, after.GetPlayer(roster[2].Id).PhysicalState);
+        Assert.Equal(PhysicalState.Healthy, after.GetPlayer(roster[3].Id).PhysicalState);
+        Assert.Equal(expected == RosterHealing.All ? PhysicalState.Healthy : PhysicalState.SevereInjury, severe.PhysicalState);
+        Assert.Equal(expected == RosterHealing.All ? 0 : 1, severe.MinorInjuries);
+        Assert.Equal(expected == RosterHealing.None ? PhysicalState.MinorInjury : PhysicalState.Healthy, minor.PhysicalState);
+        Assert.Equal(expected == RosterHealing.None ? 2 : 0, minor.MinorInjuries);
+    }
+
+    /// <summary>
+    /// Un guardado anterior a la ADR 0170 trae sólo <c>healsRoster</c> (sin <c>healsMinorInjuries</c>) y se lee igual;
+    /// y los dos a la vez son un error explícito, no una elección silenciosa (RT-032).
+    /// </summary>
+    [Fact]
+    public void ALegacyEconomyWithOnlyHealsRosterLoadsAndTheTwoFieldsTogetherAreRejected()
+    {
+        Assert.Equal(RosterHealing.All, SystemsWithBossHealing("\"healsRoster\": true").Economy.BossReward.Healing);
+        Assert.Throws<DataException>(() => SystemsWithBossHealing("\"healsRoster\": true, \"healsMinorInjuries\": true"));
     }
 
     /// <summary>

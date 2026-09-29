@@ -56,14 +56,33 @@ public sealed record PriceByRarity(int Common, int Uncommon, int Rare, int Legen
 /// el otro extremo, así que los dos no pueden coincidir en la misma opción y su suma no puede pasar de
 /// 100.
 /// </param>
-/// <param name="HealsRoster">Cura la plantilla entera al superarlo (RF-091, RF-092): cierra el ciclo de desgaste del acto.</param>
+/// <param name="Healing">
+/// Qué cura al superarlo (RF-091, RF-092). ADR 0043 lo puso en el jefe como «cura la plantilla entera» para cerrar el
+/// ciclo de desgaste de cada acto; la ADR 0170 lo retira (el desgaste es de la RUN) y deja al jefe curar sólo las
+/// lesiones <b>leves</b> (<see cref="RosterHealing.Minor"/>): las graves se arrastran de un acto al siguiente. En los datos
+/// son dos campos booleanos, <c>healsRoster</c> (todo) y <c>healsMinorInjuries</c> (sólo leves, opcional); un guardado
+/// anterior a la ADR 0170 trae sólo el primero y se lee igual.
+/// </param>
 public sealed record NodeRewardConfig(
     int GoldBonusPercent,
     int Options,
     int Picks,
     int RarityFloorPercent,
     int CommonCeilingPercent,
-    bool HealsRoster);
+    RosterHealing Healing);
+
+/// <summary>Qué cura un nodo de partido al superarlo (ADR 0170).</summary>
+public enum RosterHealing
+{
+    /// <summary>Nada: la lesión se arrastra.</summary>
+    None,
+
+    /// <summary>Sólo las lesiones leves (y su contador acumulado): un jugador leve vuelve sano; el grave sigue grave.</summary>
+    Minor,
+
+    /// <summary>La plantilla entera: leves y graves (el muerto no vuelve, RF-093). Es el comportamiento de la ADR 0043.</summary>
+    All,
+}
 
 /// <summary>Configuración del surtido del mercado (RF-114..114f).</summary>
 /// <param name="GoalkeeperOffers">
@@ -495,13 +514,26 @@ public static class EconomyLoader
         return config;
     }
 
-    private static NodeRewardConfig ReadNodeReward(Json node) => new(
-        node.Int("goldBonusPercent"),
-        node.Int("options"),
-        node.Int("picks"),
-        node.Int("rarityFloorPercent"),
-        node.Int("commonCeilingPercent"),
-        node.Prop("healsRoster").AsBool());
+    private static NodeRewardConfig ReadNodeReward(Json node)
+    {
+        bool all = node.Prop("healsRoster").AsBool();
+        bool minor = node.OptionalBool("healsMinorInjuries", false);
+        if (all && minor)
+        {
+            throw new DataException(
+                Path,
+                node.Path + ".healsMinorInjuries",
+                "healsRoster ya cura también las leves: healsMinorInjuries sería redundante (ADR 0170)");
+        }
+
+        return new NodeRewardConfig(
+            node.Int("goldBonusPercent"),
+            node.Int("options"),
+            node.Int("picks"),
+            node.Int("rarityFloorPercent"),
+            node.Int("commonCeilingPercent"),
+            all ? RosterHealing.All : minor ? RosterHealing.Minor : RosterHealing.None);
+    }
 
     private static MarketConfig ReadMarket(Json node)
     {

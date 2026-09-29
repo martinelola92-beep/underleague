@@ -355,13 +355,14 @@ public sealed class StandardRunSystems : IRunSystems
         int gold = GoldCalculator.GoldForWin(state, node, summary, _economy);
         state = state.AddGold(gold + counterGold + deathGold);
 
-        // ADR 0043 dejaba que superar el jefe curase la plantilla; la ADR 0170 lo retira en los datos
-        // (`healsRoster: false` en los tres tipos): el desgaste es recurso de la run y las lesiones se
-        // arrastran. El campo sigue siendo un mando de datos, y el muerto no vuelve nunca (RF-093).
+        // ADR 0043 dejaba que superar el jefe curase la plantilla entera; la ADR 0170 lo recorta: el desgaste es
+        // recurso de la RUN y las lesiones GRAVES se arrastran de un acto al siguiente. Sólo curan las leves, que
+        // duran un partido de todos modos (RosterHealing.Minor en el jefe; ninguno en liga y élite). El muerto no
+        // vuelve nunca (RF-093).
         var reward = _economy.RewardFor(node.Kind);
-        if (reward.HealsRoster)
+        if (reward.Healing != RosterHealing.None)
         {
-            state = HealRoster(state);
+            state = HealRoster(state, reward.Healing);
         }
 
         // Botín de liga (ADR 0161 §1): un objeto común más al almacén, además del oro de arriba. Elite y
@@ -435,22 +436,24 @@ public sealed class StandardRunSystems : IRunSystems
     }
 
     /// <summary>
-    /// Cura la plantilla entera (ADR 0043): la lesión grave y las leves acumuladas desaparecen, el muerto
-    /// no vuelve (RF-093). Recorre el roster por id ascendente, que es como <c>RunState.WithPlayer</c> lo
-    /// mantiene ordenado (RT-041).
+    /// Cura la plantilla según el modo (ADR 0043, ADR 0170). <see cref="RosterHealing.All"/>: la lesión grave y las leves
+    /// acumuladas desaparecen. <see cref="RosterHealing.Minor"/>: sólo los jugadores en estado leve vuelven sanos y con el
+    /// contador a cero; el grave sigue grave, con su contador. El muerto no vuelve en ningún modo (RF-093). Recorre el
+    /// roster por id ascendente, que es como <c>RunState.WithPlayer</c> lo mantiene ordenado (RT-041).
     /// </summary>
-    private static RunState HealRoster(RunState state)
+    internal static RunState HealRoster(RunState state, RosterHealing mode)
     {
+        if (mode == RosterHealing.Minor)
+        {
+            return MedicalSystem.HealMinorInjuries(state);
+        }
+
         var next = state;
-        for (int i = 0; i < state.Roster.Count; i++)
+        for (int i = 0; mode == RosterHealing.All && i < state.Roster.Count; i++)
         {
             var player = state.Roster[i];
-            if (player.PhysicalState == PhysicalState.Dead)
-            {
-                continue;
-            }
-
-            if (player.PhysicalState != PhysicalState.Healthy || player.MinorInjuries > 0)
+            if (player.PhysicalState != PhysicalState.Dead
+                && (player.PhysicalState != PhysicalState.Healthy || player.MinorInjuries > 0))
             {
                 next = next.WithPlayer(player with { PhysicalState = PhysicalState.Healthy, MinorInjuries = 0 });
             }

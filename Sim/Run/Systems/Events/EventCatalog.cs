@@ -21,7 +21,7 @@ public enum EventEffectKind
     /// <summary>Porcentaje del oro que se lleva encima, con signo. Es la familia que cobra por atesorar.</summary>
     GoldShare,
 
-    /// <summary>Cura todas las lesiones de la plantilla, como la tarifa plana de la clínica.</summary>
+    /// <summary>Cura las lesiones LEVES de la plantilla (ADR 0170; antes también las graves). Las graves sólo las cura la clínica.</summary>
     Heal,
 
     /// <summary>Experiencia para los titulares del once.</summary>

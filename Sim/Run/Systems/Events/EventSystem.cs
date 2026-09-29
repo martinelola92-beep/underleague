@@ -247,19 +247,11 @@ public static class EventSystem
         _ => state,
     };
 
-    private static RunState Heal(RunState state)
-    {
-        var roster = new List<RunPlayer>(state.Roster);
-        for (int i = 0; i < roster.Count; i++)
-        {
-            if (Medical.MedicalSystem.NeedsTreatment(roster[i]))
-            {
-                roster[i] = roster[i] with { PhysicalState = PhysicalState.Healthy, MinorInjuries = 0 };
-            }
-        }
-
-        return state.WithRoster(roster);
-    }
+    /// <summary>
+    /// ADR 0170: el efecto <c>heal</c> cura sólo las lesiones <b>leves</b> (antes también las graves, como la tarifa plana
+    /// de la clínica). Las graves se arrastran: sólo las cura la clínica, el herrero o el matasanos, y cuestan oro.
+    /// </summary>
+    private static RunState Heal(RunState state) => Medical.MedicalSystem.HealMinorInjuries(state);
 
     private static RunState Experience(RunState state, int amount, Data.Catalog catalog, bool onlyStarters, int targetId)
     {

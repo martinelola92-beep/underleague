@@ -102,39 +102,24 @@ public sealed class LethalRiskTests
     [Fact]
     public void BeingHurtMultipliesTheNumberOfTheSamePlayerInTheSameCell()
     {
-        // Se recorre la búsqueda de partidos con rival letal hasta uno donde el estado tocado SUBE el número de alguien:
-        // con los actos de 8/9/9 nodos (ADR 0170) el primer partido que encuentra la búsqueda puede dejar a todos
-        // los amenazados en el techo del indicador (8000), y ahí el multiplicador no se ve aunque exista. En
-        // ningún escenario el estado tocado puede BAJAR el número.
-        int raised = 0;
-        foreach (ulong seed in LethalSearchSeeds)
-        {
-            if (SearchLethalMatch(seed) is not { } found)
-            {
-                continue;
-            }
+        var (state, node) = StateAtLethalMatch();
+        var risks = RunEngine.LethalRisks(state, node.Id, SystemsTestSupport.Catalog, SystemsTestSupport.Systems);
+        int target = risks.OrderByDescending(r => r.Risk).ThenBy(r => r.PlayerId).First().PlayerId;
 
-            var (state, node) = found;
-            var risks = RunEngine.LethalRisks(state, node.Id, SystemsTestSupport.Catalog, SystemsTestSupport.Systems);
-            foreach (var risk in risks.Where(r => r.Risk > 0).OrderBy(r => r.PlayerId))
-            {
-                var hurt = state.WithPlayer(state.GetPlayer(risk.PlayerId).WithPhysicalState(PhysicalState.MinorInjury));
-                var after = RunEngine.LethalRisks(hurt, node.Id, SystemsTestSupport.Catalog, SystemsTestSupport.Systems);
-                int now = after.Single(r => r.PlayerId == risk.PlayerId).Risk;
-                Assert.True(now >= risk.Risk, $"semilla {seed}, jugador {risk.PlayerId}: tocado {now} y sano {risk.Risk}: el estado no puede bajar el indicador");
-                if (now > risk.Risk)
-                {
-                    raised++;
-                }
-            }
+        // El jugador se deja SANO a mano antes de medir. El escenario que encuentra la búsqueda no lo garantiza: con
+        // el jefe curando sólo las leves (ADR 0170) el objetivo llega al partido con lo que arrastra de los anteriores,
+        // y una versión anterior de esta prueba comparaba «tocado» contra un «sano» que en realidad ya venía tocado
+        // (8000 contra 8000, el techo del indicador). La comparación es entre los dos estados del MISMO jugador.
+        var healthy = state.WithPlayer(state.GetPlayer(target) with { PhysicalState = PhysicalState.Healthy, MinorInjuries = 0 });
+        var hurt = state.WithPlayer(state.GetPlayer(target) with { PhysicalState = PhysicalState.MinorInjury, MinorInjuries = 1 });
 
-            if (raised > 0)
-            {
-                break;
-            }
-        }
+        int before = RunEngine.LethalRisks(healthy, node.Id, SystemsTestSupport.Catalog, SystemsTestSupport.Systems)
+            .Single(r => r.PlayerId == target).Risk;
+        int now = RunEngine.LethalRisks(hurt, node.Id, SystemsTestSupport.Catalog, SystemsTestSupport.Systems)
+            .Single(r => r.PlayerId == target).Risk;
 
-        Assert.True(raised > 0, "ningún jugador con riesgo lo ve subir estando tocado: el estado tiene que pesar en el indicador");
+        Assert.True(before > 0, "el objetivo sano no corre riesgo en este escenario: la prueba no mide nada");
+        Assert.True(now > before, $"tocado {now} y sano {before}: el estado tiene que pesar en el indicador");
     }
 
     /// <summary>

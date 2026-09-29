@@ -100,6 +100,58 @@ public sealed class EventTests
         Assert.False(pay.NeedsTarget);
     }
 
+    /// <summary>
+    /// ADR 0170: el efecto <c>heal</c> de las cartas de evento cura sólo las lesiones LEVES. Las graves se arrastran y
+    /// sólo las cura la clínica: si el evento las curase, el «el desgaste es de la run» se compraría con una carta.
+    /// Se prueba con las tres cartas que lo usan (el diezmo, el santero y el carro del contrabandista).
+    /// </summary>
+    [Theory]
+    [InlineData("guild_tithe")]
+    [InlineData("faith_healer")]
+    [InlineData("smugglers_cart")]
+    public void TheHealEffectOfAnEventCuresTheMinorInjuriesAndNeverTheSevereOnes(string cardId)
+    {
+        var files = TestData.LoadAllFiles();
+        foreach (string path in files.Keys.Where(p => p.StartsWith("events/", StringComparison.Ordinal) && p != $"events/{cardId}.json").ToList())
+        {
+            files.Remove(path);
+        }
+
+        var only = EventLoader.FromJson(files);
+        var card = Assert.Single(only.All);
+        int index = Array.FindIndex(card.Options.ToArray(), o => o.Effects.Any(e => e.Kind == EventEffectKind.Heal));
+        Assert.True(index >= 0, $"{cardId} ya no tiene una opción que cure");
+
+        // La carta sólo sale desde su acto mínimo: se busca el primer nodo de evento de un acto donde pueda salir.
+        RunState? found = null;
+        for (int skip = 0; skip < 6 && found is null; skip++)
+        {
+            var (candidate, node) = AtAnEvent(4004UL, skip);
+            if (node.Act >= card.MinAct)
+            {
+                found = candidate;
+            }
+        }
+
+        var state = found ?? throw new InvalidOperationException($"ningún nodo de evento de un acto >= {card.MinAct}");
+        var roster = state.Roster;
+        state = state
+            .WithGold(1000)
+            .WithPlayer(roster[0] with { PhysicalState = PhysicalState.SevereInjury, MinorInjuries = 1 })
+            .WithPlayer(roster[1] with { PhysicalState = PhysicalState.MinorInjury, MinorInjuries = 2 })
+            .WithPlayer(roster[2] with { PhysicalState = PhysicalState.Dead });
+
+        var after = EventSystem.Choose(
+            state, new ChooseEventOption(index), only,
+            SystemsTestSupport.Systems.Items, SystemsTestSupport.Systems.Consumables, SystemsTestSupport.Systems.Economy,
+            SystemsTestSupport.Catalog);
+
+        Assert.Equal(PhysicalState.SevereInjury, after.GetPlayer(roster[0].Id).PhysicalState);
+        Assert.Equal(PhysicalState.Healthy, after.GetPlayer(roster[1].Id).PhysicalState);
+        Assert.Equal(0, after.GetPlayer(roster[1].Id).MinorInjuries);
+        Assert.Equal(PhysicalState.Dead, after.GetPlayer(roster[2].Id).PhysicalState);
+    }
+
     /// <summary>Familia de carne por ventaja: lesiona a quien el jugador señala, y solo a uno disponible.</summary>
     [Fact]
     public void TheBloodOathTakesTheChosenPlayerAndPaysGold()
