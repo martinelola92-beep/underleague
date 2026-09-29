@@ -163,7 +163,7 @@ que es un bug anterior que la Gaceta destapó.
 ## Enmienda (29 sep 2026): el panel de estadísticas del informe
 
 **Síntoma** (Regla A, medido con `CapturasMemoria.tscn`, semilla 1): con seis apodos ganados, el panel enseñaba **cinco de
-siete filas** («y 2 jugadores más»); con dos, cuatro. **Causa CONFIRMED por la captura y la aritmética**: un bloque de
+siete filas** («y 2 jugadores más»); con tres (`memoria-informe-apodos-muchos.png`), cuatro. **Causa CONFIRMED por la captura y la aritmética**: un bloque de
 apodos arriba (dos líneas y «y N apodos más») y una segunda línea de 13 px por jugador con apodo se comían el alto del
 panel (208 px útiles frente a los 211 que piden siete filas con apodo, sin contar el bloque). Lo que la ADR pedía que no se
 perdiera («los apodos ganados van arriba») se cumplía a costa de lo que sí se perdía en silencio: jugadores.
