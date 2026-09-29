@@ -128,7 +128,58 @@ se reutilizan: `_closedArea` + `PushOutOfArea` (ADR 0152: quien tiene su destino
 - `/Game`: público sobre las filas invadidas (3D y 2D) desde `MOB_START`; línea del ojeo, del mapa y del pregón.
 - Tests: `Sim.Tests/Engine/MobNarrowingTests.cs`.
 
-## Medición (29 sep 2026, provisional, sin medir)
+## Medición (29-30 sep 2026, provisional)
 
-Pendiente de rellenar en el mismo commit que cierra la implementación (Regla H: las cifras 1 fila y 15 % vienen de
-RF-055b, no de una medición; lo que se mide es lo que hacen).
+Cifras de partida: **1 fila por lado y +15 %, la literal de RF-055b: sin medir** (Regla H). Lo que se midió es lo que hacen.
+`/Balance --runs 10000 --seed 1 --teams data/balance/reference.json` (mismos partidos, árbol de la ADR 0167 cerrada contra
+este) y `--full-runs 200 --seed {1,2}` (200 y no 600: la máquina estuvo saturada y dos lotes de 600 murieron por
+`timeout` sin producir nada; la línea base de 600 —`runWinRate` 15,50, `deathsPerRun` 2,22, `bloodPerMatch` 0,35— es la
+de la ADR 0167 y se reprodujo). El reglamentario es byte a byte el mismo (test), así que **todo el cambio está en el 28 %
+de partidos que llegan a la turba** (`mobShare` 0,28 antes y después).
+
+| métrica (10.000 partidos) | antes | después |
+|---|---|---|
+| goles por partido | 2,348 | 2,364 |
+| lesiones por partido | 0,704 | 0,697 |
+| lesiones por partido que llega a la turba | 0,781 | 0,756 |
+| ticks desde el empate hasta el final (mediana de la media) | 861,6 | 799,6 (−7 %) |
+| turbas decididas por gol (no por desempate) | 84,8 % | 90,4 % |
+| faltas / entradas por partido con turba | 7,08 / 9,40 | 7,00 / 9,36 |
+
+Sólo dentro de la turba (3.500 semillas, 1.168 turbas, con y sin la ADR): 641 → 573 ticks por turba, **0,115 → 0,096
+lesiones por turba**, 4,40 → 4,13 entradas, 2,73 → 3,20 tiros, decididas por gol 75,3 % → 85,2 %.
+
+| métrica (200 runs) | antes s1 / s2 | después s1 / s2 |
+|---|---|---|
+| `runWinRate` | 14,50 / 18,50 | 16,00 / 17,00 |
+| `deathsPerRun` | 2,40 / 2,48 | 2,12 / 2,32 |
+| `bloodPerMatch` (puerta ≥ 0,27, ADR 0168) | 0,37 / 0,36 | 0,37 / 0,36 |
+| `bloodlessPastAct1Share` (puerta ≤ 7 %) | 2,08 / 1,30 | 2,16 / 3,18 |
+| `injuriesPerMatchBothTeams` | 1,24 / 1,28 | 1,19 / 1,26 |
+| `injuredAtEnd` | 0,57 / 0,69 | 0,67 / 0,78 |
+
+**Lectura (Regla F).**
+- **CONFIRMED (test): el reglamentario no cambia**; con `mob` a 0/0 la traza completa de 60 semillas es la de antes.
+- **LIKELY: la turba estrechada y acelerada es más corta y se decide más por gol** (menos ticks, +10 puntos de goles
+  decididos por partido con turba). No es un castigo: acelera el final. Consecuencia: **no consume presupuesto de
+  lesiones, lo reduce un poco** (−0,02 / −0,05 por partido en el lote y en las runs; mismo signo en las dos semillas).
+  La hipótesis de la ADR («más entradas sin árbitro, más lesiones») **no se cumple bajo estas cifras**: entra en juego
+  la duración, que baja más de lo que sube la densidad de contactos.
+- **LIKELY: `deathsPerRun` baja (−0,28 / −0,16)**, coherente con turbas más cortas; la condición 5 de la ADR 0048 (la
+  muerte es rara) no se debilita. Con 200 runs el error típico de la diferencia es ~0,15: sólo se afirma el signo.
+- **Sin conclusión: `runWinRate` (+1,5 / −1,5), `bossWinRateAct3`, `injuredAtEnd` (+0,10 en las dos)**: dentro del ruido
+  de 200 runs (≈ 3,8 puntos de error típico en la diferencia de `runWinRate`). `injuredAtEnd` sube en las dos semillas
+  aunque las lesiones por partido bajan: se anota, no se explica.
+- La sangre (ADR 0168) no se mueve: `bloodPerMatch` 0,37 / 0,36 y `bloodlessPastAct1Share` 2,2 / 3,2 dentro de sus
+  puertas.
+
+**Lo que enseñó la medición (bug propio, corregido antes de cerrar).** La primera versión sólo acotaba **el movimiento**
+a la banda. El balón seguía yendo a destinos calculados contra el campo entero (huecos de la utilidad, pases, despejes)
+y salía de banda **7,57 veces por turba** (0,48 sin la ADR): 641 → 758 ticks. Se acotan ahora **también los destinos**
+(`Utility.ClampToPlay`, `MatchEngine.InBand` sobre el objetivo del pase y del despeje) y vuelve a 0,47. El test
+`TheBallDoesNotKeepGoingOutOnTheInvadedRows` lo vigila. Es la Regla J: la primera medición de campaña
+(`runWinRate` +6) salió de ese defecto, no de la mecánica.
+
+**No hecho / abierto.** Sólo semillas 1 y 2 a 200 runs; ningún lote de 600 (falta una repetición con la máquina libre).
+Los saques (barrera de reanudación, `EnforceRestartClearance`) siguen pudiendo empujar a un rival hasta 2 casillas de
+una vez (comportamiento previo de BB-B, no de esta ADR); en la turba hay más saques de banda, así que se ve más.
