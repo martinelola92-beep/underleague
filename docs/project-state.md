@@ -41,8 +41,10 @@ PC (Steam), premium, sin online. **Estado (8 sep 2026): fases 0 y 1 cerradas; fa
 - Suite 1.647 en verde. Puertas completas: **3 rojas de 45, las de `main`**; la roja de cola de los sumideros vuelve
   a verde.
 - [ADR 0168](decisiones/0168-la-metrica-guardiana-de-la-sangre.md), **la métrica guardiana de la sangre**: puerta
-  `TheBloodIsNeverWashedOut` con `bloodPerMatch` ≥ 0,25 (base 0,31) y `bloodlessRunShare` ≤ 35 % (base 24-26 %). Dato de
-  identidad para el balance: **una de cada cuatro runs termina sin una sola muerte ni lesión grave propia**.
+  `TheBloodIsNeverWashedOut` con `bloodPerMatch` ≥ 0,27 (base 0,34 bajas de sangre propias por partido, contadas desde los
+  eventos) y `bloodlessPastAct1Share` ≤ 7 % (base 3 %). La revisión independiente desmontó la primera versión
+  (instrumento que no veía el partido final; «runs sin sangre» que medía la dificultad del jefe 1). Hermano anotado:
+  las muertes del matasanos y de cartas no las ve ninguna métrica de campaña.
 - **Sin gh en la máquina**: los PR se abren a mano con el enlace de GitHub. La rama de clanes tiene un commit heredado
   (`1337343`) cuyos tests no compilan solos: fusionar con *squash*.
 

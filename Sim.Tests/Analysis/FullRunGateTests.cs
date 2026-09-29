@@ -100,7 +100,7 @@ public sealed class FullRunGateTests
     public void TheBloodIsNeverWashedOut()
     {
         AssertIn(FullRunMetrics.BloodPerMatch);
-        AssertIn(FullRunMetrics.BloodlessRunShare);
+        AssertIn(FullRunMetrics.BloodlessPastAct1Share);
     }
 
     /// <summary>§10: bajar de 5 jugadores no puede ser la causa de más de un tercio de las derrotas.</summary>

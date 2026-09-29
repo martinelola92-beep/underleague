@@ -29,13 +29,17 @@ public static class FullRunMetrics
     public const string DeathsPerRun = "deathsPerRun";
 
     /// <summary>
-    /// ADR 0168, métrica guardiana de la sangre: muertes y lesiones graves propias por partido jugado. Vigila que
-    /// ningún cambio lave la carnicería administrada, que es la identidad del juego (CLAUDE.md).
+    /// ADR 0168, métrica guardiana de la sangre: bajas de sangre propias (jugadores que sufren una lesión grave o
+    /// mueren) por partido jugado. Vigila que ningún cambio lave la carnicería administrada, que es la identidad del
+    /// juego (CLAUDE.md).
     /// </summary>
     public const string BloodPerMatch = "bloodPerMatch";
 
-    /// <summary>ADR 0168: cuota de runs en las que la plantilla no sufre ni una muerte ni una lesión grave.</summary>
-    public const string BloodlessRunShare = "bloodlessRunShare";
+    /// <summary>
+    /// ADR 0168: de las runs que superan el jefe del acto 1, cuántas no han tenido ni una baja de sangre. Sólo las que
+    /// pasan el acto 1 (revisión independiente): sobre todas, la cifra medía lo difícil que es el primer jefe.
+    /// </summary>
+    public const string BloodlessPastAct1Share = "bloodlessPastAct1Share";
 
     /// <summary>Sumideros que el oro de un acto permite pagar; 2-3 y nunca todos (RF-114k).</summary>
     public const string SinksAffordablePerAct = "sinksAffordablePerAct";
@@ -213,19 +217,20 @@ public static class FullRunMetrics
     public const double DeathsPerRunMax = 3.0;
 
     /// <summary>
-    /// ADR 0168: suelo de <see cref="BloodPerMatch"/>. Procedencia (Regla H): línea base de 29 sep 2026, 0,309-0,318
-    /// en seis lotes de 1.800 runs (dos semillas × `main`, ADR 0165 y ADR 0167); el suelo deja un 20 % de margen,
-    /// **provisional**: el balance aplazado decidirá si la banda se estrecha.
+    /// ADR 0168: suelo de <see cref="BloodPerMatch"/>. Procedencia (Regla H): línea base medida con el instrumento de
+    /// eventos (ADR 0168, tabla); el suelo queda a un 20 % de la base, **provisional**.
     /// </summary>
-    public const double BloodPerMatchMin = 0.25;
+    public const double BloodPerMatchMin = BloodPerMatchBaseline * 0.8;
+
+    /// <summary>ADR 0168: línea base de <see cref="BloodPerMatch"/> (media de dos semillas, 29 sep 2026).</summary>
+    public const double BloodPerMatchBaseline = 0.34;
 
     /// <summary>
-    /// ADR 0168: techo de <see cref="BloodlessRunShare"/>. Procedencia (Regla H): misma línea base, 23,9-26,3 %; la
-    /// puerta mide 240 runs por doctrina (error típico ≈ 2,8 puntos con p ≈ 0,25), así que el techo va a ~3,5 errores
-    /// típicos de la base para no fallar por mala suerte (una puerta de cola frágil ya costó una roja, ADR 0165).
-    /// **Provisional**.
+    /// ADR 0168: techo de <see cref="BloodlessPastAct1Share"/>. Procedencia (Regla H): línea base 2,7-4,0 % (tabla de la
+    /// ADR); la puerta ve ~500 runs que pasan el acto 1 (error típico ≈ 0,8 puntos) y las rápidas ~125 (≈ 1,5): el techo
+    /// queda a ~2,7 errores típicos incluso en éstas, **provisional**.
     /// </summary>
-    public const double BloodlessRunShareMax = 35.0;
+    public const double BloodlessPastAct1ShareMax = 7.0;
 
     /// <summary>Sumideros pagables por acto: mínimo.</summary>
     public const double SinksMin = 2.0;
@@ -434,7 +439,7 @@ public static class FullRunMetrics
 
         int victories = 0, defeats = 0, rosterDefeats = 0, bossDefeats = 0;
         int deaths = 0, fullRuns = 0, fullRunMatches = 0, matches = 0, marketRuns = 0, brokeRuns = 0;
-        int blood = 0, bloodlessRuns = 0;
+        int blood = 0, pastAct1 = 0, bloodlessPastAct1 = 0;
         int wonMatches = 0, wonNodes = 0, lostMatches = 0, lostNodes = 0, rewardsTaken = 0, rewardsDeclined = 0;
         var defeatsByAct = new int[RunRules.Acts];
         long goldEarned = 0, market = 0, clinic = 0, enrollment = 0, reroll = 0, wages = 0, left = 0;
@@ -505,12 +510,15 @@ public static class FullRunMetrics
             deaths += run.Deaths;
             matches += run.Matches;
 
-            // ADR 0168: la sangre propia de la run (muertes y lesiones graves sufridas).
-            int runBlood = run.Deaths + run.SevereInjuriesSuffered;
-            blood += runBlood;
-            if (runBlood == 0)
+            // ADR 0168: la sangre propia de la run, contada partido a partido desde los eventos.
+            blood += run.BloodCasualties;
+            if (run.BossesBeaten >= 1)
             {
-                bloodlessRuns++;
+                pastAct1++;
+                if (run.BloodCasualties == 0)
+                {
+                    bloodlessPastAct1++;
+                }
             }
             goldEarned += run.GoldEarned;
             market += run.GoldSpentMarket;
@@ -615,7 +623,8 @@ public static class FullRunMetrics
             MatchesPerFullRunMax));
         rows.Add(Banded(DeathsPerRun, (double)deaths / runs.Count, DeathsPerRunMin, DeathsPerRunMax));
         rows.Add(Banded(BloodPerMatch, matches > 0 ? (double)blood / matches : 0.0, BloodPerMatchMin, null));
-        rows.Add(Banded(BloodlessRunShare, 100.0 * bloodlessRuns / runs.Count, null, BloodlessRunShareMax));
+        rows.Add(Banded(
+            BloodlessPastAct1Share, pastAct1 > 0 ? 100.0 * bloodlessPastAct1 / pastAct1 : 0.0, null, BloodlessPastAct1ShareMax));
         rows.Add(Banded(
             SinksAffordablePerAct,
             sinkSamples > 0 ? (double)sinkTotal / sinkSamples : 0.0,

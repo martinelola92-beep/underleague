@@ -724,6 +724,9 @@ static void WriteRunsCsv(string outDir, IReadOnlyList<RunPlayResult> runs, strin
 
         // ADR 0157: la apuesta del vestuario. Con la doctrina de apuesta por defecto (never) valen 0.
         "betsTaken", "betNetGold", "betStaked",
+
+        // ADR 0168: bajas de sangre propias (grave o muerte) contadas partido a partido desde los eventos.
+        "bloodCasualties",
     };
 
     var rows = runs.Select(r => (IReadOnlyList<string>)new[]
@@ -755,6 +758,7 @@ static void WriteRunsCsv(string outDir, IReadOnlyList<RunPlayResult> runs, strin
         string.Join(" ", r.SlotCensus ?? Array.Empty<string>()),
         string.Join(" ", r.PerkHorizon ?? Array.Empty<string>()),
         Int(r.BetsTaken), Int(r.BetNetGold), Int(r.BetGoldStaked),
+        Int(r.BloodCasualties),
     });
 
     CsvWriter.Write(Path.Combine(outDir, fileName), header, rows);

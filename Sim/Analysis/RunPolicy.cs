@@ -604,7 +604,15 @@ public sealed record RunPlayResult(
     int ProsthesesInstalled = 0,
 
     /// <summary>Jugadores que se volvieron <c>Automaton</c> con la tercera prótesis (RF-095c).</summary>
-    int Automatons = 0)
+    int Automatons = 0,
+
+    /// <summary>
+    /// ADR 0168, métrica guardiana de la sangre: en cada partido de la run —también el que la termina—, los jugadores
+    /// propios distintos que sufren una lesión grave o mueren (eventos no anulados). Se cuenta desde los hechos del
+    /// partido y no desde la diferencia de estado (revisión independiente: la subida de graves por nodo no ve el
+    /// partido final ni una grave tapada por otra que muere).
+    /// </summary>
+    int BloodCasualties = 0)
 {
     /// <summary>
     /// El estado con el que terminó la run, para quien mida algo que sólo existe al final (el censo de
@@ -3897,7 +3905,8 @@ public static class RunPolicy
             ledger.BetStaked,
             ledger.BlacksmithTreatments,
             ledger.ProsthesesInstalled,
-            ledger.Automatons);
+            ledger.Automatons,
+            ledger.BloodCasualties);
     }
 
     /// <summary>
@@ -3928,6 +3937,7 @@ public static class RunPolicy
 
         public void OnMatchPlayed(RunState stateBefore, MapNode node, MatchSetup setup, MatchResult result, RunMatchSummary summary)
         {
+            _ledger.BloodCasualties += BloodCasualtyCounter.Count(setup, result);
             if (summary.Bet is { } bet)
             {
                 _ledger.BetPaid += bet.GoldPaid;
@@ -3997,6 +4007,9 @@ public static class RunPolicy
         public int LastBetPaid;
 
         public int OwnInjuries;
+
+        /// <summary>ADR 0168: bajas de sangre propias (grave o muerte), por jugador y partido.</summary>
+        public int BloodCasualties;
 
         /// <summary>Lesiones de los DOS equipos en los partidos de la run: la misma cifra que mide RT-056.</summary>
         public int MatchInjuries;

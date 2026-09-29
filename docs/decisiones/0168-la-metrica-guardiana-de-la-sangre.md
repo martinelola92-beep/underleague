@@ -3,54 +3,71 @@
 Fecha: 29 sep 2026 · Estado: **aceptada**. **Decisión del revisor** (`docs/plan-diversion.md` §0: «Métrica guardiana de
 la sangre: sí»; §5.9: «se mide en cada paso»). La definición y las bandas son decisión propia, sin consultar, dentro de
 esa autorización (memoria: el revisor autoriza mover rangos con ADR y datos, RT-057). **Requisitos:** RT-054, RT-056,
-RT-057. **Relacionada:** ADR 0048 (un sano puede morir; `deathsPerRun` 1,5-3), ADR 0095, ADR 0167.
+RT-057. **Relacionada:** ADR 0048 (un sano puede morir; `deathsPerRun` 1,5-3), ADR 0082 (`injuriesPerMatch`), ADR 0167.
 
 ## Por qué
 
 La identidad de Underleague no es el fútbol, es **la carnicería administrada** (CLAUDE.md): el desgaste de la plantilla
-es el recurso central. Cada cambio de balance o de diversión puede lavarla sin que nada avise: `deathsPerRun` vigila las
-muertes, pero no las lesiones graves ni cuántas runs pasan sin sangre. El plan de diversión lo pidió como puerta.
+es el recurso central. Cada cambio de balance o de diversión puede lavarla sin que nada avise. El plan de diversión lo
+pidió como puerta.
 
 ## Lo que había (Regla G)
 
-`deathsPerRun` (banda 1,5-3, ADR 0048) y, sin banda, `injuriesPerMatchBothTeams`, `ownInjuriesPerMatch` y
-`severeInjuriesPerRun`. Nada que mire la sangre **propia** junta (muerte o grave) ni las runs sin ella.
+- `deathsPerRun` (1,5-3, ADR 0048): sólo muertes, y con un punto ciego (abajo).
+- `injuriesPerMatch` (0,3-0,9, ADR 0082, `MatchMetrics`, `docs/balance.md`): lesiones de partido **de los dos
+  equipos**, leves incluidas, sin run.
+- Sin banda: `injuriesPerMatchBothTeams`, `ownInjuriesPerMatch`, `severeInjuriesPerRun`.
+
+Nada mira la sangre **propia y grave** (lo que desgasta la run) ni si una run avanza sin ella.
 
 ## Decisión
 
-Dos filas nuevas en `FullRunMetrics` (lote de campaña y puerta `FullRunGateTests.TheBloodIsNeverWashedOut`):
+**Instrumento** (`Sim/Analysis/BloodCasualtyCounter.cs`): en cada partido de la run —también el que la termina—, los
+jugadores propios **distintos** que sufren una lesión grave o mueren, contados desde los eventos del partido (no
+anulados). Una grave que acaba en muerte es una baja; una lesión leve, también la de la turba (ADR 0167), no cuenta.
+Test de respuestas sabidas: `BloodCasualtyCounterTests`. Columna `bloodCasualties` en `runs.csv`.
+
+Dos filas en `FullRunMetrics` y la puerta `FullRunGateTests.TheBloodIsNeverWashedOut`:
 
 | métrica | definición | banda | procedencia (Regla H) |
 |---|---|---|---|
-| `bloodPerMatch` | (muertes + lesiones graves propias de la run) / partidos jugados | ≥ 0,25 | línea base 0,309-0,318 en seis lotes (abajo); suelo con un 20 % de margen, **provisional** |
-| `bloodlessRunShare` | % de runs sin ninguna muerte ni lesión grave propia | ≤ 35 % | línea base 23,9-26,3 %; la puerta mide 240 runs por doctrina (error típico ≈ 2,8 puntos), así que el techo va a ~3,5 errores típicos para no fallar por mala suerte; **provisional** |
+| `bloodPerMatch` | bajas de sangre propias / partidos jugados | ≥ 0,27 | base 0,34 (tabla); suelo al 80 %, **provisional** |
+| `bloodlessPastAct1Share` | de las runs que superan el jefe del acto 1, % sin ninguna baja de sangre | ≤ 7 % | base 2,7-4,0 %; la puerta ve ~500 runs que pasan el acto 1 (error típico ≈ 0,8) y las rápidas ~125 (≈ 1,5): el techo queda a ≥ 2,7 errores típicos, **provisional** |
 
-**Qué cuenta como lesión grave** (instrumento validado, Regla J): el registro de la política suma, en cada nodo, la
-subida del número de jugadores en estado grave, así que incluye las graves de partidos **y** de cartas o eventos
-(sacrificios, «La encerrona»…); un grave que muere en el mismo partido cuenta como muerte, no dos veces. Por eso en 88
-de 1.800 runs hay más graves que lesiones de partido (`ownInjuries` sólo cuenta partidos): no es un error, es la
-definición que se quiere —sangre de la run, venga de donde venga—.
+## Línea base (29 sep 2026)
 
-No hay techo para `bloodPerMatch` ni suelo para `bloodlessRunShare`: el exceso de sangre ya lo vigila
-`deathsPerRun` ≤ 3, y el objetivo de esta puerta es sólo que la carnicería no se lave.
+`/Balance --full-runs 600 --seed {1,2}` sobre la rama con las ADR 0165-0167 (el instrumento no cambia el juego:
+`runWinRate` 15,50 / 18,33, idéntico al lote sin él). Sobre las 1.800 runs de cada lote:
 
-## Línea base (29 sep 2026, `/Balance --full-runs 600`, 1.800 runs por lote)
+| | semilla 1 | semilla 2 |
+|---|---|---|
+| bajas de sangre por partido | 0,341 | 0,343 |
+| runs que superan el acto 1 | 1.258 | 1.291 |
+| de ellas, sin ninguna baja de sangre | 3,97 % | 2,71 % |
+| runs con menos bajas de sangre que muertes (caso imposible: validación) | 0 | 0 |
 
-| lote | muertes/run | graves/run | sangre/partido | runs sin sangre |
-|---|---|---|---|---|
-| `main` s1 / s2 | 2,06 / 2,07 | 2,08 / 2,07 | 0,309 / 0,309 | 26,3 % / 25,1 % |
-| + ADR 0165 s1 / s2 | 2,06 / 2,13 | 2,11 / 2,10 | 0,311 / 0,315 | 26,2 % / 25,2 % |
-| + ADR 0167 s1 / s2 | 2,11 / 2,16 | 2,17 / 2,15 | 0,318 / 0,317 | 25,8 % / 23,9 % |
+**Lectura:** casi toda run que pasa del acto 1 sangra (97 %). La sangre propia es ~1 baja cada tres partidos.
 
-**Lectura:** una de cada cuatro runs termina sin que la plantilla sufra una sola muerte o lesión grave (22-23 % incluso
-en runs de seis partidos o más). Es un dato de identidad que el balance aplazado debería mirar: esta ADR **no** lo
-cambia, sólo impide que empeore sin que salte una puerta.
+No hay techo de sangre ni suelo de runs sin sangre: el exceso ya lo vigila `deathsPerRun` ≤ 3; esta puerta sólo impide
+que la carnicería se lave.
 
-## Las diez preguntas (`game-design-review`, resumidas)
+## Lo que cambió tras la revisión independiente (29 sep 2026)
 
-No es una mecánica: es un instrumento. Qué experimenta el jugador: nada directamente; protege que siga viendo sangre.
-Qué decide: nada. Regla: la identidad de CLAUDE.md y RF-012d (lo malo previsible) — la puerta no exige más sangre, exige
-que no desaparezca. Sistemas: `Sim/Analysis/FullRunMetrics.cs`, `Sim.Tests/Analysis/FullRunGateTests.cs`. Alternativas:
-sangre de los dos equipos (la del rival no desgasta la run, que es el recurso), o por acto (más ruido con 600 runs).
-Degeneración: una puerta de suelo sobre una media estable (±0,005 entre semillas) no falla por mala suerte. Cómo se
-demuestra: la puerta en verde con los datos de hoy y los seis lotes de arriba.
+La primera versión de esta ADR medía `(muertes + subida de graves por nodo) / partidos` y `% de runs sin sangre` sobre
+todas las runs. La revisión lo desmontó, con datos:
+
+- **El instrumento era otro del que decía la ADR.** La subida de graves sólo se contaba en nodos de partido (no en
+  cartas: la ADR afirmaba lo contrario), no veía el partido que termina la run, y una grave nueva quedaba tapada si otra
+  grave moría en el mismo partido o un mercenario grave se iba. La «validación» que hice (88 runs con más graves que
+  lesiones de partido, «por las cartas») era falsa: 87 de las 88 eran derrotas, porque `OwnInjuries` no cuenta el partido
+  final. **REJECTED** mi explicación; el instrumento nuevo cuenta desde los eventos.
+- **`% de runs sin sangre` medía la dificultad del jefe 1**, no la carnicería: el 76 % de las runs que mueren en el jefe 1
+  no tienen sangre, y en runs de 10+ partidos sólo el 4 %. Endurecer el jefe 1 la pondría en rojo sin tocar la
+  identidad. Ahora se mide sólo sobre las runs que superan el acto 1.
+- **El error típico citado era de otra muestra**: la puerta juega 3 × 240 runs con semillas compartidas entre doctrinas.
+
+## Hermanos anotados (sin arreglar aquí)
+
+- `deathsPerRun` y el nuevo instrumento sólo ven **partidos**: las muertes del matasanos (clínica) y de cartas no cuentan
+  en ninguna métrica de campaña. La carnicería de fuera del campo existe y no se vigila.
+- `severeInjuriesPerRun` sigue con el contador de subida por nodo, sesgado como se describe arriba.
