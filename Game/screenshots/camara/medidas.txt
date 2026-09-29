@@ -1,0 +1,49 @@
+Medidas del arnés de capturas (BroadcastCapture) para la ADR 0174 — BA-F. Salida de Godot, sin editar.
+Las coordenadas de esquina y de boca de portería están en el lienzo lógico de 1920x1200; ReportFraming (cam-*)
+las da en píxeles de la vista (1280x800, o 1422x800 lógicos en la ventana de 1920x1080).
+
+== ANTES (cámara 45°/30°, sin el alcance de sombras corregido): retrans-base y retrans-tiro ==
+retrans-base: centro efectivo=(8, 1.0071208, 2.4928792), distancia efectiva=22.546, zoom=1
+  esquina del césped en pantalla: (244.05556, 505.9796)
+  esquina del césped en pantalla: (1675.9445, 505.9796)
+  esquina del césped en pantalla: (67.49983, 1035)
+  esquina del césped en pantalla: (1852.5001, 1035)
+  boca de la portería 0 en pantalla: (187.27867, 676.10236)
+  boca de la portería 0 en pantalla: (142.38991, 810.6041)
+  boca de la portería 1 en pantalla: (1732.7213, 676.10236)
+  boca de la portería 1 en pantalla: (1777.6101, 810.6041)
+retrans-tiro: centro efectivo=(8.456522, 0.8757573, 2.6242428) (sin gesto (8, 1.0071208, 2.4928792)), distancia efectiva=19.606 (sin gesto 22.546), zoom=1.15
+  objetivo del acercamiento (Cell { Column = 11, Row = 3 }): sin gesto (1307.6079, 741.455) con gesto (1307.6078, 741.4548) (lienzo) -> desplazamiento 0px en pantalla real
+
+== DESPUÉS (cámara 45°/45°): retrans-base y retrans-tiro ==
+retrans-base: centro efectivo=(8, 1.0071217, 2.4928784), distancia efectiva=15.459, zoom=1
+  esquina del césped en pantalla: (313.83167, 515.1429)
+  esquina del césped en pantalla: (1606.1683, 515.1429)
+  esquina del césped en pantalla: (67.5, 1034.9999)
+  esquina del césped en pantalla: (1852.5, 1034.9999)
+  boca de la portería 0 en pantalla: (240.02318, 670.9078)
+  boca de la portería 0 en pantalla: (178.19955, 801.3802)
+  boca de la portería 1 en pantalla: (1679.9768, 670.9078)
+  boca de la portería 1 en pantalla: (1741.8004, 801.3802)
+retrans-tiro: centro efectivo=(8.456522, 0.87575805, 2.624242) (sin gesto (8, 1.0071217, 2.4928784)), distancia efectiva=13.443 (sin gesto 15.459), zoom=1.15
+  objetivo del acercamiento (Cell { Column = 11, Row = 3 }): sin gesto (1287.957, 733.45844) con gesto (1287.957, 733.45844) (lienzo) -> desplazamiento 0px en pantalla real
+
+== ReportFraming, 1280x800: 45°/30° (antes) y 45°/45° (después) ==
+cam-e45f30: distancia 22.55 · césped x 45..1235 (cercano) 163..1117 (lejano), y 337..690 · porterías x 38..1242 de 1280 · ficha de radio 0,38: 46 px en la fila lejana, 55.5 en la cercana
+cam-e45f45: distancia 15.46 · césped x 45..1235 (cercano) 209..1071 (lejano), y 343..690 · porterías x 55..1225 de 1280 · ficha de radio 0,38: 41.7 px en la fila lejana, 55 en la cercana
+
+== ReportFraming, ventana de 1920x1080 (visible 1422x800 lógicos): 45°/45° ==
+cam-e45f45: distancia 15.46 · césped x 50..1372 (cercano) 232..1190 (lejano), y 314..690 · porterías x 61..1361 de 1422 · ficha de radio 0,38: 46.4 px en la fila lejana, 61.1 en la cercana
+
+== Descartada: 55°/50° (primera elección), 1280x800 ==
+cam-e55f50: distancia 13.54 · césped x 45..1235 (cercano) 199..1081 (lejano), y 299..690 · porterías x 40..1240 de 1280 · ficha de radio 0,38: 42.7 px en la fila lejana, 55.2 en la cercana
+
+
+== ReportFraming de las candidatas de candidatas-gol-3.jpg, 1280x800, con el código final ==
+cam-e35f45: distancia 15.85 · césped x 45..1235 (cercano) 227..1053 (lejano), y 394..690 · porterías x 71..1209 de 1280 · ficha de radio 0,38: 40.1 px en la fila lejana, 54.8 en la cercana
+cam-e40f45: distancia 15.67 · césped x 45..1235 (cercano) 219..1061 (lejano), y 368..690 · porterías x 63..1217 de 1280 · ficha de radio 0,38: 40.9 px en la fila lejana, 54.9 en la cercana
+cam-e45f45: distancia 15.46 · césped x 45..1235 (cercano) 209..1071 (lejano), y 343..690 · porterías x 55..1225 de 1280 · ficha de radio 0,38: 41.7 px en la fila lejana, 55 en la cercana
+cam-e45f50: distancia 14.01 · césped x 45..1235 (cercano) 224..1056 (lejano), y 345..690 · porterías x 61..1219 de 1280 · ficha de radio 0,38: 40.4 px en la fila lejana, 54.8 en la cercana
+cam-e55f50: distancia 13.54 · césped x 45..1235 (cercano) 199..1081 (lejano), y 299..690 · porterías x 40..1240 de 1280 · ficha de radio 0,38: 42.7 px en la fila lejana, 55.2 en la cercana
+
+== Avisos del arnés (WARNING: cam-...) en todos los barridos de esta ADR: ninguno ==
