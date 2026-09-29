@@ -102,6 +102,15 @@ public partial class BroadcastCapture : Control
             return;
         }
 
+        // ADR 0175: `-- turba` captura sólo la turba con el campo estrechado (salta el recorrido entero): el
+        // primer partido que llega a la prórroga, con el público ocupando las filas exteriores.
+        if (System.Array.IndexOf(OS.GetCmdlineUserArgs(), "turba") >= 0)
+        {
+            await CaptureNarrowedMob(run);
+            GetTree().Quit();
+            return;
+        }
+
         // ADR 0171: `-- destino` captura sólo la tirada del destino (salta el recorrido entero).
         if (System.Array.IndexOf(OS.GetCmdlineUserArgs(), "destino") >= 0)
         {
@@ -1540,6 +1549,70 @@ public partial class BroadcastCapture : Control
                 extraSteps: label == "muerte" ? 200 : 6);
             Drop(instance);
         }
+    }
+
+    /// <summary>
+    /// ADR 0175: la turba con el campo estrechado. Se abre el primer partido de la lista de semillas que llega a
+    /// la prórroga y se captura pasado el saque de centro de la turba (todos ya en la banda) y un rato después.
+    /// </summary>
+    private async Task CaptureNarrowedMob(RunController run)
+    {
+        foreach (var seed in Seeds)
+        {
+            run.NewRun("orc_ironworks", Race.Orc, seed);
+            int node = FirstOfKind(run, n => n.IsMatch);
+            if (node < 0)
+            {
+                continue;
+            }
+
+            run.SelectedNodeId = node;
+            var instance = await Show("res://Scenes/Retransmision.tscn", frames: 10);
+            if (instance is not BroadcastScreen screen || screen.Pitch3D.Trace is not { } trace
+                || run.Playback is not { } playback || !playback.Result.Report.WentToGoldenGoal)
+            {
+                Drop(instance);
+                continue;
+            }
+
+            int mobFrame = -1;
+            foreach (var e in playback.Result.Events)
+            {
+                if (e.Type == EventType.MobStart)
+                {
+                    mobFrame = trace.FrameOfTick(e.Tick);
+                    break;
+                }
+            }
+
+            GD.Print($"retransmisión: 'turba-campo' en la semilla {seed}, nodo {node}, turba en el fotograma {mobFrame}");
+            await ShowFrame(screen, mobFrame + 100, "turba-campo");
+            await Save("retrans-turba-campo");
+            await ShowFrame(screen, mobFrame + 220, "turba-campo");
+            await Save("retrans-turba-campo-2");
+
+            // Un saque de banda en el lado cercano a la cámara (fila 6): ¿el público tapa el balón?
+            foreach (var e in playback.Result.Events)
+            {
+                if (e.Type != EventType.Recovery || e.Detail != "throwIn" || e.Tick < playback.Result.Events.First(x => x.Type == EventType.MobStart).Tick)
+                {
+                    continue;
+                }
+
+                int frame = trace.FrameOfTick(e.Tick);
+                if (trace.BallAt(frame).Y >= Pitch.Rows - 1.2f)
+                {
+                    await ShowFrame(screen, frame, "turba-saque");
+                    await Save("retrans-turba-saque");
+                    break;
+                }
+            }
+
+            Drop(instance);
+            return;
+        }
+
+        GD.PushWarning("retransmisión: ninguna semilla de la lista llega a la turba");
     }
 
     private async Task CaptureResetCut(RunController run, ulong seed, int node, int goalFrame)
