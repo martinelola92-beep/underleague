@@ -28,15 +28,21 @@ aplaza).
   **en curso** al escribir esto.
 - [ADR 0157](decisiones/0157-la-apuesta-del-vestuario.md): la apuesta, **propuesta**, sin implementar.
 
-**Integrado en `main` el 29 sep, SIN PUBLICAR hasta cerrar puertas y revisión independiente:**
-- [ADR 0161](decisiones/0161-botin-y-cofre.md): botín de liga (un común al almacén), reliquias según la
-  carrera del muerto, `StoreItem` y el cofre en la pantalla de Equipo.
-- [BA-H](pendientes/BA-H.md): consumibles manuales usables desde el tablero del partido (re-simula como la
-  orden táctica) y catálogo de 20 consumibles con los gritos del entrenador. Falta la primitiva de
-  **provocar la turba**.
-- Pendiente para publicar: puertas del conjunto (`Category=Gate`) y las dos revisiones independientes
-  (eventos/entrenamiento `d4b53eb..8d8a34a`; botín/consumibles `e9295dd..7b21e30`). Si una sesión nueva
-  las encuentra sin hacer, relanzarlas; luego `git push`.
+**Integrado, revisado y medido el 29 sep:**
+- [ADR 0161](decisiones/0161-botin-y-cofre.md): botín de liga, reliquias según la carrera del muerto,
+  `StoreItem` y el cofre en la pantalla de Equipo.
+- [BA-H](pendientes/BA-H.md): consumibles manuales usables desde el tablero del partido y catálogo de 20.
+- Las dos revisiones independientes (eventos/entrenamiento y botín/consumibles) encontraron fallos graves,
+  todos corregidos en `00982df`/`6f8f24c`: elegir una carta o sesión infinitas veces, sacrificio que
+  rompía el partido siguiente, cambio de puesto incoherente, `MinExperienceForLevel` desplazado un nivel,
+  «La encerrona» que lesionaba a los propios, pasar un objeto que vendía el del receptor. Todas las
+  muertes (partido, sacrificio, matasanos) pasan por `DeathConsequences`. Suite 1396 en verde.
+
+**Anotado sin hacer:** los «gritos» son multiplicadores de éxito invisibles, no cambian la conducta
+(propuesta en BA-H: que un grito sea un cambio temporal de orden); falta la primitiva **provocar la
+turba**; dos slots de consumible (propuesta del revisor, cambia RF-080); las cifras nuevas (+8 de
+especialización, tasaciones de la política, umbrales de reliquia, magnitudes del árbitro) son
+provisionales y sin lote de campaña propio.
 
 **Siguiente, en este orden** (`docs/plan-diversion.md` §5): la apuesta (ADR 0157: primero el censo de
 frecuencias de las condiciones para las cuotas; `referee_blind` ya es resoluble), memoria visible
