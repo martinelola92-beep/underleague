@@ -1,7 +1,7 @@
 # 0043. Cada acto tiene su función: taller, gestión y examen
 
 **Fecha:** 2026-09-05
-**Estado:** Aceptada (directriz del revisor)
+**Estado:** Aceptada (directriz del revisor). **Enmendada por la [ADR 0170](0170-el-desgaste-es-de-la-run-y-la-run-es-mas-corta.md) (29 sep 2026): el jefe ya no cura la plantilla entera (`healsRoster` → sólo cura las lesiones leves, `healsMinorInjuries`); el desgaste es de la RUN, no del acto.** El resto —recompensa escalonada, dos perks del jefe, desgaste creciente por acto— sigue vigente.
 **Requisitos:** RF-071, RF-090..094, RF-011, RF-114g..k
 **Complementa:** ADR 0033 (curva revisada) y `docs/curva-de-dificultad.md`
 

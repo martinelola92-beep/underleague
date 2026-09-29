@@ -94,8 +94,10 @@ Modo nuevo `--full-runs N`: juega runs completas con una **política automática
 | Tasa de victoria de la run con política razonable | **20-30%** (corregido por la ADR 0040; era 25-40) |
 | Runs perdidas por bajar de 5 jugadores | < 35% de las derrotas |
 | Oro medio por acto frente al coste de los sumideros | permite 2-3, nunca todos (RF-114k) |
-| Duración de la run en partidos | 18-22 |
-| Muertes por run | 0,5-2 |
+| Duración de la run en partidos | 18-22 *(ADR 0170: 12-15 con 8/9/9 nodos por acto)* |
+| Muertes por run | 0,5-2 *(ADR 0048: 1,5-3; ADR 0170: 0,075-0,15 por partido)* |
+
+*Enmienda de la ADR 0170 (29 sep 2026): los actos pasan a 8/9/9 nodos, el peor camino a 14 partidos y las bandas de duración y de muertes se re-expresan (la de muertes, por partido). Las cifras de arriba y de §4 son las históricas.*
 
 La política automática no pretende jugar bien: pretende ser **reproducible y explicable**, para que un cambio en la economía se lea en la métrica y no en el criterio del que mide.
 
