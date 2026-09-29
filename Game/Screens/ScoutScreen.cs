@@ -8,6 +8,7 @@ using Underleague.Sim.Engine;
 using Underleague.Sim.Model;
 using Underleague.Sim.Perks;
 using Underleague.Sim.Run;
+using Underleague.Sim.Run.Systems.Bets;
 using Underleague.Sim.Run.Systems.Rivals;
 
 namespace Underleague.Game.Screens;
@@ -329,6 +330,10 @@ public partial class ScoutScreen : Control
             y = Block(UiText.Get("ui.scout.warnings"), warningLines, y, Style.Accent);
         }
 
+        // ADR 0157: el corredor ofrece una apuesta por nodo de partido. Va justo antes de confirmar: es una
+        // decisión previa al partido, igual que alinear.
+        y = BuildBookie(state, node, y);
+
         // AW-O: el botón de empezar va pegado a lo que se acaba de leer, no arriba del todo con "Volver"
         // y "Alinear" (BuildButtons) — para que confirmar se sienta como confirmar el riesgo y los
         // avisos, no como un paso de trámite anterior a ellos.
@@ -351,6 +356,85 @@ public partial class ScoutScreen : Control
         }
 
         Block(UiText.Get("ui.scout.starters"), starters, y);
+    }
+
+    /// <summary>
+    /// «EL CORREDOR» (ADR 0157, RF-114h): la apuesta que se ofrece en este nodo, con su condición, lo que
+    /// cuesta y lo que paga, y los botones de tomarla o retirarla. La oferta se deriva de (semilla, nodo)
+    /// (<see cref="BetSystem.OfferFor(RunState, MapNode, IRunSystems, Sim.Data.Catalog)"/>): la pantalla no la
+    /// calcula ni la guarda. La frecuencia medida se enseña en palabras, no en porcentajes internos: lo que el
+    /// jugador necesita es saber si es una apuesta rara o corriente. Devuelve la <c>y</c> siguiente.
+    /// </summary>
+    private float BuildBookie(RunState state, MapNode node, float y)
+    {
+        Widgets.Section(this, UiText.Get("ui.scout.bet"), new Vector2(412f, y), 830f);
+        y += 18f;
+
+        var offer = BetSystem.OfferFor(state, node, _run.Engine, _run.Catalog!);
+        var definition = offer is null ? null : _run.Systems!.Bets.Find(offer.BetId);
+        if (offer is null || definition is null)
+        {
+            var none = Widgets.Body(this, UiText.Get("ui.scout.betNone"), new Vector2(412f, y), 830f, Style.TextDim);
+            return y + none.Size.Y + 14f;
+        }
+
+        var name = Widgets.Body(this, UiText.Name(definition.Name), new Vector2(412f, y), 830f, Style.Accent);
+        y += name.Size.Y + 2f;
+
+        string condition = UiText.Name(definition.Condition).Replace("{player}", offer.TargetPlayerName, System.StringComparison.Ordinal);
+        var conditionLabel = Widgets.Body(this, condition, new Vector2(412f, y), 830f);
+        y += conditionLabel.Size.Y + 2f;
+
+        var price = Widgets.Body(
+            this,
+            UiText.Get("ui.scout.betPrice", offer.Stake, offer.Payout) + " " + UiText.Get(FrequencyKey(definition.FrequencyBasisPointsFor(node.Difficulty))),
+            new Vector2(412f, y),
+            830f,
+            Style.TextDim);
+        y += price.Size.Y + 6f;
+
+        bool taken = state.Bet is { } bet && bet.NodeId == node.Id;
+        if (taken)
+        {
+            var mine = Widgets.Body(this, UiText.Get("ui.scout.betTaken", state.Bet!.Stake, state.Bet.Payout), new Vector2(412f, y), 830f, Style.LinkCreated);
+            y += mine.Size.Y + 4f;
+            var withdraw = Widgets.Button(this, UiText.Get("ui.scout.betWithdraw"), new Rect2(412f, y, 220f, 28f));
+            withdraw.Pressed += OnWithdrawBet;
+        }
+        else
+        {
+            // Sin oro no se puede: el botón se apaga y se dice cuánto falta, en vez de dejar que el clic falle.
+            bool affordable = state.Gold >= offer.Stake;
+            var take = Widgets.Button(this, UiText.Get("ui.scout.betTake"), new Rect2(412f, y, 220f, 28f), enabled: affordable);
+            take.Pressed += OnTakeBet;
+            if (!affordable)
+            {
+                Widgets.Body(this, UiText.Get("ui.scout.betNoGold", offer.Stake, state.Gold), new Vector2(644f, y + 4f), 598f, Style.Hole);
+            }
+        }
+
+        return y + 28f + 14f;
+    }
+
+    /// <summary>Frecuencia medida (centésimas de punto) en palabras: rara, de vez en cuando, a menudo, casi la mitad.</summary>
+    private static string FrequencyKey(int basisPoints) => basisPoints switch
+    {
+        < 500 => "ui.scout.betFreq.rare",
+        < 1200 => "ui.scout.betFreq.sometimes",
+        < 2500 => "ui.scout.betFreq.often",
+        _ => "ui.scout.betFreq.veryOften",
+    };
+
+    private void OnTakeBet()
+    {
+        _run.Apply(new TakeBet(_nodeId));
+        Nav.Go(this, Nav.Scout);
+    }
+
+    private void OnWithdrawBet()
+    {
+        _run.Apply(new DeclineBet());
+        Nav.Go(this, Nav.Scout);
     }
 
     /// <summary>

@@ -333,6 +333,22 @@ public partial class ReportScreen : Control
                 Style.Accent);
         }
 
+        // ADR 0157: cómo terminó la apuesta que tomaste para este partido, si tomaste una. Va bajo el oro
+        // porque es oro, y con el nombre de la apuesta para que el jugador sepa qué cobró o qué perdió.
+        if (_report.Bet is { } bet)
+        {
+            float betY = y + 6f + now.Size.Y + (_report.Loot is null ? 0f : 22f) + 8f;
+            var definition = _run.Systems?.Bets.Find(bet.BetId);
+            string betName = definition is null ? bet.BetId : UiText.Name(definition.Name);
+            Widgets.Section(this, UiText.Get("ui.report.bet"), new Vector2(932f, betY), 320f);
+            Widgets.Body(
+                this,
+                bet.Met ? UiText.Get("ui.report.betWon", bet.GoldPaid, betName) : UiText.Get("ui.report.betLost", bet.Stake, betName),
+                new Vector2(932f, betY + 18f),
+                324f,
+                bet.Met ? Style.LinkCreated : Style.Hole);
+        }
+
         Widgets.Panel(this, new Rect2(920f, 424f, 348f, 316f));
         Widgets.Section(this, UiText.Get("ui.report.referee"), new Vector2(932f, 430f), 320f);
         var referee = _report.Referee;

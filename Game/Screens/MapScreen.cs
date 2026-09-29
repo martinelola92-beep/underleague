@@ -378,6 +378,12 @@ public partial class MapScreen : Control
             lines.Add(UiText.Get("ui.map.refereeLine", referee.Name, UiText.Get("ui.refereeTrait." + referee.Trait)));
         }
 
+        // ADR 0157: una marca discreta si ya has apostado en este nodo.
+        if (node.IsMatch && _run.State!.Bet is { } bet && bet.NodeId == node.Id)
+        {
+            lines.Add(UiText.Get("ui.map.betTaken", bet.Stake));
+        }
+
         if (node.Kind == NodeKind.Boss)
         {
             lines.Add(UiText.Get("ui.map.boss", node.Act));
