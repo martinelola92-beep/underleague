@@ -42,7 +42,7 @@ public sealed class FullRunGateTests
     /// <b>0,97</b> mientras el banco de 1.200 medía <b>1,42</b> —el doble de lejos y en el signo
     /// contrario—. Con 240 la desviación baja a ~0,08 y la muestra mide 1,35, que es lo que mide el banco.
     /// </summary>
-    private const int Runs = 240;
+    private static readonly int Runs = GateScale.Of(240);
 
     /// <summary>Semilla del lote.</summary>
     private const ulong Seed = 1;

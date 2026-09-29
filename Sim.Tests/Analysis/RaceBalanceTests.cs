@@ -86,7 +86,7 @@ public sealed class RaceBalanceTests
     };
 
     /// <summary>Plantillas distintas por pareja de razas sobre las que se promedia cada celda.</summary>
-    private const int Rosters = 250;
+    private static readonly int Rosters = GateScale.Of(250);
 
     /// <summary>Partidos por plantilla y pareja (múltiplo de 4: local/visitante × reparto de ids).</summary>
     private const int MatchesPerRoster = 4;

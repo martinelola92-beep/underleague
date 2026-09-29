@@ -45,7 +45,7 @@ public sealed class EquipmentImpactTests
     // baja a ~0,9; en Release son segundos. Corregido aquí (independent-reviewer, BA-N, tercera ronda):
     // esta nota decía "768" y luego "3.072" -las dos, la mitad de las cifras reales por no contar la
     // vuelta (×2 direcciones)-, el mismo error de aritmética cometido dos veces en la misma frase.
-    private const int Rosters = 96;
+    private static readonly int Rosters = GateScale.Of(96);
 
     /// <summary>Partidos por plantilla y dirección; con ida y vuelta salen 2x (equivalente a <c>--home-away</c>).</summary>
     private const int MatchesPerRoster = 32;

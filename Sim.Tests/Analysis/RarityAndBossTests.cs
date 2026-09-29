@@ -33,7 +33,7 @@ namespace Underleague.Sim.Tests.Analysis;
 [Collection("Gate")]
 public sealed class RarityAndBossTests
 {
-    private const int Rosters = 24;
+    private static readonly int Rosters = GateScale.Of(24);
     private const int MatchesPerRoster = 20;
     private const ulong Seed = 1;
     private const int PrimaryIdBase = 1;

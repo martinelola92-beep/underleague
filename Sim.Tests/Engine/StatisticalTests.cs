@@ -22,7 +22,7 @@ namespace Underleague.Sim.Tests.Engine;
 public sealed class StatisticalTests
 {
     /// <summary>Partidos del lote de la puerta (RT-081).</summary>
-    private const int Runs = 1000;
+    private static readonly int Runs = GateScale.Of(1000);
 
     /// <summary>Semilla base del lote; la misma que la medición de referencia de docs/balance.md.</summary>
     private const ulong Seed = 1;

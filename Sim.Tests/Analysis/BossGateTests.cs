@@ -45,7 +45,7 @@ namespace Underleague.Sim.Tests.Analysis;
 public sealed class BossGateTests
 {
     /// <summary>Plantillas distintas por celda.</summary>
-    private const int Rosters = 64;
+    private static readonly int Rosters = GateScale.Of(64);
 
     /// <summary>Partidos por plantilla. Múltiplo de 4: local/visitante × reparto de ids.</summary>
     private const int MatchesPerRoster = 16;

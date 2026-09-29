@@ -1,0 +1,7 @@
+Underleague.Sim.Tests.Analysis.BossGateTests.TheGateCurveMatchesTheAdr0033Table
+Underleague.Sim.Tests.Analysis.BuildGateTests.BadBuildsLoseToTheirBaseline
+Underleague.Sim.Tests.Analysis.BuildGateTests.CoherentBuildsBeatTheirBaseline
+Underleague.Sim.Tests.Analysis.BuildGateTests.NoGateMetricIsOutOfRange
+Underleague.Sim.Tests.Analysis.BuildGateTests.NoPerkIsDead
+Underleague.Sim.Tests.Analysis.FullRunGateTests.TheThreeDoctrinesBuyDifferently
+Underleague.Sim.Tests.Engine.MatchOrderTests.DefensiveConcedesLessAndOffensiveScoresMore

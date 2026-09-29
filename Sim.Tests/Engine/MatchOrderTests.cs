@@ -59,7 +59,7 @@ public sealed class MatchOrderTests
     [Trait("Category", "Gate")]
     public void DefensiveConcedesLessAndOffensiveScoresMore()
     {
-        const int N = 1200;
+        int N = GateScale.Of(1200);
         var neutral = Measure(Mentality.Neutral, N);
         var defensive = Measure(Mentality.Defensive, N);
         var offensive = Measure(Mentality.Offensive, N);

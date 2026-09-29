@@ -12,11 +12,22 @@ Release (17x). El `-m:1` es por la memoria del contenedor WSL (7,8 GB).
 dotnet build Underleague.slnx -c Release -m:1 -v q                        # /Sim, /Sim.Tests, /Balance, /tools (sin /Game)
 dotnet test Sim.Tests -c Release --filter "Category!=Gate" -m:1 -v q      # bucle de desarrollo, ~40 s
 dotnet test Sim.Tests -c Release --filter "Category=Gate" -m:1 -v q       # las 43 puertas estadísticas: UNA invocación, antes del commit del hito, ~9 min
+tools/puertas-rapidas.sh                                                  # las mismas puertas al 25 % de muestra, ~3 min: SOLO avisa de rojas NUEVAS frente a tools/puertas-rapidas.base
+tools/puertas-rapidas.sh --rebase                                         # regenera esa base tras publicar un hito (con las completas en verde conocidas)
 dotnet test Sim.Tests -c Release --filter "FullyQualifiedName~X" -m:1 -v q   # solo lo que cubre el cambio, durante el desarrollo
 dotnet run --project Balance -c Release -- --runs 10000 --seed 1 --teams data/balance/reference.json --out out/ --quiet
 dotnet run --project tools/DataValidator -- data/                         # esquemas de /data, tras CUALQUIER cambio en data/**
 dotnet build Game/Underleague.Game.csproj                                 # OBLIGATORIO antes de ejecutar Godot (ver skill visual-review)
 ```
+
+## Puertas rápidas (29 sep 2026)
+
+`UNDERLEAGUE_GATE_SCALE` (1-100, por defecto 100) escala la muestra de cada puerta (`Sim.Tests/GateScale.cs`);
+`tools/puertas-rapidas.sh` lo pone a 25. **No sustituyen a las completas** antes de publicar un hito: los
+umbrales no cambian y con menos muestra hay más ruido —en la base hay 3 rojas que sólo lo son por eso
+(`NoPerkIsDead`, el borde de alguna banda, la orden táctica)—. Sirven mientras se trabaja: lanzarlas tras
+cada cambio de /Sim o /data y mirar sólo si aparece una roja **nueva**. Limitación: comparan por test, así
+que una métrica nueva que falle dentro de un test que ya estaba rojo no se ve.
 
 ## Leer resultados sin gastar contexto: resumidores
 

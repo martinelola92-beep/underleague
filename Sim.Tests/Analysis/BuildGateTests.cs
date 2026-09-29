@@ -45,7 +45,7 @@ namespace Underleague.Sim.Tests.Analysis;
 public sealed class BuildGateTests
 {
     /// <summary>Plantillas distintas sobre las que se promedia cada celda.</summary>
-    private const int Rosters = 40;
+    private static readonly int Rosters = GateScale.Of(40);
 
     /// <summary>Partidos por plantilla (múltiplo de 4: local/visitante × reparto de ids).</summary>
     private const int MatchesPerRoster = 12;
