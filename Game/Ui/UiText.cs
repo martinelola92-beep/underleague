@@ -786,6 +786,7 @@ public static class UiText
         ["ui.pregon.consumable.header"] = "Se hace saber: {0} usa {1}",
         ["ui.pregon.consumable.body"] = "el efecto se nota en el campo",
         ["ui.pregon.consumable.usedLabel"] = "{0} · usado",
+        ["ui.pregon.shout.active"] = "{0} · {1} s",
 
         // --- retransmisión: sellos N1/N2 y voces altas N3/N4 del director (ADR 0119/0120) ---
         ["ui.pregon.stamp.yellow"] = "Amarilla",
