@@ -979,14 +979,17 @@ public partial class BroadcastScreen : Control
         bool ours = used.Team == 0;
         string team = ours ? _playback.OwnName : _playback.RivalName;
         string name = ConsumableNameOf(used.Detail);
+
+        // El cuerpo dice qué hace (su descripción generada, RT-035), no que "se nota": es el pregón del
+        // consumible y lo que el jugador quiere leer es qué ha cambiado en el campo.
+        string effect = _run.ConsumableDescription(used.Detail);
         _band.Show(
             UiText.Get("ui.pregon.consumable.header", team, name),
-            UiText.Get("ui.pregon.consumable.body"));
+            effect.Length > 0 ? effect : UiText.Get("ui.pregon.consumable.body"));
     }
 
     /// <summary>Nombre localizado de un consumible por id, o el propio id si la run no trae su catálogo.</summary>
-    private string ConsumableNameOf(string id) =>
-        _run.State?.Equipment.Consumables?.Find(id)?.Name.Es ?? id;
+    private string ConsumableNameOf(string id) => _run.ConsumableName(id);
 
     /// <summary>
     /// Primer tiempo de la muerte (docs/ui/README §4): el campo la cuenta con un acercamiento hacia su
@@ -1713,7 +1716,17 @@ public partial class BroadcastScreen : Control
     /// consumible manual: las dos son "el jugador interviene ahora mismo en el partido en marcha".
     /// </summary>
     private bool CanActNow() =>
-        !_matchEnded && _pendingPoint is null && _pendingDeathEvent is null && !_deathTrayPending && !_frozenLastFrame;
+        !_matchEnded && _pendingPoint is null && _pendingDeathEvent is null && !_deathTrayPending && !_frozenLastFrame
+        && HasNextTick();
+
+    /// <summary>
+    /// Revisión independiente (ADR 0161, BA-H): una decisión en vivo entra en el tick SIGUIENTE al que se
+    /// enseña, así que en el último fotograma no hay tick siguiente y el consumible se gastaría sin que el
+    /// partido llegara a notarlo. Comparten el criterio la orden táctica y el consumible manual.
+    /// </summary>
+    private bool HasNextTick() =>
+        _trace is { FrameCount: > 0 } trace
+        && trace.TickAt(Mathf.Clamp(_frame, 0, trace.FrameCount - 1)) + 1 <= trace.TickAt(trace.FrameCount - 1);
 
     private bool CanChangeOrder() => CanActNow();
 
@@ -1757,11 +1770,8 @@ public partial class BroadcastScreen : Control
             }
 
             result ??= new List<BroadcastBoard.ConsumableButtonInfo>();
-            var definition = _run.State?.Equipment.Consumables?.Find(consumable.Id);
-            string shortName = definition?.Name.Es ?? consumable.Id;
-            string tooltip = definition is null
-                ? string.Empty
-                : DescriptionGenerator.DescribeEffects(definition.Effects, _catalog.Localization.Get(GameData.Language));
+            string shortName = _run.ConsumableName(consumable.Id);
+            string tooltip = _run.ConsumableDescription(consumable.Id);
             bool used = ConsumableAlreadyUsed(consumable.Id);
             result.Add(new BroadcastBoard.ConsumableButtonInfo(consumable.Id, shortName, tooltip, used, !used && CanActNow()));
         }

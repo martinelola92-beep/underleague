@@ -487,6 +487,7 @@ public static class UiText
         ["ui.report.deathRow"] = "MUERE {0} · minuto {1}",
         ["ui.report.injuryRow"] = "{0} · {1} · minuto {2}",
         ["ui.report.cause"] = "por {0}",
+        ["ui.report.relic"] = "{0} deja {1} en el cofre",
         ["ui.report.cards"] = "TARJETAS",
         ["ui.report.cardsNone"] = "el árbitro no sacó ninguna",
         ["ui.report.cardRow"] = "{0} · {1} · minuto {2}",
@@ -671,8 +672,8 @@ public static class UiText
         ["ui.team.chestEquip"] = "Equipar",
         ["ui.team.chestStore"] = "Guardar en el cofre",
         ["ui.team.chestPass"] = "Pasar a otro",
-        ["ui.team.chestPassHint"] = "a quién se lo pasas",
-        ["ui.team.chestError"] = "no se pudo: {0}",
+        ["ui.team.chestPassHint"] = "a quién se lo pasas (si ya lleva uno, el suyo vuelve al cofre)",
+        ["ui.team.chestError"] = "no se pudo hacer ese cambio con el objeto",
         ["ui.team.chestInputMouse"] = "RATÓN  señala a un jugador en la plantilla · clic en un objeto del cofre: elegirlo · clic en Equipar/Guardar/Pasar: aplicarlo",
 
         // --- retransmisión de partido, «voz de pregón» (ADR 0119, ADR 0120; docs/ui/README.md) ---
@@ -759,6 +760,13 @@ public static class UiText
 
     /// <summary>Texto de la clave; si falta, la propia clave (un texto que falta debe verse, no ocultarse).</summary>
     public static string Get(string key) => Es.TryGetValue(key, out string? value) ? value : key;
+
+    /// <summary>
+    /// Nombre de un elemento del catálogo (objeto, perk, consumible) en el idioma del juego
+    /// (<see cref="Underleague.Game.Data.GameData.Language"/>). Las pantallas no leen <c>Name.Es</c> a mano.
+    /// </summary>
+    public static string Name(Underleague.Sim.Data.LocalizedName name) =>
+        string.Equals(Underleague.Game.Data.GameData.Language, "en", System.StringComparison.Ordinal) ? name.En : name.Es;
 
     /// <summary>Texto de la clave con los argumentos sustituidos en <c>{0}</c>, <c>{1}</c>...</summary>
     public static string Get(string key, params object[] args) =>

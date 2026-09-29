@@ -149,6 +149,23 @@ public partial class RunController
     }
 
     /// <summary>
+    /// Nombre de un consumible de la run en el idioma del juego, o el propio id si la run no trae su
+    /// catálogo. Las pantallas no leen <c>Name.Es</c> a mano: el idioma lo decide <c>GameData.Language</c>.
+    /// </summary>
+    public string ConsumableName(string id) =>
+        State?.Equipment.Consumables?.Find(id) is { } definition ? Ui.UiText.Name(definition.Name) : id;
+
+    /// <summary>
+    /// Descripción generada de lo que hace un consumible (RT-035), en el idioma del juego; vacía si la run
+    /// no lo conoce. Es el único punto por el que las pantallas piden ese texto a <c>/Sim</c> (RT-014).
+    /// </summary>
+    public string ConsumableDescription(string id) =>
+        State?.Equipment.Consumables?.Find(id) is { } definition && Catalog is not null
+            ? Underleague.Sim.Perks.DescriptionGenerator.DescribeEffects(
+                definition.Effects, Catalog.Localization.Get(Data.GameData.Language))
+            : string.Empty;
+
+    /// <summary>
     /// BA-H, RF-082: el jugador pulsa un consumible manual en el tick <paramref name="tick"/>. Mismo
     /// patrón que <see cref="ChangeOrder"/> (ADR 0154): se vuelve a reproducir el partido con la
     /// activación dentro del estado inicial (<c>docs/arquitectura.md</c>, "Consumibles manuales durante

@@ -103,7 +103,7 @@ public partial class ChestPanel : Control
                     0,
                     UiText.Get("ui.team.chestBadge"),
                     Style.NeutralBadge,
-                    item.Name.Es + " · " + UiText.Get("ui.card.rarity." + item.Rarity),
+                    UiText.Name(item.Name) + " · " + UiText.Get("ui.card.rarity." + item.Rarity),
                     count > 1 ? UiText.Get("ui.team.chestCopies", count) : string.Empty,
                     string.Empty,
                     ItemDescriptions.Describe(item, _state.Templates.Language));
@@ -137,7 +137,7 @@ public partial class ChestPanel : Control
             this,
             equipped is null
                 ? UiText.Get("ui.team.chestPlayerEmpty")
-                : UiText.Get("ui.team.chestPlayerHas", equipped.Name.Es),
+                : UiText.Get("ui.team.chestPlayerHas", UiText.Name(equipped.Name)),
             new Vector2(12f, top + 44f),
             Width - 24f,
             Style.TextDim);
@@ -258,9 +258,10 @@ public partial class ChestPanel : Control
             action();
             _error = string.Empty;
         }
-        catch (Exception ex)
+        catch (Exception)
         {
-            _error = UiText.Get("ui.team.chestError", ex.Message);
+            // /Sim rechaza con mensajes de desarrollo (RT-032); el jugador lee uno localizado y genérico.
+            _error = UiText.Get("ui.team.chestError");
         }
     }
 

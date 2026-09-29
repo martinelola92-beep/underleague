@@ -174,6 +174,12 @@ public partial class ReportScreen : Control
                 text += " · " + UiText.Get("ui.report.cause", casualty.Cause);
             }
 
+            // ADR 0161 §2: la reliquia llega al cofre sin que nadie la vea llegar; el informe lo dice.
+            if (casualty.RelicName.Length > 0)
+            {
+                text += "\n" + UiText.Get("ui.report.relic", casualty.PlayerName, casualty.RelicName);
+            }
+
             var color = casualty.Kind switch
             {
                 CasualtyKind.Death => Style.Hole,
