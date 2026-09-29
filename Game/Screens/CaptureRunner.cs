@@ -262,6 +262,22 @@ public partial class CaptureRunner : Control
         Drop(report);
 
         // 4. Recompensa, con la primera opción elegida para que se vea la asignación a un jugador.
+        //    El primer partido del acto 1 es de liga, y la liga paga oro en vez de una elección (ADR 0096): con él
+        //    pendiente no hay recompensa que enseñar y la pantalla se marchaba en silencio, dejando el lienzo vacío
+        //    (BA-L2: `recompensa.png` en blanco). Se deja abierto un nodo de élite de este mismo mapa, que es lo que
+        //    tendría delante quien ganara uno, y se dice cuál.
+        GD.Print($"recompensa: el nodo del partido es {run.State!.GetNode(run.State.PendingNodeId < 0 ? matchNode : run.State.PendingNodeId).Kind}, "
+            + $"elecciones {(run.Reward() is { } own ? own.Picks : 0)}");
+        int eliteNode = OpenAnEliteReward(run);
+        if (eliteNode < 0)
+        {
+            GD.PushError("el mapa del acto 1 no tiene ningún partido de élite: la captura de la recompensa saldría en blanco");
+        }
+        else
+        {
+            GD.Print($"recompensa: nodo de élite {eliteNode} abierto, elecciones {run.Reward()?.Picks ?? 0}");
+        }
+
         var reward = await Show("res://Scenes/Recompensa.tscn");
         await Click(new Vector2(60f, 96f));
         await Save("recompensa");
@@ -691,6 +707,30 @@ public partial class CaptureRunner : Control
         }
 
         return -1;
+    }
+
+    /// <summary>
+    /// Deja abierto, como pendiente, el primer nodo de élite del mapa del acto (BA-L2). No cambia la posición de la run:
+    /// cerrar un nodo de partido con recompensas sólo quita el pendiente. Devuelve su id, o -1 si el mapa no tiene ninguno.
+    /// </summary>
+    private static int OpenAnEliteReward(RunController run)
+    {
+        int found = -1;
+        run.SeedForCapture(state =>
+        {
+            foreach (var node in state.CurrentMap.Nodes)
+            {
+                if (node.Kind == NodeKind.EliteMatch)
+                {
+                    found = node.Id;
+                    return state.WithPendingNode(node.Id);
+                }
+            }
+
+            return state;
+        });
+
+        return found;
     }
 
     /// <summary>Rechaza las recompensas que el nodo de partido haya dejado abiertas y cierra el nodo.</summary>
