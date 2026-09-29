@@ -1,21 +1,21 @@
 {
-  "_doc": "ADR 0163: apodos derivados de la carrera de un jugador (RunCareer, ADR 0124). No se guardan: el apodo de un jugador es el de mayor prioridad cuya condición cumple su carrera (stat >= threshold); a igual prioridad, el de id menor. Como la carrera solo crece, el apodo es estable y solo cambia a uno de más prioridad. stat es un campo de RunCareer: matches, goals, assists, tackles, tacklesWon, fouls, cards, injuriesCaused, deathsCaused, injuriesSuffered. Los umbrales son PROVISIONALES, sin medir: se revisan con el censo de /Balance (--nickname-census, ADR 0163, sección Censo). El apodo no da poder de juego, solo identidad (RF-127).",
+  "_doc": "ADR 0163: apodos derivados de la carrera de un jugador (RunCareer, ADR 0124). No se guardan: el apodo de un jugador es el de mayor prioridad cuya condición cumple su carrera (stat >= threshold); a igual prioridad, el de id menor. Como la carrera solo crece, el apodo es estable y solo cambia a uno de más prioridad. stat es un campo de RunCareer: matches, goals, assists, tackles, tacklesWon, fouls, cards, injuriesCaused, deathsCaused, injuriesSuffered. Los umbrales se ajustaron con el censo de /Balance (--nickname-census, ADR 0163, sección Censo, 29 sep 2026): ningún apodo en más del 40 % de las runs ni en el 0 %; se repite si cambia la carrera. El apodo no da poder de juego, solo identidad (RF-127).",
   "nicknames": [
-    { "id": "abattoir", "name": { "es": "el Matadero", "en": "the Abattoir" }, "stat": "injuriesCaused", "threshold": 5, "priority": 70 },
+    { "id": "abattoir", "name": { "es": "el Matadero", "en": "the Abattoir" }, "stat": "injuriesCaused", "threshold": 12, "priority": 70 },
     { "id": "assist_butler", "name": { "es": "el Mayordomo", "en": "the Butler" }, "stat": "assists", "threshold": 6, "priority": 45 },
-    { "id": "butcher", "name": { "es": "el Carnicero", "en": "the Butcher" }, "stat": "injuriesCaused", "threshold": 2, "priority": 55 },
+    { "id": "butcher", "name": { "es": "el Carnicero", "en": "the Butcher" }, "stat": "injuriesCaused", "threshold": 6, "priority": 55 },
     { "id": "collector", "name": { "es": "el Coleccionista", "en": "the Collector" }, "stat": "cards", "threshold": 3, "priority": 33 },
-    { "id": "customs", "name": { "es": "la Aduana", "en": "Border Control" }, "stat": "tacklesWon", "threshold": 30, "priority": 50 },
-    { "id": "delivery_boy", "name": { "es": "el Repartidor", "en": "the Delivery Boy" }, "stat": "assists", "threshold": 3, "priority": 30 },
+    { "id": "customs", "name": { "es": "la Aduana", "en": "Border Control" }, "stat": "tacklesWon", "threshold": 20, "priority": 50 },
+    { "id": "delivery_boy", "name": { "es": "el Repartidor", "en": "the Delivery Boy" }, "stat": "assists", "threshold": 5, "priority": 30 },
     { "id": "eternal", "name": { "es": "el Eterno", "en": "the Everlasting" }, "stat": "matches", "threshold": 20, "priority": 20 },
-    { "id": "golden_boots", "name": { "es": "Pies de Oro", "en": "Golden Boots" }, "stat": "goals", "threshold": 3, "priority": 40 },
+    { "id": "golden_boots", "name": { "es": "Pies de Oro", "en": "Golden Boots" }, "stat": "goals", "threshold": 10, "priority": 40 },
     { "id": "gravedigger", "name": { "es": "el Sepulturero", "en": "the Gravedigger" }, "stat": "deathsCaused", "threshold": 1, "priority": 90 },
     { "id": "grubby", "name": { "es": "el Guarro", "en": "the Grubby" }, "stat": "fouls", "threshold": 6, "priority": 25 },
-    { "id": "keepers_bane", "name": { "es": "el Verdugo de Porteros", "en": "Keeper's Bane" }, "stat": "goals", "threshold": 6, "priority": 60 },
-    { "id": "patchwork", "name": { "es": "el Remendado", "en": "Patchwork" }, "stat": "injuriesSuffered", "threshold": 2, "priority": 38 },
-    { "id": "repeat_offender", "name": { "es": "el Reincidente", "en": "the Repeat Offender" }, "stat": "fouls", "threshold": 12, "priority": 42 },
+    { "id": "keepers_bane", "name": { "es": "el Verdugo de Porteros", "en": "Keeper's Bane" }, "stat": "goals", "threshold": 18, "priority": 60 },
+    { "id": "patchwork", "name": { "es": "el Remendado", "en": "Patchwork" }, "stat": "injuriesSuffered", "threshold": 3, "priority": 38 },
+    { "id": "repeat_offender", "name": { "es": "el Reincidente", "en": "the Repeat Offender" }, "stat": "fouls", "threshold": 15, "priority": 42 },
     { "id": "sieve", "name": { "es": "el Colador", "en": "the Sieve" }, "stat": "injuriesSuffered", "threshold": 4, "priority": 48 },
-    { "id": "veteran", "name": { "es": "el Veterano", "en": "Old Reliable" }, "stat": "matches", "threshold": 12, "priority": 10 },
-    { "id": "wall", "name": { "es": "el Muro", "en": "the Wall" }, "stat": "tacklesWon", "threshold": 15, "priority": 35 }
+    { "id": "veteran", "name": { "es": "el Veterano", "en": "Old Reliable" }, "stat": "matches", "threshold": 15, "priority": 10 },
+    { "id": "wall", "name": { "es": "el Muro", "en": "the Wall" }, "stat": "tacklesWon", "threshold": 12, "priority": 35 }
   ]
 }

@@ -22,7 +22,7 @@ tiene estadísticas por jugador y el fin de run no cuenta nada. Hay un periódic
    nombre es/en con humor («el Carnicero», «el Remendado», «Pies de Plomo»…), una condición sobre la carrera
    (campo, umbral) y una prioridad. El apodo de un jugador es el de mayor prioridad cuya condición cumple su
    carrera. Como la carrera sólo crece, el apodo es estable y sólo cambia a uno de más prioridad: **no hace
-   falta estado nuevo ni subir el guardado**. Umbrales provisionales, sin medir.
+   falta estado nuevo ni subir el guardado**. Umbrales medidos con el censo (sección «Censo»).
 2. **Se anuncia al ganarlo**: el informe post-partido dice «Grok pasa a ser *el Carnicero*» comparando la
    carrera de antes y de después.
 3. **Estadísticas**: el informe post-partido gana un apartado por jugador propio (goles, asistencias,
@@ -51,3 +51,36 @@ tiene estadísticas por jugador y el fin de run no cuenta nada. Hay un periódic
    de cuántos jugadores tienen cada apodo al final de las runs.
 10. **Cómo se demuestra.** Tests de derivación (umbrales, prioridad, estabilidad), de la vista de la Gaceta
     (determinista, sin textos vacíos), capturas del informe, la ficha y la Gaceta, y un censo de apodos.
+
+## Censo (29 sep 2026)
+
+**Instrumento.** `dotnet run --project Balance -c Release -- --nickname-census N --seed S --out DIR`
+(`Balance/NicknameCensusRunner.cs`): N runs completas con la política contextual (semilla de la run
+`S·100000+i`, paralelo por índice, un catálogo por hilo), y al terminar cada una cuenta el apodo final de
+cada jugador que pisó el campo, vivos y caídos. Columnas: % de runs con al menos un portador, % de jugadores,
+% de runs con al menos un jugador **elegible** (cumple la condición aunque otro apodo de más prioridad se la
+tape) y el máximo de la estadística. Se validó (Regla J) contra el caso sabido: el censo de una sola run
+coincide con el recuento a mano sobre su plantilla final (`NicknameCensusTests`).
+
+**Criterio.** Ningún apodo en más del 40 % de las runs (deja de distinguir) ni en el 0 % (umbral
+inalcanzable). Umbrales de partida (ADR, «provisional, sin medir»), 300 runs, semilla 1: `keepers_bane`
+(6 goles) **78,7 %**, `butcher` (2 lesiones causadas) 51,0 %, `veteran` (12 partidos) 51,0 %, `patchwork`
+(2 lesiones sufridas) 44,0 %, `customs` (30 entradas ganadas) **0,0 %** (máximo alcanzado: 26); `golden_boots`
+llegaba al 98 % de elegibles.
+
+**Ajuste** (sólo umbrales, en `data/nicknames/nicknames.json`; prioridades y nombres no cambian):
+`keepers_bane` 6→18 goles, `golden_boots` 3→10, `butcher` 2→6 lesiones causadas, `abattoir` 5→12,
+`veteran` 12→15 partidos, `patchwork` 2→3, `delivery_boy` 3→5, `repeat_offender` 12→15, `customs` 30→20 y
+`wall` 15→12. Se iteró tres veces sobre las semillas 1 y 2 (300 runs cada una): la segunda semilla destapó
+`butcher` (43 %) y `golden_boots` (47,7 %) que la primera no veía, así que una sola lectura no bastaba.
+
+**Resultado con los umbrales vigentes** (% de runs con al menos un portador final; semilla 1 / semilla 2):
+abattoir 18,0 / 19,3 · keepers_bane 27,3 / 27,7 · butcher 22,7 / 27,3 · customs 2,0 / 1,3 · sieve 19,3 /
+18,7 · assist_butler 26,3 / 25,0 · repeat_offender 33,7 / 34,3 · golden_boots 25,0 / 29,7 · patchwork 23,7 /
+26,0 · wall 7,0 / 7,3 · collector 5,3 / 2,3 · delivery_boy 12,0 / 18,7 · grubby 36,0 / 36,7 · eternal 25,3 /
+28,0 · veteran 29,3 / 34,3 · gravedigger 1,3 / 1,3. Todos entre 0 y 40 %; por jugador, el más repartido lo
+lleva el 6 % de los que pisaron el campo. Los raros son raros por diseño (`gravedigger` es una muerte causada,
+y la muerte es rara, ADR 0048) o están a la sombra de otros de más prioridad (`wall`, `customs`, `collector`),
+pero se alcanzan. El apodo sigue sin dar poder de juego, así que el ajuste **no altera el partido** y no
+necesita lote de partidos: sólo cambia qué se dice de cada jugador. Sin error típico entre semillas más allá
+de las dos lecturas; si los pesos de la carrera (ADR 0124) cambian, hay que repetir el censo.
