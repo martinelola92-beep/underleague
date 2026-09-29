@@ -8,10 +8,13 @@ namespace Underleague.Sim.Run.Systems;
 /// Lee una lista de efectos con el mismo formato de <c>data/perks/*.json</c> (<see cref="EffectDefinition"/>
 /// de <c>Sim.Perks</c>), recortado a lo que un objeto o un consumible pasivo necesita: <c>type</c>,
 /// <c>attribute</c>, <c>probability</c> y <c>value</c>. Sin disparador, sin condición, sin alcance: el
-/// objetivo es siempre el portador (<see cref="EffectTarget.Owner"/>) y la duración
-/// <see cref="EffectDuration.Run"/> (dura lo que dure el objeto equipado), porque ni <c>data/items</c> ni
-/// <c>data/consumables</c> participan todavía en la resolución de un partido (ver
-/// <c>Sim.Run.Systems.Items.ItemDefinition</c>).
+/// objetivo es siempre el portador (<see cref="EffectTarget.Owner"/>).
+///
+/// <para><b>Duración</b>: <see cref="EffectDuration.Match"/>, no <see cref="EffectDuration.Run"/> (BA-H,
+/// corrección de texto: <c>ApplyPassiveEffect</c> ignora este campo del todo —solo lo lee la plantilla de
+/// descripción, RT-035— y un objeto o un consumible pasivo actúa desde que se activa hasta el final del
+/// PARTIDO, nunca de la run entera; el valor viejo hacía que un consumible de un solo uso dijera «durante
+/// la run» en su propia descripción, que es justo lo contrario de RF-085 «se consumen al usarse»).</para>
 /// </summary>
 internal static class EffectJson
 {
@@ -52,7 +55,7 @@ internal static class EffectJson
                 Target: EffectTarget.Owner,
                 Attribute: kind,
                 Value: value,
-                Duration: EffectDuration.Run);
+                Duration: EffectDuration.Match);
         }
 
         string probability = node.Str("probability");
@@ -83,7 +86,7 @@ internal static class EffectJson
             Target: EffectTarget.Owner,
             Probability: probabilityKind,
             Value: Perks.ProbabilityScale.ToMultiplier(value),
-            Duration: EffectDuration.Run);
+            Duration: EffectDuration.Match);
     }
 
     private static AttributeKind ParseAttribute(Json node, string attribute) => attribute switch
