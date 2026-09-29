@@ -10,24 +10,18 @@ using Underleague.Sim.Run.Systems.Consumables;
 namespace Underleague.Game.Ui;
 
 /// <summary>
-/// Sección de <b>consumibles</b> de la pantalla de Equipo (CAT-B, RF-080..085): equipar y desequipar lo
-/// que ya se ha comprado en el mercado, que hasta ahora era la única mitad de la cadena que faltaba —se
-/// podía comprar pero nunca equipar, así que nunca llegaba a un partido.
+/// Sección de <b>consumibles</b> de la pantalla de Equipo (RF-080..085, ADR 0172): los <b>dos huecos</b> que
+/// el equipo lleva al partido y qué hacer con cada uno. Un consumible se compra en el mercado o lo da un
+/// evento y <b>sale ya equipado</b>, manual —un clic en el tablero de la retransmisión—; aquí se le puede
+/// pasar a condicional (salta solo cuando pasa lo que se le diga) o descartarlo para liberar el hueco. No
+/// hay «zurrón» ni inventario suelto: el hueco es la posesión, y lo que no se usa se queda en él para el
+/// partido siguiente.
 ///
 /// <para>
-/// <b>Simplificación de esta pantalla, no de <c>/Sim</c></b>: cada id se equipa como mucho una vez, sin
-/// importar cuántas copias sueltas tenga el inventario. <c>/Sim</c> sí admitiría equipar la misma copia en
-/// dos slots a la vez (<c>RunEngine.ApplyConsumables</c> solo cuenta manual/condicional, no ids
-/// repetidos), pero "cada entrada se puede equipar y desequipar" describe un interruptor por id, no un
-/// contador de slots por id, así que la interfaz no ofrece esa segunda dimensión.
-/// </para>
-///
-/// <para>
-/// Invariante que mantiene esta pantalla (más estricto que lo que exige <c>/Sim</c>, nunca lo viola):
-/// como mucho <b>un</b> consumible manual a la vez. <c>RunEngine.ApplyConsumables</c> solo exige que haya
-/// al menos uno si hay alguno equipado (RF-082); esta pantalla añade la lectura de que hay como mucho uno,
-/// que es lo que hace que "hacer manual a otro" (punto 4 del encargo) sea una operación bien definida: el
-/// que lo era pasa a condicional con su disparador por defecto, nunca quedan dos manuales a la vez.
+/// Cada hueco se configura por separado. Ya no hay invariante de «uno manual como mucho» ni de «al menos
+/// uno manual» (RF-082 enmendada): con dos huecos y consumibles que persisten, pasar los dos a condicional
+/// es una decisión legítima. <c>/Sim</c> valida lo que de verdad importa —que sólo se reconfigure lo que ya
+/// se lleva, sin repetir— y esta pantalla no ofrece nada que lo viole.
 /// </para>
 ///
 /// <para>
@@ -38,10 +32,9 @@ namespace Underleague.Game.Ui;
 /// </para>
 ///
 /// <para>
-/// <b>Lenguaje de Knavall (ADR 0162):</b> las reglas de RF-080..082 ya no se leen en una línea de texto sino
-/// en la forma: tres huecos «al partido» —el manual con su mano, los condicionales con su reloj de arena— y
-/// el zurrón debajo. A la derecha, el consumible elegido en grande con sus tres placas. La lógica de equipar,
-/// hacer manual y cambiar el disparador es la de siempre.
+/// <b>Lenguaje de Knavall (ADR 0162):</b> las reglas se leen en la forma —dos huecos grandes con su marca de
+/// mano (manual) o reloj de arena (condicional)— y no en una línea de texto. A la derecha, el consumible
+/// elegido en grande con sus tres placas.
 /// </para>
 /// </summary>
 public partial class ConsumablesPanel : InkCanvas
@@ -69,8 +62,9 @@ public partial class ConsumablesPanel : InkCanvas
     public override void _Ready()
     {
         base._Ready();
-        _equip = PlaqueButton.Create(this, UiText.Get("ui.kn.takeIt"), Glyph.Potion, PlaqueKind.Primary, new Rect2(), 21);
-        _equip.Pressed += () => OnEquipToggle(_selectedId);
+        _equip = PlaqueButton.Create(this, UiText.Get("ui.kn.discard"), Glyph.None, PlaqueKind.Paper, new Rect2(), 21);
+        _equip.Tip = new Tip(UiText.Get("ui.kn.discard"), UiText.Get("ui.kn.tip.discardConsumable"), Glyph.Potion);
+        _equip.Pressed += () => OnDiscard(_selectedId);
         _manual = PlaqueButton.Create(this, UiText.Get("ui.kn.makeManual"), Glyph.Manual, PlaqueKind.Paper, new Rect2(), 22);
         _manual.Tip = new Tip(UiText.Get("ui.kn.makeManual"), UiText.Get("ui.kn.tip.makeManual"), Glyph.Manual);
         _manual.Pressed += () => OnMakeManual(_selectedId);
@@ -118,30 +112,25 @@ public partial class ConsumablesPanel : InkCanvas
             return;
         }
 
-        int owned = _state!.ConsumablesOwned(_selectedId);
         var equipped = FindEquipped(_selectedId);
-        int equippedTotal = _state.EquippedConsumables.Count;
-        bool canEquip = equipped is null && owned > 0 && equippedTotal < 3;
+        bool carried = equipped is not null;
         bool conditional = equipped is { Mode: ConsumableMode.Conditional };
 
         float left = Size.X - DetailWidth + 10f;
         float width = DetailWidth - 36f;
         float y = Size.Y - 196f;
-        _equip.Position = new Vector2(left, y);
-        _equip.Size = new Vector2(width, 56f);
-        _equip.Caption = equipped is null ? UiText.Get("ui.kn.takeIt") : UiText.Get("ui.kn.leaveIt");
-        _equip.Kind = equipped is null ? PlaqueKind.Primary : PlaqueKind.Paper;
-        _equip.Tip = new Tip(_equip.Caption, UiText.Get(equipped is null ? "ui.kn.tip.equipConsumable" : "ui.kn.tip.unequipConsumable"), Glyph.Potion);
-        _equip.Disabled = equipped is null ? !canEquip : false;
+        _equip.Position = new Vector2(left, y + 120f);
+        _equip.Size = new Vector2(width, 52f);
+        _equip.Disabled = !carried;
 
-        _manual.Position = new Vector2(left, y + 62f);
-        _manual.Size = new Vector2(width, 52f);
+        _manual.Position = new Vector2(left, y);
+        _manual.Size = new Vector2(width, 56f);
         _manual.Disabled = !conditional;
 
-        _trigger.Position = new Vector2(left, y + 120f);
+        _trigger.Position = new Vector2(left, y + 62f);
         _trigger.Size = new Vector2(width, 52f);
-        _trigger.Caption = conditional ? UiText.Get("ui.kn.trigger") + " " + TriggerName(equipped!.Trigger) : UiText.Get("ui.kn.trigger");
-        _trigger.Disabled = !conditional;
+        _trigger.Caption = conditional ? UiText.Get("ui.kn.changeTrigger") : UiText.Get("ui.kn.makeConditional");
+        _trigger.Disabled = !carried;
     }
 
     public override void _Draw()
@@ -156,31 +145,44 @@ public partial class ConsumablesPanel : InkCanvas
             return;
         }
 
-        int equippedTotal = _state.EquippedConsumables.Count;
-        Tiles.Header(this, new Vector2(18f, 12f), main.Size.X - 30f, Glyph.Potion, UiText.Get("ui.kn.consumables"), UiText.Get("ui.kn.consumablesCount", equippedTotal), 60f, 34);
+        int slots = RunRules.ConsumableSlots;
+        Tiles.Header(this, new Vector2(18f, 12f), main.Size.X - 30f, Glyph.Potion, UiText.Get("ui.kn.consumables"), UiText.Get("ui.kn.consumablesCount", _state.EquippedConsumables.Count, slots), 60f, 34);
         Zone(new Rect2(12f, 8f, main.Size.X - 24f, 68f), TeamTips.Consumables());
 
-        // Al partido: tres huecos. El primero es el manual (RF-082), los otros dos condicionales (RF-081).
+        // Los dos huecos (RF-080, ADR 0172): lo que se lleva al partido. Cada uno con su marca de mano (manual)
+        // o de reloj de arena (condicional); el libre, vacío y dicho.
         float y = 92f;
         Ink.Text(this, Ink.Display, new Vector2(22f, y), UiText.Get("ui.kn.equipped").ToUpperInvariant(), 20, Ink.RedDark);
         y += 30f;
-        float slotGap = 14f;
-        float slot = Mathf.Min(150f, (main.Size.X - 44f - (slotGap * 2f)) / 3f);
-        var equippedList = new List<EquippedConsumable>(_state.EquippedConsumables);
-        equippedList.Sort((a, b) => a.Mode == b.Mode ? 0 : a.Mode == ConsumableMode.Manual ? -1 : 1);
-        for (int i = 0; i < 3; i++)
+        float slotGap = 18f;
+        float slot = Mathf.Min(200f, (main.Size.X - 44f - (slotGap * (slots - 1))) / slots);
+        for (int i = 0; i < slots; i++)
         {
-            var rect = new Rect2(22f + (i * (slot + slotGap)), y, slot, slot + 34f);
-            if (i < equippedList.Count && _state.Consumable(equippedList[i].Id) is { } definition)
+            var rect = new Rect2(22f + (i * (slot + slotGap)), y, slot, slot + 72f);
+            if (i < _state.EquippedConsumables.Count && _state.Consumable(_state.EquippedConsumables[i].Id) is { } definition)
             {
-                var equipped = equippedList[i];
+                var equipped = _state.EquippedConsumables[i];
                 string key = "slot:" + equipped.Id;
-                string caption = equipped.Mode == ConsumableMode.Manual
+                var look = new TileLook(InkIcons.Of(definition.Family), 1, equipped.Id == _selectedId, HoverKey == key, false, Inventory.Marker(equipped), Caption: UiText.Name(definition.Name));
+                Tiles.Draw(this, rect, look, 300 + i);
+
+                // Debajo del nombre, cómo se usa: «manual» o cuándo salta solo. Es lo que hace legible la regla sin
+                // abrir el consumible (principio: comportamiento observable).
+                string mode = equipped.Mode == ConsumableMode.Manual
                     ? UiText.Get("ui.kn.manual")
                     : UiText.Get("ui.kn.conditional", TriggerName(equipped.Trigger));
-                Tiles.Draw(this, rect, new TileLook(InkIcons.Of(definition.Family), 1, equipped.Id == _selectedId, HoverKey == key, false, Inventory.Marker(equipped), Caption: caption), 300 + i);
+                var modeColor = equipped.Id == _selectedId ? Ink.Black : Ink.Brown;
+                float modeTop = rect.End.Y - 40f;
+                var modeLines = Style.Wrap(Ink.Heavy, mode, 14, slot - 14f);
+                for (int line = 0; line < modeLines.Count && line < 2; line++)
+                {
+                    float modeWidth = Ink.Width(Ink.Heavy, modeLines[line], 14);
+                    Ink.Text(this, Ink.Heavy, new Vector2(rect.Position.X + ((slot - modeWidth) / 2f), modeTop), modeLines[line], 14, modeColor);
+                    modeTop += 16f;
+                }
+
                 string captured = equipped.Id;
-                Zone(rect, TeamTips.Consumable(_state, definition, equipped, _state.ConsumablesOwned(equipped.Id), TriggerName(equipped.Trigger)), () => Select(captured), key);
+                Zone(rect, TeamTips.Consumable(_state, definition, equipped, TriggerName(equipped.Trigger)), () => Select(captured), key);
             }
             else
             {
@@ -189,46 +191,37 @@ public partial class ConsumablesPanel : InkCanvas
             }
         }
 
-        // En el zurrón: lo comprado que no va al partido.
-        y += slot + 50f;
-        Ink.Text(this, Ink.Display, new Vector2(22f, y), UiText.Get("ui.kn.pouch").ToUpperInvariant(), 20, Ink.RedDark);
+        // Cómo se llenan y cómo se usan: las reglas de RF-080..085 en palabras cortas, con la marca de cada modo.
+        y += slot + 96f;
+        Ink.Text(this, Ink.Display, new Vector2(22f, y), UiText.Get("ui.kn.slotsHow").ToUpperInvariant(), 20, Ink.RedDark);
         y += 30f;
-        var pouch = new List<string>();
-        foreach (string id in Inventory.ConsumableIds(_state))
+        var rules = new (Glyph Glyph, string Text)[]
         {
-            if (FindEquipped(id) is null)
+            (Glyph.Potion, UiText.Get("ui.kn.slotsBuy")),
+            (Glyph.Manual, UiText.Get("ui.kn.tip.manual")),
+            (Glyph.Conditional, UiText.Get("ui.kn.slotsConditional")),
+            (Glyph.None, UiText.Get("ui.kn.slotsKeep")),
+        };
+        foreach (var (glyph, text) in rules)
+        {
+            float textLeft = 22f + 36f;
+            if (glyph != Glyph.None)
             {
-                pouch.Add(id);
-            }
-        }
-
-        const int Columns = 5;
-        float gap = 10f;
-        float tile = (main.Size.X - 44f - (gap * (Columns - 1))) / Columns;
-        if (pouch.Count == 0)
-        {
-            Ink.Text(this, Ink.Plain, new Vector2(24f, y + 4f), UiText.Get("ui.kn.consumablesEmpty"), 15, Ink.Muted);
-        }
-
-        for (int i = 0; i < pouch.Count; i++)
-        {
-            string id = pouch[i];
-            if (_state.Consumable(id) is not { } definition)
-            {
-                continue;
+                InkIcons.Draw(this, glyph, new Vector2(22f + 14f, y + 11f), 26f);
             }
 
-            int owned = _state.ConsumablesOwned(id);
-            var rect = new Rect2(22f + ((i % Columns) * (tile + gap)), y + ((i / Columns) * (tile + 44f)), tile, tile + 34f);
-            if (rect.End.Y > main.End.Y - 4f)
+            foreach (string line in Style.Wrap(Ink.Plain, text, 17, main.Size.X - textLeft - 20f))
             {
-                break;
+                if (y + 20f > main.End.Y - 6f)
+                {
+                    break;
+                }
+
+                Ink.Text(this, Ink.Plain, new Vector2(textLeft, y), line, 17, Ink.Brown);
+                y += 21f;
             }
 
-            string key = "pouch:" + id;
-            Tiles.Draw(this, rect, new TileLook(InkIcons.Of(definition.Family), owned, id == _selectedId, HoverKey == key, owned <= 0, Caption: UiText.Name(definition.Name)), 400 + i);
-            string captured = id;
-            Zone(rect, TeamTips.Consumable(_state, definition, null, owned, string.Empty), () => Select(captured), key);
+            y += 8f;
         }
 
         DrawDetail(side);
@@ -255,7 +248,6 @@ public partial class ConsumablesPanel : InkCanvas
         }
 
         var equipped = FindEquipped(_selectedId);
-        int owned = _state.ConsumablesOwned(_selectedId);
         var art = new Vector2(side.GetCenter().X, side.Position.Y + 84f);
         var splash = Broadcast.Pregon.Burst(62f, 48f, 11, art);
         DrawColoredPolygon(Ink.Shift(splash, new Vector2(3f, 4f)), new Color(0f, 0f, 0f, 0.25f));
@@ -280,7 +272,7 @@ public partial class ConsumablesPanel : InkCanvas
         y += 8f;
         var marker = Inventory.Marker(equipped);
         string status = equipped is null
-            ? UiText.Get("ui.kn.tip.pouch", owned)
+            ? string.Empty
             : equipped.Mode == ConsumableMode.Manual
                 ? UiText.Get("ui.kn.tip.manual")
                 : UiText.Get("ui.kn.tip.conditional", TriggerName(equipped.Trigger));
@@ -292,33 +284,13 @@ public partial class ConsumablesPanel : InkCanvas
         float statusLeft = left + (marker != Glyph.None ? 28f : 0f);
         foreach (string line in Style.Wrap(Ink.Heavy, status, 15, width - (statusLeft - left)))
         {
-            Ink.Text(this, Ink.Heavy, new Vector2(statusLeft, y), line, 15, equipped is null ? Ink.Muted : Ink.OchreDark);
+            Ink.Text(this, Ink.Heavy, new Vector2(statusLeft, y), line, 15, Ink.OchreDark);
             y += 18f;
-        }
-
-        string? warning = null;
-        int equippedTotal = _state.EquippedConsumables.Count;
-        if (equipped is null && owned <= 0)
-        {
-            warning = UiText.Get("ui.team.consumableNoCopies");
-        }
-        else if (equipped is null && equippedTotal >= 3)
-        {
-            warning = UiText.Get("ui.team.consumableFull");
-        }
-        else if (equipped is not null && owned <= 0)
-        {
-            warning = UiText.Get("ui.team.consumableGone");
         }
 
         if (_error.Length > 0)
         {
-            warning = _error;
-        }
-
-        if (warning is not null)
-        {
-            var warningLines = Style.Wrap(Ink.Heavy, warning, 14, width);
+            var warningLines = Style.Wrap(Ink.Heavy, _error, 14, width);
             float wy = side.End.Y - 226f - (warningLines.Count * 17f);
             foreach (string line in warningLines)
             {
@@ -329,58 +301,28 @@ public partial class ConsumablesPanel : InkCanvas
     }
 
     /// <summary>
-    /// Equipar o quitar el consumible elegido (punto 2 del encargo): el primero que se equipa entra
-    /// manual; los siguientes, condicionales con el disparador por defecto de su familia. Al quitar uno,
-    /// si era el manual y quedan otros equipados, se asciende al primero que quede (nunca se manda a
-    /// <c>/Sim</c> una lista no vacía sin manual, RF-082).
+    /// Descartar el consumible elegido (ADR 0172): lo tira y libera su hueco, por si el jugador prefiere
+    /// comprar otro mejor. No vuelve a ninguna parte —no hay zurrón— y por eso el botón lo dice con todas
+    /// las letras.
     /// </summary>
-    private void OnEquipToggle(string id)
+    private void OnDiscard(string id)
     {
         var list = new List<EquippedConsumable>(_state!.EquippedConsumables);
-        var equipped = FindEquipped(id);
-
-        if (equipped is not null)
-        {
-            list.RemoveAll(e => e.Id == id);
-            EnsureManual(list);
-        }
-        else
-        {
-            var definition = _state.Consumable(id);
-            if (definition is null)
-            {
-                return;
-            }
-
-            bool hasManual = HasManual(list);
-            list.Add(new EquippedConsumable(
-                id,
-                hasManual ? ConsumableMode.Conditional : ConsumableMode.Manual,
-                hasManual ? DefaultTrigger(definition.Family) : string.Empty));
-        }
-
+        list.RemoveAll(e => e.Id == id);
+        _selectedId = string.Empty;
         Apply(list);
     }
 
     /// <summary>
-    /// Hace manual al consumible elegido (punto 4 del encargo): el que lo era pasa a condicional con el
-    /// disparador por defecto de su propia familia. Nunca quedan dos manuales ni ninguno.
+    /// Hace manual al consumible elegido (RF-082, ADR 0172): lo activará el jugador con un clic en el tablero
+    /// del partido. Sólo cambia ese hueco; el otro no se toca.
     /// </summary>
     private void OnMakeManual(string id)
     {
         var list = new List<EquippedConsumable>(_state!.EquippedConsumables);
         for (int i = 0; i < list.Count; i++)
         {
-            if (list[i].Mode == ConsumableMode.Manual)
-            {
-                var previous = _state.Consumable(list[i].Id);
-                list[i] = list[i] with
-                {
-                    Mode = ConsumableMode.Conditional,
-                    Trigger = previous is null ? CycleTriggers[0] : DefaultTrigger(previous.Family),
-                };
-            }
-            else if (list[i].Id == id)
+            if (list[i].Id == id)
             {
                 list[i] = list[i] with { Mode = ConsumableMode.Manual, Trigger = string.Empty };
             }
@@ -389,16 +331,23 @@ public partial class ConsumablesPanel : InkCanvas
         Apply(list);
     }
 
-    /// <summary>Cicla el disparador del condicional elegido (punto 3 del encargo).</summary>
+    /// <summary>
+    /// El botón de disparador (RF-081, RF-083): un consumible manual pasa a condicional con el disparador por
+    /// defecto de su familia; uno que ya es condicional cicla al siguiente de la lista.
+    /// </summary>
     private void OnCycleTrigger(string id)
     {
         var list = new List<EquippedConsumable>(_state!.EquippedConsumables);
         for (int i = 0; i < list.Count; i++)
         {
-            if (list[i].Id == id && list[i].Mode == ConsumableMode.Conditional)
+            if (list[i].Id != id)
             {
-                list[i] = list[i] with { Trigger = NextTrigger(list[i].Trigger) };
+                continue;
             }
+
+            list[i] = list[i].Mode == ConsumableMode.Conditional
+                ? list[i] with { Trigger = NextTrigger(list[i].Trigger) }
+                : list[i] with { Mode = ConsumableMode.Conditional, Trigger = DefaultTrigger(_state.Consumable(id)?.Family ?? ConsumableFamily.Supernatural) };
         }
 
         Apply(list);
@@ -419,29 +368,6 @@ public partial class ConsumablesPanel : InkCanvas
         Render();
     }
 
-    private static void EnsureManual(List<EquippedConsumable> list)
-    {
-        if (list.Count == 0 || HasManual(list))
-        {
-            return;
-        }
-
-        list[0] = list[0] with { Mode = ConsumableMode.Manual, Trigger = string.Empty };
-    }
-
-    private static bool HasManual(List<EquippedConsumable> list)
-    {
-        foreach (var item in list)
-        {
-            if (item.Mode == ConsumableMode.Manual)
-            {
-                return true;
-            }
-        }
-
-        return false;
-    }
-
     private static string NextTrigger(string current)
     {
         int index = Array.IndexOf(CycleTriggers, current);
@@ -456,13 +382,6 @@ public partial class ConsumablesPanel : InkCanvas
         ConsumableFamily.Dirty => "scoreBehind",
         ConsumableFamily.Tactical => "scoreBehind",
         _ => "lastSeconds",
-    };
-
-    private static string EquipStatus(EquippedConsumable? equipped) => equipped switch
-    {
-        null => UiText.Get("ui.team.consumableNotEquipped"),
-        { Mode: ConsumableMode.Manual } => UiText.Get("ui.team.consumableEquippedManual"),
-        _ => UiText.Get("ui.team.consumableEquippedConditional", TriggerName(equipped.Trigger)),
     };
 
     /// <summary>Frase del disparador («vas por debajo en el marcador»), también para la vista compacta.</summary>

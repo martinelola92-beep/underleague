@@ -43,26 +43,6 @@ public static class Inventory
         return result;
     }
 
-    /// <summary>
-    /// Consumibles que enseñar: el inventario (uno por id) más los equipados aunque no queden copias —para
-    /// poder quitarlos—, en orden ordinal (RT-041).
-    /// </summary>
-    public static List<string> ConsumableIds(TeamState state)
-    {
-        var set = new SortedSet<string>(StringComparer.Ordinal);
-        foreach (string id in state.OwnedConsumables)
-        {
-            set.Add(id);
-        }
-
-        foreach (var equipped in state.EquippedConsumables)
-        {
-            set.Add(equipped.Id);
-        }
-
-        return new List<string>(set);
-    }
-
     public static EquippedConsumable? Equipped(TeamState state, string id)
     {
         foreach (var item in state.EquippedConsumables)
@@ -176,13 +156,12 @@ public partial class ChestView : InkCanvas
 }
 
 /// <summary>
-/// Consumibles en compacto, bajo el cofre en la pestaña Plantilla: lo que va al partido y lo que queda en el
-/// zurrón, con su recuento y su marca de manual o condicional. Pulsar uno abre la pestaña Consumibles con él
-/// elegido: equipar tiene reglas (tres como mucho, uno manual) que merecen su pantalla.
+/// Consumibles en compacto, bajo el cofre en la pestaña Plantilla: los dos huecos del equipo (ADR 0172), con
+/// lo que llevan —su marca de manual o condicional— y los que siguen libres. Pulsar uno abre la pestaña
+/// Consumibles con él elegido: configurarlo y descartarlo tienen sus reglas y merecen su pantalla.
 /// </summary>
 public partial class ConsumablesView : InkCanvas
 {
-    private const int Columns = 4;
     private TeamState? _state;
 
     /// <summary>Se ha pulsado un consumible (su id).</summary>
@@ -204,38 +183,28 @@ public partial class ConsumablesView : InkCanvas
             return;
         }
 
-        var ids = Inventory.ConsumableIds(_state);
-        Tiles.Header(this, new Vector2(14f, 8f), sheet.Size.X - 24f, Glyph.Potion, UiText.Get("ui.kn.consumables"), UiText.Get("ui.kn.consumablesCount", _state.EquippedConsumables.Count), 46f, 26);
+        int slots = RunRules.ConsumableSlots;
+        Tiles.Header(this, new Vector2(14f, 8f), sheet.Size.X - 24f, Glyph.Potion, UiText.Get("ui.kn.consumables"), UiText.Get("ui.kn.consumablesCountShort", _state.EquippedConsumables.Count, slots), 46f, 26);
         Zone(new Rect2(10f, 4f, sheet.Size.X - 20f, 54f), TeamTips.Consumables());
 
         float gap = 8f;
-        float side = (sheet.Size.X - 28f - (gap * (Columns - 1))) / Columns;
+        float side = Mathf.Min((sheet.Size.X - 28f - (gap * (slots - 1))) / slots, sheet.Size.Y - 66f - 8f);
         float top = 66f;
-        if (ids.Count == 0)
+        for (int i = 0; i < slots; i++)
         {
-            Tiles.Empty(this, new Rect2(14f, top, sheet.Size.X - 28f, side), string.Empty, 4);
-            Ink.Text(this, Ink.Plain, new Vector2(24f, top + side + 8f), Ink.Fit(Ink.Plain, UiText.Get("ui.kn.consumablesEmpty"), 15, sheet.Size.X - 48f), 15, Ink.Muted);
-            return;
-        }
-
-        int rows = Mathf.Max(1, (int)((sheet.Size.Y - top - 8f) / (side + gap)));
-        int shown = Math.Min(ids.Count, rows * Columns);
-        for (int i = 0; i < shown; i++)
-        {
-            string id = ids[i];
-            var definition = _state.Consumable(id);
-            if (definition is null)
+            var rect = new Rect2(14f + (i * (side + gap)), top, side, side);
+            if (i >= _state.EquippedConsumables.Count || _state.Consumable(_state.EquippedConsumables[i].Id) is not { } definition)
             {
+                Tiles.Empty(this, rect, string.Empty, 4 + i);
+                Zone(rect, TeamTips.Consumables());
                 continue;
             }
 
-            var equipped = Inventory.Equipped(_state, id);
-            int owned = _state.ConsumablesOwned(id);
-            var rect = new Rect2(14f + ((i % Columns) * (side + gap)), top + ((i / Columns) * (side + gap)), side, side);
-            string key = "cons:" + id;
-            Tiles.Draw(this, rect, new TileLook(InkIcons.Of(definition.Family), owned, false, HoverKey == key, owned <= 0 && equipped is null, Inventory.Marker(equipped)), i + 70);
-            string captured = id;
-            Zone(rect, TeamTips.Consumable(_state, definition, equipped, owned, equipped is null ? string.Empty : ConsumablesPanel.TriggerName(equipped.Trigger)), () => Picked?.Invoke(captured), key);
+            var equipped = _state.EquippedConsumables[i];
+            string key = "cons:" + equipped.Id;
+            Tiles.Draw(this, rect, new TileLook(InkIcons.Of(definition.Family), 1, false, HoverKey == key, false, Inventory.Marker(equipped)), i + 70);
+            string captured = equipped.Id;
+            Zone(rect, TeamTips.Consumable(_state, definition, equipped, ConsumablesPanel.TriggerName(equipped.Trigger)), () => Picked?.Invoke(captured), key);
         }
     }
 }

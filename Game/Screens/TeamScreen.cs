@@ -1966,11 +1966,11 @@ public partial class TeamScreen : Control
 
     /// <summary>
     /// <b>Solo para la secuencia de capturas</b> (CAT-B): la plantilla de pruebas no arrastra ninguna run
-    /// (<c>TeamState.Load</c>), así que sin esto la sección de consumibles enseñaría el mensaje de
-    /// inventario vacío y ninguna otra cosa. Mismo apaño que <see cref="EnsurePlacementItem"/> con los
-    /// objetos: fuerza un catálogo cargado directo de <c>/data</c> y un inventario de verdad —dos vendajes
-    /// (uno equipado como manual), una bengala equipada como condicional y un amuleto sin equipar— para
-    /// que la captura enseñe las tres filas y el panel de acción a la vez. No toca nada con una run detrás.
+    /// (<c>TeamState.Load</c>), así que sin esto la sección de consumibles enseñaría los dos huecos vacíos y
+    /// ninguna otra cosa. Mismo apaño que <see cref="EnsurePlacementItem"/> con los objetos: fuerza un
+    /// catálogo cargado directo de <c>/data</c> y los dos huecos llenos —un vendaje manual y una bengala
+    /// condicional (ADR 0172)— para que la captura enseñe los dos modos y el panel de acción a la vez. No toca
+    /// nada con una run detrás.
     /// </summary>
     private void EnsureTestConsumables()
     {
@@ -1980,19 +1980,13 @@ public partial class TeamScreen : Control
         }
 
         var catalog = ConsumableLoader.FromJson(GameData.Snapshot);
-        var owned = new Dictionary<string, int>
-        {
-            ["field_bandage"] = 2,
-            ["smoke_flare"] = 1,
-            ["lucky_charm"] = 1,
-        };
         var equipped = new[]
         {
             new EquippedConsumable("field_bandage", ConsumableMode.Manual, string.Empty),
             new EquippedConsumable("smoke_flare", ConsumableMode.Conditional, "scoreBehind"),
         };
 
-        _state.ForceTestConsumables(catalog, owned, equipped);
+        _state.ForceTestConsumables(catalog, equipped);
     }
 
     /// <summary>

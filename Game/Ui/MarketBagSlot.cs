@@ -3,11 +3,12 @@ using Godot;
 namespace Underleague.Game.Ui;
 
 /// <summary>
-/// La <b>bolsa del equipo</b> (encargo mercado-arrastrar, UI-006): el destino propio y visible donde se
-/// suelta un consumible comprado, porque un consumible no se le da a un jugador concreto —se equipa
-/// después, en Equipo (<see cref="ConsumablesPanel"/>)—. Es la misma idea de destino de arrastre que
-/// <see cref="PlayerCard"/>, pero como no representa a un jugador no comparte su componente: solo un
-/// distintivo, un rótulo y el mismo estado de <see cref="DropHighlight"/>.
+/// Los <b>huecos de consumible del equipo</b> (encargo mercado-arrastrar, UI-006, ADR 0172): el destino propio
+/// y visible donde se suelta un consumible que se compra, porque un consumible no se le da a un jugador
+/// concreto: entra ya equipado en un hueco libre —y se reconfigura después en Equipo
+/// (<see cref="ConsumablesPanel"/>)—. Enseña cuántos huecos hay y cuántos están llenos. Es la misma idea de
+/// destino de arrastre que <see cref="PlayerCard"/>, pero como no representa a un jugador no comparte su
+/// componente: solo un distintivo, un rótulo y el mismo estado de <see cref="DropHighlight"/>.
 /// </summary>
 public partial class MarketBagSlot : Control
 {
@@ -15,6 +16,8 @@ public partial class MarketBagSlot : Control
 
     private string _title = string.Empty;
     private string _hint = string.Empty;
+    private int _taken;
+    private int _slots = 1;
     private bool _selected;
     private DropHighlight _drop;
 
@@ -61,11 +64,13 @@ public partial class MarketBagSlot : Control
         }
     }
 
-    /// <summary>Rellena los dos textos. Llegan compuestos desde <c>UiText</c>; la bolsa no sabe de dónde salen.</summary>
-    public void Bind(string title, string hint)
+    /// <summary>Rellena los dos textos y cuántos huecos hay llenos. Los textos llegan compuestos desde <c>UiText</c>; la bolsa no sabe de dónde salen.</summary>
+    public void Bind(string title, string hint, int taken, int slots)
     {
         _title = title;
         _hint = hint;
+        _taken = taken;
+        _slots = Mathf.Max(1, slots);
         QueueRedraw();
     }
 
@@ -103,16 +108,26 @@ public partial class MarketBagSlot : Control
             DrawRect(new Rect2(Vector2.Zero, size), Style.Accent, false, 1f);
         }
 
-        // Distintivo de bolsa: un saco simple, sin arte (regla 10) — un cuerpo redondeado y el cordón
-        // atado arriba, lo bastante distinto del medallón de retrato como para no confundirse con una
-        // ficha de jugador (UI-002: la forma dice qué es, no solo el sitio en el que está).
+        // Un saquito por hueco (sin arte, regla 10): relleno si está ocupado, sólo el contorno si está libre. La
+        // forma dice qué es (UI-002) y el número de saquitos, cuántos huecos hay.
         var pouchColor = _drop == DropHighlight.Invalid ? Style.TextDim : Style.Accent;
-        var center = new Vector2(Padding + 14f, size.Y / 2f + 2f);
-        DrawCircle(center, 13f, pouchColor);
-        DrawRect(new Rect2(center + new Vector2(-4f, -17f), new Vector2(8f, 6f)), Style.Line);
+        for (int i = 0; i < _slots; i++)
+        {
+            var center = new Vector2(Padding + 12f + (i * 28f), size.Y / 2f + 2f);
+            if (i < _taken)
+            {
+                DrawCircle(center, 11f, pouchColor);
+            }
+            else
+            {
+                DrawArc(center, 10f, 0f, Mathf.Tau, 24, pouchColor, 2f);
+            }
+
+            DrawRect(new Rect2(center + new Vector2(-3f, -15f), new Vector2(6f, 5f)), Style.Line);
+        }
 
         var font = GetThemeDefaultFont();
-        float textLeft = Padding + 34f;
+        float textLeft = Padding + 10f + (_slots * 28f);
         Style.DrawText(this, font, new Vector2(textLeft, 8f), _title, Style.TextSmall, Style.Text, size.X - textLeft - Padding);
         foreach (string line in Style.Wrap(font, _hint, Style.TextSmall, size.X - textLeft - Padding))
         {

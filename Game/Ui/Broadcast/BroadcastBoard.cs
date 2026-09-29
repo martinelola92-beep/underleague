@@ -437,10 +437,10 @@ public partial class BroadcastBoard : Control
     }
 
     /// <summary>
-    /// BA-H, RF-082: los consumibles manuales equipados, debajo de la botonera de orden (mismo bloque
-    /// izquierdo, misma anchura). Como mucho tres —RF-080, el máximo de slots equipados— aunque la
-    /// pantalla de Equipo hoy limita a uno solo a la vez (invariante de <c>ConsumablesPanel</c>, no de
-    /// <c>/Sim</c>). El botón dorado hasta que se pulsa; ya usado o sin poder pulsarlo ahora, apagado.
+    /// BA-H, RF-082: los consumibles manuales que lleva el equipo, debajo de la botonera de orden (mismo bloque
+    /// izquierdo, misma anchura). Como mucho dos, uno por hueco (RF-080, ADR 0172), y todos manuales salvo los
+    /// que el jugador haya pasado a condicional en Equipo: un consumible sale de la tienda ya con su botón. El
+    /// botón dorado hasta que se pulsa; ya usado o sin poder pulsarlo ahora, apagado.
     /// </summary>
     private void DrawConsumableButtons()
     {

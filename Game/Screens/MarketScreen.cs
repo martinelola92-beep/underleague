@@ -335,20 +335,30 @@ public partial class MarketScreen : Control
     }
 
     /// <summary>
-    /// La bolsa del equipo (RF-114): destino de arrastre para un consumible, que no se le da a un jugador
-    /// concreto — se equipa después, en Equipo (<see cref="ConsumablesPanel"/>).
+    /// Los <b>huecos de consumible</b> del equipo (RF-080, ADR 0172): destino de arrastre para un consumible,
+    /// que no se le da a un jugador concreto. Comprarlo lo deja ya equipado en un hueco libre; con los dos
+    /// llenos el mercado no lo vende y la bolsa lo dice. Es el sitio que enseña cuántos huecos quedan sin salir
+    /// del mercado.
     /// </summary>
     private void Bag(float y)
     {
         _bag = new MarketBagSlot { Position = new Vector2(16f, y), Size = new Vector2(332f, 50f) };
         AddChild(_bag);
-        _bag.Bind(UiText.Get("ui.market.bagTitle"), UiText.Get("ui.market.bagHint"));
+        int taken = _run.State!.Consumables.Count;
+        int slots = RunRules.ConsumableSlots;
+        _bag.Bind(
+            UiText.Get("ui.market.bagTitle", taken, slots),
+            taken < slots ? UiText.Get("ui.market.bagHint") : UiText.Get("ui.market.bagHintFull"),
+            taken,
+            slots);
 
         bool bagFocused = (_padTargetsPane && _targetIndex == RosterOrder().Count) || (_held is not null && _hoverBag);
         _bag.Selected = bagFocused;
         if (_held is { } held && FindRow(held.Category, held.Index) is { } row)
         {
-            _bag.Drop = row.Category == MarketCategories.Consumable ? MarketBagSlot.DropHighlight.Valid : MarketBagSlot.DropHighlight.Invalid;
+            _bag.Drop = row.Category == MarketCategories.Consumable && row.Block == RewardBlock.None
+                ? MarketBagSlot.DropHighlight.Valid
+                : MarketBagSlot.DropHighlight.Invalid;
         }
 
         _bag.Activated += OnBagPressed;
@@ -578,7 +588,7 @@ public partial class MarketScreen : Control
         }
 
         bool valid = bag
-            ? row.Category == MarketCategories.Consumable
+            ? row.Category == MarketCategories.Consumable && row.Block == RewardBlock.None
             : row.NeedsCarrier && ContainsCarrier(row, playerId);
 
         if (!valid)
@@ -889,7 +899,7 @@ public partial class MarketScreen : Control
         if (_hoverBag)
         {
             _reasonLabel.Text = row.Category == MarketCategories.Consumable
-                ? UiText.Get("ui.market.reasonOk")
+                ? Reason(row, -1, bag: true)
                 : UiText.Get("ui.market.reasonWrongBag");
         }
         else if (_hoverPlayerId >= 0)
@@ -914,7 +924,12 @@ public partial class MarketScreen : Control
 
         if (bag)
         {
-            return row.Category == MarketCategories.Consumable ? UiText.Get("ui.market.reasonOk") : UiText.Get("ui.market.reasonWrongBag");
+            if (row.Category != MarketCategories.Consumable)
+            {
+                return UiText.Get("ui.market.reasonWrongBag");
+            }
+
+            return row.Block == RewardBlock.None ? UiText.Get("ui.market.reasonOk") : Blocked(row);
         }
 
         if (row.Category == MarketCategories.Consumable)
@@ -1160,6 +1175,16 @@ public partial class MarketScreen : Control
         if (row.Block == RewardBlock.NoCarrier)
         {
             return UiText.Get("ui.market.noCarrier");
+        }
+
+        if (row.Block == RewardBlock.NoConsumableSlot)
+        {
+            return UiText.Get("ui.market.consumableFull", RunRules.ConsumableSlots);
+        }
+
+        if (row.Block == RewardBlock.AlreadyCarried)
+        {
+            return UiText.Get("ui.market.consumableCarried");
         }
 
         return row.Affordable ? string.Empty : UiText.Get("ui.market.poor", row.Price, _view.Gold);

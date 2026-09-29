@@ -389,11 +389,107 @@ public partial class CaptureRunner : Control
                 }
             }
 
-            Drop(market);
+            await CaptureConsumableSlots(run, market);
         }
 
         Nav.Suppressed = false;
         GetTree().Quit();
+    }
+
+    /// <summary>
+    /// ADR 0172: los dos huecos de consumible en el mercado. Primero un arrastre de verdad hasta los huecos con
+    /// uno libre (el consumible entra ya equipado y la bolsa pasa de 0/2 a 1/2); luego, con los dos llenos, la
+    /// misma carta sostenida sobre los huecos, que tiene que decir por qué no se puede comprar (RF-012d).
+    /// </summary>
+    private async System.Threading.Tasks.Task CaptureConsumableSlots(RunController run, Node market)
+    {
+        var view = run.Market();
+        int index = -1;
+        if (view is not null)
+        {
+            foreach (var row in view.Consumables)
+            {
+                if (row.Affordable && row.Block == Sim.Run.View.RewardBlock.None)
+                {
+                    index = row.Index;
+                    break;
+                }
+            }
+        }
+
+        var offer = index < 0 ? null : FindOfferCard(market, MarketCategories.Consumable, index);
+        var bag = FindBag(market);
+        if (offer is null || bag is null)
+        {
+            GD.PushWarning("ningún consumible del mercado se puede pagar, o no se localizó la carta o los huecos: no hay captura de consumibles");
+            Drop(market);
+            return;
+        }
+
+        // Los centros se leen ANTES de pulsar: pulsar una carta reconstruye la pantalla y los nodos de aquí quedan
+        // liberados (leerlos después lanza en una tarea que nadie espera, y la captura se queda colgada).
+        var offerCenter = offer.GetGlobalRect().GetCenter();
+        var bagCenter = bag.GetGlobalRect().GetCenter();
+        await Press(offerCenter);
+        await Move(bagCenter);
+        await Save("mercado-consumible-arrastre");
+        await Release(bagCenter);
+        await Save("mercado-consumible-comprado");
+        GD.Print($"consumible comprado: {run.State!.Consumables.Count} de {Sim.Run.RunRules.ConsumableSlots} huecos");
+        Drop(market);
+
+        // Con los dos huecos llenos: se siembra el segundo consumible (un id que este mercado no ofrezca, para
+        // que ninguna carta salga «ya lo llevas» en vez de «huecos llenos») y se vuelve a abrir el mercado.
+        var offered = new HashSet<string>();
+        foreach (var row in run.Market()!.Consumables)
+        {
+            offered.Add(row.Id);
+        }
+
+        string second = string.Empty;
+        foreach (var definition in run.Systems!.Consumables.All)
+        {
+            if (!offered.Contains(definition.Id) && !run.State!.CarriesConsumable(definition.Id))
+            {
+                second = definition.Id;
+                break;
+            }
+        }
+
+        run.SeedForCapture(state => state.WithTakenConsumable(second));
+        var full = await Show("res://Scenes/Mercado.tscn");
+        var blocked = run.Market()!.Consumables[0];
+        var card = FindOfferCard(full, MarketCategories.Consumable, blocked.Index);
+        var slots = FindBag(full);
+        if (card is not null && slots is not null)
+        {
+            var cardCenter = card.GetGlobalRect().GetCenter();
+            var slotsCenter = slots.GetGlobalRect().GetCenter();
+            await Press(cardCenter);
+            await Move(slotsCenter);
+            await Save("mercado-consumible-huecos-llenos");
+        }
+
+        Drop(full);
+    }
+
+    /// <summary>Los huecos de consumible del Mercado en el árbol vivo.</summary>
+    private static MarketBagSlot? FindBag(Node root)
+    {
+        foreach (var child in root.GetChildren())
+        {
+            if (child is MarketBagSlot bag)
+            {
+                return bag;
+            }
+
+            if (FindBag(child) is { } found)
+            {
+                return found;
+            }
+        }
+
+        return null;
     }
 
     /// <summary>Instancia la escena de una pantalla y espera a que se estabilice.</summary>

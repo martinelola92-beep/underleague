@@ -135,20 +135,16 @@ public static class TeamTips
         return lines;
     }
 
-    public static Tip Consumable(TeamState state, ConsumableDefinition definition, EquippedConsumable? equipped, int owned, string triggerName)
+    public static Tip Consumable(TeamState state, ConsumableDefinition definition, EquippedConsumable equipped, string triggerName)
     {
         var lines = new List<TipLine>();
-        if (equipped is { Mode: ConsumableMode.Manual })
+        if (equipped.Mode == ConsumableMode.Manual)
         {
             lines.Add(new TipLine(UiText.Get("ui.kn.tip.manual"), Ink.Ochre, Glyph.Manual));
         }
-        else if (equipped is not null)
-        {
-            lines.Add(new TipLine(UiText.Get("ui.kn.tip.conditional", triggerName), Ink.Ochre, Glyph.Conditional));
-        }
         else
         {
-            lines.Add(new TipLine(UiText.Get("ui.kn.tip.pouch", owned), Ink.PaperDark));
+            lines.Add(new TipLine(UiText.Get("ui.kn.tip.conditional", triggerName), Ink.Ochre, Glyph.Conditional));
         }
 
         return new Tip(UiText.Name(definition.Name), DescriptionGenerator.DescribeEffects(definition.Effects, state.Templates), InkIcons.Of(definition.Family), lines);

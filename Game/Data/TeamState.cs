@@ -276,59 +276,22 @@ public sealed class TeamState
 
     /// <summary>
     /// <b>Solo para la secuencia de capturas</b> (CAT-B, mismo apaño que <see cref="ForceTestItem"/> para
-    /// objetos): sin run detrás no hay inventario de consumibles del que equipar nada, y la sección nueva
-    /// necesita enseñar algo más que el mensaje de vacío. Nunca se usa con una run real detrás.
+    /// objetos): sin run detrás no hay consumibles que llevar, y la sección de Equipo necesita enseñar
+    /// algo más que los huecos vacíos. Nunca se usa con una run real detrás.
     /// </summary>
     private ConsumableCatalog? _testConsumables;
-
-    private Dictionary<string, int>? _testConsumableStock;
 
     private List<EquippedConsumable>? _testEquippedConsumables;
 
     /// <summary>
-    /// Consumibles equipados de la run (CAT-B, RF-080..082), o vacío sin run detrás: sin una run no hay
-    /// inventario del que equipar nada.
+    /// Lo que la run lleva en sus dos huecos de consumible (RF-080..082, ADR 0172), o vacío sin run detrás.
+    /// El hueco es la posesión: no hay inventario suelto.
     /// </summary>
     public IReadOnlyList<EquippedConsumable> EquippedConsumables =>
         _testEquippedConsumables ?? _run?.State?.Consumables ?? Array.Empty<EquippedConsumable>();
 
-    /// <summary>
-    /// Consumibles del inventario, uno por copia y ordenados por id (RT-041): lo que la sección de
-    /// consumibles de Equipo enseña para elegir. Ver <see cref="RunState.OwnedConsumables"/>.
-    /// </summary>
-    public IReadOnlyList<string> OwnedConsumables
-    {
-        get
-        {
-            if (_testConsumableStock is null)
-            {
-                return _run?.State?.OwnedConsumables ?? Array.Empty<string>();
-            }
-
-            var ids = new List<string>();
-            foreach (var (id, count) in _testConsumableStock)
-            {
-                for (int i = 0; i < count; i++)
-                {
-                    ids.Add(id);
-                }
-            }
-
-            ids.Sort(StringComparer.Ordinal);
-            return ids;
-        }
-    }
-
-    /// <summary>Copias sueltas de ese consumible en el inventario.</summary>
-    public int ConsumablesOwned(string consumableId)
-    {
-        if (_testConsumableStock is not null)
-        {
-            return _testConsumableStock.TryGetValue(consumableId, out int count) ? count : 0;
-        }
-
-        return _run?.State?.ConsumablesOwned(consumableId) ?? 0;
-    }
+    /// <summary>True si queda un hueco de consumible libre.</summary>
+    public bool HasFreeConsumableSlot => EquippedConsumables.Count < RunRules.ConsumableSlots;
 
     /// <summary>
     /// Definición de un consumible, del catálogo de <b>esta</b> run; null sin run detrás (salvo que la
@@ -338,10 +301,10 @@ public sealed class TeamState
         _run?.Systems?.Consumables.Find(consumableId) ?? _testConsumables?.Find(consumableId);
 
     /// <summary>
-    /// Aplica la lista completa de consumibles equipados (CAT-B). Igual que <see cref="Move"/> con
-    /// <c>SetLineup</c>: la regla la valida <c>/Sim</c> (<c>RunEngine.Apply(SetConsumables)</c>, RF-080..082);
-    /// aquí solo se pide y se refresca la copia local. Sin run detrás no hay inventario que equipar, así
-    /// que no hace nada.
+    /// Aplica la lista completa de lo que se lleva en los huecos (CAT-B, ADR 0172): reconfigurar un modo o un
+    /// disparador, o descartar uno (una lista sin él). Igual que <see cref="Move"/> con <c>SetLineup</c>: la
+    /// regla la valida <c>/Sim</c> (<c>RunEngine.Apply(SetConsumables)</c>, RF-080..082); aquí solo se pide y
+    /// se refresca la copia local. Sin run detrás no hay nada que reconfigurar, así que no hace nada.
     /// </summary>
     public void ApplyConsumables(IReadOnlyList<EquippedConsumable> consumables)
     {
@@ -457,10 +420,10 @@ public sealed class TeamState
     }
 
     /// <summary>
-    /// <b>Solo para la secuencia de capturas</b>: fuerza un catálogo, un inventario y unos equipados sin
-    /// tocar la run ni escribir nada de verdad. No hace nada si ya hay una run real detrás.
+    /// <b>Solo para la secuencia de capturas</b>: fuerza un catálogo y lo que se lleva en los huecos sin tocar
+    /// la run ni escribir nada de verdad. No hace nada si ya hay una run real detrás.
     /// </summary>
-    public void ForceTestConsumables(ConsumableCatalog catalog, IReadOnlyDictionary<string, int> owned, IReadOnlyList<EquippedConsumable> equipped)
+    public void ForceTestConsumables(ConsumableCatalog catalog, IReadOnlyList<EquippedConsumable> equipped)
     {
         if (_run is { HasRun: true })
         {
@@ -468,7 +431,6 @@ public sealed class TeamState
         }
 
         _testConsumables = catalog;
-        _testConsumableStock = new Dictionary<string, int>(owned, StringComparer.Ordinal);
         _testEquippedConsumables = new List<EquippedConsumable>(equipped);
     }
 

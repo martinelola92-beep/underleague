@@ -121,6 +121,24 @@ public partial class BroadcastCapture : Control
             return;
         }
 
+        // ADR 0172: `-- consumible` captura sólo el botón del consumible manual, antes y después de pulsarlo.
+        if (System.Array.IndexOf(OS.GetCmdlineUserArgs(), "consumible") >= 0)
+        {
+            foreach (var probe in Seeds)
+            {
+                run.NewRun("orc_ironworks", Race.Orc, probe);
+                int probeNode = FirstOfKind(run, n => n.IsMatch);
+                if (probeNode >= 0)
+                {
+                    await CaptureConsumable(run, probe, probeNode);
+                    break;
+                }
+            }
+
+            GetTree().Quit();
+            return;
+        }
+
         // 1. Sondeo puro, sin Godot: para cada semilla, el primer nodo de partido del acto 1 y sus
         // momentos ya clasificados. Cuando un tipo ya tiene semilla asignada no se vuelve a buscar: gana
         // siempre la primera semilla de la lista que lo tenga.
@@ -1274,7 +1292,9 @@ public partial class BroadcastCapture : Control
         const string ConsumableId = "field_bandage";
 
         run.NewRun("orc_ironworks", Race.Orc, seed);
-        run.Apply(new SetConsumables(new[] { new EquippedConsumable(ConsumableId, ConsumableMode.Manual, string.Empty) }));
+        // ADR 0172: los dos consumibles entran ya en sus huecos, manuales: es lo que hace el mercado al comprarlos.
+        // Con los dos huecos llenos el tablero enseña los dos botones, y al pulsar uno el otro sigue vivo.
+        run.SeedForCapture(state => state.WithTakenConsumable(ConsumableId).WithTakenConsumable("lucky_charm"));
         run.SelectedNodeId = node;
         var instance = await Show("res://Scenes/Retransmision.tscn", frames: 10);
         if (instance is not BroadcastScreen screen)
@@ -1307,7 +1327,7 @@ public partial class BroadcastCapture : Control
         foreach (var id in new[] { "hold_the_line", "push_forward", "after_him" })
         {
             run.NewRun("orc_ironworks", Race.Orc, seed);
-            run.Apply(new SetConsumables(new[] { new EquippedConsumable(id, ConsumableMode.Manual, string.Empty) }));
+            run.SeedForCapture(state => state.WithTakenConsumable(id));
             run.SelectedNodeId = node;
             var instance = await Show("res://Scenes/Retransmision.tscn", frames: 10);
             if (instance is not BroadcastScreen screen)
