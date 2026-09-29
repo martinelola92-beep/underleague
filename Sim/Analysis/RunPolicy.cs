@@ -606,6 +606,12 @@ public sealed record RunPlayResult(
     /// <summary>Jugadores que se volvieron <c>Automaton</c> con la tercera prótesis (RF-095c).</summary>
     int Automatons = 0)
 {
+    /// <summary>
+    /// El estado con el que terminó la run, para quien mida algo que sólo existe al final (el censo de
+    /// apodos, ADR 0163). No entra en <c>runs.csv</c> ni en la igualdad de la política: es un dato de paso.
+    /// </summary>
+    public RunState? FinalState { get; init; }
+
     /// <summary>True si la run terminó ganando al jefe final (RF-002).</summary>
     public bool Won => Outcome == RunOutcomeKind.Victory;
 
@@ -721,7 +727,7 @@ public static class RunPolicy
                 : EnterService(state, node, catalog, systems, ledger);
         }
 
-        return Summarize(state, setup, seed, catalog, options, ledger);
+        return Summarize(state, setup, seed, catalog, options, ledger) with { FinalState = state };
     }
 
     // ------------------------------------------------------------------ 1. qué nodo

@@ -95,6 +95,12 @@ public sealed class Options
     public int? BetCensus { get; private set; }
 
     /// <summary>
+    /// Null salvo que se pase <c>--nickname-census N</c>: juega N runs completas y cuenta, al terminar cada
+    /// una, qué apodo lleva cada jugador (ADR 0163, sección «Censo»).
+    /// </summary>
+    public int? NicknameCensus { get; private set; }
+
+    /// <summary>
     /// <c>--bet-doctrine never|blind|prepared</c>: qué hace la política de <c>--full-runs</c> con la apuesta
     /// del vestuario (ADR 0157). Por defecto <c>never</c>, para no mover ninguna puerta.
     /// </summary>
@@ -311,6 +317,15 @@ public sealed class Options
                     if (options.BetCensus <= 0)
                     {
                         throw new ArgumentException("--bet-census debe ser mayor que cero");
+                    }
+
+                    break;
+
+                case "--nickname-census":
+                    options.NicknameCensus = ParseInt(arg, NextValue(args, ref i, arg));
+                    if (options.NicknameCensus <= 0)
+                    {
+                        throw new ArgumentException("--nickname-census debe ser mayor que cero");
                     }
 
                     break;

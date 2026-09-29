@@ -85,6 +85,19 @@ try
         return 0;
     }
 
+    if (options.NicknameCensus is { } nicknameCensusRuns)
+    {
+        // --nickname-census N: qué apodo lleva cada jugador al terminar N runs completas (ADR 0163).
+        var census = NicknameCensusRunner.Run(catalog, dataFiles, options.Seed, nicknameCensusRuns);
+        WriteNicknameCensusCsv(options.OutDir!, census);
+        if (!options.Quiet)
+        {
+            PrintNicknameCensus(census, options.OutDir!);
+        }
+
+        return 0;
+    }
+
     if (options.PerkValues)
     {
         // --perk-values: cuánto vale cada perk (ADR 0038). Alimenta data/economy/perk-values.json, de
@@ -402,6 +415,9 @@ static void PrintUsage()
                                o jefe evalúa las once condiciones de apuesta del vestuario (ADR 0157) y
                                escribe bet-census.csv: frecuencia por apuesta y dificultad (de ahí salen las
                                cuotas). La semilla de la run i es seed*100000+i, no seed+i
+          --nickname-census N N runs completas con la política contextual; al terminar cada una cuenta
+                               qué apodo lleva cada jugador (ADR 0163, «Censo») y escribe
+                               nickname-census.csv: runs con al menos un portador y jugadores por apodo
           --perk-values       mide el valor de cada perk contra su espejo sin él (ADR 0038, 0070); espejo
                                en campaña, --rosters = parejas de plantillas, --runs = partidos de la
                                campaña (8); escribe perk-values.csv y perk-values-by-match.csv
@@ -637,6 +653,38 @@ static void PrintBetCensus(BetCensusResult census, string outDir)
         string F(string key) => (cells[key].Frequency * 100).ToString("F2", CultureInfo.InvariantCulture);
         Console.WriteLine(
             $"{bet.Key,-20} {F("1"),8} {F("2"),8} {F("3"),8} {F("4"),8} {F("5"),8} {F("all"),8}  ± {(cells["all"].StdErr * 100).ToString("F2", CultureInfo.InvariantCulture)}");
+    }
+
+    Console.WriteLine($"CSV escrito en {outDir}");
+}
+
+/// <summary>nickname-census.csv del modo --nickname-census (ADR 0163): una fila por apodo.</summary>
+static void WriteNicknameCensusCsv(string outDir, NicknameCensusResult census)
+{
+    string[] header = { "nickname", "runsWith", "runsWithPercent", "players", "playersPercent", "runsEligiblePercent", "playersEligible", "maxValue" };
+    var rows = census.Cells.Select(c => (IReadOnlyList<string>)new[]
+    {
+        c.NicknameId,
+        c.RunsWith.ToString(CultureInfo.InvariantCulture),
+        (c.RunShare(census.Runs) * 100).ToString("F2", CultureInfo.InvariantCulture),
+        c.Players.ToString(CultureInfo.InvariantCulture),
+        (census.PlayersWhoPlayed == 0 ? 0 : 100.0 * c.Players / census.PlayersWhoPlayed).ToString("F2", CultureInfo.InvariantCulture),
+        (100.0 * c.RunsEligible / census.Runs).ToString("F2", CultureInfo.InvariantCulture),
+        c.PlayersEligible.ToString(CultureInfo.InvariantCulture),
+        c.MaxValue.ToString(CultureInfo.InvariantCulture),
+    });
+    CsvWriter.Write(Path.Combine(outDir, "nickname-census.csv"), header, rows);
+}
+
+static void PrintNicknameCensus(NicknameCensusResult census, string outDir)
+{
+    Console.WriteLine();
+    Console.WriteLine($"censo de apodos: {census.Runs} runs, {census.PlayersWhoPlayed} jugadores que pisaron el campo, {census.PlayersWithNickname} con apodo, en {census.Elapsed.TotalSeconds:F1} s");
+    Console.WriteLine($"{"apodo",-18} {"runs %",8} {"jugadores %",12} {"elegibles runs %",17} {"máx",5}");
+    foreach (var c in census.Cells)
+    {
+        double players = census.PlayersWhoPlayed == 0 ? 0 : 100.0 * c.Players / census.PlayersWhoPlayed;
+        Console.WriteLine($"{c.NicknameId,-18} {(c.RunShare(census.Runs) * 100).ToString("F1", CultureInfo.InvariantCulture),8} {players.ToString("F1", CultureInfo.InvariantCulture),12} {(100.0 * c.RunsEligible / census.Runs).ToString("F1", CultureInfo.InvariantCulture),17} {c.MaxValue,5}");
     }
 
     Console.WriteLine($"CSV escrito en {outDir}");
