@@ -18,21 +18,25 @@ cobro, corredor en el ojeo, informe) con las correcciones de su revisión indepe
 es el portero, las muertes cuentan, cobro redondeado, sin oro escondido); puertas rápidas
 (`tools/puertas-rapidas.sh`, ~3 min, sólo avisan de rojas nuevas); 25 textos visibles sin referencias internas.
 
-**Pendiente, en este orden:**
-1. **Recalcular cuotas de la apuesta**: `dotnet run --project Balance -c Release -- --bet-census 1200 --seed 1
-   --out out/c1/` y lo mismo con `--seed 7`; fijar `payoutPercentByDifficulty` y
-   `frequencyPercentByDifficulty` en `data/bets/bets.json` (85/p, tope 2.000, no ofrecer si p<2 %) y
-   actualizar la sección «Censo» de la ADR 0157. Sobre todo `hunt_the_star`, cuya condición cambió.
-   Después repetir Blind vs Never (`--full-runs 1200 --bet-doctrine blind|never`).
-2. **Memoria visible (ADR 0163)** en `.claude/worktrees/agent-ab8b94644c2e2b30d` (rama
-   `worktree-agent-ab8b94644c2e2b30d`): hechos apodos, estadísticas en el informe y ficha; faltan la Gaceta
-   de fin de run, el censo de apodos y las capturas. Luego rebase sobre `main`, commits limpios, revisión
-   independiente, merge.
-3. **Herrero de la clínica (ADR 0164)** en `.claude/worktrees/agent-aa3296dc0f7a93b8c`: hechos datos,
-   sistema, política y pruebas; faltan la pantalla de la clínica, el lote corto y la captura. Igual: rebase,
-   limpiar, revisión, merge.
-4. Resto del plan (`docs/plan-diversion.md` §5): clanes y némesis, catálogo de turbas y provocar la turba,
-   gritos como cambio temporal de orden, métrica guardiana de la sangre.
+**Cerrado después del reinicio (29 sep, tarde), todo publicado:**
+- Cuotas de la apuesta: el censo repetido con las dos semillas coincide con `data/bets/bets.json`; la ADR
+  0157 lleva la tabla nueva y su revisión independiente.
+- [ADR 0164](decisiones/0164-el-herrero-de-la-clinica.md), el herrero de la clínica, con su revisión: el
+  autómata conserva la especie (enmienda RF-095c; quitarla rompía partidos), `IRunSystems` sin miembros
+  por defecto que apagaban sistemas en silencio, el herrero es una apuesta real y la política lo usa (0,73
+  por run, 0,43 prótesis por run, sin mover las muertes).
+- [ADR 0163](decisiones/0163-la-memoria-se-ve.md), la memoria se ve: apodos derivados, estadísticas en el
+  informe y la ficha, la Gaceta de fin de run, y los guardados anteriores se pueden retomar
+  (`SnapshotCompletion`).
+- [BR-B](pendientes/BR-B.md): **los muertos volvían a la vida** (fallo anterior: una lesión en el mismo tick
+  que la muerte de un perk lo dejaba lesionado leve, con las consecuencias de la muerte cobradas). La muerte
+  es terminal en el motor, en la resolución y en los créditos. Puertas rápidas sin rojas nuevas.
+
+**Siguiente** (`docs/plan-diversion.md` §5): clanes y némesis (cambia rivales y guardado), catálogo de turbas
+y el consumible de provocar la turba (primitiva de motor), gritos como cambio temporal de orden (BA-H),
+métrica guardiana de la sangre. Pendientes menores: Blind contra Never de la apuesta tras sus correcciones;
+atributo máximo por run y más semillas del herrero; el panel de estadísticas del informe enseña ~4 de 7
+filas con varios apodos ganados.
 
 **Stash sin borrar** `ajenos-editor-godot-29sep`: reescrituras del editor de Godot en `Equipo.tscn`,
 `MatchScreen.cs` y `project.godot` que chocaban con lo que llegó de origin. No se reaplicaron.
