@@ -1,20 +1,21 @@
 {
   "_doc": "Paquete AL (ADR 0059 punto 4): la capa de build del rival ordinario baja de 2/7/9 a 2/1/2 perks por plantilla. Se conserva SIEMPRE el perk letal (RF-012c, ADR 0048) -quitarlo hundia deathsPerRun de 1,44 a 0,55, medido- y una pieza de la linea que da identidad al rival. Los maestros (killing_range, granite_line, blood_tithe) salen: sin su linea detras no cumplen su requiresPerks y no serian legibles. ",
   "id": "act3_orc_warlords",
+  "clanId": "ironclad",
   "name": {
-    "es": "Señores de la Guerra Carmesí",
-    "en": "Crimson Warlords"
+    "es": "Yunque Verde",
+    "en": "Green Anvil"
   },
   "description": {
-    "es": "El partido más violento del acto: entran a matar hasta en el descuento del descuento.",
-    "en": "The most violent fixture of the act: they go in to kill even in added time of added time."
+    "es": "Yunque Verde, señores de la guerra: los mismos orcos que empezaron aguantando golpes y ahora entran a matar hasta en el descuento del descuento.",
+    "en": "Green Anvil, warlords now: the same orcs who began by taking hits now go in to kill even in added time of added time."
   },
   "race": "Orc",
   "act": 3,
   "difficulty": 5,
   "players": [
     {
-      "name": "Ruk Muerdehierro",
+      "name": "Grok Comecráneos",
       "position": "Goalkeeper",
       "rarity": "common",
       "level": 5,
@@ -27,7 +28,7 @@
       }
     },
     {
-      "name": "Zog Quiebraespinas",
+      "name": "Urzag Tragaclavos",
       "position": "Defender",
       "rarity": "uncommon",
       "level": 5,
@@ -48,7 +49,7 @@
       ]
     },
     {
-      "name": "Drog Comecráneos",
+      "name": "Morg Muerdehierro",
       "position": "Defender",
       "rarity": "common",
       "level": 5,
@@ -62,7 +63,7 @@
       "styleTag": "Brute"
     },
     {
-      "name": "Krum Tragaclavos",
+      "name": "Thrak Quiebraespinas",
       "position": "Midfielder",
       "rarity": "common",
       "level": 5,
@@ -76,7 +77,7 @@
       "styleTag": "Brute"
     },
     {
-      "name": "Snaga Muerdehierro",
+      "name": "Bolg Comecráneos",
       "position": "Midfielder",
       "rarity": "common",
       "level": 5,
@@ -89,7 +90,7 @@
       }
     },
     {
-      "name": "Urk Quiebraespinas",
+      "name": "Gashk Tragaclavos",
       "position": "Midfielder",
       "rarity": "common",
       "level": 5,
@@ -102,7 +103,7 @@
       }
     },
     {
-      "name": "Ghash Comecráneos",
+      "name": "Ruk Muerdehierro",
       "position": "Forward",
       "rarity": "rare",
       "level": 5,
@@ -122,7 +123,7 @@
       ]
     },
     {
-      "name": "Lurtz Tragaclavos",
+      "name": "Zog Quiebraespinas",
       "position": "Defender",
       "rarity": "common",
       "level": 5,
@@ -135,7 +136,7 @@
       }
     },
     {
-      "name": "Muzgash Muerdehierro",
+      "name": "Drog Comecráneos",
       "position": "Midfielder",
       "rarity": "common",
       "level": 5,
@@ -148,7 +149,7 @@
       }
     },
     {
-      "name": "Naz Quiebraespinas",
+      "name": "Krum Tragaclavos",
       "position": "Forward",
       "rarity": "common",
       "level": 5,

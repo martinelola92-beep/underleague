@@ -85,6 +85,10 @@
       "description": "ADR 0064: porcentaje del oro EN MANO que se pierde al perder un partido ordinario. Instrumento de medicion; 0 si falta y 0 en /data.",
       "type": "integer", "minimum": 0, "maximum": 100
     },
+    "revengeGold": {
+      "description": "ADR 0165: oro que cobra la run por cada venganza (un jugador propio lesiona o mata a un némesis en un partido; una por némesis y partido), se gane o se pierda. PROVISIONAL, SIN MEDIR (Regla H); 0 si falta.",
+      "type": "integer", "minimum": 0
+    },
     "market": { "$ref": "#/$defs/market" }
   },
   "required": [

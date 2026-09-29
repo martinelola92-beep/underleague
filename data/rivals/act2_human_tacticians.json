@@ -1,20 +1,21 @@
 {
   "_doc": "Paquete AL (ADR 0059 punto 4): la capa de build del rival ordinario baja de 2/7/9 a 2/1/2 perks por plantilla. Se conserva SIEMPRE el perk letal (RF-012c, ADR 0048) -quitarlo hundia deathsPerRun de 1,44 a 0,55, medido- y una pieza de la linea que da identidad al rival. Los maestros (killing_range, granite_line, blood_tithe) salen: sin su linea detras no cumplen su requiresPerks y no serian legibles. ",
   "id": "act2_human_tacticians",
+  "clanId": "academy",
   "name": {
-    "es": "Tácticos de Puerto Claro",
-    "en": "Clearport Tacticians"
+    "es": "Academia Meridiana",
+    "en": "Meridian Academy"
   },
   "description": {
-    "es": "Un plan distinto para cada rival y un hombre pegado a tu mejor jugador desde el pitido inicial.",
-    "en": "A different plan for every opponent, and a man glued to your best player from the first whistle."
+    "es": "La Academia Meridiana se ha graduado y ha aprendido a mirarte: un plan distinto por rival y un hombre pegado a tu mejor jugador.",
+    "en": "Meridian Academy has graduated and learned to watch you: a plan for every opponent and a man glued to your best player."
   },
   "race": "Human",
   "act": 2,
   "difficulty": 3,
   "players": [
     {
-      "name": "Dario Lara",
+      "name": "Bruno Esteve",
       "position": "Goalkeeper",
       "rarity": "common",
       "level": 3,
@@ -27,33 +28,33 @@
       }
     },
     {
+      "name": "Ciro Haro",
+      "position": "Defender",
+      "rarity": "common",
+      "level": 3,
+      "attributes": {
+        "strength": 66,
+        "speed": 58,
+        "technique": 51,
+        "stamina": 64,
+        "leash": 61
+      }
+    },
+    {
+      "name": "Dario Lara",
+      "position": "Defender",
+      "rarity": "common",
+      "level": 3,
+      "attributes": {
+        "strength": 66,
+        "speed": 58,
+        "technique": 51,
+        "stamina": 64,
+        "leash": 61
+      }
+    },
+    {
       "name": "Elio Ortiz",
-      "position": "Defender",
-      "rarity": "common",
-      "level": 3,
-      "attributes": {
-        "strength": 66,
-        "speed": 58,
-        "technique": 51,
-        "stamina": 64,
-        "leash": 61
-      }
-    },
-    {
-      "name": "Fabio Rubio",
-      "position": "Defender",
-      "rarity": "common",
-      "level": 3,
-      "attributes": {
-        "strength": 66,
-        "speed": 58,
-        "technique": 51,
-        "stamina": 64,
-        "leash": 61
-      }
-    },
-    {
-      "name": "Gino Ureña",
       "position": "Midfielder",
       "rarity": "uncommon",
       "level": 3,
@@ -72,33 +73,33 @@
       ]
     },
     {
+      "name": "Fabio Rubio",
+      "position": "Midfielder",
+      "rarity": "common",
+      "level": 3,
+      "attributes": {
+        "strength": 56,
+        "speed": 61,
+        "technique": 64,
+        "stamina": 66,
+        "leash": 61
+      }
+    },
+    {
+      "name": "Gino Ureña",
+      "position": "Midfielder",
+      "rarity": "common",
+      "level": 3,
+      "attributes": {
+        "strength": 56,
+        "speed": 61,
+        "technique": 64,
+        "stamina": 66,
+        "leash": 61
+      }
+    },
+    {
       "name": "Hugo Zamora",
-      "position": "Midfielder",
-      "rarity": "common",
-      "level": 3,
-      "attributes": {
-        "strength": 56,
-        "speed": 61,
-        "technique": 64,
-        "stamina": 66,
-        "leash": 61
-      }
-    },
-    {
-      "name": "Ivo Cano",
-      "position": "Midfielder",
-      "rarity": "common",
-      "level": 3,
-      "attributes": {
-        "strength": 56,
-        "speed": 61,
-        "technique": 64,
-        "stamina": 66,
-        "leash": 61
-      }
-    },
-    {
-      "name": "Jano Ferrer",
       "position": "Forward",
       "rarity": "common",
       "level": 3,
@@ -111,7 +112,7 @@
       }
     },
     {
-      "name": "Lino Ibarra",
+      "name": "Ivo Cano",
       "position": "Defender",
       "rarity": "uncommon",
       "level": 3,
@@ -127,7 +128,7 @@
       ]
     },
     {
-      "name": "Marco Mora",
+      "name": "Jano Ferrer",
       "position": "Midfielder",
       "rarity": "common",
       "level": 3,
@@ -140,7 +141,7 @@
       }
     },
     {
-      "name": "Nilo Prieto",
+      "name": "Lino Ibarra",
       "position": "Forward",
       "rarity": "common",
       "level": 3,

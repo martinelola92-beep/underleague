@@ -256,7 +256,8 @@ public partial class RunController
             Systems?.Economy,
             Systems?.Items,
             Data.GameData.Language,
-            Systems?.Nicknames);
+            Systems?.Nicknames,
+            Systems?.Nemesis);
     }
 
     /// <summary>Elección de recompensa pendiente (RF-071, ADR 0049); null si no hay ninguna abierta.</summary>

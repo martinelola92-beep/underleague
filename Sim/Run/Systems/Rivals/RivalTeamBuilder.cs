@@ -16,12 +16,28 @@ public static class RivalTeamBuilder
     public const int OpponentFirstPlayerId = 2_000_000;
 
     /// <summary>Construye el equipo del rival, con la colocación por defecto (mismo 2-3-1 que <c>Lineup.Default</c>).</summary>
-    public static TeamSetup Build(RivalTeam team, Catalog catalog)
+    public static TeamSetup Build(RivalTeam team, Catalog catalog) =>
+        Build(team, catalog, RivalMemory.Empty, seed: 0, nemesisLevelBonus: 0);
+
+    /// <summary>
+    /// Construye el equipo del rival <b>con la memoria de la run</b> (ADR 0165): un puesto vacante lo cubre un
+    /// fichaje con las mismas cifras que el jugador de datos y otro nombre; el némesis que juega ahí lo hace con
+    /// su nombre y <paramref name="nemesisLevelBonus"/> niveles más. Los ids siguen siendo
+    /// <c>OpponentFirstPlayerId + puesto</c>: el puesto es la identidad estable que leen los créditos de
+    /// rival (<c>RivalCredits</c>) y la memoria.
+    ///
+    /// <para>Un némesis en el banquillo (puestos 7..9: entró de cambio y mató) <b>juega de titular</b>: sustituye
+    /// al último titular de su puesto en la alineación, porque «el mapa marca el nodo donde juega» tiene que ser
+    /// verdad y un némesis sentado no juega.</para>
+    /// </summary>
+    public static TeamSetup Build(RivalTeam team, Catalog catalog, RivalMemory memory, ulong seed, int nemesisLevelBonus)
     {
         ArgumentNullException.ThrowIfNull(team);
         ArgumentNullException.ThrowIfNull(catalog);
+        ArgumentNullException.ThrowIfNull(memory);
 
         var race = catalog.Race(team.Race);
+        var occupants = RivalRoster.Resolve(team, memory, seed, catalog);
         var players = new List<PlayerDefinition>(team.Players.Count);
         for (int i = 0; i < team.Players.Count; i++)
         {
@@ -33,9 +49,9 @@ public static class RivalTeamBuilder
                 tags.Add(source.Traits[t].ToString());
             }
 
-            players.Add(new PlayerDefinition(
+            var definition = new PlayerDefinition(
                 OpponentFirstPlayerId + i,
-                source.Name,
+                occupants[i].Name,
                 team.Race,
                 source.Position,
                 source.Rarity,
@@ -48,10 +64,35 @@ public static class RivalTeamBuilder
                 SpeciesTag = race.SpeciesTag,
                 StyleTag = source.StyleTag,
                 Perks = source.Perks,
-            });
+            };
+
+            if (occupants[i].Nemesis is not null && nemesisLevelBonus > 0)
+            {
+                definition = Progression.Progression.LevelUp(
+                    definition, definition.Level + nemesisLevelBonus, catalog.Tuning.Progression);
+            }
+
+            players.Add(definition);
         }
 
         var starters = players.Take(7).ToList();
+        for (int slot = 7; slot < players.Count; slot++)
+        {
+            if (occupants[slot].Nemesis is null)
+            {
+                continue;
+            }
+
+            for (int j = starters.Count - 1; j >= 0; j--)
+            {
+                if (starters[j].Position == players[slot].Position && occupants[j].Nemesis is null)
+                {
+                    starters[j] = players[slot];
+                    break;
+                }
+            }
+        }
+
         var lineup = Lineup.Default(starters);
 
         // El nombre visible del equipo, no su id de datos (RF-015): antes de este arreglo, el log de

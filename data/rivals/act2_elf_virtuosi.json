@@ -1,20 +1,21 @@
 {
   "_doc": "Paquete AL (ADR 0059 punto 4): la capa de build del rival ordinario baja de 2/7/9 a 2/1/2 perks por plantilla. Se conserva SIEMPRE el perk letal (RF-012c, ADR 0048) -quitarlo hundia deathsPerRun de 1,44 a 0,55, medido- y una pieza de la linea que da identidad al rival. Los maestros (killing_range, granite_line, blood_tithe) salen: sin su linea detras no cumplen su requiresPerks y no serian legibles. ",
   "id": "act2_elf_virtuosi",
+  "clanId": "swiftwing",
   "name": {
-    "es": "Virtuosos del Bosque",
-    "en": "Forest Virtuosi"
+    "es": "Ala Veloz",
+    "en": "Swiftwing"
   },
   "description": {
-    "es": "Tocan el balón como si les debiera dinero: precioso de ver, letal si les dejas dos toques.",
-    "en": "They pass the ball like it owes them money: gorgeous to watch, lethal if you give them two touches."
+    "es": "Ala Veloz ha crecido: los mismos pies, pero ya no regalan un toque. Tocan el balón como si les debiera dinero.",
+    "en": "Swiftwing has grown up: same feet, but they no longer waste a touch. They pass the ball like it owes them money."
   },
   "race": "Elf",
   "act": 2,
   "difficulty": 4,
   "players": [
     {
-      "name": "Faelar Espinafina",
+      "name": "Caelum Brisadorada",
       "position": "Goalkeeper",
       "rarity": "common",
       "level": 3,
@@ -27,7 +28,7 @@
       }
     },
     {
-      "name": "Galion Fuegoquieto",
+      "name": "Daeris Hojaplata",
       "position": "Defender",
       "rarity": "common",
       "level": 3,
@@ -41,7 +42,7 @@
       "styleTag": "Fine"
     },
     {
-      "name": "Haldir Lunargenta",
+      "name": "Elandor Ramaluz",
       "position": "Defender",
       "rarity": "common",
       "level": 3,
@@ -55,7 +56,7 @@
       "styleTag": "Fine"
     },
     {
-      "name": "Ithil Cantoalba",
+      "name": "Faelar Espinafina",
       "position": "Midfielder",
       "rarity": "common",
       "level": 3,
@@ -72,7 +73,7 @@
       ]
     },
     {
-      "name": "Laeron Rocíogris",
+      "name": "Galion Fuegoquieto",
       "position": "Midfielder",
       "rarity": "uncommon",
       "level": 3,
@@ -89,7 +90,7 @@
       ]
     },
     {
-      "name": "Maeron Vientoclaro",
+      "name": "Haldir Lunargenta",
       "position": "Midfielder",
       "rarity": "uncommon",
       "level": 3,
@@ -106,7 +107,7 @@
       ]
     },
     {
-      "name": "Naerys Sombraverde",
+      "name": "Ithil Cantoalba",
       "position": "Forward",
       "rarity": "common",
       "level": 3,
@@ -120,7 +121,7 @@
       "styleTag": "Fine"
     },
     {
-      "name": "Orophin Brisadorada",
+      "name": "Laeron Rocíogris",
       "position": "Defender",
       "rarity": "common",
       "level": 3,
@@ -133,7 +134,7 @@
       }
     },
     {
-      "name": "Rhovan Hojaplata",
+      "name": "Maeron Vientoclaro",
       "position": "Midfielder",
       "rarity": "common",
       "level": 3,
@@ -146,7 +147,7 @@
       }
     },
     {
-      "name": "Sindar Ramaluz",
+      "name": "Naerys Sombraverde",
       "position": "Forward",
       "rarity": "common",
       "level": 3,

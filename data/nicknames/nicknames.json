@@ -14,6 +14,7 @@
     { "id": "keepers_bane", "name": { "es": "el Verdugo de Porteros", "en": "Keeper's Bane" }, "stat": "goals", "threshold": 18, "priority": 60 },
     { "id": "patchwork", "name": { "es": "el Remendado", "en": "Patchwork" }, "stat": "injuriesSuffered", "threshold": 3, "priority": 38 },
     { "id": "repeat_offender", "name": { "es": "el Reincidente", "en": "the Repeat Offender" }, "stat": "fouls", "threshold": 15, "priority": 42 },
+    { "id": "avenger", "name": { "es": "el Vengador", "en": "the Avenger" }, "stat": "revenges", "threshold": 1, "priority": 85 },
     { "id": "sieve", "name": { "es": "el Colador", "en": "the Sieve" }, "stat": "injuriesSuffered", "threshold": 4, "priority": 48 },
     { "id": "veteran", "name": { "es": "el Veterano", "en": "Old Reliable" }, "stat": "matches", "threshold": 15, "priority": 10 },
     { "id": "wall", "name": { "es": "el Muro", "en": "the Wall" }, "stat": "tacklesWon", "threshold": 12, "priority": 35 }

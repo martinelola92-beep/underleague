@@ -98,7 +98,8 @@ public static class GazetteView
         NicknameCatalog nicknames,
         RivalCatalog rivals,
         GazetteCatalog templates,
-        string language = "es")
+        string language = "es",
+        NemesisCatalog? nemesis = null)
     {
         ArgumentNullException.ThrowIfNull(state);
         ArgumentNullException.ThrowIfNull(catalog);
@@ -134,7 +135,7 @@ public static class GazetteView
             Mvp(state, nicknames, templates, language),
             Pick(templates, "mvp.none", language, state.Seed, 8, facts),
             Pick(templates, "villain.title", language, state.Seed, 5, facts),
-            Villain(state, credits, rivals, templates, language),
+            NemesisVillain(state, nemesis, templates, language) ?? Villain(state, credits, rivals, templates, language),
             Pick(templates, "obituaries.title", language, state.Seed, 6, facts),
             Pick(templates, "obituaries.none", language, state.Seed, 7, facts),
             Obituaries(state, catalog, nicknames, rivals, credits, templates, language));
@@ -279,6 +280,38 @@ public static class GazetteView
     /// <c>RivalCredits</c> no guarda cronología, así que no hay «el último». Empata el clan de id menor y
     /// luego el índice menor. Null si ningún rival hizo daño: la sección se omite.
     /// </summary>
+    /// <summary>
+    /// ADR 0165 punto 4: la Gaceta prefiere como villano a un <b>némesis</b> —vivo o vengado— antes que al rival
+    /// que más daño sumó en los créditos: es el que el jugador ha visto nacer, con título y víctima. Entre
+    /// varios, el que más muertes propias suma; a igual cuenta, el de id menor (RT-041). Null si la run no tuvo
+    /// ninguno (o no se le pasa el catálogo de némesis): entonces manda la regla de siempre.
+    /// </summary>
+    private static GazetteVillain? NemesisVillain(RunState state, NemesisCatalog? nemesis, GazetteCatalog templates, string language)
+    {
+        if (nemesis is null)
+        {
+            return null;
+        }
+
+        var villain = NemesisView.Villain(state, nemesis, language);
+        if (villain is null)
+        {
+            return null;
+        }
+
+        string name = villain.Title.Length == 0 ? villain.Name : villain.Name + ", " + villain.Title;
+        var facts = new Dictionary<string, string>(StringComparer.Ordinal)
+        {
+            ["villain"] = name,
+            ["clan"] = villain.Clan,
+            ["deaths"] = Number(villain.Kills),
+            ["injuries"] = Number(0),
+        };
+
+        string line = Pick(templates, "villain.deaths", language, state.Seed, 300 + villain.NemesisId, facts);
+        return new GazetteVillain(name, villain.Clan, villain.Kills, 0, line);
+    }
+
     private static GazetteVillain? Villain(RunState state, IReadOnlyList<RivalCredit> credits, RivalCatalog rivals, GazetteCatalog templates, string language)
     {
         var comparer = Comparer<(string, int)>.Create(static (a, b) =>

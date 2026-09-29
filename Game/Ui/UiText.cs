@@ -290,6 +290,13 @@ public static class UiText
 
         // Memoria del rival (F1 §6, ADR 0124): reencuentro contra un clan ya visto, y el par
         // knaveador-víctima más destacado si lo hay (BE-B). Nunca en el nodo de jefe (ScoutScreen lo filtra).
+        ["ui.report.nemesisMade"] = "{0}, {1}, mató a {2}: se convierte en tu némesis.",
+        ["ui.report.revenge"] = "¡VENGANZA! {0} vengó a {1}: lesionó a {2}, {3}.",
+        ["ui.report.revengeSlain"] = "¡VENGANZA! {0} vengó a {1}: mató a {2}, {3}.",
+        ["ui.report.revengeGold"] = "+{0} de oro",
+        ["ui.map.nemesis"] = "némesis: {0}, {1}",
+        ["ui.scout.nemesis"] = "NÉMESIS · {0}, {1}: mató a {2} en el acto {3}. Hoy juega, y con un nivel más.",
+        ["ui.scout.nemesisMany"] = "NÉMESIS · {0}, {1}: mató a {2} en el acto {3} y a {4} más. Hoy juega, y con un nivel más.",
         ["ui.scout.rivalRepeat"] = "{0} · {1}.ª vez · {2}",
         ["ui.scout.rivalRepeatWon"] = "ganaste",
         ["ui.scout.rivalRepeatLost"] = "perdiste",
@@ -795,6 +802,7 @@ public static class UiText
         ["ui.pregon.stamp.cancelled"] = "Anulado",
         ["ui.pregon.stamp.substitution"] = "Cambio",
         ["ui.pregon.banner.kickoffTitle"] = "Comienza el partido",
+        ["ui.pregon.banner.kickoffNemesis"] = "Némesis en el campo: {0}, {1}",
         ["ui.pregon.banner.kickoffBody"] = "{0} contra {1}",
         ["ui.pregon.banner.goalTitle"] = "Gol",
         ["ui.pregon.banner.goalBody"] = "de {0}, al minuto {1}",

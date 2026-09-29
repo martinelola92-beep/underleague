@@ -888,6 +888,28 @@ public partial class BroadcastScreen : Control
         _banner.Position = new Vector2(leftHalf ? CanvasWidth - HeraldBanner.DesignWidth : 0f, 150f);
     }
 
+    /// <summary>
+    /// ADR 0165: si en el campo rival juega un némesis, el pregón del saque lo anuncia en el pie del cartel
+    /// («Némesis en el campo: X, el Matahermanos»). Sin némesis, el pie sigue vacío: ni ruido ni cartel nuevo.
+    /// </summary>
+    private string KickoffNemesisLine()
+    {
+        if (_run.State is null || _run.Systems is null)
+        {
+            return string.Empty;
+        }
+
+        var names = new List<string>(_playback.Setup.Away.Players.Count);
+        foreach (var player in _playback.Setup.Away.Players)
+        {
+            names.Add(player.Name);
+        }
+
+        var made = _run.LastMatch?.Summary.NemesesMade ?? System.Array.Empty<Underleague.Sim.Run.Systems.Rivals.NemesisMade>();
+        var line = Underleague.Sim.Run.View.NemesisView.OnPitch(_run.State, _run.Systems.Nemesis, names, made, Data.GameData.Language);
+        return line is null ? string.Empty : UiText.Get("ui.pregon.banner.kickoffNemesis", line.Name, line.Title);
+    }
+
     private void ShowKickoffBanner()
     {
         _banner.Position = new Vector2(0f, 150f);
@@ -896,7 +918,7 @@ public partial class BroadcastScreen : Control
             UiText.Get("ui.pregon.banner.said"),
             UiText.Get("ui.pregon.banner.kickoffTitle"),
             UiText.Get("ui.pregon.banner.kickoffBody", _playback.OwnName, _playback.RivalName),
-            string.Empty);
+            KickoffNemesisLine());
     }
 
     private void ShowGoalBanner(MatchEvent goal)

@@ -114,6 +114,9 @@ public sealed class BossRunSystems : IRunSystems
     public Systems.Medical.ProsthesisCatalog Prostheses => _inner.Prostheses;
 
     /// <inheritdoc />
+    public Systems.Rivals.NemesisCatalog Nemesis => _inner.Nemesis;
+
+    /// <inheritdoc />
     public void OnMatchPlayed(RunState stateBefore, MapNode node, MatchSetup setup, MatchResult result, RunMatchSummary summary) =>
         _inner.OnMatchPlayed(stateBefore, node, setup, result, summary);
 

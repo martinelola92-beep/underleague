@@ -104,24 +104,30 @@ public partial class ReportScreen : Control
     /// <summary>Columna izquierda de 376 px: bajas y tarjetas. Las muertes van primero y en rojo.</summary>
     private void Casualties()
     {
-        Widgets.Panel(this, new Rect2(12f, 52f, Widgets.CardColumnWidth, 400f));
+        // ADR 0165: si el partido ha hecho un némesis o cobrado una venganza, esa noticia va justo bajo las
+        // muertes y la columna crece lo que necesite; la lista de tarjetas cede ese alto.
+        float extra = _report.NemesesMade.Count + _report.Revenges.Count > 0 ? NemesisExtraHeight : 0f;
+        Widgets.Panel(this, new Rect2(12f, 52f, Widgets.CardColumnWidth, 400f + extra));
         Widgets.Section(this, UiText.Get("ui.report.casualties"), new Vector2(24f, 58f), 350f);
 
         float y = 80f;
         if (_report.Casualties.Count == 0)
         {
-            Widgets.Body(this, UiText.Get("ui.report.casualtiesNone"), new Vector2(24f, y), 352f, Style.TextDim);
+            var none = Widgets.Body(this, UiText.Get("ui.report.casualtiesNone"), new Vector2(24f, y), 352f, Style.TextDim);
+            y += none.Size.Y + 4f;
+            NemesisBlock(y);
         }
         else
         {
             // Las muertes primero, aunque hayan pasado después: es la única baja que no se deshace.
-            y = CasualtyBlock(y, death: true);
-            y = CasualtyBlock(y, death: false);
+            y = CasualtyBlock(y, death: true, 420f + extra);
+            y = NemesisBlock(y);
+            CasualtyBlock(y, death: false, 420f + extra);
         }
 
-        Widgets.Panel(this, new Rect2(12f, 464f, Widgets.CardColumnWidth, 276f));
-        Widgets.Section(this, UiText.Get("ui.report.cards"), new Vector2(24f, 470f), 350f);
-        float cardY = 492f;
+        Widgets.Panel(this, new Rect2(12f, 464f + extra, Widgets.CardColumnWidth, 276f - extra));
+        Widgets.Section(this, UiText.Get("ui.report.cards"), new Vector2(24f, 470f + extra), 350f);
+        float cardY = 492f + extra;
         if (_report.Cards.Count == 0)
         {
             Widgets.Body(this, UiText.Get("ui.report.cardsNone"), new Vector2(24f, cardY), 352f, Style.TextDim);
@@ -151,12 +157,55 @@ public partial class ReportScreen : Control
         }
     }
 
-    private float CasualtyBlock(float y, bool death)
+    /// <summary>Alto que la columna de bajas cede a las noticias de némesis y venganza (ADR 0165).</summary>
+    private const float NemesisExtraHeight = 110f;
+
+    /// <summary>
+    /// ADR 0165: «X, el Matahermanos, se convierte en tu némesis» y «¡VENGANZA! Y vengó a X». El lacre es el
+    /// color del némesis (el mismo de su marca en el ojeo y en el mapa); la venganza, en dorado: es lo bueno.
+    /// El oro de la venganza va en la primera línea de venganza, que es donde el jugador lo busca.
+    /// </summary>
+    private float NemesisBlock(float y)
+    {
+        foreach (var made in _report.NemesesMade)
+        {
+            var label = Widgets.Body(
+                this,
+                UiText.Get("ui.report.nemesisMade", made.Name, made.Title, made.VictimName),
+                new Vector2(24f, y),
+                352f,
+                Pregon.Wax);
+            y += label.Size.Y + 4f;
+        }
+
+        bool first = true;
+        foreach (var revenge in _report.Revenges)
+        {
+            string text = UiText.Get(
+                revenge.Slain ? "ui.report.revengeSlain" : "ui.report.revenge",
+                revenge.AvengerName,
+                revenge.VictimName,
+                revenge.NemesisName,
+                revenge.Title);
+            if (first && _report.RevengeGold > 0)
+            {
+                text += " " + UiText.Get("ui.report.revengeGold", _report.RevengeGold);
+            }
+
+            first = false;
+            var label = Widgets.Body(this, text, new Vector2(24f, y), 352f, Style.Accent);
+            y += label.Size.Y + 4f;
+        }
+
+        return y;
+    }
+
+    private float CasualtyBlock(float y, bool death, float limit)
     {
         foreach (var casualty in _report.Casualties)
         {
             bool isDeath = casualty.Kind == CasualtyKind.Death;
-            if (isDeath != death || y > 420f)
+            if (isDeath != death || y > limit)
             {
                 continue;
             }

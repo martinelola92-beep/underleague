@@ -47,8 +47,9 @@ public sealed class StandardRunSystems : IRunSystems
     private readonly ProsthesisCatalog _prostheses;
     private readonly NicknameCatalog _nicknames;
     private readonly GazetteCatalog _gazette;
+    private readonly NemesisCatalog _nemesis;
 
-    public StandardRunSystems(EconomyConfig economy, ItemCatalog items, ConsumableCatalog consumables, RivalCatalog rivals, MapConfig map, ClubCatalog clubs, EventCatalog events, RefereeCatalog referees, BetCatalog? bets = null, ProsthesisCatalog? prostheses = null, NicknameCatalog? nicknames = null, GazetteCatalog? gazette = null)
+    public StandardRunSystems(EconomyConfig economy, ItemCatalog items, ConsumableCatalog consumables, RivalCatalog rivals, MapConfig map, ClubCatalog clubs, EventCatalog events, RefereeCatalog referees, BetCatalog? bets = null, ProsthesisCatalog? prostheses = null, NicknameCatalog? nicknames = null, GazetteCatalog? gazette = null, NemesisCatalog? nemesis = null)
     {
         _economy = economy ?? throw new ArgumentNullException(nameof(economy));
         _items = items ?? throw new ArgumentNullException(nameof(items));
@@ -62,6 +63,7 @@ public sealed class StandardRunSystems : IRunSystems
         _prostheses = prostheses ?? ProsthesisCatalog.Empty;
         _nicknames = nicknames ?? NicknameCatalog.Empty;
         _gazette = gazette ?? GazetteCatalog.Empty;
+        _nemesis = nemesis ?? NemesisCatalog.Empty;
     }
 
     /// <summary>Configuración de economía de esta instancia (para tests y <c>/Balance</c>).</summary>
@@ -97,6 +99,12 @@ public sealed class StandardRunSystems : IRunSystems
     /// <summary>Catálogo de apodos de carrera de esta instancia (ADR 0163, <c>data/nicknames/</c>).</summary>
     public NicknameCatalog Nicknames => _nicknames;
 
+    /// <summary>
+    /// Clanes y némesis de esta instancia (ADR 0165, <c>data/nemesis/</c>). Sin él (<see cref="NemesisCatalog.Empty"/>)
+    /// los rivales no tienen memoria y juegan como antes.
+    /// </summary>
+    public NemesisCatalog Nemesis => _nemesis;
+
     /// <summary>Plantillas de la Gaceta de fin de run de esta instancia (ADR 0163, <c>data/gazette/</c>).</summary>
     public GazetteCatalog Gazette => _gazette;
 
@@ -105,19 +113,25 @@ public sealed class StandardRunSystems : IRunSystems
     /// consume <c>DataLoader.FromJson</c>). Ayudante de conveniencia para tests y <c>/Balance</c>: evita
     /// llamar a los cargadores por separado.
     /// </summary>
-    public static StandardRunSystems FromJson(IReadOnlyDictionary<string, string> files) => new(
-        EconomyLoader.FromJson(files),
-        ItemLoader.FromJson(files),
-        ConsumableLoader.FromJson(files),
-        RivalLoader.FromJson(files),
-        MapLoader.FromJson(files),
-        ClubLoader.FromJson(files),
-        EventLoader.FromJson(files),
-        RefereeLoader.FromJson(files),
-        BetLoader.FromJson(files),
-        ProsthesisLoader.FromJson(files),
-        NicknameLoader.FromJson(files),
-        GazetteLoader.FromJson(files));
+    public static StandardRunSystems FromJson(IReadOnlyDictionary<string, string> files)
+    {
+        ArgumentNullException.ThrowIfNull(files);
+        var rivals = RivalLoader.FromJson(files);
+        return new StandardRunSystems(
+            EconomyLoader.FromJson(files),
+            ItemLoader.FromJson(files),
+            ConsumableLoader.FromJson(files),
+            rivals,
+            MapLoader.FromJson(files),
+            ClubLoader.FromJson(files),
+            EventLoader.FromJson(files),
+            RefereeLoader.FromJson(files),
+            BetLoader.FromJson(files),
+            ProsthesisLoader.FromJson(files),
+            NicknameLoader.FromJson(files),
+            GazetteLoader.FromJson(files),
+            NemesisLoader.FromJson(files, rivals));
+    }
 
     /// <summary>
     /// <see cref="RunSetup"/> completo para empezar una run con <b>estos</b> datos: oro de partida
@@ -207,7 +221,8 @@ public sealed class StandardRunSystems : IRunSystems
             var team = _rivals.Find(node.OpponentId);
             if (team is not null)
             {
-                var built = RivalTeamBuilder.Build(team, catalog);
+                var built = RivalTeamBuilder.Build(
+                    team, catalog, state?.RivalMemory ?? RivalMemory.Empty, state?.Seed ?? 0, _nemesis.LevelBonus);
                 return node.Kind == NodeKind.EliteMatch
                     ? LevelUp(built, _map.EliteRivalLevelBonus, catalog)
                     : built;
@@ -292,6 +307,10 @@ public sealed class StandardRunSystems : IRunSystems
         // El oro de muerte (paquete BB, Seguro de vida) es el mismo canal que el de contador: se cobra se
         // gane o se pierda, porque el jugador ya pagó por adelantado el slot del perk.
         int deathGold = DeathConsequences.GoldFor(state, summary.DeathDetails, _economy);
+
+        // La venganza (ADR 0165) paga por el mismo canal: el jugador ya se expuso a la carne del némesis,
+        // haya ganado o no. Una venganza por némesis y partido; la cifra es provisional, sin medir.
+        deathGold += summary.Revenges.Count * _economy.RevengeGold;
 
         if (!summary.Won)
         {
