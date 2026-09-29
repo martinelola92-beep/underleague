@@ -76,6 +76,31 @@ desaparecen (portería a cero sola, demasiado simple).
 **Pregunta abierta para medir:** si `referee_blind` y `clean_hands` son legibles para el jugador sin la
 traza. Si el informe post-partido no enseña «faltas no señaladas», `referee_blind` no entra.
 
+## Definiciones exactas de las condiciones (implementación, 29 sep 2026)
+
+`BetConditions.Evaluate(kind, contexto)` es puro y lee solo los hechos del partido (`MatchSetup`,
+`MatchResult`: eventos ordenados e informe). Equipo del jugador = 0 (W-15). Convenciones comunes: un evento con
+`Detail` acabado en `:cancelled` (lo anuló un perk) **no ocurrió**; «ganar» es `Report.Winner == 0`; «lesión» es
+un `INJURY` no anulado (leve o grave) con la víctima en `Actor` y el causante en `Opponent`; «tarjeta» es un
+`CARD` (amarilla o roja).
+
+| condición | se cumple si |
+|---|---|
+| `blood_before_goals` | el primer `INJURY` de cualquiera va antes que el primer `GOAL`; sin goles, basta que haya habido una lesión. No exige ganar |
+| `hunt_the_star` | el rival nombrado tiene un `INJURY`, un `DEATH` o una `CARD` roja (no anulados). No exige ganar. El nombrado es `BetSystem.TargetFor`: el de mayor rareza entre los rivales de la alineación, desempate por id menor |
+| `eye_for_eye` | gana, hay ≥1 lesión propia y ≥1 lesión de un rival con `Opponent` = jugador propio |
+| `comeback` | gana y, tras algún gol no anulado, el marcador iba en contra (rival > propio) |
+| `into_the_mob` | gana y hubo `MOB_START`. **Incluye** ganar por desempate al agotarse la prórroga sin gol de oro (medido en el test: la semilla 1 de 50 contra 50 termina así) |
+| `clean_hands` | gana, ≥1 lesión de un rival atribuida a un jugador propio y 0 tarjetas propias (amarillas o rojas) |
+| `thrashing` | gana por ≥3 y el rival termina con ≤6 en el campo (jugadores rivales con tiempo de campo y sin `LeftPitchTick`: cuenta suplentes que entraron y descuenta bajas sin reemplazo) |
+| `three_names` | gana con goles no anulados de ≥3 jugadores propios distintos |
+| `youth_decides` | gana y el gol de la victoria es de un canterano. «Gol de la victoria» = el gol propio número (goles del rival + 1): con 3-1, el segundo. Es el primer gol tras el cual el equipo ya no deja de ir por delante |
+| `short_and_clean` | gana, sale con <7 titulares (casillas de la alineación con la que se jugó, no los suplentes que entran) y no encaja |
+| `referee_blind` | gana con ≥3 `FOUL` propios de detalle `unseen` **antes** de `MOB_START` (en la turba el motor emite todas las faltas como no vistas, y ahí no hay árbitro) |
+
+La oferta se deriva con `OfferStream.For(semilla, nodo, 8000)` (desplazamiento nuevo en la tabla de
+`OfferStream`), uniforme sobre las apuestas del catálogo ordenadas por id.
+
 ## Las diez preguntas (`game-design-review`)
 
 1. **Qué experimenta el jugador.** Antes del partido, un corredor le ofrece «Grok Comecráneos no acaba el

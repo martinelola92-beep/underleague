@@ -1,0 +1,126 @@
+{
+  "_doc": "ADR 0157: catalogo de apuestas del vestuario (RF-114h, RF-114i). Una por nodo de partido, derivada de (semilla, nodo) por BetSystem.OfferFor. 'kind' fija que condicion evalua BetConditions.Evaluate (definiciones exactas en el codigo y en la ADR). 'stakeByAct' es la apuesta fija en oro de los actos 1..3: PROVISIONAL, SIN MEDIR (Regla H). 'payoutPercentByDifficulty' es el cobro BRUTO como porcentaje de la apuesta, un valor por distintivo de dificultad 1..5 (RF-012): cuota = 85 / p (margen de la casa del 15 %, ADR 0157 punto 4) con p la frecuencia medida en el censo `Balance --bet-census`; el 'censo' de la ADR 0157 dice de donde sale cada cifra y cuales son un tope. En el texto de la condicion, {player} se sustituye por el nombre del jugador rival nombrado en la oferta (solo hunt_the_star). Tono: corredor de apuestas de taberna.",
+  "bets": [
+    {
+      "id": "blood_before_goals",
+      "kind": "BloodBeforeGoals",
+      "name": { "es": "Sangre antes que goles", "en": "Blood Before Goals" },
+      "condition": {
+        "es": "La primera lesión del partido cae antes que el primer gol. Si no marca nadie, me vale con que alguien sangre.",
+        "en": "The first injury lands before the first goal. If nobody scores, I'll settle for anyone bleeding."
+      },
+      "stakeByAct": [3, 4, 5],
+      "payoutPercentByDifficulty": [200, 200, 200, 200, 200]
+    },
+    {
+      "id": "hunt_the_star",
+      "kind": "HuntTheStar",
+      "name": { "es": "Cazar a la estrella", "en": "Hunt the Star" },
+      "condition": {
+        "es": "{player} no acaba el partido: lesionado, muerto o expulsado. Yo no he dicho nada.",
+        "en": "{player} doesn't finish the match: hurt, dead or sent off. I never said a word."
+      },
+      "stakeByAct": [3, 4, 5],
+      "payoutPercentByDifficulty": [200, 200, 200, 200, 200]
+    },
+    {
+      "id": "eye_for_eye",
+      "kind": "EyeForEye",
+      "name": { "es": "Ojo por ojo", "en": "An Eye for an Eye" },
+      "condition": {
+        "es": "Si te lesionan a uno, tú les lesionas a otro, y encima ganas. La venganza sin victoria no paga.",
+        "en": "If they hurt one of yours, you hurt one of theirs, and you win on top. Revenge without victory doesn't pay."
+      },
+      "stakeByAct": [3, 4, 5],
+      "payoutPercentByDifficulty": [200, 200, 200, 200, 200]
+    },
+    {
+      "id": "comeback",
+      "kind": "Comeback",
+      "name": { "es": "La remontada", "en": "The Comeback" },
+      "condition": {
+        "es": "Vas perdiendo en algún momento y acabas ganando. Aquí cobran los que aguantan el susto.",
+        "en": "You're losing at some point and still win. The house pays those who can stomach the scare."
+      },
+      "stakeByAct": [3, 4, 5],
+      "payoutPercentByDifficulty": [200, 200, 200, 200, 200]
+    },
+    {
+      "id": "into_the_mob",
+      "kind": "IntoTheMob",
+      "name": { "es": "Hasta la turba", "en": "Into the Mob" },
+      "condition": {
+        "es": "El partido llega al gol de oro y lo ganas tú, con el árbitro ya camino de la puerta.",
+        "en": "The match goes to golden goal and you win it, the referee already halfway out the door."
+      },
+      "stakeByAct": [3, 4, 5],
+      "payoutPercentByDifficulty": [200, 200, 200, 200, 200]
+    },
+    {
+      "id": "clean_hands",
+      "kind": "CleanHands",
+      "name": { "es": "Manos limpias", "en": "Clean Hands" },
+      "condition": {
+        "es": "Ganas, dejas al menos una baja rival y no ves ni una tarjeta propia. Sangre, sí, pero con modales.",
+        "en": "You win, leave at least one rival casualty and see not a single card of your own. Blood, sure, but with manners."
+      },
+      "stakeByAct": [3, 4, 5],
+      "payoutPercentByDifficulty": [200, 200, 200, 200, 200]
+    },
+    {
+      "id": "thrashing",
+      "kind": "Thrashing",
+      "name": { "es": "Paliza", "en": "Thrashing" },
+      "condition": {
+        "es": "Ganas por tres goles o más y el rival acaba con seis o menos en el campo. Que no quede nadie para contarlo.",
+        "en": "You win by three goals or more and the rival ends with six or fewer on the pitch. Leave nobody to tell the tale."
+      },
+      "stakeByAct": [3, 4, 5],
+      "payoutPercentByDifficulty": [200, 200, 200, 200, 200]
+    },
+    {
+      "id": "three_names",
+      "kind": "ThreeNames",
+      "name": { "es": "Tres firmas", "en": "Three Names" },
+      "condition": {
+        "es": "Ganas y el acta lleva goles de tres jugadores distintos. Aquí el pan se reparte.",
+        "en": "You win and the sheet carries goals from three different players. Here the bread gets shared."
+      },
+      "stakeByAct": [3, 4, 5],
+      "payoutPercentByDifficulty": [200, 200, 200, 200, 200]
+    },
+    {
+      "id": "youth_decides",
+      "kind": "YouthDecides",
+      "name": { "es": "El chaval decide", "en": "The Kid Decides" },
+      "condition": {
+        "es": "El gol que te da la victoria lo mete un canterano. La veteranía es un grado; la insolencia, otro.",
+        "en": "The goal that wins it is scored by a youth-squad kid. Experience is one asset; cheek is another."
+      },
+      "stakeByAct": [3, 4, 5],
+      "payoutPercentByDifficulty": [200, 200, 200, 200, 200]
+    },
+    {
+      "id": "short_and_clean",
+      "kind": "ShortAndClean",
+      "name": { "es": "Pocos y limpios", "en": "Few and Clean" },
+      "condition": {
+        "es": "Sales con menos de siete y ganas sin encajar. Es una locura, pero se paga como tal.",
+        "en": "You start with fewer than seven and win without conceding. Madness, but paid as such."
+      },
+      "stakeByAct": [3, 4, 5],
+      "payoutPercentByDifficulty": [200, 200, 200, 200, 200]
+    },
+    {
+      "id": "referee_blind",
+      "kind": "RefereeBlind",
+      "name": { "es": "El árbitro no se entera", "en": "The Ref Sees Nothing" },
+      "condition": {
+        "es": "Ganas con tres o más faltas tuyas que el árbitro no señala. Con árbitro en el campo: en la turba no cuenta.",
+        "en": "You win with three or more of your fouls the referee doesn't call. With the referee on the pitch: the mob doesn't count."
+      },
+      "stakeByAct": [3, 4, 5],
+      "payoutPercentByDifficulty": [200, 200, 200, 200, 200]
+    }
+  ]
+}

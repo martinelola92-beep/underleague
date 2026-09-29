@@ -1,0 +1,59 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://underleague.dev/schemas/bets.schema.json",
+  "title": "Underleague bets",
+  "description": "data/bets/bets.json: catálogo de apuestas del vestuario (ADR 0157, RF-114h, RF-114i), único fichero. Cargado por Sim.Run.Systems.Bets.BetLoader, fuera del Catalog compartido.",
+  "type": "object",
+  "properties": {
+    "_doc": { "type": "string" },
+    "bets": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/bet" },
+      "minItems": 1
+    }
+  },
+  "required": ["bets"],
+  "additionalProperties": false,
+  "$defs": {
+    "bet": {
+      "type": "object",
+      "properties": {
+        "_doc": { "type": "string" },
+        "id": { "type": "string", "pattern": "^[a-z][a-z0-9_]*$" },
+        "kind": {
+          "enum": [
+            "BloodBeforeGoals", "HuntTheStar", "EyeForEye", "Comeback", "IntoTheMob", "CleanHands",
+            "Thrashing", "ThreeNames", "YouthDecides", "ShortAndClean", "RefereeBlind"
+          ]
+        },
+        "name": { "$ref": "#/$defs/localizedText" },
+        "condition": { "$ref": "#/$defs/localizedText" },
+        "stakeByAct": {
+          "description": "Apuesta fija en oro de los actos 1, 2 y 3 (ADR 0157, punto 2). Provisional, sin medir (Regla H).",
+          "type": "array",
+          "items": { "type": "integer", "minimum": 1 },
+          "minItems": 3,
+          "maxItems": 3
+        },
+        "payoutPercentByDifficulty": {
+          "description": "Cobro BRUTO (incluye la apuesta) como porcentaje de la apuesta, un valor por distintivo de dificultad 1..5 (RF-012). Sale de 85 / p del censo; mínimo 100 (nunca menos de lo apostado), tope 2000.",
+          "type": "array",
+          "items": { "type": "integer", "minimum": 100, "maximum": 2000 },
+          "minItems": 5,
+          "maxItems": 5
+        }
+      },
+      "required": ["id", "kind", "name", "condition", "stakeByAct", "payoutPercentByDifficulty"],
+      "additionalProperties": false
+    },
+    "localizedText": {
+      "type": "object",
+      "properties": {
+        "es": { "type": "string", "minLength": 1 },
+        "en": { "type": "string", "minLength": 1 }
+      },
+      "required": ["es", "en"],
+      "additionalProperties": false
+    }
+  }
+}
