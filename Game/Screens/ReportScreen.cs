@@ -314,12 +314,6 @@ public partial class ReportScreen : Control
                 UiText.Get("ui.report.goldDifficulty", gold.Difficulty, gold.DifficultyPercent),
                 "= " + Amount(gold.AfterDifficulty));
             y = Row(y, UiText.Get("ui.report.goldNode", UiText.Get("ui.kind." + gold.NodeKind), gold.NodeBonusPercent), "+ " + Amount(gold.NodeBonus));
-            y = Row(
-                y,
-                UiText.Get(
-                    gold.ObjectiveMet ? "ui.report.goldObjective" : "ui.report.goldObjectiveFailed",
-                    UiText.Get("ui.objective." + gold.Objective)),
-                "+ " + Amount(gold.ObjectiveBonus));
             y += 6f;
             y = Row(y, UiText.Get("ui.report.goldTotal"), Amount(gold.Total), Style.Accent);
         }
