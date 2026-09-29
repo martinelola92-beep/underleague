@@ -1,20 +1,21 @@
 {
   "_doc": "Paquete AL (ADR 0059 punto 4): la capa de build del rival ordinario baja de 2/7/9 a 2/1/2 perks por plantilla. Se conserva SIEMPRE el perk letal (RF-012c, ADR 0048) -quitarlo hundia deathsPerRun de 1,44 a 0,55, medido- y una pieza de la linea que da identidad al rival. Los maestros (killing_range, granite_line, blood_tithe) salen: sin su linea detras no cumplen su requiresPerks y no serian legibles. ",
   "id": "act2_dwarf_shieldwall",
+  "clanId": "bastion",
   "name": {
-    "es": "Muralla de Escudos",
-    "en": "Shieldwall"
+    "es": "Bastión de Granito",
+    "en": "Granite Bastion"
   },
   "description": {
-    "es": "La misma muralla de siempre, pero ahora también sabe pegar: defienden el área a base de nudillos.",
-    "en": "The same old wall, now with a mean streak: they defend the box with their knuckles."
+    "es": "Los de Bastión de Granito, ahora con más años y peor carácter: han aprendido que la muralla también puede pegar.",
+    "en": "The Granite Bastion lads, older and meaner now: they have learned a wall can hit back too."
   },
   "race": "Dwarf",
   "act": 2,
   "difficulty": 4,
   "players": [
     {
-      "name": "Eldrin Golpefrío",
+      "name": "Borin Yunquefirme",
       "position": "Goalkeeper",
       "rarity": "common",
       "level": 3,
@@ -31,7 +32,7 @@
       ]
     },
     {
-      "name": "Fendrel Barbahierro",
+      "name": "Dagnar Escudopétreo",
       "position": "Defender",
       "rarity": "uncommon",
       "level": 3,
@@ -48,7 +49,7 @@
       ]
     },
     {
-      "name": "Grimnir Cavaprofundo",
+      "name": "Eldrin Golpefrío",
       "position": "Defender",
       "rarity": "uncommon",
       "level": 3,
@@ -68,6 +69,32 @@
       ]
     },
     {
+      "name": "Fendrel Barbahierro",
+      "position": "Midfielder",
+      "rarity": "common",
+      "level": 3,
+      "attributes": {
+        "strength": 64,
+        "speed": 49,
+        "technique": 52,
+        "stamina": 80,
+        "leash": 59
+      }
+    },
+    {
+      "name": "Grimnir Cavaprofundo",
+      "position": "Midfielder",
+      "rarity": "common",
+      "level": 3,
+      "attributes": {
+        "strength": 64,
+        "speed": 49,
+        "technique": 52,
+        "stamina": 80,
+        "leash": 59
+      }
+    },
+    {
       "name": "Hjalmar Vetaoro",
       "position": "Midfielder",
       "rarity": "common",
@@ -82,32 +109,6 @@
     },
     {
       "name": "Ivarr Forjagrís",
-      "position": "Midfielder",
-      "rarity": "common",
-      "level": 3,
-      "attributes": {
-        "strength": 64,
-        "speed": 49,
-        "technique": 52,
-        "stamina": 80,
-        "leash": 59
-      }
-    },
-    {
-      "name": "Joric Puñoroca",
-      "position": "Midfielder",
-      "rarity": "common",
-      "level": 3,
-      "attributes": {
-        "strength": 64,
-        "speed": 49,
-        "technique": 52,
-        "stamina": 80,
-        "leash": 59
-      }
-    },
-    {
-      "name": "Kordan Martillonegro",
       "position": "Forward",
       "rarity": "common",
       "level": 3,
@@ -124,7 +125,7 @@
       ]
     },
     {
-      "name": "Loric Tallapiedra",
+      "name": "Joric Puñoroca",
       "position": "Defender",
       "rarity": "common",
       "level": 3,
@@ -138,7 +139,7 @@
       "styleTag": "Bulwark"
     },
     {
-      "name": "Magnus Yunquefirme",
+      "name": "Kordan Martillonegro",
       "position": "Midfielder",
       "rarity": "common",
       "level": 3,
@@ -151,7 +152,7 @@
       }
     },
     {
-      "name": "Norin Escudopétreo",
+      "name": "Loric Tallapiedra",
       "position": "Forward",
       "rarity": "common",
       "level": 3,

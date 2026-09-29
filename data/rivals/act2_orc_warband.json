@@ -1,20 +1,21 @@
 {
   "_doc": "Paquete AL (ADR 0059 punto 4): la capa de build del rival ordinario baja de 2/7/9 a 2/1/2 perks por plantilla. Se conserva SIEMPRE el perk letal (RF-012c, ADR 0048) -quitarlo hundia deathsPerRun de 1,44 a 0,55, medido- y una pieza de la linea que da identidad al rival. Los maestros (killing_range, granite_line, blood_tithe) salen: sin su linea detras no cumplen su requiresPerks y no serian legibles. ",
   "id": "act2_orc_warband",
+  "clanId": "ironclad",
   "name": {
-    "es": "Horda de Colmillo Rojo",
-    "en": "Red Fang Horde"
+    "es": "Yunque Verde",
+    "en": "Green Anvil"
   },
   "description": {
-    "es": "Una horda que juega mejor cuantos menos árbitros quedan ya en el campo.",
-    "en": "A horde that plays better the fewer referees are still on the pitch."
+    "es": "Yunque Verde salió de la fragua con ganas de más: los mismos orcos, más grandes, y cada vez menos árbitros que los frenen.",
+    "en": "Green Anvil left the forge hungry for more: the same orcs, bigger, and fewer referees each week to stop them."
   },
   "race": "Orc",
   "act": 2,
   "difficulty": 3,
   "players": [
     {
-      "name": "Bolg Comecráneos",
+      "name": "Grok Comecráneos",
       "position": "Goalkeeper",
       "rarity": "common",
       "level": 3,
@@ -27,7 +28,7 @@
       }
     },
     {
-      "name": "Gashk Tragaclavos",
+      "name": "Urzag Tragaclavos",
       "position": "Defender",
       "rarity": "uncommon",
       "level": 3,
@@ -44,7 +45,7 @@
       ]
     },
     {
-      "name": "Ruk Muerdehierro",
+      "name": "Morg Muerdehierro",
       "position": "Defender",
       "rarity": "common",
       "level": 3,
@@ -58,7 +59,7 @@
       "styleTag": "Brute"
     },
     {
-      "name": "Zog Quiebraespinas",
+      "name": "Thrak Quiebraespinas",
       "position": "Midfielder",
       "rarity": "common",
       "level": 3,
@@ -72,7 +73,7 @@
       "styleTag": "Brute"
     },
     {
-      "name": "Drog Comecráneos",
+      "name": "Bolg Comecráneos",
       "position": "Midfielder",
       "rarity": "common",
       "level": 3,
@@ -86,7 +87,7 @@
       "styleTag": "Brute"
     },
     {
-      "name": "Krum Tragaclavos",
+      "name": "Gashk Tragaclavos",
       "position": "Midfielder",
       "rarity": "common",
       "level": 3,
@@ -99,7 +100,7 @@
       }
     },
     {
-      "name": "Snaga Muerdehierro",
+      "name": "Ruk Muerdehierro",
       "position": "Forward",
       "rarity": "uncommon",
       "level": 3,
@@ -119,7 +120,7 @@
       ]
     },
     {
-      "name": "Urk Quiebraespinas",
+      "name": "Zog Quiebraespinas",
       "position": "Defender",
       "rarity": "common",
       "level": 3,
@@ -132,7 +133,7 @@
       }
     },
     {
-      "name": "Ghash Comecráneos",
+      "name": "Drog Comecráneos",
       "position": "Midfielder",
       "rarity": "common",
       "level": 3,
@@ -145,7 +146,7 @@
       }
     },
     {
-      "name": "Lurtz Tragaclavos",
+      "name": "Krum Tragaclavos",
       "position": "Forward",
       "rarity": "common",
       "level": 3,

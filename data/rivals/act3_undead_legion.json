@@ -1,20 +1,21 @@
 {
   "_doc": "Paquete AL (ADR 0059 punto 4): la capa de build del rival ordinario baja de 2/7/9 a 2/1/2 perks por plantilla. Se conserva SIEMPRE el perk letal (RF-012c, ADR 0048) -quitarlo hundia deathsPerRun de 1,44 a 0,55, medido- y una pieza de la linea que da identidad al rival. Los maestros (killing_range, granite_line, blood_tithe) salen: sin su linea detras no cumplen su requiresPerks y no serian legibles. ",
   "id": "act3_undead_legion",
+  "clanId": "graveshift",
   "name": {
-    "es": "Legión Eterna",
-    "en": "Eternal Legion"
+    "es": "Turno de Ultratumba",
+    "en": "Graveshift"
   },
   "description": {
-    "es": "Cuantos más caen, más siguen viniendo: este partido no se gana, se sobrevive.",
-    "en": "However many fall, more keep coming: this match isn't won, it's survived."
+    "es": "Turno de Ultratumba, hecho legión: cuantos más caen, más siguen viniendo. Este partido no se gana, se sobrevive.",
+    "en": "Graveshift, become a legion: however many fall, more keep coming. This match isn't won, it's survived."
   },
   "race": "Undead",
   "act": 3,
   "difficulty": 5,
   "players": [
     {
-      "name": "Malric Nochehueca",
+      "name": "Vex Vozmuerta",
       "position": "Goalkeeper",
       "rarity": "uncommon",
       "level": 5,
@@ -31,7 +32,7 @@
       ]
     },
     {
-      "name": "Sever Cripta",
+      "name": "Orin Polvorento",
       "position": "Defender",
       "rarity": "common",
       "level": 5,
@@ -40,68 +41,68 @@
         "speed": 59,
         "technique": 62,
         "stamina": 93,
+        "leash": 72
+      },
+      "styleTag": "Cold"
+    },
+    {
+      "name": "Cael Huesoseco",
+      "position": "Defender",
+      "rarity": "common",
+      "level": 5,
+      "attributes": {
+        "strength": 85,
+        "speed": 59,
+        "technique": 62,
+        "stamina": 93,
+        "leash": 72
+      },
+      "styleTag": "Cold"
+    },
+    {
+      "name": "Draven Tumbafría",
+      "position": "Midfielder",
+      "rarity": "common",
+      "level": 5,
+      "attributes": {
+        "strength": 75,
+        "speed": 62,
+        "technique": 75,
+        "stamina": 95,
+        "leash": 72
+      },
+      "styleTag": "Cold"
+    },
+    {
+      "name": "Malric Nochehueca",
+      "position": "Midfielder",
+      "rarity": "common",
+      "level": 5,
+      "attributes": {
+        "strength": 75,
+        "speed": 62,
+        "technique": 75,
+        "stamina": 95,
+        "leash": 72
+      },
+      "styleTag": "Cold"
+    },
+    {
+      "name": "Sever Cripta",
+      "position": "Midfielder",
+      "rarity": "common",
+      "level": 5,
+      "attributes": {
+        "strength": 75,
+        "speed": 62,
+        "technique": 75,
+        "stamina": 95,
         "leash": 72
       },
       "styleTag": "Cold"
     },
     {
       "name": "Thane Cenizagrís",
-      "position": "Defender",
-      "rarity": "common",
-      "level": 5,
-      "attributes": {
-        "strength": 85,
-        "speed": 59,
-        "technique": 62,
-        "stamina": 93,
-        "leash": 72
-      },
-      "styleTag": "Cold"
-    },
-    {
-      "name": "Cyrus Osamenta",
-      "position": "Midfielder",
-      "rarity": "common",
-      "level": 5,
-      "attributes": {
-        "strength": 75,
-        "speed": 62,
-        "technique": 75,
-        "stamina": 95,
-        "leash": 72
-      },
-      "styleTag": "Cold"
-    },
-    {
-      "name": "Doran Sudariofrío",
-      "position": "Midfielder",
-      "rarity": "common",
-      "level": 5,
-      "attributes": {
-        "strength": 75,
-        "speed": 62,
-        "technique": 75,
-        "stamina": 95,
-        "leash": 72
-      },
-      "styleTag": "Cold"
-    },
-    {
-      "name": "Ezren Sinaliento",
-      "position": "Midfielder",
-      "rarity": "common",
-      "level": 5,
-      "attributes": {
-        "strength": 75,
-        "speed": 62,
-        "technique": 75,
-        "stamina": 95,
-        "leash": 72
-      },
-      "styleTag": "Cold"
-    },
-    {
-      "name": "Grimm Vozmuerta",
       "position": "Forward",
       "rarity": "common",
       "level": 5,
@@ -122,7 +123,7 @@
       ]
     },
     {
-      "name": "Ilan Polvorento",
+      "name": "Cyrus Osamenta",
       "position": "Defender",
       "rarity": "common",
       "level": 5,
@@ -135,7 +136,7 @@
       }
     },
     {
-      "name": "Kessel Huesoseco",
+      "name": "Doran Sudariofrío",
       "position": "Midfielder",
       "rarity": "common",
       "level": 5,
@@ -148,7 +149,7 @@
       }
     },
     {
-      "name": "Loth Tumbafría",
+      "name": "Ezren Sinaliento",
       "position": "Forward",
       "rarity": "rare",
       "level": 5,

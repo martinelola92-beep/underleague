@@ -1,20 +1,21 @@
 {
   "_doc": "Paquete AL (ADR 0059 punto 4): la capa de build del rival ordinario baja de 2/7/9 a 2/1/2 perks por plantilla. Se conserva SIEMPRE el perk letal (RF-012c, ADR 0048) -quitarlo hundia deathsPerRun de 1,44 a 0,55, medido- y una pieza de la linea que da identidad al rival. Los maestros (killing_range, granite_line, blood_tithe) salen: sin su linea detras no cumplen su requiresPerks y no serian legibles. ",
   "id": "act3_human_allstars",
+  "clanId": "academy",
   "name": {
-    "es": "Selección de Puerto Claro",
-    "en": "Clearport All-Stars"
+    "es": "Academia Meridiana",
+    "en": "Meridian Academy"
   },
   "description": {
-    "es": "Lo mejor de cada casa de Puerto Claro en un once sin un solo hueco que explotar.",
-    "en": "The best of every Clearport side in one XI with no gap left to exploit."
+    "es": "La Academia Meridiana, hecha selección: los mismos nombres de aquella aula, ahora en un once sin un solo hueco que explotar.",
+    "en": "Meridian Academy, turned national side: the same names from that classroom, now in an XI with no gap to exploit."
   },
   "race": "Human",
   "act": 3,
   "difficulty": 5,
   "players": [
     {
-      "name": "Fabio Rubio",
+      "name": "Bruno Esteve",
       "position": "Goalkeeper",
       "rarity": "common",
       "level": 5,
@@ -27,7 +28,7 @@
       }
     },
     {
-      "name": "Gino Ureña",
+      "name": "Ciro Haro",
       "position": "Defender",
       "rarity": "common",
       "level": 5,
@@ -40,7 +41,7 @@
       }
     },
     {
-      "name": "Hugo Zamora",
+      "name": "Dario Lara",
       "position": "Defender",
       "rarity": "common",
       "level": 5,
@@ -53,7 +54,7 @@
       }
     },
     {
-      "name": "Ivo Cano",
+      "name": "Elio Ortiz",
       "position": "Midfielder",
       "rarity": "rare",
       "level": 5,
@@ -72,7 +73,7 @@
       ]
     },
     {
-      "name": "Jano Ferrer",
+      "name": "Fabio Rubio",
       "position": "Midfielder",
       "rarity": "common",
       "level": 5,
@@ -85,7 +86,7 @@
       }
     },
     {
-      "name": "Lino Ibarra",
+      "name": "Gino Ureña",
       "position": "Midfielder",
       "rarity": "common",
       "level": 5,
@@ -98,7 +99,7 @@
       }
     },
     {
-      "name": "Marco Mora",
+      "name": "Hugo Zamora",
       "position": "Forward",
       "rarity": "uncommon",
       "level": 5,
@@ -118,7 +119,7 @@
       ]
     },
     {
-      "name": "Nilo Prieto",
+      "name": "Ivo Cano",
       "position": "Defender",
       "rarity": "common",
       "level": 5,
@@ -131,7 +132,7 @@
       }
     },
     {
-      "name": "Otto Soler",
+      "name": "Jano Ferrer",
       "position": "Midfielder",
       "rarity": "common",
       "level": 5,
@@ -144,7 +145,7 @@
       }
     },
     {
-      "name": "Pino Vidal",
+      "name": "Lino Ibarra",
       "position": "Forward",
       "rarity": "common",
       "level": 5,
