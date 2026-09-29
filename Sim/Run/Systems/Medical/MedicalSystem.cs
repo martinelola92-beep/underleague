@@ -271,19 +271,19 @@ public static class MedicalSystem
     /// <summary>Desplazamiento de <see cref="OfferStream"/> del herrero; se le suma el id del jugador (tabla en <see cref="OfferStream"/>).</summary>
     public const int BlacksmithStreamBase = 9000;
 
-    /// <summary>Prótesis que hacen falta para que el jugador deje de ser de su especie y pase a ser <c>Automaton</c> (RF-095c).</summary>
+    /// <summary>Prótesis que hacen falta para que el jugador gane la etiqueta <c>Automaton</c> (RF-095c).</summary>
     public const int ProsthesesForAutomaton = 3;
 
     /// <summary>Etiqueta de un jugador con alguna prótesis (ADR 0164).</summary>
     public const string ScrapTag = "Scrap";
 
-    /// <summary>Etiqueta que sustituye a la de especie con tres prótesis (RF-095c).</summary>
+    /// <summary>Etiqueta que se suma a la de especie con tres prótesis (RF-095c enmendada).</summary>
     public const string AutomatonTag = "Automaton";
 
     /// <summary>
     /// Instala <paramref name="prosthesis"/>: efecto sobre los atributos (permanente, 1..99), ranura registrada
-    /// en <see cref="RunPlayer.Prostheses"/>, etiqueta <see cref="ScrapTag"/> y, a la tercera, especie
-    /// sustituida por <see cref="AutomatonTag"/>.
+    /// en <see cref="RunPlayer.Prostheses"/>, etiqueta <see cref="ScrapTag"/> y, a la tercera, además la etiqueta
+    /// <see cref="AutomatonTag"/> (la especie se conserva).
     /// </summary>
     public static RunPlayer Install(RunPlayer player, ProsthesisDefinition prosthesis)
     {
@@ -296,22 +296,13 @@ public static class MedicalSystem
             tags.Add(ScrapTag);
         }
 
-        string species = player.SpeciesTag;
-        if (installed.Count >= ProsthesesForAutomaton && species != AutomatonTag)
+        if (installed.Count >= ProsthesesForAutomaton && !tags.Contains(AutomatonTag))
         {
-            // RF-095c. La etiqueta de especie la consumen los perks raciales (`perk.race`, EffectEngine y
-            // Scouting exigen HasTag(raza)): sin ella, la habilidad racial deja de surtir efecto. Es el coste.
-            int at = species.Length > 0 ? tags.IndexOf(species) : -1;
-            if (at >= 0)
-            {
-                tags[at] = AutomatonTag;
-            }
-            else if (!tags.Contains(AutomatonTag))
-            {
-                tags.Add(AutomatonTag);
-            }
-
-            species = AutomatonTag;
+            // RF-095c enmendada (ADR 0164): la tercera prótesis GANA `Automaton` y CONSERVA la etiqueta de
+            // especie. Perderla apagaría perks raciales y objetos restringidos en silencio, y hacía reventar
+            // `Simulator.ValidatePerks` (un perk con `tagsRequired` de su especie). La pérdida de especie se
+            // aplaza hasta que exista la familia de perks de autómata que la compense.
+            tags.Add(AutomatonTag);
         }
 
         return player with
@@ -319,7 +310,6 @@ public static class MedicalSystem
             Attributes = prosthesis.ApplyTo(player.Attributes),
             Prostheses = installed,
             Tags = tags,
-            SpeciesTag = species,
         };
     }
 

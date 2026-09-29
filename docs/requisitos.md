@@ -317,7 +317,7 @@ SUSTITUCION         CONSUMIBLE_USADO
   - **Mejora**: se instala una prótesis con ventaja (atributo o correa) y la etiqueta `Chatarra`.
   - **Empeoramiento**: se instala una prótesis con desventaja y la etiqueta `Chatarra`.
 - **RF-095b** El jugador puede **invertir oro adicional** para desplazar las probabilidades hacia los resultados favorables, con rendimiento decreciente. La apuesta sigue siendo apuesta, pero el jugador la asume conociendo las cifras exactas (RF-012d).
-- **RF-095c** Con 3 prótesis el jugador pierde su etiqueta racial y adquiere `Autómata`, habilitando una familia de perks distinta.
+- **RF-095c** Con 3 prótesis el jugador **gana** la etiqueta `Autómata` y **conserva** su etiqueta de especie (enmienda ADR 0164, 29 sep 2026): perderla apagaba en silencio los objetos restringidos y los perks exclusivos de raza con `tagsRequired`, y hacía fallar la validación del partido. La pérdida de especie se aplaza hasta que exista la familia de perks de autómata que la compense; `Autómata` habilitará esa familia.
 - **RF-096** **Resurrección**: disponible mediante perk, objeto o consumible de la familia sobrenatural. El jugador resucitado vuelve con el nivel máximo reducido en 2 y la etiqueta `Descompuesto`, que aplica una penalización creciente por cada partido posterior.
 - **RF-097** El estado físico persiste entre partidos dentro de la run y se muestra siempre en la pantalla de plantilla.
 

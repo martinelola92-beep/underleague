@@ -261,7 +261,7 @@ public sealed class BlacksmithTests
     }
 
     [Fact]
-    public void ThreeProsthesesTradeTheSpeciesTagForAutomaton()
+    public void ThreeProsthesesAddAutomatonAndKeepTheSpeciesTag()
     {
         var (state, patient) = ClinicWithSevere(11);
         string species = patient.SpeciesTag;
@@ -279,9 +279,9 @@ public sealed class BlacksmithTests
             }
         }
 
-        Assert.Equal(MedicalSystem.AutomatonTag, player.SpeciesTag);
+        Assert.Equal(species, player.SpeciesTag);
+        Assert.Contains(species, player.Tags);
         Assert.Contains(MedicalSystem.AutomatonTag, player.Tags);
-        Assert.DoesNotContain(species, player.Tags);
         Assert.Contains(MedicalSystem.ScrapTag, player.Tags);
         Assert.Equal(3, player.Prostheses.Count);
         Assert.True(player.ToDefinition(SystemsTestSupport.Catalog).HasTag(MedicalSystem.AutomatonTag));

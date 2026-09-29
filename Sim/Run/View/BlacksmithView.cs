@@ -18,7 +18,7 @@ namespace Underleague.Sim.Run.View;
 /// <param name="Affordable">True si la run tiene el oro.</param>
 /// <param name="FreeSlots">Ranuras del cuerpo que siguen libres.</param>
 /// <param name="ProsthesesNow">Prótesis que ya lleva el jugador.</param>
-/// <param name="NextMakesAutomaton">True si una prótesis nueva sería la tercera y le quitaría su especie (RF-095c).</param>
+/// <param name="NextMakesAutomaton">True si una prótesis nueva sería la tercera y le daría la etiqueta Automaton (RF-095c enmendada: conserva su especie).</param>
 public sealed record BlacksmithQuote(
     int PlayerId,
     int ExtraGold,
@@ -51,7 +51,7 @@ public enum BlacksmithOutcomeKind
     Worsened,
 }
 
-/// <summary>Resultado del herrero: la clase, la prótesis instalada y si el jugador ha dejado de ser de su especie.</summary>
+/// <summary>Resultado del herrero: la clase, la prótesis instalada y si el jugador acaba de ganar la etiqueta Automaton.</summary>
 public sealed record BlacksmithResult(
     BlacksmithOutcomeKind Kind,
     ProsthesisDefinition? Prosthesis,
@@ -86,7 +86,7 @@ public static class BlacksmithView
             state.Gold >= basePrice + extraGold,
             free,
             player.Prostheses.Count,
-            player.Prostheses.Count + 1 >= MedicalSystem.ProsthesesForAutomaton && player.SpeciesTag != MedicalSystem.AutomatonTag);
+            player.Prostheses.Count + 1 >= MedicalSystem.ProsthesesForAutomaton && !player.Tags.Contains(MedicalSystem.AutomatonTag));
     }
 
     /// <summary>Todas las cotizaciones posibles de un jugador, de 0 al tope de oro extra: la tabla que enseña la clínica paso a paso.</summary>
@@ -121,6 +121,6 @@ public static class BlacksmithView
         return new BlacksmithResult(
             installed.Kind == ProsthesisKind.Improve ? BlacksmithOutcomeKind.Improved : BlacksmithOutcomeKind.Worsened,
             installed,
-            before.SpeciesTag != MedicalSystem.AutomatonTag && after.SpeciesTag == MedicalSystem.AutomatonTag);
+            !before.Tags.Contains(MedicalSystem.AutomatonTag) && after.Tags.Contains(MedicalSystem.AutomatonTag));
     }
 }
