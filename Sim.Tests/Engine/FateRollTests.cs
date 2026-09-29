@@ -7,7 +7,7 @@ namespace Underleague.Sim.Tests.Engine;
 /// <summary>
 /// ADR 0171, la tirada del destino: el motor anuncia con <c>FATE_ROLL</c> la probabilidad real de las
 /// tiradas graves o letales, salvadas incluidas, sin cambiar un solo dado (RT-021/RT-024) y sin volverse
-/// una pausa en cada partido (RF-012d, ver el umbral <see cref="MatchEngine.FateRollMinBasisPoints"/>).
+/// una pausa en cada partido (RF-012d, ver el umbral <see cref="MatchEngine.FateRollMinSevereBasisPoints"/>).
 /// </summary>
 public sealed class FateRollTests
 {
@@ -17,13 +17,20 @@ public sealed class FateRollTests
     private static MatchResult Run(ulong seed) =>
         Simulator.Run(TestMatches.Reference(Catalog, seed), seed, Catalog, SimConfig.Default);
 
+    /// <summary>
+    /// Desgaste de acto tardío (ADR 0043) forzado al ×6: en un partido suelto ninguna lesión grave llega al
+    /// umbral (medido: ~1,4 % en el peor emparejamiento), así que para ver los sucesos hay que subir la escala.
+    /// </summary>
+    private static MatchResult RunBrutal(ulong seed) =>
+        Simulator.Run(TestMatches.Brutal(Catalog), seed, Catalog, SimConfig.Default with { InjuryScalePercent = 600 });
+
     [Fact]
     public void EveryFateRollThatHitIsFollowedByItsInjuryOrDeathInTheSameTick()
     {
         int hits = 0;
         for (ulong seed = 1; seed <= Seeds; seed++)
         {
-            var events = Run(seed).Events;
+            var events = RunBrutal(seed).Events;
             for (int i = 0; i < events.Count; i++)
             {
                 var roll = events[i];
@@ -47,11 +54,13 @@ public sealed class FateRollTests
         int saved = 0;
         for (ulong seed = 1; seed <= Seeds; seed++)
         {
-            foreach (var roll in Run(seed).Events.Where(e => e.Type == EventType.FateRoll))
+            foreach (var roll in RunBrutal(seed).Events.Where(e => e.Type == EventType.FateRoll))
             {
                 var parts = roll.Detail.Split(':');
                 Assert.Equal(3, parts.Length);
-                Assert.True(int.Parse(parts[1]) >= MatchEngine.FateRollMinBasisPoints);
+                Assert.True(int.Parse(parts[1]) >= (parts[0] == "death"
+                    ? MatchEngine.FateRollMinDeathBasisPoints
+                    : MatchEngine.FateRollMinSevereBasisPoints));
                 Assert.Contains(parts[0], new[] { "severe", "death" });
                 Assert.Contains(parts[2], new[] { "hit", "saved" });
                 if (parts[2] == "saved")
@@ -76,8 +85,8 @@ public sealed class FateRollTests
             severe += rolls.Count(e => e.Detail.StartsWith("severe", StringComparison.Ordinal));
         }
 
-        // Los dos equipos juntos: los propios son aproximadamente la mitad. Tope: ~1 por partido (encargo).
-        Assert.True(total <= Seeds, $"{total} tiradas del destino en {Seeds} partidos: hay que subir el umbral");
-        File.WriteAllText(Path.Combine(Path.GetTempPath(), "fate-frequency.txt"), $"{total} en {Seeds} partidos ({severe} graves)\n");
+        // Partido de referencia, los dos equipos juntos: tope de ~1 por partido (encargo, ADR 0171). La medida
+        // que manda es la de la run completa (columna fateMoments de runs.csv), que es la que juega el jugador.
+        Assert.True(total <= Seeds, $"{total} tiradas del destino ({severe} graves) en {Seeds} partidos: hay que subir el umbral");
     }
 }

@@ -4709,8 +4709,15 @@ internal sealed class MatchEngine : IPerkWorld
     /// ADR 0171: por debajo de este umbral (en base 10.000) una tirada de lesión no es «del destino»: es una
     /// entrada corriente y no se anuncia. Es una constante de presentación, no de balance: no cambia ninguna
     /// probabilidad ni consume dados, sólo decide qué tiradas dejan un evento <c>FATE_ROLL</c>.
+    /// <para>Dos umbrales porque la muerte tiene muchas más tiradas altas que la lesión grave (cada entrada
+    /// sobre un jugador que salió herido es una): 8 % para la grave y 15 % para la muerte. Medidos en 90 runs
+    /// automáticas, ver ADR 0171 «Frecuencia»: con 4 % y 8 % para todo salían 1,17 y 0,82 momentos propios por
+    /// partido, por encima del tope de ~1 por partido del encargo, y la mayoría eran de muerte.</para>
     /// </summary>
-    internal const int FateRollMinBasisPoints = 400;
+    internal const int FateRollMinSevereBasisPoints = 800;
+
+    /// <summary>Umbral de las tiradas de muerte (ver <see cref="FateRollMinSevereBasisPoints"/>).</summary>
+    internal const int FateRollMinDeathBasisPoints = 1500;
 
     /// <summary>
     /// Lo que está en juego si la lesión cae: el jugador alineado con una lesión grave sin tratar muere
@@ -4732,7 +4739,7 @@ internal sealed class MatchEngine : IPerkWorld
         long basisPoints = lethal
             ? injuryChance
             : (long)injuryChance * severeChance / 10000;
-        if (basisPoints < FateRollMinBasisPoints)
+        if (basisPoints < (lethal ? FateRollMinDeathBasisPoints : FateRollMinSevereBasisPoints))
         {
             return;
         }
@@ -6062,7 +6069,7 @@ internal sealed class MatchEngine : IPerkWorld
     /// <summary>ADR 0171: la tirada de un perk letal también es «del destino» (<c>FATE_ROLL</c>, <c>death:</c>).</summary>
     internal void AnnounceLethalRoll(MatchPlayer victim, MatchPlayer owner, int chance, bool hit)
     {
-        if (chance < FateRollMinBasisPoints)
+        if (chance < FateRollMinDeathBasisPoints)
         {
             return;
         }
