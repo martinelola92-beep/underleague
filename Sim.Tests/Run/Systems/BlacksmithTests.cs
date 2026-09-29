@@ -53,7 +53,7 @@ public sealed class BlacksmithTests
     public void LoaderRejectsAnImprovementThatSubtracts()
     {
         string content = TestData.LoadAllFiles()["prostheses/prostheses.json"]
-            .Replace("\"delta\": 11", "\"delta\": -11");
+            .Replace("\"delta\": 8", "\"delta\": -8");
         var files = new Dictionary<string, string> { ["prostheses/prostheses.json"] = content };
         var ex = Assert.Throws<DataException>(() => ProsthesisLoader.FromJson(files));
         Assert.Equal("prostheses/prostheses.json", ex.File);
@@ -290,6 +290,43 @@ public sealed class BlacksmithTests
         var two = MedicalSystem.Install(MedicalSystem.Install(patient, Prostheses.Find("iron_arm")!), Prostheses.Find("peg_leg")!);
         Assert.True(BlacksmithView.Quote(state.WithPlayer(two), Economy, Prostheses, patient.Id, 0).NextMakesAutomaton);
         Assert.False(BlacksmithView.Quote(state, Economy, Prostheses, patient.Id, 0).NextMakesAutomaton);
+    }
+
+    [Fact]
+    public void TheBlacksmithIsAGambleNotAFreeUpgrade()
+    {
+        // Decisión del coordinador tras la revisión independiente: sin oro extra la esperanza de atributos de la
+        // tirada es ligeramente negativa y solo con oro extra se vuelve positiva; si no, el herrero domina al médico.
+        double improve = Prostheses.All.Where(p => p.Kind == ProsthesisKind.Improve).Average(p => p.Delta);
+        double worsen = Prostheses.All.Where(p => p.Kind == ProsthesisKind.Worsen).Average(p => p.Delta);
+        Assert.True(improve > 0 && worsen < 0 && improve < -worsen, "las mejoras valen menos que los empeoramientos");
+        double Expected(int extra)
+        {
+            var odds = MedicalSystem.BlacksmithOddsFor(Economy, extra);
+            return ((odds.ImprovePercent * improve) + (odds.WorsenPercent * worsen)) / 100.0;
+        }
+
+        Assert.InRange(Expected(0), -3.0, -0.1);
+        Assert.True(Expected(Economy.Blacksmith.MaxExtraGold) > 0);
+        Assert.True(Expected(Economy.Blacksmith.MaxExtraGold) > Expected(1));
+    }
+
+    [Fact]
+    public void TheQuoteShowsTheRangesAndAttributesForTheFreeSlots()
+    {
+        var (state, patient) = ClinicWithSevere(3);
+        var all = BlacksmithView.Quote(state, Economy, Prostheses, patient.Id, 0);
+        Assert.NotNull(all.ImproveRange);
+        Assert.NotNull(all.WorsenRange);
+        Assert.Equal(Prostheses.All.Where(p => p.Kind == ProsthesisKind.Improve).Min(p => p.Delta), all.ImproveRange!.MinDelta);
+        Assert.Equal(Prostheses.All.Where(p => p.Kind == ProsthesisKind.Improve).Max(p => p.Delta), all.ImproveRange.MaxDelta);
+        Assert.Equal(Prostheses.All.Where(p => p.Kind == ProsthesisKind.Worsen).Min(p => p.Delta), all.WorsenRange!.MaxDelta);
+
+        // Con todas las ranuras ocupadas salvo 'arm', solo puede salir Fuerza.
+        var occupied = Prostheses.Slots.Where(s => s != "arm").Select(s => new RunProsthesis(s, "manual")).ToList();
+        var armOnly = BlacksmithView.Quote(state.WithPlayer(patient with { Prostheses = occupied }), Economy, Prostheses, patient.Id, 0);
+        Assert.Equal(new[] { AttributeKind.Strength }, armOnly.ImproveRange!.Attributes);
+        Assert.Equal(new[] { AttributeKind.Strength }, armOnly.WorsenRange!.Attributes);
     }
 
     [Fact]

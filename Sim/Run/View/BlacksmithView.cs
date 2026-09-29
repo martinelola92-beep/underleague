@@ -18,6 +18,8 @@ namespace Underleague.Sim.Run.View;
 /// <param name="Affordable">True si la run tiene el oro.</param>
 /// <param name="FreeSlots">Ranuras del cuerpo que siguen libres.</param>
 /// <param name="ProsthesesNow">Prótesis que ya lleva el jugador.</param>
+/// <param name="ImproveRange">Magnitudes y atributos posibles de una mejora con las ranuras libres de hoy; null si no hay ninguna.</param>
+/// <param name="WorsenRange">Magnitudes y atributos posibles de un empeoramiento con las ranuras libres de hoy; null si no hay ninguno.</param>
 /// <param name="NextMakesAutomaton">True si una prótesis nueva sería la tercera y le daría la etiqueta Automaton (RF-095c enmendada: conserva su especie).</param>
 public sealed record BlacksmithQuote(
     int PlayerId,
@@ -29,6 +31,8 @@ public sealed record BlacksmithQuote(
     bool Affordable,
     IReadOnlyList<string> FreeSlots,
     int ProsthesesNow,
+    ProsthesisRange? ImproveRange,
+    ProsthesisRange? WorsenRange,
     bool NextMakesAutomaton)
 {
     /// <summary>True si el herrero puede atender al jugador: le queda una ranura libre.</summary>
@@ -37,6 +41,13 @@ public sealed record BlacksmithQuote(
     /// <summary>True si <see cref="MedicalSystem.Forge"/> aceptaría esta decisión: hay oro y ranura libre.</summary>
     public bool CanConfirm => Affordable && HasFreeSlot;
 }
+
+/// <summary>
+/// Lo que puede salir de una clase de prótesis dadas las ranuras libres (RF-012d: la apuesta se conoce entera):
+/// el rango de magnitudes (<paramref name="MinDelta"/> el más cercano a cero, <paramref name="MaxDelta"/> el
+/// mayor en valor absoluto, con su signo) y los atributos que pueden verse afectados, sin repetir.
+/// </summary>
+public sealed record ProsthesisRange(int MinDelta, int MaxDelta, IReadOnlyList<AttributeKind> Attributes);
 
 /// <summary>Qué salió de la mesa del herrero, para anunciarlo (ADR 0164).</summary>
 public enum BlacksmithOutcomeKind
@@ -86,7 +97,22 @@ public static class BlacksmithView
             state.Gold >= basePrice + extraGold,
             free,
             player.Prostheses.Count,
+            RangeOf(prostheses.Candidates(ProsthesisKind.Improve, occupied)),
+            RangeOf(prostheses.Candidates(ProsthesisKind.Worsen, occupied)),
             player.Prostheses.Count + 1 >= MedicalSystem.ProsthesesForAutomaton && !player.Tags.Contains(MedicalSystem.AutomatonTag));
+    }
+
+    private static ProsthesisRange? RangeOf(IReadOnlyList<ProsthesisDefinition> candidates)
+    {
+        if (candidates.Count == 0)
+        {
+            return null;
+        }
+
+        int byMagnitudeMin = candidates.MinBy(p => Math.Abs(p.Delta))!.Delta;
+        int byMagnitudeMax = candidates.MaxBy(p => Math.Abs(p.Delta))!.Delta;
+        var attributes = candidates.Select(p => p.Attribute).Distinct().Order().ToList();
+        return new ProsthesisRange(byMagnitudeMin, byMagnitudeMax, attributes);
     }
 
     /// <summary>Todas las cotizaciones posibles de un jugador, de 0 al tope de oro extra: la tabla que enseña la clínica paso a paso.</summary>

@@ -20,8 +20,8 @@
   "clinicRiskyFailPercent": 30,
   "clinicRiskyWorsePercent": 12,
   "blacksmith": {
-    "_doc": "ADR 0164: el herrero de la clinica (RF-095, RF-095b), cuarto servicio para un jugador con lesion GRAVE. Todo PROVISIONAL, SIN MEDIR (Regla H). pricePercent es el % del precio del medico (clinicCost) que cuesta el servicio base (minimo 1): 60 % de 14 = 8. baseCurePercent + baseImprovePercent + baseWorsenPercent = 100: curacion (vuelve sano, sin protesis), mejora (protesis con ventaja y etiqueta Scrap) y empeoramiento (protesis con desventaja y etiqueta Scrap); nunca mata. shiftByExtraGold es el RENDIMIENTO DECRECIENTE de RF-095b: el oro extra n-esimo quita shiftByExtraGold[n-1] puntos al empeoramiento y los reparte entre curacion (cureSharePercent %) y mejora (el resto); su longitud es el TOPE de oro extra (maxExtraGold = 5) y el empeoramiento nunca baja de minWorsenPercent.",
-    "pricePercent": 60,
+    "_doc": "ADR 0164: el herrero de la clinica (RF-095, RF-095b), cuarto servicio para un jugador con lesion GRAVE. Todo PROVISIONAL, SIN MEDIR (Regla H). pricePercent es el % del precio del medico (clinicCost) que cuesta el servicio base (minimo 1): 75 % de 14 = 10. baseCurePercent + baseImprovePercent + baseWorsenPercent = 100: curacion (vuelve sano, sin protesis), mejora (protesis con ventaja y etiqueta Scrap) y empeoramiento (protesis con desventaja y etiqueta Scrap); nunca mata. shiftByExtraGold es el RENDIMIENTO DECRECIENTE de RF-095b: el oro extra n-esimo quita shiftByExtraGold[n-1] puntos al empeoramiento y los reparte entre curacion (cureSharePercent %) y mejora (el resto); su longitud es el TOPE de oro extra (maxExtraGold = 5) y el empeoramiento nunca baja de minWorsenPercent.",
+    "pricePercent": 75,
     "baseCurePercent": 30,
     "baseImprovePercent": 35,
     "baseWorsenPercent": 35,
