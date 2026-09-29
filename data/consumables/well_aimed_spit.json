@@ -1,0 +1,22 @@
+{
+  "_doc": "BA-H (catálogo, RF-084 sucios): cinismo de vestuario — más falta a cambio de que el árbitro se lo trague mejor. Común, techo 100.",
+  "id": "well_aimed_spit",
+  "name": {
+    "es": "Escupitajo certero",
+    "en": "Well-Aimed Spit"
+  },
+  "rarity": "common",
+  "family": "dirty",
+  "effects": [
+    {
+      "type": "modifyProbability",
+      "probability": "foul",
+      "value": 100
+    },
+    {
+      "type": "modifyProbability",
+      "probability": "card",
+      "value": -50
+    }
+  ]
+}

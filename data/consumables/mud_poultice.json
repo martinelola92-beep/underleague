@@ -1,0 +1,17 @@
+{
+  "_doc": "BA-H (catálogo, RF-084 médicos): protección de urgencia contra la lesión grave, hermana de field_bandage (que protege de la leve). Común, techo de rareza 100 (ADR 0058).",
+  "id": "mud_poultice",
+  "name": {
+    "es": "Emplasto de barro",
+    "en": "Mud Poultice"
+  },
+  "rarity": "common",
+  "family": "medical",
+  "effects": [
+    {
+      "type": "modifyProbability",
+      "probability": "severeInjury",
+      "value": -100
+    }
+  ]
+}

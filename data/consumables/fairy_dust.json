@@ -1,0 +1,17 @@
+{
+  "_doc": "BA-H (catálogo, RF-084 sobrenaturales): piernas mágicamente más rápidas para todo el equipo en el campo. Poco común, techo 200 (aunque un atributo no tiene techo de cuota, la rareza sigue marcando su lugar en el mercado).",
+  "id": "fairy_dust",
+  "name": {
+    "es": "Polvo de hada",
+    "en": "Fairy Dust"
+  },
+  "rarity": "uncommon",
+  "family": "supernatural",
+  "effects": [
+    {
+      "type": "modifyAttribute",
+      "attribute": "speed",
+      "value": 15
+    }
+  ]
+}

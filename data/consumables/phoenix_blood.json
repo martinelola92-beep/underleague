@@ -1,0 +1,22 @@
+{
+  "_doc": "BA-H (catálogo, RF-084 médicos): el escalón raro de la protección contra la lesión grave, con un extra de resistencia. Techo 300 (ADR 0058).",
+  "id": "phoenix_blood",
+  "name": {
+    "es": "Sangre de fénix",
+    "en": "Phoenix Blood"
+  },
+  "rarity": "rare",
+  "family": "medical",
+  "effects": [
+    {
+      "type": "modifyProbability",
+      "probability": "severeInjury",
+      "value": -300
+    },
+    {
+      "type": "modifyAttribute",
+      "attribute": "stamina",
+      "value": 20
+    }
+  ]
+}

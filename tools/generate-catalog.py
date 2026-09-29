@@ -65,7 +65,7 @@ w = o.write
 
 w("""# Catálogo de perks, objetos y consumibles
 
-> Generado desde `/data` con `tools/generate-catalog.py` el 13 sep 2026. Las descripciones de los perks son las que produce
+> Generado desde `/data` con `tools/generate-catalog.py` el 27 sep 2026. Las descripciones de los perks son las que produce
 > `Sim.Perks.DescriptionGenerator` (RT-035, `dotnet run --project Balance -c Release -- --describe es`):
 > no hay texto de efecto escrito a mano. Este documento es **derivado**; la fuente de verdad son los
 > ficheros JSON de `/data` (RF-065, RT-031).
@@ -216,7 +216,12 @@ Un solo partido, se gastan al usarlos. El efecto **no tiene portador**: lo usa e
 
 """)
 w('| Nombre | id | Rareza | Familia | Efecto |\n|---|---|---|---|---|\n')
-PROB = {'injure': 'lesionar', 'injury': 'lesionarse', 'foul': 'hacer falta', 'shotOnTarget': 'tirar a puerta', 'tackleEvasion': 'resistir entradas'}
+PROB = {
+    'injure': 'lesionar', 'injury': 'lesionarse', 'severeInjury': 'causar una lesión grave',
+    'foul': 'hacer falta', 'card': 'ver tarjeta', 'pass': 'pasar', 'intercept': 'interceptar',
+    'dribble': 'regatear', 'tackle': 'robar el balón', 'shotOnTarget': 'tirar a puerta',
+    'save': 'parar', 'tackleEvasion': 'resistir entradas', 'interceptEvasion': 'resistir intercepciones',
+}
 FAMC = {'medical': 'médica', 'dirty': 'sucia', 'supernatural': 'sobrenatural', 'tactical': 'táctica'}
 for d in sorted(cons, key=lambda d: d['id']):
     eff = []

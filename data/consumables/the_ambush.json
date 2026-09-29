@@ -1,0 +1,27 @@
+{
+  "_doc": "BA-H (catálogo, RF-084 sucios): el techo de la familia sucia, legendario (500, ADR 0058) — el equipo entero juega diez minutos sin piedad: sube lesionar y lesionar grave al rival, y el árbitro lo nota mucho.",
+  "id": "the_ambush",
+  "name": {
+    "es": "La encerrona",
+    "en": "The Ambush"
+  },
+  "rarity": "legendary",
+  "family": "dirty",
+  "effects": [
+    {
+      "type": "modifyProbability",
+      "probability": "injure",
+      "value": 300
+    },
+    {
+      "type": "modifyProbability",
+      "probability": "severeInjury",
+      "value": 200
+    },
+    {
+      "type": "modifyProbability",
+      "probability": "card",
+      "value": 200
+    }
+  ]
+}

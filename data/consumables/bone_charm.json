@@ -1,0 +1,17 @@
+{
+  "_doc": "BA-H (catálogo, RF-084 sobrenaturales): un amuleto barato que engaña a los pies para que regateen mejor. Común, techo 100.",
+  "id": "bone_charm",
+  "name": {
+    "es": "Amuleto de hueso",
+    "en": "Bone Charm"
+  },
+  "rarity": "common",
+  "family": "supernatural",
+  "effects": [
+    {
+      "type": "modifyProbability",
+      "probability": "dribble",
+      "value": 100
+    }
+  ]
+}

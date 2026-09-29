@@ -1,0 +1,17 @@
+{
+  "_doc": "BA-H (catálogo, RF-084 sobrenaturales): el balón se vuelve intangible en el pase — nadie del rival puede interceptarlo. Raro, techo 300.",
+  "id": "ghost_pass",
+  "name": {
+    "es": "Pase fantasma",
+    "en": "Ghost Pass"
+  },
+  "rarity": "rare",
+  "family": "supernatural",
+  "effects": [
+    {
+      "type": "modifyProbability",
+      "probability": "interceptEvasion",
+      "value": 300
+    }
+  ]
+}

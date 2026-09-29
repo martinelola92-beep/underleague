@@ -1,0 +1,22 @@
+{
+  "_doc": "BA-H (catálogo, RF-084 médicos): combina un chute de energía con protección leve contra la lesión, para diferenciarlo de field_bandage y mud_poultice (uno solo, más fuerte cada uno). Poco común, techo 200.",
+  "id": "healers_tonic",
+  "name": {
+    "es": "Tónico del curandero",
+    "en": "Healer's Tonic"
+  },
+  "rarity": "uncommon",
+  "family": "medical",
+  "effects": [
+    {
+      "type": "modifyAttribute",
+      "attribute": "stamina",
+      "value": 15
+    },
+    {
+      "type": "modifyProbability",
+      "probability": "injury",
+      "value": -100
+    }
+  ]
+}

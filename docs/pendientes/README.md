@@ -25,7 +25,7 @@ viva anotada.
 | [BA-E](./BA-E.md) | Goles sin ángulo | Abierta, medida (A RECHAZADA por la ADR 0111, C disponible). **Vía nueva 23 sep**: la acción «centrar» del §7 de `plan-altura-del-balon.md` le da al delantero la alternativa que a la vía B le faltaba |
 | [BA-F](./BA-F.md) | El 3D está mal | Abierta: decidir si se acepta perspectiva contra la ortográfica de la ADR 0102 |
 | [BA-G](./BA-G.md) | Los nombres de los jugadores se repiten | Abierta: el sorteo de `data/*/names` no tiene memoria dentro de la run |
-| [BA-H](./BA-H.md) | Los consumibles no se pueden usar | Abierta: CAT-B dio el equipado; falta el uso en vivo (RF-082, `ManualActivation`) |
+| [BA-H](./BA-H.md) | Los consumibles no se pueden usar | Uso en vivo y catálogo de 20 hechos (29 sep); abierta sólo la propuesta de dos slots |
 | [BA-J](./BA-J.md) | Tras una parada, el equipo defensor debería replegarse | Abierta: hoy no hay fase de repliegue tras `SAVE` |
 | [BA-L2](./BA-L2.md) | `CaptureRunner` pierde el árbol de escena entre `informe` y `recompensa` | Resuelta la secuencia; queda abierto `recompensa.png` en blanco |
 | [BB-D](./BB-D.md) | Parar unos segundos en los eventos que detienen el juego | Analizada (`game-design-review`, 16 sep); pendiente de decidir si se implementa — se resuelve entera en `/Game`, sin tocar RT-020 |
