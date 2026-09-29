@@ -70,8 +70,8 @@ public sealed record Lineup(IReadOnlyList<LineupSlot> Slots)
 public sealed record TeamSetup(string Id, string Name, Race Race, IReadOnlyList<PlayerDefinition> Players, Lineup Lineup)
 {
     /// <summary>
-    /// Consumibles equipados por este equipo para este partido (RF-080..085): hasta 3, con al menos uno
-    /// manual y hasta dos condicionales (lo valida <c>RunEngine.Apply(SetConsumables)</c>, RF-080..082).
+    /// Consumibles que lleva este equipo a este partido (RF-080..085): hasta dos, uno por hueco, cada uno
+    /// manual o condicional (lo valida <c>RunEngine.Apply(SetConsumables)</c>, RF-080..082, ADR 0172).
     /// Se declara como propiedad <c>init</c> y no como parámetro posicional por la misma razón que
     /// <c>PlayerDefinition.Perks</c>: las construcciones existentes siguen valiendo sin tocarlas.
     /// Un equipo rival no lleva ninguno.

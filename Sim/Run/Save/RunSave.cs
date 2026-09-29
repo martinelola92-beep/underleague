@@ -112,6 +112,11 @@ public static class RunSave
         // equipamiento con el que empezó (RT-061b, RunEquipment).
         state = state.WithDataSnapshot(state.DataSnapshot).WithRoster(ReadRoster(root));
 
+        // ADR 0172: un guardado anterior llevaba un inventario suelto de consumibles (contadores
+        // «consumable_owned:») y hasta tres equipados. Se pliega a los dos huecos con una migración
+        // explícita y documentada, no a escondidas; un guardado nuevo no trae nada que plegar.
+        state = state.WithLegacyConsumablesFolded();
+
         // nextPlayerId manda sobre el que deduce WithRoster: una run que ha vendido a su último fichaje
         // no puede reutilizar su id (determinismo.md, "Orden").
         int nextPlayerId = Int(root, "nextPlayerId", "$");

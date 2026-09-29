@@ -455,12 +455,18 @@ public class RunEngineTests
             new SetLineup(new Lineup(slots.Take(5).Append(new LineupSlot(dead.Id, new Cell(6, 2))).ToList())),
             Catalog));
 
+        // ADR 0172: SetConsumables reconfigura lo que la run ya lleva, no lo crea.
+        Assert.Throws<ArgumentException>(() => RunEngine.Apply(
+            state, new SetConsumables(new[] { new EquippedConsumable("bandage", ConsumableMode.Manual, "TACKLE") }), Catalog));
+
+        state = state.WithConsumables(new[] { new EquippedConsumable("bandage", ConsumableMode.Manual, "TACKLE") });
         state = RunEngine.Apply(state, new SetConsumables(new[] { new EquippedConsumable("bandage", ConsumableMode.Manual, "TACKLE") }), Catalog);
         Assert.Single(state.Consumables);
 
+        // Un disparador desconocido en un condicional se rechaza al configurar (RF-083).
         Assert.Throws<ArgumentException>(() => RunEngine.Apply(
             state,
-            new SetConsumables(new[] { new EquippedConsumable("a", ConsumableMode.Conditional, "TACKLE") }),
+            new SetConsumables(new[] { new EquippedConsumable("bandage", ConsumableMode.Conditional, "TACKLE") }),
             Catalog));
     }
 }

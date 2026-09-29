@@ -91,21 +91,18 @@ public sealed class RunEquipmentTests
     }
 
     [Fact]
-    public void ConsumablesAreEquippedForTheMatchAndSpentAfterIt()
+    public void ConsumablesInTheSlotsReachTheMatchAndOnlyTheUsedOneLeaves()
     {
-        // RF-080..085: hasta 3, con al menos un manual, llegan al MatchSetup, y al terminar el partido no
-        // persisten. El manual sin pulsar no se gasta; el condicional se resuelve solo si su disparador
-        // se cumple.
-        var state = RunEngine.Start(SystemsTestSupport.Setup(), 909, Catalog, SystemsTestSupport.Systems);
-        state = RunEngine.Apply(
-            state,
-            new SetConsumables(new[]
+        // RF-080..085 (ADR 0172): los dos huecos llegan al MatchSetup, y al terminar el partido sale sólo el
+        // que se activó. El manual sin pulsar se queda en su hueco para el partido siguiente; el condicional
+        // sale si su disparador se cumplió.
+        var state = RunEngine.Start(SystemsTestSupport.Setup(), 909, Catalog, SystemsTestSupport.Systems)
+            .WithConsumables(new[]
             {
                 new EquippedConsumable("field_bandage", ConsumableMode.Manual, string.Empty),
                 new EquippedConsumable("lucky_charm", ConsumableMode.Conditional, "lastSeconds"),
-            }),
-            Catalog,
-            SystemsTestSupport.Systems);
+            });
+        state = RunEngine.Apply(state, new SetConsumables(state.Consumables), Catalog, SystemsTestSupport.Systems);
 
         var (walked, node) = TestRuns.WalkToMatch(state, Catalog, SystemsTestSupport.Systems);
         var (setup, _, _) = RunEngine.BuildMatch(walked, node.Id, Catalog, SystemsTestSupport.Systems);
@@ -116,16 +113,24 @@ public sealed class RunEquipmentTests
         Assert.Equal(Underleague.Sim.Perks.ConsumableTrigger.LastSeconds, setup.Home.Consumables[1].Trigger);
         Assert.Empty(setup.Away.Consumables);
 
-        var after = RunEngine.Enter(walked, node.Id, Catalog, SystemsTestSupport.Systems);
-        Assert.Empty(after.Consumables);
+        var entry = RunEngine.EnterMatch(walked, node.Id, Catalog, SystemsTestSupport.Systems);
+        var fired = entry.Summary.Report.ConsumableActivations.Where(a => a.Team == 0).Select(a => a.ConsumableId).ToHashSet();
+        Assert.DoesNotContain("field_bandage", fired);
+        Assert.Contains(entry.State.Consumables, c => c.Id == "field_bandage" && c.Mode == ConsumableMode.Manual);
+        Assert.Equal(!fired.Contains("lucky_charm"), entry.State.Consumables.Any(c => c.Id == "lucky_charm"));
     }
 
     [Fact]
-    public void AnUnknownTriggerIsRejectedWhenEquipping()
+    public void AnUnknownTriggerIsRejectedWhenConfiguring()
     {
-        // RF-083: un disparador mal escrito duele al equipar, no se convierte en un consumible que no se
+        // RF-083: un disparador mal escrito duele al configurar, no se convierte en un consumible que no se
         // dispara nunca sin decir nada.
-        var state = RunEngine.Start(SystemsTestSupport.Setup(), 55, Catalog, SystemsTestSupport.Systems);
+        var state = RunEngine.Start(SystemsTestSupport.Setup(), 55, Catalog, SystemsTestSupport.Systems)
+            .WithConsumables(new[]
+            {
+                new EquippedConsumable("field_bandage", ConsumableMode.Manual, string.Empty),
+                new EquippedConsumable("lucky_charm", ConsumableMode.Manual, string.Empty),
+            });
         var decision = new SetConsumables(new[]
         {
             new EquippedConsumable("field_bandage", ConsumableMode.Manual, string.Empty),

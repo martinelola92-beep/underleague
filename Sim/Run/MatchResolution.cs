@@ -31,9 +31,6 @@ internal static class MatchResolution
     /// <summary>Detalle de una lesión grave en el evento INJURY.</summary>
     private const string SevereDetail = "severe";
 
-    /// <summary>Prefijo del contador de inventario de consumibles (paquete X, X-9).</summary>
-    private const string ConsumableOwnedCounter = RunState.ConsumableOwnedPrefix;
-
     /// <summary>Resultado de aplicar un partido al estado de la run.</summary>
     internal sealed record Applied(RunState State, RunMatchSummary Summary, RunOutcome Outcome);
 
@@ -387,11 +384,10 @@ internal static class MatchResolution
     }
 
     /// <summary>
-    /// Gasta los consumibles del partido (RF-085). Los usados descuentan su unidad del inventario
-    /// (<c>consumable_owned:&lt;id&gt;</c>, el contador que rellena el mercado del paquete X, X-9) y la
-    /// lista de equipados se vacía entera: "no persisten entre partidos" es literal, y RF-080 dice que se
-    /// equipan <b>antes de cada partido</b>. Lo que no se usó sigue en el inventario y se puede volver a
-    /// equipar.
+    /// Gasta los consumibles del partido (RF-085, ADR 0172): el que se activó sale de su hueco —lo usó el
+    /// jugador con un clic o se disparó solo— y <b>el que no se usó se queda en el suyo</b>, con su modo y su
+    /// disparador, para el partido siguiente. Antes se desequipaba todo y lo no usado volvía a un inventario
+    /// suelto que ya no existe.
     /// </summary>
     private static RunState ConsumeConsumables(RunState state, MatchReport report)
     {
@@ -400,20 +396,24 @@ internal static class MatchResolution
             return state;
         }
 
-        var next = state;
         var used = report.ConsumableActivations;
-        for (int i = 0; i < used.Count; i++)
+        var remaining = new List<EquippedConsumable>(state.Consumables.Count);
+        for (int i = 0; i < state.Consumables.Count; i++)
         {
-            if (used[i].Team != 0)
+            bool spent = false;
+            for (int j = 0; j < used.Count && !spent; j++)
             {
-                continue;
+                spent = used[j].Team == 0
+                    && string.Equals(used[j].ConsumableId, state.Consumables[i].Id, StringComparison.Ordinal);
             }
 
-            string counter = ConsumableOwnedCounter + used[i].ConsumableId;
-            next = next.WithCounter(counter, Math.Max(0, next.Counter(counter) - 1));
+            if (!spent)
+            {
+                remaining.Add(state.Consumables[i]);
+            }
         }
 
-        return next.WithConsumables(Array.Empty<EquippedConsumable>());
+        return remaining.Count == state.Consumables.Count ? state : state.WithConsumables(remaining);
     }
 
     /// <summary>

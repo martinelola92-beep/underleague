@@ -81,14 +81,6 @@ public sealed record RunPolicyOptions
     public int HireMercenaryWhileAvailableBelow { get; init; } = 6;
 
     /// <summary>
-    /// Cuántos consumibles llega a tener en el inventario antes de dejar de comprarlos (CAT-B). Tres es
-    /// el tope que se puede equipar en un partido (RF-080), así que comprar el cuarto sería oro parado
-    /// con otro nombre. Es lo último que compra el mercado, a propósito: así el consumible se lleva el
-    /// oro que sobra tras perks, objetos y fichajes en vez de competir con ellos.
-    /// </summary>
-    public int ConsumableStockTarget { get; init; } = 2;
-
-    /// <summary>
     /// Nunca vende si con ello los disponibles bajan de este número. Baja de 8 a 7 con la plantilla
     /// corta (RF-020, ADR 0046): con una base de diez, exigir nueve disponibles para vender dejaba a la
     /// política sin poder hacer sitio nunca, y "vender o descartar para fichar" es justo la decisión que
@@ -476,8 +468,8 @@ public sealed record RunPlayResult(
     /// <summary>
     /// Consumibles que llegaron a <b>activarse</b> en un partido (CAT-B). Es la métrica que separa
     /// "comprado" de "usado": comprar sin equipar era exactamente el defecto. Solo cuenta los del equipo
-    /// propio, y en la medición sale entero de los condicionales, porque el manual necesita que alguien
-    /// lo pulse (RF-082) y en /Balance no hay quien lo haga.
+    /// propio, y en la medición todos salen de condicionales (ADR 0172): un manual necesita que alguien lo
+    /// pulse (RF-082) y en /Balance no hay quien lo haga.
     /// </summary>
     int ConsumablesUsed,
     int PlayersSigned,
@@ -1216,10 +1208,10 @@ public static class RunPolicy
             state = RunEngine.Apply(state, new SetLineup(RunLineup.Compose(starters)), catalog, systems);
         }
 
-        // CAT-B: equipar es una decisión previa al partido igual que alinear, y hasta ahora no la tomaba
-        // NADIE —ni la política ni /Game—, así que los cuatro consumibles de RF-084 se compraban y no se
-        // jugaban jamás. Sin esto, cualquier cambio en /data/consumables es invisible para las puertas.
-        state = EquipConsumables(state, catalog, systems, consumables);
+        // CAT-B: configurar los consumibles es una decisión previa al partido igual que alinear, y hasta
+        // CAT-B no la tomaba NADIE —ni la política ni /Game—, así que se compraban y no se jugaban jamás.
+        // Sin esto, cualquier cambio en /data/consumables es invisible para las puertas.
+        state = ConfigureConsumables(state, catalog, systems, consumables);
 
         state = TakeBetIfWanted(state, node, catalog, systems, options, starters, ledger);
 
@@ -2860,14 +2852,16 @@ public static class RunPolicy
         // AZ-H señala como media estrategia de no comprar—, y por eso esta compra es la que puede mover
         // leftoverGoldShare sin tocar recompensas ni precios.
         //
-        // El tope es el que se puede equipar (RF-080): comprar el cuarto es atesorar, no comprar.
-        if (CountOwnedConsumables(state) < options.ConsumableStockTarget)
+        // El tope son los huecos (RF-080, ADR 0172): el mercado no vende consumibles con los dos llenos, y
+        // tampoco el que ya se lleva. Antes había un inventario suelto con tope propio (ConsumableStockTarget = 2).
+        if (state.HasFreeConsumableSlot)
         {
             int bestConsumable = -1;
             int bestRank = int.MinValue;
             for (int i = 0; i < offers.Consumables.Count; i++)
             {
-                if (used.Contains((MarketCategories.Consumable, i)) || offers.Consumables[i].Price > budget)
+                if (used.Contains((MarketCategories.Consumable, i)) || offers.Consumables[i].Price > budget
+                    || state.CarriesConsumable(offers.Consumables[i].ConsumableId))
                 {
                     continue;
                 }
@@ -2899,53 +2893,48 @@ public static class RunPolicy
     }
 
     /// <summary>
-    /// Equipa hasta tres consumibles del inventario para el partido que viene (RF-080..083, CAT-B).
+    /// Configura los consumibles que la run lleva para el partido que viene (RF-080..083, CAT-B, ADR 0172).
     ///
-    /// <para><b>Por qué el primero es el manual y los demás condicionales.</b> RF-082 obliga a que haya un
-    /// manual si se equipa algo, pero el manual solo se dispara si alguien lo pulsa, y en <c>/Balance</c>
-    /// no hay quien pulse: llega con <c>ManualTick</c> a −1 y no se activa nunca (ver
-    /// <c>MatchConsumable.ManualTick</c>). Así que el slot manual es, en la medición, un slot perdido; el
-    /// efecto medible sale entero de los dos condicionales, que se resuelven solos con su disparador.
-    /// Cambiar eso sería que la política decidiera el tick de la pulsación, y eso es una doctrina nueva,
-    /// no parte de cerrar CAT-B.</para>
+    /// <para><b>Por qué todos pasan a condicional.</b> Un consumible entra en su hueco <b>manual</b> (un clic en
+    /// el tablero de la retransmisión), pero en <c>/Balance</c> no hay quien pulse: un manual llega con
+    /// <c>ManualTick</c> a −1 y no se activa nunca (ver <c>MatchConsumable.ManualTick</c>). La política es un
+    /// jugador que <b>configura un disparador</b> para todo lo que lleva, que es lo que el jugador de carne y
+    /// hueso puede hacer en la pantalla de Equipo, y el efecto medible sale entero de los que se resuelven
+    /// solos con su disparador. Antes (ADR 0101) el primer consumible iba manual y se perdía en la medición:
+    /// con los dos huecos actuales eso sería perder la mitad, así que la doctrina cambia con la regla y el
+    /// cambio se mide aparte (ADR 0172).</para>
     ///
     /// <para>El disparador por defecto de cada familia (RF-084) es el que hace que el consumible sirva
     /// para lo que es: el médico cuando ya te han lesionado, el sucio y el táctico cuando vas por detrás,
     /// el sobrenatural en el tramo final. Es criterio de la política automática, no regla de juego: el
     /// jugador elige el suyo en la pantalla de Equipo.</para>
     /// </summary>
-    private static RunState EquipConsumables(
+    private static RunState ConfigureConsumables(
         RunState state,
         Catalog catalog,
         IRunSystems systems,
         ConsumableCatalog? consumables)
     {
-        var owned = state.OwnedConsumables;
-        if (owned.Count == 0)
+        var configured = new List<EquippedConsumable>(state.Consumables.Count);
+        bool changed = false;
+        for (int i = 0; i < state.Consumables.Count; i++)
         {
-            return state.Consumables.Count == 0
-                ? state
-                : RunEngine.Apply(state, new SetConsumables(Array.Empty<EquippedConsumable>()), catalog, systems);
-        }
-
-        var equipped = new List<EquippedConsumable>(RunRules.MaxEquippedConsumables);
-        for (int i = 0; i < owned.Count && equipped.Count < RunRules.MaxEquippedConsumables; i++)
-        {
-            // El primero va como manual porque RF-082 exige uno; el resto, condicionales (RF-081, máximo
-            // dos, que es justo lo que queda al reservar el manual).
-            if (equipped.Count == 0)
+            var slot = state.Consumables[i];
+            if (slot.Mode != ConsumableMode.Manual)
             {
-                equipped.Add(new EquippedConsumable(owned[i], ConsumableMode.Manual, string.Empty));
+                configured.Add(slot);
                 continue;
             }
 
-            equipped.Add(new EquippedConsumable(
-                owned[i],
-                ConsumableMode.Conditional,
-                DefaultTrigger(consumables?.Find(owned[i])?.Family)));
+            configured.Add(slot with
+            {
+                Mode = ConsumableMode.Conditional,
+                Trigger = DefaultTrigger(consumables?.Find(slot.Id)?.Family),
+            });
+            changed = true;
         }
 
-        return RunEngine.Apply(state, new SetConsumables(equipped), catalog, systems);
+        return changed ? RunEngine.Apply(state, new SetConsumables(configured), catalog, systems) : state;
     }
 
     /// <summary>Disparador por defecto de cada familia de RF-084. Ninguno lleva umbral, así que <c>ConsumableTriggers.Parse</c> los acepta todos.</summary>
@@ -2955,9 +2944,6 @@ public static class RunPolicy
         ConsumableFamily.Supernatural => "lastSeconds",
         _ => "scoreBehind",
     };
-
-    /// <summary>Copias de consumible en el inventario, sumando todos los ids (RF-080: el tope es de tres).</summary>
-    private static int CountOwnedConsumables(RunState state) => state.OwnedConsumables.Count;
 
     /// <summary>
     /// Orden de preferencia dentro del presupuesto. Primero <b>que no castigue</b>: un perk con

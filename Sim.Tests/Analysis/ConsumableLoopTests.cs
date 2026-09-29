@@ -16,14 +16,14 @@ namespace Underleague.Sim.Tests.Analysis;
 /// </summary>
 public sealed class ConsumableLoopTests
 {
-    private static RunPlayResult Play(ulong seed, PurchaseDoctrine doctrine = PurchaseDoctrine.Contextual)
+    private static RunPlayResult Play(ulong seed, PurchaseDoctrine doctrine = PurchaseDoctrine.Contextual, MatchObserver? observer = null)
     {
         var catalog = TestData.LoadCatalog();
         var files = TestData.LoadAllFiles();
         var standard = StandardRunSystems.FromJson(files);
         var bosses = BossCatalog.FromJson(files);
         var setup = standard.NewRunSetup("cat_b_club", Race.Orc, files) with { GeneratedQuality = 50 };
-        return RunPolicy.Play(setup, seed, catalog, standard, bosses, RunPolicyOptions.For(doctrine));
+        return RunPolicy.Play(setup, seed, catalog, standard, bosses, RunPolicyOptions.For(doctrine), observer);
     }
 
     /// <summary>
@@ -40,6 +40,31 @@ public sealed class ConsumableLoopTests
         }
 
         Assert.True(bought > 0, "en doce runs no se ha comprado un solo consumible: el mercado no los ofrece o la política no los mira");
+    }
+
+    /// <summary>
+    /// ADR 0172: la política nunca lleva más consumibles que huecos hay, y en la medición todos van
+    /// condicionales (un manual no lo pulsa nadie en <c>/Balance</c>): así el efecto que se mide es el de
+    /// los dos huecos enteros y no el de uno perdido.
+    /// </summary>
+    [Fact]
+    public void ThePolicyCarriesAtMostTheSlotsAndAllOfThemFireByThemselves()
+    {
+        int matches = 0;
+        int carried = 0;
+        for (ulong seed = 1; seed <= 6; seed++)
+        {
+            Play(seed, observer: (_, _, setup, _, _) =>
+            {
+                matches++;
+                carried += setup.Home.Consumables.Count;
+                Assert.True(setup.Home.Consumables.Count <= RunRules.ConsumableSlots);
+                Assert.DoesNotContain(setup.Home.Consumables, c => c.Trigger == Underleague.Sim.Perks.ConsumableTrigger.Manual);
+            });
+        }
+
+        Assert.True(matches > 0);
+        Assert.True(carried > 0, "en seis runs la política no ha llevado un solo consumible a un partido");
     }
 
     /// <summary>

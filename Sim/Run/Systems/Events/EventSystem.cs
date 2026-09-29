@@ -355,19 +355,21 @@ public static class EventSystem
         return candidates[rng.Range(0, candidates.Count)];
     }
 
-    /// <summary>Un consumible de esa familia, al inventario (ADR 0159): sorteado con el flujo de la carta.</summary>
+    /// <summary>
+    /// Un consumible de esa familia, a un hueco libre y ya equipado (ADR 0159, ADR 0172): sorteado con el flujo
+    /// de la carta. <see cref="EffectsResolvable"/> ya ha comprobado que hay hueco.
+    /// </summary>
     private static RunState GrantConsumable(RunState state, MapNode node, int effectIndex, ConsumableFamily family, ConsumableCatalog consumables)
     {
         var consumable = ConsumableFor(state, node, effectIndex, family, consumables)
-            ?? throw new InvalidOperationException($"no hay ningún consumible de la familia {family} en el catálogo");
-        return state.WithCounter(
-            RunState.ConsumableOwnedPrefix + consumable.Id,
-            state.ConsumablesOwned(consumable.Id) + 1);
+            ?? throw new InvalidOperationException($"no hay ningún consumible de la familia {family} que la run pueda llevar ahora");
+        return state.WithTakenConsumable(consumable.Id);
     }
 
     /// <summary>
     /// El consumible concreto que daría ese efecto (mismo criterio que <see cref="ItemFor"/>), o null si el
-    /// catálogo no tiene ninguno de esa familia.
+    /// catálogo no tiene ninguno de esa familia <b>que la run pueda llevar</b>: los que ya lleva quedan fuera
+    /// del sorteo (ADR 0172, no se lleva el mismo dos veces), no se sortean para luego rechazarlos.
     /// </summary>
     internal static ConsumableDefinition? ConsumableFor(
         RunState state, MapNode node, int effectIndex, ConsumableFamily family, ConsumableCatalog consumables)
@@ -376,7 +378,7 @@ public static class EventSystem
         var candidates = new List<ConsumableDefinition>(all.Count);
         for (int i = 0; i < all.Count; i++)
         {
-            if (all[i].Family == family)
+            if (all[i].Family == family && !state.CarriesConsumable(all[i].Id))
             {
                 candidates.Add(all[i]);
             }
@@ -673,13 +675,14 @@ public static class EventSystem
 
     /// <summary>
     /// Los efectos que no dependen de un jugador señalado pero sí de que exista dónde aterrizar: un objeto de
-    /// esa rareza, un consumible de esa familia, hueco de plantilla para el canterano, margen sobre el mínimo
+    /// esa rareza, un consumible de esa familia y un hueco libre donde llevarlo (ADR 0172), hueco de plantilla para el canterano, margen sobre el mínimo
     /// de RF-002b para el sacrificio. Es la mitad de la viabilidad que <see cref="IsEligibleTarget"/> no
     /// cubre; <see cref="Choose"/> y <c>EventView</c> la comparten.
     /// </summary>
     internal static bool EffectsResolvable(
         RunState state, MapNode node, EventOption option, ItemCatalog items, ConsumableCatalog consumables)
     {
+        int consumablesGranted = 0;
         for (int i = 0; i < option.Effects.Count; i++)
         {
             var effect = option.Effects[i];
@@ -687,8 +690,17 @@ public static class EventSystem
             {
                 case EventEffectKind.GrantItem when ItemFor(state, node, i, effect.Rarity, items) is null:
                     return false;
-                case EventEffectKind.GrantConsumable when ConsumableFor(state, node, i, effect.Family, consumables) is null:
-                    return false;
+                case EventEffectKind.GrantConsumable:
+                    // Sin hueco libre no hay dónde aterrizar (RF-080, ADR 0172): la opción no es viable, como
+                    // la del canterano sin sitio en la plantilla.
+                    consumablesGranted++;
+                    if (ConsumableFor(state, node, i, effect.Family, consumables) is null
+                        || state.Consumables.Count + consumablesGranted > RunRules.ConsumableSlots)
+                    {
+                        return false;
+                    }
+
+                    break;
                 case EventEffectKind.Recruit when !state.HasRosterSpace:
                     return false;
                 case EventEffectKind.Sacrifice when state.AvailablePlayerCount <= RunRules.MinimumAvailablePlayers:

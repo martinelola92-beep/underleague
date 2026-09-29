@@ -24,14 +24,10 @@ public enum ConsumableFamily
 /// <c>data/consumables/</c> con el mismo criterio de alcance que <c>data/items/</c>: catálogo pequeño (4,
 /// uno por familia de RF-084), formato de efecto igual al de los perks, descripción generada.</para>
 ///
-/// <para><b>Límite declarado.</b> RF-080..085 (equipar hasta 3, condicionales con disparador, familia
-/// manual obligatoria) ya los resuelve <c>Sim.Run.RunEngine.Apply</c> a través de <c>SetConsumables</c>
-/// (paquete W): cualquier id de consumible se puede equipar sin comprobar que se posea, porque
-/// <c>RunState</c> no tiene un inventario de consumibles (el paquete W dejó anotado el mismo límite: "los
-/// consumibles equipados... no surten efecto en el partido", <c>fase2-diseno.md</c> §13). Comprar aquí
-/// registra la propiedad en <c>RunState.Counters["consumable_owned:&lt;id&gt;"]</c> (RT-030, mecanismo
-/// genérico de W-11) para que un paquete futuro pueda exigirla sin subir la versión del esquema; hoy no
-/// se aplica ninguna comprobación al equipar, y queda anotado como límite de esta fase.</para>
+/// <para><b>Posesión (ADR 0172).</b> La run lleva como mucho <c>RunRules.ConsumableSlots</c> consumibles, uno
+/// por hueco, y el hueco es la posesión: comprar en el mercado o recibir de un evento exige un hueco libre y lo
+/// deja ya equipado. Hasta esa ADR el mercado subía un contador <c>consumable_owned:&lt;id&gt;</c> (paquete X, X-9)
+/// que <c>SetConsumables</c> no comprobaba al equipar; ese límite se cerró con el inventario suelto.</para>
 /// </summary>
 public sealed record ConsumableDefinition(
     string Id,

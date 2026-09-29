@@ -87,7 +87,10 @@ public abstract record RunDecision;
 /// </param>
 public sealed record SetLineup(Lineup Lineup, bool PlayShort = false) : RunDecision;
 
-/// <summary>Fija los consumibles equipados de la run (RF-080..082).</summary>
+/// <summary>
+/// Reconfigura los consumibles que la run lleva en sus dos huecos (RF-080..082, ADR 0172): modo, disparador o
+/// descartar. No crea ninguno: sólo se lleva lo que el mercado o un evento ha dado.
+/// </summary>
 public sealed record SetConsumables(IReadOnlyList<EquippedConsumable> Consumables) : RunDecision;
 
 /// <summary>Cierra el nodo interactivo abierto y vuelve al mapa.</summary>

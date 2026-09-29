@@ -64,7 +64,11 @@ public enum ConsumableMode
     Conditional,
 }
 
-/// <summary>Consumible equipado para la run: máximo 3, mínimo 1 manual (RF-080..082).</summary>
+/// <summary>
+/// Consumible que la run lleva en uno de sus <see cref="RunRules.ConsumableSlots"/> huecos (RF-080..082, ADR
+/// 0172). El hueco <b>es</b> la posesión: no hay inventario de consumibles sueltos. Entra <see cref="ConsumableMode.Manual"/>
+/// (un clic en el tablero de la retransmisión) y el jugador puede pasarlo a condicional en Equipo.
+/// </summary>
 public sealed record EquippedConsumable(string Id, ConsumableMode Mode, string Trigger);
 
 /// <summary>Árbitro de la run (RF-061, RF-064c). <c>BribesReceived</c> es progresión de fase 3.</summary>
@@ -390,11 +394,12 @@ public static class RunRules
     public const int MinimumAvailablePlayers = 5;
 
     /// <summary>
-    /// Consumibles que se pueden llevar a un partido (RF-080): uno manual obligatorio (RF-082) y hasta
-    /// dos condicionales (RF-081). Lo valida <c>RunEngine.Apply(SetConsumables)</c>; la constante existe
-    /// para que la política automática y la pantalla de Equipo no repitan el número a mano.
+    /// Huecos de consumible (RF-080, ADR 0172; antes «hasta 3»): lo que la run lleva encima, y por tanto lo
+    /// que llega al partido. Comprar o recibir un consumible exige un hueco libre y lo deja ya en él. Lo
+    /// valida <c>RunEngine.Apply(SetConsumables)</c>; la constante existe para que el mercado, los eventos,
+    /// la política automática y la pantalla de Equipo no repitan el número a mano.
     /// </summary>
-    public const int MaxEquippedConsumables = 3;
+    public const int ConsumableSlots = 2;
 
     /// <summary>
     /// Capacidad base (RF-020, ADR 0046): un hueco más que la plantilla inicial de 9 (RF-005), para poder
@@ -528,7 +533,10 @@ public sealed record RunState
     /// <summary>Alineación elegida (RF-041). Puede quedar obsoleta tras una baja: <see cref="RunLineup"/> la repara al entrar en un partido.</summary>
     public Lineup Lineup { get; init; } = new(Array.Empty<LineupSlot>());
 
-    /// <summary>Consumibles equipados, máximo 3 (RF-080..082).</summary>
+    /// <summary>
+    /// Consumibles que la run lleva, como mucho <see cref="RunRules.ConsumableSlots"/> (RF-080, ADR 0172).
+    /// Persisten entre partidos: sólo se va el que se usa (RF-085) o el que el jugador descarta.
+    /// </summary>
     public IReadOnlyList<EquippedConsumable> Consumables { get; init; } = Array.Empty<EquippedConsumable>();
 
     /// <summary>
@@ -670,45 +678,121 @@ public sealed record RunState
     }
 
     /// <summary>
-    /// Prefijo del contador de inventario de consumibles (paquete X, X-9). El mercado lo sube al comprar
-    /// (<c>MarketSystem.BuyConsumable</c>) y <c>MatchResolution.ConsumeConsumables</c> lo baja al gastarse
-    /// (RF-085). Es el gemelo de <see cref="ItemStockPrefix"/> y vivía escrito a mano en tres sitios.
+    /// Prefijo del contador del <b>inventario de consumibles sueltos</b> que existió hasta la ADR 0172 (paquete
+    /// X, X-9: el mercado lo subía al comprar y el partido lo bajaba al gastarse). Ya no lo escribe nadie:
+    /// desde la ADR 0172 el hueco es la posesión. Sólo lo lee <see cref="WithLegacyConsumablesFolded"/>, que
+    /// convierte lo que un guardado viejo trajera en ese inventario.
     /// </summary>
-    public const string ConsumableOwnedPrefix = "consumable_owned:";
+    public const string LegacyConsumableOwnedPrefix = "consumable_owned:";
 
-    /// <summary>Copias sueltas de ese consumible en el inventario.</summary>
-    public int ConsumablesOwned(string consumableId)
+    /// <summary>True si queda algún hueco de consumible libre (RF-080, ADR 0172).</summary>
+    public bool HasFreeConsumableSlot => Consumables.Count < RunRules.ConsumableSlots;
+
+    /// <summary>True si la run ya lleva ese consumible en un hueco (no se lleva el mismo dos veces, ADR 0172).</summary>
+    public bool CarriesConsumable(string consumableId)
     {
         ArgumentException.ThrowIfNullOrEmpty(consumableId);
-        return Counter(ConsumableOwnedPrefix + consumableId);
+        for (int i = 0; i < Consumables.Count; i++)
+        {
+            if (string.Equals(Consumables[i].Id, consumableId, StringComparison.Ordinal))
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /// <summary>
-    /// Consumibles del inventario, por id ascendente y una entrada por copia (RT-041): es lo que la
-    /// pantalla de Equipo enseña para elegir los tres de RF-080 y lo que una política automática recorre.
-    /// Mismo contrato y mismo orden que <see cref="StoredItems"/>.
+    /// Si ese consumible puede entrar ahora: hay un hueco libre y no se lleva ya (ADR 0172). Es lo que
+    /// comparten el mercado, los eventos y la política antes de comprar o recibir uno.
     /// </summary>
-    public IReadOnlyList<string> OwnedConsumables
+    public bool CanTakeConsumable(string consumableId) => HasFreeConsumableSlot && !CarriesConsumable(consumableId);
+
+    /// <summary>
+    /// Copia con ese consumible en el primer hueco libre, <see cref="ConsumableMode.Manual"/> y sin
+    /// disparador: sale «ya equipado» para usarlo con un clic (ADR 0172). Lanza si no cabe.
+    /// </summary>
+    public RunState WithTakenConsumable(string consumableId)
     {
-        get
+        ArgumentException.ThrowIfNullOrEmpty(consumableId);
+        if (!HasFreeConsumableSlot)
         {
-            var ids = new List<string>();
-            foreach (var (key, count) in Counters)
+            throw new InvalidOperationException(
+                $"no hay ningún hueco de consumible libre ({Consumables.Count} de {RunRules.ConsumableSlots}, RF-080)");
+        }
+
+        if (CarriesConsumable(consumableId))
+        {
+            throw new InvalidOperationException($"la run ya lleva el consumible '{consumableId}' (ADR 0172)");
+        }
+
+        var next = new List<EquippedConsumable>(Consumables)
+        {
+            new(consumableId, ConsumableMode.Manual, string.Empty),
+        };
+        return this with { Consumables = next };
+    }
+
+    /// <summary>
+    /// Migración explícita de los guardados anteriores a la ADR 0172 (no cambia la forma del guardado, sólo
+    /// lo que significa): lo que hubiera en el inventario suelto (<see cref="LegacyConsumableOwnedPrefix"/>) y
+    /// lo que estuviera equipado pasa a los huecos, por este orden y sin repetir: primero lo que ya iba
+    /// equipado (hasta <see cref="RunRules.ConsumableSlots"/>, en su orden y con su modo), luego las copias
+    /// sueltas por id ascendente (RT-041), en modo manual. <b>Lo que no cabe se pierde</b>, y los contadores
+    /// viejos se borran: es el precio de pasar de «inventario ilimitado» a dos huecos, y queda escrito en la
+    /// ADR 0172 en vez de hacerse a escondidas. Sin contadores viejos ni más de dos equipados, devuelve el
+    /// mismo estado.
+    /// </summary>
+    public RunState WithLegacyConsumablesFolded()
+    {
+        var loose = new SortedDictionary<string, int>(StringComparer.Ordinal);
+        var kept = new SortedDictionary<string, int>(StringComparer.Ordinal);
+        foreach (var (key, value) in Counters)
+        {
+            if (key.StartsWith(LegacyConsumableOwnedPrefix, StringComparison.Ordinal))
             {
-                if (count <= 0 || !key.StartsWith(ConsumableOwnedPrefix, StringComparison.Ordinal))
+                if (value > 0)
                 {
-                    continue;
+                    loose[key[LegacyConsumableOwnedPrefix.Length..]] = value;
                 }
 
-                for (int i = 0; i < count; i++)
-                {
-                    ids.Add(key[ConsumableOwnedPrefix.Length..]);
-                }
+                continue;
             }
 
-            ids.Sort(StringComparer.Ordinal);
-            return ids;
+            kept[key] = value;
         }
+
+        bool dirtyCounters = kept.Count != Counters.Count;
+        bool tooMany = Consumables.Count > RunRules.ConsumableSlots;
+        if (!dirtyCounters && !tooMany)
+        {
+            return this;
+        }
+
+        var slots = new List<EquippedConsumable>(RunRules.ConsumableSlots);
+        for (int i = 0; i < Consumables.Count && slots.Count < RunRules.ConsumableSlots; i++)
+        {
+            if (!slots.Exists(c => string.Equals(c.Id, Consumables[i].Id, StringComparison.Ordinal)))
+            {
+                slots.Add(Consumables[i]);
+            }
+        }
+
+        foreach (var (id, _) in loose)
+        {
+            if (slots.Count >= RunRules.ConsumableSlots)
+            {
+                break;
+            }
+
+            if (!slots.Exists(c => string.Equals(c.Id, id, StringComparison.Ordinal)))
+            {
+                slots.Add(new EquippedConsumable(id, ConsumableMode.Manual, string.Empty));
+            }
+        }
+
+        return this with { Consumables = slots, Counters = kept };
     }
 
     /// <summary>Copia con una copia más (o menos) de ese objeto en el almacén.</summary>
@@ -728,7 +812,7 @@ public sealed record RunState
     /// Prefijo de la memoria de "quién knaveó a quién" (BE-B, enmienda de la ADR 0124, corrigiendo su
     /// tabla «Dónde vive cada memoria»: citaba esta clave como si ya existiera, y era un plan, no código).
     /// Vive en <see cref="Counters"/> por el mismo motivo que <see cref="ItemStockPrefix"/> y
-    /// <see cref="ConsumableOwnedPrefix"/> -clave libre para no subir de versión cada vez que entra un
+    /// <see cref="ItemStockPrefix"/> -clave libre para no subir de versión cada vez que entra un
     /// sistema-, y es el gemelo de vocabulario <b>abierto</b> de <see cref="RunCareer"/> (vocabulario
     /// <b>cerrado</b>, por jugador propio): un rival no vive lo que vive la run entera con nombre propio en
     /// <c>RunState</c>, así que no puede tener una propiedad tipada.

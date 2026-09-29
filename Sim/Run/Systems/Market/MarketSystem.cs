@@ -193,12 +193,27 @@ public static class MarketSystem
         return EquipmentSystem.AssignPurchasedItem(state, decision.TargetPlayerId, offer.ItemId, economy, items);
     }
 
+    /// <summary>
+    /// Compra un consumible (RF-080, ADR 0172): exige un hueco libre y que no se lleve ya, y lo deja
+    /// <b>ya equipado</b> en él. No hay inventario de consumibles sueltos: un mercado con los dos huecos
+    /// llenos no vende consumibles (la vista los enseña bloqueados y dice por qué, RF-012d).
+    /// </summary>
     private static RunState BuyConsumable(RunState state, IReadOnlyList<ConsumableOffer> offers, BuyOffer decision)
     {
         var offer = AtIndex(offers, decision.OfferIndex, "consumible");
+        if (!state.HasFreeConsumableSlot)
+        {
+            throw new ArgumentException(
+                $"no se puede comprar un consumible: los {RunRules.ConsumableSlots} huecos están llenos (RF-080). Hay que usar o descartar uno primero");
+        }
+
+        if (state.CarriesConsumable(offer.ConsumableId))
+        {
+            throw new ArgumentException($"no se puede comprar '{offer.ConsumableId}': ya lo llevas en un hueco (ADR 0172)");
+        }
+
         RequireGold(state, offer.Price);
-        string counter = RunState.ConsumableOwnedPrefix + offer.ConsumableId;
-        return state.AddGold(-offer.Price).WithCounter(counter, state.Counter(counter) + 1);
+        return state.AddGold(-offer.Price).WithTakenConsumable(offer.ConsumableId);
     }
 
     private static T AtIndex<T>(IReadOnlyList<T> offers, int index, string what)

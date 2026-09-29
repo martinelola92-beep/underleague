@@ -227,7 +227,9 @@ public static class MarketView
                 RaceRestriction: string.Empty,
                 NeedsCarrier: false,
                 Array.Empty<RewardCarrier>(),
-                RewardBlock.None));
+                !state.HasFreeConsumableSlot
+                    ? RewardBlock.NoConsumableSlot
+                    : state.CarriesConsumable(consumable.Id) ? RewardBlock.AlreadyCarried : RewardBlock.None));
         }
 
         return new MarketScreenView(

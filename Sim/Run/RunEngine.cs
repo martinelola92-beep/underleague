@@ -696,44 +696,45 @@ public static class RunEngine
         return RunLineup.WithPlayShort(RunLineup.MarkSevereInjuryRisks(state, slots).WithLineup(decision.Lineup), decision.PlayShort);
     }
 
+    /// <summary>
+    /// Reconfigura lo que la run lleva en sus huecos de consumible (RF-080..082, ADR 0172): cambiar un
+    /// consumible de manual a condicional (o de disparador), o descartarlo para liberar el hueco. <b>No crea
+    /// consumibles</b>: cada id de la lista tiene que ser uno que la run ya lleva (antes «cualquier id se
+    /// podía equipar sin poseerlo», el límite X-9), y no se repite ninguno.
+    /// </summary>
     private static RunState ApplyConsumables(RunState state, SetConsumables decision)
     {
         ArgumentNullException.ThrowIfNull(decision.Consumables);
-        if (decision.Consumables.Count > 3)
+        if (decision.Consumables.Count > RunRules.ConsumableSlots)
         {
-            throw new ArgumentException($"se pueden equipar 3 consumibles como máximo y se han pedido {decision.Consumables.Count} (RF-080)", nameof(decision));
+            throw new ArgumentException(
+                $"se pueden llevar {RunRules.ConsumableSlots} consumibles como máximo y se han pedido {decision.Consumables.Count} (RF-080)",
+                nameof(decision));
         }
 
-        if (decision.Consumables.Count > 0)
+        for (int i = 0; i < decision.Consumables.Count; i++)
         {
-            bool manual = false;
-            int conditional = 0;
-            for (int i = 0; i < decision.Consumables.Count; i++)
-            {
-                var consumable = decision.Consumables[i];
-                if (consumable.Mode == ConsumableMode.Manual)
-                {
-                    manual = true;
-                    continue;
-                }
-
-                conditional++;
-
-                // El disparador se valida al equipar, no al empezar el partido: un disparador mal escrito
-                // tiene que doler aquí y no convertirse en un consumible que nunca se dispara (RF-083).
-                _ = ConsumableTriggers.Parse(consumable.Trigger);
-            }
-
-            if (!manual)
-            {
-                throw new ArgumentException("al menos uno de los consumibles equipados debe ser manual (RF-082)", nameof(decision));
-            }
-
-            if (conditional > 2)
+            var consumable = decision.Consumables[i];
+            if (!state.CarriesConsumable(consumable.Id))
             {
                 throw new ArgumentException(
-                    $"se pueden configurar 2 consumibles condicionales como máximo y se han pedido {conditional} (RF-081)",
+                    $"la run no lleva el consumible '{consumable.Id}': se compra en el mercado o lo da un evento, no se equipa de la nada (ADR 0172)",
                     nameof(decision));
+            }
+
+            for (int j = 0; j < i; j++)
+            {
+                if (string.Equals(decision.Consumables[j].Id, consumable.Id, StringComparison.Ordinal))
+                {
+                    throw new ArgumentException($"el consumible '{consumable.Id}' está dos veces en la lista (ADR 0172)", nameof(decision));
+                }
+            }
+
+            if (consumable.Mode == ConsumableMode.Conditional)
+            {
+                // El disparador se valida al configurar, no al empezar el partido: un disparador mal escrito
+                // tiene que doler aquí y no convertirse en un consumible que nunca se dispara (RF-083).
+                _ = ConsumableTriggers.Parse(consumable.Trigger);
             }
         }
 

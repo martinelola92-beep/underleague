@@ -108,14 +108,37 @@ public sealed class EventEffectTests
     {
         var (state, _) = AtAnEvent();
         var events = CardOf(Option("give", false, false, new EventEffect(EventEffectKind.GrantConsumable, 0, Family: family)));
-        var before = state.OwnedConsumables;
 
         var after = Choose(state, events, new ChooseEventOption(0));
 
-        Assert.Equal(before.Count + 1, after.OwnedConsumables.Count);
-        string added = Assert.Single(after.OwnedConsumables.Except(before).Distinct());
-        Assert.Equal(family, Consumables.Find(added)!.Family);
-        Assert.Equal(after.OwnedConsumables, Choose(state, events, new ChooseEventOption(0)).OwnedConsumables);
+        // ADR 0172: llega a un hueco libre, ya equipado y manual (un clic en el partido).
+        var granted = Assert.Single(after.Consumables);
+        Assert.Equal(ConsumableMode.Manual, granted.Mode);
+        Assert.Equal(family, Consumables.Find(granted.Id)!.Family);
+        Assert.Equal(granted, Assert.Single(Choose(state, events, new ChooseEventOption(0)).Consumables));
+    }
+
+    [Fact]
+    public void GrantConsumableIsNotViableWithoutAFreeSlotAndNeverRepeatsOne()
+    {
+        // ADR 0172: sin hueco libre no hay dónde aterrizar (la opción no es viable, como el canterano sin
+        // plantilla), y el sorteo no ofrece el que ya se lleva.
+        var (state, node) = AtAnEvent();
+        var option = Option("give", false, false, new EventEffect(EventEffectKind.GrantConsumable, 0, Family: ConsumableFamily.Dirty));
+        var events = CardOf(option);
+
+        Assert.True(EventSystem.IsViable(state, Catalog, node, option, Items, Consumables));
+        Assert.True(View(state, events).Options[0].Affordable);
+
+        var granted = Assert.Single(Choose(state, events, new ChooseEventOption(0)).Consumables).Id;
+        var withOne = state.WithTakenConsumable(granted);
+        var second = Assert.Single(Choose(withOne, events, new ChooseEventOption(0)).Consumables, c => c.Id != granted);
+        Assert.NotEqual(granted, second.Id);
+
+        var full = withOne.WithTakenConsumable(second.Id);
+        Assert.False(EventSystem.IsViable(full, Catalog, node, option, Items, Consumables));
+        Assert.False(View(full, events).Options[0].Affordable);
+        Assert.ThrowsAny<Exception>(() => Choose(full, events, new ChooseEventOption(0)));
     }
 
     // ------------------------------------------------------------------ grantTrait / removeTrait

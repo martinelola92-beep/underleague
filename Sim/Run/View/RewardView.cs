@@ -42,6 +42,12 @@ public enum RewardBlock
 
     /// <summary>Un maestro ya aceptado cerró su línea para el resto de la run (ADR 0051).</summary>
     Closed,
+
+    /// <summary>Un consumible con los dos huecos llenos (RF-080, ADR 0172): hay que usar o descartar uno.</summary>
+    NoConsumableSlot,
+
+    /// <summary>Un consumible que la run ya lleva en el otro hueco (ADR 0172): no se lleva el mismo dos veces.</summary>
+    AlreadyCarried,
 }
 
 /// <summary>

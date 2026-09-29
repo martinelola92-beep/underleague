@@ -317,12 +317,8 @@ public sealed class LootAndRelicTests
     public void AManualActivationReachesTheMatchThroughTheRunAndReplayMatchesEnterMatch()
     {
         const int T = 300;
-        var state = RunEngine.Start(SystemsTestSupport.Setup(), 17200UL, Catalog, Systems);
-        state = RunEngine.Apply(
-            state,
-            new SetConsumables(new[] { new EquippedConsumable("field_bandage", ConsumableMode.Manual, string.Empty) }),
-            Catalog,
-            Systems);
+        var state = RunEngine.Start(SystemsTestSupport.Setup(), 17200UL, Catalog, Systems)
+            .WithTakenConsumable("field_bandage");
         var (walked, node) = TestRuns.WalkToMatch(state, Catalog, Systems);
         var decisions = MatchDecisions.None with { ManualActivations = new[] { new ManualActivation("field_bandage", T) } };
 
