@@ -373,6 +373,24 @@ public sealed class NemesisTests
         Assert.Equal(2, third.State.Counter(RunState.RevengesCounter));
     }
 
+    /// <summary>
+    /// ADR 0167 (revisión independiente): la lesión de la turba no tiene autor (<c>Opponent</c> −1). No es venganza,
+    /// y una lesión leve sobre un lesionado grave no lo cura: sigue grave (antes quedaba en leve).
+    /// </summary>
+    [Fact]
+    public void AMobInjuryHasNoAuthorIsNoRevengeAndNeverHealsASevereInjury()
+    {
+        var state = WithNemesis(BaseState(), Clan, slot: 3);
+        var hurt = state.Roster[2] with { PhysicalState = PhysicalState.SevereInjury };
+        state = state.WithPlayer(hurt);
+
+        var applied = Play(state, new[] { Injury(1, RivalId(3), -1), Injury(0, hurt.Id, -1, "minor", tick: 60) });
+
+        Assert.Empty(applied.Summary.Revenges);
+        Assert.Equal(PhysicalState.SevereInjury, applied.State.FindPlayer(hurt.Id)!.PhysicalState);
+        Assert.Single(applied.State.RivalMemory.Nemeses);
+    }
+
     [Fact]
     public void InjuringAPlainRivalIsNotARevenge()
     {

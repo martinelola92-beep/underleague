@@ -67,6 +67,10 @@ internal sealed class MatchEngine : IPerkWorld
     private readonly Mentality[] _baseOrder = new Mentality[2];
     private readonly int[] _shoutOrderEnd = { -1, -1 };
     private readonly int[] _pressEnd = { -1, -1 };
+
+    // ADR 0167 (revisión independiente): la consigna de presión DE BASE, a la que vuelve un grito de presión al
+    // acabar. Sólo la pone la turba al entrar («hasta el final»); sin turba es siempre false.
+    private readonly bool[] _basePress = new bool[2];
     private int _nextSubstitution;
     private readonly MatchPlayer?[] _goalkeepers = new MatchPlayer?[2];
     private readonly Ball _ball = new();
@@ -5192,22 +5196,33 @@ internal sealed class MatchEngine : IPerkWorld
             if (_pressEnd[team] >= 0 && _tick >= _pressEnd[team])
             {
                 _pressEnd[team] = -1;
-                _context.PressActive[team] = false;
+                _context.PressActive[team] = _basePress[team];
             }
         }
     }
 
-    /// <summary>ADR 0167: duración, en ticks, de la conducta que la turba impone al entrar: hasta el final del partido.</summary>
-    private const int MobUntilTheEnd = 1_000_000;
-
     /// <summary>
     /// ADR 0167: el consumible «Provocar a la grada» aplica ahora el efecto del tipo de turba de este partido,
     /// con el árbitro todavía en el campo; la conducta dura <paramref name="ticks"/>. Sin tipo, o con un tipo sin
-    /// efectos (<c>plain</c>), no hace nada. Lo llama <c>EffectEngine.ResolveConsumables</c>.
+    /// efectos (<c>plain</c>), no hace nada. Con la turba ya dentro tampoco (revisión independiente): lo que la
+    /// turba trae ya ha pasado, y provocarla otra vez duplicaría la lesión o acortaría su conducta «hasta el
+    /// final». Lo llama <c>EffectEngine.ResolveConsumables</c>.
     /// </summary>
-    internal void ProvokeMob(int ticks) => ApplyMob(ticks);
+    internal void ProvokeMob(int ticks)
+    {
+        if (!_goldenGoal)
+        {
+            ApplyMob(untilTheEnd: false, ticks);
+        }
+    }
 
-    private void ApplyMob(int ticks)
+    /// <summary>
+    /// Aplica el tipo de turba. Al entrar la turba (<paramref name="untilTheEnd"/>) la conducta que impone es la
+    /// DE BASE del equipo hasta el final: un grito encima la tapa mientras dura y, al acabar, se vuelve a ella
+    /// (revisión independiente: antes un grito de presión apagaba el frenesí de su equipo). Provocada, es un
+    /// grito de <paramref name="ticks"/> como los de la ADR 0166.
+    /// </summary>
+    private void ApplyMob(bool untilTheEnd, int ticks)
     {
         var mob = _setup.Mob;
         if (mob is null)
@@ -5222,9 +5237,24 @@ internal sealed class MatchEngine : IPerkWorld
                 case MobEffectKind.Injure:
                     MobInjure();
                     break;
+                case MobEffectKind.PressBoth when untilTheEnd:
+                    for (int team = 0; team < 2; team++)
+                    {
+                        _basePress[team] = true;
+                        _pressEnd[team] = -1;
+                        _context.PressActive[team] = true;
+                    }
+
+                    break;
                 case MobEffectKind.PressBoth:
                     StartShout(0, Underleague.Sim.Perks.ShoutKind.Press, ticks);
                     StartShout(1, Underleague.Sim.Perks.ShoutKind.Press, ticks);
+                    break;
+                case MobEffectKind.TheirOffensive when untilTheEnd:
+                    // El equipo 1 es siempre el rival en la run (W-15: el jugador es local).
+                    _baseOrder[1] = Mentality.Offensive;
+                    _shoutOrderEnd[1] = -1;
+                    _context.Order[1] = Mentality.Offensive;
                     break;
                 case MobEffectKind.TheirOffensive:
                     StartShout(1, Underleague.Sim.Perks.ShoutKind.Offensive, ticks);
@@ -5865,7 +5895,7 @@ internal sealed class MatchEngine : IPerkWorld
             _report.WentToGoldenGoal = true;
 
             // ADR 0167: el tipo de turba anunciado antes del partido ocurre ahora, y lo que dura, dura hasta el final.
-            ApplyMob(MobUntilTheEnd);
+            ApplyMob(untilTheEnd: true, ticks: 0);
             ScheduleKickoff(1);
             return;
         }

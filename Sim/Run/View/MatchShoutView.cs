@@ -66,6 +66,12 @@ public static class MatchShoutView
         // puerta (ADR 0167).
         ActiveShout? order = null;
         ActiveShout? press = null;
+
+        // Lo que impone la turba al entrar es la conducta de BASE hasta el final (como en el motor): un grito
+        // encima la tapa y, al acabar, se vuelve a ella. Y una vez dentro, provocarla no hace nada.
+        ActiveShout? baseOrder = null;
+        ActiveShout? basePress = null;
+        bool mobStarted = false;
         for (int i = 0; i < events.Count; i++)
         {
             var used = events[i];
@@ -74,9 +80,14 @@ public static class MatchShoutView
                 continue;
             }
 
-            if (used.Type == EventType.MobStart && mob is not null)
+            if (used.Type == EventType.MobStart)
             {
-                ApplyMob(mob, MobPrefix + mob.Id, used.Tick, MobUntilTheEnd, team, tick, ref order, ref press);
+                mobStarted = true;
+                if (mob is not null)
+                {
+                    ApplyMobBase(mob, MobPrefix + mob.Id, used.Tick, team, tick, ref order, ref press, ref baseOrder, ref basePress);
+                }
+
                 continue;
             }
 
@@ -99,7 +110,7 @@ public static class MatchShoutView
                     int total = effects[e].Value * TicksPerSecond;
                     if (effects[e].Type == EffectType.ProvokeMob)
                     {
-                        if (mob is not null)
+                        if (mob is not null && !mobStarted)
                         {
                             ApplyMob(mob, used.Detail, used.Tick, total, team, tick, ref order, ref press);
                         }
@@ -129,6 +140,8 @@ public static class MatchShoutView
             }
         }
 
+        order ??= baseOrder;
+        press ??= basePress;
         List<ActiveShout>? active = null;
         foreach (var shout in new[] { order, press })
         {
@@ -145,7 +158,35 @@ public static class MatchShoutView
         return (IReadOnlyList<ActiveShout>?)active ?? Array.Empty<ActiveShout>();
     }
 
-    /// <summary>Lo que la turba impone a <paramref name="team"/> (ADR 0167), como <c>MatchEngine.ApplyMob</c>.</summary>
+    /// <summary>La turba al entrar (ADR 0167): conducta de base hasta el final; cancela los gritos en curso de esa categoría.</summary>
+    private static void ApplyMobBase(
+        MobSetup mob,
+        string id,
+        int startTick,
+        int team,
+        int tick,
+        ref ActiveShout? order,
+        ref ActiveShout? press,
+        ref ActiveShout? baseOrder,
+        ref ActiveShout? basePress)
+    {
+        int left = startTick + MobUntilTheEnd - tick;
+        for (int e = 0; e < mob.Effects.Count; e++)
+        {
+            if (mob.Effects[e] == MobEffectKind.PressBoth)
+            {
+                press = null;
+                basePress = new ActiveShout(id, ShoutKind.Press, left, MobUntilTheEnd);
+            }
+            else if (mob.Effects[e] == MobEffectKind.TheirOffensive && team == 1)
+            {
+                order = null;
+                baseOrder = new ActiveShout(id, ShoutKind.Offensive, left, MobUntilTheEnd);
+            }
+        }
+    }
+
+    /// <summary>La turba provocada (ADR 0167): como un grito, como <c>MatchEngine.ApplyMob</c>.</summary>
     private static void ApplyMob(
         MobSetup mob, string id, int startTick, int total, int team, int tick, ref ActiveShout? order, ref ActiveShout? press)
     {

@@ -218,6 +218,49 @@ public sealed class MobTests
         Assert.Equal(none, riled);
     }
 
+    /// <summary>
+    /// Revisión independiente: con la turba ya dentro, provocarla no hace nada —ni una segunda lesión, ni acortar la
+    /// conducta «hasta el final» a 10 s—.
+    /// </summary>
+    [Fact]
+    public void RilingTheCrowdOnceTheMobIsInDoesNothing()
+    {
+        foreach (var seed in Drawn.Value)
+        {
+            int mobTick = MobTick(Play(With(seed, Mob("invader")), seed));
+            var invader = Play(With(seed, Mob("invader"), home: Rile(mobTick + 5)), seed);
+            Assert.Single(invader, e => e.Type == EventType.Injury && e.Opponent == -1);
+
+            var trace = Trace(With(seed, Mob("frenzy"), home: Rile(mobTick + 5)), seed);
+            Assert.True(trace[^1].PressHome && trace[^1].PressAway);
+        }
+    }
+
+    /// <summary>
+    /// Revisión independiente: lo que impone la turba es la conducta de base hasta el final. Un grito de presión del
+    /// jugador durante el frenesí no la apaga al acabar (antes el equipo dejaba de presionar y el rival no).
+    /// </summary>
+    [Fact]
+    public void APressShoutDuringTheFrenzyGoesBackToTheFrenzyWhenItEnds()
+    {
+        var definition = Consumables.Find("after_him")!;
+        foreach (var seed in Drawn.Value)
+        {
+            int mobTick = MobTick(Play(With(seed, Mob("frenzy")), seed));
+            var shout = new MatchConsumable(definition.Id, definition.Rarity, definition.Effects, ConsumableTrigger.Manual) { ManualTick = mobTick + 3 };
+            var setup = With(seed, Mob("frenzy"), home: shout);
+            var trace = Trace(setup, seed);
+            var events = Play(setup, seed);
+
+            for (int tick = mobTick; tick <= trace.Count; tick++)
+            {
+                Assert.True(trace[tick - 1].PressHome, $"semilla {seed}, tick {tick}");
+                var view = MatchShoutView.ActiveAt(events, setup.Home.Consumables, 0, tick, setup.Mob, setup.Away.Consumables);
+                Assert.Contains(view, s => s.Kind == ShoutKind.Press);
+            }
+        }
+    }
+
     // ------------------------------------------------------------------ lo que se ve
 
     /// <summary>

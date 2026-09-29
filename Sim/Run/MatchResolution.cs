@@ -126,7 +126,11 @@ internal static class MatchResolution
                         ? players[index] with { PhysicalState = PhysicalState.SevereInjury }
                         : players[index] with
                         {
-                            PhysicalState = PhysicalState.MinorInjury,
+                            // Una lesión nunca mejora el estado (revisión de la ADR 0167): una leve sobre un
+                            // lesionado grave —la de la turba, que no mata— lo deja grave, no curado.
+                            PhysicalState = players[index].PhysicalState == PhysicalState.SevereInjury
+                                ? PhysicalState.SevereInjury
+                                : PhysicalState.MinorInjury,
                             MinorInjuries = players[index].MinorInjuries + 1,
                         };
                     break;
