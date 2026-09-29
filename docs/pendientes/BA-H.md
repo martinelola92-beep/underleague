@@ -27,7 +27,7 @@
 
 ## Anotado tras la revisión independiente (29 sep 2026), sin arreglar
 
-- **Los «gritos» del entrenador son multiplicadores de éxito invisibles.** `after_him`, `push_forward` y
+- **[CERRADO 29 sep 2026, ADR 0166]** ~~**Los «gritos» del entrenador son multiplicadores de éxito invisibles.**~~ Ahora `after_him`, `hold_the_line` y `push_forward` llevan el efecto `shout`: cambian la orden o la consigna de presión del equipo durante N segundos y el tablero lo enseña con cuenta atrás. Lo que sigue es el diagnóstico original: `after_him`, `push_forward` y
   `hold_the_line` usan sólo `modifyProbability`/`modifyAttribute` (catálogo BA-H): suben o bajan una cuota
   que el jugador no ve, y **no cambian la conducta que su nombre promete** (nadie «se le echa encima» ni
   «se queda atrás»; el equipo hace lo mismo con otra cuota). Es lo contrario de «comportamiento observable
