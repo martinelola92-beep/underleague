@@ -319,7 +319,15 @@ public partial class ScoutScreen : Control
         if (_run.Systems is { } mobSystems
             && Underleague.Sim.Run.View.MobView.For(state, node, mobSystems.Mobs, catalog, GameData.Language) is { } mob)
         {
-            y = Block(UiText.Get("ui.scout.mob"), new[] { UiText.Get("ui.scout.mobLine", mob.Name, mob.Text) }, y);
+            // ADR 0169: y lo que hace toda turba con el campo, anunciado antes: el estrechamiento es un problema de
+            // colocación anticipable (RF-055b, RF-012d), no una sorpresa.
+            var mobLines = new List<string> { UiText.Get("ui.scout.mobLine", mob.Name, mob.Text) };
+            if (mob.Rule.Length > 0)
+            {
+                mobLines.Add(mob.Rule);
+            }
+
+            y = Block(UiText.Get("ui.scout.mob"), mobLines, y);
         }
 
         // RF-013: los perks letales, destacados. Si no hay ninguno, se dice: la ausencia de amenaza es

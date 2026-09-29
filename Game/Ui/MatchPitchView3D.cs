@@ -306,6 +306,23 @@ public partial class MatchPitchView3D : SubViewportContainer
     /// </summary>
     public const float DefaultFov = 45f;
 
+    // ------------------------------------------------------------------ ADR 0169: el público invade el campo
+
+    /// <summary>Fotograma de <see cref="EventType.MobStart"/> de la traza, o -1 si el partido no llega a la turba (se calcula una vez en <see cref="Bind"/>).</summary>
+    private int _mobFrame = -1;
+
+    /// <summary>Filas invadidas por lado (<c>tuning.mob.narrowRowsPerSide</c>): el dato de /Sim, nunca una constante de aquí.</summary>
+    private int _mobRows;
+
+    /// <summary>Público de las filas exteriores; invisible hasta <see cref="_mobFrame"/>.</summary>
+    private Node3D? _mobCrowd;
+
+    /// <summary>Colores del público que salta al campo: los de la grada, para que se lea como la misma gente.</summary>
+    private static readonly Color[] MobCrowdColors =
+    {
+        new("2f6fd6"), new("1d4590"), new("d63a2f"), new("8e231c"), new("c9b48a"), new("6b5a3e"), new("e8dcc0"),
+    };
+
     /// <summary>Elevación de la cámara en grados sobre el césped. Es <c>[Export]</c> para poder barrerla en las capturas.</summary>
     [Export]
     public float Elevation { get; set; } = DefaultElevation;
@@ -438,6 +455,7 @@ public partial class MatchPitchView3D : SubViewportContainer
         ApplyBloodMarks();
         ApplyBallTrail();
         ApplyReferee((float)delta, snap: false);
+        ApplyMobCrowd();
         QueueRedraw();
     }
 
@@ -461,6 +479,7 @@ public partial class MatchPitchView3D : SubViewportContainer
         ApplyBloodMarks();
         ApplyBallTrail();
         ApplyReferee(0f, snap: true);
+        ApplyMobCrowd();
         QueueRedraw();
     }
 
@@ -468,6 +487,104 @@ public partial class MatchPitchView3D : SubViewportContainer
     {
         DrawMarks();
         DrawRefereeGesture();
+    }
+
+    /// <summary>
+    /// ADR 0169 (RF-055b): desde <see cref="EventType.MobStart"/> el público ocupa las filas exteriores. El motor
+    /// ya acota a jugadores y balón a la banda (<c>/Sim</c> decide, aquí no se calcula nada: RT-014); esto sólo
+    /// <b>pinta</b> lo que el motor ya hizo, con el número de filas que trae el dato (<c>Catalog.Tuning.Mob</c>).
+    /// El público son cápsulas de los colores de la grada sobre un suelo pisoteado, más bajas que las fichas
+    /// para no taparlas, con semilla fija.
+    /// </summary>
+    private void BuildMobCrowd(MatchTrace? trace, IReadOnlyList<MatchEvent>? events, Catalog? catalog)
+    {
+        _mobCrowd?.QueueFree();
+        _mobCrowd = null;
+        _mobFrame = -1;
+        _mobRows = catalog?.Tuning.Mob.NarrowRowsPerSide ?? 0;
+        if (trace is null || events is null || _mobRows <= 0)
+        {
+            return;
+        }
+
+        for (int i = 0; i < events.Count; i++)
+        {
+            if (events[i].Type == EventType.MobStart)
+            {
+                _mobFrame = trace.FrameOfTick(events[i].Tick);
+                break;
+            }
+        }
+
+        if (_mobFrame < 0)
+        {
+            return;
+        }
+
+        var crowd = new Node3D { Visible = false };
+        var rng = new RandomNumberGenerator { Seed = 4242 };
+        var body = new CapsuleMesh { Radius = 0.13f, Height = 0.52f, RadialSegments = 8, Rings = 2 };
+        var material = new StandardMaterial3D
+        {
+            VertexColorUseAsAlbedo = true,
+            Roughness = 1f,
+            SpecularMode = BaseMaterial3D.SpecularModeEnum.Disabled,
+        };
+
+        for (int side = 0; side < 2; side++)
+        {
+            float top = side == 0 ? 0f : Pitch.Rows - _mobRows;
+            crowd.AddChild(new MeshInstance3D
+            {
+                Mesh = new BoxMesh { Size = new Vector3(Pitch.Columns, 0.04f, _mobRows) },
+                MaterialOverride = new StandardMaterial3D { AlbedoColor = new Color("3b2e22"), Roughness = 1f, SpecularMode = BaseMaterial3D.SpecularModeEnum.Disabled },
+                Position = new Vector3(Pitch.Columns / 2f, 0.02f, top + (_mobRows / 2f)),
+                CastShadow = GeometryInstance3D.ShadowCastingSetting.Off,
+            });
+
+            // Tres por casilla y por eje: una multitud, no una fila de postes.
+            int perColumn = 3;
+            int perRow = 3 * _mobRows;
+            var multiMesh = new MultiMesh
+            {
+                TransformFormat = MultiMesh.TransformFormatEnum.Transform3D,
+                UseColors = true,
+                Mesh = body,
+                InstanceCount = Pitch.Columns * perColumn * perRow,
+            };
+
+            for (int k = 0; k < multiMesh.InstanceCount; k++)
+            {
+                int column = k % (Pitch.Columns * perColumn);
+                int row = k / (Pitch.Columns * perColumn);
+                float x = ((column + 0.5f) / perColumn) + rng.RandfRange(-0.12f, 0.12f);
+                float z = top + ((row + 0.5f) / 3f) + rng.RandfRange(-0.12f, 0.12f);
+                float h = rng.RandfRange(0.9f, 1.2f);
+                multiMesh.SetInstanceTransform(
+                    k,
+                    new Transform3D(Basis.Identity.Scaled(new Vector3(1f, h, 1f)), new Vector3(x, 0.04f + (0.26f * h), z)));
+                multiMesh.SetInstanceColor(k, MobCrowdColors[rng.RandiRange(0, MobCrowdColors.Length - 1)]);
+            }
+
+            crowd.AddChild(new MultiMeshInstance3D
+            {
+                Multimesh = multiMesh,
+                MaterialOverride = material,
+                CastShadow = GeometryInstance3D.ShadowCastingSetting.Off,
+            });
+        }
+
+        _world.AddChild(crowd);
+        _mobCrowd = crowd;
+    }
+
+    /// <summary>El público sólo se ve desde el fotograma en que entra la turba (y se apaga si se retrocede).</summary>
+    private void ApplyMobCrowd()
+    {
+        if (_mobCrowd is not null)
+        {
+            _mobCrowd.Visible = _mobFrame >= 0 && Frame >= _mobFrame;
+        }
     }
 
     /// <summary>
@@ -533,6 +650,8 @@ public partial class MatchPitchView3D : SubViewportContainer
                 }
             }
         }
+
+        BuildMobCrowd(trace, events, catalog);
 
         if (trace is null || setup is null || catalog is null)
         {

@@ -49,6 +49,15 @@ public partial class MatchPitchView : Control
     /// <summary>Fotograma que se está pintando (índice, no tick).</summary>
     public int Frame { get; set; }
 
+    /// <summary>
+    /// ADR 0169 (RF-055b): fotograma en que entra la turba, o -1. Desde ahí el público ocupa
+    /// <see cref="MobRows"/> filas por lado. Sólo se pinta lo que el motor ya hizo (RT-014).
+    /// </summary>
+    public int MobFrame { get; set; } = -1;
+
+    /// <summary>Filas invadidas por lado en la turba (<c>tuning.mob.narrowRowsPerSide</c>).</summary>
+    public int MobRows { get; set; }
+
     /// <summary>Fracción 0..1 hacia el fotograma siguiente. Solo suaviza el dibujo (RT-020).</summary>
     public float Alpha { get; set; }
 
@@ -133,6 +142,11 @@ public partial class MatchPitchView : Control
         }
 
         int frame = Mathf.Clamp(Frame, 0, trace.FrameCount - 1);
+        if (MobFrame >= 0 && MobRows > 0 && frame >= MobFrame)
+        {
+            DrawMobCrowd(cell);
+        }
+
         if (ShowZone && SelectedId >= 0)
         {
             DrawZone(trace, frame, cell);
@@ -277,6 +291,34 @@ public partial class MatchPitchView : Control
             new Vector2(width - 2f, (height / 2f) + mouth),
             Style.TeamRival,
             5f);
+    }
+
+    /// <summary>
+    /// ADR 0169: el público de las filas invadidas de la turba, sobre un suelo pisoteado. Determinista: cada
+    /// cabeza sale de su índice, sin generador.
+    /// </summary>
+    private void DrawMobCrowd(float cell)
+    {
+        var ground = new Color("3b2e22");
+        var heads = new[] { new Color("2f6fd6"), new Color("d63a2f"), new Color("c9b48a"), new Color("8e231c"), new Color("e8dcc0"), new Color("1d4590") };
+        for (int side = 0; side < 2; side++)
+        {
+            float top = side == 0 ? 0f : Pitch.Rows - MobRows;
+            DrawRect(new Rect2(0f, top * cell, Pitch.Columns * cell, MobRows * cell), ground);
+            int columns = Pitch.Columns * 3;
+            int rows = MobRows * 3;
+            for (int k = 0; k < columns * rows; k++)
+            {
+                int column = k % columns;
+                int row = k / columns;
+                float jitterX = ((((k * 37) + 11) % 17) - 8) / 60f;
+                float jitterY = ((((k * 53) + 7) % 13) - 6) / 60f;
+                var center = new Vector2(
+                    (((column + 0.5f) / 3f) + jitterX) * cell,
+                    (top + ((row + 0.5f) / 3f) + jitterY) * cell);
+                DrawCircle(center, cell * 0.11f, heads[((k * 7) + row) % heads.Length]);
+            }
+        }
     }
 
     /// <summary>

@@ -528,6 +528,22 @@ public partial class MatchScreen : Control
     private void BindFlashes()
     {
         var playback = _run.Playback;
+
+        // ADR 0169: la turba estrecha el campo; la vista 2D pinta el público desde el fotograma de MOB_START.
+        _pitch.MobRows = _run.Catalog?.Tuning.Mob.NarrowRowsPerSide ?? 0;
+        _pitch.MobFrame = -1;
+        if (_trace is not null && playback is not null)
+        {
+            foreach (var e in playback.Result.Events)
+            {
+                if (e.Type == Underleague.Sim.Events.EventType.MobStart)
+                {
+                    _pitch.MobFrame = _trace.FrameOfTick(e.Tick);
+                    break;
+                }
+            }
+        }
+
         _pitch.Flashes = _trace is null || playback is null || _run.Catalog is null
             ? System.Array.Empty<MatchFlash>()
             : MatchFlashView.Build(playback.Result.Events, _trace, _run.Catalog);
