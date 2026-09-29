@@ -182,6 +182,36 @@ public sealed class ShoutTests
         Assert.Equal(Mentality.Offensive, At(order, end));
     }
 
+    /// <summary>
+    /// Lo que enseña la pantalla (<c>MatchShoutView</c>, que sólo lee los eventos) coincide tick a tick con
+    /// lo que hace el motor: orden efectiva, consigna de presión y cuenta atrás.
+    /// </summary>
+    [Theory]
+    [InlineData("hold_the_line", 10)]
+    [InlineData("push_forward", 10)]
+    [InlineData("after_him", 6)]
+    public void TheViewShowsExactlyWhatTheEngineDoes(string id, int seconds)
+    {
+        var setup = With(2, id, T, new[] { new OrderChange(T + 20, Mentality.Defensive) });
+        var (order, _, press) = Trace(setup, 2);
+        var events = Simulator.Run(setup, 2, Catalog, SimConfig.Default).Events;
+        var equipped = setup.Home.Consumables;
+
+        for (int tick = 1; tick <= order.Count; tick++)
+        {
+            var shouts = Underleague.Sim.Run.View.MatchShoutView.ActiveAt(events, equipped, 0, tick);
+            var playerOrder = tick >= T + 20 ? Mentality.Defensive : Mentality.Neutral;
+            Assert.Equal(At(order, tick), Underleague.Sim.Run.View.MatchShoutView.EffectiveOrder(shouts, playerOrder));
+            Assert.Equal(press[tick - 1], shouts.Any(s => s.Kind == ShoutKind.Press));
+        }
+
+        var atStart = Underleague.Sim.Run.View.MatchShoutView.ActiveAt(events, equipped, 0, T);
+        Assert.Equal(seconds, Assert.Single(atStart).SecondsLeft);
+        Assert.Empty(Underleague.Sim.Run.View.MatchShoutView.ActiveAt(events, equipped, 0, T - 1));
+        Assert.Empty(Underleague.Sim.Run.View.MatchShoutView.ActiveAt(events, equipped, 0, T + (seconds * Tps)));
+        Assert.Empty(Underleague.Sim.Run.View.MatchShoutView.ActiveAt(events, equipped, 1, T));
+    }
+
     [Theory]
     [InlineData("hold_the_line")]
     [InlineData("push_forward")]
