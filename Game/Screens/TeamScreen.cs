@@ -50,6 +50,7 @@ public partial class TeamScreen : Control
     private Button _zonesButton = null!;
     private Button _coverageButton = null!;
     private ConsumablesPanel _consumables = null!;
+    private ChestPanel _chest = null!;
     private Toast _toast = null!;
 
     private int _selected = -1;
@@ -59,6 +60,7 @@ public partial class TeamScreen : Control
     private bool _coverage;
     private bool _zones;
     private bool _consumablesMode;
+    private bool _chestMode;
     private Cell _pressCell;
     private Cell _cursor = PlacementView.GoalkeeperCell;
 
@@ -118,12 +120,31 @@ public partial class TeamScreen : Control
         consumablesButton.Pressed += ToggleConsumables;
         AddChild(consumablesButton);
 
+        // ADR 0161 §3: el cofre, en la tira libre entre Consumibles (900-1032) y Volver (1140-1256) —la
+        // misma tira de 108 px que AddBackButton ya documenta como vacía—. Mismo criterio de montar el
+        // botón por código que Consumibles: no hay hueco libre en Equipo.tscn.
+        var chestButton = new Button
+        {
+            Text = UiText.Get("ui.team.chestButton"),
+            Position = new Vector2(1032f, 8f),
+            Size = new Vector2(104f, 26f),
+            FocusMode = FocusModeEnum.None,
+        };
+        chestButton.AddThemeFontSizeOverride("font_size", Style.TextSmall);
+        chestButton.Pressed += ToggleChest;
+        AddChild(chestButton);
+
         // Sustituye el panel de campo entero mientras está encendido (ApplyFieldMode): la decisión de
         // equipar no tiene nada que ver con la cuadrícula, así que no hay nada del campo que enseñar a la
         // vez. Ocupa el mismo hueco que Campo/Leyenda/Info/Vínculos/Riesgo, desde la fila del título de
         // "COLOCACIÓN".
         _consumables = new ConsumablesPanel { Position = new Vector2(410f, 58f), Visible = false };
         AddChild(_consumables);
+
+        // Mismo hueco que Consumibles, el mismo campo entero (ApplyFieldMode): el cofre tampoco tiene nada
+        // que ver con la cuadrícula.
+        _chest = new ChestPanel { Position = new Vector2(410f, 58f), Visible = false };
+        AddChild(_chest);
 
         UpdateInputHelp();
 
@@ -234,6 +255,12 @@ public partial class TeamScreen : Control
             if (_consumablesMode)
             {
                 ToggleConsumables();
+                return;
+            }
+
+            if (_chestMode)
+            {
+                ToggleChest();
                 return;
             }
 
@@ -476,6 +503,13 @@ public partial class TeamScreen : Control
 
         ApplyCardFlags();
         RefreshPitch();
+
+        // ADR 0161 §3: el cofre actúa sobre la ficha activa, así que cambiar de ficha con el cofre abierto
+        // tiene que refrescar sobre quién actúan sus tres botones.
+        if (_chestMode)
+        {
+            _chest.Rebuild(_state, _selected);
+        }
     }
 
     /// <summary>Activar al ya seleccionado lo colapsa: el mismo gesto abre y cierra la ficha.</summary>
@@ -538,6 +572,7 @@ public partial class TeamScreen : Control
         }
 
         _consumablesMode = false;
+        _chestMode = false;
         RefreshPitch();
         ApplyFieldMode();
         UpdateInputHelp();
@@ -552,6 +587,7 @@ public partial class TeamScreen : Control
         }
 
         _consumablesMode = false;
+        _chestMode = false;
         RefreshPitch();
         ApplyFieldMode();
         UpdateInputHelp();
@@ -569,6 +605,7 @@ public partial class TeamScreen : Control
         {
             _coverage = false;
             _zones = false;
+            _chestMode = false;
             _consumables.Rebuild(_state);
         }
 
@@ -577,10 +614,31 @@ public partial class TeamScreen : Control
         UpdateInputHelp();
     }
 
-    /// <summary>Enseña el panel de campo o el de consumibles; nunca los dos a la vez.</summary>
+    /// <summary>
+    /// ADR 0161 §3: mismo criterio que <see cref="ToggleConsumables"/> —el cofre tampoco tiene nada que
+    /// ver con la cuadrícula—. Se reconstruye con el jugador ya señalado en la plantilla (<c>_selected</c>),
+    /// si lo hay: el cofre actúa sobre la ficha activa, no sobre una selección propia.
+    /// </summary>
+    private void ToggleChest()
+    {
+        _chestMode = !_chestMode;
+        if (_chestMode)
+        {
+            _coverage = false;
+            _zones = false;
+            _consumablesMode = false;
+            _chest.Rebuild(_state, _selected);
+        }
+
+        RefreshPitch();
+        ApplyFieldMode();
+        UpdateInputHelp();
+    }
+
+    /// <summary>Enseña el panel de campo, el de consumibles o el del cofre; nunca dos a la vez.</summary>
     private void ApplyFieldMode()
     {
-        bool showPitch = !_consumablesMode;
+        bool showPitch = !_consumablesMode && !_chestMode;
         _pitch.Visible = showPitch;
         _legend.Visible = showPitch && !_zones;
         _pitchTitle.Visible = showPitch;
@@ -593,17 +651,22 @@ public partial class TeamScreen : Control
         _riskTitle.Visible = showPitch && _riskTitle.Visible;
         _risk.Visible = showPitch && _risk.Visible;
         _consumables.Visible = _consumablesMode;
+        _chest.Visible = _chestMode;
     }
 
     /// <summary>
-    /// La ayuda de mandos cambia con el modo: la sección de consumibles es hoy solo de ratón (mismo
-    /// criterio que <c>ui.input.padPending</c> en Mercado), así que la línea de mando lo dice en vez de
-    /// prometer un segundo flujo que no existe.
+    /// La ayuda de mandos cambia con el modo: la sección de consumibles y la del cofre son hoy solo de
+    /// ratón (mismo criterio que <c>ui.input.padPending</c> en Mercado), así que la línea de mando lo dice
+    /// en vez de prometer un segundo flujo que no existe.
     /// </summary>
     private void UpdateInputHelp()
     {
-        _mouseHelp.Text = _consumablesMode ? UiText.Get("ui.team.consumableInputMouse") : UiText.Get("ui.input.mouse");
-        _padHelp.Text = _consumablesMode ? UiText.Get("ui.input.padPending") : UiText.Get("ui.input.pad");
+        _mouseHelp.Text = _chestMode
+            ? UiText.Get("ui.team.chestInputMouse")
+            : _consumablesMode
+                ? UiText.Get("ui.team.consumableInputMouse")
+                : UiText.Get("ui.input.mouse");
+        _padHelp.Text = _consumablesMode || _chestMode ? UiText.Get("ui.input.padPending") : UiText.Get("ui.input.pad");
     }
 
     private void Flash(int playerId)
@@ -1205,6 +1268,23 @@ public partial class TeamScreen : Control
                 ToggleConsumables();
                 _consumables.SelectForTest("smoke_flare");
             }, false),
+            ("equipo-cofre", () =>
+            {
+                // ADR 0161 §3: mismo apaño que "equipo-consumibles" -sin run detrás no hay almacén del
+                // que sacar nada-, más una ficha señalada (EnsureTestItem del jugador 0, ya con objeto
+                // equipado por "equipo-objeto") para que el panel de acción enseñe también "guardar" y
+                // "pasar", no solo "equipar".
+                Pad("ui_cancel");
+                _toast.Post(Array.Empty<ToastLine>());
+                OnCardZoneHint(string.Empty, string.Empty);
+                int carrier = EnsurePlacementItem();
+                EnsureTestStoredItems();
+                _focusRoster = true;
+                _rosterIndex = IndexOfCard(carrier);
+                Select(carrier);
+                ToggleChest();
+                _chest.SelectForTest("worn_boots");
+            }, false),
         };
 
         string directory = ProjectSettings.GlobalizePath("res://screenshots");
@@ -1576,5 +1656,36 @@ public partial class TeamScreen : Control
         };
 
         _state.ForceTestConsumables(catalog, owned, equipped);
+    }
+
+    /// <summary>
+    /// <b>Solo para la secuencia de capturas</b> (ADR 0161): la plantilla de pruebas no arrastra ninguna
+    /// run (<c>TeamState.Load</c>), así que sin esto el cofre enseñaría el mensaje de almacén vacío y
+    /// ninguna otra cosa. Mismo apaño que <see cref="EnsureTestConsumables"/>: dos copias de un objeto
+    /// común (para enseñar el agrupado "×2") y una reliquia, para que la captura enseñe una fila de cada
+    /// clase y el panel de acción a la vez. No toca nada con una run detrás: ahí el almacén lo llena el
+    /// bucle de run (botín, reliquia, herencia), no una captura.
+    /// </summary>
+    private void EnsureTestStoredItems()
+    {
+        if (RunController.Instance is { HasRun: true })
+        {
+            return;
+        }
+
+        var catalog = ItemLoader.FromJson(GameData.Snapshot);
+        var items = new List<ItemDefinition>();
+        if (catalog.Find("worn_boots") is { } common)
+        {
+            items.Add(common);
+            items.Add(common);
+        }
+
+        if (catalog.Find("relic_scorer") is { } relic)
+        {
+            items.Add(relic);
+        }
+
+        _state.ForceTestStoredItems(items);
     }
 }

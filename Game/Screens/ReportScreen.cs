@@ -318,7 +318,20 @@ public partial class ReportScreen : Control
             y = Row(y, UiText.Get("ui.report.goldTotal"), Amount(gold.Total), Style.Accent);
         }
 
-        Widgets.Body(this, UiText.Get("ui.report.goldNow", _run.State!.Gold), new Vector2(932f, y + 6f), 324f, Style.TextDim);
+        var now = Widgets.Body(this, UiText.Get("ui.report.goldNow", _run.State!.Gold), new Vector2(932f, y + 6f), 324f, Style.TextDim);
+
+        // Botín de liga (ADR 0161 §1): un objeto común más al almacén, además del oro de arriba. Null en
+        // cualquier otro nodo o en una liga perdida (PostMatchView.Loot), así que la línea solo aparece
+        // cuando de verdad cayó algo.
+        if (_report.Loot is { } loot)
+        {
+            Widgets.Body(
+                this,
+                UiText.Get("ui.report.loot", loot.ItemName),
+                new Vector2(932f, y + 6f + now.Size.Y + 4f),
+                324f,
+                Style.Accent);
+        }
 
         Widgets.Panel(this, new Rect2(920f, 424f, 348f, 316f));
         Widgets.Section(this, UiText.Get("ui.report.referee"), new Vector2(932f, 430f), 320f);

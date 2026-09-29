@@ -302,6 +302,108 @@ public sealed class TeamState
     }
 
     /// <summary>
+    /// <b>Solo para la secuencia de capturas</b> (ADR 0161, mismo apaño que <see cref="ForceTestItem"/> y
+    /// <see cref="ForceTestConsumables"/>): sin run detrás no hay almacén del que sacar nada, y el cofre
+    /// necesita enseñar algo más que el mensaje de vacío. Nunca se usa con una run real detrás.
+    /// </summary>
+    private Dictionary<string, ItemDefinition>? _testStoredItemDefs;
+
+    private List<string>? _testStoredItems;
+
+    /// <summary>
+    /// Objetos del almacén, uno por copia y ordenados por id (RT-041, ADR 0161): botín de liga (§1),
+    /// reliquia de un muerto (§2) o equipo heredado (ADR 0048). Vacío sin run detrás, salvo que la
+    /// secuencia de capturas lo haya forzado con <see cref="ForceTestStoredItems"/>.
+    /// </summary>
+    public IReadOnlyList<string> StoredItems => _testStoredItems ?? _run?.State?.StoredItems ?? Array.Empty<string>();
+
+    /// <summary>
+    /// Definición de un objeto del almacén, del catálogo de <b>esta</b> run; null sin run detrás salvo que
+    /// la secuencia de capturas haya forzado uno con <see cref="ForceTestStoredItems"/>.
+    /// </summary>
+    public ItemDefinition? Item(string itemId)
+    {
+        if (_testStoredItemDefs is not null && _testStoredItemDefs.TryGetValue(itemId, out var forced))
+        {
+            return forced;
+        }
+
+        return _run?.Systems?.Items.Find(itemId);
+    }
+
+    /// <summary>
+    /// <b>Solo para la secuencia de capturas</b>: fuerza el contenido del almacén sin tocar la run ni el
+    /// catálogo, igual que <see cref="ForceTestItem"/>. No hace nada si ya hay una run real detrás: ahí el
+    /// almacén lo llena el bucle de run (botín, reliquia, herencia), no una captura.
+    /// </summary>
+    public void ForceTestStoredItems(IReadOnlyList<ItemDefinition> items)
+    {
+        if (_run is { HasRun: true })
+        {
+            return;
+        }
+
+        _testStoredItemDefs = new Dictionary<string, ItemDefinition>(StringComparer.Ordinal);
+        var ids = new List<string>(items.Count);
+        foreach (var item in items)
+        {
+            _testStoredItemDefs[item.Id] = item;
+            ids.Add(item.Id);
+        }
+
+        ids.Sort(StringComparer.Ordinal);
+        _testStoredItems = ids;
+    }
+
+    /// <summary>
+    /// Equipa desde el almacén (ADR 0161 §3, cofre de Equipo, decisión <c>EquipStoredItem</c>). La regla
+    /// —un objeto por jugador, el desplazado vuelve al cofre— la valida <c>/Sim</c>; aquí solo se pide y se
+    /// refresca la copia local. Sin run detrás no hay almacén del que equipar nada, así que no hace nada.
+    /// </summary>
+    public void EquipStored(int playerId, string itemId)
+    {
+        if (_run is not { HasRun: true })
+        {
+            return;
+        }
+
+        _run.Apply(new EquipStoredItem(playerId, itemId));
+        Team = TeamOf(_run.State!, Catalog, _run.Systems);
+    }
+
+    /// <summary>
+    /// Guarda en el almacén el objeto que lleva puesto el jugador (ADR 0161 §3, decisión <c>StoreItem</c>).
+    /// Sin run detrás no hace nada. Nombrado distinto de la decisión (como <see cref="EquipStored"/>) para
+    /// no chocar el nombre del método con el del tipo <c>Underleague.Sim.Run.StoreItem</c> en su propio
+    /// cuerpo.
+    /// </summary>
+    public void StoreEquipped(int playerId)
+    {
+        if (_run is not { HasRun: true })
+        {
+            return;
+        }
+
+        _run.Apply(new StoreItem(playerId));
+        Team = TeamOf(_run.State!, Catalog, _run.Systems);
+    }
+
+    /// <summary>
+    /// Pasa el objeto equipado de un jugador a otro (RF-076b, decisión <c>TransferItem</c> ya existente).
+    /// Sin run detrás no hace nada. Mismo motivo de nombre que <see cref="StoreEquipped"/>.
+    /// </summary>
+    public void TransferEquipped(int fromPlayerId, int toPlayerId)
+    {
+        if (_run is not { HasRun: true })
+        {
+            return;
+        }
+
+        _run.Apply(new TransferItem(fromPlayerId, toPlayerId));
+        Team = TeamOf(_run.State!, Catalog, _run.Systems);
+    }
+
+    /// <summary>
     /// <b>Solo para la secuencia de capturas</b>: fuerza un catálogo, un inventario y unos equipados sin
     /// tocar la run ni escribir nada de verdad. No hace nada si ya hay una run real detrás.
     /// </summary>

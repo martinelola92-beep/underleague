@@ -503,6 +503,7 @@ public static class UiText
         ["ui.report.goldObjectiveFailed"] = "partido excelente no cumplido: {0}",
         ["ui.report.goldTotal"] = "TOTAL",
         ["ui.report.goldNow"] = "oro de la run: {0}",
+        ["ui.report.loot"] = "botín de liga: {0}, al cofre",
         ["ui.report.referee"] = "ÁRBITRO",
         ["ui.report.refereeBias"] = "criterio {0} al empezar, {1} al terminar",
         ["ui.report.refereeFouls"] = "faltas señaladas: {0} tuyas, {1} del rival",
@@ -652,6 +653,27 @@ public static class UiText
         ["ui.team.consumableTriggerMobStart"] = "entra la turba",
         ["ui.team.consumableTriggerOwnInjury"] = "sufres una lesión",
         ["ui.team.consumableTriggerOwnRedCard"] = "ves una tarjeta roja",
+
+        // --- cofre de Equipo (ADR 0161 §3): almacén, equipar/guardar/pasar sobre el jugador señalado ---
+        ["ui.team.chestButton"] = "Cofre",
+        ["ui.team.chestTitle"] = "COFRE",
+        // Distintivo corto a propósito (OptionCard reserva 42 px fijos antes del título en modo pequeño,
+        // Game/Ui/OptionCard.cs: "OBJETO" de ui.reward.badgeItem monta sobre el título en esa anchura).
+        ["ui.team.chestBadge"] = "OBJ",
+        ["ui.team.chestHint"] = "botín de liga, reliquias y equipo heredado de un muerto: nada cuesta oro",
+        ["ui.team.chestAction"] = "ACCIÓN",
+        ["ui.team.chestEmpty"] = "el cofre está vacío: gana una liga o pierde a alguien con historia",
+        ["ui.team.chestCopies"] = "{0} en el cofre",
+        ["ui.team.chestNoPlayer"] = "señala a un jugador de la plantilla para equipar, guardar o pasar su objeto",
+        ["ui.team.chestPlayer"] = "{0}",
+        ["ui.team.chestPlayerEmpty"] = "no lleva ningún objeto",
+        ["ui.team.chestPlayerHas"] = "lleva puesto: {0}",
+        ["ui.team.chestEquip"] = "Equipar",
+        ["ui.team.chestStore"] = "Guardar en el cofre",
+        ["ui.team.chestPass"] = "Pasar a otro",
+        ["ui.team.chestPassHint"] = "a quién se lo pasas",
+        ["ui.team.chestError"] = "no se pudo: {0}",
+        ["ui.team.chestInputMouse"] = "RATÓN  señala a un jugador en la plantilla · clic en un objeto del cofre: elegirlo · clic en Equipar/Guardar/Pasar: aplicarlo",
 
         // --- retransmisión de partido, «voz de pregón» (ADR 0119, ADR 0120; docs/ui/README.md) ---
         ["ui.pregon.speed.x1"] = "x1",
