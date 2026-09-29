@@ -28,6 +28,19 @@ public static class FullRunMetrics
     /// <summary>Muertes por run (1,5-3 desde la ADR 0048; antes 0,5-2).</summary>
     public const string DeathsPerRun = "deathsPerRun";
 
+    /// <summary>
+    /// ADR 0168, métrica guardiana de la sangre: bajas de sangre propias (jugadores que sufren una lesión grave o
+    /// mueren) por partido jugado. Vigila que ningún cambio lave la carnicería administrada, que es la identidad del
+    /// juego (CLAUDE.md).
+    /// </summary>
+    public const string BloodPerMatch = "bloodPerMatch";
+
+    /// <summary>
+    /// ADR 0168: de las runs que superan el jefe del acto 1, cuántas no han tenido ni una baja de sangre. Sólo las que
+    /// pasan el acto 1 (revisión independiente): sobre todas, la cifra medía lo difícil que es el primer jefe.
+    /// </summary>
+    public const string BloodlessPastAct1Share = "bloodlessPastAct1Share";
+
     /// <summary>Sumideros que el oro de un acto permite pagar; 2-3 y nunca todos (RF-114k).</summary>
     public const string SinksAffordablePerAct = "sinksAffordablePerAct";
 
@@ -202,6 +215,22 @@ public static class FullRunMetrics
 
     /// <summary>Muertes por run máximas (ADR 0048: de 2 a 3).</summary>
     public const double DeathsPerRunMax = 3.0;
+
+    /// <summary>
+    /// ADR 0168: suelo de <see cref="BloodPerMatch"/>. Procedencia (Regla H): línea base medida con el instrumento de
+    /// eventos (ADR 0168, tabla); el suelo queda a un 20 % de la base, **provisional**.
+    /// </summary>
+    public const double BloodPerMatchMin = BloodPerMatchBaseline * 0.8;
+
+    /// <summary>ADR 0168: línea base de <see cref="BloodPerMatch"/> (media de dos semillas, 29 sep 2026).</summary>
+    public const double BloodPerMatchBaseline = 0.34;
+
+    /// <summary>
+    /// ADR 0168: techo de <see cref="BloodlessPastAct1Share"/>. Procedencia (Regla H): línea base 2,7-4,0 % (tabla de la
+    /// ADR); la puerta ve ~500 runs que pasan el acto 1 (error típico ≈ 0,8 puntos) y las rápidas ~125 (≈ 1,5): el techo
+    /// queda a ~2,7 errores típicos incluso en éstas, **provisional**.
+    /// </summary>
+    public const double BloodlessPastAct1ShareMax = 7.0;
 
     /// <summary>Sumideros pagables por acto: mínimo.</summary>
     public const double SinksMin = 2.0;
@@ -410,11 +439,13 @@ public static class FullRunMetrics
 
         int victories = 0, defeats = 0, rosterDefeats = 0, bossDefeats = 0;
         int deaths = 0, fullRuns = 0, fullRunMatches = 0, matches = 0, marketRuns = 0, brokeRuns = 0;
+        int blood = 0, pastAct1 = 0, bloodlessPastAct1 = 0;
         int wonMatches = 0, wonNodes = 0, lostMatches = 0, lostNodes = 0, rewardsTaken = 0, rewardsDeclined = 0;
         var defeatsByAct = new int[RunRules.Acts];
         long goldEarned = 0, market = 0, clinic = 0, enrollment = 0, reroll = 0, wages = 0, left = 0;
         long squadTreatments = 0, riskyTreatments = 0, eventsTaken = 0, eventsDeclined = 0;
         long blacksmithTreatments = 0, prosthesesInstalled = 0, automatons = 0;
+        long nemeses = 0, revenges = 0, nemesesCapped = 0;
         long slots = 0;
         long roster = 0, level = 0, perks = 0, starterPerks = 0, items = 0, injuries = 0, severe = 0, counters = 0, ownInjuries = 0, matchInjuries = 0;
         long offers = 0, affordable = 0, purchases = 0, marketVisits = 0, goldAtMarket = 0;
@@ -478,6 +509,17 @@ public static class FullRunMetrics
             rewardsDeclined += run.RewardsDeclined;
             deaths += run.Deaths;
             matches += run.Matches;
+
+            // ADR 0168: la sangre propia de la run, contada partido a partido desde los eventos.
+            blood += run.BloodCasualties;
+            if (run.BossesBeaten >= 1)
+            {
+                pastAct1++;
+                if (run.BloodCasualties == 0)
+                {
+                    bloodlessPastAct1++;
+                }
+            }
             goldEarned += run.GoldEarned;
             market += run.GoldSpentMarket;
             clinic += run.GoldSpentClinic;
@@ -488,6 +530,12 @@ public static class FullRunMetrics
             blacksmithTreatments += run.BlacksmithTreatments;
             prosthesesInstalled += run.ProsthesesInstalled;
             automatons += run.Automatons;
+            if (run.FinalState is { } final)
+            {
+                nemeses += final.RivalMemory.Nemeses.Count;
+                revenges += final.Counter(RunState.RevengesCounter);
+                nemesesCapped += final.Counter(RunState.NemesisCappedCounter);
+            }
             enrollment += run.GoldSpentEnrollment;
             slots += run.SlotsBought;
             reroll += run.GoldSpentReroll;
@@ -574,6 +622,9 @@ public static class FullRunMetrics
             MatchesPerFullRunMin,
             MatchesPerFullRunMax));
         rows.Add(Banded(DeathsPerRun, (double)deaths / runs.Count, DeathsPerRunMin, DeathsPerRunMax));
+        rows.Add(Banded(BloodPerMatch, matches > 0 ? (double)blood / matches : 0.0, BloodPerMatchMin, null));
+        rows.Add(Banded(
+            BloodlessPastAct1Share, pastAct1 > 0 ? 100.0 * bloodlessPastAct1 / pastAct1 : 0.0, null, BloodlessPastAct1ShareMax));
         rows.Add(Banded(
             SinksAffordablePerAct,
             sinkSamples > 0 ? (double)sinkTotal / sinkSamples : 0.0,
@@ -656,6 +707,11 @@ public static class FullRunMetrics
         rows.Add(Info("blacksmithTreatmentsPerRun", (double)blacksmithTreatments / runs.Count));
         rows.Add(Info("prosthesesPerRun", (double)prosthesesInstalled / runs.Count));
         rows.Add(Info("automatonsPerRun", (double)automatons / runs.Count));
+        // ADR 0165: la memoria de los clanes. nemesesPerRun a cero = ningún rival mata nunca a nadie de forma
+        // atribuible; revengesPerRun a cero = el jugador nunca se venga; nemesesCappedPerRun mide cuánto muerde el tope.
+        rows.Add(Info("nemesesPerRun", (double)nemeses / runs.Count));
+        rows.Add(Info("revengesPerRun", (double)revenges / runs.Count));
+        rows.Add(Info("nemesesCappedPerRun", (double)nemesesCapped / runs.Count));
         // ADR 0100: cartas de evento resueltas y cartas que la política dejó pasar. Si «tomadas» sale a
         // cero, el catálogo no ofrece nada que compita con el resto del mapa y el nodo sigue siendo relleno.
         rows.Add(Info("eventsTakenPerRun", (double)eventsTaken / runs.Count));

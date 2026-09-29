@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using Godot;
+using Underleague.Game.Ui.Broadcast;
 using Underleague.Sim.Run;
 
 namespace Underleague.Game.Ui;
@@ -57,6 +58,12 @@ public partial class MapView : Control
 
     /// <summary>Ids de los nodos ya recorridos, para pintar el camino hecho.</summary>
     public IReadOnlyList<int> VisitedIds { get; set; } = System.Array.Empty<int>();
+
+    /// <summary>
+    /// Nodos donde juega hoy un némesis (ADR 0165), para marcarlos en el grafo: un sello de lacre en la esquina
+    /// del glifo. Vacío si no hay ninguno o si la run no lleva memoria de rivales.
+    /// </summary>
+    public IReadOnlyList<int> NemesisNodeIds { get; set; } = System.Array.Empty<int>();
 
     /// <summary>Nodo señalado por el jugador (el que tiene el ratón encima o el botón enfocado); -1 si ninguno.</summary>
     public int HighlightedId { get; set; } = -1;
@@ -170,6 +177,23 @@ public partial class MapView : Control
         // siempre, también apagado, para que el camino que ya no se puede alcanzar se siga leyendo como
         // un mapa y no como una fila de manchas sin identidad.
         NodeIcon.Draw(this, node.Kind, center, radius * 0.82f, new Color(Style.Text, ink));
+
+        // La marca de némesis (ADR 0165): un rombo de lacre con una equis en la esquina superior derecha, el
+        // mismo lenguaje que el anillo de la ficha del ojeo. Forma y color (UI-002), y visible aunque el nodo
+        // esté apagado: es información para elegir el camino.
+        if (node.IsMatch && Contains(NemesisNodeIds, node.Id))
+        {
+            var seal = center + new Vector2(radius * 0.7f, -radius * 0.7f);
+            const float Half = 6f;
+            var diamond = new[]
+            {
+                seal + new Vector2(0f, -Half), seal + new Vector2(Half, 0f), seal + new Vector2(0f, Half), seal + new Vector2(-Half, 0f),
+            };
+            DrawColoredPolygon(diamond, Pregon.Wax);
+            DrawPolyline(new[] { diamond[0], diamond[1], diamond[2], diamond[3], diamond[0] }, Style.Text, 1f);
+            DrawLine(seal + new Vector2(-2.5f, -2.5f), seal + new Vector2(2.5f, 2.5f), Style.Text, 1.5f);
+            DrawLine(seal + new Vector2(-2.5f, 2.5f), seal + new Vector2(2.5f, -2.5f), Style.Text, 1.5f);
+        }
 
         // El distintivo de dificultad (RF-012) va a la esquina del glifo, no en el centro: ahora el
         // centro lo ocupa el icono del tipo de nodo.

@@ -238,6 +238,8 @@ static string? MapSchemaFile(string relativePath)
         "prostheses/prostheses.json" => "prostheses.schema.json",
         "nicknames/nicknames.json" => "nicknames.schema.json",
         "gazette/gazette.json" => "gazette.schema.json",
+        "nemesis/titles.json" => "nemesis-titles.schema.json",
+        "mobs/mobs.json" => "mobs.schema.json",
         _ => null,
     };
 }

@@ -530,6 +530,22 @@ internal sealed class EffectEngine : IPerkLinks
 
             slot.Used = true;
             var effects = slot.Consumable.Effects;
+
+            // ADR 0166: un grito no se aplica jugador a jugador: cambia la conducta del EQUIPO (su orden o su
+            // consigna) por el mismo campo que la orden táctica en vivo. Va antes del bucle de jugadores.
+            for (int e = 0; e < effects.Count; e++)
+            {
+                if (effects[e].Type == EffectType.Shout)
+                {
+                    _engine.StartShout(slot.Team, effects[e].Shout, effects[e].Value * TicksPerSecond);
+                }
+                else if (effects[e].Type == EffectType.ProvokeMob)
+                {
+                    // ADR 0167: la grada responde igual la provoque quien la provoque; el tipo es del partido.
+                    _engine.ProvokeMob(effects[e].Value * TicksPerSecond);
+                }
+            }
+
             for (int p = 0; p < _players.Length; p++)
             {
                 if (!_players[p].OnPitch)

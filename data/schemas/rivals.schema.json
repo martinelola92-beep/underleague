@@ -7,6 +7,11 @@
   "properties": {
     "_doc": { "type": "string" },
     "id": { "type": "string", "pattern": "^[a-z][a-z0-9_]*$" },
+    "clanId": {
+      "description": "Clan al que pertenece (ADR 0165, RF-015): los tres rivales de una raza (uno por acto) comparten clan, nombre de clan y nombres de jugador por puesto.",
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_]*$"
+    },
     "name": { "$ref": "#/$defs/localizedName" },
     "description": {
       "description": "Una frase para el informe de ojeo (RF-012b, RF-015): la build real del rival, escrita a mano (docs/estilo-descripciones.md). No es un efecto: RT-035 no aplica.",
@@ -29,7 +34,7 @@
       "maxItems": 10
     }
   },
-  "required": ["id", "name", "description", "race", "act", "difficulty", "players"],
+  "required": ["id", "clanId", "name", "description", "race", "act", "difficulty", "players"],
   "additionalProperties": false,
   "$defs": {
     "localizedName": {

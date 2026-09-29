@@ -34,6 +34,40 @@ public sealed class RivalCatalog
         }
     }
 
+    /// <summary>Ids de clan distintos, en orden ordinal ascendente (ADR 0165).</summary>
+    public IReadOnlyList<string> ClanIds =>
+        _clanIds ??= _teams.Select(t => t.ClanId).Distinct(StringComparer.Ordinal).OrderBy(c => c, StringComparer.Ordinal).ToArray();
+
+    private string[]? _clanIds;
+
+    /// <summary>El rival que representa a ese clan en ese acto (ADR 0165), o null si no lo hay.</summary>
+    public RivalTeam? OfClan(string clanId, int act)
+    {
+        for (int i = 0; i < _teams.Length; i++)
+        {
+            if (_teams[i].Act == act && string.Equals(_teams[i].ClanId, clanId, StringComparison.Ordinal))
+            {
+                return _teams[i];
+            }
+        }
+
+        return null;
+    }
+
+    /// <summary>Nombre del clan (el mismo en los tres actos, ADR 0165), o null si el clan no existe.</summary>
+    public LocalizedName? ClanName(string clanId)
+    {
+        for (int i = 0; i < _teams.Length; i++)
+        {
+            if (string.Equals(_teams[i].ClanId, clanId, StringComparison.Ordinal))
+            {
+                return _teams[i].Name;
+            }
+        }
+
+        return null;
+    }
+
     /// <summary>Todos los rivales, ordenados por id ordinal ascendente.</summary>
     public IReadOnlyList<RivalTeam> All => _teams;
 
@@ -75,7 +109,63 @@ public static class RivalLoader
             throw new DataException("rivals/", "$", "no se ha encontrado ningún rival en data/rivals/");
         }
 
+        CheckClans(teams);
+
         return new RivalCatalog(teams);
+    }
+
+    /// <summary>
+    /// ADR 0165: los rivales de un clan son el mismo clan en cada acto, así que comparten raza, nombre y el
+    /// nombre de cada puesto, y hay como mucho uno por acto. Un dato que lo rompa es un error explícito
+    /// (RT-032): la memoria de rivales (muertos, némesis) se apoya en que «el puesto 3 del clan» sea la misma
+    /// persona en los tres actos.
+    /// </summary>
+    private static void CheckClans(IReadOnlyList<RivalTeam> teams)
+    {
+        var firstOfClan = new Dictionary<string, RivalTeam>(StringComparer.Ordinal);
+        var actsSeen = new HashSet<string>(StringComparer.Ordinal);
+        foreach (var team in teams)
+        {
+            string path = "rivals/" + team.Id + ".json";
+            if (!actsSeen.Add(team.ClanId + "#" + team.Act))
+            {
+                throw new DataException(path, "$.clanId", $"el clan '{team.ClanId}' ya tiene un rival en el acto {team.Act}");
+            }
+
+            if (!firstOfClan.TryGetValue(team.ClanId, out var first))
+            {
+                firstOfClan[team.ClanId] = team;
+                continue;
+            }
+
+            if (first.Race != team.Race)
+            {
+                throw new DataException(path, "$.race", $"el clan '{team.ClanId}' mezcla razas ({first.Race} y {team.Race})");
+            }
+
+            if (first.Name != team.Name)
+            {
+                throw new DataException(path, "$.name", $"el clan '{team.ClanId}' cambia de nombre entre actos");
+            }
+
+            if (first.Players.Count != team.Players.Count)
+            {
+                throw new DataException(path, "$.players", $"el clan '{team.ClanId}' cambia de número de jugadores entre actos ({first.Players.Count} y {team.Players.Count})");
+            }
+
+            for (int i = 0; i < team.Players.Count; i++)
+            {
+                if (first.Players[i].Position != team.Players[i].Position)
+                {
+                    throw new DataException(path, $"$.players[{i}].position", $"el puesto {i} del clan '{team.ClanId}' cambia de demarcación entre actos");
+                }
+
+                if (!string.Equals(first.Players[i].Name, team.Players[i].Name, StringComparison.Ordinal))
+                {
+                    throw new DataException(path, $"$.players[{i}].name", $"el puesto {i} del clan '{team.ClanId}' cambia de jugador entre actos");
+                }
+            }
+        }
     }
 
     private static RivalTeam Parse(string path, string content)
@@ -84,6 +174,7 @@ public static class RivalLoader
         var root = Json.Root(path, document);
 
         string id = root.Str("id");
+        string clanId = root.Str("clanId");
         var name = LocalizedNameJson.Read(root.Prop("name"));
         var description = LocalizedNameJson.Read(root.Prop("description"));
         var race = ParseRace(root, root.Str("race"));
@@ -112,7 +203,7 @@ public static class RivalLoader
             throw new DataException(path, "$.players", $"un rival necesita exactamente {SlotPositions.Length} jugadores (7 titulares y 3 suplentes)");
         }
 
-        return new RivalTeam(id, name, description, race, act, difficulty, players);
+        return new RivalTeam(id, clanId, name, description, race, act, difficulty, players);
     }
 
     private static RivalPlayer ParsePlayer(Json node, int index)

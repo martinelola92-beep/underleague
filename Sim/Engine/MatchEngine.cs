@@ -60,6 +60,17 @@ internal sealed class MatchEngine : IPerkWorld
     /// <summary>ADR 0154: cambios de orden táctica pendientes, ordenados por tick; <see cref="_nextOrderChange"/> apunta al siguiente.</summary>
     private readonly List<(int Tick, int Team, int Index, Mentality Order)> _pendingOrderChanges = new();
     private int _nextOrderChange;
+
+    // ADR 0166: los gritos del entrenador. `_context.Order` es siempre la orden EFECTIVA (la que leen las
+    // líneas, las cuotas y la utilidad); `_baseOrder` es la del jugador (inicial + OrderChange), a la que se
+    // vuelve cuando el grito acaba. -1 = sin grito de orden / sin consigna de presión activa.
+    private readonly Mentality[] _baseOrder = new Mentality[2];
+    private readonly int[] _shoutOrderEnd = { -1, -1 };
+    private readonly int[] _pressEnd = { -1, -1 };
+
+    // ADR 0167 (revisión independiente): la consigna de presión DE BASE, a la que vuelve un grito de presión al
+    // acabar. Sólo la pone la turba al entrar («hasta el final»); sin turba es siempre false.
+    private readonly bool[] _basePress = new bool[2];
     private int _nextSubstitution;
     private readonly MatchPlayer?[] _goalkeepers = new MatchPlayer?[2];
     private readonly Ball _ball = new();
@@ -263,6 +274,8 @@ internal sealed class MatchEngine : IPerkWorld
         // se lee una vez aquí y no cada tick.
         _context.Order[0] = setup.Home.Order;
         _context.Order[1] = setup.Away.Order;
+        _baseOrder[0] = setup.Home.Order;
+        _baseOrder[1] = setup.Away.Order;
 
         // ADR 0154: los cambios de orden durante el partido, por tick y, a igualdad, por lista (estable).
         for (int team = 0; team < 2; team++)
@@ -307,6 +320,9 @@ internal sealed class MatchEngine : IPerkWorld
 
     private int RegulationTicks => _regulationTicks;
 
+    /// <summary>Sólo para pruebas: se invoca tras cada tick, para observar el estado (p. ej. la orden efectiva, ADR 0166). Nunca se asigna en producción.</summary>
+    internal Action<MatchEngine>? AfterStepForTest { get; set; }
+
     /// <summary>Ejecuta el partido completo y devuelve eventos e informe (§3.2).</summary>
     public MatchResult Run()
     {
@@ -319,6 +335,7 @@ internal sealed class MatchEngine : IPerkWorld
         while (_phase != MatchPhase.Finished)
         {
             Step();
+            AfterStepForTest?.Invoke(this);
             _trace?.Capture(_tick, _clockTick, _phase, _pendingRestart, _restartTaker, _ball, _events.Count);
         }
 
@@ -650,6 +667,7 @@ internal sealed class MatchEngine : IPerkWorld
         }
 
         ApplySubstitutions();
+        ExpireShouts();
         ApplyOrderChanges();
 
         // Consumibles condicionales (RF-081..083): se comprueban antes que nada, así que el disparador ve
@@ -5128,10 +5146,179 @@ internal sealed class MatchEngine : IPerkWorld
         while (_nextOrderChange < _pendingOrderChanges.Count && _pendingOrderChanges[_nextOrderChange].Tick <= _tick)
         {
             var change = _pendingOrderChanges[_nextOrderChange];
-            _context.Order[change.Team] = change.Order;
+
+            // ADR 0166: la orden del jugador cambia la de BASE siempre; la efectiva sólo si no hay un grito de
+            // orden en curso. Si lo hay, el grito manda hasta que acabe y entonces vuelve a esta orden (la que
+            // el jugador puso entretanto), no a la que había al gritar.
+            _baseOrder[change.Team] = change.Order;
+            if (_shoutOrderEnd[change.Team] < 0)
+            {
+                _context.Order[change.Team] = change.Order;
+            }
+
             _nextOrderChange++;
         }
     }
+
+    /// <summary>
+    /// ADR 0166: empieza un grito del entrenador para <paramref name="team"/> durante
+    /// <paramref name="ticks"/> ticks (contando este). Una orden (<see cref="ShoutKind.Defensive"/>,
+    /// <see cref="ShoutKind.Offensive"/>) pone la orden efectiva del equipo por el mismo campo que la orden
+    /// táctica en vivo (ADR 0154/0156: líneas, cuotas y utilidad); un segundo grito de orden sustituye al
+    /// primero. La consigna <see cref="ShoutKind.Press"/> es independiente de la orden y puede convivir con
+    /// ella. Lo llama <c>EffectEngine.ResolveConsumables</c> al activarse el consumible.
+    /// </summary>
+    internal void StartShout(int team, Underleague.Sim.Perks.ShoutKind kind, int ticks)
+    {
+        int end = _tick + ticks;
+        if (kind == Underleague.Sim.Perks.ShoutKind.Press)
+        {
+            _pressEnd[team] = end;
+            _context.PressActive[team] = true;
+            return;
+        }
+
+        _shoutOrderEnd[team] = end;
+        _context.Order[team] = kind == Underleague.Sim.Perks.ShoutKind.Defensive ? Mentality.Defensive : Mentality.Offensive;
+    }
+
+    /// <summary>ADR 0166: retira los gritos cuyo tiempo se ha cumplido; la orden efectiva vuelve a la de base.</summary>
+    private void ExpireShouts()
+    {
+        for (int team = 0; team < 2; team++)
+        {
+            if (_shoutOrderEnd[team] >= 0 && _tick >= _shoutOrderEnd[team])
+            {
+                _shoutOrderEnd[team] = -1;
+                _context.Order[team] = _baseOrder[team];
+            }
+
+            if (_pressEnd[team] >= 0 && _tick >= _pressEnd[team])
+            {
+                _pressEnd[team] = -1;
+                _context.PressActive[team] = _basePress[team];
+            }
+        }
+    }
+
+    /// <summary>
+    /// ADR 0167: el consumible «Provocar a la grada» aplica ahora el efecto del tipo de turba de este partido,
+    /// con el árbitro todavía en el campo; la conducta dura <paramref name="ticks"/>. Sin tipo, o con un tipo sin
+    /// efectos (<c>plain</c>), no hace nada. Con la turba ya dentro tampoco (revisión independiente): lo que la
+    /// turba trae ya ha pasado, y provocarla otra vez duplicaría la lesión o acortaría su conducta «hasta el
+    /// final». Lo llama <c>EffectEngine.ResolveConsumables</c>.
+    /// </summary>
+    internal void ProvokeMob(int ticks)
+    {
+        if (!_goldenGoal)
+        {
+            ApplyMob(untilTheEnd: false, ticks);
+        }
+    }
+
+    /// <summary>
+    /// Aplica el tipo de turba. Al entrar la turba (<paramref name="untilTheEnd"/>) la conducta que impone es la
+    /// DE BASE del equipo hasta el final: un grito encima la tapa mientras dura y, al acabar, se vuelve a ella
+    /// (revisión independiente: antes un grito de presión apagaba el frenesí de su equipo). Provocada, es un
+    /// grito de <paramref name="ticks"/> como los de la ADR 0166.
+    /// </summary>
+    private void ApplyMob(bool untilTheEnd, int ticks)
+    {
+        var mob = _setup.Mob;
+        if (mob is null)
+        {
+            return;
+        }
+
+        for (int i = 0; i < mob.Effects.Count; i++)
+        {
+            switch (mob.Effects[i])
+            {
+                case MobEffectKind.Injure:
+                    MobInjure();
+                    break;
+                case MobEffectKind.PressBoth when untilTheEnd:
+                    for (int team = 0; team < 2; team++)
+                    {
+                        _basePress[team] = true;
+                        _pressEnd[team] = -1;
+                        _context.PressActive[team] = true;
+                    }
+
+                    break;
+                case MobEffectKind.PressBoth:
+                    StartShout(0, Underleague.Sim.Perks.ShoutKind.Press, ticks);
+                    StartShout(1, Underleague.Sim.Perks.ShoutKind.Press, ticks);
+                    break;
+                case MobEffectKind.TheirOffensive when untilTheEnd:
+                    // El equipo 1 es siempre el rival en la run (W-15: el jugador es local).
+                    _baseOrder[1] = Mentality.Offensive;
+                    _shoutOrderEnd[1] = -1;
+                    _context.Order[1] = Mentality.Offensive;
+                    break;
+                case MobEffectKind.TheirOffensive:
+                    StartShout(1, Underleague.Sim.Perks.ShoutKind.Offensive, ticks);
+                    break;
+            }
+        }
+    }
+
+    /// <summary>
+    /// ADR 0167: salta uno de la grada y lesiona a uno. Un jugador de campo en el campo, de cualquiera de los dos
+    /// equipos, al azar con el RNG del partido entre los candidatos ordenados por id (RT-041); lesión
+    /// <b>leve</b> y <b>sin autor</b> (<c>Opponent</c> −1: nadie la causó, no hay crédito ni némesis). La turba
+    /// lesiona, no mata: a diferencia de <see cref="ResolveInjury"/>, un lesionado grave que la recibe no muere
+    /// (RF-012d, ADR 0048). Cancelable por perks como cualquier <c>INJURY</c>, y respeta la decisión de seguir
+    /// jugando (ADR 0134 E).
+    /// </summary>
+    private void MobInjure()
+    {
+        var candidates = new List<MatchPlayer>();
+        for (int i = 0; i < _players.Length; i++)
+        {
+            var player = _players[i];
+            if (player.OnPitch && !player.Dead && !ReferenceEquals(player, _goalkeepers[player.Team]))
+            {
+                candidates.Add(player);
+            }
+        }
+
+        if (candidates.Count == 0)
+        {
+            return;
+        }
+
+        candidates.Sort(static (a, b) => a.Id.CompareTo(b.Id));
+        var victim = _rng.Pick(candidates);
+        if (EmitCancellable(EventType.Injury, "minor", victim))
+        {
+            return;
+        }
+
+        _report.Injuries++;
+        victim.Injured = true;
+        if (ReferenceEquals(_ball.Owner, victim))
+        {
+            ParkBall(victim.Position);
+        }
+
+        if (FindPlayOn(victim) is { } playOn)
+        {
+            ApplyPlayOnAttributes(victim, playOn.After);
+            return;
+        }
+
+        RemoveFromPitch(victim, PlayerState.Injured);
+    }
+
+    /// <summary>ADR 0166: la orden con la que juega el equipo ahora mismo (la del grito si lo hay).</summary>
+    public Mentality EffectiveOrder(int team) => _context.Order[team];
+
+    /// <summary>ADR 0166: la orden del jugador, sin grito; a la que se vuelve al acabar.</summary>
+    public Mentality BaseOrder(int team) => _baseOrder[team];
+
+    /// <summary>ADR 0166: ¿tiene el equipo la consigna de presión activa ahora mismo?</summary>
+    public bool PressActive(int team) => _context.PressActive[team];
 
     /// <summary>
     /// ¿Qué área está cerrada? La del equipo cuyo portero tiene el balón dentro de su área —lo atrapó, lo
@@ -5706,6 +5893,9 @@ internal sealed class MatchEngine : IPerkWorld
             Emit(EventType.RefereeLeaves, "refereeLeaves");
             _goldenGoal = true;
             _report.WentToGoldenGoal = true;
+
+            // ADR 0167: el tipo de turba anunciado antes del partido ocurre ahora, y lo que dura, dura hasta el final.
+            ApplyMob(untilTheEnd: true, ticks: 0);
             ScheduleKickoff(1);
             return;
         }

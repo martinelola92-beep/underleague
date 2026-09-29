@@ -78,7 +78,7 @@ Todos con esquema JSON en `/data/schemas/` y validados por `tools/DataValidator`
 |---|---|---|
 | `data/perks/` | Un perk por fichero | RF-065..072, RT-033 |
 | `data/items/` | Equipamiento, con arquetipo maldito/frágil/restringido (`cursed`/`fragile`/`restricted`) | RF-075..078 |
-| `data/consumables/` | Familias médico/táctico/sucio/sobrenatural (`medical`/`tactical`/`dirty`/`supernatural`), con tabla de resultados para sobornos | RF-080..085, RF-064b |
+| `data/consumables/` | Familias médico/táctico/sucio/sobrenatural (`medical`/`tactical`/`dirty`/`supernatural`), con tabla de resultados para sobornos | RF-080..085, RF-064b; efecto `shout` (grito: orden o presión N s, ADR 0166) |
 | `data/races/` | Sesgo poblacional, etiqueta de especie, distribución de etiquetas de estilo, habilidad racial, radio de cuerpo, disciplina, dimensiones de sprite, generador de nombres | RF-030..035, RF-031b, RF-020b |
 | `data/tags/styles.json` | Etiquetas de estilo con su descripción y su sesgo de atributos | RF-022d (v0.9.1, ADR 0024) |
 | `data/clubs/` | Raza, plantilla inicial, oro, regla especial | RF-004 |

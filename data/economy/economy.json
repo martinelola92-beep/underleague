@@ -13,6 +13,7 @@
   },
   "defeatGoldPenalty": 0,
   "defeatGoldPenaltyPercent": 0,
+  "revengeGold": 3,
   "clinicCost": 14,
   "clinicMinorCost": 4,
   "clinicSquadCost": 24,

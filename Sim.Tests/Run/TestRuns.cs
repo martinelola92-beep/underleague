@@ -117,6 +117,8 @@ internal sealed class TestRunSystems : IRunSystems
 
     public Underleague.Sim.Run.Systems.Medical.ProsthesisCatalog Prostheses => _inner.Prostheses;
 
+    public Underleague.Sim.Run.Systems.Rivals.NemesisCatalog Nemesis => _inner.Nemesis;
+
     public IReadOnlyList<RunReferee> CreateReferees(ulong seed, int count, Catalog catalog) =>
         _inner.CreateReferees(seed, count, catalog);
 
@@ -152,6 +154,9 @@ internal sealed class TestRunSystems : IRunSystems
 
     public RefereeSetup RefereeFor(RunState state, MapNode node, Catalog catalog) =>
         _inner.RefereeFor(state, node, catalog);
+
+    public MobSetup? MobFor(RunState state, MapNode node, Catalog catalog) =>
+        _inner.MobFor(state, node, catalog);
 
     public SimConfig MatchConfig(RunState state, MapNode node, Catalog catalog) => SimConfig.Default with { CollectLog = false };
 

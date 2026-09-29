@@ -259,7 +259,7 @@ public static class RunEngine
         {
             SetLineup setLineup => ApplyLineup(state, setLineup),
             SetConsumables setConsumables => ApplyConsumables(state, setConsumables),
-            LeaveNode => CloseOpenNode(state),
+            LeaveNode => CloseOpenNode(state, systems),
             TakeBet take => Systems.Bets.BetSystem.Take(state, take, systems, catalog),
             DeclineBet => Systems.Bets.BetSystem.Withdraw(state),
             _ => systems.ApplyDecision(state, decision, catalog),
@@ -505,7 +505,9 @@ public static class RunEngine
         // El último paso es el gancho de los sistemas (RF-001b/c): un modificador de regla de jefe es una
         // transformación del MatchSetup, y tiene que pasar por aquí para que el partido que se juega y el
         // que enseña el informe de ojeo sean el mismo (RF-012b, RF-012d). W-15: el jugador es local.
-        var setup = systems.TransformMatch(state, node, new MatchSetup(home, away, referee), 0, catalog);
+        // ADR 0167: el tipo de turba viaja como el árbitro, derivado del nodo.
+        var mob = systems.MobFor(state, node, catalog);
+        var setup = systems.TransformMatch(state, node, new MatchSetup(home, away, referee) { Mob = mob }, 0, catalog);
         return (setup, RngStreams.MatchSeed(state.Seed, node.Id), lineup);
     }
 
@@ -539,7 +541,7 @@ public static class RunEngine
         // se resuelven con la política por defecto volviendo a jugar el partido con ellas en el estado inicial.
         var (setup, result) = SubstitutionPoints.ResolveAutomatically(
             built, seed, catalog, systems.MatchConfig(state, node, catalog), usesPolicy: null, decisions.Declines);
-        var applied = MatchResolution.Apply(state, node, lineup, result, catalog, built.Referee);
+        var applied = MatchResolution.Apply(state, node, lineup, result, catalog, built.Referee, systems.Nemesis);
 
         // ADR 0157: la apuesta tomada para este nodo se resuelve con los hechos del partido, aquí y no en
         // AfterMatch, porque también hay que resolverla si el partido termina la run (el informe la enseña).
@@ -572,7 +574,7 @@ public static class RunEngine
 
         if (node.Kind == NodeKind.Boss && applied.Summary.Won && next.PendingNodeId < 0)
         {
-            next = next.WithAct(node.Act + 1);
+            next = Systems.Rivals.NemesisSystem.TransferOnActEntry(next.WithAct(node.Act + 1), systems.Nemesis, node.Act + 1);
         }
 
         next = Stamp(next);
@@ -594,7 +596,7 @@ public static class RunEngine
             .WithPhase(RunPhase.OnMap));
     }
 
-    private static RunState CloseOpenNode(RunState state)
+    private static RunState CloseOpenNode(RunState state, IRunSystems systems)
     {
         if (state.Phase != RunPhase.NodeOpen || state.PendingNodeId < 0)
         {
@@ -621,7 +623,7 @@ public static class RunEngine
         {
             next = node.Act >= RunRules.Acts
                 ? next.WithOutcome(new RunOutcome(RunOutcomeKind.Victory, DefeatCause.None, node.Id))
-                : next.WithAct(node.Act + 1);
+                : Systems.Rivals.NemesisSystem.TransferOnActEntry(next.WithAct(node.Act + 1), systems.Nemesis, node.Act + 1);
         }
 
         return next;

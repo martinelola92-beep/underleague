@@ -888,6 +888,28 @@ public partial class BroadcastScreen : Control
         _banner.Position = new Vector2(leftHalf ? CanvasWidth - HeraldBanner.DesignWidth : 0f, 150f);
     }
 
+    /// <summary>
+    /// ADR 0165: si en el campo rival juega un némesis, el pregón del saque lo anuncia en el pie del cartel
+    /// («Némesis en el campo: X, el Matahermanos»). Sin némesis, el pie sigue vacío: ni ruido ni cartel nuevo.
+    /// </summary>
+    private string KickoffNemesisLine()
+    {
+        if (_run.State is null || _run.Systems is null)
+        {
+            return string.Empty;
+        }
+
+        var names = new List<string>(_playback.Setup.Away.Players.Count);
+        foreach (var player in _playback.Setup.Away.Players)
+        {
+            names.Add(player.Name);
+        }
+
+        var made = _run.LastMatch?.Summary.NemesesMade ?? System.Array.Empty<Underleague.Sim.Run.Systems.Rivals.NemesisMade>();
+        var line = Underleague.Sim.Run.View.NemesisView.OnPitch(_run.State, _run.Systems.Nemesis, names, made, Data.GameData.Language);
+        return line is null ? string.Empty : UiText.Get("ui.pregon.banner.kickoffNemesis", line.Name, line.Title);
+    }
+
     private void ShowKickoffBanner()
     {
         _banner.Position = new Vector2(0f, 150f);
@@ -896,7 +918,7 @@ public partial class BroadcastScreen : Control
             UiText.Get("ui.pregon.banner.said"),
             UiText.Get("ui.pregon.banner.kickoffTitle"),
             UiText.Get("ui.pregon.banner.kickoffBody", _playback.OwnName, _playback.RivalName),
-            string.Empty);
+            KickoffNemesisLine());
     }
 
     private void ShowGoalBanner(MatchEvent goal)
@@ -968,8 +990,15 @@ public partial class BroadcastScreen : Control
         }
     }
 
-    private void ShowMobBand() =>
-        _band.Show(UiText.Get("ui.pregon.turba.header"), UiText.Get("ui.pregon.turba.body"));
+    private void ShowMobBand()
+    {
+        // ADR 0167: el pregón dice qué turba es, la misma que anunció el ojeo.
+        var type = _playback.Setup.Mob is { } mob ? _run.Systems?.Mobs.Find(mob.Id) : null;
+        string body = type is null
+            ? UiText.Get("ui.pregon.turba.body")
+            : UiText.Get("ui.pregon.turba.bodyTyped", Data.GameData.Language == "en" ? type.Name.En : type.Name.Es);
+        _band.Show(UiText.Get("ui.pregon.turba.header"), body);
+    }
 
     /// <summary>
     /// BA-H, RF-082/085: anuncio del consumible usado —manual o condicional, el pregón no distingue
@@ -1104,7 +1133,14 @@ public partial class BroadcastScreen : Control
         _board.SetRivalResidue(UiText.Get("ui.pregon.board.residue", cards, casualties));
         _board.SetSpeedIndex(_speedIndex);
         _board.SetPaused(_manualPaused);
-        _board.SetOrder((int)_run.OrderAt(tick), enabled: CanChangeOrder());
+
+        // ADR 0166: un grito de orden manda mientras dura; el tablero enseña la orden efectiva (la que
+        // mueve las líneas) y, con aro, la que puso el jugador, a la que se vuelve.
+        var playerOrder = _run.OrderAt(tick);
+        var shouts = MatchShoutView.ActiveAt(
+            _playback.Result.Events, _playback.Setup.Home.Consumables, 0, tick, _playback.Setup.Mob, _playback.Setup.Away.Consumables);
+        _board.SetOrder((int)MatchShoutView.EffectiveOrder(shouts, playerOrder), enabled: CanChangeOrder(), playerIndex: (int)playerOrder);
+        _board.SetShouts(BuildShoutInfos(shouts));
         _board.SetConsumables(BuildConsumableButtons());
 
         // RF-062: el criterio SIEMPRE visible, leído del Bias del último evento <= este tick (ADR 0158 §6).
@@ -1779,6 +1815,35 @@ public partial class BroadcastScreen : Control
         }
 
         return (IReadOnlyList<BroadcastBoard.ConsumableButtonInfo>?)result ?? Array.Empty<BroadcastBoard.ConsumableButtonInfo>();
+    }
+
+    private IReadOnlyList<BroadcastBoard.ShoutInfo> BuildShoutInfos(IReadOnlyList<ActiveShout> shouts)
+    {
+        if (shouts.Count == 0)
+        {
+            return Array.Empty<BroadcastBoard.ShoutInfo>();
+        }
+
+        var result = new List<BroadcastBoard.ShoutInfo>(shouts.Count);
+        for (int i = 0; i < shouts.Count; i++)
+        {
+            var shout = shouts[i];
+
+            // ADR 0167: lo que impone la turba al entrar dura hasta el final: sin cuenta atrás (-1) y con su nombre.
+            if (shout.ConsumableId.StartsWith(MatchShoutView.MobPrefix, StringComparison.Ordinal))
+            {
+                string id = shout.ConsumableId[MatchShoutView.MobPrefix.Length..];
+                var type = _run.Systems?.Mobs.Find(id);
+                string name = type is null ? id : Data.GameData.Language == "en" ? type.Name.En : type.Name.Es;
+                result.Add(new BroadcastBoard.ShoutInfo(name, -1, 1f));
+                continue;
+            }
+
+            result.Add(new BroadcastBoard.ShoutInfo(
+                _run.ConsumableName(shout.ConsumableId), shout.SecondsLeft, shout.TicksLeft / (float)Math.Max(1, shout.TicksTotal)));
+        }
+
+        return result;
     }
 
     private void OnSpeedChosen(int index)

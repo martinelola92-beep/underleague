@@ -4,6 +4,7 @@ using Godot;
 using Underleague.Game.Autoload;
 using Underleague.Game.Data;
 using Underleague.Game.Ui;
+using Underleague.Game.Ui.Broadcast;
 using Underleague.Sim.Engine;
 using Underleague.Sim.Model;
 using Underleague.Sim.Perks;
@@ -127,6 +128,7 @@ public partial class ScoutScreen : Control
 
             if (node.Kind != NodeKind.Boss)
             {
+                listTop = BuildNemesisLines(state, node, listTop);
                 listTop = BuildRivalryLines(state, node.OpponentId, rivalTeam, listTop);
             }
         }
@@ -144,14 +146,52 @@ public partial class ScoutScreen : Control
         var players = new List<PlayerDefinition>(away.Players);
         players.Sort(static (a, b) => a.Id.CompareTo(b.Id));
 
+        var nemeses = NemesisLinesOf(state, node);
         foreach (var player in players)
         {
             var card = scene.Instantiate<PlayerCard>();
+            foreach (var nemesis in nemeses)
+            {
+                // Por puesto, no por nombre (revisión de la ADR 0165): un fichaje puede llamarse como un némesis.
+                if (player.Id == Underleague.Sim.Run.Systems.Rivals.RivalTeamBuilder.OpponentFirstPlayerId + nemesis.Slot)
+                {
+                    card.NemesisTitle = nemesis.Title;
+                }
+            }
+
             _list.AddChild(card);
             card.Bind(_rival, player, System.Array.Empty<string>());
             card.Activated += OnCardActivated;
             _cards.Add(card);
         }
+    }
+
+    private System.Collections.Generic.IReadOnlyList<Underleague.Sim.Run.View.NemesisLine> NemesisLinesOf(RunState state, MapNode node) =>
+        _run.Systems is null
+            ? System.Array.Empty<Underleague.Sim.Run.View.NemesisLine>()
+            : Underleague.Sim.Run.View.NemesisView.ForNode(state, _run.Systems.Nemesis, node, GameData.Language);
+
+    /// <summary>
+    /// ADR 0165: los némesis que juegan en este clan, con su título y a quién mataron y en qué acto, en lacre.
+    /// Antes del reencuentro: es lo primero que el jugador tiene que saber de este rival. Sin némesis, el bloque
+    /// desaparece. Devuelve la <c>y</c> siguiente.
+    /// </summary>
+    private float BuildNemesisLines(RunState state, MapNode node, float y)
+    {
+        var lines = NemesisLinesOf(state, node);
+        foreach (var line in lines)
+        {
+            string key = line.Kills > 1 ? "ui.scout.nemesisMany" : "ui.scout.nemesis";
+            var label = Widgets.Body(
+                this,
+                UiText.Get(key, line.Name, line.Title, line.VictimName, line.Act, line.Kills - 1),
+                new Vector2(24f, y),
+                340f,
+                Pregon.Wax);
+            y += label.Size.Y + 4f;
+        }
+
+        return lines.Count > 0 ? y + 6f : y;
     }
 
     /// <summary>
@@ -161,7 +201,10 @@ public partial class ScoutScreen : Control
     /// </summary>
     private float BuildRivalryLines(RunState state, string opponentId, RivalTeam rivalTeam, float y)
     {
-        var encounters = RivalHistory.Against(state, opponentId);
+        // ADR 0165: el reencuentro es con el clan, en cualquier acto, no con el fichero del acto.
+        var encounters = _run.Systems is { } systems
+            ? RivalHistory.AgainstClan(state, systems.Rivals, rivalTeam.ClanId)
+            : RivalHistory.Against(state, opponentId);
         if (encounters.Count == 0)
         {
             return y;
@@ -260,6 +303,14 @@ public partial class ScoutScreen : Control
         }, y);
 
         y = Block(UiText.Get("ui.scout.referee"), RefereeLines(node), y);
+
+        // ADR 0167: la turba que entra si hay empate, anunciada por su tipo (nunca la víctima), para decidir si
+        // conviene empatar y si merece la pena equipar «Provocar a la grada».
+        if (_run.Systems is { } mobSystems
+            && Underleague.Sim.Run.View.MobView.For(state, node, mobSystems.Mobs, catalog, GameData.Language) is { } mob)
+        {
+            y = Block(UiText.Get("ui.scout.mob"), new[] { UiText.Get("ui.scout.mobLine", mob.Name, mob.Text) }, y);
+        }
 
         // RF-013: los perks letales, destacados. Si no hay ninguno, se dice: la ausencia de amenaza es
         // información igual de accionable que la amenaza.

@@ -114,6 +114,9 @@ public sealed class BossRunSystems : IRunSystems
     public Systems.Medical.ProsthesisCatalog Prostheses => _inner.Prostheses;
 
     /// <inheritdoc />
+    public Systems.Rivals.NemesisCatalog Nemesis => _inner.Nemesis;
+
+    /// <inheritdoc />
     public void OnMatchPlayed(RunState stateBefore, MapNode node, MatchSetup setup, MatchResult result, RunMatchSummary summary) =>
         _inner.OnMatchPlayed(stateBefore, node, setup, result, summary);
 
@@ -148,6 +151,10 @@ public sealed class BossRunSystems : IRunSystems
     /// <inheritdoc />
     public RefereeSetup RefereeFor(RunState state, MapNode node, Catalog catalog) =>
         _inner.RefereeFor(state, node, catalog);
+
+    /// <inheritdoc />
+    public MobSetup? MobFor(RunState state, MapNode node, Catalog catalog) =>
+        _inner.MobFor(state, node, catalog);
 
     /// <inheritdoc />
     public SimConfig MatchConfig(RunState state, MapNode node, Catalog catalog) => _inner.MatchConfig(state, node, catalog);

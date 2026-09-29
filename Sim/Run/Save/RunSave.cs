@@ -101,6 +101,7 @@ public static class RunSave
             Referees = ReadReferees(root),
             Lineup = ReadLineup(root),
             Consumables = ReadConsumables(root),
+            RivalMemory = ReadRivalMemory(root),
             Counters = ReadInts(root, "counters", "$"),
             Achievements = ReadInts(root, "achievements", "$"),
             DataSnapshot = ReadStrings(root, "dataSnapshot", "$"),
@@ -251,6 +252,8 @@ public static class RunSave
         }
 
         w.WriteEndArray();
+
+        WriteRivalMemory(w, state.RivalMemory);
 
         WriteInts(w, "counters", state.Counters);
         WriteInts(w, "achievements", state.Achievements);
@@ -412,6 +415,48 @@ public static class RunSave
         w.WriteNumber("deathsCaused", career.DeathsCaused);
         w.WriteNumber("injuriesSuffered", career.InjuriesSuffered);
         w.WriteNumber("ticksOnPitch", career.TicksOnPitch);
+        w.WriteNumber("revenges", career.Revenges);
+        w.WriteEndObject();
+    }
+
+    private static void WriteRivalMemory(Utf8JsonWriter w, Systems.Rivals.RivalMemory memory)
+    {
+        w.WriteStartObject("rivalMemory");
+        w.WriteStartArray("vacancies");
+        for (int i = 0; i < memory.Vacancies.Count; i++)
+        {
+            var vacancy = memory.Vacancies[i];
+            w.WriteStartObject();
+            w.WriteString("clan", vacancy.ClanId);
+            w.WriteNumber("slot", vacancy.Slot);
+            w.WriteNumber("generation", vacancy.Generation);
+            w.WriteEndObject();
+        }
+
+        w.WriteEndArray();
+        w.WriteStartArray("nemeses");
+        for (int i = 0; i < memory.Nemeses.Count; i++)
+        {
+            var n = memory.Nemeses[i];
+            w.WriteStartObject();
+            w.WriteNumber("id", n.Id);
+            w.WriteString("title", n.TitleId);
+            w.WriteString("name", n.Name);
+            w.WriteString("position", Camel(n.Position.ToString()));
+            w.WriteString("homeClan", n.HomeClanId);
+            w.WriteNumber("homeSlot", n.HomeSlot);
+            w.WriteString("clan", n.ClanId);
+            w.WriteNumber("slot", n.Slot);
+            w.WriteString("victimName", n.VictimName);
+            w.WriteNumber("victimPlayer", n.VictimPlayerId);
+            w.WriteNumber("act", n.Act);
+            w.WriteNumber("kills", n.Kills);
+            w.WriteString("status", Camel(n.Status.ToString()));
+            w.WriteBoolean("avenged", n.Avenged);
+            w.WriteEndObject();
+        }
+
+        w.WriteEndArray();
         w.WriteEndObject();
     }
 
@@ -527,6 +572,43 @@ public static class RunSave
         }
 
         return maps;
+    }
+
+    private static Systems.Rivals.RivalMemory ReadRivalMemory(JsonElement root)
+    {
+        var memory = Prop(root, "rivalMemory", "$");
+        var vacancies = new List<Systems.Rivals.RivalVacancy>();
+        int index = 0;
+        foreach (var element in Prop(memory, "vacancies", "$.rivalMemory").EnumerateArray())
+        {
+            string path = $"$.rivalMemory.vacancies[{index++}]";
+            vacancies.Add(new Systems.Rivals.RivalVacancy(
+                Str(element, "clan", path), Int(element, "slot", path), Int(element, "generation", path)));
+        }
+
+        var nemeses = new List<Systems.Rivals.RivalNemesis>();
+        index = 0;
+        foreach (var element in Prop(memory, "nemeses", "$.rivalMemory").EnumerateArray())
+        {
+            string path = $"$.rivalMemory.nemeses[{index++}]";
+            nemeses.Add(new Systems.Rivals.RivalNemesis(
+                Int(element, "id", path),
+                Str(element, "title", path),
+                Str(element, "name", path),
+                Enum<Position>(element, "position", path),
+                Str(element, "homeClan", path),
+                Int(element, "homeSlot", path),
+                Str(element, "clan", path),
+                Int(element, "slot", path),
+                Str(element, "victimName", path),
+                Int(element, "victimPlayer", path),
+                Int(element, "act", path),
+                Int(element, "kills", path),
+                Enum<Systems.Rivals.NemesisStatus>(element, "status", path),
+                Bool(element, "avenged", path)));
+        }
+
+        return new Systems.Rivals.RivalMemory { Vacancies = vacancies, Nemeses = nemeses };
     }
 
     private static Systems.Bets.AcceptedBet? ReadBet(JsonElement root)
@@ -665,7 +747,8 @@ public static class RunSave
             Int(career, "injuriesCaused", careerPath),
             Int(career, "deathsCaused", careerPath),
             Int(career, "injuriesSuffered", careerPath),
-            Int(career, "ticksOnPitch", careerPath));
+            Int(career, "ticksOnPitch", careerPath),
+            Int(career, "revenges", careerPath));
     }
 
     private static Lineup ReadLineup(JsonElement root)

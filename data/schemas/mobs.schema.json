@@ -1,0 +1,35 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Tipos de turba (ADR 0167)",
+  "type": "object",
+  "properties": {
+    "_doc": { "type": "string" },
+    "types": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string", "pattern": "^[a-z][a-z0-9_]*$" },
+          "name": {
+            "type": "object",
+            "properties": { "es": { "type": "string", "minLength": 1 }, "en": { "type": "string", "minLength": 1 } },
+            "required": ["es", "en"],
+            "additionalProperties": false
+          },
+          "weight": { "type": "integer", "minimum": 1, "description": "Peso de sorteo entre los tipos, provisional (Regla H)." },
+          "effects": {
+            "type": "array",
+            "uniqueItems": true,
+            "items": { "enum": ["injure", "pressBoth", "theirOffensive"] },
+            "description": "Lo que pasa al entrar la turba y al provocarla. Vacío: la turba de siempre."
+          }
+        },
+        "required": ["id", "name", "weight", "effects"],
+        "additionalProperties": false
+      }
+    }
+  },
+  "required": ["types"],
+  "additionalProperties": false
+}

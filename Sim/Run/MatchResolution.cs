@@ -47,7 +47,8 @@ internal static class MatchResolution
         MatchLineup lineup,
         MatchResult result,
         Catalog catalog,
-        RefereeSetup? referee = null)
+        RefereeSetup? referee = null,
+        NemesisCatalog? nemesis = null)
     {
         var players = new List<RunPlayer>(state.Roster);
         var playedIds = new List<int>(lineup.Starters.Count);
@@ -125,7 +126,11 @@ internal static class MatchResolution
                         ? players[index] with { PhysicalState = PhysicalState.SevereInjury }
                         : players[index] with
                         {
-                            PhysicalState = PhysicalState.MinorInjury,
+                            // Una lesión nunca mejora el estado (revisión de la ADR 0167): una leve sobre un
+                            // lesionado grave —la de la turba, que no mata— lo deja grave, no curado.
+                            PhysicalState = players[index].PhysicalState == PhysicalState.SevereInjury
+                                ? PhysicalState.SevereInjury
+                                : PhysicalState.MinorInjury,
                             MinorInjuries = players[index].MinorInjuries + 1,
                         };
                     break;
@@ -249,6 +254,16 @@ internal static class MatchResolution
         //     estado no refleja es una contradicción visible en la Gaceta) -es contabilidad pura sobre
         //     RunState.Counters (RT-054)-.
         next = ApplyRivalCredits(next, node, players, result.Events, processedEvents);
+
+        // 4b'. Memoria de los clanes rivales (ADR 0165): quién se convierte en némesis por matar a uno de los
+        //      nuestros, quién se venga, qué rivales han muerto y ya no vuelven. Mismos eventos y mismo corte
+        //      que los créditos (BR-B); el estado que recibe ya lleva la plantilla y la carrera del partido.
+        if (nemesis is not null)
+        {
+            var memory = NemesisSystem.Resolve(state, next, node, result.Events, processedEvents, catalog, nemesis);
+            next = memory.State;
+            summary = summary with { NemesesMade = memory.Made, Revenges = memory.Revenges, NemesesCapped = memory.Capped };
+        }
 
         // 4c. Cómo murió cada caído del partido (ADR 0163): con matador identificado o sin él. La Gaceta lo
         //     lee para no contar «cayó en el campo» de quien murió de otra manera.

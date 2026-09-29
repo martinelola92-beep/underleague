@@ -142,6 +142,12 @@ internal sealed class UtilityContext
     public Mentality[] Order { get; } = new Mentality[2];
 
     /// <summary>
+    /// ADR 0166: ¿tiene el equipo activa la consigna de presión de un grito «¡A por él!»? Mientras sí, la
+    /// utilidad de perseguir, presionar y entrar al portador se multiplica por <c>ai.press</c>.
+    /// </summary>
+    public bool[] PressActive { get; } = new bool[2];
+
+    /// <summary>
     /// Cuántas casillas puede salirse del área el portero de cada equipo <b>en este tick</b> (ADR 0141).
     /// Cero —lo normal— es el portero acotado de siempre.
     /// </summary>
@@ -397,6 +403,14 @@ internal static class Utility
             int baseWeight = ctx.Weights.Base(p.Role, action);
             int tactical = ctx.Weights.Tactical(ctx.TacticalStates[p.Team], action);
             int mentality = EffectiveMentality(ctx, p.Team, action);
+
+            // ADR 0166: la consigna de presión de un grito. Multiplica en el mismo producto que la mentalidad
+            // (no se suma: Regla I), así que con la consigna apagada es exactamente 100 y no cambia nada.
+            if (ctx.PressActive[p.Team])
+            {
+                mentality = mentality * ctx.Weights.Press(action) / 100;
+            }
+
             // El bono de Leader de los compañeros con casilla-hogar contigua, y el de un efecto de perk
             // modifyUtility (C1, docs/analisis/c1-piloto-cazagoles-diseno.md) si lo hay, entran los dos en
             // el multiplicador de rasgos: la fórmula de §3.5 sigue siendo Base * Tactical / 100 * TraitMult

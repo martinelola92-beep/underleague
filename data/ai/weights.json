@@ -145,6 +145,12 @@
     "Neutral": {},
     "Offensive": { "ShotOnTarget": 30, "Dribble": 30, "Tackle": -20, "Intercept": -20, "Save": -20 }
   },
+  "press": {
+    "_doc": "ADR 0166: la CONSIGNA DE PRESION del grito '¡A por él!'. Multiplicador porcentual (100 = neutro) por accion, MULTIPLICATIVO como la mentalidad: entra en el mismo producto de Utility.Choose (base * tactico * mentalidad * PRESION * rasgos), no se suma (Regla I: 250 es x2,5, no +250 %). Solo sube lo que es ir a por el portador: perseguir el balon, presionar al poseedor (y al portero en su salida) y entrarle; las demas acciones quedan en 100. VALORES PROVISIONALES, sin calibrar: elegidos por lo que la consigna significa y medidos una vez en la ADR 0166.",
+    "ChaseBall": 150,
+    "PressCarrier": 250,
+    "Tackle": 150
+  },
   "blockShift": {
     "_doc": "Desplazamiento de casillas-hogar por estado táctico (capa 2). En casillas, positivo hacia la portería rival. speedTicks: ticks que tarda el bloque en completar el desplazamiento.",
     "InPossession": { "shift": 4.0, "speedTicks": 30 },

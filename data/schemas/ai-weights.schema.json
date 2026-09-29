@@ -550,6 +550,13 @@
       "required": ["Defensive", "Neutral", "Offensive"],
       "additionalProperties": false
     },
+    "press": {
+      "type": "object",
+      "description": "ADR 0166: multiplicador porcentual (100 = neutro) por acción mientras el equipo tiene activa la consigna de presión de un grito. Las acciones que no aparecen valen 100.",
+      "propertyNames": { "pattern": "^(_doc|[A-Z][A-Za-z]*)$" },
+      "properties": { "_doc": { "type": "string" } },
+      "additionalProperties": { "type": "integer", "minimum": 1, "maximum": 1000 }
+    },
     "mentalityOdds": {
       "type": "object",
       "description": "ADR 0156: porcentaje de cuota con signo por orden táctica y canal de probabilidad. Neutral vacío o a 0.",
@@ -598,7 +605,8 @@
     "context",
     "blockShift",
     "mentalityShift",
-    "mentalityOdds"
+    "mentalityOdds",
+    "press"
   ],
   "additionalProperties": false,
   "$defs": {

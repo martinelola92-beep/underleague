@@ -46,6 +46,14 @@ public partial class PlayerCard : Control
 
     private TeamState? _state;
     private PlayerDefinition? _player;
+
+    /// <summary>
+    /// Título de némesis (ADR 0165) del jugador de esta ficha, o vacío. Sólo lo pone el ojeo sobre la ficha de un
+    /// rival que ha matado a uno de los tuyos: la marca (anillo de lacre alrededor del medallón, nombre en lacre)
+    /// y el título al frente de la cabecera. Hay que fijarlo <b>antes</b> de <see cref="Bind"/>.
+    /// </summary>
+    public string NemesisTitle { get; set; } = string.Empty;
+
     private ItemDefinition? _item;
     private int _perkSlots;
     private int _perkCount;
@@ -183,6 +191,10 @@ public partial class PlayerCard : Control
             UiText.Get("ui.card.style") + " " + catalog.Style(player.StyleTag).Name.Es,
             _bench ? UiText.Get("ui.card.bench") : string.Empty,
         }).TrimEnd(' ', '·');
+        if (NemesisTitle.Length > 0)
+        {
+            _headline = NemesisTitle + " · " + _headline;
+        }
 
         _attributes.Add((templates.Get("attributes", "strength"), player.Attributes.Strength, AttributeKind.Strength));
         _attributes.Add((templates.Get("attributes", "speed"), player.Attributes.Speed, AttributeKind.Speed));
@@ -455,6 +467,12 @@ public partial class PlayerCard : Control
         }
 
         Medallion.Draw(this, new Vector2(13f, 12f), 10f, _player.Race, _player.Position, _player.Id);
+        bool nemesis = NemesisTitle.Length > 0;
+        if (nemesis)
+        {
+            // La marca de némesis (ADR 0165): un anillo de lacre alrededor del medallón. Forma, no sólo color (UI-002).
+            DrawArc(new Vector2(13f, 12f), 12.5f, 0f, Mathf.Tau, 24, Pregon.Wax, 2.5f);
+        }
 
         const float StateZoneWidth = 24f;
         const float StateGap = 6f;
@@ -463,7 +481,7 @@ public partial class PlayerCard : Control
         float slotsLeft = slotsRight - slotsWidth;
 
         float nameLeft = 30f;
-        Style.DrawText(this, font, new Vector2(nameLeft, 5f), _player.Name, Style.TextSmall, Style.Text, slotsLeft - nameLeft - 6f);
+        Style.DrawText(this, font, new Vector2(nameLeft, 5f), _player.Name, Style.TextSmall, nemesis ? Pregon.Wax : Style.Text, slotsLeft - nameLeft - 6f);
 
         // Hueco de perk: punto lleno (dorado) si está ocupado, anillo hueco si está libre. Hueco de
         // objeto: mismo criterio pero en cuadrado, para que la forma —no solo el relleno— diga si es un

@@ -1,20 +1,21 @@
 {
   "_doc": "Paquete AL (ADR 0059 punto 4): la capa de build del rival ordinario baja de 2/7/9 a 2/1/2 perks por plantilla. Se conserva SIEMPRE el perk letal (RF-012c, ADR 0048) -quitarlo hundia deathsPerRun de 1,44 a 0,55, medido- y una pieza de la linea que da identidad al rival. Los maestros (killing_range, granite_line, blood_tithe) salen: sin su linea detras no cumplen su requiresPerks y no serian legibles. ",
   "id": "act3_dwarf_ironkings",
+  "clanId": "bastion",
   "name": {
-    "es": "Reyes de Hierro",
-    "en": "Iron Kings"
+    "es": "Bastión de Granito",
+    "en": "Granite Bastion"
   },
   "description": {
-    "es": "La muralla definitiva: generaciones sin encajar un gol fácil ni retirar una entrada a tiempo.",
-    "en": "The ultimate wall: generations without conceding an easy goal or pulling out of a tackle."
+    "es": "Bastión de Granito, coronado: los mismos enanos, tras generaciones sin encajar un gol fácil ni retirar una entrada a tiempo.",
+    "en": "Granite Bastion, crowned: the same dwarves, generations on, still never conceding an easy goal or pulling out of a tackle in time."
   },
   "race": "Dwarf",
   "act": 3,
   "difficulty": 5,
   "players": [
     {
-      "name": "Grimnir Cavaprofundo",
+      "name": "Borin Yunquefirme",
       "position": "Goalkeeper",
       "rarity": "rare",
       "level": 5,
@@ -31,7 +32,7 @@
       ]
     },
     {
-      "name": "Hjalmar Vetaoro",
+      "name": "Dagnar Escudopétreo",
       "position": "Defender",
       "rarity": "uncommon",
       "level": 5,
@@ -48,7 +49,7 @@
       ]
     },
     {
-      "name": "Ivarr Forjagrís",
+      "name": "Eldrin Golpefrío",
       "position": "Defender",
       "rarity": "common",
       "level": 5,
@@ -62,7 +63,7 @@
       "styleTag": "Bulwark"
     },
     {
-      "name": "Joric Puñoroca",
+      "name": "Fendrel Barbahierro",
       "position": "Midfielder",
       "rarity": "common",
       "level": 5,
@@ -75,7 +76,7 @@
       }
     },
     {
-      "name": "Kordan Martillonegro",
+      "name": "Grimnir Cavaprofundo",
       "position": "Midfielder",
       "rarity": "common",
       "level": 5,
@@ -88,7 +89,7 @@
       }
     },
     {
-      "name": "Loric Tallapiedra",
+      "name": "Hjalmar Vetaoro",
       "position": "Midfielder",
       "rarity": "common",
       "level": 5,
@@ -101,7 +102,7 @@
       }
     },
     {
-      "name": "Magnus Yunquefirme",
+      "name": "Ivarr Forjagrís",
       "position": "Forward",
       "rarity": "common",
       "level": 5,
@@ -122,7 +123,7 @@
       ]
     },
     {
-      "name": "Norin Escudopétreo",
+      "name": "Joric Puñoroca",
       "position": "Defender",
       "rarity": "common",
       "level": 5,
@@ -136,7 +137,7 @@
       "styleTag": "Bulwark"
     },
     {
-      "name": "Oskar Golpefrío",
+      "name": "Kordan Martillonegro",
       "position": "Midfielder",
       "rarity": "common",
       "level": 5,
@@ -149,7 +150,7 @@
       }
     },
     {
-      "name": "Ragnar Barbahierro",
+      "name": "Loric Tallapiedra",
       "position": "Forward",
       "rarity": "common",
       "level": 5,

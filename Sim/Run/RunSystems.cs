@@ -71,6 +71,23 @@ public sealed record RunMatchSummary(
     /// no hubo devolución. El informe lo enseña.
     /// </summary>
     public int BetRefunded { get; init; }
+
+    /// <summary>
+    /// Rivales que se han convertido en némesis en este partido por matar a uno de los nuestros (ADR 0165).
+    /// El informe post-partido lo cuenta («X se convierte en tu némesis»). Vacía si nadie.
+    /// </summary>
+    public IReadOnlyList<Systems.Rivals.NemesisMade> NemesesMade { get; init; } = Array.Empty<Systems.Rivals.NemesisMade>();
+
+    /// <summary>
+    /// Venganzas cobradas en este partido: un jugador propio lesionó o mató a un némesis (ADR 0165). El informe
+    /// las proclama y <c>StandardRunSystems.AfterMatch</c> cobra <c>economy.revengeGold</c> por cada una.
+    /// </summary>
+    public IReadOnlyList<Systems.Rivals.NemesisRevenge> Revenges { get; init; } = Array.Empty<Systems.Rivals.NemesisRevenge>();
+
+    /// <summary>
+    /// Asesinos rivales que no se convirtieron en némesis porque ya había el tope vivos (ADR 0165, «se anota»).
+    /// </summary>
+    public int NemesesCapped { get; init; }
 }
 
 /// <summary>
@@ -127,6 +144,12 @@ public interface IRunSystems
 
     /// <summary>Árbitro que dirige el partido de ese nodo (RF-061).</summary>
     RefereeSetup RefereeFor(RunState state, MapNode node, Catalog catalog);
+
+    /// <summary>
+    /// Tipo de turba del partido de ese nodo (ADR 0167), derivado del nodo como el árbitro: mismo nodo y misma
+    /// semilla, mismo tipo. Null = sin tipo, la turba de siempre.
+    /// </summary>
+    MobSetup? MobFor(RunState state, MapNode node, Catalog catalog);
 
     /// <summary>
     /// Configuración del simulador para ese partido (log, profundidad de recursión y el desgaste del
@@ -217,6 +240,14 @@ public interface IRunSystems
     /// <see cref="Bets"/>: un envoltorio que no lo reenvía mide un mundo sin herrero sin decirlo.
     /// </summary>
     Systems.Medical.ProsthesisCatalog Prostheses { get; }
+
+    /// <summary>
+    /// Clanes rivales y némesis de estos sistemas (ADR 0165, <c>data/nemesis/</c>): con qué se resuelve quién mata
+    /// a quién entre partidos y a dónde pasa cada némesis entre actos. Lo lee <see cref="RunEngine"/>. Sin
+    /// implementación por defecto por la misma razón que <see cref="Bets"/> y <see cref="Prostheses"/>: un
+    /// envoltorio que no lo reenvía mide un mundo sin némesis sin decirlo (Regla J).
+    /// </summary>
+    Systems.Rivals.NemesisCatalog Nemesis { get; }
 }
 
 /// <summary>
@@ -263,6 +294,9 @@ public sealed class DefaultRunSystems : IRunSystems
 
     /// <inheritdoc />
     public Systems.Medical.ProsthesisCatalog Prostheses => Systems.Medical.ProsthesisCatalog.Empty;
+
+    /// <inheritdoc />
+    public Systems.Rivals.NemesisCatalog Nemesis => Systems.Rivals.NemesisCatalog.Empty;
 
     /// <inheritdoc />
     public IReadOnlyList<RunReferee> CreateReferees(ulong seed, int count, Catalog catalog)
@@ -361,6 +395,10 @@ public sealed class DefaultRunSystems : IRunSystems
             RefereeId = referee.Id,
         };
     }
+
+    /// <inheritdoc />
+    /// <remarks>Sin catálogo de turbas: la turba de siempre.</remarks>
+    public MobSetup? MobFor(RunState state, MapNode node, Catalog catalog) => null;
 
     /// <inheritdoc />
     public SimConfig MatchConfig(RunState state, MapNode node, Catalog catalog) => SimConfig.Default;

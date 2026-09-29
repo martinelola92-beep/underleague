@@ -33,6 +33,8 @@ public sealed record RunBond(int OtherPlayerId, BondKind Kind);
 /// <see cref="RunPlayer.Counters"/>, gobernado por la semántica de perk (RF-070, topes <c>maxValue</c>).
 /// Mezclar los dos ciclos de vida en la misma bolsa habría dejado que una regla futura de perk truncara
 /// el historial en silencio (ADR 0124, decisión 1). Aritmética entera (RT-023).
+/// <see cref="Revenges"/> (ADR 0165, versión 8 del esquema): veces que este jugador ha lesionado o matado a
+/// un némesis del rival; alimenta el apodo «el Vengador» (ADR 0163).
 /// </summary>
 public sealed record RunCareer(
     int Matches,
@@ -45,10 +47,11 @@ public sealed record RunCareer(
     int InjuriesCaused,
     int DeathsCaused,
     int InjuriesSuffered,
-    int TicksOnPitch)
+    int TicksOnPitch,
+    int Revenges = 0)
 {
     /// <summary>Instancia vacía compartida: el caso normal es no haber jugado ningún partido todavía.</summary>
-    public static RunCareer None { get; } = new(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    public static RunCareer None { get; } = new(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 /// <summary>Prótesis instalada en un jugador (RF-095). Fase 3; el campo existe desde la versión 1 del esquema.</summary>
@@ -456,7 +459,9 @@ public sealed record RunState
     // 5 (ADR 0124): cada jugador gana un objeto "career" con su historial de carrera acumulado.
     // 6 (ADR 0158): cada árbitro gana definitionId, grudge y blindSide.
     // 7 (ADR 0157): el estado gana la apuesta tomada del nodo pendiente (bet, null si no hay).
-    public const int CurrentSchemaVersion = 7;
+    // 8 (ADR 0165): el estado gana la memoria de los clanes rivales (rivalMemory: vacantes y némesis) y la
+    // carrera de cada jugador gana "revenges".
+    public const int CurrentSchemaVersion = 8;
 
     /// <summary>Versión de esquema con la que se creó este estado.</summary>
     public int SchemaVersion { get; init; } = CurrentSchemaVersion;
@@ -539,6 +544,12 @@ public sealed record RunState
     /// obligue a subir la versión del esquema. Ordenado por clave ordinal.
     /// </summary>
     public IReadOnlyDictionary<string, int> Counters { get; init; } = RunPlayer.NoCounters;
+
+    /// <summary>
+    /// Memoria de los clanes rivales (ADR 0165, versión 8 del esquema): qué puestos ya no ocupa su jugador
+    /// de datos y qué rivales son o fueron némesis. Vacía al empezar la run.
+    /// </summary>
+    public Systems.Rivals.RivalMemory RivalMemory { get; init; } = Systems.Rivals.RivalMemory.Empty;
 
     /// <summary>Progreso de logros de desbloqueo (RF-125b). Ordenado por clave ordinal.</summary>
     public IReadOnlyDictionary<string, int> Achievements { get; init; } = RunPlayer.NoCounters;
@@ -754,6 +765,18 @@ public sealed record RunState
     public const string RivalCreditPrefix = "rivalCredit:";
 
     /// <summary>
+    /// Contador de run (ADR 0165): venganzas cobradas en toda la run (un jugador propio lesiona o mata a un
+    /// némesis). Sólo contabilidad para el censo de <c>/Balance</c>; el dato de juego es la carrera de cada jugador.
+    /// </summary>
+    public const string RevengesCounter = "nemesis:revenges";
+
+    /// <summary>
+    /// Contador de run (ADR 0165): asesinos rivales que NO se convirtieron en némesis porque ya había el tope
+    /// vivos («se anota», ADR 0165 punto 3).
+    /// </summary>
+    public const string NemesisCappedCounter = "nemesis:capped";
+
+    /// <summary>
     /// Prefijo de los contadores que guardan <b>cómo murió</b> cada jugador propio (ADR 0163, RF-122):
     /// <c>deathCause:&lt;playerId&gt;</c> = <see cref="PlayerDeathCause"/> como entero. Lo escriben las tres
     /// vías de muerte (partido, sacrificio del evento y matasanos) y lo lee la Gaceta; sin él una esquela
@@ -879,6 +902,10 @@ public sealed record RunState
 
     /// <summary>Copia con el oro indicado. Nunca baja de 0.</summary>
     public RunState WithGold(int gold) => this with { Gold = gold < 0 ? 0 : gold };
+
+    /// <summary>Copia con la memoria de los clanes rivales indicada (ADR 0165).</summary>
+    public RunState WithRivalMemory(Systems.Rivals.RivalMemory memory) =>
+        this with { RivalMemory = memory ?? throw new ArgumentNullException(nameof(memory)) };
 
     /// <summary>Copia con la apuesta tomada indicada (null la cierra), ADR 0157.</summary>
     public RunState WithBet(Systems.Bets.AcceptedBet? bet) => this with { Bet = bet };

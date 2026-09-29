@@ -1,0 +1,50 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://underleague.dev/schemas/nemesis-titles.schema.json",
+  "title": "Underleague nemesis titles",
+  "description": "data/nemesis/titles.json: títulos de némesis (ADR 0165, RF-015) y las dos cifras de la regla. Único fichero. Cargado por Sim.Run.Systems.Rivals.NemesisLoader, fuera del Catalog compartido.",
+  "type": "object",
+  "properties": {
+    "_doc": { "type": "string" },
+    "maxAlive": {
+      "description": "Tope de némesis vivos a la vez (ADR 0165). Provisional, sin medir.",
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 5
+    },
+    "levelBonus": {
+      "description": "Niveles que suma un némesis vivo a su nivel de clan (ADR 0165). Provisional, sin medir.",
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 3
+    },
+    "titles": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/title" },
+      "minItems": 8,
+      "maxItems": 12
+    }
+  },
+  "required": ["maxAlive", "levelBonus", "titles"],
+  "additionalProperties": false,
+  "$defs": {
+    "title": {
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "pattern": "^[a-z][a-z0-9_]*$" },
+        "name": { "$ref": "#/$defs/localizedName" }
+      },
+      "required": ["id", "name"],
+      "additionalProperties": false
+    },
+    "localizedName": {
+      "type": "object",
+      "properties": {
+        "es": { "type": "string", "minLength": 1 },
+        "en": { "type": "string", "minLength": 1 }
+      },
+      "required": ["es", "en"],
+      "additionalProperties": false
+    }
+  }
+}
