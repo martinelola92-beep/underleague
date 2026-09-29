@@ -9,6 +9,42 @@ PC (Steam), premium, sin online. **Estado (8 sep 2026): fases 0 y 1 cerradas; fa
 **Campo de siete filas (14 sep 2026, decisión del revisor, BA-C):** 16×7 en vez de 16×6 —con seis filas el centro geométrico cae *entre* dos filas y no existe fila central—, con guardado v4. Añadir la fila cuesta ~1,0 tiro y ~0,45 goles por partido y **ninguna palanca local lo recupera**, así que la **ADR 0109** recalibra la banda de tiros a la geometría vigente (8-16 → 7-15) en vez de tocar el motor, y deja escrito que ensanchar la formación o las zonas de acción destruye la profundidad de colocación. Nueve auditorías de la IA de jugadores (`docs/auditoria-ia-jugadores-1..9.md`) dejan **un solo cambio aplicado**, la **ADR 0110**: `Shoot` del defensa 77 → 154 y del centrocampista 188 → 237, porque con 77 un defensa colocado arriba nunca remataba —perdía contra su propio `ShortPass` de 500— y jugar fuera de posición costaba dos tercios del ataque (100/48/38 → 100/68/55). Rechazados y documentados: `ChaseBall pen` en todas las dosis (degrada la diferenciación de builds), el desfase de fase entre equipos (no replica entre semillas) y la histéresis. Queda **abierto** el papel del centrocampista: dispara el 6,5 % de los tiros siendo el 43 % de los jugadores de campo.
 ---
 
+## ARRANQUE DE LA SESIÓN SIGUIENTE (escrito el 29 sep 2026) — plan de diversión
+
+**Contexto:** el revisor pidió una mirada de diseñador/jugador y, a partir de ella, un **plan de mejora de
+la diversión**: `docs/plan-diversion.md` (decisiones del revisor en §0, orden en §5). Encargo: *«ataca
+árbitro primero, luego el resto del plan; sigue sin pedir permiso»*. **No toca balance fino** (el revisor lo
+aplaza).
+
+**Hecho y en `main`:**
+- [BQ-A](pendientes/BQ-A.md): el nodo de evento se abría sin opciones (el mapa no abría el nodo).
+- [ADR 0158](decisiones/0158-el-arbitro-existe.md): el árbitro existe —16 con nombre, rasgos con efecto,
+  criterio que pesa, memoria de tu conducta, ficha en el ojeo, medidor en el tablero y árbitro en el campo 3D—.
+  Guardado v6. Puertas: **3 rojas de 44** (antes 4; razas pasa a verde; quedan curva de jefes y
+  `orc_violence` ×2). Rojas/partido 0,08 → 0,14.
+- [ADR 0159](decisiones/0159-eventos-segunda-tanda.md) y [ADR 0160](decisiones/0160-el-entrenamiento-se-elige.md):
+  18 cartas de evento con 8 efectos nuevos (incluido el donante, que enmienda RF-072) y el entrenamiento como
+  carta de tres sesiones (pachanga, especialización +8, cambio de puesto). Revisión independiente y puertas
+  **en curso** al escribir esto.
+- [ADR 0157](decisiones/0157-la-apuesta-del-vestuario.md): la apuesta, **propuesta**, sin implementar.
+
+**En worktrees de agentes, sin integrar** (`.claude/worktrees/agent-*`):
+- `agent-a6d189449392d5251`: [ADR 0161](decisiones/0161-botin-y-cofre.md) botín de liga, reliquias y cofre.
+- `agent-ac748ec40a16a74fe`: consumibles en vivo (cierra BA-H) y catálogo de 20 consumibles.
+Cada uno: comprobar su rama (build, DataValidator, tests, captura), `git merge --ff-only` tras rebasar sobre
+`main`, revisión independiente, puertas.
+
+**Siguiente, en este orden** (`docs/plan-diversion.md` §5): la apuesta (ADR 0157: primero el censo de
+frecuencias de las condiciones para las cuotas; `referee_blind` ya es resoluble), memoria visible
+(estadísticas, apodos, Gaceta final sobre `RunCareer`), clanes y némesis, catálogo de turbas, clínica con el
+herrero, métrica guardiana de la sangre.
+
+**Cuidado:** `Game/Ui/MatchPitchView3D.cs`, `Game/Screens/MatchScreen.cs` y varios `.tscn` tienen cambios
+**ajenos** sin commitear, sólo de espacios a tabuladores. Para commitear cambios propios en esos ficheros:
+`expand -i -t4 <f> | git hash-object -w --stdin` + `git update-index --cacheinfo 100644,<hash>,<f>`.
+
+---
+
 ## ARRANQUE DE LA SESIÓN SIGUIENTE (escrito el 27 sep 2026)
 
 **Hecho, por encargo directo del revisor** (tareas sueltas de gameplay):
