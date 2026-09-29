@@ -481,6 +481,6 @@ public partial class ScoutScreen : Control
     private void StartMatch()
     {
         _run.SelectedNodeId = _nodeId;
-        Nav.Go(this, Nav.Match);
+        Nav.Go(this, Nav.MatchView);
     }
 }

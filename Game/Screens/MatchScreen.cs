@@ -154,8 +154,9 @@ public partial class MatchScreen : Control
         {
             TogglePlay();
         }
-        else if (@event.IsActionPressed("ui_cancel"))
+        else if (@event.IsActionPressed("ui_cancel") && !PauseMenu.IsPauseKey(@event))
         {
+            // Esc es del menú de pausa; el botón B del mando sigue yendo al informe.
             GoToReport();
         }
         else if (@event.IsActionPressed("ui_left"))

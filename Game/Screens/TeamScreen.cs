@@ -562,6 +562,15 @@ public partial class TeamScreen : Control
 
         if (@event.IsActionPressed("ui_cancel"))
         {
+            // Sin nada que cerrar ni soltar, cancelar no es de esta pantalla: sigue hasta el menú de pausa
+            // (PauseMenu). Si cierra algo, se lo queda, para que Esc no cierre algo y abra la pausa a la vez.
+            bool closes = _tab == Tab.Lineup ? _held >= 0 || _selected >= 0 : _picking || _tab != Tab.Roster;
+            if (!closes)
+            {
+                return;
+            }
+
+            GetViewport().SetInputAsHandled();
             if (_tab != Tab.Lineup)
             {
                 if (_picking)
