@@ -95,6 +95,12 @@ public sealed class Options
     public int? BetCensus { get; private set; }
 
     /// <summary>
+    /// <c>--bet-doctrine never|blind|prepared</c>: qué hace la política de <c>--full-runs</c> con la apuesta
+    /// del vestuario (ADR 0157). Por defecto <c>never</c>, para no mover ninguna puerta.
+    /// </summary>
+    public Underleague.Sim.Analysis.BetDoctrine BetDoctrine { get; private set; } = Underleague.Sim.Analysis.BetDoctrine.Never;
+
+    /// <summary>
     /// --ignore-scouting: en --full-runs, la política automática <b>no lee</b> el informe de ojeo
     /// (RF-013) y alinea a los tocados aunque el rival lleve perks letales (ADR 0046). Es la medida de
     /// control: la diferencia entre las dos cifras de muertes es lo que vale leer el informe.
@@ -288,6 +294,16 @@ public sealed class Options
                         throw new ArgumentException("--full-runs debe ser mayor que cero");
                     }
 
+                    break;
+
+                case "--bet-doctrine":
+                    options.BetDoctrine = NextValue(args, ref i, arg) switch
+                    {
+                        "never" => Underleague.Sim.Analysis.BetDoctrine.Never,
+                        "blind" => Underleague.Sim.Analysis.BetDoctrine.Blind,
+                        "prepared" => Underleague.Sim.Analysis.BetDoctrine.Prepared,
+                        var other => throw new ArgumentException($"--bet-doctrine: '{other}' no es never, blind ni prepared"),
+                    };
                     break;
 
                 case "--bet-census":

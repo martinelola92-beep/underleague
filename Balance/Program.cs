@@ -43,7 +43,7 @@ try
         // --full-runs N: N runs completas con la política automática (fase2-diseno.md §10). Responde a
         // la pregunta que la curva de puertas deja abierta: si la economía permite llegar a cada puerta
         // con la build que esa puerta exige.
-        FullRunResult full = FullRunRunner.Run(catalog, dataFiles, options.Seed, fullRuns, options.IgnoreScouting, options.RiskAversion, options.MinPerkValue, options.MinPerkValueReward, options.MinPerkValueMarket, options.MinItemValueMarket, options.SlotBarOff, options.SlotHorizon, options.ArcJudged, options.SlotGates, options.Act1Pass, options.Act2Pass, options.ValuesFlat);
+        FullRunResult full = FullRunRunner.Run(catalog, dataFiles, options.Seed, fullRuns, options.IgnoreScouting, options.RiskAversion, options.MinPerkValue, options.MinPerkValueReward, options.MinPerkValueMarket, options.MinItemValueMarket, options.SlotBarOff, options.SlotHorizon, options.ArcJudged, options.SlotGates, options.Act1Pass, options.Act2Pass, options.ValuesFlat, options.BetDoctrine);
 
         var fullSummary = full.Metrics
             .Select(m => new MetricRow(m.Name, m.Value, m.RangeMin, m.RangeMax, m.Status))
@@ -395,6 +395,9 @@ static void PrintUsage()
           --full-runs N       N runs completas por cada una de las tres doctrinas de compra de la ADR
                                0037 (contextual, gastadora, ahorradora) sobre las mismas semillas;
                                escribe runs.csv y summary.csv con las métricas de fase2-diseno.md §10
+          --bet-doctrine D    con --full-runs, qué hace la política con la apuesta del vestuario: never (por
+                               defecto), blind (toma siempre) o prepared (solo si la build la favorece);
+                               añade las filas betsTakenPerRun, betNetGoldPerRun y betNetReturnPercent
           --bet-census N      N runs completas con la política contextual; en cada partido de liga, élite
                                o jefe evalúa las once condiciones de apuesta del vestuario (ADR 0157) y
                                escribe bet-census.csv: frecuencia por apuesta y dificultad (de ahí salen las
@@ -670,6 +673,9 @@ static void WriteRunsCsv(string outDir, IReadOnlyList<RunPlayResult> runs, strin
         // Censo de slots y ofertas (AS-A): "acto:ofertas:slotsLibresSumados:slotsEnLaPuerta". Diagnóstico puro.
         "slotCensus",
         "perkHorizon",
+
+        // ADR 0157: la apuesta del vestuario. Con la doctrina de apuesta por defecto (never) valen 0.
+        "betsTaken", "betNetGold", "betStaked",
     };
 
     var rows = runs.Select(r => (IReadOnlyList<string>)new[]
@@ -700,6 +706,7 @@ static void WriteRunsCsv(string outDir, IReadOnlyList<RunPlayResult> runs, strin
         string.Join(" ", r.FinalCounters ?? Array.Empty<string>()),
         string.Join(" ", r.SlotCensus ?? Array.Empty<string>()),
         string.Join(" ", r.PerkHorizon ?? Array.Empty<string>()),
+        Int(r.BetsTaken), Int(r.BetNetGold), Int(r.BetGoldStaked),
     });
 
     CsvWriter.Write(Path.Combine(outDir, fileName), header, rows);

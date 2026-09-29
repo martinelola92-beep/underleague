@@ -89,7 +89,8 @@ public static class FullRunRunner
         bool slotGates = false,
         int? act1Pass = null,
         int? act2Pass = null,
-        bool valuesFlat = false)
+        bool valuesFlat = false,
+        BetDoctrine betDoctrine = BetDoctrine.Never)
     {
         ArgumentNullException.ThrowIfNull(catalog);
         ArgumentNullException.ThrowIfNull(dataFiles);
@@ -106,7 +107,7 @@ public static class FullRunRunner
 
         foreach (var doctrine in Doctrines)
         {
-            var options = RunPolicyOptions.For(doctrine) with { HeedsLethalScouting = !ignoreScouting };
+            var options = RunPolicyOptions.For(doctrine) with { HeedsLethalScouting = !ignoreScouting, BetDoctrine = betDoctrine };
             if (riskAversion is { } aversion)
             {
                 options = options with { DeathCostPercent = aversion };
@@ -152,6 +153,7 @@ public static class FullRunRunner
         {
             HeedsLethalScouting = !ignoreScouting,
             AvoidsMarkets = true,
+            BetDoctrine = betDoctrine,
         };
         if (riskAversion is { } marketlessAversion)
         {
