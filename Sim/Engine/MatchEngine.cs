@@ -4573,6 +4573,16 @@ internal sealed class MatchEngine : IPerkWorld
 
     private void ResolveInjury(MatchPlayer tackler, MatchPlayer victim, bool isFoul)
     {
+        // BR-B: la muerte es terminal. Un perk letal publica la entrada/el bloqueo ANTES de resolverlo
+        // (EffectEngine) y puede matar ya al objetivo; la disputa sigue su curso, pero contra un muerto no
+        // hay nada más que lesionar: sin esta guarda salía un INJURY en el mismo tick que el DEATH y la
+        // plantilla lo dejaba "vivo y lesionado" (semilla 7, run 0, partido 15). Va antes de cualquier
+        // tirada, así que no consume dados que un jugador vivo consumiría.
+        if (victim.Dead)
+        {
+            return;
+        }
+
         // ADR 0041: la fuerza del que entra contra la resistencia del que la recibe, sin ninguna
         // constante de por medio. Un nivel 8 que entra a otro nivel 8 lesiona aproximadamente lo mismo
         // que un nivel 1 contra otro nivel 1; lo que mueve el riesgo es la diferencia entre los dos.

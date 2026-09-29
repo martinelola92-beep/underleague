@@ -83,6 +83,16 @@ public sealed record SetConsumables(IReadOnlyList<EquippedConsumable> Consumable
 /// <summary>Cierra el nodo interactivo abierto y vuelve al mapa.</summary>
 public sealed record LeaveNode : RunDecision;
 
+/// <summary>
+/// Toma la apuesta del vestuario que se ofrece en un nodo de partido accesible (ADR 0157): se paga al
+/// tomarla, una por nodo, antes de jugarlo. Sin oro suficiente, o en un nodo que no sea de partido, es un
+/// error. Tomar otra apuesta para otro nodo devuelve la anterior.
+/// </summary>
+public sealed record TakeBet(int NodeId) : RunDecision;
+
+/// <summary>Retira la apuesta tomada y no jugada, y devuelve lo apostado (ADR 0157: solo se pierde jugando y fallando).</summary>
+public sealed record DeclineBet : RunDecision;
+
 /// <summary>Compra el artículo indicado del surtido del mercado abierto (RF-114). Paquete X.</summary>
 /// <param name="Category">Categoría del surtido: jugadores, perks, equipamiento o consumibles (RF-114).</param>
 /// <param name="OfferIndex">Índice dentro de la categoría, 0..3.</param>
@@ -103,6 +113,15 @@ public sealed record TreatPlayer(int PlayerId, bool Risky = false) : RunDecision
 
 /// <summary>Cura a toda la plantilla por la tarifa plana de la clínica (ADR 0099).</summary>
 public sealed record TreatSquad : RunDecision;
+
+/// <summary>
+/// El herrero de la clínica (ADR 0164, RF-095, RF-095b): para un jugador con lesión <b>grave</b>. Cuesta el precio
+/// base del herrero más <paramref name="ExtraGold"/> de oro invertido (0..tope de <c>economy.blacksmith</c>), que
+/// desplaza la tabla de tres resultados —curación, mejora con prótesis, empeoramiento con prótesis— con
+/// rendimiento decreciente. La tabla que se tira es <b>exactamente</b> la que enseña <c>BlacksmithView</c>.
+/// Nunca mata.
+/// </summary>
+public sealed record ForgePlayer(int PlayerId, int ExtraGold = 0) : RunDecision;
 
 /// <summary>
 /// Elige una opción de la carta del nodo de evento abierto (ADR 0100, ADR 0159). <paramref name="TargetPlayerId"/>

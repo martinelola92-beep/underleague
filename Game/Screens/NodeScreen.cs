@@ -13,7 +13,7 @@ namespace Underleague.Game.Screens;
 /// Los cuatro se parecen tanto que compartir pantalla es lo honesto: cada uno dice <b>qué cuesta</b>,
 /// <b>qué hace</b> y pide confirmación, y ninguno esconde el efecto detrás de una pulsación.
 /// <para>
-/// Los cuatro se <b>abren</b> y esperan una decisión (<c>TreatPlayer</c>, <c>ExpandRoster</c>,
+/// Los cuatro se <b>abren</b> y esperan una decisión (<c>TreatPlayer</c>/<c>ForgePlayer</c>, <c>ExpandRoster</c>,
 /// <c>ChooseEventOption</c>, <c>ChooseTrainingSession</c>) hasta que el jugador sale con
 /// <c>LeaveNode</c>: entrar no resuelve nada por sí solo. El entrenamiento se resolvía solo hasta la
 /// ADR 0160; el evento, hasta la ADR 0100.
@@ -46,6 +46,12 @@ public partial class NodeScreen : Control
 
     private string _trainTargetName = string.Empty;
 
+    /// <summary>Jugador cuya mesa del herrero está abierta (ADR 0164); −1 si no hay ninguna.</summary>
+    private int _forgePlayer = -1;
+
+    /// <summary>Oro extra elegido en la mesa del herrero (ADR 0164, RF-095b).</summary>
+    private int _forgeExtra;
+
     public override void _Ready()
     {
         var run = RunController.Instance;
@@ -72,7 +78,35 @@ public partial class NodeScreen : Control
             return;
         }
 
+        if (Tour.Clinic && _node.Kind == NodeKind.Clinic)
+        {
+            // Solo captura: la clínica de un mapa recién generado no tiene a quién curar. Dos graves, uno con
+            // una prótesis ya puesta (para ver la ranura ocupada) y oro de sobra; se abre la mesa del primero
+            // con dos de oro extra, que es lo que haría el jugador tras probar el botón.
+            _run.SeedForCapture(seeded =>
+            {
+                var first = seeded.Roster[1] with { PhysicalState = PhysicalState.SevereInjury };
+                var second = seeded.Roster[2] with { PhysicalState = PhysicalState.SevereInjury };
+                var first2 = Sim.Run.Systems.Medical.MedicalSystem.Install(
+                    first, _run.Systems!.Prostheses.Find("iron_arm")!);
+                // Y el portero, que es quien la ficha de Equipo abre por defecto, ya con dos prótesis: la línea
+                // de la ficha se captura después de la clínica.
+                var keeper = Sim.Run.Systems.Medical.MedicalSystem.Install(
+                    Sim.Run.Systems.Medical.MedicalSystem.Install(
+                        seeded.Roster[0], _run.Systems!.Prostheses.Find("peg_leg")!),
+                    _run.Systems!.Prostheses.Find("iron_arm")!);
+                return seeded.WithPlayer(first2).WithPlayer(second).WithPlayer(keeper).WithGold(40);
+            });
+            _forgePlayer = _run.State!.Roster[1].Id;
+            _forgeExtra = 2;
+        }
+
         Rebuild();
+
+        if (Tour.Clinic && _node.Kind == NodeKind.Clinic)
+        {
+            Tour.Step(this, "clinica-herrero", () => Nav.Go(this, Nav.Team));
+        }
 
         if (Tour.Event)
         {
@@ -98,7 +132,7 @@ public partial class NodeScreen : Control
 
         Layout.CenterLegacy(this);
         Widgets.Background(this);
-        Widgets.Header(this, Title(), UiText.Get("ui.node.gold", state.Gold));
+        Widgets.Header(this, Title(), UiText.WithBetRefund(UiText.Get("ui.node.gold", state.Gold), state));
         Widgets.Panel(this, new Rect2(12f, 52f, 1256f, 690f));
 
         float y = 72f;
@@ -142,7 +176,8 @@ public partial class NodeScreen : Control
     /// <summary>
     /// Clínica (RF-094, ADR 0099): tres servicios con su precio delante. La tarifa plana arriba —cura a
     /// todos y no mira cuántos son—, y por cada lesionado dos botones: el garantizado y el del matasanos,
-    /// que cuesta una fracción y lleva sus dos porcentajes escritos. Verlos antes de elegir es lo que hace
+    /// que cuesta una fracción y lleva sus dos porcentajes escritos, y, para la lesión grave, la mesa del
+    /// herrero (ADR 0164), que enseña su tabla de tres resultados antes de confirmar. Verlos antes de elegir es lo que hace
     /// legítimo que el matasanos pueda matar (RF-012d, ADR 0048).
     /// </summary>
     private float BuildClinic(RunState state, Sim.Run.Systems.Economy.EconomyConfig economy, float y)
@@ -178,10 +213,12 @@ public partial class NodeScreen : Control
 
         var squad = Widgets.Button(
             this,
-            UiText.Get("ui.node.treatSquad", economy.ClinicSquadCost, patients.Count, piecemeal),
+            patients.Count == 1
+                ? UiText.Get("ui.node.treatSquadOne", economy.ClinicSquadCost, patients.Count, piecemeal)
+                : UiText.Get("ui.node.treatSquad", economy.ClinicSquadCost, patients.Count, piecemeal),
             new Rect2(28f, y, 520f, 28f),
             state.Gold >= economy.ClinicSquadCost);
-        squad.Pressed += () => Decide(new TreatSquad(), UiText.Get("ui.node.treatedSquad", patients.Count));
+        squad.Pressed += () => Decide(new TreatSquad(), UiText.Plural(patients.Count, "ui.node.treatedSquadOne", "ui.node.treatedSquad"));
         y += 38f;
 
         foreach (var patient in patients)
@@ -208,10 +245,175 @@ public partial class NodeScreen : Control
                 new Rect2(396f, y, 420f, 28f),
                 state.Gold >= risky);
             quack.Pressed += () => Decide(new TreatPlayer(id, Risky: true), UiText.Get("ui.node.treatedRisky", name));
+
+            // ADR 0164: el herrero solo atiende lesiones graves. Abrir la mesa no cuesta nada y no decide nada:
+            // enseña la tabla de tres resultados y deja elegir el oro extra antes de confirmar (RF-095).
+            if (patient.PhysicalState == PhysicalState.SevereInjury)
+            {
+                var prostheses = _run.Systems!.Prostheses;
+                int forgePrice = Sim.Run.Systems.Medical.MedicalSystem.BlacksmithBasePrice(economy);
+                bool canForge = state.Gold >= forgePrice
+                    && Sim.Run.Systems.Medical.MedicalSystem.HasFreeProsthesisSlot(patient, prostheses);
+                var forge = Widgets.Button(
+                    this,
+                    UiText.Get("ui.node.forgeOpen", forgePrice),
+                    new Rect2(916f, y, 338f, 28f),
+                    canForge);
+                forge.Pressed += () =>
+                {
+                    _forgePlayer = id;
+                    _forgeExtra = 0;
+                    _message = string.Empty;
+                    Rebuild();
+                };
+            }
+
             y += 34f;
         }
 
+        if (_forgePlayer >= 0)
+        {
+            var open = patients.Find(p => p.Id == _forgePlayer);
+            if (open is not null && open.PhysicalState == PhysicalState.SevereInjury)
+            {
+                y = BuildForge(state, economy, open, y + 6f);
+            }
+            else
+            {
+                _forgePlayer = -1;
+            }
+        }
+
         return y;
+    }
+
+    /// <summary>
+    /// La mesa del herrero (ADR 0164, RF-095, RF-095b): la tabla de tres resultados con su porcentaje, el oro
+    /// extra que se puede invertir —cada botón muestra la tabla que dejaría— y la confirmación. Todos los
+    /// números salen de <c>BlacksmithView</c>, la misma función que tira <c>MedicalSystem.Forge</c>: lo que se
+    /// lee aquí es lo que se juega.
+    /// </summary>
+    private float BuildForge(RunState state, Sim.Run.Systems.Economy.EconomyConfig economy, RunPlayer patient, float y)
+    {
+        var prostheses = _run.Systems!.Prostheses;
+        var quote = Sim.Run.View.BlacksmithView.Quote(state, economy, prostheses, patient.Id, _forgeExtra);
+
+        Widgets.Section(this, UiText.Get("ui.node.forgeTitle", patient.Name), new Vector2(28f, y), 1220f);
+        y += 26f;
+        Widgets.Body(this, UiText.Get("ui.node.forgeCure", quote.Odds.CurePercent), new Vector2(40f, y), 1200f);
+        y += 22f;
+        Widgets.Body(this, UiText.Get("ui.node.forgeImprove", quote.Odds.ImprovePercent), new Vector2(40f, y), 1200f);
+        y += 22f;
+        Widgets.Body(this, ForgeRange("ui.node.forgeImproveRange", quote.ImproveRange), new Vector2(60f, y), 1180f, Style.TextDim);
+        y += 22f;
+        Widgets.Body(this, UiText.Get("ui.node.forgeWorsen", quote.Odds.WorsenPercent), new Vector2(40f, y), 1200f, Style.Hole);
+        y += 22f;
+        Widgets.Body(this, ForgeRange("ui.node.forgeWorsenRange", quote.WorsenRange), new Vector2(60f, y), 1180f, Style.TextDim);
+        y += 22f;
+
+        var slots = new List<string>();
+        foreach (string slot in quote.FreeSlots)
+        {
+            slots.Add(UiText.Get("ui.prosthesis.slot." + slot));
+        }
+
+        Widgets.Body(this, UiText.Get("ui.node.forgeSlots", string.Join(", ", slots)), new Vector2(40f, y), 1200f, Style.TextDim);
+        y += 22f;
+        if (quote.NextMakesAutomaton)
+        {
+            Widgets.Body(this, UiText.Get("ui.node.forgeAutomaton", patient.Name), new Vector2(40f, y), 1200f, Style.Hole);
+            y += 22f;
+        }
+
+        Widgets.Body(this, UiText.Get("ui.node.forgeInvest", quote.MaxExtraGold), new Vector2(40f, y), 1200f, Style.TextDim);
+        y += 24f;
+        for (int extra = 0; extra <= quote.MaxExtraGold; extra++)
+        {
+            int chosen = extra;
+            var option = Sim.Run.View.BlacksmithView.Quote(state, economy, prostheses, patient.Id, extra);
+            var invest = Widgets.Button(
+                this,
+                UiText.Get("ui.node.forgeExtra", extra, option.Odds.CurePercent, option.Odds.ImprovePercent, option.Odds.WorsenPercent),
+                new Rect2(40f + (extra * 150f), y, 144f, 28f),
+                extra != _forgeExtra && option.Affordable);
+            invest.Pressed += () =>
+            {
+                _forgeExtra = chosen;
+                Rebuild();
+            };
+        }
+
+        y += 38f;
+        var confirm = Widgets.Button(
+            this,
+            UiText.Get("ui.node.forgeConfirm", quote.Price, _forgeExtra),
+            new Rect2(40f, y, 420f, 28f),
+            quote.CanConfirm);
+        confirm.Pressed += () => Forge(patient, quote.ExtraGold);
+        var close = Widgets.Button(this, UiText.Get("ui.node.forgeClose"), new Rect2(470f, y, 160f, 28f));
+        close.Pressed += () =>
+        {
+            _forgePlayer = -1;
+            Rebuild();
+        };
+        return y + 34f;
+    }
+
+    /// <summary>Rango de magnitudes y atributos posibles de una clase de prótesis con las ranuras libres (RF-012d: la apuesta se conoce entera).</summary>
+    private string ForgeRange(string key, Sim.Run.View.ProsthesisRange? range)
+    {
+        if (range is null)
+        {
+            return string.Empty;
+        }
+
+        var templates = _run.Catalog!.Localization.Get(Data.GameData.Language);
+        var names = new List<string>();
+        foreach (var attribute in range.Attributes)
+        {
+            names.Add(templates.Find("attributes", attribute.ToString().ToLowerInvariant()) ?? attribute.ToString());
+        }
+
+        return UiText.Get(key, UiText.Signed(range.MinDelta), UiText.Signed(range.MaxDelta), string.Join(", ", names));
+    }
+
+    /// <summary>Confirma la mesa del herrero y anuncia lo que ha salido: la curación, o la prótesis con su efecto (ADR 0164).</summary>
+    private void Forge(RunPlayer before, int extra)
+    {
+        var prostheses = _run.Systems!.Prostheses;
+        try
+        {
+            _run.Apply(new ForgePlayer(before.Id, extra));
+            var after = _run.State!.GetPlayer(before.Id);
+            var result = Sim.Run.View.BlacksmithView.Outcome(before, after, prostheses);
+            _message = ForgeMessage(before.Name, result);
+            _forgePlayer = -1;
+        }
+        catch (Exception error)
+        {
+            _message = UiText.Get("ui.node.error", error.Message);
+        }
+
+        Rebuild();
+    }
+
+    private string ForgeMessage(string name, Sim.Run.View.BlacksmithResult result)
+    {
+        if (result.Prosthesis is null)
+        {
+            return UiText.Get("ui.node.forgeCured", name);
+        }
+
+        var templates = _run.Catalog!.Localization.Get(Data.GameData.Language);
+        string attribute = templates.Find("attributes", result.Prosthesis.Attribute.ToString().ToLowerInvariant())
+            ?? result.Prosthesis.Attribute.ToString();
+        string text = UiText.Get(
+            result.Kind == Sim.Run.View.BlacksmithOutcomeKind.Improved ? "ui.node.forgeImproved" : "ui.node.forgeWorsened",
+            name,
+            UiText.Name(result.Prosthesis.Name),
+            attribute,
+            UiText.Signed(result.Prosthesis.Delta));
+        return result.BecameAutomaton ? text + " " + UiText.Get("ui.node.forgeBecameAutomaton", name) : text;
     }
 
     /// <summary>

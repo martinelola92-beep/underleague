@@ -113,6 +113,10 @@ internal sealed class TestRunSystems : IRunSystems
     /// <summary>Rasgos añadidos a todos los titulares rivales (por ejemplo, Aggressive y Dirty).</summary>
     public IReadOnlyList<Trait> OpponentTraits { get; init; } = Array.Empty<Trait>();
 
+    public Underleague.Sim.Run.Systems.Bets.BetCatalog Bets => _inner.Bets;
+
+    public Underleague.Sim.Run.Systems.Medical.ProsthesisCatalog Prostheses => _inner.Prostheses;
+
     public IReadOnlyList<RunReferee> CreateReferees(ulong seed, int count, Catalog catalog) =>
         _inner.CreateReferees(seed, count, catalog);
 

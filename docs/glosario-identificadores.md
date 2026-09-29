@@ -43,7 +43,7 @@ Esta tabla es la referencia única. Si un término no está aquí, se añade aqu
 | Informe de ojeo | `ScoutingReport` | |
 | Informe post-partido | `MatchReport` | |
 | Distintivo de dificultad | `DifficultyBadge` | |
-| Partido excelente | `ExcellentMatch` | |
+| Apuesta del vestuario | `Bet` | ADR 0157; sustituye al «partido excelente» (`ExcellentMatch`, retirado) |
 | Reglamentario | `Regulation` | |
 | Gol de oro de la turba | `MobGoldenGoal` | "turba" = `Mob` |
 

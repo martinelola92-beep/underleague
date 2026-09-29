@@ -108,6 +108,16 @@ public sealed class BossRunSystems : IRunSystems
     }
 
     /// <inheritdoc />
+    public Systems.Bets.BetCatalog Bets => _inner.Bets;
+
+    /// <inheritdoc />
+    public Systems.Medical.ProsthesisCatalog Prostheses => _inner.Prostheses;
+
+    /// <inheritdoc />
+    public void OnMatchPlayed(RunState stateBefore, MapNode node, MatchSetup setup, MatchResult result, RunMatchSummary summary) =>
+        _inner.OnMatchPlayed(stateBefore, node, setup, result, summary);
+
+    /// <inheritdoc />
     public RunState AfterMatch(RunState state, MapNode node, RunMatchSummary summary, Catalog catalog)
     {
         ArgumentNullException.ThrowIfNull(state);

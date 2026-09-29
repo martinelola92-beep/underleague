@@ -9,6 +9,40 @@ PC (Steam), premium, sin online. **Estado (8 sep 2026): fases 0 y 1 cerradas; fa
 **Campo de siete filas (14 sep 2026, decisión del revisor, BA-C):** 16×7 en vez de 16×6 —con seis filas el centro geométrico cae *entre* dos filas y no existe fila central—, con guardado v4. Añadir la fila cuesta ~1,0 tiro y ~0,45 goles por partido y **ninguna palanca local lo recupera**, así que la **ADR 0109** recalibra la banda de tiros a la geometría vigente (8-16 → 7-15) en vez de tocar el motor, y deja escrito que ensanchar la formación o las zonas de acción destruye la profundidad de colocación. Nueve auditorías de la IA de jugadores (`docs/auditoria-ia-jugadores-1..9.md`) dejan **un solo cambio aplicado**, la **ADR 0110**: `Shoot` del defensa 77 → 154 y del centrocampista 188 → 237, porque con 77 un defensa colocado arriba nunca remataba —perdía contra su propio `ShortPass` de 500— y jugar fuera de posición costaba dos tercios del ataque (100/48/38 → 100/68/55). Rechazados y documentados: `ChaseBall pen` en todas las dosis (degrada la diferenciación de builds), el desfase de fase entre equipos (no replica entre semillas) y la histéresis. Queda **abierto** el papel del centrocampista: dispara el 6,5 % de los tiros siendo el 43 % de los jugadores de campo.
 ---
 
+## ARRANQUE TRAS REINICIAR (escrito el 29 sep 2026, tarde) — lee esto primero
+
+Las sesiones se cortaban (el revisor reinicia el PC). **Todo está commiteado**; nada vive sólo en /tmp.
+
+**Publicado en `main` hoy, además de lo de abajo:** la apuesta completa (ADR 0157: catálogo de diez, censo,
+cobro, corredor en el ojeo, informe) con las correcciones de su revisión independiente (la estrella nunca
+es el portero, las muertes cuentan, cobro redondeado, sin oro escondido); puertas rápidas
+(`tools/puertas-rapidas.sh`, ~3 min, sólo avisan de rojas nuevas); 25 textos visibles sin referencias internas.
+
+**Cerrado después del reinicio (29 sep, tarde), todo publicado:**
+- Cuotas de la apuesta: el censo repetido con las dos semillas coincide con `data/bets/bets.json`; la ADR
+  0157 lleva la tabla nueva y su revisión independiente.
+- [ADR 0164](decisiones/0164-el-herrero-de-la-clinica.md), el herrero de la clínica, con su revisión: el
+  autómata conserva la especie (enmienda RF-095c; quitarla rompía partidos), `IRunSystems` sin miembros
+  por defecto que apagaban sistemas en silencio, el herrero es una apuesta real y la política lo usa (0,73
+  por run, 0,43 prótesis por run, sin mover las muertes).
+- [ADR 0163](decisiones/0163-la-memoria-se-ve.md), la memoria se ve: apodos derivados, estadísticas en el
+  informe y la ficha, la Gaceta de fin de run, y los guardados anteriores se pueden retomar
+  (`SnapshotCompletion`).
+- [BR-B](pendientes/BR-B.md): **los muertos volvían a la vida** (fallo anterior: una lesión en el mismo tick
+  que la muerte de un perk lo dejaba lesionado leve, con las consecuencias de la muerte cobradas). La muerte
+  es terminal en el motor, en la resolución y en los créditos. Puertas rápidas sin rojas nuevas.
+
+**Siguiente** (`docs/plan-diversion.md` §5): clanes y némesis (cambia rivales y guardado), catálogo de turbas
+y el consumible de provocar la turba (primitiva de motor), gritos como cambio temporal de orden (BA-H),
+métrica guardiana de la sangre. Pendientes menores: Blind contra Never de la apuesta tras sus correcciones;
+atributo máximo por run y más semillas del herrero; el panel de estadísticas del informe enseña ~4 de 7
+filas con varios apodos ganados.
+
+**Stash sin borrar** `ajenos-editor-godot-29sep`: reescrituras del editor de Godot en `Equipo.tscn`,
+`MatchScreen.cs` y `project.godot` que chocaban con lo que llegó de origin. No se reaplicaron.
+
+---
+
 ## ARRANQUE DE LA SESIÓN SIGUIENTE (escrito el 29 sep 2026) — plan de diversión
 
 **Contexto:** el revisor pidió una mirada de diseñador/jugador y, a partir de ella, un **plan de mejora de

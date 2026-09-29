@@ -114,6 +114,37 @@ public sealed class TeamState
         return new TeamState(catalog, team with { Players = withPerks });
     }
 
+    /// <summary>
+    /// Las prótesis que lleva el jugador en la run (ADR 0164), en el orden en que se instalaron; vacío sin run
+    /// detrás (equipo de pruebas, rival de ojeo) o si su definición ya no está en el catálogo.
+    /// </summary>
+    public IReadOnlyList<Sim.Run.Systems.Medical.ProsthesisDefinition> ProsthesesOf(int playerId)
+    {
+        var result = new List<Sim.Run.Systems.Medical.ProsthesisDefinition>();
+        if (_run?.State is not { } state || _run.Systems is null)
+        {
+            return result;
+        }
+
+        foreach (var slot in state.Roster)
+        {
+            if (slot.Id != playerId)
+            {
+                continue;
+            }
+
+            foreach (var installed in slot.Prostheses)
+            {
+                if (_run.Systems.Prostheses.Find(installed.Effect) is { } definition)
+                {
+                    result.Add(definition);
+                }
+            }
+        }
+
+        return result;
+    }
+
     /// <summary>Jugador por id, o null si no está en la plantilla.</summary>
     public PlayerDefinition? Find(int id)
     {
@@ -203,6 +234,28 @@ public sealed class TeamState
         }
 
         return null;
+    }
+
+    private Sim.Run.Systems.Nicknames.NicknameCatalog? _nicknames;
+
+    /// <summary>
+    /// Apodo del jugador (ADR 0163) en el idioma de la interfaz, derivado de su carrera; vacío si no ha
+    /// ganado ninguno. Con una run detrás usa el catálogo de la run; sin ella (equipo de pruebas) lo lee de
+    /// <c>/data</c>, para que la ficha de capturas enseñe lo mismo que enseñaría en una partida.
+    /// </summary>
+    public string NicknameOf(int playerId) => NicknameDefinitionOf(playerId)?.NameIn(Language) ?? string.Empty;
+
+    /// <summary>El apodo (definición) que tiene ahora el jugador, o null. Ver <see cref="NicknameOf"/>.</summary>
+    public Sim.Run.Systems.Nicknames.NicknameDefinition? NicknameDefinitionOf(int playerId)
+    {
+        var career = CareerOf(playerId);
+        if (career is null)
+        {
+            return null;
+        }
+
+        _nicknames ??= _run?.Systems?.Nicknames ?? Sim.Run.Systems.Nicknames.NicknameLoader.FromJson(GameData.Snapshot);
+        return Sim.Run.Systems.Nicknames.NicknameSystem.For(career, _nicknames);
     }
 
     /// <summary>

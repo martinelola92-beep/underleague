@@ -43,7 +43,7 @@ try
         // --full-runs N: N runs completas con la política automática (fase2-diseno.md §10). Responde a
         // la pregunta que la curva de puertas deja abierta: si la economía permite llegar a cada puerta
         // con la build que esa puerta exige.
-        FullRunResult full = FullRunRunner.Run(catalog, dataFiles, options.Seed, fullRuns, options.IgnoreScouting, options.RiskAversion, options.MinPerkValue, options.MinPerkValueReward, options.MinPerkValueMarket, options.MinItemValueMarket, options.SlotBarOff, options.SlotHorizon, options.ArcJudged, options.SlotGates, options.Act1Pass, options.Act2Pass, options.ValuesFlat);
+        FullRunResult full = FullRunRunner.Run(catalog, dataFiles, options.Seed, fullRuns, options.IgnoreScouting, options.RiskAversion, options.MinPerkValue, options.MinPerkValueReward, options.MinPerkValueMarket, options.MinItemValueMarket, options.SlotBarOff, options.SlotHorizon, options.ArcJudged, options.SlotGates, options.Act1Pass, options.Act2Pass, options.ValuesFlat, options.BetDoctrine);
 
         var fullSummary = full.Metrics
             .Select(m => new MetricRow(m.Name, m.Value, m.RangeMin, m.RangeMax, m.Status))
@@ -69,6 +69,33 @@ try
         }
 
         return full.Metrics.Any(m => m.Status == "OUT") ? 1 : 0;
+    }
+
+    if (options.BetCensus is { } betCensusRuns)
+    {
+        // --bet-census N: frecuencia de cada condición de apuesta (ADR 0157) por dificultad, sobre los
+        // partidos de N runs completas. De aquí salen las cuotas de data/bets/bets.json.
+        var census = BetCensusRunner.Run(catalog, dataFiles, options.Seed, betCensusRuns);
+        WriteBetCensusCsv(options.OutDir!, census);
+        if (!options.Quiet)
+        {
+            PrintBetCensus(census, options.OutDir!);
+        }
+
+        return 0;
+    }
+
+    if (options.NicknameCensus is { } nicknameCensusRuns)
+    {
+        // --nickname-census N: qué apodo lleva cada jugador al terminar N runs completas (ADR 0163).
+        var census = NicknameCensusRunner.Run(catalog, dataFiles, options.Seed, nicknameCensusRuns);
+        WriteNicknameCensusCsv(options.OutDir!, census);
+        if (!options.Quiet)
+        {
+            PrintNicknameCensus(census, options.OutDir!);
+        }
+
+        return 0;
     }
 
     if (options.PerkValues)
@@ -381,6 +408,16 @@ static void PrintUsage()
           --full-runs N       N runs completas por cada una de las tres doctrinas de compra de la ADR
                                0037 (contextual, gastadora, ahorradora) sobre las mismas semillas;
                                escribe runs.csv y summary.csv con las métricas de fase2-diseno.md §10
+          --bet-doctrine D    con --full-runs, qué hace la política con la apuesta del vestuario: never (por
+                               defecto), blind (toma siempre) o prepared (solo si la build la favorece);
+                               añade las filas betsTakenPerRun, betNetGoldPerRun y betNetReturnPercent
+          --bet-census N      N runs completas con la política contextual; en cada partido de liga, élite
+                               o jefe evalúa las once condiciones de apuesta del vestuario (ADR 0157) y
+                               escribe bet-census.csv: frecuencia por apuesta y dificultad (de ahí salen las
+                               cuotas). La semilla de la run i es seed*100000+i, no seed+i
+          --nickname-census N N runs completas con la política contextual; al terminar cada una cuenta
+                               qué apodo lleva cada jugador (ADR 0163, «Censo») y escribe
+                               nickname-census.csv: runs con al menos un portador y jugadores por apodo
           --perk-values       mide el valor de cada perk contra su espejo sin él (ADR 0038, 0070); espejo
                                en campaña, --rosters = parejas de plantillas, --runs = partidos de la
                                campaña (8); escribe perk-values.csv y perk-values-by-match.csv
@@ -586,6 +623,73 @@ static void WriteItemValuesCsv(string outDir, IReadOnlyList<ItemValueRow> rows)
     CsvWriter.Write(Path.Combine(outDir, "item-values.csv"), header, data);
 }
 
+/// <summary>bet-census.csv del modo --bet-census (ADR 0157): una fila por (apuesta, grupo, clave).</summary>
+static void WriteBetCensusCsv(string outDir, BetCensusResult census)
+{
+    string[] header = { "bet", "group", "key", "matches", "hits", "frequencyPercent", "stdErrPercent", "payoutPercentAt85" };
+    var rows = census.Cells.Select(c => (IReadOnlyList<string>)new[]
+    {
+        c.BetId, c.Group, c.Key,
+        c.Matches.ToString(CultureInfo.InvariantCulture),
+        c.Hits.ToString(CultureInfo.InvariantCulture),
+        (c.Frequency * 100).ToString("F3", CultureInfo.InvariantCulture),
+        (c.StdErr * 100).ToString("F3", CultureInfo.InvariantCulture),
+        c.Hits == 0 ? "inf" : Math.Round(85.0 / c.Frequency, MidpointRounding.AwayFromZero).ToString("F0", CultureInfo.InvariantCulture),
+    });
+    CsvWriter.Write(Path.Combine(outDir, "bet-census.csv"), header, rows);
+}
+
+static void PrintBetCensus(BetCensusResult census, string outDir)
+{
+    Console.WriteLine();
+    Console.WriteLine($"censo de apuestas: {census.Runs} runs, {census.Matches} partidos en {census.Elapsed.TotalSeconds:F1} s");
+    Console.WriteLine("partidos por dificultad 1..5: " + string.Join(" / ", census.MatchesByDifficulty));
+    Console.WriteLine();
+    var byBet = census.Cells.Where(c => c.Group == "difficulty").GroupBy(c => c.BetId);
+    Console.WriteLine($"{"apuesta",-20} {"d1",8} {"d2",8} {"d3",8} {"d4",8} {"d5",8} {"todas",8}  (frecuencia %, ± error típico de 'todas')");
+    foreach (var bet in byBet)
+    {
+        var cells = bet.ToDictionary(c => c.Key);
+        string F(string key) => (cells[key].Frequency * 100).ToString("F2", CultureInfo.InvariantCulture);
+        Console.WriteLine(
+            $"{bet.Key,-20} {F("1"),8} {F("2"),8} {F("3"),8} {F("4"),8} {F("5"),8} {F("all"),8}  ± {(cells["all"].StdErr * 100).ToString("F2", CultureInfo.InvariantCulture)}");
+    }
+
+    Console.WriteLine($"CSV escrito en {outDir}");
+}
+
+/// <summary>nickname-census.csv del modo --nickname-census (ADR 0163): una fila por apodo.</summary>
+static void WriteNicknameCensusCsv(string outDir, NicknameCensusResult census)
+{
+    string[] header = { "nickname", "runsWith", "runsWithPercent", "players", "playersPercent", "runsEligiblePercent", "playersEligible", "maxValue" };
+    var rows = census.Cells.Select(c => (IReadOnlyList<string>)new[]
+    {
+        c.NicknameId,
+        c.RunsWith.ToString(CultureInfo.InvariantCulture),
+        (c.RunShare(census.Runs) * 100).ToString("F2", CultureInfo.InvariantCulture),
+        c.Players.ToString(CultureInfo.InvariantCulture),
+        (census.PlayersWhoPlayed == 0 ? 0 : 100.0 * c.Players / census.PlayersWhoPlayed).ToString("F2", CultureInfo.InvariantCulture),
+        (100.0 * c.RunsEligible / census.Runs).ToString("F2", CultureInfo.InvariantCulture),
+        c.PlayersEligible.ToString(CultureInfo.InvariantCulture),
+        c.MaxValue.ToString(CultureInfo.InvariantCulture),
+    });
+    CsvWriter.Write(Path.Combine(outDir, "nickname-census.csv"), header, rows);
+}
+
+static void PrintNicknameCensus(NicknameCensusResult census, string outDir)
+{
+    Console.WriteLine();
+    Console.WriteLine($"censo de apodos: {census.Runs} runs, {census.PlayersWhoPlayed} jugadores que pisaron el campo, {census.PlayersWithNickname} con apodo, en {census.Elapsed.TotalSeconds:F1} s");
+    Console.WriteLine($"{"apodo",-18} {"runs %",8} {"jugadores %",12} {"elegibles runs %",17} {"máx",5}");
+    foreach (var c in census.Cells)
+    {
+        double players = census.PlayersWhoPlayed == 0 ? 0 : 100.0 * c.Players / census.PlayersWhoPlayed;
+        Console.WriteLine($"{c.NicknameId,-18} {(c.RunShare(census.Runs) * 100).ToString("F1", CultureInfo.InvariantCulture),8} {players.ToString("F1", CultureInfo.InvariantCulture),12} {(100.0 * c.RunsEligible / census.Runs).ToString("F1", CultureInfo.InvariantCulture),17} {c.MaxValue,5}");
+    }
+
+    Console.WriteLine($"CSV escrito en {outDir}");
+}
+
 /// <summary>runs.csv del modo --full-runs (fase2-diseno.md §10): una fila por run jugada.</summary>
 static void WriteRunsCsv(string outDir, IReadOnlyList<RunPlayResult> runs, string fileName = "runs.csv")
 {
@@ -617,6 +721,9 @@ static void WriteRunsCsv(string outDir, IReadOnlyList<RunPlayResult> runs, strin
         // Censo de slots y ofertas (AS-A): "acto:ofertas:slotsLibresSumados:slotsEnLaPuerta". Diagnóstico puro.
         "slotCensus",
         "perkHorizon",
+
+        // ADR 0157: la apuesta del vestuario. Con la doctrina de apuesta por defecto (never) valen 0.
+        "betsTaken", "betNetGold", "betStaked",
     };
 
     var rows = runs.Select(r => (IReadOnlyList<string>)new[]
@@ -647,6 +754,7 @@ static void WriteRunsCsv(string outDir, IReadOnlyList<RunPlayResult> runs, strin
         string.Join(" ", r.FinalCounters ?? Array.Empty<string>()),
         string.Join(" ", r.SlotCensus ?? Array.Empty<string>()),
         string.Join(" ", r.PerkHorizon ?? Array.Empty<string>()),
+        Int(r.BetsTaken), Int(r.BetNetGold), Int(r.BetGoldStaked),
     });
 
     CsvWriter.Write(Path.Combine(outDir, fileName), header, rows);

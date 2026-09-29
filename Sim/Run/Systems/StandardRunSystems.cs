@@ -1,6 +1,7 @@
 using Underleague.Sim.Data;
 using Underleague.Sim.Engine;
 using Underleague.Sim.Model;
+using Underleague.Sim.Run.Systems.Bets;
 using Underleague.Sim.Run.Systems.Clubs;
 using Underleague.Sim.Run.Systems.Consumables;
 using Underleague.Sim.Run.Systems.Economy;
@@ -10,7 +11,9 @@ using Underleague.Sim.Run.Systems.Items;
 using Underleague.Sim.Run.Systems.Map;
 using Underleague.Sim.Run.Systems.Market;
 using Underleague.Sim.Run.Systems.Medical;
+using Underleague.Sim.Run.Systems.Gazette;
 using Underleague.Sim.Run.Systems.Mercenaries;
+using Underleague.Sim.Run.Systems.Nicknames;
 using Underleague.Sim.Run.Systems.Nodes;
 using Underleague.Sim.Random;
 using Underleague.Sim.Run.Systems.Referees;
@@ -40,8 +43,12 @@ public sealed class StandardRunSystems : IRunSystems
     private readonly ClubCatalog _clubs;
     private readonly EventCatalog _events;
     private readonly RefereeCatalog _referees;
+    private readonly BetCatalog _bets;
+    private readonly ProsthesisCatalog _prostheses;
+    private readonly NicknameCatalog _nicknames;
+    private readonly GazetteCatalog _gazette;
 
-    public StandardRunSystems(EconomyConfig economy, ItemCatalog items, ConsumableCatalog consumables, RivalCatalog rivals, MapConfig map, ClubCatalog clubs, EventCatalog events, RefereeCatalog referees)
+    public StandardRunSystems(EconomyConfig economy, ItemCatalog items, ConsumableCatalog consumables, RivalCatalog rivals, MapConfig map, ClubCatalog clubs, EventCatalog events, RefereeCatalog referees, BetCatalog? bets = null, ProsthesisCatalog? prostheses = null, NicknameCatalog? nicknames = null, GazetteCatalog? gazette = null)
     {
         _economy = economy ?? throw new ArgumentNullException(nameof(economy));
         _items = items ?? throw new ArgumentNullException(nameof(items));
@@ -51,6 +58,10 @@ public sealed class StandardRunSystems : IRunSystems
         _clubs = clubs ?? throw new ArgumentNullException(nameof(clubs));
         _events = events ?? throw new ArgumentNullException(nameof(events));
         _referees = referees ?? throw new ArgumentNullException(nameof(referees));
+        _bets = bets ?? BetCatalog.Empty;
+        _prostheses = prostheses ?? ProsthesisCatalog.Empty;
+        _nicknames = nicknames ?? NicknameCatalog.Empty;
+        _gazette = gazette ?? GazetteCatalog.Empty;
     }
 
     /// <summary>Configuración de economía de esta instancia (para tests y <c>/Balance</c>).</summary>
@@ -77,6 +88,18 @@ public sealed class StandardRunSystems : IRunSystems
     /// <summary>Catálogo de árbitros de esta instancia (ADR 0158, <c>data/referees/</c>).</summary>
     public RefereeCatalog Referees => _referees;
 
+    /// <summary>Catálogo de apuestas del vestuario de esta instancia (ADR 0157, <c>data/bets/</c>).</summary>
+    public BetCatalog Bets => _bets;
+
+    /// <summary>Catálogo de prótesis del herrero de la clínica (ADR 0164, <c>data/prostheses/</c>).</summary>
+    public ProsthesisCatalog Prostheses => _prostheses;
+
+    /// <summary>Catálogo de apodos de carrera de esta instancia (ADR 0163, <c>data/nicknames/</c>).</summary>
+    public NicknameCatalog Nicknames => _nicknames;
+
+    /// <summary>Plantillas de la Gaceta de fin de run de esta instancia (ADR 0163, <c>data/gazette/</c>).</summary>
+    public GazetteCatalog Gazette => _gazette;
+
     /// <summary>
     /// Construye los catálogos del paquete X de una instantánea de <c>/data</c> (el mismo diccionario que
     /// consume <c>DataLoader.FromJson</c>). Ayudante de conveniencia para tests y <c>/Balance</c>: evita
@@ -90,7 +113,11 @@ public sealed class StandardRunSystems : IRunSystems
         MapLoader.FromJson(files),
         ClubLoader.FromJson(files),
         EventLoader.FromJson(files),
-        RefereeLoader.FromJson(files));
+        RefereeLoader.FromJson(files),
+        BetLoader.FromJson(files),
+        ProsthesisLoader.FromJson(files),
+        NicknameLoader.FromJson(files),
+        GazetteLoader.FromJson(files));
 
     /// <summary>
     /// <see cref="RunSetup"/> completo para empezar una run con <b>estos</b> datos: oro de partida
@@ -325,6 +352,7 @@ public sealed class StandardRunSystems : IRunSystems
             HireMercenary hire => MarketSystem.Hire(state, hire, catalog, _economy, _items, _consumables),
             TreatPlayer treat => MedicalSystem.Treat(state, treat, _economy, catalog, _items),
             TreatSquad => MedicalSystem.TreatSquad(state, _economy),
+            ForgePlayer forge => MedicalSystem.Forge(state, forge, _economy, _prostheses),
             ChooseEventOption choice => EventSystem.Choose(state, choice, _events, _items, _consumables, _economy, catalog),
             ChooseTrainingSession training => TrainingSystem.Choose(state, training, _economy, catalog),
             ExpandRoster => EnrollmentSystem.Expand(state, _economy),

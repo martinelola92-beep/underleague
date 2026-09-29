@@ -170,7 +170,13 @@ public partial class PlayerDossier : InkCanvas
         MoveChild(_cancel, GetChildCount() - 1);
     }
 
-    private Rect2 ItemBox() => new(Margin, Size.Y - 206f, Size.X - (Margin * 2f), 128f);
+    /// <summary>
+    /// La caja del objeto. Baja y se achica cuando no se está eligiendo a quién pasarlo, para que quepa el
+    /// bloque de estadísticas de la run (ADR 0163) entre los perks y ella; al elegir vuelve a su tamaño.
+    /// </summary>
+    private Rect2 ItemBox() => _picking
+        ? new Rect2(Margin, Size.Y - 206f, Size.X - (Margin * 2f), 128f)
+        : new Rect2(Margin, Size.Y - 162f, Size.X - (Margin * 2f), 84f);
 
     public override void _Draw()
     {
@@ -190,6 +196,7 @@ public partial class PlayerDossier : InkCanvas
         float y = DrawHead(player);
         y = DrawAttributes(player, y + 2f);
         DrawBadges(player, y + 4f);
+        DrawRunStats(player, y + 4f + 76f);
         DrawItem();
 
         if (_picking)
@@ -236,6 +243,16 @@ public partial class PlayerDossier : InkCanvas
             y += Ink.Display.GetHeight(size) - 12f;
         }
 
+        // El apodo que la carrera le ha ganado (ADR 0163), en el renglón que sigue al nombre.
+        string nickname = _state.NicknameOf(player.Id).ToUpperInvariant();
+        if (nickname.Length > 0)
+        {
+            int nickSize = Ink.FitSize(Ink.Heavy, "«" + nickname + "»", 22, width, 14);
+            Ink.Text(this, Ink.Heavy, new Vector2(left, y + 2f), "«" + nickname + "»", nickSize, Ink.RedDark);
+            Zone(new Rect2(left, y, width, 26f), TeamTips.Nickname(_state, player.Id));
+            y += 26f;
+        }
+
         // Puesto · estilo · nivel, con el icono del puesto delante.
         y += 12f;
         InkIcons.Draw(this, InkIcons.Of(player.Position), new Vector2(left + 12f, y + 11f), 24f);
@@ -252,44 +269,15 @@ public partial class PlayerDossier : InkCanvas
         Ink.Text(this, Ink.Heavy, new Vector2(x, y), level, 17, Ink.Brown);
         Zone(new Rect2(x, y - 2f, Ink.Width(Ink.Heavy, level, 17), 26f), TeamTips.Level(player));
 
-        // Estado físico y la carrera en una línea corta (ADR 0124: solo si ha pisado el campo).
+        // Estado físico. La carrera va en su propio bloque, más abajo (ADR 0163).
         y += 30f;
         InkIcons.Draw(this, InkIcons.Of(player.PhysicalState), new Vector2(left + 11f, y + 9f), 20f, player.PhysicalState == PhysicalState.Healthy ? Ink.GreenLight : null);
         string state = UiText.Get("ui.state." + player.PhysicalState).ToUpperInvariant();
         Ink.Text(this, Ink.Heavy, new Vector2(left + 28f, y), state, 15, Ink.Brown);
         Zone(new Rect2(left, y - 2f, Ink.Width(Ink.Heavy, state, 15) + 30f, 22f), TeamTips.State(player.PhysicalState));
-        if (_state.CareerOf(player.Id) is { Matches: > 0 } career)
-        {
-            float cx = left + 28f + Ink.Width(Ink.Heavy, state, 15) + 12f;
-            Ink.Text(this, Ink.Data, new Vector2(cx, y + 1f), Ink.Fit(Ink.Data, Career(career), 14, Size.X - cx - Margin - 8f), 14, Ink.Muted);
-        }
 
         return Mathf.Max(photo.End.Y + 6f, y + 26f);
     }
-
-    private static string Career(RunCareer career)
-    {
-        var parts = new List<string> { Plural(career.Matches, "ui.card.careerMatch", "ui.card.careerMatches") };
-        if (career.Goals > 0)
-        {
-            parts.Add(Plural(career.Goals, "ui.card.careerGoal", "ui.card.careerGoals"));
-        }
-
-        if (career.InjuriesCaused > 0)
-        {
-            parts.Add(Plural(career.InjuriesCaused, "ui.card.careerInjuryCaused", "ui.card.careerInjuriesCaused"));
-        }
-
-        if (career.DeathsCaused > 0)
-        {
-            parts.Add(Plural(career.DeathsCaused, "ui.card.careerDeathCaused", "ui.card.careerDeathsCaused"));
-        }
-
-        return string.Join(" · ", parts);
-    }
-
-    private static string Plural(int value, string singular, string plural) =>
-        value == 1 ? UiText.Get(singular) : UiText.Get(plural, value);
 
     // ------------------------------------------------------------------ atributos
 
@@ -367,6 +355,82 @@ public partial class PlayerDossier : InkCanvas
         }
 
         BadgeRow(perks, left, right, perksTop);
+        DrawProstheses(player, perksTop + 36f);
+    }
+
+    /// <summary>
+    /// Una línea discreta con las prótesis del jugador y lo que cambian (ADR 0164): «Prótesis · pata de palo
+    /// (−12 velocidad), brazo de hierro (+8 fuerza)». Sin prótesis no se dibuja nada.
+    /// </summary>
+    private void DrawProstheses(PlayerDefinition player, float top)
+    {
+        var installed = _state!.ProsthesesOf(player.Id);
+        if (installed.Count == 0)
+        {
+            return;
+        }
+
+        var parts = new List<string>();
+        foreach (var prosthesis in installed)
+        {
+            // El nombre con humor lleva su coletilla entre paréntesis; en una línea discreta basta lo de antes.
+            string name = UiText.Name(prosthesis.Name);
+            int cut = name.IndexOf(" (", StringComparison.Ordinal);
+            parts.Add((cut > 0 ? name[..cut] : name) + " (" + UiText.Signed(prosthesis.Delta) + " "
+                + TeamTips.AttributeName(_state, prosthesis.Attribute).ToLowerInvariant() + ")");
+        }
+
+        Label(UiText.Get("ui.kn.prostheses"), new Vector2(Margin + 2f, top + 7f));
+        float left = Margin + 116f;
+        string line = string.Join(", ", parts);
+        int size = Ink.FitSize(Ink.Heavy, line, 15, Size.X - Margin - 8f - left, 11);
+        Ink.Text(this, Ink.Heavy, new Vector2(left, top + 10f), line, size, Ink.Muted);
+    }
+
+    /// <summary>
+    /// Estadísticas de la carrera en la run (ADR 0163, RF-122): las cifras de <see cref="RunCareer"/>, ocho
+    /// casillas de cifra grande y rótulo. Solo si ha pisado el campo: un jugador sin partidos no tiene nada
+    /// que contar y el bloque no ocupa sitio.
+    /// </summary>
+    private void DrawRunStats(PlayerDefinition player, float top)
+    {
+        if (_state!.CareerOf(player.Id) is not { Matches: > 0 } career)
+        {
+            return;
+        }
+
+        Label(UiText.Get("ui.kn.run"), new Vector2(Margin + 2f, top));
+        (string Key, int Value)[] cells =
+        {
+            ("ui.kn.runMatches", career.Matches),
+            ("ui.kn.runGoals", career.Goals),
+            ("ui.kn.runAssists", career.Assists),
+            ("ui.kn.runTacklesWon", career.TacklesWon),
+            ("ui.kn.runFouls", career.Fouls),
+            ("ui.kn.runCards", career.Cards),
+            ("ui.kn.runInjuriesCaused", career.InjuriesCaused),
+            ("ui.kn.runInjuriesSuffered", career.InjuriesSuffered),
+        };
+
+        // Cifra y rótulo en la misma línea («6 goles»), dos filas de cuatro: es lo que cabe entre los perks y
+        // el objeto sin achicar ninguno de los dos.
+        float left = Margin + 4f;
+        float cell = (Size.X - (Margin * 2f) - 8f) / 4f;
+        for (int i = 0; i < cells.Length; i++)
+        {
+            float x = left + ((i % 4) * cell);
+            float y = top + 22f + ((i / 4) * 24f);
+            string figure = cells[i].Value.ToString(System.Globalization.CultureInfo.InvariantCulture);
+            Ink.Text(this, Ink.Heavy, new Vector2(x, y), figure, 20, cells[i].Value > 0 ? Ink.Black : Ink.Muted);
+            float figureWidth = Ink.Width(Ink.Heavy, figure, 20);
+            string caption = Ink.Fit(Ink.Data, UiText.Get(cells[i].Key), 13, cell - figureWidth - 10f);
+            Ink.Text(this, Ink.Data, new Vector2(x + figureWidth + 4f, y + 5f), caption, 13, Ink.Muted);
+            if (i == 6 && career.DeathsCaused > 0)
+            {
+                // Las muertes causadas cuentan aparte de las lesiones: son otro hecho, y el más pesado.
+                Ink.Text(this, Ink.Heavy, new Vector2(x + 2f, y + 22f), UiText.Get(career.DeathsCaused == 1 ? "ui.kn.runDeath" : "ui.kn.runDeaths", career.DeathsCaused), 13, Ink.Red);
+            }
+        }
     }
 
     private void Label(string text, Vector2 at) =>

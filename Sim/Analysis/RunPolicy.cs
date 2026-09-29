@@ -1,3 +1,4 @@
+using Underleague.Sim.Engine;
 using Underleague.Sim.Data;
 using Underleague.Sim.Model;
 using Underleague.Sim.Run;
@@ -11,6 +12,7 @@ using Underleague.Sim.Run.Systems.Market;
 using Underleague.Sim.Run.Systems.Medical;
 using Underleague.Sim.Run.Systems.Nodes;
 using Underleague.Sim.Run.Systems.Rewards;
+using Underleague.Sim.Run.View;
 
 namespace Underleague.Sim.Analysis;
 
@@ -41,6 +43,13 @@ public enum PurchaseDoctrine
 /// </summary>
 public sealed record RunPolicyOptions
 {
+    /// <summary>
+    /// Doctrina de apuesta del vestuario (ADR 0157). <see cref="BetDoctrine.Never"/> por defecto: ninguna
+    /// puerta se mueve por ella. Es una palanca de medición del <c>betNetGoldPerRun</c>, no una decisión de
+    /// diseño.
+    /// </summary>
+    public BetDoctrine BetDoctrine { get; init; } = BetDoctrine.Never;
+
     /// <summary>Doctrina de compra (ADR 0037). Lo demás es igual en las tres políticas.</summary>
     public PurchaseDoctrine Doctrine { get; init; } = PurchaseDoctrine.Contextual;
 
@@ -389,6 +398,34 @@ public sealed record RunPolicyOptions
 }
 
 /// <summary>
+/// Qué hace la política con la apuesta del vestuario que se ofrece en cada nodo de partido (ADR 0157).
+/// </summary>
+public enum BetDoctrine
+{
+    /// <summary>Nunca la toma. Por defecto: es el comportamiento anterior a la apuesta.</summary>
+    Never,
+
+    /// <summary>La toma siempre que pueda pagarla: apostar a ciegas. Su oro neto tiene que salir negativo.</summary>
+    Blind,
+
+    /// <summary>
+    /// La toma solo si la build la favorece. <b>Aproximación</b>, no un análisis del partido: una build de
+    /// violencia (al menos <see cref="RunPolicy.PreparedViolentStarters"/> titulares con rasgo Aggressive o
+    /// Dirty) toma <c>hunt_the_star</c>, <c>eye_for_eye</c> y <c>blood_before_goals</c>; con cualquier otra
+    /// build no toma ninguna. No coloca ni alinea para ganarla: eso sería otra política.
+    /// </summary>
+    Prepared,
+}
+
+/// <summary>
+/// Observador de los partidos de una run jugada por <see cref="RunPolicy.Play"/> (ver
+/// <see cref="IRunSystems.OnMatchPlayed"/>): solo mira, no decide. Lo usa el censo de apuestas de
+/// <c>/Balance</c> (ADR 0157).
+/// </summary>
+public delegate void MatchObserver(
+    RunState stateBefore, MapNode node, MatchSetup setup, MatchResult result, RunMatchSummary summary);
+
+/// <summary>
 /// Lo que una run jugada con una política automática deja para <c>runs.csv</c> (fase2-diseno.md §10,
 /// ADR 0037). Enteros: los promedios los calcula <see cref="FullRunMetrics"/>.
 /// </summary>
@@ -549,8 +586,35 @@ public sealed record RunPlayResult(
     /// la usa igual en la capa 0 del acto 1 que en el último nodo del acto 3. No entra en ninguna métrica
     /// ni en ninguna puerta, igual que <see cref="FinalCounters"/> y <see cref="SlotCensus"/>.
     /// </summary>
-    IReadOnlyList<string>? PerkHorizon = null)
+    IReadOnlyList<string>? PerkHorizon = null,
+
+    /// <summary>Apuestas del vestuario tomadas en la run (ADR 0157).</summary>
+    int BetsTaken = 0,
+
+    /// <summary>Oro neto de las apuestas de la run: cobrado menos apostado (negativo si se pierde más de lo que se gana).</summary>
+    int BetNetGold = 0,
+
+    /// <summary>Oro apostado en la run (denominador del retorno de las apuestas).</summary>
+    int BetGoldStaked = 0,
+
+    /// <summary>Veces que se pagó al herrero de la clínica (ADR 0164), salga lo que salga.</summary>
+    int BlacksmithTreatments = 0,
+
+    /// <summary>Prótesis instaladas en la run (ADR 0164): mejoras y empeoramientos, no las curaciones.</summary>
+    int ProsthesesInstalled = 0,
+
+    /// <summary>Jugadores que se volvieron <c>Automaton</c> con la tercera prótesis (RF-095c).</summary>
+    int Automatons = 0)
 {
+    /// <summary>
+    /// El estado con el que terminó la run, para quien mida algo que sólo existe al final (el censo de
+    /// apodos, ADR 0163). No entra en <c>runs.csv</c>. <b>Sí entra en la igualdad</b> que genera el record, y
+    /// como <see cref="RunState"/> lleva colecciones que se comparan por referencia, dos resultados de la misma
+    /// run nunca son <c>Equals</c>: quien compare resultados lo hace por <c>runs.csv</c> (byte a byte), no
+    /// con <c>==</c>.
+    /// </summary>
+    public RunState? FinalState { get; init; }
+
     /// <summary>True si la run terminó ganando al jefe final (RF-002).</summary>
     public bool Won => Outcome == RunOutcomeKind.Victory;
 
@@ -632,7 +696,8 @@ public static class RunPolicy
         Catalog catalog,
         StandardRunSystems standard,
         BossCatalog bosses,
-        RunPolicyOptions? options = null)
+        RunPolicyOptions? options = null,
+        MatchObserver? matchObserver = null)
     {
         ArgumentNullException.ThrowIfNull(setup);
         ArgumentNullException.ThrowIfNull(catalog);
@@ -642,7 +707,7 @@ public static class RunPolicy
 
         var bossSystems = new BossRunSystems(bosses, standard);
         var ledger = new Ledger();
-        var systems = new RecordingSystems(bossSystems, ledger);
+        var systems = new RecordingSystems(bossSystems, ledger, matchObserver);
         var state = bossSystems.AssignBosses(RunEngine.Start(setup, seed, catalog, systems));
 
         for (int step = 0; step < options.MaxSteps && !RunEngine.Outcome(state).IsOver; step++)
@@ -665,7 +730,7 @@ public static class RunPolicy
                 : EnterService(state, node, catalog, systems, ledger);
         }
 
-        return Summarize(state, setup, seed, catalog, options, ledger);
+        return Summarize(state, setup, seed, catalog, options, ledger) with { FinalState = state };
     }
 
     // ------------------------------------------------------------------ 1. qué nodo
@@ -1044,6 +1109,65 @@ public static class RunPolicy
 
     // ------------------------------------------------------------------ interno
 
+    /// <summary>Titulares con rasgo Aggressive o Dirty a partir de los cuales <see cref="BetDoctrine.Prepared"/> ve una build de violencia.</summary>
+    public const int PreparedViolentStarters = 3;
+
+    /// <summary>
+    /// ADR 0157: toma o deja la apuesta ofrecida en el nodo según <see cref="RunPolicyOptions.BetDoctrine"/>.
+    /// Solo si puede pagarla (no se endeuda). Lo que se toma y lo que se apuesta queda en el libro de la run.
+    /// </summary>
+    private static RunState TakeBetIfWanted(
+        RunState state,
+        MapNode node,
+        Catalog catalog,
+        IRunSystems systems,
+        RunPolicyOptions options,
+        IReadOnlyList<RunPlayer> starters,
+        Ledger ledger)
+    {
+        if (options.BetDoctrine == BetDoctrine.Never)
+        {
+            return state;
+        }
+
+        var offer = Underleague.Sim.Run.Systems.Bets.BetSystem.OfferFor(state, node, systems, catalog);
+        if (offer is null || offer.Stake > state.Gold)
+        {
+            return state;
+        }
+
+        if (options.BetDoctrine == BetDoctrine.Prepared && !FavoursBet(offer.Kind, starters))
+        {
+            return state;
+        }
+
+        state = RunEngine.Apply(state, new TakeBet(node.Id), catalog, systems);
+        ledger.BetsTaken++;
+        ledger.BetStaked += offer.Stake;
+        return state;
+    }
+
+    private static bool FavoursBet(Underleague.Sim.Run.Systems.Bets.BetKind kind, IReadOnlyList<RunPlayer> starters)
+    {
+        if (kind is not (Underleague.Sim.Run.Systems.Bets.BetKind.HuntTheStar
+            or Underleague.Sim.Run.Systems.Bets.BetKind.EyeForEye
+            or Underleague.Sim.Run.Systems.Bets.BetKind.BloodBeforeGoals))
+        {
+            return false;
+        }
+
+        int violent = 0;
+        for (int i = 0; i < starters.Count; i++)
+        {
+            if (starters[i].Traits.Contains(Trait.Aggressive) || starters[i].Traits.Contains(Trait.Dirty))
+            {
+                violent++;
+            }
+        }
+
+        return violent >= PreparedViolentStarters;
+    }
+
     private static RunState PlayMatch(
         RunState state,
         MapNode node,
@@ -1073,6 +1197,8 @@ public static class RunPolicy
         // jugaban jamás. Sin esto, cualquier cambio en /data/consumables es invisible para las puertas.
         state = EquipConsumables(state, catalog, systems, consumables);
 
+        state = TakeBetIfWanted(state, node, catalog, systems, options, starters, ledger);
+
         int wagesDue = WagesDue(state);
         int goldBefore = state.Gold;
         int deadBefore = CountState(state, PhysicalState.Dead);
@@ -1087,7 +1213,9 @@ public static class RunPolicy
             && !(node.Kind == NodeKind.Boss && !won);
 
         int wagesPaid = ranAfterMatch ? Math.Min(wagesDue, goldBefore) : 0;
-        int earned = (state.Gold - goldBefore) + wagesPaid;
+        // El cobro de la apuesta (ADR 0157) no es premio de partido: se cuenta aparte, en el libro de apuestas.
+        int earned = (state.Gold - goldBefore) + wagesPaid - ledger.LastBetPaid;
+        ledger.LastBetPaid = 0;
 
         ledger.Nodes++;
         ledger.Matches++;
@@ -1206,6 +1334,19 @@ public static class RunPolicy
 
     // ------------------------------------------------------------------ 4. clínica
 
+    /// <summary>Puerta de los tests a la clínica de la política (ADR 0164): el estado tras la visita y cuántos tratamientos fueron del herrero y del médico.</summary>
+    internal static (RunState State, int BlacksmithTreatments, int Treatments) VisitClinicForTest(
+        RunState state,
+        Catalog catalog,
+        EconomyConfig economy,
+        IRunSystems systems,
+        RunPolicyOptions options)
+    {
+        var ledger = new Ledger();
+        state = VisitClinic(state, catalog, economy, systems, options, ledger);
+        return (state, ledger.BlacksmithTreatments, ledger.Treatments);
+    }
+
     private static RunState VisitClinic(
         RunState state,
         Catalog catalog,
@@ -1252,6 +1393,16 @@ public static class RunPolicy
                 break;
             }
 
+            // ADR 0164 (decisión del coordinador): el herrero antes que el médico cuando el grave es un
+            // suplente o de rareza común, con el oro alcanzando para el herrero: se arriesga la identidad de
+            // quien menos pesa en el once en vez de pagar la tarifa segura. Los titulares y las piezas
+            // raras siguen yendo al médico.
+            if (PrefersTheBlacksmith(state, patient, options, systems, MedicalSystem.BlacksmithBasePrice(economy)))
+            {
+                state = ForgeOne(state, patient, catalog, economy, systems, ledger, economy.ClinicCost - 1);
+                continue;
+            }
+
             state = RunEngine.Apply(state, new TreatPlayer(patient.Id), catalog, systems);
             ledger.GoldSpentClinic += economy.ClinicCost;
             ledger.Treatments++;
@@ -1278,7 +1429,105 @@ public static class RunPolicy
             ledger.Treatments++;
         }
 
+        state = TryTheBlacksmith(state, catalog, economy, systems, options, ledger);
         return TryTheQuack(state, catalog, economy, systems, options, ledger);
+    }
+
+    /// <summary>
+    /// El herrero (ADR 0164) como segundo recurso: queda un grave que merece la pena y <b>no llega el oro</b>
+    /// para el médico. Entre las dos opciones baratas que sí llegan, la política prefiere la que no mata, y
+    /// solo si al jugador le queda una ranura libre; con el oro que sobra invierte en la tabla hasta un oro
+    /// <b>por debajo</b> del precio del médico. <b>Orden de la clínica</b> (documentado, ADR 0164): tarifa
+    /// plana; herrero para el suplente o el común con oro para él; médico para el resto; leves de titulares;
+    /// este segundo recurso del herrero; y por último el matasanos, que solo ve el oro y los graves que el
+    /// herrero no pudo o no quiso tomar, así que no pierde su hueco.
+    /// </summary>
+    private static RunState TryTheBlacksmith(
+        RunState state,
+        Catalog catalog,
+        EconomyConfig economy,
+        IRunSystems systems,
+        RunPolicyOptions options,
+        Ledger ledger)
+    {
+        int price = MedicalSystem.BlacksmithBasePrice(economy);
+        while (state.Gold >= price && state.Gold < economy.ClinicCost)
+        {
+            var patient = BestSevereInjured(state, options);
+            if (patient is null
+                || (state.AvailablePlayerCount >= options.TreatWhileAvailableBelow && Value(patient, options) < options.TreatFromValue)
+                || !MedicalSystem.HasFreeProsthesisSlot(patient, systems.Prostheses))
+            {
+                break;
+            }
+
+            state = ForgeOne(state, patient, catalog, economy, systems, ledger, economy.ClinicCost - 1);
+        }
+
+        return state;
+    }
+
+    /// <summary>
+    /// True si el grave debe ir al herrero aunque el oro llegue al médico: es de rareza común o, una vez sano,
+    /// no entraría en el once (hay siete jugadores disponibles de más valor), le queda ranura libre y el oro
+    /// alcanza para el herrero (<paramref name="basePrice"/>).
+    /// </summary>
+    private static bool PrefersTheBlacksmith(RunState state, RunPlayer patient, RunPolicyOptions options, IRunSystems systems, int basePrice)
+    {
+        if (systems.Prostheses.All.Count == 0
+            || !MedicalSystem.HasFreeProsthesisSlot(patient, systems.Prostheses)
+            || state.Gold < basePrice)
+        {
+            return false;
+        }
+
+        if (patient.Rarity == Rarity.Common)
+        {
+            return true;
+        }
+
+        int worth = Value(patient, options);
+        int better = 0;
+        foreach (var other in state.AvailablePlayers)
+        {
+            if (other.Id != patient.Id && Value(other, options) > worth)
+            {
+                better++;
+            }
+        }
+
+        return better >= RunRules.MaxStarters;
+    }
+
+    /// <summary>Un tratamiento del herrero con el oro extra que quepa por debajo de <paramref name="extraCeilingPrice"/> y lo anota en el registro.</summary>
+    private static RunState ForgeOne(
+        RunState state,
+        RunPlayer patient,
+        Catalog catalog,
+        EconomyConfig economy,
+        IRunSystems systems,
+        Ledger ledger,
+        int extraCeilingPrice)
+    {
+        int price = MedicalSystem.BlacksmithBasePrice(economy);
+        int extra = Math.Clamp(extraCeilingPrice - price, 0, economy.Blacksmith.MaxExtraGold);
+        extra = Math.Min(extra, state.Gold - price);
+        state = RunEngine.Apply(state, new ForgePlayer(patient.Id, extra), catalog, systems);
+        ledger.GoldSpentClinic += price + extra;
+        ledger.BlacksmithTreatments++;
+        ledger.Treatments++;
+        var result = BlacksmithView.Outcome(patient, state.GetPlayer(patient.Id), systems.Prostheses);
+        if (result.Prosthesis is not null)
+        {
+            ledger.ProsthesesInstalled++;
+        }
+
+        if (result.BecameAutomaton)
+        {
+            ledger.Automatons++;
+        }
+
+        return state;
     }
 
     /// <summary>
@@ -3642,7 +3891,13 @@ public static class RunPolicy
             ledger.MastersAffordable,
             counterCensus,
             slotCensus,
-            perkHorizon);
+            perkHorizon,
+            ledger.BetsTaken,
+            ledger.BetPaid - ledger.BetStaked,
+            ledger.BetStaked,
+            ledger.BlacksmithTreatments,
+            ledger.ProsthesesInstalled,
+            ledger.Automatons);
     }
 
     /// <summary>
@@ -3656,11 +3911,29 @@ public static class RunPolicy
     {
         private readonly IRunSystems _inner;
         private readonly Ledger _ledger;
+        private readonly MatchObserver? _observer;
 
-        public RecordingSystems(IRunSystems inner, Ledger ledger)
+        public RecordingSystems(IRunSystems inner, Ledger ledger, MatchObserver? observer = null)
         {
             _inner = inner;
             _ledger = ledger;
+            _observer = observer;
+        }
+
+        public Underleague.Sim.Run.Systems.Bets.BetCatalog Bets => _inner.Bets;
+
+        public Underleague.Sim.Run.Systems.Medical.ProsthesisCatalog Prostheses => _inner.Prostheses;
+
+        public void OnMatchPlayed(RunState stateBefore, MapNode node, MatchSetup setup, MatchResult result, RunMatchSummary summary)
+        {
+            if (summary.Bet is { } bet)
+            {
+                _ledger.BetPaid += bet.GoldPaid;
+                _ledger.LastBetPaid = bet.GoldPaid;
+            }
+
+            _observer?.Invoke(stateBefore, node, setup, result, summary);
+            _inner.OnMatchPlayed(stateBefore, node, setup, result, summary);
         }
 
         public RunState AfterMatch(RunState state, MapNode node, RunMatchSummary summary, Catalog catalog)
@@ -3711,6 +3984,13 @@ public static class RunPolicy
     /// <summary>Contabilidad de una run mientras se juega. Mutable a propósito y estrictamente local.</summary>
     private sealed class Ledger
     {
+        public int BetsTaken;
+        public int BetStaked;
+        public int BetPaid;
+
+        /// <summary>Cobro de la apuesta del último partido: se resta del oro «ganado» del partido (no es premio de partido).</summary>
+        public int LastBetPaid;
+
         public int OwnInjuries;
 
         /// <summary>Lesiones de los DOS equipos en los partidos de la run: la misma cifra que mide RT-056.</summary>
@@ -3731,6 +4011,12 @@ public static class RunPolicy
         public int EventsDeclined;
 
         public int RiskyTreatments;
+
+        public int BlacksmithTreatments;
+
+        public int ProsthesesInstalled;
+
+        public int Automatons;
 
         /// <summary>Oro gastado en huecos de plantilla (ADR 0046): el sumidero nuevo.</summary>
         public int GoldSpentEnrollment;

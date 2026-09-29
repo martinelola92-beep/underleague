@@ -57,6 +57,20 @@ public sealed record RunMatchSummary(
     /// existentes. Vacía si nadie ha muerto.
     /// </summary>
     public IReadOnlyList<PlayerDeathDetail> DeathDetails { get; init; } = Array.Empty<PlayerDeathDetail>();
+
+    /// <summary>
+    /// Cómo terminó la apuesta del vestuario que el jugador tomó para este nodo (ADR 0157), o null si no tomó
+    /// ninguna. La rellena <see cref="RunEngine"/> tras resolverla con los hechos del partido; es lo que el
+    /// informe post-partido enseña. Propiedad añadida fuera del constructor primario por el mismo motivo que
+    /// <see cref="CounterDeltas"/>.
+    /// </summary>
+    public Systems.Bets.BetResult? Bet { get; init; }
+
+    /// <summary>
+    /// Oro que el corredor devolvió al entrar en este nodo por una apuesta tomada para otro (ADR 0157); 0 si
+    /// no hubo devolución. El informe lo enseña.
+    /// </summary>
+    public int BetRefunded { get; init; }
 }
 
 /// <summary>
@@ -167,6 +181,42 @@ public interface IRunSystems
     /// </summary>
     /// <param name="playerTeamIndex">Equipo del jugador en el <see cref="MatchSetup"/>: 0 local, 1 visitante (W-15: siempre 0 hoy).</param>
     MatchSetup TransformMatch(RunState state, MapNode node, MatchSetup setup, int playerTeamIndex, Catalog catalog);
+
+    /// <summary>
+    /// Aviso de que se ha jugado un partido, con lo que se jugó: el <see cref="MatchSetup"/> real (tras
+    /// <see cref="TransformMatch"/> y las sustituciones automáticas) y el <see cref="MatchResult"/> completo
+    /// (eventos incluidos, que <see cref="RunMatchSummary"/> no lleva). Lo llama <see cref="RunEngine"/> tras
+    /// aplicar el partido, <b>también cuando el partido termina la run</b> (una derrota no pasa por
+    /// <see cref="AfterMatch"/>).
+    ///
+    /// <para>Es un gancho de <b>observación</b>: no devuelve nada ni puede cambiar el estado, así que no
+    /// altera ninguna run (ADR 0157: el censo de <c>/Balance</c> evalúa las condiciones de apuesta con esto).
+    /// Por defecto no hace nada; implementarlo no es obligatorio. **Ojo**: es el único miembro por defecto que
+    /// queda y un envoltorio que no lo reenvía se traga la observación; los que envuelven a otro (<c>BossRunSystems</c>,
+    /// <c>RecordingSystems</c>) lo reenvían.</para>
+    /// </summary>
+    /// <param name="stateBefore">Estado de la run justo ANTES del partido (plantilla, canteranos incluidos).</param>
+    void OnMatchPlayed(RunState stateBefore, MapNode node, MatchSetup setup, MatchResult result, RunMatchSummary summary)
+    {
+    }
+
+    /// <summary>
+    /// Catálogo de apuestas del vestuario de estos sistemas (ADR 0157, <c>data/bets/</c>). Sin catálogo ningún
+    /// nodo ofrece apuesta. Lo lee <see cref="RunEngine"/> para tomarlas y resolverlas.
+    ///
+    /// <para><b>Sin implementación por defecto a propósito</b> (ADR 0164, Regla J): el miembro por defecto
+    /// devolvía el catálogo vacío y <c>RunPolicy.RecordingSystems</c> lo heredaba sin reenviarlo, de modo que
+    /// una medición entera corrió contra un catálogo vacío sin que nada avisara. Que el compilador obligue a
+    /// cada envoltorio a decidir.</para>
+    /// </summary>
+    Systems.Bets.BetCatalog Bets { get; }
+
+    /// <summary>
+    /// Catálogo de prótesis del herrero de la clínica (ADR 0164, <c>data/prostheses/</c>). Sin catálogo el
+    /// herrero no puede instalar nada. Sin implementación por defecto por la misma razón que
+    /// <see cref="Bets"/>: un envoltorio que no lo reenvía mide un mundo sin herrero sin decirlo.
+    /// </summary>
+    Systems.Medical.ProsthesisCatalog Prostheses { get; }
 }
 
 /// <summary>
@@ -207,6 +257,12 @@ public sealed class DefaultRunSystems : IRunSystems
 
     /// <summary>Instancia compartida: la clase no tiene estado.</summary>
     public static DefaultRunSystems Instance { get; } = new();
+
+    /// <inheritdoc />
+    public Systems.Bets.BetCatalog Bets => Systems.Bets.BetCatalog.Empty;
+
+    /// <inheritdoc />
+    public Systems.Medical.ProsthesisCatalog Prostheses => Systems.Medical.ProsthesisCatalog.Empty;
 
     /// <inheritdoc />
     public IReadOnlyList<RunReferee> CreateReferees(ulong seed, int count, Catalog catalog)

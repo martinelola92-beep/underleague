@@ -7,7 +7,7 @@ namespace Underleague.Game.Ui;
 /// <summary>
 /// Leyenda del mapa (encargo mapa-pregon, revisión de reparto del 20 sep 2026): un <see cref="KindGlyph"/>
 /// —el mismo glifo que dibuja el nodo en el grafo y en la lista de destinos— con el nombre y una línea de
-/// qué es, para cada uno de los ocho <see cref="NodeKind"/>. Vive debajo de la lista de destinos, en la
+/// qué es, para cada uno de los siete <see cref="NodeKind"/> que el generador produce (el taller dejó de ser un nodo: es un servicio de la clínica, ADR 0164). Vive debajo de la lista de destinos, en la
 /// misma columna izquierda y con su mismo ancho completo (376 px): eso deja sitio de sobra para que cada
 /// fila sea <b>una sola línea</b> ("nombre — qué es"), en vez de la columna estrecha de ~140 px de la
 /// primera versión, que partía la descripción en tres líneas y se desbordaba sobre la madera.
@@ -22,7 +22,7 @@ public partial class MapLegend : Control
     private static readonly NodeKind[] Kinds =
     {
         NodeKind.LeagueMatch, NodeKind.EliteMatch, NodeKind.Market, NodeKind.Clinic,
-        NodeKind.Workshop, NodeKind.Training, NodeKind.Event, NodeKind.Boss,
+        NodeKind.Training, NodeKind.Event, NodeKind.Boss,
     };
 
     public override void _Ready()

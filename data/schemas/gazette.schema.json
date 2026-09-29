@@ -1,0 +1,35 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://underleague.dev/schemas/gazette.schema.json",
+  "title": "Underleague gazette",
+  "description": "data/gazette/gazette.json: plantillas localizadas con variantes de la Gaceta de fin de run (RF-122, ADR 0163), único fichero. Cargado por Sim.Run.Systems.Gazette.GazetteLoader, fuera del Catalog compartido.",
+  "type": "object",
+  "properties": {
+    "_doc": { "type": "string" },
+    "texts": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/text" },
+      "minItems": 1
+    }
+  },
+  "required": ["texts"],
+  "additionalProperties": false,
+  "$defs": {
+    "text": {
+      "type": "object",
+      "properties": {
+        "key": { "type": "string", "pattern": "^[a-zA-Z][a-zA-Z0-9.]*$" },
+        "es": { "$ref": "#/$defs/variants" },
+        "en": { "$ref": "#/$defs/variants" }
+      },
+      "required": ["key", "es", "en"],
+      "additionalProperties": false
+    },
+    "variants": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 },
+      "minItems": 1,
+      "maxItems": 8
+    }
+  }
+}

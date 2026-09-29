@@ -522,7 +522,7 @@ public static class EventSystem
 
         var heir = state.GetPlayer(heirId);
         state = state.WithPlayer(PerkPool.WithPerk(heir, perkId));
-        return DeathConsequences.Kill(state, victimId, catalog, economy, items);
+        return DeathConsequences.Kill(state, victimId, PlayerDeathCause.Sacrifice, catalog, economy, items);
     }
 
     /// <summary>

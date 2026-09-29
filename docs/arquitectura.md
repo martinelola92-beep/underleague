@@ -97,6 +97,7 @@ solo deja que la política resuelva al rival y abre la ventana para el equipo 0.
 
 - `/data` se lee al arrancar, se valida (RT-032) y se compila. Un error de validación aborta con mensaje que incluye fichero, ruta JSON y regla incumplida.
 - Al empezar una run se **congela una copia** de los ficheros de `/data` dentro del guardado. Cargar una run usa su snapshot, no el `/data` actual.
+- **Guardados anteriores** (ADR 0163, enmienda): un guardado de una versión previa puede no traer un catálogo nuevo que `StandardRunSystems.FromJson` exige. `SnapshotCompletion` (`Sim/Run/Save/`) completa la instantánea con los ficheros del `/data` actual **sólo** si están en su lista explícita de añadibles (hoy `nicknames`, `gazette`, `prostheses`: catálogos aditivos, sin efecto sobre estado guardado ni RNG). Todo lo demás —reglas de la run— sigue siendo el de la instantánea; si falta, error explícito. Sin subir `schemaVersion`.
 
 ## Persistencia (RT-060 a RT-063)
 

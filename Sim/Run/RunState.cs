@@ -455,7 +455,8 @@ public sealed record RunState
     // pasan a 0..6.
     // 5 (ADR 0124): cada jugador gana un objeto "career" con su historial de carrera acumulado.
     // 6 (ADR 0158): cada árbitro gana definitionId, grudge y blindSide.
-    public const int CurrentSchemaVersion = 6;
+    // 7 (ADR 0157): el estado gana la apuesta tomada del nodo pendiente (bet, null si no hay).
+    public const int CurrentSchemaVersion = 7;
 
     /// <summary>Versión de esquema con la que se creó este estado.</summary>
     public int SchemaVersion { get; init; } = CurrentSchemaVersion;
@@ -491,6 +492,12 @@ public sealed record RunState
 
     /// <summary>Oro disponible (RF-114g..k).</summary>
     public int Gold { get; init; }
+
+    /// <summary>
+    /// Apuesta del vestuario tomada y pagada para un nodo de partido aún sin jugar, o null (ADR 0157). Es lo
+    /// único de la apuesta que se guarda: la ofrecida se deriva de (semilla, nodo) y no ocupa estado.
+    /// </summary>
+    public Systems.Bets.AcceptedBet? Bet { get; init; }
 
     /// <summary>Rerolls usados en toda la run: su coste es creciente (RF-071b).</summary>
     public int RerollsUsed { get; init; }
@@ -609,6 +616,13 @@ public sealed record RunState
     /// el mercado y la inscripción no la usan: cobran cada servicio, así que repetir es legítimo.
     /// </summary>
     public const string NodeResolvedCounter = "nodeResolved";
+
+    /// <summary>
+    /// Oro que el corredor devolvió al entrar en el último nodo por una apuesta tomada para otro (ADR 0157):
+    /// 0 si no hubo devolución. Se reescribe en cada entrada y se borra al tomar o retirar una apuesta; es lo
+    /// que las pantallas del nodo y el informe enseñan («el corredor te devuelve N»).
+    /// </summary>
+    public const string BetRefundedCounter = "betRefunded";
 
     /// <summary>Copias sueltas de ese objeto en el almacén.</summary>
     public int StockOf(string itemId)
@@ -740,6 +754,14 @@ public sealed record RunState
     public const string RivalCreditPrefix = "rivalCredit:";
 
     /// <summary>
+    /// Prefijo de los contadores que guardan <b>cómo murió</b> cada jugador propio (ADR 0163, RF-122):
+    /// <c>deathCause:&lt;playerId&gt;</c> = <see cref="PlayerDeathCause"/> como entero. Lo escriben las tres
+    /// vías de muerte (partido, sacrificio del evento y matasanos) y lo lee la Gaceta; sin él una esquela
+    /// sólo puede decir «cayó en el campo» de quien murió en la clínica.
+    /// </summary>
+    public const string DeathCausePrefix = "deathCause:";
+
+    /// <summary>
     /// Jugadores que <b>ocupan plantilla</b> (RF-020): todos menos los muertos. El muerto se queda en
     /// <see cref="Roster"/> para el memorial (RF-122) pero deja su sitio libre: morir cuesta un jugador,
     /// no un jugador y su hueco.
@@ -857,6 +879,9 @@ public sealed record RunState
 
     /// <summary>Copia con el oro indicado. Nunca baja de 0.</summary>
     public RunState WithGold(int gold) => this with { Gold = gold < 0 ? 0 : gold };
+
+    /// <summary>Copia con la apuesta tomada indicada (null la cierra), ADR 0157.</summary>
+    public RunState WithBet(Systems.Bets.AcceptedBet? bet) => this with { Bet = bet };
 
     /// <summary>Copia sumando (o restando, con valor negativo) oro. Nunca baja de 0.</summary>
     public RunState AddGold(int delta) => WithGold(Gold + delta);
@@ -1053,6 +1078,14 @@ public sealed record RunState
         counters[name] = value;
         return this with { Counters = counters };
     }
+
+    /// <summary>Copia con la causa de muerte de ese jugador anotada (<see cref="DeathCausePrefix"/>).</summary>
+    public RunState WithDeathCause(int playerId, PlayerDeathCause cause) =>
+        WithCounter(DeathCausePrefix + playerId.ToString(System.Globalization.CultureInfo.InvariantCulture), (int)cause);
+
+    /// <summary>Cómo murió ese jugador; <see cref="PlayerDeathCause.Unknown"/> si no consta.</summary>
+    public PlayerDeathCause DeathCauseOf(int playerId) =>
+        (PlayerDeathCause)Counter(DeathCausePrefix + playerId.ToString(System.Globalization.CultureInfo.InvariantCulture));
 
     /// <summary>Valor de un contador de run, 0 si no está.</summary>
     public int Counter(string name) => Counters.TryGetValue(name, out int value) ? value : 0;

@@ -134,7 +134,6 @@ public sealed record EconomyConfig(
     NodeRewardConfig LeagueReward,
     NodeRewardConfig EliteReward,
     NodeRewardConfig BossReward,
-    int ExcellentMatchBonusGold,
     int ClinicCost,
     IReadOnlyList<int> EnrollmentCosts,
     int RerollBaseCost,
@@ -220,6 +219,9 @@ public sealed record EconomyConfig(
 
     /// <summary>Probabilidad de que además <b>empeore</b>: sano ← leve ← grave ← muerto, un escalón hacia abajo.</summary>
     public int ClinicRiskyWorsePercent { get; init; }
+
+    /// <summary>El herrero de la clínica (ADR 0164, RF-095, RF-095b): precio y tabla de tres resultados. Provisional, sin medir.</summary>
+    public BlacksmithConfig Blacksmith { get; init; } = BlacksmithConfig.Default;
 
     /// <summary>
     /// Oro fijo que se pierde al perder un <b>partido ordinario</b> (RF-002c), además de no cobrar la
@@ -404,7 +406,6 @@ public static class EconomyLoader
             ReadNodeReward(root.Prop("nodeRewards").Prop("league")),
             ReadNodeReward(root.Prop("nodeRewards").Prop("elite")),
             ReadNodeReward(root.Prop("nodeRewards").Prop("boss")),
-            root.Int("excellentMatchBonusGold"),
             root.Int("clinicCost"),
             enrollment,
             root.Int("rerollBaseCost"),
@@ -432,9 +433,59 @@ public static class EconomyLoader
             ClinicRiskyPercent = root.Int("clinicRiskyPercent"),
             ClinicRiskyFailPercent = root.Int("clinicRiskyFailPercent"),
             ClinicRiskyWorsePercent = root.Int("clinicRiskyWorsePercent"),
+            Blacksmith = ReadBlacksmith(root.Prop("blacksmith")),
             DefeatGoldPenalty = root.OptionalInt("defeatGoldPenalty", 0),
             DefeatGoldPenaltyPercent = root.OptionalInt("defeatGoldPenaltyPercent", 0),
         };
+    }
+
+    private static BlacksmithConfig ReadBlacksmith(Json node)
+    {
+        var shifts = new List<int>();
+        foreach (var item in node.Prop("shiftByExtraGold").EnumerateArray())
+        {
+            shifts.Add(item.AsInt());
+        }
+
+        var config = new BlacksmithConfig(
+            node.Int("pricePercent"),
+            node.Int("baseCurePercent"),
+            node.Int("baseImprovePercent"),
+            node.Int("baseWorsenPercent"),
+            shifts,
+            node.Int("cureSharePercent"),
+            node.Int("minWorsenPercent"));
+
+        if (config.BaseCurePercent + config.BaseImprovePercent + config.BaseWorsenPercent != 100)
+        {
+            throw new DataException(Path, node.Path, "baseCurePercent + baseImprovePercent + baseWorsenPercent deben sumar 100 (ADR 0164)");
+        }
+
+        if (shifts.Count == 0)
+        {
+            throw new DataException(Path, node.Path + ".shiftByExtraGold", "debe haber al menos un paso de oro extra");
+        }
+
+        for (int i = 1; i < shifts.Count; i++)
+        {
+            if (shifts[i] > shifts[i - 1])
+            {
+                throw new DataException(
+                    Path,
+                    node.Path + ".shiftByExtraGold",
+                    "el oro extra rinde CADA VEZ MENOS (RF-095b): ningún paso puede superar al anterior");
+            }
+        }
+
+        if (config.BaseWorsenPercent - config.TotalShift < config.MinWorsenPercent)
+        {
+            throw new DataException(
+                Path,
+                node.Path + ".shiftByExtraGold",
+                "con todo el oro extra invertido el empeoramiento bajaría de minWorsenPercent: el herrero nunca debe dejar de tener riesgo");
+        }
+
+        return config;
     }
 
     private static NodeRewardConfig ReadNodeReward(Json node) => new(
@@ -516,6 +567,48 @@ public static class EconomyLoader
         catch (JsonException ex)
         {
             throw new DataException(Path, "$", $"JSON inválido: {ex.Message}");
+        }
+    }
+}
+
+/// <summary>
+/// Configuración del herrero de la clínica (ADR 0164, RF-095, RF-095b). Todo entero (RT-023). Los números son
+/// provisionales, sin medir (Regla H): ver el <c>_doc</c> de <c>economy.json</c>.
+/// </summary>
+/// <param name="PricePercent">Porcentaje del precio de la clínica (<see cref="EconomyConfig.ClinicCost"/>) que cuesta el servicio base.</param>
+/// <param name="BaseCurePercent">Probabilidad base de curación sin prótesis.</param>
+/// <param name="BaseImprovePercent">Probabilidad base de prótesis de mejora.</param>
+/// <param name="BaseWorsenPercent">Probabilidad base de prótesis de empeoramiento.</param>
+/// <param name="ShiftByExtraGold">Puntos que quita al empeoramiento el oro extra n-ésimo (no creciente); su longitud es el tope de oro extra.</param>
+/// <param name="CureSharePercent">Parte de cada desplazamiento que va a la curación; el resto va a la mejora.</param>
+/// <param name="MinWorsenPercent">Suelo del empeoramiento con todo el oro extra invertido.</param>
+public sealed record BlacksmithConfig(
+    int PricePercent,
+    int BaseCurePercent,
+    int BaseImprovePercent,
+    int BaseWorsenPercent,
+    IReadOnlyList<int> ShiftByExtraGold,
+    int CureSharePercent,
+    int MinWorsenPercent)
+{
+    /// <summary>Valor por defecto de una instantánea que no lo declara (nunca el de <c>/data</c>, que es obligatorio).</summary>
+    public static BlacksmithConfig Default { get; } = new(60, 30, 35, 35, new[] { 10, 7, 5, 3, 2 }, 50, 5);
+
+    /// <summary>Tope de oro extra que se puede invertir: un paso de la tabla por unidad.</summary>
+    public int MaxExtraGold => ShiftByExtraGold.Count;
+
+    /// <summary>Desplazamiento total con todo el oro extra invertido.</summary>
+    public int TotalShift
+    {
+        get
+        {
+            int total = 0;
+            for (int i = 0; i < ShiftByExtraGold.Count; i++)
+            {
+                total += ShiftByExtraGold[i];
+            }
+
+            return total;
         }
     }
 }

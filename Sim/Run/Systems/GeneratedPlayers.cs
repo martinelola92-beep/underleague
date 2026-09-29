@@ -21,6 +21,8 @@ namespace Underleague.Sim.Run.Systems;
 /// <item><term>6000</term><description><c>LeagueLootSystem</c>: botín de liga (ADR 0161)</description></item>
 /// <item><term>7000</term><description><c>EventSystem</c>: el canterano de <c>recruit</c> (ADR 0159)</description></item>
 /// <item><term>7100 + índice de efecto</term><description><c>EventSystem</c>: qué objeto o consumible da <c>grantItem</c>/<c>grantConsumable</c> (ADR 0159)</description></item>
+/// <item><term>8000</term><description><c>BetSystem</c>: qué apuesta del vestuario se ofrece en el nodo de partido (ADR 0157)</description></item>
+/// <item><term>9000 + id de jugador</term><description><c>MedicalSystem.Forge</c>: la tirada del herrero de la clínica sobre ese jugador (ADR 0164)</description></item>
 /// </list>
 /// </summary>
 public static class OfferStream

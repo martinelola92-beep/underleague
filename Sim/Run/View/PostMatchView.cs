@@ -5,6 +5,7 @@ using Underleague.Sim.Model;
 using Underleague.Sim.Perks;
 using Underleague.Sim.Run.Systems.Economy;
 using Underleague.Sim.Run.Systems.Items;
+using Underleague.Sim.Run.Systems.Nicknames;
 using Underleague.Sim.Run.Systems.Rewards;
 
 namespace Underleague.Sim.Run.View;
@@ -35,6 +36,27 @@ public sealed record CasualtyRow(int PlayerId, string PlayerName, Position Posit
     /// <summary>Id de la reliquia de <see cref="RelicName"/>, vacío si no hay.</summary>
     public string RelicId { get; init; } = string.Empty;
 }
+
+/// <summary>
+/// Estadísticas de un jugador propio en este partido (ADR 0163, RF-119): las mismas cifras de
+/// <see cref="Underleague.Sim.Engine.MatchReport.Players"/>, sin recalcular nada. <see cref="Nickname"/> es
+/// el apodo que tiene <b>después</b> del partido (vacío si no tiene).
+/// </summary>
+public sealed record PlayerStatRow(
+    int PlayerId,
+    string PlayerName,
+    string Nickname,
+    int Goals,
+    int Assists,
+    int TacklesWon,
+    int Fouls,
+    int InjuriesCaused);
+
+/// <summary>
+/// Un apodo ganado en este partido (ADR 0163): la carrera de antes no lo cumplía (o cumplía uno de menos
+/// prioridad) y la de después sí. <see cref="PreviousNickname"/> vacío si no tenía ninguno.
+/// </summary>
+public sealed record NicknameGainRow(int PlayerId, string PlayerName, string NicknameId, string Nickname, string PreviousNickname);
 
 /// <summary>Una tarjeta mostrada en el partido (RF-062, RF-063), de cualquiera de los dos equipos.</summary>
 public sealed record CardRow(int PlayerId, string PlayerName, MatchSide Side, bool Red, int Minute);
@@ -124,6 +146,22 @@ public sealed record PostMatchReport(
     DeathGold DeathGold,
     LootRow? Loot)
 {
+    /// <summary>
+    /// Cómo terminó la apuesta del vestuario que el jugador tomó para este partido (ADR 0157): qué condición,
+    /// cuánto apostó, si se cumplió y cuánto cobró. Null si no tomó ninguna. La condición ya viene resuelta
+    /// por el motor (RT-014): la interfaz solo la enseña.
+    /// </summary>
+    public Underleague.Sim.Run.Systems.Bets.BetResult? Bet { get; init; }
+
+    /// <summary>Estadísticas de cada jugador propio que pisó el campo, por id ascendente (ADR 0163).</summary>
+    public IReadOnlyList<PlayerStatRow> PlayerStats { get; init; } = Array.Empty<PlayerStatRow>();
+
+    /// <summary>Apodos ganados en este partido, por id de jugador ascendente (ADR 0163).</summary>
+    public IReadOnlyList<NicknameGainRow> NicknamesEarned { get; init; } = Array.Empty<NicknameGainRow>();
+
+    /// <summary>Oro que el corredor devolvió al entrar en este partido por una apuesta tomada para otro nodo (ADR 0157); 0 si ninguno.</summary>
+    public int BetRefunded { get; init; }
+
     /// <summary>Muertes propias (RF-093): lo primero que el informe tiene que decir cuando las hay.</summary>
     public int Deaths
     {
@@ -163,6 +201,7 @@ public static class PostMatchView
     /// <param name="economy">Economía de la run; sin ella el informe no lleva desglose de oro.</param>
     /// <param name="items">Catálogo de equipamiento; sin él el informe no lista objetos.</param>
     /// <param name="language">Idioma de las descripciones generadas (RT-073).</param>
+    /// <param name="nicknames">Catálogo de apodos (ADR 0163); sin él el informe no enseña apodos.</param>
     public static PostMatchReport Build(
         MatchPlayback playback,
         RunState stateAfterMatch,
@@ -170,7 +209,8 @@ public static class PostMatchView
         Catalog catalog,
         EconomyConfig? economy = null,
         ItemCatalog? items = null,
-        string language = "es")
+        string language = "es",
+        NicknameCatalog? nicknames = null)
     {
         ArgumentNullException.ThrowIfNull(playback);
         ArgumentNullException.ThrowIfNull(stateAfterMatch);
@@ -219,7 +259,101 @@ public static class PostMatchView
             economy is null || stateAfterMatch.Result.IsOver
                 ? DeathGold.None
                 : GoldCalculator.DeathGold(stateAfterMatch, summary, economy),
-            Loot(playback, report, items, templates, stateAfterMatch));
+            Loot(playback, report, items, templates, stateAfterMatch))
+        {
+            Bet = summary.Bet,
+            BetRefunded = summary.BetRefunded,
+            PlayerStats = PlayerStatRows(report, own, stateAfterMatch, nicknames, language),
+            NicknamesEarned = NicknameGains(report, own, stateAfterMatch, nicknames, language),
+        };
+    }
+
+    /// <summary>
+    /// Estadísticas propias del partido (ADR 0163): las de <c>MatchReport.Players</c> del equipo propio, de
+    /// los que llegaron a pisar el campo, por id ascendente. Ni una cifra se recalcula.
+    /// </summary>
+    private static IReadOnlyList<PlayerStatRow> PlayerStatRows(
+        MatchReport report, int ownTeam, RunState stateAfterMatch, NicknameCatalog? nicknames, string language)
+    {
+        var rows = new List<PlayerStatRow>();
+        for (int i = 0; i < report.Players.Count; i++)
+        {
+            var stats = report.Players[i];
+            if (stats.Team != ownTeam || stats.TicksOnPitch <= 0)
+            {
+                continue;
+            }
+
+            var player = stateAfterMatch.FindPlayer(stats.PlayerId);
+            if (player is null)
+            {
+                continue;
+            }
+
+            var nickname = nicknames is null ? null : NicknameSystem.For(player, nicknames);
+            rows.Add(new PlayerStatRow(
+                stats.PlayerId,
+                player.Name,
+                nickname?.NameIn(language) ?? string.Empty,
+                stats.Goals,
+                stats.Assists,
+                stats.TacklesWon,
+                stats.Fouls,
+                stats.InjuriesCaused));
+        }
+
+        rows.Sort(static (a, b) => a.PlayerId.CompareTo(b.PlayerId));
+        return rows;
+    }
+
+    /// <summary>
+    /// Apodos que el partido ha dado (ADR 0163): compara la carrera de antes, que es la de después menos
+    /// las estadísticas del partido (<see cref="NicknameSystem.BeforeMatch"/>), con la de después.
+    /// </summary>
+    private static IReadOnlyList<NicknameGainRow> NicknameGains(
+        MatchReport report, int ownTeam, RunState stateAfterMatch, NicknameCatalog? nicknames, string language)
+    {
+        var rows = new List<NicknameGainRow>();
+        if (nicknames is null)
+        {
+            return rows;
+        }
+
+        var priorities = new Dictionary<int, int>();
+
+        for (int i = 0; i < report.Players.Count; i++)
+        {
+            var stats = report.Players[i];
+            var player = stats.Team == ownTeam ? stateAfterMatch.FindPlayer(stats.PlayerId) : null;
+            if (player is null)
+            {
+                continue;
+            }
+
+            var before = NicknameSystem.BeforeMatch(player.Career, stats);
+            var earned = NicknameSystem.Earned(before, player.Career, nicknames);
+            if (earned is null)
+            {
+                continue;
+            }
+
+            rows.Add(new NicknameGainRow(
+                player.Id,
+                player.Name,
+                earned.Id,
+                earned.NameIn(language),
+                NicknameSystem.For(before, nicknames)?.NameIn(language) ?? string.Empty));
+            priorities[player.Id] = earned.Priority;
+        }
+
+        // Los de mayor prioridad primero (los más raros de ganar): la pantalla sólo enseña los primeros y
+        // dice cuántos más hay, así que el orden es lo que decide cuáles se ven (ADR 0163). Luego id (RT-041).
+        rows.Sort((a, b) =>
+        {
+            int byPriority = priorities[b.PlayerId].CompareTo(priorities[a.PlayerId]);
+            return byPriority != 0 ? byPriority : a.PlayerId.CompareTo(b.PlayerId);
+        });
+        return rows;
     }
 
     /// <summary>

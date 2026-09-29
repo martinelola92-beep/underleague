@@ -278,7 +278,32 @@ public static class FullRunMetrics
         rows.Add(Info("leftoverGoldShare_saver", LeftoverShare(saver)));
         rows.Add(Info("purchasesPerMarket_spender", PurchaseRate(spender)));
         rows.Add(Info("purchasesPerMarket_saver", PurchaseRate(saver)));
+
+        // ADR 0157: la apuesta del vestuario, por doctrina de compra. Con la política de apuesta por defecto
+        // (Never) todas valen 0; con Blind, betNetGoldPerRun tiene que salir NEGATIVO (~ -15 % del oro
+        // apostado): si sale positivo, las cuotas están mal.
+        AddBetRows(rows, "contextual", contextual);
+        AddBetRows(rows, "spender", spender);
+        AddBetRows(rows, "saver", saver);
         return rows;
+    }
+
+    private static void AddBetRows(List<MetricResult> rows, string doctrine, IReadOnlyList<RunPlayResult> runs)
+    {
+        double n = Math.Max(1, runs.Count);
+        long taken = 0, net = 0, staked = 0;
+        for (int i = 0; i < runs.Count; i++)
+        {
+            taken += runs[i].BetsTaken;
+            net += runs[i].BetNetGold;
+            staked += runs[i].BetGoldStaked;
+        }
+
+        rows.Add(Info("betsTakenPerRun_" + doctrine, taken / n));
+        rows.Add(Info("betNetGoldPerRun_" + doctrine, net / n));
+
+        // Retorno sobre lo apostado en %: (cobrado - apostado) / apostado. -15 = el margen de la casa.
+        rows.Add(Info("betNetReturnPercent_" + doctrine, staked == 0 ? 0 : 100.0 * net / staked));
     }
 
     /// <summary>
@@ -389,6 +414,7 @@ public static class FullRunMetrics
         var defeatsByAct = new int[RunRules.Acts];
         long goldEarned = 0, market = 0, clinic = 0, enrollment = 0, reroll = 0, wages = 0, left = 0;
         long squadTreatments = 0, riskyTreatments = 0, eventsTaken = 0, eventsDeclined = 0;
+        long blacksmithTreatments = 0, prosthesesInstalled = 0, automatons = 0;
         long slots = 0;
         long roster = 0, level = 0, perks = 0, starterPerks = 0, items = 0, injuries = 0, severe = 0, counters = 0, ownInjuries = 0, matchInjuries = 0;
         long offers = 0, affordable = 0, purchases = 0, marketVisits = 0, goldAtMarket = 0;
@@ -459,6 +485,9 @@ public static class FullRunMetrics
             eventsTaken += run.EventsTaken;
             eventsDeclined += run.EventsDeclined;
             riskyTreatments += run.RiskyTreatments;
+            blacksmithTreatments += run.BlacksmithTreatments;
+            prosthesesInstalled += run.ProsthesesInstalled;
+            automatons += run.Automatons;
             enrollment += run.GoldSpentEnrollment;
             slots += run.SlotsBought;
             reroll += run.GoldSpentReroll;
@@ -623,6 +652,10 @@ public static class FullRunMetrics
         // el hueco del matasanos están mal puestos y el jugador tiene una opción que nadie toma.
         rows.Add(Info("squadTreatmentsPerRun", (double)squadTreatments / runs.Count));
         rows.Add(Info("riskyTreatmentsPerRun", (double)riskyTreatments / runs.Count));
+        // ADR 0164: el herrero. Si salen a cero, el precio o el hueco están mal puestos y el servicio no se toma.
+        rows.Add(Info("blacksmithTreatmentsPerRun", (double)blacksmithTreatments / runs.Count));
+        rows.Add(Info("prosthesesPerRun", (double)prosthesesInstalled / runs.Count));
+        rows.Add(Info("automatonsPerRun", (double)automatons / runs.Count));
         // ADR 0100: cartas de evento resueltas y cartas que la política dejó pasar. Si «tomadas» sale a
         // cero, el catálogo no ofrece nada que compita con el resto del mapa y el nodo sigue siendo relleno.
         rows.Add(Info("eventsTakenPerRun", (double)eventsTaken / runs.Count));

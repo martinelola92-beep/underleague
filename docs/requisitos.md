@@ -93,7 +93,7 @@ La identidad del juego no es el fútbol, es la **carnicería administrada**: los
 ### 3.2 Mapa
 
 - **RF-010** El mapa de cada acto es un grafo dirigido con múltiples caminos, avance en una sola dirección y sin retroceso.
-- **RF-011** Tipos de nodo: partido de liga, partido de élite (mayor riesgo y recompensa), mercado, clínica, taller de implantes, entrenamiento, evento aleatorio (**carta con opciones** desde la ADR 0100), jefe. *(La inscripción fue un nodo hasta la **ADR 0097**: el hueco de plantilla se compra ahora en el mercado, RF-020.)*
+- **RF-011** Tipos de nodo: partido de liga, partido de élite (mayor riesgo y recompensa), mercado, clínica, entrenamiento, evento aleatorio (**carta con opciones** desde la ADR 0100), jefe. *(El **taller de implantes deja de ser un nodo** con la **ADR 0164**: es el herrero de la clínica, RF-095; `NodeKind.Workshop` sigue en el enum solo para no invalidar guardados, y el generador nunca lo produjo.)* *(La inscripción fue un nodo hasta la **ADR 0097**: el hueco de plantilla se compra ahora en el mercado, RF-020.)*
 - **RF-011b** Hay un nodo de mercado cada **3-4 nodos**, y desde cualquier punto del mapa debe existir un mercado alcanzable en dos saltos como máximo. Es lo que convierte jugar en inferioridad en una decisión y no en una trampa.
 - **RF-015** Los **rivales son estáticos por acto y división**: cada acto tiene un conjunto fijo de equipos rivales, diseñados a mano con una build reconocible cada uno. Lo aleatorio es el mapa, la posición de los nodos y qué rivales aparecen en qué nodo. Los rivales son personajes que el jugador aprende, y el informe de ojeo describe una build real, no un bloque de estadísticas.
 - **RF-015b** Los rivales usan consumibles y sobornos. Ambos aparecen en el informe de ojeo.
@@ -305,19 +305,20 @@ SUSTITUCION         CONSUMIBLE_USADO
 
 - **RF-090** Estados físicos posibles: sano, lesión leve, lesión grave, muerto.
 - **RF-091** **Lesión leve**: -15% a todos los atributos durante el siguiente partido. Acumulable. No impide jugar.
-- **RF-092** **Lesión grave**: el jugador no puede alinearse hasta recibir tratamiento en un nodo de clínica o taller.
+- **RF-092** **Lesión grave**: el jugador no puede alinearse hasta recibir tratamiento en un nodo de clínica (médico, matasanos o herrero, ADR 0099 y 0164).
 - **RF-093** **Muerte**: pérdida permanente del jugador. Solo puede producirse en dos casos:
   1. El jugador se alineó arrastrando una lesión grave sin tratar.
   2. Un perk rival explícitamente marcado como letal y visible en el ojeo (RF-013).
   Un jugador en estado sano **nunca** puede morir.
 - **RF-094** *(ampliado por la ADR 0099: la clínica ofrece tres servicios —por pieza, la plantilla entera a tarifa plana, y el matasanos barato y sin garantía, que puede empeorar un escalón—; los porcentajes se ven antes de elegir.)*
 - **RF-094** **Clínica**: coste alto en oro, resultado garantizado, restaura al jugador a sano sin efectos secundarios.
-- **RF-095** **Taller de implantes**: alternativa barata y arriesgada a la clínica. Antes de confirmar, el jugador ve los **tres resultados posibles con su probabilidad**:
-  - **Curación completa**: el jugador vuelve a sano.
-  - **Mejora**: se instala una prótesis con ventaja (atributo o correa) y la etiqueta `Chatarra`.
-  - **Empeoramiento**: se instala una prótesis con desventaja y la etiqueta `Chatarra`.
+- **RF-095** **El herrero de la clínica** *(antes «taller de implantes»; ADR 0164)*: cuarto servicio de la clínica, para un jugador con lesión grave y una ranura del cuerpo libre; más barato que el médico y **siempre lo deja sano**, pero a cambio de una apuesta sobre su identidad. Antes de confirmar, el jugador ve los **tres resultados posibles con su probabilidad**, el **rango de magnitudes** de cada prótesis posible y **qué atributos** pueden salir según las ranuras libres:
+  - **Curación completa**: el jugador vuelve a sano, sin prótesis.
+  - **Mejora**: se instala una prótesis con ventaja (un atributo o la correa) y la etiqueta `Chatarra`.
+  - **Empeoramiento**: se instala una prótesis con desventaja y la etiqueta `Chatarra`. Nunca mata: el riesgo de muerte es del matasanos; el del herrero es la identidad.
+  Las mejoras valen algo **menos** que los empeoramientos (provisional, sin medir: +6..+8 contra −9..−12) para que sin oro extra la esperanza de atributos sea ligeramente negativa y solo con oro extra sea positiva: el herrero es una apuesta y no una mejora gratuita.
 - **RF-095b** El jugador puede **invertir oro adicional** para desplazar las probabilidades hacia los resultados favorables, con rendimiento decreciente. La apuesta sigue siendo apuesta, pero el jugador la asume conociendo las cifras exactas (RF-012d).
-- **RF-095c** Con 3 prótesis el jugador pierde su etiqueta racial y adquiere `Autómata`, habilitando una familia de perks distinta.
+- **RF-095c** Con 3 prótesis el jugador **gana** la etiqueta `Autómata` y **conserva** su etiqueta de especie (enmienda ADR 0164, 29 sep 2026): perderla apagaba en silencio los objetos restringidos y los perks exclusivos de raza con `tagsRequired`, y hacía fallar la validación del partido. La pérdida de especie se aplaza hasta que exista la familia de perks de autómata que la compense; `Autómata` habilitará esa familia.
 - **RF-096** **Resurrección**: disponible mediante perk, objeto o consumible de la familia sobrenatural. El jugador resucitado vuelve con el nivel máximo reducido en 2 y la etiqueta `Descompuesto`, que aplica una penalización creciente por cada partido posterior.
 - **RF-097** El estado físico persiste entre partidos dentro de la run y se muestra siempre en la pantalla de plantilla.
 
@@ -358,10 +359,10 @@ SUSTITUCION         CONSUMIBLE_USADO
 ### 3.12c Economía
 
 - **RF-114g** El oro se gana **en cada partido ganado**, con una cantidad fija por acto y un multiplicador por dificultad del rival. Los partidos de élite y de jefe pagan más. Perder no paga.
-- **RF-114h** **Partido excelente**: bonus de oro por cumplir objetivos concretos y anunciados antes del partido, como ganar por 3 o más, portería a cero, ganar en inferioridad o ganar con un canterano goleador. Los objetivos se muestran en la pantalla del nodo.
-- **RF-114i** El oro **nunca escala con el rendimiento** dentro del partido (goles, lesiones causadas, faltas). Las builds de economía existen, pero escalan mediante perks y objetos, no mediante el resultado.
-- **RF-114j** Las otras fuentes de oro son la venta de jugadores y objetos, y determinados eventos. No hay más.
-- **RF-114k** Sumideros: jugadores, perks, objetos y consumibles en el mercado; clínica; taller; sobornos; rerolls; salarios de mercenarios. `/Balance` debe verificar que el oro medio por acto permite usar dos o tres sumideros, nunca todos.
+- **RF-114h** **La apuesta del vestuario** *(enmienda de la ADR 0157, sustituye al «partido excelente»)*: cada nodo de partido (liga, élite y jefe) ofrece **una apuesta**, derivada de la semilla y el nodo —no se guarda, y se ve en el ojeo y en el cartel del nodo—, con una condición **compuesta** que habla de la carnicería (una lesión antes que el primer gol, que el rival estrella no acabe el partido, ojo por ojo, la remontada...). El jugador la **toma o la deja** antes de confirmar el partido; tomarla cuesta una **apuesta fija** en oro que depende del acto. Se resuelve al terminar con los hechos del partido, nunca con una tirada nueva: cumplida, cobra apuesta × cuota además del oro normal; fallida, pierde la apuesta y nada más. La cuota sale de la frecuencia **medida** de cada condición en cada dificultad con un margen de la casa (`cuota ≈ 85 / p`), nunca escrita a ojo; una condición cuya frecuencia medida en esa dificultad es menor del 2 % no se ofrece. Toda apuesta tiene que poder inclinarse con una decisión del jugador (alineación, orden, consumible, perk): a ciegas su esperanza es negativa.
+- **RF-114i** El oro **nunca escala con el rendimiento** dentro del partido (goles, lesiones causadas, faltas), **salvo por la apuesta** (RF-114h): un riesgo elegido y pagado **antes** del partido, con la condición y la cuota a la vista. Sigue prohibido que un gol o una lesión paguen oro por sí solos, sin compromiso previo. Las builds de economía existen, pero escalan mediante perks y objetos, no mediante el resultado.
+- **RF-114j** Las otras fuentes de oro son la venta de jugadores y objetos, determinados eventos y el **cobro de una apuesta del vestuario cumplida** (RF-114h; bruto, incluye lo apostado). No hay más.
+- **RF-114k** Sumideros: jugadores, perks, objetos y consumibles en el mercado; clínica; taller; sobornos; rerolls; salarios de mercenarios; **la apuesta del vestuario tomada** (RF-114h; se devuelve si no se juega su partido). `/Balance` debe verificar que el oro medio por acto permite usar dos o tres sumideros, nunca todos.
 
 ### 3.13 Presentación y feedback
 

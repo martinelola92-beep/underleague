@@ -76,6 +76,16 @@ internal readonly struct Json
         return value;
     }
 
+    public decimal AsDecimal()
+    {
+        if (_element.ValueKind != JsonValueKind.Number || !_element.TryGetDecimal(out var value))
+        {
+            throw new DataException(File, Path, "se esperaba un número");
+        }
+
+        return value;
+    }
+
     public bool AsBool()
     {
         if (_element.ValueKind != JsonValueKind.True && _element.ValueKind != JsonValueKind.False)
