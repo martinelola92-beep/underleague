@@ -84,3 +84,35 @@ y la muerte es rara, ADR 0048) o están a la sombra de otros de más prioridad (
 pero se alcanzan. El apodo sigue sin dar poder de juego, así que el ajuste **no altera el partido** y no
 necesita lote de partidos: sólo cambia qué se dice de cada jugador. Sin error típico entre semillas más allá
 de las dos lecturas; si los pesos de la carrera (ADR 0124) cambian, hay que repetir el censo.
+
+## Guardados anteriores (enmienda, 29 sep 2026, revisión independiente)
+
+**Síntoma.** `RunController.Continue` reconstruye los sistemas desde el `DataSnapshot` congelado
+(RT-061b), pero `StandardRunSystems.FromJson` exige `nicknames/nicknames.json`, `gazette/gazette.json` y
+`prostheses/prostheses.json`, que un guardado de antes de este paquete no trae: la run ironman **no se podía
+retomar** tras actualizar el juego, que es justo lo que la instantánea existe para impedir. Mismo esquema
+(`schemaVersion` sin cambio), ficheros de datos distintos.
+
+**Decisión.** `SnapshotCompletion` (`Sim/Run/Save/`, sin E/S: recibe los dos diccionarios) completa la
+instantánea de un guardado con los ficheros de `/data` **actual** que le faltan, y **sólo** los de una lista
+explícita, `SnapshotCompletion.AddableFiles`. Un fichero que el guardado ya trae no se toca; el resto de
+`/data` sigue siendo el de la run. No sube la versión del esquema: el guardado no cambia de forma, y al volver
+a guardar ya lleva los ficheros. `/Game` lo aplica al cargar (`RunController.Continue`).
+
+**La lista y por qué** (criterio: catálogo **aditivo** que la run antigua nunca tuvo, que no reescribe ningún
+estado guardado ni desplaza ningún flujo de RNG, RT-022):
+
+| Fichero | Añadible porque |
+|---|---|
+| `nicknames/nicknames.json` | los apodos se derivan al leer de la carrera que la run ya lleva; no cambian ningún partido |
+| `gazette/gazette.json` | plantillas de la portada de fin de run: sólo presentación |
+| `prostheses/prostheses.json` | la run antigua no tenía ninguna instalada y una prótesis sólo entra cuando el jugador la elige en la clínica (RF-095); no toca jugadores guardados ni RNG de partidos. **Es el caso límite**: sí amplía lo que puede hacer el jugador, y se admite porque la alternativa es perder la run |
+
+**Lo que no.** Perks, economía, mapa, rivales, pesos de IA, árbitros, objetos... **cambian reglas de la run
+en curso** y no se completan jamás: si faltan, `FromJson` falla con error explícito (RT-032). Una lista
+explícita y no «lo que falte» es deliberada: un catálogo nuevo debe dejar los guardados viejos sin poder
+cargarse hasta que alguien decida, escribiéndolo en la lista con su motivo, que es añadible.
+
+**Demostración.** `SnapshotCompletionTests`: un guardado sin los tres ficheros falla sin compleción
+(el fallo observado) y con ella se retoma, con el resto de la instantánea idéntico y el estado igual; un
+fichero presente no se sustituye; uno de reglas ausente no se completa.
