@@ -245,6 +245,27 @@ public sealed class MobNarrowingTests
         Assert.True(restarts > 20, "muy pocos saques en turba: el test no comprobó nada");
     }
 
+    /// <summary>
+    /// Regresión medida al hacer la ADR 0169: con los destinos de la utilidad y de los pases acotados sólo al
+    /// campo entero, el balón volaba a las filas invadidas y salía de banda 7,57 veces por turba (0,48 antes). Con
+    /// los destinos acotados a la banda vuelve a 0,47.
+    /// </summary>
+    [Fact]
+    public void TheBallDoesNotKeepGoingOutOnTheInvadedRows()
+    {
+        int throwIns = 0;
+        int mobs = 0;
+        foreach (var (_, result) in MobMatches(Current))
+        {
+            mobs++;
+            int start = result.Events.First(e => e.Type == EventType.MobStart).Tick;
+            throwIns += result.Events.Count(e => e.Tick >= start && e.Type == EventType.Recovery && e.Detail == "throwIn");
+        }
+
+        Assert.True(mobs > 10, "muy pocas turbas: el test no comprobó nada");
+        Assert.True((double)throwIns / mobs < 2.5, $"{throwIns} saques de banda en {mobs} turbas: el balón vuelve a salir por las filas invadidas");
+    }
+
     [Fact]
     public void TheMobRunsFifteenPercentFasterOnTheFeetAndOnTheBall()
     {

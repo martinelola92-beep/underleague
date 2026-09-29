@@ -129,6 +129,9 @@ internal sealed class UtilityContext
     /// <summary>Velocidad del pase en milésimas de casilla por tick (tuning.ball), para la carrera del pase en profundidad.</summary>
     public int PassSpeedCellsPerTickMilli { get; set; }
 
+    /// <summary>Filas invadidas por el público a cada lado (ADR 0169): 0 salvo en la turba. Los destinos se acotan a la banda restante.</summary>
+    public int BandInset { get; set; }
+
     /// <summary>
     /// Tick actual del partido. Lo necesita la caducidad de las intenciones de pase (P3): una oferta vale
     /// mientras dure el armado del pase y un poco más, no para siempre.
@@ -760,6 +763,19 @@ internal static class Utility
     }
 
     /// <summary>Acota un punto al rectángulo del campo.</summary>
+    /// <summary>
+    /// Acota un destino a la banda jugable de la fase (ADR 0169): el campo entero en tiempo reglamentario (idéntico a
+    /// <see cref="ClampToPitch"/>) y, en la turba, sin las filas que invade el público. Los destinos que la utilidad
+    /// elige (huecos, apoyos, conducción, pase en profundidad) no pueden caer en una fila que el balón no puede pisar.
+    /// </summary>
+    private static Vec2 ClampToPlay(UtilityContext ctx, Vec2 point)
+    {
+        var clamped = ClampToPitch(point);
+        return ctx.BandInset == 0
+            ? clamped
+            : new Vec2(clamped.X, Math.Clamp(clamped.Y, ctx.BandInset, Pitch.Rows - ctx.BandInset));
+    }
+
     public static Vec2 ClampToPitch(Vec2 point) =>
         new(Math.Clamp(point.X, 0f, Pitch.Columns), Math.Clamp(point.Y, 0f, Pitch.Rows));
 
@@ -1096,7 +1112,7 @@ internal static class Utility
         Vec2 away = presser is null
             ? new Vec2(0f, 0f)
             : (p.Position - presser.Position).Normalized;
-        eval.Target = ClampToPitch(p.Position + (away * ShieldStepCells));
+        eval.Target = ClampToPlay(ctx, p.Position + (away * ShieldStepCells));
 
         eval.Context = context.ShieldBase
             + (context.ShieldPressureBonusPerCenti * pressure)
@@ -1315,7 +1331,7 @@ internal static class Utility
         // acerca. Si estamos superpuestos se toma la dirección de ataque, que al menos es una salida.
         var offset = p.Position - carrier.Position;
         var away = offset.Length > 0.01f ? offset.Normalized : new Vec2(direction, 0f);
-        var target = ClampToPitch(carrier.Position + (away * OutletCells));
+        var target = ClampToPlay(ctx, carrier.Position + (away * OutletCells));
         eval.Target = target;
 
         int score = context.SupportBase + (context.SupportPressedBonusPerCenti * pressure);
@@ -1371,7 +1387,7 @@ internal static class Utility
         {
             for (int s = 0; s < SpaceDistances.Length; s++)
             {
-                Vec2 candidate = ClampToPitch(p.Position + (SpaceDirections[d] * SpaceDistances[s]));
+                Vec2 candidate = ClampToPlay(ctx, p.Position + (SpaceDirections[d] * SpaceDistances[s]));
 
                 // AW-Q (docs/pendientes.md), recorte posicional: la casilla candidata no puede quedar más
                 // allá de la línea defensiva rival más un margen. Sin esto el desmarque premiaba acampar a
@@ -1908,7 +1924,7 @@ internal static class Utility
 
     private static void EvaluateDribble(UtilityContext ctx, MatchPlayer p, AiContext context, int direction, ref Eval eval)
     {
-        eval.Target = ClampToPitch(new Vec2(p.Position.X + direction, MoveToward(p.Position.Y, PitchConstants.CenterRow, 1f)));
+        eval.Target = ClampToPlay(ctx, new Vec2(p.Position.X + direction, MoveToward(p.Position.Y, PitchConstants.CenterRow, 1f)));
 
         int ahead = OpponentsAheadCount(ctx.Players, p, direction);
 
@@ -2016,7 +2032,7 @@ internal static class Utility
             var unit = run * (1f / runLength);
             for (int cells = context.ThroughPassMinCells; cells <= context.ThroughPassMaxCells; cells++)
             {
-                Vec2 cell = ClampToPitch(mate.Position + (unit * cells));
+                Vec2 cell = ClampToPlay(ctx, mate.Position + (unit * cells));
                 bool inFreeZone = MathF.Abs(rivalGoalColumn - cell.X) <= context.ThroughPassFreeZoneCells;
                 if (!inFreeZone && (cell.X - marginedLine) * direction > 0f)
                 {

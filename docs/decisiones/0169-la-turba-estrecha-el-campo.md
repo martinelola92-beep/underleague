@@ -37,8 +37,8 @@ se reutilizan: `_closedArea` + `PushOutOfArea` (ADR 0152: quien tiene su destino
    banda (esquina de la banda, no de la cuadrícula). El punto de saque de cualquier reanudación se acota a la banda.
 5. **Cómo se aplica el +15 %** (RT-023, todo entero): `mob.speedPercent` = 15 (provisional). Se multiplica, en
    milésimas de casilla por tick y con división entera, **la velocidad de carrera del jugador** (`SpeedPerTick`:
-   `milli × (100 + 15) / 100`, tras el resto de bonos, sobre el atributo ya cansado) **y las tres velocidades del
-   balón** (pase, tiro, cabeceo/caída de cabeza), que además alimentan las predicciones de la utilidad
+   `milli × (100 + 15) / 100`, tras el resto de bonos, sobre el atributo ya cansado) **y las cuatro velocidades de
+   golpe del balón** (pase, tiro, cabeceo y rechace del portero; la caída vertical del cabeceo no), que además alimentan las predicciones de la utilidad
    (`UtilityContext.PassSpeedCellsPerTickMilli`) para que quien anticipa un pase use la misma velocidad que el
    balón. **No** se tocan: los ticks de las recuperaciones y de los estados (cooldowns), la fricción, la gravedad y
    el reloj lógico (15/s, RT-020) — «velocidad global» es la de movimiento, no la del reloj. La vara del cansancio

@@ -2065,6 +2065,7 @@ internal sealed class MatchEngine : IPerkWorld
         _speedBonusPercent = _tuning.Mob.SpeedPercent;
         _bodies.BandInset = _bandInset;
         _context.PassSpeedCellsPerTickMilli = BallSpeedMilli(_tuning.Ball.PassSpeedCellsPerTickMilli);
+        _context.BandInset = _bandInset;
     }
 
     private float SpeedPerTick(MatchPlayer player, bool dribbling)
@@ -3062,6 +3063,7 @@ internal sealed class MatchEngine : IPerkWorld
             : receiver is not null
                 ? Utility.PassTarget(receiver.Position, receiver.TargetPoint, receiver.SpeedPerTickMilli, ticks, pass.MaxLeadCells)
                 : receiverPoint;
+        target = InBand(target);
         if (through)
         {
             ticks = Utility.FlightTicks(Vec2.Distance(passer.Position, target), BallSpeedMilli(_tuning.Ball.PassSpeedCellsPerTickMilli));
@@ -3160,9 +3162,9 @@ internal sealed class MatchEngine : IPerkWorld
         // LaunchPass: el número de tiradas que gasta una acción no puede depender de sus datos.
         int spread = _rng.Range(-clear.SpreadRows, clear.SpreadRows + 1);
 
-        var target = Utility.ClampToPitch(new Vec2(
+        var target = InBand(Utility.ClampToPitch(new Vec2(
             player.Position.X + (distance * direction),
-            player.Position.Y + spread));
+            player.Position.Y + spread)));
 
         int ticks = Utility.FlightTicks(
             Vec2.Distance(player.Position, target), BallSpeedMilli(_tuning.Ball.PassSpeedCellsPerTickMilli));
