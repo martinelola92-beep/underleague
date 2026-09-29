@@ -25,6 +25,14 @@ public enum MomentKind
     RefereeLeaves,
     Death,
     FullTime,
+
+    /// <summary>
+    /// ADR 0171, la tirada del destino: una lesión grave o una muerte se juega a los dados sobre un jugador
+    /// propio. Momento propio (nunca se funde con la lesión o la muerte que le sigue), N3 y sin pausa: la
+    /// retransmisión ralentiza el campo y pregona el porcentaje real. Al FINAL del enum por si algo lo
+    /// persiste por número.
+    /// </summary>
+    Fate,
 }
 
 /// <summary>
@@ -114,6 +122,13 @@ public static class MatchMomentView
     /// </summary>
     public const int KickoffTicks = 15;
 
+    /// <summary>
+    /// ADR 0171: cuántos fotogramas ANTES del tick de la tirada arranca su momento (<see cref="MatchMoment.Frame"/>),
+    /// para que la cámara lenta preceda al resultado. 8 fotogramas son ~0,5 s de partido (RT-020); a la escala de
+    /// tiempo que use <c>/Game</c> (0,5) son ~1 s reales. Provisional, sin medir: es ritmo, no balance.
+    /// </summary>
+    public const int FateLeadFrames = 8;
+
     private const string CancelledSuffix = ":cancelled";
 
     /// <summary>Cadenas fijas de fusión: si el momento ya contiene <c>From</c> (sin anular), <c>To</c> se fusiona sin compartir persona.</summary>
@@ -187,8 +202,11 @@ public static class MatchMomentView
                 // Un gol encabezado por una N3 posterior en la misma fusión (por ejemplo el árbitro que
                 // se va tras el gol) no deja de ser un gol: HasGoal mira el momento entero, no solo quién
                 // lo encabeza.
-                bool shown = moment.HasGoal || moment.Level == 4 || moment.Decision;
-                bool pauses = shown && (moment.HasGoal || moment.Level == 4 || moment.Decision);
+                bool pauses = moment.HasGoal || moment.Level == 4 || moment.Decision;
+
+                // ADR 0171: la tirada del destino se enseña también a x4, comprimida y sin frenar nada: el
+                // porcentaje es información, y a esta velocidad la presentación se degrada, no se quita.
+                bool shown = pauses || moment.Kind == MomentKind.Fate;
                 return new MomentPresentation(shown, shown, pauses);
             }
 
@@ -225,7 +243,7 @@ public static class MatchMomentView
 
             var (kind, level, pauses, cancelled) = classification.Value;
             var last = builders.Count > 0 ? builders[^1] : null;
-            bool fuses = kind != MomentKind.Kickoff && last is not null && CanFuse(last, matchEvent, kind, playerTeam);
+            bool fuses = kind != MomentKind.Kickoff && kind != MomentKind.Fate && last is not null && CanFuse(last, matchEvent, kind, playerTeam);
 
             MomentBuilder target;
             if (fuses)
@@ -291,7 +309,7 @@ public static class MatchMomentView
             for (int m = 0; m < moments.Count; m++)
             {
                 var moment = moments[m];
-                if (moment.Kind == MomentKind.Kickoff
+                if (moment.Kind is MomentKind.Kickoff or MomentKind.Fate
                     || flash.Frame < moment.Frame - FusionWindowTicks
                     || flash.Frame > moment.LastFrame + FusionWindowTicks)
                 {
@@ -348,6 +366,9 @@ public static class MatchMomentView
         EventType.RefereeLeaves => (MomentKind.RefereeLeaves, 3, false),
         EventType.Death => (MomentKind.Death, 4, true),
         EventType.MatchEnd => (MomentKind.FullTime, 4, true),
+
+        // ADR 0171: sólo la tirada de uno de los nuestros. La del rival (y la del némesis) no es un momento.
+        EventType.FateRoll when team == playerTeam => (MomentKind.Fate, 3, false),
         _ => null,
     };
 
@@ -374,7 +395,7 @@ public static class MatchMomentView
     /// </summary>
     private static bool CanFuse(MomentBuilder moment, MatchEvent matchEvent, MomentKind kind, int playerTeam)
     {
-        if (moment.Kind == MomentKind.Kickoff)
+        if (moment.Kind is MomentKind.Kickoff or MomentKind.Fate)
         {
             return false;
         }
@@ -582,6 +603,12 @@ public static class MatchMomentView
         public MatchMoment ToMoment(Func<int, int> frameOfTick)
         {
             int frame = frameOfTick(FirstTick);
+            if (Kind == MomentKind.Fate)
+            {
+                // ADR 0171: arranca antes de la tirada; LastFrame conserva el fotograma de la tirada.
+                frame = Math.Max(frame - FateLeadFrames, 0);
+            }
+
             int freezeFrame = Math.Max(frame - 1, 0);
             int lastFrame = frameOfTick(LastTick);
             return new MatchMoment(

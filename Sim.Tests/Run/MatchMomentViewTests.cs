@@ -376,6 +376,53 @@ public sealed class MatchMomentViewTests
             $"la fusión no reduce lo bastante: {average:F2} momentos frente a {averageClassifiable:F2} eventos clasificables");
     }
 
+    // ---- ADR 0171: la tirada del destino ----
+
+    [Fact]
+    public void AFateRollOnAnOwnPlayerIsItsOwnMomentStartingBeforeTheRollAndNeverFusesWithTheInjury()
+    {
+        var moments = MatchMomentView.Group(
+            new[]
+            {
+                Ev(EventType.FateRoll, tick: 100, team: 0, actor: 3, opponent: 104, detail: "severe:1200:hit"),
+                Ev(EventType.Injury, tick: 100, team: 0, actor: 3, opponent: 104, detail: "severe"),
+            },
+            Identity, playerTeam: 0, pending: null);
+
+        Assert.Equal(2, moments.Count);
+        var fate = moments[0];
+        Assert.Equal(MomentKind.Fate, fate.Kind);
+        Assert.Equal(3, fate.Level);
+        Assert.False(fate.Pauses);
+        Assert.Equal(100 - MatchMomentView.FateLeadFrames, fate.Frame);
+        Assert.Equal(100, fate.LastFrame);
+        Assert.Equal(MomentKind.SevereInjury, moments[1].Kind);
+    }
+
+    [Fact]
+    public void AFateRollOnARivalIsNotAMomentAndASavedOneStandsAlone()
+    {
+        var rival = MatchMomentView.Group(
+            new[] { Ev(EventType.FateRoll, tick: 100, team: 1, actor: 103, opponent: 4, detail: "severe:1200:saved") },
+            Identity, playerTeam: 0, pending: null);
+        Assert.Empty(rival);
+
+        var saved = MatchMomentView.Group(
+            new[] { Ev(EventType.FateRoll, tick: 100, team: 0, actor: 3, opponent: 104, detail: "death:2500:saved") },
+            Identity, playerTeam: 0, pending: null);
+        Assert.Single(saved);
+        Assert.Equal(MomentKind.Fate, saved[0].Kind);
+    }
+
+    [Fact]
+    public void TheFateMomentIsShownAtX1AndCompressedAtX4WithoutPausingAndNeverAtX16()
+    {
+        var fate = HandmadeMoment(MomentKind.Fate, level: 3, pauses: false, decision: false);
+        AssertPresentation(fate, speed: 1, shown: true, compressed: false, pauses: false);
+        AssertPresentation(fate, speed: 4, shown: true, compressed: true, pauses: false);
+        AssertPresentation(fate, speed: 16, shown: false, compressed: false, pauses: false);
+    }
+
     // ---- Casos de borde de la fusión (regla 2), sobre eventos construidos a mano ----
 
     [Fact]
