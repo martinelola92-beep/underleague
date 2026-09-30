@@ -246,7 +246,7 @@ public sealed record AiContext(
     // idea sigue sin serlo. El encargo lo pide así de forma explícita.
     int GrudgeBonus = 0,
 
-    // BB-K (ADR 0175) — DOS COMPAÑEROS NO CUBREN EL MISMO PUNTO. CoverSpace era la única acción de
+    // BB-K (ADR 0176) — DOS COMPAÑEROS NO CUBREN EL MISMO PUNTO. CoverSpace era la única acción de
     // colocación que no miraba a los compañeros (OfferSupport y FindSpace tienen su penalización de
     // apiñamiento), así que dos jugadores con zonas solapadas calculaban literalmente el mismo punto y se
     // quedaban uno encima del otro, empujándose. Es la separación mínima, en casillas, entre el punto que
@@ -332,6 +332,14 @@ public sealed class AiWeights
     /// </summary>
     internal AiWeights WithContext(AiContext context) =>
         new(_base, _tactical, _mentality, _offBallTackle, context, _shift, _mentalityShift, _mentalityOdds);
+
+    /// <summary>
+    /// Los mismos pesos con otra tabla de entrada sin balón por puesto (ADR 0125 D2). Hermano de
+    /// <see cref="WithContext"/>: existe para que una prueba pueda abrir <b>un</b> puesto sobre los pesos
+    /// reales y medir qué pasa, en vez de reconstruir las tablas enteras.
+    /// </summary>
+    internal AiWeights WithOffBallTackle(int[] offBallTackle) =>
+        new(_base, _tactical, _mentality, offBallTackle, Context, _shift, _mentalityShift, _mentalityOdds, _press);
 
     /// <summary>Peso base de la acción a para la posición p.</summary>
     public int Base(Position p, PlayerAction a) => _base[(int)p, (int)a];
@@ -605,11 +613,11 @@ public sealed record SaveTuning(
     int ParrySpeedCellsPerTickMilli = 0,
     int ParryLiftCellsPerTickMilli = 0,
 
-    // BA-J (ADR 0177) — LA PARADA SE ASIENTA. Ticks que el portero sostiene el balón tras atraparlo, antes de
+    // BA-J (ADR 0178) — LA PARADA SE ASIENTA. Ticks que el portero sostiene el balón tras atraparlo, antes de
     // volver a decidir. Con 0 suelta a los 5 ticks del armado del pase, como hasta ahora.
     int HoldTicks = 0,
 
-    // BA-J (ADR 0177): ticks que el equipo que acaba de tirar, y cuyo tiro se ha parado, juega con la orden
+    // BA-J (ADR 0178): ticks que el equipo que acaba de tirar, y cuyo tiro se ha parado, juega con la orden
     // defensiva —repliegue de líneas— desde que el portero atrapa. 0 = no se repliega.
     int RetreatTicks = 0);
 

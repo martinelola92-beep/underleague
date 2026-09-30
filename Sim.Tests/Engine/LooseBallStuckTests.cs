@@ -6,7 +6,7 @@ using Xunit.Abstractions;
 namespace Underleague.Sim.Tests.Engine;
 
 /// <summary>
-/// BC-G (docs/pendientes/BC-G.md, ADR 0176): el balón se queda suelto en el córner y nadie lo coge.
+/// BC-G (docs/pendientes/BC-G.md, ADR 0177): el balón se queda suelto en el córner y nadie lo coge.
 ///
 /// <para><b>La causa, CONFIRMED con el volcado de utilidad (RT-098).</b> AW-S deja a un solo jugador por equipo
 /// con derecho a perseguir un balón suelto —el más cercano—, y la utilidad lo hacía <i>competir</i> contra las
@@ -71,13 +71,13 @@ public sealed class LooseBallStuckTests
     private static IEnumerable<ulong> Range(int count) => Enumerable.Range(1, count).Select(i => (ulong)i);
 
     /// <summary>
-    /// Las cuatro semillas del bloqueo largo medido antes del arreglo (656, 448, 440 y 430 ticks con el
-    /// balón quieto en el córner). Ninguna puede volver a tener más de 60 ticks: es la causa reproducida.
+    /// Las semillas del bloqueo largo medido antes del arreglo (656, 448, 440 y 430 ticks con el balón quieto
+    /// en el córner; la 141, 285 ticks con el portero designado sin alcance, BB-G2). Ninguna puede volver a tener más de 60 ticks: es la causa reproducida.
     /// </summary>
     [Fact]
     public void TheSeedsThatFrozeTheBallForHalfAMinuteNoLongerDo()
     {
-        var episodes = Measure(Catalog, new ulong[] { 224, 79, 66, 260 });
+        var episodes = Measure(Catalog, new ulong[] { 224, 79, 66, 260, 141 });
         foreach (var e in episodes)
         {
             _output.WriteLine($"seed {e.Seed} tick {e.StartTick} len {e.Length} ball {e.Ball}");
@@ -89,7 +89,7 @@ public sealed class LooseBallStuckTests
 
     /// <summary>
     /// En bloque: 150 partidos. Medido antes del arreglo (300 partidos: 58 episodios, 13 de más de 40 ticks);
-    /// después, 5 episodios y el más largo de 16 ticks. Los topes dejan holgura de muestra y siguen siendo
+    /// después (con la designación que sólo cuenta a quien puede llegar), 4-11 episodios en 150 partidos según el árbol (sobre `main` rebasado y separación 0,8: 11) y el más largo de ≤ 40 ticks. Los topes dejan holgura de muestra y siguen siendo
     /// una fracción de lo de antes.
     /// </summary>
     [Fact]
@@ -100,8 +100,8 @@ public sealed class LooseBallStuckTests
         int longest = episodes.Count == 0 ? 0 : episodes.Max(e => e.Length);
         _output.WriteLine($"partidos {matches} · episodios ≥{MinTicks} ticks {episodes.Count} · más largo {longest}");
 
-        Assert.True(episodes.Count <= 12, $"{episodes.Count} episodios de balón quieto ≥ {MinTicks} ticks en {matches} partidos (antes ≈ 29)");
-        Assert.True(longest <= 60, $"el más largo duró {longest} ticks (antes 656)");
+        Assert.True(episodes.Count <= 16, $"{episodes.Count} episodios de balón quieto ≥ {MinTicks} ticks en {matches} partidos (antes ≈ 29; con el deber ≈ 16, todos cortos)");
+        Assert.True(longest <= 40, $"el más largo duró {longest} ticks (antes 656)");
     }
 
     // ------------------------------------------------------------------ el deber, con los pesos reales
@@ -215,6 +215,18 @@ public sealed class LooseBallStuckTests
         context.Ball.InFlight = true;
         context.Ball.FlightTarget = new Vec2(0.5f, 7f);
         context.HoldingTeam = 1;
+
+        var rows = new List<UtilityRow>();
+        Utility.Choose(context, nearest, rows);
+        Assert.False(Row(rows, PlayerAction.CoverSpace).Rejected);
+    }
+
+    /// <summary>Un balón suelto que todavía rueda no obliga a nadie: el deber es del balón quieto (ADR 0177).</summary>
+    [Fact]
+    public void ThereIsNoDutyForARollingLooseBall()
+    {
+        var (nearest, _, context) = CornerScenario();
+        context.Ball.Velocity = new Vec2(0.15f, 0f);
 
         var rows = new List<UtilityRow>();
         Utility.Choose(context, nearest, rows);

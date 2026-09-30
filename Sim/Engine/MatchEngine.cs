@@ -67,7 +67,7 @@ internal sealed class MatchEngine : IPerkWorld
     private readonly Mentality[] _baseOrder = new Mentality[2];
     private readonly int[] _shoutOrderEnd = { -1, -1 };
 
-    // BA-J (ADR 0177): hasta qué tick (exclusivo) el equipo está en REPLIEGUE tras una parada, o -1. Es una
+    // BA-J (ADR 0178): hasta qué tick (exclusivo) el equipo está en REPLIEGUE tras una parada, o -1. Es una
     // ventana propia y NO toca la orden efectiva (`_context.Order`): la orden es del jugador y de sus gritos
     // (ADR 0166), y la vista de gritos la reconstruye de los eventos; un repliegue que la cambiara sería una
     // transición invisible que además la desmentiría.
@@ -993,7 +993,7 @@ internal sealed class MatchEngine : IPerkWorld
             // cambia la altura a la que el entrenador ha puesto las líneas.
             rawX += _catalog.Ai.MentalityShift(_context.Order[player.Team], player.Role) * direction;
 
-            // BA-J (ADR 0177): el repliegue tras una parada, encima de la orden y sin cambiarla.
+            // BA-J (ADR 0178): el repliegue tras una parada, encima de la orden y sin cambiarla.
             rawX += FallBackShift(player.Team, player.Role) * direction;
 
             // AW-Q (docs/pendientes.md): techo del propio bloque. Hasta aquí el bloque subía las 4,0
@@ -1052,6 +1052,18 @@ internal sealed class MatchEngine : IPerkWorld
             // nadie decida este tick, nunca dentro de Utility.cs (RT-034). Corte barato si el jugador no
             // lleva ningún efecto modifyUtility (el caso normal).
             player.RecomputeZoneUtilityBonus();
+
+            // BC-G (ADR 0177): el designado de un balón suelto es el más cercano DE LOS QUE PUEDEN LLEGAR a él. El
+            // portero sin alcance o el de campo con el balón más allá de su límite exterior de zona no podían
+            // perseguirlo y, siendo el designado, dejaban a todo su equipo sin derecho a hacerlo (BB-G2: semilla 141,
+            // balón quieto 285 ticks en el borde del área con el portero a 2 casillas).
+            if (_ball.Owner is null && !_ball.InFlight
+                && !(player.IsOutfield
+                    ? player.OuterZone.DistanceOutside(point, player.EffectiveHome, Pitch.AttackDirection(player.Team)) <= 0f
+                    : Utility.CanKeeperReachLoose(_context, player, point)))
+            {
+                continue;
+            }
 
             float distance = Vec2.Distance(player.Position, point);
             if (_context.NearestToBall[player.Team] is null || distance < best[player.Team])
@@ -3708,7 +3720,7 @@ internal sealed class MatchEngine : IPerkWorld
         {
             SetOwner(goalkeeper);
 
-            // BA-J (ADR 0177): LA PARADA SE ASIENTA. SetOwner deja decidir al portero en el acto y suelta el
+            // BA-J (ADR 0178): LA PARADA SE ASIENTA. SetOwner deja decidir al portero en el acto y suelta el
             // balón a los 5 ticks del armado del pase, con los que acaban de tirar todavía en el área
             // (medido: 1,9 de los seis a menos de 4 casillas del portero, y el balón vuelve a manos rivales
             // en 45 ticks el 77 % de las veces). Sostenerlo unos ticks es lo que pedía la nota del revisor
@@ -5295,7 +5307,7 @@ internal sealed class MatchEngine : IPerkWorld
     }
 
     /// <summary>
-    /// BA-J (ADR 0177): el equipo <paramref name="team"/> —el que acaba de tirar y ha visto pararlo— se repliega
+    /// BA-J (ADR 0178): el equipo <paramref name="team"/> —el que acaba de tirar y ha visto pararlo— se repliega
     /// durante <paramref name="ticks"/> ticks: sus líneas bajan a donde las pondría la orden defensiva
     /// (<c>mentalityShift.Defensive</c>, ADR 0154: el delantero tres casillas, los medios dos, los defensas
     /// una), <b>sea cual sea su orden</b>. Es el <i>repliegue tras pérdida</i> que la transición defensiva
@@ -5314,7 +5326,7 @@ internal sealed class MatchEngine : IPerkWorld
             ? _catalog.Ai.MentalityShift(Mentality.Defensive, role) - _catalog.Ai.MentalityShift(_context.Order[team], role)
             : 0f;
 
-    /// <summary>Enganche de prueba: abre la ventana de repliegue sin necesitar una parada (BA-J, ADR 0177).</summary>
+    /// <summary>Enganche de prueba: abre la ventana de repliegue sin necesitar una parada (BA-J, ADR 0178).</summary>
     internal void StartFallBackForTest(int team, int ticks) => StartFallBack(team, ticks);
 
     /// <summary>Enganche de prueba: la casilla-hogar efectiva de un jugador.</summary>

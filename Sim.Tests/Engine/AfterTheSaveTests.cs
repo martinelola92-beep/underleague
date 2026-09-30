@@ -9,7 +9,7 @@ using Xunit.Abstractions;
 namespace Underleague.Sim.Tests.Engine;
 
 /// <summary>
-/// BA-J (docs/pendientes/BA-J.md, ADR 0177): tras una parada, el equipo que tiró se repliega y el portero
+/// BA-J (docs/pendientes/BA-J.md, ADR 0178): tras una parada, el equipo que tiró se repliega y el portero
 /// espera unos ticks antes de sacar.
 ///
 /// <para><b>Lo que había, medido (300 partidos de referencia, 664 paradas retenidas).</b> El portero soltaba el

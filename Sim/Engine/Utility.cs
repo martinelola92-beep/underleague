@@ -386,7 +386,7 @@ internal static class Utility
         bool bestTackleOffBall = false;
         MatchPlayer? bestBlockTarget = null;
 
-        // BC-G (ADR 0176): el perseguidor designado de un balón suelto VA a por él. Se evalúa ChaseBall una
+        // BC-G (ADR 0177): el perseguidor designado de un balón suelto VA a por él. Se evalúa ChaseBall una
         // vez, aquí, y se reutiliza abajo: la decisión de si el deber está vivo depende de que ChaseBall sea
         // viable, y evaluarla dos veces sería duplicar una verdad.
         bool chaseDuty = false;
@@ -483,8 +483,8 @@ internal static class Utility
 
 
     /// <summary>
-    /// BC-G (ADR 0176, docs/pendientes/BC-G.md): ¿tiene este jugador <b>el deber</b> de ir a por el balón?
-    /// Sí si el balón está <b>suelto</b> —sin dueño, sin vuelo y sin reanudación pendiente— y él es el
+    /// BC-G (ADR 0177, docs/pendientes/BC-G.md): ¿tiene este jugador <b>el deber</b> de ir a por el balón?
+    /// Sí si el balón está <b>suelto y quieto</b> —sin dueño, sin vuelo, sin reanudación pendiente y casi sin velocidad— y él es el
     /// perseguidor designado de su equipo (AW-S), o sea el más cercano.
     ///
     /// <para><b>Por qué existe.</b> AW-S dejó a un solo jugador por equipo con derecho a perseguir, y la
@@ -497,10 +497,24 @@ internal static class Utility
     /// ADR 0117 (250 → 410) y quitó dos tercios de los casos, no éste: no había un número que lo cerrara sin
     /// mover la palanca compartida con la diferenciación de builds.</para>
     /// </summary>
+    /// <summary>
+    /// Velocidad (casillas por tick) por debajo de la cual un balón suelto cuenta como <b>quieto</b> para el
+    /// deber de perseguirlo. Mismo umbral con el que la sonda de BC-G define «quieto». Medido (300 partidos,
+    /// ADR 0177): con el deber para cualquier balón suelto los bloqueos desaparecen (59 episodios → 3) pero
+    /// los tiros de centrocampista pasan de 1,25 a 1,96 por partido y los del delantero bajan; con este
+    /// umbral no hay ningún episodio de más de 40 ticks y el reparto de tiros no se mueve (1,37 y 6,37).
+    /// </summary>
+    private const float StillBallSpeed = 0.02f;
+
     private static bool HasLooseBallDuty(UtilityContext ctx, MatchPlayer p, IReadOnlyList<PlayerAction> legal)
     {
         var ball = ctx.Ball;
         if (ball.Owner is not null || ball.InFlight || ctx.BallDead || !ReferenceEquals(ctx.NearestToBall[p.Team], p))
+        {
+            return false;
+        }
+
+        if (ball.Velocity.Length > StillBallSpeed)
         {
             return false;
         }
@@ -518,7 +532,7 @@ internal static class Utility
 
     /// <summary>
     /// Las acciones de colocación que <b>ceden</b> ante el deber de ir a por un balón suelto (BC-G,
-    /// ADR 0176): las que dicen «quédate donde la formación te quiere». La entrada y la carga no están: no
+    /// ADR 0177): las que dicen «quédate donde la formación te quiere». La entrada y la carga no están: no
     /// disputan un balón sin dueño, y si por alguna razón puntúan es porque tienen su propia precondición.
     /// </summary>
     private static bool YieldsToLooseBall(PlayerAction action) =>
@@ -1197,7 +1211,7 @@ internal static class Utility
     /// límite de movimiento. Los dos sitios leen la misma cifra a propósito: si la decisión y el clamp
     /// pudieran discrepar, el portero querría ir a sitios a los que no puede llegar.
     /// </summary>
-    private static bool CanKeeperReachLoose(UtilityContext ctx, MatchPlayer p, Vec2 point)
+    internal static bool CanKeeperReachLoose(UtilityContext ctx, MatchPlayer p, Vec2 point)
     {
         if (Pitch.IsInArea(point, p.Team))
         {
@@ -1475,7 +1489,7 @@ internal static class Utility
             target = p.Zone.SegmentEntry(from, ownGoal, p.EffectiveHome, direction)
                 ?? p.Zone.Clamp(from, p.EffectiveHome, direction);
 
-            // BB-K (ADR 0175): dos compañeros no cubren el mismo punto.
+            // BB-K (ADR 0176): dos compañeros no cubren el mismo punto.
             Vec2 toGoal = ownGoal - from;
             Vec2 line = toGoal.Length > 0.01f ? toGoal.Normalized : new Vec2(-direction, 0f);
             target = SpaceFromCoveringMates(ctx, p, target, line, context.CoverSpacingCells);
@@ -1494,7 +1508,7 @@ internal static class Utility
     }
 
     /// <summary>
-    /// BB-K (ADR 0175, docs/pendientes/BB-K.md): <b>dos compañeros no cubren el mismo punto</b>. El punto de
+    /// BB-K (ADR 0176, docs/pendientes/BB-K.md): <b>dos compañeros no cubren el mismo punto</b>. El punto de
     /// cobertura es el que la recta balón → portería propia cruza en la zona del jugador, y no mira a nadie:
     /// dos defensas con zonas solapadas obtenían de esa fórmula el mismo punto (medido: 0,03-0,08 casillas
     /// de diferencia entre destinos) y convergían hasta quedar encima el uno del otro, empujándose cada dos

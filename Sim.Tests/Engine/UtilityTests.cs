@@ -30,7 +30,7 @@ public sealed class UtilityTests
         var context = Context(weights, player, opponent);
 
         // El balón lo lleva el rival: con un balón suelto el designado (aquí, el único jugador del equipo)
-        // tiene el deber de ir a por él (BC-G, ADR 0176) y este test no compararía las dos colocaciones.
+        // tiene el deber de ir a por él (BC-G, ADR 0177) y este test no compararía las dos colocaciones.
         context.Ball.Owner = opponent;
         context.Ball.Position = opponent.Position;
         context.HoldingTeam = 1;

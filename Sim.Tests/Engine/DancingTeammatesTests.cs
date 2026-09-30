@@ -5,7 +5,7 @@ using Xunit.Abstractions;
 namespace Underleague.Sim.Tests.Engine;
 
 /// <summary>
-/// BB-K (docs/pendientes/BB-K.md, ADR 0175): dos compañeros que quieren la misma casilla «bailan y
+/// BB-K (docs/pendientes/BB-K.md, ADR 0176): dos compañeros que quieren la misma casilla «bailan y
 /// parpadean». <c>CoverSpace</c> era la única acción de colocación que no miraba a los compañeros, así que
 /// dos jugadores con zonas solapadas calculaban el mismo punto y se quedaban uno encima del otro,
 /// empujándose por la separación de cuerpos.
