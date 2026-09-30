@@ -175,6 +175,21 @@ public sealed class ConsumableSlotsTests
         Assert.Contains(entry.Summary.Report.ConsumableActivations, a => a.ConsumableId == "field_bandage" && a.Team == 0);
     }
 
+    [Fact]
+    public void AManualPressOutsideTheMatchIsNotSpentAndTheConsumableStays()
+    {
+        // Una pulsación cuyo tick queda fuera del partido no dispara nada: el consumible no consta como usado
+        // ni sale de su hueco (RF-085).
+        var state = RunEngine.Start(SystemsTestSupport.Setup(), 17201UL, Catalog, Systems).WithTakenConsumable("field_bandage");
+        var (walked, node) = TestRuns.WalkToMatch(state, Catalog, Systems);
+        var decisions = MatchDecisions.None with { ManualActivations = new[] { new ManualActivation("field_bandage", 1_000_000) } };
+
+        var entry = RunEngine.EnterMatch(walked, node.Id, Catalog, Systems, decisions);
+
+        Assert.Empty(entry.Summary.Report.ConsumableActivations);
+        Assert.Equal(new EquippedConsumable("field_bandage", ConsumableMode.Manual, string.Empty), Assert.Single(entry.State.Consumables));
+    }
+
     // ------------------------------------------------------------------ guardados
 
     [Fact]

@@ -193,6 +193,7 @@ public sealed class PresentationDirector
         _awaitingDecision = false;
         _held = null;
         _holdLeft = 0d;
+        _holdToFrame = 0;
 
         // ADR 0171: una tirada del destino que ya ha empezado (su Frame es 8 fotogramas anterior al de la tirada)
         // sigue viva si la búsqueda cae dentro de ella —típicamente, la decisión de sustitución de una lesión
@@ -219,6 +220,7 @@ public sealed class PresentationDirector
         _frozen = false;
         _held = null;
         _holdLeft = 0d;
+        _holdToFrame = 0;
     }
 
     /// <summary>
@@ -390,7 +392,10 @@ public sealed class PresentationDirector
     private bool StartHold(MatchMoment moment, int speed, bool ownVoice = false)
     {
         bool stageBusy = _voice is not null && !ownVoice;
-        if (_stopsPlay is null || speed != 1 || _timings.Hold <= 0d || stageBusy || !_stopsPlay(moment))
+        // Dos pausas encadenadas no hacen retroceder la imagen: si el fotograma de congelado de esta queda atrás
+        // del fotograma al que la anterior acaba de saltar (_holdToFrame), no hay pausa.
+        if (_stopsPlay is null || speed != 1 || _timings.Hold <= 0d || stageBusy || moment.FreezeFrame < _holdToFrame
+            || !_stopsPlay(moment))
         {
             return false;
         }

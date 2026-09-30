@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using Underleague.Sim.Engine;
+using Underleague.Sim.Events;
 using Underleague.Sim.Model;
 using Underleague.Sim.Run;
 using Underleague.Sim.Run.Systems.Consumables;
@@ -188,8 +189,28 @@ public partial class RunController
             }
         }
 
+        var before = Decisions;
         activations.Add(new ManualActivation(id, tick));
         Answer(Decisions with { ManualActivations = activations });
+
+        // Un manual solo cuenta como usado si el partido re-simulado lo disparó de verdad (CONSUMABLE_USED de
+        // nuestro equipo): si el tick queda fuera del partido, o el partido cambió y acabó antes, la pulsación
+        // se retira y el botón vuelve a estar vivo. Lo mismo hace /Sim al gastar (solo sale del hueco el que
+        // se activó, RF-085).
+        bool fired = false;
+        foreach (var e in Playback!.Result.Events)
+        {
+            if (e.Type == EventType.ConsumableUsed && e.Team == 0 && string.Equals(e.Detail, id, StringComparison.Ordinal))
+            {
+                fired = true;
+                break;
+            }
+        }
+
+        if (!fired)
+        {
+            Answer(before);
+        }
     }
 
     /// <summary>

@@ -22,6 +22,8 @@
     <!-- ADR 0171: el director de presentación no toca Godot (sólo Sim.Run.View); se enlaza el fichero, no el
          proyecto, para probar su cola, sus pausas y la cámara lenta sin levantar el motor gráfico. -->
     <Compile Include="..\Game\Match\PresentationDirector.cs" Link="Linked\PresentationDirector.cs" />
+    <!-- ADR 0173: la pregunta «¿este suceso detiene el juego?» del director; tampoco toca Godot. -->
+    <Compile Include="..\Game\Match\PlayStops.cs" Link="Linked\PlayStops.cs" />
   </ItemGroup>
 
   <ItemGroup>

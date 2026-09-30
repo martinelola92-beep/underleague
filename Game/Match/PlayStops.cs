@@ -11,7 +11,7 @@ namespace Underleague.Game.Match;
 /// por ellos.
 ///
 /// <para><b>Se lee de la traza, no se adivina por el tipo de suceso</b>: el juego se ha parado si en los
-/// fotogramas del momento el motor tiene una reanudación pendiente (<see cref="MatchTrace.RestartAt"/>). Es el
+/// fotogramas del momento el motor tiene pendiente el saque de falta o el penalti que ese suceso provoca (<see cref="MatchTrace.RestartAt"/>). Es el
 /// mismo dato con el que <c>MatchPitchView3D</c> decide cómo se reanuda, y el motor lo escribe con sus propias
 /// reglas (ADR 0143, 0147): si mañana una lesión deja de parar el juego, o una falta empieza a hacerlo, esto lo
 /// sigue sin tocar nada aquí.</para>
@@ -46,10 +46,15 @@ public static class PlayStops
         // Los fotogramas del propio momento, sin margen: la falta resuelve la lesión de la entrada y abre el saque
         // en el mismo tick (OpenPendingFreeKick), y con dos fotogramas de margen entraban «faltas» que el árbitro
         // no vio (4 de 298 en trescientos partidos); sin margen, 0 de 298 y las 784 pitadas, todas.
+        //
+        // Y sólo cuenta la reanudación que PROVOCA el suceso: falta, tarjeta y lesión de una entrada terminan en
+        // saque de falta o penalti. Un saque de banda, de puerta, de esquina o de centro que coincida en esos
+        // fotogramas es otra cosa (el balón salió, el juego siguió), y pausar por él sería congelar sin que el
+        // suceso hubiera parado nada.
         int last = Math.Min(moment.LastFrame, trace.FrameCount - 1);
         for (int frame = Math.Max(moment.Frame, 0); frame <= last; frame++)
         {
-            if (trace.RestartAt(frame) != RestartKind.None)
+            if (trace.RestartAt(frame) is RestartKind.FreeKick or RestartKind.Penalty)
             {
                 return true;
             }
