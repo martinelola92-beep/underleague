@@ -3,7 +3,7 @@
 Fecha: 29 sep 2026 · Estado: **aceptada, cifras provisionales** (decisión de diseño tomada sin consultar dentro de
 lo que fija RF-055b; el gate 5 de Knavall lo desbloqueó el revisor el 29 sep: «las lesiones se arrastran», es
 decir, **el desgaste es recurso de run**). **Requisitos:** RF-012d, RF-053, RF-055b, RF-055d, RT-014, RT-020,
-RT-021, RT-023, RT-024. **Relacionada:** ADR 0167 (los tipos de turba, que dejó esto fuera por el gate 5),
+RT-021, RT-023, RT-024. **Ficha de problema:** [BU-A](../pendientes/BU-A.md). **Relacionada:** ADR 0167 (los tipos de turba, que dejó esto fuera por el gate 5),
 ADR 0143 (nadie se teletransporta), ADR 0152 (el área cerrada: el precedente de «se sale andando»), ADR 0048
 (las cinco condiciones de la muerte), Knavall F7 («turba real»).
 
@@ -23,10 +23,11 @@ se reutilizan: `_closedArea` + `PushOutOfArea` (ADR 0152: quien tiene su destino
    en tiempo reglamentario `[0, 7]`; en la turba `[1, 6]` (**`mob.narrowRowsPerSide`**, un dato de
    `data/sim/tuning.json`, provisional: 1, lo que dice RF-055b). Las filas invadidas son **siempre las exteriores**
    (fila 0 y fila 6): fijas, no sorteadas; el jugador las conoce desde la alineación (RF-012d).
-2. **Dónde vive** (revisión de arquitectura, abajo): en el motor, como estado del partido (`_bandInset`, entero de
-   filas por lado, 0 hasta la turba), nunca en la constante ni en la geometría compartida. Todo lo que hoy acota
-   con `[0, Rows]` en una decisión de **movimiento o de balón** pasa por un único punto (`InBand`), que con
-   `_bandInset == 0` devuelve el argumento sin tocarlo.
+2. **Dónde vive** (revisión de arquitectura, abajo): en el motor, como estado del partido (`PlayBand`, `Sim/Engine/PlayBand.cs`: un `record struct`
+   con las filas por lado, 0 hasta la turba), nunca en la constante ni en la geometría compartida. Todo lo que acota
+   con `[0, Rows]` en una decisión de **movimiento o de balón** pasa por ese único punto (`Clamp`, `ClampStep`,
+   `Contains`; `MatchEngine.InBand` y `Utility.ClampToPlay` lo envuelven), que con 0 filas devuelve el argumento
+   sin tocarlo. (Nombre previo en el primer borrador: `_bandInset`.)
 3. **Quien está en una fila invadida cuando empieza la turba se aparta andando** (RF-053, ADR 0143). La turba
    empieza en `RegulationEnd` seguida de un saque de centro que ya recoloca a todos andando (`SendEveryoneHome`):
    el destino de cada uno se acota a la banda y `WalkTo`/`Move` los llevan a su velocidad. Nadie salta. Un jugador
@@ -54,11 +55,14 @@ se reutilizan: `_closedArea` + `PushOutOfArea` (ADR 0152: quien tiene su destino
    - **Provocada** («Provocar a la grada», ADR 0167): sigue **sin** estrechar ni acelerar: la banda y el +15 %
      son de la fase de turba (`_goldenGoal`), no del tipo; provocar aplica el efecto del tipo con el árbitro
      todavía en el campo y con el campo entero.
-7. **El partido reglamentario queda byte a byte igual.** Con `_bandInset == 0` y sin bono de velocidad, ninguna
-   ruta cambia una sola operación ni consume un número más del RNG. Se demuestra con un test que compara el
-   `Digest` de la traza de partidos que no llegan a la turba con el valor de antes del cambio (guardado como
+7. **El partido reglamentario queda byte a byte igual.** Con la banda entera y sin bono de velocidad, ninguna
+   ruta cambia una sola operación ni consume un número más del RNG. Se demuestra con un test que compara la
+   huella de la traza de partidos que no llegan a la turba con el valor de antes del cambio (guardado como
    constante), y con el mismo test con `mob.narrowRowsPerSide = 0` y `speedPercent = 0`, que debe dar la traza
-   **completa** de antes también en los partidos con turba.
+   **completa** de antes también en los partidos con turba. **Límite de la prueba**: la huella (FNV sobre los
+   eventos: tipo, tick, actores, casilla, zona, fase, detalle) cubre **eventos, no posiciones flotantes**; dos
+   recorridos distintos que produzcan los mismos eventos no los distinguiría. Es la misma vara que el test de
+   determinismo (RT-024) usa para todo el motor.
 8. **Render y anuncio.** El render no decide nada (RT-014): lee la cifra de `Catalog.Tuning.Mob` (dato, no
    constante) y, desde `MOB_START`, pinta **público** sobre las filas exteriores (tribuna que invade el césped,
    3D y 2D) y **no** recalcula la banda. El ojeo y el mapa ya anuncian el tipo de turba; se les añade la línea
@@ -76,7 +80,7 @@ se reutilizan: `_closedArea` + `PushOutOfArea` (ADR 0152: quien tiene su destino
    aleatorio (RF-012d)».
 4. **Regla.** RF-055b, casi literal. Regla nueva de contorno: la banda jugable es un estado de la fase, y el +15 %
    es de movimiento, no de reloj.
-5. **Sistemas.** `/Sim` (motor: `_bandInset`, `InBand`, velocidades), `/data` (`mob` en `tuning.json` + esquema),
+5. **Sistemas.** `/Sim` (motor: `PlayBand`, `InBand`, velocidades), `/data` (`mob` en `tuning.json` + esquema),
    `/Game` (vistas 3D y 2D, ojeo, mapa, pregón). La regla vive sólo en `/Sim`; `/Game` lee el dato.
 6. **Alternativas.** (a) Cambiar `Pitch.Rows` por fase: ~90 usos, rompe colocación, cámara y todo el reglamentario.
    (b) Cuadrícula estrechada de verdad (12×… o 16×5): mismo coste y no da «casillas invadidas». (c) Sortear las filas
@@ -112,10 +116,11 @@ se reutilizan: `_closedArea` + `PushOutOfArea` (ADR 0152: quien tiene su destino
   velocidades son enteras y se derivan de datos + fase; nada nuevo consume RNG. `InBand` es una función pura del
   estado del partido. Sin `Dictionary` ni orden nuevo (RT-041).
 - **Aritmética**: `milli * (100 + percent) / 100` en `int` (RT-023); sólo la posición sigue en `float`.
-- **Segundo orden**: (i) `ClampToPitch` es estático y lo llama la utilidad en ~10 sitios para **elegir objetivos**;
-  no se hace dependiente de la fase (los objetivos que caen en fila invadida se acotan **al ejecutarse**, en
-  `Move`, así que un jugador que «quiere» ir a una fila invadida se queda en el borde de la banda: la utilidad ve
-  su posición real, no la deseada). (ii) `CheckOutOfBounds` comprueba primero Y y luego X: se mantiene el orden y
+- **Segundo orden**: (i) `ClampToPitch` es estático y lo llama la utilidad para **elegir objetivos**; se dejó
+  así en el primer borrador (los objetivos se acotaban sólo al ejecutarse, en `Move`), y la medición lo
+  desmintió: el balón iba a destinos de las filas invadidas y salía de banda 7,57 veces por turba. **Hoy la utilidad
+  sí pasa por la banda**: los destinos se acotan con `Utility.ClampToPlay` (y los pases y despejes con `InBand`), y
+  `Move` la acota además al ejecutar. (ii) `CheckOutOfBounds` comprueba primero Y y luego X: se mantiene el orden y
   sólo cambian los límites. (iii) La zona de acción (`ClampToZone`) no cambia. (iv) Un perk/rasgo que dependa de
   «estar en la banda» (`Wide`, `onWing`, `startsIn`) lee la **casilla-hogar**, que no cambia.
 - **Paralelismo**: ninguno.
@@ -123,7 +128,7 @@ se reutilizan: `_closedArea` + `PushOutOfArea` (ADR 0152: quien tiene su destino
 ## Implementación
 
 - `/data`: `mob` en `data/sim/tuning.json` (`narrowRowsPerSide` 1, `speedPercent` 15) y esquema.
-- `/Sim`: `MobTuning` en `Catalog.Tuning.Mob`; `MatchEngine._bandInset` (0 hasta `MOB_START`), `InBand`, velocidades
+- `/Sim`: `MobTuning` en `Catalog.Tuning.Mob`; `PlayBand` (0 filas hasta `MOB_START`), `InBand`, velocidades
   entera de jugador y balón, saque de banda y córner desde el borde; `BodySeparation` acotado a la banda.
 - `/Game`: público sobre las filas invadidas (3D y 2D) desde `MOB_START`; línea del ojeo, del mapa y del pregón.
 - Tests: `Sim.Tests/Engine/MobNarrowingTests.cs`.
@@ -188,8 +193,8 @@ una vez (comportamiento previo de BB-B, no de esta ADR); en la turba hay más sa
 partidos; **verde al 100 %**, ruido de muestra) y `RaceBalanceTests` (undead 61,09). Al 100 %: **`RaceBalanceTests` sigue roja**,
 `elf_none` = 39,55 % (banda 40-60; dwarf 57,45, human 44,77, orc 48,95, undead 59,27). Aislada por interruptores
 (Regla F, CONFIRMED): con `mob` a 0/0 pasa; con sólo la velocidad (0/15) pasa; **con sólo el estrechamiento (1/0) falla**.
-Lectura: el campo estrecho quita espacio a la raza más técnica y es 0,45 puntos bajo el suelo. **Decisión abierta para el
-revisor** (no se toca la banda en silencio, RT-057): aceptar el borde, o bajar el estrechamiento, o retocar la raza elfa.
+Lectura: el campo estrecho quita espacio a la raza más técnica y es 0,45 puntos bajo el suelo. **Decisión abierta** en esta
+medición, **enmendada** después: ver «Enmiendas tras la revisión independiente» (la enmienda del suelo a 38 quedó **retirada** tras el rebase: ver «Puertas tras rebasar sobre main»).
 
 ## Enmiendas tras la revisión independiente (30 sep 2026)
 
@@ -202,18 +207,16 @@ revisor** (no se toca la banda en silencio, RT-057): aceptar el borde, o bajar e
   portero y no se pide.
 - **El saque no sale con alguien en una fila invadida.** `EveryoneInPlace` cuenta también la fila en la turba (un lento
   que venía de lejos); el tope `kickoffMaxWaitTicks` evita el congelado. Test `TheRestartWaitsForWhoIsStillOnAnInvadedRow`.
-- **Puerta de razas (RT-057).** `RaceBalanceTests` daba `elf_none` = 39,55 % (suelo 40) con las puertas completas, aislado al
-  estrechamiento (CONFIRMED por interruptores). El efecto es intencionado (RF-055d: la turba es el mayor riesgo de las
-  builds técnicas), así que **se enmienda el suelo de 40 a 38**, con procedencia: la medición (elf 39,55; resto 44,8-59,3) y
-  el error típico de la tasa (~0,8 puntos con 4.000 partidos por raza), es decir ~2 errores típicos de margen. El techo (60)
-  no se toca; `undead_none` 59,27 % queda a 0,7 de él: vigilarlo. Se descartó excluir la turba de la puerta porque la
-  puerta mide la raza en el juego real, y en el juego real hay turba.
+- **Puerta de razas (RT-057).** *(Enmienda retirada, ver «Puertas tras rebasar sobre main».)* Antes del rebase
+  `RaceBalanceTests` daba `elf_none` = 39,55 % (suelo 40) y se había bajado el suelo a 38 con procedencia (elf 39,55;
+  resto 44,8-59,3; error típico ~0,8 puntos). Tras rebasar sobre main, con el mismo suelo a 40, la puerta pasa sola:
+  el suelo **vuelve a 40** y no se mueve ningún rango.
 - **«Velocidad global» = movimiento y golpes.** Es una reinterpretación explícita de `docs/simulacion.md` («multiplicador
   entero a los costes en ticks»): aquí sube la velocidad de carrera del jugador y las de golpe del balón (pase, tiro,
   cabeceo, rechace); **no** cambian los ticks de estados ni cooldowns ni el intervalo de decisión (`decisionIntervalTicks`,
   RT-020). Razón: cambiar los ticks de estado alteraría las probabilidades por tick de las entradas sin que el jugador lo
   vea; cambiar la velocidad se ve.
-- **La turba hace algo menos de daño, no más.** Lesiones por turba 0,115 → 0,096 (−17 %), lesiones por partido −0,02/−0,05:
+- **La turba hace algo menos de daño, no más.** Lesiones por turba 0,115 → 0,096 (−17 %; corregido tras el rebase: −0,027 ± 0,017, sin conclusión, ver «Puertas tras rebasar sobre main»), lesiones por partido −0,02/−0,05:
   la turba es más corta (−7 % de ticks) y se decide más por gol. Es contrario a la lectura de RF-055d («ventana natural de
   las builds de violencia»): **anotado para balance**, no corregido aquí. Si el revisor quiere una turba más violenta, la
   palanca es otra (p. ej. el tipo `frenzy`), no el estrechamiento.
@@ -226,15 +229,49 @@ revisor** (no se toca la banda en silencio, RT-057): aceptar el borde, o bajar e
 
 ## Puertas tras rebasar sobre main (30 sep 2026)
 
-`Category=Gate` completa (47): 41 verdes, **`RaceBalanceTests` verde** (suelo 38, ver arriba). Rojas y su origen, contrastado
-corriendo las mismas pruebas sobre `main` (6441a1e):
+**`RaceBalanceTests` (CONFIRMED, tabla completa de la puerta, rama contra main 6441a1e, mismos partidos):**
+
+| raza | main | rama (turba estrechada) |
+|---|---|---|
+| dwarf | 57,83 | 58,33 |
+| elf | 42,45 | 41,92 |
+| human | 43,25 | 42,98 |
+| orc | 47,02 | 47,75 |
+| undead | 59,45 | 59,02 |
+
+Error típico de cada tasa ≈ 0,8 puntos (4.000 partidos por raza): **ninguna raza se mueve más de ~0,7 puntos**, dentro de
+~1 error típico. `elf_none` queda a 1,9 del suelo de 40. El 39,55 de la medición anterior era de un árbol previo a
+0176-0179 (conducta en el campo), que movió el reglamentario; la enmienda a 38 **se retira**. Sigue siendo cierto que, por
+interruptores, sólo el estrechamiento baja a la elfa (RF-055d); ahora es una décima de error típico, no un suelo roto.
+`undead_none` 59,02 queda a ~1 del techo de 60: vigilarlo.
+
+**`Category=Gate` completa (47) sobre la rama:** 41 verdes. Rojas y su origen, contrastado corriendo las mismas pruebas
+sobre `main`:
 
 - **Heredadas de main (CONFIRMED, fallan igual sin esta ADR):** `BossGateTests.TheGateCurveMatchesTheAdr0033Table`,
   `MatchOrderTests.DefensiveConcedesLessAndOffensiveScoresMore` y `BuildGateTests` (`orc_violence` 53,49 < 58;
   `elf_brawler` 46,59 > 45; y su agregado `NoGateMetricIsOutOfRange`).
-- **Nueva, sólo con esta ADR: `FullRunGateTests.TheThreeDoctrinesBuyDifferently`**, por el signo del oro sobrante
-  (ahorradora 14,95 contra contextual 15,94; en main pasa). Con `mob` a 0/0 pasa (CONFIRMED por interruptor), así que la
-  causa es que la turba cambia las trayectorias de las runs; que sea **ruido de una muestra de 60 runs** y no un efecto
-  de la economía es **LIKELY** (la diferencia es de un punto sobre un oro sobrante de ~15, la puerta ya avisa en su
-  comentario de que el signo «baila» con muestras pequeñas, y esta ADR no toca compras ni precios). Sin medir con más
-  runs: abierto para el revisor (no se toca la puerta en silencio, RT-057).
+- **`FullRunGateTests.TheThreeDoctrinesBuyDifferently` (LIKELY ruido de semilla, abierta como [BU-A](../pendientes/BU-A.md)).**
+  Con la semilla de la puerta (1, 240 runs por doctrina) falla en la rama y pasa en main; repetida con cuatro semillas
+  de la muestra (1, 10000, 20000, 30000): **rama 2 rojas de 4** (diferencia −0,90 y −0,46 puntos de oro sobrante), **main
+  1 roja de 4** (semilla 20000, −0,79). Main también la pierde con otra muestra y del mismo tamaño, así que el signo
+  «baila» con la semilla y no es un efecto exclusivo de esta ADR; con `mob` a 0/0 la rama pasa en la semilla 1. Con cuatro
+  semillas no se distingue 2/4 de 1/4.
+
+**Lote de `/Balance` tras el rebase** (`--runs 6000 --seed 1`, reference.json, mismos partidos y semillas en rama y en main;
+error típico calculado sobre los 1.427 partidos que llegan a la turba, emparejados por semilla):
+
+| métrica | main | rama | Δ (± error típico) |
+|---|---|---|---|
+| partidos que llegan a la turba | 23,78 % | 23,78 % | 0 (el reglamentario no cambia) |
+| ticks por partido con turba | 2088,0 | 2008,4 | −79,7 ± 10,4 (7,7 ET) |
+| lesiones por partido con turba | 0,816 | 0,789 | −0,027 ± 0,017 (1,6 ET: sin conclusión) |
+| tiros por partido con turba | 11,15 | 11,30 | +0,15 ± 0,08 (1,9 ET) |
+| lesiones por partido (todos) | 0,707 | 0,700 | sin conclusión (ET 0,011 cada uno) |
+| goles por partido | 2,461 | 2,474 | sin conclusión (ET 0,016) |
+
+Las 33 métricas de `summary.csv`: ninguna fuera de banda ni con cambio de estado. **CONFIRMED:** la turba es ~80 ticks
+(~5 s) más corta. **Corrección a la lectura del primer lote** (antes «0,115 → 0,096 lesiones por turba, −17 %»): con el
+árbol nuevo la diferencia de lesiones por turba es −0,027 ± 0,017, **no distinguible de cero**; la hipótesis «la turba
+hace más daño» (RF-055d) sigue sin cumplirse, pero la afirmación «hace menos» ya sólo es LIKELY. La cuota de partidos con
+turba bajó del 28 % al 23,8 % por los cambios de main (0176-0179), no por esta ADR.
