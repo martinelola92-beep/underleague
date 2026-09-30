@@ -1,5 +1,5 @@
 {
-  "_doc": "Ultimo hombre: solo un defensa (positionOnly Defender) puede llevarlo. Cuando el equipo contrario dispara (trigger SHOT, scope opposingTeam: se activa con cualquier tiro rival, lo reciba o no el portador), el portador se teletransporta al punto medio entre el balon y su propia porteria (relocate/betweenBallAndOwnGoal, paquete AY-cuatro-primitivas) para cortar la linea de un posible rebote o segunda jugada. No evita el tiro en curso ni mueve a nadie mas: es pura colocacion tras el disparo. Limitado a una vez por partido para que no sea una teletransportacion a demanda en cada ataque rival.",
+  "_doc": "ACTO (BC-D, 30 sep 2026, ADR 0181): el heroe del momento. Cuando un tiro rival va a puerta y ya esta en vuelo (SHOT_ON_TARGET), el defensa que lo lleva se interpone en la trayectoria y se queda con el balon el 75 % de las veces (guardShot: probabilidad FIJA, peticion del revisor, 19 sep 2026; no una cuota, ADR 0050 P1, porque el acto rompe la regla de que un tiro a puerta se para). Si la tirada sale mal, queda en la trayectoria y el tiro sigue: lo resuelven el bloqueo generico y el portero. Solo un defensa (positionOnly Defender) y una vez por partido. Antes: relocate entre el balon y su porteria en SHOT, sin efecto medible (goles encajados 1,079 contra 1,065) y con el uso gastado en el primer tiro rival aunque fuese fuera (~26 %). Ahora el disparador es el tiro que va a puerta, asi que el uso solo se gasta cuando puede salvar algo. Se interpone en el punto de la trayectoria mas cercano a el (entre el 50 y el 90 % del recorrido): es un corte, como el resto de teletransportes del catalogo (BA-K).",
   "id": "last_man",
   "name": {
     "es": "Último hombre",
@@ -11,15 +11,15 @@
   "axis": "geometry",
   "race": null,
   "family": null,
-  "trigger": "SHOT",
+  "trigger": "SHOT_ON_TARGET",
   "scope": "opposingTeam",
   "links": [],
   "condition": "",
   "effects": [
     {
-      "type": "relocate",
+      "type": "guardShot",
       "target": "owner",
-      "point": "betweenBallAndOwnGoal"
+      "value": 75
     }
   ],
   "elseEffects": [],

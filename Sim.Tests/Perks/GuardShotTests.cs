@@ -1,0 +1,150 @@
+using Underleague.Sim.Data;
+using Underleague.Sim.Engine;
+using Underleague.Sim.Events;
+using Underleague.Sim.Generation;
+using Underleague.Sim.Model;
+using Underleague.Sim.Perks;
+using Underleague.Sim.Random;
+using Xunit.Abstractions;
+
+namespace Underleague.Sim.Tests.Perks;
+
+/// <summary>
+/// BC-D (ADR 0181): «Último hombre». Con un tiro rival a puerta en vuelo, el defensa se interpone y con
+/// un % fijo se queda con el balón. El disparador es el tiro que ya se sabe que va a puerta
+/// (<c>SHOT_ON_TARGET</c>), así que el uso no se gasta en tiros que van fuera.
+/// </summary>
+public sealed class GuardShotTests
+{
+    private static readonly Catalog Catalog = TestData.LoadCatalog();
+    private static readonly RefereeSetup Referee = new("Referee", RefereeTrait.Neutral, 0);
+    private readonly ITestOutputHelper _output;
+
+    public GuardShotTests(ITestOutputHelper output) => _output = output;
+
+    private static string Guard(int value) => $$"""[{ "type": "guardShot", "target": "owner", "value": {{value}} }]""";
+
+    [Theory]
+    [InlineData("SHOT_ON_TARGET", "opposingTeam", 75, true)]
+    [InlineData("SHOT", "opposingTeam", 75, false)]        // el tiro aún no sabe si va a puerta
+    [InlineData("SHOT_ON_TARGET", "actor", 75, false)]     // el propio tirador no se interpone
+    [InlineData("SHOT_ON_TARGET", "opposingTeam", 0, false)]
+    [InlineData("SHOT_ON_TARGET", "opposingTeam", 101, false)]
+    public void TheLoaderOnlyAcceptsAGuardAgainstAnEnemyShotOnTarget(string trigger, string scope, int value, bool valid)
+    {
+        string json = TestPerks.Json("g", trigger, Guard(value), scope: scope);
+        if (valid)
+        {
+            Assert.NotNull(TestPerks.Load("g", json));
+        }
+        else
+        {
+            Assert.Throws<DataException>(() => TestPerks.Load("g", json));
+        }
+    }
+
+    private static (MatchEngine Engine, MatchPlayer Guard, MatchPlayer Shooter) OnTargetShot(int value, ulong seed)
+    {
+        var catalog = TestPerks.CatalogWith(
+            ("guard", TestPerks.Json("guard", "SHOT_ON_TARGET", Guard(value), scope: "opposingTeam", positionOnly: "Defender")));
+        var setup = TestPerks.Match(catalog, 1, (101, new[] { "guard" })); // defensa visitante
+        var engine = new MatchEngine(setup, seed, catalog, new SimConfig(CollectLog: false));
+        var guard = engine.PlayerById(101)!;
+        var shooter = engine.PlayerById(6)!;
+        for (int i = 0; i < 14; i++)
+        {
+            var p = engine.PlayerAtForTest(i);
+            if (!ReferenceEquals(p, guard) && !ReferenceEquals(p, shooter))
+            {
+                engine.PlaceForTest(i, new Vec2(p.Team == 0 ? 0.5f : 15.5f, 0.5f));
+            }
+        }
+
+        engine.PlaceForTest(shooter.Index, new Vec2(10f, 3.5f));
+        engine.PlaceForTest(guard.Index, new Vec2(14f, 6f));
+        engine.GiveBallForTest(shooter.Index, shooter.Position);
+        return (engine, guard, shooter);
+    }
+
+    /// <summary>
+    /// Con el 100 % el defensa se queda con el balón siempre que el tiro va a puerta: el evento del bloqueo
+    /// dice «guard», el balón es suyo y el tiro deja de estar en vuelo. Sin el perk en la partida real esto
+    /// no ocurre nunca.
+    /// </summary>
+    [Fact]
+    public void AGuardAtOneHundredPercentTakesEveryShotOnTarget()
+    {
+        int taken = 0;
+        int onTarget = 0;
+        for (int seed = 1; seed <= 40; seed++)
+        {
+            var (engine, guard, shooter) = OnTargetShot(100, (ulong)seed);
+            engine.LaunchShotForTest(shooter.Index);
+            if (engine.EventsForTest.Any(e => e.Type == EventType.Shot && e.Detail == "onTarget"))
+            {
+                onTarget++;
+                Assert.Contains(engine.EventsForTest, e => e.Type == EventType.ShotBlocked && e.Detail == "guard" && e.Actor == guard.Id);
+                Assert.Equal(guard.Id, engine.BallOwnerIdForTest);
+                Assert.False(engine.BallInFlightForTest);
+                taken++;
+            }
+            else
+            {
+                Assert.DoesNotContain(engine.EventsForTest, e => e.Detail == "guard");
+                Assert.True(engine.BallInFlightForTest);
+            }
+        }
+
+        _output.WriteLine($"{onTarget} tiros a puerta de 40, {taken} parados por el último hombre");
+        Assert.True(onTarget > 0 && onTarget < 40, "la prueba necesita tiros a puerta y tiros fuera");
+        Assert.Equal(onTarget, taken);
+    }
+
+    /// <summary>
+    /// En partidos reales el perk sólo se activa cuando un tiro rival va a puerta, una vez por partido, y
+    /// cuando se queda con el balón el evento y la recuperación lo dicen.
+    /// </summary>
+    [Fact]
+    public void InRealMatchesItOnlyActivatesOnAnEnemyShotOnTargetAndHitsAboutItsChance()
+    {
+        int activations = 0;
+        int stops = 0;
+        for (int nth = 0; nth < 3; nth++)
+        {
+            for (int i = 0; i < 250; i++)
+            {
+                var homeRng = RngStreams.Generation(1, i);
+                var awayRng = RngStreams.Generation(1, 10_000 + i);
+                var home = TeamGenerator.Generate(ref homeRng, Catalog, "home", Race.Human, 50, 1, 4);
+                var away = TeamGenerator.Generate(ref awayRng, Catalog, "away", Race.Human, 50, 100001, 4);
+                var players = home.Players.ToList();
+                int slot = Enumerable.Range(0, players.Count).Where(k => players[k].Position == Position.Defender).ElementAt(nth);
+                players[slot] = players[slot] with { Perks = new[] { "last_man" } };
+                var setup = new MatchSetup(home with { Players = players }, away, Referee);
+                var result = Simulator.Run(setup, RngStreams.MatchSeed(1, i), Catalog, new SimConfig(CollectLog: false));
+                int owner = players[slot].Id;
+
+                int perMatch = 0;
+                foreach (var e in result.Events.Where(e => e.Type == EventType.PerkTriggered && e.Detail == "last_man"))
+                {
+                    perMatch++;
+                    activations++;
+                    Assert.Contains(
+                        result.Events,
+                        s => s.Tick == e.Tick && s.Type == EventType.Shot && s.Detail == "onTarget" && s.Team == 1);
+                    if (result.Events.Any(s => s.Tick == e.Tick && s.Type == EventType.ShotBlocked && s.Detail == "guard" && s.Actor == owner))
+                    {
+                        stops++;
+                        Assert.Contains(result.Events, s => s.Tick == e.Tick && s.Type == EventType.Recovery && s.Detail == "guard" && s.Actor == owner);
+                    }
+                }
+
+                Assert.InRange(perMatch, 0, 1);
+            }
+        }
+
+        _output.WriteLine($"Último hombre: {activations} activaciones en 750 partidos, {stops} paradas");
+        Assert.True(activations > 100, "el perk tiene que activarse en la mayoría de los partidos");
+        Assert.InRange(stops * 100 / activations, 55, 90); // 75 % con 750 tiradas: la banda cubre el azar de sobra
+    }
+}

@@ -50,6 +50,7 @@ public sealed class TriggerBindingAuditTests
         EventType.PassFailed => (Binding.Always, Binding.Never, Binding.Sometimes), // "loose"/"cancelled" no ligan
 
         // No ligan ninguno de los dos.
+        EventType.ShotOnTarget => (Binding.Always, Binding.Never, Binding.Never),
         EventType.Shot => (Binding.Always, Binding.Never, Binding.Never),
         EventType.Recovery => (Binding.Always, Binding.Never, Binding.Never),
         EventType.Card => (Binding.Always, Binding.Never, Binding.Never),

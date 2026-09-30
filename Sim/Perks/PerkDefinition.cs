@@ -109,6 +109,14 @@ public enum EffectType
     ExtraAction,
 
     /// <summary>
+    /// El último hombre (BC-D, ADR 0181): con un tiro rival a puerta en vuelo, el portador se interpone en su
+    /// trayectoria y, con <see cref="EffectDefinition.Value"/> % de probabilidad, se queda con el balón. Es una
+    /// probabilidad <b>fija</b> y no una cuota que multiplique (ADR 0050 P1) porque el acto es de los que
+    /// rompen una regla —un tiro a puerta se para—; sólo con disparador <c>SHOT_ON_TARGET</c>.
+    /// </summary>
+    GuardShot,
+
+    /// <summary>
     /// C1 (docs/analisis/c1-piloto-cazagoles-diseno.md): suma un porcentaje al multiplicador de rasgos de
     /// una acción concreta de <see cref="Underleague.Sim.Engine.Utility"/>, en la misma línea que ya lee
     /// <see cref="Underleague.Sim.Engine.MatchPlayer.LeaderBonusPercent"/>. Con <see cref="EffectDefinition.UtilityZone"/>

@@ -95,6 +95,15 @@ public enum EventType
     /// <para>Al FINAL del enum, por el mismo motivo que <see cref="Cross"/>.</para>
     /// </summary>
     ShotRebound,
+
+    /// <summary>
+    /// El tiro va a puerta (ADR 0181, BC-D): se publica cuando ya se sabe —tras la tirada de dentro/fuera— y el
+    /// balón está en vuelo hacia la portería. <c>Actor</c> es el tirador. Disparador <b>sólo de perks</b>, como
+    /// <see cref="ShotRebound"/> (<see cref="EventTypeNames.IsTriggerOnly"/>): el flujo de eventos ya lleva
+    /// el <c>SHOT onTarget</c>. No se publica en penaltis.
+    /// <para>Al FINAL del enum, por el mismo motivo que <see cref="Cross"/>.</para>
+    /// </summary>
+    ShotOnTarget,
 }
 
 /// <summary>Conversión de EventType a la forma UPPER_SNAKE usada en datos y logs.</summary>
@@ -135,6 +144,7 @@ public static class EventTypeNames
         EventType.TeamsReset => "TEAMS_RESET",
         EventType.FateRoll => "FATE_ROLL",
         EventType.ShotRebound => "SHOT_REBOUND",
+        EventType.ShotOnTarget => "SHOT_ON_TARGET",
         _ => throw new ArgumentOutOfRangeException(nameof(t)),
     };
 
@@ -150,5 +160,5 @@ public static class EventTypeNames
     /// resultado ya se conoce pero no los registra, porque el flujo de eventos ya lleva el hecho con su
     /// propio tipo. Al revés que <see cref="IsPresentationOnly"/>, un perk sí puede colgarse de ellos.
     /// </summary>
-    public static bool IsTriggerOnly(EventType t) => t is EventType.ShotRebound;
+    public static bool IsTriggerOnly(EventType t) => t is EventType.ShotRebound or EventType.ShotOnTarget;
 }

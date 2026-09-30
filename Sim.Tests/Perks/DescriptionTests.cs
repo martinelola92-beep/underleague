@@ -321,7 +321,7 @@ public sealed class DescriptionTests
                 "modifyTraitScalar", "shiftHomeForward", "shiftHomeBackward",
                 "modifyZoneShape", "modifyZoneShapeDown",
                 "modifyMarkBiasPreferTag", "modifyMarkBiasProtectLinked", "modifyMarkBiasAvoided",
-                "modifyTackleBiasKnockedDown", "modifyTackleBiasFouled", "extraAction",
+                "modifyTackleBiasKnockedDown", "modifyTackleBiasFouled", "extraAction", "guardShot",
             })
             {
                 templates.Get("effects", key);

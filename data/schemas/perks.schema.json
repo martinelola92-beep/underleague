@@ -340,6 +340,7 @@
         "RECOVERY",
         "SHOT",
         "SHOT_REBOUND",
+        "SHOT_ON_TARGET",
         "GOAL",
         "SAVE",
         "FOUL",
@@ -374,6 +375,7 @@
             "modifyMarkBias",
             "modifyTackleBias",
             "extraAction",
+            "guardShot",
             "modifyUtility"
           ]
         },

@@ -414,7 +414,7 @@ public static class PerkBalanceClassifier
 
     /// <summary>
     /// <see cref="EffectType.ExtraAction"/> repite la acción que lo disparó (Doble disparo, Embestida,
-    /// Arrollador) — el disparador solo puede ser <c>SHOT</c>, <c>TACKLE</c> o <c>RECOVERY</c> (RT-032), y
+    /// Arrollador) — el disparador solo puede ser <c>SHOT_REBOUND</c>, <c>TACKLE</c> o <c>RECOVERY</c> (RT-032, ADR 0180), y
     /// los tres SÍ tienen banda: la repetición es, literalmente, un shotsPerMatch/tacklesPerMatch más.
     ///
     /// <para><c>RECOVERY</c> repite la <b>entrada</b>, no una "recuperación" (BB-Q Alt 0: es la forma de
@@ -424,9 +424,9 @@ public static class PerkBalanceClassifier
     /// </summary>
     private static PerkClassification ClassifyExtraAction(EventType trigger, bool multiTarget) => trigger switch
     {
-        EventType.Shot => new PerkClassification(
+        EventType.ShotRebound => new PerkClassification(
             PerkBalanceCategory.BinaryEvent, MetricReadiness.Ready, MatchMetrics.ShotsPerMatch, false, multiTarget,
-            "repite SHOT: cuenta como un shotsPerMatch más, banda ya existente"),
+            "remata el rechace (SHOT_REBOUND, ADR 0180): cuenta como un shotsPerMatch más, banda ya existente"),
         EventType.Tackle => new PerkClassification(
             PerkBalanceCategory.BinaryEvent, MetricReadiness.Ready, MatchMetrics.TacklesPerMatch, false, multiTarget,
             "repite TACKLE: cuenta como un tacklesPerMatch más, banda ya existente"),

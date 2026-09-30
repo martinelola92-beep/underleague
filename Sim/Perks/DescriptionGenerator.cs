@@ -424,6 +424,7 @@ public static class DescriptionGenerator
                 : "modifyTackleBiasKnockedDown",
 
             EffectType.ExtraAction => "extraAction",
+            EffectType.GuardShot => "guardShot",
 
             // C1 (ADR 0146): dos frases, porque la cláusula de tercio cambia lo que el jugador tiene que
             // entender. «Quiere tirar más» y «quiere tirar más cuando está arriba» no son la misma promesa.
@@ -444,6 +445,7 @@ public static class DescriptionGenerator
 
         string text = templates.Get(Effects, key);
         text = Replace(text, "{target}", DescribeTarget(effect, scope, templates, links));
+        text = Replace(text, "{chance}", effect.Value.ToString(CultureInfo.InvariantCulture));
         text = Replace(text, "{immunity}", templates.Get(ImmunitiesSection, ImmunityKey(effect.Immunity)));
         text = Replace(text, "{point}", templates.Get(PointsSection, PointKey(effect.RelocationPoint)));
         text = Replace(text, "{attribute}", templates.Get(AttributesSection, ConditionCompiler.AttributeName(effect.Attribute)));

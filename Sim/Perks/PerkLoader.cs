@@ -1070,7 +1070,7 @@ public static class PerkLoader
     {
         bool instantOnly = type is EffectType.AddCounter or EffectType.ModifyBias or EffectType.SetState
             or EffectType.CancelEvent or EffectType.Immunity or EffectType.Injure or EffectType.Relocate
-            or EffectType.ExtraAction;
+            or EffectType.ExtraAction or EffectType.GuardShot;
         if (instantOnly && duration != EffectDuration.Instant)
         {
             throw new DataException(file, node.Path, $"'{type}' solo admite duration 'instant'");
@@ -1336,6 +1336,28 @@ public static class PerkLoader
                 case TackleBiasKind.Fouled when target != EffectTarget.Actor:
                     throw new DataException(
                         file, node.Path, "fouled solo admite target 'actor': quien cometió la falta");
+            }
+        }
+
+        if (type == EffectType.GuardShot)
+        {
+            if (target != EffectTarget.Owner)
+            {
+                throw new DataException(file, node.Path, "guardShot solo admite target 'owner': el que se interpone es el portador");
+            }
+
+            if (trigger != EventType.ShotOnTarget || scope != PerkScope.OpposingTeam)
+            {
+                throw new DataException(
+                    file,
+                    node.Path,
+                    "guardShot solo es válido con trigger SHOT_ON_TARGET y scope 'opposingTeam': se interpone ante "
+                        + "un tiro rival que ya se sabe que va a puerta (ADR 0181)");
+            }
+
+            if (value is < 1 or > 100)
+            {
+                throw new DataException(file, node.Path, "guardShot necesita 'value' entre 1 y 100: el % de quedarse con el balón");
             }
         }
 

@@ -3381,6 +3381,51 @@ internal sealed class MatchEngine : IPerkWorld
         Array.Clear(_ball.BlockAttempted);
 
         shooter.EnterState(PlayerState.Positioning, 0);
+
+        // BC-D (ADR 0181): el tiro va a puerta y ya está en vuelo. Es lo último que ocurre aquí para que un
+        // perk que actúe sobre él (el último hombre) lo encuentre entero y lo que haga no lo pise nada.
+        if (!offTarget && !isPenalty)
+        {
+            PublishBeforeResolving(EventType.ShotOnTarget, "onTarget", shooter);
+        }
+    }
+
+    /// <summary>
+    /// El último hombre (efecto <c>guardShot</c>, BC-D, ADR 0181): con un tiro rival a puerta en vuelo, el
+    /// defensa se interpone —el punto de la trayectoria más cercano a él, en su último tramo, para que no
+    /// aparezca pegado al tirador— y, con <paramref name="chancePercent"/> % de probabilidad, se queda con
+    /// el balón. Si la tirada sale mal el defensa queda en la trayectoria y el tiro sigue: lo demás
+    /// (bloqueo genérico, portero) lo resuelve el motor como siempre. La tirada sale del flujo del partido
+    /// (RT-021) y se hace siempre que el defensa actúa, salga lo que salga.
+    /// </summary>
+    internal bool GuardShot(MatchPlayer guard, int chancePercent)
+    {
+        var shooter = _ball.Shooter;
+        if (shooter is null || !_ball.IsShot || !_ball.InFlight || !_ball.ShotOnTarget
+            || guard.Team == shooter.Team || !CanTouchBall(guard))
+        {
+            return false;
+        }
+
+        var origin = _ball.FlightOrigin;
+        var toGoal = _ball.FlightTarget - origin;
+        float lengthSquared = (toGoal.X * toGoal.X) + (toGoal.Y * toGoal.Y);
+        var offset = guard.Position - origin;
+        float t = lengthSquared <= 0f ? 1f : ((offset.X * toGoal.X) + (offset.Y * toGoal.Y)) / lengthSquared;
+        t = Math.Clamp(t, 0.5f, 0.9f);
+        guard.Position = origin + (toGoal * t);
+        guard.Velocity = new Vec2(0f, 0f);
+
+        if (!_rng.Chance(chancePercent * 100))
+        {
+            return false;
+        }
+
+        Emit(EventType.ShotBlocked, "guard", guard, opponent: shooter);
+        _report.ShotsBlocked[guard.Team]++;
+        SetOwner(guard);
+        Emit(EventType.Recovery, "guard", guard);
+        return true;
     }
 
     /// <summary>
@@ -4811,6 +4856,8 @@ internal sealed class MatchEngine : IPerkWorld
     }
 
     /// <summary>Tira el duelo de regate de este portador contra el defensor más cercano (BM-A).</summary>
+    internal void LaunchShotForTest(int playerIndex) => LaunchShot(_players[playerIndex], isPenalty: false);
+
     internal void TryDribbleDuelForTest(int playerIndex) => TryDribbleDuel(_players[playerIndex]);
 
     /// <summary>Resuelve la carga de <paramref name="blockerIndex"/> contra <paramref name="targetIndex"/> (BM-A).</summary>

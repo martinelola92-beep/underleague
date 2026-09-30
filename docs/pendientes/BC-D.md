@@ -1,6 +1,6 @@
 # BC-D — «Último hombre» se activa pero no hace nada
 
-**Estado:** Abierta · diagnóstico CONFIRMED · mecánica nueva pendiente de `game-design-review` y ADR
+**Estado:** **Cerrada (30 sep 2026), ADR 0181** · diagnóstico CONFIRMED · mecánica implementada; **75 % provisional, sin medir contra un techo**
 
 ## Observación
 
@@ -42,3 +42,29 @@ ADR propia. Riesgo: ~0,25 goles menos por partido por portador → `balance-meas
 ## Hermanos
 
 [BC-C](./BC-C.md).
+
+
+## Resolución (30 sep 2026) — ADR 0181
+
+`game-design-review` (resumen). *Qué vive el jugador:* un tiro rival va a puerta, su defensa aparece en la
+trayectoria y **se queda con el balón** (`SHOT_BLOCKED guard` + `RECOVERY guard`, el texto «X bloquea el
+disparo de Y» ya existe); si la tirada falla, queda plantado en la trayectoria y el tiro sigue. *Decisión:*
+la mecánica candidata de arriba, con dos matices: (1) disparador nuevo `SHOT_ON_TARGET`, publicado tras la
+tirada de dentro/fuera, para no gastar el uso en el ~26 % de tiros que van fuera; (2) el efecto `guardShot`
+con `value` = 75 (petición del revisor; **probabilidad fija, no cuota**, ADR 0050 P1: para pasar de ≈ 4 % a
+75 % haría falta un ×65, fuera de escala). *Teletransporte:* se mantiene, el revisor lo pidió («ha podido
+teletransportarse»); el defensa se coloca en el punto de la trayectoria más cercano a él, entre el 50 y el 90 %
+del recorrido. *Degeneración:* con 75 % y un uso por partido, ≈ 0,5 activaciones por partido; medido abajo.
+*Frecuencia real:* 456 activaciones en 750 partidos, 327 paradas = 72 % (`GuardShotTests`).
+
+| perk | antes | después | (por semilla 5 / 11) |
+|---|---:|---:|---|
+| `last_man` | +43,6 | **+118,5** | 75,5/11,7 → 136,7/100,3 |
+
+**Aviso, para el revisor**: +118 es el segundo valor más alto del catálogo tras `deathless_march` (+178) y
+muy por encima de cualquier otro raro (`duelist` +57, `own_third_anchor` +35). El diseño lo pidió («un
+héroe»), pero esta cifra es la de un 75 % puesto por petición y sin contrapeso de coste; si el revisor lo
+quiere en la banda de un raro, el dial es `value` (dato) o el uso por partido. **No se toca sin su decisión**:
+es un cambio de balance de un perk que él mismo fijó (RT-057). Efecto secundario anotado: `RECOVERY guard`
+activa los perks de `RECOVERY` sin filtro de detalle (`lane_reader`, `road_warrior`, `sweeper_keeper`); es una
+recuperación de verdad.

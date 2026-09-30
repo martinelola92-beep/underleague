@@ -896,6 +896,10 @@ internal sealed class EffectEngine : IPerkLinks
                         // nunca al poseedor rival (Olfato de sangre, Rabia).
                         ApplyTackleBias(subscription.Owner, player, effect.TackleBias);
                         break;
+                    case EffectType.GuardShot:
+                        // BC-D (ADR 0181): el tiro rival ya va a puerta y está en vuelo.
+                        _engine.GuardShot(player, value);
+                        break;
                     case EffectType.ExtraAction:
                         // Doble disparo, Embestida, Arrollador: repite la acción del disparador dentro del
                         // mismo tick (ver ExecuteExtraAction para el porqué es seguro con RT-041/RT-042).
