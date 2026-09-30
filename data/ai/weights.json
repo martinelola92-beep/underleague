@@ -7,7 +7,7 @@
 "Cross": 40, "Shield": 220, "Clear": 300 },
     "Midfielder":  { "ChaseBall": 420, "MarkOpponent": 300, "OfferSupport": 140, "CoverSpace": 260, "Dribble": 240, "Shoot": 237, "Tackle": 210, "Retreat": 220, "FindSpace": 380, "PressCarrier": 180, "ShortPass": 560, "LongPass": 250, "ThroughPass": 180, "Block": 50,
 "Cross": 170, "Shield": 220, "Clear": 150 },
-    "Forward":     { "ChaseBall": 400, "MarkOpponent": 120, "OfferSupport": 160, "CoverSpace": 120, "Dribble": 300, "Shoot": 385, "Tackle": 128, "Retreat": 140, "FindSpace": 460, "PressCarrier": 140, "ShortPass": 420, "LongPass": 135, "ThroughPass": 150, "Block": 65,
+    "Forward":     { "ChaseBall": 400, "MarkOpponent": 210, "OfferSupport": 160, "CoverSpace": 120, "Dribble": 300, "Shoot": 385, "Tackle": 128, "Retreat": 140, "FindSpace": 460, "PressCarrier": 140, "ShortPass": 420, "LongPass": 135, "ThroughPass": 150, "Block": 65,
 "Cross": 250, "Shield": 220, "Clear": 80 }
   },
   "tactical": {
@@ -112,7 +112,7 @@
 
     "grudgeBonus": 240,
 
-    "coverSpacingCells": 1.0,
+    "coverSpacingCells": 0.8,
     "pressCarrierBonus": 60,
     "pressDistancePenaltyPerCell": 60,
     "pressGoalkeeperExitBonus": 200,
