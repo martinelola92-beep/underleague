@@ -190,3 +190,36 @@ partidos; **verde al 100 %**, ruido de muestra) y `RaceBalanceTests` (undead 61,
 (Regla F, CONFIRMED): con `mob` a 0/0 pasa; con sólo la velocidad (0/15) pasa; **con sólo el estrechamiento (1/0) falla**.
 Lectura: el campo estrecho quita espacio a la raza más técnica y es 0,45 puntos bajo el suelo. **Decisión abierta para el
 revisor** (no se toca la banda en silencio, RT-057): aceptar el borde, o bajar el estrechamiento, o retocar la raza elfa.
+
+## Enmiendas tras la revisión independiente (30 sep 2026)
+
+- **Un único punto para «la banda».** `PlayBand` (`Sim/Engine/PlayBand.cs`) es el único sitio que acota: lo usan el
+  movimiento (`Move`, `WalkTo`), los empujones (`BodySeparation`), los destinos de la utilidad (`ClampToPlay` y
+  `TargetPoint`), los pases y despejes, los saques y córners, el balón aparcado (`ParkBall`, BB-O), la casilla de
+  reposo (`EffectiveHome`) y el suplente que entra (`MatchPlayer.EnterPitch(band)`). Con `Inset` 0 no hace una operación
+  más. **`tuning.mob.narrowRowsPerSide` se limita a 0 o 1** (parser y esquema): con 2 la banda mordería el área
+  (filas 1,5-5,5, ADR 0121) y `PushOutOfArea` sacaría a la gente a una fila invadida; soportarlo exigiría rediseñar al
+  portero y no se pide.
+- **El saque no sale con alguien en una fila invadida.** `EveryoneInPlace` cuenta también la fila en la turba (un lento
+  que venía de lejos); el tope `kickoffMaxWaitTicks` evita el congelado. Test `TheRestartWaitsForWhoIsStillOnAnInvadedRow`.
+- **Puerta de razas (RT-057).** `RaceBalanceTests` daba `elf_none` = 39,55 % (suelo 40) con las puertas completas, aislado al
+  estrechamiento (CONFIRMED por interruptores). El efecto es intencionado (RF-055d: la turba es el mayor riesgo de las
+  builds técnicas), así que **se enmienda el suelo de 40 a 38**, con procedencia: la medición (elf 39,55; resto 44,8-59,3) y
+  el error típico de la tasa (~0,8 puntos con 4.000 partidos por raza), es decir ~2 errores típicos de margen. El techo (60)
+  no se toca; `undead_none` 59,27 % queda a 0,7 de él: vigilarlo. Se descartó excluir la turba de la puerta porque la
+  puerta mide la raza en el juego real, y en el juego real hay turba.
+- **«Velocidad global» = movimiento y golpes.** Es una reinterpretación explícita de `docs/simulacion.md` («multiplicador
+  entero a los costes en ticks»): aquí sube la velocidad de carrera del jugador y las de golpe del balón (pase, tiro,
+  cabeceo, rechace); **no** cambian los ticks de estados ni cooldowns ni el intervalo de decisión (`decisionIntervalTicks`,
+  RT-020). Razón: cambiar los ticks de estado alteraría las probabilidades por tick de las entradas sin que el jugador lo
+  vea; cambiar la velocidad se ve.
+- **La turba hace algo menos de daño, no más.** Lesiones por turba 0,115 → 0,096 (−17 %), lesiones por partido −0,02/−0,05:
+  la turba es más corta (−7 % de ticks) y se decide más por gol. Es contrario a la lectura de RF-055d («ventana natural de
+  las builds de violencia»): **anotado para balance**, no corregido aquí. Si el revisor quiere una turba más violenta, la
+  palanca es otra (p. ej. el tipo `frenzy`), no el estrechamiento.
+- **Dónde se ve.** La alineación (Equipo) raya y rotula «TURBA (si hay empate)» en las filas invadidas (`PitchView.MobRows`); el
+  ojeo y el mapa dicen la regla (`MobView.Rule`, por partes según los datos: con 0 filas no dice que se estrecha, con 0 % no
+  dice que va más rápido); el pregón la repite en corto (`MobView.ShortRule`); el campo lleva una línea de banda de tiza en 3D
+  y 2D durante la turba.
+- Tests nuevos: +15 % exacto por unidad, suplente en la turba, saque con lento en fila invadida, control positivo del
+  instrumento de la banda (sin estrechamiento sí ve el balón fuera), `MobView.Rule` en es/en/0-0.
