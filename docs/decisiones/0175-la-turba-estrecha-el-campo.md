@@ -223,3 +223,18 @@ revisor** (no se toca la banda en silencio, RT-057): aceptar el borde, o bajar e
   y 2D durante la turba.
 - Tests nuevos: +15 % exacto por unidad, suplente en la turba, saque con lento en fila invadida, control positivo del
   instrumento de la banda (sin estrechamiento sí ve el balón fuera), `MobView.Rule` en es/en/0-0.
+
+## Puertas tras rebasar sobre main (30 sep 2026)
+
+`Category=Gate` completa (47): 41 verdes, **`RaceBalanceTests` verde** (suelo 38, ver arriba). Rojas y su origen, contrastado
+corriendo las mismas pruebas sobre `main` (6441a1e):
+
+- **Heredadas de main (CONFIRMED, fallan igual sin esta ADR):** `BossGateTests.TheGateCurveMatchesTheAdr0033Table`,
+  `MatchOrderTests.DefensiveConcedesLessAndOffensiveScoresMore` y `BuildGateTests` (`orc_violence` 53,49 < 58;
+  `elf_brawler` 46,59 > 45; y su agregado `NoGateMetricIsOutOfRange`).
+- **Nueva, sólo con esta ADR: `FullRunGateTests.TheThreeDoctrinesBuyDifferently`**, por el signo del oro sobrante
+  (ahorradora 14,95 contra contextual 15,94; en main pasa). Con `mob` a 0/0 pasa (CONFIRMED por interruptor), así que la
+  causa es que la turba cambia las trayectorias de las runs; que sea **ruido de una muestra de 60 runs** y no un efecto
+  de la economía es **LIKELY** (la diferencia es de un punto sobre un oro sobrante de ~15, la puerta ya avisa en su
+  comentario de que el signo «baila» con muestras pequeñas, y esta ADR no toca compras ni precios). Sin medir con más
+  runs: abierto para el revisor (no se toca la puerta en silencio, RT-057).
