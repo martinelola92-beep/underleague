@@ -34,7 +34,10 @@ public sealed class RunEngineRefereeMemoryTests
         // RunSaveTests.LeavingDuringAMatch_ReplaysTheSameMatchOnReturn), para saber qué shiftedAgainst
         // tiene que haber usado MatchResolution sin adivinarlo.
         var (setup, seed, _) = RunEngine.BuildMatch(walked, node.Id, Catalog, systems);
-        var expectedResult = Simulator.Run(setup, seed, Catalog, systems.MatchConfig(walked, node, Catalog));
+        // Con la misma resolución automática de sustituciones que usa la run (ADR 0094): un partido con una
+        // lesión que pide relevo no es el de un Simulator.Run a secas, y este test daba por hecho que no la había.
+        var expectedResult = SubstitutionPoints.ResolveAutomatically(
+            setup, seed, Catalog, systems.MatchConfig(walked, node, Catalog), usesPolicy: null, declines: null).Result;
         int shiftedAgainstPlayer = expectedResult.Report.BiasShiftedAgainst[0];
 
         var entry = RunEngine.EnterMatch(walked, node.Id, Catalog, systems);
