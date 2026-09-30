@@ -181,6 +181,61 @@ public sealed class BodiesTests
         return new[] { a.Position.X - x0, b.Position.X - x1, c.Position.X - x2 };
     }
 
+    /// <summary>
+    /// RF-057b: un empujón no saca al portero del área, ni en el reglamentario ni con la banda estrechada de la turba
+    /// (ADR 0175). Al poner <c>PlayBand.ClampStep</c> se perdió el acotado al área y este test lo ata.
+    /// </summary>
+    [Theory]
+    [InlineData(0, 0)]
+    [InlineData(0, 1)]
+    [InlineData(1, 0)]
+    [InlineData(1, 1)]
+    public void ABodyPushNeverTakesTheGoalkeeperOutOfTheArea(int team, int inset)
+    {
+        var keeper = Player(0, Race.Human, Position.Goalkeeper, new Cell(team == 0 ? 0 : 15, 3), team, strength: 10);
+        var rival = Player(1, Race.Orc, Position.Forward, new Cell(team == 0 ? 1 : 14, 2), 1 - team, strength: 100);
+        var players = Order(keeper, rival);
+
+        float edgeX = team == 0 ? 0.3f : Pitch.Columns - 0.3f;
+        // Pegado al borde superior del área, con el rival en la fila de abajo: el empujón sería hacia fuera.
+        keeper.Position = new Vec2(edgeX, Pitch.AreaTop + 0.05f);
+        rival.Position = new Vec2(edgeX, Pitch.AreaTop + 0.5f);
+
+        var separation = new BodySeparation(Catalog.Tuning.Bodies, players.Length) { Band = new PlayBand(inset) };
+        for (int tick = 0; tick < 30; tick++)
+        {
+            separation.BeginTick();
+            separation.Resolve(players);
+            Assert.True(
+                keeper.Position.Y >= Pitch.AreaTop - 0.0001f && Pitch.IsInArea(keeper.Position, team),
+                $"tick {tick}: el empujón sacó al portero del área, está en {keeper.Position}");
+        }
+
+        Assert.True(keeper.Position.Y >= Pitch.AreaTop - 0.0001f);
+    }
+
+    /// <summary>
+    /// ADR 0175: <c>PushOutOfArea</c> deja a la gente a 0,1 casillas del área; con el máximo de filas que permite el
+    /// esquema, ese punto sigue dentro de la banda (el área cabe en ella). Con dos filas ya no cabría: el esquema las rechaza.
+    /// </summary>
+    [Fact]
+    public void TheAreaAndItsPushOutMarginFitInsideTheBandWithTheMaximumRowsTheSchemaAllows()
+    {
+        const float Margin = 0.1f;
+        var band = new PlayBand(1);
+        Assert.True(band.Contains(Pitch.AreaTop - Margin), "el borde de salida superior del área queda fuera de la banda");
+        Assert.True(band.Contains(Pitch.AreaBottom + Margin), "el borde de salida inferior del área queda fuera de la banda");
+
+        var narrower = new PlayBand(2);
+        Assert.False(narrower.Contains(Pitch.AreaTop - Margin), "con 2 filas el área ya muerde: el máximo del esquema tiene que seguir en 1");
+
+        var files = TestData.LoadAllFiles();
+        string text = files["sim/tuning.json"];
+        files["sim/tuning.json"] = text.Replace("\"narrowRowsPerSide\": 1", "\"narrowRowsPerSide\": 2", StringComparison.Ordinal);
+        Assert.NotEqual(text, files["sim/tuning.json"]);
+        Assert.ThrowsAny<Exception>(() => DataLoader.FromJson(files));
+    }
+
     private static void Separate(MatchPlayer[] players)
     {
         var separation = new BodySeparation(Catalog.Tuning.Bodies, players.Length);

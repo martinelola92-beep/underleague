@@ -202,6 +202,11 @@ internal sealed class BodySeparation
 
             var next = Utility.ClampToPitch(new Vec2(player.Position.X + px, player.Position.Y + py));
             next = Band.ClampStep(next, player.Position);
+            if (!player.IsOutfield)
+            {
+                // RF-057b: un empujón no saca al portero del área (la banda de la turba sólo la estrecha por fuera).
+                next = Utility.ClampToArea(next, player.Team);
+            }
 
             player.Position = next;
         }
