@@ -72,7 +72,13 @@ public sealed class PlayStopsTests
                     if (unseen)
                     {
                         unseenFouls++;
-                        unseenHolds += held ? 1 : 0;
+
+                        // Una falta que el árbitro no ve durante la cuenta atrás de otra que sí pitó (25 ticks) o en su mismo tick —una que el árbitro no ve y otra que pita— comparten fotograma:
+                        // el saque es de la pitada, no de la que no se vio (semillas 17 y 54 con la rama BB-K..BA-J;
+                        // 0 de 298 antes). Eso no es una pausa por una falta no vista.
+                        int tick = result.Events[moment.EventIndices[^1]].Tick;
+                        bool whistledSameTick = result.Events.Any(e => e.Type == Underleague.Sim.Events.EventType.Foul && e.Tick >= tick - 25 && e.Tick <= tick + 1 && e.Detail != "unseen");
+                        unseenHolds += held && !whistledSameTick ? 1 : 0;
                     }
                     else
                     {
