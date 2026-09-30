@@ -134,7 +134,9 @@ public sealed class MatchResolutionDeathIsTerminalTests
         var options = RunPolicyOptions.For(PurchaseDoctrine.Contextual);
 
         int deaths = 0;
-        foreach (int i in new[] { 0, 2, 4, 14 })
+        // Las cuatro de la reproducción y otras doce: cualquier cambio del motor reparte las muertes de otra manera
+        // entre las runs, y con sólo cuatro el instrumento podía quedarse sin ninguna (ADR 0175, Regla J).
+        foreach (int i in new[] { 0, 2, 4, 14, 1, 3, 5, 6, 7, 8, 9, 10, 11, 12, 13, 15 })
         {
             var setup = standard.NewRunSetup("balance_club", races[i % races.Count], files) with { GeneratedQuality = 50 };
             var dead = new HashSet<int>();
