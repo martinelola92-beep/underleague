@@ -153,7 +153,7 @@ Las condiciones NCalc se traducen con un pequeño *pretty-printer* por función 
 Comparten `effect`, `condition` y `limit` con los perks. Diferencias:
 
 - Objeto: `archetype` (arquetipo: `cursed` (maldito) con `drawback` (contrapartida), `fragile` (frágil) con `uses` o `breaksOnInjury`, `restricted` (restringido) con `requiresTag`), `rarity`, `sellValue` (valor de venta) (RF-076b, RF-077).
-- Consumible: `family` (familia), `allowedTriggers` (disparadores permitidos) (RF-083), `isBribe` (es soborno) con `outcomeTable[]` (tabla de resultados) de `(outcome, baseProbability)` ajustada por rasgo del árbitro (RF-064b).
+- Consumible: `family` (familia), `suggestedTrigger` (el disparador con el que se deja al pasarlo de manual a condicional, obligatorio, ADR 0172), `allowedTriggers` (disparadores permitidos) (RF-083), `isBribe` (es soborno) con `outcomeTable[]` (tabla de resultados) de `(outcome, baseProbability)` ajustada por rasgo del árbitro (RF-064b).
 
 ## Versionado
 

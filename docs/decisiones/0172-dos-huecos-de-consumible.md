@@ -44,14 +44,25 @@ partido para usarlo con un clic»*. Encargo: enmendar RF-080 (de 3 a 2) y decidi
    igual que `recruit` sin plantilla— y **sortea sólo entre los que la run no lleva** (no se sortea uno para
    rechazarlo después). La vista ya muestra la opción como no elegible.
 7. **Guardados anteriores** (los que llevan un inventario suelto y hasta tres equipados): se **pliegan a los dos
-   huecos al cargar**, con una migración explícita (`RunState.WithLegacyConsumablesFolded`, llamada desde
+   huecos al cargar**, con una migración explícita (`RunState.FoldLegacyConsumables`, llamada desde
    `RunSave.Load`): primero lo que iba equipado (hasta dos, con su modo), luego las copias sueltas por id ascendente
-   (manuales, sin repetir); **lo que no cabe se pierde** y los contadores viejos se borran. No sube la versión del
+   (manuales, **sin repetir**: de un id repetido gana la primera copia); los contadores viejos se borran y **lo que
+   no cabe no desaparece en silencio**: `RunSave.Load(json, out lost)` devuelve un id por copia que se queda fuera y
+   el mapa lo dice **una vez** al continuar la partida («Esta partida guardada llevaba más consumibles de los que
+   caben…: X, Y»). Se eligió avisar y no reembolsar: un consumible no tiene precio de venta en `/Sim` (el precio del
+   mercado es de compra, ADR 0101) y inventarlo sería una regla de economía nueva. No sube la versión del
    esquema porque **la forma del guardado no cambia** (sigue siendo `consumables[]` y `counters{}`), sólo lo que
    significa; queda escrito aquí en vez de hacerse a escondidas (`modelo-datos.md`, «Versionado»). El único coste es
    para una run vieja con tres equipados o stock suelto, y el juego aún no está publicado.
-8. **La política automática** (`RunPolicy`) compra con un hueco libre (ya no hay `ConsumableStockTarget`) y **configura
-   como condicional todo lo que lleva**: en `/Balance` nadie pulsa un manual (`ManualTick` −1). Enmienda el punto 2 de
+8. **Cada consumible declara su disparador sugerido en `/data`** (`suggestedTrigger`, obligatorio en el esquema, uno de
+   los seis de RF-083 sin umbral; provisional, sin medir). Es el que ponen Equipo al pasarlo de manual a condicional
+   y la política: no uno por familia, que daba «¡Aguantad!» al ir perdiendo. Aguantar (`hold_the_line`) y el plan
+   maestro esperan al empate; ir a por él, arriba y lo sucio, al ir por detrás; lo médico, a la lesión (el milagro
+   del sanador, a la turba); lo sobrenatural, al tramo final; provocar a la grada, al empate.
+9. **Descartar pide confirmación** (segunda pulsación en el mismo botón; cualquier otra acción la cancela): tira el
+   consumible para siempre.
+10. **La política automática** (`RunPolicy`) compra con un hueco libre (ya no hay `ConsumableStockTarget`) y **configura
+   como condicional todo lo que lleva**, con su `suggestedTrigger`: en `/Balance` nadie pulsa un manual (`ManualTick` −1). Enmienda el punto 2 de
    la ADR 0101 y «lo que el manual no mide»: antes el primer consumible iba manual y se perdía en la medición; con dos
    huecos eso sería perder la mitad, así que la doctrina cambia con la regla y **el cambio se mide aparte** (abajo).
 
@@ -81,7 +92,7 @@ partido para usarlo con un clic»*. Encargo: enmendar RF-080 (de 3 a 2) y decidi
 ## Implementación
 
 - `/Sim`: `RunRules.ConsumableSlots = 2` (sustituye a `MaxEquippedConsumables = 3`); `RunState.HasFreeConsumableSlot`,
-  `CarriesConsumable`, `CanTakeConsumable`, `WithTakenConsumable`, `WithLegacyConsumablesFolded`; se retiran
+  `CarriesConsumable`, `CanTakeConsumable`, `WithTakenConsumable`, `FoldLegacyConsumables`; se retiran
   `ConsumablesOwned`, `OwnedConsumables` y el prefijo `consumable_owned:` como estado vivo (queda como
   `LegacyConsumableOwnedPrefix`, sólo para migrar). `MarketSystem.BuyConsumable` exige hueco y deja el consumible
   equipado; `RewardBlock.NoConsumableSlot` y `AlreadyCarried` en `MarketRow.Block`; `EventSystem` (viabilidad y sorteo);
@@ -126,7 +137,8 @@ antes (por debajo de su banda) y siguen igual de fuera. **Lectura, con la vara d
 - **Los condicionales no se ven en el tablero hasta que saltan** (el aviso «usa un consumible» ya existe): un jugador
   que pasa uno a condicional no ve en la retransmisión que está «armado». Candidato a una etiqueta pequeña junto a los
   botones; sin medir que haga falta.
-- **La opción de evento que da un consumible, con los dos huecos llenos, aparece deshabilitada sin decir por qué**
-  (como las demás opciones no viables de la ADR 0159: sin plantilla, sin a quién señalar). El mercado sí lo dice.
+- ~~La opción de evento sin hueco aparece deshabilitada sin decir por qué~~: ahora añade «no tienes hueco libre»
+  (`EventOptionRow.NoConsumableSlot`). Las demás opciones inviables (sin plantilla, sin a quién señalar) siguen mudas.
+- **Medido tras la revisión independiente** con el disparador sugerido: ver la segunda tabla de la medición.
 - La doctrina de la política sigue sin pulsar nunca un manual (CAT-C de la ADR 0101): la cifra es de un jugador que
   sólo configura disparadores.

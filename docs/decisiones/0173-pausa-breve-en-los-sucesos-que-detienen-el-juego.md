@@ -28,9 +28,13 @@ jugador ve la falta ya pasada.
    del suceso el motor ya recolocó o retiró al implicado), enseña su sello y, pasada la pausa, salta al fotograma del
    suceso y sigue. La roja, que es una voz alta N3 y no congelaba (RF-054 la llama pausa dramática), habla **a la vez**.
 2. **«El juego se ha parado» se lee de la traza, no se adivina por el tipo** (`Game/Match/PlayStops.cs`): el momento
-   detiene el juego si en sus fotogramas el motor tiene una reanudación pendiente (`MatchTrace.RestartAt`). Es el mismo
+   detiene el juego si en sus fotogramas el motor tiene pendiente **el saque de falta o el penalti que ese suceso provoca** (`MatchTrace.RestartAt`;
+   un saque de banda, de puerta, de esquina o de centro en esos fotogramas no cuenta: el balón salió, el juego siguió,
+   y pausar por él sería congelar sin que el suceso parara nada). Es el mismo
    dato con el que la vista 3D decide cómo se reanuda y lo escribe el motor con sus reglas (ADR 0143, 0147). Por eso
    una **falta que el árbitro no ve** —el juego sigue— no produce pausa, y un perk que anula el suceso tampoco.
+   Una falta pitada en el mismo tick que un gol pierde su saque ante el de centro: no pausa (para el juego el gol,
+   que tiene su congelado).
 3. **Coherencia con el resto del director** (`docs/ui/README.md`):
    - **Una sola voz alta a la vez** (§2): no hay pausa mientras haya una voz alta en el escenario o en cola, y la pausa
      no es una voz (sólo lleva el sello, el canal callado).
@@ -43,6 +47,8 @@ jugador ve la falta ya pasada.
    - **Decisiones en vivo** (orden táctica y consumible manual, ADR 0154): no se pueden pulsar durante una pausa
      (`CanActNow` exige reproducción no congelada), igual que durante el gol: una decisión en el fotograma congelado
      entraría en el tick del suceso y re-simularía justo lo que se está enseñando.
+   - **Pausas encadenadas** (revisión independiente): si el fotograma de congelado de una pausa queda por detrás del
+     fotograma al que acaba de saltar la anterior, no hay segunda pausa; la imagen nunca retrocede.
 4. **Sin dependencias con la tirada del destino** (ADR 0171, otra rama): no comparte estado ni código. Si esa ADR añade
    su propia presentación con pausa, entra en el director como una voz o un congelado más, y la regla de «una sola voz
    alta» ya decide quién manda.
@@ -62,9 +68,10 @@ jugador ve la falta ya pasada.
    **Estrategias y degeneración:** ninguna: no es una mecánica jugable. El riesgo propio es visual: apilar pausas
    (faltas seguidas) o congelar sobre otra voz; lo evita la regla de escenario libre y que la siguiente pausa sólo
    se abre cuando termina la anterior. 10. **Cómo se demuestra:** el censo de abajo, las tres capturas y una verificación
-   de los ocho comportamientos del director (pausa y salto, ×4 y ×16, juego que no se para, voz en escenario, corte por
-   cambio de velocidad, roja con voz, gol sin pausa, director sin política) con un ejemplar temporal del director fuera
-   del repositorio —RT-084 no admite tests de interfaz y `Sim.Tests` no referencia `/Game`—.
+   del director, ahora **reproducible**: `Sim.Tests` enlaza `PresentationDirector.cs` y `PlayStops.cs` (como ya hacía la
+   ADR 0171) y `PresentationDirectorHoldTests` prueba pausa y salto, ×4 y ×16, juego que no se para, voz en escenario,
+   corte por cambio de velocidad, roja con voz, gol sin pausa, director sin política, pausas encadenadas sin retroceso
+   y búsqueda hacia atrás; `PlayStopsTests` es el censo (120 partidos) con los dos casos de respuesta conocida.
 
 ## Implementación (30 sep 2026)
 
@@ -87,8 +94,9 @@ jugador ve la falta ya pasada.
 | reloj de pared añadido a 0,6 s | **≤ +1,8 s** (+1,6 % sobre los 110,6 s de un partido a ×1) |
 
 **Instrumento validado (Regla J), contra casos de respuesta conocida:** de las 298 faltas que el árbitro no vio, **0**
-producen pausa; de las 784 que pitó, **las 784**. Con dos fotogramas de margen entraban 4 de las no vistas (1,3 %), así
-que se miran sólo los fotogramas del propio momento.
+producen pausa; de las 784 que pitó, **todas menos las que un gol del mismo tick anula** (1 de 337 en el censo de
+120 partidos). Con dos fotogramas de margen entraban 4 de las no vistas (1,3 %), así que se miran sólo los
+fotogramas del propio momento. El censo vive ahora en `PlayStopsTests` (valla: 1,5-5 pausas por partido; medido 2,96).
 
 **Los 0,6 s** salen de una regla, no de una medición: menos de la mitad del sello más corto (N1, 1 s), para que el sello
 siga en pantalla cuando el juego se reanuda. Se ajusta viendo la build; el coste ya está medido (1,8 s por partido a 0,6 s;
