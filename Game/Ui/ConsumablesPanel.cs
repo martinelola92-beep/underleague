@@ -355,7 +355,7 @@ public partial class ConsumablesPanel : InkCanvas
 
             list[i] = list[i].Mode == ConsumableMode.Conditional
                 ? list[i] with { Trigger = NextTrigger(list[i].Trigger) }
-                : list[i] with { Mode = ConsumableMode.Conditional, Trigger = DefaultTrigger(_state.Consumable(id)?.Family ?? ConsumableFamily.Supernatural) };
+                : list[i] with { Mode = ConsumableMode.Conditional, Trigger = _state.Consumable(id)?.SuggestedTrigger ?? CycleTriggers[0] };
         }
 
         Apply(list);
@@ -382,15 +382,6 @@ public partial class ConsumablesPanel : InkCanvas
         int next = index < 0 ? 0 : (index + 1) % CycleTriggers.Length;
         return CycleTriggers[next];
     }
-
-    /// <summary>Disparador por defecto según la familia (punto 2 del encargo).</summary>
-    private static string DefaultTrigger(ConsumableFamily family) => family switch
-    {
-        ConsumableFamily.Medical => "ownInjury",
-        ConsumableFamily.Dirty => "scoreBehind",
-        ConsumableFamily.Tactical => "scoreBehind",
-        _ => "lastSeconds",
-    };
 
     /// <summary>Frase del disparador («vas por debajo en el marcador»), también para la vista compacta.</summary>
     public static string TriggerName(string trigger) => trigger switch
