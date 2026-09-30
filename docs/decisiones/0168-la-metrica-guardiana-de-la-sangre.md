@@ -32,7 +32,7 @@ Dos filas en `FullRunMetrics` y la puerta `FullRunGateTests.TheBloodIsNeverWashe
 | métrica | definición | banda | procedencia (Regla H) |
 |---|---|---|---|
 | `bloodPerMatch` | bajas de sangre propias / partidos jugados | ≥ 0,27 | base 0,34 (tabla); suelo al 80 %, **provisional** |
-| `bloodlessPastAct1Share` | de las runs que superan el jefe del acto 1, % sin ninguna baja de sangre | ≤ 7 % | base 2,7-4,0 %; la puerta ve ~500 runs que pasan el acto 1 (error típico ≈ 0,8) y las rápidas ~125 (≈ 1,5): el techo queda a ≥ 2,7 errores típicos, **provisional** |
+| `bloodlessPastAct1Share` | de las runs que superan el jefe del acto 1, % sin ninguna baja de sangre | ≤ 7 % | base 2,7-4,0 %; la puerta ve ~500 runs que pasan el acto 1 (error típico ≈ 0,8) y las rápidas ~125 (≈ 1,5): el techo queda a ≥ 2,7 errores típicos, **provisional**. **Corrección (ADR 0170, revisión independiente): la población estaba mal contada.** La puerta mide sólo la doctrina contextual con 240 runs (~160 que pasan el acto 1 con esos actos, ET ≈ 2 a p ≈ 4-7 %), no las tres doctrinas mezcladas; con 3,5 % de base y ET ≈ 1,6 el techo de 7 estaba a ≈ 2,2 errores típicos, no a 2,7. Techo actual: 13 % (ADR 0170) |
 
 ## Línea base (29 sep 2026)
 

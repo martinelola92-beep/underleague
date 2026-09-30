@@ -247,14 +247,15 @@ public static class FullRunMetrics
     public const double BloodPerMatchBaseline = 0.34;
 
     /// <summary>
-    /// ADR 0168: techo de <see cref="BloodlessPastAct1Share"/>, **enmendado por la ADR 0170** (7 → 10). Procedencia
-    /// (Regla H): con actos de 8/9/9 nodos hay menos partidos entre el inicio y el jefe del acto 1, y más runs lo pasan
-    /// sin una baja de sangre. Línea base re-medida bajo la ADR 0170: 7,1 % (342 de 4.821 runs que pasan el acto 1,
-    /// `--full-runs 1200` semillas 1 y 7; 3,1-4,0 % antes) con `bloodPerMatch` intacto en 0,35. La puerta ve ~500 runs
-    /// que pasan el acto 1 (error típico ≈ 1,15 puntos a ese nivel): el techo queda a ~2,5 errores típicos de la base,
-    /// la misma vara de la ADR 0168. **Provisional.**
+    /// ADR 0168: techo de <see cref="BloodlessPastAct1Share"/>, **enmendado por la ADR 0170** (7 → 13). La puerta mide
+    /// **sólo la doctrina contextual** (240 runs, de las que ~163 pasan el acto 1, error típico ≈ 2,0 puntos a ese nivel),
+    /// no las tres doctrinas mezcladas: la primera versión de esta enmienda (10) y la cifra de la ADR 0168 (~500 runs, ET
+    /// 0,8) usaban una población que la puerta no ve. Procedencia (Regla H): con actos de 8/9/9 nodos hay menos partidos
+    /// antes del jefe 1 y más runs lo pasan sin una baja de sangre; base contextual re-medida, 6,85 % (111 de 1.621 runs
+    /// que pasan el acto 1, `--full-runs 1200` semillas 1 y 7; 6,1 y 7,6 por semilla), con `bloodPerMatch` intacto. Techo =
+    /// base + 3 errores típicos de la puerta (6,85 + 6,0) = 12,9, redondeado a 13. **Provisional.**
     /// </summary>
-    public const double BloodlessPastAct1ShareMax = 10.0;
+    public const double BloodlessPastAct1ShareMax = 13.0;
 
     /// <summary>Sumideros pagables por acto: mínimo.</summary>
     public const double SinksMin = 2.0;
