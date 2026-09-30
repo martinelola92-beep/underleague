@@ -87,6 +87,13 @@ public enum PlayerState
     /// atributo resiste.
     /// </summary>
     Shielding,
+
+    /// <summary>
+    /// Sosteniendo el balón tras atraparlo (BA-J, ADR 0178): el portero espera <c>save.holdTicks</c> antes de
+    /// volver a decidir. No decide, no se mueve y, si pierde el balón, se corta en el acto. Estado propio y no
+    /// <see cref="Dribbling"/>: sostener no es conducir, y así lo distinguen la traza y la vista.
+    /// </summary>
+    Holding,
 }
 
 /// <summary>

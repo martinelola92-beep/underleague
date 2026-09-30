@@ -1034,11 +1034,6 @@ internal sealed class MatchEngine : IPerkWorld
 
     private void UpdateContextCaches()
     {
-        _context.NearestToBall[0] = null;
-        _context.NearestToBall[1] = null;
-        float[] best = { 0f, 0f };
-
-        Vec2 point = _ball.InFlight ? _ball.FlightTarget : _ball.Position;
         for (int i = 0; i < _players.Length; i++)
         {
             _players[i].SpeedPerTickMilli = (int)MathF.Round(SpeedPerTick(_players[i], dribbling: false) * 1000f);
@@ -1053,24 +1048,6 @@ internal sealed class MatchEngine : IPerkWorld
             // lleva ningún efecto modifyUtility (el caso normal).
             player.RecomputeZoneUtilityBonus();
 
-            // BC-G (ADR 0177): el designado de un balón suelto es el más cercano DE LOS QUE PUEDEN LLEGAR a él. El
-            // portero sin alcance o el de campo con el balón más allá de su límite exterior de zona no podían
-            // perseguirlo y, siendo el designado, dejaban a todo su equipo sin derecho a hacerlo (BB-G2: semilla 141,
-            // balón quieto 285 ticks en el borde del área con el portero a 2 casillas).
-            if (_ball.Owner is null && !_ball.InFlight
-                && !(player.IsOutfield
-                    ? player.OuterZone.DistanceOutside(point, player.EffectiveHome, Pitch.AttackDirection(player.Team)) <= 0f
-                    : Utility.CanKeeperReachLoose(_context, player, point)))
-            {
-                continue;
-            }
-
-            float distance = Vec2.Distance(player.Position, point);
-            if (_context.NearestToBall[player.Team] is null || distance < best[player.Team])
-            {
-                _context.NearestToBall[player.Team] = player;
-                best[player.Team] = distance;
-            }
         }
 
         if (_ball.Owner is not null)
@@ -1094,6 +1071,10 @@ internal sealed class MatchEngine : IPerkWorld
         // tratarse como balón muerto para ChaseBall (ver el `wasRestarting` de Step()).
         _context.BallDead = _restartTicksLeft > 0;
 
+        // Después de la percepción y de BallDead: la designación lee KeeperExitCells de ESTE tick y no del
+        // anterior (BC-G, ADR 0177).
+        UpdateNearestToBall();
+
         // BB-B, tercer intento: igual que BallDead arriba, se lee antes de que nadie decida este tick, así
         // que un pase dado dentro del bucle de jugadores no libera la barrera hasta el tick siguiente — el
         // mismo desfase de un tick que ya tenía el mecanismo del segundo intento (revisado por el
@@ -1111,6 +1092,59 @@ internal sealed class MatchEngine : IPerkWorld
             }
         }
     }
+
+    /// <summary>
+    /// El perseguidor designado de cada equipo (AW-S): el jugador más cercano al balón, o al destino del pase
+    /// en vuelo. <b>Con un balón suelto y quieto</b> (BC-G, ADR 0177) es el más cercano de <i>los que pueden
+    /// llegar</i> —de campo, con el punto dentro de su límite exterior de zona; portero, dentro de su alcance—: el
+    /// que no puede llegar y era el designado dejaba a todo su equipo sin derecho a perseguir (BB-G2: semilla 141,
+    /// balón quieto 285 ticks con el portero a 2 casillas). Si nadie de un equipo puede llegar se conserva el más
+    /// cercano de todos, como antes: la designación nunca queda vacía por esto.
+    /// </summary>
+    private void UpdateNearestToBall()
+    {
+        _context.NearestToBall[0] = null;
+        _context.NearestToBall[1] = null;
+        var point = _ball.InFlight ? _ball.FlightTarget : _ball.Position;
+        bool stillLoose = _ball.Owner is null && !_ball.InFlight && _ball.Velocity.Length <= Utility.StillBallSpeed;
+
+        for (int pass = 0; pass < 2; pass++)
+        {
+            // Primera pasada sólo con elegibles (si el balón está suelto y quieto); la segunda, con todos, para
+            // el equipo que se quedó sin designado.
+            float[] best = { 0f, 0f };
+            for (int i = 0; i < _players.Length; i++)
+            {
+                var player = _players[i];
+                if (!player.OnPitch || _context.NearestToBall[player.Team] is not null && pass == 1)
+                {
+                    continue;
+                }
+
+                if (pass == 0 && stillLoose && !CanReachLooseBall(player, point))
+                {
+                    continue;
+                }
+
+                float distance = Vec2.Distance(player.Position, point);
+                if (_context.NearestToBall[player.Team] is null || distance < best[player.Team])
+                {
+                    _context.NearestToBall[player.Team] = player;
+                    best[player.Team] = distance;
+                }
+            }
+
+            if (!stillLoose)
+            {
+                break;
+            }
+        }
+    }
+
+    private bool CanReachLooseBall(MatchPlayer player, Vec2 point) =>
+        player.IsOutfield
+            ? player.OuterZone.DistanceOutside(point, player.EffectiveHome, Pitch.AttackDirection(player.Team)) <= 0f
+            : Utility.CanKeeperReachLoose(_context, player, point);
 
     /// <summary>
     /// Percepción compartida del equipo (Gameplay AI Foundations Pass, P1 / D1 de
@@ -1608,6 +1642,10 @@ internal sealed class MatchEngine : IPerkWorld
             case PlayerState.Celebrating:
                 player.EnterState(PlayerState.Positioning, 0);
                 break;
+            case PlayerState.Holding:
+                // Se acabó la espera: vuelve a tener delante todas las acciones con balón.
+                player.EnterState(ReferenceEquals(_ball.Owner, player) ? PlayerState.Dribbling : PlayerState.Positioning, 0);
+                break;
             default:
                 break;
         }
@@ -1810,6 +1848,17 @@ internal sealed class MatchEngine : IPerkWorld
                     Move(player, dribbling: true);
                 }
 
+                break;
+            case PlayerState.Holding:
+                // Sostener exige tener el balón: si se lo quitan a mitad, se corta y vuelve a jugar.
+                if (!ReferenceEquals(_ball.Owner, player))
+                {
+                    player.EnterState(PlayerState.Positioning, 0);
+                    Move(player, dribbling: false);
+                    break;
+                }
+
+                player.Velocity = new Vec2(0f, 0f);
                 break;
             case PlayerState.Shielding:
                 // Proteger exige llevar el balón, por el mismo motivo que conducir (ADR 0137): si te lo
@@ -3720,26 +3769,7 @@ internal sealed class MatchEngine : IPerkWorld
         {
             SetOwner(goalkeeper);
 
-            // BA-J (ADR 0178): LA PARADA SE ASIENTA. SetOwner deja decidir al portero en el acto y suelta el
-            // balón a los 5 ticks del armado del pase, con los que acaban de tirar todavía en el área
-            // (medido: 1,9 de los seis a menos de 4 casillas del portero, y el balón vuelve a manos rivales
-            // en 45 ticks el 77 % de las veces). Sostenerlo unos ticks es lo que pedía la nota del revisor
-            // —«el portero debería esperar unos ticks antes de sacar»—: es la pausa en la que el equipo que
-            // tiró sale del área cerrada (ADR 0152) y se repliega, y el suyo se abre para recibir. Es el
-            // mismo compromiso con duración que ya usa la conducción (`Dribbling` con contador: no se decide
-            // hasta que se acaba), sin estado nuevo.
-            if (save.HoldTicks > 0)
-            {
-                goalkeeper.EnterState(PlayerState.Dribbling, save.HoldTicks);
-                goalkeeper.TargetPoint = goalkeeper.Position;
-            }
-
-            // Y el equipo que tiró se repliega durante la pausa (ver StartFallBack).
-            if (save.RetreatTicks > 0)
-            {
-                StartFallBack(shooter.Team, save.RetreatTicks);
-            }
-
+            SettleAfterCatch(goalkeeper, shooter);
             Emit(EventType.Save, _ball.ShotIsPenalty ? "penalty" : "held", goalkeeper, opponent: shooter);
             return;
         }
@@ -3768,6 +3798,36 @@ internal sealed class MatchEngine : IPerkWorld
         _ball.SetLoose(speed, save.ParryLiftCellsPerTickMilli / 1000f);
         _ball.LastTouchPlayer = goalkeeper;
         _ball.LastTouchTeam = defendingTeam;
+    }
+
+    /// <summary>
+    /// BA-J (ADR 0178): LA PARADA SE ASIENTA. SetOwner deja decidir al portero en el acto y suelta el balón a los
+    /// 5 ticks del armado del pase, con los que acaban de tirar todavía en el área (medido: 1,8 de los seis a menos
+    /// de 4 casillas del portero). El portero sostiene el balón <c>save.holdTicks</c> (estado
+    /// <see cref="PlayerState.Holding"/>: no decide ni se mueve) y el equipo que tiró se repliega durante
+    /// <c>save.retreatTicks</c> (ver <see cref="StartFallBack"/>). Vale igual con el portero fuera del área y en
+    /// un penalti: es lo que pasa al atrapar, no dónde.
+    /// </summary>
+    private void SettleAfterCatch(MatchPlayer goalkeeper, MatchPlayer shooter)
+    {
+        var save = _tuning.Save;
+        if (save.HoldTicks > 0)
+        {
+            goalkeeper.EnterState(PlayerState.Holding, save.HoldTicks);
+            goalkeeper.TargetPoint = goalkeeper.Position;
+        }
+
+        if (save.RetreatTicks > 0)
+        {
+            StartFallBack(shooter.Team, save.RetreatTicks);
+        }
+    }
+
+    /// <summary>Enganche de prueba: lo que pasa al atrapar un tiro, sin necesitar una parada real.</summary>
+    internal void SettleAfterCatchForTest(int goalkeeperIndex, int shooterIndex)
+    {
+        SetOwner(_players[goalkeeperIndex]);
+        SettleAfterCatch(_players[goalkeeperIndex], _players[shooterIndex]);
     }
 
     /// <summary>Atributo del jugador medio; el mismo pivote que usa <see cref="Utility"/>.</summary>
@@ -5318,11 +5378,12 @@ internal sealed class MatchEngine : IPerkWorld
     /// <summary>
     /// Cuánto se suma, en casillas hacia la portería rival, a la casilla-hogar de un jugador de
     /// <paramref name="team"/> mientras dura su repliegue: lo que le falta a su orden actual para estar en la
-    /// defensiva. Una orden ya defensiva no baja dos veces, y una ofensiva baja más: el repliegue lleva a todos
-    /// al mismo sitio.
+    /// defensiva. Una orden ya defensiva no baja dos veces. <b>No baja al delantero</b> —«el delantero puede
+    /// quedarse presionando, pero el resto debería replegar», nota del revisor— <b>ni pisa una orden ofensiva</b>:
+    /// el jugador (o su grito «¡Arriba!») la puso a propósito (ADR 0166).
     /// </summary>
     private float FallBackShift(int team, Position role) =>
-        _fallBackEnd[team] > _tick
+        _fallBackEnd[team] > _tick && role != Position.Forward && _context.Order[team] != Mentality.Offensive
             ? _catalog.Ai.MentalityShift(Mentality.Defensive, role) - _catalog.Ai.MentalityShift(_context.Order[team], role)
             : 0f;
 

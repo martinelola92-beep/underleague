@@ -150,13 +150,13 @@ public sealed class AfterTheSaveTests
 
         Assert.True(on.Released >= 100, $"debía haber paradas retenidas que medir: {on.Released}");
         Assert.True(on.ShortestRelease >= hold, $"el portero soltó a los {on.ShortestRelease} ticks, antes de la pausa de {hold}");
-        Assert.True(on.NearKeeperAtRelease <= 0.8, $"al soltar seguían {on.NearKeeperAtRelease:F2} rivales a <4 casillas (medido 0,4; antes 1,7)");
+        Assert.True(on.NearKeeperAtRelease <= 1.0, $"al soltar seguían {on.NearKeeperAtRelease:F2} rivales a <4 casillas (medido 0,76-0,82 con el delantero sin replegar; antes 1,7-1,95)");
         Assert.True(on.BeyondHalfAtRelease <= 4.0, $"el equipo que tiró seguía adelantado al soltar: {on.BeyondHalfAtRelease:F2} de 6 en campo contrario (medido ≈ 3,3; antes 4,9)");
     }
 
     /// <summary>
     /// El repliegue baja las casillas-hogar del equipo que tiró a donde las pondría la orden defensiva
-    /// (<c>mentalityShift.Defensive</c>: −1 defensas, −2 medios, −3 delantero) y <b>no toca su orden</b>: la
+    /// (<c>mentalityShift.Defensive</c>: −1 defensas, −2 medios) y <b>no toca su orden</b> ni baja al delantero: la
     /// orden es del jugador y de sus gritos, y la vista de gritos la reconstruye de los eventos (ADR 0166).
     /// El otro equipo no se entera.
     /// </summary>
@@ -180,7 +180,7 @@ public sealed class AfterTheSaveTests
         {
             var (team, role, x) = before[i];
             var (_, _, xAfter) = after[i];
-            if (role == Position.Goalkeeper || team == 0)
+            if (role is Position.Goalkeeper or Position.Forward || team == 0)
             {
                 Assert.Equal(x, xAfter);
                 continue;
@@ -193,7 +193,7 @@ public sealed class AfterTheSaveTests
             moved++;
         }
 
-        Assert.True(moved >= 5, $"debían moverse los jugadores de campo del equipo que tiró: {moved}");
+        Assert.True(moved >= 4, $"debían moverse los defensas y medios del equipo que tiró: {moved}");
         Assert.Equal(orderBefore[0], engine.EffectiveOrder(0));
         Assert.Equal(orderBefore[1], engine.EffectiveOrder(1));
     }
@@ -217,6 +217,69 @@ public sealed class AfterTheSaveTests
         {
             Assert.Equal(before[i].X, after[i].X);
         }
+    }
+
+    /// <summary>Un equipo con orden ofensiva (o su grito «¡Arriba!») no se repliega: la puso el jugador a propósito.</summary>
+    [Fact]
+    public void AnOffensiveTeamDoesNotFallBack()
+    {
+        var setup = TestMatches.Reference(Catalog, 3);
+        var offensive = setup with { Away = setup.Away with { Order = Mentality.Offensive } };
+        var control = new MatchEngine(offensive, 3, Catalog, SimConfig.Default);
+        control.UpdateBlockShift();
+        var before = HomesOf(control);
+
+        var engine = new MatchEngine(offensive, 3, Catalog, SimConfig.Default);
+        engine.StartFallBackForTest(1, 50);
+        engine.UpdateBlockShift();
+        var after = HomesOf(engine);
+
+        for (int i = 0; i < before.Length; i++)
+        {
+            Assert.Equal(before[i].X, after[i].X);
+        }
+    }
+
+    /// <summary>
+    /// Atrapar un tiro pone al portero en <c>Holding</c> (estado propio, no el de regate) durante
+    /// <c>holdTicks</c> —también con el portero FUERA del área— y abre el repliegue del equipo que tiró.
+    /// </summary>
+    [Theory]
+    [InlineData(1.0f)]
+    [InlineData(6.0f)]
+    public void CatchingPutsTheKeeperInHoldingWhereverHeIs(float keeperX)
+    {
+        var engine = new MatchEngine(TestMatches.Reference(Catalog, 3), 3, Catalog, SimConfig.Default);
+        int keeper = -1;
+        int shooter = -1;
+        for (int i = 0; ; i++)
+        {
+            MatchPlayer p;
+            try
+            {
+                p = engine.PlayerAtForTest(i);
+            }
+            catch (IndexOutOfRangeException)
+            {
+                break;
+            }
+
+            if (p.Team == 0 && !p.IsOutfield)
+            {
+                keeper = i;
+            }
+
+            if (p.Team == 1 && p.IsOutfield && shooter < 0)
+            {
+                shooter = i;
+            }
+        }
+
+        engine.PlaceForTest(keeper, new Vec2(keeperX, 3.5f));
+        engine.SettleAfterCatchForTest(keeper, shooter);
+
+        Assert.Equal(PlayerState.Holding, engine.StateForTest(keeper));
+        Assert.Equal(Catalog.Tuning.Save.HoldTicks, engine.PlayerAtForTest(keeper).StateTicksLeft);
     }
 
     private static (int Team, Position Role, float X)[] HomesOf(MatchEngine engine)

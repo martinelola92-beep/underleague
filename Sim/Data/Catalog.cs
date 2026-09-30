@@ -331,7 +331,7 @@ public sealed class AiWeights
     /// Comparte los arrays a propósito: nadie los muta después de cargar.
     /// </summary>
     internal AiWeights WithContext(AiContext context) =>
-        new(_base, _tactical, _mentality, _offBallTackle, context, _shift, _mentalityShift, _mentalityOdds);
+        new(_base, _tactical, _mentality, _offBallTackle, context, _shift, _mentalityShift, _mentalityOdds, _press);
 
     /// <summary>
     /// Los mismos pesos con otra tabla de entrada sin balón por puesto (ADR 0125 D2). Hermano de

@@ -1,5 +1,6 @@
 using Underleague.Sim.Data;
 using Underleague.Sim.Engine;
+using Underleague.Sim.Model;
 using Xunit.Abstractions;
 
 namespace Underleague.Sim.Tests.Engine;
@@ -192,6 +193,75 @@ public sealed class DancingTeammatesTests
             Vec2.Distance(offLower, offHigher) < 0.5f,
             $"control: sin separación los dos debían cubrir el mismo punto (causa de BB-K), quedaron a {Vec2.Distance(offLower, offHigher)}");
         Assert.Equal(offLower, lowerAt);
+    }
+
+    /// <summary>
+    /// Tres compañeros con zonas solapadas y el mismo punto bruto: se reparten por id ascendente (como
+    /// <c>Marking</c>, RT-041). El de id menor conserva su punto aunque los demás decidan después, y cada uno
+    /// queda a la separación de los datos de los de id menor; el orden en que se llama a decidir no cambia el
+    /// resultado del de id menor.
+    /// </summary>
+    [Fact]
+    public void ThreeTeammatesShareTheCoverLineInIdOrder()
+    {
+        float spacing = Catalog.Ai.Context.CoverSpacingCells;
+        var players = new[]
+        {
+            Defender(1, new Cell(2, 2)),
+            Defender(2, new Cell(2, 3)),
+            Defender(3, new Cell(2, 4)),
+            OpponentCarrier(),
+        };
+        for (int i = 0; i < players.Length; i++)
+        {
+            players[i].Index = i;
+            players[i].Position = players[i].HomeCenter;
+        }
+
+        var ball = new Ball { InterceptAttempted = new bool[players.Length], Position = new Vec2(12f, 3.5f) };
+        ball.Owner = players[3];
+        players[3].Position = ball.Position;
+        var context = new UtilityContext(players, ball, Catalog.Ai, Catalog.Tuning.ActionZone, Catalog.Tuning.Pass.InterceptRadiusCells);
+        context.TacticalStates[0] = TacticalState.OutOfPossession;
+        context.TacticalStates[1] = TacticalState.InPossession;
+        context.HoldingTeam = 1;
+        context.Carrier[1] = players[3];
+        context.NearestToBall[0] = players[0];
+        context.NearestToBall[1] = players[3];
+
+        foreach (int index in new[] { 0, 1, 2 })
+        {
+            Assert.Equal(PlayerAction.CoverSpace, Utility.Choose(context, players[index], null));
+        }
+
+        var first = players[0].TargetPoint;
+        var second = players[1].TargetPoint;
+        var third = players[2].TargetPoint;
+        Assert.True(Vec2.Distance(first, second) >= spacing - 0.06f, $"1-2: {Vec2.Distance(first, second)}");
+        Assert.True(Vec2.Distance(first, third) >= spacing - 0.06f, $"1-3: {Vec2.Distance(first, third)}");
+        Assert.True(Vec2.Distance(second, third) >= spacing - 0.06f, $"2-3: {Vec2.Distance(second, third)} pts {first} {second} {third}");
+
+        // El de id menor no mira a los mayores: decidir otra vez después de ellos no le mueve el punto.
+        Assert.Equal(PlayerAction.CoverSpace, Utility.Choose(context, players[0], null));
+        Assert.Equal(first, players[0].TargetPoint);
+
+        // Y decidir en otro orden (el 3 antes que el 2) no cambia lo que cubre el 1 ni deja a nadie encima.
+        Assert.Equal(PlayerAction.CoverSpace, Utility.Choose(context, players[2], null));
+        Assert.Equal(PlayerAction.CoverSpace, Utility.Choose(context, players[1], null));
+        Assert.Equal(first, players[0].TargetPoint);
+        Assert.True(Vec2.Distance(players[1].TargetPoint, players[2].TargetPoint) >= spacing - 0.06f);
+    }
+
+    private static MatchPlayer Defender(int id, Cell home) => Make(id, Position.Defender, home, 0);
+
+    private static MatchPlayer OpponentCarrier() => Make(101, Position.Forward, new Cell(12, 3), 1);
+
+    private static MatchPlayer Make(int id, Position position, Cell home, int team)
+    {
+        var definition = new PlayerDefinition(
+            id, "p" + id, Race.Human, position, Rarity.Common, 1, new Attributes(50, 50, 50, 50, 50),
+            Array.Empty<Trait>(), new[] { position.ToString() }, PhysicalState.Healthy);
+        return new MatchPlayer(definition, team, home, Catalog);
     }
 
     /// <summary>Los dos defensas de un equipo deciden con el balón en la recta que cruza las dos zonas.</summary>

@@ -60,6 +60,7 @@ public static class StateMachine
         // Proteger es un compromiso con duración igual que conducir (ADR 0137): mientras dura no se
         // decide, y al expirar el portador vuelve a tener delante todas las acciones con balón.
         PlayerState.Shielding => WithBallActions,
+        PlayerState.Holding => NoActions,
         PlayerState.Passing => NoActions,
         PlayerState.Shooting => NoActions,
         PlayerState.Tackling => NoActions,

@@ -504,7 +504,7 @@ internal static class Utility
     /// los tiros de centrocampista pasan de 1,25 a 1,96 por partido y los del delantero bajan; con este
     /// umbral no hay ningún episodio de más de 40 ticks y el reparto de tiros no se mueve (1,37 y 6,37).
     /// </summary>
-    private const float StillBallSpeed = 0.02f;
+    internal const float StillBallSpeed = 0.02f;
 
     private static bool HasLooseBallDuty(UtilityContext ctx, MatchPlayer p, IReadOnlyList<PlayerAction> legal)
     {
@@ -1528,8 +1528,10 @@ internal static class Utility
     /// recta y se desliza por la <b>perpendicular</b> hasta quedar a exactamente <paramref name="spacingCells"/>
     /// del punto del compañero: dos jugadores repartiéndose el ancho de la misma línea de cobertura. Es
     /// <b>continuo</b> en el punto bruto —a distancia igual a la separación el deslizamiento es cero— y se
-    /// mide sobre el punto <b>bruto</b> (el que la fórmula da, no el ya desplazado) para que apartarse no
-    /// haga desaparecer el conflicto y vuelva a aparecer en la decisión siguiente.</para>
+    /// se calcula desde el punto <b>bruto</b> y, mate a mate en orden de id, sobre el resultado
+    /// que llevan los de id menor (no sobre el desplazado en la decisión anterior del propio jugador), así que el
+    /// resultado es una función del bruto y de los destinos ajenos: apartarse no hace desaparecer el conflicto
+    /// para que vuelva en la decisión siguiente. Con tres compañeros se reparten la línea uno tras otro.</para>
     ///
     /// <para><b>Hacia qué lado.</b> Hacia el que ya está el punto bruto si se aparta lo bastante de la
     /// recta; si no, hacia donde ya está el jugador respecto al compañero, y a igualdad, hacia el lado
@@ -1560,7 +1562,7 @@ internal static class Utility
             }
 
             Vec2 anchor = mate.TargetPoint;
-            Vec2 gap = target - anchor;
+            Vec2 gap = result - anchor;
             if (gap.Length >= spacingCells)
             {
                 continue;

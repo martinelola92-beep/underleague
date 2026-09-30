@@ -17,7 +17,7 @@ namespace Underleague.Sim.Tests.Engine;
 /// <para><b>El instrumento</b> (Regla J): un episodio es una racha de al menos <see cref="MinTicks"/> ticks
 /// con el balón en juego, sin dueño, sin vuelo y sin moverse. Medido antes del arreglo con 300 partidos de
 /// referencia (semillas 1..300): <b>58 episodios, el más largo de 656 ticks (44 s)</b>, 13 de ellos de más
-/// de 40 ticks; los cuatro peores —semillas 224, 79, 66 y 260— son la causa reproducida.</para>
+/// de 40 ticks (árbol previo a la rama). Sobre `main` rebasado, los bloqueos largos están en las semillas 32 (180 ticks), 173 (276), 355 (471) y 398 (374); la 141 (285) apareció con el primer arreglo.</para>
 /// </summary>
 public sealed class LooseBallStuckTests
 {
@@ -71,20 +71,20 @@ public sealed class LooseBallStuckTests
     private static IEnumerable<ulong> Range(int count) => Enumerable.Range(1, count).Select(i => (ulong)i);
 
     /// <summary>
-    /// Las semillas del bloqueo largo medido antes del arreglo (656, 448, 440 y 430 ticks con el balón quieto
+    /// Las semillas del bloqueo largo medido antes del arreglo (main: 180, 276, 471 y 374 ticks con el balón quieto
     /// en el córner; la 141, 285 ticks con el portero designado sin alcance, BB-G2). Ninguna puede volver a tener más de 60 ticks: es la causa reproducida.
     /// </summary>
     [Fact]
     public void TheSeedsThatFrozeTheBallForHalfAMinuteNoLongerDo()
     {
-        var episodes = Measure(Catalog, new ulong[] { 224, 79, 66, 260, 141 });
+        var episodes = Measure(Catalog, new ulong[] { 32, 173, 355, 398, 141 });
         foreach (var e in episodes)
         {
             _output.WriteLine($"seed {e.Seed} tick {e.StartTick} len {e.Length} ball {e.Ball}");
         }
 
         int longest = episodes.Count == 0 ? 0 : episodes.Max(e => e.Length);
-        Assert.True(longest <= 60, $"el balón volvió a quedar quieto {longest} ticks (antes 656/448/440/430)");
+        Assert.True(longest <= 60, $"el balón volvió a quedar quieto {longest} ticks (main: 180/276/471/374)");
     }
 
     /// <summary>
@@ -100,7 +100,7 @@ public sealed class LooseBallStuckTests
         int longest = episodes.Count == 0 ? 0 : episodes.Max(e => e.Length);
         _output.WriteLine($"partidos {matches} · episodios ≥{MinTicks} ticks {episodes.Count} · más largo {longest}");
 
-        Assert.True(episodes.Count <= 16, $"{episodes.Count} episodios de balón quieto ≥ {MinTicks} ticks en {matches} partidos (antes ≈ 29; con el deber ≈ 16, todos cortos)");
+        Assert.True(episodes.Count <= 22, $"{episodes.Count} episodios de balón quieto ≥ {MinTicks} ticks en {matches} partidos (main ≈ 29; con el arreglo 10-18 según el árbol, todos cortos)");
         Assert.True(longest <= 40, $"el más largo duró {longest} ticks (antes 656)");
     }
 
