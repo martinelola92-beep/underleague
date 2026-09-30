@@ -164,7 +164,7 @@ internal sealed class BodySeparation
         _pushY[b.Index] += ny * push * shareB / 1000f;
     }
 
-    /// <summary>Filas invadidas por el público a cada lado (ADR 0169): 0 salvo en la turba.</summary>
+    /// <summary>Filas invadidas por el público a cada lado (ADR 0175): 0 salvo en la turba.</summary>
     public int BandInset { get; set; }
 
     /// <summary>
@@ -203,7 +203,7 @@ internal sealed class BodySeparation
             var next = Utility.ClampToPitch(new Vec2(player.Position.X + px, player.Position.Y + py));
             if (BandInset > 0)
             {
-                // ADR 0169: en la turba el empujón tampoco mete a nadie en una fila invadida ni lo saca de ella de golpe.
+                // ADR 0175: en la turba el empujón tampoco mete a nadie en una fila invadida ni lo saca de ella de golpe.
                 next = new Vec2(
                     next.X,
                     Math.Clamp(next.Y, MathF.Min(BandInset, player.Position.Y), MathF.Max(Pitch.Rows - BandInset, player.Position.Y)));

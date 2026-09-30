@@ -1641,7 +1641,7 @@
     },
     "mob": {
       "type": "object",
-      "description": "ADR 0169, RF-055b: el estrechamiento y la velocidad de la prórroga de turba.",
+      "description": "ADR 0175, RF-055b: el estrechamiento y la velocidad de la prórroga de turba.",
       "properties": {
         "_doc": {
           "type": "string"

@@ -11,7 +11,7 @@ namespace Underleague.Sim.Run.View;
 /// <param name="Id">Id de datos del tipo.</param>
 /// <param name="Name">Nombre en el idioma pedido («Salta uno»).</param>
 /// <param name="Text">Lo que hace, en el idioma pedido.</param>
-/// <param name="Rule">Lo que toda turba hace al campo (ADR 0169: se estrecha y el juego acelera), generado desde
+/// <param name="Rule">Lo que toda turba hace al campo (ADR 0175: se estrecha y el juego acelera), generado desde
 /// <c>tuning.mob</c>; cadena vacía si los dos parámetros valen 0.</param>
 public sealed record MobLine(string Id, string Name, string Text, string Rule = "");
 

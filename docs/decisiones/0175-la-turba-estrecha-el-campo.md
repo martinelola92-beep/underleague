@@ -1,4 +1,4 @@
-# ADR 0169 — La turba estrecha el campo (y acelera el juego)
+# ADR 0175 — La turba estrecha el campo (y acelera el juego)
 
 Fecha: 29 sep 2026 · Estado: **aceptada, cifras provisionales** (decisión de diseño tomada sin consultar dentro de
 lo que fija RF-055b; el gate 5 de Knavall lo desbloqueó el revisor el 29 sep: «las lesiones se arrastran», es
@@ -183,3 +183,10 @@ y salía de banda **7,57 veces por turba** (0,48 sin la ADR): 641 → 758 ticks.
 **No hecho / abierto.** Sólo semillas 1 y 2 a 200 runs; ningún lote de 600 (falta una repetición con la máquina libre).
 Los saques (barrera de reanudación, `EnforceRestartClearance`) siguen pudiendo empujar a un rival hasta 2 casillas de
 una vez (comportamiento previo de BB-B, no de esta ADR); en la turba hay más saques de banda, así que se ve más.
+
+**Puertas (30 sep 2026).** `tools/puertas-rapidas.sh` (25 %): dos rojas nuevas, `BetterTeamWinRateIsInRange` (92,68 con 250
+partidos; **verde al 100 %**, ruido de muestra) y `RaceBalanceTests` (undead 61,09). Al 100 %: **`RaceBalanceTests` sigue roja**,
+`elf_none` = 39,55 % (banda 40-60; dwarf 57,45, human 44,77, orc 48,95, undead 59,27). Aislada por interruptores
+(Regla F, CONFIRMED): con `mob` a 0/0 pasa; con sólo la velocidad (0/15) pasa; **con sólo el estrechamiento (1/0) falla**.
+Lectura: el campo estrecho quita espacio a la raza más técnica y es 0,45 puntos bajo el suelo. **Decisión abierta para el
+revisor** (no se toca la banda en silencio, RT-057): aceptar el borde, o bajar el estrechamiento, o retocar la raza elfa.

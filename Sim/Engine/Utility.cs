@@ -129,7 +129,7 @@ internal sealed class UtilityContext
     /// <summary>Velocidad del pase en milésimas de casilla por tick (tuning.ball), para la carrera del pase en profundidad.</summary>
     public int PassSpeedCellsPerTickMilli { get; set; }
 
-    /// <summary>Filas invadidas por el público a cada lado (ADR 0169): 0 salvo en la turba. Los destinos se acotan a la banda restante.</summary>
+    /// <summary>Filas invadidas por el público a cada lado (ADR 0175): 0 salvo en la turba. Los destinos se acotan a la banda restante.</summary>
     public int BandInset { get; set; }
 
     /// <summary>
@@ -764,7 +764,7 @@ internal static class Utility
 
     /// <summary>Acota un punto al rectángulo del campo.</summary>
     /// <summary>
-    /// Acota un destino a la banda jugable de la fase (ADR 0169): el campo entero en tiempo reglamentario (idéntico a
+    /// Acota un destino a la banda jugable de la fase (ADR 0175): el campo entero en tiempo reglamentario (idéntico a
     /// <see cref="ClampToPitch"/>) y, en la turba, sin las filas que invade el público. Los destinos que la utilidad
     /// elige (huecos, apoyos, conducción, pase en profundidad) no pueden caer en una fila que el balón no puede pisar.
     /// </summary>

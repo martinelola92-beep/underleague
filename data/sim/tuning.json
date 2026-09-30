@@ -277,7 +277,7 @@
     "attributesPerLevel": 2
   },
   "mob": {
-    "_doc": "ADR 0169, RF-055b: la prórroga de turba estrecha el campo y acelera el juego. narrowRowsPerSide: filas que el publico invade POR LADO, siempre las exteriores (0 y 6 con siete filas): casillas fijas y anunciadas, la turba es un problema de colocacion anticipable (RF-012d). La banda jugable pasa de [0, 7] a [1, 6]; la cuadricula sigue siendo de 16x7. speedPercent: aumento entero de la velocidad de carrera del jugador y de las cuatro velocidades de golpe del balon (pase, tiro, cabeceo, rechace del portero) desde MOB_START, en tanto por ciento (RT-023); no toca los ticks de estados ni el reloj logico. AMBAS CIFRAS SON LA LITERAL DE RF-055b (1 fila, 15 por ciento): PROVISIONALES, sin medir (Regla H); con las dos a 0 la turba es la de antes de la ADR 0169.",
+    "_doc": "ADR 0175, RF-055b: la prórroga de turba estrecha el campo y acelera el juego. narrowRowsPerSide: filas que el publico invade POR LADO, siempre las exteriores (0 y 6 con siete filas): casillas fijas y anunciadas, la turba es un problema de colocacion anticipable (RF-012d). La banda jugable pasa de [0, 7] a [1, 6]; la cuadricula sigue siendo de 16x7. speedPercent: aumento entero de la velocidad de carrera del jugador y de las cuatro velocidades de golpe del balon (pase, tiro, cabeceo, rechace del portero) desde MOB_START, en tanto por ciento (RT-023); no toca los ticks de estados ni el reloj logico. AMBAS CIFRAS SON LA LITERAL DE RF-055b (1 fila, 15 por ciento): PROVISIONALES, sin medir (Regla H); con las dos a 0 la turba es la de antes de la ADR 0175.",
     "narrowRowsPerSide": 1,
     "speedPercent": 15
   }

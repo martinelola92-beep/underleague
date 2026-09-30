@@ -2016,7 +2016,7 @@ internal sealed class MatchEngine : IPerkWorld
         player.Position = next;
     }
 
-    // ---------------------------------------------------------------- ADR 0169: la turba estrecha el campo
+    // ---------------------------------------------------------------- ADR 0175: la turba estrecha el campo
 
     /// <summary>Filas que el público invade por lado (0 en tiempo reglamentario, <c>mob.narrowRowsPerSide</c> en la turba).</summary>
     private int _bandInset;
@@ -2086,7 +2086,7 @@ internal sealed class MatchEngine : IPerkWorld
 
         milli = milli * percent / 100;
 
-        // ADR 0169: la turba acelera el juego, en entero (RT-023). Con el bono a 0, ni una operación más.
+        // ADR 0175: la turba acelera el juego, en entero (RT-023). Con el bono a 0, ni una operación más.
         if (_speedBonusPercent != 0)
         {
             milli = milli * (100 + _speedBonusPercent) / 100;

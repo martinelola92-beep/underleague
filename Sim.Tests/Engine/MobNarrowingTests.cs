@@ -8,7 +8,7 @@ using Underleague.Sim.Model;
 namespace Underleague.Sim.Tests.Engine;
 
 /// <summary>
-/// ADR 0169 (RF-055b): la turba estrecha el campo una fila por lado (las exteriores, siempre las mismas) y sube un
+/// ADR 0175 (RF-055b): la turba estrecha el campo una fila por lado (las exteriores, siempre las mismas) y sube un
 /// 15 % la velocidad. El tiempo reglamentario queda byte a byte igual (RT-024); quien está en una fila invadida al
 /// empezar la turba se aparta andando (RF-053, ADR 0143); el balón sale por el borde de la banda, no de la
 /// cuadrícula. Las cifras son las provisionales de <c>tuning.mob</c>.
@@ -246,7 +246,7 @@ public sealed class MobNarrowingTests
     }
 
     /// <summary>
-    /// Regresión medida al hacer la ADR 0169: con los destinos de la utilidad y de los pases acotados sólo al
+    /// Regresión medida al hacer la ADR 0175: con los destinos de la utilidad y de los pases acotados sólo al
     /// campo entero, el balón volaba a las filas invadidas y salía de banda 7,57 veces por turba (0,48 antes). Con
     /// los destinos acotados a la banda vuelve a 0,47.
     /// </summary>
