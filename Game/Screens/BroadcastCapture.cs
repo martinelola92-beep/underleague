@@ -1592,6 +1592,7 @@ public partial class BroadcastCapture : Control
             await Save("retrans-turba-campo-2");
 
             // Un saque de banda en el lado cercano a la cámara (fila 6): ¿el público tapa el balón?
+            bool taken = false;
             foreach (var e in playback.Result.Events)
             {
                 if (e.Type != EventType.Recovery || e.Detail != "throwIn" || e.Tick < playback.Result.Events.First(x => x.Type == EventType.MobStart).Tick)
@@ -1600,16 +1601,22 @@ public partial class BroadcastCapture : Control
                 }
 
                 int frame = trace.FrameOfTick(e.Tick);
-                if (trace.BallAt(frame).Y >= Pitch.Rows - 1.2f)
+                if (trace.BallAt(frame).Y >= Pitch.Rows - 2.5f)
                 {
                     await ShowFrame(screen, frame, "turba-saque");
                     await Save("retrans-turba-saque");
+                    taken = true;
                     break;
                 }
             }
 
             Drop(instance);
-            return;
+            if (taken)
+            {
+                return;
+            }
+
+            continue;
         }
 
         GD.PushWarning("retransmisión: ninguna semilla de la lista llega a la turba");
