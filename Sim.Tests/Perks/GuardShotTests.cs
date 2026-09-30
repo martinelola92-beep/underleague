@@ -144,9 +144,13 @@ public sealed class GuardShotTests
         }
 
         _output.WriteLine($"Último hombre: {activations} activaciones en 750 partidos, {stops} paradas");
-        Assert.True(activations > 100, "el perk tiene que activarse en la mayoría de los partidos");
-        Assert.InRange(stops * 100 / activations, 55, 90); // 75 % con 750 tiradas: la banda cubre el azar de sobra
+        Assert.True(activations > 100, "el perk tiene que activarse en muchos partidos");
+
+        // La probabilidad sale del dato (hoy 20 %, ADR 0181 enmendada): ±15 puntos cubren el azar de sobra.
+        int chance = Catalog.Perks.Get("last_man").Effects.Single().Value;
+        Assert.InRange(stops * 100 / activations, chance - 15, chance + 15);
     }
+
     /// <summary>
     /// Revisión independiente: si el defensa <b>no puede actuar</b> (está tirado, así que <c>CanTouchBall</c> falla),
     /// la activación no cuenta: ni cartel, ni uso gastado. Con el uso intacto, el mismo defensa sí actúa en el tiro

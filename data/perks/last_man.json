@@ -1,5 +1,5 @@
 {
-  "_doc": "ACTO (BC-D, 30 sep 2026, ADR 0181): el heroe del momento. Cuando un tiro rival va a puerta y ya esta en vuelo (SHOT_ON_TARGET), el defensa que lo lleva se interpone en la trayectoria y se queda con el balon el 75 % de las veces (guardShot: probabilidad FIJA, peticion del revisor, 19 sep 2026; no una cuota, ADR 0050 P1, porque el acto rompe la regla de que un tiro a puerta se para). Si la tirada sale mal, queda en la trayectoria y el tiro sigue: lo resuelven el bloqueo generico y el portero. Solo un defensa (positionOnly Defender) y una vez por partido. Antes: relocate entre el balon y su porteria en SHOT, sin efecto medible (goles encajados 1,079 contra 1,065) y con el uso gastado en el primer tiro rival aunque fuese fuera (~26 %). Ahora el disparador es el tiro que va a puerta, asi que el uso solo se gasta cuando puede salvar algo. Se interpone en el punto de la trayectoria mas cercano a el (entre el 50 y el 90 % del recorrido): es un corte, como el resto de teletransportes del catalogo (BA-K).",
+  "_doc": "ACTO (BC-D, 30 sep 2026, ADR 0181): el heroe del momento. Cuando un tiro rival va a puerta y ya esta en vuelo (SHOT_ON_TARGET), el defensa que lo lleva se interpone en la trayectoria y se queda con el balon el 20 % de las veces (guardShot: probabilidad FIJA, no una cuota, ADR 0050 P1, porque el acto rompe la regla de que un tiro a puerta se para). Si la tirada sale mal, queda en la trayectoria y el tiro sigue: lo resuelven el bloqueo generico y el portero. Solo un defensa (positionOnly Defender) y una vez por partido. Antes: relocate entre el balon y su porteria en SHOT, sin efecto medible (goles encajados 1,079 contra 1,065) y con el uso gastado en el primer tiro rival aunque fuese fuera (~26 %). Ahora el disparador es el tiro que va a puerta, asi que el uso solo se gasta cuando puede salvar algo. Se interpone en el punto de la trayectoria mas cercano a el (entre el 50 y el 90 % del recorrido): es un corte, como el resto de teletransportes del catalogo (BA-K). REVISION (30 sep 2026, decision del revisor, ADR 0181 enmendada): (1) solo se activa si de verdad es el ultimo hombre: teammatesGoalside(owner) == 0, ningun companero de campo -ni el portero- entre el balon y su porteria; (2) la probabilidad baja de 75 a 20. Con 75 media +124,7 ± 7,7 (tabla ADR 0087, semillas 5/11/17), el segundo valor mas alto de un raro tras deathless_march (+197): fuera de banda. Banda: percentil 90 de los otros 27 raros medidos con el mismo instrumento, +43,8 (maximo +197 = deathless_march, el outlier que la propia ficha senala; mediana +5). Con 20 mide +42,7 (semillas 5/11/17) y +45,4 ± 3,7 con cinco semillas: en la banda; con 25, +48,3; con 30, +56,0; con 35, +64,0.",
   "id": "last_man",
   "name": {
     "es": "Último hombre",
@@ -19,7 +19,7 @@
     {
       "type": "guardShot",
       "target": "owner",
-      "value": 75
+      "value": 20
     }
   ],
   "elseEffects": [],
