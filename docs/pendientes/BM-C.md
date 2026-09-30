@@ -116,3 +116,21 @@ de valor ≈ −10 ± 5 **en el espejo del medidor** (que no arrastra lesiones e
 valor alto de una rara no está, y la paga está. **No se toca el ×4 ni el valor sin decisión del revisor** (RT-057).
 Queda abierto, sin ficha propia: el rencor (10 s, sólo testigos cercanos) sigue sin costarle lesiones al portador;
 si el revisor quiere que la paga de campaña también exista, es la salida C de arriba.
+
+### Enmienda (30 sep 2026, revisión independiente): la mordida que lesiona también se pita
+
+**CONFIRMED, y arreglado.** El corte de BM-B (`if (!carrier.OnPitch)` tras la publicación previa de la entrada) se
+saltaba **la tirada de falta** justo cuando `ankle_bite` lesiona —`RemoveFromPitch` deja a la víctima fuera del campo
+en la propia publicación—, de modo que la mordida que rompe la pierna era la única que **nunca** se pitaba. Medido
+con el test `TheBiteThatInjuresIsWhistledAtTheSameRateAsTheOneThatDoesNot` (1.500 partidos de `ankle_bite` repartidos
+en 5 puestos, separando por activación la lesión del perk —emitida antes que cualquier TACKLE/FOUL del mordedor— de
+la lesión normal de la entrada): **antes 0 de 42 mordidas que lesionan llevaban falta** (contra 489 de 1.421 de las
+que no, 34,4 %); **ahora 16 de 45 (35,6 %) contra 490 de 1.419 (34,5 %)**: el mismo ritmo, que es lo que debe ser
+porque las dos llevan el mismo ×4 de cuota.
+
+**Arreglo (`ResolveOnGoneVictim`, `Sim/Engine/MatchEngine.cs`)**: el corte se mantiene para lo que BM-B quería evitar
+—ni TACKLE, ni victoria, ni una segunda lesión sobre el mismo cuerpo— pero la tirada de falta se hace con la misma
+cuenta de siempre (`TackleFoulChance`, extraída de `ResolveTackle` sin tocar su aritmética) y la falta se reanuda en
+**el punto del contacto**, no en (-1,-1) (`contactPoint`, guardado antes de la publicación). Mismo criterio en el
+bloqueo sin balón. Si la tirada no cae, quien mordió no cae. Coste RNG: una tirada más sólo en ese caso, que antes
+salía sin tirar nada.

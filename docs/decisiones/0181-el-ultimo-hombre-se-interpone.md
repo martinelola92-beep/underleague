@@ -47,3 +47,38 @@ delante del balón y tenga una alta probabilidad de quedarse con él (75 %). Es 
 Real, 750 partidos con un defensa distinto llevando el perk: 456 activaciones (0,61 por partido; el tope es 1) y 327
 paradas = 72 % con un 75 % de probabilidad (`GuardShotTests`). Antes/después de goles encajados y valor en la tabla:
 ficha [BC-D](../pendientes/BC-D.md).
+
+## Enmienda (30 sep 2026): sólo el último hombre de verdad, y una probabilidad dentro de la banda de un raro
+
+**Decisión del revisor** tras ver que el 75 % medía **+124,7 ± 7,7** (tabla de la ADR 0087, semillas 5/11/17), el segundo
+valor más alto de un raro. RT-057 (nunca un ajuste silencioso) y Regla H (la cifra dice de dónde sale).
+
+1. **Condición `teammatesGoalside(owner) == 0`.** Nueva función NCalc genérica, `teammatesGoalside(who)` (tabla de
+   [modelo-datos](../modelo-datos.md)): compañeros de campo de `who` —sin el portero y sin él— **entre el balón y su
+   propia portería**, por proyección sobre X. Se buscó antes por el concepto (`tools/existe-ya.sh`): sólo existía esa
+   misma lectura, «entre el balón y la portería» por proyección sobre X, dentro de `CoverSpace`
+   (`coverBetweenBallAndGoalBonus`), sin ser una función de condición. Limitación conocida: la proyección sobre X no
+   mira la banda, así que un compañero ancho en la misma columna cuenta como «entre». Efecto sobre la frecuencia,
+   medido con la condición y el 75 %: 387 activaciones en 750 partidos frente a 420 sin ella (**LIKELY** que casi todos
+   los tiros a puerta los recibe un defensa sin nadie más detrás: el filtro es casi un no-op como limitador de
+   frecuencia, y vale sobre todo como coherencia del texto).
+2. **La probabilidad baja de 75 a 20.** Banda de un raro = **percentil 90 de los otros 27 raros** medidos con el mismo
+   instrumento y las mismas semillas (5/11/17): **+43,8** (mediana +5,0; máximo +197,0, `deathless_march`, que es el
+   outlier que la propia ficha ya señalaba, y por eso no vale de techo). Barrido del dato:
+
+   | `value` | valor (semillas 5/11/17) |
+   |---:|---|
+   | 75 (con condición) | +124,7 ± 7,7 |
+   | 35 | +64,0 ± 6,9 |
+   | 30 | +56,0 ± 6,2 |
+   | 25 | +48,3 ± 6,2 |
+   | **20** | **+42,7** (con cinco semillas, +45,4 ± 3,7) |
+
+   Elegido el mayor valor redondo cuyo valor medido no pasa de la banda: **20**. Frecuencia real con 20: 387
+   activaciones en 750 partidos y 93 paradas (24 %, `GuardShotTests` compara con el `value` del dato, no con un 75
+   escrito en el test).
+3. **Coste de diseño, dicho.** Un «héroe del momento» al 20 % deja de ser lo que el revisor pidió en su observación
+   original; la mecánica (teletransporte, balón suyo, cartel) no cambia. Si quiere un valor más alto, el coste es salir
+   de la banda del catálogo (+56 con 30) o pagarlo con otro freno (un uso por partido ya lo es). Decisión suya.
+
+Ficha: [BC-D](../pendientes/BC-D.md).

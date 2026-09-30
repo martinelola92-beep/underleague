@@ -1,6 +1,6 @@
 # BC-D — «Último hombre» se activa pero no hace nada
 
-**Estado:** **Cerrada (30 sep 2026), ADR 0181** · diagnóstico CONFIRMED · mecánica implementada; **75 % provisional, sin medir contra un techo**
+**Estado:** **Cerrada (30 sep 2026), ADR 0181** · diagnóstico CONFIRMED · mecánica implementada; **enmendada el 30 sep: condición de último hombre y 20 %, dentro de la banda**
 
 ## Observación
 
@@ -86,3 +86,13 @@ main (BuildGate, ya rojo); la tabla por perk es el sustituto.
 Activaciones: 420 en 750 partidos, 315 paradas (75 %, `GuardShotTests`). El aviso de la sección anterior se mantiene y
 **sube**: +132 (antes +118, por la turba de la ADR 0175) es con diferencia el valor más alto de un raro; el dial sigue
 siendo `value` (dato) o el uso por partido, **sin tocar hasta decisión del revisor** (RT-057).
+
+## Enmienda (30 sep 2026) — decisión del revisor, ADR 0181
+
+El aviso de arriba se resolvió así: (a) `last_man` sólo se activa con `teammatesGoalside(owner) == 0` (función NCalc
+genérica nueva); (b) medido con las semillas 5/11/17 y error típico: **+124,7 ± 7,7** con el 75 % y la condición;
+(c) fuera de la banda de un raro (**p90 de los otros 27 raros = +43,8**), así que el `value` baja hasta entrar:
+**20 → +42,7** (semillas 5/11/17; +45,4 ± 3,7 con cinco). Procedencia de la banda, barrido completo y coste de diseño:
+ADR 0181, enmienda. **CONFIRMED** que con el 75 % el perk estaba fuera de banda; **LIKELY** que la condición casi no
+limite la frecuencia (387 activaciones frente a 420 por 750 partidos).
+
