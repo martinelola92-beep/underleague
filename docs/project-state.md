@@ -22,17 +22,19 @@ permiso. El orden decídelo tú.»*
 
 **Cola, en orden** (cada paquete: worktree `.claude/worktrees/agent-*`, commit tras cada paso, revisión
 independiente, rebase y merge a `main`, push):
-1. En curso: ADR 0170 desgaste de run + run más corta (8/9/9); ADR 0169 la turba estrecha el campo; ADR 0171
-   la tirada del destino (código y revisión hechos; falta suite completa y hash de determinismo).
+1. ~~ADR 0170 desgaste + run corta; ADR 0171 tirada del destino.~~ **HECHO.** ~~La turba estrecha el campo.~~
+   **HECHO (30 sep):** ADR 0175 (1 fila por lado + 15 % de velocidad en la turba; reglamentario byte a byte igual;
+   `PlayBand` único punto de acotado). Abierta BU-A: `TheThreeDoctrinesBuyDifferently` oscila (2/4 semillas en
+   rama, 1/4 en main), LIKELY ruido.
 2. Pulido visible: BH-B (el jefe con nombre de clan de liga), BA-G (nombres repetidos), BC-H (aviso de
    alineación falso), panel de estadísticas del informe, BA-L2 (captura de recompensa en blanco).
 3. ~~Dos huecos de consumible (BA-H, RF-080) + pausa breve en eventos que detienen el juego (BB-D).~~ **HECHO (30 sep):**
    ADR 0172 (dos huecos; enmienda RF-080..082 y RF-085; guardados anteriores se pliegan al cargar) y ADR 0173 (pausa
    breve de 0,6 s a 1× en falta pitada, tarjeta y lesión; sólo `/Game`). BA-H y BB-D cerradas.
 4. ~~Cámara en perspectiva (BA-F).~~ **Hecho** (ADR 0174: 45°/FOV 45°, en retransmisión y depuración, sombras arregladas; BA-F cerrada).
-5. Conducta en el campo, con `gameplay-debug`: BB-K (compañeros que bailan por la misma casilla), BC-G
+5. **HECHO** (ADR 0176-0179). Conducta en el campo, con `gameplay-debug`: BB-K (compañeros que bailan por la misma casilla), BC-G
    (balón suelto en el córner), BA-J (repliegue tras una parada), BF-C (el delantero que pega sin balón).
-6. Perks que no cumplen: BC-C (Doble disparo), BC-D (Último hombre), BM-B (resoluciones que no miran a sus
+6. Parado a medias (worktree `agent-a5db0e59a60aad873`, todo commiteado; renumerar ADR a 0180+). Perks que no cumplen: BC-C (Doble disparo), BC-D (Último hombre), BM-B (resoluciones que no miran a sus
    participantes), BM-C (Mordisco), BB-R (maestros que no lo son).
 7. Menores del plan de diversión: resto de BS-A; apuesta Blind contra Never; herrero con más semillas y
    atributo máximo por run; puerta de cola de los sumideros (ADR de tolerancia); BR-A (salir a mitad de
