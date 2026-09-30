@@ -267,11 +267,18 @@ public sealed class TandaTwoPrimitivesTests
         Assert.Equal(0, tackler.OffBallTackles);
         Assert.Equal(0, engine.Report.RecursionCuts);
 
+        // BM-B (ADR 0180): la publicación previa sólo ARMA la repetición; se tira cuando la entrada
+        // original termina, no dentro de la publicación, y no encadena otra.
         engine.Effects!.Publish(Tackle(engine, tackler));
+        Assert.True(tackler.RepeatTacklePending);
+        Assert.Equal(0, tackler.OffBallTackles);
 
-        Assert.Equal(2, tackler.OffBallTackles);
+        engine.FinishRepeatedTackleForTest(tackler);
+
+        Assert.False(tackler.RepeatTacklePending);
+        Assert.Equal(1, tackler.OffBallTackles);
         Assert.Equal(0, tackler.Tackles);
-        Assert.Equal(1, engine.Report.RecursionCuts);
+        Assert.Equal(0, engine.Report.RecursionCuts);
     }
 
     /// <summary>
@@ -305,6 +312,7 @@ public sealed class TandaTwoPrimitivesTests
         engine.Ball.Owner = null;
 
         engine.Effects!.Publish(Tackle(engine, tackler));
+        engine.FinishRepeatedTackleForTest(tackler);
 
         Assert.True(
             tackler.OffBallTackles > 0,

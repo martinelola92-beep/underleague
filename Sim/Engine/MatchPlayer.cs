@@ -570,6 +570,14 @@ internal sealed class MatchPlayer
     /// <summary>Tick del último derribo por efecto de perk (<c>MatchEngine.KnockDown</c>, BM-A); −1 si ninguno.</summary>
     public int EffectKnockdownTick { get; set; } = -1;
 
+    /// <summary>
+    /// BM-B: una <c>extraAction</c> sobre <c>TACKLE</c> dejó armada la repetición de la entrada que este
+    /// jugador está resolviendo. La enciende <c>MatchEngine.ArmRepeatTackle</c> durante la publicación
+    /// previa y la consume el propio motor <b>cuando termina esa entrada</b>, no dentro de la publicación:
+    /// la repetición es una entrada <i>después</i> de la primera, no antes.
+    /// </summary>
+    public bool RepeatTacklePending { get; set; }
+
     /// <summary>Paradas consecutivas sin encajar; alimenta el decaimiento de parada (§3.7).</summary>
     public int ConsecutiveSaves { get; set; }
 

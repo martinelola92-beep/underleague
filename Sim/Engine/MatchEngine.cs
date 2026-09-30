@@ -3408,34 +3408,114 @@ internal sealed class MatchEngine : IPerkWorld
     }
 
     /// <summary>
-    /// Repite la entrada del mismo jugador dentro del MISMO tick (efecto <c>extraAction</c>, "Embestida"/
-    /// "Arrollador", misma primitiva que <see cref="RepeatShot"/>). "Sigue andando" se lee literal: busca
-    /// el rival <b>más cercano</b> a su alcance -que puede ser distinto del que acaba de derribar, si ya
-    /// no sigue ahí- y no reintenta contra el mismo que ya tumbó salvo que sea el único al alcance. Marca
-    /// la entrada como sin balón salvo que el nuevo objetivo resulte tener el balón él mismo, para que
-    /// cuente y se narre igual que cualquier otra entrada de la ADR 0105.
+    /// Deja armada la repetición de la entrada que <paramref name="tackler"/> está resolviendo (efecto
+    /// <c>extraAction</c> con disparador <c>TACKLE</c>, "Embestida" y "Toro"; BM-B, ADR 0176). Sólo
+    /// <b>arma</b>: la repetición la ejecuta <see cref="ResolveTackle"/>/<see cref="ResolveBlock"/> cuando
+    /// terminan, con <see cref="FinishRepeatedTackle"/>.
+    ///
+    /// <para>Antes se resolvía aquí mismo, dentro de la publicación previa, así que la entrada «segunda» del
+    /// diseño era la <b>primera</b> que se tiraba: si fallaba, tumbaba al que entra, y la original se seguía
+    /// tirando con él en el suelo y podía ganarle el balón (medido: en 7 de 144 activaciones de Toro el
+    /// jugador acababa el tick derribado <b>con el balón</b>).</para>
     /// </summary>
-    internal void RepeatTackle(MatchPlayer tackler)
+    internal void ArmRepeatTackle(MatchPlayer tackler)
     {
-        if (!tackler.OnPitch)
+        if (!_repeatingTackle && tackler.OnPitch)
         {
-            return;
+            tackler.RepeatTacklePending = true;
+        }
+    }
+
+    private bool _repeatingTackle;
+
+    /// <summary>Cierra la repetición armada de una entrada que el test publicó a mano (BM-B).</summary>
+    internal void FinishRepeatedTackleForTest(MatchPlayer tackler) => FinishRepeatedTackle(tackler, wasFoul: false, deferredFall: false);
+
+    /// <summary>
+    /// Cierra la repetición armada al terminar una entrada o un bloqueo (BM-B). Tres cosas, y sólo tres:
+    /// <list type="bullet">
+    /// <item>No hay repetición si la entrada original fue <b>falta</b> (el juego se paró) ni si quien la
+    /// hizo ya no está en pie o en el campo.</item>
+    /// <item>Si la original <b>falló sin falta</b> y su caída se dejó para después (<paramref name="deferredFall"/>,
+    /// «no frena»), la repetición es lo que decide si cae: si hay a quién entrar se tira la segunda, que
+    /// tiene sus propias consecuencias; si no, cae ahora, como habría caído sin perk.</item>
+    /// <item>La repetición no encadena otra: una <c>extraAction</c> arma una sola.</item>
+    /// </list>
+    /// </summary>
+    private void FinishRepeatedTackle(MatchPlayer tackler, bool wasFoul, bool deferredFall)
+    {
+        bool armed = tackler.RepeatTacklePending;
+        tackler.RepeatTacklePending = false;
+        bool repeated = armed && !wasFoul && RepeatTackle(tackler);
+        if (deferredFall && !repeated && tackler.OnPitch)
+        {
+            StumbleAfterMissedTackle(tackler);
+        }
+    }
+
+    /// <summary>
+    /// La caída de quien entra y no gana ni comete falta. Un derribado no lleva el balón (como en
+    /// <see cref="KnockDown"/>): si la entrada fallada es la <b>repetición</b> de quien acaba de ganarlo
+    /// (Arrollador, Embestida tras una entrada ganada) el balón se le escapa al caer, en vez de quedarse en
+    /// los pies de un jugador tumbado (BM-B: 36 fotogramas en 120 partidos de Arrollador).
+    /// </summary>
+    private void StumbleAfterMissedTackle(MatchPlayer tackler)
+    {
+        if (ReferenceEquals(_ball.Owner, tackler))
+        {
+            ParkBall(tackler.Position);
         }
 
-        var target = NearestReachableRival(tackler);
+        tackler.EnterState(PlayerState.KnockedDown, _tuning.States.KnockedDownTicks / 2);
+    }
+
+    /// <summary>
+    /// Repite la entrada del mismo jugador dentro del MISMO tick (efecto <c>extraAction</c>, "Embestida"/
+    /// "Toro"/"Arrollador"). "Vuelve a por ella": si el que llevaba el balón sigue en pie, con el balón y a
+    /// su alcance, es a él; si no, el rival <b>en pie</b> más cercano a su alcance. Marca la entrada como
+    /// sin balón salvo que el objetivo tenga el balón él mismo, para que cuente y se narre igual que
+    /// cualquier otra entrada de la ADR 0105. Devuelve true si tiró la entrada.
+    /// </summary>
+    internal bool RepeatTackle(MatchPlayer tackler)
+    {
+        if (!tackler.OnPitch || tackler.State == PlayerState.KnockedDown)
+        {
+            return false;
+        }
+
+        float reach = _catalog.Ai.Context.TackleDistanceMaxCells + TackleReachMargin;
+        var previous = tackler.TackleTarget;
+        var target = previous is not null
+            && previous.OnPitch
+            && previous.State != PlayerState.KnockedDown
+            && ReferenceEquals(_ball.Owner, previous)
+            && Vec2.Distance(tackler.Position, previous.Position) <= reach
+                ? previous
+                : NearestReachableRival(tackler);
         if (target is null)
         {
-            return;
+            return false;
         }
 
         tackler.TackleTarget = target;
         tackler.TackleOffBall = !ReferenceEquals(_ball.Owner, target);
-        ResolveTackle(tackler);
+        _repeatingTackle = true;
+        try
+        {
+            ResolveTackle(tackler);
+        }
+        finally
+        {
+            _repeatingTackle = false;
+        }
+
+        return true;
     }
 
     /// <summary>
     /// Rival en pie más cercano al alcance de una entrada (<see cref="RepeatTackle"/>): en el campo, no
-    /// expulsado, no celebrando. Recorrido por id ascendente (RT-041); a igualdad de distancia exacta se
+    /// expulsado, no celebrando y no derribado (BM-B: el comentario ya decía «en pie» y el código no lo
+    /// comprobaba, así que la repetición podía volver a entrar al rival que acababa de tumbar). Recorrido por id ascendente (RT-041); a igualdad de distancia exacta se
     /// queda el primero que encuentra, que es el de menor id.
     /// </summary>
     private MatchPlayer? NearestReachableRival(MatchPlayer tackler)
@@ -3448,7 +3528,7 @@ internal sealed class MatchEngine : IPerkWorld
             var candidate = _players[i];
             if (candidate.Team == tackler.Team
                 || !candidate.OnPitch
-                || candidate.State is PlayerState.SentOff or PlayerState.Celebrating)
+                || candidate.State is PlayerState.SentOff or PlayerState.Celebrating or PlayerState.KnockedDown)
             {
                 continue;
             }
@@ -3997,6 +4077,14 @@ internal sealed class MatchEngine : IPerkWorld
             return;
         }
 
+        // BM-B (caso 4): un perk de la publicación previa pudo sacar al defensor del campo (una lesión
+        // provocada). Un regate «perdido» le habría dado el balón a un jugador que ya no está, y con él la
+        // posición (-1,-1).
+        if (!defender.OnPitch)
+        {
+            return;
+        }
+
         // ADR 0041: la técnica del conductor contra la cobertura del defensor —velocidad y fuerza, con el
         // reparto de defenderSpeedSharePercent—, no las tres contra el 50.
         int guard = ((dribble.DefenderSpeedSharePercent * defender.Speed)
@@ -4051,6 +4139,20 @@ internal sealed class MatchEngine : IPerkWorld
         // victoria, ni falta, ni lesión—, igual que cuando el rival se va de su alcance.
         if (StoppedByEffect(tackler))
         {
+            tackler.RepeatTacklePending = false;
+            return;
+        }
+
+        // BM-B (caso 4): la publicación previa puede haber sacado del campo al que iba a recibir la entrada
+        // (`ankle_bite`: la lesión provocada lo retira). Sin este corte la entrada se seguía tirando contra
+        // un jugador que ya no está —«gana» un balón que él ya había dejado, tira una segunda lesión sobre
+        // el mismo cuerpo, y la falta reanudaba en (-1,-1)— (medido: 5 de 60 lesiones de `ankle_bite`).
+        // No es una entrada fallada: el rival se fue, igual que cuando sale de su alcance, y quien entraba
+        // no cae.
+        if (!carrier.OnPitch)
+        {
+            tackler.RepeatTacklePending = false;
+            tackler.EnterState(PlayerState.Positioning, 0);
             return;
         }
 
@@ -4078,6 +4180,7 @@ internal sealed class MatchEngine : IPerkWorld
         // base está por debajo del suelo); la disputa del balón sí es las dos cosas.
         bool isFoul = _rng.Chance(foulChance);
         bool isWin = _rng.ChanceAveraged(Bounded(win)) && carrierHasBall;
+        bool deferredFall = false;
 
         if (carrierHasBall)
         {
@@ -4106,9 +4209,15 @@ internal sealed class MatchEngine : IPerkWorld
             SetOwner(tackler);
             Emit(EventType.Recovery, "tackle", tackler);
         }
+        else if (tackler.RepeatTacklePending)
+        {
+            // BM-B: «no frena». La entrada fallada de quien lleva una repetición armada no lo tumba todavía:
+            // lo decide lo que viene a continuación (FinishRepeatedTackle), que es donde el perk ocurre.
+            deferredFall = true;
+        }
         else
         {
-            tackler.EnterState(PlayerState.KnockedDown, _tuning.States.KnockedDownTicks / 2);
+            StumbleAfterMissedTackle(tackler);
         }
 
         // Sin balón y sin falta el que entra se retiró a tiempo: no hay contacto y no se tira lesión.
@@ -4119,6 +4228,7 @@ internal sealed class MatchEngine : IPerkWorld
         }
 
         OpenPendingFreeKick();
+        FinishRepeatedTackle(tackler, isFoul, deferredFall);
     }
 
     /// <summary>
@@ -4363,6 +4473,12 @@ internal sealed class MatchEngine : IPerkWorld
         // La jugada ocurrió aunque el árbitro no la viera: el que entra se derriba igual (es la física de
         // la entrada, no el castigo). Sin esto el infractor volvía a entrar al instante y las lesiones
         // subían de 0,86 a 1,05 por partido.
+        // BM-B: un derribado no lleva el balón (el infractor lo lleva si acaba de ganarlo y repite la entrada).
+        if (ReferenceEquals(_ball.Owner, offender))
+        {
+            ParkBall(offender.Position);
+        }
+
         offender.EnterState(PlayerState.KnockedDown, _tuning.States.KnockedDownTicks);
         _report.Fouls++;
         offender.Fouls++;
@@ -4444,6 +4560,15 @@ internal sealed class MatchEngine : IPerkWorld
         // jugador que un perk acaba de tumbar.
         if (StoppedByEffect(blocker))
         {
+            blocker.RepeatTacklePending = false;
+            return;
+        }
+
+        // BM-B (caso 4): el mismo corte que la entrada si el rival salió del campo en la publicación previa.
+        if (!target.OnPitch)
+        {
+            blocker.RepeatTacklePending = false;
+            blocker.EnterState(PlayerState.Positioning, 0);
             return;
         }
 
@@ -4498,6 +4623,7 @@ internal sealed class MatchEngine : IPerkWorld
         }
 
         OpenPendingFreeKick();
+        FinishRepeatedTackle(blocker, isFoul, deferredFall: false);
     }
 
     private void SendOff(MatchPlayer player)

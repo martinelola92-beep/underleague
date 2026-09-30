@@ -1152,6 +1152,10 @@ internal sealed class EffectEngine : IPerkLinks
                 _engine.RepeatShot(owner);
                 break;
             case EventType.Tackle:
+                // BM-B: TACKLE se publica ANTES de tirarse la entrada, así que repetirla aquí la ponía
+                // primero. Se deja armada y la ejecuta el motor cuando la entrada original termina.
+                _engine.ArmRepeatTackle(owner);
+                break;
             case EventType.Recovery:
                 // RECOVERY repite la ENTRADA porque el único camino por el que un perk de recuperación
                 // puede querer encadenar es el de `Emit(Recovery, "tackle", tackler)` (MatchEngine.cs:2223),

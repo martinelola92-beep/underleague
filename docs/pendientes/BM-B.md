@@ -1,6 +1,6 @@
 # BM-B — Una resolución publicada antes de tirarse no mira a sus participantes
 
-Estado: **Abierta** (26 sep 2026). Hermana de [BM-A](./BM-A.md), que la destapó. Sin arreglo: cambiar
+Estado: **Cerrada (30 sep 2026), ADR 0180**. Antes: abierta (26 sep 2026). Hermana de [BM-A](./BM-A.md), que la destapó. Sin arreglo: cambiar
 cualquiera de los casos de abajo cambia perks medidos, y eso es RT-057.
 
 ## Síntoma (el 1, CONFIRMED por medida; del 2 al 4, leídos en el código y sin evidencia de activación)
@@ -43,3 +43,21 @@ lanza la publicación previa y el derribo de la fallada no frena a la entrada ex
 
 Cualquiera pasa por `game-design-review` (es qué hace un acto) antes de tocar código, y por la tabla de
 valores (ADR 0087) después.
+
+
+## Resolución (30 sep 2026) — ADR 0180
+
+`game-design-review` de «qué debe hacer una `extraAction` sobre `TACKLE`»: **vuelve a entrar después de la primera**,
+no antes. Se arma en la publicación previa y la ejecuta el motor al terminar la entrada (`FinishRepeatedTackle`).
+Medido con traza de un fotograma por tick (300 partidos por perk, `PreResolutionParticipantsTests`):
+
+| caso | antes | ahora | veredicto |
+|---|---|---|---|
+| 1 `extraAction` (`charge`, `bull_rush`) | 7 de 144 activaciones de Toro acababan el tick con el que entra derribado **y con el balón**; secuencias `won > missed` contra un portador sin balón | 0; la repetición va contra el mismo portador si sigue en pie (`missed > won` = «vuelve a por ella») o contra otro rival en pie | **CONFIRMED y arreglado** |
+| 2 `setState` sobre el portador (`duelist`, `own_third_anchor`) | coherente: el derribo suelta el balón y la entrada se juega contra él | igual | **REJECTED como defecto**; documentado y con test |
+| 3 `setState` sobre el defensor de un regate (`nutmeg`) | coherente: si se pierde, el defensor recupera el balón y `Decide` lo levanta (12 de 44 activaciones, ninguna termina con un derribado con balón) | igual | **REJECTED como defecto**; documentado y con test |
+| 4 `injure` (`ankle_bite`) | 5 de 61 lesiones provocadas dejaban el balón en (-1,-1); una segunda lesión sobre el mismo cuerpo; `Tackle:won` contra un jugador que ya no está | 0: la entrada, el bloqueo o el regate se anulan si el participante salió del campo | **CONFIRMED y arreglado** |
+
+Hallazgo añadido por la propiedad «nadie acaba un tick derribado con el balón»: `steamroller` (y la falta no vista)
+dejaban el balón en los pies de un jugador tumbado (36 fotogramas en 120 partidos); ahora el balón se suelta al caer.
+Valores antes/después de los perks: ver `docs/decisiones/0180-...` y la tabla de la ficha BC-C.
