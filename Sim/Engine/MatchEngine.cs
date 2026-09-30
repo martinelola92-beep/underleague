@@ -433,6 +433,27 @@ internal sealed class MatchEngine : IPerkWorld
     }
 
     /// <inheritdoc/>
+    public int TeammatesGoalside(MatchPlayer player)
+    {
+        float ballX = _ball.Position.X;
+        float goalX = Pitch.GoalCenter(1 - player.Team).X;
+        float near = MathF.Min(ballX, goalX);
+        float far = MathF.Max(ballX, goalX);
+        int count = 0;
+        for (int i = 0; i < _players.Length; i++)
+        {
+            var other = _players[i];
+            if (other.Team == player.Team && other.Id != player.Id && other.OnPitch && other.IsOutfield
+                && other.Position.X > near && other.Position.X < far)
+            {
+                count++;
+            }
+        }
+
+        return count;
+    }
+
+    /// <inheritdoc/>
     public int Counter(MatchPlayer player, string name) => _effects?.Counter(player, name) ?? 0;
 
     /// <summary>Jugador con ese id, o null (incluido el -1 de "no aplica"). Lo usa el motor de efectos.</summary>

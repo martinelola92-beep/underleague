@@ -83,6 +83,7 @@ public static class ConditionCompiler
         new("teammatesWithTag", new[] { ConditionArgKind.Who, ConditionArgKind.Tag }, ConditionValueKind.Int),
         new("teammatesWithSameStyle", new[] { ConditionArgKind.Who }, ConditionValueKind.Int),
         new("distanceToGoal", new[] { ConditionArgKind.Who }, ConditionValueKind.Int),
+        new("teammatesGoalside", new[] { ConditionArgKind.Who }, ConditionValueKind.Int),
         new("scoreDiff", Array.Empty<ConditionArgKind>(), ConditionValueKind.Int),
         new("tick", Array.Empty<ConditionArgKind>(), ConditionValueKind.Int),
         new("counter", new[] { ConditionArgKind.CounterName }, ConditionValueKind.Int),
@@ -713,6 +714,14 @@ public sealed class CompiledCondition
                 // era siempre el actor y no dejaba preguntar por el portador ni por el rival (paquete S).
                 var who = Player(args, 0);
                 args.Result = who is null ? 0 : _context.World.DistanceToGoalCells(who);
+                break;
+            }
+
+            case "teammatesGoalside":
+            {
+                // BC-D (ADR 0181): cuántos compañeros de campo hay entre el balón y la portería propia de `who`.
+                var who = Player(args, 0);
+                args.Result = who is null ? 0 : _context.World.TeammatesGoalside(who);
                 break;
             }
 

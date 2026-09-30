@@ -14,7 +14,7 @@
   "trigger": "SHOT_ON_TARGET",
   "scope": "opposingTeam",
   "links": [],
-  "condition": "",
+  "condition": "teammatesGoalside(owner) == 0",
   "effects": [
     {
       "type": "guardShot",

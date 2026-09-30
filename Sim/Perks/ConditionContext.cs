@@ -59,6 +59,16 @@ internal interface IPerkWorld
     /// </summary>
     int TeammatesWithSameStyle(MatchPlayer player);
 
+    /// <summary>
+    /// BC-D (ADR 0181): compañeros de campo de <paramref name="player"/> —en el campo, sin contar al portero ni a
+    /// él— que están <b>entre el balón y la portería propia</b> de su equipo, por proyección sobre X (la misma
+    /// lectura de «entre el balón y la portería» que <c>CoverSpace</c>, <c>coverBetweenBallAndGoalBonus</c>): un
+    /// compañero cuenta si su columna cae estrictamente entre la del balón y la línea de gol propia, esté donde esté
+    /// en la banda. 0 significa que <paramref name="player"/> es el último hombre. Primitiva genérica: sirve a
+    /// cualquier perk que hable de quien queda solo ante el balón, no sólo a «Último hombre».
+    /// </summary>
+    int TeammatesGoalside(MatchPlayer player);
+
     /// <summary>Contador del jugador (RF-070); 0 si no existe.</summary>
     int Counter(MatchPlayer player, string name);
 }

@@ -132,6 +132,7 @@ Todos con esquema JSON en `/data/schemas/` y validados por `tools/DataValidator`
 | `zone(who)` | `'Own'` (propia), `'Middle'` (centro), `'Opposing'` (rival) |
 | `vinculado(who, 'beside'\|'ahead'\|'behind'\|...)` | bool, existe vínculo direccional en esa relación, resuelto **antes** del partido (RF-044 v0.9.1, ADR 0021) |
 | `distanceToGoal()` | int, casillas |
+| `teammatesGoalside(who)` | int, compañeros de campo de `who` (sin portero ni él) entre el balón y su propia portería, por proyección sobre X (ADR 0181): 0 = `who` es el último hombre |
 | `scoreDiff()` | int, diferencia de goles desde el punto de vista del equipo del ejecutor |
 | `tick()` | int |
 | `counter('name')` | int, contador del ejecutor (RF-070) |
