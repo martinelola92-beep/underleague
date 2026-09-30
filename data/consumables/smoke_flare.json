@@ -6,6 +6,7 @@
   },
   "rarity": "common",
   "family": "tactical",
+  "suggestedTrigger": "scoreBehind",
   "effects": [
     {
       "type": "modifyProbability",

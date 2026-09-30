@@ -2904,10 +2904,9 @@ public static class RunPolicy
     /// con los dos huecos actuales eso sería perder la mitad, así que la doctrina cambia con la regla y el
     /// cambio se mide aparte (ADR 0172).</para>
     ///
-    /// <para>El disparador por defecto de cada familia (RF-084) es el que hace que el consumible sirva
-    /// para lo que es: el médico cuando ya te han lesionado, el sucio y el táctico cuando vas por detrás,
-    /// el sobrenatural en el tramo final. Es criterio de la política automática, no regla de juego: el
-    /// jugador elige el suyo en la pantalla de Equipo.</para>
+    /// <para>El disparador es el que cada consumible declara en <c>/data</c> (<c>suggestedTrigger</c>, ADR 0172),
+    /// coherente con lo que promete su nombre —el mismo que ofrece la pantalla de Equipo—, y no uno por familia:
+    /// el de familia daba «¡Aguantad!» al ir perdiendo. El jugador elige el suyo en Equipo.</para>
     /// </summary>
     private static RunState ConfigureConsumables(
         RunState state,
@@ -2929,21 +2928,13 @@ public static class RunPolicy
             configured.Add(slot with
             {
                 Mode = ConsumableMode.Conditional,
-                Trigger = DefaultTrigger(consumables?.Find(slot.Id)?.Family),
+                Trigger = consumables?.Find(slot.Id)?.SuggestedTrigger ?? "scoreBehind",
             });
             changed = true;
         }
 
         return changed ? RunEngine.Apply(state, new SetConsumables(configured), catalog, systems) : state;
     }
-
-    /// <summary>Disparador por defecto de cada familia de RF-084. Ninguno lleva umbral, así que <c>ConsumableTriggers.Parse</c> los acepta todos.</summary>
-    private static string DefaultTrigger(ConsumableFamily? family) => family switch
-    {
-        ConsumableFamily.Medical => "ownInjury",
-        ConsumableFamily.Supernatural => "lastSeconds",
-        _ => "scoreBehind",
-    };
 
     /// <summary>
     /// Orden de preferencia dentro del presupuesto. Primero <b>que no castigue</b>: un perk con

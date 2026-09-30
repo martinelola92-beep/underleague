@@ -28,13 +28,16 @@ public enum ConsumableFamily
 /// por hueco, y el hueco es la posesión: comprar en el mercado o recibir de un evento exige un hueco libre y lo
 /// deja ya equipado. Hasta esa ADR el mercado subía un contador <c>consumable_owned:&lt;id&gt;</c> (paquete X, X-9)
 /// que <c>SetConsumables</c> no comprobaba al equipar; ese límite se cerró con el inventario suelto.</para>
+/// <c>SuggestedTrigger</c> (ADR 0172) es el disparador con el que se deja al pasarlo de manual a condicional, en
+/// <c>/data</c> y coherente con su nombre; lo usan la pantalla de Equipo y la política automática.
 /// </summary>
 public sealed record ConsumableDefinition(
     string Id,
     LocalizedName Name,
     Rarity Rarity,
     ConsumableFamily Family,
-    IReadOnlyList<EffectDefinition> Effects);
+    IReadOnlyList<EffectDefinition> Effects,
+    string SuggestedTrigger);
 
 /// <summary>Catálogo de consumibles, ordenado por id ordinal ascendente.</summary>
 public sealed class ConsumableCatalog
@@ -112,7 +115,21 @@ public static class ConsumableLoader
             throw new DataException(path, "$.effects", "un consumible necesita al menos un efecto");
         }
 
-        return new ConsumableDefinition(id, name, rarity, family, effects);
+        string suggestedTrigger = root.Str("suggestedTrigger");
+        try
+        {
+            var (trigger, _) = ConsumableTriggers.Parse(suggestedTrigger);
+            if (trigger == ConsumableTrigger.Manual)
+            {
+                throw new ArgumentException("el disparador sugerido no puede ser el manual");
+            }
+        }
+        catch (ArgumentException ex)
+        {
+            throw new DataException(path, "$.suggestedTrigger", ex.Message);
+        }
+
+        return new ConsumableDefinition(id, name, rarity, family, effects, suggestedTrigger);
     }
 
     private static JsonDocument ParseJson(string path, string content)

@@ -13,13 +13,17 @@
       "description": "RF-084: médicos, tácticos, sucios y sobrenaturales.",
       "enum": ["medical", "tactical", "dirty", "supernatural"]
     },
+    "suggestedTrigger": {
+      "description": "ADR 0172: el disparador con el que el jugador (y la política automática) deja el consumible cuando lo pasa de manual a condicional, coherente con lo que promete su nombre: el grito de aguantar cuando el marcador está empatado, no cuando se va perdiendo. Nombre de RF-083 sin umbral. Provisional, sin medir.",
+      "enum": ["scoreBehind", "scoreTied", "lastSeconds", "mobStart", "ownInjury", "ownRedCard"]
+    },
     "effects": {
       "type": "array",
       "items": { "$ref": "#/$defs/effect" },
       "minItems": 1
     }
   },
-  "required": ["id", "name", "rarity", "family", "effects"],
+  "required": ["id", "name", "rarity", "family", "suggestedTrigger", "effects"],
   "additionalProperties": false,
   "$defs": {
     "localizedName": {

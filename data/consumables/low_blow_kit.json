@@ -6,6 +6,7 @@
   },
   "rarity": "uncommon",
   "family": "dirty",
+  "suggestedTrigger": "scoreBehind",
   "effects": [
     {
       "type": "modifyAttribute",

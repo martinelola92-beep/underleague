@@ -106,6 +106,24 @@ public sealed class ConsumableSlotsTests
             Systems));
     }
 
+    [Fact]
+    public void EveryConsumableDeclaresASuggestedTriggerThatFitsItsName()
+    {
+        var offered = new[] { "scoreBehind", "scoreTied", "lastSeconds", "mobStart", "ownInjury", "ownRedCard" };
+        Assert.True(Systems.Consumables.All.Count >= 20);
+        Assert.All(Systems.Consumables.All, c =>
+        {
+            Assert.Contains(c.SuggestedTrigger, offered);
+            Assert.NotEqual(Underleague.Sim.Perks.ConsumableTrigger.Manual, ConsumableTriggers.Parse(c.SuggestedTrigger).Trigger);
+        });
+
+        // Los que el nombre compromete: aguantar no se dispara yendo por detrás, ir a por él sí, y lo médico espera a la lesión.
+        Assert.Equal("scoreTied", Systems.Consumables.Find("hold_the_line")!.SuggestedTrigger);
+        Assert.Equal("scoreBehind", Systems.Consumables.Find("push_forward")!.SuggestedTrigger);
+        Assert.Equal("scoreBehind", Systems.Consumables.Find("after_him")!.SuggestedTrigger);
+        Assert.Equal("ownInjury", Systems.Consumables.Find("field_bandage")!.SuggestedTrigger);
+    }
+
     // ------------------------------------------------------------------ el mercado
 
     [Fact]

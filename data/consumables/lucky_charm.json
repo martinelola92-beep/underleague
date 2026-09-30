@@ -6,6 +6,7 @@
   },
   "rarity": "uncommon",
   "family": "supernatural",
+  "suggestedTrigger": "lastSeconds",
   "effects": [
     {
       "type": "modifyProbability",
