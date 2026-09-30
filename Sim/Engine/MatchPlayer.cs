@@ -776,13 +776,13 @@ internal sealed class MatchPlayer
         Velocity = new Vec2(0f, 0f);
     }
 
-    /// <summary>Entra al campo por una sustitución forzada (ADR 0094): en su casilla-hogar, posicionándose.</summary>
-    public void EnterPitch()
+    /// <summary>Entra al campo por una sustitución forzada (ADR 0094): en su casilla-hogar —acotada a la banda de la fase (ADR 0175), para que en la turba no aparezca en una fila del público—, posicionándose.</summary>
+    public void EnterPitch(PlayBand band)
     {
         State = PlayerState.Positioning;
         StateTicksLeft = 0;
         OnPitch = true;
-        Position = HomeCenter;
+        Position = band.Clamp(HomeCenter);
         Velocity = new Vec2(0f, 0f);
     }
 

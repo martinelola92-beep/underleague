@@ -641,7 +641,7 @@ internal sealed class MatchEngine : IPerkWorld
                     $"la sustitución del jugador {outId} por el {inId} en el tick {tick} no es legal: el que sale tiene que haber dejado el campo por lesión o muerte en ese tick o antes (ADR 0094)");
             }
 
-            entering.EnterPitch();
+            entering.EnterPitch(_band);
             _effects?.OnEnterPitch(entering);
             if (!entering.IsOutfield)
             {
@@ -974,7 +974,7 @@ internal sealed class MatchEngine : IPerkWorld
                 // táctico, así que su casilla-hogar efectiva es siempre la fija (RF-057b ya le prohíbe
                 // salir del área, pero sin esta exención pagaba la correa de una zona desplazada que no
                 // le correspondía por estar fuera de ella).
-                player.EffectiveHome = player.HomeCenter;
+                player.EffectiveHome = InBand(player.HomeCenter);
                 continue;
             }
 
@@ -1012,7 +1012,7 @@ internal sealed class MatchEngine : IPerkWorld
                     rawX, lines[player.Team], _catalog.Ai.Context.BlockShiftLineMarginCells, direction);
             }
 
-            player.EffectiveHome = new Vec2(Math.Clamp(rawX, 0f, Pitch.Columns), player.HomeCenter.Y);
+            player.EffectiveHome = InBand(new Vec2(Math.Clamp(rawX, 0f, Pitch.Columns), player.HomeCenter.Y));
         }
     }
 
@@ -1985,6 +1985,13 @@ internal sealed class MatchEngine : IPerkWorld
                 continue;
             }
 
+            // ADR 0175: en la turba tampoco se saca con alguien todavía en una fila del público (un lento que venía de
+            // lejos): la espera cuenta también la fila, y el tope de espera evita que un caso raro congele el partido.
+            if (!_band.Contains(player.Position.Y))
+            {
+                return false;
+            }
+
             int direction = Pitch.AttackDirection(player.Team);
             float limit = player.Team == _restartTeam
                 ? middle
@@ -2018,38 +2025,21 @@ internal sealed class MatchEngine : IPerkWorld
 
     // ---------------------------------------------------------------- ADR 0175: la turba estrecha el campo
 
-    /// <summary>Filas que el público invade por lado (0 en tiempo reglamentario, <c>mob.narrowRowsPerSide</c> en la turba).</summary>
-    private int _bandInset;
+    /// <summary>La banda jugable de la fase (ADR 0175): entera hasta la turba.</summary>
+    private PlayBand _band = PlayBand.Full;
 
     /// <summary>Aumento entero de la velocidad de carrera y de los golpes del balón (0 en tiempo reglamentario).</summary>
     private int _speedBonusPercent;
 
-    /// <summary>Borde superior de la banda jugable: 0 en reglamentario, <c>_bandInset</c> en la turba.</summary>
-    private float BandMin => _bandInset;
+    private float BandMin => _band.Min;
 
-    /// <summary>Borde inferior de la banda jugable: <c>Pitch.Rows</c> en reglamentario.</summary>
-    private float BandMax => Pitch.Rows - _bandInset;
+    private float BandMax => _band.Max;
 
-    /// <summary>
-    /// Acota un punto a la banda jugable. Con la banda entera (todo el tiempo reglamentario) devuelve el punto sin
-    /// tocarlo, ni una operación más: el partido reglamentario es byte a byte el de antes (RT-024).
-    /// </summary>
-    private Vec2 InBand(Vec2 point) =>
-        _bandInset == 0 ? point : new Vec2(point.X, Math.Clamp(point.Y, BandMin, BandMax));
+    /// <summary>Acota un punto a la banda jugable (<see cref="PlayBand.Clamp"/>).</summary>
+    private Vec2 InBand(Vec2 point) => _band.Clamp(point);
 
-    /// <summary>
-    /// Acota el paso de un jugador a la banda <b>sin teletransportarlo</b> (RF-053, ADR 0143): quien está dentro
-    /// no sale, y quien está en una fila invadida no puede alejarse más de ella, sólo andar hacia la banda.
-    /// </summary>
-    private Vec2 InBandFrom(Vec2 next, Vec2 current)
-    {
-        if (_bandInset == 0)
-        {
-            return next;
-        }
-
-        return new Vec2(next.X, Math.Clamp(next.Y, MathF.Min(BandMin, current.Y), MathF.Max(BandMax, current.Y)));
-    }
+    /// <summary>Acota el paso de un jugador sin teletransportarlo (<see cref="PlayBand.ClampStep"/>).</summary>
+    private Vec2 InBandFrom(Vec2 next, Vec2 current) => _band.ClampStep(next, current);
 
     /// <summary>Velocidad de un golpe del balón (pase, tiro, cabeceo, rechace), con el bono de la turba si lo hay.</summary>
     private int BallSpeedMilli(int milli) => _speedBonusPercent == 0 ? milli : milli * (100 + _speedBonusPercent) / 100;
@@ -2061,11 +2051,11 @@ internal sealed class MatchEngine : IPerkWorld
     /// </summary>
     private void EnterMobPhase()
     {
-        _bandInset = _tuning.Mob.NarrowRowsPerSide;
+        _band = new PlayBand(_tuning.Mob.NarrowRowsPerSide);
         _speedBonusPercent = _tuning.Mob.SpeedPercent;
-        _bodies.BandInset = _bandInset;
+        _bodies.Band = _band;
         _context.PassSpeedCellsPerTickMilli = BallSpeedMilli(_tuning.Ball.PassSpeedCellsPerTickMilli);
-        _context.BandInset = _bandInset;
+        _context.Band = _band;
     }
 
     private float SpeedPerTick(MatchPlayer player, bool dribbling)
@@ -2873,7 +2863,7 @@ internal sealed class MatchEngine : IPerkWorld
         }
 
         CancelInFlightPass();
-        _ball.Park(position);
+        _ball.Park(InBand(position));
     }
 
     private void SetOwner(MatchPlayer player)
@@ -5184,7 +5174,7 @@ internal sealed class MatchEngine : IPerkWorld
 
             player.Position = ReferenceEquals(player, _restartTaker) ? _restartPoint : _restartSpot[player.Index];
             player.Velocity = default;
-            player.EffectiveHome = player.HomeCenter;
+            player.EffectiveHome = InBand(player.HomeCenter);
         }
 
         // La barrera de la reanudación (BB-B, 2 casillas) es más ancha que el círculo central del que
@@ -5982,8 +5972,8 @@ internal sealed class MatchEngine : IPerkWorld
 
             player.Position = player.HomeCenter;
             player.Velocity = new Vec2(0f, 0f);
-            player.EffectiveHome = player.HomeCenter;
-            player.TargetPoint = player.HomeCenter;
+            player.EffectiveHome = InBand(player.HomeCenter);
+            player.TargetPoint = InBand(player.HomeCenter);
             player.EnterState(PlayerState.Positioning, 0);
         }
     }
@@ -6010,8 +6000,8 @@ internal sealed class MatchEngine : IPerkWorld
                 continue;
             }
 
-            player.EffectiveHome = player.HomeCenter;
-            player.TargetPoint = player.HomeCenter;
+            player.EffectiveHome = InBand(player.HomeCenter);
+            player.TargetPoint = InBand(player.HomeCenter);
 
             // Al que celebra se le deja terminar; su contador corre igual y al acabar vuelve andando como
             // los demás. Al derribado también: levantarse lleva su tiempo y es parte de la jugada.

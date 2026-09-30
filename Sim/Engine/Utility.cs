@@ -129,8 +129,8 @@ internal sealed class UtilityContext
     /// <summary>Velocidad del pase en milésimas de casilla por tick (tuning.ball), para la carrera del pase en profundidad.</summary>
     public int PassSpeedCellsPerTickMilli { get; set; }
 
-    /// <summary>Filas invadidas por el público a cada lado (ADR 0175): 0 salvo en la turba. Los destinos se acotan a la banda restante.</summary>
-    public int BandInset { get; set; }
+    /// <summary>Banda jugable de la fase (ADR 0175): los destinos se acotan a ella.</summary>
+    public PlayBand Band { get; set; } = PlayBand.Full;
 
     /// <summary>
     /// Tick actual del partido. Lo necesita la caducidad de las intenciones de pase (P3): una oferta vale
@@ -475,7 +475,7 @@ internal static class Utility
         RecordCensus(ctx, p, rows, best, bestScore, found);
 
         p.CurrentAction = best;
-        p.TargetPoint = bestTarget;
+        p.TargetPoint = ctx.Band.Clamp(bestTarget);
         p.PassReceiver = bestReceiver;
         p.TackleTarget = bestTackleTarget;
         p.TackleOffBall = bestTackleOffBall;
@@ -762,20 +762,13 @@ internal static class Utility
         return ClampToPitch(new Vec2(x, y));
     }
 
-    /// <summary>Acota un punto al rectángulo del campo.</summary>
     /// <summary>
-    /// Acota un destino a la banda jugable de la fase (ADR 0175): el campo entero en tiempo reglamentario (idéntico a
-    /// <see cref="ClampToPitch"/>) y, en la turba, sin las filas que invade el público. Los destinos que la utilidad
-    /// elige (huecos, apoyos, conducción, pase en profundidad) no pueden caer en una fila que el balón no puede pisar.
+    /// Acota un destino de la utilidad a la banda jugable de la fase (ADR 0175): idéntico a <see cref="ClampToPitch"/> en
+    /// tiempo reglamentario y, en la turba, sin las filas que invade el público.
     /// </summary>
-    private static Vec2 ClampToPlay(UtilityContext ctx, Vec2 point)
-    {
-        var clamped = ClampToPitch(point);
-        return ctx.BandInset == 0
-            ? clamped
-            : new Vec2(clamped.X, Math.Clamp(clamped.Y, ctx.BandInset, Pitch.Rows - ctx.BandInset));
-    }
+    private static Vec2 ClampToPlay(UtilityContext ctx, Vec2 point) => ctx.Band.Clamp(ClampToPitch(point));
 
+    /// <summary>Acota un punto al campo entero.</summary>
     public static Vec2 ClampToPitch(Vec2 point) =>
         new(Math.Clamp(point.X, 0f, Pitch.Columns), Math.Clamp(point.Y, 0f, Pitch.Rows));
 

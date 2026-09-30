@@ -1649,7 +1649,7 @@
         "narrowRowsPerSide": {
           "type": "integer",
           "minimum": 0,
-          "maximum": 3
+          "maximum": 1
         },
         "speedPercent": {
           "type": "integer",

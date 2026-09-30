@@ -164,8 +164,8 @@ internal sealed class BodySeparation
         _pushY[b.Index] += ny * push * shareB / 1000f;
     }
 
-    /// <summary>Filas invadidas por el público a cada lado (ADR 0175): 0 salvo en la turba.</summary>
-    public int BandInset { get; set; }
+    /// <summary>Banda jugable de la fase (ADR 0175): el empujón tampoco mete a nadie en una fila invadida.</summary>
+    public PlayBand Band { get; set; } = PlayBand.Full;
 
     /// <summary>
     /// Aplica de golpe el buffer del tick, acotado por jugador (§2.1.3). El empuje no toca
@@ -201,18 +201,7 @@ internal sealed class BodySeparation
             }
 
             var next = Utility.ClampToPitch(new Vec2(player.Position.X + px, player.Position.Y + py));
-            if (BandInset > 0)
-            {
-                // ADR 0175: en la turba el empujón tampoco mete a nadie en una fila invadida ni lo saca de ella de golpe.
-                next = new Vec2(
-                    next.X,
-                    Math.Clamp(next.Y, MathF.Min(BandInset, player.Position.Y), MathF.Max(Pitch.Rows - BandInset, player.Position.Y)));
-            }
-
-            if (!player.IsOutfield)
-            {
-                next = Utility.ClampToArea(next, player.Team);
-            }
+            next = Band.ClampStep(next, player.Position);
 
             player.Position = next;
         }

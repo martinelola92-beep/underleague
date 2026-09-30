@@ -1291,9 +1291,9 @@ public static class DataLoader
         node.EnsureKnownKeys("narrowRowsPerSide", "speedPercent");
         int rows = node.Prop("narrowRowsPerSide").AsInt();
         int percent = node.Prop("speedPercent").AsInt();
-        if (rows < 0 || rows * 2 >= Pitch.Rows || percent < 0)
+        if (rows is < 0 or > 1 || percent < 0)
         {
-            throw new DataException("sim/tuning.json", "$.mob", $"narrowRowsPerSide {rows} (0..{(Pitch.Rows - 1) / 2}) y speedPercent {percent} (>= 0)");
+            throw new DataException("sim/tuning.json", "$.mob", $"narrowRowsPerSide {rows} (0 o 1: con más la banda mordería el área) y speedPercent {percent} (>= 0)");
         }
 
         return new MobTuning(rows, percent);
