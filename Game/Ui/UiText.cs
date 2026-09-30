@@ -680,14 +680,14 @@ public static class UiText
         // mando no estaba implementado en esta pantalla (ui.input.padPending); ahora lo está.
         ["ui.input.mouseMarket"] =
             "RATÓN  arrastra la carta de un perk, un objeto o un consumible hasta el hueco de un jugador o "
-            + "la bolsa del equipo; suelta fuera para cancelar sin coste. Jugadores, venta y ampliar plantilla se compran con un clic.",
+            + "los huecos de consumible; suelta fuera para cancelar sin coste. Jugadores, venta y ampliar plantilla se compran con un clic.",
         ["ui.input.padMarket"] =
-            "MANDO  A coge la carta señalada, la cruceta mueve el cursor por la plantilla y la bolsa, A suelta, "
+            "MANDO  A coge la carta señalada, la cruceta mueve el cursor por la plantilla y los huecos de consumible, A suelta, "
             + "B cancela. Fichar jugadores, vender y ampliar plantilla siguen siendo solo de ratón.",
         ["ui.market.sellNobody"] = "elige a quién vender en la lista",
 
         // Encargo mercado-arrastrar (20 sep 2026, UI-001/UI-006/UI-010): perk, objeto y consumible se
-        // compran arrastrando su carta hasta el hueco de un jugador o la bolsa del equipo, en vez de con
+        // compran arrastrando su carta hasta el hueco de un jugador o los huecos de consumible, en vez de con
         // el desplegable "QUIÉN LO LLEVA" (ui.market.carrier, ya sin uso).
         ["ui.market.bagTitle"] = "HUECOS DE CONSUMIBLE {0}/{1}",
         ["ui.market.bagHint"] = "suelta aquí uno: entra ya equipado",
@@ -699,7 +699,7 @@ public static class UiText
         ["ui.market.reasonPerkCarrier"] = "{0} no puede llevar este perk: sin hueco libre, ya lo lleva, o no cumple sus etiquetas",
         ["ui.market.reasonItemCarrier"] = "{0} no puede llevar este objeto",
         ["ui.market.reasonWrongPlayer"] = "esto se suelta sobre los huecos de consumible, no sobre un jugador",
-        ["ui.market.reasonWrongBag"] = "esto se suelta sobre un jugador de la plantilla, no sobre la bolsa",
+        ["ui.market.reasonWrongBag"] = "esto se suelta sobre un jugador de la plantilla, no sobre los huecos de consumible",
         ["ui.market.reasonOk"] = "suelta aquí para comprarlo y llevarlo ya equipado",
 
         // --- sección de consumibles de Equipo (CAT-B, RF-080..085) ---
@@ -876,6 +876,10 @@ public static class UiText
         ["ui.kn.consumablesCountShort"] = "{0}/{1}",
         ["ui.kn.equipped"] = "Al partido",
         ["ui.kn.freeSlot"] = "Hueco libre",
+        ["ui.load.lostConsumables"] = "Esta partida guardada llevaba más consumibles de los que caben en los dos huecos. Se han quedado fuera: {0}.",
+        ["ui.kn.discardSure"] = "¿Seguro? Descartar",
+        ["ui.kn.tip.discardSure"] = "Pulsa otra vez para tirarlo. Elegir otra cosa lo cancela.",
+        ["ui.node.eventNoSlot"] = "no tienes hueco libre",
         ["ui.kn.discard"] = "Descartar",
         ["ui.kn.tip.discardConsumable"] = "Lo tira y libera el hueco. No vuelve: para llevar otro hay que comprarlo.",
         ["ui.kn.makeConditional"] = "Que salte solo",

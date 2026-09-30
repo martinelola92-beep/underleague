@@ -52,6 +52,14 @@ public partial class MapScreen : Control
 
         _subtitle = Widgets.Header(this, UiText.Get("ui.map.title"), string.Empty);
 
+        // ADR 0172: un guardado anterior pudo dejar consumibles fuera de los dos huecos; se dice una vez.
+        if (RunController.Instance is { LoadNotice.Length: > 0 } notice)
+        {
+            Widgets.Panel(this, new Rect2(24f, 736f, 1232f, 44f), Style.PanelSoft);
+            Widgets.Body(this, notice.LoadNotice, new Vector2(36f, 744f), 1210f, Style.Accent);
+            notice.LoadNotice = string.Empty;
+        }
+
         BuildAvailableCounter();
         BuildChoicesPanel();
         BuildGraphPanel();

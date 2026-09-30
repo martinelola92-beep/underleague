@@ -55,6 +55,9 @@ public partial class ConsumablesPanel : InkCanvas
     private TeamState? _state;
     private string _selectedId = string.Empty;
     private string _error = string.Empty;
+
+    /// <summary>Descartar tira el consumible para siempre: pide una segunda pulsación, que cualquier otra acción cancela.</summary>
+    private bool _confirmDiscard;
     private PlaqueButton _equip = null!;
     private PlaqueButton _manual = null!;
     private PlaqueButton _trigger = null!;
@@ -80,6 +83,7 @@ public partial class ConsumablesPanel : InkCanvas
     {
         _state = state;
         _error = string.Empty;
+        _confirmDiscard = false;
 
         // Un consumible que ya no se lleva (se gastó en el partido o se descartó) no puede seguir elegido: la
         // columna de la derecha enseñaría algo que ya no está en ningún hueco.
@@ -94,6 +98,7 @@ public partial class ConsumablesPanel : InkCanvas
     /// <summary>Elige un consumible (desde la vista compacta de Plantilla o desde las capturas).</summary>
     public void Select(string id)
     {
+        _confirmDiscard = false;
         _selectedId = id;
         Render();
     }
@@ -130,6 +135,9 @@ public partial class ConsumablesPanel : InkCanvas
         _equip.Position = new Vector2(left, y + 120f);
         _equip.Size = new Vector2(width, 52f);
         _equip.Disabled = !carried;
+        _equip.Caption = _confirmDiscard && carried ? UiText.Get("ui.kn.discardSure") : UiText.Get("ui.kn.discard");
+        _equip.Kind = _confirmDiscard && carried ? PlaqueKind.Primary : PlaqueKind.Paper;
+        _equip.Tip = new Tip(_equip.Caption, UiText.Get(_confirmDiscard && carried ? "ui.kn.tip.discardSure" : "ui.kn.tip.discardConsumable"), Glyph.Potion);
 
         _manual.Position = new Vector2(left, y);
         _manual.Size = new Vector2(width, 56f);
@@ -315,6 +323,14 @@ public partial class ConsumablesPanel : InkCanvas
     /// </summary>
     private void OnDiscard(string id)
     {
+        if (!_confirmDiscard)
+        {
+            _confirmDiscard = true;
+            Render();
+            return;
+        }
+
+        _confirmDiscard = false;
         var list = new List<EquippedConsumable>(_state!.EquippedConsumables);
         list.RemoveAll(e => e.Id == id);
         _selectedId = string.Empty;
@@ -327,6 +343,7 @@ public partial class ConsumablesPanel : InkCanvas
     /// </summary>
     private void OnMakeManual(string id)
     {
+        _confirmDiscard = false;
         var list = new List<EquippedConsumable>(_state!.EquippedConsumables);
         for (int i = 0; i < list.Count; i++)
         {
@@ -345,6 +362,7 @@ public partial class ConsumablesPanel : InkCanvas
     /// </summary>
     private void OnCycleTrigger(string id)
     {
+        _confirmDiscard = false;
         var list = new List<EquippedConsumable>(_state!.EquippedConsumables);
         for (int i = 0; i < list.Count; i++)
         {

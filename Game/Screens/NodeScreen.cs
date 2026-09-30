@@ -441,7 +441,8 @@ public partial class NodeScreen : Control
         {
             var button = Widgets.Button(
                 this,
-                UiText.Get("ui.node.eventOption", option.Name, option.Effect),
+                UiText.Get("ui.node.eventOption", option.Name, option.Effect)
+                    + (option.NoConsumableSlot ? " · " + UiText.Get("ui.node.eventNoSlot") : string.Empty),
                 new Rect2(28f, y, 760f, 28f),
                 option.Affordable);
             int index = option.Index;

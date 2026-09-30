@@ -145,6 +145,28 @@ public partial class RunController : Node
     }
 
     /// <summary>
+    /// Aviso que el mapa enseña una vez tras cargar un guardado (ADR 0172): los consumibles de un guardado
+    /// anterior que no cupieron en los dos huecos. Vacío si no hay nada que decir; el mapa lo consume.
+    /// </summary>
+    public string LoadNotice { get; set; } = string.Empty;
+
+    private string LostConsumablesNotice(IReadOnlyList<string> lost)
+    {
+        if (lost.Count == 0)
+        {
+            return string.Empty;
+        }
+
+        var names = new List<string>(lost.Count);
+        foreach (string id in lost)
+        {
+            names.Add(ConsumableName(id));
+        }
+
+        return Ui.UiText.Get("ui.load.lostConsumables", string.Join(", ", names));
+    }
+
+    /// <summary>
     /// Retoma el guardado ironman y lo <b>borra</b> del disco (RT-061: un único slot, que se borra al
     /// cargarse). La run se sigue jugando con la instantánea de <c>/data</c> que congeló al empezar, no
     /// con la del disco (RT-061b). Devuelve false si no había guardado o si no se pudo leer.
@@ -167,12 +189,13 @@ public partial class RunController : Node
             // Un guardado de una versión anterior puede no traer los catálogos añadibles que el juego
             // actual exige (apodos, Gaceta, prótesis): se completan con los de /data actual y sólo esos
             // (SnapshotCompletion, RT-061b). Las reglas de la run siguen siendo las de su instantánea.
-            var state = SnapshotCompletion.Complete(RunSave.Load(file.GetAsText()), GameData.Snapshot);
+            var state = SnapshotCompletion.Complete(RunSave.Load(file.GetAsText(), out var lostConsumables), GameData.Snapshot);
             Catalog = RunSave.CatalogFromSnapshot(state);
             Systems = StandardRunSystems.FromJson(state.DataSnapshot, fromRunSnapshot: true);
             Bosses = BossCatalog.FromJson(state.DataSnapshot);
             _systems = new BossRunSystems(Bosses, Systems);
             State = state;
+            LoadNotice = LostConsumablesNotice(lostConsumables);
             SelectedNodeId = -1;
             LastMatch = null;
         }
