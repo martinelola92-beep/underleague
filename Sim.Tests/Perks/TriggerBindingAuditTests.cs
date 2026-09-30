@@ -43,6 +43,7 @@ public sealed class TriggerBindingAuditTests
         EventType.Injury => (Binding.Always, Binding.Never, Binding.Always),
         EventType.Save => (Binding.Always, Binding.Never, Binding.Always),
         EventType.ShotBlocked => (Binding.Always, Binding.Never, Binding.Always),
+        EventType.ShotRebound => (Binding.Always, Binding.Never, Binding.Sometimes), // el palo no tiene opponent
         EventType.DribbleAttempted => (Binding.Always, Binding.Never, Binding.Always),
         EventType.DribbleWon => (Binding.Always, Binding.Never, Binding.Always),
         EventType.DribbleLost => (Binding.Always, Binding.Never, Binding.Always),

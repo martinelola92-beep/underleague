@@ -1148,7 +1148,8 @@ internal sealed class EffectEngine : IPerkLinks
 
         switch (subscription.Perk.Trigger)
         {
-            case EventType.Shot:
+            case EventType.ShotRebound:
+                // BC-C (ADR 0180): el balón ya está suelto y el primer tiro terminó; el segundo sale del rechace.
                 _engine.RepeatShot(owner);
                 break;
             case EventType.Tackle:

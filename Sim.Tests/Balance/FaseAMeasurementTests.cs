@@ -104,9 +104,11 @@ public sealed class FaseAMeasurementTests
     // ------------------------------------------------------------------------------------------------
 
     [Theory]
-    [InlineData("double_shot", Position.Forward)]      // predicho WrongPosition -> debería mejorar en Delantero
     [InlineData("own_third_anchor", Position.Defender)] // predicho Adequate (eje de EFECTO) -> ya está en su rol
     [InlineData("last_ditch", Position.Defender)]       // predicho Adequate -> control negativo
+    // `double_shot` estaba aquí con Position.Forward, predicho cuando su disparador era SHOT. Al cerrar BC-C
+    // (ADR 0180) pasó a SHOT_REBOUND, que `PopulationFitness.ClassifyTrigger` (congelado) no mapea a un rol: se retira
+    // el caso por la misma razón que el de `steamroller`, sin tocar el analizador ni la predicción congelada.
     // `steamroller` estaba aquí con Position.Defender, predicho cuando su disparador era TACKLE.
     // Al cerrar BB-Q pasó a RECOVERY, y `PopulationFitness.ClassifyTrigger` —congelado en e152253, y que
     // solo mapea sitios de emisión verificados— ya no infiere rol para él. Se retira el caso en vez de

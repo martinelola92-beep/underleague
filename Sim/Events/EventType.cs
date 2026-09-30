@@ -85,6 +85,16 @@ public enum EventType
     /// <para>Al FINAL del enum, por el mismo motivo que <see cref="Cross"/>.</para>
     /// </summary>
     FateRoll,
+
+    /// <summary>
+    /// El tiro terminó y el balón quedó <b>suelto</b> (ADR 0180, BC-C): lo bloquearon, lo rechazó el portero o
+    /// dio en el palo. <c>Detail</c> es <c>blocked|parried|post</c>, <c>Actor</c> el tirador y <c>Opponent</c>
+    /// quien lo paró (ninguno si fue el palo). Es un disparador <b>sólo de perks</b>: se publica pero no se
+    /// registra en el flujo de eventos, porque el log ya tiene el <c>SHOT_BLOCKED</c>, el <c>SAVE</c> o el
+    /// <c>SHOT_POST</c> (<see cref="EventTypeNames.IsTriggerOnly"/>). No se publica en penaltis.
+    /// <para>Al FINAL del enum, por el mismo motivo que <see cref="Cross"/>.</para>
+    /// </summary>
+    ShotRebound,
 }
 
 /// <summary>Conversión de EventType a la forma UPPER_SNAKE usada en datos y logs.</summary>
@@ -124,6 +134,7 @@ public static class EventTypeNames
         EventType.Clearance => "CLEARANCE",
         EventType.TeamsReset => "TEAMS_RESET",
         EventType.FateRoll => "FATE_ROLL",
+        EventType.ShotRebound => "SHOT_REBOUND",
         _ => throw new ArgumentOutOfRangeException(nameof(t)),
     };
 
@@ -133,4 +144,11 @@ public static class EventTypeNames
     /// el log. Antes eran casos sueltos de <see cref="EventType.PerkTriggered"/> en tres sitios.
     /// </summary>
     public static bool IsPresentationOnly(EventType t) => t is EventType.PerkTriggered or EventType.TeamsReset or EventType.FateRoll;
+
+    /// <summary>
+    /// Eventos que sólo existen como <b>disparador de perks</b> (ADR 0180): el motor los publica cuando el
+    /// resultado ya se conoce pero no los registra, porque el flujo de eventos ya lleva el hecho con su
+    /// propio tipo. Al revés que <see cref="IsPresentationOnly"/>, un perk sí puede colgarse de ellos.
+    /// </summary>
+    public static bool IsTriggerOnly(EventType t) => t is EventType.ShotRebound;
 }

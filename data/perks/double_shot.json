@@ -1,5 +1,5 @@
 {
-  "_doc": "Doble disparo: repite el disparo UNA vez DENTRO del mismo tick (RT-020: no hay tick nuevo); el limite de 1 por partido se consume al activarse, asi que ya no se encadena hasta la profundidad de recursion (BC-B). Su texto promete 'si la primera sale mal' y hoy no cambia el resultado: rediseno abierto en docs/pendientes/BC-C.md.",
+  "_doc": "ACTO (BC-C, 30 sep 2026, ADR 0180): si su tiro termina en balon suelto -bloqueado, rechazado por el portero o al palo-, lo recupera y remata otra vez en el acto. Antes repetia el tiro DENTRO de la publicacion previa del primero y el primero lo pisaba (1,191 goles por partido con el perk frente a 1,156 sin el: ruido), y su texto prometia un 'si el primero sale mal' que no existia. Ahora el trigger ES el fallo (SHOT_REBOUND, publicado con el balon ya suelto, sin registrarse en el log): el cartel sale cuando empieza el segundo tiro y el uso no se gasta en un tiro que entra. Medido: hay 1,39 rechaces por partido entre los dos equipos; el tirador esta a <=3 casillas del balon el 77 % de las veces. Paga: el rechace es un tiro de una jugada que ya fallo.",
   "id": "double_shot",
   "name": {
     "es": "Doble disparo",
@@ -11,7 +11,7 @@
   "axis": "geometry",
   "race": null,
   "family": null,
-  "trigger": "SHOT",
+  "trigger": "SHOT_REBOUND",
   "scope": "actor",
   "links": [],
   "condition": "",
@@ -28,6 +28,7 @@
   "tagsForbidden": [],
   "limit": {
     "per": "match",
-    "times": 1
+    "times": 2,
+    "cooldownSeconds": 25
   }
 }

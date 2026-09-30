@@ -2281,6 +2281,7 @@ internal sealed class MatchEngine : IPerkWorld
             _ball.SetLoose(new Vec2(0f, 0f));
             _ball.LastTouchTeam = player.Team;
             _ball.LastTouchPlayer = player;
+            PublishRebound("blocked", shooter, player);
             return true;
         }
 
@@ -3383,18 +3384,26 @@ internal sealed class MatchEngine : IPerkWorld
     }
 
     /// <summary>
-    /// Repite el disparo del mismo jugador dentro del MISMO tick (efecto <c>extraAction</c>, "Doble
-    /// disparo", C.acción-extra de docs/analisis/perks-catalogo-unificado.md §3.2). El disparo anterior
-    /// ya dejó <c>_ball.Owner</c> en <c>null</c> y el balón en vuelo (<see cref="LaunchShot"/>), así que
-    /// esto lo recupera por decreto -es una habilidad que rompe reglas (RF-093 vía la clasificación
-    /// ABILITY, no una jugada física)- y vuelve a llamar a <see cref="LaunchShot"/>. Sus propios eventos
-    /// pasan otra vez por <c>EffectEngine.PublishAtDepth</c> con la profundidad ya incrementada (RT-042),
-    /// así que si el segundo disparo dispara la MISMA condición otra vez, el corte lo pone
-    /// <c>_maxDepth</c>/<c>RecursionCuts</c> como a cualquier otro evento anidado.
+    /// El remate del rechace (efecto <c>extraAction</c> con disparador <c>SHOT_REBOUND</c>, "Doble
+    /// disparo" y "A bocajarro"; BC-C, ADR 0176). El primer tiro ya terminó —lo bloquearon, lo rechazó el
+    /// portero o dio en el palo— y el balón está <b>suelto</b>: quien lo tiró lo recupera por decreto (es
+    /// una habilidad que rompe reglas, no una jugada física) y remata otra vez en el acto. Como el balón
+    /// se queda a dos casillas del tirador la mitad de las veces y a menos de cuatro el 93 % (medido, BC-C),
+    /// el salto del balón es del tamaño de lo que un disparo recorre en un tick: no se ve como un corte.
+    ///
+    /// <para><b>Por qué aquí y no dentro de <c>SHOT</c>.</b> La versión anterior repetía el tiro <i>dentro
+    /// de la publicación previa</i> del primero, y la llamada exterior de <see cref="LaunchShot"/>
+    /// sobrescribía el vuelo del interior y decidía su propia tirada: el segundo tiro no cambiaba ni un
+    /// resultado (BC-C, 1,191 goles por partido con el perk frente a 1,156 sin él). Con el rebote como
+    /// disparador el primero ya <b>terminó</b> cuando el segundo empieza, que es lo que dice el nombre.</para>
+    ///
+    /// <para>Sólo si el balón sigue libre: dos perks del mismo equipo cuelgan del mismo rebote y el
+    /// primero en el orden de RT-041 se lo queda. Sus propios eventos pasan otra vez por
+    /// <c>EffectEngine.PublishAtDepth</c> con la profundidad ya incrementada (RT-042).</para>
     /// </summary>
     internal void RepeatShot(MatchPlayer shooter)
     {
-        if (!shooter.OnPitch)
+        if (!shooter.OnPitch || _ball.Owner is not null || _ball.InFlight)
         {
             return;
         }
@@ -3809,7 +3818,23 @@ internal sealed class MatchEngine : IPerkWorld
             crossbar ? speed : speed * 0.5f);
         _ball.LastTouchTeam = shooter.Team;
         _ball.LastTouchPlayer = shooter;
+        PublishRebound("post", shooter, null);
         return true;
+    }
+
+    /// <summary>
+    /// Publica <c>SHOT_REBOUND</c> (ADR 0180) cuando el balón ya está suelto: el resultado del tiro se
+    /// conoce y el mundo lo refleja, así que un perk que actúe aquí no lo pisa lo que venga después. No se
+    /// registra en el flujo de eventos y no se publica en un penalti.
+    /// </summary>
+    private void PublishRebound(string detail, MatchPlayer shooter, MatchPlayer? stopper)
+    {
+        if (_ball.ShotIsPenalty)
+        {
+            return;
+        }
+
+        PublishBeforeResolving(EventType.ShotRebound, detail, shooter, opponent: stopper);
     }
 
     /// <summary>Porcentaje de la velocidad del disparo que conserva el balón tras pegar en el marco.</summary>
@@ -3928,6 +3953,7 @@ internal sealed class MatchEngine : IPerkWorld
         _ball.SetLoose(speed, save.ParryLiftCellsPerTickMilli / 1000f);
         _ball.LastTouchPlayer = goalkeeper;
         _ball.LastTouchTeam = defendingTeam;
+        PublishRebound("parried", shooter, goalkeeper);
     }
 
     /// <summary>

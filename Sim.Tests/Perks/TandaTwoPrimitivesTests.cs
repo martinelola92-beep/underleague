@@ -219,28 +219,56 @@ public sealed class TandaTwoPrimitivesTests
     // ================================================================== acción extra tras un evento
 
     /// <summary>
-    /// "Doble disparo": el MISMO tirador repite el disparo DENTRO DEL MISMO tick -sin publicar nada en un
-    /// tick futuro (RT-020)-, con el orden y el corte de RT-041/RT-042: la cadena se resuelve con el
-    /// _maxDepth/RecursionCuts que ya existía para cualquier evento anidado, y el corte es observable en
-    /// el informe. Con maxDepth=1 la cadena resuelve el disparo REAL dos veces (dos LaunchShot de verdad,
-    /// con el balón recuperado y vuelto a lanzar) antes de que la tercera se corte.
+    /// "Doble disparo" (BC-C, ADR 0180): el tirador cuyo tiro rebota recupera el balón suelto y remata otra
+    /// vez en el acto, con un tiro de verdad (<c>LaunchShot</c>: cuenta como tiro, el balón queda en vuelo).
+    /// La repetición cuelga de <c>SHOT_REBOUND</c> y no de <c>SHOT</c>, así que el primer tiro ya terminó.
     /// </summary>
     [Fact]
-    public void ExtraActionOnShotRepeatsTheRealShotWithinTheSameTickAndCutsAtMaxDepth()
+    public void ExtraActionOnAReboundRetakesTheLooseBallAndShootsAgain()
     {
         const string Extra = """[{ "type": "extraAction" }]""";
-        var catalog = TestPerks.CatalogWith(("double_shot", TestPerks.Json("double_shot", "SHOT", Extra, scope: "actor")));
+        var catalog = TestPerks.CatalogWith(("double_shot", TestPerks.Json("double_shot", "SHOT_REBOUND", Extra, scope: "actor")));
         var setup = TestPerks.Match(catalog, 1, (6, new[] { "double_shot" })); // home forward
-        var engine = TestPerks.Engine(catalog, setup, maxDepth: 1);
+        var engine = TestPerks.Engine(catalog, setup, maxDepth: 4);
         var shooter = engine.PlayerById(6)!;
+        shooter.Position = new Vec2(13f, 3f);
+        engine.ParkBallForTest(new Vec2(14f, 3f));
 
         Assert.Equal(0, shooter.Shots);
-        Assert.Equal(0, engine.Report.RecursionCuts);
+        engine.Effects!.Publish(Rebound(engine, shooter));
 
-        engine.Effects!.Publish(Shot(engine, shooter));
+        Assert.Equal(1, shooter.Shots);
+        Assert.True(engine.BallIsShotForTest);
+        Assert.Equal(shooter.Id, engine.Ball.Shooter!.Id);
+    }
 
-        Assert.Equal(2, shooter.Shots);
-        Assert.Equal(1, engine.Report.RecursionCuts);
+    /// <summary>Si alguien ya se llevó el rechace, la repetición no le quita el balón.</summary>
+    [Fact]
+    public void ExtraActionOnAReboundDoesNothingIfTheBallIsNoLongerFree()
+    {
+        const string Extra = """[{ "type": "extraAction" }]""";
+        var catalog = TestPerks.CatalogWith(("double_shot", TestPerks.Json("double_shot", "SHOT_REBOUND", Extra, scope: "actor")));
+        var setup = TestPerks.Match(catalog, 1, (6, new[] { "double_shot" }));
+        var engine = TestPerks.Engine(catalog, setup, maxDepth: 4);
+        var shooter = engine.PlayerById(6)!;
+        var rival = engine.PlayerById(101)!;
+        engine.GiveBallForTest(rival.Index, rival.Position);
+
+        engine.Effects!.Publish(Rebound(engine, shooter));
+
+        Assert.Equal(0, shooter.Shots);
+        Assert.Equal(rival.Id, engine.BallOwnerIdForTest);
+    }
+
+    /// <summary>El cargador rechaza extraAction sobre SHOT (se pisaba a sí mismo) y con un scope que no sea el del portador.</summary>
+    [Theory]
+    [InlineData("SHOT", "actor")]
+    [InlineData("SHOT_REBOUND", "team")]
+    [InlineData("TACKLE", "any")]
+    public void ExtraActionOnlyAcceptsItsTriggersAndTheActorScope(string trigger, string scope)
+    {
+        const string Extra = """[{ "type": "extraAction" }]""";
+        Assert.Throws<DataException>(() => TestPerks.Load("p", TestPerks.Json("p", trigger, Extra, scope: scope)));
     }
 
     /// <summary>
@@ -496,4 +524,8 @@ public sealed class TandaTwoPrimitivesTests
     private static MatchEvent Shot(MatchEngine engine, MatchPlayer owner) => new(
         EventType.Shot, engine.Tick, owner.Team, owner.Id, -1, -1,
         owner.HomeCell, Zone.Own, MatchPhase.OpenPlay, engine.BiasFor(0), 0, "attempted");
+
+    private static MatchEvent Rebound(MatchEngine engine, MatchPlayer owner) => new(
+        EventType.ShotRebound, engine.Tick, owner.Team, owner.Id, -1, -1,
+        owner.HomeCell, Zone.Own, MatchPhase.OpenPlay, engine.BiasFor(0), 0, "parried");
 }

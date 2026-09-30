@@ -1,5 +1,5 @@
 {
-  "_doc": "ACTO: desde la boca del gol dispara dos veces en el mismo instante, y la segunda sale del rechace de la primera. PAGA: si el primer disparo da en un cuerpo, el segundo también — a esa distancia hay más piernas que portería. Escrito con vocabulario existente (extraAction ya sabe repetir un SHOT). Los valores son de colocación, no de balance: nadie los ha medido. MEDIDO 26 sep: a menos de 2 casillas se activaba 0,25 veces por partido y valía 0,00; a menos de 3, +0,35 ± 0,16.",
+  "_doc": "ACTO: desde la boca del gol, si su tiro rebota (bloqueo, rechace del portero o palo) lo remata otra vez en el acto. PAGA: a esa distancia hay mas piernas que porteria, y el segundo tiro puede toparse con lo mismo. BC-C (30 sep 2026, ADR 0180): antes era extraAction sobre SHOT, que repetia el tiro dentro de la publicacion previa y no cambiaba ningun resultado; ahora cuelga del rebote, que es lo que su texto decia. Los valores son de colocacion. MEDIDO 26 sep con la version inerte: a menos de 2 casillas se activaba 0,25 veces por partido y valia 0,00; a menos de 3, +0,35 +- 0,16.",
   "id": "point_blank",
   "name": {
     "es": "A bocajarro",
@@ -11,7 +11,7 @@
   "kind": "conditional",
   "axis": "geometry",
   "race": null,
-  "trigger": "SHOT",
+  "trigger": "SHOT_REBOUND",
   "scope": "actor",
   "links": [],
   "condition": "distanceToGoal(actor) < 3",

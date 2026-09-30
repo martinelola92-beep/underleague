@@ -1,6 +1,6 @@
 # BC-C — «Doble disparo» no tiene sentido y no cambia el resultado
 
-**Estado:** Abierta · diagnóstico CONFIRMED · rediseño pendiente de `game-design-review`
+**Estado:** **Cerrada (30 sep 2026), ADR 0180** · diagnóstico CONFIRMED · rediseño hecho
 
 ## Observación
 
@@ -33,3 +33,33 @@ vuelta a este perk.» (Partida del revisor, 19 sep 2026.)
 ## Hermanos
 
 [BC-B](./BC-B.md), [BC-D](./BC-D.md) (mismo patrón: el perk «se ve» pero no cambia la jugada).
+
+
+## Resolución (30 sep 2026) — ADR 0180
+
+**Hermano hallado por la Regla G**: `point_blank` («A bocajarro») era el mismo perk con otra condición
+(`extraAction` sobre `SHOT`, `distanceToGoal(actor) < 3`) y era igual de inerte.
+
+`game-design-review` (resumen). *Qué vive el jugador:* su delantero dispara, el balón vuelve suelto (bloqueo,
+rechace del portero, palo) y **él mismo lo remata otra vez en el acto**; el cartel sale cuando empieza el
+segundo tiro. *Decisión:* la alternativa 1 de arriba, sin punto de reubicación nuevo: se mide que el tirador
+está a ≤ 3 casillas del balón en el 77 % de los rechaces (≤ 4 en el 93 %; 557 rechaces en 400 partidos), así
+que el salto del balón al recuperarlo es de lo que un tiro recorre en un tick. *Primitiva:* disparador nuevo
+`SHOT_REBOUND` (publicado con el balón ya suelto, sin registrarse en el log) y `extraAction` acepta
+`SHOT_REBOUND`, `TACKLE` y `RECOVERY` con `scope: actor`, rechazando `SHOT`. *Alternativas:* armar en `SHOT`
+(gasta el uso en el primer tiro y el cartel sale antes del suceso), un disparador por final (tres perks),
+la alternativa 3 de la ficha (rechace de un compañero: mismo motor, más exposición y otro nombre).
+*Degeneración:* dos perks del mismo equipo cuelgan del mismo rebote → el primero en el orden de RT-041 se
+lo queda (el balón debe seguir libre). *Frecuencia medida:* 0,16 activaciones por partido (119 en 750).
+
+| perk | antes | después | (por semilla 5 / 11) |
+|---|---:|---:|---|
+| `double_shot` | +19,5 | +13,7 | 22,1/16,9 → 15,6/11,7 |
+| `point_blank` | +9,1 | +5,9 | −3,9/22,1 → 6,5/5,2 |
+
+Tabla emparejada de la ADR 0087 (`--perk-values --rosters 192 --runs 16`, semillas 5 y 11, horizonte 8, mismo
+catálogo salvo el perk): **sigue siendo un perk de relleno pequeño, y ya no es inerte** (antes 0 tiros
+extra por diseño, ahora ~0,16 remates por partido). El valor ya no depende del ruido de una semilla
+(±20 antes, ±2 ahora), pero no es un perk fuerte: su techo lo pone que sólo hay 1,39 rechaces por partido
+entre los dos equipos. `double_shot` pasa a 2 usos con 25 s de enfriamiento (RF-069c); no medido por separado.
+El instrumento se validó con perks intactos (`blood_tithe`, `duelist`, `nutmeg`…: idénticos al decimal).

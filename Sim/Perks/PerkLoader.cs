@@ -1346,15 +1346,22 @@ public static class PerkLoader
                 throw new DataException(file, node.Path, "extraAction solo admite target 'owner'");
             }
 
-            if (trigger is not (EventType.Shot or EventType.Tackle or EventType.Recovery))
+            if (trigger is not (EventType.ShotRebound or EventType.Tackle or EventType.Recovery))
             {
                 throw new DataException(
                     file,
                     node.Path,
-                    "extraAction solo es válido con trigger SHOT, TACKLE o RECOVERY: son las únicas acciones "
-                        + "que MatchEngine sabe repetir dentro del mismo tick (RT-032). RECOVERY repite la "
-                        + "entrada, y es la forma de reaccionar al RESULTADO de una entrada, que TACKLE no "
-                        + "puede ver por publicarse antes de resolverse (BB-Q)");
+                    "extraAction solo es válido con trigger SHOT_REBOUND, TACKLE o RECOVERY: son las únicas "
+                        + "acciones que MatchEngine sabe repetir (RT-032). TACKLE arma la repetición de la entrada "
+                        + "y la ejecuta al terminar; RECOVERY reacciona al RESULTADO de una entrada ganada (BB-Q); "
+                        + "SHOT_REBOUND remata el rechace del propio tiro. SHOT no vale: se publica antes de "
+                        + "tirarse y el segundo tiro lo pisaba el primero (BC-C, ADR 0180)");
+            }
+
+            if (scope != PerkScope.Actor)
+            {
+                throw new DataException(
+                    file, node.Path, "extraAction repite la acción de su portador: exige scope 'actor' (ADR 0180)");
             }
         }
     }

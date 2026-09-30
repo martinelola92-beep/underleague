@@ -179,7 +179,7 @@ public sealed class RecoveryExtraActionTests
     /// <para>La fila de <c>steamroller</c> es solo de guarda: con estas plantillas no llegaba a encadenarse
     /// ni con el fallo. Las otras dos fallan con el código anterior (5 activaciones y 6 acciones en un tick).</para>
     [Theory]
-    [InlineData("double_shot", 6, EventType.Shot, true)]
+    [InlineData("double_shot", 6, EventType.Shot, false)]
     [InlineData("charge", 1, EventType.Tackle, true)]
     [InlineData("steamroller", 1, EventType.Tackle, false)]
     public void APerkThatRetriggersItselfStillRespectsItsLimit(string perkId, int slot, EventType repeated, bool mustActivate)

@@ -339,6 +339,7 @@
         "TACKLE",
         "RECOVERY",
         "SHOT",
+        "SHOT_REBOUND",
         "GOAL",
         "SAVE",
         "FOUL",
