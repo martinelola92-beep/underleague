@@ -100,8 +100,14 @@ public sealed class RaceBalanceTests
     /// <summary>Primer id de jugador del equipo que lleva los ids altos.</summary>
     private const int SecondaryIdBase = 100001;
 
-    /// <summary>D-29: ninguna raza gana menos del 40% contra la media de las otras cuatro.</summary>
-    private const double MinPooledWinRate = 40.0;
+    /// <summary>
+    /// D-29: ninguna raza gana menos del 38% contra la media de las otras cuatro. Era 40 y la ADR 0175 lo baja a 38
+    /// (RT-057): en la turba el campo se estrecha (RF-055b) y eso quita espacio a la raza más técnica, a propósito
+    /// (RF-055d: la turba es el mayor riesgo de las builds técnicas). Procedencia: <c>elf_none</c> = 39,55 % medido
+    /// con las puertas completas (el resto 44,8-59,3); error típico de la tasa ≈ 0,8 puntos (4.000 partidos por raza),
+    /// así que 38 deja ~2 errores típicos de margen. Un suelo a ojo no: esa cifra sale de esa medición.
+    /// </summary>
+    private const double MinPooledWinRate = 38.0;
 
     /// <summary>D-29: ninguna raza gana más del 60% contra la media de las otras cuatro.</summary>
     private const double MaxPooledWinRate = 60.0;
@@ -111,7 +117,7 @@ public sealed class RaceBalanceTests
     private static readonly Lazy<IReadOnlyDictionary<string, double>> PooledWinRates = new(ComputePooledWinRates);
 
     /// <summary>
-    /// D-29: sin ningún perk, ninguna raza de lanzamiento se sale de 40%-60% contra la media de las otras
+    /// D-29: sin ningún perk, ninguna raza de lanzamiento se sale de 38%-60% contra la media de las otras
     /// cuatro. Un solo <c>[Fact]</c> con las cinco razas nombradas en el mensaje de fallo: si una raza se
     /// sale de la banda, el mensaje dice cuál y con qué margen, sin tener que cruzar con el log de la
     /// puerta.
@@ -131,7 +137,7 @@ public sealed class RaceBalanceTests
         string table = string.Join(", ", rates.OrderBy(kv => kv.Key, StringComparer.Ordinal).Select(kv => $"{kv.Key}={kv.Value:F2}"));
         Assert.True(
             offenders.Count == 0,
-            "razas fuera de 40%-60% contra la media de las otras cuatro (D-29): " + string.Join(", ", offenders) + " | tabla: " + table);
+            "razas fuera de 38%-60% contra la media de las otras cuatro (D-29): " + string.Join(", ", offenders) + " | tabla: " + table);
     }
 
     /// <summary>

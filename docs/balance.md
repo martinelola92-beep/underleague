@@ -183,7 +183,7 @@ Las puertas automáticas viven en `Sim.Tests` con `Trait("Category", "Gate")`: *
 | Sensación de fútbol | `Engine/StatisticalTests.cs` | 1.000 partidos, semilla 1 | RT-056 y `betterTeamWinRate` (banda 70-90, ADR 0054 y 0093) |
 | Criterio de salida de fase 1 | `Analysis/BuildGateTests.cs` | 40 plantillas × 12 partidos × 14 celdas = 6.720, semilla 1, ~30 s | Coherentes >= 58%, malas <= 45%, aleatoria 40-60%, `buildsWinDifferently`, `noDeadPerks`, RF-069 |
 | Rareza y jefe final | `Analysis/RarityAndBossTests.cs` | 24 plantillas × 20 partidos × 3 comparaciones, semilla 1 | RF-024 y la salvaguarda de la ADR 0027 |
-| Equilibrio entre razas | `Analysis/RaceBalanceTests.cs` | 250 plantillas × 4 partidos × 10 parejas, semilla 1 | D-29: ninguna raza fuera del 40-60% agrupado |
+| Equilibrio entre razas | `Analysis/RaceBalanceTests.cs` | 250 plantillas × 4 partidos × 10 parejas, semilla 1 | D-29: ninguna raza fuera del 38-60% agrupado (suelo 40 → 38 por la ADR 0175, turba estrechada) |
 | **Curva de puertas de la ADR 0033** | `Analysis/BossGateTests.cs` | 32 plantillas × 4 partidos × 4 niveles × 3 jefes × 5 razas = 7.680, semilla 1, ~35 s | **La** métrica de la fase 2: cada nivel de calidad de build contra cada jefe |
 | **Run completa** | `Analysis/FullRunGateTests.cs` | **240** runs × 3 doctrinas de compra, semilla 1, ~40 s (60 hasta la ADR 0072: la cota de `deathsPerRun` quedaba a 2,7 desviaciones) | Duración de la run, causas de derrota, RF-114k, compras por mercado, determinismo del bucle |
 | Impacto del equipamiento | `Perks/EquipmentImpactTests.cs` | build buena equipada contra la misma sin equipar | Que equipar valga varios puntos de tasa de victoria (ADR 0036) |
