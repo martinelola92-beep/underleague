@@ -1,6 +1,6 @@
 # BM-C — Lo que `ankle_bite` paga no se ve (revisión de diseño de la paga)
 
-Estado: **Abierta, revisada en diseño** (26 sep 2026). Es el «DESIGN CLAIM NOT PROVEN» que dejó
+Estado: **Cerrada (30 sep 2026), salida A, sólo datos**. Antes: abierta, revisada en diseño (26 sep 2026). Es el «DESIGN CLAIM NOT PROVEN» que dejó
 [BL-A](./BL-A.md) y el paso 3 del orden del revisor. **No se ha cambiado ningún dato**: la revisión termina
 en una medición barata que decide entre las salidas, por la Regla A.
 
@@ -87,3 +87,32 @@ paga en el mismo instante que el acto (`eventos explícitos > transiciones invis
 rojas, entradas recibidas y lesiones recibidas mientras tiene rencor encima. Si el rencor ya le cuesta
 lesiones al portador en cantidad apreciable, la paga existe y el problema es sólo de visibilidad (A sigue
 valiendo, con menos cuota); si no, la paga declarada es decorativa y A es obligatoria.
+
+
+## Resolución (30 sep 2026) — salida A, sin ADR propia
+
+**Censo por portador hecho antes de tocar el dato (Regla A)**: `AnkleBitePriceTests`, 1.500 partidos con y sin
+el perk sobre **el mismo jugador** y las mismas semillas. **CONFIRMED: la paga declarada no existía.** Faltas 0,394
+con el perk contra 0,426 sin él, amarillas 0,011 contra 0,015, lesiones recibidas 0,030 contra 0,027 (ruido): el
+árbitro y el rencor no le costaban nada; sólo cambiaba lo que causa (0,057 contra 0,034 lesiones por partido).
+Es decir, la segunda rama de la ficha («si no, la paga declarada es decorativa y A es obligatoria»).
+
+**Cambio (`data/perks/ankle_bite.json`)**: el perk añade `modifyProbability(foul)` con `value: 300` y duración
+`play`, sobre la misma entrada: ×4 de cuota de falta, el techo legal de una rara (ADR 0058). Es RF-069b (el soporte
+modula el acto del mismo perk). Regla I: `Modifiers.AddProbability` multiplica, y con `limit` 2 por partido y 45 s de
+enfriamiento hay una sola activación por jugada, así que no se compone. El invariante de `PerkAuditTests` «un perk no
+mezcla categorías» declara este caso en `PerkAuditTests`: `ankle_bite` es el único perk permitido que mezcla acto y soporte.
+
+**Después (mismo censo, 1.500 partidos con y sin)**: faltas 0,583 contra 0,428 (**+0,155 por partido, +36 %**),
+amarillas 0,025 contra 0,016, rojas 0,0073 contra 0,0073, lesiones recibidas 0,035 contra 0,033 (el rencor sigue
+sin costar lesiones: no se ha tocado), causadas 0,065 contra 0,039, activaciones 0,975 por partido. La mordida ya lleva
+su silbato y su tarjeta: **CONFIRMED**. La roja sigue sin moverse (la roja sale de la segunda amarilla o de una falta
+grave, y +0,155 faltas por partido reparte poco).
+
+**Valor (tabla de la ADR 0087, `--perk-values --rosters 192 --runs 16`, semillas 5/11/17)**: main −7,0 (−7/−5/−9);
+rama −12,3 (−21/−5/−11); diferencia −5,3 con error típico 4,8, **no separable del ruido** (LIKELY que el cambio
+cueste unas décimas de punto, que es lo que se pedía). Lo que sí dice la tabla es que `ankle_bite` es hoy un perk
+de valor ≈ −10 ± 5 **en el espejo del medidor** (que no arrastra lesiones entre partidos, punto 4 arriba): el
+valor alto de una rara no está, y la paga está. **No se toca el ×4 ni el valor sin decisión del revisor** (RT-057).
+Queda abierto, sin ficha propia: el rencor (10 s, sólo testigos cercanos) sigue sin costarle lesiones al portador;
+si el revisor quiere que la paga de campaña también exista, es la salida C de arriba.

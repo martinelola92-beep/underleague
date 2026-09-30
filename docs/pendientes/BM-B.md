@@ -61,3 +61,25 @@ Medido con traza de un fotograma por tick (300 partidos por perk, `PreResolution
 Hallazgo añadido por la propiedad «nadie acaba un tick derribado con el balón»: `steamroller` (y la falta no vista)
 dejaban el balón en los pies de un jugador tumbado (36 fotogramas en 120 partidos); ahora el balón se suelta al caer.
 Valores antes/después de los perks: ver `docs/decisiones/0180-...` y la tabla de la ficha BC-C.
+
+## Remedición sobre main tras el rebase (30 sep 2026, ADR 0175 incluida)
+
+Tabla de la ADR 0087 (`--perk-values --rosters 192 --runs 16`), semillas 5/11/17, **main contra rama** (mismo instrumento,
+mismo catálogo salvo los cambios de la rama), error típico de la diferencia entre medias de tres semillas. Instrumento
+validado: `blood_tithe`, `duelist`, `nutmeg` y `own_third_anchor`, que la rama no toca, salen **idénticos al dígito**
+en los dos lados (Regla J). El lote de referencia (`--runs 3000`, semillas 1 y 2) es igual en main y en rama salvo dos
+métricas INFORMATIVAS del orden de 0,03 puntos (la referencia casi no lleva estos perks). Las builds de `/Balance` que
+los usan (`elf_glass`, `orc_butchery`) **no se pueden medir**: fallan con «asigna N perks, solo tiene M slots» también en
+main (BuildGate, ya rojo); la tabla por perk es el sustituto.
+
+| perk | main | rama | diferencia (± e.t.) | etiqueta |
+|---|---:|---:|---:|---|
+| `charge` | −0,7 | +5,0 | +5,7 ± 11,1 | no separable del ruido |
+| `bull_rush` | +3,0 | +6,0 | +3,0 ± 14,5 | no separable del ruido |
+| `steamroller` | −8,3 | +0,7 | +9,0 ± 1,5 | **CONFIRMED**: el balón se suelta al caer el derribado y deja de dar ventaja al derribado que lo conservaba |
+| `ankle_bite` | −7,0 | −12,3 | −5,3 ± 4,8 | ver [BM-C](./BM-C.md) |
+| `duelist`, `nutmeg`, `own_third_anchor` | sin cambio | sin cambio | 0 | el instrumento: no los toca la rama |
+
+La variación de las filas de acto (`charge`, `bull_rush`) queda dentro del ruido de una tabla con ±10-15 por semilla:
+el arreglo es de **coherencia** (demostrado por la traza de un fotograma por tick, `PreResolutionParticipantsTests`),
+no de valor, y no se vende como lo segundo.

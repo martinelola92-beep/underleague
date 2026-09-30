@@ -63,3 +63,22 @@ extra por diseño, ahora ~0,16 remates por partido). El valor ya no depende del 
 (±20 antes, ±2 ahora), pero no es un perk fuerte: su techo lo pone que sólo hay 1,39 rechaces por partido
 entre los dos equipos. `double_shot` pasa a 2 usos con 25 s de enfriamiento (RF-069c); no medido por separado.
 El instrumento se validó con perks intactos (`blood_tithe`, `duelist`, `nutmeg`…: idénticos al decimal).
+
+## Remedición sobre main tras el rebase (30 sep 2026, ADR 0175 incluida)
+
+Tabla de la ADR 0087 (`--perk-values --rosters 192 --runs 16`), semillas 5/11/17, **main contra rama** (mismo instrumento,
+mismo catálogo salvo los cambios de la rama), error típico de la diferencia entre medias de tres semillas. Instrumento
+validado: `blood_tithe`, `duelist`, `nutmeg` y `own_third_anchor`, que la rama no toca, salen **idénticos al dígito**
+en los dos lados (Regla J). El lote de referencia (`--runs 3000`, semillas 1 y 2) es igual en main y en rama salvo dos
+métricas INFORMATIVAS del orden de 0,03 puntos (la referencia casi no lleva estos perks). Las builds de `/Balance` que
+los usan (`elf_glass`, `orc_butchery`) **no se pueden medir**: fallan con «asigna N perks, solo tiene M slots» también en
+main (BuildGate, ya rojo); la tabla por perk es el sustituto.
+
+| perk | main | rama | diferencia (± e.t.) | etiqueta |
+|---|---:|---:|---:|---|
+| `double_shot` | +1,3 | +6,0 | +4,7 ± 9,3 | LIKELY un relleno pequeño (±10 por semilla): no separable de 0 |
+| `point_blank` | +3,7 | +5,0 | +1,3 ± 3,2 | idem |
+
+Activaciones por partido (`ReboundShotTests`, 750 partidos): `double_shot` 133, `point_blank` 76: el perk **se activa y
+cada activación va detrás de un rechace y seguida de otro tiro** (CONFIRMED por el test, no por el valor). El tope lo
+pone que hay pocos rechaces por partido.

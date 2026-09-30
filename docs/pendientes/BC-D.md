@@ -68,3 +68,21 @@ quiere en la banda de un raro, el dial es `value` (dato) o el uso por partido. *
 es un cambio de balance de un perk que él mismo fijó (RT-057). Efecto secundario anotado: `RECOVERY guard`
 activa los perks de `RECOVERY` sin filtro de detalle (`lane_reader`, `road_warrior`, `sweeper_keeper`); es una
 recuperación de verdad.
+
+## Remedición sobre main tras el rebase (30 sep 2026, ADR 0175 incluida)
+
+Tabla de la ADR 0087 (`--perk-values --rosters 192 --runs 16`), semillas 5/11/17, **main contra rama** (mismo instrumento,
+mismo catálogo salvo los cambios de la rama), error típico de la diferencia entre medias de tres semillas. Instrumento
+validado: `blood_tithe`, `duelist`, `nutmeg` y `own_third_anchor`, que la rama no toca, salen **idénticos al dígito**
+en los dos lados (Regla J). El lote de referencia (`--runs 3000`, semillas 1 y 2) es igual en main y en rama salvo dos
+métricas INFORMATIVAS del orden de 0,03 puntos (la referencia casi no lleva estos perks). Las builds de `/Balance` que
+los usan (`elf_glass`, `orc_butchery`) **no se pueden medir**: fallan con «asigna N perks, solo tiene M slots» también en
+main (BuildGate, ya rojo); la tabla por perk es el sustituto.
+
+| perk | main | rama | diferencia (± e.t.) | etiqueta |
+|---|---:|---:|---:|---|
+| `last_man` | −9,7 (−5/−12/−12) | +132,3 (+144/+123/+130) | +142,0 ± 6,6 | **CONFIRMED** que el perk por fin cambia el partido; el tamaño es el del 75 % puesto por petición |
+
+Activaciones: 420 en 750 partidos, 315 paradas (75 %, `GuardShotTests`). El aviso de la sección anterior se mantiene y
+**sube**: +132 (antes +118, por la turba de la ADR 0175) es con diferencia el valor más alto de un raro; el dial sigue
+siendo `value` (dato) o el uso por partido, **sin tocar hasta decisión del revisor** (RT-057).
