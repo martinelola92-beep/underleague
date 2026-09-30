@@ -32,6 +32,13 @@ public partial class PitchView : Control
     /// <summary>Datos de la plantilla y la alineación que se está pintando.</summary>
     public TeamState? State { get; set; }
 
+    /// <summary>
+    /// Filas que el público invade por lado en la turba (<c>tuning.mob.narrowRowsPerSide</c>, ADR 0175). Se marcan
+    /// en la alineación porque el estrechamiento es un problema de colocación anticipable (RF-055b, RF-012d): el
+    /// jugador decide aquí, sabiendo que si hay empate esas filas desaparecen.
+    /// </summary>
+    public int MobRows { get; set; }
+
     /// <summary>Casilla bajo el cursor. Es la misma para ratón y mando (UI-006): un único cursor.</summary>
     public Cell Cursor { get; set; } = new(0, 2);
 
@@ -138,6 +145,7 @@ public partial class PitchView : Control
         Chalkboard.DrawFrame(this, boardSize, 6f, frameSeed);
 
         DrawField(cell);
+        DrawMobRows(cell);
 
         if (CoverageMode)
         {
@@ -193,6 +201,32 @@ public partial class PitchView : Control
         float areaHeight = cell * (Pitch.AreaBottom - Pitch.AreaTop);
         Chalkboard.ChalkRect(this, new Rect2(0f, areaTop, cell * Pitch.AreaColumns, areaHeight), Chalkboard.Chalk, 2f, seed: 11);
         Chalkboard.ChalkRect(this, new Rect2(cell * (Pitch.Columns - Pitch.AreaColumns), areaTop, cell * Pitch.AreaColumns, areaHeight), Chalkboard.Chalk, 2f, seed: 23);
+    }
+
+    /// <summary>ADR 0175: las filas exteriores rayadas y rotuladas «turba»: el público las ocupa si hay empate.</summary>
+    private void DrawMobRows(float cell)
+    {
+        if (MobRows <= 0)
+        {
+            return;
+        }
+
+        var font = GetThemeDefaultFont();
+        var shade = new Color(0.23f, 0.18f, 0.13f, 0.62f);
+        var hatch = new Color(Chalkboard.Chalk, 0.28f);
+        float width = cell * Pitch.Columns;
+        for (int side = 0; side < 2; side++)
+        {
+            float top = (side == 0 ? 0f : Pitch.Rows - MobRows) * cell;
+            float height = MobRows * cell;
+            DrawRect(new Rect2(0f, top, width, height), shade);
+            for (float x = -height; x < width; x += 14f)
+            {
+                DrawLine(new Vector2(x, top + height), new Vector2(x + height, top), hatch, 1f);
+            }
+
+            Style.DrawText(this, font, new Vector2(width - 200f, top + (height / 2f) - 6f), UiText.Get("ui.kn.mobRow"), Style.TextSmall, new Color(Chalkboard.Chalk, 0.9f));
+        }
     }
 
     /// <summary>

@@ -542,6 +542,20 @@ public partial class MatchPitchView3D : SubViewportContainer
                 CastShadow = GeometryInstance3D.ShadowCastingSetting.Off,
             });
 
+            // La línea de banda nueva: el borde de lo que se puede pisar, de tiza, sobre el césped.
+            float edge = side == 0 ? _mobRows : Pitch.Rows - _mobRows;
+            crowd.AddChild(new MeshInstance3D
+            {
+                Mesh = new BoxMesh { Size = new Vector3(Pitch.Columns, 0.03f, 0.06f) },
+                MaterialOverride = new StandardMaterial3D
+                {
+                    AlbedoColor = new Color("f1e4c3"),
+                    ShadingMode = BaseMaterial3D.ShadingModeEnum.Unshaded,
+                },
+                Position = new Vector3(Pitch.Columns / 2f, 0.045f, edge),
+                CastShadow = GeometryInstance3D.ShadowCastingSetting.Off,
+            });
+
             // Tres por casilla y por eje: una multitud, no una fila de postes.
             int perColumn = 3;
             int perRow = 3 * _mobRows;

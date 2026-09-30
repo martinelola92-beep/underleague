@@ -305,6 +305,8 @@ public partial class MatchPitchView : Control
         {
             float top = side == 0 ? 0f : Pitch.Rows - MobRows;
             DrawRect(new Rect2(0f, top * cell, Pitch.Columns * cell, MobRows * cell), ground);
+            float edge = (side == 0 ? MobRows : Pitch.Rows - MobRows) * cell;
+            DrawLine(new Vector2(0f, edge), new Vector2(Pitch.Columns * cell, edge), Style.GrassLine, 3f);
             int columns = Pitch.Columns * 3;
             int rows = MobRows * 3;
             for (int k = 0; k < columns * rows; k++)

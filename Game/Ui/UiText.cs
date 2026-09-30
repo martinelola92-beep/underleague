@@ -790,8 +790,8 @@ public static class UiText
         ["ui.pregon.fate.savedDeath"] = "¡SE SALVA! Por los pelos",
         ["ui.pregon.fate.diceWanted"] = "los dados lo han querido",
         ["ui.pregon.turba.header"] = "Se hace saber: el árbitro abandona el campo",
-        ["ui.pregon.turba.body"] = "¡A la turba! · el campo se estrecha · el próximo gol gana",
-        ["ui.pregon.turba.bodyTyped"] = "¡A la turba! · {0} · el campo se estrecha · el próximo gol gana",
+        ["ui.pregon.turba.body"] = "¡A la turba! · el próximo gol gana",
+        ["ui.pregon.turba.bodyTyped"] = "¡A la turba! · {0} · el próximo gol gana",
         ["ui.pregon.shout.untilEnd"] = "{0} · hasta el final",
 
         // BA-H, RF-082/085: anuncio del consumible usado (banda sin congelar, igual que la turba) y el
@@ -898,6 +898,7 @@ public static class UiText
         ["ui.kn.lineupTitle"] = "Alineación",
         ["ui.kn.onPitch"] = "En el campo",
         ["ui.kn.zones"] = "Zonas",
+        ["ui.kn.mobRow"] = "TURBA (si hay empate)",
         ["ui.kn.coverage"] = "Cobertura",
         ["ui.kn.zonesTip"] = "Pinta los tercios y las bandas que nombran los perks de inicio. Tecla Z o botón Y.",
         ["ui.kn.coverageTip"] = "Cuántos jugadores cubren cada casilla y dónde quedan huecos. Tecla C o botón X.",

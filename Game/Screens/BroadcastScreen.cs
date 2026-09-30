@@ -1060,6 +1060,14 @@ public partial class BroadcastScreen : Control
         string body = type is null
             ? UiText.Get("ui.pregon.turba.body")
             : UiText.Get("ui.pregon.turba.bodyTyped", Data.GameData.Language == "en" ? type.Name.En : type.Name.Es);
+
+        // ADR 0175: y lo que la turba hace al campo, generado desde los datos (con 0 filas no dice que se estrecha).
+        string rule = Underleague.Sim.Run.View.MobView.ShortRule(_catalog, Data.GameData.Language);
+        if (rule.Length > 0)
+        {
+            body += " · " + rule;
+        }
+
         _band.Show(UiText.Get("ui.pregon.turba.header"), body);
     }
 

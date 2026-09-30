@@ -256,6 +256,7 @@ public partial class TeamScreen : Control
         _pitch = new PitchView { Position = new Vector2(398f, 164f), Size = new Vector2(816f, 357f) };
         _lineupPage.AddChild(_pitch);
         _pitch.State = _state;
+        _pitch.MobRows = _state.Catalog.Tuning.Mob.NarrowRowsPerSide;
         _pitch.CellPressed += OnCellPressed;
         _pitch.CellReleased += OnCellReleased;
         _pitch.CellHovered += OnCellHovered;

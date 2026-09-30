@@ -420,6 +420,12 @@ public partial class MapScreen : Control
                 && Underleague.Sim.Run.View.MobView.For(_run.State!, node, _run.Systems.Mobs, mobCatalog, Data.GameData.Language) is { } mob)
             {
                 lines.Add(UiText.Get("ui.map.mob", mob.Name));
+
+                // ADR 0175: lo que toda turba hace al campo, para elegir el camino sabiéndolo.
+                if (mob.Rule.Length > 0)
+                {
+                    lines.Add(mob.Rule);
+                }
             }
         }
 
