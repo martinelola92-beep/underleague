@@ -712,6 +712,21 @@ public static class EventSystem
     }
 
     /// <summary>
+    /// True si la opción entrega más consumibles de los huecos libres que quedan (RF-080, ADR 0172): es el motivo
+    /// que la vista da cuando la opción no es viable por eso (RF-012d, la opción inviable dice por qué).
+    /// </summary>
+    internal static bool LacksConsumableSlot(RunState state, EventOption option)
+    {
+        int grants = 0;
+        for (int i = 0; i < option.Effects.Count; i++)
+        {
+            grants += option.Effects[i].Kind == EventEffectKind.GrantConsumable ? 1 : 0;
+        }
+
+        return grants > 0 && state.Consumables.Count + grants > RunRules.ConsumableSlots;
+    }
+
+    /// <summary>
     /// Los disponibles que esa opción puede señalar como primer objetivo (<paramref name="forSecondTarget"/>
     /// falso) o como segundo (dado el primero en <paramref name="firstTargetId"/>). Id ascendente.
     /// </summary>

@@ -223,7 +223,8 @@ public sealed class ConsumableSlotsTests
         var loaded = RunSave.Load(RunSave.Save(state));
 
         Assert.Equal(state.Consumables, loaded.Consumables);
-        Assert.Same(loaded, loaded.WithLegacyConsumablesFolded());
+        Assert.Same(loaded, loaded.FoldLegacyConsumables(out var none));
+        Assert.Empty(none);
     }
 
     [Fact]
@@ -244,8 +245,11 @@ public sealed class ConsumableSlotsTests
                 new EquippedConsumable("field_bandage", ConsumableMode.Conditional, "ownInjury"),
             });
 
-        var loaded = RunSave.Load(RunSave.Save(state));
+        var loaded = RunSave.Load(RunSave.Save(state), out var lost);
 
+        // Se dice qué no cupo: las dos copias de vendaje (el tercero equipado y el stock suelto) y las dos
+        // bengalas que sobran del stock; no se pierde en silencio.
+        Assert.Equal(new[] { "field_bandage", "field_bandage", "smoke_flare", "smoke_flare" }, lost);
         Assert.Equal(
             new[]
             {
@@ -263,5 +267,31 @@ public sealed class ConsumableSlotsTests
         var folded = RunSave.Load(RunSave.Save(stockOnly)).Consumables;
         Assert.Equal(new[] { "field_bandage", "lucky_charm" }, folded.Select(c => c.Id));
         Assert.All(folded, c => Assert.Equal(ConsumableMode.Manual, c.Mode));
+    }
+
+    [Fact]
+    public void FoldingDeduplicatesAndReportsTheCopyItDropsWithoutCounters()
+    {
+        // Dos copias del mismo id equipadas y ningún contador: se conserva UNA (la primera, con su modo), y la otra se
+        // anuncia. Antes se conservaban las dos y ambas desaparecían al usar una (el partido gasta por id).
+        var state = RunEngine.Start(SystemsTestSupport.Setup(), 6, Catalog, Systems)
+            .WithConsumables(new[]
+            {
+                new EquippedConsumable("field_bandage", ConsumableMode.Manual, string.Empty),
+                new EquippedConsumable("field_bandage", ConsumableMode.Conditional, "ownInjury"),
+            });
+
+        var loaded = RunSave.Load(RunSave.Save(state), out var lost);
+
+        Assert.Equal(new[] { new EquippedConsumable("field_bandage", ConsumableMode.Manual, string.Empty) }, loaded.Consumables);
+        Assert.Equal(new[] { "field_bandage" }, lost);
+        Assert.True(loaded.HasFreeConsumableSlot);
+
+        // Y con stock suelto de ese mismo id, el hueco libre se rellena con OTRO id, no con la copia.
+        var withStock = state.WithCounter(RunState.LegacyConsumableOwnedPrefix + "field_bandage", 2)
+            .WithCounter(RunState.LegacyConsumableOwnedPrefix + "lucky_charm", 1);
+        var folded = RunSave.Load(RunSave.Save(withStock), out var lostWithStock);
+        Assert.Equal(new[] { "field_bandage", "lucky_charm" }, folded.Consumables.Select(c => c.Id));
+        Assert.Equal(new[] { "field_bandage" }, lostWithStock);
     }
 }

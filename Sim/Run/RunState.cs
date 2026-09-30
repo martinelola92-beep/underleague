@@ -680,7 +680,7 @@ public sealed record RunState
     /// <summary>
     /// Prefijo del contador del <b>inventario de consumibles sueltos</b> que existió hasta la ADR 0172 (paquete
     /// X, X-9: el mercado lo subía al comprar y el partido lo bajaba al gastarse). Ya no lo escribe nadie:
-    /// desde la ADR 0172 el hueco es la posesión. Sólo lo lee <see cref="WithLegacyConsumablesFolded"/>, que
+    /// desde la ADR 0172 el hueco es la posesión. Sólo lo lee <see cref="FoldLegacyConsumables"/>, que
     /// convierte lo que un guardado viejo trajera en ese inventario.
     /// </summary>
     public const string LegacyConsumableOwnedPrefix = "consumable_owned:";
@@ -737,14 +737,18 @@ public sealed record RunState
     /// <summary>
     /// Migración explícita de los guardados anteriores a la ADR 0172 (no cambia la forma del guardado, sólo
     /// lo que significa): lo que hubiera en el inventario suelto (<see cref="LegacyConsumableOwnedPrefix"/>) y
-    /// lo que estuviera equipado pasa a los huecos, por este orden y sin repetir: primero lo que ya iba
-    /// equipado (hasta <see cref="RunRules.ConsumableSlots"/>, en su orden y con su modo), luego las copias
-    /// sueltas por id ascendente (RT-041), en modo manual. <b>Lo que no cabe se pierde</b>, y los contadores
-    /// viejos se borran: es el precio de pasar de «inventario ilimitado» a dos huecos, y queda escrito en la
-    /// ADR 0172 en vez de hacerse a escondidas. Sin contadores viejos ni más de dos equipados, devuelve el
-    /// mismo estado.
+    /// lo que estuviera equipado pasa a los huecos, por este orden y <b>sin repetir</b>: primero lo que ya iba
+    /// equipado (hasta <see cref="RunRules.ConsumableSlots"/>, en su orden y con su modo; de un id repetido
+    /// gana la primera copia), luego las copias sueltas por id ascendente (RT-041), en modo manual. Los
+    /// contadores viejos se borran.
+    ///
+    /// <para><b>Lo que no cabe no se pierde en silencio</b>: <paramref name="lost"/> lleva un id por cada
+    /// copia que se queda fuera (por id ascendente), y quien carga el guardado se lo dice al jugador. Las
+    /// copias de un id son el mayor entre su contador y lo que hubiera equipado (el equipado también
+    /// contaba en el inventario). Sin contadores viejos, sin repetidos y con como mucho dos equipados,
+    /// devuelve el mismo estado y <paramref name="lost"/> vacío.</para>
     /// </summary>
-    public RunState WithLegacyConsumablesFolded()
+    public RunState FoldLegacyConsumables(out IReadOnlyList<string> lost)
     {
         var loose = new SortedDictionary<string, int>(StringComparer.Ordinal);
         var kept = new SortedDictionary<string, int>(StringComparer.Ordinal);
@@ -763,17 +767,13 @@ public sealed record RunState
             kept[key] = value;
         }
 
-        bool dirtyCounters = kept.Count != Counters.Count;
-        bool tooMany = Consumables.Count > RunRules.ConsumableSlots;
-        if (!dirtyCounters && !tooMany)
-        {
-            return this;
-        }
-
         var slots = new List<EquippedConsumable>(RunRules.ConsumableSlots);
-        for (int i = 0; i < Consumables.Count && slots.Count < RunRules.ConsumableSlots; i++)
+        var equippedCopies = new SortedDictionary<string, int>(StringComparer.Ordinal);
+        for (int i = 0; i < Consumables.Count; i++)
         {
-            if (!slots.Exists(c => string.Equals(c.Id, Consumables[i].Id, StringComparison.Ordinal)))
+            string id = Consumables[i].Id;
+            equippedCopies[id] = equippedCopies.GetValueOrDefault(id) + 1;
+            if (slots.Count < RunRules.ConsumableSlots && !slots.Exists(c => string.Equals(c.Id, id, StringComparison.Ordinal)))
             {
                 slots.Add(Consumables[i]);
             }
@@ -781,18 +781,28 @@ public sealed record RunState
 
         foreach (var (id, _) in loose)
         {
-            if (slots.Count >= RunRules.ConsumableSlots)
-            {
-                break;
-            }
-
-            if (!slots.Exists(c => string.Equals(c.Id, id, StringComparison.Ordinal)))
+            if (slots.Count < RunRules.ConsumableSlots && !slots.Exists(c => string.Equals(c.Id, id, StringComparison.Ordinal)))
             {
                 slots.Add(new EquippedConsumable(id, ConsumableMode.Manual, string.Empty));
             }
         }
 
-        return this with { Consumables = slots, Counters = kept };
+        var lostCopies = new List<string>();
+        var ids = new SortedSet<string>(loose.Keys, StringComparer.Ordinal);
+        ids.UnionWith(equippedCopies.Keys);
+        foreach (string id in ids)
+        {
+            int total = Math.Max(loose.GetValueOrDefault(id), equippedCopies.GetValueOrDefault(id));
+            int remaining = total - (slots.Exists(c => string.Equals(c.Id, id, StringComparison.Ordinal)) ? 1 : 0);
+            for (int i = 0; i < remaining; i++)
+            {
+                lostCopies.Add(id);
+            }
+        }
+
+        lost = lostCopies;
+        bool dirty = kept.Count != Counters.Count || Consumables.Count != slots.Count || lostCopies.Count > 0;
+        return dirty ? this with { Consumables = slots, Counters = kept } : this;
     }
 
     /// <summary>Copia con una copia más (o menos) de ese objeto en el almacén.</summary>

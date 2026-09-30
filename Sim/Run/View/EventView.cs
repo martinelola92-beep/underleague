@@ -33,7 +33,8 @@ public sealed record EventOptionRow(
     bool NeedsSecondTarget,
     bool Affordable,
     IReadOnlyList<EventTargetRow> Targets,
-    IReadOnlyList<EventTargetRow> SecondTargets);
+    IReadOnlyList<EventTargetRow> SecondTargets,
+    bool NoConsumableSlot = false);
 
 /// <summary>
 /// La carta del nodo de evento abierto. <paramref name="Resolved"/>: la carta ya se eligió (se elige una vez,
@@ -101,7 +102,8 @@ public static class EventView
                 option.NeedsSecondTarget,
                 viable,
                 primary,
-                second));
+                second,
+                NoConsumableSlot: !viable && EventSystem.LacksConsumableSlot(state, option)));
         }
 
         return new EventScreenView(

@@ -59,7 +59,14 @@ public static class RunSave
     /// Carga un estado desde el JSON de <see cref="Save"/>. Lanza <see cref="RunSaveException"/> con
     /// fichero y ruta si la versión no coincide o si falta algo obligatorio.
     /// </summary>
-    public static RunState Load(string json)
+    public static RunState Load(string json) => Load(json, out _);
+
+    /// <summary>
+    /// Como <see cref="Load(string)"/>, y además dice qué consumibles del guardado no cupieron en los dos huecos
+    /// de la ADR 0172 (uno por copia perdida): un guardado anterior llevaba un inventario suelto, y lo que no
+    /// cabe no se descarta sin avisar. Vacío con un guardado nuevo.
+    /// </summary>
+    public static RunState Load(string json, out IReadOnlyList<string> lostConsumables)
     {
         ArgumentException.ThrowIfNullOrEmpty(json);
 
@@ -115,7 +122,7 @@ public static class RunSave
         // ADR 0172: un guardado anterior llevaba un inventario suelto de consumibles (contadores
         // «consumable_owned:») y hasta tres equipados. Se pliega a los dos huecos con una migración
         // explícita y documentada, no a escondidas; un guardado nuevo no trae nada que plegar.
-        state = state.WithLegacyConsumablesFolded();
+        state = state.FoldLegacyConsumables(out lostConsumables);
 
         // nextPlayerId manda sobre el que deduce WithRoster: una run que ha vendido a su último fichaje
         // no puede reutilizar su id (determinismo.md, "Orden").

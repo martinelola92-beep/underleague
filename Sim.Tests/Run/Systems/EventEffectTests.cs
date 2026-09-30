@@ -138,6 +138,8 @@ public sealed class EventEffectTests
         var full = withOne.WithTakenConsumable(second.Id);
         Assert.False(EventSystem.IsViable(full, Catalog, node, option, Items, Consumables));
         Assert.False(View(full, events).Options[0].Affordable);
+        Assert.True(View(full, events).Options[0].NoConsumableSlot);
+        Assert.False(View(state, events).Options[0].NoConsumableSlot);
         Assert.ThrowsAny<Exception>(() => Choose(full, events, new ChooseEventOption(0)));
     }
 
