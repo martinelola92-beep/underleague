@@ -147,4 +147,132 @@ public sealed class GuardShotTests
         Assert.True(activations > 100, "el perk tiene que activarse en la mayoría de los partidos");
         Assert.InRange(stops * 100 / activations, 55, 90); // 75 % con 750 tiradas: la banda cubre el azar de sobra
     }
+    /// <summary>
+    /// Revisión independiente: si el defensa <b>no puede actuar</b> (está tirado, así que <c>CanTouchBall</c> falla),
+    /// la activación no cuenta: ni cartel, ni uso gastado. Con el uso intacto, el mismo defensa sí actúa en el tiro
+    /// siguiente, cuando ya está en pie (el perk tiene un uso por partido).
+    /// </summary>
+    [Fact]
+    public void AGuardWhoCannotTouchTheBallDoesNotSpendItsUseNorItsPoster()
+    {
+        int checkedShots = 0;
+        for (int seed = 1; seed <= 60; seed++)
+        {
+            var (engine, guard, shooter) = OnTargetShot(100, (ulong)seed);
+            guard.EnterState(PlayerState.KnockedDown, 100);
+            engine.LaunchShotForTest(shooter.Index);
+            if (!engine.EventsForTest.Any(e => e.Type == EventType.Shot && e.Detail == "onTarget"))
+            {
+                continue;
+            }
+
+            checkedShots++;
+            Assert.DoesNotContain(engine.EventsForTest, e => e.Type == EventType.PerkTriggered);
+            Assert.DoesNotContain(engine.EventsForTest, e => e.Type == EventType.ShotBlocked && e.Detail == "guard");
+
+            // El defensa se levanta y el siguiente tiro a puerta sí lo encuentra con el uso entero.
+            guard.EnterState(PlayerState.Positioning, 0);
+            engine.PlaceForTest(guard.Index, new Vec2(14f, 6f));
+            engine.GiveBallForTest(shooter.Index, new Vec2(10f, 3.5f));
+            engine.PlaceForTest(shooter.Index, new Vec2(10f, 3.5f));
+            for (int tries = 0; tries < 30 && !engine.EventsForTest.Any(e => e.Type == EventType.PerkTriggered); tries++)
+            {
+                engine.LaunchShotForTest(shooter.Index);
+                if (!engine.EventsForTest.Any(e => e.Type == EventType.PerkTriggered))
+                {
+                    engine.PlaceForTest(guard.Index, new Vec2(14f, 6f));
+                    engine.GiveBallForTest(shooter.Index, new Vec2(10f, 3.5f));
+                }
+            }
+
+            Assert.Single(engine.EventsForTest, e => e.Type == EventType.PerkTriggered);
+        }
+
+        _output.WriteLine($"{checkedShots} tiros a puerta con el defensa tirado");
+        Assert.True(checkedShots > 0, "la prueba necesita algún tiro a puerta");
+    }
+
+    /// <summary>
+    /// Con la tirada fallida (1 %) el defensa queda plantado en la trayectoria y el tiro <b>sigue</b>: ni balón
+    /// suyo ni evento «guard». Es una activación real (cartel y uso gastado) y el tiro lo resuelve el motor como
+    /// siempre hasta su final (gol, parada, bloqueo…).
+    /// </summary>
+    [Fact]
+    public void AFailedRollLeavesTheGuardOnTheLineAndTheShotCarriesOn()
+    {
+        int onTarget = 0, resolved = 0;
+        for (int seed = 1; seed <= 400; seed++)
+        {
+            var (engine, _, shooter) = OnTargetShot(1, (ulong)seed);
+            engine.LaunchShotForTest(shooter.Index);
+            if (!engine.EventsForTest.Any(e => e.Type == EventType.Shot && e.Detail == "onTarget"))
+            {
+                continue;
+            }
+
+            onTarget++;
+            Assert.Single(engine.EventsForTest, e => e.Type == EventType.PerkTriggered);
+            if (engine.EventsForTest.Any(e => e.Type == EventType.ShotBlocked && e.Detail == "guard"))
+            {
+                continue; // el 1 % que sí sale: no es de lo que trata esta prueba
+            }
+
+            Assert.True(engine.BallInFlightForTest, "con la tirada fallida el tiro sigue en vuelo");
+            for (int k = 0; k < 40 && engine.BallInFlightForTest; k++)
+            {
+                engine.StepFlightForTest();
+            }
+
+            Assert.False(engine.BallInFlightForTest, "el tiro no termina");
+            Assert.Contains(engine.EventsForTest, e => e.Type is EventType.Goal or EventType.Save or EventType.ShotBlocked or EventType.ShotPost);
+            resolved++;
+        }
+
+        _output.WriteLine($"{onTarget} tiros a puerta con el 1 %; seguidos y resueltos por el motor: {resolved}");
+        Assert.True(onTarget > 50, "la prueba necesita tiros a puerta");
+        Assert.True(resolved > 0.9 * onTarget);
+    }
+
+    /// <summary>
+    /// En partidos reales, tras una tirada fallida el defensa sigue siendo un defensa más: el bloqueo genérico del
+    /// motor puede pararle el tiro desde su sitio en la trayectoria. Se cuentan los bloqueos <c>blocked</c> del
+    /// portador en los diez ticks siguientes a una activación sin parada suya.
+    /// </summary>
+    [Fact]
+    public void AfterAFailedRollTheGenericBlockStillActsOnTheGuard()
+    {
+        int failed = 0, genericBlocks = 0;
+        for (int nth = 0; nth < 3; nth++)
+        {
+            for (int i = 0; i < 250; i++)
+            {
+                var homeRng = RngStreams.Generation(1, i);
+                var awayRng = RngStreams.Generation(1, 10_000 + i);
+                var home = TeamGenerator.Generate(ref homeRng, Catalog, "home", Race.Human, 50, 1, 4);
+                var away = TeamGenerator.Generate(ref awayRng, Catalog, "away", Race.Human, 50, 100001, 4);
+                var players = home.Players.ToList();
+                int slot = Enumerable.Range(0, players.Count).Where(k => players[k].Position == Position.Defender).ElementAt(nth);
+                players[slot] = players[slot] with { Perks = new[] { "last_man" } };
+                var setup = new MatchSetup(home with { Players = players }, away, Referee);
+                var result = Simulator.Run(setup, RngStreams.MatchSeed(1, i), Catalog, new SimConfig(CollectLog: false));
+                int owner = players[slot].Id;
+
+                foreach (var e in result.Events.Where(e => e.Type == EventType.PerkTriggered && e.Detail == "last_man"))
+                {
+                    if (result.Events.Any(s => s.Tick == e.Tick && s.Type == EventType.ShotBlocked && s.Detail == "guard" && s.Actor == owner))
+                    {
+                        continue;
+                    }
+
+                    failed++;
+                    genericBlocks += result.Events.Any(s => s.Tick >= e.Tick && s.Tick <= e.Tick + 10
+                        && s.Type == EventType.ShotBlocked && s.Detail == "blocked" && s.Actor == owner) ? 1 : 0;
+                }
+            }
+        }
+
+        _output.WriteLine($"activaciones sin parada del último hombre: {failed}; bloqueos genéricos suyos tras ellas: {genericBlocks}");
+        Assert.True(failed > 20, "la prueba necesita tiradas fallidas");
+        Assert.True(genericBlocks > 0, "el bloqueo genérico no llega a actuar sobre el defensa que falló la tirada");
+    }
 }

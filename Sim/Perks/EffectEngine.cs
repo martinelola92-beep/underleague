@@ -316,9 +316,17 @@ internal sealed class EffectEngine : IPerkLinks
             // BC-B: el uso se consume ANTES de aplicar los efectos. Si un efecto vuelve a publicar el mismo
             // evento (extraAction -> SHOT), la llamada anidada ya ve el límite alcanzado; con el incremento
             // detrás, el perk se encadenaba hasta MaxDepth y un `limit` de 1 daba 5 activaciones.
+            int usesBefore = subscription.Uses;
+            int lastUsedBefore = subscription.LastUsedTick;
             subscription.Uses++;
             subscription.LastUsedTick = evt.Tick;
 
+            // «No actuó, no cuenta» (BC-C/BC-D, revisión independiente): un efecto que no pudo hacer nada
+            // (el último hombre tirado o lesionado; el segundo «Doble disparo» sobre un rebote que ya remató
+            // otro) marca _fizzled y la activación se devuelve entera: ni uso gastado, ni cartel, ni informe.
+            // El uso se sigue consumiendo ANTES de los efectos (BC-B) y aquí se restituye si no hubo nada.
+            bool outerFizzled = _fizzled;
+            _fizzled = false;
             _depth = depth + 1;
             try
             {
@@ -330,6 +338,15 @@ internal sealed class EffectEngine : IPerkLinks
             finally
             {
                 _depth = depth;
+            }
+
+            bool fizzled = _fizzled;
+            _fizzled = outerFizzled;
+            if (fizzled)
+            {
+                subscription.Uses = usesBefore;
+                subscription.LastUsedTick = lastUsedBefore;
+                continue;
             }
 
             // C9: el mismo punto en el que la activación entra en el informe la anuncia también al flujo
@@ -351,6 +368,9 @@ internal sealed class EffectEngine : IPerkLinks
 
         return !cancelled;
     }
+
+    /// <summary>Un efecto de la activación en curso no pudo actuar: la activación no cuenta (ver <see cref="Publish"/>).</summary>
+    private bool _fizzled;
 
     /// <summary>Retira los modificadores de jugada y reinicia los límites <c>per: play</c> (§2).</summary>
     public void EndPlay()
@@ -819,6 +839,9 @@ internal sealed class EffectEngine : IPerkLinks
             // (portador, compañero) no se forma nunca y el bono no se aplicaba jamás: medido, quitar
             // covering_shadow o pivot_duo de una build no cambiaba ni un partido (§16, costura 4).
             // Fuera del pase, "al vinculado" se lee como lo que dice: el bono es del compañero vinculado.
+            // Consecuencia que queda escrita (BC-C/BC-D, ADR 0180 y 0181): como sólo el pase forma par, que
+            // SHOT_ON_TARGET y SHOT_REBOUND sobrescriban el contexto de resolución de SHOT (ver
+            // Modifiers.PairEventFor) no afecta hoy a ningún modificador.
             bool pairwise = effect.Target is EffectTarget.Linked or EffectTarget.LinkedWithTag
                 && effect.Probability == ProbabilityKind.Pass;
             ResolveTargets(subscription, effect, context);
@@ -898,12 +921,20 @@ internal sealed class EffectEngine : IPerkLinks
                         break;
                     case EffectType.GuardShot:
                         // BC-D (ADR 0181): el tiro rival ya va a puerta y está en vuelo.
-                        _engine.GuardShot(player, value);
+                        if (!_engine.GuardShot(player, value))
+                        {
+                            _fizzled = true;
+                        }
+
                         break;
                     case EffectType.ExtraAction:
                         // Doble disparo, Embestida, Arrollador: repite la acción del disparador dentro del
                         // mismo tick (ver ExecuteExtraAction para el porqué es seguro con RT-041/RT-042).
-                        ExecuteExtraAction(subscription);
+                        if (!ExecuteExtraAction(subscription))
+                        {
+                            _fizzled = true;
+                        }
+
                         break;
                     case EffectType.ModifyUtility:
                         // C1: registra el bono (acción, zona opcional, %); MatchEngine.UpdateContextCaches
@@ -1142,20 +1173,19 @@ internal sealed class EffectEngine : IPerkLinks
     /// de perk ascendente (RT-041)-: cada suscripción de esa lista se resuelve entera, con toda la cadena
     /// que pueda disparar, antes de pasar a la siguiente.</para>
     /// </summary>
-    private void ExecuteExtraAction(PerkSubscription subscription)
+    private bool ExecuteExtraAction(PerkSubscription subscription)
     {
         var owner = subscription.Owner;
         if (!owner.OnPitch)
         {
-            return;
+            return subscription.Perk.Trigger != EventType.ShotRebound;
         }
 
         switch (subscription.Perk.Trigger)
         {
             case EventType.ShotRebound:
                 // BC-C (ADR 0180): el balón ya está suelto y el primer tiro terminó; el segundo sale del rechace.
-                _engine.RepeatShot(owner);
-                break;
+                return _engine.RepeatShot(owner);
             case EventType.Tackle:
                 // BM-B: TACKLE se publica ANTES de tirarse la entrada, así que repetirla aquí la ponía
                 // primero. Se deja armada y la ejecuta el motor cuando la entrada original termina.
@@ -1170,6 +1200,8 @@ internal sealed class EffectEngine : IPerkLinks
                 _engine.RepeatTackle(owner);
                 break;
         }
+
+        return true;
     }
 
     /// <summary>

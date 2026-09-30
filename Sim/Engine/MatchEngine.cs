@@ -3397,6 +3397,10 @@ internal sealed class MatchEngine : IPerkWorld
     /// el balón. Si la tirada sale mal el defensa queda en la trayectoria y el tiro sigue: lo demás
     /// (bloqueo genérico, portero) lo resuelve el motor como siempre. La tirada sale del flujo del partido
     /// (RT-021) y se hace siempre que el defensa actúa, salga lo que salga.
+    ///
+    /// <para>Devuelve si el defensa <b>pudo actuar</b> (se interpuso y tiró), no si se quedó con el balón. Si no
+    /// pudo —tirado, lesionado, expulsado, o el tiro ya no va a puerta— devuelve <c>false</c> y el perk no gasta el
+    /// uso ni anuncia su cartel (<c>EffectEngine</c>: «no actuó, no cuenta»).</para>
     /// </summary>
     internal bool GuardShot(MatchPlayer guard, int chancePercent)
     {
@@ -3418,7 +3422,7 @@ internal sealed class MatchEngine : IPerkWorld
 
         if (!_rng.Chance(chancePercent * 100))
         {
-            return false;
+            return true;
         }
 
         Emit(EventType.ShotBlocked, "guard", guard, opponent: shooter);
@@ -3444,13 +3448,14 @@ internal sealed class MatchEngine : IPerkWorld
     ///
     /// <para>Sólo si el balón sigue libre: dos perks del mismo equipo cuelgan del mismo rebote y el
     /// primero en el orden de RT-041 se lo queda. Sus propios eventos pasan otra vez por
-    /// <c>EffectEngine.PublishAtDepth</c> con la profundidad ya incrementada (RT-042).</para>
+    /// <c>EffectEngine.PublishAtDepth</c> con la profundidad ya incrementada (RT-042). Devuelve si remató:
+    /// el que llega segundo al mismo rebote no remata y por tanto no gasta su uso ni anuncia su cartel.</para>
     /// </summary>
-    internal void RepeatShot(MatchPlayer shooter)
+    internal bool RepeatShot(MatchPlayer shooter)
     {
         if (!shooter.OnPitch || _ball.Owner is not null || _ball.InFlight)
         {
-            return;
+            return false;
         }
 
         // Revisión independiente: el disparo repetido conserva la identidad del que repite. Sin esto, un
@@ -3459,6 +3464,7 @@ internal sealed class MatchEngine : IPerkWorld
         bool volley = _ball.ShotIsVolley;
         SetOwner(shooter);
         LaunchShot(shooter, isPenalty: false, volley: volley);
+        return true;
     }
 
     /// <summary>
@@ -4211,6 +4217,10 @@ internal sealed class MatchEngine : IPerkWorld
         // gratis. Sin esto, un defensor podía tirarse una y otra vez sin coste (paquete E).
         bool carrierHasBall = ReferenceEquals(_ball.Owner, carrier);
 
+        // BM-C: dónde ocurre el contacto, por si la publicación previa saca del campo a quien lo recibe
+        // (`LeavePitch` lo manda a (-1,-1)): la falta se reanuda donde pasó, no donde la víctima ya no está.
+        Vec2 contactPoint = carrier.Position;
+
         // TACKLE se publica antes de los rolls de falta, victoria y lesión (§3). El evento definitivo,
         // con su Detail real, se emite más abajo (y solo si hubo disputa del balón) con publish: false.
         PublishBeforeResolving(EventType.Tackle, "attempted", tackler, opponent: carrier);
@@ -4229,11 +4239,10 @@ internal sealed class MatchEngine : IPerkWorld
         // un jugador que ya no está —«gana» un balón que él ya había dejado, tira una segunda lesión sobre
         // el mismo cuerpo, y la falta reanudaba en (-1,-1)— (medido: 5 de 60 lesiones de `ankle_bite`).
         // No es una entrada fallada: el rival se fue, igual que cuando sale de su alcance, y quien entraba
-        // no cae.
+        // no cae —salvo que la tirada de falta diga que la mordida fue sucia (BM-C, ver ResolveOnGoneVictim)—.
         if (!carrier.OnPitch)
         {
-            tackler.RepeatTacklePending = false;
-            tackler.EnterState(PlayerState.Positioning, 0);
+            ResolveOnGoneVictim(tackler, carrier, contactPoint, offBall, TackleFoulChance(tackler, carrier, offBall));
             return;
         }
 
@@ -4249,13 +4258,7 @@ internal sealed class MatchEngine : IPerkWorld
         // y es mucho mayor. Es el freno del sistema: sin él, pegarse sale barato y el partido deja de
         // parecer fútbol. El resto de la fórmula (diferencia de fuerza, canal de perk, criterio) no
         // cambia: una entrada sin balón se juzga igual, solo parte de más arriba.
-        int foulChance = ProbabilityScale.Apply(
-            (offBall ? tackle.OffBallFoulBase : tackle.FoulBase)
-                + (tackle.FoulStrengthFactor * (tackler.Strength - carrier.Strength))
-                + (tackler.FoulChanceBonus * 100)
-                + (tackler.HardTackleBonus * 100)
-                + BiasRollShift(_tuning.Referee.BiasFoulShiftPer10, tackler.Team),
-            Odds(tackler, ProbabilityKind.Foul));
+        int foulChance = TackleFoulChance(tackler, carrier, offBall);
 
         // La falta no es una de las cuatro resoluciones decisivas de la ADR 0050 P2 (ni la acota P4: su
         // base está por debajo del suelo); la disputa del balón sí es las dos cosas.
@@ -4310,6 +4313,44 @@ internal sealed class MatchEngine : IPerkWorld
 
         OpenPendingFreeKick();
         FinishRepeatedTackle(tackler, isFoul, isWin, deferredFall);
+    }
+
+    /// <summary>
+    /// Probabilidad de falta de una entrada (ADR 0041, 0105): base según lleve o no el balón, diferencia de fuerza,
+    /// bonos del que entra, criterio del árbitro y canal de perk. Es la misma cuenta para la entrada normal y para la
+    /// que se resuelve contra alguien que la publicación previa ya sacó del campo (<see cref="ResolveOnGoneVictim"/>).
+    /// </summary>
+    private int TackleFoulChance(MatchPlayer tackler, MatchPlayer carrier, bool offBall)
+    {
+        var tackle = _tuning.Tackle;
+        return ProbabilityScale.Apply(
+            (offBall ? tackle.OffBallFoulBase : tackle.FoulBase)
+                + (tackle.FoulStrengthFactor * (tackler.Strength - carrier.Strength))
+                + (tackler.FoulChanceBonus * 100)
+                + (tackler.HardTackleBonus * 100)
+                + BiasRollShift(_tuning.Referee.BiasFoulShiftPer10, tackler.Team),
+            Odds(tackler, ProbabilityKind.Foul));
+    }
+
+    /// <summary>
+    /// BM-C, sobre BM-B (caso 4): la publicación previa de una entrada o un bloqueo sacó del campo a quien iba a
+    /// recibirla (`ankle_bite`: la lesión provocada lo retira). No hay disputa que resolver —ni victoria, ni TACKLE, ni
+    /// una segunda lesión sobre el mismo cuerpo— pero <b>la falta sí se tira</b>: la mordida que rompe la pierna es
+    /// justo la que el árbitro tiene que poder pitar (es la paga del perk, RF-063, RF-069b). Sin ella el corte de BM-B
+    /// dejaba sin silbato precisamente las mordidas que lesionan. La falta se reanuda en <paramref name="contactPoint"/>,
+    /// no en la posición de quien ya no está; si la tirada no cae, quien entraba no cae.
+    /// </summary>
+    private void ResolveOnGoneVictim(MatchPlayer actor, MatchPlayer victim, Vec2 contactPoint, bool offBall, int foulChance)
+    {
+        actor.RepeatTacklePending = false;
+        if (_rng.Chance(foulChance))
+        {
+            WhistleOrLetPlay(actor, victim, offBall, contactPoint);
+            OpenPendingFreeKick();
+            return;
+        }
+
+        actor.EnterState(PlayerState.Positioning, 0);
     }
 
     /// <summary>
@@ -4432,7 +4473,7 @@ internal sealed class MatchEngine : IPerkWorld
     /// tarjetas (RF-064), no al revés. Es la cadena causal legible —el árbitro se enfada y por eso saca la
     /// tarjeta— y hace que la falta que colma el vaso sea la que se castiga, no la siguiente.</para>
     /// </summary>
-    private void ResolveFoul(MatchPlayer tackler, MatchPlayer carrier, bool offBall = false)
+    private void ResolveFoul(MatchPlayer tackler, MatchPlayer carrier, bool offBall = false, Vec2? contactPoint = null)
     {
         var tackle = _tuning.Tackle;
         var referee = _tuning.Referee;
@@ -4507,7 +4548,7 @@ internal sealed class MatchEngine : IPerkWorld
         if (_pendingRestart == RestartKind.None)
         {
             _freeKickFor = carrier.Team;
-            _freeKickPoint = carrier.Position;
+            _freeKickPoint = contactPoint ?? carrier.Position;
         }
     }
 
@@ -4535,7 +4576,7 @@ internal sealed class MatchEngine : IPerkWorld
     /// señalada no derriba, no saca tarjeta, no da penalti y no reanuda; queda en el registro (RF-119) y
     /// mueve el criterio como acción sucia no vista (RF-063), igual que la que un perk anula.
     /// </summary>
-    private void WhistleOrLetPlay(MatchPlayer offender, MatchPlayer victim, bool offBall)
+    private void WhistleOrLetPlay(MatchPlayer offender, MatchPlayer victim, bool offBall, Vec2? contactPoint = null)
     {
         // ADR 0145, RF-055d: LA TURBA ES EL ÚNICO TRAMO DEL PARTIDO SIN ÁRBITRO, y hasta ahora eso era una
         // frase. En la prórroga de gol de oro no se pita nada: la jugada sigue, el que entra se lleva su
@@ -4547,7 +4588,7 @@ internal sealed class MatchEngine : IPerkWorld
         // hacerlo con una probabilidad al 99 % sería dejar un 1 % de partido en el que la regla no vale.
         if (!IsMob && WillWhistle(offender))
         {
-            ResolveFoul(offender, victim, offBall);
+            ResolveFoul(offender, victim, offBall, contactPoint);
             return;
         }
 
@@ -4635,6 +4676,7 @@ internal sealed class MatchEngine : IPerkWorld
             return;
         }
 
+        Vec2 contactPoint = target.Position;
         PublishBeforeResolving(EventType.Tackle, "block", blocker, opponent: target);
 
         // BM-A: el mismo criterio que la entrada. Sin esto la rama sin derribo devolvería a Positioning a un
@@ -4646,18 +4688,18 @@ internal sealed class MatchEngine : IPerkWorld
         }
 
         // BM-B (caso 4): el mismo corte que la entrada si el rival salió del campo en la publicación previa.
-        if (!target.OnPitch)
-        {
-            blocker.RepeatTacklePending = false;
-            blocker.EnterState(PlayerState.Positioning, 0);
-            return;
-        }
-
         int foulChance = ProbabilityScale.Apply(
             block.FoulBase
                 + (blocker.FoulChanceBonus * 100)
                 + BiasRollShift(_tuning.Referee.BiasFoulShiftPer10, blocker.Team),
             Odds(blocker, ProbabilityKind.Foul));
+
+        // BM-C: si salió del campo la falta se tira igual (ver ResolveOnGoneVictim).
+        if (!target.OnPitch)
+        {
+            ResolveOnGoneVictim(blocker, target, contactPoint, offBall: true, foulChance);
+            return;
+        }
 
         int win = Bounded(ProbabilityScale.Apply(
             Bounded(block.BaseWin

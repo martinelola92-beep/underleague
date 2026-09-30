@@ -205,6 +205,15 @@ internal sealed class Modifiers
     /// Evento que establece el par de cada resolución probabilística. Es una tabla explícita y cerrada, y
     /// no "el último evento publicado", para que un cambio en el motor haga desaparecer el bono por par en
     /// vez de aplicarlo a la disputa equivocada.
+    ///
+    /// <para><b>SHOT_ON_TARGET y SHOT_REBOUND sobrescriben este contexto</b> (BC-C, BC-D, ADR 0180 y 0181):
+    /// <see cref="SetResolutionContext"/> se llama en cada publicación, así que tras publicar
+    /// <c>SHOT_ON_TARGET</c> —después de la tirada de dentro/fuera y antes de la parada— el evento en curso ya no es
+    /// <c>SHOT</c> y un modificador <b>por par</b> de <see cref="ProbabilityKind.Save"/> deja de cumplirse, igual que
+    /// uno de <see cref="ProbabilityKind.ShotOnTarget"/> o de <see cref="ProbabilityKind.Save"/> tras un rebote. Hoy
+    /// no hay ninguno: los modificadores por par sólo existen para el pase (<c>EffectEngine.pairwise</c>), así que no
+    /// cambia ninguna cifra; si algún día existe uno de remate o de parada, la tabla tiene que mapear también esos
+    /// dos eventos, o el bono desaparecerá en silencio (que es lo que esta tabla cerrada prefiere a aplicarlo mal).</para>
     /// </summary>
     private static EventType PairEventFor(ProbabilityKind kind) => kind switch
     {

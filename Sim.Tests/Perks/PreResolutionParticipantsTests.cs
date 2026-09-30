@@ -197,8 +197,9 @@ public sealed class PreResolutionParticipantsTests
 
     /// <summary>
     /// Caso 4: si la publicación previa saca del campo al que iba a recibir la entrada (la lesión
-    /// provocada de <c>ankle_bite</c>), la entrada no se sigue tirando contra él: ni entrada, ni falta, ni
-    /// una segunda lesión sobre el mismo cuerpo.
+    /// provocada de <c>ankle_bite</c>), la entrada no se sigue tirando contra él: ni entrada, ni una segunda
+    /// lesión sobre el mismo cuerpo. Lo único que sobrevive es <b>la falta</b> del que mordió (BM-C: la mordida que
+    /// lesiona también se pita), como mucho una, y del propio mordedor.
     /// </summary>
     [Fact]
     public void AVictimInjuredByAPerkDoesNotTakePartInTheTackleThatInjuredHim()
@@ -213,6 +214,7 @@ public sealed class PreResolutionParticipantsTests
                 foreach (var tick in result.Events.GroupBy(e => e.Tick))
                 {
                     int victim = -1;
+                    int foulsOnVictim = 0;
                     bool ownerActedFirst = false;
                     foreach (var e in tick)
                     {
@@ -234,8 +236,14 @@ public sealed class PreResolutionParticipantsTests
                         }
 
                         Assert.False(
-                            e.Type is EventType.Tackle or EventType.Foul && e.Opponent == victim,
+                            e.Type is EventType.Tackle && e.Opponent == victim,
                             $"slot {slot}, partido {i}, tick {e.Tick}: {e.Type}:{e.Detail} contra el lesionado {victim}");
+                        if (e.Type == EventType.Foul && e.Opponent == victim)
+                        {
+                            Assert.Equal(owner, e.Actor);
+                            Assert.True(++foulsOnVictim <= 1, $"slot {slot}, partido {i}, tick {e.Tick}: dos faltas por la misma mordida");
+                        }
+
                         Assert.False(
                             e.Type is EventType.Injury or EventType.Death && e.Actor == victim,
                             $"slot {slot}, partido {i}, tick {e.Tick}: una segunda {e.Type} sobre el mismo jugador {victim}");
@@ -246,5 +254,71 @@ public sealed class PreResolutionParticipantsTests
 
         _output.WriteLine($"lesiones provocadas por el perk en el lote: {perkInjuries}");
         Assert.True(perkInjuries > 10, "la prueba necesita lesiones provocadas para demostrar algo");
+    }
+    /// <summary>
+    /// BM-C: el corte de BM-B no puede dejar sin silbato justo la mordida que lesiona. La tirada de falta se hace igual
+    /// aunque la víctima ya haya salido del campo, así que las mordidas que lesionan se pitan <b>a un ritmo comparable</b>
+    /// al de las que no lesionan (las dos llevan el mismo ×4 de cuota). Separa las dos poblaciones por activación:
+    /// <c>PERK_TRIGGERED ankle_bite</c> seguido, en el mismo tick, de una <c>INJURY</c> causada por el mordedor, o no.
+    /// Además la falta se reanuda donde ocurrió, no en (-1,-1): esa propiedad la cubre el test de «nadie acaba un tick
+    /// derribado con el balón» (el balón nunca está fuera del campo) sobre el mismo perk.
+    /// </summary>
+    [Fact]
+    public void TheBiteThatInjuresIsWhistledAtTheSameRateAsTheOneThatDoesNot()
+    {
+        int injuring = 0, injuringFouled = 0, plain = 0, plainFouled = 0;
+        for (int slot = 1; slot <= 5; slot++)
+        {
+            for (int i = 0; i < 300; i++)
+            {
+                var result = Play(i, "ankle_bite", slot);
+                int owner = Owner(result, "ankle_bite");
+                foreach (var tick in result.Events.GroupBy(e => e.Tick))
+                {
+                    var events = tick.ToList();
+                    if (!events.Any(e => e.Type == EventType.PerkTriggered && e.Actor == owner && e.Detail == "ankle_bite"))
+                    {
+                        continue;
+                    }
+
+                    // La lesión del perk se emite en la publicación previa, ANTES de que el mordedor resuelva nada; una
+                    // lesión normal de la entrada llega después de su TACKLE/FOUL y no cuenta aquí.
+                    bool injured = false;
+                    foreach (var e in events)
+                    {
+                        if (e.Actor == owner && e.Type is EventType.Tackle or EventType.Foul)
+                        {
+                            break;
+                        }
+
+                        if (e.Type == EventType.Injury && e.Opponent == owner)
+                        {
+                            injured = true;
+                            break;
+                        }
+                    }
+
+                    bool fouled = events.Any(e => e.Type == EventType.Foul && e.Actor == owner);
+                    if (injured)
+                    {
+                        injuring++;
+                        injuringFouled += fouled ? 1 : 0;
+                    }
+                    else
+                    {
+                        plain++;
+                        plainFouled += fouled ? 1 : 0;
+                    }
+                }
+            }
+        }
+
+        _output.WriteLine($"mordidas que lesionan: {injuring}, con falta {injuringFouled} ({injuringFouled / (double)injuring:P1}); "
+            + $"las que no: {plain}, con falta {plainFouled} ({plainFouled / (double)plain:P1})");
+        Assert.True(injuring > 30 && plain > 100, "la prueba necesita las dos poblaciones");
+        Assert.True(injuringFouled > 0, "la mordida que lesiona no se pita nunca: el corte de BM-B se salta la tirada de falta");
+        Assert.True(
+            injuringFouled / (double)injuring >= 0.5 * (plainFouled / (double)plain),
+            "la mordida que lesiona se pita mucho menos que la que no lesiona");
     }
 }
