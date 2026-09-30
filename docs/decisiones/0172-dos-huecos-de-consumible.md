@@ -116,6 +116,11 @@ partido para usarlo con un clic»*. Encargo: enmendar RF-080 (de 3 a 2) y decidi
 | `leftoverGoldShare` | 8,64 | 8,60 | −0,04 |
 | `purchasesPerMarket` | 1,28 | 1,30 | +0,02 |
 
+**Con el disparador sugerido de `/data`** (tras la revisión independiente; mismo lote, otro binario): usados 2,12,
+comprados 2,66, `runWinRate` 15,67, `brokeMarketRunShare` 8,50, `affordableShareAtMarket` 69,14, `leftoverGoldShare` 8,52.
+Nada se mueve respecto a la tabla de arriba más de lo que mueve el ruido: cambiar de disparador por familia a
+disparador por consumible no toca la cifra.
+
 Ninguna métrica cambia de estado (dentro/fuera de banda): `runWinRate` y `brokeMarketRunShare` ya estaban **fuera**
 antes (por debajo de su banda) y siguen igual de fuera. **Lectura, con la vara de la Regla F:**
 
