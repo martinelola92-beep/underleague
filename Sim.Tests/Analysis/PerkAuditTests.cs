@@ -213,9 +213,15 @@ public sealed class PerkAuditTests
         // Lo que se fija aquí es el invariante que queda: hoy NINGÚN perk del catálogo mezcla categorías.
         // Si aparece uno, este test lo dice y hay que volver a comprobar que se clasifica como NotReady
         // por MultiEffectAttribution, no que pase en silencio.
+        //
+        // BM-C (30 sep 2026): `ankle_bite` es el primero, y es a propósito: su lesión (acto) lleva un
+        // modifyProbability(foul) que la modula (soporte del MISMO perk, RF-069b), para que la mordida arrastre
+        // su falta. El clasificador no lo deja en ReadyForScreening (hoy MultiTarget), que es lo que hay que
+        // comprobar aquí.
         var crossCategory = Entries.Where(e => e.HasCrossCategoryEffects).Select(e => e.PerkId).ToList();
 
-        Assert.Empty(crossCategory);
+        Assert.Equal(new[] { "ankle_bite" }, crossCategory);
+        Assert.NotEqual(AuditReadiness.ReadyForScreening, Entries.Single(e => e.PerkId == "ankle_bite").FinalReadiness);
     }
 
     [Fact]

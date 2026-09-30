@@ -9,7 +9,7 @@ using Xunit.Abstractions;
 namespace Underleague.Sim.Tests.Perks;
 
 /// <summary>
-/// BM-B (ADR 0176): una resolución que se publica antes de tirarse (<c>TACKLE</c>, <c>DRIBBLE_ATTEMPTED</c>)
+/// BM-B (ADR 0180): una resolución que se publica antes de tirarse (<c>TACKLE</c>, <c>DRIBBLE_ATTEMPTED</c>)
 /// tiene que mirar a sus participantes <b>después</b> de la publicación. Cada prueba cierra uno de los
 /// cuatro casos de la ficha con el flujo real del motor —traza de un fotograma por tick—, porque lo que
 /// fallaba eran estados incoherentes que sólo se ven al final del tick.
@@ -90,18 +90,18 @@ public sealed class PreResolutionParticipantsTests
     }
 
     /// <summary>
-    /// Caso 1: la repetición de una entrada va <b>después</b> de la original. Si la original ganó el balón,
-    /// el rival al que se lo quitó está en el suelo y la segunda ya no tiene un portador al que entrar: sólo
-    /// puede ser una entrada sin balón contra otro rival, y nunca una disputa del balón contra el que
-    /// acababa de perderlo. Antes de BM-B la repetición iba primero y la original se tiraba contra un
+    /// Caso 1: «si la primera no la gana, vuelve a por ella» (`bull_rush`). Si la original <b>ganó</b> el
+    /// balón no hay repetición: no queda portador al que volver, y una entrada sin balón contra otro rival
+    /// (60 % de falta) sobre el balón recién ganado hacía que cada entrada ganada acabase perdiéndolo
+    /// (revisión independiente). Antes de BM-B la repetición iba primero y la original se tiraba contra un
     /// portador que ya no tenía el balón (`Tackle:won` seguido de `Tackle:missed`).
     /// </summary>
     [Theory]
     [InlineData("charge")]
     [InlineData("bull_rush")]
-    public void ARepeatedTackleAfterAWonOneIsNeverAnotherDisputeForTheSameBall(string perkId)
+    public void ATackleThatWonTheBallIsNeverRepeated(string perkId)
     {
-        int wonThenRepeated = 0;
+        int won = 0;
         int twoTackles = 0;
         for (int i = 0; i < 300; i++)
         {
@@ -110,22 +110,50 @@ public sealed class PreResolutionParticipantsTests
             foreach (var tick in result.Events.Where(e => e.Type == EventType.Tackle && e.Actor == owner).GroupBy(e => e.Tick))
             {
                 var ordered = tick.ToList();
-                if (ordered.Count < 2)
-                {
-                    continue;
-                }
-
-                twoTackles++;
                 if (ordered[0].Detail == "won")
                 {
-                    wonThenRepeated++;
-                    Assert.StartsWith("offBall", ordered[1].Detail, StringComparison.Ordinal);
+                    won++;
+                    Assert.Single(ordered);
+                }
+
+                if (ordered.Count > 1)
+                {
+                    twoTackles++;
                 }
             }
         }
 
-        _output.WriteLine($"{perkId}: {twoTackles} ticks con dos entradas, {wonThenRepeated} con la primera ganada");
-        Assert.True(twoTackles > 0, "el perk no llega a repetir ninguna entrada: la prueba no demuestra nada");
+        _output.WriteLine($"{perkId}: {won} entradas ganadas, ninguna repetida; {twoTackles} ticks con repetición");
+        Assert.True(won > 0 && twoTackles > 0, "la prueba no demuestra nada");
+    }
+
+    /// <summary>
+    /// Arrollador y Embestida en el mismo jugador: la repetición armada por la entrada exterior no se
+    /// consume dentro de la entrada que lanza Arrollador desde RECOVERY: como mucho la original más una por perk.
+    /// </summary>
+    [Fact]
+    public void ARepeatDoesNotChainWhenTwoExtraActionPerksShareAPlayer()
+    {
+        int checkedTicks = 0;
+        for (int i = 0; i < 200; i++)
+        {
+            var homeRng = RngStreams.Generation(1, i);
+            var awayRng = RngStreams.Generation(1, 10_000 + i);
+            var home = TeamGenerator.Generate(ref homeRng, Catalog, "home", Race.Human, 50, 1, 4);
+            var away = TeamGenerator.Generate(ref awayRng, Catalog, "away", Race.Human, 50, 100001, 4);
+            var players = home.Players.ToList();
+            players[1] = players[1] with { Perks = new[] { "charge", "steamroller" } };
+            var setup = new MatchSetup(home with { Players = players }, away, Referee);
+            var result = Simulator.Run(setup, RngStreams.MatchSeed(1, i), Catalog, new SimConfig(CollectLog: false));
+            foreach (var tick in result.Events.Where(e => e.Type == EventType.Tackle && e.Actor == players[1].Id).GroupBy(e => e.Tick))
+            {
+                checkedTicks++;
+                // La original, la repetición de Embestida y la que lanza Arrollador tras ganarla: cada perk arma UNA.
+                Assert.InRange(tick.Count(), 1, 3);
+            }
+        }
+
+        Assert.True(checkedTicks > 0);
     }
 
     /// <summary>

@@ -3430,7 +3430,7 @@ internal sealed class MatchEngine : IPerkWorld
 
     /// <summary>
     /// El remate del rechace (efecto <c>extraAction</c> con disparador <c>SHOT_REBOUND</c>, "Doble
-    /// disparo" y "A bocajarro"; BC-C, ADR 0176). El primer tiro ya terminó —lo bloquearon, lo rechazó el
+    /// disparo" y "A bocajarro"; BC-C, ADR 0180). El primer tiro ya terminó —lo bloquearon, lo rechazó el
     /// portero o dio en el palo— y el balón está <b>suelto</b>: quien lo tiró lo recupera por decreto (es
     /// una habilidad que rompe reglas, no una jugada física) y remata otra vez en el acto. Como el balón
     /// se queda a dos casillas del tirador la mitad de las veces y a menos de cuatro el 93 % (medido, BC-C),
@@ -3463,7 +3463,7 @@ internal sealed class MatchEngine : IPerkWorld
 
     /// <summary>
     /// Deja armada la repetición de la entrada que <paramref name="tackler"/> está resolviendo (efecto
-    /// <c>extraAction</c> con disparador <c>TACKLE</c>, "Embestida" y "Toro"; BM-B, ADR 0176). Sólo
+    /// <c>extraAction</c> con disparador <c>TACKLE</c>, "Embestida" y "Toro"; BM-B, ADR 0180). Sólo
     /// <b>arma</b>: la repetición la ejecuta <see cref="ResolveTackle"/>/<see cref="ResolveBlock"/> cuando
     /// terminan, con <see cref="FinishRepeatedTackle"/>.
     ///
@@ -3483,24 +3483,33 @@ internal sealed class MatchEngine : IPerkWorld
     private bool _repeatingTackle;
 
     /// <summary>Cierra la repetición armada de una entrada que el test publicó a mano (BM-B).</summary>
-    internal void FinishRepeatedTackleForTest(MatchPlayer tackler) => FinishRepeatedTackle(tackler, wasFoul: false, deferredFall: false);
+    internal void FinishRepeatedTackleForTest(MatchPlayer tackler) => FinishRepeatedTackle(tackler, wasFoul: false, won: false, deferredFall: false);
 
     /// <summary>
     /// Cierra la repetición armada al terminar una entrada o un bloqueo (BM-B). Tres cosas, y sólo tres:
     /// <list type="bullet">
-    /// <item>No hay repetición si la entrada original fue <b>falta</b> (el juego se paró) ni si quien la
-    /// hizo ya no está en pie o en el campo.</item>
+    /// <item>No hay repetición si la entrada original fue <b>falta</b> (el juego se paró), si <b>ganó</b> el balón
+    /// (no queda portador al que volver: repetirla contra otro rival sería una entrada sin balón, con un 60 %
+    /// de falta, sobre el balón recién ganado; para eso está Arrollador, que lo paga) ni si quien la hizo ya no
+    /// está en pie o en el campo.</item>
     /// <item>Si la original <b>falló sin falta</b> y su caída se dejó para después (<paramref name="deferredFall"/>,
     /// «no frena»), la repetición es lo que decide si cae: si hay a quién entrar se tira la segunda, que
     /// tiene sus propias consecuencias; si no, cae ahora, como habría caído sin perk.</item>
     /// <item>La repetición no encadena otra: una <c>extraAction</c> arma una sola.</item>
     /// </list>
     /// </summary>
-    private void FinishRepeatedTackle(MatchPlayer tackler, bool wasFoul, bool deferredFall)
+    private void FinishRepeatedTackle(MatchPlayer tackler, bool wasFoul, bool won, bool deferredFall)
     {
+        // Dentro de una repetición (o de la entrada que lanza Arrollador desde RECOVERY) no se cierra nada: la
+        // repetición armada es de la entrada EXTERIOR y la cierra ella.
+        if (_repeatingTackle)
+        {
+            return;
+        }
+
         bool armed = tackler.RepeatTacklePending;
         tackler.RepeatTacklePending = false;
-        bool repeated = armed && !wasFoul && RepeatTackle(tackler);
+        bool repeated = armed && !wasFoul && !won && RepeatTackle(tackler);
         if (deferredFall && !repeated && tackler.OnPitch)
         {
             StumbleAfterMissedTackle(tackler);
@@ -3553,6 +3562,7 @@ internal sealed class MatchEngine : IPerkWorld
 
         tackler.TackleTarget = target;
         tackler.TackleOffBall = !ReferenceEquals(_ball.Owner, target);
+        bool wasRepeating = _repeatingTackle;
         _repeatingTackle = true;
         try
         {
@@ -3560,7 +3570,7 @@ internal sealed class MatchEngine : IPerkWorld
         }
         finally
         {
-            _repeatingTackle = false;
+            _repeatingTackle = wasRepeating;
         }
 
         return true;
@@ -4280,7 +4290,7 @@ internal sealed class MatchEngine : IPerkWorld
             SetOwner(tackler);
             Emit(EventType.Recovery, "tackle", tackler);
         }
-        else if (tackler.RepeatTacklePending)
+        else if (tackler.RepeatTacklePending && !_repeatingTackle)
         {
             // BM-B: «no frena». La entrada fallada de quien lleva una repetición armada no lo tumba todavía:
             // lo decide lo que viene a continuación (FinishRepeatedTackle), que es donde el perk ocurre.
@@ -4299,7 +4309,7 @@ internal sealed class MatchEngine : IPerkWorld
         }
 
         OpenPendingFreeKick();
-        FinishRepeatedTackle(tackler, isFoul, deferredFall);
+        FinishRepeatedTackle(tackler, isFoul, isWin, deferredFall);
     }
 
     /// <summary>
@@ -4694,7 +4704,7 @@ internal sealed class MatchEngine : IPerkWorld
         }
 
         OpenPendingFreeKick();
-        FinishRepeatedTackle(blocker, isFoul, deferredFall: false);
+        FinishRepeatedTackle(blocker, isFoul, isWin, deferredFall: false);
     }
 
     private void SendOff(MatchPlayer player)
