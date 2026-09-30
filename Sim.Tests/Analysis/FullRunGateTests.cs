@@ -215,8 +215,8 @@ public sealed class FullRunGateTests
     }
 
     /// <summary>
-    /// ADR 0170, enmienda de la banda de la ADR 0048: la letalidad se vigila <b>por partido</b> (0,075-0,15 muertes por
-    /// partido, el 1,5-3 por run de la ADR 0048 sobre 20 partidos), porque con el acto más corto la banda por run mide
+    /// ADR 0170, enmienda de la banda de la ADR 0048: la letalidad se vigila <b>por partido</b> (0,11-0,22 muertes por
+    /// partido, el 1,5-3 por run de la ADR 0048 sobre los 13,6 partidos medios con que se midió), porque con el acto más corto la banda por run mide
     /// la duración de la run y no la letalidad.
     /// </summary>
     [Fact]

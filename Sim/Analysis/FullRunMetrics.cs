@@ -205,8 +205,9 @@ public static class FullRunMetrics
     public const double RosterDefeatShareMax = 35.0;
 
     /// <summary>
-    /// Partidos mínimos de una run completa. ADR 0170: 12-15 (antes 18-22, banda ±10 % alrededor del peor camino de 20
-    /// partidos con 11/12/12 nodos). Con 8/9/9 el peor camino es 14 y se midieron 13,36 (semilla 1); la banda es
+    /// Partidos mínimos de una run **que llega al jefe 3** (`matchesPerFullRun` sólo cuenta esas runs, ~16 %; el resto cae
+    /// antes: 9,1 partidos de media por run). ADR 0170: 12-15 (antes 18-22, banda ±10 % alrededor del peor camino de 20
+    /// partidos con 11/12/12 nodos). Con 8/9/9 el peor camino es 14 y se midieron 13,4 (semillas 1 y 7); la banda es
     /// **provisional**, sin medir con más de una configuración de mapa.
     /// </summary>
     public const double MatchesPerFullRunMin = 12.0;
@@ -216,17 +217,16 @@ public static class FullRunMetrics
 
     /// <summary>
     /// Muertes por partido mínimas (ADR 0170, enmienda de la banda de la ADR 0048). La ADR 0048 fijó <b>1,5-3 muertes por
-    /// run</b> (subió de 0,5 a 1,5: desde que un sano puede morir, el desgaste es un riesgo permanente) sobre una run de
-    /// 20 partidos en el peor camino (11/12/12 nodos), es decir 0,075-0,15 por partido; con el acto más corto (8/9/9 nodos,
-    /// 14 partidos) la misma letalidad por partido da menos muertes por run y la banda por run deja de medir la letalidad y
-    /// pasa a medir la duración. Procedencia (Regla H): las dos cotas son las de la ADR 0048 divididas por 20; la base
-    /// medida (`--full-runs 1200`, semillas 1 y 7) fue 0,115 antes de la ADR 0170 y 0,104 después. La letalidad por partido
-    /// es la misma banda; sólo cambia la unidad.
+    /// run</b> (subió de 0,5 a 1,5: desde que un sano puede morir, el desgaste es un riesgo permanente). Con el acto más
+    /// corto la misma letalidad por partido da menos muertes por run y la banda por run pasa a medir la duración. Procedencia
+    /// (Regla H): las cotas de la ADR 0048 divididas por los **partidos medios por run** con los que se midieron, 13,6
+    /// (`matchesPerRun`, todas las runs, incluidas las que caen antes; `--full-runs 1200`, semillas 1 y 7; NO los 20 del peor
+    /// camino) = 0,11-0,22. Base medida: 0,163 antes de la ADR 0170 (2,22 / 13,6) y 0,146 después (1,31 / 9,1). **Provisional.**
     /// </summary>
-    public const double DeathsPerMatchMin = 0.075;
+    public const double DeathsPerMatchMin = 0.11;
 
-    /// <summary>Muertes por partido máximas (ADR 0170): el 3,0 de la ADR 0048 sobre 20 partidos.</summary>
-    public const double DeathsPerMatchMax = 0.15;
+    /// <summary>Muertes por partido máximas (ADR 0170): el 3,0 de la ADR 0048 sobre 13,6 partidos medios por run.</summary>
+    public const double DeathsPerMatchMax = 0.22;
 
     /// <summary>
     /// Muertes por run: ya sin banda desde la ADR 0170 (ver <see cref="DeathsPerMatchMin"/>). Se conserva como dato

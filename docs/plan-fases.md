@@ -21,7 +21,7 @@ El criterio nominal (*"el jugador dice «una run más»"*) solo lo puede respond
 | Curva de puertas (12 celdas, ADR 0033) | tabla de la ADR | todas dentro | ✅ |
 | Duración de una run completa | 18-22 partidos *(ADR 0170: 12-15 con 8/9/9 nodos)* | 20,0 | ✅ |
 | Tasa de victoria de la run | 20-30 % (ADR 0040) | **25,33 / 27,00** | ✅ desde la ADR 0095 |
-| Muertes por run | 1,5-3 (ADR 0048) *(ADR 0170: 0,075-0,15 por partido, la misma banda sobre 20 partidos)* | 1,85 / 1,85 | ✅ |
+| Muertes por run | 1,5-3 (ADR 0048) *(ADR 0170: 0,11-0,22 por partido, la misma banda sobre 13,6 partidos medios)* | 1,85 / 1,85 | ✅ |
 | Sumideros por acto (RF-114k) | 2-3, nunca 4 | 2,78 / 2,79 | ✅ |
 | Compras por visita al mercado | 1-2 | 1,20 / 1,22 | ✅ |
 | Oro sobrante | ≤ 15 % | 8,67 / 8,78 | ✅ |

@@ -95,7 +95,7 @@ Modo nuevo `--full-runs N`: juega runs completas con una **política automática
 | Runs perdidas por bajar de 5 jugadores | < 35% de las derrotas |
 | Oro medio por acto frente al coste de los sumideros | permite 2-3, nunca todos (RF-114k) |
 | Duración de la run en partidos | 18-22 *(ADR 0170: 12-15 con 8/9/9 nodos por acto)* |
-| Muertes por run | 0,5-2 *(ADR 0048: 1,5-3; ADR 0170: 0,075-0,15 por partido)* |
+| Muertes por run | 0,5-2 *(ADR 0048: 1,5-3; ADR 0170: 0,11-0,22 por partido)* |
 
 *Enmienda de la ADR 0170 (29 sep 2026): los actos pasan a 8/9/9 nodos, el peor camino a 14 partidos y las bandas de duración y de muertes se re-expresan (la de muertes, por partido). Las cifras de arriba y de §4 son las históricas.*
 

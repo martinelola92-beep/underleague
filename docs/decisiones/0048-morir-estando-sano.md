@@ -1,7 +1,7 @@
 # 0048. Un jugador sano puede morir
 
 **Fecha:** 2026-09-05
-**Estado:** Aceptada (decisión del revisor). **Banda de muertes enmendada por la [ADR 0170](0170-el-desgaste-es-de-la-run-y-la-run-es-mas-corta.md) (RT-057): de 1,5-3 por run a 0,075-0,15 por partido** (las mismas cotas sobre 20 partidos); con el acto más corto la banda por run mide la duración y no la letalidad.
+**Estado:** Aceptada (decisión del revisor). **Banda de muertes enmendada por la [ADR 0170](0170-el-desgaste-es-de-la-run-y-la-run-es-mas-corta.md) (RT-057): de 1,5-3 por run a 0,11-0,22 por partido** (las mismas cotas sobre los 13,6 partidos medios por run con los que se midieron); con el acto más corto la banda por run mide la duración y no la letalidad.
 **Modifica:** RF-093 de forma sustancial, y retira una mitigación del §8
 **Requisitos:** RF-012d, RF-013, RF-093, RF-114, RF-122
 **Sustituye:** la ADR 0047, que buscaba rodear esta limitación
