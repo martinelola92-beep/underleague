@@ -529,7 +529,7 @@ public partial class MatchScreen : Control
     {
         var playback = _run.Playback;
 
-        // ADR 0169: la turba estrecha el campo; la vista 2D pinta el público desde el fotograma de MOB_START.
+        // ADR 0175: la turba estrecha el campo; la vista 2D pinta el público desde el fotograma de MOB_START.
         _pitch.MobRows = _run.Catalog?.Tuning.Mob.NarrowRowsPerSide ?? 0;
         _pitch.MobFrame = -1;
         if (_trace is not null && playback is not null)

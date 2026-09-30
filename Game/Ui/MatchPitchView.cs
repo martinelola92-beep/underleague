@@ -50,7 +50,7 @@ public partial class MatchPitchView : Control
     public int Frame { get; set; }
 
     /// <summary>
-    /// ADR 0169 (RF-055b): fotograma en que entra la turba, o -1. Desde ahí el público ocupa
+    /// ADR 0175 (RF-055b): fotograma en que entra la turba, o -1. Desde ahí el público ocupa
     /// <see cref="MobRows"/> filas por lado. Sólo se pinta lo que el motor ya hizo (RT-014).
     /// </summary>
     public int MobFrame { get; set; } = -1;
@@ -294,7 +294,7 @@ public partial class MatchPitchView : Control
     }
 
     /// <summary>
-    /// ADR 0169: el público de las filas invadidas de la turba, sobre un suelo pisoteado. Determinista: cada
+    /// ADR 0175: el público de las filas invadidas de la turba, sobre un suelo pisoteado. Determinista: cada
     /// cabeza sale de su índice, sin generador.
     /// </summary>
     private void DrawMobCrowd(float cell)

@@ -306,7 +306,7 @@ public partial class MatchPitchView3D : SubViewportContainer
     /// </summary>
     public const float DefaultFov = 45f;
 
-    // ------------------------------------------------------------------ ADR 0169: el público invade el campo
+    // ------------------------------------------------------------------ ADR 0175: el público invade el campo
 
     /// <summary>Fotograma de <see cref="EventType.MobStart"/> de la traza, o -1 si el partido no llega a la turba (se calcula una vez en <see cref="Bind"/>).</summary>
     private int _mobFrame = -1;
@@ -490,7 +490,7 @@ public partial class MatchPitchView3D : SubViewportContainer
     }
 
     /// <summary>
-    /// ADR 0169 (RF-055b): desde <see cref="EventType.MobStart"/> el público ocupa las filas exteriores. El motor
+    /// ADR 0175 (RF-055b): desde <see cref="EventType.MobStart"/> el público ocupa las filas exteriores. El motor
     /// ya acota a jugadores y balón a la banda (<c>/Sim</c> decide, aquí no se calcula nada: RT-014); esto sólo
     /// <b>pinta</b> lo que el motor ya hizo, con el número de filas que trae el dato (<c>Catalog.Tuning.Mob</c>).
     /// El público son cápsulas de los colores de la grada sobre un suelo pisoteado, más bajas que las fichas

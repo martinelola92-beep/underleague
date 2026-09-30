@@ -319,7 +319,7 @@ public partial class ScoutScreen : Control
         if (_run.Systems is { } mobSystems
             && Underleague.Sim.Run.View.MobView.For(state, node, mobSystems.Mobs, catalog, GameData.Language) is { } mob)
         {
-            // ADR 0169: y lo que hace toda turba con el campo, anunciado antes: el estrechamiento es un problema de
+            // ADR 0175: y lo que hace toda turba con el campo, anunciado antes: el estrechamiento es un problema de
             // colocación anticipable (RF-055b, RF-012d), no una sorpresa.
             var mobLines = new List<string> { UiText.Get("ui.scout.mobLine", mob.Name, mob.Text) };
             if (mob.Rule.Length > 0)
