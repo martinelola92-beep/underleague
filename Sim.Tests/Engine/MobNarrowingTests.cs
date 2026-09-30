@@ -18,11 +18,13 @@ public sealed class MobNarrowingTests
     private const ulong FnvOffset = 14695981039346656037UL;
     private const ulong FnvPrime = 1099511628211UL;
 
-    // Huellas medidas ANTES del cambio (semillas 1..60 de TestMatches.Reference, árbol de la ADR 0167 cerrada):
+    // Huellas con la turba sin tocar (semillas 1..60 de TestMatches.Reference). Medidas por primera vez antes del cambio, sobre
+    // el árbol de la ADR 0167, y renovadas al rebasar sobre main (que movió el reglamentario por otras ADR); el test de abajo
+    // exige además que el reglamentario coincida con el de la turba a 0/0, que es la prueba de que esta ADR no lo toca:
     // el conjunto de los partidos que no llegan a la turba, y el de TODOS los partidos.
-    private const ulong RegulationOnlyBefore = 11986422554549851935UL;
+    private const ulong RegulationOnlyBefore = 923597476927811926UL;
     private const int RegulationOnlyMatches = 39;
-    private const ulong EveryMatchBefore = 4394564194198819984UL;
+    private const ulong EveryMatchBefore = 9978273609738617350UL;
 
     private const float Eps = 0.001f;
 
@@ -118,6 +120,18 @@ public sealed class MobNarrowingTests
 
         Assert.Equal(RegulationOnlyMatches, played);
         Assert.Equal(RegulationOnlyBefore, hash);
+
+        ulong untouched = FnvOffset;
+        for (ulong seed = 1; seed <= 60; seed++)
+        {
+            var result = Play(NoMobChanges, seed);
+            if (!result.Report.WentToGoldenGoal)
+            {
+                untouched = (untouched ^ Fingerprint(result)) * FnvPrime;
+            }
+        }
+
+        Assert.Equal(untouched, hash);
     }
 
     [Fact]
