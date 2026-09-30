@@ -4704,6 +4704,22 @@ internal sealed class MatchEngine : IPerkWorld
     /// <summary>Jugador por índice del array del motor, para montar escenarios y leer sus atributos.</summary>
     internal MatchPlayer PlayerAtForTest(int playerIndex) => _players[playerIndex];
 
+    /// <summary>ADR 0175: entra en la fase de turba (banda y velocidad) sin jugar el reglamentario.</summary>
+    internal void EnterMobPhaseForTest() => EnterMobPhase();
+
+    /// <summary>ADR 0175: paso por tick de un jugador, en milésimas de casilla (el bono de la turba incluido).</summary>
+    internal int SpeedPerTickMilliForTest(int playerIndex) =>
+        (int)MathF.Round(SpeedPerTick(_players[playerIndex], dribbling: false) * 1000f);
+
+    /// <summary>ADR 0175: velocidad de un golpe del balón con el bono de la fase.</summary>
+    internal int BallSpeedMilliForTest(int milli) => BallSpeedMilli(milli);
+
+    /// <summary>ADR 0175: ¿están todos en su sitio para la reanudación? (la fila cuenta en la turba).</summary>
+    internal bool EveryoneInPlaceForTest() => EveryoneInPlace();
+
+    /// <summary>ADR 0175: la banda jugable de la fase.</summary>
+    internal PlayBand BandForTest => _band;
+
     /// <summary>Estado actual de un jugador.</summary>
     internal PlayerState StateForTest(int playerIndex) => _players[playerIndex].State;
 

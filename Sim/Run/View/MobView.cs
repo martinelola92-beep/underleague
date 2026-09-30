@@ -47,11 +47,20 @@ public static class MobView
 
         string text = parts.Count == 0 ? templates.Get(Effects, "mobPlain") : string.Join("; ", parts);
         var mob = catalog.Tuning.Mob;
-        string rule = mob.NarrowRowsPerSide == 0 && mob.SpeedPercent == 0
-            ? string.Empty
-            : templates.Get(Effects, "mobNarrow")
-                .Replace("{rows}", mob.NarrowRowsPerSide.ToString(System.Globalization.CultureInfo.InvariantCulture), StringComparison.Ordinal)
-                .Replace("{percent}", mob.SpeedPercent.ToString(System.Globalization.CultureInfo.InvariantCulture), StringComparison.Ordinal);
+        var rules = new List<string>(2);
+        if (mob.NarrowRowsPerSide > 0)
+        {
+            rules.Add(templates.Get(Effects, "mobNarrow")
+                .Replace("{rows}", mob.NarrowRowsPerSide.ToString(System.Globalization.CultureInfo.InvariantCulture), StringComparison.Ordinal));
+        }
+
+        if (mob.SpeedPercent > 0)
+        {
+            rules.Add(templates.Get(Effects, "mobFaster")
+                .Replace("{percent}", mob.SpeedPercent.ToString(System.Globalization.CultureInfo.InvariantCulture), StringComparison.Ordinal));
+        }
+
+        string rule = string.Join("; ", rules);
         return new MobLine(type.Id, string.Equals(language, "en", StringComparison.Ordinal) ? type.Name.En : type.Name.Es, text, rule);
     }
 }

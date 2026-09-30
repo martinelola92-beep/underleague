@@ -4,6 +4,8 @@ using Underleague.Sim.Data;
 using Underleague.Sim.Engine;
 using Underleague.Sim.Events;
 using Underleague.Sim.Model;
+using Underleague.Sim.Run.Systems.Mobs;
+using Underleague.Sim.Run.View;
 
 namespace Underleague.Sim.Tests.Engine;
 
@@ -344,5 +346,108 @@ public sealed class MobNarrowingTests
         var files = TestData.LoadAllFiles();
         files["sim/tuning.json"] = files["sim/tuning.json"].Replace("\"narrowRowsPerSide\": 1", "\"narrowRowsPerSide\": 4", StringComparison.Ordinal);
         Assert.Throws<DataException>(() => DataLoader.FromJson(files));
+    }
+
+    private static MatchEngine NewEngine(Catalog catalog) =>
+        new(TestMatches.Reference(catalog, 1), 1, catalog, SimConfig.Default);
+
+    /// <summary>El +15 % es exacto y entero: base × 115 / 100 en cada unidad, y en el reglamentario no existe.</summary>
+    [Fact]
+    public void TheSpeedBonusIsExactPerUnit()
+    {
+        var engine = NewEngine(Current);
+        var ball = Current.Tuning.Ball;
+        var save = Current.Tuning.Save;
+        int[] milli = { ball.PassSpeedCellsPerTickMilli, ball.ShotSpeedCellsPerTickMilli, ball.HeaderSpeedCellsPerTickMilli, save.ParrySpeedCellsPerTickMilli };
+        int[] player = new int[4];
+        for (int i = 0; i < player.Length; i++)
+        {
+            Assert.Equal(milli[i], engine.BallSpeedMilliForTest(milli[i]));
+            player[i] = engine.SpeedPerTickMilliForTest(i + 1);
+        }
+
+        engine.EnterMobPhaseForTest();
+        for (int i = 0; i < milli.Length; i++)
+        {
+            Assert.Equal(milli[i] * 115 / 100, engine.BallSpeedMilliForTest(milli[i]));
+            Assert.True(player[i] > 0);
+            Assert.Equal(player[i] * 115 / 100, engine.SpeedPerTickMilliForTest(i + 1));
+        }
+    }
+
+    /// <summary>El suplente que entra en la turba no aparece en una fila del público.</summary>
+    [Fact]
+    public void ASubstituteEnteringDuringTheMobStandsInsideTheBand()
+    {
+        // Un titular con la casilla-hogar en la fila 0 (extremo puro): el suplente que hereda su sitio.
+        var setup = TestMatches.Reference(Current, 1);
+        var slots = setup.Home.Lineup.Slots.ToList();
+        slots[2] = slots[2] with { HomeCell = new Cell(3, 0) };
+        setup = setup with { Home = setup.Home with { Lineup = new Lineup(slots) } };
+        var engine = new MatchEngine(setup, 1, Current, SimConfig.Default);
+        engine.EnterMobPhaseForTest();
+        var band = engine.BandForTest;
+        MatchPlayer? wide = null;
+        for (int i = 0; i < 14 && wide is null; i++)
+        {
+            var candidate = engine.PlayerAtForTest(i);
+            if (candidate.HomeCenter.Y < 1f)
+            {
+                wide = candidate;
+            }
+        }
+
+        Assert.NotNull(wide);
+        wide!.EnterPitch(band);
+        Assert.True(band.Contains(wide.Position.Y), $"el suplente entró en y {wide.Position.Y:F2}");
+
+        // Y el balón aparcado (BB-O) tampoco cae en una fila invadida.
+        engine.ParkBallForTest(new Vec2(8f, 0.2f));
+        Assert.True(band.Contains(engine.BallPositionForTest.Y));
+    }
+
+    /// <summary>La reanudación espera al lento que sigue en una fila invadida; en reglamentario esa fila no cuenta.</summary>
+    [Fact]
+    public void TheRestartWaitsForWhoIsStillOnAnInvadedRow()
+    {
+        var engine = NewEngine(Current);
+        int outfield = engine.OutfieldIndexForTest(0, 1);
+        engine.PlaceForTest(outfield, new Vec2(3f, 0.3f));
+        Assert.True(engine.EveryoneInPlaceForTest(), "sin turba, la fila 0 es campo");
+        engine.EnterMobPhaseForTest();
+        Assert.False(engine.EveryoneInPlaceForTest(), "en la turba, el saque no sale con alguien en la fila del público");
+        engine.PlaceForTest(outfield, new Vec2(3f, 1.5f));
+        Assert.True(engine.EveryoneInPlaceForTest());
+    }
+
+    /// <summary>Control positivo: sin estrechamiento el mismo instrumento SÍ ve el balón en las filas exteriores.</summary>
+    [Fact]
+    public void TheBandInstrumentSeesTheBallOutsideWhenTheNarrowingIsOff()
+    {
+        bool seen = false;
+        foreach (var (_, result) in MobMatches(NoMobChanges))
+        {
+            var trace = result.Trace!;
+            for (int f = FirstMobFrame(trace); f >= 0 && f < trace.FrameCount && !seen; f++)
+            {
+                seen = Invaded(trace.BallAt(f).Y);
+            }
+        }
+
+        Assert.True(seen, "el instrumento no detecta el balón en filas exteriores ni sin estrechamiento: no mide nada");
+    }
+
+    [Fact]
+    public void TheRuleTextComesFromTheDataInBothLanguages()
+    {
+        var type = MobLoader.FromJson(TestData.LoadAllFiles()).Find("plain")!;
+        var es = MobView.Describe(type, Current, "es").Rule;
+        var en = MobView.Describe(type, Current, "en").Rule;
+        Assert.Contains("15", es, StringComparison.Ordinal);
+        Assert.Contains("estrecha", es, StringComparison.Ordinal);
+        Assert.Contains("15", en, StringComparison.Ordinal);
+        Assert.Contains("narrows", en, StringComparison.Ordinal);
+        Assert.Equal(string.Empty, MobView.Describe(type, NoMobChanges, "es").Rule);
+        Assert.DoesNotContain("estrecha", MobView.Describe(type, WithKnobs(rows: 0, percent: 15), "es").Rule, StringComparison.Ordinal);
     }
 }
