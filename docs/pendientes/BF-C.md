@@ -1,6 +1,6 @@
 # BF-C — El delantero pega sin balón porque no tiene nada mejor que hacer
 
-Estado: **abierta, medida**. Es lo único que impide abrirle la entrada al marcado (ADR 0133 lo deja en 0).
+Estado: **implementada (30 sep 2026, [ADR 0179](../decisiones/0179-el-delantero-marca-antes-que-pega.md))**; el puesto sigue cerrado a propósito. Es lo único que impide abrirle la entrada al marcado (ADR 0133 lo deja en 0).
 
 ## Síntoma
 
@@ -56,3 +56,15 @@ la hipótesis principal y no está comprobada.
 `docs/pendientes/BE-A.md` (de donde sale) · ADR 0133 (lo deja en 0 y dice por qué) · ADR 0125 (midió el
 orden invertido sin explicarlo) · `docs/project-state.md` (el papel abierto del centrocampista, que era el
 mismo problema un puesto más atrás y se cerró con la ADR 0133)
+
+## Arreglo (30 sep 2026, ADR 0179)
+
+- **Hoy no pega:** con `Forward: 0` hace 0,00 entradas sin balón por partido. El defecto es el que la ficha decía
+  para cuando se abra: abierto a +1 pega 0,57 por partido (0,29 por delantero-partido) porque su marca (180) pierde
+  contra su entrada (211).
+- **Hipótesis 1 (subir `PressCarrier`) REJECTED bajo esta ADR:** 300/360/420 no bajan las entradas sin balón (3,07/3,05/3,13
+  contra 3,10). **Hipótesis 2 (`FindSpace`) REJECTED:** está descartada por precondición fuera de posesión, no por
+  el multiplicador. **Hipótesis 3 (bajar `Tackle`) no probada.** **CONFIRMED:** subir `MarkOpponent`.
+- **Arreglo:** `base.Forward.MarkOpponent` 120 → 210 (margen de 104 sobre la entrada, el del centrocampista).
+  Abierto a +1: 0,15 entradas del delantero por partido; el ajuste es un dial (+40: 0,35; +100: 1,03; +150: 1,53 por partido).
+- **Sangre:** la sonda no muestra coste con el puesto cerrado. Abrirlo es decisión del revisor.

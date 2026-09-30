@@ -1,6 +1,6 @@
 # BB-K — Dos jugadores del mismo equipo que quieren la misma casilla «bailan y parpadean»
 
-**Estado:** Abierta — **causa CONFIRMED (23 sep 2026)**, arreglo pendiente de `game-design-review`
+**Estado:** **Implementada (30 sep 2026, [ADR 0176](../decisiones/0176-dos-companeros-no-cubren-el-mismo-punto.md))** — causa CONFIRMED, baile 17,3 → 0,9 episodios por partido; queda `FindSpace`
 
 ## Observación
 
@@ -141,3 +141,19 @@ su propio baseline y sus 43 puertas. Es un hito aparte.
   con la referencia de que gfootball exige que un aspirante sea 20 % mejor para relevar al titular. La
   deuda está documentada en `Utility.cs:584-590`.
 - [BF-C](./BF-C.md) — también sobre alternativas de utilidad mal ordenadas fuera de posesión.
+
+## Arreglo (30 sep 2026, ADR 0176)
+
+- **H3 re-CONFIRMED** con el instrumento de hoy (los números de línea de arriba ya no valen): volcado de la semilla 1,
+  tick 1198, ids 1 y 2 → los dos `CoverSpace` (738/826) con destinos a 0,04-0,14. El baile hoy es **17,3 episodios por
+  partido** (150 partidos), no 6,1: el motor cambió desde el 23 sep; 96,6 % en `CoverSpace`.
+- **Arreglo (opción C de la nota de diseño):** `coverSpacingCells = 0,8` (1,0 en la primera versión; ver la enmienda de la ADR 0176); el de id mayor se desliza por la perpendicular
+  a la recta de cobertura. **REJECTED** la primera versión (apartarse radialmente): choca con el borde delantero de la
+  zona de los centrocampistas y deja el baile.
+- **Medido:** 17,3 → 0,9 episodios por partido; en cobertura 16,1 → 0,48, racha máxima 100 → 6 fotogramas. Test
+  permanente `Sim.Tests/Engine/DancingTeammatesTests.cs` (con control: separación apagada ⇒ 14,7 por partido).
+- **Lote de referencia** (10.000 partidos, semilla 1): `possessionChanges` 25,39 → 25,15; `passInterceptRate` 6,47 → 5,87;
+  `throughPassesPerMatch` 6,25 → 5,52; `betterTeamWinRate_human_60_vs_human_40` 87,94 → **92,62 (fuera de banda, 90)**. Es
+  **una sola plantilla por pareja** (la semilla genera los equipos): pendiente de la segunda semilla, ver ADR 0176/informe.
+- **Hermano nuevo (LIKELY):** los 63 episodios que quedan en 150 partidos son `FindSpace` con dos compañeros al mismo
+  hueco (la penalización de apiñamiento mira posiciones, no destinos). No se toca.

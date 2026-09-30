@@ -1,6 +1,6 @@
 # BC-G — El balón se queda suelto en el córner y nadie lo coge
 
-**Estado:** Abierta · tres mecanismos CONFIRMED · reabre parcialmente [BB-G](./BB-G.md)
+**Estado:** **Implementada (30 sep 2026, [ADR 0177](../decisiones/0177-el-designado-de-un-balon-quieto-va-a-por-el.md))** · M1 y M3 CONFIRMED y cerrados por el deber del designado; M2 no observado en los largos
 
 ## Observación
 
@@ -51,3 +51,21 @@ Toca la palanca de la ADR 0117 y de `ChaseBall pen = 50`: vigilar juntas las mé
 ## Hermanos
 
 [BB-G](./BB-G.md), [BB-N](./BB-N.md), [BB-K](./BB-K.md), [BB-O](./BB-O.md), [BB-G2](./BB-G2.md).
+
+## Arreglo (30 sep 2026, ADR 0177)
+
+- **Estado hoy** (300 partidos, semillas 1..300): 58 episodios de balón quieto ≥ 15 ticks, más largo **656**, 13 de > 40.
+  Los 4 peores (semillas 224, 79, 66, 260) son **M3 CONFIRMED**: el defensa designado a 0,50-0,56 casillas puntúa
+  `CoverSpace` 790-826 contra `ChaseBall` 631-729, y nadie más puede perseguir. **M1 CONFIRMED** en los de
+  centrocampista/delantero (`Retreat` gana por 5-100). **M2 (límite duro) REJECTED en los largos** bajo el árbol de hoy:
+  `ChaseBall` no estaba descartada (`out` 50 = 0,5 casillas de penalización, no descarte).
+- **BB-G2 activado:** en 10 de 58 el designado era el portero sin alcance (`REJECTED-other`); episodios cortos.
+- **Arreglo:** el designado de un balón suelto y quieto (< 0,02 casillas/tick) descarta la colocación si `ChaseBall` es
+  viable. **REJECTED** el deber para cualquier balón suelto: 59 → 3 episodios pero tiros de centrocampista 1,25 → 1,96 y
+  goles 0,27 → 0,48 (quita tiros al delantero).
+- **Medido:** 59 → 32 episodios (300 partidos), **ninguno de > 40 ticks**, más largo 448 → 27. Tests permanentes en
+  `LooseBallStuckTests.cs` (escenario con pesos reales donde `CoverSpace` puntúa más que `ChaseBall`).
+- **Segunda mitad (BB-G2, CONFIRMED):** quedó un bloqueo de 285 ticks (semilla 141) con el portero como designado sin
+  alcance. El designado pasa a ser el más cercano de los que pueden llegar: 4 episodios en 150 partidos, el más largo 16.
+- **Sin tocar (LIKELY):** el balón nunca sale por el fondo (0 córneres, BB-N) y los pases recortados dejan el balón en la
+  línea; opción 4 de arriba, despertaría BB-N.
