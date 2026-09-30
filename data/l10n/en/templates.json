@@ -60,6 +60,8 @@
     "shoutPress": "{target} presses the ball carrier for {value} s",
     "provokeMob": "riles the crowd: whatever this match's mob brings happens now, and whatever lasts, lasts {value} s",
     "mobNarrow": "in the mob the pitch narrows: the crowd takes {rows} row per side (the touchline ones, always the same)",
+    "mobNarrowShort": "the pitch narrows ({rows} row per side)",
+    "mobFasterShort": "+{percent} % speed",
     "mobFaster": "in the mob play runs {percent} % faster",
     "mobPlain": "the stands roar and the referee walks off: next goal wins",
     "mobInjure": "someone jumps from the stands and injures a random outfield player, from either side",

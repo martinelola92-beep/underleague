@@ -28,6 +28,31 @@ public static class MobView
         return mobs.For(state.Seed, node) is { } type ? Describe(type, catalog, language) : null;
     }
 
+    /// <summary>
+    /// Lo que toda turba hace al campo, en corto, para el pregón y el tablero (ADR 0175): sólo lo que los datos activan;
+    /// cadena vacía con los dos parámetros a 0.
+    /// </summary>
+    public static string ShortRule(Catalog catalog, string language = "es")
+    {
+        ArgumentNullException.ThrowIfNull(catalog);
+        var templates = catalog.Localization.Get(language);
+        var mob = catalog.Tuning.Mob;
+        var parts = new List<string>(2);
+        if (mob.NarrowRowsPerSide > 0)
+        {
+            parts.Add(templates.Get(Effects, "mobNarrowShort")
+                .Replace("{rows}", mob.NarrowRowsPerSide.ToString(System.Globalization.CultureInfo.InvariantCulture), StringComparison.Ordinal));
+        }
+
+        if (mob.SpeedPercent > 0)
+        {
+            parts.Add(templates.Get(Effects, "mobFasterShort")
+                .Replace("{percent}", mob.SpeedPercent.ToString(System.Globalization.CultureInfo.InvariantCulture), StringComparison.Ordinal));
+        }
+
+        return string.Join(" · ", parts);
+    }
+
     /// <summary>Nombre y texto de un tipo de turba.</summary>
     public static MobLine Describe(MobType type, Catalog catalog, string language = "es")
     {
