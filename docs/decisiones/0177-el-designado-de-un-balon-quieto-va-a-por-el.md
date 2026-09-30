@@ -29,11 +29,24 @@ Descartado, **REJECTED bajo esta ADR por medición**: el deber para **cualquier*
 tiros al delantero: cambia quién marca. Con el umbral de balón quieto: 59 → 32 episodios, **ninguno de más de 40
 ticks** (más largo 448 → 27), tiros de centrocampista 1,37 y de delantero 6,37 (1,25 y 6,38 antes).
 
-## Segunda mitad: el designado es el más cercano de los que pueden llegar
+## Segunda mitad: el designado es el más cercano de los que pueden llegar (sólo con balón quieto)
 
-Tras lo anterior quedó un bloqueo de 285 ticks (semilla 141): balón quieto en el borde del área, el portero a 2
+Tras la primera mitad quedó un bloqueo de 285 ticks (semilla 141): balón quieto en el borde del área, el portero a 2
 casillas como designado sin alcance (`ChaseBall` descartada) y el centrocampista rival persiguiéndolo por fuera de su
-límite exterior. **BB-G2 CONFIRMED** (mecanismo observado disparándose). `UpdateContextCaches` sólo cuenta como
-candidato al designado de un balón suelto a quien puede llegar: el de campo con el punto dentro de su límite exterior de
-zona, el portero con `CanKeeperReachLoose`. Medido tras las dos mitades: 150 partidos, **4 episodios de ≥ 15 ticks, el más
-largo de 16** (antes 29 y 656 según la muestra).
+límite exterior. **BB-G2 CONFIRMED** (mecanismo observado disparándose). `UpdateNearestToBall` elige, **sólo con el balón
+suelto y quieto** (misma condición que el deber), al más cercano de los que pueden llegar —de campo, con el punto dentro
+de su límite exterior de zona; portero, con `CanKeeperReachLoose`—. **Si en un equipo nadie puede llegar se conserva el
+más cercano de todos**, como en `main` (la designación nunca queda vacía). Se calcula después de la percepción, para
+leer `KeeperExitCells` y `BallDead` de este tick y no del anterior (antes había un desfase de un tick).
+
+Cifras contra `main` (rebasado sobre `515e743`, 400 semillas de referencia): los bloqueos largos de `main` están en las
+semillas **32 (180 ticks), 173 (276), 355 (471) y 398 (374)**; las cinco semillas (con la 141) son test permanente y
+ninguna pasa de 60 ticks. En 150 partidos: 10 episodios de ≥ 15 ticks, el más largo de 22.
+
+## Nota de `game-design-review` (resumen de las diez preguntas)
+
+1 el jugador ve un balón parado y a todos mirándolo; 2 el más cercano va; 3 «un balón sin dueño es de quien llega»,
+compuerta dura de `referencia-motores-futbol.md` §6.3; 4 `/Sim`, sin datos nuevos; 5 hermanos BB-G, BB-G2, BB-N; 6 cualquier
+designación única sin alternativa; 7 precedente AW-S y ADR 0117; 8 arregla la causa (el designado no comparaba), no el
+síntoma; 9 riesgo: cambiar quién tira (medido y descartado el deber para balón en movimiento); 10 test de escenario con
+pesos reales y control (CoverSpace puntúa más), semillas nombradas y lote.

@@ -19,9 +19,9 @@ _(por enlazar donde se detecten; ver `README.md` del directorio)_
 - **CONFIRMED:** el portero suelta siempre a los 5 ticks (300 partidos, 664 paradas retenidas); al soltar 1,8 de los 6
   rivales a < 4 casillas y 4,9 en campo contrario. La transición defensiva existente apenas baja medio paso.
 - **Lectura del texto (LIKELY):** «equipo defensor» = el que ahora defiende, o sea el que tiró; «el delantero puede
-  quedarse presionando» no se implementa (el repliegue baja también al delantero).
+  quedarse presionando» se implementa: el repliegue no baja al delantero.
 - **REJECTED:** que el síntoma fuera de posesión. El receptor pierde el balón ante quien tiró en 45 ticks el 77 % antes y
   el 76-78 % después; los saques de puerta, 73 %.
-- **Arreglo:** `save.holdTicks` 15 y `save.retreatTicks` 20. Un primer intento reutilizando la orden defensiva rompió
+- **Arreglo:** `save.holdTicks` 15 (estado propio `Holding`) y `save.retreatTicks` 20 (no baja al delantero ni pisa la orden ofensiva). Un primer intento reutilizando la orden defensiva rompió
   `ShoutTests`/`MobTests`: la orden efectiva la reconstruye la vista de gritos de los eventos.
-- **Coste:** la pausa mueve entradas −8 %, lesiones −8 %, tiros +7 %, goles +10 % (sonda); el repliegue, nada.
+- **Coste:** medido sólo en el lote de todo el paquete (entradas 7,90 → 7,12, lesiones 0,70 → 0,66, goles 2,35 → 2,47); la atribución a la pausa es LIKELY (ver ADR 0178).

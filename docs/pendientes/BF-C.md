@@ -66,5 +66,5 @@ mismo problema un puesto más atrás y se cerró con la ADR 0133)
   contra 3,10). **Hipótesis 2 (`FindSpace`) REJECTED:** está descartada por precondición fuera de posesión, no por
   el multiplicador. **Hipótesis 3 (bajar `Tackle`) no probada.** **CONFIRMED:** subir `MarkOpponent`.
 - **Arreglo:** `base.Forward.MarkOpponent` 120 → 210 (margen de 104 sobre la entrada, el del centrocampista).
-  Abierto a +1: 0,15 entradas del delantero por partido; el ajuste es un dial (+40: 0,35; +100: 1,03; +150: 1,53 por partido).
+  Abierto a +1: 0,22 entradas de delanteros por partido en el test permanente (0,15 en la sonda de 600 partidos); el ajuste es un dial (+40: 0,35; +100: 1,03; +150: 1,53 por partido).
 - **Sangre:** la sonda no muestra coste con el puesto cerrado. Abrirlo es decisión del revisor.

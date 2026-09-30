@@ -51,3 +51,24 @@ dentro, 0,85 fuera, 0,9 y 0,95 dentro, 1,0 fuera: **no es monótono**, es una so
 (sonda: 23 episodios de cobertura en 60 partidos contra 25 con 1,0) y apenas por encima del contacto de dos orcos (0,76)—.
 Las puertas `StatisticalTests`, `FullRunGateTests` y `RarityAndBossTests` pasan (29/29). El margen de esa fila sigue
 siendo el de una plantilla: se anota en BB-P.
+
+## Estabilidad de 0,8 y tres compañeros (revisión independiente, 30 sep 2026)
+
+- **Tres compañeros:** el primer código medía el conflicto sobre el punto bruto contra cada compañero y se quedaba con el
+  último desplazamiento, así que el tercero acababa **encima del segundo** (test: 2-3 a distancia 0). Ahora se mide, mate
+  a mate en orden de id, sobre el resultado que llevan los de id menor. Sigue siendo una función del punto bruto y de los
+  destinos ajenos (no de la decisión anterior del propio jugador), así que no oscila. Test permanente
+  `ThreeTeammatesShareTheCoverLineInIdOrder`. Con el arreglo, sonda de baile (60 partidos): 0,82 episodios por partido (0,50
+  de cobertura), racha máxima de cobertura 8; con la separación apagada 22,8 y 94.
+- **0,8 no es un filo:** `StatisticalTests` (`NoMandatoryMetricIsOutOfRange`, 1.000 partidos) con semillas 1, 2 y 3 y
+  separación 0 / 0,7 / 0,8 / 0,9: **las 12 celdas en banda** con el código actual. La fila 60-vs-40 que se salió con 1,0
+  dependía de la plantilla de la semilla 1 (BB-P), no de la cifra; se conserva 0,8 por saturar el baile con la menor
+  separación.
+
+## Nota de `game-design-review` (resumen de las diez preguntas)
+
+1 el jugador ve dos defensas temblando encima; 2 uno cubre la línea y el otro su lado; 3 cobertura de zona; 4 `/Sim` +
+un dato; 5 hermano `FindSpace` (LIKELY, sin tocar) y BC-G; 6 el mismo defecto puede estar en cualquier acción que fije un
+punto sin mirar destinos; 7 precedente `Marking.AssignTeam`; 8 ataca el solapamiento; 9 riesgo: el segundo defensa se
+abre y deja pasillo, y la separación amplifica al mejor equipo (medido: 12 celdas en banda); 10 sonda de baile con control,
+test de tres compañeros y lote.

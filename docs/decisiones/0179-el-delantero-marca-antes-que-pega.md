@@ -24,3 +24,12 @@ graduado** (mismo lote, sonda): +1 → 0,08 entradas por delantero-partido, +40 
 **No se abre** (`Forward` sigue en 0): gastar presupuesto de lesión es decisión del revisor. El delantero ahora sostiene
 su posición junto a su marca (Mark 0,4 → 17 % de sus decisiones, Retreat 28 → 22 %, Cover 22 → 12 %): «sostener la
 posición arriba», `referencia-motores-futbol.md`.
+
+## Nota de `game-design-review` (resumen de las diez preguntas)
+
+1 hoy el delantero no pega, pero abrirlo lo saturaba; 2 que su marca sea su tarea y la entrada una escalada ocasional; 3
+RF-057 (contacto de quien disputa o marca); 4 `/data`; 5 hermanos BE-A/ADR 0133 (centrocampista); 6 cualquier puesto abierto
+con una alternativa peor que pegar; 7 precedente ADR 0133 (margen de 104); 8 arregla la causa; 9 riesgo: el delantero se
+queda pegado a su marca arriba (Retreat 28 → 22 %) y la sangre; el puesto sigue cerrado; 10 test de margen con la tabla
+real, test de tasa con el puesto abierto (0,22 entradas por partido; antes 0,57) y lote. Cifra actualizada: 33 entradas de
+delantero en 150 partidos (0,22 por partido).
