@@ -40,6 +40,7 @@ public sealed class FaseAMeasurementTests
     // ------------------------------------------------------------------------------------------------
 
     [Fact]
+    [Trait("Category", "Diagnostic")]
     public void RaceSpecificity_HoldOutReadyPerksPlusTheSinglePredictedPositive()
     {
         // pack_mentality (el perk de BB-J) era el único predicho positivo ("la raza SÍ importa") de toda
@@ -137,6 +138,7 @@ public sealed class FaseAMeasurementTests
     // ------------------------------------------------------------------------------------------------
 
     [Fact]
+    [Trait("Category", "Diagnostic")]
     public void FullScreeningColumnsForEveryHoldOutReadyPerk()
     {
         _output.WriteLine("perk | pred_poblacion | pred_pos_disparador | pred_pos_efecto | rol_carrier | exposicion | activaciones/partidos | delta | estado_screening | prediccion_si_baja");

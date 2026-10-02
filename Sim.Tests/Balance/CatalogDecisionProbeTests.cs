@@ -19,6 +19,7 @@ namespace Underleague.Sim.Tests.Balance;
 ///
 /// <para>No cambia umbrales, ni el circuito, ni <c>/data</c>, ni ninguna métrica del cribado.</para>
 /// </summary>
+[Trait("Category", "Diagnostic")]
 public sealed class CatalogDecisionProbeTests
 {
     private static readonly Catalog Catalog = TestData.LoadCatalog();

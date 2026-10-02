@@ -12,6 +12,7 @@ namespace Underleague.Sim.Tests.Balance;
 /// resultados dependen de partidos reales; solo se fija que el pipeline entero corre sin excepciones y
 /// que cada perk termina en un estado definido).
 /// </summary>
+[Trait("Category", "Diagnostic")]
 public sealed class RealScreeningLot1Tests
 {
     private static readonly Catalog Catalog = TestData.LoadCatalog();

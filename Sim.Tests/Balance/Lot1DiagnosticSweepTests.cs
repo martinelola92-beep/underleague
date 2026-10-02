@@ -18,6 +18,7 @@ namespace Underleague.Sim.Tests.Balance;
 /// mecánicamente cuando el instrumento está avisando de algo. Aquí precisamente se atiende el aviso —se
 /// mira qué está pasando— en vez de ignorarlo subiendo el umbral.</para>
 /// </summary>
+[Trait("Category", "Diagnostic")]
 public sealed class Lot1DiagnosticSweepTests
 {
     private static readonly Catalog Catalog = TestData.LoadCatalog();

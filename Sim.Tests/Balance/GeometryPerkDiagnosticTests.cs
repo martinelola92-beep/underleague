@@ -20,6 +20,7 @@ namespace Underleague.Sim.Tests.Balance;
 /// sobre el catálogo real, filtrando <see cref="PerkBalanceCategory.Geometry"/>. Así el diagnóstico
 /// cubre exactamente lo que el clasificador considera geometría, ni más ni menos.</para>
 /// </summary>
+[Trait("Category", "Diagnostic")]
 public sealed class GeometryPerkDiagnosticTests
 {
     private static readonly Catalog Catalog = TestData.LoadCatalog();
