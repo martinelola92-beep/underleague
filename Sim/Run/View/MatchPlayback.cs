@@ -74,4 +74,53 @@ public static class MatchPlaybacks
             built, seed, catalog, trace ? config with { Trace = true } : config, static team => team == 1, decisions.Declines);
         return new MatchPlayback(node, setup, result, seed);
     }
+
+    /// <summary>
+    /// Como <see cref="Of"/>, pero los puntos de sustitución del jugador que caen por debajo de lo que ya vio
+    /// (<paramref name="watchedTick"/>, <see cref="PendingMatch.CanDecideAt"/>) se resuelven aquí con la
+    /// política por defecto, sin ventana: elegir con el futuro conocido sería volver a tirar el partido
+    /// (ADR 0183). Es exactamente lo que <c>RunEngine.EnterMatch</c> hace con un punto sin respuesta, así que lo
+    /// que se enseña y lo que se aplica son el mismo partido. <paramref name="resolved"/> son las decisiones con
+    /// esas respuestas añadidas. Un punto sólo existe si hay candidatos, así que la política siempre elige a
+    /// alguien y nunca se anota un rechazo que el motor no anotaría.
+    /// </summary>
+    public static MatchPlayback OfResolvingBlockedPoints(
+        RunState stateBeforeMatch,
+        int nodeId,
+        Catalog catalog,
+        IRunSystems? systems,
+        bool trace,
+        MatchDecisions decisions,
+        int watchedTick,
+        out MatchDecisions resolved)
+    {
+        ArgumentNullException.ThrowIfNull(decisions);
+        var playback = Of(stateBeforeMatch, nodeId, catalog, systems, trace, decisions);
+        resolved = decisions;
+        if (watchedTick <= 0)
+        {
+            return playback;
+        }
+
+        // Cota: un punto por suplente como mucho.
+        for (int guard = 0; guard < 64; guard++)
+        {
+            var point = SubstitutionPoints.Pending(playback.Setup, playback.Result, playback.PlayerTeam, catalog, resolved.Declines);
+            if (point is null || PendingMatch.CanDecideAt(watchedTick, point.Tick + 1) || point.DefaultCandidateId < 0)
+            {
+                return playback;
+            }
+
+            resolved = resolved with
+            {
+                Substitutions = new List<Substitution>(resolved.Substitutions)
+                {
+                    new(point.Tick, point.OutPlayerId, point.DefaultCandidateId),
+                },
+            };
+            playback = Of(stateBeforeMatch, nodeId, catalog, systems, trace, resolved);
+        }
+
+        throw new InvalidOperationException("la resolución de los puntos bloqueados no converge (ADR 0183)");
+    }
 }

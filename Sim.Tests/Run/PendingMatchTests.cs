@@ -196,6 +196,67 @@ public class PendingMatchTests
     }
 
     /// <summary>
+    /// Un punto de sustitución bloqueado (por debajo de lo ya visto) se resuelve igual que <c>EnterMatch</c> sin
+    /// respuesta: mismo estado final, y lo que se enseña es el partido que se aplica. Control: con el suelo en el
+    /// propio tick del punto (decidible) no se resuelve nada, y sin suelo tampoco. Nunca se anota un rechazo, que
+    /// el motor no anotaría.
+    /// </summary>
+    [Fact]
+    public void ABlockedSubstitutionPointResolvesLikeAnUnansweredPointInEnterMatch()
+    {
+        for (ulong seed = 1; seed <= 120; seed++)
+        {
+            var (state, nodeId, systems) = BeforeAMatch(seed);
+            var open = Underleague.Sim.Run.View.MatchPlaybacks.Of(state, nodeId, Catalog, systems, trace: true);
+            var point = SubstitutionPoints.Pending(open.Setup, open.Result, open.PlayerTeam, Catalog, null);
+            if (point is null)
+            {
+                continue;
+            }
+
+            // Bloqueado: el suelo está por encima del punto.
+            Underleague.Sim.Run.View.MatchPlaybacks.OfResolvingBlockedPoints(
+                state, nodeId, Catalog, systems, true, MatchDecisions.None, point.Tick + 1, out var resolved);
+            Assert.NotEmpty(resolved.Substitutions);
+            Assert.Equal(point.DefaultCandidateId, resolved.Substitutions[0].InPlayerId);
+            Assert.Empty(resolved.Declines);
+
+            var viaDecisions = RunEngine.EnterMatch(state, nodeId, Catalog, systems, resolved);
+            var unanswered = RunEngine.EnterMatch(state, nodeId, Catalog, systems);
+            Assert.Equal(RunSave.Save(unanswered.State), RunSave.Save(viaDecisions.State));
+
+            // Con TODO bloqueado (el peor caso) lo que se enseña es lo que se aplica: sin ningún punto pendiente.
+            var allBlocked = Underleague.Sim.Run.View.MatchPlaybacks.OfResolvingBlockedPoints(
+                state, nodeId, Catalog, systems, true, MatchDecisions.None, int.MaxValue / 2, out _);
+            Assert.Equal(unanswered.Summary.Report.Goals, allBlocked.Result.Report.Goals);
+            Assert.Null(SubstitutionPoints.Pending(allBlocked.Setup, allBlocked.Result, allBlocked.PlayerTeam, Catalog, null));
+
+            // Controles: decidible (suelo en el propio tick del punto) y sin suelo, nada se resuelve.
+            Underleague.Sim.Run.View.MatchPlaybacks.OfResolvingBlockedPoints(
+                state, nodeId, Catalog, systems, true, MatchDecisions.None, point.Tick, out var stillOpen);
+            Assert.Empty(stillOpen.Substitutions);
+            Underleague.Sim.Run.View.MatchPlaybacks.OfResolvingBlockedPoints(
+                state, nodeId, Catalog, systems, true, MatchDecisions.None, 0, out var noFloor);
+            Assert.Empty(noFloor.Substitutions);
+            return;
+        }
+
+        Assert.Fail("ninguna de las 120 semillas dio un punto de sustitución del jugador");
+    }
+
+    /// <summary>La rama pesimista también es monótona: nunca por debajo del suelo de una reanudación anterior.</summary>
+    [Fact]
+    public void TheWorstCaseCheckpointNeverGoesBelowThePreviousFloor()
+    {
+        var (state, nodeId, systems) = BeforeAMatch(2026);
+        var playback = Underleague.Sim.Run.View.MatchPlaybacks.Of(state, nodeId, Catalog, systems, trace: true);
+        int end = PendingMatch.BeforeShowing(nodeId, MatchDecisions.None, playback).WatchedTick;
+
+        Assert.Equal(end + 500, PendingMatch.BeforeShowing(nodeId, MatchDecisions.None, playback, previousFloor: end + 500).WatchedTick);
+        Assert.Equal(end, PendingMatch.BeforeShowing(nodeId, MatchDecisions.None, playback, previousFloor: 3).WatchedTick);
+    }
+
+    /// <summary>
     /// Un guardado con <c>pendingMatch</c> no nulo cumple <c>run-save.schema.json</c> de verdad (JsonSchema.Net),
     /// y el nulo también: las claves no bastan, también los tipos y los <c>required</c>.
     /// </summary>

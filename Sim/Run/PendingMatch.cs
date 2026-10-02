@@ -32,11 +32,12 @@ public sealed record PendingMatch(int NodeId, MatchDecisions Decisions, int Watc
     /// (cierre forzado, caída), la repetición sale con todo lo decidible ya bloqueado y el resultado no cambia;
     /// un guardado limpio lo baja después al tick que el jugador vio de verdad. Sin traza, <c>int.MaxValue</c>.
     /// </summary>
-    public static PendingMatch BeforeShowing(int nodeId, MatchDecisions decisions, MatchPlayback playback)
+    public static PendingMatch BeforeShowing(int nodeId, MatchDecisions decisions, MatchPlayback playback, int previousFloor = 0)
     {
         ArgumentNullException.ThrowIfNull(decisions);
         ArgumentNullException.ThrowIfNull(playback);
         int end = playback.Trace is { FrameCount: > 0 } trace ? trace.TickAt(trace.FrameCount - 1) : int.MaxValue;
-        return new PendingMatch(nodeId, decisions, end);
+        // Monótono también aquí: nunca por debajo del suelo de una reanudación anterior.
+        return new PendingMatch(nodeId, decisions, Math.Max(end, previousFloor));
     }
 }
