@@ -176,6 +176,18 @@ public sealed partial class PlayerModel : Node3D
     private const float ReceiveLengthSeconds = 0.65f;
 
     /// <summary>
+    /// Velocidad del cuerpo, en casillas por segundo de partido, por encima de la cual un gesto en el sitio se
+    /// suelta. <b>Provisional</b>: es el mismo corte con que el instrumento de BV-A cuenta un gesto «deslizándose».
+    /// </summary>
+    private const float GestureReleaseCellsPerSecond = 1.0f;
+
+    /// <summary>Remate del golpeo que se deja ver tras el contacto antes de poder soltarlo. <b>Provisional, sin medir</b> (1,5 ticks).</summary>
+    private const float KickFollowThroughSeconds = 0.1f;
+
+    /// <summary>Lo mínimo que se deja ver la recepción antes de poder soltarla. <b>Provisional, sin medir</b> (~4 ticks).</summary>
+    private const float ReceiveMinSeconds = 0.25f;
+
+    /// <summary>
     /// Los gestos que no son locomoción, montados como entradas de una transición del árbol (BV-A). Los
     /// clips en bucle (<c>fallen</c>) no terminan; el resto se acaba con su propia duración.
     /// </summary>
@@ -332,7 +344,18 @@ public sealed partial class PlayerModel : Node3D
         // Segundos de PARTIDO que han pasado en este fotograma: lo que mueve todos los relojes del muñeco.
         float simDelta = delta * rate;
         Turn(facing, simDelta, snap: delta <= 0f);
+        DebugInputSpeed = speed;
         AdvanceGesture(simDelta);
+
+        // Un gesto en el sitio no puede llevarse al cuerpo deslizándose (H7): el golpeo, pasado el contacto y
+        // un poco de remate, y la recepción, pasado su primer cuarto de segundo, se funden en cuanto el cuerpo
+        // echa a correr. Medido antes: el golpeo retenido hasta el final se deslizaba el 37-77 % de su tiempo.
+        if (speed > GestureReleaseCellsPerSecond
+            && ((_gesture == "kick" && _gestureTime > KickContactSeconds + KickFollowThroughSeconds)
+                || (_gesture == "receive" && _gestureTime > ReceiveMinSeconds)))
+        {
+            StopGesture();
+        }
         ChooseGesture(state, cue, kick);
 
         // Locomoción continua: una posición de mezcla idle→trote→carrera en lugar de tres clips con umbral.
