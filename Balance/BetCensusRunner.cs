@@ -38,6 +38,13 @@ public sealed record BetCensusResult(
 /// <see cref="BetConditions.Evaluate"/>. De la frecuencia de cada una por distintivo de dificultad (RF-012)
 /// salen las cuotas de <c>data/bets/bets.json</c>: <c>cuota = 85 / p</c>.
 ///
+/// <para><b>Aviso al recensar.</b> Si se recensa y se vuelcan las frecuencias en <c>bets.json</c>, la celda
+/// <c>comeback</c> d1 recupera el valor de este censo (política <c>Never</c>, 6,25 % y cobro 1.360 %) y pierde la
+/// recalibración del 2 oct 2026 (7,76 % y 1.095 %, medida con <c>Blind</c>; ADR 0157, enmienda de cierre,
+/// decisión 5). Hay que decidir a conciencia cuál de las dos procedencias se queda; las celdas
+/// <c>withdrawnDifficulties</c> tampoco las toca el censo. <c>BetSystemTests.ComebackOnDifficultyOneReturnsInLineWithTheRest</c>
+/// falla si se pisa sin querer.</para>
+///
 /// <para><b>Qué mide y qué no.</b> Mide la frecuencia con la que un partido REAL de la política automática
 /// cumple cada condición, sin apostar: es la frecuencia de fondo. No mide lo que hace subir esa frecuencia
 /// quien prepara el partido para ganar la apuesta (alineación, orden, consumible: ADR 0157 punto 5), que es
