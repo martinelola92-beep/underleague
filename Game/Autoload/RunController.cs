@@ -233,6 +233,7 @@ public partial class RunController : Node
     /// </summary>
     public void Enter(int nodeId)
     {
+        CloseStaleMatch();
         var (state, catalog) = Require();
         var node = state.GetNode(nodeId);
         if (node.IsMatch)
@@ -257,6 +258,7 @@ public partial class RunController : Node
     /// </summary>
     public void JumpToAct(int act)
     {
+        CloseStaleMatch();
         var (state, _) = Require();
         State = RunStateBuilder.From(state).AtAct(act).Build();
         SelectedNodeId = -1;
@@ -267,6 +269,7 @@ public partial class RunController : Node
     /// <summary>Coloca la run en un nodo del acto actual sin jugar los anteriores (RT-062). Depuración y capturas.</summary>
     public void JumpToNode(int nodeId)
     {
+        CloseStaleMatch();
         var (state, _) = Require();
         State = RunStateBuilder.From(state).AtNode(nodeId).Build();
         SelectedNodeId = -1;
@@ -280,6 +283,7 @@ public partial class RunController : Node
     /// </summary>
     public void SeedForCapture(Func<RunState, RunState> edit)
     {
+        CloseStaleMatch();
         var (state, _) = Require();
         State = edit(state);
         Changed();
@@ -288,6 +292,7 @@ public partial class RunController : Node
     /// <summary>Aplica una decisión del jugador (alineación, compra, tratamiento, recompensa, salir del nodo).</summary>
     public void Apply(RunDecision decision)
     {
+        CloseStaleMatch();
         var (state, catalog) = Require();
         State = RunEngine.Apply(state, decision, catalog, _systems);
         AfterTransition();
@@ -311,9 +316,11 @@ public partial class RunController : Node
         // (RunEngine.EnterMatch lo resolvió entero antes de enseñarlo). Se guarda el de ANTES, con las
         // decisiones tomadas y hasta dónde llegó a ver el jugador; el guardado de después se escribe al
         // cerrar el partido (CommitMatch), no antes.
+        // Un Save() limpio (pausa, salir al menú, cerrar la ventana) escribe el tick que el jugador vio de
+        // verdad; el guardado del peor caso lo escriben PlayMatch y cada decisión (WriteCheckpoint).
         if (_matchOpen && _stateBeforeMatch is not null)
         {
-            WriteSave(RunSave.Save(_stateBeforeMatch, new PendingMatch(_matchNodeId, Decisions, _watchedTick)));
+            WriteCheckpoint(pessimistic: false);
             return;
         }
 
@@ -395,6 +402,16 @@ public partial class RunController : Node
     /// </summary>
     private void AfterTransition()
     {
+        // BR-A, ADR 0183: con un partido abierto, toda transición (entrar, cada decisión) escribe el guardado de
+        // ANTES con el suelo del peor caso, sea derrota o victoria: si el proceso muere sin un guardado limpio,
+        // la repetición sale con lo decidible bloqueado y el resultado no cambia.
+        if (_matchOpen && _stateBeforeMatch is not null)
+        {
+            WriteCheckpoint(pessimistic: true);
+            Changed();
+            return;
+        }
+
         if (State is not null && (State.Phase == RunPhase.OnMap || Outcome().IsOver))
         {
             Save();

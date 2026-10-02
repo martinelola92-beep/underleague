@@ -755,6 +755,9 @@ public static class UiText
         ["ui.pregon.strip.perks"] = "{0}  ✦{1}",
         ["ui.pregon.bench"] = "Banquillo {0}",
         ["ui.pregon.board.residue"] = "▮{0} · ✚{1}",
+        // BR-A, ADR 0183: al volver de un partido a medias lo ya visto no se puede volver a decidir.
+        ["ui.match.replayLocked"] = "Partido retomado: ya lo habías visto hasta el minuto {0}. No se puede decidir hasta entonces.",
+        ["ui.match.replayLockedAll"] = "Partido retomado: ya lo habías visto entero. No se puede decidir; sólo verlo.",
         // Criterio del árbitro, SIEMPRE visible en el tablero (RF-062, ADR 0158 §6): el medidor de
         // BroadcastBoard.DrawCriterionMeter lee esta etiqueta con el signo ya puesto (UiText.Signed).
         ["ui.pregon.board.bias"] = "CRITERIO {0}",

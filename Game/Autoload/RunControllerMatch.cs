@@ -4,6 +4,7 @@ using Underleague.Sim.Engine;
 using Underleague.Sim.Events;
 using Underleague.Sim.Model;
 using Underleague.Sim.Run;
+using Underleague.Sim.Run.Save;
 using Underleague.Sim.Run.Systems.Consumables;
 using Underleague.Sim.Run.View;
 
@@ -48,6 +49,13 @@ public partial class RunController
     private int _floorTick;
     private PendingMatch? _resume;
 
+    // True mientras PlayMatch/Answer llaman a Enter: es la entrada «legítima» al partido abierto. Cualquier otra
+    // entrada o decisión con un partido abierto significa que el jugador ya salió de él sin pasar por el informe.
+    private bool _replaying;
+
+    /// <summary>Hasta qué tick vio el jugador este partido en una salida anterior; antes de él no se decide (0 si no hay).</summary>
+    public int ReplayFloorTick => _floorTick;
+
     /// <summary>
     /// True si la run ha terminado <b>y</b> el jugador ya lo ha visto. Mientras el partido decisivo se está
     /// viendo, el estado en memoria ya es el de después (derrota o victoria final), pero la run sigue viva a
@@ -75,7 +83,67 @@ public partial class RunController
     /// Tras volver de un partido a medias no vale antes de lo que el jugador ya había visto: decidir con el
     /// futuro conocido sería volver a tirar el partido (RT-061, ADR 0183).
     /// </summary>
-    public bool CanDecideAt(int tick) => tick > _floorTick;
+    public bool CanDecideAt(int tick) => PendingMatch.CanDecideAt(_floorTick, tick);
+
+    /// <summary>
+    /// Cierra un partido que se quedó abierto sin que nadie llegara al informe (la vista de depuración, un
+    /// arnés de capturas): cualquier entrada o decisión nueva demuestra que el jugador ya salió de él, y dejarlo
+    /// abierto haría que cada guardado posterior reescribiera en silencio el estado viejo (ADR 0183).
+    /// </summary>
+    private void CloseStaleMatch()
+    {
+        if (_matchOpen && !_replaying)
+        {
+            CommitMatch();
+        }
+    }
+
+    private void WriteCheckpoint(bool pessimistic)
+    {
+        var pending = pessimistic && Playback is not null
+            ? PendingMatch.BeforeShowing(_matchNodeId, Decisions, Playback)
+            : new PendingMatch(_matchNodeId, Decisions, Math.Max(_watchedTick, _floorTick));
+        WriteSave(RunSave.Save(_stateBeforeMatch!, pending));
+    }
+
+    /// <summary>
+    /// Los puntos de sustitución que caen por debajo de lo que el jugador ya vio se resuelven con la política
+    /// por defecto, sin ventana: elegir con el futuro conocido sería volver a tirar el partido (ADR 0183). Como
+    /// las respuestas que ya había dado viajan en <see cref="Decisions"/>, sólo quedan los puntos que no llegó a
+    /// responder. Se resuelven aquí, antes de que la pantalla vea la reproducción, para que lo que se enseña y lo
+    /// que se aplica sean el mismo partido.
+    /// </summary>
+    private void ResolveBlockedPoints()
+    {
+        if (_floorTick <= 0 || Catalog is null || _stateBeforeMatch is null || Playback is null)
+        {
+            return;
+        }
+
+        // Cota: un punto por suplente como mucho, y la ventana no admite más.
+        for (int guard = 0; guard < 64; guard++)
+        {
+            var point = SubstitutionPoints.Pending(Playback.Setup, Playback.Result, Playback.PlayerTeam, Catalog, Decisions.Declines);
+            if (point is null || CanDecideAt(point.Tick + 1))
+            {
+                return;
+            }
+
+            Decisions = point.DefaultCandidateId >= 0
+                ? Decisions with
+                {
+                    Substitutions = new List<Substitution>(Decisions.Substitutions)
+                    {
+                        new(point.Tick, point.OutPlayerId, point.DefaultCandidateId),
+                    },
+                }
+                : Decisions with
+                {
+                    Declines = new List<DeclinedSubstitution>(Decisions.Declines) { new(point.Tick, point.OutPlayerId) },
+                };
+            Playback = MatchPlaybacks.Of(_stateBeforeMatch, _matchNodeId, Catalog, Engine, trace: true, Decisions);
+        }
+    }
 
     /// <summary>
     /// El jugador ha llegado al informe: el partido deja de estar a medias y el guardado pasa a ser el de
@@ -112,6 +180,11 @@ public partial class RunController
     /// </summary>
     public void Substitute(Substitution substitution)
     {
+        if (!CanDecideAt(substitution.Tick + 1))
+        {
+            return;
+        }
+
         if (State is null || Catalog is null || _stateBeforeMatch is null || _matchNodeId < 0)
         {
             throw new InvalidOperationException("no hay ningún partido en reproducción");
@@ -129,6 +202,11 @@ public partial class RunController
     public void Decline(SubstitutionPoint point)
     {
         ArgumentNullException.ThrowIfNull(point);
+        if (!CanDecideAt(point.Tick + 1))
+        {
+            return;
+        }
+
         var declines = new List<DeclinedSubstitution>(Decisions.Declines)
         {
             new(point.Tick, point.OutPlayerId),
@@ -152,6 +230,11 @@ public partial class RunController
         if (State is null || Catalog is null || _stateBeforeMatch is null)
         {
             throw new InvalidOperationException("no hay ningún partido en reproducción");
+        }
+
+        if (!CanDecideAt(point.Tick + 1))
+        {
+            return;
         }
 
         if (!point.CanPlayOn)
@@ -182,6 +265,11 @@ public partial class RunController
     /// </summary>
     public void ChangeOrder(int tick, Mentality order)
     {
+        if (!CanDecideAt(tick))
+        {
+            return;
+        }
+
         var changes = new List<OrderChange>();
         foreach (var change in Decisions.OrderChanges)
         {
@@ -241,6 +329,11 @@ public partial class RunController
     public void UseConsumable(string id, int tick)
     {
         ArgumentException.ThrowIfNullOrEmpty(id);
+        if (!CanDecideAt(tick))
+        {
+            return;
+        }
+
         var activations = new List<ManualActivation>();
         foreach (var activation in Decisions.ManualActivations)
         {
@@ -288,8 +381,9 @@ public partial class RunController
 
         Decisions = decisions;
         Playback = MatchPlaybacks.Of(_stateBeforeMatch, _matchNodeId, Catalog, Engine, trace: true, Decisions);
+        ResolveBlockedPoints();
         State = _stateBeforeMatch;
-        Enter(_matchNodeId);
+        EnterOpenMatch(_matchNodeId);
     }
 
     /// <summary>
@@ -298,6 +392,7 @@ public partial class RunController
     /// </summary>
     public void PlayMatch(int nodeId)
     {
+        CloseStaleMatch();
         if (State is null || Catalog is null)
         {
             throw new InvalidOperationException("no hay ninguna run en curso: llama antes a NewRun o a Continue");
@@ -316,7 +411,21 @@ public partial class RunController
         _matchNodeId = nodeId;
         _matchOpen = true;
         Playback = MatchPlaybacks.Of(State, nodeId, Catalog, Engine, trace: true, Decisions);
-        Enter(nodeId);
+        ResolveBlockedPoints();
+        EnterOpenMatch(nodeId);
+    }
+
+    private void EnterOpenMatch(int nodeId)
+    {
+        _replaying = true;
+        try
+        {
+            Enter(nodeId);
+        }
+        finally
+        {
+            _replaying = false;
+        }
     }
 
     /// <summary>Log de eventos del último partido (RF-121); vacío si todavía no se ha jugado ninguno.</summary>

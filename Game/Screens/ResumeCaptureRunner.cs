@@ -50,29 +50,50 @@ public partial class ResumeCaptureRunner : Control
         await Frames(90);
         await Save("reanudar-1-partido");
         ok &= Check("durante el partido hay un partido abierto y la run no se da por terminada", !run.IsOverNow && run.Playback is not null);
+        var original = Fingerprint(run);
 
-        // 2. Salir al menú principal a mitad de partido (lo que hace el menú de pausa).
-        run.LeaveToMenu();
+        // 2. CIERRE FORZADO: no se llama a Save() ni a LeaveToMenu(). Lo que hay en disco lo escribió PlayMatch
+        //    antes de enseñar el partido, con el peor caso (todo el partido ya «visto»).
+        using (var doc = System.Text.Json.JsonDocument.Parse(Godot.FileAccess.GetFileAsString(RunController.SavePath)))
+        {
+            var pending = doc.RootElement.GetProperty("pendingMatch");
+            ok &= Check("sin guardado limpio ya hay pendingMatch en disco", pending.ValueKind == System.Text.Json.JsonValueKind.Object);
+            ok &= Check($"el pendingMatch apunta al nodo {node.Id}", pending.GetProperty("node").GetInt32() == node.Id);
+            ok &= Check("el guardado es el de ANTES (fase en el mapa)", doc.RootElement.GetProperty("phase").GetString() == "onMap");
+            ok &= Check($"watchedTick es el del peor caso (> 0): {pending.GetProperty("watchedTick").GetInt32()}", pending.GetProperty("watchedTick").GetInt32() > 0);
+        }
+
         Drop(first);
-        string json = Godot.FileAccess.GetFileAsString(RunController.SavePath);
-        ok &= Check("el guardado lleva pendingMatch", json.Contains("\"pendingMatch\":{", System.StringComparison.Ordinal));
-        ok &= Check($"el pendingMatch apunta al nodo {node.Id}", json.Contains($"\"node\":{node.Id},", System.StringComparison.Ordinal));
-        ok &= Check("el guardado es el de ANTES (fase en el mapa)", json.Contains("\"phase\":\"onMap\"", System.StringComparison.Ordinal));
-
-        var start = await Show("res://Scenes/Inicio.tscn");
-        await Save("reanudar-2-inicio");
-        Drop(start);
-
-        // 3. Continuar: queda un partido por retomar y la retransmisión lo reproduce otra vez.
-        ok &= Check("Continue() devuelve true", run.Continue());
-        ok &= Check("tras continuar hay un partido por retomar", run.HasMatchToResume);
-        ok &= Check("el nodo del partido sigue seleccionado", run.SelectedNodeId == node.Id);
+        ok &= Check("Continue() tras el cierre forzado devuelve true", run.Continue());
+        ok &= Check("hay un partido por retomar", run.HasMatchToResume);
         ok &= Check("Nav.For lleva al partido, no al mapa", Nav.For(run) == Nav.MatchView);
-        var second = await Show("res://Scenes/Retransmision.tscn");
+        var killed = await Show("res://Scenes/Retransmision.tscn");
         await Frames(90);
-        await Save("reanudar-3-partido-reanudado");
-        ok &= Check("la retransmisión retomó el partido", !run.HasMatchToResume && run.Playback is not null);
-        Drop(second);
+        await Save("reanudar-2-tras-cierre-forzado");
+        ok &= Check("el partido retomado es el mismo (marcador y número de eventos)", Fingerprint(run) == original);
+        ok &= Check("tras un cierre forzado no se puede decidir en ningún punto", !run.CanDecideAt(1) && run.ReplayFloorTick > 0);
+
+        // 3. SALIDA LIMPIA, en una run nueva con la misma semilla (el suelo sólo baja la primera vez: tras un
+        //    cierre forzado se conserva el peor caso aunque luego se salga limpio). El menú de pausa guarda el
+        //    tick visto de verdad, más bajo que el del peor caso.
+        int worst = run.ReplayFloorTick;
+        Drop(killed);
+        run.NewRun("orc_ironworks", Race.Orc, 7UL);
+        run.SelectedNodeId = FirstMatch(run).Id;
+        var again = await Show("res://Scenes/Retransmision.tscn");
+        await Frames(90);
+        run.LeaveToMenu();
+        Drop(again);
+        var start = await Show("res://Scenes/Inicio.tscn");
+        await Save("reanudar-3-inicio");
+        Drop(start);
+        ok &= Check("Continue() tras la salida limpia devuelve true", run.Continue());
+        var clean = await Show("res://Scenes/Retransmision.tscn");
+        await Frames(30);
+        await Save("reanudar-4-tras-salida-limpia");
+        ok &= Check($"el suelo tras la salida limpia ({run.ReplayFloorTick}) es el visto, no el del peor caso ({worst})", run.ReplayFloorTick < worst);
+        ok &= Check("el partido retomado es el mismo (marcador y número de eventos)", Fingerprint(run) == original);
+        Drop(clean);
 
         // 4. Llegar al informe cierra el partido: el guardado pasa a ser el de después.
         run.CommitMatch();
@@ -82,6 +103,10 @@ public partial class ResumeCaptureRunner : Control
         Nav.Suppressed = false;
         GetTree().Quit(ok ? 0 : 1);
     }
+
+    /// <summary>Marcador y número de eventos del partido en reproducción: lo que debe coincidir entre el original y el retomado.</summary>
+    private static string Fingerprint(RunController run) =>
+        $"{run.Playback!.GoalsFor}-{run.Playback.GoalsAgainst}/{System.Linq.Enumerable.Count(run.Playback.Result.Events)}";
 
     private static bool Check(string what, bool value)
     {

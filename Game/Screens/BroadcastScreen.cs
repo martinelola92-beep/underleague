@@ -90,6 +90,9 @@ public partial class BroadcastScreen : Control
     private PresentationDirector _director = null!;
 
     private BroadcastBoard _board = null!;
+
+    /// <summary>BR-A, ADR 0183: explica por qué los controles están bloqueados al volver de un partido a medias.</summary>
+    private Label _replayNotice = null!;
     private readonly List<PlayerStrip> _strips = new();
     private BenchPlaque _bench = null!;
     private Stamp _stamp = null!;
@@ -409,6 +412,21 @@ public partial class BroadcastScreen : Control
         _board.OrderChosen += OnOrderChosen;
         _board.ConsumableChosen += OnConsumableChosen;
         _board.PauseToggled += OnPauseToggled;
+
+        _replayNotice = new Label
+        {
+            Position = new Vector2(0f, 84f),
+            Size = new Vector2(CanvasWidth, 24f),
+            HorizontalAlignment = HorizontalAlignment.Center,
+            MouseFilter = MouseFilterEnum.Ignore,
+            Visible = false,
+        };
+        _replayNotice.AddThemeFontOverride("font", Pregon.FellItalic);
+        _replayNotice.AddThemeFontSizeOverride("font_size", 18);
+        _replayNotice.AddThemeColorOverride("font_color", Pregon.Vellum);
+        _replayNotice.AddThemeColorOverride("font_outline_color", Pregon.Sable);
+        _replayNotice.AddThemeConstantOverride("outline_size", 6);
+        AddChild(_replayNotice);
 
         float x0 = (CanvasWidth - ((7 * 232f) + (6 * 12f) + 24f + 150f)) / 2f;
         for (int i = 0; i < 7; i++)
@@ -1217,10 +1235,31 @@ public partial class BroadcastScreen : Control
         UpdateStrips(tick, residueFrame);
     }
 
+    /// <summary>
+    /// BR-A, ADR 0183: mientras el partido retomado no pasa de lo que el jugador ya había visto, un texto corto
+    /// dice por qué no puede decidir. Desaparece solo al llegar a lo no visto.
+    /// </summary>
+    private void UpdateReplayNotice(int tick)
+    {
+        int floor = _run.ReplayFloorTick;
+        bool locked = floor > 0 && !_run.CanDecideAt(tick + 1);
+        _replayNotice.Visible = locked;
+        if (!locked)
+        {
+            return;
+        }
+
+        int end = _trace is { FrameCount: > 0 } t ? t.TickAt(t.FrameCount - 1) : int.MaxValue;
+        _replayNotice.Text = floor >= end
+            ? UiText.Get("ui.match.replayLockedAll")
+            : UiText.Get("ui.match.replayLocked", MatchLogView.Minute(floor, _catalog.Tuning.RegulationTicks));
+    }
+
     private void UpdateBoard(int tick)
     {
         var (own, rival) = ScoreAt(tick);
         var (cards, casualties) = RivalResidueAt(tick);
+        UpdateReplayNotice(tick);
         _board.SetTeams(_playback.OwnName, _playback.RivalName);
         _board.SetScore(own, rival);
         int regulation = Math.Max(1, _trace!.RegulationTicks);

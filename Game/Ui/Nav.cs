@@ -88,6 +88,13 @@ public static class Nav
             return;
         }
 
+        // BR-A, ADR 0183: salir de las pantallas del partido hacia cualquier otra cierra el partido abierto, por
+        // si se llegó sin pasar por el informe (la vista de depuración, un arnés).
+        if (!string.Equals(scene, Match, System.StringComparison.Ordinal) && !string.Equals(scene, MatchDebug, System.StringComparison.Ordinal))
+        {
+            RunController.Instance?.CommitMatch();
+        }
+
         if (!ResourceLoader.Exists(scene))
         {
             GD.Print($"pantalla pendiente: {scene}");
