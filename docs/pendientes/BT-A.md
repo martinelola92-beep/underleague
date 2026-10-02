@@ -47,7 +47,6 @@ política que lanza sigue siendo un fallo visible.
 `Balance --full-runs 400` con cuatro bloques de semillas (1, 1001, 2001, 3001: sin solape, la semilla de cada run es `seed + i`),
 las tres doctrinas y las tres razas, rama contra main (`bb9260f`), **4.800 runs emparejadas**: las **4.800 son idénticas** en resultado,
 oro ganado, muertes y partidos. runWinRate 13,2 % en los dos lados (diferencia 0 ± 0), oro ganado 88,4, oro final 12,3, muertes por
-run 1,21, tamaño de plantilla 9,74. **CONFIRMED**: con la configuración de `/Balance` la rama (e) no se ejerce con ese filtro (la
-plantilla de `Balance` no llega a venderle a un fichaje sin partidos), así que el arreglo no mueve las métricas de run, como
-anticipaba «Por qué no se ha visto». La diferencia que sí produce sólo existe con el `Setup` de los tests (9 de 60 runs lanzaban),
+run 1,21, tamaño de plantilla 9,74. **CONFIRMED** que el arreglo no mueve las métricas de run con la configuración de `/Balance`; **LIKELY** el motivo (la rama (e) no
+llega a elegir a un fichaje sin partidos en esas runs: no se instrumentó), como anticipaba «Por qué no se ha visto». La diferencia que sí produce sólo existe con el `Setup` de los tests (9 de 60 runs lanzaban),
 que no es lo que mide `/Balance`.
