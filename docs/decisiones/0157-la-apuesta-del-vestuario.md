@@ -330,3 +330,92 @@ mercado y la clínica, que es lo que se quería (ADR 0157 punto 7), pero el punt
 efecto contrario —que arruine— queda para el revisor: la apuesta fija 3/4/5 sigue **provisional, sin medir**
 (Regla H). (3) Con `never` las puertas de economía no se mueven salvo por quitar el bonus excelente de 1 de
 oro. `Prepared`, sin medir todavía.
+
+## Enmienda del 2 oct 2026: Blind contra Never tras las correcciones, y lo que el juego dice contra lo que ocurre
+
+**Instrumento (Regla J).** `RunPlayResult.BetCells` (tomadas, cumplidas y oro neto por condición × dificultad del nodo) y
+`BetHitCensus` (`Sim/Analysis`); `Balance --full-runs --bet-doctrine blind|prepared` escribe `bet-hits.csv` (medido, error típico
+binomial, anunciado, oro neto). Validado en `Sim.Tests/Analysis/BetHitCensusTests.cs`: (a) valor conocido (10 tomadas, 4 cumplidas,
++7 de neto → 40 %, ET √(0,4·0,6/20)); (b) control: `Never` no deja rastro y en `Blind` las celdas suman exactamente
+`betsTaken` y `betNetGold` de la run; (c) **el primer partido de la run es idéntico con `Never` y con `Blind`** (mismos eventos,
+mismos ticks, 6 semillas): la oferta sale de su propio flujo (`OfferStream`, `BetSystem`) y tomarla solo mueve oro, **no consume el
+RNG del partido**. Después del primer partido las dos ramas divergen, pero por el oro (otras compras), no por el RNG. La política
+`Blind` **apuesta de verdad**: 7,82 ± 0,07 apuestas por run (0 runs sin apostar; antes de las correcciones eran 12,6: la regla del 2 %
+y las celdas topadas ofrecen menos). La run de `Never` coincide con la de la ADR 0164 «con herrero» semilla a semilla (17,00 /
+15,83 / 14,00 / 14,17 / 15,50 / 13,67), lo que prueba que `Never` sigue siendo la línea base, no que sea independiente de ella.
+
+**Lote (reproducible).** Desde el commit `e5fc831` o posterior, por cada semilla `S` en 1, 1001, 2001, 3001, 4001, 5001:
+
+```
+dotnet run --project Balance -c Release --no-build -- --full-runs 600 --seed S --bet-doctrine never --out <dir>
+dotnet run --project Balance -c Release --no-build -- --full-runs 600 --seed S --bet-doctrine blind --out <dir>
+```
+
+600 runs × 3 doctrinas de compra por celda; las métricas de run son las de la doctrina contextual (600 runs por semilla y rama),
+**pareadas por semilla**; el censo de aciertos usa las 1.800 runs de `blind` de cada semilla (77.221 apuestas en total).
+
+| contextual, por semilla (never / blind) | 1 | 1001 | 2001 | 3001 | 4001 | 5001 | diferencia pareada ± ET (6 semillas) |
+|---|---|---|---|---|---|---|---|
+| `runWinRate` % | 17,00 / 14,33 | 15,83 / 14,67 | 14,00 / 14,50 | 14,17 / 14,67 | 15,50 / 15,00 | 13,67 / 13,33 | **−0,61 ± 0,49** |
+| oro final (`goldLeft`) | 14,65 / 12,04 | 15,66 / 12,22 | 13,77 / 10,64 | 14,08 / 12,21 | 13,39 / 12,05 | 14,18 / 11,57 | **−2,50 ± 0,32** |
+| oro neto de la apuesta por run | 0 / −3,95 | 0 / −4,15 | 0 / −6,68 | 0 / −5,99 | 0 / −4,08 | 0 / −6,31 | **−5,19 ± 0,52** |
+| oro apostado por run | 0 / 29,44 | 0 / 30,42 | 0 / 28,65 | 0 / 29,75 | 0 / 29,55 | 0 / 28,31 | 29,35 ± 0,31 |
+| mercados sin oro por run | 0,16 / 0,58 | 0,15 / 0,54 | 0,15 / 0,57 | 0,13 / 0,57 | 0,12 / 0,62 | 0,11 / 0,53 | **+0,43 ± 0,01** |
+| muertes por run | 1,26 / 1,26 | 1,37 / 1,35 | 1,27 / 1,27 | 1,19 / 1,20 | 1,19 / 1,24 | 1,38 / 1,17 | −0,03 ± 0,04 |
+
+Victoria con las otras doctrinas de compra: gastadora −0,28 ± 0,58, ahorradora −0,69 ± 0,69. Retorno neto sobre lo apostado,
+contextual: −5,19 / 29,35 = **−17,7 %** (el margen de la casa es −15 %).
+
+**Cumplimiento medido contra lo anunciado.** La UI no muestra un porcentaje: muestra el precio (apuesta y cobro, exactos) y una
+palabra por tramo de la frecuencia de `data/bets/bets.json` (`ScoutScreen.FrequencyKey`: «rara vez» < 5 %, «de vez en cuando»
+5-12 %, «a menudo» 12-25 %, «casi la mitad» ≥ 25 %). Agrupando las celdas (condición × dificultad) por la palabra que llevan:
+
+| palabra | tomadas | cumplidas | medido | anunciado (ponderado) | z |
+|---|---|---|---|---|---|
+| rara vez | 13.083 | 470 | 3,59 % | 4,27 % | −3,8 |
+| de vez en cuando | 28.806 | 2.317 | 8,04 % | 8,04 % | 0,0 |
+| a menudo | 29.458 | 4.660 | 15,82 % | 16,99 % | −5,4 |
+| casi la mitad | 5.874 | 2.618 | 44,57 % | 46,38 % | −2,8 |
+
+Por condición (todas las dificultades; medido / anunciado, %; oro neto por apuesta): `blood_before_goals` 34,79 / 35,55 (−0,42);
+`clean_hands` 17,32 / 19,05 (−0,74); `comeback` 7,44 / 6,65 (−0,24); `eye_for_eye` 10,72 / 11,85 (−0,79); `hunt_the_star` 12,40 / 12,03
+(−0,28); `into_the_mob` 16,04 / 18,06 (−0,92); `referee_blind` 3,69 / 4,29 (−1,15); `split_the_goals` 8,30 / 8,78 (−0,85);
+`thrashing` 6,71 / 7,54 (−1,08); `youth_decides` 2,62 / 3,40 (−2,29; solo 956 tomadas). Todas pierden oro por apuesta, ninguna condición
+gana a ciegas. Hay dos celdas con oro neto positivo con ≥ 100 tomadas, las dos en dificultad 1: `comeback` (7,96 % medido contra
+6,25 %, +766 de oro en 2.888 apuestas, cobro de 1.360 %: ≈ +8 % de retorno) y `hunt_the_star` (+138 en 2.879, ≈ +1,6 %, ruido).
+Tres celdas con ≥ 100 tomadas caen en **otra palabra** de la que llevan (`eye_for_eye` d3: 11,35 contra 13,04; `into_the_mob` d5:
+7,65 contra 13,31 con 183 tomadas; `split_the_goals` d5: 1,65 contra 5,64 con 242 tomadas); en las tres el juego **sobrestima**
+la frecuencia.
+
+**Etiquetas (Regla F):**
+- **CONFIRMED** (6 semillas × 600 runs, pareado): apostar a ciegas **pierde oro**, −5,19 ± 0,52 por run (−17,7 % de lo apostado).
+  No hay explotación: ninguna condición gana oro a ciegas de forma sistemática. Apostar en todas partes deja sin oro al mercado
+  cuatro veces más a menudo (0,14 → 0,57 mercados vacíos por run) y 2,5 menos de oro final.
+- **CONFIRMED**: la apuesta no consume el RNG del partido (control (c)); `Never` es la línea base.
+- **Sin efecto detectable en la victoria** a este uso: −0,61 ± 0,49 puntos (z −1,2; la cota a 2 ET es ≈ ±1 punto). Lo medido es
+  el **uso** de una política ciega, no la ausencia de efecto: la ADR 0157 de antes decía «−2 a −3 puntos» con 2 semillas y 1.200 runs
+  y las 6 semillas no lo sostienen (**la lectura previa era ruido o dependía de la versión previa a las correcciones**). El
+  efecto en oro, sí, es robusto.
+- **LIKELY**: el texto de frecuencia **es fiel dentro de su precisión de palabra**: lo medido está a 0-2 puntos de lo anunciado y
+  sólo 3 celdas pequeñas cambian de palabra, siempre por sobrestimar. Pero hay un **sesgo sistemático a la baja**: las condiciones se
+  cumplen ~5 % menos de lo anunciado (13,03 % contra 13,73 % global; z negativos en 3 de 4 palabras). Es **LIKELY** que se deba a
+  que el censo de la ADR 0157 se hizo con la población de la política `Never` y `Blind` llega a los partidos con menos oro y menos
+  compras (otra población); no se ha aislado con un experimento (haría falta censar con `Blind` y recalibrar). Efecto sobre el
+  jugador: el cobro es ≈ −17,7 % y no el −15 % anunciado en el diseño.
+- **Lo que esto dice del diseño, sin vender de más.** Apostar sin criterio es una **decisión con coste**, no ruido: mueve oro
+  (−5,2 por run, ~29 apostados) y compite con el mercado. Que apostar con criterio sea una decisión **con valor** NO está medido:
+  `Prepared` sigue sin medir y la política no escoge por árbitro, canteranos ni igualdad (la nota de diseño de esta ADR dice que
+  ahí estaría la decisión). El efecto nulo en victoria con 7,8 apuestas por run no prueba que no haya efecto en un jugador que
+  apueste distinto, y las dos celdas positivas de dificultad 1 son un indicio de que hay dónde ganar escogiendo (`comeback` en
+  dificultad 1: LIKELY, un contraste entre muchos).
+
+**Decisiones del revisor (RT-057), no se ajusta ningún número:**
+1. **Cobro algo generoso o no.** El −17,7 % medido es 2,7 puntos peor que el −15 % de diseño porque las condiciones se cumplen un
+   5 % menos de lo censado. Opciones: (a) dejarlo (el jugador sólo ve el cobro, no un porcentaje); (b) recensar con `Blind` y
+   recalibrar `payoutPercentByDifficulty`; (c) subir el margen aceptado a ~−18 % (documentarlo).
+2. **Sobrestimación en dificultad 5.** Las celdas `into_the_mob` d5 y `split_the_goals` d5 anuncian 13,3 % y 5,6 % y cumplen 7,7 % y
+   1,7 %, con muestras pequeñas (183 y 242). Opciones: ignorarlo, ampliar el censo de dificultad 5, o no ofrecerlas en d5.
+3. **Medir `Prepared`** (o una política que escoja por árbitro y canteranos) antes de afirmar que apostar es una decisión con valor.
+4. La apuesta fija 3/4/5 sigue **provisional, sin medir** (Regla H).
+
+El «Blind contra Never no se ha repetido tras las correcciones» de «Anotado sin corregir» queda cerrado por esta enmienda.

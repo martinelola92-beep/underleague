@@ -51,6 +51,36 @@ public sealed class BetHitCensusTests
     }
 
     [Fact]
+    public void TakingABetDoesNotTouchTheMatchRngOfTheFirstMatch()
+    {
+        // Regla J, el control: la oferta sale de su propio flujo (OfferStream) y tomarla solo mueve oro, así que el
+        // PRIMER partido de la run (antes de que el oro distinto cambie ninguna compra) es el mismo con Never y con
+        // Blind: mismos eventos, mismos ticks. Si no lo fuera, apostar consumiría RNG compartido.
+        var files = TestData.LoadAllFiles();
+        var bosses = BossCatalog.FromJson(files);
+        for (ulong seed = 1; seed <= 6; seed++)
+        {
+            string First(BetDoctrine doctrine)
+            {
+                string? first = null;
+                var setup = Systems.NewRunSetup("blacksmith_club", Race.Human, files) with { GeneratedQuality = 50 };
+                RunPolicy.Play(
+                    setup,
+                    seed,
+                    SystemsTestSupport.Catalog,
+                    Systems,
+                    bosses,
+                    RunPolicyOptions.Default with { BetDoctrine = doctrine },
+                    (before, node, matchSetup, result, summary) =>
+                        first ??= string.Join(";", result.Events.Select(e => $"{e.Type}@{e.Tick}:{e.Actor}:{e.Team}")));
+                return first!;
+            }
+
+            Assert.Equal(First(BetDoctrine.Never), First(BetDoctrine.Blind));
+        }
+    }
+
+    [Fact]
     public void NeverNeverBetsAndTheBlindPolicyBetsForReal()
     {
         // Control y caso positivo: la doctrina Never no deja rastro; la Blind apuesta, y su libro cuadra por
