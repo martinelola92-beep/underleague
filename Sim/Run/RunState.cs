@@ -850,6 +850,9 @@ public sealed record RunState
     /// <b>propio</b>. Las dos direcciones producen historia (RF-125 cuenta lesiones causadas; el bando de
     /// muerte de F2 querrá poder decir "a manos de quién").</description></item>
     /// </list>
+    /// <para>BS-A: si el puesto no lo ocupaba el jugador de datos sino un fichaje o un némesis, la clave lleva un
+    /// quinto campo, el código de <c>Systems.Rivals.RivalKiller</c>: <c>…:&lt;hecho&gt;:&lt;ocupante&gt;</c>. Sin él (0, y todo
+    /// guardado anterior) es el jugador de datos. Así cada ocupante lleva su propia cuenta.</para>
     /// <para>El valor del contador es cuántas veces ha pasado ese hecho concreto, acumulado a lo largo de
     /// toda la run (nunca se reinicia, igual que <see cref="ItemStockPrefix"/>). Lo escribe
     /// <see cref="MatchResolution"/>, en una pasada que excluye los eventos anulados (mismo criterio que
@@ -884,15 +887,6 @@ public sealed record RunState
     /// <c>Systems.Rivals.RivalKiller</c>. Clave libre, como <see cref="DeathCausePrefix"/>: no sube la versión.
     /// </summary>
     public const string DeathKillerPrefix = "deathKiller:";
-
-    /// <summary>
-    /// BS-A: quién ocupaba el puesto del rival en cada crédito de <see cref="RivalCreditPrefix"/>: la clave es la del
-    /// crédito sin su prefijo (<c>rivalOccupant:&lt;opponentId&gt;:&lt;rivalIndex&gt;:&lt;ownPlayerId&gt;:&lt;hecho&gt;</c>) y el
-    /// valor, el código de <c>Systems.Rivals.RivalKiller</c> (el mismo que <see cref="DeathKillerPrefix"/>). Sólo se escribe
-    /// si el ocupante no es el jugador de datos (0 = no consta), y gana el último partido que lo toca. Clave libre: no sube
-    /// la versión.
-    /// </summary>
-    public const string RivalOccupantPrefix = "rivalOccupant:";
 
     /// <summary>
     /// Jugadores que <b>ocupan plantilla</b> (RF-020): todos menos los muertos. El muerto se queda en

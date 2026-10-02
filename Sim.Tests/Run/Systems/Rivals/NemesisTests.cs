@@ -386,6 +386,79 @@ public sealed class NemesisTests
         Assert.All(RivalCredits.Against(after, OpponentId), c => Assert.Equal(0, c.Occupant));
     }
 
+    private static IReadOnlyList<RivalCredit> Credits(RunState state, int victimId, RivalCreditKind kind, int slot = 4) =>
+        RivalCredits.Against(state, OpponentId).Where(c => c.OwnPlayerId == victimId && c.Kind == kind && c.RivalIndex == slot).ToList();
+
+    /// <summary>
+    /// BS-A (revisión): el jugador de datos lesiona a A, lo matamos, entra un fichaje que lesiona otra vez a A: son dos
+    /// créditos de un hecho cada uno, de ocupantes distintos, no «el fichaje lesionó a A dos veces».
+    /// </summary>
+    [Fact]
+    public void TheCountIsPerOccupantWhenTheSigningInjuresTheSameVictimAgain()
+    {
+        var state = BaseState();
+        var victim = state.Roster[3];
+        state = Play(state, new[] { Injury(0, victim.Id, RivalId(4)) }).State;
+        state = Play(state, new[] { Death(1, RivalId(4), state.Roster[0].Id) }).State;
+        state = Play(state, new[] { Injury(0, victim.Id, RivalId(4)) }).State;
+
+        var credits = Credits(state, victim.Id, RivalCreditKind.SufferedInjury);
+        Assert.Equal(2, credits.Count);
+        var byData = Assert.Single(credits, c => c.Occupant == 0);
+        var bySigning = Assert.Single(credits, c => c.Occupant != 0);
+        Assert.Equal(1, byData.Count);
+        Assert.Equal(1, bySigning.Count);
+    }
+
+    /// <summary>BS-A (revisión): el némesis que se va conserva su crédito y no firma lo que haga quien ocupe luego su puesto.</summary>
+    [Fact]
+    public void ANemesisWhoLeavesKeepsItsCreditAndDoesNotSignWhatTheNextOccupantDoes()
+    {
+        var (state, nemesis) = SigningNemesis();
+        int code = RivalKiller.NemesisBase + nemesis.Id;
+        var first = state.Roster.First(p => p.PhysicalState != PhysicalState.Dead && p.Id != state.Roster[0].Id);
+        state = Play(state, new[] { Injury(0, first.Id, RivalId(4)) }).State;
+        Assert.Equal(code, Credits(state, first.Id, RivalCreditKind.SufferedInjury).Single().Occupant);
+
+        state = NemesisSystem.TransferOnActEntry(state, Nemesis, act: 2);
+        Assert.Null(state.RivalMemory.ActiveAt(Clan, 4));
+        var victim = state.Roster.First(p => p.PhysicalState != PhysicalState.Dead && p.Id != state.Roster[0].Id && p.Id != first.Id);
+        state = Play(state, new[] { Injury(0, victim.Id, RivalId(4)) }).State;
+
+        Assert.NotEqual(code, Credits(state, victim.Id, RivalCreditKind.SufferedInjury).Single().Occupant);
+        Assert.Equal(code, Credits(state, first.Id, RivalCreditKind.SufferedInjury).Single().Occupant);
+    }
+
+    /// <summary>BS-A (revisión): el villano por créditos cuenta cada ocupante por separado cuando el puesto se reparte.</summary>
+    [Fact]
+    public void TheCreditVillainCountsOnlyTheOccupantsOwnVictims()
+    {
+        var state = BaseState();
+        var (a, b, c) = (state.Roster[3], state.Roster[4], state.Roster[5]);
+        // El jugador de datos lesiona a A y a B; lo matamos; el fichaje lesiona a C. El puesto suma 3 víctimas, pero
+        // el villano es el jugador de datos con 2, no «el fichaje con 3».
+        state = Play(state, new[] { Injury(0, a.Id, RivalId(4)), Injury(0, b.Id, RivalId(4), tick: 60) }).State;
+        state = Play(state, new[] { Death(1, RivalId(4), state.Roster[0].Id) }).State;
+        state = Play(state, new[] { Injury(0, c.Id, RivalId(4)) }).State;
+
+        string dataName = Rivals.Find(OpponentId)!.Players[4].Name;
+        var gazette = Underleague.Sim.Run.View.GazetteView.Build(
+            state, Catalog, Systems.Nicknames, Rivals, Systems.Gazette, "es", nemesis: null);
+        Assert.NotNull(gazette.Villain);
+        Assert.Equal(dataName, gazette.Villain!.Name);
+        Assert.Equal(2, gazette.Villain.Injuries);
+    }
+
+    /// <summary>BS-A: un guardado anterior (clave sin ocupante) se lee como el jugador de datos.</summary>
+    [Fact]
+    public void AnOldCreditKeyReadsAsTheDataPlayer()
+    {
+        var state = BaseState().WithCounter("rivalCredit:" + OpponentId + ":4:7:sufferedInjury", 2);
+        var credit = Assert.Single(RivalCredits.Against(state, OpponentId));
+        Assert.Equal(0, credit.Occupant);
+        Assert.Equal(2, credit.Count);
+    }
+
     /// <summary>BS-A: sin cambio de ocupante no se anota nada y la esquela nombra al jugador de datos, como antes.</summary>
     [Fact]
     public void ADataPlayerKillerLeavesNoCodeAndKeepsItsName()

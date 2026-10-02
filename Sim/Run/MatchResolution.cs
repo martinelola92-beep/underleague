@@ -561,7 +561,6 @@ internal static class MatchResolution
         // acaba la run, si lo hubo) y la muerte es terminal: una baja posterior sobre quien ya murió no se
         // acredita. Así "sufrió una muerte" nunca dice más que el estado final del jugador.
         var deltas = new Dictionary<string, int>();
-        var occupants = new Dictionary<string, int>();
         var dead = new HashSet<int>();
         for (int i = 0; i < processedEvents; i++)
         {
@@ -615,19 +614,18 @@ internal static class MatchResolution
 
             int ownId = victimIsOwn ? matchEvent.Actor : matchEvent.Opponent;
             string direction = victimIsOwn ? "suffered" : "caused";
+            // BS-A: el ocupante del puesto en este partido (memoria de antes del partido; mismo código que la esquela)
+            // entra en la clave si no es el jugador de datos (0 = sin sufijo: es el formato de siempre).
+            int occupant = team is not null && rivalIndex < team.Players.Count
+                ? RivalKiller.Encode(team, state.RivalMemory, rivalIndex)
+                : 0;
+            string occupantSuffix = occupant == 0 ? string.Empty : ":" + occupant.ToString(CultureInfo.InvariantCulture);
             string key = RunState.RivalCreditPrefix + node.OpponentId + ":"
                 + rivalIndex.ToString(CultureInfo.InvariantCulture) + ":"
                 + ownId.ToString(CultureInfo.InvariantCulture) + ":"
-                + direction + kind;
+                + direction + kind + occupantSuffix;
 
             deltas[key] = deltas.TryGetValue(key, out int current) ? current + 1 : 1;
-
-            // BS-A: quién ocupaba ese puesto en este partido (memoria de antes del partido; mismo código que la esquela).
-            if (team is not null && rivalIndex < team.Players.Count
-                && RivalKiller.Encode(team, state.RivalMemory, rivalIndex) is var occupant and not 0)
-            {
-                occupants[RunState.RivalOccupantPrefix + key[RunState.RivalCreditPrefix.Length..]] = occupant;
-            }
         }
 
         if (deltas.Count == 0)
@@ -641,13 +639,6 @@ internal static class MatchResolution
         for (int i = 0; i < keys.Count; i++)
         {
             next = next.WithCounter(keys[i], next.Counter(keys[i]) + deltas[keys[i]]);
-        }
-
-        var occupantKeys = new List<string>(occupants.Keys);
-        occupantKeys.Sort(StringComparer.Ordinal);
-        for (int i = 0; i < occupantKeys.Count; i++)
-        {
-            next = next.WithCounter(occupantKeys[i], occupants[occupantKeys[i]]);
         }
 
         return next;

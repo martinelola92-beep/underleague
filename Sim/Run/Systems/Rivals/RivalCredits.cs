@@ -48,14 +48,13 @@ public static class RivalCredits
                 continue;
             }
 
-            if (!TryParse(key, prefix.Length, out int rivalIndex, out int ownPlayerId, out RivalCreditKind kind))
+            if (!TryParse(key, prefix.Length, out int rivalIndex, out int ownPlayerId, out RivalCreditKind kind, out int occupant))
             {
                 continue;
             }
 
             credits.Add(new RivalCredit(
-                rivalId, rivalIndex, ownPlayerId, kind, count,
-                state.Counter(RunState.RivalOccupantPrefix + key[RunState.RivalCreditPrefix.Length..])));
+                rivalId, rivalIndex, ownPlayerId, kind, count, occupant));
         }
 
         return credits;
@@ -89,8 +88,9 @@ public static class RivalCredits
         return ((isDeath ? 1 : 0) * 1_000_000) + credit.Count;
     }
 
-    private static bool TryParse(string key, int start, out int rivalIndex, out int ownPlayerId, out RivalCreditKind kind)
+    private static bool TryParse(string key, int start, out int rivalIndex, out int ownPlayerId, out RivalCreditKind kind, out int occupant)
     {
+        occupant = 0;
         rivalIndex = 0;
         ownPlayerId = 0;
         kind = default;
@@ -119,6 +119,18 @@ public static class RivalCredits
         }
 
         string suffix = remainder[(secondColon + 1)..];
+        int thirdColon = suffix.IndexOf(':');
+        if (thirdColon >= 0)
+        {
+            // BS-A: quinto campo, el ocupante del puesto; ausente = el jugador de datos (guardados anteriores).
+            if (!int.TryParse(suffix[(thirdColon + 1)..], NumberStyles.Integer, CultureInfo.InvariantCulture, out occupant))
+            {
+                return false;
+            }
+
+            suffix = suffix[..thirdColon];
+        }
+
         switch (suffix)
         {
             case "causedInjury":
