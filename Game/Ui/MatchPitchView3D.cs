@@ -2244,7 +2244,9 @@ public partial class MatchPitchView3D : SubViewportContainer
             // La velocidad sale de los dos fotogramas que la interpolación ya usa, convertida a casillas
             // por segundo (ticks lógicos a 15/s, RT-020). El modelo solo MIRA lo que la traza escribió: no
             // decide nada del partido (RT-014).
-            model.Pose(SmoothedVelocity(trace, frame, i), trace.StateAt(frame, i), CueFor(trace, frame, i), _playbackRate, poseDelta);
+            // En el tick de un teletransporte (BA-K) el muñeco se recoloca sin girar ni mezclar.
+            float delta = IsTeleportCut(trace, frame, i) ? 0f : poseDelta;
+            model.Pose(SmoothedVelocity(trace, frame, i), FacingOf(trace, frame, i), trace.StateAt(frame, i), CueFor(trace, frame, i), _playbackRate, delta);
         }
 
         var ball = InterpolateBall(trace, frame);
@@ -2558,6 +2560,43 @@ public partial class MatchPitchView3D : SubViewportContainer
         var a = PositionAtTime(trace, player, from);
         var b = PositionAtTime(trace, player, to);
         return new Vector2(b.X - a.X, b.Y - a.Y) / (to - from) * TicksPerSecond;
+    }
+
+    /// <summary>
+    /// Cuánto mira la orientación hacia adelante en la traza, en ticks (BV-A, H2/H8). Con 4, una inversión que
+    /// <c>/Sim</c> deshace en 4 ticks o menos —medido: la mitad de las inversiones a velocidad de carrera— no
+    /// llega a girar al muñeco. Sale de esa medida (BV-A, 52 % de 231 inversiones en ≤ 4 ticks), no de ojo.
+    /// </summary>
+    private const float FacingAheadTicks = 4f;
+
+    /// <summary>
+    /// Desplazamiento mínimo, en casillas, en la ventana de orientación para que cuente como dirección. <b>Provisional,
+    /// sin medir</b>: 0,15 casillas en 5 ticks son ~0,45 c/s, un paso lento; por debajo el muñeco sigue mirando a
+    /// donde miraba en vez de girar con cada empujón de la separación de cuerpos.
+    /// </summary>
+    private const float FacingMinCells = 0.15f;
+
+    /// <summary>
+    /// Hacia dónde debe mirar el muñeco: el desplazamiento entre un tick antes y <see cref="FacingAheadTicks"/>
+    /// después del instante dibujado, sobre la traza ya calculada (RT-014: sólo se lee). Cero = sin dirección
+    /// clara, sigue mirando a donde miraba.
+    /// </summary>
+    private Vector2 FacingOf(MatchTrace trace, int frame, int player)
+    {
+        float t = frame + Mathf.Clamp(Alpha, 0f, 1f);
+        float from = Mathf.Max(0f, t - 1f);
+        float to = Mathf.Min(trace.FrameCount - 1, t + FacingAheadTicks);
+        Vector2 move;
+        if (to - from >= 0.5f && CleanWindow(trace, player, (int)Mathf.Floor(from), (int)Mathf.Ceil(to)))
+        {
+            move = PositionAtTime(trace, player, to) - PositionAtTime(trace, player, from);
+        }
+        else
+        {
+            move = StepOf(trace, frame, player) * (to - from);
+        }
+
+        return move.Length() >= FacingMinCells ? move : Vector2.Zero;
     }
 
     /// <summary>Ningún fotograma fuera del campo ni ningún salto de teletransporte entre <paramref name="first"/> y <paramref name="last"/>.</summary>

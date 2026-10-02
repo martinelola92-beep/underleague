@@ -143,6 +143,13 @@ public sealed partial class PlayerModel : Node3D
     private const float LocomotionSmoothingSeconds = 0.12f;
 
     /// <summary>
+    /// Velocidad máxima de giro del cuerpo, en grados por segundo de partido (BV-A, H2). <b>Provisional, sin
+    /// medir</b>: media vuelta en 0,25 s, el orden de un futbolista que se da la vuelta corriendo. Antes no había
+    /// límite: el modelo saltaba hasta 180° entre dos fotogramas.
+    /// </summary>
+    private const float TurnDegreesPerSecond = 720f;
+
+    /// <summary>
     /// Los gestos que no son locomoción, montados como entradas de una transición del árbol (BV-A). Los
     /// clips en bucle (<c>fallen</c>) no terminan; el resto se acaba con su propia duración.
     /// </summary>
@@ -286,7 +293,7 @@ public sealed partial class PlayerModel : Node3D
     /// del muñeco —zancada, gestos, fundidos— van con él: congelada la imagen, congelado el muñeco (H6).
     /// <b>El modelo no decide nada</b>: sólo mira lo que está escrito (RT-014).
     /// </summary>
-    public void Pose(Vector2 velocity, PlayerState state, ContactCue cue, float rate, float delta)
+    public void Pose(Vector2 velocity, Vector2 facing, PlayerState state, ContactCue cue, float rate, float delta)
     {
         if (_tree is null)
         {
@@ -295,14 +302,10 @@ public sealed partial class PlayerModel : Node3D
 
         MeasureStride();
         float speed = velocity.Length();
-        if (speed > 0.15f)
-        {
-            // Mirar hacia donde se va (el giro con velocidad limitada es otro paso de BV-A).
-            Rotation = new Vector3(0f, Mathf.Atan2(velocity.X, velocity.Y) + FacingOffset, 0f);
-        }
 
         // Segundos de PARTIDO que han pasado en este fotograma: lo que mueve todos los relojes del muñeco.
         float simDelta = delta * rate;
+        Turn(facing, simDelta, snap: delta <= 0f);
         AdvanceGesture(simDelta);
         ChooseGesture(state, cue);
 
@@ -323,6 +326,36 @@ public sealed partial class PlayerModel : Node3D
         _gestureWeight = delta <= 0f ? weightTarget : Mathf.MoveToward(_gestureWeight, weightTarget, simDelta / BlendSeconds);
         _tree.Set("parameters/mix/blend_amount", _gestureWeight);
     }
+
+    /// <summary>
+    /// Gira hacia <paramref name="facing"/> como mucho <see cref="TurnDegreesPerSecond"/> (H2). Un
+    /// <paramref name="facing"/> nulo es «sigue mirando a donde mirabas»: parado, o con una ida y vuelta que
+    /// la traza deshace enseguida (lo decide la vista mirando adelante en la traza ya calculada).
+    /// </summary>
+    private void Turn(Vector2 facing, float simDelta, bool snap)
+    {
+        if (facing.LengthSquared() > 0.000001f)
+        {
+            float want = Mathf.Atan2(facing.X, facing.Y) + FacingOffset;
+            if (!_hasYaw || snap)
+            {
+                _yaw = want;
+            }
+            else
+            {
+                float diff = Mathf.Wrap(want - _yaw, -Mathf.Pi, Mathf.Pi);
+                float max = Mathf.DegToRad(TurnDegreesPerSecond) * simDelta;
+                _yaw = Mathf.Wrap(_yaw + Mathf.Clamp(diff, -max, max), -Mathf.Pi, Mathf.Pi);
+            }
+
+            _hasYaw = true;
+        }
+
+        Rotation = new Vector3(0f, _yaw, 0f);
+    }
+
+    private float _yaw;
+    private bool _hasYaw;
 
     /// <summary>
     /// Qué gesto toca encima de la locomoción. El suelo manda (el que cae, cae); después el gesto de evento
