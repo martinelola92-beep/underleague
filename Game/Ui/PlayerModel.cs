@@ -281,9 +281,12 @@ public sealed partial class PlayerModel : Node3D
     /// por segundo de partido —la vista la promedia sobre una ventana de la traza, no es el paso de un tick—,
     /// <paramref name="state"/> el estado que la simulación publica (<c>MatchTrace.StateAt</c>) y
     /// <paramref name="delta"/> los segundos reales de este fotograma (0 = colocar sin animar, para las
-    /// capturas fijas). <b>El modelo no decide nada</b>: sólo mira lo que está escrito (RT-014).
+    /// capturas fijas). <paramref name="rate"/> es a cuántos ticks por tick real avanza la reproducción que
+    /// se está viendo: 1 a x1, 4 a x4, 0,5 en la cámara lenta y 0 congelada o en pausa. Todos los relojes
+    /// del muñeco —zancada, gestos, fundidos— van con él: congelada la imagen, congelado el muñeco (H6).
+    /// <b>El modelo no decide nada</b>: sólo mira lo que está escrito (RT-014).
     /// </summary>
-    public void Pose(Vector2 velocity, PlayerState state, ContactCue cue, float delta)
+    public void Pose(Vector2 velocity, PlayerState state, ContactCue cue, float rate, float delta)
     {
         if (_tree is null)
         {
@@ -298,18 +301,26 @@ public sealed partial class PlayerModel : Node3D
             Rotation = new Vector3(0f, Mathf.Atan2(velocity.X, velocity.Y) + FacingOffset, 0f);
         }
 
-        AdvanceGesture(delta);
+        // Segundos de PARTIDO que han pasado en este fotograma: lo que mueve todos los relojes del muñeco.
+        float simDelta = delta * rate;
+        AdvanceGesture(simDelta);
         ChooseGesture(state, cue);
 
         // Locomoción continua: una posición de mezcla idle→trote→carrera en lugar de tres clips con umbral.
         float target = _runCells > 0.01f ? Mathf.Clamp(speed / _runCells, 0f, 1f) : 0f;
-        _blend = delta <= 0f ? target : Mathf.Lerp(_blend, target, 1f - Mathf.Exp(-delta / LocomotionSmoothingSeconds));
+        _blend = delta <= 0f ? target : Mathf.Lerp(_blend, target, 1f - Mathf.Exp(-simDelta / LocomotionSmoothingSeconds));
         _tree.Set("parameters/loco/blend_position", _blend);
-        _tree.Set("parameters/loco_scale/scale", 1f);
-        _tree.Set("parameters/gesture_scale/scale", 1f);
+
+        // El ritmo (H5): los puntos de la mezcla están en la zancada natural de cada clip, así que hasta la
+        // velocidad de la carrera la zancada mezclada YA es la del cuerpo y basta el ritmo de reproducción;
+        // por encima, la carrera se acelera en proporción. Medido: el clip `run` avanza 2,19 c/s, no los 2,8
+        // que suponía la constante de antes (pies patinando ×1,28).
+        float stride = _runCells > 0.01f ? Mathf.Max(1f, speed / _runCells) : 1f;
+        _tree.Set("parameters/loco_scale/scale", rate * stride);
+        _tree.Set("parameters/gesture_scale/scale", rate);
 
         float weightTarget = _gesture.Length > 0 ? 1f : 0f;
-        _gestureWeight = delta <= 0f ? weightTarget : Mathf.MoveToward(_gestureWeight, weightTarget, delta / BlendSeconds);
+        _gestureWeight = delta <= 0f ? weightTarget : Mathf.MoveToward(_gestureWeight, weightTarget, simDelta / BlendSeconds);
         _tree.Set("parameters/mix/blend_amount", _gestureWeight);
     }
 

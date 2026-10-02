@@ -2171,6 +2171,7 @@ public partial class MatchPitchView3D : SubViewportContainer
         }
 
         int frame = Mathf.Clamp(Frame, 0, trace.FrameCount - 1);
+        float poseDelta = MeasurePlaybackRate(frame);
         for (int i = 0; i < _bodies.Count && i < trace.Players.Count; i++)
         {
             var body = _bodies[i];
@@ -2243,7 +2244,7 @@ public partial class MatchPitchView3D : SubViewportContainer
             // La velocidad sale de los dos fotogramas que la interpolación ya usa, convertida a casillas
             // por segundo (ticks lógicos a 15/s, RT-020). El modelo solo MIRA lo que la traza escribió: no
             // decide nada del partido (RT-014).
-            model.Pose(SmoothedVelocity(trace, frame, i), trace.StateAt(frame, i), CueFor(trace, frame, i), _frameDelta);
+            model.Pose(SmoothedVelocity(trace, frame, i), trace.StateAt(frame, i), CueFor(trace, frame, i), _playbackRate, poseDelta);
         }
 
         var ball = InterpolateBall(trace, frame);
@@ -2485,6 +2486,48 @@ public partial class MatchPitchView3D : SubViewportContainer
 
     /// <summary>Segundos reales del fotograma que se está pintando; 0 en <see cref="RenderFrame"/> (captura fija).</summary>
     private float _frameDelta;
+
+    /// <summary>Instante dibujado en el fotograma anterior, en ticks (<c>Frame + Alpha</c>); −1 al principio.</summary>
+    private float _lastShownTicks = -1f;
+
+    /// <summary>A cuántos ticks de partido por tick real avanza lo que se está viendo (BV-A, H5/H6).</summary>
+    private float _playbackRate = 1f;
+
+    /// <summary>
+    /// Por encima de este salto en un solo fotograma, lo que ha pasado es un salto de la reproducción
+    /// (<c>SeekTo</c>, un cambio de partido), no reproducción: los muñecos se recolocan de golpe. 16 es la
+    /// velocidad más alta (x16) a 1 fotograma por tick; el doble deja margen a un fotograma lento.
+    /// </summary>
+    private const float SeekJumpTicks = 32f;
+
+    /// <summary>
+    /// El ritmo de la reproducción, MEDIDO en lo que se dibuja: cuántos ticks ha avanzado <c>Frame + Alpha</c>
+    /// desde el fotograma anterior, por cada tick real. No pregunta a la pantalla su velocidad ni si está en
+    /// pausa: congelada la imagen (pausa breve del director, decisión, pausa manual) sale 0; a x4, 4; en la
+    /// cámara lenta del destino, 0,5. Así ningún muñeco corre en el sitio con la imagen parada (H6) y la
+    /// zancada sigue a la reproducción a cualquier velocidad (H5). Devuelve el <c>delta</c> con que posar:
+    /// el real, o 0 si ha habido un salto y hay que recolocar sin animar.
+    /// </summary>
+    private float MeasurePlaybackRate(int frame)
+    {
+        float shown = frame + Mathf.Clamp(Alpha, 0f, 1f);
+        float advanced = shown - _lastShownTicks;
+        bool jump = _lastShownTicks < 0f || advanced < 0f || advanced > SeekJumpTicks;
+        _lastShownTicks = shown;
+        if (_frameDelta <= 0f)
+        {
+            return 0f;
+        }
+
+        if (jump)
+        {
+            _playbackRate = 1f;
+            return 0f;
+        }
+
+        _playbackRate = advanced / (_frameDelta * TicksPerSecond);
+        return _frameDelta;
+    }
 
     /// <summary>
     /// Media ventana, en ticks, sobre la que se promedia la velocidad que ven los modelos (BV-A). <b>Provisional,
