@@ -2,8 +2,9 @@
 
 **Estado:** **Parte `/Game` implementada en dos pasadas (3 oct 2026)**, medidas antes/después con 3 semillas (tablas en
 «Implementación» y «Segunda pasada»: trayectoria Hermite, zancada en fase con el desplazamiento, mirar al balón, balón al pie
-rodando, golpeo soltado al arrancar, congelación sin retroceso). Queda abierto lo que pide `/Sim` (H4 aceleración, H8
-oscilación, que es lo que sigue dando giros de 180°), IK de pie en los giros y clips de retroceso/lateral. Diagnóstico del 2 oct: ocho causas CONFIRMED con el instrumento nuevo. Hermanas: [BB-K](./BB-K.md) (baile de dos compañeros; queda `FindSpace`),
+rodando, golpeo soltado al arrancar, congelación sin retroceso). H8 (oscilación) arreglada en `/Sim` el 3 oct (ADR 0184,
+sección «H8 en `/Sim`»); H4 (aceleración) queda propuesta en la ADR 0185. Siguen abiertos IK de pie en los giros y clips
+de retroceso/lateral. Diagnóstico del 2 oct: ocho causas CONFIRMED con el instrumento nuevo. Hermanas: [BB-K](./BB-K.md) (baile de dos compañeros; queda `FindSpace`),
 [BI-C](./BI-C.md) (root motion), [BI-H](./BI-H.md) (balón anclado al hueso), [BA-K](./BA-K.md) (cortes de teletransporte).
 
 ## Observación (revisor, literal)
@@ -264,3 +265,26 @@ B1-B4 no lo tocan); giros de yaw > 30° 0,09 · 0,24 · 0,12 % → 0,09 · 0,24 
   y los carteles leen la traza; hay que medir la separación al pie (BI-H) tras el cambio.
 - Un solo partido medido (una semilla, equipo humano contra orcos en cápsula). Las cifras de traza son del partido
   entero; las dibujadas, de tramos de 3–40 s. Suficiente para el orden de magnitud, no para afinar umbrales.
+
+## H8 en `/Sim` (3 oct 2026, [ADR 0184](../decisiones/0184-una-colocacion-se-sostiene.md))
+
+**H8 pasa a CONFIRMED con causa en `/Sim`** y queda arreglada. Sonda `Sim.Tests/Engine/OscillationProbeTests.cs`
+(`Category=Diagnostic`): inversión = dos pasos de carrera (≥ 0,09 casillas) a más de 135°; deshecha = otro paso a más
+de 135° del de salida en ≤ 4 ticks. Validada con valor conocido (test `TheReversalInstrumentAnswersTheKnownCases`) y
+contra la cifra de arriba: en 40 partidos de referencia ve 0,301 inversiones por jugador y segundo, **46,5 % deshechas**
+(arriba, otro partido: 0,33/s y 52 %).
+
+| | Hipótesis | Etiqueta | Medida (40 partidos, semillas 1-40) |
+|---|---|---|---|
+| H8a | Empates de utilidad entre dos colocaciones que el propio movimiento invierte (`CoverSpace ⇄ Retreat`) | **CONFIRMED** | 63 % de las inversiones son un cambio de acción; el par `CoverSpace ⇄ Retreat` da 5.473, el 86 % deshechas. El 22 % de los cambios de acción se decide por < 10 puntos. Aislado: sólo la sostenida entre colocaciones baja las deshechas, y con 150 puntos aún quedan las de H8b |
+| H8b | `CoverSpace` descartada al llegar al borde exterior (`OuterLimitMinAdvance`) y recuperada a 0,25 casillas | **CONFIRMED** | Volcado RT-098 (semilla 1, portero, ticks 316-330): `CoverSpace` 864 / ausente en ticks alternos. Censo: 1.470 de los 5.191 `CoverSpace → Retreat` vienen del descarte |
+| H8c | `FindSpace` recalculado cada decisión desde la posición propia: el hueco anterior no está entre los candidatos | **CONFIRMED** | Quitadas H8a y H8b, el 42 % de las deshechas restantes era un `FindSpace` que cambiaba de hueco; volver a puntuar el hueco anterior las quita |
+| H8d | Separación de cuerpos que empuja y luego atrae | **REJECTED** | 3 de 17.766 inversiones tienen el paso contra el destino; el empuje (≤ 0,06/tick) no invierte un paso de carrera |
+| H8e | Llegada al destino con rebase | **REJECTED** (marginal) | 120 de 17.766 |
+| H8f | Destinos que cambian con el balón en vuelo | **Sin aislar** | 34 % de las inversiones con el balón en vuelo, repartidas entre H8a-c; bajan con ellas (3.317 → ~200 deshechas) |
+| H8g | Empate entre ids de paridad distinta (decisión en ticks alternos) | **Sin evidencia** | No hizo falta: H8a-c explican el 88 % de la bajada |
+
+**Arreglo:** `ai.context.positioningHoldBonus` = 40 (0 = motor de antes, comprobado bit a bit con las huellas de
+`MobNarrowingTests`). Sonda: deshechas **46,5 % → 13,7 %**, inversiones **0,301 → 0,164 por jugador y segundo**,
+*paso-0-paso* 612 → 478 por partido (lo que queda es H4, [ADR 0185](../decisiones/0185-arranque-y-frenada.md)).
+Lote, puertas y efecto en el juego: en la ADR 0184.
