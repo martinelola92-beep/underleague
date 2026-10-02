@@ -3543,7 +3543,7 @@ public static class RunPolicy
 
     /// <summary>
     /// Suplente disponible de menos valor que la política se permite vender (RF-114f). BT-A: nunca uno que no ha
-    /// jugado (<c>Experience &lt;= 0</c>): <c>MarketSystem.Sell</c> lo prohíbe (ADR 0108) y la política no debe intentar
+    /// jugado (<c>!MarketSystem.CanSell</c>): <c>MarketSystem.Sell</c> lo prohíbe (ADR 0108) y la política no debe intentar
     /// lo que la regla veta.
     /// </summary>
     private static RunPlayer? WorstSellable(RunState state, IReadOnlyList<RunPlayer> lineup, RunPolicyOptions options)
@@ -3552,7 +3552,7 @@ public static class RunPolicy
         for (int i = 0; i < state.Roster.Count; i++)
         {
             var player = state.Roster[i];
-            if (!player.IsAvailable || player.IsMercenary || player.IsYouth || player.Experience <= 0 || Contains(lineup, player.Id))
+            if (!player.IsAvailable || player.IsMercenary || player.IsYouth || !MarketSystem.CanSell(player) || Contains(lineup, player.Id))
             {
                 continue;
             }

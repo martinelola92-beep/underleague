@@ -65,6 +65,16 @@ public static class MarketSystem
         return RunNames.Admit(state, offer.Player, catalog);
     }
 
+    /// <summary>
+    /// El veto de la ADR 0108 como predicado: un fichaje que no ha pasado por un partido (<c>Experience &lt;= 0</c>) no se
+    /// vende. Lo usan <see cref="Sell"/> y la política de <c>/Analysis</c>, para no reescribir la regla a mano (BT-A).
+    /// </summary>
+    public static bool CanSell(RunPlayer player)
+    {
+        ArgumentNullException.ThrowIfNull(player);
+        return player.Experience > 0;
+    }
+
     public static RunState Sell(RunState state, SellPlayer decision, EconomyConfig economy)
     {
         ArgumentNullException.ThrowIfNull(state);
@@ -80,7 +90,7 @@ public static class MarketSystem
         // hasta 72 de oro de la nada, frente a un ingreso de acto de 9/11/13. El grifo valía más que toda
         // la economía de la run. La experiencia es la señal exacta: un recién fichado tiene 0 hasta que el
         // equipo juega, incluso desde el banquillo.
-        if (player.Experience <= 0)
+        if (!CanSell(player))
         {
             throw new ArgumentException(
                 $"'{player.Name}' todavía no ha jugado un partido con el club y no se puede vender (RF-114f, ADR 0108)",
