@@ -151,4 +151,60 @@ public sealed class RunPolicyBlacksmithTests
         Assert.Equal(AttributeKind.Strength, ceiling.First(kv => kv.Value == 14).Key);
         Assert.Equal(48, ceiling.Values.Sum());
     }
+
+    [Fact]
+    public void TheCensusSeesStrengthPlusFourteenFromArmAndJaw()
+    {
+        // Regla J: caso de valor conocido. Brazo de hierro (+8) y mandíbula de acero (+6) sobre fuerza 50 con el resto
+        // por debajo: el mejor atributo del protésico es 64, y el del compañero sin prótesis, el suyo.
+        var state = RunEngine.Start(SystemsTestSupport.Setup(), 7, SystemsTestSupport.Catalog, Systems);
+        var plain = state.Roster[1] with { Attributes = new Attributes(40, 40, 40, 40, 40), Prostheses = Array.Empty<RunProsthesis>() };
+        var forged = state.Roster[2] with { Attributes = new Attributes(50, 30, 30, 30, 30), Prostheses = Array.Empty<RunProsthesis>() };
+        forged = MedicalSystem.Install(forged, Systems.Prostheses.Find("iron_arm")!);
+        forged = MedicalSystem.Install(forged, Systems.Prostheses.Find("steel_jaw")!);
+        Assert.Equal(64, forged.Attributes.Strength);
+
+        var census = FullRunMetrics.ProstheticCensus(new[] { plain, forged });
+        Assert.Equal(1, census.ProstheticPlayers);
+        Assert.Equal(1, census.PlainPlayers);
+        Assert.Equal(64, census.MaxProstheticBest);
+        Assert.Equal(40, census.MaxPlainBest);
+        Assert.Equal(2, census.MaxProstheses);
+    }
+
+    [Fact]
+    public void TheNoBlacksmithControlMatchesTheRealArmWhereTheForgeNeverRan()
+    {
+        // Regla J: el control del lote (catálogo de prótesis vacío) es un control de verdad si, en las runs donde el
+        // herrero real no llegó a forjar nada, las dos ramas dan la misma run (misma semilla, mismo resultado).
+        var files = TestData.LoadAllFiles();
+        var bosses = Underleague.Sim.Run.Bosses.BossCatalog.FromJson(files);
+        var control = new Dictionary<string, string>(files, StringComparer.Ordinal) { ["prostheses/prostheses.json"] = "{\"prostheses\": []}" };
+        var controlSystems = StandardRunSystems.FromJson(control);
+        Assert.Empty(controlSystems.Prostheses.All);
+        int compared = 0, forgedRuns = 0;
+        for (ulong seed = 1; seed <= 12; seed++)
+        {
+            var setup = Systems.NewRunSetup("blacksmith_club", Race.Human, files) with { GeneratedQuality = 50 };
+            var real = RunPolicy.Play(setup, seed, SystemsTestSupport.Catalog, Systems, bosses, null);
+            var setupControl = controlSystems.NewRunSetup("blacksmith_club", Race.Human, control) with { GeneratedQuality = 50 };
+            var without = RunPolicy.Play(setupControl, seed, SystemsTestSupport.Catalog, controlSystems, bosses, null);
+            Assert.Equal(0, without.BlacksmithTreatments);
+            if (real.BlacksmithTreatments > 0)
+            {
+                forgedRuns++;
+                continue;
+            }
+
+            compared++;
+            Assert.Equal(without.Outcome, real.Outcome);
+            Assert.Equal(without.Matches, real.Matches);
+            Assert.Equal(without.Deaths, real.Deaths);
+            Assert.Equal(without.GoldEarned, real.GoldEarned);
+            Assert.Equal(without.GoldSpentClinic, real.GoldSpentClinic);
+            Assert.Equal(without.NodesVisited, real.NodesVisited);
+        }
+
+        Assert.True(compared > 0, $"ninguna run sin forja que comparar ({forgedRuns} con forja)");
+    }
 }

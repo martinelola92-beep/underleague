@@ -450,6 +450,43 @@ public static class FullRunMetrics
         return 100.0 * won / runs.Count;
     }
 
+    /// <summary>
+    /// Censo de la plantilla de una run (ADR 0164, enmienda del 2 oct 2026): para los jugadores con prótesis y para
+    /// el resto, cuántos hay, el mejor de sus cuatro atributos de campo (fuerza, velocidad, técnica, aguante) y la
+    /// suma de esos mejores. <b>No mira la correa</b> (<c>Leash</c>), aunque la prótesis <c>skull</c> le suma +6: es otra escala.
+    /// </summary>
+    public static RosterCensus ProstheticCensus(IReadOnlyList<Underleague.Sim.Run.RunPlayer> roster)
+    {
+        ArgumentNullException.ThrowIfNull(roster);
+        int prosthetic = 0, plain = 0, maxProsthetic = 0, maxPlain = 0, maxProstheses = 0;
+        long prostheticSum = 0, plainSum = 0;
+        for (int i = 0; i < roster.Count; i++)
+        {
+            var a = roster[i].Attributes;
+            int best = Math.Max(Math.Max(a.Strength, a.Speed), Math.Max(a.Technique, a.Stamina));
+            if (roster[i].Prostheses.Count > 0)
+            {
+                prosthetic++;
+                prostheticSum += best;
+                maxProsthetic = Math.Max(maxProsthetic, best);
+                maxProstheses = Math.Max(maxProstheses, roster[i].Prostheses.Count);
+            }
+            else
+            {
+                plain++;
+                plainSum += best;
+                maxPlain = Math.Max(maxPlain, best);
+            }
+        }
+
+        return new RosterCensus(prosthetic, plain, prostheticSum, plainSum, maxProsthetic, maxPlain, maxProstheses);
+    }
+
+    /// <summary>Resultado de <see cref="ProstheticCensus"/>.</summary>
+    public readonly record struct RosterCensus(
+        int ProstheticPlayers, int PlainPlayers, long ProstheticBestSum, long PlainBestSum,
+        int MaxProstheticBest, int MaxPlainBest, int MaxProstheses);
+
     /// <summary>Métricas de un solo conjunto de runs (una doctrina), con sus bandas y su desglose INFO.</summary>
     public static List<MetricResult> Describe(IReadOnlyList<RunPlayResult> runs, EconomyConfig economy)
     {
@@ -569,25 +606,14 @@ public static class FullRunMetrics
                 nemeses += final.RivalMemory.Nemeses.Count;
                 revenges += final.Counter(RunState.RevengesCounter);
                 nemesesCapped += final.Counter(RunState.NemesisCappedCounter);
-                for (int p = 0; p < final.Roster.Count; p++)
-                {
-                    var player = final.Roster[p];
-                    var a = player.Attributes;
-                    int best = Math.Max(Math.Max(a.Strength, a.Speed), Math.Max(a.Technique, a.Stamina));
-                    if (player.Prostheses.Count > 0)
-                    {
-                        prostheticPlayers++;
-                        prostheticAttrSum += best;
-                        maxAttrProsthetic = Math.Max(maxAttrProsthetic, best);
-                        maxProsthesesOnPlayer = Math.Max(maxProsthesesOnPlayer, player.Prostheses.Count);
-                    }
-                    else
-                    {
-                        plainPlayers++;
-                        plainAttrSum += best;
-                        maxAttrPlain = Math.Max(maxAttrPlain, best);
-                    }
-                }
+                var census = ProstheticCensus(final.Roster);
+                prostheticPlayers += census.ProstheticPlayers;
+                plainPlayers += census.PlainPlayers;
+                prostheticAttrSum += census.ProstheticBestSum;
+                plainAttrSum += census.PlainBestSum;
+                maxAttrProsthetic = Math.Max(maxAttrProsthetic, census.MaxProstheticBest);
+                maxAttrPlain = Math.Max(maxAttrPlain, census.MaxPlainBest);
+                maxProsthesesOnPlayer = Math.Max(maxProsthesesOnPlayer, census.MaxProstheses);
             }
             enrollment += run.GoldSpentEnrollment;
             slots += run.SlotsBought;
