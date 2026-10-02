@@ -85,6 +85,7 @@ public partial class BroadcastCapture
         }
 
         WriteTraceCsv(trace, hasModel, Path.Combine(directory, "traza.csv"));
+        File.WriteAllText(Path.Combine(directory, "clips.csv"), Ui.PlayerModel.DebugDescribeClips());
 
         var windows = PlanMovementWindows(screen, trace, hasModel);
         var plan = new StringBuilder("label,start,end,focus,images\n");

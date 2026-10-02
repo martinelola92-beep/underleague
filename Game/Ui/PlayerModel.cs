@@ -387,6 +387,25 @@ public sealed partial class PlayerModel : Node3D
         return perSecond * _skeleton.GlobalTransform.Basis.Scale.X;
     }
 
+    /// <summary>Una línea CSV por clip montado: clave, duración en segundos, bucle y desplazamiento horneado por segundo (unidades de esqueleto). BV-A.</summary>
+    public static string DebugDescribeClips()
+    {
+        var sb = new System.Text.StringBuilder("clip,length,loop,naturalSkelPerSecond\n");
+        foreach (var (key, _, loop) in Clips)
+        {
+            if (_library is null || !_library.HasAnimation(key))
+            {
+                continue;
+            }
+
+            float length = _library.GetAnimation(key).Length;
+            NaturalSkeletonSpeed.TryGetValue(key, out float natural);
+            sb.Append(System.Globalization.CultureInfo.InvariantCulture, $"{key},{length:0.###},{(loop ? 1 : 0)},{natural:0.####}\n");
+        }
+
+        return sb.ToString();
+    }
+
     /// <summary>Desplazamiento horizontal neto del hueso raíz por segundo de clip, en unidades del esqueleto, por clave. BV-A.</summary>
     private static readonly System.Collections.Generic.Dictionary<string, float> NaturalSkeletonSpeed = new();
 
