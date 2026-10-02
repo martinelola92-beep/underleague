@@ -230,7 +230,8 @@ def trace_metrics(path):
     }
 
 
-def contact_sheets(folder, rows, out_dir):
+def contact_sheets(folder, rows, out_dir, forced=None):
+    """forced: {tramo: n} para empezar la hoja en el mismo fotograma que otra medición (antes/después)."""
     from PIL import Image, ImageDraw
 
     windows = []
@@ -260,7 +261,11 @@ def contact_sheets(folder, rows, out_dir):
             start = max(0, min(len(lead) - 16, idx - 4))
         else:
             start = max(range(0, len(lead) - 15), key=lambda s: (sum(score[s:s + 16]), -s))
+        if forced and label in forced:
+            start = next((i for i, r in enumerate(lead) if r["n"] >= forced[label]), start)
+            start = max(0, min(len(lead) - 16, start))
         span = range(start, start + 16)
+        print(f"inicio {label}={lead[start]['n']}")
         # sx/sy salen en unidades del lienzo (1280 de ancho, project.godot, stretch canvas_items); la imagen
         # es la ventana real. Se escala por el cociente, medido en la primera imagen.
         first = Image.open(f"{folder}/{label}_{lead[start]['n']:04d}.jpg")
@@ -318,7 +323,10 @@ def main():
             print(f"  {k}: {v}")
     if "--hojas" in sys.argv:
         out = sys.argv[sys.argv.index("--hojas") + 1]
-        for p in contact_sheets(folder, rows, out):
+        forced = None
+        if "--desde" in sys.argv:
+            forced = {k: int(v) for k, v in (x.split("=") for x in sys.argv[sys.argv.index("--desde") + 1].split(","))}
+        for p in contact_sheets(folder, rows, out, forced):
             print("hoja:", p)
 
 
