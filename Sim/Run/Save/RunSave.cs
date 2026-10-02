@@ -114,7 +114,9 @@ public static class RunSave
 
         var state = new RunState
         {
-            SchemaVersion = version,
+            // Un guardado de la 8 se reescribe como 9 (ADR 0183): la migración es explícita y el estado cargado ya
+            // es de la versión actual, no una 8 con campos que no tiene.
+            SchemaVersion = SchemaVersion,
             Seed = Seed(root, "$"),
             Division = Enum<Division>(root, "division", "$"),
             ClubId = Str(root, "club", "$"),

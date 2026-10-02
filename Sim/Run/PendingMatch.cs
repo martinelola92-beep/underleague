@@ -1,3 +1,5 @@
+using Underleague.Sim.Run.View;
+
 namespace Underleague.Sim.Run;
 
 /// <summary>
@@ -14,4 +16,27 @@ namespace Underleague.Sim.Run;
 /// una activación manual o un cambio de orden sólo valen desde este tick, porque decidir con el futuro ya
 /// visto sería volver a tirar el partido (anti-abuso de RT-061).
 /// </param>
-public sealed record PendingMatch(int NodeId, MatchDecisions Decisions, int WatchedTick);
+public sealed record PendingMatch(int NodeId, MatchDecisions Decisions, int WatchedTick)
+{
+    /// <summary>
+    /// Si una decisión en <paramref name="decisionTick"/> sigue permitida cuando el jugador ya vio hasta
+    /// <paramref name="watchedTick"/>: sólo desde el tick siguiente al último visto. Es la única definición de la
+    /// regla; <c>/Game</c> la usa para los controles en vivo, las respuestas a un punto de sustitución y la
+    /// resolución automática de los puntos que quedan por debajo (ADR 0183).
+    /// </summary>
+    public static bool CanDecideAt(int watchedTick, int decisionTick) => decisionTick > watchedTick;
+
+    /// <summary>
+    /// El guardado que se escribe <b>antes de enseñar</b> el partido (ADR 0183): el peor caso, con
+    /// <see cref="WatchedTick"/> igual al último tick del partido. Si el proceso muere sin un guardado limpio
+    /// (cierre forzado, caída), la repetición sale con todo lo decidible ya bloqueado y el resultado no cambia;
+    /// un guardado limpio lo baja después al tick que el jugador vio de verdad. Sin traza, <c>int.MaxValue</c>.
+    /// </summary>
+    public static PendingMatch BeforeShowing(int nodeId, MatchDecisions decisions, MatchPlayback playback)
+    {
+        ArgumentNullException.ThrowIfNull(decisions);
+        ArgumentNullException.ThrowIfNull(playback);
+        int end = playback.Trace is { FrameCount: > 0 } trace ? trace.TickAt(trace.FrameCount - 1) : int.MaxValue;
+        return new PendingMatch(nodeId, decisions, end);
+    }
+}

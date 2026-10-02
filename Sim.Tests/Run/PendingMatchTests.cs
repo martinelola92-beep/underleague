@@ -138,7 +138,80 @@ public class PendingMatchTests
         Assert.Null(pending);
         Assert.Equal(state.Seed, loaded.Seed);
         Assert.Equal(state.Roster.Count, loaded.Roster.Count);
-        Assert.Equal(8, loaded.SchemaVersion);
+
+        // Revisión: la migración sube la versión al cargar, y al reescribirlo sale una 9 completa (con su
+        // pendingMatch nulo), idéntica a la que se habría escrito de haber empezado la run con este código.
+        Assert.Equal(9, loaded.SchemaVersion);
+        Assert.Equal(v9, RunSave.Save(loaded));
+    }
+
+    [Fact]
+    public void ADecisionAtOrBeforeTheWatchedTickIsRejectedAndTheNextOneIsAllowed()
+    {
+        Assert.False(PendingMatch.CanDecideAt(watchedTick: 100, decisionTick: 99));
+        Assert.False(PendingMatch.CanDecideAt(watchedTick: 100, decisionTick: 100));
+        Assert.True(PendingMatch.CanDecideAt(watchedTick: 100, decisionTick: 101));
+
+        // Sin salir del partido el suelo es 0 y no estorba a nada.
+        Assert.True(PendingMatch.CanDecideAt(watchedTick: 0, decisionTick: 1));
+    }
+
+    /// <summary>
+    /// El guardado de antes de enseñar el partido lleva el peor caso, el último tick, para una victoria y para
+    /// una derrota (un cierre forzado no deja un suelo a 0), y carga y reproduce el mismo partido.
+    /// </summary>
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public void TheCheckpointWrittenBeforeShowingTheMatchCarriesTheWorstCaseWatchedTick(bool victory)
+    {
+        for (ulong seed = 1; seed <= 60; seed++)
+        {
+            var (state, nodeId, systems) = BeforeAMatch(seed);
+            // El resultado que cuenta es el de EnterMatch (resuelve también los puntos del jugador con la
+            // política por defecto), no el de la reproducción, que los deja pendientes.
+            var expected = RunEngine.EnterMatch(state, nodeId, Catalog, systems);
+            if ((expected.Summary.Report.Winner == 0) != victory)
+            {
+                continue;
+            }
+
+            var playback = Underleague.Sim.Run.View.MatchPlaybacks.Of(state, nodeId, Catalog, systems, trace: true);
+
+            var pending = PendingMatch.BeforeShowing(nodeId, MatchDecisions.None, playback);
+            var trace = playback.Trace!;
+            Assert.Equal(trace.TickAt(trace.FrameCount - 1), pending.WatchedTick);
+            Assert.True(pending.WatchedTick > 0);
+
+            var loaded = RunSave.Load(RunSave.Save(state, pending), out _, out var back);
+            Assert.Equal(pending.WatchedTick, back!.WatchedTick);
+            Assert.False(PendingMatch.CanDecideAt(back.WatchedTick, back.WatchedTick));
+
+            var entry = RunEngine.EnterMatch(loaded, back.NodeId, Catalog, systems, back.Decisions);
+            Assert.Equal(RunSave.Save(expected.State), RunSave.Save(entry.State));
+            return;
+        }
+
+        Assert.Fail($"ninguna de las 60 semillas dio {(victory ? "una victoria" : "una derrota")}");
+    }
+
+    /// <summary>
+    /// Un guardado con <c>pendingMatch</c> no nulo cumple <c>run-save.schema.json</c> de verdad (JsonSchema.Net),
+    /// y el nulo también: las claves no bastan, también los tipos y los <c>required</c>.
+    /// </summary>
+    [Fact]
+    public void ASaveWithAPendingMatchValidatesAgainstTheSchema()
+    {
+        var schema = Json.Schema.JsonSchema.FromText(
+            File.ReadAllText(Path.Combine(TestData.DataDirectory, "schemas", "run-save.schema.json")));
+        var (state, nodeId, _) = BeforeAMatch(2026);
+
+        foreach (var pending in new PendingMatch?[] { new PendingMatch(nodeId, SomeDecisions(), 137), null })
+        {
+            using var doc = System.Text.Json.JsonDocument.Parse(RunSave.Save(state, pending));
+            var result = schema.Evaluate(doc.RootElement, new Json.Schema.EvaluationOptions { OutputFormat = Json.Schema.OutputFormat.List });
+            Assert.True(result.IsValid, $"pendingMatch {(pending is null ? "nulo" : "no nulo")} no cumple el esquema");
+        }
     }
 
     [Fact]
