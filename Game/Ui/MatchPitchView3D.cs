@@ -991,6 +991,7 @@ public partial class MatchPitchView3D : SubViewportContainer
             Roughness = 0.4f,
             Metallic = 0f,
             DisableReceiveShadows = true,
+            AlbedoTexture = BuildBallTexture(),
         };
         _ball = new MeshInstance3D
         {
@@ -1104,6 +1105,66 @@ public partial class MatchPitchView3D : SubViewportContainer
     /// construye así y no con un <c>PlaneMesh</c> para que no haya ninguna duda sobre en qué esquina de la
     /// textura cae la casilla (0,0): la columna es X, la fila es Z y la textura se lee igual que la imagen.
     /// </summary>
+    /// <summary>
+    /// Textura del balón (BV-A, punto 6): blanco con doce manchas oscuras en los vértices de un icosaedro, los pentágonos
+    /// de un balón de toda la vida, en proyección equirrectangular para la <see cref="SphereMesh"/>. Sin ella una esfera
+    /// lisa no puede rodar a la vista y el balón conducido parecía deslizarse. Placeholder (regla 10), generado en código.
+    /// </summary>
+    private static ImageTexture BuildBallTexture()
+    {
+        const int width = 64;
+        const int height = 32;
+        float g = (1f + Mathf.Sqrt(5f)) / 2f;
+        var vertices = new[]
+        {
+            new Vector3(-1, g, 0), new Vector3(1, g, 0), new Vector3(-1, -g, 0), new Vector3(1, -g, 0),
+            new Vector3(0, -1, g), new Vector3(0, 1, g), new Vector3(0, -1, -g), new Vector3(0, 1, -g),
+            new Vector3(g, 0, -1), new Vector3(g, 0, 1), new Vector3(-g, 0, -1), new Vector3(-g, 0, 1),
+        };
+        var image = Image.CreateEmpty(width, height, false, Image.Format.Rgb8);
+        for (int y = 0; y < height; y++)
+        {
+            float lat = Mathf.Pi * (0.5f - ((y + 0.5f) / height));
+            for (int x = 0; x < width; x++)
+            {
+                float lon = Mathf.Tau * ((x + 0.5f) / width);
+                var dir = new Vector3(Mathf.Cos(lat) * Mathf.Cos(lon), Mathf.Sin(lat), Mathf.Cos(lat) * Mathf.Sin(lon));
+                float best = -1f;
+                foreach (var v in vertices)
+                {
+                    best = Mathf.Max(best, dir.Dot(v.Normalized()));
+                }
+
+                // cos 0,3 rad: la mancha ocupa lo que el pentágono en un balón de 32 paneles.
+                image.SetPixel(x, y, best > 0.955f ? new Color(0.12f, 0.12f, 0.12f) : Colors.White);
+            }
+        }
+
+        return ImageTexture.CreateFromImage(image);
+    }
+
+    private Vector3 _ballLast;
+    private bool _ballHasLast;
+
+    /// <summary>
+    /// Hace rodar el dibujo del balón lo que se ha movido sobre el césped desde el fotograma anterior (sin deslizar:
+    /// ángulo = distancia / radio, eje horizontal perpendicular a la marcha). Un salto mayor que un teletransporte
+    /// (saque, cambio de partido) no rueda. Sólo presentación.
+    /// </summary>
+    private void RollBall(Vector3 at)
+    {
+        var step = new Vector3(at.X - _ballLast.X, 0f, at.Z - _ballLast.Z);
+        float distance = step.Length();
+        if (_ballHasLast && distance > 0.0001f && distance < TeleportThresholdCells)
+        {
+            var axis = Vector3.Up.Cross(step / distance);
+            _ball.Basis = new Basis(axis, distance / BallRadius) * _ball.Basis.Orthonormalized();
+        }
+
+        _ballLast = at;
+        _ballHasLast = true;
+    }
+
     private static ArrayMesh BuildGroundMesh()
     {
         var vertices = new Vector3[]
@@ -2340,7 +2401,9 @@ public partial class MatchPitchView3D : SubViewportContainer
         }
 
         _ball.Visible = true;
-        _ball.Position = new Vector3(ball.X + offset.X, BallRadius + Mathf.Max(0f, height), ball.Y + offset.Y);
+        var ballAt = new Vector3(ball.X + offset.X, BallRadius + Mathf.Max(0f, height), ball.Y + offset.Y);
+        RollBall(ballAt);
+        _ball.Position = ballAt;
 
         // La sombra en el suelo, que es lo que convierte "una pelota más arriba en la pantalla" en "una
         // pelota por el aire": sin una referencia fija en el césped, subir el balón en una cámara en tres
