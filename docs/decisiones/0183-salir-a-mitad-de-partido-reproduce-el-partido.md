@@ -40,14 +40,51 @@ Qué debe pasar al salir a mitad de partido en un roguelite ironman. Tres opcion
 7. **Legibilidad**: al volver se ve el partido, no un salto al informe. Los controles en vivo se reactivan al llegar al tick que ya se había visto.
 8. **Medición**: no cambia ningún peso, probabilidad ni catálogo. No aplica lote de `/Balance` (`balance-measure`): es un arreglo de replay/serialización, que la skill excluye expresamente. Lo que sí se mide es la igualdad byte a byte, en tests.
 
-### Anti-abuso: `WatchedTick`
+### Anti-abuso: `WatchedTick` (enmendado tras la revisión independiente)
 
-El guardado lleva el tick más lejano que el jugador **llegó a ver**. Al reanudar, una activación manual o un
-cambio de orden sólo valen desde ese tick (antes de él, el jugador ya conocía el futuro). Las sustituciones
-forzadas no necesitan guarda: sólo estaban respondidas las de ticks ya vistos, porque la retransmisión se
-detiene en cada una hasta que se responde. Es una consecuencia de «sin trampas por recarga» de RT-061, no una
-regla nueva; si el revisor prefiere no restringir los controles, basta con no leer `WatchedTick` en
-`BroadcastScreen.CanActNow` y el resto sigue valiendo.
+El guardado lleva el tick más lejano que el jugador **llegó a ver**. Al reanudar, nada de lo que decide el
+jugador vale por debajo de él (`PendingMatch.CanDecideAt`: sólo desde el tick siguiente): ni la activación
+manual ni el cambio de orden, **ni las sustituciones, los rechazos y «que siga jugando»**. Sin eso podía ver un
+gol, salir y decidir mejor al volver.
+
+**La salida limpia no es la única salida.** Un cierre forzado (kill, Steam Deck sin `WM_CLOSE`, caída) no
+ejecuta ningún `Save()`, y con un guardado que sólo se escribe al salir deja el suelo a 0 (derrota) o el mapa
+de antes del nodo (victoria). Por eso la regla es la conservadora:
+
+1. **`PlayMatch` escribe el guardado del partido a medias antes de enseñarlo**, sea derrota o victoria, con
+   `WatchedTick` = último tick del partido (el peor caso: `PendingMatch.BeforeShowing`). Cada decisión
+   (`Answer`) lo vuelve a escribir con el mismo suelo pesimista.
+2. Un `Save()` **limpio** (pausa, salir al menú, `WM_CLOSE`) lo baja al tick visto de verdad. El suelo nunca
+   baja por debajo del de una reanudación anterior: tras un cierre forzado se conserva el peor caso aunque la
+   siguiente salida sea limpia.
+3. Tras un cierre forzado la repetición sale con **todos los controles bloqueados** y el resultado no cambia.
+   Los puntos de sustitución que el jugador no llegó a responder y caen por debajo del suelo se resuelven con
+   la política por defecto **antes de enseñar la reproducción** (`ResolveBlockedPoints`), para que lo que se ve
+   y lo que se aplica sean el mismo partido; sin esto la ventana quedaría abierta y sin respuesta posible.
+4. La regla vive también en `RunController` (`ChangeOrder`, `UseConsumable`, `Substitute`, `Decline`,
+   `PlayOn`), no sólo en la pantalla: una pantalla nueva no puede saltársela.
+
+**Cómo se le explica al jugador** (`game-design-review`, el bloqueo es visible): un texto corto bajo el marcador
+mientras la reproducción no pasa de lo ya visto —«Partido retomado: ya lo habías visto hasta el minuto N. No se
+puede decidir hasta entonces.» o, si lo vio entero, «ya lo habías visto entero; sólo verlo»—. Lo genera el
+minuto del suelo (`MatchLogView.Minute`), desaparece solo al llegar a lo no visto y no esconde ningún daño:
+nada nuevo ocurre en el partido, sólo se explica un control que no responde. El texto está en `UiText` (la
+interfaz del juego sólo tiene `Es`; `data/l10n` es del catálogo de `/data`).
+
+## Un partido abierto no puede quedarse desfasado
+
+`_matchOpen` se cierra (`CommitMatch`) al llegar al informe, y también —por si se salió sin pasar por él, caso
+de la vista de depuración (`Nav.MatchDebug`) o de un arnés de capturas— cuando se navega a cualquier pantalla
+que no sea del partido (`Nav.Go`) y cuando entra o decide algo ajeno al partido (`Enter`, `Apply`, `JumpTo*`,
+`SeedForCapture`, `PlayMatch`). Sin esto cada `Save()` posterior reescribiría en silencio el estado viejo.
+
+## Consecuencias que se documentan
+
+- **Victoria**: `CommitMatch` guarda ahora el estado de después con la fase `NodeOpen` (recompensa pendiente),
+  que antes sólo se escribía al cerrar. Es el mismo estado que habría escrito un cierre en ese punto.
+- **Un guardado de la versión 8 hecho a mitad de partido** (el comportamiento antiguo) se comporta como antes: es
+  un estado de después del partido, no trae `pendingMatch`, y al volver el partido está jugado y no se ve. La
+  migración sube la versión a 9 al cargar, y al reescribirlo sale una 9 completa.
 
 ## Revisión de arquitectura (`architecture-review`)
 
@@ -75,7 +112,7 @@ regla nueva; si el revisor prefiere no restringir los controles, basta con no le
    el jugador llega al informe (el partido se «cierra» ahí).
 2. Al volver, el juego retoma ese guardado, vuelve a entrar en el nodo con las decisiones guardadas y
    reproduce el partido hasta el mismo final.
-3. Los controles en vivo (consumible manual, orden) quedan bloqueados antes de `WatchedTick`.
+3. Nada de lo que decide el jugador vale antes de `WatchedTick`; el guardado de antes de enseñar el partido lleva el peor caso.
 4. Un guardado de la versión 8 carga sin partido pendiente.
 
 ## Lo que queda fuera
