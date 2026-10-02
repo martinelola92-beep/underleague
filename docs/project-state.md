@@ -37,7 +37,7 @@ independiente, rebase y merge a `main`, push):
 6. Parado a medias (worktree `agent-a5db0e59a60aad873`, todo commiteado; renumerar ADR a 0180+). Perks que no cumplen: BC-C (Doble disparo), BC-D (Último hombre), BM-B (resoluciones que no miran a sus
    participantes), BM-C (Mordisco), BB-R (maestros que no lo son).
 7. Menores del plan de diversión: resto de BS-A; apuesta Blind contra Never CERRADO el 2 oct (6 semillas: pierde oro, sin efecto detectable en victoria; ADR 0157, enmienda; **`Prepared` sigue sin medir** y `comeback` en dificultad 1 queda como hallazgo abierto: decisión del revisor); herrero CERRADO el 2 oct (6 semillas, sin efecto en victoria; sin tope, techo estructural: ADR 0164);
-   puerta de cola de los sumideros (ADR de tolerancia); BR-A (salir a mitad de
+   puerta de cola de los sumideros CERRADO el 2 oct (techo medido, ADR 0182); BR-A (salir a mitad de
    partido, esquema de guardado).
 
 ---

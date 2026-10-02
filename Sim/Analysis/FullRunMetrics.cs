@@ -263,6 +263,18 @@ public static class FullRunMetrics
     /// <summary>Sumideros pagables por acto: máximo. Todos a la vez sería RF-114k incumplido.</summary>
     public const double SinksMax = 3.0;
 
+    /// <summary>Nombre de la fila: porcentaje de actos cuyo oro ganado paga los cinco sumideros (RF-114k).</summary>
+    public const string ActsWithAllSinksAffordable = "actsWithAllSinksAffordable";
+
+    /// <summary>
+    /// Techo (%) de actos que pagan todos los sumideros. RF-114k habla del oro <b>medio</b> por acto; el 0 exacto de la
+    /// ADR 0165 vigilaba una cola. Procedencia (Regla H, ADR 0182): 12 semillas × 240 runs (`--full-runs`, contextual),
+    /// 4 actos de ~5.700 (0,07 %; 3 de 12 semillas con alguno), con la puerta viendo ~480 actos (1 acto = 0,21 %). Con
+    /// esa cola, P(&gt;=5 actos) es ~2e-5, mientras que una economía que duplica el oro da decenas de puntos.
+    /// Cuatro actos por muestra (1,0 %) es el techo; el listón del oro medio sigue siendo <see cref="SinksMin"/>-<see cref="SinksMax"/>.
+    /// </summary>
+    public const double AllSinksAffordableShareMax = 1.0;
+
     /// <summary>Fracción mínima del surtido asequible (ADR 0037): por debajo, la tienda es decorado.</summary>
     public const double AffordableShareMin = 20.0;
 
@@ -780,7 +792,11 @@ public static class FullRunMetrics
             ? 100.0 * rewardsDeclined / (rewardsTaken + rewardsDeclined)
             : 0.0));
         rows.Add(Info("matchesPerRun", (double)matches / runs.Count));
-        rows.Add(Info("actsWithAllSinksAffordable", sinkSamples > 0 ? 100.0 * allFourAffordable / sinkSamples : 0.0));
+        rows.Add(Banded(
+            ActsWithAllSinksAffordable,
+            sinkSamples > 0 ? 100.0 * allFourAffordable / sinkSamples : 0.0,
+            null,
+            AllSinksAffordableShareMax));
         // BA-H (ADR 0172): consumibles comprados y consumibles que llegaron a ACTIVARSE por run. Informativas, sin
         // banda (Regla H): sirven para comparar antes y después de tocar los huecos, no son un requisito.
         rows.Add(Info("consumablesBoughtPerRun", (double)consumablesBought / runs.Count));

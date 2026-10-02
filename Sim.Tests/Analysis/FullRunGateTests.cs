@@ -117,15 +117,35 @@ public sealed class FullRunGateTests
     public void Act1IsTheWorkshop() => AssertIn($"{FullRunMetrics.OrdinaryDefeatRateByActPrefix}1");
 
     /// <summary>
-    /// RF-114k: el oro medio de un acto permite usar dos o tres sumideros, <b>nunca los cuatro</b>. Los
-    /// cuatro vivos en fase 2 son mercado, clínica, rerolls y salarios de mercenarios; el coste de "usar"
-    /// cada uno durante un acto lo define <see cref="FullRunMetrics.SinksAffordable"/>.
+    /// RF-114k: el oro medio de un acto permite usar dos o tres sumideros, <b>nunca todos</b>. Los cinco
+    /// vivos son mercado, clínica, hueco de plantilla, rerolls y salarios de mercenarios; el coste de "usar"
+    /// cada uno durante un acto lo define <see cref="FullRunMetrics.SinksAffordable"/>. ADR 0182: la media
+    /// está en banda y la cola (actos que pagan los cinco) tiene un techo medido, no un cero exacto, que
+    /// se ponía rojo por un acto suelto de cada ~500.
     /// </summary>
     [Fact]
     public void TheGoldOfAnActPaysTwoOrThreeSinksAndNeverAllOfThem()
     {
         AssertIn(FullRunMetrics.SinksAffordablePerAct);
-        Assert.Equal(0.0, Value("actsWithAllSinksAffordable"));
+        AssertIn(FullRunMetrics.ActsWithAllSinksAffordable);
+    }
+
+    /// <summary>
+    /// Control de la ADR 0182: la cola con techo sigue protegiendo. Con las mismas runs y el oro de cada acto
+    /// multiplicado por tres (una economía que sobra), la fila se sale de banda y la media también.
+    /// </summary>
+    [Fact]
+    public void AnEconomyThatTriplesTheGoldTripsTheSinksTail()
+    {
+        var by = Result.Value.ByDoctrine;
+        var rich = by[PurchaseDoctrine.Contextual]
+            .Select(r => r with { GoldEarnedByAct = r.GoldEarnedByAct.Select(g => g * 3).ToArray() })
+            .ToList();
+        var rows = FullRunMetrics.Compute(
+            rich, by[PurchaseDoctrine.Spender], by[PurchaseDoctrine.Saver], StandardRunSystems.FromJson(TestData.LoadAllFiles()).Economy);
+        var tail = rows.Single(m => m.Name == FullRunMetrics.ActsWithAllSinksAffordable);
+        Assert.NotEqual("IN", tail.Status);
+        Assert.NotEqual("IN", rows.Single(m => m.Name == FullRunMetrics.SinksAffordablePerAct).Status);
     }
 
     /// <summary>
