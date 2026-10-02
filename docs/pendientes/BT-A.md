@@ -1,6 +1,6 @@
 # BT-A — La política de `RunPolicy` intenta vender a un fichaje sin experiencia y lanza
 
-**Estado:** Abierta, **CONFIRMED** (29 sep 2026). Encontrada por el censo de [BA-G](./BA-G.md); no es de nombres.
+**Estado:** **CERRADA** (2 oct 2026). Era **CONFIRMED** (29 sep 2026). Encontrada por el censo de [BA-G](./BA-G.md); no es de nombres.
 
 ## Síntoma
 
@@ -33,3 +33,21 @@ Es el **instrumento**, no el juego (Regla J): la política es lo que mide `/Bala
   el oro y la plantilla de las runs que hoy no llegan ahí, así que exige `balance-measure` y no se ha tocado en el paquete de
   BA-G.
 - Decidir si una política que lanza es un fallo (probablemente) o algo que `RunPolicy.Play` debería capturar.
+
+## Arreglo (2 oct 2026)
+
+`RunPolicy.WorstSellable` excluye a quien tiene `Experience <= 0`, como veta `MarketSystem.Sell`: se arregla en la política (el
+instrumento); que el juego impida la venta es correcto y no se toca. Si no hay a quién vender, la rama (e) devuelve `null` y la
+política no hace sitio. Test: `RunPolicySellTests.ThePolicyNeverOffersToSellASigningWhoHasNotPlayed` (falla sin el filtro: elige al
+fichaje sin partidos; pasa con él). La decisión abierta sobre capturar la excepción en `RunPolicy.Play` queda como estaba: una
+política que lanza sigue siendo un fallo visible.
+
+## Medido (balance-measure)
+
+`Balance --full-runs 400` con cuatro bloques de semillas (1, 1001, 2001, 3001: sin solape, la semilla de cada run es `seed + i`),
+las tres doctrinas y las tres razas, rama contra main (`bb9260f`), **4.800 runs emparejadas**: las **4.800 son idénticas** en resultado,
+oro ganado, muertes y partidos. runWinRate 13,2 % en los dos lados (diferencia 0 ± 0), oro ganado 88,4, oro final 12,3, muertes por
+run 1,21, tamaño de plantilla 9,74. **CONFIRMED**: con la configuración de `/Balance` la rama (e) no se ejerce con ese filtro (la
+plantilla de `Balance` no llega a venderle a un fichaje sin partidos), así que el arreglo no mueve las métricas de run, como
+anticipaba «Por qué no se ha visto». La diferencia que sí produce sólo existe con el `Setup` de los tests (9 de 60 runs lanzaban),
+que no es lo que mide `/Balance`.

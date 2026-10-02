@@ -1,6 +1,6 @@
 # BS-A — Créditos de rival y Gaceta nombran al jugador de datos, no a quien ocupaba el puesto
 
-**Estado: CERRADA para la esquela (29 sep 2026); el villano por créditos queda abierto (ver abajo).** Encontrada por la revisión independiente
+**Estado: CERRADA (2 oct 2026).** La esquela se cerró el 29 sep; el villano por créditos, las lesiones y el Ojeo, el 2 oct (ver «Resto»). Encontrada por la revisión independiente
 de la [ADR 0165](../decisiones/0165-clanes-cerrados-y-nemesis.md) (clanes cerrados y némesis).
 
 ## Observación (de lectura de código, no reproducida en partida)
@@ -64,3 +64,21 @@ jefe y procedurales no anotan nada, y los guardados anteriores leen 0. Arreglado
 **Objeción de fondo, aceptada como deuda:** esto es un segundo canal de identidad (un contador por muerto) al lado de
 los créditos `equipo:puesto`, que siguen mezclando ocupantes en las lesiones y en el villano por créditos. Arregla lo
 más visible (quién mató a quién); la representación correcta —créditos por ocupante (A2/A3)— queda abierta aquí.
+
+## Resto (2 oct 2026): el mismo mecanismo, en cada crédito
+
+Regla G (`tools/existe-ya.sh esquela obituary`): el mecanismo ya existía —el código de `RivalKiller`, leído con la memoria de
+**antes** del partido—, así que no se inventa otro. `MatchResolution.ApplyRivalCredits` anota, junto a cada crédito
+`rivalCredit:<clan>:<puesto>:<propio>:<hecho>`, el ocupante del puesto en ese partido en `rivalOccupant:<mismo sufijo>`
+(`RunState.RivalOccupantPrefix`; clave libre, no sube el guardado; 0 = el de datos, no se escribe; los guardados antiguos leen 0).
+`RivalCredit.Occupant` lo expone y:
+
+- el **villano de la Gaceta por créditos** agrupa por `(clan, puesto, ocupante)` y se nombra con `RivalKiller.Name`;
+- el **Ojeo** (`ScoutScreen`) usa `credit.Occupant` para cualquier hecho (antes sólo muertes, vía `deathKiller:`), lo que cubre las
+  **lesiones**;
+- la esquela sigue con `deathKiller:` (por víctima), sin cambio.
+
+Límite aceptado: la clave del crédito sigue siendo por puesto, así que si dos ocupantes distintos tocan el mismo par (puesto,
+propio, hecho), gana el ocupante del último partido. Tests en `NemesisTests`: `TheCreditVillainIsNamedAfterTheSigningNotTheDataPlayer`,
+`AnInjuryCreditRecordsTheSigningWhoCausedIt`, `ADataPlayerCreditHasNoOccupant`. Balance: sólo contabilidad y nombres, no cambia
+ninguna tirada (comprobado: las 4.800 runs de BT-A son idénticas a main con este cambio dentro).
