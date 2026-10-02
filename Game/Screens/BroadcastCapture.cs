@@ -153,7 +153,12 @@ public partial class BroadcastCapture : Control
         {
             var movementArgs = OS.GetCmdlineUserArgs();
             string movementDir = movementArg + 1 < movementArgs.Length ? movementArgs[movementArg + 1] : Path.Combine(_directory, "movimiento-crudo");
-            await CaptureMovement(run, movementDir);
+            // Argumentos opcionales detrás de la carpeta: una semilla y `sinimagenes` (sólo el registro).
+            ulong movementSeed = movementArg + 2 < movementArgs.Length && ulong.TryParse(movementArgs[movementArg + 2], out var parsedSeed)
+                ? parsedSeed
+                : Seeds[0];
+            bool movementImages = System.Array.IndexOf(movementArgs, "sinimagenes") < 0;
+            await CaptureMovement(run, movementDir, movementSeed, movementImages);
             GetTree().Quit();
             return;
         }

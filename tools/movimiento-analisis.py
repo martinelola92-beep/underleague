@@ -90,12 +90,14 @@ def frame_metrics(rows, window, label=None):
                     yaw_big += 1
                 dx, dz = r["x"] - prev["x"], r["z"] - prev["z"]
                 body = math.hypot(dx, dz) * FPS
+                feet = r["naturalSpeed"] * r["speedScale"]
                 if r["state"] in FREE and r["clip"] in ("jog", "run") and r["naturalSpeed"] > 0.01:
                     in_place_total += 1
-                    feet = r["naturalSpeed"] * r["speedScale"]
-                    if body < 0.05:
+                    # Corriendo en el sitio = cuerpo quieto y pies andando. Con la reproducción parada y los
+                    # pies también parados (ritmo 0) no cuenta: es una imagen congelada, que es lo correcto.
+                    if body < 0.05 and feet > 0.05:
                         in_place += 1
-                    else:
+                    elif body >= 0.05 and feet > 0.05:
                         slide.append(body / feet)
                 if prev2 is not None:
                     ax, az = prev["x"] - prev2["x"], prev["z"] - prev2["z"]

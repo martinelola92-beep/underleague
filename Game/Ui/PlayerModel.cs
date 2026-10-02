@@ -133,15 +133,23 @@ public sealed partial class PlayerModel : Node3D
     /// </summary>
     private const float BlendSeconds = 0.15f;
 
-    /// <summary>Por debajo de esto se considera quieto (casillas por segundo).</summary>
-    private const float MovingThreshold = 0.15f;
+    /// <summary>
+    /// Constante de tiempo del filtro de la mezcla de locomoción, en segundos de partido (BV-A). La
+    /// velocidad que llega ya viene promediada sobre una ventana de la traza; esto sólo quita el escalón que
+    /// queda al cambiar de ventana. <b>Provisional, sin medir</b>: del orden del intervalo de decisión de
+    /// <c>/Sim</c> (<c>decisionIntervalTicks: 2</c> = 0,13 s), para que un cambio de destino no se vea antes de
+    /// que el motor lo haya sostenido.
+    /// </summary>
+    private const float LocomotionSmoothingSeconds = 0.12f;
 
-    /// <summary>A partir de esta velocidad se corre en vez de trotar (casillas por segundo).</summary>
-    private const float RunThreshold = 1.9f;
-
-    /// <summary>Velocidad a la que el trote y la carrera van a su ritmo natural (<c>SpeedScale</c> 1).</summary>
-    private const float JogReferenceSpeed = 1.4f;
-    private const float RunReferenceSpeed = 2.8f;
+    /// <summary>
+    /// Los gestos que no son locomoción, montados como entradas de una transición del árbol (BV-A). Los
+    /// clips en bucle (<c>fallen</c>) no terminan; el resto se acaba con su propia duración.
+    /// </summary>
+    private static readonly string[] GestureKeys =
+    {
+        "kick", "header", "tackle", "trip", "fallen", "receive", "throwin", "penalty", "gk_save", "gk_catch",
+    };
 
     /// <summary>
     /// Corrección de orientación, en radianes. glTF y FBX dan el frente en <b>+Z</b> y Godot lo considera
@@ -163,18 +171,41 @@ public sealed partial class PlayerModel : Node3D
     /// huesos por nombre, y esto se consultaría catorce veces por fotograma.
     /// </summary>
     private readonly System.Collections.Generic.Dictionary<ContactPart, (int Left, int Right)> _contactBones = new();
-    private string _playing = string.Empty;
+    private bool _keeper;
 
     /// <summary>
-    /// El gesto de contacto que se está reproduciendo y hay que <b>dejar terminar</b>, o vacío. Existe
-    /// porque un gesto nacido de un evento dura <b>un tick</b> —el cabezazo, la parada— y sin esto el
-    /// fotograma siguiente lo cortaba con la postura de estado: se lanzaba el remate y al instante volvía
-    /// a correr. El disparo y el pase no lo sufren porque <c>Passing</c>/<c>Shooting</c> duran cinco ticks.
-    /// Es el mismo patrón que ya encadena <c>trip</c> con <c>fallen</c>: lo manda el reloj de la propia
-    /// animación, no un temporizador aparte.
+    /// El árbol que mezcla la locomoción con los gestos (BV-A). Sustituye a tocar el
+    /// <see cref="AnimationPlayer"/> con <c>Play</c>, que sólo sabe ir de un clip a otro y arrancaba el
+    /// nuevo desde 0: con la velocidad cruzando los umbrales cada tick, el muñeco reiniciaba la zancada
+    /// dos veces por segundo.
     /// </summary>
-    private string _holdingCue = string.Empty;
-    private bool _keeper;
+    private AnimationTree? _tree;
+
+    /// <summary>Posición de la mezcla de locomoción ahora mismo: 0 quieto, <see cref="_jogBlend"/> trote, 1 carrera.</summary>
+    private float _blend;
+
+    /// <summary>Dónde cae el trote en la mezcla: zancada natural del <c>jog</c> / la del <c>run</c>, medida en los clips.</summary>
+    private static float _jogBlend = 0.5f;
+
+    /// <summary>Zancada natural de la carrera de ESTE modelo, en casillas por segundo de partido; 0 hasta medirla.</summary>
+    private float _runCells;
+
+    /// <summary>
+    /// El gesto que suena por encima de la locomoción, o vacío. Su reloj es el de la reproducción, no el de
+    /// un estado: un gesto nacido de un evento dura un tick y sin esto el siguiente fotograma lo cortaba.
+    /// </summary>
+    private string _gesture = string.Empty;
+    private float _gestureTime;
+    private float _gestureLength;
+
+    /// <summary>
+    /// Si el gesto termina entero aunque el estado que lo pidió ya se haya ido (los de evento: recepción,
+    /// cabezazo, parada, saques, el suelo), o vive mientras dure su estado (entrada, golpeo).
+    /// </summary>
+    private bool _gestureHeld;
+
+    /// <summary>Peso del gesto en la mezcla final, 0..1; sube y baja en <see cref="BlendSeconds"/>.</summary>
+    private float _gestureWeight;
 
     /// <summary>
     /// Un modelo escalado a esa altura de cuerpo, o <c>null</c> si el material no está (la vista sigue con
@@ -235,7 +266,7 @@ public sealed partial class PlayerModel : Node3D
         // Arranca en su espera ya, sin esperar al primer Pose(): si no, el personaje se queda en la pose de
         // reposo del fichero —los brazos en cruz de la T— y cualquier captura de una pantalla pausada sale
         // con un espantapájaros. Costó una ronda de capturas averiguarlo con el pack anterior.
-        model.Switch(keeper ? "gk_idle" : "idle");
+        model.BuildTree();
         return model;
     }
 
@@ -246,117 +277,215 @@ public sealed partial class PlayerModel : Node3D
     public void Paint(Material material) => Paint(this, material);
 
     /// <summary>
-    /// La postura de este fotograma. <paramref name="velocity"/> viene de la diferencia entre dos
-    /// fotogramas de la traza, en casillas por segundo, y <paramref name="state"/> es el estado que la
-    /// simulación ya publica por jugador (<c>MatchTrace.StateAt</c>): <b>el modelo no decide nada</b>, solo
-    /// mira lo que está escrito (RT-014).
+    /// La postura de este fotograma. <paramref name="velocity"/> es la velocidad de PRESENTACIÓN en casillas
+    /// por segundo de partido —la vista la promedia sobre una ventana de la traza, no es el paso de un tick—,
+    /// <paramref name="state"/> el estado que la simulación publica (<c>MatchTrace.StateAt</c>) y
+    /// <paramref name="delta"/> los segundos reales de este fotograma (0 = colocar sin animar, para las
+    /// capturas fijas). <b>El modelo no decide nada</b>: sólo mira lo que está escrito (RT-014).
     /// </summary>
-    public void Pose(Vector2 velocity, PlayerState state, ContactCue cue = ContactCue.None)
+    public void Pose(Vector2 velocity, PlayerState state, ContactCue cue, float delta)
     {
-        if (_anim is null)
+        if (_tree is null)
         {
             return;
         }
 
+        MeasureStride();
         float speed = velocity.Length();
-        DebugInputSpeed = speed;
-        if (speed > MovingThreshold)
+        if (speed > 0.15f)
         {
-            // Mirar hacia donde se va. Solo con movimiento de verdad: parado, el ruido de la interpolación
-            // le haría girar sobre sí mismo. Antes de elegir postura, para que la entrada y el trompicón
-            // también salgan orientados.
+            // Mirar hacia donde se va (el giro con velocidad limitada es otro paso de BV-A).
             Rotation = new Vector3(0f, Mathf.Atan2(velocity.X, velocity.Y) + FacingOffset, 0f);
         }
 
-        // El gesto de contacto va ANTES que el estado, pero después del suelo: un rematador de cabeza
-        // sigue estando en Positioning para /Sim, y un portero que para sigue estando donde estaba. Lo que
-        // no puede es tapar un derribo —el que cae, cae— así que esos dos casos se miran primero.
-        bool floored = state is PlayerState.KnockedDown or PlayerState.Injured;
+        AdvanceGesture(delta);
+        ChooseGesture(state, cue);
 
-        // Un gesto en curso se deja terminar. Solo lo interrumpe irse al suelo: el que cae, cae.
-        if (_holdingCue.Length > 0)
+        // Locomoción continua: una posición de mezcla idle→trote→carrera en lugar de tres clips con umbral.
+        float target = _runCells > 0.01f ? Mathf.Clamp(speed / _runCells, 0f, 1f) : 0f;
+        _blend = delta <= 0f ? target : Mathf.Lerp(_blend, target, 1f - Mathf.Exp(-delta / LocomotionSmoothingSeconds));
+        _tree.Set("parameters/loco/blend_position", _blend);
+        _tree.Set("parameters/loco_scale/scale", 1f);
+        _tree.Set("parameters/gesture_scale/scale", 1f);
+
+        float weightTarget = _gesture.Length > 0 ? 1f : 0f;
+        _gestureWeight = delta <= 0f ? weightTarget : Mathf.MoveToward(_gestureWeight, weightTarget, delta / BlendSeconds);
+        _tree.Set("parameters/mix/blend_amount", _gestureWeight);
+    }
+
+    /// <summary>
+    /// Qué gesto toca encima de la locomoción. El suelo manda (el que cae, cae); después el gesto de evento
+    /// —que se deja terminar—, y por último el de estado, que vive mientras dura su estado y se funde al salir.
+    /// </summary>
+    private void ChooseGesture(PlayerState state, ContactCue cue)
+    {
+        if (state is PlayerState.KnockedDown or PlayerState.Injured)
         {
-            if (!floored && _playing == _holdingCue && _anim.IsPlaying())
+            if (_gesture == "trip" && _gestureTime >= _gestureLength)
             {
-                return;
+                StartGesture("fallen", held: true);
+            }
+            else if (_gesture is not ("trip" or "fallen"))
+            {
+                StartGesture("trip", held: true);
             }
 
-            _holdingCue = string.Empty;
-        }
-
-        if (cue != ContactCue.None && !floored)
-        {
-            string? clip = cue switch
-            {
-                ContactCue.Receive => "receive",
-                ContactCue.Header => "header",
-                ContactCue.ThrowIn => "throwin",
-                ContactCue.Save => "gk_save",
-                ContactCue.Catch => "gk_catch",
-                ContactCue.Penalty => "penalty",
-                _ => null,
-            };
-
-            if (clip is not null)
-            {
-                Once(clip);
-                _holdingCue = clip;
-                return;
-            }
-        }
-
-        switch (state)
-        {
-            case PlayerState.KnockedDown:
-            case PlayerState.Injured:
-                // Dos tiempos, encadenados por el reloj de la propia animación y no por un temporizador
-                // aparte: se va al suelo (trip) y se queda ahí (fallen, en bucle).
-                if (_playing == "trip")
-                {
-                    if (!_anim.IsPlaying())
-                    {
-                        Switch("fallen");
-                    }
-                }
-                else if (_playing != "fallen")
-                {
-                    Switch("trip");
-                }
-
-                return;
-
-            case PlayerState.Tackling:
-                Once("tackle");
-                return;
-
-            case PlayerState.Shooting:
-                Once("kick");
-                return;
-
-            case PlayerState.Passing:
-                // El pase es un golpeo más corto; comparte clip con el tiro y se distingue por lo que hace
-                // el balón, que es lo que el jugador mira.
-                Once("kick");
-                return;
-
-            case PlayerState.Celebrating:
-                // El pack no trae celebración. Se queda en su espera antes que inventarse un gesto que
-                // signifique otra cosa.
-                Switch(_keeper ? "gk_idle" : "idle");
-                return;
-        }
-
-        if (speed <= MovingThreshold)
-        {
-            Switch(_keeper ? "gk_idle" : "idle");
-            _anim.SpeedScale = 1f;
             return;
         }
 
-        bool running = speed > RunThreshold;
-        Switch(running ? "run" : "jog");
-        _anim.SpeedScale = Mathf.Clamp(speed / (running ? RunReferenceSpeed : JogReferenceSpeed), 0.6f, 1.8f);
+        if (_gesture is "trip" or "fallen")
+        {
+            StopGesture();
+        }
+
+        string? cueClip = cue switch
+        {
+            ContactCue.Receive => "receive",
+            ContactCue.Header => "header",
+            ContactCue.ThrowIn => "throwin",
+            ContactCue.Save => "gk_save",
+            ContactCue.Catch => "gk_catch",
+            ContactCue.Penalty => "penalty",
+            _ => null,
+        };
+
+        if (cueClip is not null)
+        {
+            if (!(_gesture == cueClip && _gestureHeld))
+            {
+                StartGesture(cueClip, held: true);
+            }
+
+            return;
+        }
+
+        if (_gestureHeld)
+        {
+            return;
+        }
+
+        string? stateClip = state switch
+        {
+            PlayerState.Tackling => "tackle",
+            PlayerState.Shooting or PlayerState.Passing => "kick",
+            _ => null,
+        };
+
+        if (stateClip is null)
+        {
+            StopGesture();
+        }
+        else if (_gesture != stateClip)
+        {
+            StartGesture(stateClip, held: false);
+        }
     }
+
+    /// <summary>Lanza un gesto desde su principio (la transición admite volver a sí misma: dos pases seguidos son dos golpeos).</summary>
+    private void StartGesture(string key, bool held)
+    {
+        if (_tree is null || _library is null || !_library.HasAnimation(key))
+        {
+            return;
+        }
+
+        _tree.Set("parameters/gesture/transition_request", key);
+        _gesture = key;
+        _gestureHeld = held;
+        _gestureTime = 0f;
+        var clip = _library.GetAnimation(key);
+        _gestureLength = clip.LoopMode == Animation.LoopModeEnum.None ? clip.Length : float.MaxValue;
+    }
+
+    private void StopGesture()
+    {
+        _gesture = string.Empty;
+        _gestureHeld = false;
+    }
+
+    /// <summary>El reloj del gesto. Uno que terminó deja paso a la locomoción, salvo el trompicón, que encadena con el suelo.</summary>
+    private void AdvanceGesture(float delta)
+    {
+        if (_gesture.Length == 0)
+        {
+            return;
+        }
+
+        _gestureTime += delta;
+        if (_gestureTime >= _gestureLength && _gesture != "trip")
+        {
+            StopGesture();
+        }
+    }
+
+    /// <summary>
+    /// La zancada natural de la carrera de este modelo, en casillas por segundo: el desplazamiento horneado del
+    /// clip (medido al cargarlo, antes de fijarlo) por la escala real del esqueleto. Hace falta estar en el
+    /// árbol para conocer esa escala, así que se mide la primera vez que se posa.
+    /// </summary>
+    private void MeasureStride()
+    {
+        if (_runCells > 0f || _skeleton is null || !_skeleton.IsInsideTree())
+        {
+            return;
+        }
+
+        if (NaturalSkeletonSpeed.TryGetValue("run", out float run) && run > 0f)
+        {
+            _runCells = run * _skeleton.GlobalTransform.Basis.Scale.X;
+        }
+    }
+
+    /// <summary>
+    /// Monta el árbol de mezcla (BV-A; skill <c>animation-system</c>: <c>AnimationTree</c> cuando hay que
+    /// mezclar). Raíz <see cref="AnimationNodeBlendTree"/>: <c>loco</c> (<see cref="AnimationNodeBlendSpace1D"/>
+    /// idle→jog→run con <c>Sync</c>, para que los tres clips sigan andando y cruzar un punto no reinicie
+    /// ninguno) → <c>loco_scale</c> → <c>mix</c>[0]; <c>gesture</c> (<see cref="AnimationNodeTransition"/>,
+    /// un clip por gesto) → <c>gesture_scale</c> → <c>mix</c>[1]. El peso de <c>mix</c> es el del gesto.
+    /// Los puntos de la mezcla están en la zancada natural de cada clip, relativa a la de la carrera: así, a
+    /// una velocidad dada, la zancada mezclada es esa misma velocidad y los pies no patinan.
+    /// </summary>
+    private void BuildTree()
+    {
+        if (_anim is null || _library is null)
+        {
+            return;
+        }
+
+        var root = new AnimationNodeBlendTree();
+        var loco = new AnimationNodeBlendSpace1D { MinSpace = 0f, MaxSpace = 1f, Sync = true };
+        loco.AddBlendPoint(Clip(_keeper ? "gk_idle" : "idle"), 0f);
+        loco.AddBlendPoint(Clip("jog"), _jogBlend);
+        loco.AddBlendPoint(Clip("run"), 1f);
+        root.AddNode("loco", loco);
+        root.AddNode("loco_scale", new AnimationNodeTimeScale());
+        root.ConnectNode("loco_scale", 0, "loco");
+
+        var gestures = new AnimationNodeTransition { XfadeTime = 0.1f, AllowTransitionToSelf = true, InputCount = GestureKeys.Length };
+        root.AddNode("gesture", gestures);
+        for (int i = 0; i < GestureKeys.Length; i++)
+        {
+            gestures.SetInputName(i, GestureKeys[i]);
+            gestures.SetInputReset(i, true);
+            root.AddNode("g_" + GestureKeys[i], Clip(GestureKeys[i]));
+            root.ConnectNode("gesture", i, "g_" + GestureKeys[i]);
+        }
+
+        root.AddNode("gesture_scale", new AnimationNodeTimeScale());
+        root.ConnectNode("gesture_scale", 0, "gesture");
+        root.AddNode("mix", new AnimationNodeBlend2());
+        root.ConnectNode("mix", 0, "loco_scale");
+        root.ConnectNode("mix", 1, "gesture_scale");
+        root.ConnectNode("output", 0, "mix");
+
+        _anim.Stop();
+        _tree = new AnimationTree { Name = "Tree", TreeRoot = root, RootNode = _anim.RootNode };
+        _tree.AddAnimationLibrary(Library, _library);
+        _anim.GetParent().AddChild(_tree);
+        _tree.Active = true;
+    }
+
+    private static AnimationNodeAnimation Clip(string key) => new() { Animation = $"{Library}/{key}" };
 
     // ------------------------------------------------------------------ diagnóstico (BV-A), solo lectura
 
@@ -364,13 +493,15 @@ public sealed partial class PlayerModel : Node3D
     public float DebugInputSpeed { get; private set; }
 
     /// <summary>Clave del clip que se está reproduciendo (<c>run</c>, <c>jog</c>, <c>idle</c>...). Solo para el instrumento de BV-A.</summary>
-    public string DebugClip => _playing;
+    public string DebugClip => _gestureWeight > 0.5f && _gesture.Length > 0
+        ? _gesture
+        : _blend < _jogBlend / 2f ? (_keeper ? "gk_idle" : "idle") : _blend < (_jogBlend + 1f) / 2f ? "jog" : "run";
 
     /// <summary>Segundo del clip en curso, o -1 si el reproductor ya no está sonando (un golpe que terminó). BV-A.</summary>
-    public float DebugClipTime => _anim is not null && _anim.IsPlaying() ? (float)_anim.CurrentAnimationPosition : -1f;
+    public float DebugClipTime => _gestureWeight > 0.5f && _gesture.Length > 0 ? _gestureTime : _blend;
 
     /// <summary>Multiplicador de ritmo del reproductor ahora mismo. BV-A.</summary>
-    public float DebugSpeedScale => _anim is null ? 0f : _anim.SpeedScale;
+    public float DebugSpeedScale => _tree is null ? 0f : (float)_tree.Get("parameters/loco_scale/scale");
 
     /// <summary>
     /// A qué velocidad, en casillas por segundo, avanzaría el cuerpo si el clip conservara su desplazamiento
@@ -379,6 +510,13 @@ public sealed partial class PlayerModel : Node3D
     /// </summary>
     public float DebugNaturalCellsPerSecond(string key)
     {
+        // La locomoción es una mezcla: con los puntos en la zancada de cada clip, la de la mezcla es
+        // posición × zancada de la carrera.
+        if (key is "idle" or "gk_idle" or "jog" or "run")
+        {
+            return _blend * _runCells;
+        }
+
         if (_skeleton is null || !NaturalSkeletonSpeed.TryGetValue(key, out float perSecond))
         {
             return 0f;
@@ -403,6 +541,50 @@ public sealed partial class PlayerModel : Node3D
             sb.Append(System.Globalization.CultureInfo.InvariantCulture, $"{key},{length:0.###},{(loop ? 1 : 0)},{natural:0.####}\n");
         }
 
+        return sb.ToString();
+    }
+
+    /// <summary>
+    /// Perfil de los dos pies a lo largo de un clip, muestreado a 60 Hz en un personaje de prueba colgado de
+    /// <paramref name="parent"/>: <c>t, pie izquierdo xyz, pie derecho xyz</c> en espacio del esqueleto. De ahí
+    /// sale cuándo golpea el pie (pico de velocidad de la puntera), que es lo que hay que alinear con el tick
+    /// en que sale el balón. Solo para el instrumento de BV-A.
+    /// </summary>
+    public static string DebugFootProfile(Node parent, string key)
+    {
+        var sb = new System.Text.StringBuilder();
+        if (_character is null || _library is null || !_library.HasAnimation(key))
+        {
+            return sb.ToString();
+        }
+
+        var probe = _character.Instantiate<Node3D>();
+        parent.AddChild(probe);
+        var anim = FindAnimationPlayer(probe);
+        var skeleton = FindSkeleton(probe);
+        if (anim is not null && skeleton is not null)
+        {
+            if (!anim.HasAnimationLibrary(Library))
+            {
+                anim.AddAnimationLibrary(Library, _library);
+            }
+
+            int left = skeleton.FindBone("mixamorig_LeftToeBase");
+            int right = skeleton.FindBone("mixamorig_RightToeBase");
+            float length = _library.GetAnimation(key).Length;
+            anim.Play($"{Library}/{key}");
+            for (float t = 0f; t <= length; t += 1f / 60f)
+            {
+                anim.Seek(t, true);
+                var l = skeleton.GetBoneGlobalPose(left).Origin;
+                var r = skeleton.GetBoneGlobalPose(right).Origin;
+                sb.Append(System.Globalization.CultureInfo.InvariantCulture,
+                    $"{key},{t:0.####},{l.X:0.###},{l.Y:0.###},{l.Z:0.###},{r.X:0.###},{r.Y:0.###},{r.Z:0.###}\n");
+            }
+        }
+
+        parent.RemoveChild(probe);
+        probe.Free();
         return sb.ToString();
     }
 
@@ -482,30 +664,6 @@ public sealed partial class PlayerModel : Node3D
         return null;
     }
 
-    /// <summary>Cambia de animación solo si no es la que ya suena (llamar cada fotograma es seguro).</summary>
-    private void Switch(string key)
-    {
-        if (_playing == key)
-        {
-            return;
-        }
-
-        _playing = key;
-        _anim!.SpeedScale = 1f;
-        _anim.Play($"{Library}/{key}", BlendSeconds);
-    }
-
-    /// <summary>Un golpe seco que se deja terminar: mientras dure, ninguna otra postura lo interrumpe.</summary>
-    private void Once(string key)
-    {
-        if (_playing == key && _anim!.IsPlaying())
-        {
-            return;
-        }
-
-        Switch(key);
-    }
-
     /// <summary>
     /// Carga los clips una vez en una biblioteca compartida. Cada fichero de Mixamo trae su animación
     /// dentro de una escena propia, así que hay que instanciarla para sacarla; el recurso de animación
@@ -544,6 +702,12 @@ public sealed partial class PlayerModel : Node3D
             }
 
             probe.Free();
+        }
+
+        // Dónde cae el trote en la mezcla de locomoción: su zancada relativa a la de la carrera (BV-A).
+        if (NaturalSkeletonSpeed.TryGetValue("jog", out float jog) && NaturalSkeletonSpeed.TryGetValue("run", out float run) && run > 0f)
+        {
+            _jogBlend = Math.Clamp(jog / run, 0.1f, 0.9f);
         }
 
         return library;

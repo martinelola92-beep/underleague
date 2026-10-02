@@ -448,6 +448,7 @@ public partial class MatchPitchView3D : SubViewportContainer
             return;
         }
 
+        _frameDelta = (float)delta;
         AdvanceGestures((float)delta);
         ApplyCamera();
         ApplyPalette();
@@ -473,6 +474,7 @@ public partial class MatchPitchView3D : SubViewportContainer
     {
         Frame = frame;
         Alpha = 0f;
+        _frameDelta = 0f;
         ApplyCamera();
         ApplyPalette();
         ApplyTrace();
@@ -2241,7 +2243,7 @@ public partial class MatchPitchView3D : SubViewportContainer
             // La velocidad sale de los dos fotogramas que la interpolación ya usa, convertida a casillas
             // por segundo (ticks lógicos a 15/s, RT-020). El modelo solo MIRA lo que la traza escribió: no
             // decide nada del partido (RT-014).
-            model.Pose(StepOf(trace, frame, i) * TicksPerSecond, trace.StateAt(frame, i), CueFor(trace, frame, i));
+            model.Pose(SmoothedVelocity(trace, frame, i), trace.StateAt(frame, i), CueFor(trace, frame, i), _frameDelta);
         }
 
         var ball = InterpolateBall(trace, frame);
@@ -2479,6 +2481,75 @@ public partial class MatchPitchView3D : SubViewportContainer
 
         var step = new Vector2(next.X - here.X, next.Y - here.Y);
         return step.Length() > TeleportThresholdCells ? Vector2.Zero : step;
+    }
+
+    /// <summary>Segundos reales del fotograma que se está pintando; 0 en <see cref="RenderFrame"/> (captura fija).</summary>
+    private float _frameDelta;
+
+    /// <summary>
+    /// Media ventana, en ticks, sobre la que se promedia la velocidad que ven los modelos (BV-A). <b>Provisional,
+    /// sin medir</b>: 2 ticks a cada lado cubren el intervalo de decisión de <c>/Sim</c>
+    /// (<c>decisionIntervalTicks: 2</c>), que es lo que hacía el patrón medido «0,1 casillas, 0, 0,1, 0…» y los
+    /// pasos parciales al llegar al destino; más ancha retrasaría el arranque y la parada a la vista.
+    /// </summary>
+    private const float VelocityHalfWindowTicks = 2f;
+
+    /// <summary>
+    /// La velocidad de PRESENTACIÓN de un jugador, en casillas por segundo de partido: el desplazamiento medio
+    /// entre <c>t − 2</c> y <c>t + 2</c> ticks alrededor del instante dibujado (<c>t = Frame + Alpha</c>), sobre la
+    /// traza ya calculada. Es continua en el tiempo —la del paso de un tick saltaba en cada frontera y cruzaba los
+    /// umbrales de animación dos veces por segundo (BV-A, H1)—. Sólo se lee la traza (RT-014): no cambia dónde
+    /// se dibuja a nadie, sólo cómo se mueve el muñeco. Si la ventana cruza un teletransporte (BA-K) o un
+    /// fotograma fuera del campo, se vuelve al paso del tick.
+    /// </summary>
+    private Vector2 SmoothedVelocity(MatchTrace trace, int frame, int player)
+    {
+        float t = frame + Mathf.Clamp(Alpha, 0f, 1f);
+        float from = Mathf.Max(0f, t - VelocityHalfWindowTicks);
+        float to = Mathf.Min(trace.FrameCount - 1, t + VelocityHalfWindowTicks);
+        if (to - from < 0.5f || !CleanWindow(trace, player, (int)Mathf.Floor(from), (int)Mathf.Ceil(to)))
+        {
+            return StepOf(trace, frame, player) * TicksPerSecond;
+        }
+
+        var a = PositionAtTime(trace, player, from);
+        var b = PositionAtTime(trace, player, to);
+        return new Vector2(b.X - a.X, b.Y - a.Y) / (to - from) * TicksPerSecond;
+    }
+
+    /// <summary>Ningún fotograma fuera del campo ni ningún salto de teletransporte entre <paramref name="first"/> y <paramref name="last"/>.</summary>
+    private static bool CleanWindow(MatchTrace trace, int player, int first, int last)
+    {
+        last = System.Math.Min(last, trace.FrameCount - 1);
+        for (int g = System.Math.Max(0, first); g <= last; g++)
+        {
+            if (!trace.OnPitchAt(g, player))
+            {
+                return false;
+            }
+
+            if (g > first && Vec2.Distance(trace.PositionAt(g - 1, player), trace.PositionAt(g, player)) > TeleportThresholdCells)
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    /// <summary>Posición de la traza en un instante fraccionario (interpolación lineal entre ticks, como el dibujo).</summary>
+    private static Vector2 PositionAtTime(MatchTrace trace, int player, float t)
+    {
+        int g = System.Math.Clamp((int)Mathf.Floor(t), 0, trace.FrameCount - 1);
+        float u = t - g;
+        var here = trace.PositionAt(g, player);
+        if (g + 1 >= trace.FrameCount || u <= 0f)
+        {
+            return new Vector2(here.X, here.Y);
+        }
+
+        var next = trace.PositionAt(g + 1, player);
+        return new Vector2(Mathf.Lerp(here.X, next.X, u), Mathf.Lerp(here.Y, next.Y, u));
     }
 
     /// <summary>

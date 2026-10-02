@@ -53,13 +53,15 @@ public partial class BroadcastCapture
     private StringBuilder? _movementLog;
     private string _movementDirectory = string.Empty;
 
-    private async Task CaptureMovement(RunController run, string directory)
+    private bool _movementImages = true;
+
+    private async Task CaptureMovement(RunController run, string directory, ulong seed, bool images)
     {
+        _movementImages = images;
         _movementDirectory = directory;
         Directory.CreateDirectory(directory);
 
         // Un equipo HUMANO: la maqueta solo pone modelo a los humanos (PlayerModel), y el síntoma es de los modelos.
-        ulong seed = Seeds[0];
         run.NewRun("human_abattoir", Race.Human, seed);
         int node = FirstOfKind(run, n => n.IsMatch);
         if (node < 0)
@@ -86,6 +88,9 @@ public partial class BroadcastCapture
 
         WriteTraceCsv(trace, hasModel, Path.Combine(directory, "traza.csv"));
         File.WriteAllText(Path.Combine(directory, "clips.csv"), Ui.PlayerModel.DebugDescribeClips());
+        File.WriteAllText(
+            Path.Combine(directory, "pies.csv"),
+            "clip,t,lx,ly,lz,rx,ry,rz\n" + Ui.PlayerModel.DebugFootProfile(this, "kick") + Ui.PlayerModel.DebugFootProfile(this, "receive"));
 
         var windows = PlanMovementWindows(screen, trace, hasModel);
         var plan = new StringBuilder("label,start,end,focus,images\n");
@@ -139,7 +144,7 @@ public partial class BroadcastCapture
                 $"{probe.Position.X:0.#####},{probe.Position.Z:0.#####},{probe.Yaw:0.#####},{probe.Clip},{probe.ClipTime:0.####},{probe.SpeedScale:0.####},{probe.InputSpeed:0.####},{probe.NaturalSpeed:0.####},{probe.Screen.X:0.#},{probe.Screen.Y:0.#}\n");
         }
 
-        if (w.Images)
+        if (w.Images && _movementImages)
         {
             var image = GetViewport().GetTexture().GetImage();
             image.SaveJpg(Path.Combine(_movementDirectory, $"{w.Label}_{_windowFrame:0000}.jpg"), 0.9f);
