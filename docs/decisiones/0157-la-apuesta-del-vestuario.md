@@ -334,7 +334,7 @@ oro. `Prepared`, sin medir todavía.
 ## Enmienda del 2 oct 2026: Blind contra Never tras las correcciones, y lo que el juego dice contra lo que ocurre
 
 **Instrumento (Regla J).** `RunPlayResult.BetCells` (tomadas, cumplidas y oro neto por condición × dificultad del nodo) y
-`BetHitCensus` (`Sim/Analysis`); `Balance --full-runs --bet-doctrine blind|prepared` escribe `bet-hits.csv` (medido, error típico
+`BetHitCensus` (`Sim/Analysis`); `Balance --full-runs --bet-doctrine blind|prepared|comeback-easiest` escribe `bet-hits.csv` (la tabla por palabra y por condición la calcula `tools/bet-aciertos.py`, ya no a mano) (medido, error típico
 binomial, anunciado, oro neto). Validado en `Sim.Tests/Analysis/BetHitCensusTests.cs`: (a) valor conocido (10 tomadas, 4 cumplidas,
 +7 de neto → 40 %, ET √(0,4·0,6/20)); (b) control: `Never` no deja rastro y en `Blind` las celdas suman exactamente
 `betsTaken` y `betNetGold` de la run; (c) **el primer partido de la run es idéntico con `Never` y con `Blind`** (mismos eventos,
@@ -388,8 +388,9 @@ Tres celdas con ≥ 100 tomadas caen en **otra palabra** de la que llevan (`eye_
 la frecuencia.
 
 **Etiquetas (Regla F):**
-- **CONFIRMED** (6 semillas × 600 runs, pareado): apostar a ciegas **pierde oro**, −5,19 ± 0,52 por run (−17,7 % de lo apostado).
-  No hay explotación: ninguna condición gana oro a ciegas de forma sistemática. Apostar en todas partes deja sin oro al mercado
+- **CONFIRMED** (6 semillas × 600 runs, pareado): apostar a ciegas **pierde oro**, −5,19 ± 0,52 por run (−17,7 % de lo apostado), y
+  **apostar a ciegas no es un exploit**: ninguna condición gana oro a ciegas de forma sistemática. Esto NO dice que no exista
+  una apuesta explotable para quien elige: ver el hallazgo abierto de `comeback` en dificultad 1 más abajo. Apostar en todas partes deja sin oro al mercado
   cuatro veces más a menudo (0,14 → 0,57 mercados vacíos por run) y 2,5 menos de oro final.
 - **CONFIRMED**: la apuesta no consume el RNG del partido (control (c)); `Never` es la línea base.
 - **Sin efecto detectable en la victoria** a este uso: −0,61 ± 0,49 puntos (z −1,2; la cota a 2 ET es ≈ ±1 punto). Lo medido es
@@ -400,7 +401,9 @@ la frecuencia.
   sólo 3 celdas pequeñas cambian de palabra, siempre por sobrestimar. Pero hay un **sesgo sistemático a la baja**: las condiciones se
   cumplen ~5 % menos de lo anunciado (13,03 % contra 13,73 % global; z negativos en 3 de 4 palabras). Es **LIKELY** que se deba a
   que el censo de la ADR 0157 se hizo con la población de la política `Never` y `Blind` llega a los partidos con menos oro y menos
-  compras (otra población); no se ha aislado con un experimento (haría falta censar con `Blind` y recalibrar). Efecto sobre el
+  compras (otra población); **alternativa, igual de plausible: que el censo base sea anterior a las correcciones** de la ADR
+  (regla del 2 %, celdas topadas, portero fuera de `hunt_the_star`) y las frecuencias de `data/bets/bets.json` describan un juego
+  que ya no es éste. No se ha aislado con un experimento (haría falta recensar con la versión actual, con `Never` y con `Blind`). Efecto sobre el
   jugador: el cobro es ≈ −17,7 % y no el −15 % anunciado en el diseño.
 - **Lo que esto dice del diseño, sin vender de más.** Apostar sin criterio es una **decisión con coste**, no ruido: mueve oro
   (−5,2 por run, ~29 apostados) y compite con el mercado. Que apostar con criterio sea una decisión **con valor** NO está medido:
@@ -408,6 +411,20 @@ la frecuencia.
   ahí estaría la decisión). El efecto nulo en victoria con 7,8 apuestas por run no prueba que no haya efecto en un jugador que
   apueste distinto, y las dos celdas positivas de dificultad 1 son un indicio de que hay dónde ganar escogiendo (`comeback` en
   dificultad 1: LIKELY, un contraste entre muchos).
+
+**Hallazgo abierto: `comeback` en dificultad 1.** En el lote de `Blind`, 2.888 apuestas cumplen 7,96 % contra el 6,25 % anunciado
+(z +3,8 con `tools/bet-aciertos.py`, por encima del umbral de Bonferroni de 3,27 para las 46 celdas con ≥ 100 tomadas; con otra
+cuenta de z, +3,4: también por encima). El cobro de 1.360 % lo vuelve positivo (+766 de oro). Para dejar la cifra **medida** y no solo
+derivada del censo, la política `ComebackOnEasiest` (`--bet-doctrine comeback-easiest`: toma solo `comeback` en dificultad 1;
+validada en `BetHitCensusTests`) se jugó con las mismas 6 semillas × 600 runs: 0,278 ± 0,005 apuestas por run (0,83 de oro
+apostado), **oro neto +0,044 ± 0,157 por run** (pareado contra `Never`; por semilla +0,00, −0,25, +0,30, −0,50, +0,14, +0,57),
+victoria −0,28 ± 0,29 puntos, oro final +0,06 ± 0,15; cumplimiento 7,76 % en 2.849 apuestas (z +3,3 contra el 6,25 %, +514 de
+oro, +0,18 por apuesta). Lectura: el cumplimiento sobre lo anunciado se repite, pero **es la misma población de semillas** (no una
+réplica independiente) y el efecto en oro por run es indistinguible de cero (≈ +5 % de retorno sobre 0,83 de oro por run).
+**LIKELY** que la celda esté infravalorada; **no probado** que sea explotable en la práctica con esta cuota (el beneficio es de
+centésimas de oro por run con un estudio ciego a la build). Un jugador que escoge sí puede aprovechar una celda así: de ahí la
+quinta decisión del revisor. Con el mismo criterio, `into_the_mob` en d2 y d3 queda fuera de Bonferroni por **sobrestimar**
+(−3,5 y −3,4): el juego anuncia más de lo que da.
 
 **Decisiones del revisor (RT-057), no se ajusta ningún número:**
 1. **Cobro algo generoso o no.** El −17,7 % medido es 2,7 puntos peor que el −15 % de diseño porque las condiciones se cumplen un
@@ -417,5 +434,8 @@ la frecuencia.
    1,7 %, con muestras pequeñas (183 y 242). Opciones: ignorarlo, ampliar el censo de dificultad 5, o no ofrecerlas en d5.
 3. **Medir `Prepared`** (o una política que escoja por árbitro y canteranos) antes de afirmar que apostar es una decisión con valor.
 4. La apuesta fija 3/4/5 sigue **provisional, sin medir** (Regla H).
+5. **`comeback` en dificultad 1** (hallazgo abierto de arriba): opciones: (a) dejarlo (efecto de centésimas de oro por run);
+   (b) recensar con la versión actual y recalibrar la cuota de esa celda; (c) no ofrecerla en d1; (d) un lote con una política que
+   elija a quién apostar, para ver si la ventaja crece cuando hay criterio.
 
 El «Blind contra Never no se ha repetido tras las correcciones» de «Anotado sin corregir» queda cerrado por esta enmienda.

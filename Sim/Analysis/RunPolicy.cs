@@ -407,6 +407,12 @@ public enum BetDoctrine
     /// build no toma ninguna. No coloca ni alinea para ganarla: eso sería otra política.
     /// </summary>
     Prepared,
+
+    /// <summary>
+    /// Toma solo la apuesta <c>comeback</c> en nodos de dificultad 1 (ADR 0157, enmienda del 2 oct 2026): la celda que el
+    /// censo de <see cref="BetDoctrine.Blind"/> encontró con oro neto positivo. Existe para medirla, no como política de juego.
+    /// </summary>
+    ComebackOnEasiest,
 }
 
 /// <summary>
@@ -1163,6 +1169,12 @@ public static class RunPolicy
         }
 
         if (options.BetDoctrine == BetDoctrine.Prepared && !FavoursBet(offer.Kind, starters))
+        {
+            return state;
+        }
+
+        if (options.BetDoctrine == BetDoctrine.ComebackOnEasiest
+            && (offer.Kind != Underleague.Sim.Run.Systems.Bets.BetKind.Comeback || node.Difficulty != 1))
         {
             return state;
         }
@@ -4029,8 +4041,13 @@ public static class RunPolicy
 
         public void RecordBet(Underleague.Sim.Run.Systems.Bets.BetResult bet, int difficulty)
         {
+            if (difficulty is < 1 or > 5)
+            {
+                throw new ArgumentOutOfRangeException(nameof(difficulty), difficulty, "la dificultad de un nodo es 1..5 (RF-012)");
+            }
+
             BetCells ??= new int[BetCellCount * 3];
-            int cell = (((int)bet.Kind * 5) + (Math.Clamp(difficulty, 1, 5) - 1)) * 3;
+            int cell = (((int)bet.Kind * 5) + (difficulty - 1)) * 3;
             BetCells[cell]++;
             if (bet.Met)
             {

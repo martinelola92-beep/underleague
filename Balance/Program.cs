@@ -417,7 +417,8 @@ static void PrintUsage()
                                escribe runs.csv y summary.csv con las métricas de fase2-diseno.md §10
           --no-blacksmith     con --full-runs, catálogo de prótesis vacío: control sin herrero (ADR 0164)
           --bet-doctrine D    con --full-runs, qué hace la política con la apuesta del vestuario: never (por
-                               defecto), blind (toma siempre) o prepared (solo si la build la favorece);
+                               defecto), blind (toma siempre), prepared (solo si la build la favorece) o
+                               comeback-easiest (solo comeback en dificultad 1, para medirla);
                                añade las filas betsTakenPerRun, betNetGoldPerRun y betNetReturnPercent
           --bet-census N      N runs completas con la política contextual; en cada partido de liga, élite
                                o jefe evalúa las once condiciones de apuesta del vestuario (ADR 0157) y

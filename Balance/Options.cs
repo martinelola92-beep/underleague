@@ -101,7 +101,7 @@ public sealed class Options
     public int? NicknameCensus { get; private set; }
 
     /// <summary>
-    /// <c>--bet-doctrine never|blind|prepared</c>: qué hace la política de <c>--full-runs</c> con la apuesta
+    /// <c>--bet-doctrine never|blind|prepared|comeback-easiest</c>: qué hace la política de <c>--full-runs</c> con la apuesta
     /// del vestuario (ADR 0157). Por defecto <c>never</c>, para no mover ninguna puerta.
     /// </summary>
     public Underleague.Sim.Analysis.BetDoctrine BetDoctrine { get; private set; } = Underleague.Sim.Analysis.BetDoctrine.Never;
@@ -318,7 +318,8 @@ public sealed class Options
                         "never" => Underleague.Sim.Analysis.BetDoctrine.Never,
                         "blind" => Underleague.Sim.Analysis.BetDoctrine.Blind,
                         "prepared" => Underleague.Sim.Analysis.BetDoctrine.Prepared,
-                        var other => throw new ArgumentException($"--bet-doctrine: '{other}' no es never, blind ni prepared"),
+                        "comeback-easiest" => Underleague.Sim.Analysis.BetDoctrine.ComebackOnEasiest,
+                        var other => throw new ArgumentException($"--bet-doctrine: '{other}' no es never, blind, prepared ni comeback-easiest"),
                     };
                     break;
 

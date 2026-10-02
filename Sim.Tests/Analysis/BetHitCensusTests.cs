@@ -60,6 +60,7 @@ public sealed class BetHitCensusTests
         var bosses = BossCatalog.FromJson(files);
         for (ulong seed = 1; seed <= 6; seed++)
         {
+            int betsBeforeFirst = -1;
             string First(BetDoctrine doctrine)
             {
                 string? first = null;
@@ -72,11 +73,19 @@ public sealed class BetHitCensusTests
                     bosses,
                     RunPolicyOptions.Default with { BetDoctrine = doctrine },
                     (before, node, matchSetup, result, summary) =>
-                        first ??= string.Join(";", result.Events.Select(e => $"{e.Type}@{e.Tick}:{e.Actor}:{e.Team}")));
+                    {
+                        if (first is null)
+                        {
+                            first = string.Join(";", result.Events.Select(e => $"{e.Type}@{e.Tick}:{e.Actor}:{e.Team}"));
+                            // Con Blind, el primer partido solo vale como control si hubo una apuesta tomada para él.
+                            betsBeforeFirst = doctrine == BetDoctrine.Blind && summary.Bet is not null ? 1 : 0;
+                        }
+                    });
                 return first!;
             }
 
             Assert.Equal(First(BetDoctrine.Never), First(BetDoctrine.Blind));
+            Assert.True(betsBeforeFirst == 1, $"semilla {seed}: no hubo apuesta antes del primer partido; el control no controla nada");
         }
     }
 
@@ -114,5 +123,32 @@ public sealed class BetHitCensusTests
         }
 
         Assert.True(blindBets > 0, "la política Blind no apostó ni una vez en 12 runs");
+    }
+
+    [Fact]
+    public void ComebackOnEasiestOnlyBetsOnComebackInDifficultyOne()
+    {
+        // Control de la política que mide la celda abierta de la ADR 0157: solo toma comeback, solo en dificultad 1.
+        int taken = 0;
+        for (ulong seed = 1; seed <= 12; seed++)
+        {
+            var run = Play(seed, BetDoctrine.ComebackOnEasiest);
+            taken += run.BetsTaken;
+            if (run.BetCells is { } cells)
+            {
+                for (int c = 0; c < RunPolicy.BetCellCount; c++)
+                {
+                    bool allowed = c == ((int)BetKind.Comeback * 5);
+                    if (!allowed)
+                    {
+                        Assert.Equal(0, cells[c * 3]);
+                    }
+                }
+
+                Assert.Equal(run.BetsTaken, cells[(int)BetKind.Comeback * 5 * 3]);
+            }
+        }
+
+        Assert.True(taken > 0, "la política no tomó ninguna comeback de dificultad 1 en 12 runs");
     }
 }
