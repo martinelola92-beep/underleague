@@ -2172,6 +2172,8 @@ public partial class MatchPitchView3D : SubViewportContainer
 
         int frame = Mathf.Clamp(Frame, 0, trace.FrameCount - 1);
         float poseDelta = MeasurePlaybackRate(frame);
+        var lookBall = InterpolateBall(trace, frame);
+        int receiver = NextReceiver(trace, frame);
         for (int i = 0; i < _bodies.Count && i < trace.Players.Count; i++)
         {
             var body = _bodies[i];
@@ -2246,7 +2248,9 @@ public partial class MatchPitchView3D : SubViewportContainer
             // decide nada del partido (RT-014).
             // En el tick de un teletransporte (BA-K) el muñeco se recoloca sin girar ni mezclar.
             float delta = IsTeleportCut(trace, frame, i) ? 0f : poseDelta;
-            model.Pose(SmoothedVelocity(trace, frame, i), FacingOf(trace, frame, i), trace.StateAt(frame, i), CueFor(trace, frame, i), KickFor(trace, frame, i), _playbackRate, delta);
+            model.Pose(
+                SmoothedVelocity(trace, frame, i), FacingOf(trace, frame, i), LookAtBall(trace, frame, i, at, lookBall),
+                i == receiver, trace.StateAt(frame, i), CueFor(trace, frame, i), KickFor(trace, frame, i), _playbackRate, delta);
         }
 
         var ball = InterpolateBall(trace, frame);
@@ -2293,7 +2297,14 @@ public partial class MatchPitchView3D : SubViewportContainer
             {
                 var part = ContactPartFor(trace, frame, carrier);
                 var here = new Vector3(ball.X, 0f, ball.Y);
-                if (model.TryContactPoint(part, here, out var bone))
+                var drawn = _bodies[carrier].Position;
+                if (part == ContactPart.Feet && model.TryBallAtFeet(BallRadius, out var feet))
+                {
+                    // BV-A punto 4: al pie, al ritmo de la zancada y desde el cuerpo DIBUJADO (la spline), no desde la
+                    // traza lineal; ver PlayerModel.TryBallAtFeet.
+                    offset = new Vector2(drawn.X - ball.X, drawn.Z - ball.Y) + feet;
+                }
+                else if (model.TryContactPoint(part, here, out var bone))
                 {
                     var pull = new Vector2(bone.X - ball.X, bone.Z - ball.Y);
                     if (pull.Length() <= MaxBoneAnchorCells)
@@ -2312,6 +2323,16 @@ public partial class MatchPitchView3D : SubViewportContainer
         //
         // Se interpola entre los dos ticks igual que la posición, con el mismo Alpha, para que el arco sea
         // una curva y no una escalera de 15 escalones por segundo.
+        if (carrier >= 0 && carrier < _radii.Count)
+        {
+            _handOff = offset;
+            _handOffTicks = frame + Mathf.Clamp(Alpha, 0f, 1f);
+        }
+        else
+        {
+            offset = HandOverOffset(trace, frame, ball);
+        }
+
         float height = trace.BallHeightAt(frame);
         if (Alpha > 0f && frame + 1 < trace.FrameCount)
         {
@@ -2484,6 +2505,94 @@ public partial class MatchPitchView3D : SubViewportContainer
 
         var step = new Vector2(next.X - here.X, next.Y - here.Y);
         return step.Length() > TeleportThresholdCells ? Vector2.Zero : step;
+    }
+
+    /// <summary>
+    /// Hacia dónde queda el balón dibujado desde este jugador, para que el muñeco lo mire cuando no corre (BV-A, punto 3).
+    /// Cero para quien lo lleva: él mira hacia donde conduce.
+    /// </summary>
+    private static Vector2 LookAtBall(MatchTrace trace, int frame, int player, Vec2 at, Vec2 ball)
+        => trace.BallOwnerAt(frame) == player ? Vector2.Zero : new Vector2(ball.X - at.X, ball.Y - at.Y);
+
+    /// <summary>
+    /// Hasta cuántos ticks adelante se busca quién recibe el balón que va en vuelo (BV-A, punto 3). Provisional: un pase
+    /// largo de la traza dura del orden de un segundo; más allá, el receptor no sabe aún que lo es.
+    /// </summary>
+    private const int ReceiverLookAheadTicks = 15;
+
+    /// <summary>Quien va a recibir el balón que ahora va en vuelo, según la traza ya calculada (RT-014: sólo se lee); −1 si nadie pronto.</summary>
+    private static int NextReceiver(MatchTrace trace, int frame)
+    {
+        if (!trace.BallInFlightAt(frame))
+        {
+            return -1;
+        }
+
+        int last = System.Math.Min(trace.FrameCount - 1, frame + ReceiverLookAheadTicks);
+        for (int g = frame + 1; g <= last; g++)
+        {
+            int owner = trace.BallOwnerAt(g);
+            if (owner >= 0)
+            {
+                return owner;
+            }
+
+            if (!trace.BallInFlightAt(g))
+            {
+                return -1;
+            }
+        }
+
+        return -1;
+    }
+
+    /// <summary>
+    /// Ticks en que el balón suelto se funde con la posición al pie de quien lo soltó o de quien lo va a recibir (BV-A,
+    /// punto 6). La traza pone el balón en el CENTRO del jugador en el tick de la entrega; sin esto, el balón saltaba del
+    /// pie al pecho y luego salía volando, y al recibir hacía lo contrario. Provisional: 2 ticks, lo que tarda un pase en
+    /// separarse un cuerpo.
+    /// </summary>
+    private const float HandOverTicks = 2f;
+
+    private Vector2 _handOff;
+    private float _handOffTicks = -100f;
+
+    /// <summary>
+    /// Desvío del dibujo del balón suelto cerca de una entrega: el que traía al pie, desvaneciéndose tras soltarlo, y el
+    /// del pie del receptor, apareciendo antes de que lo controle. Sólo mueve el dibujo; la traza manda (RT-014).
+    /// </summary>
+    private Vector2 HandOverOffset(MatchTrace trace, int frame, Vec2 ball)
+    {
+        float now = frame + Mathf.Clamp(Alpha, 0f, 1f);
+        var offset = Vector2.Zero;
+        float since = now - _handOffTicks;
+        if (since >= 0f && since < HandOverTicks)
+        {
+            offset += _handOff * (1f - (since / HandOverTicks));
+        }
+
+        for (int g = frame + 1; g <= frame + (int)HandOverTicks + 1 && g < trace.FrameCount; g++)
+        {
+            int owner = trace.BallOwnerAt(g);
+            if (owner < 0)
+            {
+                continue;
+            }
+
+            float until = g - now;
+            if (until < HandOverTicks && owner < _models.Count && _models[owner] is { } model
+                && ContactPartFor(trace, g, owner) == ContactPart.Feet && model.TryBallAtFeet(BallRadius, out var feet))
+            {
+                var drawn = _bodies[owner].Position;
+                var target = new Vector2(drawn.X - ball.X, drawn.Z - ball.Y) + feet;
+                float w = 1f - (until / HandOverTicks);
+                offset = offset.Lerp(target, Mathf.Clamp(w * w, 0f, 1f));
+            }
+
+            break;
+        }
+
+        return offset;
     }
 
     /// <summary>Segundos reales del fotograma que se está pintando; 0 en <see cref="RenderFrame"/> (captura fija).</summary>
@@ -2690,7 +2799,56 @@ public partial class MatchPitchView3D : SubViewportContainer
             return Alpha < 0.5f ? here : next;
         }
 
-        return new Vec2(Mathf.Lerp(here.X, next.X, Alpha), Mathf.Lerp(here.Y, next.Y, Alpha));
+        // BV-A, H3: curva por los ticks en vez de rectas. Los vecinos sólo cuentan si son zancadas de verdad (ni fuera
+        // del campo ni teletransporte, BA-K); si no, el tramo arranca o acaba como si el vecino fuera el propio punto.
+        var p1 = new Vector2(here.X, here.Y);
+        var p2 = new Vector2(next.X, next.Y);
+        var p0 = Neighbour(trace, player, frame - 1, p1);
+        var p3 = Neighbour(trace, player, frame + 2, p2);
+        var at = Trajectory(p0, p1, p2, p3, Alpha);
+        return new Vec2(at.X, at.Y);
+    }
+
+    /// <summary>Posición del tick <paramref name="g"/> si es una zancada desde <paramref name="from"/>; si no, <paramref name="from"/>.</summary>
+    private static Vector2 Neighbour(MatchTrace trace, int player, int g, Vector2 from)
+    {
+        if (g < 0 || g >= trace.FrameCount || !trace.OnPitchAt(g, player))
+        {
+            return from;
+        }
+
+        var at = trace.PositionAt(g, player);
+        var p = new Vector2(at.X, at.Y);
+        return p.DistanceTo(from) > TeleportThresholdCells ? from : p;
+    }
+
+    /// <summary>
+    /// El punto de la trayectoria dibujada entre los ticks <paramref name="p1"/> (u = 0) y <paramref name="p2"/> (u = 1)
+    /// (BV-A, H3, punto 1). Hermite cúbica que pasa EXACTAMENTE por cada posición de tick —el render no inventa dónde
+    /// está nadie en un tick, sólo cómo va de uno a otro (RT-014, RT-020)—, con la tangente en cada tick en la dirección
+    /// media de los dos tramos que se unen allí (Catmull-Rom en dirección: el cuerpo ya no dobla en seco en la frontera)
+    /// y de módulo como mucho el largo del tramo. Con ese tope la curva no se pasa nunca del tick (el avance a lo largo
+    /// del tramo es monótono: condición de Fritsch-Carlson, tangentes ≤ 3 veces la pendiente; aquí ≤ 1). En línea recta a
+    /// paso constante da exactamente la interpolación lineal; en una ida y vuelta la tangente es nula y frena en el
+    /// tick; al arrancar de parado sale a media velocidad en vez de a toda.
+    /// </summary>
+    public static Vector2 Trajectory(Vector2 p0, Vector2 p1, Vector2 p2, Vector2 p3, float u)
+    {
+        var chord = p2 - p1;
+        float d = chord.Length();
+        if (d < 0.00001f)
+        {
+            return p1;
+        }
+
+        var dir = chord / d;
+        var before = (p1 - p0).LengthSquared() > 1e-10f ? (p1 - p0).Normalized() : Vector2.Zero;
+        var after = (p3 - p2).LengthSquared() > 1e-10f ? (p3 - p2).Normalized() : Vector2.Zero;
+        var m1 = (before + dir) * (0.5f * d);
+        var m2 = (dir + after) * (0.5f * d);
+        float u2 = u * u;
+        float u3 = u2 * u;
+        return (((2f * u3) - (3f * u2) + 1f) * p1) + ((u3 - (2f * u2) + u) * m1) + (((-2f * u3) + (3f * u2)) * p2) + ((u3 - u2) * m2);
     }
 
     /// <summary>

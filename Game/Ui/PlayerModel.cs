@@ -181,6 +181,42 @@ public sealed partial class PlayerModel : Node3D
     /// </summary>
     private const float GestureReleaseCellsPerSecond = 1.0f;
 
+    /// <summary>
+    /// Lo mínimo que se adelanta el golpeo al contacto cuando el cuerpo llega corriendo (BV-A, carrerilla). Parado
+    /// se lanza entero, <see cref="KickContactSeconds"/> antes; a la velocidad de la carrera, sólo esto: el pie de
+    /// apoyo sigue la zancada hasta casi el contacto en vez de clavarse mientras <c>/Sim</c> sigue moviendo el
+    /// cuerpo (medido antes: el golpeo se deslizaba el 35-56 % de sus fotogramas). <b>Provisional, sin medir</b>:
+    /// algo más de un tick (1/15 s).
+    /// </summary>
+    private const float KickMinLeadSeconds = 0.08f;
+
+    /// <summary>
+    /// Cuánto rueda el balón por delante del pie entre dos toques al conducir, en casillas (BV-A, punto 4). Se toca una
+    /// vez por ciclo de zancada (dos pasos), con la puntera izquierda adelantada. <b>Provisional, sin medir</b>: ~20 cm,
+    /// conducción pegada; una conducción larga lo pondría más lejos.
+    /// </summary>
+    private const float DribbleRollCells = 0.10f;
+
+    /// <summary>
+    /// Velocidad del cuerpo (casillas/s) por debajo de la cual el jugador se vuelve a mirar el balón, y por encima de la
+    /// cual vuelve a mirar hacia donde corre (histéresis). Corriendo se mira adelante; parado o casi, al juego (BV-A,
+    /// H9). <b>Provisionales, sin medir</b>: entre el trote (1,3 c/s medido) y la carrera (2,19 c/s medido).
+    /// </summary>
+    private const float FaceBallEnterCellsPerSecond = 0.9f;
+    private const float FaceBallExitCellsPerSecond = 1.3f;
+
+    /// <summary>Lo mismo para el que va a recibir un pase en vuelo: espera mirando al pasador aunque se acomode trotando. Provisional.</summary>
+    private const float FaceBallReceiverExitCellsPerSecond = 1.9f;
+
+    /// <summary>Por debajo de esto (c/s) se considera parado y mira al balón aunque se mueva de lado. Provisional: medio trote.</summary>
+    private const float StandStillCellsPerSecond = 0.35f;
+
+    /// <summary>Coseno del ángulo entre la marcha y el balón por debajo del cual el paso es lateral (70°–110°): ahí no hay clip creíble y mira a donde va. Provisional.</summary>
+    private const float LateralCos = 0.34f;
+
+    /// <summary>A menos de esto (casillas) el balón está encima y su dirección no dice nada. Provisional.</summary>
+    private const float BallLookMinCells = 0.3f;
+
     /// <summary>Remate del golpeo que se deja ver tras el contacto antes de poder soltarlo. <b>Provisional, sin medir</b> (1,5 ticks).</summary>
     private const float KickFollowThroughSeconds = 0.1f;
 
@@ -210,6 +246,29 @@ public sealed partial class PlayerModel : Node3D
 
     private AnimationPlayer? _anim;
     private Skeleton3D? _skeleton;
+    private Node3D? _instance;
+
+    /// <summary>
+    /// Fase del ciclo de locomoción, en ciclos [0, 1): 0 es la puntera izquierda en su punto más adelantado, en el
+    /// trote y en la carrera por igual (BV-A, punto 2). Avanza con el desplazamiento DIBUJADO del cuerpo dividido por
+    /// la zancada de un ciclo, así que el pie de apoyo no patina por construcción; hacia atrás, retrocede.
+    /// </summary>
+    private float _phase;
+    private Vector3 _lastGlobal;
+    private bool _hasLast;
+    private bool _faceBall;
+    private float _gestureFade = BlendSeconds;
+    private float _debugFeetScale;
+    private float _debugFeetNatural;
+
+    /// <summary>
+    /// Medidas del ciclo hechas una vez sobre los propios clips (no supuestas): en qué segundo de cada clip va la
+    /// puntera izquierda más adelantada, y dónde quedan las punteras —en el espacio del personaje importado— en la
+    /// zancada, en la espera y en el contacto del golpeo. De ahí salen la alineación trote/carrera y el balón al pie.
+    /// </summary>
+    private static bool _cyclesMeasured;
+    private static float _jogOffset, _runOffset;
+    private static Vector3 _reachRun, _reachIdle, _reachKick;
 
     /// <summary>
     /// Índices de hueso resueltos una vez por modelo. <see cref="Skeleton3D.FindBone"/> recorre los 65
@@ -291,6 +350,7 @@ public sealed partial class PlayerModel : Node3D
         // El personaje tiene el origen en los pies y la cápsula está centrada en su mitad.
         model.Position = new Vector3(0f, -bodyHeight / 2f, 0f);
 
+        model._instance = instance;
         model._anim = FindAnimationPlayer(instance);
         model._skeleton = FindSkeleton(instance);
         model.ResolveContactBones();
@@ -331,7 +391,7 @@ public sealed partial class PlayerModel : Node3D
     /// del muñeco —zancada, gestos, fundidos— van con él: congelada la imagen, congelado el muñeco (H6).
     /// <b>El modelo no decide nada</b>: sólo mira lo que está escrito (RT-014).
     /// </summary>
-    public void Pose(Vector2 velocity, Vector2 facing, PlayerState state, ContactCue cue, KickCue kick, float rate, float delta)
+    public void Pose(Vector2 velocity, Vector2 facing, Vector2 toBall, bool receiving, PlayerState state, ContactCue cue, KickCue kick, float rate, float delta)
     {
         if (_tree is null)
         {
@@ -339,11 +399,13 @@ public sealed partial class PlayerModel : Node3D
         }
 
         MeasureStride();
+        MeasureCycles();
         float speed = velocity.Length();
 
         // Segundos de PARTIDO que han pasado en este fotograma: lo que mueve todos los relojes del muñeco.
         float simDelta = delta * rate;
-        Turn(facing, simDelta, snap: delta <= 0f);
+        bool down = state is PlayerState.KnockedDown or PlayerState.Injured;
+        Turn(ChooseFacing(velocity, facing, toBall, receiving, down), simDelta, snap: delta <= 0f);
         DebugInputSpeed = speed;
         AdvanceGesture(simDelta);
 
@@ -356,24 +418,211 @@ public sealed partial class PlayerModel : Node3D
         {
             StopGesture();
         }
-        ChooseGesture(state, cue, kick);
+        ChooseGesture(state, cue, kick, speed);
 
         // Locomoción continua: una posición de mezcla idle→trote→carrera en lugar de tres clips con umbral.
         float target = _runCells > 0.01f ? Mathf.Clamp(speed / _runCells, 0f, 1f) : 0f;
         _blend = delta <= 0f ? target : Mathf.Lerp(_blend, target, 1f - Mathf.Exp(-simDelta / LocomotionSmoothingSeconds));
-        _tree.Set("parameters/loco/blend_position", _blend);
 
-        // El ritmo (H5): los puntos de la mezcla están en la zancada natural de cada clip, así que hasta la
-        // velocidad de la carrera la zancada mezclada YA es la del cuerpo y basta el ritmo de reproducción;
-        // por encima, la carrera se acelera en proporción. Medido: el clip `run` avanza 2,19 c/s, no los 2,8
-        // que suponía la constante de antes (pies patinando ×1,28).
-        float stride = _runCells > 0.01f ? Mathf.Max(1f, speed / _runCells) : 1f;
-        _tree.Set("parameters/loco_scale/scale", rate * stride);
+        // Pesos: espera→marcha hasta el punto del trote, y trote→carrera por encima (la misma mezcla lineal que hacía
+        // el BlendSpace1D, pero con trote y carrera en la MISMA fase, para que la mezcla no cruce dos zancadas).
+        float move = _jogBlend > 0f ? Mathf.Clamp(_blend / _jogBlend, 0f, 1f) : 1f;
+        float jogToRun = _blend <= _jogBlend ? 0f : Mathf.Clamp((_blend - _jogBlend) / (1f - _jogBlend), 0f, 1f);
+        AdvancePhase(jogToRun, delta);
+        _tree.Set("parameters/loco/blend_amount", move);
+        _tree.Set("parameters/jr/blend_amount", jogToRun);
+        _tree.Set("parameters/jog_seek/seek_request", ClipTimeAtPhase("jog", _jogOffset));
+        _tree.Set("parameters/run_seek/seek_request", ClipTimeAtPhase("run", _runOffset));
+        _tree.Set("parameters/idle_scale/scale", rate);
         _tree.Set("parameters/gesture_scale/scale", rate);
 
         float weightTarget = _gesture.Length > 0 ? 1f : 0f;
-        _gestureWeight = delta <= 0f ? weightTarget : Mathf.MoveToward(_gestureWeight, weightTarget, simDelta / BlendSeconds);
+        float fade = weightTarget > _gestureWeight ? _gestureFade : BlendSeconds;
+        _gestureWeight = delta <= 0f ? weightTarget : Mathf.MoveToward(_gestureWeight, weightTarget, simDelta / Mathf.Max(0.01f, fade));
         _tree.Set("parameters/mix/blend_amount", _gestureWeight);
+    }
+
+    /// <summary>
+    /// Hacia dónde debe mirar (BV-A, punto 3). Corriendo, hacia donde va (<paramref name="facing"/>, que la vista
+    /// saca mirando adelante en la traza). Parado o casi, al balón; y si se mueve despacio hacia delante o hacia atrás
+    /// sigue mirándolo (hacia atrás es un retroceso: la zancada se reproduce al revés, ver <see cref="AdvancePhase"/>).
+    /// De lado no hay clip que lo haga creíble, así que mira a donde va. El que va a recibir un pase aguanta mirando al
+    /// pasador hasta una velocidad mayor. Derribado no gira. Vector nulo = sigue como estaba.
+    /// </summary>
+    private Vector2 ChooseFacing(Vector2 velocity, Vector2 facing, Vector2 toBall, bool receiving, bool down)
+    {
+        if (down)
+        {
+            return Vector2.Zero;
+        }
+
+        float speed = velocity.Length();
+        bool canBall = toBall.LengthSquared() > BallLookMinCells * BallLookMinCells;
+        float exit = receiving ? FaceBallReceiverExitCellsPerSecond : FaceBallExitCellsPerSecond;
+        _faceBall = _faceBall
+            ? canBall && speed <= exit
+            : canBall && speed < (receiving ? exit : FaceBallEnterCellsPerSecond);
+
+        if (!_faceBall)
+        {
+            return facing;
+        }
+
+        if (speed > StandStillCellsPerSecond && Mathf.Abs(velocity.Normalized().Dot(toBall.Normalized())) < LateralCos)
+        {
+            return facing;
+        }
+
+        return toBall;
+    }
+
+    /// <summary>
+    /// Avanza la fase con lo que el cuerpo se ha movido DE VERDAD en pantalla este fotograma: a la velocidad que sea, a
+    /// x4 o en cámara lenta, los pies dan exactamente los pasos que el cuerpo recorre (H5) y, congelada la imagen, no
+    /// se mueven (H6). Un desplazamiento mayoritariamente hacia atrás retrocede la fase (retroceso de cara al balón).
+    /// </summary>
+    private void AdvancePhase(float jogToRun, float delta)
+    {
+        var here = GlobalPosition;
+        if (delta <= 0f || !_hasLast)
+        {
+            _lastGlobal = here;
+            _hasLast = true;
+            _debugFeetScale = 0f;
+            return;
+        }
+
+        var step = new Vector2(here.X - _lastGlobal.X, here.Z - _lastGlobal.Z);
+        _lastGlobal = here;
+        float distance = step.Length();
+        float cycle = CycleCells(jogToRun);
+        if (distance > 0.6f || cycle <= 0.001f)
+        {
+            return;
+        }
+
+        var forward = new Vector2(Mathf.Sin(_yaw), Mathf.Cos(_yaw));
+        float signed = step.Dot(forward) < -0.25f * distance ? -distance : distance;
+        _phase = Mathf.PosMod(_phase + (signed / cycle), 1f);
+
+        float length = Mathf.Lerp(ClipLength("jog"), ClipLength("run"), jogToRun);
+        _debugFeetScale = signed / cycle * length / delta;
+        _debugFeetNatural = cycle / Mathf.Max(0.001f, length);
+    }
+
+    /// <summary>Zancada de un ciclo completo (dos pasos), en casillas, a esta mezcla trote→carrera: desplazamiento horneado del clip por su duración.</summary>
+    private float CycleCells(float jogToRun)
+    {
+        if (_skeleton is null || !_skeleton.IsInsideTree())
+        {
+            return 0f;
+        }
+
+        float scale = _skeleton.GlobalTransform.Basis.Scale.X;
+        NaturalSkeletonSpeed.TryGetValue("jog", out float jog);
+        NaturalSkeletonSpeed.TryGetValue("run", out float run);
+        return Mathf.Lerp(jog * ClipLength("jog"), run * ClipLength("run"), jogToRun) * scale;
+    }
+
+    private static float ClipLength(string key) => _library is not null && _library.HasAnimation(key) ? _library.GetAnimation(key).Length : 1f;
+
+    private float ClipTimeAtPhase(string key, float offset)
+    {
+        float length = ClipLength(key);
+        return Mathf.PosMod(offset + (_phase * length), length);
+    }
+
+    /// <summary>
+    /// Dónde va el balón de quien lo conduce, respecto al centro de su cuerpo y en casillas del mundo (BV-A, punto 4):
+    /// delante, en la dirección en que MIRA el muñeco, tocado con la puntera izquierda en la fase 0 de cada ciclo y
+    /// rodando <see cref="DribbleRollCells"/> por delante hasta el toque siguiente. Parado, quieto delante del pie; en el
+    /// golpeo, donde la puntera llega en el contacto. Las distancias al pie son las de los clips, medidas al cargar.
+    /// Sustituye a anclarlo a la puntera más cercana, que cambiaba de pie a cada paso (H11). <c>false</c> si aún no hay
+    /// medidas o no hay esqueleto.
+    /// </summary>
+    public bool TryBallAtFeet(float ballRadius, out Vector2 offset)
+    {
+        offset = Vector2.Zero;
+        if (!_cyclesMeasured || _instance is null || !_instance.IsInsideTree())
+        {
+            return false;
+        }
+
+        float k = _instance.GlobalTransform.Basis.Scale.X;
+        float move = _jogBlend > 0f ? Mathf.Clamp(_blend / _jogBlend, 0f, 1f) : 1f;
+        float reach = Mathf.Lerp(_reachIdle.Z, _reachRun.Z, move) * k;
+        float dribble = reach + ballRadius + (DribbleRollCells * move * Mathf.Sin(Mathf.Pi * _phase));
+        float distance = _gesture == "kick" ? Mathf.Lerp(dribble, (_reachKick.Z * k) + ballRadius, _gestureWeight) : dribble;
+        offset = new Vector2(Mathf.Sin(_yaw), Mathf.Cos(_yaw)) * distance;
+        return true;
+    }
+
+    /// <summary>
+    /// Mide, una vez y sobre un personaje de prueba colgado de este modelo, la fase de cada clip de marcha (instante con
+    /// la puntera izquierda más adelantada respecto a la derecha) y dónde caen las punteras en la zancada, en la espera
+    /// y en el contacto del golpeo. Mismo método que <see cref="DebugFootProfile"/>, que ya midió el contacto del golpeo.
+    /// </summary>
+    private void MeasureCycles()
+    {
+        if (_cyclesMeasured || _character is null || _library is null || !IsInsideTree())
+        {
+            return;
+        }
+
+        _cyclesMeasured = true;
+        var probe = _character.Instantiate<Node3D>();
+        AddChild(probe);
+        var anim = FindAnimationPlayer(probe);
+        var skeleton = FindSkeleton(probe);
+        if (anim is not null && skeleton is not null)
+        {
+            if (!anim.HasAnimationLibrary(Library))
+            {
+                anim.AddAnimationLibrary(Library, _library);
+            }
+
+            int left = skeleton.FindBone("mixamorig_LeftToeBase");
+            int right = skeleton.FindBone("mixamorig_RightToeBase");
+            if (left >= 0 && right >= 0)
+            {
+                (Vector3 L, Vector3 R) Toes(string key, float t)
+                {
+                    anim.Play($"{Library}/{key}");
+                    anim.Seek(t, true);
+                    var toRoot = probe.GlobalTransform.AffineInverse() * skeleton.GlobalTransform;
+                    return (toRoot * skeleton.GetBoneGlobalPose(left).Origin, toRoot * skeleton.GetBoneGlobalPose(right).Origin);
+                }
+
+                (float T, Vector3 L) LeftForward(string key)
+                {
+                    float length = ClipLength(key);
+                    (float T, Vector3 L, float D) best = (0f, Vector3.Zero, float.MinValue);
+                    for (int i = 0; i < 60; i++)
+                    {
+                        float t = i * length / 60f;
+                        var (l, r) = Toes(key, t);
+                        if (l.Z - r.Z > best.D)
+                        {
+                            best = (t, l, l.Z - r.Z);
+                        }
+                    }
+
+                    return (best.T, best.L);
+                }
+
+                (_jogOffset, _) = LeftForward("jog");
+                (_runOffset, _reachRun) = LeftForward("run");
+                var (il, ir) = Toes("idle", 0f);
+                _reachIdle = il.Z >= ir.Z ? il : ir;
+                var (kl, kr) = Toes("kick", KickContactSeconds);
+                _reachKick = kl.Z >= kr.Z ? kl : kr;
+                GD.Print($"[modelos] ciclo medido: fase 0 del trote {_jogOffset:0.###} s, de la carrera {_runOffset:0.###} s; "
+                    + $"puntera adelantada {_reachRun.Z:0.###} (carrera), {_reachIdle.Z:0.###} (espera), {_reachKick.Z:0.###} (golpeo) en unidades del personaje");
+            }
+        }
+
+        RemoveChild(probe);
+        probe.Free();
     }
 
     /// <summary>
@@ -410,7 +659,7 @@ public sealed partial class PlayerModel : Node3D
     /// Qué gesto toca encima de la locomoción. El suelo manda (el que cae, cae); después el gesto de evento
     /// —que se deja terminar—, y por último el de estado, que vive mientras dura su estado y se funde al salir.
     /// </summary>
-    private void ChooseGesture(PlayerState state, ContactCue cue, KickCue kick)
+    private void ChooseGesture(PlayerState state, ContactCue cue, KickCue kick, float speed)
     {
         if (state is PlayerState.KnockedDown or PlayerState.Injured)
         {
@@ -435,10 +684,15 @@ public sealed partial class PlayerModel : Node3D
         // este jugador suelte el balón; el clip arranca para que su pie llegue justo entonces, y se deja
         // terminar. Si el aviso llega tarde, el clip entra ya avanzado lo que corresponda.
         bool handsOrSetPiece = cue is ContactCue.ThrowIn or ContactCue.Penalty || _gesture is "throwin" or "penalty";
-        if (!handsOrSetPiece && kick.Release >= 0 && kick.Release != _lastKickRelease && kick.SecondsToContact <= KickContactSeconds)
+        // Llegando corriendo, el golpeo se lanza más tarde y ya avanzado (carrerilla): hasta entonces manda la zancada.
+        float lead = _runCells > 0.01f
+            ? Mathf.Lerp(KickContactSeconds, KickMinLeadSeconds, Mathf.Clamp(speed / _runCells, 0f, 1f))
+            : KickContactSeconds;
+        if (!handsOrSetPiece && kick.Release >= 0 && kick.Release != _lastKickRelease && kick.SecondsToContact <= lead)
         {
             _lastKickRelease = kick.Release;
             StartGesture("kick", held: true, KickContactSeconds - Mathf.Max(0f, kick.SecondsToContact));
+            _gestureFade = Mathf.Clamp(kick.SecondsToContact * 0.75f, 0.03f, BlendSeconds);
             return;
         }
 
@@ -501,6 +755,7 @@ public sealed partial class PlayerModel : Node3D
         }
 
         _gesture = key;
+        _gestureFade = BlendSeconds;
         _gestureHeld = held;
         _gestureTime = offset;
         var clip = _library.GetAnimation(key);
@@ -568,13 +823,25 @@ public sealed partial class PlayerModel : Node3D
         }
 
         var root = new AnimationNodeBlendTree();
-        var loco = new AnimationNodeBlendSpace1D { MinSpace = 0f, MaxSpace = 1f, Sync = true };
-        loco.AddBlendPoint(Clip(_keeper ? "gk_idle" : "idle"), 0f);
-        loco.AddBlendPoint(Clip("jog"), _jogBlend);
-        loco.AddBlendPoint(Clip("run"), 1f);
-        root.AddNode("loco", loco);
-        root.AddNode("loco_scale", new AnimationNodeTimeScale());
-        root.ConnectNode("loco_scale", 0, "loco");
+
+        // La espera va con su reloj (al ritmo de la reproducción); trote y carrera se COLOCAN cada fotograma en la
+        // misma fase (BV-A, punto 2): mezclar dos zancadas desfasadas daba piernas a medio camino de dos pasos.
+        root.AddNode("idle", Clip(_keeper ? "gk_idle" : "idle"));
+        root.AddNode("idle_scale", new AnimationNodeTimeScale());
+        root.ConnectNode("idle_scale", 0, "idle");
+        foreach (var key in new[] { "jog", "run" })
+        {
+            root.AddNode(key, Clip(key));
+            root.AddNode(key + "_seek", new AnimationNodeTimeSeek());
+            root.ConnectNode(key + "_seek", 0, key);
+        }
+
+        root.AddNode("jr", new AnimationNodeBlend2());
+        root.ConnectNode("jr", 0, "jog_seek");
+        root.ConnectNode("jr", 1, "run_seek");
+        root.AddNode("loco", new AnimationNodeBlend2());
+        root.ConnectNode("loco", 0, "idle_scale");
+        root.ConnectNode("loco", 1, "jr");
 
         var gestures = new AnimationNodeTransition { XfadeTime = 0.1f, AllowTransitionToSelf = true, InputCount = GestureKeys.Length };
         root.AddNode("gesture", gestures);
@@ -602,7 +869,7 @@ public sealed partial class PlayerModel : Node3D
         root.AddNode("gesture_scale", new AnimationNodeTimeScale());
         root.ConnectNode("gesture_scale", 0, "gesture_seek");
         root.AddNode("mix", new AnimationNodeBlend2());
-        root.ConnectNode("mix", 0, "loco_scale");
+        root.ConnectNode("mix", 0, "loco");
         root.ConnectNode("mix", 1, "gesture_scale");
         root.ConnectNode("output", 0, "mix");
 
@@ -629,7 +896,7 @@ public sealed partial class PlayerModel : Node3D
     public float DebugClipTime => _gestureWeight > 0.5f && _gesture.Length > 0 ? _gestureTime : _blend;
 
     /// <summary>Multiplicador de ritmo del reproductor ahora mismo. BV-A.</summary>
-    public float DebugSpeedScale => _tree is null ? 0f : (float)_tree.Get("parameters/loco_scale/scale");
+    public float DebugSpeedScale => _debugFeetScale;
 
     /// <summary>
     /// A qué velocidad, en casillas por segundo, avanzaría el cuerpo si el clip conservara su desplazamiento
@@ -642,7 +909,9 @@ public sealed partial class PlayerModel : Node3D
         // posición × zancada de la carrera.
         if (key is "idle" or "gk_idle" or "jog" or "run")
         {
-            return _blend * _runCells;
+            // Con la fase atada al desplazamiento, los pies avanzan lo que el cuerpo por construcción: esta cifra deja de
+            // medir nada (cuerpo/pies = 1). La medida honesta es el pie de apoyo en el mundo (instrumento, Regla J).
+            return _debugFeetNatural;
         }
 
         if (_skeleton is null || !NaturalSkeletonSpeed.TryGetValue(key, out float perSecond))
