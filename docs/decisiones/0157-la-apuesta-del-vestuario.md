@@ -447,8 +447,9 @@ El revisor decidió las cinco de la lista anterior. Esta sección dice qué se h
 **Revisión de diseño (skill `game-design-review`, puntos 2 y 4: lo que ve el jugador).**
 1. *Qué experimenta:* el jugador ve una apuesta (precio y cobro exactos, una palabra de frecuencia) en el ojeo; ahora en
    dificultad 5 ya no le salen dos de ellas, y la remontada fácil enseña un cobro menor (33/44/55 en vez de 41/54/68).
-2. *Decisión:* la misma de siempre (tomarla o no); lo que cambia es que **lo anunciado vuelve a ser verdad** (RF-012d: nada
-   previsible deja de serlo; antes la palabra de dos celdas mentía por sobrestima).
+2. *Decisión:* la misma de siempre (tomarla o no); lo que cambia es que **lo anunciado deja de mentir en esas dos celdas** (RF-012d; antes la palabra de dos celdas mentía por sobrestima). **Salvedad:
+   siguen abiertos, sin tocar, tres hermanos:** `into_the_mob` d2 y d3 (z −3,5 y −3,4, por encima de Bonferroni, sobrestiman) y
+   `eye_for_eye` d3 (cambia de palabra: 11,35 % contra 13,04 %). No se dice que «lo anunciado sea verdad» en general.
 3. *Regla:* RF-114h/RF-114i, ADR 0157 punto 4 (margen de la casa) y punto 5 (frecuencia mínima, de donde sale la regla de «no se ofrece»).
 4. *Sistemas:* `/data/bets/bets.json` (+ esquema) y `BetSystem.OfferFor`; `/Game` no se toca (el ojeo lee la oferta, no la
    decide: RT-014). La descripción visible sigue generándose desde la condición y los números (RT-035).
@@ -465,7 +466,7 @@ de la ADR sigue siendo el margen de la casa **de la cuota** (`85/p`); el cobro q
 se cumplen ~5 % menos de lo censado. No se toca código ni datos.
 
 **Decisión 2: no se ofrecen las celdas (tipo × dificultad 5) con sobrestima clara.**
-*Criterio escrito (antes de mirar las celdas, sobre `tools/bet-aciertos.py` con las 6 semillas × 600 runs de `Blind`):* una celda
+*Criterio escrito **a posteriori**: se fijó con las celdas de d5 ya publicadas en la enmienda anterior (las dos candidatas se conocían), no antes de verlas; no es una prueba independiente de que el criterio las escoja por méritos propios (sobre `tools/bet-aciertos.py` con las 6 semillas × 600 runs de `Blind`):* una celda
 con ≥ 100 apuestas tomadas se retira si **(a)** su cumplimiento medido cae en **otra palabra de la UI** que la anunciada **y**
 **(b)** z < −2 (sobrestima, no solo cambio de palabra). Procedencia de los umbrales: el 100 es el de `bet-aciertos.py`; el −2 lo
 fijo yo, **provisional, sin medir** (con 46 celdas el umbral de Bonferroni sería −3,27: ninguna de las dos lo cruza, así que esto
@@ -491,7 +492,7 @@ apuesta no retirada. Test nuevo, no se cambió ni quitó ninguno.
 **Decisión 3: `Prepared` (apostar con criterio) no se mide.** Decisión del revisor, cerrada. Queda anotado que **«apostar con criterio
 es una decisión con valor» sigue sin estar medido**: lo medido es solo el efecto de apostar a ciegas.
 
-**Decisión 4: la apuesta fija 3/4/5 se mide contra 2/3/4 y 4/5/6.**
+**Decisión 4: la apuesta fija 3/4/5 se mide contra 2/3/4 y 4/5/6.** Resultado: 3/4/5 queda **no refutada** (no «óptima» ni «medida como la mejor»).
 *Criterio escrito antes de medir (umbrales míos, **provisionales, sin medir**; fijados en la etapa de 2 semillas, antes de verla):*
 con `Blind` contra `Never` (pareado por semilla, contextual) una apuesta es **válida** si (K1, *cuesta*) el oro neto de la apuesta
 es ≤ −2,0 por run; (K2, *no arruina*) la tasa de victoria baja menos de 2 puntos y los mercados sin oro suben ≤ +0,8 por run;
@@ -522,7 +523,8 @@ cota a 2 ET ≈ ±1-1,5 puntos; el retorno es ≈ −18 % en las tres, porque es
 oro escala con la apuesta, casi linealmente. 2/3/4 queda al límite de K3 (pesa poco); 3/4/5 y 4/5/6 cumplen todo. **El criterio no
 discrimina entre 3/4/5 y 4/5/6** (la diferencia, 1,6 de oro por run, no es el objetivo de ninguna cota) y manda la regla de
 desempate: **se queda 3/4/5**, ya medida y con menos presión sobre el mercado (+0,43 contra +0,56 mercados vacíos por run).
-La apuesta fija pasa de «provisional, sin medir» a «medida, con criterio y procedencia» (campos `_doc` y esquema actualizados).
+La apuesta fija pasa de «provisional, sin medir» a «**no refutada** con criterio y procedencia» (campos `_doc` y esquema actualizados).
+**Parada opcional (declarada):** la etapa 2 (4 semillas más) se lanzó porque en la etapa 1 el 3/4/5 fallaba K3 (−3,98); si hubiera pasado, no se habría ampliado, y ampliar solo cuando falla favorece al resultado que se acaba obteniendo. Además, **la regla de desempate decidía entre las tres opciones** (el criterio dejaba válidas 3/4/5 y 4/5/6, y 2/3/4 al límite): la elección de 3/4/5 es la del desempate, no un resultado de la medición.
 Límite: los umbrales K1-K3 son míos, no de un requisito; cambiarlos puede cambiar la elección.
 
 **Decisión 5: `comeback` en dificultad 1 recalibrada.** Medido: cumple 7,76 % (2.849 apuestas, política `comeback-easiest`, 6 semillas ×
@@ -531,9 +533,10 @@ el resto de celdas (`cuota = round(85 / p)` con la frecuencia medida)**: `freque
 sigue siendo «de vez en cuando», 5-12 %, igual que antes: sigue siendo verdad) y `payoutPercentByDifficulty[0]` 1.360 → **1.095**
 (= round(85 / 7,76)). Con las apuestas 3/4/5 el cobro es 33/44/55 de oro (redondeo al entero más cercano): retorno esperado
 7,76 % × 11 = **0,854** (−14,6 %), que es el −15 % de diseño. Valor conocido en `BetSystemTests.ComebackOnDifficultyOneReturnsInLineWithTheRest`
-(33, 44, 55 y retorno en [0,84, 0,86]). **Comprobación medida** en el lote de la decisión 4 (3/4/5, `Blind`, 6 × 600): la celda se tomó 2.885 veces,
+(33, 44, 55 y retorno en [0,84, 0,86]). **Comprobación, medida en la misma muestra (no es una réplica): las semillas 1-5001 son las de la calibración;** en el lote de la decisión 4 (3/4/5, `Blind`, 6 × 600): la celda se tomó 2.885 veces,
 cumplió 7,94 % (el anunciado de 7,76 % cae dentro de ±1 ET ≈ 0,5) y el oro neto fue **−0,38 por apuesta** (−1.098): ya no es positiva.
+**Procedencia distinta del resto:** esta celda sale de `Blind` (cobro −14,6 %), el resto de celdas de bets.json salen del censo con `Never` (≈ −18 % vivido). Si se recensa (`Balance --bet-census`) y se vuelcan las frecuencias en `data`, `comeback` d1 recupera el censo (6,25 % / 1.360 %) y pierde esta recalibración: el aviso está en `BetCensusRunner` y lo guarda `BetSystemTests.ComebackOnDifficultyOneReturnsInLineWithTheRest`.
 Las demás celdas de `comeback` (d2-d5) no estaban fuera de Bonferroni y no se tocan. `into_the_mob` d2/d3 (sobrestima) **no se toca**:
 queda anotado como hallazgo (z −3,5 y −3,4, misma palabra).
 
-**Estado.** Las cinco decisiones del revisor quedan cerradas. Abierto: `Prepared` (decisión 3, no se medirá) y el valor de apostar con criterio.
+**Estado.** Las cinco decisiones del revisor quedan cerradas. Abiertos: `into_the_mob` d2/d3 y `eye_for_eye` d3 (sobrestima, sin tocar), `Prepared` (decisión 3, no se medirá) y el valor de apostar con criterio.
