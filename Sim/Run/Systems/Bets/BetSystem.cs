@@ -52,7 +52,7 @@ public static class BetSystem
     /// catálogo de apuestas está vacío. Determinista por (semilla, nodo). Para
     /// <see cref="BetKind.HuntTheStar"/> nombra al rival concreto (<see cref="TargetFor"/>) del equipo que
     /// devuelve <paramref name="systems"/> para ese nodo, el mismo que se jugará. No se ofrece una apuesta en
-    /// una dificultad donde su frecuencia medida es menor que <see cref="MinOfferedBasisPoints"/>.
+    /// una dificultad donde su frecuencia medida es menor que <see cref="MinOfferedBasisPoints"/> ni donde está retirada (<see cref="BetDefinition.WithdrawnDifficulties"/>).
     /// </summary>
     public static BetOffer? OfferFor(RunState state, MapNode node, BetCatalog bets, IRunSystems systems, Catalog catalog)
     {
@@ -82,8 +82,30 @@ public static class BetSystem
             return null;
         }
 
+        // Primero se sortea sobre TODAS las elegibles por frecuencia (como antes de las retiradas): un nodo cuya
+        // primera tirada no cae en una celda retirada ofrece exactamente lo mismo que antes. Solo si cae en una
+        // retirada se tira de nuevo, del mismo flujo, entre las no retiradas: el resultado es uniforme sobre estas
+        // (P = 1/n + (w/n)(1/m) = 1/m con m = n - w) y no se desplaza ningún otro nodo.
         var rng = OfferStream.For(state.Seed, node.Id, OfferStreamOffset);
         var bet = eligible[rng.Range(0, eligible.Count)];
+        if (bet.IsWithdrawnAt(node.Difficulty))
+        {
+            var offered = new List<BetDefinition>(eligible.Count);
+            for (int i = 0; i < eligible.Count; i++)
+            {
+                if (!eligible[i].IsWithdrawnAt(node.Difficulty))
+                {
+                    offered.Add(eligible[i]);
+                }
+            }
+
+            if (offered.Count == 0)
+            {
+                return null;
+            }
+
+            bet = offered[rng.Range(0, offered.Count)];
+        }
 
         int targetId = -1;
         string targetName = string.Empty;

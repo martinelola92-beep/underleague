@@ -42,6 +42,12 @@
           "minItems": 5,
           "maxItems": 5
         },
+        "withdrawnDifficulties": {
+          "description": "Dificultades 1..5 en las que la apuesta no se ofrece aunque su frecuencia llegue al mínimo: celdas que el censo mide claramente por debajo de lo anunciado (ADR 0157, enmienda del 2 oct 2026, decisión 2).",
+          "type": "array",
+          "items": { "type": "integer", "minimum": 1, "maximum": 5 },
+          "uniqueItems": true
+        },
         "payoutPercentByDifficulty": {
           "description": "Cobro BRUTO (incluye la apuesta) como porcentaje de la apuesta, un valor por distintivo de dificultad 1..5 (RF-012). Sale de 85 / p del censo; mínimo 100 (nunca menos de lo apostado), tope 2000.",
           "type": "array",

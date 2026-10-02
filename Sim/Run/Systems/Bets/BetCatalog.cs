@@ -35,6 +35,11 @@ public enum BetKind
 /// 14,29 %; aritmética entera, RT-023). Es la <c>p</c> de la cuota y lo que decide si la apuesta se
 /// ofrece: por debajo de <see cref="BetSystem.MinOfferedBasisPoints"/> es una lotería y no se ofrece.
 /// </param>
+/// <param name="WithdrawnDifficulties">
+/// Dificultades 1..5 en las que la apuesta <b>no se ofrece aunque su frecuencia llegue al mínimo</b>: celdas
+/// cuyo cumplimiento medido queda claramente por debajo de lo anunciado (ADR 0157, enmienda del 2 oct, decisión 2).
+/// Vacío por defecto. La frecuencia de la celda se conserva (es la medida) para que el censo siga comparando.
+/// </param>
 public sealed record BetDefinition(
     string Id,
     BetKind Kind,
@@ -42,8 +47,29 @@ public sealed record BetDefinition(
     LocalizedName Condition,
     IReadOnlyList<int> StakeByAct,
     IReadOnlyList<int> PayoutPercentByDifficulty,
-    IReadOnlyList<int> FrequencyBasisPointsByDifficulty)
+    IReadOnlyList<int> FrequencyBasisPointsByDifficulty,
+    IReadOnlyList<int>? WithdrawnDifficulties = null)
 {
+    /// <summary>Si la apuesta está retirada (no se ofrece) en esa dificultad 1..5 (fuera de rango se ajusta).</summary>
+    public bool IsWithdrawnAt(int difficulty)
+    {
+        if (WithdrawnDifficulties is null)
+        {
+            return false;
+        }
+
+        int d = Math.Clamp(difficulty, 1, FrequencyBasisPointsByDifficulty.Count);
+        for (int i = 0; i < WithdrawnDifficulties.Count; i++)
+        {
+            if (WithdrawnDifficulties[i] == d)
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     /// <summary>Oro que se apuesta en ese acto (1..3; fuera de rango se ajusta al extremo más cercano).</summary>
     public int StakeFor(int act) => StakeByAct[Math.Clamp(act, 1, StakeByAct.Count) - 1];
 
@@ -181,7 +207,37 @@ public static class BetLoader
             LocalizedNameJson.Read(node.Prop("condition")),
             ReadInts(node.Prop("stakeByAct"), 3, 1, int.MaxValue),
             ReadInts(node.Prop("payoutPercentByDifficulty"), 5, 100, 2000),
-            ReadBasisPoints(node.Prop("frequencyPercentByDifficulty")));
+            ReadBasisPoints(node.Prop("frequencyPercentByDifficulty")),
+            ReadWithdrawn(node));
+    }
+
+    /// <summary>Lee <c>withdrawnDifficulties</c> (opcional): dificultades 1..5 sin repetir, en orden ascendente.</summary>
+    private static IReadOnlyList<int> ReadWithdrawn(Json node)
+    {
+        var values = new List<int>();
+        if (node.TryProp("withdrawnDifficulties") is not { } array)
+        {
+            return values;
+        }
+
+        foreach (var item in array.EnumerateArray())
+        {
+            int d = item.AsInt();
+            if (d < 1 || d > 5)
+            {
+                throw new DataException(item.File, item.Path, $"dificultad {d} fuera de rango [1, 5]");
+            }
+
+            if (values.Contains(d))
+            {
+                throw new DataException(item.File, item.Path, $"dificultad {d} repetida");
+            }
+
+            values.Add(d);
+        }
+
+        values.Sort();
+        return values;
     }
 
     /// <summary>Lee porcentajes con decimales (0..100) y los guarda como centésimas de punto: 14,29 -> 1429.</summary>

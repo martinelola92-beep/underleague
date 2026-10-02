@@ -115,6 +115,70 @@ public sealed class BetSystemTests
         }
     }
 
+    /// <summary>
+    /// ADR 0157, enmienda del 2 oct (decisión 2): una celda retirada (<c>withdrawnDifficulties</c>) no se ofrece
+    /// nunca en esa dificultad, y control: en el resto de nodos la oferta es la misma que sin retirar nada, con
+    /// la misma semilla (la retirada no desplaza las demás apuestas); solo cambian los nodos cuya primera tirada
+    /// caía en una celda retirada, y ahí sale otra apuesta no retirada.
+    /// </summary>
+    [Fact]
+    public void AWithdrawnCellIsNeverOfferedAndEveryOtherOfferIsUnchanged()
+    {
+        var withdrawn = Systems.Bets.All.Where(b => b.WithdrawnDifficulties is { Count: > 0 }).ToList();
+        Assert.Equal(
+            new[] { "into_the_mob", "split_the_goals" },
+            withdrawn.Select(b => b.Id).OrderBy(i => i, StringComparer.Ordinal));
+        Assert.All(withdrawn, b => Assert.Equal(new[] { 5 }, b.WithdrawnDifficulties));
+
+        var unflagged = new BetCatalog(Systems.Bets.All.Select(b => b with { WithdrawnDifficulties = null }).ToList());
+        int atRetiredCell = 0;
+        int unchanged = 0;
+        for (ulong seed = 1; seed <= 60; seed++)
+        {
+            foreach (var (state, node) in MatchNodes(seed))
+            {
+                var now = Offer(state, node);
+                var before = BetSystem.OfferFor(state, node, unflagged, Systems, SystemsTestSupport.Catalog);
+                Assert.NotNull(now);
+                Assert.False(Systems.Bets.Find(now.BetId)!.IsWithdrawnAt(node.Difficulty));
+                if (Systems.Bets.Find(before!.BetId)!.IsWithdrawnAt(node.Difficulty))
+                {
+                    atRetiredCell++;
+                    Assert.NotEqual(before.BetId, now.BetId);
+                }
+                else
+                {
+                    unchanged++;
+                    Assert.Equal(before, now);
+                }
+            }
+        }
+
+        Assert.True(atRetiredCell > 0, "el censo de semillas no cae nunca en una celda retirada: el control no prueba nada");
+        Assert.True(unchanged > atRetiredCell, "la retirada debe dejar intactas casi todas las ofertas");
+    }
+
+    /// <summary>
+    /// ADR 0157, enmienda del 2 oct (decisión 5), valor conocido: <c>comeback</c> en dificultad 1 anuncia la
+    /// frecuencia medida (7,76 %) y paga round(85 / 7,76) = 1095 %: 33, 44 y 55 de oro por 3, 4 y 5 apostados.
+    /// Su retorno esperado queda en -14,6 %, en línea con el resto (-15 % de diseño).
+    /// </summary>
+    [Theory]
+    [InlineData(1, 3, 33)]
+    [InlineData(2, 4, 44)]
+    [InlineData(3, 5, 55)]
+    public void ComebackOnDifficultyOneReturnsInLineWithTheRest(int act, int stake, int payout)
+    {
+        var comeback = Systems.Bets.Find(BetKind.Comeback)!;
+        Assert.Equal(776, comeback.FrequencyBasisPointsFor(1));
+        Assert.Equal(1095, comeback.PayoutPercentFor(1));
+        Assert.Equal(stake, comeback.StakeFor(act));
+        Assert.Equal(payout, BetSystem.PayoutFor(stake, comeback.PayoutPercentFor(1)));
+
+        double expectedReturn = comeback.FrequencyBasisPointsFor(1) / 10000.0 * payout / stake;
+        Assert.InRange(expectedReturn, 0.84, 0.86);
+    }
+
     [Fact]
     public void TheStakeFollowsTheActAndThePayoutTheDifficulty()
     {
