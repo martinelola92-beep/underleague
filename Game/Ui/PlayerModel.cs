@@ -68,6 +68,15 @@ public enum ContactPart
     Chest,
 }
 
+/// <summary>
+/// El golpeo que viene (BV-A, H7): en qué tick suelta el balón este jugador según la traza ya calculada
+/// (<see cref="Release"/>, −1 si no lo suelta pronto) y cuántos segundos de partido faltan para ese instante.
+/// </summary>
+public readonly record struct KickCue(int Release, float SecondsToContact)
+{
+    public static KickCue None { get; } = new(-1, -1f);
+}
+
 public sealed partial class PlayerModel : Node3D
 {
     /// <summary>La carpeta del material de fútbol: personaje y clips, todos del mismo esqueleto.</summary>
@@ -148,6 +157,23 @@ public sealed partial class PlayerModel : Node3D
     /// límite: el modelo saltaba hasta 180° entre dos fotogramas.
     /// </summary>
     private const float TurnDegreesPerSecond = 720f;
+
+    /// <summary>
+    /// Segundo del clip <c>kick</c> en que el pie golpea (BV-A, H7). <b>Medido</b> con
+    /// <see cref="DebugFootProfile"/>: la puntera izquierda barre hacia delante de 0,05 a 0,30 s con el pico de
+    /// velocidad a 0,20–0,23 s y a la altura del balón; después vuelve. La vista lanza el golpeo para que este
+    /// instante caiga en el tick en que la traza suelta el balón.
+    /// </summary>
+    public const float KickContactSeconds = 0.20f;
+
+    /// <summary>
+    /// El tramo útil del clip <c>receive</c> (5,13 s, casi todo pasitos con el balón): de 0,85 s a 1,5 s, donde
+    /// el perfil de los pies (<see cref="DebugFootProfile"/>) enseña el pie levantado a ~0,3 m y lento, que es el
+    /// control. <b>Medido</b> el sitio; la longitud es <b>provisional</b>: lo justo para leerse como «la
+    /// controla» sin que el cuerpo se deslice con un gesto parado (antes, 5,2 s y el 77 % deslizándose).
+    /// </summary>
+    private const float ReceiveStartSeconds = 0.85f;
+    private const float ReceiveLengthSeconds = 0.65f;
 
     /// <summary>
     /// Los gestos que no son locomoción, montados como entradas de una transición del árbol (BV-A). Los
@@ -293,7 +319,7 @@ public sealed partial class PlayerModel : Node3D
     /// del muñeco —zancada, gestos, fundidos— van con él: congelada la imagen, congelado el muñeco (H6).
     /// <b>El modelo no decide nada</b>: sólo mira lo que está escrito (RT-014).
     /// </summary>
-    public void Pose(Vector2 velocity, Vector2 facing, PlayerState state, ContactCue cue, float rate, float delta)
+    public void Pose(Vector2 velocity, Vector2 facing, PlayerState state, ContactCue cue, KickCue kick, float rate, float delta)
     {
         if (_tree is null)
         {
@@ -307,7 +333,7 @@ public sealed partial class PlayerModel : Node3D
         float simDelta = delta * rate;
         Turn(facing, simDelta, snap: delta <= 0f);
         AdvanceGesture(simDelta);
-        ChooseGesture(state, cue);
+        ChooseGesture(state, cue, kick);
 
         // Locomoción continua: una posición de mezcla idle→trote→carrera en lugar de tres clips con umbral.
         float target = _runCells > 0.01f ? Mathf.Clamp(speed / _runCells, 0f, 1f) : 0f;
@@ -361,7 +387,7 @@ public sealed partial class PlayerModel : Node3D
     /// Qué gesto toca encima de la locomoción. El suelo manda (el que cae, cae); después el gesto de evento
     /// —que se deja terminar—, y por último el de estado, que vive mientras dura su estado y se funde al salir.
     /// </summary>
-    private void ChooseGesture(PlayerState state, ContactCue cue)
+    private void ChooseGesture(PlayerState state, ContactCue cue, KickCue kick)
     {
         if (state is PlayerState.KnockedDown or PlayerState.Injured)
         {
@@ -380,6 +406,17 @@ public sealed partial class PlayerModel : Node3D
         if (_gesture is "trip" or "fallen")
         {
             StopGesture();
+        }
+
+        // El golpeo, ALINEADO con la traza (H7): la vista avisa de cuántos segundos de partido faltan para que
+        // este jugador suelte el balón; el clip arranca para que su pie llegue justo entonces, y se deja
+        // terminar. Si el aviso llega tarde, el clip entra ya avanzado lo que corresponda.
+        bool handsOrSetPiece = cue is ContactCue.ThrowIn or ContactCue.Penalty || _gesture is "throwin" or "penalty";
+        if (!handsOrSetPiece && kick.Release >= 0 && kick.Release != _lastKickRelease && kick.SecondsToContact <= KickContactSeconds)
+        {
+            _lastKickRelease = kick.Release;
+            StartGesture("kick", held: true, KickContactSeconds - Mathf.Max(0f, kick.SecondsToContact));
+            return;
         }
 
         string? cueClip = cue switch
@@ -408,10 +445,11 @@ public sealed partial class PlayerModel : Node3D
             return;
         }
 
+        // El golpeo por estado sólo queda de respaldo, para un pase o tiro cuya salida la traza no enseñe.
         string? stateClip = state switch
         {
             PlayerState.Tackling => "tackle",
-            PlayerState.Shooting or PlayerState.Passing => "kick",
+            PlayerState.Shooting or PlayerState.Passing when kick.Release < 0 => "kick",
             _ => null,
         };
 
@@ -426,7 +464,7 @@ public sealed partial class PlayerModel : Node3D
     }
 
     /// <summary>Lanza un gesto desde su principio (la transición admite volver a sí misma: dos pases seguidos son dos golpeos).</summary>
-    private void StartGesture(string key, bool held)
+    private void StartGesture(string key, bool held, float offset = 0f)
     {
         if (_tree is null || _library is null || !_library.HasAnimation(key))
         {
@@ -434,12 +472,22 @@ public sealed partial class PlayerModel : Node3D
         }
 
         _tree.Set("parameters/gesture/transition_request", key);
+        if (offset > 0f)
+        {
+            _tree.Set("parameters/gesture_seek/seek_request", offset);
+        }
+
         _gesture = key;
         _gestureHeld = held;
-        _gestureTime = 0f;
+        _gestureTime = offset;
         var clip = _library.GetAnimation(key);
-        _gestureLength = clip.LoopMode == Animation.LoopModeEnum.None ? clip.Length : float.MaxValue;
+        _gestureLength = key == "receive"
+            ? ReceiveLengthSeconds
+            : clip.LoopMode == Animation.LoopModeEnum.None ? clip.Length : float.MaxValue;
     }
+
+    /// <summary>La salida de balón para la que ya se lanzó un golpeo, para no lanzarlo dos veces.</summary>
+    private int _lastKickRelease = -1;
 
     private void StopGesture()
     {
@@ -511,12 +559,25 @@ public sealed partial class PlayerModel : Node3D
         {
             gestures.SetInputName(i, GestureKeys[i]);
             gestures.SetInputReset(i, true);
-            root.AddNode("g_" + GestureKeys[i], Clip(GestureKeys[i]));
+            var node = Clip(GestureKeys[i]);
+            if (GestureKeys[i] == "receive")
+            {
+                // Sólo el control, no los cinco segundos de pasitos (H7).
+                node.UseCustomTimeline = true;
+                node.StretchTimeScale = false;
+                node.StartOffset = ReceiveStartSeconds;
+                node.TimelineLength = ReceiveLengthSeconds;
+                node.LoopMode = Animation.LoopModeEnum.None;
+            }
+
+            root.AddNode("g_" + GestureKeys[i], node);
             root.ConnectNode("gesture", i, "g_" + GestureKeys[i]);
         }
 
+        root.AddNode("gesture_seek", new AnimationNodeTimeSeek());
+        root.ConnectNode("gesture_seek", 0, "gesture");
         root.AddNode("gesture_scale", new AnimationNodeTimeScale());
-        root.ConnectNode("gesture_scale", 0, "gesture");
+        root.ConnectNode("gesture_scale", 0, "gesture_seek");
         root.AddNode("mix", new AnimationNodeBlend2());
         root.ConnectNode("mix", 0, "loco_scale");
         root.ConnectNode("mix", 1, "gesture_scale");

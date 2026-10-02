@@ -2246,7 +2246,7 @@ public partial class MatchPitchView3D : SubViewportContainer
             // decide nada del partido (RT-014).
             // En el tick de un teletransporte (BA-K) el muñeco se recoloca sin girar ni mezclar.
             float delta = IsTeleportCut(trace, frame, i) ? 0f : poseDelta;
-            model.Pose(SmoothedVelocity(trace, frame, i), FacingOf(trace, frame, i), trace.StateAt(frame, i), CueFor(trace, frame, i), _playbackRate, delta);
+            model.Pose(SmoothedVelocity(trace, frame, i), FacingOf(trace, frame, i), trace.StateAt(frame, i), CueFor(trace, frame, i), KickFor(trace, frame, i), _playbackRate, delta);
         }
 
         var ball = InterpolateBall(trace, frame);
@@ -2561,6 +2561,40 @@ public partial class MatchPitchView3D : SubViewportContainer
         var b = PositionAtTime(trace, player, to);
         return new Vector2(b.X - a.X, b.Y - a.Y) / (to - from) * TicksPerSecond;
     }
+
+    /// <summary>
+    /// Hasta cuántos ticks adelante se busca la salida del balón de un jugador para lanzar su golpeo (H7). Basta
+    /// con que cubra el arranque del clip antes del contacto (<see cref="PlayerModel.KickContactSeconds"/>, 3 ticks);
+    /// 8 deja margen a la cámara lenta sin mirar tan lejos como para confundir dos pases seguidos.
+    /// </summary>
+    private const int KickLookAheadTicks = 8;
+
+    /// <summary>
+    /// El próximo golpeo de este jugador según la traza: el tick en que tiene el balón y en el siguiente ya va
+    /// por el aire sin dueño suyo (pase, tiro o despeje: medido, cae en el último tick de <c>Passing</c>/<c>Shooting</c>).
+    /// Sólo lee la traza ya calculada (RT-014).
+    /// </summary>
+    private static KickCue KickFor(MatchTrace trace, int frame, int player, float alpha)
+    {
+        int last = System.Math.Min(trace.FrameCount - 2, frame + KickLookAheadTicks);
+        for (int g = frame; g <= last; g++)
+        {
+            if (trace.BallOwnerAt(g) == player && trace.BallOwnerAt(g + 1) != player && trace.BallInFlightAt(g + 1))
+            {
+                // Un balón a la altura del pecho o más no se golpea con el pie: es el cabezazo de CueFor.
+                if (trace.BallHeightAt(g) >= ChestContactHeightCells)
+                {
+                    return KickCue.None;
+                }
+
+                return new KickCue(g, (g + 1 - (frame + alpha)) / TicksPerSecond);
+            }
+        }
+
+        return KickCue.None;
+    }
+
+    private KickCue KickFor(MatchTrace trace, int frame, int player) => KickFor(trace, frame, player, Mathf.Clamp(Alpha, 0f, 1f));
 
     /// <summary>
     /// Cuánto mira la orientación hacia adelante en la traza, en ticks (BV-A, H2/H8). Con 4, una inversión que

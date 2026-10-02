@@ -105,7 +105,28 @@ def frame_metrics(rows, window, label=None):
                         turn_at_boundary.append(math.degrees(abs(wrap(math.atan2(dz, dx) - math.atan2(az, ax)))))
             prev2 = prev
             prev = r
+    # Oscilación de la MEZCLA de locomoción (sólo con el árbol de BV-A, donde clipTime lleva la posición de
+    # mezcla 0..1 en los clips de locomoción): idas y vueltas de amplitud >= 0,15 por segundo y jugador. Es la
+    # medida honesta del parpadeo cuando ya no hay clips discretos: la etiqueta «clip dominante» puede cambiar
+    # al rozar el punto medio sin que el muñeco cambie de postura apreciablemente.
+    swings = 0
+    for (w, p), seq in rows.items():
+        if w != window or not seq[0]["hasModel"]:
+            continue
+        vals = [r["clipTime"] for r in seq if r["visible"] and r["clip"] in LOCO and 0 <= r["clipTime"] <= 1.0001]
+        if len(vals) < 3:
+            continue
+        anchor, direction = vals[0], 0
+        for v in vals[1:]:
+            if direction >= 0 and v > anchor:
+                anchor, direction = v, 1
+            elif direction <= 0 and v < anchor:
+                anchor, direction = v, -1
+            elif abs(v - anchor) >= 0.15:
+                swings += 1
+                anchor, direction = v, (1 if v > anchor else -1)
     return {
+        "oscilaciones de la mezcla >=0,15/s/jugador (sólo árbol)": swings / seconds if seconds else 0,
         "segundos-jugador": seconds,
         "cambios de clip/s/jugador": switches / seconds if seconds else 0,
         "parpadeos (A-B-A <=0,3 s)/s/jugador": flicker / seconds if seconds else 0,
