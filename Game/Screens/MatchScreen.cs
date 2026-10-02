@@ -596,6 +596,10 @@ public partial class MatchScreen : Control
         }
 
         _frame = Mathf.Clamp(_frame, 0, trace.FrameCount - 1);
+
+        // BR-A, ADR 0183: esta vista (F3 desde la retransmisión) enseña el partido igual de entero; lo que
+        // enseña cuenta como visto, o se podría ver aquí, guardar limpio y bajar el suelo.
+        RunController.Instance?.NoteWatched(trace.TickAt(_frame));
         CheckSubstitution(trace);
         _pitch.Frame = _frame;
         _pitch.Alpha = _playing ? (float)_carry : 0f;

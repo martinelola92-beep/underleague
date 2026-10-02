@@ -415,7 +415,7 @@ public partial class BroadcastScreen : Control
 
         _replayNotice = new Label
         {
-            Position = new Vector2(0f, 84f),
+            Position = new Vector2(0f, 116f),
             Size = new Vector2(CanvasWidth, 24f),
             HorizontalAlignment = HorizontalAlignment.Center,
             MouseFilter = MouseFilterEnum.Ignore,
@@ -1209,8 +1209,6 @@ public partial class BroadcastScreen : Control
 
         _frame = Mathf.Clamp(_frame, 0, trace.FrameCount - 1);
 
-        // BR-A, ADR 0183: lo más lejos que llega a ver el jugador es lo que se guarda si sale ahora.
-        _run.NoteWatched(trace.TickAt(_frame));
         _pitch3d.Frame = _frame;
         _pitch3d.Alpha = _frozenLastFrame ? 0f : (float)Mathf.Clamp(_carry, 0d, 1d);
         _pitch3d.QueueRedraw();
@@ -1222,6 +1220,10 @@ public partial class BroadcastScreen : Control
         int residueFrame = _residueMoment is not null
             ? Mathf.Clamp(_residueMoment.LastFrame, 0, trace.FrameCount - 1)
             : _frame;
+
+        // BR-A, ADR 0183: lo más lejos que llega a ver el jugador es lo que se guarda si sale ahora. El marcador
+        // y las tiras ya enseñan el residuo, que puede ir por delante del campo congelado: cuenta lo más lejano.
+        _run.NoteWatched(Math.Max(trace.TickAt(_frame), trace.TickAt(residueFrame)));
 
         if (_frame == _synced && _residueMoment == _lastResidueMoment)
         {

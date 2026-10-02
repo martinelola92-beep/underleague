@@ -41,3 +41,12 @@ del partido más `PendingMatch` (nodo, decisiones, tick más lejano visto), esqu
 guardado de después se escribe al llegar al informe. Anti-abuso: el resultado no puede cambiar (mismo estado,
 semilla y decisiones) y los controles en vivo se bloquean antes de lo ya visto. CONFIRMED por
 `Sim.Tests/Run/PendingMatchTests.cs`.
+
+## Hermano abierto (anotado en la segunda revisión)
+
+`Continue()` borra el slot al cargar (RT-061: «se borra al cargarse», anti-recarga). Un cierre forzado entre
+la carga y el siguiente guardado pierde la run. No se arregla aquí: conservar el fichero reabre justo la recarga
+que el borrado impide (matar el proceso tras una mala decisión de un nodo abierto y volver al guardado
+anterior), así que es una decisión del revisor, no un arreglo mecánico. Con partido a medias el riesgo es
+mínimo: `PlayMatch` reescribe el guardado antes de enseñar nada. La vista 2D (F3) ya registra lo que enseña
+(`MatchScreen` llama a `NoteWatched`); si F3 debe existir sólo en desarrollo es decisión del revisor, no se ha cambiado.

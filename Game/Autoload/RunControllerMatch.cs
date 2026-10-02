@@ -98,51 +98,25 @@ public partial class RunController
         }
     }
 
+    /// <summary>
+    /// La reproducción con las decisiones actuales; los puntos de sustitución por debajo de lo ya visto se
+    /// resuelven con la política por defecto en <c>/Sim</c> (ADR 0183) y quedan anotados en
+    /// <see cref="Decisions"/>, para que lo que se enseña y lo que se aplica sean el mismo partido.
+    /// </summary>
+    private MatchPlayback PlaybackFor(RunState before, int nodeId)
+    {
+        var playback = MatchPlaybacks.OfResolvingBlockedPoints(
+            before, nodeId, Catalog!, Engine, trace: true, Decisions, _floorTick, out var resolved);
+        Decisions = resolved;
+        return playback;
+    }
+
     private void WriteCheckpoint(bool pessimistic)
     {
         var pending = pessimistic && Playback is not null
-            ? PendingMatch.BeforeShowing(_matchNodeId, Decisions, Playback)
+            ? PendingMatch.BeforeShowing(_matchNodeId, Decisions, Playback, _floorTick)
             : new PendingMatch(_matchNodeId, Decisions, Math.Max(_watchedTick, _floorTick));
         WriteSave(RunSave.Save(_stateBeforeMatch!, pending));
-    }
-
-    /// <summary>
-    /// Los puntos de sustitución que caen por debajo de lo que el jugador ya vio se resuelven con la política
-    /// por defecto, sin ventana: elegir con el futuro conocido sería volver a tirar el partido (ADR 0183). Como
-    /// las respuestas que ya había dado viajan en <see cref="Decisions"/>, sólo quedan los puntos que no llegó a
-    /// responder. Se resuelven aquí, antes de que la pantalla vea la reproducción, para que lo que se enseña y lo
-    /// que se aplica sean el mismo partido.
-    /// </summary>
-    private void ResolveBlockedPoints()
-    {
-        if (_floorTick <= 0 || Catalog is null || _stateBeforeMatch is null || Playback is null)
-        {
-            return;
-        }
-
-        // Cota: un punto por suplente como mucho, y la ventana no admite más.
-        for (int guard = 0; guard < 64; guard++)
-        {
-            var point = SubstitutionPoints.Pending(Playback.Setup, Playback.Result, Playback.PlayerTeam, Catalog, Decisions.Declines);
-            if (point is null || CanDecideAt(point.Tick + 1))
-            {
-                return;
-            }
-
-            Decisions = point.DefaultCandidateId >= 0
-                ? Decisions with
-                {
-                    Substitutions = new List<Substitution>(Decisions.Substitutions)
-                    {
-                        new(point.Tick, point.OutPlayerId, point.DefaultCandidateId),
-                    },
-                }
-                : Decisions with
-                {
-                    Declines = new List<DeclinedSubstitution>(Decisions.Declines) { new(point.Tick, point.OutPlayerId) },
-                };
-            Playback = MatchPlaybacks.Of(_stateBeforeMatch, _matchNodeId, Catalog, Engine, trace: true, Decisions);
-        }
     }
 
     /// <summary>
@@ -380,8 +354,7 @@ public partial class RunController
         }
 
         Decisions = decisions;
-        Playback = MatchPlaybacks.Of(_stateBeforeMatch, _matchNodeId, Catalog, Engine, trace: true, Decisions);
-        ResolveBlockedPoints();
+        Playback = PlaybackFor(_stateBeforeMatch, _matchNodeId);
         State = _stateBeforeMatch;
         EnterOpenMatch(_matchNodeId);
     }
@@ -410,8 +383,7 @@ public partial class RunController
         _stateBeforeMatch = State;
         _matchNodeId = nodeId;
         _matchOpen = true;
-        Playback = MatchPlaybacks.Of(State, nodeId, Catalog, Engine, trace: true, Decisions);
-        ResolveBlockedPoints();
+        Playback = PlaybackFor(State, nodeId);
         EnterOpenMatch(nodeId);
     }
 
