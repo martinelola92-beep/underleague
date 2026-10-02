@@ -90,11 +90,23 @@ public static class FullRunRunner
         int? act1Pass = null,
         int? act2Pass = null,
         bool valuesFlat = false,
-        BetDoctrine betDoctrine = BetDoctrine.Never)
+        BetDoctrine betDoctrine = BetDoctrine.Never,
+        bool noBlacksmith = false)
     {
         ArgumentNullException.ThrowIfNull(catalog);
         ArgumentNullException.ThrowIfNull(dataFiles);
         ArgumentOutOfRangeException.ThrowIfLessThan(runs, 1);
+
+        if (noBlacksmith)
+        {
+            // Control de la ADR 0164: el mismo lote con el catalogo de protesis vacio (la politica ve que no hay
+            // ranura libre que ofrecer y la clinica vuelve a ser la de la ADR 0099).
+            var copy = new Dictionary<string, string>(dataFiles, StringComparer.Ordinal)
+            {
+                ["prostheses/prostheses.json"] = "{\"prostheses\": []}",
+            };
+            dataFiles = copy;
+        }
 
         var standard = StandardRunSystems.FromJson(dataFiles);
         var bosses = BossCatalog.FromJson(dataFiles);

@@ -472,6 +472,10 @@ public static class FullRunMetrics
         long squadTreatments = 0, riskyTreatments = 0, eventsTaken = 0, eventsDeclined = 0;
         long blacksmithTreatments = 0, prosthesesInstalled = 0, automatons = 0;
         long nemeses = 0, revenges = 0, nemesesCapped = 0;
+        // ADR 0164 (enmienda del 2 oct 2026): el techo del herrero se mide en el estado final de cada run, contra
+        // los jugadores sin prótesis como grupo de control. Máximos sobre todas las runs, no medias.
+        int maxProsthesesOnPlayer = 0, maxAttrProsthetic = 0, maxAttrPlain = 0;
+        long prostheticPlayers = 0, plainPlayers = 0, prostheticAttrSum = 0, plainAttrSum = 0;
         long slots = 0;
         long roster = 0, level = 0, perks = 0, starterPerks = 0, items = 0, injuries = 0, severe = 0, counters = 0, ownInjuries = 0, matchInjuries = 0;
         long offers = 0, affordable = 0, purchases = 0, marketVisits = 0, goldAtMarket = 0;
@@ -565,6 +569,25 @@ public static class FullRunMetrics
                 nemeses += final.RivalMemory.Nemeses.Count;
                 revenges += final.Counter(RunState.RevengesCounter);
                 nemesesCapped += final.Counter(RunState.NemesisCappedCounter);
+                for (int p = 0; p < final.Roster.Count; p++)
+                {
+                    var player = final.Roster[p];
+                    var a = player.Attributes;
+                    int best = Math.Max(Math.Max(a.Strength, a.Speed), Math.Max(a.Technique, a.Stamina));
+                    if (player.Prostheses.Count > 0)
+                    {
+                        prostheticPlayers++;
+                        prostheticAttrSum += best;
+                        maxAttrProsthetic = Math.Max(maxAttrProsthetic, best);
+                        maxProsthesesOnPlayer = Math.Max(maxProsthesesOnPlayer, player.Prostheses.Count);
+                    }
+                    else
+                    {
+                        plainPlayers++;
+                        plainAttrSum += best;
+                        maxAttrPlain = Math.Max(maxAttrPlain, best);
+                    }
+                }
             }
             enrollment += run.GoldSpentEnrollment;
             slots += run.SlotsBought;
@@ -747,6 +770,14 @@ public static class FullRunMetrics
         rows.Add(Info("blacksmithTreatmentsPerRun", (double)blacksmithTreatments / runs.Count));
         rows.Add(Info("prosthesesPerRun", (double)prosthesesInstalled / runs.Count));
         rows.Add(Info("automatonsPerRun", (double)automatons / runs.Count));
+        // ADR 0164, techo del herrero: el atributo máximo (fuerza, velocidad, técnica, aguante) del estado final de la run,
+        // con prótesis y sin ellas. Si el forjado supera con holgura al resto, hace falta un tope; si no, el techo
+        // estructural (una prótesis por ranura, atributos a 99) basta.
+        rows.Add(Info("maxProsthesesOnOnePlayer", maxProsthesesOnPlayer));
+        rows.Add(Info("maxAttributeProsthetic", maxAttrProsthetic));
+        rows.Add(Info("maxAttributePlain", maxAttrPlain));
+        rows.Add(Info("meanBestAttributeProsthetic", prostheticPlayers == 0 ? 0 : (double)prostheticAttrSum / prostheticPlayers));
+        rows.Add(Info("meanBestAttributePlain", plainPlayers == 0 ? 0 : (double)plainAttrSum / plainPlayers));
         // ADR 0165: la memoria de los clanes. nemesesPerRun a cero = ningún rival mata nunca a nadie de forma
         // atribuible; revengesPerRun a cero = el jugador nunca se venga; nemesesCappedPerRun mide cuánto muerde el tope.
         rows.Add(Info("nemesesPerRun", (double)nemeses / runs.Count));

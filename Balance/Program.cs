@@ -43,7 +43,7 @@ try
         // --full-runs N: N runs completas con la política automática (fase2-diseno.md §10). Responde a
         // la pregunta que la curva de puertas deja abierta: si la economía permite llegar a cada puerta
         // con la build que esa puerta exige.
-        FullRunResult full = FullRunRunner.Run(catalog, dataFiles, options.Seed, fullRuns, options.IgnoreScouting, options.RiskAversion, options.MinPerkValue, options.MinPerkValueReward, options.MinPerkValueMarket, options.MinItemValueMarket, options.SlotBarOff, options.SlotHorizon, options.ArcJudged, options.SlotGates, options.Act1Pass, options.Act2Pass, options.ValuesFlat, options.BetDoctrine);
+        FullRunResult full = FullRunRunner.Run(catalog, dataFiles, options.Seed, fullRuns, options.IgnoreScouting, options.RiskAversion, options.MinPerkValue, options.MinPerkValueReward, options.MinPerkValueMarket, options.MinItemValueMarket, options.SlotBarOff, options.SlotHorizon, options.ArcJudged, options.SlotGates, options.Act1Pass, options.Act2Pass, options.ValuesFlat, options.BetDoctrine, options.NoBlacksmith);
 
         var fullSummary = full.Metrics
             .Select(m => new MetricRow(m.Name, m.Value, m.RangeMin, m.RangeMax, m.Status))
@@ -408,6 +408,7 @@ static void PrintUsage()
           --full-runs N       N runs completas por cada una de las tres doctrinas de compra de la ADR
                                0037 (contextual, gastadora, ahorradora) sobre las mismas semillas;
                                escribe runs.csv y summary.csv con las métricas de fase2-diseno.md §10
+          --no-blacksmith     con --full-runs, catálogo de prótesis vacío: control sin herrero (ADR 0164)
           --bet-doctrine D    con --full-runs, qué hace la política con la apuesta del vestuario: never (por
                                defecto), blind (toma siempre) o prepared (solo si la build la favorece);
                                añade las filas betsTakenPerRun, betNetGoldPerRun y betNetReturnPercent

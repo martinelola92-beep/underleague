@@ -114,6 +114,12 @@ public sealed class Options
     public bool IgnoreScouting { get; private set; }
 
     /// <summary>
+    /// <c>--no-blacksmith</c>: en <c>--full-runs</c>, el catálogo de prótesis va vacío y la clínica no ofrece el herrero
+    /// (ADR 0164). Es el control del lote: la diferencia con el mismo lote sin la bandera es lo que vale el herrero.
+    /// </summary>
+    public bool NoBlacksmith { get; private set; }
+
+    /// <summary>
     /// <c>--risk-aversion N</c>: cuánto pesa el indicador de riesgo de muerte al alinear
     /// (<c>RunPolicyOptions.DeathCostPercent</c>), sin dejar de leer el informe de ojeo. Es la palanca
     /// con la que se mide el <b>rango</b> de la agencia de la ADR 0048: 0 la ignora, un valor alto la
@@ -244,6 +250,10 @@ public sealed class Options
 
                 case "--ignore-scouting":
                     options.IgnoreScouting = true;
+                    break;
+
+                case "--no-blacksmith":
+                    options.NoBlacksmith = true;
                     break;
 
                 case "--min-perk-value":
