@@ -92,4 +92,23 @@ public sealed class BetCatalogTests
         var files = new Dictionary<string, string> { ["bets/bets.json"] = broken };
         Assert.Throws<DataException>(() => BetLoader.FromJson(files));
     }
+
+    private static void AssertWithdrawnRejected(string withdrawn)
+    {
+        string content = TestData.LoadAllFiles()["bets/bets.json"];
+        string marker = "\"withdrawnDifficulties\": [5]";
+        int at = content.IndexOf(marker, StringComparison.Ordinal);
+        Assert.True(at >= 0, "el catálogo real debe llevar withdrawnDifficulties");
+        string broken = content[..at] + "\"withdrawnDifficulties\": " + withdrawn + content[(at + marker.Length)..];
+        var files = new Dictionary<string, string> { ["bets/bets.json"] = broken };
+        var ex = Assert.Throws<DataException>(() => BetLoader.FromJson(files));
+        Assert.Equal("bets/bets.json", ex.File);
+    }
+
+    /// <summary>RT-032: una dificultad retirada fuera de 1..5 o repetida es un error explícito, nunca silencioso.</summary>
+    [Theory]
+    [InlineData("[6]")]
+    [InlineData("[0]")]
+    [InlineData("[5, 5]")]
+    public void AnInvalidWithdrawnDifficultyIsAnExplicitError(string withdrawn) => AssertWithdrawnRejected(withdrawn);
 }

@@ -179,6 +179,29 @@ public sealed class BetSystemTests
         Assert.InRange(expectedReturn, 0.84, 0.86);
     }
 
+    /// <summary>Un nodo donde toda celda elegible está retirada no ofrece nada: devuelve null, sin segunda tirada ni bucle.</summary>
+    [Fact]
+    public void ANodeWhereEveryEligibleCellIsWithdrawnOffersNothing()
+    {
+        var state = RunEngine.Start(SystemsTestSupport.Setup(), 9UL, SystemsTestSupport.Catalog, Systems);
+        var node = state.MapOf(1).Nodes.First(n => n.Kind == NodeKind.LeagueMatch);
+        int d = Math.Clamp(node.Difficulty, 1, 5);
+        var all = new BetCatalog(new[]
+        {
+            Bet(BetKind.Comeback, new[] { 500, 500, 500, 500, 500 }) with { WithdrawnDifficulties = new[] { d } },
+            Bet(BetKind.IntoTheMob, new[] { 500, 500, 500, 500, 500 }) with { WithdrawnDifficulties = new[] { d } },
+        });
+        Assert.Null(BetSystem.OfferFor(state, node, all, Systems, SystemsTestSupport.Catalog));
+
+        // Con una sola sin retirar, esa y solo esa.
+        var one = new BetCatalog(new[]
+        {
+            Bet(BetKind.Comeback, new[] { 500, 500, 500, 500, 500 }) with { WithdrawnDifficulties = new[] { d } },
+            Bet(BetKind.IntoTheMob, new[] { 500, 500, 500, 500, 500 }),
+        });
+        Assert.Equal(BetKind.IntoTheMob, BetSystem.OfferFor(state, node, one, Systems, SystemsTestSupport.Catalog)!.Kind);
+    }
+
     [Fact]
     public void TheStakeFollowsTheActAndThePayoutTheDifficulty()
     {
