@@ -527,7 +527,7 @@ public static class DataLoader
         "passReceiverPressureRankPenalty", "passReceiverPressurePenalty", "passReceiverHoldSlope",
         "tiredEffortPenalty",
         "supportBase", "supportMinCarrierPressure", "supportPressedBonusPerCenti",
-        "grudgeBonus", "coverSpacingCells",
+        "grudgeBonus", "coverSpacingCells", "positioningHoldBonus",
     };
 
     private static AiWeights ParseAiWeights(string file, string content)
@@ -702,7 +702,8 @@ public static class DataLoader
             SupportMinCarrierPressure: contextNode.Prop("supportMinCarrierPressure").AsInt(),
             SupportPressedBonusPerCenti: contextNode.Prop("supportPressedBonusPerCenti").AsInt(),
             GrudgeBonus: contextNode.Prop("grudgeBonus").AsInt(),
-            CoverSpacingCells: contextNode.Prop("coverSpacingCells").AsFloat());
+            CoverSpacingCells: contextNode.Prop("coverSpacingCells").AsFloat(),
+            PositioningHoldBonus: contextNode.Prop("positioningHoldBonus").AsInt());
 
         // ADR 0125 D2: el ajuste de la entrada sin balón es un mapa por puesto, con la misma forma que la
         // tabla `base` —el único patrón por puesto que ya existe en este fichero—, y con signo. Los cuatro

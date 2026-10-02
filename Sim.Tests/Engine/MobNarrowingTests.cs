@@ -24,9 +24,12 @@ public sealed class MobNarrowingTests
     // el árbol de la ADR 0167, y renovadas al rebasar sobre main (que movió el reglamentario por otras ADR); el test de abajo
     // exige además que el reglamentario coincida con el de la turba a 0/0, que es la prueba de que esta ADR no lo toca:
     // el conjunto de los partidos que no llegan a la turba, y el de TODOS los partidos.
-    private const ulong RegulationOnlyBefore = 1085505645508475356UL;
-    private const int RegulationOnlyMatches = 44;
-    private const ulong EveryMatchBefore = 9633395058359667205UL;
+    // Renovadas el 3 oct 2026 por la ADR 0184 (positioningHoldBonus 0 -> 40: cambian las trayectorias de todos los
+    // partidos). Antes de renovarlas se comprobó que con el dato a 0 los tres valores viejos (1085505645508475356, 44,
+    // 9633395058359667205) seguían saliendo: la sostenida apagada es el motor de antes, bit a bit.
+    private const ulong RegulationOnlyBefore = 11080906411296668719UL;
+    private const int RegulationOnlyMatches = 43;
+    private const ulong EveryMatchBefore = 646147432754916318UL;
 
     private const float Eps = 0.001f;
 

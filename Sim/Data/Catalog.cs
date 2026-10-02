@@ -251,7 +251,13 @@ public sealed record AiContext(
     // apiñamiento), así que dos jugadores con zonas solapadas calculaban literalmente el mismo punto y se
     // quedaban uno encima del otro, empujándose. Es la separación mínima, en casillas, entre el punto que
     // cubre uno y el que ya cubre un compañero de id menor; 0 la apaga.
-    float CoverSpacingCells = 0f);
+    float CoverSpacingCells = 0f,
+
+    // BV-A H8 (ADR 0184) — UNA COLOCACIÓN SE SOSTIENE. Entre dos acciones de colocación (CoverSpace,
+    // Retreat, MarkOpponent, FindSpace, OfferSupport) la que el jugador ya ejecuta sólo se abandona si la
+    // otra le gana por más de estos puntos. No toca la competencia con perseguir, entrar, presionar o
+    // pasar: ésas ganan o pierden exactamente como antes. 0 lo apaga, bit a bit.
+    int PositioningHoldBonus = 0);
 
 /// <summary>
 /// Pesos de la IA de utilidad (RT-093..RT-098). Las tablas Base y Tactical se guardan como arrays

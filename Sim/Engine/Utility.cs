@@ -38,6 +38,34 @@ public sealed class UtilityCensus
     /// <summary>Cuántas veces se decidió algo, por puesto: el denominador de todo lo demás.</summary>
     public long[] Decisions { get; } = new long[Roles];
 
+    /// <summary>
+    /// BV-A H8: cambios de acción, [acción anterior, acción nueva]. La anterior es la que el jugador tenía
+    /// vigente al decidir (<see cref="MatchPlayer.CurrentAction"/>).
+    /// </summary>
+    public long[,] Switches { get; } = new long[Actions, Actions];
+
+    /// <summary>
+    /// BV-A H8: por cuánto ganó la acción nueva a la anterior en un cambio de acción, en tramos de
+    /// <see cref="SwitchMarginBucket"/> puntos (el último tramo acumula todo lo que pasa del tope). Sólo cuenta
+    /// los cambios en los que la anterior seguía siendo legal y viable: los demás no son un empate que alterna.
+    /// </summary>
+    public long[] SwitchMargin { get; } = new long[SwitchMarginBuckets];
+
+    /// <summary>
+    /// BV-A H8: cambios de acción en los que la anterior quedó descartada por el límite duro exterior (avanzaba
+    /// menos de <c>OuterLimitMinAdvance</c> hacia un destino fuera de él), [anterior, nueva].
+    /// </summary>
+    public long[,] SwitchesFromOuterLimit { get; } = new long[Actions, Actions];
+
+    /// <summary>BV-A H8: cambios de acción en los que la anterior quedó descartada por cualquier otra razón.</summary>
+    public long[,] SwitchesFromDiscard { get; } = new long[Actions, Actions];
+
+    /// <summary>Ancho de un tramo de <see cref="SwitchMargin"/>, en puntos de utilidad.</summary>
+    public const int SwitchMarginBucket = 10;
+
+    /// <summary>Número de tramos de <see cref="SwitchMargin"/>.</summary>
+    public const int SwitchMarginBuckets = 41;
+
     /// <summary>Veces que una acción fue elegida, sumando puestos.</summary>
     public long ChosenTotal(PlayerAction action) => Sum(Chosen, action);
 
@@ -389,6 +417,13 @@ internal static class Utility
         bool bestTackleOffBall = false;
         MatchPlayer? bestBlockTarget = null;
 
+        // BV-A H8 (ADR 0184): la colocación en curso, para sostenerla frente a otra colocación.
+        var holding = p.CurrentAction;
+        bool holdFound = false;
+        int holdScore = 0;
+        Eval holdEval = default;
+        bool previousOuterLimit = false, previousDiscarded = false;
+
         // BC-G (ADR 0177): el perseguidor designado de un balón suelto VA a por él. Se evalúa ChaseBall una
         // vez, aquí, y se reutiliza abajo: la decisión de si el deber está vivo depende de que ChaseBall sea
         // viable, y evaluarla dos veces sería duplicar una verdad.
@@ -447,9 +482,22 @@ internal static class Utility
                 action, score, baseWeight, tactical * mentality / 100, traitMultiplier, eval.Context,
                 rejected, eval.OutsideCentiCells > 0, eval.OutsideCentiCells));
 
+            if (action == holding && ctx.Census is not null)
+            {
+                previousOuterLimit = eval.OutsideOuterLimit && !eval.Discarded;
+                previousDiscarded = eval.Discarded;
+            }
+
             if (rejected)
             {
                 continue;
+            }
+
+            if (action == holding)
+            {
+                holdFound = true;
+                holdScore = score;
+                holdEval = eval;
             }
 
             if (!found || score > bestScore)
@@ -472,7 +520,37 @@ internal static class Utility
             bestTarget = p.EffectiveHome;
         }
 
+        // BV-A H8 (ADR 0184): UNA COLOCACIÓN SE SOSTIENE. Si gana otra acción de colocación por menos de
+        // positioningHoldBonus puntos, el jugador sigue con la que ya ejecutaba. Sólo entre colocaciones: si
+        // gana perseguir, entrar, presionar o un pase, gana igual que antes, y por eso este paso va DESPUÉS
+        // del bucle y no sumando un bono dentro (un bono dentro haría perder también a esas acciones).
+        int hold = ctx.Weights.Context.PositioningHoldBonus;
+        if (hold > 0 && found && holdFound && best != holding
+            && p.State == PlayerState.Positioning
+            && YieldsToLooseBall(best) && YieldsToLooseBall(holding)
+            && holdScore + hold >= bestScore)
+        {
+            best = holding;
+            bestScore = holdScore;
+            bestTarget = holdEval.Target;
+            bestReceiver = holdEval.Receiver;
+            bestTackleTarget = holdEval.TackleTarget;
+            bestTackleOffBall = holdEval.TackleOffBall;
+            bestBlockTarget = holdEval.BlockTarget;
+        }
+
         RecordCensus(ctx, p, rows, best, bestScore, found);
+        if (ctx.Census is { } switchCensus && found && best != holding)
+        {
+            if (previousOuterLimit)
+            {
+                switchCensus.SwitchesFromOuterLimit[(int)holding, (int)best]++;
+            }
+            else if (previousDiscarded)
+            {
+                switchCensus.SwitchesFromDiscard[(int)holding, (int)best]++;
+            }
+        }
 
         p.CurrentAction = best;
         p.TargetPoint = ctx.Band.Clamp(bestTarget);
@@ -615,6 +693,21 @@ internal static class Utility
 
         int role = (int)p.Role;
         census.Decisions[role]++;
+
+        var previous = p.CurrentAction;
+        if (found && best != previous)
+        {
+            census.Switches[(int)previous, (int)best]++;
+            for (int i = 0; i < rows.Count; i++)
+            {
+                if (rows[i].Action == previous && !rows[i].Rejected)
+                {
+                    int bucket = Math.Min((bestScore - rows[i].Score) / UtilityCensus.SwitchMarginBucket, UtilityCensus.SwitchMarginBuckets - 1);
+                    census.SwitchMargin[Math.Max(bucket, 0)]++;
+                    break;
+                }
+            }
+        }
 
         for (int i = 0; i < rows.Count; i++)
         {
@@ -1016,8 +1109,15 @@ internal static class Utility
             eval.Context -= OutsidePenalty(ctx, p, eval.OutsideCentiCells);
         }
 
+        // BV-A H8 (ADR 0184): una colocación que ya se ejecuta no se descarta por haber llegado al borde. El
+        // descarte por el límite exterior existe para no EMPEZAR a ir hacia un sitio al que no se llega; pero
+        // el que ya cubre en el borde de su zona está haciendo exactamente lo que puede, y descartarlo al
+        // llegar lo mandaba a casa para volver en cuanto se alejaba 0,25 casillas (medido: un ciclo
+        // CoverSpace -> Retreat -> CoverSpace de 4 ticks).
+        bool sustained = ctx.Weights.Context.PositioningHoldBonus > 0
+            && action == p.CurrentAction && p.State == PlayerState.Positioning && YieldsToLooseBall(action);
         bool beyondOuterLimit = p.OuterZone.DistanceOutside(raw, p.EffectiveHome, direction) > 0f;
-        if (!eval.IgnoreOuterLimit && beyondOuterLimit
+        if (!eval.IgnoreOuterLimit && !sustained && beyondOuterLimit
             && Vec2.Distance(clamped, p.Position) < OuterLimitMinAdvance)
         {
             eval.OutsideOuterLimit = true;
@@ -1376,66 +1476,27 @@ internal static class Utility
         int bestScore = 0;
         Vec2 bestPoint = p.Position;
 
+        // BV-A H8 (ADR 0184): EL HUECO ELEGIDO SE SOSTIENE. Los dieciséis candidatos se miden desde la posición
+        // de este tick, así que el hueco de la decisión anterior no está entre ellos y basta un empate para
+        // que gane el del lado contrario (medido: el 42 % de las inversiones deshechas que quedaban eran un
+        // FindSpace que cambiaba de hueco). El que ya buscaba hueco lo vuelve a puntuar con las mismas reglas
+        // y con positioningHoldBonus de ventaja: sólo lo deja si otro es claramente mejor. Va primero, así
+        // que a igualdad también se queda.
+        int hold = context.PositioningHoldBonus;
+        if (hold > 0 && p.CurrentAction == PlayerAction.FindSpace && p.State == PlayerState.Positioning)
+        {
+            Vec2 held = FindSpaceCandidate(ctx, p, p.TargetPoint, direction, marginedLine);
+            bestScore = FindSpaceScore(ctx, p, held, direction, carrier, intentTarget, intentRadiusCenti) + hold;
+            bestPoint = held;
+            found = true;
+        }
+
         for (int d = 0; d < SpaceDirections.Length; d++)
         {
             for (int s = 0; s < SpaceDistances.Length; s++)
             {
-                Vec2 candidate = ClampToPlay(ctx, p.Position + (SpaceDirections[d] * SpaceDistances[s]));
-
-                // AW-Q (docs/pendientes.md), recorte posicional: la casilla candidata no puede quedar más
-                // allá de la línea defensiva rival más un margen. Sin esto el desmarque premiaba acampar a
-                // espaldas de la defensa (findSpaceAdvanceBonusPerCell crece sin techo y allí no hay
-                // rivales, así que findSpaceOpponentDistanceBonusPerCell también cobra el máximo). Es el
-                // mismo mecanismo que forceNoOffside de gfootball y el recorte de formación de HELIOS-base
-                // (docs/referencia-motores-futbol.md §6.1), y no pita nada: solo quita la casilla-objetivo.
-                // Se aplica a cualquier jugador de campo, no solo al delantero: en un desmarque cualquiera
-                // puede rebasar la línea. El recorte va ANTES de la pinza de zona para que la correa de
-                // zona siga aplicando después sobre el resultado ya recortado.
-                if ((candidate.X - marginedLine) * direction > 0f)
-                {
-                    candidate = new Vec2(marginedLine, candidate.Y);
-                }
-
-                candidate = p.Zone.Clamp(candidate, p.EffectiveHome, direction);
-
-                int space = Centi(NearestOpponentDistance(players, p.Team, candidate));
-                if (space > FindSpaceMaxSpaceCenti)
-                {
-                    space = FindSpaceMaxSpaceCenti;
-                }
-
-                int advance = Centi((candidate.X - p.Position.X) * direction);
-                int score = (context.FindSpaceOpponentDistanceBonusPerCell * space / 100)
-                    + (context.FindSpaceAdvanceBonusPerCell * advance / 100);
-
-                if (carrier is not null && !SegmentBlocked(players, p.Team, carrier.Position, candidate, context.PassLaneRadiusCells))
-                {
-                    score += context.FindSpaceOpenLaneBonus;
-                }
-
-                // AW-E (docs/pendientes.md, cambio 2 de 2): hasta ahora la única casilla candidata que
-                // miraba si ya había compañeros era la de OfferSupport (SupportCrowdedPenalty); FindSpace
-                // solo premiaba alejarse del rival, así que dos jugadores podían converger en el mismo
-                // hueco sin que nada lo penalizara. Mismo radio que OfferSupport (SupportCrowdRadius),
-                // para que "estar apiñado" signifique lo mismo en las dos acciones.
-                score -= context.FindSpaceCrowdedPenalty * TeammatesNear(players, p, candidate, SupportCrowdRadius);
-
-                // P3, ARRANQUE COORDINADO: si un compañero está armando ahora mismo un balón al espacio
-                // dirigido a mí, las casillas cercanas a ese espacio valen más. El pase en profundidad
-                // dejaba de ser un monólogo justo aquí: antes el pasador leía el destino que el receptor
-                // ya había elegido por su cuenta, y el receptor no se enteraba de nada.
-                //
-                // Suma, no manda: un desmarque claramente mejor por espacio o por línea de pase sigue
-                // ganando, y eso es deliberado —una intención es una oferta, no una orden—.
-                if (intentRadiusCenti > 0)
-                {
-                    int toIntent = Centi(Vec2.Distance(candidate, intentTarget));
-                    if (toIntent < intentRadiusCenti)
-                    {
-                        score += context.FindSpaceIntentBonus * (intentRadiusCenti - toIntent) / intentRadiusCenti;
-                    }
-                }
-
+                Vec2 candidate = FindSpaceCandidate(ctx, p, p.Position + (SpaceDirections[d] * SpaceDistances[s]), direction, marginedLine);
+                int score = FindSpaceScore(ctx, p, candidate, direction, carrier, intentTarget, intentRadiusCenti);
                 if (!found || score > bestScore)
                 {
                     found = true;
@@ -1447,6 +1508,78 @@ internal static class Utility
 
         eval.Target = bestPoint;
         eval.Context = bestScore;
+    }
+
+    /// <summary>
+    /// Una casilla candidata de <see cref="EvaluateFindSpace"/> ya recortada: al campo, a la línea defensiva rival
+    /// más el margen (AW-Q) y a la zona blanda del jugador.
+    /// </summary>
+    private static Vec2 FindSpaceCandidate(UtilityContext ctx, MatchPlayer p, Vec2 point, int direction, float marginedLine)
+    {
+        Vec2 candidate = ClampToPlay(ctx, point);
+
+        // AW-Q (docs/pendientes.md), recorte posicional: la casilla candidata no puede quedar más
+        // allá de la línea defensiva rival más un margen. Sin esto el desmarque premiaba acampar a
+        // espaldas de la defensa (findSpaceAdvanceBonusPerCell crece sin techo y allí no hay
+        // rivales, así que findSpaceOpponentDistanceBonusPerCell también cobra el máximo). Es el
+        // mismo mecanismo que forceNoOffside de gfootball y el recorte de formación de HELIOS-base
+        // (docs/referencia-motores-futbol.md §6.1), y no pita nada: solo quita la casilla-objetivo.
+        // Se aplica a cualquier jugador de campo, no solo al delantero: en un desmarque cualquiera
+        // puede rebasar la línea. El recorte va ANTES de la pinza de zona para que la correa de
+        // zona siga aplicando después sobre el resultado ya recortado.
+        if ((candidate.X - marginedLine) * direction > 0f)
+        {
+            candidate = new Vec2(marginedLine, candidate.Y);
+        }
+
+        return p.Zone.Clamp(candidate, p.EffectiveHome, direction);
+    }
+
+    /// <summary>Puntuación de una casilla candidata de <see cref="EvaluateFindSpace"/>.</summary>
+    private static int FindSpaceScore(
+        UtilityContext ctx, MatchPlayer p, Vec2 candidate, int direction, MatchPlayer? carrier, Vec2 intentTarget, int intentRadiusCenti)
+    {
+        var context = ctx.Weights.Context;
+        var players = ctx.Players;
+        int space = Centi(NearestOpponentDistance(players, p.Team, candidate));
+        if (space > FindSpaceMaxSpaceCenti)
+        {
+            space = FindSpaceMaxSpaceCenti;
+        }
+
+        int advance = Centi((candidate.X - p.Position.X) * direction);
+        int score = (context.FindSpaceOpponentDistanceBonusPerCell * space / 100)
+            + (context.FindSpaceAdvanceBonusPerCell * advance / 100);
+
+        if (carrier is not null && !SegmentBlocked(players, p.Team, carrier.Position, candidate, context.PassLaneRadiusCells))
+        {
+            score += context.FindSpaceOpenLaneBonus;
+        }
+
+        // AW-E (docs/pendientes.md, cambio 2 de 2): hasta ahora la única casilla candidata que
+        // miraba si ya había compañeros era la de OfferSupport (SupportCrowdedPenalty); FindSpace
+        // solo premiaba alejarse del rival, así que dos jugadores podían converger en el mismo
+        // hueco sin que nada lo penalizara. Mismo radio que OfferSupport (SupportCrowdRadius),
+        // para que "estar apiñado" signifique lo mismo en las dos acciones.
+        score -= context.FindSpaceCrowdedPenalty * TeammatesNear(players, p, candidate, SupportCrowdRadius);
+
+        // P3, ARRANQUE COORDINADO: si un compañero está armando ahora mismo un balón al espacio
+        // dirigido a mí, las casillas cercanas a ese espacio valen más. El pase en profundidad
+        // dejaba de ser un monólogo justo aquí: antes el pasador leía el destino que el receptor
+        // ya había elegido por su cuenta, y el receptor no se enteraba de nada.
+        //
+        // Suma, no manda: un desmarque claramente mejor por espacio o por línea de pase sigue
+        // ganando, y eso es deliberado —una intención es una oferta, no una orden—.
+        if (intentRadiusCenti > 0)
+        {
+            int toIntent = Centi(Vec2.Distance(candidate, intentTarget));
+            if (toIntent < intentRadiusCenti)
+            {
+                score += context.FindSpaceIntentBonus * (intentRadiusCenti - toIntent) / intentRadiusCenti;
+            }
+        }
+
+        return score;
     }
 
     /// <summary>

@@ -441,6 +441,12 @@
         "supportMinCarrierPressure": { "type": "integer", "minimum": 0, "maximum": 100 },
         "supportPressedBonusPerCenti": { "type": "integer", "minimum": 0, "maximum": 50 },
         "grudgeBonus": { "type": "integer", "minimum": 0, "maximum": 2000 },
+        "positioningHoldBonus": {
+          "type": "integer",
+          "description": "BV-A H8 (ADR 0184): puntos de ventaja que conserva la acción de colocación en curso frente a otra acción de colocación. 0 lo apaga.",
+          "minimum": 0,
+          "maximum": 2000
+        },
         "coverSpacingCells": {
           "type": "number",
           "description": "BB-K (ADR 0176): separación mínima, en casillas, entre el punto que cubre un jugador y el que ya cubre un compañero de id menor. 0 la apaga.",
@@ -541,6 +547,7 @@
         "supportPressedBonusPerCenti",
         "grudgeBonus",
         "coverSpacingCells",
+        "positioningHoldBonus",
         "crossTechniqueSlope"
       ],
       "additionalProperties": false
