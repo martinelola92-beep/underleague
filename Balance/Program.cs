@@ -57,6 +57,13 @@ try
         WriteRunsCsv(options.OutDir!, full.Marketless, "runs-nomarket.csv");
         WriteSummaryCsv(options.OutDir!, fullSummary);
 
+        if (options.BetDoctrine != Underleague.Sim.Analysis.BetDoctrine.Never)
+        {
+            // ADR 0157: cuántas apuestas tomadas se cumplieron, por condicion y dificultad, contra la
+            // frecuencia que anuncia el juego. Solo con una doctrina que apueste (con never no hay datos).
+            WriteBetHitsCsv(options.OutDir!, Underleague.Sim.Analysis.BetHitCensus.Compute(full.Runs, Underleague.Sim.Run.Systems.Bets.BetLoader.FromJson(dataFiles)));
+        }
+
         if (!options.Quiet)
         {
             Console.WriteLine();
@@ -622,6 +629,24 @@ static void WriteItemValuesCsv(string outDir, IReadOnlyList<ItemValueRow> rows)
     });
 
     CsvWriter.Write(Path.Combine(outDir, "item-values.csv"), header, data);
+}
+
+/// <summary>bet-hits.csv de <c>--full-runs --bet-doctrine</c> (ADR 0157): aciertos medidos contra frecuencia anunciada.</summary>
+static void WriteBetHitsCsv(string outDir, IReadOnlyList<Underleague.Sim.Analysis.BetHitCell> cells)
+{
+    string[] header = { "bet", "difficulty", "taken", "met", "measuredPercent", "stdErrPercent", "announcedPercent", "netGold" };
+    var rows = cells.Select(c => (IReadOnlyList<string>)new[]
+    {
+        c.BetId,
+        c.Difficulty.ToString(CultureInfo.InvariantCulture),
+        c.Taken.ToString(CultureInfo.InvariantCulture),
+        c.Met.ToString(CultureInfo.InvariantCulture),
+        CsvWriter.F2(c.MeasuredPercent),
+        CsvWriter.F2(c.StdErrPercent),
+        CsvWriter.F2(c.AnnouncedPercent),
+        c.NetGold.ToString(CultureInfo.InvariantCulture),
+    });
+    CsvWriter.Write(Path.Combine(outDir, "bet-hits.csv"), header, rows);
 }
 
 /// <summary>bet-census.csv del modo --bet-census (ADR 0157): una fila por (apuesta, grupo, clave).</summary>

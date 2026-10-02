@@ -631,6 +631,13 @@ public sealed record RunPlayResult(
     /// </summary>
     public RunState? FinalState { get; init; }
 
+    /// <summary>
+    /// ADR 0157 (enmienda del 2 oct 2026): las apuestas tomadas, por condición y dificultad del nodo. Tres enteros por
+    /// celda, <c>[(kind * 5 + (dificultad - 1)) * 3 + {0 tomadas, 1 cumplidas, 2 oro neto}]</c>, con <c>kind</c> el valor
+    /// de <c>BetKind</c>. Nulo si la run no tomó ninguna. No entra en <c>runs.csv</c>; lo lee <c>BetHitCensus</c>.
+    /// </summary>
+    public IReadOnlyList<int>? BetCells { get; init; }
+
     /// <summary>True si la run terminó ganando al jefe final (RF-002).</summary>
     public bool Won => Outcome == RunOutcomeKind.Victory;
 
@@ -746,7 +753,7 @@ public static class RunPolicy
                 : EnterService(state, node, catalog, systems, ledger);
         }
 
-        return Summarize(state, setup, seed, catalog, options, ledger) with { FinalState = state };
+        return Summarize(state, setup, seed, catalog, options, ledger) with { FinalState = state, BetCells = ledger.BetCells };
     }
 
     // ------------------------------------------------------------------ 1. qué nodo
@@ -1124,6 +1131,9 @@ public static class RunPolicy
     }
 
     // ------------------------------------------------------------------ interno
+
+    /// <summary>Celdas (condición × dificultad) de <see cref="RunPlayResult.BetCells"/>.</summary>
+    public const int BetCellCount = 10 * 5;
 
     /// <summary>Titulares con rasgo Aggressive o Dirty a partir de los cuales <see cref="BetDoctrine.Prepared"/> ve una build de violencia.</summary>
     public const int PreparedViolentStarters = 3;
@@ -3952,6 +3962,7 @@ public static class RunPolicy
             {
                 _ledger.BetPaid += bet.GoldPaid;
                 _ledger.LastBetPaid = bet.GoldPaid;
+                _ledger.RecordBet(bet, node.Difficulty);
             }
 
             _observer?.Invoke(stateBefore, node, setup, result, summary);
@@ -4012,6 +4023,22 @@ public static class RunPolicy
         public int BetsTaken;
         public int BetStaked;
         public int BetPaid;
+
+        /// <summary>Apuestas resueltas por condición y dificultad (<see cref="RunPlayResult.BetCells"/>); null hasta la primera.</summary>
+        public int[]? BetCells;
+
+        public void RecordBet(Underleague.Sim.Run.Systems.Bets.BetResult bet, int difficulty)
+        {
+            BetCells ??= new int[BetCellCount * 3];
+            int cell = (((int)bet.Kind * 5) + (Math.Clamp(difficulty, 1, 5) - 1)) * 3;
+            BetCells[cell]++;
+            if (bet.Met)
+            {
+                BetCells[cell + 1]++;
+            }
+
+            BetCells[cell + 2] += bet.Net;
+        }
 
         /// <summary>Cobro de la apuesta del último partido: se resta del oro «ganado» del partido (no es premio de partido).</summary>
         public int LastBetPaid;
