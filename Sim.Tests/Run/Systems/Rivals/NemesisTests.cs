@@ -691,7 +691,7 @@ public sealed class NemesisTests
         string json = RunSave.Save(state);
         var loaded = RunSave.Load(json);
 
-        Assert.Equal(8, loaded.SchemaVersion);
+        Assert.Equal(9, loaded.SchemaVersion);
         Assert.Equal(state.RivalMemory.Nemeses, loaded.RivalMemory.Nemeses);
         Assert.Equal(state.RivalMemory.Vacancies, loaded.RivalMemory.Vacancies);
         Assert.Equal(state.FindPlayer(state.Roster[1].Id)!.Career.Revenges, loaded.FindPlayer(state.Roster[1].Id)!.Career.Revenges);
@@ -701,7 +701,7 @@ public sealed class NemesisTests
     [Fact]
     public void ASaveFromVersionSevenIsRejectedExplicitly()
     {
-        string old = RunSave.Save(BaseState()).Replace("\"schemaVersion\":8", "\"schemaVersion\":7");
+        string old = RunSave.Save(BaseState()).Replace($"\"schemaVersion\":{RunSave.SchemaVersion}", "\"schemaVersion\":7", StringComparison.Ordinal);
 
         var error = Assert.Throws<RunSaveException>(() => RunSave.Load(old));
         Assert.Equal("$.schemaVersion", error.JsonPath);

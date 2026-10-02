@@ -33,23 +33,40 @@ public sealed class RunSaveException : Exception
 /// nodeId)</c> y del estado de la plantilla, salir a mitad de un partido y volver reproduce
 /// exactamente el mismo partido. No hace falta guardar nada del partido en curso.</para>
 ///
-/// <para><b>Versionado</b>: el guardado lleva <c>schemaVersion</c> y cargar otra versión es un error
-/// explícito. Nunca se migra en silencio (<c>modelo-datos.md</c>, "Versionado").</para>
+/// <para><b>Versionado</b>: el guardado lleva <c>schemaVersion</c>. Se escribe siempre la actual y se leen la
+/// actual y desde <see cref="MinimumReadableVersion"/>; cualquier otra es un error explícito. Nunca se migra
+/// en silencio (<c>modelo-datos.md</c>, "Versionado").</para>
+///
+/// <para><b>Partido a medias</b> (RT-061, ADR 0183): desde la versión 9 el guardado puede llevar un
+/// <see cref="PendingMatch"/> junto al estado de <b>antes</b> de ese partido. La versión 8 no lo traía y
+/// carga igual, sin partido pendiente: es una migración explícita, no un cambio en silencio.</para>
 /// </summary>
 public static class RunSave
 {
     /// <summary>Versión de esquema que escribe y acepta este código.</summary>
     public const int SchemaVersion = RunState.CurrentSchemaVersion;
 
+    /// <summary>
+    /// Versión más antigua que se sigue leyendo. La 9 sólo <b>añade</b> el campo opcional <c>pendingMatch</c>
+    /// (ADR 0183), así que un guardado de la 8 carga tal cual, con <c>pendingMatch</c> ausente.
+    /// </summary>
+    public const int MinimumReadableVersion = 8;
+
     /// <summary>Serializa el estado a JSON. <paramref name="indented"/> solo afecta al formato.</summary>
-    public static string Save(RunState state, bool indented = false)
+    public static string Save(RunState state, bool indented = false) => Save(state, null, indented);
+
+    /// <summary>
+    /// Como <see cref="Save(RunState, bool)"/>, con el partido que se estaba viendo (RT-061, ADR 0183).
+    /// <paramref name="state"/> debe ser el estado de <b>antes</b> de ese partido, no el de después.
+    /// </summary>
+    public static string Save(RunState state, PendingMatch? pendingMatch, bool indented = false)
     {
         ArgumentNullException.ThrowIfNull(state);
 
         var buffer = new ArrayBufferWriter<byte>();
         using (var writer = new Utf8JsonWriter(buffer, new JsonWriterOptions { Indented = indented }))
         {
-            WriteState(writer, state);
+            WriteState(writer, state, pendingMatch);
         }
 
         return Encoding.UTF8.GetString(buffer.WrittenSpan);
@@ -66,7 +83,15 @@ public static class RunSave
     /// de la ADR 0172 (uno por copia perdida): un guardado anterior llevaba un inventario suelto, y lo que no
     /// cabe no se descarta sin avisar. Vacío con un guardado nuevo.
     /// </summary>
-    public static RunState Load(string json, out IReadOnlyList<string> lostConsumables)
+    public static RunState Load(string json, out IReadOnlyList<string> lostConsumables) =>
+        Load(json, out lostConsumables, out _);
+
+    /// <summary>
+    /// Como <see cref="Load(string, out IReadOnlyList{string})"/>, y además devuelve el partido que se estaba
+    /// viendo al guardar, o <c>null</c> si no había ninguno (ADR 0183). Con uno, el estado devuelto es el de
+    /// <b>antes</b> de ese partido.
+    /// </summary>
+    public static RunState Load(string json, out IReadOnlyList<string> lostConsumables, out PendingMatch? pendingMatch)
     {
         ArgumentException.ThrowIfNullOrEmpty(json);
 
@@ -78,11 +103,11 @@ public static class RunSave
         }
 
         int version = Int(root, "schemaVersion", "$");
-        if (version != SchemaVersion)
+        if (version < MinimumReadableVersion || version > SchemaVersion)
         {
             throw new RunSaveException(
                 "$.schemaVersion",
-                $"el guardado es de la versión {version} y este código escribe la {SchemaVersion}. "
+                $"el guardado es de la versión {version}; este código escribe la {SchemaVersion} y lee desde la {MinimumReadableVersion}. "
                     + "Una run guardada con otra versión se migra explícitamente o se rechaza; nunca se migra en silencio "
                     + "(modelo-datos.md, \"Versionado\").");
         }
@@ -126,6 +151,10 @@ public static class RunSave
 
         // nextPlayerId manda sobre el que deduce WithRoster: una run que ha vendido a su último fichaje
         // no puede reutilizar su id (determinismo.md, "Orden").
+        pendingMatch = root.TryGetProperty("pendingMatch", out var pending) && pending.ValueKind != JsonValueKind.Null
+            ? ReadPendingMatch(pending)
+            : null;
+
         int nextPlayerId = Int(root, "nextPlayerId", "$");
         return nextPlayerId > state.NextPlayerId ? state with { NextPlayerId = nextPlayerId } : state;
     }
@@ -153,7 +182,7 @@ public static class RunSave
 
     // ------------------------------------------------------------------ escritura
 
-    private static void WriteState(Utf8JsonWriter w, RunState state)
+    private static void WriteState(Utf8JsonWriter w, RunState state, PendingMatch? pendingMatch)
     {
         w.WriteStartObject();
         w.WriteNumber("schemaVersion", state.SchemaVersion);
@@ -277,7 +306,142 @@ public static class RunSave
         }
 
         w.WriteEndObject();
+
+        if (pendingMatch is not null)
+        {
+            WritePendingMatch(w, pendingMatch);
+        }
+        else
+        {
+            w.WriteNull("pendingMatch");
+        }
+
         w.WriteEndObject();
+    }
+
+    private static void WritePendingMatch(Utf8JsonWriter w, PendingMatch match)
+    {
+        var d = match.Decisions;
+        w.WriteStartObject("pendingMatch");
+        w.WriteNumber("node", match.NodeId);
+        w.WriteNumber("watchedTick", match.WatchedTick);
+
+        w.WriteStartArray("manualActivations");
+        foreach (var a in d.ManualActivations)
+        {
+            w.WriteStartObject();
+            w.WriteString("id", a.ConsumableId);
+            w.WriteNumber("tick", a.Tick);
+            w.WriteEndObject();
+        }
+
+        w.WriteEndArray();
+
+        w.WriteStartArray("substitutions");
+        foreach (var s in d.Substitutions)
+        {
+            w.WriteStartObject();
+            w.WriteNumber("tick", s.Tick);
+            w.WriteNumber("out", s.OutPlayerId);
+            w.WriteNumber("in", s.InPlayerId);
+            w.WriteEndObject();
+        }
+
+        w.WriteEndArray();
+
+        w.WriteStartArray("declines");
+        foreach (var x in d.Declines)
+        {
+            w.WriteStartObject();
+            w.WriteNumber("tick", x.Tick);
+            w.WriteNumber("out", x.OutPlayerId);
+            w.WriteEndObject();
+        }
+
+        w.WriteEndArray();
+
+        w.WriteStartArray("playOns");
+        foreach (var p in d.PlayOns)
+        {
+            w.WriteStartObject();
+            w.WriteNumber("tick", p.Tick);
+            w.WriteNumber("player", p.PlayerId);
+            w.WriteNumber("strength", p.After.Strength);
+            w.WriteNumber("speed", p.After.Speed);
+            w.WriteNumber("technique", p.After.Technique);
+            w.WriteNumber("stamina", p.After.Stamina);
+            w.WriteNumber("leash", p.After.Leash);
+            w.WriteEndObject();
+        }
+
+        w.WriteEndArray();
+
+        w.WriteStartArray("orderChanges");
+        foreach (var o in d.OrderChanges)
+        {
+            w.WriteStartObject();
+            w.WriteNumber("tick", o.Tick);
+            w.WriteString("order", Camel(o.Order.ToString()));
+            w.WriteEndObject();
+        }
+
+        w.WriteEndArray();
+        w.WriteEndObject();
+    }
+
+    private static PendingMatch ReadPendingMatch(JsonElement e)
+    {
+        const string path = "$.pendingMatch";
+        var manual = new List<Underleague.Sim.Run.Systems.Consumables.ManualActivation>();
+        foreach (var x in Items(e, "manualActivations", path))
+        {
+            manual.Add(new(Str(x, "id", path), Int(x, "tick", path)));
+        }
+
+        var substitutions = new List<Substitution>();
+        foreach (var x in Items(e, "substitutions", path))
+        {
+            substitutions.Add(new(Int(x, "tick", path), Int(x, "out", path), Int(x, "in", path)));
+        }
+
+        var declines = new List<DeclinedSubstitution>();
+        foreach (var x in Items(e, "declines", path))
+        {
+            declines.Add(new(Int(x, "tick", path), Int(x, "out", path)));
+        }
+
+        var playOns = new List<PlayOn>();
+        foreach (var x in Items(e, "playOns", path))
+        {
+            var after = new Attributes(
+                Int(x, "strength", path), Int(x, "speed", path), Int(x, "technique", path), Int(x, "stamina", path), Int(x, "leash", path));
+            playOns.Add(new(Int(x, "tick", path), Int(x, "player", path), after));
+        }
+
+        var orders = new List<OrderChange>();
+        foreach (var x in Items(e, "orderChanges", path))
+        {
+            orders.Add(new(Int(x, "tick", path), Enum<Underleague.Sim.Engine.Mentality>(x, "order", path)));
+        }
+
+        var decisions = new MatchDecisions(manual, substitutions)
+        {
+            Declines = declines,
+            PlayOns = playOns,
+            OrderChanges = orders,
+        };
+        return new PendingMatch(Int(e, "node", path), decisions, Int(e, "watchedTick", path));
+    }
+
+    private static IEnumerable<JsonElement> Items(JsonElement parent, string name, string path)
+    {
+        var array = Prop(parent, name, path);
+        if (array.ValueKind != JsonValueKind.Array)
+        {
+            throw new RunSaveException($"{path}.{name}", $"se esperaba una lista y hay {array.ValueKind}");
+        }
+
+        return array.EnumerateArray();
     }
 
     private static void WriteMap(Utf8JsonWriter w, ActMap map)

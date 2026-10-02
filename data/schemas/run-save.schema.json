@@ -206,6 +206,21 @@
       "description": "Progreso de logros de desbloqueo (RF-125b).",
       "$ref": "#/$defs/intMap"
     },
+    "pendingMatch": {
+      "description": "ADR 0183 (RT-061): el partido que se estaba viendo al guardar, o null. Con uno, el resto del guardado es el estado de ANTES de ese partido; al volver se reproduce desde la semilla del nodo con estas decisiones. Ausente en los guardados de la versión 8.",
+      "type": ["object", "null"],
+      "properties": {
+        "node": { "type": "integer", "description": "Id del nodo de partido." },
+        "watchedTick": { "type": "integer", "minimum": 0, "description": "Tick más lejano que el jugador llegó a ver; antes de él no se puede volver a decidir." },
+        "manualActivations": { "type": "array", "items": { "type": "object", "properties": { "id": { "type": "string" }, "tick": { "type": "integer" } }, "required": ["id", "tick"], "additionalProperties": false } },
+        "substitutions": { "type": "array", "items": { "type": "object", "properties": { "tick": { "type": "integer" }, "out": { "type": "integer" }, "in": { "type": "integer" } }, "required": ["tick", "out", "in"], "additionalProperties": false } },
+        "declines": { "type": "array", "items": { "type": "object", "properties": { "tick": { "type": "integer" }, "out": { "type": "integer" } }, "required": ["tick", "out"], "additionalProperties": false } },
+        "playOns": { "type": "array", "items": { "type": "object", "properties": { "tick": { "type": "integer" }, "player": { "type": "integer" }, "strength": { "type": "integer" }, "speed": { "type": "integer" }, "technique": { "type": "integer" }, "stamina": { "type": "integer" }, "leash": { "type": "integer" } }, "required": ["tick", "player", "strength", "speed", "technique", "stamina", "leash"], "additionalProperties": false } },
+        "orderChanges": { "type": "array", "items": { "type": "object", "properties": { "tick": { "type": "integer" }, "order": { "enum": ["defensive", "neutral", "offensive"] } }, "required": ["tick", "order"], "additionalProperties": false } }
+      },
+      "required": ["node", "watchedTick", "manualActivations", "substitutions", "declines", "playOns", "orderChanges"],
+      "additionalProperties": false
+    },
     "dataSnapshot": {
       "description": "Instantánea de /data congelada al empezar la run (RT-061b): ruta relativa -> contenido del fichero. Opcional para los estados de depuración escritos a mano (RT-062); obligatoria en un guardado real.",
       "type": "object",
@@ -215,7 +230,7 @@
   "required": [
     "schemaVersion", "seed", "division", "club", "clubRace", "act", "currentNode", "pendingNode",
     "phase", "gold", "bet", "rerollsUsed", "nodeRerolls", "nextPlayerId", "result", "nodeHistory", "maps",
-    "referees", "roster", "lineup", "consumables", "rivalMemory"
+    "referees", "roster", "lineup", "consumables", "rivalMemory", "pendingMatch"
   ],
   "additionalProperties": false,
   "$defs": {

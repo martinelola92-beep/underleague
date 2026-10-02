@@ -1,6 +1,6 @@
 # Modelo de datos
 
-Concreta RT-030 a RT-035, RT-060, RT-061b. El esquema del estado de la run se define **antes** de implementar sistemas (RT-030) y está versionado. Versión actual del código: **7** (la apuesta tomada, ADR 0157; `RunState.CurrentSchemaVersion`).
+Concreta RT-030 a RT-035, RT-060, RT-061b. El esquema del estado de la run se define **antes** de implementar sistemas (RT-030) y está versionado. Versión actual del código: **9** (el partido a medias, ADR 0183; `RunState.CurrentSchemaVersion`). Se leen la 9 y la 8; la 8 carga sin partido pendiente (migración explícita, `RunSave.MinimumReadableVersion`).
 
 ## Estado de la run (`Run`)
 
@@ -18,6 +18,7 @@ Run
   nodeHistory[]         (nodeId, kind, result)
   map                   grafo del acto (nodos, aristas, rival asignado, modificador de jefe oculto/revelado)
   bet                   apuesta del vestuario tomada y pagada para un nodo de partido sin jugar, o null: id, node, stake, payoutPercent, targetPlayer, targetName (RF-114h, ADR 0157; versión 7)
+  pendingMatch          el partido que se estaba viendo al guardar, o null: node, watchedTick, y las decisiones del jugador dentro de él (manualActivations, substitutions, declines, playOns, orderChanges). Con uno, TODO el resto del guardado es el estado de ANTES de ese partido; al volver se reproduce desde la semilla del nodo (RT-061, BR-A, ADR 0183; versión 9)
   referees[]            6-8 árbitros de la run: id, definitionId, name, trait, bribesReceived, memory, blindSide (RF-061b, RF-064c, ADR 0158)
   rerollsUsed           int  (RF-071b, coste creciente)
   dataSnapshot          copia de /data congelada al empezar (RT-061b)

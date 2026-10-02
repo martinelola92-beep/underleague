@@ -255,16 +255,16 @@ public sealed class BetRunTests
     // ---------------------------------------------------------------- guardado v7
 
     [Fact]
-    public void SaveVersionIsEightAndATakenBetSurvivesTheRoundTrip()
+    public void SaveVersionIsNineAndATakenBetSurvivesTheRoundTrip()
     {
-        Assert.Equal(8, RunState.CurrentSchemaVersion);
+        Assert.Equal(9, RunState.CurrentSchemaVersion);
         var (state, node, _) = Offered();
         var taken = RunEngine.Apply(state, new TakeBet(node.Id), Catalog, Systems)
             .WithBet(new AcceptedBet("hunt_the_star", node.Id, 4, 973, 104, "Grok \"Comecráneos\""));
 
         var loaded = RunSave.Load(RunSave.Save(taken));
 
-        Assert.Equal(8, loaded.SchemaVersion);
+        Assert.Equal(9, loaded.SchemaVersion);
         Assert.Equal(taken.Bet, loaded.Bet);
         Assert.Equal(taken.Gold, loaded.Gold);
         Assert.Equal(RunSave.Save(taken), RunSave.Save(loaded));
@@ -284,7 +284,7 @@ public sealed class BetRunTests
     public void ASaveFromVersionSevenIsRejectedExplicitly()
     {
         var state = RunEngine.Start(SystemsTestSupport.Setup(), 3UL, Catalog, Systems);
-        string old = RunSave.Save(state).Replace("\"schemaVersion\":8", "\"schemaVersion\":7");
+        string old = RunSave.Save(state).Replace($"\"schemaVersion\":{RunSave.SchemaVersion}", "\"schemaVersion\":7", StringComparison.Ordinal);
 
         var error = Assert.Throws<RunSaveException>(() => RunSave.Load(old));
         Assert.Equal("$.schemaVersion", error.JsonPath);

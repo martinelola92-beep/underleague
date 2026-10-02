@@ -466,7 +466,9 @@ public sealed record RunState
     // 7 (ADR 0157): el estado gana la apuesta tomada del nodo pendiente (bet, null si no hay).
     // 8 (ADR 0165): el estado gana la memoria de los clanes rivales (rivalMemory: vacantes y némesis) y la
     // carrera de cada jugador gana "revenges".
-    public const int CurrentSchemaVersion = 8;
+    // 9 (ADR 0183): el guardado puede llevar un "pendingMatch" (partido a medias y sus decisiones) junto al estado
+    // de antes de ese partido. Sólo añade un campo opcional: la 8 sigue leyéndose (RunSave.MinimumReadableVersion).
+    public const int CurrentSchemaVersion = 9;
 
     /// <summary>Versión de esquema con la que se creó este estado.</summary>
     public int SchemaVersion { get; init; } = CurrentSchemaVersion;

@@ -98,6 +98,7 @@ solo deja que la política resuelva al rival y abre la ventana para el equipo 0.
 ## Carga de datos y snapshot por run (RT-031, RT-061b)
 
 - `/data` se lee al arrancar, se valida (RT-032) y se compila. Un error de validación aborta con mensaje que incluye fichero, ruta JSON y regla incumplida.
+- **Partido a medias** (RT-061, ADR 0183): salir o guardar mientras se ve un partido escribe el estado de **antes** del partido más un `PendingMatch` (nodo, decisiones, tick más lejano visto). Al volver, `/Game` retoma ese guardado y `EnterMatch` reproduce el mismo partido desde `MatchSeed(seed, nodeId)`. El guardado de después se escribe al llegar al informe (`RunController.CommitMatch`).
 - Al empezar una run se **congela una copia** de los ficheros de `/data` dentro del guardado. Cargar una run usa su snapshot, no el `/data` actual.
 - **Guardados anteriores** (ADR 0163, enmienda): un guardado de una versión previa puede no traer un catálogo nuevo que `StandardRunSystems.FromJson` exige. `SnapshotCompletion` (`Sim/Run/Save/`) completa la instantánea con los ficheros del `/data` actual **sólo** si están en su lista explícita de añadibles (hoy `nicknames`, `gazette`, `prostheses`: catálogos aditivos, sin efecto sobre estado guardado ni RNG). Todo lo demás —reglas de la run— sigue siendo el de la instantánea; si falta, error explícito. Sin subir `schemaVersion`.
 
