@@ -16,7 +16,7 @@ namespace Underleague.Sim.Tests.Analysis;
 /// <para><b>Qué afirma y qué no.</b> La métrica principal de la fase sigue siendo la curva de puertas de
 /// la ADR 0033 (<see cref="BossGateTests"/>). Esta puerta afirma lo que hoy se cumple y es estable con
 /// esta muestra: la duración de una run completa, que las derrotas por plantilla no dominan, RF-114k
-/// (dos o tres sumideros por acto, nunca los cuatro), las compras por visita al mercado, y que las tres
+/// (dos o tres sumideros por acto, nunca todos; ADR 0182), las compras por visita al mercado, y que las tres
 /// doctrinas son de verdad tres. Las bandas de diseño que <b>no</b> se cumplen —tasa de victoria de la
 /// run, ventaja de la contextual, muertes por run, fracción asequible del surtido, oro sobrante— están
 /// medidas, explicadas y con causa identificada en <c>docs/balance/fase2-resultados.md</c>; aquí
@@ -132,20 +132,32 @@ public sealed class FullRunGateTests
 
     /// <summary>
     /// Control de la ADR 0182: la cola con techo sigue protegiendo. Con las mismas runs y el oro de cada acto
-    /// multiplicado por tres (una economía que sobra), la fila se sale de banda y la media también.
+    /// multiplicado (una economía que sobra) la fila sale de banda: ×1,5 basta para la cola y ×3 para la media.
+    /// Exige <c>OUT</c> y no «distinto de IN», para que una fila degradada a informativa no pase el control.
+    /// Con <c>UNDERLEAGUE_GATE_SCALE</c> bajo la banda de cola no se aplica (<see cref="FullRunMetrics.MinActsForTailBand"/>).
     /// </summary>
     [Fact]
-    public void AnEconomyThatTriplesTheGoldTripsTheSinksTail()
+    public void AnEconomyWithSurplusGoldTripsTheSinksRows()
     {
+        if (GateScale.IsQuick)
+        {
+            return;
+        }
+
         var by = Result.Value.ByDoctrine;
-        var rich = by[PurchaseDoctrine.Contextual]
-            .Select(r => r with { GoldEarnedByAct = r.GoldEarnedByAct.Select(g => g * 3).ToArray() })
-            .ToList();
-        var rows = FullRunMetrics.Compute(
-            rich, by[PurchaseDoctrine.Spender], by[PurchaseDoctrine.Saver], StandardRunSystems.FromJson(TestData.LoadAllFiles()).Economy);
-        var tail = rows.Single(m => m.Name == FullRunMetrics.ActsWithAllSinksAffordable);
-        Assert.NotEqual("IN", tail.Status);
-        Assert.NotEqual("IN", rows.Single(m => m.Name == FullRunMetrics.SinksAffordablePerAct).Status);
+        var economy = StandardRunSystems.FromJson(TestData.LoadAllFiles()).Economy;
+        IReadOnlyList<MetricResult> Rich(int factorPercent) => FullRunMetrics.Compute(
+            by[PurchaseDoctrine.Contextual]
+                .Select(r => r with { GoldEarnedByAct = r.GoldEarnedByAct.Select(g => g * factorPercent / 100).ToArray() })
+                .ToList(),
+            by[PurchaseDoctrine.Spender],
+            by[PurchaseDoctrine.Saver],
+            economy);
+
+        var tail = Rich(150).Single(m => m.Name == FullRunMetrics.ActsWithAllSinksAffordable);
+        Assert.Equal("OUT", tail.Status);
+        var mean = Rich(300).Single(m => m.Name == FullRunMetrics.SinksAffordablePerAct);
+        Assert.Equal("OUT", mean.Status);
     }
 
     /// <summary>

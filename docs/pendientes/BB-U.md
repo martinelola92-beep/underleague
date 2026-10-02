@@ -1,6 +1,6 @@
 # BB-U — Un solo perk común rompe el invariante de cero de la puerta de economía
 
-**Estado:** Abierta, sin causa. El perk que lo destapó se ha retirado para no dejar la puerta roja; el
+**Estado:** **descartada bajo la ADR 0182** (la puerta de cero exacto era frágil; la economía no tiene problema real) — historia abajo. Antes: abierta, sin causa. El perk que lo destapó se ha retirado para no dejar la puerta roja; el
 hallazgo es lo que importa.
 
 ## Observación
@@ -47,3 +47,12 @@ primero.
 
 - `docs/pendientes/CAT-J.md` — las otras tres puertas rojas, que NO se movieron con este cambio.
 - ADR 0118 / `BB-T` — el caso en que una puerta roja SÍ era ruido; aquí está descartado.
+
+## Cierre (ADR 0182, 2 oct 2026)
+
+La cola de actos que pagan los cinco sumideros mide 0,07 % (4 de ~5.700 actos, 12 semillas) y la media 2,34 ± 0,03: el
+cero exacto se ponía rojo en ~30 % de las muestras sin que pasara nada. La puerta ahora tiene techo del 1,0 %
+([ADR 0182](../decisiones/0182-la-cola-de-los-sumideros-tiene-techo.md)). **Esto desbloquea el tercer perk de `Bulwark`**
+(ya no puede romper esta puerta por una mariposa), **sin implementarlo**: sigue pendiente de `perk-authoring` y de que
+la cola con ese perk se mida bajo el techo. Límite: el 0,196 de entonces (~20 % de los actos) era mucho mayor que la
+cola actual; no se ha re-medido aquel perk concreto (LIKELY que era otro efecto de catálogo antiguo).

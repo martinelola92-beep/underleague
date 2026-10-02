@@ -270,10 +270,19 @@ public static class FullRunMetrics
     /// Techo (%) de actos que pagan todos los sumideros. RF-114k habla del oro <b>medio</b> por acto; el 0 exacto de la
     /// ADR 0165 vigilaba una cola. Procedencia (Regla H, ADR 0182): 12 semillas × 240 runs (`--full-runs`, contextual),
     /// 4 actos de ~5.700 (0,07 %; 3 de 12 semillas con alguno), con la puerta viendo ~480 actos (1 acto = 0,21 %). Con
-    /// esa cola, P(&gt;=5 actos) es ~2e-5, mientras que una economía que duplica el oro da decenas de puntos.
-    /// Cuatro actos por muestra (1,0 %) es el techo; el listón del oro medio sigue siendo <see cref="SinksMin"/>-<see cref="SinksMax"/>.
+    /// esa cola, P(&gt;=5 actos) es ~2e-5. El 1,0 % admite <b>4-5 actos según el tamaño de la muestra</b> (4 con ~480 actos,
+    /// 5 con ~500+). La sensibilidad la fija el control de <c>FullRunGateTests</c>, no una cifra supuesta. El listón del oro
+    /// medio sigue siendo <see cref="SinksMin"/>-<see cref="SinksMax"/>. <b>Provisional.</b>
     /// </summary>
     public const double AllSinksAffordableShareMax = 1.0;
+
+    /// <summary>
+    /// Actos mínimos para aplicar la banda de cola. Con menos, un solo acto ya pesa &gt;= 0,25 % y con ~50 actos
+    /// (<c>UNDERLEAGUE_GATE_SCALE</c> bajo) pesa ~2 %: el techo volvería a ser un cero exacto. Por debajo la fila es
+    /// informativa (ADR 0182). Con la muestra completa de la puerta (~480 actos) la banda se aplica; el tope de 400 es un
+    /// suelo, no una medición.
+    /// </summary>
+    public const int MinActsForTailBand = 400;
 
     /// <summary>Fracción mínima del surtido asequible (ADR 0037): por debajo, la tienda es decorado.</summary>
     public const double AffordableShareMin = 20.0;
@@ -792,11 +801,10 @@ public static class FullRunMetrics
             ? 100.0 * rewardsDeclined / (rewardsTaken + rewardsDeclined)
             : 0.0));
         rows.Add(Info("matchesPerRun", (double)matches / runs.Count));
-        rows.Add(Banded(
-            ActsWithAllSinksAffordable,
-            sinkSamples > 0 ? 100.0 * allFourAffordable / sinkSamples : 0.0,
-            null,
-            AllSinksAffordableShareMax));
+        double allSinksShare = sinkSamples > 0 ? 100.0 * allFourAffordable / sinkSamples : 0.0;
+        rows.Add(sinkSamples >= MinActsForTailBand
+            ? Banded(ActsWithAllSinksAffordable, allSinksShare, null, AllSinksAffordableShareMax)
+            : Info(ActsWithAllSinksAffordable, allSinksShare));
         // BA-H (ADR 0172): consumibles comprados y consumibles que llegaron a ACTIVARSE por run. Informativas, sin
         // banda (Regla H): sirven para comparar antes y después de tocar los huecos, no son un requisito.
         rows.Add(Info("consumablesBoughtPerRun", (double)consumablesBought / runs.Count));
@@ -1033,7 +1041,7 @@ public static class FullRunMetrics
     /// caben en el mismo.</item>
     /// <item><b>Rerolls</b>: repetir la tirada en cada partido ganado del acto, con el coste creciente de
     /// RF-071b contado desde cero dentro del acto.</item>
-    /// <item><b>Salarios</b>: un mercenario raro durante todos los partidos del acto (RF-111).</item>
+    /// <item><b>Salarios</b>: un mercenario <b>poco común</b> (<c>Rarity.Uncommon</c>; la rareza real se sortea al ofrecerlo, MarketOffers) durante todos los partidos del acto (RF-111).</item>
     /// </list>
     /// Se cuentan de más barato a más caro: el número que sale es <b>cuántos caben</b>, no cuántos usó la
     /// política.

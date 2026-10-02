@@ -145,12 +145,12 @@ congeladas de cada commit: `main` (base), `main` + ADR 0166 (gritos) y la integr
 Tres son las de `main` (curva de jefes `eternal_crown_excellent` 41,6; `orc_violence` ×2, 53,4).
 `TheThreeDoctrinesBuyDifferently`, roja en `main`, pasa. **Una es nueva**:
 `TheGoldOfAnActPaysTwoOrThreeSinksAndNeverAllOfThem` — el 0,19 % de los actos de la muestra de la puerta puede
-pagar los cuatro sumideros (RF-114k), y la puerta exige 0 exacto.
+pagar los sumideros (RF-114k; son cinco, no cuatro), y la puerta exige 0 exacto. **Resuelto en la [ADR 0182](0182-la-cola-de-los-sumideros-tiene-techo.md)**: techo medido en vez de cero exacto.
 
 - **REJECTED — el oro de venganza**: con `revengeGold` = 0, la semilla 1 del lote sigue dando 0,08 %.
 - **LIKELY — un acto de cola que cruza el umbral por efecto mariposa**: el oro ganado por acto no se mueve (máximo
   idéntico en los tres actos; percentil 99 dentro de ±4), y en la semilla 2 un acto 3 más rico que cualquiera de
-  la semilla 1 no llega a los cuatro. Es ~1 acto de cada 1.200.
+  la semilla 1 no llega a los cinco. Es ~1 acto de cada 1.200.
 - **No se toca la puerta** (RT-057: moverla exige ADR con datos). Queda anotado: una puerta de «cero exacto» sobre
   una cola es frágil ante cualquier cambio que reordene las runs; la decisión (tolerancia o métrica por media) es
   del balance aplazado.
