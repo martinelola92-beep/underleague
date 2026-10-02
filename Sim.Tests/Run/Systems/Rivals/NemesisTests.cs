@@ -368,12 +368,12 @@ public sealed class NemesisTests
     [Fact]
     public void AnInjuryCreditRecordsTheSigningWhoCausedIt()
     {
-        var (state, _) = SigningNemesis();
+        var (state, nemesis) = SigningNemesis();
         var victim = state.Roster.First(p => p.PhysicalState != PhysicalState.Dead && p.Id != state.Roster[0].Id);
         var after = Play(state, new[] { Injury(0, victim.Id, RivalId(4)) }).State;
         var credit = RivalCredits.Against(after, OpponentId)
             .Single(c => c.Kind == RivalCreditKind.SufferedInjury && c.OwnPlayerId == victim.Id);
-        Assert.Equal(1, credit.Occupant);
+        Assert.Equal(RivalKiller.NemesisBase + nemesis.Id, credit.Occupant);
     }
 
     /// <summary>BS-A: con el jugador de datos en el puesto no se anota ocupante.</summary>
