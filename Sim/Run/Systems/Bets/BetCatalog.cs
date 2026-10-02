@@ -25,7 +25,7 @@ public enum BetKind
 /// Ficha de datos de una apuesta (ADR 0157, RF-114h, RF-114i): nombre y texto de la condición localizados,
 /// apuesta fija por acto y cobro por dificultad.
 /// </summary>
-/// <param name="StakeByAct">Oro apostado en los actos 1, 2 y 3. Provisional, sin medir (Regla H).</param>
+/// <param name="StakeByAct">Oro apostado en los actos 1, 2 y 3. 3/4/5 medido el 2 oct 2026 frente a 2/3/4 y 4/5/6 (ADR 0157, enmienda, decisión 4).</param>
 /// <param name="PayoutPercentByDifficulty">
 /// Cobro BRUTO (incluye la apuesta) como porcentaje de la apuesta, índices 0..4 = dificultad 1..5 (RF-012).
 /// Sale de <c>85 / p</c> del censo (<c>Balance --bet-census</c>, ADR 0157, sección «Censo»).

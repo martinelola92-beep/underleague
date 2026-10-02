@@ -29,7 +29,7 @@
         "name": { "$ref": "#/$defs/localizedText" },
         "condition": { "$ref": "#/$defs/localizedText" },
         "stakeByAct": {
-          "description": "Apuesta fija en oro de los actos 1, 2 y 3 (ADR 0157, punto 2). Provisional, sin medir (Regla H).",
+          "description": "Apuesta fija en oro de los actos 1, 2 y 3 (ADR 0157, punto 2). 3/4/5 medido el 2 oct 2026 frente a 2/3/4 y 4/5/6 (ADR 0157, enmienda, decisión 4).",
           "type": "array",
           "items": { "type": "integer", "minimum": 1 },
           "minItems": 3,
