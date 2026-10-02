@@ -36,8 +36,8 @@ independiente, rebase y merge a `main`, push):
    (balón suelto en el córner), BA-J (repliegue tras una parada), BF-C (el delantero que pega sin balón).
 6. Parado a medias (worktree `agent-a5db0e59a60aad873`, todo commiteado; renumerar ADR a 0180+). Perks que no cumplen: BC-C (Doble disparo), BC-D (Último hombre), BM-B (resoluciones que no miran a sus
    participantes), BM-C (Mordisco), BB-R (maestros que no lo son).
-7. Menores del plan de diversión: resto de BS-A; apuesta Blind contra Never; herrero con más semillas y
-   atributo máximo por run; puerta de cola de los sumideros (ADR de tolerancia); BR-A (salir a mitad de
+7. Menores del plan de diversión: resto de BS-A; apuesta Blind contra Never; herrero CERRADO el 2 oct (6 semillas, sin efecto en victoria; sin tope, techo estructural: ADR 0164);
+   puerta de cola de los sumideros (ADR de tolerancia); BR-A (salir a mitad de
    partido, esquema de guardado).
 
 ---
@@ -103,7 +103,7 @@ villano por créditos y las lesiones: `docs/pendientes/BS-A.md`.
 
 **Siguiente**: el plan de diversión (§5) queda recorrido entero. Lo que sigue: estrechamiento del campo en la turba (RF-055b, F7, bloqueado por el
 gate 5 de Knavall: ¿el desgaste es de run o de acto? — **pregunta al revisor**), el gesto visual del invasor, y los
-pendientes menores: BS-A; Blind contra Never de la apuesta; atributo máximo por run y más semillas del herrero; el panel
+pendientes menores: BS-A; Blind contra Never de la apuesta; el panel
 de estadísticas del informe; la roja de cola `TheGoldOfAnActPaysTwoOrThreeSinksAndNeverAllOfThem` (una puerta de cero
 exacto sobre una cola: decidir tolerancia con ADR).
 
@@ -135,7 +135,7 @@ es el portero, las muertes cuentan, cobro redondeado, sin oro escondido); puerta
 **Siguiente** (`docs/plan-diversion.md` §5): clanes y némesis (cambia rivales y guardado), catálogo de turbas
 y el consumible de provocar la turba (primitiva de motor), gritos como cambio temporal de orden (BA-H),
 métrica guardiana de la sangre. Pendientes menores: Blind contra Never de la apuesta tras sus correcciones;
-atributo máximo por run y más semillas del herrero; el panel de estadísticas del informe enseña ~4 de 7
+el panel de estadísticas del informe enseña ~4 de 7
 filas con varios apodos ganados.
 
 **Stash sin borrar** `ajenos-editor-godot-29sep`: reescrituras del editor de Godot en `Equipo.tscn`,
