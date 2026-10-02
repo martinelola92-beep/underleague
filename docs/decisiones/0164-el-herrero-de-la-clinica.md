@@ -127,50 +127,77 @@ lleva; añadirlo exige tocar `RunPlayResult` y el CSV). Las magnitudes, las prob
 siendo **provisionales, sin medir** (Regla H): falta repetir con más semillas y con un lote donde la política elija
 al herrero sobre el médico en distinta medida.
 
-## Enmienda del 2 oct 2026: más semillas y el techo por run
+## Enmienda del 2 oct 2026: más semillas y el techo por run (corregida tras la revisión independiente)
 
 **Instrumento (Regla J).** `/Balance --full-runs` gana `--no-blacksmith` (catálogo de prótesis vacío: la clínica vuelve a la
 de la ADR 0099), el control del mismo árbol, y `FullRunMetrics.Describe` gana cinco filas INFO sobre el estado final de la
-run: `maxProsthesesOnOnePlayer`, `maxAttributeProsthetic`/`maxAttributePlain` (el mejor de fuerza, velocidad, técnica y
-aguante) y sus medias. Un test las valida contra un caso conocido (runs enteras de la política que acaban con un protésico).
+run (`FullRunMetrics.ProstheticCensus`): `maxProsthesesOnOnePlayer`, `maxAttributeProsthetic`/`maxAttributePlain` (el mejor de
+fuerza, velocidad, técnica y aguante) y sus medias. **No mira `Leash`** (la prótesis `skull` le suma +6): otra escala, omitida a
+propósito. Validado con tests: un caso de valor conocido (brazo +8 y mandíbula +6 sobre fuerza 50 → el censo da 64, es decir
++14) y el control (en las runs donde el herrero real no forjó nada, la rama con catálogo vacío da la misma run, misma semilla).
 
-**Medido:** 600 runs × 3 doctrinas por semilla, semillas 1, 1001, 2001, 3001, 4001 y 5001 (separadas ≥ 600: `seed + i`),
-con y sin herrero sobre las mismas semillas (pareado); media ± error típico de la media entre semillas. Resumen de la
-doctrina principal; salida fuera del repositorio.
+**Lote (reproducible).** Desde un árbol con el commit `554636a` o posterior, por cada semilla `S` en 1, 1001, 2001, 3001, 4001, 5001
+(separadas ≥ 600 porque las runs usan `seed + i`):
 
-| métrica | con herrero | sin herrero | diferencia pareada ± ET |
-|---|---|---|---|
-| `runWinRate` | 15,03 ± 0,53 | 15,08 ± 0,50 | **−0,05 ± 0,27** (por semilla: +0,17 −0,17 −0,17 −1,16 +0,83 +0,17) |
-| `deathsPerRun` | 1,28 ± 0,03 | 1,28 ± 0,03 | −0,01 ± 0,01 |
-| `goldSpentClinicPerRun` | 12,33 ± 0,23 | 12,67 ± 0,24 | −0,34 ± 0,13 (z −2,5) |
-| `blacksmithTreatmentsPerRun` / `prosthesesPerRun` | 0,43 / 0,26 (ET < 0,005) | 0 / 0 | |
-| `automatonsPerRun` | 0,00 | 0,00 | |
+```
+dotnet run --project Balance -c Release --no-build -- --full-runs 600 --seed S --out <dir>
+dotnet run --project Balance -c Release --no-build -- --full-runs 600 --seed S --no-blacksmith --out <dir>
+```
 
-**Etiquetas (Regla F):**
-- **CONFIRMED** (6 semillas, pareado): el herrero **no mueve la victoria** (−0,05 ± 0,27: la cota a 2 ET es ±0,6 puntos) ni
-  **las muertes** (−0,01 ± 0,01). La lectura de una semilla de arriba (+1,3 puntos) era ruido; ahí el lote ya no es el
-  de aquella medición (hoy `runWinRate` ≈ 15, no 22), así que lo que se sostiene es la diferencia pareada, no la cifra absoluta.
-- **CONFIRMED**: el servicio se usa (0,43 tratamientos y 0,26 prótesis por run, estable entre semillas) y la clínica sale
-  ligeramente más barata (−0,34 de oro por run, z −2,5; **LIKELY** como efecto real, es un único contraste entre muchos).
-- **CONFIRMED**: nadie llega a autómata con esta política (0,00 en 6 semillas × 1.800 runs); la tercera prótesis sigue
-  siendo de cola.
-- **Límite del instrumento:** el censo del techo mira la plantilla **final** (los muertos y vendidos no cuentan) y la
-  política elige al herrero sobre todo para suplentes y comunes; un jugador humano concentrando prótesis en un
-  titular no está representado. Por eso el techo se sostiene además por aritmética, no solo por el lote.
+600 runs × 3 doctrinas por celda; el resumen es el de la doctrina principal. Pareado por semilla. Cifras por semilla
+(con herrero / sin herrero), en el orden de las semillas:
 
-**Atributo máximo por run: no se implementa tope (game-design-review, respuesta a «degeneración»).**
-- Ya existe un techo, **estructural**: una prótesis por ranura (`HasFreeProsthesisSlot`), atributos acotados a 1..99
-  (`ProsthesisDefinition.ApplyTo`) y siete ranuras con efectos repartidos entre cinco atributos. Del catálogo (derivado,
-  no medido): el techo de **un** atributo es **+14** (fuerza: brazo +8, mandíbula +6) y el total de todas las mejoras
-  posibles es **+48**; cada una exige una lesión grave y 35 % de salir bien (más oro, con rendimiento decreciente).
-  Un test fija esa aritmética (`TheStructuralCeilingOfTheForgeIsWhatTheDataSays`): tocarla exige pasar por esta ADR.
-- Medido en el lote: a lo sumo **2** prótesis en un mismo jugador (6 semillas), y el mejor atributo de un protésico llega a
-  90 ± 0,4 de máximo por semilla frente a **98,2 ± 0,7** de los jugadores sin prótesis: el herrero no forja nada por encima de
-  lo que ya da la progresión. Media del mejor atributo: 76,2 (protésicos) contra 68,7 (resto), compatible con que el
-  herrero se use sobre jugadores de más valor o con que cada mejora aporte ~+7.
-- Un tope por run añadiría una regla invisible (viola «comportamiento observable > modificadores invisibles») para
-  resolver un caso que no ocurre. **No se toca `/Game`**: no hay tope que enseñar en la pantalla del herrero. **Se reabre
-  si** se añaden prótesis, deltas o ranuras que muevan el techo (el test lo avisa), o si la política/jugador concentra
-  prótesis (`maxProsthesesOnOnePlayer` ≥ 4).
-- Las magnitudes, 30/35/35 y el precio siguen **provisionales, sin medir** como balance de diseño (Regla H): esta medición
-  dice que no desequilibran la run ni el techo, no que sean las óptimas.
+| métrica | 1 | 1001 | 2001 | 3001 | 4001 | 5001 |
+|---|---|---|---|---|---|---|
+| `runWinRate` | 17,00 / 16,83 | 15,83 / 16,00 | 14,00 / 14,17 | 14,17 / 15,33 | 15,50 / 14,67 | 13,67 / 13,50 |
+| `deathsPerRun` | 1,26 / 1,31 | 1,37 / 1,36 | 1,27 / 1,25 | 1,19 / 1,21 | 1,19 / 1,19 | 1,38 / 1,38 |
+| `goldSpentClinicPerRun` | 12,81 / 13,61 | 12,64 / 12,74 | 12,34 / 12,80 | 11,66 / 11,90 | 12,93 / 12,82 | 11,62 / 12,18 |
+| `maxAttributeProsthetic` / `maxAttributePlain` (con herrero) | 89 / 99 | 90 / 99 | 91 / 99 | 89 / 98 | 91 / 95 | 90 / 99 |
+
+Medias (± error típico de la media entre las 6 semillas): `runWinRate` 15,03 ± 0,53 con herrero y 15,08 ± 0,50 sin él,
+**diferencia pareada −0,05 ± 0,27**; `deathsPerRun` 1,28 ± 0,03 en las dos ramas (−0,01 ± 0,01); `goldSpentClinicPerRun`
+12,33 ± 0,23 contra 12,67 ± 0,24 (−0,34 ± 0,13). Uso: 0,43 tratamientos y 0,26 prótesis por run (ET < 0,005); autómatas 0,00.
+
+**Etiquetas (Regla F), corregidas:**
+- **Sin efecto detectable al nivel de uso de la política** (0,26 prótesis por run): diferencia en victoria −0,05 ± 0,27 y en
+  muertes −0,01 ± 0,01. La cota a 2 ET es ±0,6 puntos de victoria por run, es decir **~±1,4 puntos por forja** (0,6 / 0,43).
+  Lo demostrado es el **uso bajo**, no la ausencia de efecto: con este uso un efecto por forja menor que esa cota no se ve.
+  (Y la lectura de una semilla de la primera medición, +1,3 puntos, era ruido.)
+- **LIKELY**: la clínica sale algo más barata (−0,34 ± 0,13 de oro por run, z −2,5); un contraste entre muchos.
+- **CONFIRMED** (6 semillas × 1.800 runs): nadie llega a autómata con esta política; la tercera prótesis es de cola.
+- **El 90 contra 98,2 de máximos no se interpreta.** Compara un grupo de ≈0,26 protésicos por run contra ≈10 jugadores sin
+  prótesis (el máximo de un grupo grande es mayor por tamaño de muestra) y la política forja sobre todo a suplentes y comunes
+  (selección). Está **confundido** por las dos cosas: no dice que el herrero no forje por encima de la progresión. Tampoco
+  se interpreta la media 76,2 contra 68,7.
+- **Límite del instrumento:** el censo mira la plantilla **final** (muertos y vendidos fuera) y la política no concentra: nunca
+  pasa de 2 prótesis en un jugador. El caso que importa (varias prótesis en un titular estrella) **no está representado en el lote**.
+
+### Atributo máximo por run: nota de `game-design-review` sobre «sin tope»
+
+1. **Qué experimenta el jugador / 2. qué decide.** Ve una mesa con tres destinos y sus rangos y decide si arriesgar la identidad
+   de un grave en la forja; cada prótesis es permanente y de una ranura. Un tope por run sería una regla que el jugador no ve venir.
+3. **Qué debería decidir.** Elegir **a quién** forjar y con cuánto oro; no «cuántas veces me deja el juego».
+4. **Regla.** RF-095, RF-095b, RF-095c; no hay requisito de tope.
+5. **Sistemas.** `/Sim` (`MedicalSystem.Forge`, catálogo de prótesis); un tope tocaría además `/Game` (decirlo en la mesa).
+6. **Alternativas.** (a) Sin tope, techo estructural; (b) tope de prótesis por jugador (hoy 7 ranuras); (c) tope de atributo
+   por run; (d) rendimiento decreciente por prótesis ya instalada.
+7. **Trade-off.** Hoy el coste de forjar es la identidad (35 % de empeoramiento de −9..−12, una ranura ocupada) y el oro.
+   (b)/(c)/(d) añaden un coste, pero invisible hasta que se alcanza.
+8. **Estrategias.** Concentrar prótesis en un titular (estrella de chatarra, `Scrap`/`Automaton`) frente a repartirlas por la
+   plantilla; ambas legibles.
+9. **Degeneración, medida contra la progresión (el criterio de la skill).** `attributesPerLevel` = 2 con nivel máximo 8: la
+   progresión da **+14 a cada atributo de campo** (los cuatro, a la vez). La forja da como techo **+14 a un solo atributo**
+   (fuerza: brazo 8 + mandíbula 6) y **+48 repartido** entre cinco (cuatro de campo más la correa); estar al techo exige siete
+   lesiones graves en **el mismo** jugador (el lote registra ~1,7 graves por run en toda la plantilla: LIKELY inalcanzable para
+   esta política y difícil para una persona) y 35 % de acierto cada vez, con cada fallo (−9..−12) restando de lo ganado.
+   **Conclusión del pase: no hace falta un tope**; el techo estructural es del orden de la progresión y más caro de alcanzar.
+10. **Cómo se demuestra.** El test de aritmética del techo (`TheStructuralCeilingOfTheForgeIsWhatTheDataSays`), el censo con
+    valor conocido y el lote de arriba. **Lo que no se ha medido** es la estrella forjada al máximo en partido (un lote
+    forzando la concentración): queda como **decisión del revisor** si +48 sobre un titular estrella, aunque inalcanzable hoy,
+    merece un tope de seguridad o esa medición. No se implementa nada.
+
+No se toca `/Game`: no hay tope que enseñar en la pantalla del herrero. **Umbral de reapertura (provisional, sin medir, Regla H):**
+`maxProsthesesOnOnePlayer` ≥ 4 o un cambio de deltas/ranuras que mueva el techo (el test lo avisa). **La política actual no puede
+alcanzar el umbral** (no concentra, máximo 2), así que ese indicador solo se movería con otra política o con una persona; es una
+señal para cuando exista una política que concentre, no un guardián efectivo hoy. Las magnitudes, 30/35/35 y el precio siguen
+**provisionales, sin medir** como balance de diseño.
