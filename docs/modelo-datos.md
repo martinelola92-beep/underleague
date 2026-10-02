@@ -55,6 +55,20 @@ Run
     progress{}          contadores de logros de desbloqueo (RF-125b)
 ```
 
+### Contadores de run de clave libre (`RunState.Counters`)
+
+Contabilidad de run que no tiene propiedad tipada: un diccionario ordinal `clave -> int`, **sin subir `schemaVersion`** (un guardado
+anterior simplemente no tiene la clave y la lee como 0). Las de la memoria de rivales:
+
+| Clave | Valor | Quién la escribe / lee |
+|---|---|---|
+| `rivalCredit:<opponentId>:<rivalIndex>:<ownPlayerId>:<hecho>[:<ocupante>]` | veces que ha pasado (BE-B, ADR 0124); `<hecho>` = `causedInjury`, `causedDeath`, `sufferedInjury`, `sufferedDeath`; `<ocupante>` (BS-A) = código de `RivalKiller` de quien ocupaba el puesto, **ausente = el jugador de datos** (y todo guardado anterior) | `MatchResolution.ApplyRivalCredits` / `RivalCredits`; cada ocupante lleva su propia cuenta |
+| `deathCause:<playerId>` | `PlayerDeathCause` como entero (ADR 0163) | las tres vías de muerte / Gaceta |
+| `deathKiller:<playerId>` (BS-A) | código de `RivalKiller` del ocupante que mató a ese jugador propio; 0 = jugador de datos (no se escribe) | `MatchResolution` / esquela, Ojeo |
+
+Código de `RivalKiller` (se guarda, no se renumera): 0 = jugador de datos; `1..999.999` = el fichaje de generación `código − 1`;
+`1.000.000 + id` = ese némesis. Se lee de la memoria de rivales de **antes** del partido.
+
 Fuera de la run, en el perfil del jugador: razas desbloqueadas, divisiones ganadas por raza (RF-128b), perks/objetos/consumibles desbloqueados (RF-126), compendio de modificadores de jefe descubiertos (RF-014b), memorial acumulado.
 
 ## Estado del partido (`MatchState`)

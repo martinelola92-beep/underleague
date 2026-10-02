@@ -93,6 +93,8 @@ No es una inconsistencia, es la consecuencia de la decisión 1:
 | carrera de un jugador **propio** | `RunPlayer.Career` (registro tipado) | vocabulario cerrado, vive lo que vive el jugador | **sí, 4 → 5** |
 | «quién knaveó a quién» contra un **rival** | `RunState.Counters`, clave libre | vocabulario abierto (pares rival×jugador), vive lo que vive la run | **no** |
 
+Enmienda (2 oct 2026, BS-A, ADR 0165): la clave del crédito admite un quinto campo opcional, el ocupante del puesto (código de `RivalKiller`); sin él es el jugador de datos, así que los guardados anteriores se leen igual. Ver `docs/modelo-datos.md`.
+
 ---
 
 ## Determinismo

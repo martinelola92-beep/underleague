@@ -68,17 +68,18 @@ más visible (quién mató a quién); la representación correcta —créditos p
 ## Resto (2 oct 2026): el mismo mecanismo, en cada crédito
 
 Regla G (`tools/existe-ya.sh esquela obituary`): el mecanismo ya existía —el código de `RivalKiller`, leído con la memoria de
-**antes** del partido—, así que no se inventa otro. `MatchResolution.ApplyRivalCredits` anota, junto a cada crédito
-`rivalCredit:<clan>:<puesto>:<propio>:<hecho>`, el ocupante del puesto en ese partido en `rivalOccupant:<mismo sufijo>`
-(`RunState.RivalOccupantPrefix`; clave libre, no sube el guardado; 0 = el de datos, no se escribe; los guardados antiguos leen 0).
+**antes** del partido—, así que no se inventa otro. Primera versión (rechazada por la revisión independiente): un contador
+`rivalOccupant:` aparte, que se pegaba al crédito y mezclaba ocupantes («Grak lesionó a A dos veces» cuando una era del de datos; un
+némesis que se va dejaba su nombre pegado). **Versión final: el ocupante entra en la clave del crédito** —
+`rivalCredit:<clan>:<puesto>:<propio>:<hecho>[:<ocupante>]`, sin sufijo = jugador de datos, así que los guardados antiguos se leen
+como ocupante 0 y no hay migración—, de modo que cada ocupante lleva su cuenta (`docs/modelo-datos.md`, contadores de clave libre).
 `RivalCredit.Occupant` lo expone y:
 
 - el **villano de la Gaceta por créditos** agrupa por `(clan, puesto, ocupante)` y se nombra con `RivalKiller.Name`;
-- el **Ojeo** (`ScoutScreen`) usa `credit.Occupant` para cualquier hecho (antes sólo muertes, vía `deathKiller:`), lo que cubre las
-  **lesiones**;
+- el **Ojeo** usa `credit.Occupant` para cualquier hecho (antes sólo muertes), lo que cubre las **lesiones**;
 - la esquela sigue con `deathKiller:` (por víctima), sin cambio.
 
-Límite aceptado: la clave del crédito sigue siendo por puesto, así que si dos ocupantes distintos tocan el mismo par (puesto,
-propio, hecho), gana el ocupante del último partido. Tests en `NemesisTests`: `TheCreditVillainIsNamedAfterTheSigningNotTheDataPlayer`,
-`AnInjuryCreditRecordsTheSigningWhoCausedIt`, `ADataPlayerCreditHasNoOccupant`. Balance: sólo contabilidad y nombres, no cambia
-ninguna tirada (comprobado: las 4.800 runs de BT-A son idénticas a main con este cambio dentro).
+Tests en `NemesisTests`: `TheCreditVillainIsNamedAfterTheSigningNotTheDataPlayer`, `AnInjuryCreditRecordsTheSigningWhoCausedIt`,
+`ADataPlayerCreditHasNoOccupant`, `TheCountIsPerOccupantWhenTheSigningInjuresTheSameVictimAgain` (caso Grak),
+`ANemesisWhoLeavesKeepsItsCreditAndDoesNotSignWhatTheNextOccupantDoes`, `TheCreditVillainCountsOnlyTheOccupantsOwnVictims`,
+`AnOldCreditKeyReadsAsTheDataPlayer`. Es contabilidad y nombres: no cambia ninguna tirada.

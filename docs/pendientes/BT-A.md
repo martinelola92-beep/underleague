@@ -38,7 +38,7 @@ Es el **instrumento**, no el juego (Regla J): la política es lo que mide `/Bala
 
 `RunPolicy.WorstSellable` excluye a quien tiene `Experience <= 0`, como veta `MarketSystem.Sell`: se arregla en la política (el
 instrumento); que el juego impida la venta es correcto y no se toca. Si no hay a quién vender, la rama (e) devuelve `null` y la
-política no hace sitio. Test: `RunPolicySellTests.ThePolicyNeverOffersToSellASigningWhoHasNotPlayed` (falla sin el filtro: elige al
+política no hace sitio. El veto es ahora un predicado compartido, `MarketSystem.CanSell`, que usan `Sell` y la política (antes la política lo reescribía a mano). Tests: `RunPolicySellTests.AWholePolicyRunNeverTriesToSellASigningWhoHasNotPlayed` (`Play` entero, 5 razas de lanzamiento × 20 semillas con `Setup()`: 14 de 100 lanzaban sin el filtro) y `ThePolicyNeverOffersToSellASigningWhoHasNotPlayed` (falla sin el filtro: elige al
 fichaje sin partidos; pasa con él). La decisión abierta sobre capturar la excepción en `RunPolicy.Play` queda como estaba: una
 política que lanza sigue siendo un fallo visible.
 
