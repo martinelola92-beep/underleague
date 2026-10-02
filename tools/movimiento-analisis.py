@@ -164,7 +164,10 @@ def foot_ball_metrics(rows, window):
             body = math.hypot(b["x"] - a["x"], b["z"] - a["z"]) * FPS
             if body > 0.5 and body < 9:
                 left = a["ly"] < a["ry"]
-                if left == (b["ly"] < b["ry"]):
+                # Sólo con el pie EN EL SUELO (puntera a < 0,015 casillas, 3 cm): en la fase de vuelo de la carrera no
+                # pisa ninguno. Validado en la carrera recta: el pie apoyado da 0,02-0,3 c/s con el cuerpo a 2,1 c/s.
+                grounded = min(a["ly"], a["ry"]) < 0.015 and min(b["ly"], b["ry"]) < 0.015
+                if grounded and left == (b["ly"] < b["ry"]):
                     k = "l" if left else "r"
                     foot = math.hypot(b[k + "x"] - a[k + "x"], b[k + "z"] - a[k + "z"]) * FPS
                     if b["clip"] in LOCO and a["clip"] in LOCO:
