@@ -121,6 +121,13 @@ public static class Nav
             return End;
         }
 
+        // BR-A, RT-061, ADR 0183: un guardado de partido a medias vuelve al partido, no al mapa. El estado es el
+        // de ANTES de ese partido, y la retransmisión lo reproduce desde su semilla.
+        if (run.HasMatchToResume)
+        {
+            return MatchView;
+        }
+
         var state = run.State!;
         if (state.Phase != RunPhase.NodeOpen || state.PendingNodeId < 0)
         {

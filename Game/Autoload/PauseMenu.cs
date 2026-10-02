@@ -104,7 +104,7 @@ public sealed partial class PauseMenu : CanvasLayer
     public void Open()
     {
         var run = RunController.Instance;
-        bool live = run is { HasRun: true } && !run.Outcome().IsOver;
+        bool live = run is { HasRun: true } && !run.IsOverNow;
         _save.Disabled = !live;
         _saveStatus.Text = UiText.Get("ui.pause.autosave");
         _saveStatus.AddThemeColorOverride("font_color", Style.TextDim);
@@ -161,7 +161,7 @@ public sealed partial class PauseMenu : CanvasLayer
     private void SaveRun()
     {
         var run = RunController.Instance;
-        if (run is not { HasRun: true } || run.Outcome().IsOver)
+        if (run is not { HasRun: true } || run.IsOverNow)
         {
             return;
         }
@@ -180,7 +180,7 @@ public sealed partial class PauseMenu : CanvasLayer
         if (run is { HasRun: true })
         {
             // Una run terminada ya no tiene slot (Save lo borra): salir es cerrarla, como en FinDeRun.
-            if (run.Outcome().IsOver)
+            if (run.IsOverNow)
             {
                 run.Abandon();
             }

@@ -138,6 +138,7 @@ public partial class RunController : Node
         State = bossSystems.AssignBosses(RunEngine.Start(setup, seed, Catalog, bossSystems));
         SelectedNodeId = -1;
         LastMatch = null;
+        ForgetMatch();
 
         DeleteSave();
         Save();
@@ -189,7 +190,8 @@ public partial class RunController : Node
             // Un guardado de una versión anterior puede no traer los catálogos añadibles que el juego
             // actual exige (apodos, Gaceta, prótesis): se completan con los de /data actual y sólo esos
             // (SnapshotCompletion, RT-061b). Las reglas de la run siguen siendo las de su instantánea.
-            var state = SnapshotCompletion.Complete(RunSave.Load(file.GetAsText(), out var lostConsumables), GameData.Snapshot);
+            var loaded = RunSave.Load(file.GetAsText(), out var lostConsumables, out var pendingMatch);
+            var state = SnapshotCompletion.Complete(loaded, GameData.Snapshot);
             Catalog = RunSave.CatalogFromSnapshot(state);
             Systems = StandardRunSystems.FromJson(state.DataSnapshot, fromRunSnapshot: true);
             Bosses = BossCatalog.FromJson(state.DataSnapshot);
@@ -198,6 +200,16 @@ public partial class RunController : Node
             LoadNotice = LostConsumablesNotice(lostConsumables);
             SelectedNodeId = -1;
             LastMatch = null;
+            ForgetMatch();
+
+            // BR-A, RT-061, ADR 0183: el guardado era de un partido a medias, y `state` es el de ANTES de ese
+            // partido. Se deja el nodo seleccionado y las decisiones listas: la retransmisión lo reproduce
+            // (PlayMatch las recoge), no se salta al informe.
+            if (pendingMatch is not null)
+            {
+                _resume = pendingMatch;
+                SelectedNodeId = pendingMatch.NodeId;
+            }
         }
         catch (Exception error)
         {
@@ -295,12 +307,27 @@ public partial class RunController : Node
             return;
         }
 
+        // BR-A, RT-061, ADR 0183: con un partido a medias, lo que hay en memoria ya es el estado de DESPUÉS
+        // (RunEngine.EnterMatch lo resolvió entero antes de enseñarlo). Se guarda el de ANTES, con las
+        // decisiones tomadas y hasta dónde llegó a ver el jugador; el guardado de después se escribe al
+        // cerrar el partido (CommitMatch), no antes.
+        if (_matchOpen && _stateBeforeMatch is not null)
+        {
+            WriteSave(RunSave.Save(_stateBeforeMatch, new PendingMatch(_matchNodeId, Decisions, _watchedTick)));
+            return;
+        }
+
         if (Outcome().IsOver)
         {
             DeleteSave();
             return;
         }
 
+        WriteSave(RunSave.Save(State));
+    }
+
+    private static void WriteSave(string json)
+    {
         using var file = FileAccess.Open(SavePath, FileAccess.ModeFlags.Write);
         if (file is null)
         {
@@ -308,7 +335,7 @@ public partial class RunController : Node
             return;
         }
 
-        file.StoreString(RunSave.Save(State));
+        file.StoreString(json);
     }
 
     /// <summary>Borra el guardado ironman.</summary>
@@ -326,6 +353,7 @@ public partial class RunController : Node
         State = null;
         LastMatch = null;
         SelectedNodeId = -1;
+        ForgetMatch();
         DeleteSave();
         Changed();
     }
@@ -342,6 +370,7 @@ public partial class RunController : Node
         State = null;
         LastMatch = null;
         SelectedNodeId = -1;
+        ForgetMatch();
         Changed();
     }
 

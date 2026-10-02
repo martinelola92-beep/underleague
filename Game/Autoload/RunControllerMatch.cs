@@ -39,6 +39,67 @@ public partial class RunController
     private RunState? _stateBeforeMatch;
     private int _matchNodeId = -1;
 
+    // BR-A, RT-061, ADR 0183. `_matchOpen`: hay un partido que el jugador todavía no ha terminado de ver, y
+    // por tanto el guardado es el de ANTES (Save). `_watchedTick`: el tick más lejano que ha llegado a ver.
+    // `_floorTick`: el que ya había visto al guardar la vez anterior; antes de él no se puede volver a decidir.
+    // `_resume`: el partido a medias que trajo el guardado, hasta que PlayMatch lo recoge.
+    private bool _matchOpen;
+    private int _watchedTick;
+    private int _floorTick;
+    private PendingMatch? _resume;
+
+    /// <summary>
+    /// True si la run ha terminado <b>y</b> el jugador ya lo ha visto. Mientras el partido decisivo se está
+    /// viendo, el estado en memoria ya es el de después (derrota o victoria final), pero la run sigue viva a
+    /// efectos de guardar y de salir: el guardado es el de antes del partido (BR-A, ADR 0183).
+    /// </summary>
+    public bool IsOverNow => !_matchOpen && Outcome().IsOver;
+
+    /// <summary>True si el guardado cargado era de un partido a medias y todavía no se ha retomado (BR-A).</summary>
+    public bool HasMatchToResume => _resume is not null;
+
+    /// <summary>
+    /// La retransmisión avisa del tick que enseña. Sólo importa el más lejano: es lo que el jugador ya sabe del
+    /// partido, y lo que <see cref="CanDecideAt"/> protege al reanudar (ADR 0183).
+    /// </summary>
+    public void NoteWatched(int tick)
+    {
+        if (_matchOpen && tick > _watchedTick)
+        {
+            _watchedTick = tick;
+        }
+    }
+
+    /// <summary>
+    /// Si una decisión en vivo (consumible manual, orden táctica) puede entrar en <paramref name="tick"/>.
+    /// Tras volver de un partido a medias no vale antes de lo que el jugador ya había visto: decidir con el
+    /// futuro conocido sería volver a tirar el partido (RT-061, ADR 0183).
+    /// </summary>
+    public bool CanDecideAt(int tick) => tick > _floorTick;
+
+    /// <summary>
+    /// El jugador ha llegado al informe: el partido deja de estar a medias y el guardado pasa a ser el de
+    /// <b>después</b> (en una derrota definitiva, el slot se borra). Idempotente.
+    /// </summary>
+    public void CommitMatch()
+    {
+        if (!_matchOpen)
+        {
+            return;
+        }
+
+        _matchOpen = false;
+        Save();
+    }
+
+    private void ForgetMatch()
+    {
+        _matchOpen = false;
+        _watchedTick = 0;
+        _floorTick = 0;
+        _resume = null;
+    }
+
     /// <summary>Primer punto de sustitución del jugador sin resolver en la reproducción actual, o <c>null</c>.</summary>
     public SubstitutionPoint? PendingSubstitution() =>
         Playback is null || Catalog is null
@@ -245,9 +306,15 @@ public partial class RunController
         // trace: true — la pantalla de Partido reproduce el campo con la traza de posiciones tick a tick
         // (MatchTrace). Se pide aquí y solo aquí: el partido que /Sim resuelve de verdad en Enter y los
         // millones de partidos de /Balance siguen corriendo sin ella.
-        Decisions = MatchDecisions.None;
+        // BR-A: si viene de un guardado a medias, se retoman sus decisiones y lo que ya había visto.
+        var resume = _resume is { } r && r.NodeId == nodeId ? r : null;
+        _resume = null;
+        Decisions = resume?.Decisions ?? MatchDecisions.None;
+        _watchedTick = resume?.WatchedTick ?? 0;
+        _floorTick = _watchedTick;
         _stateBeforeMatch = State;
         _matchNodeId = nodeId;
+        _matchOpen = true;
         Playback = MatchPlaybacks.Of(State, nodeId, Catalog, Engine, trace: true, Decisions);
         Enter(nodeId);
     }

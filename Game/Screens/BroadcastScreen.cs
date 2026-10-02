@@ -1190,6 +1190,9 @@ public partial class BroadcastScreen : Control
         }
 
         _frame = Mathf.Clamp(_frame, 0, trace.FrameCount - 1);
+
+        // BR-A, ADR 0183: lo más lejos que llega a ver el jugador es lo que se guarda si sale ahora.
+        _run.NoteWatched(trace.TickAt(_frame));
         _pitch3d.Frame = _frame;
         _pitch3d.Alpha = _frozenLastFrame ? 0f : (float)Mathf.Clamp(_carry, 0d, 1d);
         _pitch3d.QueueRedraw();
@@ -1848,7 +1851,15 @@ public partial class BroadcastScreen : Control
     /// </summary>
     private bool CanActNow() =>
         !_matchEnded && _pendingPoint is null && _pendingDeathEvent is null && !_deathTrayPending && !_frozenLastFrame
-        && HasNextTick();
+        && HasNextTick() && CanDecideNextTick();
+
+    /// <summary>
+    /// BR-A, ADR 0183: al volver de un partido a medias, lo que el jugador ya había visto no se puede volver a
+    /// decidir —sería elegir con el futuro conocido—. Sin salir del partido el suelo es 0 y no estorba.
+    /// </summary>
+    private bool CanDecideNextTick() =>
+        _trace is { FrameCount: > 0 } trace
+        && _run.CanDecideAt(trace.TickAt(Mathf.Clamp(_frame, 0, trace.FrameCount - 1)) + 1);
 
     /// <summary>
     /// Revisión independiente (ADR 0161, BA-H): una decisión en vivo entra en el tick SIGUIENTE al que se
@@ -1956,7 +1967,12 @@ public partial class BroadcastScreen : Control
         _board.SetPaused(_manualPaused);
     }
 
-    private void GoToReport() => Nav.Go(this, Nav.Report);
+    private void GoToReport()
+    {
+        // BR-A, ADR 0183: el partido deja de estar a medias al llegar al informe.
+        _run.CommitMatch();
+        Nav.Go(this, Nav.Report);
+    }
 
     // ------------------------------------------------------------------ API pública (capturas, F3)
 

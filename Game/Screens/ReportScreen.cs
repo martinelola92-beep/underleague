@@ -34,6 +34,9 @@ public partial class ReportScreen : Control
         }
 
         _run = run;
+
+        // BR-A, ADR 0183: llegar al informe cierra el partido aunque se haya entrado por otro camino.
+        run.CommitMatch();
         var report = run.PostMatch();
         if (report is null)
         {

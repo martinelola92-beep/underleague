@@ -438,7 +438,12 @@ public partial class MatchScreen : Control
         Sync();
     }
 
-    private void GoToReport() => Nav.Go(this, Nav.Report);
+    private void GoToReport()
+    {
+        // BR-A, ADR 0183: el partido deja de estar a medias al llegar al informe.
+        RunController.Instance?.CommitMatch();
+        Nav.Go(this, Nav.Report);
+    }
 
     /// <summary>
     /// ADR 0094 (AZ-F): si la reproducción ha llegado al tick en el que un jugador propio salió por lesión o
