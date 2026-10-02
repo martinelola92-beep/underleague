@@ -48,7 +48,16 @@ independiente, rebase y merge a `main`, push):
    - en `/Sim` con ADR: aceleración (H4) y oscilación (H8).
    Ver `docs/pendientes/BV-A.md`.
 
-**SIGUIENTE (3 oct):** la cola de la noche está vacía. Decisiones abiertas del revisor:
+**DECISIONES DEL REVISOR (3 oct, madrugada):**
+1. F3 (vista 2D) pasa a ser opcional en el menú de ajustes.
+2. `Continue()` hace lo habitual: no borra el guardado; escritura atómica y anti-recarga por suelo/semilla.
+3. Herrero: tope de 3 prótesis; a partir de ahí, el jugador queda lisiado.
+4. Sumideros: se balanceará el coste al final; por ahora vale.
+5. Bulwark: a criterio.
+6. Apuesta: ajustar `into_the_mob` d2/d3 y `eye_for_eye` d3.
+Prioridad absoluta: IA y animaciones 3D para la build de la mañana del 3 oct (dos pistas: /Game presentación y /Sim oscilación/aceleración).
+
+**SIGUIENTE (3 oct):** la cola de la noche está vacía. Decisiones abiertas del revisor (antes de responderlas):
 - F3 (vista 2D) en el juego normal o sólo en desarrollo (BR-A);
 - `Continue()` borra el guardado (anti-recarga, BR-A);
 - tope de seguridad del herrero sobre un titular (ADR 0164);
