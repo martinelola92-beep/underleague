@@ -1210,7 +1210,10 @@ public partial class BroadcastScreen : Control
         _frame = Mathf.Clamp(_frame, 0, trace.FrameCount - 1);
 
         _pitch3d.Frame = _frame;
-        _pitch3d.Alpha = _frozenLastFrame ? 0f : (float)Mathf.Clamp(_carry, 0d, 1d);
+        // BV-A (segunda pasada): congelada la imagen, se queda donde estaba —el resto de tick acumulado no avanza mientras
+        // dura la congelación—. Antes se forzaba Alpha a 0 y, medido en el instrumento, todos los jugadores retrocedían medio
+        // tick de golpe al congelar y volvían a saltar al reanudar (giros de 180° de la trayectoria, p99 del tramo).
+        _pitch3d.Alpha = (float)Mathf.Clamp(_carry, 0d, 1d);
         _pitch3d.QueueRedraw();
 
         // Principio 5 (revisión visual del orquestador): mientras el director congela en FreezeFrame, el

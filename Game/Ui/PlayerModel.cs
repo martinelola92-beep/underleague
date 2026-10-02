@@ -217,8 +217,18 @@ public sealed partial class PlayerModel : Node3D
     /// <summary>A menos de esto (casillas) el balón está encima y su dirección no dice nada. Provisional.</summary>
     private const float BallLookMinCells = 0.3f;
 
-    /// <summary>Remate del golpeo que se deja ver tras el contacto antes de poder soltarlo. <b>Provisional, sin medir</b> (1,5 ticks).</summary>
-    private const float KickFollowThroughSeconds = 0.1f;
+    /// <summary>
+    /// Remate del golpeo que se deja ver tras el contacto antes de poder soltarlo. <b>Medido</b> (BV-A, segunda pasada):
+    /// el pasador está QUIETO durante <c>Passing</c> y <c>/Sim</c> lo echa a correr en el mismo tick en que sale el balón,
+    /// así que el patinaje del golpeo no estaba en la carrerilla sino en el remate (0,20-0,30 s del clip, cuerpo a 2,2 c/s).
+    /// Si arranca, el golpeo se suelta en el contacto.
+    /// </summary>
+    private const float KickFollowThroughSeconds = 0f;
+
+    /// <summary>Fundido de salida de un gesto que se suelta porque el cuerpo echa a correr. <b>Provisional, sin medir</b>: algo más de un tick.</summary>
+    private const float GestureRunOutSeconds = 0.08f;
+
+    private float _outFade = BlendSeconds;
 
     /// <summary>Lo mínimo que se deja ver la recepción antes de poder soltarla. <b>Provisional, sin medir</b> (~4 ticks).</summary>
     private const float ReceiveMinSeconds = 0.25f;
@@ -417,6 +427,7 @@ public sealed partial class PlayerModel : Node3D
                 || (_gesture == "receive" && _gestureTime > ReceiveMinSeconds)))
         {
             StopGesture();
+            _outFade = GestureRunOutSeconds;
         }
         ChooseGesture(state, cue, kick, speed);
 
@@ -437,7 +448,7 @@ public sealed partial class PlayerModel : Node3D
         _tree.Set("parameters/gesture_scale/scale", rate);
 
         float weightTarget = _gesture.Length > 0 ? 1f : 0f;
-        float fade = weightTarget > _gestureWeight ? _gestureFade : BlendSeconds;
+        float fade = weightTarget > _gestureWeight ? _gestureFade : _outFade;
         _gestureWeight = delta <= 0f ? weightTarget : Mathf.MoveToward(_gestureWeight, weightTarget, simDelta / Mathf.Max(0.01f, fade));
         _tree.Set("parameters/mix/blend_amount", _gestureWeight);
     }
@@ -756,6 +767,7 @@ public sealed partial class PlayerModel : Node3D
 
         _gesture = key;
         _gestureFade = BlendSeconds;
+        _outFade = BlendSeconds;
         _gestureHeld = held;
         _gestureTime = offset;
         var clip = _library.GetAnimation(key);

@@ -65,6 +65,7 @@ def frame_metrics(rows, window, label=None):
     yaw_big = 0
     yaw_frames = 0
     turn_at_boundary = []
+    turn_moving = []
     slide = []
     in_place = 0
     in_place_total = 0
@@ -106,7 +107,15 @@ def frame_metrics(rows, window, label=None):
                 if prev2 is not None:
                     ax, az = prev["x"] - prev2["x"], prev["z"] - prev2["z"]
                     if math.hypot(ax, az) > 1e-3 and math.hypot(dx, dz) > 1e-3:
-                        turn_at_boundary.append(math.degrees(abs(wrap(math.atan2(dz, dx) - math.atan2(az, ax)))))
+                        turn = math.degrees(abs(wrap(math.atan2(dz, dx) - math.atan2(az, ax))))
+                        turn_at_boundary.append(turn)
+                        # A velocidad de marcha (> 0,6 c/s en los dos fotogramas): sin los pasitos de llegar al destino,
+                        # cuya dirección es ruido.
+                        # Y con el reloj dibujado avanzando en los tres fotogramas: una congelación que devuelve la
+                        # imagen medio tick atrás se cuenta aparte (es otro defecto, no la forma de la trayectoria).
+                        clock = [q["frame"] + q["alpha"] for q in (prev2, prev, r)]
+                        if math.hypot(ax, az) * FPS > 0.6 and math.hypot(dx, dz) * FPS > 0.6 and clock[0] < clock[1] < clock[2]:
+                            turn_moving.append(turn)
             prev2 = prev
             prev = r
     # Oscilación de la MEZCLA de locomoción (sólo con el árbol de BV-A, donde clipTime lleva la posición de
@@ -138,6 +147,7 @@ def frame_metrics(rows, window, label=None):
         "% fotogramas con yaw cambiando": 100.0 * len(yaw_jumps) / yaw_frames if yaw_frames else 0,
         "giro de yaw cuando cambia (p50/p90/max °)": (pct(yaw_jumps, 50), pct(yaw_jumps, 90), max(yaw_jumps) if yaw_jumps else 0),
         "giro de la trayectoria entre fotogramas (p50/p90/p99 °)": (pct(turn_at_boundary, 50), pct(turn_at_boundary, 90), pct(turn_at_boundary, 99)),
+        "giro de la trayectoria a > 0,6 c/s (p50/p90/p99 °)": (pct(turn_moving, 50), pct(turn_moving, 90), pct(turn_moving, 99)),
         "patinaje cuerpo/pies (p10/p50/p90; 1 = pies clavados)": (pct(slide, 10), pct(slide, 50), pct(slide, 90)),
         "% fotogramas corriendo con el cuerpo quieto": 100.0 * in_place / in_place_total if in_place_total else 0,
     }
