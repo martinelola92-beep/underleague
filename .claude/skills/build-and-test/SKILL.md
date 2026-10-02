@@ -10,7 +10,8 @@ Release (17x). El `-m:1` es por la memoria del contenedor WSL (7,8 GB).
 
 ```bash
 dotnet build Underleague.slnx -c Release -m:1 -v q                        # /Sim, /Sim.Tests, /Balance, /tools (sin /Game)
-dotnet test Sim.Tests -c Release --filter "Category!=Gate" -m:1 -v q      # bucle de desarrollo, ~40 s
+dotnet test Sim.Tests -c Release --filter "Category!=Gate&Category!=Diagnostic" -m:1 -v q   # bucle de desarrollo (sin puertas ni sondas)
+dotnet test Sim.Tests -c Release --filter "Category=Diagnostic" -m:1 -v q   # sondas de diagnóstico (barren/imprimen, sin asserts de comportamiento): UNA vez al cerrar un hito
 dotnet test Sim.Tests -c Release --filter "Category=Gate" -m:1 -v q       # las 43 puertas estadísticas: UNA invocación, antes del commit del hito, ~9 min
 tools/puertas-rapidas.sh                                                  # las mismas puertas al 25 % de muestra, ~3 min: SOLO avisa de rojas NUEVAS frente a tools/puertas-rapidas.base
 tools/puertas-rapidas.sh --rebase                                         # regenera esa base tras publicar un hito (con las completas en verde conocidas)
@@ -47,6 +48,10 @@ a mirar, no una conclusión. El log y el `.trx` completos quedan en la ruta impr
 
 ## Reglas que van con estos comandos
 
+- `Category=Diagnostic` marca las sondas: tests que imprimen, censan o barren y cuyos asserts son recuentos
+  o `Enum.IsDefined`. Quedan fuera del bucle, **pero se ejecutan al cerrar un hito** (`--filter "Category=Diagnostic"`)
+  y el CI las sigue ejecutando. Un test con asserts de comportamiento NO se marca: se reduce su muestra.
+
 - Las puertas (`Category=Gate`) se lanzan **una vez y en una sola invocación**, nunca tras cada edición ni
   troceadas por clase. `summary.csv` se lee con `tools/balance-resumen.py` o con `grep -E "^métrica,"`,
   nunca entero (>150 filas).
@@ -66,7 +71,7 @@ capturas 85 minutos con 4 h de CPU al 295 % sin producir nada, confundiendo "el 
 
 - **Todo proceso largo va envuelto en `timeout`**, siempre, sin excepción.
 - **Presupuesto por tarea, medido**: capturas ≤ 10 min · las 43 puertas ≤ 11 min (tardan 8 m 41 s desde la ADR 0131, que hace que la puerta de build promedie ocho plantillas en vez de una) · el
-  bucle `Category!=Gate` ≤ 2 min (tarda ~40 s). Al doble del presupuesto, se mata y se diagnostica.
+  bucle `Category!=Gate&Category!=Diagnostic` ≤ 5 min (medido el 2 oct 2026: 3 m 48 s con compilación, frente a 7 m 39 s con `Category!=Gate`). Al doble del presupuesto, se mata y se diagnostica.
 - **Se espera un ARTEFACTO, no un latido.** `pgrep`/`%CPU`/`TIME` dicen que el proceso existe, no que
   progrese. La condición de espera es un fichero escrito o una línea de log, con marca de tiempo
   comprobada.

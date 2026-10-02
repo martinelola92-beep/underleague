@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Turno para procesos PESADOS (lotes de /Balance, suite Category!=Gate completa, puertas, censos).
+# Turno para procesos PESADOS (lotes de /Balance, suite del bucle, puertas, censos).
 #
 # La máquina tiene 4 núcleos y cada uno de esos procesos ya los usa todos (Parallel.For). Dos a la vez no
 # suman: se estorban (29 sep 2026: carga 78, agentes de más de 2 h). Este envoltorio hace cola con `flock`
@@ -7,7 +7,7 @@
 # agentes pueden trabajar en paralelo y sus mediciones salen de una en una, sin coordinación manual.
 #
 # Uso:   tools/pesado.sh <segundos-de-timeout> <comando> [args...]
-# Ej.:   tools/pesado.sh 1500 tools/test-resumen.sh Sim.Tests -c Release --filter "Category!=Gate" -m:1 -v q
+# Ej.:   tools/pesado.sh 1500 tools/test-resumen.sh Sim.Tests -c Release --filter "Category!=Gate&Category!=Diagnostic" -m:1 -v q
 #        tools/pesado.sh 3600 dotnet run --project Balance -c Release -- --full-runs 1200 --seed 1 --out out/x/
 #
 # El timeout cuenta desde que se obtiene el turno, no desde que se pide. La espera por el turno no tiene

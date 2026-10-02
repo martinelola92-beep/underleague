@@ -26,7 +26,7 @@ fichero (no commits, no push, no skills, no subagentes, no ADRs).
 
 ```bash
 timeout 300 dotnet build Underleague.slnx -c Release -m:1 -v q
-timeout 180 dotnet test Sim.Tests -c Release --filter "Category!=Gate" -m:1 -v q
+timeout 180 dotnet test Sim.Tests -c Release --filter "Category!=Gate&Category!=Diagnostic" -m:1 -v q
 timeout 180 dotnet test Sim.Tests -c Release --filter "FullyQualifiedName~X" -m:1 -v q
 timeout 120 dotnet run --project tools/DataValidator -- data/     # tras cualquier cambio en data/
 ```
