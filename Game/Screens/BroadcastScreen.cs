@@ -1981,6 +1981,15 @@ public partial class BroadcastScreen : Control
     /// <inheritdoc cref="CutVeil"/>
     public bool CutActive => _cut.Active;
 
+    /// <summary>Para el instrumento de movimiento (BV-A): cambia la velocidad como el botón del tablero (0 = x1, 1 = x4, 2 = x16).</summary>
+    public void ChooseSpeedForCapture(int index) => OnSpeedChosen(index);
+
+    /// <summary>Para el instrumento de movimiento (BV-A): pausa o reanuda como el botón del tablero.</summary>
+    public void TogglePauseForCapture() => OnPauseToggled();
+
+    /// <summary>Para el instrumento de movimiento (BV-A): la escala de tiempo que pidió el director (cámara lenta, ADR 0171).</summary>
+    public double TimeScaleForCapture => _timeScale;
+
     /// <summary>Para el arnés de capturas: si la reproducción está congelada ahora mismo (voz que pausa, decisión o pausa breve, ADR 0173).</summary>
     public bool Frozen => _frozenLastFrame;
 

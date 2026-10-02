@@ -259,6 +259,7 @@ public sealed partial class PlayerModel : Node3D
         }
 
         float speed = velocity.Length();
+        DebugInputSpeed = speed;
         if (speed > MovingThreshold)
         {
             // Mirar hacia donde se va. Solo con movimiento de verdad: parado, el ruido de la interpolación
@@ -356,6 +357,38 @@ public sealed partial class PlayerModel : Node3D
         Switch(running ? "run" : "jog");
         _anim.SpeedScale = Mathf.Clamp(speed / (running ? RunReferenceSpeed : JogReferenceSpeed), 0.6f, 1.8f);
     }
+
+    // ------------------------------------------------------------------ diagnóstico (BV-A), solo lectura
+
+    /// <summary>Velocidad (casillas/s) que <see cref="Pose"/> recibió en su última llamada. Solo para el instrumento de BV-A.</summary>
+    public float DebugInputSpeed { get; private set; }
+
+    /// <summary>Clave del clip que se está reproduciendo (<c>run</c>, <c>jog</c>, <c>idle</c>...). Solo para el instrumento de BV-A.</summary>
+    public string DebugClip => _playing;
+
+    /// <summary>Segundo del clip en curso, o -1 si el reproductor ya no está sonando (un golpe que terminó). BV-A.</summary>
+    public float DebugClipTime => _anim is not null && _anim.IsPlaying() ? (float)_anim.CurrentAnimationPosition : -1f;
+
+    /// <summary>Multiplicador de ritmo del reproductor ahora mismo. BV-A.</summary>
+    public float DebugSpeedScale => _anim is null ? 0f : _anim.SpeedScale;
+
+    /// <summary>
+    /// A qué velocidad, en casillas por segundo, avanzaría el cuerpo si el clip conservara su desplazamiento
+    /// horneado (el que <see cref="PinInPlace"/> le quita), con este modelo a su escala. Es la velocidad a
+    /// la que los pies NO patinan con <c>SpeedScale</c> 1. 0 si el clip no se desplaza. Solo BV-A.
+    /// </summary>
+    public float DebugNaturalCellsPerSecond(string key)
+    {
+        if (_skeleton is null || !NaturalSkeletonSpeed.TryGetValue(key, out float perSecond))
+        {
+            return 0f;
+        }
+
+        return perSecond * _skeleton.GlobalTransform.Basis.Scale.X;
+    }
+
+    /// <summary>Desplazamiento horizontal neto del hueso raíz por segundo de clip, en unidades del esqueleto, por clave. BV-A.</summary>
+    private static readonly System.Collections.Generic.Dictionary<string, float> NaturalSkeletonSpeed = new();
 
     /// <summary>
     /// Dónde está, en el mundo, la parte del cuerpo con la que se está jugando el balón (BI-H). Devuelve
@@ -477,6 +510,7 @@ public sealed partial class PlayerModel : Node3D
             {
                 var clip = player.GetAnimation(names[0]);
                 clip.LoopMode = loop ? Animation.LoopModeEnum.Linear : Animation.LoopModeEnum.None;
+                NaturalSkeletonSpeed[key] = NetRootTravel(clip) / Math.Max(clip.Length, 0.001f);
                 float drift = PinInPlace(clip);
                 if (drift > 0.01f)
                 {
@@ -545,6 +579,34 @@ public sealed partial class PlayerModel : Node3D
         }
 
         return drift;
+    }
+
+    /// <summary>
+    /// Desplazamiento horizontal neto (primera clave a última) del hueso raíz, antes de fijarlo. Para un
+    /// ciclo de carrera es la zancada del clip entero; de ahí sale a qué velocidad los pies no patinan (BV-A).
+    /// </summary>
+    private static float NetRootTravel(Animation clip)
+    {
+        for (int track = 0; track < clip.GetTrackCount(); track++)
+        {
+            if (clip.TrackGetType(track) != Animation.TrackType.Position3D
+                || !clip.TrackGetPath(track).ToString().EndsWith(RootBone, StringComparison.Ordinal))
+            {
+                continue;
+            }
+
+            int keys = clip.TrackGetKeyCount(track);
+            if (keys < 2)
+            {
+                return 0f;
+            }
+
+            var first = (Vector3)clip.TrackGetKeyValue(track, 0);
+            var last = (Vector3)clip.TrackGetKeyValue(track, keys - 1);
+            return new Vector2(last.X - first.X, last.Z - first.Z).Length();
+        }
+
+        return 0f;
     }
 
     /// <summary>El <see cref="AnimationPlayer"/> esté donde esté en el árbol importado: el importador no garantiza dónde lo cuelga.</summary>

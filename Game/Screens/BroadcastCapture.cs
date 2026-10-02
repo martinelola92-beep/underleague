@@ -147,6 +147,17 @@ public partial class BroadcastCapture : Control
             return;
         }
 
+        // BV-A: `-- movimiento <carpeta>` graba fotograma a fotograma lo que dibujan los modelos 3D (lanzar con --fixed-fps 30).
+        int movementArg = System.Array.IndexOf(OS.GetCmdlineUserArgs(), "movimiento");
+        if (movementArg >= 0)
+        {
+            var movementArgs = OS.GetCmdlineUserArgs();
+            string movementDir = movementArg + 1 < movementArgs.Length ? movementArgs[movementArg + 1] : Path.Combine(_directory, "movimiento-crudo");
+            await CaptureMovement(run, movementDir);
+            GetTree().Quit();
+            return;
+        }
+
         // ADR 0172: `-- consumible` captura sólo el botón del consumible manual, antes y después de pulsarlo.
         if (System.Array.IndexOf(OS.GetCmdlineUserArgs(), "consumible") >= 0)
         {

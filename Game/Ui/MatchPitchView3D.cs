@@ -2541,6 +2541,42 @@ public partial class MatchPitchView3D : SubViewportContainer
         return new Vec2(Mathf.Lerp(here.X, next.X, Alpha), Mathf.Lerp(here.Y, next.Y, Alpha));
     }
 
+    // ------------------------------------------------------------------ diagnóstico de movimiento (BV-A)
+
+    /// <summary>
+    /// Lo que se está DIBUJANDO de un jugador en este fotograma real, para el instrumento de BV-A: dónde está
+    /// su cuerpo, hacia dónde mira el modelo, qué clip suena y a qué ritmo, y en qué píxel de la ventana cae
+    /// su centro. Solo lectura: no toca nada de lo que se pinta.
+    /// </summary>
+    public readonly record struct BodyProbe(
+        bool Visible, bool HasModel, Vector3 Position, float Yaw, string Clip, float ClipTime, float SpeedScale,
+        float InputSpeed, float NaturalSpeed, Vector2 Screen);
+
+    /// <summary>Número de cuerpos montados (uno por ficha de la traza). BV-A.</summary>
+    public int BodyCount => _bodies.Count;
+
+    /// <summary>Sonda de un cuerpo (BV-A); ver <see cref="BodyProbe"/>.</summary>
+    public BodyProbe ProbeBody(int index)
+    {
+        if (index < 0 || index >= _bodies.Count)
+        {
+            return default;
+        }
+
+        var body = _bodies[index];
+        var model = _models[index];
+        var center = body.GlobalPosition;
+        var screen = GetScreenTransform() * _camera.UnprojectPosition(center);
+        if (model is null)
+        {
+            return new BodyProbe(body.Visible, false, center, 0f, string.Empty, -1f, 0f, 0f, 0f, screen);
+        }
+
+        return new BodyProbe(
+            body.Visible, true, center, model.Rotation.Y, model.DebugClip, model.DebugClipTime, model.DebugSpeedScale,
+            model.DebugInputSpeed, model.DebugNaturalCellsPerSecond(model.DebugClip), screen);
+    }
+
     // ------------------------------------------------------------------ marcas de perk (regla 5, ADR 0119)
 
     /// <summary>
