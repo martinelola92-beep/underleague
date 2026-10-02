@@ -1,6 +1,6 @@
 # BR-A — Guardar o salir a mitad de partido no reproduce el partido al volver
 
-**Estado: abierta.** Anotada al añadir el menú de pausa (29 sep 2026), que no la crea pero la hace
+**Estado: cerrada (2 oct 2026, [ADR 0183](../decisiones/0183-salir-a-mitad-de-partido-reproduce-el-partido.md)). Texto original de la ficha a continuación.** Anotada al añadir el menú de pausa (29 sep 2026), que no la crea pero la hace
 visible: ahora hay un botón «Guardar» y otro «Salir al menú principal» dentro de la retransmisión.
 
 ## Qué dice el requisito
@@ -33,3 +33,11 @@ esquema de guardado (sube versión) y del orden «resolver → enseñar», no de
 1. Guardar el estado previo **más** las decisiones del partido (esquema nuevo) y no escribir el guardado
    posterior hasta que la retransmisión termine.
 2. Enmendar RT-061: salir a mitad de partido lo da por visto (lo que hace hoy).
+
+## Cierre
+
+Opción 1 de las dos, que es además lo que RT-061 ya decía: no enmienda ningún requisito. Guardado de **antes**
+del partido más `PendingMatch` (nodo, decisiones, tick más lejano visto), esquema 9 (la 8 sigue cargando); el
+guardado de después se escribe al llegar al informe. Anti-abuso: el resultado no puede cambiar (mismo estado,
+semilla y decisiones) y los controles en vivo se bloquean antes de lo ya visto. CONFIRMED por
+`Sim.Tests/Run/PendingMatchTests.cs`.
