@@ -97,6 +97,18 @@ public partial class ScoutCaptureRunner : Control
 
         Drop(gap);
 
+        // BS-A: un crédito cuyo ocupante del puesto no es el jugador de datos (código 1 = el primer fichaje del puesto):
+        // el ojeo tiene que nombrar al fichaje, no al del fichero del clan.
+        run.NewRun("orc_ironworks", Race.Orc, 7UL);
+        var match = FirstMatch(run);
+        // El bloque de reencuentro sólo sale si ya se ha jugado contra el clan: se da por jugado (y perdido) este mismo nodo.
+        run.SeedForCapture(state => state.WithNodeCompleted(match.Id, match.Kind, NodeResult.Lost).WithCounter(
+            RunState.RivalCreditPrefix + match.OpponentId + ":4:" + state.Roster[2].Id + ":sufferedInjury:1", 1));
+        run.SelectedNodeId = match.Id;
+        var occupied = await Show("res://Scenes/Ojeo.tscn");
+        await Save("ojeo-ocupante");
+        Drop(occupied);
+
         Nav.Suppressed = false;
         GetTree().Quit(0);
     }
